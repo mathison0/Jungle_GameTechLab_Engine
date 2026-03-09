@@ -136,6 +136,7 @@
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="planet.cpp" />
+    <ClCompile Include="PrimitivesManager.cpp" />
     <ClCompile Include="UBall.cpp" />
     <ClCompile Include="URenderer.cpp" />
   </ItemGroup>
@@ -150,6 +151,7 @@
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="planet.h" />
+    <ClInclude Include="PrimitivesManager.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Type.h" />
     <ClInclude Include="UBall.h" />

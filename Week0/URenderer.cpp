@@ -254,7 +254,7 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(FVector3 Offset)
+void URenderer::UpdateConstant(FVector3 Offset, float Angle)
 {
 	if (ConstantBuffer)
 	{
@@ -264,6 +264,7 @@ void URenderer::UpdateConstant(FVector3 Offset)
 		FConstants* constants = (FConstants*)constantbufferMSR.pData;
 		{
 			constants->Offset = Offset;
+			constants->Angle = Angle;
 		}
 		DeviceContext->Unmap(ConstantBuffer, 0);
 	}

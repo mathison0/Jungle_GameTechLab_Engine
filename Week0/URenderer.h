@@ -45,7 +45,7 @@ public:
 	struct FConstants
 	{
 		FVector3 Offset;
-		float Pad;
+		float Angle;
 	};
 
 
@@ -69,5 +69,5 @@ public:
 	void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
 	void CreateConstantBuffer();
 	void ReleaseConstantBuffer();
-	void UpdateConstant(FVector3 Offset);
+	void UpdateConstant(FVector3 Offset, float Angle);
 };
