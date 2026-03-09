@@ -14,6 +14,11 @@
 #include "ImGui/imgui_impl_dx11.h"
 #include "imGui/imgui_impl_win32.h"
 
+#include "URenderer.h"
+#include "UBall.h"
+#include "dx11math.h"
+
+/*
 
 // 1. Define the triangle vertices
 struct FVertexSimple
@@ -27,6 +32,7 @@ struct FVector
 	float x, y, z;
 	FVector(float _x = 0, float _y = 0, float _z = 0) : x(_x), y(_y), z(_z) {}
 };
+*/
 
 #include "Sphere.h"
 
@@ -88,7 +94,7 @@ FVertexSimple cube_vertices[] =
 	{  0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.5f, 1.0f }, // Bottom-right (purple)
 };
 
-
+/*
 class URenderer
 {
 public:
@@ -617,6 +623,7 @@ public:
 		D(force);
 	}
 };
+*/
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
@@ -704,7 +711,7 @@ public:
 		targetBallNum = UBall::GetTotalNumBalls();
 	}
 
-	void Update(const float deltaTime, const FVector& ExternalForcePos)
+	void Update(const float deltaTime, const FVector3& ExternalForcePos)
 	{
 		for (int i = 0; i < fillPrimitiveCount; ++i)
 		{
@@ -827,8 +834,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	};
 
 	ETypePrimitive typePrimitive = EPT_Sphere;
-	FVector	offset(0.0f);
-	FVector velocity(0.0f);
+	FVector3	offset(0.0f);
+	FVector3 velocity(0.0f);
 
 	const float leftBorder = -1.0f;
 	const float rightBorder = 1.0f;
@@ -853,7 +860,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	double elapsedTime = 0.0;
 
 	POINT mousePos;
-	FVector mouseWorldPos;
+	FVector3 mouseWorldPos;
 
 	FPrimitivesManager primitivesManager;
 	UBall::InitializeBuffer(renderer);
