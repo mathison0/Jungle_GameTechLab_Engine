@@ -1,4 +1,6 @@
 #include <windows.h>
+#include "dx11math.h"
+struct FVector3;
 
 // D3D Library Linking
 #pragma comment(lib, "user32")
@@ -20,12 +22,6 @@ struct FVertexSimple
 {
 	float x, y, z;    // Position
 	float r, g, b, a; // Color
-};
-
-struct FVector
-{
-	float x, y, z;
-	FVector(float _x = 0, float _y = 0, float _z = 0) : x(_x), y(_y), z(_z) {}
 };
 
 #include "Sphere.h"
@@ -357,8 +353,8 @@ public:
 
 	struct FConstants
 	{
-		FVector Offset;
-		float Pad;
+		FVector3 Offset; // x: X 위치, y: Y 위치, z: 크기(Radius)
+		float Angle;     // Pad를 Angle로 변경하여 회전값 전달
 	};
 
 	void CreateConstantBuffer()
@@ -381,22 +377,25 @@ public:
 		}
 	}
 
-	void UpdateConstant(FVector Offset)
+	// UpdateConstant 함수가 Angle도 받도록 수정
+	void UpdateConstant(FVector3 Offset, float Angle)
 	{
 		if (ConstantBuffer)
 		{
 			D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
-
-			DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+			DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
 			FConstants* constants = (FConstants*)constantbufferMSR.pData;
-			{
-				constants->Offset = Offset;
-			}
+
+			constants->Offset = Offset;
+			constants->Angle = Angle; // 추가된 부분
+
 			DeviceContext->Unmap(ConstantBuffer, 0);
 		}
 	}
 };
 
+
+FVector3 gravity;
 
 class UPrimitive
 {
@@ -404,32 +403,36 @@ public:
 	virtual void Update(float t) = 0;
 	virtual void UpdateRenderer(URenderer& renderer) = 0;
 	virtual void HandleCollision(UPrimitive* other) = 0;
-	virtual void D(const FVector& v) = 0;
-	virtual void ApplyAttraction(const FVector& point, float strength) = 0;
+	virtual void D(const FVector3& v) = 0;
+	virtual void ApplyAttraction(const FVector3& point, float strength) = 0;
 	virtual ID3D11Buffer* GetVertexBuffer() = 0;
 	virtual ~UPrimitive() {}
+	virtual void Render(URenderer& renderer) = 0;
 };
-
-
 
 class UBall : public UPrimitive
 {
 private:
-	static constexpr float MaxSpeed = 0.001f;
-	static constexpr float gravity = -0.000001f;
+	static constexpr float MaxSpeed = 0.01f;
 	static constexpr float MaxAttractionForce = 0.001f;
 
 	static ID3D11Buffer* SphereVertexBuffer;
 	static UINT NumVerticesSphere;
+
+	static ID3D11Buffer* CubeVertexBuffer;
+	static UINT NumVerticesCube;
 	static int TotalNumBalls;
 
-	FVector Location{};
-	FVector Velocity{};
+	FVector3 Location{};
+	FVector3 Velocity{};
 	float Radius{};
 	float Mass{};
 
 
 	float Index{};
+
+	float Angle = 0.0f;           // 현재 회전 각도 (라디안)
+	float AngularVelocity = 0.0f; // 회전하는 속도 (각속도)
 
 	int NumHits{};
 public:
@@ -441,12 +444,18 @@ public:
 	{
 		SphereVertexBuffer = renderer.CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
 		NumVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+
+		CubeVertexBuffer = renderer.CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
+		NumVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
 	}
 
 	static void ReleaseBuffer(URenderer& renderer)
 	{
 		renderer.ReleaseVertexBuffer(SphereVertexBuffer);
 		SphereVertexBuffer = nullptr;
+
+		renderer.ReleaseVertexBuffer(CubeVertexBuffer);
+		CubeVertexBuffer = nullptr;
 	}
 
 	virtual ID3D11Buffer* GetVertexBuffer() override
@@ -454,7 +463,8 @@ public:
 		return SphereVertexBuffer;
 	}
 
-
+	FVector3 GetVelocity() const { return Velocity; }
+	void SetVelocity(FVector3 val) { Velocity = val; }
 
 	UBall()
 	{
@@ -463,8 +473,12 @@ public:
 		Mass = Radius * Radius;
 		Location.x = ((float)(rand() % 200 - 100)) * 0.01f;
 		Location.y = ((float)(rand() % 200 - 100)) * 0.01f;
+		float initialSpeed = 0.0005f;
+		float randomAngle = (float)(rand() % 360) * (3.141592f / 180.0f);
 
-		Velocity.x = ((float)(rand() % 100 - 50)) * 0.00001f;
+		Velocity.x = cosf(randomAngle) * initialSpeed;
+		Velocity.y = sinf(randomAngle) * initialSpeed;
+		Velocity.z = 0.0f;
 	}
 
 	~UBall()
@@ -482,43 +496,134 @@ public:
 		if (Location.x < -1.0f + Radius)
 		{
 			Location.x = -1.0f + Radius;
-			Velocity.x *= -1;
+			Velocity.x *= -0.5f;
 		}
 		else if (Location.x > 1.0f - Radius)
 		{
 			Location.x = 1.0f - Radius;
-			Velocity.x *= -1;
+			Velocity.x *= -0.5f;
 		}
 		if (Location.y < -1.0f + Radius)
 		{
 			Location.y = -1.0f + Radius;
 			Velocity.y *= -0.8f;
 		}
-		else if (Location.y > 1.0f - Radius)
-		{
-			Location.y = 1.0f - Radius;
-			Velocity.y *= -1;
-		}
 	}
 
+	void Render(URenderer& renderer) override
+	{
+		// 1. 메인 공(구체) 렌더링
+		FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
+		renderer.UpdateConstant(sphereTransform, this->Angle);
+		renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
+
+		// --- 시각적 장식(추진체) 추가 ---
+
+		// 2. 사각형의 크기를 키웁니다 (기존 0.4f -> 0.8f)
+		float thrusterScale = this->Radius * 0.8f;
+
+		// 3. 겹침 방지를 위해 약간의 여백(Padding)을 줍니다.
+		float padding = this->Radius * 0.1f; // 원 반경의 10%만큼 틈새를 만듦
+
+		// 4. 공 중심에서 날개가 떨어져 있을 거리 = 원의 반지름 + 여백 + 사각형 절반
+		float offsetDist = this->Radius + padding + (thrusterScale * 0.5f);
+
+		// 5. 현재 회전 각도(Angle)를 기준으로 로컬 Right 방향(양옆 방향) 계산
+		float rightX = cosf(this->Angle);
+		float rightY = sinf(this->Angle);
+
+		// 왼쪽 날개 렌더링 (중심에서 -Right 방향으로 이동)
+		FVector3 leftPos = {
+			this->Location.x - rightX * offsetDist,
+			this->Location.y - rightY * offsetDist,
+			thrusterScale
+		};
+		renderer.UpdateConstant(leftPos, this->Angle);
+		renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
+
+		// 오른쪽 날개 렌더링 (중심에서 +Right 방향으로 이동)
+		FVector3 rightPos = {
+			this->Location.x + rightX * offsetDist,
+			this->Location.y + rightY * offsetDist,
+			thrusterScale
+		};
+		renderer.UpdateConstant(rightPos, this->Angle);
+		renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
+	}
+
+	// 추진체 가동 함수
+// 추진체 가동 함수
+// 추진체 가동 함수 (순간적인 충격량 방식)
+// 추진체 가동 함수 (순간적인 충격량 방식)
+	void ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime)
+	{
+		float thrustPower = 0.0006f;
+		float torquePower = 0.001f;
+
+		FVector3 forwardDir(-sinf(Angle), cosf(Angle), 0.0f);
+		FVector3 rightDir(cosf(Angle), sinf(Angle), 0.0f);
+
+		if (bLeftThruster) // A키 (왼쪽 추진체 탭!)
+		{
+			FVector3 pushDir = forwardDir * 0.8f + rightDir * 0.5f;
+			Velocity = Velocity + (pushDir * thrustPower);
+
+			// [추가] 이미 오른쪽(도려는 방향)으로 기울어진 상태라면 회전력을 줄임
+			float modifier = 1.0f;
+			if (sinf(Angle) < 0.0f)
+			{
+				// 똑바로 서 있을 때(cos=1)는 100%, 눕거나 뒤집힐수록 최소 20%까지 힘을 제한
+				float currentCos = cosf(Angle);
+				modifier = currentCos < 0.2f ? 0.2f : currentCos;
+			}
+			AngularVelocity -= torquePower * modifier;
+		}
+
+		if (bRightThruster) // D키 (오른쪽 추진체 탭!)
+		{
+			FVector3 pushDir = forwardDir * 0.8f - rightDir * 0.5f;
+			Velocity = Velocity + (pushDir * thrustPower);
+
+			// [추가] 이미 왼쪽(도려는 방향)으로 기울어진 상태라면 회전력을 줄임
+			float modifier = 1.0f;
+			if (sinf(Angle) > 0.0f)
+			{
+				float currentCos = cosf(Angle);
+				modifier = currentCos < 0.2f ? 0.2f : currentCos;
+			}
+			AngularVelocity += torquePower * modifier;
+		}
+	}
 
 	void Update(float t) override
 	{
-		if (bApplyGravity)
-		{
-			Velocity.y += gravity * t;
-		}
+		// 1. 중력도 스케일에 맞춰 낮춤 (천천히 가속되며 떨어짐)
+		Velocity.y -= 0.000002f * t;
 
+		// 2. 우주의 마찰력 (조작하지 않을 때 미끄러지듯 감속)
+		Velocity.x *= 0.995f;
+		Velocity.y *= 0.995f;
+
+		// 회전 마찰력 
+		AngularVelocity *= 0.95f;
+
+		// [추가] 3. 오뚝이(Auto-Balance) 기능
+		// sinf(Angle)의 반대 방향으로 아주 미세한 힘을 가해 항상 0도(위쪽)를 향하도록 유도합니다.
+		float autoBalancePower = 0.000005f; // 복원력 강도 (너무 세면 덜렁거리니 미세하게 조절)
+		AngularVelocity += -sinf(Angle) * autoBalancePower * t;
+
+		// 4. 각도 업데이트
+		Angle += AngularVelocity * t;
 
 		ClampSpeed();
-
 		Move(t);
-
 	}
+
 	void UpdateRenderer(URenderer& renderer) override
 	{
-		FVector transform = { this->Location.x, this->Location.y, this->Radius };
-		renderer.UpdateConstant(transform);
+		FVector3 transform = { this->Location.x, this->Location.y, this->Radius };
+		// 이제 위치/크기 정보와 함께 Angle(회전각)도 전달합니다.
+		renderer.UpdateConstant(transform, this->Angle);
 	}
 	void HandleCollision(UPrimitive* other)override
 	{
@@ -569,15 +674,15 @@ public:
 			float impulseMagnitude = -(1 + elasticity) * velocityAlongNormal;
 			impulseMagnitude /= (1 / Mass) + (1 / otherBall->Mass);
 
-			FVector impulseThis = { -(impulseMagnitude / Mass) * normalX, -(impulseMagnitude / Mass) * normalY, 0.0f };
-			FVector impulseOther = { (impulseMagnitude / otherBall->Mass) * normalX, (impulseMagnitude / otherBall->Mass) * normalY, 0.0f };
+			FVector3 impulseThis = { -(impulseMagnitude / Mass) * normalX, -(impulseMagnitude / Mass) * normalY, 0.0f };
+			FVector3 impulseOther = { (impulseMagnitude / otherBall->Mass) * normalX, (impulseMagnitude / otherBall->Mass) * normalY, 0.0f };
 
 			D(impulseThis);
 			other->D(impulseOther);
 		}
 	}
 
-	virtual void D(const FVector& v)override
+	virtual void D(const FVector3& v)override
 	{
 		this->Velocity.x += v.x;
 		this->Velocity.y += v.y;
@@ -594,7 +699,7 @@ public:
 		}
 	}
 
-	void ApplyAttraction(const FVector& point, float strength)
+	void ApplyAttraction(const FVector3& point, float strength)
 	{
 		if (bApplyAttraction == false)
 		{
@@ -613,13 +718,15 @@ public:
 		float forceX = (deltaX / distance) * forceMagnitude;
 		float forceY = (deltaY / distance) * forceMagnitude;
 
-		FVector force = { forceX, forceY, 0.0f };
+		FVector3 force = { forceX, forceY, 0.0f };
 		D(force);
 	}
 };
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
+ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
+UINT UBall::NumVerticesCube = 0;
 int UBall::TotalNumBalls = 0;
 bool UBall::bApplyGravity = true;
 bool UBall::bApplyAttraction = false;
@@ -687,6 +794,11 @@ public:
 		delete[] PrimitiveList;
 	}
 
+	UPrimitive* GetPrimitive(int index)
+	{
+		if (index >= 0 && index < fillPrimitiveCount) return PrimitiveList[index];
+		return nullptr;
+	}
 
 	void SyncBallCountWithUI(int& targetBallNum)
 	{
@@ -704,7 +816,7 @@ public:
 		targetBallNum = UBall::GetTotalNumBalls();
 	}
 
-	void Update(const float deltaTime, const FVector& ExternalForcePos)
+	void Update(const float deltaTime, const FVector3& ExternalForcePos)
 	{
 		for (int i = 0; i < fillPrimitiveCount; ++i)
 		{
@@ -736,8 +848,7 @@ public:
 			UPrimitive* primitive = PrimitiveList[i];
 			if (primitive != nullptr)
 			{
-				primitive->UpdateRenderer(renderer);
-				renderer.RenderPrimitive(primitive->GetVertexBuffer(), sizeof(sphere_vertices) / sizeof(FVertexSimple));
+				primitive->Render(renderer); // 객체에게 렌더링을 위임!
 			}
 		}
 	}
@@ -806,7 +917,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}*/
 
 	ID3D11Buffer* vertexBufferTriangle = renderer.CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
-	ID3D11Buffer* vertexBufferCube = renderer.CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
 
 
 	/*for (UINT i = 0; i < numVerticesSphere; ++i)
@@ -827,8 +937,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	};
 
 	ETypePrimitive typePrimitive = EPT_Sphere;
-	FVector	offset(0.0f);
-	FVector velocity(0.0f);
+	FVector3	offset(0.0f);
+	FVector3 velocity(0.0f);
 
 	const float leftBorder = -1.0f;
 	const float rightBorder = 1.0f;
@@ -844,7 +954,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	const int targetFPS = 60;
 	const double targetFrameTime = 1000.0 / targetFPS;
-	int targetBallNum = 0;
+	int targetBallNum = 1;
 
 	LARGE_INTEGER frequency;
 	QueryPerformanceFrequency(&frequency);
@@ -853,11 +963,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	double elapsedTime = 0.0;
 
 	POINT mousePos;
-	FVector mouseWorldPos;
+	FVector3 mouseWorldPos;
 
 	FPrimitivesManager primitivesManager;
+
+	UINT numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+	for (UINT i = 0; i < numVerticesSphere; ++i)
+	{
+		// 로컬 Y좌표가 0.6 이상인 부분을 빨간색으로 변경 (구체 반경 기준에 맞춰 0.5~0.8 등 수치 조절)
+		if (sphere_vertices[i].y > 0.6f)
+		{
+			sphere_vertices[i].r = 1.0f; // Red
+			sphere_vertices[i].g = 0.0f;
+			sphere_vertices[i].b = 0.0f;
+		}
+	}
+
 	UBall::InitializeBuffer(renderer);
 
+	bool bPrevLeftPressed = false;
+	bool bPrevRightPressed = false;
 	// Main Loop 
 	while (bIsExit == false)
 	{
@@ -876,11 +1001,48 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				bIsExit = true;
 				break;
 			}
-
-			else if (msg.message == WM_KEYDOWN)
+			if (msg.message == WM_KEYDOWN)
 			{
+				if (msg.wParam == 'Q') bIsExit = true;
 			}
 		}
+			// 키가 눌려있다면 추진체 가동!
+		UBall* targetBall = static_cast<UBall*>(primitivesManager.GetPrimitive(0));
+		if (targetBall != nullptr)
+		{
+			// 1. 현재 프레임의 키 상태 확인
+			bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
+			bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
+
+			// 2. 핵심 로직: 이번 프레임에 막 눌렸는가? (현재 눌림 && 이전엔 안 눌림)
+			bool bLeftTap = bCurrentLeftPressed && !bPrevLeftPressed;
+			bool bRightTap = bCurrentRightPressed && !bPrevRightPressed;
+
+			// 3. 꾹 누르는 게 아니라, 새로 눌렸을 때(Tap)만 추진체 가동!
+			if (bLeftTap || bRightTap)
+			{
+				targetBall->ApplyThrust(bLeftTap, bRightTap, elapsedTime);
+			}
+
+			// 4. 다음 프레임을 위해 현재 상태를 이전 상태로 저장
+			bPrevLeftPressed = bCurrentLeftPressed;
+			bPrevRightPressed = bCurrentRightPressed;
+		}
+
+			//if (targetBall && (msg.wParam == 'A' || msg.wParam == 'D'))
+			//{
+			//	float angle = 0.10f; // 회전 속도 조절
+			//	if (msg.wParam == 'D') angle = -angle;
+
+			//	float cosA = cosf(angle);
+			//	float sinA = sinf(angle);
+
+			//	FVector3 currentVel = targetBall->GetVelocity(); // UBall에 GetVelocity() 함수 추가 필요
+			//	float newX = currentVel.x * cosA - currentVel.y * sinA;
+			//	float newY = currentVel.x * sinA + currentVel.y * cosA;
+
+			//	targetBall->SetVelocity(FVector3(newX, newY, 0.0f)); // UBall에 SetVelocity() 함수 추가 필요
+			//}
 
 		renderer.Prepare();
 		renderer.PrepareShader();
@@ -896,28 +1058,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		primitivesManager.Render(renderer);
 
 
-		ImGui_ImplDX11_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
+		//ImGui_ImplDX11_NewFrame();
+		//ImGui_ImplWin32_NewFrame();
+		//ImGui::NewFrame();
 
-		ImGui::Begin("Jungle Property Window");
+		//ImGui::Begin("Jungle Property Window");
 
-		ImGui::InputInt("Number of Balls", &targetBallNum);
-		targetBallNum = targetBallNum < 0 ? 0 : targetBallNum;
+		//ImGui::InputInt("Number of Balls", &targetBallNum);
+		//targetBallNum = targetBallNum < 0 ? 0 : targetBallNum;
 
-		ImGui::Checkbox("Gravity", &UBall::bApplyGravity);
-		ImGui::Checkbox("Attraction", &UBall::bApplyAttraction);
+		//ImGui::Checkbox("Gravity", &UBall::bApplyGravity);
+		//ImGui::Checkbox("Attraction", &UBall::bApplyAttraction);
 
-		if (ImGui::Button("Quit this app"))
-		{
-			PostMessage(hWnd, WM_QUIT, 0, 0);
-		}
+		//if (ImGui::Button("Quit this app"))
+		//{
+		//	PostMessage(hWnd, WM_QUIT, 0, 0);
+		//}
 
-		ImGui::End();
+		//ImGui::End();
 
 
-		ImGui::Render();
-		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		//ImGui::Render();
+		//ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 		renderer.SwapBuffer();
 
@@ -935,8 +1097,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ImGui::DestroyContext();
 
 	renderer.ReleaseVertexBuffer(vertexBufferTriangle);
-	renderer.ReleaseVertexBuffer(vertexBufferCube);
-	
+
 	UBall::ReleaseBuffer(renderer);
 
 	renderer.ReleaseConstantBuffer();
