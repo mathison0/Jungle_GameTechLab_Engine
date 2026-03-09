@@ -414,6 +414,7 @@ class UBall : public UPrimitive
 {
 private:
 	static constexpr float MaxSpeed = 0.01f;
+	static constexpr float MaxSpeedBothThrusters = 0.0015f; // 둘 다 누를 때 더 낮은 상한
 	static constexpr float MaxAttractionForce = 0.001f;
 
 	static ID3D11Buffer* SphereVertexBuffer;
@@ -593,6 +594,15 @@ public:
 			}
 			AngularVelocity += torquePower * modifier;
 		}
+
+		if (bLeftThruster && bRightThruster)
+		{
+			ClampSpeed2(MaxSpeedBothThrusters);
+		}
+		else
+		{
+			ClampSpeed2(MaxSpeed);
+		}
 	}
 
 	void Update(float t) override
@@ -609,7 +619,7 @@ public:
 
 		// [추가] 3. 오뚝이(Auto-Balance) 기능
 		// sinf(Angle)의 반대 방향으로 아주 미세한 힘을 가해 항상 0도(위쪽)를 향하도록 유도합니다.
-		float autoBalancePower = 0.000005f; // 복원력 강도 (너무 세면 덜렁거리니 미세하게 조절)
+		float autoBalancePower = 0.000001f; // 복원력 강도 (너무 세면 덜렁거리니 미세하게 조절)
 		AngularVelocity += -sinf(Angle) * autoBalancePower * t;
 
 		// 4. 각도 업데이트
@@ -696,6 +706,17 @@ public:
 			float speed = sqrtf(speedSquared);
 			Velocity.x = (Velocity.x / speed) * MaxSpeed;
 			Velocity.y = (Velocity.y / speed) * MaxSpeed;
+		}
+	}
+
+	void ClampSpeed2(float maxSpeed)
+	{
+		float speedSquared = Velocity.x * Velocity.x + Velocity.y * Velocity.y;
+		if (speedSquared > maxSpeed * maxSpeed)
+		{
+			float speed = sqrtf(speedSquared);
+			Velocity.x = (Velocity.x / speed) * maxSpeed;
+			Velocity.y = (Velocity.y / speed) * maxSpeed;
 		}
 	}
 
