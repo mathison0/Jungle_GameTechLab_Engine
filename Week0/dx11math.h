@@ -12,18 +12,20 @@ public:
 		return FVector3(-x, -y, -z);
 	}
 
-	//ì‚°ìˆ  ì—°ì‚°
+	//»ê¼ú ¿¬»ê
 	FVector3 operator+(const FVector3& other) const { return FVector3(x + other.x, y + other.y, z + other.z); }
 	FVector3 operator-(const FVector3& other) const { return FVector3(x - other.x, y - other.y, z - other.z); }
 	FVector3 operator*(float scalar) const { return FVector3(x * scalar, y * scalar, z * scalar); }
 	FVector3 operator/(float scalar) const
 	{
-		//divided by zero ë°©ì§€
+		//divided by zero ¹æÁö
 		float inv = 1.0f / scalar;
 		return FVector3(x * inv, y * inv, z * inv);
 	}
 
-	//ëŒ€ì… ì—°ì‚°
+	//´ëÀÔ ¿¬»ê
+	FVector3& operator=(const FVector3& other) { x = other.x; y = other.y; z = other.z; return *this; }
+
 	FVector3& operator+=(const FVector3& other) { x += other.x; y += other.y; z += other.z; return *this; }
 	FVector3& operator-=(const FVector3& other) { x -= other.x; y -= other.y; z -= other.z; return *this; }
 	FVector3& operator*=(float scalar) { x *= scalar; y *= scalar; z *= scalar; return *this; }
@@ -34,18 +36,18 @@ public:
 		return *this;
 	}
 
-	//ë¹„êµ ì—°ì‚°
+	//ºñ±³ ¿¬»ê
 	bool operator==(const FVector3& other) const { return (x == other.x && y == other.y && z == other.z); }
 	bool operator!=(const FVector3& other) const { return !(*this == other); }
 
-	//ë‚´ì 
+	//³»Àû
 	float Dot(const FVector3& other) const
 	{
 		return (x * other.x) + (y * other.y) + (z * other.z);
 	}
 	static float Dot(const FVector3& v1, const FVector3& v2) { return v1.Dot(v2); }
 
-	//ì™¸ì 
+	//¿ÜÀû
 	FVector3 Cross(const FVector3& other) const
 	{
 		return FVector3(
@@ -56,11 +58,11 @@ public:
 	}
 	static FVector3 Cross(const FVector3& v1, const FVector3& v2) { return v1.Cross(v2); }
 
-	//ë²¡í„°ì˜ í¬ê¸°
+	//º¤ÅÍÀÇ Å©±â
 	float LengthSquared() const { return (x * x) + (y * y) + (z * z); }
 	float Length() const { return std::sqrt(LengthSquared()); }
 
-	//ì •ê·œí™”(ë²¡í„°ì˜ í¬ê¸°ë§Œ ë°˜ì˜)
+	//Á¤±ÔÈ­(º¤ÅÍÀÇ Å©±â¸¸ ¹İ¿µ)
 	void Normalize()
 	{
 		float lenSq = LengthSquared();
@@ -71,7 +73,7 @@ public:
 		}
 	}
 
-	//ì •ê·œí™”ëœ ë²¡í„° ë°˜í™˜
+	//Á¤±ÔÈ­µÈ º¤ÅÍ ¹İÈ¯
 	FVector3 GetNormalized() const
 	{
 		FVector3 result = *this;
@@ -83,7 +85,7 @@ public:
 	static float DegToRad(float degrees) { return degrees * (PI / 180.0f); }
 	static float RadToDeg(float radians) { return radians * (180.0f / PI); }
 
-	//x,y,zì¶• íšŒì „
+	//x,y,zÃà È¸Àü
 	FVector3 RotateX(float angleRad) const
 	{
 		float c = std::cos(angleRad);
@@ -103,7 +105,7 @@ public:
 		return FVector3((x * c) - (y * s), (x * s) + (y * c), z);
 	}
 
-	//ì„ì˜ì˜ ì¶•(axis) íšŒì „
+	//ÀÓÀÇÀÇ Ãà(axis) È¸Àü
 	FVector3 RotateAroundAxis(const FVector3& axis, float angleRad) const
 	{
 		FVector3 k = axis.GetNormalized();
@@ -116,7 +118,7 @@ public:
 		return (*this * c) + (cross_kv * s) + (k * dot_kv * (1.0f - c));
 	}
 
-	//ë‘ ì  ì‚¬ì´ì˜ ê±°ë¦¬(FVector3ë¥¼ pointì˜ ì¢Œí‘œë¡œ ì‚¬ìš©í•  ë•Œ homogeneous coordinate ë³€í™˜ ì‹œ ì£¼ì˜)
+	//µÎ Á¡ »çÀÌÀÇ °Å¸®(FVector3¸¦ pointÀÇ ÁÂÇ¥·Î »ç¿ëÇÒ ¶§ homogeneous coordinate º¯È¯ ½Ã ÁÖÀÇ)
 	float Distance(const FVector3& other) const
 	{
 		return (*this - other).Length();
