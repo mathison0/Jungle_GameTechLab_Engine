@@ -61,30 +61,6 @@ void UBall::Move(float t)
 	}
 }
 
-void UBall::Update(float t)
-{
-	// 1. 중력도 스케일에 맞춰 낮춤 (천천히 가속되며 떨어짐)
-	Velocity.y -= 0.000002f * t;
-
-	// 2. 우주의 마찰력 (조작하지 않을 때 미끄러지듯 감속)
-	Velocity.x *= 0.995f;
-	Velocity.y *= 0.995f;
-
-	// 회전 마찰력 
-	AngularVelocity *= 0.95f;
-
-	// [추가] 3. 오뚝이(Auto-Balance) 기능
-	// sinf(Angle)의 반대 방향으로 아주 미세한 힘을 가해 항상 0도(위쪽)를 향하도록 유도합니다.
-	float autoBalancePower = 0.000001f; // 복원력 강도 (너무 세면 덜렁거리니 미세하게 조절)
-	AngularVelocity += -sinf(Angle) * autoBalancePower * t;
-
-	// 4. 각도 업데이트
-	Angle += AngularVelocity * t;
-
-	ClampSpeed();
-	Move(t);
-}
-
 void UBall::Render(URenderer& renderer)
 {
 	// 1. 메인 공(구체) 렌더링
@@ -126,53 +102,80 @@ void UBall::Render(URenderer& renderer)
 	renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
 }
 
+void UBall::ApplyJetpackForce(float thrustAmount)
+{
+	FVector3 upDir(-sinf(Angle), cosf(Angle), 0.0f);
+	Velocity.x += upDir.x * thrustAmount;
+	Velocity.y += upDir.y * thrustAmount;
+}
+
+void UBall::LimitVelocities(float maxLinearSpeed)
+{
+	float speedSquared = Velocity.x * Velocity.x + Velocity.y * Velocity.y;
+	if (speedSquared > maxLinearSpeed * maxLinearSpeed)
+	{
+		float speed = sqrtf(speedSquared);
+		Velocity.x = (Velocity.x / speed) * maxLinearSpeed;
+		Velocity.y = (Velocity.y / speed) * maxLinearSpeed;
+	}
+
+	if (fabsf(AngularVelocity) > MaxAngularSpeed)
+	{
+		AngularVelocity = (AngularVelocity > 0.0f ? 1.0f : -1.0f) * MaxAngularSpeed;
+	}
+}
+
 void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime)
 {
-	float thrustPower = 0.0001f;
-	float torquePower = 0.0001f;
+	PendingTorque = 0.0f;
 
-	FVector3 forwardDir(-sinf(Angle), cosf(Angle), 0.0f);
-	FVector3 rightDir(cosf(Angle), sinf(Angle), 0.0f);
-
-	if (bLeftThruster) // A키 (왼쪽 추진체 탭!)
+	if (!bLeftThruster && !bRightThruster)
 	{
-		FVector3 pushDir = forwardDir * 0.8f + rightDir * 0.5f;
-		Velocity = Velocity + (pushDir * thrustPower);
-
-		// [추가] 이미 오른쪽(도려는 방향)으로 기울어진 상태라면 회전력을 줄임
-		float modifier = 1.0f;
-		if (sinf(Angle) < 0.0f)
-		{
-			// 똑바로 서 있을 때(cos=1)는 100%, 눕거나 뒤집힐수록 최소 20%까지 힘을 제한
-			float currentCos = cosf(Angle);
-			modifier = currentCos < 0.2f ? 0.2f : currentCos;
-		}
-		AngularVelocity -= torquePower * modifier;
+		return;
 	}
 
-	if (bRightThruster) // D키 (오른쪽 추진체 탭!)
-	{
-		FVector3 pushDir = forwardDir * 0.8f - rightDir * 0.5f;
-		Velocity = Velocity + (pushDir * thrustPower);
+	float thrustPerJetpack = (bLeftThruster && bRightThruster)
+		? BothJetpackForce
+		: SoleJetpackForce;
 
-		// [추가] 이미 왼쪽(도려는 방향)으로 기울어진 상태라면 회전력을 줄임
-		float modifier = 1.0f;
-		if (sinf(Angle) > 0.0f)
-		{
-			float currentCos = cosf(Angle);
-			modifier = currentCos < 0.2f ? 0.2f : currentCos;
-		}
-		AngularVelocity += torquePower * modifier;
+	float currentMaxLinearSpeed = (bLeftThruster && bRightThruster)
+		? MaxBothJetpackSpeed
+		: MaxSoleJetpackSpeed;
+
+	if (bLeftThruster)
+	{
+		ApplyJetpackForce(thrustPerJetpack);
+		PendingTorque -= JetpackTorqueAmount;
 	}
 
-	if (bLeftThruster && bRightThruster)
+	if (bRightThruster)
 	{
-		ClampSpeed2(MaxSpeedBothThrusters);
+		ApplyJetpackForce(thrustPerJetpack);
+		PendingTorque += JetpackTorqueAmount;
 	}
-	else
+
+	AngularVelocity += PendingTorque;
+	LimitVelocities(currentMaxLinearSpeed);
+}
+
+void UBall::Update(float t)
+{
+	float dt = t * 0.001f;
+
+	if (bApplyGravity)
 	{
-		ClampSpeed2(MaxSpeed);
+		Velocity.y -= GravityForce * t;
 	}
+
+	Velocity.x *= LinearDamping;
+	Velocity.y *= LinearDamping;
+
+	AngularVelocity *= AngularDamping;
+
+	Angle += AngularVelocity * t;
+
+	LimitVelocities(MaxLinearSpeed);
+	Move(t);
 }
 
 void UBall::UpdateRenderer(URenderer& renderer)
@@ -245,27 +248,27 @@ void UBall::D(const FVector3& v)
 	this->Velocity.y += v.y;
 }
 
-void UBall::ClampSpeed()
-{
-	float speedSquared = Velocity.x * Velocity.x + Velocity.y * Velocity.y;
-	if (speedSquared > MaxSpeed * MaxSpeed)
-	{
-		float speed = sqrtf(speedSquared);
-		Velocity.x = (Velocity.x / speed) * MaxSpeed;
-		Velocity.y = (Velocity.y / speed) * MaxSpeed;
-	}
-}
-
-void UBall::ClampSpeed2(float maxSpeed)
-{
-	float speedSquared = Velocity.x * Velocity.x + Velocity.y * Velocity.y;
-	if (speedSquared > maxSpeed * maxSpeed)
-	{
-		float speed = sqrtf(speedSquared);
-		Velocity.x = (Velocity.x / speed) * maxSpeed;
-		Velocity.y = (Velocity.y / speed) * maxSpeed;
-	}
-}
+//void UBall::ClampSpeed()
+//{
+//	float speedSquared = Velocity.x * Velocity.x + Velocity.y * Velocity.y;
+//	if (speedSquared > MaxSpeed * MaxSpeed)
+//	{
+//		float speed = sqrtf(speedSquared);
+//		Velocity.x = (Velocity.x / speed) * MaxSpeed;
+//		Velocity.y = (Velocity.y / speed) * MaxSpeed;
+//	}
+//}
+//
+//void UBall::ClampSpeed2(float maxSpeed)
+//{
+//	float speedSquared = Velocity.x * Velocity.x + Velocity.y * Velocity.y;
+//	if (speedSquared > maxSpeed * maxSpeed)
+//	{
+//		float speed = sqrtf(speedSquared);
+//		Velocity.x = (Velocity.x / speed) * maxSpeed;
+//		Velocity.y = (Velocity.y / speed) * maxSpeed;
+//	}
+//}
 
 void UBall::ApplyAttraction(const FVector3& point, float strength)
 {
