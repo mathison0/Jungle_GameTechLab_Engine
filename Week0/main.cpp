@@ -557,8 +557,8 @@ public:
 // 추진체 가동 함수 (순간적인 충격량 방식)
 	void ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime)
 	{
-		float thrustPower = 0.0006f;
-		float torquePower = 0.001f;
+		float thrustPower = 0.0001f;
+		float torquePower = 0.0001f;
 
 		FVector3 forwardDir(-sinf(Angle), cosf(Angle), 0.0f);
 		FVector3 rightDir(cosf(Angle), sinf(Angle), 0.0f);
@@ -1014,19 +1014,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
 			bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
 
-			// 2. 핵심 로직: 이번 프레임에 막 눌렸는가? (현재 눌림 && 이전엔 안 눌림)
-			bool bLeftTap = bCurrentLeftPressed && !bPrevLeftPressed;
-			bool bRightTap = bCurrentRightPressed && !bPrevRightPressed;
-
 			// 3. 꾹 누르는 게 아니라, 새로 눌렸을 때(Tap)만 추진체 가동!
-			if (bLeftTap || bRightTap)
+			if (bCurrentLeftPressed || bCurrentRightPressed)
 			{
-				targetBall->ApplyThrust(bLeftTap, bRightTap, elapsedTime);
+				targetBall->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
 			}
-
-			// 4. 다음 프레임을 위해 현재 상태를 이전 상태로 저장
-			bPrevLeftPressed = bCurrentLeftPressed;
-			bPrevRightPressed = bCurrentRightPressed;
 		}
 
 			//if (targetBall && (msg.wParam == 'A' || msg.wParam == 'D'))
