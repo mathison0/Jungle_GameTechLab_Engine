@@ -19,6 +19,7 @@ struct FVector3;
 #include "URenderer.h"
 #include "UBall.h"
 #include "PrimitivesManager.h"
+#include "planet.h"
 
 
 struct FVector
@@ -173,6 +174,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	UBall::InitializeBuffer(renderer);
 
+	Planet TestPlanet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f);
+	
+
 	bool bPrevLeftPressed = false;
 	bool bPrevRightPressed = false;
 	// Main Loop 
@@ -198,6 +202,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				if (msg.wParam == 'Q') bIsExit = true;
 			}
 		}
+
 			// 키가 눌려있다면 추진체 가동!
 		UBall* targetBall = static_cast<UBall*>(primitivesManager.GetPrimitive(0));
 		if (targetBall != nullptr)
@@ -237,10 +242,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
 		mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
 
+		
 		primitivesManager.SyncBallCountWithUI(targetBallNum);
 		primitivesManager.Update(elapsedTime, mouseWorldPos);
+
+		TestPlanet.Update(elapsedTime);
+
+		if (targetBall != nullptr)
+		{
+			TestPlanet.HandleCollision(targetBall);
+		}
+
 		primitivesManager.Render(renderer);
 
+		if (TestPlanet.bIsActive)
+		{
+			TestPlanet.Render(renderer);
+		}
 
 		//ImGui_ImplDX11_NewFrame();
 		//ImGui_ImplWin32_NewFrame();

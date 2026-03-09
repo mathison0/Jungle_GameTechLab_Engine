@@ -1,20 +1,24 @@
 #pragma once
-#include "dx11math.h"
+#include "UBall.h"
 
-class UBall;
-
-class Planet
+class Planet : public UBall
 {
 public:
-	FVector3 Location;
-	float radius;
-	float mass;
+	bool bIsActive = true; 
+	const float ExplosionForce = 0.005f; // 터지면서 튕기는 힘
+	FVector3 OriginalLocation; // 초기 위치
+	FVector3 OriginalVelocity; // 초기 속도
+
+	// 리스폰 타이머 관련 변수들
+	float RespawnTimer = 0.0f;
+	const float RespawnDelay = 3000.0f;
 
 public:
-	Planet(FVector3 L, float r);
+	Planet(FVector3 startPos, FVector3 startVel, float r);
 
-	bool Collision(UBall* other); // 충돌 판정
-	void Boom(UBall* other); // 터지며 튕겨내는 함수
+	void HandleCollision(UPrimitive* other)override;
+	void Update(float t) override;
 
-	// 충돌의 세기를 조정할 수 있는 변수 추가
+	void Explode();
+	void Respawn();
 };
