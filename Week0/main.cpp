@@ -111,6 +111,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	LARGE_INTEGER startTime, endTime;
 	double elapsedTime = 0.0;
+	float deltaTime = 0.0f;
 
 	POINT mousePos;
 	FVector3 mouseWorldPos;
@@ -155,6 +156,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
+		deltaTime = (float)elapsedTime / 1000.0f;
+
 		// 플레이어 조작
 		if (player != nullptr)
 		{
@@ -163,7 +166,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			if (bCurrentLeftPressed || bCurrentRightPressed)
 			{
-				player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
+				player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, deltaTime);
 			}
 		}
 
@@ -176,20 +179,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
 		mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
 
-		primitivesManager.Update(elapsedTime, mouseWorldPos);
+		primitivesManager.Update(deltaTime, mouseWorldPos);
 
-		float playerY = player? player->GetLocation().y : 0.f;
-		float deltaTime = (float)elapsedTime / 1000.0f;
-		camera.Update(deltaTime, playerY);
-
+		camera.Update(deltaTime, player);
 		renderer.UpdateConstantPerFrame(camera.GetCurrentCameraY());
 
-		testPlanet->Update(elapsedTime);
+		testPlanet->Update(deltaTime);
 
 		if (player != nullptr)
 		{
 			testPlanet->HandleCollision(player);
 		}
+
+		
+
 
 		primitivesManager.Render(renderer);
 

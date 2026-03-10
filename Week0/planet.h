@@ -11,7 +11,7 @@ public:
 
 	// 리스폰 타이머 관련 변수들
 	float RespawnTimer = 0.0f;
-	const float RespawnDelay = 3000.0f;
+	const float RespawnDelay = 3.0f;
 
 public:
 	Planet(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName = "");
@@ -21,4 +21,4 @@ public:
 	void Explode();
 	void Respawn();
 	void Render(URenderer& renderer) override;
-};
+}; 

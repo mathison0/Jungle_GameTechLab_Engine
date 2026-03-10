@@ -231,8 +231,6 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 
 void UBall::Update(float t)
 {
-	float dt = t * 0.001f;
-
 	if (bApplyGravity)
 	{
 		Velocity.y -= GravityForce * t;
@@ -243,7 +241,7 @@ void UBall::Update(float t)
 
 	AngularVelocity *= AngularDamping;
 
-	float autoBalancePower = 0.000001f;
+	float autoBalancePower = 0.001f;
 	AngularVelocity += -sinf(Angle) * autoBalancePower * t;
 
 	Angle += AngularVelocity * t;
@@ -260,7 +258,7 @@ void UBall::UpdateRenderer(URenderer& renderer)
 
 void UBall::HandleCollision(UPrimitive* other)
 {
-	UBall* otherBall = static_cast<UBall*>(other);
+	/*UBall* otherBall = static_cast<UBall*>(other);
 
 	float deltaX = otherBall->Location.x - Location.x;
 	float deltaY = otherBall->Location.y - Location.y;
@@ -312,7 +310,7 @@ void UBall::HandleCollision(UPrimitive* other)
 
 		D(impulseThis);
 		other->D(impulseOther);
-	}
+	}*/
 }
 
 
