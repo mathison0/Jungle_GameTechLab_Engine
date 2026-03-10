@@ -89,7 +89,7 @@ public:
 inline std::vector<FVertexSimple> GenerateCircleVertices(int num)
 {
 	std::vector<FVertexSimple> vertices;
-	const float PI = 3.14159265359f;
+	const float PI = FVector3::PI;
 
 	// 중심점 정점 (기본 색, UV는 중심 0.5, 0.5)
 	FVertexSimple center = { 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.5f, 0.5f };
