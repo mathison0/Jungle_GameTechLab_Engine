@@ -6,7 +6,7 @@ class Planet : public UBall
 {
 public:
 	bool bIsActive = true; 
-	const float ExplosionForce = 0.005f; // 터지면서 튕기는 힘
+	const float ExplosionForce = 0.002f; // 터지면서 튕기는 힘
 	FVector3 OriginalLocation; // 초기 위치
 	FVector3 OriginalVelocity; // 초기 속도
 

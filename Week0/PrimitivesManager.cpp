@@ -42,18 +42,14 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 	}
 
 	// 충돌 체크
-	/*
-	* for (size_t i = 0; i < objects.size(); ++i)
+	for (size_t i = 1; i < objects.size(); ++i)
 	{
-		for (size_t j = i + 1; j < objects.size(); ++j)
-		{
-			if (objects[i] != nullptr && objects[j] != nullptr)
-			{
-				objects[i]->HandleCollision(objects[j]);
-			}
-		}
+		objects[i]->HandleCollision(objects[0]);
 	}
-	*/
+	for (size_t i = 2; i < objects.size(); ++i)
+	{
+		objects[i]->HandleCollision(objects[1]);
+	}
 }
 
 void FPrimitivesManager::Render(URenderer& renderer)

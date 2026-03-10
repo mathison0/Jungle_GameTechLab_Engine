@@ -74,7 +74,7 @@ UBall::~UBall()
 
 void UBall::InitializeBuffer(URenderer& renderer)
 {
-	std::vector<FVertexSimple> circleVertices = GenerateCircleVertices(36);
+	std::vector<FVertexSimple> circleVertices = GenerateCircleVertices(72);
 
 	SphereVertexBuffer = renderer.CreateVertexBuffer(circleVertices.data(), circleVertices.size() * sizeof(FVertexSimple));
 	NumVerticesSphere = circleVertices.size();
