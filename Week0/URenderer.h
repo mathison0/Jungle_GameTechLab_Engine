@@ -27,6 +27,10 @@ public:
 	ID3D11DeviceContext* DeviceContext = nullptr; // GPU 명령 실행을 담당하는 컨텍스트
 	IDXGISwapChain* SwapChain = nullptr; // 프레임 버퍼를 교체하는 데 사용되는 스왑 체인
 
+	//텍스처 맵핑
+	std::map<std::string, ID3D11ShaderResourceView*> TextureSRVs;
+	ID3D11SamplerState* SamplerState = nullptr;
+
 	// 렌더링에 필요한 리소스 및 상태를 관리하기 위한 변수들
 	ID3D11Texture2D* FrameBuffer = nullptr; // 화면 출력용 텍스쳐
 	ID3D11RenderTargetView* FrameBufferRTV = nullptr; // 텍스처를 렌더 타겟으로 사용하는 뷰
@@ -70,4 +74,67 @@ public:
 	void CreateConstantBuffer();
 	void ReleaseConstantBuffer();
 	void UpdateConstant(FVector3 Offset, float Angle);
+
+	void ReleaseTextures();
+	bool LoadTexture(const std::string& name, const wchar_t* filename);
+	void CreateSampler();
+	ID3D11ShaderResourceView* GetTexture(const std::string& name);
 };
+
+inline bool URenderer::LoadTexture(const std::string& name, const wchar_t* filename)
+{
+	if (TextureSRVs.find(name) != TextureSRVs.end())
+	{
+		return true;
+	}
+
+	ID3D11ShaderResourceView* srv = nullptr;
+	HRESULT hr = CreateWICTextureFromFile(
+		Device, DeviceContext, filename, nullptr,
+		&srv
+	);
+
+	if (FAILED(hr))
+	{
+		std::string errorMsg = "Failed to load texture: ";
+		// wchar_t* → string 변환
+		std::wstring wFilename(filename);
+		errorMsg += std::string(wFilename.begin(), wFilename.end());
+		errorMsg += "\nHRESULT: 0x" + std::to_string(hr);
+		
+		MessageBoxA(nullptr, errorMsg.c_str(), "Texture Load Error", MB_OK | MB_ICONERROR);
+		return false;
+	}
+
+	TextureSRVs[name] = srv;
+	return true;
+}
+
+inline void URenderer::CreateSampler()
+{
+	if (SamplerState)
+	{
+		return;
+	}
+
+	D3D11_SAMPLER_DESC sampDesc = {};
+	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc.MinLOD = 0;
+	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	Device->CreateSamplerState(&sampDesc, &SamplerState);
+}
+
+inline ID3D11ShaderResourceView* URenderer::GetTexture(const std::string& name)
+{
+	auto it = TextureSRVs.find(name);
+	if (it != TextureSRVs.end())
+	{
+		return it->second;
+	}
+	return nullptr;
+}

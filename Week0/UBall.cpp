@@ -1,5 +1,56 @@
 #include "UBall.h"
-#include "Sphere.h"
+#include "Type.h"
+
+static FVertexSimple cube_vertices[] =
+{
+	// Front face (Z+) - UV (0, 0) 추가
+	{ -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+
+	// Back face (Z-)
+	{ -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+
+	// Left face (X-)
+	{ -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+
+	// Right face (X+)
+	{  0.5f, -0.5f, -0.5f,  1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f,  0.5f,  0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f },
+	{  0.5f,  0.5f, -0.5f,  0.5f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f },
+	{  0.5f,  0.5f, -0.5f,  0.5f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f,  0.5f,  0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f },
+	{  0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f },
+
+	// Top face (Y+)
+	{ -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.5f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f,  0.5f,  0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f,  0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f,  0.5f,  0.5f,  0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f,  0.5f,  0.5f,  0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f,  0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+
+	// Bottom face (Y-)
+	{ -0.5f, -0.5f, -0.5f,  0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f },
+	{ -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+	{  0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f },
+};
 
 UBall::UBall()
 {
@@ -23,8 +74,13 @@ UBall::~UBall()
 
 void UBall::InitializeBuffer(URenderer& renderer)
 {
-	SphereVertexBuffer = renderer.CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
-	NumVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+	std::vector<FVertexSimple> circleVertices = GenerateCircleVertices(36);
+
+	SphereVertexBuffer = renderer.CreateVertexBuffer(circleVertices.data(), circleVertices.size() * sizeof(FVertexSimple));
+	NumVerticesSphere = circleVertices.size();
+
+	//SphereVertexBuffer = renderer.CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
+	//NumVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
 
 	CubeVertexBuffer = renderer.CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
 	NumVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
@@ -63,12 +119,27 @@ void UBall::Move(float t)
 
 void UBall::Render(URenderer& renderer)
 {
+	// 텍스처 설정 (텍스처가 지정되어 있으면)
+	if (!TextureName.empty())
+	{
+		ID3D11ShaderResourceView* texture = renderer.GetTexture(TextureName);
+		if (texture)
+		{
+			renderer.DeviceContext->PSSetShaderResources(0, 1, &texture);
+			renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
+		}
+	}
+
 	// 1. 메인 공(구체) 렌더링
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
 	renderer.UpdateConstant(sphereTransform, this->Angle);
 	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
 
-	// --- 시각적 장식(추진체) 추가 ---
+	// 텍스처 언바인드 (추진체 렌더링에는 영향 안 가도록)
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	renderer.DeviceContext->PSSetShaderResources(0, 1, &nullSRV);
+
+	// --- 시각적 장식(추진체) 추가 , 아래 부분은 플레이어를 파생시킬 때 따라가면 됩니다.---
 
 	// 2. 사각형의 크기를 키웁니다 (기존 0.4f -> 0.8f)
 	float thrusterScale = this->Radius * 0.8f;

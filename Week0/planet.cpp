@@ -1,7 +1,8 @@
 #include "planet.h"
 
-Planet::Planet(FVector3 startPos, FVector3 startVel, float r)
+Planet::Planet(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName)
 {
+	TextureName = textureName;
 	UBall::TotalNumBalls--;
 
 	this->Location = startPos;
@@ -71,4 +72,29 @@ void Planet::Respawn()
 	bIsActive = true;
 	this->Location = OriginalLocation;
 	this->Velocity = OriginalVelocity;
+}
+
+void Planet::Render(URenderer& renderer)
+{
+	if (!bIsActive) return;
+
+	// 텍스처 설정 (부모 클래스 로직 사용)
+	if (!TextureName.empty())
+	{
+		ID3D11ShaderResourceView* texture = renderer.GetTexture(TextureName);
+		if (texture)
+		{
+			renderer.DeviceContext->PSSetShaderResources(0, 1, &texture);
+			renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
+		}
+	}
+
+	// 행성(구체)만 렌더링 - 추진체 제외
+	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
+	renderer.UpdateConstant(sphereTransform, 0.0f);
+	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
+
+	// 텍스처 언바인드
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	renderer.DeviceContext->PSSetShaderResources(0, 1, &nullSRV);
 }

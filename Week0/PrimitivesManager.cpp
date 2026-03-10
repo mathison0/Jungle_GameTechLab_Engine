@@ -1,97 +1,54 @@
 #include "PrimitivesManager.h"
 
-
-void FPrimitivesManager::addElement(UPrimitive* element)
-{
-	if (UBall::GetTotalNumBalls() >= capacity)
-	{
-		// Resize
-		int newCapacity = capacity * 2;
-		UPrimitive** newList = new UPrimitive * [newCapacity];
-		memcpy(newList, PrimitiveList, fillPrimitiveCount * sizeof(UPrimitive*));
-
-		delete[] PrimitiveList;
-		PrimitiveList = newList;
-		capacity = newCapacity;
-	}
-
-	PrimitiveList[fillPrimitiveCount] = element;
-	fillPrimitiveCount++;
-}
-
-void FPrimitivesManager::RemoveRandomElement()
-{
-	if (fillPrimitiveCount == 0)
-	{
-		return;
-	}
-
-	int indexToRemove = rand() % fillPrimitiveCount;
-	delete PrimitiveList[indexToRemove];
-
-	if (indexToRemove != fillPrimitiveCount - 1)
-	{
-		PrimitiveList[indexToRemove] = PrimitiveList[fillPrimitiveCount - 1];
-	}
-
-	fillPrimitiveCount--;
-	PrimitiveList[fillPrimitiveCount] = nullptr;
-}
-
 FPrimitivesManager::~FPrimitivesManager()
 {
-	for (int i = 0; i < fillPrimitiveCount; ++i)
+	for (UPrimitive* obj : objects)
 	{
-		if (PrimitiveList[i] != nullptr)
+		if (obj != nullptr)
 		{
-			delete PrimitiveList[i];
+			delete obj;
 		}
 	}
-	delete[] PrimitiveList;
+	objects.clear();
+}
+
+void FPrimitivesManager::AddObject(UPrimitive* obj)
+{
+	if (obj != nullptr)
+	{
+		objects.push_back(obj);
+	}
 }
 
 UPrimitive* FPrimitivesManager::GetPrimitive(int index)
 {
-	if (index >= 0 && index < fillPrimitiveCount) return PrimitiveList[index];
+	if (index >= 0 && index < objects.size())
+	{
+		return objects[index];
+	}
 	return nullptr;
-}
-
-void FPrimitivesManager::SyncBallCountWithUI(int& targetBallNum)
-{
-	while (UBall::GetTotalNumBalls() < targetBallNum)
-	{
-		UBall* newBall = new UBall();
-		addElement(newBall);
-	}
-
-	while (UBall::GetTotalNumBalls() > targetBallNum)
-	{
-		RemoveRandomElement();
-	}
-
-	targetBallNum = UBall::GetTotalNumBalls();
 }
 
 void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalForcePos)
 {
-	for (int i = 0; i < fillPrimitiveCount; ++i)
+	// 모든 객체 업데이트
+	for (UPrimitive* obj : objects)
 	{
-		UPrimitive* primitive = PrimitiveList[i];
-		if (primitive != nullptr)
+		if (obj != nullptr)
 		{
-			primitive->Update(deltaTime);
+			obj->Update(deltaTime);
+			obj->ApplyAttraction(ExternalForcePos, 0.000001f);
 		}
-
-		primitive->ApplyAttraction(ExternalForcePos, 0.000001f);
-
 	}
-	for (int i = 0; i < fillPrimitiveCount; ++i)
+
+	// 충돌 체크
+	for (size_t i = 0; i < objects.size(); ++i)
 	{
-		for (int j = i + 1; j < fillPrimitiveCount; ++j)
+		for (size_t j = i + 1; j < objects.size(); ++j)
 		{
-			if (PrimitiveList[i] != nullptr && PrimitiveList[j] != nullptr)
+			if (objects[i] != nullptr && objects[j] != nullptr)
 			{
-				PrimitiveList[i]->HandleCollision(PrimitiveList[j]);
+				objects[i]->HandleCollision(objects[j]);
 			}
 		}
 	}
@@ -99,12 +56,11 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 
 void FPrimitivesManager::Render(URenderer& renderer)
 {
-	for (int i = 0; i < fillPrimitiveCount; ++i)
+	for (UPrimitive* obj : objects)
 	{
-		UPrimitive* primitive = PrimitiveList[i];
-		if (primitive != nullptr)
+		if (obj != nullptr)
 		{
-			primitive->Render(renderer); // 객체에게 렌더링을 위임!
+			obj->Render(renderer);
 		}
 	}
 }

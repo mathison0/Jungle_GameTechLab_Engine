@@ -4,29 +4,16 @@
 class FPrimitivesManager
 {
 private:
-	UPrimitive** PrimitiveList = nullptr;
-	int fillPrimitiveCount = 0;
-	int capacity = 100;
+	std::vector<UPrimitive*> objects;
 
 public:
-	FPrimitivesManager()
-	{
-		PrimitiveList = new UPrimitive * [capacity];
-	}
-
-	void addElement(UPrimitive* element);
-
-	void RemoveRandomElement();
-
+	FPrimitivesManager() {}
 	~FPrimitivesManager();
 
+	void AddObject(UPrimitive* obj);
 	UPrimitive* GetPrimitive(int index);
-
-	void SyncBallCountWithUI(int& targetBallNum);
-
+	int GetObjectCount() const { return objects.size(); }
 
 	void Update(const float deltaTime, const FVector3& ExternalForcePos);
-
-
 	void Render(URenderer& renderer);
 };

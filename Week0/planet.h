@@ -5,7 +5,7 @@ class Planet : public UBall
 {
 public:
 	bool bIsActive = true; 
-	const float ExplosionForce = 0.002f; // 터지면서 튕기는 힘
+	const float ExplosionForce = 0.005f; // 터지면서 튕기는 힘
 	FVector3 OriginalLocation; // 초기 위치
 	FVector3 OriginalVelocity; // 초기 속도
 
@@ -14,12 +14,11 @@ public:
 	const float RespawnDelay = 3000.0f;
 
 public:
-	Planet(FVector3 startPos, FVector3 startVel, float r);
-	virtual ~Planet() {}
+	Planet(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName = "");
 
-	void HandleCollision(UPrimitive* other) override;
+	void HandleCollision(UPrimitive* other)override;
 	void Update(float t) override;
-
 	void Explode();
 	void Respawn();
+	void Render(URenderer& renderer) override;
 };
