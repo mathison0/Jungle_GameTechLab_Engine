@@ -22,9 +22,6 @@ public:
 
 	UPrimitive* GetPrimitive(int index);
 
-	void SyncBallCountWithUI(int& targetBallNum);
-
-
 	void Update(const float deltaTime, const FVector3& ExternalForcePos);
 
 

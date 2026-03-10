@@ -56,22 +56,6 @@ UPrimitive* FPrimitivesManager::GetPrimitive(int index)
 	return nullptr;
 }
 
-void FPrimitivesManager::SyncBallCountWithUI(int& targetBallNum)
-{
-	while (UBall::GetTotalNumBalls() < targetBallNum)
-	{
-		UBall* newBall = new UBall();
-		addElement(newBall);
-	}
-
-	while (UBall::GetTotalNumBalls() > targetBallNum)
-	{
-		RemoveRandomElement();
-	}
-
-	targetBallNum = UBall::GetTotalNumBalls();
-}
-
 void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalForcePos)
 {
 	for (int i = 0; i < fillPrimitiveCount; ++i)
