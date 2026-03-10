@@ -19,8 +19,6 @@ public:
 	FVector3 Location{};
 	FVector3 Velocity{};
 	float Radius{};
-	float Mass{};
-
 
 	float Index{};
 

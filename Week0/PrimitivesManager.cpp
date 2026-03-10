@@ -41,19 +41,26 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 		}
 	}
 
-	// 충돌 체크
+	//충돌 체크
 	for (size_t i = 1; i < objects.size(); ++i)
 	{
+		//지구와 나머지
 		objects[i]->HandleCollision(objects[0]);
 	}
 	for (size_t i = 2; i < objects.size(); ++i)
 	{
+		//(지구를 제외하고) 달과 나머지
 		objects[i]->HandleCollision(objects[1]);
 	}
 }
 
 void FPrimitivesManager::Render(URenderer& renderer)
 {
+	for (int i = (int)(objects.size() - 1); i >= 0; --i)
+	{
+		objects[i]->Render(renderer);
+	}
+
 	for (UPrimitive* obj : objects)
 	{
 		if (obj != nullptr)

@@ -56,7 +56,6 @@ UBall::UBall()
 {
 	TotalNumBalls++;
 	Radius = rand() % 100 * 0.001f + 0.01f;
-	Mass = Radius * Radius;
 	Location.x = ((float)(rand() % 200 - 100)) * 0.01f;
 	Location.y = ((float)(rand() % 200 - 100)) * 0.01f;
 	float initialSpeed = 0.0005f;
@@ -261,6 +260,7 @@ void UBall::UpdateRenderer(URenderer& renderer)
 void UBall::HandleCollision(UPrimitive* other)
 {
 	/*
+	float Mass = this->Radius * this->Radius;
 	UBall* otherBall = static_cast<UBall*>(other);
 
 	float deltaX = otherBall->Location.x - Location.x;

@@ -54,9 +54,14 @@ void Planet::HandleCollision(UPrimitive* other)
 		player->Location.x += normal.x * overlap;
 		player->Location.y += normal.y * overlap;
 
-		// 일정한 힘을 장애물 반대 방향으로
-		player->Velocity.x = (normal.x * ExplosionForce);
-		player->Velocity.y = (normal.y * ExplosionForce);
+		// 행성의 질량(반지름)에 비례하는 튕김 힘
+		// 큰 행성일수록 더 강하게 튕겨냄
+		float explosionForce = 0.01f * this->Radius;
+		float maxExplosionForce = 0.015f;
+		explosionForce = explosionForce > maxExplosionForce ? maxExplosionForce : explosionForce;
+
+		player->Velocity.x = normal.x * explosionForce;
+		player->Velocity.y = normal.y * explosionForce;
 
 		Explode();
 	}
