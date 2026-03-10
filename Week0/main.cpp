@@ -73,12 +73,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
-	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED); //texture mapping
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	WCHAR WindowClass[] = L"JungleWindowClass";
 	WCHAR Title[] = L"Game Tech Lab";
 
 	WNDCLASSW wndclass = { 0, WndProc, 0, 0, 0, 0, 0, 0, 0, WindowClass };
-
 	RegisterClassW(&wndclass);
 
 	HWND hWnd = CreateWindowExW(0, WindowClass, Title, WS_POPUP | WS_VISIBLE | WS_OVERLAPPEDWINDOW,
@@ -89,7 +88,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	renderer.Create(hWnd);
 	renderer.CreateShader();
 	renderer.CreateSampler();
+	
+	// 텍스처 로드
 	renderer.LoadTexture("Earth", L"earth.jpg");
+	renderer.LoadTexture("Mars", L"mars.jpg");
+	
 	renderer.CreateConstantBuffer();
 
 	// ImGui Setup
@@ -99,22 +102,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ImGui_ImplWin32_Init((void*)hWnd);
 	ImGui_ImplDX11_Init(renderer.Device, renderer.DeviceContext);
 
-	UINT numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
-	UINT numVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
-
-	ID3D11Buffer* vertexBufferTriangle = renderer.CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
-
 	bool bIsExit = false;
-
-	const float leftBorder = -1.0f;
-	const float rightBorder = 1.0f;
-	const float topBorder = -1.0f;
-	const float bottomBorder = 1.0f;
-	const float sphereRadius = 1.0f;
 
 	const int targetFPS = 60;
 	const double targetFrameTime = 1000.0 / targetFPS;
-	int targetBallNum = 1;
 
 	LARGE_INTEGER frequency;
 	QueryPerformanceFrequency(&frequency);
@@ -129,11 +120,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	UBall::InitializeBuffer(renderer);
 
-	Planet TestPlanet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f, "Earth");
-	
+	//Player 생성
+	UBall* player = new UBall();
+	player->Location = { 0.0f, 0.0f, 0.0f };
+	player->Radius = 0.05f;
+	player->TextureName = "Earth";
+	primitivesManager.AddObject(player);
 
-	bool bPrevLeftPressed = false;
-	bool bPrevRightPressed = false;
+	//TestPlanet 생성
+	Planet* testPlanet = new Planet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f, "Mars");
+	primitivesManager.AddObject(testPlanet);
+
 	// Main Loop 
 	while (bIsExit == false)
 	{
@@ -142,9 +139,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 		{
-			//키 입력 메시지 번역
 			TranslateMessage(&msg);
-			// 메시지를 적절한 윈도우 프로시저에 전달, 메시지가 위에서 등록한 WndProc로 전달됨
 			DispatchMessage(&msg);
 
 			if (msg.message == WM_QUIT)
@@ -158,35 +153,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
-		// 키가 눌려있다면 추진체 가동!
-		UBall* targetBall = static_cast<UBall*>(primitivesManager.GetPrimitive(0));
-		if (targetBall != nullptr)
+		// 플레이어 조작
+		if (player != nullptr)
 		{
-			// 1. 현재 프레임의 키 상태 확인
 			bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
 			bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
 
-			// 3. 꾹 누르는 게 아니라, 새로 눌렸을 때(Tap)만 추진체 가동!
 			if (bCurrentLeftPressed || bCurrentRightPressed)
 			{
-				targetBall->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
+				player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
 			}
 		}
-
-			//if (targetBall && (msg.wParam == 'A' || msg.wParam == 'D'))
-			//{
-			//	float angle = 0.10f; // 회전 속도 조절
-			//	if (msg.wParam == 'D') angle = -angle;
-
-			//	float cosA = cosf(angle);
-			//	float sinA = sinf(angle);
-
-			//	FVector3 currentVel = targetBall->GetVelocity(); // UBall에 GetVelocity() 함수 추가 필요
-			//	float newX = currentVel.x * cosA - currentVel.y * sinA;
-			//	float newY = currentVel.x * sinA + currentVel.y * cosA;
-
-			//	targetBall->SetVelocity(FVector3(newX, newY, 0.0f)); // UBall에 SetVelocity() 함수 추가 필요
-			//}
 
 		renderer.Prepare();
 		renderer.PrepareShader();
@@ -197,30 +174,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
 		mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
 
-		
-		primitivesManager.SyncBallCountWithUI(targetBallNum);
 		primitivesManager.Update(elapsedTime, mouseWorldPos);
-
-		TestPlanet.Update(elapsedTime);
-
-		if (targetBall != nullptr)
-		{
-			TestPlanet.HandleCollision(targetBall);
-		}
-
 		primitivesManager.Render(renderer);
-
-		if (TestPlanet.bIsActive)
-		{
-			TestPlanet.Render(renderer);
-		}
 
 		renderer.SwapBuffer();
 
 		do
 		{
 			Sleep(0);
-
 			QueryPerformanceCounter(&endTime);
 			elapsedTime = (endTime.QuadPart - startTime.QuadPart) * 1000.0 / frequency.QuadPart;
 		} while (elapsedTime < targetFrameTime);
@@ -230,10 +191,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-	renderer.ReleaseVertexBuffer(vertexBufferTriangle);
-
 	UBall::ReleaseBuffer(renderer);
-
 	renderer.ReleaseConstantBuffer();
 	renderer.ReleaseShader();
 	renderer.Release();
