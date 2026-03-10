@@ -274,29 +274,12 @@ void Meteor::Update(float t)
 	Angle += rotationSpeed * t;
 
 	Location.x += Velocity.x * t;
-	Location.y += Velocity.y * t;
+	Location.y += Velocity.y * t * 10.0;
 
 	if (Location.y < -1.2f)
 	{
-		Respawn();
+		bIsActive = false;
 	}
-}
-
-void Meteor::Respawn()
-{
-	float randomX = ((rand() % 1000) / 1000.0f) * 1.6f - 0.8f; // -0.8 ~ 0.8 범위
-	float randomSpeed = 0.0003f + (rand() % 8) * 0.51f;
-
-	OriginalLocation = { randomX, 1.2f, 0.0f };
-	OriginalVelocity = { 0.0f, -randomSpeed, 0.0f };
-
-	spawnDelay = static_cast<float>(rand() % 3000 + 1000); // 1초 ~ 4초
-	spawnTimer = 0.0f;
-
-	Location = OriginalLocation;
-	Velocity = OriginalVelocity;
-
-	bIsActive = false; // 리스폰 후 대기 상태
 }
 
 void Meteor::HandleCollision(UPrimitive* other)

@@ -87,7 +87,7 @@ PlanetData planetDataList[] = {
 	{"Mars", 1.532f},
 	{"Jupiter", 7.21f},
 	{"Neptune", 4.883f},
-	{"Meteor", 4.883f},
+	{"Meteor", 0.883f},
 };
 
 float highestPlayerY = 0.0f;
@@ -176,6 +176,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WinMainUpdate(hWnd);
 		WinMainRender();
 
+		/* 게임 끝 */
+		if (player->Location.y >= 120.f)
+		{
+			break;
+		}
 
 		do
 		{
