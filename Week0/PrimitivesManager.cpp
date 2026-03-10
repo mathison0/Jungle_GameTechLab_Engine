@@ -2,42 +2,53 @@
 
 FPrimitivesManager::~FPrimitivesManager()
 {
-	for (int i = 0; i < fillPrimitiveCount; ++i)
+	for (UPrimitive* obj : objects)
 	{
-		if (PrimitiveList[i] != nullptr)
+		if (obj != nullptr)
 		{
-			delete PrimitiveList[i];
+			delete obj;
 		}
 	}
-	delete[] PrimitiveList;
+	objects.clear();
+}
+
+void FPrimitivesManager::AddObject(UPrimitive* obj)
+{
+	if (obj != nullptr)
+	{
+		objects.push_back(obj);
+	}
 }
 
 UPrimitive* FPrimitivesManager::GetPrimitive(int index)
 {
-	if (index >= 0 && index < fillPrimitiveCount) return PrimitiveList[index];
+	if (index >= 0 && index < objects.size())
+	{
+		return objects[index];
+	}
 	return nullptr;
 }
 
 void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalForcePos)
 {
-	for (int i = 0; i < fillPrimitiveCount; ++i)
+	// 모든 객체 업데이트
+	for (UPrimitive* obj : objects)
 	{
-		UPrimitive* primitive = PrimitiveList[i];
-		if (primitive != nullptr)
+		if (obj != nullptr)
 		{
-			primitive->Update(deltaTime);
+			obj->Update(deltaTime);
+			obj->ApplyAttraction(ExternalForcePos, 0.000001f);
 		}
-
-		primitive->ApplyAttraction(ExternalForcePos, 0.000001f);
-
 	}
-	for (int i = 0; i < fillPrimitiveCount; ++i)
+
+	// 충돌 체크
+	for (size_t i = 0; i < objects.size(); ++i)
 	{
-		for (int j = i + 1; j < fillPrimitiveCount; ++j)
+		for (size_t j = i + 1; j < objects.size(); ++j)
 		{
-			if (PrimitiveList[i] != nullptr && PrimitiveList[j] != nullptr)
+			if (objects[i] != nullptr && objects[j] != nullptr)
 			{
-				PrimitiveList[i]->HandleCollision(PrimitiveList[j]);
+				objects[i]->HandleCollision(objects[j]);
 			}
 		}
 	}
@@ -45,12 +56,11 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 
 void FPrimitivesManager::Render(URenderer& renderer)
 {
-	for (int i = 0; i < fillPrimitiveCount; ++i)
+	for (UPrimitive* obj : objects)
 	{
-		UPrimitive* primitive = PrimitiveList[i];
-		if (primitive != nullptr)
+		if (obj != nullptr)
 		{
-			primitive->Render(renderer); // 객체에게 렌더링을 위임!
+			obj->Render(renderer);
 		}
 	}
 }
