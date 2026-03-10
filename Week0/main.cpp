@@ -21,23 +21,6 @@ struct FVector3;
 #include "PrimitivesManager.h"
 #include "planet.h"
 
-
-struct FVector
-{
-	float x, y, z;
-	FVector(float _x = 0, float _y = 0, float _z = 0) : x(_x), y(_y), z(_z) {}
-};
-
-FVertexSimple triangle_vertices[] =
-{
-	{  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f }, // Top vertex (red)
-	{  1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f }, // Bottom-right vertex (green)
-	{ -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f }  // Bottom-left vertex (blue)
-};
-
-FVector3 gravity;
-
-
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
@@ -46,9 +29,7 @@ int UBall::TotalNumBalls = 0;
 bool UBall::bApplyGravity = true;
 bool UBall::bApplyAttraction = false;
 
-
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -67,7 +48,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return 0;
 }
-
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
