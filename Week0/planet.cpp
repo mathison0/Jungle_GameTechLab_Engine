@@ -52,9 +52,9 @@ void Planet::HandleCollision(UPrimitive* other)
 		player->Location.x += normal.x * overlap;
 		player->Location.y += normal.y * overlap;
 
-		// 일정한 힘을 
-		player->Velocity.x = (normal.x * ExplosionForce) + (this->Velocity.x * 0.5f);
-		player->Velocity.y = (normal.y * ExplosionForce) + (this->Velocity.y * 0.5f);
+		// 일정한 힘을 장애물 반대 방향으로
+		player->Velocity.x = (normal.x * ExplosionForce);
+		player->Velocity.y = (normal.y * ExplosionForce);
 
 		Explode();
 	}

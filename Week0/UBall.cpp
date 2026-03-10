@@ -233,13 +233,6 @@ void UBall::Update(float t)
 {
 	float dt = t * 0.001f;
 
-	if (inputLockTimer > 0.0f)
-	{
-		inputLockTimer -= t;
-		if (inputLockTimer < 0.0f)
-			inputLockTimer = 0.0f;
-	}
-
 	if (bApplyGravity)
 	{
 		Velocity.y -= GravityForce * t;
@@ -267,7 +260,8 @@ void UBall::UpdateRenderer(URenderer& renderer)
 
 void UBall::HandleCollision(UPrimitive* other)
 {
-	/*UBall* otherBall = static_cast<UBall*>(other);
+	/*
+	UBall* otherBall = static_cast<UBall*>(other);
 
 	float deltaX = otherBall->Location.x - Location.x;
 	float deltaY = otherBall->Location.y - Location.y;
@@ -319,7 +313,8 @@ void UBall::HandleCollision(UPrimitive* other)
 
 		D(impulseThis);
 		other->D(impulseOther);
-	}*/
+	}
+	*/
 }
 
 
