@@ -44,8 +44,10 @@ FVector3 gravity;
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
+ID3D11Buffer* UBall::PNGSphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
 UINT UBall::NumVerticesCube = 0;
+UINT UBall::NumVerticesPNGSphere = 0;
 int UBall::TotalNumBalls = 0;
 bool UBall::bApplyGravity = true;
 bool UBall::bApplyAttraction = false;
@@ -184,13 +186,26 @@ void InitializeRenderer(HWND hWnd)
 	renderer.CreateSampler();
 
 	// 텍스처 로드
-	std::string textureNames[] = { "Earth", "Mars", "Moon", "Jupiter", "Venus",  "mercury",  "Neptune" };
-	std::wstring textureFiles[] = { L"earth.jpg", L"mars.jpg", L"moon.jpg", L"jupiter.jpg", L"venus.jpg", L"mercury.jpg", L"neptune.jpg" };
-	renderer.LoadTexture("Background", L"background.jpg");
-
-	for (int i = 0; i < textureNames->size(); ++i)
+	struct TextureInfo
 	{
-		renderer.LoadTexture(textureNames[i], textureFiles[i].c_str());
+		std::string name;
+		std::wstring file;
+	};
+
+	TextureInfo textures[] = {
+		{"Earth", L"earth.jpg"},
+		{"Mars", L"mars.jpg"},
+		{"Moon", L"moon.jpg"},
+		{"Jupiter", L"jupiter.jpg"},
+		{"Venus", L"venus.jpg"},
+		{"Mercury", L"mercury.jpg"},
+		{"Neptune", L"neptune.jpg"},
+		{"Meteor", L"meteor.png"}
+	};
+
+	for (const auto& tex : textures)
+	{
+		renderer.LoadTexture(tex.name, tex.file.c_str());
 	}
 
 	renderer.CreateConstantBuffer();
@@ -221,6 +236,83 @@ void InitializeGameObjects()
 	testPlanet = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	primitivesManager.AddObject(testPlanet);
 
+	struct PlanetData
+	{
+		std::string name;
+		float relativeRadius; // 지구를 1.0 기준
+	};
+
+	PlanetData planetDataList[] = {
+		{"Mercury", 1.383f},
+		{"Venus", 1.949f},
+		{"Mars", 1.532f},
+		{"Jupiter", 7.21f},
+		{"Neptune", 4.883f},
+		{"Meteor", 4.883f},
+	};
+
+	const float baseRadius = 0.05f; // 지구 기준 반지름
+	const int maxAttempts = 50;     // 배치 시도 횟수
+	const float minSpeed = 0.01f; // 최소 속도
+	const float maxSpeed = 0.03f; // 최대 속도
+	std::vector<UBall*> placedBalls;
+
+	for (int i = 0; i < sizeof(planetDataList) / sizeof(PlanetData); ++i)
+	{
+		float radius = baseRadius * planetDataList[i].relativeRadius;
+		FVector3 newPos;
+		bool bPlaced = false;
+
+		for (int attempt = 0; attempt < maxAttempts; ++attempt)
+		{
+			newPos.x = ((rand() % 1000) / 1000.0f) * 1.6f - 0.8f;
+			newPos.y = ((rand() % 1000) / 1000.0f) * 1.6f - 0.8f;
+			newPos.z = 0.0f;
+
+			bool bOverlap = false;
+			for (auto& ball : placedBalls)
+			{
+				float dx = newPos.x - ball->Location.x;
+				float dy = newPos.y - ball->Location.y;
+				float distance = sqrtf(dx * dx + dy * dy);
+				float minDistance = (radius + ball->Radius) * 2.0f;
+
+				if (distance < minDistance)
+				{
+					bOverlap = true;
+					break;
+				}
+			}
+
+			if (!bOverlap)
+			{
+				bPlaced = true;
+				break;
+			}
+		}
+
+		// 랜덤 속도 생성
+		float randomAngle = (rand() % 360) * (3.141592f / 180.0f); // 0~360도 랜덤 각도
+		float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed); // minSpeed ~ maxSpeed 사이 랜덤 속도
+		FVector3 randomVelocity;
+		randomVelocity.x = cosf(randomAngle) * randomSpeed;
+		randomVelocity.y = sinf(randomAngle) * randomSpeed;
+		randomVelocity.z = 0.0f;
+
+		// 50번 시도 후에도 배치 못했으면 그냥 마지막 위치에 배치
+		Planet* newPlanet = nullptr;
+		if (planetDataList[i].name != "Meteor")
+		{
+			newPlanet = new Planet(newPos, randomVelocity, radius, planetDataList[i].name);
+		}
+		else
+		{
+			newPlanet = new Meteor(newPos + 1.0f, randomVelocity, radius, planetDataList[i].name);
+		}
+		primitivesManager.AddObject(newPlanet);
+		placedBalls.push_back(newPlanet);
+	}
+
 	//Camera 생성
 	camera = new Camera();
 
@@ -246,7 +338,6 @@ void WinMainUpdate(HWND hWnd)
 {
 	renderer.Prepare();
 	renderer.PrepareShader();
-	testPlanet->HandleCollision(player);
 
 	GetCursorPos(&mousePos);
 	ScreenToClient(hWnd, &mousePos);
@@ -256,13 +347,28 @@ void WinMainUpdate(HWND hWnd)
 
 	camera->Update(deltaTime, player);
 	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
-
-
 }
 
 void WinMainRender()
 {
 	background->Render(renderer);
 	primitivesManager.Render(renderer);
+
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	ImGui::Begin("Player Info");
+	if (player != nullptr)
+	{
+		ImGui::Text("Earth Position:");
+		ImGui::Text("X: %.3f", player->Location.x);
+		ImGui::Text("Y: %.3f", player->Location.y);
+		ImGui::Text("Z: %.3f", player->Location.z);
+	}
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	
 	renderer.SwapBuffer();
 }

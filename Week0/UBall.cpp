@@ -56,7 +56,6 @@ UBall::UBall()
 {
 	TotalNumBalls++;
 	Radius = rand() % 100 * 0.001f + 0.01f;
-	Mass = Radius * Radius;
 	Location.x = ((float)(rand() % 200 - 100)) * 0.01f;
 	Location.y = ((float)(rand() % 200 - 100)) * 0.01f;
 	float initialSpeed = 0.0005f;
@@ -74,13 +73,19 @@ UBall::~UBall()
 
 void UBall::InitializeBuffer(URenderer& renderer)
 {
-	std::vector<FVertexSimple> circleVertices = GenerateCircleVertices(36);
+	std::vector<FVertexSimple> circleVertices = GenerateCircleVertices(72);
 
 	SphereVertexBuffer = renderer.CreateVertexBuffer(circleVertices.data(), circleVertices.size() * sizeof(FVertexSimple));
 	NumVerticesSphere = circleVertices.size();
 
-	//SphereVertexBuffer = renderer.CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
-	//NumVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+	std::vector<FVertexSimple> pngCircleVertices = GenerateCircleVertices(72);
+	for (auto& vertex : pngCircleVertices)
+	{
+		vertex.u = -vertex.u; // UV를 음수로 변환
+		vertex.v = -vertex.v;
+	}
+	PNGSphereVertexBuffer = renderer.CreateVertexBuffer(pngCircleVertices.data(), pngCircleVertices.size() * sizeof(FVertexSimple));
+	NumVerticesPNGSphere = pngCircleVertices.size();
 
 	CubeVertexBuffer = renderer.CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
 	NumVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
@@ -90,6 +95,9 @@ void UBall::ReleaseBuffer(URenderer& renderer)
 {
 	renderer.ReleaseVertexBuffer(SphereVertexBuffer);
 	SphereVertexBuffer = nullptr;
+
+	renderer.ReleaseVertexBuffer(PNGSphereVertexBuffer);
+	PNGSphereVertexBuffer = nullptr;
 
 	renderer.ReleaseVertexBuffer(CubeVertexBuffer);
 	CubeVertexBuffer = nullptr;
@@ -260,6 +268,7 @@ void UBall::UpdateRenderer(URenderer& renderer)
 void UBall::HandleCollision(UPrimitive* other)
 {
 	/*
+	float Mass = this->Radius * this->Radius;
 	UBall* otherBall = static_cast<UBall*>(other);
 
 	float deltaX = otherBall->Location.x - Location.x;
