@@ -224,5 +224,22 @@ void WinMainUpdate(HWND hWnd)
 void WinMainRender()
 {
 	primitivesManager.Render(renderer);
+
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	ImGui::Begin("Player Info");
+	if (player != nullptr)
+	{
+		ImGui::Text("Earth Position:");
+		ImGui::Text("X: %.3f", player->Location.x);
+		ImGui::Text("Y: %.3f", player->Location.y);
+		ImGui::Text("Z: %.3f", player->Location.z);
+	}
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	
 	renderer.SwapBuffer();
 }
