@@ -21,6 +21,7 @@ struct FVector3;
 #include "PrimitivesManager.h"
 #include "planet.h"
 #include "GravityPlanet.h"
+#include "SoundManager.h"
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
@@ -99,6 +100,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	UBall::InitializeBuffer(renderer);
 
+	//SoundManager
+	SoundManager::Get().Initialize();
+
+	//여기에 원하는 음원 등록후 사용하고 싶은 곳에 헤더파일 include후 사용
+	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV"); 
+	SoundManager::Get().LoadSound("bgm", L"Audio/bgm.WAV"); 
+
+	// 배경음악
+	SoundManager::Get().SetBGMVolume(0.5f);
+	SoundManager::Get().PlayBGM("bgm");
+
+
 	//Player 생성
 	UBall* player = new UBall();
 	player->Location = { 0.0f, 0.0f, 0.0f };
@@ -131,6 +144,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				if (msg.wParam == 'Q') bIsExit = true;
 			}
 		}
+
+		SoundManager::Get().Update();
 
 		if (player != nullptr)
 		{
@@ -177,6 +192,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+
+	SoundManager::Get().Release();
 
 	UBall::ReleaseBuffer(renderer);
 	renderer.ReleaseConstantBuffer();

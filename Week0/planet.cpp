@@ -1,4 +1,5 @@
 #include "planet.h"
+#include "SoundManager.h"
 
 Planet::Planet(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName)
 {
@@ -60,11 +61,12 @@ void Planet::HandleCollision(UPrimitive* other)
 	}
 }
 
+
 void Planet::Explode()
 {
 	bIsActive = false;
 	RespawnTimer = 0.0f;
-
+	SoundManager::Get().PlayEffect("Explosion");
 }
 
 void Planet::Respawn()
