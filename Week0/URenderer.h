@@ -36,6 +36,7 @@ public:
 	ID3D11RenderTargetView* FrameBufferRTV = nullptr; // 텍스처를 렌더 타겟으로 사용하는 뷰
 	ID3D11RasterizerState* RasterizerState = nullptr; // 래스터라이저 상태(컬링, 채우기 모드 등 정의)
 	ID3D11Buffer* ConstantBuffer = nullptr; // 쉐이더에 데이터를 전달하기 위한 상수 버퍼
+	ID3D11Buffer* ConstnantBufferPerFrame = nullptr; // 매 프레임마다 업데이트되는 상수 버퍼
 
 	FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f }; // 화면을 초기화할 때 사용할 색상 (RGBA)
 	D3D11_VIEWPORT ViewportInfo; // 렌더링 영역을 정의하는 뷰포트 정보
@@ -46,6 +47,17 @@ public:
 	ID3D11InputLayout* SimpleInputLayout;
 	unsigned int Stride;
 
+	struct FConstants
+	{
+		FVector3 Offset;
+		float Angle;
+	};
+
+	struct FConstantPerFrame
+	{
+		float cameraY;
+		float padding[3];
+	};
 
 
 public:
@@ -68,6 +80,7 @@ public:
 	void CreateConstantBuffer();
 	void ReleaseConstantBuffer();
 	void UpdateConstant(FVector3 Offset, float Angle);
+	void UpdateConstantPerFrame(float cameraY);
 
 	void ReleaseTextures();
 	bool LoadTexture(const std::string& name, const wchar_t* filename);

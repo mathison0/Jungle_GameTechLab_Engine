@@ -22,6 +22,7 @@ struct FVector3;
 #include "UBall.h"
 #include "PrimitivesManager.h"
 #include "planet.h"
+#include "Camera.h"
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
@@ -38,6 +39,7 @@ bool bIsExit = false;
 
 UBall* player;
 Moon* testPlanet;
+Camera* camera;
 
 //FPS, time
 const int targetFPS = 60;
@@ -45,6 +47,7 @@ const double targetFrameTime = 1000.0 / targetFPS;
 LARGE_INTEGER frequency;
 LARGE_INTEGER startTime, endTime;
 double elapsedTime = 0.0;
+float deltaTime = 0.0f;
 
 //mouse
 POINT mousePos;
@@ -115,6 +118,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
+		deltaTime = (float)elapsedTime / 1000.0f;
+
+
 		ProcessInput();
 		WinMainUpdate(hWnd);
 		WinMainRender();
@@ -178,6 +184,9 @@ void InitializeGameObjects()
 	//TestPlanet 생성
 	testPlanet = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	primitivesManager.AddObject(testPlanet);
+
+	//Camera 생성
+	camera = new Camera();
 }
 
 void ProcessInput()
@@ -189,7 +198,7 @@ void ProcessInput()
 
 		if (bCurrentLeftPressed || bCurrentRightPressed)
 		{
-			player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
+			player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, deltaTime);
 		}
 	}
 }
@@ -204,7 +213,12 @@ void WinMainUpdate(HWND hWnd)
 	ScreenToClient(hWnd, &mousePos);
 	mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
 	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
-	primitivesManager.Update(elapsedTime, mouseWorldPos);
+	primitivesManager.Update(deltaTime, mouseWorldPos);
+
+	camera->Update(deltaTime, player);
+	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
+
+
 }
 
 void WinMainRender()

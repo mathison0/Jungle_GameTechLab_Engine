@@ -7,6 +7,12 @@ cbuffer Constants : register(b0)
     float Angle; // C++에서 넘겨준 회전 각도
 };
 
+cbuffer ConstantPerFrame : register(b1)
+{
+    float cameraY;
+    float padding[3]; // 16바이트 정렬을 위한 패딩
+};
+
 struct VS_INPUT
 {
     float4 position : POSITION; // Input position from vertex buffer
@@ -35,6 +41,10 @@ PS_INPUT mainVS(VS_INPUT input)
     
     //to pixel shader
     output.position = float4(rotatedPos.x + Offset.x, rotatedPos.y + Offset.y, 0, input.position.w);
+
+    output.position.y -= cameraY; // 카메라 Y 위치 적용
+    
+    // 색상을 픽셀 셰이더로 전달
     output.color = input.color;
     output.uv = input.uv;
     
