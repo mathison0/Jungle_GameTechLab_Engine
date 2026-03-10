@@ -24,12 +24,37 @@ struct FVector3;
 #include "planet.h"
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
-UINT UBall::NumVerticesSphere = 0;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
+UINT UBall::NumVerticesSphere = 0;
 UINT UBall::NumVerticesCube = 0;
 int UBall::TotalNumBalls = 0;
 bool UBall::bApplyGravity = true;
 bool UBall::bApplyAttraction = false;
+
+//Global Variables
+URenderer renderer;
+FPrimitivesManager primitivesManager;
+bool bIsExit = false;
+
+UBall* player;
+Moon* testPlanet;
+
+//FPS, time
+const int targetFPS = 60;
+const double targetFrameTime = 1000.0 / targetFPS;
+LARGE_INTEGER frequency;
+LARGE_INTEGER startTime, endTime;
+double elapsedTime = 0.0;
+
+//mouse
+POINT mousePos;
+FVector3 mouseWorldPos;
+
+void InitializeRenderer(HWND hWnd);
+void InitializeGameObjects();
+void ProcessInput();
+void WinMainUpdate(HWND hWnd);
+void WinMainRender();
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -51,6 +76,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+//_In, _In_opt_ 을 매개변수 앞에 추가해 warn C28251 제거
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -64,53 +90,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		CW_USEDEFAULT, CW_USEDEFAULT, 1024, 1024,
 		nullptr, nullptr, hInstance, nullptr);
 
-	URenderer renderer;
-	renderer.Create(hWnd);
-	renderer.CreateShader();
-	renderer.CreateSampler();
-
-	// 텍스처 로드
-	renderer.LoadTexture("Earth", L"earth.jpg");
-	renderer.LoadTexture("Mars", L"mars.jpg");
-	renderer.LoadTexture("Moon", L"moon.jpg");
-
-	renderer.CreateConstantBuffer();
-
-	// ImGui Setup
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	ImGui_ImplWin32_Init((void*)hWnd);
-	ImGui_ImplDX11_Init(renderer.Device, renderer.DeviceContext);
-
-	bool bIsExit = false;
-
-	const int targetFPS = 60;
-	const double targetFrameTime = 1000.0 / targetFPS;
-
-	LARGE_INTEGER frequency;
-	QueryPerformanceFrequency(&frequency);
-
-	LARGE_INTEGER startTime, endTime;
-	double elapsedTime = 0.0;
-
-	POINT mousePos;
-	FVector3 mouseWorldPos;
-
-	FPrimitivesManager primitivesManager;
-
-	UBall::InitializeBuffer(renderer);
-
-	//Player 생성
-	UBall* player = new UBall();
-	player->Location = { 0.0f, 0.0f, 0.0f };
-	player->Radius = 0.05f;
-	player->TextureName = "Earth";
-	primitivesManager.AddObject(player);
-
-	//TestPlanet 생성
-	Moon* testPlanet = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f , player, "Moon");
-	primitivesManager.AddObject(testPlanet);
+	InitializeRenderer(hWnd);
+	InitializeGameObjects();
 
 	// Main Loop 
 	while (bIsExit == false)
@@ -134,31 +115,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
-		// 플레이어 조작
-		if (player != nullptr)
-		{
-			bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
-			bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
-
-			if (bCurrentLeftPressed || bCurrentRightPressed)
-			{
-				player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
-			}
-		}
-
-		renderer.Prepare();
-		renderer.PrepareShader();
-		testPlanet->HandleCollision(player);
-		GetCursorPos(&mousePos);
-		ScreenToClient(hWnd, &mousePos);
-
-		mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
-		mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
-
-		primitivesManager.Update(elapsedTime, mouseWorldPos);
-		primitivesManager.Render(renderer);
-
-		renderer.SwapBuffer();
+		ProcessInput();
+		WinMainUpdate(hWnd);
+		WinMainRender();
 
 		do
 		{
@@ -178,4 +137,78 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	renderer.Release();
 
 	return 0;
+}
+
+void InitializeRenderer(HWND hWnd)
+{
+	renderer.Create(hWnd);
+	renderer.CreateShader();
+	renderer.CreateSampler();
+
+	// 텍스처 로드
+	std::string textureNames[] = { "Earth", "Mars", "Moon", "Jupiter", "Venus",  "mercury",  "Neptune" };
+	std::string textureFiles[] = { "earth.jpg", "mars.jpg", "moon.jpg", "jupiter.jpg", "venus.jpg", "mercury.jpg", "neptune.jpg" };
+	for(int i=0;i<textureNames->size(); ++i)
+	{
+		renderer.LoadTexture(textureNames[i], std::wstring(textureFiles[i].begin(), textureFiles[i].end()).c_str());
+	}
+	renderer.CreateConstantBuffer();
+	
+	// ImGui Setup
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui_ImplWin32_Init((void*)hWnd);
+	ImGui_ImplDX11_Init(renderer.Device, renderer.DeviceContext);
+
+	QueryPerformanceFrequency(&frequency);
+
+	UBall::InitializeBuffer(renderer);
+}
+
+void InitializeGameObjects()
+{
+	//Player 생성
+	player = new UBall();
+	player->Location = { 0.0f, 0.0f, 0.0f };
+	player->Radius = 0.05f;
+	player->TextureName = "Earth";
+	primitivesManager.AddObject(player);
+
+	//TestPlanet 생성
+	testPlanet = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
+	primitivesManager.AddObject(testPlanet);
+}
+
+void ProcessInput()
+{
+	if (player != nullptr)
+	{
+		bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
+		bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
+
+		if (bCurrentLeftPressed || bCurrentRightPressed)
+		{
+			player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
+		}
+	}
+}
+
+void WinMainUpdate(HWND hWnd)
+{
+	renderer.Prepare();
+	renderer.PrepareShader();
+	testPlanet->HandleCollision(player);
+
+	GetCursorPos(&mousePos);
+	ScreenToClient(hWnd, &mousePos);
+	mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
+	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
+	primitivesManager.Update(elapsedTime, mouseWorldPos);
+}
+
+void WinMainRender()
+{
+	primitivesManager.Render(renderer);
+	renderer.SwapBuffer();
 }

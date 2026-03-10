@@ -87,10 +87,11 @@ inline bool URenderer::LoadTexture(const std::string& name, const wchar_t* filen
 	{
 		return true;
 	}
-
+	std::wstring fullPath = L"images\\";
+	fullPath += filename;
 	ID3D11ShaderResourceView* srv = nullptr;
 	HRESULT hr = CreateWICTextureFromFile(
-		Device, DeviceContext, filename, nullptr,
+		Device, DeviceContext, fullPath.c_str(), nullptr,
 		&srv
 	);
 
