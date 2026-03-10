@@ -138,6 +138,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="planet.cpp" />
     <ClCompile Include="PrimitivesManager.cpp" />
+    <ClCompile Include="SoundManager.cpp" />
+    <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="UBall.cpp" />
     <ClCompile Include="URenderer.cpp" />
   </ItemGroup>
@@ -154,12 +156,17 @@
     <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="planet.h" />
     <ClInclude Include="PrimitivesManager.h" />
+    <ClInclude Include="SoundManager.h" />
+    <ClInclude Include="Sprite.h" />
     <ClInclude Include="Type.h" />
     <ClInclude Include="UBall.h" />
     <ClInclude Include="UPrimitive.h" />
     <ClInclude Include="URenderer.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Background.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="ShaderW0.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

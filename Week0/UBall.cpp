@@ -121,7 +121,7 @@ void UBall::Move(float t)
 	if (Location.y < -1.0f + Radius)
 	{
 		Location.y = -1.0f + Radius;
-		//Velocity.y *= -0.8f;
+		Velocity.y  = 0.0f;
 	}
 }
 
@@ -168,6 +168,7 @@ void UBall::Render(URenderer& renderer)
 		this->Location.y - rightY * offsetDist,
 		thrusterScale
 	};
+
 	renderer.UpdateConstant(leftPos, this->Angle);
 	renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
 
@@ -223,18 +224,18 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 
 	if (bLeftThruster)
 	{
-		ApplyJetpackForce(thrustPerJetpack);
-		PendingTorque -= JetpackTorqueAmount;
+		ApplyJetpackForce(thrustPerJetpack * deltaTime);
+		PendingTorque -= JetpackTorqueAmount * deltaTime;
 	}
 
 	if (bRightThruster)
 	{
-		ApplyJetpackForce(thrustPerJetpack);
-		PendingTorque += JetpackTorqueAmount;
+		ApplyJetpackForce(thrustPerJetpack * deltaTime);
+		PendingTorque += JetpackTorqueAmount * deltaTime;
 	}
 
 	AngularVelocity += PendingTorque;
-	LimitVelocities(currentMaxLinearSpeed);
+	//LimitVelocities(currentMaxLinearSpeed);
 }
 
 void UBall::Update(float t)
@@ -244,8 +245,8 @@ void UBall::Update(float t)
 		Velocity.y -= GravityForce * t;
 	}
 
-	Velocity.x *= LinearDamping;
-	Velocity.y *= LinearDamping;
+	//Velocity.x *= LinearDamping;
+	//Velocity.y *= LinearDamping;
 
 	AngularVelocity *= AngularDamping;
 

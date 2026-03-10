@@ -1,4 +1,5 @@
 #include "planet.h"
+#include "SoundManager.h"
 #include <cmath>
 #include <cstdlib>
 
@@ -69,7 +70,7 @@ void Planet::Explode()
 {
 	bIsActive = false;
 	RespawnTimer = 0.0f;
-
+	SoundManager::Get().PlayEffect("Explosion");
 }
 
 void Planet::Respawn()
@@ -92,6 +93,8 @@ void Planet::Render(URenderer& renderer)
 	{
 		renderer.EnableAlphaBlending(true);
 	}
+
+
 
 	// 텍스처 설정 (부모 클래스 로직 사용)
 	if (!TextureName.empty())

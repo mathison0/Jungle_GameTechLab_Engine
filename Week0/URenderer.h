@@ -47,12 +47,18 @@ public:
 	ID3D11VertexShader* SimpleVertexShader;
 	ID3D11PixelShader* SimplePixelShader;
 	ID3D11InputLayout* SimpleInputLayout;
+
+	ID3D11VertexShader* SpriteVertexShader = nullptr;
+	ID3D11PixelShader* SpritePixelShader = nullptr;
 	unsigned int Stride;
 
 	struct FConstants
 	{
 		FVector3 Offset;
 		float Angle;
+
+		FVector3 Scale;
+		float uvOffset;
 	};
 
 	struct FConstantPerFrame
@@ -81,7 +87,7 @@ public:
 	void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
 	void CreateConstantBuffer();
 	void ReleaseConstantBuffer();
-	void UpdateConstant(FVector3 Offset, float Angle);
+	void UpdateConstant(FVector3 Offset, float Angle, FVector3 scale = {0,0,0}, float uvOffset = 0.f);
 	void UpdateConstantPerFrame(float cameraY);
 
 	void ReleaseTextures();

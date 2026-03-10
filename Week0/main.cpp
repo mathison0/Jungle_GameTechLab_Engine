@@ -23,6 +23,24 @@ struct FVector3;
 #include "PrimitivesManager.h"
 #include "planet.h"
 #include "Camera.h"
+#include "SoundManager.h"
+#include "Sprite.h"
+
+
+struct FVector
+{
+	float x, y, z;
+	FVector(float _x = 0, float _y = 0, float _z = 0) : x(_x), y(_y), z(_z) {}
+};
+
+FVertexSimple triangle_vertices[] =
+{
+	{  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f }, // Top vertex (red)
+	{  1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f }, // Bottom-right vertex (green)
+	{ -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f }  // Bottom-left vertex (blue)
+};
+
+FVector3 gravity;
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
@@ -42,6 +60,7 @@ bool bIsExit = false;
 UBall* player;
 Moon* testPlanet;
 Camera* camera;
+Sprite* background;
 
 //FPS, time
 const int targetFPS = 60;
@@ -98,6 +117,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitializeRenderer(hWnd);
 	InitializeGameObjects();
 
+	//SoundManager
+	SoundManager::Get().Init();
+	
+	// 원하는 음원을 아래처럼 등록해서 원하는 곳에서 헤더만 포함해서 사용
+	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
+	SoundManager::Get().LoadSound("bgm", L"Audio/bgm.WAV");
+
+	SoundManager::Get().PlayBGM("bgm", true);
+
 	// Main Loop 
 	while (bIsExit == false)
 	{
@@ -127,6 +155,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WinMainUpdate(hWnd);
 		WinMainRender();
 
+
 		do
 		{
 			Sleep(0);
@@ -139,7 +168,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
+	SoundManager::Get().Release();
+
 	UBall::ReleaseBuffer(renderer);
+	Sprite::ReleaseQuadVertexBuffer(renderer);
 	renderer.ReleaseConstantBuffer();
 	renderer.ReleaseShader();
 	renderer.Release();
@@ -175,6 +207,7 @@ void InitializeRenderer(HWND hWnd)
 	{
 		renderer.LoadTexture(tex.name, tex.file.c_str());
 	}
+
 	renderer.CreateConstantBuffer();
 	
 	// ImGui Setup
@@ -187,6 +220,7 @@ void InitializeRenderer(HWND hWnd)
 	QueryPerformanceFrequency(&frequency);
 
 	UBall::InitializeBuffer(renderer);
+	Sprite::CreateQuadVertexBuffer(renderer);
 }
 
 void InitializeGameObjects()
@@ -281,6 +315,9 @@ void InitializeGameObjects()
 
 	//Camera 생성
 	camera = new Camera();
+
+	//Background 생성
+	background = new Sprite("Background");
 }
 
 void ProcessInput()
@@ -314,6 +351,7 @@ void WinMainUpdate(HWND hWnd)
 
 void WinMainRender()
 {
+	background->Render(renderer);
 	primitivesManager.Render(renderer);
 
 	ImGui_ImplDX11_NewFrame();

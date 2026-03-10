@@ -160,6 +160,9 @@ void URenderer::CreateShader()
 	ID3DBlob* vertexshaderCSO;
 	ID3DBlob* pixelshaderCSO;
 
+	ID3DBlob* spriteVertexShaderCSO;
+	ID3DBlob* spritePixelShaderCSO;
+
 	D3DCompileFromFile(L"ShaderW0.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexshaderCSO, nullptr);
 
 	Device->CreateVertexShader(vertexshaderCSO->GetBufferPointer(), vertexshaderCSO->GetBufferSize(), nullptr, &SimpleVertexShader);
@@ -174,13 +177,27 @@ void URenderer::CreateShader()
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 }, // UV 좌표 추가!
 	};
-
 	Device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexshaderCSO->GetBufferPointer(), vertexshaderCSO->GetBufferSize(), &SimpleInputLayout);
+
+
+
+
+	D3DCompileFromFile(L"Background.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &spriteVertexShaderCSO, nullptr);
+
+	Device->CreateVertexShader(spriteVertexShaderCSO->GetBufferPointer(), spriteVertexShaderCSO->GetBufferSize(), nullptr, &SpriteVertexShader);
+
+
+	D3DCompileFromFile(L"Background.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &spritePixelShaderCSO, nullptr);
+	
+	Device->CreatePixelShader(spritePixelShaderCSO->GetBufferPointer(), spritePixelShaderCSO->GetBufferSize(), nullptr, &SpritePixelShader);
+	
+	vertexshaderCSO->Release();
+	pixelshaderCSO->Release();
+	spriteVertexShaderCSO->Release();
+	spritePixelShaderCSO->Release();
 
 	Stride = sizeof(FVertexSimple);
 
-	vertexshaderCSO->Release();
-	pixelshaderCSO->Release();
 }
 
 void URenderer::ReleaseShader()
@@ -195,6 +212,12 @@ void URenderer::ReleaseShader()
 	{
 		SimplePixelShader->Release();
 		SimplePixelShader = nullptr;
+	}
+
+	if(SpritePixelShader)
+	{
+		SpritePixelShader->Release();
+		SpritePixelShader = nullptr;
 	}
 
 	if (SimpleVertexShader)
@@ -287,7 +310,7 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(FVector3 Offset, float Angle)
+void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, float uvOffset)
 {
 	if (ConstantBuffer)
 	{
@@ -298,6 +321,8 @@ void URenderer::UpdateConstant(FVector3 Offset, float Angle)
 		{
 			constants->Offset = Offset;
 			constants->Angle = Angle;
+			constants->Scale = scale;
+			constants->uvOffset = uvOffset;
 		}
 		DeviceContext->Unmap(ConstantBuffer, 0);
 	}
@@ -316,6 +341,7 @@ void URenderer::UpdateConstantPerFrame(float cameraY)
 		DeviceContext->Unmap(ConstnantBufferPerFrame, 0);
 
 		DeviceContext->VSSetConstantBuffers(1, 1, &ConstnantBufferPerFrame);
+		DeviceContext->PSSetConstantBuffers(1, 1, &ConstnantBufferPerFrame);
 	}
 }
 
