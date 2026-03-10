@@ -1,6 +1,6 @@
 #include "SoundManager.h"
 
-void SoundManager::Initialize()
+void SoundManager::Init()
 {
 	audioEngine = std::make_unique<DirectX::AudioEngine>();
 }

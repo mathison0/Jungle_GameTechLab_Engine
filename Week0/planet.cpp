@@ -1,4 +1,5 @@
 #include "planet.h"
+#include "SoundManager.h"
 #include <cmath>
 #include <cstdlib>
 
@@ -66,7 +67,7 @@ void Planet::Explode()
 {
 	bIsActive = false;
 	RespawnTimer = 0.0f;
-
+	SoundManager::Get().PlayEffect("Explosion");
 }
 
 void Planet::Respawn()

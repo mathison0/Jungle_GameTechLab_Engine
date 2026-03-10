@@ -23,6 +23,7 @@ struct FVector3;
 #include "PrimitivesManager.h"
 #include "planet.h"
 #include "Camera.h"
+#include "SoundManager.h"
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
@@ -96,6 +97,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitializeRenderer(hWnd);
 	InitializeGameObjects();
 
+	//SoundManager
+	SoundManager::Get().Init();
+	
+	// 원하는 음원을 아래처럼 등록해서 원하는 곳에서 헤더만 포함해서 사용
+	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
+	SoundManager::Get().LoadSound("bgm", L"Audio/bgm.WAV");
+
+	SoundManager::Get().PlayBGM("bgm", true);
+
 	// Main Loop 
 	while (bIsExit == false)
 	{
@@ -136,6 +146,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+
+	SoundManager::Get().Release();
 
 	UBall::ReleaseBuffer(renderer);
 	renderer.ReleaseConstantBuffer();

@@ -10,7 +10,7 @@ public:
 	// 싱글톤
 	static SoundManager& Get() { static SoundManager instance; return instance; }
 
-	void Initialize();
+	void Init();
 	void Update();
 
 	void LoadSound(const std::string& name, const std::wstring& path);
