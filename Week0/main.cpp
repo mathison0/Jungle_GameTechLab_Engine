@@ -147,10 +147,10 @@ void InitializeRenderer(HWND hWnd)
 
 	// 텍스처 로드
 	std::string textureNames[] = { "Earth", "Mars", "Moon", "Jupiter", "Venus",  "mercury",  "Neptune" };
-	std::string textureFiles[] = { "earth.jpg", "mars.jpg", "moon.jpg", "jupiter.jpg", "venus.jpg", "mercury.jpg", "neptune.jpg" };
-	for(int i=0;i<textureNames->size(); ++i)
+	std::wstring textureFiles[] = { L"earth.jpg", L"mars.jpg", L"moon.jpg", L"jupiter.jpg", L"venus.jpg", L"mercury.jpg", L"neptune.jpg" };
+	for (int i = 0; i < textureNames->size(); ++i)
 	{
-		renderer.LoadTexture(textureNames[i], std::wstring(textureFiles[i].begin(), textureFiles[i].end()).c_str());
+		renderer.LoadTexture(textureNames[i], textureFiles[i].c_str());
 	}
 	renderer.CreateConstantBuffer();
 	

@@ -46,12 +46,6 @@ public:
 	ID3D11InputLayout* SimpleInputLayout;
 	unsigned int Stride;
 
-	struct FConstants
-	{
-		FVector3 Offset;
-		float Angle;
-	};
-
 
 
 public:

@@ -24,7 +24,7 @@ public:
 	virtual void Render(URenderer& renderer) override;
 };
 
-// --- Moon ---
+//--- Moon ---
 class Moon : public Planet
 {
 private:
@@ -46,7 +46,7 @@ public:
 	void Update(float t) override;
 };
 
-// --- GravityPlanet ---
+//--- GravityPlanet ---
 enum class PlanetType
 {
 	pull,
@@ -74,7 +74,7 @@ public:
 	void Gravity(UBall* player, float deltatime);
 };
 
-// --- Meteor ---
+//--- Meteor ---
 class Meteor : public Planet
 {
 public:
