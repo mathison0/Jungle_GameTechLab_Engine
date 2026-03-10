@@ -66,6 +66,7 @@ public:
 
 	FVector3 GetVelocity() const { return Velocity; }
 	void SetVelocity(FVector3 val) { Velocity = val; }
+	FVector3 GetLocation() const { return Location; }
 
 	void Move(float t); 
 	void Update(float t) override;

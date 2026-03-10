@@ -20,6 +20,7 @@ struct FVector3;
 #include "UBall.h"
 #include "PrimitivesManager.h"
 #include "planet.h"
+#include "Camera.h"
 
 
 struct FVector
@@ -158,6 +159,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	POINT mousePos;
 	FVector3 mouseWorldPos;
 
+	Camera camera;
+	
+
 	FPrimitivesManager primitivesManager;
 
 	UINT numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
@@ -218,21 +222,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
-			//if (targetBall && (msg.wParam == 'A' || msg.wParam == 'D'))
-			//{
-			//	float angle = 0.10f; // 회전 속도 조절
-			//	if (msg.wParam == 'D') angle = -angle;
-
-			//	float cosA = cosf(angle);
-			//	float sinA = sinf(angle);
-
-			//	FVector3 currentVel = targetBall->GetVelocity(); // UBall에 GetVelocity() 함수 추가 필요
-			//	float newX = currentVel.x * cosA - currentVel.y * sinA;
-			//	float newY = currentVel.x * sinA + currentVel.y * cosA;
-
-			//	targetBall->SetVelocity(FVector3(newX, newY, 0.0f)); // UBall에 SetVelocity() 함수 추가 필요
-			//}
-
 		renderer.Prepare();
 		renderer.PrepareShader();
 
@@ -245,6 +234,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		
 		primitivesManager.SyncBallCountWithUI(targetBallNum);
 		primitivesManager.Update(elapsedTime, mouseWorldPos);
+
+		float playerY = targetBall? targetBall->GetLocation().y : 0.f;
+		float deltaTime = (float)elapsedTime / 1000.0f;
+		camera.Update(deltaTime, playerY);
+
+		renderer.UpdateConstantPerFrame(camera.GetCurrentCameraY());
 
 		TestPlanet.Update(elapsedTime);
 

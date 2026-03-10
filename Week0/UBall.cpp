@@ -57,7 +57,7 @@ void UBall::Move(float t)
 	if (Location.y < -1.0f + Radius)
 	{
 		Location.y = -1.0f + Radius;
-		Velocity.y *= -0.8f;
+		//Velocity.y *= -0.8f;
 	}
 }
 
