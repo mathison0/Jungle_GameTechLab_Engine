@@ -172,6 +172,9 @@ void UBall::Update(float t)
 
 	AngularVelocity *= AngularDamping;
 
+	float autoBalancePower = 0.000001f;
+	AngularVelocity += -sinf(Angle) * autoBalancePower * t;
+
 	Angle += AngularVelocity * t;
 
 	LimitVelocities(MaxLinearSpeed);
