@@ -135,8 +135,13 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="planet.cpp" />
+    <ClCompile Include="PrimitivesManager.cpp" />
+    <ClCompile Include="UBall.cpp" />
+    <ClCompile Include="URenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dx11math.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />
     <ClInclude Include="ImGui\imgui_impl_dx11.h" />
@@ -145,7 +150,12 @@
     <ClInclude Include="ImGui\imstb_rectpack.h" />
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
-    <ClInclude Include="Sphere.h" />
+    <ClInclude Include="planet.h" />
+    <ClInclude Include="PrimitivesManager.h" />
+    <ClInclude Include="Type.h" />
+    <ClInclude Include="UBall.h" />
+    <ClInclude Include="UPrimitive.h" />
+    <ClInclude Include="URenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">
@@ -155,7 +165,17 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets" Condition="Exists('..\packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>이 프로젝트는 이 컴퓨터에 없는 NuGet 패키지를 참조합니다. 해당 패키지를 다운로드하려면 NuGet 패키지 복원을 사용하십시오. 자세한 내용은 http://go.microsoft.com/fwlink/?LinkID=322105를 참조하십시오. 누락된 파일은 {0}입니다.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets'))" />
+  </Target>
 </Project>
