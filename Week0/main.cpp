@@ -25,7 +25,7 @@ struct FVector3;
 #include "Camera.h"
 #include "SoundManager.h"
 #include "Sprite.h"
-#include "Button.h"
+#include "UIManager.h"
 
 struct FVector
 {
@@ -61,8 +61,8 @@ UBall* player;
 Moon* testPlanet;
 Camera* camera;
 Sprite* background;
-Button* startButton;
-Button* restartButton;
+UIManager* uiManager;
+
 
 //FPS, time
 const int targetFPS = 60;
@@ -324,17 +324,7 @@ void InitializeGameObjects()
 	//Background 생성
 	background = new Sprite("Background");
 
-	//StartButton 생성
-	startButton = new Button({ 0,-0.1f,0, }, { 0.3f,0.1f },"StartButton", []() {
-		// Start 버튼 클릭 시 실행할 코드 작성
-		// 예: 게임 시작, 메뉴 닫기 등
-		});
-
-	//RestartButton 생성
-	restartButton = new Button({ 0,-0.2f,0, }, { 0.3f,0.1f }, "RestartButton", []() {
-		// Restart 버튼 클릭 시 실행할 코드 작성
-		// 예: 게임 초기화, 점수 리셋 등
-		});
+	uiManager = new UIManager();
 }
 
 void ProcessInput()
@@ -362,8 +352,7 @@ void WinMainUpdate(HWND hWnd)
 	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
 	primitivesManager.Update(deltaTime, mouseWorldPos);
 
-	startButton->Update(mouseWorldPos.x, mouseWorldPos.y, false);
-	restartButton->Update(mouseWorldPos.x, mouseWorldPos.y, false);
+	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, false);
 
 	camera->Update(deltaTime, player);
 	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
@@ -374,8 +363,7 @@ void WinMainRender()
 	background->Render(renderer);
 	primitivesManager.Render(renderer);
 
-	startButton->Render(renderer);
-	restartButton->Render(renderer);
+	uiManager->Render(renderer);
 
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();

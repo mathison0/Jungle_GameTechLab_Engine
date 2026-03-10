@@ -142,6 +142,7 @@
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="UBall.cpp" />
+    <ClCompile Include="UIManager.cpp" />
     <ClCompile Include="URenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -162,6 +163,7 @@
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="Type.h" />
     <ClInclude Include="UBall.h" />
+    <ClInclude Include="UIManager.h" />
     <ClInclude Include="UPrimitive.h" />
     <ClInclude Include="URenderer.h" />
   </ItemGroup>
