@@ -1,7 +1,9 @@
 #include <windows.h>
 #include "dx11math.h"
 struct FVector3;
-
+/*
+리팩토링 필
+*/
 // D3D Library Linking
 #pragma comment(lib, "user32")
 #pragma comment(lib, "d3d11")

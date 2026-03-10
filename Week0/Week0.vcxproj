@@ -136,6 +136,7 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="meteor.cpp" />
     <ClCompile Include="moon.cpp" />
     <ClCompile Include="planet.cpp" />
     <ClCompile Include="PrimitivesManager.cpp" />
@@ -153,6 +154,7 @@
     <ClInclude Include="ImGui\imstb_rectpack.h" />
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
+    <ClInclude Include="meteor.h" />
     <ClInclude Include="moon.h" />
     <ClInclude Include="planet.h" />
     <ClInclude Include="PrimitivesManager.h" />
