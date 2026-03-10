@@ -14,10 +14,6 @@ public:
 		PrimitiveList = new UPrimitive * [capacity];
 	}
 
-	void addElement(UPrimitive* element);
-
-	void RemoveRandomElement();
-
 	~FPrimitivesManager();
 
 	UPrimitive* GetPrimitive(int index);

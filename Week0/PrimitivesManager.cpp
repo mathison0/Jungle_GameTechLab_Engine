@@ -1,43 +1,5 @@
 #include "PrimitivesManager.h"
 
-
-void FPrimitivesManager::addElement(UPrimitive* element)
-{
-	if (UBall::GetTotalNumBalls() >= capacity)
-	{
-		// Resize
-		int newCapacity = capacity * 2;
-		UPrimitive** newList = new UPrimitive * [newCapacity];
-		memcpy(newList, PrimitiveList, fillPrimitiveCount * sizeof(UPrimitive*));
-
-		delete[] PrimitiveList;
-		PrimitiveList = newList;
-		capacity = newCapacity;
-	}
-
-	PrimitiveList[fillPrimitiveCount] = element;
-	fillPrimitiveCount++;
-}
-
-void FPrimitivesManager::RemoveRandomElement()
-{
-	if (fillPrimitiveCount == 0)
-	{
-		return;
-	}
-
-	int indexToRemove = rand() % fillPrimitiveCount;
-	delete PrimitiveList[indexToRemove];
-
-	if (indexToRemove != fillPrimitiveCount - 1)
-	{
-		PrimitiveList[indexToRemove] = PrimitiveList[fillPrimitiveCount - 1];
-	}
-
-	fillPrimitiveCount--;
-	PrimitiveList[fillPrimitiveCount] = nullptr;
-}
-
 FPrimitivesManager::~FPrimitivesManager()
 {
 	for (int i = 0; i < fillPrimitiveCount; ++i)
