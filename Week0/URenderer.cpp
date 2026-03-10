@@ -76,7 +76,7 @@ void URenderer::CreateFrameBuffer()
 
 	// 렌더 타겟 뷰 생성
 	D3D11_RENDER_TARGET_VIEW_DESC framebufferRTVdesc = {};
-	framebufferRTVdesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // 색상 포맷
+	framebufferRTVdesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // 색상 포맷
 	framebufferRTVdesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D; // 2D 텍스처
 
 	Device->CreateRenderTargetView(FrameBuffer, &framebufferRTVdesc, &FrameBufferRTV);
@@ -115,8 +115,29 @@ void URenderer::ReleaseRasterizerState()
 	}
 }
 
+void URenderer::ReleaseTextures()
+{
+	for (auto& pair : TextureSRVs)
+	{
+		if (pair.second)
+		{
+			pair.second->Release();
+			pair.second = nullptr;
+		}
+	}
+	TextureSRVs.clear();
+
+	// SamplerState Release
+	if (SamplerState)
+	{
+		SamplerState->Release();
+		SamplerState = nullptr;
+	}
+}
+
 void URenderer::Release()
 {
+	ReleaseTextures();
 	RasterizerState->Release();
 
 	// 렌더 타겟을 초기화
@@ -148,6 +169,7 @@ void URenderer::CreateShader()
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 }, // UV 좌표 추가!
 	};
 
 	Device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexshaderCSO->GetBufferPointer(), vertexshaderCSO->GetBufferSize(), &SimpleInputLayout);
