@@ -265,6 +265,8 @@ void URenderer::CreateConstantBuffer()
 	constantbufferdesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
 	Device->CreateBuffer(&constantbufferdesc, nullptr, &ConstantBuffer);
+
+	Device->CreateBuffer(&constantbufferdesc, nullptr, &ConstnantBufferPerFrame);
 }
 
 void URenderer::ReleaseConstantBuffer()
@@ -273,6 +275,12 @@ void URenderer::ReleaseConstantBuffer()
 	{
 		ConstantBuffer->Release();
 		ConstantBuffer = nullptr;
+	}
+
+	if(ConstnantBufferPerFrame)
+	{
+		ConstnantBufferPerFrame->Release();
+		ConstnantBufferPerFrame = nullptr;
 	}
 }
 
@@ -289,5 +297,21 @@ void URenderer::UpdateConstant(FVector3 Offset, float Angle)
 			constants->Angle = Angle;
 		}
 		DeviceContext->Unmap(ConstantBuffer, 0);
+	}
+}
+
+void URenderer::UpdateConstantPerFrame(float cameraY)
+{
+	if (ConstnantBufferPerFrame)
+	{
+		D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+		DeviceContext->Map(ConstnantBufferPerFrame, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+		FConstantPerFrame* constants = (FConstantPerFrame*)constantbufferMSR.pData;
+		{
+			constants->cameraY = cameraY;
+		}
+		DeviceContext->Unmap(ConstnantBufferPerFrame, 0);
+
+		DeviceContext->VSSetConstantBuffers(1, 1, &ConstnantBufferPerFrame);
 	}
 }

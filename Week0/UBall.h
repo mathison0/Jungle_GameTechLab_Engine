@@ -7,7 +7,6 @@ class UBall : public UPrimitive
 {
 public:
 	static constexpr float MaxSpeed = 0.01f;
-	static constexpr float MaxSpeedBothThrusters = 0.0015f;
 	static constexpr float gravity = -0.000001f;
 
 	static ID3D11Buffer* SphereVertexBuffer;
@@ -33,25 +32,27 @@ public:
 	static bool bApplyGravity;
 	static bool bApplyAttraction;
 
-	static constexpr float MaxLinearSpeed = 0.010f;
-	static constexpr float MaxAngularSpeed = 0.0035f;
+	static constexpr float MaxLinearSpeed = 10.0f;
+	static constexpr float MaxAngularSpeed = 3.5f;
 
-	static constexpr float MaxSoleJetpackSpeed = 0.008f;
-	static constexpr float MaxBothJetpackSpeed = 0.010f;
+	static constexpr float MaxSoleJetpackSpeed = 8.0f;
+	static constexpr float MaxBothJetpackSpeed = 10.0f;
 
-	static constexpr float SoleJetpackForce = 0.00006f;
-	static constexpr float BothJetpackForce = 0.00005f;
+	static constexpr float SoleJetpackForce = 0.06f;
+	static constexpr float BothJetpackForce = 0.05f;
 
-	static constexpr float JetpackTorqueAmount = 0.00008f;
+	static constexpr float JetpackTorqueAmount = 0.08f;
 	static constexpr float LinearDamping = 0.995f;
 	static constexpr float AngularDamping = 0.95f;
-	static constexpr float GravityForce = 0.000002f;
+	static constexpr float GravityForce = 0.98f;
 
 	static constexpr float MaxAttractionForce = 0.001f;
 
 	float PendingTorque = 0.0f;
 
 	std::string TextureName; // 텍스처 이름 추가
+	float inputLockTimer = 0.0f; // 입력 잠금 타이머
+	float inputLockDuration = 1500.0f; // 입력 잠금 지속 시간 (밀리초)
 
 public:
 	UBall();
@@ -68,6 +69,7 @@ public:
 
 	FVector3 GetVelocity() const { return Velocity; }
 	void SetVelocity(FVector3 val) { Velocity = val; }
+	FVector3 GetLocation() const { return Location; }
 
 	void Move(float t); 
 	void Update(float t) override;

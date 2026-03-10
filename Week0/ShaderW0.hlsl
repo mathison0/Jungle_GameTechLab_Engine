@@ -7,6 +7,12 @@ cbuffer Constants : register(b0)
     float Angle; // C++에서 넘겨준 회전 각도
 };
 
+cbuffer ConstantPerFrame : register(b1)
+{
+    float cameraY;
+    float padding[3]; // 16바이트 정렬을 위한 패딩
+};
+
 struct VS_INPUT
 {
     float4 position : POSITION; // Input position from vertex buffer
@@ -35,6 +41,10 @@ PS_INPUT mainVS(VS_INPUT input)
     
     //to pixel shader
     output.position = float4(rotatedPos.x + Offset.x, rotatedPos.y + Offset.y, 0, input.position.w);
+
+    output.position.y -= cameraY; // 카메라 Y 위치 적용
+    
+    // 색상을 픽셀 셰이더로 전달
     output.color = input.color;
     output.uv = input.uv;
     
@@ -56,8 +66,16 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     p.y = -p.y;
     float r2 = p.x * p.x + p.y * p.y;
     float z = sqrt(max(0.0f, 1.0f - r2));
-    float sphereU = 0.5f + (atan2(p.x, z) / (2.0f * PI));
-    float sphereV = 0.5f - (asin(p.y) / PI);
+    
+    // === 텍스처 회전 추가 ===
+    float s = sin(Angle);
+    float c = cos(Angle);
+    float2 rotatedP;
+    rotatedP.x = p.x * c - p.y * s;
+    rotatedP.y = p.x * s + p.y * c;
+    
+    float sphereU = 0.5f + (atan2(rotatedP.x, z) / (2.0f * PI));
+    float sphereV = 0.5f - (asin(rotatedP.y) / PI);
 
     //왜곡된 새 UV로 텍스처를 샘플링
     return earthTexture.Sample(earthSampler, float2(sphereU, sphereV));
