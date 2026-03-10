@@ -18,7 +18,7 @@ public:
 
 	virtual void HandleCollision(UPrimitive* other)override;
 	virtual void Update(float t) override;
-	void Explode();
-	void Respawn();
-	void Render(URenderer& renderer) override;
+	virtual void Explode();
+	virtual void Respawn();
+	virtual void Render(URenderer& renderer) override;
 };
