@@ -56,8 +56,16 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     p.y = -p.y;
     float r2 = p.x * p.x + p.y * p.y;
     float z = sqrt(max(0.0f, 1.0f - r2));
-    float sphereU = 0.5f + (atan2(p.x, z) / (2.0f * PI));
-    float sphereV = 0.5f - (asin(p.y) / PI);
+    
+    // === 텍스처 회전 추가 ===
+    float s = sin(Angle);
+    float c = cos(Angle);
+    float2 rotatedP;
+    rotatedP.x = p.x * c - p.y * s;
+    rotatedP.y = p.x * s + p.y * c;
+    
+    float sphereU = 0.5f + (atan2(rotatedP.x, z) / (2.0f * PI));
+    float sphereV = 0.5f - (asin(rotatedP.y) / PI);
 
     //왜곡된 새 UV로 텍스처를 샘플링
     return earthTexture.Sample(earthSampler, float2(sphereU, sphereV));

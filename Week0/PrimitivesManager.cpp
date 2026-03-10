@@ -42,7 +42,8 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 	}
 
 	// 충돌 체크
-	for (size_t i = 0; i < objects.size(); ++i)
+	/*
+	* for (size_t i = 0; i < objects.size(); ++i)
 	{
 		for (size_t j = i + 1; j < objects.size(); ++j)
 		{
@@ -52,6 +53,7 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 			}
 		}
 	}
+	*/
 }
 
 void FPrimitivesManager::Render(URenderer& renderer)
