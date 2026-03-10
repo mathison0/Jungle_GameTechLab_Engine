@@ -14,11 +14,11 @@ public:
 	const float RespawnDelay = 3000.0f;
 
 public:
-	Planet(FVector3 startPos, FVector3 startVel, float r);
+	Planet(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName = "");
 
 	void HandleCollision(UPrimitive* other)override;
 	void Update(float t) override;
-
 	void Explode();
 	void Respawn();
+	void Render(URenderer& renderer) override;
 };

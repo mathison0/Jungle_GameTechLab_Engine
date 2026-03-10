@@ -73,6 +73,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED); //texture mapping
 	WCHAR WindowClass[] = L"JungleWindowClass";
 	WCHAR Title[] = L"Game Tech Lab";
 
@@ -87,7 +88,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	URenderer renderer;
 	renderer.Create(hWnd);
 	renderer.CreateShader();
-
+	renderer.CreateSampler();
+	renderer.LoadTexture("Earth", L"earth.jpg");
 	renderer.CreateConstantBuffer();
 
 	// ImGui Setup
@@ -100,50 +102,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	UINT numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
 	UINT numVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
 
-	float scaleMod = 0.1f;
-
-	/*for (UINT i = 0; i < numVerticesSphere; ++i)
-	{
-		sphere_vertices[i].x *= scaleMod;
-		sphere_vertices[i].y *= scaleMod;
-		sphere_vertices[i].z *= scaleMod;
-	}*/
-
 	ID3D11Buffer* vertexBufferTriangle = renderer.CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
 
-
-	/*for (UINT i = 0; i < numVerticesSphere; ++i)
-	{
-		sphere_vertices[i].x *= scaleMod;
-		sphere_vertices[i].y *= scaleMod;
-		sphere_vertices[i].z *= scaleMod;
-	}*/
-
 	bool bIsExit = false;
-
-	enum ETypePrimitive
-	{
-		EPT_Triangle,
-		EPT_Cube,
-		EPT_Sphere,
-		EPT_Max,
-	};
-
-	ETypePrimitive typePrimitive = EPT_Sphere;
-	FVector3	offset(0.0f);
-	FVector3 velocity(0.0f);
 
 	const float leftBorder = -1.0f;
 	const float rightBorder = 1.0f;
 	const float topBorder = -1.0f;
 	const float bottomBorder = 1.0f;
 	const float sphereRadius = 1.0f;
-
-	bool bBoundBallToScreen = true;
-	bool bPinballMovement = true;
-
-	velocity.x = ((float)(rand() % 100 - 50)) * 0.001f;
-	velocity.y = ((float)(rand() % 100 - 50)) * 0.001f;
 
 	const int targetFPS = 60;
 	const double targetFrameTime = 1000.0 / targetFPS;
@@ -160,21 +127,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	FPrimitivesManager primitivesManager;
 
-	UINT numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
-	for (UINT i = 0; i < numVerticesSphere; ++i)
-	{
-		// 로컬 Y좌표가 0.6 이상인 부분을 빨간색으로 변경 (구체 반경 기준에 맞춰 0.5~0.8 등 수치 조절)
-		if (sphere_vertices[i].y > 0.6f)
-		{
-			sphere_vertices[i].r = 1.0f; // Red
-			sphere_vertices[i].g = 0.0f;
-			sphere_vertices[i].b = 0.0f;
-		}
-	}
-
 	UBall::InitializeBuffer(renderer);
 
-	Planet TestPlanet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f);
+	Planet TestPlanet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f, "Earth");
 	
 
 	bool bPrevLeftPressed = false;
@@ -203,7 +158,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
-			// 키가 눌려있다면 추진체 가동!
+		// 키가 눌려있다면 추진체 가동!
 		UBall* targetBall = static_cast<UBall*>(primitivesManager.GetPrimitive(0));
 		if (targetBall != nullptr)
 		{
@@ -259,29 +214,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		{
 			TestPlanet.Render(renderer);
 		}
-
-		//ImGui_ImplDX11_NewFrame();
-		//ImGui_ImplWin32_NewFrame();
-		//ImGui::NewFrame();
-
-		//ImGui::Begin("Jungle Property Window");
-
-		//ImGui::InputInt("Number of Balls", &targetBallNum);
-		//targetBallNum = targetBallNum < 0 ? 0 : targetBallNum;
-
-		//ImGui::Checkbox("Gravity", &UBall::bApplyGravity);
-		//ImGui::Checkbox("Attraction", &UBall::bApplyAttraction);
-
-		//if (ImGui::Button("Quit this app"))
-		//{
-		//	PostMessage(hWnd, WM_QUIT, 0, 0);
-		//}
-
-		//ImGui::End();
-
-
-		//ImGui::Render();
-		//ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 		renderer.SwapBuffer();
 
