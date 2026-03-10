@@ -20,6 +20,7 @@ struct FVector3;
 #include "UBall.h"
 #include "PrimitivesManager.h"
 #include "planet.h"
+#include "GravityPlanet.h"
 
 
 struct FVector
@@ -174,7 +175,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	UBall::InitializeBuffer(renderer);
 
-	Planet TestPlanet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f);
+	//Planet TestPlanet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f);
+	GravityPlanet TestGravity({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f);
 	
 
 	bool bPrevLeftPressed = false;
@@ -246,18 +248,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		primitivesManager.SyncBallCountWithUI(targetBallNum);
 		primitivesManager.Update(elapsedTime, mouseWorldPos);
 
-		TestPlanet.Update(elapsedTime);
+		TestGravity.Update(elapsedTime);
 
 		if (targetBall != nullptr)
 		{
-			TestPlanet.HandleCollision(targetBall);
+			TestGravity.HandleCollision(targetBall);
+			TestGravity.Gravity(targetBall);
 		}
 
 		primitivesManager.Render(renderer);
 
-		if (TestPlanet.bIsActive)
+		if (TestGravity.bIsActive)
 		{
-			TestPlanet.Render(renderer);
+			TestGravity.Render(renderer);
 		}
 
 		//ImGui_ImplDX11_NewFrame();
@@ -301,6 +304,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	renderer.ReleaseVertexBuffer(vertexBufferTriangle);
 
 	UBall::ReleaseBuffer(renderer);
+	TestGravity.ReleaseBuffer(renderer);
 
 	renderer.ReleaseConstantBuffer();
 	renderer.ReleaseShader();
