@@ -184,13 +184,15 @@ void InitializeRenderer(HWND hWnd)
 	renderer.CreateSampler();
 
 	// 텍스처 로드
-	renderer.LoadTexture("Background", L"background");
 	std::string textureNames[] = { "Earth", "Mars", "Moon", "Jupiter", "Venus",  "mercury",  "Neptune" };
 	std::wstring textureFiles[] = { L"earth.jpg", L"mars.jpg", L"moon.jpg", L"jupiter.jpg", L"venus.jpg", L"mercury.jpg", L"neptune.jpg" };
+	renderer.LoadTexture("Background", L"background.jpg");
+
 	for (int i = 0; i < textureNames->size(); ++i)
 	{
 		renderer.LoadTexture(textureNames[i], textureFiles[i].c_str());
 	}
+
 	renderer.CreateConstantBuffer();
 	
 	// ImGui Setup
@@ -203,6 +205,7 @@ void InitializeRenderer(HWND hWnd)
 	QueryPerformanceFrequency(&frequency);
 
 	UBall::InitializeBuffer(renderer);
+	Sprite::CreateQuadVertexBuffer(renderer);
 }
 
 void InitializeGameObjects()
