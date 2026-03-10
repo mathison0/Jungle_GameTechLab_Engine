@@ -325,13 +325,13 @@ void InitializeGameObjects()
 	background = new Sprite("Background");
 
 	//StartButton 생성
-	startButton = new Button({ 0,0,0, }, { 0.3f,0.1f },"StartButton", []() {
+	startButton = new Button({ 0,-0.1f,0, }, { 0.3f,0.1f },"StartButton", []() {
 		// Start 버튼 클릭 시 실행할 코드 작성
 		// 예: 게임 시작, 메뉴 닫기 등
 		});
 
 	//RestartButton 생성
-	restartButton = new Button({ 0,0,0, }, { 0.3f,0.1f }, "RestartButton", []() {
+	restartButton = new Button({ 0,-0.2f,0, }, { 0.3f,0.1f }, "RestartButton", []() {
 		// Restart 버튼 클릭 시 실행할 코드 작성
 		// 예: 게임 초기화, 점수 리셋 등
 		});

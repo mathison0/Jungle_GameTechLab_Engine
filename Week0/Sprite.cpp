@@ -16,8 +16,8 @@ void Sprite::Render(URenderer& renderer)
 	}
 
 
-	renderer.DeviceContext->VSSetShader(renderer.SpriteVertexShader, nullptr, 0);
-	renderer.DeviceContext->PSSetShader(renderer.SpritePixelShader, nullptr, 0);
+	renderer.DeviceContext->VSSetShader(renderer.backgroundVertexShader, nullptr, 0);
+	renderer.DeviceContext->PSSetShader(renderer.backgroundPixelShader, nullptr, 0);
 	renderer.DeviceContext->PSSetShaderResources(0, 1, &textureResourceView);
 	renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
 

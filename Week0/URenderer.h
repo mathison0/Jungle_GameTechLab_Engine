@@ -48,8 +48,12 @@ public:
 	ID3D11PixelShader* SimplePixelShader;
 	ID3D11InputLayout* SimpleInputLayout;
 
-	ID3D11VertexShader* SpriteVertexShader = nullptr;
-	ID3D11PixelShader* SpritePixelShader = nullptr;
+	ID3D11VertexShader* backgroundVertexShader = nullptr;
+	ID3D11PixelShader* backgroundPixelShader = nullptr;
+
+	ID3D11VertexShader* UIVertexShader = nullptr;
+	ID3D11PixelShader* UIPixelShader = nullptr;
+
 	unsigned int Stride;
 
 	struct FConstants
