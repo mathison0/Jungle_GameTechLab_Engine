@@ -20,6 +20,7 @@ struct FVector3;
 #include "UBall.h"
 #include "PrimitivesManager.h"
 #include "planet.h"
+#include "meteor.h"
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
@@ -51,6 +52,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+	srand(1234);
+
 	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	WCHAR WindowClass[] = L"JungleWindowClass";
 	WCHAR Title[] = L"Game Tech Lab";
@@ -109,6 +112,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	Planet* testPlanet = new Planet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f, "Mars");
 	primitivesManager.AddObject(testPlanet);
 
+	Meteor* testMeteor = new Meteor(0.06f, "Mars");
+	primitivesManager.AddObject(testMeteor);
+
 	// Main Loop 
 	while (bIsExit == false)
 	{
@@ -137,9 +143,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
 			bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
 
-			if (bCurrentLeftPressed || bCurrentRightPressed)
+			if (player->inputLockTimer <= 0.0f)
 			{
-				player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
+				if (bCurrentLeftPressed || bCurrentRightPressed)
+				{
+					player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
+				}
 			}
 		}
 
@@ -153,7 +162,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
 
 		primitivesManager.Update(elapsedTime, mouseWorldPos);
-		primitivesManager.Render(renderer);
+		if (player != nullptr && testPlanet != nullptr)
+		{
+			testPlanet->HandleCollision(player);
+		}
+
+		if (player != nullptr && testMeteor != nullptr)
+		{
+			testMeteor->HandleCollision(player);
+		}
+
+		primitivesManager.Render(renderer);		
 
 		renderer.SwapBuffer();
 

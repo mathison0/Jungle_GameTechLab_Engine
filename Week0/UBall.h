@@ -7,7 +7,6 @@ class UBall : public UPrimitive
 {
 public:
 	static constexpr float MaxSpeed = 0.01f;
-	static constexpr float MaxSpeedBothThrusters = 0.0015f;
 	static constexpr float gravity = -0.000001f;
 
 	static ID3D11Buffer* SphereVertexBuffer;
@@ -52,6 +51,8 @@ public:
 	float PendingTorque = 0.0f;
 
 	std::string TextureName; // 텍스처 이름 추가
+	float inputLockTimer = 0.0f; // 입력 잠금 타이머
+	float inputLockDuration = 1500.0f; // 입력 잠금 지속 시간 (밀리초)
 
 public:
 	UBall();

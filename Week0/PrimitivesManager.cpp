@@ -41,17 +41,17 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 		}
 	}
 
-	// 面倒 眉农
-	for (size_t i = 0; i < objects.size(); ++i)
-	{
-		for (size_t j = i + 1; j < objects.size(); ++j)
-		{
-			if (objects[i] != nullptr && objects[j] != nullptr)
-			{
-				objects[i]->HandleCollision(objects[j]);
-			}
-		}
-	}
+	//// 面倒 眉农
+	//for (size_t i = 0; i < objects.size(); ++i)
+	//{
+	//	for (size_t j = i + 1; j < objects.size(); ++j)
+	//	{
+	//		if (objects[i] != nullptr && objects[j] != nullptr)
+	//		{
+	//			objects[i]->HandleCollision(objects[j]);
+	//		}
+	//	}
+	//}
 }
 
 void FPrimitivesManager::Render(URenderer& renderer)
