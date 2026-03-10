@@ -81,6 +81,8 @@ void Planet::Render(URenderer& renderer)
 {
 	if (!bIsActive) return;
 
+
+
 	// 텍스처 설정 (부모 클래스 로직 사용)
 	if (!TextureName.empty())
 	{

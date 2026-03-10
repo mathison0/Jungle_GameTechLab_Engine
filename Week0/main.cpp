@@ -24,6 +24,23 @@ struct FVector3;
 #include "planet.h"
 #include "Camera.h"
 #include "SoundManager.h"
+#include "Sprite.h"
+
+
+struct FVector
+{
+	float x, y, z;
+	FVector(float _x = 0, float _y = 0, float _z = 0) : x(_x), y(_y), z(_z) {}
+};
+
+FVertexSimple triangle_vertices[] =
+{
+	{  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f }, // Top vertex (red)
+	{  1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f }, // Bottom-right vertex (green)
+	{ -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f }  // Bottom-left vertex (blue)
+};
+
+FVector3 gravity;
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
@@ -41,6 +58,7 @@ bool bIsExit = false;
 UBall* player;
 Moon* testPlanet;
 Camera* camera;
+Sprite* background;
 
 //FPS, time
 const int targetFPS = 60;
@@ -135,6 +153,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WinMainUpdate(hWnd);
 		WinMainRender();
 
+
 		do
 		{
 			Sleep(0);
@@ -150,6 +169,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SoundManager::Get().Release();
 
 	UBall::ReleaseBuffer(renderer);
+	Sprite::ReleaseQuadVertexBuffer(renderer);
 	renderer.ReleaseConstantBuffer();
 	renderer.ReleaseShader();
 	renderer.Release();
@@ -164,6 +184,7 @@ void InitializeRenderer(HWND hWnd)
 	renderer.CreateSampler();
 
 	// 텍스처 로드
+	renderer.LoadTexture("Background", L"background");
 	std::string textureNames[] = { "Earth", "Mars", "Moon", "Jupiter", "Venus",  "mercury",  "Neptune" };
 	std::wstring textureFiles[] = { L"earth.jpg", L"mars.jpg", L"moon.jpg", L"jupiter.jpg", L"venus.jpg", L"mercury.jpg", L"neptune.jpg" };
 	for (int i = 0; i < textureNames->size(); ++i)
@@ -199,6 +220,9 @@ void InitializeGameObjects()
 
 	//Camera 생성
 	camera = new Camera();
+
+	//Background 생성
+	background = new Sprite("Background");
 }
 
 void ProcessInput()
@@ -235,6 +259,7 @@ void WinMainUpdate(HWND hWnd)
 
 void WinMainRender()
 {
+	background->Render(renderer);
 	primitivesManager.Render(renderer);
 	renderer.SwapBuffer();
 }
