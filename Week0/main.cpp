@@ -40,6 +40,7 @@ bool bIsExit = false;
 
 UBall* player;
 Moon* testPlanet;
+GravityPlanet* testPlanet2;
 Camera* camera;
 
 //FPS, time
@@ -182,6 +183,7 @@ void InitializeRenderer(HWND hWnd)
 	QueryPerformanceFrequency(&frequency);
 
 	UBall::InitializeBuffer(renderer);
+	testPlanet2->InitRangeResources(renderer.Device);
 }
 
 void InitializeGameObjects()
@@ -196,6 +198,9 @@ void InitializeGameObjects()
 	//TestPlanet 생성
 	testPlanet = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	primitivesManager.AddObject(testPlanet);
+
+	testPlanet2 = new GravityPlanet({ -0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.1f, "Mars");
+	primitivesManager.AddObject(testPlanet2);
 
 	//Camera 생성
 	camera = new Camera();
@@ -230,7 +235,8 @@ void WinMainUpdate(HWND hWnd)
 	camera->Update(deltaTime, player);
 	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
 
-
+	testPlanet2->Gravity(player, deltaTime);
+	testPlanet2->HandleCollision(player);
 }
 
 void WinMainRender()

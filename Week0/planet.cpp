@@ -165,6 +165,11 @@ void Moon::Update(float t)
 
 // --- GravityPlanet Implementation ---
 
+ID3D11Buffer* GravityPlanet::RangeDashBuffer = nullptr;
+UINT GravityPlanet::NumDashVertices = 0;
+int GravityPlanet::ReferenceCount = 0;
+ID3D11RasterizerState* GravityPlanet::NoCullState = nullptr;
+
 void GravityPlanet::Gravity(UBall* player, float deltatime)
 {
 	if (!this->bIsActive)
@@ -194,19 +199,17 @@ void GravityPlanet::Gravity(UBall* player, float deltatime)
 
 	if (this->planetType == PlanetType::pull)
 	{
-		standardDist = standardDist_pull;
 		maxSpeed = maxSpeed_pull;
 		strength = 1.0f;
 	}
 	else if(this->planetType == PlanetType::push)
 	{
-		standardDist = standardDist_push;
 		maxSpeed = maxSpeed_push;
 		normal *= -1.0f;
 		strength = 50.0f;
 	}
 
-	if (dist > standardDist) 
+	if (dist > range) 
 		return;
 
 	float gravityForce = strength / ((dist * dist) + 0.001f);
@@ -221,6 +224,85 @@ void GravityPlanet::Gravity(UBall* player, float deltatime)
 
 	player->SetVelocity(newVelocity);
 }
+
+void GravityPlanet::InitRangeResources(ID3D11Device* device)
+{
+	if (RangeDashBuffer) return;
+
+	const int segments = 128;
+	std::vector<FVertexSimple> vertices;
+
+	for (int i = 0; i < segments; i+=2)
+	{
+		float t1 = (float)i / segments * 2.0f * 3.141592f;
+		float t2 = (float)(i + 1) / segments * 2.0f * 3.141592f;
+
+		FVertexSimple v1 = {}, v2 = {};
+
+		// 1. Position (x, y, z)
+		v1.x = cosf(t1); v1.y = sinf(t1); v1.z = 0.0f;
+		v2.x = cosf(t2); v2.y = sinf(t2); v2.z = 0.0f;
+
+		// 2. Color (r, g, b, a) - 노란색 점선
+		v1.r = v2.r = 1.0f;
+		v1.g = v2.g = 1.0f;
+		v1.b = v2.b = 0.0f;
+		v1.a = v2.a = 1.0f;
+
+		// 3. UV (u, v) - 셰이더 조건문 통과를 위해 반드시 0.0f
+		v1.u = v1.v = v2.u = v2.v = 0.0f;
+
+		vertices.push_back(v1);
+		vertices.push_back(v2);
+	}
+	NumDashVertices = (UINT)vertices.size();
+
+	// D3D11 버퍼 생성 로직
+	D3D11_BUFFER_DESC bd = {};
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(FVertexSimple) * NumDashVertices;
+	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA sd = {};
+	sd.pSysMem = vertices.data();
+	device->CreateBuffer(&bd, &sd, &RangeDashBuffer);
+
+	D3D11_RASTERIZER_DESC rd = {};
+	rd.FillMode = D3D11_FILL_SOLID;
+	rd.CullMode = D3D11_CULL_NONE;
+	device->CreateRasterizerState(&rd, &NoCullState);
+}
+
+
+void GravityPlanet::Render(URenderer& renderer)
+{
+	Planet::Render(renderer);
+
+	if (!RangeDashBuffer) return;
+
+	// --- 점선 그리기 세팅 시작 ---
+
+	ID3D11RasterizerState* previousState = nullptr;
+	renderer.DeviceContext->RSGetState(&previousState);
+	renderer.DeviceContext->RSSetState(NoCullState);
+
+	renderer.DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	renderer.DeviceContext->PSSetShaderResources(0, 1, &nullSRV);
+
+	FVector3 rangeTransform = { this->Location.x, this->Location.y, range};
+	renderer.UpdateConstant(rangeTransform, 0.0f);
+	renderer.DeviceContext->VSSetConstantBuffers(0, 1, &renderer.ConstantBuffer);
+
+	renderer.RenderPrimitive(RangeDashBuffer, NumDashVertices);
+
+	// --- 복구 ---
+	renderer.DeviceContext->RSSetState(previousState);
+	if (previousState) previousState->Release();
+	renderer.DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
 
 // --- Meteor Implementation ---
 

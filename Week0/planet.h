@@ -57,21 +57,41 @@ class GravityPlanet : public Planet
 {
 public:
 	PlanetType planetType;
-	float standardDist = 0;
+
+	float range;
+
 	float maxSpeed = 0;
-
-	float standardDist_pull = 0.7f;
 	float maxSpeed_pull = 0.4f;
-
-	float standardDist_push = 0.7f;
 	float maxSpeed_push = 2.0f;
+
+private:
+	static ID3D11Buffer* RangeDashBuffer;
+	static UINT NumDashVertices;
+	static int ReferenceCount;
+	static ID3D11RasterizerState* NoCullState;
 
 public:
 	GravityPlanet(FVector3 Location, FVector3 Velocity, float r, const std::string& textureName = "", PlanetType type = PlanetType::pull)
-		: Planet(Location, Velocity, r, textureName), planetType(type) {}
+		: Planet(Location, Velocity, r, textureName), planetType(type) 
+	{
+		range = r * 5.0f;
+		ReferenceCount++;
+	}
 
-	virtual ~GravityPlanet() override {}
+	virtual ~GravityPlanet() override 
+	{
+		ReferenceCount--;
+		if (ReferenceCount == 0 && RangeDashBuffer)
+		{
+			RangeDashBuffer->Release();
+			RangeDashBuffer = nullptr;
+		}
+	}
+
 	void Gravity(UBall* player, float deltatime);
+
+	static void InitRangeResources(ID3D11Device* device);
+	virtual void Render(URenderer& renderer) override;
 };
 
 //--- Meteor ---
