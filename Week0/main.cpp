@@ -20,6 +20,7 @@ struct FVector3;
 #include "UBall.h"
 #include "PrimitivesManager.h"
 #include "planet.h"
+#include "GravityPlanet.h"
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
@@ -106,7 +107,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	primitivesManager.AddObject(player);
 
 	//TestPlanet 생성
-	Planet* testPlanet = new Planet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f, "Mars");
+	GravityPlanet* testPlanet = new GravityPlanet({ -0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f, "Mars", PlanetType::push);
 	primitivesManager.AddObject(testPlanet);
 
 	// Main Loop 
@@ -129,6 +130,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			{
 				if (msg.wParam == 'Q') bIsExit = true;
 			}
+		}
+
+		if (player != nullptr)
+		{
+			testPlanet->Gravity(player, elapsedTime);
 		}
 
 		// 플레이어 조작
@@ -154,6 +160,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		primitivesManager.Update(elapsedTime, mouseWorldPos);
 		primitivesManager.Render(renderer);
+
+		testPlanet->HandleCollision(player);
+		
 
 		renderer.SwapBuffer();
 

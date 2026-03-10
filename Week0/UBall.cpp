@@ -260,6 +260,7 @@ void UBall::UpdateRenderer(URenderer& renderer)
 
 void UBall::HandleCollision(UPrimitive* other)
 {
+	/*
 	UBall* otherBall = static_cast<UBall*>(other);
 
 	float deltaX = otherBall->Location.x - Location.x;
@@ -313,6 +314,7 @@ void UBall::HandleCollision(UPrimitive* other)
 		D(impulseThis);
 		other->D(impulseOther);
 	}
+	*/
 }
 
 
