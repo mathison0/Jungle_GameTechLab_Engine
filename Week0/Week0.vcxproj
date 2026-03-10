@@ -152,7 +152,6 @@
     <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="planet.h" />
     <ClInclude Include="PrimitivesManager.h" />
-    <ClInclude Include="Sphere.h" />
     <ClInclude Include="Type.h" />
     <ClInclude Include="UBall.h" />
     <ClInclude Include="UPrimitive.h" />
