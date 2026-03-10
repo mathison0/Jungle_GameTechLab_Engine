@@ -120,14 +120,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	UBall::InitializeBuffer(renderer);
 
-	// Player 생성 (UBall 타입, Earth 텍스처)
+	//Player 생성
 	UBall* player = new UBall();
 	player->Location = { 0.0f, 0.0f, 0.0f };
 	player->Radius = 0.05f;
 	player->TextureName = "Earth";
 	primitivesManager.AddObject(player);
 
-	// TestPlanet 생성 (Planet 타입, Mars 텍스처)
+	//TestPlanet 생성
 	Planet* testPlanet = new Planet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f, "Mars");
 	primitivesManager.AddObject(testPlanet);
 

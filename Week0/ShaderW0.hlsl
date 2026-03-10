@@ -43,6 +43,12 @@ PS_INPUT mainVS(VS_INPUT input)
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
+    //UV가 (0,0)이면 vertex color 사용 (cube용) -> Sphere.h에서 uv 좌표 수정
+    //UV가 (0,0)이 아니면 텍스처 사용 (sphere용)
+    if (input.uv.x == 0.0f && input.uv.y == 0.0f)
+    {
+        return input.color; // Vertex color 사용
+    }
     //2d texture mapping
     //texture에서 그대로 잘라 넣지 않고 구의 표면에 맞게 uv 좌표 변형.
     const float PI = 3.14159265f;
