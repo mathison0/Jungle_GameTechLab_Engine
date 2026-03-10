@@ -6,9 +6,11 @@
 class Sprite
 {
 private:
-	static ID3D11Buffer* QuadVertexBuffer;
 
 	ID3D11ShaderResourceView* textureResourceView = nullptr;
+
+protected:
+	static ID3D11Buffer* QuadVertexBuffer;
 
 	FVector3 position{ 0.f, 0.f, 1.0f };
 	FVector3 scale{ 1.f, 1.f };
@@ -24,7 +26,7 @@ public:
 	inline void SetPosition(float x, float y) { position = { x, y }; }
 	inline void SetScale(float sw, float sh) { scale = { sw, sh }; }
 
-	void Render(URenderer& renderer);
+	virtual void Render(URenderer& renderer);
 
 	static void CreateQuadVertexBuffer(URenderer& renderer)
 	{
