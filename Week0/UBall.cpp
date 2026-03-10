@@ -78,8 +78,14 @@ void UBall::InitializeBuffer(URenderer& renderer)
 	SphereVertexBuffer = renderer.CreateVertexBuffer(circleVertices.data(), circleVertices.size() * sizeof(FVertexSimple));
 	NumVerticesSphere = circleVertices.size();
 
-	//SphereVertexBuffer = renderer.CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
-	//NumVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+	std::vector<FVertexSimple> pngCircleVertices = GenerateCircleVertices(72);
+	for (auto& vertex : pngCircleVertices)
+	{
+		vertex.u = -vertex.u; // UV를 음수로 변환
+		vertex.v = -vertex.v;
+	}
+	PNGSphereVertexBuffer = renderer.CreateVertexBuffer(pngCircleVertices.data(), pngCircleVertices.size() * sizeof(FVertexSimple));
+	NumVerticesPNGSphere = pngCircleVertices.size();
 
 	CubeVertexBuffer = renderer.CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
 	NumVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
@@ -89,6 +95,9 @@ void UBall::ReleaseBuffer(URenderer& renderer)
 {
 	renderer.ReleaseVertexBuffer(SphereVertexBuffer);
 	SphereVertexBuffer = nullptr;
+
+	renderer.ReleaseVertexBuffer(PNGSphereVertexBuffer);
+	PNGSphereVertexBuffer = nullptr;
 
 	renderer.ReleaseVertexBuffer(CubeVertexBuffer);
 	CubeVertexBuffer = nullptr;

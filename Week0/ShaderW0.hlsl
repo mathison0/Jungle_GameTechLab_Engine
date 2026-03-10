@@ -1,4 +1,5 @@
 Texture2D earthTexture : register(t0);
+Texture2D pngTexture : register(t1);
 SamplerState earthSampler : register(s0);
 
 cbuffer Constants : register(b0)
@@ -53,6 +54,22 @@ PS_INPUT mainVS(VS_INPUT input)
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
+    // 1. UV가 음수일 경우 (새로운 PNG 텍스처 사용)
+    if (input.uv.x < 0.0f || input.uv.y < 0.0f)
+    {
+        float2 correctUV = abs(input.uv);
+        
+        // UV를 중심(0.5, 0.5) 기준으로 회전
+        float2 centered = correctUV - 0.5f;
+        float s = sin(Angle);
+        float c = cos(Angle);
+        float2 rotatedUV;
+        rotatedUV.x = centered.x * c - centered.y * s;
+        rotatedUV.y = centered.x * s + centered.y * c;
+        rotatedUV += 0.5f; // 다시 중심으로 이동
+        
+        return pngTexture.Sample(earthSampler, rotatedUV);
+    }
     //UV가 (0,0)이면 vertex color 사용 (cube용) -> Sphere.h에서 uv 좌표 수정
     //UV가 (0,0)이 아니면 텍스처 사용 (sphere용)
     if (input.uv.x == 0.0f && input.uv.y == 0.0f)

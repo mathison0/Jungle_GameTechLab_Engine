@@ -13,6 +13,8 @@ public:
 	static UINT NumVerticesSphere;
 	static ID3D11Buffer* CubeVertexBuffer;
 	static UINT NumVerticesCube;
+	static ID3D11Buffer* PNGSphereVertexBuffer;
+	static UINT NumVerticesPNGSphere;
 
 	static int TotalNumBalls;
 

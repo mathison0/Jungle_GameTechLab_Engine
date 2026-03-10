@@ -56,9 +56,7 @@ void Planet::HandleCollision(UPrimitive* other)
 
 		// 행성의 질량(반지름)에 비례하는 튕김 힘
 		// 큰 행성일수록 더 강하게 튕겨냄
-		float explosionForce = 0.01f * this->Radius;
-		float maxExplosionForce = 0.015f;
-		explosionForce = explosionForce > maxExplosionForce ? maxExplosionForce : explosionForce;
+		float explosionForce = 7.f * this->Radius;
 
 		player->Velocity.x = normal.x * explosionForce;
 		player->Velocity.y = normal.y * explosionForce;
@@ -83,7 +81,17 @@ void Planet::Respawn()
 
 void Planet::Render(URenderer& renderer)
 {
-	if (!bIsActive) return;
+	if (!bIsActive)
+	{
+		return;
+	}
+
+	bool bIsPNGTexture = (TextureName == "Meteor");
+
+	if (bIsPNGTexture)
+	{
+		renderer.EnableAlphaBlending(true);
+	}
 
 	// 텍스처 설정 (부모 클래스 로직 사용)
 	if (!TextureName.empty())
@@ -91,19 +99,28 @@ void Planet::Render(URenderer& renderer)
 		ID3D11ShaderResourceView* texture = renderer.GetTexture(TextureName);
 		if (texture)
 		{
-			renderer.DeviceContext->PSSetShaderResources(0, 1, &texture);
+			int slot = bIsPNGTexture ? 1 : 0;
+			renderer.DeviceContext->PSSetShaderResources(slot, 1, &texture);
 			renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
 		}
 	}
 
+	ID3D11Buffer* bufferToUse = bIsPNGTexture ? UBall::PNGSphereVertexBuffer : UBall::SphereVertexBuffer;
+	UINT numVertices = bIsPNGTexture ? UBall::NumVerticesPNGSphere : UBall::NumVerticesSphere;
+
 	// 행성(구체)만 렌더링 - 추진체 제외
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
 	renderer.UpdateConstant(sphereTransform, this->Angle);
-	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
+	renderer.RenderPrimitive(bufferToUse, numVertices);
+
+	if (bIsPNGTexture)
+	{
+		renderer.EnableAlphaBlending(false);
+	}
 
 	// 텍스처 언바인드
-	ID3D11ShaderResourceView* nullSRV = nullptr;
-	renderer.DeviceContext->PSSetShaderResources(0, 1, &nullSRV);
+	ID3D11ShaderResourceView* nullSRV[2] = { nullptr, nullptr };
+	renderer.DeviceContext->PSSetShaderResources(0, 2, nullSRV);
 }
 
 // --- Moon Implementation ---
@@ -141,11 +158,11 @@ void Moon::Update(float t)
 			this->Velocity.y += direction.y * forceMagnitude * t;
 			
 			float currentSpeed = this->Velocity.Length();
-			if (currentSpeed > MaxFollowSpeed)
+			/*if (currentSpeed > MaxFollowSpeed)
 			{
 				this->Velocity.x = (this->Velocity.x / currentSpeed) * MaxFollowSpeed;
 				this->Velocity.y = (this->Velocity.y / currentSpeed) * MaxFollowSpeed;
-			}
+			}*/
 		}
 		
 		float currentSpeed = this->Velocity.Length();
@@ -228,10 +245,11 @@ void GravityPlanet::Gravity(UBall* player, float deltatime)
 
 // --- Meteor Implementation ---
 
-Meteor::Meteor(float r, const std::string& textureName)
-	: Planet({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, r, textureName)
+Meteor::Meteor(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName)
+	: Planet(startPos, startVel, r, textureName)
 {
 	Respawn();
+	bIsActive = true;
 }
 
 void Meteor::Update(float t)
@@ -249,6 +267,9 @@ void Meteor::Update(float t)
 		return;
 	}
 
+	float rotationSpeed = 1.002f;
+	Angle += rotationSpeed * t;
+
 	Location.x += Velocity.x * t;
 	Location.y += Velocity.y * t;
 
@@ -260,19 +281,19 @@ void Meteor::Update(float t)
 
 void Meteor::Respawn()
 {
-	float randomX = 0.0f;
-	float randomSpeed = 0.0003f + (rand() % 8) * 0.0001f;
+	float randomX = ((rand() % 1000) / 1000.0f) * 1.6f - 0.8f; // -0.8 ~ 0.8 범위
+	float randomSpeed = 0.0003f + (rand() % 8) * 0.51f;
 
 	OriginalLocation = { randomX, 1.2f, 0.0f };
 	OriginalVelocity = { 0.0f, -randomSpeed, 0.0f };
 
-	spawnDelay = static_cast<float>(rand() % 5000);
+	spawnDelay = static_cast<float>(rand() % 3000 + 1000); // 1초 ~ 4초
 	spawnTimer = 0.0f;
 
 	Location = OriginalLocation;
 	Velocity = OriginalVelocity;
 
-	bIsActive = false;
+	bIsActive = false; // 리스폰 후 대기 상태
 }
 
 void Meteor::HandleCollision(UPrimitive* other)
