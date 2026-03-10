@@ -362,6 +362,9 @@ void WinMainUpdate(HWND hWnd)
 	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
 	primitivesManager.Update(deltaTime, mouseWorldPos);
 
+	startButton->Update(mouseWorldPos.x, mouseWorldPos.y, false);
+	restartButton->Update(mouseWorldPos.x, mouseWorldPos.y, false);
+
 	camera->Update(deltaTime, player);
 	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
 }

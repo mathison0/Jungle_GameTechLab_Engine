@@ -14,6 +14,8 @@ protected:
 
 	FVector3 position{ 0.f, 0.f, 1.0f };
 	FVector3 scale{ 1.f, 1.f };
+	FVector3 color{ 1.f, 1.f, 1.f};
+
 	float uvOffset{ 0.f };
 
 	std::string textureName{};

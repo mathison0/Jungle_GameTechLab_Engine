@@ -3,10 +3,12 @@ SamplerState backgroundSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float3 Offset; 
-    float Angle; 
+    float3 Offset;
+    float Angle;
     float3 Scale;
     float uvOffset;
+    float3 Color;
+    float Alpha;
 };
 
 cbuffer ConstantPerFrame : register(b1)

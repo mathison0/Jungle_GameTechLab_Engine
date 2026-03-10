@@ -2,16 +2,20 @@
 
 void Button::Update(float mouseX, float mouseY, bool isMousePressed)
 {
-	if (IsMouseOver(mouseX, mouseY) && isMousePressed)
+	if (IsMouseOver(mouseX, mouseY))
 	{
-
 		//Hover Effect
-
-
-		if (OnClickCallback)
+		color = { 0.5f, 0.5f, 0.5f };
+		
+		if (OnClickCallback && isMousePressed)
 		{
 			OnClickCallback();
 		}
+	}
+
+	else
+	{
+		color = { 1.0f, 1.0f, 1.0f };
 	}
 }
 
@@ -31,7 +35,7 @@ void Button::Render(URenderer& renderer)
 			renderer.DeviceContext->PSSetShaderResources(0, 1, &srv);
 			renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
 
-			renderer.UpdateConstant(position, 0.0f, scale, uvOffset);
+			renderer.UpdateConstant(position, 0.0f, scale, uvOffset, color);
 			renderer.RenderPrimitive(QuadVertexBuffer, 6);
 
 			ID3D11ShaderResourceView* nullSRV = nullptr;
