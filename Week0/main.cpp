@@ -20,6 +20,7 @@ struct FVector3;
 #include "UBall.h"
 #include "PrimitivesManager.h"
 #include "planet.h"
+#include "moon.h"
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
@@ -70,6 +71,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// 텍스처 로드
 	renderer.LoadTexture("Earth", L"earth.jpg");
 	renderer.LoadTexture("Mars", L"mars.jpg");
+	renderer.LoadTexture("Moon", L"moon.jpg");
 
 	renderer.CreateConstantBuffer();
 
@@ -106,7 +108,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	primitivesManager.AddObject(player);
 
 	//TestPlanet 생성
-	Planet* testPlanet = new Planet({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.15f, "Mars");
+	Moon* testPlanet = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f , player, "Moon");
 	primitivesManager.AddObject(testPlanet);
 
 	// Main Loop 
@@ -145,7 +147,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		renderer.Prepare();
 		renderer.PrepareShader();
-
+		testPlanet->HandleCollision(player);
 		GetCursorPos(&mousePos);
 		ScreenToClient(hWnd, &mousePos);
 

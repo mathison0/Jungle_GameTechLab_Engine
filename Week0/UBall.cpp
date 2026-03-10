@@ -260,59 +260,59 @@ void UBall::UpdateRenderer(URenderer& renderer)
 
 void UBall::HandleCollision(UPrimitive* other)
 {
-	UBall* otherBall = static_cast<UBall*>(other);
+	//UBall* otherBall = static_cast<UBall*>(other);
 
-	float deltaX = otherBall->Location.x - Location.x;
-	float deltaY = otherBall->Location.y - Location.y;
+	//float deltaX = otherBall->Location.x - Location.x;
+	//float deltaY = otherBall->Location.y - Location.y;
 
-	float distanceSquared = deltaX * deltaX + deltaY * deltaY;
+	//float distanceSquared = deltaX * deltaX + deltaY * deltaY;
 
-	float radiusSum = Radius + otherBall->Radius;
-	float radiusSumSquared = radiusSum * radiusSum;
+	//float radiusSum = Radius + otherBall->Radius;
+	//float radiusSumSquared = radiusSum * radiusSum;
 
-	if (distanceSquared <= radiusSumSquared)
-	{
-		float distance = sqrtf(distanceSquared);
-		distance = distance < 0.0001f ? 0.0001f : distance;
-		float normalX = deltaX / distance;
-		float normalY = deltaY / distance;
+	//if (distanceSquared <= radiusSumSquared)
+	//{
+	//	float distance = sqrtf(distanceSquared);
+	//	distance = distance < 0.0001f ? 0.0001f : distance;
+	//	float normalX = deltaX / distance;
+	//	float normalY = deltaY / distance;
 
-		float relativeVelocityX = otherBall->Velocity.x - Velocity.x;
-		float relativeVelocityY = otherBall->Velocity.y - Velocity.y;
+	//	float relativeVelocityX = otherBall->Velocity.x - Velocity.x;
+	//	float relativeVelocityY = otherBall->Velocity.y - Velocity.y;
 
-		float velocityAlongNormal = relativeVelocityX * normalX + relativeVelocityY * normalY;
+	//	float velocityAlongNormal = relativeVelocityX * normalX + relativeVelocityY * normalY;
 
 
 
-		float overlap = radiusSum - distance;
-		float totalInverseMass = (1.0f / Mass) + (1.0f / otherBall->Mass);
+	//	float overlap = radiusSum - distance;
+	//	float totalInverseMass = (1.0f / Mass) + (1.0f / otherBall->Mass);
 
-		float percent = 0.2f;
-		float correctionMagnitude = (overlap / totalInverseMass) * percent;
-		float moveX = correctionMagnitude * normalX;
-		float moveY = correctionMagnitude * normalY;
+	//	float percent = 0.2f;
+	//	float correctionMagnitude = (overlap / totalInverseMass) * percent;
+	//	float moveX = correctionMagnitude * normalX;
+	//	float moveY = correctionMagnitude * normalY;
 
-		this->Location.x -= moveX * (1.0f / Mass);
-		this->Location.y -= moveY * (1.0f / Mass);
-		otherBall->Location.x += moveX * (1.0f / otherBall->Mass);
-		otherBall->Location.y += moveY * (1.0f / otherBall->Mass);
+	//	this->Location.x -= moveX * (1.0f / Mass);
+	//	this->Location.y -= moveY * (1.0f / Mass);
+	//	otherBall->Location.x += moveX * (1.0f / otherBall->Mass);
+	//	otherBall->Location.y += moveY * (1.0f / otherBall->Mass);
 
-		if (velocityAlongNormal > 0)
-		{
-			return;
-		}
+	//	if (velocityAlongNormal > 0)
+	//	{
+	//		return;
+	//	}
 
-		float elasticity = 1.0f;
+	//	float elasticity = 1.0f;
 
-		float impulseMagnitude = -(1 + elasticity) * velocityAlongNormal;
-		impulseMagnitude /= (1 / Mass) + (1 / otherBall->Mass);
+	//	float impulseMagnitude = -(1 + elasticity) * velocityAlongNormal;
+	//	impulseMagnitude /= (1 / Mass) + (1 / otherBall->Mass);
 
-		FVector3 impulseThis = { -(impulseMagnitude / Mass) * normalX, -(impulseMagnitude / Mass) * normalY, 0.0f };
-		FVector3 impulseOther = { (impulseMagnitude / otherBall->Mass) * normalX, (impulseMagnitude / otherBall->Mass) * normalY, 0.0f };
+	//	FVector3 impulseThis = { -(impulseMagnitude / Mass) * normalX, -(impulseMagnitude / Mass) * normalY, 0.0f };
+	//	FVector3 impulseOther = { (impulseMagnitude / otherBall->Mass) * normalX, (impulseMagnitude / otherBall->Mass) * normalY, 0.0f };
 
-		D(impulseThis);
-		other->D(impulseOther);
-	}
+	//	D(impulseThis);
+	//	other->D(impulseOther);
+	//}
 }
 
 

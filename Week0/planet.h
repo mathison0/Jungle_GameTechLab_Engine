@@ -16,8 +16,8 @@ public:
 public:
 	Planet(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName = "");
 
-	void HandleCollision(UPrimitive* other)override;
-	void Update(float t) override;
+	virtual void HandleCollision(UPrimitive* other)override;
+	virtual void Update(float t) override;
 	void Explode();
 	void Respawn();
 	void Render(URenderer& renderer) override;

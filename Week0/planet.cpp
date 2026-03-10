@@ -91,7 +91,7 @@ void Planet::Render(URenderer& renderer)
 
 	// 행성(구체)만 렌더링 - 추진체 제외
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(sphereTransform, 0.0f);
+	renderer.UpdateConstant(sphereTransform, this->Angle);
 	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
 
 	// 텍스처 언바인드

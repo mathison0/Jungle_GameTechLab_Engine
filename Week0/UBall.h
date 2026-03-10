@@ -72,7 +72,7 @@ public:
 	void Move(float t); 
 	void Update(float t) override;
 	void UpdateRenderer(URenderer& renderer) override;
-	void HandleCollision(UPrimitive* other)override;
+	virtual void HandleCollision(UPrimitive* other)override;
 	void D(const FVector3& v)override;
 	/*void ClampSpeed();
 	void ClampSpeed2(float maxSpeed);*/
