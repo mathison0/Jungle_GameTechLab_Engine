@@ -22,6 +22,7 @@ struct FVector3;
 #include "UBall.h"
 #include "PrimitivesManager.h"
 #include "planet.h"
+#include "Camera.h"
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
@@ -38,6 +39,7 @@ bool bIsExit = false;
 
 UBall* player;
 Moon* testPlanet;
+Camera* camera;
 
 //FPS, time
 const int targetFPS = 60;
@@ -45,6 +47,7 @@ const double targetFrameTime = 1000.0 / targetFPS;
 LARGE_INTEGER frequency;
 LARGE_INTEGER startTime, endTime;
 double elapsedTime = 0.0;
+float deltaTime = 0.0f;
 
 //mouse
 POINT mousePos;
@@ -115,6 +118,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
+		deltaTime = (float)elapsedTime / 1000.0f;
+
+
 		ProcessInput();
 		WinMainUpdate(hWnd);
 		WinMainRender();
@@ -146,9 +152,9 @@ void InitializeRenderer(HWND hWnd)
 	renderer.CreateSampler();
 
 	// 텍스처 로드
-	std::string textureNames[] = { "Earth", "Mars", "Moon", "Jupiter", "Venus",  "Mercury",  "Neptune" };
+	std::string textureNames[] = { "Earth", "Mars", "Moon", "Jupiter", "Venus",  "mercury",  "Neptune" };
 	std::wstring textureFiles[] = { L"earth.jpg", L"mars.jpg", L"moon.jpg", L"jupiter.jpg", L"venus.jpg", L"mercury.jpg", L"neptune.jpg" };
-	for (int i = 0; i < size(textureNames); ++i)
+	for (int i = 0; i < textureNames->size(); ++i)
 	{
 		renderer.LoadTexture(textureNames[i], textureFiles[i].c_str());
 	}
@@ -179,78 +185,8 @@ void InitializeGameObjects()
 	testPlanet = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	primitivesManager.AddObject(testPlanet);
 
-	struct PlanetData
-	{
-		std::string name;
-		std::string texture;
-		float relativeRadius; // 지구를 1.0 기준
-	};
-
-	PlanetData planetDataList[] = {
-		{"Mercury", "Mercury", 1.383f},
-		{"Venus", "Venus", 1.949f},
-		{"Mars", "Mars", 1.532f},
-		{"Jupiter", "Jupiter", 7.21f},
-		{"Neptune", "Neptune", 4.883f},
-	};
-
-	const float baseRadius = 0.05f; // 지구 기준 반지름
-	const int maxAttempts = 50;     // 배치 시도 횟수
-	const float minSpeed = 0.00001f; // 최소 속도
-	const float maxSpeed = 0.00003f; // 최대 속도
-	std::vector<UBall*> placedBalls;
-	
-	// 나머지 행성들 랜덤 배치
-	for (int i = 0; i < sizeof(planetDataList) / sizeof(PlanetData); ++i)
-	{
-		float radius = baseRadius * planetDataList[i].relativeRadius;
-		FVector3 newPos;
-		bool bPlaced = false;
-
-		// 최대 50번 시도
-		for (int attempt = 0; attempt < maxAttempts; ++attempt)
-		{
-			// -0.8 ~ 0.8 범위에서 랜덤 위치 생성
-			newPos.x = ((rand() % 1000) / 1000.0f) * 1.6f - 0.8f;
-			newPos.y = ((rand() % 1000) / 1000.0f) * 1.6f - 0.8f;
-			newPos.z = 0.0f;
-
-			// 다른 행성들과의 거리 체크
-			bool bOverlap = false;
-			for (auto& ball : placedBalls)
-			{
-				float dx = newPos.x - ball->Location.x;
-				float dy = newPos.y - ball->Location.y;
-				float distance = sqrtf(dx * dx + dy * dy);
-				float minDistance = (radius + ball->Radius) * 2.0f; // 반지름 합의 2배
-
-				if (distance < minDistance)
-				{
-					bOverlap = true;
-					break;
-				}
-			}
-
-			if (!bOverlap)
-			{
-				bPlaced = true;
-				break;
-			}
-		}
-
-		// 랜덤 속도 생성
-		float randomAngle = (rand() % 360) * (3.141592f / 180.0f); // 0~360도 랜덤 각도
-		float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed); // minSpeed ~ maxSpeed 사이 랜덤 속도
-		FVector3 randomVelocity;
-		randomVelocity.x = cosf(randomAngle) * randomSpeed;
-		randomVelocity.y = sinf(randomAngle) * randomSpeed;
-		randomVelocity.z = 0.0f;
-
-		// 50번 시도 후에도 배치 못했으면 그냥 마지막 위치에 배치
-		Planet* newPlanet = new Planet(newPos, randomVelocity, radius, planetDataList[i].texture);
-		primitivesManager.AddObject(newPlanet);
-		placedBalls.push_back(newPlanet);
-	}
+	//Camera 생성
+	camera = new Camera();
 }
 
 void ProcessInput()
@@ -262,7 +198,7 @@ void ProcessInput()
 
 		if (bCurrentLeftPressed || bCurrentRightPressed)
 		{
-			player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, elapsedTime);
+			player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, deltaTime);
 		}
 	}
 }
@@ -271,12 +207,18 @@ void WinMainUpdate(HWND hWnd)
 {
 	renderer.Prepare();
 	renderer.PrepareShader();
+	testPlanet->HandleCollision(player);
 
 	GetCursorPos(&mousePos);
 	ScreenToClient(hWnd, &mousePos);
 	mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
 	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
-	primitivesManager.Update(elapsedTime, mouseWorldPos);
+	primitivesManager.Update(deltaTime, mouseWorldPos);
+
+	camera->Update(deltaTime, player);
+	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
+
+
 }
 
 void WinMainRender()

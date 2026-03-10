@@ -112,7 +112,7 @@ void UBall::Move(float t)
 	if (Location.y < -1.0f + Radius)
 	{
 		Location.y = -1.0f + Radius;
-		Velocity.y *= -0.8f;
+		//Velocity.y *= -0.8f;
 	}
 }
 
@@ -230,8 +230,6 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 
 void UBall::Update(float t)
 {
-	float dt = t * 0.001f;
-
 	if (bApplyGravity)
 	{
 		Velocity.y -= GravityForce * t;
@@ -242,7 +240,7 @@ void UBall::Update(float t)
 
 	AngularVelocity *= AngularDamping;
 
-	float autoBalancePower = 0.000001f;
+	float autoBalancePower = 0.001f;
 	AngularVelocity += -sinf(Angle) * autoBalancePower * t;
 
 	Angle += AngularVelocity * t;
