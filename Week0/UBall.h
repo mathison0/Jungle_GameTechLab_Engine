@@ -50,9 +50,10 @@ public:
 
 	float PendingTorque = 0.0f;
 
-	std::string TextureName; // 텍스처 이름 추가
-	float inputLockTimer = 0.0f; // 입력 잠금 타이머
-	float inputLockDuration = 1500.0f; // 입력 잠금 지속 시간 (밀리초)
+	std::string TextureName;
+
+	float inputLockTimer = 0.0f;
+	float inputLockDuration = 1.0f;
 
 public:
 	UBall();

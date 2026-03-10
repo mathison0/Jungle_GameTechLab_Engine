@@ -73,7 +73,6 @@ float deltaTime = 0.0f;
 POINT mousePos;
 FVector3 mouseWorldPos;
 
-
 //Game
 struct PlanetData
 {
@@ -144,7 +143,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// 원하는 음원을 아래처럼 등록해서 원하는 곳에서 헤더만 포함해서 사용
 	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
 	SoundManager::Get().LoadSound("bgm", L"Audio/bgm.WAV");
-
 	SoundManager::Get().PlayBGM("bgm", true);
 
 	// Main Loop 
@@ -177,7 +175,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WinMainRender();
 
 		/* 게임 끝 */
-		if (player->Location.y >= 120.f)
+		if (player->Location.y >= 100.f)
 		{
 			break;
 		}
@@ -296,13 +294,27 @@ void SpawnRandomPlanet(float spawnBaseY)
 		if (bPositionValid) break;
 	}
 
-	//무작위 속도
+	//무작위 속도 및 방향 설정
 	float randomAngle = (rand() % 360) * (FVector3::PI / 180.0f);
 	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
+
+	float sizeMultiplier = 0.05f / sqrtf(radius);
+	randomSpeed *= sizeMultiplier;
+
 	FVector3 randomVelocity;
-	randomVelocity.x = cosf(randomAngle) * randomSpeed;
-	randomVelocity.y = sinf(randomAngle) * randomSpeed;
-	randomVelocity.z = 0.0f;
+
+	if (planetDataList[randIndex].name == "Meteor")
+	{
+		randomVelocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f; //수직낙하에 가깝게
+		randomVelocity.y = -(randomSpeed * 2.0f);
+		randomVelocity.z = 0.0f;
+	}
+	else
+	{
+		randomVelocity.x = cosf(randomAngle) * randomSpeed;
+		randomVelocity.y = sinf(randomAngle) * randomSpeed;
+		randomVelocity.z = 0.0f;
+	}
 
 	Planet* newPlanet = nullptr;
 	if (planetDataList[randIndex].name != "Meteor")
@@ -321,6 +333,12 @@ void ProcessInput()
 {
 	if (player != nullptr)
 	{
+		if (player->inputLockTimer > 0.0f)
+		{
+			player->inputLockTimer -= deltaTime;
+			return;
+		}
+
 		bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
 		bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
 
@@ -341,7 +359,7 @@ void InitializeGameObjects()
 	primitivesManager.AddObject(player);
 
 	//Moon 생성
-	moon = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
+	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	primitivesManager.AddObject(moon);
 
 	//Camera 생성

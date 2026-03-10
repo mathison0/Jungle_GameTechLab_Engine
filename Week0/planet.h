@@ -34,6 +34,10 @@ private:
 	float MaxFollowSpeed = 0.003f;
 	float RotationSpeed = 0.002f;
 
+	bool bIsFollowing = false;
+	bool bIsHiddenByCollision = false;
+	float HideTimer = 0.0f;
+
 public:
 	Moon(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName = "");
 	Moon(FVector3 startPos, FVector3 startVel, float r, UBall* target, const std::string& textureName = "");
@@ -44,6 +48,7 @@ public:
 	void SetRotationSpeed(float speed) { RotationSpeed = speed; }
 	
 	void Update(float t) override;
+	virtual void HandleCollision(UPrimitive* other) override;
 };
 
 //--- GravityPlanet ---
