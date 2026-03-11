@@ -1,10 +1,31 @@
 #pragma once
 #include "UBall.h"
+#include "planet.h"
+#include "Camera.h"
+#include "Sprite.h"
+#include <string>
+
+struct PlanetData
+{
+	std::string name;
+	float relativeRadius;
+};
 
 class FPrimitivesManager
 {
 private:
 	std::vector<UPrimitive*> objects;
+	
+	UBall* player = nullptr;
+	Moon* moon = nullptr;
+	Camera* camera = nullptr;
+	Sprite* background = nullptr;
+
+	float highestPlayerY = 0.0f;
+	float nextSpawnY = 1.0f;
+	float spawnInterval = 1.5f;
+
+	static PlanetData planetDataList[];
 
 public:
 	FPrimitivesManager() {}
@@ -14,6 +35,13 @@ public:
 	UPrimitive* GetPrimitive(int index);
 	int GetObjectCount() const { return objects.size(); }
 	std::vector<UPrimitive*> GetObjects() const { return objects; }
+
+	UBall* GetPlayer() const { return player; }
+	Camera* GetCamera() const { return camera; }
+
+	void InitializeGameObjects();
+	void SpawnRandomPlanet(float spawnBaseY);
+	void Reset();
 
 	void Update(const float deltaTime, const FVector3& ExternalForcePos);
 	void Render(URenderer& renderer);
