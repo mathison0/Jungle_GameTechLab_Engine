@@ -55,6 +55,7 @@ bool UBall::bApplyAttraction = false;
 URenderer renderer;
 FPrimitivesManager primitivesManager;
 bool bIsExit = false;
+bool bShowHomingUI = false;
 
 UBall* player;
 Moon* moon;
@@ -360,6 +361,15 @@ void ProcessInput()
 			player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, deltaTime);
 		}
 	}
+
+	static bool prevHState = false;
+	bool currentHState = (GetAsyncKeyState('H') & 0x8000) != 0;
+	bool ctrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+	if (currentHState && !prevHState && ctrlDown)
+	{
+		bShowHomingUI = !bShowHomingUI;
+	}
+	prevHState = currentHState;
 }
 
 void InitializeGameObjects()
@@ -393,6 +403,16 @@ void WinMainUpdate(HWND hWnd)
 	ScreenToClient(hWnd, &mousePos);
 	mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
 	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
+
+	if (camera != nullptr)
+	{
+		mouseWorldPos.y += camera->GetCurrentCameraY();
+	}
+
+	if (player != nullptr && player->bHomingMode)
+	{
+		player->ApplyHoming(mouseWorldPos, deltaTime);
+	}
 	primitivesManager.Update(deltaTime, mouseWorldPos);
 
 	camera->Update(deltaTime, player);
@@ -430,9 +450,17 @@ void WinMainRender()
 		ImGui::Text("X: %.3f", player->Location.x);
 		ImGui::Text("Y: %.3f", player->Location.y);
 		ImGui::Text("Z: %.3f", player->Location.z);
+
+		if (bShowHomingUI)
+		{
+			bool enabled = player->bHomingMode;
+			if (ImGui::Checkbox("Homing Mode", &enabled))
+			{
+				player->bHomingMode = enabled;
+			}
+		}
 	}
 	ImGui::End();
-
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 	

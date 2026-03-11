@@ -376,3 +376,41 @@ void UBall::ApplyAttraction(const FVector3& point, float strength)
 	FVector3 force = { forceX, forceY, 0.0f };
 	D(force);
 }
+
+void UBall::ApplyHoming(const FVector3& target, float deltaTime)
+{
+	if (this->inputLockTimer > 0.0f)
+		return;
+
+	FVector3 toTarget = target - this->Location;
+	float dist = toTarget.Length();
+	if (dist < 0.001f) return;
+
+	FVector3 dir = toTarget / dist;
+
+	float baseThrust = BothJetpackForce * deltaTime;
+	this->Velocity.x += dir.x * baseThrust;
+	this->Velocity.y += dir.y * baseThrust;
+
+	LimitVelocities(MaxBothJetpackSpeed * 0.1f);
+
+	// --- 회전 처리: 플레이어의 up-vector가 이동 방향을 보게 회전 ---
+	// upVector = (-sin(Angle), cos(Angle)) 이므로,
+	// desiredAngle을 upVector == dir 가 되도록 계산:
+	const float PI = 3.14159265359f;
+	float desiredAngle = atan2f(-dir.x, dir.y);
+
+	// 각도 차이를 -PI..PI 로 정규화
+	float diff = desiredAngle - this->Angle;
+	while (diff > PI) diff -= 2.0f * PI;
+	while (diff < -PI) diff += 2.0f * PI;
+
+	// 회전 강도 (튜닝 가능)
+	const float rotateStrength = 6.0f; // 값이 클수록 더 빠르게 회전
+	// 프레임 스케일 적용
+	this->AngularVelocity += diff * rotateStrength * deltaTime;
+
+	// AngularVelocity 한계 적용
+	if (this->AngularVelocity > MaxAngularSpeed) this->AngularVelocity = MaxAngularSpeed;
+	if (this->AngularVelocity < -MaxAngularSpeed) this->AngularVelocity = -MaxAngularSpeed;
+}
