@@ -2,10 +2,10 @@
 #include <algorithm>
 
 PlanetData FPrimitivesManager::planetDataList[] = {
-	{"Mercury", 1.383f},
+	{"Mercury", 1.483f},
 	{"Venus", 1.949f},
 	{"Mars", 1.532f},
-	{"Jupiter", 7.21f},
+	{"Jupiter", 6.21f},
 	{"Neptune", 4.883f},
 	{"Uranus", 2.331f},
 	{"Pluto", 2.745f},
@@ -81,7 +81,7 @@ void FPrimitivesManager::SpawnRandomPlanet(float spawnBaseY)
 
 	FVector3 newPos;
 	bool bPositionValid = false;
-	const int maxAttempts = 50;
+	const int maxAttempts = 100;
 
 	for (int attempt = 0; attempt < maxAttempts; ++attempt)
 	{
