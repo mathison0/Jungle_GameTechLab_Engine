@@ -26,6 +26,8 @@ struct FVector3;
 #include "Camera.h"
 #include "SoundManager.h"
 #include "Sprite.h"
+#include "UIManager.h"
+#include "GameContext.h"
 
 
 struct FVector
@@ -54,12 +56,8 @@ bool UBall::bApplyAttraction = false;
 //Global Variables
 URenderer renderer;
 FPrimitivesManager primitivesManager;
+UIManager* uiManager;
 bool bIsExit = false;
-
-UBall* player;
-Moon* moon;
-Camera* camera;
-Sprite* background;
 
 //FPS, time
 const int targetFPS = 60;
@@ -73,31 +71,9 @@ float deltaTime = 0.0f;
 POINT mousePos;
 FVector3 mouseWorldPos;
 
-//Game
-struct PlanetData
-{
-	std::string name;
-	float relativeRadius;
-};
-
-PlanetData planetDataList[] = {
-	{"Mercury", 1.383f},
-	{"Venus", 1.949f},
-	{"Mars", 1.532f},
-	{"Jupiter", 7.21f},
-	{"Neptune", 4.883f},
-	{"Uranus", 2.331f},
-	{"Pluto", 2.745f},
-	{"Meteor", 0.883f},
-};
-
-float highestPlayerY = 0.0f;
-float nextSpawnY = 1.0f;
-float spawnInterval = 1.5f;
 // ----------------------------------
 
 void InitializeRenderer(HWND hWnd);
-void InitializeGameObjects();
 void ProcessInput();
 void WinMainUpdate(HWND hWnd);
 void WinMainRender();
@@ -137,10 +113,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		nullptr, nullptr, hInstance, nullptr);
 
 	InitializeRenderer(hWnd);
-	InitializeGameObjects();
+	primitivesManager.InitializeGameObjects(renderer);
+	uiManager = new UIManager();
 
-	//SoundManager
 	SoundManager::Get().Init();
+	GameContext::GetiNSTANCE().RegisterListenerObject(&primitivesManager);
+	GameContext::GetiNSTANCE().RegisterListenerObject(uiManager);
+	GameContext::GetiNSTANCE().RegisterListenerObject(&SoundManager::Get());
+
 	
 	// 원하는 음원을 아래처럼 등록해서 원하는 곳에서 헤더만 포함해서 사용
 	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
@@ -166,6 +146,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			if (msg.message == WM_KEYDOWN)
 			{
 				if (msg.wParam == 'Q') bIsExit = true;
+				//R을 눌러서 리셋 가능하도록 만들어뒀습니다.
+				//명칭은 clear로 하라고 하셨는지 기억이 잘 안네요
+				if (msg.wParam == 'R')
+				{
+					primitivesManager.Reset();
+					primitivesManager.InitializeGameObjects(renderer);
+				}
 			}
 		}
 
@@ -176,10 +163,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WinMainUpdate(hWnd);
 		WinMainRender();
 
-		/* 게임 끝 */
-		if (player->Location.y >= 100.f)
+		//아래처럼 리셋 되도록 만들어뒀습니다.
+		UBall* player = primitivesManager.GetPlayer();
+		if (player && player->Location.y >= 100.f)
 		{
-			break;
+			primitivesManager.Reset();
+			primitivesManager.InitializeGameObjects(renderer);
 		}
 
 		do
@@ -202,9 +191,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	renderer.ReleaseShader();
 	renderer.Release();
 
-	//player, moon은 primitivesManager에서 관리하므로 delete할 필요 없습니다
-	delete camera;
-	delete background;
 	return 0;
 }
 
@@ -232,7 +218,10 @@ void InitializeRenderer(HWND hWnd)
 		{"Neptune", L"neptune.jpg"},
 		{"Uranus", L"uranus.jpg"},
 		{"Pluto", L"pluto.jpg"},
-		{"Meteor", L"me.png"}
+		{"Meteor", L"meteor.png"},
+		{"Background", L"background.jpg"},
+		{"StartButton", L"startButton.png" },
+		{"RestartButton", L"restartButton.png" }
 	};
 
 	for (const auto& tex : textures)
@@ -255,99 +244,9 @@ void InitializeRenderer(HWND hWnd)
 	Sprite::CreateQuadVertexBuffer(renderer);
 }
 
-void SpawnRandomPlanet(float spawnBaseY)
-{
-	const float baseRadius = 0.05f;
-	const float minSpeed = 0.01f;
-	const float maxSpeed = 0.03f;
-
-	int randIndex = rand() % (sizeof(planetDataList) / sizeof(PlanetData));
-	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
-
-	FVector3 newPos;
-	bool bPositionValid = false;
-	const int maxAttempts = 50;
-
-	for (int attempt = 0; attempt < maxAttempts; ++attempt)
-	{
-		float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f; // -1.0 ~ 1.0 사이
-		// 한 번에 여러 개 스폰될 때 Y축도 조금씩 다르게 퍼지도록 랜덤값 추가
-		float offsetY = ((rand() % 1000) / 1000.0f) * 0.5f;
-		float newY = spawnBaseY + 1.5f + offsetY;
-		newPos = FVector3(newX, newY, 0.0f);
-
-		bPositionValid = true;
-
-		for (UPrimitive* obj : primitivesManager.GetObjects())
-		{
-			if (obj == nullptr) continue;
-			UBall* bobj = dynamic_cast<UBall*>(obj);
-
-			float dx = newPos.x - bobj->Location.x;
-			float dy = newPos.y - bobj->Location.y;
-			float distance = sqrtf(dx * dx + dy * dy);
-
-			float minSpacing = (radius + bobj->Radius) * 1.5f;
-
-			if (distance < minSpacing)
-			{
-				bPositionValid = false;
-				break;
-			}
-		}
-		if (bPositionValid) break;
-	}
-
-	//무작위 속도 및 방향 설정
-	float randomAngle = (rand() % 360) * (FVector3::PI / 180.0f);
-	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
-
-	float sizeMultiplier = 0.05f / sqrtf(radius);
-	randomSpeed *= sizeMultiplier;
-
-	FVector3 randomVelocity;
-
-	if (planetDataList[randIndex].name == "Meteor")
-	{
-		randomVelocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f; //수직낙하에 가깝게
-		randomVelocity.y = -(randomSpeed * 2.0f);
-		randomVelocity.z = 0.0f;
-	}
-	else
-	{
-		randomVelocity.x = cosf(randomAngle) * randomSpeed;
-		randomVelocity.y = sinf(randomAngle) * randomSpeed;
-		randomVelocity.z = 0.0f;
-	}
-
-	Planet* newPlanet = nullptr;
-	std::string planetName = planetDataList[randIndex].name;
-
-	if (planetName == "Meteor")
-	{
-		newPlanet = new Meteor(newPos, randomVelocity, radius, planetName);
-	}
-	else if (planetName == "Jupiter")
-	{
-		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
-		newPlanet->brightness = 1.5f;
-	}
-	else if (planetName == "Mars")
-	{
-		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::push);
-		newPlanet->brightness = 1.5f;
-	} 
-	else
-	{
-		newPlanet = new Planet(newPos, randomVelocity, radius, planetName);
-		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
-	}
-
-	primitivesManager.AddObject(newPlanet);
-}
-
 void ProcessInput()
 {
+	UBall* player = primitivesManager.GetPlayer();
 	if (player != nullptr)
 	{
 		if (player->inputLockTimer > 0.0f)
@@ -366,31 +265,6 @@ void ProcessInput()
 	}
 }
 
-void InitializeGameObjects()
-{
-	//Player 생성
-	player = new UBall();
-	player->Location = { 0.0f, 0.0f, 0.0f };
-	player->Radius = 0.05f;
-	player->TextureName = "Earth";
-	player->brightness = 1.0f;
-	primitivesManager.AddObject(player);
-
-	//Moon 생성
-	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
-	moon->brightness = 1.0f;
-	primitivesManager.AddObject(moon);
-
-	//중력행성 리소스 초기화
-	GravityPlanet::SetGravitySystem(renderer.Device, player);
-
-	//Camera 생성
-	camera = new Camera();
-
-	//Background 생성
-	background = new Sprite("Background");
-}
-
 void WinMainUpdate(HWND hWnd)
 {
 	renderer.Prepare();
@@ -402,42 +276,44 @@ void WinMainUpdate(HWND hWnd)
 	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
 	primitivesManager.Update(deltaTime, mouseWorldPos);
 
-	camera->Update(deltaTime, player);
-
-	if (player != nullptr)
+	Camera* camera = primitivesManager.GetCamera();
+	if (camera)
 	{
-		//플레이어가 가장 높이 올라가면.... window는 max 저주가 있다
-		highestPlayerY = std::max<float>(highestPlayerY, player->Location.y);
-		while (highestPlayerY > nextSpawnY)
-		{
-			int spawnCount = (rand() % 3) + 1;
-			for (int i = 0; i < spawnCount; ++i)
-			{
-				SpawnRandomPlanet(nextSpawnY);
-			}
-			nextSpawnY += spawnInterval;
-		}
+		renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
 	}
 
-	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
+
+	bool bLeftMousePressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+
+	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, bLeftMousePressed);
 }
 
 void WinMainRender()
 {
-	background->Render(renderer);
 	primitivesManager.Render(renderer);
+
+	uiManager->Render(renderer);
 
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 	ImGui::Begin("Player Info");
+	
+	UBall* player = primitivesManager.GetPlayer();
 	if (player != nullptr)
 	{
 		ImGui::Text("Earth Position:");
 		ImGui::Text("X: %.3f", player->Location.x);
 		ImGui::Text("Y: %.3f", player->Location.y);
 		ImGui::Text("Z: %.3f", player->Location.z);
+		
+		if (ImGui::Button("Reset Game (R)"))
+		{
+			primitivesManager.Reset();
+			primitivesManager.InitializeGameObjects(renderer);
+		}
 	}
+	ImGui::Text("Press R to Restart");
 	ImGui::End();
 
 	ImGui::Render();

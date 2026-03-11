@@ -89,7 +89,30 @@ void SoundManager::Release()
 	soundLibrary.clear();
 
 	if (audioEngine)
+	{
+		audioEngine->Suspend();
 		audioEngine.reset();
+
+	}
+}
+
+void SoundManager::OnGameStateChanged(EGameState newState)
+{
+	switch (newState)
+
+	{
+	case EGameState::Running:
+
+		if (bgmInstance)
+		{
+			bgmInstance->Stop();
+
+		}
+
+		PlayBGM("bgm", true);
+		break;
+		
+	}
 }
 
 
