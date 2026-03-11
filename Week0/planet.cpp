@@ -386,6 +386,7 @@ Meteor::Meteor(FVector3 startPos, FVector3 startVel, float r, const std::string&
 {
 	Respawn();
 	bIsActive = true;
+	spawnTimer = 0.0f;
 }
 
 void Meteor::Update(float t)
