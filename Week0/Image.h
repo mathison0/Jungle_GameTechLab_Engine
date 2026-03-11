@@ -27,6 +27,7 @@ public:
 	inline void SetPosition(float x, float y) { position = { x, y }; }
 	inline void SetScale(float sw, float sh) { scale = { sw, sh }; }
 	inline void SetAngle(float value) { angle = value; }
+	inline void SetAlpha(float a) { color.w = a; }
 
 	inline void SetActive(bool active) { bIsActive = active; }
 	inline bool IsActive() const { return bIsActive; }

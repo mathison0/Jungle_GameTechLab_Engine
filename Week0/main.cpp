@@ -264,10 +264,11 @@ void ProcessInput()
 		if (player->inputLockTimer > 0.0f)
 		{
 			player->inputLockTimer -= deltaTime;
+			player->bIsDamaged = true;
 			return;
 		}
 
-
+		player->bIsDamaged = false;
 		player->bIsLeftFire = false;
 		player->bIsRightFire = false;
 

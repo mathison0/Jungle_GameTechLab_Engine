@@ -67,6 +67,8 @@ public:
 	Sprite* leftWingSprite = nullptr;
 	Sprite* rightWingSprite = nullptr;
 
+	bool bIsDamaged = false;
+
 
 	// Homing (시연용)
 	bool bHomingMode = false; // on/off 컨트롤+H키

@@ -201,8 +201,18 @@ void UBall::Render(URenderer& renderer)
 		leftWingSprite->SetPosition(leftPos.x, leftPos.y);
 		leftWingSprite->SetScale(0.1f, 0.1f);
 		leftWingSprite->SetAngle(this->Angle);
-		leftWingSprite->Render(renderer);
 
+		if (bIsDamaged)
+		{
+			//float blinkAlpha = (sin(inputLockTimer * 20.0f) * 0.5f) + 0.5f;
+			leftWingSprite->SetAlpha(0.0f);
+		}
+		else
+		{
+			leftWingSprite->SetAlpha(1.0f);
+		}
+
+		leftWingSprite->Render(renderer);
 	}
 
 	// 오른쪽 날개 렌더링 (중심에서 +Right 방향으로 이동)
@@ -305,11 +315,11 @@ void UBall::Update(float t)
 	LimitVelocities(MaxLinearSpeed);
 	Move(t);
 
-	if (leftWingSprite)
+	if (leftWingSprite && !bIsDamaged)
 	{
 		leftWingSprite->SetFrame(bIsLeftFire ? 0 : 1, 0);
 	}
-	if (rightWingSprite)
+	if (rightWingSprite && !bIsDamaged)
 	{
 		rightWingSprite->SetFrame(bIsRightFire ? 0 : 1, 0);
 	}
