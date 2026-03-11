@@ -72,9 +72,9 @@ void TimeLap::Render(URenderer& renderer)
 
 void TimeLap::Clear()
 {
-    lastTimeStr = "00:00";
+    totalTime = 0.0f;
     for (int i = 0; i < 5; ++i)
     {
-        digits[i]->SetChar(lastTimeStr[i]);
+        digits[i]->SetChar(defaultTimeStr[i]);
     }
 }

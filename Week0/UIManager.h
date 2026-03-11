@@ -20,6 +20,7 @@ private:
 	~UIManager();
 	void Update(float mouseX, float mouseY, float deltaTime, bool isMousePressed);
 	void Render(URenderer& renderer);
+	void Reset();
 
 	void OnGameStateChanged(EGameState gameState) override;
 };

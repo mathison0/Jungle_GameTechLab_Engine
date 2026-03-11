@@ -50,6 +50,15 @@ void UIManager::Render(URenderer& renderer)
 	timeLap->Render(renderer);
 }
 
+void UIManager::Reset()
+{
+	startButton->SetActive(false);
+	restartButton->SetActive(false);
+	isRunning = true;
+	timeLap->Clear();
+
+}
+
 void UIManager::OnGameStateChanged(EGameState newState)
 {
 	switch (newState)
@@ -61,9 +70,7 @@ void UIManager::OnGameStateChanged(EGameState newState)
 		break;
 
 	case EGameState::Running:
-		startButton->SetActive(false);
-		restartButton->SetActive(false);
-		isRunning = true;
+		Reset();
 		break;
 
 	case EGameState::Ending:
