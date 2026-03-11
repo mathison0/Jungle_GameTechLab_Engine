@@ -56,6 +56,8 @@ void UIManager::OnGameStateChanged(EGameState newState)
 		break;
 
 	case EGameState::Ending:
+		startButton->SetActive(false);
+		restartButton->SetActive(false);
 		break;
 
 	case EGameState::Clear:

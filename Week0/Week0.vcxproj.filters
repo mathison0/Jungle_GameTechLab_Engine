@@ -75,6 +75,9 @@
     <ClCompile Include="GameContext.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="GameEnding.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGui\imconfig.h">
@@ -141,6 +144,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="IGameStateListener.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="GameEnding.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

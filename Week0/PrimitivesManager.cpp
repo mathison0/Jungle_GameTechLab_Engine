@@ -38,7 +38,7 @@ void FPrimitivesManager::InitializeGameObjects()
 {
 	// Player 생성
 	player = new UBall();
-	player->Location = { 0.0f, 0.0f, 0.0f };
+	player->Location = { 0.0f, -1.0f, 0.0f };
 	player->Radius = 0.05f;
 	player->TextureName = "Earth";
 	player->brightness = 1.0f;
@@ -243,11 +243,21 @@ void FPrimitivesManager::OnGameStateChanged(EGameState newState)
 {
 	switch (newState)
 	{
-
 	case EGameState::Running:
+		if (!isRunning)
+		{
+			Reset();
+			InitializeGameObjects();
+		}
 		isRunning = true;
+		break;
+
+	case EGameState::Title:
+		isRunning = false;
+		break;
 		
 	case EGameState::Ending:
+		isRunning = false;
 		break;
 	}
 }

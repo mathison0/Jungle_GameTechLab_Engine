@@ -28,6 +28,7 @@ struct FVector3;
 #include "Sprite.h"
 #include "UIManager.h"
 #include "GameContext.h"
+#include "GameEnding.h"
 
 
 struct FVector
@@ -116,6 +117,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitializeRenderer(hWnd);
 	primitivesManager.InitializeGameObjects();
 	uiManager = new UIManager();
+	
+	GameEnding ending;
 
 	SoundManager::Get().Init();
 	GameContext::GetiNSTANCE().RegisterListenerObject(&primitivesManager);
@@ -164,13 +167,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WinMainUpdate(hWnd);
 		WinMainRender();
 
-		//아래처럼 리셋 되도록 만들어뒀습니다.
-		UBall* player = primitivesManager.GetPlayer();
-		if (player && player->Location.y >= 100.f)
-		{
-			primitivesManager.Reset();
-			primitivesManager.InitializeGameObjects();
-		}
+		ending.Update(primitivesManager.GetPlayer(), deltaTime);
 
 		do
 		{
@@ -247,6 +244,9 @@ void InitializeRenderer(HWND hWnd)
 
 void ProcessInput()
 {
+	if (GameContext::GetiNSTANCE().GetState() == Ending)
+		return;
+
 	UBall* player = primitivesManager.GetPlayer();
 	if (player != nullptr)
 	{
@@ -282,33 +282,50 @@ void WinMainUpdate(HWND hWnd)
 
 	GetCursorPos(&mousePos);
 	ScreenToClient(hWnd, &mousePos);
-	mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
-	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
+	// 클라이언트 영역 크기를 동적으로 가져와 NDC(-1..1) 계산
+	RECT clientRect;
+	GetClientRect(hWnd, &clientRect);
+	float clientWidth = static_cast<float>(clientRect.right - clientRect.left);
+	float clientHeight = static_cast<float>(clientRect.bottom - clientRect.top);
+	if (clientWidth <= 0.f) clientWidth = 1024.f;
+	if (clientHeight <= 0.f) clientHeight = 1024.f;
 
+	// 픽셀 -> NDC (-1..1)
+	FVector3 ndcPos;
+	ndcPos.x = (mousePos.x / clientWidth) * 2.0f - 1.0f;
+	ndcPos.y = -((mousePos.y / clientHeight) * 2.0f - 1.0f);
+	ndcPos.z = 0.0f;
+
+	// worldMousePos: 카메라 보정 적용 (게임 월드 상호작용용)
 	Camera* camera = primitivesManager.GetCamera();
-
+	FVector3 worldMousePos = ndcPos;
 	if (camera != nullptr)
 	{
-		mouseWorldPos.y += camera->GetCurrentCameraY();
+		worldMousePos.y += camera->GetCurrentCameraY();
 	}
 
+	// 전역 mouseWorldPos는 월드 좌표로 유지
+	mouseWorldPos = worldMousePos;
+
+	// 플레이어 호밍(월드 상호작용)
 	UBall* player = primitivesManager.GetPlayer();
-	if (player != nullptr && player->bHomingMode)
+	if (player != nullptr && player->bHomingMode && GameContext::GetiNSTANCE().GetState() != Ending)
 	{
-		player->ApplyHoming(mouseWorldPos, deltaTime);
+		player->ApplyHoming(worldMousePos, deltaTime);
 	}
-	primitivesManager.Update(deltaTime, mouseWorldPos);
 
-	
+	// primitivesManager 업데이트 (월드 좌표 사용)
+	primitivesManager.Update(deltaTime, worldMousePos);
+
+	// 렌더러에 카메라 정보 적용
 	if (camera)
 	{
 		renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
 	}
 
-
+	// UI 입력: 화면 고정(UI는 스크린-스페이스) -> 카메라 보정 제거한 ndcPos 전달
 	bool bLeftMousePressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
-
-	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, bLeftMousePressed);
+	uiManager->Update(ndcPos.x, ndcPos.y, bLeftMousePressed);
 }
 
 void WinMainRender()
