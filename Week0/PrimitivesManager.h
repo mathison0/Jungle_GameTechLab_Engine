@@ -21,7 +21,7 @@ private:
 	UBall* player = nullptr;
 	Moon* moon = nullptr;
 	Camera* camera = nullptr;
-	Sprite* background = nullptr;
+	Image* background = nullptr;
 
 	float highestPlayerY = 0.0f;
 	float nextSpawnY = 1.0f;

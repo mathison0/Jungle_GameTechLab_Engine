@@ -53,7 +53,7 @@ void FPrimitivesManager::InitializeGameObjects()
 	camera = new Camera();
 
 	// Background 생성
-	background = new Sprite("Background");
+	background = new Image("Background");
 
 	highestPlayerY = 0.0f;
 	nextSpawnY = 1.0f;

@@ -186,7 +186,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SoundManager::Get().Release();
 
 	UBall::ReleaseBuffer(renderer);
-	Sprite::ReleaseQuadVertexBuffer(renderer);
+	Image::ReleaseQuadVertexBuffer(renderer);
 	renderer.ReleaseConstantBuffer();
 	renderer.ReleaseShader();
 	renderer.Release();
@@ -241,7 +241,7 @@ void InitializeRenderer(HWND hWnd)
 	QueryPerformanceFrequency(&frequency);
 
 	UBall::InitializeBuffer(renderer);
-	Sprite::CreateQuadVertexBuffer(renderer);
+	Image::CreateQuadVertexBuffer(renderer);
 }
 
 void ProcessInput()

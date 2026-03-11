@@ -2,7 +2,7 @@
 
 class URenderer;
 struct FVector3;
-//class ID3D11Buffer;
+class ID3D11Buffer;
 
 class UPrimitive
 {

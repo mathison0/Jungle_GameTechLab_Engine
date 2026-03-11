@@ -1,5 +1,7 @@
 #include "Image.h"
 
+ID3D11Buffer* Image::QuadVertexBuffer = nullptr;
+
 
 void Image::Render(URenderer& renderer)
 {

@@ -1,6 +1,6 @@
 #pragma once
 #include <functional>
-#include "Sprite.h"
+#include "Image.h"
 
 class Button : public Image
 {
