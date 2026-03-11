@@ -317,14 +317,26 @@ void SpawnRandomPlanet(float spawnBaseY)
 	}
 
 	Planet* newPlanet = nullptr;
-	if (planetDataList[randIndex].name != "Meteor")
+	std::string planetName = planetDataList[randIndex].name;
+
+	if (planetName == "Meteor")
 	{
-		newPlanet = new Planet(newPos, randomVelocity, radius, planetDataList[randIndex].name);
-		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
+		newPlanet = new Meteor(newPos, randomVelocity, radius, planetName);
+	}
+	else if (planetName == "Jupiter")
+	{
+		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
+		newPlanet->brightness = 1.5f;
+	}
+	else if (planetName == "Mars")
+	{
+		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::push);
+		newPlanet->brightness = 1.5f;
 	}
 	else
 	{
-		newPlanet = new Meteor(newPos, randomVelocity, radius, planetDataList[randIndex].name);
+		newPlanet = new Planet(newPos, randomVelocity, radius, planetName);
+		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
 	}
 
 	primitivesManager.AddObject(newPlanet);
