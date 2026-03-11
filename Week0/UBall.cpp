@@ -66,7 +66,9 @@ UBall::UBall()
 	Velocity.z = 0.0f;
 
 	leftWingSprite = new Sprite({ 0,0,0 }, { 1, 1, 1 }, "Rocket", 2, 1, 1280, 698);
+	leftWingSprite->SetFlag(false);
 	rightWingSprite = new Sprite({ 0,0,0 }, { 1, 1, 1 }, "Rocket", 2, 1, 1280, 698);
+	rightWingSprite->SetFlag(false);
 }
 
 UBall::~UBall()
@@ -145,7 +147,7 @@ void UBall::Render(URenderer& renderer)
 
 	// 1. 메인 공(구체) 렌더링
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f,1.0f,this->brightness });
+	renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 },{ 1.0f, 1.0f,1.0f,this->brightness });
 	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
 
 	// 텍스처 언바인드 (추진체 렌더링에는 영향 안 가도록)
@@ -178,7 +180,9 @@ void UBall::Render(URenderer& renderer)
 	{
 		leftWingSprite->SetPosition(leftPos.x, leftPos.y);
 		leftWingSprite->SetScale(0.1f, 0.1f);
+		leftWingSprite->SetAngle(this->Angle);
 		leftWingSprite->Render(renderer);
+
 	}
 
 	// 오른쪽 날개 렌더링 (중심에서 +Right 방향으로 이동)
@@ -192,7 +196,9 @@ void UBall::Render(URenderer& renderer)
 	{
 		rightWingSprite->SetPosition(rightPos.x, rightPos.y);
 		rightWingSprite->SetScale(0.1f, 0.1f);
+		rightWingSprite->SetAngle(this->Angle);
 		rightWingSprite->Render(renderer);
+
 	}
 }
 
@@ -290,7 +296,7 @@ void UBall::Update(float t)
 void UBall::UpdateRenderer(URenderer& renderer)
 {
 	FVector3 transform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(transform, this->Angle, { 0, 0, 0 },{ 1.0f, 1.0f,1.0f,this->brightness });
+	renderer.UpdateConstant(transform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f,1.0f,this->brightness });
 }
 
 void UBall::HandleCollision(UPrimitive* other)

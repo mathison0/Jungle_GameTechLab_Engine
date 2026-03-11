@@ -108,6 +108,11 @@ void Planet::Render(URenderer& renderer)
 		}
 	}
 
+
+	renderer.DeviceContext->VSSetShader(renderer.SimpleVertexShader, nullptr, 0);
+	renderer.DeviceContext->PSSetShader(renderer.SimplePixelShader, nullptr, 0);
+
+
 	ID3D11Buffer* bufferToUse = bIsPNGTexture ? UBall::PNGSphereVertexBuffer : UBall::SphereVertexBuffer;
 	UINT numVertices = bIsPNGTexture ? UBall::NumVerticesPNGSphere : UBall::NumVerticesSphere;
 

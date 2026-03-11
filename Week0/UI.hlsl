@@ -6,11 +6,17 @@ cbuffer Constants : register(b0)
     float3 Offset; 
     float Angle; 
     float3 Scale;
-    float padding;
+    int isUI;
     float4 Color;
 
     float2 uvOffset;
     float2 uvScale;
+};
+
+cbuffer ConstantPerFrame : register(b1)
+{
+    float cameraY;
+    float3 padding;
 };
 
 struct VS_INPUT
@@ -32,12 +38,29 @@ PS_INPUT mainVS(VS_INPUT input)
     PS_INPUT output;
     
     float3 scaledPos = input.position.xyz * Scale;
+    float2 finalPos2D;
     
-    float3 finalPos = scaledPos + Offset;
-    output.position = float4(finalPos, 1.0f);
+    if(isUI == 0)
+    {
+        float s = sin(Angle);
+        float c = cos(Angle);
+        
+        finalPos2D.x = scaledPos.x * c - scaledPos.y * s;
+        finalPos2D.y = scaledPos.x * s + scaledPos.y * c;
+        
+        finalPos2D += Offset.xy;
+        finalPos2D.y -= cameraY;
+        
+    }
+    else
+    {
+        finalPos2D = scaledPos.xy;
+        finalPos2D += Offset.xy;
+    }
+    
+    output.position = float4(finalPos2D, scaledPos.z, 1.0f);
     
     output.uv = (input.uv * uvScale) + uvOffset;
-    
     output.color = input.color;
     
     return output;
