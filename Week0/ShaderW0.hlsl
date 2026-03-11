@@ -8,6 +8,7 @@ cbuffer Constants : register(b0)
     float Angle; // C++에서 넘겨준 회전 각도
     float3 Scale;
     float uvOffset;
+    float4 Color;
 };
 
 cbuffer ConstantPerFrame : register(b1)
@@ -56,6 +57,7 @@ PS_INPUT mainVS(VS_INPUT input)
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
+    float brightness = Color.w;
     // 1. UV가 음수일 경우 (새로운 PNG 텍스처 사용)
     if (input.uv.x < 0.0f || input.uv.y < 0.0f)
     {
@@ -70,13 +72,13 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
         rotatedUV.y = centered.x * s + centered.y * c;
         rotatedUV += 0.5f; // 다시 중심으로 이동
         
-        return pngTexture.Sample(earthSampler, rotatedUV);
+        return pngTexture.Sample(earthSampler, rotatedUV) * brightness;
     }
     //UV가 (0,0)이면 vertex color 사용 (cube용) -> Sphere.h에서 uv 좌표 수정
     //UV가 (0,0)이 아니면 텍스처 사용 (sphere용)
-    if (input.uv.x == 0.0f && input.uv.y == 0.0f)
+    else if (input.uv.x == 0.0f && input.uv.y == 0.0f)
     {
-        return input.color; // Vertex color 사용
+        return input.color * brightness; // Vertex color 사용
     }
     //2d texture mapping
     //texture에서 그대로 잘라 넣지 않고 구의 표면에 맞게 uv 좌표 변형.
@@ -97,5 +99,5 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     float sphereV = 0.5f - (asin(rotatedP.y) / PI);
 
     //왜곡된 새 UV로 텍스처를 샘플링
-    return earthTexture.Sample(earthSampler, float2(sphereU, sphereV));
+    return earthTexture.Sample(earthSampler, float2(sphereU, sphereV)) * brightness;
 }

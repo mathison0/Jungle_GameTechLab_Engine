@@ -6,6 +6,8 @@
 class UBall : public UPrimitive
 {
 public:
+	float brightness = 1.0f;
+public:
 	static constexpr float MaxSpeed = 0.01f;
 	static constexpr float gravity = -0.000001f;
 
@@ -50,9 +52,10 @@ public:
 
 	float PendingTorque = 0.0f;
 
-	std::string TextureName; // 텍스처 이름 추가
-	float inputLockTimer = 0.0f; // 입력 잠금 타이머
-	float inputLockDuration = 1500.0f; // 입력 잠금 지속 시간 (밀리초)
+	std::string TextureName;
+
+	float inputLockTimer = 0.0f;
+	float inputLockDuration = 1.0f;
 
 public:
 	UBall();
@@ -89,7 +92,7 @@ public:
 inline std::vector<FVertexSimple> GenerateCircleVertices(int num)
 {
 	std::vector<FVertexSimple> vertices;
-	const float PI = 3.14159265359f;
+	const float PI = FVector3::PI;
 
 	// 중심점 정점 (기본 색, UV는 중심 0.5, 0.5)
 	FVertexSimple center = { 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.5f, 0.5f };

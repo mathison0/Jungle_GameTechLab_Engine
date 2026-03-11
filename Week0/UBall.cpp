@@ -76,7 +76,7 @@ void UBall::InitializeBuffer(URenderer& renderer)
 	std::vector<FVertexSimple> circleVertices = GenerateCircleVertices(72);
 
 	SphereVertexBuffer = renderer.CreateVertexBuffer(circleVertices.data(), circleVertices.size() * sizeof(FVertexSimple));
-	NumVerticesSphere = circleVertices.size();
+	NumVerticesSphere = (UINT)circleVertices.size();
 
 	std::vector<FVertexSimple> pngCircleVertices = GenerateCircleVertices(72);
 	for (auto& vertex : pngCircleVertices)
@@ -85,7 +85,7 @@ void UBall::InitializeBuffer(URenderer& renderer)
 		vertex.v = -vertex.v;
 	}
 	PNGSphereVertexBuffer = renderer.CreateVertexBuffer(pngCircleVertices.data(), pngCircleVertices.size() * sizeof(FVertexSimple));
-	NumVerticesPNGSphere = pngCircleVertices.size();
+	NumVerticesPNGSphere = (UINT)pngCircleVertices.size();
 
 	CubeVertexBuffer = renderer.CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
 	NumVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
@@ -140,7 +140,7 @@ void UBall::Render(URenderer& renderer)
 
 	// 1. 메인 공(구체) 렌더링
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(sphereTransform, this->Angle);
+	renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, 0.f, this->brightness);
 	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
 
 	// 텍스처 언바인드 (추진체 렌더링에는 영향 안 가도록)
@@ -262,7 +262,7 @@ void UBall::Update(float t)
 void UBall::UpdateRenderer(URenderer& renderer)
 {
 	FVector3 transform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(transform, this->Angle);
+	renderer.UpdateConstant(transform, this->Angle, { 0, 0, 0 }, 0.f, this->brightness);
 }
 
 void UBall::HandleCollision(UPrimitive* other)

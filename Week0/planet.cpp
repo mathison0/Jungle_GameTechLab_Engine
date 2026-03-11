@@ -113,7 +113,7 @@ void Planet::Render(URenderer& renderer)
 
 	// 행성(구체)만 렌더링 - 추진체 제외
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(sphereTransform, this->Angle);
+	renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, 0.f, this->brightness);
 	renderer.RenderPrimitive(bufferToUse, numVertices);
 
 	if (bIsPNGTexture)
@@ -147,44 +147,96 @@ void Moon::Update(float t)
 		return;
 	}
 
+	if (bIsHiddenByCollision)
+	{
+		HideTimer += t;
+		if (HideTimer >= 5.0f)
+		{
+			bIsHiddenByCollision = false;
+			if (TargetObject && TargetObject->Location.y >= 30.0f)
+			{
+				this->Location = TargetObject->Location + FVector3(0.0f, -2.0f, 0.0f);
+			}
+		}
+		else
+		{
+			this->Location = FVector3(0.0f, -1000.0f, 0.0f);
+			return;
+		}
+	}
+
 	if (TargetObject != nullptr)
 	{
-		FVector3 direction = TargetObject->Location - this->Location;
-		float distance = direction.Length();
-
-		if (distance > FollowDistance)
+		// (2) 플레이어가 30.f를 넘어서면 쫓아오고, 아래면 숨는다.
+		if (TargetObject->Location.y >= 30.0f)
 		{
-			direction = direction / distance;
-			float forceMagnitude = (distance - FollowDistance) * FollowSpeed;
-			
-			this->Velocity.x += direction.x * forceMagnitude * t;
-			this->Velocity.y += direction.y * forceMagnitude * t;
-			
-			float currentSpeed = this->Velocity.Length();
-			/*if (currentSpeed > MaxFollowSpeed)
+			if (!bIsFollowing)
 			{
-				this->Velocity.x = (this->Velocity.x / currentSpeed) * MaxFollowSpeed;
-				this->Velocity.y = (this->Velocity.y / currentSpeed) * MaxFollowSpeed;
-			}*/
+				bIsFollowing = true;
+				// 처음 30.f를 돌파했을 때 화면 밖에서 날아오지 않도록 근처에서 나타나게 함
+				this->Location = TargetObject->Location + FVector3(0.0f, -2.0f, 0.0f);
+				this->Velocity = FVector3(0.0f, 0.0f, 0.0f);
+			}
+
+			// --- 기존 추적 로직 시작 ---
+			FVector3 direction = TargetObject->Location - this->Location;
+			float distance = direction.Length();
+
+			if (distance > FollowDistance)
+			{
+				direction = direction / distance;
+				float forceMagnitude = (distance - FollowDistance) * FollowSpeed;
+
+				this->Velocity.x += direction.x * forceMagnitude * t;
+				this->Velocity.y += direction.y * forceMagnitude * t;
+			}
+
+			float currentSpeed = this->Velocity.Length();
+			if (currentSpeed > 0.0001f && distance > 0.0001f)
+			{
+				direction = direction / distance;
+				FVector3 currentDirection = this->Velocity / currentSpeed;
+				float cross = currentDirection.x * direction.y - currentDirection.y * direction.x;
+				float rotationDirection = (cross > 0.0f) ? 1.0f : -1.0f;
+				this->Angle += rotationDirection * RotationSpeed * 10.0f;
+			}
+
+			this->Velocity.x *= 0.98f;
+			this->Velocity.y *= 0.98f;
 		}
-		
-		float currentSpeed = this->Velocity.Length();
-		
-		if (currentSpeed > 0.0001f && distance > 0.0001f)
+		else
 		{
-			direction = direction / distance;
-			FVector3 currentDirection = this->Velocity / currentSpeed;
-			float cross = currentDirection.x * direction.y - currentDirection.y * direction.x;
-			float rotationDirection = (cross > 0.0f) ? 1.0f : -1.0f;
-			this->Angle += rotationDirection * RotationSpeed * 10.0f;
+			bIsFollowing = false;
+			this->Location = FVector3(0.0f, -1000.0f, 0.0f);
+			this->Velocity = FVector3(0.0f, 0.0f, 0.0f);
 		}
-		
-		this->Velocity.x *= 0.98f;
-		this->Velocity.y *= 0.98f;
 	}
 	
 	Location.x += Velocity.x * t;
 	Location.y += Velocity.y * t;
+}
+
+void Moon::HandleCollision(UPrimitive* other)
+{
+	if (!bIsActive || bIsHiddenByCollision)
+	{
+		return;
+	}
+	UBall* targetObj = static_cast<UBall*>(other);
+	if (!targetObj || targetObj != TargetObject)
+	{
+		return; //이미 Manager에서 충돌을 막고있지만 안전장치
+	}
+	FVector3 distance = targetObj->Location - this->Location;
+	float dist = distance.Length();
+	float radiusSum = targetObj->Radius + this->Radius;
+	if (dist <= radiusSum)
+	{
+		bIsHiddenByCollision = true;
+		HideTimer = 0.0f;
+		this->Location = FVector3(0.0f, -1000.0f, 0.0f);
+		this->Velocity = FVector3(0.0f, 0.0f, 0.0f);
+	}
 }
 
 // --- GravityPlanet Implementation ---
@@ -347,29 +399,12 @@ void Meteor::Update(float t)
 	Angle += rotationSpeed * t;
 
 	Location.x += Velocity.x * t;
-	Location.y += Velocity.y * t;
+	Location.y += Velocity.y * t * 10.0;
 
 	if (Location.y < -1.2f)
 	{
-		Respawn();
+		bIsActive = false;
 	}
-}
-
-void Meteor::Respawn()
-{
-	float randomX = ((rand() % 1000) / 1000.0f) * 1.6f - 0.8f; // -0.8 ~ 0.8 범위
-	float randomSpeed = 0.0003f + (rand() % 8) * 0.51f;
-
-	OriginalLocation = { randomX, 1.2f, 0.0f };
-	OriginalVelocity = { 0.0f, -randomSpeed, 0.0f };
-
-	spawnDelay = static_cast<float>(rand() % 3000 + 1000); // 1초 ~ 4초
-	spawnTimer = 0.0f;
-
-	Location = OriginalLocation;
-	Velocity = OriginalVelocity;
-
-	bIsActive = false; // 리스폰 후 대기 상태
 }
 
 void Meteor::HandleCollision(UPrimitive* other)
