@@ -13,6 +13,7 @@ private:
 
     FVector3 basePosition;      
     float digitSpacing = 0.05f;  
+    bool isActive = false;
 
 public:
     TimeLap(FVector3 position, const std::string& textureName, int cols, int rows, float fullWidth, float fullHeight);
@@ -20,6 +21,9 @@ public:
 
     void Update(float deltaTime);
     void Render(URenderer& renderer);
+
+    void SetActive(bool active) { isActive = active; }
+    bool GetActive() { return isActive; }
 
     void SetPosition(FVector3 pos) { basePosition = pos; }
 

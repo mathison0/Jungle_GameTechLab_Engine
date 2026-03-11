@@ -1,15 +1,63 @@
 #include "PrimitivesManager.h"
+#include "GameContext.h"
 #include <algorithm>
 
 PlanetData FPrimitivesManager::planetDataList[] = {
-	{"Mercury", 1.483f},
+	{"Mercury", 2.483f},
 	{"Venus", 1.949f},
-	{"Mars", 1.532f},
+	{"Mars", 3.832f},
 	{"Jupiter", 6.21f},
-	{"Neptune", 4.883f},
+	{"Neptune", 5.883f},
 	{"Uranus", 2.331f},
 	{"Pluto", 2.745f},
 };
+
+std::vector<std::vector<StageGroup>> FPrimitivesManager::stageGroupData = {
+	// Stage 1 (0.0 ~ 2.0)
+	{
+		{"Mercury", 4},
+		{"Mars", 3},
+		{"Venus", 4},
+	},
+	// Stage 2 (2.0 ~ 4.0)
+	{
+		{"Mercury", 4},
+		{"Mars", 6},
+		{"Venus", 4},
+		{"Pluto", 3},
+		{"Neptune", 3},
+	},
+	// Stage 3 (4.0 ~ 6.0)
+	{
+		{"Mercury", 2},
+		{"Mars", 3},
+		{"Venus", 2},
+		{"Pluto", 3},
+		{"Jupiter", 2},
+		{"Neptune", 3},
+	},
+	// Stage 4 (6.0 ~ 8.0)
+	{
+		{"Mercury", 7},
+		{"Mars", 3},
+		{"Venus", 2},
+		{"Pluto", 3},
+		{"Jupiter", 4},
+		{"Neptune", 3},
+		{"Uranus", 12},
+	},
+	// Stage 5 (8.0 ~ 10.0)
+	{
+		{"Mercury", 2},
+		{"Mars", 6},
+		{"Venus", 8},
+		{"Pluto", 3},
+		{"Jupiter", 2},
+		{"Neptune", 3},
+		{"Uranus", 18},
+	}
+};
+
 
 FPrimitivesManager::~FPrimitivesManager()
 {
@@ -52,7 +100,7 @@ void FPrimitivesManager::InitializeGameObjects()
 	float meteorRadius = 0.05f * 0.883f; // baseRadius * meteorRelativeRadius
 	for (int i = 0; i < 2; ++i)
 	{
-		meteors[i] = new Meteor(player, player->Radius * 0.7f, "Meteor");
+		meteors[i] = new Meteor(player, player->Radius * 1.7f, "Meteor");
 		// 겹치지 않게 초기 생성 시간에 차이를 둡니다.
 		meteors[i]->waitTimer = i * 2.5f;
 		AddObject(meteors[i]);
@@ -67,92 +115,205 @@ void FPrimitivesManager::InitializeGameObjects()
 	background = new Image("Background");
 
 	highestPlayerY = 0.0f;
-	nextSpawnY = 1.0f;
+
+	SpawnPlanetsForAllStages();
 }
 
-void FPrimitivesManager::SpawnRandomPlanet(float spawnBaseY)
+//void FPrimitivesManager::SpawnRandomPlanet()
+//{
+//	const float baseRadius = 0.05f;
+//	const float minSpeed = 0.01f;
+//	const float maxSpeed = 0.03f;
+//
+//	int lastIndex = (sizeof(planetDataList) / sizeof(planetDataList[0]));
+//	int randIndex = rand() % lastIndex;
+//	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
+//
+//	FVector3 newPos;
+//	bool bPositionValid = false;
+//	const int maxAttempts = 100;
+//
+//	for (int attempt = 0; attempt < maxAttempts; ++attempt)
+//	{
+//		float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f;
+//		float offsetY = ((rand() % 1000) / 1000.0f) * 0.5f;
+//		float newY = spawnBaseY + 1.5f + offsetY;
+//		newPos = FVector3(newX, newY, 0.0f);
+//
+//		bPositionValid = true;
+//
+//		for (UPrimitive* obj : objects)
+//		{
+//			if (obj == nullptr) continue;
+//			UBall* bobj = dynamic_cast<UBall*>(obj);
+//			if (!bobj) continue;
+//
+//			float dx = newPos.x - bobj->Location.x;
+//			float dy = newPos.y - bobj->Location.y;
+//			float distance = sqrtf(dx * dx + dy * dy);
+//
+//			float minSpacing = (radius + bobj->Radius) * 1.5f;
+//
+//			if (distance < minSpacing)
+//			{
+//				bPositionValid = false;
+//				break;
+//			}
+//		}
+//		if (bPositionValid) break;
+//	}
+//
+//	float randomAngle = (rand() % 360) * (FVector3::PI / 180.0f);
+//	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
+//	float sizeMultiplier = 0.05f / sqrtf(radius);
+//	randomSpeed *= sizeMultiplier;
+//
+//	FVector3 randomVelocity;
+//	std::string planetName = planetDataList[randIndex].name;
+//
+//	if (planetName == "Meteor")
+//	{
+//		randomVelocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f;
+//		randomVelocity.y = -(randomSpeed * 2.0f);
+//		randomVelocity.z = 0.0f;
+//	}
+//	else
+//	{
+//		randomVelocity.x = cosf(randomAngle) * randomSpeed;
+//		randomVelocity.y = sinf(randomAngle) * randomSpeed;
+//		randomVelocity.z = 0.0f;
+//	}
+//
+//	Planet* newPlanet = nullptr;
+//	if (planetName == "Jupiter")
+//	{
+//		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
+//		newPlanet->brightness = 1.5f;
+//	}
+//	else if (planetName == "Mars")
+//	{
+//		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::push);
+//		newPlanet->brightness = 1.5f;
+//	}
+//	else
+//	{
+//		newPlanet = new Planet(newPos, randomVelocity, radius, planetName);
+//		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
+//	}
+//
+//	AddObject(newPlanet);
+//}
+
+void FPrimitivesManager::SpawnPlanetsForAllStages()
 {
-	const float baseRadius = 0.05f;
-	const float minSpeed = 0.01f;
-	const float maxSpeed = 0.03f;
-
-	int lastIndex = (sizeof(planetDataList) / sizeof(planetDataList[0]));
-	int randIndex = rand() % lastIndex;
-	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
-
-	FVector3 newPos;
-	bool bPositionValid = false;
-	const int maxAttempts = 100;
-
-	for (int attempt = 0; attempt < maxAttempts; ++attempt)
+	for (int stageIndex = 0; stageIndex < 5; ++stageIndex)
 	{
-		float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f;
-		float offsetY = ((rand() % 1000) / 1000.0f) * 0.5f;
-		float newY = spawnBaseY + 1.5f + offsetY;
-		newPos = FVector3(newX, newY, 0.0f);
+		SpawnPlanetsForStage(stageIndex);
+	}
+}
 
-		bPositionValid = true;
+void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
+{
+	if (stageIndex < 0 || stageIndex >= (int)stageGroupData.size())
+	{
+		return;
+	}
 
-		for (UPrimitive* obj : objects)
+	const float baseRadius = 0.05f;
+	const float minHeight = GameContext::MinHeight;
+	const float maxHeight = GameContext::MaxHeight - 2.0f;;
+	const float heightRange = maxHeight - minHeight;
+	const float stageHeight = heightRange / 5.0f;
+	const float stageMinY = minHeight + (stageIndex * stageHeight);
+	const float stageMaxY = minHeight + ((stageIndex + 1) * stageHeight);
+
+	const std::vector<StageGroup>& currentStageGroups = stageGroupData[stageIndex];
+
+	// 각 그룹의 행성들을 생성
+	for (const StageGroup& group : currentStageGroups)
+	{
+		PlanetData* planetData = nullptr;
+		int planetDataCount = sizeof(planetDataList) / sizeof(planetDataList[0]);
+		for (int i = 0; i < planetDataCount; ++i)
 		{
-			if (obj == nullptr) continue;
-			UBall* bobj = dynamic_cast<UBall*>(obj);
-			if (!bobj) continue;
-
-			float dx = newPos.x - bobj->Location.x;
-			float dy = newPos.y - bobj->Location.y;
-			float distance = sqrtf(dx * dx + dy * dy);
-
-			float minSpacing = (radius + bobj->Radius) * 1.5f;
-
-			if (distance < minSpacing)
+			if (planetDataList[i].name == group.planetName)
 			{
-				bPositionValid = false;
+				planetData = &planetDataList[i];
 				break;
 			}
 		}
-		if (bPositionValid) break;
-	}
 
-	float randomAngle = (rand() % 360) * (FVector3::PI / 180.0f);
-	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
-	float sizeMultiplier = 0.05f / sqrtf(radius);
-	randomSpeed *= sizeMultiplier;
+		if (planetData == nullptr)
+		{
+			continue;
+		}
+		
+		float radius = baseRadius * planetData->relativeRadius;
 
-	FVector3 randomVelocity;
-	std::string planetName = planetDataList[randIndex].name;
+		//해당 그룹의 행성 개수만큼 생성
+		for (int i = 0; i < group.count; ++i)
+		{
+			FVector3 newPos;
+			bool bPositionValid = false;
+			const int maxAttempts = 200;
 
-	if (planetName == "Meteor")
-	{
-		randomVelocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f;
-		randomVelocity.y = -(randomSpeed * 2.0f);
-		randomVelocity.z = 0.0f;
-	}
-	else
-	{
-		randomVelocity.x = cosf(randomAngle) * randomSpeed;
-		randomVelocity.y = sinf(randomAngle) * randomSpeed;
-		randomVelocity.z = 0.0f;
-	}
+			//겹치지 않는 위치 찾기
+			for (int attempt = 0; attempt < maxAttempts; ++attempt)
+			{
+				float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f;
+				float expandedStageMinY = stageMinY - 0.2f;
+				float expandedStageMaxY = stageMaxY + 0.2f;
+				float newY = expandedStageMinY + ((rand() % 1000) / 1000.0f) * (expandedStageMaxY - expandedStageMinY);
+				newPos = FVector3(newX, newY, 0.0f);
 
-	Planet* newPlanet = nullptr;
-	if (planetName == "Jupiter")
-	{
-		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
-		newPlanet->brightness = 1.5f;
-	}
-	else if (planetName == "Mars")
-	{
-		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::push);
-		newPlanet->brightness = 1.5f;
-	}
-	else
-	{
-		newPlanet = new Planet(newPos, randomVelocity, radius, planetName);
-		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
-	}
+				bPositionValid = true;
 
-	AddObject(newPlanet);
+				// 모든 기존 오브젝트와의 충돌 체크
+				for (UPrimitive* obj : objects)
+				{
+					if (obj == nullptr) continue;
+					UBall* bobj = dynamic_cast<UBall*>(obj);
+					if (!bobj) continue;
+
+					float dx = newPos.x - bobj->Location.x;
+					float dy = newPos.y - bobj->Location.y;
+					float distance = sqrtf(dx * dx + dy * dy);
+
+					float minSpacing = (radius + bobj->Radius) * 1.2f;
+
+					if (distance < minSpacing)
+					{
+						bPositionValid = false;
+						break;
+					}
+				}
+
+				if (bPositionValid) break;
+			}
+
+			// 행성 생성 (고정, velocity = 0)
+			FVector3 zeroVelocity(0.0f, 0.0f, 0.0f);
+			Planet* newPlanet = nullptr;
+
+			if (planetData->name == "Jupiter")
+			{
+				newPlanet = new GravityPlanet(newPos, zeroVelocity, radius, planetData->name, PlanetType::pull);
+				newPlanet->brightness = 1.5f;
+			}
+			else if (planetData->name == "Mars")
+			{
+				newPlanet = new GravityPlanet(newPos, zeroVelocity, radius, planetData->name, PlanetType::push);
+				newPlanet->brightness = 1.5f;
+			}
+			else
+			{
+				newPlanet = new Planet(newPos, zeroVelocity, radius, planetData->name);
+				newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
+			}
+
+			AddObject(newPlanet);
+		}
+	}
 }
 
 void FPrimitivesManager::Reset()
@@ -214,22 +375,6 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 	if (camera && player)
 	{
 		camera->Update(deltaTime, player);
-	}
-
-
-	// 행성 생성 로직
-	if (player != nullptr)
-	{
-		highestPlayerY = std::max<float>(highestPlayerY, player->Location.y);
-		while (highestPlayerY > nextSpawnY)
-		{
-			int spawnCount = (rand() % 3) + 1;
-			for (int i = 0; i < spawnCount; ++i)
-			{
-				SpawnRandomPlanet(nextSpawnY);
-			}
-			nextSpawnY += spawnInterval;
-		}
 	}
 }
 
