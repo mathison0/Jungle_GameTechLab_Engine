@@ -31,7 +31,7 @@ class Moon : public Planet
 private:
 	UBall* TargetObject = nullptr;
 	float FollowSpeed = 1.0f;
-	float FollowDistance = 0.3f;        
+	float FollowDistance = 0.1f;
 	float MaxFollowSpeed = 0.003f;
 	float RotationSpeed = 0.002f;
 

@@ -174,14 +174,13 @@ void Moon::Update(float t)
 
 	if (TargetObject != nullptr)
 	{
-		// (2) 플레이어가 30.f를 넘어서면 쫓아오고, 아래면 숨는다.
 		if (TargetObject->Location.y >= 30.0f)
 		{
 			if (!bIsFollowing)
 			{
 				bIsFollowing = true;
-				// 처음 30.f를 돌파했을 때 화면 밖에서 날아오지 않도록 근처에서 나타나게 함
-				this->Location = TargetObject->Location + FVector3(0.0f, -2.0f, 0.0f);
+				//처음 30.f를 돌파했을 때 화면 밖 근처에서 나타나게 함
+				this->Location = TargetObject->Location + FVector3(0.0f, -3.0f, 0.0f);
 				this->Velocity = FVector3(0.0f, 0.0f, 0.0f);
 			}
 
