@@ -86,6 +86,8 @@ PlanetData planetDataList[] = {
 	{"Mars", 1.532f},
 	{"Jupiter", 7.21f},
 	{"Neptune", 4.883f},
+	{"Uranus", 2.331f},
+	{"Pluto", 2.745f},
 	{"Meteor", 0.883f},
 };
 
@@ -228,6 +230,8 @@ void InitializeRenderer(HWND hWnd)
 		{"Venus", L"venus.jpg"},
 		{"Mercury", L"mercury.jpg"},
 		{"Neptune", L"neptune.jpg"},
+		{"Uranus", L"uranus.jpg"},
+		{"Pluto", L"pluto.jpg"},
 		{"Meteor", L"me.png"}
 	};
 
