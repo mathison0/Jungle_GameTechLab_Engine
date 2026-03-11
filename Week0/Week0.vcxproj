@@ -130,6 +130,7 @@
     <ClCompile Include="Button.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="GameContext.cpp" />
+    <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
     <ClCompile Include="ImGui\imgui_draw.cpp" />
@@ -151,6 +152,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="dx11math.h" />
     <ClInclude Include="GameContext.h" />
+    <ClInclude Include="Image.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />
     <ClInclude Include="ImGui\imgui_impl_dx11.h" />

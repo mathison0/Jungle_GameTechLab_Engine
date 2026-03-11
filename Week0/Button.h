@@ -2,13 +2,13 @@
 #include <functional>
 #include "Sprite.h"
 
-class Button : public Sprite
+class Button : public Image
 {
 public:
 	std::function<void()> OnClickCallback;
 
 	Button(FVector3 position, FVector3 scale, const std::string& textureName, std::function<void()> onClickCallback)
-		: Sprite(textureName), OnClickCallback(onClickCallback)
+		: Image(textureName), OnClickCallback(onClickCallback)
 	{
 		SetPosition(position.x, position.y);
 		SetScale(scale.x, scale.y);
