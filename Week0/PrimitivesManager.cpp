@@ -1,15 +1,19 @@
 #include "PrimitivesManager.h"
+#include <algorithm>
+
+PlanetData FPrimitivesManager::planetDataList[] = {
+	{"Mercury", 1.483f},
+	{"Venus", 1.949f},
+	{"Mars", 1.532f},
+	{"Jupiter", 6.21f},
+	{"Neptune", 4.883f},
+	{"Uranus", 2.331f},
+	{"Pluto", 2.745f},
+};
 
 FPrimitivesManager::~FPrimitivesManager()
 {
-	for (UPrimitive* obj : objects)
-	{
-		if (obj != nullptr)
-		{
-			delete obj;
-		}
-	}
-	objects.clear();
+	Reset();
 }
 
 void FPrimitivesManager::AddObject(UPrimitive* obj)
@@ -22,16 +26,164 @@ void FPrimitivesManager::AddObject(UPrimitive* obj)
 
 UPrimitive* FPrimitivesManager::GetPrimitive(int index)
 {
-	if (index >= 0 && index < objects.size())
+	if (index >= 0 && index < (int)objects.size())
 	{
 		return objects[index];
 	}
 	return nullptr;
 }
 
+void FPrimitivesManager::InitializeGameObjects(URenderer renderer)
+{
+	// Player ìƒì„±
+	player = new UBall();
+	player->Location = { 0.0f, -0.95f, 0.0f };
+	player->Radius = 0.05f;
+	player->TextureName = "Earth";
+	player->brightness = 1.0f;
+	AddObject(player);
+
+	// Moon ìƒì„±
+	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
+	moon->brightness = 1.0f;
+	AddObject(moon);
+
+	// ì¬ì‚¬ìš©í•  Meteor 2ê°œ ìƒì„±
+	float meteorRadius = 0.05f * 0.883f; // baseRadius * meteorRelativeRadius
+	for (int i = 0; i < 2; ++i)
+	{
+		meteors[i] = new Meteor(player, player->Radius * 0.7f, "Meteor");
+		// ê²¹ì¹˜ì§€ ì•Šê²Œ ì´ˆê¸° ìƒì„± ì‹œê°„ì— ì°¨ì´ë¥¼ ë‘¡ë‹ˆë‹¤.
+		meteors[i]->waitTimer = i * 2.5f;
+		AddObject(meteors[i]);
+	}
+
+	GravityPlanet::SetGravitySystem(renderer.Device, player);
+
+	// Camera ìƒì„±
+	camera = new Camera();
+
+	// Background ìƒì„±
+	background = new Image("Background");
+
+	highestPlayerY = 0.0f;
+	nextSpawnY = 1.0f;
+}
+
+void FPrimitivesManager::SpawnRandomPlanet(float spawnBaseY)
+{
+	const float baseRadius = 0.05f;
+	const float minSpeed = 0.01f;
+	const float maxSpeed = 0.03f;
+
+	int randIndex = rand() % 8; // planetDataList size
+	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
+
+	FVector3 newPos;
+	bool bPositionValid = false;
+	const int maxAttempts = 100;
+
+	for (int attempt = 0; attempt < maxAttempts; ++attempt)
+	{
+		float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f;
+		float offsetY = ((rand() % 1000) / 1000.0f) * 0.5f;
+		float newY = spawnBaseY + 1.5f + offsetY;
+		newPos = FVector3(newX, newY, 0.0f);
+
+		bPositionValid = true;
+
+		for (UPrimitive* obj : objects)
+		{
+			if (obj == nullptr) continue;
+			UBall* bobj = dynamic_cast<UBall*>(obj);
+			if (!bobj) continue;
+
+			float dx = newPos.x - bobj->Location.x;
+			float dy = newPos.y - bobj->Location.y;
+			float distance = sqrtf(dx * dx + dy * dy);
+
+			float minSpacing = (radius + bobj->Radius) * 1.5f;
+
+			if (distance < minSpacing)
+			{
+				bPositionValid = false;
+				break;
+			}
+		}
+		if (bPositionValid) break;
+	}
+
+	float randomAngle = (rand() % 360) * (FVector3::PI / 180.0f);
+	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
+	float sizeMultiplier = 0.05f / sqrtf(radius);
+	randomSpeed *= sizeMultiplier;
+
+	FVector3 randomVelocity;
+	std::string planetName = planetDataList[randIndex].name;
+
+	if (planetName == "Meteor")
+	{
+		randomVelocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f;
+		randomVelocity.y = -(randomSpeed * 2.0f);
+		randomVelocity.z = 0.0f;
+	}
+	else
+	{
+		randomVelocity.x = cosf(randomAngle) * randomSpeed;
+		randomVelocity.y = sinf(randomAngle) * randomSpeed;
+		randomVelocity.z = 0.0f;
+	}
+
+	Planet* newPlanet = nullptr;
+	if (planetName == "Jupiter")
+	{
+		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
+		newPlanet->brightness = 1.5f;
+	}
+	else if (planetName == "Mars")
+	{
+		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::push);
+		newPlanet->brightness = 1.5f;
+	}
+	else
+	{
+		newPlanet = new Planet(newPos, randomVelocity, radius, planetName);
+		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
+	}
+
+	AddObject(newPlanet);
+}
+
+void FPrimitivesManager::Reset()
+{
+	for (UPrimitive* obj : objects)
+	{
+		if (obj != nullptr)
+		{
+			delete obj;
+		}
+	}
+	objects.clear();
+
+	if (camera) delete camera;
+	if (background) delete background;
+
+	player = nullptr;
+	moon = nullptr;
+	camera = nullptr;
+	meteors[0] = nullptr;
+	meteors[1] = nullptr;
+	background = nullptr;
+}
+
 void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalForcePos)
 {
-	// ¸ğµç °´Ã¼ ¾÷µ¥ÀÌÆ®
+	if (isRunning == false)
+	{
+		return;
+	}
+
+	// ì˜¤ë¸Œì íŠ¸ ì—…ë°ì´íŠ¸
 	for (UPrimitive* obj : objects)
 	{
 		if (obj != nullptr)
@@ -41,24 +193,50 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 		}
 	}
 
-	//Ãæµ¹ Ã¼Å©
-	for (size_t i = 1; i < objects.size(); ++i)
+	// ì¶©ëŒ ì²´í¬
+	if (objects.size() >= 1)
 	{
-		//Áö±¸¿Í ³ª¸ÓÁö
-		objects[i]->HandleCollision(objects[0]);
+		for (size_t i = 1; i < objects.size(); ++i)
+		{
+			objects[i]->HandleCollision(objects[0]); // Player
+		}
 	}
-	for (size_t i = 2; i < objects.size(); ++i)
+	if (objects.size() >= 2)
 	{
-		//(Áö±¸¸¦ Á¦¿ÜÇÏ°í) ´Ş°ú ³ª¸ÓÁö
-		objects[i]->HandleCollision(objects[1]);
+		for (size_t i = 2; i < objects.size(); ++i)
+		{
+			objects[i]->HandleCollision(objects[1]); // Moon
+		}
+	}
+
+	// ì¹´ë©”ë¼ ì—…ë°ì´íŠ¸
+	if (camera && player)
+	{
+		camera->Update(deltaTime, player);
+	}
+
+
+	// í–‰ì„± ìƒì„± ë¡œì§
+	if (player != nullptr)
+	{
+		highestPlayerY = std::max<float>(highestPlayerY, player->Location.y);
+		while (highestPlayerY > nextSpawnY)
+		{
+			int spawnCount = (rand() % 3) + 1;
+			for (int i = 0; i < spawnCount; ++i)
+			{
+				SpawnRandomPlanet(nextSpawnY);
+			}
+			nextSpawnY += spawnInterval;
+		}
 	}
 }
 
 void FPrimitivesManager::Render(URenderer& renderer)
 {
-	for (int i = (int)(objects.size() - 1); i >= 0; --i)
+	if (background)
 	{
-		objects[i]->Render(renderer);
+		background->Render(renderer);
 	}
 
 	for (UPrimitive* obj : objects)
@@ -67,5 +245,28 @@ void FPrimitivesManager::Render(URenderer& renderer)
 		{
 			obj->Render(renderer);
 		}
+	}
+}
+
+void FPrimitivesManager::OnGameStateChanged(EGameState newState)
+{
+	switch (newState)
+	{
+	case EGameState::Running:
+		if (!isRunning)
+		{
+			Reset();
+			// rendererê°€ í•„ìš”í•˜ë‹¤ë©´ ë©¤ë²„ ë³€ìˆ˜ë¡œ ì €ì¥í•˜ê±°ë‚˜ ë‹¤ë¥¸ ë°©ë²• ì‚¬ìš©
+		}
+		isRunning = true;
+		break;
+
+	case EGameState::Title:
+		isRunning = false;
+		break;
+		
+	case EGameState::Ending:
+		isRunning = false;
+		break;
 	}
 }

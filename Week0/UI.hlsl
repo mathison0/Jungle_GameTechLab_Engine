@@ -1,20 +1,16 @@
-Texture2D backgroundTexture : register(t0);
-SamplerState backgroundSampler : register(s0);
+Texture2D uiTexture : register(t0);
+SamplerState uiSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float3 Offset;
-    float Angle;
+    float3 Offset; 
+    float Angle; 
     float3 Scale;
-    float uvOffset;
-    float3 Color;
-    float Alpha;
-};
+    float padding;
+    float4 Color;
 
-cbuffer ConstantPerFrame : register(b1)
-{
-    float cameraY;
-    float3 padding; 
+    float2 uvOffset;
+    float2 uvScale;
 };
 
 struct VS_INPUT
@@ -35,10 +31,14 @@ PS_INPUT mainVS(VS_INPUT input)
 {
     PS_INPUT output;
     
-    output.position = float4(input.position.xyz * 2, 1.0f);
+    float3 scaledPos = input.position.xyz * Scale;
+    
+    float3 finalPos = scaledPos + Offset;
+    output.position = float4(finalPos, 1.0f);
+    
+    output.uv = (input.uv * uvScale) + uvOffset;
     
     output.color = input.color;
-    output.uv = input.uv;
     
     return output;
 }
@@ -47,9 +47,7 @@ PS_INPUT mainVS(VS_INPUT input)
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
-    float2 scrolledUV = input.uv;
-
-    scrolledUV.y -= cameraY * 0.1f;
+    float4 texColor = uiTexture.Sample(uiSampler, input.uv);
     
-    return backgroundTexture.Sample(backgroundSampler, scrolledUV);
+    return texColor * input.color;
 }

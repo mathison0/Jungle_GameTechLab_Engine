@@ -26,6 +26,9 @@ struct FVector3;
 #include "Camera.h"
 #include "SoundManager.h"
 #include "Sprite.h"
+#include "UIManager.h"
+#include "GameContext.h"
+#include "GameEnding.h"
 
 
 struct FVector
@@ -54,12 +57,9 @@ bool UBall::bApplyAttraction = false;
 //Global Variables
 URenderer renderer;
 FPrimitivesManager primitivesManager;
+UIManager* uiManager;
 bool bIsExit = false;
-
-UBall* player;
-Moon* moon;
-Camera* camera;
-Sprite* background;
+bool bShowHomingUI = false;
 
 //FPS, time
 const int targetFPS = 60;
@@ -73,31 +73,9 @@ float deltaTime = 0.0f;
 POINT mousePos;
 FVector3 mouseWorldPos;
 
-//Game
-struct PlanetData
-{
-	std::string name;
-	float relativeRadius;
-};
-
-PlanetData planetDataList[] = {
-	{"Mercury", 1.383f},
-	{"Venus", 1.949f},
-	{"Mars", 1.532f},
-	{"Jupiter", 7.21f},
-	{"Neptune", 4.883f},
-	{"Uranus", 2.331f},
-	{"Pluto", 2.745f},
-	{"Meteor", 0.883f},
-};
-
-float highestPlayerY = 0.0f;
-float nextSpawnY = 1.0f;
-float spawnInterval = 1.5f;
 // ----------------------------------
 
 void InitializeRenderer(HWND hWnd);
-void InitializeGameObjects();
 void ProcessInput();
 void WinMainUpdate(HWND hWnd);
 void WinMainRender();
@@ -137,10 +115,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		nullptr, nullptr, hInstance, nullptr);
 
 	InitializeRenderer(hWnd);
-	InitializeGameObjects();
+	primitivesManager.InitializeGameObjects(renderer);
+	uiManager = new UIManager();
+	
+	GameEnding ending;
 
-	//SoundManager
 	SoundManager::Get().Init();
+	GameContext::GetiNSTANCE().RegisterListenerObject(&primitivesManager);
+	GameContext::GetiNSTANCE().RegisterListenerObject(uiManager);
+	GameContext::GetiNSTANCE().RegisterListenerObject(&SoundManager::Get());
+
 	
 	// 원하는 음원을 아래처럼 등록해서 원하는 곳에서 헤더만 포함해서 사용
 	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
@@ -166,6 +150,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			if (msg.message == WM_KEYDOWN)
 			{
 				if (msg.wParam == 'Q') bIsExit = true;
+				//R을 눌러서 리셋 가능하도록 만들어뒀습니다.
+				//명칭은 clear로 하라고 하셨는지 기억이 잘 안네요
+				if (msg.wParam == 'R')
+				{
+					primitivesManager.Reset();
+					primitivesManager.InitializeGameObjects(renderer);
+				}
 			}
 		}
 
@@ -176,11 +167,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WinMainUpdate(hWnd);
 		WinMainRender();
 
-		/* 게임 끝 */
-		if (player->Location.y >= 100.f)
-		{
-			break;
-		}
+
+		ending.Update(primitivesManager.GetPlayer(), deltaTime);
 
 		do
 		{
@@ -197,14 +185,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SoundManager::Get().Release();
 
 	UBall::ReleaseBuffer(renderer);
-	Sprite::ReleaseQuadVertexBuffer(renderer);
+	Image::ReleaseQuadVertexBuffer(renderer);
 	renderer.ReleaseConstantBuffer();
 	renderer.ReleaseShader();
 	renderer.Release();
 
-	//player, moon은 primitivesManager에서 관리하므로 delete할 필요 없습니다
-	delete camera;
-	delete background;
 	return 0;
 }
 
@@ -232,7 +217,11 @@ void InitializeRenderer(HWND hWnd)
 		{"Neptune", L"neptune.jpg"},
 		{"Uranus", L"uranus.jpg"},
 		{"Pluto", L"pluto.jpg"},
-		{"Meteor", L"me.png"}
+		{"Meteor", L"meteor.png"},
+		{"Background", L"background.jpg"},
+		{"StartButton", L"startButton.png" },
+		{"RestartButton", L"restartButton.png" },
+		{"TestSprite", L"testSprite.png" }
 	};
 
 	for (const auto& tex : textures)
@@ -252,102 +241,15 @@ void InitializeRenderer(HWND hWnd)
 	QueryPerformanceFrequency(&frequency);
 
 	UBall::InitializeBuffer(renderer);
-	Sprite::CreateQuadVertexBuffer(renderer);
-}
-
-void SpawnRandomPlanet(float spawnBaseY)
-{
-	const float baseRadius = 0.05f;
-	const float minSpeed = 0.01f;
-	const float maxSpeed = 0.03f;
-
-	int randIndex = rand() % (sizeof(planetDataList) / sizeof(PlanetData));
-	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
-
-	FVector3 newPos;
-	bool bPositionValid = false;
-	const int maxAttempts = 50;
-
-	for (int attempt = 0; attempt < maxAttempts; ++attempt)
-	{
-		float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f; // -1.0 ~ 1.0 사이
-		// 한 번에 여러 개 스폰될 때 Y축도 조금씩 다르게 퍼지도록 랜덤값 추가
-		float offsetY = ((rand() % 1000) / 1000.0f) * 0.5f;
-		float newY = spawnBaseY + 1.5f + offsetY;
-		newPos = FVector3(newX, newY, 0.0f);
-
-		bPositionValid = true;
-
-		for (UPrimitive* obj : primitivesManager.GetObjects())
-		{
-			if (obj == nullptr) continue;
-			UBall* bobj = dynamic_cast<UBall*>(obj);
-
-			float dx = newPos.x - bobj->Location.x;
-			float dy = newPos.y - bobj->Location.y;
-			float distance = sqrtf(dx * dx + dy * dy);
-
-			float minSpacing = (radius + bobj->Radius) * 1.5f;
-
-			if (distance < minSpacing)
-			{
-				bPositionValid = false;
-				break;
-			}
-		}
-		if (bPositionValid) break;
-	}
-
-	//무작위 속도 및 방향 설정
-	float randomAngle = (rand() % 360) * (FVector3::PI / 180.0f);
-	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
-
-	float sizeMultiplier = 0.05f / sqrtf(radius);
-	randomSpeed *= sizeMultiplier;
-
-	FVector3 randomVelocity;
-
-	if (planetDataList[randIndex].name == "Meteor")
-	{
-		randomVelocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f; //수직낙하에 가깝게
-		randomVelocity.y = -(randomSpeed * 2.0f);
-		randomVelocity.z = 0.0f;
-	}
-	else
-	{
-		randomVelocity.x = cosf(randomAngle) * randomSpeed;
-		randomVelocity.y = sinf(randomAngle) * randomSpeed;
-		randomVelocity.z = 0.0f;
-	}
-
-	Planet* newPlanet = nullptr;
-	std::string planetName = planetDataList[randIndex].name;
-
-	if (planetName == "Meteor")
-	{
-		newPlanet = new Meteor(newPos, randomVelocity, radius, planetName);
-	}
-	else if (planetName == "Jupiter")
-	{
-		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
-		newPlanet->brightness = 1.5f;
-	}
-	else if (planetName == "Mars")
-	{
-		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::push);
-		newPlanet->brightness = 1.5f;
-	} 
-	else
-	{
-		newPlanet = new Planet(newPos, randomVelocity, radius, planetName);
-		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
-	}
-
-	primitivesManager.AddObject(newPlanet);
+	Image::CreateQuadVertexBuffer(renderer);
 }
 
 void ProcessInput()
 {
+	if (GameContext::GetiNSTANCE().GetState() == Ending)
+		return;
+
+	UBall* player = primitivesManager.GetPlayer();
 	if (player != nullptr)
 	{
 		if (player->inputLockTimer > 0.0f)
@@ -367,31 +269,15 @@ void ProcessInput()
 			player->ApplyThrust(bCurrentLeftPressed, bCurrentRightPressed, deltaTime);
 		}
 	}
-}
 
-void InitializeGameObjects()
-{
-	//Player 생성
-	player = new UBall();
-	player->Location = { 0.0f, 0.0f, 0.0f };
-	player->Radius = 0.05f;
-	player->TextureName = "Earth";
-	player->brightness = 1.0f;
-	primitivesManager.AddObject(player);
-
-	//Moon 생성
-	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
-	moon->brightness = 1.0f;
-	primitivesManager.AddObject(moon);
-
-	//중력행성 리소스 초기화
-	GravityPlanet::SetGravitySystem(renderer.Device, player);
-
-	//Camera 생성
-	camera = new Camera();
-
-	//Background 생성
-	background = new Sprite("Background");
+	static bool prevHState = false;
+	bool currentHState = (GetAsyncKeyState('H') & 0x8000) != 0;
+	bool ctrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+	if (currentHState && !prevHState && ctrlDown)
+	{
+		bShowHomingUI = !bShowHomingUI;
+	}
+	prevHState = currentHState;
 }
 
 void WinMainUpdate(HWND hWnd)
@@ -401,48 +287,90 @@ void WinMainUpdate(HWND hWnd)
 
 	GetCursorPos(&mousePos);
 	ScreenToClient(hWnd, &mousePos);
-	mouseWorldPos.x = (mousePos.x / 512.0f) - 1.0f;
-	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
-	primitivesManager.Update(deltaTime, mouseWorldPos);
+	// 클라이언트 영역 크기를 동적으로 가져와 NDC(-1..1) 계산
+	RECT clientRect;
+	GetClientRect(hWnd, &clientRect);
+	float clientWidth = static_cast<float>(clientRect.right - clientRect.left);
+	float clientHeight = static_cast<float>(clientRect.bottom - clientRect.top);
+	if (clientWidth <= 0.f) clientWidth = 1024.f;
+	if (clientHeight <= 0.f) clientHeight = 1024.f;
 
-	camera->Update(deltaTime, player);
+	// 픽셀 -> NDC (-1..1)
+	FVector3 ndcPos;
+	ndcPos.x = (mousePos.x / clientWidth) * 2.0f - 1.0f;
+	ndcPos.y = -((mousePos.y / clientHeight) * 2.0f - 1.0f);
+	ndcPos.z = 0.0f;
 
-	if (player != nullptr)
+	// worldMousePos: 카메라 보정 적용 (게임 월드 상호작용용)
+	Camera* camera = primitivesManager.GetCamera();
+	FVector3 worldMousePos = ndcPos;
+	if (camera != nullptr)
 	{
-		//플레이어가 가장 높이 올라가면.... window는 max 저주가 있다
-		highestPlayerY = std::max<float>(highestPlayerY, player->Location.y);
-		while (highestPlayerY > nextSpawnY)
-		{
-			int spawnCount = (rand() % 3) + 1;
-			for (int i = 0; i < spawnCount; ++i)
-			{
-				SpawnRandomPlanet(nextSpawnY);
-			}
-			nextSpawnY += spawnInterval;
-		}
+		worldMousePos.y += camera->GetCurrentCameraY();
 	}
 
-	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
+	// 전역 mouseWorldPos는 월드 좌표로 유지
+	mouseWorldPos = worldMousePos;
+
+	// 플레이어 호밍(월드 상호작용)
+	UBall* player = primitivesManager.GetPlayer();
+	if (player != nullptr && player->bHomingMode && GameContext::GetiNSTANCE().GetState() != Ending)
+	{
+		player->ApplyHoming(worldMousePos, deltaTime);
+	}
+
+	// primitivesManager 업데이트 (월드 좌표 사용)
+	primitivesManager.Update(deltaTime, worldMousePos);
+
+	// 렌더러에 카메라 정보 적용
+	if (camera)
+	{
+		renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
+	}
+
+	// UI 입력: 화면 고정(UI는 스크린-스페이스) -> 카메라 보정 제거한 ndcPos 전달
+	bool bLeftMousePressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+
+	uiManager->Update(ndcPos.x, ndcPos.y, deltaTime, bLeftMousePressed);
 }
 
 void WinMainRender()
 {
-	background->Render(renderer);
 	primitivesManager.Render(renderer);
+
+	uiManager->Render(renderer);
 
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 	ImGui::Begin("Player Info");
+	
+	UBall* player = primitivesManager.GetPlayer();
 	if (player != nullptr)
 	{
 		ImGui::Text("Earth Position:");
 		ImGui::Text("X: %.3f", player->Location.x);
 		ImGui::Text("Y: %.3f", player->Location.y);
 		ImGui::Text("Z: %.3f", player->Location.z);
-	}
-	ImGui::End();
 
+		if (bShowHomingUI)
+		{
+			bool enabled = player->bHomingMode;
+			if (ImGui::Checkbox("Homing Mode", &enabled))
+			{
+				player->bHomingMode = enabled;
+			}
+		}
+
+		
+		if (ImGui::Button("Reset Game (R)"))
+		{
+			primitivesManager.Reset();
+			primitivesManager.InitializeGameObjects(renderer);
+		}
+	}
+	ImGui::Text("Press R to Restart");
+	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 	

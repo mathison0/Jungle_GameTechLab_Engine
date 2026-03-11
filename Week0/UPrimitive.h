@@ -1,7 +1,7 @@
 #pragma once
 
 class URenderer;
-class FVector3;
+struct FVector3;
 class ID3D11Buffer;
 
 class UPrimitive

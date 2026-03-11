@@ -4,8 +4,8 @@ SamplerState earthSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float3 Offset; // x: 위치X, y: 위치Y, z: 스케일(반지름)
-    float Angle; // C++에서 넘겨준 회전 각도
+    float3 Offset;
+    float Angle;
     float3 Scale;
     float uvOffset;
     float4 Color;
@@ -98,6 +98,7 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     float sphereU = 0.5f + (atan2(rotatedP.x, z) / (2.0f * PI));
     float sphereV = 0.5f - (asin(rotatedP.y) / PI);
 
+    sphereU = frac(sphereU + uvOffset);
     //왜곡된 새 UV로 텍스처를 샘플링
     return earthTexture.Sample(earthSampler, float2(sphereU, sphereV)) * brightness;
 }

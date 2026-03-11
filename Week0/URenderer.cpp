@@ -160,8 +160,14 @@ void URenderer::CreateShader()
 	ID3DBlob* vertexshaderCSO;
 	ID3DBlob* pixelshaderCSO;
 
+	ID3DBlob* backgroundVertexShaderCSO;
+	ID3DBlob* backgroundPixelShaderCSO;
+
+
 	ID3DBlob* spriteVertexShaderCSO;
 	ID3DBlob* spritePixelShaderCSO;
+
+		
 
 	D3DCompileFromFile(L"ShaderW0.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexshaderCSO, nullptr);
 
@@ -180,21 +186,32 @@ void URenderer::CreateShader()
 	Device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexshaderCSO->GetBufferPointer(), vertexshaderCSO->GetBufferSize(), &SimpleInputLayout);
 
 
+	D3DCompileFromFile(L"Background.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &backgroundVertexShaderCSO, nullptr);
+
+	Device->CreateVertexShader(backgroundVertexShaderCSO->GetBufferPointer(), backgroundVertexShaderCSO->GetBufferSize(), nullptr, &backgroundVertexShader);
 
 
-	D3DCompileFromFile(L"Background.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &spriteVertexShaderCSO, nullptr);
-
-	Device->CreateVertexShader(spriteVertexShaderCSO->GetBufferPointer(), spriteVertexShaderCSO->GetBufferSize(), nullptr, &SpriteVertexShader);
-
-
-	D3DCompileFromFile(L"Background.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &spritePixelShaderCSO, nullptr);
+	D3DCompileFromFile(L"Background.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &backgroundPixelShaderCSO, nullptr);
 	
-	Device->CreatePixelShader(spritePixelShaderCSO->GetBufferPointer(), spritePixelShaderCSO->GetBufferSize(), nullptr, &SpritePixelShader);
-	
+	Device->CreatePixelShader(backgroundPixelShaderCSO->GetBufferPointer(), backgroundPixelShaderCSO->GetBufferSize(), nullptr, &backgroundPixelShader);
+
+	D3DCompileFromFile(L"UI.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &spriteVertexShaderCSO, nullptr);
+
+	Device->CreateVertexShader(spriteVertexShaderCSO->GetBufferPointer(), spriteVertexShaderCSO->GetBufferSize(), nullptr, &UIVertexShader);
+
+
+	D3DCompileFromFile(L"UI.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &spritePixelShaderCSO, nullptr);
+
+	Device->CreatePixelShader(spritePixelShaderCSO->GetBufferPointer(), spritePixelShaderCSO->GetBufferSize(), nullptr, &UIPixelShader);
+
+
 	vertexshaderCSO->Release();
 	pixelshaderCSO->Release();
 	spriteVertexShaderCSO->Release();
 	spritePixelShaderCSO->Release();
+	backgroundPixelShaderCSO->Release();
+	backgroundVertexShaderCSO->Release();
+
 
 	Stride = sizeof(FVertexSimple);
 
@@ -208,22 +225,40 @@ void URenderer::ReleaseShader()
 		SimpleInputLayout = nullptr;
 	}
 
+	if (SimpleVertexShader)
+	{
+		SimpleVertexShader->Release();
+		SimpleVertexShader = nullptr;
+	}
+
 	if (SimplePixelShader)
 	{
 		SimplePixelShader->Release();
 		SimplePixelShader = nullptr;
 	}
 
-	if(SpritePixelShader)
+	if(backgroundVertexShader)
 	{
-		SpritePixelShader->Release();
-		SpritePixelShader = nullptr;
+		backgroundVertexShader->Release();
+		backgroundVertexShader = nullptr;
 	}
 
-	if (SimpleVertexShader)
+	if(backgroundPixelShader)
 	{
-		SimpleVertexShader->Release();
-		SimpleVertexShader = nullptr;
+		backgroundPixelShader->Release();
+		backgroundPixelShader = nullptr;
+	}
+
+	if(UIVertexShader)
+	{
+		UIVertexShader->Release();
+		UIVertexShader = nullptr;
+	}
+
+	if (UIPixelShader)
+	{
+		UIPixelShader->Release();
+		UIPixelShader = nullptr;
 	}
 }
 
@@ -311,7 +346,8 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, float uvOffset, float brightness)
+void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, XMFLOAT4 color,
+	XMFLOAT2 uvOffset, XMFLOAT2 uvScale, int flag, float spinAngle)
 {
 	if (ConstantBuffer)
 	{
@@ -323,8 +359,11 @@ void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, flo
 			constants->Offset = Offset;
 			constants->Angle = Angle;
 			constants->Scale = scale;
+			constants->Flag = flag;
 			constants->uvOffset = uvOffset;
-			constants->Color.w = brightness;
+			constants->uvScale = uvScale;
+			constants->Color = color;
+			constants->spinAngle = spinAngle;
 		}
 		DeviceContext->Unmap(ConstantBuffer, 0);
 	}

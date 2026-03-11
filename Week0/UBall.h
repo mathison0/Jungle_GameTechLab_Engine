@@ -7,6 +7,7 @@ class UBall : public UPrimitive
 {
 public:
 	float brightness = 1.0f;
+	float EarthSpinAngle = 0.0f;
 public:
 	static constexpr float MaxSpeed = 0.01f;
 	static constexpr float gravity = -0.000001f;
@@ -57,10 +58,12 @@ public:
 	float inputLockTimer = 0.0f;
 	float inputLockDuration = 1.0f;
 
-	// 부스터 출력 관련 변수들
-	bool bIsPlayer = false;
-	bool bIsLeftFireActive = false;
-	bool bIsRightFireActive = false;
+
+	// Homing (시연용)
+	bool bHomingMode = false; // on/off 컨트롤+H키
+
+	static constexpr float groundFriction = 1.0f; // 지면 마찰 계수
+
 
 public:
 	UBall();
@@ -91,6 +94,7 @@ public:
 	void ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime);
 	void ApplyJetpackForce(float thrustAmount);
 	void LimitVelocities(float maxLinearSpeed);
+	void ApplyHoming(const FVector3& target, float delatTime);
 };
 
 //여기서 삼각형을 num개 사용해 원을 만들어내는데, num이 많아질 수록 성능은 저하되고 원은 더 부드러워집니다. 

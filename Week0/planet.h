@@ -12,7 +12,7 @@ public:
 
 	// 리스폰 타이머 관련 변수들
 	float RespawnTimer = 0.0f;
-	const float RespawnDelay = 3.0f;
+	const float RespawnDelay = 3.5f;
 
 public:
 	Planet(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName = "");
@@ -31,7 +31,7 @@ class Moon : public Planet
 private:
 	UBall* TargetObject = nullptr;
 	float FollowSpeed = 1.0f;
-	float FollowDistance = 0.3f;        
+	float FollowDistance = 0.1f;
 	float MaxFollowSpeed = 0.003f;
 	float RotationSpeed = 0.002f;
 
@@ -107,12 +107,16 @@ public:
 class Meteor : public Planet
 {
 public:
-	float spawnDelay;
-	float spawnTimer;
+	UBall* targetPlayer = nullptr;
+	const float waitDuration = 7.0f;
+	float waitTimer = 0.f;
+	bool bIsWaiting = false;
 
 public:
-	Meteor(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName);
+	Meteor(UBall* target, float r, const std::string& textureName);
 
 	void Update(float t) override;
 	void HandleCollision(UPrimitive* other) override;
+	void HideAndWait();
+	void RespawnAbovePlayer();
 };
