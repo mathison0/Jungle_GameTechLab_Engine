@@ -336,7 +336,7 @@ void SpawnRandomPlanet(float spawnBaseY)
 	{
 		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::push);
 		newPlanet->brightness = 1.5f;
-	}
+	} 
 	else
 	{
 		newPlanet = new Planet(newPos, randomVelocity, radius, planetName);
@@ -380,6 +380,9 @@ void InitializeGameObjects()
 	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	moon->brightness = 1.0f;
 	primitivesManager.AddObject(moon);
+
+	//중력행성 리소스 초기화
+	GravityPlanet::SetGravitySystem(renderer.Device, player);
 
 	//Camera 생성
 	camera = new Camera();

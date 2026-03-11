@@ -95,7 +95,6 @@ void Planet::Render(URenderer& renderer)
 	}
 
 
-
 	// 텍스처 설정 (부모 클래스 로직 사용)
 	if (!TextureName.empty())
 	{
@@ -245,60 +244,61 @@ ID3D11Buffer* GravityPlanet::RangeDashBuffer = nullptr;
 UINT GravityPlanet::NumDashVertices = 0;
 int GravityPlanet::ReferenceCount = 0;
 ID3D11RasterizerState* GravityPlanet::NoCullState = nullptr;
+UBall* GravityPlanet::targetPlayer = nullptr;
 
-void GravityPlanet::Gravity(UBall* player, float deltatime)
+void GravityPlanet::SetGravitySystem(ID3D11Device* device, UBall* player)
 {
-	if (!this->bIsActive)
-		return;
+	targetPlayer = player;
+	InitRangeResources(device);
+}
 
-	FVector3 direction = this->Location - player->Location;
+void GravityPlanet::Update(float t)
+{
+	Planet::Update(t);
+
+	FVector3 direction = this->Location - targetPlayer->Location;
 	float dist = direction.Length();
 	FVector3 normal = direction / dist;
 
-	float strength;
-	float sumRadius = this->Radius + player->Radius;
-
-	if (dist < sumRadius && this->planetType == PlanetType::push)
-	{
-		FVector3 pushVector = (player->Location - this->Location) / (player->Location - this->Location).Length();
-		player->Location = this->Location + (pushVector * (sumRadius + 0.001f));
-
-		FVector3 currentVel = player->GetVelocity();
-		if (currentVel.Dot(pushVector) < 0)
-		{
-			player->SetVelocity(pushVector * 0.5f);
-		}
-
-		return;
-	}
-
+	float strength = 1.0f;
+	FVector3 newVelocity;
 
 	if (this->planetType == PlanetType::pull)
 	{
-		maxSpeed = maxSpeed_pull;
 		strength = 1.0f;
+		FVector3 force = normal * (strength / ((dist * dist) + 0.01f));
+		newVelocity = targetPlayer->GetVelocity() + force * t;
+
+		if (newVelocity.Length() > maxSpeed_pull)
+		{
+			newVelocity = newVelocity / newVelocity.Length() * maxSpeed;
+		}
+
+		targetPlayer->SetVelocity(newVelocity);
 	}
 	else if(this->planetType == PlanetType::push)
 	{
-		maxSpeed = maxSpeed_push;
-		normal *= -1.0f;
-		strength = 50.0f;
+		FVector3 pushDir = normal * -1.0f;
+		float surfaceDist = dist - this->Radius;
+		if (surfaceDist < 0.0f) surfaceDist = 0.01f;
+
+		float pushStrength = 0.5f / (surfaceDist + 0.1f);
+		FVector3 pushForce = pushDir * pushStrength;
+
+		float approachSpeed = targetPlayer->GetVelocity().Dot(-pushDir);
+		if (approachSpeed > 0)
+		{
+			pushForce += pushDir * approachSpeed * 2.0f;
+		}
+
+		newVelocity = targetPlayer->GetVelocity() + pushForce * t;
+
+		float limit = 5.0f;
+		if (newVelocity.Length() > limit)
+			newVelocity = newVelocity / newVelocity.Length() * limit;
 	}
 
-	if (dist > range) 
-		return;
-
-	float gravityForce = strength / ((dist * dist) + 0.001f);
-	FVector3 force = normal * GravityForce;
-
-	FVector3 newVelocity = player->GetVelocity() + force * deltatime;
-
-	if (newVelocity.Length() > maxSpeed)
-	{
-		newVelocity = newVelocity / newVelocity.Length() * maxSpeed;
-	}
-
-	player->SetVelocity(newVelocity);
+	targetPlayer->SetVelocity(newVelocity);
 }
 
 void GravityPlanet::InitRangeResources(ID3D11Device* device)
@@ -354,7 +354,7 @@ void GravityPlanet::Render(URenderer& renderer)
 {
 	Planet::Render(renderer);
 
-	if (!RangeDashBuffer) return;
+	if (!RangeDashBuffer || !this->bIsActive) return;
 
 	// --- 점선 그리기 세팅 ---
 	renderer.DeviceContext->RSSetState(NoCullState);

@@ -63,12 +63,15 @@ class GravityPlanet : public Planet
 {
 public:
 	PlanetType planetType;
+	static UBall* targetPlayer;
 
 	float range;
 
 	float maxSpeed = 0;
-	float maxSpeed_pull = 0.4f;
-	float maxSpeed_push = 2.0f;
+	float maxSpeed_pull = 5.0f;
+	float maxSpeed_push = 3.0f;
+
+	FVector3 Color = { 1.0f, 1.0f, 0.0f};
 
 private:
 	static ID3D11Buffer* RangeDashBuffer;
@@ -80,7 +83,7 @@ public:
 	GravityPlanet(FVector3 Location, FVector3 Velocity, float r, const std::string& textureName = "", PlanetType type = PlanetType::pull)
 		: Planet(Location, Velocity, r, textureName), planetType(type) 
 	{
-		range = r * 5.0f;
+		range = r * 3.0f;
 		ReferenceCount++;
 	}
 
@@ -94,8 +97,8 @@ public:
 		}
 	}
 
-	void Gravity(UBall* player, float deltatime);
-
+	static void SetGravitySystem(ID3D11Device* device, UBall* player);
+	void Update(float t) override;
 	static void InitRangeResources(ID3D11Device* device);
 	virtual void Render(URenderer& renderer) override;
 };
