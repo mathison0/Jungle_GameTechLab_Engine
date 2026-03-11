@@ -259,6 +259,7 @@ void UBall::Update(float t)
 	Move(t);
 }
 
+/*현재 전혀 호출되지 않는 함수이므로 지워도 됩니다. 해당 코드로 작업하고 계신 분이 있을까 남겨둡니다.*/
 void UBall::UpdateRenderer(URenderer& renderer)
 {
 	FVector3 transform = { this->Location.x, this->Location.y, this->Radius };
