@@ -11,14 +11,17 @@ private:
 	int maxFrameX = 1;
 	int maxFrameY = 1;
 
-	int curFrameX = 0;
-	int curFrameY = 0;
+	int curFrameX = 1;
+	int curFrameY = 1;
 
 public:
 
-	Sprite(const std::string& textureName, int frameCountX, int frameCountY, float fullWidth, float fullHeight) :
+	Sprite(FVector3 position, FVector3 scale, const std::string& textureName, int frameCountX, int frameCountY, float fullWidth, float fullHeight) :
 		Image(textureName), maxFrameX{ frameCountX }, maxFrameY{ frameCountY}
 	{
+		SetPosition(position.x, position.y);
+		SetScale(scale.x, scale.y);
+
 		this->width = fullWidth / (float)frameCountX;
 		this->height = fullHeight / (float)frameCountY;
 
@@ -26,6 +29,15 @@ public:
 	virtual ~Sprite();
 
 	virtual void Render(URenderer& renderer) override;
+
+	inline int GetMaxFrameX() { return maxFrameX; }
+	inline int GetMaxFrameY() { return maxFrameY; }
+
+	void SetFrame(int frameX, int frameY)
+	{
+		curFrameX = frameX;
+		curFrameY = frameY;
+	}
 
 	void Update(float deltaTime);
 };
