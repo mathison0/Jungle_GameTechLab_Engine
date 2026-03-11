@@ -16,7 +16,7 @@ public:
 
 	void Update(float mouseX, float mouseY, bool isMousePressed);
 
-	inline bool IsMouseOver(float mx, float my) {
+	inline bool IsMouseOver (float mx, float my) {
 		float left = position.x - (scale.x * 0.5f);
 		float right = position.x + (scale.x * 0.5f);
 		float top = position.y + (scale.y * 0.5f);

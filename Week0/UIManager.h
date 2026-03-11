@@ -3,6 +3,7 @@
 #include "Button.h"
 #include "GameContext.h"
 #include "Sprite.h"
+#include "TimeLap.h"
 
 class UIManager : public IGameStateListener
 {
@@ -10,7 +11,7 @@ private:
 	Button* startButton;
 	Button* restartButton;
 
-	Sprite* testSprite;
+	TimeLap* timeLap;
 
 	public:
 	UIManager();

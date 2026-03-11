@@ -29,6 +29,8 @@ public:
 	inline void SetActive(bool active) { bIsActive = active; }
 	inline bool IsActive() const { return bIsActive; }
 
+	FVector3 GetScale() { return scale; }
+
 	virtual void Render(URenderer& renderer);
 
 	static void CreateQuadVertexBuffer(URenderer& renderer)

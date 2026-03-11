@@ -3,7 +3,7 @@
 class Digit : public Sprite
 {
 private :
-	char currentChar = '\0';
+	char currentChar = '\0f';
 	int offset = 32; // ' ' Index
 
 public:
