@@ -57,6 +57,10 @@ void TimeLap::Update(float deltaTime)
 
 void TimeLap::Render(URenderer& renderer)
 {
+    if (GetActive() == false)
+    {
+        return;
+    }
     float startX = basePosition.x - (digitSpacing * 2.0f);
     float currentX = startX;
 

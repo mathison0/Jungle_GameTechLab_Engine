@@ -11,6 +11,9 @@ private:
 	Button* startButton;
 	Button* restartButton;
 
+	Button* titleImage;
+	Button* teamImage;
+
 	TimeLap* timeLap;
 
 	bool isRunning = false;

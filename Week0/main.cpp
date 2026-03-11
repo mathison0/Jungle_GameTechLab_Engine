@@ -117,7 +117,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitializeRenderer(hWnd);
 	primitivesManager.InitializeGameObjects();
 	uiManager = new UIManager();
-	
+
 	GameEnding ending;
 
 	SoundManager::Get().Init();
@@ -125,7 +125,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	GameContext::GetiNSTANCE().RegisterListenerObject(uiManager);
 	GameContext::GetiNSTANCE().RegisterListenerObject(&SoundManager::Get());
 
-	
+
 	// 원하는 음원을 아래처럼 등록해서 원하는 곳에서 헤더만 포함해서 사용
 	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
 	SoundManager::Get().LoadSound("Ending", L"Audio/ending.WAV");
@@ -133,7 +133,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SoundManager::Get().LoadSound("bgm", L"Audio/bgm.WAV");
 
 	SoundManager::Get().PlayBGM("bgm", true);
-	
+
 	GravityPlanet::InitRangeResources(renderer.Device);
 
 	// Main Loop 
@@ -230,7 +230,10 @@ void InitializeRenderer(HWND hWnd)
 		{"StartButton", L"startButton.png" },
 		{"RestartButton", L"restartButton.png" },
 		{"TestSprite", L"testSprite.png" },
-		{"Rocket", L"rocket.png"}
+		{"Rocket", L"rocket.png"},
+		{"Title", L"title.png" },
+		{"Team", L"team.png"}
+
 	};
 
 	for (const auto& tex : textures)
@@ -239,7 +242,7 @@ void InitializeRenderer(HWND hWnd)
 	}
 
 	renderer.CreateConstantBuffer();
-	
+
 	// ImGui Setup
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -354,7 +357,7 @@ void WinMainRender()
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 	ImGui::Begin("Player Info");
-	
+
 	UBall* player = primitivesManager.GetPlayer();
 	if (player != nullptr)
 	{
@@ -372,7 +375,7 @@ void WinMainRender()
 			}
 		}
 
-		
+
 		if (ImGui::Button("Reset Game (R)"))
 		{
 			primitivesManager.Reset();
@@ -383,6 +386,6 @@ void WinMainRender()
 	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-	
+
 	renderer.SwapBuffer();
 }
