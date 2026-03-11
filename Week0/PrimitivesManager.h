@@ -1,7 +1,8 @@
 #pragma once
 #include "UBall.h"
+#include "IGameStateListener.h"
 
-class FPrimitivesManager
+class FPrimitivesManager : public IGameStateListener 
 {
 private:
 	std::vector<UPrimitive*> objects;
@@ -16,4 +17,7 @@ public:
 
 	void Update(const float deltaTime, const FVector3& ExternalForcePos);
 	void Render(URenderer& renderer);
+
+	void OnGameStateChanged(EGameState newState) override;
+
 };

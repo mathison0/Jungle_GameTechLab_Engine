@@ -3,15 +3,15 @@
 
 UIManager::UIManager()
 {
-	startButton = new Button({ 0.0f, -0.1f, 0.0f }, { 0.3f, 0.1f}, "StartButton", []() {
-		// Start 버튼 클릭 시 실행할 코드
-		// 예: 게임 시작, 메뉴 전환 등
+	startButton = new Button({ 0.0f, -0.1f, 0.0f }, { 0.3f, 0.1f }, "StartButton", []() {
+		GameContext::GetiNSTANCE().SetState(EGameState::Running);
 		});
 
 	restartButton = new Button({ 0.0f, -0.3f, 0.0f }, { 0.3f, 0.1f }, "RestartButton", []() {
-		// Restart 버튼 클릭 시 실행할 코드
-		// 예: 게임 재시작, 점수 초기화 등
+		GameContext::GetiNSTANCE().SetState(EGameState::Running);
 		});
+
+	restartButton->SetActive(false);
 
 }
 
@@ -39,4 +39,28 @@ void UIManager::Render(URenderer& renderer)
 {
 	startButton->Render(renderer);
 	restartButton->Render(renderer);
+}
+
+void UIManager::OnGameStateChanged(EGameState newState)
+{
+	switch (newState)
+	{
+	case EGameState::Title:
+		startButton->SetActive(true);
+		restartButton->SetActive(false);
+		break;
+
+	case EGameState::Running:
+		startButton->SetActive(false);
+		restartButton->SetActive(false);
+		break;
+
+	case EGameState::Ending:
+		break;
+
+	case EGameState::Clear:
+		startButton->SetActive(false);
+		restartButton->SetActive(true);
+		break;
+	}
 }

@@ -8,6 +8,7 @@ class Sprite
 private:
 
 	ID3D11ShaderResourceView* textureResourceView = nullptr;
+	bool bIsActive{ true };
 
 protected:
 	static ID3D11Buffer* QuadVertexBuffer;
@@ -27,6 +28,9 @@ public:
 
 	inline void SetPosition(float x, float y) { position = { x, y }; }
 	inline void SetScale(float sw, float sh) { scale = { sw, sh }; }
+
+	inline void SetActive(bool active) { bIsActive = active; }
+	inline bool IsActive() const { return bIsActive; }
 
 	virtual void Render(URenderer& renderer);
 

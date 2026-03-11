@@ -1,8 +1,9 @@
 #pragma once
 #include "URenderer.h"
 #include "Button.h"
+#include "GameContext.h"
 
-class UIManager
+class UIManager : public IGameStateListener
 {
 private:
 	Button* startButton;
@@ -13,5 +14,7 @@ private:
 	~UIManager();
 	void Update(float mouseX, float mouseY, bool isMousePressed);
 	void Render(URenderer& renderer);
+
+	void OnGameStateChanged(EGameState gameState) override;
 };
 

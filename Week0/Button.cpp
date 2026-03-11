@@ -2,6 +2,11 @@
 
 void Button::Update(float mouseX, float mouseY, bool isMousePressed)
 {
+	if(IsActive() == false)
+	{
+		return;
+	}
+
 	if (IsMouseOver(mouseX, mouseY))
 	{
 		//Hover Effect
@@ -9,6 +14,7 @@ void Button::Update(float mouseX, float mouseY, bool isMousePressed)
 		
 		if (OnClickCallback && isMousePressed)
 		{
+			SetActive(false);
 			OnClickCallback();
 		}
 	}
@@ -21,7 +27,10 @@ void Button::Update(float mouseX, float mouseY, bool isMousePressed)
 
 void Button::Render(URenderer& renderer)
 {
-	//Sprite::Render(renderer);
+	if (IsActive() == false)
+	{
+		return;
+	}
 
 	if (textureName != "")
 	{

@@ -69,3 +69,7 @@ void FPrimitivesManager::Render(URenderer& renderer)
 		}
 	}
 }
+
+void FPrimitivesManager::OnGameStateChanged(EGameState newState)
+{
+}

@@ -26,6 +26,8 @@ struct FVector3;
 #include "SoundManager.h"
 #include "Sprite.h"
 #include "UIManager.h"
+#include "GameContext.h"
+
 
 struct FVector
 {
@@ -325,6 +327,9 @@ void InitializeGameObjects()
 	background = new Sprite("Background");
 
 	uiManager = new UIManager();
+
+	GameContext::GetiNSTANCE().RegisterListenerObject(&primitivesManager);
+	GameContext::GetiNSTANCE().RegisterListenerObject(uiManager);
 }
 
 void ProcessInput()
@@ -352,7 +357,8 @@ void WinMainUpdate(HWND hWnd)
 	mouseWorldPos.y = -((mousePos.y / 512.0f) - 1.0f);
 	primitivesManager.Update(deltaTime, mouseWorldPos);
 
-	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, false);
+	bool bLeftButtonState = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, bLeftButtonState);
 
 	camera->Update(deltaTime, player);
 	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
