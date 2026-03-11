@@ -5,6 +5,7 @@
 /// 
 ///여기서 오류가 발생한다면 상단 프로젝트-Nuget패키지관리-찾아보기에서 directxtk_desktop_win10을 검색해 설치해주세요.
 #include <WICTextureLoader.h>
+#include <DirectXMath.h>
 using namespace DirectX;
 #include <cmath>
 #include <vector>

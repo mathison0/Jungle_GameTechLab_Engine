@@ -320,6 +320,7 @@ void SpawnRandomPlanet(float spawnBaseY)
 	if (planetDataList[randIndex].name != "Meteor")
 	{
 		newPlanet = new Planet(newPos, randomVelocity, radius, planetDataList[randIndex].name);
+		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
 	}
 	else
 	{
@@ -356,10 +357,12 @@ void InitializeGameObjects()
 	player->Location = { 0.0f, 0.0f, 0.0f };
 	player->Radius = 0.05f;
 	player->TextureName = "Earth";
+	player->brightness = 1.0f;
 	primitivesManager.AddObject(player);
 
 	//Moon 생성
 	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
+	moon->brightness = 1.0f;
 	primitivesManager.AddObject(moon);
 
 	//Camera 생성

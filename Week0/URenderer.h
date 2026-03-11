@@ -59,6 +59,8 @@ public:
 
 		FVector3 Scale;
 		float uvOffset;
+
+		XMFLOAT4 Color;
 	};
 
 	struct FConstantPerFrame
@@ -87,7 +89,7 @@ public:
 	void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
 	void CreateConstantBuffer();
 	void ReleaseConstantBuffer();
-	void UpdateConstant(FVector3 Offset, float Angle, FVector3 scale = {0,0,0}, float uvOffset = 0.f);
+	void UpdateConstant(FVector3 Offset, float Angle, FVector3 scale = {0,0,0}, float uvOffset = 0.f, float brightness = 1.f);
 	void UpdateConstantPerFrame(float cameraY);
 
 	void ReleaseTextures();

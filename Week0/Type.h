@@ -6,9 +6,3 @@ struct FVertexSimple
 	float r, g, b, a; // Color
 	float u, v;		  // 텍스처를 위한 uv좌표
 };
-
-struct FConstants
-{
-	FVector3 Offset;
-	float Angle;
-};

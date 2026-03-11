@@ -249,6 +249,7 @@ void URenderer::PrepareShader()
 	if (ConstantBuffer)
 	{
 		DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
+		DeviceContext->PSSetConstantBuffers(0, 1, &ConstantBuffer);
 	}
 }
 
@@ -310,7 +311,7 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, float uvOffset)
+void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, float uvOffset, float brightness)
 {
 	if (ConstantBuffer)
 	{
@@ -323,6 +324,7 @@ void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, flo
 			constants->Angle = Angle;
 			constants->Scale = scale;
 			constants->uvOffset = uvOffset;
+			constants->Color.w = brightness;
 		}
 		DeviceContext->Unmap(ConstantBuffer, 0);
 	}
