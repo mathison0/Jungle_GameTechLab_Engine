@@ -3,59 +3,52 @@
 #include <algorithm>
 
 PlanetData FPrimitivesManager::planetDataList[] = {
-	{"Mercury", 2.483f},
 	{"Venus", 1.949f},
+	{"Uranus", 2.331f},
+	{"Mercury", 2.483f},
+	{"Pluto", 3.145f},
+	{"Neptune", 5.883f},
 	{"Mars", 3.832f},
 	{"Jupiter", 6.21f},
-	{"Neptune", 5.883f},
-	{"Uranus", 2.331f},
-	{"Pluto", 2.745f},
 };
 
 std::vector<std::vector<StageGroup>> FPrimitivesManager::stageGroupData = {
-	// Stage 1 (0.0 ~ 2.0)
-	{
-		{"Mercury", 4},
-		{"Mars", 3},
-		{"Venus", 4},
-	},
-	// Stage 2 (2.0 ~ 4.0)
-	{
-		{"Mercury", 4},
-		{"Mars", 6},
-		{"Venus", 4},
-		{"Pluto", 3},
-		{"Neptune", 3},
-	},
-	// Stage 3 (4.0 ~ 6.0)
-	{
-		{"Mercury", 2},
-		{"Mars", 3},
-		{"Venus", 2},
-		{"Pluto", 3},
-		{"Jupiter", 2},
-		{"Neptune", 3},
-	},
-	// Stage 4 (6.0 ~ 8.0)
 	{
 		{"Mercury", 7},
-		{"Mars", 3},
-		{"Venus", 2},
-		{"Pluto", 3},
-		{"Jupiter", 4},
-		{"Neptune", 3},
-		{"Uranus", 12},
+		{"Mars", 8},
+		{"Venus", 7},
+		{"Pluto", 6},
+		{"Neptune", 7},
 	},
-	// Stage 5 (8.0 ~ 10.0)
 	{
-		{"Mercury", 2},
-		{"Mars", 6},
-		{"Venus", 8},
-		{"Pluto", 3},
-		{"Jupiter", 2},
-		{"Neptune", 3},
-		{"Uranus", 18},
-	}
+		{"Uranus", 12},
+		{"Mercury", 15},
+		{"Pluto", 10},
+		{"Neptune", 5},
+	},
+	{
+		{"Uranus", 12},
+		{"Mercury", 15},
+		{"Pluto", 10},
+		{"Neptune", 5},
+		{"Mars", 5},
+	},
+	{
+		{"Uranus", 12},
+		{"Mercury", 15},
+		{"Pluto", 10},
+		{"Neptune", 5},
+		{"Jupiter", 5},
+	},
+	{
+		{"Venus", 12},
+		{"Uranus", 12},
+		{"Mercury", 15},
+		{"Pluto", 10},
+		{"Neptune", 5},
+		{"Jupiter", 5},
+		{"Mars", 5},
+	},
 };
 
 
@@ -255,14 +248,14 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 		{
 			FVector3 newPos;
 			bool bPositionValid = false;
-			const int maxAttempts = 200;
+			const int maxAttempts = 1200;
 
 			//겹치지 않는 위치 찾기
 			for (int attempt = 0; attempt < maxAttempts; ++attempt)
 			{
 				float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f;
-				float expandedStageMinY = stageMinY - 0.2f;
-				float expandedStageMaxY = stageMaxY + 0.2f;
+				float expandedStageMinY = stageMinY - 0.5f;
+				float expandedStageMaxY = stageMaxY + 8.5f;
 				float newY = expandedStageMinY + ((rand() % 1000) / 1000.0f) * (expandedStageMaxY - expandedStageMinY);
 				newPos = FVector3(newX, newY, 0.0f);
 
@@ -279,7 +272,7 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 					float dy = newPos.y - bobj->Location.y;
 					float distance = sqrtf(dx * dx + dy * dy);
 
-					float minSpacing = (radius + bobj->Radius) * 1.2f;
+					float minSpacing = (radius + bobj->Radius) * 2.0f;
 
 					if (distance < minSpacing)
 					{

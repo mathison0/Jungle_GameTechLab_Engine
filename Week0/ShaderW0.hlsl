@@ -4,17 +4,25 @@ SamplerState earthSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float3 Offset;
-    float Angle;
-    float3 Scale;
-    int uvOffset;
-    float4 Color;
+    float3 Offset; // 12바이트
+    float Angle; // 4바이트 (여기까지 16바이트, 1번 레지스터 꽉 참)
+    
+    float3 Scale; // 12바이트
+    int Flag; // 4바이트 (기존 isUI/uvOffset 대체. 여기까지 16바이트, 2번 레지스터 꽉 참)
+    
+    float4 Color; // 16바이트 (3번 레지스터 꽉 참)
+    
+    float2 uvOffset; // 8바이트
+    float2 uvScale; // 8바이트 (여기까지 16바이트, 4번 레지스터 꽉 참)
+    
+    float spinAngle; // 4바이트
+    float3 pad_constants; // 12바이트 패딩 (마지막 16바이트 정렬 완벽)
 };
 
 cbuffer ConstantPerFrame : register(b1)
 {
     float cameraY;
-    float padding[3]; // 16바이트 정렬을 위한 패딩
+    float3 padding; // 16바이트 정렬을 위한 패딩
 };
 
 struct VS_INPUT
@@ -57,7 +65,7 @@ PS_INPUT mainVS(VS_INPUT input)
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
-    if(uvOffset == 0)
+    if (Flag == 0)
     {
         return Color;
     }
@@ -103,7 +111,7 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     float sphereU = 0.5f + (atan2(rotatedP.x, z) / (2.0f * PI));
     float sphereV = 0.5f - (asin(rotatedP.y) / PI);
 
-    sphereU = frac(sphereU + uvOffset);
+    sphereU = frac(sphereU + spinAngle);
     //왜곡된 새 UV로 텍스처를 샘플링
     return earthTexture.Sample(earthSampler, float2(sphereU, sphereV)) * brightness;
 }

@@ -61,9 +61,11 @@ void Planet::HandleCollision(UPrimitive* other)
 
 		player->Velocity.x = normal.x * explosionForce;
 		player->Velocity.y = normal.y * explosionForce;
+		player->inputLockTimer = player->inputLockDuration;
 
 		Explode();
 	}
+
 }
 
 void Planet::Explode()
