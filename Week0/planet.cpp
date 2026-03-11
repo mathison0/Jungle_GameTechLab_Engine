@@ -82,10 +82,10 @@ void Planet::Respawn()
 
 void Planet::Render(URenderer& renderer)
 {
-	if (!bIsActive)
-	{
-		return;
-	}
+	//if (!bIsActive)
+	//{
+	//	return;
+	//}
 
 	bool bIsPNGTexture = (TextureName == "Meteor");
 
@@ -113,7 +113,15 @@ void Planet::Render(URenderer& renderer)
 
 	// 행성(구체)만 렌더링 - 추진체 제외
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, 0.f, { 1.0f, 1.0f, 1.0f,this->brightness });
+	float colorAfterCollision = 0.5f;
+	if (bIsActive)
+	{
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, 0.f, { 1.0f, 1.0f, 1.0f,this->brightness });
+	}
+	else
+	{
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, 0.f, { 1.0f, 1.0f, 1.0f,this->brightness * colorAfterCollision });
+	}
 	renderer.RenderPrimitive(bufferToUse, numVertices);
 
 	if (bIsPNGTexture)
