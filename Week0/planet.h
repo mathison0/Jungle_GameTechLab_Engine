@@ -71,7 +71,8 @@ public:
 	float maxSpeed_pull = 5.0f;
 	float maxSpeed_push = 3.0f;
 
-	FVector3 Color = { 1.0f, 1.0f, 0.0f};
+	XMFLOAT4 Color_pull = { 1.0f, 0.0f, 0.0f, 1.0f};
+	XMFLOAT4 Color_push = { 0.0f, 0.0f, 1.0f, 1.0f};
 
 private:
 	static ID3D11Buffer* RangeDashBuffer;

@@ -114,6 +114,10 @@ void SoundManager::OnGameStateChanged(EGameState newState)
 		PlayBGM("bgm", true);
 		break;
 		
+	case EGameState::Ending:
+		StopBGM();
+		PlayEffect("Ending1");
+		break;
 	}
 }
 

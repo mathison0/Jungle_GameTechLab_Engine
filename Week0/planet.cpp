@@ -256,6 +256,7 @@ UBall* GravityPlanet::targetPlayer = nullptr;
 void GravityPlanet::SetGravitySystem(ID3D11Device* device, UBall* player)
 {
 	targetPlayer = player;
+
 	InitRangeResources(device);
 }
 
@@ -330,7 +331,7 @@ void GravityPlanet::InitRangeResources(ID3D11Device* device)
 		// 2. Color (r, g, b, a) - 노란색 점선
 		v1.r = v2.r = 1.0f;
 		v1.g = v2.g = 1.0f;
-		v1.b = v2.b = 0.0f;
+		v1.b = v2.b = 1.0f;
 		v1.a = v2.a = 1.0f;
 
 		// 3. UV (u, v) - 셰이더 조건문 통과를 위해 0.0f
@@ -364,13 +365,20 @@ void GravityPlanet::Render(URenderer& renderer)
 
 	if (!RangeDashBuffer || !this->bIsActive) return;
 
+	XMFLOAT4 Color;
+
+	if (this->planetType == PlanetType::pull)
+		Color = this->Color_pull;
+	else
+		Color = this->Color_push;
+
 	// --- 점선 그리기 세팅 ---
 	renderer.DeviceContext->RSSetState(NoCullState);
 	renderer.DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
 	// 원하는 수치로 상수 버퍼 업데이트
 	FVector3 rangeTransform = { this->Location.x, this->Location.y, range};
-	renderer.UpdateConstant(rangeTransform, 0.0f);
+	renderer.UpdateConstant(rangeTransform, 0.0f, {1.0f, 1.0f, 1.0f}, Color, {0.0f, 0.0f}, {0.0f, 0.0f}, 0, 0.0f);
 	renderer.RenderPrimitive(RangeDashBuffer, NumDashVertices); // 그리기
 
 	// --- 복구 ---

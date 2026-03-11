@@ -128,7 +128,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	
 	// 원하는 음원을 아래처럼 등록해서 원하는 곳에서 헤더만 포함해서 사용
 	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
+	SoundManager::Get().LoadSound("Ending", L"Audio/ending.WAV");
+	SoundManager::Get().LoadSound("Ending1", L"Audio/ending1.WAV");
 	SoundManager::Get().LoadSound("bgm", L"Audio/bgm.WAV");
+
 	SoundManager::Get().PlayBGM("bgm", true);
 
 	// Main Loop 

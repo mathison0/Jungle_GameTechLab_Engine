@@ -58,6 +58,10 @@ public:
 	float inputLockTimer = 0.0f;
 	float inputLockDuration = 1.0f;
 
+	// 부스터 출력 관련 변수들
+	bool bIsPlayer = false;
+	bool bIsLeftFireActive = false;
+	bool bIsRightFireActive = false;
 
 	// Homing (시연용)
 	bool bHomingMode = false; // on/off 컨트롤+H키
