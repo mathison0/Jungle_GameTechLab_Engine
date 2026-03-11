@@ -26,8 +26,8 @@ void Planet::Update(float t)
 		return;
 	}
 
-	Location.x += Velocity.x * t;
-	Location.y += Velocity.y * t;
+	//Location.x += Velocity.x * t;
+	//Location.y += Velocity.y * t;
 }
 
 void Planet::HandleCollision(UPrimitive* other)
