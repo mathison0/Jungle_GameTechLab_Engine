@@ -428,7 +428,7 @@ void UBall::ApplyHoming(const FVector3& target, float deltaTime)
 	this->Velocity.x += dir.x * baseThrust;
 	this->Velocity.y += dir.y * baseThrust;
 
-	LimitVelocities(MaxBothJetpackSpeed * 0.1f);
+	LimitVelocities(MaxBothJetpackSpeed);
 
 	// 플레이어의 up-vector가 이동 방향을 보게 회전
 	// upVector = (-sin(Angle), cos(Angle))

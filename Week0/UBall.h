@@ -36,14 +36,14 @@ public:
 	static bool bApplyGravity;
 	static bool bApplyAttraction;
 
-	static constexpr float MaxLinearSpeed = 10.0f;
+	static constexpr float MaxLinearSpeed = 1.5f;
 	static constexpr float MaxAngularSpeed = 3.5f;
 
-	static constexpr float MaxSoleJetpackSpeed = 8.0f;
-	static constexpr float MaxBothJetpackSpeed = 10.0f;
+	static constexpr float MaxSoleJetpackSpeed = 4.0f;
+	static constexpr float MaxBothJetpackSpeed = 5.0f;
 
-	static constexpr float SoleJetpackForce = 4.f;
-	static constexpr float BothJetpackForce = 3.f;
+	static constexpr float SoleJetpackForce = 3.f;
+	static constexpr float BothJetpackForce = 4.f;
 
 	static constexpr float JetpackTorqueAmount = 8.0f;
 	static constexpr float LinearDamping = 0.995f;
