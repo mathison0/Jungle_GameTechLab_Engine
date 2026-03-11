@@ -12,10 +12,11 @@ public:
 
 	// 리스폰 타이머 관련 변수들
 	float RespawnTimer = 0.0f;
-	const float RespawnDelay = 3.0f;
+	const float RespawnDelay = 3.5f;
 
 public:
 	Planet(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName = "");
+	virtual ~Planet() {};
 
 	virtual void HandleCollision(UPrimitive* other)override;
 	virtual void Update(float t) override;
@@ -30,7 +31,7 @@ class Moon : public Planet
 private:
 	UBall* TargetObject = nullptr;
 	float FollowSpeed = 1.0f;
-	float FollowDistance = 0.3f;        
+	float FollowDistance = 0.1f;
 	float MaxFollowSpeed = 0.003f;
 	float RotationSpeed = 0.002f;
 
@@ -62,33 +63,60 @@ class GravityPlanet : public Planet
 {
 public:
 	PlanetType planetType;
-	float standardDist = 0;
+	static UBall* targetPlayer;
+
+	float range;
+
 	float maxSpeed = 0;
+	float maxSpeed_pull = 5.0f;
+	float maxSpeed_push = 3.0f;
 
-	float standardDist_pull = 0.7f;
-	float maxSpeed_pull = 0.4f;
+	FVector3 Color = { 1.0f, 1.0f, 0.0f};
 
-	float standardDist_push = 0.7f;
-	float maxSpeed_push = 2.0f;
+private:
+	static ID3D11Buffer* RangeDashBuffer;
+	static UINT NumDashVertices;
+	static int ReferenceCount;
+	static ID3D11RasterizerState* NoCullState;
 
 public:
 	GravityPlanet(FVector3 Location, FVector3 Velocity, float r, const std::string& textureName = "", PlanetType type = PlanetType::pull)
-		: Planet(Location, Velocity, r, textureName), planetType(type) {}
+		: Planet(Location, Velocity, r, textureName), planetType(type) 
+	{
+		range = r * 3.0f;
+		ReferenceCount++;
+	}
 
-	virtual ~GravityPlanet() override {}
-	void Gravity(UBall* player, float deltatime);
+	virtual ~GravityPlanet() override 
+	{
+		ReferenceCount--;
+		if (ReferenceCount == 0 && RangeDashBuffer)
+		{
+			RangeDashBuffer->Release();
+			RangeDashBuffer = nullptr;
+		}
+	}
+
+	static void SetGravitySystem(ID3D11Device* device, UBall* player);
+	void Update(float t) override;
+	static void InitRangeResources(ID3D11Device* device);
+	virtual void Render(URenderer& renderer) override;
 };
 
 //--- Meteor ---
 class Meteor : public Planet
 {
 public:
-	float spawnDelay;
-	float spawnTimer;
+	UBall* targetPlayer = nullptr;
+	const float waitDuration = 7.0f;
+	float waitTimer = 0.f;
+	bool bIsWaiting = false;
 
 public:
-	Meteor(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName);
+	Meteor(UBall* target, float r, const std::string& textureName);
 
 	void Update(float t) override;
 	void HandleCollision(UPrimitive* other) override;
+	void HideAndWait();
+	void RespawnAbovePlayer();
 };

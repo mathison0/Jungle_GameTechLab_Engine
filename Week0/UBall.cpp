@@ -129,6 +129,19 @@ void UBall::Move(float t)
 	{
 		Location.y = -1.0f + Radius;
 		Velocity.y  = 0.0f;
+
+		float decel = groundFriction * t;
+
+		if (Velocity.x > 0.0f)
+		{
+			Velocity.x -= decel;
+			if (Velocity.x < 0.0f) Velocity.x = 0.0f;
+		}
+		else if (Velocity.x < 0.0f)
+		{
+			Velocity.x += decel;
+			if (Velocity.x > 0.0f) Velocity.x = 0.0f;
+		}
 	}
 }
 
@@ -147,7 +160,14 @@ void UBall::Render(URenderer& renderer)
 
 	// 1. 메인 공(구체) 렌더링
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 },{ 1.0f, 1.0f,1.0f,this->brightness });
+	if (TextureName == "Earth")
+	{
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f,1.0f,this->brightness }, { 0.f, 0.f }, { 0.f, 0.f }, 1, EarthSpinAngle);
+	}
+	else
+	{
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f,1.0f,this->brightness }, { 0.f, 0.f }, { 0.f, 0.f }, 1, 0.f);
+	}
 	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
 
 	// 텍스처 언바인드 (추진체 렌더링에는 영향 안 가도록)
@@ -264,6 +284,7 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 
 void UBall::Update(float t)
 {
+	//EarthSpinAngle += 0.2f * t;
 	if (bApplyGravity)
 	{
 		Velocity.y -= GravityForce * t;
@@ -278,6 +299,8 @@ void UBall::Update(float t)
 	AngularVelocity += -sinf(Angle) * autoBalancePower * t;
 
 	Angle += AngularVelocity * t;
+
+	EarthSpinAngle += 0.007f * Velocity.x;
 
 	LimitVelocities(MaxLinearSpeed);
 	Move(t);
@@ -366,28 +389,6 @@ void UBall::D(const FVector3& v)
 	this->Velocity.y += v.y;
 }
 
-//void UBall::ClampSpeed()
-//{
-//	float speedSquared = Velocity.x * Velocity.x + Velocity.y * Velocity.y;
-//	if (speedSquared > MaxSpeed * MaxSpeed)
-//	{
-//		float speed = sqrtf(speedSquared);
-//		Velocity.x = (Velocity.x / speed) * MaxSpeed;
-//		Velocity.y = (Velocity.y / speed) * MaxSpeed;
-//	}
-//}
-//
-//void UBall::ClampSpeed2(float maxSpeed)
-//{
-//	float speedSquared = Velocity.x * Velocity.x + Velocity.y * Velocity.y;
-//	if (speedSquared > maxSpeed * maxSpeed)
-//	{
-//		float speed = sqrtf(speedSquared);
-//		Velocity.x = (Velocity.x / speed) * maxSpeed;
-//		Velocity.y = (Velocity.y / speed) * maxSpeed;
-//	}
-//}
-
 void UBall::ApplyAttraction(const FVector3& point, float strength)
 {
 	if (bApplyAttraction == false)
@@ -409,4 +410,42 @@ void UBall::ApplyAttraction(const FVector3& point, float strength)
 
 	FVector3 force = { forceX, forceY, 0.0f };
 	D(force);
+}
+
+void UBall::ApplyHoming(const FVector3& target, float deltaTime)
+{
+	if (this->inputLockTimer > 0.0f)
+		return;
+
+
+	FVector3 toTarget = target - this->Location;
+	float dist = toTarget.Length();
+	if (dist < 0.001f) return;
+
+	FVector3 dir = toTarget / dist;
+
+	float baseThrust = BothJetpackForce * deltaTime;
+	this->Velocity.x += dir.x * baseThrust;
+	this->Velocity.y += dir.y * baseThrust;
+
+	LimitVelocities(MaxBothJetpackSpeed * 0.1f);
+
+	// 플레이어의 up-vector가 이동 방향을 보게 회전
+	// upVector = (-sin(Angle), cos(Angle))
+	// desiredAngle을 upVector == dir 가 되도록 계산:
+	const float PI = 3.14159265359f;
+	float desiredAngle = atan2f(-dir.x, dir.y);
+
+	// 각도 차이를 -PI..PI 로 정규화
+	float diff = desiredAngle - this->Angle;
+	while (diff > PI) diff -= 2.0f * PI;
+	while (diff < -PI) diff += 2.0f * PI;
+
+	const float rotateStrength = 6.0f; // 값이 클수록 더 빠르게 회전
+	// 프레임 스케일 적용
+	this->AngularVelocity += diff * rotateStrength * deltaTime;
+
+	// AngularVelocity 한계 적용
+	if (this->AngularVelocity > MaxAngularSpeed) this->AngularVelocity = MaxAngularSpeed;
+	if (this->AngularVelocity < -MaxAngularSpeed) this->AngularVelocity = -MaxAngularSpeed;
 }

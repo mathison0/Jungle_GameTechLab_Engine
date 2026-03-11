@@ -13,6 +13,7 @@ public:
 
 	void Init();
 	void Update();
+	void Reset();
 
 	void LoadSound(const std::string& name, const std::wstring& path);
 

@@ -6,6 +6,7 @@
 #include "IGameStateListener.h"
 
 #include <string>
+class URenderer;
 
 struct PlanetData
 {
@@ -20,6 +21,7 @@ private:
 	
 	UBall* player = nullptr;
 	Moon* moon = nullptr;
+	Meteor* meteors[2] = { nullptr, nullptr };
 	Camera* camera = nullptr;
 	Image* background = nullptr;
 
@@ -42,7 +44,7 @@ public:
 	UBall* GetPlayer() const { return player; }
 	Camera* GetCamera() const { return camera; }
 
-	void InitializeGameObjects();
+	void InitializeGameObjects(URenderer renderer);
 	void SpawnRandomPlanet(float spawnBaseY);
 	void Reset();
 

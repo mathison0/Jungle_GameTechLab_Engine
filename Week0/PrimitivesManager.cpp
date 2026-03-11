@@ -2,14 +2,13 @@
 #include <algorithm>
 
 PlanetData FPrimitivesManager::planetDataList[] = {
-	{"Mercury", 1.383f},
+	{"Mercury", 1.483f},
 	{"Venus", 1.949f},
 	{"Mars", 1.532f},
-	{"Jupiter", 7.21f},
+	{"Jupiter", 6.21f},
 	{"Neptune", 4.883f},
 	{"Uranus", 2.331f},
 	{"Pluto", 2.745f},
-	{"Meteor", 0.883f},
 };
 
 FPrimitivesManager::~FPrimitivesManager()
@@ -34,11 +33,11 @@ UPrimitive* FPrimitivesManager::GetPrimitive(int index)
 	return nullptr;
 }
 
-void FPrimitivesManager::InitializeGameObjects()
+void FPrimitivesManager::InitializeGameObjects(URenderer renderer)
 {
 	// Player 생성
 	player = new UBall();
-	player->Location = { 0.0f, 0.0f, 0.0f };
+	player->Location = { 0.0f, -0.95f, 0.0f };
 	player->Radius = 0.05f;
 	player->TextureName = "Earth";
 	player->brightness = 1.0f;
@@ -48,6 +47,18 @@ void FPrimitivesManager::InitializeGameObjects()
 	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	moon->brightness = 1.0f;
 	AddObject(moon);
+
+	// 재사용할 Meteor 2개 생성
+	float meteorRadius = 0.05f * 0.883f; // baseRadius * meteorRelativeRadius
+	for (int i = 0; i < 2; ++i)
+	{
+		meteors[i] = new Meteor(player, player->Radius * 0.7f, "Meteor");
+		// 겹치지 않게 초기 생성 시간에 차이를 둡니다.
+		meteors[i]->waitTimer = i * 2.5f;
+		AddObject(meteors[i]);
+	}
+
+	GravityPlanet::SetGravitySystem(renderer.Device, player);
 
 	// Camera 생성
 	camera = new Camera();
@@ -70,7 +81,7 @@ void FPrimitivesManager::SpawnRandomPlanet(float spawnBaseY)
 
 	FVector3 newPos;
 	bool bPositionValid = false;
-	const int maxAttempts = 50;
+	const int maxAttempts = 100;
 
 	for (int attempt = 0; attempt < maxAttempts; ++attempt)
 	{
@@ -124,11 +135,7 @@ void FPrimitivesManager::SpawnRandomPlanet(float spawnBaseY)
 	}
 
 	Planet* newPlanet = nullptr;
-	if (planetName == "Meteor")
-	{
-		newPlanet = new Meteor(newPos, randomVelocity, radius, planetName);
-	}
-	else if (planetName == "Jupiter")
+	if (planetName == "Jupiter")
 	{
 		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
 		newPlanet->brightness = 1.5f;
@@ -164,6 +171,8 @@ void FPrimitivesManager::Reset()
 	player = nullptr;
 	moon = nullptr;
 	camera = nullptr;
+	meteors[0] = nullptr;
+	meteors[1] = nullptr;
 	background = nullptr;
 }
 
@@ -243,11 +252,21 @@ void FPrimitivesManager::OnGameStateChanged(EGameState newState)
 {
 	switch (newState)
 	{
-
 	case EGameState::Running:
+		if (!isRunning)
+		{
+			Reset();
+			// renderer가 필요하다면 멤버 변수로 저장하거나 다른 방법 사용
+		}
 		isRunning = true;
+		break;
+
+	case EGameState::Title:
+		isRunning = false;
+		break;
 		
 	case EGameState::Ending:
+		isRunning = false;
 		break;
 	}
 }

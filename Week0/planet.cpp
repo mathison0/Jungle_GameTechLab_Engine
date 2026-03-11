@@ -95,7 +95,6 @@ void Planet::Render(URenderer& renderer)
 	}
 
 
-
 	// 텍스처 설정 (부모 클래스 로직 사용)
 	if (!TextureName.empty())
 	{
@@ -121,11 +120,11 @@ void Planet::Render(URenderer& renderer)
 	float colorAfterCollision = 0.5f;
 	if (bIsActive)
 	{
-		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f,this->brightness });
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f,this->brightness }, { 0.f,0.f }, { 0.f,0.f });
 	}
 	else
 	{
-		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f,this->brightness * colorAfterCollision });
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f,this->brightness * colorAfterCollision }, { 0.f,0.f }, { 0.f,0.f });
 	}
 	renderer.RenderPrimitive(bufferToUse, numVertices);
 
@@ -180,14 +179,13 @@ void Moon::Update(float t)
 
 	if (TargetObject != nullptr)
 	{
-		// (2) 플레이어가 30.f를 넘어서면 쫓아오고, 아래면 숨는다.
 		if (TargetObject->Location.y >= 30.0f)
 		{
 			if (!bIsFollowing)
 			{
 				bIsFollowing = true;
-				// 처음 30.f를 돌파했을 때 화면 밖에서 날아오지 않도록 근처에서 나타나게 함
-				this->Location = TargetObject->Location + FVector3(0.0f, -2.0f, 0.0f);
+				//처음 30.f를 돌파했을 때 화면 밖 근처에서 나타나게 함
+				this->Location = TargetObject->Location + FVector3(0.0f, -3.0f, 0.0f);
 				this->Velocity = FVector3(0.0f, 0.0f, 0.0f);
 			}
 
@@ -254,83 +252,155 @@ void Moon::HandleCollision(UPrimitive* other)
 
 // --- GravityPlanet Implementation ---
 
-void GravityPlanet::Gravity(UBall* player, float deltatime)
-{
-	if (!this->bIsActive)
-		return;
+ID3D11Buffer* GravityPlanet::RangeDashBuffer = nullptr;
+UINT GravityPlanet::NumDashVertices = 0;
+int GravityPlanet::ReferenceCount = 0;
+ID3D11RasterizerState* GravityPlanet::NoCullState = nullptr;
+UBall* GravityPlanet::targetPlayer = nullptr;
 
-	FVector3 direction = this->Location - player->Location;
+void GravityPlanet::SetGravitySystem(ID3D11Device* device, UBall* player)
+{
+	targetPlayer = player;
+	InitRangeResources(device);
+}
+
+void GravityPlanet::Update(float t)
+{
+	Planet::Update(t);
+
+	FVector3 direction = this->Location - targetPlayer->Location;
 	float dist = direction.Length();
 	FVector3 normal = direction / dist;
 
-	float strength;
-	float sumRadius = this->Radius + player->Radius;
-
-	if (dist < sumRadius && this->planetType == PlanetType::push)
-	{
-		FVector3 pushVector = (player->Location - this->Location) / (player->Location - this->Location).Length();
-		player->Location = this->Location + (pushVector * (sumRadius + 0.001f));
-
-		FVector3 currentVel = player->GetVelocity();
-		if (currentVel.Dot(pushVector) < 0)
-		{
-			player->SetVelocity(pushVector * 0.5f);
-		}
-
-		return;
-	}
-
+	float strength = 1.0f;
+	FVector3 newVelocity;
 
 	if (this->planetType == PlanetType::pull)
 	{
-		standardDist = standardDist_pull;
-		maxSpeed = maxSpeed_pull;
 		strength = 1.0f;
+		FVector3 force = normal * (strength / ((dist * dist) + 0.01f));
+		newVelocity = targetPlayer->GetVelocity() + force * t;
+
+		if (newVelocity.Length() > maxSpeed_pull)
+		{
+			newVelocity = newVelocity / newVelocity.Length() * maxSpeed;
+		}
+
+		targetPlayer->SetVelocity(newVelocity);
 	}
 	else if(this->planetType == PlanetType::push)
 	{
-		standardDist = standardDist_push;
-		maxSpeed = maxSpeed_push;
-		normal *= -1.0f;
-		strength = 50.0f;
+		FVector3 pushDir = normal * -1.0f;
+		float surfaceDist = dist - this->Radius;
+		if (surfaceDist < 0.0f) surfaceDist = 0.01f;
+
+		float pushStrength = 0.5f / (surfaceDist + 0.1f);
+		FVector3 pushForce = pushDir * pushStrength;
+
+		float approachSpeed = targetPlayer->GetVelocity().Dot(-pushDir);
+		if (approachSpeed > 0)
+		{
+			pushForce += pushDir * approachSpeed * 2.0f;
+		}
+
+		newVelocity = targetPlayer->GetVelocity() + pushForce * t;
+
+		float limit = 5.0f;
+		if (newVelocity.Length() > limit)
+			newVelocity = newVelocity / newVelocity.Length() * limit;
 	}
 
-	if (dist > standardDist) 
-		return;
-
-	float gravityForce = strength / ((dist * dist) + 0.001f);
-	FVector3 force = normal * GravityForce;
-
-	FVector3 newVelocity = player->GetVelocity() + force * deltatime;
-
-	if (newVelocity.Length() > maxSpeed)
-	{
-		newVelocity = newVelocity / newVelocity.Length() * maxSpeed;
-	}
-
-	player->SetVelocity(newVelocity);
+	targetPlayer->SetVelocity(newVelocity);
 }
+
+void GravityPlanet::InitRangeResources(ID3D11Device* device)
+{
+	if (RangeDashBuffer) return;
+
+	const int segments = 128;
+	std::vector<FVertexSimple> vertices;
+
+	for (int i = 0; i < segments; i+=2)
+	{
+		float t1 = (float)i / segments * 2.0f * 3.141592f;
+		float t2 = (float)(i + 1) / segments * 2.0f * 3.141592f;
+
+		FVertexSimple v1 = {}, v2 = {};
+
+		// 1. Position (x, y, z)
+		v1.x = cosf(t1); v1.y = sinf(t1); v1.z = 0.0f;
+		v2.x = cosf(t2); v2.y = sinf(t2); v2.z = 0.0f;
+
+		// 2. Color (r, g, b, a) - 노란색 점선
+		v1.r = v2.r = 1.0f;
+		v1.g = v2.g = 1.0f;
+		v1.b = v2.b = 0.0f;
+		v1.a = v2.a = 1.0f;
+
+		// 3. UV (u, v) - 셰이더 조건문 통과를 위해 0.0f
+		v1.u = v1.v = v2.u = v2.v = 0.0f;
+
+		vertices.push_back(v1);
+		vertices.push_back(v2);
+	}
+	NumDashVertices = (UINT)vertices.size();
+
+	// D3D11 버퍼 생성 로직
+	D3D11_BUFFER_DESC bd = {};
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(FVertexSimple) * NumDashVertices;
+	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA sd = {};
+	sd.pSysMem = vertices.data();
+	device->CreateBuffer(&bd, &sd, &RangeDashBuffer);
+
+	D3D11_RASTERIZER_DESC rd = {};
+	rd.FillMode = D3D11_FILL_SOLID;
+	rd.CullMode = D3D11_CULL_NONE;
+	device->CreateRasterizerState(&rd, &NoCullState);
+}
+
+
+void GravityPlanet::Render(URenderer& renderer)
+{
+	Planet::Render(renderer);
+
+	if (!RangeDashBuffer || !this->bIsActive) return;
+
+	// --- 점선 그리기 세팅 ---
+	renderer.DeviceContext->RSSetState(NoCullState);
+	renderer.DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+	// 원하는 수치로 상수 버퍼 업데이트
+	FVector3 rangeTransform = { this->Location.x, this->Location.y, range};
+	renderer.UpdateConstant(rangeTransform, 0.0f);
+	renderer.RenderPrimitive(RangeDashBuffer, NumDashVertices); // 그리기
+
+	// --- 복구 ---
+	renderer.DeviceContext->RSSetState(renderer.RasterizerState);
+	renderer.DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
 
 // --- Meteor Implementation ---
 
-Meteor::Meteor(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName)
-	: Planet(startPos, startVel, r, textureName)
+Meteor::Meteor(UBall* target, float r, const std::string& textureName)
+	: Planet({ 0.f, -1000.f, 0.f }, { 0.f, 0.f, 0.f }, r, textureName), targetPlayer(target)
 {
-	Respawn();
 	bIsActive = true;
+	HideAndWait();
 }
 
 void Meteor::Update(float t)
 {
-	if (!bIsActive)
+	if (bIsWaiting)
 	{
-		spawnTimer += t;
+		waitTimer += t;
 
-		if (spawnTimer >= spawnDelay)
+		if (waitTimer >= waitDuration)
 		{
-			bIsActive = true;
-			Location = OriginalLocation;
-			Velocity = OriginalVelocity;
+			RespawnAbovePlayer();
 		}
 		return;
 	}
@@ -341,15 +411,15 @@ void Meteor::Update(float t)
 	Location.x += Velocity.x * t;
 	Location.y += Velocity.y * t * 10.0;
 
-	if (Location.y < -1.2f)
+	if (targetPlayer && Location.y < targetPlayer->Location.y - 2.5f)
 	{
-		bIsActive = false;
+		HideAndWait();
 	}
 }
 
 void Meteor::HandleCollision(UPrimitive* other)
 {
-	if (!bIsActive) return;
+	if (bIsWaiting || !bIsActive) return;
 
 	UBall* player = static_cast<UBall*>(other);
 	if (!player) return;
@@ -360,7 +430,41 @@ void Meteor::HandleCollision(UPrimitive* other)
 
 	if (dist <= radiusSum)
 	{
+		//planet의 explode 사용 x
 		player->inputLockTimer = player->inputLockDuration;
-		Explode();
+		SoundManager::Get().PlayEffect("Explosion");
+		HideAndWait();
 	}
+}
+
+void Meteor::HideAndWait()
+{
+	bIsWaiting = true;
+	waitTimer = 0.0f;
+	// 화면 밖 보이지 않는 곳으로 순간이동
+	Location = FVector3(0.0f, -1000.0f, 0.0f);
+	Velocity = FVector3(0.0f, 0.0f, 0.0f);
+}
+
+void Meteor::RespawnAbovePlayer()
+{
+	bIsWaiting = false;
+	if (!targetPlayer) return;
+
+	float spawnHeight = targetPlayer->Location.y + 3.0f + ((rand() % 1000) / 1000.0f) * 2.0f;
+	float spawnX = targetPlayer->Location.x;
+
+	Location = FVector3(spawnX, spawnHeight, 0.0f);
+
+	float minSpeed = 0.01f;
+	float maxSpeed = 0.03f;
+	float baseRadius = 0.05f;
+
+	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
+	float sizeMultiplier = baseRadius / sqrtf(this->Radius + 0.001f);
+	randomSpeed *= sizeMultiplier;
+
+	Velocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f;
+	Velocity.y = -(randomSpeed * 2.0f);
+	Velocity.z = 0.0f;
 }
