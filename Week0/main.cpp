@@ -115,7 +115,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		nullptr, nullptr, hInstance, nullptr);
 
 	InitializeRenderer(hWnd);
-	primitivesManager.InitializeGameObjects(renderer);
+	primitivesManager.InitializeGameObjects();
 	uiManager = new UIManager();
 	
 	GameEnding ending;
@@ -130,6 +130,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
 	SoundManager::Get().LoadSound("bgm", L"Audio/bgm.WAV");
 	SoundManager::Get().PlayBGM("bgm", true);
+	
+	GravityPlanet::InitRangeResources(renderer.Device);
 
 	// Main Loop 
 	while (bIsExit == false)
@@ -155,7 +157,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				if (msg.wParam == 'R')
 				{
 					primitivesManager.Reset();
-					primitivesManager.InitializeGameObjects(renderer);
+					primitivesManager.InitializeGameObjects();
 				}
 			}
 		}
@@ -184,6 +186,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	SoundManager::Get().Release();
 
+	GravityPlanet::ReleaseRangeResources();
 	UBall::ReleaseBuffer(renderer);
 	Image::ReleaseQuadVertexBuffer(renderer);
 	renderer.ReleaseConstantBuffer();
@@ -221,7 +224,8 @@ void InitializeRenderer(HWND hWnd)
 		{"Background", L"background.jpg"},
 		{"StartButton", L"startButton.png" },
 		{"RestartButton", L"restartButton.png" },
-		{"TestSprite", L"testSprite.png" }
+		{"TestSprite", L"testSprite.png" },
+		{"Rocket", L"rocket.png"}
 	};
 
 	for (const auto& tex : textures)
@@ -257,6 +261,9 @@ void ProcessInput()
 			player->inputLockTimer -= deltaTime;
 			return;
 		}
+
+		player->bIsLeftFire = false;
+		player->bIsRightFire = false;
 
 		bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
 		bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
@@ -363,7 +370,7 @@ void WinMainRender()
 		if (ImGui::Button("Reset Game (R)"))
 		{
 			primitivesManager.Reset();
-			primitivesManager.InitializeGameObjects(renderer);
+			primitivesManager.InitializeGameObjects();
 		}
 	}
 	ImGui::Text("Press R to Restart");

@@ -11,6 +11,7 @@ protected:
 	FVector3 position{ 0.f, 0.f, 1.0f };
 	FVector3 scale{ 1.f, 1.f };
 	XMFLOAT4 color{ 1.f, 1.f, 1.f, 1.f };
+	float angle;
 
 	float uvOffset{ 0.f };
 
@@ -25,6 +26,7 @@ public:
 
 	inline void SetPosition(float x, float y) { position = { x, y }; }
 	inline void SetScale(float sw, float sh) { scale = { sw, sh }; }
+	inline void SetAngle(float value) { angle = value; }
 
 	inline void SetActive(bool active) { bIsActive = active; }
 	inline bool IsActive() const { return bIsActive; }

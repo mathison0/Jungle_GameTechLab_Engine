@@ -76,7 +76,6 @@ public:
 private:
 	static ID3D11Buffer* RangeDashBuffer;
 	static UINT NumDashVertices;
-	static int ReferenceCount;
 	static ID3D11RasterizerState* NoCullState;
 
 public:
@@ -84,22 +83,16 @@ public:
 		: Planet(Location, Velocity, r, textureName), planetType(type) 
 	{
 		range = r * 3.0f;
-		ReferenceCount++;
 	}
 
 	virtual ~GravityPlanet() override 
 	{
-		ReferenceCount--;
-		if (ReferenceCount == 0 && RangeDashBuffer)
-		{
-			RangeDashBuffer->Release();
-			RangeDashBuffer = nullptr;
-		}
 	}
 
-	static void SetGravitySystem(ID3D11Device* device, UBall* player);
+	static void SetGravitySystem(UBall* player);
 	void Update(float t) override;
 	static void InitRangeResources(ID3D11Device* device);
+	static void ReleaseRangeResources();
 	virtual void Render(URenderer& renderer) override;
 };
 

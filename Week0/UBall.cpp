@@ -64,11 +64,18 @@ UBall::UBall()
 	Velocity.x = cosf(randomAngle) * initialSpeed;
 	Velocity.y = sinf(randomAngle) * initialSpeed;
 	Velocity.z = 0.0f;
+
+	leftWingSprite = new Sprite({ 0,0,0 }, { 1, 1, 1 }, "Rocket", 2, 1, 1280, 698);
+	leftWingSprite->SetFlag(false);
+	rightWingSprite = new Sprite({ 0,0,0 }, { 1, 1, 1 }, "Rocket", 2, 1, 1280, 698);
+	rightWingSprite->SetFlag(false);
 }
 
 UBall::~UBall()
 {
 	TotalNumBalls--;
+	delete leftWingSprite;
+	delete rightWingSprite;
 }
 
 void UBall::InitializeBuffer(URenderer& renderer)
@@ -186,20 +193,33 @@ void UBall::Render(URenderer& renderer)
 	FVector3 leftPos = {
 		this->Location.x - rightX * offsetDist,
 		this->Location.y - rightY * offsetDist,
-		thrusterScale
+		0.0f
 	};
 
-	renderer.UpdateConstant(leftPos, this->Angle);
-	renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
+	if (leftWingSprite)
+	{
+		leftWingSprite->SetPosition(leftPos.x, leftPos.y);
+		leftWingSprite->SetScale(0.1f, 0.1f);
+		leftWingSprite->SetAngle(this->Angle);
+		leftWingSprite->Render(renderer);
+
+	}
 
 	// 오른쪽 날개 렌더링 (중심에서 +Right 방향으로 이동)
 	FVector3 rightPos = {
 		this->Location.x + rightX * offsetDist,
 		this->Location.y + rightY * offsetDist,
-		thrusterScale
+		0.0f
 	};
-	renderer.UpdateConstant(rightPos, this->Angle);
-	renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
+
+	if (rightWingSprite)
+	{
+		rightWingSprite->SetPosition(rightPos.x, rightPos.y);
+		rightWingSprite->SetScale(0.1f, 0.1f);
+		rightWingSprite->SetAngle(this->Angle);
+		rightWingSprite->Render(renderer);
+
+	}
 }
 
 void UBall::ApplyJetpackForce(float thrustAmount)
@@ -246,14 +266,16 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 	{
 		ApplyJetpackForce(thrustPerJetpack * deltaTime);
 		PendingTorque -= JetpackTorqueAmount * deltaTime;
-		//EarthSpinAngle += 0.5f * deltaTime;
+
+		bIsLeftFire = true;
 	}
 
 	if (bRightThruster)
 	{
 		ApplyJetpackForce(thrustPerJetpack * deltaTime);
 		PendingTorque += JetpackTorqueAmount * deltaTime;
-		//EarthSpinAngle -= 0.5f * deltaTime;
+
+		bIsRightFire = true;
 	}
 
 	AngularVelocity += PendingTorque;
@@ -282,13 +304,22 @@ void UBall::Update(float t)
 
 	LimitVelocities(MaxLinearSpeed);
 	Move(t);
+
+	if (leftWingSprite)
+	{
+		leftWingSprite->SetFrame(bIsLeftFire ? 0 : 1, 0);
+	}
+	if (rightWingSprite)
+	{
+		rightWingSprite->SetFrame(bIsRightFire ? 0 : 1, 0);
+	}
 }
 
 /*현재 전혀 호출되지 않는 함수이므로 지워도 됩니다. 해당 코드로 작업하고 계신 분이 있을까 남겨둡니다.*/
 void UBall::UpdateRenderer(URenderer& renderer)
 {
 	FVector3 transform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(transform, this->Angle, { 0, 0, 0 },{ 1.0f, 1.0f,1.0f,this->brightness });
+	renderer.UpdateConstant(transform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f,1.0f,this->brightness });
 }
 
 void UBall::HandleCollision(UPrimitive* other)

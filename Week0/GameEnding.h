@@ -5,7 +5,7 @@
 class GameEnding
 {
 public:
-	GameEnding(float triggerHeight = 3.f, float clearHeight = 3.5f, float slowSpeed = 0.1f);
+	GameEnding(float triggerHeight = 50.f, float clearHeight = 50.f, float slowSpeed = 0.1f);
 	void Update(UBall* player, float deltaTime);
 
 private:
