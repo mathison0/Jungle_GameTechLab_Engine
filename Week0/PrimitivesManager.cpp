@@ -201,6 +201,7 @@ void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalF
 		camera->Update(deltaTime, player);
 	}
 
+
 	// 행성 생성 로직
 	if (player != nullptr)
 	{
@@ -231,4 +232,8 @@ void FPrimitivesManager::Render(URenderer& renderer)
 			obj->Render(renderer);
 		}
 	}
+}
+
+void FPrimitivesManager::OnGameStateChanged(EGameState newState)
+{
 }

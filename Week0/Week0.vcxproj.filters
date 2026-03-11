@@ -57,10 +57,22 @@
     <ClCompile Include="PrimitivesManager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="GravityPlanet.cpp">
+    <ClCompile Include="SoundManager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="SoundManager.cpp">
+    <ClCompile Include="Camera.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Sprite.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Button.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="UIManager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="GameContext.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -110,10 +122,25 @@
     <ClInclude Include="PrimitivesManager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="GravityPlanet.h">
+    <ClInclude Include="SoundManager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="SoundManager.h">
+    <ClInclude Include="Button.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Sprite.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="UIManager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="GameContext.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="IGameStateListener.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -121,6 +148,7 @@
     <FxCompile Include="ShaderW0.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Background.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

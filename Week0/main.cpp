@@ -26,6 +26,8 @@ struct FVector3;
 #include "Camera.h"
 #include "SoundManager.h"
 #include "Sprite.h"
+#include "UIManager.h"
+#include "GameContext.h"
 
 
 struct FVector
@@ -54,6 +56,7 @@ bool UBall::bApplyAttraction = false;
 //Global Variables
 URenderer renderer;
 FPrimitivesManager primitivesManager;
+UIManager* uiManager;
 bool bIsExit = false;
 
 //FPS, time
@@ -111,9 +114,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	InitializeRenderer(hWnd);
 	primitivesManager.InitializeGameObjects();
+	uiManager = new UIManager();
 
-	//SoundManager
 	SoundManager::Get().Init();
+	GameContext::GetiNSTANCE().RegisterListenerObject(&primitivesManager);
+	GameContext::GetiNSTANCE().RegisterListenerObject(uiManager);
+	GameContext::GetiNSTANCE().RegisterListenerObject(&SoundManager::Get());
+
 	
 	// 원하는 음원을 아래처럼 등록해서 원하는 곳에서 헤더만 포함해서 사용
 	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
@@ -211,7 +218,10 @@ void InitializeRenderer(HWND hWnd)
 		{"Neptune", L"neptune.jpg"},
 		{"Uranus", L"uranus.jpg"},
 		{"Pluto", L"pluto.jpg"},
-		{"Meteor", L"me.png"}
+		{"Meteor", L"meteor.png"},
+		{"Background", L"background.jpg"},
+		{"StartButton", L"startButton.png" },
+		{"RestartButton", L"restartButton.png" }
 	};
 
 	for (const auto& tex : textures)
@@ -271,11 +281,15 @@ void WinMainUpdate(HWND hWnd)
 	{
 		renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
 	}
+
+	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, deltaTime);
 }
 
 void WinMainRender()
 {
 	primitivesManager.Render(renderer);
+
+	uiManager->Render(renderer);
 
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();

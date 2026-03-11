@@ -4,8 +4,8 @@ SamplerState earthSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float3 Offset; // x: 위치X, y: 위치Y, z: 스케일(반지름)
-    float Angle; // C++에서 넘겨준 회전 각도
+    float3 Offset;
+    float Angle;
     float3 Scale;
     float uvOffset;
     float4 Color;

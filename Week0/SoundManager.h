@@ -3,8 +3,9 @@
 #include <string>
 #include <memory>
 #include <Audio.h>
+#include "IGameStateListener.h"
 
-class SoundManager
+class SoundManager : public IGameStateListener
 {
 public:
 	// 싱글톤
@@ -22,6 +23,8 @@ public:
 	void SetBGMVolume(float volume);
 	
 	void Release();
+
+	void OnGameStateChanged(EGameState newState) override;
 
 private:
 	SoundManager() = default;

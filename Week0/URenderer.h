@@ -48,8 +48,12 @@ public:
 	ID3D11PixelShader* SimplePixelShader;
 	ID3D11InputLayout* SimpleInputLayout;
 
-	ID3D11VertexShader* SpriteVertexShader = nullptr;
-	ID3D11PixelShader* SpritePixelShader = nullptr;
+	ID3D11VertexShader* backgroundVertexShader = nullptr;
+	ID3D11PixelShader* backgroundPixelShader = nullptr;
+
+	ID3D11VertexShader* UIVertexShader = nullptr;
+	ID3D11PixelShader* UIPixelShader = nullptr;
+
 	unsigned int Stride;
 
 	struct FConstants
@@ -89,14 +93,14 @@ public:
 	void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
 	void CreateConstantBuffer();
 	void ReleaseConstantBuffer();
-	void UpdateConstant(FVector3 Offset, float Angle, FVector3 scale = {0,0,0}, float uvOffset = 0.f, float brightness = 1.f);
+	void UpdateConstant(FVector3 Offset, float Angle, FVector3 scale = { 0,0,0 }, float uvOffset = 0.f, XMFLOAT4 color = { 1.0f,1.0f ,1.0f ,1.0f });
 	void UpdateConstantPerFrame(float cameraY);
 
 	void ReleaseTextures();
 	bool LoadTexture(const std::string& name, const wchar_t* filename);
 	void CreateSampler();
 	ID3D11ShaderResourceView* GetTexture(const std::string& name);
-	
+
 	void CreateBlendState();
 	void ReleaseBlendState();
 	void EnableAlphaBlending(bool enable);
@@ -123,7 +127,7 @@ inline bool URenderer::LoadTexture(const std::string& name, const wchar_t* filen
 		std::wstring wFilename(filename);
 		errorMsg += std::string(wFilename.begin(), wFilename.end());
 		errorMsg += "\nHRESULT: 0x" + std::to_string(hr);
-		
+
 		MessageBoxA(nullptr, errorMsg.c_str(), "Texture Load Error", MB_OK | MB_ICONERROR);
 		return false;
 	}

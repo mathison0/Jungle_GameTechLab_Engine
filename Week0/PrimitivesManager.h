@@ -3,6 +3,8 @@
 #include "planet.h"
 #include "Camera.h"
 #include "Sprite.h"
+#include "IGameStateListener.h"
+
 #include <string>
 
 struct PlanetData
@@ -11,7 +13,7 @@ struct PlanetData
 	float relativeRadius;
 };
 
-class FPrimitivesManager
+class FPrimitivesManager : public IGameStateListener 
 {
 private:
 	std::vector<UPrimitive*> objects;
@@ -45,4 +47,7 @@ public:
 
 	void Update(const float deltaTime, const FVector3& ExternalForcePos);
 	void Render(URenderer& renderer);
+
+	void OnGameStateChanged(EGameState newState) override;
+
 };
