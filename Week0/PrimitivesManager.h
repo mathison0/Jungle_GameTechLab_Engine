@@ -20,6 +20,7 @@ private:
 	
 	UBall* player = nullptr;
 	Moon* moon = nullptr;
+	Meteor* meteors[2] = { nullptr, nullptr };
 	Camera* camera = nullptr;
 	Sprite* background = nullptr;
 
