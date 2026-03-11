@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <windows.h>
 #include "dx11math.h"
 struct FVector3;
@@ -24,11 +25,28 @@ struct FVector3;
 #include "planet.h"
 #include "Camera.h"
 #include "SoundManager.h"
+#include "Sprite.h"
+
+
+struct FVector
+{
+	float x, y, z;
+	FVector(float _x = 0, float _y = 0, float _z = 0) : x(_x), y(_y), z(_z) {}
+};
+
+FVertexSimple triangle_vertices[] =
+{
+	{  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f }, // Top vertex (red)
+	{  1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f }, // Bottom-right vertex (green)
+	{ -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f }  // Bottom-left vertex (blue)
+};
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
+ID3D11Buffer* UBall::PNGSphereVertexBuffer = nullptr;
 UINT UBall::NumVerticesSphere = 0;
 UINT UBall::NumVerticesCube = 0;
+UINT UBall::NumVerticesPNGSphere = 0;
 int UBall::TotalNumBalls = 0;
 bool UBall::bApplyGravity = true;
 bool UBall::bApplyAttraction = false;
@@ -39,9 +57,9 @@ FPrimitivesManager primitivesManager;
 bool bIsExit = false;
 
 UBall* player;
-Moon* testPlanet;
-GravityPlanet* testPlanet2;
+Moon* moon;
 Camera* camera;
+Sprite* background;
 
 //FPS, time
 const int targetFPS = 60;
@@ -54,6 +72,28 @@ float deltaTime = 0.0f;
 //mouse
 POINT mousePos;
 FVector3 mouseWorldPos;
+
+
+//Game
+struct PlanetData
+{
+	std::string name;
+	float relativeRadius;
+};
+
+PlanetData planetDataList[] = {
+	{"Mercury", 1.383f},
+	{"Venus", 1.949f},
+	{"Mars", 1.532f},
+	{"Jupiter", 7.21f},
+	{"Neptune", 4.883f},
+	{"Meteor", 4.883f},
+};
+
+float highestPlayerY = 0.0f;  // 플레이어의 최고 도달 높이
+float nextSpawnY = 1.0f;      // 다음 행성이 생성될 Y축 임계값
+float spawnInterval = 1.5f;   // 행성이 생성되는 Y축 간격
+// ----------------------------------
 
 void InitializeRenderer(HWND hWnd);
 void InitializeGameObjects();
@@ -136,6 +176,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WinMainUpdate(hWnd);
 		WinMainRender();
 
+
 		do
 		{
 			Sleep(0);
@@ -151,10 +192,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SoundManager::Get().Release();
 
 	UBall::ReleaseBuffer(renderer);
+	Sprite::ReleaseQuadVertexBuffer(renderer);
 	renderer.ReleaseConstantBuffer();
 	renderer.ReleaseShader();
 	renderer.Release();
 
+	//player, moon은 primitivesManager에서 관리하므로 delete할 필요 없습니다
+	delete camera;
+	delete background;
 	return 0;
 }
 
@@ -165,12 +210,29 @@ void InitializeRenderer(HWND hWnd)
 	renderer.CreateSampler();
 
 	// 텍스처 로드
-	std::string textureNames[] = { "Earth", "Mars", "Moon", "Jupiter", "Venus",  "mercury",  "Neptune" };
-	std::wstring textureFiles[] = { L"earth.jpg", L"mars.jpg", L"moon.jpg", L"jupiter.jpg", L"venus.jpg", L"mercury.jpg", L"neptune.jpg" };
-	for (int i = 0; i < textureNames->size(); ++i)
+	struct TextureInfo
 	{
-		renderer.LoadTexture(textureNames[i], textureFiles[i].c_str());
+		std::string name;
+		std::wstring file;
+	};
+
+	TextureInfo textures[] = {
+		{"Background", L"background.jpg"},
+		{"Earth", L"earth.jpg"},
+		{"Mars", L"mars.jpg"},
+		{"Moon", L"moon.jpg"},
+		{"Jupiter", L"jupiter.jpg"},
+		{"Venus", L"venus.jpg"},
+		{"Mercury", L"mercury.jpg"},
+		{"Neptune", L"neptune.jpg"},
+		{"Meteor", L"me.png"}
+	};
+
+	for (const auto& tex : textures)
+	{
+		renderer.LoadTexture(tex.name, tex.file.c_str());
 	}
+
 	renderer.CreateConstantBuffer();
 	
 	// ImGui Setup
@@ -183,27 +245,44 @@ void InitializeRenderer(HWND hWnd)
 	QueryPerformanceFrequency(&frequency);
 
 	UBall::InitializeBuffer(renderer);
-	testPlanet2->InitRangeResources(renderer.Device);
+	Sprite::CreateQuadVertexBuffer(renderer);
 }
 
-void InitializeGameObjects()
+void SpawnRandomPlanet(float spawnBaseY)
 {
-	//Player 생성
-	player = new UBall();
-	player->Location = { 0.0f, 0.0f, 0.0f };
-	player->Radius = 0.05f;
-	player->TextureName = "Earth";
-	primitivesManager.AddObject(player);
+	const float baseRadius = 0.05f;
+	const float minSpeed = 0.01f;
+	const float maxSpeed = 0.03f;
 
-	//TestPlanet 생성
-	testPlanet = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
-	primitivesManager.AddObject(testPlanet);
+	// 1. 랜덤한 행성 종류 선택
+	int randIndex = rand() % (sizeof(planetDataList) / sizeof(PlanetData));
+	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
 
-	testPlanet2 = new GravityPlanet({ -0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, 0.1f, "Mars");
-	primitivesManager.AddObject(testPlanet2);
+	// 2. 생성 위치 설정 (X는 화면 폭 내 랜덤, Y는 카메라보다 위쪽인 spawnBaseY + Offset)
+	float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f; // -1.0 ~ 1.0 사이
+	float newY = spawnBaseY + 1.5f; // 화면 밖 위쪽에서 스폰
+	FVector3 newPos(newX, newY, 0.0f);
 
-	//Camera 생성
-	camera = new Camera();
+	// 3. 랜덤 속도 및 방향 설정
+	float randomAngle = (rand() % 360) * (3.141592f / 180.0f);
+	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
+	FVector3 randomVelocity;
+	randomVelocity.x = cosf(randomAngle) * randomSpeed;
+	randomVelocity.y = sinf(randomAngle) * randomSpeed;
+	randomVelocity.z = 0.0f;
+
+	// 4. 객체 생성 및 매니저에 등록
+	Planet* newPlanet = nullptr;
+	if (planetDataList[randIndex].name != "Meteor")
+	{
+		newPlanet = new Planet(newPos, randomVelocity, radius, planetDataList[randIndex].name);
+	}
+	else
+	{
+		newPlanet = new Meteor(newPos, randomVelocity, radius, planetDataList[randIndex].name);
+	}
+
+	primitivesManager.AddObject(newPlanet);
 }
 
 void ProcessInput()
@@ -220,11 +299,30 @@ void ProcessInput()
 	}
 }
 
+void InitializeGameObjects()
+{
+	//Player 생성
+	player = new UBall();
+	player->Location = { 0.0f, 0.0f, 0.0f };
+	player->Radius = 0.05f;
+	player->TextureName = "Earth";
+	primitivesManager.AddObject(player);
+
+	//Moon 생성
+	moon = new Moon({ 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
+	primitivesManager.AddObject(moon);
+
+	//Camera 생성
+	camera = new Camera();
+
+	//Background 생성
+	background = new Sprite("Background");
+}
+
 void WinMainUpdate(HWND hWnd)
 {
 	renderer.Prepare();
 	renderer.PrepareShader();
-	testPlanet->HandleCollision(player);
 
 	GetCursorPos(&mousePos);
 	ScreenToClient(hWnd, &mousePos);
@@ -233,14 +331,45 @@ void WinMainUpdate(HWND hWnd)
 	primitivesManager.Update(deltaTime, mouseWorldPos);
 
 	camera->Update(deltaTime, player);
-	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
 
-	testPlanet2->Gravity(player, deltaTime);
-	testPlanet2->HandleCollision(player);
+	if (player != nullptr)
+	{
+		//플레이어가 가장 높이 올라가면.... window는 max 저주가 있다
+		highestPlayerY = std::max<float>(highestPlayerY, player->Location.y);
+		while (highestPlayerY > nextSpawnY)
+		{
+			int spawnCount = (rand() % 3) + 1;
+			for (int i = 0; i < spawnCount; ++i)
+			{
+				SpawnRandomPlanet(nextSpawnY);
+			}
+			nextSpawnY += spawnInterval;
+		}
+	}
+
+	renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
 }
 
 void WinMainRender()
 {
+	background->Render(renderer);
 	primitivesManager.Render(renderer);
+
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	ImGui::Begin("Player Info");
+	if (player != nullptr)
+	{
+		ImGui::Text("Earth Position:");
+		ImGui::Text("X: %.3f", player->Location.x);
+		ImGui::Text("Y: %.3f", player->Location.y);
+		ImGui::Text("Z: %.3f", player->Location.z);
+	}
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	
 	renderer.SwapBuffer();
 }

@@ -6,7 +6,7 @@ class Planet : public UBall
 {
 public:
 	bool bIsActive = true; 
-	const float ExplosionForce = 0.005f; // 터지면서 튕기는 힘
+	const float ExplosionForce = 100.0f; // 터지면서 튕기는 힘
 	FVector3 OriginalLocation; // 초기 위치
 	FVector3 OriginalVelocity; // 초기 속도
 
@@ -29,7 +29,7 @@ class Moon : public Planet
 {
 private:
 	UBall* TargetObject = nullptr;
-	float FollowSpeed = 0.000001f;
+	float FollowSpeed = 1.0f;
 	float FollowDistance = 0.3f;        
 	float MaxFollowSpeed = 0.003f;
 	float RotationSpeed = 0.002f;
@@ -102,7 +102,7 @@ public:
 	float spawnTimer;
 
 public:
-	Meteor(float r, const std::string& textureName);
+	Meteor(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName);
 
 	void Update(float t) override;
 	void Respawn() override;

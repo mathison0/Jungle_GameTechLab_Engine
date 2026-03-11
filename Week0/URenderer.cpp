@@ -9,7 +9,8 @@ void URenderer::Create(HWND hWindow)
 	CreateFrameBuffer();
 
 	CreateRasterizerState();
-
+	
+	CreateBlendState();
 	// 깊이 스텐실 버퍼 및 블렌드 상태는 이 코드에서는 다루지 않음
 }
 
@@ -138,6 +139,8 @@ void URenderer::ReleaseTextures()
 void URenderer::Release()
 {
 	ReleaseTextures();
+	ReleaseBlendState();
+
 	RasterizerState->Release();
 
 	// 렌더 타겟을 초기화
@@ -157,6 +160,9 @@ void URenderer::CreateShader()
 	ID3DBlob* vertexshaderCSO;
 	ID3DBlob* pixelshaderCSO;
 
+	ID3DBlob* spriteVertexShaderCSO;
+	ID3DBlob* spritePixelShaderCSO;
+
 	D3DCompileFromFile(L"ShaderW0.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexshaderCSO, nullptr);
 
 	Device->CreateVertexShader(vertexshaderCSO->GetBufferPointer(), vertexshaderCSO->GetBufferSize(), nullptr, &SimpleVertexShader);
@@ -171,13 +177,27 @@ void URenderer::CreateShader()
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 }, // UV 좌표 추가!
 	};
-
 	Device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexshaderCSO->GetBufferPointer(), vertexshaderCSO->GetBufferSize(), &SimpleInputLayout);
+
+
+
+
+	D3DCompileFromFile(L"Background.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &spriteVertexShaderCSO, nullptr);
+
+	Device->CreateVertexShader(spriteVertexShaderCSO->GetBufferPointer(), spriteVertexShaderCSO->GetBufferSize(), nullptr, &SpriteVertexShader);
+
+
+	D3DCompileFromFile(L"Background.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &spritePixelShaderCSO, nullptr);
+	
+	Device->CreatePixelShader(spritePixelShaderCSO->GetBufferPointer(), spritePixelShaderCSO->GetBufferSize(), nullptr, &SpritePixelShader);
+	
+	vertexshaderCSO->Release();
+	pixelshaderCSO->Release();
+	spriteVertexShaderCSO->Release();
+	spritePixelShaderCSO->Release();
 
 	Stride = sizeof(FVertexSimple);
 
-	vertexshaderCSO->Release();
-	pixelshaderCSO->Release();
 }
 
 void URenderer::ReleaseShader()
@@ -192,6 +212,12 @@ void URenderer::ReleaseShader()
 	{
 		SimplePixelShader->Release();
 		SimplePixelShader = nullptr;
+	}
+
+	if(SpritePixelShader)
+	{
+		SpritePixelShader->Release();
+		SpritePixelShader = nullptr;
 	}
 
 	if (SimpleVertexShader)
@@ -284,7 +310,7 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(FVector3 Offset, float Angle)
+void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, float uvOffset)
 {
 	if (ConstantBuffer)
 	{
@@ -295,6 +321,8 @@ void URenderer::UpdateConstant(FVector3 Offset, float Angle)
 		{
 			constants->Offset = Offset;
 			constants->Angle = Angle;
+			constants->Scale = scale;
+			constants->uvOffset = uvOffset;
 		}
 		DeviceContext->Unmap(ConstantBuffer, 0);
 	}
@@ -313,5 +341,43 @@ void URenderer::UpdateConstantPerFrame(float cameraY)
 		DeviceContext->Unmap(ConstnantBufferPerFrame, 0);
 
 		DeviceContext->VSSetConstantBuffers(1, 1, &ConstnantBufferPerFrame);
+		DeviceContext->PSSetConstantBuffers(1, 1, &ConstnantBufferPerFrame);
+	}
+}
+
+void URenderer::CreateBlendState()
+{
+	D3D11_BLEND_DESC blendDesc = {};
+	blendDesc.RenderTarget[0].BlendEnable = TRUE;
+	blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	Device->CreateBlendState(&blendDesc, &AlphaBlendState);
+}
+
+void URenderer::ReleaseBlendState()
+{
+	if (AlphaBlendState)
+	{
+		AlphaBlendState->Release();
+		AlphaBlendState = nullptr;
+	}
+}
+
+void URenderer::EnableAlphaBlending(bool enable)
+{
+	if (enable && AlphaBlendState)
+	{
+		float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		DeviceContext->OMSetBlendState(AlphaBlendState, blendFactor, 0xffffffff);
+	}
+	else
+	{
+		DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 	}
 }

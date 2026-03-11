@@ -35,6 +35,8 @@ public:
 	ID3D11Texture2D* FrameBuffer = nullptr; // 화면 출력용 텍스쳐
 	ID3D11RenderTargetView* FrameBufferRTV = nullptr; // 텍스처를 렌더 타겟으로 사용하는 뷰
 	ID3D11RasterizerState* RasterizerState = nullptr; // 래스터라이저 상태(컬링, 채우기 모드 등 정의)
+	ID3D11BlendState* AlphaBlendState = nullptr;//블렌딩
+
 	ID3D11Buffer* ConstantBuffer = nullptr; // 쉐이더에 데이터를 전달하기 위한 상수 버퍼
 	ID3D11Buffer* ConstnantBufferPerFrame = nullptr; // 매 프레임마다 업데이트되는 상수 버퍼
 
@@ -45,12 +47,18 @@ public:
 	ID3D11VertexShader* SimpleVertexShader;
 	ID3D11PixelShader* SimplePixelShader;
 	ID3D11InputLayout* SimpleInputLayout;
+
+	ID3D11VertexShader* SpriteVertexShader = nullptr;
+	ID3D11PixelShader* SpritePixelShader = nullptr;
 	unsigned int Stride;
 
 	struct FConstants
 	{
 		FVector3 Offset;
 		float Angle;
+
+		FVector3 Scale;
+		float uvOffset;
 	};
 
 	struct FConstantPerFrame
@@ -79,13 +87,17 @@ public:
 	void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
 	void CreateConstantBuffer();
 	void ReleaseConstantBuffer();
-	void UpdateConstant(FVector3 Offset, float Angle);
+	void UpdateConstant(FVector3 Offset, float Angle, FVector3 scale = {0,0,0}, float uvOffset = 0.f);
 	void UpdateConstantPerFrame(float cameraY);
 
 	void ReleaseTextures();
 	bool LoadTexture(const std::string& name, const wchar_t* filename);
 	void CreateSampler();
 	ID3D11ShaderResourceView* GetTexture(const std::string& name);
+	
+	void CreateBlendState();
+	void ReleaseBlendState();
+	void EnableAlphaBlending(bool enable);
 };
 
 inline bool URenderer::LoadTexture(const std::string& name, const wchar_t* filename)
@@ -94,7 +106,7 @@ inline bool URenderer::LoadTexture(const std::string& name, const wchar_t* filen
 	{
 		return true;
 	}
-	std::wstring fullPath = L"images\\";
+	std::wstring fullPath = L"Images\\";
 	fullPath += filename;
 	ID3D11ShaderResourceView* srv = nullptr;
 	HRESULT hr = CreateWICTextureFromFile(

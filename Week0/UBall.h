@@ -13,14 +13,14 @@ public:
 	static UINT NumVerticesSphere;
 	static ID3D11Buffer* CubeVertexBuffer;
 	static UINT NumVerticesCube;
+	static ID3D11Buffer* PNGSphereVertexBuffer;
+	static UINT NumVerticesPNGSphere;
 
 	static int TotalNumBalls;
 
 	FVector3 Location{};
 	FVector3 Velocity{};
 	float Radius{};
-	float Mass{};
-
 
 	float Index{};
 
@@ -38,13 +38,13 @@ public:
 	static constexpr float MaxSoleJetpackSpeed = 8.0f;
 	static constexpr float MaxBothJetpackSpeed = 10.0f;
 
-	static constexpr float SoleJetpackForce = 0.06f;
-	static constexpr float BothJetpackForce = 0.05f;
+	static constexpr float SoleJetpackForce = 4.f;
+	static constexpr float BothJetpackForce = 3.f;
 
-	static constexpr float JetpackTorqueAmount = 0.08f;
+	static constexpr float JetpackTorqueAmount = 8.0f;
 	static constexpr float LinearDamping = 0.995f;
 	static constexpr float AngularDamping = 0.95f;
-	static constexpr float GravityForce = 0.98f;
+	static constexpr float GravityForce = 1.8f;
 
 	static constexpr float MaxAttractionForce = 0.001f;
 
