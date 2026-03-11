@@ -129,7 +129,9 @@
   <ItemGroup>
     <ClCompile Include="Button.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Digit.cpp" />
     <ClCompile Include="GameContext.cpp" />
+    <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
     <ClCompile Include="ImGui\imgui_draw.cpp" />
@@ -142,6 +144,7 @@
     <ClCompile Include="PrimitivesManager.cpp" />
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Sprite.cpp" />
+    <ClCompile Include="TimeLap.cpp" />
     <ClCompile Include="UBall.cpp" />
     <ClCompile Include="UIManager.cpp" />
     <ClCompile Include="URenderer.cpp" />
@@ -149,8 +152,10 @@
   <ItemGroup>
     <ClInclude Include="Button.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Digit.h" />
     <ClInclude Include="dx11math.h" />
     <ClInclude Include="GameContext.h" />
+    <ClInclude Include="Image.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />
     <ClInclude Include="ImGui\imgui_impl_dx11.h" />
@@ -164,6 +169,7 @@
     <ClInclude Include="PrimitivesManager.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Sprite.h" />
+    <ClInclude Include="TimeLap.h" />
     <ClInclude Include="Type.h" />
     <ClInclude Include="UBall.h" />
     <ClInclude Include="UIManager.h" />

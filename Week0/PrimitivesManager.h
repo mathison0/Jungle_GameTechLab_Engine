@@ -22,7 +22,7 @@ private:
 	Moon* moon = nullptr;
 	Meteor* meteors[2] = { nullptr, nullptr };
 	Camera* camera = nullptr;
-	Sprite* background = nullptr;
+	Image* background = nullptr;
 
 	float highestPlayerY = 0.0f;
 	float nextSpawnY = 1.0f;

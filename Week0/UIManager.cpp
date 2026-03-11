@@ -13,6 +13,9 @@ UIManager::UIManager()
 
 	restartButton->SetActive(false);
 
+
+	timeLap = new TimeLap({ 0.0f, 0.9f, 0.f }, "TestSprite", 15, 8, 300, 160);
+
 }
 
 UIManager::~UIManager()
@@ -29,16 +32,22 @@ UIManager::~UIManager()
 	}
 }
 
-void UIManager::Update(float mouseX, float mouseY, bool isMousePressed)
+void UIManager::Update(float mouseX, float mouseY, float deltaTime, bool isMousePressed)
 {
 	startButton->Update(mouseX, mouseY, isMousePressed);
 	restartButton->Update(mouseX, mouseY, isMousePressed);
+
+	if (isRunning)
+	{
+		timeLap->Update(deltaTime);
+	}
 }
 
 void UIManager::Render(URenderer& renderer)
 {
 	startButton->Render(renderer);
 	restartButton->Render(renderer);
+	timeLap->Render(renderer);
 }
 
 void UIManager::OnGameStateChanged(EGameState newState)
@@ -48,14 +57,17 @@ void UIManager::OnGameStateChanged(EGameState newState)
 	case EGameState::Title:
 		startButton->SetActive(true);
 		restartButton->SetActive(false);
+		timeLap->Clear();
 		break;
 
 	case EGameState::Running:
 		startButton->SetActive(false);
 		restartButton->SetActive(false);
+		isRunning = true;
 		break;
 
 	case EGameState::Ending:
+		isRunning = false;
 		break;
 
 	case EGameState::Clear:

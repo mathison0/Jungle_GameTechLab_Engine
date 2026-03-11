@@ -275,7 +275,7 @@ void UBall::Update(float t)
 void UBall::UpdateRenderer(URenderer& renderer)
 {
 	FVector3 transform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(transform, this->Angle, { 0, 0, 0 }, 0.f, { 1.0f, 1.0f,1.0f,this->brightness });
+	renderer.UpdateConstant(transform, this->Angle, { 0, 0, 0 },{ 1.0f, 1.0f,1.0f,this->brightness });
 }
 
 void UBall::HandleCollision(UPrimitive* other)

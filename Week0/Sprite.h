@@ -1,61 +1,44 @@
 #pragma once
 #include "dx11math.h"
-#include "UPrimitive.h"
-#include "URenderer.h"
+#include "Image.h"
 
-class Sprite
+class Sprite : public Image
 {
 private:
+	float width;
+	float height;
 
-	ID3D11ShaderResourceView* textureResourceView = nullptr;
-	bool bIsActive{ true };
+	int maxFrameX = 1;
+	int maxFrameY = 1;
 
-protected:
-	static ID3D11Buffer* QuadVertexBuffer;
-
-	FVector3 position{ 0.f, 0.f, 1.0f };
-	FVector3 scale{ 1.f, 1.f };
-	XMFLOAT4 color{ 1.f, 1.f, 1.f, 1.f};
-
-	float uvOffset{ 0.f };
-
-	std::string textureName{};
+	int curFrameX = 1;
+	int curFrameY = 1;
 
 public:
 
-	Sprite(const std::string& textureName) :textureName(textureName) {}
-	~Sprite();
-
-	inline void SetPosition(float x, float y) { position = { x, y }; }
-	inline void SetScale(float sw, float sh) { scale = { sw, sh }; }
-
-	inline void SetActive(bool active) { bIsActive = active; }
-	inline bool IsActive() const { return bIsActive; }
-
-	virtual void Render(URenderer& renderer);
-
-	static void CreateQuadVertexBuffer(URenderer& renderer)
+	Sprite(FVector3 position, FVector3 scale, const std::string& textureName, int frameCountX, int frameCountY, float fullWidth, float fullHeight) :
+		Image(textureName), maxFrameX{ frameCountX }, maxFrameY{ frameCountY}
 	{
-		FVertexSimple quadVertices[] =
-		{
-			{ -0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,	0.0f, 0.0f}, // Top-left vertex
-			{  0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,	1.0f, 0.0f}, // Top-right vertex
-			{ -0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,	0.0f, 1.0f}, // Bottom-left vertex
-			{ -0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,	0.0f, 1.0f}, // Bottom-left vertex (repeated for second triangle)
-			{  0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,	1.0f, 0.0f}, // Top-right vertex (repeated for second triangle)
-			{  0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,	1.0f, 1.0f} // Bottom-right vertex
-		};
-		QuadVertexBuffer = renderer.CreateVertexBuffer(quadVertices, sizeof(quadVertices));
+		SetPosition(position.x, position.y);
+		SetScale(scale.x, scale.y);
+
+		this->width = fullWidth / (float)frameCountX;
+		this->height = fullHeight / (float)frameCountY;
+
+	};
+	virtual ~Sprite();
+
+	virtual void Render(URenderer& renderer) override;
+
+	inline int GetMaxFrameX() { return maxFrameX; }
+	inline int GetMaxFrameY() { return maxFrameY; }
+
+	void SetFrame(int frameX, int frameY)
+	{
+		curFrameX = frameX;
+		curFrameY = frameY;
 	}
 
-	static void ReleaseQuadVertexBuffer(URenderer& renderer)
-	{
-		if (QuadVertexBuffer)
-		{
-			renderer.ReleaseVertexBuffer(QuadVertexBuffer);
-			QuadVertexBuffer = nullptr;
-
-		}
-	}
+	void Update(float deltaTime);
 };
 

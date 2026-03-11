@@ -6,9 +6,11 @@ cbuffer Constants : register(b0)
     float3 Offset; 
     float Angle; 
     float3 Scale;
-    float uvOffset;
-    float3 Color;
-    float Alpha;
+    float padding;
+    float4 Color;
+
+    float2 uvOffset;
+    float2 uvScale;
 };
 
 struct VS_INPUT
@@ -32,11 +34,11 @@ PS_INPUT mainVS(VS_INPUT input)
     float3 scaledPos = input.position.xyz * Scale;
     
     float3 finalPos = scaledPos + Offset;
-    
     output.position = float4(finalPos, 1.0f);
     
-    output.color = float4(Color, Alpha);
-    output.uv = input.uv;
+    output.uv = (input.uv * uvScale) + uvOffset;
+    
+    output.color = input.color;
     
     return output;
 }

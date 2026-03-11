@@ -186,7 +186,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SoundManager::Get().Release();
 
 	UBall::ReleaseBuffer(renderer);
-	Sprite::ReleaseQuadVertexBuffer(renderer);
+	Image::ReleaseQuadVertexBuffer(renderer);
 	renderer.ReleaseConstantBuffer();
 	renderer.ReleaseShader();
 	renderer.Release();
@@ -221,7 +221,8 @@ void InitializeRenderer(HWND hWnd)
 		{"Meteor", L"meteor.png"},
 		{"Background", L"background.jpg"},
 		{"StartButton", L"startButton.png" },
-		{"RestartButton", L"restartButton.png" }
+		{"RestartButton", L"restartButton.png" },
+		{"TestSprite", L"testSprite.png" }
 	};
 
 	for (const auto& tex : textures)
@@ -241,7 +242,7 @@ void InitializeRenderer(HWND hWnd)
 	QueryPerformanceFrequency(&frequency);
 
 	UBall::InitializeBuffer(renderer);
-	Sprite::CreateQuadVertexBuffer(renderer);
+	Image::CreateQuadVertexBuffer(renderer);
 }
 
 void ProcessInput()
@@ -285,7 +286,7 @@ void WinMainUpdate(HWND hWnd)
 
 	bool bLeftMousePressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
 
-	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, bLeftMousePressed);
+	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, deltaTime, bLeftMousePressed);
 }
 
 void WinMainRender()
