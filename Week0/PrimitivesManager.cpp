@@ -33,7 +33,7 @@ UPrimitive* FPrimitivesManager::GetPrimitive(int index)
 	return nullptr;
 }
 
-void FPrimitivesManager::InitializeGameObjects(URenderer renderer)
+void FPrimitivesManager::InitializeGameObjects()
 {
 	// Player 생성
 	player = new UBall();
@@ -58,7 +58,7 @@ void FPrimitivesManager::InitializeGameObjects(URenderer renderer)
 		AddObject(meteors[i]);
 	}
 
-	GravityPlanet::SetGravitySystem(renderer.Device, player);
+	GravityPlanet::SetGravitySystem(player);
 
 	// Camera 생성
 	camera = new Camera();
@@ -76,7 +76,8 @@ void FPrimitivesManager::SpawnRandomPlanet(float spawnBaseY)
 	const float minSpeed = 0.01f;
 	const float maxSpeed = 0.03f;
 
-	int randIndex = rand() % 8; // planetDataList size
+	int lastIndex = (sizeof(planetDataList) / sizeof(planetDataList[0]));
+	int randIndex = rand() % lastIndex;
 	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
 
 	FVector3 newPos;
@@ -253,11 +254,13 @@ void FPrimitivesManager::OnGameStateChanged(EGameState newState)
 	switch (newState)
 	{
 	case EGameState::Running:
+		
 		if (!isRunning)
-		{
+		{ 
 			Reset();
-			// renderer가 필요하다면 멤버 변수로 저장하거나 다른 방법 사용
+			InitializeGameObjects();
 		}
+
 		isRunning = true;
 		break;
 

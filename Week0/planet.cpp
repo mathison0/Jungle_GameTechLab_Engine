@@ -26,8 +26,8 @@ void Planet::Update(float t)
 		return;
 	}
 
-	Location.x += Velocity.x * t;
-	Location.y += Velocity.y * t;
+	//Location.x += Velocity.x * t;
+	//Location.y += Velocity.y * t;
 }
 
 void Planet::HandleCollision(UPrimitive* other)
@@ -106,6 +106,11 @@ void Planet::Render(URenderer& renderer)
 			renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
 		}
 	}
+
+
+	renderer.DeviceContext->VSSetShader(renderer.SimpleVertexShader, nullptr, 0);
+	renderer.DeviceContext->PSSetShader(renderer.SimplePixelShader, nullptr, 0);
+
 
 	ID3D11Buffer* bufferToUse = bIsPNGTexture ? UBall::PNGSphereVertexBuffer : UBall::SphereVertexBuffer;
 	UINT numVertices = bIsPNGTexture ? UBall::NumVerticesPNGSphere : UBall::NumVerticesSphere;
@@ -249,15 +254,12 @@ void Moon::HandleCollision(UPrimitive* other)
 
 ID3D11Buffer* GravityPlanet::RangeDashBuffer = nullptr;
 UINT GravityPlanet::NumDashVertices = 0;
-int GravityPlanet::ReferenceCount = 0;
 ID3D11RasterizerState* GravityPlanet::NoCullState = nullptr;
 UBall* GravityPlanet::targetPlayer = nullptr;
 
-void GravityPlanet::SetGravitySystem(ID3D11Device* device, UBall* player)
+void GravityPlanet::SetGravitySystem(UBall* player)
 {
 	targetPlayer = player;
-
-	InitRangeResources(device);
 }
 
 void GravityPlanet::Update(float t)
@@ -356,6 +358,15 @@ void GravityPlanet::InitRangeResources(ID3D11Device* device)
 	rd.FillMode = D3D11_FILL_SOLID;
 	rd.CullMode = D3D11_CULL_NONE;
 	device->CreateRasterizerState(&rd, &NoCullState);
+}
+
+void GravityPlanet::ReleaseRangeResources()
+{
+	if (RangeDashBuffer != nullptr)
+	{
+		RangeDashBuffer->Release();
+		RangeDashBuffer = nullptr;
+	}
 }
 
 

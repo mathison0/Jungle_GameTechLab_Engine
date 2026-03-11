@@ -4,7 +4,7 @@
 
 class Sprite : public Image
 {
-private:
+protected:
 	float width;
 	float height;
 
@@ -13,6 +13,8 @@ private:
 
 	int curFrameX = 1;
 	int curFrameY = 1;
+
+	bool flag = 1;
 
 public:
 
@@ -38,6 +40,8 @@ public:
 		curFrameX = frameX;
 		curFrameY = frameY;
 	}
+
+	void SetFlag(bool active) { flag = active; }
 
 	void Update(float deltaTime);
 };

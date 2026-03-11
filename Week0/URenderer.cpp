@@ -346,8 +346,7 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, XMFLOAT4 color,
-	XMFLOAT2 uvOffset, XMFLOAT2 uvScale, int flag, float spinAngle)
+void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, XMFLOAT4 color, XMFLOAT2 uvOffset, XMFLOAT2 uvScale, int flag, float spinAngle)
 {
 	if (ConstantBuffer)
 	{

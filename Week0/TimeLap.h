@@ -9,6 +9,7 @@ private:
     std::vector<Digit*> digits; 
     float totalTime = 0.0f;
     std::string lastTimeStr = "";
+    std::string defaultTimeStr = "00:00";
 
     FVector3 basePosition;      
     float digitSpacing = 0.05f;  

@@ -34,7 +34,7 @@ void Sprite::Render(URenderer& renderer)
 	renderer.DeviceContext->PSSetShaderResources(0, 1, &textureResourceView);
 	renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
 
-	renderer.UpdateConstant(position, 0.f, scale, color, { offsetX, offsetY }, { scaleX, scaleY });
+	renderer.UpdateConstant(position, angle, scale, color, { offsetX, offsetY }, { scaleX, scaleY }, flag);
 	renderer.RenderPrimitive(QuadVertexBuffer, 6);
 
 	ID3D11ShaderResourceView* nullSRV = nullptr;
