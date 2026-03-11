@@ -7,7 +7,6 @@ class Sprite
 {
 private:
 
-	ID3D11ShaderResourceView* textureResourceView = nullptr;
 	bool bIsActive{ true };
 
 protected:

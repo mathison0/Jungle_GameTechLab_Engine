@@ -8,7 +8,7 @@ Sprite::~Sprite()
 
 void Sprite::Render(URenderer& renderer)
 {
-	textureResourceView = renderer.GetTexture(textureName);
+	auto textureResourceView = renderer.GetTexture(textureName);
 
 	if (textureResourceView == nullptr)
 	{
