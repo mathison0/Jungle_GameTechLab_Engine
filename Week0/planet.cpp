@@ -260,6 +260,9 @@ void GravityPlanet::Update(float t)
 	float dist = direction.Length();
 	FVector3 normal = direction / dist;
 
+	if (range + targetPlayer->Radius < dist || !bIsActive)
+		return;
+
 	float strength = 1.0f;
 	FVector3 newVelocity;
 
@@ -273,8 +276,6 @@ void GravityPlanet::Update(float t)
 		{
 			newVelocity = newVelocity / newVelocity.Length() * maxSpeed;
 		}
-
-		targetPlayer->SetVelocity(newVelocity);
 	}
 	else if(this->planetType == PlanetType::push)
 	{

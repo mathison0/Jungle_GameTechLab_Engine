@@ -356,6 +356,9 @@ void ProcessInput()
 			return;
 		}
 
+		player->bIsLeftFireActive = false;
+		player->bIsRightFireActive = false;
+
 		bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
 		bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;
 

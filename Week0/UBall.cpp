@@ -180,6 +180,35 @@ void UBall::Render(URenderer& renderer)
 	};
 	renderer.UpdateConstant(rightPos, this->Angle);
 	renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
+
+	// 부스터 랜더링
+	// 뒤쪽을 바라보는 벡터 계산
+	float backX = sinf(this->Angle);
+	float backY = -cosf(this->Angle);
+
+	FVector3 leftFirePos = {
+		leftPos.x + backX * offsetDist, // 날개의 뒤쪽에 오도록 이동시키기
+		leftPos.y + backY * offsetDist,
+		thrusterScale
+	};
+
+	if (bIsLeftFireActive)
+	{
+		renderer.UpdateConstant(leftFirePos, this->Angle);
+		renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
+	}
+
+	FVector3 rightFirePos = {
+		rightPos.x + backX * offsetDist,
+		rightPos.y + backY * offsetDist,
+		thrusterScale
+	};
+
+	if (bIsRightFireActive)
+	{
+		renderer.UpdateConstant(rightFirePos, this->Angle);
+		renderer.RenderPrimitive(CubeVertexBuffer, NumVerticesCube);
+	}
 }
 
 void UBall::ApplyJetpackForce(float thrustAmount)
@@ -226,12 +255,18 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 	{
 		ApplyJetpackForce(thrustPerJetpack * deltaTime);
 		PendingTorque -= JetpackTorqueAmount * deltaTime;
+
+		// 불꽃 출력
+		this->bIsLeftFireActive = true;
 	}
 
 	if (bRightThruster)
 	{
 		ApplyJetpackForce(thrustPerJetpack * deltaTime);
 		PendingTorque += JetpackTorqueAmount * deltaTime;
+
+		// 불꽃 출력
+		this->bIsRightFireActive = true;
 	}
 
 	AngularVelocity += PendingTorque;
