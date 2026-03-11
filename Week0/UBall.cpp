@@ -204,8 +204,8 @@ void UBall::Render(URenderer& renderer)
 
 		if (bIsDamaged)
 		{
-			//float blinkAlpha = (sin(inputLockTimer * 20.0f) * 0.5f) + 0.5f;
-			leftWingSprite->SetAlpha(0.0f);
+			float blinkAlpha = (sin(inputLockTimer * 20.0f) * 0.5f) + 0.5f;
+			leftWingSprite->SetAlpha(blinkAlpha);
 		}
 		else
 		{
@@ -227,6 +227,17 @@ void UBall::Render(URenderer& renderer)
 		rightWingSprite->SetPosition(rightPos.x, rightPos.y);
 		rightWingSprite->SetScale(0.1f, 0.1f);
 		rightWingSprite->SetAngle(this->Angle);
+
+		if (bIsDamaged)
+		{
+			float blinkAlpha = (sin(inputLockTimer * 20.0f) * 0.5f) + 0.5f;
+			rightWingSprite->SetAlpha(blinkAlpha);
+		}
+		else
+		{
+			rightWingSprite->SetAlpha(1.0f);
+		}
+
 		rightWingSprite->Render(renderer);
 	}
 }
