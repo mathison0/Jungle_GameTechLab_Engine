@@ -32,8 +32,9 @@ void GameEnding::Update(UBall* player, float deltaTime)
 		float len = vel.Length();
 		FVector3 dir = (len > 1e-6f) ? (vel / len) : FVector3(0.0f, 1.0f, 0.0f);
 
-		// 프레임 독립적으로 천천히 이동
-		player->Location += dir * slowSpeed * deltaTime;
+		// 속도를 설정하여 이동
+		player->Velocity = dir * slowSpeed;
+		player->Move(deltaTime);
 
 		// 감속
 		player->Velocity *= 0.98f;
