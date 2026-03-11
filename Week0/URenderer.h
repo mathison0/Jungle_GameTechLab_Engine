@@ -65,6 +65,7 @@ public:
 		int Flag;
 
 		XMFLOAT4 Color;
+
 		XMFLOAT2 uvOffset;
 		XMFLOAT2 uvScale;
 

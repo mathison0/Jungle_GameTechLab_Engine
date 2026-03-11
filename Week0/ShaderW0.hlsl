@@ -7,7 +7,7 @@ cbuffer Constants : register(b0)
     float3 Offset;
     float Angle;
     float3 Scale;
-    float uvOffset;
+    int uvOffset;
     float4 Color;
 };
 
@@ -57,6 +57,11 @@ PS_INPUT mainVS(VS_INPUT input)
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
+    if(uvOffset == 0)
+    {
+        return Color;
+    }
+    
     float brightness = Color.w;
     // 1. UV가 음수일 경우 (새로운 PNG 텍스처 사용)
     if (input.uv.x < 0.0f || input.uv.y < 0.0f)
