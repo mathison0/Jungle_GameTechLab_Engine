@@ -233,12 +233,14 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 	{
 		ApplyJetpackForce(thrustPerJetpack * deltaTime);
 		PendingTorque -= JetpackTorqueAmount * deltaTime;
+		//EarthSpinAngle += 0.5f * deltaTime;
 	}
 
 	if (bRightThruster)
 	{
 		ApplyJetpackForce(thrustPerJetpack * deltaTime);
 		PendingTorque += JetpackTorqueAmount * deltaTime;
+		//EarthSpinAngle -= 0.5f * deltaTime;
 	}
 
 	AngularVelocity += PendingTorque;
@@ -247,7 +249,7 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 
 void UBall::Update(float t)
 {
-	EarthSpinAngle += 0.2f * t;
+	//EarthSpinAngle += 0.2f * t;
 	if (bApplyGravity)
 	{
 		Velocity.y -= GravityForce * t;
@@ -262,6 +264,8 @@ void UBall::Update(float t)
 	AngularVelocity += -sinf(Angle) * autoBalancePower * t;
 
 	Angle += AngularVelocity * t;
+
+	EarthSpinAngle += 0.007f * Velocity.x;
 
 	LimitVelocities(MaxLinearSpeed);
 	Move(t);
