@@ -15,4 +15,4 @@ public:
 	virtual ID3D11Buffer* GetVertexBuffer() = 0;
 	virtual ~UPrimitive() {}
 	virtual void Render(URenderer& renderer) = 0;
-};
+}; 

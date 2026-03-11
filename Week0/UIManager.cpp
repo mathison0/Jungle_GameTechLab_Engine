@@ -3,11 +3,11 @@
 
 UIManager::UIManager()
 {
-	startButton = new Button({ 0.0f, -0.1f, 0.0f }, { 0.3f, 0.1f }, "StartButton", []() {
+	startButton = new Button({ 0.0f, -0.3f, 0.0f }, { 0.6f, 0.2f }, "StartButton", []() {
 		GameContext::GetiNSTANCE().SetState(EGameState::Running);
 		});
 
-	restartButton = new Button({ 0.0f, -0.3f, 0.0f }, { 0.3f, 0.1f }, "RestartButton", []() {
+	restartButton = new Button({ 0.0f, -0.3f, 0.0f }, { 0.6f, 0.2f }, "RestartButton", []() {
 		GameContext::GetiNSTANCE().SetState(EGameState::Running);
 		});
 
