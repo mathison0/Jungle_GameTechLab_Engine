@@ -76,7 +76,8 @@ void FPrimitivesManager::SpawnRandomPlanet(float spawnBaseY)
 	const float minSpeed = 0.01f;
 	const float maxSpeed = 0.03f;
 
-	int randIndex = rand() % 8; // planetDataList size
+	int lastIndex = (sizeof(planetDataList) / sizeof(planetDataList[0]));
+	int randIndex = rand() % lastIndex;
 	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
 
 	FVector3 newPos;
