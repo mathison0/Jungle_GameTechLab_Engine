@@ -71,7 +71,6 @@ void SoundManager::Release()
 		bgmInstance.reset();
 	}
 
-	soundLibrary.clear();
 
 	if (audioEngine)
 	{
@@ -79,6 +78,9 @@ void SoundManager::Release()
 		audioEngine.reset();
 
 	}
+
+	soundLibrary.clear();
+
 }
 
 void SoundManager::OnGameStateChanged(EGameState newState)

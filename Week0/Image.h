@@ -12,7 +12,6 @@ protected:
 	FVector3 scale{ 1.f, 1.f };
 	XMFLOAT4 color{ 1.f, 1.f, 1.f, 1.f };
 
-
 	float uvOffset{ 0.f };
 
 	std::string textureName{};

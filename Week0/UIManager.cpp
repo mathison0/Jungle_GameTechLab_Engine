@@ -13,6 +13,9 @@ UIManager::UIManager()
 
 	restartButton->SetActive(false);
 
+
+	testSprite = new Sprite("TestSprite", 15, 8, 300.0f, 160.0f);
+
 }
 
 UIManager::~UIManager()
@@ -33,12 +36,14 @@ void UIManager::Update(float mouseX, float mouseY, bool isMousePressed)
 {
 	startButton->Update(mouseX, mouseY, isMousePressed);
 	restartButton->Update(mouseX, mouseY, isMousePressed);
+	testSprite->Update(0);
 }
 
 void UIManager::Render(URenderer& renderer)
 {
 	startButton->Render(renderer);
 	restartButton->Render(renderer);
+	testSprite->Render(renderer);
 }
 
 void UIManager::OnGameStateChanged(EGameState newState)

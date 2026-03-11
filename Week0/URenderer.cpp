@@ -346,7 +346,8 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, float uvOffset, XMFLOAT4 color)
+void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, XMFLOAT4 color,
+	XMFLOAT2 uvOffset, XMFLOAT2 uvScale)
 {
 	if (ConstantBuffer)
 	{
@@ -358,8 +359,11 @@ void URenderer::UpdateConstant(FVector3 Offset, float Angle, FVector3 scale, flo
 			constants->Offset = Offset;
 			constants->Angle = Angle;
 			constants->Scale = scale;
-			constants->uvOffset = uvOffset;
+			constants->Padding = 0;
 			constants->Color = color;
+			constants->uvOffset = uvOffset;
+			constants->uvScale = uvScale;
+
 		}
 		DeviceContext->Unmap(ConstantBuffer, 0);
 	}

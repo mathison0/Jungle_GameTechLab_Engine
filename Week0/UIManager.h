@@ -2,12 +2,15 @@
 #include "URenderer.h"
 #include "Button.h"
 #include "GameContext.h"
+#include "Sprite.h"
 
 class UIManager : public IGameStateListener
 {
 private:
 	Button* startButton;
 	Button* restartButton;
+
+	Sprite* testSprite;
 
 	public:
 	UIManager();

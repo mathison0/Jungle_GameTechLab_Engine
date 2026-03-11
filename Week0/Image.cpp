@@ -12,13 +12,12 @@ void Image::Render(URenderer& renderer)
 		return;
 	}
 
-
 	renderer.DeviceContext->VSSetShader(renderer.backgroundVertexShader, nullptr, 0);
 	renderer.DeviceContext->PSSetShader(renderer.backgroundPixelShader, nullptr, 0);
 	renderer.DeviceContext->PSSetShaderResources(0, 1, &textureResourceView);
 	renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
 
-	renderer.UpdateConstant(position, 0.0f, scale, uvOffset);
+	renderer.UpdateConstant(position, 0.0f, scale);
 	renderer.RenderPrimitive(QuadVertexBuffer, 6);
 
 	renderer.DeviceContext->VSSetShader(renderer.SimpleVertexShader, nullptr, 0);

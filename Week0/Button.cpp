@@ -48,7 +48,7 @@ void Button::Render(URenderer& renderer)
 			renderer.DeviceContext->PSSetShaderResources(0, 1, &srv);
 			renderer.DeviceContext->PSSetSamplers(0, 1, &renderer.SamplerState);
 
-			renderer.UpdateConstant(position, 0.0f, scale, uvOffset, color);
+			renderer.UpdateConstant(position, 0.0f, scale, color);
 			renderer.RenderPrimitive(QuadVertexBuffer, 6);
 
 			ID3D11ShaderResourceView* nullSRV = nullptr;
