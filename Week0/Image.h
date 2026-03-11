@@ -11,7 +11,7 @@ protected:
 	FVector3 position{ 0.f, 0.f, 1.0f };
 	FVector3 scale{ 1.f, 1.f };
 	XMFLOAT4 color{ 1.f, 1.f, 1.f, 1.f };
-	float angle;
+	float angle{};
 
 	float uvOffset{ 0.f };
 

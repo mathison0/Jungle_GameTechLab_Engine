@@ -61,7 +61,7 @@ PS_INPUT mainVS(VS_INPUT input)
     output.position = float4(finalPos2D, scaledPos.z, 1.0f);
     
     output.uv = (input.uv * uvScale) + uvOffset;
-    output.color = input.color;
+    output.color = Color;
     
     return output;
 }
