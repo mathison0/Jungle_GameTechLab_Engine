@@ -330,6 +330,7 @@ void InitializeGameObjects()
 
 	GameContext::GetiNSTANCE().RegisterListenerObject(&primitivesManager);
 	GameContext::GetiNSTANCE().RegisterListenerObject(uiManager);
+	GameContext::GetiNSTANCE().RegisterListenerObject(&SoundManager::Get());
 }
 
 void ProcessInput()
