@@ -115,11 +115,11 @@ void Planet::Render(URenderer& renderer)
 	float colorAfterCollision = 0.5f;
 	if (bIsActive)
 	{
-		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f,this->brightness });
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f,this->brightness }, { 0.f,0.f }, { 0.f,0.f });
 	}
 	else
 	{
-		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f,this->brightness * colorAfterCollision });
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f,this->brightness * colorAfterCollision }, { 0.f,0.f }, { 0.f,0.f });
 	}
 	renderer.RenderPrimitive(bufferToUse, numVertices);
 

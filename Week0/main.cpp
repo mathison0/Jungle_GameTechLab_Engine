@@ -328,7 +328,7 @@ void WinMainUpdate(HWND hWnd)
 	// UI 입력: 화면 고정(UI는 스크린-스페이스) -> 카메라 보정 제거한 ndcPos 전달
 	bool bLeftMousePressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
 
-	uiManager->Update(ndcPos.x, ndcPos.y, bLeftMousePressed);
+	uiManager->Update(ndcPos.x, ndcPos.y, deltaTime, bLeftMousePressed);
 }
 
 void WinMainRender()

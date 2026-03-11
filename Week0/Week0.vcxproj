@@ -131,6 +131,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Digit.cpp" />
     <ClCompile Include="GameContext.cpp" />
+    <ClCompile Include="GameEnding.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
@@ -155,6 +156,7 @@
     <ClInclude Include="Digit.h" />
     <ClInclude Include="dx11math.h" />
     <ClInclude Include="GameContext.h" />
+    <ClInclude Include="GameEnding.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />

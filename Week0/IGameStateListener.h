@@ -10,7 +10,7 @@ enum EGameState
 class IGameStateListener
 {
 public:
-	virtual void OnGameStateChanged(EGameState) = 0;
+	virtual void OnGameStateChanged(EGameState newState) = 0;
 	virtual ~IGameStateListener() {}
 
 };

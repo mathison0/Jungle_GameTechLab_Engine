@@ -6,6 +6,7 @@
 #include "IGameStateListener.h"
 
 #include <string>
+class URenderer;
 
 struct PlanetData
 {

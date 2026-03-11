@@ -155,11 +155,11 @@ void UBall::Render(URenderer& renderer)
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
 	if (TextureName == "Earth")
 	{
-		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, EarthSpinAngle, { 1.0f, 1.0f,1.0f,this->brightness });
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f,1.0f,this->brightness }, { 0.f, 0.f }, { 0.f, 0.f }, 1, EarthSpinAngle);
 	}
 	else
 	{
-		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, 0.f, { 1.0f, 1.0f,1.0f,this->brightness });
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, { 1.0f, 1.0f,1.0f,this->brightness }, { 0.f, 0.f }, { 0.f, 0.f }, 1, 0.f);
 	}
 	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
 

@@ -256,7 +256,7 @@ void FPrimitivesManager::OnGameStateChanged(EGameState newState)
 		if (!isRunning)
 		{
 			Reset();
-			InitializeGameObjects();
+			// renderer가 필요하다면 멤버 변수로 저장하거나 다른 방법 사용
 		}
 		isRunning = true;
 		break;
