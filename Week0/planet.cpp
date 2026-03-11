@@ -381,25 +381,22 @@ void GravityPlanet::Render(URenderer& renderer)
 
 // --- Meteor Implementation ---
 
-Meteor::Meteor(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName)
-	: Planet(startPos, startVel, r, textureName)
+Meteor::Meteor(UBall* target, float r, const std::string& textureName)
+	: Planet({ 0.f, -1000.f, 0.f }, { 0.f, 0.f, 0.f }, r, textureName), targetPlayer(target)
 {
-	Respawn();
 	bIsActive = true;
-	spawnTimer = 0.0f;
+	HideAndWait();
 }
 
 void Meteor::Update(float t)
 {
-	if (!bIsActive)
+	if (bIsWaiting)
 	{
-		spawnTimer += t;
+		waitTimer += t;
 
-		if (spawnTimer >= spawnDelay)
+		if (waitTimer >= waitDuration)
 		{
-			bIsActive = true;
-			Location = OriginalLocation;
-			Velocity = OriginalVelocity;
+			RespawnAbovePlayer();
 		}
 		return;
 	}
@@ -410,15 +407,15 @@ void Meteor::Update(float t)
 	Location.x += Velocity.x * t;
 	Location.y += Velocity.y * t * 10.0;
 
-	if (Location.y < -1.2f)
+	if (targetPlayer && Location.y < targetPlayer->Location.y - 2.5f)
 	{
-		bIsActive = false;
+		HideAndWait();
 	}
 }
 
 void Meteor::HandleCollision(UPrimitive* other)
 {
-	if (!bIsActive) return;
+	if (bIsWaiting || !bIsActive) return;
 
 	UBall* player = static_cast<UBall*>(other);
 	if (!player) return;
@@ -429,7 +426,41 @@ void Meteor::HandleCollision(UPrimitive* other)
 
 	if (dist <= radiusSum)
 	{
+		//planet의 explode 사용 x
 		player->inputLockTimer = player->inputLockDuration;
-		Explode();
+		SoundManager::Get().PlayEffect("Explosion");
+		HideAndWait();
 	}
+}
+
+void Meteor::HideAndWait()
+{
+	bIsWaiting = true;
+	waitTimer = 0.0f;
+	// 화면 밖 보이지 않는 곳으로 순간이동
+	Location = FVector3(0.0f, -1000.0f, 0.0f);
+	Velocity = FVector3(0.0f, 0.0f, 0.0f);
+}
+
+void Meteor::RespawnAbovePlayer()
+{
+	bIsWaiting = false;
+	if (!targetPlayer) return;
+
+	float spawnHeight = targetPlayer->Location.y + 3.0f + ((rand() % 1000) / 1000.0f) * 2.0f;
+	float spawnX = targetPlayer->Location.x;
+
+	Location = FVector3(spawnX, spawnHeight, 0.0f);
+
+	float minSpeed = 0.01f;
+	float maxSpeed = 0.03f;
+	float baseRadius = 0.05f;
+
+	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
+	float sizeMultiplier = baseRadius / sqrtf(this->Radius + 0.001f);
+	randomSpeed *= sizeMultiplier;
+
+	Velocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f;
+	Velocity.y = -(randomSpeed * 2.0f);
+	Velocity.z = 0.0f;
 }

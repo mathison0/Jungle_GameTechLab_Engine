@@ -107,12 +107,16 @@ public:
 class Meteor : public Planet
 {
 public:
-	const float spawnDelay = 5.0f;
-	float spawnTimer;
+	UBall* targetPlayer = nullptr;
+	const float waitDuration = 7.0f;
+	float waitTimer = 0.f;
+	bool bIsWaiting = false;
 
 public:
-	Meteor(FVector3 startPos, FVector3 startVel, float r, const std::string& textureName);
+	Meteor(UBall* target, float r, const std::string& textureName);
 
 	void Update(float t) override;
 	void HandleCollision(UPrimitive* other) override;
+	void HideAndWait();
+	void RespawnAbovePlayer();
 };

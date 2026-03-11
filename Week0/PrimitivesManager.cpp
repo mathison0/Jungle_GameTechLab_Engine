@@ -9,7 +9,6 @@ PlanetData FPrimitivesManager::planetDataList[] = {
 	{"Neptune", 4.883f},
 	{"Uranus", 2.331f},
 	{"Pluto", 2.745f},
-	{"Meteor", 0.883f},
 };
 
 FPrimitivesManager::~FPrimitivesManager()
@@ -48,6 +47,16 @@ void FPrimitivesManager::InitializeGameObjects(URenderer renderer)
 	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	moon->brightness = 1.0f;
 	AddObject(moon);
+
+	// 재사용할 Meteor 2개 생성
+	float meteorRadius = 0.05f * 0.883f; // baseRadius * meteorRelativeRadius
+	for (int i = 0; i < 2; ++i)
+	{
+		meteors[i] = new Meteor(player, player->Radius * 0.7f, "Meteor");
+		// 겹치지 않게 초기 생성 시간에 차이를 둡니다.
+		meteors[i]->waitTimer = i * 2.5f;
+		AddObject(meteors[i]);
+	}
 
 	GravityPlanet::SetGravitySystem(renderer.Device, player);
 
@@ -126,11 +135,7 @@ void FPrimitivesManager::SpawnRandomPlanet(float spawnBaseY)
 	}
 
 	Planet* newPlanet = nullptr;
-	if (planetName == "Meteor")
-	{
-		newPlanet = new Meteor(newPos, randomVelocity, radius, planetName);
-	}
-	else if (planetName == "Jupiter")
+	if (planetName == "Jupiter")
 	{
 		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
 		newPlanet->brightness = 1.5f;
@@ -166,6 +171,8 @@ void FPrimitivesManager::Reset()
 	player = nullptr;
 	moon = nullptr;
 	camera = nullptr;
+	meteors[0] = nullptr;
+	meteors[1] = nullptr;
 	background = nullptr;
 }
 
