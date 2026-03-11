@@ -45,7 +45,7 @@ public:
 	static constexpr float SoleJetpackForce = 3.f;
 	static constexpr float BothJetpackForce = 4.f;
 
-	static constexpr float JetpackTorqueAmount = 8.0f;
+	static constexpr float JetpackTorqueAmount = 9.0f;
 	static constexpr float LinearDamping = 0.995f;
 	static constexpr float AngularDamping = 0.95f;
 	static constexpr float GravityForce = 1.8f;
