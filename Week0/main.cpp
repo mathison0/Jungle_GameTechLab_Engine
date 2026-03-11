@@ -115,7 +115,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		nullptr, nullptr, hInstance, nullptr);
 
 	InitializeRenderer(hWnd);
-	primitivesManager.InitializeGameObjects(renderer);
+	primitivesManager.InitializeGameObjects();
 	uiManager = new UIManager();
 	
 	GameEnding ending;
@@ -130,6 +130,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SoundManager::Get().LoadSound("Explosion", L"Audio/explosion.WAV");
 	SoundManager::Get().LoadSound("bgm", L"Audio/bgm.WAV");
 	SoundManager::Get().PlayBGM("bgm", true);
+	
+	GravityPlanet::InitRangeResources(renderer.Device);
 
 	// Main Loop 
 	while (bIsExit == false)
@@ -155,7 +157,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				if (msg.wParam == 'R')
 				{
 					primitivesManager.Reset();
-					primitivesManager.InitializeGameObjects(renderer);
+					primitivesManager.InitializeGameObjects();
 				}
 			}
 		}
@@ -184,6 +186,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	SoundManager::Get().Release();
 
+	GravityPlanet::ReleaseRangeResources();
 	UBall::ReleaseBuffer(renderer);
 	Image::ReleaseQuadVertexBuffer(renderer);
 	renderer.ReleaseConstantBuffer();
@@ -367,7 +370,7 @@ void WinMainRender()
 		if (ImGui::Button("Reset Game (R)"))
 		{
 			primitivesManager.Reset();
-			primitivesManager.InitializeGameObjects(renderer);
+			primitivesManager.InitializeGameObjects();
 		}
 	}
 	ImGui::Text("Press R to Restart");

@@ -254,14 +254,12 @@ void Moon::HandleCollision(UPrimitive* other)
 
 ID3D11Buffer* GravityPlanet::RangeDashBuffer = nullptr;
 UINT GravityPlanet::NumDashVertices = 0;
-int GravityPlanet::ReferenceCount = 0;
 ID3D11RasterizerState* GravityPlanet::NoCullState = nullptr;
 UBall* GravityPlanet::targetPlayer = nullptr;
 
-void GravityPlanet::SetGravitySystem(ID3D11Device* device, UBall* player)
+void GravityPlanet::SetGravitySystem(UBall* player)
 {
 	targetPlayer = player;
-	InitRangeResources(device);
 }
 
 void GravityPlanet::Update(float t)
@@ -271,6 +269,9 @@ void GravityPlanet::Update(float t)
 	FVector3 direction = this->Location - targetPlayer->Location;
 	float dist = direction.Length();
 	FVector3 normal = direction / dist;
+
+	if (range + targetPlayer->Radius < dist || !bIsActive)
+		return;
 
 	float strength = 1.0f;
 	FVector3 newVelocity;
@@ -359,6 +360,15 @@ void GravityPlanet::InitRangeResources(ID3D11Device* device)
 	rd.FillMode = D3D11_FILL_SOLID;
 	rd.CullMode = D3D11_CULL_NONE;
 	device->CreateRasterizerState(&rd, &NoCullState);
+}
+
+void GravityPlanet::ReleaseRangeResources()
+{
+	if (RangeDashBuffer != nullptr)
+	{
+		RangeDashBuffer->Release();
+		RangeDashBuffer = nullptr;
+	}
 }
 
 
