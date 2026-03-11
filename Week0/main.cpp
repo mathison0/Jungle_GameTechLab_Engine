@@ -222,7 +222,8 @@ void InitializeRenderer(HWND hWnd)
 		{"Background", L"background.jpg"},
 		{"StartButton", L"startButton.png" },
 		{"RestartButton", L"restartButton.png" },
-		{"TestSprite", L"testSprite.png" }
+		{"TestSprite", L"testSprite.png" },
+		{"Rocket", L"rocket.png"}
 	};
 
 	for (const auto& tex : textures)
@@ -255,6 +256,9 @@ void ProcessInput()
 			player->inputLockTimer -= deltaTime;
 			return;
 		}
+
+		player->bIsLeftFire = false;
+		player->bIsRightFire = false;
 
 		bool bCurrentLeftPressed = (GetAsyncKeyState('A') & 0x8000) != 0;
 		bool bCurrentRightPressed = (GetAsyncKeyState('D') & 0x8000) != 0;

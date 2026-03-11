@@ -2,6 +2,7 @@
 #include "dx11math.h"
 #include "URenderer.h"
 #include "UPrimitive.h"
+#include "Sprite.h"
 
 class UBall : public UPrimitive
 {
@@ -56,6 +57,13 @@ public:
 
 	float inputLockTimer = 0.0f;
 	float inputLockDuration = 1.0f;
+
+	// 부스터 효과를 위한 변수
+	bool bIsLeftFire = false;
+	bool bIsRightFire = false;
+
+	Sprite* leftWingSprite = nullptr;
+	Sprite* rightWingSprite = nullptr;
 
 public:
 	UBall();
