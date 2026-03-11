@@ -33,7 +33,7 @@ public:
 
 	void AddObject(UPrimitive* obj);
 	UPrimitive* GetPrimitive(int index);
-	int GetObjectCount() const { return objects.size(); }
+	int GetObjectCount() const { return (int)objects.size(); }
 	std::vector<UPrimitive*> GetObjects() const { return objects; }
 
 	UBall* GetPlayer() const { return player; }
