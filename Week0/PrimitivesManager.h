@@ -26,6 +26,7 @@ private:
 	float highestPlayerY = 0.0f;
 	float nextSpawnY = 1.0f;
 	float spawnInterval = 1.5f;
+	bool isRunning = false;
 
 	static PlanetData planetDataList[];
 

@@ -282,7 +282,10 @@ void WinMainUpdate(HWND hWnd)
 		renderer.UpdateConstantPerFrame(camera->GetCurrentCameraY());
 	}
 
-	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, deltaTime);
+
+	bool bLeftMousePressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+
+	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, bLeftMousePressed);
 }
 
 void WinMainRender()

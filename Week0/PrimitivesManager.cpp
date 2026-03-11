@@ -169,6 +169,11 @@ void FPrimitivesManager::Reset()
 
 void FPrimitivesManager::Update(const float deltaTime, const FVector3& ExternalForcePos)
 {
+	if (isRunning == false)
+	{
+		return;
+	}
+
 	// 오브젝트 업데이트
 	for (UPrimitive* obj : objects)
 	{
@@ -236,4 +241,13 @@ void FPrimitivesManager::Render(URenderer& renderer)
 
 void FPrimitivesManager::OnGameStateChanged(EGameState newState)
 {
+	switch (newState)
+	{
+
+	case EGameState::Running:
+		isRunning = true;
+		
+	case EGameState::Ending:
+		break;
+	}
 }
