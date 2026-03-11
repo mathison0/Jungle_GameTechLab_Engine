@@ -286,7 +286,7 @@ void WinMainUpdate(HWND hWnd)
 
 	bool bLeftMousePressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
 
-	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, bLeftMousePressed);
+	uiManager->Update(mouseWorldPos.x, mouseWorldPos.y, deltaTime, bLeftMousePressed);
 }
 
 void WinMainRender()

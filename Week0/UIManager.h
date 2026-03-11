@@ -13,10 +13,12 @@ private:
 
 	TimeLap* timeLap;
 
+	bool isRunning = false;
+
 	public:
 	UIManager();
 	~UIManager();
-	void Update(float mouseX, float mouseY, bool isMousePressed);
+	void Update(float mouseX, float mouseY, float deltaTime, bool isMousePressed);
 	void Render(URenderer& renderer);
 
 	void OnGameStateChanged(EGameState gameState) override;

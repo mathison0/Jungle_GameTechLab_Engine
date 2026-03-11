@@ -69,3 +69,12 @@ void TimeLap::Render(URenderer& renderer)
         currentX += digitSpacing;
     }
 }
+
+void TimeLap::Clear()
+{
+    lastTimeStr = "00:00";
+    for (int i = 0; i < 5; ++i)
+    {
+        digits[i]->SetChar(lastTimeStr[i]);
+    }
+}

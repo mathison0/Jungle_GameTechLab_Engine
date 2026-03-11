@@ -32,11 +32,15 @@ UIManager::~UIManager()
 	}
 }
 
-void UIManager::Update(float mouseX, float mouseY, bool isMousePressed)
+void UIManager::Update(float mouseX, float mouseY, float deltaTime, bool isMousePressed)
 {
 	startButton->Update(mouseX, mouseY, isMousePressed);
 	restartButton->Update(mouseX, mouseY, isMousePressed);
-	timeLap->Update(0.016);
+
+	if (isRunning)
+	{
+		timeLap->Update(deltaTime);
+	}
 }
 
 void UIManager::Render(URenderer& renderer)
@@ -53,14 +57,17 @@ void UIManager::OnGameStateChanged(EGameState newState)
 	case EGameState::Title:
 		startButton->SetActive(true);
 		restartButton->SetActive(false);
+		timeLap->Clear();
 		break;
 
 	case EGameState::Running:
 		startButton->SetActive(false);
 		restartButton->SetActive(false);
+		isRunning = true;
 		break;
 
 	case EGameState::Ending:
+		isRunning = false;
 		break;
 
 	case EGameState::Clear:

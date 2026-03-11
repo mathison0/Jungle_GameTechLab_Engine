@@ -20,7 +20,7 @@ public:
     void Update(float deltaTime);
     void Render(URenderer& renderer);
 
-    // 유틸리티
     void SetPosition(FVector3 pos) { basePosition = pos; }
-    float GetTotalWidth();
+
+    void Clear();
 };
