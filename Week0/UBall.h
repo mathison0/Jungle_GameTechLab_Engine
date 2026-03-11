@@ -60,6 +60,9 @@ public:
 	// Homing (시연용)
 	bool bHomingMode = false; // on/off 컨트롤+H키
 
+	static constexpr float groundFriction = 1.0f; // 지면 마찰 계수
+
+
 public:
 	UBall();
 	~UBall();

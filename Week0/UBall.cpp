@@ -122,6 +122,19 @@ void UBall::Move(float t)
 	{
 		Location.y = -1.0f + Radius;
 		Velocity.y  = 0.0f;
+
+		float decel = groundFriction * t;
+
+		if (Velocity.x > 0.0f)
+		{
+			Velocity.x -= decel;
+			if (Velocity.x < 0.0f) Velocity.x = 0.0f;
+		}
+		else if (Velocity.x < 0.0f)
+		{
+			Velocity.x += decel;
+			if (Velocity.x > 0.0f) Velocity.x = 0.0f;
+		}
 	}
 }
 
