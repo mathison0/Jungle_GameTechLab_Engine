@@ -98,6 +98,7 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     float sphereU = 0.5f + (atan2(rotatedP.x, z) / (2.0f * PI));
     float sphereV = 0.5f - (asin(rotatedP.y) / PI);
 
+    sphereU = frac(sphereU + uvOffset);
     //왜곡된 새 UV로 텍스처를 샘플링
     return earthTexture.Sample(earthSampler, float2(sphereU, sphereV)) * brightness;
 }

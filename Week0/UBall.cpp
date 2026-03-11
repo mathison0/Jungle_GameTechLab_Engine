@@ -140,7 +140,14 @@ void UBall::Render(URenderer& renderer)
 
 	// 1. 메인 공(구체) 렌더링
 	FVector3 sphereTransform = { this->Location.x, this->Location.y, this->Radius };
-	renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, 0.f, { 1.0f, 1.0f,1.0f,this->brightness });
+	if (TextureName == "Earth")
+	{
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, EarthSpinAngle, { 1.0f, 1.0f,1.0f,this->brightness });
+	}
+	else
+	{
+		renderer.UpdateConstant(sphereTransform, this->Angle, { 0, 0, 0 }, 0.f, { 1.0f, 1.0f,1.0f,this->brightness });
+	}
 	renderer.RenderPrimitive(SphereVertexBuffer, NumVerticesSphere);
 
 	// 텍스처 언바인드 (추진체 렌더링에는 영향 안 가도록)
@@ -240,6 +247,7 @@ void UBall::ApplyThrust(bool bLeftThruster, bool bRightThruster, float deltaTime
 
 void UBall::Update(float t)
 {
+	EarthSpinAngle += 0.2f * t;
 	if (bApplyGravity)
 	{
 		Velocity.y -= GravityForce * t;

@@ -7,6 +7,7 @@ class UBall : public UPrimitive
 {
 public:
 	float brightness = 1.0f;
+	float EarthSpinAngle = 0.0f;
 public:
 	static constexpr float MaxSpeed = 0.01f;
 	static constexpr float gravity = -0.000001f;
