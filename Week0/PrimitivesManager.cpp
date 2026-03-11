@@ -34,7 +34,7 @@ UPrimitive* FPrimitivesManager::GetPrimitive(int index)
 	return nullptr;
 }
 
-void FPrimitivesManager::InitializeGameObjects()
+void FPrimitivesManager::InitializeGameObjects(URenderer renderer)
 {
 	// Player 생성
 	player = new UBall();
@@ -48,6 +48,8 @@ void FPrimitivesManager::InitializeGameObjects()
 	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
 	moon->brightness = 1.0f;
 	AddObject(moon);
+
+	GravityPlanet::SetGravitySystem(renderer.Device, player);
 
 	// Camera 생성
 	camera = new Camera();

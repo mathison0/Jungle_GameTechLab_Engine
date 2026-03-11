@@ -42,7 +42,7 @@ public:
 	UBall* GetPlayer() const { return player; }
 	Camera* GetCamera() const { return camera; }
 
-	void InitializeGameObjects();
+	void InitializeGameObjects(URenderer renderer);
 	void SpawnRandomPlanet(float spawnBaseY);
 	void Reset();
 
