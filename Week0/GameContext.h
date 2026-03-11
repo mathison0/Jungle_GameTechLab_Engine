@@ -1,4 +1,5 @@
 #pragma once
+
 #include <vector>
 #include "IGameStateListener.h"
 
@@ -33,5 +34,6 @@ public:
 		return instance;
 	}
 
+	static float MaxHeight;
+	static float MinHeight;
 };
-

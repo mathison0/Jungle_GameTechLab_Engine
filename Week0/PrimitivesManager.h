@@ -14,6 +14,12 @@ struct PlanetData
 	float relativeRadius;
 };
 
+struct StageGroup
+{
+	std::string planetName;
+	int count;
+};
+
 class FPrimitivesManager : public IGameStateListener 
 {
 private:
@@ -26,11 +32,10 @@ private:
 	Image* background = nullptr;
 
 	float highestPlayerY = 0.0f;
-	float nextSpawnY = 1.0f;
-	float spawnInterval = 1.5f;
 	bool isRunning = false;
 
 	static PlanetData planetDataList[];
+	static std::vector<std::vector<StageGroup>> stageGroupData;
 
 public:
 	FPrimitivesManager() {}
@@ -45,7 +50,9 @@ public:
 	Camera* GetCamera() const { return camera; }
 
 	void InitializeGameObjects();
-	void SpawnRandomPlanet(float spawnBaseY);
+	//void SpawnRandomPlanet();
+	void SpawnPlanetsForAllStages();
+	void SpawnPlanetsForStage(int stageIndex);
 	void Reset();
 
 	void Update(const float deltaTime, const FVector3& ExternalForcePos);
