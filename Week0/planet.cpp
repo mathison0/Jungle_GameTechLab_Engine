@@ -273,7 +273,7 @@ void GravityPlanet::InitRangeResources(ID3D11Device* device)
 		v1.b = v2.b = 0.0f;
 		v1.a = v2.a = 1.0f;
 
-		// 3. UV (u, v) - 셰이더 조건문 통과를 위해 반드시 0.0f
+		// 3. UV (u, v) - 셰이더 조건문 통과를 위해 0.0f
 		v1.u = v1.v = v2.u = v2.v = 0.0f;
 
 		vertices.push_back(v1);
@@ -304,26 +304,17 @@ void GravityPlanet::Render(URenderer& renderer)
 
 	if (!RangeDashBuffer) return;
 
-	// --- 점선 그리기 세팅 시작 ---
-
-	ID3D11RasterizerState* previousState = nullptr;
-	renderer.DeviceContext->RSGetState(&previousState);
+	// --- 점선 그리기 세팅 ---
 	renderer.DeviceContext->RSSetState(NoCullState);
-
 	renderer.DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
-	ID3D11ShaderResourceView* nullSRV = nullptr;
-	renderer.DeviceContext->PSSetShaderResources(0, 1, &nullSRV);
-
+	// 원하는 수치로 상수 버퍼 업데이트
 	FVector3 rangeTransform = { this->Location.x, this->Location.y, range};
 	renderer.UpdateConstant(rangeTransform, 0.0f);
-	renderer.DeviceContext->VSSetConstantBuffers(0, 1, &renderer.ConstantBuffer);
-
-	renderer.RenderPrimitive(RangeDashBuffer, NumDashVertices);
+	renderer.RenderPrimitive(RangeDashBuffer, NumDashVertices); // 그리기
 
 	// --- 복구 ---
-	renderer.DeviceContext->RSSetState(previousState);
-	if (previousState) previousState->Release();
+	renderer.DeviceContext->RSSetState(renderer.RasterizerState);
 	renderer.DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 

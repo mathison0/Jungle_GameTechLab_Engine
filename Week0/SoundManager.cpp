@@ -13,6 +13,21 @@ void SoundManager::Update()
 	}
 }
 
+void SoundManager::Reset()
+{
+	if (bgmInstance)
+	{
+		bgmInstance->Stop();
+	}
+
+	if (audioEngine)
+	{
+		audioEngine->Reset();
+	}
+
+	this->PlayBGM("bgm", true);
+}
+
 void SoundManager::LoadSound(const std::string& name, const std::wstring& path)
 {
 	soundLibrary[name] = std::make_unique<DirectX::SoundEffect>(audioEngine.get(), path.c_str());
