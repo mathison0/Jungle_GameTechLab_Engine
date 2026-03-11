@@ -38,7 +38,7 @@ void FPrimitivesManager::InitializeGameObjects()
 {
 	// Player 생성
 	player = new UBall();
-	player->Location = { 0.0f, -1.0f, 0.0f };
+	player->Location = { 0.0f, -0.95f, 0.0f };
 	player->Radius = 0.05f;
 	player->TextureName = "Earth";
 	player->brightness = 1.0f;
