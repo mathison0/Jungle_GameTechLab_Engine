@@ -14,11 +14,10 @@ PlanetData FPrimitivesManager::planetDataList[] = {
 
 std::vector<std::vector<StageGroup>> FPrimitivesManager::stageGroupData = {
 	{
-		{"Mercury", 7},
-		{"Mars", 8},
-		{"Venus", 7},
-		{"Pluto", 6},
-		{"Neptune", 7},
+		{"Venus", 15},
+		{"Uranus", 12},
+		{"Mercury", 15},
+		{"Pluto", 5},
 	},
 	{
 		{"Uranus", 12},
