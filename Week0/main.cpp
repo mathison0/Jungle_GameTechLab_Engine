@@ -369,6 +369,11 @@ void WinMainRender()
 			}
 		}
 
+		if (ImGui::Button("Move End"))
+		{
+			player->Location.y = 98.0f;
+		}
+
 
 		if (ImGui::Button("Reset Game (R)"))
 		{

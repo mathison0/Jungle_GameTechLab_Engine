@@ -40,11 +40,12 @@ std::vector<std::vector<StageGroup>> FPrimitivesManager::stageGroupData = {
 		{"Jupiter", 5},
 	},
 	{
-		{"Venus", 12},
-		{"Uranus", 12},
-		{"Mercury", 15},
-		{"Pluto", 10},
-		{"Neptune", 5},
+		//좀 더 적은 영역에 배치하므로 개수를 일부 줄임.
+		{"Venus", 10},
+		{"Uranus", 10},
+		{"Mercury", 13},
+		{"Pluto", 8},
+		{"Neptune", 4},
 		{"Jupiter", 5},
 		{"Mars", 5},
 	},
@@ -130,7 +131,7 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 
 	const float baseRadius = 0.05f;
 	const float minHeight = GameContext::MinHeight;
-	const float maxHeight = GameContext::MaxHeight - 2.0;
+	const float maxHeight = GameContext::MaxHeight - 1.5f;
 	const float heightRange = maxHeight - minHeight;
 	const float stageHeight = heightRange / 5.0f;
 	const float stageMinY = minHeight + (stageIndex * stageHeight);
@@ -160,7 +161,7 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 		float radius = baseRadius * planetData->relativeRadius;
 		float expandedStageMinY = stageMinY - 0.5f;
 		//마지막 스테이지에서는 y값을 확장하지 않습니다(치트 생성 후 제대로 반영되었는지 확인)
-		float expandedStageMaxY = (stageIndex != (int)stageGroupData.size()) ? stageMaxY + 8.5f : stageMaxY;
+		float expandedStageMaxY = (stageIndex != (int)stageGroupData.size() -1) ? stageMaxY + 8.5f : stageMaxY;
 
 		//해당 그룹의 행성 개수만큼 생성
 		for (int i = 0; i < group.count; ++i)
