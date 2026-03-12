@@ -3,13 +3,18 @@
 
 UIManager::UIManager()
 {
-	startButton = new Button({ 0.0f, -0.4f, 0.0f }, { 0.5f, 0.25f }, "StartButton", []() {
+	startButton = new Button({ 0.0f, -0.4f, 0.0f }, { 0.4f, 0.2f }, "StartButton", []() {
 		GameContext::GetiNSTANCE().SetState(EGameState::Running);
 		});
 
-	restartButton = new Button({ 0.0f, -0.3f, 0.0f }, { 0.5f, 0.25f }, "RestartButton", []() {
+	restartButton = new Button({ 0.0f, -0.4f, 0.0f }, { 0.4f, 0.2f }, "RestartButton", []() {
 		GameContext::GetiNSTANCE().SetState(EGameState::Running);
 		});
+
+	quitButton = new Button({ 0.0f, -0.6f, 0.0f }, { 0.4f, 0.2f }, "QuitButton", []() {
+		std::exit(0);
+		});
+
 
 	restartButton->SetActive(false);
 
@@ -39,6 +44,7 @@ void UIManager::Update(float mouseX, float mouseY, float deltaTime, bool isMouse
 {
 	startButton->Update(mouseX, mouseY, isMousePressed);
 	restartButton->Update(mouseX, mouseY, isMousePressed);
+	quitButton->Update(mouseX, mouseY, isMousePressed);
 
 	if (isRunning)
 	{
@@ -50,6 +56,7 @@ void UIManager::Render(URenderer& renderer)
 {
 	startButton->Render(renderer);
 	restartButton->Render(renderer);
+	quitButton->Render(renderer);
 	timeLap->Render(renderer);
 	titleImage->Render(renderer);
 	teamImage->Render(renderer);
@@ -59,6 +66,7 @@ void UIManager::Reset()
 {
 	startButton->SetActive(false);
 	restartButton->SetActive(false);
+	quitButton->SetActive(false);
 	titleImage->SetActive(false);
 	teamImage->SetActive(false);
 	isRunning = true;
@@ -92,6 +100,7 @@ void UIManager::OnGameStateChanged(EGameState newState)
 	case EGameState::Clear:
 		startButton->SetActive(false);
 		restartButton->SetActive(true);
+		quitButton->SetActive(true);
 		break;
 	}
 }

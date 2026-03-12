@@ -215,6 +215,7 @@ void InitializeRenderer(HWND hWnd)
 		{"Background", L"background.jpg"},
 		{"StartButton", L"startButton.png" },
 		{"RestartButton", L"restartButton.png" },
+		{"QuitButton", L"quitButton.png"},
 		{"TestSprite", L"testSprite.png" },
 		{"Rocket", L"rocket.png"},
 		{"Title", L"title.png" },

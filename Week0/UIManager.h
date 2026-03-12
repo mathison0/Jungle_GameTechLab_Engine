@@ -10,6 +10,7 @@ class UIManager : public IGameStateListener
 private:
 	Button* startButton;
 	Button* restartButton;
+	Button* quitButton;
 
 	Button* titleImage;
 	Button* teamImage;
