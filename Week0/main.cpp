@@ -52,7 +52,7 @@ URenderer renderer;
 FPrimitivesManager primitivesManager;
 UIManager* uiManager;
 bool bIsExit = false;
-bool bShowHomingUI = false;
+bool bShowUI = false;
 
 //FPS, time
 const int targetFPS = 60;
@@ -281,9 +281,9 @@ void ProcessInput()
 	static bool prevHState = false;
 	bool currentHState = (GetAsyncKeyState('H') & 0x8000) != 0;
 	bool ctrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
-	if (currentHState && !prevHState && ctrlDown)
+	if (currentHState && !prevHState)
 	{
-		bShowHomingUI = !bShowHomingUI;
+		bShowUI = !bShowUI;
 	}
 	prevHState = currentHState;
 }
@@ -349,45 +349,44 @@ void WinMainRender()
 
 	uiManager->Render(renderer);
 
-	ImGui_ImplDX11_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-	ImGui::Begin("Player Info");
-
-	UBall* player = primitivesManager.GetPlayer();
-	if (player != nullptr)
+	if (bShowUI)
 	{
-		ImGui::Text("Earth Position:");
-		ImGui::Text("X: %.3f", player->Location.x);
-		ImGui::Text("Y: %.3f", player->Location.y);
-		ImGui::Text("Z: %.3f", player->Location.z);
 
-		if (bShowHomingUI)
+		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+		ImGui::Begin("Player Info");
+
+		UBall* player = primitivesManager.GetPlayer();
+		if (player != nullptr)
 		{
+			ImGui::Text("Earth Position:");
+			ImGui::Text("X: %.3f, Y: %.3f, Z: %.3f", player->Location.x, player->Location.y, player->Location.z);
+
 			bool enabled = player->bHomingMode;
 			if (ImGui::Checkbox("Homing Mode", &enabled))
 			{
 				player->bHomingMode = enabled;
 			}
-		}
 
-		if (ImGui::Button("Move End"))
-		{
-			player->Location.y = 98.0f;
-		}
-		ImGui::SliderFloat("cheat", &player->Location.y, 0.0f, 100.0f);
-		ImGui::Checkbox("Invincible", &player->bInvincible);
+			if (ImGui::Button("Move End"))
+			{
+				player->Location.y = 98.0f;
+			}
+			ImGui::SliderFloat("cheat", &player->Location.y, 0.0f, 100.0f);
+			ImGui::Checkbox("Invincible", &player->bInvincible);
 
-		if (ImGui::Button("Reset Game (R)"))
-		{
-			primitivesManager.Reset();
-			primitivesManager.InitializeGameObjects();
+			if (ImGui::Button("Reset Game (R)"))
+			{
+				primitivesManager.Reset();
+				primitivesManager.InitializeGameObjects();
+			}
+			ImGui::Text("Press R to Restart");
 		}
+		ImGui::End();
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 	}
-	ImGui::Text("Press R to Restart");
-	ImGui::End();
-	ImGui::Render();
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	renderer.SwapBuffer();
 }
