@@ -373,6 +373,7 @@ void WinMainRender()
 		{
 			player->Location.y = 98.0f;
 		}
+		ImGui::SliderFloat("cheat", &player->Location.y, 0.0f, 100.0f);
 
 
 		if (ImGui::Button("Reset Game (R)"))

@@ -131,7 +131,7 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 
 	const float baseRadius = 0.05f;
 	const float minHeight = GameContext::MinHeight;
-	const float maxHeight = GameContext::MaxHeight - 1.5f;
+	const float maxHeight = GameContext::MaxHeight - 2.0f;
 	const float heightRange = maxHeight - minHeight;
 	const float stageHeight = heightRange / 5.0f;
 	const float stageMinY = minHeight + (stageIndex * stageHeight);
@@ -168,9 +168,9 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 		{
 			FVector3 newPos;
 			bool bPositionValid = false;
-
+			int attempt;
 			//겹치지 않는 위치 찾기
-			for (int attempt = 0; attempt < maxAttempts; ++attempt)
+			for (attempt = 0; attempt < maxAttempts; ++attempt)
 			{
 				float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f;
 				float newY = expandedStageMinY + ((rand() % 1000) / 1000.0f) * (expandedStageMaxY - expandedStageMinY);
@@ -199,6 +199,7 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 				}
 				if (bPositionValid) break;
 			}
+			if (attempt == maxAttempts) continue;
 
 			FVector3 zeroVelocity(0.0f, 0.0f, 0.0f);
 			Planet* newPlanet = nullptr;
