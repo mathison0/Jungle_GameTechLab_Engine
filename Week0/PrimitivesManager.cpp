@@ -323,4 +323,33 @@ void FPrimitivesManager::OnGameStateChanged(EGameState newState)
 		isRunning = false;
 		break;
 	}
+
+}
+
+void FPrimitivesManager::ApplyCheat(char key)
+{
+	if (player == nullptr || (GameContext::GetiNSTANCE().GetState() != EGameState::Running))
+	{
+		return;
+	}
+
+
+	switch (key)
+	{
+	case '1':
+		player->Location.y = 20.0f;
+		break;
+	case '2':
+		player->Location.y = 40.0f;
+		break;
+	case '3':
+		player->Location.y = 60.0f;
+		break;
+	case '4':
+		player->Location.y = 80.0f;
+		break;
+	case '5':
+		player->Location.y = 98.0f;
+		break;
+	}
 }

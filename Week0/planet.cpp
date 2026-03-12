@@ -36,6 +36,7 @@ void Planet::HandleCollision(UPrimitive* other)
 
 	UBall* player = static_cast<UBall*>(other);
 	if (!player) return;
+	if (player->bInvincible) return;
 
 	FVector3 distance = player->Location - this->Location;
 	float dist = distance.Length();
@@ -235,6 +236,7 @@ void Moon::HandleCollision(UPrimitive* other)
 	{
 		return;
 	}
+
 	UBall* targetObj = static_cast<UBall*>(other);
 	if (!targetObj || targetObj != TargetObject)
 	{
@@ -267,6 +269,9 @@ void GravityPlanet::SetGravitySystem(UBall* player)
 void GravityPlanet::Update(float t)
 {
 	Planet::Update(t);
+
+	if (targetPlayer == nullptr)return;
+	if (targetPlayer->bInvincible) return;
 
 	FVector3 direction = this->Location - targetPlayer->Location;
 	float dist = direction.Length();
@@ -440,6 +445,7 @@ void Meteor::HandleCollision(UPrimitive* other)
 
 	UBall* player = static_cast<UBall*>(other);
 	if (!player) return;
+	if (player->bInvincible) return;
 
 	FVector3 distance = player->Location - this->Location;
 	float dist = distance.Length();

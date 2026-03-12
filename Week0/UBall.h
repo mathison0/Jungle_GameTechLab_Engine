@@ -33,6 +33,9 @@ public:
 
 	int NumHits{};
 
+	//Cheat
+	bool bInvincible = false;
+
 	static bool bApplyGravity;
 	static bool bApplyAttraction;
 

@@ -60,4 +60,6 @@ public:
 
 	void OnGameStateChanged(EGameState newState) override;
 
+
+	void ApplyCheat(char key);
 };

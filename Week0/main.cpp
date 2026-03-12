@@ -157,6 +157,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					uiManager->Reset();
 
 				}
+
+				primitivesManager.ApplyCheat(msg.wParam);
 			}
 		}
 
@@ -374,7 +376,7 @@ void WinMainRender()
 			player->Location.y = 98.0f;
 		}
 		ImGui::SliderFloat("cheat", &player->Location.y, 0.0f, 100.0f);
-
+		ImGui::Checkbox("Invincible", &player->bInvincible);
 
 		if (ImGui::Button("Reset Game (R)"))
 		{
