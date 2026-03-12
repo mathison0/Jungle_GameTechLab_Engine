@@ -103,7 +103,7 @@ class Meteor : public Planet
 {
 public:
 	UBall* targetPlayer = nullptr;
-	const float waitDuration = 7.0f;
+	float waitDuration = 0.0f;
 	float waitTimer = 0.f;
 	bool bIsWaiting = false;
 

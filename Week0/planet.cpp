@@ -440,8 +440,8 @@ void Meteor::Update(float t)
 	float rotationSpeed = 1.002f;
 	Angle += rotationSpeed * t;
 
-	Location.x += Velocity.x * t;
-	Location.y += Velocity.y * t * 10.0;
+	Location.x += Velocity.x * t; 
+	Location.y += Velocity.y * t * 15.0;
 
 	if (targetPlayer && Location.y < targetPlayer->Location.y - 2.5f)
 	{
@@ -474,6 +474,7 @@ void Meteor::HideAndWait()
 {
 	bIsWaiting = true;
 	waitTimer = 0.0f;
+	waitDuration = 1.5f + ((rand() % 1000) / 1000.0f) * 3.0f;
 	// 화면 밖 보이지 않는 곳으로 순간이동
 	Location = FVector3(0.0f, -1000.0f, 0.0f);
 	Velocity = FVector3(0.0f, 0.0f, 0.0f);
@@ -485,7 +486,10 @@ void Meteor::RespawnAbovePlayer()
 	if (!targetPlayer || targetPlayer->Location.y >= 90.f) return;
 
 	float spawnHeight = targetPlayer->Location.y + 3.0f + ((rand() % 1000) / 1000.0f) * 2.0f;
-	float spawnX = targetPlayer->Location.x;
+	float randomXOffset = (((rand() % 1000) / 1000.0f) - 0.5f) * 1.0f;
+	float spawnX = targetPlayer->Location.x + randomXOffset;
+	if(-1.f >= spawnX) spawnX = -1.0f + this->Radius;
+	if (1.f <= spawnX) spawnX = 1.0f - this->Radius;;
 
 	Location = FVector3(spawnX, spawnHeight, 0.0f);
 

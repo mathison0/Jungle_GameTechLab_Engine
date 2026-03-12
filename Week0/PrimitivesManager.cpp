@@ -85,12 +85,12 @@ void FPrimitivesManager::InitializeGameObjects()
 	AddObject(player);
 
 	// Moon 생성
-	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.7f, player, "Moon");
+	moon = new Moon({ 0.0f, -1000.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, player->Radius * 0.8f, player, "Moon");
 	moon->brightness = 1.0f;
 	AddObject(moon);
 
 	// 재사용할 Meteor 2개 생성
-	float meteorRadius = 0.05f * 0.883f; // baseRadius * meteorRelativeRadius
+	float meteorRadius = 0.05f * 0.883f;
 	for (int i = 0; i < 2; ++i)
 	{
 		meteors[i] = new Meteor(player, player->Radius * 1.7f, "Meteor");
