@@ -64,6 +64,9 @@ void Planet::HandleCollision(UPrimitive* other)
 		player->Velocity.y = normal.y * explosionForce;
 		player->inputLockTimer = player->inputLockDuration;
 
+
+		Moon* moon = dynamic_cast<Moon*>(player);
+		if (moon) return;
 		Explode();
 	}
 
