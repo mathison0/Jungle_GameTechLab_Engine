@@ -291,8 +291,10 @@ void FPrimitivesManager::Render(URenderer& renderer)
 		background->Render(renderer);
 	}
 
-	for (UPrimitive* obj : objects)
+	int lastIdx = (int)objects.size() - 1 ;
+	for (int i = lastIdx; i >= 0; --i)
 	{
+		UPrimitive* obj = objects[i];
 		if (obj != nullptr)
 		{
 			obj->Render(renderer);
