@@ -107,6 +107,8 @@ void FPrimitivesManager::InitializeGameObjects()
 	// Background 생성
 	background = new Image("Background");
 
+	goalLine = new GoalLine("Checkerboard");
+
 	highestPlayerY = 0.0f;
 
 	SpawnPlanetsForAllStages();
@@ -299,6 +301,11 @@ void FPrimitivesManager::Render(URenderer& renderer)
 		{
 			obj->Render(renderer);
 		}
+	}
+
+	if (goalLine)
+	{
+		goalLine->Render(renderer);
 	}
 }
 

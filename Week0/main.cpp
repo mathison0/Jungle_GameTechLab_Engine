@@ -218,7 +218,8 @@ void InitializeRenderer(HWND hWnd)
 		{"TestSprite", L"testSprite.png" },
 		{"Rocket", L"rocket.png"},
 		{"Title", L"title.png" },
-		{"Team", L"team.png"}
+		{"Team", L"team.png"},
+		{"Checkerboard", L"checkerboard.jpg"}
 	};
 
 	for (const auto& tex : textures)

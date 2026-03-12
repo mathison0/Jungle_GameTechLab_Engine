@@ -3,6 +3,7 @@
 #include "planet.h"
 #include "Camera.h"
 #include "Sprite.h"
+#include "GoalLine.h"
 #include "IGameStateListener.h"
 
 #include <string>
@@ -30,6 +31,7 @@ private:
 	Meteor* meteors[2] = { nullptr, nullptr };
 	Camera* camera = nullptr;
 	Image* background = nullptr;
+	GoalLine* goalLine = nullptr;
 
 	float highestPlayerY = 0.0f;
 	bool isRunning = false;

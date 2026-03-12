@@ -239,7 +239,7 @@ void Moon::Render(URenderer& renderer)
 }
 
 void Moon::HandleCollision(UPrimitive* other)
-{
+{  
 	Planet::HandleCollision(other);
 
 	if (!bIsActive || bIsHiddenByCollision)

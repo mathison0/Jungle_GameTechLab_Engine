@@ -3,19 +3,19 @@ SamplerState uiSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float3 Offset;
-    float Angle;
+    float3 Offset;     // 12바이트
+    float Angle;       // 4바이트 (여기까지 16바이트, 1번 레지스터 꽉 참)
     
-    float3 Scale;
-    int Flag;
+    float3 Scale;      // 12바이트
+    int Flag;          // 4바이트 (기존 isUI/uvOffset 대체. 여기까지 16바이트, 2번 레지스터 꽉 참)
     
-    float4 Color;
+    float4 Color;      // 16바이트 (3번 레지스터 꽉 참)
     
-    float2 uvOffset;
-    float2 uvScale;
+    float2 uvOffset;   // 8바이트
+    float2 uvScale;    // 8바이트 (여기까지 16바이트, 4번 레지스터 꽉 참)
     
-    float spinAngle;
-    float3 pad_constants;
+    float spinAngle;   // 4바이트
+    float3 pad_constants; // 12바이트 패딩 (마지막 16바이트 정렬 완벽)
 };
 
 cbuffer ConstantPerFrame : register(b1)

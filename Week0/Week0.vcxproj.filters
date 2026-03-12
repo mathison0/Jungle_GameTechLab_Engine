@@ -87,6 +87,9 @@
     <ClCompile Include="GameEnding.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="GoalLine.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGui\imconfig.h">
@@ -168,6 +171,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalLine.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

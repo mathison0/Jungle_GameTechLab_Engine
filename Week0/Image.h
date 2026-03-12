@@ -21,6 +21,7 @@ protected:
 
 public:
 
+	Image() {}
 	Image(const std::string& textureName) : textureName{ textureName } {}
 	virtual ~Image() {};
 
