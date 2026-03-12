@@ -37,13 +37,6 @@ struct FVector
 	FVector(float _x = 0, float _y = 0, float _z = 0) : x(_x), y(_y), z(_z) {}
 };
 
-FVertexSimple triangle_vertices[] =
-{
-	{  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f }, // Top vertex (red)
-	{  1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f }, // Bottom-right vertex (green)
-	{ -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f }  // Bottom-left vertex (blue)
-};
-
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
 ID3D11Buffer* UBall::PNGSphereVertexBuffer = nullptr;
@@ -233,7 +226,6 @@ void InitializeRenderer(HWND hWnd)
 		{"Rocket", L"rocket.png"},
 		{"Title", L"title.png" },
 		{"Team", L"team.png"}
-
 	};
 
 	for (const auto& tex : textures)
@@ -301,6 +293,7 @@ void WinMainUpdate(HWND hWnd)
 
 	GetCursorPos(&mousePos);
 	ScreenToClient(hWnd, &mousePos);
+
 	// 클라이언트 영역 크기를 동적으로 가져와 NDC(-1..1) 계산
 	RECT clientRect;
 	GetClientRect(hWnd, &clientRect);
