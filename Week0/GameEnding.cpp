@@ -1,4 +1,5 @@
 #include "GameEnding.h"
+#include <cmath>
 
 GameEnding::GameEnding(float triggerHeight, float clearHeight, float slowSpeed)
 	: endingTriggerHeight(triggerHeight)
@@ -27,17 +28,32 @@ void GameEnding::Update(UBall* player, float deltaTime)
 	// Ending 상태 자동 이동 
 	if (state == EGameState::Ending)
 	{
-		// 진행 방향을 속도로 판단, 속도가 거의 0이면 위로 이동
-		FVector3 vel = player->Velocity;
-		float len = vel.Length();
-		FVector3 dir = (len > 1e-6f) ? (vel / len) : FVector3(0.0f, 1.0f, 0.0f);
+		// 목표 지점까지의 방향을 매 프레임 계산
+		FVector3 targetPos(0.0f, clearTargetHeight, 0.0f);
+		FVector3 targetDir = targetPos - player->Location;
+		targetDir.Normalize();
 
-		// 속도를 설정하여 이동
-		player->Velocity = dir * slowSpeed;
+		float currentSpeed = player->Velocity.Length();
+		player->Velocity = targetDir * currentSpeed;
 		player->Move(deltaTime);
 
-		// 감속
-		player->Velocity *= 0.98f;
+		// 기준 방향 벡터 (플레이어의 기본 up 방향: y축)
+		FVector3 baseUp(0.0f, 1.0f, 0.0f);
+
+		// 외적을 사용하여 회전 방향 결정
+		float cross = baseUp.x * targetDir.y - baseUp.y * targetDir.x;
+
+		// 내적을 사용하여 각도 계산
+		float dot = baseUp.x * targetDir.x + baseUp.y * targetDir.y;
+
+		// acos와 부호를 조합하여 각도 계산
+		float targetAngle = acosf(dot);
+		if (cross < 0.0f)
+		{
+			targetAngle = -targetAngle;
+		}
+
+		player->Angle = targetAngle;
 
 		if (player->Location.y >= clearTargetHeight && ctx.GetState() != EGameState::Clear)
 		{
