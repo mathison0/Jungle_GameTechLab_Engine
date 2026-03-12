@@ -466,7 +466,7 @@ void Meteor::HideAndWait()
 void Meteor::RespawnAbovePlayer()
 {
 	bIsWaiting = false;
-	if (!targetPlayer) return;
+	if (!targetPlayer || targetPlayer->Location.y >= 90.f) return;
 
 	float spawnHeight = targetPlayer->Location.y + 3.0f + ((rand() % 1000) / 1000.0f) * 2.0f;
 	float spawnX = targetPlayer->Location.x;

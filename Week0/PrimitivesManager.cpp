@@ -40,11 +40,12 @@ std::vector<std::vector<StageGroup>> FPrimitivesManager::stageGroupData = {
 		{"Jupiter", 5},
 	},
 	{
-		{"Venus", 12},
-		{"Uranus", 12},
-		{"Mercury", 15},
-		{"Pluto", 10},
-		{"Neptune", 5},
+		//좀 더 적은 영역에 배치하므로 개수를 일부 줄임.
+		{"Venus", 10},
+		{"Uranus", 10},
+		{"Mercury", 13},
+		{"Pluto", 8},
+		{"Neptune", 4},
 		{"Jupiter", 5},
 		{"Mars", 5},
 	},
@@ -111,91 +112,6 @@ void FPrimitivesManager::InitializeGameObjects()
 	SpawnPlanetsForAllStages();
 }
 
-//void FPrimitivesManager::SpawnRandomPlanet()
-//{
-//	const float baseRadius = 0.05f;
-//	const float minSpeed = 0.01f;
-//	const float maxSpeed = 0.03f;
-//
-//	int lastIndex = (sizeof(planetDataList) / sizeof(planetDataList[0]));
-//	int randIndex = rand() % lastIndex;
-//	float radius = baseRadius * planetDataList[randIndex].relativeRadius;
-//
-//	FVector3 newPos;
-//	bool bPositionValid = false;
-//	const int maxAttempts = 100;
-//
-//	for (int attempt = 0; attempt < maxAttempts; ++attempt)
-//	{
-//		float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f;
-//		float offsetY = ((rand() % 1000) / 1000.0f) * 0.5f;
-//		float newY = spawnBaseY + 1.5f + offsetY;
-//		newPos = FVector3(newX, newY, 0.0f);
-//
-//		bPositionValid = true;
-//
-//		for (UPrimitive* obj : objects)
-//		{
-//			if (obj == nullptr) continue;
-//			UBall* bobj = dynamic_cast<UBall*>(obj);
-//			if (!bobj) continue;
-//
-//			float dx = newPos.x - bobj->Location.x;
-//			float dy = newPos.y - bobj->Location.y;
-//			float distance = sqrtf(dx * dx + dy * dy);
-//
-//			float minSpacing = (radius + bobj->Radius) * 1.5f;
-//
-//			if (distance < minSpacing)
-//			{
-//				bPositionValid = false;
-//				break;
-//			}
-//		}
-//		if (bPositionValid) break;
-//	}
-//
-//	float randomAngle = (rand() % 360) * (FVector3::PI / 180.0f);
-//	float randomSpeed = minSpeed + ((rand() % 1000) / 1000.0f) * (maxSpeed - minSpeed);
-//	float sizeMultiplier = 0.05f / sqrtf(radius);
-//	randomSpeed *= sizeMultiplier;
-//
-//	FVector3 randomVelocity;
-//	std::string planetName = planetDataList[randIndex].name;
-//
-//	if (planetName == "Meteor")
-//	{
-//		randomVelocity.x = (((rand() % 100) / 100.0f) - 0.5f) * 0.02f;
-//		randomVelocity.y = -(randomSpeed * 2.0f);
-//		randomVelocity.z = 0.0f;
-//	}
-//	else
-//	{
-//		randomVelocity.x = cosf(randomAngle) * randomSpeed;
-//		randomVelocity.y = sinf(randomAngle) * randomSpeed;
-//		randomVelocity.z = 0.0f;
-//	}
-//
-//	Planet* newPlanet = nullptr;
-//	if (planetName == "Jupiter")
-//	{
-//		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::pull);
-//		newPlanet->brightness = 1.5f;
-//	}
-//	else if (planetName == "Mars")
-//	{
-//		newPlanet = new GravityPlanet(newPos, randomVelocity, radius, planetName, PlanetType::push);
-//		newPlanet->brightness = 1.5f;
-//	}
-//	else
-//	{
-//		newPlanet = new Planet(newPos, randomVelocity, radius, planetName);
-//		newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
-//	}
-//
-//	AddObject(newPlanet);
-//}
-
 void FPrimitivesManager::SpawnPlanetsForAllStages()
 {
 	for (int stageIndex = 0; stageIndex < 5; ++stageIndex)
@@ -210,10 +126,12 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 	{
 		return;
 	}
+	//최대 초기화 시도 횟수이며 겹치는 경우를 허용합니다. 행성의 개수가 많지 않기에 1000번 시도해도 큰 오버헤드가 아닙니다.
+	const int maxAttempts = 1000;
 
 	const float baseRadius = 0.05f;
 	const float minHeight = GameContext::MinHeight;
-	const float maxHeight = GameContext::MaxHeight - 2.0f;;
+	const float maxHeight = GameContext::MaxHeight - 1.5f;
 	const float heightRange = maxHeight - minHeight;
 	const float stageHeight = heightRange / 5.0f;
 	const float stageMinY = minHeight + (stageIndex * stageHeight);
@@ -221,7 +139,7 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 
 	const std::vector<StageGroup>& currentStageGroups = stageGroupData[stageIndex];
 
-	// 각 그룹의 행성들을 생성
+	// 각 그룹의 행성들을 가져와 차례대로 배치합니다.
 	for (const StageGroup& group : currentStageGroups)
 	{
 		PlanetData* planetData = nullptr;
@@ -241,20 +159,20 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 		}
 		
 		float radius = baseRadius * planetData->relativeRadius;
+		float expandedStageMinY = stageMinY - 0.5f;
+		//마지막 스테이지에서는 y값을 확장하지 않습니다(치트 생성 후 제대로 반영되었는지 확인)
+		float expandedStageMaxY = (stageIndex != (int)stageGroupData.size() -1) ? stageMaxY + 8.5f : stageMaxY;
 
 		//해당 그룹의 행성 개수만큼 생성
 		for (int i = 0; i < group.count; ++i)
 		{
 			FVector3 newPos;
 			bool bPositionValid = false;
-			const int maxAttempts = 1200;
 
 			//겹치지 않는 위치 찾기
 			for (int attempt = 0; attempt < maxAttempts; ++attempt)
 			{
 				float newX = ((rand() % 1000) / 1000.0f) * 2.0f - 1.0f;
-				float expandedStageMinY = stageMinY - 0.5f;
-				float expandedStageMaxY = stageMaxY + 8.5f;
 				float newY = expandedStageMinY + ((rand() % 1000) / 1000.0f) * (expandedStageMaxY - expandedStageMinY);
 				newPos = FVector3(newX, newY, 0.0f);
 
@@ -279,30 +197,25 @@ void FPrimitivesManager::SpawnPlanetsForStage(int stageIndex)
 						break;
 					}
 				}
-
 				if (bPositionValid) break;
 			}
 
-			// 행성 생성 (고정, velocity = 0)
 			FVector3 zeroVelocity(0.0f, 0.0f, 0.0f);
 			Planet* newPlanet = nullptr;
 
 			if (planetData->name == "Jupiter")
 			{
 				newPlanet = new GravityPlanet(newPos, zeroVelocity, radius, planetData->name, PlanetType::pull);
-				newPlanet->brightness = 1.5f;
 			}
 			else if (planetData->name == "Mars")
 			{
 				newPlanet = new GravityPlanet(newPos, zeroVelocity, radius, planetData->name, PlanetType::push);
-				newPlanet->brightness = 1.5f;
 			}
 			else
 			{
 				newPlanet = new Planet(newPos, zeroVelocity, radius, planetData->name);
-				newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
 			}
-
+			newPlanet->brightness = 0.7f + (rand() % 40) / 100.0f;
 			AddObject(newPlanet);
 		}
 	}
