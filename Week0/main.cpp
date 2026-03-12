@@ -2,9 +2,7 @@
 #include <windows.h>
 #include "dx11math.h"
 struct FVector3;
-/*
-리팩토링 필
-*/
+
 // D3D Library Linking
 #pragma comment(lib, "user32")
 #pragma comment(lib, "d3d11")
@@ -29,13 +27,6 @@ struct FVector3;
 #include "UIManager.h"
 #include "GameContext.h"
 #include "GameEnding.h"
-
-
-struct FVector
-{
-	float x, y, z;
-	FVector(float _x = 0, float _y = 0, float _z = 0) : x(_x), y(_y), z(_z) {}
-};
 
 ID3D11Buffer* UBall::SphereVertexBuffer = nullptr;
 ID3D11Buffer* UBall::CubeVertexBuffer = nullptr;
@@ -98,7 +89,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
 	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	WCHAR WindowClass[] = L"JungleWindowClass";
-	WCHAR Title[] = L"Game Tech Lab";
+	WCHAR Title[] = L"ByeBye SolarSystem";
 
 	WNDCLASSW wndclass = { 0, WndProc, 0, 0, 0, 0, 0, 0, 0, WindowClass };
 	RegisterClassW(&wndclass);
