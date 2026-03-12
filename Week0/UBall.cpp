@@ -204,6 +204,7 @@ void UBall::Render(URenderer& renderer)
 
 		if (bIsDamaged)
 		{
+			leftWingSprite->SetFrame(1,0);
 			float blinkAlpha = (sin(inputLockTimer * 20.0f) * 0.5f) + 0.5f;
 			leftWingSprite->SetAlpha(blinkAlpha);
 		}
@@ -230,6 +231,7 @@ void UBall::Render(URenderer& renderer)
 
 		if (bIsDamaged)
 		{
+			rightWingSprite->SetFrame(1, 0);
 			float blinkAlpha = (sin(inputLockTimer * 20.0f) * 0.5f) + 0.5f;
 			rightWingSprite->SetAlpha(blinkAlpha);
 		}
