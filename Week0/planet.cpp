@@ -230,8 +230,18 @@ void Moon::Update(float t)
 	Location.y += Velocity.y * t;
 }
 
+void Moon::Render(URenderer& renderer)
+{
+	if (bIsActive)
+	{
+		Planet::Render(renderer);
+	}
+}
+
 void Moon::HandleCollision(UPrimitive* other)
 {
+	Planet::HandleCollision(other);
+
 	if (!bIsActive || bIsHiddenByCollision)
 	{
 		return;

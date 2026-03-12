@@ -49,6 +49,7 @@ public:
 	void SetRotationSpeed(float speed) { RotationSpeed = speed; }
 	
 	void Update(float t) override;
+	virtual void Render(URenderer& renderer) override;
 	virtual void HandleCollision(UPrimitive* other) override;
 };
 
