@@ -1,5 +1,5 @@
 #pragma once
-#include "FVertex.h"
+#include "Core/Core.h"
 
 FVertex sphere_vertices[] = {
 	{ 0.000000f, 1.000000f, 0.000000f, 0.500000f, 1.000000f, 0.500000f, 1.000000f },
