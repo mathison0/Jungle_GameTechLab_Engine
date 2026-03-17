@@ -5,13 +5,14 @@
 class UStaticMesh;
 class UStaticMeshComponent;
 
-class ASphere : public APrimitiveActor
+class ATorus : public APrimitiveActor
 {
-    DECLARE_UClass(ASphere, APrimitiveActor)
+    DECLARE_UClass(ATorus, APrimitiveActor)
 
 public:
-    ASphere();
-    virtual ~ASphere() override;
+
+    ATorus();
+    virtual ~ATorus() override;
 
 public:
     void SetStaticMesh(UStaticMesh* InStaticMesh);

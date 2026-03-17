@@ -1,18 +1,20 @@
-#include "Actor/ATriangle.h"
+#include "Actor/ATorus.h"
+
+#include "FUObjectFactory.h"
 #include "Component/UStaticMeshComponent.h"
 #include "Resource/UStaticMesh.h"
 
-ATriangle::ATriangle()
+ATorus::ATorus()
     : APrimitiveActor()
 {
     InitializeActor();
 }
 
-ATriangle::~ATriangle()
+ATorus::~ATorus()
 {
 }
 
-void ATriangle::SetStaticMesh(UStaticMesh* InStaticMesh)
+void ATorus::SetStaticMesh(UStaticMesh* InStaticMesh)
 {
     if (!StaticMeshComponent)
     {
@@ -22,7 +24,7 @@ void ATriangle::SetStaticMesh(UStaticMesh* InStaticMesh)
     StaticMeshComponent->SetStaticMesh(InStaticMesh);
 }
 
-UStaticMesh* ATriangle::GetStaticMesh() const
+UStaticMesh* ATorus::GetStaticMesh() const
 {
     if (!StaticMeshComponent)
     {
@@ -32,13 +34,13 @@ UStaticMesh* ATriangle::GetStaticMesh() const
     return StaticMeshComponent->GetStaticMesh();
 }
 
-UStaticMeshComponent* ATriangle::GetStaticMeshComponent() const
+UStaticMeshComponent* ATorus::GetStaticMeshComponent() const
 {
     return StaticMeshComponent;
 }
 
-void ATriangle::InitializeActor()
+void ATorus::InitializeActor()
 {
-    StaticMeshComponent = new UStaticMeshComponent();
+    StaticMeshComponent = NewObject<UStaticMeshComponent>("TorusStaticMeshComponent");
     SetPrimitiveComponent(StaticMeshComponent);
 }
