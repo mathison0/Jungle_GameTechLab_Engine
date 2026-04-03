@@ -26,13 +26,8 @@ FString FObjManager::GetBinaryFilePath(const FString& OriginalPath)
 	}
 
 	// obj 등 원본 메시 경로가 들어온 경우에는 MeshCache 아래에 bin 생성
-	static bool bCacheDirCreated = false;
-	if (!bCacheDirCreated)
-	{
-		std::wstring CacheDir = FPaths::RootDir() + L"Asset\\MeshCache\\";
-		FPaths::CreateDir(CacheDir);
-		bCacheDirCreated = true;
-	}
+	std::wstring CacheDir = FPaths::RootDir() + L"Asset\\MeshCache\\";
+	FPaths::CreateDir(CacheDir);
 
 	// 상대 경로로 반환
 	std::filesystem::path RelPath = std::filesystem::path(L"Asset\\MeshCache") / SrcPath.stem();
@@ -52,7 +47,9 @@ FString FObjManager::GetMBinaryFilePath(const FString& OriginalPath)
 		return OriginalPath;
 	}
 
-	// GetBinaryFilePath 에서 이미 생성하므로 중복 호출 불필요
+	// obj 등 원본 메시 경로가 들어온 경우에는 MeshCache 아래에 bin 생성
+	std::wstring CacheDir = FPaths::RootDir() + L"Asset\\MeshCache\\";
+	FPaths::CreateDir(CacheDir);
 
 	// 상대 경로로 반환
 	std::filesystem::path RelPath = std::filesystem::path(L"Asset\\MeshCache") / SrcPath.stem();
@@ -219,6 +216,10 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const F
 	StaticMesh->InitResources(InDevice);
 	StaticMeshCache[CacheKey] = StaticMesh;
 
+	// 리프레시
+	ScanMeshAssets();
+	ScanMaterialAssets();
+
 	return StaticMesh;
 }
 
@@ -307,6 +308,9 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, ID3D11D
 
 	// 캐시 등록
 	StaticMeshCache[CacheKey] = StaticMesh;
+
+	ScanMeshAssets();
+	ScanMaterialAssets();
 
 	return StaticMesh;
 }

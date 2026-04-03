@@ -4,15 +4,8 @@
 #include "Math/Vector.h"
 
 struct FStaticMesh;
+struct FStaticMeshSection;
 struct FStaticMaterial;
-
-// 파싱 전용 섹션 — 직렬화되지 않음. usemtl 이름으로 구간을 식별합니다.
-struct FRawMeshSection
-{
-	FString MaterialNameInObjFile = "None";
-	uint32 FirstIndex = 0;
-	uint32 NumTriangles = 0;
-};
 
 // Raw Data — OBJ 파싱 직후 상태
 struct FObjInfo
@@ -27,13 +20,13 @@ struct FObjInfo
 	FString ObjectName; // object name (optional)
 
 	FString MaterialLibraryFilePath;
-	TArray<FRawMeshSection> Sections; // 파싱 단계 전용, Convert 후 FStaticMeshSection(MaterialIndex)으로 변환됨
+	TArray<FStaticMeshSection> Sections;
 };
 
 // MTL 재질 정보
 struct FObjMaterialInfo
 {
-	FString MaterialNameInMtlFile = "None"; // newmtl
+	FString MaterialSlotName = "None"; // newmtl
 	FVector Kd; // diffuse color
 	FString map_Kd; // diffuse texture file path
 

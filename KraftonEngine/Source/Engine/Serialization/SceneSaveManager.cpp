@@ -17,7 +17,6 @@
 #include "Object/ObjectFactory.h"
 #include "Core/PropertyTypes.h"
 #include "Object/FName.h"
-#include "Mesh/ObjManager.h"
 
 // ---- JSON vector helpers ---------------------------------------------------
 
@@ -68,6 +67,13 @@ static const char* WorldTypeToString(EWorldType Type)
 	case EWorldType::PIE:  return "PIE";
 	default:               return "Editor";
 	}
+}
+
+static EWorldType StringToWorldType(const string& Str)
+{
+	if (Str == "Game") return EWorldType::Game;
+	if (Str == "PIE")  return EWorldType::PIE;
+	return EWorldType::Editor;
 }
 
 // ============================================================
@@ -130,9 +136,25 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 			FVector scale = M.GetScale();
 
 			p["ObjStaticMeshAsset"] = S->GetStaticMeshPath();
-			WriteVec3(p, "Location", loc);
-			WriteVec3(p, "Rotation", rot);
-			WriteVec3(p, "Scale",    scale);
+
+			JSON locArr = json::Array();
+			locArr.append(static_cast<double>(loc.X));
+			locArr.append(static_cast<double>(loc.Y));
+			locArr.append(static_cast<double>(loc.Z));
+			p["Location"] = locArr;
+
+			JSON rotArr = json::Array();
+			rotArr.append(static_cast<double>(rot.X));
+			rotArr.append(static_cast<double>(rot.Y));
+			rotArr.append(static_cast<double>(rot.Z));
+			p["Rotation"] = rotArr;
+
+			JSON scaleArr = json::Array();
+			scaleArr.append(static_cast<double>(scale.X));
+			scaleArr.append(static_cast<double>(scale.Y));
+			scaleArr.append(static_cast<double>(scale.Z));
+			p["Scale"] = scaleArr;
+
 			p["Type"] = "StaticMeshComp";
 
 			// Note: per design, material/UV overrides are stored on the Actor->RootComponent Properties
@@ -248,7 +270,14 @@ json::JSON FSceneSaveManager::SerializePropertyValue(const FPropertyDescriptor& 
 	case EPropertyType::Float:
 		return JSON(static_cast<double>(*static_cast<float*>(Prop.ValuePtr)));
 
-	case EPropertyType::Vec3:
+	case EPropertyType::Vec3: {
+		float* v = static_cast<float*>(Prop.ValuePtr);
+		JSON arr = json::Array();
+		arr.append(static_cast<double>(v[0]));
+		arr.append(static_cast<double>(v[1]));
+		arr.append(static_cast<double>(v[2]));
+		return arr;
+	}
 	case EPropertyType::Rotator: {
 		float* v = static_cast<float*>(Prop.ValuePtr);
 		JSON arr = json::Array();
@@ -270,10 +299,11 @@ json::JSON FSceneSaveManager::SerializePropertyValue(const FPropertyDescriptor& 
 	case EPropertyType::StaticMeshRef:
 		return JSON(*static_cast<FString*>(Prop.ValuePtr));
 
-	case EPropertyType::MaterialRef: {
-		const FString* SlotPath = static_cast<const FString*>(Prop.ValuePtr);
+	case EPropertyType::MaterialSlot: {
+		const FMaterialSlot* Slot = static_cast<const FMaterialSlot*>(Prop.ValuePtr);
 		JSON obj = json::Object();
-		obj["Path"] = JSON(*SlotPath);
+		obj["Path"]      = JSON(Slot->Path);
+		obj["UVScroll"]  = JSON(static_cast<bool>(Slot->bUVScroll != 0));
 		return obj;
 	}
 
@@ -310,34 +340,48 @@ json::JSON FSceneSaveManager::SerializeCamera(UCameraComponent* Cam)
 
 void FSceneSaveManager::DeserializePrimitives(json::JSON& Primitives, UWorld* World, std::unordered_map<string, AActor*>& OutCreatedActors)
 {
-	for (auto& kv : Primitives.ObjectRange()) {
-		const string& Key  = kv.first;
-		json::JSON    Entry = kv.second;
+	using namespace json;
+	for (auto it = Primitives.ObjectRange().begin(); it != Primitives.ObjectRange().end(); ++it) {
+		const auto& kv = *it;
+		const string& Key = kv.first;
+		JSON Entry = kv.second;
 
-		if (!Entry.hasKey("Type") || Entry["Type"].ToString() != "StaticMeshComp") continue;
+		if (!Entry.hasKey("Type")) continue;
+		if (Entry["Type"].ToString() != "StaticMeshComp") continue;
 
-		string MeshPath = Entry.hasKey("ObjStaticMeshAsset") ? Entry["ObjStaticMeshAsset"].ToString() : "None";
+		string MeshPath = Entry.hasKey("ObjStaticMeshAsset") ? Entry["ObjStaticMeshAsset"].ToString() : string("None");
 
+		// Spawn a static mesh actor and initialize
 		AStaticMeshActor* Actor = World->SpawnActor<AStaticMeshActor>();
 		if (!Actor) continue;
 		Actor->InitDefaultComponents(FString(MeshPath));
 		OutCreatedActors[Key] = Actor;
 
-		if (Entry.hasKey("Location")) Actor->SetActorLocation(ReadVec3(Entry["Location"]));
-		if (Entry.hasKey("Rotation")) Actor->SetActorRotation(ReadVec3(Entry["Rotation"]));
-		if (Entry.hasKey("Scale"))    Actor->SetActorScale(ReadVec3(Entry["Scale"]));
-		// Material/UV overrides are applied later via RootComponent Properties
-	}
-}
+		// Location / Rotation / Scale
+		if (Entry.hasKey("Location")) {
+			auto locjson = Entry["Location"];
+			float lx = 0, ly = 0, lz = 0;
+			int i = 0;
+			for (auto& e : locjson.ArrayRange()) { if (i==0) lx = static_cast<float>(e.ToFloat()); else if (i==1) ly = static_cast<float>(e.ToFloat()); else if (i==2) lz = static_cast<float>(e.ToFloat()); i++; }
+			Actor->SetActorLocation(FVector(lx, ly, lz));
+		}
+		if (Entry.hasKey("Rotation")) {
+			auto rotjson = Entry["Rotation"];
+			float rx = 0, ry = 0, rz = 0;
+			int i = 0;
+			for (auto& e : rotjson.ArrayRange()) { if (i==0) rx = static_cast<float>(e.ToFloat()); else if (i==1) ry = static_cast<float>(e.ToFloat()); else if (i==2) rz = static_cast<float>(e.ToFloat()); i++; }
+			Actor->SetActorRotation(FVector(rx, ry, rz));
+		}
+		if (Entry.hasKey("Scale")) {
+			auto sjson = Entry["Scale"];
+			float sx = 1, sy = 1, sz = 1;
+			int i = 0;
+			for (auto& e : sjson.ArrayRange()) { if (i==0) sx = static_cast<float>(e.ToFloat()); else if (i==1) sy = static_cast<float>(e.ToFloat()); else if (i==2) sz = static_cast<float>(e.ToFloat()); i++; }
+			Actor->SetActorScale(FVector(sx, sy, sz));
+		}
 
-// Competition 포맷에서 FOV/NearClip/FarClip이 단일 원소 배열([60.0])로 오는 경우를 처리
-static float ReadScalarOrArray(json::JSON& Val)
-{
-	if (Val.JSONType() == json::JSON::Class::Array) {
-		for (auto& e : Val.ArrayRange()) return static_cast<float>(e.ToFloat());
-		return 0.0f;
+		// Material/UV overrides are applied later when deserializing the Actor's RootComponent properties
 	}
-	return static_cast<float>(Val.ToFloat());
 }
 
 void FSceneSaveManager::DeserializeCamera(json::JSON& CameraJSON, FPerspectiveCameraData& OutCam)
@@ -347,9 +391,9 @@ void FSceneSaveManager::DeserializeCamera(json::JSON& CameraJSON, FPerspectiveCa
 
 	if (CameraJSON.hasKey("Location")) OutCam.Location = ReadVec3(CameraJSON["Location"]);
 	if (CameraJSON.hasKey("Rotation")) OutCam.Rotation = ReadVec3(CameraJSON["Rotation"]);
-	if (CameraJSON.hasKey("FOV"))      OutCam.FOV      = ReadScalarOrArray(CameraJSON["FOV"]);
-	if (CameraJSON.hasKey("NearClip")) OutCam.NearClip = ReadScalarOrArray(CameraJSON["NearClip"]);
-	if (CameraJSON.hasKey("FarClip"))  OutCam.FarClip  = ReadScalarOrArray(CameraJSON["FarClip"]);
+	if (CameraJSON.hasKey("FOV"))      OutCam.FOV      = static_cast<float>(CameraJSON["FOV"].ToFloat());
+	if (CameraJSON.hasKey("NearClip")) OutCam.NearClip = static_cast<float>(CameraJSON["NearClip"].ToFloat());
+	if (CameraJSON.hasKey("FarClip"))  OutCam.FarClip  = static_cast<float>(CameraJSON["FarClip"].ToFloat());
 	OutCam.bValid = true;
 }
 
@@ -371,21 +415,21 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 
 	JSON root = JSON::Load(FileContent);
 
-	// ClassName은 힌트: 명시된 클래스로 시도 후 실패 시 UWorld로 폴백
-	string ClassHint = root.hasKey(SceneKeys::ClassName) ? root[SceneKeys::ClassName].ToString() : "UWorld";
-	UObject* WorldObj = FObjectFactory::Get().Create(ClassHint);
-	if (!WorldObj || !WorldObj->IsA<UWorld>()) WorldObj = FObjectFactory::Get().Create("UWorld");
+	string ClassName = root[SceneKeys::ClassName].ToString();
+	UObject* WorldObj = FObjectFactory::Get().Create(ClassName);
 	if (!WorldObj || !WorldObj->IsA<UWorld>()) return;
 
 	UWorld* World = static_cast<UWorld*>(WorldObj);
 
-	// WorldType/ContextName/ContextHandle은 메타데이터: 항상 에디터 기본값 사용,
-	// 씬 이름은 파일 경로의 stem에서 추출
-	EWorldType WorldType = EWorldType::Editor;
-	FString ContextName = FPaths::ToUtf8(
-		std::filesystem::path(FPaths::ToWide(filepath)).stem().wstring()
-	);
-	FString ContextHandle = ContextName;
+	EWorldType WorldType = root.hasKey(SceneKeys::WorldType)
+		? StringToWorldType(root[SceneKeys::WorldType].ToString())
+		: EWorldType::Editor;
+	FString ContextName = root.hasKey(SceneKeys::ContextName)
+		? root[SceneKeys::ContextName].ToString()
+		: "Loaded Scene";
+	FString ContextHandle = root.hasKey(SceneKeys::ContextHandle)
+		? root[SceneKeys::ContextHandle].ToString()
+		: ContextName;
 
 	// Deserialize Primitives (top-level) and Camera first
 	std::unordered_map<string, AActor*> CreatedFromPrimitives;
@@ -404,13 +448,6 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 	}
 
 	// Deserialize Actors
-	if (!root.hasKey(SceneKeys::Actors)) {
-		OutWorldContext.WorldType = WorldType;
-		OutWorldContext.World = World;
-		OutWorldContext.ContextName = ContextName;
-		OutWorldContext.ContextHandle = FName(ContextHandle);
-		return;
-	}
 	for (auto& ActorJSON : root[SceneKeys::Actors].ArrayRange()) {
 		string ActorClass = ActorJSON[SceneKeys::ClassName].ToString();
 		// If this actor references a PrimitiveKey and that primitive already created an actor,
@@ -465,10 +502,6 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 			}
 		}
 	}
-
-	// 씬 로드 완료 후 에셋 목록 1회 갱신
-	FObjManager::ScanMeshAssets();
-	FObjManager::ScanMaterialAssets();
 
 	OutWorldContext.WorldType = WorldType;
 	OutWorldContext.World = World;
@@ -535,21 +568,28 @@ void FSceneSaveManager::DeserializeSceneComponentIntoExisting(USceneComponent* E
 
 void FSceneSaveManager::DeserializeProperties(UActorComponent* Comp, json::JSON& PropsJSON)
 {
-	auto ApplyProp = [&](FPropertyDescriptor& Prop) {
-		if (!PropsJSON.hasKey(Prop.Name.c_str())) return;
+	TArray<FPropertyDescriptor> Descriptors;
+	Comp->GetEditableProperties(Descriptors);
+
+	for (auto& Prop : Descriptors) {
+		if (!PropsJSON.hasKey(Prop.Name.c_str())) continue;
 		auto Value = PropsJSON[Prop.Name.c_str()];
 		DeserializePropertyValue(Prop, Value);
 		Comp->PostEditProperty(Prop.Name.c_str());
-	};
+	}
 
-	TArray<FPropertyDescriptor> Before;
-	Comp->GetEditableProperties(Before);
-	for (auto& Prop : Before) ApplyProp(Prop);
+	// 2nd pass: PostEditProperty가 새 프로퍼티를 추가할 수 있음
+	// (예: SetStaticMesh → MaterialSlots 생성 → "Element N" 디스크립터 추가)
+	TArray<FPropertyDescriptor> Descriptors2;
+	Comp->GetEditableProperties(Descriptors2);
 
-	// PostEditProperty가 새 디스크립터를 추가할 수 있음 (예: SetStaticMesh → MaterialSlots)
-	TArray<FPropertyDescriptor> After;
-	Comp->GetEditableProperties(After);
-	for (size_t i = Before.size(); i < After.size(); ++i) ApplyProp(After[i]);
+	for (size_t i = Descriptors.size(); i < Descriptors2.size(); ++i) {
+		auto& Prop = Descriptors2[i];
+		if (!PropsJSON.hasKey(Prop.Name.c_str())) continue;
+		auto Value = PropsJSON[Prop.Name.c_str()];
+		DeserializePropertyValue(Prop, Value);
+		Comp->PostEditProperty(Prop.Name.c_str());
+	}
 }
 
 void FSceneSaveManager::DeserializePropertyValue(FPropertyDescriptor& Prop, json::JSON& Value)
@@ -571,7 +611,15 @@ void FSceneSaveManager::DeserializePropertyValue(FPropertyDescriptor& Prop, json
 		*static_cast<float*>(Prop.ValuePtr) = static_cast<float>(Value.ToFloat());
 		break;
 
-	case EPropertyType::Vec3:
+	case EPropertyType::Vec3: {
+		float* v = static_cast<float*>(Prop.ValuePtr);
+		int i = 0;
+		for (auto& elem : Value.ArrayRange()) {
+			if (i < 3) v[i] = static_cast<float>(elem.ToFloat());
+			i++;
+		}
+		break;
+	}
 	case EPropertyType::Rotator: {
 		float* v = static_cast<float*>(Prop.ValuePtr);
 		int i = 0;
@@ -595,9 +643,10 @@ void FSceneSaveManager::DeserializePropertyValue(FPropertyDescriptor& Prop, json
 		*static_cast<FString*>(Prop.ValuePtr) = Value.ToString();
 		break;
 
-	case EPropertyType::MaterialRef: {
-		FString* SlotPath = static_cast<FString*>(Prop.ValuePtr);
-		if (Value.hasKey("Path")) *SlotPath = Value["Path"].ToString();
+	case EPropertyType::MaterialSlot: {
+		FMaterialSlot* Slot = static_cast<FMaterialSlot*>(Prop.ValuePtr);
+		if (Value.hasKey("Path"))     Slot->Path      = Value["Path"].ToString();
+		if (Value.hasKey("UVScroll")) Slot->bUVScroll = Value["UVScroll"].ToBool() ? 1 : 0;
 		break;
 	}
 
@@ -636,12 +685,9 @@ TArray<FString> FSceneSaveManager::GetSceneFileList()
 
 	for (auto& Entry : std::filesystem::directory_iterator(SceneDir))
 	{
-		if (!Entry.is_regular_file()) continue;
-		std::wstring Ext = Entry.path().extension().wstring();
-		if (Ext == L".Scene" || Ext == L".scene")
+		if (Entry.is_regular_file() && Entry.path().extension() == SceneExtension)
 		{
-			// stem + 원본 확장자를 함께 저장 (대/소문자 보존)
-			Result.push_back(FPaths::ToUtf8(Entry.path().filename().wstring()));
+			Result.push_back(FPaths::ToUtf8(Entry.path().stem().wstring()));
 		}
 	}
 	return Result;

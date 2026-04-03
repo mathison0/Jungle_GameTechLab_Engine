@@ -12,7 +12,12 @@ PS_Input_Full VS(VS_Input_PNCT input)
     output.normal = normalize(mul(input.normal, (float3x3) Model));
     output.color = input.color * PrimitiveColor;
 
-    output.texcoord = input.texcoord;
+    float2 texcoord = input.texcoord;
+    if (bIsUVScroll != 0)
+    {
+        texcoord.x += Time * 0.5f; // 가로 방향으로 스크롤 예시
+    }
+    output.texcoord = texcoord;
 
     return output;
 }

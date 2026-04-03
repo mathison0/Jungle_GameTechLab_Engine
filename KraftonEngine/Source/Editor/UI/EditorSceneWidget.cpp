@@ -98,27 +98,19 @@ void FEditorSceneWidget::Render(float DeltaTime)
 
 	if (!SceneFiles.empty())
 	{
-		// SceneFiles에는 "A.Scene" / "A.scene" 형태의 파일명이 들어있으므로
-		// Combo 표시용으로 확장자를 제거한 stem 목록을 별도 구성
-		TArray<FString> SceneStems;
-		SceneStems.reserve(SceneFiles.size());
-		for (const auto& F : SceneFiles)
-			SceneStems.push_back(FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(F)).stem().wstring()));
-
 		auto SceneNameGetter = [](void* Data, int32 Idx) -> const char*
 			{
-				auto* Stems = static_cast<TArray<FString>*>(Data);
-				if (Idx < 0 || Idx >= static_cast<int32>(Stems->size())) return nullptr;
-				return (*Stems)[Idx].c_str();
+				auto* Files = static_cast<TArray<FString>*>(Data);
+				if (Idx < 0 || Idx >= static_cast<int32>(Files->size())) return nullptr;
+				return (*Files)[Idx].c_str();
 			};
 
-		ImGui::Combo("Scene File", &SelectedSceneIndex, SceneNameGetter, &SceneStems, static_cast<int32>(SceneStems.size()));
+		ImGui::Combo("Scene File", &SelectedSceneIndex, SceneNameGetter, &SceneFiles, static_cast<int32>(SceneFiles.size()));
 
 		if (ImGui::Button("Load Scene") && SelectedSceneIndex >= 0)
 		{
-			// 원본 확장자(.Scene / .scene)를 그대로 사용
 			std::filesystem::path ScenePath = std::filesystem::path(FSceneSaveManager::GetSceneDirectory())
-				/ FPaths::ToWide(SceneFiles[SelectedSceneIndex]);
+				/ (FPaths::ToWide(SceneFiles[SelectedSceneIndex]) + FSceneSaveManager::SceneExtension);
 			FString FilePath = FPaths::ToUtf8(ScenePath.wstring());
 
 			EditorEngine->ClearScene();

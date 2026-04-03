@@ -540,10 +540,10 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyDescriptor>& Pr
 		}
 		break;
 	}
-	case EPropertyType::MaterialRef:
+	case EPropertyType::MaterialSlot:
 	{
-		FString* Slot    = static_cast<FString*>(Prop.ValuePtr);
-		int32    ElemIdx = (strncmp(Prop.Name.c_str(), "Element ", 8) == 0) ? atoi(&Prop.Name[8]) : -1;
+		FMaterialSlot* Slot    = static_cast<FMaterialSlot*>(Prop.ValuePtr);
+		int32          ElemIdx = (strncmp(Prop.Name.c_str(), "Element ", 8) == 0) ? atoi(&Prop.Name[8]) : -1;
 
 		FString SlotName = "None";
 		if (ElemIdx != -1 && SelectedComponent && SelectedComponent->IsA<UStaticMeshComponent>())
@@ -553,20 +553,29 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyDescriptor>& Pr
 				SlotName = SMC->GetStaticMesh()->GetStaticMaterials()[ElemIdx].MaterialSlotName;
 		}
 
-		// 첫 줄: 좌측 Element 인덱스, 우측 Material 콤보
+		// 좌측: Element 인덱스 + 슬롯 이름
+		ImGui::BeginGroup();
 		ImGui::Text("Element %d", ElemIdx);
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+		ImGui::TextUnformatted(SlotName.c_str());
+		ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", SlotName.c_str());
+		ImGui::EndGroup();
 
 		ImGui::SameLine(120);
+
+		// 우측: Material 콤보 + UVScroll 체크박스
+		ImGui::BeginGroup();
 		ImGui::SetNextItemWidth(-1);
 
-		FString Preview = (Slot->empty() || *Slot == "None") ? "None" : GetStemFromPath(*Slot);
+		FString Preview = (Slot->Path.empty() || Slot->Path == "None") ? "None" : GetStemFromPath(Slot->Path);
 		if (ImGui::BeginCombo("##Mat", Preview.c_str()))
 		{
 			// "None" 선택지 기본 제공
-			bool bSelectedNone = (*Slot == "None" || Slot->empty());
+			bool bSelectedNone = (Slot->Path == "None" || Slot->Path.empty());
 			if (ImGui::Selectable("None", bSelectedNone))
 			{
-				*Slot = "None";
+				Slot->Path = "None";
 				bChanged = true;
 			}
 			if (bSelectedNone) ImGui::SetItemDefaultFocus();
@@ -575,10 +584,10 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyDescriptor>& Pr
 			const TArray<FMaterialAssetListItem>& MatFiles = FObjManager::GetAvailableMaterialFiles();
 			for (const FMaterialAssetListItem& Item : MatFiles)
 			{
-				bool bSelected = (*Slot == Item.FullPath);
+				bool bSelected = (Slot->Path == Item.FullPath);
 				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
 				{
-					*Slot = Item.FullPath; // 데이터는 전체 경로로 저장
+					Slot->Path = Item.FullPath; // 데이터는 전체 경로로 저장
 					bChanged = true;
 				}
 				if (bSelected) ImGui::SetItemDefaultFocus();
@@ -586,10 +595,12 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyDescriptor>& Pr
 			ImGui::EndCombo();
 		}
 
-		// 두 번째 줄: 좌측 SlotName (회색) - 기능은 UI상에 표시만 되도록 유지
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-		ImGui::TextUnformatted(SlotName.c_str());
-		ImGui::PopStyleColor();
+		// UVScroll 체크박스 — 렌더러가 매 프레임 직접 읽으므로 PostEditProperty 불필요
+		bool bScroll = (Slot->bUVScroll != 0);
+		if (ImGui::Checkbox("Scroll", &bScroll))
+			Slot->bUVScroll = bScroll ? 1 : 0;
+
+		ImGui::EndGroup();
 		break;
 	}
 	case EPropertyType::Name:

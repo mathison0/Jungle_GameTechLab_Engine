@@ -23,13 +23,14 @@ struct FNormalVertex
 
 struct FStaticMeshSection
 {
-	int32 MaterialIndex = -1; // Index into UStaticMesh's StaticMaterials array.
-	uint32 FirstIndex = 0;
-	uint32 NumTriangles = 0;
+	//int32 MaterialIndex; // Index into UStaticMesh's FStaticMaterial array.
+	FString MaterialSlotName;
+	uint32 FirstIndex;
+	uint32 NumTriangles;
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticMeshSection& Section)
 	{
-		Ar << Section.MaterialIndex << Section.FirstIndex << Section.NumTriangles;
+		Ar << Section.MaterialSlotName << Section.FirstIndex << Section.NumTriangles;
 		return Ar;
 	}
 };
@@ -38,9 +39,8 @@ struct FStaticMaterial
 {
 	// std::shared_ptr<class UMaterialInterface> MaterialInterface;
 	UMaterial* MaterialInterface;
-	// TODO: FName 으로 사용
 	FString MaterialSlotName = "None"; // "None"은 특별한 슬롯 이름으로, OBJ 파일에서 머티리얼이 지정되지 않은 섹션에 할당됩니다.
-	// FName ImportedMaterialSlotName;
+	bool bIsUVScroll = false;
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticMaterial& Mat)
 	{
@@ -72,7 +72,18 @@ struct FStaticMaterial
 			}
 		}
 
+		Ar << Mat.bIsUVScroll;
+
 		return Ar;
+
+		//Ar << Mat.MaterialSlotName;
+
+		//if (Ar.IsLoading()) Mat.MaterialInterface = FObjManager::GetOrLoadMaterial(Mat.MaterialSlotName);
+
+		//Ar << Mat.MaterialInterface->PathFileName;
+		//Ar << Mat.MaterialInterface->DiffuseTextureFilePath;
+		//Ar << Mat.MaterialInterface->DiffuseColor;
+		//return Ar;
 	}
 };
 
