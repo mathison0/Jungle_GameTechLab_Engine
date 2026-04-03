@@ -1,63 +1,12 @@
 ﻿#include "PrimitiveComponent.h"
+#include "Object/ObjectFactory.h"
 #include "Core/RayTypes.h"
 #include "Collision/RayUtils.h"
 #include "Render/Resource/MeshBufferManager.h"
 #include "Render/Resource/ShaderManager.h"
 #include "Core/CollisionTypes.h"
-#include "GameFramework/World.h"
-#include "Render/Pipeline/WorldRenderProxy.h"
-#include "Render/Pipeline/PrimitiveProxy.h"
 
 DEFINE_CLASS(UPrimitiveComponent, USceneComponent)
-
-UPrimitiveComponent::~UPrimitiveComponent()
-{
-	if (Proxy)
-	{
-		delete Proxy;
-		Proxy = nullptr;
-	}
-}
-
-FPrimitiveProxy* UPrimitiveComponent::CreateProxy()
-{
-	return new FDefaultPrimitiveProxy(this);
-}
-
-void UPrimitiveComponent::OnRegister()
-{
-	if (!Proxy)
-	{
-		Proxy = CreateProxy();
-	}
-
-	UWorld* World = GetWorld();
-	if (Proxy && World)
-	{
-		World->GetRenderProxy().AddProxy(Proxy);
-	}
-}
-
-
-
-void UPrimitiveComponent::OnUnregister()
-{
-	UWorld* World = GetWorld();
-	if (Proxy && World)
-	{
-		World->GetRenderProxy().RemoveProxy(Proxy);
-		delete Proxy;
-		Proxy = nullptr;
-	}
-}
-
-void UPrimitiveComponent::MarkRenderStateDirty()
-{
-	if (Proxy)
-	{
-		Proxy->MarkDirty();
-	}
-}
 
 void UPrimitiveComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
@@ -145,5 +94,4 @@ void UPrimitiveComponent::UpdateWorldMatrix() const
 {
 	USceneComponent::UpdateWorldMatrix();
 	UpdateWorldAABB();
-	const_cast<UPrimitiveComponent*>(this)->MarkRenderStateDirty();
 }

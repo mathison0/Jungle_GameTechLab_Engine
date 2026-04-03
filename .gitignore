@@ -1,7 +1,5 @@
-# Ignore Build Results
-ReleaseBuild/
-
 # Claude Code
+CLAUDE.md
 DEVLOG.md
 .claude/
 

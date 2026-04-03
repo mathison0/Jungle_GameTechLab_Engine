@@ -1,12 +1,6 @@
 ﻿#include "ActorComponent.h"
-#include "GameFramework/AActor.h"
 
 DEFINE_CLASS(UActorComponent, UObject)
-
-UWorld* UActorComponent::GetWorld() const
-{
-	return Owner ? Owner->GetWorld() : nullptr;
-}
 
 void UActorComponent::BeginPlay()
 {

@@ -28,13 +28,6 @@ public:
 		T* Comp = UObjectManager::Get().CreateObject<T>();
 		Comp->SetOwner(this);
 		OwnedComponents.push_back(Comp);
-		bPrimitiveCacheDirty = true;
-
-		if (GetWorld())
-		{
-			Comp->OnRegister();
-		}
-
 		return Comp;
 	}
 
@@ -73,9 +66,6 @@ public:
 
 	bool IsVisible() const { return bVisible; }
 	void SetVisible(bool Visible) { bVisible = Visible; }
-
-	virtual void RegisterAllComponents();
-	virtual void UnregisterAllComponents();
 
 	const TArray<UPrimitiveComponent*>& GetPrimitiveComponents() const;
 

@@ -6,8 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DirectX 11 3D scene editor engine built with C++ and ImGui. Actor/Component architecture with WYSIWYG editing, raycasting object selection, multi-scene management, and JSON serialization. Includes a standalone OBJ mesh viewer mode (`ObjViewDebug` build) for previewing static meshes.
 
-**Week 5 focus:** High-performance rendering competition — render 50,000 `StaticMeshComponent`s (50×50×20 grid) as fast as possible. Key constraint: one Draw Call per StaticMesh (no `DrawInstanced`/`DrawIndexedInstanced`). Optimization targets: Frustum Culling, Scene Graph (BVH/Octree/K-d tree), SIMD. Performance HUD must display FPS (ms), last Picking time (ms), accumulated Picking count, and accumulated Picking time (ms) in the top-left corner.
-
 ## Build Commands
 
 ```bash
@@ -60,27 +58,6 @@ Standalone mesh preview mode (`Source/ObjViewer/`). `UObjViewerEngine` subclasse
 ### Serialization
 
 `.Scene` files are JSON. `FSceneSaveManager` handles read/write of actor hierarchy, components, transforms, camera state. Editor settings persist to `Settings/editor.ini`.
-
-### Performance & Optimization (Week 5)
-
-Competition constraints:
-- **No Instanced Rendering** — `DrawInstanced` / `DrawIndexedInstanced` are forbidden; each `StaticMesh` issues exactly one Draw Call.
-- **Real-time only** — pre-caching results when the camera is stationary is not allowed. Objects may move in/out of view at any time.
-- Standard scene (`DefaultScene.zip`) and mesh dataset (`JungleApples.zip`) are fixed; camera info, object count, and meshes may vary between teams at judging time.
-- Performance measured on Alienware m15 R5 (RTX 3070). Winner ranked by FPS score + Picking score (lower ms = better).
-
-Key optimization techniques in scope:
-- **Frustum Culling** — skip Draw Calls for meshes outside the view frustum.
-- **Scene Graph / Spatial partitioning** — BVH, Octree, or K-d tree to accelerate frustum and ray-cast queries.
-- **SIMD** — SSE2/AVX for math-heavy culling loops (`__m128`, aligned allocations).
-- **Render State sorting** — minimize redundant state changes between Draw Calls.
-
-Performance timing uses `FWindowsPlatformTime` (`QueryPerformanceFrequency` / `QueryPerformanceCounter`) and `FScopeCycleCounter` (RAII scope timer). The HUD overlay (top-left) must show:
-
-```
-FPS : <N> (<ms> ms)
-Picking Time <ms> ms : Num Attempts <N> : Accumulated Time <ms> ms
-```
 
 ## Code Conventions
 

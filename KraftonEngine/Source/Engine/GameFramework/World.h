@@ -1,18 +1,13 @@
 ﻿#pragma once
-
 #include "Object/Object.h"
 #include "GameFramework/AActor.h"
-#include "Render/Pipeline/WorldRenderProxy.h"
-#include <memory>
 
-// === Forward Declaration
 class UCameraComponent;
-// === Forward Declaration
 
 class UWorld : public UObject {
 public:
 	DECLARE_CLASS(UWorld, UObject)
-	UWorld();
+	UWorld() = default;
 	~UWorld() override;
 
 	// Actor lifecycle
@@ -21,7 +16,7 @@ public:
 	void DestroyActor(AActor* Actor);
 
 	const TArray<AActor*>& GetActors() const { return Actors; }
-	void AddActor(AActor* Actor);
+	void AddActor(AActor* Actor) { Actors.push_back(Actor); }
 
 	void InitWorld();      // Set up the world before gameplay begins
 	void BeginPlay();      // Triggers BeginPlay on all actors
@@ -34,14 +29,10 @@ public:
 	void SetActiveCamera(UCameraComponent* InCamera) { ActiveCamera = InCamera; }
 	UCameraComponent* GetActiveCamera() const { return ActiveCamera; }
 
-	FWorldRenderProxy& GetRenderProxy() { return *RenderProxy; }
-
 private:
 	TArray<AActor*> Actors;
 	UCameraComponent* ActiveCamera = nullptr;
 	bool bHasBegunPlay = false;
-
-	std::unique_ptr<FWorldRenderProxy> RenderProxy;
 };
 
 template<typename T>
@@ -50,7 +41,6 @@ inline T* UWorld::SpawnActor()
 	// create and register an actor
 	T* Actor = UObjectManager::Get().CreateObject<T>();
 	Actor->SetWorld(this);
-	Actor->RegisterAllComponents();
 	if (bHasBegunPlay)
 	{
 		Actor->BeginPlay();
