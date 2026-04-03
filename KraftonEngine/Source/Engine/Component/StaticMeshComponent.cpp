@@ -20,24 +20,23 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 		const TArray<FStaticMaterial>& DefaultMaterials = StaticMesh->GetStaticMaterials();
 
 		OverrideMaterials.resize(DefaultMaterials.size());
-		MaterialSlots.resize(DefaultMaterials.size());
+		OverrideMaterialPaths.resize(DefaultMaterials.size());
 
 		for (int32 i = 0; i < (int32)DefaultMaterials.size(); ++i)
 		{
 			OverrideMaterials[i]        = DefaultMaterials[i].MaterialInterface;
-			MaterialSlots[i].bUVScroll  = DefaultMaterials[i].bIsUVScroll ? 1 : 0;
 
 			if (OverrideMaterials[i])
-				MaterialSlots[i].Path = OverrideMaterials[i]->GetAssetPathFileName();
+				OverrideMaterialPaths[i] = OverrideMaterials[i]->GetAssetPathFileName();
 			else
-				MaterialSlots[i].Path = "None";
+				OverrideMaterialPaths[i] = "None";
 		}
 	}
 	else
 	{
 		StaticMeshPath = "None";
 		OverrideMaterials.clear();
-		MaterialSlots.clear();
+		OverrideMaterialPaths.clear();
 	}
 	CacheLocalBounds();
 }
@@ -103,7 +102,7 @@ void UStaticMeshComponent::CollectRender(FRenderBus& Bus) const
 	if (StaticMesh && StaticMesh->GetStaticMeshAsset())
 	{
 		const auto& Sections = StaticMesh->GetStaticMeshAsset()->Sections;
-		
+
 		for (const FStaticMeshSection& Section : Sections)
 		{
 			FMeshSectionDraw Draw;
@@ -112,14 +111,14 @@ void UStaticMeshComponent::CollectRender(FRenderBus& Bus) const
 
 			const int32 MatIdx = Section.MaterialIndex;
 			if (MatIdx >= 0 && MatIdx < (int32)OverrideMaterials.size() && OverrideMaterials[MatIdx])
-					{
+			{
 				auto& Mat = OverrideMaterials[MatIdx];
-						if (Mat->DiffuseTexture)
-							Draw.DiffuseSRV = Mat->DiffuseTexture->GetSRV();
-						Draw.DiffuseColor = Mat->DiffuseColor;
-					}
+				if (Mat->DiffuseTexture)
+					Draw.DiffuseSRV = Mat->DiffuseTexture->GetSRV();
+				Draw.DiffuseColor = Mat->DiffuseColor;
+			}
 
-								Cmd.SectionDraws.push_back(Draw);
+			Cmd.SectionDraws.push_back(Draw);
 		}
 	}
 	Bus.AddCommand(ERenderPass::Opaque, Cmd);
@@ -214,12 +213,12 @@ void UStaticMeshComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Ou
 	UPrimitiveComponent::GetEditableProperties(OutProps);
 	OutProps.push_back({ "Static Mesh", EPropertyType::StaticMeshRef, &StaticMeshPath });
 
-	for (int32 i = 0; i < (int32)MaterialSlots.size(); ++i)
+	for (int32 i = 0; i < (int32)OverrideMaterialPaths.size(); ++i)
 	{
 		FPropertyDescriptor Desc;
 		Desc.Name     = "Element " + std::to_string(i);
-		Desc.Type     = EPropertyType::MaterialSlot;
-		Desc.ValuePtr = &MaterialSlots[i];
+		Desc.Type     = EPropertyType::MaterialRef;
+		Desc.ValuePtr = &OverrideMaterialPaths[i];
 		OutProps.push_back(Desc);
 	}
 }
@@ -247,9 +246,9 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 		int32 Index = atoi(&PropertyName[8]);
 
 		// 인덱스 범위 유효성 검사
-		if (Index >= 0 && Index < (int32)MaterialSlots.size())
+		if (Index >= 0 && Index < (int32)OverrideMaterialPaths.size())
 		{
-			FString NewMatPath = MaterialSlots[Index].Path;
+			FString NewMatPath = OverrideMaterialPaths[Index];
 
 			if (NewMatPath == "None" || NewMatPath.empty())
 			{

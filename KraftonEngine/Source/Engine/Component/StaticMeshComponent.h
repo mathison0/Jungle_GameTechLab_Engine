@@ -45,7 +45,7 @@ private:
 	UStaticMesh* StaticMesh = nullptr;
 	FString StaticMeshPath = "None";
 	TArray<UMaterial*> OverrideMaterials;
-	TArray<FMaterialSlot> MaterialSlots; // 경로 + UVScroll 묶음
+	TArray<FString> OverrideMaterialPaths; // 머티리얼 에셋 경로
 
 	FVector CachedLocalCenter = { 0, 0, 0 };
 	FVector CachedLocalExtent = { 0.5f, 0.5f, 0.5f };

@@ -270,11 +270,10 @@ json::JSON FSceneSaveManager::SerializePropertyValue(const FPropertyDescriptor& 
 	case EPropertyType::StaticMeshRef:
 		return JSON(*static_cast<FString*>(Prop.ValuePtr));
 
-	case EPropertyType::MaterialSlot: {
-		const FMaterialSlot* Slot = static_cast<const FMaterialSlot*>(Prop.ValuePtr);
+	case EPropertyType::MaterialRef: {
+		const FString* SlotPath = static_cast<const FString*>(Prop.ValuePtr);
 		JSON obj = json::Object();
-		obj["Path"]      = JSON(Slot->Path);
-		obj["UVScroll"]  = JSON(static_cast<bool>(Slot->bUVScroll != 0));
+		obj["Path"] = JSON(*SlotPath);
 		return obj;
 	}
 
@@ -596,10 +595,9 @@ void FSceneSaveManager::DeserializePropertyValue(FPropertyDescriptor& Prop, json
 		*static_cast<FString*>(Prop.ValuePtr) = Value.ToString();
 		break;
 
-	case EPropertyType::MaterialSlot: {
-		FMaterialSlot* Slot = static_cast<FMaterialSlot*>(Prop.ValuePtr);
-		if (Value.hasKey("Path"))     Slot->Path      = Value["Path"].ToString();
-		if (Value.hasKey("UVScroll")) Slot->bUVScroll = Value["UVScroll"].ToBool() ? 1 : 0;
+	case EPropertyType::MaterialRef: {
+		FString* SlotPath = static_cast<FString*>(Prop.ValuePtr);
+		if (Value.hasKey("Path")) *SlotPath = Value["Path"].ToString();
 		break;
 	}
 
