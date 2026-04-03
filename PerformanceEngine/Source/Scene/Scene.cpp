@@ -388,6 +388,10 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	}
 
 	//Create World BVH here
+
+	//For Check
+	//For Check
+
 	WorldBVHNodes.clear();
 	WorldBVHNodes.reserve(RenderItems.size() * 2);
 	AABBNode RootNode;
@@ -434,19 +438,14 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 	FVector Extent = WorldBVHNodes[ParentIdx].Max - WorldBVHNodes[ParentIdx].Min;
 	int axis = (Extent.X >= Extent.Y && Extent.X >= Extent.Z) ? 0 : (Extent.Y >= Extent.Z ? 1 : 2);
 
-	float SplitValue = (WorldBVHNodes[ParentIdx].Min[axis] + WorldBVHNodes[ParentIdx].Max[axis]) * 0.5f;
-
-	auto Mid = std::partition(RenderItems.begin() + start, RenderItems.begin() + end,//중간을 찾는 과정,
-		[&](const FRenderItem& Item) {
-			float Centroid = (Item.WorldBoundsMax[axis] + Item.WorldBoundsMin[axis]) * 0.5f;
-			return Centroid < SplitValue;
+	//양쪽 균일 보장
+	int MidIdx = (start + end) / 2;
+	std::nth_element(RenderItems.begin() + start, RenderItems.begin() + MidIdx, RenderItems.begin() + end,
+		[&](const FRenderItem& A, const FRenderItem& B) {
+			float CentA = (A.WorldBoundsMin[axis] + A.WorldBoundsMax[axis]) * 0.5f;
+			float CentB = (B.WorldBoundsMin[axis] + B.WorldBoundsMax[axis]) * 0.5f;
+			return CentA < CentB;
 		});
-
-	int MidIdx = (int)(Mid - RenderItems.begin());
-
-	// 모두 한쪽으로 쏠렸을 때 방어
-	if (MidIdx == start) MidIdx = start + 1;
-	if (MidIdx == end)   MidIdx = end - 1;
 
 	AABBNode LeftNode;
 	LeftNode.Min = RenderItems[start].WorldBoundsMin;

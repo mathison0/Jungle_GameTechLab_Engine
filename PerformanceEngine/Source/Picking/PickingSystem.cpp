@@ -190,7 +190,7 @@ namespace
 		return bHit;
 	}
 
-	void IntersectWorldBVH(const FRay& InRay, const FScene& Scene, FPickHit& InOutPickHit)
+	void IntersectWorldBVH(const FRay& InRay, const FScene& Scene, FPickHit& InOutPickHit, FPickState& State)
 	{
 		TStack<int> NodeStack;
 		NodeStack.push(0);
@@ -201,6 +201,7 @@ namespace
 			AABBNode Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
 			if (IntersectRayAabb(InRay, Node.Min, Node.Max))
 			{
+				++State.TotalAABBCheckCount;
 				if (Node.IsLeaf() && IntersectRenderItem(InRay, Scene.GetRenderItems()[Node.PrimitiveIndex], InOutPickHit))
 				{
 					distanceSquared = std::min(distanceSquared, InOutPickHit.DistanceSquared);
@@ -261,15 +262,11 @@ void FPickingSystem::UpdatePick(
 		{
 			continue;
 		}
-
-		/*if (IntersectRenderItem(PickRay, RenderItems[PrimitiveIndex], BestHit))
+		if (IntersectRenderItem(PickRay, RenderItems[PrimitiveIndex], BestHit))
 		{
 			BestHit.PrimitiveIndex = static_cast<int32>(PrimitiveIndex);
-		}*/
-
+		}
 	}
-
-	IntersectWorldBVH(PickRay, InScene, BestHit);
 
 
 	const uint64 PickEndCycles = QueryCycles64();
@@ -280,4 +277,42 @@ void FPickingSystem::UpdatePick(
 	InOutPickState.SelectedPrimitiveId = BestHit.PrimitiveId;
 	InOutPickState.SelectedPrimitiveIndex = BestHit.PrimitiveIndex;
 	InOutPickState.HitWorldPosition = BestHit.WorldPosition;
+	InOutPickState.TotalAABBCheckCount = 0;
+}
+
+
+void FPickingSystem::UpdatePickWorldBVH(
+	const FScene& InScene,
+	const FCamera& InCamera,
+	const FVisibilityResults& InVisibilityResults,
+	POINT InMousePositionClient,
+	int32 InViewportWidth,
+	int32 InViewportHeight,
+	FPickState& InOutPickState) const
+{
+	if (InViewportWidth <= 0 || InViewportHeight <= 0)
+	{
+		return;
+	}
+
+	if (InMousePositionClient.x < 0
+		|| InMousePositionClient.y < 0
+		|| InMousePositionClient.x >= InViewportWidth
+		|| InMousePositionClient.y >= InViewportHeight)
+	{
+		return;
+	}
+
+	const FRay PickRay = BuildPickRay(InCamera, InMousePositionClient.x, InMousePositionClient.y, InViewportWidth, InViewportHeight);
+	const uint64 PickStartCycles = QueryCycles64();
+
+	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+	FPickHit BestHit;
+	BestHit.DistanceSquared = std::numeric_limits<float>::max();
+
+	IntersectWorldBVH(PickRay, InScene, BestHit, InOutPickState);
+
+
+	const uint64 PickEndCycles = QueryCycles64();
+	InOutPickState.LastPickTimeMsWorldBVH = CyclesToMilliseconds(PickStartCycles, PickEndCycles);
 }

@@ -254,7 +254,7 @@ namespace
 	const FBitmapGlyph* FindBitmapGlyph(char InCharacter)
 	{
 		static const std::array<FBitmapGlyph, 40> Glyphs =
-		{{
+		{ {
 			{ ' ', { 0x00,0x00,0x00,0x00,0x00,0x00,0x00 } },
 			{ '-', { 0x00,0x00,0x00,0x1F,0x00,0x00,0x00 } },
 			{ '.', { 0x00,0x00,0x00,0x00,0x00,0x06,0x06 } },
@@ -295,7 +295,7 @@ namespace
 			{ 'X', { 0x11,0x11,0x0A,0x04,0x0A,0x11,0x11 } },
 			{ 'Y', { 0x11,0x11,0x0A,0x04,0x04,0x04,0x04 } },
 			{ 'Z', { 0x1F,0x01,0x02,0x04,0x08,0x10,0x1F } },
-		}};
+		} };
 
 		const char Character = static_cast<char>(std::toupper(static_cast<unsigned char>(InCharacter)));
 		for (const FBitmapGlyph& Glyph : Glyphs)
@@ -439,9 +439,9 @@ namespace
 		};
 
 		std::sort(Axes.begin(), Axes.end(), [](const FAxisGizmoVisual& A, const FAxisGizmoVisual& B)
-		{
-			return A.CameraSpaceDirection.X < B.CameraSpaceDirection.X;
-		});
+			{
+				return A.CameraSpaceDirection.X < B.CameraSpaceDirection.X;
+			});
 
 		const DirectX::XMFLOAT2 Center(CenterX, CenterY);
 		for (const FAxisGizmoVisual& Axis : Axes)
@@ -539,6 +539,8 @@ void FHudRenderer::Render(
 		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
 		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"
 		<< "PICK LAST: " << InStatsSystem.GetLastPickTimeMs() << " MS\n"
+		<< "PICK WORLD BVH: " << InStatsSystem.GetPickWorldBVHTimeMs() << " MS\n"
+		<< "PICK AABBCnt: " << InStatsSystem.GetTotalAABBCheckCount() << " \n"
 		<< "PICK COUNT: " << InStatsSystem.GetTotalPickCount() << '\n'
 		<< "PICK TOTAL: " << InStatsSystem.GetTotalPickTimeMs() << " MS\n"
 		<< "PRIMS: " << InScene.GetRenderItems().size() << '\n'

@@ -163,15 +163,22 @@ void FCore::Tick()
 			RHI->GetViewportWidth(),
 			RHI->GetViewportHeight(),
 			PickState);
+		PickingSystem->UpdatePickWorldBVH
+		(
+			*Scene,
+			*Camera,
+			VisibilityResults,
+			Input->GetMousePositionClient(),
+			RHI->GetViewportWidth(),
+			RHI->GetViewportHeight(),
+			PickState);
 	}
-
 	StatsSystem->ApplyPickState(PickState);
 
 	BeginFrame();
 	SceneRenderer->Render(*RHI, *Scene, *Camera, VisibilityResults, PickState);
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
 	EndFrame();
-
 	StatsSystem->EndFrame();
 }
 
