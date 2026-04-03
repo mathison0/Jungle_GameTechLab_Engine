@@ -14,7 +14,4 @@ public:
 	void CollectGrid(float GridSpacing, int32 GridHalfLineCount, FRenderBus& RenderBus);
 	void CollectGizmo(UGizmoComponent* Gizmo, ELevelViewportType ViewportType, FRenderBus& RenderBus);
 	void CollectOverlayText(bool bActive, const FOverlayStatSystem& OverlaySystem, const UEditorEngine& Editor, FRenderBus& RenderBus);
-
-private:
-	void CollectFromActor(AActor* Actor, bool bSelected, FRenderBus& RenderBus);
 };

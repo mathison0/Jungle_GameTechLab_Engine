@@ -323,6 +323,9 @@
     <ClCompile Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.cpp">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Pipeline\PrimitiveProxy.cpp">
+      <Filter>Source\Engine\Render\Pipeline</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Pipeline\RenderBus.cpp">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClCompile>
@@ -330,6 +333,12 @@
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Pipeline\Renderer.cpp">
+      <Filter>Source\Engine\Render\Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Pipeline\StaticMeshProxy.cpp">
+      <Filter>Source\Engine\Render\Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Pipeline\WorldRenderProxy.cpp">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Resource\Buffer.cpp">
@@ -548,6 +557,9 @@
     <ClInclude Include="Source\Engine\Materials\Material.h">
       <Filter>Source\Engine\Materials</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Math\MathUtils.h">
+      <Filter>Source\Engine\Math</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Math\Matrix.h">
       <Filter>Source\Engine\Math</Filter>
     </ClInclude>
@@ -558,9 +570,6 @@
       <Filter>Source\Engine\Math</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Transform.h">
-      <Filter>Source\Engine\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Math\MathUtils.h">
       <Filter>Source\Engine\Math</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Vector.h">
@@ -644,6 +653,9 @@
     <ClInclude Include="Source\Engine\Render\Pipeline\IRenderPipeline.h">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Pipeline\PrimitiveProxy.h">
+      <Filter>Source\Engine\Render\Pipeline</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Pipeline\RenderBus.h">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClInclude>
@@ -657,6 +669,12 @@
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Pipeline\Renderer.h">
+      <Filter>Source\Engine\Render\Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Pipeline\StaticMeshProxy.h">
+      <Filter>Source\Engine\Render\Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Pipeline\WorldRenderProxy.h">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resource\Buffer.h">

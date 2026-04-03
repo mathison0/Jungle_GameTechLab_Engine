@@ -41,11 +41,4 @@ cbuffer OutlinePostProcessCB : register(b3)
     float3 _Pad;
 };
 
-// b4: Material properties
-cbuffer MaterialBuffer : register(b4)
-{
-    uint bIsUVScroll;
-    float3 _matPad;
-}
-
 #endif // CONSTANT_BUFFERS_HLSL

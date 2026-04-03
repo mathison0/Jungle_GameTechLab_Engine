@@ -8,8 +8,14 @@
 #include "Engine/Runtime/Engine.h"
 #include "Render/Resource/ShaderManager.h"
 #include "Texture/Texture2D.h"
+#include "Render/Pipeline/StaticMeshProxy.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
+
+FPrimitiveProxy* UStaticMeshComponent::CreateProxy()
+{
+	return new FStaticMeshProxy(this);
+}
 
 void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 {
@@ -20,26 +26,26 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 		const TArray<FStaticMaterial>& DefaultMaterials = StaticMesh->GetStaticMaterials();
 
 		OverrideMaterials.resize(DefaultMaterials.size());
-		MaterialSlots.resize(DefaultMaterials.size());
+		OverrideMaterialPaths.resize(DefaultMaterials.size());
 
 		for (int32 i = 0; i < (int32)DefaultMaterials.size(); ++i)
 		{
 			OverrideMaterials[i]        = DefaultMaterials[i].MaterialInterface;
-			MaterialSlots[i].bUVScroll  = DefaultMaterials[i].bIsUVScroll ? 1 : 0;
 
 			if (OverrideMaterials[i])
-				MaterialSlots[i].Path = OverrideMaterials[i]->GetAssetPathFileName();
+				OverrideMaterialPaths[i] = OverrideMaterials[i]->GetAssetPathFileName();
 			else
-				MaterialSlots[i].Path = "None";
+				OverrideMaterialPaths[i] = "None";
 		}
 	}
 	else
 	{
 		StaticMeshPath = "None";
 		OverrideMaterials.clear();
-		MaterialSlots.clear();
+		OverrideMaterialPaths.clear();
 	}
 	CacheLocalBounds();
+	MarkRenderStateDirty();
 }
 
 void UStaticMeshComponent::CacheLocalBounds()
@@ -77,6 +83,7 @@ void UStaticMeshComponent::SetMaterial(int32 ElementIndex, UMaterial* InMaterial
 	if (ElementIndex >= 0 && ElementIndex < OverrideMaterials.size())
 	{
 		OverrideMaterials[ElementIndex] = InMaterial;
+		MarkRenderStateDirty();
 	}
 }
 
@@ -103,7 +110,6 @@ void UStaticMeshComponent::CollectRender(FRenderBus& Bus) const
 	if (StaticMesh && StaticMesh->GetStaticMeshAsset())
 	{
 		const auto& Sections = StaticMesh->GetStaticMeshAsset()->Sections;
-		const auto& Slots = StaticMesh->GetStaticMaterials();
 
 		for (const FStaticMeshSection& Section : Sections)
 		{
@@ -111,25 +117,15 @@ void UStaticMeshComponent::CollectRender(FRenderBus& Bus) const
 			Draw.FirstIndex = Section.FirstIndex;
 			Draw.IndexCount = Section.NumTriangles * 3;
 
-			for (int32 i = 0; i < Slots.size(); ++i)
+			const int32 MatIdx = Section.MaterialIndex;
+			if (MatIdx >= 0 && MatIdx < (int32)OverrideMaterials.size() && OverrideMaterials[MatIdx])
 			{
-				if (Slots[i].MaterialSlotName == Section.MaterialSlotName)
-				{
-					if (i < OverrideMaterials.size() && OverrideMaterials[i])
-					{
-						auto& Mat = OverrideMaterials[i];
-						if (Mat->DiffuseTexture)
-							Draw.DiffuseSRV = Mat->DiffuseTexture->GetSRV();
-						Draw.DiffuseColor = Mat->DiffuseColor;
-					}
-
-					if (i < (int32)MaterialSlots.size())
-					{
-						Draw.bIsUVScroll = MaterialSlots[i].bUVScroll;
-					}
-					break;
-				}
+				auto& Mat = OverrideMaterials[MatIdx];
+				if (Mat->DiffuseTexture)
+					Draw.DiffuseSRV = Mat->DiffuseTexture->GetSRV();
+				Draw.DiffuseColor = Mat->DiffuseColor;
 			}
+
 			Cmd.SectionDraws.push_back(Draw);
 		}
 	}
@@ -225,12 +221,12 @@ void UStaticMeshComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Ou
 	UPrimitiveComponent::GetEditableProperties(OutProps);
 	OutProps.push_back({ "Static Mesh", EPropertyType::StaticMeshRef, &StaticMeshPath });
 
-	for (int32 i = 0; i < (int32)MaterialSlots.size(); ++i)
+	for (int32 i = 0; i < (int32)OverrideMaterialPaths.size(); ++i)
 	{
 		FPropertyDescriptor Desc;
 		Desc.Name     = "Element " + std::to_string(i);
-		Desc.Type     = EPropertyType::MaterialSlot;
-		Desc.ValuePtr = &MaterialSlots[i];
+		Desc.Type     = EPropertyType::MaterialRef;
+		Desc.ValuePtr = &OverrideMaterialPaths[i];
 		OutProps.push_back(Desc);
 	}
 }
@@ -258,9 +254,9 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 		int32 Index = atoi(&PropertyName[8]);
 
 		// 인덱스 범위 유효성 검사
-		if (Index >= 0 && Index < (int32)MaterialSlots.size())
+		if (Index >= 0 && Index < (int32)OverrideMaterialPaths.size())
 		{
-			FString NewMatPath = MaterialSlots[Index].Path;
+			FString NewMatPath = OverrideMaterialPaths[Index];
 
 			if (NewMatPath == "None" || NewMatPath.empty())
 			{

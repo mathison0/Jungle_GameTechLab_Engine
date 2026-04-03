@@ -10,10 +10,22 @@
 #include "Render/Types/VertexTypes.h"
 
 
+class FPrimitiveProxy;
+
 class UPrimitiveComponent : public USceneComponent
 {
+	friend class FPrimitiveProxy;
+
 public:
 	DECLARE_CLASS(UPrimitiveComponent, USceneComponent)
+
+	~UPrimitiveComponent() override;
+
+	void OnRegister() override;
+	void OnUnregister() override;
+
+	virtual FPrimitiveProxy* CreateProxy();
+	void MarkRenderStateDirty();
 
 	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 
@@ -38,6 +50,7 @@ public:
 	virtual bool SupportsOutline() const { return true; }
 
 protected:
+	FPrimitiveProxy* Proxy = nullptr;
 	FVector LocalExtents = { 0.5f, 0.5f, 0.5f };
 	mutable FVector WorldAABBMinLocation;
 	mutable FVector WorldAABBMaxLocation;

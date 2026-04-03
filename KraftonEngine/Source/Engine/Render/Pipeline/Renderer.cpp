@@ -397,14 +397,6 @@ void FRenderer::DrawStaticMeshSections(ID3D11DeviceContext* Context, const FRend
 		SectionConstants.Color = Section.DiffuseColor;
 		Resources.PerObjectConstantBuffer.Update(Context, &SectionConstants, sizeof(FPerObjectConstants));
 
-		// UVScroll (b4) 업데이트
-		FConstantBuffer* MaterialCB = FConstantBufferPool::Get().GetBuffer(ECBSlot::Material, sizeof(FMaterialConstants));
-		FMaterialConstants MatConstants = {};
-		MatConstants.bIsUVScroll = Section.bIsUVScroll ? 1 : 0;
-		MaterialCB->Update(Context, &MatConstants, sizeof(MatConstants));
-		ID3D11Buffer* b4 = MaterialCB->GetBuffer();
-		Context->VSSetConstantBuffers(ECBSlot::Material, 1, &b4);
-
 		Context->DrawIndexed(Section.IndexCount, Section.FirstIndex, 0);
 	}
 

@@ -6,6 +6,7 @@
 #include "Component/GizmoComponent.h"
 #include "Editor/Subsystem/OverlayStatSystem.h"
 #include "Editor/EditorEngine.h"
+#include "Render/Pipeline/WorldRenderProxy.h"
 
 #include <algorithm>
 
@@ -13,12 +14,7 @@ void FRenderCollector::CollectWorld(UWorld* World, const TArray<AActor*>& Select
 {
 	if (!World) return;
 
-	for (AActor* Actor : World->GetActors())
-	{
-		if (!Actor) continue;
-		bool bSelected = std::find(SelectedActors.begin(), SelectedActors.end(), Actor) != SelectedActors.end();
-		CollectFromActor(Actor, bSelected, RenderBus);
-	}
+	World->GetRenderProxy().CollectWorld(RenderBus, SelectedActors);
 }
 
 void FRenderCollector::CollectGrid(float GridSpacing, int32 GridHalfLineCount, FRenderBus& RenderBus)
@@ -54,22 +50,5 @@ void FRenderCollector::CollectOverlayText(bool bActive, const FOverlayStatSystem
 		Entry.Font.ScreenPosition = Line.ScreenPosition;
 
 		RenderBus.AddOverlayFontEntry(std::move(Entry));
-	}
-}
-
-void FRenderCollector::CollectFromActor(AActor* Actor, bool bSelected, FRenderBus& RenderBus)
-{
-	if (!Actor->IsVisible()) return;
-
-	for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
-	{
-		if (!Primitive->IsVisible()) continue;
-
-		Primitive->CollectRender(RenderBus);
-
-		if (bSelected)
-		{
-			Primitive->CollectSelection(RenderBus);
-		}
 	}
 }
