@@ -12,6 +12,8 @@ namespace json { class JSON; }
 // UStaticMeshComponent — 월드 배치 컴포넌트
 class UStaticMeshComponent : public UMeshComponent
 {
+	friend class FStaticMeshProxy;
+
 public:
 	DECLARE_CLASS(UStaticMeshComponent, UMeshComponent)
 
@@ -23,6 +25,8 @@ public:
 	void CollectSelection(FRenderBus& Bus) const override;
 	bool LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult) override;
 	void UpdateWorldAABB() const override;
+
+	FPrimitiveProxy* CreateProxy() override;
 
 	void SetStaticMesh(UStaticMesh* InMesh);
 	UStaticMesh* GetStaticMesh() const;

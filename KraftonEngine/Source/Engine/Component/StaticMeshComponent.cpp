@@ -8,8 +8,14 @@
 #include "Engine/Runtime/Engine.h"
 #include "Render/Resource/ShaderManager.h"
 #include "Texture/Texture2D.h"
+#include "Render/Pipeline/StaticMeshProxy.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
+
+FPrimitiveProxy* UStaticMeshComponent::CreateProxy()
+{
+	return new FStaticMeshProxy(this);
+}
 
 void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 {
@@ -39,6 +45,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 		OverrideMaterialPaths.clear();
 	}
 	CacheLocalBounds();
+	MarkRenderStateDirty();
 }
 
 void UStaticMeshComponent::CacheLocalBounds()
@@ -76,6 +83,7 @@ void UStaticMeshComponent::SetMaterial(int32 ElementIndex, UMaterial* InMaterial
 	if (ElementIndex >= 0 && ElementIndex < OverrideMaterials.size())
 	{
 		OverrideMaterials[ElementIndex] = InMaterial;
+		MarkRenderStateDirty();
 	}
 }
 

@@ -33,6 +33,12 @@ UActorComponent* AActor::AddComponentByClass(const FTypeInfo* Class)
 	Comp->SetOwner(this);
 	OwnedComponents.push_back(Comp);
 	bPrimitiveCacheDirty = true;
+
+	if (GetWorld())
+	{
+		Comp->OnRegister();
+	}
+
 	return Comp;
 }
 
@@ -45,6 +51,11 @@ void AActor::RegisterComponent(UActorComponent* Comp)
 		Comp->SetOwner(this);
 		OwnedComponents.push_back(Comp);
 		bPrimitiveCacheDirty = true;
+
+		if (GetWorld())
+		{
+			Comp->OnRegister();
+		}
 	}
 }
 
@@ -148,6 +159,28 @@ FVector AActor::GetActorForward() const
 	}
 
 	return FVector(0, 0, 1);
+}
+
+void AActor::RegisterAllComponents()
+{
+	for (UActorComponent* Comp : OwnedComponents)
+	{
+		if (Comp)
+		{
+			Comp->OnRegister();
+		}
+	}
+}
+
+void AActor::UnregisterAllComponents()
+{
+	for (UActorComponent* Comp : OwnedComponents)
+	{
+		if (Comp)
+		{
+			Comp->OnUnregister();
+		}
+	}
 }
 
 const TArray<UPrimitiveComponent*>& AActor::GetPrimitiveComponents() const

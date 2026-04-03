@@ -1,7 +1,15 @@
 ﻿#include "GameFramework/World.h"
 #include "Object/ObjectFactory.h"
+#include "Render/Pipeline/WorldRenderProxy.h"
+#include <algorithm>
+#include <memory>
 
 IMPLEMENT_CLASS(UWorld, UObject)
+
+UWorld::UWorld()
+{
+	RenderProxy = std::make_unique<FWorldRenderProxy>();
+}
 
 UWorld::~UWorld()
 {
@@ -15,6 +23,7 @@ void UWorld::DestroyActor(AActor* Actor)
 {
 	// remove and clean up
 	if (!Actor) return;
+	Actor->UnregisterAllComponents();
 	Actor->EndPlay();
 	// Remove from actor list
 	auto it = std::find(Actors.begin(), Actors.end(), Actor);
@@ -25,9 +34,21 @@ void UWorld::DestroyActor(AActor* Actor)
 	UObjectManager::Get().DestroyObject(Actor);
 }
 
+void UWorld::AddActor(AActor* Actor)
+{
+	if (Actor)
+	{
+		Actors.push_back(Actor);
+		Actor->RegisterAllComponents();
+	}
+}
+
 void UWorld::InitWorld()
 {
-
+	if (!RenderProxy)
+	{
+		RenderProxy = std::make_unique<FWorldRenderProxy>();
+	}
 }
 
 void UWorld::BeginPlay()
@@ -62,6 +83,7 @@ void UWorld::EndPlay()
 	{
 		if (Actor)
 		{
+			Actor->UnregisterAllComponents();
 			Actor->EndPlay();
 			UObjectManager::Get().DestroyObject(Actor);
 		}
