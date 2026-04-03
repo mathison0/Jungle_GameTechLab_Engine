@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include "Types/Stack.h"
 
 #include "Camera/Camera.h"
 #include "Scene/Scene.h"
@@ -21,11 +22,11 @@ namespace
 	double GetSecondsPerCycle()
 	{
 		static const double SecondsPerCycle = []()
-		{
-			LARGE_INTEGER Frequency = {};
-			QueryPerformanceFrequency(&Frequency);
-			return 1.0 / static_cast<double>(Frequency.QuadPart);
-		}();
+			{
+				LARGE_INTEGER Frequency = {};
+				QueryPerformanceFrequency(&Frequency);
+				return 1.0 / static_cast<double>(Frequency.QuadPart);
+			}();
 		return SecondsPerCycle;
 	}
 
@@ -188,11 +189,42 @@ namespace
 
 		return bHit;
 	}
+
+	void IntersectWorldBVH(const FRay& InRay, const FScene& Scene, FPickHit& InOutPickHit)
+	{
+		TStack<int> NodeStack;
+		NodeStack.push(0);
+		float distanceSquared = std::numeric_limits<float>::max();
+		while (!NodeStack.empty())
+		{
+			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
+			AABBNode Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
+			if (IntersectRayAabb(InRay, Node.Min, Node.Max))
+			{
+				if (Node.IsLeaf() && IntersectRenderItem(InRay, Scene.GetRenderItems()[Node.PrimitiveIndex], InOutPickHit))
+				{
+					distanceSquared = std::min(distanceSquared, InOutPickHit.DistanceSquared);
+				}
+				else
+				{
+					if (Node.LeftChildIndex != -1)
+					{
+						NodeStack.push(Node.LeftChildIndex);
+					}
+					if (Node.RightChildIndex != -1)
+					{
+						NodeStack.push(Node.RightChildIndex);
+					}
+				}
+			}
+		}
+	}
 }
 
 void FPickingSystem::Reset()
 {
 }
+
 
 void FPickingSystem::UpdatePick(
 	const FScene& InScene,
@@ -230,11 +262,15 @@ void FPickingSystem::UpdatePick(
 			continue;
 		}
 
-		if (IntersectRenderItem(PickRay, RenderItems[PrimitiveIndex], BestHit))
+		/*if (IntersectRenderItem(PickRay, RenderItems[PrimitiveIndex], BestHit))
 		{
 			BestHit.PrimitiveIndex = static_cast<int32>(PrimitiveIndex);
-		}
+		}*/
+
 	}
+
+	IntersectWorldBVH(PickRay, InScene, BestHit);
+
 
 	const uint64 PickEndCycles = QueryCycles64();
 	InOutPickState.LastPickTimeMs = CyclesToMilliseconds(PickStartCycles, PickEndCycles);

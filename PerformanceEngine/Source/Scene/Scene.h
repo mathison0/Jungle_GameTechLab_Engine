@@ -5,9 +5,11 @@
 #include "Graphics/D3D11/D3D11Common.h"
 #include "Scene/SceneTypes.h"
 #include "Types/Array.h"
+#include "Picking/AABBNode.h"
 #include "Types/Map.h"
 
 class FStaticMesh;
+struct AABBNode;
 
 class FScene
 {
@@ -20,11 +22,17 @@ public:
 
 	const FVector& GetSceneBoundsMin() const { return SceneBoundsMin; }
 	const FVector& GetSceneBoundsMax() const { return SceneBoundsMax; }
+	const TArray<AABBNode>& GetWorldBVHNodes() const { return WorldBVHNodes; }
+
+
+private:
+	//BVH Related Functions
+	int CreateWorldBVH(int start, int end, int ParentIdx);
 
 private:
 	TArray<FRenderItem> RenderItems;
 	TMap<FString, std::shared_ptr<FStaticMesh>> MeshCache;
-
+	TArray<AABBNode> WorldBVHNodes;
 	FSceneCameraInitData InitialCamera;
 
 	FVector RawCameraLocation = FVector::ZeroVector;

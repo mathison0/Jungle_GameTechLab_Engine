@@ -10,6 +10,7 @@
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
 
+
 namespace
 {
 	struct FPendingPrimitive
@@ -378,11 +379,22 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 		}
 	}
 
+
+
 	if (RenderItems.empty())
 	{
 		Release();
 		return false;
 	}
+
+	//Create World BVH here
+	WorldBVHNodes.clear();
+	WorldBVHNodes.reserve(RenderItems.size() * 2);
+	AABBNode RootNode;
+	RootNode.Min = SceneBoundsMin;
+	RootNode.Max = SceneBoundsMax;
+	WorldBVHNodes.push_back(RootNode); // index 0 = root
+	CreateWorldBVH(0, (int)RenderItems.size(), 0);
 
 	InitialCamera.Transform = FTransform(MakeSceneRotation(RawCameraRotation), RawCameraLocation, FVector::OneVector);
 	if (!bHasSceneBounds)
@@ -403,4 +415,64 @@ void FScene::Release()
 	RawCameraRotation = FVector::ZeroVector;
 	SceneBoundsMin = FVector::ZeroVector;
 	SceneBoundsMax = FVector::ZeroVector;
+}
+
+//start,end는 RenderItems의 인덱스 범위, ParentIdx는 WorldBVHNodes의 인덱스, bIsRight는 ParentIdx가 부모 노드의 오른쪽 자식인지 여부
+int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
+{
+	if (start >= end)
+		return -1;
+
+	if (end - start == 1)
+	{
+		WorldBVHNodes[ParentIdx].LeftChildIndex = -1;
+		WorldBVHNodes[ParentIdx].RightChildIndex = -1;
+		WorldBVHNodes[ParentIdx].PrimitiveIndex = start; // RenderItems 배열 인덱스
+		return ParentIdx;
+	}
+
+	FVector Extent = WorldBVHNodes[ParentIdx].Max - WorldBVHNodes[ParentIdx].Min;
+	int axis = (Extent.X >= Extent.Y && Extent.X >= Extent.Z) ? 0 : (Extent.Y >= Extent.Z ? 1 : 2);
+
+	float SplitValue = (WorldBVHNodes[ParentIdx].Min[axis] + WorldBVHNodes[ParentIdx].Max[axis]) * 0.5f;
+
+	auto Mid = std::partition(RenderItems.begin() + start, RenderItems.begin() + end,//중간을 찾는 과정,
+		[&](const FRenderItem& Item) {
+			float Centroid = (Item.WorldBoundsMax[axis] + Item.WorldBoundsMin[axis]) * 0.5f;
+			return Centroid < SplitValue;
+		});
+
+	int MidIdx = (int)(Mid - RenderItems.begin());
+
+	// 모두 한쪽으로 쏠렸을 때 방어
+	if (MidIdx == start) MidIdx = start + 1;
+	if (MidIdx == end)   MidIdx = end - 1;
+
+	AABBNode LeftNode;
+	LeftNode.Min = RenderItems[start].WorldBoundsMin;
+	LeftNode.Max = RenderItems[start].WorldBoundsMax;
+	for (int i = start + 1; i < MidIdx; ++i)
+	{
+		LeftNode.Min = FVector::Min(LeftNode.Min, RenderItems[i].WorldBoundsMin);
+		LeftNode.Max = FVector::Max(LeftNode.Max, RenderItems[i].WorldBoundsMax);
+	}
+
+	AABBNode RightNode;
+	RightNode.Min = RenderItems[MidIdx].WorldBoundsMin;
+	RightNode.Max = RenderItems[MidIdx].WorldBoundsMax;
+	for (int i = MidIdx + 1; i < end; ++i)
+	{
+		RightNode.Min = FVector::Min(RightNode.Min, RenderItems[i].WorldBoundsMin);
+		RightNode.Max = FVector::Max(RightNode.Max, RenderItems[i].WorldBoundsMax);
+	}
+
+	int LeftIdx = (int)WorldBVHNodes.size();
+	WorldBVHNodes.push_back(LeftNode);
+	int RightIdx = (int)WorldBVHNodes.size();
+	WorldBVHNodes.push_back(RightNode);
+
+	WorldBVHNodes[ParentIdx].LeftChildIndex = CreateWorldBVH(start, MidIdx, LeftIdx);
+	WorldBVHNodes[ParentIdx].RightChildIndex = CreateWorldBVH(MidIdx, end, RightIdx);
+
+	return ParentIdx;  // 버그5 수정
 }

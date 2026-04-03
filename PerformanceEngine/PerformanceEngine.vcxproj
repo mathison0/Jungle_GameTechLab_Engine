@@ -166,6 +166,7 @@
     <ClCompile Include="Source\Visibility\VisibilitySystem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Picking\AABBNode.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11Common.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11RHI.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
@@ -200,6 +201,7 @@
     <ClInclude Include="Source\Types\PlatformTypes.h" />
     <ClInclude Include="Source\Types\Queue.h" />
     <ClInclude Include="Source\Types\Set.h" />
+    <ClInclude Include="Source\Types\Stack.h" />
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
     <ClInclude Include="Source\Visibility\VisibilitySystem.h" />
