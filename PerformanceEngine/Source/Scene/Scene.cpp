@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <memory>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -9,6 +10,7 @@
 
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
+#include "BVH/BVHBuilder.h"
 
 namespace
 {
@@ -194,6 +196,14 @@ namespace
 
 }
 
+FScene::FScene()
+	: BVHBuilder(std::make_unique<FBVHBuilder>())
+{
+
+}
+
+FScene::~FScene() = default;
+
 bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InSceneFilePath)
 {
 	Release();
@@ -301,6 +311,10 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 					else
 					{
 						MeshCache.emplace(MeshCacheKey, SharedMesh);
+
+						// BVH 트리 생성
+						SharedMesh->SetSpatialData(
+							std::make_shared<FBVHSpatialData>(BVHBuilder->BuildBVH(SharedMesh.get())));
 					}
 				}
 

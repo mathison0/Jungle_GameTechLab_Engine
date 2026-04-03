@@ -8,6 +8,7 @@
 #include "Scene/Scene.h"
 #include "StaticMesh/StaticMesh.h"
 #include "Visibility/VisibilitySystem.h"
+#include "Types/Stack.h"
 
 namespace
 {
@@ -153,37 +154,64 @@ namespace
 			return false;
 		}
 
-		if (!IntersectRayAabb(InRay, InRenderItem.WorldBoundsMin, InRenderItem.WorldBoundsMax))
-		{
-			return false;
-		}
+		const FBVHSpatialData* SpatialData =
+			static_cast<const FBVHSpatialData*>(InRenderItem.StaticMesh->GetSpatialData().get());
 
+		if (!SpatialData || SpatialData->Nodes.empty()) return false;
+
+		const TArray<FBVHNode>& Nodes = SpatialData->Nodes;
+		const TArray<uint32>& TriangleIndices = SpatialData->TriangleIndices;
 		const TArray<FStaticMeshVertex>& Vertices = InRenderItem.StaticMesh->GetVertices();
-		bool bHit = false;
 
-		for (size_t VertexIndex = 0; VertexIndex + 2 < Vertices.size(); VertexIndex += 3)
+
+		bool bHit = { false };
+
+		FRay LocalRay;
+		LocalRay.Origin = InRenderItem.Transform.InverseTransformPosition(InRay.Origin);
+		LocalRay.Direction = InRenderItem.Transform.InverseTransformVector(InRay.Direction).GetSafeNormal();
+
+		TStack<int32> NodeStack;
+		NodeStack.push(0);
+
+		while (!NodeStack.empty())
 		{
-			const FVector A = InRenderItem.Transform.TransformPosition(Vertices[VertexIndex + 0].Position);
-			const FVector B = InRenderItem.Transform.TransformPosition(Vertices[VertexIndex + 1].Position);
-			const FVector C = InRenderItem.Transform.TransformPosition(Vertices[VertexIndex + 2].Position);
+			const FBVHNode& Node = Nodes[NodeStack.top()]; 
+			NodeStack.pop();
 
-			float HitDistance = 0.0f;
-			FVector HitPosition = FVector::ZeroVector;
-			if (!IntersectRayTriangle(InRay, A, B, C, HitDistance, HitPosition))
+			if (!IntersectRayAabb(LocalRay, Node.BoundMin, Node.BoundMax))
 			{
 				continue;
 			}
 
-			const float DistanceSquared = FVector::DistSquared(InRay.Origin, HitPosition);
-			if (DistanceSquared >= InOutBestHit.DistanceSquared)
+			if (Node.IsLeaf())
 			{
-				continue;
+				for (int32 i = 0; i < Node.PrimitiveCount; ++i)
+				{
+					uint32 TriangleIndex = TriangleIndices[Node.LeftFirst + i];
+					const FVector& Vertex0 = Vertices[TriangleIndex].Position;
+					const FVector& Vertex1 = Vertices[TriangleIndex + 1].Position;
+					const FVector& Vertex2 = Vertices[TriangleIndex + 2].Position;
+
+					float LocalT = 0.0f;
+					FVector LocalHitPos;
+					if (!IntersectRayTriangle(LocalRay, Vertex0, Vertex1, Vertex2, LocalT, LocalHitPos)) continue;
+
+					const FVector WorldHitPos = InRenderItem.Transform.TransformPosition(LocalHitPos);
+					const float DistSq = FVector::DistSquared(InRay.Origin, WorldHitPos);
+					if (DistSq >= InOutBestHit.DistanceSquared) continue;
+
+					InOutBestHit.DistanceSquared = DistSq;
+					InOutBestHit.PrimitiveId = InRenderItem.PrimitiveId;
+					InOutBestHit.WorldPosition = WorldHitPos;
+					bHit = true;
+				}
+			}
+			else
+			{
+				NodeStack.push(Node.LeftFirst);
+				NodeStack.push(Node.LeftFirst + 1);
 			}
 
-			InOutBestHit.DistanceSquared = DistanceSquared;
-			InOutBestHit.PrimitiveId = InRenderItem.PrimitiveId;
-			InOutBestHit.WorldPosition = HitPosition;
-			bHit = true;
 		}
 
 		return bHit;

@@ -7,6 +7,7 @@
 #include "Math/Vector.h"
 #include "Math/Vector2.h"
 #include "Types/Array.h"
+#include "BVH/BVHTypes.h"
 
 struct FStaticMeshVertex
 {
@@ -14,11 +15,6 @@ struct FStaticMeshVertex
 	FVector2 TexCoord;
 };
 
-class IStaticMeshSpatialData
-{
-public:
-	virtual ~IStaticMeshSpatialData() = default;
-};
 
 class FStaticMesh
 {
@@ -39,8 +35,9 @@ public:
 	const TArray<FStaticMeshVertex>& GetVertices() const { return Vertices; }
 	const FVector& GetBoundsMin() const { return BoundsMin; }
 	const FVector& GetBoundsMax() const { return BoundsMax; }
-	const std::shared_ptr<IStaticMeshSpatialData>& GetSpatialData() const { return SpatialData; }
-	void SetSpatialData(std::shared_ptr<IStaticMeshSpatialData> InSpatialData) { SpatialData = std::move(InSpatialData); }
+
+	const std::shared_ptr<FBVHSpatialData>& GetSpatialData() const { return SpatialData; }
+	void SetSpatialData(std::shared_ptr<FBVHSpatialData> InSpatialData) { SpatialData = std::move(InSpatialData); }
 
 private:
 	void ExpandBounds(const FVector& InPosition);
@@ -51,7 +48,7 @@ private:
 	TArray<FStaticMeshVertex> Vertices;
 	TComPtr<ID3D11Buffer> VertexBuffer;
 	TComPtr<ID3D11ShaderResourceView> DiffuseTextureView;
-	std::shared_ptr<IStaticMeshSpatialData> SpatialData;
+	std::shared_ptr<FBVHSpatialData> SpatialData;
 
 	FVector BoundsMin = FVector::ZeroVector;
 	FVector BoundsMax = FVector::ZeroVector;

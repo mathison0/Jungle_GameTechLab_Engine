@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <fstream>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -83,6 +84,7 @@ namespace
 		return {};
 	}
 }
+
 
 bool FStaticMesh::LoadFromObj(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InObjPath)
 {

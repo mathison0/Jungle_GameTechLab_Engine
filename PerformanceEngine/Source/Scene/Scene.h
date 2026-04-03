@@ -6,22 +6,33 @@
 #include "Scene/SceneTypes.h"
 #include "Types/Array.h"
 #include "Types/Map.h"
+#include "BVH/BVHTypes.h"
 
 class FStaticMesh;
+class FBVHBuilder;
 
 class FScene
 {
 public:
+	FScene();
+	~FScene();
+
 	bool LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InSceneFilePath);
 	void Release();
 
 	const TArray<FRenderItem>& GetRenderItems() const { return RenderItems; }
 	const FSceneCameraInitData& GetInitialCamera() const { return InitialCamera; }
 
+	const TArray<FBVHNode>& GetBVHNodeDatas() const { return BVHDatas.Nodes; };
+
 	const FVector& GetSceneBoundsMin() const { return SceneBoundsMin; }
 	const FVector& GetSceneBoundsMax() const { return SceneBoundsMax; }
 
+
 private:
+	std::unique_ptr<FBVHBuilder> BVHBuilder;
+	FBVHSpatialData BVHDatas;
+
 	TArray<FRenderItem> RenderItems;
 	TMap<FString, std::shared_ptr<FStaticMesh>> MeshCache;
 
