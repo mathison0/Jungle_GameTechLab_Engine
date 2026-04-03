@@ -2,7 +2,7 @@
   "Actors" : [{
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
-      "PrimitiveKey" : "5",
+      "PrimitiveKey" : "6",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -38,12 +38,12 @@
   "PerspectiveCamera" : {
     "FOV" : 1.570796,
     "FarClip" : 1000.000000,
-    "Location" : [-3.031477, -3.292168, 3.007871],
+    "Location" : [-4.983980, -2.887515, 3.507862],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 26.055521, 51.479973]
+    "Rotation" : [0.000000, 27.405302, 47.129379]
   },
   "Primitives" : {
-    "5" : {
+    "6" : {
       "Location" : [0.000000, 0.000000, 0.000000],
       "ObjStaticMeshAsset" : "Data/BasicShape/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
