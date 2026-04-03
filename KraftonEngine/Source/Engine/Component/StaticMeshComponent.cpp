@@ -103,34 +103,23 @@ void UStaticMeshComponent::CollectRender(FRenderBus& Bus) const
 	if (StaticMesh && StaticMesh->GetStaticMeshAsset())
 	{
 		const auto& Sections = StaticMesh->GetStaticMeshAsset()->Sections;
-		const auto& Slots = StaticMesh->GetStaticMaterials();
-
+		
 		for (const FStaticMeshSection& Section : Sections)
 		{
 			FMeshSectionDraw Draw;
 			Draw.FirstIndex = Section.FirstIndex;
 			Draw.IndexCount = Section.NumTriangles * 3;
 
-			for (int32 i = 0; i < Slots.size(); ++i)
-			{
-				if (Slots[i].MaterialSlotName == Section.MaterialSlotName)
-				{
-					if (i < OverrideMaterials.size() && OverrideMaterials[i])
+			const int32 MatIdx = Section.MaterialIndex;
+			if (MatIdx >= 0 && MatIdx < (int32)OverrideMaterials.size() && OverrideMaterials[MatIdx])
 					{
-						auto& Mat = OverrideMaterials[i];
+				auto& Mat = OverrideMaterials[MatIdx];
 						if (Mat->DiffuseTexture)
 							Draw.DiffuseSRV = Mat->DiffuseTexture->GetSRV();
 						Draw.DiffuseColor = Mat->DiffuseColor;
 					}
 
-					if (i < (int32)MaterialSlots.size())
-					{
-						Draw.bIsUVScroll = MaterialSlots[i].bUVScroll;
-					}
-					break;
-				}
-			}
-			Cmd.SectionDraws.push_back(Draw);
+								Cmd.SectionDraws.push_back(Draw);
 		}
 	}
 	Bus.AddCommand(ERenderPass::Opaque, Cmd);

@@ -214,7 +214,7 @@ bool FObjImporter::ParseObj(const FString& ObjFilePath, FObjInfo& OutObjInfo)
 			// default material section 추가 (usemtl이 없이 f가 먼저 나오는 경우)
 			if (OutObjInfo.Sections.empty())
 			{
-				FStaticMeshSection DefaultSection;
+				FRawMeshSection DefaultSection;
 				DefaultSection.MaterialSlotName = "None";
 				DefaultSection.FirstIndex = 0;
 				DefaultSection.NumTriangles = 0;
@@ -257,20 +257,32 @@ bool FObjImporter::ParseObj(const FString& ObjFilePath, FObjInfo& OutObjInfo)
 				size_t CommentPos = Line.find('#');
 				if (CommentPos != std::string_view::npos) { Line = Line.substr(0, CommentPos); }
 				FStringParser::TrimLeft(Line);
+				// RTrim: trailing whitespace/tab 제거
+				size_t MtllibLastNonSpace = Line.find_last_not_of(" \t");
+				if (MtllibLastNonSpace != std::string_view::npos)
+					Line = Line.substr(0, MtllibLastNonSpace + 1);
+				else
+					Line = std::string_view();
 				OutObjInfo.MaterialLibraryFilePath = FPaths::ResolveAssetPath(ObjFilePath, std::string(Line));
-				UE_LOG("Found material library: %s", OutObjInfo.MaterialLibraryFilePath.c_str());
+				UE_LOG("Found material library: '%s' -> resolved: '%s'", std::string(Line).c_str(), OutObjInfo.MaterialLibraryFilePath.c_str());
 			}
 			else if (Prefix == "usemtl")
 			{
 				size_t CommentPos = Line.find('#');
 				if (CommentPos != std::string_view::npos) { Line = Line.substr(0, CommentPos); }
 				FStringParser::TrimLeft(Line);
+				// RTrim: trailing whitespace/tab 제거
+				size_t UsemtlLastNonSpace = Line.find_last_not_of(" \t");
+				if (UsemtlLastNonSpace != std::string_view::npos)
+					Line = Line.substr(0, UsemtlLastNonSpace + 1);
+				else
+					Line = std::string_view();
 
 				if (!OutObjInfo.Sections.empty())
 				{
 					OutObjInfo.Sections.back().NumTriangles = (static_cast<uint32>(OutObjInfo.PosIndices.size()) - OutObjInfo.Sections.back().FirstIndex) / 3;
 				}
-				FStaticMeshSection Section;
+				FRawMeshSection Section;
 				Section.MaterialSlotName = std::string(Line);
 				if (Section.MaterialSlotName.empty())
 				{
@@ -278,6 +290,7 @@ bool FObjImporter::ParseObj(const FString& ObjFilePath, FObjInfo& OutObjInfo)
 				}
 				Section.FirstIndex = static_cast<uint32>(OutObjInfo.PosIndices.size());
 				OutObjInfo.Sections.emplace_back(Section);
+				UE_LOG("New section with material: '%s'", Section.MaterialSlotName.c_str());
 			}
 			else if (Prefix == "o")
 			{
@@ -299,6 +312,11 @@ bool FObjImporter::ParseObj(const FString& ObjFilePath, FObjInfo& OutObjInfo)
 	{
 		OutObjInfo.UVs.emplace_back(FVector2{ 0.0f, 0.0f });
 	}
+
+	UE_LOG("ParseObj complete: %s | Positions=%zu UVs=%zu Normals=%zu Sections=%zu TotalIndices=%zu",
+		ObjFilePath.c_str(),
+		OutObjInfo.Positions.size(), OutObjInfo.UVs.size(), OutObjInfo.Normals.size(),
+		OutObjInfo.Sections.size(), OutObjInfo.PosIndices.size());
 
 	return true;
 }
@@ -435,10 +453,12 @@ bool FObjImporter::ParseMtl(const FString& MtlFilePath, TArray<FObjMaterialInfo>
 			if (!TextureFileName.empty())
 			{
 				OutMtlInfos.back().map_Kd = FPaths::ResolveAssetPath(MtlFilePath, TextureFileName);
+				UE_LOG("  map_Kd '%s' -> resolved: '%s'", TextureFileName.c_str(), OutMtlInfos.back().map_Kd.c_str());
 			}
 		}
 	}
 
+	UE_LOG("ParseMtl complete: %s | Materials=%zu", MtlFilePath.c_str(), OutMtlInfos.size());
 	return true;
 }
 
@@ -476,7 +496,7 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
 	bool bHasNoneSlot = false;
 
 	// OBJ의 Sections(usemtl) 등장 순서대로 고유 슬롯 수집
-	for (const FStaticMeshSection& Section : ObjInfo.Sections)
+	for (const FRawMeshSection& Section : ObjInfo.Sections)
 	{
 		const FString& CurrentSlotName = Section.MaterialSlotName;
 
@@ -570,7 +590,7 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
 	TArray<TArray<uint32>> FacesPerMaterial;
 	FacesPerMaterial.resize(OutMaterials.size());
 
-	for (const FStaticMeshSection& RawSection : ObjInfo.Sections)
+	for (const FRawMeshSection& RawSection : ObjInfo.Sections)
 	{
 		// 섹션의 머티리얼 슬롯 이름과 일치하는 OutMaterials 배열의 인덱스 찾기
 		auto It = std::find_if(OutMaterials.begin(), OutMaterials.end(),
@@ -606,7 +626,7 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
 		if (FaceStarts.empty()) continue;
 
 		FStaticMeshSection NewSection;
-		NewSection.MaterialSlotName = OutMaterials[MaterialIndex].MaterialSlotName;
+		NewSection.MaterialIndex = static_cast<int32>(MaterialIndex);
 		NewSection.FirstIndex = static_cast<uint32>(OutMesh.Indices.size());
 		NewSection.NumTriangles = static_cast<uint32>(FaceStarts.size());
 
@@ -693,6 +713,9 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
 
 		OutMesh.Sections.push_back(NewSection);
 	}
+
+	UE_LOG("Convert complete: Vertices=%zu Indices=%zu Sections=%zu Materials=%zu",
+		OutMesh.Vertices.size(), OutMesh.Indices.size(), OutMesh.Sections.size(), OutMaterials.size());
 
     return true;
 }
