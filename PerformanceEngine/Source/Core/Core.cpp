@@ -188,7 +188,7 @@ void FCore::Tick()
 		Grid->Render(*RHI, *Camera);
 	}
 
-	BVHDebugRenderer->Render(*RHI, *Camera, *Scene);
+	//BVHDebugRenderer->Render(*RHI, *Camera, *Scene);
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
 	EndFrame();
 

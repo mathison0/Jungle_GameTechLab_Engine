@@ -163,6 +163,7 @@ namespace
 		const TArray<FBVHNode>& Nodes = SpatialData->Nodes;
 		const TArray<uint32>& TriangleIndices = SpatialData->TriangleIndices;
 		const TArray<FStaticMeshVertex>& Vertices = StaticMesh->GetVertices();
+		const TArray<uint32>& Indices = StaticMesh->GetIndices();
 
 
 		bool bHit = { false };
@@ -192,9 +193,9 @@ namespace
 				for (int32 i = 0; i < Node->PrimitiveCount; ++i)
 				{
 					uint32 TriangleIndex = TriangleIndices[Node->LeftFirst + i];
-					const FVector& Vertex0 = Vertices[TriangleIndex * 3 + 0].Position;
-					const FVector& Vertex1 = Vertices[TriangleIndex * 3 + 1].Position;
-					const FVector& Vertex2 = Vertices[TriangleIndex * 3 + 2].Position;
+					const FVector& Vertex0 = Vertices[Indices[TriangleIndex * 3 + 0]].Position;
+					const FVector& Vertex1 = Vertices[Indices[TriangleIndex * 3 + 1]].Position;
+					const FVector& Vertex2 = Vertices[Indices[TriangleIndex * 3 + 2]].Position;
 
 					float LocalT = 0.0f;
 					FVector LocalHitPos;
