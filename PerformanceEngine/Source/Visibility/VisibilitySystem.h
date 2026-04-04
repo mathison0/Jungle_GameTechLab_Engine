@@ -3,6 +3,7 @@
 #include "Types/Array.h"
 #include "Types/PlatformTypes.h"
 #include "Math/Vector.h"
+#include "Scene/SceneTypes.h"
 
 class FCamera;
 class FScene;
@@ -40,6 +41,11 @@ private:
 	bool IntersectsAABB(const FFrustum& InFrustum, const FVector& InBoxMin, const FVector& InBoxMax) const;
 	bool HasCameraChanged(const FCamera& InCamera) const;
 	void UpdateCachedCameraState(const FCamera& InCamera);
+
+	bool TryReuseCachedResults(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults) const;
+	void ComputeVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, FVisibilityResults& OutResults);
+	void UpdateCache(const FCamera& InCamera, const FVisibilityResults& InResults);
+	void LogBuildResult(size_t TotalCount, size_t VisibleCount, bool bReusedCache) const;
 
 private:
 	uint64 NextFrameNumber = 1;

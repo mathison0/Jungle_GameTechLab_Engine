@@ -9,63 +9,40 @@
 void FVisibilitySystem::Reset()
 {
 	NextFrameNumber = 1;
+
+	CachedResults = FVisibilityResults();
+	CachedFrustum = FFrustum();
+
+	CachedCameraPosition = FVector::ZeroVector;
+	CachedCameraForward = FVector::ForwardVector;
+	CachedCameraUp = FVector::UpVector;
+	CachedCameraRight = FVector::RightVector;
+
+	CachedFOV = 0.0f;
+	CachedAspect = 0.0f;
+	CachedNearClip = 0.0f;
+	CachedFarClip = 0.0f;
+
+	bHasCachedVisibility = false;
 }
 
 void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults)
 {
 	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+
 	OutResults.FrameNumber = NextFrameNumber++;
 
-	// 디버그 출력용
-	uint32 VisibleCount = static_cast<uint32>(CachedResults.VisiblePrimitiveIndices.size());
-	uint32 TotalCount = static_cast<uint32>(RenderItems.size());
-
-	if (!HasCameraChanged(InCamera))
+	if (TryReuseCachedResults(InScene, InCamera, OutResults))
 	{
-		OutResults.VisiblePrimitiveIndices = CachedResults.VisiblePrimitiveIndices;
-		OutputDebugStringA("VisibilitySystem: Reuse cached visible list\n");
-		std::string Msg = "Frustum Culling - Total: " + std::to_string(TotalCount)
-			+ ", Visible: " + std::to_string(VisibleCount) + "\n";
-		OutputDebugStringA(Msg.c_str());
+		LogBuildResult(RenderItems.size(), OutResults.VisiblePrimitiveIndices.size(), true);
 		return;
 	}
 
-	OutResults.VisiblePrimitiveIndices.clear();
-	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
+	ComputeVisiblePrimitives(RenderItems, InCamera, OutResults);
+	UpdateCache(InCamera, OutResults);
 
-	CachedFrustum = BuildFrustum(InCamera);
-
-	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
-	{
-		const FRenderItem& Item = RenderItems[PrimitiveIndex];
-
-		if (!Item.StaticMesh || !Item.StaticMesh->IsValid())
-		{
-			continue; // 정적 메시가 없는 경우 건너뜀
-		}
-
-		if (IntersectsAABB(CachedFrustum, Item.WorldBoundsMin, Item.WorldBoundsMax))
-		{
-			OutResults.VisiblePrimitiveIndices.push_back(PrimitiveIndex);
-		}
-	}
-
-	CachedResults.VisiblePrimitiveIndices = OutResults.VisiblePrimitiveIndices;
-	CachedResults.FrameNumber = OutResults.FrameNumber;
-
-	UpdateCachedCameraState(InCamera);
-
-	// 디버그 출력
-	VisibleCount = static_cast<uint32>(OutResults.VisiblePrimitiveIndices.size());
-	TotalCount = static_cast<uint32>(RenderItems.size());
-
-	OutputDebugStringA("VisibilitySystem: Camera changed, recomputed visible list\n");
-	std::string Msg = "Frustum Culling - Total: " + std::to_string(TotalCount)
-		+ ", Visible: " + std::to_string(VisibleCount) + "\n";
-
-	OutputDebugStringA(Msg.c_str());
+	LogBuildResult(RenderItems.size(), OutResults.VisiblePrimitiveIndices.size(), false);
 }
-
 namespace
 {
 	FPlane MakePlaneFromPointNormal(const FVector& Point, const FVector& Normal);
@@ -177,6 +154,70 @@ void FVisibilitySystem::UpdateCachedCameraState(const FCamera& InCamera)
 	CachedNearClip = InCamera.GetNearClip();
 	CachedFarClip = InCamera.GetFarClip();
 	bHasCachedVisibility = true;
+}
+
+bool FVisibilitySystem::TryReuseCachedResults(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults) const
+{
+	(void)InScene;
+
+	if (HasCameraChanged(InCamera))
+	{
+		return false;
+	}
+
+	OutResults.VisiblePrimitiveIndices = CachedResults.VisiblePrimitiveIndices;
+	return true;
+}
+
+void FVisibilitySystem::ComputeVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, FVisibilityResults& OutResults)
+{
+	OutResults.VisiblePrimitiveIndices.clear();
+	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
+
+	CachedFrustum = BuildFrustum(InCamera);
+
+	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
+	{
+		const FRenderItem& Item = RenderItems[PrimitiveIndex];
+
+		if (Item.StaticMesh == nullptr || !Item.StaticMesh->IsValid())
+		{
+			continue;
+		}
+
+		if (!IntersectsAABB(CachedFrustum, Item.WorldBoundsMin, Item.WorldBoundsMax))
+		{
+			continue;
+		}
+
+		OutResults.VisiblePrimitiveIndices.push_back(PrimitiveIndex);
+	}
+}
+
+void FVisibilitySystem::UpdateCache(const FCamera& InCamera, const FVisibilityResults& InResults)
+{
+	CachedResults = InResults;
+	UpdateCachedCameraState(InCamera);
+}
+
+void FVisibilitySystem::LogBuildResult(size_t TotalCount, size_t VisibleCount, bool bReusedCache) const
+{
+	if (bReusedCache)
+	{
+		OutputDebugStringA("VisibilitySystem: Reuse cached visible list\n");
+	}
+	else
+	{
+		OutputDebugStringA("VisibilitySystem: Camera changed, recomputed visible list\n");
+	}
+
+	std::string Msg = "Frustum Culling - Total: "
+		+ std::to_string(TotalCount)
+		+ ", Visible: "
+		+ std::to_string(VisibleCount)
+		+ "\n";
+
+	OutputDebugStringA(Msg.c_str());
 }
 
 // 평면 생성 헬퍼
