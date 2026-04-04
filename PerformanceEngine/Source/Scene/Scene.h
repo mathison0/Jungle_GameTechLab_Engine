@@ -28,11 +28,19 @@ public:
 private:
 	//BVH Related Functions
 	int CreateWorldBVH(int start, int end, int ParentIdx);
+	int AllocateBVHNode();
+	int FreeNode(int NodeIdx);
+	void RefitUpward(int ParentIdx);
+	int InsertLeaf(const FVector& Min, const FVector& Max, int PrimitiveIndex);
+	int FindBestSibling(const FVector& Min, const FVector& Max);
+	void RemoveLeaf(int LeafIdx);
+	float SurfaceArea(const FVector& Min, const FVector& Max);
+	void MoveLeaf(int RenderItemIndex, const FTransform& NewTransform);
+
 
 private:
 	TArray<FRenderItem> RenderItems;
 	TMap<FString, std::shared_ptr<FStaticMesh>> MeshCache;
-	TArray<AABBNode> WorldBVHNodes;
 	FSceneCameraInitData InitialCamera;
 
 	FVector RawCameraLocation = FVector::ZeroVector;
@@ -40,4 +48,11 @@ private:
 
 	FVector SceneBoundsMin = FVector::ZeroVector;
 	FVector SceneBoundsMax = FVector::ZeroVector;
+
+
+	//BVH Related Variables
+	TArray<AABBNode> WorldBVHNodes;
+	TArray<int> FreeNodes;
+	int RootIndex = 1;
+	//BVH Related Variables
 };

@@ -6,9 +6,11 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
+#include "limits"
 
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
+#include "Types/Queue.h"
 
 
 namespace
@@ -398,6 +400,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	RootNode.Min = SceneBoundsMin;
 	RootNode.Max = SceneBoundsMax;
 	WorldBVHNodes.push_back(RootNode); // index 0 = root
+	RootIndex = 0;
 	CreateWorldBVH(0, (int)RenderItems.size(), 0);
 
 	InitialCamera.Transform = FTransform(MakeSceneRotation(RawCameraRotation), RawCameraLocation, FVector::OneVector);
@@ -432,6 +435,11 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 		WorldBVHNodes[ParentIdx].LeftChildIndex = -1;
 		WorldBVHNodes[ParentIdx].RightChildIndex = -1;
 		WorldBVHNodes[ParentIdx].PrimitiveIndex = start; // RenderItems 배열 인덱스
+
+		FRenderItem& Item = RenderItems[start];
+		Item.BVHLeafIndex = ParentIdx; //Parent? why?
+		const FVector Margin = (Item.WorldBoundsMax - Item.WorldBoundsMin) * 0.1f;
+
 		return ParentIdx;
 	}
 
@@ -450,6 +458,7 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 	AABBNode LeftNode;
 	LeftNode.Min = RenderItems[start].WorldBoundsMin;
 	LeftNode.Max = RenderItems[start].WorldBoundsMax;
+	LeftNode.ParentIndex = ParentIdx;
 	for (int i = start + 1; i < MidIdx; ++i)
 	{
 		LeftNode.Min = FVector::Min(LeftNode.Min, RenderItems[i].WorldBoundsMin);
@@ -459,6 +468,7 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 	AABBNode RightNode;
 	RightNode.Min = RenderItems[MidIdx].WorldBoundsMin;
 	RightNode.Max = RenderItems[MidIdx].WorldBoundsMax;
+	RightNode.ParentIndex = ParentIdx;
 	for (int i = MidIdx + 1; i < end; ++i)
 	{
 		RightNode.Min = FVector::Min(RightNode.Min, RenderItems[i].WorldBoundsMin);
@@ -473,5 +483,215 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 	WorldBVHNodes[ParentIdx].LeftChildIndex = CreateWorldBVH(start, MidIdx, LeftIdx);
 	WorldBVHNodes[ParentIdx].RightChildIndex = CreateWorldBVH(MidIdx, end, RightIdx);
 
-	return ParentIdx;  // 버그5 수정
+	return ParentIdx;
+}
+
+int FScene::AllocateBVHNode()
+{
+	if (FreeNodes.empty())
+	{
+		int NewIndex = (int)WorldBVHNodes.size();
+		WorldBVHNodes.emplace_back();
+		return NewIndex;
+	}
+	else
+	{
+		int ReuseIndex = FreeNodes.back();
+		FreeNodes.pop_back();
+		return ReuseIndex;
+	}
+}
+
+int FScene::FreeNode(int NodeIdx)
+{
+	FreeNodes.push_back(NodeIdx);
+	return NodeIdx;
+}
+
+void FScene::RefitUpward(int ParentIdx)
+{
+	while (ParentIdx != -1)
+	{
+		AABBNode& Node = WorldBVHNodes[ParentIdx];
+		if (Node.LeftChildIndex != -1 && Node.RightChildIndex != -1)
+		{
+			Node.Min = FVector::Min(WorldBVHNodes[Node.LeftChildIndex].Min,
+				WorldBVHNodes[Node.RightChildIndex].Min);
+			Node.Max = FVector::Max(WorldBVHNodes[Node.LeftChildIndex].Max,
+				WorldBVHNodes[Node.RightChildIndex].Max);
+		}
+		ParentIdx = Node.ParentIndex;
+	}
+}
+
+int FScene::InsertLeaf(const FVector& Min, const FVector& Max, int PrimitiveIndex)
+{
+	int LeafIdx = AllocateBVHNode();
+	WorldBVHNodes[LeafIdx].LeftChildIndex = -1;
+	WorldBVHNodes[LeafIdx].RightChildIndex = -1;
+	WorldBVHNodes[LeafIdx].Min = Min;
+	WorldBVHNodes[LeafIdx].Max = Max;
+	WorldBVHNodes[LeafIdx].PrimitiveIndex = PrimitiveIndex;
+
+	int SiblingIdx = FindBestSibling(Min, Max);
+
+	int NewInternalIdx = AllocateBVHNode();
+	WorldBVHNodes[NewInternalIdx].PrimitiveIndex = -1; // 내부 노드
+	int OldParentIdx = WorldBVHNodes[SiblingIdx].ParentIndex;
+	WorldBVHNodes[NewInternalIdx].ParentIndex = OldParentIdx;
+	WorldBVHNodes[NewInternalIdx].LeftChildIndex = SiblingIdx;
+	WorldBVHNodes[NewInternalIdx].RightChildIndex = LeafIdx;
+
+	WorldBVHNodes[SiblingIdx].ParentIndex = NewInternalIdx;
+	WorldBVHNodes[LeafIdx].ParentIndex = NewInternalIdx;
+
+	if (OldParentIdx != -1)
+	{
+		if (WorldBVHNodes[OldParentIdx].LeftChildIndex == SiblingIdx)
+			WorldBVHNodes[OldParentIdx].LeftChildIndex = NewInternalIdx;
+		else
+			WorldBVHNodes[OldParentIdx].RightChildIndex = NewInternalIdx;
+	}
+	else
+	{
+		RootIndex = NewInternalIdx;  // 루트 교체
+	}
+
+	// 5. AABB 갱신
+	RefitUpward(NewInternalIdx);
+	return LeafIdx;
+
+}
+
+int FScene::FindBestSibling(const FVector& NewMin, const FVector& NewMax)
+{
+	// 우선순위 큐: (누적비용, 노드인덱스)
+	std::priority_queue<std::pair<float, int>,
+		std::vector<std::pair<float, int>>,
+		std::greater<>> PQ;
+	PQ.push({ 0.0f, RootIndex });
+
+	float BestCost = std::numeric_limits<float>::max();
+	int BestNode = RootIndex;
+
+	while (!PQ.empty())
+	{
+		auto [InheritedCost, NodeIdx] = PQ.top(); PQ.pop();
+
+		// 이 노드 옆에 삽입했을 때 총 비용
+		FVector MergedMin = FVector::Min(WorldBVHNodes[NodeIdx].Min, NewMin);
+		FVector MergedMax = FVector::Max(WorldBVHNodes[NodeIdx].Max, NewMax);
+		float DirectCost = SurfaceArea(MergedMin, MergedMax);
+		float TotalCost = DirectCost + InheritedCost;
+
+		if (TotalCost < BestCost)
+		{
+			BestCost = TotalCost;
+			BestNode = NodeIdx;
+		}
+
+		// 자식 탐색 가치가 있는지 판단
+		// 자식에 삽입해도 최소 InheritedCost + SA(NewLeaf)는 들음
+		// 이게 이미 BestCost보다 크면 이 가지는 스킵
+		float LowerBound = InheritedCost + SurfaceArea(NewMin, NewMax);
+		if (LowerBound < BestCost && !WorldBVHNodes[NodeIdx].IsLeaf())
+		{
+			// SA 증가량을 다음 노드의 InheritedCost에 누적
+			float ChildInherited = InheritedCost + (DirectCost - SurfaceArea(WorldBVHNodes[NodeIdx].Min, WorldBVHNodes[NodeIdx].Max));
+			PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].LeftChildIndex });
+			PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].RightChildIndex });
+		}
+	}
+
+	return BestNode;
+}
+
+void FScene::RemoveLeaf(int LeafIdx)
+{
+	int ParentIdx = WorldBVHNodes[LeafIdx].ParentIndex;
+	if (ParentIdx == -1)
+	{
+		// 루트가 리프인 경우
+		RootIndex = -1;
+		FreeNode(LeafIdx);
+		return;
+	}
+
+	int GrandParentIdx = WorldBVHNodes[ParentIdx].ParentIndex;
+
+	// 형제 찾기
+	int SiblingIdx = (WorldBVHNodes[ParentIdx].LeftChildIndex == LeafIdx)
+		? WorldBVHNodes[ParentIdx].RightChildIndex
+		: WorldBVHNodes[ParentIdx].LeftChildIndex;
+
+	// 형제를 부모 자리로 올림
+	WorldBVHNodes[SiblingIdx].ParentIndex = GrandParentIdx;
+	if (GrandParentIdx != -1)
+	{
+		if (WorldBVHNodes[GrandParentIdx].LeftChildIndex == ParentIdx)
+			WorldBVHNodes[GrandParentIdx].LeftChildIndex = SiblingIdx;
+		else
+			WorldBVHNodes[GrandParentIdx].RightChildIndex = SiblingIdx;
+	}
+	else
+	{
+		RootIndex = SiblingIdx;
+	}
+
+	FreeNode(ParentIdx);
+	FreeNode(LeafIdx);
+
+	// AABB 갱신
+	RefitUpward(GrandParentIdx);
+}
+
+
+float FScene::SurfaceArea(const FVector& Min, const FVector& Max)
+{
+	float X = Max.X - Min.X;
+	float Y = Max.Y - Min.Y;
+	float Z = Max.Z - Min.Z;
+	return 2.0f * (X * Y + Y * Z + X * Z);
+}
+
+void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
+{
+	FRenderItem& Item = RenderItems[RenderItemIndex];
+
+	// Transform 갱신
+	Item.Transform = NewTransform;
+
+	// 새 AABB 계산
+	bool bHasBounds = false;
+	ExpandBoundsWithTransformedAabb(
+		Item.StaticMesh->GetBoundsMin(),
+		Item.StaticMesh->GetBoundsMax(),
+		NewTransform,
+		Item.WorldBoundsMin,
+		Item.WorldBoundsMax,
+		bHasBounds);
+
+	const FVector& NewMin = Item.WorldBoundsMin;
+	const FVector& NewMax = Item.WorldBoundsMax;
+
+	// Loose AABB 안에 있으면 리프 AABB만 갱신 후 Refit
+	bool bInsideLoose =
+		NewMin.X >= Item.LooseBoundsMin.X && NewMin.Y >= Item.LooseBoundsMin.Y && NewMin.Z >= Item.LooseBoundsMin.Z &&
+		NewMax.X <= Item.LooseBoundsMax.X && NewMax.Y <= Item.LooseBoundsMax.Y && NewMax.Z <= Item.LooseBoundsMax.Z;
+
+	if (bInsideLoose)
+	{
+		WorldBVHNodes[Item.BVHLeafIndex].Min = NewMin;
+		WorldBVHNodes[Item.BVHLeafIndex].Max = NewMax;
+		RefitUpward(WorldBVHNodes[Item.BVHLeafIndex].ParentIndex);
+		return;
+	}
+
+	// Loose AABB 벗어남 → 삭제 후 재삽입
+	RemoveLeaf(Item.BVHLeafIndex);
+
+	const FVector Margin = (NewMax - NewMin) * 0.1f;
+	Item.LooseBoundsMin = NewMin - Margin;
+	Item.LooseBoundsMax = NewMax + Margin;
+	Item.BVHLeafIndex = InsertLeaf(Item.LooseBoundsMin, Item.LooseBoundsMax, RenderItemIndex);
 }
