@@ -454,8 +454,10 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 		WorldBVHNodes[ParentIdx].PrimitiveIndex = start; // RenderItems 배열 인덱스
 
 		FRenderItem& Item = RenderItems[start];
-		Item.BVHLeafIndex = ParentIdx; //Parent? why?
+		Item.BVHLeafIndex = ParentIdx;
 		const FVector Margin = (Item.WorldBoundsMax - Item.WorldBoundsMin) * 0.1f;
+		Item.LooseBoundsMin = Item.WorldBoundsMin - Margin;
+		Item.LooseBoundsMax = Item.WorldBoundsMax + Margin;
 
 		return ParentIdx;
 	}
