@@ -415,6 +415,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	RootNode.Max = SceneBoundsMax;
 	WorldBVHNodes.push_back(RootNode); // index 0 = root
 	RootIndex = 0;
+	// Sort RenderItems
 	CreateWorldBVH(0, (int)RenderItems.size(), 0);
 
 	InitialCamera.Transform = FTransform(MakeSceneRotation(RawCameraRotation), RawCameraLocation, FVector::OneVector);
@@ -466,6 +467,14 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 	int MidIdx = (start + end) / 2;
 	std::nth_element(RenderItems.begin() + start, RenderItems.begin() + MidIdx, RenderItems.begin() + end,
 		[&](const FRenderItem& A, const FRenderItem& B) {
+			float CentA = (A.WorldBoundsMin[axis] + A.WorldBoundsMax[axis]) * 0.5f;
+			float CentB = (B.WorldBoundsMin[axis] + B.WorldBoundsMax[axis]) * 0.5f;
+			return CentA < CentB;
+		});
+
+	// 임시 코드
+	std::nth_element(PrimitiveRuntimeData.begin() + start, PrimitiveRuntimeData.begin() + MidIdx, PrimitiveRuntimeData.begin() + end,
+		[&](const FScenePrimitiveRuntimeData& A, const FScenePrimitiveRuntimeData& B) {
 			float CentA = (A.WorldBoundsMin[axis] + A.WorldBoundsMax[axis]) * 0.5f;
 			float CentB = (B.WorldBoundsMin[axis] + B.WorldBoundsMax[axis]) * 0.5f;
 			return CentA < CentB;
