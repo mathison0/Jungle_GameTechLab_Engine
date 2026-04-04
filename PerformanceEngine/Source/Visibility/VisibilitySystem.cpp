@@ -173,7 +173,6 @@ void FVisibilitySystem::ComputeVisiblePrimitives(const TArray<FRenderItem>& Rend
 {
 	OutResults.VisiblePrimitiveIndices.clear();
 	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
-
 	CachedFrustum = BuildFrustum(InCamera);
 
 	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)

@@ -291,28 +291,43 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 					continue;
 				}
 
+				const FTransform WorldTransform = BuildSceneTransform(PendingPrimitive.Location, PendingPrimitive.Rotation, PendingPrimitive.Scale);
+
 				FRenderItem RenderItem;
 				RenderItem.PrimitiveId = PendingPrimitive.Id;
 				RenderItem.MeshAssetPath = MeshCacheKey;
-				RenderItem.Transform = BuildSceneTransform(PendingPrimitive.Location, PendingPrimitive.Rotation, PendingPrimitive.Scale);
+				RenderItem.Transform = WorldTransform;
 				RenderItem.StaticMesh = SharedMesh;
 
-				bool bHasRenderItemBounds = false;
+				FScenePrimitiveColdData ColdData;
+				ColdData.MeshAssetPath = MeshCacheKey;
+				ColdData.StaticMeshOwner = SharedMesh;
+
+				FScenePrimitiveRuntimeData RuntimeData;
+				RuntimeData.PrimitiveId = PendingPrimitive.Id;
+				RuntimeData.WorldMatrix = WorldTransform.ToMatrixWithScale();
+				RuntimeData.StaticMesh = SharedMesh.get();
+
+				bool bHasRuntimeBounds = false;
 				ExpandBoundsWithTransformedAabb(
 					SharedMesh->GetBoundsMin(),
 					SharedMesh->GetBoundsMax(),
-					RenderItem.Transform,
-					RenderItem.WorldBoundsMin,
-					RenderItem.WorldBoundsMax,
-					bHasRenderItemBounds);
+					WorldTransform,
+					RuntimeData.WorldBoundsMin,
+					RuntimeData.WorldBoundsMax,
+					bHasRuntimeBounds);
 
-				if (bHasRenderItemBounds)
+				if (bHasRuntimeBounds)
 				{
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RenderItem.WorldBoundsMin);
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RenderItem.WorldBoundsMax);
+					RenderItem.WorldBoundsMin = RuntimeData.WorldBoundsMin;
+					RenderItem.WorldBoundsMax = RuntimeData.WorldBoundsMax;
+					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMin);
+					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMax);
 				}
 
 				RenderItems.push_back(std::move(RenderItem));
+				PrimitiveColdData.push_back(std::move(ColdData));
+				PrimitiveRuntimeData.push_back(std::move(RuntimeData));
 				continue;
 			}
 
@@ -360,7 +375,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 		}
 	}
 
-	if (RenderItems.empty())
+	if (PrimitiveRuntimeData.empty())
 	{
 		Release();
 		return false;
@@ -379,6 +394,8 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 void FScene::Release()
 {
 	RenderItems.clear();
+	PrimitiveRuntimeData.clear();
+	PrimitiveColdData.clear();
 	MeshManager.Release();
 	InitialCamera = FSceneCameraInitData();
 	RawCameraLocation = FVector::ZeroVector;

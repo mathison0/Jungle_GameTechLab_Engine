@@ -188,7 +188,9 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 	{
 		SwapChain.Reset();
 		Device.Reset();
+		Device1.Reset();
 		DeviceContext.Reset();
+		DeviceContext1.Reset();
 
 		return D3D11CreateDeviceAndSwapChain(
 			nullptr,
@@ -209,7 +211,9 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 	{
 		SwapChain.Reset();
 		Device.Reset();
+		Device1.Reset();
 		DeviceContext.Reset();
+		DeviceContext1.Reset();
 
 		return D3D11CreateDeviceAndSwapChain(
 			InAdapter,
@@ -311,6 +315,14 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 		return false;
 	}
 
+	if (FAILED(Device.As(&Device1)) || !Device1
+		|| FAILED(DeviceContext.As(&DeviceContext1)) || !DeviceContext1)
+	{
+		OutputDebugStringA("[D3D11RHI] Failed to acquire ID3D11Device1/ID3D11DeviceContext1.\n");
+		Shutdown();
+		return false;
+	}
+
 	UpdateAdapterInfo(bUsedHighPerformancePreference);
 	UpdateViewport(ClientWidth, ClientHeight);
 
@@ -335,7 +347,9 @@ void FD3D11RHI::Shutdown()
 
 	ReleaseBackBufferResources();
 	SwapChain.Reset();
+	DeviceContext1.Reset();
 	DeviceContext.Reset();
+	Device1.Reset();
 	Device.Reset();
 	AdapterName.clear();
 	AdapterVendorId = 0;
