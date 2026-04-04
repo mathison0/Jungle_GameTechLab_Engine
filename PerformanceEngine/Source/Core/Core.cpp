@@ -163,9 +163,6 @@ void FCore::Tick()
 			RHI->GetViewportWidth(),
 			RHI->GetViewportHeight(),
 			PickState);
-	}
-	if (Input->IsKeyPressed('R'))
-	{
 		PickingSystem->UpdatePickWorldBVH
 		(
 			*Scene,
@@ -175,6 +172,10 @@ void FCore::Tick()
 			RHI->GetViewportWidth(),
 			RHI->GetViewportHeight(),
 			PickState);
+	}
+	if (Input->IsKeyPressed('R'))
+	{
+		//Scene->GetRenderItems()[0].Transform.
 	}
 	StatsSystem->ApplyPickState(PickState);
 
