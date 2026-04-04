@@ -3,6 +3,7 @@
 #include <memory>
 #include <Windows.h>
 
+#include "BVH/BVHDebugRenderer.h"
 #include "Picking/PickingSystem.h"
 #include "Visibility/VisibilitySystem.h"
 
@@ -19,6 +20,7 @@ class FSceneRenderer;
 class FStatsSystem;
 class FVisibilitySystem;
 class FWindowsWindow;
+class FBVHBuilder;
 
 struct FCoreInitArgs
 {
@@ -63,6 +65,7 @@ private:
 	std::unique_ptr<FPickingSystem> PickingSystem;
 	std::unique_ptr<FStatsSystem> StatsSystem;
 	std::unique_ptr<FGrid> Grid;
+	std::unique_ptr<FBVHDebugRenderer> BVHDebugRenderer;
 
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;

@@ -63,7 +63,8 @@ namespace
 		return Result;
 	}
 
-	bool IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax)
+	// AABB와의 교차 진입 거리를 반환. 미교차 시 1e30f 반환.
+	float IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax)
 	{
 		float TMin = 0.0f;
 		float TMax = std::numeric_limits<float>::max();
@@ -79,7 +80,7 @@ namespace
 			{
 				if (Origin < BoundsMin || Origin > BoundsMax)
 				{
-					return false;
+					return 1e30f;
 				}
 				continue;
 			}
@@ -96,11 +97,11 @@ namespace
 			TMax = std::min(TMax, T1);
 			if (TMin > TMax)
 			{
-				return false;
+				return 1e30f;
 			}
 		}
 
-		return true;
+		return TMin;
 	}
 
 	bool IntersectRayTriangle(
@@ -154,46 +155,89 @@ namespace
 			return false;
 		}
 
-		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBoundsMin, InPrimitiveRuntimeData.WorldBoundsMax))
+		const FBVHSpatialData* SpatialData =
+			static_cast<const FBVHSpatialData*>(StaticMesh->GetSpatialData().get());
+
+		if (!SpatialData || SpatialData->Nodes.empty()) return false;
+
+		const TArray<FBVHNode>& Nodes = SpatialData->Nodes;
+		const TArray<uint32>& TriangleIndices = SpatialData->TriangleIndices;
+		const TArray<FStaticMeshVertex>& Vertices = StaticMesh->GetVertices();
+		const TArray<uint32>& Indices = StaticMesh->GetIndices();
+
+
+		bool bHit = { false };
+
+		FRay LocalRay;
+
+		LocalRay.Origin = InPrimitiveRuntimeData.InverseWorldMatrix.TransformPosition(InRay.Origin);
+		LocalRay.Direction = InPrimitiveRuntimeData.InverseWorldMatrix.TransformVector(InRay.Direction).GetSafeNormal();
+
+		// 루트 AABB miss면 즉시 탈출
+		if (IntersectRayAabb(LocalRay, Nodes[0].BoundMin, Nodes[0].BoundMax) == 1e30f)
 		{
 			return false;
 		}
 
-		const TArray<FStaticMeshVertex>& Vertices = StaticMesh->GetVertices();
-		const TArray<uint32>& Indices = StaticMesh->GetIndices();
-		bool bHit = false;
+		float BestLocalT = 1e30f;
 
-		for (size_t IndexOffset = 0; IndexOffset + 2 < Indices.size(); IndexOffset += 3)
+		// BVH 깊이는 64 초과 불가
+		int32 Stack[64];
+		int32 StackPtr = 0;
+		const FBVHNode* Node = &Nodes[0];
+
+		while (true)
 		{
-			const uint32 IndexA = Indices[IndexOffset + 0];
-			const uint32 IndexB = Indices[IndexOffset + 1];
-			const uint32 IndexC = Indices[IndexOffset + 2];
-			if (IndexA >= Vertices.size() || IndexB >= Vertices.size() || IndexC >= Vertices.size())
+			if (Node->IsLeaf())
 			{
+				for (int32 i = 0; i < Node->PrimitiveCount; ++i)
+				{
+					uint32 TriangleIndex = TriangleIndices[Node->LeftFirst + i];
+					const FVector& Vertex0 = Vertices[Indices[TriangleIndex * 3 + 0]].Position;
+					const FVector& Vertex1 = Vertices[Indices[TriangleIndex * 3 + 1]].Position;
+					const FVector& Vertex2 = Vertices[Indices[TriangleIndex * 3 + 2]].Position;
+
+					float LocalT = 0.0f;
+					FVector LocalHitPos;
+					if (!IntersectRayTriangle(LocalRay, Vertex0, Vertex1, Vertex2, LocalT, LocalHitPos)) continue;
+					if (LocalT >= BestLocalT) continue;
+
+					const FVector WorldHitPos = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(LocalHitPos);
+					const float DistSq = FVector::DistSquared(InRay.Origin, WorldHitPos);
+					if (DistSq >= InOutBestHit.DistanceSquared) continue;
+
+					BestLocalT = LocalT;
+					InOutBestHit.DistanceSquared = DistSq;
+					InOutBestHit.PrimitiveId = InPrimitiveRuntimeData.PrimitiveId;
+					InOutBestHit.WorldPosition = WorldHitPos;
+					bHit = true;
+				}
+				if (StackPtr == 0) break;
+				Node = &Nodes[Stack[--StackPtr]];
 				continue;
 			}
 
-			const FVector A = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexA].Position);
-			const FVector B = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexB].Position);
-			const FVector C = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexC].Position);
+			// 두 자식의 AABB 진입 거리 계산
+			const FBVHNode* Child1 = &Nodes[Node->LeftFirst];
+			const FBVHNode* Child2 = &Nodes[Node->LeftFirst + 1];
+			float Dist1 = IntersectRayAabb(LocalRay, Child1->BoundMin, Child1->BoundMax);
+			float Dist2 = IntersectRayAabb(LocalRay, Child2->BoundMin, Child2->BoundMax);
 
-			float HitDistance = 0.0f;
-			FVector HitPosition = FVector::ZeroVector;
-			if (!IntersectRayTriangle(InRay, A, B, C, HitDistance, HitPosition))
+			// 가까운 쪽을 먼저 방문, 먼 쪽만 스택에 저장
+			if (Dist1 > Dist2) { std::swap(Dist1, Dist2); std::swap(Child1, Child2); }
+
+			if (Dist1 >= BestLocalT)
 			{
-				continue;
+				// 두 자식 모두 miss 또는 현재 hit보다 멀면 스택에서 꺼내기
+				if (StackPtr == 0) break;
+				Node = &Nodes[Stack[--StackPtr]];
 			}
-
-			const float DistanceSquared = FVector::DistSquared(InRay.Origin, HitPosition);
-			if (DistanceSquared >= InOutBestHit.DistanceSquared)
+			else
 			{
-				continue;
+				// 가까운 쪽으로 직접 이동, 먼 쪽은 교차할 경우만 스택에 push
+				Node = Child1;
+				if (Dist2 < BestLocalT) Stack[StackPtr++] = static_cast<int32>(Child2 - &Nodes[0]);
 			}
-
-			InOutBestHit.DistanceSquared = DistanceSquared;
-			InOutBestHit.PrimitiveId = InPrimitiveRuntimeData.PrimitiveId;
-			InOutBestHit.WorldPosition = HitPosition;
-			bHit = true;
 		}
 
 		return bHit;

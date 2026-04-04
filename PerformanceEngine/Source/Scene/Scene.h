@@ -6,10 +6,18 @@
 #include "Scene/SceneTypes.h"
 #include "StaticMesh/StaticMeshManager.h"
 #include "Types/Array.h"
+#include "Types/Map.h"
+#include "BVH/BVHTypes.h"
+
+class FStaticMesh;
+class FBVHBuilder;
 
 class FScene
 {
 public:
+	FScene();
+	~FScene();
+
 	bool LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InSceneFilePath);
 	void Release();
 
@@ -19,10 +27,16 @@ public:
 	size_t GetPrimitiveCount() const { return PrimitiveRuntimeData.size(); }
 	const FSceneCameraInitData& GetInitialCamera() const { return InitialCamera; }
 
+	const TArray<FBVHNode>& GetBVHNodeDatas() const { return BVHDatas.Nodes; };
+
 	const FVector& GetSceneBoundsMin() const { return SceneBoundsMin; }
 	const FVector& GetSceneBoundsMax() const { return SceneBoundsMax; }
 
+
 private:
+	std::unique_ptr<FBVHBuilder> BVHBuilder;
+	FBVHSpatialData BVHDatas;
+
 	TArray<FRenderItem> RenderItems;
 	TArray<FScenePrimitiveRuntimeData> PrimitiveRuntimeData;
 	TArray<FScenePrimitiveColdData> PrimitiveColdData;

@@ -7,6 +7,7 @@
 #include "Math/Vector.h"
 #include "Math/Vector2.h"
 #include "Types/Array.h"
+#include "BVH/BVHTypes.h"
 #include "Types/PlatformTypes.h"
 #include "Types/String.h"
 
@@ -84,10 +85,12 @@ public:
 	const TArray<uint32>& GetIndices() const { return Indices; }
 	const TArray<FMaterial>& GetMaterials() const { return Materials; }
 	const TArray<FSection>& GetSections() const { return Sections; }
+
 	const FVector& GetBoundsMin() const { return BoundsMin; }
 	const FVector& GetBoundsMax() const { return BoundsMax; }
-	const std::shared_ptr<IStaticMeshSpatialData>& GetSpatialData() const { return SpatialData; }
-	void SetSpatialData(std::shared_ptr<IStaticMeshSpatialData> InSpatialData) { SpatialData = std::move(InSpatialData); }
+
+	const std::shared_ptr<FBVHSpatialData>& GetSpatialData() const { return SpatialData; }
+	void SetSpatialData(std::shared_ptr<FBVHSpatialData> InSpatialData) { SpatialData = std::move(InSpatialData); }
 
 	ID3D11ShaderResourceView* GetMaterialTexture(int32 InMaterialIndex) const
 	{
@@ -105,11 +108,11 @@ private:
 	TArray<FStaticMeshVertex> Vertices;
 	TArray<uint32> Indices;
 	TComPtr<ID3D11Buffer> VertexBuffer;
+	TComPtr<ID3D11ShaderResourceView> DiffuseTextureView;
+	std::shared_ptr<FBVHSpatialData> SpatialData;
 	TComPtr<ID3D11Buffer> IndexBuffer;
 	TArray<FMaterial> Materials;
 	TArray<FSection> Sections;
-	std::shared_ptr<IStaticMeshSpatialData> SpatialData;
-
 	FVector BoundsMin = FVector::ZeroVector;
 	FVector BoundsMax = FVector::ZeroVector;
 };

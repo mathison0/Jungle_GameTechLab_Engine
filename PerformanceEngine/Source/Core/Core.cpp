@@ -3,6 +3,7 @@
 #include <array>
 #include <filesystem>
 
+#include "BVH/BVHDebugRenderer.h"
 #include "Camera/Camera.h"
 #include "Graphics/D3D11/D3D11RHI.h"
 #include "Grid/Grid.h"
@@ -12,6 +13,7 @@
 #include "Scene/Scene.h"
 #include "Stats/StatsSystem.h"
 #include "Visibility/VisibilitySystem.h"
+#include "BVH/BVHBuilder.h"
 
 namespace
 {
@@ -93,8 +95,10 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	VisibilitySystem = std::make_unique<FVisibilitySystem>();
 	PickingSystem = std::make_unique<FPickingSystem>();
 	StatsSystem = std::make_unique<FStatsSystem>();
+	BVHDebugRenderer = std::make_unique<FBVHDebugRenderer>();
 
-	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !HudRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem)
+
+	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !HudRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem || !BVHDebugRenderer)
 	{
 		Release();
 		return false;
@@ -138,7 +142,7 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 		Camera->SetAspectRatio(static_cast<float>(Args.Width) / static_cast<float>(Args.Height));
 	}
 
-	if (!SceneRenderer->Initialize(*RHI) || !HudRenderer->Initialize(*RHI))
+	if (!SceneRenderer->Initialize(*RHI) || !HudRenderer->Initialize(*RHI) || !BVHDebugRenderer->Initialize(*RHI))
 	{
 		Release();
 		return false;
@@ -184,6 +188,7 @@ void FCore::Tick()
 		Grid->Render(*RHI, *Camera);
 	}
 
+	//BVHDebugRenderer->Render(*RHI, *Camera, *Scene);
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
 	EndFrame();
 
@@ -234,6 +239,12 @@ void FCore::Release()
 		HudRenderer.reset();
 	}
 
+	if (BVHDebugRenderer)
+	{
+		BVHDebugRenderer->Shutdown();
+		BVHDebugRenderer.reset();
+	}
+
 	if (SceneRenderer)
 	{
 		SceneRenderer->Shutdown();
@@ -261,7 +272,6 @@ void FCore::Release()
 		RHI->Shutdown();
 		RHI.reset();
 	}
-
 	StatsSystem.reset();
 	PickingSystem.reset();
 	VisibilitySystem.reset();
@@ -302,5 +312,10 @@ bool FCore::LoadDefaultScene()
 		return false;
 	}
 
-	return Scene->LoadFromFile(RHI->GetDevice(), RHI->GetDeviceContext(), ScenePath);
+	if (!Scene->LoadFromFile(RHI->GetDevice(), RHI->GetDeviceContext(), ScenePath))
+	{
+		return false;
+	}
+
+	return true;
 }

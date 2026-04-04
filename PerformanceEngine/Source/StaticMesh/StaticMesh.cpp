@@ -1,5 +1,14 @@
 #include "StaticMesh.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <fstream>
+#include <limits>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
 #include <unordered_map>
 
 #include <WICTextureLoader.h>
@@ -92,7 +101,6 @@ void FStaticMesh::Release()
 	Materials.clear();
 	Sections.clear();
 	SpatialData.reset();
-
 	BoundsMin = FVector::ZeroVector;
 	BoundsMax = FVector::ZeroVector;
 }

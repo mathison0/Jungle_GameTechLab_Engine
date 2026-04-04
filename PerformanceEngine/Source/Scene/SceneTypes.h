@@ -52,6 +52,8 @@ struct FScenePrimitiveRuntimeData
 {
 	int32 PrimitiveId = -1;
 	FMatrix WorldMatrix = FMatrix::Identity;
+	FMatrix InverseWorldMatrix = FMatrix::Identity;
+
 	FVector WorldBoundsMin = FVector::ZeroVector;
 	FVector WorldBoundsMax = FVector::ZeroVector;
 	FStaticMesh* StaticMesh = nullptr;

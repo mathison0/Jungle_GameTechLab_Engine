@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <memory>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -9,6 +10,8 @@
 
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
+#include "BVH/BVHBuilder.h"
+
 namespace
 {
 	struct FPendingPrimitive
@@ -193,6 +196,14 @@ namespace
 
 }
 
+FScene::FScene()
+	: BVHBuilder(std::make_unique<FBVHBuilder>())
+{
+
+}
+
+FScene::~FScene() = default;
+
 bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InSceneFilePath)
 {
 	Release();
@@ -285,6 +296,12 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				const FString MeshCacheKey = FStaticMeshManager::BuildAssetKey(MeshPath);
 
 				std::shared_ptr<FStaticMesh> SharedMesh = MeshManager.LoadStaticMesh(InDevice, InDeviceContext, MeshPath);
+				if (SharedMesh && !SharedMesh->GetSpatialData())
+				{
+					// BVH 트리 생성
+					SharedMesh->SetSpatialData(
+						std::make_shared<FBVHSpatialData>(BVHBuilder->BuildBVH(SharedMesh.get())));
+				}
 
 				if (!SharedMesh || !SharedMesh->IsValid())
 				{
@@ -306,6 +323,8 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				FScenePrimitiveRuntimeData RuntimeData;
 				RuntimeData.PrimitiveId = PendingPrimitive.Id;
 				RuntimeData.WorldMatrix = WorldTransform.ToMatrixWithScale();
+				RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+
 				RuntimeData.StaticMesh = SharedMesh.get();
 
 				bool bHasRuntimeBounds = false;
