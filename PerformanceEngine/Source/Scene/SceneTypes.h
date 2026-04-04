@@ -40,6 +40,10 @@ struct FRenderItem
 	FVector WorldBoundsMin = FVector::ZeroVector;
 	FVector WorldBoundsMax = FVector::ZeroVector;
 	std::shared_ptr<FStaticMesh> StaticMesh;
+
+	int BVHLeafIndex = -1;
+	FVector LooseBoundsMin = FVector::ZeroVector;
+	FVector LooseBoundsMax = FVector::ZeroVector;
 };
 
 struct FScenePrimitiveColdData
