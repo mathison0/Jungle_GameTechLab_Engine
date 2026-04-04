@@ -6,11 +6,13 @@
 #include "Scene/SceneTypes.h"
 #include "StaticMesh/StaticMeshManager.h"
 #include "Types/Array.h"
+#include "Picking/AABBNode.h"
 #include "Types/Map.h"
 #include "BVH/BVHTypes.h"
 
 class FStaticMesh;
 class FBVHBuilder;
+struct AABBNode;
 
 class FScene
 {
@@ -31,6 +33,20 @@ public:
 
 	const FVector& GetSceneBoundsMin() const { return SceneBoundsMin; }
 	const FVector& GetSceneBoundsMax() const { return SceneBoundsMax; }
+	const TArray<AABBNode>& GetWorldBVHNodes() const { return WorldBVHNodes; }
+
+
+private:
+	//BVH Related Functions
+	int CreateWorldBVH(int start, int end, int ParentIdx);
+	int AllocateBVHNode();
+	int FreeNode(int NodeIdx);
+	void RefitUpward(int ParentIdx);
+	int InsertLeaf(const FVector& Min, const FVector& Max, int PrimitiveIndex);
+	int FindBestSibling(const FVector& Min, const FVector& Max);
+	void RemoveLeaf(int LeafIdx);
+	float SurfaceArea(const FVector& Min, const FVector& Max);
+	void MoveLeaf(int RenderItemIndex, const FTransform& NewTransform);
 
 
 private:
@@ -42,6 +58,7 @@ private:
 	TArray<FScenePrimitiveColdData> PrimitiveColdData;
 	FStaticMeshManager MeshManager;
 
+	TMap<FString, std::shared_ptr<FStaticMesh>> MeshCache;
 	FSceneCameraInitData InitialCamera;
 
 	FVector RawCameraLocation = FVector::ZeroVector;
@@ -49,4 +66,11 @@ private:
 
 	FVector SceneBoundsMin = FVector::ZeroVector;
 	FVector SceneBoundsMax = FVector::ZeroVector;
+
+
+	//BVH Related Variables
+	TArray<AABBNode> WorldBVHNodes;
+	TArray<int> FreeNodes;
+	int RootIndex = 1;
+	//BVH Related Variables
 };

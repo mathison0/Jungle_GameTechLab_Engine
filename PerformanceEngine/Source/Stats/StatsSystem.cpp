@@ -26,11 +26,11 @@ namespace
 	double GetSecondsPerCycle()
 	{
 		static const double SecondsPerCycle = []()
-		{
-			LARGE_INTEGER Frequency = {};
-			QueryPerformanceFrequency(&Frequency);
-			return 1.0 / static_cast<double>(Frequency.QuadPart);
-		}();
+			{
+				LARGE_INTEGER Frequency = {};
+				QueryPerformanceFrequency(&Frequency);
+				return 1.0 / static_cast<double>(Frequency.QuadPart);
+			}();
 		return SecondsPerCycle;
 	}
 
@@ -258,6 +258,8 @@ void FStatsSystem::ApplyPickState(const FPickState& InPickState)
 	LastPickTimeMs = InPickState.LastPickTimeMs;
 	TotalPickTimeMs = InPickState.TotalPickTimeMs;
 	TotalPickCount = InPickState.TotalPickCount;
+	LastPickTimeMsWorldBVH = InPickState.LastPickTimeMsWorldBVH;
+	TotalAABBCheckCount = InPickState.TotalAABBCheckCount;
 }
 
 void FStatsSystem::RecordPickEvent(const FPickState& InPickState)
