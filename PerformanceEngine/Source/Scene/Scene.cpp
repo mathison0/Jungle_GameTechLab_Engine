@@ -295,27 +295,12 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				const std::filesystem::path MeshPath = ResolveAssetPath(SceneFilePath, PendingPrimitive.MeshAssetPath);
 				const FString MeshCacheKey = FStaticMeshManager::BuildAssetKey(MeshPath);
 
-				std::shared_ptr<FStaticMesh> SharedMesh;
-				const auto ExistingMeshIt = MeshCache.find(MeshCacheKey);
-				if (ExistingMeshIt != MeshCache.end())
+				std::shared_ptr<FStaticMesh> SharedMesh = MeshManager.LoadStaticMesh(InDevice, InDeviceContext, MeshPath);
+				if (SharedMesh && !SharedMesh->GetSpatialData())
 				{
-					SharedMesh = ExistingMeshIt->second;
-				}
-				else
-				{
-					SharedMesh = std::make_shared<FStaticMesh>();
-					if (!SharedMesh->LoadFromObj(InDevice, InDeviceContext, MeshPath))
-					{
-						SharedMesh.reset();
-					}
-					else
-					{
-						MeshCache.emplace(MeshCacheKey, SharedMesh);
-
-						// BVH 트리 생성
-						SharedMesh->SetSpatialData(
-							std::make_shared<FBVHSpatialData>(BVHBuilder->BuildBVH(SharedMesh.get())));
-					}
+					// BVH 트리 생성
+					SharedMesh->SetSpatialData(
+						std::make_shared<FBVHSpatialData>(BVHBuilder->BuildBVH(SharedMesh.get())));
 				}
 
 				if (!SharedMesh || !SharedMesh->IsValid())
@@ -338,6 +323,8 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				FScenePrimitiveRuntimeData RuntimeData;
 				RuntimeData.PrimitiveId = PendingPrimitive.Id;
 				RuntimeData.WorldMatrix = WorldTransform.ToMatrixWithScale();
+				RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+
 				RuntimeData.StaticMesh = SharedMesh.get();
 
 				bool bHasRuntimeBounds = false;

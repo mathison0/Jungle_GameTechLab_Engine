@@ -101,7 +101,6 @@ void FStaticMesh::Release()
 	Materials.clear();
 	Sections.clear();
 	SpatialData.reset();
-
 	BoundsMin = FVector::ZeroVector;
 	BoundsMax = FVector::ZeroVector;
 }

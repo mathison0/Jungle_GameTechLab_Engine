@@ -156,20 +156,21 @@ namespace
 		}
 
 		const FBVHSpatialData* SpatialData =
-			static_cast<const FBVHSpatialData*>(InRenderItem.StaticMesh->GetSpatialData().get());
+			static_cast<const FBVHSpatialData*>(StaticMesh->GetSpatialData().get());
 
 		if (!SpatialData || SpatialData->Nodes.empty()) return false;
 
 		const TArray<FBVHNode>& Nodes = SpatialData->Nodes;
 		const TArray<uint32>& TriangleIndices = SpatialData->TriangleIndices;
-		const TArray<FStaticMeshVertex>& Vertices = InRenderItem.StaticMesh->GetVertices();
+		const TArray<FStaticMeshVertex>& Vertices = StaticMesh->GetVertices();
 
 
 		bool bHit = { false };
 
 		FRay LocalRay;
-		LocalRay.Origin = InRenderItem.Transform.InverseTransformPosition(InRay.Origin);
-		LocalRay.Direction = InRenderItem.Transform.InverseTransformVector(InRay.Direction).GetSafeNormal();
+
+		LocalRay.Origin = InPrimitiveRuntimeData.InverseWorldMatrix.TransformPosition(InRay.Origin);
+		LocalRay.Direction = InPrimitiveRuntimeData.InverseWorldMatrix.TransformVector(InRay.Direction).GetSafeNormal();
 
 		// 루트 AABB miss면 즉시 탈출
 		if (IntersectRayAabb(LocalRay, Nodes[0].BoundMin, Nodes[0].BoundMax) == 1e30f)
@@ -179,7 +180,7 @@ namespace
 
 		float BestLocalT = 1e30f;
 
-		// 힙 할당 없는 고정 배열 스택 (BVH 깊이는 64 초과 불가)
+		// BVH 깊이는 64 초과 불가
 		int32 Stack[64];
 		int32 StackPtr = 0;
 		const FBVHNode* Node = &Nodes[0];
@@ -200,13 +201,13 @@ namespace
 					if (!IntersectRayTriangle(LocalRay, Vertex0, Vertex1, Vertex2, LocalT, LocalHitPos)) continue;
 					if (LocalT >= BestLocalT) continue;
 
-					const FVector WorldHitPos = InRenderItem.Transform.TransformPosition(LocalHitPos);
+					const FVector WorldHitPos = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(LocalHitPos);
 					const float DistSq = FVector::DistSquared(InRay.Origin, WorldHitPos);
 					if (DistSq >= InOutBestHit.DistanceSquared) continue;
 
 					BestLocalT = LocalT;
 					InOutBestHit.DistanceSquared = DistSq;
-					InOutBestHit.PrimitiveId = InRenderItem.PrimitiveId;
+					InOutBestHit.PrimitiveId = InPrimitiveRuntimeData.PrimitiveId;
 					InOutBestHit.WorldPosition = WorldHitPos;
 					bHit = true;
 				}

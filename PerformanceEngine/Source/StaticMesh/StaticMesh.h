@@ -85,6 +85,7 @@ public:
 	const TArray<uint32>& GetIndices() const { return Indices; }
 	const TArray<FMaterial>& GetMaterials() const { return Materials; }
 	const TArray<FSection>& GetSections() const { return Sections; }
+
 	const FVector& GetBoundsMin() const { return BoundsMin; }
 	const FVector& GetBoundsMax() const { return BoundsMax; }
 
@@ -112,5 +113,6 @@ private:
 	TComPtr<ID3D11Buffer> IndexBuffer;
 	TArray<FMaterial> Materials;
 	TArray<FSection> Sections;
-or BoundsMax = FVector::ZeroVector;
+	FVector BoundsMin = FVector::ZeroVector;
+	FVector BoundsMax = FVector::ZeroVector;
 };

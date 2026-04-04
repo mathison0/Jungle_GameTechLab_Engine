@@ -174,7 +174,8 @@ FBVHSpatialData FBVHBuilder::BuildBVH(FStaticMesh* InStaticMesh)
 	FBVHBuildContext Ctx;
 
 	const TArray<FStaticMeshVertex>& Vertices = InStaticMesh->GetVertices();
-	const uint32 TriangleCount = InStaticMesh->GetVertexCount() / 3;
+	const TArray<uint32>& Indices = InStaticMesh->GetIndices();
+	const uint32 TriangleCount = InStaticMesh->GetIndexCount() / 3;
 
 	Ctx.Triangles.reserve(TriangleCount);
 	Ctx.TriangleIndices.reserve(TriangleCount);
@@ -182,9 +183,9 @@ FBVHSpatialData FBVHBuilder::BuildBVH(FStaticMesh* InStaticMesh)
 	for (uint32 j = 0; j < TriangleCount; ++j)
 	{
 		FBVHTriangle Tri;
-		Tri.Vertex0  = Vertices[j * 3 + 0].Position;
-		Tri.Vertex1  = Vertices[j * 3 + 1].Position;
-		Tri.Vertex2  = Vertices[j * 3 + 2].Position;
+		Tri.Vertex0  = Vertices[Indices[j * 3 + 0]].Position;
+		Tri.Vertex1  = Vertices[Indices[j * 3 + 1]].Position;
+		Tri.Vertex2  = Vertices[Indices[j * 3 + 2]].Position;
 		Tri.Centroid = (Tri.Vertex0 + Tri.Vertex1 + Tri.Vertex2) * 0.3333f;
 
 		Ctx.TriangleIndices.push_back(j);
