@@ -46,6 +46,8 @@ public:
 	double GetTotalPickTimeMs() const { return TotalPickTimeMs; }
 	uint64 GetTotalPickCount() const { return TotalPickCount; }
 	uint64 GetFrameNumber() const { return FrameNumber; }
+	uint64 GetTotalAABBCheckCount() const { return TotalAABBCheckCount; }
+	double GetPickWorldBVHTimeMs() const { return LastPickTimeMsWorldBVH; }
 
 private:
 	uint64 LastFrameCounter = 0;
@@ -55,6 +57,8 @@ private:
 	double TotalPickTimeMs = 0.0;
 	uint64 TotalPickCount = 0;
 	uint64 FrameNumber = 0;
+	uint64 TotalAABBCheckCount = 0;
+	double LastPickTimeMsWorldBVH = 0.0;
 
 #if defined(BENCHMARK)
 	std::vector<FFrameBenchmarkSample> FrameBenchmarkSamples;

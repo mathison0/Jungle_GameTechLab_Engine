@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include "Types/Stack.h"
 
 #include "Camera/Camera.h"
 #include "Scene/Scene.h"
@@ -21,11 +22,11 @@ namespace
 	double GetSecondsPerCycle()
 	{
 		static const double SecondsPerCycle = []()
-		{
-			LARGE_INTEGER Frequency = {};
-			QueryPerformanceFrequency(&Frequency);
-			return 1.0 / static_cast<double>(Frequency.QuadPart);
-		}();
+			{
+				LARGE_INTEGER Frequency = {};
+				QueryPerformanceFrequency(&Frequency);
+				return 1.0 / static_cast<double>(Frequency.QuadPart);
+			}();
 		return SecondsPerCycle;
 	}
 
@@ -242,11 +243,54 @@ namespace
 
 		return bHit;
 	}
+
+	void IntersectWorldBVH(const FRay& InRay, const FScene& Scene, FPickHit& InOutPickHit, FPickState& State)
+	{
+		TStack<int> NodeStack;
+		NodeStack.push(0);
+		float distanceSquared = std::numeric_limits<float>::max();
+		while (!NodeStack.empty())
+		{
+			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
+			++State.TotalAABBCheckCount;
+			AABBNode Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
+			if (IntersectRayAabb(InRay, Node.Min, Node.Max))
+			{
+				if (Node.PrimitiveIndex >= Scene.GetPrimitiveRuntimeData().size())
+				{
+					continue;
+				}
+				if (Node.IsLeaf() && IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[Node.PrimitiveIndex], InOutPickHit))
+				{
+					distanceSquared = std::min(distanceSquared, InOutPickHit.DistanceSquared);
+				}
+				else
+				{
+					float distToLeft = 0.f;
+					float distToRight = 0.f;
+					if (Node.LeftChildIndex != -1)
+					{
+						AABBNode Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
+						distToLeft = FVector::DistSquared(InRay.Origin, (Left.Min + Left.Max) * 0.5f);
+						//NodeStack.push(Node.LeftChildIndex);
+					}
+					if (Node.RightChildIndex != -1)
+					{
+						AABBNode Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
+						distToRight = FVector::DistSquared(InRay.Origin, (Right.Min + Right.Max) * 0.5f);
+						//NodeStack.push(Node.RightChildIndex);
+					}
+					distToLeft > distToRight ? NodeStack.push(Node.LeftChildIndex) : NodeStack.push(Node.RightChildIndex);
+				}
+			}
+		}
+	}
 }
 
 void FPickingSystem::Reset()
 {
 }
+
 
 void FPickingSystem::UpdatePick(
 	const FScene& InScene,
@@ -290,6 +334,7 @@ void FPickingSystem::UpdatePick(
 		}
 	}
 
+
 	const uint64 PickEndCycles = QueryCycles64();
 	InOutPickState.LastPickTimeMs = CyclesToMilliseconds(PickStartCycles, PickEndCycles);
 	InOutPickState.TotalPickTimeMs += InOutPickState.LastPickTimeMs;
@@ -298,4 +343,42 @@ void FPickingSystem::UpdatePick(
 	InOutPickState.SelectedPrimitiveId = BestHit.PrimitiveId;
 	InOutPickState.SelectedPrimitiveIndex = BestHit.PrimitiveIndex;
 	InOutPickState.HitWorldPosition = BestHit.WorldPosition;
+	InOutPickState.TotalAABBCheckCount = 0;
+}
+
+
+void FPickingSystem::UpdatePickWorldBVH(
+	const FScene& InScene,
+	const FCamera& InCamera,
+	const FVisibilityResults& InVisibilityResults,
+	POINT InMousePositionClient,
+	int32 InViewportWidth,
+	int32 InViewportHeight,
+	FPickState& InOutPickState) const
+{
+	if (InViewportWidth <= 0 || InViewportHeight <= 0)
+	{
+		return;
+	}
+
+	if (InMousePositionClient.x < 0
+		|| InMousePositionClient.y < 0
+		|| InMousePositionClient.x >= InViewportWidth
+		|| InMousePositionClient.y >= InViewportHeight)
+	{
+		return;
+	}
+
+	const FRay PickRay = BuildPickRay(InCamera, InMousePositionClient.x, InMousePositionClient.y, InViewportWidth, InViewportHeight);
+	const uint64 PickStartCycles = QueryCycles64();
+
+	//const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+	FPickHit BestHit;
+	BestHit.DistanceSquared = std::numeric_limits<float>::max();
+
+	IntersectWorldBVH(PickRay, InScene, BestHit, InOutPickState);
+
+
+	const uint64 PickEndCycles = QueryCycles64();
+	InOutPickState.LastPickTimeMsWorldBVH = CyclesToMilliseconds(PickStartCycles, PickEndCycles);
 }
