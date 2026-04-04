@@ -200,8 +200,10 @@ void FCore::Tick()
 		Grid->Render(*RHI, *Camera);
 	}
 
-
-	// BVHDebugRenderer->Render(*RHI, *Camera, *Scene);
+	if (BVHDebugRenderer)
+	{
+		BVHDebugRenderer->RenderWorldNodeBoxes(*RHI, *Camera, PickState.TraversedWorldBVHNodes);
+	}
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
 	EndFrame();
 	StatsSystem->EndFrame();

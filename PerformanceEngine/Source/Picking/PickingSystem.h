@@ -2,7 +2,9 @@
 
 #include <Windows.h>
 
+#include "Picking/AABBNode.h"
 #include "Scene/SceneTypes.h"
+#include "Types/Array.h"
 #include "Types/PlatformTypes.h"
 
 class FCamera;
@@ -20,6 +22,7 @@ struct FPickState
 	uint64 TotalPickCount = 0;
 	uint64 TotalAABBCheckCount = 0;
 	double LastPickTimeMsWorldBVH = 0.0;
+	TArray<AABBNode> TraversedWorldBVHNodes;
 };
 
 class FPickingSystem

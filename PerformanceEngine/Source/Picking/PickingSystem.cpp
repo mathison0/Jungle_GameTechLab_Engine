@@ -255,13 +255,14 @@ namespace
 		{
 			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
 			++State.TotalAABBCheckCount;
-			AABBNode Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
-			float tNode = IntersectRayAabb(InRay, Node.Min, Node.Max);
+			const AABBNode& Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
+			const float tNode = IntersectRayAabb(InRay, Node.Min, Node.Max);
 			
-			if (tNode * tNode >= BestDistSq)
+			if (tNode == 1e30f || tNode * tNode >= BestDistSq)
 			{
 				continue;
 			}
+			State.TraversedWorldBVHNodes.push_back(Node);
 			if (Node.IsLeaf())
 			{
 				const size_t PrimIdx = static_cast<size_t>(Node.PrimitiveIndex);
@@ -269,6 +270,7 @@ namespace
 				{
 					if (IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[PrimIdx], InOutPickHit))
 					{
+						InOutPickHit.PrimitiveIndex = static_cast<int32>(PrimIdx);
 						BestDistSq = InOutPickHit.DistanceSquared; // 더 가까운 히트 갱신
 					}
 				}
@@ -367,6 +369,7 @@ void FPickingSystem::UpdatePick(
 	InOutPickState.SelectedPrimitiveIndex = BestHit.PrimitiveIndex;
 	InOutPickState.HitWorldPosition = BestHit.WorldPosition;
 	InOutPickState.TotalAABBCheckCount = 0;
+	InOutPickState.TraversedWorldBVHNodes.clear();
 }
 
 
@@ -399,6 +402,7 @@ void FPickingSystem::UpdatePickWorldBVH(
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();
 	InOutPickState.TotalAABBCheckCount = 0;
+	InOutPickState.TraversedWorldBVHNodes.clear();
 
 	IntersectWorldBVH(PickRay, InScene, BestHit, InOutPickState);
 
