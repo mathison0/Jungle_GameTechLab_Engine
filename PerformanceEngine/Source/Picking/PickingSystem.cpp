@@ -8,7 +8,6 @@
 #include "Scene/Scene.h"
 #include "StaticMesh/StaticMesh.h"
 #include "Visibility/VisibilitySystem.h"
-#include "Types/Stack.h"
 
 namespace
 {
@@ -64,7 +63,8 @@ namespace
 		return Result;
 	}
 
-	bool IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax)
+	// AABB와의 교차 진입 거리를 반환. 미교차 시 1e30f 반환.
+	float IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax)
 	{
 		float TMin = 0.0f;
 		float TMax = std::numeric_limits<float>::max();
@@ -80,7 +80,7 @@ namespace
 			{
 				if (Origin < BoundsMin || Origin > BoundsMax)
 				{
-					return false;
+					return 1e30f;
 				}
 				continue;
 			}
@@ -97,11 +97,11 @@ namespace
 			TMax = std::min(TMax, T1);
 			if (TMin > TMax)
 			{
-				return false;
+				return 1e30f;
 			}
 		}
 
-		return true;
+		return TMin;
 	}
 
 	bool IntersectRayTriangle(
@@ -170,48 +170,71 @@ namespace
 		LocalRay.Origin = InRenderItem.Transform.InverseTransformPosition(InRay.Origin);
 		LocalRay.Direction = InRenderItem.Transform.InverseTransformVector(InRay.Direction).GetSafeNormal();
 
-		TStack<int32> NodeStack;
-		NodeStack.push(0);
-
-		while (!NodeStack.empty())
+		// 루트 AABB miss면 즉시 탈출
+		if (IntersectRayAabb(LocalRay, Nodes[0].BoundMin, Nodes[0].BoundMax) == 1e30f)
 		{
-			const FBVHNode& Node = Nodes[NodeStack.top()]; 
-			NodeStack.pop();
+			return false;
+		}
 
-			if (!IntersectRayAabb(LocalRay, Node.BoundMin, Node.BoundMax))
-			{
-				continue;
-			}
+		float BestLocalT = 1e30f;
 
-			if (Node.IsLeaf())
+		// 힙 할당 없는 고정 배열 스택 (BVH 깊이는 64 초과 불가)
+		int32 Stack[64];
+		int32 StackPtr = 0;
+		const FBVHNode* Node = &Nodes[0];
+
+		while (true)
+		{
+			if (Node->IsLeaf())
 			{
-				for (int32 i = 0; i < Node.PrimitiveCount; ++i)
+				for (int32 i = 0; i < Node->PrimitiveCount; ++i)
 				{
-					uint32 TriangleIndex = TriangleIndices[Node.LeftFirst + i];
-					const FVector& Vertex0 = Vertices[TriangleIndex].Position;
-					const FVector& Vertex1 = Vertices[TriangleIndex + 1].Position;
-					const FVector& Vertex2 = Vertices[TriangleIndex + 2].Position;
+					uint32 TriangleIndex = TriangleIndices[Node->LeftFirst + i];
+					const FVector& Vertex0 = Vertices[TriangleIndex * 3 + 0].Position;
+					const FVector& Vertex1 = Vertices[TriangleIndex * 3 + 1].Position;
+					const FVector& Vertex2 = Vertices[TriangleIndex * 3 + 2].Position;
 
 					float LocalT = 0.0f;
 					FVector LocalHitPos;
 					if (!IntersectRayTriangle(LocalRay, Vertex0, Vertex1, Vertex2, LocalT, LocalHitPos)) continue;
+					if (LocalT >= BestLocalT) continue;
 
 					const FVector WorldHitPos = InRenderItem.Transform.TransformPosition(LocalHitPos);
 					const float DistSq = FVector::DistSquared(InRay.Origin, WorldHitPos);
 					if (DistSq >= InOutBestHit.DistanceSquared) continue;
 
+					BestLocalT = LocalT;
 					InOutBestHit.DistanceSquared = DistSq;
 					InOutBestHit.PrimitiveId = InRenderItem.PrimitiveId;
 					InOutBestHit.WorldPosition = WorldHitPos;
 					bHit = true;
 				}
+				if (StackPtr == 0) break;
+				Node = &Nodes[Stack[--StackPtr]];
+				continue;
+			}
+
+			// 두 자식의 AABB 진입 거리 계산
+			const FBVHNode* Child1 = &Nodes[Node->LeftFirst];
+			const FBVHNode* Child2 = &Nodes[Node->LeftFirst + 1];
+			float Dist1 = IntersectRayAabb(LocalRay, Child1->BoundMin, Child1->BoundMax);
+			float Dist2 = IntersectRayAabb(LocalRay, Child2->BoundMin, Child2->BoundMax);
+
+			// 가까운 쪽을 먼저 방문, 먼 쪽만 스택에 저장
+			if (Dist1 > Dist2) { std::swap(Dist1, Dist2); std::swap(Child1, Child2); }
+
+			if (Dist1 >= BestLocalT)
+			{
+				// 두 자식 모두 miss 또는 현재 hit보다 멀면 스택에서 꺼내기
+				if (StackPtr == 0) break;
+				Node = &Nodes[Stack[--StackPtr]];
 			}
 			else
 			{
-				NodeStack.push(Node.LeftFirst);
-				NodeStack.push(Node.LeftFirst + 1);
+				// 가까운 쪽으로 직접 이동, 먼 쪽은 교차할 경우만 스택에 push
+				Node = Child1;
+				if (Dist2 < BestLocalT) Stack[StackPtr++] = static_cast<int32>(Child2 - &Nodes[0]);
 			}
-
 		}
 
 		return bHit;
