@@ -18,7 +18,9 @@ public:
 	bool Resize(int32 InWidth, int32 InHeight);
 
 	ID3D11Device* GetDevice() const { return Device.Get(); }
+	ID3D11Device1* GetDevice1() const { return Device1.Get(); }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext.Get(); }
+	ID3D11DeviceContext1* GetDeviceContext1() const { return DeviceContext1.Get(); }
 	IDXGISwapChain* GetSwapChain() const { return SwapChain.Get(); }
 
 	ID3D11RenderTargetView* GetBackBufferRTV() const { return BackBufferRTV.Get(); }
@@ -52,7 +54,9 @@ private:
 	bool bVSyncEnabled = false;
 
 	TComPtr<ID3D11Device>        Device;
+	TComPtr<ID3D11Device1>       Device1;
 	TComPtr<ID3D11DeviceContext> DeviceContext;
+	TComPtr<ID3D11DeviceContext1> DeviceContext1;
 	TComPtr<IDXGISwapChain>      SwapChain;
 
 	TComPtr<ID3D11Texture2D>        BackBufferTexture;
