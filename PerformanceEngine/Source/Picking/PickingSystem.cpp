@@ -147,9 +147,10 @@ namespace
 		return true;
 	}
 
-	bool IntersectRenderItem(const FRay& InRay, const FRenderItem& InRenderItem, FPickHit& InOutBestHit)
+	bool IntersectRenderItem(const FRay& InRay, const FScenePrimitiveRuntimeData& InPrimitiveRuntimeData, FPickHit& InOutBestHit)
 	{
-		if (!InRenderItem.StaticMesh || !InRenderItem.StaticMesh->IsValid())
+		FStaticMesh* StaticMesh = InPrimitiveRuntimeData.StaticMesh;
+		if (StaticMesh == nullptr || !StaticMesh->IsValid())
 		{
 			return false;
 		}
@@ -270,18 +271,18 @@ void FPickingSystem::UpdatePick(
 	const FRay PickRay = BuildPickRay(InCamera, InMousePositionClient.x, InMousePositionClient.y, InViewportWidth, InViewportHeight);
 	const uint64 PickStartCycles = QueryCycles64();
 
-	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();
 
 	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
 	{
-		if (PrimitiveIndex >= RenderItems.size())
+		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
 		{
 			continue;
 		}
 
-		if (IntersectRenderItem(PickRay, RenderItems[PrimitiveIndex], BestHit))
+		if (IntersectRenderItem(PickRay, PrimitiveRuntimeData[PrimitiveIndex], BestHit))
 		{
 			BestHit.PrimitiveIndex = static_cast<int32>(PrimitiveIndex);
 		}

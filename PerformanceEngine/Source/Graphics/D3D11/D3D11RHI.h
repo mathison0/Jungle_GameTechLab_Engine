@@ -1,6 +1,7 @@
 #pragma once
 #include "D3D11Common.h"
 #include "Types/PlatformTypes.h"
+#include "Types/String.h"
 
 class FD3D11RHI
 {
@@ -17,7 +18,9 @@ public:
 	bool Resize(int32 InWidth, int32 InHeight);
 
 	ID3D11Device* GetDevice() const { return Device.Get(); }
+	ID3D11Device1* GetDevice1() const { return Device1.Get(); }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext.Get(); }
+	ID3D11DeviceContext1* GetDeviceContext1() const { return DeviceContext1.Get(); }
 	IDXGISwapChain* GetSwapChain() const { return SwapChain.Get(); }
 
 	ID3D11RenderTargetView* GetBackBufferRTV() const { return BackBufferRTV.Get(); }
@@ -28,6 +31,11 @@ public:
 
 	int32 GetViewportWidth() const { return ViewportWidth; }
 	int32 GetViewportHeight() const { return ViewportHeight; }
+	const FString& GetAdapterName() const { return AdapterName; }
+	uint32 GetAdapterVendorId() const { return AdapterVendorId; }
+	uint32 GetAdapterDeviceId() const { return AdapterDeviceId; }
+	uint64 GetAdapterDedicatedVideoMemoryMB() const { return AdapterDedicatedVideoMemoryMB; }
+	bool IsHighPerformancePreferenceApplied() const { return bHighPerformancePreferenceApplied; }
 
 
 private:
@@ -35,6 +43,7 @@ private:
 	void ReleaseBackBufferResources();
 	void BindBackBuffer();
 	void UpdateViewport(int32 InWidth, int32 InHeight);
+	void UpdateAdapterInfo(bool bInHighPerformancePreferenceApplied);
 
 private:
 	HWND WindowHandle = nullptr;
@@ -45,7 +54,9 @@ private:
 	bool bVSyncEnabled = false;
 
 	TComPtr<ID3D11Device>        Device;
+	TComPtr<ID3D11Device1>       Device1;
 	TComPtr<ID3D11DeviceContext> DeviceContext;
+	TComPtr<ID3D11DeviceContext1> DeviceContext1;
 	TComPtr<IDXGISwapChain>      SwapChain;
 
 	TComPtr<ID3D11Texture2D>        BackBufferTexture;
@@ -55,5 +66,11 @@ private:
 	TComPtr<ID3D11DepthStencilView> DepthStencilView;
 
 	D3D11_VIEWPORT Viewport = {};
+
+	FString AdapterName;
+	uint32 AdapterVendorId = 0;
+	uint32 AdapterDeviceId = 0;
+	uint64 AdapterDedicatedVideoMemoryMB = 0;
+	bool bHighPerformancePreferenceApplied = false;
 };
 

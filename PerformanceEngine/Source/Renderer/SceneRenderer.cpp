@@ -1,11 +1,14 @@
 #include "Renderer/SceneRenderer.h"
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstring>
-
-#include <d3dcompiler.h>
+#include <functional>
+#include <vector>
 
 #include "Camera/Camera.h"
+#include "Graphics/D3D11/D3D11Utils.h"
 #include "Graphics/D3D11/D3D11RHI.h"
 #include "Picking/PickingSystem.h"
 #include "Scene/Scene.h"
@@ -14,64 +17,6 @@
 
 namespace
 {
-	bool CreateDynamicConstantBuffer(ID3D11Device* InDevice, UINT InByteWidth, TComPtr<ID3D11Buffer>& OutBuffer)
-	{
-		const D3D11_BUFFER_DESC BufferDesc =
-		{
-			InByteWidth,
-			D3D11_USAGE_DYNAMIC,
-			D3D11_BIND_CONSTANT_BUFFER,
-			D3D11_CPU_ACCESS_WRITE,
-			0,
-			0
-		};
-
-		return SUCCEEDED(InDevice->CreateBuffer(&BufferDesc, nullptr, OutBuffer.GetAddressOf()));
-	}
-
-	template <typename T>
-	bool UpdateDynamicBuffer(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InBuffer, const T& InData)
-	{
-		if (InDeviceContext == nullptr || InBuffer == nullptr)
-		{
-			return false;
-		}
-
-		D3D11_MAPPED_SUBRESOURCE MappedResource = {};
-		if (FAILED(InDeviceContext->Map(InBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
-		{
-			return false;
-		}
-
-		std::memcpy(MappedResource.pData, &InData, sizeof(T));
-		InDeviceContext->Unmap(InBuffer, 0);
-		return true;
-	}
-
-	bool CompileShader(const char* InSource, const char* InEntryPoint, const char* InTarget, TComPtr<ID3DBlob>& OutBlob)
-	{
-		UINT CompileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(_DEBUG)
-		CompileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-		TComPtr<ID3DBlob> ErrorBlob;
-		const HRESULT Result = D3DCompile(
-			InSource,
-			std::strlen(InSource),
-			nullptr,
-			nullptr,
-			nullptr,
-			InEntryPoint,
-			InTarget,
-			CompileFlags,
-			0,
-			OutBlob.GetAddressOf(),
-			ErrorBlob.GetAddressOf());
-
-		return SUCCEEDED(Result);
-	}
-
 	bool CreateWhiteTexture(ID3D11Device* InDevice, TComPtr<ID3D11ShaderResourceView>& OutTextureView)
 	{
 		const uint32 WhitePixel = 0xFFFFFFFFu;
@@ -118,6 +63,28 @@ struct alignas(16) FObjectConstants
 	float Tint[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 };
 
+constexpr UINT ObjectConstantsBlockSize = 256;
+constexpr UINT ObjectConstantsPerRange = ObjectConstantsBlockSize / 16;
+
+struct alignas(16) FObjectConstantsBlock
+{
+	FObjectConstants Constants = {};
+	std::array<uint8, ObjectConstantsBlockSize - sizeof(FObjectConstants)> Padding = {};
+};
+
+static_assert(sizeof(FObjectConstants) <= ObjectConstantsBlockSize, "FObjectConstants must fit within a single constant buffer range.");
+static_assert(sizeof(FObjectConstantsBlock) == ObjectConstantsBlockSize, "FObjectConstantsBlock must match the range binding size.");
+
+struct FDrawItem
+{
+	ID3D11Buffer* VertexBuffer = nullptr;
+	ID3D11Buffer* IndexBuffer = nullptr;
+	ID3D11ShaderResourceView* TextureView = nullptr;
+	UINT IndexCount = 0;
+	UINT IndexStart = 0;
+	UINT ObjectIndex = 0;
+};
+
 struct FSceneRenderer::FResources
 {
 	TComPtr<ID3D11VertexShader> VertexShader;
@@ -127,8 +94,193 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11Buffer> ObjectConstantBuffer;
 	TComPtr<ID3D11SamplerState> LinearSampler;
 	TComPtr<ID3D11RasterizerState> RasterizerState;
+	TComPtr<ID3D11DepthStencilState> DepthStencilState;
+	TComPtr<ID3D11BlendState> BlendState;
 	TComPtr<ID3D11ShaderResourceView> WhiteTextureView;
+	std::vector<FObjectConstantsBlock> ObjectConstantBlocks;
+	std::vector<FDrawItem> RenderItems;
+	UINT ObjectBufferCapacity = 0;
 };
+
+namespace
+{
+	template <typename TResources>
+	bool EnsureObjectConstantBufferCapacity(ID3D11Device* InDevice, TResources& InOutResources, UINT InRequiredObjectCount)
+	{
+		if (InRequiredObjectCount <= InOutResources.ObjectBufferCapacity)
+		{
+			return true;
+		}
+
+		UINT NewCapacity = std::max(InRequiredObjectCount, 1u);
+		if (InOutResources.ObjectBufferCapacity > 0)
+		{
+			NewCapacity = InOutResources.ObjectBufferCapacity;
+			while (NewCapacity < InRequiredObjectCount)
+			{
+				NewCapacity *= 2;
+			}
+		}
+
+		TComPtr<ID3D11Buffer> NewObjectBuffer;
+		if (!D3D11Utils::CreateDynamicConstantBuffer(InDevice, NewCapacity * ObjectConstantsBlockSize, NewObjectBuffer))
+		{
+			return false;
+		}
+
+		InOutResources.ObjectConstantBuffer = std::move(NewObjectBuffer);
+		InOutResources.ObjectBufferCapacity = NewCapacity;
+		return true;
+	}
+
+	template <typename TResources>
+	void BuildRenderQueue(
+		const FScene& InScene,
+		const FVisibilityResults& InVisibilityResults,
+		const FPickState& InPickState,
+		ID3D11ShaderResourceView* InDefaultTextureView,
+		TResources& InOutResources)
+	{
+		InOutResources.ObjectConstantBlocks.clear();
+		InOutResources.RenderItems.clear();
+
+		InOutResources.ObjectConstantBlocks.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
+		InOutResources.RenderItems.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
+
+		const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
+		for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
+		{
+			if (PrimitiveIndex >= PrimitiveRuntimeData.size())
+			{
+				continue;
+			}
+
+			const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
+			FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
+			if (StaticMesh == nullptr || !StaticMesh->IsValid())
+			{
+				continue;
+			}
+
+			FObjectConstantsBlock ObjectBlock = {};
+			ObjectBlock.Constants.World = PrimitiveData.WorldMatrix;
+			if (PrimitiveData.PrimitiveId == InPickState.SelectedPrimitiveId)
+			{
+				ObjectBlock.Constants.Tint[0] = 0.1f;
+				ObjectBlock.Constants.Tint[1] = 0.1f;
+				ObjectBlock.Constants.Tint[2] = 0.1f;
+				ObjectBlock.Constants.Tint[3] = 1.0f;
+			}
+
+			const UINT ObjectIndex = static_cast<UINT>(InOutResources.ObjectConstantBlocks.size());
+			InOutResources.ObjectConstantBlocks.push_back(ObjectBlock);
+
+			ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer();
+			ID3D11Buffer* IndexBuffer = StaticMesh->GetIndexBuffer();
+			for (const FStaticMesh::FSection& Section : StaticMesh->GetSections())
+			{
+				FDrawItem RenderItem = {};
+				RenderItem.VertexBuffer = VertexBuffer;
+				RenderItem.IndexBuffer = IndexBuffer;
+				RenderItem.TextureView = StaticMesh->GetMaterialTexture(Section.MaterialIndex);
+				if (RenderItem.TextureView == nullptr)
+				{
+					RenderItem.TextureView = InDefaultTextureView;
+				}
+
+				RenderItem.IndexCount = Section.IndexCount;
+				RenderItem.IndexStart = Section.IndexStart;
+				RenderItem.ObjectIndex = ObjectIndex;
+				InOutResources.RenderItems.push_back(RenderItem);
+			}
+		}
+	}
+
+	bool UploadObjectConstantBlocks(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InObjectConstantBuffer, const std::vector<FObjectConstantsBlock>& InObjectConstantBlocks)
+	{
+		if (InDeviceContext == nullptr || InObjectConstantBuffer == nullptr || InObjectConstantBlocks.empty())
+		{
+			return true;
+		}
+
+		D3D11_MAPPED_SUBRESOURCE MappedResource = {};
+		if (FAILED(InDeviceContext->Map(InObjectConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
+		{
+			return false;
+		}
+
+		std::memcpy(
+			MappedResource.pData,
+			InObjectConstantBlocks.data(),
+			InObjectConstantBlocks.size() * sizeof(FObjectConstantsBlock));
+		InDeviceContext->Unmap(InObjectConstantBuffer, 0);
+		return true;
+	}
+
+	template <typename T>
+	int ComparePointers(T* InLeft, T* InRight)
+	{
+		const std::less<T*> Less = {};
+		if (Less(InLeft, InRight))
+		{
+			return -1;
+		}
+
+		if (Less(InRight, InLeft))
+		{
+			return 1;
+		}
+
+		return 0;
+	}
+
+	void SortRenderItems(std::vector<FDrawItem>& InOutRenderItems)
+	{
+		std::ranges::stable_sort(InOutRenderItems, [](const FDrawItem& InLeft, const FDrawItem& InRight)
+		{
+			if (const int VertexBufferOrder = ComparePointers(InLeft.VertexBuffer, InRight.VertexBuffer); VertexBufferOrder != 0)
+			{
+				return VertexBufferOrder < 0;
+			}
+
+			if (const int IndexBufferOrder = ComparePointers(InLeft.IndexBuffer, InRight.IndexBuffer); IndexBufferOrder != 0)
+			{
+				return IndexBufferOrder < 0;
+			}
+
+			if (const int TextureOrder = ComparePointers(InLeft.TextureView, InRight.TextureView); TextureOrder != 0)
+			{
+				return TextureOrder < 0;
+			}
+
+			if (InLeft.ObjectIndex != InRight.ObjectIndex)
+			{
+				return InLeft.ObjectIndex < InRight.ObjectIndex;
+			}
+
+			if (InLeft.IndexStart != InRight.IndexStart)
+			{
+				return InLeft.IndexStart < InRight.IndexStart;
+			}
+
+			return InLeft.IndexCount < InRight.IndexCount;
+		});
+	}
+
+	void BindObjectConstantRange(ID3D11DeviceContext1* InDeviceContext, ID3D11Buffer* InObjectConstantBuffer, UINT InObjectIndex)
+	{
+		if (InDeviceContext == nullptr || InObjectConstantBuffer == nullptr)
+		{
+			return;
+		}
+
+		const UINT FirstConstant = InObjectIndex * ObjectConstantsPerRange;
+		const UINT NumConstants = ObjectConstantsPerRange;
+		ID3D11Buffer* ObjectBuffer = InObjectConstantBuffer;
+		InDeviceContext->VSSetConstantBuffers1(1, 1, &ObjectBuffer, &FirstConstant, &NumConstants);
+		InDeviceContext->PSSetConstantBuffers1(1, 1, &ObjectBuffer, &FirstConstant, &NumConstants);
+	}
+}
 
 FSceneRenderer::FSceneRenderer() = default;
 FSceneRenderer::~FSceneRenderer() = default;
@@ -136,7 +288,7 @@ FSceneRenderer::~FSceneRenderer() = default;
 bool FSceneRenderer::Initialize(FD3D11RHI& InRHI)
 {
 	ID3D11Device* Device = InRHI.GetDevice();
-	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
+	ID3D11DeviceContext1* DeviceContext = InRHI.GetDeviceContext1();
 	if (Device == nullptr || DeviceContext == nullptr)
 	{
 		return false;
@@ -206,8 +358,8 @@ float4 PSMain(PSInput Input) : SV_Target
 
 	TComPtr<ID3DBlob> VertexShaderBlob;
 	TComPtr<ID3DBlob> PixelShaderBlob;
-	if (!CompileShader(VertexShaderSource, "VSMain", "vs_5_0", VertexShaderBlob)
-		|| !CompileShader(PixelShaderSource, "PSMain", "ps_5_0", PixelShaderBlob))
+	if (!D3D11Utils::CompileShaderFromSource(VertexShaderSource, "VSMain", "vs_5_0", VertexShaderBlob, "SceneRenderer vertex shader")
+		|| !D3D11Utils::CompileShaderFromSource(PixelShaderSource, "PSMain", "ps_5_0", PixelShaderBlob, "SceneRenderer pixel shader"))
 	{
 		Resources.reset();
 		return false;
@@ -245,8 +397,8 @@ float4 PSMain(PSInput Input) : SV_Target
 		return false;
 	}
 
-	if (!CreateDynamicConstantBuffer(Device, sizeof(FFrameConstants), Resources->FrameConstantBuffer)
-		|| !CreateDynamicConstantBuffer(Device, sizeof(FObjectConstants), Resources->ObjectConstantBuffer))
+	if (!D3D11Utils::CreateDynamicConstantBuffer(Device, sizeof(FFrameConstants), Resources->FrameConstantBuffer)
+		|| !EnsureObjectConstantBufferCapacity(Device, *Resources, 1))
 	{
 		Resources.reset();
 		return false;
@@ -275,7 +427,7 @@ float4 PSMain(PSInput Input) : SV_Target
 	const D3D11_RASTERIZER_DESC RasterizerDesc =
 	{
 		D3D11_FILL_SOLID,
-		D3D11_CULL_NONE,
+		D3D11_CULL_BACK,
 		FALSE,
 		0,
 		0.0f,
@@ -287,6 +439,28 @@ float4 PSMain(PSInput Input) : SV_Target
 	};
 
 	if (FAILED(Device->CreateRasterizerState(&RasterizerDesc, Resources->RasterizerState.GetAddressOf())))
+	{
+		Resources.reset();
+		return false;
+	}
+
+	D3D11_DEPTH_STENCIL_DESC DepthStencilDesc = {};
+	DepthStencilDesc.DepthEnable = TRUE;
+	DepthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	DepthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	DepthStencilDesc.StencilEnable = FALSE;
+
+	if (FAILED(Device->CreateDepthStencilState(&DepthStencilDesc, Resources->DepthStencilState.GetAddressOf())))
+	{
+		Resources.reset();
+		return false;
+	}
+
+	D3D11_BLEND_DESC BlendDesc = {};
+	BlendDesc.RenderTarget[0].BlendEnable = FALSE;
+	BlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	if (FAILED(Device->CreateBlendState(&BlendDesc, Resources->BlendState.GetAddressOf())))
 	{
 		Resources.reset();
 		return false;
@@ -318,79 +492,86 @@ void FSceneRenderer::Render(
 		return;
 	}
 
-	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
+	ID3D11DeviceContext1* DeviceContext = InRHI.GetDeviceContext1();
 	if (DeviceContext == nullptr)
 	{
 		return;
 	}
+
+	ID3D11RenderTargetView* RenderTargets[] = { InRHI.GetBackBufferRTV() };
+	const D3D11_VIEWPORT Viewport = InRHI.GetViewport();
+	DeviceContext->OMSetRenderTargets(1, RenderTargets, InRHI.GetDepthStencilView());
+	DeviceContext->RSSetViewports(1, &Viewport);
 
 	DeviceContext->IASetInputLayout(Resources->InputLayout.Get());
 	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	DeviceContext->VSSetShader(Resources->VertexShader.Get(), nullptr, 0);
 	DeviceContext->PSSetShader(Resources->PixelShader.Get(), nullptr, 0);
 	DeviceContext->RSSetState(Resources->RasterizerState.Get());
+	DeviceContext->OMSetDepthStencilState(Resources->DepthStencilState.Get(), 0);
+	DeviceContext->OMSetBlendState(Resources->BlendState.Get(), nullptr, 0xffffffffu);
 
 	ID3D11SamplerState* Samplers[] = { Resources->LinearSampler.Get() };
 	DeviceContext->PSSetSamplers(0, 1, Samplers);
 
 	FFrameConstants FrameConstants = {};
 	FrameConstants.ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
-	UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
+	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
-	ID3D11Buffer* VertexConstantBuffers[] = { Resources->FrameConstantBuffer.Get(), Resources->ObjectConstantBuffer.Get() };
-	ID3D11Buffer* PixelConstantBuffers[] = { nullptr, Resources->ObjectConstantBuffer.Get() };
-	DeviceContext->VSSetConstantBuffers(0, 2, VertexConstantBuffers);
-	DeviceContext->PSSetConstantBuffers(0, 2, PixelConstantBuffers);
+	BuildRenderQueue(InScene, InVisibilityResults, InPickState, Resources->WhiteTextureView.Get(), *Resources);
+	SortRenderItems(Resources->RenderItems);
+	if (!EnsureObjectConstantBufferCapacity(
+		InRHI.GetDevice(),
+		*Resources,
+		static_cast<UINT>(std::max<size_t>(Resources->ObjectConstantBlocks.size(), 1))))
+	{
+		return;
+	}
+
+	if (!UploadObjectConstantBlocks(DeviceContext, Resources->ObjectConstantBuffer.Get(), Resources->ObjectConstantBlocks))
+	{
+		return;
+	}
+
+	ID3D11Buffer* VertexConstantBuffer = Resources->FrameConstantBuffer.Get();
+	DeviceContext->VSSetConstantBuffers(0, 1, &VertexConstantBuffer);
 
 	ID3D11Buffer* CurrentVertexBuffer = nullptr;
+	ID3D11Buffer* CurrentIndexBuffer = nullptr;
 	ID3D11ShaderResourceView* CurrentTextureView = nullptr;
+	UINT CurrentObjectIndex = UINT_MAX;
 	const UINT Stride = sizeof(FStaticMeshVertex);
 	const UINT Offset = 0;
 
-	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
-	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
+	for (const FDrawItem& RenderItem : Resources->RenderItems)
 	{
-		if (PrimitiveIndex >= RenderItems.size())
-		{
-			continue;
-		}
-
-		const FRenderItem& RenderItem = RenderItems[PrimitiveIndex];
-		if (!RenderItem.StaticMesh || !RenderItem.StaticMesh->IsValid())
-		{
-			continue;
-		}
-
-		ID3D11Buffer* VertexBuffer = RenderItem.StaticMesh->GetVertexBuffer();
+		ID3D11Buffer* VertexBuffer = RenderItem.VertexBuffer;
 		if (VertexBuffer != CurrentVertexBuffer)
 		{
 			DeviceContext->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
 			CurrentVertexBuffer = VertexBuffer;
 		}
 
-		ID3D11ShaderResourceView* TextureView = RenderItem.StaticMesh->GetDiffuseTexture();
-		if (TextureView == nullptr)
+		ID3D11Buffer* IndexBuffer = RenderItem.IndexBuffer;
+		if (IndexBuffer != CurrentIndexBuffer)
 		{
-			TextureView = Resources->WhiteTextureView.Get();
+			DeviceContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+			CurrentIndexBuffer = IndexBuffer;
 		}
 
+		if (RenderItem.ObjectIndex != CurrentObjectIndex)
+		{
+			BindObjectConstantRange(DeviceContext, Resources->ObjectConstantBuffer.Get(), RenderItem.ObjectIndex);
+			CurrentObjectIndex = RenderItem.ObjectIndex;
+		}
+
+		ID3D11ShaderResourceView* TextureView = RenderItem.TextureView;
 		if (TextureView != CurrentTextureView)
 		{
 			DeviceContext->PSSetShaderResources(0, 1, &TextureView);
 			CurrentTextureView = TextureView;
 		}
 
-		FObjectConstants ObjectConstants = {};
-		ObjectConstants.World = RenderItem.Transform.ToMatrixWithScale();
-		if (RenderItem.PrimitiveId == InPickState.SelectedPrimitiveId)
-		{
-			ObjectConstants.Tint[0] = 0.1f;
-			ObjectConstants.Tint[1] = 0.1f;
-			ObjectConstants.Tint[2] = 0.1f;
-			ObjectConstants.Tint[3] = 1.0f;
-		}
-
-		UpdateDynamicBuffer(DeviceContext, Resources->ObjectConstantBuffer.Get(), ObjectConstants);
-		DeviceContext->Draw(RenderItem.StaticMesh->GetVertexCount(), 0);
+		DeviceContext->DrawIndexed(RenderItem.IndexCount, RenderItem.IndexStart, 0);
 	}
 }

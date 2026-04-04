@@ -4,6 +4,7 @@
 
 #include "Graphics/D3D11/D3D11Common.h"
 #include "Scene/SceneTypes.h"
+#include "StaticMesh/StaticMeshManager.h"
 #include "Types/Array.h"
 #include "Types/Map.h"
 #include "BVH/BVHTypes.h"
@@ -21,6 +22,9 @@ public:
 	void Release();
 
 	const TArray<FRenderItem>& GetRenderItems() const { return RenderItems; }
+	const TArray<FScenePrimitiveRuntimeData>& GetPrimitiveRuntimeData() const { return PrimitiveRuntimeData; }
+	const TArray<FScenePrimitiveColdData>& GetPrimitiveColdData() const { return PrimitiveColdData; }
+	size_t GetPrimitiveCount() const { return PrimitiveRuntimeData.size(); }
 	const FSceneCameraInitData& GetInitialCamera() const { return InitialCamera; }
 
 	const TArray<FBVHNode>& GetBVHNodeDatas() const { return BVHDatas.Nodes; };
@@ -34,7 +38,9 @@ private:
 	FBVHSpatialData BVHDatas;
 
 	TArray<FRenderItem> RenderItems;
-	TMap<FString, std::shared_ptr<FStaticMesh>> MeshCache;
+	TArray<FScenePrimitiveRuntimeData> PrimitiveRuntimeData;
+	TArray<FScenePrimitiveColdData> PrimitiveColdData;
+	FStaticMeshManager MeshManager;
 
 	FSceneCameraInitData InitialCamera;
 

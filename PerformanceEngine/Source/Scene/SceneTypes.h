@@ -3,6 +3,7 @@
 #include <limits>
 #include <memory>
 
+#include "Math/Matrix.h"
 #include "Math/Transform.h"
 #include "Types/PlatformTypes.h"
 #include "Types/String.h"
@@ -39,4 +40,19 @@ struct FRenderItem
 	FVector WorldBoundsMin = FVector::ZeroVector;
 	FVector WorldBoundsMax = FVector::ZeroVector;
 	std::shared_ptr<FStaticMesh> StaticMesh;
+};
+
+struct FScenePrimitiveColdData
+{
+	FString MeshAssetPath;
+	std::shared_ptr<FStaticMesh> StaticMeshOwner;
+};
+
+struct FScenePrimitiveRuntimeData
+{
+	int32 PrimitiveId = -1;
+	FMatrix WorldMatrix = FMatrix::Identity;
+	FVector WorldBoundsMin = FVector::ZeroVector;
+	FVector WorldBoundsMax = FVector::ZeroVector;
+	FStaticMesh* StaticMesh = nullptr;
 };
