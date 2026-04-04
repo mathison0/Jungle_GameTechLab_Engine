@@ -38,7 +38,7 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 		return;
 	}
 
-	ComputeVisiblePrimitives(RenderItems, InCamera, OutResults);
+	ComputeVisiblePrimitives(InScene, InCamera, OutResults);
 	UpdateCache(InCamera, OutResults);
 
 	LogBuildResult(RenderItems.size(), OutResults.VisiblePrimitiveIndices.size(), false);
@@ -117,6 +117,52 @@ bool FVisibilitySystem::IntersectsAABB(const FFrustum& InFrustum, const FVector&
 	return true; // AABB intersects or is inside the frustum
 }
 
+void FVisibilitySystem::TraverseWorldBVH(const FScene& InScene, int32 NodeIndex, FVisibilityResults& OutResults)
+{
+	const TArray<AABBNode>& WorldBVHNodes = InScene.GetWorldBVHNodes();
+	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+
+	if (NodeIndex < 0 || NodeIndex >= static_cast<int32>(WorldBVHNodes.size()))
+	{
+		return;
+	}
+
+	const AABBNode& Node = WorldBVHNodes[NodeIndex];
+
+	if (!IntersectsAABB(CachedFrustum, Node.Min, Node.Max))
+	{
+		return; // 이 노드와 자식 노드들은 프러스텀과 교차하지 않음
+	}
+
+	if (Node.IsLeaf())
+	{
+		const int32 PrimitiveIndex = Node.PrimitiveIndex;
+		if (PrimitiveIndex < 0 || PrimitiveIndex >= static_cast<int32>(RenderItems.size()))
+		{
+			return; // 유효하지 않은 PrimitiveIndex
+		}
+
+		const FRenderItem& Item = RenderItems[PrimitiveIndex];
+		if (Item.StaticMesh == nullptr || !Item.StaticMesh->IsValid())
+		{
+			return; // 유효하지 않은 StaticMesh
+		}
+
+		OutResults.VisiblePrimitiveIndices.push_back(static_cast<uint32>(PrimitiveIndex));
+		return;
+	}
+
+	if (Node.LeftChildIndex != -1)
+	{
+		TraverseWorldBVH(InScene, Node.LeftChildIndex, OutResults);
+	}
+
+	if (Node.RightChildIndex != -1)
+	{
+		TraverseWorldBVH(InScene, Node.RightChildIndex, OutResults);
+	}
+}
+
 bool FVisibilitySystem::HasCameraChanged(const FCamera& InCamera) const
 {
 	if (!bHasCachedVisibility)
@@ -169,28 +215,22 @@ bool FVisibilitySystem::TryReuseCachedResults(const FScene& InScene, const FCame
 	return true;
 }
 
-void FVisibilitySystem::ComputeVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, FVisibilityResults& OutResults)
+void FVisibilitySystem::ComputeVisiblePrimitives(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults)
 {
 	OutResults.VisiblePrimitiveIndices.clear();
+
+	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
 	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
+
 	CachedFrustum = BuildFrustum(InCamera);
 
-	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
+	const TArray<AABBNode>& WorldBVHNodes = InScene.GetWorldBVHNodes();
+	if (WorldBVHNodes.empty())
 	{
-		const FRenderItem& Item = RenderItems[PrimitiveIndex];
-
-		if (Item.StaticMesh == nullptr || !Item.StaticMesh->IsValid())
-		{
-			continue;
-		}
-
-		if (!IntersectsAABB(CachedFrustum, Item.WorldBoundsMin, Item.WorldBoundsMax))
-		{
-			continue;
-		}
-
-		OutResults.VisiblePrimitiveIndices.push_back(PrimitiveIndex);
+		return;
 	}
+
+	TraverseWorldBVH(InScene, 0, OutResults);
 }
 
 void FVisibilitySystem::UpdateCache(const FCamera& InCamera, const FVisibilityResults& InResults)
