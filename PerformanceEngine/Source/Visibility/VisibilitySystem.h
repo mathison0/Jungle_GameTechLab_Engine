@@ -41,9 +41,10 @@ private:
 	bool IntersectsAABB(const FFrustum& InFrustum, const FVector& InBoxMin, const FVector& InBoxMax) const;
 	bool HasCameraChanged(const FCamera& InCamera) const;
 	void UpdateCachedCameraState(const FCamera& InCamera);
+	void TraverseWorldBVH(const FScene& InScene, int32 NodeIndex, FVisibilityResults& OutResults);
 
 	bool TryReuseCachedResults(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults) const;
-	void ComputeVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, FVisibilityResults& OutResults);
+	void ComputeVisiblePrimitives(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults);
 	void UpdateCache(const FCamera& InCamera, const FVisibilityResults& InResults);
 	void LogBuildResult(size_t TotalCount, size_t VisibleCount, bool bReusedCache) const;
 
