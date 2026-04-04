@@ -534,7 +534,7 @@ void FHudRenderer::Render(
 	}
 
 	std::ostringstream TextStream;
-	TextStream << std::fixed << std::setprecision(2);
+	TextStream << std::fixed << std::setprecision(5);
 	TextStream
 		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
 		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"

@@ -198,24 +198,31 @@ namespace
 		while (!NodeStack.empty())
 		{
 			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
+			++State.TotalAABBCheckCount;
 			AABBNode Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
 			if (IntersectRayAabb(InRay, Node.Min, Node.Max))
 			{
-				++State.TotalAABBCheckCount;
 				if (Node.IsLeaf() && IntersectRenderItem(InRay, Scene.GetRenderItems()[Node.PrimitiveIndex], InOutPickHit))
 				{
 					distanceSquared = std::min(distanceSquared, InOutPickHit.DistanceSquared);
 				}
 				else
 				{
+					float distToLeft = 0.f;
+					float distToRight = 0.f;
 					if (Node.LeftChildIndex != -1)
 					{
-						NodeStack.push(Node.LeftChildIndex);
+						AABBNode Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
+						distToLeft = FVector::DistSquared(InRay.Origin, (Left.Min + Left.Max) * 0.5f);
+						//NodeStack.push(Node.LeftChildIndex);
 					}
 					if (Node.RightChildIndex != -1)
 					{
-						NodeStack.push(Node.RightChildIndex);
+						AABBNode Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
+						distToRight = FVector::DistSquared(InRay.Origin, (Right.Min + Right.Max) * 0.5f);
+						//NodeStack.push(Node.RightChildIndex);
 					}
+					distToLeft > distToRight ? NodeStack.push(Node.LeftChildIndex) : NodeStack.push(Node.RightChildIndex);
 				}
 			}
 		}
