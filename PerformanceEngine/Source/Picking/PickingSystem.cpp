@@ -116,7 +116,7 @@ namespace
 		const FVector EdgeAC = InC - InA;
 		const FVector PVector = FVector::CrossProduct(InRay.Direction, EdgeAC);
 		const float Determinant = FVector::DotProduct(EdgeAB, PVector);
-		if (std::fabs(Determinant) < 1.e-8f)
+		if (Determinant < 1.e-8f)  // 뒷면(Determinant <= 0) 및 평행 레이 모두 거부
 		{
 			return false;
 		}
