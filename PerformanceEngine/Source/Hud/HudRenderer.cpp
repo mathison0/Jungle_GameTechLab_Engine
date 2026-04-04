@@ -361,9 +361,8 @@ void FHudRenderer::Render(
 	TextStream
 		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
 		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"
-		<< "PICK LAST: " << InStatsSystem.GetLastPickTimeMs() << " MS\n"
-		<< "PICK WORLD BVH: " << InStatsSystem.GetPickWorldBVHTimeMs() << " MS\n"
-		<< "PICK AABBCnt: " << InStatsSystem.GetTotalAABBCheckCount() << " \n"
+		<< "PICK BVH: " << InStatsSystem.GetPickWorldBVHTimeMs() << " MS\n"
+		<< "PICK AABB CNT: " << InStatsSystem.GetTotalAABBCheckCount() << '\n'
 		<< "PICK COUNT: " << InStatsSystem.GetTotalPickCount() << '\n'
 		<< "PICK TOTAL: " << InStatsSystem.GetTotalPickTimeMs() << " MS\n"
 		<< "GPU: " << SanitizeBitmapText(InRHI.GetAdapterName().empty() ? std::string("UNKNOWN") : InRHI.GetAdapterName());

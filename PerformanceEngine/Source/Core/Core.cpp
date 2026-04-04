@@ -167,14 +167,14 @@ void FCore::Tick()
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
-		PickingSystem->UpdatePick(
+		/*PickingSystem->UpdatePick(
 			*Scene,
 			*Camera,
 			VisibilityResults,
 			Input->GetMousePositionClient(),
 			RHI->GetViewportWidth(),
 			RHI->GetViewportHeight(),
-			PickState);
+			PickState);*/
 		PickingSystem->UpdatePickWorldBVH
 		(
 			*Scene,

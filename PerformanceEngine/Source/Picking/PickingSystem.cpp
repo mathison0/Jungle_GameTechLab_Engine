@@ -246,42 +246,65 @@ namespace
 
 	void IntersectWorldBVH(const FRay& InRay, const FScene& Scene, FPickHit& InOutPickHit, FPickState& State)
 	{
+		// 현재 베스트 히트까지의 T값(월드 거리)으로 가지치기
+		float BestDistSq = InOutPickHit.DistanceSquared;
+
 		TStack<int> NodeStack;
 		NodeStack.push(0);
-		float distanceSquared = std::numeric_limits<float>::max();
 		while (!NodeStack.empty())
 		{
 			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
 			++State.TotalAABBCheckCount;
 			AABBNode Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
-			if (IntersectRayAabb(InRay, Node.Min, Node.Max))
+			float tNode = IntersectRayAabb(InRay, Node.Min, Node.Max);
+			
+			if (tNode * tNode >= BestDistSq)
 			{
-				if (Node.PrimitiveIndex >= Scene.GetPrimitiveRuntimeData().size())
+				continue;
+			}
+			if (Node.IsLeaf())
+			{
+				const size_t PrimIdx = static_cast<size_t>(Node.PrimitiveIndex);
+				if (PrimIdx < Scene.GetPrimitiveRuntimeData().size())
 				{
-					continue;
-				}
-				if (Node.IsLeaf() && IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[Node.PrimitiveIndex], InOutPickHit))
-				{
-					distanceSquared = std::min(distanceSquared, InOutPickHit.DistanceSquared);
-				}
-				else
-				{
-					float distToLeft = 0.f;
-					float distToRight = 0.f;
-					if (Node.LeftChildIndex != -1)
+					if (IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[PrimIdx], InOutPickHit))
 					{
-						AABBNode Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
-						distToLeft = FVector::DistSquared(InRay.Origin, (Left.Min + Left.Max) * 0.5f);
-						//NodeStack.push(Node.LeftChildIndex);
+						BestDistSq = InOutPickHit.DistanceSquared; // 더 가까운 히트 갱신
 					}
-					if (Node.RightChildIndex != -1)
-					{
-						AABBNode Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
-						distToRight = FVector::DistSquared(InRay.Origin, (Right.Min + Right.Max) * 0.5f);
-						//NodeStack.push(Node.RightChildIndex);
-					}
-					distToLeft > distToRight ? NodeStack.push(Node.LeftChildIndex) : NodeStack.push(Node.RightChildIndex);
 				}
+			}
+			else
+			{
+				float distToLeft = 1e30f;
+				float distToRight = 1e30f;
+				if (Node.LeftChildIndex != -1)
+				{
+					AABBNode Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
+					float t = IntersectRayAabb(InRay, Left.Min, Left.Max);
+					if (t * t < BestDistSq) distToLeft = t;
+				}
+				if (Node.RightChildIndex != -1)
+				{
+					AABBNode Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
+					float t = IntersectRayAabb(InRay, Right.Min, Right.Max);
+					if (t * t < BestDistSq) distToRight = t;
+				}
+				// 가까운 쪽을 나중에 꺼내도록 먼 쪽을 먼저 push
+				if (distToLeft < 1e30f && distToRight < 1e30f)
+				{
+					if (distToLeft < distToRight)
+					{
+						NodeStack.push(Node.RightChildIndex);
+						NodeStack.push(Node.LeftChildIndex);
+					}
+					else
+					{
+						NodeStack.push(Node.LeftChildIndex);
+						NodeStack.push(Node.RightChildIndex);
+					}
+				}
+				else if (distToLeft < 1e30f)  { NodeStack.push(Node.LeftChildIndex); }
+				else if (distToRight < 1e30f) { NodeStack.push(Node.RightChildIndex); }
 			}
 		}
 	}
@@ -375,10 +398,17 @@ void FPickingSystem::UpdatePickWorldBVH(
 	//const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();
+	InOutPickState.TotalAABBCheckCount = 0;
 
 	IntersectWorldBVH(PickRay, InScene, BestHit, InOutPickState);
 
-
 	const uint64 PickEndCycles = QueryCycles64();
 	InOutPickState.LastPickTimeMsWorldBVH = CyclesToMilliseconds(PickStartCycles, PickEndCycles);
+	InOutPickState.TotalPickTimeMs += InOutPickState.LastPickTimeMsWorldBVH;
+	++InOutPickState.TotalPickCount;
+	InOutPickState.bHit = BestHit.PrimitiveId >= 0;
+	InOutPickState.SelectedPrimitiveId = BestHit.PrimitiveId;
+	InOutPickState.SelectedPrimitiveIndex = BestHit.PrimitiveIndex;
+	InOutPickState.HitWorldPosition = BestHit.WorldPosition;
+
 }
