@@ -31,8 +31,8 @@ namespace
 		FVector& AABBMin = Ctx.Nodes[NodeIndex].BoundMin;
 		FVector& AABBMax = Ctx.Nodes[NodeIndex].BoundMax;
 
-		AABBMin = FVector{ 1e30f,  1e30f,  1e30f };
-		AABBMax = FVector{ -1e30f, -1e30f, -1e30f };
+		AABBMin = FVector{ FLT_MAX,  FLT_MAX,  FLT_MAX };
+		AABBMax = FVector{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
 
 		const int32 First = Ctx.Nodes[NodeIndex].LeftFirst;
 		const int32 Count = Ctx.Nodes[NodeIndex].PrimitiveCount;
@@ -50,11 +50,11 @@ namespace
 
 	float EvaluateSAH( FBVHBuildContext& InCtx, FBVHNode& InNode, int32 InAxis, float InPostion)
 	{
-		FVector LeftBoxMin = { 1e30f,  1e30f,  1e30f };
-		FVector RightBoxMin = { 1e30f,  1e30f,  1e30f };
+		FVector LeftBoxMin = { FLT_MAX,  FLT_MAX,  FLT_MAX };
+		FVector RightBoxMin = { FLT_MAX,  FLT_MAX,  FLT_MAX };
 
-		FVector LeftBoxMax = { -1e30f, -1e30f, -1e30f };
-		FVector RightBoxMax = { -1e30f, -1e30f, -1e30f };
+		FVector LeftBoxMax = { FLT_MIN, FLT_MIN, FLT_MIN };
+		FVector RightBoxMax = { FLT_MIN, FLT_MIN, FLT_MIN };
 
 		uint32 LeftTriangleCount = 0;
 		uint32 RightTriangleCount = 0;
@@ -92,7 +92,7 @@ namespace
 
 		float TotalCost = LeftBoxArea * LeftTriangleCount + RightBoxArea * RightTriangleCount;
 
-		return (TotalCost > 0) ? (TotalCost) : (1e30f);
+		return (TotalCost > 0) ? (TotalCost) : (FLT_MAX);
 	}
 	void Subdivide(FBVHBuildContext& Ctx, int32 InNodeIndex)
 	{
@@ -100,7 +100,7 @@ namespace
 
 		int32 BestAxis = -1;
 		float BestPivot = -1;
-		float BestCost = 1e30f;
+		float BestCost = FLT_MAX;
 
 
 		for (int32 Axis = 0; Axis < 3; ++Axis)

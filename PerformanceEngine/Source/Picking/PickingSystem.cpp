@@ -64,7 +64,7 @@ namespace
 		return Result;
 	}
 
-	// AABB와의 교차 진입 거리를 반환. 미교차 시 1e30f 반환.
+	// AABB와의 교차 진입 거리를 반환. 미교차 시 FLT_MAX 반환.
 	float IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax)
 	{
 		float TMin = 0.0f;
@@ -81,7 +81,7 @@ namespace
 			{
 				if (Origin < BoundsMin || Origin > BoundsMax)
 				{
-					return 1e30f;
+					return FLT_MAX;
 				}
 				continue;
 			}
@@ -98,11 +98,34 @@ namespace
 			TMax = std::min(TMax, T1);
 			if (TMin > TMax)
 			{
-				return 1e30f;
+				return FLT_MAX;
 			}
 		}
 
 		return TMin;
+	}
+
+
+	float IntersectRayAabbSIMD(const FRay& InRay, const FBVHNode& Node)
+	{
+		const __m128 T1 = _mm_mul_ps(_mm_sub_ps(Node.aabbMin4, InRay.Origin4), InRay.InvDirection4);
+		const __m128 T2 = _mm_mul_ps(_mm_sub_ps(Node.aabbMax4, InRay.Origin4), InRay.InvDirection4);
+
+		__m128 TMin4 = _mm_min_ps(T1, T2);
+		__m128 TMax4 = _mm_max_ps(T1, T2);
+
+		// 수평 max: X, Y, Z 중 최댓값 (store 없이 shuffle로)
+		// TMin4 = [X, Y, Z, W]
+		__m128 TMin_yy = _mm_shuffle_ps(TMin4, TMin4, _MM_SHUFFLE(1, 1, 1, 1)); // Y
+		__m128 TMin_zz = _mm_shuffle_ps(TMin4, TMin4, _MM_SHUFFLE(2, 2, 2, 2)); // Z
+		const float TNear = _mm_cvtss_f32(_mm_max_ps(_mm_max_ps(TMin4, TMin_yy), TMin_zz));
+
+		// 수평 min: X, Y, Z 중 최솟값
+		__m128 TMax_yy = _mm_shuffle_ps(TMax4, TMax4, _MM_SHUFFLE(1, 1, 1, 1));
+		__m128 TMax_zz = _mm_shuffle_ps(TMax4, TMax4, _MM_SHUFFLE(2, 2, 2, 2));
+		const float TFar = _mm_cvtss_f32(_mm_min_ps(_mm_min_ps(TMax4, TMax_yy), TMax_zz));
+
+		return (TFar >= TNear && TNear < InRay.T && TFar > 0.0f) ? TNear : FLT_MAX;
 	}
 
 	bool IntersectRayTriangle(
@@ -158,7 +181,7 @@ namespace
 
 		const FBVHSpatialData* SpatialData =
 			static_cast<const FBVHSpatialData*>(StaticMesh->GetSpatialData().get());
-
+		
 		if (!SpatialData || SpatialData->Nodes.empty()) return false;
 
 		const TArray<FBVHNode>& Nodes = SpatialData->Nodes;
@@ -174,13 +197,16 @@ namespace
 		LocalRay.Origin = InPrimitiveRuntimeData.InverseWorldMatrix.TransformPosition(InRay.Origin);
 		LocalRay.Direction = InPrimitiveRuntimeData.InverseWorldMatrix.TransformVector(InRay.Direction).GetSafeNormal();
 
-		// 루트 AABB miss면 즉시 탈출
-		if (IntersectRayAabb(LocalRay, Nodes[0].BoundMin, Nodes[0].BoundMax) == 1e30f)
+		LocalRay.InvDirection.X = 1.0f / LocalRay.Direction.X;
+		LocalRay.InvDirection.Y = 1.0f / LocalRay.Direction.Y;
+		LocalRay.InvDirection.Z = 1.0f / LocalRay.Direction.Z;
+
+		if (IntersectRayAabbSIMD(LocalRay, Nodes[0]) == FLT_MAX)
 		{
 			return false;
 		}
 
-		float BestLocalT = 1e30f;
+		float BestLocalT = FLT_MAX;
 
 		// BVH 깊이는 64 초과 불가
 		int32 Stack[64];
@@ -221,8 +247,8 @@ namespace
 			// 두 자식의 AABB 진입 거리 계산
 			const FBVHNode* Child1 = &Nodes[Node->LeftFirst];
 			const FBVHNode* Child2 = &Nodes[Node->LeftFirst + 1];
-			float Dist1 = IntersectRayAabb(LocalRay, Child1->BoundMin, Child1->BoundMax);
-			float Dist2 = IntersectRayAabb(LocalRay, Child2->BoundMin, Child2->BoundMax);
+			float Dist1 = IntersectRayAabbSIMD(LocalRay, *Child1);
+			float Dist2 = IntersectRayAabbSIMD(LocalRay, *Child2);
 
 			// 가까운 쪽을 먼저 방문, 먼 쪽만 스택에 저장
 			if (Dist1 > Dist2) { std::swap(Dist1, Dist2); std::swap(Child1, Child2); }
@@ -258,27 +284,27 @@ namespace
 			const AABBNode& Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
 			const float tNode = IntersectRayAabb(InRay, Node.Min, Node.Max);
 			
-			if (tNode == 1e30f || tNode * tNode >= BestDistSq)
+			if (tNode == FLT_MAX || tNode * tNode >= BestDistSq)
 			{
 				continue;
 			}
 			State.TraversedWorldBVHNodes.push_back(Node);
 			if (Node.IsLeaf())
 			{
-				const size_t PrimIdx = static_cast<size_t>(Node.PrimitiveIndex);
+				const uint64 PrimIdx = static_cast<uint64>(Node.PrimitiveIndex);
 				if (PrimIdx < Scene.GetPrimitiveRuntimeData().size())
 				{
 					if (IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[PrimIdx], InOutPickHit))
 					{
 						InOutPickHit.PrimitiveIndex = static_cast<int32>(PrimIdx);
-						BestDistSq = InOutPickHit.DistanceSquared; // 더 가까운 히트 갱신
+						BestDistSq = InOutPickHit.DistanceSquared;
 					}
 				}
 			}
 			else
 			{
-				float distToLeft = 1e30f;
-				float distToRight = 1e30f;
+				float distToLeft = FLT_MAX;
+				float distToRight = FLT_MAX;
 				if (Node.LeftChildIndex != -1)
 				{
 					AABBNode Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
@@ -292,7 +318,7 @@ namespace
 					if (t * t < BestDistSq) distToRight = t;
 				}
 				// 가까운 쪽을 나중에 꺼내도록 먼 쪽을 먼저 push
-				if (distToLeft < 1e30f && distToRight < 1e30f)
+				if (distToLeft < FLT_MAX && distToRight < FLT_MAX)
 				{
 					if (distToLeft < distToRight)
 					{
@@ -305,8 +331,8 @@ namespace
 						NodeStack.push(Node.RightChildIndex);
 					}
 				}
-				else if (distToLeft < 1e30f)  { NodeStack.push(Node.LeftChildIndex); }
-				else if (distToRight < 1e30f) { NodeStack.push(Node.RightChildIndex); }
+				else if (distToLeft < FLT_MAX)  { NodeStack.push(Node.LeftChildIndex); }
+				else if (distToRight < FLT_MAX) { NodeStack.push(Node.RightChildIndex); }
 			}
 		}
 	}
