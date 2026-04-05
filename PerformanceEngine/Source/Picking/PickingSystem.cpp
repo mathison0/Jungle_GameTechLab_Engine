@@ -264,8 +264,14 @@ namespace
 			1.0f / InRay.Direction.Z
 		);
 
+		const int32 RootIndex = Scene.GetWorldBVHRootIndex();
+		if (RootIndex < 0 || RootIndex >= static_cast<int32>(Scene.GetWorldBVHNodes().size()))
+		{
+			return;
+		}
+
 		TStack<int> NodeStack;
-		NodeStack.push(0);
+		NodeStack.push(RootIndex);
 		while (!NodeStack.empty())
 		{
 			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
@@ -277,7 +283,9 @@ namespace
 			{
 				continue;
 			}
-			//State.TraversedWorldBVHNodes.push_back(Node);
+
+			// TODO : Debug용 로직 주석처리 해야함.
+			State.TraversedWorldBVHNodes.push_back(Node);
 			if (Node.IsLeaf())
 			{
 				const size_t PrimIdx = static_cast<size_t>(Node.PrimitiveIndex);

@@ -26,6 +26,11 @@ void FVisibilitySystem::Reset()
 	bHasCachedVisibility = false;
 }
 
+void FVisibilitySystem::Invalidate()
+{
+	bHasCachedVisibility = false;
+}
+
 void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults)
 {
 	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();

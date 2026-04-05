@@ -19,6 +19,48 @@ namespace
 {
 	constexpr float DefaultCameraSpeed = 20.0f;
 	constexpr float DefaultCameraSensitivity = 0.12f;
+	constexpr float SelectedObjectMoveSpeed = 5.0f;
+
+	FVector BuildSelectedObjectMoveDelta(const FInput& InInput, float DeltaTimeSeconds)
+	{
+		if (DeltaTimeSeconds <= 0.0f || SelectedObjectMoveSpeed <= 0.0f)
+		{
+			return FVector::ZeroVector;
+		}
+
+		FVector MoveDirection = FVector::ZeroVector;
+		if (InInput.IsKeyDown(VK_UP))
+		{
+			MoveDirection += FVector::ForwardVector;
+		}
+		if (InInput.IsKeyDown(VK_DOWN))
+		{
+			MoveDirection += FVector::BackwardVector;
+		}
+		if (InInput.IsKeyDown(VK_LEFT))
+		{
+			MoveDirection += FVector::LeftVector;
+		}
+		if (InInput.IsKeyDown(VK_RIGHT))
+		{
+			MoveDirection += FVector::RightVector;
+		}
+		if (InInput.IsKeyDown(VK_PRIOR))
+		{
+			MoveDirection += FVector::UpVector;
+		}
+		if (InInput.IsKeyDown(VK_NEXT))
+		{
+			MoveDirection += FVector::DownVector;
+		}
+
+		if (MoveDirection.IsNearlyZero())
+		{
+			return FVector::ZeroVector;
+		}
+
+		return MoveDirection.GetSafeNormal() * (SelectedObjectMoveSpeed * DeltaTimeSeconds);
+	}
 
 	std::filesystem::path SearchForSceneFrom(const std::filesystem::path& InStartDirectory)
 	{
@@ -161,20 +203,21 @@ void FCore::Tick()
 {
 	StatsSystem->BeginFrame();
 	Input->Tick();
-	Camera->Update(*Input, static_cast<float>(StatsSystem->GetFrameTimeMs() * 0.001));
+	const float DeltaTimeSeconds = static_cast<float>(StatsSystem->GetFrameTimeMs() * 0.001);
+	Camera->Update(*Input, DeltaTimeSeconds);
 
 	VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
-		/*PickingSystem->UpdatePick(
-			*Scene,
-			*Camera,
-			VisibilityResults,
-			Input->GetMousePositionClient(),
-			RHI->GetViewportWidth(),
-			RHI->GetViewportHeight(),
-			PickState);*/
+		//PickingSystem->UpdatePick(
+		//	*Scene,
+		//	*Camera,
+		//	VisibilityResults,
+		//	Input->GetMousePositionClient(),
+		//	RHI->GetViewportWidth(),
+		//	RHI->GetViewportHeight(),
+		//	PickState);
 		PickingSystem->UpdatePickWorldBVH
 		(
 			*Scene,
@@ -184,6 +227,15 @@ void FCore::Tick()
 			RHI->GetViewportWidth(),
 			RHI->GetViewportHeight(),
 			PickState);
+	}
+	const FVector SelectedObjectMoveDelta = BuildSelectedObjectMoveDelta(*Input, DeltaTimeSeconds);
+	if (PickState.SelectedPrimitiveIndex >= 0 && !SelectedObjectMoveDelta.IsNearlyZero())
+	{
+		if (Scene->TranslatePrimitiveWorld(PickState.SelectedPrimitiveIndex, SelectedObjectMoveDelta))
+		{
+			VisibilitySystem->Invalidate();
+			VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
+		}
 	}
 	if (Input->IsKeyPressed('R'))
 	{

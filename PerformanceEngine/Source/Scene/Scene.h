@@ -34,6 +34,9 @@ public:
 	const FVector& GetSceneBoundsMin() const { return SceneBoundsMin; }
 	const FVector& GetSceneBoundsMax() const { return SceneBoundsMax; }
 	const TArray<AABBNode>& GetWorldBVHNodes() const { return WorldBVHNodes; }
+	int32 GetWorldBVHRootIndex() const { return RootIndex; }
+
+	bool TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta);
 
 
 private:
@@ -47,6 +50,8 @@ private:
 	void RemoveLeaf(int LeafIdx);
 	float SurfaceArea(const FVector& Min, const FVector& Max);
 	void MoveLeaf(int RenderItemIndex, const FTransform& NewTransform);
+	void UpdatePrimitiveRuntimeData(int32 PrimitiveIndex);
+	void UpdateSceneBoundsFromRoot();
 
 
 private:
@@ -71,6 +76,6 @@ private:
 	//BVH Related Variables
 	TArray<AABBNode> WorldBVHNodes;
 	TArray<int> FreeNodes;
-	int RootIndex = 1;
+	int RootIndex = -1;
 	//BVH Related Variables
 };

@@ -409,6 +409,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	//For Check
 
 	WorldBVHNodes.clear();
+	FreeNodes.clear();
 	WorldBVHNodes.reserve(RenderItems.size() * 2);
 	AABBNode RootNode;
 	RootNode.Min = SceneBoundsMin;
@@ -433,12 +434,40 @@ void FScene::Release()
 	RenderItems.clear();
 	PrimitiveRuntimeData.clear();
 	PrimitiveColdData.clear();
+	WorldBVHNodes.clear();
+	FreeNodes.clear();
+	RootIndex = -1;
 	MeshManager.Release();
 	InitialCamera = FSceneCameraInitData();
 	RawCameraLocation = FVector::ZeroVector;
 	RawCameraRotation = FVector::ZeroVector;
 	SceneBoundsMin = FVector::ZeroVector;
 	SceneBoundsMax = FVector::ZeroVector;
+}
+
+bool FScene::TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta)
+{
+	if (PrimitiveIndex < 0 || Delta.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex >= RenderItems.size() || PrimitiveArrayIndex >= PrimitiveRuntimeData.size())
+	{
+		return false;
+	}
+
+	FRenderItem& Item = RenderItems[PrimitiveArrayIndex];
+	if (!Item.StaticMesh || !Item.StaticMesh->IsValid())
+	{
+		return false;
+	}
+
+	FTransform NewTransform = Item.Transform;
+	NewTransform.AddToTranslation(Delta);
+	MoveLeaf(PrimitiveIndex, NewTransform);
+	return true;
 }
 
 //start,end는 RenderItems의 인덱스 범위, ParentIdx는 WorldBVHNodes의 인덱스, bIsRight는 ParentIdx가 부모 노드의 오른쪽 자식인지 여부
@@ -456,6 +485,8 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 		FRenderItem& Item = RenderItems[start];
 		Item.BVHLeafIndex = ParentIdx; //Parent? why?
 		const FVector Margin = (Item.WorldBoundsMax - Item.WorldBoundsMin) * 0.1f;
+		Item.LooseBoundsMin = Item.WorldBoundsMin - Margin;
+		Item.LooseBoundsMax = Item.WorldBoundsMax + Margin;
 
 		return ParentIdx;
 	}
@@ -709,8 +740,21 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 		WorldBVHNodes[Item.BVHLeafIndex].Min = NewMin;
 		WorldBVHNodes[Item.BVHLeafIndex].Max = NewMax;
 		RefitUpward(WorldBVHNodes[Item.BVHLeafIndex].ParentIndex);
-		return;
 	}
+	else
+	{
+		RemoveLeaf(Item.BVHLeafIndex);
+
+		const FVector Margin = (NewMax - NewMin) * 0.1f;
+		Item.LooseBoundsMin = NewMin - Margin;
+		Item.LooseBoundsMax = NewMax + Margin;
+		Item.BVHLeafIndex = InsertLeaf(Item.LooseBoundsMin, Item.LooseBoundsMax, RenderItemIndex);
+	}
+
+	UpdatePrimitiveRuntimeData(RenderItemIndex);
+	UpdateSceneBoundsFromRoot();
+
+#if 0
 
 	// Loose AABB 벗어남 → 삭제 후 재삽입
 	RemoveLeaf(Item.BVHLeafIndex);
@@ -719,4 +763,42 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 	Item.LooseBoundsMin = NewMin - Margin;
 	Item.LooseBoundsMax = NewMax + Margin;
 	Item.BVHLeafIndex = InsertLeaf(Item.LooseBoundsMin, Item.LooseBoundsMax, RenderItemIndex);
+}
+#endif
+}
+
+void FScene::UpdatePrimitiveRuntimeData(int32 PrimitiveIndex)
+{
+	if (PrimitiveIndex < 0)
+	{
+		return;
+	}
+
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex >= RenderItems.size() || PrimitiveArrayIndex >= PrimitiveRuntimeData.size())
+	{
+		return;
+	}
+
+	const FRenderItem& Item = RenderItems[PrimitiveArrayIndex];
+	FScenePrimitiveRuntimeData& RuntimeData = PrimitiveRuntimeData[PrimitiveArrayIndex];
+	RuntimeData.PrimitiveId = Item.PrimitiveId;
+	RuntimeData.WorldMatrix = Item.Transform.ToMatrixWithScale();
+	RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+	RuntimeData.WorldBoundsMin = Item.WorldBoundsMin;
+	RuntimeData.WorldBoundsMax = Item.WorldBoundsMax;
+	RuntimeData.StaticMesh = Item.StaticMesh.get();
+}
+
+void FScene::UpdateSceneBoundsFromRoot()
+{
+	if (RootIndex < 0 || RootIndex >= static_cast<int32>(WorldBVHNodes.size()))
+	{
+		SceneBoundsMin = FVector::ZeroVector;
+		SceneBoundsMax = FVector::ZeroVector;
+		return;
+	}
+
+	SceneBoundsMin = WorldBVHNodes[RootIndex].Min;
+	SceneBoundsMax = WorldBVHNodes[RootIndex].Max;
 }

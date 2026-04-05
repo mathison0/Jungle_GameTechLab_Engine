@@ -34,6 +34,7 @@ class FVisibilitySystem
 {
 public:
 	void Reset();
+	void Invalidate();
 	void Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults);
 
 private:
