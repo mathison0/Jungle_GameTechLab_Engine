@@ -26,6 +26,7 @@ public:
 	ID3D11RenderTargetView* GetBackBufferRTV() const { return BackBufferRTV.Get(); }
 	ID3D11Texture2D* GetDepthStencilBuffer() const { return DepthStencilBuffer.Get(); }
 	ID3D11DepthStencilView* GetDepthStencilView() const { return DepthStencilView.Get(); }
+	ID3D11ShaderResourceView* GetDepthStencilShaderResourceView() const { return DepthStencilSRV.Get(); }
 
 	D3D11_VIEWPORT GetViewport() const { return Viewport; }
 
@@ -53,17 +54,18 @@ private:
 
 	bool bVSyncEnabled = false;
 
-	TComPtr<ID3D11Device>        Device;
-	TComPtr<ID3D11Device1>       Device1;
+	TComPtr<ID3D11Device> Device;
+	TComPtr<ID3D11Device1> Device1;
 	TComPtr<ID3D11DeviceContext> DeviceContext;
 	TComPtr<ID3D11DeviceContext1> DeviceContext1;
-	TComPtr<IDXGISwapChain>      SwapChain;
+	TComPtr<IDXGISwapChain> SwapChain;
 
-	TComPtr<ID3D11Texture2D>        BackBufferTexture;
+	TComPtr<ID3D11Texture2D> BackBufferTexture;
 	TComPtr<ID3D11RenderTargetView> BackBufferRTV;
 
-	TComPtr<ID3D11Texture2D>        DepthStencilBuffer;
+	TComPtr<ID3D11Texture2D> DepthStencilBuffer;
 	TComPtr<ID3D11DepthStencilView> DepthStencilView;
+	TComPtr<ID3D11ShaderResourceView> DepthStencilSRV;
 
 	D3D11_VIEWPORT Viewport = {};
 

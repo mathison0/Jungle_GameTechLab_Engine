@@ -15,6 +15,7 @@
 #include "Picking/PickingSystem.h"
 #include "Scene/Scene.h"
 #include "Stats/StatsSystem.h"
+#include "Visibility/VisibilitySystem.h"
 
 namespace
 {
@@ -343,6 +344,7 @@ void FHudRenderer::Render(
 	const FCamera& InCamera,
 	const FScene& InScene,
 	const FStatsSystem& InStatsSystem,
+	const FVisibilityResults& InVisibilityResults,
 	const FPickState& InPickState)
 {
 	if (!Resources || !Resources->SpriteBatch || !Resources->WhiteTextureView)
@@ -361,6 +363,14 @@ void FHudRenderer::Render(
 	TextStream
 		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
 		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"
+		<< "OCCLUSION: GPU\n"
+		<< "VISIBLE: " << InVisibilityResults.VisiblePrimitiveIndices.size() << '\n'
+		<< "FRUSTUM: " << InVisibilityResults.Stats.FrustumVisibleCount << '\n'
+		<< "SEED: " << InVisibilityResults.Stats.SeedCount << '\n'
+		<< "OCCLUDED: " << InVisibilityResults.Stats.OccludedCount << '\n'
+		<< "GPU CAND: " << InVisibilityResults.Stats.GpuCandidateCount << '\n'
+		<< "GPU VIS: " << InVisibilityResults.Stats.GpuVisibleCount << '\n'
+		<< "READBACK: " << InVisibilityResults.Stats.ReadbackTimeMs << " MS\n"
 		<< "PICK LAST: " << InStatsSystem.GetLastPickTimeMs() << " MS\n"
 		<< "PICK WORLD BVH: " << InStatsSystem.GetPickWorldBVHTimeMs() << " MS\n"
 		<< "PICK AABBCnt: " << InStatsSystem.GetTotalAABBCheckCount() << " \n"

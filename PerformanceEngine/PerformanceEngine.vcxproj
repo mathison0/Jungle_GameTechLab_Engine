@@ -221,6 +221,9 @@
     <ClInclude Include="Source\Visibility\VisibilitySystem.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shader\HZB\DepthToHzbMip0CS.hlsl" />
+    <None Include="Shader\HZB\OcclusionCullCS.hlsl" />
+    <None Include="Shader\HZB\ReduceHzbMipCS.hlsl" />
     <None Include="Shader\Grid\GridPixelShader.hlsl" />
     <None Include="Shader\Grid\GridVertexShader.hlsl" />
     <None Include="packages.config" />

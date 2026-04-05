@@ -237,6 +237,15 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shader\HZB\DepthToHzbMip0CS.hlsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Shader\HZB\OcclusionCullCS.hlsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Shader\HZB\ReduceHzbMipCS.hlsl">
+      <Filter>Source Files</Filter>
+    </None>
     <None Include="Shader\Grid\GridPixelShader.hlsl">
       <Filter>Source Files</Filter>
     </None>

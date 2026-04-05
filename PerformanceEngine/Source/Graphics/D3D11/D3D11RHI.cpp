@@ -7,7 +7,9 @@
 namespace
 {
 	constexpr DXGI_FORMAT BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-	constexpr DXGI_FORMAT DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	constexpr DXGI_FORMAT DepthStencilTextureFormat = DXGI_FORMAT_R32_TYPELESS;
+	constexpr DXGI_FORMAT DepthStencilViewFormat = DXGI_FORMAT_D32_FLOAT;
+	constexpr DXGI_FORMAT DepthStencilShaderResourceFormat = DXGI_FORMAT_R32_FLOAT;
 	constexpr float ClearColor[] = { 0.08f, 0.10f, 0.14f, 1.0f };
 
 	struct FAdapterCandidate
@@ -370,7 +372,7 @@ void FD3D11RHI::BeginFrame()
 
 	BindBackBuffer();
 	DeviceContext->ClearRenderTargetView(BackBufferRTV.Get(), ClearColor);
-	DeviceContext->ClearDepthStencilView(DepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	DeviceContext->ClearDepthStencilView(DepthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
 void FD3D11RHI::EndFrame()
@@ -444,11 +446,11 @@ bool FD3D11RHI::CreateBackBufferResources()
 	DepthStencilDesc.Height = static_cast<UINT>(ViewportHeight);
 	DepthStencilDesc.MipLevels = 1;
 	DepthStencilDesc.ArraySize = 1;
-	DepthStencilDesc.Format = DepthStencilFormat;
+	DepthStencilDesc.Format = DepthStencilTextureFormat;
 	DepthStencilDesc.SampleDesc.Count = 1;
 	DepthStencilDesc.SampleDesc.Quality = 0;
 	DepthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
-	DepthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	DepthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
 	Result = Device->CreateTexture2D(&DepthStencilDesc, nullptr, DepthStencilBuffer.GetAddressOf());
 	if (FAILED(Result))
@@ -457,7 +459,23 @@ bool FD3D11RHI::CreateBackBufferResources()
 		return false;
 	}
 
-	Result = Device->CreateDepthStencilView(DepthStencilBuffer.Get(), nullptr, DepthStencilView.GetAddressOf());
+	D3D11_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {};
+	DepthStencilViewDesc.Format = DepthStencilViewFormat;
+	DepthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	DepthStencilViewDesc.Texture2D.MipSlice = 0;
+	Result = Device->CreateDepthStencilView(DepthStencilBuffer.Get(), &DepthStencilViewDesc, DepthStencilView.GetAddressOf());
+	if (FAILED(Result))
+	{
+		ReleaseBackBufferResources();
+		return false;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC DepthStencilSRVDesc = {};
+	DepthStencilSRVDesc.Format = DepthStencilShaderResourceFormat;
+	DepthStencilSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	DepthStencilSRVDesc.Texture2D.MostDetailedMip = 0;
+	DepthStencilSRVDesc.Texture2D.MipLevels = 1;
+	Result = Device->CreateShaderResourceView(DepthStencilBuffer.Get(), &DepthStencilSRVDesc, DepthStencilSRV.GetAddressOf());
 	if (FAILED(Result))
 	{
 		ReleaseBackBufferResources();
@@ -469,6 +487,7 @@ bool FD3D11RHI::CreateBackBufferResources()
 
 void FD3D11RHI::ReleaseBackBufferResources()
 {
+	DepthStencilSRV.Reset();
 	DepthStencilView.Reset();
 	DepthStencilBuffer.Reset();
 	BackBufferRTV.Reset();
