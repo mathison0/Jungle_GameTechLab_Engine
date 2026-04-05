@@ -50,6 +50,11 @@ void FInput::ProcessMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		MousePositionClient = MakeClientPoint(LParam);
 		SetCapture(Hwnd);
 		break;
+	case WM_LBUTTONDBLCLK:
+		EventQueue.push_back({ EInputEventType::MouseButtonDown, MOUSE_LEFT });
+		MousePositionClient = MakeClientPoint(LParam);
+		SetCapture(Hwnd);
+		break;
 
 	case WM_LBUTTONUP:
 		EventQueue.push_back({ EInputEventType::MouseButtonUp, MOUSE_LEFT });
