@@ -12,29 +12,8 @@ class FStaticMesh;
 
 struct FRay
 {
-	// simd 연산을 사용하다 보니 union을 썼는데 내부적으로 사용자 정의 타입이 존재하면 기본 생성자가 자동으로 삭제됨
-	FRay() : Origin(FVector::ZeroVector), Direction(FVector::ForwardVector), InvDirection(), T(FLT_MAX) {};
-
-	union
-	{
-		struct { FVector Origin; float Dummy0; };
-		__m128 Origin4;
-	};
-
-	union
-	{
-		struct { FVector Direction; float Dummy1; };
-		__m128 Direction4;
-	};
-
-	union
-	{
-		struct { FVector InvDirection; float Dummy2; };
-		__m128 InvDirection4;
-	};
-
-	float T = FLT_MAX;
-
+	FVector Origin = FVector::ZeroVector;
+	FVector Direction = FVector::ForwardVector;
 };
 
 struct FPickHit

@@ -29,8 +29,6 @@ class FPickingSystem
 {
 public:
 	void Reset();
-
-	//Deprecated Pick
 	void UpdatePick(
 		const FScene& InScene,
 		const FCamera& InCamera,
