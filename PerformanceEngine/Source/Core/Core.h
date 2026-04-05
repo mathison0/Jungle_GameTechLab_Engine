@@ -12,6 +12,7 @@
 class FGrid;
 class FCamera;
 class FD3D11RHI;
+class FGUIRenderer;
 class FHudRenderer;
 class FInput;
 class FPickingSystem;
@@ -61,6 +62,7 @@ private:
 	std::unique_ptr<FScene> Scene;
 	std::unique_ptr<FSceneRenderer> SceneRenderer;
 	std::unique_ptr<FHudRenderer> HudRenderer;
+	std::unique_ptr<FGUIRenderer> GUIRenderer;
 	std::unique_ptr<FVisibilitySystem> VisibilitySystem;
 	std::unique_ptr<FPickingSystem> PickingSystem;
 	std::unique_ptr<FStatsSystem> StatsSystem;

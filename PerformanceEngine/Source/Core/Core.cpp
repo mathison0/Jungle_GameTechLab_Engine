@@ -6,6 +6,7 @@
 #include "BVH/BVHDebugRenderer.h"
 #include "Camera/Camera.h"
 #include "Graphics/D3D11/D3D11RHI.h"
+#include "Gui/GUIRenderer.h"
 #include "Grid/Grid.h"
 #include "Hud/HudRenderer.h"
 #include "Input/Input.h"
@@ -134,13 +135,14 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	Scene = std::make_unique<FScene>();
 	SceneRenderer = std::make_unique<FSceneRenderer>();
 	HudRenderer = std::make_unique<FHudRenderer>();
+	GUIRenderer = std::make_unique<FGUIRenderer>();
 	VisibilitySystem = std::make_unique<FVisibilitySystem>();
 	PickingSystem = std::make_unique<FPickingSystem>();
 	StatsSystem = std::make_unique<FStatsSystem>();
 	BVHDebugRenderer = std::make_unique<FBVHDebugRenderer>();
 
 
-	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !HudRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem || !BVHDebugRenderer)
+	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !HudRenderer || !GUIRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem || !BVHDebugRenderer)
 	{
 		Release();
 		return false;
@@ -184,7 +186,10 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 		Camera->SetAspectRatio(static_cast<float>(Args.Width) / static_cast<float>(Args.Height));
 	}
 
-	if (!SceneRenderer->Initialize(*RHI) || !HudRenderer->Initialize(*RHI) || !BVHDebugRenderer->Initialize(*RHI))
+	if (!SceneRenderer->Initialize(*RHI)
+		|| !HudRenderer->Initialize(*RHI)
+		|| !GUIRenderer->Initialize(*RHI, Args.Hwnd)
+		|| !BVHDebugRenderer->Initialize(*RHI))
 	{
 		Release();
 		return false;
@@ -204,11 +209,17 @@ void FCore::Tick()
 	StatsSystem->BeginFrame();
 	Input->Tick();
 	const float DeltaTimeSeconds = static_cast<float>(StatsSystem->GetFrameTimeMs() * 0.001);
-	Camera->Update(*Input, DeltaTimeSeconds);
+	const bool bGUIWantsMouseCapture = GUIRenderer && GUIRenderer->WantsMouseCapture();
+	const bool bGUIWantsKeyboardCapture = GUIRenderer && GUIRenderer->WantsKeyboardCapture();
+
+	if (!bGUIWantsMouseCapture && !bGUIWantsKeyboardCapture)
+	{
+		Camera->Update(*Input, DeltaTimeSeconds);
+	}
 
 	VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
 
-	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
+	if (!bGUIWantsMouseCapture && Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
 		//PickingSystem->UpdatePick(
 		//	*Scene,
@@ -229,7 +240,7 @@ void FCore::Tick()
 			PickState);
 	}
 	const FVector SelectedObjectMoveDelta = BuildSelectedObjectMoveDelta(*Input, DeltaTimeSeconds);
-	if (PickState.SelectedPrimitiveIndex >= 0 && !SelectedObjectMoveDelta.IsNearlyZero())
+	if (!bGUIWantsKeyboardCapture && PickState.SelectedPrimitiveIndex >= 0 && !SelectedObjectMoveDelta.IsNearlyZero())
 	{
 		if (Scene->TranslatePrimitiveWorld(PickState.SelectedPrimitiveIndex, SelectedObjectMoveDelta))
 		{
@@ -257,6 +268,10 @@ void FCore::Tick()
 		BVHDebugRenderer->RenderWorldNodeBoxes(*RHI, *Camera, PickState.TraversedWorldBVHNodes);
 	}
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
+	if (GUIRenderer && GUIRenderer->Render(*RHI, *Scene, PickState))
+	{
+		VisibilitySystem->Invalidate();
+	}
 	EndFrame();
 	StatsSystem->EndFrame();
 }
@@ -268,12 +283,14 @@ void FCore::Shutdown()
 
 bool FCore::HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
+	const bool bGUIHandled = GUIRenderer && GUIRenderer->HandleMessage(Hwnd, Msg, WParam, LParam);
+
 	if (Input)
 	{
 		Input->ProcessMessage(Hwnd, Msg, WParam, LParam);
 	}
 
-	return false;
+	return bGUIHandled;
 }
 
 void FCore::HandleResize(int32 Width, int32 Height)
@@ -303,6 +320,12 @@ void FCore::Release()
 	{
 		HudRenderer->Shutdown();
 		HudRenderer.reset();
+	}
+
+	if (GUIRenderer)
+	{
+		GUIRenderer->Shutdown();
+		GUIRenderer.reset();
 	}
 
 	if (BVHDebugRenderer)

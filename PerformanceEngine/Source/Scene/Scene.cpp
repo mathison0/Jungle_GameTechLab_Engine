@@ -470,6 +470,34 @@ bool FScene::TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta)
 	return true;
 }
 
+bool FScene::SetPrimitiveTransformWorld(int32 PrimitiveIndex, const FTransform& NewTransform)
+{
+	if (PrimitiveIndex < 0)
+	{
+		return false;
+	}
+
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex >= RenderItems.size() || PrimitiveArrayIndex >= PrimitiveRuntimeData.size())
+	{
+		return false;
+	}
+
+	FRenderItem& Item = RenderItems[PrimitiveArrayIndex];
+	if (!Item.StaticMesh || !Item.StaticMesh->IsValid())
+	{
+		return false;
+	}
+
+	if (Item.Transform.Equals(NewTransform, 1.e-4f))
+	{
+		return false;
+	}
+
+	MoveLeaf(PrimitiveIndex, NewTransform);
+	return true;
+}
+
 //start,end는 RenderItems의 인덱스 범위, ParentIdx는 WorldBVHNodes의 인덱스, bIsRight는 ParentIdx가 부모 노드의 오른쪽 자식인지 여부
 int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 {

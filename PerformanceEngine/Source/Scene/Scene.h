@@ -37,6 +37,7 @@ public:
 	int32 GetWorldBVHRootIndex() const { return RootIndex; }
 
 	bool TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta);
+	bool SetPrimitiveTransformWorld(int32 PrimitiveIndex, const FTransform& NewTransform);
 
 
 private:
