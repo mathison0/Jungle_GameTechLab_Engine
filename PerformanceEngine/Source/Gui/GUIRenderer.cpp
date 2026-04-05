@@ -1,8 +1,10 @@
 #include "Gui/GUIRenderer.h"
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 
+#include "Camera/Camera.h"
 #include "Math/Quat.h"
 #include "Graphics/D3D11/D3D11RHI.h"
 #include "Math/Rotator.h"
@@ -18,6 +20,10 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 namespace
 {
+	constexpr float MinSpawnDistance = 10.0f;
+	constexpr float MaxSpawnDistance = 150.0f;
+	constexpr float DefaultSpawnDistance = 10.0f;
+
 	bool IsMouseMessage(UINT InMessage)
 	{
 		switch (InMessage)
@@ -239,7 +245,7 @@ bool FGUIRenderer::HandleMessage(HWND InWindowHandle, UINT InMessage, WPARAM InW
 	return false;
 }
 
-bool FGUIRenderer::Render(const FD3D11RHI& InRHI, FScene& InScene, const FPickState& InPickState)
+bool FGUIRenderer::Render(const FD3D11RHI& InRHI, FScene& InScene, const FCamera& InCamera, FPickState& InOutPickState)
 {
 	if (!bInitialized)
 	{
@@ -256,7 +262,7 @@ bool FGUIRenderer::Render(const FD3D11RHI& InRHI, FScene& InScene, const FPickSt
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	const bool bSceneChanged = DrawSelectedObjectWindow(InScene, InPickState);
+	const bool bSceneChanged = DrawSceneWindow(InScene, InCamera, InOutPickState) | DrawSelectedObjectWindow(InScene, InOutPickState);
 
 	ImGui::Render();
 
@@ -283,6 +289,120 @@ bool FGUIRenderer::WantsMouseCapture() const
 bool FGUIRenderer::WantsKeyboardCapture() const
 {
 	return bWantsKeyboardCapture;
+}
+
+bool FGUIRenderer::DrawSceneWindow(FScene& InScene, const FCamera& InCamera, FPickState& InOutPickState)
+{
+	ImGui::SetNextWindowPos(ImVec2(16.0f, 16.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(420.0f, 128.0f), ImGuiCond_FirstUseEver);
+
+	bool bSceneChanged = false;
+	if (!ImGui::Begin("Scene"))
+	{
+		ImGui::End();
+		return false;
+	}
+
+	TArray<FString> LoadedMeshAssetKeys = InScene.GetLoadedMeshAssetKeys();
+	std::sort(LoadedMeshAssetKeys.begin(), LoadedMeshAssetKeys.end());
+
+	ImGui::Text("Loaded StaticMeshes: %d", static_cast<int32>(LoadedMeshAssetKeys.size()));
+
+	if (!LoadedMeshAssetKeys.empty())
+	{
+		const auto SelectedMeshIt = std::find(LoadedMeshAssetKeys.begin(), LoadedMeshAssetKeys.end(), SceneWindowSelectedMeshAssetKey);
+		if (SelectedMeshIt == LoadedMeshAssetKeys.end())
+		{
+			SceneWindowSelectedMeshAssetKey = LoadedMeshAssetKeys.front();
+			SceneWindowSelectedMeshIndex = 0;
+		}
+		else
+		{
+			SceneWindowSelectedMeshIndex = static_cast<int32>(std::distance(LoadedMeshAssetKeys.begin(), SelectedMeshIt));
+		}
+
+		if (ImGui::BeginCombo("StaticMesh", SceneWindowSelectedMeshAssetKey.c_str()))
+		{
+			for (int32 MeshIndex = 0; MeshIndex < static_cast<int32>(LoadedMeshAssetKeys.size()); ++MeshIndex)
+			{
+				const bool bSelected = (MeshIndex == SceneWindowSelectedMeshIndex);
+				if (ImGui::Selectable(LoadedMeshAssetKeys[MeshIndex].c_str(), bSelected))
+				{
+					SceneWindowSelectedMeshIndex = MeshIndex;
+					SceneWindowSelectedMeshAssetKey = LoadedMeshAssetKeys[MeshIndex];
+				}
+
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::Button("Add"))
+		{
+			float SpawnDistance = DefaultSpawnDistance;
+			if (const std::shared_ptr<FStaticMesh> StaticMesh = InScene.FindLoadedStaticMesh(SceneWindowSelectedMeshAssetKey))
+			{
+				const float MeshBoundsDiagonal = (StaticMesh->GetBoundsMax() - StaticMesh->GetBoundsMin()).Size();
+				SpawnDistance = std::clamp(MeshBoundsDiagonal * 0.5f, MinSpawnDistance, MaxSpawnDistance);
+			}
+
+			const FVector CameraForward = InCamera.GetRotation().GetForwardVector().GetSafeNormal();
+			const FVector SpawnLocation = InCamera.GetLocation() + CameraForward * SpawnDistance;
+			const FTransform SpawnTransform(FQuat::Identity, SpawnLocation, FVector::OneVector);
+
+			int32 NewPrimitiveIndex = -1;
+			if (InScene.AddLoadedStaticMeshInstance(SceneWindowSelectedMeshAssetKey, SpawnTransform, NewPrimitiveIndex))
+			{
+				InOutPickState.bHit = false;
+				InOutPickState.SelectedPrimitiveIndex = NewPrimitiveIndex;
+				InOutPickState.SelectedPrimitiveId =
+					(static_cast<size_t>(NewPrimitiveIndex) < InScene.GetPrimitiveRuntimeData().size())
+					? InScene.GetPrimitiveRuntimeData()[NewPrimitiveIndex].PrimitiveId
+					: -1;
+				InOutPickState.HitWorldPosition = SpawnLocation;
+				InOutPickState.TraversedWorldBVHNodes.clear();
+				bSceneChanged = true;
+			}
+		}
+	}
+	else
+	{
+		ImGui::TextDisabled("No loaded meshes are available.");
+	}
+
+	const bool bHasSelection =
+		InOutPickState.SelectedPrimitiveIndex >= 0
+		&& static_cast<size_t>(InOutPickState.SelectedPrimitiveIndex) < InScene.GetRenderItems().size();
+
+	if (!bHasSelection)
+	{
+		ImGui::BeginDisabled();
+	}
+
+	if (ImGui::Button("Delete Selected") && bHasSelection)
+	{
+		if (InScene.RemovePrimitiveFromScene(InOutPickState.SelectedPrimitiveIndex))
+		{
+			InOutPickState.bHit = false;
+			InOutPickState.SelectedPrimitiveId = -1;
+			InOutPickState.SelectedPrimitiveIndex = -1;
+			InOutPickState.HitWorldPosition = FVector::ZeroVector;
+			InOutPickState.TraversedWorldBVHNodes.clear();
+			bSceneChanged = true;
+		}
+	}
+
+	if (!bHasSelection)
+	{
+		ImGui::EndDisabled();
+	}
+
+	ImGui::End();
+	return bSceneChanged;
 }
 
 bool FGUIRenderer::DrawSelectedObjectWindow(FScene& InScene, const FPickState& InPickState)

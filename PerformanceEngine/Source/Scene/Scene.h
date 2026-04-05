@@ -35,9 +35,13 @@ public:
 	const FVector& GetSceneBoundsMax() const { return SceneBoundsMax; }
 	const TArray<AABBNode>& GetWorldBVHNodes() const { return WorldBVHNodes; }
 	int32 GetWorldBVHRootIndex() const { return RootIndex; }
+	TArray<FString> GetLoadedMeshAssetKeys() const;
+	std::shared_ptr<FStaticMesh> FindLoadedStaticMesh(const FString& InMeshAssetKey) const;
 
 	bool TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta);
 	bool SetPrimitiveTransformWorld(int32 PrimitiveIndex, const FTransform& NewTransform);
+	bool AddLoadedStaticMeshInstance(const FString& InMeshAssetKey, const FTransform& InTransform, int32& OutPrimitiveIndex);
+	bool RemovePrimitiveFromScene(int32 PrimitiveIndex);
 
 
 private:
@@ -53,6 +57,8 @@ private:
 	void MoveLeaf(int RenderItemIndex, const FTransform& NewTransform);
 	void UpdatePrimitiveRuntimeData(int32 PrimitiveIndex);
 	void UpdateSceneBoundsFromRoot();
+	bool AppendStaticMeshPrimitive(int32 PrimitiveId, const FString& InMeshAssetKey, const std::shared_ptr<FStaticMesh>& InStaticMesh, const FTransform& InTransform);
+	void RebuildSceneBoundsFromRenderItems();
 
 
 private:
@@ -78,5 +84,7 @@ private:
 	TArray<AABBNode> WorldBVHNodes;
 	TArray<int> FreeNodes;
 	int RootIndex = -1;
+	int32 NextPrimitiveId = 0;
+	bool bWorldBVHStructureStale = false;
 	//BVH Related Variables
 };

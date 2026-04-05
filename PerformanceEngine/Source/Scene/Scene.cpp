@@ -226,9 +226,9 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	bool bInCameraBlock = false;
 	bool bInPrimitivesBlock = false;
 	bool bInPrimitiveBlock = false;
-	bool bHasSceneBounds = false;
 
 	FPendingPrimitive PendingPrimitive;
+	int32 MaxPrimitiveId = -1;
 	std::string Line;
 	while (std::getline(SceneFile, Line))
 	{
@@ -312,44 +312,10 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				}
 
 				const FTransform WorldTransform = BuildSceneTransform(PendingPrimitive.Location, PendingPrimitive.Rotation, PendingPrimitive.Scale);
-
-				FRenderItem RenderItem;
-				RenderItem.PrimitiveId = PendingPrimitive.Id;
-				RenderItem.MeshAssetPath = MeshCacheKey;
-				RenderItem.Transform = WorldTransform;
-				RenderItem.StaticMesh = SharedMesh;
-
-				FScenePrimitiveColdData ColdData;
-				ColdData.MeshAssetPath = MeshCacheKey;
-				ColdData.StaticMeshOwner = SharedMesh;
-
-				FScenePrimitiveRuntimeData RuntimeData;
-				RuntimeData.PrimitiveId = PendingPrimitive.Id;
-				RuntimeData.WorldMatrix = WorldTransform.ToMatrixWithScale();
-				RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
-
-				RuntimeData.StaticMesh = SharedMesh.get();
-
-				bool bHasRuntimeBounds = false;
-				ExpandBoundsWithTransformedAabb(
-					SharedMesh->GetBoundsMin(),
-					SharedMesh->GetBoundsMax(),
-					WorldTransform,
-					RuntimeData.WorldBoundsMin,
-					RuntimeData.WorldBoundsMax,
-					bHasRuntimeBounds);
-
-				if (bHasRuntimeBounds)
+				if (AppendStaticMeshPrimitive(PendingPrimitive.Id, MeshCacheKey, SharedMesh, WorldTransform))
 				{
-					RenderItem.WorldBoundsMin = RuntimeData.WorldBoundsMin;
-					RenderItem.WorldBoundsMax = RuntimeData.WorldBoundsMax;
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMin);
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMax);
+					MaxPrimitiveId = std::max(MaxPrimitiveId, PendingPrimitive.Id);
 				}
-
-				RenderItems.push_back(std::move(RenderItem));
-				PrimitiveColdData.push_back(std::move(ColdData));
-				PrimitiveRuntimeData.push_back(std::move(RuntimeData));
 				continue;
 			}
 
@@ -403,6 +369,10 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 		return false;
 	}
 
+	NextPrimitiveId = MaxPrimitiveId + 1;
+	RebuildSceneBoundsFromRenderItems();
+	bWorldBVHStructureStale = false;
+
 	//Create World BVH here
 
 	//For Check
@@ -420,7 +390,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	CreateWorldBVH(0, (int)RenderItems.size(), 0);
 
 	InitialCamera.Transform = FTransform(MakeSceneRotation(RawCameraRotation), RawCameraLocation, FVector::OneVector);
-	if (!bHasSceneBounds)
+	if (RenderItems.empty())
 	{
 		SceneBoundsMin = FVector::ZeroVector;
 		SceneBoundsMax = FVector::ZeroVector;
@@ -443,6 +413,8 @@ void FScene::Release()
 	RawCameraRotation = FVector::ZeroVector;
 	SceneBoundsMin = FVector::ZeroVector;
 	SceneBoundsMax = FVector::ZeroVector;
+	NextPrimitiveId = 0;
+	bWorldBVHStructureStale = false;
 }
 
 bool FScene::TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta)
@@ -495,6 +467,65 @@ bool FScene::SetPrimitiveTransformWorld(int32 PrimitiveIndex, const FTransform& 
 	}
 
 	MoveLeaf(PrimitiveIndex, NewTransform);
+	return true;
+}
+
+TArray<FString> FScene::GetLoadedMeshAssetKeys() const
+{
+	return MeshManager.GetLoadedMeshAssetKeys();
+}
+
+std::shared_ptr<FStaticMesh> FScene::FindLoadedStaticMesh(const FString& InMeshAssetKey) const
+{
+	return MeshManager.FindLoadedStaticMesh(InMeshAssetKey);
+}
+
+bool FScene::AddLoadedStaticMeshInstance(const FString& InMeshAssetKey, const FTransform& InTransform, int32& OutPrimitiveIndex)
+{
+	OutPrimitiveIndex = -1;
+
+	const std::shared_ptr<FStaticMesh> StaticMesh = MeshManager.FindLoadedStaticMesh(InMeshAssetKey);
+	if (!StaticMesh || !StaticMesh->IsValid())
+	{
+		return false;
+	}
+
+	if (!StaticMesh->GetSpatialData() && BVHBuilder)
+	{
+		StaticMesh->SetSpatialData(std::make_shared<FBVHSpatialData>(BVHBuilder->BuildBVH(StaticMesh.get())));
+	}
+
+	if (!AppendStaticMeshPrimitive(NextPrimitiveId++, InMeshAssetKey, StaticMesh, InTransform))
+	{
+		return false;
+	}
+
+	bWorldBVHStructureStale = true;
+	RebuildSceneBoundsFromRenderItems();
+	OutPrimitiveIndex = static_cast<int32>(RenderItems.size()) - 1;
+	return OutPrimitiveIndex >= 0;
+}
+
+bool FScene::RemovePrimitiveFromScene(int32 PrimitiveIndex)
+{
+	if (PrimitiveIndex < 0)
+	{
+		return false;
+	}
+
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex >= RenderItems.size()
+		|| PrimitiveArrayIndex >= PrimitiveRuntimeData.size()
+		|| PrimitiveArrayIndex >= PrimitiveColdData.size())
+	{
+		return false;
+	}
+
+	RenderItems.erase(RenderItems.begin() + PrimitiveArrayIndex);
+	PrimitiveRuntimeData.erase(PrimitiveRuntimeData.begin() + PrimitiveArrayIndex);
+	PrimitiveColdData.erase(PrimitiveColdData.begin() + PrimitiveArrayIndex);
+	bWorldBVHStructureStale = true;
+	RebuildSceneBoundsFromRenderItems();
 	return true;
 }
 
@@ -758,6 +789,15 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 	const FVector& NewMin = Item.WorldBoundsMin;
 	const FVector& NewMax = Item.WorldBoundsMax;
 
+	if (bWorldBVHStructureStale
+		|| Item.BVHLeafIndex < 0
+		|| Item.BVHLeafIndex >= static_cast<int32>(WorldBVHNodes.size()))
+	{
+		UpdatePrimitiveRuntimeData(RenderItemIndex);
+		RebuildSceneBoundsFromRenderItems();
+		return;
+	}
+
 	// Loose AABB 안에 있으면 리프 AABB만 갱신 후 Refit
 	bool bInsideLoose =
 		NewMin.X >= Item.LooseBoundsMin.X && NewMin.Y >= Item.LooseBoundsMin.Y && NewMin.Z >= Item.LooseBoundsMin.Z &&
@@ -829,4 +869,80 @@ void FScene::UpdateSceneBoundsFromRoot()
 
 	SceneBoundsMin = WorldBVHNodes[RootIndex].Min;
 	SceneBoundsMax = WorldBVHNodes[RootIndex].Max;
+}
+
+bool FScene::AppendStaticMeshPrimitive(
+	int32 PrimitiveId,
+	const FString& InMeshAssetKey,
+	const std::shared_ptr<FStaticMesh>& InStaticMesh,
+	const FTransform& InTransform)
+{
+	if (!InStaticMesh || !InStaticMesh->IsValid())
+	{
+		return false;
+	}
+
+	FRenderItem RenderItem;
+	RenderItem.PrimitiveId = PrimitiveId;
+	RenderItem.MeshAssetPath = InMeshAssetKey;
+	RenderItem.Transform = InTransform;
+	RenderItem.StaticMesh = InStaticMesh;
+
+	FScenePrimitiveColdData ColdData;
+	ColdData.MeshAssetPath = InMeshAssetKey;
+	ColdData.StaticMeshOwner = InStaticMesh;
+
+	FScenePrimitiveRuntimeData RuntimeData;
+	RuntimeData.PrimitiveId = PrimitiveId;
+	RuntimeData.WorldMatrix = InTransform.ToMatrixWithScale();
+	RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+	RuntimeData.StaticMesh = InStaticMesh.get();
+
+	bool bHasRuntimeBounds = false;
+	ExpandBoundsWithTransformedAabb(
+		InStaticMesh->GetBoundsMin(),
+		InStaticMesh->GetBoundsMax(),
+		InTransform,
+		RuntimeData.WorldBoundsMin,
+		RuntimeData.WorldBoundsMax,
+		bHasRuntimeBounds);
+
+	if (bHasRuntimeBounds)
+	{
+		RenderItem.WorldBoundsMin = RuntimeData.WorldBoundsMin;
+		RenderItem.WorldBoundsMax = RuntimeData.WorldBoundsMax;
+	}
+
+	RenderItems.push_back(std::move(RenderItem));
+	PrimitiveColdData.push_back(std::move(ColdData));
+	PrimitiveRuntimeData.push_back(std::move(RuntimeData));
+	return true;
+}
+
+void FScene::RebuildSceneBoundsFromRenderItems()
+{
+	bool bHasSceneBounds = false;
+	FVector BoundsMin = FVector::ZeroVector;
+	FVector BoundsMax = FVector::ZeroVector;
+
+	for (const FRenderItem& RenderItem : RenderItems)
+	{
+		if (!RenderItem.StaticMesh || !RenderItem.StaticMesh->IsValid())
+		{
+			continue;
+		}
+
+		ExpandBounds(BoundsMin, BoundsMax, bHasSceneBounds, RenderItem.WorldBoundsMin);
+		ExpandBounds(BoundsMin, BoundsMax, bHasSceneBounds, RenderItem.WorldBoundsMax);
+	}
+
+	if (!bHasSceneBounds)
+	{
+		SceneBoundsMin = FVector::ZeroVector;
+		SceneBoundsMax = FVector::ZeroVector;
+		return;
+	}
+
+	SceneBoundsMin = BoundsMin;
+	SceneBoundsMax = BoundsMax;
 }

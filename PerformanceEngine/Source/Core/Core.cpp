@@ -337,8 +337,14 @@ void FCore::Tick()
 		GizmoRenderer->Render(*RHI, *Camera, GizmoDrawCommands);
 	}
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
-	if (GUIRenderer && GUIRenderer->Render(*RHI, *Scene, PickState))
+	if (GUIRenderer && GUIRenderer->Render(*RHI, *Scene, *Camera, PickState))
 	{
+		if (PickState.SelectedPrimitiveIndex < 0 && Gizmo)
+		{
+			Gizmo->EndDrag();
+			Gizmo->ClearHover();
+		}
+
 		VisibilitySystem->Invalidate();
 	}
 	EndFrame();
