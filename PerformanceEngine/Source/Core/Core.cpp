@@ -1,6 +1,7 @@
 #include "Core.h"
 
 #include <array>
+#include <cmath>
 #include <filesystem>
 
 #include "BVH/BVHDebugRenderer.h"
@@ -9,6 +10,7 @@
 #include "Grid/Grid.h"
 #include "Hud/HudRenderer.h"
 #include "Input/Input.h"
+#include "Math/MathUtility.h"
 #include "Renderer/SceneRenderer.h"
 #include "Scene/Scene.h"
 #include "Stats/StatsSystem.h"
@@ -19,6 +21,8 @@ namespace
 {
 	constexpr float DefaultCameraSpeed = 20.0f;
 	constexpr float DefaultCameraSensitivity = 0.12f;
+	constexpr float OcclusionHistoryInvalidateDistance = 25.0f;
+	constexpr float OcclusionHistoryInvalidateAngleDegrees = 20.0f;
 
 	std::filesystem::path SearchForSceneFrom(const std::filesystem::path& InStartDirectory)
 	{
@@ -151,8 +155,15 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	VisibilitySystem->Reset();
 	PickingSystem->Reset();
 	StatsSystem->Reset();
+	VisibilityFrameInput = FVisibilityFrameInput();
 	VisibilityResults = FVisibilityResults();
 	PickState = FPickState();
+	LastViewportWidth = Args.Width;
+	LastViewportHeight = Args.Height;
+	LastCameraFov = Camera ? Camera->GetFOV() : 0.0f;
+	LastCameraLocation = Camera ? Camera->GetLocation() : FVector::ZeroVector;
+	LastCameraForward = Camera ? Camera->GetTransform().GetUnitAxis(EAxis::X).GetSafeNormal() : FVector::ForwardVector;
+	bHasLastCameraPose = Camera != nullptr;
 	bInitialized = true;
 	return true;
 }
@@ -163,7 +174,98 @@ void FCore::Tick()
 	Input->Tick();
 	Camera->Update(*Input, static_cast<float>(StatsSystem->GetFrameTimeMs() * 0.001));
 
-	VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
+	const int32 CurrentViewportWidth = RHI ? RHI->GetViewportWidth() : 0;
+	const int32 CurrentViewportHeight = RHI ? RHI->GetViewportHeight() : 0;
+	const float CurrentCameraFov = Camera ? Camera->GetFOV() : 0.0f;
+	const FVector CurrentCameraLocation = Camera ? Camera->GetLocation() : FVector::ZeroVector;
+	const FVector CurrentCameraForward = Camera ? Camera->GetTransform().GetUnitAxis(EAxis::X).GetSafeNormal() : FVector::ForwardVector;
+
+	bool bInvalidateOcclusionHistory = CurrentViewportWidth != LastViewportWidth
+		|| CurrentViewportHeight != LastViewportHeight
+		|| std::fabs(CurrentCameraFov - LastCameraFov) > 1.0e-4f;
+	if (!bInvalidateOcclusionHistory && bHasLastCameraPose)
+	{
+		const float CameraTravelDistance = FVector::Dist(CurrentCameraLocation, LastCameraLocation);
+		const float ForwardDot = FMath::Clamp(FVector::DotProduct(CurrentCameraForward, LastCameraForward), -1.0f, 1.0f);
+		const float CameraTurnAngleDegrees = FMath::RadiansToDegrees(std::acos(ForwardDot));
+
+		bInvalidateOcclusionHistory = CameraTravelDistance >= OcclusionHistoryInvalidateDistance
+			|| CameraTurnAngleDegrees >= OcclusionHistoryInvalidateAngleDegrees;
+	}
+
+	if (bInvalidateOcclusionHistory)
+	{
+		InvalidateOcclusionState();
+	}
+
+	LastViewportWidth = CurrentViewportWidth;
+	LastViewportHeight = CurrentViewportHeight;
+	LastCameraFov = CurrentCameraFov;
+	LastCameraLocation = CurrentCameraLocation;
+	LastCameraForward = CurrentCameraForward;
+	bHasLastCameraPose = Camera != nullptr;
+
+	FVisibilityResults PreparedVisibilityResults;
+	VisibilitySystem->PrepareFrame(*Scene, *Camera, VisibilityFrameInput, PreparedVisibilityResults);
+	BeginFrame();
+
+	TArray<uint32> VisiblePrimitiveIndices;
+	FVisibilityFrameInput ResolvedVisibilityFrameInput;
+	uint32 GpuCandidateCount = 0;
+	uint32 GpuVisibleCount = 0;
+	float GpuReadbackTimeMs = 0.0f;
+	bool bResolvedDelayedResult = false;
+	bool bHasPendingReadback = false;
+	if (!SceneRenderer->ResolveGpuVisibility(
+		*RHI,
+		*Scene,
+		*Camera,
+		VisibilityFrameInput,
+		VisiblePrimitiveIndices,
+		ResolvedVisibilityFrameInput,
+		GpuCandidateCount,
+		GpuVisibleCount,
+		GpuReadbackTimeMs,
+		bResolvedDelayedResult,
+		bHasPendingReadback))
+	{
+		OutputDebugStringA("[Core] GPU visibility resolve failed. Falling back to frustum-visible draw submission for this frame.\n");
+		VisiblePrimitiveIndices = VisibilityFrameInput.FrustumVisiblePrimitiveIndices;
+		GpuCandidateCount = static_cast<uint32>(VisibilityFrameInput.CandidatePrimitiveIndices.size());
+		GpuVisibleCount = static_cast<uint32>(VisiblePrimitiveIndices.size());
+		GpuReadbackTimeMs = 0.0f;
+		bResolvedDelayedResult = false;
+		bHasPendingReadback = false;
+		ResolvedVisibilityFrameInput = FVisibilityFrameInput();
+	}
+
+	if (bResolvedDelayedResult)
+	{
+		VisibilitySystem->FinalizeGpuResults(
+			*Scene,
+			ResolvedVisibilityFrameInput,
+			VisiblePrimitiveIndices,
+			GpuCandidateCount,
+			GpuVisibleCount,
+			GpuReadbackTimeMs,
+			VisibilityResults);
+	}
+	else if (!bHasPendingReadback || VisibilityResults.FrameNumber == 0)
+	{
+		VisiblePrimitiveIndices = VisibilityFrameInput.FrustumVisiblePrimitiveIndices;
+		GpuCandidateCount = static_cast<uint32>(VisibilityFrameInput.CandidatePrimitiveIndices.size());
+		GpuVisibleCount = static_cast<uint32>(VisiblePrimitiveIndices.size());
+		GpuReadbackTimeMs = 0.0f;
+
+		VisibilitySystem->FinalizeGpuResults(
+			*Scene,
+			VisibilityFrameInput,
+			VisiblePrimitiveIndices,
+			GpuCandidateCount,
+			GpuVisibleCount,
+			GpuReadbackTimeMs,
+			VisibilityResults);
+	}
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
@@ -191,9 +293,7 @@ void FCore::Tick()
 		StatsSystem->RecordPickEvent(PickState);
 	}
 	StatsSystem->ApplyPickState(PickState);
-
-	BeginFrame();
-	SceneRenderer->Render(*RHI, *Scene, *Camera, VisibilityResults, PickState);
+	SceneRenderer->RenderVisibleScene(*RHI, *Scene, *Camera, VisibilityResults, PickState);
 
 	if (Grid)
 	{
@@ -202,7 +302,7 @@ void FCore::Tick()
 
 
 	// BVHDebugRenderer->Render(*RHI, *Camera, *Scene);
-	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
+	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, VisibilityResults, PickState);
 	EndFrame();
 	StatsSystem->EndFrame();
 }
@@ -235,6 +335,10 @@ void FCore::HandleResize(int32 Width, int32 Height)
 	{
 		Camera->SetAspectRatio(static_cast<float>(Width) / static_cast<float>(Height));
 	}
+
+	LastViewportWidth = Width;
+	LastViewportHeight = Height;
+	InvalidateOcclusionState();
 }
 
 void FCore::Release()
@@ -291,8 +395,28 @@ void FCore::Release()
 	Input.reset();
 
 	VisibilityResults = FVisibilityResults();
+	VisibilityFrameInput = FVisibilityFrameInput();
 	PickState = FPickState();
+	LastViewportWidth = 0;
+	LastViewportHeight = 0;
+	LastCameraFov = 0.0f;
+	LastCameraLocation = FVector::ZeroVector;
+	LastCameraForward = FVector::ForwardVector;
+	bHasLastCameraPose = false;
 	bInitialized = false;
+}
+
+void FCore::InvalidateOcclusionState()
+{
+	if (VisibilitySystem)
+	{
+		VisibilitySystem->InvalidateHistory();
+	}
+
+	if (SceneRenderer)
+	{
+		SceneRenderer->InvalidateDelayedVisibility();
+	}
 }
 
 void FCore::BeginFrame()

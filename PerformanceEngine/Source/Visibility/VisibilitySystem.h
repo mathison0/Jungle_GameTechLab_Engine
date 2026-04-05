@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Types/Array.h"
-#include "Types/PlatformTypes.h"
 #include "Math/Vector.h"
 #include "Scene/SceneTypes.h"
 
@@ -24,44 +23,63 @@ struct FFrustum
 	FPlane Planes[6];
 };
 
+struct FVisibilityStats
+{
+	uint32 TotalPrimitiveCount = 0;
+	uint32 FrustumVisibleCount = 0;
+	uint32 SeedCount = 0;
+	uint32 VisibleCount = 0;
+	uint32 OccludedCount = 0;
+	uint32 GpuCandidateCount = 0;
+	uint32 GpuVisibleCount = 0;
+	float ReadbackTimeMs = 0.0f;
+};
+
+struct FVisibilityFrameInput
+{
+	uint64 FrameNumber = 0;
+	TArray<uint32> FrustumVisiblePrimitiveIndices;
+	TArray<uint32> SeedPrimitiveIndices;
+	TArray<uint32> CandidatePrimitiveIndices;
+};
+
 struct FVisibilityResults
 {
 	uint64 FrameNumber = 0;
 	TArray<uint32> VisiblePrimitiveIndices;
+	TArray<uint32> SeedPrimitiveIndices;
+	FVisibilityStats Stats;
 };
 
 class FVisibilitySystem
 {
 public:
+	~FVisibilitySystem();
+
 	void Reset();
-	void Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults);
+	void InvalidateHistory();
+	void PrepareFrame(const FScene& InScene, const FCamera& InCamera, FVisibilityFrameInput& OutFrameInput, FVisibilityResults& OutResults);
+	void FinalizeGpuResults(
+		const FScene& InScene,
+		const FVisibilityFrameInput& InFrameInput,
+		const TArray<uint32>& InVisiblePrimitiveIndices,
+		uint32 InGpuCandidateCount,
+		uint32 InGpuVisibleCount,
+		float InGpuReadbackTimeMs,
+		FVisibilityResults& OutResults);
 
 private:
 	FFrustum BuildFrustum(const FCamera& InCamera) const;
 	bool IntersectsAABB(const FFrustum& InFrustum, const FVector& InBoxMin, const FVector& InBoxMax) const;
-	bool HasCameraChanged(const FCamera& InCamera) const;
-	void UpdateCachedCameraState(const FCamera& InCamera);
-
-	bool TryReuseCachedResults(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults) const;
-	void ComputeVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, FVisibilityResults& OutResults);
-	void UpdateCache(const FCamera& InCamera, const FVisibilityResults& InResults);
-	void LogBuildResult(size_t TotalCount, size_t VisibleCount, bool bReusedCache) const;
+	void ComputeFrustumVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, TArray<uint32>& OutVisibleIndices);
+	void ComputeSeedVisibilityPrimitives(const TArray<FRenderItem>& RenderItems, const TArray<uint32>& InFrustumVisiblePrimitiveIndices, TArray<uint32>& OutSeedPrimitiveIndices);
+	void UpdatePreviousVisibilityMask(size_t PrimitiveCount, const FVisibilityResults& InResults);
+	void EnsurePreviousVisibilityMaskSize(size_t PrimitiveCount);
+	void LogBuildResult(const FVisibilityResults& InResults) const;
 
 private:
 	uint64 NextFrameNumber = 1;
-
-	FVisibilityResults CachedResults;
 	FFrustum CachedFrustum;
-
-	FVector CachedCameraPosition = FVector::ZeroVector;
-	FVector CachedCameraForward = FVector::ForwardVector;
-	FVector CachedCameraUp = FVector::UpVector;
-	FVector CachedCameraRight = FVector::RightVector;
-
-	float CachedFOV = 0.0f;
-	float CachedAspect = 0.0f;
-	float CachedNearClip = 0.0f;
-	float CachedFarClip = 0.0f;
-
-	bool bHasCachedVisibility = false;
+	TArray<uint8> PreviousFrameVisibilityMask;
+	bool bHistoryValid = false;
 };

@@ -1,57 +1,85 @@
 #include "Visibility/VisibilitySystem.h"
 
+#include <algorithm>
+#include <sstream>
+
+#include <Windows.h>
+
 #include "Camera/Camera.h"
-#include "Scene/Scene.h"
-#include "StaticMesh/StaticMesh.h"
 #include "Math/MathUtility.h"
 #include "Math/Vector.h"
+#include "Scene/Scene.h"
+#include "StaticMesh/StaticMesh.h"
+
+FVisibilitySystem::~FVisibilitySystem()
+= default;
 
 void FVisibilitySystem::Reset()
 {
 	NextFrameNumber = 1;
-
-	CachedResults = FVisibilityResults();
 	CachedFrustum = FFrustum();
-
-	CachedCameraPosition = FVector::ZeroVector;
-	CachedCameraForward = FVector::ForwardVector;
-	CachedCameraUp = FVector::UpVector;
-	CachedCameraRight = FVector::RightVector;
-
-	CachedFOV = 0.0f;
-	CachedAspect = 0.0f;
-	CachedNearClip = 0.0f;
-	CachedFarClip = 0.0f;
-
-	bHasCachedVisibility = false;
+	PreviousFrameVisibilityMask.clear();
+	bHistoryValid = false;
 }
 
-void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults)
+void FVisibilitySystem::InvalidateHistory()
+{
+	std::fill(PreviousFrameVisibilityMask.begin(), PreviousFrameVisibilityMask.end(), 0);
+	bHistoryValid = false;
+}
+
+void FVisibilitySystem::PrepareFrame(const FScene& InScene, const FCamera& InCamera, FVisibilityFrameInput& OutFrameInput, FVisibilityResults& OutResults)
 {
 	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+	EnsurePreviousVisibilityMaskSize(RenderItems.size());
 
-	OutResults.FrameNumber = NextFrameNumber++;
+	OutFrameInput = FVisibilityFrameInput();
+	OutResults = FVisibilityResults();
 
-	if (TryReuseCachedResults(InScene, InCamera, OutResults))
-	{
-		LogBuildResult(RenderItems.size(), OutResults.VisiblePrimitiveIndices.size(), true);
-		return;
-	}
+	OutFrameInput.FrameNumber = NextFrameNumber++;
+	OutResults.FrameNumber = OutFrameInput.FrameNumber;
+	OutResults.Stats.TotalPrimitiveCount = static_cast<uint32>(RenderItems.size());
 
-	ComputeVisiblePrimitives(RenderItems, InCamera, OutResults);
-	UpdateCache(InCamera, OutResults);
+	ComputeFrustumVisiblePrimitives(RenderItems, InCamera, OutFrameInput.FrustumVisiblePrimitiveIndices);
+	OutResults.Stats.FrustumVisibleCount = static_cast<uint32>(OutFrameInput.FrustumVisiblePrimitiveIndices.size());
 
-	LogBuildResult(RenderItems.size(), OutResults.VisiblePrimitiveIndices.size(), false);
+	OutFrameInput.CandidatePrimitiveIndices = OutFrameInput.FrustumVisiblePrimitiveIndices;
+	ComputeSeedVisibilityPrimitives(
+		RenderItems,
+		OutFrameInput.FrustumVisiblePrimitiveIndices,
+		OutFrameInput.SeedPrimitiveIndices);
+
+	OutResults.SeedPrimitiveIndices = OutFrameInput.SeedPrimitiveIndices;
+	OutResults.Stats.SeedCount = static_cast<uint32>(OutFrameInput.SeedPrimitiveIndices.size());
 }
-namespace
-{
-	FPlane MakePlaneFromPointNormal(const FVector& Point, const FVector& Normal);
-	FPlane MakePlaneFromPoints(const FVector& PointA, const FVector& PointB, const FVector& PointC, const FVector& InFrustumCenter);
 
-	float AbsFloat(float Value)
-	{
-		return (Value < 0.0f) ? -Value : Value;
-	}
+void FVisibilitySystem::FinalizeGpuResults(
+	const FScene& InScene,
+	const FVisibilityFrameInput& InFrameInput,
+	const TArray<uint32>& InVisiblePrimitiveIndices,
+	uint32 InGpuCandidateCount,
+	uint32 InGpuVisibleCount,
+	float InGpuReadbackTimeMs,
+	FVisibilityResults& OutResults)
+{
+	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+	EnsurePreviousVisibilityMaskSize(RenderItems.size());
+
+	OutResults.FrameNumber = InFrameInput.FrameNumber;
+	OutResults.VisiblePrimitiveIndices = InVisiblePrimitiveIndices;
+	OutResults.SeedPrimitiveIndices = InFrameInput.SeedPrimitiveIndices;
+
+	OutResults.Stats.TotalPrimitiveCount = static_cast<uint32>(RenderItems.size());
+	OutResults.Stats.FrustumVisibleCount = static_cast<uint32>(InFrameInput.FrustumVisiblePrimitiveIndices.size());
+	OutResults.Stats.SeedCount = static_cast<uint32>(InFrameInput.SeedPrimitiveIndices.size());
+	OutResults.Stats.VisibleCount = static_cast<uint32>(InVisiblePrimitiveIndices.size());
+	OutResults.Stats.OccludedCount = static_cast<uint32>(InGpuCandidateCount - InGpuVisibleCount);
+	OutResults.Stats.GpuCandidateCount = InGpuCandidateCount;
+	OutResults.Stats.GpuVisibleCount = InGpuVisibleCount;
+	OutResults.Stats.ReadbackTimeMs = InGpuReadbackTimeMs;
+
+	UpdatePreviousVisibilityMask(RenderItems.size(), OutResults);
+	LogBuildResult(OutResults);
 }
 
 FFrustum FVisibilitySystem::BuildFrustum(const FCamera& InCamera) const
@@ -83,155 +111,15 @@ FFrustum FVisibilitySystem::BuildFrustum(const FCamera& InCamera) const
 	const FVector NBL = NearCenter - Up * NearHalfHeight - Right * NearHalfWidth;
 	const FVector NBR = NearCenter - Up * NearHalfHeight + Right * NearHalfWidth;
 
-	/*const FVector FTL = FarCenter + Up * FarHalfHeight - Right * FarHalfWidth;
-	const FVector FTR = FarCenter + Up * FarHalfHeight + Right * FarHalfWidth;
-	const FVector FBL = FarCenter - Up * FarHalfHeight - Right * FarHalfWidth;
-	const FVector FBR = FarCenter - Up * FarHalfHeight + Right * FarHalfWidth;*/
-
-	// inward normals
-	Frustum.Planes[0] = MakePlaneFromPointNormal(NearCenter, Forward);     // near
-	Frustum.Planes[1] = MakePlaneFromPointNormal(FarCenter, -Forward);     // far
-
-	Frustum.Planes[2] = MakePlaneFromPoints(CameraPos, NTL, NBL, FrustumCenter); // left
-	Frustum.Planes[3] = MakePlaneFromPoints(CameraPos, NBR, NTR, FrustumCenter); // right
-	Frustum.Planes[4] = MakePlaneFromPoints(CameraPos, NTR, NTL, FrustumCenter); // top
-	Frustum.Planes[5] = MakePlaneFromPoints(CameraPos, NBL, NBR, FrustumCenter); // bottom
-
-	return Frustum;
-}
-
-bool FVisibilitySystem::IntersectsAABB(const FFrustum& InFrustum, const FVector& InBoxMin, const FVector& InBoxMax) const
-{
-	for (const FPlane& Plane : InFrustum.Planes)
-	{
-		FVector PositiveVertex = InBoxMin;
-		if (Plane.Normal.X >= 0) PositiveVertex.X = InBoxMax.X;
-		if (Plane.Normal.Y >= 0) PositiveVertex.Y = InBoxMax.Y;
-		if (Plane.Normal.Z >= 0) PositiveVertex.Z = InBoxMax.Z;
-
-		if (Plane.GetSignedDistanceToPoint(PositiveVertex) < 0)
-		{
-			return false; // AABB is completely outside this plane
-		}
-	}
-	return true; // AABB intersects or is inside the frustum
-}
-
-bool FVisibilitySystem::HasCameraChanged(const FCamera& InCamera) const
-{
-	if (!bHasCachedVisibility)
-	{
-		return true;
-	}
-
-	const float Epsilon = 1e-4f;
-
-	const FTransform& CameraTransform = InCamera.GetTransform();
-	const FVector CameraPos = CameraTransform.GetLocation();
-	const FVector Forward = CameraTransform.GetUnitAxis(EAxis::X).GetSafeNormal();
-	const FVector Up = CameraTransform.GetUnitAxis(EAxis::Z).GetSafeNormal();
-	const FVector Right = CameraTransform.GetUnitAxis(EAxis::Y).GetSafeNormal();
-
-	return !CameraPos.Equals(CachedCameraPosition, Epsilon)
-		|| !Forward.Equals(CachedCameraForward, Epsilon)
-		|| !Up.Equals(CachedCameraUp, Epsilon)
-		|| !Right.Equals(CachedCameraRight, Epsilon)
-		|| AbsFloat(InCamera.GetFOV() - CachedFOV) > Epsilon
-		|| AbsFloat(InCamera.GetAspectRatio() - CachedAspect) > Epsilon
-		|| AbsFloat(InCamera.GetNearClip() - CachedNearClip) > Epsilon
-		|| AbsFloat(InCamera.GetFarClip() - CachedFarClip) > Epsilon;
-}
-
-void FVisibilitySystem::UpdateCachedCameraState(const FCamera& InCamera)
-{
-	const FTransform& CameraTransform = InCamera.GetTransform();
-	CachedCameraPosition = CameraTransform.GetLocation();
-	CachedCameraForward = CameraTransform.GetUnitAxis(EAxis::X).GetSafeNormal();
-	CachedCameraUp = CameraTransform.GetUnitAxis(EAxis::Z).GetSafeNormal();
-	CachedCameraRight = CameraTransform.GetUnitAxis(EAxis::Y).GetSafeNormal();
-	CachedFOV = InCamera.GetFOV();
-	CachedAspect = InCamera.GetAspectRatio();
-	CachedNearClip = InCamera.GetNearClip();
-	CachedFarClip = InCamera.GetFarClip();
-	bHasCachedVisibility = true;
-}
-
-bool FVisibilitySystem::TryReuseCachedResults(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults) const
-{
-	(void)InScene;
-
-	if (HasCameraChanged(InCamera))
-	{
-		return false;
-	}
-
-	OutResults.VisiblePrimitiveIndices = CachedResults.VisiblePrimitiveIndices;
-	return true;
-}
-
-void FVisibilitySystem::ComputeVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, FVisibilityResults& OutResults)
-{
-	OutResults.VisiblePrimitiveIndices.clear();
-	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
-	CachedFrustum = BuildFrustum(InCamera);
-
-	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
-	{
-		const FRenderItem& Item = RenderItems[PrimitiveIndex];
-
-		if (Item.StaticMesh == nullptr || !Item.StaticMesh->IsValid())
-		{
-			continue;
-		}
-
-		if (!IntersectsAABB(CachedFrustum, Item.WorldBoundsMin, Item.WorldBoundsMax))
-		{
-			continue;
-		}
-
-		OutResults.VisiblePrimitiveIndices.push_back(PrimitiveIndex);
-	}
-}
-
-void FVisibilitySystem::UpdateCache(const FCamera& InCamera, const FVisibilityResults& InResults)
-{
-	CachedResults = InResults;
-	UpdateCachedCameraState(InCamera);
-}
-
-void FVisibilitySystem::LogBuildResult(size_t TotalCount, size_t VisibleCount, bool bReusedCache) const
-{
-	if (bReusedCache)
-	{
-		OutputDebugStringA("VisibilitySystem: Reuse cached visible list\n");
-	}
-	else
-	{
-		OutputDebugStringA("VisibilitySystem: Camera changed, recomputed visible list\n");
-	}
-
-	std::string Msg = "Frustum Culling - Total: "
-		+ std::to_string(TotalCount)
-		+ ", Visible: "
-		+ std::to_string(VisibleCount)
-		+ "\n";
-
-	OutputDebugStringA(Msg.c_str());
-}
-
-// 평면 생성 헬퍼
-namespace
-{
-	FPlane MakePlaneFromPointNormal(const FVector& Point, const FVector& Normal)
+	auto MakePlaneFromPointNormal = [](const FVector& Point, const FVector& Normal)
 	{
 		FPlane Plane;
 		Plane.Normal = Normal.GetSafeNormal();
 		Plane.Distance = -FVector::DotProduct(Plane.Normal, Point);
 		return Plane;
-	}
+	};
 
-	// 법선 방향이 프러스텀 중심을 향하도록.
-	FPlane MakePlaneFromPoints(const FVector& PointA, const FVector& PointB, const FVector& PointC, const FVector& InFrustumCenter)
+	auto MakePlaneFromPoints = [](const FVector& PointA, const FVector& PointB, const FVector& PointC, const FVector& InFrustumCenter)
 	{
 		FVector Normal = FVector::CrossProduct(PointB - PointA, PointC - PointA).GetSafeNormal();
 
@@ -246,5 +134,128 @@ namespace
 		}
 
 		return Plane;
+	};
+
+	Frustum.Planes[0] = MakePlaneFromPointNormal(NearCenter, Forward);
+	Frustum.Planes[1] = MakePlaneFromPointNormal(FarCenter, -Forward);
+	Frustum.Planes[2] = MakePlaneFromPoints(CameraPos, NTL, NBL, FrustumCenter);
+	Frustum.Planes[3] = MakePlaneFromPoints(CameraPos, NBR, NTR, FrustumCenter);
+	Frustum.Planes[4] = MakePlaneFromPoints(CameraPos, NTR, NTL, FrustumCenter);
+	Frustum.Planes[5] = MakePlaneFromPoints(CameraPos, NBL, NBR, FrustumCenter);
+
+	return Frustum;
+}
+
+bool FVisibilitySystem::IntersectsAABB(const FFrustum& InFrustum, const FVector& InBoxMin, const FVector& InBoxMax) const
+{
+	for (const FPlane& Plane : InFrustum.Planes)
+	{
+		FVector PositiveVertex = InBoxMin;
+		if (Plane.Normal.X >= 0.0f) PositiveVertex.X = InBoxMax.X;
+		if (Plane.Normal.Y >= 0.0f) PositiveVertex.Y = InBoxMax.Y;
+		if (Plane.Normal.Z >= 0.0f) PositiveVertex.Z = InBoxMax.Z;
+
+		if (Plane.GetSignedDistanceToPoint(PositiveVertex) < 0.0f)
+		{
+			return false;
+		}
 	}
+
+	return true;
+}
+
+void FVisibilitySystem::ComputeFrustumVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, TArray<uint32>& OutVisibleIndices)
+{
+	OutVisibleIndices.clear();
+	OutVisibleIndices.reserve(RenderItems.size());
+	CachedFrustum = BuildFrustum(InCamera);
+
+	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
+	{
+		const FRenderItem& Item = RenderItems[PrimitiveIndex];
+		if (Item.StaticMesh == nullptr || !Item.StaticMesh->IsValid())
+		{
+			continue;
+		}
+
+		if (!IntersectsAABB(CachedFrustum, Item.WorldBoundsMin, Item.WorldBoundsMax))
+		{
+			continue;
+		}
+
+		OutVisibleIndices.push_back(PrimitiveIndex);
+	}
+}
+
+void FVisibilitySystem::ComputeSeedVisibilityPrimitives(
+	const TArray<FRenderItem>& RenderItems,
+	const TArray<uint32>& InFrustumVisiblePrimitiveIndices,
+	TArray<uint32>& OutSeedPrimitiveIndices)
+{
+	OutSeedPrimitiveIndices.clear();
+	if (!bHistoryValid || InFrustumVisiblePrimitiveIndices.empty())
+	{
+		return;
+	}
+	for (uint32 PrimitiveIndex : InFrustumVisiblePrimitiveIndices)
+	{
+		if (PrimitiveIndex >= RenderItems.size())
+		{
+			continue;
+		}
+
+		const bool bWasVisibleLastFrame = PrimitiveIndex < PreviousFrameVisibilityMask.size()
+			&& PreviousFrameVisibilityMask[PrimitiveIndex] != 0;
+		if (!bWasVisibleLastFrame)
+		{
+			continue;
+		}
+
+		OutSeedPrimitiveIndices.push_back(PrimitiveIndex);
+	}
+}
+
+void FVisibilitySystem::UpdatePreviousVisibilityMask(size_t PrimitiveCount, const FVisibilityResults& InResults)
+{
+	EnsurePreviousVisibilityMaskSize(PrimitiveCount);
+	std::fill(PreviousFrameVisibilityMask.begin(), PreviousFrameVisibilityMask.end(), 0);
+
+	for (uint32 PrimitiveIndex : InResults.VisiblePrimitiveIndices)
+	{
+		if (PrimitiveIndex < PreviousFrameVisibilityMask.size())
+		{
+			PreviousFrameVisibilityMask[PrimitiveIndex] = 1;
+		}
+	}
+
+	bHistoryValid = true;
+}
+
+void FVisibilitySystem::EnsurePreviousVisibilityMaskSize(size_t PrimitiveCount)
+{
+	if (PreviousFrameVisibilityMask.size() != PrimitiveCount)
+	{
+		PreviousFrameVisibilityMask.assign(PrimitiveCount, 0);
+	}
+}
+
+void FVisibilitySystem::LogBuildResult(const FVisibilityResults& InResults) const
+{
+	/*
+	std::ostringstream Stream;
+	Stream
+		<< "VisibilitySystem: "
+		<< "GPU"
+		<< " - Total: " << InResults.Stats.TotalPrimitiveCount
+		<< ", Frustum: " << InResults.Stats.FrustumVisibleCount
+		<< ", Seed: " << InResults.Stats.SeedCount
+		<< ", Visible: " << InResults.Stats.VisibleCount
+		<< ", Occluded: " << InResults.Stats.OccludedCount
+		<< ", GPUCand: " << InResults.Stats.GpuCandidateCount
+		<< ", GPUVisible: " << InResults.Stats.GpuVisibleCount
+		<< ", ReadbackMs: " << InResults.Stats.ReadbackTimeMs
+		<< ", FinalVisible: " << InResults.VisiblePrimitiveIndices.size()
+		<< '\n';
+
+	OutputDebugStringA(Stream.str().c_str());*/
 }
