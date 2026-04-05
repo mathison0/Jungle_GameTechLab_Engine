@@ -65,19 +65,21 @@ namespace
 	}
 
 	// AABB와의 교차 진입 거리를 반환. 미교차 시 1e30f 반환.
-	float IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax)
+	// InInvDirection: 레이 방향의 역수(1/Direction), 호출 전 미리 계산해서 전달.
+	float IntersectRayAabb(const FVector& InOrigin, const FVector& InInvDirection, const FVector& InBoundsMin, const FVector& InBoundsMax)
 	{
 		float TMin = 0.0f;
 		float TMax = std::numeric_limits<float>::max();
 
 		for (int32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
 		{
-			const float Origin = InRay.Origin[AxisIndex];
-			const float Direction = InRay.Direction[AxisIndex];
+			const float Origin = InOrigin[AxisIndex];
+			const float InverseDirection = InInvDirection[AxisIndex];
 			const float BoundsMin = InBoundsMin[AxisIndex];
 			const float BoundsMax = InBoundsMax[AxisIndex];
 
-			if (std::fabs(Direction) < 1.e-8f)
+			// InverseDirection이 매우 크면 원래 Direction이 거의 0 (평행 레이)
+			if (std::fabs(InverseDirection) > 1.e8f)
 			{
 				if (Origin < BoundsMin || Origin > BoundsMax)
 				{
@@ -86,7 +88,6 @@ namespace
 				continue;
 			}
 
-			const float InverseDirection = 1.0f / Direction;
 			float T0 = (BoundsMin - Origin) * InverseDirection;
 			float T1 = (BoundsMax - Origin) * InverseDirection;
 			if (T0 > T1)
@@ -174,8 +175,15 @@ namespace
 		LocalRay.Origin = InPrimitiveRuntimeData.InverseWorldMatrix.TransformPosition(InRay.Origin);
 		LocalRay.Direction = InPrimitiveRuntimeData.InverseWorldMatrix.TransformVector(InRay.Direction).GetSafeNormal();
 
+		// 레이 방향 역수를 미리 계산 — BVH 순회 중 방향은 변하지 않으므로 나눗셈을 1회로 줄임
+		const FVector LocalInvDir(
+			1.0f / LocalRay.Direction.X,
+			1.0f / LocalRay.Direction.Y,
+			1.0f / LocalRay.Direction.Z
+		);
+
 		// 루트 AABB miss면 즉시 탈출
-		if (IntersectRayAabb(LocalRay, Nodes[0].BoundMin, Nodes[0].BoundMax) == 1e30f)
+		if (IntersectRayAabb(LocalRay.Origin, LocalInvDir, Nodes[0].BoundMin, Nodes[0].BoundMax) == 1e30f)
 		{
 			return false;
 		}
@@ -221,8 +229,8 @@ namespace
 			// 두 자식의 AABB 진입 거리 계산
 			const FBVHNode* Child1 = &Nodes[Node->LeftFirst];
 			const FBVHNode* Child2 = &Nodes[Node->LeftFirst + 1];
-			float Dist1 = IntersectRayAabb(LocalRay, Child1->BoundMin, Child1->BoundMax);
-			float Dist2 = IntersectRayAabb(LocalRay, Child2->BoundMin, Child2->BoundMax);
+			float Dist1 = IntersectRayAabb(LocalRay.Origin, LocalInvDir, Child1->BoundMin, Child1->BoundMax);
+			float Dist2 = IntersectRayAabb(LocalRay.Origin, LocalInvDir, Child2->BoundMin, Child2->BoundMax);
 
 			// 가까운 쪽을 먼저 방문, 먼 쪽만 스택에 저장
 			if (Dist1 > Dist2) { std::swap(Dist1, Dist2); std::swap(Child1, Child2); }
@@ -249,6 +257,13 @@ namespace
 		// 현재 베스트 히트까지의 T값(월드 거리)으로 가지치기
 		float BestDistSq = InOutPickHit.DistanceSquared;
 
+		// 레이 방향 역수를 미리 계산 — 순회 중 방향은 변하지 않으므로 나눗셈을 1회로 줄임
+		const FVector WorldInvDir(
+			1.0f / InRay.Direction.X,
+			1.0f / InRay.Direction.Y,
+			1.0f / InRay.Direction.Z
+		);
+
 		TStack<int> NodeStack;
 		NodeStack.push(0);
 		while (!NodeStack.empty())
@@ -256,13 +271,13 @@ namespace
 			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
 			++State.TotalAABBCheckCount;
 			const AABBNode& Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
-			const float tNode = IntersectRayAabb(InRay, Node.Min, Node.Max);
+			const float tNode = IntersectRayAabb(InRay.Origin, WorldInvDir, Node.Min, Node.Max);
 			
 			if (tNode == 1e30f || tNode * tNode >= BestDistSq)
 			{
 				continue;
 			}
-			State.TraversedWorldBVHNodes.push_back(Node);
+			//State.TraversedWorldBVHNodes.push_back(Node);
 			if (Node.IsLeaf())
 			{
 				const size_t PrimIdx = static_cast<size_t>(Node.PrimitiveIndex);
@@ -282,13 +297,13 @@ namespace
 				if (Node.LeftChildIndex != -1)
 				{
 					AABBNode Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
-					float t = IntersectRayAabb(InRay, Left.Min, Left.Max);
+					float t = IntersectRayAabb(InRay.Origin, WorldInvDir, Left.Min, Left.Max);
 					if (t * t < BestDistSq) distToLeft = t;
 				}
 				if (Node.RightChildIndex != -1)
 				{
 					AABBNode Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
-					float t = IntersectRayAabb(InRay, Right.Min, Right.Max);
+					float t = IntersectRayAabb(InRay.Origin, WorldInvDir, Right.Min, Right.Max);
 					if (t * t < BestDistSq) distToRight = t;
 				}
 				// 가까운 쪽을 나중에 꺼내도록 먼 쪽을 먼저 push
