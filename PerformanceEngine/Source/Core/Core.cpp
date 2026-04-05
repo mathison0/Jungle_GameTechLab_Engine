@@ -2,9 +2,12 @@
 
 #include <array>
 #include <filesystem>
+#include <vector>
 
 #include "BVH/BVHDebugRenderer.h"
 #include "Camera/Camera.h"
+#include "Gizmo/Gizmo.h"
+#include "Gizmo/GizmoRenderer.h"
 #include "Graphics/D3D11/D3D11RHI.h"
 #include "Gui/GUIRenderer.h"
 #include "Grid/Grid.h"
@@ -134,15 +137,17 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	RHI = std::make_unique<FD3D11RHI>();
 	Scene = std::make_unique<FScene>();
 	SceneRenderer = std::make_unique<FSceneRenderer>();
+	GizmoRenderer = std::make_unique<FGizmoRenderer>();
 	HudRenderer = std::make_unique<FHudRenderer>();
 	GUIRenderer = std::make_unique<FGUIRenderer>();
+	Gizmo = std::make_unique<FGizmo>();
 	VisibilitySystem = std::make_unique<FVisibilitySystem>();
 	PickingSystem = std::make_unique<FPickingSystem>();
 	StatsSystem = std::make_unique<FStatsSystem>();
 	BVHDebugRenderer = std::make_unique<FBVHDebugRenderer>();
 
 
-	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !HudRenderer || !GUIRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem || !BVHDebugRenderer)
+	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !GizmoRenderer || !HudRenderer || !GUIRenderer || !Gizmo || !VisibilitySystem || !PickingSystem || !StatsSystem || !BVHDebugRenderer)
 	{
 		Release();
 		return false;
@@ -187,9 +192,11 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	}
 
 	if (!SceneRenderer->Initialize(*RHI)
+		|| !GizmoRenderer->Initialize(*RHI)
 		|| !HudRenderer->Initialize(*RHI)
 		|| !GUIRenderer->Initialize(*RHI, Args.Hwnd)
-		|| !BVHDebugRenderer->Initialize(*RHI))
+		|| !BVHDebugRenderer->Initialize(*RHI)
+		|| !Gizmo->Initialize(*RHI))
 	{
 		Release();
 		return false;
@@ -211,47 +218,103 @@ void FCore::Tick()
 	const float DeltaTimeSeconds = static_cast<float>(StatsSystem->GetFrameTimeMs() * 0.001);
 	const bool bGUIWantsMouseCapture = GUIRenderer && GUIRenderer->WantsMouseCapture();
 	const bool bGUIWantsKeyboardCapture = GUIRenderer && GUIRenderer->WantsKeyboardCapture();
+	const bool bRightMouseDown = Input && Input->IsMouseButtonDown(FInput::MOUSE_RIGHT);
+	const bool bLeftMousePressed = Input && Input->IsMouseButtonPressed(FInput::MOUSE_LEFT);
+	const bool bLeftMouseDown = Input && Input->IsMouseButtonDown(FInput::MOUSE_LEFT);
+	const bool bLeftMouseReleased = Input && Input->IsMouseButtonReleased(FInput::MOUSE_LEFT);
 
-	if (!bGUIWantsMouseCapture && !bGUIWantsKeyboardCapture)
+	if (!bGUIWantsKeyboardCapture && !bRightMouseDown)
+	{
+		if (Input->IsKeyPressed('W'))
+		{
+			Gizmo->SetMode(EGizmoMode::Translation);
+		}
+		if (Input->IsKeyPressed('E'))
+		{
+			Gizmo->SetMode(EGizmoMode::Rotation);
+		}
+		if (Input->IsKeyPressed('R'))
+		{
+			Gizmo->SetMode(EGizmoMode::Scale);
+		}
+		if (Input->IsKeyPressed('L'))
+		{
+			Gizmo->ToggleCoordinateSpace();
+		}
+	}
+
+	if (!bGUIWantsMouseCapture && !bGUIWantsKeyboardCapture && !Gizmo->IsDragging() && bRightMouseDown)
 	{
 		Camera->Update(*Input, DeltaTimeSeconds);
 	}
 
 	VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
 
-	if (!bGUIWantsMouseCapture && Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
+	bool bSceneChanged = false;
+	if (!bGUIWantsMouseCapture)
 	{
-		//PickingSystem->UpdatePick(
-		//	*Scene,
-		//	*Camera,
-		//	VisibilityResults,
-		//	Input->GetMousePositionClient(),
-		//	RHI->GetViewportWidth(),
-		//	RHI->GetViewportHeight(),
-		//	PickState);
-		PickingSystem->UpdatePickWorldBVH
-		(
-			*Scene,
-			*Camera,
-			VisibilityResults,
-			Input->GetMousePositionClient(),
-			RHI->GetViewportWidth(),
-			RHI->GetViewportHeight(),
-			PickState);
+		const POINT MousePositionClient = Input->GetMousePositionClient();
+		if (Gizmo->IsDragging())
+		{
+			if (bLeftMouseDown && Gizmo->UpdateDrag(*Scene, PickState, *Camera, MousePositionClient, RHI->GetViewportWidth(), RHI->GetViewportHeight()))
+			{
+				bSceneChanged = true;
+			}
+
+			if (bLeftMouseReleased)
+			{
+				Gizmo->EndDrag();
+				Gizmo->UpdateHover(*Scene, PickState, *Camera, MousePositionClient, RHI->GetViewportWidth(), RHI->GetViewportHeight());
+			}
+		}
+		else
+		{
+			Gizmo->UpdateHover(*Scene, PickState, *Camera, MousePositionClient, RHI->GetViewportWidth(), RHI->GetViewportHeight());
+
+			if (bLeftMousePressed)
+			{
+				const bool bGizmoCaptured = Gizmo->BeginDrag(*Scene, PickState, *Camera, MousePositionClient, RHI->GetViewportWidth(), RHI->GetViewportHeight());
+				if (!bGizmoCaptured)
+				{
+					PickingSystem->UpdatePickWorldBVH
+					(
+						*Scene,
+						*Camera,
+						VisibilityResults,
+						MousePositionClient,
+						RHI->GetViewportWidth(),
+						RHI->GetViewportHeight(),
+						PickState);
+				}
+			}
+		}
 	}
+	else
+	{
+		if (!Gizmo->IsDragging())
+		{
+			Gizmo->ClearHover();
+		}
+		if (bLeftMouseReleased)
+		{
+			Gizmo->EndDrag();
+		}
+	}
+
+	if (bSceneChanged)
+	{
+		VisibilitySystem->Invalidate();
+		VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
+	}
+
 	const FVector SelectedObjectMoveDelta = BuildSelectedObjectMoveDelta(*Input, DeltaTimeSeconds);
-	if (!bGUIWantsKeyboardCapture && PickState.SelectedPrimitiveIndex >= 0 && !SelectedObjectMoveDelta.IsNearlyZero())
+	if (!bGUIWantsKeyboardCapture && !Gizmo->IsDragging() && PickState.SelectedPrimitiveIndex >= 0 && !SelectedObjectMoveDelta.IsNearlyZero())
 	{
 		if (Scene->TranslatePrimitiveWorld(PickState.SelectedPrimitiveIndex, SelectedObjectMoveDelta))
 		{
 			VisibilitySystem->Invalidate();
 			VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
 		}
-	}
-	if (Input->IsKeyPressed('R'))
-	{
-		//Scene->GetRenderItems()[0].Transform.
-		StatsSystem->RecordPickEvent(PickState);
 	}
 	StatsSystem->ApplyPickState(PickState);
 
@@ -266,6 +329,12 @@ void FCore::Tick()
 	if (BVHDebugRenderer)
 	{
 		BVHDebugRenderer->RenderWorldNodeBoxes(*RHI, *Camera, PickState.TraversedWorldBVHNodes);
+	}
+	if (GizmoRenderer && Gizmo)
+	{
+		std::vector<FGizmoDrawCommand> GizmoDrawCommands;
+		Gizmo->BuildDrawCommands(*Scene, PickState, *Camera, GizmoDrawCommands);
+		GizmoRenderer->Render(*RHI, *Camera, GizmoDrawCommands);
 	}
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
 	if (GUIRenderer && GUIRenderer->Render(*RHI, *Scene, PickState))
@@ -322,6 +391,12 @@ void FCore::Release()
 		HudRenderer.reset();
 	}
 
+	if (GizmoRenderer)
+	{
+		GizmoRenderer->Shutdown();
+		GizmoRenderer.reset();
+	}
+
 	if (GUIRenderer)
 	{
 		GUIRenderer->Shutdown();
@@ -364,6 +439,7 @@ void FCore::Release()
 	StatsSystem.reset();
 	PickingSystem.reset();
 	VisibilitySystem.reset();
+	Gizmo.reset();
 	Camera.reset();
 	Input.reset();
 

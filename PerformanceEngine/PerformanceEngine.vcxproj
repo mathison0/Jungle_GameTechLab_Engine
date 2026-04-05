@@ -149,6 +149,10 @@
     <ClCompile Include="Source\BVH\BVHDebugRenderer.cpp" />
     <ClCompile Include="Source\Graphics\D3D11\D3D11RHI.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
+    <ClCompile Include="Source\GIzmo\Gizmo.cpp" />
+    <ClCompile Include="Source\GIzmo\GizmoLocalBVH.cpp" />
+    <ClCompile Include="Source\GIzmo\GizmoMeshFactory.cpp" />
+    <ClCompile Include="Source\GIzmo\GizmoRenderer.cpp" />
     <ClCompile Include="Source\Gui\GUIRenderer.cpp" />
     <ClCompile Include="Source\Grid\Grid.cpp" />
     <ClCompile Include="Source\Hud\HudRenderer.cpp" />
@@ -190,6 +194,10 @@
     <ClInclude Include="Source\Graphics\D3D11\D3D11RHI.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
+    <ClInclude Include="Source\GIzmo\Gizmo.h" />
+    <ClInclude Include="Source\GIzmo\GizmoLocalBVH.h" />
+    <ClInclude Include="Source\GIzmo\GizmoMeshFactory.h" />
+    <ClInclude Include="Source\GIzmo\GizmoRenderer.h" />
     <ClInclude Include="Source\Gui\GUIRenderer.h" />
     <ClInclude Include="Source\Grid\Grid.h" />
     <ClInclude Include="Source\Hud\HudRenderer.h" />
@@ -210,6 +218,7 @@
     <ClInclude Include="Source\Input\Input.h" />
     <ClInclude Include="Source\Core\Windows\WindowsLaunch.h" />
     <ClInclude Include="Source\Picking\PickingSystem.h" />
+    <ClInclude Include="Source\Picking\PickingMath.h" />
     <ClInclude Include="Source\Renderer\SceneRenderer.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
