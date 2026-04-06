@@ -837,19 +837,6 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 	}
 
 	UpdatePrimitiveRuntimeData(RenderItemIndex);
-	UpdateSceneBoundsFromRoot();
-
-#if 0
-
-	// Loose AABB 벗어남 → 삭제 후 재삽입
-	RemoveLeaf(Item.BVHLeafIndex);
-
-	const FVector Margin = (NewMax - NewMin) * 0.1f;
-	Item.LooseBoundsMin = NewMin - Margin;
-	Item.LooseBoundsMax = NewMax + Margin;
-	Item.BVHLeafIndex = InsertLeaf(Item.LooseBoundsMin, Item.LooseBoundsMax, RenderItemIndex);
-}
-#endif
 }
 
 void FScene::UpdatePrimitiveRuntimeData(int32 PrimitiveIndex)
