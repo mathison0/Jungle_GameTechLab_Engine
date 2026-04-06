@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <queue>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -90,14 +91,17 @@ namespace
 		FVector Position = FVector::ZeroVector;
 		FVector2 TexCoord;
 		FQuadric Quadric;
+		std::unordered_set<uint32> AdjacentTriangles;
 		bool bBoundary = false;
 		bool bUVSeam = false;
 		bool bRemoved = false;
+		uint32 Version = 0;
 	};
 
 	struct FSectionTriangle
 	{
 		uint32 Indices[3] = {};
+		FQuadric Quadric;
 		bool bRemoved = false;
 	};
 
@@ -156,6 +160,18 @@ namespace
 	{
 		TArray<FStaticMeshVertex> Vertices;
 		TArray<uint32> Indices;
+	};
+
+	struct FQueuedCollapse
+	{
+		FSectionCollapse Collapse;
+		uint32 VersionA = 0;
+		uint32 VersionB = 0;
+
+		bool operator<(const FQueuedCollapse& InOther) const
+		{
+			return Collapse.Cost > InOther.Collapse.Cost;
+		}
 	};
 
 	FPositionKey MakePositionKey(const FVector& InPosition)
@@ -321,6 +337,258 @@ namespace
 		return true;
 	}
 
+	FSectionEdge MakeEdge(uint32 InA, uint32 InB)
+	{
+		if (InA > InB)
+		{
+			std::swap(InA, InB);
+		}
+
+		return { InA, InB };
+	}
+
+	FQuadric ScaleQuadric(const FQuadric& InQuadric, double InScale)
+	{
+		FQuadric Result = InQuadric;
+		Result.M00 *= InScale;
+		Result.M01 *= InScale;
+		Result.M02 *= InScale;
+		Result.M03 *= InScale;
+		Result.M11 *= InScale;
+		Result.M12 *= InScale;
+		Result.M13 *= InScale;
+		Result.M22 *= InScale;
+		Result.M23 *= InScale;
+		Result.M33 *= InScale;
+		return Result;
+	}
+
+	bool RecomputeTriangleQuadric(FSectionTriangle& InOutTriangle, const std::vector<FSectionVertex>& InVertices)
+	{
+		if (InOutTriangle.bRemoved)
+		{
+			InOutTriangle.Quadric = {};
+			return false;
+		}
+
+		const FSectionVertex& Vertex0 = InVertices[InOutTriangle.Indices[0]];
+		const FSectionVertex& Vertex1 = InVertices[InOutTriangle.Indices[1]];
+		const FSectionVertex& Vertex2 = InVertices[InOutTriangle.Indices[2]];
+		if (Vertex0.bRemoved || Vertex1.bRemoved || Vertex2.bRemoved)
+		{
+			InOutTriangle.Quadric = {};
+			return false;
+		}
+
+		const FVector Edge01 = Vertex1.Position - Vertex0.Position;
+		const FVector Edge02 = Vertex2.Position - Vertex0.Position;
+		const FVector Normal = FVector::CrossProduct(Edge01, Edge02).GetSafeNormal();
+		if (Normal.IsNearlyZero())
+		{
+			InOutTriangle.Quadric = {};
+			return false;
+		}
+
+		const float PlaneDistance = -FVector::DotProduct(Normal, Vertex0.Position);
+		InOutTriangle.Quadric = FQuadric::FromPlane(Normal.X, Normal.Y, Normal.Z, PlaneDistance);
+		return true;
+	}
+
+	void AddTriangleAdjacency(
+		std::vector<FSectionVertex>& InOutVertices,
+		const FSectionTriangle& InTriangle,
+		uint32 InTriangleIndex)
+	{
+		for (uint32 VertexIndex : InTriangle.Indices)
+		{
+			InOutVertices[VertexIndex].AdjacentTriangles.insert(InTriangleIndex);
+		}
+	}
+
+	void RemoveTriangleAdjacency(
+		std::vector<FSectionVertex>& InOutVertices,
+		const FSectionTriangle& InTriangle,
+		uint32 InTriangleIndex)
+	{
+		for (uint32 VertexIndex : InTriangle.Indices)
+		{
+			InOutVertices[VertexIndex].AdjacentTriangles.erase(InTriangleIndex);
+		}
+	}
+
+	void AddTriangleEdges(
+		const FSectionTriangle& InTriangle,
+		std::unordered_map<FSectionEdge, uint32, FSectionEdgeHasher>& InOutEdgeUseCounts)
+	{
+		for (int EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
+		{
+			const uint32 A = InTriangle.Indices[EdgeIndex];
+			const uint32 B = InTriangle.Indices[(EdgeIndex + 1) % 3];
+			if (A != B)
+			{
+				++InOutEdgeUseCounts[MakeEdge(A, B)];
+			}
+		}
+	}
+
+	void RemoveTriangleEdges(
+		const FSectionTriangle& InTriangle,
+		std::unordered_map<FSectionEdge, uint32, FSectionEdgeHasher>& InOutEdgeUseCounts)
+	{
+		for (int EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
+		{
+			const uint32 A = InTriangle.Indices[EdgeIndex];
+			const uint32 B = InTriangle.Indices[(EdgeIndex + 1) % 3];
+			if (A == B)
+			{
+				continue;
+			}
+
+			const FSectionEdge Edge = MakeEdge(A, B);
+			const auto EdgeIt = InOutEdgeUseCounts.find(Edge);
+			if (EdgeIt == InOutEdgeUseCounts.end())
+			{
+				continue;
+			}
+
+			if (EdgeIt->second <= 1)
+			{
+				InOutEdgeUseCounts.erase(EdgeIt);
+			}
+			else
+			{
+				--EdgeIt->second;
+			}
+		}
+	}
+
+	void MarkUVSeams(std::vector<FSectionVertex>& InOutVertices)
+	{
+		std::unordered_map<FPositionKey, std::vector<uint32>, FPositionKeyHasher> VerticesByPosition;
+		VerticesByPosition.reserve(InOutVertices.size());
+		for (uint32 VertexIndex = 0; VertexIndex < static_cast<uint32>(InOutVertices.size()); ++VertexIndex)
+		{
+			if (InOutVertices[VertexIndex].bRemoved)
+			{
+				continue;
+			}
+
+			InOutVertices[VertexIndex].bUVSeam = false;
+			VerticesByPosition[MakePositionKey(InOutVertices[VertexIndex].Position)].push_back(VertexIndex);
+		}
+
+		for (const auto& [PositionKey, VertexIndices] : VerticesByPosition)
+		{
+			(void)PositionKey;
+			if (VertexIndices.size() < 2)
+			{
+				continue;
+			}
+
+			for (size_t LeftIndex = 0; LeftIndex < VertexIndices.size(); ++LeftIndex)
+			{
+				for (size_t RightIndex = LeftIndex + 1; RightIndex < VertexIndices.size(); ++RightIndex)
+				{
+					const FSectionVertex& LeftVertex = InOutVertices[VertexIndices[LeftIndex]];
+					const FSectionVertex& RightVertex = InOutVertices[VertexIndices[RightIndex]];
+					const bool bTexCoordMismatch =
+						std::fabs(LeftVertex.TexCoord.X - RightVertex.TexCoord.X) > 1.0e-4f
+						|| std::fabs(LeftVertex.TexCoord.Y - RightVertex.TexCoord.Y) > 1.0e-4f;
+					if (!bTexCoordMismatch)
+					{
+						continue;
+					}
+
+					InOutVertices[VertexIndices[LeftIndex]].bUVSeam = true;
+					InOutVertices[VertexIndices[RightIndex]].bUVSeam = true;
+				}
+			}
+		}
+	}
+
+	void CollectCollapseTriangles(
+		uint32 InA,
+		uint32 InB,
+		const std::vector<FSectionVertex>& InVertices,
+		std::unordered_set<uint32>& OutTriangleIndices)
+	{
+		OutTriangleIndices.clear();
+		OutTriangleIndices.insert(InVertices[InA].AdjacentTriangles.begin(), InVertices[InA].AdjacentTriangles.end());
+		OutTriangleIndices.insert(InVertices[InB].AdjacentTriangles.begin(), InVertices[InB].AdjacentTriangles.end());
+	}
+
+	void RecomputeVertexQuadric(
+		uint32 InVertexIndex,
+		std::vector<FSectionVertex>& InOutVertices,
+		const std::vector<FSectionTriangle>& InTriangles,
+		const std::unordered_map<FSectionEdge, uint32, FSectionEdgeHasher>& InEdgeUseCounts)
+	{
+		FSectionVertex& Vertex = InOutVertices[InVertexIndex];
+		if (Vertex.bRemoved)
+		{
+			Vertex.Quadric = {};
+			Vertex.bBoundary = false;
+			return;
+		}
+
+		Vertex.Quadric = {};
+		Vertex.bBoundary = false;
+
+		for (uint32 TriangleIndex : Vertex.AdjacentTriangles)
+		{
+			const FSectionTriangle& Triangle = InTriangles[TriangleIndex];
+			if (Triangle.bRemoved)
+			{
+				continue;
+			}
+
+			Vertex.Quadric += Triangle.Quadric;
+		}
+
+		for (uint32 TriangleIndex : Vertex.AdjacentTriangles)
+		{
+			const FSectionTriangle& Triangle = InTriangles[TriangleIndex];
+			if (Triangle.bRemoved)
+			{
+				continue;
+			}
+
+			for (int EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
+			{
+				const uint32 A = Triangle.Indices[EdgeIndex];
+				const uint32 B = Triangle.Indices[(EdgeIndex + 1) % 3];
+				if (A != InVertexIndex && B != InVertexIndex)
+				{
+					continue;
+				}
+
+				const auto EdgeUseIt = InEdgeUseCounts.find(MakeEdge(A, B));
+				if (EdgeUseIt == InEdgeUseCounts.end() || EdgeUseIt->second != 1)
+				{
+					continue;
+				}
+
+				Vertex.bBoundary = true;
+				const uint32 OtherIndex = (A == InVertexIndex) ? B : A;
+				const FVector EdgeDirection = (InOutVertices[OtherIndex].Position - Vertex.Position).GetSafeNormal();
+				const FVector Normal = ComputeTriangleNormal(
+					InOutVertices[Triangle.Indices[0]].Position,
+					InOutVertices[Triangle.Indices[1]].Position,
+					InOutVertices[Triangle.Indices[2]].Position);
+				const FVector BoundaryNormal = FVector::CrossProduct(EdgeDirection, Normal).GetSafeNormal();
+				if (BoundaryNormal.IsNearlyZero())
+				{
+					continue;
+				}
+
+				const float BoundaryPlaneDistance = -FVector::DotProduct(BoundaryNormal, Vertex.Position);
+				Vertex.Quadric += ScaleQuadric(
+					FQuadric::FromPlane(BoundaryNormal.X, BoundaryNormal.Y, BoundaryNormal.Z, BoundaryPlaneDistance),
+					10.0);
+			}
+		}
+	}
+
 	FSectionCollapse BuildCollapse(
 		uint32 InA,
 		uint32 InB,
@@ -367,159 +635,11 @@ namespace
 		return Collapse;
 	}
 
-	void RebuildVertexFlagsAndQuadrics(std::vector<FSectionVertex>& InOutVertices, const std::vector<FSectionTriangle>& InTriangles)
-	{
-		for (FSectionVertex& Vertex : InOutVertices)
-		{
-			Vertex.Quadric = {};
-			Vertex.bBoundary = false;
-			Vertex.bUVSeam = false;
-		}
-
-		std::unordered_map<FSectionEdge, uint32, FSectionEdgeHasher> EdgeUseCounts;
-		EdgeUseCounts.reserve(InTriangles.size() * 3);
-
-		for (const FSectionTriangle& Triangle : InTriangles)
-		{
-			if (Triangle.bRemoved)
-			{
-				continue;
-			}
-
-			for (int EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
-			{
-				uint32 A = Triangle.Indices[EdgeIndex];
-				uint32 B = Triangle.Indices[(EdgeIndex + 1) % 3];
-				if (A == B || InOutVertices[A].bRemoved || InOutVertices[B].bRemoved)
-				{
-					continue;
-				}
-
-				if (A > B)
-				{
-					std::swap(A, B);
-				}
-
-				++EdgeUseCounts[{ A, B }];
-			}
-		}
-
-		for (const FSectionTriangle& Triangle : InTriangles)
-		{
-			if (Triangle.bRemoved)
-			{
-				continue;
-			}
-
-			FSectionVertex& Vertex0 = InOutVertices[Triangle.Indices[0]];
-			FSectionVertex& Vertex1 = InOutVertices[Triangle.Indices[1]];
-			FSectionVertex& Vertex2 = InOutVertices[Triangle.Indices[2]];
-			if (Vertex0.bRemoved || Vertex1.bRemoved || Vertex2.bRemoved)
-			{
-				continue;
-			}
-
-			const FVector Edge01 = Vertex1.Position - Vertex0.Position;
-			const FVector Edge02 = Vertex2.Position - Vertex0.Position;
-			const FVector Normal = FVector::CrossProduct(Edge01, Edge02).GetSafeNormal();
-			if (Normal.IsNearlyZero())
-			{
-				continue;
-			}
-
-			const float PlaneDistance = -FVector::DotProduct(Normal, Vertex0.Position);
-			const FQuadric FaceQuadric = FQuadric::FromPlane(Normal.X, Normal.Y, Normal.Z, PlaneDistance);
-			Vertex0.Quadric += FaceQuadric;
-			Vertex1.Quadric += FaceQuadric;
-			Vertex2.Quadric += FaceQuadric;
-
-			for (int EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
-			{
-				uint32 A = Triangle.Indices[EdgeIndex];
-				uint32 B = Triangle.Indices[(EdgeIndex + 1) % 3];
-				if (A > B)
-				{
-					std::swap(A, B);
-				}
-
-				const auto EdgeUseIt = EdgeUseCounts.find({ A, B });
-				if (EdgeUseIt == EdgeUseCounts.end() || EdgeUseIt->second != 1)
-				{
-					continue;
-				}
-
-				InOutVertices[A].bBoundary = true;
-				InOutVertices[B].bBoundary = true;
-
-				const FVector EdgeDirection = (InOutVertices[B].Position - InOutVertices[A].Position).GetSafeNormal();
-				const FVector BoundaryNormal = FVector::CrossProduct(EdgeDirection, Normal).GetSafeNormal();
-				if (BoundaryNormal.IsNearlyZero())
-				{
-					continue;
-				}
-
-				const float BoundaryPlaneDistance = -FVector::DotProduct(BoundaryNormal, InOutVertices[A].Position);
-				FQuadric BoundaryQuadric = FQuadric::FromPlane(BoundaryNormal.X, BoundaryNormal.Y, BoundaryNormal.Z, BoundaryPlaneDistance);
-				BoundaryQuadric.M00 *= 10.0;
-				BoundaryQuadric.M01 *= 10.0;
-				BoundaryQuadric.M02 *= 10.0;
-				BoundaryQuadric.M03 *= 10.0;
-				BoundaryQuadric.M11 *= 10.0;
-				BoundaryQuadric.M12 *= 10.0;
-				BoundaryQuadric.M13 *= 10.0;
-				BoundaryQuadric.M22 *= 10.0;
-				BoundaryQuadric.M23 *= 10.0;
-				BoundaryQuadric.M33 *= 10.0;
-				InOutVertices[A].Quadric += BoundaryQuadric;
-				InOutVertices[B].Quadric += BoundaryQuadric;
-			}
-		}
-
-		std::unordered_map<FPositionKey, std::vector<uint32>, FPositionKeyHasher> VerticesByPosition;
-		VerticesByPosition.reserve(InOutVertices.size());
-		for (uint32 VertexIndex = 0; VertexIndex < static_cast<uint32>(InOutVertices.size()); ++VertexIndex)
-		{
-			if (InOutVertices[VertexIndex].bRemoved)
-			{
-				continue;
-			}
-
-			VerticesByPosition[MakePositionKey(InOutVertices[VertexIndex].Position)].push_back(VertexIndex);
-		}
-
-		for (const auto& [PositionKey, VertexIndices] : VerticesByPosition)
-		{
-			(void)PositionKey;
-			if (VertexIndices.size() < 2)
-			{
-				continue;
-			}
-
-			for (size_t LeftIndex = 0; LeftIndex < VertexIndices.size(); ++LeftIndex)
-			{
-				for (size_t RightIndex = LeftIndex + 1; RightIndex < VertexIndices.size(); ++RightIndex)
-				{
-					const FSectionVertex& LeftVertex = InOutVertices[VertexIndices[LeftIndex]];
-					const FSectionVertex& RightVertex = InOutVertices[VertexIndices[RightIndex]];
-					const bool bTexCoordMismatch =
-						std::fabs(LeftVertex.TexCoord.X - RightVertex.TexCoord.X) > 1.0e-4f
-						|| std::fabs(LeftVertex.TexCoord.Y - RightVertex.TexCoord.Y) > 1.0e-4f;
-					if (!bTexCoordMismatch)
-					{
-						continue;
-					}
-
-					InOutVertices[VertexIndices[LeftIndex]].bUVSeam = true;
-					InOutVertices[VertexIndices[RightIndex]].bUVSeam = true;
-				}
-			}
-		}
-	}
-
 	bool IsCollapseValid(
 		const FSectionCollapse& InCollapse,
 		const std::vector<FSectionVertex>& InVertices,
-		const std::vector<FSectionTriangle>& InTriangles)
+		const std::vector<FSectionTriangle>& InTriangles,
+		const std::unordered_map<FSectionEdge, uint32, FSectionEdgeHasher>& InEdgeUseCounts)
 	{
 		const FSectionVertex& VertexA = InVertices[InCollapse.A];
 		const FSectionVertex& VertexB = InVertices[InCollapse.B];
@@ -538,8 +658,20 @@ namespace
 			return false;
 		}
 
-		for (const FSectionTriangle& Triangle : InTriangles)
+		if (VertexA.bBoundary && VertexB.bBoundary)
 		{
+			const auto EdgeUseIt = InEdgeUseCounts.find(MakeEdge(InCollapse.A, InCollapse.B));
+			if (EdgeUseIt == InEdgeUseCounts.end() || EdgeUseIt->second != 1)
+			{
+				return false;
+			}
+		}
+
+		std::unordered_set<uint32> AffectedTriangles;
+		CollectCollapseTriangles(InCollapse.A, InCollapse.B, InVertices, AffectedTriangles);
+		for (uint32 TriangleIndex : AffectedTriangles)
+		{
+			const FSectionTriangle& Triangle = InTriangles[TriangleIndex];
 			if (Triangle.bRemoved)
 			{
 				continue;
@@ -657,94 +789,168 @@ namespace
 			Triangles.push_back(Triangle);
 		}
 
-		RebuildVertexFlagsAndQuadrics(Vertices, Triangles);
+		std::unordered_map<FSectionEdge, uint32, FSectionEdgeHasher> EdgeUseCounts;
+		EdgeUseCounts.reserve(Triangles.size() * 3);
+		for (uint32 TriangleIndex = 0; TriangleIndex < static_cast<uint32>(Triangles.size()); ++TriangleIndex)
+		{
+			FSectionTriangle& Triangle = Triangles[TriangleIndex];
+			RecomputeTriangleQuadric(Triangle, Vertices);
+			AddTriangleAdjacency(Vertices, Triangle, TriangleIndex);
+			AddTriangleEdges(Triangle, EdgeUseCounts);
+		}
+
+		MarkUVSeams(Vertices);
+		for (uint32 VertexIndex = 0; VertexIndex < static_cast<uint32>(Vertices.size()); ++VertexIndex)
+		{
+			RecomputeVertexQuadric(VertexIndex, Vertices, Triangles, EdgeUseCounts);
+		}
+
+		std::priority_queue<FQueuedCollapse> CollapseQueue;
+		auto QueueEdgeCollapse =
+			[&Vertices, &Triangles, &EdgeUseCounts, &CollapseQueue](uint32 InA, uint32 InB)
+			{
+				if (InA == InB || Vertices[InA].bRemoved || Vertices[InB].bRemoved)
+				{
+					return;
+				}
+
+				if (InA > InB)
+				{
+					std::swap(InA, InB);
+				}
+
+				FSectionCollapse Collapse = BuildCollapse(InA, InB, Vertices);
+				if (!Collapse.bValid)
+				{
+					return;
+				}
+
+				if (Vertices[InA].bBoundary || Vertices[InA].bUVSeam)
+				{
+					const FQuadric CombinedQuadric = Vertices[InA].Quadric + Vertices[InB].Quadric;
+					const std::array<FVector, 2> ProtectedCandidates = { Vertices[InA].Position, Vertices[InB].Position };
+					Collapse.Cost = std::numeric_limits<double>::max();
+					for (const FVector& Candidate : ProtectedCandidates)
+					{
+						const double CandidateCost = CombinedQuadric.Evaluate(Candidate);
+						if (CandidateCost < Collapse.Cost)
+						{
+							Collapse.Cost = CandidateCost;
+							Collapse.Position = Candidate;
+						}
+					}
+				}
+
+				if (!IsCollapseValid(Collapse, Vertices, Triangles, EdgeUseCounts))
+				{
+					return;
+				}
+
+				CollapseQueue.push({ Collapse, Vertices[InA].Version, Vertices[InB].Version });
+			};
+
+		auto QueueNeighborhood =
+			[&Vertices, &Triangles, &QueueEdgeCollapse](uint32 InVertexIndex)
+			{
+				if (Vertices[InVertexIndex].bRemoved)
+				{
+					return;
+				}
+
+				std::unordered_set<uint32> NeighborVertices;
+				for (uint32 TriangleIndex : Vertices[InVertexIndex].AdjacentTriangles)
+				{
+					const FSectionTriangle& Triangle = Triangles[TriangleIndex];
+					if (Triangle.bRemoved)
+					{
+						continue;
+					}
+
+					for (uint32 TriangleVertexIndex : Triangle.Indices)
+					{
+						if (TriangleVertexIndex != InVertexIndex && !Vertices[TriangleVertexIndex].bRemoved)
+						{
+							NeighborVertices.insert(TriangleVertexIndex);
+						}
+					}
+				}
+
+				for (uint32 NeighborVertexIndex : NeighborVertices)
+				{
+					QueueEdgeCollapse(InVertexIndex, NeighborVertexIndex);
+				}
+			};
+
+		for (const FSectionTriangle& Triangle : Triangles)
+		{
+			if (Triangle.bRemoved)
+			{
+				continue;
+			}
+
+			QueueEdgeCollapse(Triangle.Indices[0], Triangle.Indices[1]);
+			QueueEdgeCollapse(Triangle.Indices[1], Triangle.Indices[2]);
+			QueueEdgeCollapse(Triangle.Indices[2], Triangle.Indices[0]);
+		}
 
 		size_t ActiveTriangleCount = CountActiveTriangles(Triangles);
-		while (ActiveTriangleCount > TargetTriangleCount)
+		while (ActiveTriangleCount > TargetTriangleCount && !CollapseQueue.empty())
 		{
-			std::unordered_set<FSectionEdge, FSectionEdgeHasher> UniqueEdges;
-			UniqueEdges.reserve(ActiveTriangleCount * 3);
-			FSectionCollapse BestCollapse;
+			FQueuedCollapse QueuedCollapse = CollapseQueue.top();
+			CollapseQueue.pop();
 
-			for (const FSectionTriangle& Triangle : Triangles)
+			const FSectionCollapse& BestCollapse = QueuedCollapse.Collapse;
+			if (Vertices[BestCollapse.A].bRemoved
+				|| Vertices[BestCollapse.B].bRemoved
+				|| Vertices[BestCollapse.A].Version != QueuedCollapse.VersionA
+				|| Vertices[BestCollapse.B].Version != QueuedCollapse.VersionB
+				|| !IsCollapseValid(BestCollapse, Vertices, Triangles, EdgeUseCounts))
 			{
+				continue;
+			}
+
+			std::unordered_set<uint32> AffectedTriangles;
+			CollectCollapseTriangles(BestCollapse.A, BestCollapse.B, Vertices, AffectedTriangles);
+			std::unordered_set<uint32> AffectedVertices;
+
+			for (uint32 TriangleIndex : AffectedTriangles)
+			{
+				const FSectionTriangle& Triangle = Triangles[TriangleIndex];
 				if (Triangle.bRemoved)
 				{
 					continue;
 				}
 
-				for (int EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
+				for (uint32 TriangleVertexIndex : Triangle.Indices)
 				{
-					uint32 A = Triangle.Indices[EdgeIndex];
-					uint32 B = Triangle.Indices[(EdgeIndex + 1) % 3];
-					if (A == B || Vertices[A].bRemoved || Vertices[B].bRemoved)
-					{
-						continue;
-					}
-
-					if (A > B)
-					{
-						std::swap(A, B);
-					}
-
-					const FSectionEdge Edge{ A, B };
-					if (!UniqueEdges.insert(Edge).second)
-					{
-						continue;
-					}
-
-					FSectionCollapse Collapse = BuildCollapse(A, B, Vertices);
-					if (Collapse.bValid && (Vertices[A].bBoundary || Vertices[A].bUVSeam))
-					{
-						const std::array<FVector, 2> ProtectedCandidates = { Vertices[A].Position, Vertices[B].Position };
-						Collapse.Cost = std::numeric_limits<double>::max();
-						for (const FVector& Candidate : ProtectedCandidates)
-						{
-							const double CandidateCost = (Vertices[A].Quadric + Vertices[B].Quadric).Evaluate(Candidate);
-							if (CandidateCost < Collapse.Cost)
-							{
-								Collapse.Cost = CandidateCost;
-								Collapse.Position = Candidate;
-							}
-						}
-					}
-
-					if (!Collapse.bValid || !IsCollapseValid(Collapse, Vertices, Triangles))
-					{
-						continue;
-					}
-
-					if (Collapse.bValid && Collapse.Cost < BestCollapse.Cost)
-					{
-						BestCollapse = Collapse;
-					}
+					AffectedVertices.insert(TriangleVertexIndex);
 				}
-			}
-
-			if (!BestCollapse.bValid)
-			{
-				break;
 			}
 
 			FSectionVertex& VertexA = Vertices[BestCollapse.A];
 			FSectionVertex& VertexB = Vertices[BestCollapse.B];
 			VertexA.Position = BestCollapse.Position;
 			VertexA.TexCoord = BestCollapse.TexCoord;
-			VertexA.Quadric += VertexB.Quadric;
+			++VertexA.Version;
 			VertexB.bRemoved = true;
+			++VertexB.Version;
 
-			for (FSectionTriangle& Triangle : Triangles)
+			for (uint32 TriangleIndex : AffectedTriangles)
 			{
+				FSectionTriangle& Triangle = Triangles[TriangleIndex];
 				if (Triangle.bRemoved)
 				{
 					continue;
 				}
 
-				for (uint32& TriangleIndex : Triangle.Indices)
+				RemoveTriangleEdges(Triangle, EdgeUseCounts);
+				RemoveTriangleAdjacency(Vertices, Triangle, TriangleIndex);
+
+				for (uint32& TriangleVertexIndex : Triangle.Indices)
 				{
-					if (TriangleIndex == BestCollapse.B)
+					if (TriangleVertexIndex == BestCollapse.B)
 					{
-						TriangleIndex = BestCollapse.A;
+						TriangleVertexIndex = BestCollapse.A;
 					}
 				}
 
@@ -753,10 +959,45 @@ namespace
 					|| Triangle.Indices[2] == Triangle.Indices[0])
 				{
 					Triangle.bRemoved = true;
+					Triangle.Quadric = {};
+					--ActiveTriangleCount;
+					continue;
+				}
+
+				RecomputeTriangleQuadric(Triangle, Vertices);
+				AddTriangleAdjacency(Vertices, Triangle, TriangleIndex);
+				AddTriangleEdges(Triangle, EdgeUseCounts);
+
+				for (uint32 TriangleVertexIndex : Triangle.Indices)
+				{
+					AffectedVertices.insert(TriangleVertexIndex);
 				}
 			}
 
-			RebuildVertexFlagsAndQuadrics(Vertices, Triangles);
+			AffectedVertices.insert(BestCollapse.A);
+			for (auto VertexIt = AffectedVertices.begin(); VertexIt != AffectedVertices.end(); )
+			{
+				if (*VertexIt == BestCollapse.B || Vertices[*VertexIt].bRemoved)
+				{
+					VertexIt = AffectedVertices.erase(VertexIt);
+				}
+				else
+				{
+					++VertexIt;
+				}
+			}
+
+			for (uint32 VertexIndex : AffectedVertices)
+			{
+				RecomputeVertexQuadric(VertexIndex, Vertices, Triangles, EdgeUseCounts);
+				++Vertices[VertexIndex].Version;
+			}
+
+			for (uint32 VertexIndex : AffectedVertices)
+			{
+				QueueNeighborhood(VertexIndex);
+			}
+
 			ActiveTriangleCount = CountActiveTriangles(Triangles);
 		}
 
