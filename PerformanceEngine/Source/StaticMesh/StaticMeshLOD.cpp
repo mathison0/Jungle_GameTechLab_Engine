@@ -21,6 +21,8 @@ namespace
 {
 	constexpr std::array<float, 3> LODTriangleRatios = { 1.0f, 0.6f, 0.3f };
 	constexpr float QuadricSolveTolerance = 1.0e-6f;
+	constexpr size_t MinTrianglesForLOD1Simplification = 64;
+	constexpr size_t MinTrianglesForLOD2Simplification = 128;
 
 	struct FQuadric
 	{
@@ -335,6 +337,21 @@ namespace
 			static_cast<float>(Matrix[1][3]),
 			static_cast<float>(Matrix[2][3]));
 		return true;
+	}
+
+	bool ShouldSkipSectionSimplification(size_t InSourceTriangleCount, float InTriangleRatio)
+	{
+		if (InTriangleRatio >= 0.999f)
+		{
+			return true;
+		}
+
+		if (InTriangleRatio <= 0.35f)
+		{
+			return InSourceTriangleCount < MinTrianglesForLOD2Simplification;
+		}
+
+		return InSourceTriangleCount < MinTrianglesForLOD1Simplification;
 	}
 
 	FSectionEdge MakeEdge(uint32 InA, uint32 InB)
@@ -760,6 +777,13 @@ namespace
 		}
 
 		const size_t SourceTriangleCount = InIndices.size() / 3;
+		if (ShouldSkipSectionSimplification(SourceTriangleCount, InTriangleRatio))
+		{
+			Result.Vertices = InVertices;
+			Result.Indices = InIndices;
+			return Result;
+		}
+
 		const size_t TargetTriangleCount = std::max<size_t>(2, static_cast<size_t>(std::ceil(SourceTriangleCount * InTriangleRatio)));
 		if (TargetTriangleCount >= SourceTriangleCount)
 		{
