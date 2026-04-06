@@ -371,7 +371,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 
 	NextPrimitiveId = MaxPrimitiveId + 1;
 	RebuildSceneBoundsFromRenderItems();
-	
+
 	//Create World BVH here
 
 	//For Check
@@ -717,23 +717,23 @@ int FScene::FindBestSibling(const FVector& NewMin, const FVector& NewMax)
 		float DirectCost = SurfaceArea(MergedMin, MergedMax);
 		float TotalCost = DirectCost + InheritedCost;
 
-		if (TotalCost < BestCost)
+
+		float LowerBound = InheritedCost + SurfaceArea(NewMin, NewMax);
+		if (LowerBound > BestCost) continue;
+
+		if (BestCost > TotalCost)
 		{
 			BestCost = TotalCost;
 			BestNode = NodeIdx;
 		}
 
-		// 자식 탐색 가치가 있는지 판단
-		// 자식에 삽입해도 최소 InheritedCost + SA(NewLeaf)는 들음
-		// 이게 이미 BestCost보다 크면 이 가지는 스킵
-		float LowerBound = InheritedCost + SurfaceArea(NewMin, NewMax);
-		if (LowerBound < BestCost && !WorldBVHNodes[NodeIdx].IsLeaf())
-		{
-			// SA 증가량을 다음 노드의 InheritedCost에 누적
-			float ChildInherited = InheritedCost + (DirectCost - SurfaceArea(WorldBVHNodes[NodeIdx].Min, WorldBVHNodes[NodeIdx].Max));
-			PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].LeftChildIndex });
-			PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].RightChildIndex });
-		}
+		if (WorldBVHNodes[NodeIdx].IsLeaf()) continue;
+
+		// SA 증가량을 다음 노드의 InheritedCost에 누적
+		float ChildInherited = InheritedCost + (DirectCost - SurfaceArea(WorldBVHNodes[NodeIdx].Min, WorldBVHNodes[NodeIdx].Max));
+		PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].LeftChildIndex });
+		PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].RightChildIndex });
+
 	}
 
 	return BestNode;
