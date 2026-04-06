@@ -169,6 +169,7 @@
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Stats\StatsSystem.cpp" />
     <ClCompile Include="Source\StaticMesh\ObjParser.cpp" />
+    <ClCompile Include="Source\StaticMesh\StaticMeshLOD.cpp" />
     <ClCompile Include="Source\StaticMesh\StaticMesh.cpp" />
     <ClCompile Include="Source\StaticMesh\StaticMeshManager.cpp" />
     <ClCompile Include="Source\Visibility\VisibilitySystem.cpp" />
@@ -206,6 +207,7 @@
     <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Stats\StatsSystem.h" />
     <ClInclude Include="Source\StaticMesh\ObjParser.h" />
+    <ClInclude Include="Source\StaticMesh\StaticMeshLOD.h" />
     <ClInclude Include="Source\StaticMesh\StaticMesh.h" />
     <ClInclude Include="Source\StaticMesh\StaticMeshManager.h" />
     <ClInclude Include="Source\Types\Array.h" />
