@@ -2,14 +2,19 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstring>
 #include <functional>
+#include <sstream>
 #include <vector>
+
+#include <Windows.h>
 
 #include "Camera/Camera.h"
 #include "Graphics/D3D11/D3D11Utils.h"
 #include "Graphics/D3D11/D3D11RHI.h"
+#include "Math/MathUtility.h"
 #include "Picking/PickingSystem.h"
 #include "Scene/Scene.h"
 #include "StaticMesh/StaticMesh.h"
@@ -17,6 +22,8 @@
 
 namespace
 {
+	constexpr std::array<float, 2> ScreenSizeLODCutoffs = { 0.2f, 0.08f };
+
 	bool CreateWhiteTexture(ID3D11Device* InDevice, TComPtr<ID3D11ShaderResourceView>& OutTextureView)
 	{
 		const uint32 WhitePixel = 0xFFFFFFFFu;
@@ -99,6 +106,8 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11ShaderResourceView> WhiteTextureView;
 	std::vector<FObjectConstantsBlock> ObjectConstantBlocks;
 	std::vector<FDrawItem> RenderItems;
+	std::array<uint32, 8> LODSelectionCounts = {};
+	uint32 VisiblePrimitiveCount = 0;
 	UINT ObjectBufferCapacity = 0;
 };
 
@@ -133,9 +142,41 @@ namespace
 		return true;
 	}
 
+	uint32 SelectLODIndex(const FScenePrimitiveRuntimeData& InPrimitiveData, const FCamera& InCamera)
+	{
+		const FBoundingSphere& WorldSphere = InPrimitiveData.WorldBoundsSphere;
+		if (WorldSphere.Radius <= 0.0f)
+		{
+			return 0;
+		}
+
+		const FVector CameraToCenter = WorldSphere.Center - InCamera.GetLocation();
+		const float Depth = FVector::DotProduct(CameraToCenter, InCamera.GetRotation().GetForwardVector());
+		const float SafeDepth = std::max(Depth, InCamera.GetNearClip());
+		if (SafeDepth <= 0.0f)
+		{
+			return 0;
+		}
+
+		const float ProjectionScaleY = 1.0f / std::tan(FMath::DegreesToRadians(InCamera.GetFOV()) * 0.5f);
+		const float ScreenDiameterRatio = (2.0f * WorldSphere.Radius * ProjectionScaleY) / SafeDepth;
+		if (ScreenDiameterRatio >= ScreenSizeLODCutoffs[0])
+		{
+			return 0;
+		}
+
+		if (ScreenDiameterRatio >= ScreenSizeLODCutoffs[1])
+		{
+			return 1;
+		}
+
+		return 2;
+	}
+
 	template <typename TResources>
 	void BuildRenderQueue(
 		const FScene& InScene,
+		const FCamera& InCamera,
 		const FVisibilityResults& InVisibilityResults,
 		const FPickState& InPickState,
 		ID3D11ShaderResourceView* InDefaultTextureView,
@@ -143,6 +184,8 @@ namespace
 	{
 		InOutResources.ObjectConstantBlocks.clear();
 		InOutResources.RenderItems.clear();
+		InOutResources.LODSelectionCounts.fill(0);
+		InOutResources.VisiblePrimitiveCount = 0;
 
 		InOutResources.ObjectConstantBlocks.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
 		InOutResources.RenderItems.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
@@ -155,9 +198,30 @@ namespace
 				continue;
 			}
 
+			++InOutResources.VisiblePrimitiveCount;
+
 			const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
 			FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
 			if (StaticMesh == nullptr || !StaticMesh->IsValid())
+			{
+				continue;
+			}
+
+			const uint32 LODCount = StaticMesh->GetLODCount();
+			if (LODCount == 0)
+			{
+				continue;
+			}
+
+			const uint32 LODIndex = std::min(SelectLODIndex(PrimitiveData, InCamera), LODCount - 1);
+			if (LODIndex < InOutResources.LODSelectionCounts.size())
+			{
+				++InOutResources.LODSelectionCounts[LODIndex];
+			}
+
+			ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer(LODIndex);
+			ID3D11Buffer* IndexBuffer = StaticMesh->GetIndexBuffer(LODIndex);
+			if (VertexBuffer == nullptr || IndexBuffer == nullptr)
 			{
 				continue;
 			}
@@ -175,9 +239,7 @@ namespace
 			const UINT ObjectIndex = static_cast<UINT>(InOutResources.ObjectConstantBlocks.size());
 			InOutResources.ObjectConstantBlocks.push_back(ObjectBlock);
 
-			ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer();
-			ID3D11Buffer* IndexBuffer = StaticMesh->GetIndexBuffer();
-			for (const FStaticMesh::FSection& Section : StaticMesh->GetSections())
+			for (const FStaticMesh::FSection& Section : StaticMesh->GetSections(LODIndex))
 			{
 				FDrawItem RenderItem = {};
 				RenderItem.VertexBuffer = VertexBuffer;
@@ -194,6 +256,43 @@ namespace
 				InOutResources.RenderItems.push_back(RenderItem);
 			}
 		}
+	}
+
+	template <typename TResources>
+	void LogLODSelectionCounts(const FScene& InScene, const TResources& InResources)
+	{
+		std::ostringstream LogStream;
+		uint32 SubmittedPrimitiveCount = 0;
+		for (size_t LODIndex = 0; LODIndex < InResources.LODSelectionCounts.size(); ++LODIndex)
+		{
+			SubmittedPrimitiveCount += InResources.LODSelectionCounts[LODIndex];
+		}
+
+		LogStream
+			<< "LOD Selection - Total: " << InScene.GetPrimitiveCount()
+			<< ", Visible: " << InResources.VisiblePrimitiveCount
+			<< ", Submitted: " << SubmittedPrimitiveCount;
+
+		bool bHasAnyCount = false;
+		for (size_t LODIndex = 0; LODIndex < InResources.LODSelectionCounts.size(); ++LODIndex)
+		{
+			const uint32 Count = InResources.LODSelectionCounts[LODIndex];
+			if (Count == 0)
+			{
+				continue;
+			}
+
+			bHasAnyCount = true;
+			LogStream << " - LOD" << LODIndex << ": " << Count;
+		}
+
+		if (!bHasAnyCount)
+		{
+			LogStream << " - LOD0: 0";
+		}
+
+		LogStream << '\n';
+		OutputDebugStringA(LogStream.str().c_str());
 	}
 
 	bool UploadObjectConstantBlocks(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InObjectConstantBuffer, const std::vector<FObjectConstantsBlock>& InObjectConstantBlocks)
@@ -518,7 +617,8 @@ void FSceneRenderer::Render(
 	FrameConstants.ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
 	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
-	BuildRenderQueue(InScene, InVisibilityResults, InPickState, Resources->WhiteTextureView.Get(), *Resources);
+	BuildRenderQueue(InScene, InCamera, InVisibilityResults, InPickState, Resources->WhiteTextureView.Get(), *Resources);
+	LogLODSelectionCounts(InScene, *Resources);
 	SortRenderItems(Resources->RenderItems);
 	if (!EnsureObjectConstantBufferCapacity(
 		InRHI.GetDevice(),
