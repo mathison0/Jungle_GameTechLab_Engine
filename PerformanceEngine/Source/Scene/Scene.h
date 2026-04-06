@@ -42,6 +42,14 @@ public:
 		const FVisibilityCluster& InCluster,
 		TArray<FVisibilityCluster>& OutChildClusters,
 		TArray<uint32>& InOutFramePrimitiveIndices) const;
+	int32 GetWorldBVHRootIndex() const { return RootIndex; }
+	TArray<FString> GetLoadedMeshAssetKeys() const;
+	std::shared_ptr<FStaticMesh> FindLoadedStaticMesh(const FString& InMeshAssetKey) const;
+
+	bool TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta);
+	bool SetPrimitiveTransformWorld(int32 PrimitiveIndex, const FTransform& NewTransform);
+	bool AddLoadedStaticMeshInstance(const FString& InMeshAssetKey, const FTransform& InTransform, int32& OutPrimitiveIndex);
+	bool RemovePrimitiveFromScene(int32 PrimitiveIndex);
 
 
 private:
@@ -68,6 +76,10 @@ private:
 	bool TryBuildVisibilityClusterFromNode(int NodeIndex, TArray<uint32>& InOutFramePrimitiveIndices, FVisibilityCluster& OutCluster) const;
 	void CollectNodePrimitiveIndices(int NodeIndex, TArray<uint32>& OutPrimitiveIndices) const;
 	void LogVisibilityClusterBuildSummary() const;
+	void UpdatePrimitiveRuntimeData(int32 PrimitiveIndex);
+	void UpdateSceneBoundsFromRoot();
+	bool AppendStaticMeshPrimitive(int32 PrimitiveId, const FString& InMeshAssetKey, const std::shared_ptr<FStaticMesh>& InStaticMesh, const FTransform& InTransform);
+	void RebuildSceneBoundsFromRenderItems();
 
 
 private:
@@ -92,7 +104,8 @@ private:
 	//BVH Related Variables
 	TArray<AABBNode> WorldBVHNodes;
 	TArray<int> FreeNodes;
-	int RootIndex = 1;
+	int RootIndex = -1;
+	int32 NextPrimitiveId = 0;
 	//BVH Related Variables
 
 	TArray<FVisibilityCluster> StaticVisibilityClusters;

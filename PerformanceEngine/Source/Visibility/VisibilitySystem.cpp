@@ -75,6 +75,36 @@ void FVisibilitySystem::InvalidateHistory()
 	bHistoryValid = false;
 }
 
+void FVisibilitySystem::Invalidate()
+{
+	InvalidateHistory();
+}
+
+void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults)
+{
+	FVisibilityFrameInput FrameInput;
+	PrepareFrame(InScene, InCamera, FrameInput, OutResults);
+
+	TArray<uint32> VisibleClusterIndices;
+	VisibleClusterIndices.reserve(FrameInput.FrustumVisibleClusters.size());
+	for (uint32 ClusterIndex = 0; ClusterIndex < static_cast<uint32>(FrameInput.FrustumVisibleClusters.size()); ++ClusterIndex)
+	{
+		VisibleClusterIndices.push_back(ClusterIndex);
+	}
+
+	FinalizeFrame(
+		InScene,
+		InCamera,
+		FrameInput,
+		VisibleClusterIndices,
+		FOcclusionTimingStats(),
+		false,
+		OutResults);
+
+	bHistoryValid = false;
+	OutResults.Stats.bHzbValid = false;
+}
+
 void FVisibilitySystem::PrepareFrame(const FScene& InScene, const FCamera& InCamera, FVisibilityFrameInput& OutFrameInput, FVisibilityResults& OutResults)
 {
 	OutFrameInput = FVisibilityFrameInput();

@@ -255,9 +255,9 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	bool bInCameraBlock = false;
 	bool bInPrimitivesBlock = false;
 	bool bInPrimitiveBlock = false;
-	bool bHasSceneBounds = false;
 
 	FPendingPrimitive PendingPrimitive;
+	int32 MaxPrimitiveId = -1;
 	std::string Line;
 	while (std::getline(SceneFile, Line))
 	{
@@ -341,46 +341,10 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				}
 
 				const FTransform WorldTransform = BuildSceneTransform(PendingPrimitive.Location, PendingPrimitive.Rotation, PendingPrimitive.Scale);
-
-				FRenderItem RenderItem;
-				RenderItem.PrimitiveId = PendingPrimitive.Id;
-				RenderItem.MeshAssetPath = MeshCacheKey;
-				RenderItem.Transform = WorldTransform;
-				RenderItem.StaticMesh = SharedMesh;
-
-				FScenePrimitiveColdData ColdData;
-				ColdData.MeshAssetPath = MeshCacheKey;
-				ColdData.StaticMeshOwner = SharedMesh;
-
-				FScenePrimitiveRuntimeData RuntimeData;
-				RuntimeData.PrimitiveId = PendingPrimitive.Id;
-				RuntimeData.WorldMatrix = WorldTransform.ToMatrixWithScale();
-				RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
-
-				RuntimeData.StaticMesh = SharedMesh.get();
-				RuntimeData.WorldBoundsSphere = TransformBoundingSphere(SharedMesh->GetBoundsSphere(), WorldTransform);
-
-				bool bHasRuntimeBounds = false;
-				ExpandBoundsWithTransformedAabb(
-					SharedMesh->GetBoundsMin(),
-					SharedMesh->GetBoundsMax(),
-					WorldTransform,
-					RuntimeData.WorldBoundsMin,
-					RuntimeData.WorldBoundsMax,
-					bHasRuntimeBounds);
-
-				if (bHasRuntimeBounds)
+				if (AppendStaticMeshPrimitive(PendingPrimitive.Id, MeshCacheKey, SharedMesh, WorldTransform))
 				{
-					RenderItem.WorldBoundsMin = RuntimeData.WorldBoundsMin;
-					RenderItem.WorldBoundsMax = RuntimeData.WorldBoundsMax;
-					RenderItem.WorldBoundsSphere = RuntimeData.WorldBoundsSphere;
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMin);
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMax);
+					MaxPrimitiveId = std::max(MaxPrimitiveId, PendingPrimitive.Id);
 				}
-
-				RenderItems.push_back(std::move(RenderItem));
-				PrimitiveColdData.push_back(std::move(ColdData));
-				PrimitiveRuntimeData.push_back(std::move(RuntimeData));
 				continue;
 			}
 
@@ -434,12 +398,16 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 		return false;
 	}
 
+	NextPrimitiveId = MaxPrimitiveId + 1;
+	RebuildSceneBoundsFromRenderItems();
+
 	//Create World BVH here
 
 	//For Check
 	//For Check
 
 	WorldBVHNodes.clear();
+	FreeNodes.clear();
 	WorldBVHNodes.reserve(RenderItems.size() * 2);
 	AABBNode RootNode;
 	RootNode.Min = SceneBoundsMin;
@@ -452,7 +420,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	BuildVisibilityClusters();
 
 	InitialCamera.Transform = FTransform(MakeSceneRotation(RawCameraRotation), RawCameraLocation, FVector::OneVector);
-	if (!bHasSceneBounds)
+	if (RenderItems.empty())
 	{
 		SceneBoundsMin = FVector::ZeroVector;
 		SceneBoundsMax = FVector::ZeroVector;
@@ -466,20 +434,21 @@ void FScene::Release()
 	RenderItems.clear();
 	PrimitiveRuntimeData.clear();
 	PrimitiveColdData.clear();
+	WorldBVHNodes.clear();
+	FreeNodes.clear();
+	RootIndex = -1;
 	MeshManager.Release();
 	InitialCamera = FSceneCameraInitData();
 	RawCameraLocation = FVector::ZeroVector;
 	RawCameraRotation = FVector::ZeroVector;
 	SceneBoundsMin = FVector::ZeroVector;
 	SceneBoundsMax = FVector::ZeroVector;
-	WorldBVHNodes.clear();
-	FreeNodes.clear();
-	RootIndex = -1;
 	StaticVisibilityClusters.clear();
 	StaticClusterPrimitiveIndices.clear();
 	DynamicPrimitiveMask.clear();
 	VisibilityClusterBuildStatsCache.clear();
 	VisibilityClusterBuildStatsValidMask.clear();
+	NextPrimitiveId = 0;
 }
 
 bool FScene::IsPrimitiveDynamic(uint32 PrimitiveIndex) const
@@ -553,6 +522,196 @@ void FScene::BuildDynamicVisibilityClusters(TArray<FVisibilityCluster>& OutDynam
 		OutDynamicPrimitiveIndices.push_back(PrimitiveIndex);
 		OutDynamicClusters.push_back(Cluster);
 	}
+}
+
+bool FScene::TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta)
+{
+	if (PrimitiveIndex < 0 || Delta.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex >= RenderItems.size() || PrimitiveArrayIndex >= PrimitiveRuntimeData.size())
+	{
+		return false;
+	}
+
+	FRenderItem& Item = RenderItems[PrimitiveArrayIndex];
+	if (!Item.StaticMesh || !Item.StaticMesh->IsValid())
+	{
+		return false;
+	}
+
+	FTransform NewTransform = Item.Transform;
+	NewTransform.AddToTranslation(Delta);
+	MoveLeaf(PrimitiveIndex, NewTransform);
+	UpdateSceneBoundsFromRoot();
+	return true;
+}
+
+bool FScene::SetPrimitiveTransformWorld(int32 PrimitiveIndex, const FTransform& NewTransform)
+{
+	if (PrimitiveIndex < 0)
+	{
+		return false;
+	}
+
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex >= RenderItems.size() || PrimitiveArrayIndex >= PrimitiveRuntimeData.size())
+	{
+		return false;
+	}
+
+	FRenderItem& Item = RenderItems[PrimitiveArrayIndex];
+	if (!Item.StaticMesh || !Item.StaticMesh->IsValid())
+	{
+		return false;
+	}
+
+	if (Item.Transform.Equals(NewTransform, 1.e-4f))
+	{
+		return false;
+	}
+
+	MoveLeaf(PrimitiveIndex, NewTransform);
+	UpdateSceneBoundsFromRoot();
+	return true;
+}
+
+TArray<FString> FScene::GetLoadedMeshAssetKeys() const
+{
+	return MeshManager.GetLoadedMeshAssetKeys();
+}
+
+std::shared_ptr<FStaticMesh> FScene::FindLoadedStaticMesh(const FString& InMeshAssetKey) const
+{
+	return MeshManager.FindLoadedStaticMesh(InMeshAssetKey);
+}
+
+bool FScene::AddLoadedStaticMeshInstance(const FString& InMeshAssetKey, const FTransform& InTransform, int32& OutPrimitiveIndex)
+{
+	OutPrimitiveIndex = -1;
+
+	const std::shared_ptr<FStaticMesh> StaticMesh = MeshManager.FindLoadedStaticMesh(InMeshAssetKey);
+	if (!StaticMesh || !StaticMesh->IsValid())
+	{
+		return false;
+	}
+
+	if (!StaticMesh->GetSpatialData() && BVHBuilder)
+	{
+		StaticMesh->SetSpatialData(std::make_shared<FBVHSpatialData>(BVHBuilder->BuildBVH(StaticMesh.get())));
+	}
+
+	const int32 PrimitiveId = NextPrimitiveId;
+	if (!AppendStaticMeshPrimitive(PrimitiveId, InMeshAssetKey, StaticMesh, InTransform))
+	{
+		return false;
+	}
+
+	++NextPrimitiveId;
+	OutPrimitiveIndex = static_cast<int32>(RenderItems.size()) - 1;
+	FRenderItem& NewItem = RenderItems.back();
+	const FVector Margin = (NewItem.WorldBoundsMax - NewItem.WorldBoundsMin) * 0.1f;
+	NewItem.LooseBoundsMin = NewItem.WorldBoundsMin - Margin;
+	NewItem.LooseBoundsMax = NewItem.WorldBoundsMax + Margin;
+
+	if (RootIndex < 0 || WorldBVHNodes.empty())
+	{
+		WorldBVHNodes.clear();
+		FreeNodes.clear();
+
+		AABBNode RootNode;
+		RootNode.Min = NewItem.WorldBoundsMin;
+		RootNode.Max = NewItem.WorldBoundsMax;
+		RootNode.ParentIndex = -1;
+		RootNode.LeftChildIndex = -1;
+		RootNode.RightChildIndex = -1;
+		RootNode.PrimitiveIndex = OutPrimitiveIndex;
+
+		WorldBVHNodes.push_back(RootNode);
+		RootIndex = 0;
+		NewItem.BVHLeafIndex = 0;
+	}
+	else
+	{
+		NewItem.BVHLeafIndex = InsertLeaf(NewItem.WorldBoundsMin, NewItem.WorldBoundsMax, OutPrimitiveIndex);
+	}
+
+	UpdateSceneBoundsFromRoot();
+	DynamicPrimitiveMask.assign(RenderItems.size(), 0);
+	BuildVisibilityClusters();
+
+	return OutPrimitiveIndex >= 0;
+}
+
+bool FScene::RemovePrimitiveFromScene(int32 PrimitiveIndex)
+{
+	if (PrimitiveIndex < 0)
+	{
+		return false;
+	}
+
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex >= RenderItems.size()
+		|| PrimitiveArrayIndex >= PrimitiveRuntimeData.size()
+		|| PrimitiveArrayIndex >= PrimitiveColdData.size())
+	{
+		return false;
+	}
+
+	const int32 RemovedLeafIndex = RenderItems[PrimitiveArrayIndex].BVHLeafIndex;
+	if (RemovedLeafIndex >= 0 && RemovedLeafIndex < static_cast<int32>(WorldBVHNodes.size()))
+	{
+		RemoveLeaf(RemovedLeafIndex);
+	}
+
+	const size_t LastIndex = RenderItems.size() - 1;
+
+	if (PrimitiveArrayIndex != LastIndex)
+	{
+		std::swap(RenderItems[PrimitiveArrayIndex], RenderItems[LastIndex]);
+		std::swap(PrimitiveRuntimeData[PrimitiveArrayIndex], PrimitiveRuntimeData[LastIndex]);
+		std::swap(PrimitiveColdData[PrimitiveArrayIndex], PrimitiveColdData[LastIndex]);
+		if (PrimitiveArrayIndex < DynamicPrimitiveMask.size() && LastIndex < DynamicPrimitiveMask.size())
+		{
+			std::swap(DynamicPrimitiveMask[PrimitiveArrayIndex], DynamicPrimitiveMask[LastIndex]);
+		}
+
+		FRenderItem& MovedItem = RenderItems[PrimitiveArrayIndex];
+		if (MovedItem.BVHLeafIndex >= 0 && MovedItem.BVHLeafIndex < static_cast<int32>(WorldBVHNodes.size()))
+		{
+			WorldBVHNodes[MovedItem.BVHLeafIndex].PrimitiveIndex = static_cast<int32>(PrimitiveArrayIndex);
+		}
+	}
+
+	RenderItems.pop_back();
+	PrimitiveRuntimeData.pop_back();
+	PrimitiveColdData.pop_back();
+	if (!DynamicPrimitiveMask.empty())
+	{
+		DynamicPrimitiveMask.pop_back();
+	}
+
+	if (RenderItems.empty())
+	{
+		WorldBVHNodes.clear();
+		FreeNodes.clear();
+		RootIndex = -1;
+		SceneBoundsMin = FVector::ZeroVector;
+		SceneBoundsMax = FVector::ZeroVector;
+		StaticVisibilityClusters.clear();
+		StaticClusterPrimitiveIndices.clear();
+		VisibilityClusterBuildStatsCache.clear();
+		VisibilityClusterBuildStatsValidMask.clear();
+		return true;
+	}
+
+	UpdateSceneBoundsFromRoot();
+	DynamicPrimitiveMask.assign(RenderItems.size(), 0);
+	BuildVisibilityClusters();
+	return true;
 }
 
 //start,end는 RenderItems의 인덱스 범위, ParentIdx는 WorldBVHNodes의 인덱스, bIsRight는 ParentIdx가 부모 노드의 오른쪽 자식인지 여부
@@ -941,23 +1100,23 @@ int FScene::FindBestSibling(const FVector& NewMin, const FVector& NewMax)
 		float DirectCost = SurfaceArea(MergedMin, MergedMax);
 		float TotalCost = DirectCost + InheritedCost;
 
-		if (TotalCost < BestCost)
+
+		float LowerBound = InheritedCost + SurfaceArea(NewMin, NewMax);
+		if (LowerBound > BestCost) continue;
+
+		if (BestCost > TotalCost)
 		{
 			BestCost = TotalCost;
 			BestNode = NodeIdx;
 		}
 
-		// 자식 탐색 가치가 있는지 판단
-		// 자식에 삽입해도 최소 InheritedCost + SA(NewLeaf)는 들음
-		// 이게 이미 BestCost보다 크면 이 가지는 스킵
-		float LowerBound = InheritedCost + SurfaceArea(NewMin, NewMax);
-		if (LowerBound < BestCost && !WorldBVHNodes[NodeIdx].IsLeaf())
-		{
-			// SA 증가량을 다음 노드의 InheritedCost에 누적
-			float ChildInherited = InheritedCost + (DirectCost - SurfaceArea(WorldBVHNodes[NodeIdx].Min, WorldBVHNodes[NodeIdx].Max));
-			PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].LeftChildIndex });
-			PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].RightChildIndex });
-		}
+		if (WorldBVHNodes[NodeIdx].IsLeaf()) continue;
+
+		// SA 증가량을 다음 노드의 InheritedCost에 누적
+		float ChildInherited = InheritedCost + (DirectCost - SurfaceArea(WorldBVHNodes[NodeIdx].Min, WorldBVHNodes[NodeIdx].Max));
+		PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].LeftChildIndex });
+		PQ.push({ ChildInherited, WorldBVHNodes[NodeIdx].RightChildIndex });
+
 	}
 
 	return BestNode;
@@ -1045,6 +1204,14 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 		DynamicPrimitiveMask[RenderItemIndex] = 1;
 	}
 
+	if (Item.BVHLeafIndex < 0
+		|| Item.BVHLeafIndex >= static_cast<int32>(WorldBVHNodes.size()))
+	{
+		UpdatePrimitiveRuntimeData(RenderItemIndex);
+		RebuildSceneBoundsFromRenderItems();
+		return;
+	}
+
 	// Loose AABB 안에 있으면 리프 AABB만 갱신 후 Refit
 	bool bInsideLoose =
 		NewMin.X >= Item.LooseBoundsMin.X && NewMin.Y >= Item.LooseBoundsMin.Y && NewMin.Z >= Item.LooseBoundsMin.Z &&
@@ -1055,14 +1222,131 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 		WorldBVHNodes[Item.BVHLeafIndex].Min = NewMin;
 		WorldBVHNodes[Item.BVHLeafIndex].Max = NewMax;
 		RefitUpward(WorldBVHNodes[Item.BVHLeafIndex].ParentIndex);
+	}
+	else
+	{
+		RemoveLeaf(Item.BVHLeafIndex);
+
+		const FVector Margin = (NewMax - NewMin) * 0.1f;
+		Item.LooseBoundsMin = NewMin - Margin;
+		Item.LooseBoundsMax = NewMax + Margin;
+		Item.BVHLeafIndex = InsertLeaf(Item.LooseBoundsMin, Item.LooseBoundsMax, RenderItemIndex);
+	}
+
+	UpdatePrimitiveRuntimeData(RenderItemIndex);
+}
+
+void FScene::UpdatePrimitiveRuntimeData(int32 PrimitiveIndex)
+{
+	if (PrimitiveIndex < 0)
+	{
 		return;
 	}
 
-	// Loose AABB 벗어남 → 삭제 후 재삽입
-	RemoveLeaf(Item.BVHLeafIndex);
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex >= RenderItems.size() || PrimitiveArrayIndex >= PrimitiveRuntimeData.size())
+	{
+		return;
+	}
 
-	const FVector Margin = (NewMax - NewMin) * 0.1f;
-	Item.LooseBoundsMin = NewMin - Margin;
-	Item.LooseBoundsMax = NewMax + Margin;
-	Item.BVHLeafIndex = InsertLeaf(Item.LooseBoundsMin, Item.LooseBoundsMax, RenderItemIndex);
+	const FRenderItem& Item = RenderItems[PrimitiveArrayIndex];
+	FScenePrimitiveRuntimeData& RuntimeData = PrimitiveRuntimeData[PrimitiveArrayIndex];
+	RuntimeData.PrimitiveId = Item.PrimitiveId;
+	RuntimeData.WorldMatrix = Item.Transform.ToMatrixWithScale();
+	RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+	RuntimeData.WorldBoundsMin = Item.WorldBoundsMin;
+	RuntimeData.WorldBoundsMax = Item.WorldBoundsMax;
+	RuntimeData.WorldBoundsSphere = Item.WorldBoundsSphere;
+	RuntimeData.StaticMesh = Item.StaticMesh.get();
+}
+
+void FScene::UpdateSceneBoundsFromRoot()
+{
+	if (RootIndex < 0 || RootIndex >= static_cast<int32>(WorldBVHNodes.size()))
+	{
+		SceneBoundsMin = FVector::ZeroVector;
+		SceneBoundsMax = FVector::ZeroVector;
+		return;
+	}
+
+	SceneBoundsMin = WorldBVHNodes[RootIndex].Min;
+	SceneBoundsMax = WorldBVHNodes[RootIndex].Max;
+}
+
+bool FScene::AppendStaticMeshPrimitive(
+	int32 PrimitiveId,
+	const FString& InMeshAssetKey,
+	const std::shared_ptr<FStaticMesh>& InStaticMesh,
+	const FTransform& InTransform)
+{
+	if (!InStaticMesh || !InStaticMesh->IsValid())
+	{
+		return false;
+	}
+
+	FRenderItem RenderItem;
+	RenderItem.PrimitiveId = PrimitiveId;
+	RenderItem.MeshAssetPath = InMeshAssetKey;
+	RenderItem.Transform = InTransform;
+	RenderItem.StaticMesh = InStaticMesh;
+
+	FScenePrimitiveColdData ColdData;
+	ColdData.MeshAssetPath = InMeshAssetKey;
+	ColdData.StaticMeshOwner = InStaticMesh;
+
+	FScenePrimitiveRuntimeData RuntimeData;
+	RuntimeData.PrimitiveId = PrimitiveId;
+	RuntimeData.WorldMatrix = InTransform.ToMatrixWithScale();
+	RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+	RuntimeData.StaticMesh = InStaticMesh.get();
+	RuntimeData.WorldBoundsSphere = TransformBoundingSphere(InStaticMesh->GetBoundsSphere(), InTransform);
+
+	bool bHasRuntimeBounds = false;
+	ExpandBoundsWithTransformedAabb(
+		InStaticMesh->GetBoundsMin(),
+		InStaticMesh->GetBoundsMax(),
+		InTransform,
+		RuntimeData.WorldBoundsMin,
+		RuntimeData.WorldBoundsMax,
+		bHasRuntimeBounds);
+
+	if (bHasRuntimeBounds)
+	{
+		RenderItem.WorldBoundsMin = RuntimeData.WorldBoundsMin;
+		RenderItem.WorldBoundsMax = RuntimeData.WorldBoundsMax;
+		RenderItem.WorldBoundsSphere = RuntimeData.WorldBoundsSphere;
+	}
+
+	RenderItems.push_back(std::move(RenderItem));
+	PrimitiveColdData.push_back(std::move(ColdData));
+	PrimitiveRuntimeData.push_back(std::move(RuntimeData));
+	return true;
+}
+
+void FScene::RebuildSceneBoundsFromRenderItems()
+{
+	bool bHasSceneBounds = false;
+	FVector BoundsMin = FVector::ZeroVector;
+	FVector BoundsMax = FVector::ZeroVector;
+
+	for (const FRenderItem& RenderItem : RenderItems)
+	{
+		if (!RenderItem.StaticMesh || !RenderItem.StaticMesh->IsValid())
+		{
+			continue;
+		}
+
+		ExpandBounds(BoundsMin, BoundsMax, bHasSceneBounds, RenderItem.WorldBoundsMin);
+		ExpandBounds(BoundsMin, BoundsMax, bHasSceneBounds, RenderItem.WorldBoundsMax);
+	}
+
+	if (!bHasSceneBounds)
+	{
+		SceneBoundsMin = FVector::ZeroVector;
+		SceneBoundsMax = FVector::ZeroVector;
+		return;
+	}
+
+	SceneBoundsMin = BoundsMin;
+	SceneBoundsMax = BoundsMax;
 }

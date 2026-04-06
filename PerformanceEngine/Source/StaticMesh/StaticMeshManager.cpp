@@ -105,6 +105,33 @@ std::shared_ptr<FStaticMesh> FStaticMeshManager::LoadStaticMesh(
 	return Mesh;
 }
 
+TArray<FString> FStaticMeshManager::GetLoadedMeshAssetKeys() const
+{
+	TArray<FString> LoadedMeshAssetKeys;
+	LoadedMeshAssetKeys.reserve(MeshCache.size());
+
+	for (const auto& [AssetKey, Mesh] : MeshCache)
+	{
+		if (Mesh && Mesh->IsValid())
+		{
+			LoadedMeshAssetKeys.push_back(AssetKey);
+		}
+	}
+
+	return LoadedMeshAssetKeys;
+}
+
+std::shared_ptr<FStaticMesh> FStaticMeshManager::FindLoadedStaticMesh(const FString& InAssetKey) const
+{
+	const auto MeshIt = MeshCache.find(InAssetKey);
+	if (MeshIt == MeshCache.end())
+	{
+		return {};
+	}
+
+	return MeshIt->second;
+}
+
 void FStaticMeshManager::Release()
 {
 	MeshCache.clear();

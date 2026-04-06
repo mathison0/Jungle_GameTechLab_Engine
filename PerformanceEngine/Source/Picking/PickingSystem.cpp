@@ -65,19 +65,21 @@ namespace
 	}
 
 	// AABB와의 교차 진입 거리를 반환. 미교차 시 1e30f 반환.
-	float IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax)
+	// InInvDirection: 레이 방향의 역수(1/Direction), 호출 전 미리 계산해서 전달.
+	float IntersectRayAabb(const FVector& InOrigin, const FVector& InInvDirection, const FVector& InBoundsMin, const FVector& InBoundsMax)
 	{
 		float TMin = 0.0f;
 		float TMax = std::numeric_limits<float>::max();
 
 		for (int32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
 		{
-			const float Origin = InRay.Origin[AxisIndex];
-			const float Direction = InRay.Direction[AxisIndex];
+			const float Origin = InOrigin[AxisIndex];
+			const float InverseDirection = InInvDirection[AxisIndex];
 			const float BoundsMin = InBoundsMin[AxisIndex];
 			const float BoundsMax = InBoundsMax[AxisIndex];
 
-			if (std::fabs(Direction) < 1.e-8f)
+			// InverseDirection이 매우 크면 원래 Direction이 거의 0 (평행 레이)
+			if (std::fabs(InverseDirection) > 1.e8f)
 			{
 				if (Origin < BoundsMin || Origin > BoundsMax)
 				{
@@ -86,7 +88,6 @@ namespace
 				continue;
 			}
 
-			const float InverseDirection = 1.0f / Direction;
 			float T0 = (BoundsMin - Origin) * InverseDirection;
 			float T1 = (BoundsMax - Origin) * InverseDirection;
 			if (T0 > T1)
@@ -117,7 +118,7 @@ namespace
 		const FVector EdgeAC = InC - InA;
 		const FVector PVector = FVector::CrossProduct(InRay.Direction, EdgeAC);
 		const float Determinant = FVector::DotProduct(EdgeAB, PVector);
-		if (std::fabs(Determinant) < 1.e-8f)
+		if (Determinant < 1.e-8f)  // 뒷면(Determinant <= 0) 및 평행 레이 모두 거부
 		{
 			return false;
 		}
@@ -174,8 +175,15 @@ namespace
 		LocalRay.Origin = InPrimitiveRuntimeData.InverseWorldMatrix.TransformPosition(InRay.Origin);
 		LocalRay.Direction = InPrimitiveRuntimeData.InverseWorldMatrix.TransformVector(InRay.Direction).GetSafeNormal();
 
+		// 레이 방향 역수를 미리 계산 — BVH 순회 중 방향은 변하지 않으므로 나눗셈을 1회로 줄임
+		const FVector LocalInvDir(
+			1.0f / LocalRay.Direction.X,
+			1.0f / LocalRay.Direction.Y,
+			1.0f / LocalRay.Direction.Z
+		);
+
 		// 루트 AABB miss면 즉시 탈출
-		if (IntersectRayAabb(LocalRay, Nodes[0].BoundMin, Nodes[0].BoundMax) == 1e30f)
+		if (IntersectRayAabb(LocalRay.Origin, LocalInvDir, Nodes[0].BoundMin, Nodes[0].BoundMax) == 1e30f)
 		{
 			return false;
 		}
@@ -221,8 +229,8 @@ namespace
 			// 두 자식의 AABB 진입 거리 계산
 			const FBVHNode* Child1 = &Nodes[Node->LeftFirst];
 			const FBVHNode* Child2 = &Nodes[Node->LeftFirst + 1];
-			float Dist1 = IntersectRayAabb(LocalRay, Child1->BoundMin, Child1->BoundMax);
-			float Dist2 = IntersectRayAabb(LocalRay, Child2->BoundMin, Child2->BoundMax);
+			float Dist1 = IntersectRayAabb(LocalRay.Origin, LocalInvDir, Child1->BoundMin, Child1->BoundMax);
+			float Dist2 = IntersectRayAabb(LocalRay.Origin, LocalInvDir, Child2->BoundMin, Child2->BoundMax);
 
 			// 가까운 쪽을 먼저 방문, 먼 쪽만 스택에 저장
 			if (Dist1 > Dist2) { std::swap(Dist1, Dist2); std::swap(Child1, Child2); }
@@ -246,48 +254,82 @@ namespace
 
 	void IntersectWorldBVH(const FRay& InRay, const FScene& Scene, FPickHit& InOutPickHit, FPickState& State)
 	{
+		// 현재 베스트 히트까지의 T값(월드 거리)으로 가지치기
+		float BestDistSq = InOutPickHit.DistanceSquared;
+
+		// 레이 방향 역수를 미리 계산 — 순회 중 방향은 변하지 않으므로 나눗셈을 1회로 줄임
+		const FVector WorldInvDir(
+			1.0f / InRay.Direction.X,
+			1.0f / InRay.Direction.Y,
+			1.0f / InRay.Direction.Z
+		);
+
+		const int32 RootIndex = Scene.GetWorldBVHRootIndex();
+		if (RootIndex < 0 || RootIndex >= static_cast<int32>(Scene.GetWorldBVHNodes().size()))
+		{
+			return;
+		}
+
 		TStack<int> NodeStack;
-		NodeStack.push(0);
+		NodeStack.push(RootIndex);
 		while (!NodeStack.empty())
 		{
 			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
 			++State.TotalAABBCheckCount;
 			const AABBNode& Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
-			if (IntersectRayAabb(InRay, Node.Min, Node.Max) >= 1e30f)
+			const float tNode = IntersectRayAabb(InRay.Origin, WorldInvDir, Node.Min, Node.Max);
+			
+			if (tNode == 1e30f || tNode * tNode >= BestDistSq)
 			{
 				continue;
 			}
+
+			// TODO : Debug용 로직 주석처리 해야함.
+			State.TraversedWorldBVHNodes.push_back(Node);
 			if (Node.IsLeaf())
 			{
-				if (Node.PrimitiveIndex >= 0 && Node.PrimitiveIndex < static_cast<int>(Scene.GetPrimitiveRuntimeData().size()))
+				const size_t PrimIdx = static_cast<size_t>(Node.PrimitiveIndex);
+				if (PrimIdx < Scene.GetPrimitiveRuntimeData().size())
 				{
-					IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[Node.PrimitiveIndex], InOutPickHit);
+					if (IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[PrimIdx], InOutPickHit))
+					{
+						InOutPickHit.PrimitiveIndex = static_cast<int32>(PrimIdx);
+						BestDistSq = InOutPickHit.DistanceSquared; // 더 가까운 히트 갱신
+					}
 				}
 			}
 			else
 			{
-				float distToLeft = std::numeric_limits<float>::max();
-				float distToRight = std::numeric_limits<float>::max();
+				float distToLeft = 1e30f;
+				float distToRight = 1e30f;
 				if (Node.LeftChildIndex != -1)
 				{
-					const AABBNode& Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
-					distToLeft = FVector::DistSquared(InRay.Origin, (Left.Min + Left.Max) * 0.5f);
+					AABBNode Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
+					float t = IntersectRayAabb(InRay.Origin, WorldInvDir, Left.Min, Left.Max);
+					if (t * t < BestDistSq) distToLeft = t;
 				}
 				if (Node.RightChildIndex != -1)
 				{
-					const AABBNode& Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
-					distToRight = FVector::DistSquared(InRay.Origin, (Right.Min + Right.Max) * 0.5f);
+					AABBNode Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
+					float t = IntersectRayAabb(InRay.Origin, WorldInvDir, Right.Min, Right.Max);
+					if (t * t < BestDistSq) distToRight = t;
 				}
-				if (distToLeft > distToRight)
+				// 가까운 쪽을 나중에 꺼내도록 먼 쪽을 먼저 push
+				if (distToLeft < 1e30f && distToRight < 1e30f)
 				{
-					if (Node.LeftChildIndex != -1)  NodeStack.push(Node.LeftChildIndex);
-					if (Node.RightChildIndex != -1) NodeStack.push(Node.RightChildIndex);
+					if (distToLeft < distToRight)
+					{
+						NodeStack.push(Node.RightChildIndex);
+						NodeStack.push(Node.LeftChildIndex);
+					}
+					else
+					{
+						NodeStack.push(Node.LeftChildIndex);
+						NodeStack.push(Node.RightChildIndex);
+					}
 				}
-				else
-				{
-					if (Node.RightChildIndex != -1) NodeStack.push(Node.RightChildIndex);
-					if (Node.LeftChildIndex != -1)  NodeStack.push(Node.LeftChildIndex);
-				}
+				else if (distToLeft < 1e30f)  { NodeStack.push(Node.LeftChildIndex); }
+				else if (distToRight < 1e30f) { NodeStack.push(Node.RightChildIndex); }
 			}
 		}
 	}
@@ -350,6 +392,7 @@ void FPickingSystem::UpdatePick(
 	InOutPickState.SelectedPrimitiveIndex = BestHit.PrimitiveIndex;
 	InOutPickState.HitWorldPosition = BestHit.WorldPosition;
 	InOutPickState.TotalAABBCheckCount = 0;
+	InOutPickState.TraversedWorldBVHNodes.clear();
 }
 
 
@@ -381,10 +424,18 @@ void FPickingSystem::UpdatePickWorldBVH(
 	//const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();
+	InOutPickState.TotalAABBCheckCount = 0;
+	InOutPickState.TraversedWorldBVHNodes.clear();
 
 	IntersectWorldBVH(PickRay, InScene, BestHit, InOutPickState);
 
-
 	const uint64 PickEndCycles = QueryCycles64();
 	InOutPickState.LastPickTimeMsWorldBVH = CyclesToMilliseconds(PickStartCycles, PickEndCycles);
+	InOutPickState.TotalPickTimeMs += InOutPickState.LastPickTimeMsWorldBVH;
+	++InOutPickState.TotalPickCount;
+	InOutPickState.bHit = BestHit.PrimitiveId >= 0;
+	InOutPickState.SelectedPrimitiveId = BestHit.PrimitiveId;
+	InOutPickState.SelectedPrimitiveIndex = BestHit.PrimitiveIndex;
+	InOutPickState.HitWorldPosition = BestHit.WorldPosition;
+
 }

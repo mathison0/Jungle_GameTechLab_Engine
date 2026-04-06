@@ -379,7 +379,7 @@ void FHudRenderer::Render(
 		<< "READBACK COPY: " << InVisibilityResults.Stats.OcclusionTimings.ReadbackCopyCpuTimeMs << " MS\n"
 		<< "PICK LAST: " << InStatsSystem.GetLastPickTimeMs() << " MS\n"
 		<< "PICK WORLD BVH: " << InStatsSystem.GetPickWorldBVHTimeMs() << " MS\n"
-		<< "PICK AABBCnt: " << InStatsSystem.GetTotalAABBCheckCount() << " \n"
+		<< "PICK AABB CNT: " << InStatsSystem.GetTotalAABBCheckCount() << '\n'
 		<< "PICK COUNT: " << InStatsSystem.GetTotalPickCount() << '\n'
 		<< "PICK TOTAL: " << InStatsSystem.GetTotalPickTimeMs() << " MS\n"
 		<< "GPU: " << SanitizeBitmapText(InRHI.GetAdapterName().empty() ? std::string("UNKNOWN") : InRHI.GetAdapterName());
@@ -393,6 +393,11 @@ void FHudRenderer::Render(
 		<< '\n'
 		<< "PRIMS: " << InScene.GetPrimitiveCount() << '\n'
 		<< "SELECTED: " << InPickState.SelectedPrimitiveId;
+
+	if (InPickState.SelectedPrimitiveId >= 0)
+	{
+		TextStream << '\n' << "MOVE: ARROWS / PGUP / PGDN";
+	}
 
 	DirectX::SpriteBatch& SpriteBatch = *Resources->SpriteBatch;
 	ID3D11ShaderResourceView* WhiteTexture = Resources->WhiteTextureView.Get();

@@ -282,6 +282,57 @@ void FBVHDebugRenderer::Shutdown()
 	Resources.reset();
 }
 
+bool FBVHDebugRenderer::BeginRenderPass(
+	const FD3D11RHI& InRHI,
+	const FCamera& InCamera,
+	ID3D11DeviceContext*& OutDeviceContext)
+{
+	if (!Resources)
+	{
+		OutDeviceContext = nullptr;
+		return false;
+	}
+
+	OutDeviceContext = InRHI.GetDeviceContext();
+	if (!OutDeviceContext)
+	{
+		return false;
+	}
+
+	FDebugFrameConstants FrameConst = {};
+	FrameConst.ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
+	if (!UpdateDynamic(OutDeviceContext, Resources->FrameCB.Get(), FrameConst))
+	{
+		return false;
+	}
+
+	const UINT Stride = sizeof(FLineVertex);
+	const UINT Offset = 0;
+	OutDeviceContext->IASetInputLayout(Resources->InputLayout.Get());
+	OutDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	OutDeviceContext->IASetVertexBuffers(0, 1, Resources->VertexBuffer.GetAddressOf(), &Stride, &Offset);
+	OutDeviceContext->VSSetShader(Resources->VertexShader.Get(), nullptr, 0);
+	OutDeviceContext->PSSetShader(Resources->PixelShader.Get(), nullptr, 0);
+	OutDeviceContext->RSSetState(Resources->RasterizerState.Get());
+	OutDeviceContext->OMSetDepthStencilState(Resources->DepthStencilState.Get(), 0);
+
+	ID3D11Buffer* CBs[] = { Resources->FrameCB.Get(), Resources->ColorCB.Get() };
+	OutDeviceContext->VSSetConstantBuffers(0, 2, CBs);
+	OutDeviceContext->PSSetConstantBuffers(0, 2, CBs);
+	return true;
+}
+
+void FBVHDebugRenderer::EndRenderPass(ID3D11DeviceContext* InDeviceContext)
+{
+	if (!InDeviceContext)
+	{
+		return;
+	}
+
+	InDeviceContext->RSSetState(nullptr);
+	InDeviceContext->OMSetDepthStencilState(nullptr, 0);
+}
+
 // -----------------------------------------------------------------------
 // Render  — Scene의 모든 RenderItem BVH를 순회하며 렌더링
 // -----------------------------------------------------------------------
@@ -290,30 +341,15 @@ void FBVHDebugRenderer::Render(
 	const FCamera& InCamera,
 	const FScene& InScene)
 {
-	if (!Resources) return;
-
-	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
-	if (!DeviceContext) return;
+	ID3D11DeviceContext* DeviceContext = nullptr;
+	if (!BeginRenderPass(InRHI, InCamera, DeviceContext))
+	{
+		return;
+	}
 
 	// ViewProjection 업로드
-	FDebugFrameConstants FrameConst;
-	FrameConst.ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
-	UpdateDynamic(DeviceContext, Resources->FrameCB.Get(), FrameConst);
 
 	// 파이프라인 바인딩
-	const UINT Stride = sizeof(FLineVertex);
-	const UINT Offset = 0;
-	DeviceContext->IASetInputLayout(Resources->InputLayout.Get());
-	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-	DeviceContext->IASetVertexBuffers(0, 1, Resources->VertexBuffer.GetAddressOf(), &Stride, &Offset);
-	DeviceContext->VSSetShader(Resources->VertexShader.Get(), nullptr, 0);
-	DeviceContext->PSSetShader(Resources->PixelShader.Get(),  nullptr, 0);
-	DeviceContext->RSSetState(Resources->RasterizerState.Get());
-	DeviceContext->OMSetDepthStencilState(Resources->DepthStencilState.Get(), 0);
-
-	ID3D11Buffer* CBs[] = { Resources->FrameCB.Get(), Resources->ColorCB.Get() };
-	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
-	DeviceContext->PSSetConstantBuffers(0, 2, CBs);
 
 	// Scene의 모든 RenderItem을 순회하며 BVH 렌더링
 	for (const FRenderItem& RenderItem : InScene.GetRenderItems())
@@ -328,8 +364,27 @@ void FBVHDebugRenderer::Render(
 	}
 
 	// 파이프라인 상태 리셋
-	DeviceContext->RSSetState(nullptr);
-	DeviceContext->OMSetDepthStencilState(nullptr, 0);
+	EndRenderPass(DeviceContext);
+}
+
+void FBVHDebugRenderer::RenderWorldNodeBoxes(
+	const FD3D11RHI& InRHI,
+	const FCamera& InCamera,
+	const TArray<AABBNode>& InNodes)
+{
+	if (InNodes.empty())
+	{
+		return;
+	}
+
+	ID3D11DeviceContext* DeviceContext = nullptr;
+	if (!BeginRenderPass(InRHI, InCamera, DeviceContext))
+	{
+		return;
+	}
+
+	RenderWorldNodeBoxes(DeviceContext, InNodes);
+	EndRenderPass(DeviceContext);
 }
 
 // -----------------------------------------------------------------------
@@ -412,4 +467,40 @@ void FBVHDebugRenderer::RenderNodes(
 
 		InDeviceContext->Draw(static_cast<UINT>(VertexCount), 0);
 	}
+}
+
+void FBVHDebugRenderer::RenderWorldNodeBoxes(
+	ID3D11DeviceContext* InDeviceContext,
+	const TArray<AABBNode>& InNodes)
+{
+	static FLineVertex VertexScratch[MaxVertexCount];
+
+	int32 VertexCount = 0;
+	for (const AABBNode& Node : InNodes)
+	{
+		AppendBoxLines(Node.Min, Node.Max, VertexScratch, VertexCount);
+	}
+
+	if (VertexCount == 0)
+	{
+		return;
+	}
+
+	if (!UpdateDynamicRaw(
+		InDeviceContext,
+		Resources->VertexBuffer.Get(),
+		VertexScratch,
+		static_cast<UINT>(VertexCount * sizeof(FLineVertex))))
+	{
+		return;
+	}
+
+	FDebugColorConstants ColorConst = {};
+	ColorConst.Color[0] = 0.15f;
+	ColorConst.Color[1] = 1.0f;
+	ColorConst.Color[2] = 0.2f;
+	ColorConst.Color[3] = 1.0f;
+	UpdateDynamic(InDeviceContext, Resources->ColorCB.Get(), ColorConst);
+
+	InDeviceContext->Draw(static_cast<UINT>(VertexCount), 0);
 }

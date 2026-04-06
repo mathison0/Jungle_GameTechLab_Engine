@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "Graphics/D3D11/D3D11Common.h"
+#include "Types/Array.h"
 #include "Types/Map.h"
 #include "Types/String.h"
 
@@ -13,6 +14,8 @@ class FStaticMeshManager
 {
 public:
 	std::shared_ptr<FStaticMesh> LoadStaticMesh(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InAssetPath);
+	TArray<FString> GetLoadedMeshAssetKeys() const;
+	std::shared_ptr<FStaticMesh> FindLoadedStaticMesh(const FString& InAssetKey) const;
 	void Release();
 
 	static FString BuildAssetKey(const std::filesystem::path& InAssetPath);

@@ -76,6 +76,8 @@ public:
 
 	void Reset();
 	void InvalidateHistory();
+	void Invalidate();
+	void Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults);
 	void PrepareFrame(const FScene& InScene, const FCamera& InCamera, FVisibilityFrameInput& OutFrameInput, FVisibilityResults& OutResults);
 	void FinalizeFrame(
 		const FScene& InScene,
