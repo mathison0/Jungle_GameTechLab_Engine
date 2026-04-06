@@ -416,8 +416,8 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	RootIndex = 0;
 	// Sort RenderItems
 	CreateWorldBVH(0, (int)RenderItems.size(), 0);
-	DynamicPrimitiveMask.assign(RenderItems.size(), 0);
-	BuildVisibilityClusters();
+	AdvanceWorldBvhRevision();
+	InvalidateVisibilityClusters();
 
 	InitialCamera.Transform = FTransform(MakeSceneRotation(RawCameraRotation), RawCameraLocation, FVector::OneVector);
 	if (RenderItems.empty())
@@ -448,7 +448,22 @@ void FScene::Release()
 	DynamicPrimitiveMask.clear();
 	VisibilityClusterBuildStatsCache.clear();
 	VisibilityClusterBuildStatsValidMask.clear();
+	WorldBVHRevision = 0;
+	VisibilityClusterRevision = 0;
+	bVisibilityClustersDirty = true;
 	NextPrimitiveId = 0;
+}
+
+const TArray<FVisibilityCluster>& FScene::GetStaticVisibilityClusters() const
+{
+	EnsureVisibilityClustersBuilt();
+	return StaticVisibilityClusters;
+}
+
+const TArray<uint32>& FScene::GetStaticClusterPrimitiveIndices() const
+{
+	EnsureVisibilityClustersBuilt();
+	return StaticClusterPrimitiveIndices;
 }
 
 bool FScene::IsPrimitiveDynamic(uint32 PrimitiveIndex) const
@@ -462,8 +477,10 @@ bool FScene::TryRefineVisibilityCluster(
 	TArray<uint32>& InOutFramePrimitiveIndices) const
 {
 	OutChildClusters.clear();
+	EnsureVisibilityClustersBuilt();
 
-	if (InCluster.bDynamic
+	if (!HasCurrentVisibilityClusterSnapshot()
+		|| InCluster.bDynamic
 		|| InCluster.SourceBvhNodeIndex < 0
 		|| InCluster.SourceBvhNodeIndex >= static_cast<int>(WorldBVHNodes.size()))
 	{
@@ -638,8 +655,8 @@ bool FScene::AddLoadedStaticMeshInstance(const FString& InMeshAssetKey, const FT
 	}
 
 	UpdateSceneBoundsFromRoot();
-	DynamicPrimitiveMask.assign(RenderItems.size(), 0);
-	BuildVisibilityClusters();
+	AdvanceWorldBvhRevision();
+	InvalidateVisibilityClusters();
 
 	return OutPrimitiveIndex >= 0;
 }
@@ -699,15 +716,13 @@ bool FScene::RemovePrimitiveFromScene(int32 PrimitiveIndex)
 		RootIndex = -1;
 		SceneBoundsMin = FVector::ZeroVector;
 		SceneBoundsMax = FVector::ZeroVector;
-		StaticVisibilityClusters.clear();
-		StaticClusterPrimitiveIndices.clear();
-		VisibilityClusterBuildStatsCache.clear();
-		VisibilityClusterBuildStatsValidMask.clear();
+		AdvanceWorldBvhRevision();
+		InvalidateVisibilityClusters();
 		return true;
 	}
 
-	DynamicPrimitiveMask.assign(RenderItems.size(), 0);
-	BuildVisibilityClusters();
+	AdvanceWorldBvhRevision();
+	InvalidateVisibilityClusters();
 	return true;
 }
 
@@ -783,12 +798,15 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 	return ParentIdx;
 }
 
-void FScene::BuildVisibilityClusters()
+void FScene::BuildVisibilityClusters() const
 {
 	StaticVisibilityClusters.clear();
 	StaticClusterPrimitiveIndices.clear();
 	VisibilityClusterBuildStatsCache.clear();
 	VisibilityClusterBuildStatsValidMask.clear();
+	DynamicPrimitiveMask.assign(RenderItems.size(), 0u);
+	VisibilityClusterRevision = WorldBVHRevision;
+	bVisibilityClustersDirty = false;
 
 	if (RootIndex < 0 || WorldBVHNodes.empty())
 	{
@@ -802,7 +820,7 @@ void FScene::BuildVisibilityClusters()
 	LogVisibilityClusterBuildSummary();
 }
 
-void FScene::EmitVisibilityClustersFromNode(int NodeIndex)
+void FScene::EmitVisibilityClustersFromNode(int NodeIndex) const
 {
 	if (NodeIndex < 0 || NodeIndex >= static_cast<int>(WorldBVHNodes.size()))
 	{
@@ -836,7 +854,7 @@ void FScene::EmitVisibilityClustersFromNode(int NodeIndex)
 	EmitVisibilityClustersFromNode(Node.RightChildIndex);
 }
 
-void FScene::ComputeVisibilityClusterBuildStats(int NodeIndex, FVisibilityClusterBuildStats& OutStats)
+void FScene::ComputeVisibilityClusterBuildStats(int NodeIndex, FVisibilityClusterBuildStats& OutStats) const
 {
 	OutStats = {};
 
@@ -1196,16 +1214,14 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 		RuntimeData.WorldBoundsMax = NewMax;
 	}
 
-	if (RenderItemIndex >= 0 && RenderItemIndex < static_cast<int>(DynamicPrimitiveMask.size()))
-	{
-		DynamicPrimitiveMask[RenderItemIndex] = 1;
-	}
+	MarkPrimitiveDynamic(RenderItemIndex);
 
 	if (Item.BVHLeafIndex < 0
 		|| Item.BVHLeafIndex >= static_cast<int32>(WorldBVHNodes.size()))
 	{
 		UpdatePrimitiveRuntimeData(RenderItemIndex);
 		RebuildSceneBoundsFromRenderItems();
+		AdvanceWorldBvhRevision();
 		return;
 	}
 
@@ -1231,6 +1247,56 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 	}
 
 	UpdatePrimitiveRuntimeData(RenderItemIndex);
+	AdvanceWorldBvhRevision();
+}
+
+void FScene::EnsureVisibilityClustersBuilt() const
+{
+	if (!bVisibilityClustersDirty)
+	{
+		return;
+	}
+
+	BuildVisibilityClusters();
+}
+
+void FScene::InvalidateVisibilityClusters()
+{
+	StaticVisibilityClusters.clear();
+	StaticClusterPrimitiveIndices.clear();
+	VisibilityClusterBuildStatsCache.clear();
+	VisibilityClusterBuildStatsValidMask.clear();
+	VisibilityClusterRevision = 0;
+	bVisibilityClustersDirty = true;
+}
+
+bool FScene::HasCurrentVisibilityClusterSnapshot() const
+{
+	return !bVisibilityClustersDirty && VisibilityClusterRevision == WorldBVHRevision;
+}
+
+void FScene::MarkPrimitiveDynamic(int32 PrimitiveIndex)
+{
+	if (PrimitiveIndex < 0)
+	{
+		return;
+	}
+
+	if (DynamicPrimitiveMask.size() != RenderItems.size())
+	{
+		DynamicPrimitiveMask.assign(RenderItems.size(), 0u);
+	}
+
+	const size_t PrimitiveArrayIndex = static_cast<size_t>(PrimitiveIndex);
+	if (PrimitiveArrayIndex < DynamicPrimitiveMask.size())
+	{
+		DynamicPrimitiveMask[PrimitiveArrayIndex] = 1u;
+	}
+}
+
+void FScene::AdvanceWorldBvhRevision()
+{
+	++WorldBVHRevision;
 }
 
 void FScene::UpdatePrimitiveRuntimeData(int32 PrimitiveIndex)

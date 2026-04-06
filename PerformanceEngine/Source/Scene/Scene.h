@@ -34,8 +34,8 @@ public:
 	const FVector& GetSceneBoundsMin() const { return SceneBoundsMin; }
 	const FVector& GetSceneBoundsMax() const { return SceneBoundsMax; }
 	const TArray<AABBNode>& GetWorldBVHNodes() const { return WorldBVHNodes; }
-	const TArray<FVisibilityCluster>& GetStaticVisibilityClusters() const { return StaticVisibilityClusters; }
-	const TArray<uint32>& GetStaticClusterPrimitiveIndices() const { return StaticClusterPrimitiveIndices; }
+	const TArray<FVisibilityCluster>& GetStaticVisibilityClusters() const;
+	const TArray<uint32>& GetStaticClusterPrimitiveIndices() const;
 	bool IsPrimitiveDynamic(uint32 PrimitiveIndex) const;
 	void BuildDynamicVisibilityClusters(TArray<FVisibilityCluster>& OutDynamicClusters, TArray<uint32>& OutDynamicPrimitiveIndices) const;
 	bool TryRefineVisibilityCluster(
@@ -69,9 +69,9 @@ private:
 	void RemoveLeaf(int LeafIdx);
 	float SurfaceArea(const FVector& Min, const FVector& Max);
 	void MoveLeaf(int RenderItemIndex, const FTransform& NewTransform);
-	void BuildVisibilityClusters();
-	void EmitVisibilityClustersFromNode(int NodeIndex);
-	void ComputeVisibilityClusterBuildStats(int NodeIndex, FVisibilityClusterBuildStats& OutStats);
+	void BuildVisibilityClusters() const;
+	void EmitVisibilityClustersFromNode(int NodeIndex) const;
+	void ComputeVisibilityClusterBuildStats(int NodeIndex, FVisibilityClusterBuildStats& OutStats) const;
 	bool ShouldEmitVisibilityCluster(int NodeIndex, const FVisibilityClusterBuildStats& InStats) const;
 	bool TryBuildVisibilityClusterFromNode(int NodeIndex, TArray<uint32>& InOutFramePrimitiveIndices, FVisibilityCluster& OutCluster) const;
 	void CollectNodePrimitiveIndices(int NodeIndex, TArray<uint32>& OutPrimitiveIndices) const;
@@ -80,6 +80,11 @@ private:
 	void UpdateSceneBoundsFromRoot();
 	bool AppendStaticMeshPrimitive(int32 PrimitiveId, const FString& InMeshAssetKey, const std::shared_ptr<FStaticMesh>& InStaticMesh, const FTransform& InTransform);
 	void RebuildSceneBoundsFromRenderItems();
+	void EnsureVisibilityClustersBuilt() const;
+	void InvalidateVisibilityClusters();
+	bool HasCurrentVisibilityClusterSnapshot() const;
+	void MarkPrimitiveDynamic(int32 PrimitiveIndex);
+	void AdvanceWorldBvhRevision();
 
 
 private:
@@ -106,11 +111,15 @@ private:
 	TArray<int> FreeNodes;
 	int RootIndex = -1;
 	int32 NextPrimitiveId = 0;
+	uint64 WorldBVHRevision = 0;
 	//BVH Related Variables
 
-	TArray<FVisibilityCluster> StaticVisibilityClusters;
-	TArray<uint32> StaticClusterPrimitiveIndices;
-	TArray<uint8> DynamicPrimitiveMask;
-	TArray<FVisibilityClusterBuildStats> VisibilityClusterBuildStatsCache;
-	TArray<uint8> VisibilityClusterBuildStatsValidMask;
+	// Static visibility clusters are a derived snapshot layered on top of the live world BVH.
+	mutable TArray<FVisibilityCluster> StaticVisibilityClusters;
+	mutable TArray<uint32> StaticClusterPrimitiveIndices;
+	mutable TArray<uint8> DynamicPrimitiveMask;
+	mutable TArray<FVisibilityClusterBuildStats> VisibilityClusterBuildStatsCache;
+	mutable TArray<uint8> VisibilityClusterBuildStatsValidMask;
+	mutable uint64 VisibilityClusterRevision = 0;
+	mutable bool bVisibilityClustersDirty = true;
 };
