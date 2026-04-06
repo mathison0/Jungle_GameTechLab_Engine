@@ -215,10 +215,16 @@ void FStatsSystem::Reset()
 	LastFrameCounter = 0;
 	FrameTimeMs = 0.0;
 	FramesPerSecond = 0.0;
+	AverageFrameTimeMs = 0.0;
+	AverageFramesPerSecond = 0.0;
 	LastPickTimeMs = 0.0;
 	TotalPickTimeMs = 0.0;
 	TotalPickCount = 0;
 	FrameNumber = 0;
+	FrameTimeHistoryMs.fill(0.0);
+	FrameTimeHistoryIndex = 0;
+	FrameTimeHistoryCount = 0;
+	FrameTimeHistorySumMs = 0.0;
 
 #ifdef BENCHMARK
 	FrameBenchmarkSamples.clear();
@@ -242,6 +248,25 @@ void FStatsSystem::BeginFrame()
 	LastFrameCounter = CurrentFrameCounter;
 	FrameTimeMs = DeltaSeconds * 1000.0;
 	FramesPerSecond = DeltaSeconds > 1.e-9 ? (1.0 / DeltaSeconds) : 0.0;
+
+	if (FrameTimeHistoryCount < FrameTimeHistoryMs.size())
+	{
+		++FrameTimeHistoryCount;
+	}
+	else
+	{
+		FrameTimeHistorySumMs -= FrameTimeHistoryMs[FrameTimeHistoryIndex];
+	}
+
+	FrameTimeHistoryMs[FrameTimeHistoryIndex] = FrameTimeMs;
+	FrameTimeHistorySumMs += FrameTimeMs;
+	FrameTimeHistoryIndex = (FrameTimeHistoryIndex + 1u) % FrameTimeHistoryMs.size();
+
+	if (FrameTimeHistoryCount > 0)
+	{
+		AverageFrameTimeMs = FrameTimeHistorySumMs / static_cast<double>(FrameTimeHistoryCount);
+		AverageFramesPerSecond = AverageFrameTimeMs > 1.e-9 ? (1000.0 / AverageFrameTimeMs) : 0.0;
+	}
 }
 
 void FStatsSystem::EndFrame()

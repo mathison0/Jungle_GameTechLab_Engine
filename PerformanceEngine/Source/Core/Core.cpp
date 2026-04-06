@@ -241,6 +241,9 @@ void FCore::Tick()
 			GpuOcclusionTimings,
 			true,
 			VisibilityResults);
+		VisibilityResults.Stats.VisibilityResultAgeFrames = VisibilityFrameInput.FrameNumber > ResolvedVisibilityFrameInput.FrameNumber
+			? static_cast<uint32>(VisibilityFrameInput.FrameNumber - ResolvedVisibilityFrameInput.FrameNumber)
+			: 0u;
 	}
 	else if (!bHasPendingReadback || VisibilityResults.FrameNumber == 0)
 	{
@@ -251,6 +254,14 @@ void FCore::Tick()
 			GpuOcclusionTimings,
 			false,
 			VisibilityResults);
+	}
+	else
+	{
+		VisibilityResults.Stats.VisibilityResultAgeFrames = VisibilityFrameInput.FrameNumber > VisibilityResults.FrameNumber
+			? static_cast<uint32>(VisibilityFrameInput.FrameNumber - VisibilityResults.FrameNumber)
+			: 0u;
+		VisibilityResults.Stats.OcclusionTimings.HzbBuildGpuTimeMs = GpuOcclusionTimings.HzbBuildGpuTimeMs;
+		VisibilityResults.Stats.bHzbValid = VisibilityFrameInput.bOcclusionValid;
 	}
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))

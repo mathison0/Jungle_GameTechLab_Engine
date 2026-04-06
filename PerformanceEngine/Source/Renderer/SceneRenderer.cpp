@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <cstring>
@@ -25,13 +26,36 @@ namespace
 	constexpr UINT HzbThreadGroupSizeX = 8;
 	constexpr UINT HzbThreadGroupSizeY = 8;
 	constexpr UINT OcclusionCullThreadGroupSizeX = 64;
+	constexpr size_t OcclusionReadbackSlotCount = 3;
 	constexpr float GpuDepthEpsilon = 1.e-3f;
+	constexpr float SceneDepthClearValue = 1.0f;
 
 	enum class ERenderPassType
 	{
 		DepthOnly,
 		BasePass,
 	};
+
+#ifndef NDEBUG
+	void ValidateHzbStandardZContract()
+	{
+		constexpr float ValidationNearClip = 0.1f;
+		constexpr float ValidationFarClip = 1000.0f;
+		constexpr float ValidationFovRadians = 90.0f * (3.14159265358979323846f / 180.0f);
+		const FMatrix Projection = FMatrix::MakePerspectiveFovLH(
+			ValidationFovRadians,
+			1.0f,
+			ValidationNearClip,
+			ValidationFarClip);
+		const float NearDepth = Projection.TransformPosition(FVector(0.0f, 0.0f, ValidationNearClip)).Z;
+		const float FarDepth = Projection.TransformPosition(FVector(0.0f, 0.0f, ValidationFarClip)).Z;
+
+		assert(std::fabs(SceneDepthClearValue - 1.0f) <= 1.0e-6f);
+		assert(NearDepth >= -1.0e-4f && NearDepth < 0.01f);
+		assert(FarDepth > 0.99f && FarDepth <= 1.0001f);
+		assert(NearDepth < FarDepth);
+	}
+#endif
 
 	bool CreateWhiteTexture(ID3D11Device* InDevice, TComPtr<ID3D11ShaderResourceView>& OutTextureView)
 	{
@@ -248,7 +272,11 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11ShaderResourceView> CandidateBufferSRV;
 	UINT CandidateBufferCapacity = 0;
 
-	FOcclusionReadbackState OcclusionReadback = {};
+	std::array<FOcclusionReadbackState, OcclusionReadbackSlotCount> OcclusionReadbackSlots = {};
+	size_t OldestPendingReadbackSlotIndex = 0;
+	size_t NextSubmissionReadbackSlotIndex = 0;
+	size_t PendingReadbackCount = 0;
+	uint64 LastResolvedOcclusionFrameNumber = 0;
 	TComPtr<ID3D11Query> HzbBuildCompletionQuery;
 	TComPtr<ID3D11Query> HzbBuildTimingDisjointQuery;
 	TComPtr<ID3D11Query> HzbBuildStartQuery;
@@ -777,6 +805,43 @@ namespace
 		InOutReadbackState.bPendingReadback = false;
 	}
 
+	void RefreshOcclusionReadbackRingState(FSceneRenderer::FResources& InOutResources)
+	{
+		InOutResources.PendingReadbackCount = 0;
+		InOutResources.OldestPendingReadbackSlotIndex = 0;
+
+		for (size_t SlotIndex = 0; SlotIndex < OcclusionReadbackSlotCount; ++SlotIndex)
+		{
+			const FSceneRenderer::FResources::FOcclusionReadbackState& ReadbackState = InOutResources.OcclusionReadbackSlots[SlotIndex];
+			if (!ReadbackState.bPendingReadback)
+			{
+				continue;
+			}
+
+			if (InOutResources.PendingReadbackCount == 0
+				|| ReadbackState.FrameInput.FrameNumber < InOutResources.OcclusionReadbackSlots[InOutResources.OldestPendingReadbackSlotIndex].FrameInput.FrameNumber)
+			{
+				InOutResources.OldestPendingReadbackSlotIndex = SlotIndex;
+			}
+
+			++InOutResources.PendingReadbackCount;
+		}
+	}
+
+	size_t FindAvailableOcclusionReadbackSlotIndex(const FSceneRenderer::FResources& InResources)
+	{
+		for (size_t Offset = 0; Offset < OcclusionReadbackSlotCount; ++Offset)
+		{
+			const size_t SlotIndex = (InResources.NextSubmissionReadbackSlotIndex + Offset) % OcclusionReadbackSlotCount;
+			if (!InResources.OcclusionReadbackSlots[SlotIndex].bPendingReadback)
+			{
+				return SlotIndex;
+			}
+		}
+
+		return OcclusionReadbackSlotCount;
+	}
+
 	bool IsOcclusionReadbackReady(
 		ID3D11DeviceContext* InDeviceContext,
 		const FSceneRenderer::FResources::FOcclusionReadbackState& InReadbackState,
@@ -1077,6 +1142,10 @@ namespace
 		FSceneRenderer::FResources::FOcclusionReadbackState& InOutReadbackState)
 	{
 		const UINT CandidateCount = static_cast<UINT>(InVisibilityFrameInput.CandidateClusterIndices.size());
+		if (CandidateCount == 0)
+		{
+			return true;
+		}
 
 		ID3D11Device* Device = InRHI.GetDevice();
 		ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
@@ -1121,6 +1190,9 @@ namespace
 		DeviceContext->Dispatch(DivideAndRoundUp(CandidateCount, OcclusionCullThreadGroupSizeX), 1, 1);
 		UnbindComputeResources(DeviceContext);
 
+		DeviceContext->CopyResource(
+			InOutReadbackState.VisibilityFlagStagingBuffer.Get(),
+			InOutReadbackState.VisibilityFlagBuffer.Get());
 		DeviceContext->End(InOutReadbackState.CompletionQuery.Get());
 		return true;
 	}
@@ -1147,16 +1219,15 @@ namespace
 		}
 
 		std::vector<uint32> VisibleFlags(CandidateCount, 0u);
+
+		D3D11_MAPPED_SUBRESOURCE Mapped = {};
 		const auto ReadbackStart = std::chrono::high_resolution_clock::now();
-		if (!D3D11Utils::ReadbackBuffer(
-			InDeviceContext,
-			InReadbackState.VisibilityFlagBuffer.Get(),
-			InReadbackState.VisibilityFlagStagingBuffer.Get(),
-			VisibleFlags.data(),
-			VisibleFlags.size() * sizeof(uint32)))
+		if (FAILED(InDeviceContext->Map(InReadbackState.VisibilityFlagStagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &Mapped)))
 		{
 			return false;
 		}
+		std::memcpy(VisibleFlags.data(), Mapped.pData, VisibleFlags.size() * sizeof(uint32));
+		InDeviceContext->Unmap(InReadbackState.VisibilityFlagStagingBuffer.Get(), 0);
 		const auto ReadbackEnd = std::chrono::high_resolution_clock::now();
 		InOutOcclusionTimings.ReadbackCopyCpuTimeMs = static_cast<float>(std::chrono::duration<double, std::milli>(ReadbackEnd - ReadbackStart).count());
 
@@ -1343,8 +1414,18 @@ float4 PSMain(PSInput Input) : SV_Target
 	D3D11_DEPTH_STENCIL_DESC DepthStencilDesc = {};
 	DepthStencilDesc.DepthEnable = TRUE;
 	DepthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	// Standard-Z HZB contract:
+	// - scene depth clears to 1.0
+	// - raster depth uses LESS_EQUAL
+	// - HZB stores the farthest depth via max reduction
+	// - occlusion compares candidate min depth against HZB max depth + epsilon
 	DepthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 	DepthStencilDesc.StencilEnable = FALSE;
+
+#ifndef NDEBUG
+	ValidateHzbStandardZContract();
+	assert(DepthStencilDesc.DepthFunc == D3D11_COMPARISON_LESS_EQUAL);
+#endif
 
 	if (FAILED(Device->CreateDepthStencilState(&DepthStencilDesc, Resources->DepthStencilState.GetAddressOf()))
 		|| FAILED(Device->CreateDepthStencilState(&DepthStencilDesc, Resources->DepthOnlyDepthStencilState.GetAddressOf())))
@@ -1395,7 +1476,15 @@ void FSceneRenderer::InvalidateDelayedVisibility()
 		return;
 	}
 
-	ResetOcclusionReadbackState(Resources->OcclusionReadback);
+	for (FResources::FOcclusionReadbackState& ReadbackState : Resources->OcclusionReadbackSlots)
+	{
+		ResetOcclusionReadbackState(ReadbackState);
+	}
+
+	Resources->OldestPendingReadbackSlotIndex = 0;
+	Resources->NextSubmissionReadbackSlotIndex = 0;
+	Resources->PendingReadbackCount = 0;
+	Resources->LastResolvedOcclusionFrameNumber = 0;
 	Resources->bHzbValid = false;
 	Resources->bPendingHzbBuildTiming = false;
 	Resources->LastHzbBuildGpuTimeMs = 0.0f;
@@ -1431,39 +1520,80 @@ bool FSceneRenderer::ResolveGpuVisibility(
 	ResolvePendingHzbBuildTiming(DeviceContext, *Resources);
 	OutOcclusionTimings.HzbBuildGpuTimeMs = Resources->LastHzbBuildGpuTimeMs;
 
-	if (Resources->OcclusionReadback.bPendingReadback)
+	if (Resources->PendingReadbackCount > 0)
 	{
-		bool bReadbackReady = false;
-		if (!IsOcclusionReadbackReady(DeviceContext, Resources->OcclusionReadback, bReadbackReady))
+		std::array<bool, OcclusionReadbackSlotCount> ReadySlots = {};
+		size_t LatestReadySlotIndex = OcclusionReadbackSlotCount;
+		uint64 LatestReadyFrameNumber = 0;
+
+		for (size_t SlotIndex = 0; SlotIndex < OcclusionReadbackSlotCount; ++SlotIndex)
 		{
-			return false;
+			FResources::FOcclusionReadbackState& ReadbackState = Resources->OcclusionReadbackSlots[SlotIndex];
+			if (!ReadbackState.bPendingReadback)
+			{
+				continue;
+			}
+
+			bool bReadbackReady = false;
+			if (!IsOcclusionReadbackReady(DeviceContext, ReadbackState, bReadbackReady))
+			{
+				return false;
+			}
+
+			ReadySlots[SlotIndex] = bReadbackReady;
+			if (!bReadbackReady
+				|| ReadbackState.FrameInput.FrameNumber <= Resources->LastResolvedOcclusionFrameNumber)
+			{
+				continue;
+			}
+
+			if (LatestReadySlotIndex == OcclusionReadbackSlotCount
+				|| ReadbackState.FrameInput.FrameNumber > LatestReadyFrameNumber)
+			{
+				LatestReadySlotIndex = SlotIndex;
+				LatestReadyFrameNumber = ReadbackState.FrameInput.FrameNumber;
+			}
 		}
 
-		if (bReadbackReady)
+		if (LatestReadySlotIndex != OcclusionReadbackSlotCount)
 		{
+			FResources::FOcclusionReadbackState& LatestReadyState =
+				Resources->OcclusionReadbackSlots[LatestReadySlotIndex];
 			ResolveOcclusionTimings(
 				DeviceContext,
-				Resources->OcclusionReadback,
-				Resources->OcclusionReadback.SubmissionWallClockTime,
+				LatestReadyState,
+				LatestReadyState.SubmissionWallClockTime,
 				OutOcclusionTimings);
 			OutOcclusionTimings.HzbBuildGpuTimeMs = Resources->LastHzbBuildGpuTimeMs;
 			if (!ReadbackOcclusionCullResults(
 				DeviceContext,
-				Resources->OcclusionReadback,
-				Resources->OcclusionReadback.FrameInput,
+				LatestReadyState,
+				LatestReadyState.FrameInput,
 				OutVisibleClusterIndices,
 				OutOcclusionTimings))
 			{
 				return false;
 			}
 
-			OutResolvedFrameInput = Resources->OcclusionReadback.FrameInput;
+			OutResolvedFrameInput = LatestReadyState.FrameInput;
 			OutResolvedDelayedResult = true;
-			ResetOcclusionReadbackState(Resources->OcclusionReadback);
+			Resources->LastResolvedOcclusionFrameNumber = LatestReadyState.FrameInput.FrameNumber;
 		}
+
+		for (size_t SlotIndex = 0; SlotIndex < OcclusionReadbackSlotCount; ++SlotIndex)
+		{
+			if (!ReadySlots[SlotIndex])
+			{
+				continue;
+			}
+
+			ResetOcclusionReadbackState(Resources->OcclusionReadbackSlots[SlotIndex]);
+		}
+
+		RefreshOcclusionReadbackRingState(*Resources);
 	}
 
-	OutHasPendingReadback = Resources->OcclusionReadback.bPendingReadback;
+	OutHasPendingReadback = Resources->PendingReadbackCount > 0;
 
 	if (!Resources->bHzbValid
 		|| !InVisibilityFrameInput.bOcclusionValid
@@ -1478,25 +1608,33 @@ bool FSceneRenderer::ResolveGpuVisibility(
 		return false;
 	}
 
-	if (!EnsureOcclusionQueries(Device, Resources->OcclusionReadback))
-	{
-		return false;
-	}
-
-	if (Resources->OcclusionReadback.bPendingReadback)
+	if (Resources->PendingReadbackCount >= OcclusionReadbackSlotCount)
 	{
 		OutHasPendingReadback = true;
 		return true;
 	}
 
+	const size_t SubmissionSlotIndex = FindAvailableOcclusionReadbackSlotIndex(*Resources);
+	if (SubmissionSlotIndex == OcclusionReadbackSlotCount)
+	{
+		return false;
+	}
+	FResources::FOcclusionReadbackState& SubmissionState =
+		Resources->OcclusionReadbackSlots[SubmissionSlotIndex];
+
+	if (!EnsureOcclusionQueries(Device, SubmissionState))
+	{
+		return false;
+	}
+
 	const auto SubmissionTime = std::chrono::steady_clock::now();
-	const bool bRecordGpuTimings = Resources->OcclusionReadback.GpuTimingDisjointQuery
-		&& Resources->OcclusionReadback.OcclusionCullStartQuery
-		&& Resources->OcclusionReadback.OcclusionCullEndQuery;
+	const bool bRecordGpuTimings = SubmissionState.GpuTimingDisjointQuery
+		&& SubmissionState.OcclusionCullStartQuery
+		&& SubmissionState.OcclusionCullEndQuery;
 	if (bRecordGpuTimings)
 	{
-		DeviceContext->Begin(Resources->OcclusionReadback.GpuTimingDisjointQuery.Get());
-		DeviceContext->End(Resources->OcclusionReadback.OcclusionCullStartQuery.Get());
+		DeviceContext->Begin(SubmissionState.GpuTimingDisjointQuery.Get());
+		DeviceContext->End(SubmissionState.OcclusionCullStartQuery.Get());
 	}
 
 	if (!DispatchOcclusionCull(
@@ -1504,24 +1642,27 @@ bool FSceneRenderer::ResolveGpuVisibility(
 		InCamera,
 		InVisibilityFrameInput,
 		*Resources,
-		Resources->OcclusionReadback))
+		SubmissionState))
 	{
 		if (bRecordGpuTimings)
 		{
-			DeviceContext->End(Resources->OcclusionReadback.GpuTimingDisjointQuery.Get());
+			DeviceContext->End(SubmissionState.GpuTimingDisjointQuery.Get());
 		}
 		return false;
 	}
 	if (bRecordGpuTimings)
 	{
-		DeviceContext->End(Resources->OcclusionReadback.OcclusionCullEndQuery.Get());
-		DeviceContext->End(Resources->OcclusionReadback.GpuTimingDisjointQuery.Get());
+		DeviceContext->End(SubmissionState.OcclusionCullEndQuery.Get());
+		DeviceContext->End(SubmissionState.GpuTimingDisjointQuery.Get());
 	}
 
-	Resources->OcclusionReadback.FrameInput = InVisibilityFrameInput;
-	Resources->OcclusionReadback.SubmissionWallClockTime = SubmissionTime;
-	Resources->OcclusionReadback.bPendingReadback = true;
-	OutHasPendingReadback = true;
+	SubmissionState.FrameInput = InVisibilityFrameInput;
+	SubmissionState.SubmissionWallClockTime = SubmissionTime;
+	SubmissionState.bPendingReadback = true;
+	Resources->NextSubmissionReadbackSlotIndex =
+		(SubmissionSlotIndex + 1u) % OcclusionReadbackSlotCount;
+	RefreshOcclusionReadbackRingState(*Resources);
+	OutHasPendingReadback = Resources->PendingReadbackCount > 0;
 	return true;
 }
 
@@ -1543,7 +1684,7 @@ bool FSceneRenderer::RenderVisibleScene(
 		return false;
 	}
 
-	DeviceContext->ClearDepthStencilView(InRHI.GetDepthStencilView(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	DeviceContext->ClearDepthStencilView(InRHI.GetDepthStencilView(), D3D11_CLEAR_DEPTH, SceneDepthClearValue, 0);
 
 	ID3D11RenderTargetView* RenderTargets[] = { InRHI.GetBackBufferRTV() };
 	const D3D11_VIEWPORT Viewport = InRHI.GetViewport();

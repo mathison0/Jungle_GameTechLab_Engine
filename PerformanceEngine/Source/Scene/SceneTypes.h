@@ -39,6 +39,7 @@ struct FVisibilityCluster
 	uint32 PrimitiveOffset = 0;
 	uint32 PrimitiveCount = 0;
 	int32 SourceBvhNodeIndex = -1;
+	bool bUsesFramePrimitiveIndices = false;
 	bool bDynamic = false;
 };
 

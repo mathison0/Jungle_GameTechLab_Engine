@@ -6,8 +6,11 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include "limits"
+
+#include <Windows.h>
 
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
@@ -17,7 +20,10 @@
 
 namespace
 {
-	constexpr uint32 VisibilityClusterPrimitiveTarget = 32;
+	constexpr uint32 VisibilityClusterPrimitiveTarget = 8;
+	constexpr float VisibilityClusterMaxLongestAxisScale = 2.5f;
+	constexpr float VisibilityClusterMaxAspectRatio = 3.0f;
+	constexpr float VisibilityClusterAxisEpsilon = 1.0e-3f;
 
 	struct FPendingPrimitive
 	{
@@ -39,6 +45,16 @@ namespace
 		}
 
 		return std::string(Begin, End);
+	}
+
+	float ComputeLongestAxis(const FVector& InExtent)
+	{
+		return std::max(std::max(std::fabs(InExtent.X), std::fabs(InExtent.Y)), std::fabs(InExtent.Z));
+	}
+
+	float ComputeShortestAxis(const FVector& InExtent)
+	{
+		return std::min(std::min(std::fabs(InExtent.X), std::fabs(InExtent.Y)), std::fabs(InExtent.Z));
 	}
 
 	bool TryParseFloatArray1(const std::string& InLine, float& OutValue)
@@ -449,11 +465,46 @@ void FScene::Release()
 	StaticVisibilityClusters.clear();
 	StaticClusterPrimitiveIndices.clear();
 	DynamicPrimitiveMask.clear();
+	VisibilityClusterBuildStatsCache.clear();
+	VisibilityClusterBuildStatsValidMask.clear();
 }
 
 bool FScene::IsPrimitiveDynamic(uint32 PrimitiveIndex) const
 {
 	return PrimitiveIndex < DynamicPrimitiveMask.size() && DynamicPrimitiveMask[PrimitiveIndex] != 0;
+}
+
+bool FScene::TryRefineVisibilityCluster(
+	const FVisibilityCluster& InCluster,
+	TArray<FVisibilityCluster>& OutChildClusters,
+	TArray<uint32>& InOutFramePrimitiveIndices) const
+{
+	OutChildClusters.clear();
+
+	if (InCluster.bDynamic
+		|| InCluster.SourceBvhNodeIndex < 0
+		|| InCluster.SourceBvhNodeIndex >= static_cast<int>(WorldBVHNodes.size()))
+	{
+		return false;
+	}
+
+	const AABBNode& Node = WorldBVHNodes[InCluster.SourceBvhNodeIndex];
+	if (Node.IsLeaf() || Node.LeftChildIndex < 0 || Node.RightChildIndex < 0)
+	{
+		return false;
+	}
+
+	FVisibilityCluster LeftCluster = {};
+	FVisibilityCluster RightCluster = {};
+	if (!TryBuildVisibilityClusterFromNode(Node.LeftChildIndex, InOutFramePrimitiveIndices, LeftCluster)
+		|| !TryBuildVisibilityClusterFromNode(Node.RightChildIndex, InOutFramePrimitiveIndices, RightCluster))
+	{
+		return false;
+	}
+
+	OutChildClusters.push_back(LeftCluster);
+	OutChildClusters.push_back(RightCluster);
+	return true;
 }
 
 void FScene::BuildDynamicVisibilityClusters(TArray<FVisibilityCluster>& OutDynamicClusters, TArray<uint32>& OutDynamicPrimitiveIndices) const
@@ -567,13 +618,19 @@ void FScene::BuildVisibilityClusters()
 {
 	StaticVisibilityClusters.clear();
 	StaticClusterPrimitiveIndices.clear();
+	VisibilityClusterBuildStatsCache.clear();
+	VisibilityClusterBuildStatsValidMask.clear();
 
 	if (RootIndex < 0 || WorldBVHNodes.empty())
 	{
 		return;
 	}
 
+	VisibilityClusterBuildStatsCache.resize(WorldBVHNodes.size());
+	VisibilityClusterBuildStatsValidMask.assign(WorldBVHNodes.size(), 0u);
+
 	EmitVisibilityClustersFromNode(RootIndex);
+	LogVisibilityClusterBuildSummary();
 }
 
 void FScene::EmitVisibilityClustersFromNode(int NodeIndex)
@@ -584,19 +641,20 @@ void FScene::EmitVisibilityClustersFromNode(int NodeIndex)
 	}
 
 	const AABBNode& Node = WorldBVHNodes[NodeIndex];
-	const uint32 PrimitiveCount = CountPrimitivesInNode(NodeIndex);
-	if (PrimitiveCount == 0)
+	FVisibilityClusterBuildStats BuildStats = {};
+	ComputeVisibilityClusterBuildStats(NodeIndex, BuildStats);
+	if (BuildStats.PrimitiveCount == 0)
 	{
 		return;
 	}
 
-	if (Node.IsLeaf() || PrimitiveCount <= VisibilityClusterPrimitiveTarget)
+	if (ShouldEmitVisibilityCluster(NodeIndex, BuildStats))
 	{
 		FVisibilityCluster Cluster = {};
 		Cluster.BoundsMin = Node.Min;
 		Cluster.BoundsMax = Node.Max;
 		Cluster.PrimitiveOffset = static_cast<uint32>(StaticClusterPrimitiveIndices.size());
-		Cluster.PrimitiveCount = PrimitiveCount;
+		Cluster.PrimitiveCount = BuildStats.PrimitiveCount;
 		Cluster.SourceBvhNodeIndex = NodeIndex;
 		Cluster.bDynamic = false;
 
@@ -609,20 +667,120 @@ void FScene::EmitVisibilityClustersFromNode(int NodeIndex)
 	EmitVisibilityClustersFromNode(Node.RightChildIndex);
 }
 
-uint32 FScene::CountPrimitivesInNode(int NodeIndex) const
+void FScene::ComputeVisibilityClusterBuildStats(int NodeIndex, FVisibilityClusterBuildStats& OutStats)
 {
+	OutStats = {};
+
 	if (NodeIndex < 0 || NodeIndex >= static_cast<int>(WorldBVHNodes.size()))
 	{
-		return 0;
+		return;
+	}
+
+	if (NodeIndex < static_cast<int>(VisibilityClusterBuildStatsCache.size())
+		&& NodeIndex < static_cast<int>(VisibilityClusterBuildStatsValidMask.size())
+		&& VisibilityClusterBuildStatsValidMask[NodeIndex] != 0)
+	{
+		OutStats = VisibilityClusterBuildStatsCache[NodeIndex];
+		return;
 	}
 
 	const AABBNode& Node = WorldBVHNodes[NodeIndex];
 	if (Node.IsLeaf())
 	{
-		return 1;
+		if (Node.PrimitiveIndex >= 0
+			&& Node.PrimitiveIndex < static_cast<int>(PrimitiveRuntimeData.size()))
+		{
+			const FScenePrimitiveRuntimeData& Primitive = PrimitiveRuntimeData[Node.PrimitiveIndex];
+			const FVector PrimitiveExtent = Primitive.WorldBoundsMax - Primitive.WorldBoundsMin;
+			OutStats.PrimitiveCount = 1;
+			OutStats.AveragePrimitiveLongestAxis = ComputeLongestAxis(PrimitiveExtent);
+		}
+	}
+	else
+	{
+		FVisibilityClusterBuildStats LeftStats = {};
+		FVisibilityClusterBuildStats RightStats = {};
+		ComputeVisibilityClusterBuildStats(Node.LeftChildIndex, LeftStats);
+		ComputeVisibilityClusterBuildStats(Node.RightChildIndex, RightStats);
+
+		OutStats.PrimitiveCount = LeftStats.PrimitiveCount + RightStats.PrimitiveCount;
+		if (OutStats.PrimitiveCount > 0)
+		{
+			const float WeightedLongestAxisSum =
+				(LeftStats.AveragePrimitiveLongestAxis * static_cast<float>(LeftStats.PrimitiveCount))
+				+ (RightStats.AveragePrimitiveLongestAxis * static_cast<float>(RightStats.PrimitiveCount));
+			OutStats.AveragePrimitiveLongestAxis = WeightedLongestAxisSum / static_cast<float>(OutStats.PrimitiveCount);
+		}
 	}
 
-	return CountPrimitivesInNode(Node.LeftChildIndex) + CountPrimitivesInNode(Node.RightChildIndex);
+	if (NodeIndex < static_cast<int>(VisibilityClusterBuildStatsCache.size())
+		&& NodeIndex < static_cast<int>(VisibilityClusterBuildStatsValidMask.size()))
+	{
+		VisibilityClusterBuildStatsCache[NodeIndex] = OutStats;
+		VisibilityClusterBuildStatsValidMask[NodeIndex] = 1u;
+	}
+}
+
+bool FScene::ShouldEmitVisibilityCluster(int NodeIndex, const FVisibilityClusterBuildStats& InStats) const
+{
+	if (NodeIndex < 0 || NodeIndex >= static_cast<int>(WorldBVHNodes.size()))
+	{
+		return false;
+	}
+
+	const AABBNode& Node = WorldBVHNodes[NodeIndex];
+	if (Node.IsLeaf())
+	{
+		return true;
+	}
+
+	if (InStats.PrimitiveCount == 0 || InStats.PrimitiveCount > VisibilityClusterPrimitiveTarget)
+	{
+		return false;
+	}
+
+	const FVector NodeExtent = Node.Max - Node.Min;
+	const float NodeLongestAxis = ComputeLongestAxis(NodeExtent);
+	const float NodeShortestAxis = std::max(ComputeShortestAxis(NodeExtent), VisibilityClusterAxisEpsilon);
+	const float NodeAspectRatio = NodeLongestAxis / NodeShortestAxis;
+	const float AveragePrimitiveLongestAxis = std::max(InStats.AveragePrimitiveLongestAxis, VisibilityClusterAxisEpsilon);
+
+	return NodeAspectRatio <= VisibilityClusterMaxAspectRatio
+		&& NodeLongestAxis <= (VisibilityClusterMaxLongestAxisScale * AveragePrimitiveLongestAxis);
+}
+
+bool FScene::TryBuildVisibilityClusterFromNode(int NodeIndex, TArray<uint32>& InOutFramePrimitiveIndices, FVisibilityCluster& OutCluster) const
+{
+	OutCluster = FVisibilityCluster();
+
+	if (NodeIndex < 0 || NodeIndex >= static_cast<int>(WorldBVHNodes.size()))
+	{
+		return false;
+	}
+
+	if (NodeIndex >= static_cast<int>(VisibilityClusterBuildStatsCache.size())
+		|| NodeIndex >= static_cast<int>(VisibilityClusterBuildStatsValidMask.size())
+		|| VisibilityClusterBuildStatsValidMask[NodeIndex] == 0)
+	{
+		return false;
+	}
+
+	const FVisibilityClusterBuildStats& BuildStats = VisibilityClusterBuildStatsCache[NodeIndex];
+	if (BuildStats.PrimitiveCount == 0)
+	{
+		return false;
+	}
+
+	const AABBNode& Node = WorldBVHNodes[NodeIndex];
+	OutCluster.BoundsMin = Node.Min;
+	OutCluster.BoundsMax = Node.Max;
+	OutCluster.PrimitiveOffset = static_cast<uint32>(InOutFramePrimitiveIndices.size());
+	OutCluster.PrimitiveCount = BuildStats.PrimitiveCount;
+	OutCluster.SourceBvhNodeIndex = NodeIndex;
+	OutCluster.bUsesFramePrimitiveIndices = true;
+	OutCluster.bDynamic = false;
+	CollectNodePrimitiveIndices(NodeIndex, InOutFramePrimitiveIndices);
+	return true;
 }
 
 void FScene::CollectNodePrimitiveIndices(int NodeIndex, TArray<uint32>& OutPrimitiveIndices) const
@@ -644,6 +802,32 @@ void FScene::CollectNodePrimitiveIndices(int NodeIndex, TArray<uint32>& OutPrimi
 
 	CollectNodePrimitiveIndices(Node.LeftChildIndex, OutPrimitiveIndices);
 	CollectNodePrimitiveIndices(Node.RightChildIndex, OutPrimitiveIndices);
+}
+
+void FScene::LogVisibilityClusterBuildSummary() const
+{
+	if (StaticVisibilityClusters.empty())
+	{
+		return;
+	}
+
+	uint32 MaxPrimitivePerCluster = 0;
+	for (const FVisibilityCluster& Cluster : StaticVisibilityClusters)
+	{
+		MaxPrimitivePerCluster = std::max(MaxPrimitivePerCluster, Cluster.PrimitiveCount);
+	}
+
+	const double AveragePrimitivePerCluster =
+		static_cast<double>(StaticClusterPrimitiveIndices.size()) / static_cast<double>(StaticVisibilityClusters.size());
+
+	std::ostringstream Stream;
+	Stream
+		<< "Scene Visibility Clusters: "
+		<< "StaticClusters=" << StaticVisibilityClusters.size()
+		<< ", AveragePrimitivePerCluster=" << AveragePrimitivePerCluster
+		<< ", MaxPrimitivePerCluster=" << MaxPrimitivePerCluster
+		<< '\n';
+	OutputDebugStringA(Stream.str().c_str());
 }
 
 int FScene::AllocateBVHNode()

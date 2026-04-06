@@ -12,6 +12,20 @@
 #include "Scene/Scene.h"
 #include "StaticMesh/StaticMesh.h"
 
+namespace
+{
+	constexpr float ClusterRefineMinScreenFraction = 0.2f;
+	constexpr float ClusterRefineNearDepthEpsilon = 1.0e-3f;
+
+	FVector BuildAabbCorner(const FVisibilityCluster& InCluster, uint32 InCornerIndex)
+	{
+		return FVector(
+			(InCornerIndex & 1u) != 0u ? InCluster.BoundsMax.X : InCluster.BoundsMin.X,
+			(InCornerIndex & 2u) != 0u ? InCluster.BoundsMax.Y : InCluster.BoundsMin.Y,
+			(InCornerIndex & 4u) != 0u ? InCluster.BoundsMax.Z : InCluster.BoundsMin.Z);
+	}
+}
+
 FVisibilitySystem::~FVisibilitySystem() = default;
 
 void FVisibilitySystem::Reset()
@@ -36,6 +50,8 @@ void FVisibilitySystem::PrepareFrame(const FScene& InScene, const FCamera& InCam
 	OutFrameInput.bOcclusionValid = bHistoryValid;
 	OutResults.FrameNumber = OutFrameInput.FrameNumber;
 	OutResults.Stats.TotalPrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
+	CachedViewMatrix = InCamera.GetViewMatrix();
+	CachedViewProjectionMatrix = CachedViewMatrix * InCamera.GetProjectionMatrix();
 
 	ComputeFrustumVisibleClusters(InScene, InCamera, OutFrameInput);
 
@@ -81,6 +97,7 @@ void FVisibilitySystem::FinalizeFrame(
 		? (OutResults.Stats.CandidateClusterCount - OutResults.Stats.VisibleClusterCount)
 		: 0u;
 	OutResults.Stats.ExpandedVisiblePrimitiveCount = static_cast<uint32>(OutResults.VisiblePrimitiveIndices.size());
+	OutResults.Stats.VisibilityResultAgeFrames = 0;
 	OutResults.Stats.bHzbValid = InFrameInput.bOcclusionValid;
 	OutResults.Stats.bUsedOcclusion = bUsedOcclusion;
 	OutResults.Stats.ReadbackTimeMs = InOcclusionTimings.ReadbackCopyCpuTimeMs;
@@ -175,6 +192,7 @@ bool FVisibilitySystem::IntersectsAABB(const FFrustum& InFrustum, const FVector&
 void FVisibilitySystem::ComputeFrustumVisibleClusters(const FScene& InScene, const FCamera& InCamera, FVisibilityFrameInput& OutFrameInput)
 {
 	OutFrameInput.FrustumVisibleClusters.clear();
+	OutFrameInput.RefinedStaticClusterPrimitiveIndices.clear();
 	OutFrameInput.DynamicClusterPrimitiveIndices.clear();
 	OutFrameInput.CandidateClusterIndices.clear();
 	CachedFrustum = BuildFrustum(InCamera);
@@ -183,12 +201,7 @@ void FVisibilitySystem::ComputeFrustumVisibleClusters(const FScene& InScene, con
 	OutFrameInput.FrustumVisibleClusters.reserve(StaticClusters.size());
 	for (const FVisibilityCluster& Cluster : StaticClusters)
 	{
-		if (!IntersectsAABB(CachedFrustum, Cluster.BoundsMin, Cluster.BoundsMax))
-		{
-			continue;
-		}
-
-		OutFrameInput.FrustumVisibleClusters.push_back(Cluster);
+		AppendFrustumVisibleCluster(InScene, InCamera, Cluster, OutFrameInput);
 	}
 
 	TArray<FVisibilityCluster> DynamicClusters;
@@ -217,6 +230,74 @@ void FVisibilitySystem::ComputeFrustumVisibleClusters(const FScene& InScene, con
 	}
 }
 
+bool FVisibilitySystem::ShouldRefineClusterForOcclusion(const FCamera& InCamera, const FVisibilityCluster& InCluster) const
+{
+	if (!bHistoryValid
+		|| InCluster.bDynamic
+		|| InCluster.SourceBvhNodeIndex < 0
+		|| InCluster.PrimitiveCount <= 1)
+	{
+		return false;
+	}
+
+	float MinNdcX = 1.0f;
+	float MinNdcY = 1.0f;
+	float MaxNdcX = -1.0f;
+	float MaxNdcY = -1.0f;
+
+	for (uint32 CornerIndex = 0; CornerIndex < 8; ++CornerIndex)
+	{
+		const FVector Corner = BuildAabbCorner(InCluster, CornerIndex);
+		const FVector ViewSpace = CachedViewMatrix.TransformPosition(Corner);
+		if (ViewSpace.Z <= (InCamera.GetNearClip() + ClusterRefineNearDepthEpsilon))
+		{
+			return false;
+		}
+
+		const FVector Ndc = CachedViewProjectionMatrix.TransformPosition(Corner);
+		MinNdcX = std::min(MinNdcX, std::clamp(Ndc.X, -1.0f, 1.0f));
+		MinNdcY = std::min(MinNdcY, std::clamp(Ndc.Y, -1.0f, 1.0f));
+		MaxNdcX = std::max(MaxNdcX, std::clamp(Ndc.X, -1.0f, 1.0f));
+		MaxNdcY = std::max(MaxNdcY, std::clamp(Ndc.Y, -1.0f, 1.0f));
+	}
+
+	const float ScreenWidthFraction = std::max(0.0f, (MaxNdcX - MinNdcX) * 0.5f);
+	const float ScreenHeightFraction = std::max(0.0f, (MaxNdcY - MinNdcY) * 0.5f);
+	return std::max(ScreenWidthFraction, ScreenHeightFraction) >= ClusterRefineMinScreenFraction;
+}
+
+void FVisibilitySystem::AppendFrustumVisibleCluster(
+	const FScene& InScene,
+	const FCamera& InCamera,
+	const FVisibilityCluster& InCluster,
+	FVisibilityFrameInput& OutFrameInput)
+{
+	if (!IntersectsAABB(CachedFrustum, InCluster.BoundsMin, InCluster.BoundsMax))
+	{
+		return;
+	}
+
+	if (ShouldRefineClusterForOcclusion(InCamera, InCluster))
+	{
+		TArray<FVisibilityCluster> RefinedChildren;
+		if (InScene.TryRefineVisibilityCluster(InCluster, RefinedChildren, OutFrameInput.RefinedStaticClusterPrimitiveIndices))
+		{
+			for (const FVisibilityCluster& ChildCluster : RefinedChildren)
+			{
+				if (!IntersectsAABB(CachedFrustum, ChildCluster.BoundsMin, ChildCluster.BoundsMax))
+				{
+					continue;
+				}
+
+				OutFrameInput.FrustumVisibleClusters.push_back(ChildCluster);
+			}
+			return;
+		}
+	}
+
+	OutFrameInput.FrustumVisibleClusters.push_back(InCluster);
+}
+
 void FVisibilitySystem::ExpandClustersToPrimitives(
 	const FScene& InScene,
 	const FVisibilityFrameInput& InFrameInput,
@@ -240,7 +321,7 @@ void FVisibilitySystem::ExpandClustersToPrimitives(
 		const FVisibilityCluster& Cluster = InFrameInput.FrustumVisibleClusters[ClusterIndex];
 		const TArray<uint32>& ClusterPrimitiveIndices = Cluster.bDynamic
 			? InFrameInput.DynamicClusterPrimitiveIndices
-			: StaticClusterPrimitiveIndices;
+			: (Cluster.bUsesFramePrimitiveIndices ? InFrameInput.RefinedStaticClusterPrimitiveIndices : StaticClusterPrimitiveIndices);
 		const uint32 PrimitiveEnd = Cluster.PrimitiveOffset + Cluster.PrimitiveCount;
 		if (PrimitiveEnd > ClusterPrimitiveIndices.size())
 		{

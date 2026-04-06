@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <vector>
 
 #include "Types/PlatformTypes.h"
@@ -42,6 +43,8 @@ public:
 
 	double GetFrameTimeMs() const { return FrameTimeMs; }
 	double GetFramesPerSecond() const { return FramesPerSecond; }
+	double GetAverageFrameTimeMs() const { return AverageFrameTimeMs; }
+	double GetAverageFramesPerSecond() const { return AverageFramesPerSecond; }
 	double GetLastPickTimeMs() const { return LastPickTimeMs; }
 	double GetTotalPickTimeMs() const { return TotalPickTimeMs; }
 	uint64 GetTotalPickCount() const { return TotalPickCount; }
@@ -53,12 +56,18 @@ private:
 	uint64 LastFrameCounter = 0;
 	double FrameTimeMs = 0.0;
 	double FramesPerSecond = 0.0;
+	double AverageFrameTimeMs = 0.0;
+	double AverageFramesPerSecond = 0.0;
 	double LastPickTimeMs = 0.0;
 	double TotalPickTimeMs = 0.0;
 	uint64 TotalPickCount = 0;
 	uint64 FrameNumber = 0;
 	uint64 TotalAABBCheckCount = 0;
 	double LastPickTimeMsWorldBVH = 0.0;
+	std::array<double, 60> FrameTimeHistoryMs = {};
+	size_t FrameTimeHistoryIndex = 0;
+	size_t FrameTimeHistoryCount = 0;
+	double FrameTimeHistorySumMs = 0.0;
 
 #if defined(BENCHMARK)
 	std::vector<FFrameBenchmarkSample> FrameBenchmarkSamples;

@@ -361,8 +361,8 @@ void FHudRenderer::Render(
 	std::ostringstream TextStream;
 	TextStream << std::fixed << std::setprecision(6);
 	TextStream
-		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
-		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"
+		<< "FPS: " << InStatsSystem.GetAverageFramesPerSecond() << '\n'
+		<< "FRAME: " << InStatsSystem.GetAverageFrameTimeMs() << " MS\n"
 		<< "OCCLUSION: CLUSTER HZB\n"
 		<< "VISIBLE PRIMS: " << InVisibilityResults.VisiblePrimitiveIndices.size() << '\n'
 		<< "TOTAL CLUSTERS: " << InVisibilityResults.Stats.TotalClusterCount << '\n'
@@ -370,6 +370,7 @@ void FHudRenderer::Render(
 		<< "CANDIDATE CLUSTERS: " << InVisibilityResults.Stats.CandidateClusterCount << '\n'
 		<< "VISIBLE CLUSTERS: " << InVisibilityResults.Stats.VisibleClusterCount << '\n'
 		<< "OCCLUDED CLUSTERS: " << InVisibilityResults.Stats.OccludedClusterCount << '\n'
+		<< "VIS AGE: " << InVisibilityResults.Stats.VisibilityResultAgeFrames << " FRAMES\n"
 		<< "HZB VALID: " << (InVisibilityResults.Stats.bHzbValid ? "YES" : "NO") << '\n'
 		<< "OCCLUSION USED: " << (InVisibilityResults.Stats.bUsedOcclusion ? "YES" : "NO") << '\n'
 		<< "GPU HZB: " << InVisibilityResults.Stats.OcclusionTimings.HzbBuildGpuTimeMs << " MS\n"

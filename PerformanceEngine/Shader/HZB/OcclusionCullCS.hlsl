@@ -1,6 +1,13 @@
 static const float DepthClearValue = 1.0f;
 static const float SmallClipW = 1.0e-6f;
 static const float MinViewDepthEpsilon = 1.0e-3f;
+static const uint SmallObjectMaxFootprint = 8u;
+
+// Standard-Z HZB contract:
+// - depth clears to 1.0 and raster depth uses LESS_EQUAL
+// - HZB mip reduction stores the farthest depth with max()
+// - candidate min depth is compared against the HZB max depth
+// If the renderer switches to reversed-Z or min-reduced HZB, this compare must change too.
 
 struct FGpuOcclusionCandidate
 {
@@ -104,13 +111,8 @@ void CSMain(uint3 DispatchThreadID : SV_DispatchThreadID)
         return;
     }
 
-    uint Width = (uint)(MaxX - MinX + 1);
-    uint Height = (uint)(MaxY - MinY + 1);
-    if (max(Width, Height) < 2u)
-    {
-        VisibilityFlags[CandidateIndex] = 1u;
-        return;
-    }
+    uint ScreenRectWidth = ((uint)MaxX - (uint)MinX) + 1u;
+    uint ScreenRectHeight = ((uint)MaxY - (uint)MinY) + 1u;
 
     uint SelectedMip = 0u;
     while ((SelectedMip + 1u) < MipCount)
@@ -131,6 +133,13 @@ void CSMain(uint3 DispatchThreadID : SV_DispatchThreadID)
         {
             break;
         }
+    }
+
+    if (ScreenRectWidth <= SmallObjectMaxFootprint
+        && ScreenRectHeight <= SmallObjectMaxFootprint
+        && SelectedMip > 0u)
+    {
+        SelectedMip -= 1u;
     }
 
     uint SelectedMipWidth = ComputeMipDimension(DepthWidth, SelectedMip);

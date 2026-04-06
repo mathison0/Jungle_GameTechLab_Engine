@@ -38,9 +38,19 @@ public:
 	const TArray<uint32>& GetStaticClusterPrimitiveIndices() const { return StaticClusterPrimitiveIndices; }
 	bool IsPrimitiveDynamic(uint32 PrimitiveIndex) const;
 	void BuildDynamicVisibilityClusters(TArray<FVisibilityCluster>& OutDynamicClusters, TArray<uint32>& OutDynamicPrimitiveIndices) const;
+	bool TryRefineVisibilityCluster(
+		const FVisibilityCluster& InCluster,
+		TArray<FVisibilityCluster>& OutChildClusters,
+		TArray<uint32>& InOutFramePrimitiveIndices) const;
 
 
 private:
+	struct FVisibilityClusterBuildStats
+	{
+		uint32 PrimitiveCount = 0;
+		float AveragePrimitiveLongestAxis = 0.0f;
+	};
+
 	//BVH Related Functions
 	int CreateWorldBVH(int start, int end, int ParentIdx);
 	int AllocateBVHNode();
@@ -53,8 +63,11 @@ private:
 	void MoveLeaf(int RenderItemIndex, const FTransform& NewTransform);
 	void BuildVisibilityClusters();
 	void EmitVisibilityClustersFromNode(int NodeIndex);
-	uint32 CountPrimitivesInNode(int NodeIndex) const;
+	void ComputeVisibilityClusterBuildStats(int NodeIndex, FVisibilityClusterBuildStats& OutStats);
+	bool ShouldEmitVisibilityCluster(int NodeIndex, const FVisibilityClusterBuildStats& InStats) const;
+	bool TryBuildVisibilityClusterFromNode(int NodeIndex, TArray<uint32>& InOutFramePrimitiveIndices, FVisibilityCluster& OutCluster) const;
 	void CollectNodePrimitiveIndices(int NodeIndex, TArray<uint32>& OutPrimitiveIndices) const;
+	void LogVisibilityClusterBuildSummary() const;
 
 
 private:
@@ -85,4 +98,6 @@ private:
 	TArray<FVisibilityCluster> StaticVisibilityClusters;
 	TArray<uint32> StaticClusterPrimitiveIndices;
 	TArray<uint8> DynamicPrimitiveMask;
+	TArray<FVisibilityClusterBuildStats> VisibilityClusterBuildStatsCache;
+	TArray<uint8> VisibilityClusterBuildStatsValidMask;
 };
