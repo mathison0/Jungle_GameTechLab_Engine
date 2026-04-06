@@ -236,6 +236,7 @@ void FCore::Tick()
 	{
 		VisibilitySystem->FinalizeFrame(
 			*Scene,
+			*Camera,
 			ResolvedVisibilityFrameInput,
 			VisibleClusterIndices,
 			GpuOcclusionTimings,
@@ -249,6 +250,7 @@ void FCore::Tick()
 	{
 		VisibilitySystem->FinalizeFrame(
 			*Scene,
+			*Camera,
 			VisibilityFrameInput,
 			VisibleClusterIndices,
 			GpuOcclusionTimings,

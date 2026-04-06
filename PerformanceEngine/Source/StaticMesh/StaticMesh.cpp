@@ -1,19 +1,13 @@
 #include "StaticMesh.h"
 
 #include <algorithm>
-#include <cctype>
-#include <cstdio>
-#include <fstream>
-#include <limits>
-#include <memory>
-#include <sstream>
+#include <array>
 #include <string>
-#include <vector>
 #include <unordered_map>
 
 #include <WICTextureLoader.h>
 
-#include "Graphics/D3D11/D3D11Utils.h"
+#include "StaticMeshLOD.h"
 
 bool FStaticMesh::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FStaticMeshSourceData InSourceData)
 {
@@ -25,32 +19,18 @@ bool FStaticMesh::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDevi
 	}
 
 	SourcePath = std::move(InSourceData.SourcePath);
-	BoundsMin = InSourceData.BoundsMin;
-	BoundsMax = InSourceData.BoundsMax;
-	Vertices = std::move(InSourceData.Vertices);
-	Indices = std::move(InSourceData.Indices);
-
-	if (!D3D11Utils::CreateImmutableBuffer(
-			InDevice,
-			static_cast<UINT>(Vertices.size() * sizeof(FStaticMeshVertex)),
-			D3D11_BIND_VERTEX_BUFFER,
-			Vertices.data(),
-			VertexBuffer)
-		|| !D3D11Utils::CreateImmutableBuffer(
-			InDevice,
-			static_cast<UINT>(Indices.size() * sizeof(uint32)),
-			D3D11_BIND_INDEX_BUFFER,
-			Indices.data(),
-			IndexBuffer))
+	const std::array<float, 3>& TriangleRatios = StaticMeshLOD::GetTriangleRatios();
+	LODLevels.reserve(TriangleRatios.size());
+	for (float TriangleRatio : TriangleRatios)
 	{
-		Release();
-		return false;
-	}
+		FLODLevel LODLevel = StaticMeshLOD::GenerateLODLevel(InSourceData, TriangleRatio);
+		if (!StaticMeshLOD::FinalizeLODLevel(InDevice, LODLevel))
+		{
+			Release();
+			return false;
+		}
 
-	Sections.reserve(InSourceData.Sections.size());
-	for (const FStaticMeshSourceData::FSection& SourceSection : InSourceData.Sections)
-	{
-		Sections.push_back({ SourceSection.IndexStart, SourceSection.IndexCount, SourceSection.MaterialIndex });
+		LODLevels.push_back(std::move(LODLevel));
 	}
 
 	Materials.reserve(InSourceData.Materials.size());
@@ -88,19 +68,126 @@ bool FStaticMesh::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDevi
 		Materials.push_back(std::move(Material));
 	}
 
-	return true;
+	return IsValid();
 }
 
 void FStaticMesh::Release()
 {
 	SourcePath.clear();
-	Vertices.clear();
-	Indices.clear();
-	VertexBuffer.Reset();
-	IndexBuffer.Reset();
+	LODLevels.clear();
 	Materials.clear();
-	Sections.clear();
 	SpatialData.reset();
-	BoundsMin = FVector::ZeroVector;
-	BoundsMax = FVector::ZeroVector;
+}
+
+const FStaticMesh::FLODLevel* FStaticMesh::GetBaseLOD() const
+{
+	return GetLODLevel(0);
+}
+
+const FStaticMesh::FLODLevel* FStaticMesh::GetLODLevel(uint32 InLODIndex) const
+{
+	if (LODLevels.empty())
+	{
+		return nullptr;
+	}
+
+	const size_t LODIndex = std::min<size_t>(InLODIndex, LODLevels.size() - 1);
+	return &LODLevels[LODIndex];
+}
+
+ID3D11Buffer* FStaticMesh::GetVertexBuffer() const
+{
+	return GetVertexBuffer(0);
+}
+
+ID3D11Buffer* FStaticMesh::GetIndexBuffer() const
+{
+	return GetIndexBuffer(0);
+}
+
+ID3D11Buffer* FStaticMesh::GetVertexBuffer(uint32 InLODIndex) const
+{
+	const FLODLevel* LODLevel = GetLODLevel(InLODIndex);
+	return LODLevel ? LODLevel->VertexBuffer.Get() : nullptr;
+}
+
+ID3D11Buffer* FStaticMesh::GetIndexBuffer(uint32 InLODIndex) const
+{
+	const FLODLevel* LODLevel = GetLODLevel(InLODIndex);
+	return LODLevel ? LODLevel->IndexBuffer.Get() : nullptr;
+}
+
+UINT FStaticMesh::GetVertexCount() const
+{
+	const FLODLevel* LODLevel = GetBaseLOD();
+	return LODLevel ? static_cast<UINT>(LODLevel->Vertices.size()) : 0;
+}
+
+UINT FStaticMesh::GetIndexCount() const
+{
+	const FLODLevel* LODLevel = GetBaseLOD();
+	return LODLevel ? static_cast<UINT>(LODLevel->Indices.size()) : 0;
+}
+
+bool FStaticMesh::IsValid() const
+{
+	const FLODLevel* LODLevel = GetBaseLOD();
+	return LODLevel != nullptr && LODLevel->IsValid();
+}
+
+const TArray<FStaticMeshVertex>& FStaticMesh::GetVertices() const
+{
+	static const TArray<FStaticMeshVertex> EmptyVertices;
+	const FLODLevel* LODLevel = GetBaseLOD();
+	return LODLevel ? LODLevel->Vertices : EmptyVertices;
+}
+
+const TArray<uint32>& FStaticMesh::GetIndices() const
+{
+	static const TArray<uint32> EmptyIndices;
+	const FLODLevel* LODLevel = GetBaseLOD();
+	return LODLevel ? LODLevel->Indices : EmptyIndices;
+}
+
+const TArray<FStaticMesh::FSection>& FStaticMesh::GetSections() const
+{
+	return GetSections(0);
+}
+
+const TArray<FStaticMesh::FSection>& FStaticMesh::GetSections(uint32 InLODIndex) const
+{
+	static const TArray<FSection> EmptySections;
+	const FLODLevel* LODLevel = GetLODLevel(InLODIndex);
+	return LODLevel ? LODLevel->Sections : EmptySections;
+}
+
+const FVector& FStaticMesh::GetBoundsMin() const
+{
+	static const FVector EmptyBounds = FVector::ZeroVector;
+	const FLODLevel* LODLevel = GetBaseLOD();
+	return LODLevel ? LODLevel->BoundsMin : EmptyBounds;
+}
+
+const FVector& FStaticMesh::GetBoundsMax() const
+{
+	static const FVector EmptyBounds = FVector::ZeroVector;
+	const FLODLevel* LODLevel = GetBaseLOD();
+	return LODLevel ? LODLevel->BoundsMax : EmptyBounds;
+}
+
+const FBoundingSphere& FStaticMesh::GetBoundsSphere() const
+{
+	static const FBoundingSphere EmptySphere;
+	const FLODLevel* LODLevel = GetBaseLOD();
+	return LODLevel ? LODLevel->BoundsSphere : EmptySphere;
+}
+
+ID3D11ShaderResourceView* FStaticMesh::GetMaterialTexture(int32 InMaterialIndex) const
+{
+	if (InMaterialIndex < 0 || static_cast<size_t>(InMaterialIndex) >= Materials.size())
+	{
+		return nullptr;
+	}
+
+	return Materials[InMaterialIndex].DiffuseTextureView.Get();
 }

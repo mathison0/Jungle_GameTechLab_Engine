@@ -5,6 +5,7 @@
 
 #include "Math/Matrix.h"
 #include "Math/Transform.h"
+#include "StaticMesh/StaticMesh.h"
 #include "Types/PlatformTypes.h"
 #include "Types/String.h"
 
@@ -50,6 +51,7 @@ struct FRenderItem
 	FTransform Transform = FTransform::Identity;
 	FVector WorldBoundsMin = FVector::ZeroVector;
 	FVector WorldBoundsMax = FVector::ZeroVector;
+	FBoundingSphere WorldBoundsSphere;
 	std::shared_ptr<FStaticMesh> StaticMesh;
 
 	int BVHLeafIndex = -1;
@@ -71,5 +73,6 @@ struct FScenePrimitiveRuntimeData
 
 	FVector WorldBoundsMin = FVector::ZeroVector;
 	FVector WorldBoundsMax = FVector::ZeroVector;
+	FBoundingSphere WorldBoundsSphere;
 	FStaticMesh* StaticMesh = nullptr;
 };

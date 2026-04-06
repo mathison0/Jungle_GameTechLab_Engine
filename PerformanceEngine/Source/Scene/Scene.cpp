@@ -187,6 +187,17 @@ namespace
 		}
 	}
 
+	FBoundingSphere TransformBoundingSphere(const FBoundingSphere& InLocalSphere, const FTransform& InTransform)
+	{
+		FBoundingSphere WorldSphere;
+		WorldSphere.Center = InTransform.TransformPosition(InLocalSphere.Center);
+
+		const FVector Scale = InTransform.GetScale3D();
+		const float MaxScale = std::max({ std::fabs(Scale.X), std::fabs(Scale.Y), std::fabs(Scale.Z) });
+		WorldSphere.Radius = InLocalSphere.Radius * MaxScale;
+		return WorldSphere;
+	}
+
 	std::filesystem::path ResolveAssetPath(const std::filesystem::path& InScenePath, const FString& InRelativeAssetPath)
 	{
 		const std::filesystem::path AssetPath(InRelativeAssetPath);
@@ -347,6 +358,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
 
 				RuntimeData.StaticMesh = SharedMesh.get();
+				RuntimeData.WorldBoundsSphere = TransformBoundingSphere(SharedMesh->GetBoundsSphere(), WorldTransform);
 
 				bool bHasRuntimeBounds = false;
 				ExpandBoundsWithTransformedAabb(
@@ -361,6 +373,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				{
 					RenderItem.WorldBoundsMin = RuntimeData.WorldBoundsMin;
 					RenderItem.WorldBoundsMax = RuntimeData.WorldBoundsMax;
+					RenderItem.WorldBoundsSphere = RuntimeData.WorldBoundsSphere;
 					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMin);
 					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMax);
 				}
@@ -1014,6 +1027,7 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 		Item.WorldBoundsMin,
 		Item.WorldBoundsMax,
 		bHasBounds);
+	Item.WorldBoundsSphere = TransformBoundingSphere(Item.StaticMesh->GetBoundsSphere(), NewTransform);
 
 	const FVector& NewMin = Item.WorldBoundsMin;
 	const FVector& NewMax = Item.WorldBoundsMax;

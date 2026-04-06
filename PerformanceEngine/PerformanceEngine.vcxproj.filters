@@ -80,6 +80,9 @@
     <ClCompile Include="Source\StaticMesh\ObjParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\StaticMesh\StaticMeshLOD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Visibility\VisibilitySystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -206,6 +209,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\StaticMesh\ObjParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\StaticMesh\StaticMeshLOD.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Visibility\VisibilitySystem.h">

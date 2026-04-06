@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstring>
 #include <filesystem>
@@ -320,7 +321,7 @@ namespace
 	template <typename TResources>
 	void BuildRenderQueue(
 		const FScene& InScene,
-		const TArray<uint32>& InVisiblePrimitiveIndices,
+		const FVisibilityResults& InVisibilityResults,
 		const FPickState& InPickState,
 		ID3D11ShaderResourceView* InDefaultTextureView,
 		ERenderPassType InRenderPassType,
@@ -329,12 +330,13 @@ namespace
 		InOutResources.ObjectConstantBlocks.clear();
 		InOutResources.RenderItems.clear();
 
-		InOutResources.ObjectConstantBlocks.reserve(InVisiblePrimitiveIndices.size());
-		InOutResources.RenderItems.reserve(InVisiblePrimitiveIndices.size());
+		InOutResources.ObjectConstantBlocks.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
+		InOutResources.RenderItems.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
 
 		const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
-		for (uint32 PrimitiveIndex : InVisiblePrimitiveIndices)
+		for (size_t VisibleIndex = 0; VisibleIndex < InVisibilityResults.VisiblePrimitiveIndices.size(); ++VisibleIndex)
 		{
+			const uint32 PrimitiveIndex = InVisibilityResults.VisiblePrimitiveIndices[VisibleIndex];
 			if (PrimitiveIndex >= PrimitiveRuntimeData.size())
 			{
 				continue;
@@ -346,6 +348,18 @@ namespace
 			{
 				continue;
 			}
+
+			const uint32 LODCount = StaticMesh->GetLODCount();
+			if (LODCount == 0)
+			{
+				continue;
+			}
+
+			const uint32 CachedLODIndex =
+				VisibleIndex < InVisibilityResults.VisibleLODIndices.size()
+				? InVisibilityResults.VisibleLODIndices[VisibleIndex]
+				: 0;
+			const uint32 LODIndex = std::min(CachedLODIndex, LODCount - 1);
 
 			FObjectConstantsBlock ObjectBlock = {};
 			ObjectBlock.Constants.World = PrimitiveData.WorldMatrix;
@@ -360,9 +374,14 @@ namespace
 			const UINT ObjectIndex = static_cast<UINT>(InOutResources.ObjectConstantBlocks.size());
 			InOutResources.ObjectConstantBlocks.push_back(ObjectBlock);
 
-			ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer();
-			ID3D11Buffer* IndexBuffer = StaticMesh->GetIndexBuffer();
-			for (const FStaticMesh::FSection& Section : StaticMesh->GetSections())
+			ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer(LODIndex);
+			ID3D11Buffer* IndexBuffer = StaticMesh->GetIndexBuffer(LODIndex);
+			if (VertexBuffer == nullptr || IndexBuffer == nullptr)
+			{
+				continue;
+			}
+
+			for (const FStaticMesh::FSection& Section : StaticMesh->GetSections(LODIndex))
 			{
 				FDrawItem RenderItem = {};
 				RenderItem.VertexBuffer = VertexBuffer;
@@ -477,14 +496,14 @@ namespace
 	bool PrepareRenderPassResources(
 		const FD3D11RHI& InRHI,
 		const FScene& InScene,
-		const TArray<uint32>& InVisiblePrimitiveIndices,
+		const FVisibilityResults& InVisibilityResults,
 		const FPickState& InPickState,
 		ERenderPassType InRenderPassType,
 		TResources& InOutResources)
 	{
 		BuildRenderQueue(
 			InScene,
-			InVisiblePrimitiveIndices,
+			InVisibilityResults,
 			InPickState,
 			InOutResources.WhiteTextureView.Get(),
 			InRenderPassType,
@@ -1058,10 +1077,12 @@ namespace
 		DeviceContext->VSSetConstantBuffers(0, 1, &VertexConstantBuffer);
 
 		const FPickState NoPickState = {};
+		FVisibilityResults VisibleResults = {};
+		VisibleResults.VisiblePrimitiveIndices = InVisiblePrimitiveIndices;
 		if (!PrepareRenderPassResources(
 			InRHI,
 			InScene,
-			InVisiblePrimitiveIndices,
+			VisibleResults,
 			NoPickState,
 			ERenderPassType::DepthOnly,
 			InOutResources))
@@ -1712,7 +1733,7 @@ bool FSceneRenderer::RenderVisibleScene(
 	if (!PrepareRenderPassResources(
 		InRHI,
 		InScene,
-		InVisibilityResults.VisiblePrimitiveIndices,
+		InVisibilityResults,
 		InPickState,
 		ERenderPassType::BasePass,
 		*Resources))

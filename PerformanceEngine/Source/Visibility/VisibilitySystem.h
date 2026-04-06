@@ -64,6 +64,7 @@ struct FVisibilityResults
 {
 	uint64 FrameNumber = 0;
 	TArray<uint32> VisiblePrimitiveIndices;
+	TArray<uint32> VisibleLODIndices;
 	TArray<uint32> VisibleClusterIndices;
 	FVisibilityStats Stats;
 };
@@ -78,6 +79,7 @@ public:
 	void PrepareFrame(const FScene& InScene, const FCamera& InCamera, FVisibilityFrameInput& OutFrameInput, FVisibilityResults& OutResults);
 	void FinalizeFrame(
 		const FScene& InScene,
+		const FCamera& InCamera,
 		const FVisibilityFrameInput& InFrameInput,
 		const TArray<uint32>& InVisibleClusterIndices,
 		const FOcclusionTimingStats& InOcclusionTimings,

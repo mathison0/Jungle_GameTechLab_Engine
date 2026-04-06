@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <sstream>
 #include <string>
+
+#include <Windows.h>
 
 #include "StaticMesh/ObjParser.h"
 #include "StaticMesh/StaticMesh.h"
@@ -16,6 +19,30 @@ namespace
 		                       InValue.begin(),
 		                       [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
 		return InValue;
+	}
+
+	void LogMeshLODStats(const FStaticMesh& InMesh, bool bFromCache)
+	{
+		for (uint32 LODIndex = 0; LODIndex < InMesh.GetLODCount(); ++LODIndex)
+		{
+			const FStaticMesh::FLODLevel* LODLevel = InMesh.GetLODLevel(LODIndex);
+			if (LODLevel == nullptr)
+			{
+				continue;
+			}
+
+			std::ostringstream LogStream;
+			LogStream
+				<< "[StaticMesh][LOD] "
+				<< (bFromCache ? "Cache Hit" : "Imported")
+				<< " asset=" << InMesh.GetSourcePath().generic_string()
+				<< " lod=" << LODIndex
+				<< " vertices=" << LODLevel->Vertices.size()
+				<< " triangles=" << (LODLevel->Indices.size() / 3)
+				<< " ratio=" << LODLevel->TriangleRatio
+				<< '\n';
+			OutputDebugStringA(LogStream.str().c_str());
+		}
 	}
 }
 
@@ -45,6 +72,10 @@ std::shared_ptr<FStaticMesh> FStaticMeshManager::LoadStaticMesh(
 	const auto ExistingMeshIt = MeshCache.find(MeshCacheKey);
 	if (ExistingMeshIt != MeshCache.end())
 	{
+		if (ExistingMeshIt->second)
+		{
+			LogMeshLODStats(*ExistingMeshIt->second, true);
+		}
 		return ExistingMeshIt->second;
 	}
 
@@ -70,6 +101,7 @@ std::shared_ptr<FStaticMesh> FStaticMeshManager::LoadStaticMesh(
 	}
 
 	MeshCache.emplace(MeshCacheKey, Mesh);
+	LogMeshLODStats(*Mesh, false);
 	return Mesh;
 }
 

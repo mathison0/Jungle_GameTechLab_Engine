@@ -431,5 +431,16 @@ bool FObjParser::Parse(const std::filesystem::path& InObjPath, FStaticMeshSource
 		return false;
 	}
 
+	OutSourceData.BoundsSphere.Center = (OutSourceData.BoundsMin + OutSourceData.BoundsMax) * 0.5f;
+	float MaxDistanceSquared = 0.0f;
+	for (const FStaticMeshVertex& Vertex : OutSourceData.Vertices)
+	{
+		MaxDistanceSquared = std::max(
+			MaxDistanceSquared,
+			FVector::DistSquared(Vertex.Position, OutSourceData.BoundsSphere.Center));
+	}
+
+	OutSourceData.BoundsSphere.Radius = std::sqrt(MaxDistanceSquared);
+
 	return true;
 }

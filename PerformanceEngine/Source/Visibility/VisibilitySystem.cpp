@@ -1,6 +1,7 @@
 #include "Visibility/VisibilitySystem.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <sstream>
 
@@ -16,6 +17,7 @@ namespace
 {
 	constexpr float ClusterRefineMinScreenFraction = 0.2f;
 	constexpr float ClusterRefineNearDepthEpsilon = 1.0e-3f;
+	constexpr std::array<float, 2> ScreenSizeLODCutoffs = { 0.2f, 0.08f };
 
 	FVector BuildAabbCorner(const FVisibilityCluster& InCluster, uint32 InCornerIndex)
 	{
@@ -23,6 +25,38 @@ namespace
 			(InCornerIndex & 1u) != 0u ? InCluster.BoundsMax.X : InCluster.BoundsMin.X,
 			(InCornerIndex & 2u) != 0u ? InCluster.BoundsMax.Y : InCluster.BoundsMin.Y,
 			(InCornerIndex & 4u) != 0u ? InCluster.BoundsMax.Z : InCluster.BoundsMin.Z);
+	}
+
+	uint32 SelectLODIndex(const FScenePrimitiveRuntimeData& InPrimitiveData, const FCamera& InCamera)
+	{
+		const FBoundingSphere& WorldSphere = InPrimitiveData.WorldBoundsSphere;
+		if (WorldSphere.Radius <= 0.0f)
+		{
+			return 0;
+		}
+
+		const FVector CameraForward = InCamera.GetTransform().GetUnitAxis(EAxis::X).GetSafeNormal();
+		const FVector CameraToCenter = WorldSphere.Center - InCamera.GetLocation();
+		const float Depth = FVector::DotProduct(CameraToCenter, CameraForward);
+		const float SafeDepth = std::max(Depth, InCamera.GetNearClip());
+		if (SafeDepth <= 0.0f)
+		{
+			return 0;
+		}
+
+		const float ProjectionScaleY = 1.0f / std::tan(FMath::DegreesToRadians(InCamera.GetFOV()) * 0.5f);
+		const float ScreenDiameterRatio = (2.0f * WorldSphere.Radius * ProjectionScaleY) / SafeDepth;
+		if (ScreenDiameterRatio >= ScreenSizeLODCutoffs[0])
+		{
+			return 0;
+		}
+
+		if (ScreenDiameterRatio >= ScreenSizeLODCutoffs[1])
+		{
+			return 1;
+		}
+
+		return 2;
 	}
 }
 
@@ -63,6 +97,7 @@ void FVisibilitySystem::PrepareFrame(const FScene& InScene, const FCamera& InCam
 
 void FVisibilitySystem::FinalizeFrame(
 	const FScene& InScene,
+	const FCamera& InCamera,
 	const FVisibilityFrameInput& InFrameInput,
 	const TArray<uint32>& InVisibleClusterIndices,
 	const FOcclusionTimingStats& InOcclusionTimings,
@@ -87,6 +122,35 @@ void FVisibilitySystem::FinalizeFrame(
 	}
 
 	ExpandClustersToPrimitives(InScene, InFrameInput, OutResults.VisibleClusterIndices, OutResults.VisiblePrimitiveIndices);
+	OutResults.VisibleLODIndices.clear();
+	OutResults.VisibleLODIndices.reserve(OutResults.VisiblePrimitiveIndices.size());
+
+	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
+	for (uint32 PrimitiveIndex : OutResults.VisiblePrimitiveIndices)
+	{
+		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
+		{
+			OutResults.VisibleLODIndices.push_back(0);
+			continue;
+		}
+
+		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
+		FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
+		if (StaticMesh == nullptr)
+		{
+			OutResults.VisibleLODIndices.push_back(0);
+			continue;
+		}
+
+		const uint32 LODCount = StaticMesh->GetLODCount();
+		if (LODCount == 0)
+		{
+			OutResults.VisibleLODIndices.push_back(0);
+			continue;
+		}
+
+		OutResults.VisibleLODIndices.push_back(std::min(SelectLODIndex(PrimitiveData, InCamera), LODCount - 1));
+	}
 
 	OutResults.Stats.TotalPrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
 	OutResults.Stats.TotalClusterCount = InFrameInput.TotalClusterCount;
