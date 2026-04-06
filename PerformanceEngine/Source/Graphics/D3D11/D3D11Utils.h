@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <filesystem>
 #include <cstring>
 
@@ -20,6 +21,40 @@ namespace D3D11Utils
 		ID3D11Device* InDevice,
 		UINT InByteWidth,
 		TComPtr<ID3D11Buffer>& OutBuffer);
+
+	bool CreateStructuredBuffer(
+		ID3D11Device* InDevice,
+		UINT InElementStride,
+		UINT InElementCount,
+		UINT InBindFlags,
+		D3D11_USAGE InUsage,
+		UINT InCpuAccessFlags,
+		const void* InInitialData,
+		TComPtr<ID3D11Buffer>& OutBuffer);
+
+	bool CreateStructuredBufferSRV(
+		ID3D11Device* InDevice,
+		ID3D11Buffer* InBuffer,
+		UINT InElementCount,
+		TComPtr<ID3D11ShaderResourceView>& OutShaderResourceView);
+
+	bool CreateStructuredBufferUAV(
+		ID3D11Device* InDevice,
+		ID3D11Buffer* InBuffer,
+		UINT InElementCount,
+		TComPtr<ID3D11UnorderedAccessView>& OutUnorderedAccessView);
+
+	bool CreateStagingBuffer(
+		ID3D11Device* InDevice,
+		UINT InByteWidth,
+		TComPtr<ID3D11Buffer>& OutBuffer);
+
+	bool ReadbackBuffer(
+		ID3D11DeviceContext* InDeviceContext,
+		ID3D11Buffer* InSourceBuffer,
+		ID3D11Buffer* InStagingBuffer,
+		void* OutData,
+		size_t InByteCount);
 
 	template <typename T>
 	bool UpdateDynamicBuffer(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InBuffer, const T& InData)
@@ -52,5 +87,12 @@ namespace D3D11Utils
 		const char* InEntryPoint,
 		const char* InTarget,
 		TComPtr<ID3DBlob>& OutBlob,
+		const char* InDebugName = nullptr);
+
+	bool CreateComputeShaderFromFile(
+		ID3D11Device* InDevice,
+		const std::filesystem::path& InShaderPath,
+		const char* InEntryPoint,
+		TComPtr<ID3D11ComputeShader>& OutShader,
 		const char* InDebugName = nullptr);
 }

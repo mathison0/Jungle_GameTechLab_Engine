@@ -15,6 +15,7 @@
 #include "Picking/PickingSystem.h"
 #include "Scene/Scene.h"
 #include "Stats/StatsSystem.h"
+#include "Visibility/VisibilitySystem.h"
 
 namespace
 {
@@ -343,6 +344,7 @@ void FHudRenderer::Render(
 	const FCamera& InCamera,
 	const FScene& InScene,
 	const FStatsSystem& InStatsSystem,
+	const FVisibilityResults& InVisibilityResults,
 	const FPickState& InPickState)
 {
 	if (!Resources || !Resources->SpriteBatch || !Resources->WhiteTextureView)
@@ -359,8 +361,22 @@ void FHudRenderer::Render(
 	std::ostringstream TextStream;
 	TextStream << std::fixed << std::setprecision(6);
 	TextStream
-		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
-		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"
+		<< "FPS: " << InStatsSystem.GetAverageFramesPerSecond() << '\n'
+		<< "FRAME: " << InStatsSystem.GetAverageFrameTimeMs() << " MS\n"
+		<< "OCCLUSION: CLUSTER HZB\n"
+		<< "VISIBLE PRIMS: " << InVisibilityResults.VisiblePrimitiveIndices.size() << '\n'
+		<< "TOTAL CLUSTERS: " << InVisibilityResults.Stats.TotalClusterCount << '\n'
+		<< "FRUSTUM CLUSTERS: " << InVisibilityResults.Stats.FrustumVisibleClusterCount << '\n'
+		<< "CANDIDATE CLUSTERS: " << InVisibilityResults.Stats.CandidateClusterCount << '\n'
+		<< "VISIBLE CLUSTERS: " << InVisibilityResults.Stats.VisibleClusterCount << '\n'
+		<< "OCCLUDED CLUSTERS: " << InVisibilityResults.Stats.OccludedClusterCount << '\n'
+		<< "VIS AGE: " << InVisibilityResults.Stats.VisibilityResultAgeFrames << " FRAMES\n"
+		<< "HZB VALID: " << (InVisibilityResults.Stats.bHzbValid ? "YES" : "NO") << '\n'
+		<< "OCCLUSION USED: " << (InVisibilityResults.Stats.bUsedOcclusion ? "YES" : "NO") << '\n'
+		<< "GPU HZB: " << InVisibilityResults.Stats.OcclusionTimings.HzbBuildGpuTimeMs << " MS\n"
+		<< "GPU OCC: " << InVisibilityResults.Stats.OcclusionTimings.OcclusionCullGpuTimeMs << " MS\n"
+		<< "GPU LAT: " << InVisibilityResults.Stats.OcclusionTimings.ReadbackLatencyTimeMs << " MS\n"
+		<< "READBACK COPY: " << InVisibilityResults.Stats.OcclusionTimings.ReadbackCopyCpuTimeMs << " MS\n"
 		<< "PICK LAST: " << InStatsSystem.GetLastPickTimeMs() << " MS\n"
 		<< "PICK WORLD BVH: " << InStatsSystem.GetPickWorldBVHTimeMs() << " MS\n"
 		<< "PICK AABBCnt: " << InStatsSystem.GetTotalAABBCheckCount() << " \n"
