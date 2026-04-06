@@ -179,8 +179,7 @@ bool FGUIRenderer::Initialize(FD3D11RHI& InRHI, HWND InWindowHandle)
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 
-	ImGuiIO& IO = ImGui::GetIO();
-	IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	ImGui::GetIO();
 
 	ImGui::StyleColorsDark();
 

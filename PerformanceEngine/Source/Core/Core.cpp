@@ -243,7 +243,7 @@ void FCore::Tick()
 		}
 	}
 
-	if (!bGUIWantsMouseCapture && !bGUIWantsKeyboardCapture && !Gizmo->IsDragging() && bRightMouseDown)
+	if (!bGUIWantsMouseCapture && !Gizmo->IsDragging() && bRightMouseDown)
 	{
 		Camera->Update(*Input, DeltaTimeSeconds);
 	}
