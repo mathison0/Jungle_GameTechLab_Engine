@@ -1,5 +1,7 @@
 #include "Visibility/VisibilitySystem.h"
 
+#include <array>
+
 #include "Camera/Camera.h"
 #include "Scene/Scene.h"
 #include "StaticMesh/StaticMesh.h"
@@ -51,6 +53,39 @@ namespace
 	float AbsFloat(float Value)
 	{
 		return (Value < 0.0f) ? -Value : Value;
+	}
+
+	uint32 SelectLODIndex(const FScenePrimitiveRuntimeData& InPrimitiveData, const FCamera& InCamera)
+	{
+		static constexpr std::array<float, 2> ScreenSizeLODCutoffs = { 0.2f, 0.08f };
+
+		const FBoundingSphere& WorldSphere = InPrimitiveData.WorldBoundsSphere;
+		if (WorldSphere.Radius <= 0.0f)
+		{
+			return 0;
+		}
+
+		const FVector CameraToCenter = WorldSphere.Center - InCamera.GetLocation();
+		const float Depth = FVector::DotProduct(CameraToCenter, InCamera.GetRotation().GetForwardVector());
+		const float SafeDepth = std::max(Depth, InCamera.GetNearClip());
+		if (SafeDepth <= 0.0f)
+		{
+			return 0;
+		}
+
+		const float ProjectionScaleY = 1.0f / std::tan(FMath::DegreesToRadians(InCamera.GetFOV()) * 0.5f);
+		const float ScreenDiameterRatio = (2.0f * WorldSphere.Radius * ProjectionScaleY) / SafeDepth;
+		if (ScreenDiameterRatio >= ScreenSizeLODCutoffs[0])
+		{
+			return 0;
+		}
+
+		if (ScreenDiameterRatio >= ScreenSizeLODCutoffs[1])
+		{
+			return 1;
+		}
+
+		return 2;
 	}
 }
 
@@ -212,15 +247,18 @@ bool FVisibilitySystem::TryReuseCachedResults(const FScene& InScene, const FCame
 	}
 
 	OutResults.VisiblePrimitiveIndices = CachedResults.VisiblePrimitiveIndices;
+	OutResults.VisibleLODIndices = CachedResults.VisibleLODIndices;
 	return true;
 }
 
 void FVisibilitySystem::ComputeVisiblePrimitives(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults)
 {
 	OutResults.VisiblePrimitiveIndices.clear();
+	OutResults.VisibleLODIndices.clear();
 
 	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
 	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
+	OutResults.VisibleLODIndices.reserve(RenderItems.size());
 
 	CachedFrustum = BuildFrustum(InCamera);
 
@@ -231,6 +269,34 @@ void FVisibilitySystem::ComputeVisiblePrimitives(const FScene& InScene, const FC
 	}
 
 	TraverseWorldBVH(InScene, 0, OutResults);
+
+	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
+	OutResults.VisibleLODIndices.reserve(OutResults.VisiblePrimitiveIndices.size());
+	for (uint32 PrimitiveIndex : OutResults.VisiblePrimitiveIndices)
+	{
+		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
+		{
+			OutResults.VisibleLODIndices.push_back(0);
+			continue;
+		}
+
+		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
+		FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
+		if (StaticMesh == nullptr)
+		{
+			OutResults.VisibleLODIndices.push_back(0);
+			continue;
+		}
+
+		const uint32 LODCount = StaticMesh->GetLODCount();
+		if (LODCount == 0)
+		{
+			OutResults.VisibleLODIndices.push_back(0);
+			continue;
+		}
+
+		OutResults.VisibleLODIndices.push_back(std::min(SelectLODIndex(PrimitiveData, InCamera), LODCount - 1));
+	}
 }
 
 void FVisibilitySystem::UpdateCache(const FCamera& InCamera, const FVisibilityResults& InResults)

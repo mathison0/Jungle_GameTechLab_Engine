@@ -28,6 +28,7 @@ struct FVisibilityResults
 {
 	uint64 FrameNumber = 0;
 	TArray<uint32> VisiblePrimitiveIndices;
+	TArray<uint32> VisibleLODIndices;
 };
 
 class FVisibilitySystem

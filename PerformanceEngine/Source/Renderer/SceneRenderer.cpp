@@ -142,41 +142,9 @@ namespace
 		return true;
 	}
 
-	uint32 SelectLODIndex(const FScenePrimitiveRuntimeData& InPrimitiveData, const FCamera& InCamera)
-	{
-		const FBoundingSphere& WorldSphere = InPrimitiveData.WorldBoundsSphere;
-		if (WorldSphere.Radius <= 0.0f)
-		{
-			return 0;
-		}
-
-		const FVector CameraToCenter = WorldSphere.Center - InCamera.GetLocation();
-		const float Depth = FVector::DotProduct(CameraToCenter, InCamera.GetRotation().GetForwardVector());
-		const float SafeDepth = std::max(Depth, InCamera.GetNearClip());
-		if (SafeDepth <= 0.0f)
-		{
-			return 0;
-		}
-
-		const float ProjectionScaleY = 1.0f / std::tan(FMath::DegreesToRadians(InCamera.GetFOV()) * 0.5f);
-		const float ScreenDiameterRatio = (2.0f * WorldSphere.Radius * ProjectionScaleY) / SafeDepth;
-		if (ScreenDiameterRatio >= ScreenSizeLODCutoffs[0])
-		{
-			return 0;
-		}
-
-		if (ScreenDiameterRatio >= ScreenSizeLODCutoffs[1])
-		{
-			return 1;
-		}
-
-		return 2;
-	}
-
 	template <typename TResources>
 	void BuildRenderQueue(
 		const FScene& InScene,
-		const FCamera& InCamera,
 		const FVisibilityResults& InVisibilityResults,
 		const FPickState& InPickState,
 		ID3D11ShaderResourceView* InDefaultTextureView,
@@ -191,8 +159,9 @@ namespace
 		InOutResources.RenderItems.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
 
 		const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
-		for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
+		for (size_t VisibleIndex = 0; VisibleIndex < InVisibilityResults.VisiblePrimitiveIndices.size(); ++VisibleIndex)
 		{
+			const uint32 PrimitiveIndex = InVisibilityResults.VisiblePrimitiveIndices[VisibleIndex];
 			if (PrimitiveIndex >= PrimitiveRuntimeData.size())
 			{
 				continue;
@@ -213,7 +182,11 @@ namespace
 				continue;
 			}
 
-			const uint32 LODIndex = std::min(SelectLODIndex(PrimitiveData, InCamera), LODCount - 1);
+			const uint32 CachedLODIndex =
+				VisibleIndex < InVisibilityResults.VisibleLODIndices.size()
+				? InVisibilityResults.VisibleLODIndices[VisibleIndex]
+				: 0;
+			const uint32 LODIndex = std::min(CachedLODIndex, LODCount - 1);
 			if (LODIndex < InOutResources.LODSelectionCounts.size())
 			{
 				++InOutResources.LODSelectionCounts[LODIndex];
@@ -617,7 +590,7 @@ void FSceneRenderer::Render(
 	FrameConstants.ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
 	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
-	BuildRenderQueue(InScene, InCamera, InVisibilityResults, InPickState, Resources->WhiteTextureView.Get(), *Resources);
+	BuildRenderQueue(InScene, InVisibilityResults, InPickState, Resources->WhiteTextureView.Get(), *Resources);
 	LogLODSelectionCounts(InScene, *Resources);
 	SortRenderItems(Resources->RenderItems);
 	if (!EnsureObjectConstantBufferCapacity(
