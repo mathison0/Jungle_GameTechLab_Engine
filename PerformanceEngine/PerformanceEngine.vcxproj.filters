@@ -241,6 +241,9 @@
     <ClInclude Include="Source\Stats\StatsSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Types\PathUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Source\StaticMesh\ObjParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -14,6 +14,7 @@
 
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
+#include "Types/PathUtils.h"
 #include "Types/Queue.h"
 #include "BVH/BVHBuilder.h"
 
@@ -200,7 +201,7 @@ namespace
 
 	std::filesystem::path ResolveAssetPath(const std::filesystem::path& InScenePath, const FString& InRelativeAssetPath)
 	{
-		const std::filesystem::path AssetPath(InRelativeAssetPath);
+		const std::filesystem::path AssetPath = PathUtils::PathFromUtf8(InRelativeAssetPath);
 		if (AssetPath.is_absolute() && std::filesystem::exists(AssetPath))
 		{
 			return AssetPath;
@@ -246,11 +247,13 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	}
 
 	const std::filesystem::path SceneFilePath = std::filesystem::absolute(InSceneFilePath);
-	std::ifstream SceneFile(SceneFilePath);
-	if (!SceneFile)
+	std::string SceneText;
+	if (!PathUtils::ReadTextFileUtf8(SceneFilePath, SceneText))
 	{
 		return false;
 	}
+
+	std::istringstream SceneFile(SceneText);
 
 	bool bInCameraBlock = false;
 	bool bInPrimitivesBlock = false;

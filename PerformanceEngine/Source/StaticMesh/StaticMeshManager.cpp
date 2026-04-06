@@ -9,6 +9,7 @@
 
 #include "StaticMesh/ObjParser.h"
 #include "StaticMesh/StaticMesh.h"
+#include "Types/PathUtils.h"
 
 namespace
 {
@@ -35,7 +36,7 @@ namespace
 			LogStream
 				<< "[StaticMesh][LOD] "
 				<< (bFromCache ? "Cache Hit" : "Imported")
-				<< " asset=" << InMesh.GetSourcePath().generic_string()
+				<< " asset=" << PathUtils::PathToUtf8(InMesh.GetSourcePath())
 				<< " lod=" << LODIndex
 				<< " vertices=" << LODLevel->Vertices.size()
 				<< " triangles=" << (LODLevel->Indices.size() / 3)
@@ -53,7 +54,7 @@ FString FStaticMeshManager::BuildAssetKey(const std::filesystem::path& InAssetPa
 		return {};
 	}
 
-	return std::filesystem::absolute(InAssetPath).lexically_normal().generic_string();
+	return PathUtils::NormalizeAbsolutePathUtf8(InAssetPath);
 }
 
 std::shared_ptr<FStaticMesh> FStaticMeshManager::LoadStaticMesh(
@@ -79,7 +80,7 @@ std::shared_ptr<FStaticMesh> FStaticMeshManager::LoadStaticMesh(
 		return ExistingMeshIt->second;
 	}
 
-	const std::string Extension = ToLowerCopy(NormalizedPath.extension().string());
+	const std::string Extension = ToLowerCopy(PathUtils::PathToUtf8(NormalizedPath.extension()));
 
 	FStaticMeshSourceData SourceData;
 	if (Extension == ".obj")

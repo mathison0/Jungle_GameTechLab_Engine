@@ -12,6 +12,7 @@
 #include "Scene/Scene.h"
 #include "Scene/SceneTypes.h"
 #include "StaticMesh/StaticMesh.h"
+#include "Types/PathUtils.h"
 #include "ThirdParty/ImGui/imgui.h"
 #include "ThirdParty/ImGui/imgui_impl_dx11.h"
 #include "ThirdParty/ImGui/imgui_impl_win32.h"
@@ -536,7 +537,7 @@ bool FGUIRenderer::DrawSelectedObjectWindow(FScene& InScene, const FPickState& I
 				DrawIntProperty("Sections", static_cast<int32>(StaticMesh->GetSections().size()));
 				DrawIntProperty("Materials", static_cast<int32>(StaticMesh->GetMaterials().size()));
 
-				const std::string SourcePath = StaticMesh->GetSourcePath().string();
+				const std::string SourcePath = PathUtils::PathToUtf8(StaticMesh->GetSourcePath());
 				DrawTextProperty("Source", SourcePath.empty() ? "-" : SourcePath.c_str());
 			}
 			else

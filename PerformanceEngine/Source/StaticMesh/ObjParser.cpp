@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "StaticMesh/StaticMesh.h"
+#include "Types/PathUtils.h"
 
 namespace
 {
@@ -160,11 +161,13 @@ namespace
 			return;
 		}
 
-		std::ifstream MaterialFile(InMaterialPath);
-		if (!MaterialFile)
+		std::string MaterialText;
+		if (!PathUtils::ReadTextFileUtf8(InMaterialPath, MaterialText))
 		{
 			return;
 		}
+
+		std::istringstream MaterialFile(MaterialText);
 
 		FString CurrentMaterialName;
 		std::string Line;
@@ -194,7 +197,7 @@ namespace
 			}
 
 			InOutMaterialPathMap[CurrentMaterialName] =
-				(InMaterialPath.parent_path() / std::filesystem::path(RelativeTexturePath)).lexically_normal();
+				(InMaterialPath.parent_path() / PathUtils::PathFromUtf8(RelativeTexturePath)).lexically_normal();
 		}
 	}
 
@@ -259,11 +262,13 @@ bool FObjParser::Parse(const std::filesystem::path& InObjPath, FStaticMeshSource
 	}
 
 	const std::filesystem::path ObjPath = std::filesystem::absolute(InObjPath).lexically_normal();
-	std::ifstream ObjFile(ObjPath);
-	if (!ObjFile)
+	std::string ObjText;
+	if (!PathUtils::ReadTextFileUtf8(ObjPath, ObjText))
 	{
 		return false;
 	}
+
+	std::istringstream ObjFile(ObjText);
 
 	OutSourceData.SourcePath = ObjPath;
 	OutSourceData.Vertices.reserve(2048);
@@ -305,7 +310,7 @@ bool FObjParser::Parse(const std::filesystem::path& InObjPath, FStaticMeshSource
 			const std::string RelativeMaterialPath = Trim(TrimmedLine.substr(7));
 			if (!RelativeMaterialPath.empty())
 			{
-				ParseMaterialLibrary((ObjPath.parent_path() / std::filesystem::path(RelativeMaterialPath)).lexically_normal(), MaterialPathMap);
+				ParseMaterialLibrary((ObjPath.parent_path() / PathUtils::PathFromUtf8(RelativeMaterialPath)).lexically_normal(), MaterialPathMap);
 			}
 			continue;
 		}

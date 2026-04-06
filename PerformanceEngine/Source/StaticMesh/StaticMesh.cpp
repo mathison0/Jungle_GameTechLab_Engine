@@ -8,6 +8,7 @@
 #include <WICTextureLoader.h>
 
 #include "StaticMeshLOD.h"
+#include "Types/PathUtils.h"
 
 bool FStaticMesh::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FStaticMeshSourceData InSourceData)
 {
@@ -43,7 +44,7 @@ bool FStaticMesh::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDevi
 
 		if (!Material.DiffuseTexturePath.empty())
 		{
-			const std::string TextureKey = Material.DiffuseTexturePath.lexically_normal().generic_string();
+			const std::string TextureKey = PathUtils::NormalizeAbsolutePathUtf8(Material.DiffuseTexturePath);
 			const auto ExistingTextureIt = TextureViewCache.find(TextureKey);
 			if (ExistingTextureIt != TextureViewCache.end())
 			{

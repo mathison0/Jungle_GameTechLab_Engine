@@ -239,6 +239,7 @@
     <ClInclude Include="Source\Types\Array.h" />
     <ClInclude Include="Source\Types\LinkedList.h" />
     <ClInclude Include="Source\Types\Map.h" />
+    <ClInclude Include="Source\Types\PathUtils.h" />
     <ClInclude Include="Source\Types\Pair.h" />
     <ClInclude Include="Source\Types\PlatformTypes.h" />
     <ClInclude Include="Source\Types\Queue.h" />

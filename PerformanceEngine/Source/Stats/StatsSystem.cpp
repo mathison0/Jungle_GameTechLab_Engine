@@ -13,6 +13,7 @@
 #include <Windows.h>
 
 #include "Picking/PickingSystem.h"
+#include "Types/PathUtils.h"
 
 namespace
 {
@@ -310,7 +311,7 @@ void FStatsSystem::WriteBenchmarkLogs(const FBenchmarkRunMetadata& InMetadata) c
 	if (ErrorCode)
 	{
 		std::ostringstream Stream;
-		Stream << "[Benchmark] Failed to create log directory: " << LogDirectory.string() << '\n';
+		Stream << "[Benchmark] Failed to create log directory: " << PathUtils::PathToUtf8(LogDirectory) << '\n';
 		EmitBenchmarkDebugMessage(Stream.str());
 		return;
 	}
@@ -321,21 +322,21 @@ void FStatsSystem::WriteBenchmarkLogs(const FBenchmarkRunMetadata& InMetadata) c
 	const std::filesystem::path PickCsvPath = FilePrefix;
 	const std::filesystem::path SummaryPath = FilePrefix;
 
-	const std::filesystem::path FrameFilePath = FrameCsvPath.string() + "_frames.csv";
-	const std::filesystem::path PickFilePath = PickCsvPath.string() + "_pick_events.csv";
-	const std::filesystem::path SummaryFilePath = SummaryPath.string() + "_summary.txt";
+	const std::filesystem::path FrameFilePath = PathUtils::AppendUtf8Suffix(FrameCsvPath, "_frames.csv");
+	const std::filesystem::path PickFilePath = PathUtils::AppendUtf8Suffix(PickCsvPath, "_pick_events.csv");
+	const std::filesystem::path SummaryFilePath = PathUtils::AppendUtf8Suffix(SummaryPath, "_summary.txt");
 
 	if (!WriteFrameBenchmarkCsv(FrameFilePath, FrameBenchmarkSamples))
 	{
 		std::ostringstream Stream;
-		Stream << "[Benchmark] Failed to write frame log: " << FrameFilePath.string() << '\n';
+		Stream << "[Benchmark] Failed to write frame log: " << PathUtils::PathToUtf8(FrameFilePath) << '\n';
 		EmitBenchmarkDebugMessage(Stream.str());
 	}
 
 	if (!WritePickBenchmarkCsv(PickFilePath, PickBenchmarkSamples))
 	{
 		std::ostringstream Stream;
-		Stream << "[Benchmark] Failed to write pick log: " << PickFilePath.string() << '\n';
+		Stream << "[Benchmark] Failed to write pick log: " << PathUtils::PathToUtf8(PickFilePath) << '\n';
 		EmitBenchmarkDebugMessage(Stream.str());
 	}
 
@@ -349,7 +350,7 @@ void FStatsSystem::WriteBenchmarkLogs(const FBenchmarkRunMetadata& InMetadata) c
 		TotalPickCount))
 	{
 		std::ostringstream Stream;
-		Stream << "[Benchmark] Failed to write summary log: " << SummaryFilePath.string() << '\n';
+		Stream << "[Benchmark] Failed to write summary log: " << PathUtils::PathToUtf8(SummaryFilePath) << '\n';
 		EmitBenchmarkDebugMessage(Stream.str());
 	}
 #else
