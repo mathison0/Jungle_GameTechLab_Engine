@@ -35,6 +35,11 @@ float3 BuildCorner(FGpuOcclusionCandidate Candidate, uint CornerIndex)
         (CornerIndex & 4u) != 0u ? Candidate.BoundsMax.z : Candidate.BoundsMin.z);
 }
 
+uint ComputeMipDimension(uint BaseDimension, uint MipIndex)
+{
+    return max(BaseDimension >> MipIndex, 1u);
+}
+
 [numthreads(64, 1, 1)]
 void CSMain(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
@@ -111,10 +116,8 @@ void CSMain(uint3 DispatchThreadID : SV_DispatchThreadID)
     while ((SelectedMip + 1u) < MipCount)
     {
         uint NextMip = SelectedMip + 1u;
-        uint NextMipWidth = 0u;
-        uint NextMipHeight = 0u;
-        uint NextMipLevels = 0u;
-        HzbTexture.GetDimensions(NextMip, NextMipWidth, NextMipHeight, NextMipLevels);
+        uint NextMipWidth = ComputeMipDimension(DepthWidth, NextMip);
+        uint NextMipHeight = ComputeMipDimension(DepthHeight, NextMip);
 
         uint NextMinX = min((uint)MinX >> NextMip, NextMipWidth - 1u);
         uint NextMinY = min((uint)MinY >> NextMip, NextMipHeight - 1u);
@@ -130,10 +133,8 @@ void CSMain(uint3 DispatchThreadID : SV_DispatchThreadID)
         }
     }
 
-    uint SelectedMipWidth = 0;
-    uint SelectedMipHeight = 0;
-    uint SelectedMipLevels = 0;
-    HzbTexture.GetDimensions(SelectedMip, SelectedMipWidth, SelectedMipHeight, SelectedMipLevels);
+    uint SelectedMipWidth = ComputeMipDimension(DepthWidth, SelectedMip);
+    uint SelectedMipHeight = ComputeMipDimension(DepthHeight, SelectedMip);
 
     uint MipRectMinX = min((uint)MinX >> SelectedMip, SelectedMipWidth - 1u);
     uint MipRectMinY = min((uint)MinY >> SelectedMip, SelectedMipHeight - 1u);

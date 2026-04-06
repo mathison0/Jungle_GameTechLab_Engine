@@ -21,8 +21,8 @@ namespace
 {
 	constexpr float DefaultCameraSpeed = 20.0f;
 	constexpr float DefaultCameraSensitivity = 0.12f;
-	constexpr float OcclusionHistoryInvalidateDistance = 25.0f;
-	constexpr float OcclusionHistoryInvalidateAngleDegrees = 20.0f;
+	constexpr float OcclusionHistoryInvalidateDistance = 10.0f;
+	constexpr float OcclusionHistoryInvalidateAngleDegrees = 5.0f;
 
 	std::filesystem::path SearchForSceneFrom(const std::filesystem::path& InStartDirectory)
 	{
@@ -209,61 +209,47 @@ void FCore::Tick()
 	VisibilitySystem->PrepareFrame(*Scene, *Camera, VisibilityFrameInput, PreparedVisibilityResults);
 	BeginFrame();
 
-	TArray<uint32> VisiblePrimitiveIndices;
+	TArray<uint32> VisibleClusterIndices;
 	FVisibilityFrameInput ResolvedVisibilityFrameInput;
-	uint32 GpuCandidateCount = 0;
-	uint32 GpuVisibleCount = 0;
-	float GpuReadbackTimeMs = 0.0f;
+	FOcclusionTimingStats GpuOcclusionTimings = {};
 	bool bResolvedDelayedResult = false;
 	bool bHasPendingReadback = false;
 	if (!SceneRenderer->ResolveGpuVisibility(
 		*RHI,
-		*Scene,
 		*Camera,
 		VisibilityFrameInput,
-		VisiblePrimitiveIndices,
+		VisibleClusterIndices,
+		GpuOcclusionTimings,
 		ResolvedVisibilityFrameInput,
-		GpuCandidateCount,
-		GpuVisibleCount,
-		GpuReadbackTimeMs,
 		bResolvedDelayedResult,
 		bHasPendingReadback))
 	{
-		OutputDebugStringA("[Core] GPU visibility resolve failed. Falling back to frustum-visible draw submission for this frame.\n");
-		VisiblePrimitiveIndices = VisibilityFrameInput.FrustumVisiblePrimitiveIndices;
-		GpuCandidateCount = static_cast<uint32>(VisibilityFrameInput.CandidatePrimitiveIndices.size());
-		GpuVisibleCount = static_cast<uint32>(VisiblePrimitiveIndices.size());
-		GpuReadbackTimeMs = 0.0f;
+		OutputDebugStringA("[Core] GPU visibility resolve failed. Falling back to frustum-visible cluster submission for this frame.\n");
+		GpuOcclusionTimings = {};
+		ResolvedVisibilityFrameInput = FVisibilityFrameInput();
 		bResolvedDelayedResult = false;
 		bHasPendingReadback = false;
-		ResolvedVisibilityFrameInput = FVisibilityFrameInput();
+		VisibleClusterIndices.clear();
 	}
 
 	if (bResolvedDelayedResult)
 	{
-		VisibilitySystem->FinalizeGpuResults(
+		VisibilitySystem->FinalizeFrame(
 			*Scene,
 			ResolvedVisibilityFrameInput,
-			VisiblePrimitiveIndices,
-			GpuCandidateCount,
-			GpuVisibleCount,
-			GpuReadbackTimeMs,
+			VisibleClusterIndices,
+			GpuOcclusionTimings,
+			true,
 			VisibilityResults);
 	}
 	else if (!bHasPendingReadback || VisibilityResults.FrameNumber == 0)
 	{
-		VisiblePrimitiveIndices = VisibilityFrameInput.FrustumVisiblePrimitiveIndices;
-		GpuCandidateCount = static_cast<uint32>(VisibilityFrameInput.CandidatePrimitiveIndices.size());
-		GpuVisibleCount = static_cast<uint32>(VisiblePrimitiveIndices.size());
-		GpuReadbackTimeMs = 0.0f;
-
-		VisibilitySystem->FinalizeGpuResults(
+		VisibilitySystem->FinalizeFrame(
 			*Scene,
 			VisibilityFrameInput,
-			VisiblePrimitiveIndices,
-			GpuCandidateCount,
-			GpuVisibleCount,
-			GpuReadbackTimeMs,
+			VisibleClusterIndices,
+			GpuOcclusionTimings,
+			false,
 			VisibilityResults);
 	}
 
@@ -293,7 +279,10 @@ void FCore::Tick()
 		StatsSystem->RecordPickEvent(PickState);
 	}
 	StatsSystem->ApplyPickState(PickState);
-	SceneRenderer->RenderVisibleScene(*RHI, *Scene, *Camera, VisibilityResults, PickState);
+	if (!SceneRenderer->RenderVisibleScene(*RHI, *Scene, *Camera, VisibilityResults, PickState))
+	{
+		InvalidateOcclusionState();
+	}
 
 	if (Grid)
 	{

@@ -363,14 +363,19 @@ void FHudRenderer::Render(
 	TextStream
 		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
 		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"
-		<< "OCCLUSION: GPU\n"
-		<< "VISIBLE: " << InVisibilityResults.VisiblePrimitiveIndices.size() << '\n'
-		<< "FRUSTUM: " << InVisibilityResults.Stats.FrustumVisibleCount << '\n'
-		<< "SEED: " << InVisibilityResults.Stats.SeedCount << '\n'
-		<< "OCCLUDED: " << InVisibilityResults.Stats.OccludedCount << '\n'
-		<< "GPU CAND: " << InVisibilityResults.Stats.GpuCandidateCount << '\n'
-		<< "GPU VIS: " << InVisibilityResults.Stats.GpuVisibleCount << '\n'
-		<< "READBACK: " << InVisibilityResults.Stats.ReadbackTimeMs << " MS\n"
+		<< "OCCLUSION: CLUSTER HZB\n"
+		<< "VISIBLE PRIMS: " << InVisibilityResults.VisiblePrimitiveIndices.size() << '\n'
+		<< "TOTAL CLUSTERS: " << InVisibilityResults.Stats.TotalClusterCount << '\n'
+		<< "FRUSTUM CLUSTERS: " << InVisibilityResults.Stats.FrustumVisibleClusterCount << '\n'
+		<< "CANDIDATE CLUSTERS: " << InVisibilityResults.Stats.CandidateClusterCount << '\n'
+		<< "VISIBLE CLUSTERS: " << InVisibilityResults.Stats.VisibleClusterCount << '\n'
+		<< "OCCLUDED CLUSTERS: " << InVisibilityResults.Stats.OccludedClusterCount << '\n'
+		<< "HZB VALID: " << (InVisibilityResults.Stats.bHzbValid ? "YES" : "NO") << '\n'
+		<< "OCCLUSION USED: " << (InVisibilityResults.Stats.bUsedOcclusion ? "YES" : "NO") << '\n'
+		<< "GPU HZB: " << InVisibilityResults.Stats.OcclusionTimings.HzbBuildGpuTimeMs << " MS\n"
+		<< "GPU OCC: " << InVisibilityResults.Stats.OcclusionTimings.OcclusionCullGpuTimeMs << " MS\n"
+		<< "GPU LAT: " << InVisibilityResults.Stats.OcclusionTimings.ReadbackLatencyTimeMs << " MS\n"
+		<< "READBACK COPY: " << InVisibilityResults.Stats.OcclusionTimings.ReadbackCopyCpuTimeMs << " MS\n"
 		<< "PICK LAST: " << InStatsSystem.GetLastPickTimeMs() << " MS\n"
 		<< "PICK WORLD BVH: " << InStatsSystem.GetPickWorldBVHTimeMs() << " MS\n"
 		<< "PICK AABBCnt: " << InStatsSystem.GetTotalAABBCheckCount() << " \n"

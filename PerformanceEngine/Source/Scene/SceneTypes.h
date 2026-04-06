@@ -32,6 +32,16 @@ struct FSceneCameraInitData
 	float FarClip = 1000.0f;
 };
 
+struct FVisibilityCluster
+{
+	FVector BoundsMin = FVector::ZeroVector;
+	FVector BoundsMax = FVector::ZeroVector;
+	uint32 PrimitiveOffset = 0;
+	uint32 PrimitiveCount = 0;
+	int32 SourceBvhNodeIndex = -1;
+	bool bDynamic = false;
+};
+
 struct FRenderItem
 {
 	int32 PrimitiveId = -1;

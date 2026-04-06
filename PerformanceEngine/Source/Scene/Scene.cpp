@@ -17,6 +17,8 @@
 
 namespace
 {
+	constexpr uint32 VisibilityClusterPrimitiveTarget = 32;
+
 	struct FPendingPrimitive
 	{
 		int32 Id = 0;
@@ -417,6 +419,8 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 	RootIndex = 0;
 	// Sort RenderItems
 	CreateWorldBVH(0, (int)RenderItems.size(), 0);
+	DynamicPrimitiveMask.assign(RenderItems.size(), 0);
+	BuildVisibilityClusters();
 
 	InitialCamera.Transform = FTransform(MakeSceneRotation(RawCameraRotation), RawCameraLocation, FVector::OneVector);
 	if (!bHasSceneBounds)
@@ -439,6 +443,52 @@ void FScene::Release()
 	RawCameraRotation = FVector::ZeroVector;
 	SceneBoundsMin = FVector::ZeroVector;
 	SceneBoundsMax = FVector::ZeroVector;
+	WorldBVHNodes.clear();
+	FreeNodes.clear();
+	RootIndex = -1;
+	StaticVisibilityClusters.clear();
+	StaticClusterPrimitiveIndices.clear();
+	DynamicPrimitiveMask.clear();
+}
+
+bool FScene::IsPrimitiveDynamic(uint32 PrimitiveIndex) const
+{
+	return PrimitiveIndex < DynamicPrimitiveMask.size() && DynamicPrimitiveMask[PrimitiveIndex] != 0;
+}
+
+void FScene::BuildDynamicVisibilityClusters(TArray<FVisibilityCluster>& OutDynamicClusters, TArray<uint32>& OutDynamicPrimitiveIndices) const
+{
+	OutDynamicClusters.clear();
+	OutDynamicPrimitiveIndices.clear();
+
+	const TArray<FScenePrimitiveRuntimeData>& RuntimeData = GetPrimitiveRuntimeData();
+	OutDynamicClusters.reserve(RuntimeData.size());
+	OutDynamicPrimitiveIndices.reserve(RuntimeData.size());
+
+	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RuntimeData.size()); ++PrimitiveIndex)
+	{
+		if (!IsPrimitiveDynamic(PrimitiveIndex))
+		{
+			continue;
+		}
+
+		const FScenePrimitiveRuntimeData& Primitive = RuntimeData[PrimitiveIndex];
+		if (Primitive.StaticMesh == nullptr || !Primitive.StaticMesh->IsValid())
+		{
+			continue;
+		}
+
+		FVisibilityCluster Cluster = {};
+		Cluster.BoundsMin = Primitive.WorldBoundsMin;
+		Cluster.BoundsMax = Primitive.WorldBoundsMax;
+		Cluster.PrimitiveOffset = static_cast<uint32>(OutDynamicPrimitiveIndices.size());
+		Cluster.PrimitiveCount = 1;
+		Cluster.SourceBvhNodeIndex = -1;
+		Cluster.bDynamic = true;
+
+		OutDynamicPrimitiveIndices.push_back(PrimitiveIndex);
+		OutDynamicClusters.push_back(Cluster);
+	}
 }
 
 //start,end는 RenderItems의 인덱스 범위, ParentIdx는 WorldBVHNodes의 인덱스, bIsRight는 ParentIdx가 부모 노드의 오른쪽 자식인지 여부
@@ -509,6 +559,89 @@ int FScene::CreateWorldBVH(int start, int end, int ParentIdx)
 	WorldBVHNodes[ParentIdx].RightChildIndex = CreateWorldBVH(MidIdx, end, RightIdx);
 
 	return ParentIdx;
+}
+
+void FScene::BuildVisibilityClusters()
+{
+	StaticVisibilityClusters.clear();
+	StaticClusterPrimitiveIndices.clear();
+
+	if (RootIndex < 0 || WorldBVHNodes.empty())
+	{
+		return;
+	}
+
+	EmitVisibilityClustersFromNode(RootIndex);
+}
+
+void FScene::EmitVisibilityClustersFromNode(int NodeIndex)
+{
+	if (NodeIndex < 0 || NodeIndex >= static_cast<int>(WorldBVHNodes.size()))
+	{
+		return;
+	}
+
+	const AABBNode& Node = WorldBVHNodes[NodeIndex];
+	const uint32 PrimitiveCount = CountPrimitivesInNode(NodeIndex);
+	if (PrimitiveCount == 0)
+	{
+		return;
+	}
+
+	if (Node.IsLeaf() || PrimitiveCount <= VisibilityClusterPrimitiveTarget)
+	{
+		FVisibilityCluster Cluster = {};
+		Cluster.BoundsMin = Node.Min;
+		Cluster.BoundsMax = Node.Max;
+		Cluster.PrimitiveOffset = static_cast<uint32>(StaticClusterPrimitiveIndices.size());
+		Cluster.PrimitiveCount = PrimitiveCount;
+		Cluster.SourceBvhNodeIndex = NodeIndex;
+		Cluster.bDynamic = false;
+
+		CollectNodePrimitiveIndices(NodeIndex, StaticClusterPrimitiveIndices);
+		StaticVisibilityClusters.push_back(Cluster);
+		return;
+	}
+
+	EmitVisibilityClustersFromNode(Node.LeftChildIndex);
+	EmitVisibilityClustersFromNode(Node.RightChildIndex);
+}
+
+uint32 FScene::CountPrimitivesInNode(int NodeIndex) const
+{
+	if (NodeIndex < 0 || NodeIndex >= static_cast<int>(WorldBVHNodes.size()))
+	{
+		return 0;
+	}
+
+	const AABBNode& Node = WorldBVHNodes[NodeIndex];
+	if (Node.IsLeaf())
+	{
+		return 1;
+	}
+
+	return CountPrimitivesInNode(Node.LeftChildIndex) + CountPrimitivesInNode(Node.RightChildIndex);
+}
+
+void FScene::CollectNodePrimitiveIndices(int NodeIndex, TArray<uint32>& OutPrimitiveIndices) const
+{
+	if (NodeIndex < 0 || NodeIndex >= static_cast<int>(WorldBVHNodes.size()))
+	{
+		return;
+	}
+
+	const AABBNode& Node = WorldBVHNodes[NodeIndex];
+	if (Node.IsLeaf())
+	{
+		if (Node.PrimitiveIndex >= 0)
+		{
+			OutPrimitiveIndices.push_back(static_cast<uint32>(Node.PrimitiveIndex));
+		}
+		return;
+	}
+
+	CollectNodePrimitiveIndices(Node.LeftChildIndex, OutPrimitiveIndices);
+	CollectNodePrimitiveIndices(Node.RightChildIndex, OutPrimitiveIndices);
 }
 
 int FScene::AllocateBVHNode()
@@ -698,6 +831,19 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 
 	const FVector& NewMin = Item.WorldBoundsMin;
 	const FVector& NewMax = Item.WorldBoundsMax;
+	if (RenderItemIndex >= 0 && RenderItemIndex < static_cast<int>(PrimitiveRuntimeData.size()))
+	{
+		FScenePrimitiveRuntimeData& RuntimeData = PrimitiveRuntimeData[RenderItemIndex];
+		RuntimeData.WorldMatrix = NewTransform.ToMatrixWithScale();
+		RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+		RuntimeData.WorldBoundsMin = NewMin;
+		RuntimeData.WorldBoundsMax = NewMax;
+	}
+
+	if (RenderItemIndex >= 0 && RenderItemIndex < static_cast<int>(DynamicPrimitiveMask.size()))
+	{
+		DynamicPrimitiveMask[RenderItemIndex] = 1;
+	}
 
 	// Loose AABB 안에 있으면 리프 AABB만 갱신 후 Refit
 	bool bInsideLoose =

@@ -1,6 +1,7 @@
 #include "Visibility/VisibilitySystem.h"
 
 #include <algorithm>
+#include <cmath>
 #include <sstream>
 
 #include <Windows.h>
@@ -11,74 +12,81 @@
 #include "Scene/Scene.h"
 #include "StaticMesh/StaticMesh.h"
 
-FVisibilitySystem::~FVisibilitySystem()
-= default;
+FVisibilitySystem::~FVisibilitySystem() = default;
 
 void FVisibilitySystem::Reset()
 {
 	NextFrameNumber = 1;
 	CachedFrustum = FFrustum();
-	PreviousFrameVisibilityMask.clear();
+	PrimitiveScratchVisibilityMask.clear();
 	bHistoryValid = false;
 }
 
 void FVisibilitySystem::InvalidateHistory()
 {
-	std::fill(PreviousFrameVisibilityMask.begin(), PreviousFrameVisibilityMask.end(), 0);
 	bHistoryValid = false;
 }
 
 void FVisibilitySystem::PrepareFrame(const FScene& InScene, const FCamera& InCamera, FVisibilityFrameInput& OutFrameInput, FVisibilityResults& OutResults)
 {
-	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
-	EnsurePreviousVisibilityMaskSize(RenderItems.size());
-
 	OutFrameInput = FVisibilityFrameInput();
 	OutResults = FVisibilityResults();
 
 	OutFrameInput.FrameNumber = NextFrameNumber++;
+	OutFrameInput.bOcclusionValid = bHistoryValid;
 	OutResults.FrameNumber = OutFrameInput.FrameNumber;
-	OutResults.Stats.TotalPrimitiveCount = static_cast<uint32>(RenderItems.size());
+	OutResults.Stats.TotalPrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
 
-	ComputeFrustumVisiblePrimitives(RenderItems, InCamera, OutFrameInput.FrustumVisiblePrimitiveIndices);
-	OutResults.Stats.FrustumVisibleCount = static_cast<uint32>(OutFrameInput.FrustumVisiblePrimitiveIndices.size());
+	ComputeFrustumVisibleClusters(InScene, InCamera, OutFrameInput);
 
-	OutFrameInput.CandidatePrimitiveIndices = OutFrameInput.FrustumVisiblePrimitiveIndices;
-	ComputeSeedVisibilityPrimitives(
-		RenderItems,
-		OutFrameInput.FrustumVisiblePrimitiveIndices,
-		OutFrameInput.SeedPrimitiveIndices);
-
-	OutResults.SeedPrimitiveIndices = OutFrameInput.SeedPrimitiveIndices;
-	OutResults.Stats.SeedCount = static_cast<uint32>(OutFrameInput.SeedPrimitiveIndices.size());
+	OutResults.Stats.TotalClusterCount = OutFrameInput.TotalClusterCount;
+	OutResults.Stats.FrustumVisibleClusterCount = static_cast<uint32>(OutFrameInput.FrustumVisibleClusters.size());
+	OutResults.Stats.CandidateClusterCount = static_cast<uint32>(OutFrameInput.CandidateClusterIndices.size());
+	OutResults.Stats.bHzbValid = OutFrameInput.bOcclusionValid;
 }
 
-void FVisibilitySystem::FinalizeGpuResults(
+void FVisibilitySystem::FinalizeFrame(
 	const FScene& InScene,
 	const FVisibilityFrameInput& InFrameInput,
-	const TArray<uint32>& InVisiblePrimitiveIndices,
-	uint32 InGpuCandidateCount,
-	uint32 InGpuVisibleCount,
-	float InGpuReadbackTimeMs,
+	const TArray<uint32>& InVisibleClusterIndices,
+	const FOcclusionTimingStats& InOcclusionTimings,
+	bool bUsedOcclusion,
 	FVisibilityResults& OutResults)
 {
-	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
-	EnsurePreviousVisibilityMaskSize(RenderItems.size());
+	EnsurePrimitiveScratchMaskSize(InScene.GetPrimitiveCount());
 
 	OutResults.FrameNumber = InFrameInput.FrameNumber;
-	OutResults.VisiblePrimitiveIndices = InVisiblePrimitiveIndices;
-	OutResults.SeedPrimitiveIndices = InFrameInput.SeedPrimitiveIndices;
+	if (bUsedOcclusion)
+	{
+		OutResults.VisibleClusterIndices = InVisibleClusterIndices;
+	}
+	else
+	{
+		OutResults.VisibleClusterIndices.clear();
+		OutResults.VisibleClusterIndices.reserve(InFrameInput.FrustumVisibleClusters.size());
+		for (uint32 ClusterIndex = 0; ClusterIndex < static_cast<uint32>(InFrameInput.FrustumVisibleClusters.size()); ++ClusterIndex)
+		{
+			OutResults.VisibleClusterIndices.push_back(ClusterIndex);
+		}
+	}
 
-	OutResults.Stats.TotalPrimitiveCount = static_cast<uint32>(RenderItems.size());
-	OutResults.Stats.FrustumVisibleCount = static_cast<uint32>(InFrameInput.FrustumVisiblePrimitiveIndices.size());
-	OutResults.Stats.SeedCount = static_cast<uint32>(InFrameInput.SeedPrimitiveIndices.size());
-	OutResults.Stats.VisibleCount = static_cast<uint32>(InVisiblePrimitiveIndices.size());
-	OutResults.Stats.OccludedCount = static_cast<uint32>(InGpuCandidateCount - InGpuVisibleCount);
-	OutResults.Stats.GpuCandidateCount = InGpuCandidateCount;
-	OutResults.Stats.GpuVisibleCount = InGpuVisibleCount;
-	OutResults.Stats.ReadbackTimeMs = InGpuReadbackTimeMs;
+	ExpandClustersToPrimitives(InScene, InFrameInput, OutResults.VisibleClusterIndices, OutResults.VisiblePrimitiveIndices);
 
-	UpdatePreviousVisibilityMask(RenderItems.size(), OutResults);
+	OutResults.Stats.TotalPrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
+	OutResults.Stats.TotalClusterCount = InFrameInput.TotalClusterCount;
+	OutResults.Stats.FrustumVisibleClusterCount = static_cast<uint32>(InFrameInput.FrustumVisibleClusters.size());
+	OutResults.Stats.CandidateClusterCount = static_cast<uint32>(InFrameInput.CandidateClusterIndices.size());
+	OutResults.Stats.VisibleClusterCount = static_cast<uint32>(OutResults.VisibleClusterIndices.size());
+	OutResults.Stats.OccludedClusterCount = OutResults.Stats.CandidateClusterCount >= OutResults.Stats.VisibleClusterCount
+		? (OutResults.Stats.CandidateClusterCount - OutResults.Stats.VisibleClusterCount)
+		: 0u;
+	OutResults.Stats.ExpandedVisiblePrimitiveCount = static_cast<uint32>(OutResults.VisiblePrimitiveIndices.size());
+	OutResults.Stats.bHzbValid = InFrameInput.bOcclusionValid;
+	OutResults.Stats.bUsedOcclusion = bUsedOcclusion;
+	OutResults.Stats.ReadbackTimeMs = InOcclusionTimings.ReadbackCopyCpuTimeMs;
+	OutResults.Stats.OcclusionTimings = InOcclusionTimings;
+
+	bHistoryValid = true;
 	LogBuildResult(OutResults);
 }
 
@@ -164,78 +172,117 @@ bool FVisibilitySystem::IntersectsAABB(const FFrustum& InFrustum, const FVector&
 	return true;
 }
 
-void FVisibilitySystem::ComputeFrustumVisiblePrimitives(const TArray<FRenderItem>& RenderItems, const FCamera& InCamera, TArray<uint32>& OutVisibleIndices)
+void FVisibilitySystem::ComputeFrustumVisibleClusters(const FScene& InScene, const FCamera& InCamera, FVisibilityFrameInput& OutFrameInput)
 {
-	OutVisibleIndices.clear();
-	OutVisibleIndices.reserve(RenderItems.size());
+	OutFrameInput.FrustumVisibleClusters.clear();
+	OutFrameInput.DynamicClusterPrimitiveIndices.clear();
+	OutFrameInput.CandidateClusterIndices.clear();
 	CachedFrustum = BuildFrustum(InCamera);
 
-	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
+	const TArray<FVisibilityCluster>& StaticClusters = InScene.GetStaticVisibilityClusters();
+	OutFrameInput.FrustumVisibleClusters.reserve(StaticClusters.size());
+	for (const FVisibilityCluster& Cluster : StaticClusters)
 	{
-		const FRenderItem& Item = RenderItems[PrimitiveIndex];
-		if (Item.StaticMesh == nullptr || !Item.StaticMesh->IsValid())
+		if (!IntersectsAABB(CachedFrustum, Cluster.BoundsMin, Cluster.BoundsMax))
 		{
 			continue;
 		}
 
-		if (!IntersectsAABB(CachedFrustum, Item.WorldBoundsMin, Item.WorldBoundsMax))
-		{
-			continue;
-		}
-
-		OutVisibleIndices.push_back(PrimitiveIndex);
+		OutFrameInput.FrustumVisibleClusters.push_back(Cluster);
 	}
-}
 
-void FVisibilitySystem::ComputeSeedVisibilityPrimitives(
-	const TArray<FRenderItem>& RenderItems,
-	const TArray<uint32>& InFrustumVisiblePrimitiveIndices,
-	TArray<uint32>& OutSeedPrimitiveIndices)
-{
-	OutSeedPrimitiveIndices.clear();
-	if (!bHistoryValid || InFrustumVisiblePrimitiveIndices.empty())
+	TArray<FVisibilityCluster> DynamicClusters;
+	InScene.BuildDynamicVisibilityClusters(DynamicClusters, OutFrameInput.DynamicClusterPrimitiveIndices);
+	OutFrameInput.TotalClusterCount = static_cast<uint32>(StaticClusters.size() + DynamicClusters.size());
+	OutFrameInput.FrustumVisibleClusters.reserve(OutFrameInput.FrustumVisibleClusters.size() + DynamicClusters.size());
+	for (const FVisibilityCluster& Cluster : DynamicClusters)
+	{
+		if (!IntersectsAABB(CachedFrustum, Cluster.BoundsMin, Cluster.BoundsMax))
+		{
+			continue;
+		}
+
+		OutFrameInput.FrustumVisibleClusters.push_back(Cluster);
+	}
+
+	if (!OutFrameInput.bOcclusionValid)
 	{
 		return;
 	}
-	for (uint32 PrimitiveIndex : InFrustumVisiblePrimitiveIndices)
+
+	OutFrameInput.CandidateClusterIndices.reserve(OutFrameInput.FrustumVisibleClusters.size());
+	for (uint32 ClusterIndex = 0; ClusterIndex < static_cast<uint32>(OutFrameInput.FrustumVisibleClusters.size()); ++ClusterIndex)
 	{
-		if (PrimitiveIndex >= RenderItems.size())
+		OutFrameInput.CandidateClusterIndices.push_back(ClusterIndex);
+	}
+}
+
+void FVisibilitySystem::ExpandClustersToPrimitives(
+	const FScene& InScene,
+	const FVisibilityFrameInput& InFrameInput,
+	const TArray<uint32>& InVisibleClusterIndices,
+	TArray<uint32>& OutVisiblePrimitiveIndices)
+{
+	OutVisiblePrimitiveIndices.clear();
+	EnsurePrimitiveScratchMaskSize(InScene.GetPrimitiveCount());
+	std::fill(PrimitiveScratchVisibilityMask.begin(), PrimitiveScratchVisibilityMask.end(), 0);
+
+	const TArray<uint32>& StaticClusterPrimitiveIndices = InScene.GetStaticClusterPrimitiveIndices();
+	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
+
+	for (uint32 ClusterIndex : InVisibleClusterIndices)
+	{
+		if (ClusterIndex >= InFrameInput.FrustumVisibleClusters.size())
 		{
 			continue;
 		}
 
-		const bool bWasVisibleLastFrame = PrimitiveIndex < PreviousFrameVisibilityMask.size()
-			&& PreviousFrameVisibilityMask[PrimitiveIndex] != 0;
-		if (!bWasVisibleLastFrame)
+		const FVisibilityCluster& Cluster = InFrameInput.FrustumVisibleClusters[ClusterIndex];
+		const TArray<uint32>& ClusterPrimitiveIndices = Cluster.bDynamic
+			? InFrameInput.DynamicClusterPrimitiveIndices
+			: StaticClusterPrimitiveIndices;
+		const uint32 PrimitiveEnd = Cluster.PrimitiveOffset + Cluster.PrimitiveCount;
+		if (PrimitiveEnd > ClusterPrimitiveIndices.size())
 		{
 			continue;
 		}
 
-		OutSeedPrimitiveIndices.push_back(PrimitiveIndex);
-	}
-}
-
-void FVisibilitySystem::UpdatePreviousVisibilityMask(size_t PrimitiveCount, const FVisibilityResults& InResults)
-{
-	EnsurePreviousVisibilityMaskSize(PrimitiveCount);
-	std::fill(PreviousFrameVisibilityMask.begin(), PreviousFrameVisibilityMask.end(), 0);
-
-	for (uint32 PrimitiveIndex : InResults.VisiblePrimitiveIndices)
-	{
-		if (PrimitiveIndex < PreviousFrameVisibilityMask.size())
+		for (uint32 PrimitiveCursor = Cluster.PrimitiveOffset; PrimitiveCursor < PrimitiveEnd; ++PrimitiveCursor)
 		{
-			PreviousFrameVisibilityMask[PrimitiveIndex] = 1;
+			const uint32 PrimitiveIndex = ClusterPrimitiveIndices[PrimitiveCursor];
+			if (PrimitiveIndex >= PrimitiveScratchVisibilityMask.size()
+				|| PrimitiveIndex >= PrimitiveRuntimeData.size())
+			{
+				continue;
+			}
+
+			if (!Cluster.bDynamic && InScene.IsPrimitiveDynamic(PrimitiveIndex))
+			{
+				continue;
+			}
+
+			const FScenePrimitiveRuntimeData& Primitive = PrimitiveRuntimeData[PrimitiveIndex];
+			if (Primitive.StaticMesh == nullptr || !Primitive.StaticMesh->IsValid())
+			{
+				continue;
+			}
+
+			if (PrimitiveScratchVisibilityMask[PrimitiveIndex] != 0)
+			{
+				continue;
+			}
+
+			PrimitiveScratchVisibilityMask[PrimitiveIndex] = 1;
+			OutVisiblePrimitiveIndices.push_back(PrimitiveIndex);
 		}
 	}
-
-	bHistoryValid = true;
 }
 
-void FVisibilitySystem::EnsurePreviousVisibilityMaskSize(size_t PrimitiveCount)
+void FVisibilitySystem::EnsurePrimitiveScratchMaskSize(size_t PrimitiveCount)
 {
-	if (PreviousFrameVisibilityMask.size() != PrimitiveCount)
+	if (PrimitiveScratchVisibilityMask.size() != PrimitiveCount)
 	{
-		PreviousFrameVisibilityMask.assign(PrimitiveCount, 0);
+		PrimitiveScratchVisibilityMask.assign(PrimitiveCount, 0);
 	}
 }
 
@@ -245,17 +292,18 @@ void FVisibilitySystem::LogBuildResult(const FVisibilityResults& InResults) cons
 	std::ostringstream Stream;
 	Stream
 		<< "VisibilitySystem: "
-		<< "GPU"
-		<< " - Total: " << InResults.Stats.TotalPrimitiveCount
-		<< ", Frustum: " << InResults.Stats.FrustumVisibleCount
-		<< ", Seed: " << InResults.Stats.SeedCount
-		<< ", Visible: " << InResults.Stats.VisibleCount
-		<< ", Occluded: " << InResults.Stats.OccludedCount
-		<< ", GPUCand: " << InResults.Stats.GpuCandidateCount
-		<< ", GPUVisible: " << InResults.Stats.GpuVisibleCount
-		<< ", ReadbackMs: " << InResults.Stats.ReadbackTimeMs
-		<< ", FinalVisible: " << InResults.VisiblePrimitiveIndices.size()
+		<< "ClustersTotal: " << InResults.Stats.TotalClusterCount
+		<< ", ClustersFrustum: " << InResults.Stats.FrustumVisibleClusterCount
+		<< ", ClustersCand: " << InResults.Stats.CandidateClusterCount
+		<< ", ClustersVisible: " << InResults.Stats.VisibleClusterCount
+		<< ", PrimsVisible: " << InResults.Stats.ExpandedVisiblePrimitiveCount
+		<< ", HzbValid: " << InResults.Stats.bHzbValid
+		<< ", UsedOcclusion: " << InResults.Stats.bUsedOcclusion
+		<< ", HzbMs: " << InResults.Stats.OcclusionTimings.HzbBuildGpuTimeMs
+		<< ", CullMs: " << InResults.Stats.OcclusionTimings.OcclusionCullGpuTimeMs
+		<< ", WaitMs: " << InResults.Stats.OcclusionTimings.ReadbackLatencyTimeMs
+		<< ", ReadbackMs: " << InResults.Stats.OcclusionTimings.ReadbackCopyCpuTimeMs
 		<< '\n';
-
-	OutputDebugStringA(Stream.str().c_str());*/
+	OutputDebugStringA(Stream.str().c_str());
+	*/
 }

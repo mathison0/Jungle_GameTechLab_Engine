@@ -69,7 +69,6 @@ private:
 	std::unique_ptr<FBVHDebugRenderer> BVHDebugRenderer;
 
 	FVisibilityFrameInput VisibilityFrameInput;
-	FVisibilityFrameInput PendingGpuVisibilityFrameInput;
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;
 	int32 LastViewportWidth = 0;
@@ -78,7 +77,6 @@ private:
 	FVector LastCameraLocation = FVector::ZeroVector;
 	FVector LastCameraForward = FVector::ForwardVector;
 	bool bHasLastCameraPose = false;
-	bool bHasPendingGpuVisibilityFrameInput = false;
 
 	bool bInitialized = false;
 };

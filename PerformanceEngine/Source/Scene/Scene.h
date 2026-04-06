@@ -34,6 +34,10 @@ public:
 	const FVector& GetSceneBoundsMin() const { return SceneBoundsMin; }
 	const FVector& GetSceneBoundsMax() const { return SceneBoundsMax; }
 	const TArray<AABBNode>& GetWorldBVHNodes() const { return WorldBVHNodes; }
+	const TArray<FVisibilityCluster>& GetStaticVisibilityClusters() const { return StaticVisibilityClusters; }
+	const TArray<uint32>& GetStaticClusterPrimitiveIndices() const { return StaticClusterPrimitiveIndices; }
+	bool IsPrimitiveDynamic(uint32 PrimitiveIndex) const;
+	void BuildDynamicVisibilityClusters(TArray<FVisibilityCluster>& OutDynamicClusters, TArray<uint32>& OutDynamicPrimitiveIndices) const;
 
 
 private:
@@ -47,6 +51,10 @@ private:
 	void RemoveLeaf(int LeafIdx);
 	float SurfaceArea(const FVector& Min, const FVector& Max);
 	void MoveLeaf(int RenderItemIndex, const FTransform& NewTransform);
+	void BuildVisibilityClusters();
+	void EmitVisibilityClustersFromNode(int NodeIndex);
+	uint32 CountPrimitivesInNode(int NodeIndex) const;
+	void CollectNodePrimitiveIndices(int NodeIndex, TArray<uint32>& OutPrimitiveIndices) const;
 
 
 private:
@@ -73,4 +81,8 @@ private:
 	TArray<int> FreeNodes;
 	int RootIndex = 1;
 	//BVH Related Variables
+
+	TArray<FVisibilityCluster> StaticVisibilityClusters;
+	TArray<uint32> StaticClusterPrimitiveIndices;
+	TArray<uint8> DynamicPrimitiveMask;
 };
