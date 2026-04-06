@@ -248,39 +248,45 @@ namespace
 	{
 		TStack<int> NodeStack;
 		NodeStack.push(0);
-		float distanceSquared = std::numeric_limits<float>::max();
 		while (!NodeStack.empty())
 		{
 			int BVHNodeIndex = NodeStack.top(); NodeStack.pop();
 			++State.TotalAABBCheckCount;
-			AABBNode Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
-			if (IntersectRayAabb(InRay, Node.Min, Node.Max))
+			const AABBNode& Node = Scene.GetWorldBVHNodes()[BVHNodeIndex];
+			if (IntersectRayAabb(InRay, Node.Min, Node.Max) >= 1e30f)
 			{
-				if (Node.PrimitiveIndex >= Scene.GetPrimitiveRuntimeData().size())
+				continue;
+			}
+			if (Node.IsLeaf())
+			{
+				if (Node.PrimitiveIndex >= 0 && Node.PrimitiveIndex < static_cast<int>(Scene.GetPrimitiveRuntimeData().size()))
 				{
-					continue;
+					IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[Node.PrimitiveIndex], InOutPickHit);
 				}
-				if (Node.IsLeaf() && IntersectRenderItem(InRay, Scene.GetPrimitiveRuntimeData()[Node.PrimitiveIndex], InOutPickHit))
+			}
+			else
+			{
+				float distToLeft = std::numeric_limits<float>::max();
+				float distToRight = std::numeric_limits<float>::max();
+				if (Node.LeftChildIndex != -1)
 				{
-					distanceSquared = std::min(distanceSquared, InOutPickHit.DistanceSquared);
+					const AABBNode& Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
+					distToLeft = FVector::DistSquared(InRay.Origin, (Left.Min + Left.Max) * 0.5f);
+				}
+				if (Node.RightChildIndex != -1)
+				{
+					const AABBNode& Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
+					distToRight = FVector::DistSquared(InRay.Origin, (Right.Min + Right.Max) * 0.5f);
+				}
+				if (distToLeft > distToRight)
+				{
+					if (Node.LeftChildIndex != -1)  NodeStack.push(Node.LeftChildIndex);
+					if (Node.RightChildIndex != -1) NodeStack.push(Node.RightChildIndex);
 				}
 				else
 				{
-					float distToLeft = 0.f;
-					float distToRight = 0.f;
-					if (Node.LeftChildIndex != -1)
-					{
-						AABBNode Left = Scene.GetWorldBVHNodes()[Node.LeftChildIndex];
-						distToLeft = FVector::DistSquared(InRay.Origin, (Left.Min + Left.Max) * 0.5f);
-						//NodeStack.push(Node.LeftChildIndex);
-					}
-					if (Node.RightChildIndex != -1)
-					{
-						AABBNode Right = Scene.GetWorldBVHNodes()[Node.RightChildIndex];
-						distToRight = FVector::DistSquared(InRay.Origin, (Right.Min + Right.Max) * 0.5f);
-						//NodeStack.push(Node.RightChildIndex);
-					}
-					distToLeft > distToRight ? NodeStack.push(Node.LeftChildIndex) : NodeStack.push(Node.RightChildIndex);
+					if (Node.RightChildIndex != -1) NodeStack.push(Node.RightChildIndex);
+					if (Node.LeftChildIndex != -1)  NodeStack.push(Node.LeftChildIndex);
 				}
 			}
 		}
