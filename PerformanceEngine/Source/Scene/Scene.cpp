@@ -371,8 +371,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 
 	NextPrimitiveId = MaxPrimitiveId + 1;
 	RebuildSceneBoundsFromRenderItems();
-	bWorldBVHStructureStale = false;
-
+	
 	//Create World BVH here
 
 	//For Check
@@ -414,7 +413,6 @@ void FScene::Release()
 	SceneBoundsMin = FVector::ZeroVector;
 	SceneBoundsMax = FVector::ZeroVector;
 	NextPrimitiveId = 0;
-	bWorldBVHStructureStale = false;
 }
 
 bool FScene::TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta)
@@ -500,9 +498,13 @@ bool FScene::AddLoadedStaticMeshInstance(const FString& InMeshAssetKey, const FT
 		return false;
 	}
 
-	bWorldBVHStructureStale = true;
-	RebuildSceneBoundsFromRenderItems();
 	OutPrimitiveIndex = static_cast<int32>(RenderItems.size()) - 1;
+
+	FRenderItem& NewItem = RenderItems.back();
+	int NewLeafIdx = InsertLeaf(NewItem.WorldBoundsMin, NewItem.WorldBoundsMax, OutPrimitiveIndex);
+	NewItem.BVHLeafIndex = NewLeafIdx;
+	UpdateSceneBoundsFromRoot();
+
 	return OutPrimitiveIndex >= 0;
 }
 
@@ -521,11 +523,27 @@ bool FScene::RemovePrimitiveFromScene(int32 PrimitiveIndex)
 		return false;
 	}
 
-	RenderItems.erase(RenderItems.begin() + PrimitiveArrayIndex);
-	PrimitiveRuntimeData.erase(PrimitiveRuntimeData.begin() + PrimitiveArrayIndex);
-	PrimitiveColdData.erase(PrimitiveColdData.begin() + PrimitiveArrayIndex);
-	bWorldBVHStructureStale = true;
-	RebuildSceneBoundsFromRenderItems();
+	RemoveLeaf(RenderItems[PrimitiveArrayIndex].BVHLeafIndex);
+
+	const size_t LastIndex = RenderItems.size() - 1;
+
+	if (PrimitiveArrayIndex != LastIndex)
+	{
+		std::swap(RenderItems[PrimitiveArrayIndex], RenderItems[LastIndex]);
+		std::swap(PrimitiveRuntimeData[PrimitiveArrayIndex], PrimitiveRuntimeData[LastIndex]);
+		std::swap(PrimitiveColdData[PrimitiveArrayIndex], PrimitiveColdData[LastIndex]);
+
+		FRenderItem& MovedItem = RenderItems[PrimitiveArrayIndex];
+		if (MovedItem.BVHLeafIndex >= 0 && MovedItem.BVHLeafIndex < static_cast<int32>(WorldBVHNodes.size()))
+		{
+			WorldBVHNodes[MovedItem.BVHLeafIndex].PrimitiveIndex = static_cast<int32>(PrimitiveArrayIndex);
+		}
+	}
+
+	RenderItems.pop_back();
+	PrimitiveRuntimeData.pop_back();
+	PrimitiveColdData.pop_back();
+
 	return true;
 }
 
@@ -789,8 +807,7 @@ void FScene::MoveLeaf(int RenderItemIndex, const FTransform& NewTransform)
 	const FVector& NewMin = Item.WorldBoundsMin;
 	const FVector& NewMax = Item.WorldBoundsMax;
 
-	if (bWorldBVHStructureStale
-		|| Item.BVHLeafIndex < 0
+	if (Item.BVHLeafIndex < 0
 		|| Item.BVHLeafIndex >= static_cast<int32>(WorldBVHNodes.size()))
 	{
 		UpdatePrimitiveRuntimeData(RenderItemIndex);

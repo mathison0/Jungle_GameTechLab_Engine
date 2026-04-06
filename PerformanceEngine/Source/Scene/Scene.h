@@ -85,6 +85,5 @@ private:
 	TArray<int> FreeNodes;
 	int RootIndex = -1;
 	int32 NextPrimitiveId = 0;
-	bool bWorldBVHStructureStale = false;
 	//BVH Related Variables
 };
