@@ -546,7 +546,6 @@ bool FScene::TranslatePrimitiveWorld(int32 PrimitiveIndex, const FVector& Delta)
 	FTransform NewTransform = Item.Transform;
 	NewTransform.AddToTranslation(Delta);
 	MoveLeaf(PrimitiveIndex, NewTransform);
-	UpdateSceneBoundsFromRoot();
 	return true;
 }
 
@@ -575,7 +574,6 @@ bool FScene::SetPrimitiveTransformWorld(int32 PrimitiveIndex, const FTransform& 
 	}
 
 	MoveLeaf(PrimitiveIndex, NewTransform);
-	UpdateSceneBoundsFromRoot();
 	return true;
 }
 
@@ -708,7 +706,6 @@ bool FScene::RemovePrimitiveFromScene(int32 PrimitiveIndex)
 		return true;
 	}
 
-	UpdateSceneBoundsFromRoot();
 	DynamicPrimitiveMask.assign(RenderItems.size(), 0);
 	BuildVisibilityClusters();
 	return true;
