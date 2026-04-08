@@ -303,9 +303,9 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 							}
 						}
 
-						bool bScreenScaled = BillboardComp->IsScreenSizeScaled();
+						/*bool bScreenScaled = BillboardComp->IsScreenSizeScaled();
 						if (ImGui::Checkbox("Sprite Screen Scaled", &bScreenScaled))
-							BillboardComp->SetScreenSizeScaled(bScreenScaled);
+							BillboardComp->SetScreenSizeScaled(bScreenScaled);*/
 
 						FVector RelativeLocation = BillboardComp->GetRelativeLocation();
 						float OffsetValues[3] = { RelativeLocation.X, RelativeLocation.Y, RelativeLocation.Z };
