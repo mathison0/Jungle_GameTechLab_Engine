@@ -45,6 +45,8 @@ public:
 	FVector GetBillboardRenderScale(const FVector& CameraPosition) const;
 	FMaterial* GetBillboardMaterial() const;
 	bool EnsureRenderResources();
+	virtual void DuplicateSubObjects() override;
+
 
 private:
 	void RebuildMesh();

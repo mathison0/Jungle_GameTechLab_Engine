@@ -21,9 +21,9 @@ UBillboardComponent::UBillboardComponent(const UBillboardComponent& Other)
 	, TintColor(Other.TintColor)
 	, bScreenSizeScaled(Other.bScreenSizeScaled)
 	, ScreenSize(Other.ScreenSize)
-	, BillboardMesh(Other.BillboardMesh ? std::make_shared<FDynamicMesh>(*Other.BillboardMesh) : nullptr)
+	, BillboardMesh(nullptr)  // GPU 버퍼를 공유하지 않도록 nullptr로 초기화 — DuplicateSubObjects에서 재생성
 	, BillboardMaterial(nullptr)
-	, LoadedSprite(Other.LoadedSprite)
+	, LoadedSprite(nullptr)
 {
 }
 
@@ -147,6 +147,18 @@ bool UBillboardComponent::EnsureRenderResources()
 {
 	RebuildMesh();
 	return EnsureMaterial() && LoadSpriteTexture();
+}
+
+void UBillboardComponent::DuplicateSubObjects()
+{
+	UPrimitiveComponent::DuplicateSubObjects();
+
+	BillboardMesh = std::make_shared<FDynamicMesh>();
+	BillboardMesh->Topology = EMeshTopology::EMT_TriangleList;
+	RebuildMesh();
+
+	BillboardMaterial = nullptr;
+	LoadedSprite = nullptr;
 }
 
 void UBillboardComponent::RebuildMesh()

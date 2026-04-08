@@ -2,7 +2,7 @@
 
 #include "Actor.h"
 
-class UStaticMeshComponent;
+class UBillboardComponent;
 
 class ENGINE_API APlayerStart : public AActor
 {
@@ -12,5 +12,5 @@ public:
 	void PostSpawnInitialize() override;
 	virtual void Tick(float fTimeDelta) override;
 private:
-	UStaticMeshComponent* MeshComponent = nullptr;
+	UBillboardComponent* BillboardComponent = nullptr;
 };

@@ -54,7 +54,7 @@ void UTextRenderComponent::DuplicateSubObjects()
 	TextMesh->bIsDirty = true;
 }
 
-void UTextComponent::Serialize(FArchive& Ar)
+void UTextRenderComponent::Serialize(FArchive& Ar)
 {
 	UPrimitiveComponent::Serialize(Ar);
 

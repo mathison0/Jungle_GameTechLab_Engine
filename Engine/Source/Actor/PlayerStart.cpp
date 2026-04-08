@@ -1,21 +1,24 @@
 #include "PlayerStart.h"
 
-#include "Asset/ObjManager.h"
-#include "Component/StaticMeshComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Core/Paths.h"
 #include "Object/ObjectFactory.h"
 #include "Object/Class.h"
+#include "Renderer/Texture.h"
 
 IMPLEMENT_RTTI(APlayerStart, AActor)
 
 void APlayerStart::PostSpawnInitialize()
 {
-	UStaticMesh* Mesh = FObjManager::LoadModelStaticMeshAsset(FPaths::FromPath(FPaths::MeshDir() / "PrimitiveBox.Model"));
+	BillboardComponent = FObjectFactory::ConstructObject<UBillboardComponent>(this, "BillboardComponent");
 
-	MeshComponent = FObjectFactory::ConstructObject<UStaticMeshComponent>(this, "StaticMeshComponent");
-	MeshComponent->SetStaticMesh(Mesh);
+	if (UTexture* PawnSprite = UTexture::FindOrLoad("Editor/Icons/Pawn_64x.png", this))
+	{
+		BillboardComponent->SetSprite(PawnSprite);
+	}
 
-	AddOwnedComponent(MeshComponent);
+	BillboardComponent->SetSize(FVector2(0.5f, 0.5f));
+	AddOwnedComponent(BillboardComponent);
 
 	AActor::PostSpawnInitialize();
 }

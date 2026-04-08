@@ -16,7 +16,7 @@ namespace
 	} GUUIDTextRenderComponentAliases;
 }
 
-FRenderMesh* UUUIDBillboardComponent::GetRenderMesh() const
+FRenderMesh* UUUIDTextRenderComponent::GetRenderMesh() const
 {
 	// UUID 빌보드는 에디터 전용이므로 PIE/Game 월드에서는 렌더링하지 않는다.
 	AActor* OwnerActor = GetOwner();
@@ -28,10 +28,8 @@ FRenderMesh* UUUIDBillboardComponent::GetRenderMesh() const
 				return nullptr;
 		}
 	}
-	return UTextComponent::GetRenderMesh();
+	return UTextRenderComponent::GetRenderMesh();
 }
-
-FString UUUIDBillboardComponent::GetDisplayText() const
 
 void UUUIDTextRenderComponent::PostConstruct()
 {
