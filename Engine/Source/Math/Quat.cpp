@@ -466,22 +466,33 @@ FMatrix FQuat::ToMatrix() const noexcept
 
 FRotator FQuat::Rotator() const noexcept
 {
-	const FMatrix RotationMatrix = ToMatrix();
-	const float ClampedPitchSin = std::clamp(RotationMatrix.M[2][0], -1.0f, 1.0f);
-	const float PitchRadians = std::asin(ClampedPitchSin);
-	const float CosPitch = std::cos(PitchRadians);
-
-	float YawRadians = 0.0f;
-	float RollRadians = 0.0f;
-
-	if (std::fabs(CosPitch) > 1.e-6f)
+	const FQuat NormalizedQuat = GetNormalized();
+	const FVector Forward = NormalizedQuat.GetForwardVector().GetSafeNormal(MatrixConversionTolerance);
+	if (Forward.IsNearlyZero(MatrixConversionTolerance))
 	{
-		YawRadians = std::atan2(-RotationMatrix.M[1][0], RotationMatrix.M[0][0]);
-		RollRadians = std::atan2(-RotationMatrix.M[2][1], RotationMatrix.M[2][2]);
+		return FRotator::ZeroRotator;
 	}
-	else
+
+	const float PitchRadians = std::asin(std::clamp(Forward.Z, -1.0f, 1.0f));
+	const float YawRadians = std::atan2(Forward.Y, Forward.X);
+
+	FVector BaseForward;
+	FVector BaseRight;
+	FVector BaseUp;
+	const bool bBuiltBase =
+		BuildOrthonormalBasisFromXZ(Forward, FVector::UpVector, BaseForward, BaseRight, BaseUp)
+		|| BuildOrthonormalBasisFromXY(Forward, FVector::RightVector, BaseForward, BaseRight, BaseUp);
+
+	float RollRadians = 0.0f;
+	if (bBuiltBase)
 	{
-		YawRadians = std::atan2(RotationMatrix.M[0][1], RotationMatrix.M[1][1]);
+		const FVector Right = NormalizedQuat.GetRightVector().GetSafeNormal(MatrixConversionTolerance);
+		if (!Right.IsNearlyZero(MatrixConversionTolerance))
+		{
+			RollRadians = std::atan2(
+				FVector::DotProduct(Right, BaseUp),
+				FVector::DotProduct(Right, BaseRight));
+		}
 	}
 
 	FRotator Result(

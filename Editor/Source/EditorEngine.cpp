@@ -27,6 +27,20 @@ namespace
 {
 	constexpr const char* PreviewSceneContextName = "PreviewScene";
 
+	FRotator MakeCameraRotatorFromForward(const FVector& Forward)
+	{
+		const FVector NormalizedForward = Forward.GetSafeNormal();
+		if (NormalizedForward.IsNearlyZero())
+		{
+			return FRotator::ZeroRotator;
+		}
+
+		constexpr float RadToDeg = 57.29577951308232f;
+		const float PitchDegrees = std::asin(std::clamp(NormalizedForward.Z, -1.0f, 1.0f)) * RadToDeg;
+		const float YawDegrees = std::atan2(NormalizedForward.Y, NormalizedForward.X) * RadToDeg;
+		return FRotator(PitchDegrees, YawDegrees, 0.0f);
+	}
+
 	const TArray<FWorldContext*>& GetEmptyPreviewWorldContexts()
 	{
 		static TArray<FWorldContext*> EmptyPreviewWorldContexts;
@@ -374,8 +388,9 @@ void FEditorEngine::StartPIE()
 			USceneComponent* RootComp = FoundPlayerStart->GetRootComponent();
 			PerspEntry->LocalState.Position = RootComp->GetWorldLocation();
 
-			const FTransform WorldTransform(RootComp->GetWorldTransform());
-			PerspEntry->LocalState.Rotation = WorldTransform.Rotator();
+			// Initialize the PIE camera from the PlayerStart's actual world forward axis.
+			const FVector WorldForward = RootComp->GetWorldTransform().GetForwardVector();
+			PerspEntry->LocalState.Rotation = MakeCameraRotatorFromForward(WorldForward);
 		}
 		// else: LocalState.Position은 에디터 카메라 위치 그대로 유지
 
