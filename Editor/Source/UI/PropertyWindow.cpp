@@ -5,6 +5,7 @@
 #include "Component/ActorComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/CameraComponent.h"
+#include "Component/MovementComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/StaticMeshComponent.h"
@@ -644,6 +645,39 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 					}
 				}
 				ImGui::Unindent(8.0f);
+			}
+
+			if (UClass* MovementComponentClass = UClass::FindClass("UMovementComponent"))
+			{
+				if (UActorComponent* MovementComponentBase = SelectedActor->GetComponentByExactClass(MovementComponentClass))
+				{
+					UMovementComponent* MovementComp = static_cast<UMovementComponent*>(MovementComponentBase);
+					const bool bShowMovementSection = !SelectedComponent || SelectedComponent == MovementComp;
+					if (bShowMovementSection && ImGui::CollapsingHeader("Movement", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::Indent(8.0f);
+
+						bool bEnabled = MovementComp->IsEnabled();
+						if (ImGui::Checkbox("Enabled", &bEnabled))
+						{
+							MovementComp->SetEnabled(bEnabled);
+						}
+
+						float Amplitude = MovementComp->GetAmplitude();
+						if (ImGui::DragFloat("Amplitude", &Amplitude, 0.01f, 0.0f, 1000.0f, "%.2f"))
+						{
+							MovementComp->SetAmplitude(Amplitude);
+						}
+
+						float Speed = MovementComp->GetSpeed();
+						if (ImGui::DragFloat("Speed", &Speed, 0.01f, 0.0f, 100.0f, "%.2f"))
+						{
+							MovementComp->SetSpeed(Speed);
+						}
+
+						ImGui::Unindent(8.0f);
+					}
+				}
 			}
 
 			if (UCameraComponent* CameraComp = SelectedActor->GetExactComponentByClass<UCameraComponent>())

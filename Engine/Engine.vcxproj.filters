@@ -126,6 +126,9 @@
     <ClCompile Include="Source\Component\MeshComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\MovementComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
@@ -367,6 +370,9 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\MeshComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\MovementComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\PrimitiveComponent.h">

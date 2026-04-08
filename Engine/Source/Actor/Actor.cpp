@@ -228,6 +228,14 @@ void AActor::Serialize(FArchive& Ar)
 			UUID = SavedUUID;
 			GUUIDToObjectMap[SavedUUID] = this;
 
+			for (UActorComponent* Component : OwnedComponents)
+			{
+				if (Component)
+				{
+					Component->SetOwner(this);
+				}
+			}
+
 		}
 
 		uint32 SavedRootCompUUID = 0;
