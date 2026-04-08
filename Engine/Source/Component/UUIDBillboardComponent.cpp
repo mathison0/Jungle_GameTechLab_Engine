@@ -13,6 +13,21 @@ void UUUIDBillboardComponent::PostConstruct()
 	SetTextScale(0.3f); // UUID 빌보드의 기본 스케일 설정
 }
 
+FRenderMesh* UUUIDBillboardComponent::GetRenderMesh() const
+{
+	// UUID 빌보드는 에디터 전용이므로 PIE/Game 월드에서는 렌더링하지 않는다.
+	AActor* OwnerActor = GetOwner();
+	if (OwnerActor)
+	{
+		if (UWorld* World = OwnerActor->GetWorld())
+		{
+			if (World->GetWorldType() != EWorldType::Editor)
+				return nullptr;
+		}
+	}
+	return UTextComponent::GetRenderMesh();
+}
+
 FString UUUIDBillboardComponent::GetDisplayText() const
 {
 	AActor* OwnerActor = GetOwner();

@@ -10,6 +10,7 @@ public:
 
 	void PostConstruct() override;
 
+	virtual FRenderMesh* GetRenderMesh() const override;
 	virtual FString GetDisplayText() const override;
 	// SetWorldOffset 諛섏쁺?댁꽌 ?ㅻ툕?앺듃 癒몃━ ?꾩뿉 ?⑤룄濡???
 	virtual FVector GetRenderWorldPosition() const override;
