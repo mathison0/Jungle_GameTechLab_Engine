@@ -107,34 +107,22 @@ UTexture* UTexture::FindOrLoad(const FString& InAssetPathFileName, UObject* InOu
 	}
 
 	NewTexture->SetAssetPathFileName(NormalizedPath);
-	if (!NewTexture->EnsureTextureResource())
-	{
-		return nullptr;
-	}
-
 	return NewTexture;
 }
 
-TArray<UTexture*> UTexture::GetAvailableTextureAssets(UObject* InOuter)
+TArray<FString> UTexture::GetAvailableTextureAssetPaths()
 {
-	TArray<UTexture*> AvailableTextures;
-	GatherTextureAssetsFromDirectory(FPaths::TextureDir(), FPaths::AssetDir(), InOuter, AvailableTextures);
-	GatherTextureAssetsFromDirectory(FPaths::ContentDir() / "Textures", FPaths::ProjectRoot(), InOuter, AvailableTextures);
+	TArray<FString> AvailableTextureAssetPaths;
+	GatherTextureAssetPathsFromDirectory(FPaths::TextureDir(), FPaths::AssetDir(), AvailableTextureAssetPaths);
+	GatherTextureAssetPathsFromDirectory(FPaths::ContentDir() / "Textures", FPaths::ProjectRoot(), AvailableTextureAssetPaths);
 
-	std::sort(
-		AvailableTextures.begin(),
-		AvailableTextures.end(),
-		[](const UTexture* A, const UTexture* B)
-		{
-			if (!A || !B)
-			{
-				return A != nullptr;
-			}
-			return A->GetAssetPathFileName() < B->GetAssetPathFileName();
-		}
+	std::sort(AvailableTextureAssetPaths.begin(), AvailableTextureAssetPaths.end());
+	AvailableTextureAssetPaths.erase(
+		std::unique(AvailableTextureAssetPaths.begin(), AvailableTextureAssetPaths.end()),
+		AvailableTextureAssetPaths.end()
 	);
 
-	return AvailableTextures;
+	return AvailableTextureAssetPaths;
 }
 
 FString UTexture::NormalizeTextureAssetPath(const FString& InAssetPathFileName)
@@ -225,11 +213,10 @@ bool UTexture::IsSupportedTextureFile(const std::filesystem::path& InPath)
 	return false;
 }
 
-void UTexture::GatherTextureAssetsFromDirectory(
+void UTexture::GatherTextureAssetPathsFromDirectory(
 	const std::filesystem::path& InDirectory,
 	const std::filesystem::path& InRelativeBase,
-	UObject* InOuter,
-	TArray<UTexture*>& OutTextures)
+	TArray<FString>& OutAssetPaths)
 {
 	if (!std::filesystem::exists(InDirectory) || !std::filesystem::is_directory(InDirectory))
 	{
@@ -249,9 +236,6 @@ void UTexture::GatherTextureAssetsFromDirectory(
 			continue;
 		}
 
-		if (UTexture* Texture = FindOrLoad(FPaths::FromPath(RelativePath), InOuter))
-		{
-			OutTextures.push_back(Texture);
-		}
+		OutAssetPaths.push_back(FPaths::FromPath(RelativePath));
 	}
 }

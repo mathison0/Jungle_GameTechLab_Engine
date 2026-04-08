@@ -20,17 +20,16 @@ public:
 
 	static UTexture* FindByAssetPath(const FString& InAssetPathFileName);
 	static UTexture* FindOrLoad(const FString& InAssetPathFileName, UObject* InOuter = nullptr);
-	static TArray<UTexture*> GetAvailableTextureAssets(UObject* InOuter = nullptr);
+	static TArray<FString> GetAvailableTextureAssetPaths();
 
 private:
 	static FString NormalizeTextureAssetPath(const FString& InAssetPathFileName);
 	static std::filesystem::path ResolveTexturePath(const FString& InAssetPathFileName);
 	static bool IsSupportedTextureFile(const std::filesystem::path& InPath);
-	static void GatherTextureAssetsFromDirectory(
+	static void GatherTextureAssetPathsFromDirectory(
 		const std::filesystem::path& InDirectory,
 		const std::filesystem::path& InRelativeBase,
-		UObject* InOuter,
-		TArray<UTexture*>& OutTextures
+		TArray<FString>& OutAssetPaths
 	);
 
 private:

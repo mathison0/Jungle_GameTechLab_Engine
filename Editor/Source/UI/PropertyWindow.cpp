@@ -249,7 +249,12 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 					{
 						UBillboardComponent* BillboardComp = static_cast<UBillboardComponent*>(Component);
 						UTexture* CurrentSprite = BillboardComp->GetSprite();
-						std::string CurrentSpriteName = CurrentSprite ? CurrentSprite->GetAssetPathFileName() : "None";
+						std::string CurrentSpriteName = "None";
+						if (CurrentSprite)
+						{
+							const std::filesystem::path CurrentSpritePath = FPaths::ToPath(CurrentSprite->GetAssetPathFileName());
+							CurrentSpriteName = CurrentSpritePath.stem().string();
+						}
 
 						ImGui::Text("Sprite Asset:");
 						ImGui::SameLine();
@@ -262,17 +267,19 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 								BillboardComp->SetSprite(nullptr);
 							}
 
-							const TArray<UTexture*> TextureAssets = UTexture::GetAvailableTextureAssets(SelectedActor);
-							for (UTexture* TextureAsset : TextureAssets)
+							const TArray<FString> TextureAssetPaths = UTexture::GetAvailableTextureAssetPaths();
+							for (const FString& TextureAssetPath : TextureAssetPaths)
 							{
-								if (!TextureAsset) continue;
-
-								const std::string TextureName = TextureAsset->GetAssetPathFileName();
-								const bool bSelected = (CurrentSprite == TextureAsset);
+								const std::filesystem::path TexturePath = FPaths::ToPath(TextureAssetPath);
+								const std::string TextureName = TexturePath.stem().string();
+								const bool bSelected = (CurrentSprite && CurrentSprite->GetAssetPathFileName() == TextureAssetPath);
 
 								if (ImGui::Selectable(TextureName.c_str(), bSelected))
 								{
-									BillboardComp->SetSprite(TextureAsset);
+									if (UTexture* TextureAsset = UTexture::FindOrLoad(TextureAssetPath, SelectedActor))
+									{
+										BillboardComp->SetSprite(TextureAsset);
+									}
 								}
 
 								if (bSelected)
