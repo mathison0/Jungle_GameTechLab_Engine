@@ -12,6 +12,7 @@ class AActor;
 class FEditorViewportClient;
 class FShowFlags;
 class UActorComponent;
+class USceneComponent;
 
 class FEditorEngine : public FEngine
 {
@@ -24,6 +25,7 @@ public:
 	AActor* GetSelectedActor() const;
 	void SetSelectedComponent(UActorComponent* InComponent);
 	UActorComponent* GetSelectedComponent() const;
+	USceneComponent* GetTransformTargetComponent() const;
 	void ActivateEditorScene();
 	bool ActivatePreviewScene(const FString& ContextName);
 	UScene* GetEditorScene() const;

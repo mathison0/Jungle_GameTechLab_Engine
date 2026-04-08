@@ -16,6 +16,7 @@
 #include "Component/StaticMeshComponent.h"
 #include "Asset/ObjManager.h"
 #include "Slate/Widget/Painter.h"
+#include "Component/SceneComponent.h"
 
 namespace
 {
@@ -112,10 +113,11 @@ void FEditorViewportRenderService::RenderAll(
 		const FVector CameraPosition = Queue.ViewMatrix.GetInverse().GetTranslation();
 		BuildRenderCommands(Engine, Scene, Frustum, Entry.LocalState.ShowFlags, CameraPosition, Queue);
 
-		AActor* GizmoTarget = EditorEngine->GetSelectedActor();
-		if (GizmoTarget && GizmoTarget->GetComponentByClass<USkyComponent>() == nullptr)
+		AActor* GizmoActor = EditorEngine->GetSelectedActor();
+		USceneComponent* GizmoTarget = EditorEngine->GetTransformTargetComponent();
+		if (GizmoActor && GizmoActor->GetComponentByClass<USkyComponent>() == nullptr)
 		{
-			Gizmo.BuildRenderCommands(GizmoTarget, &Entry, Queue);
+			Gizmo.BuildRenderCommands(GizmoActor, GizmoTarget, &Entry, Queue);
 		}
 
 		if (Entry.LocalState.ViewMode == ERenderMode::Wireframe && WireFrameMaterial)

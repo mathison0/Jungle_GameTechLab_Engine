@@ -53,10 +53,10 @@ public:
 	EGizmoCoordinateSpace GetCoordinateSpace() const { return CoordinateSpace; }
 	void ToggleCoordinateSpace();
 
-	void BuildRenderCommands(AActor* SelectedActor, const FViewportEntry* Entry, FRenderCommandQueue& OutQueue) const;
-	bool BeginDrag(AActor* SelectedActor, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
-	bool UpdateDrag(AActor* SelectedActor, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
-	void UpdateHover(AActor* SelectedActor, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
+	void BuildRenderCommands(AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, FRenderCommandQueue& OutQueue) const;
+	bool BeginDrag(AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
+	bool UpdateDrag(AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
+	void UpdateHover(AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
 	void ClearHover();
 	void EndDrag();
 
@@ -66,23 +66,30 @@ private:
 	bool EnsureTranslationMeshes() const;
 	bool EnsureRotationMeshes(const FViewportEntry* Entry, const FVector& GizmoWorldLocation) const;
 	bool EnsureScaleMeshes() const;
-	EGizmoAxis HitTestAxis(AActor* SelectedActor, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY) const;
-	bool BeginAxisDrag(EGizmoAxis Axis, AActor* SelectedActor, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
-	bool BeginTranslationDrag(EGizmoAxis Axis, AActor* SelectedActor, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
-	bool BeginRotationDrag(EGizmoAxis Axis, AActor* SelectedActor, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
-	bool BeginScaleDrag(EGizmoAxis Axis, AActor* SelectedActor, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
+	EGizmoAxis HitTestAxis(AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY) const;
+	bool BeginAxisDrag(EGizmoAxis Axis, AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
+	bool BeginTranslationDrag(EGizmoAxis Axis, AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
+	bool BeginRotationDrag(EGizmoAxis Axis, AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
+	bool BeginScaleDrag(EGizmoAxis Axis, AActor* SelectedActor, USceneComponent* TransformTarget, const FViewportEntry* Entry, const FPicker& Picker, int32 ScreenX, int32 ScreenY);
 	EGizmoAxis GetDisplayAxis() const;
 	FRotationGizmoDesc BuildRotationDesc(const FViewportEntry* Entry, const FVector& GizmoWorldLocation) const;
-	FQuat GetGizmoRotation(const AActor* Actor) const;
-	FVector GetGizmoAxisVector(EGizmoAxis Axis, const AActor* Actor) const;
-	FVector GetGizmoPlaneNormal(EGizmoAxis Axis, const AActor* Actor) const;
+	FQuat GetGizmoRotation(const AActor* Actor, const USceneComponent* TransformTarget) const;
+	FVector GetGizmoAxisVector(EGizmoAxis Axis, const AActor* Actor, const USceneComponent* TransformTarget) const;
+	FVector GetGizmoPlaneNormal(EGizmoAxis Axis, const AActor* Actor, const USceneComponent* TransformTarget) const;
 
 	static FVector GetAxisVector(EGizmoAxis Axis);
 	static FVector GetPlaneNormal(EGizmoAxis Axis);
+	static bool ShouldUseComponentTransform(AActor* Actor, const USceneComponent* TransformTarget);
+	static FVector GetTargetWorldLocation(AActor* Actor, const USceneComponent* TransformTarget);
 	static FVector GetActorWorldLocation(const AActor* Actor);
+	static FQuat GetTargetWorldRotation(const AActor* Actor, const USceneComponent* TransformTarget);
 	static FQuat GetActorWorldRotation(const AActor* Actor);
 	static FQuat GetComponentWorldRotationIgnoringScale(const USceneComponent* Component);
+	static FVector GetTargetRelativeScale(const AActor* Actor, const USceneComponent* TransformTarget);
 	static FVector GetActorRelativeScale(const AActor* Actor);
+	static bool ApplyComponentWorldLocation(USceneComponent* Component, const FVector& NewWorldLocation);
+	static bool ApplyComponentWorldRotation(USceneComponent* Component, const FQuat& NewWorldRotation);
+	static bool ApplyComponentRelativeScale(USceneComponent* Component, const FVector& NewRelativeScale);
 	static bool ApplyActorWorldLocation(AActor* Actor, const FVector& NewWorldLocation);
 	static bool ApplyActorWorldRotation(AActor* Actor, const FQuat& NewWorldRotation);
 	static bool ApplyActorRelativeScale(AActor* Actor, const FVector& NewRelativeScale);

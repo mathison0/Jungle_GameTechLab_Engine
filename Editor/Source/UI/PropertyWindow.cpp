@@ -315,6 +315,25 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 							BillboardComp->UpdateBounds();
 						}
 
+						FTransform RelativeTransform = BillboardComp->GetRelativeTransform();
+						FVector RelativeRotationEuler = RelativeTransform.Rotator().Euler();
+						float RotationValues[3] = { RelativeRotationEuler.X, RelativeRotationEuler.Y, RelativeRotationEuler.Z };
+						if (ImGui::DragFloat3("Sprite Rotation", RotationValues, 0.5f, -360.0f, 360.0f, "%.1f"))
+						{
+							RelativeTransform.SetRotation(FRotator::MakeFromEuler(FVector(RotationValues[0], RotationValues[1], RotationValues[2])));
+							BillboardComp->SetRelativeTransform(RelativeTransform);
+							BillboardComp->UpdateBounds();
+						}
+
+						FVector RelativeScale = RelativeTransform.GetScale3D();
+						float ScaleValues[3] = { RelativeScale.X, RelativeScale.Y, RelativeScale.Z };
+						if (ImGui::DragFloat3("Sprite Scale", ScaleValues, 0.01f, 0.001f, 100.0f, "%.3f"))
+						{
+							RelativeTransform.SetScale3D(FVector(ScaleValues[0], ScaleValues[1], ScaleValues[2]));
+							BillboardComp->SetRelativeTransform(RelativeTransform);
+							BillboardComp->UpdateBounds();
+						}
+
 						FVector2 SpriteSize = BillboardComp->GetSize();
 						float SizeValues[2] = { SpriteSize.X, SpriteSize.Y };
 						if (ImGui::DragFloat2("Sprite Size", SizeValues, 0.01f, 0.01f, 100.0f, "%.2f"))

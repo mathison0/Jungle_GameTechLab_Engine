@@ -4,6 +4,9 @@
 #include "Viewport/EditorViewportRegistry.h"
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
+#include "Component/BillboardComponent.h"
+#include "Component/PrimitiveComponent.h"
+#include "Component/SceneComponent.h"
 #include "Core/Engine.h"
 #include "Debug/EngineLog.h"
 #include "Gizmo/Gizmo.h"
@@ -205,6 +208,7 @@ void FEditorViewportInputService::HandleMessage(
 
 	UScene* Scene = Engine->GetScene();
 	AActor* SelectedActor = EditorEngine->GetSelectedActor();
+	USceneComponent* TransformTarget = EditorEngine->GetTransformTargetComponent();
 	if (!Scene)
 	{
 		return;
@@ -257,13 +261,22 @@ void FEditorViewportInputService::HandleMessage(
 		ScreenMouseX = MouseX - Rect.X;
 		ScreenMouseY = MouseY - Rect.Y;
 
-		if (SelectedActor && Gizmo.BeginDrag(SelectedActor, Entry, Picker, ScreenMouseX, ScreenMouseY))
+		if (SelectedActor && Gizmo.BeginDrag(SelectedActor, TransformTarget, Entry, Picker, ScreenMouseX, ScreenMouseY))
 		{
 			return;
 		}
 
-		AActor* PickedActor = Picker.PickActor(Scene, Entry, ScreenMouseX, ScreenMouseY);
-		EditorEngine->SetSelectedActor(PickedActor);
+		UPrimitiveComponent* PickedComponent = Picker.PickPrimitiveComponent(Scene, Entry, ScreenMouseX, ScreenMouseY);
+		if (PickedComponent && PickedComponent->IsA(UBillboardComponent::StaticClass()))
+		{
+			EditorEngine->SetSelectedActor(PickedComponent->GetOwner());
+			EditorEngine->SetSelectedComponent(PickedComponent);
+		}
+		else
+		{
+			AActor* PickedActor = PickedComponent ? PickedComponent->GetOwner() : Picker.PickActor(Scene, Entry, ScreenMouseX, ScreenMouseY);
+			EditorEngine->SetSelectedActor(PickedActor);
+		}
 		if (OnSelectionChanged)
 		{
 			OnSelectionChanged();
@@ -289,11 +302,11 @@ void FEditorViewportInputService::HandleMessage(
 
 		if (!Gizmo.IsDragging())
 		{
-			Gizmo.UpdateHover(SelectedActor, HoveredEntry, Picker, ScreenMouseX, ScreenMouseY);
+			Gizmo.UpdateHover(SelectedActor, TransformTarget, HoveredEntry, Picker, ScreenMouseX, ScreenMouseY);
 			return;
 		}
 
-		if (Gizmo.UpdateDrag(SelectedActor, HoveredEntry, Picker, ScreenMouseX, ScreenMouseY) && OnSelectionChanged)
+		if (Gizmo.UpdateDrag(SelectedActor, TransformTarget, HoveredEntry, Picker, ScreenMouseX, ScreenMouseY) && OnSelectionChanged)
 		{
 			OnSelectionChanged();
 		}
@@ -317,7 +330,7 @@ void FEditorViewportInputService::HandleMessage(
 			ScreenHeight = Rect.Height;
 			ScreenMouseX = MouseX - Rect.X;
 			ScreenMouseY = MouseY - Rect.Y;
-			Gizmo.UpdateHover(SelectedActor, HoveredEntry, Picker, ScreenMouseX, ScreenMouseY);
+			Gizmo.UpdateHover(SelectedActor, EditorEngine->GetTransformTargetComponent(), HoveredEntry, Picker, ScreenMouseX, ScreenMouseY);
 		}
 		else
 		{
