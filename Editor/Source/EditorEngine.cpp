@@ -371,17 +371,21 @@ void FEditorEngine::StartPIE()
 
 		if (FoundPlayerStart && FoundPlayerStart->GetRootComponent())
 		{
-			PerspEntry->LocalState.Position = FoundPlayerStart->GetRootComponent()->GetWorldLocation();
+			USceneComponent* RootComp = FoundPlayerStart->GetRootComponent();
+			PerspEntry->LocalState.Position = RootComp->GetWorldLocation();
 
-			PerspEntry->LocalState.Rotation = FoundPlayerStart->GetRootComponent()->GetRelativeTransform().Rotator();
-
+			const FTransform WorldTransform(RootComp->GetWorldTransform());
+			PerspEntry->LocalState.Rotation = WorldTransform.Rotator();
 		}
 		// else: LocalState.Position은 에디터 카메라 위치 그대로 유지
 
-		// FoV / Near / Far는 에디터 뷰포트 설정을 그대로 사용
+		// FoV / Near / Far는 에디터 뷰포트 설정을 그대로 사용; 위치/회전은 PlayerStart 기준으로 즉시 적용
 		if (UCameraComponent* PIECam = PIEWorld->GetActiveCameraComponent())
 		{
 			FCamera* Cam = PIECam->GetCamera();
+			Cam->SetPosition(PerspEntry->LocalState.Position);
+			Cam->SetRotation(PerspEntry->LocalState.Rotation.Yaw, PerspEntry->LocalState.Rotation.Pitch);
+
 			Cam->SetFOV(PerspEntry->LocalState.FovY);
 			Cam->SetNearPlane(PerspEntry->LocalState.NearPlane);
 			Cam->SetFarPlane(PerspEntry->LocalState.FarPlane);
