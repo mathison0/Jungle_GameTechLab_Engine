@@ -19,3 +19,8 @@ void APlayerStart::PostSpawnInitialize()
 
 	AActor::PostSpawnInitialize();
 }
+
+void APlayerStart::Tick(float fTimeDelta)
+{
+
+}

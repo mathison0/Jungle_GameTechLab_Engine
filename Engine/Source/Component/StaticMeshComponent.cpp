@@ -51,12 +51,6 @@ FBoxSphereBounds UStaticMeshComponent::GetLocalBounds() const
 void UStaticMeshComponent::Tick(float DeltaTime)
 {
 	SetRelativeLocation(GetWorldLocation() + GetWorldTransform().GetForwardVector() * DeltaTime);
-
-	/*if (GetOwner()->GetWorld()->GetWorldType() == EWorldType::PIE)
-	{
-		SetRelativeLocation(GetWorldLocation() + GetWorldTransform().GetForwardVector() * DeltaTime);
-
-	}*/
 }
 
 FBoxSphereBounds UStaticMeshComponent::CalcBounds(const FMatrix& LocalToWorld) const

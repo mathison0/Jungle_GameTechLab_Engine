@@ -10,7 +10,7 @@ public:
 	DECLARE_RTTI(APlayerStart, AActor)
 
 	void PostSpawnInitialize() override;
-
+	virtual void Tick(float fTimeDelta) override;
 private:
 	UStaticMeshComponent* MeshComponent = nullptr;
 };
