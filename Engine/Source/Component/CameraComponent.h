@@ -10,6 +10,7 @@ public:
 	virtual ~UCameraComponent();
 
 	void PostConstruct() override;
+	void Serialize(FArchive& Ar) override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void DuplicateSubObjects() override;
 	//Movement method
@@ -27,6 +28,9 @@ public:
 	void SetFov(float inFov);
 	void SetSpeed(float Inspeed);
 	void SetSensitivity(float InSetSensitivity);
+
 private:
+	void OnTransformUpdated() override;
+
 	FCamera* Camera = nullptr;
 };

@@ -4,6 +4,7 @@
 #include "Object/Object.h"
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
+#include "Component/ActorComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
@@ -90,13 +91,27 @@ void FEditorUI::Initialize(FEditorEngine* InEngine)
 				return;
 			}
 
-			if (USceneComponent* Root = Selected->GetRootComponent())
+			USceneComponent* TargetComponent = nullptr;
+			if (UActorComponent* SelectedComponent = Engine->GetSelectedComponent())
 			{
-				FTransform Transform = Root->GetRelativeTransform();
+				if (SelectedComponent->IsA(USceneComponent::StaticClass()))
+				{
+					TargetComponent = static_cast<USceneComponent*>(SelectedComponent);
+				}
+			}
+
+			if (TargetComponent == nullptr)
+			{
+				TargetComponent = Selected->GetRootComponent();
+			}
+
+			if (TargetComponent)
+			{
+				FTransform Transform = TargetComponent->GetRelativeTransform();
 				Transform.SetLocation(Loc);
 				Transform.SetRotation(FRotator::MakeFromEuler(Rot));
 				Transform.SetScale3D(Scl);
-				Root->SetRelativeTransform(Transform);
+				TargetComponent->SetRelativeTransform(Transform);
 			}
 		};
 
@@ -693,7 +708,8 @@ void FEditorUI::Render()
 	if (Engine)
 	{
 		AActor* Selected = Engine->GetSelectedActor();
-		if (Selected != CachedSelectedActor)
+		UActorComponent* SelectedComponent = Engine->GetSelectedComponent();
+		if (Selected != CachedSelectedActor || SelectedComponent != CachedSelectedComponent)
 		{
 			SyncSelectedActorProperty();
 		}
@@ -1072,17 +1088,33 @@ void FEditorUI::SyncSelectedActorProperty()
 	}
 
 	AActor* Selected = Engine->GetSelectedActor();
+	UActorComponent* SelectedComponent = Engine->GetSelectedComponent();
 	if (Selected)
 	{
-		if (USceneComponent* Root = Selected->GetRootComponent())
+		USceneComponent* TargetComponent = nullptr;
+		if (SelectedComponent && SelectedComponent->IsA(USceneComponent::StaticClass()))
 		{
-			const FTransform Transform = Root->GetRelativeTransform();
+			TargetComponent = static_cast<USceneComponent*>(SelectedComponent);
+		}
+
+		if (TargetComponent == nullptr)
+		{
+			TargetComponent = Selected->GetRootComponent();
+		}
+
+		if (TargetComponent)
+		{
+			const FTransform Transform = TargetComponent->GetRelativeTransform();
 			Property.SetTarget(
 				Transform.GetLocation(),
 				Transform.Rotator().Euler(),
 				Transform.GetScale3D(),
 				Selected->GetName().c_str()
 			);
+		}
+		else
+		{
+			Property.SetTarget({ 0, 0, 0 }, { 0, 0, 0 }, { 1, 1, 1 }, Selected->GetName().c_str());
 		}
 	}
 	else
@@ -1091,6 +1123,7 @@ void FEditorUI::SyncSelectedActorProperty()
 	}
 
 	CachedSelectedActor = Selected;
+	CachedSelectedComponent = SelectedComponent;
 }
 
 bool FEditorUI::GetCentralDockRect(FRect& OutRect) const
