@@ -26,6 +26,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstring>
+#include <unordered_set>
 #include <vector>
 
 namespace
@@ -53,11 +54,16 @@ namespace
 		Ofn.lpstrFile = FileName;
 		Ofn.nMaxFile = MAX_PATH;
 		Ofn.lpstrInitialDir = InitialDirectory.c_str();
-		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
 		if (GetOpenFileNameW(&Ofn))
 		{
 			return FPaths::FromWide(FileName);
+		}
+
+		if (CommDlgExtendedError() != 0)
+		{
+			return "";
 		}
 
 		return "";
@@ -221,7 +227,7 @@ namespace
 		if (Component->GetClass() == UBillboardComponent::StaticClass())
 		{
 			UBillboardComponent* BillboardComponent = static_cast<UBillboardComponent*>(Component);
-			if (UTexture* DefaultSprite = UTexture::FindOrLoad("Textures/FileIcon.png", OwnerActor))
+			if (UTexture* DefaultSprite = UTexture::FindOrLoad("Editor/Icons/Pawn_64x.png", OwnerActor))
 			{
 				BillboardComponent->SetSprite(DefaultSprite);
 			}
@@ -567,10 +573,22 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 							}
 
 							const TArray<FString> TextureAssetPaths = UTexture::GetAvailableTextureAssetPaths();
+							std::unordered_set<std::string> SeenTextureNames;
 							for (const FString& TextureAssetPath : TextureAssetPaths)
 							{
 								const std::filesystem::path TexturePath = FPaths::ToPath(TextureAssetPath);
 								const std::string TextureName = TexturePath.stem().string();
+								std::string TextureNameKey = TextureName;
+								std::transform(TextureNameKey.begin(), TextureNameKey.end(), TextureNameKey.begin(),
+									[](unsigned char Character)
+									{
+										return static_cast<char>(std::tolower(Character));
+									});
+								if (!SeenTextureNames.insert(TextureNameKey).second)
+								{
+									continue;
+								}
+
 								const bool bSelected = (CurrentSprite && CurrentSprite->GetAssetPathFileName() == TextureAssetPath);
 
 								if (ImGui::Selectable(TextureName.c_str(), bSelected))

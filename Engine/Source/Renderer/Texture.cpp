@@ -10,6 +10,46 @@
 #include <algorithm>
 #include <array>
 #include <cwctype>
+#include <unordered_set>
+
+namespace
+{
+	FString MakeTextureAssetPathKey(const FString& InAssetPath)
+	{
+		std::filesystem::path KeyPath = FPaths::ToPath(InAssetPath).lexically_normal();
+		if (!KeyPath.is_absolute())
+		{
+			const std::filesystem::path AssetCandidate = FPaths::AssetDir() / KeyPath;
+			const std::filesystem::path ContentCandidate = FPaths::ContentDir() / KeyPath;
+			const std::filesystem::path ProjectCandidate = FPaths::ProjectRoot() / KeyPath;
+
+			if (std::filesystem::exists(AssetCandidate))
+			{
+				KeyPath = std::filesystem::absolute(AssetCandidate).lexically_normal();
+			}
+			else if (std::filesystem::exists(ContentCandidate))
+			{
+				KeyPath = std::filesystem::absolute(ContentCandidate).lexically_normal();
+			}
+			else if (std::filesystem::exists(ProjectCandidate))
+			{
+				KeyPath = std::filesystem::absolute(ProjectCandidate).lexically_normal();
+			}
+		}
+		else if (std::filesystem::exists(KeyPath))
+		{
+			KeyPath = std::filesystem::absolute(KeyPath).lexically_normal();
+		}
+
+		FString Key = FPaths::FromPath(KeyPath);
+		std::transform(Key.begin(), Key.end(), Key.begin(),
+			[](unsigned char Character)
+			{
+				return static_cast<char>(std::tolower(Character));
+			});
+		return Key;
+	}
+}
 
 IMPLEMENT_RTTI(UTexture, UObject)
 
@@ -113,17 +153,51 @@ UTexture* UTexture::FindOrLoad(const FString& InAssetPathFileName, UObject* InOu
 TArray<FString> UTexture::GetAvailableTextureAssetPaths()
 {
 	TArray<FString> AvailableTextureAssetPaths;
-	GatherTextureAssetPathsFromDirectory(FPaths::TextureDir(), FPaths::AssetDir(), AvailableTextureAssetPaths);
-	GatherTextureAssetPathsFromDirectory(FPaths::ContentDir() / "Textures", FPaths::ProjectRoot(), AvailableTextureAssetPaths);
+	std::unordered_set<FString> UniqueAssetPathKeys;
+	/*GatherTextureAssetPathsFromDirectory(FPaths::TextureDir(), FPaths::AssetDir(), AvailableTextureAssetPaths);
+	GatherTextureAssetPathsFromDirectory(FPaths::ContentDir() / "Textures", FPaths::ProjectRoot(), AvailableTextureAssetPaths);*/
 	GatherTextureAssetPathsFromDirectory(FPaths::AssetDir() / "Editor", FPaths::ProjectRoot(), AvailableTextureAssetPaths);
 
-	std::sort(AvailableTextureAssetPaths.begin(), AvailableTextureAssetPaths.end());
-	AvailableTextureAssetPaths.erase(
-		std::unique(AvailableTextureAssetPaths.begin(), AvailableTextureAssetPaths.end()),
-		AvailableTextureAssetPaths.end()
-	);
+	TArray<FString> NormalizedAssetPaths;
+	NormalizedAssetPaths.reserve(AvailableTextureAssetPaths.size());
 
-	return AvailableTextureAssetPaths;
+	for (const FString& AssetPath : AvailableTextureAssetPaths)
+	{
+		const FString NormalizedPath = NormalizeTextureAssetPath(AssetPath);
+		if (NormalizedPath.empty())
+		{
+			continue;
+		}
+
+		const FString AssetPathKey = MakeTextureAssetPathKey(NormalizedPath);
+		if (UniqueAssetPathKeys.insert(AssetPathKey).second)
+		{
+			NormalizedAssetPaths.push_back(NormalizedPath);
+		}
+	}
+
+	for (TObjectIterator<UTexture> It; It; ++It)
+	{
+		UTexture* Texture = It.Get();
+		if (!Texture)
+		{
+			continue;
+		}
+
+		const FString& AssetPath = Texture->GetAssetPathFileName();
+		const FString NormalizedPath = NormalizeTextureAssetPath(AssetPath);
+		if (!NormalizedPath.empty())
+		{
+			const FString AssetPathKey = MakeTextureAssetPathKey(NormalizedPath);
+			if (UniqueAssetPathKeys.insert(AssetPathKey).second)
+			{
+				NormalizedAssetPaths.push_back(NormalizedPath);
+			}
+		}
+	}
+
+	std::sort(NormalizedAssetPaths.begin(), NormalizedAssetPaths.end());
+	return NormalizedAssetPaths;
 }
 
 FString UTexture::NormalizeTextureAssetPath(const FString& InAssetPathFileName)
@@ -136,6 +210,12 @@ FString UTexture::NormalizeTextureAssetPath(const FString& InAssetPathFileName)
 	const std::filesystem::path InputPath = FPaths::ToPath(InAssetPathFileName).lexically_normal();
 	if (!InputPath.is_absolute())
 	{
+		const std::filesystem::path RelativeToAssetsRoot = InputPath.lexically_relative(FPaths::AssetDir().filename());
+		if (!RelativeToAssetsRoot.empty() && RelativeToAssetsRoot.native()[0] != L'.')
+		{
+			return FPaths::FromPath(RelativeToAssetsRoot);
+		}
+
 		return FPaths::FromPath(InputPath);
 	}
 
@@ -237,6 +317,10 @@ void UTexture::GatherTextureAssetPathsFromDirectory(
 			continue;
 		}
 
-		OutAssetPaths.push_back(FPaths::FromPath(RelativePath));
+		const FString NormalizedPath = NormalizeTextureAssetPath(FPaths::FromPath(RelativePath));
+		if (!NormalizedPath.empty())
+		{
+			OutAssetPaths.push_back(NormalizedPath);
+		}
 	}
 }
