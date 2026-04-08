@@ -5,7 +5,9 @@
 #include "Actor/Actor.h"
 #include "Actor/PlayerStart.h"
 #include "Camera/Camera.h"
+#include "Component/ActorComponent.h"
 #include "Component/CameraComponent.h"
+#include "Component/SceneComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Core/ConsoleVariableManager.h"
 #include "Core/Engine.h"
@@ -96,6 +98,34 @@ void FEditorEngine::SetSelectedActor(AActor* InActor)
 AActor* FEditorEngine::GetSelectedActor() const
 {
 	return SelectionSubsystem.GetSelectedActor();
+}
+
+void FEditorEngine::SetSelectedComponent(UActorComponent* InComponent)
+{
+	SelectionSubsystem.SetSelectedComponent(InComponent);
+}
+
+UActorComponent* FEditorEngine::GetSelectedComponent() const
+{
+	return SelectionSubsystem.GetSelectedComponent();
+}
+
+USceneComponent* FEditorEngine::GetTransformTargetComponent() const
+{
+	if (UActorComponent* SelectedComponent = GetSelectedComponent())
+	{
+		if (SelectedComponent->IsA(USceneComponent::StaticClass()))
+		{
+			return static_cast<USceneComponent*>(SelectedComponent);
+		}
+	}
+
+	if (AActor* SelectedActor = GetSelectedActor())
+	{
+		return SelectedActor->GetRootComponent();
+	}
+
+	return nullptr;
 }
 
 void FEditorEngine::ActivateEditorScene()
