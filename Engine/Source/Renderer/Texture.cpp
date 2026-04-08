@@ -115,6 +115,7 @@ TArray<FString> UTexture::GetAvailableTextureAssetPaths()
 	TArray<FString> AvailableTextureAssetPaths;
 	GatherTextureAssetPathsFromDirectory(FPaths::TextureDir(), FPaths::AssetDir(), AvailableTextureAssetPaths);
 	GatherTextureAssetPathsFromDirectory(FPaths::ContentDir() / "Textures", FPaths::ProjectRoot(), AvailableTextureAssetPaths);
+	GatherTextureAssetPathsFromDirectory(FPaths::AssetDir() / "Editor", FPaths::ProjectRoot(), AvailableTextureAssetPaths);
 
 	std::sort(AvailableTextureAssetPaths.begin(), AvailableTextureAssetPaths.end());
 	AvailableTextureAssetPaths.erase(
