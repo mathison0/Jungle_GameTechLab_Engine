@@ -58,6 +58,7 @@ void UTextRenderComponent::Serialize(FArchive& Ar)
 		Ar.Serialize("Text", Text);
 		Ar.Serialize("TextColor", TextColor);
 
+		// 구 버전 호환용
 		if (Ar.Contains("AlwaysFaceCamera"))
 		{
 			Ar.Serialize("AlwaysFaceCamera", bAlwaysFaceCamera);

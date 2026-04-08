@@ -4,6 +4,7 @@
 #include "imgui_impl_win32.h"
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
+#include "Component/ActorComponent.h"
 #include "Component/CameraComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Core/ConsoleVariableManager.h"
@@ -95,6 +96,16 @@ void FEditorEngine::SetSelectedActor(AActor* InActor)
 AActor* FEditorEngine::GetSelectedActor() const
 {
 	return SelectionSubsystem.GetSelectedActor();
+}
+
+void FEditorEngine::SetSelectedComponent(UActorComponent* InComponent)
+{
+	SelectionSubsystem.SetSelectedComponent(InComponent);
+}
+
+UActorComponent* FEditorEngine::GetSelectedComponent() const
+{
+	return SelectionSubsystem.GetSelectedComponent();
 }
 
 void FEditorEngine::ActivateEditorScene()

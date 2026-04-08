@@ -2,12 +2,13 @@
 
 #include "PrimitiveComponent.h"
 #include "Renderer/Material.h"
+#include "Types/ObjectPtr.h"
 
-#include <filesystem>
 #include <memory>
 
 class FArchive;
 class FMaterial;
+class UTexture;
 
 struct FDynamicMesh;
 
@@ -25,8 +26,8 @@ public:
 	virtual FRenderMesh* GetRenderMesh() const override;
 	virtual FBoxSphereBounds GetWorldBounds() const override;
 
-	void SetSpritePath(const FString& InSpritePath);
-	const FString& GetSpritePath() const { return SpritePath; }
+	void SetSprite(UTexture* InSprite);
+	UTexture* GetSprite() const { return Sprite.Get(); }
 
 	void SetSize(const FVector2& InSize);
 	const FVector2& GetSize() const { return Size; }
@@ -48,10 +49,9 @@ private:
 	void RebuildMesh();
 	bool EnsureMaterial();
 	bool LoadSpriteTexture();
-	std::filesystem::path ResolveSpriteTexturePath() const;
 
 private:
-	FString SpritePath = "";
+	TObjectPtr<UTexture> Sprite = nullptr;
 	FVector2 Size = FVector2(1.0f, 1.0f);
 	FVector4 TintColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 	bool bScreenSizeScaled = false;
@@ -59,5 +59,5 @@ private:
 
 	std::shared_ptr<FDynamicMesh> BillboardMesh;
 	std::unique_ptr<FDynamicMaterial> BillboardMaterial;
-	FString LoadedSpritePath;
+	TObjectPtr<UTexture> LoadedSprite = nullptr;
 };

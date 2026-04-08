@@ -1,17 +1,16 @@
 #include "BillboardComponent.h"
 
 #include "Core/Engine.h"
-#include "Core/Paths.h"
 #include "Object/Class.h"
 #include "Renderer/Material.h"
 #include "Renderer/MeshData.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderStateManager.h"
+#include "Renderer/Texture.h"
 #include "Serializer/Archive.h"
 
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 
 IMPLEMENT_RTTI(UBillboardComponent, UPrimitiveComponent)
 
@@ -37,7 +36,8 @@ void UBillboardComponent::Serialize(FArchive& Ar)
 {
 	UPrimitiveComponent::Serialize(Ar);
 
-	Ar.Serialize("SpritePath", SpritePath);
+	FString SpriteAssetPath = Sprite ? Sprite->GetAssetPathFileName() : "";
+	Ar.Serialize("Sprite", SpriteAssetPath);
 	FVector SerializedSize(Size.X, Size.Y, 0.0f);
 	Ar.Serialize("Size", SerializedSize);
 	Ar.Serialize("TintColor", TintColor);
@@ -46,8 +46,14 @@ void UBillboardComponent::Serialize(FArchive& Ar)
 
 	if (Ar.IsLoading())
 	{
+		if (SpriteAssetPath.empty() && Ar.Contains("SpritePath"))
+		{
+			Ar.Serialize("SpritePath", SpriteAssetPath);
+		}
+
+		Sprite = UTexture::FindOrLoad(SpriteAssetPath, this);
 		Size = FVector2((std::max)(SerializedSize.X, 0.001f), (std::max)(SerializedSize.Y, 0.001f));
-		LoadedSpritePath.clear();
+		LoadedSprite = nullptr;
 		RebuildMesh();
 		EnsureRenderResources();
 		UpdateBounds();
@@ -72,15 +78,15 @@ FBoxSphereBounds UBillboardComponent::GetWorldBounds() const
 	return { Center, BoxExtent.Size(), BoxExtent };
 }
 
-void UBillboardComponent::SetSpritePath(const FString& InSpritePath)
+void UBillboardComponent::SetSprite(UTexture* InSprite)
 {
-	if (SpritePath == InSpritePath)
+	if (Sprite.Get() == InSprite)
 	{
 		return;
 	}
 
-	SpritePath = InSpritePath;
-	LoadedSpritePath.clear();
+	Sprite = InSprite;
+	LoadedSprite = nullptr;
 	EnsureRenderResources();
 }
 
@@ -225,60 +231,23 @@ bool UBillboardComponent::LoadSpriteTexture()
 		return false;
 	}
 
-	if (SpritePath == LoadedSpritePath && BillboardMaterial->GetMaterialTexture())
+	UTexture* SpriteTexture = Sprite.Get();
+	if (!SpriteTexture)
+	{
+		return false;
+	}
+
+	if (LoadedSprite.Get() == SpriteTexture && BillboardMaterial->GetMaterialTexture())
 	{
 		return true;
 	}
 
-	FRenderer* Renderer = GEngine ? GEngine->GetRenderer() : nullptr;
-	if (!Renderer)
+	if (!SpriteTexture->EnsureTextureResource())
 	{
 		return false;
 	}
 
-	const std::filesystem::path TexturePath = ResolveSpriteTexturePath();
-	if (TexturePath.empty() || !std::filesystem::exists(TexturePath))
-	{
-		return false;
-	}
-
-	ID3D11ShaderResourceView* SpriteSRV = nullptr;
-	if (!Renderer->CreateTextureFromSTB(Renderer->GetDevice(), TexturePath, &SpriteSRV))
-	{
-		return false;
-	}
-
-	std::shared_ptr<FMaterialTexture> MaterialTexture = std::make_shared<FMaterialTexture>();
-	MaterialTexture->TextureSRV = SpriteSRV;
-	BillboardMaterial->SetMaterialTexture(MaterialTexture);
-	LoadedSpritePath = SpritePath;
+	BillboardMaterial->SetMaterialTexture(SpriteTexture->GetTextureResource());
+	LoadedSprite = SpriteTexture;
 	return true;
-}
-
-std::filesystem::path UBillboardComponent::ResolveSpriteTexturePath() const
-{
-	if (SpritePath.empty())
-	{
-		return {};
-	}
-
-	std::filesystem::path InPath = FPaths::ToPath(SpritePath);
-	if (InPath.is_absolute())
-	{
-		return InPath.lexically_normal();
-	}
-
-	const std::filesystem::path AssetCandidate = FPaths::AssetDir() / InPath;
-	if (std::filesystem::exists(AssetCandidate))
-	{
-		return AssetCandidate.lexically_normal();
-	}
-
-	const std::filesystem::path ContentCandidate = FPaths::ContentDir() / InPath;
-	if (std::filesystem::exists(ContentCandidate))
-	{
-		return ContentCandidate.lexically_normal();
-	}
-
-	return (FPaths::ProjectRoot() / InPath).lexically_normal();
 }

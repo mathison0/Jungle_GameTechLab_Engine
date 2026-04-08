@@ -11,6 +11,7 @@
 class AActor;
 class FEditorViewportClient;
 class FShowFlags;
+class UActorComponent;
 
 class FEditorEngine : public FEngine
 {
@@ -21,6 +22,8 @@ public:
 	void Shutdown() override;
 	void SetSelectedActor(AActor* InActor);
 	AActor* GetSelectedActor() const;
+	void SetSelectedComponent(UActorComponent* InComponent);
+	UActorComponent* GetSelectedComponent() const;
 	void ActivateEditorScene();
 	bool ActivatePreviewScene(const FString& ContextName);
 	UScene* GetEditorScene() const;
