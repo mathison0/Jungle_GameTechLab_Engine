@@ -29,6 +29,7 @@ public:
 	virtual void UpdateBounds();
 	virtual FBoxSphereBounds GetLocalBounds() const;
 	virtual FBoxSphereBounds CalcBounds(const FMatrix& LocalToWorld) const;
+	virtual bool ShouldIncludeInBVH() const { return true; }
 
 	bool ShouldDrawDebugBounds() const { return bDrawDebugBounds; }
 	void SetDrawDebugBounds(bool bEnable) { bDrawDebugBounds = bEnable; }

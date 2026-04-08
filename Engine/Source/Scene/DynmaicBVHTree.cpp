@@ -1,4 +1,5 @@
 #include "DynmaicBVHTree.h"
+#include "Debug/DebugDrawManager.h"
 #include <queue>
 #include <limits>
 
@@ -301,3 +302,33 @@ void FDynamicBVHTree::RefitUpward(int32 Index)
 		ParentIdx = Nodes[ParentIdx].ParentIndex;
 	}
 }
+
+void FDynamicBVHTree::Visualize(FDebugDrawManager& DebugDrawer) const
+{
+	if (RootIdx == -1) return;
+
+	TArray<int32> Stack;
+	Stack.push_back(RootIdx);
+
+	while (!Stack.empty())
+	{
+		int32 Idx = Stack.back();
+		Stack.pop_back();
+
+		const DynamicBVHNode& Node = Nodes[Idx];
+
+		FVector Center = (Node.Bound.Min + Node.Bound.Max) * 0.5f;
+		FVector Extent = (Node.Bound.Max - Node.Bound.Min) * 0.5f;
+		
+		// Leaf nodes are Green, internal nodes are Yellow.
+		FVector4 Color = Node.IsLeaf() ? FVector4(0.0f, 1.0f, 0.0f, 1.0f) : FVector4(1.0f, 1.0f, 0.0f, 1.0f);
+
+		DebugDrawer.DrawCube(Center, Extent, Color);
+
+		if (Node.LeftChildIndex != -1)
+			Stack.push_back(Node.LeftChildIndex);
+		if (Node.RightChildIndex != -1)
+			Stack.push_back(Node.RightChildIndex);
+	}
+}
+

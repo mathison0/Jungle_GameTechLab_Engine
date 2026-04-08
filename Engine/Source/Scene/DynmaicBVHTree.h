@@ -34,6 +34,8 @@ public:
 	void QueryRay(const FVector& Origin, const FVector& Direction, TArray<UPrimitiveComponent*>& OutCandidates) const;
 	void Clear();
 
+	void Visualize(class FDebugDrawManager& DebugDrawer) const;
+
 private:
 	int32 GetFreeIndex();
 	void InitNode(int32 Index);

@@ -8,6 +8,9 @@
 #include "Component/SubUVComponent.h"
 #include "Component/SkyComponent.h"
 #include "Object/Class.h"
+#include "Scene/Scene.h"
+#include "Scene/DynmaicBVHTree.h"
+
 void FDebugDrawManager::DrawLine(const FVector& Start, const FVector& End, const FVector4& Color)
 {
 	Lines.push_back({ Start, End, Color });
@@ -42,6 +45,11 @@ void FDebugDrawManager::Flush(FRenderer* Renderer, const FShowFlags& ShowFlags, 
 	if (ShowFlags.HasFlag(EEngineShowFlags::SF_Collision) && World)
 	{
 		DrawAllCollisionBounds(Renderer, World);
+	}
+
+	if (ShowFlags.HasFlag(EEngineShowFlags::SF_BVH) && World && World->GetScene())
+	{
+		World->GetScene()->GetBVHTree().Visualize(*this);
 	}
 
 	for (const auto& Cube : Cubes)

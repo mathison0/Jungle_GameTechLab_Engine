@@ -187,6 +187,31 @@ void FControlPanelWindow::Render(FEditorEngine* Engine)
 				if (ImGui::DragFloat("Ortho Zoom", &OrthoZoom, 1.0f, 1.0f, 10000.0f))
 					Entry->LocalState.OrthoZoom = OrthoZoom;
 			}
+
+			ImGui::SeparatorText("Debug Draw");
+			
+			bool bDebugDraw = Entry->LocalState.ShowFlags.HasFlag(EEngineShowFlags::SF_DebugDraw);
+			if (ImGui::Checkbox("Enable Debug Draw", &bDebugDraw))
+			{
+				Entry->LocalState.ShowFlags.SetFlag(EEngineShowFlags::SF_DebugDraw, bDebugDraw);
+			}
+
+			if (bDebugDraw)
+			{
+				ImGui::Indent();
+				bool bShowCollision = Entry->LocalState.ShowFlags.HasFlag(EEngineShowFlags::SF_Collision);
+				if (ImGui::Checkbox("Show Collision", &bShowCollision))
+				{
+					Entry->LocalState.ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, bShowCollision);
+				}
+
+				bool bShowBVH = Entry->LocalState.ShowFlags.HasFlag(EEngineShowFlags::SF_BVH);
+				if (ImGui::Checkbox("Show BVH", &bShowBVH))
+				{
+					Entry->LocalState.ShowFlags.SetFlag(EEngineShowFlags::SF_BVH, bShowBVH);
+				}
+				ImGui::Unindent();
+			}
 		}
 
 		ImGui::SeparatorText("Spawn");

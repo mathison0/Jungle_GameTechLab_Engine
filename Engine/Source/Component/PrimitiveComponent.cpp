@@ -19,7 +19,16 @@ void UPrimitiveComponent::UpdateBounds()
 
 	if (AActor* Owner = GetOwner())
 		if (UScene* Scene = Owner->GetScene())
-			Scene->GetBVHTree().MoveLeaf(this);
+		{
+			if (ShouldIncludeInBVH())
+			{
+				Scene->GetBVHTree().MoveLeaf(this);
+			}
+			else
+			{
+				Scene->GetBVHTree().RemoveLeaf(this);
+			}
+		}
 }
 
 void UPrimitiveComponent::OnTransformUpdated()

@@ -11,9 +11,10 @@ public:
 	void PostConstruct() override;
 
 	virtual FString GetDisplayText() const override;
-	// SetWorldOffset 반영해서 오브젝트 머리 위에 뜨도록 함
+	// SetWorldOffset 諛섏쁺?댁꽌 ?ㅻ툕?앺듃 癒몃━ ?꾩뿉 ?⑤룄濡???
 	virtual FVector GetRenderWorldPosition() const override;
 	virtual FVector GetRenderWorldScale() const override;
+	virtual bool ShouldIncludeInBVH() const override { return false; }
 
 	const FVector& GetWorldOffset() const { return WorldOffset; }
 	void SetWorldOffset(const FVector& InOffset) { WorldOffset = InOffset; }
