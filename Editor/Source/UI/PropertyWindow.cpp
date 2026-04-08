@@ -26,6 +26,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstring>
+#include <unordered_set>
 #include <vector>
 
 namespace
@@ -567,10 +568,22 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 							}
 
 							const TArray<FString> TextureAssetPaths = UTexture::GetAvailableTextureAssetPaths();
+							std::unordered_set<std::string> SeenTextureNames;
 							for (const FString& TextureAssetPath : TextureAssetPaths)
 							{
 								const std::filesystem::path TexturePath = FPaths::ToPath(TextureAssetPath);
 								const std::string TextureName = TexturePath.stem().string();
+								std::string TextureNameKey = TextureName;
+								std::transform(TextureNameKey.begin(), TextureNameKey.end(), TextureNameKey.begin(),
+									[](unsigned char Character)
+									{
+										return static_cast<char>(std::tolower(Character));
+									});
+								if (!SeenTextureNames.insert(TextureNameKey).second)
+								{
+									continue;
+								}
+
 								const bool bSelected = (CurrentSprite && CurrentSprite->GetAssetPathFileName() == TextureAssetPath);
 
 								if (ImGui::Selectable(TextureName.c_str(), bSelected))
