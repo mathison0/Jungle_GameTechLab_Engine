@@ -302,6 +302,8 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 		}
 	);
 
+	// 진짜 이거 찾는데 너무 오래걸렸어요.. 
+	// 아웃라인 관련
 	InRenderer->SetPostRenderCallback([this](FRenderer* Renderer)
 		{
 			if (!Engine)

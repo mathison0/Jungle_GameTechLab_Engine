@@ -39,6 +39,8 @@ public:
 	void Serialize(FArchive& Ar) override;
 	virtual void DuplicateSubObjects() override;
 
+	virtual void Tick(float fDeltaTime) override;
+
 protected:
 	FString Text = "Text";
 	FVector4 TextColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);

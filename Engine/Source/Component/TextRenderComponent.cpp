@@ -54,6 +54,11 @@ void UTextRenderComponent::DuplicateSubObjects()
 	TextMesh->bIsDirty = true;
 }
 
+
+void UTextRenderComponent::Tick(float fDeltaTime)
+{
+}
+
 void UTextRenderComponent::Serialize(FArchive& Ar)
 {
 	UPrimitiveComponent::Serialize(Ar);

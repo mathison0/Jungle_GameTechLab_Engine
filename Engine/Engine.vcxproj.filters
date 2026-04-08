@@ -303,6 +303,9 @@
     <ClCompile Include="Source\World\World.cpp">
       <Filter>Source\World</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Actor\PlayerStart.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Scene\DynmaicBVHTree.cpp" />
     <ClCompile Include="Source\Component\BillboardComponent.cpp">
       <Filter>Source\Component</Filter>
@@ -889,6 +892,9 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="Source\Object\ObjectIterator.h" />
+    <ClInclude Include="Source\Actor\PlayerStart.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\DynmaicBVHTree.h" />
     <ClInclude Include="Source\Component\BillboardComponent.h">
       <Filter>Source\Component</Filter>
