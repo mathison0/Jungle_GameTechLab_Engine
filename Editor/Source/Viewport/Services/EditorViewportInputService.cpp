@@ -305,9 +305,9 @@ void FEditorViewportInputService::HandleMessage(
 			return;
 		}
 
-		if (Gizmo.UpdateDrag(SelectedActor, HoveredEntry, Picker, ScreenMouseX, ScreenMouseY) && OnSelectionChanged)
+		if (Gizmo.UpdateDrag(SelectedActor, HoveredEntry, Picker, ScreenMouseX, ScreenMouseY))
 		{
-			OnSelectionChanged();
+			if (OnSelectionChanged) OnSelectionChanged();
 		}
 		return;
 	}

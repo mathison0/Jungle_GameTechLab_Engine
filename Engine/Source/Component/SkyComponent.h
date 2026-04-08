@@ -9,4 +9,5 @@ public:
 	void PostConstruct() override;
 	virtual void Tick(float DeltaTime) override;
 	FBoxSphereBounds GetWorldBounds() const override;
+	virtual bool ShouldIncludeInBVH() const override { return false; }
 };

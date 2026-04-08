@@ -6,6 +6,8 @@
 #include "WorldTypes.h"
 #include "Core/ShowFlags.h"
 #include "RenderCollector.h"
+#include "DynmaicBVHTree.h"
+
 
 class AActor;
 class FCamera;
@@ -32,8 +34,7 @@ public:
 			return nullptr;
 		}
 		RegisterActor(NewActor);
-		NewActor->PostSpawnInitialize();
-
+		NewActor->PostSpawnInitialize(); // UpdateBounds → BVH insert 자동 처리됨
 		return NewActor;
 	}
 
@@ -64,7 +65,10 @@ public:
 	/** 씬 안의 액터를 순회하며 Tick하고, 끝나면 파괴 대상을 정리한다. */
 	void Tick(float DeltaTime);
 
+	FDynamicBVHTree& GetBVHTree() { return BVHTree; }
+
 private:
 	TArray<AActor*> Actors;
+	FDynamicBVHTree BVHTree;
 	bool bBegunPlay = false;
 };

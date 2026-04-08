@@ -188,6 +188,31 @@ void FControlPanelWindow::Render(FEditorEngine* Engine)
 				if (ImGui::DragFloat("Ortho Zoom", &OrthoZoom, 1.0f, 1.0f, 10000.0f))
 					Entry->LocalState.OrthoZoom = OrthoZoom;
 			}
+
+			ImGui::SeparatorText("Debug Draw");
+			
+			bool bDebugDraw = Entry->LocalState.ShowFlags.HasFlag(EEngineShowFlags::SF_DebugDraw);
+			if (ImGui::Checkbox("Enable Debug Draw", &bDebugDraw))
+			{
+				Entry->LocalState.ShowFlags.SetFlag(EEngineShowFlags::SF_DebugDraw, bDebugDraw);
+			}
+
+			if (bDebugDraw)
+			{
+				ImGui::Indent();
+				bool bShowCollision = Entry->LocalState.ShowFlags.HasFlag(EEngineShowFlags::SF_Collision);
+				if (ImGui::Checkbox("Show Collision", &bShowCollision))
+				{
+					Entry->LocalState.ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, bShowCollision);
+				}
+
+				bool bShowBVH = Entry->LocalState.ShowFlags.HasFlag(EEngineShowFlags::SF_BVH);
+				if (ImGui::Checkbox("Show BVH", &bShowBVH))
+				{
+					Entry->LocalState.ShowFlags.SetFlag(EEngineShowFlags::SF_BVH, bShowBVH);
+				}
+				ImGui::Unindent();
+			}
 		}
 
 		ImGui::SeparatorText("Spawn");
@@ -258,7 +283,9 @@ void FControlPanelWindow::Render(FEditorEngine* Engine)
 				NewActor = Scene->SpawnActor<AActor>(Name);
 				if (NewActor)
 				{
-					UStaticMeshComponent* MeshComp = FObjectFactory::ConstructObject<UStaticMeshComponent>(nullptr, "StaticMeshComponent");
+					UStaticMeshComponent* MeshComp = FObjectFactory::ConstructObject<UStaticMeshComponent>(NewActor, "StaticMeshComponent");
+					NewActor->AddOwnedComponent(MeshComp);
+					NewActor->SetRootComponent(MeshComp);
 
 					std::filesystem::path ModelPath = FPaths::MeshDir() / "cube-tex.obj";
 					FString FullPath = FPaths::FromPath(ModelPath);
@@ -268,15 +295,12 @@ void FControlPanelWindow::Render(FEditorEngine* Engine)
 					{
 						MeshComp->SetStaticMesh(MeshData);
 						UE_LOG("[테스트] OBJ 파일 로드 성공! 섹션 개수: %d", MeshData->GetNumSections());
-
 						MeshComp->SetRelativeLocation(FVector(0, 0, 3.0f));
 					}
 					else
 					{
 						UE_LOG("[테스트 실패] OBJ 파일을 찾을 수 없거나 파싱에 실패했습니다.");
 					}
-					NewActor->AddOwnedComponent(MeshComp);
-					NewActor->SetRootComponent(MeshComp);
 				}
 			}
 

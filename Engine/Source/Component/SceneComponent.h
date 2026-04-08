@@ -39,6 +39,8 @@ public:
 private:
 	/** 자신과 자식들의 월드 트랜스폼 캐시를 무효화한다. */
 	void MarkTransformDirty();
+	/** 트랜스폼이 갱신될 때 호출되는 훅. 서브클래스에서 override해 바운드 갱신 등을 수행한다. */
+	virtual void OnTransformUpdated() {}
 	/** 부모 트랜스폼까지 반영해 월드 변환 행렬 캐시를 다시 만든다. */
 	void UpdateWorldTransform() const;
 

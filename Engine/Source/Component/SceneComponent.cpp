@@ -1,6 +1,7 @@
 #include "SceneComponent.h"
 #include "Object/Class.h"
 #include "Serializer/Archive.h"
+#include "Actor/Actor.h"
 
 IMPLEMENT_RTTI(USceneComponent, UActorComponent)
 
@@ -115,6 +116,7 @@ FVector USceneComponent::GetWorldLocation() const
 void USceneComponent::MarkTransformDirty()
 {
 	bWorldTransformDirty = true;
+	OnTransformUpdated();
 
 	for (USceneComponent* Child : AttachChildren)
 	{

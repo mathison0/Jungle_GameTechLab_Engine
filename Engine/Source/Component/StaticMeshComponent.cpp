@@ -26,7 +26,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InStaticMesh)
 		{
 			Materials[i] = DefaultMats[i]->CreateDynamicMaterial();
 		}
-		UpdateBounds();
+		UpdateBounds(); // BVH ������ UpdateBounds ���ο��� �ڵ� ó��
 	}
 	else
 	{
@@ -36,7 +36,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InStaticMesh)
 
 FRenderMesh* UStaticMeshComponent::GetRenderMesh() const
 {
-	 return StaticMesh ? StaticMesh->GetRenderData() : nullptr;
+	return StaticMesh ? StaticMesh->GetRenderData() : nullptr;
 }
 
 FBoxSphereBounds UStaticMeshComponent::GetLocalBounds() const

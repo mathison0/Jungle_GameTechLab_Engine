@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
@@ -306,6 +306,7 @@
     <ClCompile Include="Source\Actor\PlayerStart.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Scene\DynmaicBVHTree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -888,6 +889,7 @@
     <ClInclude Include="Source\Actor\PlayerStart.h">
       <Filter>Source\Actor</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Scene\DynmaicBVHTree.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
