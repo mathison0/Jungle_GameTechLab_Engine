@@ -23,6 +23,7 @@
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
     <ClInclude Include="Source\Actor\CubeActor.h" />
+    <ClInclude Include="Source\Actor\PlayerStart.h" />
     <ClInclude Include="Source\Actor\PlaneActor.h" />
     <ClInclude Include="Source\Actor\SkySphereActor.h" />
     <ClInclude Include="Source\Actor\SphereActor.h" />
@@ -36,7 +37,6 @@
     <ClInclude Include="Source\Component\LineBatchComponent.h" />
     <ClInclude Include="Source\Component\MeshComponent.h" />
     <ClInclude Include="Source\Component\PrimitiveComponent.h" />
-    <ClInclude Include="Source\Component\RandomColorComponent.h" />
     <ClInclude Include="Source\Component\SceneComponent.h" />
     <ClInclude Include="Source\Component\SkyComponent.h" />
     <ClInclude Include="Source\Component\StaticMeshComponent.h" />
@@ -217,6 +217,7 @@
   <ItemGroup>
     <ClCompile Include="Source\Actor\Actor.cpp" />
     <ClCompile Include="Source\Actor\CubeActor.cpp" />
+    <ClCompile Include="Source\Actor\PlayerStart.cpp" />
     <ClCompile Include="Source\Actor\PlaneActor.cpp" />
     <ClCompile Include="Source\Actor\SkySphereActor.cpp" />
     <ClCompile Include="Source\Actor\SphereActor.cpp" />
@@ -230,7 +231,6 @@
     <ClCompile Include="Source\Component\LineBatchComponent.cpp" />
     <ClCompile Include="Source\Component\MeshComponent.cpp" />
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp" />
-    <ClCompile Include="Source\Component\RandomColorComponent.cpp" />
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Component\SkyComponent.cpp" />
     <ClCompile Include="Source\Component\StaticMeshComponent.cpp" />

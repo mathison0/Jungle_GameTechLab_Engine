@@ -16,6 +16,9 @@
 #include "Component/StaticMeshComponent.h"
 #include "Asset/ObjManager.h"
 #include "Slate/Widget/Painter.h"
+#include "World/World.h"
+#include "Component/CameraComponent.h"
+#include "Camera/Camera.h"
 
 namespace
 {
@@ -104,18 +107,40 @@ void FEditorViewportRenderService::RenderAll(
 		const float AspectRatio = static_cast<float>(Rect.Width) / static_cast<float>(Rect.Height);
 		FRenderCommandQueue Queue;
 		Queue.Reserve(Renderer->GetPrevCommandCount());
-		Queue.ProjectionMatrix = Entry.LocalState.BuildProjMatrix(AspectRatio);
-		Queue.ViewMatrix = Entry.LocalState.BuildViewMatrix();
+
+		// PIE 활성 중에는 PIE 월드의 활성 카메라 행렬을 사용한다.
+		if (EditorEngine->IsPIEActive())
+		{
+			if (UWorld* PIEWorld = EditorEngine->GetActiveWorld())
+			{
+				if (UCameraComponent* PIECam = PIEWorld->GetActiveCameraComponent())
+				{
+					PIECam->GetCamera()->SetAspectRatio(AspectRatio);
+					Queue.ViewMatrix       = PIECam->GetViewMatrix();
+					Queue.ProjectionMatrix = PIECam->GetProjectionMatrix();
+				}
+			}
+		}
+		else
+		{
+			Queue.ProjectionMatrix = Entry.LocalState.BuildProjMatrix(AspectRatio);
+			Queue.ViewMatrix       = Entry.LocalState.BuildViewMatrix();
+		}
 
 		FFrustum Frustum;
 		Frustum.ExtractFromVP(Queue.ViewMatrix * Queue.ProjectionMatrix);
 		const FVector CameraPosition = Queue.ViewMatrix.GetInverse().GetTranslation();
 		BuildRenderCommands(Engine, Scene, Frustum, Entry.LocalState.ShowFlags, CameraPosition, Queue);
 
-		AActor* GizmoTarget = EditorEngine->GetSelectedActor();
-		if (GizmoTarget && GizmoTarget->GetComponentByClass<USkyComponent>() == nullptr)
+		const bool bPIE = EditorEngine->IsPIEActive();
+
+		if (!bPIE)
 		{
-			Gizmo.BuildRenderCommands(GizmoTarget, &Entry, Queue);
+			AActor* GizmoTarget = EditorEngine->GetSelectedActor();
+			if (GizmoTarget && GizmoTarget->GetComponentByClass<USkyComponent>() == nullptr)
+			{
+				Gizmo.BuildRenderCommands(GizmoTarget, &Entry, Queue);
+			}
 		}
 
 		if (Entry.LocalState.ViewMode == ERenderMode::Wireframe && WireFrameMaterial)
@@ -123,7 +148,7 @@ void FEditorViewportRenderService::RenderAll(
 			ApplyWireframe(Queue, WireFrameMaterial.get());
 		}
 
-		if (Entry.LocalState.bShowGrid && GridMesh && GridMaterial)
+		if (!bPIE && Entry.LocalState.bShowGrid && GridMesh && GridMaterial)
 		{
 			FVector GridAxisU = FVector::ForwardVector;
 			FVector GridAxisV = FVector::RightVector;
