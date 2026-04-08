@@ -17,6 +17,7 @@ struct DynamicBVHNode
 	int32 LeftChildIndex = -1;
 	int32 RightChildIndex = -1;
 	int32 ParentIndex = -1;
+	int32 BF = 0;
 	UPrimitiveComponent* Component = nullptr; // 리프 노드인 경우에만 유효
 	bool IsLeaf() const
 	{

@@ -81,6 +81,7 @@ int32 FDynamicBVHTree::InsertLeaf(UPrimitiveComponent* Component)
 		RootIdx = GetFreeIndex();
 		Nodes[RootIdx].Bound = ComponentBound;
 		Nodes[RootIdx].Component = Component;
+		Nodes[RootIdx].BF = 0;
 		ComponentToIndexMap.insert({ Component,RootIdx });
 		return RootIdx;
 	}
@@ -96,6 +97,7 @@ int32 FDynamicBVHTree::InsertLeaf(UPrimitiveComponent* Component)
 	Nodes[NewParentIdx].RightChildIndex = NewLeafIdx;
 	Nodes[NewParentIdx].ParentIndex = OldParentIdx;
 	Nodes[NewParentIdx].Bound = MergeBounds(Nodes[BestSiblingIdx].Bound, ComponentBound);
+	//Nodes[NewParentIdx].BF = Nodes[BestSiblingIdx].BF - 
 
 	Nodes[BestSiblingIdx].ParentIndex = NewParentIdx;
 
@@ -235,6 +237,7 @@ void FDynamicBVHTree::InitNode(int32 Index)
 	Node.LeftChildIndex = -1;
 	Node.RightChildIndex = -1;
 	Node.ParentIndex = -1;
+	Node.BF = 0;
 }
 
 void FDynamicBVHTree::ReleaseIndex(int32 Index)
@@ -319,7 +322,7 @@ void FDynamicBVHTree::Visualize(FDebugDrawManager& DebugDrawer) const
 
 		FVector Center = (Node.Bound.Min + Node.Bound.Max) * 0.5f;
 		FVector Extent = (Node.Bound.Max - Node.Bound.Min) * 0.5f;
-		
+
 		// Leaf nodes are Green, internal nodes are Yellow.
 		FVector4 Color = Node.IsLeaf() ? FVector4(0.0f, 1.0f, 0.0f, 1.0f) : FVector4(1.0f, 1.0f, 0.0f, 1.0f);
 
