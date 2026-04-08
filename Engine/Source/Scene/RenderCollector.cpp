@@ -1,4 +1,5 @@
 #include "RenderCollector.h"
+#include "Component/BillboardComponent.h"
 #include "Component/UUIDTextRenderComponent.h"
 #include "Renderer/RenderCommand.h"
 #include "Actor/Actor.h"
@@ -128,6 +129,33 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 			continue;
 		}
 
+		if (Comp->IsA(UBillboardComponent::StaticClass()))
+		{
+			UBillboardComponent* BillboardComponent = static_cast<UBillboardComponent*>(Comp);
+			if (!BillboardComponent->EnsureRenderResources())
+			{
+				continue;
+			}
+
+			FRenderMesh* BillboardMesh = BillboardComponent->GetRenderMesh();
+			FMaterial* BillboardMaterial = BillboardComponent->GetBillboardMaterial();
+			if (!BillboardMesh || !BillboardMaterial)
+			{
+				continue;
+			}
+
+			FRenderCommand Command;
+			Command.RenderMesh = BillboardMesh;
+			Command.Material = BillboardMaterial;
+			Command.RenderLayer = ERenderLayer::Default;
+			Command.WorldMatrix =
+				FMatrix::MakeScale(BillboardComponent->GetBillboardRenderScale(CameraPosition)) *
+				FMatrix::MakeBillboard(BillboardComponent->GetWorldLocation(), CameraPosition);
+
+			OutQueue.AddCommand(Command);
+			continue;
+		}
+
 		// ─── 3. 정적 메쉬 컴포넌트 (과거 프리미티브 대통합) ───
 		if (Comp->IsA(UStaticMeshComponent::StaticClass()))
 		{
@@ -188,13 +216,14 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 
 			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDTextRenderComponent::StaticClass());
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
+			const bool bIsBillboard = PrimitiveComponent->IsA(UBillboardComponent::StaticClass());
 			const bool bIsText = PrimitiveComponent->IsA(UTextRenderComponent::StaticClass());
 			// ─── ShowFlags에 따른 필터링 ───
 			if (bIsUUID)
 			{
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_UUID)) continue;
 			}
-			else if (bIsSubUV)
+			else if (bIsSubUV || bIsBillboard)
 			{
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Billboard))
 				{

@@ -1,6 +1,7 @@
 #include "PropertyWindow.h"
 #include "EditorEngine.h"
 #include "Actor/Actor.h"
+#include "Component/BillboardComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
@@ -149,6 +150,23 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 						bool bBillboard = SubUVComp->IsBillboard();
 						if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
 							SubUVComp->SetBillboard(bBillboard);
+					}
+					else if (Component->IsA(UBillboardComponent::StaticClass()))
+					{
+						UBillboardComponent* BillboardComp = static_cast<UBillboardComponent*>(Component);
+
+						bool bScreenScaled = BillboardComp->IsScreenSizeScaled();
+						if (ImGui::Checkbox("Sprite Screen Scaled", &bScreenScaled))
+							BillboardComp->SetScreenSizeScaled(bScreenScaled);
+
+						FVector2 SpriteSize = BillboardComp->GetSize();
+						float SizeValues[2] = { SpriteSize.X, SpriteSize.Y };
+						if (ImGui::DragFloat2("Sprite Size", SizeValues, 0.01f, 0.01f, 100.0f, "%.2f"))
+							BillboardComp->SetSize(FVector2(SizeValues[0], SizeValues[1]));
+
+						float ScreenSize = BillboardComp->GetScreenSize();
+						if (ImGui::DragFloat("Sprite Screen Size", &ScreenSize, 0.0001f, 0.0001f, 1.0f, "%.4f"))
+							BillboardComp->SetScreenSize(ScreenSize);
 					}
 					else if (Component->IsA(UTextRenderComponent::StaticClass()) && !Component->IsA(UUUIDTextRenderComponent::StaticClass()))
 					{

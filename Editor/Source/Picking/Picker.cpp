@@ -4,6 +4,7 @@
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Component/UUIDTextRenderComponent.h"
@@ -176,7 +177,7 @@ AActor* FPicker::PickActor(UScene* Scene, const FViewportEntry* Entry, int32 Scr
 			UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Component);
 
 			// ─── 2. 바운딩 스피어(구형) 기반 피킹 (Text, SubUV) ───
-		if (PrimComp->IsA(USubUVComponent::StaticClass()) || PrimComp->IsA(UTextRenderComponent::StaticClass()))
+		if (PrimComp->IsA(UBillboardComponent::StaticClass()) || PrimComp->IsA(USubUVComponent::StaticClass()) || PrimComp->IsA(UTextRenderComponent::StaticClass()))
 			{
 				const FBoxSphereBounds Bounds = PrimComp->GetWorldBounds();
 				FVector ToCenter = Bounds.Center - Ray.Origin;

@@ -4,6 +4,7 @@
 #include "Object/Object.h"
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
+#include "Component/BillboardComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Platform/Windows/WindowsWindow.h"
@@ -28,6 +29,7 @@
 #include "Viewport/EditorViewportClient.h"
 #include "Component/SkyComponent.h"
 #include "Component/SubUVComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Component/UUIDTextRenderComponent.h"
 
 enum class EFileDialogType
@@ -301,8 +303,9 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 				for (UActorComponent* Component : Selected->GetComponents())
 				{
 					if (!Component->IsA(UPrimitiveComponent::StaticClass())) continue;
-			if (Component->IsA(UTextRenderComponent::StaticClass())) continue;
+					if (Component->IsA(UTextRenderComponent::StaticClass())) continue;
 					if (Component->IsA(USubUVComponent::StaticClass())) continue;
+					if (Component->IsA(UBillboardComponent::StaticClass())) continue;
 
 					UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
 					if (PrimitiveComponent->GetRenderMesh())
