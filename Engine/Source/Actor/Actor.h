@@ -2,6 +2,7 @@
 #include "Object/Object.h"
 #include "World/World.h"
 #include "Component/ActorComponent.h"
+#include <type_traits>
 
 class UActorComponent;
 class USceneComponent;
@@ -30,6 +31,7 @@ public:
 
 	/** 액터가 소유한 모든 컴포넌트 배열을 반환한다. */
 	const TArray<UActorComponent*>& GetComponents() const;
+	UActorComponent* GetComponentByExactClass(const UClass* InClass) const;
 	/** 액터에 새 컴포넌트를 소유권과 함께 등록한다. */
 	void AddOwnedComponent(UActorComponent* InComponent);
 	/** 액터에서 컴포넌트를 분리하고 소유 관계를 끊는다. */
@@ -46,6 +48,13 @@ public:
 			}
 		}
 		return nullptr;
+	}
+
+	template <typename T>
+	T* GetExactComponentByClass() const
+	{
+		static_assert(std::is_base_of_v<UActorComponent, T>, "T must derive from UActorComponent");
+		return static_cast<T*>(GetComponentByExactClass(T::StaticClass()));
 	}
 
 	void Test() { int a = 5; }

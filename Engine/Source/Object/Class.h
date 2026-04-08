@@ -17,6 +17,7 @@ public:
 
 	UObject* CreateInstance(UObject* InOuter, const FString& InName) const;
 	static UClass* FindClass(const FString& InString);
+	static const TMap<FString, UClass*>& GetRegisteredClasses();
 	static void RegisterClass(UClass* InClass);
 	static void RegisterAlias(const FString& AliasName, UClass* InClass);
 private:
