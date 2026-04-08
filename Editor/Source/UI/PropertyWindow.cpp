@@ -221,7 +221,7 @@ namespace
 		if (Component->GetClass() == UBillboardComponent::StaticClass())
 		{
 			UBillboardComponent* BillboardComponent = static_cast<UBillboardComponent*>(Component);
-			if (UTexture* DefaultSprite = UTexture::FindOrLoad("Textures/FileIcon.png", OwnerActor))
+			if (UTexture* DefaultSprite = UTexture::FindOrLoad("Editor/Icons/Pawn_64x.png", OwnerActor))
 			{
 				BillboardComponent->SetSprite(DefaultSprite);
 			}
