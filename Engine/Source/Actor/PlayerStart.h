@@ -13,6 +13,7 @@ public:
 
 	void PostSpawnInitialize() override;
 	void Serialize(FArchive& Ar) override;
+	void BeginPlay() override;
 	virtual void Tick(float fTimeDelta) override;
 
 private:

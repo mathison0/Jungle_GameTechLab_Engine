@@ -97,6 +97,12 @@ void APlayerStart::Serialize(FArchive& Ar)
 	}
 }
 
+void APlayerStart::BeginPlay()
+{
+	AActor::BeginPlay();
+	SetVisible(false);
+}
+
 void APlayerStart::Tick(float fTimeDelta)
 {
 	AActor::Tick(fTimeDelta);
