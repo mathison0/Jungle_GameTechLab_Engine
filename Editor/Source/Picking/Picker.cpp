@@ -3,6 +3,7 @@
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
+#include "Component/ArrowComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/SubUVComponent.h"
@@ -60,7 +61,10 @@ namespace
 
 				UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Component);
 
-				if (PrimComp->IsA(UBillboardComponent::StaticClass()) || PrimComp->IsA(USubUVComponent::StaticClass()) || PrimComp->IsA(UTextRenderComponent::StaticClass()))
+				if (PrimComp->IsA(UArrowComponent::StaticClass())
+					|| PrimComp->IsA(UBillboardComponent::StaticClass())
+					|| PrimComp->IsA(USubUVComponent::StaticClass())
+					|| PrimComp->IsA(UTextRenderComponent::StaticClass()))
 				{
 					const FBoxSphereBounds Bounds = PrimComp->GetWorldBounds();
 					const FVector ToCenter = Bounds.Center - Ray.Origin;

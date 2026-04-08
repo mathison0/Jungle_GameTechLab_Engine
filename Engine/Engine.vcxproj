@@ -34,6 +34,7 @@
     <ClInclude Include="Source\Asset\ObjManager.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Component\ActorComponent.h" />
+    <ClInclude Include="Source\Component\ArrowComponent.h" />
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\LineBatchComponent.h" />
     <ClInclude Include="Source\Component\MeshComponent.h" />
@@ -230,6 +231,7 @@
     <ClCompile Include="Source\Asset\ObjManager.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
+    <ClCompile Include="Source\Component\ArrowComponent.cpp" />
     <ClCompile Include="Source\Component\BillboardComponent.cpp" />
     <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\Component\LineBatchComponent.cpp" />

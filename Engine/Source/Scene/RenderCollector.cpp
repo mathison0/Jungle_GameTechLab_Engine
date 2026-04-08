@@ -1,4 +1,5 @@
 #include "RenderCollector.h"
+#include "Component/ArrowComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/UUIDTextRenderComponent.h"
 #include "Renderer/RenderCommand.h"
@@ -12,6 +13,7 @@
 #include "Renderer/TextMeshBuilder.h"
 #include "Renderer/SubUVRenderer.h"
 #include "Renderer/Material.h"
+#include "Renderer/MaterialManager.h"
 #include "Renderer/MeshData.h"
 
 void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
@@ -26,6 +28,8 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 
 	FTextMeshBuilder& TextRenderer = Renderer->GetTextRenderer();
 	FSubUVRenderer& SubUVRenderer = Renderer->GetSubUVRenderer();
+	std::shared_ptr<FMaterial> GizmoMaterialPtr = FMaterialManager::Get().FindByName("M_Gizmos");
+	FMaterial* GizmoMaterial = GizmoMaterialPtr ? GizmoMaterialPtr.get() : Renderer->GetDefaultMaterial();
 
 	for (UPrimitiveComponent* Comp : VisiblePrimitives)
 	{
@@ -129,6 +133,24 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 			continue;
 		}
 
+		if (Comp->IsA(UArrowComponent::StaticClass()))
+		{
+			FRenderMesh* ArrowMesh = Comp->GetRenderMesh();
+			if (!ArrowMesh || !GizmoMaterial)
+			{
+				continue;
+			}
+
+			FRenderCommand Command;
+			Command.RenderMesh = ArrowMesh;
+			Command.Material = GizmoMaterial;
+			Command.RenderLayer = ERenderLayer::Default;
+			Command.WorldMatrix = Comp->GetWorldTransform();
+
+			OutQueue.AddCommand(Command);
+			continue;
+		}
+
 		if (Comp->IsA(UBillboardComponent::StaticClass()))
 		{
 			UBillboardComponent* BillboardComponent = static_cast<UBillboardComponent*>(Comp);
@@ -216,6 +238,7 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 
 			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDTextRenderComponent::StaticClass());
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
+			const bool bIsArrow = PrimitiveComponent->IsA(UArrowComponent::StaticClass());
 			const bool bIsBillboard = PrimitiveComponent->IsA(UBillboardComponent::StaticClass());
 			const bool bIsText = PrimitiveComponent->IsA(UTextRenderComponent::StaticClass());
 			// ─── ShowFlags에 따른 필터링 ───
@@ -223,7 +246,7 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 			{
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_UUID)) continue;
 			}
-			else if (bIsSubUV || bIsBillboard)
+			else if (bIsSubUV || bIsArrow || bIsBillboard)
 			{
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Billboard))
 				{

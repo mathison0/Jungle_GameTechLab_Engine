@@ -108,6 +108,7 @@ namespace
 
 		const FString& ClassName = ComponentClass->GetName();
 		return ClassName != "UActorComponent"
+			&& ClassName != "UArrowComponent"
 			&& ClassName != "UPrimitiveComponent"
 			&& ClassName != "UMeshComponent"
 			&& ClassName != "ULineBatchComponent"

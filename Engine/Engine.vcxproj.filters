@@ -114,6 +114,9 @@
     <ClCompile Include="Source\Component\ActorComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\ArrowComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Component\CameraComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
@@ -352,6 +355,9 @@
       <Filter>Source\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\ActorComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\ArrowComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\CameraComponent.h">
