@@ -54,11 +54,16 @@ namespace
 		Ofn.lpstrFile = FileName;
 		Ofn.nMaxFile = MAX_PATH;
 		Ofn.lpstrInitialDir = InitialDirectory.c_str();
-		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
 		if (GetOpenFileNameW(&Ofn))
 		{
 			return FPaths::FromWide(FileName);
+		}
+
+		if (CommDlgExtendedError() != 0)
+		{
+			return "";
 		}
 
 		return "";
