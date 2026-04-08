@@ -3,10 +3,10 @@
 
 #include "Renderer/MeshData.h"
 
-class ENGINE_API UTextComponent : public UPrimitiveComponent
+class ENGINE_API UTextRenderComponent : public UPrimitiveComponent
 {
 public:
-	DECLARE_RTTI(UTextComponent, UPrimitiveComponent)
+	DECLARE_RTTI(UTextRenderComponent, UPrimitiveComponent)
 
 	void PostConstruct() override;
 
@@ -20,17 +20,14 @@ public:
 	void SetTextColor(const FVector4& InColor) { TextColor = InColor; }
 	const FVector4& GetTextColor() const { return TextColor; }
 
-	void SetBillboard(bool bInBillboard) { bBillboard = bInBillboard; }
-	bool IsBillboard() const { return bBillboard; }
+	void SetAlwaysFaceCamera(bool bInAlwaysFaceCamera) { bAlwaysFaceCamera = bInAlwaysFaceCamera; }
+	bool IsAlwaysFaceCamera() const { return bAlwaysFaceCamera; }
 
-	void SetTextScale(float InScale) { TextScale = InScale; }
-	float GetTextScale() const { return TextScale; }
-
-	void SetWorldScale(float InScale) { TextScale = InScale; }
-	float GetWorldScale() const { return TextScale; }
+	void SetWorldSize(float InWorldSize) { WorldSize = InWorldSize; }
+	float GetWorldSize() const { return WorldSize; }
 
 	virtual FVector GetRenderWorldPosition() const { return GetWorldLocation(); }
-	virtual FVector GetRenderWorldScale() const { return GetWorldTransform().GetScaleVector() * TextScale; }
+	virtual FVector GetRenderWorldScale() const { return GetWorldTransform().GetScaleVector() * WorldSize; }
 
 	virtual FRenderMesh* GetRenderMesh() const override;
 	FDynamicMesh* GetTextMesh() const { return TextMesh.get(); }
@@ -44,8 +41,8 @@ public:
 protected:
 	FString Text = "Text";
 	FVector4 TextColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
-	float TextScale = 1.0f;
-	bool bBillboard = false;
+	float WorldSize = 1.0f;
+	bool bAlwaysFaceCamera = false;
 
 	std::shared_ptr<struct FDynamicMesh> TextMesh;
 

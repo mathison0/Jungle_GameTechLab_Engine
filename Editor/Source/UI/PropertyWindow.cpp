@@ -3,8 +3,8 @@
 #include "Actor/Actor.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
-#include "Component/TextComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 #include "Object/ObjectIterator.h"
 #include "Renderer/MeshData.h"
 #include "Renderer/RenderMesh.h"
@@ -12,7 +12,7 @@
 #include "Renderer/MaterialManager.h"
 
 void FPropertyWindow::SetTarget(const FVector& Location, const FVector& Rotation,
-                                const FVector& Scale, const char* ActorName)
+								const FVector& Scale, const char* ActorName)
 {
 	EditLocation = Location;
 	EditRotation = Rotation;
@@ -150,12 +150,12 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 						if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
 							SubUVComp->SetBillboard(bBillboard);
 					}
-					else if (Component->IsA(UTextComponent::StaticClass()) && !Component->IsA(UUUIDBillboardComponent::StaticClass()))
+					else if (Component->IsA(UTextRenderComponent::StaticClass()) && !Component->IsA(UUUIDTextRenderComponent::StaticClass()))
 					{
-						UTextComponent* TextComp = static_cast<UTextComponent*>(Component);
-						bool bBillboard = TextComp->IsBillboard();
-						if (ImGui::Checkbox("Text Billboard", &bBillboard))
-							TextComp->SetBillboard(bBillboard);
+						UTextRenderComponent* TextComp = static_cast<UTextRenderComponent*>(Component);
+						bool bAlwaysFaceCamera = TextComp->IsAlwaysFaceCamera();
+						if (ImGui::Checkbox("Text Always Face Camera", &bAlwaysFaceCamera))
+							TextComp->SetAlwaysFaceCamera(bAlwaysFaceCamera);
 					}
 				}
 				ImGui::Unindent(8.0f);

@@ -4,7 +4,7 @@
 #include "World/World.h"
 #include "Actor/Actor.h"
 #include "Component/PrimitiveComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/SkyComponent.h"
 #include "Object/Class.h"

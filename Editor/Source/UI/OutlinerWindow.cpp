@@ -7,8 +7,8 @@
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
-#include "Component/TextComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 
 void FOutlinerWindow::Render(FEditorEngine* Engine)
 {

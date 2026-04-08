@@ -1,11 +1,11 @@
 #include "RenderCollector.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 #include "Renderer/RenderCommand.h"
 #include "Actor/Actor.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Core/Engine.h"
-#include "Component/TextComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Debug/EngineLog.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/TextMeshBuilder.h"
@@ -31,9 +31,9 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 		if (!Comp) continue;
 
 		// ─── 1. 텍스트 컴포넌트 ───
-		if (Comp->IsA(UTextComponent::StaticClass()))
+		if (Comp->IsA(UTextRenderComponent::StaticClass()))
 		{
-			UTextComponent* TextComp = static_cast<UTextComponent*>(Comp);
+			UTextRenderComponent* TextComp = static_cast<UTextRenderComponent*>(Comp);
 			FRenderMesh* TextMesh = TextComp->GetRenderMesh();
 
 			if (TextMesh)
@@ -61,7 +61,7 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 						Command.RenderMesh = TextMesh;
 						Command.Material = FontMat;
 
-						if (!Comp->IsA(UUUIDBillboardComponent::StaticClass()))
+						if (!Comp->IsA(UUUIDTextRenderComponent::StaticClass()))
 						{
 							Command.RenderLayer = ERenderLayer::Default;
 						}
@@ -73,15 +73,15 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 						const FVector WorldPos = TextComp->GetRenderWorldPosition();
 						const FVector Scale = TextComp->GetRenderWorldScale();
 
-						if (TextComp->IsBillboard())
+						if (TextComp->IsAlwaysFaceCamera())
 						{
 							Command.WorldMatrix = FMatrix::MakeScale(Scale) * FMatrix::MakeBillboard(WorldPos, CameraPosition);
 						}
 						else
 						{
-							const float TextScale = TextComp->GetTextScale();
+							const float TextWorldSize = TextComp->GetWorldSize();
 							Command.WorldMatrix =
-								FMatrix::MakeScale(FVector(TextScale, TextScale, TextScale)) *
+								FMatrix::MakeScale(FVector(TextWorldSize, TextWorldSize, TextWorldSize)) *
 								TextComp->GetWorldTransform();
 						}
 
@@ -186,9 +186,9 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
 
-			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
+			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDTextRenderComponent::StaticClass());
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
-			const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
+			const bool bIsText = PrimitiveComponent->IsA(UTextRenderComponent::StaticClass());
 			// ─── ShowFlags에 따른 필터링 ───
 			if (bIsUUID)
 			{

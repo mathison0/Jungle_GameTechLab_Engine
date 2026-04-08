@@ -1,9 +1,9 @@
 #include "Actor.h"
 #include "Object/ObjectFactory.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 #include "Object/Class.h"
 #include "Renderer/Material.h"
-#include "Component/TextComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Component/SceneComponent.h"
 #include "Debug/EngineLog.h"
 #include "Serializer/Archive.h"
@@ -81,17 +81,17 @@ void AActor::RemoveOwnedComponent(UActorComponent* InComponent)
 
 void AActor::PostSpawnInitialize()
 {
-	if (GetComponentByClass<UUUIDBillboardComponent>() == nullptr)
+	if (GetComponentByClass<UUUIDTextRenderComponent>() == nullptr)
 	{
-		UUUIDBillboardComponent* UUIDComponent =
-			FObjectFactory::ConstructObject<UUUIDBillboardComponent>(this, "UUIDBillboard");
+		UUUIDTextRenderComponent* UUIDComponent =
+			FObjectFactory::ConstructObject<UUUIDTextRenderComponent>(this, "UUIDTextRenderComponent");
 
 		if (UUIDComponent)
 		{
 			AddOwnedComponent(UUIDComponent);
 
 			UUIDComponent->SetWorldOffset(FVector(0.0f, 0.0f, 0.3f));
-			UUIDComponent->SetWorldScale(0.3f);
+			UUIDComponent->SetWorldSize(0.3f);
 			UUIDComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 	}

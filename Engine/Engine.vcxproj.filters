@@ -141,10 +141,10 @@
     <ClCompile Include="Source\Component\SubUVComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\TextComponent.cpp">
+    <ClCompile Include="Source\Component\TextRenderComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
+    <ClCompile Include="Source\Component\UUIDTextRenderComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
@@ -374,10 +374,10 @@
     <ClInclude Include="Source\Component\SubUVComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\TextComponent.h">
+    <ClInclude Include="Source\Component\TextRenderComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
+    <ClInclude Include="Source\Component\UUIDTextRenderComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\ConsoleVariableManager.h">

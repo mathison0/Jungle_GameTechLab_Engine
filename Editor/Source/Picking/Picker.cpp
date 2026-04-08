@@ -5,8 +5,8 @@
 #include "Camera/Camera.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SubUVComponent.h"
-#include "Component/TextComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Renderer/MeshData.h"
 #include <limits>
@@ -170,13 +170,13 @@ AActor* FPicker::PickActor(UScene* Scene, const FViewportEntry* Entry, int32 Scr
 			if (!Component || !Component->IsA(UPrimitiveComponent::StaticClass())) continue;
 
 			// ─── 1. 피킹 제외 대상 (UUID 이름표, 하늘) ───
-			if (Component->IsA(UUUIDBillboardComponent::StaticClass())) continue;
+		if (Component->IsA(UUUIDTextRenderComponent::StaticClass())) continue;
 			if (Component->IsA(USkyComponent::StaticClass())) continue;
 
 			UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Component);
 
 			// ─── 2. 바운딩 스피어(구형) 기반 피킹 (Text, SubUV) ───
-			if (PrimComp->IsA(USubUVComponent::StaticClass()) || PrimComp->IsA(UTextComponent::StaticClass()))
+		if (PrimComp->IsA(USubUVComponent::StaticClass()) || PrimComp->IsA(UTextRenderComponent::StaticClass()))
 			{
 				const FBoxSphereBounds Bounds = PrimComp->GetWorldBounds();
 				FVector ToCenter = Bounds.Center - Ray.Origin;
