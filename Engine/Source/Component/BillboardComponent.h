@@ -16,6 +16,7 @@ class ENGINE_API UBillboardComponent : public UPrimitiveComponent
 {
 public:
 	DECLARE_RTTI(UBillboardComponent, UPrimitiveComponent)
+	UBillboardComponent(const UBillboardComponent& Other);
 
 	~UBillboardComponent() override;
 

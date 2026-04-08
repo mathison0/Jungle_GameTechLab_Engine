@@ -14,6 +14,19 @@
 
 IMPLEMENT_RTTI(UBillboardComponent, UPrimitiveComponent)
 
+UBillboardComponent::UBillboardComponent(const UBillboardComponent& Other)
+	: UPrimitiveComponent(Other)
+	, Sprite(Other.Sprite)
+	, Size(Other.Size)
+	, TintColor(Other.TintColor)
+	, bScreenSizeScaled(Other.bScreenSizeScaled)
+	, ScreenSize(Other.ScreenSize)
+	, BillboardMesh(Other.BillboardMesh ? std::make_shared<FDynamicMesh>(*Other.BillboardMesh) : nullptr)
+	, BillboardMaterial(nullptr)
+	, LoadedSprite(Other.LoadedSprite)
+{
+}
+
 UBillboardComponent::~UBillboardComponent() = default;
 
 void UBillboardComponent::PostConstruct()
