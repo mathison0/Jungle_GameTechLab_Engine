@@ -13,6 +13,7 @@ public:
 	// 기본 타입 직렬화
 	void Serialize(const FString& Key, FString& Value);
 	void Serialize(const FString& Key, uint32& Value);
+	void Serialize(const FString& Key, float& Value);
 	void Serialize(const FString& Key, bool& Value);
 	void Serialize(const FString& Key, FVector& Value);
 	void Serialize(const FString& Key, FVector4& Value);

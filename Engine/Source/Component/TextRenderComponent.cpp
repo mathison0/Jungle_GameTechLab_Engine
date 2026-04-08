@@ -1,15 +1,25 @@
-#include "TextComponent.h"
+#include "TextRenderComponent.h"
 #include "Object/Class.h"
 #include <algorithm>
 
 #include "Serializer/Archive.h"
 
 
-IMPLEMENT_RTTI(UTextComponent, UPrimitiveComponent)
+IMPLEMENT_RTTI(UTextRenderComponent, UPrimitiveComponent)
 
-void UTextComponent::PostConstruct()
+namespace
 {
-	// 폰트 렌더링용 메시 데이터 객체 생성
+	struct FTextRenderComponentAliases
+	{
+		FTextRenderComponentAliases()
+		{
+			UClass::RegisterAlias("UTextComponent", UTextRenderComponent::StaticClass());
+		}
+	} GTextRenderComponentAliases;
+}
+
+void UTextRenderComponent::PostConstruct()
+{
 	bDrawDebugBounds = false;
 	TextMesh = std::make_shared<FDynamicMesh>();
 	TextMesh->Topology = EMeshTopology::EMT_TriangleList;
@@ -18,22 +28,21 @@ void UTextComponent::PostConstruct()
 	if (TextMesh) TextMesh->bIsDirty = true;
 }
 
-void UTextComponent::SetText(const FString& InText)
+void UTextRenderComponent::SetText(const FString& InText)
 {
 	if (Text != InText)
 	{
 		Text = InText;
-		// NOTE: 실제 정점 데이터 갱신은 RenderCollector에서 TextRenderer를 통해 수행함
 		MarkTextMeshDirty();
 	}
 }
 
-FRenderMesh* UTextComponent::GetRenderMesh() const
+FRenderMesh* UTextRenderComponent::GetRenderMesh() const
 {
 	return TextMesh.get();
 }
 
-void UTextComponent::DuplicateSubObjects()
+void UTextRenderComponent::DuplicateSubObjects()
 {
 	UPrimitiveComponent::DuplicateSubObjects();
 
@@ -45,7 +54,7 @@ void UTextComponent::DuplicateSubObjects()
 	TextMesh->bIsDirty = true;
 }
 
-void UTextComponent::Serialize(FArchive& Ar)
+void UTextRenderComponent::Serialize(FArchive& Ar)
 {
 	UPrimitiveComponent::Serialize(Ar);
 
@@ -53,21 +62,41 @@ void UTextComponent::Serialize(FArchive& Ar)
 	{
 		Ar.Serialize("Text", Text);
 		Ar.Serialize("TextColor", TextColor);
-		Ar.Serialize("Billboard", bBillboard);
+		Ar.Serialize("AlwaysFaceCamera", bAlwaysFaceCamera);
+		Ar.Serialize("WorldSize", WorldSize);
 	}
 	else
 	{
 		Ar.Serialize("Text", Text);
 		Ar.Serialize("TextColor", TextColor);
-		Ar.Serialize("Billboard", bBillboard);
+
+		// 구 버전 호환용
+		if (Ar.Contains("AlwaysFaceCamera"))
+		{
+			Ar.Serialize("AlwaysFaceCamera", bAlwaysFaceCamera);
+		}
+		else if (Ar.Contains("Billboard"))
+		{
+			Ar.Serialize("Billboard", bAlwaysFaceCamera);
+		}
+
+		if (Ar.Contains("WorldSize"))
+		{
+			Ar.Serialize("WorldSize", WorldSize);
+		}
+		else if (Ar.Contains("TextScale"))
+		{
+			Ar.Serialize("TextScale", WorldSize);
+		}
 
 		SetText(Text);
 		SetTextColor(TextColor);
-		SetBillboard(bBillboard);
+		SetAlwaysFaceCamera(bAlwaysFaceCamera);
+		SetWorldSize(WorldSize);
 	}
 }
 
-FBoxSphereBounds UTextComponent::GetWorldBounds() const
+FBoxSphereBounds UTextRenderComponent::GetWorldBounds() const
 {
 	const FVector Center = GetRenderWorldPosition();
 	const FString DisplayText = GetDisplayText();

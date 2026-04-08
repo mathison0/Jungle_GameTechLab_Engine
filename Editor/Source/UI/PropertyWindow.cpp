@@ -1,18 +1,53 @@
 #include "PropertyWindow.h"
 #include "EditorEngine.h"
 #include "Actor/Actor.h"
+#include "Component/ActorComponent.h"
+#include "Component/BillboardComponent.h"
+#include "Component/PrimitiveComponent.h"
+#include "Component/SceneComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
-#include "Component/TextComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 #include "Object/ObjectIterator.h"
+#include "Object/ObjectFactory.h"
 #include "Renderer/MeshData.h"
 #include "Renderer/RenderMesh.h"
 #include "Renderer/Material.h"
 #include "Renderer/MaterialManager.h"
+#include "Renderer/Texture.h"
+#include "Core/Paths.h"
+
+#include <commdlg.h>
+
+namespace
+{
+	FString OpenTextureFileDialog()
+	{
+		wchar_t FileName[MAX_PATH] = L"";
+		const std::filesystem::path InitialDirectory = FPaths::TextureDir();
+
+		OPENFILENAMEW Ofn = {};
+		Ofn.lStructSize = sizeof(OPENFILENAMEW);
+		Ofn.lpstrFilter =
+			L"Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.dds)\0*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.dds\0"
+			L"All Files (*.*)\0*.*\0";
+		Ofn.lpstrFile = FileName;
+		Ofn.nMaxFile = MAX_PATH;
+		Ofn.lpstrInitialDir = InitialDirectory.c_str();
+		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+		if (GetOpenFileNameW(&Ofn))
+		{
+			return FPaths::FromWide(FileName);
+		}
+
+		return "";
+	}
+}
 
 void FPropertyWindow::SetTarget(const FVector& Location, const FVector& Rotation,
-                                const FVector& Scale, const char* ActorName)
+								const FVector& Scale, const char* ActorName)
 {
 	EditLocation = Location;
 	EditRotation = Rotation;
@@ -134,14 +169,74 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 	if (Engine)
 	{
 		AActor* SelectedActor = Engine->GetSelectedActor();
+		UActorComponent* SelectedComponent = Engine->GetSelectedComponent();
 		if (SelectedActor)
 		{
+			if (SelectedComponent)
+			{
+				ImGui::TextDisabled("Selected Component:");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(0.6f, 0.85f, 1.0f, 1.0f), "%s", SelectedComponent->GetName().c_str());
+				ImGui::Separator();
+			}
+
+			if (ImGui::CollapsingHeader("Components", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::Indent(8.0f);
+
+				if (ImGui::Button("Add Billboard Component"))
+				{
+					int32 BillboardIndex = 0;
+					for (UActorComponent* Component : SelectedActor->GetComponents())
+					{
+						if (Component && Component->IsA(UBillboardComponent::StaticClass()))
+						{
+							++BillboardIndex;
+						}
+					}
+
+					const FString ComponentName = "BillboardComponent_" + std::to_string(BillboardIndex);
+					UBillboardComponent* BillboardComponent =
+						FObjectFactory::ConstructObject<UBillboardComponent>(SelectedActor, ComponentName);
+
+					if (BillboardComponent)
+					{
+						SelectedActor->AddOwnedComponent(BillboardComponent);
+
+						if (USceneComponent* RootComponent = SelectedActor->GetRootComponent())
+						{
+							if (RootComponent != BillboardComponent)
+							{
+								BillboardComponent->AttachTo(RootComponent);
+							}
+						}
+						else
+						{
+							SelectedActor->SetRootComponent(BillboardComponent);
+						}
+
+						if (UTexture* DefaultSprite = UTexture::FindOrLoad("Textures/FileIcon.png", SelectedActor))
+						{
+							BillboardComponent->SetSprite(DefaultSprite);
+						}
+
+						BillboardComponent->OnRegister();
+						BillboardComponent->UpdateBounds();
+						Engine->SetSelectedComponent(BillboardComponent);
+						SelectedComponent = BillboardComponent;
+					}
+				}
+
+				ImGui::Unindent(8.0f);
+			}
+
 			if (ImGui::CollapsingHeader("Billboard", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				ImGui::Indent(8.0f);
 				for (UActorComponent* Component : SelectedActor->GetComponents())
 				{
 					if (!Component) continue;
+					if (SelectedComponent && Component != SelectedComponent) continue;
 
 					if (Component->IsA(USubUVComponent::StaticClass()))
 					{
@@ -150,19 +245,118 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 						if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
 							SubUVComp->SetBillboard(bBillboard);
 					}
-					else if (Component->IsA(UTextComponent::StaticClass()) && !Component->IsA(UUUIDBillboardComponent::StaticClass()))
+					else if (Component->IsA(UBillboardComponent::StaticClass()))
 					{
-						UTextComponent* TextComp = static_cast<UTextComponent*>(Component);
-						bool bBillboard = TextComp->IsBillboard();
-						if (ImGui::Checkbox("Text Billboard", &bBillboard))
-							TextComp->SetBillboard(bBillboard);
+						UBillboardComponent* BillboardComp = static_cast<UBillboardComponent*>(Component);
+						UTexture* CurrentSprite = BillboardComp->GetSprite();
+						std::string CurrentSpriteName = "None";
+						if (CurrentSprite)
+						{
+							const std::filesystem::path CurrentSpritePath = FPaths::ToPath(CurrentSprite->GetAssetPathFileName());
+							CurrentSpriteName = CurrentSpritePath.stem().string();
+						}
+
+						ImGui::Text("Sprite Asset:");
+						ImGui::SameLine();
+
+						ImGui::PushItemWidth(200.f);
+						if (ImGui::BeginCombo("##BillboardSpriteAssign", CurrentSpriteName.c_str()))
+						{
+							if (ImGui::Selectable("None", CurrentSprite == nullptr))
+							{
+								BillboardComp->SetSprite(nullptr);
+							}
+
+							const TArray<FString> TextureAssetPaths = UTexture::GetAvailableTextureAssetPaths();
+							for (const FString& TextureAssetPath : TextureAssetPaths)
+							{
+								const std::filesystem::path TexturePath = FPaths::ToPath(TextureAssetPath);
+								const std::string TextureName = TexturePath.stem().string();
+								const bool bSelected = (CurrentSprite && CurrentSprite->GetAssetPathFileName() == TextureAssetPath);
+
+								if (ImGui::Selectable(TextureName.c_str(), bSelected))
+								{
+									if (UTexture* TextureAsset = UTexture::FindOrLoad(TextureAssetPath, SelectedActor))
+									{
+										BillboardComp->SetSprite(TextureAsset);
+									}
+								}
+
+								if (bSelected)
+								{
+									ImGui::SetItemDefaultFocus();
+								}
+							}
+							ImGui::EndCombo();
+						}
+						ImGui::PopItemWidth();
+
+						if (ImGui::Button("Browse..."))
+						{
+							const FString SelectedFilePath = OpenTextureFileDialog();
+							if (!SelectedFilePath.empty())
+							{
+								if (UTexture* SelectedTexture = UTexture::FindOrLoad(SelectedFilePath, SelectedActor))
+								{
+									BillboardComp->SetSprite(SelectedTexture);
+								}
+							}
+						}
+
+						bool bScreenScaled = BillboardComp->IsScreenSizeScaled();
+						if (ImGui::Checkbox("Sprite Screen Scaled", &bScreenScaled))
+							BillboardComp->SetScreenSizeScaled(bScreenScaled);
+
+						FVector RelativeLocation = BillboardComp->GetRelativeLocation();
+						float OffsetValues[3] = { RelativeLocation.X, RelativeLocation.Y, RelativeLocation.Z };
+						if (ImGui::DragFloat3("Sprite Offset", OffsetValues, 0.01f, -1000.0f, 1000.0f, "%.2f"))
+						{
+							BillboardComp->SetRelativeLocation(FVector(OffsetValues[0], OffsetValues[1], OffsetValues[2]));
+							BillboardComp->UpdateBounds();
+						}
+
+						FTransform RelativeTransform = BillboardComp->GetRelativeTransform();
+						FVector RelativeRotationEuler = RelativeTransform.Rotator().Euler();
+						float RotationValues[3] = { RelativeRotationEuler.X, RelativeRotationEuler.Y, RelativeRotationEuler.Z };
+						if (ImGui::DragFloat3("Sprite Rotation", RotationValues, 0.5f, -360.0f, 360.0f, "%.1f"))
+						{
+							RelativeTransform.SetRotation(FRotator::MakeFromEuler(FVector(RotationValues[0], RotationValues[1], RotationValues[2])));
+							BillboardComp->SetRelativeTransform(RelativeTransform);
+							BillboardComp->UpdateBounds();
+						}
+
+						FVector RelativeScale = RelativeTransform.GetScale3D();
+						float ScaleValues[3] = { RelativeScale.X, RelativeScale.Y, RelativeScale.Z };
+						if (ImGui::DragFloat3("Sprite Scale", ScaleValues, 0.01f, 0.001f, 100.0f, "%.3f"))
+						{
+							RelativeTransform.SetScale3D(FVector(ScaleValues[0], ScaleValues[1], ScaleValues[2]));
+							BillboardComp->SetRelativeTransform(RelativeTransform);
+							BillboardComp->UpdateBounds();
+						}
+
+						FVector2 SpriteSize = BillboardComp->GetSize();
+						float SizeValues[2] = { SpriteSize.X, SpriteSize.Y };
+						if (ImGui::DragFloat2("Sprite Size", SizeValues, 0.01f, 0.01f, 100.0f, "%.2f"))
+							BillboardComp->SetSize(FVector2(SizeValues[0], SizeValues[1]));
+
+						float ScreenSize = BillboardComp->GetScreenSize();
+						if (ImGui::DragFloat("Sprite Screen Size", &ScreenSize, 0.0001f, 0.0001f, 1.0f, "%.4f"))
+							BillboardComp->SetScreenSize(ScreenSize);
+					}
+					else if (Component->IsA(UTextRenderComponent::StaticClass()) && !Component->IsA(UUUIDTextRenderComponent::StaticClass()))
+					{
+						UTextRenderComponent* TextComp = static_cast<UTextRenderComponent*>(Component);
+						bool bAlwaysFaceCamera = TextComp->IsAlwaysFaceCamera();
+						if (ImGui::Checkbox("Text Billboard", &bAlwaysFaceCamera))
+							TextComp->SetAlwaysFaceCamera(bAlwaysFaceCamera);
 					}
 				}
 				ImGui::Unindent(8.0f);
 			}
 			if (UStaticMeshComponent* MeshComp = SelectedActor->GetComponentByClass<UStaticMeshComponent>())
 			{
-				if (ImGui::CollapsingHeader("Static Mesh", ImGuiTreeNodeFlags_DefaultOpen))
+				const bool bShowStaticMeshSection = !SelectedComponent || SelectedComponent == MeshComp;
+				if (bShowStaticMeshSection && ImGui::CollapsingHeader("Static Mesh", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					ImGui::Indent(8.0f);
 
@@ -203,7 +397,7 @@ void FPropertyWindow::Render(FEditorEngine* Engine)
 					ImGui::Unindent(8.0f);
 				}
 
-				if (ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen))
+				if (bShowStaticMeshSection && ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					ImGui::Indent(8.0f);
 
