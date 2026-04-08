@@ -14,6 +14,7 @@ class FEditorEngine;
 class FWindowsWindow;
 class FRenderer;
 class AActor;
+class UActorComponent;
 class FEditorUI
 {
 public:
@@ -41,6 +42,7 @@ private:
 	std::wstring GetEditorIniPathW() const;
 	FEditorEngine* Engine = nullptr;
 	TObjectPtr<AActor> CachedSelectedActor;
+	TObjectPtr<UActorComponent> CachedSelectedComponent;
 
 	FWindowsWindow* MainWindow = nullptr;
 
