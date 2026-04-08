@@ -10,6 +10,7 @@
 #include "Debug/EngineLog.h"
 #include "Renderer/Material.h"
 #include "Actor/Actor.h"
+
 IMPLEMENT_RTTI(UStaticMeshComponent, UMeshComponent)
 
 void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InStaticMesh)
@@ -25,7 +26,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InStaticMesh)
 		{
 			Materials[i] = DefaultMats[i]->CreateDynamicMaterial();
 		}
-		UpdateBounds(); // BVH 갱신은 UpdateBounds 내부에서 자동 처리
+		UpdateBounds(); // BVH ������ UpdateBounds ���ο��� �ڵ� ó��
 	}
 	else
 	{
@@ -45,6 +46,17 @@ FBoxSphereBounds UStaticMeshComponent::GetLocalBounds() const
 		return StaticMesh->LocalBounds;
 	}
 	return UPrimitiveComponent::GetLocalBounds();
+}
+
+void UStaticMeshComponent::Tick(float DeltaTime)
+{
+	SetRelativeLocation(GetWorldLocation() + GetWorldTransform().GetForwardVector() * DeltaTime);
+
+	/*if (GetOwner()->GetWorld()->GetWorldType() == EWorldType::PIE)
+	{
+		SetRelativeLocation(GetWorldLocation() + GetWorldTransform().GetForwardVector() * DeltaTime);
+
+	}*/
 }
 
 FBoxSphereBounds UStaticMeshComponent::CalcBounds(const FMatrix& LocalToWorld) const

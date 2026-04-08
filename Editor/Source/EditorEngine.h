@@ -34,6 +34,17 @@ public:
 	const FWorldContext* GetActiveWorldContext() const override;
 	void HandleResize(int32 Width, int32 Height) override;
 
+	/** PIE를 시작한다. Editor World를 복사하고 BeginPlay를 호출한다. */
+	void StartPIE();
+	/** PIE를 종료한다. PIE World를 정리하고 Editor World로 복귀한다. */
+	void StopPIE();
+	/** PIE를 일시정지/재개한다. */
+	void PausePIE();
+	void ResumePIE();
+	/** 현재 PIE가 활성화되어 있는지 반환한다. */
+	bool IsPIEActive() const { return bIsPIEActive; }
+	bool IsPIEPaused() const { return bIsPIEPaused; }
+
 	const TArray<FViewport>& GetViewports() const { return ViewportRegistry.GetViewports(); }
 	TArray<FViewport>& GetViewports() { return ViewportRegistry.GetViewports(); }
 	const FEditorViewportRegistry& GetViewportRegistry() const { return ViewportRegistry; }
@@ -86,6 +97,10 @@ private:
 	FWorldContext* EditorWorldContext = nullptr;
 	TArray<FWorldContext*> PreviewWorldContexts;
 	FWorldContext* ActiveEditorWorldContext = nullptr;
+
+	FWorldContext* PIEWorldContext = nullptr;
+	bool bIsPIEActive  = false;
+	bool bIsPIEPaused  = false;
 
 	FWindowsWindow* MainWindow = nullptr;
 	FEditorViewportRegistry ViewportRegistry;
