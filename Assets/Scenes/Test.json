@@ -1,0 +1,240 @@
+{
+  "Materials": [
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Water.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 27,
+  "PerspectiveCamera": {
+    "FOV": 60.0,
+    "FarClip": 10000.0,
+    "Location": [
+      -22.947038650512695,
+      4.129848480224609,
+      16.76968002319336
+    ],
+    "NearClip": 0.0010000000474974513,
+    "Rotation": [
+      -34.00004577636719,
+      -8.799997329711914,
+      0.0
+    ]
+  },
+  "Primitives": {
+    "0": {
+      "Class": "AActor",
+      "Components": [
+        {
+          "Billboard": true,
+          "Class": "UUUIDBillboardComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "Text",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 20
+        },
+        {
+          "Class": "UStaticMeshComponent",
+          "Location": [
+            -12.529853820800781,
+            0.5107645988464355,
+            9.627001762390137
+          ],
+          "Materials": [
+            "texture"
+          ],
+          "ObjStaticMeshAsset": "cube-tex.Model",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 21
+        }
+      ],
+      "RootComponentUUID": 21,
+      "UUID": 19
+    },
+    "1": {
+      "Class": "AActor",
+      "Components": [
+        {
+          "Billboard": true,
+          "Class": "UUUIDBillboardComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "Text",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 23
+        },
+        {
+          "Class": "UStaticMeshComponent",
+          "Location": [
+            -6.346040725708008,
+            0.501638650894165,
+            9.627114295959473
+          ],
+          "Materials": [
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper",
+            "Creeper"
+          ],
+          "ObjStaticMeshAsset": "Creeper.Model",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 24
+        }
+      ],
+      "RootComponentUUID": 24,
+      "UUID": 22
+    },
+    "2": {
+      "Class": "AActor",
+      "Components": [
+        {
+          "Billboard": true,
+          "Class": "UUUIDBillboardComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "Text",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 26
+        },
+        {
+          "Class": "UStaticMeshComponent",
+          "Location": [
+            -10.010052680969238,
+            6.082717418670654,
+            9.598295211791992
+          ],
+          "Materials": [
+            "Mat_maverick.012",
+            "Mat_maverick.011",
+            "Mat_maverick.008",
+            "Mat_maverick.009",
+            "Mat_maverick.010"
+          ],
+          "ObjStaticMeshAsset": "chopper.Model",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 27
+        }
+      ],
+      "RootComponentUUID": 27,
+      "UUID": 25
+    }
+  }
+}

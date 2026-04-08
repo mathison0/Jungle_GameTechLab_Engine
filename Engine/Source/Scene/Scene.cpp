@@ -70,6 +70,7 @@ void UScene::ClearActors()
 		}
 	}
 	Actors.clear();
+	BVHTree.Clear();
 
 	bBegunPlay = false;
 }
@@ -105,9 +106,16 @@ void UScene::DestroyActor(AActor* InActor)
 void UScene::CleanupDestroyedActors()
 {
 	const auto NewEnd = std::ranges::remove_if(Actors,
-		[](const AActor* Actor)
+		[this](const AActor* Actor)
 		{
-			return Actor == nullptr || Actor->IsPendingDestroy();
+			if (Actor && Actor->IsPendingDestroy())
+			{
+				for (UActorComponent* Comp : Actor->GetComponents())
+					if (UPrimitiveComponent* Prim = dynamic_cast<UPrimitiveComponent*>(Comp))
+						BVHTree.RemoveLeaf(Prim);
+				return true;
+			}
+			return Actor == nullptr;
 		}).begin();
 
 	Actors.erase(NewEnd, Actors.end());

@@ -306,6 +306,7 @@
     <ClCompile Include="Source\World\World.cpp">
       <Filter>Source\World</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Scene\DynmaicBVHTree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -888,6 +889,7 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="Source\Object\ObjectIterator.h" />
+    <ClInclude Include="Source\Scene\DynmaicBVHTree.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

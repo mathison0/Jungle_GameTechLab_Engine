@@ -2,6 +2,8 @@
 #include "Object/Class.h"
 #include "Serializer/Archive.h"
 #include "Debug/EngineLog.h"
+#include "Actor/Actor.h"
+#include "Scene/Scene.h"
 
 #include "PrimitiveComponent.h"
 IMPLEMENT_RTTI(UPrimitiveComponent, USceneComponent)
@@ -14,6 +16,15 @@ FBoxSphereBounds UPrimitiveComponent::GetLocalBounds() const
 void UPrimitiveComponent::UpdateBounds()
 {
 	Bounds = CalcBounds(GetWorldTransform());
+
+	if (AActor* Owner = GetOwner())
+		if (UScene* Scene = Owner->GetScene())
+			Scene->GetBVHTree().MoveLeaf(this);
+}
+
+void UPrimitiveComponent::OnTransformUpdated()
+{
+	UpdateBounds();
 }
 
 FBoxSphereBounds UPrimitiveComponent::CalcBounds(const FMatrix& LocalToWorld) const

@@ -28,9 +28,6 @@ USceneComponent* AActor::GetRootComponent() const { return RootComponent; }
 
 void AActor::SetRootComponent(USceneComponent* InRootComponent)
 {
-	// 의문점
-	// 기존에 RootComponent가 있을 시에는 RootComponent의 OwnerActor를 지워주나?
-	// 이러면 두 개의 RootComponent가 하나의 Owner을 가지고 있는건데.
 	RootComponent = InRootComponent;
 	if (RootComponent)
 	{
@@ -183,7 +180,7 @@ void AActor::Serialize(FArchive& Ar)
 			if (Component)
 			{
 				FArchive* ComponentArchive = new FArchive(true);
-				
+
 				FString ComponentClassName = Component->GetClass()->GetName();
 				ComponentArchive->Serialize("Class", ComponentClassName);
 
@@ -219,20 +216,20 @@ void AActor::Serialize(FArchive& Ar)
 		{
 			Ar.Serialize("RootComponentUUID", SavedRootCompUUID);
 		}
-		
+
 		if (Ar.Contains("Components"))
 		{
 			TArray<FArchive*> ComponentArchives;
 			Ar.Serialize("Components", ComponentArchives);
 
-			for (FArchive* ComponentArchive: ComponentArchives)
+			for (FArchive* ComponentArchive : ComponentArchives)
 			{
 				if (ComponentArchive->Contains("Class"))
 				{
 					FString ComponentClassName;
 					ComponentArchive->Serialize("Class", ComponentClassName);
 
-					
+
 					UClass* ComponentClass = UClass::FindClass(ComponentClassName);
 					if (ComponentClass)
 					{

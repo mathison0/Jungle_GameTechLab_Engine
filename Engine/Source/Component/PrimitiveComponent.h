@@ -33,6 +33,7 @@ public:
 	bool ShouldDrawDebugBounds() const { return bDrawDebugBounds; }
 	void SetDrawDebugBounds(bool bEnable) { bDrawDebugBounds = bEnable; }
 
+	void OnTransformUpdated() override;
 	virtual FRenderMesh* GetRenderMesh() const { return nullptr; }
 
 protected:

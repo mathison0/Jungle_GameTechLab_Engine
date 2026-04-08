@@ -9,6 +9,7 @@
 #include "Core/Paths.h"
 #include "Debug/EngineLog.h"
 #include "Renderer/Material.h"
+#include "Actor/Actor.h"
 IMPLEMENT_RTTI(UStaticMeshComponent, UMeshComponent)
 
 void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InStaticMesh)
@@ -24,7 +25,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InStaticMesh)
 		{
 			Materials[i] = DefaultMats[i]->CreateDynamicMaterial();
 		}
-		UpdateBounds();
+		UpdateBounds(); // BVH 갱신은 UpdateBounds 내부에서 자동 처리
 	}
 	else
 	{
@@ -34,7 +35,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InStaticMesh)
 
 FRenderMesh* UStaticMeshComponent::GetRenderMesh() const
 {
-	 return StaticMesh ? StaticMesh->GetRenderData() : nullptr;
+	return StaticMesh ? StaticMesh->GetRenderData() : nullptr;
 }
 
 FBoxSphereBounds UStaticMeshComponent::GetLocalBounds() const
