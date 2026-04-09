@@ -302,7 +302,7 @@ void FDynamicBVHTree::RefitUpward(int32 Index)
 	{
 		const DynamicBVHNode& ParentNode = Nodes[ParentIdx];
 		Nodes[ParentIdx].Bound = MergeBounds(Nodes[ParentNode.LeftChildIndex].Bound, Nodes[ParentNode.RightChildIndex].Bound);
-		//Rotate(ParentIdx);
+		Rotate(ParentIdx);
 		ParentIdx = Nodes[ParentIdx].ParentIndex;
 	}
 }

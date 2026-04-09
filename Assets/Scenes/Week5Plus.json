@@ -9,19 +9,19 @@
     "Assets/Materials/M_Sky.json",
     "Assets/Materials/M_TintYellow.json"
   ],
-  "NextUUID": 23,
+  "NextUUID": 168,
   "PerspectiveCamera": {
     "FOV": 60.0,
     "FarClip": 10000.0,
     "Location": [
-      4.4523844718933105,
-      1.0454533100128174,
-      2.703315258026123
+      -6.50941801071167,
+      -6.581776142120361,
+      2.6737520694732666
     ],
     "NearClip": 0.0010000000474974513,
     "Rotation": [
-      -19.600000381469727,
-      -146.79994201660156,
+      -19.800006866455078,
+      37.79999542236328,
       0.0
     ]
   },
@@ -42,14 +42,14 @@
           "AttachParentUUID": 0,
           "Class": "UArrowComponent",
           "Location": [
-            0.0,
+            -2.309673309326172,
             0.0,
             0.0
           ],
           "Rotation": [
-            -0.0,
             0.0,
-            -0.0
+            31.999990463256836,
+            0.0
           ],
           "Scale": [
             1.0,
@@ -67,9 +67,9 @@
             0.0
           ],
           "Rotation": [
-            -0.0,
             0.0,
-            -0.0
+            0.0,
+            0.0
           ],
           "Scale": [
             1.0,
@@ -94,7 +94,7 @@
         },
         {
           "AlwaysFaceCamera": true,
-          "AttachParentUUID": 0,
+          "AttachParentUUID": 20,
           "Class": "UUUIDTextRenderComponent",
           "Location": [
             0.0,
@@ -102,9 +102,9 @@
             0.0
           ],
           "Rotation": [
-            -0.0,
             0.0,
-            -0.0
+            0.0,
+            0.0
           ],
           "Scale": [
             1.0,
@@ -124,6 +124,77 @@
       ],
       "RootComponentUUID": 20,
       "UUID": 19
+    },
+    "1": {
+      "Class": "AActor",
+      "Components": [
+        {
+          "AlwaysFaceCamera": true,
+          "AttachParentUUID": 134,
+          "Class": "UUUIDTextRenderComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "Text",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 133,
+          "WorldSize": 0.30000001192092896
+        },
+        {
+          "AttachParentUUID": 0,
+          "Class": "UStaticMeshComponent",
+          "Location": [
+            5.753748893737793,
+            -2.422572374343872,
+            -0.5747666358947754
+          ],
+          "Materials": [
+            "Mat_maverick.012",
+            "Mat_maverick.011",
+            "Mat_maverick.008",
+            "Mat_maverick.009",
+            "Mat_maverick.010"
+          ],
+          "ObjStaticMeshAsset": "chopper.Model",
+          "Rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 134
+        },
+        {
+          "Amplitude": 1.0,
+          "Class": "UMovementComponent",
+          "Enabled": true,
+          "Speed": 2.0,
+          "UUID": 135
+        }
+      ],
+      "RootComponentUUID": 134,
+      "UUID": 132
     }
   }
 }
