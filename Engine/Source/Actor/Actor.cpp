@@ -1,13 +1,14 @@
 #include "Actor.h"
 #include "Object/ObjectFactory.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 #include "Object/Class.h"
 #include "Renderer/Material.h"
-#include "Component/TextComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Component/SceneComponent.h"
 #include "Debug/EngineLog.h"
 #include "Serializer/Archive.h"
 #include "Scene/Scene.h"
+#include <utility>
 IMPLEMENT_RTTI(AActor, UObject)
 
 namespace {
@@ -36,6 +37,24 @@ void AActor::SetRootComponent(USceneComponent* InRootComponent)
 }
 
 const TArray<UActorComponent*>& AActor::GetComponents() const { return OwnedComponents; }
+
+UActorComponent* AActor::GetComponentByExactClass(const UClass* InClass) const
+{
+	if (InClass == nullptr)
+	{
+		return nullptr;
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component && !Component->IsPendingKill() && Component->GetClass() == InClass)
+		{
+			return Component;
+		}
+	}
+
+	return nullptr;
+}
 
 void AActor::AddOwnedComponent(UActorComponent* InComponent)
 {
@@ -78,17 +97,17 @@ void AActor::RemoveOwnedComponent(UActorComponent* InComponent)
 
 void AActor::PostSpawnInitialize()
 {
-	if (GetComponentByClass<UUUIDBillboardComponent>() == nullptr)
+	if (GetComponentByClass<UUUIDTextRenderComponent>() == nullptr)
 	{
-		UUUIDBillboardComponent* UUIDComponent =
-			FObjectFactory::ConstructObject<UUUIDBillboardComponent>(this, "UUIDBillboard");
+		UUUIDTextRenderComponent* UUIDComponent =
+			FObjectFactory::ConstructObject<UUUIDTextRenderComponent>(this, "UUIDTextRenderComponent");
 
 		if (UUIDComponent)
 		{
 			AddOwnedComponent(UUIDComponent);
 
 			UUIDComponent->SetWorldOffset(FVector(0.0f, 0.0f, 0.3f));
-			UUIDComponent->SetWorldScale(0.3f);
+			UUIDComponent->SetWorldSize(0.3f);
 			UUIDComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 	}
@@ -209,9 +228,18 @@ void AActor::Serialize(FArchive& Ar)
 			UUID = SavedUUID;
 			GUUIDToObjectMap[SavedUUID] = this;
 
+			for (UActorComponent* Component : OwnedComponents)
+			{
+				if (Component)
+				{
+					Component->SetOwner(this);
+				}
+			}
+
 		}
 
 		uint32 SavedRootCompUUID = 0;
+		TArray<std::pair<USceneComponent*, uint32>> PendingAttachParents;
 		if (Ar.Contains("RootComponentUUID"))
 		{
 			Ar.Serialize("RootComponentUUID", SavedRootCompUUID);
@@ -233,16 +261,7 @@ void AActor::Serialize(FArchive& Ar)
 					UClass* ComponentClass = UClass::FindClass(ComponentClassName);
 					if (ComponentClass)
 					{
-						UActorComponent* TargetComponent = nullptr;
-
-						for (UActorComponent* ExistingComponent : OwnedComponents)
-						{
-							if (ExistingComponent->GetClass() == ComponentClass)
-							{
-								TargetComponent = ExistingComponent;
-								break;
-							}
-						}
+						UActorComponent* TargetComponent = GetComponentByExactClass(ComponentClass);
 
 						if (!TargetComponent)
 						{
@@ -258,6 +277,16 @@ void AActor::Serialize(FArchive& Ar)
 						if (TargetComponent)
 						{
 							TargetComponent->Serialize(*ComponentArchive);
+
+							if (TargetComponent->IsA(USceneComponent::StaticClass()))
+							{
+								uint32 AttachParentUUID = 0;
+								if (ComponentArchive->Contains("AttachParentUUID"))
+								{
+									ComponentArchive->Serialize("AttachParentUUID", AttachParentUUID);
+								}
+								PendingAttachParents.emplace_back(static_cast<USceneComponent*>(TargetComponent), AttachParentUUID);
+							}
 						}
 					}
 					else
@@ -282,12 +311,30 @@ void AActor::Serialize(FArchive& Ar)
 		}
 		if (RootComponent)
 		{
-			for (UActorComponent* Comp : OwnedComponents)
+			for (const auto& PendingAttachParent : PendingAttachParents)
 			{
-				if (Comp != RootComponent && Comp->IsA(USceneComponent::StaticClass()))
+				USceneComponent* SceneComp = PendingAttachParent.first;
+				if (SceneComp == nullptr || SceneComp == RootComponent)
 				{
-					USceneComponent* SceneComp = static_cast<USceneComponent*>(Comp);
-					SceneComp->AttachTo(RootComponent);
+					continue;
+				}
+
+				USceneComponent* AttachParent = RootComponent;
+				if (PendingAttachParent.second != 0)
+				{
+					for (UActorComponent* Comp : OwnedComponents)
+					{
+						if (Comp && Comp->UUID == PendingAttachParent.second && Comp->IsA(USceneComponent::StaticClass()))
+						{
+							AttachParent = static_cast<USceneComponent*>(Comp);
+							break;
+						}
+					}
+				}
+
+				if (AttachParent && AttachParent != SceneComp)
+				{
+					SceneComp->AttachTo(AttachParent);
 				}
 			}
 		}

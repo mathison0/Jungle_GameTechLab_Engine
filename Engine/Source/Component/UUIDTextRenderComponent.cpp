@@ -1,19 +1,45 @@
-#include "UUIDBillboardComponent.h"
+#include "UUIDTextRenderComponent.h"
 #include "Actor/Actor.h"
 #include "Object/Class.h"
 #include <limits>
 
-IMPLEMENT_RTTI(UUUIDBillboardComponent, UTextComponent)
+IMPLEMENT_RTTI(UUUIDTextRenderComponent, UTextRenderComponent)
 
-void UUUIDBillboardComponent::PostConstruct()
+namespace
 {
-	UTextComponent::PostConstruct();
-	SetBillboard(true);
-	bDrawDebugBounds = false;
-	SetTextScale(0.3f); // UUID 빌보드의 기본 스케일 설정
+	struct FUUIDTextRenderComponentAliases
+	{
+		FUUIDTextRenderComponentAliases()
+		{
+			UClass::RegisterAlias("UUUIDBillboardComponent", UUUIDTextRenderComponent::StaticClass());
+		}
+	} GUUIDTextRenderComponentAliases;
 }
 
-FString UUUIDBillboardComponent::GetDisplayText() const
+FRenderMesh* UUUIDTextRenderComponent::GetRenderMesh() const
+{
+	// UUID 빌보드는 에디터 전용이므로 PIE/Game 월드에서는 렌더링하지 않는다.
+	AActor* OwnerActor = GetOwner();
+	if (OwnerActor)
+	{
+		if (UWorld* World = OwnerActor->GetWorld())
+		{
+			if (World->GetWorldType() != EWorldType::Editor)
+				return nullptr;
+		}
+	}
+	return UTextRenderComponent::GetRenderMesh();
+}
+
+void UUUIDTextRenderComponent::PostConstruct()
+{
+	UTextRenderComponent::PostConstruct();
+	SetAlwaysFaceCamera(true);
+	bDrawDebugBounds = false;
+	SetWorldSize(0.3f);
+}
+
+FString UUUIDTextRenderComponent::GetDisplayText() const
 {
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor)
@@ -24,7 +50,7 @@ FString UUUIDBillboardComponent::GetDisplayText() const
 	return FString("UUID: ") + OwnerActor->GetUUIDString();
 }
 
-FVector UUUIDBillboardComponent::GetRenderWorldPosition() const
+FVector UUUIDTextRenderComponent::GetRenderWorldPosition() const
 {
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor) return WorldOffset;
@@ -39,10 +65,7 @@ FVector UUUIDBillboardComponent::GetRenderWorldPosition() const
 
 	for (UActorComponent* Component : OwnerActor->GetComponents())
 	{
-		// 자기 자신(UUID 컴포넌트)이거나 nullptr이면 패스
 		if (!Component || Component == this) continue;
-
-		// ⭐ 구형/신형 구분할 필요 없이 UPrimitiveComponent 하나로 통일!
 		if (!Component->IsA(UPrimitiveComponent::StaticClass())) continue;
 
 		UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
@@ -69,17 +92,15 @@ FVector UUUIDBillboardComponent::GetRenderWorldPosition() const
 	return RootLocation + WorldOffset;
 }
 
-FVector UUUIDBillboardComponent::GetRenderWorldScale() const
+FVector UUUIDTextRenderComponent::GetRenderWorldScale() const
 {
-	// 빌보드는 트랜스포메이션의 스케일과 상관없이 TextScale 만을 절대적으로 사용하는 것이 일반적임
-	return FVector(TextScale, TextScale, TextScale);
+	return FVector(WorldSize, WorldSize, WorldSize);
 }
 
-FBoxSphereBounds UUUIDBillboardComponent::GetWorldBounds() const
+FBoxSphereBounds UUUIDTextRenderComponent::GetWorldBounds() const
 {
 	const FVector Center = GetRenderWorldPosition();
-	// radius 를 정사각형 extent 에 맞게 줄이기
-	const FVector Extent(TextScale * 3.0f * 0.707f, TextScale * 3.0f * 0.707f, TextScale * 3.0f * 0.707f);
+	const FVector Extent(WorldSize * 3.0f * 0.707f, WorldSize * 3.0f * 0.707f, WorldSize * 3.0f * 0.707f);
 
 	return { Center, Extent.Size(), Extent };
 }

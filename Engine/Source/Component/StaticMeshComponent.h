@@ -21,7 +21,6 @@ public:
 	void Serialize(FArchive& Ar) override;
 	FBoxSphereBounds CalcBounds(const FMatrix& LocalToWorld) const override;
 	FBoxSphereBounds GetLocalBounds() const override;
-	void Tick(float DeltaTime) override;
 
 private:
 	UStaticMesh* StaticMesh = nullptr;

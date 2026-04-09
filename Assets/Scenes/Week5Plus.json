@@ -1,0 +1,129 @@
+{
+  "Materials": [
+    "Assets/Materials/M_Water.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "NextUUID": 23,
+  "PerspectiveCamera": {
+    "FOV": 60.0,
+    "FarClip": 10000.0,
+    "Location": [
+      4.4523844718933105,
+      1.0454533100128174,
+      2.703315258026123
+    ],
+    "NearClip": 0.0010000000474974513,
+    "Rotation": [
+      -19.600000381469727,
+      -146.79994201660156,
+      0.0
+    ]
+  },
+  "Primitives": {
+    "0": {
+      "Class": "APlayerStart",
+      "Components": [
+        {
+          "ArrowColor": [
+            0.44999998807907104,
+            1.0,
+            0.3499999940395355,
+            1.0
+          ],
+          "ArrowHeadLength": 0.2800000011920929,
+          "ArrowHeadSize": 0.14000000059604645,
+          "ArrowLength": 1.0,
+          "AttachParentUUID": 0,
+          "Class": "UArrowComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 20
+        },
+        {
+          "AttachParentUUID": 20,
+          "Class": "UBillboardComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ScreenSize": 0.0024999999441206455,
+          "ScreenSizeScaled": false,
+          "Size": [
+            0.5,
+            0.5,
+            0.0
+          ],
+          "Sprite": "Editor\\Icons\\Pawn_64x.png",
+          "TintColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 21
+        },
+        {
+          "AlwaysFaceCamera": true,
+          "AttachParentUUID": 0,
+          "Class": "UUUIDTextRenderComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "Text",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 23,
+          "WorldSize": 0.30000001192092896
+        }
+      ],
+      "RootComponentUUID": 20,
+      "UUID": 19
+    }
+  }
+}

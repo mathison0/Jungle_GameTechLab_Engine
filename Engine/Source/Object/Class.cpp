@@ -43,11 +43,25 @@ UClass* UClass::FindClass(const FString& InString)
 	return nullptr;
 }
 
+const TMap<FString, UClass*>& UClass::GetRegisteredClasses()
+{
+	return GetClassRegistry();
+}
+
 void UClass::RegisterClass(UClass* InClass)
 {
 	if (InClass)
 		GetClassRegistry()[InClass->GetName()] = InClass;
 }
+
+void UClass::RegisterAlias(const FString& AliasName, UClass* InClass)
+{
+	if (!AliasName.empty() && InClass)
+	{
+		GetClassRegistry()[AliasName] = InClass;
+	}
+}
+
 TMap<FString, UClass*>& UClass::GetClassRegistry()
 {
 	static TMap<FString, UClass*> Registry;

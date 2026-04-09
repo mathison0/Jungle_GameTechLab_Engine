@@ -302,8 +302,85 @@ void FDynamicBVHTree::RefitUpward(int32 Index)
 	{
 		const DynamicBVHNode& ParentNode = Nodes[ParentIdx];
 		Nodes[ParentIdx].Bound = MergeBounds(Nodes[ParentNode.LeftChildIndex].Bound, Nodes[ParentNode.RightChildIndex].Bound);
+		//Rotate(ParentIdx);
 		ParentIdx = Nodes[ParentIdx].ParentIndex;
 	}
+}
+
+void FDynamicBVHTree::Rotate(int32 Index)
+{
+	if (Nodes[Index].IsLeaf()) return;
+
+	int32 B = Nodes[Index].LeftChildIndex;
+	int32 C = Nodes[Index].RightChildIndex;
+	if (B == -1 || C == -1) return;
+
+	int32 LL = -1, LR = -1, RL = -1, RR = -1;
+	if (!Nodes[B].IsLeaf()) { LL = Nodes[B].LeftChildIndex; LR = Nodes[B].RightChildIndex; }
+	if (!Nodes[C].IsLeaf()) { RL = Nodes[C].LeftChildIndex; RR = Nodes[C].RightChildIndex; }
+
+	float BestDelta = 0.0f;
+	int32 BestChild = -1, BestNephew = -1;
+
+	// B ↔ RL : C의 Bound가 Merge(B, RR)로 변경
+	if (RL != -1)
+	{
+		float Delta = SwapCost(B, RL) - Nodes[C].Bound.SurfaceArea();
+		if (Delta < BestDelta) { BestDelta = Delta; BestChild = B; BestNephew = RL; }
+	}
+	// B ↔ RR : C의 Bound가 Merge(B, RL)로 변경
+	if (RR != -1)
+	{
+		float Delta = SwapCost(B, RR) - Nodes[C].Bound.SurfaceArea();
+		if (Delta < BestDelta) { BestDelta = Delta; BestChild = B; BestNephew = RR; }
+	}
+	// C ↔ LL : B의 Bound가 Merge(C, LR)로 변경
+	if (LL != -1)
+	{
+		float Delta = SwapCost(C, LL) - Nodes[B].Bound.SurfaceArea();
+		if (Delta < BestDelta) { BestDelta = Delta; BestChild = C; BestNephew = LL; }
+	}
+	// C ↔ LR : B의 Bound가 Merge(C, LL)로 변경
+	if (LR != -1)
+	{
+		float Delta = SwapCost(C, LR) - Nodes[B].Bound.SurfaceArea();
+		if (Delta < BestDelta) { BestDelta = Delta; BestChild = C; BestNephew = LR; }
+	}
+
+	if (BestChild == -1) return;
+
+	// 스왑 실행
+	int32 NephewParent = Nodes[BestNephew].ParentIndex;
+
+	// A에서 BestChild 자리에 BestNephew 연결
+	if (Nodes[Index].LeftChildIndex == BestChild)
+		Nodes[Index].LeftChildIndex = BestNephew;
+	else
+		Nodes[Index].RightChildIndex = BestNephew;
+	Nodes[BestNephew].ParentIndex = Index;
+
+	// NephewParent에서 BestNephew 자리에 BestChild 연결
+	if (Nodes[NephewParent].LeftChildIndex == BestNephew)
+		Nodes[NephewParent].LeftChildIndex = BestChild;
+	else
+		Nodes[NephewParent].RightChildIndex = BestChild;
+	Nodes[BestChild].ParentIndex = NephewParent;
+
+	// NephewParent의 Bound 재계산
+	Nodes[NephewParent].Bound = MergeBounds(
+		Nodes[Nodes[NephewParent].LeftChildIndex].Bound,
+		Nodes[Nodes[NephewParent].RightChildIndex].Bound
+	);
+}
+
+float FDynamicBVHTree::SwapCost(int32 Idx1, int32 Idx2)
+{
+	// Idx2의 형제를 찾아서, 스왑 후 Idx2의 부모 Bound = Merge(Idx1, 형제)
+	int32 ParentOfIdx2 = Nodes[Idx2].ParentIndex;
+	int32 SiblingOfIdx2 = (Nodes[ParentOfIdx2].LeftChildIndex == Idx2)
+		? Nodes[ParentOfIdx2].RightChildIndex
+		: Nodes[ParentOfIdx2].LeftChildIndex;
+	return MergeBounds(Nodes[Idx1].Bound, Nodes[SiblingOfIdx2].Bound).SurfaceArea();
 }
 
 void FDynamicBVHTree::Visualize(FDebugDrawManager& DebugDrawer) const

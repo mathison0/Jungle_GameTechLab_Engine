@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
@@ -114,6 +114,9 @@
     <ClCompile Include="Source\Component\ActorComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\ArrowComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Component\CameraComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
@@ -121,6 +124,9 @@
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\MeshComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\MovementComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp">
@@ -138,10 +144,10 @@
     <ClCompile Include="Source\Component\SubUVComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\TextComponent.cpp">
+    <ClCompile Include="Source\Component\TextRenderComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
+    <ClCompile Include="Source\Component\UUIDTextRenderComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
@@ -303,7 +309,16 @@
     <ClCompile Include="Source\World\World.cpp">
       <Filter>Source\World</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Actor\PlayerStart.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Scene\DynmaicBVHTree.cpp" />
+    <ClCompile Include="Source\Component\BillboardComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Texture.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -345,6 +360,9 @@
     <ClInclude Include="Source\Component\ActorComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\ArrowComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\CameraComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
@@ -352,6 +370,9 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\MeshComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\MovementComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\PrimitiveComponent.h">
@@ -369,10 +390,10 @@
     <ClInclude Include="Source\Component\SubUVComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\TextComponent.h">
+    <ClInclude Include="Source\Component\TextRenderComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
+    <ClInclude Include="Source\Component\UUIDTextRenderComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\ConsoleVariableManager.h">
@@ -883,7 +904,16 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="Source\Object\ObjectIterator.h" />
+    <ClInclude Include="Source\Actor\PlayerStart.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\DynmaicBVHTree.h" />
+    <ClInclude Include="Source\Component\BillboardComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Texture.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

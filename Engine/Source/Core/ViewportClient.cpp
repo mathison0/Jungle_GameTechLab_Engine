@@ -7,10 +7,10 @@
 #include "Renderer/Material.h"
 #include "Scene/Scene.h"
 #include "Debug/EngineLog.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/UUIDTextRenderComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Core/Engine.h"
-#include "Component/TextComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Component/CameraComponent.h"
 #include "Math/Frustum.h"
 

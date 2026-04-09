@@ -9,6 +9,7 @@ public:
 	DECLARE_RTTI(USubUVComponent, UPrimitiveComponent)
 
 	void PostConstruct() override;
+	void Serialize(FArchive& Ar) override;
 
 	virtual FBoxSphereBounds GetWorldBounds() const override;
 

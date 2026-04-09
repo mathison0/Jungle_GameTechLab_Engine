@@ -45,6 +45,10 @@ private:
 	FAABB MergeBounds(const FAABB& A, const FAABB& B) const;
 	void RefitUpward(int32 Index);
 
+	void Rotate(int32 Index);
+
+	float SwapCost(int32 Idx1, int32 Idx2);
+
 private:
 	TArray<DynamicBVHNode> Nodes;
 	TMap<UPrimitiveComponent*, int32> ComponentToIndexMap;

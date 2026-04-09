@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Component\BillboardComponent.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
@@ -33,16 +34,18 @@
     <ClInclude Include="Source\Asset\ObjManager.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Component\ActorComponent.h" />
+    <ClInclude Include="Source\Component\ArrowComponent.h" />
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\LineBatchComponent.h" />
     <ClInclude Include="Source\Component\MeshComponent.h" />
+    <ClInclude Include="Source\Component\MovementComponent.h" />
     <ClInclude Include="Source\Component\PrimitiveComponent.h" />
     <ClInclude Include="Source\Component\SceneComponent.h" />
     <ClInclude Include="Source\Component\SkyComponent.h" />
     <ClInclude Include="Source\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Component\SubUVComponent.h" />
-    <ClInclude Include="Source\Component\TextComponent.h" />
-    <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
+    <ClInclude Include="Source\Component\TextRenderComponent.h" />
+    <ClInclude Include="Source\Component\UUIDTextRenderComponent.h" />
     <ClInclude Include="Source\Core\ConsoleVariableManager.h" />
     <ClInclude Include="Source\Core\Engine.h" />
     <ClInclude Include="Source\Core\EngineLoop.h" />
@@ -100,6 +103,7 @@
     <ClInclude Include="Source\Renderer\ShaderType.h" />
     <ClInclude Include="Source\Renderer\SubUVRenderer.h" />
     <ClInclude Include="Source\Renderer\TextMeshBuilder.h" />
+    <ClInclude Include="Source\Renderer\Texture.h" />
     <ClInclude Include="Source\Renderer\TextureVertex.h" />
     <ClInclude Include="Source\Renderer\Vertex.h" />
     <ClInclude Include="Source\Scene\DynmaicBVHTree.h" />
@@ -228,16 +232,19 @@
     <ClCompile Include="Source\Asset\ObjManager.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
+    <ClCompile Include="Source\Component\ArrowComponent.cpp" />
+    <ClCompile Include="Source\Component\BillboardComponent.cpp" />
     <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\Component\LineBatchComponent.cpp" />
     <ClCompile Include="Source\Component\MeshComponent.cpp" />
+    <ClCompile Include="Source\Component\MovementComponent.cpp" />
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Component\SkyComponent.cpp" />
     <ClCompile Include="Source\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Component\SubUVComponent.cpp" />
-    <ClCompile Include="Source\Component\TextComponent.cpp" />
-    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp" />
+    <ClCompile Include="Source\Component\TextRenderComponent.cpp" />
+    <ClCompile Include="Source\Component\UUIDTextRenderComponent.cpp" />
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp" />
     <ClCompile Include="Source\Core\Engine.cpp" />
     <ClCompile Include="Source\Core\EngineLoop.cpp" />
@@ -285,6 +292,7 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp" />
     <ClCompile Include="Source\Renderer\SubUVRenderer.cpp" />
     <ClCompile Include="Source\Renderer\TextMeshBuilder.cpp" />
+    <ClCompile Include="Source\Renderer\Texture.cpp" />
     <ClCompile Include="Source\Scene\DynmaicBVHTree.cpp" />
     <ClCompile Include="Source\Scene\RenderCollector.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
