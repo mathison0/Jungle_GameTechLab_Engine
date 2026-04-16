@@ -1,0 +1,109 @@
+# ---------------------------------------
+# Default
+# ---------------------------------------
+* text=auto
+
+# ---------------------------------------
+# Source / shader / config files -> LF
+# ---------------------------------------
+*.h           text eol=lf
+*.hpp         text eol=lf
+*.hh          text eol=lf
+*.hxx         text eol=lf
+*.inl         text eol=lf
+
+*.c           text eol=lf
+*.cc          text eol=lf
+*.cpp         text eol=lf
+*.cxx         text eol=lf
+
+*.ixx         text eol=lf
+*.cppm        text eol=lf
+
+*.rc          text eol=lf
+*.def         text eol=lf
+
+*.hlsl        text eol=lf
+*.hlsli       text eol=lf
+*.fx          text eol=lf
+*.fxh         text eol=lf
+*.glsl        text eol=lf
+*.vert        text eol=lf
+*.frag        text eol=lf
+*.comp        text eol=lf
+
+*.cmake       text eol=lf
+CMakeLists.txt text eol=lf
+
+*.py          text eol=lf
+*.lua         text eol=lf
+*.json        text eol=lf
+*.xml         text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+*.toml        text eol=lf
+*.ini         text eol=lf
+*.cfg         text eol=lf
+*.txt         text eol=lf
+*.md          text eol=lf
+
+# ---------------------------------------
+# Visual Studio / Windows script files -> CRLF
+# ---------------------------------------
+*.sln         text eol=crlf
+*.vcxproj     text eol=crlf
+*.vcxproj.filters text eol=crlf
+*.props       text eol=crlf
+*.targets     text eol=crlf
+*.bat         text eol=crlf
+*.cmd         text eol=crlf
+
+# ---------------------------------------
+# Binary files
+# ---------------------------------------
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.tga         binary
+*.dds         binary
+*.bmp         binary
+*.ico         binary
+*.gif         binary
+*.exr         binary
+*.hdr         binary
+
+*.fbx         binary
+*.obj         text eol=lf
+*.mtl         text eol=lf
+*.gltf        text eol=lf
+*.glb         binary
+
+*.wav         binary
+*.mp3         binary
+*.ogg         binary
+
+*.mp4         binary
+*.avi         binary
+*.mov         binary
+
+*.zip         binary
+*.7z          binary
+*.rar         binary
+
+*.lib         binary
+*.dll         binary
+*.exe         binary
+*.pdb         binary
+*.obj         text eol=lf
+*.ilk         binary
+
+# ---------------------------------------
+# Third-party: preserve as-is when needed
+# ---------------------------------------
+# If you want to avoid accidental EOL normalization in vendor code,
+# uncomment and adjust paths as needed.
+
+# NipsEngine/ThirdParty/** -text
+
+# Example: keep Dear ImGui vendor sources untouched
+# NipsEngine/ThirdParty/ImGui/** -text
