@@ -2,6 +2,14 @@
 
 #include "Math/Vector.h"
 
+struct FDirectionalLightInfo
+{
+    FVector Direction;
+	float Intensity;
+
+	FVector Color;
+};
+
 struct FSpotLightInfo
 {
     FVector Position;

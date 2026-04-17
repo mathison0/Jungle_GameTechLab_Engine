@@ -65,7 +65,7 @@ void FRenderer::Create(HWND hWindow)
     // 12. FXAA 모드 (ShaderFXAA.hlsl)
     Resources.FXAAShader.Create(Device.GetDevice(), L"Shaders/ShaderFXAA.hlsl", "FxaaVS", "FxaaPS", nullptr, 0);
 
-	// 13. UberLit (UberLit.hlsl)
+    // 13. UberLit (UberLit.hlsl)
 
     Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS", NormalVertexInputLayout,
                                    ARRAYSIZE(NormalVertexInputLayout));
@@ -171,26 +171,28 @@ void FRenderer::PrepareBatchers(const FRenderBus& InRenderBus)
         PassBatchers[i].Clear();
         for (const auto& Cmd : AlignedCommands)
             PassBatchers[i].Collect(Cmd, InRenderBus);
-
     }
 
+    for (const auto& RenderCmd : InRenderBus.GetDebugCommands(ERenderPass::Editor))
+    {
+        switch (RenderCmd.Type)
+        {
+        case EDebugShapeType::Line:
+        {
+            const FDebugLine& Line = RenderCmd.Line;
 
-	for (const auto& RenderCmd : InRenderBus.GetDebugCommands(ERenderPass::Editor))
-	{
-		switch (RenderCmd.Type)
-		{
+            EditorLineBatcher.AddLine(Line.Start, Line.End, Line.Color);
+            break;
+        }
         case EDebugShapeType::Cone:
+        {
             const FDebugCone& Cone = RenderCmd.Cone;
-            EditorLineBatcher.AddCone(
-				Cone.Apex, 
-				Cone.Direction, 
-				Cone.Height, 
-				Cone.Angle, 
-				Cone.SegmentCount,
-                Cone.Color);
-                    break;
-		}
-	}
+            EditorLineBatcher.AddCone(Cone.Apex, Cone.Direction, Cone.Height, Cone.Angle, Cone.SegmentCount,
+                                      Cone.Color);
+            break;
+        }
+        }
+    }
 }
 
 const TArray<FRenderCommand>& FRenderer::GetAlignedCommands(ERenderPass Pass, const TArray<FRenderCommand>& Commands)

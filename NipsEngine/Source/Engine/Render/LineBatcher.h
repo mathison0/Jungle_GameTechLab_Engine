@@ -61,8 +61,7 @@ public:
 	void AddOBB(const FMatrix& Transform, const FColor& Color);
 
 	// Cone
-        void AddCone(const FVector& Apex, const FVector& Direction, float Height, float AngleRad, int32 SegmentCount,
-                     const FVector4& Color);
+    void AddCone(const FVector& Apex, const FVector& Direction, float Height, float AngleRad, int32 SegmentCount, const FVector4& Color);
 
 	/**
 	 * @brief 카메라 기준의 grid patch와 축 보조선을 생성합니다.

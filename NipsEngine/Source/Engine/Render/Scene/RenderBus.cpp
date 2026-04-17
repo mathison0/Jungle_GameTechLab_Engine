@@ -20,6 +20,11 @@ void FRenderBus::AddCommand(ERenderPass Pass, FRenderCommand&& InCommand)
 	PassQueues[(uint32)Pass].push_back(std::move(InCommand));
 }
 
+void FRenderBus::AddDebugCommand(ERenderPass Pass, FDebugRenderCommand& InCommand)
+{
+    DebugCommandQueues[(uint32)Pass].push_back(InCommand);
+}
+
 void FRenderBus::AddDebugCommand(ERenderPass Pass, FDebugRenderCommand&& InCommand) 
 {
     DebugCommandQueues[(uint32)Pass].push_back(std::move(InCommand));

@@ -20,6 +20,7 @@ public:
 	void Clear();
 	void AddCommand(ERenderPass Pass, const FRenderCommand& InCommand);
 	void AddCommand(ERenderPass Pass, FRenderCommand&& InCommand);
+	void AddDebugCommand(ERenderPass Pass, FDebugRenderCommand& InCommand);
     void AddDebugCommand(ERenderPass Pass, FDebugRenderCommand&& InCommand);
 	const TArray<FRenderCommand>& GetCommands(ERenderPass Pass) const;
     const TArray<FDebugRenderCommand>& GetDebugCommands(ERenderPass Pass) const;
