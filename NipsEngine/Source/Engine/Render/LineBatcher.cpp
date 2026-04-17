@@ -266,6 +266,45 @@ void FLineBatcher::AddOBB(const FMatrix& Transform, const FColor& InColor)
 	}
 }
 
+void FLineBatcher::AddCone(const FVector& Apex, const FVector& Direction, float Height, float AngleRad,
+                           int32 SegmentCount, const FVector4& Color)
+{
+    FVector Dir = Direction.GetSafeNormal();
+
+    const FVector BaseCenter = Apex + Dir * Height;
+
+    const float Radius = Height * tanf(AngleRad);
+
+    FVector Up = fabs(Dir.Z) < 0.999f ? FVector(0, 0, 1) : FVector(0, 1, 0);
+    FVector Right = Up.CrossProduct(Dir).GetSafeNormal();
+    FVector Forward = Dir.CrossProduct(Right).GetSafeNormal();
+
+    TArray<FVector> CirclePoints;
+
+    for (int32 i = 0; i < SegmentCount; ++i)
+    {
+        float Theta = (2.0f * MathUtil::PI * i) / SegmentCount;
+
+        FVector Point = BaseCenter + (Right * cosf(Theta) + Forward * sinf(Theta)) * Radius;
+
+        CirclePoints.push_back(Point);
+    }
+
+    // 1. 원 (circle)
+    for (int32 i = 0; i < SegmentCount; ++i)
+    {
+        const FVector& P0 = CirclePoints[i];
+        const FVector& P1 = CirclePoints[(i + 1) % SegmentCount];
+        AddLine(P0, P1, Color);
+    }
+
+    // 2. Apex → Circle
+    for (int32 i = 0; i < SegmentCount; ++i)
+    {
+        AddLine(Apex, CirclePoints[i], Color);
+    }
+}
+
 void FLineBatcher::AddWorldHelpers(const FShowFlags& ShowFlags, float GridSpacing, int32 GridHalfLineCount,
 	const FVector& CameraPosition, const FVector& CameraForward, bool bOrthographic)
 {
