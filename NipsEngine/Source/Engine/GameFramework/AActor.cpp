@@ -1,5 +1,6 @@
 ﻿#include "GameFramework/AActor.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/Light/LightComponent.h"
 #include "Component/ActorComponent.h"
 #include "GameFramework/World.h"
 
@@ -78,7 +79,7 @@ AActor* AActor::Duplicate()
 		}
 	}
 
-	NewActor->bPrimitiveCacheDirty = true;
+	NewActor->bComponentCacheDirty = true;
 	
 	return NewActor;
 }
@@ -102,7 +103,7 @@ UActorComponent* AActor::AddComponentByClass(const FTypeInfo* Class) {
 
 	Comp->SetOwner(this);
 	OwnedComponents.push_back(Comp);
-	bPrimitiveCacheDirty = true;
+    bComponentCacheDirty = true;
 	NotifyComponentRegistered(Comp);
 	return Comp;
 }
@@ -114,7 +115,7 @@ void AActor::RegisterComponent(UActorComponent* Comp) {
 	if (it == OwnedComponents.end()) {
 		Comp->SetOwner(this);
 		OwnedComponents.push_back(Comp);
-		bPrimitiveCacheDirty = true;
+        bComponentCacheDirty = true;
 		NotifyComponentRegistered(Comp);
 	}
 }
@@ -127,7 +128,7 @@ void AActor::RemoveComponent(UActorComponent* Component) {
 	auto it = std::find(OwnedComponents.begin(), OwnedComponents.end(), Component);
 	if (it != OwnedComponents.end()) {
 		OwnedComponents.erase(it);
-		bPrimitiveCacheDirty = true;
+        bComponentCacheDirty = true;
 	}
 
 	// RootComponent가 제거되면 nullptr로
@@ -270,17 +271,40 @@ void AActor::MarkPrimitiveComponentsDirty()
 
 const TArray<UPrimitiveComponent*>& AActor::GetPrimitiveComponents() const
 {
-	if (bPrimitiveCacheDirty)
+    if (bComponentCacheDirty)
 	{
-		PrimitiveCache.clear();
-		for (UActorComponent* Comp : OwnedComponents)
-		{
-			if (Comp && Comp->IsA<UPrimitiveComponent>())
-			{
-				PrimitiveCache.emplace_back(static_cast<UPrimitiveComponent*>(Comp));
-			}
-		}
-		bPrimitiveCacheDirty = false;
+            RebuildComponentCache();
 	}
 	return PrimitiveCache;
+}
+
+const TArray<ULightComponent*>& AActor::GetLightComponents() const
+{
+    if (bComponentCacheDirty)
+    {
+        RebuildComponentCache();
+    }
+    return LightComponentCache;
+}
+
+const void AActor::RebuildComponentCache() const 
+{
+    PrimitiveCache.clear();
+
+    for (UActorComponent* Comp : OwnedComponents)
+    {
+		if (Comp == nullptr)
+		{
+          continue;
+		}
+        if (Comp->IsA<UPrimitiveComponent>())
+        {
+            PrimitiveCache.emplace_back(static_cast<UPrimitiveComponent*>(Comp));
+        }
+		else if (Comp->IsA<ULightComponent>())
+		{
+            LightComponentCache.emplace_back(static_cast<ULightComponent*>(Comp));
+		}
+    }
+    bComponentCacheDirty = false;
 }

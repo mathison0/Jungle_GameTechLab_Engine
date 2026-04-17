@@ -8,6 +8,7 @@
 
 class UWorld;
 class UPrimitiveComponent;
+class ULightComponent;
 
 class AActor : public UObject {
 public:
@@ -28,11 +29,10 @@ public:
 
 		T* Comp = UObjectManager::Get().CreateObject<T>();
 
-		bPrimitiveCacheDirty = true;
 
 		Comp->SetOwner(this);
 		OwnedComponents.push_back(Comp);
-		bPrimitiveCacheDirty = true;
+		bComponentCacheDirty = true;
 		NotifyComponentRegistered(Comp);
 		return Comp;
 	}
@@ -101,6 +101,9 @@ public:
 	void SetVisible(bool Visible);
 
 	const TArray<UPrimitiveComponent*>& GetPrimitiveComponents() const;
+    const TArray<ULightComponent*>&     GetLightComponents() const;
+    
+	const void RebuildComponentCache() const;
 
 protected:
 	void NotifyComponentRegistered(UActorComponent* Component);
@@ -120,5 +123,6 @@ protected:
 
 	// 렌더링용 캐시
 	mutable TArray<UPrimitiveComponent*> PrimitiveCache;
-	mutable bool bPrimitiveCacheDirty = true;
+    mutable TArray<ULightComponent*>     LightComponentCache;
+	mutable bool bComponentCacheDirty = true;
 };
