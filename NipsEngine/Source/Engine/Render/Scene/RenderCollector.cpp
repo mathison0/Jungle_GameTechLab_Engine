@@ -463,10 +463,20 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FShowFlags& ShowFla
     if (!Actor->IsVisible())
         return;
 
-    for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
-    {
-        CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus);
-    }
+	for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
+	{
+		CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus);
+	}
+
+	// 라이트 컴포넌트 수집 (Frustum culling이 필요 없는 라이트는 여기서 수집)
+	for (ULightComponent* Light : Actor->GetLightComponents())
+	{
+            if (Light == nullptr)
+                continue;
+
+			CollectLight(Light, RenderBus);
+		}
+
 }
 
 bool FRenderCollector::CollectFromSelectedActor(AActor* Actor, const FShowFlags& ShowFlags, EViewMode ViewMode,

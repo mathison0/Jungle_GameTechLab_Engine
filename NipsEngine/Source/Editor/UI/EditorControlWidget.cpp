@@ -13,6 +13,8 @@
 
 #include "GameFramework/PrimitiveActors.h"
 #include "GameFramework/FireballActor.h"
+#include "GameFramework/AmbientLightActor.h"
+#include "GameFramework/DirectionalLightActor.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
@@ -47,6 +49,7 @@ void FEditorControlWidget::Render(float DeltaTime)
 			return;
 		}
 
+        AActor* LastSpawnedActor = nullptr;
 		for (int32 i = 0; i < NumberOfSpawnedActors; i++)
 		{
 			switch (SelectedPrimitiveType)
@@ -56,6 +59,7 @@ void FEditorControlWidget::Render(float DeltaTime)
 				AStaticMeshActor* Actor = World->SpawnActor<AStaticMeshActor>();
 				Actor->InitDefaultComponents();
 				Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
 
 				break;
 			}
@@ -65,6 +69,7 @@ void FEditorControlWidget::Render(float DeltaTime)
 				ATextRenderActor* Actor = World->SpawnActor<ATextRenderActor>();
 				Actor->InitDefaultComponents();
 				Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
 				break;
 			}
 			case 2: // SubUV
@@ -72,6 +77,7 @@ void FEditorControlWidget::Render(float DeltaTime)
 				ASubUVActor* Actor = World->SpawnActor<ASubUVActor>();
 				Actor->InitDefaultComponents();
 				Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
 				break;
 			}
 			case 3: // Billboard
@@ -79,38 +85,64 @@ void FEditorControlWidget::Render(float DeltaTime)
 				ABillboardActor* Actor = World->SpawnActor<ABillboardActor>();
 				Actor->InitDefaultComponents();
 				Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
 				break;
 			}
-                        case 4: // Decal
-                        {
-                            ADecalActor* Actor = World->SpawnActor<ADecalActor>();
-                            Actor->InitDefaultComponents();
-                            Actor->SetActorLocation(CurSpawnPoint);
-                            break;
-                        }
-                        case 5: // FakeSpotlight
-                        {
-                            AFakeSpotlightActor* Actor = World->SpawnActor<AFakeSpotlightActor>();
-                            Actor->InitDefaultComponents();
-                            Actor->SetActorLocation(CurSpawnPoint);
-                            break;
-                        }
-                        case 6: // FakeSpotlight
-                        {
-                            AActor* Actor = World->SpawnActor<AFireballActor>();
-                            Actor->InitDefaultComponents();
-                            Actor->SetActorLocation(CurSpawnPoint);
-                            break;
-                        }
-						case 7: // FOG
-						{
-							AExponentialHeightFog* Actor = World->SpawnActor<AExponentialHeightFog>();
-							Actor->InitDefaultComponents();
-							Actor->SetActorLocation(CurSpawnPoint);
-							break;
-						}
+            case 4: // Decal
+            {
+                ADecalActor* Actor = World->SpawnActor<ADecalActor>();
+                Actor->InitDefaultComponents();
+                Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
+                break;
+            }
+            case 5: // FakeSpotlight
+            {
+                AFakeSpotlightActor* Actor = World->SpawnActor<AFakeSpotlightActor>();
+                Actor->InitDefaultComponents();
+                Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
+                break;
+            }
+            case 6: // Fireball
+            {
+                AActor* Actor = World->SpawnActor<AFireballActor>();
+                Actor->InitDefaultComponents();
+                Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
+                break;
+            }
+			case 7: // FOG
+			{
+				AExponentialHeightFog* Actor = World->SpawnActor<AExponentialHeightFog>();
+				Actor->InitDefaultComponents();
+				Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
+				break;
+			}
+            case 8: // AmbientLight
+            {
+                AAmbientLightActor* Actor = World->SpawnActor<AAmbientLightActor>();
+                Actor->InitDefaultComponents();
+                Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
+                break;
+            }
+            case 9: // DirectionalLight
+            {
+                ADirectionalLightActor* Actor =
+                    World->SpawnActor<ADirectionalLightActor>();
+                Actor->InitDefaultComponents();
+                Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
+                break;
+            }
 			}
 		}
+        if (LastSpawnedActor != nullptr)
+        {
+            EditorEngine->GetSelectionManager().Select(LastSpawnedActor);
+        }
 		NumberOfSpawnedActors = 1;
 	}
 	ImGui::InputInt("Number of Spawn", &NumberOfSpawnedActors, 1, 10);

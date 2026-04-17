@@ -18,6 +18,7 @@
 #include "Component/ProjectileComponent.h"
 #include "Component/RotationMovementComponent.h"
 #include "Component/SpawnRandomRotatingCopiesComponent.h"
+#include "Component/Light/LightComponent.h"
 
 #include "Component/Light/SpotLightComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
@@ -137,6 +138,48 @@ namespace
 	}
 }
 
+UActorComponent* FEditorPropertyWidget::FindPreferredComponentForActor(AActor* Actor) const
+{
+    if (Actor == nullptr)
+    {
+        return nullptr;
+    }
+
+    for (UActorComponent* Component : Actor->GetComponents())
+    {
+        if (Component != nullptr && Component->IsA<ULightComponent>())
+        {
+            return Component;
+        }
+    }
+
+    USceneComponent* RootComp = Actor->GetRootComponent();
+    if (RootComp != nullptr && RootComp->IsA<UStaticMeshComponent>())
+    {
+        return RootComp;
+    }
+
+    return nullptr;
+}
+
+void FEditorPropertyWidget::SyncSelectionTarget(AActor* PrimaryActor)
+{
+    if (PrimaryActor == nullptr)
+    {
+        SelectedComponent = nullptr;
+        LastSelectedActor = nullptr;
+        bActorSelected = true;
+        return;
+    }
+
+    if (PrimaryActor != LastSelectedActor)
+    {
+        LastSelectedActor = PrimaryActor;
+        SelectedComponent = FindPreferredComponentForActor(PrimaryActor);
+        bActorSelected = (SelectedComponent == nullptr);
+    }
+}
+
 void FEditorPropertyWidget::Render(float DeltaTime)
 {
     (void)DeltaTime;
@@ -148,31 +191,13 @@ void FEditorPropertyWidget::Render(float DeltaTime)
     AActor* PrimaryActor = SelectionManager->GetPrimarySelection();
     if (!PrimaryActor)
     {
-        SelectedComponent = nullptr;
-        LastSelectedActor = nullptr;
-        bActorSelected = true;
+        SyncSelectionTarget(nullptr);
         ImGui::Text("No object selected.");
         ImGui::End();
         return;
     }
 
-    // Actor 선택이 바뀌면 초기화
-    if (PrimaryActor != LastSelectedActor)
-    {
-        SelectedComponent = nullptr;
-        LastSelectedActor = PrimaryActor;
-
-        USceneComponent* RootComp = PrimaryActor->GetRootComponent();
-        if (RootComp && RootComp->IsA<UStaticMeshComponent>())
-        {
-            SelectedComponent = RootComp;
-            bActorSelected = false;
-        }
-        else
-        {
-            bActorSelected = true;
-        }
-    }
+    SyncSelectionTarget(PrimaryActor);
 
     const TArray<AActor*>& SelectedActors = SelectionManager->GetSelectedActors();
     const int32            SelectionCount = static_cast<int32>(SelectedActors.size());

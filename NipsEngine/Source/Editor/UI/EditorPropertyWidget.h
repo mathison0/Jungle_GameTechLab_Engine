@@ -20,6 +20,8 @@ private:
 	void RenderComponentProperties();
 	void RenderActorProperties(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
 	void RenderPropertyWidget(struct FPropertyDescriptor& Prop);
+	void SyncSelectionTarget(AActor* PrimaryActor);
+	class UActorComponent* FindPreferredComponentForActor(AActor* Actor) const;
 
 	FSelectionManager* SelectionManager = nullptr;
 	UActorComponent* SelectedComponent = nullptr;
