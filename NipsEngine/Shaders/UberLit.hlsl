@@ -72,12 +72,13 @@ PSInput VS(VSInput input)
 {
     PSInput output;
 
-    float4 worldPos = mul(float4(input.Position, 1.0f), World);
+    float4 worldPos = mul(float4(input.Position, 1.0f), Model);
 
     output.WorldPos = worldPos.xyz;
-    output.ClipPos = mul(worldPos, ViewProj);
+    float4 viewPos = mul(worldPos, View);
+    output.ClipPos = mul(viewPos, Projection);
 
-    output.WorldNormal = normalize(mul(input.Normal, (float3x3) World));
+    output.WorldNormal = normalize(mul(input.Normal, (float3x3) Model));
 
     output.UV = input.UV;
 
