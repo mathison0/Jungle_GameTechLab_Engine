@@ -10,6 +10,8 @@ class ULightComponentBase : public USceneComponent
     ULightComponentBase() = default;
     ~ULightComponentBase() = default;
 
+	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
+
     const FColor& GetColor() const;
     void   SetColor(const FColor& NewColor);
 

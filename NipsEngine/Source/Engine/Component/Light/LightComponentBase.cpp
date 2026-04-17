@@ -2,8 +2,15 @@
 
 DEFINE_CLASS(ULightComponentBase, USceneComponent)
 
-const FColor& ULightComponentBase::GetColor() const 
-{ 
+void ULightComponentBase::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) 
+{
+    USceneComponent::GetEditableProperties(OutProps);
+
+	OutProps.push_back({"Color", EPropertyType::LinearColor, &Color});
+    OutProps.push_back({"Intensity", EPropertyType::Float, &Intensity});
+}
+
+const FColor& ULightComponentBase::GetColor() const { 
 	return Color; 
 }
 
