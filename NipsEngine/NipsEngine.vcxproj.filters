@@ -524,6 +524,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\LightComponentBase.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\LightComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Light\SpotLightComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1029,6 +1030,7 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Light\LightComponentBase.h" />
     <ClInclude Include="Source\Engine\Component\Light\LightComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Light\SpotLightComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Shaders\ShaderAxis.hlsl" />

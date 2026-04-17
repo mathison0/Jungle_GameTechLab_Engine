@@ -8,7 +8,6 @@
 #include "Component/BillboardComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
-#include "Component/Light/LightComponent.h"
 #include "Component/GizmoComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Component/SubUVComponent.h"
@@ -22,6 +21,10 @@
 #include "Component/FireBallComponent.h"
 #include "Component/Light/AmbientLightComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
+
+#include "Render/Scene/LightInfo.h"
+#include "Component/Light/LightComponent.h"
+#include "Component/Light/SpotLightComponent.h"
 
 namespace
 {
@@ -324,7 +327,7 @@ void FRenderCollector::CollectFog(UWorld* World, FRenderBus& RenderBus)
 	}
 }
 
-void FRenderCollector::CollectLight(const ULightComponent* LightComponent, FRenderBus& RenderBus) 
+void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus& RenderBus) 
 { 
 	if (LightComponent == nullptr || !LightComponent->IsActive())
 	{
@@ -365,7 +368,19 @@ void FRenderCollector::CollectLight(const ULightComponent* LightComponent, FRend
 
 	case ELightType::Spot:
 	{
-		break;
+        USpotLightComponent* SpotLight = static_cast<USpotLightComponent*>(LightComponent);
+        FSpotLightInfo       SpotLightInfo;
+
+		FVector4 LightColor = SpotLight->GetColor().ToVector4();
+
+		SpotLightInfo.Color = {LightColor.X, LightColor.Y, LightColor.Z};
+        SpotLightInfo.Direction = SpotLight->GetDirection();
+        SpotLightInfo.InnerConeCos = SpotLight->GetInnerConeAngle();
+        SpotLightInfo.OuterConeCos = SpotLight->GetOuterConeAngle();
+        SpotLightInfo.Position = SpotLight->GetWorldLocation();
+        SpotLightInfo.Intensity = SpotLight->GetIntensity();
+        SpotLightInfo.Radius = SpotLight->GetRadius();
+        break;
 	}
 
 	default:

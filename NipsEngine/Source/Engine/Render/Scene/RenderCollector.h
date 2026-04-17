@@ -46,7 +46,7 @@ private:
         const FDecalStats&   GetLastDecalStats() const { return LastDecalStats; }
 
 	void CollectFog(UWorld* World, FRenderBus& RenderBus);
-    void CollectLight(const ULightComponent* LightComponent, FRenderBus& RenderBus);
+    void CollectLight(ULightComponent* LightComponent, FRenderBus& RenderBus);
 
 private:
 	void ResetStats();
