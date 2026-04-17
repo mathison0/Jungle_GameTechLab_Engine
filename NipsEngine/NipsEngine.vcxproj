@@ -434,6 +434,7 @@
     <ClInclude Include="Source\Engine\Object\ObjectIterator.h" />
     <ClInclude Include="Source\Engine\Render\FontBatcher.h" />
     <ClInclude Include="Source\Engine\Render\LineBatcher.h" />
+    <ClInclude Include="Source\Engine\Render\Scene\DebugCommand.h" />
     <ClInclude Include="Source\Engine\Render\Scene\LightInfo.h" />
     <ClInclude Include="Source\Engine\Render\SubUVBatcher.h" />
     <ClInclude Include="Source\Engine\Render\Common\ComPtr.h" />

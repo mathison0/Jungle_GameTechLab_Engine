@@ -6,6 +6,7 @@ void FRenderBus::Clear()
 	for (uint32 i = 0; i < (uint32)ERenderPass::MAX; ++i)
 	{
 		PassQueues[i].clear();
+        DebugCommandQueues[i].clear();
 	}
 }
 
@@ -19,9 +20,18 @@ void FRenderBus::AddCommand(ERenderPass Pass, FRenderCommand&& InCommand)
 	PassQueues[(uint32)Pass].push_back(std::move(InCommand));
 }
 
+void FRenderBus::AddDebugCommand(ERenderPass Pass, FDebugRenderCommand&& InCommand) 
+{
+    DebugCommandQueues[(uint32)Pass].push_back(std::move(InCommand));
+}
+
 const TArray<FRenderCommand>& FRenderBus::GetCommands(ERenderPass Pass) const
 {
-	return PassQueues[(uint32)Pass];
+	return PassQueues[(uint32)Pass]; }
+
+const TArray<FDebugRenderCommand>& FRenderBus::GetDebugCommands(ERenderPass Pass) const
+{
+    return DebugCommandQueues[(uint32)Pass];
 }
 
 void FRenderBus::SetViewProjection(const FMatrix& InView, const FMatrix& InProj)

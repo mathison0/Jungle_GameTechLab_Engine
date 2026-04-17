@@ -60,6 +60,10 @@ public:
 	// OBB 와이어프레임
 	void AddOBB(const FMatrix& Transform, const FColor& Color);
 
+	// Cone
+        void AddCone(const FVector& Apex, const FVector& Direction, float Height, float AngleRad, int32 SegmentCount,
+                     const FVector4& Color);
+
 	/**
 	 * @brief 카메라 기준의 grid patch와 축 보조선을 생성합니다.
 	 * @details 카메라 위치와 forward 벡터를 이용해 바닥면 위의 focus point를 계산하고,

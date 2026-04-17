@@ -363,6 +363,8 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
 
 	case ELightType::Point:
 	{
+
+
 		break;
 	}
 
@@ -375,11 +377,31 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
 
 		SpotLightInfo.Color = {LightColor.X, LightColor.Y, LightColor.Z};
         SpotLightInfo.Direction = SpotLight->GetDirection();
-        SpotLightInfo.InnerConeCos = SpotLight->GetInnerConeAngle();
-        SpotLightInfo.OuterConeCos = SpotLight->GetOuterConeAngle();
+        SpotLightInfo.InnerConeCos = MathUtil::DegreesToRadians(SpotLight->GetInnerConeAngle());
+        SpotLightInfo.OuterConeCos = MathUtil::DegreesToRadians(SpotLight->GetOuterConeAngle());
         SpotLightInfo.Position = SpotLight->GetWorldLocation();
         SpotLightInfo.Intensity = SpotLight->GetIntensity();
         SpotLightInfo.Radius = SpotLight->GetRadius();
+
+		//Outer
+		RenderBus.AddDebugCommand(ERenderPass::Editor, 
+			DebugCmd::MakeCone(
+			SpotLightInfo.Position,
+			SpotLightInfo.Direction,
+			SpotLightInfo.Radius,
+			SpotLightInfo.OuterConeCos, 
+			FColor::Green().ToVector4()
+			));
+
+		//Iner
+		RenderBus.AddDebugCommand(ERenderPass::Editor,
+            DebugCmd::MakeCone(
+			SpotLightInfo.Position, 
+			SpotLightInfo.Direction,
+            SpotLightInfo.Radius, 
+			SpotLightInfo.InnerConeCos,
+            FColor::Yellow().ToVector4()
+			));
         break;
 	}
 

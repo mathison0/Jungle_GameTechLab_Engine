@@ -31,13 +31,13 @@ class USpotLightComponent : public ULightComponent
 	ELightType GetLightType() const override { return ELightType::Spot; };
 
   private:
-    FVector Direction = FVector::Zero();
+    FVector Direction = FVector::XAxisVector;
     float InnerConeAngle = 0.0f;
     float OuterConeAngle = 45.0f;
     float MaxConeAngle = 80.0f;
 
 
 	//Point Light Variable?
-    float Radius;
+    float Radius = 10.f;
 
 };

@@ -19,6 +19,8 @@
 #include "Component/RotationMovementComponent.h"
 #include "Component/SpawnRandomRotatingCopiesComponent.h"
 
+#include "Component/Light/SpotLightComponent.h"
+
 
 #define SEPARATOR()                                                                                                    \
     ;                                                                                                                  \
@@ -94,7 +96,14 @@ static const TArray<FComponentMenuEntry> ComponentMenuRegistry = {
 	 {
 		 USpawnRandomRotatingCopiesComponent* Comp = Actor->AddComponent<USpawnRandomRotatingCopiesComponent>();
 		 return Comp;
-	 }}
+	 }},
+
+	{"SpotLight Component", 
+	[](AActor* Actor) -> UActorComponent*
+     {
+         USpotLightComponent* Comp = Actor->AddComponent<USpotLightComponent>();
+         return Comp;
+     }}
 };
 
 namespace

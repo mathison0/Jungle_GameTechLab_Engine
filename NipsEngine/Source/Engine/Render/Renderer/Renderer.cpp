@@ -171,7 +171,26 @@ void FRenderer::PrepareBatchers(const FRenderBus& InRenderBus)
         PassBatchers[i].Clear();
         for (const auto& Cmd : AlignedCommands)
             PassBatchers[i].Collect(Cmd, InRenderBus);
+
     }
+
+
+	for (const auto& RenderCmd : InRenderBus.GetDebugCommands(ERenderPass::Editor))
+	{
+		switch (RenderCmd.Type)
+		{
+        case EDebugShapeType::Cone:
+            const FDebugCone& Cone = RenderCmd.Cone;
+            EditorLineBatcher.AddCone(
+				Cone.Apex, 
+				Cone.Direction, 
+				Cone.Height, 
+				Cone.Angle, 
+				Cone.SegmentCount,
+                Cone.Color);
+                    break;
+		}
+	}
 }
 
 const TArray<FRenderCommand>& FRenderer::GetAlignedCommands(ERenderPass Pass, const TArray<FRenderCommand>& Commands)
