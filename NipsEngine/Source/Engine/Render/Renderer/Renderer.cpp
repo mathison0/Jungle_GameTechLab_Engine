@@ -1015,7 +1015,7 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     const FLightingConstants& Lighting = InRenderBus.GetLightingConstants();
     Resources.LightingConstantBuffer.Update(Context, &Lighting, sizeof(FLightingConstants));
 
-    ID3D11Buffer* b15 = Resources.LightingConstantBuffer.GetBuffer();
-    Context->VSSetConstantBuffers(15, 1, &b15);
-    Context->PSSetConstantBuffers(15, 1, &b15);
+    ID3D11Buffer* b13 = Resources.LightingConstantBuffer.GetBuffer();
+    Context->VSSetConstantBuffers(13, 1, &b13);
+    Context->PSSetConstantBuffers(13, 1, &b13);
 }

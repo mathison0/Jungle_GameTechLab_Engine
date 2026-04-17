@@ -22,7 +22,7 @@ struct FRenderResources
     FConstantBuffer FogConstantBuffer;				// b9
     FConstantBuffer SceneDepthBuffer;				// b10
     FConstantBuffer FXAAConstantBuffer;   // b9
-    FConstantBuffer LightingConstantBuffer; // b15
+    FConstantBuffer LightingConstantBuffer; // b13
 
     FShader PrimitiveShader;
     FShader GizmoShader;

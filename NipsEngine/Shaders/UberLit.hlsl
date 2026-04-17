@@ -54,7 +54,7 @@ struct FSpotLightInfo
     float3 Padding;
 };
 
-cbuffer Lighting : register(b15)
+cbuffer Lighting : register(b13)
 {
     FAmbientLightInfo Ambient;
     FDirectionalLightInfo Directional;
