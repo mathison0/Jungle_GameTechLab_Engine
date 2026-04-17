@@ -522,6 +522,8 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Source\Engine\Component\Light\LightComponentBase.cpp" />
+    <ClCompile Include="Source\Engine\Component\Light\LightComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1025,5 +1027,11 @@
     <ClInclude Include="ThirdParty\SimpleJSON\json.hpp">
       <Filter>ThirdParty\SimpleJSON</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Light\LightComponentBase.h" />
+    <ClInclude Include="Source\Engine\Component\Light\LightComponent.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Shaders\ShaderAxis.hlsl" />
+    <Text Include="Shaders\ShaderFXAA.hlsl" />
   </ItemGroup>
 </Project>
