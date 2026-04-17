@@ -257,6 +257,8 @@
     <ClCompile Include="Source\Engine\Core\Logging\Stats.cpp" />
     <ClCompile Include="Source\Engine\Core\Logging\Timer.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\AActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\AmbientLightActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\DirectionalLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\FireballActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Level.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\PrimitiveActors.cpp" />
@@ -406,6 +408,8 @@
     <ClInclude Include="Source\Engine\Core\Logging\Stats.h" />
     <ClInclude Include="Source\Engine\Core\Logging\Timer.h" />
     <ClInclude Include="Source\Engine\GameFramework\AActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\DirectionalLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\FireballActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\Level.h" />
     <ClInclude Include="Source\Engine\GameFramework\PrimitiveActors.h" />
