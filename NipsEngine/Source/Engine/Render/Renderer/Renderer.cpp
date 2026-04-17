@@ -673,7 +673,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             ID3D11ShaderResourceView* SRVs[4] = {
                 InCmd.Constants.StaticMesh.DiffuseSRV, InCmd.Constants.StaticMesh.AmbientSRV,
                 InCmd.Constants.StaticMesh.SpecularSRV, InCmd.Constants.StaticMesh.BumpSRV};
-            Context->PSSetShaderResources(0, 4, SRVs);
+            Context->PSSetShaderResources(6, 4, SRVs);
         }
         break;
 

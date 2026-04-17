@@ -290,6 +290,7 @@ const TArray<ULightComponent*>& AActor::GetLightComponents() const
 const void AActor::RebuildComponentCache() const 
 {
     PrimitiveCache.clear();
+    LightComponentCache.clear();
 
     for (UActorComponent* Comp : OwnedComponents)
     {

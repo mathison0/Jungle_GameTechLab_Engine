@@ -5,7 +5,7 @@
 class UAmbientLightComponent : public ULightComponent
 {
   public:
-    DECLARE_CLASS(UAmbientLightComponent, ULightComponentBase)
+    DECLARE_CLASS(UAmbientLightComponent, ULightComponent)
     UAmbientLightComponent() = default;
     ~UAmbientLightComponent() = default;
 
