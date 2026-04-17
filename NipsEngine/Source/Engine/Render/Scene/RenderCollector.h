@@ -8,6 +8,7 @@ class UWorld;
 class AActor;
 class UPrimitiveComponent;
 class UGizmoComponent;
+class ULightComponent;
 struct FFrustum;
 
 class FRenderCollector {
@@ -45,6 +46,7 @@ private:
         const FDecalStats&   GetLastDecalStats() const { return LastDecalStats; }
 
 	void CollectFog(UWorld* World, FRenderBus& RenderBus);
+    void CollectLight(const ULightComponent* LightComponent, FRenderBus& RenderBus);
 
 private:
 	void ResetStats();

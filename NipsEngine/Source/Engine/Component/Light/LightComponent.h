@@ -2,6 +2,14 @@
 
 #include "Component/Light/LightComponentBase.h"
 
+enum ELightType
+{
+	Ambient,
+	Directional,
+	Point,
+	Spot
+};
+
 class ULightComponent : public ULightComponentBase
 {
 
@@ -11,5 +19,5 @@ class ULightComponent : public ULightComponentBase
     ULightComponent() = default;
     ~ULightComponent() = default;
 
-
+	virtual ELightType GetLightType() const = 0;
 };

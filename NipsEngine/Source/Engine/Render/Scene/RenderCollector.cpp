@@ -8,10 +8,10 @@
 #include "Component/BillboardComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
+#include "Component/Light/LightComponent.h"
 #include "Component/GizmoComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Component/SubUVComponent.h"
-#include "Component/StaticMeshComponent.h"
 #include "Core/ResourceManager.h"
 #include "Engine/Geometry/Frustum.h"
 #include "Render/Resource/Material.h"
@@ -204,6 +204,7 @@ void FRenderCollector::CollectWorldWithFrustum(UWorld* World, const FFrustum& Vi
             continue;
         }
 
+		//Primitive
         for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
         {
             if (Primitive == nullptr || !Primitive->IsVisible())
@@ -236,6 +237,17 @@ void FRenderCollector::CollectWorldWithFrustum(UWorld* World, const FFrustum& Vi
             ++LastCullingStats.FallbackPassedPrimitiveCount;
             CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus);
         }
+
+		// Light
+		for (ULightComponent* Light : Actor->GetLightComponents())
+		{
+			if (Light == nullptr)
+			{
+				continue;
+			}
+
+			CollectLight(Light, RenderBus);
+		}
     }
 }
 
@@ -308,6 +320,37 @@ void FRenderCollector::CollectFog(UWorld* World, FRenderBus& RenderBus)
 		}
 
 	}
+}
+
+void FRenderCollector::CollectLight(const ULightComponent* LightComponent, FRenderBus& RenderBus) 
+{ 
+	switch (LightComponent->GetLightType())
+    {
+
+    case ELightType::Ambient:
+    {
+
+         break;
+	}
+
+	case ELightType::Directional:
+	{
+                 break;
+	}
+
+	case ELightType::Point:
+	{
+		break;
+	}
+
+	case ELightType::Spot:
+	{
+        break;
+	}
+
+    default:
+        break;
+    }
 }
 
 void FRenderCollector::CollectGizmo(UGizmoComponent* Gizmo, const FShowFlags& ShowFlags, FRenderBus& RenderBus, bool bIsActiveOperation)
