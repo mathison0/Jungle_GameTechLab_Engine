@@ -83,7 +83,7 @@ private:
 	void UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus);
 	void UpdateSceneDepthBuffer(ID3D11DeviceContext* InDeviceContext);
 	void ApplyFXAA(ID3D11DeviceContext* InDeviceContext, const FFXAASettings* InFXAASettings);
-
+    void UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus);
 
 	// 기본 패스 실행기 — SetupRenderState + DrawCommand 루프
 	void ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand>& Commands, const FRenderBus& Bus, ID3D11DeviceContext* Context);

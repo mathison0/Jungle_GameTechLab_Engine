@@ -89,7 +89,16 @@ PSInput VS(VSInput input)
 
 float4 PS(PSInput input) : SV_TARGET
 {
-    float4 output;
-    
-    return output;
+    float3 N = normalize(input.WorldNormal);
+
+    // Ambient
+    float3 ambient = Ambient.Color * Ambient.Intensity;
+
+    // Directional
+    float3 L = normalize(-Directional.Direction);
+    float NdotL = max(dot(N, L), 0.0f);
+    float3 diffuse = Directional.Color * Directional.Intensity * NdotL;
+
+    float3 finalColor = (ambient + diffuse);
+    return float4(finalColor, 1.0f);
 }

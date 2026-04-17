@@ -46,3 +46,8 @@ void FRenderBus::SetFogConstants(const FFogConstants& InFog)
 {
 	FogConstants = InFog;
 }
+
+void FRenderBus::SetLightingConstants(const FLightingConstants& InLighting)
+{
+	LightingConstants = InLighting; 
+}

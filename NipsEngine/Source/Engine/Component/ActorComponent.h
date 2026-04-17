@@ -24,7 +24,7 @@ public:
 	inline void SetAutoActivate(bool bNewAutoActivate) { bAutoActivate = bNewAutoActivate; }
 	inline void SetComponentTickEnabled(bool bEnabled) { bCanEverTick = bEnabled; }
 
-	inline bool IsActive() { return bIsActive; }
+	inline bool IsActive() const { return bIsActive; }
 	inline bool IsComponentTickEnabled() const { return bCanEverTick; }
 
 	virtual void SetOwner(AActor* Actor) { Owner = Actor; }

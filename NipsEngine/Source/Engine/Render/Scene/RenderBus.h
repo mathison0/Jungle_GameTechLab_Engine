@@ -25,8 +25,10 @@ public:
 	void SetViewProjection(const FMatrix& InView, const FMatrix& InProj);
 	void SetRenderSettings(const EViewMode NewViewMode, const FShowFlags NewShowFlags);
 	void SetFogConstants(const FFogConstants& InFog);
+	void SetLightingConstants(const FLightingConstants& InLighting);
 
 	const FFogConstants& GetFogConstants() const { return FogConstants; }
+	const FLightingConstants& GetLightingConstants() const { return LightingConstants; }
 	const FMatrix& GetView() const { return View; }
 	const FMatrix& GetProj() const { return Proj; }
 	const FVector& GetCameraPosition() const { return CameraPosition;  }
@@ -55,5 +57,6 @@ private:
 	FVector WireframeColor = FVector(1.0f, 1.0f, 1.0f);
 
 	FFogConstants FogConstants;
+    FLightingConstants LightingConstants;
 };
 

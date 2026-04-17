@@ -65,6 +65,11 @@ void FRenderer::Create(HWND hWindow)
     // 12. FXAA 모드 (ShaderFXAA.hlsl)
     Resources.FXAAShader.Create(Device.GetDevice(), L"Shaders/ShaderFXAA.hlsl", "FxaaVS", "FxaaPS", nullptr, 0);
 
+	// 13. UberLit (UberLit.hlsl)
+
+    Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS", NormalVertexInputLayout,
+                                   ARRAYSIZE(NormalVertexInputLayout));
+
     Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FPerObjectConstants));
     Resources.FrameBuffer.Create(Device.GetDevice(), sizeof(FFrameConstants));
     Resources.GizmoPerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FGizmoConstants));
@@ -76,6 +81,7 @@ void FRenderer::Create(HWND hWindow)
     Resources.SceneDepthBuffer.Create(Device.GetDevice(), sizeof(FSceneDepthConstants));
     Resources.FogConstantBuffer.Create(Device.GetDevice(), sizeof(FFogConstants));
     Resources.FXAAConstantBuffer.Create(Device.GetDevice(), sizeof(FFXAAConstants));
+    Resources.LightingConstantBuffer.Create(Device.GetDevice(), sizeof(FLightingConstants));
 
     // TODO : SamplerState 관리
     D3D11_SAMPLER_DESC SampDesc = {};
@@ -123,6 +129,7 @@ void FRenderer::Release()
     Resources.FireBallShader.Release();
     Resources.FogShader.Release();
     Resources.FXAAShader.Release();
+    Resources.UberLitShader.Release();
 
     Resources.PerObjectConstantBuffer.Release();
     Resources.FrameBuffer.Release();
@@ -135,6 +142,7 @@ void FRenderer::Release()
     Resources.SceneDepthBuffer.Release();
     Resources.FogConstantBuffer.Release();
     Resources.FXAAConstantBuffer.Release();
+    Resources.LightingConstantBuffer.Release();
 
     Resources.MeshSamplerState.Reset();
     Resources.FXAASamplerState.Reset();
@@ -717,6 +725,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 
 void FRenderer::RenderScenePasses(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
 {
+    UpdateLightingBuffer(Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Opaque, Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Decal, Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Translucent, Context, InRenderBus);
@@ -999,4 +1008,14 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
     ID3D11Buffer* b0 = Resources.FrameBuffer.GetBuffer();
     Context->VSSetConstantBuffers(0, 1, &b0);
     Context->PSSetConstantBuffers(0, 1, &b0);
+}
+
+void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
+{
+    const FLightingConstants& Lighting = InRenderBus.GetLightingConstants();
+    Resources.LightingConstantBuffer.Update(Context, &Lighting, sizeof(FLightingConstants));
+
+    ID3D11Buffer* b15 = Resources.LightingConstantBuffer.GetBuffer();
+    Context->VSSetConstantBuffers(15, 1, &b15);
+    Context->PSSetConstantBuffers(15, 1, &b15);
 }
