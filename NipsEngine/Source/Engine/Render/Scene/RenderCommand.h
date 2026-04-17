@@ -199,15 +199,15 @@ struct FFXAAConstants
 struct FAmbientLightConstants
 {
 
-	FVector Color = {1.0f, 1.0f, 1.0f};
-    float   Intensity = 1.0f;
+	FVector Color = {0.0f, 0.0f, 0.0f};
+    float   Intensity = 0.0f;
 };
 
 struct FDirectionalLightConstants
 {
-    FVector Direction = {0.0f, -1.0f, 0.0f};
-    float   Intensity = 1.0f;
-    FVector Color = {1.0f, 1.0f, 1.0f};
+    FVector Direction = {0.0f, 0.0f, 0.0f};
+    float   Intensity = 0.0f;
+    FVector Color = {0.0f, 0.0f, 0.0f};
     float   Padding = 0.0f;
 };
 

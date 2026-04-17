@@ -8,6 +8,9 @@ void FRenderBus::Clear()
 		PassQueues[i].clear();
         DebugCommandQueues[i].clear();
 	}
+
+    FogConstants = FFogConstants{};
+    LightingConstants = FLightingConstants{};
 }
 
 void FRenderBus::AddCommand(ERenderPass Pass, const FRenderCommand& InCommand)
