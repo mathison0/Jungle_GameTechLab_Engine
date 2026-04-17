@@ -44,9 +44,9 @@ void FRenderer::Create(HWND hWindow)
     // 6. 포스트 프로세스 아웃라인 (OutlinePostProcess.hlsl)
     Resources.OutlineShader.Create(Device.GetDevice(), L"Shaders/OutlinePostProcess.hlsl", "VS", "PS", nullptr, 0);
 
-    // 7. 스태틱 메시 (ShaderStaticMesh.hlsl)
-    Resources.StaticMeshShader.Create(Device.GetDevice(), L"Shaders/ShaderStaticMesh.hlsl", "mainVS", "mainPS",
-                                      NormalVertexInputLayout, ARRAYSIZE(NormalVertexInputLayout));
+    // 7. 스태틱 메시/라이트 통합 셰이더 (UberLit.hlsl)
+    Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS", NormalVertexInputLayout,
+                                   ARRAYSIZE(NormalVertexInputLayout));
 
     // 8. 데칼 (Decal.hlsl)
     Resources.DecalShader.Create(Device.GetDevice(), L"Shaders/Decal.hlsl", "VS", "PS", PrimitiveInputLayout,
@@ -64,11 +64,6 @@ void FRenderer::Create(HWND hWindow)
 
     // 12. FXAA 모드 (ShaderFXAA.hlsl)
     Resources.FXAAShader.Create(Device.GetDevice(), L"Shaders/ShaderFXAA.hlsl", "FxaaVS", "FxaaPS", nullptr, 0);
-
-    // 13. UberLit (UberLit.hlsl)
-
-    Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS", NormalVertexInputLayout,
-                                   ARRAYSIZE(NormalVertexInputLayout));
 
     Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FPerObjectConstants));
     Resources.FrameBuffer.Create(Device.GetDevice(), sizeof(FFrameConstants));
@@ -123,7 +118,6 @@ void FRenderer::Release()
     Resources.AxisShader.Release();
     Resources.SelectionMaskShader.Release();
     Resources.OutlineShader.Release();
-    Resources.StaticMeshShader.Release();
     Resources.DepthVisualizerShader.Release();
     Resources.DecalShader.Release();
     Resources.FireBallShader.Release();
@@ -653,7 +647,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 
         if (bTypeChanged)
         {
-            Resources.StaticMeshShader.Bind(Context);
+            Resources.UberLitShader.Bind(Context);
 
             ID3D11Buffer* cb1 = Resources.PerObjectConstantBuffer.GetBuffer();
             Context->VSSetConstantBuffers(1, 1, &cb1);
