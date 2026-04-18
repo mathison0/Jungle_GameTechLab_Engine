@@ -95,6 +95,27 @@ Texture2D BumpMap : register(t9);
 
 SamplerState SampleState : register(s0);
 
+float3 CalculateAmbientLight(FAmbientLightInfo Light, float3 MaterialAmbientColor, float3 DiffuseTex)
+{
+    return Light.Color * Light.Intensity * MaterialAmbientColor * DiffuseTex;
+}
+
+float3 CalculateDirectionalDiffuse(FDirectionalLightInfo Light, float3 N, float3 DiffuseTex)
+{
+    float3 L = normalize(-Light.Direction);
+    float NdotL = max(dot(N, L), 0.0f);
+    return Light.Color * Light.Intensity * DiffuseTex * NdotL;
+}
+
+float3 CalculateDirectionalSpecular(FDirectionalLightInfo Light, float3 N, float3 WorldPos, float3 CameraWorldPos, float3 SpecularTex, float Shininess)
+{
+    float3 L = normalize(-Light.Direction);
+    float3 ViewDir = normalize(CameraWorldPos - WorldPos);
+    float3 HalfVector = normalize(L + ViewDir);
+    float NdotH = saturate(dot(N, HalfVector));
+    return Light.Color * Light.Intensity * SpecularTex * pow(NdotH, max(Shininess, 1.0f));
+}
+
 PSInput VS(VSInput input)
 {
     PSInput output;
@@ -140,22 +161,17 @@ float4 PS(PSInput input) : SV_TARGET
     //    SpecularTex = SpecularColor;
     //}
     
+    float3 finalColor = 0;
+    
     // Blinn-Phong Forward Lighting
     // Ambient
-    float3 Finalambient = Ambient.Color * Ambient.Intensity * AmbientColor * DiffuseTex;
+    finalColor += CalculateAmbientLight(Ambient, AmbientColor, DiffuseTex);
 
     // Directional - Diffuse
-    float3 L = normalize(-Directional.Direction);
-    float NdotL = max(dot(N, L), 0.0f);
-    float FinalDiffuse = Directional.Color * Directional.Intensity * DiffuseTex * NdotL;
+    finalColor += CalculateDirectionalDiffuse(Directional, N, DiffuseTex);
     
     //// Directional - Specular (Blinn-Phong)
-    //float3 ViewDir = normalize(CameraWorldPos - input.WorldPos);
-    //float3 HalfVector = normalize(L + ViewDir);
-    //float NdotH = saturate(dot(N, HalfVector));
-    //float3 FinalSpecular = Directional.Color * Directional.Intensity * SpecularTex * pow(NdotH, max(Shininess, 1.0f));
+    //finalColor += CalculateDirectionalSpecular(Directional, N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
     
-    //float3 finalColor = (Finalambient + FinalDiffuse + FinalSpecular);
-    float3 finalColor = (Finalambient + FinalDiffuse);
     return float4(finalColor, 1.0f);
 }
