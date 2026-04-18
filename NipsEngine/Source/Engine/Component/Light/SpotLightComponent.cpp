@@ -6,8 +6,8 @@ DEFINE_CLASS(USpotLightComponent, ULightComponent)
 void USpotLightComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) 
 {
     ULightComponent::GetEditableProperties(OutProps);
-    OutProps.push_back({"InnerConeAngle", EPropertyType::Float, &InnerConeAngle});
-    OutProps.push_back({"OuterConeAngle", EPropertyType::Float, &OuterConeAngle});
+    OutProps.push_back({"InnerConeAngle", EPropertyType::Float, &InnerConeAngle, 0.f, OuterConeAngle});
+    OutProps.push_back({"OuterConeAngle", EPropertyType::Float, &OuterConeAngle, InnerConeAngle, 80.f});
 }
 
 const FVector USpotLightComponent::GetDirection() const
