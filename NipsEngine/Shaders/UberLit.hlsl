@@ -12,6 +12,7 @@ cbuffer StaticMeshBuffer : register(b6)
     // ScrollUV
     float2 ScrollUV;
     float  Padding6_1;
+    
     uint   bHasDiffuseMap;
     uint   bHasSpecularMap;
     float  Padding6_2;
@@ -32,6 +33,7 @@ struct PSInput
     float3 WorldNormal : TEXCOORD1;
     float4 Tangent : TEXCOORD2;
     float2 UV : TEXCOORD3;
+    float3 VertexLighting : TEXCOORD4;
 };
 
 // Lighting (b13)
@@ -270,6 +272,25 @@ float3 CalculateSpotSpecular(FSpotLightInfo Light, float3 N, float3 WorldPos, fl
            spotFactor;
 }
 
+float3 CalculateLightingLambert(float3 WorldPos, float3 N, float3 DiffuseTex)
+{
+    float3 finalColor = 0;
+
+    finalColor += CalculateAmbientLight(Ambient, AmbientColor, DiffuseTex);
+
+    for (uint i = 0; i < DirectionalLightCount; ++i)
+    {
+        finalColor += CalculateDirectionalDiffuse(DirectionalLights[i], N, DiffuseTex);
+    }
+
+    for (uint i = 0; i < SpotLightCount; ++i)
+    {
+        finalColor += CalculateSpotDiffuse(SpotLights[i], N, WorldPos, DiffuseTex);
+    }
+
+    return finalColor;
+}
+
 PSInput VS(VSInput input)
 {
     PSInput output;
@@ -286,6 +307,18 @@ PSInput VS(VSInput input)
     output.UV = input.UV + ScrollUV;
 
     output.Tangent = float4(0, 0, 0, 1);
+    
+    // Gouraud Lighting
+    {
+        float3 diffuseTex = DiffuseColor;
+        if ((bool) bHasDiffuseMap)
+        {
+            diffuseTex = DiffuseMap.Sample(SampleState, output.UV).rgb;
+        }
+
+        float3 N = normalize(output.WorldNormal);
+        output.VertexLighting = CalculateLightingLambert(output.WorldPos, N, diffuseTex);
+    }
 
     return output;
 }
@@ -305,15 +338,19 @@ float4 PS(PSInput input) : SV_TARGET
         DiffuseTex = DiffuseColor;
     }
     
-    //float3 SpecularTex;
-    //if ((bool) bHasSpecularMap)
-    //{
-    //    SpecularTex = SpecularMap.Sample(SampleState, input.UV).rgb;
-    //}
-    //else
-    //{
-    //    SpecularTex = SpecularColor;
-    //}
+    float3 SpecularTex;
+    if ((bool) bHasSpecularMap)
+    {
+        SpecularTex = SpecularMap.Sample(SampleState, input.UV).rgb;
+    }
+    else
+    {
+        SpecularTex = SpecularColor;
+    }
+    
+    {
+        finalColor = input.VertexLighting;
+    }
     
     float3 finalColor = 0;
     
@@ -326,8 +363,8 @@ float4 PS(PSInput input) : SV_TARGET
     {
         finalColor += CalculateDirectionalDiffuse(DirectionalLights[i], N, DiffuseTex);
         
-        //// Directional - Specular (Blinn-Phong)
-        //finalColor += CalculateDirectionalSpecular(DirectionalLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
+        // Specular (Blinn-Phong)
+        finalColor += CalculateDirectionalSpecular(DirectionalLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
     }
 
     for (uint j = 0; j < PointLightCount; ++j)
@@ -347,8 +384,9 @@ float4 PS(PSInput input) : SV_TARGET
         SpotLighting += CalculateSpotDiffuse(SpotLights[i], N, input.WorldPos, DiffuseTex);
         
         //Specular
-        //SpotLighting += CalculateSpotSpecular(SpotLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
+        SpotLighting += CalculateSpotSpecular(SpotLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
     }
+
     finalColor += SpotLighting;
     return float4(finalColor, 1.0f);
 }
