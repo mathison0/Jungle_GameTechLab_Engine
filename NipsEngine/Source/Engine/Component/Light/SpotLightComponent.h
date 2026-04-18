@@ -11,8 +11,7 @@ class USpotLightComponent : public ULightComponent
 
 	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 
-	const FVector& GetDirection() const;
-    void  SetDirection(FVector NewDirection);
+	const FVector GetDirection() const;
 
 	float GetInnerConeAngle() const;
     void  SetInnerConeAngle(float InAngle);
@@ -31,7 +30,6 @@ class USpotLightComponent : public ULightComponent
 	ELightType GetLightType() const override { return ELightType::Spot; };
 
   private:
-    FVector Direction = FVector::XAxisVector;
     float InnerConeAngle = 0.0f;
     float OuterConeAngle = 45.0f;
     float MaxConeAngle = 80.0f;

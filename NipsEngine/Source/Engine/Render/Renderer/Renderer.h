@@ -17,6 +17,8 @@
 #include <cstddef>
 #include <functional>
 
+#include "Render/Scene/LightInfo.h"
+
 // 패스별 Batcher 바인딩 — Clear → Collect → Flush 패턴
 struct FPassBatcherBinding
 {
@@ -125,6 +127,5 @@ private:
 		{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FNormalVertex, Normal)),   D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, static_cast<uint32>(offsetof(FNormalVertex, UVs)),      D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
-
 };
 

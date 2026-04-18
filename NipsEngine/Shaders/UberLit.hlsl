@@ -76,8 +76,9 @@ struct FSpotLightInfo
     float Intensity;
     
     float3 Direction;
-    float Angle;
+    float InnerConeCos;
     
+    float OuterConeCos;
     float3 Padding;
 };
 
@@ -85,8 +86,9 @@ cbuffer Lighting : register(b13)
 {
     FAmbientLightInfo Ambient;
     uint DirectionalLightCount;
+    uint SpotLightCount;
     uint PointLightCount;
-    float3 LightingPad;
+    float LightingPad;
 };
 
 // Light Data (t0-t5)
@@ -199,6 +201,75 @@ float3 CalculateDirectionalSpecular(FDirectionalLightInfo Light, float3 N, float
     return Light.Color * Light.Intensity * SpecularTex * pow(NdotH, max(Shininess, 1.0f));
 }
 
+float3 CalculateSpotDiffuse(FSpotLightInfo Light, float3 N, float3 WorldPos, float3 DiffuseTex)
+{
+    float3 Lvec = Light.Position - WorldPos;
+    float dist = length(Lvec);
+
+    if (dist > Light.Radius)
+        return 0;
+
+    float3 L = Lvec / dist;
+
+    float NdotL = max(dot(N, L), 0.0f);
+
+    float3 lightDir = normalize(-Light.Direction);
+
+    float spotCos = dot(L, lightDir);
+    float spotFactor = smoothstep(
+        Light.OuterConeCos,
+        Light.InnerConeCos,
+        spotCos
+    );
+    spotFactor = spotFactor * spotFactor;
+
+    float attenuation = 1.0f - (dist / Light.Radius);
+    attenuation = attenuation * attenuation;
+
+    return Light.Color *
+           Light.Intensity *
+           DiffuseTex *
+           NdotL *
+           attenuation *
+           spotFactor;
+}
+
+float3 CalculateSpotSpecular(FSpotLightInfo Light, float3 N, float3 WorldPos, float3 CameraWorldPos, float3 SpecularTex, float Shininess)
+{
+    float3 Lvec = Light.Position - WorldPos;
+    float dist = length(Lvec);
+
+    if (dist > Light.Radius)
+        return 0;
+
+    float3 L = Lvec / dist;
+
+    float3 V = normalize(CameraWorldPos - WorldPos);
+    float3 H = normalize(L + V);
+
+    float NdotH = saturate(dot(N, H));
+
+    float3 lightDir = normalize(-Light.Direction);
+    float spotCos = dot(L, lightDir);
+
+    float spotFactor = smoothstep(
+        Light.OuterConeCos,
+        Light.InnerConeCos,
+        spotCos
+    );
+    spotFactor *= spotFactor;
+
+    float attenuation = 1.0f - (dist / Light.Radius);
+    attenuation *= attenuation;
+
+    return Light.Color *
+           Light.Intensity *
+           SpecularTex *
+           pow(NdotH, max(Shininess, 1.0f)) *
+           attenuation *
+           spotFactor;
+}
+
 PSInput VS(VSInput input)
 {
     PSInput output;
@@ -258,12 +329,26 @@ float4 PS(PSInput input) : SV_TARGET
         //// Directional - Specular (Blinn-Phong)
         //finalColor += CalculateDirectionalSpecular(DirectionalLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
     }
-    
+
     for (uint j = 0; j < PointLightCount; ++j)
     {
         FPointLightCommon PreCalc = EvaluatePointLightCommon(PointLights[j], input.WorldPos, N);
         finalColor += CalculatePointDiffuse(PointLights[j], DiffuseTex,  PreCalc);
     }
     
+    
+    // =========================
+    // Spot Light (DEBUG VERSION)
+    // =========================
+    float3 SpotLighting = float3(0, 0, 0);
+    
+    for (uint i = 0; i < SpotLightCount; ++i)
+    {
+        SpotLighting += CalculateSpotDiffuse(SpotLights[i], N, input.WorldPos, DiffuseTex);
+        
+        //Specular
+        //SpotLighting += CalculateSpotSpecular(SpotLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
+    }
+    finalColor += SpotLighting;
     return float4(finalColor, 1.0f);
 }

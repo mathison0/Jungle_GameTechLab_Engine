@@ -9,6 +9,7 @@ void FRenderBus::Clear()
         DebugCommandQueues[i].clear();
     }
     DirectionalLights.clear();
+    SpotLightInfos.clear();
     PointlLights.clear();
     FogConstants = FFogConstants{};
     LightingConstants = FLightingConstants{};

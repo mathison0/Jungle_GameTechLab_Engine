@@ -91,7 +91,7 @@ private:
 class FStructuredBuffer
 {
   public:
-	void Create(ID3D11Device* InDevice, uint32 InElementSize, uint32 InElementCount);
+	void Create(ID3D11Device* InDevice, uint32 InElementSize, uint32 InElementCount = 64);
 	void Release();
 	void Update(ID3D11DeviceContext* InDeviceContext, const void* InData, uint32 InElementCount);
 	ID3D11ShaderResourceView* GetSRV() const;

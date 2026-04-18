@@ -224,7 +224,8 @@ struct FLightingConstants
     FAmbientLightConstants AmbientLight;
     uint32                 DirectionalLightCount = 0;
     uint32                 PointLightCount = 0;
-    float                  Padding[3] = {};
+    uint32                 SpotLightCount = 0;
+    float                  Padding = 0.0f;
 };
 
 // StaticMeshBuffer (b6) — UberLit.hlsl 대응
