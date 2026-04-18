@@ -68,8 +68,9 @@ struct FSpotLightInfo
     float Intensity;
     
     float3 Direction;
-    float Angle;
+    float InnerConeCos;
     
+    float OuterConeCos;
     float3 Padding;
 };
 
@@ -180,5 +181,69 @@ float4 PS(PSInput input) : SV_TARGET
         //finalColor += CalculateDirectionalSpecular(DirectionalLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
     }
     
+    // =========================
+    // Directional Light
+    // =========================
+    float3 L = normalize(-Directional.Direction);
+    float NdotL = max(dot(N, L), 0.0f);
+    float FinalDiffuse = Directional.Color * Directional.Intensity * DiffuseTex * NdotL;
+    
+    // =========================
+    // Spot Light (DEBUG VERSION)
+    // =========================
+    float3 SpotLighting = float3(0, 0, 0);
+    uint tempCount;
+    uint dummy;
+    SpotLights.GetDimensions(tempCount, dummy);
+    tempCount = min(tempCount, 32);
+    
+    for (uint i = 0; i < tempCount; ++i)
+    {
+        FSpotLightInfo light = SpotLights[i];
+
+        // 거리 벡터
+        float3 L = light.Position - input.WorldPos;
+        float dist = length(L);
+
+        if (dist > light.Radius)
+            continue;
+
+        L /= dist;
+
+        // 거리 감쇠
+        float attenuation = saturate(1.0f - dist / light.Radius);
+
+        // cone 계산
+        float3 lightDir = normalize(-light.Direction);
+        float spotCos = dot(L, lightDir);
+
+        float spotFactor = saturate(
+            (spotCos - light.OuterConeCos) /
+            max(light.InnerConeCos - light.OuterConeCos, 0.001f)
+        );
+
+        // diffuse
+        float NdotL_spot = max(dot(N, L), 0.0f);
+
+        float3 diffuse =
+            light.Color *
+            light.Intensity *
+            DiffuseTex *
+            NdotL_spot *
+            attenuation *
+            spotFactor;
+
+        SpotLighting += diffuse;
+    }
+    
+    
+    //// Directional - Specular (Blinn-Phong)
+    //float3 ViewDir = normalize(CameraWorldPos - input.WorldPos);
+    //float3 HalfVector = normalize(L + ViewDir);
+    //float NdotH = saturate(dot(N, HalfVector));
+    //float3 FinalSpecular = Directional.Color * Directional.Intensity * SpecularTex * pow(NdotH, max(Shininess, 1.0f));
+    
+    //float3 finalColor = (Finalambient + FinalDiffuse + FinalSpecular);
+    finalColor += SpotLighting;
     return float4(finalColor, 1.0f);
 }

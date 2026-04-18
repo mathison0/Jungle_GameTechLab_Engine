@@ -10,6 +10,7 @@
 #include "Core/CoreMinimal.h"
 #include "Render/Scene/RenderCommand.h"
 #include "Render/Scene/DebugCommand.h"
+#include "Render/Scene/LightInfo.h"
 
 #include "Render/Common/ViewTypes.h"
 
@@ -28,6 +29,8 @@ public:
 
     const TArray<FDirectionalLightConstants>& GetDirectionalLights() const { return DirectionalLights; }
     void AddDirectionalLight(const FDirectionalLightConstants& InLight) { DirectionalLights.push_back(InLight); }
+
+	void AddSpotLightInfo(const FSpotLightInfo& LightInfo);
 
 	// Getter,Setter
 	void SetViewProjection(const FMatrix& InView, const FMatrix& InProj);
@@ -49,6 +52,8 @@ public:
 	void SetWireframeColor(const FVector& InColor) { WireframeColor = InColor; }
 	bool IsOrthographic() const { return Proj.M[3][3] == 1.0f; }
 
+	const TArray<FSpotLightInfo>& GetSpotLightInfos() const { return SpotLightInfos; };
+
 private:
 	TArray<FRenderCommand> PassQueues[(uint32)ERenderPass::MAX];
 	TArray<FDebugRenderCommand>  DebugCommandQueues[(uint32)ERenderPass::MAX];
@@ -67,5 +72,6 @@ private:
 
 	FFogConstants FogConstants;
     FLightingConstants LightingConstants;
+	TArray<FSpotLightInfo> SpotLightInfos;
 };
 

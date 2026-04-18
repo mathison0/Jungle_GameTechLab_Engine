@@ -20,6 +20,7 @@ struct FSpotLightInfo
 
 	FVector Direction;
     float   InnerConeCos;
-    float   OuterConeCos;
 
+    float   OuterConeCos;
+    float   Paddings[3];
 };
