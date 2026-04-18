@@ -24,6 +24,10 @@ public:
     void AddDebugCommand(ERenderPass Pass, FDebugRenderCommand&& InCommand);
 	const TArray<FRenderCommand>& GetCommands(ERenderPass Pass) const;
     const TArray<FDebugRenderCommand>& GetDebugCommands(ERenderPass Pass) const;
+    TArray<FDirectionalLightConstants> DirectionalLights;
+
+    const TArray<FDirectionalLightConstants>& GetDirectionalLights() const { return DirectionalLights; }
+    void AddDirectionalLight(const FDirectionalLightConstants& InLight) { DirectionalLights.push_back(InLight); }
 
 	// Getter,Setter
 	void SetViewProjection(const FMatrix& InView, const FMatrix& InProj);

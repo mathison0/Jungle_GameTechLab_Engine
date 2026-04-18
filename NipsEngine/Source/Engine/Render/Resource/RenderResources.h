@@ -24,6 +24,8 @@ struct FRenderResources
     FConstantBuffer FXAAConstantBuffer;   // b9
     FConstantBuffer LightingConstantBuffer; // b13
 
+	FStructuredBuffer DirectionalLightBuffer;
+
     FShader PrimitiveShader;
     FShader GizmoShader;
     FShader EditorShader;

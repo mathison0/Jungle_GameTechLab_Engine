@@ -8,7 +8,7 @@ void FRenderBus::Clear()
 		PassQueues[i].clear();
         DebugCommandQueues[i].clear();
 	}
-
+    DirectionalLights.clear();
     FogConstants = FFogConstants{};
     LightingConstants = FLightingConstants{};
 }

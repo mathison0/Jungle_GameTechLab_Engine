@@ -76,7 +76,8 @@ struct FSpotLightInfo
 cbuffer Lighting : register(b13)
 {
     FAmbientLightInfo Ambient;
-    FDirectionalLightInfo Directional;
+    uint DirectionalLightCount;
+    float3 LightingPad;
 };
 
 // Light Data (t0-t5)
@@ -86,6 +87,9 @@ StructuredBuffer<uint> TilePointLightIndices : register(t2);
 StructuredBuffer<uint> TileSpotLightIndices : register(t3);
 StructuredBuffer<uint2> TilePointLightGrid : register(t4);
 StructuredBuffer<uint2> TileSpotLightGrid : register(t5);
+
+// Directional Lights (t13)
+StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t13);
 
 // StaticMesh Textures (t6-t9)
 Texture2D DiffuseMap : register(t6);
@@ -168,10 +172,13 @@ float4 PS(PSInput input) : SV_TARGET
     finalColor += CalculateAmbientLight(Ambient, AmbientColor, DiffuseTex);
 
     // Directional - Diffuse
-    finalColor += CalculateDirectionalDiffuse(Directional, N, DiffuseTex);
-    
-    //// Directional - Specular (Blinn-Phong)
-    //finalColor += CalculateDirectionalSpecular(Directional, N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
+    for (uint i = 0; i < DirectionalLightCount; ++i)
+    {
+        finalColor += CalculateDirectionalDiffuse(DirectionalLights[i], N, DiffuseTex);
+        
+        //// Directional - Specular (Blinn-Phong)
+        //finalColor += CalculateDirectionalSpecular(DirectionalLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
+    }
     
     return float4(finalColor, 1.0f);
 }

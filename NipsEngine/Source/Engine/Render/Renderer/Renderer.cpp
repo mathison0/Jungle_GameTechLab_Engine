@@ -11,6 +11,7 @@
 #include "Core/Logging/Stats.h"
 #include "Core/Logging/GPUProfiler.h"
 #include "Render/Scene/RenderCollector.h"
+#include "Render/Scene/RenderBus.h"
 
 void FRenderer::Create(HWND hWindow)
 {
@@ -77,6 +78,7 @@ void FRenderer::Create(HWND hWindow)
     Resources.FogConstantBuffer.Create(Device.GetDevice(), sizeof(FFogConstants));
     Resources.FXAAConstantBuffer.Create(Device.GetDevice(), sizeof(FFXAAConstants));
     Resources.LightingConstantBuffer.Create(Device.GetDevice(), sizeof(FLightingConstants));
+    Resources.DirectionalLightBuffer.Create(Device.GetDevice(), sizeof(FDirectionalLightConstants), 64);
 
     // TODO : SamplerState 관리
     D3D11_SAMPLER_DESC SampDesc = {};
@@ -1027,10 +1029,24 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
 
 void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
 {
+    // cbuffer: Ambient + Count
     const FLightingConstants& Lighting = InRenderBus.GetLightingConstants();
-    Resources.LightingConstantBuffer.Update(Context, &Lighting, sizeof(FLightingConstants));
 
+    FLightingConstants LightingData = Lighting;
+    LightingData.DirectionalLightCount = static_cast<uint32>(InRenderBus.GetDirectionalLights().size());
+
+    Resources.LightingConstantBuffer.Update(Context, &LightingData, sizeof(FLightingConstants));
     ID3D11Buffer* b13 = Resources.LightingConstantBuffer.GetBuffer();
     Context->VSSetConstantBuffers(13, 1, &b13);
     Context->PSSetConstantBuffers(13, 1, &b13);
+
+    // StructuredBuffer: Directional Lights → t13
+    const TArray<FDirectionalLightConstants>& DirLights = InRenderBus.GetDirectionalLights();
+    if (!DirLights.empty())
+    {
+        Resources.DirectionalLightBuffer.Update(Context, DirLights.data(), static_cast<uint32>(DirLights.size()));
+    }
+
+    ID3D11ShaderResourceView* SRV = Resources.DirectionalLightBuffer.GetSRV();
+    Context->PSSetShaderResources(13, 1, &SRV);
 }

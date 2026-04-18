@@ -347,14 +347,18 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
         break;
     }
 
-    case ELightType::Directional:
+    	case ELightType::Directional:
     {
         const UDirectionalLightComponent* DirLight = static_cast<const UDirectionalLightComponent*>(LightComponent);
         const FVector&                    Direction = DirLight->GetLightDirection().GetSafeNormal();
-        Lighting.DirectionalLight.Direction = Direction;
-        Lighting.DirectionalLight.Color = ColorVec;
-        Lighting.DirectionalLight.Intensity = LightComponent->GetIntensity();
-        Lighting.DirectionalLight.Padding = 0.0f;
+
+        FDirectionalLightConstants DirConst;
+        DirConst.Direction = Direction;
+        DirConst.Color = ColorVec;
+        DirConst.Intensity = LightComponent->GetIntensity();
+        DirConst.Padding = 0.0f;
+        RenderBus.AddDirectionalLight(DirConst);
+
         TArray<FDebugRenderCommand> Temp;
         DebugCmd::MakeArrow(Temp, DirLight->GetWorldLocation(), Direction, 3.0f, 0.3f, FColor::Cyan().ToVector4());
         for (auto& DebugCmd : Temp)
