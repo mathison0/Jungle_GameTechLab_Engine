@@ -319,6 +319,7 @@
     <ClCompile Include="Source\Misc\ObjViewer\UI\ObjViewerStatWidget.cpp" />
     <ClCompile Include="Source\Misc\ObjViewer\Viewport\ObjViewerViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\SpotLightComponent.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\SpotLightActor.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_demo.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_draw.cpp" />
@@ -498,6 +499,7 @@
     <ClInclude Include="Source\Misc\ObjViewer\UI\ObjViewerWidget.h" />
     <ClInclude Include="Source\Misc\ObjViewer\Viewport\ObjViewerViewportClient.h" />
     <ClInclude Include="Source\Engine\Component\Light\SpotLightComponent.h" />
+    <ClInclude Include="Source\Engine\GameFramework\SpotLightActor.h" />
     <ClInclude Include="ThirdParty\ImGui\imconfig.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui_impl_dx11.h" />

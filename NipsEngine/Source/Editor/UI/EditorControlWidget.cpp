@@ -16,6 +16,7 @@
 #include "GameFramework/AmbientLightActor.h"
 #include "GameFramework/DirectionalLightActor.h"
 #include "GameFramework/PointLightActor.h"
+#include "GameFramework/SpotLightActor.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
@@ -141,6 +142,14 @@ void FEditorControlWidget::Render(float DeltaTime)
             case 10: // PointLight
             {
                 APointLightActor* Actor = World->SpawnActor<APointLightActor>();
+                Actor->InitDefaultComponents();
+                Actor->SetActorLocation(CurSpawnPoint);
+                LastSpawnedActor = Actor;
+                break;
+            }
+            case 11: // SpotLight
+            {
+                ASpotLightActor* Actor = World->SpawnActor<ASpotLightActor>();
                 Actor->InitDefaultComponents();
                 Actor->SetActorLocation(CurSpawnPoint);
                 LastSpawnedActor = Actor;

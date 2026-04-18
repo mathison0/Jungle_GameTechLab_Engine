@@ -86,8 +86,8 @@ cbuffer Lighting : register(b13)
 {
     FAmbientLightInfo Ambient;
     uint DirectionalLightCount;
-    uint SpotLightCount;
     uint PointLightCount;
+    uint SpotLightCount;
     float LightingPad;
 };
 

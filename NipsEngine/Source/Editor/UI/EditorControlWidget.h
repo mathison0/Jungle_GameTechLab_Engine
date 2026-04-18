@@ -10,8 +10,8 @@ public:
 	virtual void Render(float DeltaTime) override;
 
 private:
-        const char* PrimitiveTypes[11] = {"StaticMesh", "TextRender",    "SubUV",        "Billboard", "Decal",        "FakeSpotlight",    "Fireball", "Fog",
-                                    "AmbientLight", "DirectionalLight", "PointLight"};
+        const char* PrimitiveTypes[12] = {"StaticMesh", "TextRender",    "SubUV",        "Billboard", "Decal",        "FakeSpotlight",    "Fireball", "Fog",
+                                    "AmbientLight", "DirectionalLight", "PointLight", "SpotLight"};
 	int32 SelectedPrimitiveType = 0;
 	int32 NumberOfSpawnedActors = 1;
 	FVector CurSpawnPoint = { 0.f, 0.f, 0.f };
