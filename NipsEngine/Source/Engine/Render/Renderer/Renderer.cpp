@@ -79,6 +79,7 @@ void FRenderer::Create(HWND hWindow)
     Resources.FXAAConstantBuffer.Create(Device.GetDevice(), sizeof(FFXAAConstants));
     Resources.LightingConstantBuffer.Create(Device.GetDevice(), sizeof(FLightingConstants));
     Resources.DirectionalLightBuffer.Create(Device.GetDevice(), sizeof(FDirectionalLightConstants), 64);
+    Resources.PointlLightBuffer.Create(Device.GetDevice(), sizeof(FPointLightConstatns), 64);
 
     // TODO : SamplerState 관리
     D3D11_SAMPLER_DESC SampDesc = {};
@@ -139,6 +140,8 @@ void FRenderer::Release()
     Resources.FogConstantBuffer.Release();
     Resources.FXAAConstantBuffer.Release();
     Resources.LightingConstantBuffer.Release();
+    Resources.DirectionalLightBuffer.Release();
+    Resources.PointlLightBuffer.Release();
 
     Resources.MeshSamplerState.Reset();
     Resources.FXAASamplerState.Reset();
@@ -1034,6 +1037,8 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
 
     FLightingConstants LightingData = Lighting;
     LightingData.DirectionalLightCount = static_cast<uint32>(InRenderBus.GetDirectionalLights().size());
+    LightingData.PointLightCount = static_cast<uint32>(InRenderBus.GetPointlLights().size());
+
 
     Resources.LightingConstantBuffer.Update(Context, &LightingData, sizeof(FLightingConstants));
     ID3D11Buffer* b13 = Resources.LightingConstantBuffer.GetBuffer();
@@ -1046,7 +1051,14 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     {
         Resources.DirectionalLightBuffer.Update(Context, DirLights.data(), static_cast<uint32>(DirLights.size()));
     }
-
     ID3D11ShaderResourceView* SRV = Resources.DirectionalLightBuffer.GetSRV();
     Context->PSSetShaderResources(10, 1, &SRV);
+
+    const TArray<FPointLightConstatns>& PointLights = InRenderBus.GetPointlLights();
+    if (!PointLights.empty())
+    {
+        Resources.PointlLightBuffer.Update(Context, PointLights.data(), static_cast<uint32>(PointLights.size()));
+    }
+    SRV = Resources.PointlLightBuffer.GetSRV();
+    Context->PSSetShaderResources(0, 1, &SRV);
 }

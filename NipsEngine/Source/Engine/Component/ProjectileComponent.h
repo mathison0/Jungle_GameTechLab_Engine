@@ -29,5 +29,5 @@ class UProjectileMovementComponent : public UMovementComponent
     FVector InitialAcceleration;
 
     float GravitationalAcceleration = -9.80665f;
-    bool  bIsGravityEnabled;
+    bool  bIsGravityEnabled = false;
 };

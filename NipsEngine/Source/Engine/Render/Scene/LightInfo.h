@@ -5,9 +5,9 @@
 struct FDirectionalLightInfo
 {
     FVector Direction;
-	float Intensity;
+    float   Intensity;
 
-	FVector Color;
+    FVector Color;
 };
 
 struct FSpotLightInfo
@@ -15,11 +15,18 @@ struct FSpotLightInfo
     FVector Position;
     float   Radius;
 
-	FVector Color;
+    FVector Color;
     float   Intensity;
 
-	FVector Direction;
+    FVector Direction;
     float   InnerConeCos;
     float   OuterConeCos;
+};
 
+struct FPointLightInfo
+{
+    FVector Position;
+    FVector Color;
+    float   Intensity;
+    float   Radius;
 };

@@ -31,7 +31,7 @@ enum class ERenderCommandType
     SubUV,      // SubUVComponent     — SubUVBatcher 경유
     StaticMesh, // UStaticMeshComponent — OBJ 메시 퐁셰이딩
     Decal,
-    FireBall, // 사실 라이트랑 비슷한놈 아닐까요  
+    FireBall, // 사실 라이트랑 비슷한놈 아닐까요
     Fog,
 
 };
@@ -74,8 +74,8 @@ struct FEditorConstants
     float MinorIntensity = 0.65f;
     float MajorIntensity = 1.0f;
 
-    float AxisThickness = 1.75f;
-    float AxisLength = 3000.0f;
+    float    AxisThickness = 1.75f;
+    float    AxisLength = 3000.0f;
     FVector2 EditorPadding0 = FVector2(0.0f, 0.0f);
 };
 
@@ -105,15 +105,15 @@ struct FGridConstants
     uint32 bOrthographic = 0;
     float  LineThickness = 1.0f;
 
-    float  MajorLineThickness = 1.35f;
-    float  MajorLineInterval = 10.0f;
-    float  MinorIntensity = 0.65f;
-    float  MajorIntensity = 1.0f;
+    float MajorLineThickness = 1.35f;
+    float MajorLineInterval = 10.0f;
+    float MinorIntensity = 0.65f;
+    float MajorIntensity = 1.0f;
 
-    float  RangeScale = 1.0f;
-    float  MaxDistanceScale = 1.5f;
-    float  AxisThickness = 1.75f;
-    float  AxisLengthScale = 1.0f;
+    float RangeScale = 1.0f;
+    float MaxDistanceScale = 1.5f;
+    float AxisThickness = 1.75f;
+    float AxisLengthScale = 1.0f;
 };
 
 struct FFontConstants
@@ -147,42 +147,42 @@ struct FDecalConstants
 
 struct FSceneDepthConstants
 {
-	FVector2 ViewportUVOffset;
-	FVector2 ViewportUVScale;
-	FVector2 DepthTextureSize;
-	FVector2 Pad = FVector2(0.0f, 0.0f);
+    FVector2 ViewportUVOffset;
+    FVector2 ViewportUVScale;
+    FVector2 DepthTextureSize;
+    FVector2 Pad = FVector2(0.0f, 0.0f);
 };
 
 struct FFogConstants
 {
     FVector4 InscatteringColor = FVector4(0.5f, 0.6f, 0.7f, 1.0f);
 
-    float    Density           = 0.02f;
-    float    HeightFalloff     = 0.2f;
-    float    StartDistance     = 0.0f;
-    float    CutoffDistance    = 0.0f;
+    float Density = 0.02f;
+    float HeightFalloff = 0.2f;
+    float StartDistance = 0.0f;
+    float CutoffDistance = 0.0f;
 
-    float    MaxOpacity        = 1.0f;
-    float    FogHeight         = 0.0f;
-    float    Pad0              = 0.0f;
-    float    Pad1              = 0.0f;
+    float MaxOpacity = 1.0f;
+    float FogHeight = 0.0f;
+    float Pad0 = 0.0f;
+    float Pad1 = 0.0f;
 
-    FVector  CameraWorldPos          = FVector::ZeroVector;
-    float    Pad2                    = 0.0f;
+    FVector CameraWorldPos = FVector::ZeroVector;
+    float   Pad2 = 0.0f;
 
-    FMatrix  InverseViewProjection   = FMatrix::Identity;
+    FMatrix InverseViewProjection = FMatrix::Identity;
 
-    uint32   bEnabled                = 0;
-    float    Pad3[3]                 = { 0.0f, 0.0f, 0.0f };
+    uint32 bEnabled = 0;
+    float  Pad3[3] = {0.0f, 0.0f, 0.0f};
 };
 
 struct FFireBallConstants
 {
     FMatrix InverseClipToLocal;
-    float Intensity;
-    float Radius;
-    float RadiusFallOff;
-    float Padding;
+    float   Intensity;
+    float   Radius;
+    float   RadiusFallOff;
+    float   Padding;
 };
 struct FFXAAConstants
 {
@@ -199,7 +199,7 @@ struct FFXAAConstants
 struct FAmbientLightConstants
 {
 
-	FVector Color = {0.0f, 0.0f, 0.0f};
+    FVector Color = {0.0f, 0.0f, 0.0f};
     float   Intensity = 0.0f;
 };
 
@@ -211,10 +211,19 @@ struct FDirectionalLightConstants
     float   Padding = 0.0f;
 };
 
+struct FPointLightConstatns
+{
+    FVector Position = {0.f, 0.f, 0.f};
+    float   Radius = 10.f;
+    FVector Color = {1.0f, 1.0f, 1.0f};
+	float   Intensity = 10.0f;
+};
+
 struct FLightingConstants
 {
     FAmbientLightConstants AmbientLight;
     uint32                 DirectionalLightCount = 0;
+    uint32                 PointLightCount = 0;
     float                  Padding[3] = {};
 };
 

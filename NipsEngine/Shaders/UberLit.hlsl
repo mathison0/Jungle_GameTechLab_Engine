@@ -54,9 +54,17 @@ struct FPointLightInfo
 {
     float3 Position;
     float Radius;
-
     float3 Color;
     float Intensity;
+};
+
+struct FPointLightCommon
+{
+    float3 LightDir;
+    float Distance;
+    float Attenuation;
+    float NdotL;
+    bool bValid;
 };
 
 struct FSpotLightInfo
@@ -77,6 +85,7 @@ cbuffer Lighting : register(b13)
 {
     FAmbientLightInfo Ambient;
     uint DirectionalLightCount;
+    uint PointLightCount;
     float3 LightingPad;
 };
 
@@ -89,6 +98,7 @@ StructuredBuffer<uint2> TilePointLightGrid : register(t4);
 StructuredBuffer<uint2> TileSpotLightGrid : register(t5);
 
 // Directional Lights (t10)
+
 StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t10);
 
 // StaticMesh Textures (t6-t9)
@@ -102,6 +112,75 @@ SamplerState SampleState : register(s0);
 float3 CalculateAmbientLight(FAmbientLightInfo Light, float3 MaterialAmbientColor, float3 DiffuseTex)
 {
     return Light.Color * Light.Intensity * MaterialAmbientColor * DiffuseTex;
+}
+
+FPointLightCommon EvaluatePointLightCommon(
+    FPointLightInfo Light,
+    float3 WorldPos,
+    float3 N)
+{
+    FPointLightCommon Result;
+    Result.bValid = false;
+    Result.LightDir = 0.0f.xxx;
+    Result.Distance = 0.0f;
+    Result.Attenuation = 0.0f;
+    Result.NdotL = 0.0f;
+
+    float3 L = Light.Position - WorldPos;
+    float distSq = dot(L, L);
+    float radiusSq = Light.Radius * Light.Radius;
+
+    if (distSq > radiusSq)
+        return Result;
+
+    float dist = sqrt(distSq);
+    float3 lightDir = L / max(dist, 1e-5f);
+
+    N = normalize(N);
+    float NdotL = saturate(dot(N, lightDir));
+    if (NdotL <= 0.0f)
+        return Result;
+
+    float attenuation = saturate(1.0f - dist / Light.Radius);
+    attenuation *= attenuation;
+
+    Result.bValid = true;
+    Result.LightDir = lightDir;
+    Result.Distance = dist;
+    Result.Attenuation = attenuation;
+    Result.NdotL = NdotL;
+    return Result;
+}
+
+float3 CalculatePointDiffuse(
+    FPointLightInfo Light,
+    float3 DiffuseTex,
+    FPointLightCommon Common)
+{
+    if (!Common.bValid)
+        return 0.0f.xxx;
+
+    return DiffuseTex * Light.Color.xyz * Light.Intensity * Common.NdotL * Common.Attenuation;
+}
+
+float3 CalculatePointSpecular(
+    FPointLightInfo Light,
+    float3 N,
+    float3 WorldPos,
+    float3 CameraWorldPos,
+    float3 SpecularTex,
+    float Shininess,
+    FPointLightCommon Common)
+{
+    if (!Common.bValid)
+        return 0.0f.xxx;
+
+    float3 V = normalize(CameraWorldPos - WorldPos);
+    float3 H = normalize(Common.LightDir + V);
+    float NdotH = saturate(dot(normalize(N), H));
+    float spec = pow(NdotH, Shininess);
+
+    return Light.Color.xyz * Light.Intensity * SpecularTex * spec * Common.Attenuation;
 }
 
 float3 CalculateDirectionalDiffuse(FDirectionalLightInfo Light, float3 N, float3 DiffuseTex)
@@ -178,6 +257,12 @@ float4 PS(PSInput input) : SV_TARGET
         
         //// Directional - Specular (Blinn-Phong)
         //finalColor += CalculateDirectionalSpecular(DirectionalLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
+    }
+    
+    for (uint j = 0; j < PointLightCount; ++j)
+    {
+        FPointLightCommon PreCalc = EvaluatePointLightCommon(PointLights[j], input.WorldPos, N);
+        finalColor += CalculatePointDiffuse(PointLights[j], DiffuseTex,  PreCalc);
     }
     
     return float4(finalColor, 1.0f);

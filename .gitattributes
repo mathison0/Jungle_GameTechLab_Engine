@@ -1,55 +1,58 @@
-# ---------------------------------------
-# Default
-# ---------------------------------------
+# ----------------------------------------------------------------------
+# 1. 기본 설정: Git이 파일 형식을 자동 감지하여 줄바꿈을 관리합니다.
+# ----------------------------------------------------------------------
 * text=auto
 
-# ---------------------------------------
-# Source / shader / config files -> LF
-# ---------------------------------------
-*.h           text eol=lf
-*.hpp         text eol=lf
-*.hh          text eol=lf
-*.hxx         text eol=lf
-*.inl         text eol=lf
+# ----------------------------------------------------------------------
+# 2. 소스 코드 및 텍스트 파일: 
+# 'text'만 명시하여 Git이 Commit 시 LF로, Checkout 시 CRLF로 자동 변환하게 합니다.
+# ----------------------------------------------------------------------
+*.h           text
+*.hpp         text
+*.hh          text
+*.hxx         text
+*.inl         text
 
-*.c           text eol=lf
-*.cc          text eol=lf
-*.cpp         text eol=lf
-*.cxx         text eol=lf
+*.c           text
+*.cc          text
+*.cpp         text
+*.cxx         text
 
-*.ixx         text eol=lf
-*.cppm        text eol=lf
+*.ixx         text
+*.cppm        text
 
-*.rc          text eol=lf
-*.def         text eol=lf
+*.rc          text
+*.def         text
 
-*.hlsl        text eol=lf
-*.hlsli       text eol=lf
-*.fx          text eol=lf
-*.fxh         text eol=lf
-*.glsl        text eol=lf
-*.vert        text eol=lf
-*.frag        text eol=lf
-*.comp        text eol=lf
+# Shader Files
+*.hlsl        text
+*.hlsli       text
+*.fx          text
+*.fxh         text
+*.glsl        text
+*.vert        text
+*.frag        text
+*.comp        text
 
-*.cmake       text eol=lf
-CMakeLists.txt text eol=lf
+# Build & Config
+*.cmake       text
+CMakeLists.txt text
+*.py          text
+*.lua         text
+*.json        text
+*.xml         text
+*.yml         text
+*.yaml        text
+*.toml        text
+*.ini         text
+*.cfg         text
+*.txt         text
+*.md          text
 
-*.py          text eol=lf
-*.lua         text eol=lf
-*.json        text eol=lf
-*.xml         text eol=lf
-*.yml         text eol=lf
-*.yaml        text eol=lf
-*.toml        text eol=lf
-*.ini         text eol=lf
-*.cfg         text eol=lf
-*.txt         text eol=lf
-*.md          text eol=lf
-
-# ---------------------------------------
-# Visual Studio / Windows script files -> CRLF
-# ---------------------------------------
+# ----------------------------------------------------------------------
+# 3. Visual Studio / Windows 전용 파일: 
+# 윈도우 전용이므로 항상 CRLF를 유지하도록 명시합니다.
+# ----------------------------------------------------------------------
 *.sln         text eol=crlf
 *.vcxproj     text eol=crlf
 *.vcxproj.filters text eol=crlf
@@ -58,9 +61,10 @@ CMakeLists.txt text eol=lf
 *.bat         text eol=crlf
 *.cmd         text eol=crlf
 
-# ---------------------------------------
-# Binary files
-# ---------------------------------------
+# ----------------------------------------------------------------------
+# 4. 바이너리 파일: 
+# 줄바꿈 변환이 절대 일어나면 안 되는 파일들입니다.
+# ----------------------------------------------------------------------
 *.png         binary
 *.jpg         binary
 *.jpeg        binary
@@ -73,9 +77,6 @@ CMakeLists.txt text eol=lf
 *.hdr         binary
 
 *.fbx         binary
-*.obj         text eol=lf
-*.mtl         text eol=lf
-*.gltf        text eol=lf
 *.glb         binary
 
 *.wav         binary
@@ -94,16 +95,8 @@ CMakeLists.txt text eol=lf
 *.dll         binary
 *.exe         binary
 *.pdb         binary
-*.obj         text eol=lf
 *.ilk         binary
 
-# ---------------------------------------
-# Third-party: preserve as-is when needed
-# ---------------------------------------
-# If you want to avoid accidental EOL normalization in vendor code,
-# uncomment and adjust paths as needed.
-
-# NipsEngine/ThirdParty/** -text
-
-# Example: keep Dear ImGui vendor sources untouched
-# NipsEngine/ThirdParty/ImGui/** -text
+# obj 파일은 텍스트 형식이지만 쉐이더와 달리 줄바꿈 변환에 민감할 수 있어 
+# 안전하게 binary로 처리하거나 설정을 뺍니다.
+*.obj         binary

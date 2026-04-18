@@ -25,6 +25,7 @@
 #include "Render/Scene/LightInfo.h"
 #include "Component/Light/LightComponent.h"
 #include "Component/Light/SpotLightComponent.h"
+#include "Component/Light/PointLightComponent.h"
 
 namespace
 {
@@ -347,7 +348,7 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
         break;
     }
 
-    	case ELightType::Directional:
+    case ELightType::Directional:
     {
         const UDirectionalLightComponent* DirLight = static_cast<const UDirectionalLightComponent*>(LightComponent);
         const FVector&                    Direction = DirLight->GetLightDirection().GetSafeNormal();
@@ -370,6 +371,22 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
 
     case ELightType::Point:
     {
+        UPointLightComponent* PointLight = static_cast<UPointLightComponent*>(LightComponent);
+        FPointLightConstatns       PointLightConst;
+
+		const FColor ColorRef = PointLight->GetColor();
+
+		PointLightConst.Position = PointLight->GetWorldLocation();
+        PointLightConst.Radius = PointLight->GetRadius();
+        PointLightConst.Color = FVector(ColorRef.R, ColorRef.G, ColorRef.B);
+        PointLightConst.Intensity = PointLight->GetIntensity();
+
+        RenderBus.AddPointLight(PointLightConst);
+
+        //RenderBus.AddDebugCommand(ERenderPass::Editor,
+        //                          DebugCmd::MakeCone(SpotLightInfo.Position, SpotLightInfo.Direction,
+        //                                             SpotLightInfo.Radius, SpotLightInfo.OuterConeCos,
+        //                                             FColor::Green().ToVector4()));
 
         break;
     }
@@ -467,20 +484,19 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FShowFlags& ShowFla
     if (!Actor->IsVisible())
         return;
 
-	for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
-	{
-		CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus);
-	}
+    for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
+    {
+        CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus);
+    }
 
-	// 라이트 컴포넌트 수집 (Frustum culling이 필요 없는 라이트는 여기서 수집)
-	for (ULightComponent* Light : Actor->GetLightComponents())
-	{
-            if (Light == nullptr)
-                continue;
+    // 라이트 컴포넌트 수집 (Frustum culling이 필요 없는 라이트는 여기서 수집)
+    for (ULightComponent* Light : Actor->GetLightComponents())
+    {
+        if (Light == nullptr)
+            continue;
 
-			CollectLight(Light, RenderBus);
-		}
-
+        CollectLight(Light, RenderBus);
+    }
 }
 
 bool FRenderCollector::CollectFromSelectedActor(AActor* Actor, const FShowFlags& ShowFlags, EViewMode ViewMode,
