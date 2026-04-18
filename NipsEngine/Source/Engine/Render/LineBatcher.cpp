@@ -305,6 +305,48 @@ void FLineBatcher::AddCone(const FVector& Apex, const FVector& Direction, float 
     }
 }
 
+void FLineBatcher::AddSphere(const FVector& Center, float Radius, int32 SegmentCount, const FVector4& Color)
+{
+    if (SegmentCount < 3 || Radius <= 0.0f)
+    {
+        return;
+    }
+
+    TArray<FVector> CircleXY;
+    TArray<FVector> CircleXZ;
+    TArray<FVector> CircleYZ;
+
+    CircleXY.reserve(SegmentCount);
+    CircleXZ.reserve(SegmentCount);
+    CircleYZ.reserve(SegmentCount);
+
+    for (int32 i = 0; i < SegmentCount; ++i)
+    {
+        const float Theta = (2.0f * MathUtil::PI * i) / static_cast<float>(SegmentCount);
+
+        const float C = cosf(Theta);
+        const float S = sinf(Theta);
+
+        // XY plane
+        CircleXY.push_back(Center + FVector(C * Radius, S * Radius, 0.0f));
+
+        // XZ plane
+        CircleXZ.push_back(Center + FVector(C * Radius, 0.0f, S * Radius));
+
+        // YZ plane
+        CircleYZ.push_back(Center + FVector(0.0f, C * Radius, S * Radius));
+    }
+
+    for (int32 i = 0; i < SegmentCount; ++i)
+    {
+        const int32 Next = (i + 1) % SegmentCount;
+
+        AddLine(CircleXY[i], CircleXY[Next], Color);
+        AddLine(CircleXZ[i], CircleXZ[Next], Color);
+        AddLine(CircleYZ[i], CircleYZ[Next], Color);
+    }
+}
+
 void FLineBatcher::AddWorldHelpers(const FShowFlags& ShowFlags, float GridSpacing, int32 GridHalfLineCount,
 	const FVector& CameraPosition, const FVector& CameraForward, bool bOrthographic)
 {

@@ -372,22 +372,20 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
     case ELightType::Point:
     {
         UPointLightComponent* PointLight = static_cast<UPointLightComponent*>(LightComponent);
-        FPointLightConstatns       PointLightConst;
+        FPointLightConstatns  PointLightConst;
 
-		const FColor ColorRef = PointLight->GetColor();
+        const FColor ColorRef = PointLight->GetColor();
 
-		PointLightConst.Position = PointLight->GetWorldLocation();
+        PointLightConst.Position = PointLight->GetWorldLocation();
         PointLightConst.Radius = PointLight->GetRadius();
         PointLightConst.Color = FVector(ColorRef.R, ColorRef.G, ColorRef.B);
         PointLightConst.Intensity = PointLight->GetIntensity();
 
         RenderBus.AddPointLight(PointLightConst);
 
-        //RenderBus.AddDebugCommand(ERenderPass::Editor,
-        //                          DebugCmd::MakeCone(SpotLightInfo.Position, SpotLightInfo.Direction,
-        //                                             SpotLightInfo.Radius, SpotLightInfo.OuterConeCos,
-        //                                             FColor::Green().ToVector4()));
-
+        RenderBus.AddDebugCommand(
+            ERenderPass::Editor,
+            DebugCmd::MakeSphere(PointLightConst.Position, PointLightConst.Radius, FColor::Blue().ToVector4()));
         break;
     }
 
@@ -397,8 +395,8 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
         FSpotLightInfo       SpotLightInfo;
 
         FVector4 LightColor = SpotLight->GetColor().ToVector4();
-        float InnerRadian = MathUtil::DegreesToRadians(SpotLight->GetInnerConeAngle());
-		float OuterRadian = MathUtil::DegreesToRadians(SpotLight->GetOuterConeAngle());
+        float    InnerRadian = MathUtil::DegreesToRadians(SpotLight->GetInnerConeAngle());
+        float    OuterRadian = MathUtil::DegreesToRadians(SpotLight->GetOuterConeAngle());
 
         SpotLightInfo.Color = {LightColor.X, LightColor.Y, LightColor.Z};
         SpotLightInfo.Direction = SpotLight->GetDirection();
@@ -409,18 +407,16 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
         SpotLightInfo.Radius = SpotLight->GetRadius();
         RenderBus.AddSpotLightInfo(SpotLightInfo);
 
-		//Add Debug Shape Command
+        // Add Debug Shape Command
         // Outer
         RenderBus.AddDebugCommand(ERenderPass::Editor,
                                   DebugCmd::MakeCone(SpotLightInfo.Position, SpotLightInfo.Direction,
-                                                     SpotLightInfo.Radius, OuterRadian,
-                                                     FColor::Green().ToVector4()));
+                                                     SpotLightInfo.Radius, OuterRadian, FColor::Green().ToVector4()));
 
         // Iner
         RenderBus.AddDebugCommand(ERenderPass::Editor,
                                   DebugCmd::MakeCone(SpotLightInfo.Position, SpotLightInfo.Direction,
-                                                     SpotLightInfo.Radius, InnerRadian,
-                                                     FColor::Yellow().ToVector4()));
+                                                     SpotLightInfo.Radius, InnerRadian, FColor::Yellow().ToVector4()));
         break;
     }
 

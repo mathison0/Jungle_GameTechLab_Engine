@@ -152,6 +152,7 @@ void FEditorControlWidget::Render(float DeltaTime)
                 ASpotLightActor* Actor = World->SpawnActor<ASpotLightActor>();
                 Actor->InitDefaultComponents();
                 Actor->SetActorLocation(CurSpawnPoint);
+
                 LastSpawnedActor = Actor;
                 break;
             }

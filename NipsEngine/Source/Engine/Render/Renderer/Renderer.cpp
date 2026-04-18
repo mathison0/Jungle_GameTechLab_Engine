@@ -193,6 +193,12 @@ void FRenderer::PrepareBatchers(const FRenderBus& InRenderBus)
                                       Cone.Color);
             break;
         }
+        case EDebugShapeType::Sphere:
+        {
+            const FDebugSphere& Sphere = RenderCmd.Sphere;
+            EditorLineBatcher.AddSphere(Sphere.Center, Sphere.Radius, Sphere.SegmentCount, Sphere.Color);
+            break;
+        }
         }
     }
 }

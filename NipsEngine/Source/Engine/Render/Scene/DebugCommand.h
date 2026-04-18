@@ -93,4 +93,13 @@ namespace DebugCmd
         Cmd.Cone = {Apex, Dir, Height, Angle, Color, SegmentCount};
         return Cmd;
     }
+
+	inline FDebugRenderCommand MakeSphere(const FVector& Center, float Radius, const FVector4& Color,
+                                          int32 SegmentCount = 16) 
+	{
+            FDebugRenderCommand Cmd{};
+            Cmd.Type = EDebugShapeType::Sphere;
+            Cmd.Sphere = {Center, Radius, Color, SegmentCount};
+            return Cmd;
+	}
 } // namespace DebugCmd
