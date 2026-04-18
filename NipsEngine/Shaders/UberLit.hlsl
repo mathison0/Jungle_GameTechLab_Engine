@@ -78,7 +78,8 @@ cbuffer Lighting : register(b13)
 {
     FAmbientLightInfo Ambient;
     uint DirectionalLightCount;
-    float3 LightingPad;
+    uint SpotLightCount;
+    float2 LightingPad;
 };
 
 // Light Data (t0-t5)
@@ -119,6 +120,39 @@ float3 CalculateDirectionalSpecular(FDirectionalLightInfo Light, float3 N, float
     float3 HalfVector = normalize(L + ViewDir);
     float NdotH = saturate(dot(N, HalfVector));
     return Light.Color * Light.Intensity * SpecularTex * pow(NdotH, max(Shininess, 1.0f));
+}
+
+float3 CalculateSpotDiffuse(FSpotLightInfo Light, float3 N, float3 WorldPos, float3 DiffuseTex)
+{
+    float3 Lvec = Light.Position - WorldPos;
+    float dist = length(Lvec);
+
+    if (dist > Light.Radius)
+        return 0;
+
+    float3 L = Lvec / dist;
+
+    float NdotL = max(dot(N, L), 0.0f);
+
+    float3 lightDir = normalize(-Light.Direction);
+
+    float spotCos = dot(L, lightDir);
+    float spotFactor = smoothstep(
+        Light.OuterConeCos,
+        Light.InnerConeCos,
+        spotCos
+    );
+    spotFactor = spotFactor * spotFactor;
+
+    float attenuation = 1.0f - (dist / Light.Radius);
+    attenuation = attenuation * attenuation;
+
+    return Light.Color *
+           Light.Intensity *
+           DiffuseTex *
+           NdotL *
+           attenuation *
+           spotFactor;
 }
 
 PSInput VS(VSInput input)
@@ -185,51 +219,10 @@ float4 PS(PSInput input) : SV_TARGET
     // Spot Light (DEBUG VERSION)
     // =========================
     float3 SpotLighting = float3(0, 0, 0);
-    uint tempCount;
-    uint dummy;
-    SpotLights.GetDimensions(tempCount, dummy);
-    tempCount = min(tempCount, 32);
     
-    for (uint i = 0; i < tempCount; ++i)
+    for (uint i = 0; i < SpotLightCount; ++i)
     {
-        FSpotLightInfo light = SpotLights[i];
-
-        // 거리 벡터
-        float3 L = light.Position - input.WorldPos;
-        float dist = length(L);
-
-        if (dist > light.Radius)
-            continue;
-
-        L /= dist;
-
-        // 거리 감쇠
-        float distNorm = dist / light.Radius;
-        float attenuation = saturate(1.0f - distNorm);
-        attenuation *= attenuation;
-
-        // cone 계산
-        float3 lightDir = normalize(-light.Direction);
-        float spotCos = dot(L, lightDir);
-
-        float spotFactor = smoothstep(
-            light.OuterConeCos,
-            light.InnerConeCos,
-            spotCos
-        );
-        spotFactor = pow(spotFactor, 2.0f);
-        // diffuse
-        float NdotL_spot = max(dot(N, L), 0.0f);
-
-        float3 diffuse =
-            light.Color *
-            light.Intensity *
-            DiffuseTex *
-            NdotL_spot *
-            attenuation *
-            spotFactor;
-
-        SpotLighting += diffuse;
+        SpotLighting += CalculateSpotDiffuse(SpotLights[i], N, input.WorldPos, DiffuseTex);
     }
     
     

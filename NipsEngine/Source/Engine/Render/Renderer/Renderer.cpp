@@ -1037,6 +1037,7 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
 
     FLightingConstants LightingData = Lighting;
     LightingData.DirectionalLightCount = static_cast<uint32>(InRenderBus.GetDirectionalLights().size());
+    LightingData.SpotLightCount = static_cast<uint32>(InRenderBus.GetSpotLightInfos().size());
 
     Resources.LightingConstantBuffer.Update(Context, &LightingData, sizeof(FLightingConstants));
     ID3D11Buffer* b13 = Resources.LightingConstantBuffer.GetBuffer();
