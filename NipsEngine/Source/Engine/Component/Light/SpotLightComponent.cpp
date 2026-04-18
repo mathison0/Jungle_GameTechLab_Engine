@@ -1,7 +1,9 @@
 ﻿#include "SpotLightComponent.h"
+#include "Object/ObjectFactory.h"
 #include <algorithm>
 
 DEFINE_CLASS(USpotLightComponent, ULightComponent)
+REGISTER_FACTORY(USpotLightComponent)
 
 void USpotLightComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) 
 {

@@ -13,6 +13,7 @@
 #include "Render/Scene/RenderCollector.h"
 #include "Render/Scene/RenderBus.h"
 #include "Render/Scene/LightInfo.h"
+#include "Render/Resource/VertexLayouts.h"
 
 void FRenderer::Create(HWND hWindow)
 {
@@ -24,16 +25,16 @@ void FRenderer::Create(HWND hWindow)
     }
 
     // 1. 일반 메쉬 (Primitive.hlsl)
-    Resources.PrimitiveShader.Create(Device.GetDevice(), L"Shaders/Primitive.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                     ARRAYSIZE(PrimitiveInputLayout));
+    Resources.PrimitiveShader.Create(Device.GetDevice(), L"Shaders/Primitive.hlsl", "VS", "PS", VertexLayouts::PrimitiveInputLayout,
+                                     ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 2. 기즈모 (Gizmo.hlsl)
-    Resources.GizmoShader.Create(Device.GetDevice(), L"Shaders/Gizmo.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                 ARRAYSIZE(PrimitiveInputLayout));
+    Resources.GizmoShader.Create(Device.GetDevice(), L"Shaders/Gizmo.hlsl", "VS", "PS",
+                                 VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 3. 에디터/라인 (Editor.hlsl)
-    Resources.EditorShader.Create(Device.GetDevice(), L"Shaders/Editor.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                  ARRAYSIZE(PrimitiveInputLayout));
+    Resources.EditorShader.Create(Device.GetDevice(), L"Shaders/Editor.hlsl", "VS", "PS",
+                                  VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 4. 월드 그리드 / 축 (ShaderGrid.hlsl, ShaderAxis.hlsl)
     Resources.GridShader.Create(Device.GetDevice(), L"Shaders/ShaderGrid.hlsl", "GridVS", "GridPS", nullptr, 0);
@@ -41,22 +42,22 @@ void FRenderer::Create(HWND hWindow)
 
     // 5. 선택 마스크 (SelectionMask.hlsl)
     Resources.SelectionMaskShader.Create(Device.GetDevice(), L"Shaders/SelectionMask.hlsl", "VS", "PS",
-                                         PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
+                                         VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 6. 포스트 프로세스 아웃라인 (OutlinePostProcess.hlsl)
     Resources.OutlineShader.Create(Device.GetDevice(), L"Shaders/OutlinePostProcess.hlsl", "VS", "PS", nullptr, 0);
 
     // 7. 스태틱 메시/라이트 통합 셰이더 (UberLit.hlsl)
-    Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS", NormalVertexInputLayout,
-                                   ARRAYSIZE(NormalVertexInputLayout));
+    Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS",
+                                   VertexLayouts::NormalVertexInputLayout, ARRAYSIZE(VertexLayouts::NormalVertexInputLayout));
 
     // 8. 데칼 (Decal.hlsl)
-    Resources.DecalShader.Create(Device.GetDevice(), L"Shaders/Decal.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                 ARRAYSIZE(PrimitiveInputLayout));
+    Resources.DecalShader.Create(Device.GetDevice(), L"Shaders/Decal.hlsl", "VS", "PS",
+                                 VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 9. 파이어볼 (FireBall.hlsl)
-    Resources.FireBallShader.Create(Device.GetDevice(), L"Shaders/FireBall.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                    ARRAYSIZE(PrimitiveInputLayout));
+    Resources.FireBallShader.Create(Device.GetDevice(), L"Shaders/FireBall.hlsl", "VS", "PS",
+                                    VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 10. Depth Scene View 모드 (DepthScene.hlsl)
     Resources.DepthVisualizerShader.Create(Device.GetDevice(), L"Shaders/DepthScene.hlsl", "VS", "PS", nullptr, 0);
@@ -82,6 +83,8 @@ void FRenderer::Create(HWND hWindow)
     Resources.DirectionalLightBuffer.Create(Device.GetDevice(), sizeof(FDirectionalLightConstants), 64);
     Resources.SpotLightBuffer.Create(Device.GetDevice(), sizeof(FSpotLightInfo));
     Resources.PointlLightBuffer.Create(Device.GetDevice(), sizeof(FPointLightConstatns), 64);
+
+	ShaderManager.PreloadShaders(Device.GetDevice());
 
     // TODO : SamplerState 관리
     D3D11_SAMPLER_DESC SampDesc = {};

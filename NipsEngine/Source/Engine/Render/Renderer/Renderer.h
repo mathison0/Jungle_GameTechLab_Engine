@@ -9,6 +9,7 @@
 
 #include "Render/Scene/RenderBus.h"
 #include "Render/Device/D3DDevice.h"
+#include "Render/Resource/ShaderManager.h"
 #include "Render/Resource/RenderResources.h"
 #include "Render/LineBatcher.h"
 #include "Render/FontBatcher.h"
@@ -111,21 +112,6 @@ private:
 	FGridShaderPassState GridShaderPassState;
 	ID3D11ShaderResourceView* SubUVCachedSRV = nullptr;
 	bool bUsePostProcessSceneColor = false;
-
-	//	Primitive and Gizmo Input Layout
-	D3D11_INPUT_ELEMENT_DESC PrimitiveInputLayout[2] =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  static_cast<uint32>(offsetof(FVertex, Position)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, static_cast<uint32>(offsetof(FVertex, Color)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-
-	// StaticMesh (FNormalVertex) Input Layout
-	D3D11_INPUT_ELEMENT_DESC NormalVertexInputLayout[4] =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FNormalVertex, Position)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, static_cast<uint32>(offsetof(FNormalVertex, Color)),    D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FNormalVertex, Normal)),   D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, static_cast<uint32>(offsetof(FNormalVertex, UVs)),      D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
+	FShaderManager ShaderManager;
 };
 
