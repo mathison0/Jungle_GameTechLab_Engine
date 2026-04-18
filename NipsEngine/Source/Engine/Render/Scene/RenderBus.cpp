@@ -9,9 +9,9 @@ void FRenderBus::Clear()
         DebugCommandQueues[i].clear();
 	}
     DirectionalLights.clear();
+    SpotLightInfos.clear();
     FogConstants = FFogConstants{};
     LightingConstants = FLightingConstants{};
-    SpotLightInfos.clear();
 }
 
 void FRenderBus::AddCommand(ERenderPass Pass, const FRenderCommand& InCommand)
@@ -41,11 +41,6 @@ const TArray<FRenderCommand>& FRenderBus::GetCommands(ERenderPass Pass) const
 const TArray<FDebugRenderCommand>& FRenderBus::GetDebugCommands(ERenderPass Pass) const
 {
     return DebugCommandQueues[(uint32)Pass];
-}
-
-void FRenderBus::AddSpotLightInfo(const FSpotLightInfo& LightInfo) 
-{ 
-	SpotLightInfos.push_back(LightInfo); 
 }
 
 void FRenderBus::SetViewProjection(const FMatrix& InView, const FMatrix& InProj)

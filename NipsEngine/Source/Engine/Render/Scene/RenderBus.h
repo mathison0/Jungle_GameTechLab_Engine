@@ -29,8 +29,8 @@ public:
 
     const TArray<FDirectionalLightConstants>& GetDirectionalLights() const { return DirectionalLights; }
     void AddDirectionalLight(const FDirectionalLightConstants& InLight) { DirectionalLights.push_back(InLight); }
-
-	void AddSpotLightInfo(const FSpotLightInfo& LightInfo);
+    const TArray<FSpotLightInfo>& GetSpotLightInfos() const { return SpotLightInfos; };
+    void AddSpotLightInfo(const FSpotLightInfo& LightInfo) { SpotLightInfos.push_back(LightInfo); };
 
 	// Getter,Setter
 	void SetViewProjection(const FMatrix& InView, const FMatrix& InProj);
@@ -52,7 +52,6 @@ public:
 	void SetWireframeColor(const FVector& InColor) { WireframeColor = InColor; }
 	bool IsOrthographic() const { return Proj.M[3][3] == 1.0f; }
 
-	const TArray<FSpotLightInfo>& GetSpotLightInfos() const { return SpotLightInfos; };
 
 private:
 	TArray<FRenderCommand> PassQueues[(uint32)ERenderPass::MAX];

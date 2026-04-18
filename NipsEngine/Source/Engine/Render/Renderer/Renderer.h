@@ -47,13 +47,6 @@ struct FGridShaderPassState
 	FEditorConstants Constants = {};
 };
 
-struct FLightBuffer
-{
-    ID3D11Buffer* Buffer = nullptr;
-    ID3D11ShaderResourceView* Srv = nullptr;
-	uint32 Capacity = 0;
-};
-
 class FRenderer
 {
 public:
@@ -100,10 +93,6 @@ private:
 	// LineBatcher Flush 공통 — EditorConstants 업데이트 + EditorShader 바인딩
 	void FlushLineBatcher(FLineBatcher& Batcher, ERenderPass Pass, const FRenderBus& Bus, ID3D11DeviceContext* Context);
 
-	void CreateLightBuffer(uint32 NewCapacity);
-	void ReleaseLightBuffer();
-    void UpdateLightBuffer(const TArray<FSpotLightInfo>& SpotLights);
-
 private:
 	FD3DDevice Device;
 	FRenderTargetSet CurrentRenderTargets;
@@ -138,8 +127,5 @@ private:
 		{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FNormalVertex, Normal)),   D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, static_cast<uint32>(offsetof(FNormalVertex, UVs)),      D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
-
-	//관리하는 클래스 별도 생성 필요
-	FLightBuffer SpotLightBuffer;
 };
 

@@ -182,13 +182,6 @@ float4 PS(PSInput input) : SV_TARGET
     }
     
     // =========================
-    // Directional Light
-    // =========================
-    float3 L = normalize(-Directional.Direction);
-    float NdotL = max(dot(N, L), 0.0f);
-    float FinalDiffuse = Directional.Color * Directional.Intensity * DiffuseTex * NdotL;
-    
-    // =========================
     // Spot Light (DEBUG VERSION)
     // =========================
     float3 SpotLighting = float3(0, 0, 0);
@@ -211,17 +204,20 @@ float4 PS(PSInput input) : SV_TARGET
         L /= dist;
 
         // 거리 감쇠
-        float attenuation = saturate(1.0f - dist / light.Radius);
+        float distNorm = dist / light.Radius;
+        float attenuation = saturate(1.0f - distNorm);
+        attenuation *= attenuation;
 
         // cone 계산
         float3 lightDir = normalize(-light.Direction);
         float spotCos = dot(L, lightDir);
 
-        float spotFactor = saturate(
-            (spotCos - light.OuterConeCos) /
-            max(light.InnerConeCos - light.OuterConeCos, 0.001f)
+        float spotFactor = smoothstep(
+            light.OuterConeCos,
+            light.InnerConeCos,
+            spotCos
         );
-
+        spotFactor = pow(spotFactor, 2.0f);
         // diffuse
         float NdotL_spot = max(dot(N, L), 0.0f);
 

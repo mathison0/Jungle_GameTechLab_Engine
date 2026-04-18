@@ -80,6 +80,7 @@ void FRenderer::Create(HWND hWindow)
     Resources.FXAAConstantBuffer.Create(Device.GetDevice(), sizeof(FFXAAConstants));
     Resources.LightingConstantBuffer.Create(Device.GetDevice(), sizeof(FLightingConstants));
     Resources.DirectionalLightBuffer.Create(Device.GetDevice(), sizeof(FDirectionalLightConstants), 64);
+    Resources.SpotLightBuffer.Create(Device.GetDevice(), sizeof(FSpotLightInfo));
 
     // TODO : SamplerState 관리
     D3D11_SAMPLER_DESC SampDesc = {};
@@ -140,6 +141,8 @@ void FRenderer::Release()
     Resources.FogConstantBuffer.Release();
     Resources.FXAAConstantBuffer.Release();
     Resources.LightingConstantBuffer.Release();
+    Resources.DirectionalLightBuffer.Release();
+    Resources.SpotLightBuffer.Release();
 
     Resources.MeshSamplerState.Reset();
     Resources.FXAASamplerState.Reset();
@@ -150,8 +153,6 @@ void FRenderer::Release()
     GridLineBatcher.Release();
     FontBatcher.Release();
     SubUVBatcher.Release();
-
-	ReleaseLightBuffer();
 
     Device.Release();
 }
@@ -270,7 +271,6 @@ void FRenderer::Render(const FRenderBus& InRenderBus, const FFXAASettings* InFXA
     ID3D11DeviceContext* Context = Device.GetDeviceContext();
     bUsePostProcessSceneColor = false;
     UpdateFrameBuffer(Context, InRenderBus);
-    UpdateLightBuffer(InRenderBus.GetSpotLightInfos());
 
     RenderScenePasses(Context, InRenderBus);
     RenderPostProcess(Context, InRenderBus, InFXAASettings);
@@ -531,70 +531,6 @@ void FRenderer::FlushLineBatcher(FLineBatcher& Batcher, ERenderPass Pass, const 
     Batcher.Flush(Context);
 }
 
-void FRenderer::CreateLightBuffer(uint32 NewCapacity) 
-{
-    SpotLightBuffer.Capacity = NewCapacity;
-
-    D3D11_BUFFER_DESC desc = {};
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    desc.ByteWidth = sizeof(FSpotLightInfo) * NewCapacity;
-    desc.Usage = D3D11_USAGE_DYNAMIC;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-    desc.StructureByteStride = sizeof(FSpotLightInfo);
-
-	ID3D11Device* Device = this->Device.GetDevice();
-    Device->CreateBuffer(&desc, nullptr, &SpotLightBuffer.Buffer);
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-    srvDesc.Buffer.FirstElement = 0;
-    srvDesc.Buffer.NumElements = NewCapacity;
-
-    Device->CreateShaderResourceView(SpotLightBuffer.Buffer, &srvDesc, &SpotLightBuffer.Srv);
-}
-
-void FRenderer::ReleaseLightBuffer() 
-{
-    if (SpotLightBuffer.Srv)
-    {
-        SpotLightBuffer.Srv->Release();
-        SpotLightBuffer.Srv = nullptr;
-    }
-
-	if (SpotLightBuffer.Buffer)
-	{
-		SpotLightBuffer.Buffer->Release();
-		SpotLightBuffer.Buffer = nullptr;
-	}
-
-	SpotLightBuffer.Capacity = 0;
-}
-
-void FRenderer::UpdateLightBuffer(const TArray<FSpotLightInfo>& SpotLights) 
-{
-    size_t Count = SpotLights.size();
-    if (Count == 0)
-    {
-        return;
-    }
-
-	if (Count > SpotLightBuffer.Capacity)
-	{
-       ReleaseLightBuffer();
-       CreateLightBuffer(static_cast<uint32>(Count));
-	}
-
-	D3D11_MAPPED_SUBRESOURCE mapped;
-    ID3D11DeviceContext* Context = Device.GetDeviceContext();
-	Context->Map(SpotLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-
-    memcpy(mapped.pData, SpotLights.data(), sizeof(FSpotLightInfo) * Count);
-
-    Context->Unmap(SpotLightBuffer.Buffer, 0);
-}
-
 // ============================================================
 // 기본 패스 실행기
 // ============================================================
@@ -730,11 +666,6 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             ID3D11SamplerState* Samplers[] = {Resources.MeshSamplerState.Get()};
             Context->PSSetSamplers(0, 1, Samplers);
         }
-
-		if (SpotLightBuffer.Buffer)
-		{
-			Context->PSSetShaderResources(1,1,&SpotLightBuffer.Srv);
-		}
 
         // [주의] 텍스처(SRV)는 타입이 같아도 메시의 머티리얼마다 변경될 수 있으므로 분기문 밖에서 매번 바인딩합니다.
         {
@@ -1121,4 +1052,13 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
 
     ID3D11ShaderResourceView* SRV = Resources.DirectionalLightBuffer.GetSRV();
     Context->PSSetShaderResources(10, 1, &SRV);
+
+	// StructuredBuffer: Spot Lights 
+	const TArray<FSpotLightInfo>& SpotLights = InRenderBus.GetSpotLightInfos();
+	if (!SpotLights.empty())
+	{
+        Resources.SpotLightBuffer.Update(Context, SpotLights.data(), static_cast<uint32>(SpotLights.size()));
+	}
+	ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
+    Context->PSSetShaderResources(1, 1, &SpotLightSRV);
 }
