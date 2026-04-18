@@ -88,8 +88,8 @@ StructuredBuffer<uint> TileSpotLightIndices : register(t3);
 StructuredBuffer<uint2> TilePointLightGrid : register(t4);
 StructuredBuffer<uint2> TileSpotLightGrid : register(t5);
 
-// Directional Lights (t13)
-StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t13);
+// Directional Lights (t10)
+StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t10);
 
 // StaticMesh Textures (t6-t9)
 Texture2D DiffuseMap : register(t6);

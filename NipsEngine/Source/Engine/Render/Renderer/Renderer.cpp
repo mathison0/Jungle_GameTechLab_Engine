@@ -1040,7 +1040,7 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     Context->VSSetConstantBuffers(13, 1, &b13);
     Context->PSSetConstantBuffers(13, 1, &b13);
 
-    // StructuredBuffer: Directional Lights → t13
+    // StructuredBuffer: Directional Lights → t10
     const TArray<FDirectionalLightConstants>& DirLights = InRenderBus.GetDirectionalLights();
     if (!DirLights.empty())
     {
@@ -1048,5 +1048,5 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     }
 
     ID3D11ShaderResourceView* SRV = Resources.DirectionalLightBuffer.GetSRV();
-    Context->PSSetShaderResources(13, 1, &SRV);
+    Context->PSSetShaderResources(10, 1, &SRV);
 }
