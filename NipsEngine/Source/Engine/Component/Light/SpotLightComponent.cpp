@@ -10,7 +10,7 @@ void USpotLightComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
     OutProps.push_back({"OuterConeAngle", EPropertyType::Float, &OuterConeAngle});
 }
 
-const FVector& USpotLightComponent::GetDirection() const
+const FVector USpotLightComponent::GetDirection() const
 {
 	return GetWorldMatrix().GetForwardVector(); 
 }

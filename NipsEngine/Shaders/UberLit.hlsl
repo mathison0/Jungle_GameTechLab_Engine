@@ -155,6 +155,42 @@ float3 CalculateSpotDiffuse(FSpotLightInfo Light, float3 N, float3 WorldPos, flo
            spotFactor;
 }
 
+float3 CalculateSpotSpecular(FSpotLightInfo Light, float3 N, float3 WorldPos, float3 CameraWorldPos, float3 SpecularTex, float Shininess)
+{
+    float3 Lvec = Light.Position - WorldPos;
+    float dist = length(Lvec);
+
+    if (dist > Light.Radius)
+        return 0;
+
+    float3 L = Lvec / dist;
+
+    float3 V = normalize(CameraWorldPos - WorldPos);
+    float3 H = normalize(L + V);
+
+    float NdotH = saturate(dot(N, H));
+
+    float3 lightDir = normalize(-Light.Direction);
+    float spotCos = dot(L, lightDir);
+
+    float spotFactor = smoothstep(
+        Light.OuterConeCos,
+        Light.InnerConeCos,
+        spotCos
+    );
+    spotFactor *= spotFactor;
+
+    float attenuation = 1.0f - (dist / Light.Radius);
+    attenuation *= attenuation;
+
+    return Light.Color *
+           Light.Intensity *
+           SpecularTex *
+           pow(NdotH, max(Shininess, 1.0f)) *
+           attenuation *
+           spotFactor;
+}
+
 PSInput VS(VSInput input)
 {
     PSInput output;
@@ -223,6 +259,9 @@ float4 PS(PSInput input) : SV_TARGET
     for (uint i = 0; i < SpotLightCount; ++i)
     {
         SpotLighting += CalculateSpotDiffuse(SpotLights[i], N, input.WorldPos, DiffuseTex);
+        
+        //Specular
+        //SpotLighting += CalculateSpotSpecular(SpotLights[i], N, input.WorldPos, CameraWorldPos, SpecularTex, Shininess);
     }
     
     

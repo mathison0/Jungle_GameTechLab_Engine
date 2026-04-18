@@ -11,7 +11,7 @@ class USpotLightComponent : public ULightComponent
 
 	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 
-	const FVector& GetDirection() const;
+	const FVector GetDirection() const;
 
 	float GetInnerConeAngle() const;
     void  SetInnerConeAngle(float InAngle);
