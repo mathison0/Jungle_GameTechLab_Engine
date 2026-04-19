@@ -1,6 +1,7 @@
 ﻿#include "ShaderManager.h"
 #include "VertexLayouts.h"
 #include "Render/Resource/Shader.h"
+#include "Render/Common/ViewTypes.h"
 
 FShader* FShaderManager::GetShader(const FShaderKey& Key)
 {
@@ -15,7 +16,7 @@ FShader* FShaderManager::GetShader(const FShaderKey& Key)
 void FShaderManager::PreloadShaders(ID3D11Device* Device)
 {
 
-    for (int view = 0; view < 3; ++view)
+    for (int view = 0; view < (int)EViewMode::Count; ++view)
     {
         FShaderKey Key;
         Key.SetViewMode(view);
@@ -31,15 +32,17 @@ FShader* FShaderManager::CreateShader(ID3D11Device* Device, const FShaderKey& Ke
 {
     std::unique_ptr<FShader> Shader = std::make_unique<FShader>();
 
-    FString view = std::to_string(Key.Bits & 0b11);
+	static const char* ViewModeTable[] = {"0", "1", "2",  "3",  "4",  "5",  "6",  "7",
+                                          "8", "9", "10", "11", "12", "13", "14", "15"};
+
+	uint32 ViewModeIndex = Key.Bits & VIEWMODE_MASK;
 
     D3D_SHADER_MACRO Defines[] = 
-	{
-		{"VIEW_MODE", view.c_str()}, 
+	{{"VIEW_MODE", ViewModeTable[ViewModeIndex]}, 
 		{"USE_NORMALMAP", (Key.Bits & NORMALMAP_BIT) ? "1" : "0"},
 		{nullptr, nullptr}};
 
-    Shader->Create(Device, L"UberShader.hlsl", "VS", "PS", VertexLayouts::NormalVertexInputLayout, ARRAYSIZE(VertexLayouts::NormalVertexInputLayout));
+    Shader->Create(Device, L"Shaders/UberLit.hlsl", "VS", "PS", VertexLayouts::NormalVertexInputLayout, ARRAYSIZE(VertexLayouts::NormalVertexInputLayout),Defines);
 
     FShader* Result = Shader.get();
     ShaderMap.emplace(Key, std::move(Shader));

@@ -23,7 +23,7 @@ private:
 
 public:
 	void Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const char* InVSEntryPoint, const char* InPSEntryPoint,
-		const D3D11_INPUT_ELEMENT_DESC* InInputElements, UINT InInputElementCount);
+		const D3D11_INPUT_ELEMENT_DESC* InInputElements, UINT InInputElementCount, const D3D_SHADER_MACRO* InDefines = nullptr);
 	void Release();
 
 	void Bind(ID3D11DeviceContext* InDeviceContext) const;

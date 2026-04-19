@@ -611,6 +611,18 @@ void FRenderer::ApplyPassRenderState(ERenderPass Pass, ID3D11DeviceContext* Cont
     Device.SetRasterizerState(Rasterizer);
     Context->IASetPrimitiveTopology(State.Topology);
 
+	//Pass + ViewMode 별 셰이더 변경 필요
+    FShaderKey ShaderKey;
+    ShaderKey.SetViewMode((uint32)CurViewMode);
+    ShaderKey.SetNormalMap(false);
+
+	FShader* Shader = ShaderManager.GetShader(ShaderKey);
+	if (Shader && Pass == ERenderPass::Opaque)
+	{
+        Shader->Bind(Context);
+		return;
+	}
+
     if (State.Shader)
     {
         State.Shader->Bind(Context);
@@ -663,7 +675,6 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 
         if (bTypeChanged)
         {
-            Resources.UberLitShader.Bind(Context);
 
             ID3D11Buffer* cb1 = Resources.PerObjectConstantBuffer.GetBuffer();
             Context->VSSetConstantBuffers(1, 1, &cb1);

@@ -3,6 +3,12 @@
 #define UBERLIT_DEBUG_SPEC_MODE 0
 // 0: off, 1: NdotL, 2: NdotH, 3: spec
 
+// VIEW_MODE: 0(Lit), 5(Gouraud), 6(Lambert), 7(Phong)
+// USE_NORMALMAP: 0 or 1
+#ifndef VIEW_MODE
+    #define VIEW_MODE 0  // 기본값 설정
+#endif
+
 // StaticMesh Material (b6)
 cbuffer StaticMeshBuffer : register(b6)
 {
@@ -474,23 +480,21 @@ float4 PS(PSInput input) : SV_TARGET
     
     float3 finalColor = 0;
  
-    // 1. Gouraud
-
-    /*finalColor =
+ #if VIEW_MODE == 5  //Gouraud
+    finalColor =
         DiffuseTex * input.VertexDiffuseLighting +
-        SpecularTex * input.VertexSpecularLighting;*/
+        SpecularTex * input.VertexSpecularLighting;
 
-
-    // 2. Lambert
-     /*float3 DiffuseLighting;
-     CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
-     finalColor = DiffuseTex * DiffuseLighting;*/
-
-    // 3. Blinn-Phong
+#elif VIEW_MODE == 6 //Lambert
      float3 DiffuseLighting;
+     CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
+     finalColor = DiffuseTex * DiffuseLighting;
+
+#elif VIEW_MODE == 7 //BlinnPhong
+     float3 DiffuseLighting;    
      float3 SpecularLighting;
      CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseLighting, SpecularLighting);
      finalColor = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
-
+#endif
     return float4(finalColor, 1.0f);
 }

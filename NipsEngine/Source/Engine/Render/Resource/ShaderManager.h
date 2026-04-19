@@ -11,9 +11,8 @@ class FShader;
 
 enum EShaderKeyBits : uint32
 {
-    VIEWMODE_MASK = 0b00000000000000000000000000000011, // 2 bits
-    NORMALMAP_BIT = 1 << 2,
-    SKINNING_BIT = 1 << 3,
+    VIEWMODE_MASK = 0xF, // 4 bits
+    NORMALMAP_BIT = 1 << 4,
     // 필요하면 계속 추가
 };
 
@@ -26,7 +25,7 @@ struct FShaderKey
     inline void SetViewMode(uint32 view)
     {
         Bits &= ~VIEWMODE_MASK;
-        Bits |= (view & 0b11);
+        Bits |= (view & VIEWMODE_MASK);
     }
 
 	inline void SetNormalMap(bool enable)
@@ -36,6 +35,7 @@ struct FShaderKey
         else
             Bits &= ~NORMALMAP_BIT;
     }
+
 };
 
 struct FShaderKeyHash
