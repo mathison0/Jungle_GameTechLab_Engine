@@ -34,8 +34,5 @@ class USpotLightComponent : public ULightComponent
     float OuterConeAngle = 45.0f;
     float MaxConeAngle = 80.0f;
 
-
-	//Point Light Variable?
     float Radius = 10.f;
-
 };

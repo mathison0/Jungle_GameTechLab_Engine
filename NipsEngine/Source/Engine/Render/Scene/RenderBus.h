@@ -26,11 +26,15 @@ public:
 	const TArray<FRenderCommand>& GetCommands(ERenderPass Pass) const;
     const TArray<FDebugRenderCommand>& GetDebugCommands(ERenderPass Pass) const;
     TArray<FDirectionalLightConstants> DirectionalLights;
+    TArray<FPointLightConstatns>       PointlLights;
 
     const TArray<FDirectionalLightConstants>& GetDirectionalLights() const { return DirectionalLights; }
     void AddDirectionalLight(const FDirectionalLightConstants& InLight) { DirectionalLights.push_back(InLight); }
     const TArray<FSpotLightInfo>& GetSpotLightInfos() const { return SpotLightInfos; };
     void AddSpotLightInfo(const FSpotLightInfo& LightInfo) { SpotLightInfos.push_back(LightInfo); };
+
+	const TArray<FPointLightConstatns>& GetPointlLights() const { return PointlLights; }
+    void AddPointLight(const FPointLightConstatns& InLight) { PointlLights.push_back(InLight); }
 
 	// Getter,Setter
 	void SetViewProjection(const FMatrix& InView, const FMatrix& InProj);

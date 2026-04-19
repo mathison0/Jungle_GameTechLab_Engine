@@ -22,6 +22,7 @@
 
 #include "Component/Light/SpotLightComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
+#include "Component/Light/PointLightComponent.h"
 
 
 #define SEPARATOR()                                                                                                    \

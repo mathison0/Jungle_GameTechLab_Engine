@@ -81,6 +81,7 @@ void FRenderer::Create(HWND hWindow)
     Resources.LightingConstantBuffer.Create(Device.GetDevice(), sizeof(FLightingConstants));
     Resources.DirectionalLightBuffer.Create(Device.GetDevice(), sizeof(FDirectionalLightConstants), 64);
     Resources.SpotLightBuffer.Create(Device.GetDevice(), sizeof(FSpotLightInfo));
+    Resources.PointlLightBuffer.Create(Device.GetDevice(), sizeof(FPointLightConstatns), 64);
 
     // TODO : SamplerState 관리
     D3D11_SAMPLER_DESC SampDesc = {};
@@ -143,6 +144,7 @@ void FRenderer::Release()
     Resources.LightingConstantBuffer.Release();
     Resources.DirectionalLightBuffer.Release();
     Resources.SpotLightBuffer.Release();
+    Resources.PointlLightBuffer.Release();
 
     Resources.MeshSamplerState.Reset();
     Resources.FXAASamplerState.Reset();
@@ -189,6 +191,12 @@ void FRenderer::PrepareBatchers(const FRenderBus& InRenderBus)
             const FDebugCone& Cone = RenderCmd.Cone;
             EditorLineBatcher.AddCone(Cone.Apex, Cone.Direction, Cone.Height, Cone.Angle, Cone.SegmentCount,
                                       Cone.Color);
+            break;
+        }
+        case EDebugShapeType::Sphere:
+        {
+            const FDebugSphere& Sphere = RenderCmd.Sphere;
+            EditorLineBatcher.AddSphere(Sphere.Center, Sphere.Radius, Sphere.SegmentCount, Sphere.Color);
             break;
         }
         }
@@ -1038,6 +1046,7 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     FLightingConstants LightingData = Lighting;
     LightingData.DirectionalLightCount = static_cast<uint32>(InRenderBus.GetDirectionalLights().size());
     LightingData.SpotLightCount = static_cast<uint32>(InRenderBus.GetSpotLightInfos().size());
+    LightingData.PointLightCount = static_cast<uint32>(InRenderBus.GetPointlLights().size());
 
     Resources.LightingConstantBuffer.Update(Context, &LightingData, sizeof(FLightingConstants));
     ID3D11Buffer* b13 = Resources.LightingConstantBuffer.GetBuffer();
@@ -1050,16 +1059,23 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     {
         Resources.DirectionalLightBuffer.Update(Context, DirLights.data(), static_cast<uint32>(DirLights.size()));
     }
+    ID3D11ShaderResourceView* DirectionLightSRV = Resources.DirectionalLightBuffer.GetSRV();
+    Context->PSSetShaderResources(10, 1, &DirectionLightSRV);
 
-    ID3D11ShaderResourceView* SRV = Resources.DirectionalLightBuffer.GetSRV();
-    Context->PSSetShaderResources(10, 1, &SRV);
+    const TArray<FPointLightConstatns>& PointLights = InRenderBus.GetPointlLights();
+    if (!PointLights.empty())
+    {
+        Resources.PointlLightBuffer.Update(Context, PointLights.data(), static_cast<uint32>(PointLights.size()));
+    }
+    ID3D11ShaderResourceView* PointLightSRV = Resources.PointlLightBuffer.GetSRV();
+    Context->PSSetShaderResources(0, 1, &PointLightSRV);
 
-	// StructuredBuffer: Spot Lights 
-	const TArray<FSpotLightInfo>& SpotLights = InRenderBus.GetSpotLightInfos();
-	if (!SpotLights.empty())
-	{
+    // StructuredBuffer: Spot Lights
+    const TArray<FSpotLightInfo>& SpotLights = InRenderBus.GetSpotLightInfos();
+    if (!SpotLights.empty())
+    {
         Resources.SpotLightBuffer.Update(Context, SpotLights.data(), static_cast<uint32>(SpotLights.size()));
-	}
-	ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
+    }
+    ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
     Context->PSSetShaderResources(1, 1, &SpotLightSRV);
 }

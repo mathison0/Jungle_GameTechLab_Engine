@@ -12,7 +12,6 @@ enum ELightType
 
 class ULightComponent : public ULightComponentBase
 {
-
 	public:
     DECLARE_CLASS(ULightComponent, ULightComponentBase)
 

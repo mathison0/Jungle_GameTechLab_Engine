@@ -26,6 +26,7 @@ struct FRenderResources
 
 	FStructuredBuffer DirectionalLightBuffer;
     FStructuredBuffer SpotLightBuffer;
+    FStructuredBuffer PointlLightBuffer;
 
     FShader PrimitiveShader;
     FShader GizmoShader;

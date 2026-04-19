@@ -2,7 +2,6 @@
 
 #include "GameFramework/AActor.h"
 #include "Component/Light/DirectionalLightComponent.h"
-#include "Component/SceneComponent.h"
 
 class ADirectionalLightActor : public AActor
 {
