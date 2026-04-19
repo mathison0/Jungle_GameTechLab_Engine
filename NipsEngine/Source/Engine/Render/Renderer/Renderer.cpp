@@ -672,6 +672,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 
             // 샘플러 상태도 주로 렌더 타입에 종속적이므로 스킵 가능
             ID3D11SamplerState* Samplers[] = {Resources.MeshSamplerState.Get()};
+            Context->VSSetSamplers(0, 1, Samplers);
             Context->PSSetSamplers(0, 1, Samplers);
         }
 
@@ -680,6 +681,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             ID3D11ShaderResourceView* SRVs[4] = {
                 InCmd.Constants.StaticMesh.DiffuseSRV, InCmd.Constants.StaticMesh.AmbientSRV,
                 InCmd.Constants.StaticMesh.SpecularSRV, InCmd.Constants.StaticMesh.BumpSRV};
+            Context->VSSetShaderResources(6, 4, SRVs);
             Context->PSSetShaderResources(6, 4, SRVs);
         }
         break;
@@ -1060,6 +1062,7 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
         Resources.DirectionalLightBuffer.Update(Context, DirLights.data(), static_cast<uint32>(DirLights.size()));
     }
     ID3D11ShaderResourceView* DirectionLightSRV = Resources.DirectionalLightBuffer.GetSRV();
+    Context->VSSetShaderResources(10, 1, &DirectionLightSRV);
     Context->PSSetShaderResources(10, 1, &DirectionLightSRV);
 
     const TArray<FPointLightConstatns>& PointLights = InRenderBus.GetPointlLights();
@@ -1068,6 +1071,7 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
         Resources.PointlLightBuffer.Update(Context, PointLights.data(), static_cast<uint32>(PointLights.size()));
     }
     ID3D11ShaderResourceView* PointLightSRV = Resources.PointlLightBuffer.GetSRV();
+    Context->VSSetShaderResources(0, 1, &PointLightSRV);
     Context->PSSetShaderResources(0, 1, &PointLightSRV);
 
     // StructuredBuffer: Spot Lights
@@ -1077,5 +1081,6 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
         Resources.SpotLightBuffer.Update(Context, SpotLights.data(), static_cast<uint32>(SpotLights.size()));
     }
     ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
+    Context->VSSetShaderResources(1, 1, &SpotLightSRV);
     Context->PSSetShaderResources(1, 1, &SpotLightSRV);
 }

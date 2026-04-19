@@ -428,10 +428,10 @@ float4 PS(PSInput input) : SV_TARGET
     float3 finalColor = 0;
     
     // 1. Gouraud
-    //finalColor = input.VertexLighting;
+    finalColor = input.VertexLighting;
 
     // 2. Lambert
-    finalColor = CalculateLightingLambert(input.WorldPos, N, DiffuseTex);
+    //finalColor = CalculateLightingLambert(input.WorldPos, N, DiffuseTex);
 
     // 3. Blinn-Phong
      //finalColor = CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseTex, SpecularTex);
