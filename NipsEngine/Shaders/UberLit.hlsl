@@ -1,5 +1,8 @@
 #include "Common.hlsl"
 
+#define UBERLIT_DEBUG_SPEC_MODE 0
+// 0: off, 1: NdotL, 2: NdotH, 3: spec
+
 // StaticMesh Material (b6)
 cbuffer StaticMeshBuffer : register(b6)
 {
@@ -33,7 +36,8 @@ struct PSInput
     float3 WorldNormal : TEXCOORD1;
     float4 Tangent : TEXCOORD2;
     float2 UV : TEXCOORD3;
-    float3 VertexLighting : TEXCOORD4;
+    float3 VertexDiffuseLighting : TEXCOORD4;
+    float3 VertexSpecularLighting : TEXCOORD5;
 };
 
 // Lighting (b13)
@@ -386,6 +390,109 @@ float3 CalculateLightingBlinnPhong(
     return finalColor;
 }
 
+float3 CalculateAmbientOnly(FAmbientLightInfo Light, float3 MaterialAmbientColor)
+{
+    return Light.Color * Light.Intensity * MaterialAmbientColor;
+}
+
+float3 CalculateDirectionalDiffuseOnly(FDirectionalLightInfo Light, float3 N)
+{
+    float3 L = normalize(-Light.Direction);
+    float NdotL = max(dot(N, L), 0.0f);
+    return Light.Color * Light.Intensity * NdotL;
+}
+
+float3 CalculatePointDiffuseOnly(
+    FPointLightInfo Light,
+    float3 WorldPos,
+    float3 N)
+{
+    FPointLightCommon Common = EvaluatePointLightCommon(Light, WorldPos, N);
+    if (!Common.bValid)
+        return 0.0f.xxx;
+
+    return Light.Color * Light.Intensity * Common.NdotL * Common.Attenuation;
+}
+
+float3 CalculateSpotDiffuseOnly(FSpotLightInfo Light, float3 N, float3 WorldPos)
+{
+    float3 Lvec = Light.Position - WorldPos;
+    float dist = length(Lvec);
+
+    if (dist > Light.Radius)
+        return 0.0f.xxx;
+
+    float3 L = Lvec / max(dist, 1e-5f);
+    float NdotL = max(dot(N, L), 0.0f);
+
+    float3 lightDir = normalize(-Light.Direction);
+    float spotCos = dot(L, lightDir);
+
+    float spotFactor = smoothstep(Light.OuterConeCos, Light.InnerConeCos, spotCos);
+    spotFactor *= spotFactor;
+
+    float attenuation = 1.0f - (dist / Light.Radius);
+    attenuation *= attenuation;
+
+    return Light.Color * Light.Intensity * NdotL * attenuation * spotFactor;
+}
+
+float3 CalculateGouraudDiffuseOnly(float3 WorldPos, float3 N)
+{
+    float3 lighting = 0.0f.xxx;
+
+    lighting += CalculateAmbientOnly(Ambient, AmbientColor);
+
+    for (uint i = 0; i < DirectionalLightCount; ++i)
+    {
+        lighting += CalculateDirectionalDiffuseOnly(DirectionalLights[i], N);
+    }
+
+    for (uint j = 0; j < PointLightCount; ++j)
+    {
+        lighting += CalculatePointDiffuseOnly(PointLights[j], WorldPos, N);
+    }
+
+    for (uint k = 0; k < SpotLightCount; ++k)
+    {
+        lighting += CalculateSpotDiffuseOnly(SpotLights[k], N, WorldPos);
+    }
+
+    return lighting;
+}
+
+float3 CalculateDirectionalSpecularOnly(
+    FDirectionalLightInfo Light,
+    float3 N,
+    float3 WorldPos,
+    float3 CameraWorldPos,
+    float Shininess)
+{
+    float3 L = normalize(-Light.Direction);
+    float3 V = normalize(CameraWorldPos - WorldPos);
+    float3 H = normalize(L + V);
+    float NdotH = saturate(dot(N, H));
+    float spec = pow(NdotH, max(Shininess, 1.0f));
+    return Light.Color * Light.Intensity * spec;
+}
+
+float3 CalculateGouraudSpecularOnly(float3 WorldPos, float3 N)
+{
+    float3 lighting = 0.0f.xxx;
+
+    for (uint i = 0; i < DirectionalLightCount; ++i)
+    {
+        lighting += CalculateDirectionalSpecularOnly(
+            DirectionalLights[i],
+            N,
+            WorldPos,
+            CameraWorldPos,
+            Shininess);
+    }
+
+    return lighting;
+}
+
 
 PSInput VS(VSInput input)
 {
@@ -406,12 +513,10 @@ PSInput VS(VSInput input)
     
     // Gouraud Lighting
     {
-        float3 diffuseTex = GetDiffuseTexVS(output.UV);
         float3 N = normalize(output.WorldNormal);
         
-        output.VertexLighting = CalculateLightingLambert(output.WorldPos, N, diffuseTex);
-        // 블린퐁
-        // output.VertexLighting = CalculateLightingBlinnPhong(output.WorldPos, N, diffuseTex, GetSpecularTex(output.UV));
+        output.VertexDiffuseLighting = CalculateGouraudDiffuseOnly(output.WorldPos, N);
+        output.VertexSpecularLighting = CalculateGouraudSpecularOnly(output.WorldPos, N); // 블린퐁
 
     }
 
@@ -423,18 +528,20 @@ float4 PS(PSInput input) : SV_TARGET
     float3 N = normalize(input.WorldNormal);
     
     float3 DiffuseTex = GetDiffuseTexPS(input.UV);
-    float3 SpecularTex = GetSpecularTexPS(input.UV);
+    float3 SpecularTex = GetSpecularTexPS(input.UV);    
     
     float3 finalColor = 0;
-    
+ 
     // 1. Gouraud
-    finalColor = input.VertexLighting;
+    finalColor =
+    DiffuseTex * input.VertexDiffuseLighting +
+    SpecularTex * input.VertexSpecularLighting;
 
     // 2. Lambert
     //finalColor = CalculateLightingLambert(input.WorldPos, N, DiffuseTex);
 
     // 3. Blinn-Phong
-     //finalColor = CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseTex, SpecularTex);
+    //finalColor = CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseTex, SpecularTex);
 
     return float4(finalColor, 1.0f);
 }
