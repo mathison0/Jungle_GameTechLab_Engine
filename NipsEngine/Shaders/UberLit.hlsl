@@ -312,261 +312,124 @@ float3 CalculateSpotSpecular(FSpotLightInfo Light, float3 N, float3 WorldPos, fl
            spotFactor;
 }
 
-// Lambert
-float3 CalculateLightingLambert(float3 WorldPos, float3 N, float3 DiffuseTex)
+void CalculateLightingLambert(float3 WorldPos, float3 N, out float3 OutDiffuse)
 {
-    float3 finalColor = 0.0f.xxx;
-
-    finalColor += CalculateAmbientLight(Ambient, AmbientColor, DiffuseTex);
+    OutDiffuse = CalculateAmbientLight(Ambient, AmbientColor, 1.0f.xxx);
 
     for (uint i = 0; i < DirectionalLightCount; ++i)
     {
-        finalColor += CalculateDirectionalDiffuse(DirectionalLights[i], N, DiffuseTex);
+        float3 L = normalize(-DirectionalLights[i].Direction);
+        float NdotL = saturate(dot(N, L));
+        OutDiffuse += DirectionalLights[i].Color * DirectionalLights[i].Intensity * NdotL;
     }
 
     for (uint j = 0; j < PointLightCount; ++j)
     {
         FPointLightCommon Common = EvaluatePointLightCommon(PointLights[j], WorldPos, N);
-        finalColor += CalculatePointDiffuse(PointLights[j], DiffuseTex, Common);
+        if (Common.bValid)
+        {
+            OutDiffuse += PointLights[j].Color * PointLights[j].Intensity * Common.NdotL * Common.Attenuation;
+        }
     }
 
     for (uint k = 0; k < SpotLightCount; ++k)
     {
-        finalColor += CalculateSpotDiffuse(SpotLights[k], N, WorldPos, DiffuseTex);
-    }
+        float3 Lvec = SpotLights[k].Position - WorldPos;
+        float dist = length(Lvec);
 
-    return finalColor;
+        if (dist > SpotLights[k].Radius)
+            continue;
+
+        float3 L = Lvec / max(dist, 1e-5f);
+        float NdotL = saturate(dot(N, L));
+        if (NdotL <= 0.0f)
+            continue;
+
+        float3 lightDir = normalize(-SpotLights[k].Direction);
+        float spotCos = dot(L, lightDir);
+        float spotFactor = smoothstep(SpotLights[k].OuterConeCos, SpotLights[k].InnerConeCos, spotCos);
+        spotFactor *= spotFactor;
+
+        float attenuation = 1.0f - (dist / SpotLights[k].Radius);
+        attenuation *= attenuation;
+
+        OutDiffuse += SpotLights[k].Color * SpotLights[k].Intensity * NdotL * attenuation * spotFactor;
+    }
 }
 
-//  Blinn-Phong
-float3 CalculateLightingBlinnPhong(
+void CalculateLightingBlinnPhong(
     float3 WorldPos,
     float3 N,
-    float3 DiffuseTex,
-    float3 SpecularTex)
+    out float3 OutDiffuse,
+    out float3 OutSpecular)
 {
-    float3 finalColor = 0.0f.xxx;
-
-    finalColor += CalculateAmbientLight(Ambient, AmbientColor, DiffuseTex);
+    CalculateLightingLambert(WorldPos, N, OutDiffuse);
+    OutSpecular = 0.0f.xxx;
 
     for (uint i = 0; i < DirectionalLightCount; ++i)
     {
-        finalColor += CalculateDirectionalDiffuse(DirectionalLights[i], N, DiffuseTex);
-        finalColor += CalculateDirectionalSpecular(
-            DirectionalLights[i],
-            N,
-            WorldPos,
-            CameraWorldPos,
-            SpecularTex,
-            Shininess);
+        float3 L = normalize(-DirectionalLights[i].Direction);
+        float NdotL = saturate(dot(N, L));
+        if (NdotL <= 0.0f)
+            continue;
+
+        float3 V = normalize(CameraWorldPos - WorldPos);
+        float3 H = normalize(L + V);
+        float NdotH = saturate(dot(N, H));
+
+        OutSpecular += DirectionalLights[i].Color *
+                       DirectionalLights[i].Intensity *
+                       pow(NdotH, max(Shininess, 1.0f));
     }
 
     for (uint j = 0; j < PointLightCount; ++j)
     {
         FPointLightCommon Common = EvaluatePointLightCommon(PointLights[j], WorldPos, N);
-        finalColor += CalculatePointDiffuse(PointLights[j], DiffuseTex, Common);
-        finalColor += CalculatePointSpecular(
-            PointLights[j],
-            N,
-            WorldPos,
-            CameraWorldPos,
-            SpecularTex,
-            Shininess,
-            Common);
+        if (!Common.bValid)
+            continue;
+
+        float3 V = normalize(CameraWorldPos - WorldPos);
+        float3 H = normalize(Common.LightDir + V);
+        float NdotH = saturate(dot(normalize(N), H));
+
+        OutSpecular += PointLights[j].Color *
+                       PointLights[j].Intensity *
+                       pow(NdotH, max(Shininess, 1.0f)) *
+                       Common.Attenuation;
     }
 
     for (uint k = 0; k < SpotLightCount; ++k)
     {
-        finalColor += CalculateSpotDiffuse(SpotLights[k], N, WorldPos, DiffuseTex);
-        finalColor += CalculateSpotSpecular(
-            SpotLights[k],
-            N,
-            WorldPos,
-            CameraWorldPos,
-            SpecularTex,
-            Shininess);
+        float3 Lvec = SpotLights[k].Position - WorldPos;
+        float dist = length(Lvec);
+
+        if (dist > SpotLights[k].Radius)
+            continue;
+
+        float3 L = Lvec / max(dist, 1e-5f);
+        float NdotL = saturate(dot(N, L));
+        if (NdotL <= 0.0f)
+            continue;
+
+        float3 lightDir = normalize(-SpotLights[k].Direction);
+        float spotCos = dot(L, lightDir);
+        float spotFactor = smoothstep(SpotLights[k].OuterConeCos, SpotLights[k].InnerConeCos, spotCos);
+        spotFactor *= spotFactor;
+
+        float attenuation = 1.0f - (dist / SpotLights[k].Radius);
+        attenuation *= attenuation;
+
+        float3 V = normalize(CameraWorldPos - WorldPos);
+        float3 H = normalize(L + V);
+        float NdotH = saturate(dot(N, H));
+
+        OutSpecular += SpotLights[k].Color *
+                       SpotLights[k].Intensity *
+                       pow(NdotH, max(Shininess, 1.0f)) *
+                       attenuation *
+                       spotFactor;
     }
-
-    return finalColor;
 }
-
-float3 CalculateAmbientOnly(FAmbientLightInfo Light, float3 MaterialAmbientColor)
-{
-    return Light.Color * Light.Intensity * MaterialAmbientColor;
-}
-
-float3 CalculateDirectionalDiffuseOnly(FDirectionalLightInfo Light, float3 N)
-{
-    float3 L = normalize(-Light.Direction);
-    float NdotL = max(dot(N, L), 0.0f);
-    return Light.Color * Light.Intensity * NdotL;
-}
-
-float3 CalculatePointDiffuseOnly(
-    FPointLightInfo Light,
-    float3 WorldPos,
-    float3 N)
-{
-    FPointLightCommon Common = EvaluatePointLightCommon(Light, WorldPos, N);
-    if (!Common.bValid)
-        return 0.0f.xxx;
-
-    return Light.Color * Light.Intensity * Common.NdotL * Common.Attenuation;
-}
-
-float3 CalculateSpotDiffuseOnly(FSpotLightInfo Light, float3 N, float3 WorldPos)
-{
-    float3 Lvec = Light.Position - WorldPos;
-    float dist = length(Lvec);
-
-    if (dist > Light.Radius)
-        return 0.0f.xxx;
-
-    float3 L = Lvec / max(dist, 1e-5f);
-    float NdotL = max(dot(N, L), 0.0f);
-
-    float3 lightDir = normalize(-Light.Direction);
-    float spotCos = dot(L, lightDir);
-
-    float spotFactor = smoothstep(Light.OuterConeCos, Light.InnerConeCos, spotCos);
-    spotFactor *= spotFactor;
-
-    float attenuation = 1.0f - (dist / Light.Radius);
-    attenuation *= attenuation;
-
-    return Light.Color * Light.Intensity * NdotL * attenuation * spotFactor;
-}
-
-float3 CalculateGouraudDiffuseOnly(float3 WorldPos, float3 N)
-{
-    float3 lighting = 0.0f.xxx;
-
-    lighting += CalculateAmbientOnly(Ambient, AmbientColor);
-
-    for (uint i = 0; i < DirectionalLightCount; ++i)
-    {
-        lighting += CalculateDirectionalDiffuseOnly(DirectionalLights[i], N);
-    }
-
-    for (uint j = 0; j < PointLightCount; ++j)
-    {
-        lighting += CalculatePointDiffuseOnly(PointLights[j], WorldPos, N);
-    }
-
-    for (uint k = 0; k < SpotLightCount; ++k)
-    {
-        lighting += CalculateSpotDiffuseOnly(SpotLights[k], N, WorldPos);
-    }
-
-    return lighting;
-}
-
-float3 CalculateDirectionalSpecularOnly(
-    FDirectionalLightInfo Light,
-    float3 N,
-    float3 WorldPos,
-    float3 CameraWorldPos,
-    float Shininess)
-{
-    float3 L = normalize(-Light.Direction);
-    float3 V = normalize(CameraWorldPos - WorldPos);
-    float3 H = normalize(L + V);
-    float NdotH = saturate(dot(N, H));
-    float spec = pow(NdotH, max(Shininess, 1.0f));
-    return Light.Color * Light.Intensity * spec;
-}
-
-float3 CalculatePointSpecularOnly(
-    FPointLightInfo Light,
-    float3 N,
-    float3 WorldPos,
-    float3 CameraWorldPos,
-    float Shininess)
-{
-    FPointLightCommon Common = EvaluatePointLightCommon(Light, WorldPos, N);
-    if (!Common.bValid)
-        return 0.0f.xxx;
-
-    float3 V = normalize(CameraWorldPos - WorldPos);
-    float3 H = normalize(Common.LightDir + V);
-    float NdotH = saturate(dot(normalize(N), H));
-    float spec = pow(NdotH, max(Shininess, 1.0f));
-
-    return Light.Color * Light.Intensity * spec * Common.Attenuation;
-}
-
-float3 CalculateSpotSpecularOnly(
-    FSpotLightInfo Light,
-    float3 N,
-    float3 WorldPos,
-    float3 CameraWorldPos,
-    float Shininess)
-{
-    float3 Lvec = Light.Position - WorldPos;
-    float dist = length(Lvec);
-
-    if (dist > Light.Radius)
-        return 0.0f.xxx;
-
-    float3 L = Lvec / max(dist, 1e-5f);
-    float3 V = normalize(CameraWorldPos - WorldPos);
-    float3 H = normalize(L + V);
-
-    float NdotL = max(dot(N, L), 0.0f);
-    if (NdotL <= 0.0f)
-        return 0.0f.xxx;
-
-    float NdotH = saturate(dot(N, H));
-
-    float3 lightDir = normalize(-Light.Direction);
-    float spotCos = dot(L, lightDir);
-
-    float spotFactor = smoothstep(Light.OuterConeCos, Light.InnerConeCos, spotCos);
-    spotFactor *= spotFactor;
-
-    float attenuation = 1.0f - (dist / Light.Radius);
-    attenuation *= attenuation;
-
-    return Light.Color * Light.Intensity * pow(NdotH, max(Shininess, 1.0f)) * attenuation * spotFactor;
-}
-
-float3 CalculateGouraudSpecularOnly(float3 WorldPos, float3 N)
-{
-    float3 lighting = 0.0f.xxx;
-
-    for (uint i = 0; i < DirectionalLightCount; ++i)
-    {
-        lighting += CalculateDirectionalSpecularOnly(
-            DirectionalLights[i],
-            N,
-            WorldPos,
-            CameraWorldPos,
-            Shininess);
-    }
-
-    for (uint j = 0; j < PointLightCount; ++j)
-    {
-        lighting += CalculatePointSpecularOnly(
-            PointLights[j],
-            N,
-            WorldPos,
-            CameraWorldPos,
-            Shininess);
-    }
-
-    for (uint k = 0; k < SpotLightCount; ++k)
-    {
-        lighting += CalculateSpotSpecularOnly(
-            SpotLights[k],
-            N,
-            WorldPos,
-            CameraWorldPos,
-            Shininess);
-    }
-
-    return lighting;
-}
-
 
 PSInput VS(VSInput input)
 {
@@ -588,9 +451,14 @@ PSInput VS(VSInput input)
     // Gouraud Lighting
     {
         float3 N = normalize(output.WorldNormal);
-        
-        output.VertexDiffuseLighting = CalculateGouraudDiffuseOnly(output.WorldPos, N);
-        output.VertexSpecularLighting = CalculateGouraudSpecularOnly(output.WorldPos, N); // 블린퐁
+
+        CalculateLightingBlinnPhong(
+            output.WorldPos,
+            N,
+            output.VertexDiffuseLighting,
+            output.VertexSpecularLighting);
+        // 블린퐁
+        // output.VertexLighting = CalculateLightingBlinnPhong(output.WorldPos, N, diffuseTex, GetSpecularTex(output.UV));
 
     }
 
@@ -607,15 +475,22 @@ float4 PS(PSInput input) : SV_TARGET
     float3 finalColor = 0;
  
     // 1. Gouraud
-    finalColor =
-    DiffuseTex * input.VertexDiffuseLighting +
-    SpecularTex * input.VertexSpecularLighting;
+
+    /*finalColor =
+        DiffuseTex * input.VertexDiffuseLighting +
+        SpecularTex * input.VertexSpecularLighting;*/
+
 
     // 2. Lambert
-    //finalColor = CalculateLightingLambert(input.WorldPos, N, DiffuseTex);
+     /*float3 DiffuseLighting;
+     CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
+     finalColor = DiffuseTex * DiffuseLighting;*/
 
     // 3. Blinn-Phong
-    //finalColor = CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseTex, SpecularTex);
+     float3 DiffuseLighting;
+     float3 SpecularLighting;
+     CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseLighting, SpecularLighting);
+     finalColor = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
 
     return float4(finalColor, 1.0f);
 }

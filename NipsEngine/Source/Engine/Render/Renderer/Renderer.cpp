@@ -670,6 +670,20 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->VSSetConstantBuffers(6, 1, &cb6);
             Context->PSSetConstantBuffers(6, 1, &cb6);
 
+            // t0/t1 are reused by other passes (e.g. depth/decal), so UberLit needs its light SRVs rebound
+            // whenever we switch back to the static mesh path.
+            ID3D11ShaderResourceView* PointLightSRV = Resources.PointlLightBuffer.GetSRV();
+            Context->VSSetShaderResources(0, 1, &PointLightSRV);
+            Context->PSSetShaderResources(0, 1, &PointLightSRV);
+
+            ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
+            Context->VSSetShaderResources(1, 1, &SpotLightSRV);
+            Context->PSSetShaderResources(1, 1, &SpotLightSRV);
+
+            ID3D11ShaderResourceView* DirectionLightSRV = Resources.DirectionalLightBuffer.GetSRV();
+            Context->VSSetShaderResources(10, 1, &DirectionLightSRV);
+            Context->PSSetShaderResources(10, 1, &DirectionLightSRV);
+
             // 샘플러 상태도 주로 렌더 타입에 종속적이므로 스킵 가능
             ID3D11SamplerState* Samplers[] = {Resources.MeshSamplerState.Get()};
             Context->VSSetSamplers(0, 1, Samplers);
