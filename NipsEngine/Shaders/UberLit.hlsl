@@ -476,6 +476,60 @@ float3 CalculateDirectionalSpecularOnly(
     return Light.Color * Light.Intensity * spec;
 }
 
+float3 CalculatePointSpecularOnly(
+    FPointLightInfo Light,
+    float3 N,
+    float3 WorldPos,
+    float3 CameraWorldPos,
+    float Shininess)
+{
+    FPointLightCommon Common = EvaluatePointLightCommon(Light, WorldPos, N);
+    if (!Common.bValid)
+        return 0.0f.xxx;
+
+    float3 V = normalize(CameraWorldPos - WorldPos);
+    float3 H = normalize(Common.LightDir + V);
+    float NdotH = saturate(dot(normalize(N), H));
+    float spec = pow(NdotH, max(Shininess, 1.0f));
+
+    return Light.Color * Light.Intensity * spec * Common.Attenuation;
+}
+
+float3 CalculateSpotSpecularOnly(
+    FSpotLightInfo Light,
+    float3 N,
+    float3 WorldPos,
+    float3 CameraWorldPos,
+    float Shininess)
+{
+    float3 Lvec = Light.Position - WorldPos;
+    float dist = length(Lvec);
+
+    if (dist > Light.Radius)
+        return 0.0f.xxx;
+
+    float3 L = Lvec / max(dist, 1e-5f);
+    float3 V = normalize(CameraWorldPos - WorldPos);
+    float3 H = normalize(L + V);
+
+    float NdotL = max(dot(N, L), 0.0f);
+    if (NdotL <= 0.0f)
+        return 0.0f.xxx;
+
+    float NdotH = saturate(dot(N, H));
+
+    float3 lightDir = normalize(-Light.Direction);
+    float spotCos = dot(L, lightDir);
+
+    float spotFactor = smoothstep(Light.OuterConeCos, Light.InnerConeCos, spotCos);
+    spotFactor *= spotFactor;
+
+    float attenuation = 1.0f - (dist / Light.Radius);
+    attenuation *= attenuation;
+
+    return Light.Color * Light.Intensity * pow(NdotH, max(Shininess, 1.0f)) * attenuation * spotFactor;
+}
+
 float3 CalculateGouraudSpecularOnly(float3 WorldPos, float3 N)
 {
     float3 lighting = 0.0f.xxx;
@@ -484,6 +538,26 @@ float3 CalculateGouraudSpecularOnly(float3 WorldPos, float3 N)
     {
         lighting += CalculateDirectionalSpecularOnly(
             DirectionalLights[i],
+            N,
+            WorldPos,
+            CameraWorldPos,
+            Shininess);
+    }
+
+    for (uint j = 0; j < PointLightCount; ++j)
+    {
+        lighting += CalculatePointSpecularOnly(
+            PointLights[j],
+            N,
+            WorldPos,
+            CameraWorldPos,
+            Shininess);
+    }
+
+    for (uint k = 0; k < SpotLightCount; ++k)
+    {
+        lighting += CalculateSpotSpecularOnly(
+            SpotLights[k],
             N,
             WorldPos,
             CameraWorldPos,
