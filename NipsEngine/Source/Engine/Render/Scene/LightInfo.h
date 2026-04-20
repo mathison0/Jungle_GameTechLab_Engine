@@ -22,6 +22,7 @@ struct FSpotLightInfo
     float   InnerConeCos;
 
     float   OuterConeCos;
+    FVector Padding = FVector::ZeroVector;
 };
 
 struct FPointLightInfo
