@@ -470,8 +470,19 @@ float4 PS(PSInput input) : SV_TARGET
     float3 SpecularTex = GetSpecularTexPS(input.UV);
     
     float3 finalColor = 0;
+
+ #if VIEW_MODE == 1 //unlit
+    if (!(bool)bHasDiffuseMap)
+    {
+        DiffuseTex = float3(1.f, 1.f, 1.f);
+        finalColor = DiffuseColor;
+    }
+    else
+    {
+        finalColor = DiffuseTex;
+    }
  
- #if VIEW_MODE == 5  //Gouraud
+ #elif VIEW_MODE == 5  //Gouraud
     finalColor =
         DiffuseTex * input.VertexDiffuseLighting +
         SpecularTex * input.VertexSpecularLighting;
