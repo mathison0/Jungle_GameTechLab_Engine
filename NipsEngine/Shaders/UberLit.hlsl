@@ -452,7 +452,7 @@ PSInput VS(VSInput input)
     float3x3 normalMatrix = transpose(Inverse3x3((float3x3) Model));
     output.WorldNormal = normalize(mul(input.Normal, normalMatrix));
     output.WorldTangent = normalize(mul(input.Tangent, normalMatrix));
-
+    
     output.UV = input.UV + ScrollUV;
 
     
@@ -477,11 +477,18 @@ float4 PS(PSInput input) : SV_TARGET
 {
     float3 N = normalize(input.WorldNormal);
     
+    #if USE_NORMALMAP == 1
+    float3 T = normalize(input.WorldTangent);
+    float3 B = cross(N, T);
+    float3x3 TBN = float3x3(T, B, N);
+
+    float3 NormalTex = BumpMap.Sample(SampleState, input.UV).rgb * 2.0f - 1.0f;
+    N = normalize(mul(NormalTex,TBN));
+    #endif
+    
     float3 DiffuseTex = GetDiffuseTexPS(input.UV);
     float3 SpecularTex = GetSpecularTexPS(input.UV);
     
-    return float4(input.WorldTangent, 1.0f);
-   
     float3 finalColor = 0;
  
  #if VIEW_MODE == 5  //Gouraud
@@ -498,7 +505,11 @@ float4 PS(PSInput input) : SV_TARGET
      float3 DiffuseLighting;    
      float3 SpecularLighting;
      CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseLighting, SpecularLighting);
-     finalColor = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
+     
+    finalColor = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
+#elif VIEW_MODE == 8 //WorldNORMAL
+    finalColor = N * 0.5f + 0.5f;
+    
 #endif
     return float4(finalColor, 1.0f);
 }

@@ -12,6 +12,7 @@ enum class EViewMode : int32
 	Lit_Gouraud = 5,
 	Lit_Lambert = 6,
 	Lit_Phong = 7,
+	WorldNormal = 8,
 	Count
 };
 

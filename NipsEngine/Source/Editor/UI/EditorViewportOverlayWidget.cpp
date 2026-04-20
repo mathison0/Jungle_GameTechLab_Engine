@@ -63,6 +63,8 @@ static const char* GetViewModeName(EViewMode Mode)
         return "Lit_Lambert";
     case EViewMode::Lit_Phong:
         return "Lit_Phong";
+    case EViewMode::WorldNormal:
+        return "WorldNormal";
     default:
         return "Lit";
     }
