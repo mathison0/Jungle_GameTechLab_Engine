@@ -1072,7 +1072,11 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
 {
     FFrameConstants frameConstantData;
     frameConstantData.View = InRenderBus.GetView();
+    frameConstantData.InvView = frameConstantData.View;
+    frameConstantData.InvView.Inverse(); 
     frameConstantData.Projection = InRenderBus.GetProj();
+    frameConstantData.InvProjection = frameConstantData.Projection;
+    frameConstantData.InvProjection.Inverse(); 
     frameConstantData.bIsWireframe = (InRenderBus.GetViewMode() == EViewMode::Wireframe);
     frameConstantData.WireframeColor = InRenderBus.GetWireframeColor();
 

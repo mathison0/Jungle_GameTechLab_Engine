@@ -51,7 +51,7 @@ PSInput mainVS(VSInput input)
     
     // 비균일 스케일을 위한 역행렬 이후 전치 
     // 역행렬은 비용이 많이 들어서 상수 버퍼로 가져오는 게 나을 거 같네요...
-    float3x3 normalMatrix = transpose(Inverse3x3((float3x3) Model));
+    float3x3 normalMatrix = transpose(InvModel);
     output.WorldNormal = normalize(mul(input.Normal, normalMatrix));
     output.UV          = input.UV + ScrollUV;
     output.ClipPos     = ApplyMVP(input.Position);

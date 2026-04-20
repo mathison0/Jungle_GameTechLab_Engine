@@ -40,13 +40,16 @@ enum class ERenderCommandType
 struct FPerObjectConstants
 {
     FMatrix  Model;
+    FMatrix  InvModel;
     FVector4 Color;
 };
 
 struct FFrameConstants
 {
     FMatrix View;
+    FMatrix InvView;
     FMatrix Projection;
+    FMatrix InvProjection;
     float   bIsWireframe = 0.0f;
     FVector WireframeColor;
 };
