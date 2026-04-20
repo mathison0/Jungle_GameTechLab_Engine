@@ -9,6 +9,7 @@
 
 #include "Render/Scene/RenderBus.h"
 #include "Render/Device/D3DDevice.h"
+#include "Core/FileWatcher.h"
 #include "Render/Resource/ShaderManager.h"
 #include "Render/Resource/RenderResources.h"
 #include "Render/LineBatcher.h"
@@ -119,7 +120,10 @@ class FRenderer
 	FGridShaderPassState GridShaderPassState;
 	ID3D11ShaderResourceView* SubUVCachedSRV = nullptr;
 	bool bUsePostProcessSceneColor = false;
-    FShaderManager ShaderManager;
+
+	FShaderManager ShaderManager;
+	FFileWatcher ShaderFileWatcher;
+};
 
 	////	Primitive and Gizmo Input Layout
 	//D3D11_INPUT_ELEMENT_DESC PrimitiveInputLayout[2] =
@@ -141,4 +145,4 @@ class FRenderer
     //D3D11_INPUT_ELEMENT_DESC DepthPrepassInputLayout[1] = {
     //    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     //};
-};
+

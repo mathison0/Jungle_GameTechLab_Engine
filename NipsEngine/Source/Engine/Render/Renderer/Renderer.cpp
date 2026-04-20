@@ -4,8 +4,10 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <vector>
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
+#include "Editor/UI/EditorConsoleWidget.h"
 #include "Render/Common/RenderTypes.h"
 #include "Render/Mesh/MeshManager.h"
 #include "Core/Logging/Stats.h"
@@ -130,10 +132,17 @@ void FRenderer::Create(HWND hWindow)
 
     // GPU Profiler 초기화
     FGPUProfiler::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext());
+
+    if (!ShaderFileWatcher.Start(FPaths::ShaderDir(), true))
+    {
+        UE_LOG("[ShaderHotReload] Failed to start shader file watcher.");
+    }
 }
 
 void FRenderer::Release()
 {
+    ShaderFileWatcher.Stop();
+
     Resources.PrimitiveShader.Release();
     Resources.GizmoShader.Release();
     Resources.EditorShader.Release();
@@ -264,6 +273,12 @@ const TArray<FRenderCommand>& FRenderer::GetAlignedCommands(ERenderPass Pass, co
 //	GPU 프레임 시작. 반드시 Render 이전에 호출되어야 함.
 void FRenderer::BeginFrame()
 {
+    ShaderManager.ProcessHotReloads(
+        Device.GetDevice(),
+        ShaderFileWatcher.DequeueChangedFiles(),
+        Resources,
+        FontBatcher,
+        SubUVBatcher);
     Device.BeginFrame();
     UseBackBufferRenderTargets();
 #if STATS
@@ -698,7 +713,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         }
         else
         {
-            Resources.StaticMeshShader.Bind(Context);
+            Resources.UberLitShader.Bind(Context);
         }
 
         if (bTypeChanged)
@@ -1085,7 +1100,6 @@ void FRenderer::ApplyFXAA(ID3D11DeviceContext* InDeviceContext, const FFXAASetti
 
     bUsePostProcessSceneColor = true;
 }
-
 //	Present the rendered frame to the screen. 반드시 Render 이후에 호출되어야 함.
 void FRenderer::EndFrame()
 {

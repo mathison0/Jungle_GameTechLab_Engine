@@ -60,6 +60,11 @@ void FSubUVBatcher::Release()
     SubUVShader.Release();
 }
 
+bool FSubUVBatcher::ReloadShader()
+{
+    return Device.Get() ? SubUVShader.Reload(Device.Get()) : false;
+}
+
 void FSubUVBatcher::AddSprite(ID3D11ShaderResourceView* SRV, 
 							  const FVector& WorldPos,
                               const FVector& CamRight,

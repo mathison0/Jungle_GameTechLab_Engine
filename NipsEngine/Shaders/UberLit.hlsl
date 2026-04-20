@@ -656,6 +656,9 @@ float4 PS(PSInput input) : SV_TARGET
      float3 DiffuseLighting;
      CalculateLightingLambertTile(input.WorldPos, N, TileIndex, DiffuseLighting);
      finalColor = DiffuseTex * DiffuseLighting;
+     
+     //ShaderHotReload 테스트용 코드 
+     //finalColor = DiffuseTex * float3(1.0f, 1.0f, 1.0f);
 
 #elif VIEW_MODE == 7 //BlinnPhong
      float3 DiffuseLighting;    

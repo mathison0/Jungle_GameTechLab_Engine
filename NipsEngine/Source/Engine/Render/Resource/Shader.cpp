@@ -1,79 +1,111 @@
 ﻿#include "Shader.h"
-
 #include <iostream>
+#include "Core/Paths.h"
+#include "Render/Resource/ShaderCompilationUtils.h"
 
-void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const char * InVSEntryPoint, const char * InPSEntryPoint,
-		const D3D11_INPUT_ELEMENT_DESC * InInputElements, UINT InInputElementCount, const D3D_SHADER_MACRO* InDefines)
+bool FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const char* InVSEntryPoint, const char* InPSEntryPoint,
+	const D3D11_INPUT_ELEMENT_DESC* InInputElements, UINT InInputElementCount, const D3D_SHADER_MACRO* InDefines)
 {
-	TComPtr<ID3DBlob> vertexShaderCSO;
-	TComPtr<ID3DBlob> pixelShaderCSO;
-	TComPtr<ID3DBlob> errorBlob;
+	FilePath = InFilePath ? FPaths::ToAbsolute(InFilePath) : L"";
+	VSEntryPoint = InVSEntryPoint ? InVSEntryPoint : "";
+	PSEntryPoint = InPSEntryPoint ? InPSEntryPoint : "";
 
-	// Vertex Shader 컴파일
-	HRESULT hr = D3DCompileFromFile(InFilePath, InDefines, D3D_COMPILE_STANDARD_FILE_INCLUDE, InVSEntryPoint, "vs_5_0", 0, 0,
-		vertexShaderCSO.GetAddressOf(), errorBlob.GetAddressOf());
-	if (FAILED(hr))
-	{
-		if (errorBlob)
-		{
-			MessageBoxA(nullptr, (char*)errorBlob->GetBufferPointer(), "Vertex Shader Compile Error", MB_OK | MB_ICONERROR);
-		}
-		return;
-	}
 
-	// Vertex Shader 생성
-	hr = InDevice->CreateVertexShader(vertexShaderCSO->GetBufferPointer(), vertexShaderCSO->GetBufferSize(), nullptr,
-		VertexShader.ReleaseAndGetAddressOf());
-	if (FAILED(hr))
-	{
-		std::cerr << "Failed to create Vertex Shader (HRESULT: " << hr << ")" << std::endl;
-		return;
-	}
-
-	if (InPSEntryPoint != nullptr && InPSEntryPoint[0] != '\0')
-	{
-		// Pixel Shader 컴파일
-		errorBlob.Reset();
-		hr = D3DCompileFromFile(InFilePath, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, InPSEntryPoint, "ps_5_0", 0, 0,
-			pixelShaderCSO.GetAddressOf(), errorBlob.GetAddressOf());
-		if (FAILED(hr))
-		{
-			if (errorBlob)
-			{
-				MessageBoxA(nullptr, (char*)errorBlob->GetBufferPointer(), "Pixel Shader Compile Error", MB_OK | MB_ICONERROR);
-			}
-			return;
-		}
-
-		// Pixel Shader 생성
-		hr = InDevice->CreatePixelShader(pixelShaderCSO->GetBufferPointer(), pixelShaderCSO->GetBufferSize(), nullptr,
-			PixelShader.ReleaseAndGetAddressOf());
-		if (FAILED(hr))
-		{
-			std::cerr << "Failed to create Pixel Shader (HRESULT: " << hr << ")" << std::endl;
-			return;
-		}
-	}
-	else
-	{
-		PixelShader.Reset();
-	}
-
-	// Input Layout 생성 (fullscreen triangle 등 입력 레이아웃이 없는 VS 지원)
+	InputElements.clear();
 	if (InInputElements != nullptr && InInputElementCount > 0)
 	{
-		hr = InDevice->CreateInputLayout(InInputElements, InInputElementCount, vertexShaderCSO->GetBufferPointer(),
-			vertexShaderCSO->GetBufferSize(), InputLayout.ReleaseAndGetAddressOf());
-		if (FAILED(hr))
+		InputElements.assign(InInputElements, InInputElements + InInputElementCount);
+	}
+
+	MacroDefinitions.clear();
+	if (InDefines != nullptr)
+	{
+		for (const D3D_SHADER_MACRO* Macro = InDefines; Macro->Name != nullptr; ++Macro)
 		{
-			std::cerr << "Failed to create Input Layout (HRESULT: " << hr << ")" << std::endl;
-			return;
+			MacroDefinitions.emplace_back(Macro->Name, Macro->Definition ? Macro->Definition : "");
 		}
 	}
-	else
+
+	FShaderCompiledState CompiledState;
+	if (!CompileShaderState(InDevice, true, true, nullptr, CompiledState))
 	{
-		InputLayout.Reset();
+		return false;
 	}
+
+	ApplyCompiledState(std::move(CompiledState));
+	return true;
+}
+
+bool FShader::Reload(ID3D11Device* InDevice, std::string* OutFailureMessage, bool bLogFailures)
+{
+	if (!IsReloadable())
+	{
+		if (OutFailureMessage != nullptr)
+		{
+			*OutFailureMessage = "shader is not reloadable";
+		}
+		return false;
+	}
+
+	FShaderCompiledState CompiledState;
+	if (!CompileShaderState(InDevice, false, bLogFailures, OutFailureMessage, CompiledState))
+	{
+		return false;
+	}
+
+	ApplyCompiledState(std::move(CompiledState));
+	return true;
+}
+
+bool FShader::PrepareReload(
+	ID3D11Device* InDevice,
+	FShaderCompiledState& OutCompiledState,
+	std::string* OutFailureMessage,
+	bool bLogFailures)
+{
+	if (!IsReloadable())
+	{
+		if (OutFailureMessage != nullptr)
+		{
+			*OutFailureMessage = "shader is not reloadable";
+		}
+		return false;
+	}
+
+	return CompileShaderState(InDevice, false, bLogFailures, OutFailureMessage, OutCompiledState);
+}
+
+void FShader::CommitReload(FShaderCompiledState&& InCompiledState)
+{
+	ApplyCompiledState(std::move(InCompiledState));
+}
+
+bool FShader::CompileShaderState(
+	ID3D11Device* InDevice,
+	bool bAllowInterfaceChanges,
+	bool bLogFailures,
+	std::string* OutFailureMessage,
+	FShaderCompiledState& OutCompiledState)
+{
+	ShaderCompilationUtils::FCompileRequest Request = {};
+	Request.Device = InDevice;
+	Request.FilePath = FilePath;
+	Request.VSEntryPoint = VSEntryPoint;
+	Request.PSEntryPoint = PSEntryPoint;
+	Request.InputElements = &InputElements;
+	Request.MacroDefinitions = &MacroDefinitions;
+	Request.CurrentInterfaceSignature = &InterfaceSignature;
+	Request.bAllowInterfaceChanges = bAllowInterfaceChanges;
+	Request.bLogFailures = bLogFailures;
+	return ShaderCompilationUtils::CompileShader(Request, OutCompiledState, OutFailureMessage);
+}
+
+void FShader::ApplyCompiledState(FShaderCompiledState&& InCompiledState)
+{
+	VertexShader = std::move(InCompiledState.VertexShader);
+	PixelShader = std::move(InCompiledState.PixelShader);
+	InputLayout = std::move(InCompiledState.InputLayout);
+	InterfaceSignature = std::move(InCompiledState.InterfaceSignature);
 }
 
 void FShader::Release()
@@ -81,6 +113,7 @@ void FShader::Release()
 	InputLayout.Reset();
 	PixelShader.Reset();
 	VertexShader.Reset();
+	InterfaceSignature.clear();
 }
 
 void FShader::Bind(ID3D11DeviceContext* InDeviceContext) const

@@ -252,6 +252,7 @@
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp" />
     <ClCompile Include="Source\Engine\Core\CrashDump.cpp" />
     <ClCompile Include="Source\Engine\Core\EngineTypes.cpp" />
+    <ClCompile Include="Source\Engine\Core\FileWatcher.cpp" />
     <ClCompile Include="Source\Engine\Core\InputSystem.cpp" />
     <ClCompile Include="Source\Engine\Core\Paths.cpp" />
     <ClCompile Include="Source\Engine\Core\PlatformTime.cpp" />
@@ -292,6 +293,7 @@
     <ClCompile Include="Source\Engine\Render\Resource\Material.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\MeshBufferManager.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\Shader.cpp" />
+    <ClCompile Include="Source\Engine\Render\Resource\ShaderCompilationUtils.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\RenderBus.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\RenderCollector.cpp" />
     <ClCompile Include="Source\Engine\Runtime\Engine.cpp" />
@@ -396,6 +398,7 @@
     <ClInclude Include="Source\Engine\Core\CrashDump.h" />
     <ClInclude Include="Source\Engine\Core\Debug.h" />
     <ClInclude Include="Source\Engine\Core\EngineTypes.h" />
+    <ClInclude Include="Source\Engine\Core\FileWatcher.h" />
     <ClInclude Include="Source\Engine\Core\InputSystem.h" />
     <ClInclude Include="Source\Engine\Core\Paths.h" />
     <ClInclude Include="Source\Engine\Core\PlatformTime.h" />
@@ -463,6 +466,7 @@
     <ClInclude Include="Source\Engine\Render\Resource\MeshBufferManager.h" />
     <ClInclude Include="Source\Engine\Render\Resource\RenderResources.h" />
     <ClInclude Include="Source\Engine\Render\Resource\Shader.h" />
+    <ClInclude Include="Source\Engine\Render\Resource\ShaderCompilationUtils.h" />
     <ClInclude Include="Source\Engine\Render\Resource\VertexTypes.h" />
     <ClInclude Include="Source\Engine\Render\Scene\RenderBus.h" />
     <ClInclude Include="Source\Engine\Render\Scene\RenderCollector.h" />

@@ -68,6 +68,9 @@ cbuffer OutlineConstants : register(b5)
 
 float4 ApplyMVP(float3 pos)
 {
+    // Common.hlsl이 변경되었을 때 이에 의존하는 셰이더들이 정상적으로 리로드되는지 테스트하기 위한 코드.
+    //pos.y += 1.0f;
+    
     float4 world = mul(float4(pos, 1.0f), Model);
     float4 view = mul(world, View);
     return mul(view, Projection);
