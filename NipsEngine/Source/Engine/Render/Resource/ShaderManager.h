@@ -13,7 +13,16 @@ enum EShaderKeyBits : uint32
 {
     VIEWMODE_MASK = 0xF, // 4 bits
     NORMALMAP_BIT = 1 << 4,
+	OPAQUE_TYPE_SHIFT=5,
+	OPAQUE_TYPE_MASK = 0x3 << OPAQUE_TYPE_SHIFT,
     // 필요하면 계속 추가
+};
+
+enum EOpaqueType : uint32
+{
+	StaticMesh,
+	Decal,
+	Count
 };
 
 struct FShaderKey
@@ -35,6 +44,11 @@ struct FShaderKey
         else
             Bits &= ~NORMALMAP_BIT;
     }
+	inline void SetOpaqueType(uint32 type)
+	{
+		Bits &= ~OPAQUE_TYPE_MASK;
+        Bits |= (type << OPAQUE_TYPE_SHIFT) & OPAQUE_TYPE_MASK;
+	}
 
 };
 
