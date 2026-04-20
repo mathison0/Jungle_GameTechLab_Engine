@@ -132,7 +132,7 @@ bool FObjMtlLoader::Load(const FString& FilePath, TMap<FString, FMaterial>& OutM
 			Current->bHasSpecularTexture = true;
         }
 		// 범프 맵은 그레이스케일로 높이값이 저장되어 있고 추후 노말로 변환한다고 한다.
-        else if (Token == "map_bump" || Token == "bump")
+        else if (Token == "map_Bump" || Token == "bump")
         {
 			Current->BumpTexPath = ResolveTexPath(ISS);
 			Current->bHasBumpTexture = true;

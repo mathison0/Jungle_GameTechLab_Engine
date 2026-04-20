@@ -3,14 +3,14 @@
 #include <iostream>
 
 void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const char * InVSEntryPoint, const char * InPSEntryPoint,
-		const D3D11_INPUT_ELEMENT_DESC * InInputElements, UINT InInputElementCount)
+		const D3D11_INPUT_ELEMENT_DESC * InInputElements, UINT InInputElementCount, const D3D_SHADER_MACRO* InDefines)
 {
 	TComPtr<ID3DBlob> vertexShaderCSO;
 	TComPtr<ID3DBlob> pixelShaderCSO;
 	TComPtr<ID3DBlob> errorBlob;
 
 	// Vertex Shader 컴파일
-	HRESULT hr = D3DCompileFromFile(InFilePath, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, InVSEntryPoint, "vs_5_0", 0, 0,
+	HRESULT hr = D3DCompileFromFile(InFilePath, InDefines, D3D_COMPILE_STANDARD_FILE_INCLUDE, InVSEntryPoint, "vs_5_0", 0, 0,
 		vertexShaderCSO.GetAddressOf(), errorBlob.GetAddressOf());
 	if (FAILED(hr))
 	{

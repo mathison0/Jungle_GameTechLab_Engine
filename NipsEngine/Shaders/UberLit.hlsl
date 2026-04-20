@@ -3,6 +3,12 @@
 #define UBERLIT_DEBUG_SPEC_MODE 0
 // 0: off, 1: NdotL, 2: NdotH, 3: spec
 
+// VIEW_MODE: 0(Lit), 5(Gouraud), 6(Lambert), 7(Phong)
+// USE_NORMALMAP: 0 or 1
+#ifndef VIEW_MODE
+    #define VIEW_MODE 7  // 기본값 설정
+#endif
+
 // StaticMesh Material (b6)
 cbuffer StaticMeshBuffer : register(b6)
 {
@@ -14,10 +20,11 @@ cbuffer StaticMeshBuffer : register(b6)
     float3 CameraWorldPos;
     // ScrollUV
     float2 ScrollUV;
-    float Padding6_1;
-    
     uint bHasDiffuseMap;
     uint bHasSpecularMap;
+    
+    uint bHasNormalMap;
+    float Padding6_1;
     float Padding6_2;
     float Padding6_3;
 };
@@ -27,6 +34,7 @@ struct VSInput
     float3 Position : POSITION;
     float3 Normal : NORMAL;
     float2 UV : TEXCOORD;
+    float3 Tangent : TANGENT;
 };
 
 struct PSInput
@@ -34,7 +42,7 @@ struct PSInput
     float4 ClipPos : SV_POSITION;
     float3 WorldPos : TEXCOORD0;
     float3 WorldNormal : TEXCOORD1;
-    float4 Tangent : TEXCOORD2;
+    float3 WorldTangent : TEXCOORD2;
     float2 UV : TEXCOORD3;
     float3 VertexDiffuseLighting : TEXCOORD4;
     float3 VertexSpecularLighting : TEXCOORD5;
@@ -425,10 +433,10 @@ PSInput VS(VSInput input)
     // 역행렬은 비용이 많이 들어서 상수 버퍼로 가져오는 게 나을 거 같네요...
     float3x3 normalMatrix = transpose(Inverse3x3((float3x3) Model));
     output.WorldNormal = normalize(mul(input.Normal, normalMatrix));
-
+    output.WorldTangent = normalize(mul(input.Tangent, normalMatrix));
+    
     output.UV = input.UV + ScrollUV;
 
-    output.Tangent = float4(0, 0, 0, 1);
     
     // Gouraud Lighting
     {
@@ -449,27 +457,50 @@ float4 PS(PSInput input) : SV_TARGET
 {
     float3 N = normalize(input.WorldNormal);
     
+    #if USE_NORMALMAP == 1
+    float3 T = normalize(input.WorldTangent);
+    float3 B = cross(N, T);
+    float3x3 TBN = float3x3(T, B, N);
+
+    float3 NormalTex = BumpMap.Sample(SampleState, input.UV).rgb * 2.0f - 1.0f;
+    N = normalize(mul(NormalTex,TBN));
+    #endif
+    
     float3 DiffuseTex = GetDiffuseTexPS(input.UV);
-    float3 SpecularTex = GetSpecularTexPS(input.UV);    
+    float3 SpecularTex = GetSpecularTexPS(input.UV);
     
     float3 finalColor = 0;
+
+ #if VIEW_MODE == 1 //unlit
+    if (!(bool)bHasDiffuseMap)
+    {
+        DiffuseTex = float3(1.f, 1.f, 1.f);
+        finalColor = DiffuseColor;
+    }
+    else
+    {
+        finalColor = DiffuseTex;
+    }
  
-    // 1. Gouraud
-    /*finalColor =
+ #elif VIEW_MODE == 5  //Gouraud
+    finalColor =
         DiffuseTex * input.VertexDiffuseLighting +
-        SpecularTex * input.VertexSpecularLighting;*/
+        SpecularTex * input.VertexSpecularLighting;
 
-
-    // 2. Lambert
-     /*float3 DiffuseLighting;
-     CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
-     finalColor = DiffuseTex * DiffuseLighting;*/
-
-    // 3. Blinn-Phong
+#elif VIEW_MODE == 6 //Lambert
      float3 DiffuseLighting;
+     CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
+     finalColor = DiffuseTex * DiffuseLighting;
+
+#elif VIEW_MODE == 7 //BlinnPhong
+     float3 DiffuseLighting;    
      float3 SpecularLighting;
      CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseLighting, SpecularLighting);
-     finalColor = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
-
+     
+    finalColor = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
+#elif VIEW_MODE == 8 //WorldNORMAL
+    finalColor = N * 0.5f + 0.5f;
+    
+#endif
     return float4(finalColor, 1.0f);
 }

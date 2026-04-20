@@ -9,6 +9,7 @@
 
 #include "Render/Scene/RenderBus.h"
 #include "Render/Device/D3DDevice.h"
+#include "Render/Resource/ShaderManager.h"
 #include "Render/Resource/RenderResources.h"
 #include "Render/LineBatcher.h"
 #include "Render/FontBatcher.h"
@@ -69,7 +70,7 @@ class FRenderer
 
     void ApplyPassRenderState(ERenderPass Pass, ID3D11DeviceContext* Context, EViewMode ViewMode);
     void BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContext* Context,
-                          ERenderCommandType& LastCommandType);
+                          ERenderCommandType& LastCommandType, const EViewMode ViewMode);
 
     void RenderScenePasses(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus);
     void RenderPostProcess(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus,
@@ -112,31 +113,28 @@ class FRenderer
     const TArray<FRenderCommand>& GetAlignedCommands(ERenderPass Pass, const TArray<FRenderCommand>& Commands);
     TArray<FRenderCommand>        SortedCommandBuffer; // 재할당 방지용 멤버 버퍼
 
-    FPassRenderState          PassRenderStates[(uint32)ERenderPass::MAX];
-    FPassBatcherBinding       PassBatchers[(uint32)ERenderPass::MAX];
-    FGridShaderPassState      GridShaderPassState;
-    ID3D11ShaderResourceView* SubUVCachedSRV = nullptr;
-    bool                      bUsePostProcessSceneColor = false;
+	FPassRenderState    PassRenderStates[(uint32)ERenderPass::MAX];
+	FPassBatcherBinding PassBatchers[(uint32)ERenderPass::MAX];
+	FGridShaderPassState GridShaderPassState;
+	ID3D11ShaderResourceView* SubUVCachedSRV = nullptr;
+	bool bUsePostProcessSceneColor = false;
+    FShaderManager ShaderManager;
 
-    //	Primitive and Gizmo Input Layout
-    D3D11_INPUT_ELEMENT_DESC PrimitiveInputLayout[2] = {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<uint32>(offsetof(FVertex, Position)),
-         D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, static_cast<uint32>(offsetof(FVertex, Color)),
-         D3D11_INPUT_PER_VERTEX_DATA, 0},
-    };
+	//	Primitive and Gizmo Input Layout
+	D3D11_INPUT_ELEMENT_DESC PrimitiveInputLayout[2] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  static_cast<uint32>(offsetof(FVertex, Position)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, static_cast<uint32>(offsetof(FVertex, Color)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
 
-    // StaticMesh (FNormalVertex) Input Layout
-    D3D11_INPUT_ELEMENT_DESC NormalVertexInputLayout[4] = {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<uint32>(offsetof(FNormalVertex, Position)),
-         D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, static_cast<uint32>(offsetof(FNormalVertex, Color)),
-         D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<uint32>(offsetof(FNormalVertex, Normal)),
-         D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, static_cast<uint32>(offsetof(FNormalVertex, UVs)),
-         D3D11_INPUT_PER_VERTEX_DATA, 0},
-    };
+	// StaticMesh (FNormalVertex) Input Layout
+	D3D11_INPUT_ELEMENT_DESC NormalVertexInputLayout[4] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FNormalVertex, Position)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, static_cast<uint32>(offsetof(FNormalVertex, Color)),    D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FNormalVertex, Normal)),   D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, static_cast<uint32>(offsetof(FNormalVertex, UVs)),      D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
 
     // Depth Prepass 전용 Input Layout — Position만 선언
     D3D11_INPUT_ELEMENT_DESC DepthPrepassInputLayout[1] = {

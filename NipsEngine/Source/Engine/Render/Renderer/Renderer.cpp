@@ -13,6 +13,7 @@
 #include "Render/Scene/RenderCollector.h"
 #include "Render/Scene/RenderBus.h"
 #include "Render/Scene/LightInfo.h"
+#include "Render/Resource/VertexLayouts.h"
 
 void FRenderer::Create(HWND hWindow)
 {
@@ -24,16 +25,16 @@ void FRenderer::Create(HWND hWindow)
     }
 
     // 1. 일반 메쉬 (Primitive.hlsl)
-    Resources.PrimitiveShader.Create(Device.GetDevice(), L"Shaders/Primitive.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                     ARRAYSIZE(PrimitiveInputLayout));
+    Resources.PrimitiveShader.Create(Device.GetDevice(), L"Shaders/Primitive.hlsl", "VS", "PS", VertexLayouts::PrimitiveInputLayout,
+                                     ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 2. 기즈모 (Gizmo.hlsl)
-    Resources.GizmoShader.Create(Device.GetDevice(), L"Shaders/Gizmo.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                 ARRAYSIZE(PrimitiveInputLayout));
+    Resources.GizmoShader.Create(Device.GetDevice(), L"Shaders/Gizmo.hlsl", "VS", "PS",
+                                 VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 3. 에디터/라인 (Editor.hlsl)
-    Resources.EditorShader.Create(Device.GetDevice(), L"Shaders/Editor.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                  ARRAYSIZE(PrimitiveInputLayout));
+    Resources.EditorShader.Create(Device.GetDevice(), L"Shaders/Editor.hlsl", "VS", "PS",
+                                  VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 4. 월드 그리드 / 축 (ShaderGrid.hlsl, ShaderAxis.hlsl)
     Resources.GridShader.Create(Device.GetDevice(), L"Shaders/ShaderGrid.hlsl", "GridVS", "GridPS", nullptr, 0);
@@ -41,22 +42,22 @@ void FRenderer::Create(HWND hWindow)
 
     // 5. 선택 마스크 (SelectionMask.hlsl)
     Resources.SelectionMaskShader.Create(Device.GetDevice(), L"Shaders/SelectionMask.hlsl", "VS", "PS",
-                                         PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
+                                         VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 6. 포스트 프로세스 아웃라인 (OutlinePostProcess.hlsl)
     Resources.OutlineShader.Create(Device.GetDevice(), L"Shaders/OutlinePostProcess.hlsl", "VS", "PS", nullptr, 0);
 
     // 7. 스태틱 메시/라이트 통합 셰이더 (UberLit.hlsl)
-    Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS", NormalVertexInputLayout,
-                                   ARRAYSIZE(NormalVertexInputLayout));
+    Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS",
+                                   VertexLayouts::NormalVertexInputLayout, ARRAYSIZE(VertexLayouts::NormalVertexInputLayout));
 
     // 8. 데칼 (Decal.hlsl)
-    Resources.DecalShader.Create(Device.GetDevice(), L"Shaders/Decal.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                 ARRAYSIZE(PrimitiveInputLayout));
+    Resources.DecalShader.Create(Device.GetDevice(), L"Shaders/Decal.hlsl", "VS", "PS",
+                                 VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 9. 파이어볼 (FireBall.hlsl)
-    Resources.FireBallShader.Create(Device.GetDevice(), L"Shaders/FireBall.hlsl", "VS", "PS", PrimitiveInputLayout,
-                                    ARRAYSIZE(PrimitiveInputLayout));
+    Resources.FireBallShader.Create(Device.GetDevice(), L"Shaders/FireBall.hlsl", "VS", "PS",
+                                    VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 10. Depth Scene View 모드 (DepthScene.hlsl)
     Resources.DepthVisualizerShader.Create(Device.GetDevice(), L"Shaders/DepthScene.hlsl", "VS", "PS", nullptr, 0);
@@ -86,6 +87,8 @@ void FRenderer::Create(HWND hWindow)
     Resources.DirectionalLightBuffer.Create(Device.GetDevice(), sizeof(FDirectionalLightConstants), 64);
     Resources.SpotLightBuffer.Create(Device.GetDevice(), sizeof(FSpotLightInfo));
     Resources.PointlLightBuffer.Create(Device.GetDevice(), sizeof(FPointLightConstatns), 64);
+
+	ShaderManager.PreloadShaders(Device.GetDevice());
 
     // TODO : SamplerState 관리
     D3D11_SAMPLER_DESC SampDesc = {};
@@ -550,7 +553,8 @@ void FRenderer::FlushLineBatcher(FLineBatcher& Batcher, ERenderPass Pass, const 
 void FRenderer::ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand>& Commands, const FRenderBus& Bus,
                                    ID3D11DeviceContext* Context)
 {
-    ApplyPassRenderState(Pass, Context, Bus.GetViewMode());
+    EViewMode ViewMode = Bus.GetViewMode();
+    ApplyPassRenderState(Pass, Context, ViewMode);
 
     const FPassRenderState& State = PassRenderStates[(uint32)Pass];
     ERenderCommandType      LastCommandType = static_cast<ERenderCommandType>(-1);
@@ -564,7 +568,7 @@ void FRenderer::ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand
         Device.SetDepthStencilState(TargetDepth);
         Device.SetBlendState(TargetBlend);
 
-        BindShaderByType(Cmd, Context, LastCommandType);
+        BindShaderByType(Cmd, Context, LastCommandType, ViewMode);
 
         switch (Cmd.Type)
         {
@@ -620,7 +624,7 @@ void FRenderer::ApplyPassRenderState(ERenderPass Pass, ID3D11DeviceContext* Cont
 }
 
 void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContext* Context,
-                                 ERenderCommandType& LastCommandType)
+                                 ERenderCommandType& LastCommandType, const EViewMode ViewMode)
 {
     bool bTypeChanged = (LastCommandType != InCmd.Type);
 
@@ -661,11 +665,27 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
     }
 
     case ERenderCommandType::StaticMesh:
+    {
         Resources.StaticMeshConstantBuffer.Update(Context, &InCmd.Constants.StaticMesh, sizeof(FStaticMeshConstants));
+
+        // ViewMode, NormalMap 기준 셰이더 변경 필요
+        FShaderKey ShaderKey;
+        ShaderKey.SetViewMode((uint32)ViewMode);
+        bool bHasNormalMap = InCmd.Constants.StaticMesh.bHasNormalMap > 0 ? true : false;
+        ShaderKey.SetNormalMap(bHasNormalMap);
+
+        FShader* Shader = ShaderManager.GetShader(ShaderKey);
+        if (Shader)
+        {
+            Shader->Bind(Context);
+        }
+        else
+        {
+            Resources.StaticMeshShader.Bind(Context);
+        }
 
         if (bTypeChanged)
         {
-            Resources.UberLitShader.Bind(Context);
 
             ID3D11Buffer* cb1 = Resources.PerObjectConstantBuffer.GetBuffer();
             Context->VSSetConstantBuffers(1, 1, &cb1);
@@ -704,6 +724,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->PSSetShaderResources(6, 4, SRVs);
         }
         break;
+    }
 
     case ERenderCommandType::Decal:
     {

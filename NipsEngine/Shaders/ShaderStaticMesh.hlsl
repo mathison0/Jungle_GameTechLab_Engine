@@ -9,11 +9,12 @@ cbuffer StaticMeshBuffer : register(b6)
     // Camera
     float3 CameraWorldPos;
     // ScrollUV
-    float2 ScrollUV;
-    float  Padding6_1;
-    
+    float2 ScrollUV;    
     uint   bHasDiffuseMap;   
-    uint   bHasSpecularMap;  
+    uint   bHasSpecularMap;
+    
+    uint   bHasNormalMap;
+    float  Padding6_1;
     float  Padding6_2;       
     float  Padding6_3;       
 };

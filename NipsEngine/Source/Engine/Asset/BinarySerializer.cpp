@@ -335,12 +335,6 @@ void FBinarySerializer::WriteVertices(std::ofstream& Out, const FStaticMesh& Dat
 		WriteFloatLE(Out, Vertex.Position.Y);
 		WriteFloatLE(Out, Vertex.Position.Z);
 
-		//	Color
-		WriteFloatLE(Out, Vertex.Color.R);
-		WriteFloatLE(Out, Vertex.Color.G);
-		WriteFloatLE(Out, Vertex.Color.B);
-		WriteFloatLE(Out, Vertex.Color.A);
-
 		//	Normal
 		WriteFloatLE(Out, Vertex.Normal.X);
 		WriteFloatLE(Out, Vertex.Normal.Y);
@@ -349,6 +343,11 @@ void FBinarySerializer::WriteVertices(std::ofstream& Out, const FStaticMesh& Dat
 		//	UVs
 		WriteFloatLE(Out, Vertex.UVs.X);
 		WriteFloatLE(Out, Vertex.UVs.Y);
+
+		//	Tangent
+		WriteFloatLE(Out, Vertex.Tangent.X);
+		WriteFloatLE(Out, Vertex.Tangent.Y);
+		WriteFloatLE(Out, Vertex.Tangent.Z);
 	}
 }
 
@@ -378,15 +377,6 @@ bool FBinarySerializer::ReadVertices(std::ifstream& In, FStaticMesh& OutData, ui
 			return false;
 		}
 
-		//	Color
-		if (!ReadFloatLE(In, Vertex.Color.R) ||
-			!ReadFloatLE(In, Vertex.Color.G) ||
-			!ReadFloatLE(In, Vertex.Color.B) ||
-			!ReadFloatLE(In, Vertex.Color.A))
-		{
-			return false;
-		}
-
 		//	Normal
 		if (!ReadFloatLE(In, Vertex.Normal.X) ||
 			!ReadFloatLE(In, Vertex.Normal.Y) ||
@@ -398,6 +388,14 @@ bool FBinarySerializer::ReadVertices(std::ifstream& In, FStaticMesh& OutData, ui
 		//	UVs
 		if (!ReadFloatLE(In, Vertex.UVs.X) ||
 			!ReadFloatLE(In, Vertex.UVs.Y))
+		{
+			return false;
+		}
+
+		//	Tangent
+		if (!ReadFloatLE(In, Vertex.Tangent.X) ||
+			!ReadFloatLE(In, Vertex.Tangent.Y) ||
+			!ReadFloatLE(In, Vertex.Tangent.Z))
 		{
 			return false;
 		}

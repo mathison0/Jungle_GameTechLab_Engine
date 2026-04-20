@@ -9,6 +9,10 @@ enum class EViewMode : int32
 	Wireframe,
     DepthScene,
 	Fog,
+	Lit_Gouraud = 5,
+	Lit_Lambert = 6,
+	Lit_Phong = 7,
+	WorldNormal = 8,
 	Count
 };
 

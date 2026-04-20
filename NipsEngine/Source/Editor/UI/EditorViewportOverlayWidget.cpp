@@ -57,6 +57,14 @@ static const char* GetViewModeName(EViewMode Mode)
         return "Wireframe";
     case EViewMode::Fog:
         return "Fog";
+    case EViewMode::Lit_Gouraud:
+        return "Lit_Gouraud";
+    case EViewMode::Lit_Lambert:
+        return "Lit_Lambert";
+    case EViewMode::Lit_Phong:
+        return "Lit_Phong";
+    case EViewMode::WorldNormal:
+        return "WorldNormal";
     default:
         return "Lit";
     }
