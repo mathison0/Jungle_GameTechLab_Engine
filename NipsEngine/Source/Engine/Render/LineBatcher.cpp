@@ -312,38 +312,27 @@ void FLineBatcher::AddSphere(const FVector& Center, float Radius, int32 SegmentC
         return;
     }
 
-    TArray<FVector> CircleXY;
-    TArray<FVector> CircleXZ;
-    TArray<FVector> CircleYZ;
-
-    CircleXY.reserve(SegmentCount);
-    CircleXZ.reserve(SegmentCount);
-    CircleYZ.reserve(SegmentCount);
-
     for (int32 i = 0; i < SegmentCount; ++i)
     {
-        const float Theta = (2.0f * MathUtil::PI * i) / static_cast<float>(SegmentCount);
+        const float Theta0 = (2.0f * MathUtil::PI * i) / static_cast<float>(SegmentCount);
+        const float Theta1 = (2.0f * MathUtil::PI * (i + 1)) / static_cast<float>(SegmentCount);
 
-        const float C = cosf(Theta);
-        const float S = sinf(Theta);
+        const float C0 = cosf(Theta0);
+        const float S0 = sinf(Theta0);
+        const float C1 = cosf(Theta1);
+        const float S1 = sinf(Theta1);
 
-        // XY plane
-        CircleXY.push_back(Center + FVector(C * Radius, S * Radius, 0.0f));
+        // XY
+        AddLine(Center + FVector(C0 * Radius, S0 * Radius, 0.0f), Center + FVector(C1 * Radius, S1 * Radius, 0.0f),
+                Color);
 
-        // XZ plane
-        CircleXZ.push_back(Center + FVector(C * Radius, 0.0f, S * Radius));
+        // XZ
+        AddLine(Center + FVector(C0 * Radius, 0.0f, S0 * Radius), Center + FVector(C1 * Radius, 0.0f, S1 * Radius),
+                Color);
 
-        // YZ plane
-        CircleYZ.push_back(Center + FVector(0.0f, C * Radius, S * Radius));
-    }
-
-    for (int32 i = 0; i < SegmentCount; ++i)
-    {
-        const int32 Next = (i + 1) % SegmentCount;
-
-        AddLine(CircleXY[i], CircleXY[Next], Color);
-        AddLine(CircleXZ[i], CircleXZ[Next], Color);
-        AddLine(CircleYZ[i], CircleYZ[Next], Color);
+        // YZ
+        AddLine(Center + FVector(0.0f, C0 * Radius, S0 * Radius), Center + FVector(0.0f, C1 * Radius, S1 * Radius),
+                Color);
     }
 }
 

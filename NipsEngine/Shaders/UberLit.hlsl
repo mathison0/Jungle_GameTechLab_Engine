@@ -143,24 +143,6 @@ float3 GetSpecularTexPS(float2 uv)
     return SpecularColor;
 }
 
-float3 GetDiffuseTexVS(float2 uv)
-{
-    if ((bool) bHasDiffuseMap)
-    {
-        return DiffuseMap.SampleLevel(SampleState, uv, 0).rgb;
-    }
-    return DiffuseColor;
-}
-
-float3 GetSpecularTexVS(float2 uv)
-{
-    if ((bool) bHasSpecularMap)
-    {
-        return SpecularMap.SampleLevel(SampleState, uv, 0).rgb;
-    }
-    return SpecularColor;
-}
-
 float3 CalculateAmbientLight(FAmbientLightInfo Light, float3 MaterialAmbientColor, float3 DiffuseTex)
 {
     return Light.Color * Light.Intensity * MaterialAmbientColor * DiffuseTex;
@@ -465,8 +447,6 @@ PSInput VS(VSInput input)
             N,
             output.VertexDiffuseLighting,
             output.VertexSpecularLighting);
-        // 블린퐁
-        // output.VertexLighting = CalculateLightingBlinnPhong(output.WorldPos, N, diffuseTex, GetSpecularTex(output.UV));
 
     }
 
