@@ -99,6 +99,7 @@ class FRenderer
     void FlushLineBatcher(FLineBatcher& Batcher, ERenderPass Pass, const FRenderBus& Bus, ID3D11DeviceContext* Context);
 
 	void ExecuteDepthPrepass(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus);
+    void DispatchTileLightCulling(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus);
 
   private:
     FD3DDevice       Device;

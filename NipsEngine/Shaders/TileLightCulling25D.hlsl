@@ -70,22 +70,24 @@ struct FTileFrustum
     float3 BottomPlaneNormal;
 };
 
-cbuffer ForwardPlusConstants : register(b0)
+cbuffer ForwardPlusConstants : register(b11)
 {
-    row_major float4x4 View;
-    row_major float4x4 Projection;
-    row_major float4x4 InverseProjection;
-
     uint2 ViewportMin;
     uint2 ViewportSize;
-
     uint2 DepthTextureSize;
     uint2 TileCount;
+    uint bEnable25DMask;
+    float3 Padding;
+};
 
+cbuffer Lighting : register(b13)
+{
+    float3 UnusedAmbientColor;
+    float UnusedAmbientIntensity;
+    uint DirectionalLightCount;
     uint PointLightCount;
     uint SpotLightCount;
-    uint bEnable25DMask;
-    uint Padding0;
+    float LightingPad;
 };
 
 Texture2D<float> SceneDepth : register(t0);
@@ -140,7 +142,7 @@ float3 ReconstructViewPosition(float2 uv, float deviceDepth)
     ndc.y = 1.0f - uv.y * 2.0f;
 
     float4 clip = float4(ndc, deviceDepth, 1.0f);
-    float4 viewH = mul(clip, InverseProjection);
+    float4 viewH = mul(clip, InvProjection);
     return viewH.xyz / max(viewH.w, kEpsilon);
 }
 

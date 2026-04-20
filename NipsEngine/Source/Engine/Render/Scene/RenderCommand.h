@@ -219,7 +219,7 @@ struct FPointLightConstatns
     FVector Position = {0.f, 0.f, 0.f};
     float   Radius = 10.f;
     FVector Color = {1.0f, 1.0f, 1.0f};
-	float   Intensity = 10.0f;
+    float   Intensity = 10.0f;
 };
 
 struct FLightingConstants
@@ -229,6 +229,18 @@ struct FLightingConstants
     uint32                 PointLightCount = 0;
     uint32                 SpotLightCount = 0;
     float                  Padding = 0.0f;
+};
+
+struct ForwardPlusConstants
+{
+    uint32 ViewportMin[2];
+    uint32 ViewportSize[2];
+    uint32 DepthTextureSize[2];
+    uint32 TileCount[2];
+    uint32 bEnable25DMask;
+    float  Padding[3] = {
+        0.0f,
+    };
 };
 
 // StaticMeshBuffer (b6) — UberLit.hlsl 대응
@@ -252,13 +264,13 @@ struct FStaticMeshConstants
     // ScrollUV
     float  ScrollX = 0.f;
     float  ScrollY = 0.f;
-    uint32 bHasDiffuseMap = 0; 
+    uint32 bHasDiffuseMap = 0;
     uint32 bHasSpecularMap = 0;
 
-	uint32 bHasNormalMap = 0;
-    float  Padding1 = 0.f;     
-    float  Padding2 = 0.f;     
-    float  Padding3 = 0.f;     
+    uint32 bHasNormalMap = 0;
+    float  Padding1 = 0.f;
+    float  Padding2 = 0.f;
+    float  Padding3 = 0.f;
 
     // Texture SRV (CPU-only, cbuffer 범위 밖)
     ID3D11ShaderResourceView* DiffuseSRV = {nullptr};

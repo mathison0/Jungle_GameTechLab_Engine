@@ -29,5 +29,18 @@ public:
 	void Bind(ID3D11DeviceContext* InDeviceContext) const;
 };
 
+class FComputeShader
+{
+  private:
+    TComPtr<ID3D11ComputeShader> ComputeShader;
+
+  public:
+    void Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const char* InCSEntryPoint,
+                const D3D_SHADER_MACRO* InDefines = nullptr);
+    void Release();
+    void Bind(ID3D11DeviceContext* InDeviceContext) const;
+    bool IsValid() const { return ComputeShader != nullptr; }
+};
+
 
 

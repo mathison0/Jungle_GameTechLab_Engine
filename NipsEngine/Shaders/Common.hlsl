@@ -27,17 +27,17 @@ cbuffer GizmoBuffer : register(b2)
     float HoveredAxisOpacity;
 };
 
+// 현재 사용 안 하는 버퍼
+//cbuffer OverlayBuffer : register(b3)
+//{
+//    float2 OverlayCenterScreen;
+//    float2 ViewportSize;
 
-cbuffer OverlayBuffer : register(b3)
-{
-    float2 OverlayCenterScreen;
-    float2 ViewportSize;
+//    float OverlayRadius;
+//    float3 Padding2;
 
-    float OverlayRadius;
-    float3 Padding2;
-
-    float4 OverlayColor;
-};
+//    float4 OverlayColor;
+//};
 
 cbuffer EditorBuffer : register(b4)
 {
