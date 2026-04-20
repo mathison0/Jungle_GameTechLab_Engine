@@ -112,7 +112,14 @@ static const TArray<FComponentMenuEntry> ComponentMenuRegistry = {
      {
          UDirectionalLightComponent* Comp = Actor->AddComponent<UDirectionalLightComponent>();
          return Comp;
-     }}};
+     }},
+
+	{"PointLight Component", [](AActor* Actor) -> UActorComponent*
+	 {
+		 UPointLightComponent* Comp = Actor->AddComponent<UPointLightComponent>();
+		 return Comp;
+     }},
+};
 
 namespace
 {

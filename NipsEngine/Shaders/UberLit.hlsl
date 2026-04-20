@@ -439,8 +439,6 @@ PSInput VS(VSInput input)
             N,
             output.VertexDiffuseLighting,
             output.VertexSpecularLighting);
-        // 블린퐁
-        // output.VertexLighting = CalculateLightingBlinnPhong(output.WorldPos, N, diffuseTex, GetSpecularTex(output.UV));
 
     }
 
@@ -457,7 +455,6 @@ float4 PS(PSInput input) : SV_TARGET
     float3 finalColor = 0;
  
     // 1. Gouraud
-
     /*finalColor =
         DiffuseTex * input.VertexDiffuseLighting +
         SpecularTex * input.VertexSpecularLighting;*/
