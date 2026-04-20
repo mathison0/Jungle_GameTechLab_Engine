@@ -9,6 +9,14 @@
     #define VIEW_MODE 7  // 기본값 설정
 #endif
 
+#ifndef FORWARD_PLUS_TILE_SIZE_X
+    #define FORWARD_PLUS_TILE_SIZE_X 16
+#endif
+
+#ifndef FORWARD_PLUS_TILE_SIZE_Y
+    #define FORWARD_PLUS_TILE_SIZE_Y 16
+#endif
+
 // StaticMesh Material (b6)
 cbuffer StaticMeshBuffer : register(b6)
 {
@@ -103,6 +111,16 @@ cbuffer Lighting : register(b13)
     uint PointLightCount;
     uint SpotLightCount;
     float LightingPad;
+};
+
+cbuffer ForwardPlusConstants : register(b11)
+{
+    uint2 ViewportMin;
+    uint2 ViewportSize;
+    uint2 DepthTextureSize;
+    uint2 TileCount;
+    uint bEnable25DMask;
+    float3 ForwardPlusPadding;
 };
 
 // Light Data (t0-t5)
@@ -302,6 +320,154 @@ float3 CalculateSpotSpecular(FSpotLightInfo Light, float3 N, float3 WorldPos, fl
            spotFactor;
 }
 
+uint GetTileIndexFromScreenPos(float2 screenPos)
+{
+    uint tileCountX = max(TileCount.x, 1u);
+    uint tileCountY = max(TileCount.y, 1u);
+
+    float2 localPixel = max(screenPos - float2(ViewportMin), 0.0f.xx);
+    uint2 tileCoord = uint2(localPixel / float2(FORWARD_PLUS_TILE_SIZE_X, FORWARD_PLUS_TILE_SIZE_Y));
+    tileCoord.x = min(tileCoord.x, tileCountX - 1u);
+    tileCoord.y = min(tileCoord.y, tileCountY - 1u);
+
+    return tileCoord.y * tileCountX + tileCoord.x;
+}
+
+void CalculateLightingLambertTile(float3 WorldPos, float3 N, uint TileIndex, out float3 OutDiffuse)
+{
+    OutDiffuse = CalculateAmbientLight(Ambient, AmbientColor, 1.0f.xxx);
+
+    for (uint i = 0; i < DirectionalLightCount; ++i)
+    {
+        float3 L = normalize(-DirectionalLights[i].Direction);
+        float NdotL = saturate(dot(N, L));
+        OutDiffuse += DirectionalLights[i].Color * DirectionalLights[i].Intensity * NdotL;
+    }
+
+    uint2 pointGrid = TilePointLightGrid[TileIndex];
+    for (uint i = 0; i < pointGrid.y; ++i)
+    {
+        uint lightIndex = TilePointLightIndices[pointGrid.x + i];
+        FPointLightCommon Common = EvaluatePointLightCommon(PointLights[lightIndex], WorldPos, N);
+        if (Common.bValid)
+        {
+            OutDiffuse += PointLights[lightIndex].Color *
+                          PointLights[lightIndex].Intensity *
+                          Common.NdotL *
+                          Common.Attenuation;
+        }
+    }
+
+    uint2 spotGrid = TileSpotLightGrid[TileIndex];
+    for (uint i = 0; i < spotGrid.y; ++i)
+    {
+        uint lightIndex = TileSpotLightIndices[spotGrid.x + i];
+        float3 Lvec = SpotLights[lightIndex].Position - WorldPos;
+        float dist = length(Lvec);
+
+        if (dist > SpotLights[lightIndex].Radius)
+            continue;
+
+        float3 L = Lvec / max(dist, 1e-5f);
+        float NdotL = saturate(dot(N, L));
+        if (NdotL <= 0.0f)
+            continue;
+
+        float3 lightDir = normalize(-SpotLights[lightIndex].Direction);
+        float spotCos = dot(L, lightDir);
+        float spotFactor = smoothstep(SpotLights[lightIndex].OuterConeCos, SpotLights[lightIndex].InnerConeCos, spotCos);
+        spotFactor *= spotFactor;
+
+        float attenuation = 1.0f - (dist / SpotLights[lightIndex].Radius);
+        attenuation *= attenuation;
+
+        OutDiffuse += SpotLights[lightIndex].Color *
+                      SpotLights[lightIndex].Intensity *
+                      NdotL *
+                      attenuation *
+                      spotFactor;
+    }
+}
+
+void CalculateLightingBlinnPhongTile(
+    float3 WorldPos,
+    float3 N,
+    uint TileIndex,
+    out float3 OutDiffuse,
+    out float3 OutSpecular)
+{
+    CalculateLightingLambertTile(WorldPos, N, TileIndex, OutDiffuse);
+    OutSpecular = 0.0f.xxx;
+
+    for (uint i = 0; i < DirectionalLightCount; ++i)
+    {
+        float3 L = normalize(-DirectionalLights[i].Direction);
+        float NdotL = saturate(dot(N, L));
+        if (NdotL <= 0.0f)
+            continue;
+
+        float3 V = normalize(CameraWorldPos - WorldPos);
+        float3 H = normalize(L + V);
+        float NdotH = saturate(dot(N, H));
+
+        OutSpecular += DirectionalLights[i].Color *
+                       DirectionalLights[i].Intensity *
+                       pow(NdotH, max(Shininess, 1.0f));
+    }
+
+    uint2 pointGrid = TilePointLightGrid[TileIndex];
+    for (uint i = 0; i < pointGrid.y; ++i)
+    {
+        uint lightIndex = TilePointLightIndices[pointGrid.x + i];
+        FPointLightCommon Common = EvaluatePointLightCommon(PointLights[lightIndex], WorldPos, N);
+        if (!Common.bValid)
+            continue;
+
+        float3 V = normalize(CameraWorldPos - WorldPos);
+        float3 H = normalize(Common.LightDir + V);
+        float NdotH = saturate(dot(normalize(N), H));
+
+        OutSpecular += PointLights[lightIndex].Color *
+                       PointLights[lightIndex].Intensity *
+                       pow(NdotH, max(Shininess, 1.0f)) *
+                       Common.Attenuation;
+    }
+
+    uint2 spotGrid = TileSpotLightGrid[TileIndex];
+    for (uint i = 0; i < spotGrid.y; ++i)
+    {
+        uint lightIndex = TileSpotLightIndices[spotGrid.x + i];
+        float3 Lvec = SpotLights[lightIndex].Position - WorldPos;
+        float dist = length(Lvec);
+
+        if (dist > SpotLights[lightIndex].Radius)
+            continue;
+
+        float3 L = Lvec / max(dist, 1e-5f);
+        float NdotL = saturate(dot(N, L));
+        if (NdotL <= 0.0f)
+            continue;
+
+        float3 lightDir = normalize(-SpotLights[lightIndex].Direction);
+        float spotCos = dot(L, lightDir);
+        float spotFactor = smoothstep(SpotLights[lightIndex].OuterConeCos, SpotLights[lightIndex].InnerConeCos, spotCos);
+        spotFactor *= spotFactor;
+
+        float attenuation = 1.0f - (dist / SpotLights[lightIndex].Radius);
+        attenuation *= attenuation;
+
+        float3 V = normalize(CameraWorldPos - WorldPos);
+        float3 H = normalize(L + V);
+        float NdotH = saturate(dot(N, H));
+
+        OutSpecular += SpotLights[lightIndex].Color *
+                       SpotLights[lightIndex].Intensity *
+                       pow(NdotH, max(Shininess, 1.0f)) *
+                       attenuation *
+                       spotFactor;
+    }
+}
+
 void CalculateLightingLambert(float3 WorldPos, float3 N, out float3 OutDiffuse)
 {
     OutDiffuse = CalculateAmbientLight(Ambient, AmbientColor, 1.0f.xxx);
@@ -454,6 +620,7 @@ PSInput VS(VSInput input)
 float4 PS(PSInput input) : SV_TARGET
 {
     float3 N = normalize(input.WorldNormal);
+    uint TileIndex = GetTileIndexFromScreenPos(input.ClipPos.xy);
     
     #if USE_NORMALMAP == 1
     float3 T = normalize(input.WorldTangent);
@@ -487,13 +654,13 @@ float4 PS(PSInput input) : SV_TARGET
 
 #elif VIEW_MODE == 6 //Lambert
      float3 DiffuseLighting;
-     CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
+     CalculateLightingLambertTile(input.WorldPos, N, TileIndex, DiffuseLighting);
      finalColor = DiffuseTex * DiffuseLighting;
 
 #elif VIEW_MODE == 7 //BlinnPhong
      float3 DiffuseLighting;    
      float3 SpecularLighting;
-     CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseLighting, SpecularLighting);
+     CalculateLightingBlinnPhongTile(input.WorldPos, N, TileIndex, DiffuseLighting, SpecularLighting);
      
     finalColor = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
 #elif VIEW_MODE == 8 //WorldNORMAL

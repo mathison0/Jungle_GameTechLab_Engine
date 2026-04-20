@@ -712,6 +712,9 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->VSSetConstantBuffers(6, 1, &cb6);
             Context->PSSetConstantBuffers(6, 1, &cb6);
 
+            ID3D11Buffer* cb11 = Resources.ForwardPlusConstantBuffer.GetBuffer();
+            Context->PSSetConstantBuffers(11, 1, &cb11);
+
             // t0/t1 are reused by other passes (e.g. depth/decal), so UberLit needs its light SRVs rebound
             // whenever we switch back to the static mesh path.
             ID3D11ShaderResourceView* PointLightSRV = Resources.PointlLightBuffer.GetSRV();
