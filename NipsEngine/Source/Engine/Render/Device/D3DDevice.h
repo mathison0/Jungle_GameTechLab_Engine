@@ -15,11 +15,11 @@ enum class EDepthStencilState
 	DepthReadOnly,
 	StencilWrite,
 	StencilWriteOnlyEqual,
-        DepthNone,
+    DepthNone,
 
 	// --- 기즈모 전용 ---
 	GizmoInside,         
-	GizmoOutside         
+	GizmoOutside
 };
 
 enum class EBlendState
@@ -47,7 +47,7 @@ struct FRenderTargetSet
 	ID3D11RenderTargetView* SelectionMaskRTV = nullptr;
 	ID3D11ShaderResourceView* SelectionMaskSRV = nullptr;
 	ID3D11DepthStencilView* DepthStencilView = nullptr;
-        ID3D11ShaderResourceView* DepthStencilSRV = nullptr;
+    ID3D11ShaderResourceView* DepthStencilSRV = nullptr;
 
 	float Width = 0.0f;
 	float Height = 0.0f;

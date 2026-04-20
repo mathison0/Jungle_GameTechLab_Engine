@@ -42,6 +42,7 @@ struct FRenderResources
     FShader FireBallShader;
     FShader FXAAShader;
     FShader UberLitShader;
+    FShader DepthPrepassShader;
 
     TComPtr<ID3D11SamplerState> MeshSamplerState;
     TComPtr<ID3D11SamplerState> FXAASamplerState;

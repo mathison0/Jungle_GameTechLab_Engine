@@ -67,6 +67,10 @@ void FRenderer::Create(HWND hWindow)
     // 12. FXAA 모드 (ShaderFXAA.hlsl)
     Resources.FXAAShader.Create(Device.GetDevice(), L"Shaders/ShaderFXAA.hlsl", "FxaaVS", "FxaaPS", nullptr, 0);
 
+	// 13. Depth Prepass (VS only — Position 전용 레이아웃)
+    Resources.DepthPrepassShader.Create(Device.GetDevice(), L"Shaders/DepthPrepass.hlsl", "DepthPrepassVS", nullptr,
+                                        DepthPrepassInputLayout, ARRAYSIZE(DepthPrepassInputLayout));
+
     Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FPerObjectConstants));
     Resources.FrameBuffer.Create(Device.GetDevice(), sizeof(FFrameConstants));
     Resources.GizmoPerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FGizmoConstants));
@@ -129,6 +133,7 @@ void FRenderer::Release()
     Resources.FogShader.Release();
     Resources.FXAAShader.Release();
     Resources.UberLitShader.Release();
+    Resources.DepthPrepassShader.Release();
 
     Resources.PerObjectConstantBuffer.Release();
     Resources.FrameBuffer.Release();
@@ -770,6 +775,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 void FRenderer::RenderScenePasses(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
 {
     UpdateLightingBuffer(Context, InRenderBus);
+    ExecuteDepthPrepass(Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Opaque, Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Decal, Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Translucent, Context, InRenderBus);
@@ -1097,4 +1103,69 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
     Context->VSSetShaderResources(1, 1, &SpotLightSRV);
     Context->PSSetShaderResources(1, 1, &SpotLightSRV);
+}
+
+
+void FRenderer::ExecuteDepthPrepass(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
+{
+    const auto& Commands = InRenderBus.GetCommands(ERenderPass::Opaque);
+    if (Commands.empty() || CurrentRenderTargets.DepthStencilView == nullptr)
+        return;
+
+    const auto& AlignedCommands = GetAlignedCommands(ERenderPass::Opaque, Commands);
+    if (AlignedCommands.empty())
+        return;
+
+    // Bind only the active render target set's DSV for z-only depth prepass.
+    ID3D11DepthStencilView* PrepassDSV = CurrentRenderTargets.DepthStencilView;
+    Context->OMSetRenderTargets(0, nullptr, PrepassDSV);
+
+    Device.SetDepthStencilState(EDepthStencilState::Default);
+    Device.SetBlendState(EBlendState::NoColor);
+    Device.SetRasterizerState(ERasterizerState::SolidBackCull);
+    Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    // VS-only depth prepass path.
+    Resources.DepthPrepassShader.Bind(Context);
+
+    ID3D11Buffer* cb1 = Resources.PerObjectConstantBuffer.GetBuffer();
+    Context->VSSetConstantBuffers(1, 1, &cb1);
+
+    FMeshBuffer* LastMeshBuffer = nullptr;
+
+    for (const FRenderCommand& Cmd : AlignedCommands)
+    {
+        if (Cmd.Type != ERenderCommandType::StaticMesh || Cmd.MeshBuffer == nullptr || !Cmd.MeshBuffer->IsValid())
+        {
+            continue;
+        }
+
+        Resources.PerObjectConstantBuffer.Update(Context, &Cmd.PerObjectConstants, sizeof(FPerObjectConstants));
+
+        if (Cmd.MeshBuffer != LastMeshBuffer)
+        {
+            uint32 Offset = 0;
+            uint32 Stride = Cmd.MeshBuffer->GetVertexBuffer().GetStride();
+            ID3D11Buffer* VertexBuffer = Cmd.MeshBuffer->GetVertexBuffer().GetBuffer();
+            Context->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
+
+            ID3D11Buffer* IndexBuffer = Cmd.MeshBuffer->GetIndexBuffer().GetBuffer();
+            if (IndexBuffer != nullptr)
+            {
+                Context->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+            }
+
+            LastMeshBuffer = Cmd.MeshBuffer;
+        }
+
+        ID3D11Buffer* IndexBuffer = Cmd.MeshBuffer->GetIndexBuffer().GetBuffer();
+        if (IndexBuffer != nullptr)
+        {
+            Context->DrawIndexed(Cmd.SectionIndexCount, Cmd.SectionIndexStart, 0);
+        }
+        else
+        {
+            Context->Draw(Cmd.MeshBuffer->GetVertexBuffer().GetVertexCount(), 0);
+        }
+    }
 }
