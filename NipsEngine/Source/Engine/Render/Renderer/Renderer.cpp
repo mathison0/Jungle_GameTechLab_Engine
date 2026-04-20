@@ -70,7 +70,8 @@ void FRenderer::Create(HWND hWindow)
 
 	// 13. Depth Prepass (VS only — Position 전용 레이아웃)
     Resources.DepthPrepassShader.Create(Device.GetDevice(), L"Shaders/DepthPrepass.hlsl", "DepthPrepassVS", nullptr,
-                                        DepthPrepassInputLayout, ARRAYSIZE(DepthPrepassInputLayout));
+                                        VertexLayouts::DepthPrepassInputLayout,
+                                        ARRAYSIZE(VertexLayouts::DepthPrepassInputLayout));
 
     Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FPerObjectConstants));
     Resources.FrameBuffer.Create(Device.GetDevice(), sizeof(FFrameConstants));
@@ -303,7 +304,7 @@ void FRenderer::InitializePassRenderStates()
 
     //                              DepthStencil                   Blend                Rasterizer Topology Shader
     //                              WireframeAware
-    S[(uint32)E::Opaque] = {EDepthStencilState::Default,     EBlendState::Opaque,
+    S[(uint32)E::Opaque] = {EDepthStencilState::DepthReadOnly,     EBlendState::Opaque,
                             ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
                             &Resources.PrimitiveShader,      true};
     S[(uint32)E::Translucent] = {EDepthStencilState::Default,     EBlendState::AlphaBlend,

@@ -650,7 +650,7 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
             Cmd.PerObjectConstants = FPerObjectConstants{Primitive->GetWorldMatrix(), FColor::White().ToVector4()};
             Cmd.Type = ERenderCommandType::StaticMesh;
             Cmd.MeshBuffer = MeshBuffer;
-            Cmd.DepthStencilState = EDepthStencilState::Default;
+            Cmd.DepthStencilState = EDepthStencilState::DepthReadOnly;
             Cmd.BlendState = EBlendState::Opaque;
 
             Cmd.SectionIndexStart = Section.StartIndex;
