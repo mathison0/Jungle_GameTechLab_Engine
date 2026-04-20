@@ -671,6 +671,8 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
             Cmd.Constants.StaticMesh.SpecularColor = MtlData->SpecularColor;
             Cmd.Constants.StaticMesh.Shininess = MtlData->Shininess;
 
+			Cmd.Constants.StaticMesh.bHasNormalMap = MtlData->bHasBumpTexture;
+
             Cmd.Constants.StaticMesh.ScrollX = StaticMeshComp->GetScroll().first;
             Cmd.Constants.StaticMesh.ScrollY = StaticMeshComp->GetScroll().second;
 

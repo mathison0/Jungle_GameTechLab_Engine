@@ -249,11 +249,13 @@ struct FStaticMeshConstants
     // ScrollUV
     float  ScrollX = 0.f;
     float  ScrollY = 0.f;
-    float  Padding0 = 0.0f;
-    uint32 bHasDiffuseMap = 0;  // cbuffer bytes 76-79  — HLSL uint bHasDiffuseMap 대응
-    uint32 bHasSpecularMap = 0; // cbuffer bytes 80-83  — HLSL uint bHasSpecularMap 대응
-    float  Padding1 = 0.f;      // cbuffer bytes 84-87
-    float  Padding2 = 0.f;      // cbuffer bytes 88-91  (16바이트 블록 완성)
+    uint32 bHasDiffuseMap = 0; 
+    uint32 bHasSpecularMap = 0;
+
+	uint32 bHasNormalMap = 0;
+    float  Padding1 = 0.f;     
+    float  Padding2 = 0.f;     
+    float  Padding3 = 0.f;     
 
     // Texture SRV (CPU-only, cbuffer 범위 밖)
     ID3D11ShaderResourceView* DiffuseSRV = {nullptr};

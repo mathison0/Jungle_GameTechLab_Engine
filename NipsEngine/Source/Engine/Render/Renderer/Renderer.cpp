@@ -548,7 +548,8 @@ void FRenderer::FlushLineBatcher(FLineBatcher& Batcher, ERenderPass Pass, const 
 void FRenderer::ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand>& Commands, const FRenderBus& Bus,
                                    ID3D11DeviceContext* Context)
 {
-    ApplyPassRenderState(Pass, Context, Bus.GetViewMode());
+    EViewMode ViewMode = Bus.GetViewMode();
+    ApplyPassRenderState(Pass, Context, ViewMode);
 
     const FPassRenderState& State = PassRenderStates[(uint32)Pass];
     ERenderCommandType      LastCommandType = static_cast<ERenderCommandType>(-1);
@@ -562,7 +563,7 @@ void FRenderer::ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand
         Device.SetDepthStencilState(TargetDepth);
         Device.SetBlendState(TargetBlend);
 
-        BindShaderByType(Cmd, Context, LastCommandType);
+        BindShaderByType(Cmd, Context, LastCommandType, ViewMode);
 
         switch (Cmd.Type)
         {
@@ -611,18 +612,6 @@ void FRenderer::ApplyPassRenderState(ERenderPass Pass, ID3D11DeviceContext* Cont
     Device.SetRasterizerState(Rasterizer);
     Context->IASetPrimitiveTopology(State.Topology);
 
-	//Pass + ViewMode 별 셰이더 변경 필요
-    FShaderKey ShaderKey;
-    ShaderKey.SetViewMode((uint32)CurViewMode);
-    ShaderKey.SetNormalMap(false);
-
-	FShader* Shader = ShaderManager.GetShader(ShaderKey);
-	if (Shader && Pass == ERenderPass::Opaque)
-	{
-        Shader->Bind(Context);
-		return;
-	}
-
     if (State.Shader)
     {
         State.Shader->Bind(Context);
@@ -630,7 +619,7 @@ void FRenderer::ApplyPassRenderState(ERenderPass Pass, ID3D11DeviceContext* Cont
 }
 
 void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContext* Context,
-                                 ERenderCommandType& LastCommandType)
+                                 ERenderCommandType& LastCommandType, const EViewMode ViewMode)
 {
     bool bTypeChanged = (LastCommandType != InCmd.Type);
 
@@ -671,7 +660,24 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
     }
 
     case ERenderCommandType::StaticMesh:
+    {
         Resources.StaticMeshConstantBuffer.Update(Context, &InCmd.Constants.StaticMesh, sizeof(FStaticMeshConstants));
+
+        // ViewMode, NormalMap 기준 셰이더 변경 필요
+        FShaderKey ShaderKey;
+        ShaderKey.SetViewMode((uint32)ViewMode);
+        bool bHasNormalMap = InCmd.Constants.StaticMesh.bHasNormalMap > 0 ? true : false;
+        ShaderKey.SetNormalMap(bHasNormalMap);
+
+        FShader* Shader = ShaderManager.GetShader(ShaderKey);
+        if (Shader)
+        {
+            Shader->Bind(Context);
+        }
+        else
+        {
+            Resources.StaticMeshShader.Bind(Context);
+        }
 
         if (bTypeChanged)
         {
@@ -713,6 +719,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->PSSetShaderResources(6, 4, SRVs);
         }
         break;
+    }
 
     case ERenderCommandType::Decal:
     {

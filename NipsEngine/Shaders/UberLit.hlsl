@@ -6,7 +6,7 @@
 // VIEW_MODE: 0(Lit), 5(Gouraud), 6(Lambert), 7(Phong)
 // USE_NORMALMAP: 0 or 1
 #ifndef VIEW_MODE
-    #define VIEW_MODE 0  // 기본값 설정
+    #define VIEW_MODE 7  // 기본값 설정
 #endif
 
 // StaticMesh Material (b6)
@@ -20,10 +20,11 @@ cbuffer StaticMeshBuffer : register(b6)
     float3 CameraWorldPos;
     // ScrollUV
     float2 ScrollUV;
-    float Padding6_1;
-    
     uint bHasDiffuseMap;
     uint bHasSpecularMap;
+    
+    uint bHasNormalMap;
+    float Padding6_1;
     float Padding6_2;
     float Padding6_3;
 };

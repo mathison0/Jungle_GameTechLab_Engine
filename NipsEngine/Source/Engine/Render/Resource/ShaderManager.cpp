@@ -18,12 +18,16 @@ void FShaderManager::PreloadShaders(ID3D11Device* Device)
 
     for (int view = 0; view < (int)EViewMode::Count; ++view)
     {
-        FShaderKey Key;
-        Key.SetViewMode(view);
-
-        if (!ShaderMap.contains(Key))
+        for (int bNormal = 0; bNormal <= 1; ++bNormal)
         {
-            CreateShader(Device, Key);
+            FShaderKey Key;
+            Key.SetViewMode(view);
+            Key.SetNormalMap(bNormal != 0);
+
+            if (!ShaderMap.contains(Key))
+            {
+                CreateShader(Device, Key);
+            }
         }
     }
 }
