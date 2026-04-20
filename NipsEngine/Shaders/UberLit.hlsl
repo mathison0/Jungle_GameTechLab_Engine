@@ -34,6 +34,7 @@ struct VSInput
     float3 Position : POSITION;
     float3 Normal : NORMAL;
     float2 UV : TEXCOORD;
+    float3 Tangent : TANGENT;
 };
 
 struct PSInput
@@ -41,7 +42,7 @@ struct PSInput
     float4 ClipPos : SV_POSITION;
     float3 WorldPos : TEXCOORD0;
     float3 WorldNormal : TEXCOORD1;
-    float4 Tangent : TEXCOORD2;
+    float3 WorldTangent : TEXCOORD2;
     float2 UV : TEXCOORD3;
     float3 VertexDiffuseLighting : TEXCOORD4;
     float3 VertexSpecularLighting : TEXCOORD5;
@@ -450,10 +451,10 @@ PSInput VS(VSInput input)
     // 역행렬은 비용이 많이 들어서 상수 버퍼로 가져오는 게 나을 거 같네요...
     float3x3 normalMatrix = transpose(Inverse3x3((float3x3) Model));
     output.WorldNormal = normalize(mul(input.Normal, normalMatrix));
+    output.WorldTangent = normalize(mul(input.Tangent, normalMatrix));
 
     output.UV = input.UV + ScrollUV;
 
-    output.Tangent = float4(0, 0, 0, 1);
     
     // Gouraud Lighting
     {
@@ -477,8 +478,10 @@ float4 PS(PSInput input) : SV_TARGET
     float3 N = normalize(input.WorldNormal);
     
     float3 DiffuseTex = GetDiffuseTexPS(input.UV);
-    float3 SpecularTex = GetSpecularTexPS(input.UV);    
+    float3 SpecularTex = GetSpecularTexPS(input.UV);
     
+    return float4(input.WorldTangent, 1.0f);
+   
     float3 finalColor = 0;
  
  #if VIEW_MODE == 5  //Gouraud

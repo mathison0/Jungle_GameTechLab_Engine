@@ -12,5 +12,5 @@ namespace VertexLayouts
 
 
 	// StaticMesh (FNormalVertex) Input Layout
-    extern const D3D11_INPUT_ELEMENT_DESC NormalVertexInputLayout[3];
+    extern const D3D11_INPUT_ELEMENT_DESC NormalVertexInputLayout[4];
 }

@@ -17,9 +17,10 @@ struct FVertex
 struct FNormalVertex
 {
 	FVector Position;
-	FColor Color;
 	FVector Normal;
 	FVector2 UVs;	//	TexCoord
+	FVector Tangent;
+
 };
 
 struct FOverlayVertex

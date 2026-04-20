@@ -20,4 +20,4 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd btc4_texture.png
-map_Bump -bm 1.600000 btc4_normal.jpeg
+map_Bump btc4_normal.jpeg

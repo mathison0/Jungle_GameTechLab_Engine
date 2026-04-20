@@ -37,6 +37,8 @@ private:
 	
 	void NormalizeRawPositionsToUnitCube();
 	void NormalizeRawSizeToUnitCube();
+
+	void CalculateTangents(TArray<FNormalVertex>& Vertices, const TArray<uint32>& Indices);
 	
 	int32 GetOrAddMaterialSlot(const FString& MaterialName);
 	FAABB BuildLocalBounds() const;

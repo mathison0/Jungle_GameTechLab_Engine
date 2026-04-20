@@ -42,7 +42,7 @@ FShader* FShaderManager::CreateShader(ID3D11Device* Device, const FShaderKey& Ke
 	uint32 ViewModeIndex = Key.Bits & VIEWMODE_MASK;
 
     D3D_SHADER_MACRO Defines[] = 
-	{{"VIEW_MODE", ViewModeTable[ViewModeIndex]}, 
+		{{"VIEW_MODE", ViewModeTable[ViewModeIndex]}, 
 		{"USE_NORMALMAP", (Key.Bits & NORMALMAP_BIT) ? "1" : "0"},
 		{nullptr, nullptr}};
 

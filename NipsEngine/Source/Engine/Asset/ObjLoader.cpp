@@ -211,6 +211,8 @@ bool FObjLoader::BuildStaticMesh()
 		
 		StaticMeshAsset.Sections.push_back(NewSection);
 	}
+
+	CalculateTangents(StaticMeshAsset.Vertices, StaticMeshAsset.Indices);
 	
 	StaticMeshAsset.SlotNames = BuiltMaterialSlotName;
 	StaticMeshAsset.LocalBounds = BuildLocalBounds();
@@ -478,8 +480,6 @@ FNormalVertex FObjLoader::MakeVertex(const FObjRawIndex& RawIndex) const
 		Vertex.Normal = FVector(0.0f, 0.0f, 1.0f);
 	}
 
-	//	White로 초기화
-	Vertex.Color = FColor{ 1.f, 1.f, 1.f, 1.f };
 
 	if (RawIndex.UVIndex >= 0 && RawIndex.UVIndex < static_cast<int32>(RawData.UVs.size()))
 	{
@@ -580,6 +580,59 @@ void FObjLoader::NormalizeRawSizeToUnitCube()
 	{
 		Position = (Position - Center);
 	}
+}
+
+void FObjLoader::CalculateTangents(TArray<FNormalVertex>& Vertices, const TArray<uint32>& Indices) 
+{
+    // 1. 모든 탄젠트 초기화
+    for (auto& V : Vertices)
+    {
+        V.Tangent = FVector(0.0f, 0.0f, 0.0f);
+    }
+
+    // 2. 삼각형 단위로 루프 돌며 탄젠트 계산 및 누적
+    for (size_t i = 0; i < Indices.size(); i += 3)
+    {
+        uint32 i0 = Indices[i];
+        uint32 i1 = Indices[i + 1];
+        uint32 i2 = Indices[i + 2];
+
+        FNormalVertex& v0 = Vertices[i0];
+        FNormalVertex& v1 = Vertices[i1];
+        FNormalVertex& v2 = Vertices[i2];
+
+        FVector  Edge1 = v1.Position - v0.Position;
+        FVector  Edge2 = v2.Position - v0.Position;
+        FVector2 DeltaUV1 = v1.UVs - v0.UVs;
+        FVector2 DeltaUV2 = v2.UVs - v0.UVs;
+
+        // 분모가 0이 되는 상황 방지 (UV가 겹치거나 잘못된 경우)
+        float Det = (DeltaUV1.X * DeltaUV2.Y - DeltaUV2.X * DeltaUV1.Y);
+        float f = (std::abs(Det) < 1e-6f) ? 1.0f : 1.0f / Det;
+
+        FVector Tangent;
+        Tangent.X = f * (DeltaUV2.Y * Edge1.X - DeltaUV1.Y * Edge2.X);
+        Tangent.Y = f * (DeltaUV2.Y * Edge1.Y - DeltaUV1.Y * Edge2.Y);
+        Tangent.Z = f * (DeltaUV2.Y * Edge1.Z - DeltaUV1.Y * Edge2.Z);
+
+        v0.Tangent += Tangent;
+        v1.Tangent += Tangent;
+        v2.Tangent += Tangent;
+    }
+
+    // 3. 최종 정규화 (부드러운 표면 처리를 위해 평균화된 값을 normalize)
+    for (auto& V : Vertices)
+    {
+        if (V.Tangent.SizeSquared() > 1e-6f)
+        {
+            V.Tangent = V.Tangent.Normalized();
+        }
+        else
+        {
+            // 탄젠트 계산이 불가능한 경우 임의의 축 설정
+            V.Tangent = FVector(1.0f, 0.0f, 0.0f);
+        }
+    }
 }
 
 
