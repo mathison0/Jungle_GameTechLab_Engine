@@ -25,8 +25,6 @@ cbuffer FogBuffer : register(b9)
     float3 CameraWorldPos;
     float Pad2;
 
-    row_major float4x4 InverseViewProjection;
-
     uint  bEnabled;
     float3 Pad3;
 };

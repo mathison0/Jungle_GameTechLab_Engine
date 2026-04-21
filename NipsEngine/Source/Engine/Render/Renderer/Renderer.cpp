@@ -99,6 +99,8 @@ void FRenderer::Create(HWND hWindow)
     SampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
     Device.GetDevice()->CreateSamplerState(&SampDesc, Resources.FXAASamplerState.ReleaseAndGetAddressOf());
 
+
+
     //	MeshManager init
     FMeshManager::Initialize();
 
@@ -668,6 +670,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         ShaderKey.SetViewMode((uint32)ViewMode);
         bool bHasNormalMap = InCmd.Constants.StaticMesh.bHasNormalMap > 0 ? true : false;
         ShaderKey.SetNormalMap(bHasNormalMap);
+        ShaderKey.SetOpaqueType(EOpaqueType::StaticMesh);
 
         FShader* Shader = ShaderManager.GetShader(ShaderKey);
         if (Shader)
@@ -708,6 +711,9 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             ID3D11SamplerState* Samplers[] = {Resources.MeshSamplerState.Get()};
             Context->VSSetSamplers(0, 1, Samplers);
             Context->PSSetSamplers(0, 1, Samplers);
+			
+			ID3D11RenderTargetView* RTVs[2] = {CurrentRenderTargets.SceneColorRTV, CurrentRenderTargets.NormalRTV};
+            Context->OMSetRenderTargets(2, RTVs, CurrentRenderTargets.DepthStencilView);
         }
 
         // [주의] 텍스처(SRV)는 타입이 같아도 메시의 머티리얼마다 변경될 수 있으므로 분기문 밖에서 매번 바인딩합니다.
@@ -723,10 +729,25 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 
     case ERenderCommandType::Decal:
     {
+		ID3D11RenderTargetView* RTV = CurrentRenderTargets.SceneColorRTV;
+        Context->OMSetRenderTargets(1, &RTV, nullptr);
+
+
+        ID3D11ShaderResourceView* DecalSRV = InCmd.Constants.Decal.DecalSRV;
+        Context->PSSetShaderResources(11, 1, &CurrentRenderTargets.NormalSRV);
+        Context->PSSetShaderResources(12, 1, &DecalSRV);
+        Context->PSSetShaderResources(13, 1, &CurrentRenderTargets.DepthStencilSRV);
+
         Resources.DecalConstantBuffer.Update(Context, &InCmd.Constants.Decal, sizeof(FDecalConstants));
+        UpdateSceneDepthBuffer(Context);
+
+		// SceneDepthBuffer (b10)
+        ID3D11Buffer* cb10 = Resources.SceneDepthBuffer.GetBuffer();
+        Context->PSSetConstantBuffers(10, 1, &cb10);
+
         if (bTypeChanged)
         {
-            Resources.DecalShader.Bind(Context);
+            //Resources.DecalShader.Bind(Context);
 
             ID3D11Buffer* cb1 = Resources.PerObjectConstantBuffer.GetBuffer();
             Context->VSSetConstantBuffers(1, 1, &cb1);
@@ -741,16 +762,22 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->PSSetSamplers(0, 1, Samplers);
         }
 
-        UpdateSceneDepthBuffer(Context);
-        // SceneDepthBuffer (b10)
-        ID3D11Buffer* cb10 = Resources.SceneDepthBuffer.GetBuffer();
-        Context->PSSetConstantBuffers(10, 1, &cb10);
+		// ViewMode, NormalMap 기준 셰이더 변경 필요
+        FShaderKey ShaderKey;
+        ShaderKey.SetViewMode((uint32)ViewMode);
+        // bool bHasNormalMap = InCmd.Constants.Decal.bHasNormalMap > 0 ? true : false;
+        ShaderKey.SetNormalMap(false);
+        ShaderKey.SetOpaqueType(EOpaqueType::Decal);
 
-        ID3D11ShaderResourceView* DecalSRV = InCmd.Constants.Decal.DecalSRV;
-        Context->PSSetShaderResources(1, 1, &DecalSRV);
-
-        ID3D11ShaderResourceView* DepthSRV = CurrentRenderTargets.DepthStencilSRV;
-        Context->PSSetShaderResources(0, 1, &DepthSRV);
+        FShader* Shader = ShaderManager.GetShader(ShaderKey);
+        if (Shader)
+        {
+            Shader->Bind(Context);
+        }
+        else
+        {
+            Resources.StaticMeshShader.Bind(Context);
+        }
         break;
     }
 
@@ -889,7 +916,11 @@ void FRenderer::DrawCommand(ID3D11DeviceContext* InDeviceContext, const FRenderC
     {
         ID3D11ShaderResourceView* nullSRV = nullptr;
         InDeviceContext->PSSetShaderResources(0, 1, &nullSRV);
+        InDeviceContext->PSSetShaderResources(11, 1, &nullSRV);
+        InDeviceContext->PSSetShaderResources(13, 1, &nullSRV);
+		
     }
+
 }
 
 void FRenderer::DrawPostProcessOutline(ID3D11DeviceContext* InDeviceContext)
@@ -1068,6 +1099,7 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
     frameConstantData.Projection = InRenderBus.GetProj();
     frameConstantData.bIsWireframe = (InRenderBus.GetViewMode() == EViewMode::Wireframe);
     frameConstantData.WireframeColor = InRenderBus.GetWireframeColor();
+    frameConstantData.InverseViewProjection = (InRenderBus.GetView() * InRenderBus.GetProj()).GetInverse();
 
     Resources.FrameBuffer.Update(Context, &frameConstantData, sizeof(FFrameConstants));
     ID3D11Buffer* b0 = Resources.FrameBuffer.GetBuffer();

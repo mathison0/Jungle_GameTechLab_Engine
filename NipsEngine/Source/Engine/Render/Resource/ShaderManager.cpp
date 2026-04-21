@@ -44,7 +44,7 @@ FShader* FShaderManager::CreateShader(ID3D11Device* Device, const FShaderKey& Ke
 	static const char* ViewModeTable[] = {"0", "1", "2",  "3",  "4",  "5",  "6",  "7",
                                           "8", "9", "10", "11", "12", "13", "14", "15"};
 
-	static const char* OpaqueTypeTable[] = {"StaticMesh", "Decal"};
+	static const char* OpaqueTypeTable[] = {"0", "1"};
 
 	uint32 ViewModeIndex = Key.Bits & VIEWMODE_MASK;
 	uint32 OpaqueTypeIndex = (Key.Bits & OPAQUE_TYPE_MASK) >> OPAQUE_TYPE_SHIFT;

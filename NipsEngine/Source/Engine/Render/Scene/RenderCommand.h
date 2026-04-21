@@ -49,6 +49,8 @@ struct FFrameConstants
     FMatrix Projection;
     float   bIsWireframe = 0.0f;
     FVector WireframeColor;
+
+	FMatrix InverseViewProjection;
 };
 
 struct FGizmoConstants
