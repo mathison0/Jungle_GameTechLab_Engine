@@ -37,6 +37,7 @@ enum class EPrimitiveType
 enum class ERenderPass : uint32
 {
 	Opaque,
+    Decal,
 	Font, // TextRenderComponent → FontBatcher 경유
 	SubUV, // SubUVComponent     → SubUVBatcher 경유
 	Translucent,
@@ -45,7 +46,6 @@ enum class ERenderPass : uint32
 	Editor,
 	DepthLess,
 	PostProcessOutline,
-	Decal,
     FireBall,
 	Fog,
 	MAX

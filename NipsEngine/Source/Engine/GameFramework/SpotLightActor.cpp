@@ -12,9 +12,16 @@ void ASpotLightActor::InitDefaultComponents()
     LightComponent = AddComponent<USpotLightComponent>();
     LightComponent->AttachToComponent(Root);
 
-    UBillboardComponent* LightBillboard = AddComponent<UBillboardComponent>();
+    LightBillboard = AddComponent<UBillboardComponent>();
     LightBillboard->AttachToComponent(Root);
     LightBillboard->SetTextureName("Asset\\Texture\\S_LightSpot.png");
     LightBillboard->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
     LightBillboard->SetOutlineEnabled(false);
+
+	LightComponent->SetOnColorChanged(
+        [this](const FColor& NewColor)
+        {
+            if (LightBillboard)
+                LightBillboard->SetTintColor(NewColor);
+        });
 }

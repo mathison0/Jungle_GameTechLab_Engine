@@ -4,8 +4,10 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <vector>
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
+#include "Editor/UI/EditorConsoleWidget.h"
 #include "Render/Common/RenderTypes.h"
 #include "Render/Mesh/MeshManager.h"
 #include "Core/Logging/Stats.h"
@@ -114,6 +116,8 @@ void FRenderer::Create(HWND hWindow)
     SampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
     Device.GetDevice()->CreateSamplerState(&SampDesc, Resources.FXAASamplerState.ReleaseAndGetAddressOf());
 
+
+
     //	MeshManager init
     FMeshManager::Initialize();
 
@@ -130,10 +134,17 @@ void FRenderer::Create(HWND hWindow)
 
     // GPU Profiler 초기화
     FGPUProfiler::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext());
+
+    if (!ShaderFileWatcher.Start(FPaths::ShaderDir(), true))
+    {
+        UE_LOG("[ShaderHotReload] Failed to start shader file watcher.");
+    }
 }
 
 void FRenderer::Release()
 {
+    ShaderFileWatcher.Stop();
+
     Resources.PrimitiveShader.Release();
     Resources.GizmoShader.Release();
     Resources.EditorShader.Release();
@@ -264,6 +275,12 @@ const TArray<FRenderCommand>& FRenderer::GetAlignedCommands(ERenderPass Pass, co
 //	GPU 프레임 시작. 반드시 Render 이전에 호출되어야 함.
 void FRenderer::BeginFrame()
 {
+    ShaderManager.ProcessHotReloads(
+        Device.GetDevice(),
+        ShaderFileWatcher.DequeueChangedFiles(),
+        Resources,
+        FontBatcher,
+        SubUVBatcher);
     Device.BeginFrame();
     UseBackBufferRenderTargets();
 #if STATS
@@ -604,6 +621,16 @@ void FRenderer::ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand
             break;
         }
     }
+
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+    Context->PSSetShaderResources(0, 1, &nullSRV);
+    Context->PSSetShaderResources(1, 1, &nullSRV);
+    Context->PSSetShaderResources(2, 1, &nullSRV);
+    Context->PSSetShaderResources(3, 1, &nullSRV);
+    Context->PSSetShaderResources(4, 1, &nullSRV);
+    Context->PSSetShaderResources(5, 1, &nullSRV);
+    Context->PSSetShaderResources(11, 1, &nullSRV);
+    Context->PSSetShaderResources(13, 1, &nullSRV);
 }
 
 void FRenderer::ApplyPassRenderState(ERenderPass Pass, ID3D11DeviceContext* Context, EViewMode CurViewMode)
@@ -690,6 +717,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         ShaderKey.SetViewMode((uint32)ViewMode);
         bool bHasNormalMap = InCmd.Constants.StaticMesh.bHasNormalMap > 0 ? true : false;
         ShaderKey.SetNormalMap(bHasNormalMap);
+        ShaderKey.SetOpaqueType(EOpaqueType::StaticMesh);
 
         FShader* Shader = ShaderManager.GetShader(ShaderKey);
         if (Shader)
@@ -698,7 +726,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         }
         else
         {
-            Resources.StaticMeshShader.Bind(Context);
+            Resources.UberLitShader.Bind(Context);
         }
 
         if (bTypeChanged)
@@ -740,6 +768,9 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             ID3D11SamplerState* Samplers[] = {Resources.MeshSamplerState.Get()};
             Context->VSSetSamplers(0, 1, Samplers);
             Context->PSSetSamplers(0, 1, Samplers);
+			
+			ID3D11RenderTargetView* RTVs[2] = {CurrentRenderTargets.SceneColorRTV, CurrentRenderTargets.NormalRTV};
+            Context->OMSetRenderTargets(2, RTVs, CurrentRenderTargets.DepthStencilView);
         }
 
         // [주의] 텍스처(SRV)는 타입이 같아도 메시의 머티리얼마다 변경될 수 있으므로 분기문 밖에서 매번 바인딩합니다.
@@ -755,10 +786,23 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 
     case ERenderCommandType::Decal:
     {
+		ID3D11RenderTargetView* RTV = CurrentRenderTargets.SceneColorRTV;
+        Context->OMSetRenderTargets(1, &RTV, nullptr);
+
+
+        Context->PSSetShaderResources(11, 1, &CurrentRenderTargets.NormalSRV);
+        Context->PSSetShaderResources(13, 1, &CurrentRenderTargets.DepthStencilSRV);
+
         Resources.DecalConstantBuffer.Update(Context, &InCmd.Constants.Decal, sizeof(FDecalConstants));
+        UpdateSceneDepthBuffer(Context);
+
+		// SceneDepthBuffer (b10)
+        ID3D11Buffer* cb10 = Resources.SceneDepthBuffer.GetBuffer();
+        Context->PSSetConstantBuffers(10, 1, &cb10);
+
         if (bTypeChanged)
         {
-            Resources.DecalShader.Bind(Context);
+            //Resources.DecalShader.Bind(Context);
 
             ID3D11Buffer* cb1 = Resources.PerObjectConstantBuffer.GetBuffer();
             Context->VSSetConstantBuffers(1, 1, &cb1);
@@ -773,16 +817,30 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->PSSetSamplers(0, 1, Samplers);
         }
 
-        UpdateSceneDepthBuffer(Context);
-        // SceneDepthBuffer (b10)
-        ID3D11Buffer* cb10 = Resources.SceneDepthBuffer.GetBuffer();
-        Context->PSSetConstantBuffers(10, 1, &cb10);
+		// ViewMode, NormalMap 기준 셰이더 변경 필요
+        FShaderKey ShaderKey;
+        ShaderKey.SetViewMode((uint32)ViewMode);
+        // bool bHasNormalMap = InCmd.Constants.Decal.bHasNormalMap > 0 ? true : false;
+        ShaderKey.SetNormalMap(false);
+        ShaderKey.SetOpaqueType(EOpaqueType::Decal);
 
-        ID3D11ShaderResourceView* DecalSRV = InCmd.Constants.Decal.DecalSRV;
-        Context->PSSetShaderResources(1, 1, &DecalSRV);
+        FShader* Shader = ShaderManager.GetShader(ShaderKey);
+        if (Shader)
+        {
+            Shader->Bind(Context);
+        }
+        else
+        {
+            Resources.StaticMeshShader.Bind(Context);
+        }
 
-        ID3D11ShaderResourceView* DepthSRV = CurrentRenderTargets.DepthStencilSRV;
-        Context->PSSetShaderResources(0, 1, &DepthSRV);
+		{
+			ID3D11ShaderResourceView* SRVs[4] = {
+			    InCmd.Constants.Decal.DiffuseSRV, InCmd.Constants.Decal.AmbientSRV,
+			    InCmd.Constants.Decal.SpecularSRV, InCmd.Constants.Decal.BumpSRV};
+			Context->VSSetShaderResources(6, 4, SRVs);
+			Context->PSSetShaderResources(6, 4, SRVs);
+        }
         break;
     }
 
@@ -923,7 +981,11 @@ void FRenderer::DrawCommand(ID3D11DeviceContext* InDeviceContext, const FRenderC
     {
         ID3D11ShaderResourceView* nullSRV = nullptr;
         InDeviceContext->PSSetShaderResources(0, 1, &nullSRV);
+        InDeviceContext->PSSetShaderResources(11, 1, &nullSRV);
+        InDeviceContext->PSSetShaderResources(13, 1, &nullSRV);
+		
     }
+
 }
 
 void FRenderer::DrawPostProcessOutline(ID3D11DeviceContext* InDeviceContext)
@@ -1085,7 +1147,6 @@ void FRenderer::ApplyFXAA(ID3D11DeviceContext* InDeviceContext, const FFXAASetti
 
     bUsePostProcessSceneColor = true;
 }
-
 //	Present the rendered frame to the screen. 반드시 Render 이후에 호출되어야 함.
 void FRenderer::EndFrame()
 {
@@ -1106,6 +1167,7 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
     frameConstantData.InvProjection.Inverse(); 
     frameConstantData.bIsWireframe = (InRenderBus.GetViewMode() == EViewMode::Wireframe);
     frameConstantData.WireframeColor = InRenderBus.GetWireframeColor();
+    frameConstantData.InverseViewProjection = (InRenderBus.GetView() * InRenderBus.GetProj()).GetInverse();
 
     Resources.FrameBuffer.Update(Context, &frameConstantData, sizeof(FFrameConstants));
     ID3D11Buffer* b0 = Resources.FrameBuffer.GetBuffer();

@@ -89,6 +89,11 @@ void FFontBatcher::Release()
 	FontShader.Release();
 }
 
+bool FFontBatcher::ReloadShader()
+{
+	return Device.Get() ? FontShader.Reload(Device.Get()) : false;
+}
+
 void FFontBatcher::AddText(const FString& Text,
 	const FMatrix& ModelMatrix,
 	float Scale)
@@ -289,4 +294,3 @@ void FFontBatcher::GetCharUV(uint32 Codepoint, FVector2& OutUVMin, FVector2& Out
 	OutUVMin = FVector2(Info.U, Info.V);
 	OutUVMax = FVector2(Info.U + Info.Width, Info.V + Info.Height);
 }
-

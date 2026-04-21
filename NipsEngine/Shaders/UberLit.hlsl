@@ -3,11 +3,39 @@
 #define UBERLIT_DEBUG_SPEC_MODE 0
 // 0: off, 1: NdotL, 2: NdotH, 3: spec
 
-// VIEW_MODE: 0(Lit), 5(Gouraud), 6(Lambert), 7(Phong), 8(WorldNormal), 9(TileLightHitmap)
+#define LIT 0
+#define UNLIT 1
+#define LIT_GOURAUD 5
+#define LIT_LAMBERT 6
+#define LIT_PHONG 7
+#define WORLD_NORMAL 8
+#define TILE_LIGHT_HITMAP 9
+
 // USE_NORMALMAP: 0 or 1
+#define TRUE 1
+#define FALSE 0
+
+// OPAQUE TYPE
+#define STATICMESH 0
+#define DECAL 1
+
 #ifndef VIEW_MODE
     #define VIEW_MODE 7  // 기본값 설정
 #endif
+
+#if OPAQUETYPE == DECAL
+Texture2D g_NormalTexture : register(t11);
+Texture2D g_DepthTexture : register(t13);
+#endif
+
+struct PSOutput
+{
+    float4 Color : SV_Target0;
+    
+#if OPAQUETYPE == STATICMESH
+    float4 Normal : SV_Target1;
+#endif
+};
 
 #ifndef FORWARD_PLUS_TILE_SIZE_X
     #define FORWARD_PLUS_TILE_SIZE_X 16
@@ -37,6 +65,30 @@ cbuffer StaticMeshBuffer : register(b6)
     float Padding6_3;
 };
 
+cbuffer DecalBuffer : register(b7)
+{
+    row_major float4x4 InverseClipToLocal;
+    float FadeAlpha;
+    float3 DecalAmbientColor;
+    
+    float3 DecalDiffuseColor;
+    uint bHasDecalDiffuseMap;
+    
+    float3 DecalSpecularColor;
+    uint bHasDecalSpecularMap;
+    
+    uint bHasDecalNormalMap;
+    float3 Padding7;
+}
+
+cbuffer SceneDepthBuffer : register(b10)
+{
+    float2 ViewportUVOffset;
+    float2 ViewportUVScale;
+    float2 SceneDepthTextureSize;
+    float2 Pad;
+}
+
 struct VSInput
 {
     float3 Position : POSITION;
@@ -54,6 +106,9 @@ struct PSInput
     float2 UV : TEXCOORD3;
     float3 VertexDiffuseLighting : TEXCOORD4;
     float3 VertexSpecularLighting : TEXCOORD5;
+    
+    float4 ScreenPos : TEXCOORD6;
+    
 };
 
 // Lighting (b13)
@@ -135,7 +190,7 @@ StructuredBuffer<uint2> TileSpotLightGrid : register(t5);
 
 StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t10);
 
-// StaticMesh Textures (t6-t9)
+// StaticMesh/Decal Textures (t6-t9)
 Texture2D DiffuseMap : register(t6);
 Texture2D AmbientMap : register(t7);
 Texture2D SpecularMap : register(t8);
@@ -646,6 +701,7 @@ PSInput VS(VSInput input)
     float4 worldPos = mul(float4(input.Position, 1.0f), Model);
     output.WorldPos = worldPos.xyz;
     output.ClipPos = mul(mul(worldPos, View), Projection);
+    output.ScreenPos = output.ClipPos;
     
     float3x3 normalMatrix = transpose(InvModel);
     output.WorldNormal = normalize(mul(input.Normal, normalMatrix));
@@ -669,12 +725,101 @@ PSInput VS(VSInput input)
     return output;
 }
 
-float4 PS(PSInput input) : SV_TARGET
+PSOutput PS(PSInput input)
 {
+    PSOutput Output;
+    float4 finalColor = { 0.f, 0.f, 0.f, 1.0f };
     float3 N = normalize(input.WorldNormal);
     uint TileIndex = GetTileIndexFromScreenPos(input.ClipPos.xy);
     
-    #if USE_NORMALMAP == 1
+    float3 DiffuseTex = { 1.0f, 1.0f, 1.0f };
+    float3 SpecularTex = { 1.0f, 1.0f, 1.0f };
+    
+    float3 DiffuseLighting;
+    
+    //Decal PixelShader Logic
+    #if OPAQUETYPE == DECAL
+    float2 ndcXY = input.ScreenPos.xy / input.ScreenPos.w;
+    
+    float2 screenUV = ndcXY * float2(0.5f, -0.5f) + 0.5f;
+    float2 DepthUV = ViewportUVOffset + ViewportUVScale * screenUV;
+    
+    float depthZ = g_DepthTexture.Sample(SampleState, DepthUV).r;
+    
+    if (depthZ >= 1.0f) 
+        discard;
+    
+    float4 clipPos = float4(ndcXY, depthZ, 1.0f);
+    float4 localPos = mul(clipPos, InverseClipToLocal);
+    localPos /= localPos.w;
+    
+    if (any(abs(localPos.xyz) > 0.501f)) 
+        clip(-1);
+    
+    float2 decalUV = float2(localPos.y, -localPos.z) + 0.5f;
+    finalColor = DiffuseMap.Sample(SampleState, decalUV);
+    finalColor.a *= FadeAlpha;
+  
+    if (finalColor.a < 0.05f) 
+        clip(-1);
+  
+    //Normal Sampling
+    
+    float3 sceneNormal = g_NormalTexture.Sample(SampleState, DepthUV).rgb;
+    sceneNormal = normalize(sceneNormal * 2.0f -1.0f);
+    float3 finalNormal = sceneNormal;
+    
+    #if USE_NORMALMAP == TRUE
+    float3 decalNormalTex = BumpMap.Sample(SampleState, decalUV).rgb * 2.0f - 1.0f;
+    finalNormal = normalize(sceneNormal + decalNormalTex);
+    #endif
+    
+    //월드 좌표 복원
+    float4 worldPosDecal = mul(clipPos, InverseViewProjection);
+    worldPosDecal /= worldPosDecal.w;
+    
+    //조명 계산
+    float3 dDiffuse = 0;
+    float3 dSpecular = 0;
+    
+    DiffuseTex = DiffuseMap.Sample(SampleState, decalUV).rgb;
+    SpecularTex = SpecularMap.Sample(SampleState, decalUV).rgb;
+
+    
+#if VIEW_MODE == UNLIT 
+    if (!(bool)bHasDecalDiffuseMap)
+    {
+        DiffuseTex = float3(1.f, 1.f, 1.f);
+        finalColor.xyz = DiffuseColor;
+    }
+    else
+    {
+        finalColor.xyz = DiffuseTex;
+    }
+    
+    #elif VIEW_MODE == LIT_LAMBERT
+     CalculateLightingLambert(input.WorldPos, finalNormal, DiffuseLighting);
+     finalColor.xyz = DiffuseTex * DiffuseLighting;
+    
+    #elif VIEW_MODE == LIT_PHONG
+    CalculateLightingBlinnPhong(worldPosDecal.xyz, finalNormal, dDiffuse, dSpecular);
+    finalColor.xyz = (finalColor.rgb * dDiffuse) + (SpecularTex * dSpecular);
+    
+    #elif VIEW_MODE == WORLD_NORMAL
+    discard;
+
+    #endif
+
+    if (finalColor.a < 0.05f)
+        discard;
+    
+    Output.Color = finalColor;
+    return Output;
+    
+    #elif OPAQUETYPE == STATICMESH // StaticMesh PixelShader Logic
+    DiffuseTex = DiffuseColor;
+    
+    #if USE_NORMALMAP == TRUE
     float3 T = normalize(input.WorldTangent);
     float3 B = cross(N, T);
     float3x3 TBN = float3x3(T, B, N);
@@ -683,44 +828,47 @@ float4 PS(PSInput input) : SV_TARGET
     N = normalize(mul(NormalTex,TBN));
     #endif
     
-    float3 DiffuseTex = GetDiffuseTexPS(input.UV);
-    float3 SpecularTex = GetSpecularTexPS(input.UV);
+    SpecularTex = GetSpecularTexPS(input.UV);
+    if ((bool)bHasDiffuseMap)
+    {
+        DiffuseTex = GetDiffuseTexPS(input.UV);
+    }
     
-    float3 finalColor = 0;
 
- #if VIEW_MODE == 1 //unlit
-    if (!(bool)bHasDiffuseMap)
-    {
-        DiffuseTex = float3(1.f, 1.f, 1.f);
-        finalColor = DiffuseColor;
-    }
-    else
-    {
-        finalColor = DiffuseTex;
-    }
+ #if VIEW_MODE == UNLIT
+    finalColor.xyz = DiffuseTex;
  
- #elif VIEW_MODE == 5  //Gouraud
-    finalColor =
+ #elif VIEW_MODE == LIT_GOURAUD
+    finalColor.xyz =
         DiffuseTex * input.VertexDiffuseLighting +
         SpecularTex * input.VertexSpecularLighting;
 
-#elif VIEW_MODE == 6 //Lambert
-     float3 DiffuseLighting;
+#elif VIEW_MODE == LIT_LAMBERT
      CalculateLightingLambertTile(input.WorldPos, N, TileIndex, DiffuseLighting);
-     finalColor = DiffuseTex * DiffuseLighting;
+     finalColor.xyz = DiffuseTex * DiffuseLighting;
+    
+     //ShaderHotReload 테스트용 코드 
+     //finalColor = DiffuseTex * float3(1.0f, 1.0f, 1.0f);
+    
 
-#elif VIEW_MODE == 7 //BlinnPhong
-     float3 DiffuseLighting;    
+#elif VIEW_MODE == LIT_PHONG  
      float3 SpecularLighting;
      CalculateLightingBlinnPhongTile(input.WorldPos, N, TileIndex, DiffuseLighting, SpecularLighting);
      
-    finalColor = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
-#elif VIEW_MODE == 8 //WorldNORMAL
-    finalColor = N * 0.5f + 0.5f;
+    finalColor.xyz = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
+#elif VIEW_MODE == WORLD_NORMAL
+    finalColor.xyz = N * 0.5f + 0.5f;
 
-#elif VIEW_MODE == 9 //TileLightHitmap
+#elif VIEW_MODE == TILE_LIGHT_HITMAP //TileLightHitmap
     finalColor = CalculateTileLightHitmap(TileIndex, input.ClipPos.xy);
     
 #endif
-    return float4(finalColor, 1.0f);
+    Output.Color =  finalColor;
+#endif
+    
+    #if OPAQUETYPE == STATICMESH
+    Output.Normal = float4(N, 1.0f);
+    #endif
+    
+    return Output;
 }

@@ -2,6 +2,7 @@
 
 #include "GameFramework/AActor.h"
 #include "Component/Light/DirectionalLightComponent.h"
+#include "Component/BillboardComponent.h"
 
 class ADirectionalLightActor : public AActor
 {
@@ -17,4 +18,5 @@ class ADirectionalLightActor : public AActor
 
   private:
     UDirectionalLightComponent* LightComponent = nullptr;
+    UBillboardComponent*        LightBillboard = nullptr;
 };

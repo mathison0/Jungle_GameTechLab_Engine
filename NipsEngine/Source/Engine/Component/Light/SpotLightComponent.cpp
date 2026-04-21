@@ -5,6 +5,23 @@
 DEFINE_CLASS(USpotLightComponent, ULightComponent)
 REGISTER_FACTORY(USpotLightComponent)
 
+USpotLightComponent* USpotLightComponent::Duplicate()
+{
+    USpotLightComponent* NewComp = UObjectManager::Get().CreateObject<USpotLightComponent>();
+    NewComp->SetActive(this->IsActive());
+    NewComp->SetOwner(nullptr);
+    NewComp->SetRelativeLocation(this->GetRelativeLocation());
+    NewComp->SetRelativeRotation(this->GetRelativeRotation());
+    NewComp->SetRelativeScale(this->GetRelativeScale());
+    NewComp->SetColor(this->GetColor());
+    NewComp->SetIntensity(this->GetIntensity());
+    NewComp->SetInnerConeAngle(this->GetInnerConeAngle());
+    NewComp->SetOuterConeAngle(this->GetOuterConeAngle());
+    NewComp->SetRadius(this->GetRadius());
+    NewComp->DuplicateSubObjects();
+    return NewComp;
+}
+
 void USpotLightComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) 
 {
     ULightComponent::GetEditableProperties(OutProps);

@@ -3,6 +3,7 @@
 #include "GameFramework/AActor.h"
 #include "Component/Light/PointLightComponent.h"
 #include "Component/SceneComponent.h"
+#include "Component/BillboardComponent.h"
 
 class APointLightActor : public AActor
 {
@@ -18,4 +19,5 @@ class APointLightActor : public AActor
 
   private:
     UPointLightComponent* LightComponent = nullptr;
+    UBillboardComponent*  LightBillboard = nullptr;
 };

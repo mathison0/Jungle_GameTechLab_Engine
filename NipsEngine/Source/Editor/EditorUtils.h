@@ -8,7 +8,7 @@
 struct FEditorViewportState
 {
 	FViewportRect Rect;
-	EViewMode ViewMode = EViewMode::Lit;
+	EViewMode ViewMode = EViewMode::Unlit;
 	bool bHovered = false;
 	FViewportPostProcessSettings PostProcessSettings;
 

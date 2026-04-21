@@ -9,6 +9,9 @@ class USpotLightComponent : public ULightComponent
     USpotLightComponent() = default;
     ~USpotLightComponent() = default;
 
+	virtual USpotLightComponent* Duplicate() override;
+    virtual USpotLightComponent* DuplicateSubObjects() override { return this; }
+
 	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 
 	const FVector GetDirection() const;
@@ -19,11 +22,11 @@ class USpotLightComponent : public ULightComponent
     float GetOuterConeAngle() const;
     void  SetOuterConeAngle(float InAngle);
 
-    void SetConeAngles(float InInnerAngle, float InOuterAngle);
+    void SetConeAngles(float InInnerAnglae, float InOuterAngle);
 
 
 	float GetRadius() { return Radius; }
-    float SetRadius(float NewRadius) { Radius = NewRadius; }
+    void SetRadius(float NewRadius) { Radius = NewRadius; }
 
 
 	ELightType GetLightType() const override { return ELightType::Spot; };

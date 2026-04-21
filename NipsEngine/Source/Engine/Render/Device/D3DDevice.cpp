@@ -152,6 +152,8 @@ FRenderTargetSet FD3DDevice::GetViewportRenderTargets() const
     Targets.SelectionMaskSRV = ViewportSelectionMaskSRV.Get();
     Targets.DepthStencilView = ViewportDepthStencilView.Get();
     Targets.DepthStencilSRV = ViewportDepthStencilSRV.Get();
+    Targets.NormalRTV = ViewportNormalRTV.Get();
+    Targets.NormalSRV = ViewportNormalSRV.Get();
     Targets.Width = static_cast<float>(ViewportRenderTargetWidth);
     Targets.Height = static_cast<float>(ViewportRenderTargetHeight);
     return Targets;
@@ -454,6 +456,38 @@ void FD3DDevice::CreateViewportRenderTargets(uint32 Width, uint32 Height)
     srvDesc.Texture2D.MipLevels = 1;
     Device->CreateShaderResourceView(ViewportDepthStencilTexture.Get(), &srvDesc,
                                      ViewportDepthStencilSRV.ReleaseAndGetAddressOf());
+
+	//Normal
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+    textureDesc.Width = Width;   // 현재 화면 너비
+    textureDesc.Height = Height; // 현재 화면 높이
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT; // 높은 정밀도의 포맷 추천
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.Usage = D3D11_USAGE_DEFAULT;
+    textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE; // RTV와 SRV 모두 사용
+    textureDesc.CPUAccessFlags = 0;
+    textureDesc.MiscFlags = 0;
+
+    HRESULT          hr = Device->CreateTexture2D(&textureDesc, nullptr, ViewportNormalTexture.ReleaseAndGetAddressOf());
+
+    D3D11_RENDER_TARGET_VIEW_DESC normalRtvDesc = {};
+    normalRtvDesc.Format = textureDesc.Format;
+    normalRtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    normalRtvDesc.Texture2D.MipSlice = 0;
+
+    hr = Device->CreateRenderTargetView(ViewportNormalTexture.Get(), &normalRtvDesc,
+                                        ViewportNormalRTV.ReleaseAndGetAddressOf());
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC normalSrvDesc = {};
+    normalSrvDesc.Format = textureDesc.Format;
+    normalSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    normalSrvDesc.Texture2D.MostDetailedMip = 0;
+    normalSrvDesc.Texture2D.MipLevels = 1;
+
+    hr = Device->CreateShaderResourceView(ViewportNormalTexture.Get(), &normalSrvDesc,
+                                          ViewportNormalSRV.ReleaseAndGetAddressOf());
 }
 
 void FD3DDevice::ReleaseViewportRenderTargets()
@@ -470,6 +504,8 @@ void FD3DDevice::ReleaseViewportRenderTargets()
     ViewportSceneColorRTV.Reset();
     ViewportDepthStencilSRV.Reset();
     ViewportSceneColorTexture.Reset();
+    ViewportNormalRTV.Reset();
+    ViewportNormalSRV.Reset();
     ViewportRenderTargetWidth = 0;
     ViewportRenderTargetHeight = 0;
 }

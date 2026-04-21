@@ -48,6 +48,8 @@ struct FRenderTargetSet
 	ID3D11ShaderResourceView* SelectionMaskSRV = nullptr;
 	ID3D11DepthStencilView* DepthStencilView = nullptr;
     ID3D11ShaderResourceView* DepthStencilSRV = nullptr;
+	ID3D11RenderTargetView* NormalRTV = nullptr;
+	ID3D11ShaderResourceView* NormalSRV = nullptr;
 
 	float Width = 0.0f;
 	float Height = 0.0f;
@@ -92,6 +94,10 @@ private:
 	TComPtr<ID3D11Texture2D> ViewportDepthStencilTexture;
 	TComPtr<ID3D11DepthStencilView> ViewportDepthStencilView;
     TComPtr<ID3D11ShaderResourceView> ViewportDepthStencilSRV;
+
+	TComPtr<ID3D11Texture2D> ViewportNormalTexture;
+	TComPtr<ID3D11RenderTargetView> ViewportNormalRTV;
+    TComPtr<ID3D11ShaderResourceView> ViewportNormalSRV;
 
 	TComPtr<ID3D11DepthStencilState> DepthStencilStateDefault;
 	TComPtr<ID3D11DepthStencilState> DepthStencilStateDepthReadOnly;

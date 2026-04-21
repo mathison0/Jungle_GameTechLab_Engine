@@ -17,6 +17,10 @@ const FColor& ULightComponentBase::GetColor() const {
 void ULightComponentBase::SetColor(const FColor& NewColor) 
 { 
 	Color = NewColor; 
+	if (OnColorChanged)
+	{
+		OnColorChanged(Color);
+    }
 }
 
 // Intensity
@@ -28,4 +32,12 @@ float ULightComponentBase::GetIntensity() const
 void ULightComponentBase::SetIntensity(float NewIntensity) 
 {
 	Intensity = std::max(0.0f, NewIntensity); 
+}
+
+void ULightComponentBase::PostEditProperty(const char* PropertyName) 
+{
+	if (strcmp(PropertyName, "Color") == 0 && OnColorChanged)
+	{
+		OnColorChanged(Color);
+	}
 }
