@@ -391,7 +391,8 @@ void FEditorMainPanel::RenderViewportMenuBarForIndex(int32 Index)
 		};
 		static constexpr const char* Labels[] = { "Lit", "Unlit", "Wireframe", "DepthScene", "Fog", "Lit_Gouraud", "Lit_Lambert", "Lit_Phong", "WorldNormal"};
 
-		for (int32 j = 0; j < (int32)EViewMode::Count; ++j)
+		//Lit이 여러 LightModel을 사용한 Viewmode로 존재하는 관계로 Unlit 부터 시작합니다
+		for (int32 j = (int32)EViewMode::Unlit; j < (int32)EViewMode::Count; ++j)
 		{
 			const bool bSel = (State.ViewMode == Modes[j]);
 			if (ImGui::MenuItem(Labels[j], nullptr, bSel))
