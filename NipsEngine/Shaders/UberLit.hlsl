@@ -763,8 +763,8 @@ PSOutput PS(PSInput input)
     Output.Color = finalColor;
     return Output;
     
-    #elif OPAQUETYPE == STATICMESH
-    //StaticMesh PixelShader Logic
+    #elif OPAQUETYPE == STATICMESH // StaticMesh PixelShader Logic
+    DiffuseTex = DiffuseColor;
     
     #if USE_NORMALMAP == TRUE
     float3 T = normalize(input.WorldTangent);
@@ -775,20 +775,15 @@ PSOutput PS(PSInput input)
     N = normalize(mul(NormalTex,TBN));
     #endif
     
-    DiffuseTex = GetDiffuseTexPS(input.UV);
     SpecularTex = GetSpecularTexPS(input.UV);
+    if ((bool)bHasDiffuseMap)
+    {
+        DiffuseTex = GetDiffuseTexPS(input.UV);
+    }
     
 
  #if VIEW_MODE == UNLIT
-    if (!(bool)bHasDiffuseMap)
-    {
-        DiffuseTex = float3(1.f, 1.f, 1.f);
-        finalColor.xyz = DiffuseColor;
-    }
-    else
-    {
-        finalColor.xyz = DiffuseTex;
-    }
+    finalColor.xyz = DiffuseTex;
  
  #elif VIEW_MODE == LIT_GOURAUD
     finalColor.xyz =
@@ -796,7 +791,7 @@ PSOutput PS(PSInput input)
         SpecularTex * input.VertexSpecularLighting;
 
 #elif VIEW_MODE == LIT_LAMBERT
-     CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
+     CalculateLightingLambertTile(input.WorldPos, N, TileIndex, DiffuseLighting);
      finalColor.xyz = DiffuseTex * DiffuseLighting;
     
      //ShaderHotReload 테스트용 코드 
