@@ -621,6 +621,16 @@ void FRenderer::ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand
             break;
         }
     }
+
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+    Context->PSSetShaderResources(0, 1, &nullSRV);
+    Context->PSSetShaderResources(1, 1, &nullSRV);
+    Context->PSSetShaderResources(2, 1, &nullSRV);
+    Context->PSSetShaderResources(3, 1, &nullSRV);
+    Context->PSSetShaderResources(4, 1, &nullSRV);
+    Context->PSSetShaderResources(5, 1, &nullSRV);
+    Context->PSSetShaderResources(11, 1, &nullSRV);
+    Context->PSSetShaderResources(13, 1, &nullSRV);
 }
 
 void FRenderer::ApplyPassRenderState(ERenderPass Pass, ID3D11DeviceContext* Context, EViewMode CurViewMode)

@@ -84,7 +84,7 @@ cbuffer SceneDepthBuffer : register(b10)
 {
     float2 ViewportUVOffset;
     float2 ViewportUVScale;
-    float2 DepthTextureSize;
+    float2 SceneDepthTextureSize;
     float2 Pad;
 }
 
