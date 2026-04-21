@@ -550,6 +550,12 @@ PSOutput PS(PSInput input)
     
     float3 sceneNormal = g_NormalTexture.Sample(SampleState, DepthUV).rgb;
     sceneNormal = normalize(sceneNormal * 2.0f -1.0f);
+    float3 finalNormal = sceneNormal;
+    
+    #if USE_NORMALMAP == TRUE
+    float3 decalNormalTex = BumpMap.Sample(SampleState, decalUV).rgb * 2.0f - 1.0f;
+    finalNormal = normalize(sceneNormal + decalNormalTex);
+    #endif
     
     //월드 좌표 복원
     float4 worldPosDecal = mul(clipPos, InverseViewProjection);
@@ -563,7 +569,7 @@ PSOutput PS(PSInput input)
     SpecularTex = SpecularMap.Sample(SampleState, decalUV).rgb;
 
     
-    #if VIEW_MODE == UNLIT 
+#if VIEW_MODE == UNLIT 
     if (!(bool)bHasDecalDiffuseMap)
     {
         DiffuseTex = float3(1.f, 1.f, 1.f);
@@ -575,15 +581,15 @@ PSOutput PS(PSInput input)
     }
     
     #elif VIEW_MODE == LIT_LAMBERT
-     CalculateLightingLambert(input.WorldPos, sceneNormal, DiffuseLighting);
+     CalculateLightingLambert(input.WorldPos, finalNormal, DiffuseLighting);
      finalColor.xyz = DiffuseTex * DiffuseLighting;
     
     #elif VIEW_MODE == LIT_PHONG
-    CalculateLightingBlinnPhong(worldPosDecal.xyz, sceneNormal, dDiffuse, dSpecular);
+    CalculateLightingBlinnPhong(worldPosDecal.xyz, finalNormal, dDiffuse, dSpecular);
     finalColor.xyz = (finalColor.rgb * dDiffuse) + (SpecularColor * dSpecular);
     
     #elif VIEW_MODE == WORLD_NORMAL
-    finalColor.xyz = sceneNormal * 0.5f + 0.5f;
+    finalColor.xyz = finalNormal * 0.5f + 0.5f;
 
     #endif
 
