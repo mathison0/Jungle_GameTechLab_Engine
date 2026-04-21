@@ -21,12 +21,17 @@ struct FRenderResources
     FConstantBuffer FireBallConstantBuffer;   // b8
     FConstantBuffer FogConstantBuffer;				// b9
     FConstantBuffer SceneDepthBuffer;				// b10
+    FConstantBuffer ForwardPlusConstantBuffer;   // b11
     FConstantBuffer FXAAConstantBuffer;   // b9
     FConstantBuffer LightingConstantBuffer; // b13
 
 	FStructuredBuffer DirectionalLightBuffer;
     FStructuredBuffer SpotLightBuffer;
     FStructuredBuffer PointlLightBuffer;
+    FRWStructuredBuffer TilePointLightGrid;
+    FRWStructuredBuffer TilePointLightIndices;
+    FRWStructuredBuffer TileSpotLightGrid;
+    FRWStructuredBuffer TileSpotLightIndices;
 
     FShader PrimitiveShader;
     FShader GizmoShader;
@@ -42,6 +47,8 @@ struct FRenderResources
     FShader FireBallShader;
     FShader FXAAShader;
     FShader UberLitShader;
+    FShader DepthPrepassShader;
+    FComputeShader TileLightCullingCS;
 
     TComPtr<ID3D11SamplerState> MeshSamplerState;
     TComPtr<ID3D11SamplerState> FXAASamplerState;

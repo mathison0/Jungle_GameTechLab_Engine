@@ -654,10 +654,13 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
             const FStaticMeshSection& Section = Sections[SectionIdx];
 
             FRenderCommand Cmd = {};
-            Cmd.PerObjectConstants = FPerObjectConstants{Primitive->GetWorldMatrix(), FColor::White().ToVector4()};
+            FMatrix        InvModel = Primitive->GetWorldMatrix();
+            InvModel.Inverse();
+            Cmd.PerObjectConstants =
+                FPerObjectConstants{Primitive->GetWorldMatrix(), InvModel, FColor::White().ToVector4()};
             Cmd.Type = ERenderCommandType::StaticMesh;
             Cmd.MeshBuffer = MeshBuffer;
-            Cmd.DepthStencilState = EDepthStencilState::Default;
+            Cmd.DepthStencilState = EDepthStencilState::DepthReadOnly;
             Cmd.BlendState = EBlendState::Opaque;
 
             Cmd.SectionIndexStart = Section.StartIndex;
@@ -730,7 +733,9 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
 
         FRenderCommand Cmd = {};
         Cmd.Type = ERenderCommandType::Font;
-        Cmd.PerObjectConstants = FPerObjectConstants{TextComp->GetWorldMatrix(), TextComp->GetColor()};
+        FMatrix InvModel = Primitive->GetWorldMatrix();
+        InvModel.Inverse();
+        Cmd.PerObjectConstants = FPerObjectConstants{TextComp->GetWorldMatrix(), InvModel, TextComp->GetColor()};
         Cmd.Constants.Font.Text = &Text;
         Cmd.Constants.Font.Font = Font;
         Cmd.Constants.Font.Scale = TextComp->GetFontSize();
@@ -763,8 +768,10 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
         }
 
         FRenderCommand Cmd = {};
+        FMatrix        InvModel = Primitive->GetWorldMatrix();
+        InvModel.Inverse();
         Cmd.PerObjectConstants =
-            FPerObjectConstants{MakeViewBillboardMatrix(Primitive, RenderBus), FVector4(1.0f, 1.0f, 1.0f, FadeAlpha)};
+            FPerObjectConstants{MakeViewBillboardMatrix(Primitive, RenderBus), InvModel, FVector4(1.0f, 1.0f, 1.0f, FadeAlpha)};
         Cmd.Type = ERenderCommandType::SubUV;
         Cmd.Constants.SubUV.Particle = Particle;
         Cmd.Constants.SubUV.FrameIndex = SubUVComp->GetFrameIndex();
@@ -803,8 +810,11 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
 
         FRenderCommand Cmd = {};
         Cmd.Type = ERenderCommandType::Billboard;
+        FMatrix InvModel = Primitive->GetWorldMatrix();
+        InvModel.Inverse();
+        const FColor& Tint = BillboardComp->GetTintColor();
         Cmd.PerObjectConstants =
-            FPerObjectConstants{MakeViewBillboardMatrix(Primitive, RenderBus), FVector4(1.0f, 1.0f, 1.0f, FadeAlpha)};
+            FPerObjectConstants{MakeViewBillboardMatrix(Primitive, RenderBus), InvModel, FVector4(Tint.R, Tint.G, Tint.B, FadeAlpha)};
         Cmd.Constants.Billboard.SRV = SRV;
         Cmd.Constants.Billboard.Width = BillboardComp->GetWidth();
         Cmd.Constants.Billboard.Height = BillboardComp->GetHeight();

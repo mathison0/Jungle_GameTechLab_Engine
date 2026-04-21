@@ -9,11 +9,14 @@ class UPointLightComponent : public ULightComponent
     UPointLightComponent() = default;
     ~UPointLightComponent() = default;
 
+	virtual UPointLightComponent* Duplicate() override;
+    virtual UPointLightComponent* DuplicateSubObjects() override { return this; }
+
     void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 
     // Point Light Function?
     float GetRadius() { return Radius; }
-    float SetRadius(float NewRadius) { Radius = NewRadius; }
+    void SetRadius(float NewRadius) { Radius = NewRadius; }
 
     ELightType GetLightType() const override { return ELightType::Point; };
 

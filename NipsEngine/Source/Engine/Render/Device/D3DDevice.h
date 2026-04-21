@@ -15,11 +15,11 @@ enum class EDepthStencilState
 	DepthReadOnly,
 	StencilWrite,
 	StencilWriteOnlyEqual,
-        DepthNone,
+    DepthNone,
 
 	// --- 기즈모 전용 ---
 	GizmoInside,         
-	GizmoOutside         
+	GizmoOutside
 };
 
 enum class EBlendState

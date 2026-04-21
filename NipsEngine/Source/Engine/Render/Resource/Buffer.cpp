@@ -249,3 +249,86 @@ void FStructuredBuffer::Update(ID3D11DeviceContext* InDeviceContext, const void*
 ID3D11ShaderResourceView* FStructuredBuffer::GetSRV() const { return SRV.Get(); }
 
 #pragma endregion
+
+#pragma region __FRWSTRUCTUREDBUFFER__
+
+void FRWStructuredBuffer::Create(ID3D11Device* InDevice, uint32 InElementSize, uint32 InElementCount)
+{
+    Release();
+
+    if (InDevice == nullptr || InElementSize == 0 || InElementCount == 0)
+    {
+        ElementSize = 0;
+        ElementCount = 0;
+        return;
+    }
+
+    ElementSize = InElementSize;
+    ElementCount = InElementCount;
+
+    D3D11_BUFFER_DESC Desc = {};
+    Desc.ByteWidth = InElementSize * InElementCount;
+    Desc.Usage = D3D11_USAGE_DEFAULT;
+    Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+    Desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    Desc.StructureByteStride = InElementSize;
+
+    HRESULT hr = InDevice->CreateBuffer(&Desc, nullptr, Buffer.ReleaseAndGetAddressOf());
+    if (FAILED(hr))
+    {
+        Release();
+        return;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+    SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
+    SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    SRVDesc.Buffer.FirstElement = 0;
+    SRVDesc.Buffer.NumElements = InElementCount;
+
+    hr = InDevice->CreateShaderResourceView(Buffer.Get(), &SRVDesc, SRV.ReleaseAndGetAddressOf());
+    if (FAILED(hr))
+    {
+        Release();
+        return;
+    }
+
+    D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+    UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
+    UAVDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+    UAVDesc.Buffer.FirstElement = 0;
+    UAVDesc.Buffer.NumElements = InElementCount;
+
+    hr = InDevice->CreateUnorderedAccessView(Buffer.Get(), &UAVDesc, UAV.ReleaseAndGetAddressOf());
+    if (FAILED(hr))
+    {
+        Release();
+        return;
+    }
+}
+
+void FRWStructuredBuffer::Release()
+{
+    UAV.Reset();
+    SRV.Reset();
+    Buffer.Reset();
+    ElementSize = 0;
+    ElementCount = 0;
+}
+
+void FRWStructuredBuffer::ClearUAV(ID3D11DeviceContext* InDeviceContext, uint32 InValue)
+{
+    if (InDeviceContext == nullptr || !UAV)
+    {
+        return;
+    }
+
+    const UINT ClearValues[4] = {InValue, InValue, InValue, InValue};
+    InDeviceContext->ClearUnorderedAccessViewUint(UAV.Get(), ClearValues);
+}
+
+ID3D11ShaderResourceView* FRWStructuredBuffer::GetSRV() const { return SRV.Get(); }
+
+ID3D11UnorderedAccessView* FRWStructuredBuffer::GetUAV() const { return UAV.Get(); }
+
+#pragma endregion

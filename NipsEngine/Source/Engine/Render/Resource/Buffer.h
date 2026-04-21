@@ -15,6 +15,7 @@ struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct ID3D11Buffer;
 struct ID3D11ShaderResourceView;
+struct ID3D11UnorderedAccessView;
 
 
 class FVertexBuffer
@@ -101,4 +102,23 @@ class FStructuredBuffer
 	TComPtr<ID3D11ShaderResourceView> SRV;
 	uint32                            ElementSize = 0;
 	uint32                            MaxElements = 0;
+};
+
+class FRWStructuredBuffer
+{
+  public:
+    void Create(ID3D11Device* InDevice, uint32 InElementSize, uint32 InElementCount);
+    void Release();
+    void ClearUAV(ID3D11DeviceContext* InDeviceContext, uint32 InValue = 0);
+
+    ID3D11ShaderResourceView* GetSRV() const;
+    ID3D11UnorderedAccessView* GetUAV() const;
+    uint32 GetElementCount() const { return ElementCount; }
+
+  private:
+    TComPtr<ID3D11Buffer> Buffer;
+    TComPtr<ID3D11ShaderResourceView> SRV;
+    TComPtr<ID3D11UnorderedAccessView> UAV;
+    uint32 ElementSize = 0;
+    uint32 ElementCount = 0;
 };

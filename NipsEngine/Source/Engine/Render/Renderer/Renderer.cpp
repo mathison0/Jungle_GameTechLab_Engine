@@ -4,8 +4,10 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <vector>
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
+#include "Editor/UI/EditorConsoleWidget.h"
 #include "Render/Common/RenderTypes.h"
 #include "Render/Mesh/MeshManager.h"
 #include "Core/Logging/Stats.h"
@@ -14,6 +16,14 @@
 #include "Render/Scene/RenderBus.h"
 #include "Render/Scene/LightInfo.h"
 #include "Render/Resource/VertexLayouts.h"
+
+namespace
+{
+constexpr uint32 GForwardPlusTileSizeX = 16;
+constexpr uint32 GForwardPlusTileSizeY = 16;
+constexpr uint32 GForwardPlusMaxPointLightsPerTile = 128;
+constexpr uint32 GForwardPlusMaxSpotLightsPerTile = 128;
+}
 
 void FRenderer::Create(HWND hWindow)
 {
@@ -68,6 +78,12 @@ void FRenderer::Create(HWND hWindow)
     // 12. FXAA 모드 (ShaderFXAA.hlsl)
     Resources.FXAAShader.Create(Device.GetDevice(), L"Shaders/ShaderFXAA.hlsl", "FxaaVS", "FxaaPS", nullptr, 0);
 
+	// 13. Depth Prepass (VS only — Position 전용 레이아웃)
+    Resources.DepthPrepassShader.Create(Device.GetDevice(), L"Shaders/DepthPrepass.hlsl", "DepthPrepassVS", nullptr,
+                                        VertexLayouts::DepthPrepassInputLayout,
+                                        ARRAYSIZE(VertexLayouts::DepthPrepassInputLayout));
+    Resources.TileLightCullingCS.Create(Device.GetDevice(), L"Shaders/TileLightCulling25D.hlsl", "TileLightCulling25DCS");
+
     Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FPerObjectConstants));
     Resources.FrameBuffer.Create(Device.GetDevice(), sizeof(FFrameConstants));
     Resources.GizmoPerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FGizmoConstants));
@@ -77,6 +93,7 @@ void FRenderer::Create(HWND hWindow)
     Resources.DecalConstantBuffer.Create(Device.GetDevice(), sizeof(FDecalConstants));
     Resources.FireBallConstantBuffer.Create(Device.GetDevice(), sizeof(FFireBallConstants));
     Resources.SceneDepthBuffer.Create(Device.GetDevice(), sizeof(FSceneDepthConstants));
+    Resources.ForwardPlusConstantBuffer.Create(Device.GetDevice(), sizeof(ForwardPlusConstants));
     Resources.FogConstantBuffer.Create(Device.GetDevice(), sizeof(FFogConstants));
     Resources.FXAAConstantBuffer.Create(Device.GetDevice(), sizeof(FFXAAConstants));
     Resources.LightingConstantBuffer.Create(Device.GetDevice(), sizeof(FLightingConstants));
@@ -117,10 +134,17 @@ void FRenderer::Create(HWND hWindow)
 
     // GPU Profiler 초기화
     FGPUProfiler::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext());
+
+    if (!ShaderFileWatcher.Start(FPaths::ShaderDir(), true))
+    {
+        UE_LOG("[ShaderHotReload] Failed to start shader file watcher.");
+    }
 }
 
 void FRenderer::Release()
 {
+    ShaderFileWatcher.Stop();
+
     Resources.PrimitiveShader.Release();
     Resources.GizmoShader.Release();
     Resources.EditorShader.Release();
@@ -134,6 +158,8 @@ void FRenderer::Release()
     Resources.FogShader.Release();
     Resources.FXAAShader.Release();
     Resources.UberLitShader.Release();
+    Resources.DepthPrepassShader.Release();
+    Resources.TileLightCullingCS.Release();
 
     Resources.PerObjectConstantBuffer.Release();
     Resources.FrameBuffer.Release();
@@ -144,12 +170,17 @@ void FRenderer::Release()
     Resources.DecalConstantBuffer.Release();
     Resources.FireBallConstantBuffer.Release();
     Resources.SceneDepthBuffer.Release();
+    Resources.ForwardPlusConstantBuffer.Release();
     Resources.FogConstantBuffer.Release();
     Resources.FXAAConstantBuffer.Release();
     Resources.LightingConstantBuffer.Release();
     Resources.DirectionalLightBuffer.Release();
     Resources.SpotLightBuffer.Release();
     Resources.PointlLightBuffer.Release();
+    Resources.TilePointLightGrid.Release();
+    Resources.TilePointLightIndices.Release();
+    Resources.TileSpotLightGrid.Release();
+    Resources.TileSpotLightIndices.Release();
 
     Resources.MeshSamplerState.Reset();
     Resources.FXAASamplerState.Reset();
@@ -244,6 +275,12 @@ const TArray<FRenderCommand>& FRenderer::GetAlignedCommands(ERenderPass Pass, co
 //	GPU 프레임 시작. 반드시 Render 이전에 호출되어야 함.
 void FRenderer::BeginFrame()
 {
+    ShaderManager.ProcessHotReloads(
+        Device.GetDevice(),
+        ShaderFileWatcher.DequeueChangedFiles(),
+        Resources,
+        FontBatcher,
+        SubUVBatcher);
     Device.BeginFrame();
     UseBackBufferRenderTargets();
 #if STATS
@@ -300,7 +337,7 @@ void FRenderer::InitializePassRenderStates()
 
     //                              DepthStencil                   Blend                Rasterizer Topology Shader
     //                              WireframeAware
-    S[(uint32)E::Opaque] = {EDepthStencilState::Default,     EBlendState::Opaque,
+    S[(uint32)E::Opaque] = {EDepthStencilState::DepthReadOnly,     EBlendState::Opaque,
                             ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
                             &Resources.PrimitiveShader,      true};
     S[(uint32)E::Translucent] = {EDepthStencilState::Default,     EBlendState::AlphaBlend,
@@ -679,7 +716,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         }
         else
         {
-            Resources.StaticMeshShader.Bind(Context);
+            Resources.UberLitShader.Bind(Context);
         }
 
         if (bTypeChanged)
@@ -692,6 +729,9 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             ID3D11Buffer* cb6 = Resources.StaticMeshConstantBuffer.GetBuffer();
             Context->VSSetConstantBuffers(6, 1, &cb6);
             Context->PSSetConstantBuffers(6, 1, &cb6);
+
+            ID3D11Buffer* cb11 = Resources.ForwardPlusConstantBuffer.GetBuffer();
+            Context->PSSetConstantBuffers(11, 1, &cb11);
 
             // t0/t1 are reused by other passes (e.g. depth/decal), so UberLit needs its light SRVs rebound
             // whenever we switch back to the static mesh path.
@@ -706,6 +746,13 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             ID3D11ShaderResourceView* DirectionLightSRV = Resources.DirectionalLightBuffer.GetSRV();
             Context->VSSetShaderResources(10, 1, &DirectionLightSRV);
             Context->PSSetShaderResources(10, 1, &DirectionLightSRV);
+
+            ID3D11ShaderResourceView* TileLightSRVs[4] = {
+                Resources.TilePointLightIndices.GetSRV(),
+                Resources.TileSpotLightIndices.GetSRV(),
+                Resources.TilePointLightGrid.GetSRV(),
+                Resources.TileSpotLightGrid.GetSRV()};
+            Context->PSSetShaderResources(2, 4, TileLightSRVs);
 
             // 샘플러 상태도 주로 렌더 타입에 종속적이므로 스킵 가능
             ID3D11SamplerState* Samplers[] = {Resources.MeshSamplerState.Get()};
@@ -824,6 +871,8 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 void FRenderer::RenderScenePasses(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
 {
     UpdateLightingBuffer(Context, InRenderBus);
+    ExecuteDepthPrepass(Context, InRenderBus);
+    DispatchTileLightCulling(Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Opaque, Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Decal, Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Translucent, Context, InRenderBus);
@@ -1088,7 +1137,6 @@ void FRenderer::ApplyFXAA(ID3D11DeviceContext* InDeviceContext, const FFXAASetti
 
     bUsePostProcessSceneColor = true;
 }
-
 //	Present the rendered frame to the screen. 반드시 Render 이후에 호출되어야 함.
 void FRenderer::EndFrame()
 {
@@ -1102,7 +1150,11 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
 {
     FFrameConstants frameConstantData;
     frameConstantData.View = InRenderBus.GetView();
+    frameConstantData.InvView = frameConstantData.View;
+    frameConstantData.InvView.Inverse(); 
     frameConstantData.Projection = InRenderBus.GetProj();
+    frameConstantData.InvProjection = frameConstantData.Projection;
+    frameConstantData.InvProjection.Inverse(); 
     frameConstantData.bIsWireframe = (InRenderBus.GetViewMode() == EViewMode::Wireframe);
     frameConstantData.WireframeColor = InRenderBus.GetWireframeColor();
     frameConstantData.InverseViewProjection = (InRenderBus.GetView() * InRenderBus.GetProj()).GetInverse();
@@ -1156,4 +1208,171 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
     Context->VSSetShaderResources(1, 1, &SpotLightSRV);
     Context->PSSetShaderResources(1, 1, &SpotLightSRV);
+}
+
+
+void FRenderer::ExecuteDepthPrepass(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
+{
+    const auto& Commands = InRenderBus.GetCommands(ERenderPass::Opaque);
+    if (Commands.empty() || CurrentRenderTargets.DepthStencilView == nullptr)
+        return;
+
+    const auto& AlignedCommands = GetAlignedCommands(ERenderPass::Opaque, Commands);
+    if (AlignedCommands.empty())
+        return;
+
+    // Bind only the active render target set's DSV for z-only depth prepass.
+    ID3D11DepthStencilView* PrepassDSV = CurrentRenderTargets.DepthStencilView;
+    Context->OMSetRenderTargets(0, nullptr, PrepassDSV);
+
+    Device.SetDepthStencilState(EDepthStencilState::Default);
+    Device.SetBlendState(EBlendState::NoColor);
+    Device.SetRasterizerState(ERasterizerState::SolidBackCull);
+    Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    // VS-only depth prepass path.
+    Resources.DepthPrepassShader.Bind(Context);
+
+    ID3D11Buffer* cb1 = Resources.PerObjectConstantBuffer.GetBuffer();
+    Context->VSSetConstantBuffers(1, 1, &cb1);
+
+    FMeshBuffer* LastMeshBuffer = nullptr;
+
+    for (const FRenderCommand& Cmd : AlignedCommands)
+    {
+        if (Cmd.Type != ERenderCommandType::StaticMesh || Cmd.MeshBuffer == nullptr || !Cmd.MeshBuffer->IsValid())
+        {
+            continue;
+        }
+
+        Resources.PerObjectConstantBuffer.Update(Context, &Cmd.PerObjectConstants, sizeof(FPerObjectConstants));
+
+        if (Cmd.MeshBuffer != LastMeshBuffer)
+        {
+            uint32 Offset = 0;
+            uint32 Stride = Cmd.MeshBuffer->GetVertexBuffer().GetStride();
+            ID3D11Buffer* VertexBuffer = Cmd.MeshBuffer->GetVertexBuffer().GetBuffer();
+            Context->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
+
+            ID3D11Buffer* IndexBuffer = Cmd.MeshBuffer->GetIndexBuffer().GetBuffer();
+            if (IndexBuffer != nullptr)
+            {
+                Context->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+            }
+
+            LastMeshBuffer = Cmd.MeshBuffer;
+        }
+
+        ID3D11Buffer* IndexBuffer = Cmd.MeshBuffer->GetIndexBuffer().GetBuffer();
+        if (IndexBuffer != nullptr)
+        {
+            Context->DrawIndexed(Cmd.SectionIndexCount, Cmd.SectionIndexStart, 0);
+        }
+        else
+        {
+            Context->Draw(Cmd.MeshBuffer->GetVertexBuffer().GetVertexCount(), 0);
+        }
+    }
+}
+
+void FRenderer::DispatchTileLightCulling(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
+{
+    if (Context == nullptr || CurrentRenderTargets.DepthStencilSRV == nullptr || !Resources.TileLightCullingCS.IsValid())
+    {
+        return;
+    }
+
+    const D3D11_VIEWPORT Viewport = Device.GetSubViewportInfo();
+    const uint32 ViewportMinX = static_cast<uint32>(std::max(0.0f, Viewport.TopLeftX));
+    const uint32 ViewportMinY = static_cast<uint32>(std::max(0.0f, Viewport.TopLeftY));
+    const uint32 ViewportWidth = static_cast<uint32>(std::max(0.0f, Viewport.Width));
+    const uint32 ViewportHeight = static_cast<uint32>(std::max(0.0f, Viewport.Height));
+
+    if (ViewportWidth == 0 || ViewportHeight == 0)
+    {
+        return;
+    }
+
+    const uint32 NumTilesX = (ViewportWidth + GForwardPlusTileSizeX - 1) / GForwardPlusTileSizeX;
+    const uint32 NumTilesY = (ViewportHeight + GForwardPlusTileSizeY - 1) / GForwardPlusTileSizeY;
+    const uint32 NumTiles = NumTilesX * NumTilesY;
+
+    if (NumTiles == 0)
+    {
+        return;
+    }
+
+    const uint32 PointIndexCount = NumTiles * GForwardPlusMaxPointLightsPerTile;
+    const uint32 SpotIndexCount = NumTiles * GForwardPlusMaxSpotLightsPerTile;
+
+    if (Resources.TilePointLightGrid.GetElementCount() != NumTiles)
+    {
+        Resources.TilePointLightGrid.Create(Device.GetDevice(), sizeof(uint32) * 2, NumTiles);
+    }
+
+    if (Resources.TileSpotLightGrid.GetElementCount() != NumTiles)
+    {
+        Resources.TileSpotLightGrid.Create(Device.GetDevice(), sizeof(uint32) * 2, NumTiles);
+    }
+
+    if (Resources.TilePointLightIndices.GetElementCount() != PointIndexCount)
+    {
+        Resources.TilePointLightIndices.Create(Device.GetDevice(), sizeof(uint32), PointIndexCount);
+    }
+
+    if (Resources.TileSpotLightIndices.GetElementCount() != SpotIndexCount)
+    {
+        Resources.TileSpotLightIndices.Create(Device.GetDevice(), sizeof(uint32), SpotIndexCount);
+    }
+
+    ForwardPlusConstants ForwardPlusData = {};
+    ForwardPlusData.ViewportMin[0] = ViewportMinX;
+    ForwardPlusData.ViewportMin[1] = ViewportMinY;
+    ForwardPlusData.ViewportSize[0] = ViewportWidth;
+    ForwardPlusData.ViewportSize[1] = ViewportHeight;
+    ForwardPlusData.DepthTextureSize[0] = static_cast<uint32>(CurrentRenderTargets.Width);
+    ForwardPlusData.DepthTextureSize[1] = static_cast<uint32>(CurrentRenderTargets.Height);
+    ForwardPlusData.TileCount[0] = NumTilesX;
+    ForwardPlusData.TileCount[1] = NumTilesY;
+    ForwardPlusData.bEnable25DMask = 1u;
+
+    Resources.ForwardPlusConstantBuffer.Update(Context, &ForwardPlusData, sizeof(ForwardPlusData));
+
+    Resources.TilePointLightGrid.ClearUAV(Context);
+    Resources.TilePointLightIndices.ClearUAV(Context);
+    Resources.TileSpotLightGrid.ClearUAV(Context);
+    Resources.TileSpotLightIndices.ClearUAV(Context);
+
+    Context->OMSetRenderTargets(0, nullptr, nullptr);
+
+    ID3D11Buffer* FrameCB = Resources.FrameBuffer.GetBuffer();
+    Context->CSSetConstantBuffers(0, 1, &FrameCB);
+
+    ID3D11Buffer* ForwardPlusCB = Resources.ForwardPlusConstantBuffer.GetBuffer();
+    Context->CSSetConstantBuffers(11, 1, &ForwardPlusCB);
+
+    ID3D11Buffer* LightingCB = Resources.LightingConstantBuffer.GetBuffer();
+    Context->CSSetConstantBuffers(13, 1, &LightingCB);
+
+    ID3D11ShaderResourceView* SRVs[3] = {
+        CurrentRenderTargets.DepthStencilSRV,
+        Resources.PointlLightBuffer.GetSRV(),
+        Resources.SpotLightBuffer.GetSRV()};
+    Context->CSSetShaderResources(0, 3, SRVs);
+
+    ID3D11UnorderedAccessView* UAVs[4] = {
+        Resources.TilePointLightGrid.GetUAV(),
+        Resources.TilePointLightIndices.GetUAV(),
+        Resources.TileSpotLightGrid.GetUAV(),
+        Resources.TileSpotLightIndices.GetUAV()};
+    Context->CSSetUnorderedAccessViews(0, 4, UAVs, nullptr);
+
+    Resources.TileLightCullingCS.Bind(Context);
+    Context->Dispatch(NumTilesX, NumTilesY, 1);
+
+    ID3D11ShaderResourceView* NullSRVs[3] = {nullptr, nullptr, nullptr};
+    ID3D11UnorderedAccessView* NullUAVs[4] = {nullptr, nullptr, nullptr, nullptr};
+    Context->CSSetShaderResources(0, 3, NullSRVs);
+    Context->CSSetUnorderedAccessViews(0, 4, NullUAVs, nullptr);
+    Context->CSSetShader(nullptr, nullptr, 0);
 }

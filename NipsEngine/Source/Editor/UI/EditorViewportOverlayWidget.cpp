@@ -133,7 +133,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
             float                  CameraMoveSpeed = FocusedClient.GetMoveSpeed();
 
             SetControlWidth();
-            if (ImGui::SliderFloat("Dolly Speed", &CameraMoveSpeed, 10.0f, 2000.0f, "%.0f"))
+            if (ImGui::SliderFloat("Dolly Speed", &CameraMoveSpeed, 1.0f, 500.0f, "%.0f"))
             {
                 FocusedClient.SetMoveSpeed(CameraMoveSpeed);
             }

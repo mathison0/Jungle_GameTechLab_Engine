@@ -43,10 +43,12 @@ public:
 	float GetFadeStartDistance() const { return FadeStartDistance; }
 	void SetFadeEndDistance(float InDistance) { FadeEndDistance = InDistance; }
 	float GetFadeEndDistance() const { return FadeEndDistance; }
-        void  SetCylindrical(bool bEnable) { bIsCylinderical = bEnable; }
-        bool  IsCylindrical() const { return bIsCylinderical; }
-        void  SetUseRotation(bool bEnable) { bUseRotation = bEnable; }
-        bool  IsUseRotation() const { return bUseRotation; }
+    void  SetCylindrical(bool bEnable) { bIsCylinderical = bEnable; }
+    bool  IsCylindrical() const { return bIsCylinderical; }
+    void  SetUseRotation(bool bEnable) { bUseRotation = bEnable; }
+    bool  IsUseRotation() const { return bUseRotation; }
+    void  SetTintColor(const FColor& InColor) { TintColor = InColor; }
+    const FColor& GetTintColor() const { return TintColor; }
 
 	//////////////////// override ////////////////////////////
 	void UpdateWorldAABB() const override;
@@ -75,6 +77,7 @@ private:
 	float FadeEndDistance = 1000.0f;
 
 	bool bIsCylinderical = false;
-        bool bUseRotation = false;
+    bool bUseRotation = false;
+    FColor TintColor = FColor(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
