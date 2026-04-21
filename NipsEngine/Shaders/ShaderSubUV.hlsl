@@ -30,11 +30,12 @@ float4 PS(PSInput input) : SV_TARGET
 {
     float4 col = SubUVAtlas.Sample(SubUVSampler, input.texCoord);
     
+    col.rgb *= input.color.rgb;
     // Apply vertex color (including distance fade alpha)
     col.a *= input.color.a;
 
     // Minimum alpha test to avoid rendering completely transparent pixels
-    if (col.r < 0.01f)
+    if (col.a < 0.01f)
     {
         discard;
     }

@@ -812,8 +812,9 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
         Cmd.Type = ERenderCommandType::Billboard;
         FMatrix InvModel = Primitive->GetWorldMatrix();
         InvModel.Inverse();
+        const FColor& Tint = BillboardComp->GetTintColor();
         Cmd.PerObjectConstants =
-            FPerObjectConstants{MakeViewBillboardMatrix(Primitive, RenderBus), InvModel, FVector4(1.0f, 1.0f, 1.0f, FadeAlpha)};
+            FPerObjectConstants{MakeViewBillboardMatrix(Primitive, RenderBus), InvModel, FVector4(Tint.R, Tint.G, Tint.B, FadeAlpha)};
         Cmd.Constants.Billboard.SRV = SRV;
         Cmd.Constants.Billboard.Width = BillboardComp->GetWidth();
         Cmd.Constants.Billboard.Height = BillboardComp->GetHeight();
