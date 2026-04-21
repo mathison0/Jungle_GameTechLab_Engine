@@ -29,7 +29,7 @@ void FDefaultRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 		FMatrix ProjMat = Camera->GetProjectionMatrix();
 
 		FShowFlags ShowFlags;
-		EViewMode ViewMode = EViewMode::Lit;
+		EViewMode ViewMode = EViewMode::Unlit;
 
 		Bus.SetViewProjection(Camera->GetViewMatrix(), Camera->GetProjectionMatrix());
 		Bus.SetRenderSettings(ViewMode, ShowFlags);

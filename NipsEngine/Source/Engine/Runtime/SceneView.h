@@ -16,7 +16,7 @@ struct FSceneView
 	FVector CameraRight;
 	FVector CameraUp;
 
-	EViewMode ViewMode = EViewMode::Lit;
+	EViewMode ViewMode = EViewMode::Unlit;
 
 	bool bOrthographic = false;
 };
