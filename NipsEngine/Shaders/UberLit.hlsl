@@ -753,7 +753,7 @@ PSOutput PS(PSInput input)
     finalColor.xyz = (finalColor.rgb * dDiffuse) + (SpecularColor * dSpecular);
     
     #elif VIEW_MODE == WORLD_NORMAL
-    finalColor.xyz = finalNormal * 0.5f + 0.5f;
+    discard;
 
     #endif
 
