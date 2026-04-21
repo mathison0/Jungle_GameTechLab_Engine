@@ -515,6 +515,11 @@ PSOutput PS(PSInput input)
     float4 finalColor = { 0.f, 0.f, 0.f, 1.0f };
     float3 N = normalize(input.WorldNormal);
     
+    float3 DiffuseTex = { 1.0f, 1.0f, 1.0f };
+    float3 SpecularTex = { 1.0f, 1.0f, 1.0f };
+    
+    float3 DiffuseLighting;
+    
     //Decal PixelShader Logic
     #if OPAQUETYPE == DECAL
     float2 ndcXY = input.ScreenPos.xy / input.ScreenPos.w;
@@ -553,10 +558,25 @@ PSOutput PS(PSInput input)
     //조명 계산
     float3 dDiffuse = 0;
     float3 dSpecular = 0;
+    
+    DiffuseTex = DiffuseMap.Sample(SampleState, decalUV).rgb;
+    SpecularTex = SpecularMap.Sample(SampleState, decalUV).rgb;
 
     
     #if VIEW_MODE == UNLIT 
-    //No Write FinalColor
+    if (!(bool)bHasDecalDiffuseMap)
+    {
+        DiffuseTex = float3(1.f, 1.f, 1.f);
+        finalColor.xyz = DiffuseColor;
+    }
+    else
+    {
+        finalColor.xyz = DiffuseTex;
+    }
+    
+    #elif VIEW_MODE == LIT_LAMBERT
+     CalculateLightingLambert(input.WorldPos, sceneNormal, DiffuseLighting);
+     finalColor.xyz = DiffuseTex * DiffuseLighting;
     
     #elif VIEW_MODE == LIT_PHONG
     CalculateLightingBlinnPhong(worldPosDecal.xyz, sceneNormal, dDiffuse, dSpecular);
@@ -564,7 +584,7 @@ PSOutput PS(PSInput input)
     
     #elif VIEW_MODE == WORLD_NORMAL
     finalColor.xyz = sceneNormal * 0.5f + 0.5f;
-    
+
     #endif
 
     if (finalColor.a < 0.05f)
@@ -572,9 +592,11 @@ PSOutput PS(PSInput input)
     
     Output.Color = finalColor;
     return Output;
-#endif
     
-    #if USE_NORMALMAP == DECAL
+    #elif OPAQUETYPE == STATICMESH
+    //StaticMesh PixelShader Logic
+    
+    #if USE_NORMALMAP == TRUE
     float3 T = normalize(input.WorldTangent);
     float3 B = cross(N, T);
     float3x3 TBN = float3x3(T, B, N);
@@ -583,8 +605,8 @@ PSOutput PS(PSInput input)
     N = normalize(mul(NormalTex,TBN));
     #endif
     
-    float3 DiffuseTex = GetDiffuseTexPS(input.UV);
-    float3 SpecularTex = GetSpecularTexPS(input.UV);
+    DiffuseTex = GetDiffuseTexPS(input.UV);
+    SpecularTex = GetSpecularTexPS(input.UV);
     
 
  #if VIEW_MODE == UNLIT
@@ -598,18 +620,16 @@ PSOutput PS(PSInput input)
         finalColor.xyz = DiffuseTex;
     }
  
- #elif VIEW_MODE == LIT_GOURARD
+ #elif VIEW_MODE == LIT_GOURAUD
     finalColor.xyz =
         DiffuseTex * input.VertexDiffuseLighting +
         SpecularTex * input.VertexSpecularLighting;
 
 #elif VIEW_MODE == LIT_LAMBERT
-     float3 DiffuseLighting;
      CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
      finalColor.xyz = DiffuseTex * DiffuseLighting;
 
-#elif VIEW_MODE == LIT_PHONG
-     float3 DiffuseLighting;    
+#elif VIEW_MODE == LIT_PHONG  
      float3 SpecularLighting;
      CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseLighting, SpecularLighting);
      
@@ -619,6 +639,7 @@ PSOutput PS(PSInput input)
     
 #endif
     Output.Color =  finalColor;
+#endif
     
     #if OPAQUETYPE == STATICMESH
     Output.Normal = float4(N, 1.0f);
