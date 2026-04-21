@@ -750,7 +750,7 @@ PSOutput PS(PSInput input)
     
     #elif VIEW_MODE == LIT_PHONG
     CalculateLightingBlinnPhong(worldPosDecal.xyz, finalNormal, dDiffuse, dSpecular);
-    finalColor.xyz = (finalColor.rgb * dDiffuse) + (SpecularColor * dSpecular);
+    finalColor.xyz = (finalColor.rgb * dDiffuse) + (SpecularTex * dSpecular);
     
     #elif VIEW_MODE == WORLD_NORMAL
     discard;
