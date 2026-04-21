@@ -53,5 +53,6 @@ class FShaderManager
     FShader* CreateShader(ID3D11Device* Device, const FShaderKey& Key);
 
   private:
+    ID3D11Device* CachedDevice = nullptr;
     TMap<FShaderKey, std::unique_ptr<FShader>, FShaderKeyHash> ShaderMap;
 };

@@ -22,7 +22,6 @@ class USpotLightComponent : public ULightComponent
     void SetConeAngles(float InInnerAngle, float InOuterAngle);
 
 
-	//Point Light Function?
 	float GetRadius() { return Radius; }
     float SetRadius(float NewRadius) { Radius = NewRadius; }
 

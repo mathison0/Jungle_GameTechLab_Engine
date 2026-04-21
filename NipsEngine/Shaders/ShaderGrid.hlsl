@@ -121,8 +121,8 @@ float4 GridPS(GRID_VS_OUTPUT input) : SV_Target
     {
         color =
             (gridColor * gridAlpha +
-             float3(1.0f, 0.2f, 0.2f) * axisXAlpha +
-             float3(0.2f, 1.0f, 0.2f) * axisYAlpha) / totalWeight;
+             float3(0.2f, 1.0f, 0.2f) * axisXAlpha +
+             float3(1.0f, 0.2f, 0.2f) * axisYAlpha) / totalWeight;
     }
 
     return float4(color, finalAlpha);

@@ -51,6 +51,7 @@ namespace
         case EViewMode::Lit_Lambert: return "Lit_Lambert";
         case EViewMode::Lit_Phong: return "Lit_Phong";
         case EViewMode::WorldNormal: return "WorldNormal";
+        case EViewMode::TileLightHitmap: return "TileLightHitmap";
 		default:                   return "Lit";
 		}
 	}
@@ -388,8 +389,9 @@ void FEditorMainPanel::RenderViewportMenuBarForIndex(int32 Index)
 			EViewMode::Lit_Lambert,
 			EViewMode::Lit_Phong,
 			EViewMode::WorldNormal,
+            EViewMode::TileLightHitmap,
 		};
-		static constexpr const char* Labels[] = { "Lit", "Unlit", "Wireframe", "DepthScene", "Fog", "Lit_Gouraud", "Lit_Lambert", "Lit_Phong", "WorldNormal"};
+		static constexpr const char* Labels[] = { "Lit", "Unlit", "Wireframe", "DepthScene", "Fog", "Lit_Gouraud", "Lit_Lambert", "Lit_Phong", "WorldNormal", "TileLightHitmap" };
 
 		for (int32 j = 0; j < (int32)EViewMode::Count; ++j)
 		{

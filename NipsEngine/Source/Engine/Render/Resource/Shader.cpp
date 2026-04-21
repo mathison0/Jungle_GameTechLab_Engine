@@ -34,7 +34,7 @@ void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const ch
 	{
 		// Pixel Shader 컴파일
 		errorBlob.Reset();
-		hr = D3DCompileFromFile(InFilePath, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, InPSEntryPoint, "ps_5_0", 0, 0,
+		hr = D3DCompileFromFile(InFilePath, InDefines, D3D_COMPILE_STANDARD_FILE_INCLUDE, InPSEntryPoint, "ps_5_0", 0, 0,
 			pixelShaderCSO.GetAddressOf(), errorBlob.GetAddressOf());
 		if (FAILED(hr))
 		{

@@ -8,6 +8,7 @@ REGISTER_FACTORY(USpotLightComponent)
 void USpotLightComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) 
 {
     ULightComponent::GetEditableProperties(OutProps);
+    OutProps.push_back({"Radius", EPropertyType::Float, &Radius, 0.1f});
     OutProps.push_back({"InnerConeAngle", EPropertyType::Float, &InnerConeAngle, 0.f, OuterConeAngle});
     OutProps.push_back({"OuterConeAngle", EPropertyType::Float, &OuterConeAngle, InnerConeAngle, 80.f});
 }

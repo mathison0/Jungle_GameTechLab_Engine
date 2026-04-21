@@ -385,7 +385,7 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
 
         RenderBus.AddDebugCommand(
             ERenderPass::Editor,
-            DebugCmd::MakeSphere(PointLightConst.Position, PointLightConst.Radius, FColor::Blue().ToVector4()));
+            DebugCmd::MakeSphere(PointLightConst.Position, PointLightConst.Radius, FColor::Yellow().ToVector4()));
         break;
     }
 
