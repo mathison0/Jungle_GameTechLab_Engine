@@ -625,6 +625,13 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
     if (!Primitive->IsVisible())
         return;
 
+    ID3D11ShaderResourceView* DefaultSRV = FResourceManager::Get().GetDefaultWhiteSRV();
+	auto ResolveSRV = [&](const FString& Path) -> ID3D11ShaderResourceView*
+    {
+        FMaterialResource* Res = FResourceManager::Get().FindTexture(Path);
+        return (Res && Res->SRV) ? Res->SRV.Get() : DefaultSRV;
+    };
+
     EPrimitiveType PrimType = Primitive->GetPrimitiveType();
 
     switch (PrimType)
@@ -675,14 +682,7 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
 
             Cmd.Constants.StaticMesh.ScrollX = StaticMeshComp->GetScroll().first;
             Cmd.Constants.StaticMesh.ScrollY = StaticMeshComp->GetScroll().second;
-
-            ID3D11ShaderResourceView* DefaultSRV = FResourceManager::Get().GetDefaultWhiteSRV();
-
-            auto ResolveSRV = [&](const FString& Path) -> ID3D11ShaderResourceView*
-            {
-                FMaterialResource* Res = FResourceManager::Get().FindTexture(Path);
-                return (Res && Res->SRV) ? Res->SRV.Get() : DefaultSRV;
-            };
+  
 
             // 와이어 프레임이 있는 경우 텍스쳐를 사용하지 않는 메테리얼에게 기본 텍스쳐를 강제 주입
             if (ViewMode == EViewMode::Wireframe)
@@ -858,17 +858,16 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
         Cmd.SortKey = static_cast<float>(DecalComp->GetSortOrder());
 
         ID3D11ShaderResourceView* FinalSRV = FResourceManager::Get().GetDefaultWhiteSRV();
-        if (DecalMat && DecalMat->bHasDiffuseTexture)
-        {
-            FMaterialResource* TexRes = FResourceManager::Get().FindTexture(DecalMat->DiffuseTexPath);
-            if (TexRes && TexRes->SRV)
-            {
-                FinalSRV = TexRes->SRV.Get();
-            }
-        }
+        static const FMaterial EngineDefaultMaterial{};
+        if (!DecalMat) DecalMat = &EngineDefaultMaterial;
 
-        Cmd.Constants.Decal.DecalSRV = FinalSRV;
-
+        Cmd.Constants.Decal.bHasDiffuseMap = DecalMat->bHasDiffuseTexture ? 1u : 0u;
+        Cmd.Constants.Decal.bHasSpecularMap = DecalMat->bHasSpecularTexture ? 1u : 0u;
+        Cmd.Constants.Decal.DiffuseSRV = DecalMat->bHasDiffuseTexture ? ResolveSRV(DecalMat->DiffuseTexPath) : DefaultSRV;
+        Cmd.Constants.Decal.AmbientSRV = DecalMat->bHasAmbientTexture ? ResolveSRV(DecalMat->AmbientTexPath) : DefaultSRV;
+        Cmd.Constants.Decal.SpecularSRV = DecalMat->bHasSpecularTexture ? ResolveSRV(DecalMat->SpecularTexPath) : DefaultSRV;
+        Cmd.Constants.Decal.BumpSRV = DecalMat->bHasBumpTexture ? ResolveSRV(DecalMat->BumpTexPath) : DefaultSRV;
+       
         Cmd.DepthStencilState = EDepthStencilState::DepthReadOnly;
         Cmd.BlendState = EBlendState::AlphaBlend;
 

@@ -733,9 +733,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         Context->OMSetRenderTargets(1, &RTV, nullptr);
 
 
-        ID3D11ShaderResourceView* DecalSRV = InCmd.Constants.Decal.DecalSRV;
         Context->PSSetShaderResources(11, 1, &CurrentRenderTargets.NormalSRV);
-        Context->PSSetShaderResources(12, 1, &DecalSRV);
         Context->PSSetShaderResources(13, 1, &CurrentRenderTargets.DepthStencilSRV);
 
         Resources.DecalConstantBuffer.Update(Context, &InCmd.Constants.Decal, sizeof(FDecalConstants));
@@ -777,6 +775,14 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         else
         {
             Resources.StaticMeshShader.Bind(Context);
+        }
+
+		{
+			ID3D11ShaderResourceView* SRVs[4] = {
+			    InCmd.Constants.Decal.DiffuseSRV, InCmd.Constants.Decal.AmbientSRV,
+			    InCmd.Constants.Decal.SpecularSRV, InCmd.Constants.Decal.BumpSRV};
+			Context->VSSetShaderResources(6, 4, SRVs);
+			Context->PSSetShaderResources(6, 4, SRVs);
         }
         break;
     }

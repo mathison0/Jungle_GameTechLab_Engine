@@ -133,9 +133,7 @@ void FConstantBuffer::Release()
 	Buffer.Reset();
 }
 
-//	Constant buffer�� Dynamic���� ���������Ƿ� ������Ʈ�� ����. ������Ʈ�� �ʿ��ϴٸ� Map/Unmap�� �̿��Ͽ� ������Ʈ
-//	InData�� Constant buffer�� ������Ʈ�� �������� �������Դϴ�. InByteWidth�� ������Ʈ�� �������� �� byte ũ���Դϴ�.
-//	��, InData�� FPerObjectConstants ����ü�� �������Դϴ�.
+
 void FConstantBuffer::Update(ID3D11DeviceContext* InDeviceContext, const void * InData, uint32 InByteWidth)
 {
 	if (Buffer)

@@ -12,7 +12,6 @@
 
 #if OPAQUETYPE == 1
 Texture2D g_NormalTexture : register(t11);
-Texture2D g_DecalTexture : register(t12);
 Texture2D g_DepthTexture : register(t13);
 #endif
 
@@ -49,7 +48,16 @@ cbuffer DecalBuffer : register(b7)
 {
     row_major float4x4 InverseClipToLocal;
     float FadeAlpha;
-    float3 Padding;
+    float3 DecalAmbientColor;
+    
+    float3 DecalDiffuseColor;
+    uint bHasDecalDiffuseMap;
+    
+    float3 DecalSpecularColor;
+    uint bHasDecalSpecularMap;
+    
+    uint bHasDecalNormalMap;
+    float3 Padding7;
 }
 
 cbuffer SceneDepthBuffer : register(b10)
@@ -151,7 +159,7 @@ StructuredBuffer<uint2> TileSpotLightGrid : register(t5);
 
 StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t10);
 
-// StaticMesh Textures (t6-t9)
+// StaticMesh/Decal Textures (t6-t9)
 Texture2D DiffuseMap : register(t6);
 Texture2D AmbientMap : register(t7);
 Texture2D SpecularMap : register(t8);
@@ -514,7 +522,7 @@ PSOutput PS(PSInput input)
         clip(-1);
     
     float2 decalUV = float2(localPos.y, -localPos.z) + 0.5f;
-    finalColor = g_DecalTexture.Sample(SampleState, decalUV);
+    finalColor = DiffuseMap.Sample(SampleState, decalUV);
     finalColor.a *= FadeAlpha;
   
     if (finalColor.a < 0.05f) 
@@ -532,9 +540,6 @@ PSOutput PS(PSInput input)
     //조명 계산
     float3 dDiffuse = 0;
     float3 dSpecular = 0;
-    
-    float4 decalColor = g_DecalTexture.Sample(SampleState, decalUV);
-    decalColor.a *= FadeAlpha;
 
     
     #if VIEW_MODE == 1 //unlit
@@ -542,14 +547,12 @@ PSOutput PS(PSInput input)
     
     #elif VIEW_MODE == 7
     CalculateLightingBlinnPhong(worldPosDecal.xyz, sceneNormal, dDiffuse, dSpecular);
-    finalColor.xyz = (decalColor.rgb * dDiffuse) + (SpecularColor * dSpecular);
+    finalColor.xyz = (finalColor.rgb * dDiffuse) + (SpecularColor * dSpecular);
     
     #elif VIEW_MODE == 8 //WorldNormal
     finalColor.xyz = sceneNormal * 0.5f + 0.5f;
     
     #endif
-    
-    finalColor.a = decalColor.a;
 
     if (finalColor.a < 0.05f)
         discard;

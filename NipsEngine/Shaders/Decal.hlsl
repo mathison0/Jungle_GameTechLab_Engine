@@ -9,7 +9,13 @@ cbuffer DecalBuffer : register(b7)
 {
     row_major float4x4 InverseClipToLocal;
     float FadeAlpha;
-    float3 Padding;
+    float3 DecalAmbientColor;
+    
+    float3 DecalDiffuseColor;
+    float bHasDecalDiffuseMap;
+    
+    float3 DecalSpecularColor;
+    uint bHasDecalNormalMap;
 }
 
 cbuffer SceneDepthBuffer : register(b10)

@@ -142,9 +142,21 @@ struct FDecalConstants
 {
     FMatrix InverseClipToLocal;
     float   FadeAlpha;
-    float   Padding[3];
+    FVector AmbientColor;
 
-    ID3D11ShaderResourceView* DecalSRV = nullptr;
+	FVector DiffuseColor;
+    uint32  bHasDiffuseMap;
+
+	FVector SpecularColor;
+    uint32  bHasSpecularMap;
+
+    uint32  bHasNormalMap;
+    FVector padding;
+
+	ID3D11ShaderResourceView* DiffuseSRV = {nullptr};
+    ID3D11ShaderResourceView* AmbientSRV = {nullptr};
+    ID3D11ShaderResourceView* SpecularSRV = {nullptr};
+    ID3D11ShaderResourceView* BumpSRV = {nullptr};
 };
 
 struct FSceneDepthConstants
