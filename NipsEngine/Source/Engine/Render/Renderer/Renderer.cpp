@@ -19,11 +19,71 @@
 
 namespace
 {
-constexpr uint32 GForwardPlusTileSizeX = 16;
-constexpr uint32 GForwardPlusTileSizeY = 16;
-constexpr uint32 GForwardPlusMaxPointLightsPerTile = 128;
-constexpr uint32 GForwardPlusMaxSpotLightsPerTile = 128;
-}
+    constexpr uint32 GForwardPlusTileSizeX = 16;
+    constexpr uint32 GForwardPlusTileSizeY = 16;
+    constexpr uint32 GForwardPlusMaxPointLightsPerTile = 256;
+    constexpr uint32 GForwardPlusMaxSpotLightsPerTile = 256;
+    constexpr uint32 GSceneMaxPointLight = 256;
+    constexpr uint32 GSceneMaxSpotLight = 256;
+
+    struct FSpotBroadPhaseBounds
+    {
+        FVector Center;
+        float   Radius = 0.0f;
+    };
+
+    float ComputePointLightScore(const FPointLightConstatns& Light, const FVector& CameraPos)
+    {
+        const float Radius = std::max(Light.Radius, 0.001f);
+        const float DistanceToCenter = FVector::Dist(CameraPos, Light.Position);
+        const float VolumeDist = std::max(0.0f, DistanceToCenter - Radius);
+        const float Influence = std::max(Light.Intensity, 0.0f) * Radius * Radius;
+
+        return Influence / (1.0f + VolumeDist * VolumeDist);
+    }
+
+    FSpotBroadPhaseBounds BuildSpotBroadPhaseBounds(const FSpotLightInfo& Light)
+    {
+        const float   Height = std::max(Light.Radius, 0.001f);
+        const FVector Axis = Light.Direction.GetSafeNormal();
+
+        const float   CosTheta = std::clamp(Light.OuterConeCos, 0.001f, 0.9999f);
+        const float   SinTheta = std::sqrt(std::max(0.0f, 1.0f - CosTheta * CosTheta));
+        const float   BaseRadius = Height * (SinTheta / CosTheta);
+        const FVector BaseCenter = Light.Position + Axis * Height;
+
+        FSpotBroadPhaseBounds Bounds;
+        if (BaseRadius <= Height)
+        {
+            Bounds.Radius = (Height * Height + BaseRadius * BaseRadius) / (2.0f * Height);
+            Bounds.Center = Light.Position + Axis * Bounds.Radius;
+        }
+        else
+        {
+            Bounds.Radius = BaseRadius;
+            Bounds.Center = BaseCenter;
+        }
+
+        return Bounds;
+    }
+
+    float ComputeSpotLightScore(const FSpotLightInfo& Light, const FVector& CameraPos)
+    {
+        const FSpotBroadPhaseBounds Bounds = BuildSpotBroadPhaseBounds(Light);
+        const float                 DistanceToCenter = FVector::Dist(CameraPos, Bounds.Center);
+        const float                 VolumeDist = std::max(0.0f, DistanceToCenter - Bounds.Radius);
+
+        const FVector LightDirection = Light.Direction.GetSafeNormal();
+        const FVector ToCamera = (CameraPos - Light.Position).GetSafeNormal();
+        const float   Facing = std::max(0.0f, FVector::DotProduct(LightDirection, ToCamera));
+        const float   FacingWeight = 0.25f + 0.75f * Facing * Facing;
+
+        const float InfluenceRadius = std::max(Bounds.Radius, 0.001f);
+        const float Influence = std::max(Light.Intensity, 0.0f) * InfluenceRadius * InfluenceRadius;
+
+        return (Influence * FacingWeight) / (1.0f + VolumeDist * VolumeDist);
+    }
+} // namespace
 
 void FRenderer::Create(HWND hWindow)
 {
@@ -35,7 +95,8 @@ void FRenderer::Create(HWND hWindow)
     }
 
     // 1. 일반 메쉬 (Primitive.hlsl)
-    Resources.PrimitiveShader.Create(Device.GetDevice(), L"Shaders/Primitive.hlsl", "VS", "PS", VertexLayouts::PrimitiveInputLayout,
+    Resources.PrimitiveShader.Create(Device.GetDevice(), L"Shaders/Primitive.hlsl", "VS", "PS",
+                                     VertexLayouts::PrimitiveInputLayout,
                                      ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 2. 기즈모 (Gizmo.hlsl)
@@ -52,14 +113,16 @@ void FRenderer::Create(HWND hWindow)
 
     // 5. 선택 마스크 (SelectionMask.hlsl)
     Resources.SelectionMaskShader.Create(Device.GetDevice(), L"Shaders/SelectionMask.hlsl", "VS", "PS",
-                                         VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
+                                         VertexLayouts::PrimitiveInputLayout,
+                                         ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 6. 포스트 프로세스 아웃라인 (OutlinePostProcess.hlsl)
     Resources.OutlineShader.Create(Device.GetDevice(), L"Shaders/OutlinePostProcess.hlsl", "VS", "PS", nullptr, 0);
 
     // 7. 스태틱 메시/라이트 통합 셰이더 (UberLit.hlsl)
     Resources.UberLitShader.Create(Device.GetDevice(), L"Shaders/UberLit.hlsl", "VS", "PS",
-                                   VertexLayouts::NormalVertexInputLayout, ARRAYSIZE(VertexLayouts::NormalVertexInputLayout));
+                                   VertexLayouts::NormalVertexInputLayout,
+                                   ARRAYSIZE(VertexLayouts::NormalVertexInputLayout));
 
     // 8. 데칼 (Decal.hlsl)
     Resources.DecalShader.Create(Device.GetDevice(), L"Shaders/Decal.hlsl", "VS", "PS",
@@ -67,7 +130,8 @@ void FRenderer::Create(HWND hWindow)
 
     // 9. 파이어볼 (FireBall.hlsl)
     Resources.FireBallShader.Create(Device.GetDevice(), L"Shaders/FireBall.hlsl", "VS", "PS",
-                                    VertexLayouts::PrimitiveInputLayout, ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
+                                    VertexLayouts::PrimitiveInputLayout,
+                                    ARRAYSIZE(VertexLayouts::PrimitiveInputLayout));
 
     // 10. Depth Scene View 모드 (DepthScene.hlsl)
     Resources.DepthVisualizerShader.Create(Device.GetDevice(), L"Shaders/DepthScene.hlsl", "VS", "PS", nullptr, 0);
@@ -78,11 +142,12 @@ void FRenderer::Create(HWND hWindow)
     // 12. FXAA 모드 (ShaderFXAA.hlsl)
     Resources.FXAAShader.Create(Device.GetDevice(), L"Shaders/ShaderFXAA.hlsl", "FxaaVS", "FxaaPS", nullptr, 0);
 
-	// 13. Depth Prepass (VS only — Position 전용 레이아웃)
+    // 13. Depth Prepass (VS only — Position 전용 레이아웃)
     Resources.DepthPrepassShader.Create(Device.GetDevice(), L"Shaders/DepthPrepass.hlsl", "DepthPrepassVS", nullptr,
                                         VertexLayouts::DepthPrepassInputLayout,
                                         ARRAYSIZE(VertexLayouts::DepthPrepassInputLayout));
-    Resources.TileLightCullingCS.Create(Device.GetDevice(), L"Shaders/TileLightCulling25D.hlsl", "TileLightCulling25DCS");
+    Resources.TileLightCullingCS.Create(Device.GetDevice(), L"Shaders/TileLightCulling25D.hlsl",
+                                        "TileLightCulling25DCS");
 
     Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FPerObjectConstants));
     Resources.FrameBuffer.Create(Device.GetDevice(), sizeof(FFrameConstants));
@@ -98,10 +163,10 @@ void FRenderer::Create(HWND hWindow)
     Resources.FXAAConstantBuffer.Create(Device.GetDevice(), sizeof(FFXAAConstants));
     Resources.LightingConstantBuffer.Create(Device.GetDevice(), sizeof(FLightingConstants));
     Resources.DirectionalLightBuffer.Create(Device.GetDevice(), sizeof(FDirectionalLightConstants), 64);
-    Resources.SpotLightBuffer.Create(Device.GetDevice(), sizeof(FSpotLightInfo));
-    Resources.PointlLightBuffer.Create(Device.GetDevice(), sizeof(FPointLightConstatns), 64);
+    Resources.SpotLightBuffer.Create(Device.GetDevice(), sizeof(FSpotLightInfo), GSceneMaxSpotLight);
+    Resources.PointlLightBuffer.Create(Device.GetDevice(), sizeof(FPointLightConstatns), GSceneMaxPointLight);
 
-	ShaderManager.PreloadShaders(Device.GetDevice());
+    ShaderManager.PreloadShaders(Device.GetDevice());
 
     // TODO : SamplerState 관리
     D3D11_SAMPLER_DESC SampDesc = {};
@@ -115,8 +180,6 @@ void FRenderer::Create(HWND hWindow)
     SampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
     SampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
     Device.GetDevice()->CreateSamplerState(&SampDesc, Resources.FXAASamplerState.ReleaseAndGetAddressOf());
-
-
 
     //	MeshManager init
     FMeshManager::Initialize();
@@ -275,12 +338,8 @@ const TArray<FRenderCommand>& FRenderer::GetAlignedCommands(ERenderPass Pass, co
 //	GPU 프레임 시작. 반드시 Render 이전에 호출되어야 함.
 void FRenderer::BeginFrame()
 {
-    ShaderManager.ProcessHotReloads(
-        Device.GetDevice(),
-        ShaderFileWatcher.DequeueChangedFiles(),
-        Resources,
-        FontBatcher,
-        SubUVBatcher);
+    ShaderManager.ProcessHotReloads(Device.GetDevice(), ShaderFileWatcher.DequeueChangedFiles(), Resources, FontBatcher,
+                                    SubUVBatcher);
     Device.BeginFrame();
     UseBackBufferRenderTargets();
 #if STATS
@@ -337,9 +396,9 @@ void FRenderer::InitializePassRenderStates()
 
     //                              DepthStencil                   Blend                Rasterizer Topology Shader
     //                              WireframeAware
-    S[(uint32)E::Opaque] = {EDepthStencilState::DepthReadOnly,     EBlendState::Opaque,
-                            ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-                            &Resources.PrimitiveShader,      true};
+    S[(uint32)E::Opaque] = {EDepthStencilState::DepthReadOnly, EBlendState::Opaque,
+                            ERasterizerState::SolidBackCull,   D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+                            &Resources.PrimitiveShader,        true};
     S[(uint32)E::Translucent] = {EDepthStencilState::Default,     EBlendState::AlphaBlend,
                                  ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
                                  &Resources.PrimitiveShader,      false};
@@ -622,7 +681,7 @@ void FRenderer::ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand
         }
     }
 
-	ID3D11ShaderResourceView* nullSRV = nullptr;
+    ID3D11ShaderResourceView* nullSRV = nullptr;
     Context->PSSetShaderResources(0, 1, &nullSRV);
     Context->PSSetShaderResources(1, 1, &nullSRV);
     Context->PSSetShaderResources(2, 1, &nullSRV);
@@ -758,18 +817,16 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->PSSetShaderResources(10, 1, &DirectionLightSRV);
 
             ID3D11ShaderResourceView* TileLightSRVs[4] = {
-                Resources.TilePointLightIndices.GetSRV(),
-                Resources.TileSpotLightIndices.GetSRV(),
-                Resources.TilePointLightGrid.GetSRV(),
-                Resources.TileSpotLightGrid.GetSRV()};
+                Resources.TilePointLightIndices.GetSRV(), Resources.TileSpotLightIndices.GetSRV(),
+                Resources.TilePointLightGrid.GetSRV(), Resources.TileSpotLightGrid.GetSRV()};
             Context->PSSetShaderResources(2, 4, TileLightSRVs);
 
             // 샘플러 상태도 주로 렌더 타입에 종속적이므로 스킵 가능
             ID3D11SamplerState* Samplers[] = {Resources.MeshSamplerState.Get()};
             Context->VSSetSamplers(0, 1, Samplers);
             Context->PSSetSamplers(0, 1, Samplers);
-			
-			ID3D11RenderTargetView* RTVs[2] = {CurrentRenderTargets.SceneColorRTV, CurrentRenderTargets.NormalRTV};
+
+            ID3D11RenderTargetView* RTVs[2] = {CurrentRenderTargets.SceneColorRTV, CurrentRenderTargets.NormalRTV};
             Context->OMSetRenderTargets(2, RTVs, CurrentRenderTargets.DepthStencilView);
         }
 
@@ -786,9 +843,8 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 
     case ERenderCommandType::Decal:
     {
-		ID3D11RenderTargetView* RTV = CurrentRenderTargets.SceneColorRTV;
+        ID3D11RenderTargetView* RTV = CurrentRenderTargets.SceneColorRTV;
         Context->OMSetRenderTargets(1, &RTV, nullptr);
-
 
         Context->PSSetShaderResources(11, 1, &CurrentRenderTargets.NormalSRV);
         Context->PSSetShaderResources(13, 1, &CurrentRenderTargets.DepthStencilSRV);
@@ -796,13 +852,13 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         Resources.DecalConstantBuffer.Update(Context, &InCmd.Constants.Decal, sizeof(FDecalConstants));
         UpdateSceneDepthBuffer(Context);
 
-		// SceneDepthBuffer (b10)
+        // SceneDepthBuffer (b10)
         ID3D11Buffer* cb10 = Resources.SceneDepthBuffer.GetBuffer();
         Context->PSSetConstantBuffers(10, 1, &cb10);
 
         if (bTypeChanged)
         {
-            //Resources.DecalShader.Bind(Context);
+            // Resources.DecalShader.Bind(Context);
 
             ID3D11Buffer* cb1 = Resources.PerObjectConstantBuffer.GetBuffer();
             Context->VSSetConstantBuffers(1, 1, &cb1);
@@ -817,7 +873,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->PSSetSamplers(0, 1, Samplers);
         }
 
-		// ViewMode, NormalMap 기준 셰이더 변경 필요
+        // ViewMode, NormalMap 기준 셰이더 변경 필요
         FShaderKey ShaderKey;
         ShaderKey.SetViewMode((uint32)ViewMode);
         // bool bHasNormalMap = InCmd.Constants.Decal.bHasNormalMap > 0 ? true : false;
@@ -834,12 +890,11 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Resources.StaticMeshShader.Bind(Context);
         }
 
-		{
-			ID3D11ShaderResourceView* SRVs[4] = {
-			    InCmd.Constants.Decal.DiffuseSRV, InCmd.Constants.Decal.AmbientSRV,
-			    InCmd.Constants.Decal.SpecularSRV, InCmd.Constants.Decal.BumpSRV};
-			Context->VSSetShaderResources(6, 4, SRVs);
-			Context->PSSetShaderResources(6, 4, SRVs);
+        {
+            ID3D11ShaderResourceView* SRVs[4] = {InCmd.Constants.Decal.DiffuseSRV, InCmd.Constants.Decal.AmbientSRV,
+                                                 InCmd.Constants.Decal.SpecularSRV, InCmd.Constants.Decal.BumpSRV};
+            Context->VSSetShaderResources(6, 4, SRVs);
+            Context->PSSetShaderResources(6, 4, SRVs);
         }
         break;
     }
@@ -983,9 +1038,7 @@ void FRenderer::DrawCommand(ID3D11DeviceContext* InDeviceContext, const FRenderC
         InDeviceContext->PSSetShaderResources(0, 1, &nullSRV);
         InDeviceContext->PSSetShaderResources(11, 1, &nullSRV);
         InDeviceContext->PSSetShaderResources(13, 1, &nullSRV);
-		
     }
-
 }
 
 void FRenderer::DrawPostProcessOutline(ID3D11DeviceContext* InDeviceContext)
@@ -1161,10 +1214,10 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
     FFrameConstants frameConstantData;
     frameConstantData.View = InRenderBus.GetView();
     frameConstantData.InvView = frameConstantData.View;
-    frameConstantData.InvView.Inverse(); 
+    frameConstantData.InvView.Inverse();
     frameConstantData.Projection = InRenderBus.GetProj();
     frameConstantData.InvProjection = frameConstantData.Projection;
-    frameConstantData.InvProjection.Inverse(); 
+    frameConstantData.InvProjection.Inverse();
     frameConstantData.bIsWireframe = (InRenderBus.GetViewMode() == EViewMode::Wireframe);
     frameConstantData.WireframeColor = InRenderBus.GetWireframeColor();
     frameConstantData.InverseViewProjection = (InRenderBus.GetView() * InRenderBus.GetProj()).GetInverse();
@@ -1177,13 +1230,70 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
 
 void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
 {
+    const TArray<FDirectionalLightConstants>& DirLights = InRenderBus.GetDirectionalLights();
+    const FVector&                            CameraPos = InRenderBus.GetCameraPosition();
+    const auto                                SortByHigherScore = [](const FLightSortKey& A, const FLightSortKey& B)
+    {
+        if (A.Score != B.Score)
+        {
+            return A.Score > B.Score;
+        }
+
+        return A.Index < B.Index;
+    };
+
+    const TArray<FPointLightConstatns>& PointLights = InRenderBus.GetPointlLights();
+    PointSortScratch.clear();
+    PointSortScratch.reserve(PointLights.size());
+    for (uint32 i = 0; i < PointLights.size(); ++i)
+    {
+        PointSortScratch.push_back({ComputePointLightScore(PointLights[i], CameraPos), i});
+    }
+
+    const uint32 SelectedPointCount =
+        std::min<uint32>(static_cast<uint32>(PointSortScratch.size()), GSceneMaxPointLight);
+    PointUploadScratch.clear();
+    PointUploadScratch.reserve(SelectedPointCount);
+    if (SelectedPointCount > 0)
+    {
+        std::partial_sort(PointSortScratch.begin(), PointSortScratch.begin() + SelectedPointCount,
+                          PointSortScratch.end(), SortByHigherScore);
+
+        for (uint32 i = 0; i < SelectedPointCount; ++i)
+        {
+            PointUploadScratch.push_back(PointLights[PointSortScratch[i].Index]);
+        }
+    }
+
+    const TArray<FSpotLightInfo>& SpotLights = InRenderBus.GetSpotLightInfos();
+    SpotSortScratch.clear();
+    SpotSortScratch.reserve(SpotLights.size());
+    for (uint32 i = 0; i < SpotLights.size(); ++i)
+    {
+        SpotSortScratch.push_back({ComputeSpotLightScore(SpotLights[i], CameraPos), i});
+    }
+
+    const uint32 SelectedSpotCount = std::min<uint32>(static_cast<uint32>(SpotSortScratch.size()), GSceneMaxSpotLight);
+    SpotUploadScratch.clear();
+    SpotUploadScratch.reserve(SelectedSpotCount);
+    if (SelectedSpotCount > 0)
+    {
+        std::partial_sort(SpotSortScratch.begin(), SpotSortScratch.begin() + SelectedSpotCount, SpotSortScratch.end(),
+                          SortByHigherScore);
+
+        for (uint32 i = 0; i < SelectedSpotCount; ++i)
+        {
+            SpotUploadScratch.push_back(SpotLights[SpotSortScratch[i].Index]);
+        }
+    }
+
     // cbuffer: Ambient + Count
     const FLightingConstants& Lighting = InRenderBus.GetLightingConstants();
 
     FLightingConstants LightingData = Lighting;
-    LightingData.DirectionalLightCount = static_cast<uint32>(InRenderBus.GetDirectionalLights().size());
-    LightingData.SpotLightCount = static_cast<uint32>(InRenderBus.GetSpotLightInfos().size());
-    LightingData.PointLightCount = static_cast<uint32>(InRenderBus.GetPointlLights().size());
+    LightingData.DirectionalLightCount = static_cast<uint32>(DirLights.size());
+    LightingData.PointLightCount = SelectedPointCount;
+    LightingData.SpotLightCount = SelectedSpotCount;
 
     Resources.LightingConstantBuffer.Update(Context, &LightingData, sizeof(FLightingConstants));
     ID3D11Buffer* b13 = Resources.LightingConstantBuffer.GetBuffer();
@@ -1191,7 +1301,6 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     Context->PSSetConstantBuffers(13, 1, &b13);
 
     // StructuredBuffer: Directional Lights → t10
-    const TArray<FDirectionalLightConstants>& DirLights = InRenderBus.GetDirectionalLights();
     if (!DirLights.empty())
     {
         Resources.DirectionalLightBuffer.Update(Context, DirLights.data(), static_cast<uint32>(DirLights.size()));
@@ -1200,26 +1309,22 @@ void FRenderer::UpdateLightingBuffer(ID3D11DeviceContext* Context, const FRender
     Context->VSSetShaderResources(10, 1, &DirectionLightSRV);
     Context->PSSetShaderResources(10, 1, &DirectionLightSRV);
 
-    const TArray<FPointLightConstatns>& PointLights = InRenderBus.GetPointlLights();
-    if (!PointLights.empty())
+    if (!PointUploadScratch.empty())
     {
-        Resources.PointlLightBuffer.Update(Context, PointLights.data(), static_cast<uint32>(PointLights.size()));
+        Resources.PointlLightBuffer.Update(Context, PointUploadScratch.data(), SelectedPointCount);
     }
     ID3D11ShaderResourceView* PointLightSRV = Resources.PointlLightBuffer.GetSRV();
     Context->VSSetShaderResources(0, 1, &PointLightSRV);
     Context->PSSetShaderResources(0, 1, &PointLightSRV);
 
-    // StructuredBuffer: Spot Lights
-    const TArray<FSpotLightInfo>& SpotLights = InRenderBus.GetSpotLightInfos();
-    if (!SpotLights.empty())
+    if (!SpotUploadScratch.empty())
     {
-        Resources.SpotLightBuffer.Update(Context, SpotLights.data(), static_cast<uint32>(SpotLights.size()));
+        Resources.SpotLightBuffer.Update(Context, SpotUploadScratch.data(), SelectedSpotCount);
     }
     ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
     Context->VSSetShaderResources(1, 1, &SpotLightSRV);
     Context->PSSetShaderResources(1, 1, &SpotLightSRV);
 }
-
 
 void FRenderer::ExecuteDepthPrepass(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
 {
@@ -1259,8 +1364,8 @@ void FRenderer::ExecuteDepthPrepass(ID3D11DeviceContext* Context, const FRenderB
 
         if (Cmd.MeshBuffer != LastMeshBuffer)
         {
-            uint32 Offset = 0;
-            uint32 Stride = Cmd.MeshBuffer->GetVertexBuffer().GetStride();
+            uint32        Offset = 0;
+            uint32        Stride = Cmd.MeshBuffer->GetVertexBuffer().GetStride();
             ID3D11Buffer* VertexBuffer = Cmd.MeshBuffer->GetVertexBuffer().GetBuffer();
             Context->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
 
@@ -1287,16 +1392,17 @@ void FRenderer::ExecuteDepthPrepass(ID3D11DeviceContext* Context, const FRenderB
 
 void FRenderer::DispatchTileLightCulling(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
 {
-    if (Context == nullptr || CurrentRenderTargets.DepthStencilSRV == nullptr || !Resources.TileLightCullingCS.IsValid())
+    if (Context == nullptr || CurrentRenderTargets.DepthStencilSRV == nullptr ||
+        !Resources.TileLightCullingCS.IsValid())
     {
         return;
     }
 
     const D3D11_VIEWPORT Viewport = Device.GetSubViewportInfo();
-    const uint32 ViewportMinX = static_cast<uint32>(std::max(0.0f, Viewport.TopLeftX));
-    const uint32 ViewportMinY = static_cast<uint32>(std::max(0.0f, Viewport.TopLeftY));
-    const uint32 ViewportWidth = static_cast<uint32>(std::max(0.0f, Viewport.Width));
-    const uint32 ViewportHeight = static_cast<uint32>(std::max(0.0f, Viewport.Height));
+    const uint32         ViewportMinX = static_cast<uint32>(std::max(0.0f, Viewport.TopLeftX));
+    const uint32         ViewportMinY = static_cast<uint32>(std::max(0.0f, Viewport.TopLeftY));
+    const uint32         ViewportWidth = static_cast<uint32>(std::max(0.0f, Viewport.Width));
+    const uint32         ViewportHeight = static_cast<uint32>(std::max(0.0f, Viewport.Height));
 
     if (ViewportWidth == 0 || ViewportHeight == 0)
     {
@@ -1364,23 +1470,19 @@ void FRenderer::DispatchTileLightCulling(ID3D11DeviceContext* Context, const FRe
     ID3D11Buffer* LightingCB = Resources.LightingConstantBuffer.GetBuffer();
     Context->CSSetConstantBuffers(13, 1, &LightingCB);
 
-    ID3D11ShaderResourceView* SRVs[3] = {
-        CurrentRenderTargets.DepthStencilSRV,
-        Resources.PointlLightBuffer.GetSRV(),
-        Resources.SpotLightBuffer.GetSRV()};
+    ID3D11ShaderResourceView* SRVs[3] = {CurrentRenderTargets.DepthStencilSRV, Resources.PointlLightBuffer.GetSRV(),
+                                         Resources.SpotLightBuffer.GetSRV()};
     Context->CSSetShaderResources(0, 3, SRVs);
 
     ID3D11UnorderedAccessView* UAVs[4] = {
-        Resources.TilePointLightGrid.GetUAV(),
-        Resources.TilePointLightIndices.GetUAV(),
-        Resources.TileSpotLightGrid.GetUAV(),
-        Resources.TileSpotLightIndices.GetUAV()};
+        Resources.TilePointLightGrid.GetUAV(), Resources.TilePointLightIndices.GetUAV(),
+        Resources.TileSpotLightGrid.GetUAV(), Resources.TileSpotLightIndices.GetUAV()};
     Context->CSSetUnorderedAccessViews(0, 4, UAVs, nullptr);
 
     Resources.TileLightCullingCS.Bind(Context);
     Context->Dispatch(NumTilesX, NumTilesY, 1);
 
-    ID3D11ShaderResourceView* NullSRVs[3] = {nullptr, nullptr, nullptr};
+    ID3D11ShaderResourceView*  NullSRVs[3] = {nullptr, nullptr, nullptr};
     ID3D11UnorderedAccessView* NullUAVs[4] = {nullptr, nullptr, nullptr, nullptr};
     Context->CSSetShaderResources(0, 3, NullSRVs);
     Context->CSSetUnorderedAccessViews(0, 4, NullUAVs, nullptr);
