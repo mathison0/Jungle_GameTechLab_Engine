@@ -654,7 +654,7 @@ PSOutput PS(PSInput input)
         #if VIEW_MODE == UNLIT
             finalColor.xyz = DiffuseTex;
         
-        #elif VIEW_MODE == LIT_LAMBERT
+        #elif (VIEW_MODE == LIT_LAMBERT) || (VIEW_MODE == LIT_GOURAUD)
             #if LIGHT_CULLING_FLAG
                 CalculateLightingLambertTile(worldPosDecal.xyz, finalNormal, TileIndex, DiffuseLighting, DecalAmbientColor);
             #else
