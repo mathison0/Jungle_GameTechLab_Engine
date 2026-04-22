@@ -252,7 +252,7 @@ void FRenderCollector::CollectWorldWithFrustum(UWorld* World, const FFrustum& Vi
                 continue;
             }
 
-            CollectLight(Light, RenderBus);
+            CollectLight(Light, ShowFlags, RenderBus);
         }
     }
 }
@@ -327,7 +327,7 @@ void FRenderCollector::CollectFog(UWorld* World, FRenderBus& RenderBus)
     }
 }
 
-void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus& RenderBus)
+void FRenderCollector::CollectLight(ULightComponent* LightComponent, const FShowFlags& ShowFlags, FRenderBus& RenderBus)
 {
     if (LightComponent == nullptr || !LightComponent->IsActive())
     {
@@ -360,11 +360,14 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
         DirConst.Padding = 0.0f;
         RenderBus.AddDirectionalLight(DirConst);
 
-        TArray<FDebugRenderCommand> Temp;
-        DebugCmd::MakeArrow(Temp, DirLight->GetWorldLocation(), Direction, 3.0f, 0.3f, FColor::Cyan().ToVector4());
-        for (auto& DebugCmd : Temp)
+        if (ShowFlags.bDirectionalLightDebug)
         {
-            RenderBus.AddDebugCommand(ERenderPass::Editor, DebugCmd);
+            TArray<FDebugRenderCommand> Temp;
+            DebugCmd::MakeArrow(Temp, DirLight->GetWorldLocation(), Direction, 3.0f, 0.3f, FColor::Cyan().ToVector4());
+            for (auto& DebugCmd : Temp)
+            {
+                RenderBus.AddDebugCommand(ERenderPass::Editor, DebugCmd);
+            }
         }
         break;
     }
@@ -383,9 +386,12 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
 
         RenderBus.AddPointLight(PointLightConst);
 
-        RenderBus.AddDebugCommand(
-            ERenderPass::Editor,
-            DebugCmd::MakeSphere(PointLightConst.Position, PointLightConst.Radius, FColor::Yellow().ToVector4()));
+        if (ShowFlags.bPointLightDebug)
+        {
+            RenderBus.AddDebugCommand(
+                ERenderPass::Editor,
+                DebugCmd::MakeSphere(PointLightConst.Position, PointLightConst.Radius, FColor::Yellow().ToVector4()));
+        }
         break;
     }
 
@@ -409,14 +415,17 @@ void FRenderCollector::CollectLight(ULightComponent* LightComponent, FRenderBus&
 
         // Add Debug Shape Command
         // Outer
-        RenderBus.AddDebugCommand(ERenderPass::Editor,
-                                  DebugCmd::MakeCone(SpotLightInfo.Position, SpotLightInfo.Direction,
-                                                     SpotLightInfo.Radius, OuterRadian, FColor::Green().ToVector4()));
+        if (ShowFlags.bSpotLightDebug)
+        {
+            RenderBus.AddDebugCommand(ERenderPass::Editor,
+                                      DebugCmd::MakeCone(SpotLightInfo.Position, SpotLightInfo.Direction,
+                                                         SpotLightInfo.Radius, OuterRadian, FColor::Green().ToVector4()));
 
-        // Iner
-        RenderBus.AddDebugCommand(ERenderPass::Editor,
-                                  DebugCmd::MakeCone(SpotLightInfo.Position, SpotLightInfo.Direction,
-                                                     SpotLightInfo.Radius, InnerRadian, FColor::Yellow().ToVector4()));
+            // Iner
+            RenderBus.AddDebugCommand(ERenderPass::Editor,
+                                      DebugCmd::MakeCone(SpotLightInfo.Position, SpotLightInfo.Direction,
+                                                         SpotLightInfo.Radius, InnerRadian, FColor::Yellow().ToVector4()));
+        }
         break;
     }
 
@@ -495,7 +504,7 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FShowFlags& ShowFla
         if (Light == nullptr)
             continue;
 
-        CollectLight(Light, RenderBus);
+        CollectLight(Light, ShowFlags, RenderBus);
     }
 }
 

@@ -37,6 +37,9 @@ struct FShowFlags
     bool bGrid = true;
     bool bAxis = true;
     bool bGizmo = true;
+    bool bDirectionalLightDebug = true;
+    bool bPointLightDebug = true;
+    bool bSpotLightDebug = true;
     bool bBillboardText = false;
     bool bBoundingVolume = false;
     bool bBVHBoundingVolume = false;

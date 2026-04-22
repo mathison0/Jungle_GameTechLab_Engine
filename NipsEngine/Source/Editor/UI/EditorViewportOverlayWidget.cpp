@@ -121,6 +121,13 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
         }
     }
 
+    if (BeginSettingsSection("Light", false))
+    {
+        ImGui::Checkbox("Directional Light Debug", &Settings.ShowFlags.bDirectionalLightDebug);
+        ImGui::Checkbox("Point Light Debug", &Settings.ShowFlags.bPointLightDebug);
+        ImGui::Checkbox("Spot Light Debug", &Settings.ShowFlags.bSpotLightDebug);
+    }
+
     if (BeginSettingsSection("Camera", true))
     {
         SetControlWidth();

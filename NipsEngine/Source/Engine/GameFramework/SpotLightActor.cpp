@@ -16,6 +16,7 @@ void ASpotLightActor::InitDefaultComponents()
     LightBillboard->AttachToComponent(Root);
     LightBillboard->SetTextureName("Asset\\Texture\\S_LightSpot.png");
     LightBillboard->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+    LightBillboard->SetRelativeScale(FVector(5.0f, 5.0f, 5.0f));
     LightBillboard->SetOutlineEnabled(false);
 
 	LightComponent->SetOnColorChanged(

@@ -33,6 +33,9 @@ namespace EditorKey
 	constexpr const char* bGrid = "bGrid";
 	constexpr const char* bAxis = "bAxis";
 	constexpr const char* bGizmo = "bGizmo";
+	constexpr const char* bDirectionalLightDebug = "bDirectionalLightDebug";
+	constexpr const char* bPointLightDebug = "bPointLightDebug";
+	constexpr const char* bSpotLightDebug = "bSpotLightDebug";
 	constexpr const char* bBillboardText = "bBillboardText";
 	constexpr const char* bBoundingVolume = "bBoundingVolume";
 	constexpr const char* bBVHBoundingVolume = "bBVHBoundingVolume";
@@ -104,6 +107,9 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	ViewObj[EditorKey::bGrid] = ShowFlags.bGrid;
 	ViewObj[EditorKey::bAxis] = ShowFlags.bAxis;
 	ViewObj[EditorKey::bGizmo] = ShowFlags.bGizmo;
+	ViewObj[EditorKey::bDirectionalLightDebug] = ShowFlags.bDirectionalLightDebug;
+	ViewObj[EditorKey::bPointLightDebug] = ShowFlags.bPointLightDebug;
+	ViewObj[EditorKey::bSpotLightDebug] = ShowFlags.bSpotLightDebug;
 	ViewObj[EditorKey::bBillboardText] = ShowFlags.bBillboardText;
 	ViewObj[EditorKey::bBoundingVolume] = ShowFlags.bBoundingVolume;
 	ViewObj[EditorKey::bBVHBoundingVolume] = ShowFlags.bBVHBoundingVolume;
@@ -244,6 +250,12 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			ShowFlags.bAxis = ViewObj[EditorKey::bAxis].ToBool();
 		if (ViewObj.hasKey(EditorKey::bGizmo))
 			ShowFlags.bGizmo = ViewObj[EditorKey::bGizmo].ToBool();
+		if (ViewObj.hasKey(EditorKey::bDirectionalLightDebug))
+			ShowFlags.bDirectionalLightDebug = ViewObj[EditorKey::bDirectionalLightDebug].ToBool();
+		if (ViewObj.hasKey(EditorKey::bPointLightDebug))
+			ShowFlags.bPointLightDebug = ViewObj[EditorKey::bPointLightDebug].ToBool();
+		if (ViewObj.hasKey(EditorKey::bSpotLightDebug))
+			ShowFlags.bSpotLightDebug = ViewObj[EditorKey::bSpotLightDebug].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBillboardText))
 			ShowFlags.bBillboardText = ViewObj[EditorKey::bBillboardText].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBoundingVolume))
