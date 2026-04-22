@@ -17,7 +17,7 @@
           }],
         "ClassName" : "StaticMeshComp",
         "Properties" : {
-          "Location" : [80.350075, -130.113968, 30.000000],
+          "Location" : [96.158638, -125.859154, 8.389319],
           "Material 0" : "marble_bust_01",
           "Outline" : true,
           "Rotation" : [-0.000824, -10.424438, -179.999893],
@@ -47,7 +47,7 @@
           }],
         "ClassName" : "StaticMeshComp",
         "Properties" : {
-          "Location" : [80.350075, -98.806831, 30.000000],
+          "Location" : [86.857323, -98.806831, 5.079893],
           "Material 0" : "brass_pan_01",
           "Outline" : true,
           "Rotation" : [0.000000, 0.000000, 180.000000],
@@ -77,10 +77,10 @@
           }],
         "ClassName" : "StaticMeshComp",
         "Properties" : {
-          "Location" : [80.350075, -26.674431, 30.000000],
+          "Location" : [97.992592, -23.722935, 9.000000],
           "Material 0" : "mid_century_lounge_chair",
           "Outline" : true,
-          "Rotation" : [1.866110, 57.593864, 178.401886],
+          "Rotation" : [0.000000, 30.000000, 180.000000],
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
@@ -107,10 +107,10 @@
           }],
         "ClassName" : "StaticMeshComp",
         "Properties" : {
-          "Location" : [80.350075, -41.438923, 30.000000],
+          "Location" : [97.542519, -43.470608, 9.000000],
           "Material 0" : "without_normalMap_mid_century_lounge_chair",
           "Outline" : true,
-          "Rotation" : [0.000000, 36.516159, -179.999893],
+          "Rotation" : [0.000000, 30.000000, -179.999893],
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
@@ -162,7 +162,7 @@
               "Intensity" : 30.000000,
               "Location" : [0.000000, 0.000000, 0.000000],
               "OuterConeAngle" : 45.000000,
-              "Radius" : 13.300000,
+              "Radius" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000]
             }
@@ -188,7 +188,7 @@
           }],
         "ClassName" : "USceneComponent",
         "Properties" : {
-          "Location" : [81.833527, -129.465561, 39.565651],
+          "Location" : [99.056717, -123.979332, 18.386450],
           "Rotation" : [-0.000000, 90.000000, -0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000]
         }
@@ -229,7 +229,7 @@
           }],
         "ClassName" : "USceneComponent",
         "Properties" : {
-          "Location" : [88.627014, -99.190498, 32.053188],
+          "Location" : [96.105675, -99.190498, 7.919768],
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000]
         }
@@ -244,7 +244,7 @@
               "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
               "Intensity" : 1.000000,
               "Location" : [0.000000, 0.000000, 0.000000],
-              "Rotation" : [0.000000, -45.000000, 0.000000],
+              "Rotation" : [0.000000, 45.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000]
             }
           }, {
@@ -269,7 +269,7 @@
           }],
         "ClassName" : "USceneComponent",
         "Properties" : {
-          "Location" : [0.000000, 0.000000, 0.000000],
+          "Location" : [222.219116, 0.000000, 0.000000],
           "Rotation" : [0.000000, 0.000000, 180.000000],
           "Scale" : [1.000000, 1.000000, 1.000000]
         }
@@ -315,7 +315,7 @@
         "ClassName" : "StaticMeshComp",
         "Properties" : {
           "Location" : [59.255417, -70.551765, 45.321915],
-          "Material 0" : "Mat_검은색_거친표면",
+          "Material 0" : "moon_rock_04",
           "Outline" : true,
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [20.000000, 319.787628, 197.709259],
@@ -344,11 +344,71 @@
           }],
         "ClassName" : "StaticMeshComp",
         "Properties" : {
-          "Location" : [95.901726, -70.551765, -9.531757],
-          "Material 0" : "Mat_검은색_거친표면",
+          "Location" : [95.901726, -28.588844, 1.000000],
+          "Material 0" : "WoodBox",
           "Outline" : true,
           "Rotation" : [0.000000, -90.000000, 0.000000],
-          "Scale" : [20.000000, 392.580627, 197.709259],
+          "Scale" : [5.000000, 70.790062, 63.456512],
+          "Scroll U" : 0.000000,
+          "Scroll V" : 0.000000,
+          "StaticMesh" : "Asset/Mesh/Dice/Dice.obj",
+          "Visible" : true
+        }
+      },
+      "Visible" : true
+    }, {
+      "ClassName" : "AActor",
+      "RootComponent" : {
+        "Children" : [{
+            "ClassName" : "UTextRenderComponent",
+            "Properties" : {
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Location" : [0.000000, 0.000000, 1.000000],
+              "Outline" : false,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID: 367",
+              "Visible" : false
+            }
+          }],
+        "ClassName" : "StaticMeshComp",
+        "Properties" : {
+          "Location" : [95.901726, -112.398117, 1.000000],
+          "Material 0" : "WoodBox",
+          "Outline" : true,
+          "Rotation" : [0.000000, -90.000000, 0.000000],
+          "Scale" : [5.000000, 70.790062, 63.456512],
+          "Scroll U" : 0.000000,
+          "Scroll V" : 0.000000,
+          "StaticMesh" : "Asset/Mesh/Dice/Dice.obj",
+          "Visible" : true
+        }
+      },
+      "Visible" : true
+    }, {
+      "ClassName" : "AActor",
+      "RootComponent" : {
+        "Children" : [{
+            "ClassName" : "UTextRenderComponent",
+            "Properties" : {
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Location" : [0.000000, 0.000000, 1.000000],
+              "Outline" : false,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID: 367",
+              "Visible" : false
+            }
+          }],
+        "ClassName" : "StaticMeshComp",
+        "Properties" : {
+          "Location" : [156.157394, -70.551765, -13.925123],
+          "Material 0" : "moon_rock_04",
+          "Outline" : true,
+          "Rotation" : [0.000000, 90.000000, 0.000000],
+          "Scale" : [20.000000, 319.787628, 197.709259],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
           "StaticMesh" : "Asset/Mesh/Dice/Dice.obj",
@@ -362,9 +422,9 @@
   "PerspectiveCamera" : {
     "FOV" : [84.000000],
     "FarClip" : [2000.000000],
-    "Location" : [116.856216, -81.745003, 32.674503],
+    "Location" : [116.450645, -121.663231, 22.833364],
     "NearClip" : [0.100000],
-    "Rotation" : [2.405933, 178.042542, 0.082204]
+    "Rotation" : [-26.450470, 165.734695, -6.461212]
   },
   "Version" : 3,
   "WorldType" : "Editor"
