@@ -18,12 +18,15 @@ struct FRenderResources;
 class FFontBatcher;
 class FSubUVBatcher;
 
+
+// 0000_0000_0000_0000_0000_000L_OOON_VVVV
 enum EShaderKeyBits : uint32
 {
     VIEWMODE_MASK = 0xF, // 4 bits
     NORMALMAP_BIT = 1 << 4,
 	OPAQUE_TYPE_SHIFT=5,
 	OPAQUE_TYPE_MASK = 0x3 << OPAQUE_TYPE_SHIFT,
+	LIGHTCULLING_BIT = 1 << 8
     // 필요하면 계속 추가
 };
 
@@ -58,7 +61,13 @@ struct FShaderKey
 		Bits &= ~OPAQUE_TYPE_MASK;
         Bits |= (type << OPAQUE_TYPE_SHIFT) & OPAQUE_TYPE_MASK;
 	}
-
+    inline void SetLightCullMode(bool enable)
+    {
+        if (enable)
+            Bits |= LIGHTCULLING_BIT;
+        else
+            Bits &= ~LIGHTCULLING_BIT;
+    }
 };
 
 struct FShaderKeyHash

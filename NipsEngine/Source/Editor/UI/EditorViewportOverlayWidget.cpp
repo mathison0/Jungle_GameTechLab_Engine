@@ -125,6 +125,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
         ImGui::Checkbox("Point Light Debug", &Settings.ShowFlags.bPointLightDebug);
         ImGui::Checkbox("Spot Light Debug", &Settings.ShowFlags.bSpotLightDebug);
         ImGui::Checkbox("Light Hitmap Overlay", &Settings.ShowFlags.bShowLightHitmapOverlay);
+        ImGui::Checkbox("Light Culling Mode", &Settings.ShowFlags.bLightCullingMode);
     }
 
     if (BeginSettingsSection("Camera", true))

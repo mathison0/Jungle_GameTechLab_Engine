@@ -390,58 +390,6 @@ uint GetTileIndexFromScreenPos(float2 screenPos)
     return tileCoord.y * tileCountX + tileCoord.x;
 }
 
-float3 EvaluateHitmapRamp(float t)
-{
-    t = saturate(t);
-
-    const float3 c0 = float3(0.02f, 0.02f, 0.04f);
-    const float3 c1 = float3(0.06f, 0.22f, 0.68f);
-    const float3 c2 = float3(0.00f, 0.72f, 0.84f);
-    const float3 c3 = float3(0.96f, 0.86f, 0.18f);
-    const float3 c4 = float3(0.92f, 0.20f, 0.10f);
-
-    if (t < 0.25f)
-    {
-        return lerp(c0, c1, t / 0.25f);
-    }
-
-    if (t < 0.50f)
-    {
-        return lerp(c1, c2, (t - 0.25f) / 0.25f);
-    }
-
-    if (t < 0.75f)
-    {
-        return lerp(c2, c3, (t - 0.50f) / 0.25f);
-    }
-
-    return lerp(c3, c4, (t - 0.75f) / 0.25f);
-}
-
-float3 CalculateTileLightHitmap(uint TileIndex, float2 screenPos)
-{
-    uint pointCount = TilePointLightGrid[TileIndex].y;
-    uint spotCount = TileSpotLightGrid[TileIndex].y;
-    uint totalCount = pointCount + spotCount;
-
-    // A log scale makes low-to-mid tile densities easier to inspect.
-    float normalizedCount = saturate(log2((float)totalCount + 1.0f) / log2(33.0f));
-    float3 baseColor = EvaluateHitmapRamp(normalizedCount);
-
-    float pointWeight = (totalCount > 0u) ? ((float)pointCount / (float)totalCount) : 0.0f;
-    float spotWeight = (totalCount > 0u) ? ((float)spotCount / (float)totalCount) : 0.0f;
-    baseColor += float3(0.18f * pointWeight, 0.00f, 0.18f * spotWeight);
-
-    float2 localPixel = max(screenPos - float2(ViewportMin), 0.0f.xx);
-    float2 tileCoordPixel = frac(localPixel / float2(FORWARD_PLUS_TILE_SIZE_X, FORWARD_PLUS_TILE_SIZE_Y));
-    float2 tileEdgeDistance =
-        min(tileCoordPixel, 1.0f - tileCoordPixel) * float2(FORWARD_PLUS_TILE_SIZE_X, FORWARD_PLUS_TILE_SIZE_Y);
-    float edgeDistance = min(tileEdgeDistance.x, tileEdgeDistance.y);
-    float gridLine = 1.0f - smoothstep(0.3f, 0.6f, edgeDistance);
-
-    return lerp(baseColor, 1.0f.xxx, gridLine * 0.3f);
-}
-
 void CalculateLightingLambertTile(float3 WorldPos, float3 N, uint TileIndex, out float3 OutDiffuse, float3 InAmbientColor)
 {
     OutDiffuse = CalculateAmbientLight(Ambient, InAmbientColor, 1.0f.xxx);
@@ -764,6 +712,7 @@ PSOutput PS(PSInput input)
     
     float4 sampledDiffuse = DiffuseMap.Sample(SampleState, decalUV);
     SpecularTex = SpecularMap.Sample(SampleState, decalUV).rgb;
+    
     DiffuseTex = sampledDiffuse.rgb;
     float alpha = sampledDiffuse.a * FadeAlpha;
   

@@ -19,29 +19,29 @@
 
 namespace
 {
-	std::string TrimCopy(const std::string& Value)
-	{
-		size_t Start = 0;
-		while (Start < Value.size() && std::isspace(static_cast<unsigned char>(Value[Start])) != 0)
-		{
-			++Start;
-		}
+    std::string TrimCopy(const std::string& Value)
+    {
+        size_t Start = 0;
+        while (Start < Value.size() && std::isspace(static_cast<unsigned char>(Value[Start])) != 0)
+        {
+            ++Start;
+        }
 
-		size_t End = Value.size();
-		while (End > Start && std::isspace(static_cast<unsigned char>(Value[End - 1])) != 0)
-		{
-			--End;
-		}
+        size_t End = Value.size();
+        while (End > Start && std::isspace(static_cast<unsigned char>(Value[End - 1])) != 0)
+        {
+            --End;
+        }
 
-		return Value.substr(Start, End - Start);
-	}
-}
+        return Value.substr(Start, End - Start);
+    }
+} // namespace
 
 FShader* FShaderManager::GetShader(const FShaderKey& Key)
 {
     auto It = ShaderMap.find(Key);
     if (It != ShaderMap.end())
-         return It->second.get();
+        return It->second.get();
     if (CachedDevice != nullptr)
     {
         return CreateShader(CachedDevice, Key);
@@ -57,29 +57,28 @@ void FShaderManager::PreloadShaders(ID3D11Device* Device)
     {
         for (int bNormal = 0; bNormal <= 1; ++bNormal)
         {
-
-			for (int type = 0; type < (int)EOpaqueType::Count; ++type)
-			{
-				FShaderKey Key;
-				Key.SetViewMode(view);
-				Key.SetNormalMap(bNormal != 0);
-				Key.SetOpaqueType(type);
-				if (!ShaderMap.contains(Key))
+            for (int type = 0; type < static_cast<int>(EOpaqueType::Count); ++type)
+            {
+				for (int bLightCull = 0; bLightCull <= 1; ++bLightCull)
 				{
-                CreateShader(Device, Key);
+                                    FShaderKey Key;
+                                    Key.SetViewMode(view);
+                                    Key.SetNormalMap(bNormal != 0);
+                                    Key.SetOpaqueType(type);
+                                    Key.SetLightCullMode(bLightCull);
+                                    if (!ShaderMap.contains(Key))
+                                    {
+                                        CreateShader(Device, Key);
+                                    }
 				}
-			}
-            
+            }
         }
     }
 }
 
-void FShaderManager::ProcessHotReloads(
-    ID3D11Device* Device,
-    const std::vector<std::wstring>& ChangedFiles,
-    FRenderResources& Resources,
-    FFontBatcher& FontBatcher,
-    FSubUVBatcher& SubUVBatcher)
+void FShaderManager::ProcessHotReloads(ID3D11Device* Device, const std::vector<std::wstring>& ChangedFiles,
+                                       FRenderResources& Resources, FFontBatcher& FontBatcher,
+                                       FSubUVBatcher& SubUVBatcher)
 {
     const auto Now = std::chrono::steady_clock::now();
 
@@ -92,11 +91,8 @@ void FShaderManager::ProcessHotReloads(
         }
 
         std::wstring Extension = FilePath.substr(DotIndex);
-        std::transform(
-            Extension.begin(),
-            Extension.end(),
-            Extension.begin(),
-            [](wchar_t Character) { return static_cast<wchar_t>(towlower(Character)); });
+        std::transform(Extension.begin(), Extension.end(), Extension.begin(),
+                       [](wchar_t Character) { return static_cast<wchar_t>(towlower(Character)); });
         if (Extension != L".hlsl")
         {
             continue;
@@ -137,12 +133,8 @@ void FShaderManager::ProcessHotReloads(
     ReloadShaders(Device, ReadyDirtyFiles, Resources, FontBatcher, SubUVBatcher);
 }
 
-void FShaderManager::ReloadShaders(
-    ID3D11Device* Device,
-    const std::set<std::wstring>& DirtyFiles,
-    FRenderResources& Resources,
-    FFontBatcher& FontBatcher,
-    FSubUVBatcher& SubUVBatcher)
+void FShaderManager::ReloadShaders(ID3D11Device* Device, const std::set<std::wstring>& DirtyFiles,
+                                   FRenderResources& Resources, FFontBatcher& FontBatcher, FSubUVBatcher& SubUVBatcher)
 {
     if (Device == nullptr || DirtyFiles.empty())
     {
@@ -151,7 +143,7 @@ void FShaderManager::ReloadShaders(
 
     std::vector<FShader*> ReloadableShaders;
     CollectReloadableShaders(Resources, FontBatcher, SubUVBatcher, ReloadableShaders);
-    std::unordered_set<FShader*> UniqueReloadableShaders;
+    std::unordered_set<FShader*>                            UniqueReloadableShaders;
     std::unordered_map<std::wstring, std::vector<FShader*>> AffectedShadersBySource;
 
     std::unordered_map<std::wstring, std::unordered_set<std::wstring>> DependencyCache;
@@ -161,8 +153,8 @@ void FShaderManager::ReloadShaders(
         size_t FailureCount = 0;
     };
     std::unordered_map<std::wstring, FReloadSourceStats> ReloadStatsBySource;
-    std::unordered_set<std::string> LoggedFailureMessages;
-    size_t AffectedShaderCount = 0;
+    std::unordered_set<std::string>                      LoggedFailureMessages;
+    size_t                                               AffectedShaderCount = 0;
 
     for (FShader* Shader : ReloadableShaders)
     {
@@ -171,7 +163,7 @@ void FShaderManager::ReloadShaders(
             continue;
         }
 
-        const std::wstring ShaderSourcePath = NormalizePath(Shader->GetFilePath());
+        const std::wstring               ShaderSourcePath = NormalizePath(Shader->GetFilePath());
         std::unordered_set<std::wstring> Dependencies;
         CollectShaderDependencies(ShaderSourcePath, Dependencies, DependencyCache);
 
@@ -199,13 +191,14 @@ void FShaderManager::ReloadShaders(
 
     if (AffectedShaderCount == 0)
     {
-        UE_LOG("[ShaderHotReload] Detected %zu dirty shader file(s), but no dependent shaders were reloaded.", DirtyFiles.size());
+        UE_LOG("[ShaderHotReload] Detected %zu dirty shader file(s), but no dependent shaders were reloaded.",
+               DirtyFiles.size());
         return;
     }
 
     for (auto& Entry : AffectedShadersBySource)
     {
-        const std::wstring& ShaderSourcePath = Entry.first;
+        const std::wstring&          ShaderSourcePath = Entry.first;
         const std::vector<FShader*>& ShadersForSource = Entry.second;
 
         std::vector<FShaderCompiledState> PendingCompiledStates;
@@ -215,7 +208,8 @@ void FShaderManager::ReloadShaders(
         for (size_t ShaderIndex = 0; ShaderIndex < ShadersForSource.size(); ++ShaderIndex)
         {
             std::string FailureMessage;
-            if (!ShadersForSource[ShaderIndex]->PrepareReload(Device, PendingCompiledStates[ShaderIndex], &FailureMessage, false))
+            if (!ShadersForSource[ShaderIndex]->PrepareReload(Device, PendingCompiledStates[ShaderIndex],
+                                                              &FailureMessage, false))
             {
                 bSourceFailed = true;
                 ReloadStatsBySource[ShaderSourcePath].FailureCount = ShadersForSource.size();
@@ -258,17 +252,14 @@ void FShaderManager::ReloadShaders(
         }
     }
 
-    UE_LOG(
-        "[ShaderHotReload] Detected %zu dirty shader file(s). %zu shader variant(s) affected, %zu source(s) reloaded, %zu source(s) failed.",
-        DirtyFiles.size(),
-        AffectedShaderCount,
-        FullyReloadedSourceCount,
-        FailedSourceCount);
+    UE_LOG("[ShaderHotReload] Detected %zu dirty shader file(s). %zu shader variant(s) affected, %zu source(s) "
+           "reloaded, %zu source(s) failed.",
+           DirtyFiles.size(), AffectedShaderCount, FullyReloadedSourceCount, FailedSourceCount);
 
     for (const auto& Entry : ReloadStatsBySource)
     {
         const FReloadSourceStats& Stats = Entry.second;
-        const std::string SourcePath = FPaths::ToUtf8(Entry.first);
+        const std::string         SourcePath = FPaths::ToUtf8(Entry.first);
         if (Stats.SuccessCount > 0 && Stats.FailureCount == 0)
         {
             UE_LOG("[ShaderHotReload] %s reloaded (%zu variant(s))", SourcePath.c_str(), Stats.SuccessCount);
@@ -280,11 +271,8 @@ void FShaderManager::ReloadShaders(
     }
 }
 
-void FShaderManager::CollectReloadableShaders(
-    FRenderResources& Resources,
-    FFontBatcher& FontBatcher,
-    FSubUVBatcher& SubUVBatcher,
-    std::vector<FShader*>& OutShaders)
+void FShaderManager::CollectReloadableShaders(FRenderResources& Resources, FFontBatcher& FontBatcher,
+                                              FSubUVBatcher& SubUVBatcher, std::vector<FShader*>& OutShaders)
 {
     OutShaders.push_back(&Resources.PrimitiveShader);
     OutShaders.push_back(&Resources.GizmoShader);
@@ -313,21 +301,17 @@ void FShaderManager::CollectReloadableShaders(
 }
 
 void FShaderManager::CollectShaderDependencies(
-    const std::wstring& ShaderFilePath,
-    std::unordered_set<std::wstring>& OutDependencies,
+    const std::wstring& ShaderFilePath, std::unordered_set<std::wstring>& OutDependencies,
     std::unordered_map<std::wstring, std::unordered_set<std::wstring>>& Cache)
 {
     std::unordered_set<std::wstring> ActiveStack;
 
-    const auto CollectRecursive =
-        [this, &Cache](
-            const auto& Self,
-            const std::wstring& CurrentShaderFilePath,
-            std::unordered_set<std::wstring>& CurrentDependencies,
-            std::unordered_set<std::wstring>& CurrentActiveStack) -> void
+    const auto CollectRecursive = [this, &Cache](const auto& Self, const std::wstring& CurrentShaderFilePath,
+                                                 std::unordered_set<std::wstring>& CurrentDependencies,
+                                                 std::unordered_set<std::wstring>& CurrentActiveStack) -> void
     {
         const std::wstring NormalizedShaderPath = NormalizePath(CurrentShaderFilePath);
-        auto CachedIt = Cache.find(NormalizedShaderPath);
+        auto               CachedIt = Cache.find(NormalizedShaderPath);
         if (CachedIt != Cache.end())
         {
             CurrentDependencies.insert(CachedIt->second.begin(), CachedIt->second.end());
@@ -362,7 +346,7 @@ void FShaderManager::CollectShaderDependencies(
                     continue;
                 }
 
-                const std::string IncludePathUtf8 = TrimmedLine.substr(FirstQuote + 1, LastQuote - FirstQuote - 1);
+                const std::string  IncludePathUtf8 = TrimmedLine.substr(FirstQuote + 1, LastQuote - FirstQuote - 1);
                 const std::wstring IncludePathWide = FPaths::ToWide(IncludePathUtf8);
                 const std::wstring IncludeFullPath = NormalizePath(
                     (ParentDirectory / std::filesystem::path(IncludePathWide)).lexically_normal().generic_wstring());
@@ -385,11 +369,8 @@ void FShaderManager::CollectShaderDependencies(
 std::wstring FShaderManager::NormalizePath(const std::wstring& InPath) const
 {
     std::wstring Result = std::filesystem::path(InPath).lexically_normal().generic_wstring();
-    std::transform(
-        Result.begin(),
-        Result.end(),
-        Result.begin(),
-        [](wchar_t Character) { return static_cast<wchar_t>(towlower(Character)); });
+    std::transform(Result.begin(), Result.end(), Result.begin(),
+                   [](wchar_t Character) { return static_cast<wchar_t>(towlower(Character)); });
     return Result;
 }
 
@@ -397,22 +378,24 @@ FShader* FShaderManager::CreateShader(ID3D11Device* Device, const FShaderKey& Ke
 {
     std::unique_ptr<FShader> Shader = std::make_unique<FShader>();
 
-    static const char* ViewModeTable[] = {"0", "1", "2", "3", "4", "5", "6", "7",
+    static const char* ViewModeTable[] = {"0", "1", "2",  "3",  "4",  "5",  "6",  "7",
                                           "8", "9", "10", "11", "12", "13", "14", "15"};
 
-	static const char* OpaqueTypeTable[] = {"0", "1"};
+    static const char* OpaqueTypeTable[] = {"0", "1"};
 
-	uint32 ViewModeIndex = Key.Bits & VIEWMODE_MASK;
-	uint32 OpaqueTypeIndex = (Key.Bits & OPAQUE_TYPE_MASK) >> OPAQUE_TYPE_SHIFT;
+    uint32 ViewModeIndex = Key.Bits & VIEWMODE_MASK;
+    uint32 OpaqueTypeIndex = (Key.Bits & OPAQUE_TYPE_MASK) >> OPAQUE_TYPE_SHIFT;
+    bool   bNormalMap = (Key.Bits & NORMALMAP_BIT);
+    bool   bLightCullMode = (Key.Bits & LIGHTCULLING_BIT);
 
-    D3D_SHADER_MACRO Defines[] = 
-		{{"VIEW_MODE", ViewModeTable[ViewModeIndex]}, 
-		{"USE_NORMALMAP", (Key.Bits & NORMALMAP_BIT) ? "1" : "0"},
-		{"OPAQUETYPE", OpaqueTypeTable[OpaqueTypeIndex]},
-		{nullptr, nullptr}};
+    D3D_SHADER_MACRO Defines[] = {{"VIEW_MODE", ViewModeTable[ViewModeIndex]},
+                                  {"USE_NORMALMAP", bNormalMap ? "1" : "0"},
+                                  {"OPAQUETYPE", OpaqueTypeTable[OpaqueTypeIndex]},
+                                  {"LIGHT_CULLING_FLAG", bLightCullMode ? "1" : "0"},
+                                  {nullptr, nullptr}};
 
     if (!Shader->Create(Device, L"Shaders/UberLit.hlsl", "VS", "PS", VertexLayouts::NormalVertexInputLayout,
-            ARRAYSIZE(VertexLayouts::NormalVertexInputLayout), Defines))
+                        ARRAYSIZE(VertexLayouts::NormalVertexInputLayout), Defines))
     {
         return nullptr;
     }

@@ -13,7 +13,6 @@ enum class EViewMode : int32
 	Lit_Lambert = 6,
 	Lit_Phong = 7,
 	WorldNormal = 8,
-    TileLightHitmap = 9,
 	Count
 };
 
@@ -41,6 +40,7 @@ struct FShowFlags
     bool bPointLightDebug = true;
     bool bSpotLightDebug = true;
     bool bShowLightHitmapOverlay = false;
+    bool bLightCullingMode = true;
     bool bBillboardText = false;
     bool bBoundingVolume = false;
     bool bBVHBoundingVolume = false;

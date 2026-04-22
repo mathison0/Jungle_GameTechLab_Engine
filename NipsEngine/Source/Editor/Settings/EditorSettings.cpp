@@ -26,6 +26,13 @@ namespace EditorKey
 	constexpr const char* InitViewPos = "InitViewPos";
 	constexpr const char* InitLookAt = "InitLookAt";
 
+	// Light
+    constexpr const char* bDirectionalLightDebug = "bDirectionalLightDebug";
+    constexpr const char* bPointLightDebug = "bPointLightDebug";
+    constexpr const char* bSpotLightDebug = "bSpotLightDebug";
+    constexpr const char* bShowLightHitmapOverlay = "bShowLightHitmapOverlay";
+    constexpr const char* bLightCullingMode = "bLightCullingMode";
+
 	// View
 	constexpr const char* View = "View";
 	constexpr const char* ViewMode = "ViewMode";
@@ -33,10 +40,6 @@ namespace EditorKey
 	constexpr const char* bGrid = "bGrid";
 	constexpr const char* bAxis = "bAxis";
 	constexpr const char* bGizmo = "bGizmo";
-	constexpr const char* bDirectionalLightDebug = "bDirectionalLightDebug";
-	constexpr const char* bPointLightDebug = "bPointLightDebug";
-	constexpr const char* bSpotLightDebug = "bSpotLightDebug";
-	constexpr const char* bShowLightHitmapOverlay = "bShowLightHitmapOverlay";
 	constexpr const char* bBillboardText = "bBillboardText";
 	constexpr const char* bBoundingVolume = "bBoundingVolume";
 	constexpr const char* bBVHBoundingVolume = "bBVHBoundingVolume";
@@ -108,16 +111,19 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	ViewObj[EditorKey::bGrid] = ShowFlags.bGrid;
 	ViewObj[EditorKey::bAxis] = ShowFlags.bAxis;
 	ViewObj[EditorKey::bGizmo] = ShowFlags.bGizmo;
-	ViewObj[EditorKey::bDirectionalLightDebug] = ShowFlags.bDirectionalLightDebug;
-	ViewObj[EditorKey::bPointLightDebug] = ShowFlags.bPointLightDebug;
-	ViewObj[EditorKey::bSpotLightDebug] = ShowFlags.bSpotLightDebug;
-	ViewObj[EditorKey::bShowLightHitmapOverlay] = ShowFlags.bShowLightHitmapOverlay;
 	ViewObj[EditorKey::bBillboardText] = ShowFlags.bBillboardText;
 	ViewObj[EditorKey::bBoundingVolume] = ShowFlags.bBoundingVolume;
 	ViewObj[EditorKey::bBVHBoundingVolume] = ShowFlags.bBVHBoundingVolume;
 	ViewObj[EditorKey::bDecal] = ShowFlags.bDecal;
 	Root[EditorKey::View] = ViewObj;
 
+	// Light
+    ViewObj[EditorKey::bDirectionalLightDebug] = ShowFlags.bDirectionalLightDebug;
+    ViewObj[EditorKey::bPointLightDebug] = ShowFlags.bPointLightDebug;
+    ViewObj[EditorKey::bSpotLightDebug] = ShowFlags.bSpotLightDebug;
+    ViewObj[EditorKey::bShowLightHitmapOverlay] = ShowFlags.bShowLightHitmapOverlay;
+
+	//FXAA
 	JSON FXAAObj = Object();
 	FXAAObj[EditorKey::Subpix] = DefaultFXAASettings.Subpix;
 	FXAAObj[EditorKey::EdgeThreshold] = DefaultFXAASettings.EdgeThreshold;
@@ -260,6 +266,8 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			ShowFlags.bSpotLightDebug = ViewObj[EditorKey::bSpotLightDebug].ToBool();
 		if (ViewObj.hasKey(EditorKey::bShowLightHitmapOverlay))
 			ShowFlags.bShowLightHitmapOverlay = ViewObj[EditorKey::bShowLightHitmapOverlay].ToBool();
+        if (ViewObj.hasKey(EditorKey::bLightCullingMode))
+            ShowFlags.bLightCullingMode = ViewObj[EditorKey::bLightCullingMode].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBillboardText))
 			ShowFlags.bBillboardText = ViewObj[EditorKey::bBillboardText].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBoundingVolume))
