@@ -743,15 +743,24 @@ PSOutput PS(PSInput input)
         float4 worldPosDecal = mul(clipPos, InverseViewProjection);
         worldPosDecal /= worldPosDecal.w;
         
-        float3x3 worldRotation = (float3x3)Model;
-        float3 D_Normal    = normalize(worldRotation[0].xyz); // 로컬 X -> 월드 Forward
-        float3 D_Tangent   = normalize(worldRotation[1].xyz); // 로컬 Y -> 월드 Tangent
-        float3 D_Bitangent = normalize(worldRotation[2].xyz); // 로컬 Z -> 월드 Bitangent
-        float3x3 DecalTBN = float3x3(D_Tangent, D_Bitangent, D_Normal);
+    
+        //Output.Color.xyz = finalNormal;
+        //Output.Color.w = 1.0f;
+        //return Output;
         
         #if USE_NORMALMAP == TRUE
             float3 decalNormalTex = BumpMap.Sample(SampleState, decalUV).rgb * 2.0f - 1.0f;
-            finalNormal = normalize(mul(decalNormalTex, DecalTBN));
+            float3 baseN = normalize(sceneNormal);
+    
+            float3 up = abs(baseN.z) < 0.999f ? float3(0,0,1) : float3(0,1,0);
+            float3 T = normalize(cross(up, baseN));
+            float3 B = cross(baseN, T);
+    
+            finalNormal = normalize(
+            decalNormalTex.x * T +
+            decalNormalTex.y * B +
+            decalNormalTex.z * baseN
+            );
         #endif
 
         //조명 계산
