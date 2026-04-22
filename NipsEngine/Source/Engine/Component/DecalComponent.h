@@ -38,6 +38,7 @@ public:
     float GetFadeStartDistance() const { return FadeStartDistance; }
     void SetFadeEndDistance(float InDistance) { FadeEndDistance = InDistance; }
     float GetFadeEndDistance() const { return FadeEndDistance; }
+    bool  IsUsingSurfaceNormal() const { return bUseSurfaceNormal; }
 
 private:
     class FMaterial* DecalMaterial = nullptr;
@@ -48,6 +49,8 @@ private:
     bool bDistanceFade = false;
     float FadeStartDistance = 100.0f;
     float FadeEndDistance = 1000.0f;
+
+	bool bUseSurfaceNormal = true;
 
     void MarkRenderStateDirty();
 };

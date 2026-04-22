@@ -659,12 +659,17 @@ void FEditorPropertyWidget::RenderPropertyWidget(FPropertyDescriptor& Prop)
         }
         else
         {
-            char Buf[256];
-            strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
-            if (ImGui::InputText(Prop.Name, Buf, sizeof(Buf)))
+            const bool bIsMaterialSlot = (strncmp(Prop.Name, "Material ", 9) == 0);
+            if (bIsMaterialSlot)
             {
-                *Val = Buf;
-                bChanged = true;
+                ImGui::BeginDisabled();
+
+                char Buf[256];
+                strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
+                ImGui::InputText(Prop.Name, Buf, sizeof(Buf));
+
+                ImGui::EndDisabled();
+                break;
             }
         }
         break;
