@@ -885,7 +885,7 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
 
         Cmd.Constants.Decal.bHasDiffuseMap = DecalMat->bHasDiffuseTexture ? 1u : 0u;
         Cmd.Constants.Decal.bHasSpecularMap = DecalMat->bHasSpecularTexture ? 1u : 0u;
-        Cmd.Constants.Decal.bHasNormalMap = DecalMat->bHasBumpTexture ? 1u : 0u;
+        Cmd.Constants.Decal.bHasNormalMap = DecalMat->bHasBumpTexture && !DecalComp->IsUsingSurfaceNormal() ? 1u : 0u;
         Cmd.Constants.Decal.DiffuseSRV = DecalMat->bHasDiffuseTexture ? ResolveSRV(DecalMat->DiffuseTexPath) : DefaultSRV;
         Cmd.Constants.Decal.AmbientSRV = DecalMat->bHasAmbientTexture ? ResolveSRV(DecalMat->AmbientTexPath) : DefaultSRV;
         Cmd.Constants.Decal.SpecularSRV = DecalMat->bHasSpecularTexture ? ResolveSRV(DecalMat->SpecularTexPath) : DefaultSRV;

@@ -1,4 +1,4 @@
-#include "DecalComponent.h"
+﻿#include "DecalComponent.h"
 #include <cstring>
 #include "Core/ResourceManager.h"
 #include "Render/Resource/Material.h"
@@ -90,6 +90,7 @@ void UDecalComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProp
     OutProps.push_back({"Distance Fade", EPropertyType::Bool, &bDistanceFade});
     OutProps.push_back({"Fade Start Distance", EPropertyType::Float, &FadeStartDistance, 0.0f, 10000.0f, 10.0f});
     OutProps.push_back({"Fade End Distance", EPropertyType::Float, &FadeEndDistance, 0.0f, 10000.0f, 10.0f});
+    OutProps.push_back({"bUseSurfaceNormal", EPropertyType::Bool, &bUseSurfaceNormal});
 }
 
 void UDecalComponent::PostEditProperty(const char* PropertyName)
