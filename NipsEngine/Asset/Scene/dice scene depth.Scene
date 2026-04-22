@@ -2322,7 +2322,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\\\\\\\\\\\\\Mesh\\\\\\\\\\\\\\\\pan\\\\\\\\\\\\\\\\brass_pan_01_1k.obj",
+          "StaticMesh" : "Asset\Mesh\pan\brass_pan_01_1k.obj",
           "Visible" : true
         }
       },
@@ -2382,7 +2382,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\\\\\\\\\\\\\Mesh\\\\\\\\\\\\\\\\marble\\\\\\\\\\\\\\\\marble_bust_01_1k.obj",
+          "StaticMesh" : "Asset\Mesh\marble\marble_bust_01_1k.obj",
           "Visible" : true
         }
       },
@@ -2412,7 +2412,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Mesh\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\horse\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\horse_head_1k.obj",
+          "StaticMesh" : "Asset\Mesh\horse\horse_head_1k.obj",
           "Visible" : true
         }
       },
@@ -3102,7 +3102,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\Mesh\\\\chair\\\\wirhoutNormalMap\\\\without_normalMap_mid_century_lounge_chair_1k.obj",
+          "StaticMesh" : "Asset\Mesh\chair\wirhoutNormalMap\without_normalMap_mid_century_lounge_chair_1k.obj",
           "Visible" : true
         }
       },
@@ -3132,7 +3132,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Mesh\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Bitcoin\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Sketchfab.obj",
+          "StaticMesh" : "Asset\Mesh\Bitcoin\Sketchfab.obj",
           "Visible" : true
         }
       },
@@ -3192,7 +3192,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Mesh\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\chair\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\mid_century_lounge_chair_1k.obj",
+          "StaticMesh" : "Asset\Mesh\chair\mid_century_lounge_chair_1k.obj",
           "Visible" : true
         }
       },
@@ -3281,7 +3281,7 @@
               "Play Rate" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Sprite" : "Asset\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Texture\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\S_LightDirectional.png",
+              "Sprite" : "Asset\Texture\S_LightDirectional.png",
               "Visible" : true,
               "Width" : 1.000000,
               "bCylindrical" : false,
@@ -3356,7 +3356,7 @@
               "Play Rate" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Sprite" : "Asset\\\\\\\\\\\\\\\\Texture\\\\\\\\\\\\\\\\S_LightSpot.png",
+              "Sprite" : "Asset\Texture\S_LightSpot.png",
               "Visible" : true,
               "Width" : 1.000000,
               "bCylindrical" : false,
@@ -3397,7 +3397,7 @@
               "Play Rate" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Sprite" : "Asset\\\\\\\\\\\\\\\\Texture\\\\\\\\\\\\\\\\S_LightPoint.png",
+              "Sprite" : "Asset\Texture\S_LightPoint.png",
               "Visible" : true,
               "Width" : 1.000000,
               "bCylindrical" : false,
@@ -3438,7 +3438,7 @@
               "Play Rate" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Sprite" : "Asset\\\\\\\\\\\\\\\\Texture\\\\\\\\\\\\\\\\S_LightPoint.png",
+              "Sprite" : "Asset\Texture\S_LightPoint.png",
               "Visible" : true,
               "Width" : 1.000000,
               "bCylindrical" : false,
@@ -3454,15 +3454,99 @@
         }
       },
       "Visible" : true
+    }, {
+      "ClassName" : "APointLightActor",
+      "RootComponent" : {
+        "Children" : [{
+            "ClassName" : "UPointLightComponent",
+            "Properties" : {
+              "Color" : [1.000000, 0.000000, 0.810145, 1.000000],
+              "Intensity" : 1.000000,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Radius" : 10.000000,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000]
+            }
+          }, {
+            "ClassName" : "UBillboardComponent",
+            "Properties" : {
+              "Distance Fade" : false,
+              "Fade End Distance" : 1000.000000,
+              "Fade Start Distance" : 100.000000,
+              "Height" : 1.000000,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Outline" : false,
+              "Play Rate" : 30.000000,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [5.000000, 5.000000, 5.000000],
+              "Sprite" : "Asset\\Texture\\S_LightPoint.png",
+              "Visible" : true,
+              "Width" : 1.000000,
+              "bCylindrical" : false,
+              "bLoop" : true,
+              "bUseRotation" : false
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Properties" : {
+          "Location" : [83.609688, -69.970421, 51.355553],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000]
+        }
+      },
+      "Visible" : true
+    }, {
+      "ClassName" : "ASpotLightActor",
+      "RootComponent" : {
+        "Children" : [{
+            "ClassName" : "USpotLightComponent",
+            "Properties" : {
+              "Color" : [1.000000, 0.000000, 0.000000, 1.000000],
+              "InnerConeAngle" : 27.299999,
+              "Intensity" : 10.000000,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "OuterConeAngle" : 45.000000,
+              "Radius" : 14.000000,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000]
+            }
+          }, {
+            "ClassName" : "UBillboardComponent",
+            "Properties" : {
+              "Distance Fade" : false,
+              "Fade End Distance" : 1000.000000,
+              "Fade Start Distance" : 100.000000,
+              "Height" : 1.000000,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Outline" : false,
+              "Play Rate" : 30.000000,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [5.000000, 5.000000, 5.000000],
+              "Sprite" : "Asset\\Texture\\S_LightSpot.png",
+              "Visible" : true,
+              "Width" : 1.000000,
+              "bCylindrical" : false,
+              "bLoop" : true,
+              "bUseRotation" : false
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Properties" : {
+          "Location" : [72.860695, -98.986267, 50.732311],
+          "Rotation" : [-0.000000, 15.568004, -0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000]
+        }
+      },
+      "Visible" : true
     }],
   "ClassName" : "UWorld",
   "Name" : "dice scene depth",
   "PerspectiveCamera" : {
     "FOV" : [84.000000],
     "FarClip" : [2000.000000],
-    "Location" : [94.015945, -40.802341, 61.769947],
+    "Location" : [119.510361, -86.038109, 75.175240],
     "NearClip" : [0.100000],
-    "Rotation" : [-41.451324, -179.424713, 0.380826]
+    "Rotation" : [-23.063812, 142.972549, -16.462616]
   },
   "Version" : 3,
   "WorldType" : "Editor"
