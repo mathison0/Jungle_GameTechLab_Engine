@@ -41,8 +41,10 @@ FShader* FShaderManager::GetShader(const FShaderKey& Key)
 {
     auto It = ShaderMap.find(Key);
     if (It != ShaderMap.end())
+         return It->second.get();
+    if (CachedDevice != nullptr)
     {
-        return It->second.get();
+        return CreateShader(CachedDevice, Key);
     }
 
     return nullptr;
@@ -50,6 +52,7 @@ FShader* FShaderManager::GetShader(const FShaderKey& Key)
 
 void FShaderManager::PreloadShaders(ID3D11Device* Device)
 {
+    CachedDevice = Device;
     for (int view = 0; view < static_cast<int>(EViewMode::Count); ++view)
     {
         for (int bNormal = 0; bNormal <= 1; ++bNormal)

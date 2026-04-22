@@ -95,6 +95,7 @@ class FShaderManager
     std::wstring NormalizePath(const std::wstring& InPath) const;
 
   private:
+    ID3D11Device* CachedDevice = nullptr;
     TMap<FShaderKey, std::unique_ptr<FShader>, FShaderKeyHash> ShaderMap;
     std::unordered_map<std::wstring, std::chrono::steady_clock::time_point> PendingShaderFiles;
     static constexpr uint32 ShaderReloadDebounceMs = 250;

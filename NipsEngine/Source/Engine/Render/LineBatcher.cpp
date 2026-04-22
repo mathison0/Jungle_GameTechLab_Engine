@@ -305,12 +305,26 @@ void FLineBatcher::AddCone(const FVector& Apex, const FVector& Direction, float 
     }
 }
 
-void FLineBatcher::AddSphere(const FVector& Center, float Radius, int32 SegmentCount, const FVector4& Color)
+void FLineBatcher::AddCircleOnPlane(const FVector& Center, const FVector& PlaneNormal, float Radius, int32 SegmentCount,
+                                    const FVector4& Color)
 {
     if (SegmentCount < 3 || Radius <= 0.0f)
     {
         return;
     }
+
+    FVector N = PlaneNormal.GetSafeNormal();
+    if (N.Size() < 1e-6f)
+    {
+        return;
+    }
+
+    // N과 평행하지 않은 임시 축 선택
+    FVector Up = fabs(N.Z) < 0.999f ? FVector(0.0f, 0.0f, 1.0f) : FVector(0.0f, 1.0f, 0.0f);
+
+    // 평면 위의 두 직교 축
+    FVector T = Up.CrossProduct(N).GetSafeNormal();
+    FVector B = N.CrossProduct(T).GetSafeNormal();
 
     for (int32 i = 0; i < SegmentCount; ++i)
     {
@@ -322,18 +336,34 @@ void FLineBatcher::AddSphere(const FVector& Center, float Radius, int32 SegmentC
         const float C1 = cosf(Theta1);
         const float S1 = sinf(Theta1);
 
-        // XY
-        AddLine(Center + FVector(C0 * Radius, S0 * Radius, 0.0f), Center + FVector(C1 * Radius, S1 * Radius, 0.0f),
-                Color);
+        const FVector P0 = Center + (T * C0 + B * S0) * Radius;
+        const FVector P1 = Center + (T * C1 + B * S1) * Radius;
 
-        // XZ
-        AddLine(Center + FVector(C0 * Radius, 0.0f, S0 * Radius), Center + FVector(C1 * Radius, 0.0f, S1 * Radius),
-                Color);
-
-        // YZ
-        AddLine(Center + FVector(0.0f, C0 * Radius, S0 * Radius), Center + FVector(0.0f, C1 * Radius, S1 * Radius),
-                Color);
+        AddLine(P0, P1, Color);
     }
+}
+
+void FLineBatcher::AddSphere(const FVector& Center, float Radius, int32 SegmentCount, const FVector4& Color)
+{
+    if (SegmentCount < 3 || Radius <= 0.0f)
+    {
+        return;
+    }
+
+    // 기본 축 정렬 평면
+    AddCircleOnPlane(Center, FVector(1.0f, 0.0f, 0.0f), Radius, SegmentCount, Color); // YZ
+    AddCircleOnPlane(Center, FVector(0.0f, 1.0f, 0.0f), Radius, SegmentCount, Color); // XZ
+    AddCircleOnPlane(Center, FVector(0.0f, 0.0f, 1.0f), Radius, SegmentCount, Color); // XY
+
+    // 대각 평면들 추가
+    AddCircleOnPlane(Center, FVector(1.0f, 1.0f, 0.0f), Radius, SegmentCount, Color);  // x + y = 0 에 수직
+    AddCircleOnPlane(Center, FVector(1.0f, -1.0f, 0.0f), Radius, SegmentCount, Color); // x - y = 0 에 수직
+
+    AddCircleOnPlane(Center, FVector(1.0f, 0.0f, 1.0f), Radius, SegmentCount, Color);  // x + z = 0 계열
+    AddCircleOnPlane(Center, FVector(1.0f, 0.0f, -1.0f), Radius, SegmentCount, Color); // x - z = 0 계열
+
+    AddCircleOnPlane(Center, FVector(0.0f, 1.0f, 1.0f), Radius, SegmentCount, Color);  // y + z = 0 계열
+    AddCircleOnPlane(Center, FVector(0.0f, 1.0f, -1.0f), Radius, SegmentCount, Color); // y - z = 0 계열
 }
 
 void FLineBatcher::AddWorldHelpers(const FShowFlags& ShowFlags, float GridSpacing, int32 GridHalfLineCount,

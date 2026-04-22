@@ -95,7 +95,7 @@ namespace DebugCmd
     }
 
 	inline FDebugRenderCommand MakeSphere(const FVector& Center, float Radius, const FVector4& Color,
-                                          int32 SegmentCount = 16) 
+                                          int32 SegmentCount = 64) 
 	{
             FDebugRenderCommand Cmd{};
             Cmd.Type = EDebugShapeType::Sphere;

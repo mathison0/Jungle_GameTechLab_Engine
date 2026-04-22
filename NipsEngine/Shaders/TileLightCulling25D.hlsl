@@ -70,6 +70,21 @@ struct FTileFrustum
     float3 BottomPlaneNormal;
 };
 
+struct FSpotConeBounds
+{
+    float3 ApexVS;
+    float Height;
+
+    float3 AxisVS;
+    float BaseRadius;
+
+    float3 BaseCenterVS;
+    float BroadPhaseRadius;
+
+    float3 BroadPhaseCenterVS;
+    float Padding;
+};
+
 cbuffer ForwardPlusConstants : register(b11)
 {
     uint2 ViewportMin;
@@ -104,8 +119,8 @@ groupshared uint gMaxDepthBits;
 groupshared uint gTileDepthMask;
 groupshared uint gHasValidDepth;
 
-groupshared float gTileMinZ;
-groupshared float gTileMaxZ;
+groupshared float gTileMinDepth;
+groupshared float gTileMaxDepth;
 
 groupshared float3 gLeftPlaneNormal;
 groupshared float3 gRightPlaneNormal;
@@ -126,6 +141,12 @@ float3 SafeNormalize(float3 v)
     }
 
     return v * rsqrt(lenSq);
+}
+
+float GetViewDepth(float3 viewPos)
+{
+    // This engine keeps forward on +X even in view space.
+    return viewPos.x;
 }
 
 float2 PixelCoordToViewportUV(uint2 pixelCoord)
@@ -179,14 +200,16 @@ FTileFrustum BuildTileFrustum(uint2 tilePixelMin, uint2 tilePixelMaxExclusive)
     return frustum;
 }
 
-bool SphereIntersectsTileFrustum(float3 centerVS, float radius, FTileFrustum frustum, float tileMinZ, float tileMaxZ)
+bool SphereIntersectsTileFrustum(float3 centerVS, float radius, FTileFrustum frustum, float tileMinDepth, float tileMaxDepth)
 {
-    if (centerVS.z + radius < tileMinZ)
+    float centerDepth = GetViewDepth(centerVS);
+
+    if (centerDepth + radius < tileMinDepth)
     {
         return false;
     }
 
-    if (centerVS.z - radius > tileMaxZ)
+    if (centerDepth - radius > tileMaxDepth)
     {
         return false;
     }
@@ -214,28 +237,28 @@ bool SphereIntersectsTileFrustum(float3 centerVS, float radius, FTileFrustum fru
     return true;
 }
 
-uint BuildDepthSliceMask(float rangeMinZ, float rangeMaxZ, float tileMinZ, float tileMaxZ)
+uint BuildDepthSliceMask(float rangeMinDepth, float rangeMaxDepth, float tileMinDepth, float tileMaxDepth)
 {
-    float clampedMinZ = max(rangeMinZ, tileMinZ);
-    float clampedMaxZ = min(rangeMaxZ, tileMaxZ);
+    float clampedMinDepth = max(rangeMinDepth, tileMinDepth);
+    float clampedMaxDepth = min(rangeMaxDepth, tileMaxDepth);
 
-    if (clampedMaxZ < clampedMinZ)
+    if (clampedMaxDepth < clampedMinDepth)
     {
         return 0u;
     }
 
-    float tileDepthExtent = tileMaxZ - tileMinZ;
+    float tileDepthExtent = tileMaxDepth - tileMinDepth;
     if (tileDepthExtent <= kEpsilon)
     {
         return 1u;
     }
 
-    float normalizedMinZ = saturate((clampedMinZ - tileMinZ) / tileDepthExtent);
-    float normalizedMaxZ = saturate((clampedMaxZ - tileMinZ) / tileDepthExtent);
+    float normalizedMinDepth = saturate((clampedMinDepth - tileMinDepth) / tileDepthExtent);
+    float normalizedMaxDepth = saturate((clampedMaxDepth - tileMinDepth) / tileDepthExtent);
 
-    uint sliceMin = min((uint)floor(normalizedMinZ * (FORWARD_PLUS_DEPTH_SLICE_COUNT - 1)),
+    uint sliceMin = min((uint)floor(normalizedMinDepth * (FORWARD_PLUS_DEPTH_SLICE_COUNT - 1)),
                         FORWARD_PLUS_DEPTH_SLICE_COUNT - 1);
-    uint sliceMax = min((uint)ceil(normalizedMaxZ * (FORWARD_PLUS_DEPTH_SLICE_COUNT - 1)),
+    uint sliceMax = min((uint)ceil(normalizedMaxDepth * (FORWARD_PLUS_DEPTH_SLICE_COUNT - 1)),
                         FORWARD_PLUS_DEPTH_SLICE_COUNT - 1);
 
     uint mask = 0u;
@@ -254,9 +277,109 @@ uint BuildDepthSliceMask(float rangeMinZ, float rangeMaxZ, float tileMinZ, float
     return mask;
 }
 
-bool SpherePasses25DMask(float3 centerVS, float radius, float tileMinZ, float tileMaxZ, uint tileDepthMask)
+bool SpherePasses25DMask(float3 centerVS, float radius, float tileMinDepth, float tileMaxDepth, uint tileDepthMask)
 {
-    uint lightMask = BuildDepthSliceMask(centerVS.z - radius, centerVS.z + radius, tileMinZ, tileMaxZ);
+    float centerDepth = GetViewDepth(centerVS);
+    uint lightMask = BuildDepthSliceMask(centerDepth - radius, centerDepth + radius, tileMinDepth, tileMaxDepth);
+    if (lightMask == 0u)
+    {
+        return false;
+    }
+
+    if (tileDepthMask == 0u)
+    {
+        return true;
+    }
+
+    return (lightMask & tileDepthMask) != 0u;
+}
+
+FSpotConeBounds BuildSpotConeBounds(FSpotLightInfo light)
+{
+    FSpotConeBounds bounds;
+
+    bounds.ApexVS = mul(float4(light.Position, 1.0f), View).xyz;
+    bounds.Height = max(light.Radius, kEpsilon);
+    bounds.AxisVS = SafeNormalize(mul(float4(light.Direction, 0.0f), View).xyz);
+
+    float cosTheta = clamp(light.OuterConeCos, 0.001f, 0.9999f);
+    float sinTheta = sqrt(saturate(1.0f - cosTheta * cosTheta));
+    bounds.BaseRadius = bounds.Height * (sinTheta / cosTheta);
+    bounds.BaseCenterVS = bounds.ApexVS + bounds.AxisVS * bounds.Height;
+
+    if (bounds.BaseRadius <= bounds.Height)
+    {
+        bounds.BroadPhaseRadius =
+            (bounds.Height * bounds.Height + bounds.BaseRadius * bounds.BaseRadius) / (2.0f * bounds.Height);
+        bounds.BroadPhaseCenterVS = bounds.ApexVS + bounds.AxisVS * bounds.BroadPhaseRadius;
+    }
+    else
+    {
+        bounds.BroadPhaseRadius = bounds.BaseRadius;
+        bounds.BroadPhaseCenterVS = bounds.BaseCenterVS;
+    }
+
+    bounds.Padding = 0.0f;
+    return bounds;
+}
+
+float ComputeConePlaneMaxDistance(FSpotConeBounds bounds, float3 planeNormal, float planeOffset)
+{
+    float apexDistance = dot(planeNormal, bounds.ApexVS) + planeOffset;
+    
+    float axisDot = dot(planeNormal, bounds.AxisVS);
+    float radialProjection = sqrt(saturate(1.0f - axisDot * axisDot));
+    float baseDistance = dot(planeNormal, bounds.BaseCenterVS) + planeOffset;
+    float baseSupport = baseDistance + bounds.BaseRadius * radialProjection;
+    
+    return max(apexDistance, baseSupport);
+}
+
+bool ConeIntersectsTileFrustum(FSpotConeBounds bounds, FTileFrustum frustum, float tileMinDepth, float tileMaxDepth)
+{
+    if (ComputeConePlaneMaxDistance(bounds, frustum.LeftPlaneNormal, 0.0f) < 0.0f)
+    {
+        return false;
+    }
+
+    if (ComputeConePlaneMaxDistance(bounds, frustum.RightPlaneNormal, 0.0f) < 0.0f)
+    {
+        
+        return false;
+    }
+
+    if (ComputeConePlaneMaxDistance(bounds, frustum.TopPlaneNormal, 0.0f) < 0.0f)
+    {
+        return false;
+    }
+
+    if (ComputeConePlaneMaxDistance(bounds, frustum.BottomPlaneNormal, 0.0f) < 0.0f)
+    {
+        return false;
+    }
+
+    if (ComputeConePlaneMaxDistance(bounds, float3(1.0f, 0.0f, 0.0f), -tileMinDepth) < 0.0f)
+    {
+        return false;
+    }
+
+    if (ComputeConePlaneMaxDistance(bounds, float3(-1.0f, 0.0f, 0.0f), tileMaxDepth) < 0.0f)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool ConePasses25DMask(FSpotConeBounds bounds, float tileMinDepth, float tileMaxDepth, uint tileDepthMask)
+{
+    float radialDepth = sqrt(saturate(1.0f - bounds.AxisVS.x * bounds.AxisVS.x));
+    float apexDepth = GetViewDepth(bounds.ApexVS);
+    float baseDepth = GetViewDepth(bounds.BaseCenterVS);
+    float coneMinDepth = min(apexDepth, baseDepth - bounds.BaseRadius * radialDepth);
+    float coneMaxDepth = max(apexDepth, baseDepth + bounds.BaseRadius * radialDepth);
+
+    uint lightMask = BuildDepthSliceMask(coneMinDepth, coneMaxDepth, tileMinDepth, tileMaxDepth);
     if (lightMask == 0u)
     {
         return false;
@@ -292,8 +415,8 @@ void TileLightCulling25DCS(
         gMaxDepthBits = asuint(0.0f);
         gTileDepthMask = 0u;
         gHasValidDepth = 0u;
-        gTileMinZ = 0.0f;
-        gTileMaxZ = 0.0f;
+        gTileMinDepth = 0.0f;
+        gTileMaxDepth = 0.0f;
         gPointLightCount = 0u;
         gSpotLightCount = 0u;
     }
@@ -302,7 +425,7 @@ void TileLightCulling25DCS(
 
     bool bPixelInsideViewport = false;
     bool bHasDepthSample = false;
-    float viewZ = 0.0f;
+    float viewDepth = 0.0f;
 
     uint2 pixelCoord = tilePixelMin + GroupThreadID.xy;
     if (pixelCoord.x < (ViewportMin.x + ViewportSize.x) &&
@@ -316,11 +439,11 @@ void TileLightCulling25DCS(
         if (deviceDepth < 1.0f)
         {
             float3 viewPos = ReconstructViewPosition(pixelCoord, deviceDepth);
-            viewZ = max(viewPos.z, 0.0f);
+            viewDepth = max(GetViewDepth(viewPos), 0.0f);
             bHasDepthSample = true;
 
-            InterlockedMin(gMinDepthBits, asuint(viewZ));
-            InterlockedMax(gMaxDepthBits, asuint(viewZ));
+            InterlockedMin(gMinDepthBits, asuint(viewDepth));
+            InterlockedMax(gMaxDepthBits, asuint(viewDepth));
         }
     }
 
@@ -332,8 +455,8 @@ void TileLightCulling25DCS(
 
         if (gHasValidDepth != 0u)
         {
-            gTileMinZ = asfloat(gMinDepthBits);
-            gTileMaxZ = asfloat(gMaxDepthBits);
+            gTileMinDepth = asfloat(gMinDepthBits);
+            gTileMaxDepth = asfloat(gMaxDepthBits);
 
             FTileFrustum tileFrustum = BuildTileFrustum(tilePixelMin, tilePixelMaxExclusive);
             gLeftPlaneNormal = tileFrustum.LeftPlaneNormal;
@@ -357,7 +480,7 @@ void TileLightCulling25DCS(
 
     if (bPixelInsideViewport && bHasDepthSample)
     {
-        uint pixelMask = BuildDepthSliceMask(viewZ, viewZ, gTileMinZ, gTileMaxZ);
+        uint pixelMask = BuildDepthSliceMask(viewDepth, viewDepth, gTileMinDepth, gTileMaxDepth);
         InterlockedOr(gTileDepthMask, pixelMask);
     }
 
@@ -376,13 +499,13 @@ void TileLightCulling25DCS(
         float3 centerVS = mul(float4(light.Position, 1.0f), View).xyz;
         float radius = light.Radius;
 
-        if (!SphereIntersectsTileFrustum(centerVS, radius, sharedFrustum, gTileMinZ, gTileMaxZ))
+        if (!SphereIntersectsTileFrustum(centerVS, radius, sharedFrustum, gTileMinDepth, gTileMaxDepth))
         {
             continue;
         }
 
         if (bEnable25DMask != 0u &&
-            !SpherePasses25DMask(centerVS, radius, gTileMinZ, gTileMaxZ, gTileDepthMask))
+            !SpherePasses25DMask(centerVS, radius, gTileMinDepth, gTileMaxDepth, gTileDepthMask))
         {
             continue;
         }
@@ -395,22 +518,26 @@ void TileLightCulling25DCS(
         }
     }
 
-    [loop]
+   [loop]
     for (uint lightIndex = flatThreadIndex; lightIndex < SpotLightCount; lightIndex += FORWARD_PLUS_THREAD_COUNT)
     {
         FSpotLightInfo light = SpotLights[lightIndex];
 
-        // v1: conservative sphere bound around the whole spotlight volume.
-        float3 centerVS = mul(float4(light.Position, 1.0f), View).xyz;
-        float radius = light.Radius;
+        FSpotConeBounds bounds = BuildSpotConeBounds(light);
 
-        if (!SphereIntersectsTileFrustum(centerVS, radius, sharedFrustum, gTileMinZ, gTileMaxZ))
+        if (!SphereIntersectsTileFrustum(bounds.BroadPhaseCenterVS, bounds.BroadPhaseRadius, sharedFrustum,
+                                         gTileMinDepth, gTileMaxDepth))
+        {
+            continue;
+        }
+
+        if (!ConeIntersectsTileFrustum(bounds, sharedFrustum, gTileMinDepth, gTileMaxDepth))
         {
             continue;
         }
 
         if (bEnable25DMask != 0u &&
-            !SpherePasses25DMask(centerVS, radius, gTileMinZ, gTileMaxZ, gTileDepthMask))
+            !ConePasses25DMask(bounds, gTileMinDepth, gTileMaxDepth, gTileDepthMask))
         {
             continue;
         }

@@ -55,6 +55,8 @@ static const char* GetViewModeName(EViewMode Mode)
         return "Unlit";
     case EViewMode::Wireframe:
         return "Wireframe";
+    case EViewMode::DepthScene:
+        return "DepthScene";
     case EViewMode::Fog:
         return "Fog";
     case EViewMode::Lit_Gouraud:
@@ -65,6 +67,8 @@ static const char* GetViewModeName(EViewMode Mode)
         return "Lit_Phong";
     case EViewMode::WorldNormal:
         return "WorldNormal";
+    case EViewMode::TileLightHitmap:
+        return "TileLightHitmap";
     default:
         return "Lit";
     }
