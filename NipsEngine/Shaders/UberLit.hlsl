@@ -805,6 +805,9 @@ PSOutput PS(PSInput input)
     CalculateLightingBlinnPhong(worldPosDecal.xyz, finalNormal, dDiffuse, dSpecular);
     finalColor.xyz = (finalColor.rgb * dDiffuse) + (SpecularTex * dSpecular);
     
+    #elif VIEW_MODE == TILE_LIGHT_HITMAP
+    finalColor.xyz = CalculateTileLightHitmap(TileIndex, input.ClipPos.xy);
+
     #elif VIEW_MODE == WORLD_NORMAL
     discard;
 
@@ -860,7 +863,7 @@ PSOutput PS(PSInput input)
     finalColor.xyz = N * 0.5f + 0.5f;
 
 #elif VIEW_MODE == TILE_LIGHT_HITMAP //TileLightHitmap
-    finalColor = CalculateTileLightHitmap(TileIndex, input.ClipPos.xy);
+    finalColor.xyz = CalculateTileLightHitmap(TileIndex, input.ClipPos.xy);
     
 #endif
     Output.Color =  finalColor;
