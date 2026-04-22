@@ -874,6 +874,19 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
             Context->VSSetConstantBuffers(7, 1, &cb7);
             Context->PSSetConstantBuffers(7, 1, &cb7);
 
+			ID3D11ShaderResourceView* PointLightSRV = Resources.PointlLightBuffer.GetSRV();
+            Context->VSSetShaderResources(0, 1, &PointLightSRV);
+            Context->PSSetShaderResources(0, 1, &PointLightSRV);
+
+            ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
+            Context->VSSetShaderResources(1, 1, &SpotLightSRV);
+            Context->PSSetShaderResources(1, 1, &SpotLightSRV);
+
+			ID3D11ShaderResourceView* TileLightSRVs[4] = {
+            Resources.TilePointLightIndices.GetSRV(), Resources.TileSpotLightIndices.GetSRV(),
+            Resources.TilePointLightGrid.GetSRV(), Resources.TileSpotLightGrid.GetSRV()};
+            Context->PSSetShaderResources(2, 4, TileLightSRVs);
+
             ID3D11SamplerState* Samplers[] = {Resources.MeshSamplerState.Get()};
             Context->PSSetSamplers(0, 1, Samplers);
         }
