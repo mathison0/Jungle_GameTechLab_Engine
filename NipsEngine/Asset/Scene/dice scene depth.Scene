@@ -2319,10 +2319,10 @@
           "Material 0" : "brass_pan_01",
           "Outline" : true,
           "Rotation" : [-0.000000, 0.000000, -148.125687],
-          "Scale" : [30.000000, 30.000000, 30.000000],
+          "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\Mesh\\pan\\brass_pan_01_1k.obj",
+          "StaticMesh" : "Asset\\\\\\\\Mesh\\\\\\\\pan\\\\\\\\brass_pan_01_1k.obj",
           "Visible" : true
         }
       },
@@ -2382,7 +2382,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\Mesh\\marble\\marble_bust_01_1k.obj",
+          "StaticMesh" : "Asset\\\\\\\\Mesh\\\\\\\\marble\\\\\\\\marble_bust_01_1k.obj",
           "Visible" : true
         }
       },
@@ -2412,7 +2412,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\Mesh\\\\horse\\\\horse_head_1k.obj",
+          "StaticMesh" : "Asset\\\\\\\\\\\\\\\\Mesh\\\\\\\\\\\\\\\\horse\\\\\\\\\\\\\\\\horse_head_1k.obj",
           "Visible" : true
         }
       },
@@ -3096,13 +3096,13 @@
         "ClassName" : "StaticMeshComp",
         "Properties" : {
           "Location" : [55.831577, -36.191612, 48.662598],
-          "Material 0" : "DicePaper",
+          "Material 0" : "without_normalMap_mid_century_lounge_chair",
           "Outline" : true,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 0.000000, 180.000000],
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset/Mesh/Dice/Dice.obj",
+          "StaticMesh" : "Asset\\Mesh\\chair\\wirhoutNormalMap\\without_normalMap_mid_century_lounge_chair_1k.obj",
           "Visible" : true
         }
       },
@@ -3132,7 +3132,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\Mesh\\\\Bitcoin\\\\Sketchfab.obj",
+          "StaticMesh" : "Asset\\\\\\\\\\\\\\\\Mesh\\\\\\\\\\\\\\\\Bitcoin\\\\\\\\\\\\\\\\Sketchfab.obj",
           "Visible" : true
         }
       },
@@ -3192,7 +3192,7 @@
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset\\\\Mesh\\\\chair\\\\mid_century_lounge_chair_1k.obj",
+          "StaticMesh" : "Asset\\\\\\\\\\\\\\\\Mesh\\\\\\\\\\\\\\\\chair\\\\\\\\\\\\\\\\mid_century_lounge_chair_1k.obj",
           "Visible" : true
         }
       },
@@ -3263,7 +3263,7 @@
         "Children" : [{
             "ClassName" : "UDirectionalLightComponent",
             "Properties" : {
-              "Color" : [0.980910, 0.980910, 0.980910, 1.000000],
+              "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
               "Intensity" : 1.000000,
               "Location" : [0.000000, 0.000000, 0.000000],
               "Rotation" : [0.000000, 0.000000, 180.000000],
@@ -3281,7 +3281,7 @@
               "Play Rate" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Sprite" : "Asset\\\\Texture\\\\S_LightDirectional.png",
+              "Sprite" : "Asset\\\\\\\\\\\\\\\\Texture\\\\\\\\\\\\\\\\S_LightDirectional.png",
               "Visible" : true,
               "Width" : 1.000000,
               "bCylindrical" : false,
@@ -3324,7 +3324,8 @@
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [50.000000, 50.000000, 50.000000],
           "Sort Order" : 0,
-          "Visible" : true
+          "Visible" : true,
+          "bUseSurfaceNormal" : true
         }
       },
       "Visible" : true
@@ -3355,7 +3356,7 @@
               "Play Rate" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Sprite" : "Asset\\Texture\\S_LightSpot.png",
+              "Sprite" : "Asset\\\\\\\\Texture\\\\\\\\S_LightSpot.png",
               "Visible" : true,
               "Width" : 1.000000,
               "bCylindrical" : false,
@@ -3396,7 +3397,7 @@
               "Play Rate" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Sprite" : "Asset\\Texture\\S_LightPoint.png",
+              "Sprite" : "Asset\\\\\\\\Texture\\\\\\\\S_LightPoint.png",
               "Visible" : true,
               "Width" : 1.000000,
               "bCylindrical" : false,
@@ -3418,7 +3419,7 @@
         "Children" : [{
             "ClassName" : "UPointLightComponent",
             "Properties" : {
-              "Color" : [0.000000, 0.000000, 0.000000, 1.000000],
+              "Color" : [1.000000, 0.818660, 0.818660, 1.000000],
               "Intensity" : 1.000000,
               "Location" : [0.000000, 0.000000, 0.000000],
               "Radius" : 10.000000,
@@ -3437,7 +3438,7 @@
               "Play Rate" : 30.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Sprite" : "Asset\\Texture\\S_LightPoint.png",
+              "Sprite" : "Asset\\\\\\\\Texture\\\\\\\\S_LightPoint.png",
               "Visible" : true,
               "Width" : 1.000000,
               "bCylindrical" : false,
@@ -3459,9 +3460,9 @@
   "PerspectiveCamera" : {
     "FOV" : [84.000000],
     "FarClip" : [2000.000000],
-    "Location" : [153.435318, -135.007538, 61.311211],
+    "Location" : [122.827133, -65.560448, 86.108101],
     "NearClip" : [0.100000],
-    "Rotation" : [-3.965820, 145.777084, -2.693359]
+    "Rotation" : [-39.841858, 159.513824, -13.461090]
   },
   "Version" : 3,
   "WorldType" : "Editor"
