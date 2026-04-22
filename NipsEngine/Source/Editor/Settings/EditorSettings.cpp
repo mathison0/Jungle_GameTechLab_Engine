@@ -36,6 +36,7 @@ namespace EditorKey
 	constexpr const char* bDirectionalLightDebug = "bDirectionalLightDebug";
 	constexpr const char* bPointLightDebug = "bPointLightDebug";
 	constexpr const char* bSpotLightDebug = "bSpotLightDebug";
+	constexpr const char* bShowLightHitmapOverlay = "bShowLightHitmapOverlay";
 	constexpr const char* bBillboardText = "bBillboardText";
 	constexpr const char* bBoundingVolume = "bBoundingVolume";
 	constexpr const char* bBVHBoundingVolume = "bBVHBoundingVolume";
@@ -110,6 +111,7 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	ViewObj[EditorKey::bDirectionalLightDebug] = ShowFlags.bDirectionalLightDebug;
 	ViewObj[EditorKey::bPointLightDebug] = ShowFlags.bPointLightDebug;
 	ViewObj[EditorKey::bSpotLightDebug] = ShowFlags.bSpotLightDebug;
+	ViewObj[EditorKey::bShowLightHitmapOverlay] = ShowFlags.bShowLightHitmapOverlay;
 	ViewObj[EditorKey::bBillboardText] = ShowFlags.bBillboardText;
 	ViewObj[EditorKey::bBoundingVolume] = ShowFlags.bBoundingVolume;
 	ViewObj[EditorKey::bBVHBoundingVolume] = ShowFlags.bBVHBoundingVolume;
@@ -256,6 +258,8 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			ShowFlags.bPointLightDebug = ViewObj[EditorKey::bPointLightDebug].ToBool();
 		if (ViewObj.hasKey(EditorKey::bSpotLightDebug))
 			ShowFlags.bSpotLightDebug = ViewObj[EditorKey::bSpotLightDebug].ToBool();
+		if (ViewObj.hasKey(EditorKey::bShowLightHitmapOverlay))
+			ShowFlags.bShowLightHitmapOverlay = ViewObj[EditorKey::bShowLightHitmapOverlay].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBillboardText))
 			ShowFlags.bBillboardText = ViewObj[EditorKey::bBillboardText].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBoundingVolume))

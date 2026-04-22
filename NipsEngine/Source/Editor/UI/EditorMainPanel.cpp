@@ -51,7 +51,6 @@ namespace
         case EViewMode::Lit_Lambert: return "Lit_Lambert";
         case EViewMode::Lit_Phong: return "Lit_Phong";
         case EViewMode::WorldNormal: return "WorldNormal";
-        case EViewMode::TileLightHitmap: return "TileLightHitmap";
 		default:                   return "Lit";
 		}
 	}
@@ -389,12 +388,12 @@ void FEditorMainPanel::RenderViewportMenuBarForIndex(int32 Index)
 			EViewMode::Lit_Lambert,
 			EViewMode::Lit_Phong,
 			EViewMode::WorldNormal,
-            EViewMode::TileLightHitmap,
 		};
-		static constexpr const char* Labels[] = { "Lit", "Unlit", "Wireframe", "DepthScene", "Fog", "Lit_Gouraud", "Lit_Lambert", "Lit_Phong", "WorldNormal", "TileLightHitmap" };
+		static constexpr const char* Labels[] = { "Lit", "Unlit", "Wireframe", "DepthScene", "Fog", "Lit_Gouraud", "Lit_Lambert", "Lit_Phong", "WorldNormal" };
+        constexpr int32 ModeCount = static_cast<int32>(sizeof(Modes) / sizeof(Modes[0]));
 
 		//Lit이 여러 LightModel을 사용한 Viewmode로 존재하는 관계로 Unlit 부터 시작합니다
-		for (int32 j = (int32)EViewMode::Unlit; j < (int32)EViewMode::Count; ++j)
+		for (int32 j = (int32)EViewMode::Unlit; j < ModeCount; ++j)
 		{
 			const bool bSel = (State.ViewMode == Modes[j]);
 			if (ImGui::MenuItem(Labels[j], nullptr, bSel))

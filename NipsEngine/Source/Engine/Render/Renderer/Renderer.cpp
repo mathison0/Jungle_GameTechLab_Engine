@@ -139,10 +139,14 @@ void FRenderer::Create(HWND hWindow)
     // 11. Fog (Fog.hlsl)
     Resources.FogShader.Create(Device.GetDevice(), L"Shaders/Fog.hlsl", "VS", "PS", nullptr, 0);
 
-    // 12. FXAA 모드 (ShaderFXAA.hlsl)
+    // 12. Light Hitmap Overlay (LightHitmapOverlay.hlsl)
+    Resources.LightHitmapOverlayShader.Create(Device.GetDevice(), L"Shaders/LightHitmapOverlay.hlsl", "VS", "PS",
+                                              nullptr, 0);
+
+    // 13. FXAA 모드 (ShaderFXAA.hlsl)
     Resources.FXAAShader.Create(Device.GetDevice(), L"Shaders/ShaderFXAA.hlsl", "FxaaVS", "FxaaPS", nullptr, 0);
 
-    // 13. Depth Prepass (VS only — Position 전용 레이아웃)
+    // 14. Depth Prepass (VS only — Position 전용 레이아웃)
     Resources.DepthPrepassShader.Create(Device.GetDevice(), L"Shaders/DepthPrepass.hlsl", "DepthPrepassVS", nullptr,
                                         VertexLayouts::DepthPrepassInputLayout,
                                         ARRAYSIZE(VertexLayouts::DepthPrepassInputLayout));
@@ -219,6 +223,7 @@ void FRenderer::Release()
     Resources.DecalShader.Release();
     Resources.FireBallShader.Release();
     Resources.FogShader.Release();
+    Resources.LightHitmapOverlayShader.Release();
     Resources.FXAAShader.Release();
     Resources.UberLitShader.Release();
     Resources.DepthPrepassShader.Release();
@@ -959,6 +964,7 @@ void FRenderer::RenderPostProcess(ID3D11DeviceContext* Context, const FRenderBus
         ExecuteSinglePass(ERenderPass::Fog, Context, InRenderBus);
         ExecuteSinglePass(ERenderPass::FireBall, Context, InRenderBus);
         ExecuteSinglePass(ERenderPass::Grid, Context, InRenderBus);
+        DrawLightHitmapOverlay(Context, InRenderBus);
         ExecuteSinglePass(ERenderPass::SelectionMask, Context, InRenderBus);
         ExecuteSinglePass(ERenderPass::PostProcessOutline, Context, InRenderBus);
         ApplyFXAA(Context, InFXAASettings);
@@ -1091,6 +1097,38 @@ void FRenderer::DrawPostProcessFog(ID3D11DeviceContext* InDeviceContext, const F
 
     ID3D11ShaderResourceView* nullSRV = nullptr;
     InDeviceContext->PSSetShaderResources(0, 1, &nullSRV);
+}
+
+void FRenderer::DrawLightHitmapOverlay(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
+{
+    if (!InRenderBus.GetShowFlags().bShowLightHitmapOverlay ||
+        Resources.LightHitmapOverlayShader.PixelShader.Get() == nullptr ||
+        CurrentRenderTargets.SceneColorRTV == nullptr || Resources.TilePointLightGrid.GetSRV() == nullptr ||
+        Resources.TileSpotLightGrid.GetSRV() == nullptr)
+    {
+        return;
+    }
+
+    Device.SetBlendState(EBlendState::Additive);
+    Device.SetRasterizerState(ERasterizerState::SolidNoCull);
+    InDeviceContext->IASetInputLayout(nullptr);
+    InDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    ID3D11RenderTargetView* RTV = CurrentRenderTargets.SceneColorRTV;
+    InDeviceContext->OMSetRenderTargets(1, &RTV, nullptr);
+    InDeviceContext->OMSetDepthStencilState(nullptr, 0);
+
+    ID3D11Buffer* ForwardPlusCB = Resources.ForwardPlusConstantBuffer.GetBuffer();
+    InDeviceContext->PSSetConstantBuffers(11, 1, &ForwardPlusCB);
+
+    ID3D11ShaderResourceView* GridSRVs[2] = {Resources.TilePointLightGrid.GetSRV(), Resources.TileSpotLightGrid.GetSRV()};
+    InDeviceContext->PSSetShaderResources(4, 2, GridSRVs);
+
+    Resources.LightHitmapOverlayShader.Bind(InDeviceContext);
+    InDeviceContext->Draw(3, 0);
+
+    ID3D11ShaderResourceView* NullSRVs[2] = {nullptr, nullptr};
+    InDeviceContext->PSSetShaderResources(4, 2, NullSRVs);
 }
 
 void FRenderer::DrawDepthVisualizer(ID3D11DeviceContext* InDeviceContext)

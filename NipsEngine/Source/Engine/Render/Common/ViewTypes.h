@@ -40,6 +40,7 @@ struct FShowFlags
     bool bDirectionalLightDebug = true;
     bool bPointLightDebug = true;
     bool bSpotLightDebug = true;
+    bool bShowLightHitmapOverlay = false;
     bool bBillboardText = false;
     bool bBoundingVolume = false;
     bool bBVHBoundingVolume = false;

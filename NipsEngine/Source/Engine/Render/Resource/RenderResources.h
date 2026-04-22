@@ -45,6 +45,7 @@ struct FRenderResources
     FShader DepthVisualizerShader;
 	FShader FogShader;
     FShader FireBallShader;
+    FShader LightHitmapOverlayShader;
     FShader FXAAShader;
     FShader UberLitShader;
     FShader DepthPrepassShader;

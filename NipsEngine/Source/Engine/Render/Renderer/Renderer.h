@@ -85,6 +85,7 @@ class FRenderer
     void DrawCommand(ID3D11DeviceContext* InDeviceContext, const FRenderCommand& InCommand);
     void DrawPostProcessOutline(ID3D11DeviceContext* InDeviceContext);
     void DrawPostProcessFog(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderbus);
+    void DrawLightHitmapOverlay(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 
     void DrawDepthVisualizer(ID3D11DeviceContext* InDeviceContext);
     void UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus);

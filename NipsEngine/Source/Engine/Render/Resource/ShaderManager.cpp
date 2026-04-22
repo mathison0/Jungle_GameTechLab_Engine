@@ -298,6 +298,7 @@ void FShaderManager::CollectReloadableShaders(
     OutShaders.push_back(&Resources.FireBallShader);
     OutShaders.push_back(&Resources.DepthVisualizerShader);
     OutShaders.push_back(&Resources.FogShader);
+    OutShaders.push_back(&Resources.LightHitmapOverlayShader);
     OutShaders.push_back(&Resources.FXAAShader);
     OutShaders.push_back(FontBatcher.GetShader());
     OutShaders.push_back(SubUVBatcher.GetShader());

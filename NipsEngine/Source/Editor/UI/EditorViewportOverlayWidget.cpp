@@ -67,8 +67,6 @@ static const char* GetViewModeName(EViewMode Mode)
         return "Lit_Phong";
     case EViewMode::WorldNormal:
         return "WorldNormal";
-    case EViewMode::TileLightHitmap:
-        return "TileLightHitmap";
     default:
         return "Lit";
     }
@@ -126,6 +124,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
         ImGui::Checkbox("Directional Light Debug", &Settings.ShowFlags.bDirectionalLightDebug);
         ImGui::Checkbox("Point Light Debug", &Settings.ShowFlags.bPointLightDebug);
         ImGui::Checkbox("Spot Light Debug", &Settings.ShowFlags.bSpotLightDebug);
+        ImGui::Checkbox("Light Hitmap Overlay", &Settings.ShowFlags.bShowLightHitmapOverlay);
     }
 
     if (BeginSettingsSection("Camera", true))

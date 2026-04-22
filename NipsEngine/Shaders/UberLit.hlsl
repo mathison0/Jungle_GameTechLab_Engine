@@ -9,7 +9,6 @@
 #define LIT_LAMBERT 6
 #define LIT_PHONG 7
 #define WORLD_NORMAL 8
-#define TILE_LIGHT_HITMAP 9
 
 // USE_NORMALMAP: 0 or 1
 #define TRUE 1
@@ -807,9 +806,6 @@ PSOutput PS(PSInput input)
     #elif VIEW_MODE == LIT_PHONG
     CalculateLightingBlinnPhongTile(worldPosDecal.xyz, finalNormal, TileIndex, dDiffuse, dSpecular, DecalAmbientColor, 50);
     finalColor.xyz = (DiffuseTex * dDiffuse) + (SpecularTex * dSpecular);
-    
-    #elif VIEW_MODE == TILE_LIGHT_HITMAP
-    finalColor.xyz = CalculateTileLightHitmap(TileIndex, input.ClipPos.xy);
 
     #elif VIEW_MODE == WORLD_NORMAL
     finalColor = float4(finalNormal* 0.5f + 0.5f, 1.0f);
@@ -856,16 +852,13 @@ PSOutput PS(PSInput input)
      //finalColor = DiffuseTex * float3(1.0f, 1.0f, 1.0f);
     
 
-#elif VIEW_MODE == LIT_PHONG  
+#elif VIEW_MODE == LIT_PHONG
      float3 SpecularLighting;
      CalculateLightingBlinnPhongTile(input.WorldPos, N, TileIndex, DiffuseLighting, SpecularLighting, AmbientColor, 50);
      
     finalColor.xyz = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
 #elif VIEW_MODE == WORLD_NORMAL
     finalColor.xyz = N * 0.5f + 0.5f;
-
-#elif VIEW_MODE == TILE_LIGHT_HITMAP //TileLightHitmap
-    finalColor.xyz = CalculateTileLightHitmap(TileIndex, input.ClipPos.xy);
     
 #endif
     Output.Color = finalColor;
