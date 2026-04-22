@@ -527,9 +527,9 @@ void CalculateLightingBlinnPhongTile(
     }
 }
 
-void CalculateLightingLambert(float3 WorldPos, float3 N, out float3 OutDiffuse)
+void CalculateLightingLambertMaterial(float3 WorldPos, float3 N, out float3 OutDiffuse, float3 InAmbientColor)
 {
-    OutDiffuse = CalculateAmbientLight(Ambient, AmbientColor, 1.0f.xxx);
+    OutDiffuse = CalculateAmbientLight(Ambient, InAmbientColor, 1.0f.xxx);
 
     for (uint i = 0; i < DirectionalLightCount; ++i)
     {
@@ -572,13 +572,20 @@ void CalculateLightingLambert(float3 WorldPos, float3 N, out float3 OutDiffuse)
     }
 }
 
+void CalculateLightingLambert(float3 WorldPos, float3 N, out float3 OutDiffuse)
+{
+    CalculateLightingLambertMaterial(WorldPos, N, OutDiffuse, AmbientColor);
+}
+
 void CalculateLightingBlinnPhong(
     float3 WorldPos,
     float3 N,
     out float3 OutDiffuse,
-    out float3 OutSpecular)
+    out float3 OutSpecular,
+    float3 InAmbientColor,
+    float InShininess)
 {
-    CalculateLightingLambert(WorldPos, N, OutDiffuse);
+    CalculateLightingLambertMaterial(WorldPos, N, OutDiffuse, InAmbientColor);
     OutSpecular = 0.0f.xxx;
 
     for (uint i = 0; i < DirectionalLightCount; ++i)
@@ -594,7 +601,7 @@ void CalculateLightingBlinnPhong(
 
         OutSpecular += DirectionalLights[i].Color *
                        DirectionalLights[i].Intensity *
-                       pow(NdotH, max(Shininess, 1.0f));
+                       pow(NdotH, max(InShininess, 1.0f));
     }
 
     for (uint j = 0; j < PointLightCount; ++j)
@@ -609,7 +616,7 @@ void CalculateLightingBlinnPhong(
 
         OutSpecular += PointLights[j].Color *
                        PointLights[j].Intensity *
-                       pow(NdotH, max(Shininess, 1.0f)) *
+                       pow(NdotH, max(InShininess, 1.0f)) *
                        Common.Attenuation;
     }
 
@@ -640,10 +647,19 @@ void CalculateLightingBlinnPhong(
 
         OutSpecular += SpotLights[k].Color *
                        SpotLights[k].Intensity *
-                       pow(NdotH, max(Shininess, 1.0f)) *
+                       pow(NdotH, max(InShininess, 1.0f)) *
                        attenuation *
                        spotFactor;
     }
+}
+
+void CalculateLightingBlinnPhong(
+    float3 WorldPos,
+    float3 N,
+    out float3 OutDiffuse,
+    out float3 OutSpecular)
+{
+    CalculateLightingBlinnPhong(WorldPos, N, OutDiffuse, OutSpecular, AmbientColor, Shininess);
 }
 
 PSInput VS(VSInput input)
@@ -689,132 +705,162 @@ PSOutput PS(PSInput input)
     
     float3 DiffuseLighting;
     
-    //Decal PixelShader Logic
+    //----------------------------------------------------------------------------------------------------------------------------------------
+    //                                      Decal PixelShader Logic
+    //----------------------------------------------------------------------------------------------------------------------------------------
     #if OPAQUETYPE == DECAL
-    float2 ndcXY = input.ScreenPos.xy / input.ScreenPos.w;
-    
-    float2 screenUV = ndcXY * float2(0.5f, -0.5f) + 0.5f;
-    float2 DepthUV = ViewportUVOffset + ViewportUVScale * screenUV;
-    
-    float depthZ = g_DepthTexture.Sample(SampleState, DepthUV).r;
-    
-    if (depthZ >= 1.0f) 
-        discard;
-    
-    float4 clipPos = float4(ndcXY, depthZ, 1.0f);
-    float4 localPos = mul(clipPos, InverseClipToLocal);
-    localPos /= localPos.w;
-    
-    if (any(abs(localPos.xyz) > 0.501f)) 
-        clip(-1);
-    
-    float2 decalUV = float2(localPos.y, -localPos.z) + 0.5f;
-    
-    float4 sampledDiffuse = DiffuseMap.Sample(SampleState, decalUV);
-    SpecularTex = SpecularMap.Sample(SampleState, decalUV).rgb;
-    
-    DiffuseTex = sampledDiffuse.rgb;
-    float alpha = sampledDiffuse.a * FadeAlpha;
-  
-    if (alpha < 0.05f) 
-        clip(-1);
-  
-    //Normal Sampling
-    float3 sceneNormal = g_NormalTexture.Sample(SampleState, DepthUV).rgb;
-    float3 finalNormal = normalize(sceneNormal);
-    
-    //월드 좌표 복원
-    float4 worldPosDecal = mul(clipPos, InverseViewProjection);
-    worldPosDecal /= worldPosDecal.w;
-    
-    float3x3 worldRotation = (float3x3)Model;
-    float3 D_Normal    = normalize(worldRotation[0].xyz); // 로컬 X -> 월드 Forward
-    float3 D_Tangent   = normalize(worldRotation[1].xyz); // 로컬 Y -> 월드 Tangent
-    float3 D_Bitangent = normalize(worldRotation[2].xyz); // 로컬 Z -> 월드 Bitangent
-    float3x3 DecalTBN = float3x3(D_Tangent, D_Bitangent, D_Normal);
-    
-    #if USE_NORMALMAP == TRUE
-    float3 decalNormalTex = BumpMap.Sample(SampleState, decalUV).rgb * 2.0f - 1.0f;
-    finalNormal = normalize(mul(decalNormalTex, DecalTBN));
-    #endif
-    
+        float2 ndcXY = input.ScreenPos.xy / input.ScreenPos.w;
+        float2 screenUV = ndcXY * float2(0.5f, -0.5f) + 0.5f;
+        float2 DepthUV = ViewportUVOffset + ViewportUVScale * screenUV;
 
+        float depthZ = g_DepthTexture.Sample(SampleState, DepthUV).r;
+        if (depthZ >= 1.0f) 
+            discard;
+        
+        float4 clipPos = float4(ndcXY, depthZ, 1.0f);
+        float4 localPos = mul(clipPos, InverseClipToLocal);
+        localPos /= localPos.w;
+        
+        if (any(abs(localPos.xyz) > 0.501f)) 
+            clip(-1);
+        
+        float2 decalUV = float2(localPos.y, -localPos.z) + 0.5f;
+        
+        float4 sampledDiffuse = DiffuseMap.Sample(SampleState, decalUV);
+        SpecularTex = SpecularMap.Sample(SampleState, decalUV).rgb;
+        
+        DiffuseTex = sampledDiffuse.rgb;
+        float alpha = sampledDiffuse.a * FadeAlpha;
     
+        if (alpha < 0.05f) 
+            clip(-1);
     
-    //조명 계산
-    float3 dDiffuse = 0;
-    float3 dSpecular = 0;
-    
-    #if VIEW_MODE == UNLIT 
-        finalColor.xyz = DiffuseTex;
-    
-    #elif VIEW_MODE == LIT_LAMBERT
-     CalculateLightingLambertTile(worldPosDecal.xyz, finalNormal, TileIndex, DiffuseLighting, DecalAmbientColor);
-     finalColor.xyz = DiffuseTex * DiffuseLighting;
-    
-    #elif VIEW_MODE == LIT_PHONG
-    CalculateLightingBlinnPhongTile(worldPosDecal.xyz, finalNormal, TileIndex, dDiffuse, dSpecular, DecalAmbientColor, 50);
-    finalColor.xyz = (DiffuseTex * dDiffuse) + (SpecularTex * dSpecular);
+        //Normal Sampling
+        float3 sceneNormal = g_NormalTexture.Sample(SampleState, DepthUV).rgb;
+        float3 finalNormal = normalize(sceneNormal);
+        
+        //월드 좌표 복원
+        float4 worldPosDecal = mul(clipPos, InverseViewProjection);
+        worldPosDecal /= worldPosDecal.w;
+        
+        float3x3 worldRotation = (float3x3)Model;
+        float3 D_Normal    = normalize(worldRotation[0].xyz); // 로컬 X -> 월드 Forward
+        float3 D_Tangent   = normalize(worldRotation[1].xyz); // 로컬 Y -> 월드 Tangent
+        float3 D_Bitangent = normalize(worldRotation[2].xyz); // 로컬 Z -> 월드 Bitangent
+        float3x3 DecalTBN = float3x3(D_Tangent, D_Bitangent, D_Normal);
+        
+        #if USE_NORMALMAP == TRUE
+            float3 decalNormalTex = BumpMap.Sample(SampleState, decalUV).rgb * 2.0f - 1.0f;
+            finalNormal = normalize(mul(decalNormalTex, DecalTBN));
+        #endif
 
-    #elif VIEW_MODE == WORLD_NORMAL
-    finalColor = float4(finalNormal* 0.5f + 0.5f, 1.0f);
+        //조명 계산
+        float3 dDiffuse = 0;
+        float3 dSpecular = 0;
+        
+        #if VIEW_MODE == UNLIT
+            finalColor.xyz = DiffuseTex;
+        
+        #elif VIEW_MODE == LIT_LAMBERT
+            #if LIGHT_CULLING_FLAG
+                CalculateLightingLambertTile(worldPosDecal.xyz, finalNormal, TileIndex, DiffuseLighting, DecalAmbientColor);
+            #else
+                CalculateLightingLambertMaterial(worldPosDecal.xyz, finalNormal, DiffuseLighting, DecalAmbientColor);
+            #endif
+            finalColor.xyz = DiffuseTex * DiffuseLighting;
+        #elif VIEW_MODE == LIT_PHONG
+            #if LIGHT_CULLING_FLAG
+                CalculateLightingBlinnPhongTile(
+                    worldPosDecal.xyz,
+                    finalNormal,
+                    TileIndex,
+                    dDiffuse,
+                    dSpecular,
+                    DecalAmbientColor,
+                    50.0f);
+            #else
+                CalculateLightingBlinnPhong(
+                    worldPosDecal.xyz,
+                    finalNormal,
+                    dDiffuse,
+                    dSpecular,
+                    DecalAmbientColor,
+                    50.0f);
+            #endif
+            finalColor.xyz = (DiffuseTex * dDiffuse) + (SpecularTex * dSpecular);
+        #elif VIEW_MODE == WORLD_NORMAL
+            finalColor = float4(finalNormal * 0.5f + 0.5f, 1.0f);
 
-    #endif
+        #endif
 
     finalColor.a = alpha;
     if (finalColor.a < 0.05f)
         discard;
-    
     Output.Color = finalColor;
     return Output;
+    //----------------------------------------------------------------------------------------------------------------------------------------
+    //                                      // StaticMesh PixelShader Logic
+    //----------------------------------------------------------------------------------------------------------------------------------------
+    #elif OPAQUETYPE == STATICMESH 
+        DiffuseTex = DiffuseColor;
     
-    #elif OPAQUETYPE == STATICMESH // StaticMesh PixelShader Logic
-    DiffuseTex = DiffuseColor;
-    
-    #if USE_NORMALMAP == TRUE
-    float3 T = normalize(input.WorldTangent);
-    T = normalize(T - dot(T, N) * N);
-    float3 B = cross(N, T);
-    float3x3 TBN = float3x3(T, B, N);
+        #if USE_NORMALMAP == TRUE
+            float3 T = normalize(input.WorldTangent);
+            T = normalize(T - dot(T, N) * N);
+            float3 B = cross(N, T);
+            float3x3 TBN = float3x3(T, B, N);
 
-    float3 NormalTex = BumpMap.Sample(SampleState, input.UV).rgb * 2.0f - 1.0f;
-    N = normalize(mul(NormalTex,TBN));
-    #endif
+            float3 NormalTex = BumpMap.Sample(SampleState, input.UV).rgb * 2.0f - 1.0f;
+            N = normalize(mul(NormalTex, TBN));
+        #endif
+        
+        SpecularTex = GetSpecularTexPS(input.UV);
+        DiffuseTex = GetDiffuseTexPS(input.UV);
+        
+        #if VIEW_MODE == UNLIT
+            finalColor.xyz = DiffuseTex;
     
-    SpecularTex = GetSpecularTexPS(input.UV);
-    DiffuseTex = GetDiffuseTexPS(input.UV);
-    
+        #elif VIEW_MODE == LIT_GOURAUD
+            finalColor.xyz =
+                DiffuseTex * input.VertexDiffuseLighting +
+                SpecularTex * input.VertexSpecularLighting;
 
- #if VIEW_MODE == UNLIT
-    finalColor.xyz = DiffuseTex;
- 
- #elif VIEW_MODE == LIT_GOURAUD
-    finalColor.xyz =
-        DiffuseTex * input.VertexDiffuseLighting +
-        SpecularTex * input.VertexSpecularLighting;
+        #elif VIEW_MODE == LIT_LAMBERT
+            #if LIGHT_CULLING_FLAG
+                CalculateLightingLambertTile(input.WorldPos, N, TileIndex, DiffuseLighting, AmbientColor);
+            #else
+                CalculateLightingLambert(input.WorldPos, N, DiffuseLighting);
+            #endif
+            finalColor.xyz = DiffuseTex * DiffuseLighting;
+        
+        //ShaderHotReload 테스트용 코드 
+            //finalColor = DiffuseTex * float3(1.0f, 1.0f, 1.0f);
 
-#elif VIEW_MODE == LIT_LAMBERT
-     CalculateLightingLambertTile(input.WorldPos, N, TileIndex, DiffuseLighting, AmbientColor);
-     finalColor.xyz = DiffuseTex * DiffuseLighting;
-    
-     //ShaderHotReload 테스트용 코드 
-     //finalColor = DiffuseTex * float3(1.0f, 1.0f, 1.0f);
-    
+        #elif VIEW_MODE == LIT_PHONG
+            float3 SpecularLighting;
+            #if LIGHT_CULLING_FLAG
+                CalculateLightingBlinnPhongTile(
+                    input.WorldPos,
+                    N,
+                    TileIndex,
+                    DiffuseLighting,
+                    SpecularLighting,
+                    AmbientColor,
+                    50.0f);
+            #else
+                CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseLighting, SpecularLighting);
+            #endif
+            finalColor.xyz = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
 
-#elif VIEW_MODE == LIT_PHONG
-     float3 SpecularLighting;
-     CalculateLightingBlinnPhongTile(input.WorldPos, N, TileIndex, DiffuseLighting, SpecularLighting, AmbientColor, 50);
-     
-    finalColor.xyz = DiffuseTex * DiffuseLighting + SpecularTex * SpecularLighting;
-#elif VIEW_MODE == WORLD_NORMAL
-    finalColor.xyz = N * 0.5f + 0.5f;
-    
-#endif
-    Output.Color = finalColor;
-#endif
-    
-    #if OPAQUETYPE == STATICMESH
-    Output.Normal = float4(N, 1.0f);
+        #elif VIEW_MODE == WORLD_NORMAL
+            finalColor.xyz = N * 0.5f + 0.5f;
+        #endif
+
+        Output.Color = finalColor;
+        #endif
+
+        #if OPAQUETYPE == STATICMESH
+            Output.Normal = float4(N, 1.0f);
     #endif
     
     return Output;

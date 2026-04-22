@@ -666,7 +666,7 @@ void FRenderer::ExecuteDefaultPass(ERenderPass Pass, const TArray<FRenderCommand
         Device.SetDepthStencilState(TargetDepth);
         Device.SetBlendState(TargetBlend);
 
-        BindShaderByType(Cmd, Context, LastCommandType, ViewMode);
+        BindShaderByType(Cmd, Context, LastCommandType, Bus);
 
         switch (Cmd.Type)
         {
@@ -731,9 +731,9 @@ void FRenderer::ApplyPassRenderState(ERenderPass Pass, ID3D11DeviceContext* Cont
     }
 }
 
-void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContext* Context,
-                                 ERenderCommandType& LastCommandType, const EViewMode ViewMode)
+void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContext* Context, ERenderCommandType& LastCommandType, const FRenderBus& InRenderBus)
 {
+    const EViewMode& ViewMode = InRenderBus.GetViewMode();
     bool bTypeChanged = (LastCommandType != InCmd.Type);
 
     // 객체별 Transform Data는 항상 업데이트해야 한다.
@@ -782,6 +782,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         bool bHasNormalMap = InCmd.Constants.StaticMesh.bHasNormalMap > 0 ? true : false;
         ShaderKey.SetNormalMap(bHasNormalMap);
         ShaderKey.SetOpaqueType(EOpaqueType::StaticMesh);
+        ShaderKey.SetLightCullMode(InRenderBus.GetShowFlags().bLightCullingMode);
 
         FShader* Shader = ShaderManager.GetShader(ShaderKey);
         if (Shader)
@@ -884,6 +885,7 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
         bool bHasNormalMap = InCmd.Constants.Decal.bHasNormalMap > 0 ? true : false;
         ShaderKey.SetNormalMap(bHasNormalMap);
         ShaderKey.SetOpaqueType(EOpaqueType::Decal);
+        ShaderKey.SetLightCullMode(InRenderBus.GetShowFlags().bLightCullingMode);
 
         FShader* Shader = ShaderManager.GetShader(ShaderKey);
         if (Shader)
@@ -942,7 +944,10 @@ void FRenderer::RenderScenePasses(ID3D11DeviceContext* Context, const FRenderBus
 {
     UpdateLightingBuffer(Context, InRenderBus);
     ExecuteDepthPrepass(Context, InRenderBus);
-    DispatchTileLightCulling(Context, InRenderBus);
+    if (InRenderBus.GetShowFlags().bLightCullingMode)
+    {
+        DispatchTileLightCulling(Context, InRenderBus);
+    }
     ExecuteSinglePass(ERenderPass::Opaque, Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Decal, Context, InRenderBus);
     ExecuteSinglePass(ERenderPass::Translucent, Context, InRenderBus);
@@ -1428,6 +1433,53 @@ void FRenderer::ExecuteDepthPrepass(ID3D11DeviceContext* Context, const FRenderB
         }
     }
 }
+
+// LightCulling On/Off 테스트용 함수. 현재는 각 광원의 Score를 기반으로 Point 256개, Spot 256개의 광원만 선택해서 계산하고 있다보니 LightCulling On/Off시 프레임 차이가 별로 없습니다.
+// 이 함수는 모든 광원을 전부 선택해서 계산하다보니 LightCulling On/Off시 프레임 차이를 확연히 비교해볼 수 있습니다.
+//void FRenderer::UpdateLightingBufferNoScore(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
+//{
+//    // cbuffer: Ambient + Count
+//    const FLightingConstants& Lighting = InRenderBus.GetLightingConstants();
+//
+//    FLightingConstants LightingData = Lighting;
+//    LightingData.DirectionalLightCount = static_cast<uint32>(InRenderBus.GetDirectionalLights().size());
+//    LightingData.SpotLightCount = static_cast<uint32>(InRenderBus.GetSpotLightInfos().size());
+//    LightingData.PointLightCount = static_cast<uint32>(InRenderBus.GetPointlLights().size());
+//
+//    Resources.LightingConstantBuffer.Update(Context, &LightingData, sizeof(FLightingConstants));
+//    ID3D11Buffer* b13 = Resources.LightingConstantBuffer.GetBuffer();
+//    Context->VSSetConstantBuffers(13, 1, &b13);
+//    Context->PSSetConstantBuffers(13, 1, &b13);
+//
+//    // StructuredBuffer: Directional Lights → t10
+//    const TArray<FDirectionalLightConstants>& DirLights = InRenderBus.GetDirectionalLights();
+//    if (!DirLights.empty())
+//    {
+//        Resources.DirectionalLightBuffer.Update(Context, DirLights.data(), static_cast<uint32>(DirLights.size()));
+//    }
+//    ID3D11ShaderResourceView* DirectionLightSRV = Resources.DirectionalLightBuffer.GetSRV();
+//    Context->VSSetShaderResources(10, 1, &DirectionLightSRV);
+//    Context->PSSetShaderResources(10, 1, &DirectionLightSRV);
+//
+//    const TArray<FPointLightConstatns>& PointLights = InRenderBus.GetPointlLights();
+//    if (!PointLights.empty())
+//    {
+//        Resources.PointlLightBuffer.Update(Context, PointLights.data(), static_cast<uint32>(PointLights.size()));
+//    }
+//    ID3D11ShaderResourceView* PointLightSRV = Resources.PointlLightBuffer.GetSRV();
+//    Context->VSSetShaderResources(0, 1, &PointLightSRV);
+//    Context->PSSetShaderResources(0, 1, &PointLightSRV);
+//
+//    // StructuredBuffer: Spot Lights
+//    const TArray<FSpotLightInfo>& SpotLights = InRenderBus.GetSpotLightInfos();
+//    if (!SpotLights.empty())
+//    {
+//        Resources.SpotLightBuffer.Update(Context, SpotLights.data(), static_cast<uint32>(SpotLights.size()));
+//    }
+//    ID3D11ShaderResourceView* SpotLightSRV = Resources.SpotLightBuffer.GetSRV();
+//    Context->VSSetShaderResources(1, 1, &SpotLightSRV);
+//    Context->PSSetShaderResources(1, 1, &SpotLightSRV);
+//}
 
 void FRenderer::DispatchTileLightCulling(ID3D11DeviceContext* Context, const FRenderBus& InRenderBus)
 {
