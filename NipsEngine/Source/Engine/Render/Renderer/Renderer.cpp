@@ -982,7 +982,10 @@ void FRenderer::RenderPostProcess(ID3D11DeviceContext* Context, const FRenderBus
         ExecuteSinglePass(ERenderPass::Fog, Context, InRenderBus);
         ExecuteSinglePass(ERenderPass::FireBall, Context, InRenderBus);
         ExecuteSinglePass(ERenderPass::Grid, Context, InRenderBus);
-        DrawLightHitmapOverlay(Context, InRenderBus);
+        if (InRenderBus.GetShowFlags().bLightCullingMode)
+        {
+            DrawLightHitmapOverlay(Context, InRenderBus);
+        }
         ExecuteSinglePass(ERenderPass::SelectionMask, Context, InRenderBus);
         ExecuteSinglePass(ERenderPass::PostProcessOutline, Context, InRenderBus);
         ApplyFXAA(Context, InFXAASettings);
