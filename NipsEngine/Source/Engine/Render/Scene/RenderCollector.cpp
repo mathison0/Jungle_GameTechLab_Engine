@@ -675,7 +675,6 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
             Cmd.SectionIndexStart = Section.StartIndex;
             Cmd.SectionIndexCount = Section.IndexCount;
 
-            Cmd.Constants.StaticMesh.CameraWorldPos = RenderBus.GetCameraPosition();
 
             // 메테리얼 정보가 없을 시 디폴트 메테리얼을 사용합니다.
             static const FMaterial EngineDefaultMaterial{};
@@ -879,6 +878,10 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
         ID3D11ShaderResourceView* FinalSRV = FResourceManager::Get().GetDefaultWhiteSRV();
         static const FMaterial EngineDefaultMaterial{};
         if (!DecalMat) DecalMat = &EngineDefaultMaterial;
+
+		Cmd.Constants.Decal.AmbientColor = DecalMat->AmbientColor;
+        Cmd.Constants.Decal.DiffuseColor = DecalMat->DiffuseColor;
+        Cmd.Constants.Decal.SpecularColor = DecalMat->SpecularColor;
 
         Cmd.Constants.Decal.bHasDiffuseMap = DecalMat->bHasDiffuseTexture ? 1u : 0u;
         Cmd.Constants.Decal.bHasSpecularMap = DecalMat->bHasSpecularTexture ? 1u : 0u;

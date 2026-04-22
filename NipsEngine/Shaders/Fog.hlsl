@@ -22,9 +22,6 @@ cbuffer FogBuffer : register(b9)
     float Pad0;
     float Pad1;
 
-    float3 CameraWorldPos;
-    float Pad2;
-
     uint  bEnabled;
     float3 Pad3;
 };
