@@ -416,15 +416,47 @@
         }
       },
       "Visible" : true
+    }, {
+      "ClassName" : "ADecalActor",
+      "RootComponent" : {
+        "Children" : [{
+            "ClassName" : "UTextRenderComponent",
+            "Properties" : {
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Location" : [0.000000, 0.000000, 100.000000],
+              "Outline" : false,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID: 56",
+              "Visible" : false
+            }
+          }],
+        "ClassName" : "UDecalComponent",
+        "Properties" : {
+          "Distance Fade" : false,
+          "Fade Amount" : 1.000000,
+          "Fade End Distance" : 1000.000000,
+          "Fade Start Distance" : 100.000000,
+          "Location" : [94.051056, -32.193436, 9.963333],
+          "Material" : "Material_BTC",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [30.000000, 30.000000, 30.000000],
+          "Sort Order" : 0,
+          "Visible" : false,
+          "bUseSurfaceNormal" : true
+        }
+      },
+      "Visible" : true
     }],
   "ClassName" : "UWorld",
   "Name" : "LightDemoScene",
   "PerspectiveCamera" : {
     "FOV" : [84.000000],
     "FarClip" : [2000.000000],
-    "Location" : [116.450645, -121.663231, 22.833364],
+    "Location" : [126.863060, -32.915058, 25.002155],
     "NearClip" : [0.100000],
-    "Rotation" : [-26.450470, 165.734695, -6.461212]
+    "Rotation" : [-26.072998, 171.347946, -3.826172]
   },
   "Version" : 3,
   "WorldType" : "Editor"

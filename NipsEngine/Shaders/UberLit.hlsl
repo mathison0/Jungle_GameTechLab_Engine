@@ -261,122 +261,6 @@ FPointLightCommon EvaluatePointLightCommon(
     return Result;
 }
 
-float3 CalculatePointDiffuse(
-    FPointLightInfo Light,
-    float3 DiffuseTex,
-    FPointLightCommon Common)
-{
-    if (!Common.bValid)
-        return 0.0f.xxx;
-
-    return DiffuseTex * Light.Color.xyz * Light.Intensity * Common.NdotL * Common.Attenuation;
-}
-
-float3 CalculatePointSpecular(
-    FPointLightInfo Light,
-    float3 N,
-    float3 WorldPos,
-    float3 CameraWorldPos,
-    float3 SpecularTex,
-    float Shininess,
-    FPointLightCommon Common)
-{
-    if (!Common.bValid)
-        return 0.0f.xxx;
-
-    float3 V = normalize(CameraWorldPos - WorldPos);
-    float3 H = normalize(Common.LightDir + V);
-    float NdotH = saturate(dot(normalize(N), H));
-    float spec = pow(NdotH, Shininess);
-
-    return Light.Color.xyz * Light.Intensity * SpecularTex * spec * Common.Attenuation;
-}
-
-float3 CalculateDirectionalDiffuse(FDirectionalLightInfo Light, float3 N, float3 DiffuseTex)
-{
-    float3 L = normalize(-Light.Direction);
-    float NdotL = max(dot(N, L), 0.0f);
-    return Light.Color * Light.Intensity * DiffuseTex * NdotL;
-}
-
-float3 CalculateDirectionalSpecular(FDirectionalLightInfo Light, float3 N, float3 WorldPos, float3 CameraWorldPos, float3 SpecularTex, float Shininess)
-{
-    float3 L = normalize(-Light.Direction);
-    float3 ViewDir = normalize(CameraWorldPos - WorldPos);
-    float3 HalfVector = normalize(L + ViewDir);
-    float NdotH = saturate(dot(N, HalfVector));
-    return Light.Color * Light.Intensity * SpecularTex * pow(NdotH, max(Shininess, 1.0f));
-}
-
-float3 CalculateSpotDiffuse(FSpotLightInfo Light, float3 N, float3 WorldPos, float3 DiffuseTex)
-{
-    float3 Lvec = Light.Position - WorldPos;
-    float dist = length(Lvec);
-
-    if (dist > Light.Radius)
-        return 0;
-
-    float3 L = Lvec / dist;
-
-    float NdotL = max(dot(N, L), 0.0f);
-
-    float3 lightDir = normalize(-Light.Direction);
-
-    float spotCos = dot(L, lightDir);
-    float spotFactor = smoothstep(
-        Light.OuterConeCos,
-        Light.InnerConeCos,
-        spotCos
-    );
-    spotFactor = spotFactor * spotFactor;
-
-    float attenuation = 1.0f - (dist / Light.Radius);
-    attenuation = attenuation * attenuation;
-
-    return Light.Color *
-           Light.Intensity *
-           DiffuseTex *
-           NdotL *
-           attenuation *
-           spotFactor;
-}
-
-float3 CalculateSpotSpecular(FSpotLightInfo Light, float3 N, float3 WorldPos, float3 CameraWorldPos, float3 SpecularTex, float Shininess)
-{
-    float3 Lvec = Light.Position - WorldPos;
-    float dist = length(Lvec);
-
-    if (dist > Light.Radius)
-        return 0;
-
-    float3 L = Lvec / dist;
-
-    float3 V = normalize(CameraWorldPos - WorldPos);
-    float3 H = normalize(L + V);
-
-    float NdotH = saturate(dot(N, H));
-
-    float3 lightDir = normalize(-Light.Direction);
-    float spotCos = dot(L, lightDir);
-
-    float spotFactor = smoothstep(
-        Light.OuterConeCos,
-        Light.InnerConeCos,
-        spotCos
-    );
-    spotFactor *= spotFactor;
-
-    float attenuation = 1.0f - (dist / Light.Radius);
-    attenuation *= attenuation;
-
-    return Light.Color *
-           Light.Intensity *
-           SpecularTex *
-           pow(NdotH, max(Shininess, 1.0f)) *
-           attenuation *
-           spotFactor;
-}
-
 uint GetTileIndexFromScreenPos(float2 screenPos)
 {
     uint tileCountX = max(TileCount.x, 1u);
@@ -843,7 +727,7 @@ PSOutput PS(PSInput input)
             finalColor.xyz = DiffuseTex * DiffuseLighting;
         
         //ShaderHotReload 테스트용 코드 
-            //finalColor = DiffuseTex * float3(1.0f, 1.0f, 1.0f);
+            //finalColor.xyz = DiffuseTex * float3(1.0f, 1.0f, 1.0f);
 
         #elif VIEW_MODE == LIT_PHONG
             float3 SpecularLighting;
