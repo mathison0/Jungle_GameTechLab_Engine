@@ -372,7 +372,7 @@ void FRenderer::InitializePassRenderStates()
     S[(uint32)E::PostProcessOutline] = {EDepthStencilState::Default,   EBlendState::AlphaBlend,
                                         ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
                                         &Resources.OutlineShader,      false};
-    S[(uint32)E::Decal] = {EDepthStencilState::DepthNone,    EBlendState::AlphaBlend,
+    S[(uint32)E::Decal] = {EDepthStencilState::DepthNone,    EBlendState::Opaque,
                            ERasterizerState::SolidFrontCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
                            &Resources.DecalShader,           false};
     S[(uint32)E::FireBall] = {EDepthStencilState::DepthNone,    EBlendState::AlphaBlend,
@@ -1168,6 +1168,7 @@ void FRenderer::UpdateFrameBuffer(ID3D11DeviceContext* Context, const FRenderBus
     frameConstantData.bIsWireframe = (InRenderBus.GetViewMode() == EViewMode::Wireframe);
     frameConstantData.WireframeColor = InRenderBus.GetWireframeColor();
     frameConstantData.InverseViewProjection = (InRenderBus.GetView() * InRenderBus.GetProj()).GetInverse();
+    frameConstantData.CameraWorldPos = InRenderBus.GetCameraPosition();
 
     Resources.FrameBuffer.Update(Context, &frameConstantData, sizeof(FFrameConstants));
     ID3D11Buffer* b0 = Resources.FrameBuffer.GetBuffer();

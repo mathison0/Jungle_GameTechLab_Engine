@@ -11,6 +11,9 @@ cbuffer FrameBuffer : register(b0)
     float3 WireframeRGB;
     
     row_major float4x4 InverseViewProjection;
+    
+    float3 CameraWorldPos;
+    float Padding0;
 }
 
 cbuffer PerObjectBuffer : register(b1)

@@ -615,9 +615,16 @@ void FObjLoader::CalculateTangents(TArray<FNormalVertex>& Vertices, const TArray
         Tangent.Y = f * (DeltaUV2.Y * Edge1.Y - DeltaUV1.Y * Edge2.Y);
         Tangent.Z = f * (DeltaUV2.Y * Edge1.Z - DeltaUV1.Y * Edge2.Z);
 
-        v0.Tangent += Tangent;
-        v1.Tangent += Tangent;
-        v2.Tangent += Tangent;
+		auto AccumulateTangent = [&](FNormalVertex& V, const FVector& TriT)
+        {
+            // T' = T - (N dot T) * N
+            FVector OrthoT = TriT - V.Normal * FVector::DotProduct(V.Normal, TriT);
+            V.Tangent += OrthoT;
+        };
+
+		AccumulateTangent(v0, Tangent);
+        AccumulateTangent(v1, Tangent);
+        AccumulateTangent(v2, Tangent);
     }
 
     // 3. 최종 정규화 (부드러운 표면 처리를 위해 평균화된 값을 normalize)

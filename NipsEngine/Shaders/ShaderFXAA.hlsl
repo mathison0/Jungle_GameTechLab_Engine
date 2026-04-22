@@ -28,7 +28,7 @@ cbuffer FXAAConstants : register(b9)
     // 1이면 실제 FXAA 수행, 0이면 현재 viewport 구간을 그대로 복사(copy path)한다.
     // shared postprocess RT를 항상 최종 출력으로 쓰기 위해, FXAA off여도 pass 자체는 돈다.
     float FxaaEnabled;
-    float2 Padding0;
+    float2 Padding9;
 };
 
 static const int FXAA_SEARCH_STEPS = 10;

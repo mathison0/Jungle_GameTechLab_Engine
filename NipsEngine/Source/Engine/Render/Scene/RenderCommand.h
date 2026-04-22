@@ -54,6 +54,8 @@ struct FFrameConstants
     FVector WireframeColor;
 
 	FMatrix InverseViewProjection;
+    FVector CameraWorldPos;
+	float Padding0;
 };
 
 struct FGizmoConstants
@@ -270,10 +272,6 @@ struct FStaticMeshConstants
 
     FVector SpecularColor = {0.5f, 0.5f, 0.5f};
     float   Shininess = 32.0f;
-
-    // Camera
-    FVector CameraWorldPos = {0.0f, 0.0f, 0.0f};
-    float   _Pad2 = 0.0f;
 
     // ScrollUV
     float  ScrollX = 0.f;
