@@ -820,8 +820,8 @@ void FRenderer::BindShaderByType(const FRenderCommand& InCmd, ID3D11DeviceContex
 		// ViewMode, NormalMap 기준 셰이더 변경 필요
         FShaderKey ShaderKey;
         ShaderKey.SetViewMode((uint32)ViewMode);
-        // bool bHasNormalMap = InCmd.Constants.Decal.bHasNormalMap > 0 ? true : false;
-        ShaderKey.SetNormalMap(false);
+        bool bHasNormalMap = InCmd.Constants.Decal.bHasNormalMap > 0 ? true : false;
+        ShaderKey.SetNormalMap(bHasNormalMap);
         ShaderKey.SetOpaqueType(EOpaqueType::Decal);
 
         FShader* Shader = ShaderManager.GetShader(ShaderKey);

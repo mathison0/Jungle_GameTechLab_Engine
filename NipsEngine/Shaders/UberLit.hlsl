@@ -443,7 +443,7 @@ float3 CalculateTileLightHitmap(uint TileIndex, float2 screenPos)
     return lerp(baseColor, 1.0f.xxx, gridLine * 0.3f);
 }
 
-void CalculateLightingLambertTile(float3 WorldPos, float3 N, uint TileIndex, out float3 OutDiffuse)
+void CalculateLightingLambertTile(float3 WorldPos, float3 N, uint TileIndex, out float3 OutDiffuse, float3 InAmbientColor)
 {
     OutDiffuse = CalculateAmbientLight(Ambient, InAmbientColor, 1.0f.xxx);
 
@@ -772,24 +772,30 @@ PSOutput PS(PSInput input)
         clip(-1);
   
     //Normal Sampling
-    
     float3 sceneNormal = g_NormalTexture.Sample(SampleState, DepthUV).rgb;
-    sceneNormal = normalize(sceneNormal * 2.0f -1.0f);
-    float3 finalNormal = sceneNormal;
-    
-    #if USE_NORMALMAP == TRUE
-    float3 decalNormalTex = BumpMap.Sample(SampleState, decalUV).rgb * 2.0f - 1.0f;
-    finalNormal = normalize(sceneNormal + decalNormalTex);
-    #endif
+    float3 finalNormal = normalize(sceneNormal);
     
     //월드 좌표 복원
     float4 worldPosDecal = mul(clipPos, InverseViewProjection);
     worldPosDecal /= worldPosDecal.w;
     
+    float3x3 worldRotation = (float3x3)Model;
+    float3 D_Normal    = normalize(worldRotation[0].xyz); // 로컬 X -> 월드 Forward
+    float3 D_Tangent   = normalize(worldRotation[1].xyz); // 로컬 Y -> 월드 Tangent
+    float3 D_Bitangent = normalize(worldRotation[2].xyz); // 로컬 Z -> 월드 Bitangent
+    float3x3 DecalTBN = float3x3(D_Tangent, D_Bitangent, D_Normal);
+    
+    #if USE_NORMALMAP == TRUE
+    float3 decalNormalTex = BumpMap.Sample(SampleState, decalUV).rgb * 2.0f - 1.0f;
+    finalNormal = normalize(mul(decalNormalTex, DecalTBN));
+    #endif
+    
+
+    
+    
     //조명 계산
     float3 dDiffuse = 0;
     float3 dSpecular = 0;
-    
     
     #if VIEW_MODE == UNLIT 
         finalColor.xyz = DiffuseTex;
@@ -806,7 +812,7 @@ PSOutput PS(PSInput input)
     finalColor.xyz = CalculateTileLightHitmap(TileIndex, input.ClipPos.xy);
 
     #elif VIEW_MODE == WORLD_NORMAL
-    discard;
+    finalColor = float4(finalNormal* 0.5f + 0.5f, 1.0f);
 
     #endif
 
@@ -862,7 +868,7 @@ PSOutput PS(PSInput input)
     finalColor.xyz = CalculateTileLightHitmap(TileIndex, input.ClipPos.xy);
     
 #endif
-    Output.Color =  finalColor;
+    Output.Color = finalColor;
 #endif
     
     #if OPAQUETYPE == STATICMESH

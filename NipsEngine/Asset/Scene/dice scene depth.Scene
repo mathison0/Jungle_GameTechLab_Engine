@@ -2406,13 +2406,13 @@
         "ClassName" : "StaticMeshComp",
         "Properties" : {
           "Location" : [80.350075, -66.485214, 48.662598],
-          "Material 0" : "DicePaper",
+          "Material 0" : "horse_head",
           "Outline" : true,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [-0.000000, 0.000000, -170.516693],
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset/Mesh/Dice/Dice.obj",
+          "StaticMesh" : "Asset\\Mesh\\horse\\horse_head_1k.obj",
           "Visible" : true
         }
       },
@@ -3126,13 +3126,13 @@
         "ClassName" : "StaticMeshComp",
         "Properties" : {
           "Location" : [80.350075, -4.884476, 48.662598],
-          "Material 0" : "DicePaper",
+          "Material 0" : "Material_BTC",
           "Outline" : true,
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset/Mesh/Dice/Dice.obj",
+          "StaticMesh" : "Asset\\Mesh\\Bitcoin\\Sketchfab.obj",
           "Visible" : true
         }
       },
@@ -3186,13 +3186,13 @@
         "ClassName" : "StaticMeshComp",
         "Properties" : {
           "Location" : [80.350075, -36.191612, 48.662598],
-          "Material 0" : "DicePaper",
+          "Material 0" : "mid_century_lounge_chair",
           "Outline" : true,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [-0.000000, 0.000000, -172.815598],
           "Scale" : [10.000000, 10.000000, 10.000000],
           "Scroll U" : 0.000000,
           "Scroll V" : 0.000000,
-          "StaticMesh" : "Asset/Mesh/Dice/Dice.obj",
+          "StaticMesh" : "Asset\\Mesh\\chair\\mid_century_lounge_chair_1k.obj",
           "Visible" : true
         }
       },
@@ -3257,15 +3257,86 @@
         }
       },
       "Visible" : true
+    }, {
+      "ClassName" : "ADirectionalLightActor",
+      "RootComponent" : {
+        "Children" : [{
+            "ClassName" : "UDirectionalLightComponent",
+            "Properties" : {
+              "Color" : [0.980910, 0.980910, 0.980910, 1.000000],
+              "Intensity" : 1.000000,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 180.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000]
+            }
+          }, {
+            "ClassName" : "UBillboardComponent",
+            "Properties" : {
+              "Distance Fade" : false,
+              "Fade End Distance" : 1000.000000,
+              "Fade Start Distance" : 100.000000,
+              "Height" : 1.000000,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Outline" : false,
+              "Play Rate" : 30.000000,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Sprite" : "Asset\\Texture\\S_LightDirectional.png",
+              "Visible" : true,
+              "Width" : 1.000000,
+              "bCylindrical" : false,
+              "bLoop" : true,
+              "bUseRotation" : false
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Properties" : {
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000]
+        }
+      },
+      "Visible" : true
+    }, {
+      "ClassName" : "ADecalActor",
+      "RootComponent" : {
+        "Children" : [{
+            "ClassName" : "UTextRenderComponent",
+            "Properties" : {
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Location" : [0.000000, 0.000000, 100.000000],
+              "Outline" : false,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID: 343",
+              "Visible" : false
+            }
+          }],
+        "ClassName" : "UDecalComponent",
+        "Properties" : {
+          "Distance Fade" : false,
+          "Fade Amount" : 1.000000,
+          "Fade End Distance" : 1000.000000,
+          "Fade Start Distance" : 100.000000,
+          "Location" : [80.868263, 10.235627, 30.925388],
+          "Material" : "Material_BTC",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [50.000000, 50.000000, 50.000000],
+          "Sort Order" : 0,
+          "Visible" : true
+        }
+      },
+      "Visible" : true
     }],
   "ClassName" : "UWorld",
   "Name" : "dice scene depth",
   "PerspectiveCamera" : {
     "FOV" : [84.000000],
     "FarClip" : [2000.000000],
-    "Location" : [180.342941, 7.451917, 86.784966],
+    "Location" : [135.588547, 19.047609, 53.025223],
     "NearClip" : [0.100000],
-    "Rotation" : [-22.282959, -166.489594, 5.205620]
+    "Rotation" : [-13.624939, -175.117447, 1.152794]
   },
   "Version" : 3,
   "WorldType" : "Editor"
