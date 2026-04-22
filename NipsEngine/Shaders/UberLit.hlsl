@@ -739,7 +739,7 @@ PSOutput PS(PSInput input)
                     DiffuseLighting,
                     SpecularLighting,
                     AmbientColor,
-                    50.0f);
+                    Shininess);
             #else
                 CalculateLightingBlinnPhong(input.WorldPos, N, DiffuseLighting, SpecularLighting);
             #endif
