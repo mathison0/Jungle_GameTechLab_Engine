@@ -799,10 +799,18 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
         ID3D11ShaderResourceView* SRV =
             (Sprite && Sprite->SRV) ? Sprite->SRV.Get() : FResourceManager::Get().GetDefaultWhiteSRV();
 
+        FVector CameraPos = RenderBus.GetView().GetInverse().GetOrigin();
+        float   Distance = FVector::Distance(CameraPos, BillboardComp->GetWorldLocation());
+
+		float ScaleFactor = Distance / 10.0f;
+        ScaleFactor = std::clamp(ScaleFactor, 1.0f, 3.0f);
+
+		FMatrix FinalWorldMatrix = MakeViewBillboardMatrix(Primitive, RenderBus);
+        FinalWorldMatrix =  FinalWorldMatrix.ApplyScale((FVector(ScaleFactor, ScaleFactor, ScaleFactor)));
+
         float FadeAlpha = 1.0f;
         if (BillboardComp->IsDistanceFadeEnabled())
         {
-            FVector CameraPos = RenderBus.GetView().GetInverse().GetOrigin();
             float   Distance = FVector::Distance(CameraPos, BillboardComp->GetWorldLocation());
             float   Start = BillboardComp->GetFadeStartDistance();
             float   End = BillboardComp->GetFadeEndDistance();
@@ -818,11 +826,11 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
 
         FRenderCommand Cmd = {};
         Cmd.Type = ERenderCommandType::Billboard;
-        FMatrix InvModel = Primitive->GetWorldMatrix();
+        FMatrix InvModel = FinalWorldMatrix;
         InvModel.Inverse();
         const FColor& Tint = BillboardComp->GetTintColor();
         Cmd.PerObjectConstants =
-            FPerObjectConstants{MakeViewBillboardMatrix(Primitive, RenderBus), InvModel, FVector4(Tint.R, Tint.G, Tint.B, FadeAlpha)};
+            FPerObjectConstants{FinalWorldMatrix, InvModel, FVector4(Tint.R, Tint.G, Tint.B, FadeAlpha)};
         Cmd.Constants.Billboard.SRV = SRV;
         Cmd.Constants.Billboard.Width = BillboardComp->GetWidth();
         Cmd.Constants.Billboard.Height = BillboardComp->GetHeight();
