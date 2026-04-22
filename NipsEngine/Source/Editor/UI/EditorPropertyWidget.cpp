@@ -632,6 +632,20 @@ void FEditorPropertyWidget::RenderPropertyWidget(FPropertyDescriptor& Prop)
 	{
 		FString* Val = static_cast<FString*>(Prop.ValuePtr);
 
+		const bool bIsMaterialSlot = (strncmp(Prop.Name, "Material ", 9) == 0);
+        if (bIsMaterialSlot)
+        {
+            ImGui::BeginDisabled();
+
+            char Buf[256];
+            strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
+            ImGui::InputText(Prop.Name, Buf, sizeof(Buf));
+
+            ImGui::EndDisabled();
+            break;
+        }
+
+
         if (strcmp(Prop.Name, "StaticMesh") == 0)
         {
             TArray<FString> MeshPaths = FResourceManager::Get().GetStaticMeshPaths();
