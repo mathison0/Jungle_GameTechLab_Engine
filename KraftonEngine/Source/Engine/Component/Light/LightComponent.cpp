@@ -13,6 +13,11 @@ void ULightComponent::Serialize(FArchive& Ar)
 	Ar << ShadowSharpen;
 }
 
+FTexture2DArrayPool::Entry* ULightComponent::GetShadowEntry()
+{
+	return nullptr;
+}
+
 void ULightComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
 	ULightComponentBase::GetEditableProperties(OutProps);

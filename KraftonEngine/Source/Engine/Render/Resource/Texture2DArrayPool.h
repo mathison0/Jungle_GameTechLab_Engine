@@ -3,19 +3,12 @@
 #include <wrl/client.h>
 #include "d3d11.h"
 #include <memory>
+#include "Core/Singleton.h"
 
 enum class ArrayType : uint32
 {
 	Default,
 	CubeMap,
-};
-
-struct FTexture2DArrayPoolEntry
-{
-	ArrayType Type = ArrayType::Default;
-	uint32 size;
-
-	uint32 Index;
 };
 
 class FTexture2DArrayPool
@@ -75,3 +68,16 @@ private:
 	ID3D11DeviceContext* DeviceContext = nullptr;
 };
 
+class FTexture2DArrayPoolManager : public TSingleton<FTexture2DArrayPoolManager>
+{
+public:
+	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext);
+	FTexture2DArrayPool* GetTexturePool(ArrayType InType, uint32 InSize);
+
+private:
+	ID3D11Device* Device;
+	ID3D11DeviceContext* DeviceContext;
+
+	TMap<uint32, std::unique_ptr<FTexture2DArrayPool>> DefaultMap;
+	TMap<uint32, std::unique_ptr<FTexture2DArrayPool>> CubeMap;
+};

@@ -1,6 +1,6 @@
 ﻿#include "Texture2DArrayPool.h"
 
-FTexture2DArrayPool::FTexture2DArrayPool(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InSize, uint32 InInitialSize, ArrayType InType = ArrayType::Default)
+FTexture2DArrayPool::FTexture2DArrayPool(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InSize, uint32 InInitialSize, ArrayType InType)
 	: Device(InDevice), DeviceContext(InDeviceContext), Type(InType)
 {
 	assert(InInitialSize >= 1);
@@ -81,7 +81,7 @@ void FTexture2DArrayPool::ReuseEntry(Entry* Entry)
 
 	Entry->bInUsed = false;
 	Entry->NextFreeEntry = LastFreeEntry;
-	
+
 	LastFreeEntry = Entry;
 }
 
@@ -180,7 +180,7 @@ void FTexture2DArrayPool::Entry::ClearDSV(ID3D11DeviceContext* InDeviceContext)
 {
 	for (uint32 i = 0; i < DSV.size(); ++i)
 	{
-		if (!DSV[i]) 
+		if (!DSV[i])
 			continue;
 
 		InDeviceContext->ClearDepthStencilView(
@@ -189,5 +189,22 @@ void FTexture2DArrayPool::Entry::ClearDSV(ID3D11DeviceContext* InDeviceContext)
 			1.0f,
 			0
 		);
+	}
+}
+
+void FTexture2DArrayPoolManager::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext)
+{
+	Device = InDevice;
+	DeviceContext = InDeviceContext;
+}
+
+FTexture2DArrayPool* FTexture2DArrayPoolManager::GetTexturePool(ArrayType InType, uint32 InSize)
+{
+	if (InType == ArrayType::Default)
+	{
+		if (!DefaultMap.contains(InSize))
+			DefaultMap[InSize] = std::make_unique<FTexture2DArrayPool>(Device, DeviceContext, InSize, 16, InType);
+
+		return DefaultMap[InSize].get();
 	}
 }
