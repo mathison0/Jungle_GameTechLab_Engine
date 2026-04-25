@@ -200,22 +200,38 @@ struct alignas(16) FGPULight
     float   SpotOuterCos = 0.0f;
 
     FVector Direction = FVector::ZeroVector;
-    float   Padding0 = 0.0f;
+    uint32	bCastShadows = 0;
+
+    int32 ShadowMapIndex = -1;
+    float ShadowBias = 0.0f;
+    float Padding0 = 0.0f;
+    float Padding1 = 0.0f;
 };
 
 using FRenderLight = FGPULight;
 
-static_assert(sizeof(FGPULight) == 64, "FGPULight layout must match the HLSL structured buffer layout.");
+static_assert(sizeof(FGPULight) == 80, "FGPULight layout must match the HLSL structured buffer layout.");
 
 struct FShadowConstants
 {
     FMatrix LightViewProj[6]; // CSM: cascade별, Spot: [0]만, Point: 6면
     FVector4 SplitDistances;     // CSM 전용 (4 cascade 가정), 그 외는 0
-    int ShadowMapIndex;        // ShadowMapArray2D 또는 ArrayCube에서의 시작 슬라이스
-    int NumSlices;             // CSM=NumCascades, Spot=1, Point=6
-    int AtlasType;             // 0 = 2DArray, 1 = CubeArray
+    int32 ShadowMapIndex;        // ShadowMapArray2D 또는 ArrayCube에서의 시작 슬라이스
+    int32 NumSlices;             // CSM=NumCascades, Spot=1, Point=6
+    int32 AtlasType;             // 0 = 2DArray, 1 = CubeArray
     float ShadowBias;
 };
+
+// Shadow Depth Pass용 Struct
+struct FSpotShadowConstants
+{
+    FMatrix LightViewProj;
+    float ShadowResolution;
+    float ShadowBias;
+    float Padding[2] = { 0.0f, 0.0f };
+};
+
+static_assert(sizeof(FSpotShadowConstants) == 80, "FSpotShadowConstants layout must match the shadow pass GPU layout.");
 
 struct FRenderCommand
 {
