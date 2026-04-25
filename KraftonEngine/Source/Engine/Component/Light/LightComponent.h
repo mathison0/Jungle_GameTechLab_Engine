@@ -7,7 +7,7 @@ class ULightComponent : public ULightComponentBase
 public:
 	DECLARE_CLASS(ULightComponent, ULightComponentBase)
 
-	~ULightComponent() { ShadowMapEntry->LetsGoHome(); }
+	~ULightComponent() { if(ShadowMapEntry) ShadowMapEntry->LetsGoHome(); }
 
 	float GetShadowResolutionScale() const { return ShadowResolutionScale; }
 	float GetShadowBias() const { return ShadowBias; }
