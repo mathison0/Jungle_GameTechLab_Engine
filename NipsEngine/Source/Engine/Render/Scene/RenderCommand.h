@@ -17,7 +17,6 @@
 #include "Math/Vector.h"
 #include "Math/Vector4.h"
 
-
 struct ID3D11ShaderResourceView;
 
 enum class ERenderCommandType
@@ -211,11 +210,13 @@ static_assert(sizeof(FGPULight) == 64, "FGPULight layout must match the HLSL str
 
 struct FDirectionalShadowConstants
 {
-    FMatrix LightViewProj[MAX_CASCADE_COUNT]; // 4 cascades, 64*4 = 256B
-    FVector4 SplitDistances;                  // 각 cascade가 차지하는 비율
-    float  ShadowBias = 0.001f;
-    FVector Padding;
+    FMatrix LightViewProj[MAX_CASCADE_COUNT]; // 4 cascades, 64 * 4 = 256B
+    FVector4 SplitDistances;                  // 각 cascade가 차지하는 비율, 16B
+    float ShadowBias = 0.001f;                // 4B
+    FVector Padding;                          // 12B
 };
+
+static_assert(sizeof(FDirectionalShadowConstants) % 16 == 0, "FDirectionalShadowConstants must be 16-byte aligned");
 
 struct FShadowConstants
 {

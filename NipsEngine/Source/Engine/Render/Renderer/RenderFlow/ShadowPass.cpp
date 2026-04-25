@@ -1,21 +1,21 @@
 ﻿#include "ShadowPass.h"
 
-bool FShadowPass::Initialize()
+bool FShadowRenderPass::Initialize()
 {
 	return true;
 }
 
-bool FShadowPass::Release()
+bool FShadowRenderPass::Release()
 {
 	return true;
 }
 
-bool FShadowPass::Begin(const FRenderPassContext* Context)
+bool FShadowRenderPass::Begin(const FRenderPassContext* Context)
 {
 	return true;
 }
 
-bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
+bool FShadowRenderPass::DrawCommand(const FRenderPassContext* Context)
 {
 	// TODO : Directional
 
@@ -25,7 +25,7 @@ bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
 	return true;
 }
 
-bool FShadowPass::End(const FRenderPassContext* Context)
+bool FShadowRenderPass::End(const FRenderPassContext* Context)
 {
 	return true;
 }

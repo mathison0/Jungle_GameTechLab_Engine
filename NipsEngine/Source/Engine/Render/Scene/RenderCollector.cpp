@@ -87,20 +87,37 @@ namespace
 		return NearCorner + (FarCorner - NearCorner) * T;
 	}
 
-	void BuildDirectionalShadowViewProjections(
-		const UDirectionalLightComponent* DirectionalLight,
-		const FRenderBus& RenderBus,
+	/* PSSM(Parallel - Split Shadow Map) 공식에 따라 View Frustum을 평행 분할
+	 * Lambda[0, 1] → Linear : 0.0f, Logarithmic : 1.0f */
+	void CalculatePSSMSplits(int32 CascadeCount, float Lambda, float NearPlane, float ShadowDistance, float* OutSplits)
+	{
+		OutSplits[0] = NearPlane;
+		for (int32 i = 1; i < CascadeCount; ++i)
+		{
+			float Fraction = static_cast<float>(i) / CascadeCount; // 전체 Cascade 구간 중 경계선
+			float LogarithmSplit = std::pow(ShadowDistance / NearPlane, Fraction);
+			float UniformSplit = NearPlane + (ShadowDistance - NearPlane) * Fraction;
+			OutSplits[i] = Lambda * LogarithmSplit + (1.0f - Lambda) * Fraction;
+		}
+		OutSplits[CascadeCount] = ShadowDistance;
+	}
+
+	/* View Frustum을 PSSM 공식에 따라 Cascade 구간으로 분할한 뒤,
+	 * 각 구간을 포함하는 최소 크기의 Bounding Sphere를 구하고, 
+	 * 빛의 시점에서 Bounding Sphere를 덮는 직교 투영 행렬과 뷰 행렬을 생성한다. */
+	void BuildDirectionalShadowViewProjection(
+		const UDirectionalLightComponent* Light,
+		const FRenderBus& RenderBus, 
 		const FVector& DirectionToLight,
 		int32 CascadeCount,
 		FShadowConstants& ShadowData)
 	{
-		const FVector4 CascadeSplits = DirectionalLight->GetCascadeSplits();
-		const float ShadowDistance = std::max(DirectionalLight->GetShadowDistance(), 1.0f);
-		ShadowData.SplitDistances = FVector4(
-			CascadeSplits.X * ShadowDistance,
-			CascadeSplits.Y * ShadowDistance,
-			CascadeSplits.Z * ShadowDistance,
-			CascadeSplits.W * ShadowDistance);
+		const float NearPlane = std::max(RenderBus.GetNear(), 1.0f);
+		const float Lambda = Light->GetCascadeSplitWeight();
+		const float ShadowDistance = Light->GetShadowDistance();
+
+		float Splits[5]; // CascadeCount + 1
+		CalculatePSSMSplits(CascadeCount, NearPlane, ShadowDistance, Lambda, Splits);
 
 		const FMatrix InverseViewProjection = (RenderBus.GetView() * RenderBus.GetProj()).GetInverse();
 		static constexpr float NdcX[4] = { -1.0f, 1.0f, 1.0f, -1.0f };
@@ -108,42 +125,29 @@ namespace
 
 		FVector NearCorners[4];
 		FVector FarCorners[4];
-		for (int32 CornerIndex = 0; CornerIndex < 4; ++CornerIndex)
+		for (int32 i = 0; i < 4; ++i) // i: Corner Index
 		{
-			NearCorners[CornerIndex] = InverseViewProjection.TransformPosition(
-				FVector(NdcX[CornerIndex], NdcY[CornerIndex], 0.0f));
-			FarCorners[CornerIndex] = InverseViewProjection.TransformPosition(
-				FVector(NdcX[CornerIndex], NdcY[CornerIndex], 1.0f));
+			NearCorners[i] = InverseViewProjection.TransformPosition(FVector(NdcX[i], NdcY[i], 0.0f));
+			FarCorners[i] = InverseViewProjection.TransformPosition(FVector(NdcX[i], NdcY[i], 1.0f));
 		}
 
 		const FVector& CameraPosition = RenderBus.GetCameraPosition();
 		const FVector& CameraForward = RenderBus.GetCameraForward();
 		const float NearDepth = FVector::DotProduct(NearCorners[0] - CameraPosition, CameraForward);
 		const float FarDepth = FVector::DotProduct(FarCorners[0] - CameraPosition, CameraForward);
-		const FVector LightRayDirection = (DirectionToLight * -1.0f).GetSafeNormal();
+		const FVector LightDirection = (DirectionToLight * -1.0f).GetSafeNormal();
 
-		float PreviousSplitDistance = 0.0f;
-		for (int32 CascadeIndex = 0; CascadeIndex < CascadeCount; ++CascadeIndex)
+		for (int32 i = 0; i < CascadeCount; ++i) // i: Cascade Index
 		{
-			const float CurrentSplitDistance = ShadowData.SplitDistances.XYZW[CascadeIndex];
-			const float CascadeNearDistance = PreviousSplitDistance;
-			const float CascadeFarDistance = std::max(CurrentSplitDistance, CascadeNearDistance + 1.0f);
+			const float CascadeNear = Splits[i];
+			const float CascadeFar = Splits[i + 1];
+			ShadowData.SplitDistances.XYZW[i] = CascadeFar;
 
 			FVector CascadeCorners[8];
-			for (int32 CornerIndex = 0; CornerIndex < 4; ++CornerIndex)
+			for (int32 j = 0; j < 4; ++j) // j: Corner Index
 			{
-				CascadeCorners[CornerIndex] = InterpolateFrustumCorner(
-					NearCorners[CornerIndex],
-					FarCorners[CornerIndex],
-					NearDepth,
-					FarDepth,
-					CascadeNearDistance);
-				CascadeCorners[CornerIndex + 4] = InterpolateFrustumCorner(
-					NearCorners[CornerIndex],
-					FarCorners[CornerIndex],
-					NearDepth,
-					FarDepth,
-					CascadeFarDistance);
+				CascadeCorners[j] = InterpolateFrustumCorner(NearCorners[j], FarCorners[j], NearDepth, FarDepth, CascadeNear);
+				CascadeCorners[j + 4] = InterpolateFrustumCorner(NearCorners[j], FarCorners[j], NearDepth, FarDepth, CascadeFar);
 			}
 
 			FVector Center = FVector::ZeroVector;
@@ -159,19 +163,13 @@ namespace
 				Radius = std::max(Radius, FVector::Dist(Center, Corner));
 			}
 
-			const FVector LightPosition = Center - LightRayDirection * Radius;
-			const FMatrix LightView = FMatrix::MakeViewLookAtLH(
-				LightPosition,
-				Center,
-				MakeStableUpVector(LightRayDirection));
-			const FMatrix LightProjection = FMatrix::MakeOrthographicLH(
-				Radius * 2.0f,
-				Radius * 2.0f,
-				0.0f,
-				Radius * 2.0f);
-			ShadowData.LightViewProj[CascadeIndex] = LightView * LightProjection;
+			// Depth 값을 매우 여유롭게 잡아 Shadow Culling 개선, 추후 무난한 정도까지 수정
+			const float DepthRange = 50000.0f;
+			const FVector LightPosition = Center - LightDirection * (DepthRange * 0.5f);
 
-			PreviousSplitDistance = CurrentSplitDistance;
+			const FMatrix LightView = FMatrix::MakeViewLookAtLH(LightPosition, Center, MakeStableUpVector(LightDirection));
+			const FMatrix LightProjection = FMatrix::MakeOrthographicLH(Radius * 2.0f, Radius * 2.0f, 0.0f, DepthRange);
+			ShadowData.LightViewProj[i] = LightView * LightProjection;
 		}
 	}
 
@@ -430,12 +428,13 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
 
 		case ELightType::LightType_Directional:
 		{
-			FVector DirectionToLight = (LightComponent->GetForwardVector() * -1.0f);
-			DirectionToLight.Normalize();
-			RenderLight.Direction = DirectionToLight;
+			FVector Direction = LightComponent->GetForwardVector() * -1.0f; // 빛 방향 벡터
+			Direction.Normalize();
+			RenderLight.Direction = Direction;
 			RenderBus.AddLight(RenderLight);
 
-			if (LightComponent->IsCastShadows())
+			// 첫 번째로 추가된 Directional Light만 그림자를 반영한다.
+			if (!RenderBus.HasDirectionalShadow())
 			{
 				const UDirectionalLightComponent* DirectionalLight = Cast<UDirectionalLightComponent>(LightComponent);
 				if (DirectionalLight != nullptr)

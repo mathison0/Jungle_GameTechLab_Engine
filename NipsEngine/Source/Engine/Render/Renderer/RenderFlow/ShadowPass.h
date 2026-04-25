@@ -2,7 +2,7 @@
 
 #include "RenderPass.h"
 
-class FShadowPass : public FBaseRenderPass
+class FShadowRenderPass : public FBaseRenderPass
 {
 public:
     bool Initialize();
