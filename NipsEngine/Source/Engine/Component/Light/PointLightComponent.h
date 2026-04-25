@@ -6,6 +6,8 @@ class UPointLightComponent : public ULightComponent
 public:
     DECLARE_CLASS(UPointLightComponent, ULightComponent)
 
+    static constexpr const char* BillboardTexturePath = "Asset/Texture/Icons/S_LightPoint.PNG";
+
     UPointLightComponent();
     ~UPointLightComponent() override = default;
 
@@ -18,9 +20,6 @@ public:
 
     void SetAttenuationRadius(float InRadius)       { AttenuationRadius    = InRadius; }
     void SetLightFalloffExponent(float InExponent)  { LightFalloffExponent = InExponent; }
-
-protected:
-    FString GetVisualizationTexturePath() const override { return "Asset/Texture/Icons/S_LightPoint.PNG"; }
 
 private:
     float AttenuationRadius    = 10.0f;

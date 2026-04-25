@@ -6,6 +6,8 @@ class USpotLightComponent : public UPointLightComponent
 public:
     DECLARE_CLASS(USpotLightComponent, UPointLightComponent)
 
+    static constexpr const char* BillboardTexturePath = "Asset/Texture/Icons/S_LightSpot.PNG";
+
     USpotLightComponent();
     ~USpotLightComponent() override = default;
 
@@ -13,9 +15,6 @@ public:
     void PostEditProperty(const char* PropertyName) override;
     void Serialize(FArchive& Ar) override;
     void PostDuplicate(UObject* Original) override;
-
-protected:
-    FString GetVisualizationTexturePath() const override { return "Asset/Texture/Icons/S_LightSpot.PNG"; }
 
 public:
     float GetInnerConeAngle() const { return InnerConeAngle; }

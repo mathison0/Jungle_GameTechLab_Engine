@@ -47,10 +47,6 @@ private:
 	bool bCastShadows = true;
 
 	FLightHandle LightHandle;
-    UBillboardComponent* VisualizationComponent = nullptr;
-
-protected:
-    virtual FString GetVisualizationTexturePath() const { return {}; }
 };
 
 class ULightComponent : public ULightComponentBase

@@ -501,7 +501,8 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
 			{
 				continue;
 			}
-			
+			const FVector LightLocation = SpotLight->GetWorldLocation();
+			const float Attenuation = SpotLight->GetAttenuationRadius();
 			const float InnerAngle = SpotLight->GetInnerConeAngle(); // Degree 단위 주의
 			const float OuterAngle = SpotLight->GetOuterConeAngle();
 
@@ -512,34 +513,34 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
 			// 원뿔 각도에 따라 줄어든 Bounding Sphere 교차 검사
 			if (ViewFrustum)
 			{
-				const float Attenuation = SpotLight->GetAttenuationRadius();
 				const float SpotAngle = MathUtil::Clamp(std::max(OuterAngle, InnerAngle), 0.0f, 89.0f);
 				const float SpotRadian = MathUtil::DegreesToRadians(SpotAngle);
 
-				FVector Center;
-				float Radius;
+				FVector Center = LightLocation;
+				float Radius = Attenuation;
 
-				if (OuterAngle > 45.0f)
+				if (SpotAngle <= 45.0f)
 				{
-					Center = SpotLight->GetWorldLocation();
-					Radius = Attenuation;
-				}
-				else
-				{
+					const float SpotRadian = MathUtil::DegreesToRadians(SpotAngle);
 					const float Offset = Attenuation * 0.5f;
+            
+					Center = LightLocation + (LightDirection * Offset);
+            
+					const float TanAngle = std::tan(SpotRadian);
+					const float BaseRadius = Attenuation * TanAngle;
 
-					Center = SpotLight->GetWorldLocation() + LightDirection * Offset;
-					float BaseRadius = Attenuation * std::tan(SpotRadian);
-					Radius = std::sqrt(Offset * Offset + BaseRadius * BaseRadius);
+					Radius = std::sqrt((Offset * Offset) + (BaseRadius * BaseRadius));
 				}
 
 				if (!ViewFrustum->IntersectsBoundingSphere(Center, Radius))
+				{
 					continue;
+				}
 			}
 
-			RenderLight.Position = SpotLight->GetWorldLocation();
+			RenderLight.Position = LightLocation;
 			RenderLight.Direction = LightDirection;
-			RenderLight.Radius = SpotLight->GetAttenuationRadius();
+			RenderLight.Radius = Attenuation;
 			RenderLight.FalloffExponent = SpotLight->GetLightFalloffExponent();
 			RenderLight.SpotInnerCos = std::cos(MathUtil::DegreesToRadians(InnerAngle));
 			RenderLight.SpotOuterCos = std::cos(MathUtil::DegreesToRadians(OuterAngle));
