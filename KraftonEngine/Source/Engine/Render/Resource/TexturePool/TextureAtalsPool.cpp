@@ -35,9 +35,9 @@ void FTextureAtlasPool::ReleaseHandle(TexturePoolHandle& InHandle)
 	UVManagers[InHandle.ArrayIndex].get()->ReleaseUV(InHandle.InternalIndex);
 }
 
-TArray<AtlasUV> FTextureAtlasPool::GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet)
+TArray<FAtlasUV> FTextureAtlasPool::GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet)
 {
-	TArray<AtlasUV> Result;
+	TArray<FAtlasUV> Result;
 	for (const auto& Handle : InHandleSet->Handles)
 	{
 		Result.push_back(GetAtlasUV(Handle));

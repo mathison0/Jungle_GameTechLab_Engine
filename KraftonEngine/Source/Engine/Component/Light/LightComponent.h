@@ -6,12 +6,20 @@
 using FShadowHandle = FTexturePoolBase::TexturePoolHandle;
 using FShadowHandleSet = FTexturePoolBase::TexturePoolHandleSet;
 
+struct FShadowMapKey
+{
+	bool IsAtlas() { return !Atlas.empty(); }
+	TArray<FAtlasUV> Atlas;
+	//Todo: CubMap 그거 추가
+
+};
+
 class ULightComponent : public ULightComponentBase
 {
 public:
 	DECLARE_CLASS(ULightComponent, ULightComponentBase)
 
-	~ULightComponent() { ShadowHandleSet->Release(); }
+	~ULightComponent() { if(ShadowHandleSet) ShadowHandleSet->Release(); }
 
 	float GetShadowResolutionScale() const { return ShadowResolutionScale; }
 	float GetShadowBias() const { return ShadowBias; }
@@ -22,6 +30,7 @@ public:
 	virtual void Serialize(FArchive& Ar) override;
 
 	virtual FShadowHandleSet* GetShadowHandleSet() { return ShadowHandleSet; }
+	virtual FShadowMapKey GetShadowMapKey() { return FShadowMapKey(); }
 
 protected:
 	float ShadowResolutionScale = 1.0f;
