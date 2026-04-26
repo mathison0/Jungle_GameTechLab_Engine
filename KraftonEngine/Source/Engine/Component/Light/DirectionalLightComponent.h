@@ -10,6 +10,7 @@ public:
 	virtual void PushToScene() override;
 	virtual void DestroyFromScene() override;
 
+	FShadowMapKey GetShadowMapKey() override;
 
 	virtual FShadowHandleSet* GetShadowHandleSet() override;
 };

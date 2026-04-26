@@ -90,6 +90,13 @@ FShadowHandleSet* USpotLightComponent::GetShadowHandleSet()
 	return ShadowHandleSet;
 }
 
+FShadowMapKey USpotLightComponent::GetShadowMapKey()
+{
+	FShadowMapKey Result;
+	Result.Atlas = FTextureAtlasPool::Get().GetAtlasUVArray(ShadowHandleSet);
+	return Result;
+}
+
 void USpotLightComponent::Serialize(FArchive& Ar)
 {
 	UPointLightComponent::Serialize(Ar);

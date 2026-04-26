@@ -6,7 +6,7 @@
 #include <memory>
 
 
-class FTexturePoolBase : public TSingleton<FTexturePoolBase>
+class FTexturePoolBase
 {
 	template<typename T>
 	using TComPtr = Microsoft::WRL::ComPtr<T>;
