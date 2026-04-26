@@ -83,3 +83,13 @@ void UDirectionalLightComponent::DestroyFromScene()
 
 	World->GetScene().GetEnvironment().RemoveGlobalDirectionalLight(this);
 }
+
+FShadowHandleSet* UDirectionalLightComponent::GetShadowHandleSet()
+{
+	if (!ShadowHandleSet->bIsValid)
+	{
+		ShadowHandleSet->Release();
+		ShadowHandleSet = FTextureAtlasPool::Get().GetTextureHandle({ 2048, 1024, 512, 256 });
+	}
+	return ShadowHandleSet;
+}
