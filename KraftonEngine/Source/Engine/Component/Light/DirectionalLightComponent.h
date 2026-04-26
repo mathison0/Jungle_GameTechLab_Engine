@@ -11,5 +11,5 @@ public:
 	virtual void DestroyFromScene() override;
 
 
-	virtual FShadowHandleSet& GetShadowHandleSet() override;
+	virtual FShadowHandleSet* GetShadowHandleSet() override;
 };

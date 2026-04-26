@@ -3,6 +3,8 @@
 
 struct AtlasUV
 {
+	uint32 ArrayIndex;
+
 	float u1;
 	float v1;
 	float u2;

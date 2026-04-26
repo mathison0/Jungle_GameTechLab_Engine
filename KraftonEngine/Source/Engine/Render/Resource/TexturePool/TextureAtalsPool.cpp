@@ -6,11 +6,11 @@ using TexturePoolHandle = FTexturePoolBase::TexturePoolHandle;
 using TexturePoolHandleSet = FTexturePoolBase::TexturePoolHandleSet;
 
 
-TexturePoolHandleSet FTextureAtlasPool::GetTextureHandle(TexturePoolHandleRequest HandleRequest)
+TexturePoolHandleSet* FTextureAtlasPool::GetTextureHandle(TexturePoolHandleRequest HandleRequest)
 {
 	uint32 ManagerCount = UVManagers.size();
 
-	TexturePoolHandleSet HandleSet;
+	std::unique_ptr<TexturePoolHandleSet> HandleSet = std::make_unique<TexturePoolHandleSet>(this, AllocatedHandleList.size());
 
 	for (uint32 Size : HandleRequest.Sizes)
 	{
@@ -23,15 +23,40 @@ TexturePoolHandleSet FTextureAtlasPool::GetTextureHandle(TexturePoolHandleReques
 				break;
 			}
 		}
+
+		HandleSet.get()->Handles.push_back(Handle);
 	}
-
-
-	return HandleSet;
+	AllocatedHandleList.push_back(std::move(HandleSet));
+	return AllocatedHandleList.back().get();
 }
 
 void FTextureAtlasPool::ReleaseHandle(TexturePoolHandle& InHandle)
 {
 	UVManagers[InHandle.ArrayIndex].get()->ReleaseUV(InHandle.InternalIndex);
+}
+
+TArray<AtlasUV> FTextureAtlasPool::GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet)
+{
+	TArray<AtlasUV> Result;
+	for (const auto& Handle : InHandleSet->Handles)
+	{
+		Result.push_back(GetAtlasUV(Handle));
+	}
+
+	return Result;
+}
+
+TArray<ID3D11DepthStencilView*> FTextureAtlasPool::GetDSVs(TexturePoolHandleSet* HandleSet)
+{
+	TArray<ID3D11DepthStencilView*> Result;
+	TArray<TexturePoolHandle> Handles = HandleSet->Handles;
+
+	for (const auto& Handle : Handles)
+	{
+		Result.push_back(DSVs[Handle.ArrayIndex].Get());
+	}
+
+	return Result;
 }
 
 ID3D11ShaderResourceView* FTextureAtlasPool::GetDebugSRV(const TexturePoolHandle& InHandle)
@@ -73,14 +98,6 @@ void FTextureAtlasPool::RebuildSRV(ID3D11Device* Device, ID3D11Texture2D* InText
 	SRV.Reset();
 	HRESULT hr = Device->CreateShaderResourceView(InTexture, &srvDesc, SRV.GetAddressOf());
 	assert(SUCCEEDED(hr));
-}
-
-void FTextureAtlasPool::BroadCastEntries()
-{
-	for (const auto& UVManager : UVManagers)
-	{
-		UVManager.get()->BroadCastEntries();
-	}
 }
 
 void FTextureAtlasPool::OnSetTextureSize()

@@ -11,7 +11,7 @@ class ULightComponent : public ULightComponentBase
 public:
 	DECLARE_CLASS(ULightComponent, ULightComponentBase)
 
-	~ULightComponent() { ShadowHandleSet.Release(); }
+	~ULightComponent() { ShadowHandleSet->Release(); }
 
 	float GetShadowResolutionScale() const { return ShadowResolutionScale; }
 	float GetShadowBias() const { return ShadowBias; }
@@ -21,7 +21,7 @@ public:
 	virtual void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 	virtual void Serialize(FArchive& Ar) override;
 
-	virtual FShadowHandleSet& GetShadowHandleSet() { return ShadowHandleSet; }
+	virtual FShadowHandleSet* GetShadowHandleSet() { return ShadowHandleSet; }
 
 protected:
 	float ShadowResolutionScale = 1.0f;
@@ -29,5 +29,5 @@ protected:
 	float ShadowSlopeBias = 0.01f;
 	float ShadowSharpen = 0.0f;
 
-	FShadowHandleSet ShadowHandleSet;
+	FShadowHandleSet* ShadowHandleSet;
 };

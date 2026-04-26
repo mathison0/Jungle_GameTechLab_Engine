@@ -80,11 +80,13 @@ void USpotLightComponent::DestroyFromScene()
 	World->GetScene().GetEnvironment().RemoveSpotLight(this);
 }
 
-FShadowHandleSet& USpotLightComponent::GetShadowHandleSet()
+FShadowHandleSet* USpotLightComponent::GetShadowHandleSet()
 {
-	if(ShadowHandleSet.bIsValid)
+	if (ShadowHandleSet->bIsValid)
+	{
+		ShadowHandleSet->Release();
 		ShadowHandleSet = FTextureAtlasPool::Get().GetTextureHandle(1024);
-
+	}
 	return ShadowHandleSet;
 }
 

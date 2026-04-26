@@ -20,28 +20,21 @@ public:
 			: InternalIndex(InInternalIndex), ArrayIndex(InArrayIndex) {
 		}
 
-		float GetIndex() { return InternalIndex; }
-		void Release() { Pool->ReleaseHandle(*this); }
-
-		bool operator==(const TexturePoolHandle& Other) const
-		{
-			return InternalIndex == Other.InternalIndex &&
-				ArrayIndex == Other.ArrayIndex;
-		}
-
 		uint32 InternalIndex = -1;
 		uint32 ArrayIndex = -1;
-
-	private:
-		FTexturePoolBase* Pool = nullptr;
 	};
 
 	struct TexturePoolHandleSet
 	{
-		void Release() { for (auto Handle : Handles) Handle.Release(); }
+		TexturePoolHandleSet(FTexturePoolBase* InPool, uint32 InInternalIndex) : Pool(InPool), InternalIndex(InInternalIndex) {}
+		void Release() { Pool->ReleaseHandleSet(this); }
 
+		uint32 InternalIndex;
 		bool bIsValid = false;
 		TArray<TexturePoolHandle> Handles;
+
+	private:
+		FTexturePoolBase* Pool = nullptr;
 	};
 
 	struct TexturePoolHandleRequest
@@ -68,8 +61,9 @@ private:
 public:
 	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InTextureSize);
 
-	virtual TexturePoolHandleSet GetTextureHandle(TexturePoolHandleRequest HandleRequest) { return TexturePoolHandleSet(); }
+	virtual TexturePoolHandleSet* GetTextureHandle(TexturePoolHandleRequest HandleRequest) { return nullptr; }
 	virtual void ReleaseHandle(TexturePoolHandle& InHandle) {};
+	virtual void ReleaseHandleSet(TexturePoolHandleSet* InHandleSet);
 	virtual ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandle& InHandle) { return nullptr; }
 
 protected:
@@ -80,7 +74,7 @@ protected:
 	void ResizeLayer() { ResizeLayer(TextureLayerSize * 2); }
 	void ResizeLayer(uint32 InNewLayerSize);
 
-	virtual void BroadCastEntries() {};
+	virtual void BroadCastHandlesUnvalid();
 
 	virtual void OnSetTextureSize() {};
 	virtual void OnSetTextureLayerSize() {};
@@ -97,8 +91,9 @@ protected:
 
 	TComPtr<ID3D11ShaderResourceView> SRV;
 	TArray<TComPtr<ID3D11DepthStencilView>> DSVs;
+	TMap<uint32, std::unique_ptr<SRVResource>> DebugResource; //ImGui::Image에 렌더링할 대표 이미지, Size
 
-	TMap<float, std::unique_ptr<SRVResource>> DebugResource; //ImGui::Image에 렌더링할 대표 이미지, Size
+	TArray<std::unique_ptr<TexturePoolHandleSet>> AllocatedHandleList;
 
 private:
 	TComPtr<ID3D11Texture2D> Texture;

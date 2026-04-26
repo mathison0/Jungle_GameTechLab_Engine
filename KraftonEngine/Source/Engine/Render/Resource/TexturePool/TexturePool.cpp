@@ -13,6 +13,21 @@ void FTexturePoolBase::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* I
 	RebuildDSV(Device, Texture.Get());
 }
 
+void FTexturePoolBase::ReleaseHandleSet(TexturePoolHandleSet* InHandleSet)
+{
+	TArray<TexturePoolHandle> Handles = InHandleSet->Handles;
+	for (auto& Handle : Handles)
+	{
+		ReleaseHandle(Handle);
+	}
+
+	uint32 TargetIndex = InHandleSet->InternalIndex;
+	AllocatedHandleList[TargetIndex].release();
+	AllocatedHandleList[TargetIndex] = std::move(AllocatedHandleList.back());
+	AllocatedHandleList[TargetIndex].get()->InternalIndex = TargetIndex;
+	AllocatedHandleList.pop_back();
+}
+
 void FTexturePoolBase::RebuildDSV(ID3D11Device* Device, ID3D11Texture2D* InTexture)
 {
 	DSVs.clear();
@@ -63,6 +78,16 @@ void FTexturePoolBase::ResizeLayer(uint32 InNewLayerSize)
 	Texture = std::move(NewTexture);
 	RebuildSRV(Device, Texture.Get());
 	RebuildDSV(Device, Texture.Get());
+
+	BroadCastHandlesUnvalid();
+}
+
+void FTexturePoolBase::BroadCastHandlesUnvalid()
+{
+	for (auto& HandleSet : AllocatedHandleList)
+	{
+		HandleSet.get()->bIsValid = false;
+	}
 }
 
 void FTexturePoolBase::SetTextureLayerSize(uint32 InTextureLayerSize)
