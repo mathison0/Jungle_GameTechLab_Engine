@@ -37,5 +37,5 @@ protected:
 	float ShadowSlopeBias = 0.01f;
 	float ShadowSharpen = 0.0f;
 
-	FShadowHandleSet* ShadowHandleSet;
+	FShadowHandleSet* ShadowHandleSet = nullptr;
 };
