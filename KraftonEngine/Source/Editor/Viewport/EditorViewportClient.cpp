@@ -29,6 +29,46 @@ UWorld* FEditorViewportClient::GetWorld() const
 #include "GameFramework/AActor.h"
 #include "ImGui/imgui.h"
 
+namespace
+{
+	void SetCameraOrientationFromBasis(UCameraComponent* Camera, const FVector& Forward, const FVector& Right, const FVector& Up)
+	{
+		if (!Camera)
+		{
+			return;
+		}
+
+		FMatrix Basis = FMatrix::Identity;
+		Basis.SetAxes(Forward, Right, Up);
+		Camera->SetRelativeRotation(Basis.ToQuat());
+	}
+
+	void SetCameraLookDirection(UCameraComponent* Camera, const FVector& Direction)
+	{
+		if (!Camera)
+		{
+			return;
+		}
+
+		FVector Forward = Direction;
+		if (Forward.Dot(Forward) <= 1e-6f)
+		{
+			return;
+		}
+		Forward.Normalize();
+
+		FVector ReferenceUp(0.0f, 0.0f, 1.0f);
+		if (std::fabs(Forward.Dot(ReferenceUp)) > 0.999f)
+		{
+			ReferenceUp = FVector(0.0f, 1.0f, 0.0f);
+		}
+
+		FVector Right = ReferenceUp.Cross(Forward).Normalized();
+		FVector Up = Forward.Cross(Right).Normalized();
+		SetCameraOrientationFromBasis(Camera, Forward, Right, Up);
+	}
+}
+
 void FEditorViewportClient::Initialize(FWindowsWindow* InWindow)
 {
 	Window = InWindow;
@@ -50,6 +90,7 @@ void FEditorViewportClient::DestroyCamera()
 
 	CameraOverrideSnapshot = {};
 	bLightCameraOverrideActive = false;
+	PreviewLightComponent = nullptr;
 }
 
 void FEditorViewportClient::ResetCamera()
@@ -143,11 +184,34 @@ void FEditorViewportClient::Tick(float DeltaTime)
 
 	TickEditorShortcuts();
 	TickLightCameraOverride();
-	if (!bLightCameraOverrideActive)
+	const bool bAllowDirectionalPreviewInput =
+		bLightCameraOverrideActive
+		&& PreviewLightComponent
+		&& !PreviewLightComponent->IsA<UPointLightComponent>()
+		&& !PreviewLightComponent->IsA<USpotLightComponent>()
+		&& Camera
+		&& Camera->IsOrthogonal();
+
+	if (!bLightCameraOverrideActive || bAllowDirectionalPreviewInput)
 	{
 		TickInput(DeltaTime);
 	}
 	TickInteraction(DeltaTime);
+}
+
+void FEditorViewportClient::OnLightComponentChanged(ULightComponentBase* LightComponent)
+{
+	if (!bLightCameraOverrideActive || !PreviewLightComponent || !LightComponent)
+	{
+		return;
+	}
+
+	if (LightComponent != PreviewLightComponent)
+	{
+		return;
+	}
+
+	SyncLightCameraOverride();
 }
 
 void FEditorViewportClient::SaveCameraOverrideSnapshot()
@@ -198,76 +262,91 @@ void FEditorViewportClient::RestoreCameraOverrideSnapshot()
 	CameraOverrideSnapshot = {};
 }
 
-void FEditorViewportClient::TickLightCameraOverride()
+ULightComponent* FEditorViewportClient::GetSelectedLight() const
 {
-	if (!Camera || !SelectionManager)
+	if (!SelectionManager)
 	{
-		if (bLightCameraOverrideActive)
-		{
-			RestoreCameraOverrideSnapshot();
-			bLightCameraOverrideActive = false;
-		}
-		return;
+		return nullptr;
 	}
 
-	ULightComponent* SelectedLight = nullptr;
 	if (AActor* PrimarySelection = SelectionManager->GetPrimarySelection())
 	{
 		for (UActorComponent* Component : PrimarySelection->GetComponents())
 		{
 			if (Component && Component->IsA<ULightComponent>())
 			{
-				SelectedLight = static_cast<ULightComponent*>(Component);
-				break;
+				return static_cast<ULightComponent*>(Component);
 			}
 		}
 	}
 
-	const bool bShouldOverride = RenderOptions.bOverrideCameraWithSelectedLight && SelectedLight != nullptr;
-	if (!bShouldOverride)
+	return nullptr;
+}
+
+void FEditorViewportClient::EnterLightCameraOverride(ULightComponent* LightComponent)
+{
+	if (!Camera || !LightComponent || bLightCameraOverrideActive)
 	{
-		if (bLightCameraOverrideActive)
-		{
-			RestoreCameraOverrideSnapshot();
-			bLightCameraOverrideActive = false;
-		}
 		return;
 	}
 
+	SaveCameraOverrideSnapshot();
+	if (SelectionManager)
+	{
+		SelectionManager->SetGizmoEnabled(false);
+	}
+
+	PreviewLightComponent = LightComponent;
+	bLightCameraOverrideActive = true;
+	SyncLightCameraOverride();
+}
+
+void FEditorViewportClient::ExitLightCameraOverride()
+{
 	if (!bLightCameraOverrideActive)
 	{
-		SaveCameraOverrideSnapshot();
-		if (SelectionManager)
-		{
-			SelectionManager->SetGizmoEnabled(false);
-		}
-		bLightCameraOverrideActive = true;
+		PreviewLightComponent = nullptr;
+		return;
+	}
+
+	RestoreCameraOverrideSnapshot();
+	bLightCameraOverrideActive = false;
+	PreviewLightComponent = nullptr;
+}
+
+void FEditorViewportClient::SyncLightCameraOverride()
+{
+	if (!Camera || !PreviewLightComponent || !CameraOverrideSnapshot.bValid)
+	{
+		return;
 	}
 
 	FCameraState OverrideState = Camera->GetCameraState();
 	OverrideState.NearZ = 0.1f;
 	OverrideState.FarZ = 1000.0f;
 
-	const FVector LightLocation = SelectedLight->GetWorldLocation();
-	const FVector LightForward = SelectedLight->GetForwardVector();
-	const FVector FocusPoint = CameraOverrideSnapshot.bValid
-		? CameraOverrideSnapshot.FocusPoint
-		: (LightLocation + LightForward * 100.0f);
+	const FVector LightLocation = PreviewLightComponent->GetWorldLocation();
+	const FVector LightForward = PreviewLightComponent->GetForwardVector();
+	const FVector FocusPoint = CameraOverrideSnapshot.FocusPoint;
+	const float PreviewBackoff = std::max(OverrideState.NearZ * 2.0f, 0.25f);
 
-	if (SelectedLight->IsA<USpotLightComponent>())
+	if (PreviewLightComponent->IsA<USpotLightComponent>())
 	{
-		const USpotLightComponent* SpotLight = static_cast<const USpotLightComponent*>(SelectedLight);
-		Camera->SetWorldLocation(LightLocation);
-		Camera->LookAt(LightLocation + LightForward);
+		const USpotLightComponent* SpotLight = static_cast<const USpotLightComponent*>(PreviewLightComponent);
+		Camera->SetWorldLocation(LightLocation + LightForward * PreviewBackoff);
+		SetCameraOrientationFromBasis(Camera,
+			LightForward,
+			PreviewLightComponent->GetRightVector(),
+			PreviewLightComponent->GetUpVector());
 		OverrideState.bIsOrthogonal = false;
 		OverrideState.FOV = FMath::Clamp(SpotLight->GetOuterConeAngle() * 2.0f * FMath::DegToRad, 0.1f, 3.13f);
 		RenderOptions.ViewportType = ELevelViewportType::Perspective;
 	}
-	else if (SelectedLight->IsA<UPointLightComponent>())
+	else if (PreviewLightComponent->IsA<UPointLightComponent>())
 	{
 		// TODO: Point light override should support choosing and previewing all 6 cubemap faces.
-		Camera->SetWorldLocation(LightLocation);
-		Camera->LookAt(FocusPoint);
+		Camera->SetWorldLocation(LightLocation + LightForward * PreviewBackoff);
+		SetCameraLookDirection(Camera, FocusPoint - LightLocation);
 		OverrideState.bIsOrthogonal = false;
 		OverrideState.FOV = 90.0f * FMath::DegToRad;
 		RenderOptions.ViewportType = ELevelViewportType::Perspective;
@@ -276,13 +355,50 @@ void FEditorViewportClient::TickLightCameraOverride()
 	{
 		const float DirectionalDistance = 100.0f;
 		Camera->SetWorldLocation(FocusPoint - LightForward * DirectionalDistance);
-		Camera->LookAt(FocusPoint);
+		SetCameraOrientationFromBasis(Camera,
+			LightForward,
+			PreviewLightComponent->GetRightVector(),
+			PreviewLightComponent->GetUpVector());
 		OverrideState.bIsOrthogonal = true;
 		OverrideState.OrthoWidth = 100.0f;
 		RenderOptions.ViewportType = ELevelViewportType::FreeOrthographic;
 	}
 
 	Camera->SetCameraState(OverrideState);
+
+	if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
+	{
+		EditorEngine->InvalidateOcclusionResults();
+	}
+}
+
+void FEditorViewportClient::TickLightCameraOverride()
+{
+	if (!Camera || !SelectionManager)
+	{
+		ExitLightCameraOverride();
+		return;
+	}
+
+	ULightComponent* SelectedLight = GetSelectedLight();
+	const bool bShouldOverride = RenderOptions.bOverrideCameraWithSelectedLight && SelectedLight != nullptr;
+	if (!bShouldOverride)
+	{
+		ExitLightCameraOverride();
+		return;
+	}
+
+	if (!bLightCameraOverrideActive)
+	{
+		EnterLightCameraOverride(SelectedLight);
+		return;
+	}
+
+	if (PreviewLightComponent != SelectedLight)
+	{
+		PreviewLightComponent = SelectedLight;
+		SyncLightCameraOverride();
+	}
 }
 
 void FEditorViewportClient::TickEditorShortcuts()

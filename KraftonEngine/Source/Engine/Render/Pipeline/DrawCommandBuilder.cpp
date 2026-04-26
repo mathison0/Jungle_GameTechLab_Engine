@@ -305,7 +305,11 @@ void FDrawCommandBuilder::PrepareDynamicGeometry(const FFrameContext& Frame, con
 			Frame.RenderOptions.ShowFlags,
 			Scene->GetGridSpacing(),
 			Scene->GetGridHalfLineCount(),
-			CameraPos, CameraFwd, Frame.IsFixedOrtho());
+			CameraPos, CameraFwd, Frame.CameraRight, Frame.CameraUp,
+			Frame.bIsOrtho,
+			Frame.OrthoWidth,
+			Frame.ViewportWidth / ((Frame.ViewportHeight > 0.0f) ? Frame.ViewportHeight : 1.0f),
+			Frame.RenderOptions.ViewportType == ELevelViewportType::FreeOrthographic);
 	}
 
 	// --- OverlayFont 패스: 스크린 공간 텍스트 ---

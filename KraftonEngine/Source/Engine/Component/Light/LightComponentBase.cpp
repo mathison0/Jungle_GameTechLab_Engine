@@ -1,8 +1,38 @@
 ﻿#include "LightComponentBase.h"
 #include "Serialization/Archive.h"
 #include "Object/ObjectFactory.h"
+#include "Engine/Runtime/Engine.h"
+#include "Editor/EditorEngine.h"
 
 IMPLEMENT_ABSTRACT_CLASS(ULightComponentBase, USceneComponent)
+
+namespace
+{
+	void NotifyEditorLightPreviewChanged(ULightComponentBase* LightComponent)
+	{
+		UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine);
+		if (!EditorEngine || !LightComponent)
+		{
+			return;
+		}
+
+		EditorEngine->NotifyLightComponentChanged(LightComponent);
+	}
+}
+
+void ULightComponentBase::OnTransformDirty()
+{
+	USceneComponent::OnTransformDirty();
+	PushToScene();
+	NotifyEditorLightPreviewChanged(this);
+}
+
+void ULightComponentBase::PostEditProperty(const char* PropertyName)
+{
+	USceneComponent::PostEditProperty(PropertyName);
+	PushToScene();
+	NotifyEditorLightPreviewChanged(this);
+}
 
 void ULightComponentBase::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {

@@ -13,6 +13,8 @@
 class UWorld;
 class UCameraComponent;
 class UGizmoComponent;
+class ULightComponent;
+class ULightComponentBase;
 class FEditorSettings;
 class FWindowsWindow;
 class FSelectionManager;
@@ -47,6 +49,7 @@ public:
 	UCameraComponent* GetCamera() const { return Camera; }
 
 	void Tick(float DeltaTime);
+	void OnLightComponentChanged(ULightComponentBase* LightComponent);
 
 	// 활성 상태 — 활성 뷰포트만 입력 처리
 	void SetActive(bool bInActive) { bIsActive = bInActive; }
@@ -75,6 +78,10 @@ public:
 private:
 	void TickEditorShortcuts();
 	void TickLightCameraOverride();
+	ULightComponent* GetSelectedLight() const;
+	void EnterLightCameraOverride(ULightComponent* LightComponent);
+	void ExitLightCameraOverride();
+	void SyncLightCameraOverride();
 	void TickInput(float DeltaTime);
 	void TickInteraction(float DeltaTime);
 	void HandleDragStart(const FRay& Ray); //픽킹 시작
@@ -113,6 +120,7 @@ private:
 
 	bool bIsActive = false;
 	bool bLightCameraOverrideActive = false;
+	ULightComponent* PreviewLightComponent = nullptr;
 	FCameraOverrideSnapshot CameraOverrideSnapshot;
 	// 뷰포트 슬롯의 스크린 좌표 (ImGui screen space = 윈도우 클라이언트 좌표)
 	FRect ViewportScreenRect;
