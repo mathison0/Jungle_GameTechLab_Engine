@@ -98,6 +98,6 @@ void FTexturePoolBase::SetTextureLayerSize(uint32 InTextureLayerSize)
 
 void FTexturePoolBase::SetTextureSize(uint32 InTextureSize)
 {
-	TextureLayerSize = InTextureSize;
+	TextureSize = InTextureSize;
 	OnSetTextureSize();
 }
