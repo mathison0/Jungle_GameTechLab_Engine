@@ -693,8 +693,8 @@ float FEditorViewportOverlayWidget::RenderShadowWindow(int32 ViewportIndex, cons
             const float TexelSize = (Radius * 2.0f) / static_cast<float>(Res);
 
             ImGui::TextColored(ColorPaleBlue, "[%d] Split: %.1f", i, Split);
-            ImGui::SameLine(100.f);
-            ImGui::TextColored(ColorPaleBlue, "TexSize: %.4f", TexelSize);
+            ImGui::SameLine(105.f);
+            ImGui::TextColored(ColorPaleBlue, "TexSize: %.2f", TexelSize);
         }
         WindowWidth = ImGui::GetWindowSize().x;
     }
