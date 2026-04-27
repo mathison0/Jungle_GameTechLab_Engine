@@ -79,6 +79,4 @@ private:
 	float ShadowBias = 0.001f;
 	float ShadowSlopeBias = 0.5f;
 	float ShadowSharpen = 0.0f; 
-
-	bool bOverrideCamera = false;
 };

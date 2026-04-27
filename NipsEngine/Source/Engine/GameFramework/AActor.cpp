@@ -176,6 +176,19 @@ void AActor::RemoveComponent(UActorComponent* Component)
 
     Component->OnUnregister();
 
+    // 다른 컴포넌트들이 삭제될 컴포넌트를 참조하고 있다면 nullptr로 밀어줍니다.
+    for (UActorComponent* Comp : OwnedComponents)
+    {
+        if (!Comp) continue;
+        if (UMovementComponent* MoveComp = Cast<UMovementComponent>(Comp))
+        {
+            if (MoveComp->GetUpdatedComponent() == Component)
+            {
+                MoveComp->SetUpdatedComponent(nullptr);
+            }
+        }
+    }
+
     auto it = std::find(OwnedComponents.begin(), OwnedComponents.end(), Component);
     if (it != OwnedComponents.end())
     {
