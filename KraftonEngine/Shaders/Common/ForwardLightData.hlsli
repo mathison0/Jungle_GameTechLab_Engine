@@ -126,6 +126,9 @@ StructuredBuffer<uint> g_ClusterLightIndices : register(t11);
 StructuredBuffer<uint2> g_ClusterLightGrid : register(t12);
 StructuredBuffer<FShadowInfo> gShadowInfos : register(t21);
 Texture2DArray gShadowAtlasArray : register(t22);
-TextureCubeArray gShadowCubeArray : register(t23);
+TextureCubeArray gShadowCubeArrayTier0 : register(t23);
+TextureCubeArray gShadowCubeArrayTier1 : register(t24);
+TextureCubeArray gShadowCubeArrayTier2 : register(t25);
+TextureCubeArray gShadowCubeArrayTier3 : register(t26);
 
 #endif // FORWARD_LIGHT_DATA_HLSLI

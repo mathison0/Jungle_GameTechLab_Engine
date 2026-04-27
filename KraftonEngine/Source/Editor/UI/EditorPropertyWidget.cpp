@@ -571,13 +571,14 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 	ImGui::Text("Shadow");
 	ImGui::Spacing();
 
-	static constexpr int32 ResolutionOptions[] = { 512, 1024, 2048, 4096 };
-	static constexpr const char* ResolutionLabels[] = { "512", "1024", "2048", "4096" };
+	static constexpr int32 ResolutionOptions[] = { 256, 512, 1024, 2048 };
+	static constexpr const char* ResolutionLabels[] = { "256", "512", "1024", "2048" };
+	static constexpr float ResolutionScales[] = { 0.25f, 0.5f, 1.0f, 2.0f };
 
-	int32 ResolutionIndex = 1;
+	int32 ResolutionIndex = 2;
 	for (int32 Index = 0; Index < static_cast<int32>(std::size(ResolutionOptions)); ++Index)
 	{
-		if (RenderOptions.ShadowMapResolution == ResolutionOptions[Index])
+		if (LightComponent->GetShadowResolutionScale() <= ResolutionScales[Index])
 		{
 			ResolutionIndex = Index;
 			break;
@@ -588,10 +589,12 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 	{
 		for (int32 Index = 0; Index < static_cast<int32>(std::size(ResolutionOptions)); ++Index)
 		{
-			const bool bSelected = (RenderOptions.ShadowMapResolution == ResolutionOptions[Index]);
+			const bool bSelected = (ResolutionIndex == Index);
 			if (ImGui::Selectable(ResolutionLabels[Index], bSelected))
 			{
+				LightComponent->SetShadowResolutionScale(ResolutionScales[Index]);
 				RenderOptions.ShadowMapResolution = ResolutionOptions[Index];
+				ResolutionIndex = Index;
 			}
 			if (bSelected)
 			{
