@@ -51,7 +51,8 @@ namespace
 	// ─────────────────── Billboard, SubUV ───────────────────
     FMatrix MakeViewBillboardMatrix(const UPrimitiveComponent* Primitive, const FRenderBus& RenderBus);
     FMatrix MakeViewSubUVSelectionMatrix(const USubUVComponent* SubUVComp, const FRenderBus& RenderBus);
-	// ─────────────────── AABB, BVH ───────────────────
+	
+    // ─────────────────── AABB, BVH ───────────────────
 	FColor MakeBVHInternalNodeColor(int32 PathIndexFromLeaf, int32 PathLength);
     bool UsesCameraDependentRenderBounds(const UPrimitiveComponent* PrimitiveComponent);
     FAABB BuildQuadAABB(const FMatrix& WorldMatrix);
@@ -120,7 +121,8 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
 				{
 					FDirectionalShadowConstants ShadowConstants;
 					ShadowConstants.ShadowBias = LightComponent->GetShadowBias();
-					BuildDirectionalShadowViewProjection(DirectionalLight, RenderBus, RenderLight.Direction, ShadowConstants);
+				    ShadowConstants.bCascadeDebug = RenderBus.GetShowFlags().bCascadeDebug ? 1 : 0;
+				    BuildDirectionalShadowViewProjection(DirectionalLight, RenderBus, RenderLight.Direction, ShadowConstants);
 
 					RenderBus.SetDirectionalShadow(ShadowConstants);
 					RenderLight.bCastShadows = 1; // uint32

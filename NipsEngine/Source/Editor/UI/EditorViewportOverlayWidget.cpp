@@ -136,6 +136,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
 	ImGui::Checkbox("Enable LOD", &Settings.ShowFlags.bEnableLOD);
     ImGui::Checkbox("Decals", &Settings.ShowFlags.bDecals);
     ImGui::Checkbox("Fog", &Settings.ShowFlags.bFog);
+    ImGui::Checkbox("Cascade Shadow", &Settings.ShowFlags.bCascadeDebug);
 
     ImGui::Separator();
 
@@ -172,29 +173,31 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
         ImGui::SliderFloat("Zoom Speed", &Settings.CameraZoomSpeed, 0.1f, 100.0f, "%.1f");
     }
 
-    ImGui::Separator();
-
-    ImGui::Text("BVH Maintenance");
-    bool bPolicyChanged = false;
-
-    ImGui::SetNextItemWidth(ItemWidth);
-    bPolicyChanged |= ImGui::SliderInt("Batch Refit Min Dirty", &Settings.SpatialBatchRefitMinDirtyCount, 1, 256);
-
-    ImGui::SetNextItemWidth(ItemWidth);
-    bPolicyChanged |= ImGui::SliderInt("Batch Refit Dirty %", &Settings.SpatialBatchRefitDirtyPercentThreshold, 1, 100);
-
-    ImGui::SetNextItemWidth(ItemWidth);
-    bPolicyChanged |= ImGui::SliderInt("Rotation Structural Changes", &Settings.SpatialRotationStructuralChangeThreshold, 1, 256);
-
-    ImGui::SetNextItemWidth(ItemWidth);
-    bPolicyChanged |= ImGui::SliderInt("Rotation Dirty Count", &Settings.SpatialRotationDirtyCountThreshold, 1, 512);
-
-    ImGui::SetNextItemWidth(ItemWidth);
-    bPolicyChanged |= ImGui::SliderInt("Rotation Dirty %", &Settings.SpatialRotationDirtyPercentThreshold, 1, 100);
-
-    if (bPolicyChanged && EditorEngine)
+    if (Settings.ShowFlags.bBoundingVolume && Settings.ShowFlags.bBVHBoundingVolume)
     {
-        EditorEngine->ApplySpatialIndexMaintenanceSettings();
+        ImGui::Separator();
+        ImGui::Text("BVH Maintenance");
+        bool bPolicyChanged = false;
+
+        ImGui::SetNextItemWidth(ItemWidth);
+        bPolicyChanged |= ImGui::SliderInt("Batch Refit Min Dirty", &Settings.SpatialBatchRefitMinDirtyCount, 1, 256);
+
+        ImGui::SetNextItemWidth(ItemWidth);
+        bPolicyChanged |= ImGui::SliderInt("Batch Refit Dirty %", &Settings.SpatialBatchRefitDirtyPercentThreshold, 1, 100);
+
+        ImGui::SetNextItemWidth(ItemWidth);
+        bPolicyChanged |= ImGui::SliderInt("Rotation Structural Changes", &Settings.SpatialRotationStructuralChangeThreshold, 1, 256);
+
+        ImGui::SetNextItemWidth(ItemWidth);
+        bPolicyChanged |= ImGui::SliderInt("Rotation Dirty Count", &Settings.SpatialRotationDirtyCountThreshold, 1, 512);
+
+        ImGui::SetNextItemWidth(ItemWidth);
+        bPolicyChanged |= ImGui::SliderInt("Rotation Dirty %", &Settings.SpatialRotationDirtyPercentThreshold, 1, 100);
+
+        if (bPolicyChanged && EditorEngine)
+        {
+            EditorEngine->ApplySpatialIndexMaintenanceSettings();
+        }
     }
 
     ImGui::End();

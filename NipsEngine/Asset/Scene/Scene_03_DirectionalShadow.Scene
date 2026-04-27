@@ -1,13 +1,13 @@
 {
   "ClassName" : "UWorld",
   "Name" : "Scene_03_DirectionalShadow",
-  "NextUUID" : 152,
+  "NextUUID" : 172,
   "PerspectiveCamera" : {
     "FOV" : 90.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-2.390464, 1.648853, 1.471419],
+    "Location" : [3.754021, 7.823135, 3.670762],
     "NearClip" : 0.100000,
-    "Rotation" : [36.908432, 21.574228, -63.914154]
+    "Rotation" : [43.492332, -30.396271, -118.072418]
   },
   "Primitives" : {
     "135" : {
@@ -15,7 +15,7 @@
       "Enable Cull" : true,
       "EnableTick" : true,
       "HiddenInEditor" : false,
-      "Location" : [0.000000, 0.000000, -3.682054],
+      "Location" : [0.000000, 0.000000, -8.896593],
       "Materials" : ["DicePaper"],
       "NormalizeOnImport" : false,
       "ObjStaticMeshAsset" : "Asset\\Mesh\\Dice\\Dice.obj",
@@ -27,7 +27,7 @@
       "Visible" : true
     },
     "138" : {
-      "CascadeSplitWeight" : 1.000000,
+      "CascadeSplitWeight" : 0.900000,
       "CastShadows" : true,
       "EditorOnly" : false,
       "EnableTick" : true,
@@ -36,7 +36,7 @@
       "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
       "LightType" : 0,
       "Location" : [0.000000, 0.000000, 0.000000],
-      "Rotation" : [-0.000183, 35.934391, 0.000823],
+      "Rotation" : [-19.517426, -30.790436, 145.290817],
       "Scale" : [1.000000, 1.000000, 1.000000],
       "ShadowBias" : 0.001500,
       "ShadowDistance" : 3000.000000,
@@ -66,10 +66,10 @@
       "Enable Cull" : true,
       "EnableTick" : true,
       "HiddenInEditor" : false,
-      "Location" : [0.000000, 0.000000, -5.282619],
-      "Materials" : ["DicePaper"],
+      "Location" : [0.000000, 0.000000, -11.712605],
+      "Materials" : ["Material"],
       "NormalizeOnImport" : false,
-      "ObjStaticMeshAsset" : "Asset\\Mesh\\Dice\\Dice.obj",
+      "ObjStaticMeshAsset" : "Asset\\Mesh\\cube.obj",
       "Rotation" : [0.000000, 0.000000, 0.000000],
       "Scale" : [155.000000, 155.000000, 1.000000],
       "Scroll U" : 0.000000,

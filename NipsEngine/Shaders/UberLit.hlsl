@@ -96,7 +96,8 @@ cbuffer DirectionalShadowInfo : register(b7)
     row_major float4x4 LightViewProj[MAX_CASCADE_COUNT];
     float4 SplitDistances;
     float ShadowBias;
-    float3 _DirectionalShadowInfoPad0;
+    uint bCascadeDebug;
+    float2 _DirectionalShadowInfoPad0;
 }
 
 StructuredBuffer<FSpotShadowConstants> SpotShadowData : register(t11);
@@ -353,6 +354,24 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
             }
 
             AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor * ShadowFactor, Result);
+            
+            if (Light.bCastShadows != 0u)
+            {
+                ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
+            }
+            AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor * ShadowFactor, Result);
+
+            if (bCascadeDebug != 0u)
+            {
+                int CascadeIndex = GetCascadeIndex(WorldPos);
+                float3 DebugColors[4] = {
+                    float3(1.0, 0.2, 0.2), // Reddish
+                    float3(0.2, 1.0, 0.2), // Greenish
+                    float3(0.2, 0.2, 1.0), // Blueish
+                    float3(1.0, 1.0, 0.2)  // Yellowish
+                };
+                Result.Diffuse = lerp(Result.Diffuse, DebugColors[CascadeIndex], 0.5f);
+            }
         }
     }
 
@@ -397,13 +416,25 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
         if (Light.Type == LIGHT_TYPE_DIRECTIONAL)
         {
             const float3 L = normalize(Light.Direction);
+            
             float ShadowFactor = 1.0f;
             if (Light.bCastShadows != 0u)
             {
                 ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
             }
-
             AccumulateDirectLight(WorldPos, N, V, L, LightColor * ShadowFactor, Result);
+
+            if (bCascadeDebug != 0u)
+            {
+                int CascadeIndex = GetCascadeIndex(WorldPos);
+                float3 DebugColors[4] = {
+                    float3(1.0, 0.2, 0.2), // Reddish
+                    float3(0.2, 1.0, 0.2), // Greenish
+                    float3(0.2, 0.2, 1.0), // Blueish
+                    float3(1.0, 1.0, 0.2)  // Yellowish
+                };
+                Result.Diffuse = lerp(Result.Diffuse, DebugColors[CascadeIndex], 0.5f);
+            }
         }
     }
 
