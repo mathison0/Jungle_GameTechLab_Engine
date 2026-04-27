@@ -339,6 +339,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		Info.NearZ = NearZ;
 		Info.LightVP = FMatrix::Identity;
 		Info.SampleData = FVector4(Params.Position.X, Params.Position.Y, Params.Position.Z, FarZ);
+		Info.ShadowParams = FVector4(PointLight->GetShadowBias(), PointLight->GetShadowSharpen(), 0.0f, 0.0f);
 
 		const int32 ShadowInfoIndex = static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
 		OutShadowPassData.BindingData.ShadowInfos.push_back(Info);
