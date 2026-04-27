@@ -72,9 +72,15 @@ void UPointLightComponent::DestroyFromScene()
 
 FShadowCubeHandle UPointLightComponent::GetCubeShadowHandle()
 {
+	const uint32 DesiredTierIndex = FTextureCubeShadowPool::Get().GetTierIndexForScale(GetShadowResolutionScale());
+	if (CubeShadowHandle.IsValid() && CubeShadowHandle.TierIndex != DesiredTierIndex)
+	{
+		ReleaseCubeShadowHandle();
+	}
+
 	if (!CubeShadowHandle.IsValid())
 	{
-		CubeShadowHandle = FTextureCubeShadowPool::Get().Allocate();
+		CubeShadowHandle = FTextureCubeShadowPool::Get().Allocate(GetShadowResolutionScale());
 	}
 
 	return CubeShadowHandle;

@@ -75,12 +75,15 @@ struct FShadowInfo
 	uint32   LightIndex;
 	uint32   bIsPSM;
 
+	uint32   CubeTierIndex;
+	uint32   _padShadowInfo[3];
+
 	FShadowMatrixGPU LightVP;
 	FVector4 SampleData;
 	FVector4 ShadowParams; // x = Bias, y = SlopeBias, z = Sharpen, w = NearZ
 };
 static_assert(sizeof(FShadowInfo) % 16 == 0, "FShadowInfo must be 16-byte aligned for StructuredBuffer");
-static_assert(sizeof(FShadowInfo) == 112, "FShadowInfo size mismatch with HLSL");
+static_assert(sizeof(FShadowInfo) == 128, "FShadowInfo size mismatch with HLSL");
 
 namespace EShadowInfoType
 {

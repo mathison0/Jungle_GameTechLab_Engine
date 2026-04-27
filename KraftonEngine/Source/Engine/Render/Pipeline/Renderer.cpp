@@ -232,8 +232,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 	}
 #pragma endregion	
 
-	// 1�� �н�: �ʿ��� �ڵ��� ��� Ȯ���� atlas resize�� ���� ������.
-	//����� �ϴµ� Atlas ũ�� �����־ �̰� ���߿� ���� �ɰ���, ���ʿ� ���� ������Ʈ �ø� �ܰ迡�� �ʿ��� ��鸸 ������� �Ȱɾ ����������
+	// 1차 패스: 필요한 핸들을 모두 확보해 atlas resize를 먼저 끝낸다.
+	//라고는 하는데 Atlas 크기 제한있어서 이거 나중에 제한 걸거임, 애초에 위의 오브젝트 컬링 단계에서 필요한 놈들만 골랐으면 안걸어도 괜찮을지도
 #pragma region ResizeState
 	if (bShadowDirectional)
 	{
@@ -261,10 +261,10 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 	}
 #pragma endregion
 
-	// 2�� �н�: ���������� ����ȭ�� handle/DSV/UV�� render task�� �����.
+	// 2차 패스: 최종적으로 안정화된 handle/DSV/UV로 render task를 만든다.
 #pragma region CreateRenderTask
 
-	//PointLightTask ���� ����
+	//PointLightTask 생성 관련
 #pragma region PointLightTask
 	for (uint32 PointIndex : ShadowedPointIndices)
 	{
@@ -285,7 +285,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		float NearZ = 0.0f;
 		float FarZ = 0.0f;
 		const FMatrix LightProj = FShadowUtil::MakePointShadowProjection(Params.AttenuationRadius, NearZ, FarZ);
-		const D3D11_VIEWPORT CubeViewport = FShadowUtil::MakeFullViewport(FTextureCubeShadowPool::Get().GetResolution());
+		const D3D11_VIEWPORT CubeViewport = FShadowUtil::MakeFullViewport(FTextureCubeShadowPool::Get().GetResolution(CubeHandle));
 
 		const FVector FaceForwards[FTextureCubeShadowPool::CubeFaceCount] =
 		{
@@ -343,9 +343,14 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		Info.ArrayIndex = CubeHandle.CubeIndex;
 		Info.LightIndex = PointIndex;
 		Info.bIsPSM = 0;
+		Info.CubeTierIndex = CubeHandle.TierIndex;
 		Info.LightVP = FMatrix::Identity;
 		Info.SampleData = FVector4(Params.Position.X, Params.Position.Y, Params.Position.Z, FarZ);
-		Info.ShadowParams = FVector4(PointLight->GetShadowBias(), 0.0f, PointLight->GetShadowSharpen(), NearZ);
+		Info.ShadowParams = FVector4(
+			PointLight->GetShadowBias(),
+			PointLight->GetShadowSlopeBias(),
+			PointLight->GetShadowSharpen(),
+			NearZ);
 
 		const int32 ShadowInfoIndex = static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
 		OutShadowPassData.BindingData.ShadowInfos.push_back(Info);
@@ -400,7 +405,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		Info.LightIndex = NumPointLights + SpotIndex;
 		Info.LightVP = LightVP;
 		Info.SampleData = FVector4(AtlasUVs[0].u1, AtlasUVs[0].v1, AtlasUVs[0].u2, AtlasUVs[0].v2);
-		Info.ShadowParams = FVector4(SpotLight->GetShadowBias(), SpotLight->GetShadowSharpen(), 0.0f, 0.0f);
+		Info.ShadowParams = FVector4(SpotLight->GetShadowBias(), SpotLight->GetShadowSlopeBias(), SpotLight->GetShadowSharpen(), NearZ);
 
 		const int32 ShadowInfoIndex = static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
 		OutShadowPassData.BindingData.ShadowInfos.push_back(Info);

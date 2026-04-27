@@ -24,6 +24,7 @@ public:
 	~ULightComponent() { if(ShadowHandleSet) ShadowHandleSet->Release(); }
 
 	float GetShadowResolutionScale() const { return ShadowResolutionScale; }
+	void SetShadowResolutionScale(float InShadowResolutionScale) { ShadowResolutionScale = InShadowResolutionScale; }
 	float GetShadowBias() const { return ShadowBias; }
 	float GetShadowSlopeBias() const { return ShadowSlopeBias; }
 	float GetShadowSharpen() const { return ShadowSharpen; }

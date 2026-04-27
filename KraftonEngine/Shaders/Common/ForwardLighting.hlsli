@@ -140,8 +140,31 @@ float SampleCubeShadow(FShadowInfo info, float3 worldPos)
 
     float3 dir = toPixel / max(faceDepth, 0.0001f);
     float depth = (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ)) + GetShadowDepthBias(info);
+    uint cubeTier = min(info.CubeTierIndex, 3u);
 
-    return gShadowCubeArray.SampleCmpLevelZero(
+    if (cubeTier == 0u)
+    {
+        return gShadowCubeArrayTier0.SampleCmpLevelZero(
+            ShadowCmpSampler,
+            float4(dir, info.ArrayIndex),
+            depth);
+    }
+    if (cubeTier == 1u)
+    {
+        return gShadowCubeArrayTier1.SampleCmpLevelZero(
+            ShadowCmpSampler,
+            float4(dir, info.ArrayIndex),
+            depth);
+    }
+    if (cubeTier == 2u)
+    {
+        return gShadowCubeArrayTier2.SampleCmpLevelZero(
+            ShadowCmpSampler,
+            float4(dir, info.ArrayIndex),
+            depth);
+    }
+
+    return gShadowCubeArrayTier3.SampleCmpLevelZero(
         ShadowCmpSampler,
         float4(dir, info.ArrayIndex),
         depth);

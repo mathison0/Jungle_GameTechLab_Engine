@@ -406,18 +406,24 @@ void FSystemResources::BindShadowResources(FD3DDevice& Device)
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
 	ID3D11ShaderResourceView* ShadowInfoSRV = ShadowInfos.SRV;
 	ID3D11ShaderResourceView* ShadowAtlasSRV = FTextureAtlasPool::Get().GetSRV();
-	ID3D11ShaderResourceView* ShadowCubeSRV = FTextureCubeShadowPool::Get().GetSRV();
+	ID3D11ShaderResourceView* ShadowCubeSRVs[FTextureCubeShadowPool::TierCount] =
+	{
+		FTextureCubeShadowPool::Get().GetSRV(0),
+		FTextureCubeShadowPool::Get().GetSRV(1),
+		FTextureCubeShadowPool::Get().GetSRV(2),
+		FTextureCubeShadowPool::Get().GetSRV(3)
+	};
 
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowInfos, 1, &ShadowInfoSRV);
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowAtlasArray, 1, &ShadowAtlasSRV);
-	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowCubeArray, 1, &ShadowCubeSRV);
+	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowCubeArrayTier0, FTextureCubeShadowPool::TierCount, ShadowCubeSRVs);
 }
 
 void FSystemResources::UnbindShadowResources(FD3DDevice& Device)
 {
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
-	ID3D11ShaderResourceView* NullSRVs[3] = {};
-	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowInfos, 3, NullSRVs);
+	ID3D11ShaderResourceView* NullSRVs[2 + FTextureCubeShadowPool::TierCount] = {};
+	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowInfos, 2 + FTextureCubeShadowPool::TierCount, NullSRVs);
 }
 
 void FSystemResources::BindSystemSamplers(FD3DDevice& Device)

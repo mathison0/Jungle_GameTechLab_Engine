@@ -1,113 +1,190 @@
 #include "TextureCubeShadowPool.h"
+namespace
+{
+	uint32 MakeTierResolution(uint32 BaseResolution, uint32 TierIndex)
+	{
+		const uint32 SafeBase = BaseResolution > 0 ? BaseResolution : 1024;
+		switch (TierIndex)
+		{
+		case 0: return SafeBase / 4 > 0 ? SafeBase / 4 : 1u;
+		case 1: return SafeBase / 2 > 0 ? SafeBase / 2 : 1u;
+		case 2: return SafeBase;
+		default: return SafeBase * 2;
+		}
+	}
+}
 
-void FTextureCubeShadowPool::Initialize(ID3D11Device* InDevice, uint32 InResolution, uint32 InitialCubeCapacity)
+void FTextureCubeShadowPool::Initialize(ID3D11Device* InDevice, uint32 InBaseResolution, uint32 InitialCubeCapacity)
 {
 	Release();
 
 	Device = InDevice;
-	Resolution = InResolution > 0 ? InResolution : 1;
+	BaseResolution = InBaseResolution > 0 ? InBaseResolution : 1024;
 
 	const uint32 SafeInitialCapacity = InitialCubeCapacity > 0 ? InitialCubeCapacity : 1;
-	RebuildResources(SafeInitialCapacity);
+	for (uint32 TierIndex = 0; TierIndex < TierCount; ++TierIndex)
+	{
+		Tiers[TierIndex].Resolution = MakeTierResolution(BaseResolution, TierIndex);
+		RebuildResources(TierIndex, SafeInitialCapacity);
+	}
 }
 
 void FTextureCubeShadowPool::Release()
 {
-	FaceDSVs.clear();
-	SRV.Reset();
-	Texture.Reset();
-	AllocationFlags.clear();
-	FreeCubeIndices.clear();
+	for (FTierPool& Tier : Tiers)
+	{
+		Tier.FaceDSVs.clear();
+		Tier.SRV.Reset();
+		Tier.Texture.Reset();
+		Tier.AllocationFlags.clear();
+		Tier.FreeCubeIndices.clear();
+		Tier.Resolution = 0;
+		Tier.CubeCapacity = 0;
+		Tier.AllocatedCount = 0;
+	}
 
 	Device = nullptr;
-	CubeCapacity = 0;
-	AllocatedCount = 0;
+	BaseResolution = 1024;
 }
 
-FTextureCubeShadowPool::FCubeShadowHandle FTextureCubeShadowPool::Allocate()
+FTextureCubeShadowPool::FCubeShadowHandle FTextureCubeShadowPool::Allocate(float ResolutionScale)
 {
-	if (!Device)
+	const uint32 TierIndex = GetTierIndexForScale(ResolutionScale);
+	FTierPool* Tier = GetTier(TierIndex);
+	if (!Device || !Tier)
 	{
 		return {};
 	}
 
-	if (FreeCubeIndices.empty())
+	if (Tier->FreeCubeIndices.empty())
 	{
-		const uint32 NewCapacity = CubeCapacity > 0 ? CubeCapacity * 2 : 1;
-		Resize(NewCapacity);
+		const uint32 NewCapacity = Tier->CubeCapacity > 0 ? Tier->CubeCapacity * 2 : 1;
+		Resize(TierIndex, NewCapacity);
 	}
 
-	if (FreeCubeIndices.empty())
-	{
-		return {};
-	}
-
-	const uint32 CubeIndex = FreeCubeIndices.back();
-	FreeCubeIndices.pop_back();
-
-	if (CubeIndex >= AllocationFlags.size())
+	if (Tier->FreeCubeIndices.empty())
 	{
 		return {};
 	}
 
-	AllocationFlags[CubeIndex] = 1;
-	++AllocatedCount;
+	const uint32 CubeIndex = Tier->FreeCubeIndices.back();
+	Tier->FreeCubeIndices.pop_back();
+
+	if (CubeIndex >= Tier->AllocationFlags.size())
+	{
+		return {};
+	}
+
+	Tier->AllocationFlags[CubeIndex] = 1;
+	++Tier->AllocatedCount;
 
 	FCubeShadowHandle Handle;
 	Handle.CubeIndex = CubeIndex;
+	Handle.TierIndex = TierIndex;
 	return Handle;
 }
 
 void FTextureCubeShadowPool::ReleaseHandle(FCubeShadowHandle Handle)
 {
-	if (!Handle.IsValid() || Handle.CubeIndex >= AllocationFlags.size())
+	FTierPool* Tier = GetTier(Handle.TierIndex);
+	if (!Handle.IsValid() || !Tier || Handle.CubeIndex >= Tier->AllocationFlags.size())
 	{
 		return;
 	}
 
-	if (AllocationFlags[Handle.CubeIndex] == 0)
+	if (Tier->AllocationFlags[Handle.CubeIndex] == 0)
 	{
 		return;
 	}
 
-	AllocationFlags[Handle.CubeIndex] = 0;
-	FreeCubeIndices.push_back(Handle.CubeIndex);
+	Tier->AllocationFlags[Handle.CubeIndex] = 0;
+	Tier->FreeCubeIndices.push_back(Handle.CubeIndex);
 
-	if (AllocatedCount > 0)
+	if (Tier->AllocatedCount > 0)
 	{
-		--AllocatedCount;
+		--Tier->AllocatedCount;
 	}
+}
+
+ID3D11ShaderResourceView* FTextureCubeShadowPool::GetSRV(uint32 TierIndex) const
+{
+	const FTierPool* Tier = GetTier(TierIndex);
+	return Tier ? Tier->SRV.Get() : nullptr;
 }
 
 ID3D11DepthStencilView* FTextureCubeShadowPool::GetFaceDSV(FCubeShadowHandle Handle, uint32 FaceIndex) const
 {
-	if (!Handle.IsValid() || FaceIndex >= CubeFaceCount)
+	const FTierPool* Tier = GetTier(Handle.TierIndex);
+	if (!Handle.IsValid() || !Tier || FaceIndex >= CubeFaceCount)
 	{
 		return nullptr;
 	}
 
 	const uint32 SliceIndex = GetSliceIndex(Handle, FaceIndex);
-	if (SliceIndex >= FaceDSVs.size())
+	if (SliceIndex >= Tier->FaceDSVs.size())
 	{
 		return nullptr;
 	}
 
-	return FaceDSVs[SliceIndex].Get();
+	return Tier->FaceDSVs[SliceIndex].Get();
 }
 
-void FTextureCubeShadowPool::Resize(uint32 NewCubeCapacity)
+uint32 FTextureCubeShadowPool::GetResolution(FCubeShadowHandle Handle) const
 {
-	if (NewCubeCapacity <= CubeCapacity)
+	return GetResolutionForTier(Handle.TierIndex);
+}
+
+uint32 FTextureCubeShadowPool::GetResolutionForTier(uint32 TierIndex) const
+{
+	const FTierPool* Tier = GetTier(TierIndex);
+	return Tier ? Tier->Resolution : 0;
+}
+
+uint32 FTextureCubeShadowPool::GetTierIndexForScale(float ResolutionScale) const
+{
+	const float SafeScale = ResolutionScale > 0.0f ? ResolutionScale : 0.0f;
+	if (SafeScale <= 0.25f)
+	{
+		return 0;
+	}
+	if (SafeScale <= 0.5f)
+	{
+		return 1;
+	}
+	if (SafeScale <= 1.0f)
+	{
+		return 2;
+	}
+	return 3;
+}
+
+uint32 FTextureCubeShadowPool::GetCapacity(uint32 TierIndex) const
+{
+	const FTierPool* Tier = GetTier(TierIndex);
+	return Tier ? Tier->CubeCapacity : 0;
+}
+
+uint32 FTextureCubeShadowPool::GetAllocatedCount(uint32 TierIndex) const
+{
+	const FTierPool* Tier = GetTier(TierIndex);
+	return Tier ? Tier->AllocatedCount : 0;
+}
+
+void FTextureCubeShadowPool::Resize(uint32 TierIndex, uint32 NewCubeCapacity)
+{
+	FTierPool* Tier = GetTier(TierIndex);
+	if (!Tier || NewCubeCapacity <= Tier->CubeCapacity)
 	{
 		return;
 	}
 
-	RebuildResources(NewCubeCapacity);
+	RebuildResources(TierIndex, NewCubeCapacity);
 }
 
-bool FTextureCubeShadowPool::RebuildResources(uint32 NewCubeCapacity)
+bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCapacity)
 {
-	if (!Device || NewCubeCapacity == 0)
+	FTierPool* Tier = GetTier(TierIndex);
+	if (!Device || !Tier || Tier->Resolution == 0 || NewCubeCapacity == 0)
 	{
 		return false;
 	}
@@ -119,8 +196,8 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 NewCubeCapacity)
 	const uint32 TotalSlices = NewCubeCapacity * CubeFaceCount;
 
 	D3D11_TEXTURE2D_DESC TextureDesc = {};
-	TextureDesc.Width = Resolution;
-	TextureDesc.Height = Resolution;
+	TextureDesc.Width = Tier->Resolution;
+	TextureDesc.Height = Tier->Resolution;
 	TextureDesc.MipLevels = 1;
 	TextureDesc.ArraySize = TotalSlices;
 	TextureDesc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -170,17 +247,17 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 NewCubeCapacity)
 		}
 	}
 
-	const uint32 OldCapacity = CubeCapacity;
+	const uint32 OldCapacity = Tier->CubeCapacity;
 
-	Texture = std::move(NewTexture);
-	SRV = std::move(NewSRV);
-	FaceDSVs = std::move(NewFaceDSVs);
-	CubeCapacity = NewCubeCapacity;
+	Tier->Texture = std::move(NewTexture);
+	Tier->SRV = std::move(NewSRV);
+	Tier->FaceDSVs = std::move(NewFaceDSVs);
+	Tier->CubeCapacity = NewCubeCapacity;
 
-	AllocationFlags.resize(CubeCapacity, 0);
-	for (uint32 CubeIndex = CubeCapacity; CubeIndex > OldCapacity; --CubeIndex)
+	Tier->AllocationFlags.resize(Tier->CubeCapacity, 0);
+	for (uint32 CubeIndex = Tier->CubeCapacity; CubeIndex > OldCapacity; --CubeIndex)
 	{
-		FreeCubeIndices.push_back(CubeIndex - 1);
+		Tier->FreeCubeIndices.push_back(CubeIndex - 1);
 	}
 
 	return true;
@@ -189,4 +266,14 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 NewCubeCapacity)
 uint32 FTextureCubeShadowPool::GetSliceIndex(FCubeShadowHandle Handle, uint32 FaceIndex) const
 {
 	return Handle.CubeIndex * CubeFaceCount + FaceIndex;
+}
+
+FTextureCubeShadowPool::FTierPool* FTextureCubeShadowPool::GetTier(uint32 TierIndex)
+{
+	return TierIndex < TierCount ? &Tiers[TierIndex] : nullptr;
+}
+
+const FTextureCubeShadowPool::FTierPool* FTextureCubeShadowPool::GetTier(uint32 TierIndex) const
+{
+	return TierIndex < TierCount ? &Tiers[TierIndex] : nullptr;
 }
