@@ -222,7 +222,8 @@ struct FDirectionalShadowConstants
     FVector4 CascadeRadius;                   // 각 cascade의 Bounding Sphere Radius, 16B
     float ShadowBias = 0.001f;                // 4B
     uint32 bCascadeDebug = 0;                 // 4B
-    float Padding[2];                         // 8B
+    uint32 bHasShadowMap = 0;                 // 4B
+    float Padding = 0.0f;                     // 4B
 };
 
 static_assert(sizeof(FDirectionalShadowConstants) % 16 == 0, "FDirectionalShadowConstants must be 16-byte aligned");
@@ -231,12 +232,13 @@ static_assert(sizeof(FDirectionalShadowConstants) % 16 == 0, "FDirectionalShadow
 struct FSpotShadowConstants
 {
     FMatrix LightViewProj;
-    float ShadowResolution;
-    float ShadowBias;
+    FVector4 AtlasRect = FVector4(0.0f, 0.0f, 1.0f, 1.0f);
+    float ShadowResolution = 0.0f;
+    float ShadowBias = 0.0f;
     float Padding[2] = { 0.0f, 0.0f };
 };
 
-static_assert(sizeof(FSpotShadowConstants) == 80, "FSpotShadowConstants layout must match the shadow pass GPU layout.");
+static_assert(sizeof(FSpotShadowConstants) == 96, "FSpotShadowConstants layout must match the shadow pass GPU layout.");
 
 struct FRenderCommand
 {

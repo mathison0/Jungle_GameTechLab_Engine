@@ -38,7 +38,8 @@ namespace SceneLightBinding
 		FVector4 CascadeRadius;
 		float ShadowBias = 0.001f;
 		uint32 bCascadeDebug = 0;
-		float Padding[2] = { 0.0f, 0.0f };
+		uint32 bHasShadowMap = 0;
+		float Padding = 0.0f;
 	};
 
 	inline bool EnsureVisibleLightConstantBuffer(ID3D11Device* Device, TComPtr<ID3D11Buffer>& VisibleLightConstantBuffer)
@@ -257,8 +258,10 @@ namespace SceneLightBinding
 			InfoConstants.SplitDistances = DirShadow->SplitDistances;
 			InfoConstants.CascadeRadius = DirShadow->CascadeRadius;
 			InfoConstants.ShadowBias = DirShadow->ShadowBias;
-			InfoConstants.bCascadeDebug = DirShadow->bCascadeDebug;
+		    InfoConstants.bCascadeDebug = DirShadow->bCascadeDebug;
 		}
+
+		InfoConstants.bHasShadowMap = (ShadowMapSRV != nullptr) ? 1u : 0u;
 
 		D3D11_MAPPED_SUBRESOURCE Mapped = {};
 		if (SUCCEEDED(Context->DeviceContext->Map(DirectionalShadowInfoCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
