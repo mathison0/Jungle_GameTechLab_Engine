@@ -287,25 +287,6 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		const FMatrix LightProj = FShadowUtil::MakePointShadowProjection(Params.AttenuationRadius, NearZ, FarZ);
 		const D3D11_VIEWPORT CubeViewport = FShadowUtil::MakeFullViewport(FTextureCubeShadowPool::Get().GetResolution(CubeHandle));
 
-		const FVector FaceForwards[FTextureCubeShadowPool::CubeFaceCount] =
-		{
-			FVector(1.0f, 0.0f, 0.0f),
-			FVector(-1.0f, 0.0f, 0.0f),
-			FVector(0.0f, 1.0f, 0.0f),
-			FVector(0.0f, -1.0f, 0.0f),
-			FVector(0.0f, 0.0f, 1.0f),
-			FVector(0.0f, 0.0f, -1.0f)
-		};
-		const FVector FaceUps[FTextureCubeShadowPool::CubeFaceCount] =
-		{
-			FVector(0.0f, 1.0f, 0.0f),
-			FVector(0.0f, 1.0f, 0.0f),
-			FVector(0.0f, 0.0f, -1.0f),
-			FVector(0.0f, 0.0f, 1.0f),
-			FVector(0.0f, 1.0f, 0.0f),
-			FVector(0.0f, 1.0f, 0.0f)
-		};
-
 		bool bAllFacesValid = true;
 		for (uint32 FaceIndex = 0; FaceIndex < FTextureCubeShadowPool::CubeFaceCount; ++FaceIndex)
 		{
@@ -322,10 +303,12 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 
 		for (uint32 FaceIndex = 0; FaceIndex < FTextureCubeShadowPool::CubeFaceCount; ++FaceIndex)
 		{
-			const FVector Forward = FaceForwards[FaceIndex];
-			const FVector Up = FaceUps[FaceIndex];
-			const FVector Right = Up.Cross(Forward);
-			const FMatrix LightView = FShadowUtil::MakeAxesViewMatrix(Params.Position, Right, Up, Forward);
+			const FPointShadowFaceBasis FaceBasis = FTextureCubeShadowPool::GetFaceBasis(FaceIndex);
+			const FMatrix LightView = FShadowUtil::MakeAxesViewMatrix(
+				Params.Position,
+				FaceBasis.Right,
+				FaceBasis.Up,
+				FaceBasis.Forward);
 			const FMatrix LightVP = LightView * LightProj;
 
 			FShadowRenderTask& Task = OutShadowPassData.RenderTasks.emplace_back();

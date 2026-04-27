@@ -129,6 +129,72 @@ ID3D11DepthStencilView* FTextureCubeShadowPool::GetFaceDSV(FCubeShadowHandle Han
 	return Tier->FaceDSVs[SliceIndex].Get();
 }
 
+FPointShadowFaceBasis FTextureCubeShadowPool::GetFaceBasis(uint32 FaceIndex)
+{
+	static const FVector FaceForwards[CubeFaceCount] =
+	{
+		FVector(1.0f, 0.0f, 0.0f),
+		FVector(-1.0f, 0.0f, 0.0f),
+		FVector(0.0f, 1.0f, 0.0f),
+		FVector(0.0f, -1.0f, 0.0f),
+		FVector(0.0f, 0.0f, 1.0f),
+		FVector(0.0f, 0.0f, -1.0f)
+	};
+
+	static const FVector FaceUps[CubeFaceCount] =
+	{
+		FVector(0.0f, 1.0f, 0.0f),
+		FVector(0.0f, 1.0f, 0.0f),
+		FVector(0.0f, 0.0f, -1.0f),
+		FVector(0.0f, 0.0f, 1.0f),
+		FVector(0.0f, 1.0f, 0.0f),
+		FVector(0.0f, 1.0f, 0.0f)
+	};
+
+	const uint32 SafeFaceIndex = FaceIndex < CubeFaceCount ? FaceIndex : 0;
+	const FVector Forward = FaceForwards[SafeFaceIndex];
+	const FVector Up = FaceUps[SafeFaceIndex];
+
+	FPointShadowFaceBasis Basis;
+	Basis.Forward = Forward;
+	Basis.Up = Up;
+	Basis.Right = Up.Cross(Forward);
+	return Basis;
+}
+
+FPointShadowFaceBasis FTextureCubeShadowPool::GetPreviewFaceBasis(uint32 FaceIndex)
+{
+	static const FVector FaceForwards[CubeFaceCount] =
+	{
+		FVector(1.0f, 0.0f, 0.0f),
+		FVector(-1.0f, 0.0f, 0.0f),
+		FVector(0.0f, 1.0f, 0.0f),
+		FVector(0.0f, -1.0f, 0.0f),
+		FVector(0.0f, 0.0f, 1.0f),
+		FVector(0.0f, 0.0f, -1.0f)
+	};
+
+	static const FVector FaceUps[CubeFaceCount] =
+	{
+		FVector(0.0f, 0.0f, 1.0f),
+		FVector(0.0f, 0.0f, 1.0f),
+		FVector(0.0f, 0.0f, 1.0f),
+		FVector(0.0f, 0.0f, 1.0f),
+		FVector(0.0f, 1.0f, 0.0f),
+		FVector(0.0f, 1.0f, 0.0f)
+	};
+
+	const uint32 SafeFaceIndex = FaceIndex < CubeFaceCount ? FaceIndex : 0;
+	const FVector Forward = FaceForwards[SafeFaceIndex];
+	const FVector Up = FaceUps[SafeFaceIndex];
+
+	FPointShadowFaceBasis Basis;
+	Basis.Forward = Forward;
+	Basis.Up = Up;
+	Basis.Right = Up.Cross(Forward);
+	return Basis;
+}
+
 uint32 FTextureCubeShadowPool::GetResolution(FCubeShadowHandle Handle) const
 {
 	return GetResolutionForTier(Handle.TierIndex);

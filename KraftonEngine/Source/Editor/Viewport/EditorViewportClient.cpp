@@ -11,6 +11,7 @@
 #include "Component/Light/LightComponent.h"
 #include "Component/Light/PointLightComponent.h"
 #include "Component/Light/SpotLightComponent.h"
+#include "Render/Resource/TexturePool/TextureCubeShadowPool.h"
 #include "Viewport/Viewport.h"
 #include "GameFramework/World.h"
 #include "Engine/Runtime/Engine.h"
@@ -43,30 +44,6 @@ namespace
 		Camera->SetRelativeRotation(Basis.ToQuat());
 	}
 
-	void SetCameraLookDirection(UCameraComponent* Camera, const FVector& Direction)
-	{
-		if (!Camera)
-		{
-			return;
-		}
-
-		FVector Forward = Direction;
-		if (Forward.Dot(Forward) <= 1e-6f)
-		{
-			return;
-		}
-		Forward.Normalize();
-
-		FVector ReferenceUp(0.0f, 0.0f, 1.0f);
-		if (std::fabs(Forward.Dot(ReferenceUp)) > 0.999f)
-		{
-			ReferenceUp = FVector(0.0f, 1.0f, 0.0f);
-		}
-
-		FVector Right = ReferenceUp.Cross(Forward).Normalized();
-		FVector Up = Forward.Cross(Right).Normalized();
-		SetCameraOrientationFromBasis(Camera, Forward, Right, Up);
-	}
 }
 
 void FEditorViewportClient::Initialize(FWindowsWindow* InWindow)
@@ -90,6 +67,7 @@ void FEditorViewportClient::DestroyCamera()
 
 	CameraOverrideSnapshot = {};
 	bLightCameraOverrideActive = false;
+	LastPointLightPreviewFaceIndex = 0;
 	PreviewLightComponent = nullptr;
 }
 
@@ -298,6 +276,7 @@ void FEditorViewportClient::EnterLightCameraOverride(ULightComponent* LightCompo
 
 	PreviewLightComponent = LightComponent;
 	bLightCameraOverrideActive = true;
+	LastPointLightPreviewFaceIndex = RenderOptions.PointLightPreviewFaceIndex;
 	SyncLightCameraOverride();
 }
 
@@ -311,6 +290,7 @@ void FEditorViewportClient::ExitLightCameraOverride()
 
 	RestoreCameraOverrideSnapshot();
 	bLightCameraOverrideActive = false;
+	LastPointLightPreviewFaceIndex = 0;
 	PreviewLightComponent = nullptr;
 }
 
@@ -344,9 +324,9 @@ void FEditorViewportClient::SyncLightCameraOverride()
 	}
 	else if (PreviewLightComponent->IsA<UPointLightComponent>())
 	{
-		// TODO: Point light override should support choosing and previewing all 6 cubemap faces.
-		Camera->SetWorldLocation(LightLocation + LightForward * PreviewBackoff);
-		SetCameraLookDirection(Camera, FocusPoint - LightLocation);
+		const FPointShadowFaceBasis FaceBasis = FTextureCubeShadowPool::GetPreviewFaceBasis(RenderOptions.PointLightPreviewFaceIndex);
+		Camera->SetWorldLocation(LightLocation + FaceBasis.Forward * PreviewBackoff);
+		SetCameraOrientationFromBasis(Camera, FaceBasis.Forward, FaceBasis.Right, FaceBasis.Up);
 		OverrideState.bIsOrthogonal = false;
 		OverrideState.FOV = 90.0f * FMath::DegToRad;
 		RenderOptions.ViewportType = ELevelViewportType::Perspective;
@@ -397,6 +377,14 @@ void FEditorViewportClient::TickLightCameraOverride()
 	if (PreviewLightComponent != SelectedLight)
 	{
 		PreviewLightComponent = SelectedLight;
+		LastPointLightPreviewFaceIndex = RenderOptions.PointLightPreviewFaceIndex;
+		SyncLightCameraOverride();
+	}
+
+	if (PreviewLightComponent && PreviewLightComponent->IsA<UPointLightComponent>()
+		&& LastPointLightPreviewFaceIndex != RenderOptions.PointLightPreviewFaceIndex)
+	{
+		LastPointLightPreviewFaceIndex = RenderOptions.PointLightPreviewFaceIndex;
 		SyncLightCameraOverride();
 	}
 }

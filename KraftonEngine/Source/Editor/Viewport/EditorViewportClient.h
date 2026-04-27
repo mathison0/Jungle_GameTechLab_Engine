@@ -120,6 +120,7 @@ private:
 
 	bool bIsActive = false;
 	bool bLightCameraOverrideActive = false;
+	uint32 LastPointLightPreviewFaceIndex = 0;
 	ULightComponent* PreviewLightComponent = nullptr;
 	FCameraOverrideSnapshot CameraOverrideSnapshot;
 	// 뷰포트 슬롯의 스크린 좌표 (ImGui screen space = 윈도우 클라이언트 좌표)

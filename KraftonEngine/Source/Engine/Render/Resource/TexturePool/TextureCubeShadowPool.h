@@ -1,8 +1,16 @@
 #pragma once
 
 #include "Core/CoreTypes.h"
+#include "Math/Vector.h"
 #include <d3d11.h>
 #include <wrl/client.h>
+
+struct FPointShadowFaceBasis
+{
+	FVector Forward;
+	FVector Right;
+	FVector Up;
+};
 
 class FTextureCubeShadowPool final
 {
@@ -42,6 +50,8 @@ public:
 
 	ID3D11ShaderResourceView* GetSRV(uint32 TierIndex) const;
 	ID3D11DepthStencilView* GetFaceDSV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
+	static FPointShadowFaceBasis GetFaceBasis(uint32 FaceIndex);
+	static FPointShadowFaceBasis GetPreviewFaceBasis(uint32 FaceIndex);
 
 	uint32 GetResolution(FCubeShadowHandle Handle) const;
 	uint32 GetResolutionForTier(uint32 TierIndex) const;
