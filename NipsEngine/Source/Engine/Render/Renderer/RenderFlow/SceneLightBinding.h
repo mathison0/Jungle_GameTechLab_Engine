@@ -15,6 +15,9 @@ namespace SceneLightBinding
 	constexpr uint32 SpotShadowMapRegister = 12;
 	constexpr uint32 DirectionalShadowMapRegister = 13;
 
+    constexpr uint32 SpotShadowVSMMapRegister = 15;
+    constexpr uint32 DirectionalShadowVSMMapRegister = 16;
+
 	struct FVisibleLightConstants
 	{
 		uint32 TileCountX = 0;
@@ -35,6 +38,7 @@ namespace SceneLightBinding
 	{
 		FMatrix LightViewProj[MAX_CASCADE_COUNT];
 		FVector4 SplitDistances;
+		FVector4 CascadeRadius;
 		float ShadowBias = 0.001f;
 		uint32 bCascadeDebug = 0;
 		uint32 bHasShadowMap = 0;
@@ -152,10 +156,12 @@ namespace SceneLightBinding
 
 		uint32 SpotShadowCount = 0;
 		ID3D11ShaderResourceView* SpotShadowMapSRV = nullptr;
+        ID3D11ShaderResourceView* SpotShadowMapVSMSRV = nullptr;
 		if (Context->RenderTargets != nullptr)
 		{
 			SpotShadowCount = Context->RenderTargets->SpotShadowCount;
 			SpotShadowMapSRV = Context->RenderTargets->SpotShadowSRV;
+            SpotShadowMapVSMSRV = Context->RenderTargets->SpotShadowVSMSRV;
 		}
 
 		const TArray<FSpotShadowConstants>* SpotShadows = nullptr;
@@ -217,6 +223,9 @@ namespace SceneLightBinding
 
 		ID3D11ShaderResourceView* ShadowMapSRV = SpotShadowCount > 0 ? SpotShadowMapSRV : nullptr;
 		Context->DeviceContext->PSSetShaderResources(SpotShadowMapRegister, 1, &ShadowMapSRV);
+
+		ID3D11ShaderResourceView* ShadowMapVSMSRV = SpotShadowCount > 0 ? SpotShadowMapVSMSRV : nullptr;
+        Context->DeviceContext->PSSetShaderResources(SpotShadowVSMMapRegister, 1, &ShadowMapVSMSRV);
 	}
 
 	inline void BindDirectionalShadowResources(const FRenderPassContext* Context, TComPtr<ID3D11Buffer>& DirectionalShadowInfoCB)
@@ -238,9 +247,11 @@ namespace SceneLightBinding
 		}
 
 		ID3D11ShaderResourceView* ShadowMapSRV = nullptr;
+        ID3D11ShaderResourceView* ShadowMapVSMSRV = nullptr;
 		if (Context->RenderTargets != nullptr && DirShadow != nullptr)
 		{
 			ShadowMapSRV = Context->RenderTargets->DirectionalShadowSRV;
+            ShadowMapVSMSRV = Context->RenderTargets->DirectionalShadowVSMSRV;
 		}
 
 		static_assert(sizeof(FDirectionalShadowInfoConstants) == sizeof(FDirectionalShadowConstants),
@@ -255,6 +266,7 @@ namespace SceneLightBinding
 			}
 
 			InfoConstants.SplitDistances = DirShadow->SplitDistances;
+			InfoConstants.CascadeRadius = DirShadow->CascadeRadius;
 			InfoConstants.ShadowBias = DirShadow->ShadowBias;
 		    InfoConstants.bCascadeDebug = DirShadow->bCascadeDebug;
 		}
@@ -274,6 +286,8 @@ namespace SceneLightBinding
 
 		Context->DeviceContext->PSSetShaderResources(DirectionalShadowMapRegister, 1, &ShadowMapSRV);
 		Context->DeviceContext->VSSetShaderResources(DirectionalShadowMapRegister, 1, &ShadowMapSRV);
+
+		Context->DeviceContext->PSSetShaderResources(DirectionalShadowVSMMapRegister, 1, &ShadowMapVSMSRV);
 	}
 
 	inline void BindResources(const FRenderPassContext* Context, TComPtr<ID3D11Buffer>& VisibleLightConstantBuffer)
