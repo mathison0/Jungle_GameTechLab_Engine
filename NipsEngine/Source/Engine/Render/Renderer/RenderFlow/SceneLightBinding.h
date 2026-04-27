@@ -36,7 +36,8 @@ namespace SceneLightBinding
 		FMatrix LightViewProj[MAX_CASCADE_COUNT];
 		FVector4 SplitDistances;
 		float ShadowBias = 0.001f;
-		float Padding[3] = { 0.0f, 0.0f, 0.0f };
+		uint32 bCascadeDebug = 0;
+		float Padding[2] = { 0.0f, 0.0f };
 	};
 
 	inline bool EnsureVisibleLightConstantBuffer(ID3D11Device* Device, TComPtr<ID3D11Buffer>& VisibleLightConstantBuffer)
@@ -254,6 +255,7 @@ namespace SceneLightBinding
 
 			InfoConstants.SplitDistances = DirShadow->SplitDistances;
 			InfoConstants.ShadowBias = DirShadow->ShadowBias;
+			InfoConstants.bCascadeDebug = DirShadow->bCascadeDebug;
 		}
 
 		D3D11_MAPPED_SUBRESOURCE Mapped = {};

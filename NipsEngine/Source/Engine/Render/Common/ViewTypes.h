@@ -41,4 +41,5 @@ struct FShowFlags
     bool bEnableLOD = true;
     bool bDecals = true;
     bool bFog = true;
+    bool bCascadeDebug = false;
 };

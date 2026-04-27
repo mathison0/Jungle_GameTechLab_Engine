@@ -94,7 +94,8 @@ cbuffer DirectionalShadowInfo : register(b7)
     row_major float4x4 LightViewProj[MAX_CASCADE_COUNT];
     float4 SplitDistances;
     float ShadowBias;
-    float3 _DirectionalShadowInfoPad0;
+    uint bCascadeDebug;
+    float2 _DirectionalShadowInfoPad0;
 }
 
 StructuredBuffer<FSpotShadowConstants> SpotShadowData : register(t11);
@@ -103,8 +104,7 @@ Texture2DArray<float> DirectionalShadowMap : register(t13);
 
 static const int kCascadeShadowResoultion = 2048; // ShadowPass::CascadeShadowResolution과 일치
 
-// 뷰 공간 깊이로 Cascade Index를 결정한다.
-float ComputeDirectionalShadowFactor(float3 WorldPos)
+int GetCascadeIndex(float3 WorldPos)
 {
     float ViewDepth = mul(float4(WorldPos, 1.0f), View).x;
         
@@ -112,7 +112,13 @@ float ComputeDirectionalShadowFactor(float3 WorldPos)
     int CascadeIndex = (int)(step(SplitDistances.x, ViewDepth));
     CascadeIndex += step(SplitDistances.y, ViewDepth);
     CascadeIndex += step(SplitDistances.z, ViewDepth);
-    CascadeIndex = min(CascadeIndex, MAX_CASCADE_COUNT - 1);
+    return min(CascadeIndex, MAX_CASCADE_COUNT - 1);
+}
+
+// 뷰 공간 깊이로 Cascade Index를 결정한다.
+float ComputeDirectionalShadowFactor(float3 WorldPos)
+{
+    int CascadeIndex = GetCascadeIndex(WorldPos);
     
     float4 ShadowClip = mul(float4(WorldPos, 1.0f), LightViewProj[CascadeIndex]);
     
@@ -333,6 +339,18 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
                 ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
             }
             AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor * ShadowFactor, Result);
+
+            if (bCascadeDebug != 0u)
+            {
+                int CascadeIndex = GetCascadeIndex(WorldPos);
+                float3 DebugColors[4] = {
+                    float3(1.0, 0.2, 0.2), // Reddish
+                    float3(0.2, 1.0, 0.2), // Greenish
+                    float3(0.2, 0.2, 1.0), // Blueish
+                    float3(1.0, 1.0, 0.2)  // Yellowish
+                };
+                Result.Diffuse = lerp(Result.Diffuse, DebugColors[CascadeIndex], 0.5f);
+            }
         }
     }
 
@@ -383,6 +401,18 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
                 ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
             }
             AccumulateDirectLight(WorldPos, N, V, L, LightColor * ShadowFactor, Result);
+
+            if (bCascadeDebug != 0u)
+            {
+                int CascadeIndex = GetCascadeIndex(WorldPos);
+                float3 DebugColors[4] = {
+                    float3(1.0, 0.2, 0.2), // Reddish
+                    float3(0.2, 1.0, 0.2), // Greenish
+                    float3(0.2, 0.2, 1.0), // Blueish
+                    float3(1.0, 1.0, 0.2)  // Yellowish
+                };
+                Result.Diffuse = lerp(Result.Diffuse, DebugColors[CascadeIndex], 0.5f);
+            }
         }
     }
 
