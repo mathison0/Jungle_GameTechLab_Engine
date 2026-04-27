@@ -1154,7 +1154,7 @@ namespace
 			float Fraction = static_cast<float>(i) / CascadeCount; // 전체 Cascade 구간 중 경계선
 			float LogarithmSplit = std::pow(ShadowDistance / NearPlane, Fraction);
 			float UniformSplit = NearPlane + (ShadowDistance - NearPlane) * Fraction;
-			OutSplits[i] = Lambda * LogarithmSplit + (1.0f - Lambda) * UniformSplit;
+			OutSplits[i] = (0.9f + Lambda) * LogarithmSplit + (0.1f - Lambda) * UniformSplit;
 		}
 		OutSplits[CascadeCount] = ShadowDistance;
 	}
@@ -1170,7 +1170,7 @@ namespace
 	{
 		constexpr int32 CascadeCount = MAX_CASCADE_COUNT;
 		const float NearPlane = std::max(RenderBus.GetNear(), 1.0f);
-		const float Lambda = Light->GetCascadeSplitWeight();
+		const float Lambda = Light->GetCascadeSplitWeight() * 0.1f;
 		const float ShadowDistance = Light->GetShadowDistance();
 
 		float Splits[MAX_CASCADE_COUNT + 1]; // CascadeCount + 1
