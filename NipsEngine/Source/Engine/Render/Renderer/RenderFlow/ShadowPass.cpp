@@ -57,7 +57,10 @@ bool FShadowPass::Begin(const FRenderPassContext* Context)
         Context->RenderTargets->SpotShadowCount = 0;
     }
 
-    EnsureDirectionalShadowResources(Context->Device, MAX_CASCADE_COUNT);
+    if (!EnsureDirectionalShadowResources(Context->Device, MAX_CASCADE_COUNT))
+    {
+        return false;
+    }
 
     if (!EnsureSpotShadowResources(Context->Device))
     {
@@ -80,6 +83,12 @@ bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
     const FDirectionalShadowConstants* DirShadow = Context->RenderBus->GetDirectionalShadow();
     if (DirShadow != nullptr && DirectionalShaderBinding && !DirectionalShadowDSVs.empty())
     {
+        // 이전 프레임에 shader stage에서 directional shadow array를 읽고 있었을 수 있으니
+        // depth target으로 다시 쓰기 전에 SRV 바인딩을 끊어준다.
+        ID3D11ShaderResourceView* NullDirectionalShadowSRV = nullptr;
+        Context->DeviceContext->PSSetShaderResources(13, 1, &NullDirectionalShadowSRV);
+        Context->DeviceContext->VSSetShaderResources(13, 1, &NullDirectionalShadowSRV);
+
         D3D11_VIEWPORT DirShadowViewport = {};
         DirShadowViewport.Width = static_cast<float>(DirectionalShadowResolution);
         DirShadowViewport.Height = static_cast<float>(DirectionalShadowResolution);

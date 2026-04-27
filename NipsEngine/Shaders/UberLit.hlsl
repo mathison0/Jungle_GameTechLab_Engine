@@ -334,7 +334,13 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
 
         if (Light.Type == LIGHT_TYPE_DIRECTIONAL)
         {
-            AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor, Result);
+            float ShadowFactor = 1.0f;
+            if (Light.bCastShadows != 0u)
+            {
+                ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
+            }
+
+            AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor * ShadowFactor, Result);
         }
     }
 
@@ -379,7 +385,13 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
         if (Light.Type == LIGHT_TYPE_DIRECTIONAL)
         {
             const float3 L = normalize(Light.Direction);
-            AccumulateDirectLight(WorldPos, N, V, L, LightColor, Result);
+            float ShadowFactor = 1.0f;
+            if (Light.bCastShadows != 0u)
+            {
+                ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
+            }
+
+            AccumulateDirectLight(WorldPos, N, V, L, LightColor * ShadowFactor, Result);
         }
     }
 
