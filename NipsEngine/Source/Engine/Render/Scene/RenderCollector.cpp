@@ -923,9 +923,6 @@ void FRenderCollector::CollectWorld(UWorld* World, const FShowFlags& ShowFlags, 
 
 namespace
 {
-	constexpr float SpotShadowNearPlane = 0.1f;
-	constexpr float SpotShadowBaseResolution = 1024.0f;
-
 	FVector MakeLightColorVector(const ULightComponentBase* LightComponent)
 	{
 		if (LightComponent == nullptr)
