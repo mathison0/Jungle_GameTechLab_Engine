@@ -611,7 +611,7 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 		RenderOptions.bOverrideCameraWithSelectedLight = bOverrideCamera;
 	}
 
-	if (LightComponent->IsA<UPointLightComponent>())
+	if (LightComponent->GetClass() == UPointLightComponent::StaticClass())
 	{
 		static constexpr const char* FaceLabels[] = { "+X", "-X", "+Y", "-Y", "+Z", "-Z" };
 		RenderOptions.PointLightPreviewFaceIndex = RenderOptions.PointLightPreviewFaceIndex < static_cast<uint32>(std::size(FaceLabels))
