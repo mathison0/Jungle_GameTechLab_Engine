@@ -97,7 +97,8 @@ cbuffer DirectionalShadowInfo : register(b7)
     float4 SplitDistances;
     float ShadowBias;
     uint bCascadeDebug;
-    float2 _DirectionalShadowInfoPad0;
+    uint bHasShadowMap;
+    float _DirectionalShadowInfoPad0;
 }
 
 StructuredBuffer<FSpotShadowConstants> SpotShadowData : register(t11);
@@ -116,16 +117,25 @@ float4 GetDirectionalCascadeAtlasRect(int CascadeIndex)
     return float4(0.5f, 0.5f, 0.5f, 0.5f);
 }
 
-// 뷰 공간 깊이로 Cascade Index를 결정한다.
-float ComputeDirectionalShadowFactor(float3 WorldPos)
+int GetCascadeIndex(float3 WorldPos)
 {
     float ViewDepth = mul(float4(WorldPos, 1.0f), View).x;
-        
-    // remove branching 
+
     int CascadeIndex = (int)(step(SplitDistances.x, ViewDepth));
     CascadeIndex += step(SplitDistances.y, ViewDepth);
     CascadeIndex += step(SplitDistances.z, ViewDepth);
-    CascadeIndex = min(CascadeIndex, MAX_CASCADE_COUNT - 1);
+    return min(CascadeIndex, MAX_CASCADE_COUNT - 1);
+}
+
+// 뷰 공간 깊이로 Cascade Index를 결정한다.
+float ComputeDirectionalShadowFactor(float3 WorldPos)
+{
+    if (bHasShadowMap == 0u)
+    {
+        return 1.0f;
+    }
+
+    int CascadeIndex = GetCascadeIndex(WorldPos);
     
     float4 ShadowClip = mul(float4(WorldPos, 1.0f), LightViewProj[CascadeIndex]);
     
@@ -353,12 +363,6 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
                 ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
             }
 
-            AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor * ShadowFactor, Result);
-            
-            if (Light.bCastShadows != 0u)
-            {
-                ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
-            }
             AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor * ShadowFactor, Result);
 
             if (bCascadeDebug != 0u)
