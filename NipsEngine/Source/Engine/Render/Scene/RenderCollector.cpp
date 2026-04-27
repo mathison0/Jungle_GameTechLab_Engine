@@ -1,6 +1,7 @@
 ﻿#include "RenderCollector.h"
 
 #include "Render/LineBatcher.h"
+#include "Render/Renderer/RenderFlow/ShadowAtlasManager.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
 #include "Object/ActorIterator.h"
@@ -50,8 +51,8 @@ namespace
 	// ─────────────────── Billboard, SubUV ───────────────────
     FMatrix MakeViewBillboardMatrix(const UPrimitiveComponent* Primitive, const FRenderBus& RenderBus);
     FMatrix MakeViewSubUVSelectionMatrix(const USubUVComponent* SubUVComp, const FRenderBus& RenderBus);
-
-	// ─────────────────── AABB, BVH ───────────────────
+	
+    // ─────────────────── AABB, BVH ───────────────────
 	FColor MakeBVHInternalNodeColor(int32 PathIndexFromLeaf, int32 PathLength);
     bool UsesCameraDependentRenderBounds(const UPrimitiveComponent* PrimitiveComponent);
     FAABB BuildQuadAABB(const FMatrix& WorldMatrix);
@@ -79,6 +80,9 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
 	int32 Next2DShadowSlice = 0;
 	int32 NextSpotShadowIndex = 0;
 
+    // Spot atlas allocation 상태는 프레임마다 다시 시작함.
+    FShadowAtlasManager::BeginSpotFrame();
+    
 	for (const FLightSlot& Slot : LightSlots)
 	{
         if (!Slot.bAlive || !Slot.LightData)
@@ -117,8 +121,8 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
 				{
 					FDirectionalShadowConstants ShadowConstants;
 					ShadowConstants.ShadowBias = LightComponent->GetShadowBias();
-					ShadowConstants.bCascadeDebug = RenderBus.GetShowFlags().bCascadeDebug ? 1 : 0;
-					BuildDirectionalShadowViewProjection(DirectionalLight, RenderBus, RenderLight.Direction, ShadowConstants);
+				    ShadowConstants.bCascadeDebug = RenderBus.GetShowFlags().bCascadeDebug ? 1 : 0;
+				    BuildDirectionalShadowViewProjection(DirectionalLight, RenderBus, RenderLight.Direction, ShadowConstants);
 
 					RenderBus.SetDirectionalShadow(ShadowConstants);
 					RenderLight.bCastShadows = 1; // uint32
@@ -215,23 +219,40 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
 			RenderLight.SpotInnerCos = std::cos(MathUtil::DegreesToRadians(InnerAngle));
 			RenderLight.SpotOuterCos = std::cos(MathUtil::DegreesToRadians(OuterAngle));
 
-			if (LightComponent->IsCastShadows())
-			{
-				const int32 ShadowMapIndex = NextSpotShadowIndex++;
-				const float NearPlane = SpotShadowNearPlane;
-				const float FarPlane = MakeSpotShadowFarPlane(SpotLight);
-				const float ShadowBias = LightComponent->GetShadowBias();
+		    if (LightComponent->IsCastShadows())
+		    {
+		        // 1) 라이트가 원하는 shadow 해상도 계산
+		        const float RequestedResolution = MakeSpotShadowResolution(LightComponent);
 
-				RenderLight.bCastShadows = 1;
-				RenderLight.ShadowMapIndex = ShadowMapIndex;
-				RenderLight.ShadowBias = ShadowBias;
+		        // 2) allocator가 산정한 PoT 타일 크기로 정규화
+		        const uint32 DesiredTileSize = FShadowAtlasManager::SnapSpotTileSize(RequestedResolution);
 
-				FSpotShadowConstants ShadowData{};
-				ShadowData.LightViewProj = MakeSpotShadowViewProjection(SpotLight, LightDirection, NearPlane, FarPlane);
-				ShadowData.ShadowResolution = MakeSpotShadowResolution(LightComponent);
-				ShadowData.ShadowBias = ShadowBias;
-				RenderBus.AddCastShadowSpotLight(ShadowData);
-			}
+		        // 3) atlas 빈 영역에 할당
+		        FSpotAtlasSlotDesc SpotSlot = {};
+		        if (FShadowAtlasManager::RequestSpotSlot(DesiredTileSize, SpotSlot))
+		        {
+		            // ShadowMapIndex는 "SpotShadowData 배열에서 몇 번째 shadow metadata인가"를 뜻합니다.
+		            // atlas 내부 위치는 SpotSlot.AtlasRect가 담당하므로 둘은 역할이 다릅니다.
+		            const int32 ShadowMapIndex = NextSpotShadowIndex++;
+		            const float NearPlane = SpotShadowNearPlane;
+		            const float FarPlane = MakeSpotShadowFarPlane(SpotLight);
+		            const float ShadowBias = LightComponent->GetShadowBias();
+
+		            RenderLight.bCastShadows = 1;
+		            RenderLight.ShadowMapIndex = ShadowMapIndex;
+		            RenderLight.ShadowBias = ShadowBias;
+
+		            FSpotShadowConstants ShadowData{};
+		            ShadowData.LightViewProj = MakeSpotShadowViewProjection(SpotLight, LightDirection, NearPlane, FarPlane);
+		            ShadowData.AtlasRect = SpotSlot.AtlasRect;
+
+		            // 실제 할당된 타일 크기를 넘겨줌
+		            ShadowData.ShadowResolution = static_cast<float>(SpotSlot.Width);
+		            ShadowData.ShadowBias = ShadowBias;
+
+		            RenderBus.AddCastShadowSpotLight(ShadowData);
+		        }
+		    }
 
 			RenderBus.AddLight(RenderLight);
 			break;
@@ -993,7 +1014,7 @@ namespace
 	}
 
 	/* PSSM(Parallel - Split Shadow Map) 공식에 따라 View Frustum을 평행 분할합니다.
-	 * Lambda[0, 1] → Lambda가 0일 경우 선형 분할의 비율이 10%, 1.0일 경우 0%가 되어 완전 지수 분할이 됩니다. */
+	 * Lambda[0, 1] → Linear : 0.0f, Logarithmic : 1.0f */
 	void CalculatePSSMSplits(int32 CascadeCount, float Lambda, float NearPlane, float ShadowDistance, float* OutSplits)
 	{
 		OutSplits[0] = NearPlane;
@@ -1002,7 +1023,7 @@ namespace
 			float Fraction = static_cast<float>(i) / CascadeCount; // 전체 Cascade 구간 중 경계선
 			float LogarithmSplit = std::pow(ShadowDistance / NearPlane, Fraction);
 			float UniformSplit = NearPlane + (ShadowDistance - NearPlane) * Fraction;
-			OutSplits[i] = (0.9f + Lambda) * LogarithmSplit + (0.1f - Lambda) * UniformSplit;
+			OutSplits[i] = Lambda * LogarithmSplit + (1.0f - Lambda) * UniformSplit;
 		}
 		OutSplits[CascadeCount] = ShadowDistance;
 	}
@@ -1022,7 +1043,7 @@ namespace
 		const float ShadowDistance = Light->GetShadowDistance();
 
 		float Splits[MAX_CASCADE_COUNT + 1]; // CascadeCount + 1
-		CalculatePSSMSplits(CascadeCount, Lambda * 0.1f, NearPlane, ShadowDistance, Splits);
+		CalculatePSSMSplits(CascadeCount, Lambda, NearPlane, ShadowDistance, Splits);
 
 		const FMatrix InverseViewProjection = (RenderBus.GetView() * RenderBus.GetProj()).GetInverse();
 		static constexpr float NdcX[4] = { -1.0f, 1.0f, 1.0f, -1.0f };

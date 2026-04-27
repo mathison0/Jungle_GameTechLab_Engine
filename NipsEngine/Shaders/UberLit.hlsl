@@ -76,6 +76,7 @@ StructuredBuffer<uint> TileVisibleLightIndices : register(t10);
 struct FSpotShadowConstants
 {
     row_major float4x4 LightViewProj;
+    float4 AtlasRect; // xy = offset, zw = scale
     float ShadowResolution;
     float ShadowBias;
     float2 Padding;
@@ -87,6 +88,7 @@ cbuffer SpotShadowInfo : register(b6)
     float3 _SpotShadowInfoPad0;
 }
 
+
 #define MAX_CASCADE_COUNT 4
 
 cbuffer DirectionalShadowInfo : register(b7)
@@ -95,20 +97,30 @@ cbuffer DirectionalShadowInfo : register(b7)
     float4 SplitDistances;
     float ShadowBias;
     uint bCascadeDebug;
-    float2 _DirectionalShadowInfoPad0;
+    uint bHasShadowMap;
+    float _DirectionalShadowInfoPad0;
 }
 
 StructuredBuffer<FSpotShadowConstants> SpotShadowData : register(t11);
-Texture2DArray<float> SpotShadowMap : register(t12);
-Texture2DArray<float> DirectionalShadowMap : register(t13);
+Texture2D<float> SpotShadowMap : register(t12);
+
+Texture2D<float> DirectionalShadowMap : register(t13);
 
 static const int kCascadeShadowResoultion = 2048; // ShadowPass::CascadeShadowResolution과 일치
+static const int kDirectionalAtlasResolution = 4096;
+
+float4 GetDirectionalCascadeAtlasRect(int CascadeIndex)
+{
+    if (CascadeIndex == 0) return float4(0.0f, 0.0f, 0.5f, 0.5f);
+    if (CascadeIndex == 1) return float4(0.5f, 0.0f, 0.5f, 0.5f);
+    if (CascadeIndex == 2) return float4(0.0f, 0.5f, 0.5f, 0.5f);
+    return float4(0.5f, 0.5f, 0.5f, 0.5f);
+}
 
 int GetCascadeIndex(float3 WorldPos)
 {
     float ViewDepth = mul(float4(WorldPos, 1.0f), View).x;
-        
-    // remove branching 
+
     int CascadeIndex = (int)(step(SplitDistances.x, ViewDepth));
     CascadeIndex += step(SplitDistances.y, ViewDepth);
     CascadeIndex += step(SplitDistances.z, ViewDepth);
@@ -118,6 +130,11 @@ int GetCascadeIndex(float3 WorldPos)
 // 뷰 공간 깊이로 Cascade Index를 결정한다.
 float ComputeDirectionalShadowFactor(float3 WorldPos)
 {
+    if (bHasShadowMap == 0u)
+    {
+        return 1.0f;
+    }
+
     int CascadeIndex = GetCascadeIndex(WorldPos);
     
     float4 ShadowClip = mul(float4(WorldPos, 1.0f), LightViewProj[CascadeIndex]);
@@ -126,10 +143,13 @@ float ComputeDirectionalShadowFactor(float3 WorldPos)
     float3 ShadowNDC = ShadowClip.xyz / W;
     float InBounds = step(abs(ShadowNDC.x), 1.0f) * step(abs(ShadowNDC.y), 1.0f) * step(0.0f, ShadowNDC.z) * step(ShadowNDC.z, 1.0f) * step(1.0e-5f, ShadowClip.w);
         
-    float2 ShadowUV = float2(ShadowNDC.x * 0.5f + 0.5f, ShadowNDC.y * -0.5f + 0.5f);
-    int2 MaxTexel = int2(kCascadeShadowResoultion - 1, kCascadeShadowResoultion - 1);
-    int2 ShadowTexel = clamp((int2)floor(ShadowUV * (float)kCascadeShadowResoultion), int2(0, 0), MaxTexel);
-    float StoredDepth = DirectionalShadowMap.Load(int4(ShadowTexel.xy, CascadeIndex, 0));
+    float2 LocalUV = float2(ShadowNDC.x * 0.5f + 0.5f, ShadowNDC.y * -0.5f + 0.5f);
+    float4 AtlasRect = GetDirectionalCascadeAtlasRect(CascadeIndex);
+    float2 AtlasUV = AtlasRect.xy + LocalUV * AtlasRect.zw;
+    
+    int2 AtlasSize = int2(kDirectionalAtlasResolution, kDirectionalAtlasResolution);
+    int2 ShadowTexel = clamp((int2)floor(AtlasUV * (float2)AtlasSize), int2(0, 0), AtlasSize - 1);
+    float StoredDepth = DirectionalShadowMap.Load(int3(ShadowTexel, 0));
     
     float ShadowFactor = step(ShadowNDC.z - ShadowBias, StoredDepth); // 저장된 깊이와 비교해 빛을 받는지 여부 도출
     
@@ -215,7 +235,6 @@ float ComputeSpotShadowFactor(float3 WorldPos, uint bCastShadows, int ShadowMapI
     }
 
     const FSpotShadowConstants Shadow = SpotShadowData[ShadowSlice];
-    const int Resolution = max((int)Shadow.ShadowResolution, 1);
 
     const float4 ShadowClip = mul(float4(WorldPos, 1.0f), Shadow.LightViewProj);
     if (ShadowClip.w <= 1.0e-5f)
@@ -231,14 +250,19 @@ float ComputeSpotShadowFactor(float3 WorldPos, uint bCastShadows, int ShadowMapI
         return 1.0f;
     }
 
-    const float2 ShadowUV = float2(
+    const float2 LocalUV = float2(
         ShadowNDC.x * 0.5f + 0.5f,
         0.5f - ShadowNDC.y * 0.5f);
 
+    const float2 AtlasUV = Shadow.AtlasRect.xy + LocalUV * Shadow.AtlasRect.zw;
+    const int2 AtlasSize = int2(4096, 4096);
+    const int2 ShadowTexel = clamp((int2)floor(AtlasUV * (float2)AtlasSize), int2(0, 0), AtlasSize - 1);
+    
     const float CurrentDepth = ShadowNDC.z;
     const float Bias = max(LightShadowBias, Shadow.ShadowBias);
-    
-    return SampleShadowPoissonDisk(ShadowUV, CurrentDepth - Bias, SpotShadowMap, ShadowSlice, Resolution);
+    const float StoredDepth = SpotShadowMap.Load(int3(ShadowTexel, 0));
+
+    return (CurrentDepth - Bias <= StoredDepth) ? 1.0f : 0.0f;
 }
 
 void AccumulateVisiblePointLights(float3 WorldPos, float3 N, float3 V, float2 ScreenPos, inout FLightingResult Result)
@@ -338,6 +362,7 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
             {
                 ShadowFactor = ComputeDirectionalShadowFactor(WorldPos);
             }
+
             AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor * ShadowFactor, Result);
 
             if (bCascadeDebug != 0u)
@@ -395,6 +420,7 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
         if (Light.Type == LIGHT_TYPE_DIRECTIONAL)
         {
             const float3 L = normalize(Light.Direction);
+            
             float ShadowFactor = 1.0f;
             if (Light.bCastShadows != 0u)
             {
