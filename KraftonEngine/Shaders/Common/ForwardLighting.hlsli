@@ -10,6 +10,15 @@ float GetShadowDepthBias(FShadowInfo info)
     return max(info.ShadowParams.x, 0.00001f);
 }
 
+float GetShadowCompareBias(FShadowInfo info)
+{
+    if (info.bIsPSM)
+    {
+        return 0.0f;
+    }
+    return GetShadowDepthBias(info);
+}
+
 float GetShadowSlopeBias(FShadowInfo info)
 {
     return info.ShadowParams.y;       
@@ -61,7 +70,7 @@ float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 
     float3 ndc = shadowPos.xyz / shadowPos.w;
     float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-    float depth = ndc.z + GetShadowDepthBias(info);
+    float depth = ndc.z + GetShadowCompareBias(info);
 
     if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
     {
@@ -103,7 +112,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos)
 
     float3 ndc = lightClip.xyz / lightClip.w;
     float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-    float depth = (1.0f - ndc.z) + GetShadowDepthBias(info);
+    float depth = (1.0f - ndc.z) + GetShadowCompareBias(info);
 
     if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
     {

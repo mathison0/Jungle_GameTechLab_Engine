@@ -567,7 +567,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 				Task.LightVP = FinalLightVP;
 				Task.bIsPSM = (bIsPSM_Flag != 0);
 				Task.CameraVP = Frame.View * Frame.Proj;
-				Task.bCullWithShadowFrustum = true;
+				Task.bCullWithShadowFrustum = !Task.bIsPSM;
 				Task.ShadowDepthBias = DirectionalLight->GetShadowBias();
 				Task.ShadowSlopeBias = DirectionalLight->GetShadowSlopeBias();
 
