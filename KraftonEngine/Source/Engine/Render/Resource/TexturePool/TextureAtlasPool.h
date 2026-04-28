@@ -35,7 +35,7 @@ public:
 	TexturePoolHandleSet* GetTextureHandle(TexturePoolHandleRequest HandleRequest) override;
 	void ReleaseHandle(TexturePoolHandle& InHandle) override;
 
-	FAtlasUV GetAtlasUV(const TexturePoolHandle& InHandle) { return UVManagers[InHandle.ArrayIndex].get()->GetAtlasUV(InHandle.InternalIndex); }
+	FAtlasUV GetAtlasUV(const TexturePoolHandle& InHandle) { return UVManager ? UVManager->GetAtlasUV(InHandle) : FAtlasUV{}; }
 	TArray<FAtlasUV> GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet);
 
 	ID3D11ShaderResourceView* GetSRV() { return SRV.Get(); }
@@ -82,7 +82,7 @@ private:
 	bool IsVSMMode() const { return CurrentFilterMode == EShadowFilterMode::VSM; }
 
 private:
-	TArray<std::unique_ptr<FUVManagerBase>> UVManagers;
+	std::unique_ptr<FUVManagerBase> UVManager;
 
 	EShadowFilterMode CurrentFilterMode = EShadowFilterMode::PCF;
 	TComPtr<ID3D11Texture2D> VSMDepthTexture;
