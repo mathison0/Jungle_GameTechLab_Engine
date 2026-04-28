@@ -26,6 +26,8 @@
 
 #include "Materials/MaterialManager.h"
 
+#include "EditorShadowPropertyWidget.h"
+
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
 static FString RemoveExtension(const FString& Path)
@@ -606,6 +608,11 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 	{
 		RenderOptions.bOverrideCameraWithSelectedLight = bOverrideCamera;
 	}
+
+	FEditorShadowPropertyWidget::Get().ShowShadowProperty(LightComponent);
+		
+
+	
 
 	ImGui::BeginDisabled(true);
 	ImGui::Text("Shadow Filter: %s",
