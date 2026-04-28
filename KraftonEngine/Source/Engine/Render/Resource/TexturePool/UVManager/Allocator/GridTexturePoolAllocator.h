@@ -18,6 +18,8 @@ public:
 	virtual uint64 GetTotalFreeArea() const override;
 	virtual uint64 GetLargestFreeRectArea() const override;
 	virtual float GetFragmentationRatio() const override;
+	virtual void GetFreeRects(TArray<FAtlasDebugRect>& OutRects) const override;
+	virtual void GetAllocatedRects(TArray<FAtlasDebugRect>& OutRects) const override;
 	virtual void SetSize(uint32 InNewTextureSize) override;
 	virtual void SetLayerCount(uint32 InNewLayerCount) override;
 

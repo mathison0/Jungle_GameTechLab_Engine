@@ -128,6 +128,22 @@ float FTexturePoolBase::GetAllocatorFragmentationRatio() const
 	return Allocator ? Allocator->GetFragmentationRatio() : 1.0f;
 }
 
+void FTexturePoolBase::GetAllocatorFreeRects(TArray<FAtlasDebugRect>& OutRects) const
+{
+	if (Allocator)
+	{
+		Allocator->GetFreeRects(OutRects);
+	}
+}
+
+void FTexturePoolBase::GetAllocatorAllocatedRects(TArray<FAtlasDebugRect>& OutRects) const
+{
+	if (Allocator)
+	{
+		Allocator->GetAllocatedRects(OutRects);
+	}
+}
+
 void FTexturePoolBase::ReleaseHandleSet(TexturePoolHandleSet* InHandleSet)
 {
 	if (!Allocator || !InHandleSet)

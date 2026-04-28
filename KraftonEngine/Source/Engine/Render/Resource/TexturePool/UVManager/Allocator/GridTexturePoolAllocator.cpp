@@ -147,6 +147,41 @@ float FGridTexturePoolAllocator::GetFragmentationRatio() const
 	return 1.0f - (static_cast<float>(GetLargestFreeRectArea()) / static_cast<float>(TotalArea));
 }
 
+void FGridTexturePoolAllocator::GetFreeRects(TArray<FAtlasDebugRect>& OutRects) const
+{
+	OutRects.reserve(OutRects.size() + FreeRects.size());
+	for (const FAtlasRect& Rect : FreeRects)
+	{
+		FAtlasDebugRect DebugRect = {};
+		DebugRect.X = Rect.X * MinBlockSize;
+		DebugRect.Y = Rect.Y * MinBlockSize;
+		DebugRect.W = Rect.W * MinBlockSize;
+		DebugRect.H = Rect.H * MinBlockSize;
+		DebugRect.ArrayIndex = Rect.ArrayIndex;
+		DebugRect.bAllocated = false;
+		OutRects.push_back(DebugRect);
+	}
+}
+
+void FGridTexturePoolAllocator::GetAllocatedRects(TArray<FAtlasDebugRect>& OutRects) const
+{
+	OutRects.reserve(OutRects.size() + AllocatedRects.size());
+	for (const auto& Pair : AllocatedRects)
+	{
+		const FAtlasRect& Rect = Pair.second;
+
+		FAtlasDebugRect DebugRect = {};
+		DebugRect.X = Rect.X * MinBlockSize;
+		DebugRect.Y = Rect.Y * MinBlockSize;
+		DebugRect.W = Rect.W * MinBlockSize;
+		DebugRect.H = Rect.H * MinBlockSize;
+		DebugRect.ArrayIndex = Rect.ArrayIndex;
+		DebugRect.HandleIndex = Pair.first;
+		DebugRect.bAllocated = true;
+		OutRects.push_back(DebugRect);
+	}
+}
+
 void FGridTexturePoolAllocator::SetSize(uint32 InNewTextureSize)
 {
 	FTexturePoolAllocatorBase::SetSize(InNewTextureSize);

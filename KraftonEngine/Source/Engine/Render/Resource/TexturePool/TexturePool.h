@@ -3,11 +3,10 @@
 #include "Core/CoreTypes.h"
 #include "Core/Singleton.h"
 #include "TexturePoolTypes.h"
+#include "UVManager/Allocator/TexturePoolAllocatorBase.h"
 #include "d3d11.h"
 #include <memory>
 #include <wrl/client.h>
-
-class FTexturePoolAllocatorBase;
 
 class FTexturePoolBase
 {
@@ -50,6 +49,8 @@ public:
 	uint64 GetAllocatorTotalFreeArea() const;
 	uint64 GetAllocatorLargestFreeRectArea() const;
 	float GetAllocatorFragmentationRatio() const;
+	void GetAllocatorFreeRects(TArray<FAtlasDebugRect>& OutRects) const;
+	void GetAllocatorAllocatedRects(TArray<FAtlasDebugRect>& OutRects) const;
 	virtual void ReleaseHandleSet(TexturePoolHandleSet* InHandleSet);
 	virtual ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandle& InHandle) = 0;
 	virtual ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandleSet* InHandleSet) = 0;

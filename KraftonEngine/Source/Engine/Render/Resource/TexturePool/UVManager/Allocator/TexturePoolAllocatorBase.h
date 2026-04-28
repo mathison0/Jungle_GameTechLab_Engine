@@ -14,6 +14,17 @@ struct FAtlasUV
 	float v2 = 0.0f;
 };
 
+struct FAtlasDebugRect
+{
+	uint32 X = 0;
+	uint32 Y = 0;
+	uint32 W = 0;
+	uint32 H = 0;
+	uint32 ArrayIndex = 0;
+	uint32 HandleIndex = static_cast<uint32>(-1);
+	bool bAllocated = false;
+};
+
 class FTexturePoolAllocatorBase
 {
 public:
@@ -32,6 +43,8 @@ public:
 	virtual uint64 GetTotalFreeArea() const { return 0; }
 	virtual uint64 GetLargestFreeRectArea() const { return 0; }
 	virtual float GetFragmentationRatio() const { return 1.0f; }
+	virtual void GetFreeRects(TArray<FAtlasDebugRect>& OutRects) const {}
+	virtual void GetAllocatedRects(TArray<FAtlasDebugRect>& OutRects) const {}
 
 	virtual void SetSize(uint32 InNewTextureSize);
 	virtual void SetLayerCount(uint32 InNewLayerCount);
