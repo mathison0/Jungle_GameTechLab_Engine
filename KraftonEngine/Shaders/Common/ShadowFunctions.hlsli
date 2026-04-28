@@ -258,6 +258,132 @@ float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
     return result;
 }
 
+float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+{
+    float3 lightPos = info.SampleData.xyz;
+    float nearZ = GetShadowNearZ(info);
+    float farZ = max(info.SampleData.w, nearZ + 0.0001f);
+
+    float3 toPixel = worldPos - lightPos;
+    float3 absToPixel = abs(toPixel);
+
+    // Cube shadow에서는 perspective depth 기준으로 max axis 거리를 사용
+    float faceDepth = max(max(absToPixel.x, absToPixel.y), absToPixel.z);
+
+    if (faceDepth < nearZ || faceDepth > farZ)
+    {
+        return 1.0f;
+    }
+
+    // 기존 SampleCubeShadow와 같은 depth convention 유지
+    float receiverDepth =
+        (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ))
+        + GetShadowDepthBias(info);
+
+    float3 dir = normalize(toPixel);
+
+    uint cubeTier = min(info.CubeTierIndex, 3u);
+
+    uint cubeWidth = 1;
+    uint cubeHeight = 1;
+    uint cubeElements = 1;
+    uint cubeMips = 1;
+
+    if (cubeTier == 0u)
+    {
+        gShadowCubeArrayTier0.GetDimensions(0, cubeWidth, cubeHeight, cubeElements, cubeMips);
+    }
+    else if (cubeTier == 1u)
+    {
+        gShadowCubeArrayTier1.GetDimensions(0, cubeWidth, cubeHeight, cubeElements, cubeMips);
+    }
+    else if (cubeTier == 2u)
+    {
+        gShadowCubeArrayTier2.GetDimensions(0, cubeWidth, cubeHeight, cubeElements, cubeMips);
+    }
+    else
+    {
+        gShadowCubeArrayTier3.GetDimensions(0, cubeWidth, cubeHeight, cubeElements, cubeMips);
+    }
+
+    // direction vector 주변으로 offset을 줄 기준 축 생성
+    float3 up = abs(dir.y) < 0.999f ? float3(0.0f, 1.0f, 0.0f) : float3(1.0f, 0.0f, 0.0f);
+    float3 tangent = normalize(cross(up, dir));
+    float3 bitangent = cross(dir, tangent);
+
+    // 대략 cube texel 하나 정도의 angular offset
+    float texelAngle = 1.5f / max((float) cubeWidth, 1.0f);
+
+    float shadow = 0.0f;
+    float weightSum = 0.0f;
+
+    // 3x3 weighted PCF
+    // weight:
+    // 1 2 1
+    // 2 4 2
+    // 1 2 1
+    [unroll]
+    for (int y = -1; y <= 1; ++y)
+    {
+        [unroll]
+        for (int x = -1; x <= 1; ++x)
+        {
+            float weight = 1.0f;
+
+            if (x == 0 && y == 0)
+            {
+                weight = 4.0f;
+            }
+            else if (x == 0 || y == 0)
+            {
+                weight = 2.0f;
+            }
+
+            float3 sampleDir = normalize(
+                dir
+                + tangent * ((float) x * texelAngle)
+                + bitangent * ((float) y * texelAngle)
+            );
+
+            float sampleShadow = 1.0f;
+
+            if (cubeTier == 0u)
+            {
+                sampleShadow = gShadowCubeArrayTier0.SampleCmpLevelZero(
+                    ShadowCmpSampler,
+                    float4(sampleDir, info.ArrayIndex),
+                    receiverDepth);
+            }
+            else if (cubeTier == 1u)
+            {
+                sampleShadow = gShadowCubeArrayTier1.SampleCmpLevelZero(
+                    ShadowCmpSampler,
+                    float4(sampleDir, info.ArrayIndex),
+                    receiverDepth);
+            }
+            else if (cubeTier == 2u)
+            {
+                sampleShadow = gShadowCubeArrayTier2.SampleCmpLevelZero(
+                    ShadowCmpSampler,
+                    float4(sampleDir, info.ArrayIndex),
+                    receiverDepth);
+            }
+            else
+            {
+                sampleShadow = gShadowCubeArrayTier3.SampleCmpLevelZero(
+                    ShadowCmpSampler,
+                    float4(sampleDir, info.ArrayIndex),
+                    receiverDepth);
+            }
+
+            shadow += sampleShadow * weight;
+            weightSum += weight;
+        }
+    }
+
+    return shadow / weightSum;
+}
+
 // =========================================================================
 // VSM(Variance Shadow Map) Functions
 // =========================================================================
@@ -313,6 +439,80 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
     return result;
 }
 
+float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+{
+    float result = 1.0f;
+
+    float3 lightPos = info.SampleData.xyz;
+    float nearZ = GetShadowNearZ(info);
+    float farZ = max(info.SampleData.w, nearZ + 0.0001f);
+
+    float3 toPixel = worldPos - lightPos;
+    float3 absToPixel = abs(toPixel);
+
+    float faceDepth = max(max(absToPixel.x, absToPixel.y), absToPixel.z);
+
+    if (faceDepth < nearZ || faceDepth > farZ)
+    {
+        return 1.0f;
+    }
+
+    float3 dir = normalize(toPixel);
+
+    // 기존 SampleCubeShadow의 comparison depth와 같은 base depth
+    float hardwareDepth =
+        nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ);
+
+    // ShadowDepth.hlsl의 VSM 저장 방식:
+    // depth = 1.0f - input.Position.z
+    float receiverDepth = saturate((1.0f - hardwareDepth) + GetShadowDepthBias(info));
+
+    uint cubeTier = min(info.CubeTierIndex, 3u);
+
+    float2 moments = float2(1.0f, 1.0f);
+
+    if (cubeTier == 0u)
+    {
+        moments = gShadowCubeArrayTier0.SampleLevel(
+            LinearClampSampler,
+            float4(dir, info.ArrayIndex),
+            0.0f).xy;
+    }
+    else if (cubeTier == 1u)
+    {
+        moments = gShadowCubeArrayTier1.SampleLevel(
+            LinearClampSampler,
+            float4(dir, info.ArrayIndex),
+            0.0f).xy;
+    }
+    else if (cubeTier == 2u)
+    {
+        moments = gShadowCubeArrayTier2.SampleLevel(
+            LinearClampSampler,
+            float4(dir, info.ArrayIndex),
+            0.0f).xy;
+    }
+    else
+    {
+        moments = gShadowCubeArrayTier3.SampleLevel(
+            LinearClampSampler,
+            float4(dir, info.ArrayIndex),
+            0.0f).xy;
+    }
+
+    if (receiverDepth > moments.x)
+    {
+        float variance = max(moments.y - moments.x * moments.x, 0.00002f);
+        float delta = receiverDepth - moments.x;
+        float probability = variance / (variance + delta * delta);
+
+        result = ReduceLightBleed(probability);
+    }
+
+    return result;
+
+}
+
 // =========================================================================
 // Shadow 분기 처리 함수
 // =========================================================================
@@ -338,7 +538,13 @@ float GetLightShadow(FLightInfo light, float3 worldPos)
     }
     else
     {
+#if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
+        shadow = SampleCubeShadowVSM(info, worldPos, info.LightVP);
+#elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
+        shadow = SampleCubeShadowPCF(info, worldPos, info.LightVP);
+#else
         shadow = SampleCubeShadow(info, worldPos);
+#endif
     }
     return ApplyShadowSharpen(shadow, info);
 }
