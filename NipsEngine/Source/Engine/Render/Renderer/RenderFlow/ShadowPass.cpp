@@ -105,6 +105,12 @@ bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
         ID3D11DepthStencilState* DSState =
             FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::Default, Context->Device);
         Context->DeviceContext->OMSetDepthStencilState(DSState, 0);
+        ID3D11RasterizerState* DirectionalRS = FResourceManager::Get().GetOrCreateRasterizerState(
+            DirShadow->ShadowMode == DirectionalShadowModeValue::PSM
+                ? ERasterizerType::SolidNoCull
+                : ERasterizerType::SolidBackCull,
+            Context->Device);
+        Context->DeviceContext->RSSetState(DirectionalRS);
         Context->DeviceContext->OMSetRenderTargets(1, &AtlasRTV, AtlasDSV);
         Context->DeviceContext->ClearDepthStencilView(AtlasDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
@@ -113,8 +119,10 @@ bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
 
         const TArray<FDirectionalAtlasSlotDesc>& CascadeSlots = FShadowAtlasManager::GetDirectionalCascadeSlots();
         const uint32 CascadeCount = static_cast<uint32>(CascadeSlots.size());
+        const uint32 DirectionalPassCount =
+            (DirShadow->ShadowMode == DirectionalShadowModeValue::PSM && CascadeCount > 0u) ? 1u : CascadeCount;
         
-        for (uint32 CascadeIndex = 0; CascadeIndex < CascadeCount; ++CascadeIndex)
+        for (uint32 CascadeIndex = 0; CascadeIndex < DirectionalPassCount; ++CascadeIndex)
         {
             const FDirectionalAtlasSlotDesc& Slot = CascadeSlots[CascadeIndex];
             const D3D11_VIEWPORT DirShadowViewport = 
@@ -206,6 +214,9 @@ bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
     ID3D11DepthStencilState* DepthStencilState =
         FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::Default, Context->Device);
     Context->DeviceContext->OMSetDepthStencilState(DepthStencilState, 0);
+    ID3D11RasterizerState* ShadowRS =
+        FResourceManager::Get().GetOrCreateRasterizerState(ERasterizerType::SolidBackCull, Context->Device);
+    Context->DeviceContext->RSSetState(ShadowRS);
     Context->DeviceContext->OMSetRenderTargets(1, &AtlasRTV, AtlasDSV);
     
     // 매 프레임 atlas 전체를 초기화하고, 이번 프레임의 visible spot shadow들을 다시 채우기

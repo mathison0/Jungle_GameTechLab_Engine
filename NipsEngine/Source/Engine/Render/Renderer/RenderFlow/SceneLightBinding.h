@@ -42,7 +42,7 @@ namespace SceneLightBinding
 		float ShadowBias = 0.001f;
 		uint32 bCascadeDebug = 0;
 		uint32 bHasShadowMap = 0;
-		float Padding = 0.0f;
+		uint32 ShadowMode = 0;
 	};
 
 	inline bool EnsureVisibleLightConstantBuffer(ID3D11Device* Device, TComPtr<ID3D11Buffer>& VisibleLightConstantBuffer)
@@ -269,6 +269,7 @@ namespace SceneLightBinding
 			InfoConstants.CascadeRadius = DirShadow->CascadeRadius;
 			InfoConstants.ShadowBias = DirShadow->ShadowBias;
 		    InfoConstants.bCascadeDebug = DirShadow->bCascadeDebug;
+		    InfoConstants.ShadowMode = DirShadow->ShadowMode;
 		}
 
 		InfoConstants.bHasShadowMap = (ShadowMapSRV != nullptr) ? 1u : 0u;

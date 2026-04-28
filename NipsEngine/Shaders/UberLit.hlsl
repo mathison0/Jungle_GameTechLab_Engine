@@ -89,6 +89,8 @@ cbuffer SpotShadowInfo : register(b6)
 }
 
 #define MAX_CASCADE_COUNT 4
+static const uint SHADOW_MODE_CSM = 0u;
+static const uint SHADOW_MODE_PSM = 1u;
 
 cbuffer DirectionalShadowInfo : register(b7)
 {
@@ -98,7 +100,7 @@ cbuffer DirectionalShadowInfo : register(b7)
     float ShadowBias;
     uint bCascadeDebug;
     uint bHasShadowMap;
-    float _DirectionalShadowInfoPad0;
+    uint ShadowMode;
 }
 
 StructuredBuffer<FSpotShadowConstants> SpotShadowData : register(t11);
@@ -132,6 +134,32 @@ int GetCascadeIndex(float3 WorldPos)
 }
 
 // 뷰 공간 깊이로 Cascade Index를 결정한다.
+float SampleDirectionalShadowAtIndex(float3 WorldPos, int ShadowIndex)
+{
+    const float4 ShadowClip = mul(float4(WorldPos, 1.0f), LightViewProj[ShadowIndex]);
+    if (ShadowClip.w <= 1.0e-5f)
+    {
+        return 1.0f;
+    }
+
+    const float3 ShadowNDC = ShadowClip.xyz / ShadowClip.w;
+    if (ShadowNDC.x < -1.0f || ShadowNDC.x > 1.0f ||
+        ShadowNDC.y < -1.0f || ShadowNDC.y > 1.0f ||
+        ShadowNDC.z < 0.0f || ShadowNDC.z > 1.0f)
+    {
+        return 1.0f;
+    }
+        
+    float2 LocalUV = float2(ShadowNDC.x * 0.5f + 0.5f, ShadowNDC.y * -0.5f + 0.5f);
+    float4 AtlasRect = GetDirectionalCascadeAtlasRect(ShadowIndex);
+    float2 AtlasUV = AtlasRect.xy + LocalUV * AtlasRect.zw;
+    
+    int2 AtlasSize = int2(kDirectionalAtlasResolution, kDirectionalAtlasResolution);
+    
+    //return SampleShadowVSM(AtlasUV, ShadowNDC.z - ShadowBias, DirectionalShadowVSMMap, AtlasSize);
+    return SampleShadowPoissonDisk(AtlasUV, ShadowNDC.z - ShadowBias, DirectionalShadowMap, AtlasSize);
+}
+
 float ComputeDirectionalShadowFactor(float3 WorldPos)
 {
     if (bHasShadowMap == 0u)
@@ -139,22 +167,8 @@ float ComputeDirectionalShadowFactor(float3 WorldPos)
         return 1.0f;
     }
 
-    int CascadeIndex = GetCascadeIndex(WorldPos);
-    
-    float4 ShadowClip = mul(float4(WorldPos, 1.0f), LightViewProj[CascadeIndex]);
-    
-    float W = (ShadowClip.w <= 1.0e-5f) ? 1.0f : ShadowClip.w;
-    float3 ShadowNDC = ShadowClip.xyz / W;
-    float InBounds = step(abs(ShadowNDC.x), 1.0f) * step(abs(ShadowNDC.y), 1.0f) * step(0.0f, ShadowNDC.z) * step(ShadowNDC.z, 1.0f) * step(1.0e-5f, ShadowClip.w);
-        
-    float2 LocalUV = float2(ShadowNDC.x * 0.5f + 0.5f, ShadowNDC.y * -0.5f + 0.5f);
-    float4 AtlasRect = GetDirectionalCascadeAtlasRect(CascadeIndex);
-    float2 AtlasUV = AtlasRect.xy + LocalUV * AtlasRect.zw;
-    
-    int2 AtlasSize = int2(kDirectionalAtlasResolution, kDirectionalAtlasResolution);
-    
-    //return SampleShadowVSM(AtlasUV, ShadowNDC.z - ShadowBias, DirectionalShadowVSMMap, AtlasSize);
-    return SampleShadowPoissonDisk(AtlasUV, ShadowNDC.z - ShadowBias, DirectionalShadowMap, AtlasSize);
+    const int ShadowIndex = (ShadowMode == SHADOW_MODE_PSM) ? 0 : GetCascadeIndex(WorldPos);
+    return SampleDirectionalShadowAtIndex(WorldPos, ShadowIndex);
 }
 
 // ─────────────────── Lights ───────────────────
@@ -365,7 +379,7 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
 
             AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor * ShadowFactor, Result);
 
-            if (bCascadeDebug != 0u)
+            if (bCascadeDebug != 0u && ShadowMode == SHADOW_MODE_CSM)
             {
                 int CascadeIndex = GetCascadeIndex(WorldPos);
                 float3 DebugColors[4] = {
@@ -428,7 +442,7 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
             }
             AccumulateDirectLight(WorldPos, N, V, L, LightColor * ShadowFactor, Result);
 
-            if (bCascadeDebug != 0u)
+            if (bCascadeDebug != 0u && ShadowMode == SHADOW_MODE_CSM)
             {
                 int CascadeIndex = GetCascadeIndex(WorldPos);
                 float3 DebugColors[4] = {

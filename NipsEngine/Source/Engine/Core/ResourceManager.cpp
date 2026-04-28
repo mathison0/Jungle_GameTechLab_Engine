@@ -2127,6 +2127,7 @@ ID3D11RasterizerState* FResourceManager::GetOrCreateRasterizerState(ERasterizerT
 	}
 
 	D3D11_RASTERIZER_DESC Desc = {};
+	Desc.DepthClipEnable = TRUE;
 	switch (Type)
 	{
 	case ERasterizerType::SolidBackCull:
