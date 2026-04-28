@@ -286,6 +286,31 @@ TArray<FAtlasUV> FTextureAtlasPool::GetAtlasUVArray(const TexturePoolHandleSet* 
 	return Result;
 }
 
+TArray<ID3D11ShaderResourceView*> FTextureAtlasPool::GetSliceSRVs(TexturePoolHandleSet* HandleSet)
+{
+	TArray<ID3D11ShaderResourceView*> Result;
+	if (!HandleSet)
+	{
+		return Result;
+	}
+
+	TArray<TexturePoolHandle> Handles = HandleSet->Handles;
+	Result.reserve(Handles.size());
+	for (const TexturePoolHandle& Handle : Handles)
+	{
+		if (Handle.ArrayIndex < static_cast<uint32>(SliceSRVs.size()))
+		{
+			Result.push_back(SliceSRVs[Handle.ArrayIndex].Get());
+		}
+		else
+		{
+			Result.push_back(nullptr);
+		}
+	}
+
+	return Result;
+}
+
 TArray<ID3D11DepthStencilView*> FTextureAtlasPool::GetDSVs(TexturePoolHandleSet* HandleSet)
 {
 	TArray<ID3D11DepthStencilView*> Result;
@@ -685,6 +710,35 @@ void FTextureAtlasPool::RebuildVSMMomentSRV(
 	assert(SUCCEEDED(hr));
 }
 
+void FTextureAtlasPool::RebuildSliceSRVs(
+	ID3D11Device* Device,
+	ID3D11Texture2D* InTexture,
+	DXGI_FORMAT Format,
+	TArray<TComPtr<ID3D11ShaderResourceView>>& OutSRVs)
+{
+	OutSRVs.clear();
+	OutSRVs.resize(TextureLayerSize);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	srvDesc.Texture2DArray.MostDetailedMip = 0;
+	srvDesc.Texture2DArray.MipLevels = 1;
+	srvDesc.Texture2DArray.ArraySize = 1;
+
+	for (uint32 SliceIndex = 0; SliceIndex < TextureLayerSize; ++SliceIndex)
+	{
+		srvDesc.Texture2DArray.FirstArraySlice = SliceIndex;
+
+		HRESULT hr = Device->CreateShaderResourceView(
+			InTexture,
+			&srvDesc,
+			OutSRVs[SliceIndex].GetAddressOf());
+
+		assert(SUCCEEDED(hr));
+	}
+}
+
 void FTextureAtlasPool::RebuildVSMMomentRTVs(
 	ID3D11Device* Device,
 	ID3D11Texture2D* InTexture,
@@ -730,6 +784,7 @@ void FTextureAtlasPool::RebuildSRV(ID3D11Device* Device, ID3D11Texture2D* InText
 	if (IsVSMMode())
 	{
 		RebuildVSMMomentSRV(Device, InTexture, SRV);
+		RebuildSliceSRVs(Device, InTexture, DXGI_FORMAT_R32G32_FLOAT, SliceSRVs);
 		RebuildRTVs(Device, InTexture);
 		RebuildVSMBlurResources(Device);
 	}
@@ -746,6 +801,7 @@ void FTextureAtlasPool::RebuildSRV(ID3D11Device* Device, ID3D11Texture2D* InText
 		SRV.Reset();
 		HRESULT hr = Device->CreateShaderResourceView(InTexture, &srvDesc, SRV.GetAddressOf());
 		assert(SUCCEEDED(hr));
+		RebuildSliceSRVs(Device, InTexture, DXGI_FORMAT_R32_FLOAT, SliceSRVs);
 
 		RTVs.clear();
 		VSMFilteredTexture.Reset();

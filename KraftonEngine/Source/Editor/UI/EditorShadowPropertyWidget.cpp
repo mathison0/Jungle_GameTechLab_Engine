@@ -1,4 +1,4 @@
-#include "EditorShadowPropertyWidget.h"
+﻿#include "EditorShadowPropertyWidget.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/LevelEditorViewportClient.h"
 #include "Engine/Runtime/Engine.h"
@@ -95,6 +95,7 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 	else
 	{
 		PreviewSRV = AtlasPool.GetDebugLayerSRV(static_cast<uint32>(PreviewAtlasLayerIndex));
+		//PreviewSRV = AtlasPool.GetSliceSRV(PreviewAtlasLayerIndex);
 		if (!PreviewSRV)
 		{
 			ImGui::TextUnformatted("Atlas layer preview unavailable.");

@@ -39,9 +39,11 @@ public:
 	TArray<FAtlasUV> GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet);
 
 	ID3D11ShaderResourceView* GetSRV() { return SRV.Get(); }
+	ID3D11ShaderResourceView* GetSliceSRV(uint32 SliceIndex) { return SliceIndex < static_cast<uint32>(SliceSRVs.size()) ? SliceSRVs[SliceIndex].Get() : nullptr; }
 	ID3D11ShaderResourceView* GetRawSRV() { return SRV.Get(); }
 	ID3D11ShaderResourceView* GetFilteredSRV() { return VSMFilteredSRV.Get(); }
 	ID3D11ShaderResourceView* GetTempSRV() { return VSMTempSRV.Get(); }
+	TArray<ID3D11ShaderResourceView*> GetSliceSRVs(TexturePoolHandleSet* HandleSet);
 	ID3D11RenderTargetView* GetFilteredRTV(uint32 SliceIndex) { return SliceIndex < static_cast<uint32>(VSMFilteredRTVs.size()) ? VSMFilteredRTVs[SliceIndex].Get() : nullptr; }
 	ID3D11RenderTargetView* GetTempRTV(uint32 SliceIndex) { return SliceIndex < static_cast<uint32>(VSMTempRTVs.size()) ? VSMTempRTVs[SliceIndex].Get() : nullptr; }
 	TArray<ID3D11DepthStencilView*> GetDSVs(TexturePoolHandleSet* HandleSet);
@@ -74,6 +76,7 @@ private:
 	TComPtr<ID3D11Texture2D> CreateVSMDepthTexture(ID3D11Device* Device);
 	TComPtr<ID3D11Texture2D> CreateVSMMomentTexture(ID3D11Device* Device);
 	void RebuildVSMMomentSRV(ID3D11Device* Device, ID3D11Texture2D* InTexture, TComPtr<ID3D11ShaderResourceView>& OutSRV);
+	void RebuildSliceSRVs(ID3D11Device* Device, ID3D11Texture2D* InTexture, DXGI_FORMAT Format, TArray<TComPtr<ID3D11ShaderResourceView>>& OutSRVs);
 	void RebuildVSMMomentRTVs(ID3D11Device* Device, ID3D11Texture2D* InTexture, TArray<TComPtr<ID3D11RenderTargetView>>& OutRTVs);
 	void RebuildVSMBlurResources(ID3D11Device* Device);
 	bool IsVSMMode() const { return CurrentFilterMode == EShadowFilterMode::VSM; }
@@ -87,6 +90,7 @@ private:
 	TComPtr<ID3D11Texture2D> VSMTempTexture;
 	TComPtr<ID3D11ShaderResourceView> VSMFilteredSRV;
 	TComPtr<ID3D11ShaderResourceView> VSMTempSRV;
+	TArray<TComPtr<ID3D11ShaderResourceView>> SliceSRVs;
 	TArray<TComPtr<ID3D11RenderTargetView>> RTVs;
 	TArray<TComPtr<ID3D11RenderTargetView>> VSMFilteredRTVs;
 	TArray<TComPtr<ID3D11RenderTargetView>> VSMTempRTVs;
