@@ -65,6 +65,7 @@ private:
 		D3D11_VIEWPORT Viewport = {};
 		ID3D11DepthStencilView* DSV = nullptr;
 		ID3D11RenderTargetView* RTV = nullptr;
+		uint32 AtlasSliceIndex = static_cast<uint32>(-1);
 		uint32 CubeIndex = static_cast<uint32>(-1);
 		uint32 CubeFaceIndex = 0;
 		FMatrix CameraVP = FMatrix::Identity;
@@ -81,8 +82,15 @@ private:
 		TArray<FShadowRenderTask> RenderTasks;
 	};
 
+	struct FVSMBlurRegion
+	{
+		uint32 SliceIndex = static_cast<uint32>(-1);
+		D3D11_BOX Box = {};
+	};
+
 	void BuildShadowPassData(const FFrameContext& Frame, const FScene& Scene, FShadowPassData& OutShadowPassData);
 	void RenderShadowPass(const FFrameContext& Frame, const FScene& Scene, const FShadowPassData& ShadowPassData);
+	void RenderVSMBlurPass(const FShadowPassData& ShadowPassData);
 	void CleanupPassState(FStateCache& Cache);
 
 private:
