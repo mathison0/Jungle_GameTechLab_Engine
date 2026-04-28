@@ -122,8 +122,8 @@ namespace
 			float ShadowMapWidth,
 			float ShadowMapHeight)
 		{
-			const float ShadowDistance = FMath::Clamp(Frame.FarClip * 0.15f, 15.0f, 80.0f);
-			const float ShadowExtent = FMath::Clamp(Frame.FarClip * 0.2f, 20.0f, 120.0f);
+			const float ShadowDistance = FMath::Clamp(Frame.FarClip * 0.12f, 12.0f, 60.0f);
+			const float ShadowExtent = FMath::Clamp(Frame.FarClip * 0.1f, 15.0f, 60.0f);
 			const FVector LightRight = DirectionalLight.GetRightVector();
 			const FVector LightUp = DirectionalLight.GetUpVector();
 			const FVector LightDir = DirectionalLight.GetForwardVector();
@@ -624,11 +624,11 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 
 				const bool bIsPSM = (bIsPSM_Flag != 0);
 				const float DirectionalShadowBias = bIsPSM
-					? DirectionalLight->GetShadowBias()
-					: DirectionalLight->GetShadowBias() * 0.25f;
+					? DirectionalLight->GetShadowBias() * 0.02f
+					: DirectionalLight->GetShadowBias() * 0.05f;
 				const float DirectionalShadowSlopeBias = bIsPSM
-					? DirectionalLight->GetShadowSlopeBias()
-					: DirectionalLight->GetShadowSlopeBias() * 0.5f;
+					? DirectionalLight->GetShadowSlopeBias() * 0.05f
+					: DirectionalLight->GetShadowSlopeBias() * 0.15f;
 
 				FShadowRenderTask& Task = OutShadowPassData.RenderTasks.emplace_back();
 				Task.TargetType = EShadowRenderTargetType::Atlas2D;
@@ -689,7 +689,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					CascadeRanges[NumCascades] = std::min(Frame.FarClip, 200.0f); // Limit shadow distance
 
 					// Logarithmic split scheme
-					float Lambda = 0.85f; // More weight on logarithmic split for better near resolution
+					float Lambda = 0.6f; // Balance near detail with smoother far cascade resolution
 					for (int i = 1; i < NumCascades; ++i)
 					{
 						float f = (float)i / (float)NumCascades;
@@ -707,8 +707,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					FVector LightDir = DirectionalLight->GetForwardVector();
 					FVector LightUp = DirectionalLight->GetUpVector();
 					FVector LightRight = DirectionalLight->GetRightVector();
-					const float CSMShadowBias = DirectionalLight->GetShadowBias() * 0.25f;
-					const float CSMShadowSlopeBias = DirectionalLight->GetShadowSlopeBias() * 0.5f;
+					const float CSMShadowBias = DirectionalLight->GetShadowBias() * 0.03f;
+					const float CSMShadowSlopeBias = DirectionalLight->GetShadowSlopeBias() * 0.12f;
 
 					for (int i = 0; i < NumCascades; ++i)
 					{
@@ -756,6 +756,10 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						FMatrix LightProj = FShadowUtil::MakeReversedZOrthographic(Radius * 2.0f, Radius * 2.0f, 0.1f, Radius * 6.0f);
 						FMatrix LightVP = LightView * LightProj;
 
+						const float CascadeBiasScale = 1.0f + static_cast<float>(i) * 0.35f;
+						const float CascadeShadowBias = CSMShadowBias * CascadeBiasScale;
+						const float CascadeShadowSlopeBias = CSMShadowSlopeBias * CascadeBiasScale;
+
 						FShadowRenderTask& Task = OutShadowPassData.RenderTasks.emplace_back();
 						Task.TargetType = EShadowRenderTargetType::Atlas2D;
 						Task.LightVP = LightVP;
@@ -765,8 +769,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Task.Viewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[i], AtlasTextureSize);
 						Task.DSV = DSVs[i];
 						Task.RTV = (bUseVSM && i < RTVs.size()) ? RTVs[i] : nullptr;
-						Task.ShadowDepthBias = CSMShadowBias;
-						Task.ShadowSlopeBias = CSMShadowSlopeBias;
+						Task.ShadowDepthBias = CascadeShadowBias;
+						Task.ShadowSlopeBias = CascadeShadowSlopeBias;
 						Task.AtlasSliceIndex = AtlasUVs[i].ArrayIndex;
 
 						FShadowInfo Info = {};
@@ -776,7 +780,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Info.bIsPSM = 0;
 						Info.LightVP = LightVP;
 						Info.SampleData = FVector4(AtlasUVs[i].u1, AtlasUVs[i].v1, AtlasUVs[i].u2, AtlasUVs[i].v2);
-						Info.ShadowParams = FVector4(CSMShadowBias, CSMShadowSlopeBias, DirectionalLight->GetShadowSharpen(), 0.1f);
+						Info.ShadowParams = FVector4(CascadeShadowBias, CascadeShadowSlopeBias, DirectionalLight->GetShadowSharpen(), 0.1f);
 
 						OutShadowPassData.BindingData.CascadeMatrices[i] = LightVP;
 						OutShadowPassData.BindingData.ShadowInfos.push_back(Info);

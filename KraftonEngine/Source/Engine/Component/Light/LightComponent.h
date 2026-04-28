@@ -41,7 +41,7 @@ public:
 	virtual FShadowMapKey GetShadowMapKey() { return FShadowMapKey(); }
 
 protected:
-	float ShadowResolutionScale = 1.0f;
+	float ShadowResolutionScale = 2.0f;
 	float ShadowBias = 0.5f;
 	float ShadowSlopeBias = 0.5f;
 	float ShadowSharpen = 0.0f;
