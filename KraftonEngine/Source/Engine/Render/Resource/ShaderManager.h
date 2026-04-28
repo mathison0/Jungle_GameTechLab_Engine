@@ -74,6 +74,7 @@ namespace EShaderPath
 	inline constexpr const char* Gizmo				= "Shaders/Editor/Gizmo.hlsl";
 
 	inline constexpr const char* FXAA				= "Shaders/PostProcess/FXAA.hlsl";
+	inline constexpr const char* Gaussianblur		= "Shaders/PostProcess/GaussianBlur.hlsl";
 	inline constexpr const char* Outline			= "Shaders/PostProcess/Outline.hlsl";
 	inline constexpr const char* SceneDepth			= "Shaders/PostProcess/SceneDepth.hlsl";
 	inline constexpr const char* SceneNormal		= "Shaders/PostProcess/SceneNormal.hlsl";

@@ -30,21 +30,25 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 
 	// 단순 셰이더 (매크로 없음)
 	GetOrCreate(EShaderPath::Primitive);
-	GetOrCreate(EShaderPath::Gizmo);
-	GetOrCreate(EShaderPath::Editor);
 	GetOrCreate(EShaderPath::Decal);
 	GetOrCreate(EShaderPath::ShadowDepth);
 	GetOrCreate(EShaderPath::ShadowClear);
 	GetOrCreate(EShaderPath::ShadowDepthDebug);
+
+	GetOrCreate(EShaderPath::Editor);
+	GetOrCreate(EShaderPath::Gizmo);
+
+	GetOrCreate(EShaderPath::FXAA);
+	GetOrCreate(EShaderPath::Gaussianblur);
 	GetOrCreate(EShaderPath::Outline);
 	GetOrCreate(EShaderPath::SceneDepth);
 	GetOrCreate(EShaderPath::SceneNormal);
-	GetOrCreate(EShaderPath::FXAA);
+	GetOrCreate(EShaderPath::HeightFog);
+
 	GetOrCreate(EShaderPath::Font);
 	GetOrCreate(EShaderPath::OverlayFont);
 	GetOrCreate(EShaderPath::SubUV);
 	GetOrCreate(EShaderPath::Billboard);
-	GetOrCreate(EShaderPath::HeightFog);
 
 	// UberLit 기본은 Phong + Cluster Culling으로 컴파일한다.
 	
