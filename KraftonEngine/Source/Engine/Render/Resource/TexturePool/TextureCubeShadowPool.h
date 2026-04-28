@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreTypes.h"
 #include "Math/Vector.h"
@@ -44,12 +44,14 @@ public:
 
 	void Initialize(ID3D11Device* InDevice, uint32 InBaseResolution, uint32 InitialCubeCapacity = 1);
 	void Release();
+	bool EnsureVSMMode(bool bUseVSM);
 
 	FCubeShadowHandle Allocate(float ResolutionScale = 1.0f);
 	void ReleaseHandle(FCubeShadowHandle Handle);
 
 	ID3D11ShaderResourceView* GetSRV(uint32 TierIndex) const;
 	ID3D11DepthStencilView* GetFaceDSV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
+	ID3D11RenderTargetView* GetFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
 	static FPointShadowFaceBasis GetFaceBasis(uint32 FaceIndex);
 	static FPointShadowFaceBasis GetPreviewFaceBasis(uint32 FaceIndex);
 
@@ -72,7 +74,9 @@ private:
 
 		TComPtr<ID3D11Texture2D> Texture;
 		TComPtr<ID3D11ShaderResourceView> SRV;
+		TComPtr<ID3D11Texture2D> MomentTexture;
 		TArray<TComPtr<ID3D11DepthStencilView>> FaceDSVs;
+		TArray<TComPtr<ID3D11RenderTargetView>> FaceVSMRTVs;
 		TArray<uint8> AllocationFlags;
 		TArray<uint32> FreeCubeIndices;
 	};
@@ -86,5 +90,6 @@ private:
 private:
 	ID3D11Device* Device = nullptr;
 	uint32 BaseResolution = 1024;
+	bool bVSMMode = false;
 	FTierPool Tiers[TierCount];
 };

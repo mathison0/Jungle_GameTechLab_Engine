@@ -39,8 +39,15 @@ public:
 	TArray<FAtlasUV> GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet);
 
 	ID3D11ShaderResourceView* GetSRV() { return SRV.Get(); }
+	ID3D11ShaderResourceView* GetRawSRV() { return SRV.Get(); }
+	ID3D11ShaderResourceView* GetFilteredSRV() { return VSMFilteredSRV.Get(); }
+	ID3D11ShaderResourceView* GetTempSRV() { return VSMTempSRV.Get(); }
+	ID3D11RenderTargetView* GetFilteredRTV(uint32 SliceIndex) { return SliceIndex < static_cast<uint32>(VSMFilteredRTVs.size()) ? VSMFilteredRTVs[SliceIndex].Get() : nullptr; }
+	ID3D11RenderTargetView* GetTempRTV(uint32 SliceIndex) { return SliceIndex < static_cast<uint32>(VSMTempRTVs.size()) ? VSMTempRTVs[SliceIndex].Get() : nullptr; }
 	TArray<ID3D11DepthStencilView*> GetDSVs(TexturePoolHandleSet* HandleSet);
 	TArray<ID3D11RenderTargetView*> GetRTVs(TexturePoolHandleSet* HandleSet);
+	TArray<ID3D11RenderTargetView*> GetFilteredRTVs(TexturePoolHandleSet* HandleSet);
+	TArray<ID3D11RenderTargetView*> GetTempRTVs(TexturePoolHandleSet* HandleSet);
 
 	ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandle& InHandle) override;
 	ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandleSet* InHandleSet) override;
@@ -65,6 +72,10 @@ private:
 	uint32 MakeHandleDebugKey(const TexturePoolHandle& InHandle);
 	void RecreateAtlasResources();
 	TComPtr<ID3D11Texture2D> CreateVSMDepthTexture(ID3D11Device* Device);
+	TComPtr<ID3D11Texture2D> CreateVSMMomentTexture(ID3D11Device* Device);
+	void RebuildVSMMomentSRV(ID3D11Device* Device, ID3D11Texture2D* InTexture, TComPtr<ID3D11ShaderResourceView>& OutSRV);
+	void RebuildVSMMomentRTVs(ID3D11Device* Device, ID3D11Texture2D* InTexture, TArray<TComPtr<ID3D11RenderTargetView>>& OutRTVs);
+	void RebuildVSMBlurResources(ID3D11Device* Device);
 	bool IsVSMMode() const { return CurrentFilterMode == EShadowFilterMode::VSM; }
 
 private:
@@ -72,7 +83,13 @@ private:
 
 	EShadowFilterMode CurrentFilterMode = EShadowFilterMode::PCF;
 	TComPtr<ID3D11Texture2D> VSMDepthTexture;
+	TComPtr<ID3D11Texture2D> VSMFilteredTexture;
+	TComPtr<ID3D11Texture2D> VSMTempTexture;
+	TComPtr<ID3D11ShaderResourceView> VSMFilteredSRV;
+	TComPtr<ID3D11ShaderResourceView> VSMTempSRV;
 	TArray<TComPtr<ID3D11RenderTargetView>> RTVs;
+	TArray<TComPtr<ID3D11RenderTargetView>> VSMFilteredRTVs;
+	TArray<TComPtr<ID3D11RenderTargetView>> VSMTempRTVs;
 	TArray<uint64> SliceDebugVersions;
 	FConstantBuffer DebugConstantBuffer;
 	TComPtr<ID3D11SamplerState> DebugPointClampSampler;

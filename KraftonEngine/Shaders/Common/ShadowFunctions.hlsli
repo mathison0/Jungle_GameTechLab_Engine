@@ -55,6 +55,29 @@ float ReduceLightBleed(float probability)
     return saturate((probability - bleedReduction) / (1.0f - bleedReduction));
 }
 
+bool BuildCubeShadowLookup(FShadowInfo info, float3 worldPos, out float3 outDir, out float outDepth, out uint outCubeTier)
+{
+    float3 lightPos = info.SampleData.xyz;
+    float nearZ = GetShadowNearZ(info);
+    float farZ = max(info.SampleData.w, nearZ + 0.0001f);
+
+    float3 toPixel = worldPos - lightPos;
+    float3 absToPixel = abs(toPixel);
+    float faceDepth = max(max(absToPixel.x, absToPixel.y), absToPixel.z);
+    if (faceDepth < nearZ || faceDepth > farZ)
+    {
+        outDir = float3(0.0f, 0.0f, 1.0f);
+        outDepth = 0.0f;
+        outCubeTier = 0u;
+        return false;
+    }
+
+    outDir = toPixel / max(faceDepth, 0.0001f);
+    outDepth = nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ);
+    outCubeTier = min(info.CubeTierIndex, 3u);
+    return true;
+}
+
 // =========================================================================
 // Hard Shadow(No Filter) Function
 // =========================================================================
@@ -62,53 +85,40 @@ float ReduceLightBleed(float probability)
 // Hard Atlas Shadow 계산 함수
 float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 {
-    float shadow = 1.0f;
-    float4 shadowPos = mul(float4(worldPos, 1.0f), lightVP);
-    bool validClip = true;
-    
-    if (info.bIsPSM != 0u) // PSM
+    float4 shadowPos;
+    if (info.bIsPSM)
     {
         float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        float4 cameraNDC = mul(viewPos, Projection);
-
-        if (abs(cameraNDC.w) < 1e-5f)
-        {
-            validClip = false;
-        }
-        else
-        {
-            // Camera Clip -> Camera NDC
-            cameraNDC.xyz /= cameraNDC.w;
-            cameraNDC.w = 1.0f;
-
-            shadowPos = mul(cameraNDC, lightVP);
-        }
+        float4 cameraClip = mul(viewPos, Projection);
+        shadowPos = mul(cameraClip, lightVP);
     }
-
-    if (validClip && abs(shadowPos.w) >= 1e-5f)
+    else
     {
-        // light ndc 공간
-        float3 ndc = shadowPos.xyz / shadowPos.w;
-
-        // ndc 공간 [-1, 1] -> [0, 1]
-        float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-        float depth = ndc.z + GetShadowDepthBias(info);
-
-        // uv, depth 범위 체크
-        if (!any(uv < 0.0f) && !any(uv > 1.0f) && depth >= 0.0f && depth <= 1.0f)
-        {
-            float2 atlasMin = info.SampleData.xy;
-            float2 atlasMax = info.SampleData.zw;
-            float2 atlasUV = lerp(atlasMin, atlasMax, uv);
-
-            shadow = gShadowAtlasArray.SampleCmpLevelZero(
-                ShadowCmpSampler,
-                float3(atlasUV, info.ArrayIndex),
-                depth);
-        }
+        shadowPos = mul(float4(worldPos, 1.0f), lightVP);
     }
 
-    return shadow;
+    if (abs(shadowPos.w) < 1e-5f)
+    {
+        return 1.0f;
+    }
+
+    float3 ndc = shadowPos.xyz / shadowPos.w;
+    float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
+    float depth = ndc.z + GetShadowDepthBias(info);
+
+    if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
+    {
+        return 1.0f;
+    }
+
+    float2 atlasMin = info.SampleData.xy;
+    float2 atlasMax = info.SampleData.zw;
+    float2 atlasUV = lerp(atlasMin, atlasMax, uv);
+
+    return gShadowAtlasArray.SampleCmpLevelZero(
+        ShadowCmpSampler,
+        float3(atlasUV, info.ArrayIndex),
+        depth);
 }
 
 float SampleCubeShadow(FShadowInfo info, float3 worldPos)
@@ -390,53 +400,49 @@ float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 
 float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 {
-    float result = 1.0f;
-    float4 lightClip = mul(float4(worldPos, 1.0f), lightVP);
-    bool validClip = true;
-
-    if (info.bIsPSM != 0u)
+    float4 lightClip;
+    if (info.bIsPSM)
     {
         float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        float4 cameraNDC = mul(viewPos, Projection);
-        if (abs(cameraNDC.w) < 1e-5f)
-        {
-            validClip = false;
-        }
-        else
-        {
-            cameraNDC.xyz /= cameraNDC.w;
-            cameraNDC.w = 1.0f;
-            lightClip = mul(cameraNDC, lightVP);
-        }
+        float4 cameraClip = mul(viewPos, Projection);
+        lightClip = mul(cameraClip, info.LightVP);
     }
-
-    if (validClip && abs(lightClip.w) >= 1e-5f)
+    else
     {
-        float3 ndc = lightClip.xyz / lightClip.w;
-        float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-        float depth = (1.0f - ndc.z) + GetShadowDepthBias(info);
-
-        if (!any(uv < 0.0f) && !any(uv > 1.0f) && depth >= 0.0f && depth <= 1.0f)
-        {
-            float2 atlasMin = info.SampleData.xy;
-            float2 atlasMax = info.SampleData.zw;
-            float2 atlasUV = lerp(atlasMin, atlasMax, uv);
-            float2 moments = gShadowAtlasArray.SampleLevel(
-                LinearClampSampler,
-                float3(atlasUV, info.ArrayIndex),
-                0.0f).xy;
-
-            if (depth > moments.x)
-            {
-                float variance = max(moments.y - moments.x * moments.x, 0.00002f);
-                float delta = depth - moments.x;
-                float probability = variance / (variance + delta * delta);
-                result = ReduceLightBleed(probability);
-            }
-        }
+        lightClip = mul(float4(worldPos, 1.0f), info.LightVP);
     }
 
-    return result;
+    if (abs(lightClip.w) < 1e-5f)
+    {
+        return 1.0f;
+    }
+
+    float3 ndc = lightClip.xyz / lightClip.w;
+    float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
+    float depth = (1.0f - ndc.z) + GetShadowDepthBias(info);
+
+    if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
+    {
+        return 1.0f;
+    }
+
+    float2 atlasMin = info.SampleData.xy;
+    float2 atlasMax = info.SampleData.zw;
+    float2 atlasUV = lerp(atlasMin, atlasMax, uv);
+    float2 moments = gShadowAtlasArray.SampleLevel(
+        LinearClampSampler,
+        float3(atlasUV, info.ArrayIndex),
+        0.0f).xy;
+
+    if (depth <= moments.x)
+    {
+        return 1.0f;
+    }
+
+    float variance = max(moments.y - moments.x * moments.x, 0.00002f);
+    float delta = depth - moments.x;
+    float probability = variance / (variance + delta * delta);
+    return ReduceLightBleed(probability);
 }
 
 float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
@@ -576,6 +582,7 @@ float GetDirectionalShadow(float3 worldPos)
         }
 
         FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex + cascadeIdx];
+        
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
         shadow = SampleAtlasShadowVSM(info, worldPos, CascadeMatrices[cascadeIdx]);
 #elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
