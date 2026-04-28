@@ -142,6 +142,7 @@ float SampleCubeShadow(FShadowInfo info, float3 worldPos)
     float depth = (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ)) + GetShadowDepthBias(info);
     uint cubeTier = min(info.CubeTierIndex, 3u);
 
+
     if (cubeTier == 0u)
     {
         return gShadowCubeArrayTier0.SampleCmpLevelZero(
