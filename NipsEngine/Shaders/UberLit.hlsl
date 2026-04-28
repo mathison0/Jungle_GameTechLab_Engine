@@ -157,16 +157,19 @@ float ComputeDirectionalShadowFactor(float3 WorldPos, float3 N, float3 L)
         return 1.0f;
     }
 
+    float NormalizedBias = ShadowBias / SplitDistances.w;
+    float NormalizedSlopeBias = ShadowSlopeBias / SplitDistances.w;
+    
     float CosTheta = saturate(dot(N, L));
     CosTheta = max(CosTheta, 1e-4f);
     float TanTheta = sqrt(1.0 - CosTheta * CosTheta) / CosTheta;
-    TanTheta = min(TanTheta, 3.0f);
+    TanTheta = min(TanTheta, 2.0f);
     
-    float Bias = ShadowBias + (ShadowSlopeBias * TanTheta);
+    float Bias = NormalizedBias + (NormalizedSlopeBias * TanTheta);
     
     int CascadeIndex = GetCascadeIndex(WorldPos);
     
-    float NormalOffsetScale = 0.1f; // Noraml Offset Bias
+    float NormalOffsetScale = 0.2f; // Noraml Offset Bias
     float3 OffsetWorldPos = WorldPos + N * NormalOffsetScale * (1.0f - CosTheta);
     float4 ShadowClip = mul(float4(OffsetWorldPos, 1.0f), LightViewProj[CascadeIndex]);
     
