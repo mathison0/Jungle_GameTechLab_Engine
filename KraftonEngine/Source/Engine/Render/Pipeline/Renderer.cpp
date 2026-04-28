@@ -16,6 +16,7 @@
 #include "Materials/MaterialManager.h"
 #include "Math/MathUtils.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace
@@ -113,6 +114,19 @@ namespace
 			&& Proxy->GetRenderPass() == ERenderPass::Opaque
 			&& Proxy->GetMeshBuffer()
 			&& Proxy->GetMeshBuffer()->IsValid();
+	}
+
+	D3D11_BOX MakeViewportCopyBox(const D3D11_VIEWPORT& Viewport, uint32 TextureSize, bool& bOutValid)
+	{
+		D3D11_BOX Box = {};
+		Box.left = static_cast<UINT>(std::max(0.0f, std::floor(Viewport.TopLeftX)));
+		Box.top = static_cast<UINT>(std::max(0.0f, std::floor(Viewport.TopLeftY)));
+		Box.right = static_cast<UINT>(std::min(static_cast<float>(TextureSize), std::ceil(Viewport.TopLeftX + Viewport.Width)));
+		Box.bottom = static_cast<UINT>(std::min(static_cast<float>(TextureSize), std::ceil(Viewport.TopLeftY + Viewport.Height)));
+		Box.front = 0;
+		Box.back = 1;
+		bOutValid = Box.right > Box.left && Box.bottom > Box.top;
+		return Box;
 	}
 }
 
@@ -382,6 +396,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		Task.Viewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[0], AtlasTextureSize);
 		Task.DSV = DSVs[0];
 		Task.RTV = bUseVSM ? RTVs[0] : nullptr;
+		Task.AtlasSliceIndex = AtlasUVs[0].ArrayIndex;
 
 		FShadowInfo Info = {};
 		Info.Type = EShadowInfoType::Atlas2D;
@@ -479,6 +494,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					Task.Viewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[0], AtlasTextureSize);
 					Task.DSV = DSVs[0];
 					Task.RTV = (bUseVSM && !RTVs.empty()) ? RTVs[0] : nullptr;
+					Task.AtlasSliceIndex = AtlasUVs[0].ArrayIndex;
 
 					FShadowInfo Info = {};
 					Info.Type = EShadowInfoType::Atlas2D;
@@ -577,6 +593,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Task.Viewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[i], AtlasTextureSize);
 						Task.DSV = DSVs[i];
 						Task.RTV = (bUseVSM && i < RTVs.size()) ? RTVs[i] : nullptr;
+						Task.AtlasSliceIndex = AtlasUVs[i].ArrayIndex;
 
 						FShadowInfo Info = {};
 						Info.Type = EShadowInfoType::Atlas2D;
@@ -740,7 +757,11 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 		}
 
 		//VSM이면 이후 블러 작업 필요
-		//한 요쯤에 들어갈듯?
+	}
+
+	if (bUseVSM)
+	{
+		RenderVSMBlurPass(ShadowPassData);
 	}
 
 	if (Frame.ViewportRTV)
@@ -761,6 +782,45 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 	MainViewport.MinDepth = 0.0f;
 	MainViewport.MaxDepth = 1.0f;
 	Ctx->RSSetViewports(1, &MainViewport);
+}
+
+void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
+{
+	FTextureAtlasPool& AtlasPool = FTextureAtlasPool::Get();
+	if (!AtlasPool.HasVSMBlurResources())
+	{
+		return;
+	}
+
+	TArray<FTextureAtlasPool::FVSMBlurRegion> BlurRegions;
+	BlurRegions.reserve(ShadowPassData.RenderTasks.size());
+
+	const uint32 AtlasTextureSize = AtlasPool.GetTextureSize();
+	for (const FShadowRenderTask& Task : ShadowPassData.RenderTasks)
+	{
+		if (Task.TargetType != EShadowRenderTargetType::Atlas2D
+			|| !Task.RTV
+			|| Task.AtlasSliceIndex == static_cast<uint32>(-1))
+		{
+			continue;
+		}
+
+		bool bValidRegion = false;
+		FTextureAtlasPool::FVSMBlurRegion Region = {};
+		Region.SliceIndex = Task.AtlasSliceIndex;
+		Region.Box = MakeViewportCopyBox(Task.Viewport, AtlasTextureSize, bValidRegion);
+		if (bValidRegion)
+		{
+			BlurRegions.push_back(Region);
+		}
+	}
+
+	if (BlurRegions.empty())
+	{
+		return;
+	}
+
+	AtlasPool.ExecuteVSMBlurPass(BlurRegions);
 }
 
 // ============================================================

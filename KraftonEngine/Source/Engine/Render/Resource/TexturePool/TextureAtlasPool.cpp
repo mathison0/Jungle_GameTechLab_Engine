@@ -342,6 +342,127 @@ TArray<ID3D11RenderTargetView*> FTextureAtlasPool::GetRTVs(TexturePoolHandleSet*
 	return Result;
 }
 
+TArray<ID3D11RenderTargetView*> FTextureAtlasPool::GetFilteredRTVs(TexturePoolHandleSet* HandleSet)
+{
+	TArray<ID3D11RenderTargetView*> Result;
+	if (!IsVSMMode() || !HandleSet)
+	{
+		return Result;
+	}
+
+	TArray<TexturePoolHandle> Handles = HandleSet->Handles;
+	Result.reserve(Handles.size());
+	for (const TexturePoolHandle& Handle : Handles)
+	{
+		if (Handle.ArrayIndex < static_cast<uint32>(VSMFilteredRTVs.size()))
+		{
+			Result.push_back(VSMFilteredRTVs[Handle.ArrayIndex].Get());
+		}
+		else
+		{
+			Result.push_back(nullptr);
+		}
+	}
+
+	return Result;
+}
+
+TArray<ID3D11RenderTargetView*> FTextureAtlasPool::GetTempRTVs(TexturePoolHandleSet* HandleSet)
+{
+	TArray<ID3D11RenderTargetView*> Result;
+	if (!IsVSMMode() || !HandleSet)
+	{
+		return Result;
+	}
+
+	TArray<TexturePoolHandle> Handles = HandleSet->Handles;
+	Result.reserve(Handles.size());
+	for (const TexturePoolHandle& Handle : Handles)
+	{
+		if (Handle.ArrayIndex < static_cast<uint32>(VSMTempRTVs.size()))
+		{
+			Result.push_back(VSMTempRTVs[Handle.ArrayIndex].Get());
+		}
+		else
+		{
+			Result.push_back(nullptr);
+		}
+	}
+
+	return Result;
+}
+
+bool FTextureAtlasPool::HasVSMBlurResources() const
+{
+	return IsVSMMode()
+		&& VSMFilteredTexture
+		&& VSMTempTexture
+		&& VSMFilteredSRV
+		&& VSMTempSRV
+		&& VSMFilteredRTVs.size() == TextureLayerSize
+		&& VSMTempRTVs.size() == TextureLayerSize;
+}
+
+void FTextureAtlasPool::ExecuteVSMBlurPass(const TArray<FVSMBlurRegion>& Regions)
+{
+	if (!HasVSMBlurResources() || Regions.empty())
+	{
+		return;
+	}
+
+	ID3D11DeviceContext* Context = GetDeviceContext();
+	if (!Context)
+	{
+		return;
+	}
+
+	Context->OMSetRenderTargets(0, nullptr, nullptr);
+
+	for (const FVSMBlurRegion& Region : Regions)
+	{
+		if (Region.SliceIndex >= TextureLayerSize)
+		{
+			continue;
+		}
+
+		D3D11_BOX CopyBox = Region.Box;
+		CopyBox.left = CopyBox.left < TextureSize ? CopyBox.left : TextureSize;
+		CopyBox.top = CopyBox.top < TextureSize ? CopyBox.top : TextureSize;
+		CopyBox.right = CopyBox.right < TextureSize ? CopyBox.right : TextureSize;
+		CopyBox.bottom = CopyBox.bottom < TextureSize ? CopyBox.bottom : TextureSize;
+		CopyBox.front = 0;
+		CopyBox.back = 1;
+		if (CopyBox.right <= CopyBox.left || CopyBox.bottom <= CopyBox.top)
+		{
+			continue;
+		}
+
+		const UINT Subresource = D3D11CalcSubresource(0, Region.SliceIndex, 1);
+
+		// No blur shader exists yet. Keep the pass structure and hazard-safe resource flow
+		// by staging raw -> temp -> filtered through copy operations on the atlas sub-rect.
+		Context->CopySubresourceRegion(
+			VSMTempTexture.Get(),
+			Subresource,
+			CopyBox.left,
+			CopyBox.top,
+			0,
+			Texture.Get(),
+			Subresource,
+			&CopyBox);
+
+		Context->CopySubresourceRegion(
+			VSMFilteredTexture.Get(),
+			Subresource,
+			CopyBox.left,
+			CopyBox.top,
+			0,
+			VSMTempTexture.Get(),
+			Subresource,
+			&CopyBox);
+	}
+}
+
 ID3D11ShaderResourceView* FTextureAtlasPool::GetDebugSRV(const TexturePoolHandle& InHandle)
 {
 	if (!Texture || !SRV || InHandle.ArrayIndex >= TextureLayerSize || !CreateDebugPassResources())
@@ -551,6 +672,11 @@ ID3D11ShaderResourceView* FTextureAtlasPool::GetDebugLayerSRV(uint32 SliceIndex)
 
 TComPtr<ID3D11Texture2D> FTextureAtlasPool::CreateTexture(ID3D11Device* Device)
 {
+	if (IsVSMMode())
+	{
+		return CreateVSMMomentTexture(Device);
+	}
+
 	D3D11_TEXTURE2D_DESC desc = {};
 	desc.Width = TextureSize;
 	desc.Height = TextureSize;
@@ -560,17 +686,8 @@ TComPtr<ID3D11Texture2D> FTextureAtlasPool::CreateTexture(ID3D11Device* Device)
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.MiscFlags = 0;
 	desc.CPUAccessFlags = 0;
-
-	if (IsVSMMode())
-	{
-		desc.Format = DXGI_FORMAT_R32G32_FLOAT;
-		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-	}
-	else
-	{
-		desc.Format = DXGI_FORMAT_R32_TYPELESS;
-		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-	}
+	desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
 
 	TComPtr<ID3D11Texture2D> NewTexture;
 	HRESULT hr = Device->CreateTexture2D(&desc, nullptr, NewTexture.GetAddressOf());
@@ -600,27 +717,112 @@ TComPtr<ID3D11Texture2D> FTextureAtlasPool::CreateVSMDepthTexture(ID3D11Device* 
 	return NewTexture;
 }
 
-void FTextureAtlasPool::RebuildSRV(ID3D11Device* Device, ID3D11Texture2D* InTexture)
+TComPtr<ID3D11Texture2D> FTextureAtlasPool::CreateVSMMomentTexture(ID3D11Device* Device)
+{
+	D3D11_TEXTURE2D_DESC desc = {};
+	desc.Width = TextureSize;
+	desc.Height = TextureSize;
+	desc.MipLevels = 1;
+	desc.ArraySize = TextureLayerSize;
+	desc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	desc.SampleDesc.Count = 1;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.MiscFlags = 0;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	desc.CPUAccessFlags = 0;
+
+	TComPtr<ID3D11Texture2D> NewTexture;
+	HRESULT hr = Device->CreateTexture2D(&desc, nullptr, NewTexture.GetAddressOf());
+	assert(SUCCEEDED(hr));
+
+	return NewTexture;
+}
+
+void FTextureAtlasPool::RebuildVSMMomentSRV(
+	ID3D11Device* Device,
+	ID3D11Texture2D* InTexture,
+	TComPtr<ID3D11ShaderResourceView>& OutSRV)
 {
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
 	srvDesc.Texture2DArray.MostDetailedMip = 0;
 	srvDesc.Texture2DArray.MipLevels = 1;
 	srvDesc.Texture2DArray.FirstArraySlice = 0;
 	srvDesc.Texture2DArray.ArraySize = TextureLayerSize;
-	srvDesc.Format = IsVSMMode() ? DXGI_FORMAT_R32G32_FLOAT : DXGI_FORMAT_R32_FLOAT;
 
-	SRV.Reset();
-	HRESULT hr = Device->CreateShaderResourceView(InTexture, &srvDesc, SRV.GetAddressOf());
+	OutSRV.Reset();
+	HRESULT hr = Device->CreateShaderResourceView(InTexture, &srvDesc, OutSRV.GetAddressOf());
 	assert(SUCCEEDED(hr));
+}
 
+void FTextureAtlasPool::RebuildVSMMomentRTVs(
+	ID3D11Device* Device,
+	ID3D11Texture2D* InTexture,
+	TArray<TComPtr<ID3D11RenderTargetView>>& OutRTVs)
+{
+	OutRTVs.clear();
+	OutRTVs.resize(TextureLayerSize);
+
+	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+	rtvDesc.Texture2DArray.MipSlice = 0;
+	rtvDesc.Texture2DArray.ArraySize = 1;
+
+	for (uint32 SliceIndex = 0; SliceIndex < TextureLayerSize; ++SliceIndex)
+	{
+		rtvDesc.Texture2DArray.FirstArraySlice = SliceIndex;
+
+		HRESULT hr = Device->CreateRenderTargetView(
+			InTexture,
+			&rtvDesc,
+			OutRTVs[SliceIndex].GetAddressOf());
+
+		assert(SUCCEEDED(hr));
+	}
+}
+
+void FTextureAtlasPool::RebuildVSMBlurResources(ID3D11Device* Device)
+{
+	VSMFilteredTexture = CreateVSMMomentTexture(Device);
+	VSMTempTexture = CreateVSMMomentTexture(Device);
+
+	RebuildVSMMomentSRV(Device, VSMFilteredTexture.Get(), VSMFilteredSRV);
+	RebuildVSMMomentSRV(Device, VSMTempTexture.Get(), VSMTempSRV);
+	RebuildVSMMomentRTVs(Device, VSMFilteredTexture.Get(), VSMFilteredRTVs);
+	RebuildVSMMomentRTVs(Device, VSMTempTexture.Get(), VSMTempRTVs);
+}
+
+void FTextureAtlasPool::RebuildSRV(ID3D11Device* Device, ID3D11Texture2D* InTexture)
+{
 	if (IsVSMMode())
 	{
+		RebuildVSMMomentSRV(Device, InTexture, SRV);
 		RebuildRTVs(Device, InTexture);
+		RebuildVSMBlurResources(Device);
 	}
 	else
 	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		srvDesc.Texture2DArray.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.MipLevels = 1;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+		srvDesc.Texture2DArray.ArraySize = TextureLayerSize;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+
+		SRV.Reset();
+		HRESULT hr = Device->CreateShaderResourceView(InTexture, &srvDesc, SRV.GetAddressOf());
+		assert(SUCCEEDED(hr));
+
 		RTVs.clear();
+		VSMFilteredTexture.Reset();
+		VSMTempTexture.Reset();
+		VSMFilteredSRV.Reset();
+		VSMTempSRV.Reset();
+		VSMFilteredRTVs.clear();
+		VSMTempRTVs.clear();
 	}
 }
 
@@ -659,27 +861,7 @@ void FTextureAtlasPool::RebuildDSV(ID3D11Device* Device, ID3D11Texture2D* InText
 
 void FTextureAtlasPool::RebuildRTVs(ID3D11Device* Device, ID3D11Texture2D* InTexture)
 {
-	RTVs.clear();
-	RTVs.resize(TextureLayerSize);
-
-	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-	rtvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-	rtvDesc.Texture2DArray.MipSlice = 0;
-	rtvDesc.Texture2DArray.ArraySize = 1;
-
-	for (uint32 SliceIndex = 0; SliceIndex < TextureLayerSize; ++SliceIndex)
-	{
-		rtvDesc.Texture2DArray.FirstArraySlice = SliceIndex;
-
-		HRESULT hr = Device->CreateRenderTargetView(
-			InTexture,
-			&rtvDesc,
-			RTVs[SliceIndex].GetAddressOf()
-		);
-
-		assert(SUCCEEDED(hr));
-	}
+	RebuildVSMMomentRTVs(Device, InTexture, RTVs);
 }
 
 void FTextureAtlasPool::OnSetTextureSize()
