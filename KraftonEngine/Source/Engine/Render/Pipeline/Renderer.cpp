@@ -82,22 +82,57 @@ namespace
 				0.0f, 0.0f, -FarZ / Denom, 1.0f);
 		}
 
+		static FVector SnapCenterToShadowTexels(
+			const FVector& Center,
+			const FVector& Right,
+			const FVector& Up,
+			float Width,
+			float Height,
+			float ShadowMapWidth,
+			float ShadowMapHeight)
+		{
+			const float TexelSizeX = Width / std::max(ShadowMapWidth, 1.0f);
+			const float TexelSizeY = Height / std::max(ShadowMapHeight, 1.0f);
+			if (TexelSizeX <= 0.0f || TexelSizeY <= 0.0f)
+			{
+				return Center;
+			}
+
+			const float CenterX = Center.Dot(Right);
+			const float CenterY = Center.Dot(Up);
+			const float SnappedX = std::round(CenterX / TexelSizeX) * TexelSizeX;
+			const float SnappedY = std::round(CenterY / TexelSizeY) * TexelSizeY;
+			return Center + Right * (SnappedX - CenterX) + Up * (SnappedY - CenterY);
+		}
+
 		static bool MakeDirectionalShadowMatrix(
 			const FFrameContext& Frame,
 			const UDirectionalLightComponent& DirectionalLight,
 			FMatrix& OutLightVP,
-			float& OutNearZ)
+			float& OutNearZ,
+			float ShadowMapWidth,
+			float ShadowMapHeight)
 		{
 			const float ShadowDistance = FMath::Clamp(Frame.FarClip * 0.15f, 15.0f, 80.0f);
 			const float ShadowExtent = FMath::Clamp(Frame.FarClip * 0.2f, 20.0f, 120.0f);
-			const FVector CameraCenter = Frame.CameraPosition + Frame.CameraForward * (ShadowExtent * 0.5f);
+			const FVector LightRight = DirectionalLight.GetRightVector();
+			const FVector LightUp = DirectionalLight.GetUpVector();
+			const FVector LightDir = DirectionalLight.GetForwardVector();
+			const FVector CameraCenter = SnapCenterToShadowTexels(
+				Frame.CameraPosition + Frame.CameraForward * (ShadowExtent * 0.5f),
+				LightRight,
+				LightUp,
+				ShadowExtent * 2.0f,
+				ShadowExtent * 2.0f,
+				ShadowMapWidth,
+				ShadowMapHeight);
 			const FVector Eye = CameraCenter - DirectionalLight.GetForwardVector() * ShadowDistance;
 
 			const FMatrix LightView = MakeAxesViewMatrix(
 				Eye,
-				DirectionalLight.GetRightVector(),
-				DirectionalLight.GetUpVector(),
-				DirectionalLight.GetForwardVector());
+				LightRight,
+				LightUp,
+				LightDir);
 
 			const float NearZ = 0.1f;
 			const FMatrix LightProj = MakeReversedZOrthographic(
@@ -559,7 +594,14 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 				}
 				else
 				{
-					FShadowUtil::MakeDirectionalShadowMatrix(Frame, *DirectionalLight, FinalLightVP, ShadowNearZ);
+					const D3D11_VIEWPORT ShadowViewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[0], AtlasTextureSize);
+					FShadowUtil::MakeDirectionalShadowMatrix(
+						Frame,
+						*DirectionalLight,
+						FinalLightVP,
+						ShadowNearZ,
+						ShadowViewport.Width,
+						ShadowViewport.Height);
 				}
 
 				FShadowRenderTask& Task = OutShadowPassData.RenderTasks.emplace_back();
@@ -668,6 +710,17 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						// Find radius for tight bounding sphere
 						float Radius = 0.0f;
 						for (int j = 0; j < 8; ++j) Radius = std::max(Radius, (Corners[j] - Center).Length());
+						Radius = std::ceil(Radius * 16.0f) / 16.0f;
+
+						const D3D11_VIEWPORT CascadeViewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[i], AtlasTextureSize);
+						Center = FShadowUtil::SnapCenterToShadowTexels(
+							Center,
+							LightRight,
+							LightUp,
+							Radius * 2.0f,
+							Radius * 2.0f,
+							CascadeViewport.Width,
+							CascadeViewport.Height);
 
 						// Create tight Orthographic projection
 						FVector Eye = Center - LightDir * Radius * 2.0f;
