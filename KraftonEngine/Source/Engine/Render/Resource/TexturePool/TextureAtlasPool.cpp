@@ -201,7 +201,7 @@ void FTextureAtlasPool::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* 
 
 std::unique_ptr<FTexturePoolAllocatorBase> FTextureAtlasPool::CreateAllocator()
 {
-	return std::make_unique<FGridTexturePoolAllocator>(256);
+	return std::make_unique<FGridTexturePoolAllocator>();
 }
 
 void FTextureAtlasPool::EnsureAtlasMode(EShadowFilterMode InFilterMode)
