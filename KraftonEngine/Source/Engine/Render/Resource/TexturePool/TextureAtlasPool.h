@@ -79,6 +79,7 @@ private:
 	void RebuildSliceSRVs(ID3D11Device* Device, ID3D11Texture2D* InTexture, DXGI_FORMAT Format, TArray<TComPtr<ID3D11ShaderResourceView>>& OutSRVs);
 	void RebuildVSMMomentRTVs(ID3D11Device* Device, ID3D11Texture2D* InTexture, TArray<TComPtr<ID3D11RenderTargetView>>& OutRTVs);
 	void RebuildVSMBlurResources(ID3D11Device* Device);
+	void UpdateMemoryStats();
 	bool IsVSMMode() const { return CurrentFilterMode == EShadowFilterMode::VSM; }
 
 private:
@@ -99,4 +100,5 @@ private:
 	TComPtr<ID3D11SamplerState> DebugPointClampSampler;
 	TComPtr<ID3D11RasterizerState> DebugRasterizerState;
 	TComPtr<ID3D11DepthStencilState> DebugDepthStencilState;
+	uint64 TrackedShadowAtlasMemory = 0;
 };

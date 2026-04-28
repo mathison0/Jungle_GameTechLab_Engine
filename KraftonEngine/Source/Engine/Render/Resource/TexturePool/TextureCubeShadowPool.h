@@ -83,6 +83,7 @@ private:
 
 	void Resize(uint32 TierIndex, uint32 NewCubeCapacity);
 	bool RebuildResources(uint32 TierIndex, uint32 NewCubeCapacity);
+	void UpdateMemoryStats();
 	uint32 GetSliceIndex(FCubeShadowHandle Handle, uint32 FaceIndex) const;
 	FTierPool* GetTier(uint32 TierIndex);
 	const FTierPool* GetTier(uint32 TierIndex) const;
@@ -91,5 +92,6 @@ private:
 	ID3D11Device* Device = nullptr;
 	uint32 BaseResolution = 1024;
 	bool bVSMMode = false;
+	uint64 TrackedShadowCubeMemory = 0;
 	FTierPool Tiers[TierCount];
 };

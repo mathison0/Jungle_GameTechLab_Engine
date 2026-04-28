@@ -59,7 +59,7 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 	}
 	if (bShowLight)
 	{
-		EstimatedLineCount += 5;
+		EstimatedLineCount += 8;
 	}
 	OutLines.reserve(EstimatedLineCount);
 
@@ -186,6 +186,18 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 			CurrentY += Layout.LineHeight;
 
 			snprintf(Buffer, sizeof(Buffer), "Spot Lights : %u", NumSpotLights);
+			AppendLine(OutLines, CurrentY, FString(Buffer));
+			CurrentY += Layout.LineHeight;
+
+			FormatBytes(Buffer, sizeof(Buffer), "Shadow Atlas Memory", MemoryStats::GetShadowAtlasMemory());
+			AppendLine(OutLines, CurrentY, FString(Buffer));
+			CurrentY += Layout.LineHeight;
+
+			FormatBytes(Buffer, sizeof(Buffer), "Shadow Cube Memory", MemoryStats::GetShadowCubeMemory());
+			AppendLine(OutLines, CurrentY, FString(Buffer));
+			CurrentY += Layout.LineHeight;
+
+			FormatBytes(Buffer, sizeof(Buffer), "Shadow Total Memory", MemoryStats::GetShadowAtlasMemory() + MemoryStats::GetShadowCubeMemory());
 			AppendLine(OutLines, CurrentY, FString(Buffer));
 			CurrentY += Layout.LineHeight + Layout.GroupSpacing;
 		}

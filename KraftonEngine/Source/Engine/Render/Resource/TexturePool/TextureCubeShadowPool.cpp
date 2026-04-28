@@ -1,4 +1,5 @@
 ﻿#include "TextureCubeShadowPool.h"
+#include "Profiling/MemoryStats.h"
 namespace
 {
 	uint32 MakeTierResolution(uint32 BaseResolution, uint32 TierIndex)
@@ -32,6 +33,12 @@ void FTextureCubeShadowPool::Initialize(ID3D11Device* InDevice, uint32 InBaseRes
 
 void FTextureCubeShadowPool::Release()
 {
+	if (TrackedShadowCubeMemory > 0)
+	{
+		MemoryStats::SubShadowCubeMemory(TrackedShadowCubeMemory);
+		TrackedShadowCubeMemory = 0;
+	}
+
 	for (FTierPool& Tier : Tiers)
 	{
 		Tier.FaceDSVs.clear();
@@ -426,7 +433,29 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 		Tier->FreeCubeIndices.push_back(CubeIndex - 1);
 	}
 
+	UpdateMemoryStats();
 	return true;
+}
+
+void FTextureCubeShadowPool::UpdateMemoryStats()
+{
+	uint64 NewMemory = 0;
+	for (const FTierPool& Tier : Tiers)
+	{
+		NewMemory += MemoryStats::CalculateTextureMemory(Tier.Texture.Get());
+		NewMemory += MemoryStats::CalculateTextureMemory(Tier.MomentTexture.Get());
+	}
+
+	if (NewMemory > TrackedShadowCubeMemory)
+	{
+		MemoryStats::AddShadowCubeMemory(NewMemory - TrackedShadowCubeMemory);
+	}
+	else if (TrackedShadowCubeMemory > NewMemory)
+	{
+		MemoryStats::SubShadowCubeMemory(TrackedShadowCubeMemory - NewMemory);
+	}
+
+	TrackedShadowCubeMemory = NewMemory;
 }
 
 uint32 FTextureCubeShadowPool::GetSliceIndex(FCubeShadowHandle Handle, uint32 FaceIndex) const

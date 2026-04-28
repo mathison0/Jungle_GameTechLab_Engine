@@ -1,6 +1,7 @@
 ﻿#include "TextureAtlasPool.h"
 #include "Render/Pipeline/RenderConstants.h"
 #include "Render/Resource/ShaderManager.h"
+#include "Profiling/MemoryStats.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -222,6 +223,7 @@ void FTextureAtlasPool::RecreateAtlasResources()
 	Texture = CreateTexture(Device);
 	RebuildSRV(Device, Texture.Get());
 	RebuildDSV(Device, Texture.Get());
+	UpdateMemoryStats();
 	BroadCastHandlesUnvalid();
 }
 
@@ -819,6 +821,7 @@ void FTextureAtlasPool::RebuildDSV(ID3D11Device* Device, ID3D11Texture2D* InText
 	{
 		VSMDepthTexture.Reset();
 		FTexturePoolBase::RebuildDSV(Device, InTexture);
+		UpdateMemoryStats();
 		return;
 	}
 
@@ -844,11 +847,33 @@ void FTextureAtlasPool::RebuildDSV(ID3D11Device* Device, ID3D11Texture2D* InText
 		);
 		assert(SUCCEEDED(hr));
 	}
+
+	UpdateMemoryStats();
 }
 
 void FTextureAtlasPool::RebuildRTVs(ID3D11Device* Device, ID3D11Texture2D* InTexture)
 {
 	RebuildVSMMomentRTVs(Device, InTexture, RTVs);
+}
+
+void FTextureAtlasPool::UpdateMemoryStats()
+{
+	uint64 NewMemory = 0;
+	NewMemory += MemoryStats::CalculateTextureMemory(Texture.Get());
+	NewMemory += MemoryStats::CalculateTextureMemory(VSMDepthTexture.Get());
+	NewMemory += MemoryStats::CalculateTextureMemory(VSMFilteredTexture.Get());
+	NewMemory += MemoryStats::CalculateTextureMemory(VSMTempTexture.Get());
+
+	if (NewMemory > TrackedShadowAtlasMemory)
+	{
+		MemoryStats::AddShadowAtlasMemory(NewMemory - TrackedShadowAtlasMemory);
+	}
+	else if (TrackedShadowAtlasMemory > NewMemory)
+	{
+		MemoryStats::SubShadowAtlasMemory(TrackedShadowAtlasMemory - NewMemory);
+	}
+
+	TrackedShadowAtlasMemory = NewMemory;
 }
 
 void FTextureAtlasPool::OnSetTextureSize()
