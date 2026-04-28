@@ -24,26 +24,31 @@
 // Shadow 계산 헬퍼 함수(Bias + Bleeding)
 // =========================================================================
 
+// FShadowInfo.ShadowParams.x에 저장된 constant bias를 셰이더 내부 배율과 함께 꺼낸다.
 float GetShadowConstantBias(FShadowInfo info)
 {
     return max(info.ShadowParams.x, 0.0f) * SHADOW_BIAS;
 }
 
+// FShadowInfo.ShadowParams.y에 저장된 slope bias를 셰이더 내부 배율과 함께 꺼낸다.
 float GetShadowSlopeBias(FShadowInfo info)
 {
     return max(info.ShadowParams.y, 0.0f) * SHADOW_SLOPE_BIAS;
 }
 
+// ShadowParams.z를 [0, 1] 범위의 sharpen 강도로 해석한다.
 float GetShadowSharpen(FShadowInfo info)
 {
     return saturate(info.ShadowParams.z);
 }
 
+// ShadowParams.w에 저장된 near plane 값을 안전한 최소값과 함께 반환한다.
 float GetShadowNearZ(FShadowInfo info)
 {
     return max(info.ShadowParams.w, 0.0001f);
 }
 
+// 길이가 너무 작은 벡터를 정규화할 때 NaN이 생기지 않도록 fallback 방향을 사용한다.
 float3 SafeNormalize(float3 value, float3 fallback)
 {
     float lenSq = dot(value, value);
@@ -55,6 +60,8 @@ float3 SafeNormalize(float3 value, float3 fallback)
     return value * rsqrt(lenSq);
 }
 
+// 표면 법선과 광원 방향의 각도를 이용해 receiver bias를 만든다.
+// 정면에서는 constant bias 위주로, grazing angle에서는 slope bias가 더 많이 붙는다.
 float GetReceiverShadowBias(FShadowInfo info, float3 normal, float3 lightVector)
 {
     float3 N = SafeNormalize(normal, float3(0.0f, 1.0f, 0.0f));
@@ -68,6 +75,7 @@ float GetReceiverShadowBias(FShadowInfo info, float3 normal, float3 lightVector)
     return max(constantBias + slopeBias, 0.00001f);
 }
 
+// 필터링이 끝난 shadow 값에 대비를 더해 그림자 경계를 조금 또렷하게 만든다.
 float ApplyShadowSharpen(float shadow, FShadowInfo info)
 {
     float sharpen = GetShadowSharpen(info);
@@ -75,13 +83,15 @@ float ApplyShadowSharpen(float shadow, FShadowInfo info)
     return saturate((shadow - 0.5f) * contrast + 0.5f);
 }
 
-// Light Bleeding 방지 함수
+// VSM 확률값을 remap해서 밝은 누수(light bleeding)를 줄인다.
 float ReduceLightBleed(float probability)
 {
     const float bleedReduction = 0.2f;
     return saturate((probability - bleedReduction) / (1.0f - bleedReduction));
 }
 
+// Point light cube shadow 샘플링에 필요한 방향, 비교 depth, tier를 한 번에 계산한다.
+// 유효 범위를 벗어나면 false를 반환해서 호출부가 바로 lit 처리할 수 있게 한다.
 bool BuildCubeShadowLookup(FShadowInfo info, float3 worldPos, out float3 outDir, out float outDepth, out uint outCubeTier)
 {
     float3 lightPos = info.SampleData.xyz;
@@ -109,7 +119,8 @@ bool BuildCubeShadowLookup(FShadowInfo info, float3 worldPos, out float3 outDir,
 // Hard Shadow(No Filter) Function
 // =========================================================================
 
-// Hard Atlas Shadow 계산 함수
+// 2D atlas shadow map을 한 번만 비교 샘플링하는 hard shadow 경로다.
+// Directional/Spot shadow의 기본 비교 경로로 사용된다.
 float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float4 shadowPos;
@@ -148,6 +159,8 @@ float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP, flo
         depth);
 }
 
+// Cube shadow map을 한 번만 비교 샘플링하는 hard shadow 경로다.
+// Point light shadow의 기본 비교 경로로 사용된다.
 float SampleCubeShadow(FShadowInfo info, float3 worldPos, float receiverBias)
 {
     float3 lightPos = info.SampleData.xyz;
@@ -199,6 +212,8 @@ float SampleCubeShadow(FShadowInfo info, float3 worldPos, float receiverBias)
 // PCF(Percentage-Closer Filtering) Functions
 // =========================================================================
 
+// Atlas shadow map에서 3x3 weighted PCF를 수행한다.
+// 타일 경계를 넘어가면 옆 shadow map을 읽지 않도록 atlas UV를 clamp한다.
 float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float result = 1.0f;
@@ -295,6 +310,8 @@ float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
     return result;
 }
 
+// Cube shadow map에서 방향 벡터 주변을 3x3으로 퍼뜨려 weighted PCF를 수행한다.
+// 비교 depth는 cube shadow 전용 reversed-Z depth 규약을 그대로 따른다.
 float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float3 lightPos = info.SampleData.xyz;
@@ -425,6 +442,8 @@ float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, f
 // VSM(Variance Shadow Map) Functions
 // =========================================================================
 
+// Atlas에 저장된 VSM moments를 읽어 확률 기반 shadow 값을 계산한다.
+// receiver depth가 first moment보다 뒤에 있을 때만 variance test를 수행한다.
 float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float4 lightClip;
@@ -472,6 +491,8 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
     return ReduceLightBleed(probability);
 }
 
+// Cube shadow용 VSM moments를 읽어 point light shadow 값을 계산한다.
+// cube shadow depth를 VSM 저장 규약에 맞게 변환한 뒤 variance test를 적용한다.
 float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float result = 1.0f;
@@ -550,6 +571,8 @@ float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, f
 // Shadow 분기 처리 함수
 // =========================================================================
 
+// Point/Spot light shadow의 단일 진입점이다.
+// shadow 타입(atlas/cube)과 현재 필터 모드(hard/PCF/VSM)에 맞는 샘플링 함수를 고른다.
 float GetLightShadow(FLightInfo light, float3 worldPos, float3 normal)
 {
     if (light.ShadowIndex < 0)
@@ -587,6 +610,9 @@ float GetLightShadow(FLightInfo light, float3 worldPos, float3 normal)
 // =========================================================================
 // Directional Light Shadow 분기 처리 함수
 // =========================================================================
+
+// Directional light shadow의 단일 진입점이다.
+// CSM이면 cascade를 고르고, 아니면 단일 atlas shadow map을 사용한다.
 float GetDirectionalShadow(float3 worldPos, float3 normal)
 {
     if (DirectionalLight.ShadowIndex < 0)

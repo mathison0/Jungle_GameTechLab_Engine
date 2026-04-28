@@ -59,19 +59,19 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Gouraud),		EUberLitDefines::Gouraud);
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Lambert),		EUberLitDefines::Lambert);
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Phong),		EUberLitDefines::Phong);
-	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Toon),			EUberLitDefines::Toon);
+	// PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Toon),			EUberLitDefines::Toon);
 
 	// PCF
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::GouraudPCF),	EUberLitDefines::GouraudPCF);
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::LambertPCF),	EUberLitDefines::LambertPCF);
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::PhongPCF),		EUberLitDefines::PhongPCF);
-	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::ToonPCF),		EUberLitDefines::ToonPCF);
+	// PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::ToonPCF),		EUberLitDefines::ToonPCF);
 
 	// VSM
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::GouraudVSM),	EUberLitDefines::GouraudVSM);
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::LambertVSM),	EUberLitDefines::LambertVSM);
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::PhongVSM),		EUberLitDefines::PhongVSM);
-	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::ToonVSM),		EUberLitDefines::ToonVSM);
+	// PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::ToonVSM),		EUberLitDefines::ToonVSM);
 
 	// Shadow Pass에서 사용하는 셰이더
 	PreCompile(FShaderKey(EShaderPath::ShadowDepth, EShadowPassDefines::VSM),		EShadowPassDefines::VSM);
