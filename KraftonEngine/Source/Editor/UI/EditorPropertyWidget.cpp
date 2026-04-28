@@ -626,31 +626,6 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 		LightComponent->SetShadowSharpen(ShadowSharpen);
 	}
 
-	if (LightComponent->GetClass() == UPointLightComponent::StaticClass())
-	{
-		static constexpr const char* FaceLabels[] = { "+X", "-X", "+Y", "-Y", "+Z", "-Z" };
-		RenderOptions.PointLightPreviewFaceIndex = RenderOptions.PointLightPreviewFaceIndex < static_cast<uint32>(std::size(FaceLabels))
-			? RenderOptions.PointLightPreviewFaceIndex
-			: 0u;
-
-		if (ImGui::BeginCombo("Point Light Preview Face", FaceLabels[RenderOptions.PointLightPreviewFaceIndex]))
-		{
-			for (uint32 FaceIndex = 0; FaceIndex < static_cast<uint32>(std::size(FaceLabels)); ++FaceIndex)
-			{
-				const bool bSelected = RenderOptions.PointLightPreviewFaceIndex == FaceIndex;
-				if (ImGui::Selectable(FaceLabels[FaceIndex], bSelected))
-				{
-					RenderOptions.PointLightPreviewFaceIndex = FaceIndex;
-				}
-				if (bSelected)
-				{
-					ImGui::SetItemDefaultFocus();
-				}
-			}
-			ImGui::EndCombo();
-		}
-	}
-
 	FEditorShadowPropertyWidget::Get().ShowShadowProperty(LightComponent);
 
 	static constexpr const char* MethodLabels[] = { "Standard", "PSM", "CSM" };

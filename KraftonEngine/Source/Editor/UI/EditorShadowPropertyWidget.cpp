@@ -3,6 +3,7 @@
 #include "Editor/Viewport/LevelEditorViewportClient.h"
 #include "Engine/Runtime/Engine.h"
 #include "imgui.h"
+#include "Engine/Component/Light/PointLightComponent.h"
 
 void FEditorShadowPropertyWidget::ShowShadowProperty(ULightComponent* LightComponent)
 {
@@ -38,6 +39,31 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 			if (ImGui::Checkbox("Override camera with light's perspective", &bOverrideCamera))
 			{
 				RenderOptions.bOverrideCameraWithSelectedLight = bOverrideCamera;
+			}
+
+			if (CurrentShowLightComponent->GetClass() == UPointLightComponent::StaticClass())
+			{
+				static constexpr const char* FaceLabels[] = { "+X", "-X", "+Y", "-Y", "+Z", "-Z" };
+				RenderOptions.PointLightPreviewFaceIndex = RenderOptions.PointLightPreviewFaceIndex < static_cast<uint32>(std::size(FaceLabels))
+					? RenderOptions.PointLightPreviewFaceIndex
+					: 0u;
+
+				if (ImGui::BeginCombo("Point Light Preview Face", FaceLabels[RenderOptions.PointLightPreviewFaceIndex]))
+				{
+					for (uint32 FaceIndex = 0; FaceIndex < static_cast<uint32>(std::size(FaceLabels)); ++FaceIndex)
+					{
+						const bool bSelected = RenderOptions.PointLightPreviewFaceIndex == FaceIndex;
+						if (ImGui::Selectable(FaceLabels[FaceIndex], bSelected))
+						{
+							RenderOptions.PointLightPreviewFaceIndex = FaceIndex;
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
 			}
 
 			ImGui::BeginDisabled(true);
