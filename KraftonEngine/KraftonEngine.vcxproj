@@ -388,6 +388,7 @@
     <ClCompile Include="Source\ObjViewer\ObjViewerViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\TexturePool\TextureAtlasPool.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\TexturePool\TexturePool.cpp" />
+    <ClCompile Include="Source\Engine\Render\Resource\TexturePool\UVManager\Allocator\TextureHandleAllocatorReal.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_demo.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_draw.cpp" />
@@ -587,6 +588,7 @@
     <ClInclude Include="Source\Engine\Render\Resource\TexturePool\TextureAtlasPool.h" />
     <ClInclude Include="Source\Engine\Render\Resource\TexturePool\TexturePool.h" />
     <ClInclude Include="Source\Engine\Render\Resource\TexturePool\TexturePoolTypes.h" />
+    <ClInclude Include="Source\Engine\Render\Resource\TexturePool\UVManager\Allocator\TextureHandleAllocatorReal.h" />
     <ClInclude Include="ThirdParty\ImGui\imconfig.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui_impl_dx11.h" />
