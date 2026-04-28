@@ -1,6 +1,6 @@
 ﻿#include "RenderResources.h"
 #include "Render/Device/D3DDevice.h"
-#include "Render/Resource/TexturePool/TextureAtalsPool.h"
+#include "Render/Resource/TexturePool/TextureAtlasPool.h"
 #include "Render/Resource/TexturePool/TextureCubeShadowPool.h"
 #include "Materials/MaterialManager.h"
 #include "Render/Pipeline/ForwardLightData.h"

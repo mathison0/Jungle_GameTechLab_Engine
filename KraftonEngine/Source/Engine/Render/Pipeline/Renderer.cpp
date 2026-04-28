@@ -438,6 +438,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 			Task.DSV = FTextureCubeShadowPool::Get().GetFaceDSV(CubeHandle, FaceIndex);
 			Task.CubeIndex = CubeHandle.CubeIndex;
 			Task.CubeFaceIndex = FaceIndex;
+			Task.ShadowDepthBias = PointLight->GetShadowBias();
+			Task.ShadowSlopeBias = PointLight->GetShadowSlopeBias();
 		}
 
 		FShadowInfo Info = {};
@@ -500,6 +502,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		Task.Viewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[0], AtlasTextureSize);
 		Task.DSV = DSVs[0];
 		Task.RTV = bUseVSM ? RTVs[0] : nullptr;
+		Task.ShadowDepthBias = SpotLight->GetShadowBias();
+		Task.ShadowSlopeBias = SpotLight->GetShadowSlopeBias();
 		Task.AtlasSliceIndex = AtlasUVs[0].ArrayIndex;
 
 		FShadowInfo Info = {};
@@ -552,6 +556,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 				Task.bIsPSM = (bIsPSM_Flag != 0);
 				Task.CameraVP = Frame.View * Frame.Proj;
 				Task.bCullWithShadowFrustum = !Task.bIsPSM;
+				Task.ShadowDepthBias = DirectionalLight->GetShadowBias();
+				Task.ShadowSlopeBias = DirectionalLight->GetShadowSlopeBias();
 
 				if (Task.bIsPSM)
 				{
@@ -666,6 +672,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Task.Viewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[i], AtlasTextureSize);
 						Task.DSV = DSVs[i];
 						Task.RTV = (bUseVSM && i < RTVs.size()) ? RTVs[i] : nullptr;
+						Task.ShadowDepthBias = DirectionalLight->GetShadowBias();
+						Task.ShadowSlopeBias = DirectionalLight->GetShadowSlopeBias();
 						Task.AtlasSliceIndex = AtlasUVs[i].ArrayIndex;
 
 						FShadowInfo Info = {};
@@ -721,6 +729,37 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 	Resources.SetRasterizerState(Device, ERasterizerState::SolidBackCull);
 
 	ID3D11Buffer* ShadowPassCBHandle = ShadowPassBuffer.GetBuffer();
+	ID3D11Device* D3DDevice = Device.GetDevice();
+	auto CreateShadowRasterizerState = [D3DDevice](const FShadowRenderTask& Task) -> ID3D11RasterizerState*
+	{
+		if (!D3DDevice)
+		{
+			return nullptr;
+		}
+
+		constexpr float DepthBiasScale = 100000.0f;
+		const float ClampedDepthBias = FMath::Clamp(Task.ShadowDepthBias, 0.0f, 0.05f);
+		const float ClampedSlopeBias = FMath::Clamp(Task.ShadowSlopeBias, 0.0f, 10.0f);
+
+		D3D11_RASTERIZER_DESC RasterizerDesc = {};
+		RasterizerDesc.FillMode = D3D11_FILL_SOLID;
+		RasterizerDesc.CullMode = D3D11_CULL_BACK;
+		RasterizerDesc.FrontCounterClockwise = FALSE;
+		RasterizerDesc.DepthBias = -static_cast<INT>(ClampedDepthBias * DepthBiasScale);
+		RasterizerDesc.DepthBiasClamp = 0.0f;
+		RasterizerDesc.SlopeScaledDepthBias = -ClampedSlopeBias;
+		RasterizerDesc.DepthClipEnable = TRUE;
+		RasterizerDesc.ScissorEnable = FALSE;
+		RasterizerDesc.MultisampleEnable = FALSE;
+		RasterizerDesc.AntialiasedLineEnable = FALSE;
+
+		ID3D11RasterizerState* RasterizerState = nullptr;
+		if (FAILED(D3DDevice->CreateRasterizerState(&RasterizerDesc, &RasterizerState)))
+		{
+			return nullptr;
+		}
+		return RasterizerState;
+	};
 
 	for (const FShadowRenderTask& Task : ShadowPassData.RenderTasks)
 	{
@@ -734,6 +773,7 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 		FShader* ActiveShadowDepthShader = bWriteMoments ? ShadowDepthShaderVSM : ShadowDepthShader;
 
 		Resources.SetBlendState(Device, bWriteMoments ? EBlendState::Opaque : EBlendState::NoColor);
+		Resources.SetRasterizerState(Device, ERasterizerState::SolidBackCull);
 
 		if (Task.RTV)
 		{
@@ -759,6 +799,12 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 		if (!bWriteMoments)
 		{
 			Ctx->PSSetShader(nullptr, nullptr, 0);
+		}
+
+		ID3D11RasterizerState* ShadowRasterizerState = CreateShadowRasterizerState(Task);
+		if (ShadowRasterizerState)
+		{
+			Ctx->RSSetState(ShadowRasterizerState);
 		}
 
 		FShadowPassConstants ShadowPassConstants = {};
@@ -829,8 +875,16 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 				Ctx->DrawIndexed(Section.IndexCount, Section.FirstIndex, 0);
 			}
 		}
+
+		if (ShadowRasterizerState)
+		{
+			ShadowRasterizerState->Release();
+		}
+		Resources.ResetRenderStateCache();
 	}
 
+		//VSM이면 이후 블러 작업 필요
+		//한 요쯤에 들어갈듯?
 	// Blur shader가 아직 연결되지 않았으므로 실행 경로는 막아 둔다.
 	// 아래 블록은 H/V blur shader를 준비한 뒤 다시 활성화한다.
 	/*
@@ -839,6 +893,8 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 		RenderVSMBlurPass(ShadowPassData);
 	}
 	*/
+
+	Resources.ResetRenderStateCache();
 
 	if (Frame.ViewportRTV)
 	{
