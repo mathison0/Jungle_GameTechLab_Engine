@@ -23,7 +23,6 @@ protected:
 
 public:
 	void ShowShadowProperty(ULightComponent* LightComponent);
-	void ShowShadowParameter();
 	bool GetEnablePointer() { return bIsEnabled; }
 	void SetEnabled(bool InEnable) { bIsEnabled = InEnable; }
 
