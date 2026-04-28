@@ -68,3 +68,9 @@ enum class ELightType
 	LightType_AmbientLight = 3,
 	Max
 };
+
+enum class EShadowFilterType
+{
+    PCF = 0,
+    VSM = 1,
+};

@@ -1,4 +1,4 @@
-﻿#include "EditorRenderPipeline.h"
+#include "EditorRenderPipeline.h"
 
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/ViewportCamera.h"
@@ -119,6 +119,7 @@ bool FEditorRenderPipeline::PrepareViewport(FRenderer& Renderer, int32 ViewportI
 	Bus.SetViewportSize(FVector2(static_cast<float>(Rect.Width), static_cast<float>(Rect.Height)));
 	Bus.SetViewportOrigin(FVector2(0.0f, 0.0f));
 	Bus.SetFXAAEnabled(Settings.bEnableFXAA && !OutSceneView.bOrthographic);
+    Bus.SetShadowFilterType(Settings.ShadowFilterType);
 
 	return true;
 }

@@ -31,7 +31,8 @@ namespace SceneLightBinding
 	struct FSpotShadowInfoConstants
 	{
 		uint32 SpotShadowCount = 0;
-		float Padding[3] = { 0.0f, 0.0f, 0.0f };
+        uint32 ShadowFilterType = 0;
+		float Padding[2] = { 0.0f, 0.0f };
 	};
 
 	struct FDirectionalShadowInfoConstants
@@ -42,7 +43,7 @@ namespace SceneLightBinding
 		float ShadowBias = 0.001f;
 		uint32 bCascadeDebug = 0;
 		uint32 bHasShadowMap = 0;
-		float Padding = 0.0f;
+        uint32 ShadowFilterType = 0;
 	};
 
 	inline bool EnsureVisibleLightConstantBuffer(ID3D11Device* Device, TComPtr<ID3D11Buffer>& VisibleLightConstantBuffer)
@@ -195,6 +196,7 @@ namespace SceneLightBinding
 
 		FSpotShadowInfoConstants InfoConstants = {};
 		InfoConstants.SpotShadowCount = SpotShadowCount;
+        InfoConstants.ShadowFilterType = (uint32)Context->RenderBus->GetShadowFilterType();
 
 		D3D11_MAPPED_SUBRESOURCE MappedInfo = {};
 		if (SUCCEEDED(Context->DeviceContext->Map(SpotShadowInfoConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedInfo)))
@@ -272,6 +274,7 @@ namespace SceneLightBinding
 		}
 
 		InfoConstants.bHasShadowMap = (ShadowMapSRV != nullptr) ? 1u : 0u;
+        InfoConstants.ShadowFilterType = (uint32)Context->RenderBus->GetShadowFilterType();
 
 		D3D11_MAPPED_SUBRESOURCE Mapped = {};
 		if (SUCCEEDED(Context->DeviceContext->Map(DirectionalShadowInfoCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
