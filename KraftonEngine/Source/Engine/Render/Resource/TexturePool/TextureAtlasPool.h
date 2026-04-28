@@ -42,9 +42,8 @@ public:
 	ID3D11ShaderResourceView* GetRawSRV() { return SRV.Get(); }
 	ID3D11ShaderResourceView* GetFilteredSRV() { return VSMFilteredSRV.Get(); }
 	ID3D11ShaderResourceView* GetTempSRV() { return VSMTempSRV.Get(); }
-	ID3D11Texture2D* GetRawTexture() { return Texture.Get(); }
-	ID3D11Texture2D* GetFilteredTexture() { return VSMFilteredTexture.Get(); }
-	ID3D11Texture2D* GetTempTexture() { return VSMTempTexture.Get(); }
+	ID3D11RenderTargetView* GetFilteredRTV(uint32 SliceIndex) { return SliceIndex < static_cast<uint32>(VSMFilteredRTVs.size()) ? VSMFilteredRTVs[SliceIndex].Get() : nullptr; }
+	ID3D11RenderTargetView* GetTempRTV(uint32 SliceIndex) { return SliceIndex < static_cast<uint32>(VSMTempRTVs.size()) ? VSMTempRTVs[SliceIndex].Get() : nullptr; }
 	TArray<ID3D11DepthStencilView*> GetDSVs(TexturePoolHandleSet* HandleSet);
 	TArray<ID3D11RenderTargetView*> GetRTVs(TexturePoolHandleSet* HandleSet);
 	TArray<ID3D11RenderTargetView*> GetFilteredRTVs(TexturePoolHandleSet* HandleSet);

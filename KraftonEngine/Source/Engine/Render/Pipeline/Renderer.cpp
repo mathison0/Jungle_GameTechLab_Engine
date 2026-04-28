@@ -116,7 +116,7 @@ namespace
 			&& Proxy->GetMeshBuffer()->IsValid();
 	}
 
-	D3D11_BOX MakeViewportCopyBox(const D3D11_VIEWPORT& Viewport, uint32 TextureSize, bool& bOutValid)
+	D3D11_BOX MakeViewportBlurBox(const D3D11_VIEWPORT& Viewport, uint32 TextureSize, bool& bOutValid)
 	{
 		D3D11_BOX Box = {};
 		Box.left = static_cast<UINT>(std::max(0.0f, std::floor(Viewport.TopLeftX)));
@@ -755,14 +755,16 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 				Ctx->DrawIndexed(Section.IndexCount, Section.FirstIndex, 0);
 			}
 		}
-
-		//VSM이면 이후 블러 작업 필요
 	}
 
+	// Blur shader가 아직 연결되지 않았으므로 실행 경로는 막아 둔다.
+	// 아래 블록은 H/V blur shader를 준비한 뒤 다시 활성화한다.
+	/*
 	if (bUseVSM)
 	{
 		RenderVSMBlurPass(ShadowPassData);
 	}
+	*/
 
 	if (Frame.ViewportRTV)
 	{
@@ -786,18 +788,26 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 
 void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 {
+	struct FPreparedVSMBlurRegion
+	{
+		uint32 SliceIndex = static_cast<uint32>(-1);
+		D3D11_BOX Box = {};
+		ID3D11RenderTargetView* TempRTV = nullptr;
+		ID3D11RenderTargetView* FilteredRTV = nullptr;
+	};
+
 	FTextureAtlasPool& AtlasPool = FTextureAtlasPool::Get();
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
-	ID3D11Texture2D* RawTexture = AtlasPool.GetRawTexture();
-	ID3D11Texture2D* TempTexture = AtlasPool.GetTempTexture();
-	ID3D11Texture2D* FilteredTexture = AtlasPool.GetFilteredTexture();
-	if (!Ctx || !RawTexture || !TempTexture || !FilteredTexture)
+	ID3D11ShaderResourceView* RawSRV = AtlasPool.GetRawSRV();
+	ID3D11ShaderResourceView* TempSRV = AtlasPool.GetTempSRV();
+	ID3D11ShaderResourceView* FilteredSRV = AtlasPool.GetFilteredSRV();
+	if (!Ctx || !RawSRV || !TempSRV || !FilteredSRV)
 	{
 		return;
 	}
 
-	TArray<FVSMBlurRegion> BlurRegions;
-	BlurRegions.reserve(ShadowPassData.RenderTasks.size());
+	TArray<FPreparedVSMBlurRegion> PreparedRegions;
+	PreparedRegions.reserve(ShadowPassData.RenderTasks.size());
 
 	const uint32 AtlasTextureSize = AtlasPool.GetTextureSize();
 	const uint32 AtlasLayerCount = AtlasPool.GetAllocatedLayerCount();
@@ -811,71 +821,95 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 		}
 
 		bool bValidRegion = false;
-		FVSMBlurRegion Region = {};
-		Region.SliceIndex = Task.AtlasSliceIndex;
-		Region.Box = MakeViewportCopyBox(Task.Viewport, AtlasTextureSize, bValidRegion);
-		if (bValidRegion)
+		const D3D11_BOX BlurBox = MakeViewportBlurBox(Task.Viewport, AtlasTextureSize, bValidRegion);
+		if (!bValidRegion || Task.AtlasSliceIndex >= AtlasLayerCount)
 		{
-			BlurRegions.push_back(Region);
+			continue;
 		}
+
+		FPreparedVSMBlurRegion Region = {};
+		Region.SliceIndex = Task.AtlasSliceIndex;
+		Region.Box = BlurBox;
+		Region.TempRTV = AtlasPool.GetTempRTV(Task.AtlasSliceIndex);
+		Region.FilteredRTV = AtlasPool.GetFilteredRTV(Task.AtlasSliceIndex);
+		if (!Region.TempRTV || !Region.FilteredRTV)
+		{
+			continue;
+		}
+
+		PreparedRegions.push_back(Region);
 	}
 
-	if (BlurRegions.empty())
+	if (PreparedRegions.empty())
 	{
 		return;
 	}
 
-	Ctx->OMSetRenderTargets(0, nullptr, nullptr);
+	constexpr UINT BlurSRVSlot = 0;
+	ID3D11ShaderResourceView* NullSRV = nullptr;
+	ID3D11Buffer* NullVB = nullptr;
+	const UINT NullStride = 0;
+	const UINT NullOffset = 0;
 
-	for (const FVSMBlurRegion& Region : BlurRegions)
+	Resources.SetBlendState(Device, EBlendState::Opaque);
+	Resources.SetDepthStencilState(Device, EDepthStencilState::NoDepth);
+	Resources.SetRasterizerState(Device, ERasterizerState::SolidNoCull);
+
+	Ctx->IASetInputLayout(nullptr);
+	Ctx->IASetVertexBuffers(0, 1, &NullVB, &NullStride, &NullOffset);
+	Ctx->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+	Ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	for (const FPreparedVSMBlurRegion& Region : PreparedRegions)
 	{
-		if (Region.SliceIndex >= AtlasLayerCount)
+		if (!Region.TempRTV || !Region.FilteredRTV)
 		{
 			continue;
 		}
 
-		D3D11_BOX CopyBox = Region.Box;
-		CopyBox.left = CopyBox.left < AtlasTextureSize ? CopyBox.left : AtlasTextureSize;
-		CopyBox.top = CopyBox.top < AtlasTextureSize ? CopyBox.top : AtlasTextureSize;
-		CopyBox.right = CopyBox.right < AtlasTextureSize ? CopyBox.right : AtlasTextureSize;
-		CopyBox.bottom = CopyBox.bottom < AtlasTextureSize ? CopyBox.bottom : AtlasTextureSize;
-		CopyBox.front = 0;
-		CopyBox.back = 1;
-		if (CopyBox.right <= CopyBox.left || CopyBox.bottom <= CopyBox.top)
-		{
-			continue;
-		}
+		D3D11_VIEWPORT BlurViewport = {};
+		BlurViewport.TopLeftX = static_cast<float>(Region.Box.left);
+		BlurViewport.TopLeftY = static_cast<float>(Region.Box.top);
+		BlurViewport.Width = static_cast<float>(Region.Box.right - Region.Box.left);
+		BlurViewport.Height = static_cast<float>(Region.Box.bottom - Region.Box.top);
+		BlurViewport.MinDepth = 0.0f;
+		BlurViewport.MaxDepth = 1.0f;
 
-		const UINT Subresource = D3D11CalcSubresource(0, Region.SliceIndex, 1);
+		D3D11_RECT BlurScissor = {};
+		BlurScissor.left = static_cast<LONG>(Region.Box.left);
+		BlurScissor.top = static_cast<LONG>(Region.Box.top);
+		BlurScissor.right = static_cast<LONG>(Region.Box.right);
+		BlurScissor.bottom = static_cast<LONG>(Region.Box.bottom);
 
-		// Blur shader 적용 지점:
-		// 1) Horizontal blur draw: RawSRV(Texture/SRV)를 입력으로 읽고 TempRTV를 출력으로 쓴다.
-		// 2) Vertical blur draw: TempSRV를 입력으로 읽고 FilteredRTV를 출력으로 쓴다.
-		// 3) 두 draw 모두 Region.Box에 맞춘 viewport/scissor를 사용한다.
-		// 4) pass 사이에는 input SRV를 명시적으로 unbind해서 SRV/RTV same-resource hazard를 막는다.
-		//
-		// 지금은 셰이더를 건드리지 않는 조건이라 renderer가 copy로 skeleton만 유지한다.
-		// 실제 blur shader가 준비되면 아래 copy 둘을 H/V blur draw 둘로 교체하면 된다.
-		Ctx->CopySubresourceRegion(
-			TempTexture,
-			Subresource,
-			CopyBox.left,
-			CopyBox.top,
-			0,
-			RawTexture,
-			Subresource,
-			&CopyBox);
+		Ctx->RSSetViewports(1, &BlurViewport);
+		Ctx->RSSetScissorRects(1, &BlurScissor);
 
-		Ctx->CopySubresourceRegion(
-			FilteredTexture,
-			Subresource,
-			CopyBox.left,
-			CopyBox.top,
-			0,
-			TempTexture,
-			Subresource,
-			&CopyBox);
+		Ctx->VSSetShader(nullptr, nullptr, 0);
+		Ctx->PSSetShader(nullptr, nullptr, 0);
+
+		// Horizontal blur shader bind 지점:
+		// - fullscreen triangle용 VS/PS를 bind한다.
+		// - blur 방향/texel size를 담는 constant buffer가 필요하면 여기서 bind/update한다.
+		// - 입력 텍스처는 t0(BlurSRVSlot)에서 읽는 계약으로 맞춘다.
+		Ctx->OMSetRenderTargets(1, &Region.TempRTV, nullptr);
+		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &RawSRV);
+		Ctx->Draw(3, 0);
+		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &NullSRV);
+
+		Ctx->VSSetShader(nullptr, nullptr, 0);
+		Ctx->PSSetShader(nullptr, nullptr, 0);
+
+		// Vertical blur shader bind 지점:
+		// - fullscreen triangle용 VS/PS를 bind한다.
+		// - vertical direction 상수를 갱신해야 하면 여기서 처리한다.
+		// - 입력 텍스처는 t0(BlurSRVSlot)에서 읽는 계약으로 맞춘다.
+		Ctx->OMSetRenderTargets(1, &Region.FilteredRTV, nullptr);
+		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &TempSRV);
+		Ctx->Draw(3, 0);
+		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &NullSRV);
 	}
+
+	Ctx->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
 // ============================================================
