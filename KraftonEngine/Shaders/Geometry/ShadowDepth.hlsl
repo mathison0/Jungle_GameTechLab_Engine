@@ -24,8 +24,7 @@ VSOutput VS(VSInput input)
     float4 worldPos = mul(float4(input.Position, 1.0f), Model);
     if (bIsPSM != 0)
     {
-        float4 cameraClip = mul(worldPos, CameraVP);
-        output.Position = mul(cameraClip, LightVP);
+        output.Position = mul(worldPos, LightVP);
     }
     else
     {

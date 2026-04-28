@@ -91,22 +91,57 @@ namespace
 				0.0f, 0.0f, -FarZ / Denom, 1.0f);
 		}
 
+		static FVector SnapCenterToShadowTexels(
+			const FVector& Center,
+			const FVector& Right,
+			const FVector& Up,
+			float Width,
+			float Height,
+			float ShadowMapWidth,
+			float ShadowMapHeight)
+		{
+			const float TexelSizeX = Width / std::max(ShadowMapWidth, 1.0f);
+			const float TexelSizeY = Height / std::max(ShadowMapHeight, 1.0f);
+			if (TexelSizeX <= 0.0f || TexelSizeY <= 0.0f)
+			{
+				return Center;
+			}
+
+			const float CenterX = Center.Dot(Right);
+			const float CenterY = Center.Dot(Up);
+			const float SnappedX = std::round(CenterX / TexelSizeX) * TexelSizeX;
+			const float SnappedY = std::round(CenterY / TexelSizeY) * TexelSizeY;
+			return Center + Right * (SnappedX - CenterX) + Up * (SnappedY - CenterY);
+		}
+
 		static bool MakeDirectionalShadowMatrix(
 			const FFrameContext& Frame,
 			const UDirectionalLightComponent& DirectionalLight,
 			FMatrix& OutLightVP,
-			float& OutNearZ)
+			float& OutNearZ,
+			float ShadowMapWidth,
+			float ShadowMapHeight)
 		{
-			const float ShadowDistance = FMath::Clamp(Frame.FarClip * 0.15f, 15.0f, 80.0f);
-			const float ShadowExtent = FMath::Clamp(Frame.FarClip * 0.2f, 20.0f, 120.0f);
-			const FVector CameraCenter = Frame.CameraPosition + Frame.CameraForward * (ShadowExtent * 0.5f);
+			const float ShadowDistance = FMath::Clamp(Frame.FarClip * 0.12f, 12.0f, 60.0f);
+			const float ShadowExtent = FMath::Clamp(Frame.FarClip * 0.1f, 15.0f, 60.0f);
+			const FVector LightRight = DirectionalLight.GetRightVector();
+			const FVector LightUp = DirectionalLight.GetUpVector();
+			const FVector LightDir = DirectionalLight.GetForwardVector();
+			const FVector CameraCenter = SnapCenterToShadowTexels(
+				Frame.CameraPosition + Frame.CameraForward * (ShadowExtent * 0.5f),
+				LightRight,
+				LightUp,
+				ShadowExtent * 2.0f,
+				ShadowExtent * 2.0f,
+				ShadowMapWidth,
+				ShadowMapHeight);
 			const FVector Eye = CameraCenter - DirectionalLight.GetForwardVector() * ShadowDistance;
 
 			const FMatrix LightView = MakeAxesViewMatrix(
 				Eye,
-				DirectionalLight.GetRightVector(),
-				DirectionalLight.GetUpVector(),
-				DirectionalLight.GetForwardVector());
+				LightRight,
+				LightUp,
+				LightDir);
 
 			const float NearZ = 0.1f;
 			const FMatrix LightProj = MakeReversedZOrthographic(
@@ -131,10 +166,21 @@ namespace
 				return false;
 			}
 
-			const FMatrix CameraVP = Frame.View * Frame.Proj;
+			const float VirtualSlideBack = FMath::Clamp(Frame.FarClip * 0.01f, 1.0f, 10.0f);
+			const float VirtualNearZ = FMath::Clamp(Frame.NearClip + VirtualSlideBack, Frame.NearClip, Frame.FarClip - 1.0f);
+			const float Aspect = Frame.Proj.M[1][1] / Frame.Proj.M[0][0];
+			const float VerticalFov = 2.0f * atanf(1.0f / Frame.Proj.M[1][1]);
+			const FVector VirtualCameraPosition = Frame.CameraPosition - Frame.CameraForward * VirtualSlideBack;
+			const FMatrix VirtualCameraView = MakeAxesViewMatrix(
+				VirtualCameraPosition,
+				Frame.CameraRight,
+				Frame.CameraUp,
+				Frame.CameraForward);
+			const FMatrix VirtualCameraProj = MakeReversedZPerspective(VerticalFov, Aspect, VirtualNearZ, Frame.FarClip);
+			const FMatrix CameraVP = VirtualCameraView * VirtualCameraProj;
 			const FVector LightDir = DirectionalLight.GetForwardVector().Normalized();
-			const float FocusDistance = FMath::Clamp(Frame.FarClip * 0.05f, Frame.NearClip + 1.0f, 50.0f);
-			const FVector FocusPoint = Frame.CameraPosition + Frame.CameraForward * FocusDistance;
+			const float FocusDistance = FMath::Clamp(Frame.FarClip * 0.05f, VirtualNearZ + 1.0f, 50.0f);
+			const FVector FocusPoint = VirtualCameraPosition + Frame.CameraForward * FocusDistance;
 			const FVector PSMDir = (CameraVP.TransformPositionWithW(FocusPoint + LightDir * FocusDistance)
 				- CameraVP.TransformPositionWithW(FocusPoint)).Normalized();
 
@@ -189,7 +235,8 @@ namespace
 				+ PSMDir * (MinZ - ZPadding);
 
 			OutNearZ = ZPadding;
-			OutLightVP = MakeAxesViewMatrix(Eye, Right, Up, PSMDir)
+			OutLightVP = CameraVP
+				* MakeAxesViewMatrix(Eye, Right, Up, PSMDir)
 				* MakeReversedZOrthographic(Width, Height, OutNearZ, Depth + OutNearZ);
 			return true;
 		}
@@ -565,17 +612,32 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 				}
 				else
 				{
-					FShadowUtil::MakeDirectionalShadowMatrix(Frame, *DirectionalLight, FinalLightVP, ShadowNearZ);
+					const D3D11_VIEWPORT ShadowViewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[0], AtlasTextureSize);
+					FShadowUtil::MakeDirectionalShadowMatrix(
+						Frame,
+						*DirectionalLight,
+						FinalLightVP,
+						ShadowNearZ,
+						ShadowViewport.Width,
+						ShadowViewport.Height);
 				}
+
+				const bool bIsPSM = (bIsPSM_Flag != 0);
+				const float DirectionalShadowBias = bIsPSM
+					? DirectionalLight->GetShadowBias() * 0.02f
+					: DirectionalLight->GetShadowBias() * 0.05f;
+				const float DirectionalShadowSlopeBias = bIsPSM
+					? DirectionalLight->GetShadowSlopeBias() * 0.05f
+					: DirectionalLight->GetShadowSlopeBias() * 0.15f;
 
 				FShadowRenderTask& Task = OutShadowPassData.RenderTasks.emplace_back();
 				Task.TargetType = EShadowRenderTargetType::Atlas2D;
 				Task.LightVP = FinalLightVP;
-				Task.bIsPSM = (bIsPSM_Flag != 0);
+				Task.bIsPSM = bIsPSM;
 				Task.CameraVP = Frame.View * Frame.Proj;
 				Task.bCullWithShadowFrustum = !Task.bIsPSM;
-				Task.ShadowDepthBias = DirectionalLight->GetShadowBias();
-				Task.ShadowSlopeBias = DirectionalLight->GetShadowSlopeBias();
+				Task.ShadowDepthBias = DirectionalShadowBias;
+				Task.ShadowSlopeBias = DirectionalShadowSlopeBias;
 
 				if (Task.bIsPSM)
 				{
@@ -600,11 +662,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					Info.bIsPSM = bIsPSM_Flag;
 					Info.LightVP = FinalLightVP;
 					Info.SampleData = FVector4(AtlasUVs[0].u1, AtlasUVs[0].v1, AtlasUVs[0].u2, AtlasUVs[0].v2);
-					Info.ShadowParams = FVector4(
-						DirectionalLight->GetShadowBias(), 
-						DirectionalLight->GetShadowSlopeBias(), 
-						DirectionalLight->GetShadowSharpen(), 
-						ShadowNearZ);
+					Info.ShadowParams = FVector4(DirectionalShadowBias, DirectionalShadowSlopeBias, DirectionalLight->GetShadowSharpen(), ShadowNearZ);
 
 					OutShadowPassData.BindingData.DirectionalShadowIndex =
 						static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
@@ -631,7 +689,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					CascadeRanges[NumCascades] = std::min(Frame.FarClip, 200.0f); // Limit shadow distance
 
 					// Logarithmic split scheme
-					float Lambda = 0.85f; // More weight on logarithmic split for better near resolution
+					float Lambda = 0.6f; // Balance near detail with smoother far cascade resolution
 					for (int i = 1; i < NumCascades; ++i)
 					{
 						float f = (float)i / (float)NumCascades;
@@ -649,6 +707,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					FVector LightDir = DirectionalLight->GetForwardVector();
 					FVector LightUp = DirectionalLight->GetUpVector();
 					FVector LightRight = DirectionalLight->GetRightVector();
+					const float CSMShadowBias = DirectionalLight->GetShadowBias() * 0.03f;
+					const float CSMShadowSlopeBias = DirectionalLight->GetShadowSlopeBias() * 0.12f;
 
 					for (int i = 0; i < NumCascades; ++i)
 					{
@@ -678,12 +738,27 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						// Find radius for tight bounding sphere
 						float Radius = 0.0f;
 						for (int j = 0; j < 8; ++j) Radius = std::max(Radius, (Corners[j] - Center).Length());
+						Radius = std::ceil(Radius * 16.0f) / 16.0f;
+
+						const D3D11_VIEWPORT CascadeViewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[i], AtlasTextureSize);
+						Center = FShadowUtil::SnapCenterToShadowTexels(
+							Center,
+							LightRight,
+							LightUp,
+							Radius * 2.0f,
+							Radius * 2.0f,
+							CascadeViewport.Width,
+							CascadeViewport.Height);
 
 						// Create tight Orthographic projection
 						FVector Eye = Center - LightDir * Radius * 2.0f;
 						FMatrix LightView = FShadowUtil::MakeAxesViewMatrix(Eye, LightRight, LightUp, LightDir);
 						FMatrix LightProj = FShadowUtil::MakeReversedZOrthographic(Radius * 2.0f, Radius * 2.0f, 0.1f, Radius * 6.0f);
 						FMatrix LightVP = LightView * LightProj;
+
+						const float CascadeBiasScale = 1.0f + static_cast<float>(i) * 0.35f;
+						const float CascadeShadowBias = CSMShadowBias * CascadeBiasScale;
+						const float CascadeShadowSlopeBias = CSMShadowSlopeBias * CascadeBiasScale;
 
 						FShadowRenderTask& Task = OutShadowPassData.RenderTasks.emplace_back();
 						Task.TargetType = EShadowRenderTargetType::Atlas2D;
@@ -694,8 +769,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Task.Viewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[i], AtlasTextureSize);
 						Task.DSV = DSVs[i];
 						Task.RTV = (bUseVSM && i < RTVs.size()) ? RTVs[i] : nullptr;
-						Task.ShadowDepthBias = DirectionalLight->GetShadowBias();
-						Task.ShadowSlopeBias = DirectionalLight->GetShadowSlopeBias();
+						Task.ShadowDepthBias = CascadeShadowBias;
+						Task.ShadowSlopeBias = CascadeShadowSlopeBias;
 						Task.AtlasSliceIndex = AtlasUVs[i].ArrayIndex;
 
 						FShadowInfo Info = {};
@@ -705,11 +780,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Info.bIsPSM = 0;
 						Info.LightVP = LightVP;
 						Info.SampleData = FVector4(AtlasUVs[i].u1, AtlasUVs[i].v1, AtlasUVs[i].u2, AtlasUVs[i].v2);
-						Info.ShadowParams = FVector4(
-							DirectionalLight->GetShadowBias(), 
-							DirectionalLight->GetShadowSlopeBias(), 
-							DirectionalLight->GetShadowSharpen(), 
-							0.1f);
+						Info.ShadowParams = FVector4(CascadeShadowBias, CascadeShadowSlopeBias, DirectionalLight->GetShadowSharpen(), 0.1f);
 
 						OutShadowPassData.BindingData.CascadeMatrices[i] = LightVP;
 						OutShadowPassData.BindingData.ShadowInfos.push_back(Info);

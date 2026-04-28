@@ -96,7 +96,7 @@ struct FViewportRenderOptions
 	// Shadow debug/control 설정
 	bool bOverrideCameraWithSelectedLight = false;
 	uint32 PointLightPreviewFaceIndex = 0;
-	int32 ShadowMapResolution = 1024;
+	int32 ShadowMapResolution = 2048;
 	EShadowFilterMode ShadowFilterMode = EShadowFilterMode::PCF;
 	EShadowMethod ShadowMethod = EShadowMethod::Standard;
 };

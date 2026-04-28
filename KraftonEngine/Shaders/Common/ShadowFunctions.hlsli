@@ -17,8 +17,8 @@
 #define SHADOW_METHOD_CSM 2
 #endif
 
-#define SHADOW_BIAS 0.0005f
-#define SHADOW_SLOPE_BIAS 0.002f
+#define SHADOW_BIAS 0.01f
+#define SHADOW_SLOPE_BIAS 0.04f
 
 // =========================================================================
 // Shadow 계산 헬퍼 함수(Bias + Bleeding)
@@ -60,6 +60,16 @@ float3 SafeNormalize(float3 value, float3 fallback)
     return value * rsqrt(lenSq);
 }
 
+float3 ApplyPSMNormalOffset(FShadowInfo info, float3 worldPos, float3 normal)
+{
+    if (info.bIsPSM)
+    {
+        const float PSMNormalBias = 0.01f;
+        return worldPos + SafeNormalize(normal, float3(0.0f, 1.0f, 0.0f)) * PSMNormalBias;
+    }
+    return worldPos;
+}
+
 // 표면 법선과 광원 방향의 각도를 이용해 receiver bias를 만든다.
 // 정면에서는 constant bias 위주로, grazing angle에서는 slope bias가 더 많이 붙는다.
 float GetReceiverShadowBias(FShadowInfo info, float3 normal, float3 lightVector)
@@ -72,6 +82,10 @@ float GetReceiverShadowBias(FShadowInfo info, float3 normal, float3 lightVector)
     // 렌더러 rasterizer depth bias와는 단위/적용 위치가 다르므로 여기서도 유지한다.
     float constantBias = GetShadowConstantBias(info);
     float slopeBias = GetShadowSlopeBias(info) * angleFactor;
+    if (info.bIsPSM)
+    {
+        return max((constantBias + slopeBias) * 0.35f, 0.000005f);
+    }
     return max(constantBias + slopeBias, 0.00001f);
 }
 
@@ -126,9 +140,7 @@ float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP, flo
     float4 shadowPos;
     if (info.bIsPSM)
     {
-        float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        float4 cameraClip = mul(viewPos, Projection);
-        shadowPos = mul(cameraClip, lightVP);
+        shadowPos = mul(float4(worldPos, 1.0f), lightVP);
     }
     else
     {
@@ -222,20 +234,7 @@ float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
 
     if (info.bIsPSM != 0u)
     {
-        float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        float4 cameraNDC = mul(viewPos, Projection);
-
-        if (abs(cameraNDC.w) < 1e-5f)
-        {
-            validClip = false;
-        }
-        else
-        {
-            cameraNDC.xyz /= cameraNDC.w;
-            cameraNDC.w = 1.0f;
-
-            shadowPos = mul(cameraNDC, lightVP);
-        }
+        shadowPos = mul(float4(worldPos, 1.0f), lightVP);
     }
 
     if (validClip && abs(shadowPos.w) >= 1e-5f)
@@ -449,9 +448,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
     float4 lightClip;
     if (info.bIsPSM)
     {
-        float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        float4 cameraClip = mul(viewPos, Projection);
-        lightClip = mul(cameraClip, info.LightVP);
+        lightClip = mul(float4(worldPos, 1.0f), info.LightVP);
     }
     else
     {
@@ -639,7 +636,7 @@ float GetDirectionalShadow(float3 worldPos, float3 normal)
 
         FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex + cascadeIdx];
         float receiverBias = GetReceiverShadowBias(info, normal, lightVector);
-        
+
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
         shadow = SampleAtlasShadowVSM(info, worldPos, CascadeMatrices[cascadeIdx], receiverBias);
 #elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
@@ -651,13 +648,14 @@ float GetDirectionalShadow(float3 worldPos, float3 normal)
     }
 
     FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex];
+    float3 shadowWorldPos = ApplyPSMNormalOffset(info, worldPos, normal);
     float receiverBias = GetReceiverShadowBias(info, normal, lightVector);
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-    shadow = SampleAtlasShadowVSM(info, worldPos, info.LightVP, receiverBias);
+    shadow = SampleAtlasShadowVSM(info, shadowWorldPos, info.LightVP, receiverBias);
 #elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
-    shadow = SampleAtlasShadowPCF(info, worldPos, info.LightVP, receiverBias);
+    shadow = SampleAtlasShadowPCF(info, shadowWorldPos, info.LightVP, receiverBias);
 #else
-    shadow = SampleAtlasShadow(info, worldPos, info.LightVP, receiverBias);
+    shadow = SampleAtlasShadow(info, shadowWorldPos, info.LightVP, receiverBias);
 #endif
     return ApplyShadowSharpen(shadow, info);
 }
