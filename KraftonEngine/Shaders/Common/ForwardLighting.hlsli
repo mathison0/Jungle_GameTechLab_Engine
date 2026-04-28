@@ -51,8 +51,20 @@ float3 CalcAmbient(float3 lightColor, float intensity)
 #define SHADOW_METHOD_PSM 1
 #define SHADOW_METHOD_CSM 2
 
-float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+float3 ApplyPSMNormalOffset(FShadowInfo info, float3 worldPos, float3 normal)
 {
+    if (info.bIsPSM)
+    {
+        const float PSMNormalBias = 0.05f;
+        return worldPos + normalize(normal) * PSMNormalBias;
+    }
+    return worldPos;
+}
+
+float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float3 normal, float4x4 lightVP)
+{
+    worldPos = ApplyPSMNormalOffset(info, worldPos, normal);
+
     float4 shadowPos;
     if (info.bIsPSM)
     {
@@ -93,8 +105,10 @@ float ReduceLightBleed(float probability)
     return saturate((probability - bleedReduction) / (1.0f - bleedReduction));
 }
 
-float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos)
+float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float3 normal)
 {
+    worldPos = ApplyPSMNormalOffset(info, worldPos, normal);
+
     float4 lightClip;
     if (info.bIsPSM)
     {
@@ -185,7 +199,7 @@ float SampleCubeShadow(FShadowInfo info, float3 worldPos)
         depth);
 }
 
-float GetDirectionalShadow(float3 worldPos)
+float GetDirectionalShadow(float3 worldPos, float3 normal)
 {
     if (DirectionalLight.ShadowIndex < 0)
     {
@@ -209,15 +223,15 @@ float GetDirectionalShadow(float3 worldPos)
         }
 
         FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex + cascadeIdx];
-        shadow = SampleAtlasShadow(info, worldPos, CascadeMatrices[cascadeIdx]);
+        shadow = SampleAtlasShadow(info, worldPos, normal, CascadeMatrices[cascadeIdx]);
         return ApplyShadowSharpen(shadow, info);
     }
     
     FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex];
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-    shadow = SampleAtlasShadowVSM(info, worldPos);
+    shadow = SampleAtlasShadowVSM(info, worldPos, normal);
 #else
-    shadow = SampleAtlasShadow(info, worldPos, info.LightVP);
+    shadow = SampleAtlasShadow(info, worldPos, normal, info.LightVP);
 #endif
     return ApplyShadowSharpen(shadow, info);
 }
@@ -234,9 +248,9 @@ float GetLightShadow(FLightInfo light, float3 worldPos)
     if (info.Type == SHADOW_INFO_TYPE_ATLAS2D)
     {
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-        shadow = SampleAtlasShadowVSM(info, worldPos);
+        shadow = SampleAtlasShadowVSM(info, worldPos, float3(0.0f, 0.0f, 1.0f));
 #else
-        shadow = SampleAtlasShadow(info, worldPos, info.LightVP);
+        shadow = SampleAtlasShadow(info, worldPos, float3(0.0f, 0.0f, 1.0f), info.LightVP);
 #endif
     }
     else
@@ -475,7 +489,7 @@ float3 AccumulateToonDiffuse(float3 worldPos, float3 N, float4 screenPos)
     float3 result = float3(0, 0, 0);
     result += CalcAmbient(AmbientLight.Color.rgb, AmbientLight.Intensity);
     result += CalcDirectionalToonDiffuse(DirectionalLight.Color.rgb, DirectionalLight.Direction,
-                                         DirectionalLight.Intensity, N) * GetDirectionalShadow(worldPos);
+                                         DirectionalLight.Intensity, N) * GetDirectionalShadow(worldPos, N);
     AccumulatePointSpotToonDiffuse(worldPos, N, screenPos, result);
     return result;
 }
@@ -486,7 +500,7 @@ float3 AccumulateDiffuse(float3 worldPos, float3 N, float4 screenPos)
     float3 result = float3(0, 0, 0);
     result += CalcAmbient(AmbientLight.Color.rgb, AmbientLight.Intensity);
     result += CalcDirectionalDiffuse(DirectionalLight.Color.rgb, DirectionalLight.Direction,
-                                     DirectionalLight.Intensity, N) * GetDirectionalShadow(worldPos);
+                                     DirectionalLight.Intensity, N) * GetDirectionalShadow(worldPos, N);
     AccumulatePointSpotDiffuse(worldPos, N, screenPos, result);
     return result;
 }
@@ -495,7 +509,7 @@ float3 AccumulateSpecular(float3 worldPos, float3 N, float3 V, float shininess, 
 {
     float3 result = float3(0, 0, 0);
     result += CalcDirectionalSpecular(DirectionalLight.Color.rgb, DirectionalLight.Direction,
-                                      DirectionalLight.Intensity, N, V, shininess) * GetDirectionalShadow(worldPos);
+                                      DirectionalLight.Intensity, N, V, shininess) * GetDirectionalShadow(worldPos, N);
     AccumulatePointSpotSpecular(worldPos, N, V, shininess, screenPos, result);
     return result;
 }
