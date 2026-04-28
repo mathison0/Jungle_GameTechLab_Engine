@@ -1,24 +1,26 @@
 #pragma once
+
+#include "../TexturePoolTypes.h"
 #include "Core/CoreTypes.h"
-#include "../TexturePool.h"
 #include <cmath>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
 struct FAtlasUV
 {
-	uint32 ArrayIndex;
+	uint32 ArrayIndex = 0;
 
-	float u1;
-	float v1;
-	float u2;
-	float v2;
+	float u1 = 0.0f;
+	float v1 = 0.0f;
+	float u2 = 0.0f;
+	float v2 = 0.0f;
 };
 
-class FUVManagerBase
+class FTexturePoolAllocatorBase
 {
 public:
-	virtual ~FUVManagerBase() = default;
+	virtual ~FTexturePoolAllocatorBase() = default;
 
 	virtual void Initialize(uint32 InSize, uint32 InLayerCount)
 	{
@@ -26,21 +28,55 @@ public:
 		LayerCount = InLayerCount;
 	}
 
-	virtual bool GetHandle(float TextureSize, FTexturePoolBase::TexturePoolHandle& OutHandle) = 0;
-	virtual FAtlasUV GetAtlasUV(const FTexturePoolBase::TexturePoolHandle& InHandle) = 0;
-	virtual void ReleaseUV(const FTexturePoolBase::TexturePoolHandle& InHandle) = 0;
-	virtual void BroadCastEntries() = 0;
+	virtual bool AllocateHandle(float TextureSize, FTexturePoolHandle& OutHandle) = 0;
+	virtual FAtlasUV GetAtlasUV(const FTexturePoolHandle& InHandle) = 0;
+	virtual void ReleaseHandle(const FTexturePoolHandle& InHandle) = 0;
+	virtual void BroadcastEntries() = 0;
 
 	virtual void SetSize(uint32 InNewTextureSize)
 	{
 		Size = InNewTextureSize;
-		BroadCastEntries();
+		BroadcastEntries();
 	}
 
 	virtual void SetLayerCount(uint32 InNewLayerCount)
 	{
 		LayerCount = InNewLayerCount;
-		BroadCastEntries();
+		BroadcastEntries();
+	}
+
+	uint32 ReserveHandleSetId()
+	{
+		return NextHandleSetId++;
+	}
+
+	FTexturePoolHandleSet* RegisterHandleSet(std::unique_ptr<FTexturePoolHandleSet> InHandleSet)
+	{
+		if (!InHandleSet)
+		{
+			return nullptr;
+		}
+
+		FTexturePoolHandleSet* HandleSet = InHandleSet.get();
+		RegisteredHandleSets[HandleSet->InternalIndex] = std::move(InHandleSet);
+		return HandleSet;
+	}
+
+	void UnregisterHandleSet(uint32 InHandleSetId)
+	{
+		RegisteredHandleSets.erase(InHandleSetId);
+	}
+
+	void InvalidateAllHandleSets()
+	{
+		for (auto& Pair : RegisteredHandleSets)
+		{
+			if (FTexturePoolHandleSet* HandleSet = Pair.second.get())
+			{
+				HandleSet->bIsValid = false;
+				++HandleSet->DebugVersion;
+			}
+		}
 	}
 
 protected:
@@ -50,45 +86,38 @@ protected:
 private:
 	uint32 Size = 0;
 	uint32 LayerCount = 0;
+	uint32 NextHandleSetId = 0;
+	TMap<uint32, std::unique_ptr<FTexturePoolHandleSet>> RegisteredHandleSets;
 };
 
-class TempManager : public FUVManagerBase
+class FGridTexturePoolAllocator : public FTexturePoolAllocatorBase
 {
 public:
-	virtual bool GetHandle(float TextureSize, FTexturePoolBase::TexturePoolHandle& OutHandle) { return false; };
-	virtual FAtlasUV GetAtlasUV(const FTexturePoolBase::TexturePoolHandle& InHandle) { return FAtlasUV(); };
-	virtual void ReleaseUV(const FTexturePoolBase::TexturePoolHandle& InHandle) {};
-	virtual void BroadCastEntries() {};
-};
+	explicit FGridTexturePoolAllocator(uint32 InMinBlockSize = 1024)
+		: MinBlockSize(InMinBlockSize)
+	{
+	}
 
-class FGridUVManager : public FUVManagerBase
-{
-public:
 	virtual void Initialize(uint32 InAtlasSize, uint32 InLayerCount) override
 	{
-		Initialize(InAtlasSize, InLayerCount, MinBlockSize);
-	}
-
-	void Initialize(uint32 InAtlasSize, uint32 InLayerCount, uint32 InMinBlockSize)
-	{
-		FUVManagerBase::Initialize(InAtlasSize, InLayerCount);
+		FTexturePoolAllocatorBase::Initialize(InAtlasSize, InLayerCount);
 
 		AtlasSize = InAtlasSize;
-		MinBlockSize = InMinBlockSize;
 		GridCount = AtlasSize / MinBlockSize;
-
 		ResetSliceOccupancy(InLayerCount);
-		NextHandle = 1;
 		Entries.clear();
+		NextHandle = 1;
 	}
 
-	virtual bool GetHandle(float TextureSize, FTexturePoolBase::TexturePoolHandle& OutHandle) override
+	virtual bool AllocateHandle(float TextureSize, FTexturePoolHandle& OutHandle) override
 	{
 		const uint32 RequestSize = static_cast<uint32>(std::ceil(TextureSize));
 		const uint32 BlockCount = CeilDiv(RequestSize, MinBlockSize);
 
 		if (BlockCount == 0 || BlockCount > GridCount)
+		{
 			return false;
+		}
 
 		for (uint32 SliceIndex = 0; SliceIndex < GetLayerCount(); ++SliceIndex)
 		{
@@ -96,12 +125,13 @@ public:
 			uint32 OutY = 0;
 
 			if (!FindFreeRect(SliceIndex, BlockCount, BlockCount, OutX, OutY))
+			{
 				continue;
+			}
 
 			MarkRect(SliceIndex, OutX, OutY, BlockCount, BlockCount, true);
 
-			const uint32 Handle = NextHandle++;
-
+			const uint32 HandleId = NextHandle++;
 			FEntry Entry;
 			Entry.X = OutX;
 			Entry.Y = OutY;
@@ -109,9 +139,9 @@ public:
 			Entry.H = BlockCount;
 			Entry.ArrayIndex = SliceIndex;
 
-			Entries.emplace(Handle, Entry);
+			Entries.emplace(HandleId, Entry);
 
-			OutHandle.InternalIndex = Handle;
+			OutHandle.InternalIndex = HandleId;
 			OutHandle.ArrayIndex = SliceIndex;
 			return true;
 		}
@@ -119,14 +149,15 @@ public:
 		return false;
 	}
 
-	virtual FAtlasUV GetAtlasUV(const FTexturePoolBase::TexturePoolHandle& InHandle) override
+	virtual FAtlasUV GetAtlasUV(const FTexturePoolHandle& InHandle) override
 	{
 		auto It = Entries.find(InHandle.InternalIndex);
 		if (It == Entries.end())
+		{
 			return {};
+		}
 
 		const FEntry& Entry = It->second;
-
 		const float PixelX1 = static_cast<float>(Entry.X * MinBlockSize);
 		const float PixelY1 = static_cast<float>(Entry.Y * MinBlockSize);
 		const float PixelX2 = static_cast<float>((Entry.X + Entry.W) * MinBlockSize);
@@ -134,43 +165,43 @@ public:
 
 		FAtlasUV UV;
 		UV.ArrayIndex = Entry.ArrayIndex;
-		UV.u1 = PixelX1 / AtlasSize;
-		UV.v1 = PixelY1 / AtlasSize;
-		UV.u2 = PixelX2 / AtlasSize;
-		UV.v2 = PixelY2 / AtlasSize;
-
+		UV.u1 = PixelX1 / static_cast<float>(AtlasSize);
+		UV.v1 = PixelY1 / static_cast<float>(AtlasSize);
+		UV.u2 = PixelX2 / static_cast<float>(AtlasSize);
+		UV.v2 = PixelY2 / static_cast<float>(AtlasSize);
 		return UV;
 	}
 
-	virtual void ReleaseUV(const FTexturePoolBase::TexturePoolHandle& InHandle) override
+	virtual void ReleaseHandle(const FTexturePoolHandle& InHandle) override
 	{
 		auto It = Entries.find(InHandle.InternalIndex);
 		if (It == Entries.end())
+		{
 			return;
+		}
 
 		const FEntry& Entry = It->second;
 		MarkRect(Entry.ArrayIndex, Entry.X, Entry.Y, Entry.W, Entry.H, false);
 		Entries.erase(It);
 	}
 
-	virtual void BroadCastEntries() override
+	virtual void BroadcastEntries() override
 	{
-		// Atlas 크기가 바뀌었을 때 기존 UV를 다시 계산해야 하는 구조라면 여기서 알림.
-		// 지금 단순 버전에서는 GetAtlasUV()가 매번 현재 AtlasSize 기준으로 계산하므로 비워둬도 됨.
+		// UV는 GetAtlasUV 호출 시 현재 atlas 크기 기준으로 계산한다.
 	}
 
 	virtual void SetSize(uint32 InNewTextureSize) override
 	{
-		FUVManagerBase::SetSize(InNewTextureSize);
+		FTexturePoolAllocatorBase::SetSize(InNewTextureSize);
 		AtlasSize = InNewTextureSize;
 		GridCount = AtlasSize / MinBlockSize;
-		ResetSliceOccupancy(GetLayerCount());
+		RebuildOccupancyFromEntries();
 	}
 
 	virtual void SetLayerCount(uint32 InNewLayerCount) override
 	{
-		FUVManagerBase::SetLayerCount(InNewLayerCount);
-		ResizeSliceOccupancy(InNewLayerCount);
+		FTexturePoolAllocatorBase::SetLayerCount(InNewLayerCount);
+		RebuildOccupancyFromEntries();
 	}
 
 private:
@@ -200,21 +231,22 @@ private:
 		OccupiedBySlice.assign(InLayerCount, std::vector<bool>(CellCount, false));
 	}
 
-	void ResizeSliceOccupancy(uint32 InLayerCount)
+	void RebuildOccupancyFromEntries()
 	{
-		const size_t CellCount = static_cast<size_t>(GridCount) * static_cast<size_t>(GridCount);
-		OccupiedBySlice.resize(InLayerCount);
-
-		for (std::vector<bool>& Occupied : OccupiedBySlice)
+		ResetSliceOccupancy(GetLayerCount());
+		for (const auto& Pair : Entries)
 		{
-			Occupied.resize(CellCount, false);
+			const FEntry& Entry = Pair.second;
+			MarkRect(Entry.ArrayIndex, Entry.X, Entry.Y, Entry.W, Entry.H, true);
 		}
 	}
 
 	bool IsFreeRect(uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H) const
 	{
 		if (SliceIndex >= OccupiedBySlice.size() || X + W > GridCount || Y + H > GridCount)
+		{
 			return false;
+		}
 
 		const std::vector<bool>& Occupied = OccupiedBySlice[SliceIndex];
 		for (uint32 yy = Y; yy < Y + H; ++yy)
@@ -222,7 +254,9 @@ private:
 			for (uint32 xx = X; xx < X + W; ++xx)
 			{
 				if (Occupied[Index(xx, yy)])
+				{
 					return false;
+				}
 			}
 		}
 

@@ -199,6 +199,11 @@ void FTextureAtlasPool::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* 
 	CreateDebugPassResources();
 }
 
+std::unique_ptr<FTexturePoolAllocatorBase> FTextureAtlasPool::CreateAllocator()
+{
+	return std::make_unique<FGridTexturePoolAllocator>(256);
+}
+
 void FTextureAtlasPool::EnsureAtlasMode(EShadowFilterMode InFilterMode)
 {
 	if (CurrentFilterMode == InFilterMode)
@@ -223,46 +228,6 @@ void FTextureAtlasPool::RecreateAtlasResources()
 	RebuildSRV(Device, Texture.Get());
 	RebuildDSV(Device, Texture.Get());
 	BroadCastHandlesUnvalid();
-}
-
-TexturePoolHandleSet* FTextureAtlasPool::GetTextureHandle(TexturePoolHandleRequest HandleRequest)
-{
-	std::unique_ptr<TexturePoolHandleSet> HandleSet = std::make_unique<TexturePoolHandleSet>(
-		this,
-		static_cast<uint32>(AllocatedHandleList.size()));
-
-	for (uint32 Size : HandleRequest.Sizes)
-	{
-		TexturePoolHandle Handle;
-		bool bAllocated = false;
-		while (!bAllocated)
-		{
-			if (UVManager && UVManager->GetHandle(static_cast<float>(Size), Handle))
-			{
-				bAllocated = true;
-				break;
-			}
-
-			if (!bAllocated)
-			{
-				ResizeLayer();
-			}
-		}
-
-		HandleSet.get()->Handles.push_back(Handle);
-	}
-
-	HandleSet->bIsValid = true;
-	AllocatedHandleList.push_back(std::move(HandleSet));
-	return AllocatedHandleList.back().get();
-}
-
-void FTextureAtlasPool::ReleaseHandle(TexturePoolHandle& InHandle)
-{
-	if (UVManager)
-	{
-		UVManager->ReleaseUV(InHandle);
-	}
 }
 
 TArray<FAtlasUV> FTextureAtlasPool::GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet)
@@ -850,26 +815,12 @@ void FTextureAtlasPool::RebuildRTVs(ID3D11Device* Device, ID3D11Texture2D* InTex
 void FTextureAtlasPool::OnSetTextureSize()
 {
 	DebugResource.clear();
-	if (UVManager)
-	{
-		UVManager->SetSize(TextureSize);
-	}
 }
 
 void FTextureAtlasPool::OnSetTextureLayerSize()
 {
 	const uint32 TargetCount = GetTextureLayerSize();
 	SliceDebugVersions.resize(TargetCount, 1);
-
-	if (!UVManager)
-	{
-		auto NewManager = std::make_unique<FGridUVManager>();
-		NewManager->Initialize(TextureSize, TargetCount, 256);
-		UVManager = std::move(NewManager);
-		return;
-	}
-
-	UVManager->SetLayerCount(TargetCount);
 }
 
 bool FTextureAtlasPool::CreateDebugResource(SRVResource& OutResource, uint32 Width, uint32 Height)

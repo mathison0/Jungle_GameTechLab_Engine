@@ -3,7 +3,7 @@
 #include "TexturePool.h"
 #include "Render/Resource/Buffer.h"
 #include "Render/Types/ViewTypes.h"
-#include "UVManager/FUVManager.h"
+#include "UVManager/TexturePoolAllocator.h"
 
 class FTextureAtlasPool final : public FTexturePoolBase
 {
@@ -32,10 +32,11 @@ public:
 	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InTextureSize) override;
 	void EnsureAtlasMode(EShadowFilterMode InFilterMode);
 
-	TexturePoolHandleSet* GetTextureHandle(TexturePoolHandleRequest HandleRequest) override;
-	void ReleaseHandle(TexturePoolHandle& InHandle) override;
-
-	FAtlasUV GetAtlasUV(const TexturePoolHandle& InHandle) { return UVManager ? UVManager->GetAtlasUV(InHandle) : FAtlasUV{}; }
+	FAtlasUV GetAtlasUV(const TexturePoolHandle& InHandle)
+	{
+		FTexturePoolAllocatorBase* Allocator = GetAllocator();
+		return Allocator ? Allocator->GetAtlasUV(InHandle) : FAtlasUV{};
+	}
 	TArray<FAtlasUV> GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet);
 
 	ID3D11ShaderResourceView* GetSRV() { return SRV.Get(); }
@@ -56,6 +57,7 @@ public:
 	ID3D11ShaderResourceView* GetDebugLayerSRV(uint32 SliceIndex);
 
 protected:
+	std::unique_ptr<FTexturePoolAllocatorBase> CreateAllocator() override;
 	TComPtr<ID3D11Texture2D> CreateTexture(ID3D11Device* Device) override;
 	void RebuildSRV(ID3D11Device* Device, ID3D11Texture2D* InTexture) override;
 	void RebuildDSV(ID3D11Device* Device, ID3D11Texture2D* InTexture) override;
@@ -82,8 +84,6 @@ private:
 	bool IsVSMMode() const { return CurrentFilterMode == EShadowFilterMode::VSM; }
 
 private:
-	std::unique_ptr<FUVManagerBase> UVManager;
-
 	EShadowFilterMode CurrentFilterMode = EShadowFilterMode::PCF;
 	TComPtr<ID3D11Texture2D> VSMDepthTexture;
 	TComPtr<ID3D11Texture2D> VSMFilteredTexture;
