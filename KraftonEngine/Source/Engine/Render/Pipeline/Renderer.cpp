@@ -161,7 +161,7 @@ void FRenderer::BeginFrame()
 	Device.BeginFrame();
 }
 
-//ShadowMap�� �׸��� ���� ShadowRenderTask�����ϴ� �κ�
+//ShadowMap을 그리기 위한 ShadowRenderTask생성하는 부분
 void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Scene, FShadowPassData& OutShadowPassData)
 {
 	const FSceneEnvironment& Env = Scene.GetEnvironment();
@@ -185,9 +185,9 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 			return DirectionalLight && DirectionalLight->IsCastShadow();
 		}();
 
-	//����� ��ü �� ������ �ɼ� ������ ȭ�鿡 ������ �ִ� ��鸸, 
-	//���Ŀ� �� ������ ������Ʈ�� ���ͼ� Depth�� ��ȭ�� ����� ��� ���� �˻� �߰�
-	//�߿䵵�� ���� ���ϴ� �͵� �߰�
+	//현재는 전체 중 쉐도우 옵션 켜지고 화면에 영향을 주는 놈들만, 
+	//추후에 광 범위에 오브젝트가 들어와서 Depth에 변화가 생기는 놈들 까지 검사 추가
+	//중요도에 따라서 컷하는 것도 추가
 #pragma region SearchUpdateNeededPointLight
 	TArray<uint32> ShadowedPointIndices;
 	ShadowedPointIndices.reserve(Env.GetNumPointLights());
@@ -358,7 +358,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 	}
 #pragma endregion
 
-	//SpotLightTask ���� ����
+	//SpotLightTask 생성 관련
 #pragma region SpotLightTask
 	for (uint32 SpotIndex : ShadowedSpotIndices)
 	{
@@ -412,10 +412,10 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		OutShadowPassData.BindingData.SpotLightShadowIndices[SpotIndex] = ShadowInfoIndex;
 	}
 #pragma endregion
-	//DirectionLightTask ���� ����
+	//DirectionLightTask 생성 관련
 #pragma region DirectionLightTask
-	//����� �ݺ��� HandleSet�� ù��° �ε����� �а� �׳��� �������� Light VP�ϳ� �����ϰ� �ѹ��� ������ �ϰ��־� CSM�� �Ұ�,
-	// PSM�� �ƴ� �׳� ī�޶� �������� �ָ� �������� HandleSet�� ù��° �ػ󵵸� �������� �׸�����
+	//현재는 반복을 HandleSet의 첫번째 인덱스만 읽고 그놈을 기준으로 Light VP하나 생성하고 한번만 렌더링 하고있어 CSM은 불가,
+	// PSM도 아닌 그냥 카메라 시점에서 멀리 떨어져서 HandleSet의 첫번째 해상도를 기준으로 그리는중
 	const UDirectionalLightComponent* DirectionalLight = Env.GetGlobalDirectionalLightOwner();
 	if (bShadowDirectional && DirectionalLight)
 	{
@@ -619,7 +619,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 
 }
 
-//������ ShadowTask�鿡 ���ؼ� �������ؼ� ShadowMap �����ϴ� ����.
+//생성된 ShadowTask들에 대해서 렌더링해서 ShadowMap 생성하는 과정. VSM 아직 불가
 void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene, const FShadowPassData& ShadowPassData)
 {
 	if (ShadowPassData.RenderTasks.empty())
@@ -699,7 +699,7 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 		uint32 CurrentStride = 0;
 		FConstantBuffer* CurrentPerObjectCB = nullptr;
 
-		//�ܼ� �ݺ� Frustum�ø� �� DrawCall
+		//단순 반복 Frustum컬링 후 DrawCall
 		for (FPrimitiveSceneProxy* Proxy : Scene.GetAllProxies())
 		{
 			if (!IsOpaqueShadowCaster(Proxy) || !Task.ShadowFrustum.IntersectAABB(Proxy->GetCachedBounds()))
@@ -755,8 +755,8 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 			}
 		}
 
-		//VSM�̸� ���� ���� �۾� �ʿ�
-		//�� ���뿡 ����?
+		//VSM이면 이후 블러 작업 필요
+		//한 요쯤에 들어갈듯?
 	}
 
 	if (Frame.ViewportRTV)
@@ -780,8 +780,8 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 }
 
 // ============================================================
-// Render ? ���� + GPU ����
-// BeginCollect + Collector + BuildDynamicCommands ���Ŀ� ȣ��.
+// Render — 정렬 + GPU 제출
+// BeginCollect + Collector + BuildDynamicCommands 이후에 호출.
 // ============================================================
 void FRenderer::Render(const FFrameContext& Frame, FScene& Scene)
 {
@@ -857,7 +857,7 @@ void FRenderer::Render(const FFrameContext& Frame, FScene& Scene)
 }
 
 // ============================================================
-// CleanupPassState ? �н� ���� ���� �� �ý��� �ؽ�ó ����ε� + ĳ�� ����
+// CleanupPassState — 패스 루프 종료 후 시스템 텍스처 언바인딩 + 캐시 정리
 // ============================================================
 void FRenderer::CleanupPassState(FStateCache& Cache)
 {
