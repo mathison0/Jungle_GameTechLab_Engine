@@ -53,8 +53,8 @@ void ULightComponent::Serialize(FArchive& Ar)
 void ULightComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
 	ULightComponentBase::GetEditableProperties(OutProps);
-	OutProps.push_back({ "ShadowResolutionScale", EPropertyType::Float, &ShadowResolutionScale, 0.0f, 4.0f,  0.01f });
-	OutProps.push_back({ "ShadowBias",            EPropertyType::Float, &ShadowBias,            0.0f, 0.05f, 0.0001f });
-	OutProps.push_back({ "ShadowSlopeBias",        EPropertyType::Float, &ShadowSlopeBias,       0.0f, 0.05f, 0.0001f });
-	OutProps.push_back({ "ShadowSharpen",          EPropertyType::Float, &ShadowSharpen,         0.0f, 1.0f,  0.01f });
+	OutProps.push_back({ "ShadowResolutionScale",	EPropertyType::Float, &ShadowResolutionScale, 0.0f, 4.0f,  0.01f });
+	OutProps.push_back({ "ShadowBias",				EPropertyType::Float, &ShadowBias,            0.0f, 1.f, 0.00001f });
+	OutProps.push_back({ "ShadowSlopeBias",			EPropertyType::Float, &ShadowSlopeBias,       0.0f, 1.f, 0.00001f });
+	OutProps.push_back({ "ShadowSharpen",			EPropertyType::Float, &ShadowSharpen,         0.0f, 1.0f,  0.01f });
 }

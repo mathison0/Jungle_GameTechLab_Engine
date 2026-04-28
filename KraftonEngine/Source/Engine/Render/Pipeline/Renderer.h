@@ -101,6 +101,7 @@ private:
 	FPassRenderStateTable PassRenderStateTable;
 	FPassEventBuilder PassEventBuilder;
 	FConstantBuffer ShadowPassBuffer;
+	FConstantBuffer VSMBlurPassBuffer;
 
 	FTileBasedLightCulling TileBasedCulling;
 	FClusteredLightCuller ClusteredLightCuller;

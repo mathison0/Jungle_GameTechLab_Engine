@@ -65,7 +65,7 @@ struct FShadowInfo
 
     row_major float4x4 LightVP;
     float4 SampleData;
-    float4 ShadowParams;
+    float4 ShadowParams; //x = Cosntant Bias, y = Slope Bias, z = Sharpen, w = nearZ
 };
 
 struct FLightInfo

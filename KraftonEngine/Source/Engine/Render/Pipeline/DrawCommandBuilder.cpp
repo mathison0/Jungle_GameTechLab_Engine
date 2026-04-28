@@ -87,11 +87,11 @@ FShader* FDrawCommandBuilder::SelectEffectiveShader(FShader* ProxyShader, EViewM
 	switch (ViewMode)
 	{
 	case EViewMode::Unlit:        return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, EUberLitDefines::Unlit));
-	case EViewMode::Lit_Gouraud:  return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::GouraudVSM : EUberLitDefines::Gouraud));
-	case EViewMode::Lit_Lambert:  return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::LambertVSM : EUberLitDefines::Lambert));
-	case EViewMode::Lit_Phong:    return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::PhongVSM : EUberLitDefines::Phong));
-	case EViewMode::Lit_Toon:     return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::ToonVSM : EUberLitDefines::Toon));
-	case EViewMode::LightCulling: return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::PhongVSM : EUberLitDefines::Phong));
+	case EViewMode::Lit_Gouraud:  return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::GouraudVSM : EUberLitDefines::GouraudPCF));
+	case EViewMode::Lit_Lambert:  return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::LambertVSM : EUberLitDefines::LambertPCF));
+	case EViewMode::Lit_Phong:    return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::PhongVSM : EUberLitDefines::PhongPCF));
+	case EViewMode::Lit_Toon:     return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::ToonVSM : EUberLitDefines::ToonPCF));
+	case EViewMode::LightCulling: return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::UberLit, bUseVSM ? EUberLitDefines::PhongVSM : EUberLitDefines::PhongPCF));
 	default:                      return ProxyShader;
 	}
 }
