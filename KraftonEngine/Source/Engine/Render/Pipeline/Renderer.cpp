@@ -122,10 +122,21 @@ namespace
 				return false;
 			}
 
-			const FMatrix CameraVP = Frame.View * Frame.Proj;
+			const float VirtualSlideBack = FMath::Clamp(Frame.FarClip * 0.01f, 1.0f, 10.0f);
+			const float VirtualNearZ = FMath::Clamp(Frame.NearClip + VirtualSlideBack, Frame.NearClip, Frame.FarClip - 1.0f);
+			const float Aspect = Frame.Proj.M[1][1] / Frame.Proj.M[0][0];
+			const float VerticalFov = 2.0f * atanf(1.0f / Frame.Proj.M[1][1]);
+			const FVector VirtualCameraPosition = Frame.CameraPosition - Frame.CameraForward * VirtualSlideBack;
+			const FMatrix VirtualCameraView = MakeAxesViewMatrix(
+				VirtualCameraPosition,
+				Frame.CameraRight,
+				Frame.CameraUp,
+				Frame.CameraForward);
+			const FMatrix VirtualCameraProj = MakeReversedZPerspective(VerticalFov, Aspect, VirtualNearZ, Frame.FarClip);
+			const FMatrix CameraVP = VirtualCameraView * VirtualCameraProj;
 			const FVector LightDir = DirectionalLight.GetForwardVector().Normalized();
-			const float FocusDistance = FMath::Clamp(Frame.FarClip * 0.05f, Frame.NearClip + 1.0f, 50.0f);
-			const FVector FocusPoint = Frame.CameraPosition + Frame.CameraForward * FocusDistance;
+			const float FocusDistance = FMath::Clamp(Frame.FarClip * 0.05f, VirtualNearZ + 1.0f, 50.0f);
+			const FVector FocusPoint = VirtualCameraPosition + Frame.CameraForward * FocusDistance;
 			const FVector PSMDir = (CameraVP.TransformPositionWithW(FocusPoint + LightDir * FocusDistance)
 				- CameraVP.TransformPositionWithW(FocusPoint)).Normalized();
 
@@ -180,7 +191,8 @@ namespace
 				+ PSMDir * (MinZ - ZPadding);
 
 			OutNearZ = ZPadding;
-			OutLightVP = MakeAxesViewMatrix(Eye, Right, Up, PSMDir)
+			OutLightVP = CameraVP
+				* MakeAxesViewMatrix(Eye, Right, Up, PSMDir)
 				* MakeReversedZOrthographic(Width, Height, OutNearZ, Depth + OutNearZ);
 			return true;
 		}
@@ -555,7 +567,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 				Task.LightVP = FinalLightVP;
 				Task.bIsPSM = (bIsPSM_Flag != 0);
 				Task.CameraVP = Frame.View * Frame.Proj;
-				Task.bCullWithShadowFrustum = !Task.bIsPSM;
+				Task.bCullWithShadowFrustum = true;
 				Task.ShadowDepthBias = DirectionalLight->GetShadowBias();
 				Task.ShadowSlopeBias = DirectionalLight->GetShadowSlopeBias();
 

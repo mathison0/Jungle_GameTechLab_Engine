@@ -47,9 +47,7 @@ float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP)
     float4 shadowPos;
     if (info.bIsPSM)
     {
-        float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        float4 cameraClip = mul(viewPos, Projection);
-        shadowPos = mul(cameraClip, lightVP);
+        shadowPos = mul(float4(worldPos, 1.0f), lightVP);
     }
     else
     {
@@ -91,9 +89,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos)
     float4 lightClip;
     if (info.bIsPSM)
     {
-        float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        float4 cameraClip = mul(viewPos, Projection);
-        lightClip = mul(cameraClip, info.LightVP);
+        lightClip = mul(float4(worldPos, 1.0f), info.LightVP);
     }
     else
     {
