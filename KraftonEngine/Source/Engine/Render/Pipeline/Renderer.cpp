@@ -604,14 +604,22 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						ShadowViewport.Height);
 				}
 
+				const bool bIsPSM = (bIsPSM_Flag != 0);
+				const float DirectionalShadowBias = bIsPSM
+					? DirectionalLight->GetShadowBias()
+					: DirectionalLight->GetShadowBias() * 0.25f;
+				const float DirectionalShadowSlopeBias = bIsPSM
+					? DirectionalLight->GetShadowSlopeBias()
+					: DirectionalLight->GetShadowSlopeBias() * 0.5f;
+
 				FShadowRenderTask& Task = OutShadowPassData.RenderTasks.emplace_back();
 				Task.TargetType = EShadowRenderTargetType::Atlas2D;
 				Task.LightVP = FinalLightVP;
-				Task.bIsPSM = (bIsPSM_Flag != 0);
+				Task.bIsPSM = bIsPSM;
 				Task.CameraVP = Frame.View * Frame.Proj;
 				Task.bCullWithShadowFrustum = !Task.bIsPSM;
-				Task.ShadowDepthBias = DirectionalLight->GetShadowBias();
-				Task.ShadowSlopeBias = DirectionalLight->GetShadowSlopeBias();
+				Task.ShadowDepthBias = DirectionalShadowBias;
+				Task.ShadowSlopeBias = DirectionalShadowSlopeBias;
 
 				if (Task.bIsPSM)
 				{
@@ -636,7 +644,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					Info.bIsPSM = bIsPSM_Flag;
 					Info.LightVP = FinalLightVP;
 					Info.SampleData = FVector4(AtlasUVs[0].u1, AtlasUVs[0].v1, AtlasUVs[0].u2, AtlasUVs[0].v2);
-					Info.ShadowParams = FVector4(DirectionalLight->GetShadowBias(), DirectionalLight->GetShadowSlopeBias(), DirectionalLight->GetShadowSharpen(), ShadowNearZ);
+					Info.ShadowParams = FVector4(DirectionalShadowBias, DirectionalShadowSlopeBias, DirectionalLight->GetShadowSharpen(), ShadowNearZ);
 
 					OutShadowPassData.BindingData.DirectionalShadowIndex =
 						static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
@@ -681,6 +689,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					FVector LightDir = DirectionalLight->GetForwardVector();
 					FVector LightUp = DirectionalLight->GetUpVector();
 					FVector LightRight = DirectionalLight->GetRightVector();
+					const float CSMShadowBias = DirectionalLight->GetShadowBias() * 0.25f;
+					const float CSMShadowSlopeBias = DirectionalLight->GetShadowSlopeBias() * 0.5f;
 
 					for (int i = 0; i < NumCascades; ++i)
 					{
@@ -737,8 +747,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Task.Viewport = FShadowUtil::MakeAtlasViewport(AtlasUVs[i], AtlasTextureSize);
 						Task.DSV = DSVs[i];
 						Task.RTV = (bUseVSM && i < RTVs.size()) ? RTVs[i] : nullptr;
-						Task.ShadowDepthBias = DirectionalLight->GetShadowBias();
-						Task.ShadowSlopeBias = DirectionalLight->GetShadowSlopeBias();
+						Task.ShadowDepthBias = CSMShadowBias;
+						Task.ShadowSlopeBias = CSMShadowSlopeBias;
 						Task.AtlasSliceIndex = AtlasUVs[i].ArrayIndex;
 
 						FShadowInfo Info = {};
@@ -748,7 +758,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Info.bIsPSM = 0;
 						Info.LightVP = LightVP;
 						Info.SampleData = FVector4(AtlasUVs[i].u1, AtlasUVs[i].v1, AtlasUVs[i].u2, AtlasUVs[i].v2);
-						Info.ShadowParams = FVector4(DirectionalLight->GetShadowBias(), DirectionalLight->GetShadowSlopeBias(), DirectionalLight->GetShadowSharpen(), 0.1f);
+						Info.ShadowParams = FVector4(CSMShadowBias, CSMShadowSlopeBias, DirectionalLight->GetShadowSharpen(), 0.1f);
 
 						OutShadowPassData.BindingData.CascadeMatrices[i] = LightVP;
 						OutShadowPassData.BindingData.ShadowInfos.push_back(Info);
