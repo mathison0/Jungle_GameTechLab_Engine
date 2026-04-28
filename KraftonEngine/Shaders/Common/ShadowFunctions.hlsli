@@ -17,18 +17,21 @@
 #define SHADOW_METHOD_CSM 2
 #endif
 
+#define SHADOW_BIAS 0.0005f
+#define SHADOW_SLOPE_BIAS 0.002f
+
 // =========================================================================
 // Shadow 계산 헬퍼 함수(Bias + Bleeding)
 // =========================================================================
 
 float GetShadowConstantBias(FShadowInfo info)
 {
-    return max(info.ShadowParams.x, 0.0f);
+    return max(info.ShadowParams.x, 0.0f) * SHADOW_BIAS;
 }
 
 float GetShadowSlopeBias(FShadowInfo info)
 {
-    return max(info.ShadowParams.y, 0.0f);
+    return max(info.ShadowParams.y, 0.0f) * SHADOW_SLOPE_BIAS;
 }
 
 float GetShadowSharpen(FShadowInfo info)

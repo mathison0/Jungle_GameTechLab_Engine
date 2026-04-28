@@ -37,8 +37,8 @@ public:
 
 protected:
 	float ShadowResolutionScale = 1.0f;
-	float ShadowBias = 0.01f;
-	float ShadowSlopeBias = 0.01f;
+	float ShadowBias = 0.5f;
+	float ShadowSlopeBias = 0.5f;
 	float ShadowSharpen = 0.0f;
 
 	FShadowHandleSet* ShadowHandleSet = nullptr;
