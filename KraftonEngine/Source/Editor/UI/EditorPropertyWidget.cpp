@@ -7,6 +7,7 @@
 #include "Component/GizmoComponent.h"
 #include "Component/Light/LightComponent.h"
 #include "Component/Light/PointLightComponent.h"
+#include "Component/Light/AmbientLightComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SceneComponent.h"
@@ -548,7 +549,7 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 		static_cast<USceneComponent*>(SelectedComponent)->MarkTransformDirty();
 	}
 
-	if (SelectedComponent && SelectedComponent->IsA<ULightComponent>())
+	if (SelectedComponent && (SelectedComponent->IsA<ULightComponent>() && !SelectedComponent->IsA<UAmbientLightComponent>()))
 	{
 		ImGui::Separator();
 		RenderLightShadowSettings(static_cast<ULightComponent*>(SelectedComponent));
