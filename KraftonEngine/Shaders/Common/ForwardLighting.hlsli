@@ -133,7 +133,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos)
     return ReduceLightBleed(probability);
 }
 
-float SampleCubeShadow(FShadowInfo info, float3 worldPos)
+bool BuildCubeShadowLookup(FShadowInfo info, float3 worldPos, out float3 outDir, out float outDepth, out uint outCubeTier)
 {
     float3 lightPos = info.SampleData.xyz;
     float nearZ = GetShadowNearZ(info);
@@ -144,13 +144,28 @@ float SampleCubeShadow(FShadowInfo info, float3 worldPos)
     float faceDepth = max(max(absToPixel.x, absToPixel.y), absToPixel.z);
     if (faceDepth < nearZ || faceDepth > farZ)
     {
-        return 1.0f;
+        outDir = float3(0.0f, 0.0f, 1.0f);
+        outDepth = 0.0f;
+        outCubeTier = 0u;
+        return false;
     }
 
-    float3 dir = toPixel / max(faceDepth, 0.0001f);
-    float depth = (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ)) + GetShadowDepthBias(info);
-    uint cubeTier = min(info.CubeTierIndex, 3u);
+    outDir = toPixel / max(faceDepth, 0.0001f);
+    outDepth = nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ);
+    outCubeTier = min(info.CubeTierIndex, 3u);
+    return true;
+}
 
+float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos)
+{
+    float3 dir;
+    float depth;
+    uint cubeTier;
+    if (!BuildCubeShadowLookup(info, worldPos, dir, depth, cubeTier))
+    {
+        return 1.0f;
+    }
+    depth += GetShadowDepthBias(info);
 
     if (cubeTier == 0u)
     {
@@ -178,6 +193,46 @@ float SampleCubeShadow(FShadowInfo info, float3 worldPos)
         ShadowCmpSampler,
         float4(dir, info.ArrayIndex),
         depth);
+}
+
+float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos)
+{
+    float3 dir;
+    float depth;
+    uint cubeTier;
+    if (!BuildCubeShadowLookup(info, worldPos, dir, depth, cubeTier))
+    {
+        return 1.0f;
+    }
+    depth = (1.0f - depth) + GetShadowDepthBias(info);
+
+    float2 moments;
+    if (cubeTier == 0u)
+    {
+        moments = gShadowCubeArrayTier0.SampleLevel(LinearClampSampler, float4(dir, info.ArrayIndex), 0.0f).rg;
+    }
+    else if (cubeTier == 1u)
+    {
+        moments = gShadowCubeArrayTier1.SampleLevel(LinearClampSampler, float4(dir, info.ArrayIndex), 0.0f).rg;
+    }
+    else if (cubeTier == 2u)
+    {
+        moments = gShadowCubeArrayTier2.SampleLevel(LinearClampSampler, float4(dir, info.ArrayIndex), 0.0f).rg;
+    }
+    else
+    {
+        moments = gShadowCubeArrayTier3.SampleLevel(LinearClampSampler, float4(dir, info.ArrayIndex), 0.0f).rg;
+    }
+
+    if (depth <= moments.x)
+    {
+        return 1.0f;
+    }
+
+    float variance = max(moments.y - moments.x * moments.x, 0.00002f);
+    float delta = depth - moments.x;
+    float probability = variance / (variance + delta * delta);
+    return ReduceLightBleed(probability);
 }
 
 float GetDirectionalShadow(float3 worldPos)
@@ -236,7 +291,11 @@ float GetLightShadow(FLightInfo light, float3 worldPos)
     }
     else
     {
-        shadow = SampleCubeShadow(info, worldPos);
+#if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
+        shadow = SampleCubeShadowVSM(info, worldPos);
+#else
+        shadow = SampleCubeShadowPCF(info, worldPos);
+#endif
     }
     return ApplyShadowSharpen(shadow, info);
 }

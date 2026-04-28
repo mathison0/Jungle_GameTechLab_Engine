@@ -295,6 +295,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 
 	const bool bUseVSM = Frame.RenderOptions.ShadowFilterMode == EShadowFilterMode::VSM;
 	FTextureAtlasPool::Get().EnsureAtlasMode(Frame.RenderOptions.ShadowFilterMode);
+	FTextureCubeShadowPool::Get().EnsureVSMMode(bUseVSM);
 
 	const uint32 AtlasTextureSize = FTextureAtlasPool::Get().GetTextureSize();
 	const uint32 NumPointLights = Env.GetNumPointLights();
@@ -409,7 +410,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		bool bAllFacesValid = true;
 		for (uint32 FaceIndex = 0; FaceIndex < FTextureCubeShadowPool::CubeFaceCount; ++FaceIndex)
 		{
-			if (!FTextureCubeShadowPool::Get().GetFaceDSV(CubeHandle, FaceIndex))
+			if (!FTextureCubeShadowPool::Get().GetFaceDSV(CubeHandle, FaceIndex)
+				|| (bUseVSM && !FTextureCubeShadowPool::Get().GetFaceVSMRTV(CubeHandle, FaceIndex)))
 			{
 				bAllFacesValid = false;
 				break;
@@ -436,6 +438,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 			Task.ShadowFrustum.UpdateFromMatrix(LightVP);
 			Task.Viewport = CubeViewport;
 			Task.DSV = FTextureCubeShadowPool::Get().GetFaceDSV(CubeHandle, FaceIndex);
+			Task.RTV = bUseVSM ? FTextureCubeShadowPool::Get().GetFaceVSMRTV(CubeHandle, FaceIndex) : nullptr;
 			Task.CubeIndex = CubeHandle.CubeIndex;
 			Task.CubeFaceIndex = FaceIndex;
 			Task.ShadowDepthBias = PointLight->GetShadowBias();
@@ -768,7 +771,7 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 			continue;
 		}
 
-		const bool bWriteMoments = bUseVSM && Task.TargetType == EShadowRenderTargetType::Atlas2D && Task.RTV != nullptr;
+		const bool bWriteMoments = bUseVSM && Task.RTV != nullptr;
 		FShader* ActiveShadowClearShader = bWriteMoments ? ShadowClearShaderVSM : ShadowClearShader;
 		FShader* ActiveShadowDepthShader = bWriteMoments ? ShadowDepthShaderVSM : ShadowDepthShader;
 
@@ -1056,6 +1059,8 @@ void FRenderer::Render(const FFrameContext& Frame, FScene& Scene)
 	}
 
 	Resources.BindSystemSamplers(Device);
+
+	Resources.UnbindShadowResources(Device);
 
 	FShadowPassData ShadowPassData;
 	BuildShadowPassData(Frame, Scene, ShadowPassData);
