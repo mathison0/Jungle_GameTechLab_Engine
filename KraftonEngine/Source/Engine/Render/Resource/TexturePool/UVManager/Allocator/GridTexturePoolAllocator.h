@@ -9,6 +9,8 @@ class FGridTexturePoolAllocator : public FTexturePoolAllocatorBase
 public:
 	virtual void Initialize(uint32 InAtlasSize, uint32 InLayerCount, uint32 InMinBlockSize = 32) override;
 	virtual bool AllocateHandle(float TextureSize, FTexturePoolHandle& OutHandle) override;
+	virtual bool CanAllocateHandle(float TextureSize) const override;
+	virtual bool CanAllocateHandleSet(const FTexturePoolHandleRequest& Request) const override;
 	virtual FAtlasUV GetAtlasUV(const FTexturePoolHandle& InHandle) override;
 	virtual void ReleaseHandle(const FTexturePoolHandle& InHandle) override;
 	virtual void BroadcastEntries() override;
@@ -34,6 +36,9 @@ private:
 	bool IsFreeRect(uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H) const;
 	bool FindFreeRect(uint32 SliceIndex, uint32 W, uint32 H, uint32& OutX, uint32& OutY) const;
 	void MarkRect(uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H, bool bOccupied);
+	bool IsFreeRectInOccupancy(const std::vector<std::vector<bool>>& Occupancy, uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H) const;
+	bool FindFreeRectInOccupancy(const std::vector<std::vector<bool>>& Occupancy, uint32 SliceIndex, uint32 W, uint32 H, uint32& OutX, uint32& OutY) const;
+	void MarkRectInOccupancy(std::vector<std::vector<bool>>& Occupancy, uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H, bool bOccupied) const;
 
 private:
 	uint32 GridCount = 4;

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreTypes.h"
 #include "Core/Singleton.h"
@@ -40,8 +40,12 @@ public:
 	virtual void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InTextureSize);
 	uint32 GetTextureSize() const { return TextureSize; }
 	uint32 GetAllocatedLayerCount() const { return TextureLayerSize; }
+	uint32 GetAllocatorMinBlockSize() const;
 
 	virtual TexturePoolHandleSet* GetTextureHandle(TexturePoolHandleRequest HandleRequest);
+	virtual TexturePoolHandleSet* TryGetTextureHandleNoResize(TexturePoolHandleRequest HandleRequest);
+	bool CanAllocateTextureHandleSet(const TexturePoolHandleRequest& HandleRequest) const;
+	float EstimateAllocationCost(const TexturePoolHandleRequest& HandleRequest) const;
 	virtual void ReleaseHandleSet(TexturePoolHandleSet* InHandleSet);
 	virtual ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandle& InHandle) = 0;
 	virtual ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandleSet* InHandleSet) = 0;

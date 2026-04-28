@@ -22,6 +22,9 @@ public:
 	virtual void Initialize(uint32 InSize, uint32 InLayerCount, uint32 InMinBlockSize = 32);
 
 	virtual bool AllocateHandle(float TextureSize, FTexturePoolHandle& OutHandle) = 0;
+	virtual bool CanAllocateHandle(float TextureSize) const = 0;
+	virtual bool CanAllocateHandleSet(const FTexturePoolHandleRequest& Request) const = 0;
+	virtual float EstimateAllocationCost(const FTexturePoolHandleRequest& Request) const;
 	virtual FAtlasUV GetAtlasUV(const FTexturePoolHandle& InHandle) = 0;
 	virtual void ReleaseHandle(const FTexturePoolHandle& InHandle) = 0;
 	virtual void BroadcastEntries() = 0;
@@ -33,6 +36,7 @@ public:
 	FTexturePoolHandleSet* RegisterHandleSet(std::unique_ptr<FTexturePoolHandleSet> InHandleSet);
 	void UnregisterHandleSet(uint32 InHandleSetId);
 	void InvalidateAllHandleSets();
+	uint32 GetMinBlockSize() const { return MinBlockSize; }
 
 protected:
 	uint32 GetLayerCount() const { return LayerCount; }

@@ -41,6 +41,25 @@ void ULightComponent::InvalidateShadowHandleSet()
 	}
 }
 
+void ULightComponent::SetShadowHandleSetForRenderer(FShadowHandleSet* InHandleSet)
+{
+	if (ShadowHandleSet && ShadowHandleSet != InHandleSet)
+	{
+		ShadowHandleSet->Release();
+	}
+
+	ShadowHandleSet = InHandleSet;
+}
+
+void ULightComponent::ReleaseShadowHandleSetForRenderer()
+{
+	if (ShadowHandleSet)
+	{
+		ShadowHandleSet->Release();
+		ShadowHandleSet = nullptr;
+	}
+}
+
 void ULightComponent::Serialize(FArchive& Ar)
 {
 	ULightComponentBase::Serialize(Ar);

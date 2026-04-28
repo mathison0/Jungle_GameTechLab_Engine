@@ -39,6 +39,9 @@ public:
 
 	virtual FShadowHandleSet* GetShadowHandleSet() { return ShadowHandleSet; }
 	virtual FShadowMapKey GetShadowMapKey() { return FShadowMapKey(); }
+	FShadowHandleSet* PeekShadowHandleSet() const { return ShadowHandleSet; }
+	void SetShadowHandleSetForRenderer(FShadowHandleSet* InHandleSet);
+	void ReleaseShadowHandleSetForRenderer();
 
 protected:
 	float ShadowResolutionScale = 1.0f;

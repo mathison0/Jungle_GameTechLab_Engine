@@ -1,4 +1,4 @@
-#include "TexturePool.h"
+﻿#include "TexturePool.h"
 #include "UVManager/TexturePoolAllocator.h"
 
 void FTexturePoolHandleSet::Release()
@@ -61,6 +61,51 @@ FTexturePoolBase::TexturePoolHandleSet* FTexturePoolBase::GetTextureHandle(Textu
 
 	HandleSet->bIsValid = true;
 	return Allocator->RegisterHandleSet(std::move(HandleSet));
+}
+
+FTexturePoolBase::TexturePoolHandleSet* FTexturePoolBase::TryGetTextureHandleNoResize(TexturePoolHandleRequest HandleRequest)
+{
+	if (!Allocator || !Allocator->CanAllocateHandleSet(HandleRequest))
+	{
+		return nullptr;
+	}
+
+	std::unique_ptr<TexturePoolHandleSet> HandleSet = std::make_unique<TexturePoolHandleSet>(
+		this,
+		Allocator->ReserveHandleSetId());
+
+	for (uint32 Size : HandleRequest.Sizes)
+	{
+		TexturePoolHandle Handle;
+		if (!Allocator->AllocateHandle(static_cast<float>(Size), Handle))
+		{
+			for (const TexturePoolHandle& AllocatedHandle : HandleSet->Handles)
+			{
+				Allocator->ReleaseHandle(AllocatedHandle);
+			}
+			return nullptr;
+		}
+
+		HandleSet->Handles.push_back(Handle);
+	}
+
+	HandleSet->bIsValid = true;
+	return Allocator->RegisterHandleSet(std::move(HandleSet));
+}
+
+bool FTexturePoolBase::CanAllocateTextureHandleSet(const TexturePoolHandleRequest& HandleRequest) const
+{
+	return Allocator ? Allocator->CanAllocateHandleSet(HandleRequest) : false;
+}
+
+float FTexturePoolBase::EstimateAllocationCost(const TexturePoolHandleRequest& HandleRequest) const
+{
+	return Allocator ? Allocator->EstimateAllocationCost(HandleRequest) : 0.0f;
+}
+
+uint32 FTexturePoolBase::GetAllocatorMinBlockSize() const
+{
+	return Allocator ? Allocator->GetMinBlockSize() : 0;
 }
 
 void FTexturePoolBase::ReleaseHandleSet(TexturePoolHandleSet* InHandleSet)

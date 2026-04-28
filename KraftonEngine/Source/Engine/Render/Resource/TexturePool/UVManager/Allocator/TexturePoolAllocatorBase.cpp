@@ -19,6 +19,22 @@ void FTexturePoolAllocatorBase::SetLayerCount(uint32 InNewLayerCount)
 	BroadcastEntries();
 }
 
+float FTexturePoolAllocatorBase::EstimateAllocationCost(const FTexturePoolHandleRequest& Request) const
+{
+	if (MinBlockSize == 0)
+	{
+		return 0.0f;
+	}
+
+	float TotalCost = 0.0f;
+	for (uint32 Size : Request.Sizes)
+	{
+		const uint32 BlockCount = (Size + MinBlockSize - 1) / MinBlockSize;
+		TotalCost += static_cast<float>(BlockCount * BlockCount);
+	}
+	return TotalCost;
+}
+
 uint32 FTexturePoolAllocatorBase::ReserveHandleSetId()
 {
 	return NextHandleSetId++;
