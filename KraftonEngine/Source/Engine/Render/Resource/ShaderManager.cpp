@@ -47,18 +47,30 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 	GetOrCreate(EShaderPath::HeightFog);
 
 	// UberLit 기본은 Phong + Cluster Culling으로 컴파일한다.
+	
 	GetOrCreate(EShaderPath::UberLit);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::Unlit),   EUberLitDefines::Unlit);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::Gouraud), EUberLitDefines::Gouraud);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::Lambert), EUberLitDefines::Lambert);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::Phong),   EUberLitDefines::Phong);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::Toon),    EUberLitDefines::Toon);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::GouraudVSM), EUberLitDefines::GouraudVSM);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::LambertVSM), EUberLitDefines::LambertVSM);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::PhongVSM),   EUberLitDefines::PhongVSM);
-	PreCompile(FShaderKey(EShaderPath::UberLit, EUberLitDefines::ToonVSM),    EUberLitDefines::ToonVSM);
-	PreCompile(FShaderKey(EShaderPath::ShadowDepth, EShadowPassDefines::VSM), EShadowPassDefines::VSM);
-	PreCompile(FShaderKey(EShaderPath::ShadowClear, EShadowPassDefines::VSM), EShadowPassDefines::VSM);
+
+	// Hard Shadow
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Unlit),		EUberLitDefines::Unlit);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Gouraud),		EUberLitDefines::Gouraud);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Lambert),		EUberLitDefines::Lambert);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Phong),		EUberLitDefines::Phong);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::Toon),			EUberLitDefines::Toon);
+
+	// PCF
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::GouraudPCF),	EUberLitDefines::GouraudPCF);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::LambertPCF),	EUberLitDefines::LambertPCF);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::PhongPCF),		EUberLitDefines::PhongPCF);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::ToonPCF),		EUberLitDefines::ToonPCF);
+
+	// VSM
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::GouraudVSM),	EUberLitDefines::GouraudVSM);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::LambertVSM),	EUberLitDefines::LambertVSM);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::PhongVSM),		EUberLitDefines::PhongVSM);
+	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::ToonVSM),		EUberLitDefines::ToonVSM);
+
+	PreCompile(FShaderKey(EShaderPath::ShadowDepth, EShadowPassDefines::VSM),		EShadowPassDefines::VSM);
+	PreCompile(FShaderKey(EShaderPath::ShadowClear, EShadowPassDefines::VSM),		EShadowPassDefines::VSM);
 
 	// include 역매핑 구축
 	RebuildIncludeDependents();
