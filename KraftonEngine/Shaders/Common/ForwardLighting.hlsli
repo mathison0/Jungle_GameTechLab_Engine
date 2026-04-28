@@ -4,260 +4,24 @@
 #include "Common/ForwardLightData.hlsli"
 #include "Common/ConstantBuffers.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Common/ShadowFunctions.hlsli"
 
-float GetShadowDepthBias(FShadowInfo info)
-{
-    return max(info.ShadowParams.x, 0.00001f);
-}
+// =========================================================================
+// Forward Light 계산 헬퍼 함수
+// Shadow 관련 함수는 ShadowFunctions.hlsl에 다 모여있음.
+// =========================================================================
 
-float GetShadowCompareBias(FShadowInfo info)
-{
-    if (info.bIsPSM)
-    {
-        return 0.0f;
-    }
-    return GetShadowDepthBias(info);
-}
-
-float GetShadowSlopeBias(FShadowInfo info)
-{
-    return info.ShadowParams.y;       
-}
-
-float GetShadowNearZ(FShadowInfo info)
-{
-    return max(info.ShadowParams.w, 0.0001f);
-}
-
-float ApplyShadowSharpen(float shadow, FShadowInfo info)
-{
-    float sharpen = saturate(info.ShadowParams.z);
-    float contrast = 1.0f + sharpen * 4.0f;
-    return saturate((shadow - 0.5f) * contrast + 0.5f);
-}
-
+// 감쇠 계산
 float CalcAttenuation(float dist, float radius, float falloff)
 {
     float ratio = saturate(dist / max(radius, 0.0001f));
     return pow(1.0f - ratio, falloff);
 }
 
+// Ambinet Light 빛 세기 계산
 float3 CalcAmbient(float3 lightColor, float intensity)
 {
     return lightColor * intensity;
-}
-
-#define SHADOW_METHOD_STANDARD 0
-#define SHADOW_METHOD_PSM 1
-#define SHADOW_METHOD_CSM 2
-
-float3 ApplyPSMNormalOffset(FShadowInfo info, float3 worldPos, float3 normal)
-{
-    if (info.bIsPSM)
-    {
-        const float PSMNormalBias = 0.05f;
-        return worldPos + normalize(normal) * PSMNormalBias;
-    }
-    return worldPos;
-}
-
-float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float3 normal, float4x4 lightVP)
-{
-    worldPos = ApplyPSMNormalOffset(info, worldPos, normal);
-
-    float4 shadowPos;
-    if (info.bIsPSM)
-    {
-        shadowPos = mul(float4(worldPos, 1.0f), lightVP);
-    }
-    else
-    {
-        shadowPos = mul(float4(worldPos, 1.0f), lightVP);
-    }
-
-    if (abs(shadowPos.w) < 1e-5f)
-    {
-        return 1.0f;
-    }
-
-    float3 ndc = shadowPos.xyz / shadowPos.w;
-    float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-    float depth = ndc.z + GetShadowCompareBias(info);
-
-    if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
-    {
-        return 1.0f;
-    }
-
-    float2 atlasMin = info.SampleData.xy;
-    float2 atlasMax = info.SampleData.zw;
-    float2 atlasUV = lerp(atlasMin, atlasMax, uv);
-
-    return gShadowAtlasArray.SampleCmpLevelZero(
-        ShadowCmpSampler,
-        float3(atlasUV, info.ArrayIndex),
-        depth);
-}
-
-float ReduceLightBleed(float probability)
-{
-    const float bleedReduction = 0.2f;
-    return saturate((probability - bleedReduction) / (1.0f - bleedReduction));
-}
-
-float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float3 normal)
-{
-    worldPos = ApplyPSMNormalOffset(info, worldPos, normal);
-
-    float4 lightClip;
-    if (info.bIsPSM)
-    {
-        lightClip = mul(float4(worldPos, 1.0f), info.LightVP);
-    }
-    else
-    {
-        lightClip = mul(float4(worldPos, 1.0f), info.LightVP);
-    }
-
-    if (abs(lightClip.w) < 1e-5f)
-    {
-        return 1.0f;
-    }
-
-    float3 ndc = lightClip.xyz / lightClip.w;
-    float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-    float depth = (1.0f - ndc.z) + GetShadowCompareBias(info);
-
-    if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
-    {
-        return 1.0f;
-    }
-
-    float2 atlasMin = info.SampleData.xy;
-    float2 atlasMax = info.SampleData.zw;
-    float2 atlasUV = lerp(atlasMin, atlasMax, uv);
-    float2 moments = gShadowAtlasArray.SampleLevel(
-        LinearClampSampler,
-        float3(atlasUV, info.ArrayIndex),
-        0.0f).xy;
-
-    if (depth <= moments.x)
-    {
-        return 1.0f;
-    }
-
-    float variance = max(moments.y - moments.x * moments.x, 0.00002f);
-    float delta = depth - moments.x;
-    float probability = variance / (variance + delta * delta);
-    return ReduceLightBleed(probability);
-}
-
-float SampleCubeShadow(FShadowInfo info, float3 worldPos)
-{
-    float3 lightPos = info.SampleData.xyz;
-    float nearZ = GetShadowNearZ(info);
-    float farZ = max(info.SampleData.w, nearZ + 0.0001f);
-
-    float3 toPixel = worldPos - lightPos;
-    float3 absToPixel = abs(toPixel);
-    float faceDepth = max(max(absToPixel.x, absToPixel.y), absToPixel.z);
-    if (faceDepth < nearZ || faceDepth > farZ)
-    {
-        return 1.0f;
-    }
-
-    float3 dir = toPixel / max(faceDepth, 0.0001f);
-    float depth = (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ)) + GetShadowDepthBias(info);
-    uint cubeTier = min(info.CubeTierIndex, 3u);
-
-
-    if (cubeTier == 0u)
-    {
-        return gShadowCubeArrayTier0.SampleCmpLevelZero(
-            ShadowCmpSampler,
-            float4(dir, info.ArrayIndex),
-            depth);
-    }
-    if (cubeTier == 1u)
-    {
-        return gShadowCubeArrayTier1.SampleCmpLevelZero(
-            ShadowCmpSampler,
-            float4(dir, info.ArrayIndex),
-            depth);
-    }
-    if (cubeTier == 2u)
-    {
-        return gShadowCubeArrayTier2.SampleCmpLevelZero(
-            ShadowCmpSampler,
-            float4(dir, info.ArrayIndex),
-            depth);
-    }
-
-    return gShadowCubeArrayTier3.SampleCmpLevelZero(
-        ShadowCmpSampler,
-        float4(dir, info.ArrayIndex),
-        depth);
-}
-
-float GetDirectionalShadow(float3 worldPos, float3 normal)
-{
-    if (DirectionalLight.ShadowIndex < 0)
-    {
-        return 1.0f;
-    }
-
-    float shadow = 1.0f;
-    if (ShadowMethod == SHADOW_METHOD_CSM)
-    {
-        float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        float depth = abs(viewPos.z);
-        
-        int cascadeIdx = 0;
-        if (depth > CascadeSplits.x) cascadeIdx = 1;
-        if (depth > CascadeSplits.y) cascadeIdx = 2;
-        if (depth > CascadeSplits.z) cascadeIdx = 3;
-        
-        if (cascadeIdx >= (int)NumCascades)
-        {
-            return 1.0f;
-        }
-
-        FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex + cascadeIdx];
-        shadow = SampleAtlasShadow(info, worldPos, normal, CascadeMatrices[cascadeIdx]);
-        return ApplyShadowSharpen(shadow, info);
-    }
-    
-    FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex];
-#if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-    shadow = SampleAtlasShadowVSM(info, worldPos, normal);
-#else
-    shadow = SampleAtlasShadow(info, worldPos, normal, info.LightVP);
-#endif
-    return ApplyShadowSharpen(shadow, info);
-}
-
-float GetLightShadow(FLightInfo light, float3 worldPos)
-{
-    if (light.ShadowIndex < 0)
-    {
-        return 1.0f;
-    }
-
-    FShadowInfo info = gShadowInfos[light.ShadowIndex];
-    float shadow = 1.0f;
-    if (info.Type == SHADOW_INFO_TYPE_ATLAS2D)
-    {
-#if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-        shadow = SampleAtlasShadowVSM(info, worldPos, float3(0.0f, 0.0f, 1.0f));
-#else
-        shadow = SampleAtlasShadow(info, worldPos, float3(0.0f, 0.0f, 1.0f), info.LightVP);
-#endif
-    }
-    else
-    {
-        shadow = SampleCubeShadow(info, worldPos);
-    }
-    return ApplyShadowSharpen(shadow, info);
 }
 
 float3 CalcDirectionalDiffuse(float3 lightColor, float3 lightDir, float intensity, float3 N)
@@ -349,7 +113,7 @@ void AccumulatePointSpotDiffuse(float3 worldPos, float3 N, float4 screenPos, ino
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[TileLightIndices[gridData.x + t]];
-            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
     else if (LightCullingMode == LIGHT_CULLING_CLUSTER)
@@ -359,7 +123,7 @@ void AccumulatePointSpotDiffuse(float3 worldPos, float3 N, float4 screenPos, ino
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[g_ClusterLightIndices[gridData.x + t]];
-            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
     else
@@ -367,7 +131,7 @@ void AccumulatePointSpotDiffuse(float3 worldPos, float3 N, float4 screenPos, ino
         for (uint i = 0; i < NumActivePointLights + NumActiveSpotLights; ++i)
         {
             FLightInfo light = AllLights[i];
-            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
 }
@@ -382,7 +146,7 @@ void AccumulatePointSpotSpecular(float3 worldPos, float3 N, float3 V, float shin
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[TileLightIndices[gridData.x + t]];
-            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos);
+            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos, N);
         }
     }
     else if (LightCullingMode == LIGHT_CULLING_CLUSTER)
@@ -392,7 +156,7 @@ void AccumulatePointSpotSpecular(float3 worldPos, float3 N, float3 V, float shin
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[g_ClusterLightIndices[gridData.x + t]];
-            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos);
+            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos, N);
         }
     }
     else
@@ -400,7 +164,7 @@ void AccumulatePointSpotSpecular(float3 worldPos, float3 N, float3 V, float shin
         for (uint i = 0; i < NumActivePointLights + NumActiveSpotLights; ++i)
         {
             FLightInfo light = AllLights[i];
-            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos);
+            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos, N);
         }
     }
 }
@@ -420,7 +184,7 @@ float ToonStep(float NdotL)
     return lerp(g_ToonDarknessFloor, 1.0f, saturate(stepped));
 }
 
-float3 CalcRimMask(float3 N, float3 V)
+float CalcRimMask(float3 N, float3 V)
 {
     float rimDot = 1.0f - saturate(dot(N, V));
     return smoothstep(g_ToonRimMin, g_ToonRimMax, rimDot);
@@ -461,7 +225,7 @@ void AccumulatePointSpotToonDiffuse(float3 worldPos, float3 N, float4 screenPos,
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[TileLightIndices[gridData.x + t]];
-            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
     else if (LightCullingMode == LIGHT_CULLING_CLUSTER)
@@ -471,7 +235,7 @@ void AccumulatePointSpotToonDiffuse(float3 worldPos, float3 N, float4 screenPos,
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[g_ClusterLightIndices[gridData.x + t]];
-            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
     else
@@ -479,7 +243,7 @@ void AccumulatePointSpotToonDiffuse(float3 worldPos, float3 N, float4 screenPos,
         for (uint i = 0; i < NumActivePointLights + NumActiveSpotLights; ++i)
         {
             FLightInfo light = AllLights[i];
-            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
 }

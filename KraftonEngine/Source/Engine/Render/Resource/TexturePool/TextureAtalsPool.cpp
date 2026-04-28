@@ -1,7 +1,6 @@
-﻿#include "TextureAtlasPool.h"
+﻿#include "TextureAtalsPool.h"
 #include "Render/Pipeline/RenderConstants.h"
 #include "Render/Resource/ShaderManager.h"
-#include "Profiling/MemoryStats.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -223,7 +222,6 @@ void FTextureAtlasPool::RecreateAtlasResources()
 	Texture = CreateTexture(Device);
 	RebuildSRV(Device, Texture.Get());
 	RebuildDSV(Device, Texture.Get());
-	UpdateMemoryStats();
 	BroadCastHandlesUnvalid();
 }
 
@@ -288,31 +286,6 @@ TArray<FAtlasUV> FTextureAtlasPool::GetAtlasUVArray(const TexturePoolHandleSet* 
 	return Result;
 }
 
-TArray<ID3D11ShaderResourceView*> FTextureAtlasPool::GetSliceSRVs(TexturePoolHandleSet* HandleSet)
-{
-	TArray<ID3D11ShaderResourceView*> Result;
-	if (!HandleSet)
-	{
-		return Result;
-	}
-
-	TArray<TexturePoolHandle> Handles = HandleSet->Handles;
-	Result.reserve(Handles.size());
-	for (const TexturePoolHandle& Handle : Handles)
-	{
-		if (Handle.ArrayIndex < static_cast<uint32>(SliceSRVs.size()))
-		{
-			Result.push_back(SliceSRVs[Handle.ArrayIndex].Get());
-		}
-		else
-		{
-			Result.push_back(nullptr);
-		}
-	}
-
-	return Result;
-}
-
 TArray<ID3D11DepthStencilView*> FTextureAtlasPool::GetDSVs(TexturePoolHandleSet* HandleSet)
 {
 	TArray<ID3D11DepthStencilView*> Result;
@@ -359,56 +332,6 @@ TArray<ID3D11RenderTargetView*> FTextureAtlasPool::GetRTVs(TexturePoolHandleSet*
 		if (Handle.ArrayIndex < static_cast<uint32>(RTVs.size()))
 		{
 			Result.push_back(RTVs[Handle.ArrayIndex].Get());
-		}
-		else
-		{
-			Result.push_back(nullptr);
-		}
-	}
-
-	return Result;
-}
-
-TArray<ID3D11RenderTargetView*> FTextureAtlasPool::GetFilteredRTVs(TexturePoolHandleSet* HandleSet)
-{
-	TArray<ID3D11RenderTargetView*> Result;
-	if (!IsVSMMode() || !HandleSet)
-	{
-		return Result;
-	}
-
-	TArray<TexturePoolHandle> Handles = HandleSet->Handles;
-	Result.reserve(Handles.size());
-	for (const TexturePoolHandle& Handle : Handles)
-	{
-		if (Handle.ArrayIndex < static_cast<uint32>(VSMFilteredRTVs.size()))
-		{
-			Result.push_back(VSMFilteredRTVs[Handle.ArrayIndex].Get());
-		}
-		else
-		{
-			Result.push_back(nullptr);
-		}
-	}
-
-	return Result;
-}
-
-TArray<ID3D11RenderTargetView*> FTextureAtlasPool::GetTempRTVs(TexturePoolHandleSet* HandleSet)
-{
-	TArray<ID3D11RenderTargetView*> Result;
-	if (!IsVSMMode() || !HandleSet)
-	{
-		return Result;
-	}
-
-	TArray<TexturePoolHandle> Handles = HandleSet->Handles;
-	Result.reserve(Handles.size());
-	for (const TexturePoolHandle& Handle : Handles)
-	{
-		if (Handle.ArrayIndex < static_cast<uint32>(VSMTempRTVs.size()))
-		{
-			Result.push_back(VSMTempRTVs[Handle.ArrayIndex].Get());
 		}
 		else
 		{
@@ -628,11 +551,6 @@ ID3D11ShaderResourceView* FTextureAtlasPool::GetDebugLayerSRV(uint32 SliceIndex)
 
 TComPtr<ID3D11Texture2D> FTextureAtlasPool::CreateTexture(ID3D11Device* Device)
 {
-	if (IsVSMMode())
-	{
-		return CreateVSMMomentTexture(Device);
-	}
-
 	D3D11_TEXTURE2D_DESC desc = {};
 	desc.Width = TextureSize;
 	desc.Height = TextureSize;
@@ -642,8 +560,17 @@ TComPtr<ID3D11Texture2D> FTextureAtlasPool::CreateTexture(ID3D11Device* Device)
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.MiscFlags = 0;
 	desc.CPUAccessFlags = 0;
-	desc.Format = DXGI_FORMAT_R32_TYPELESS;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+
+	if (IsVSMMode())
+	{
+		desc.Format = DXGI_FORMAT_R32G32_FLOAT;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	}
+	else
+	{
+		desc.Format = DXGI_FORMAT_R32_TYPELESS;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+	}
 
 	TComPtr<ID3D11Texture2D> NewTexture;
 	HRESULT hr = Device->CreateTexture2D(&desc, nullptr, NewTexture.GetAddressOf());
@@ -673,145 +600,27 @@ TComPtr<ID3D11Texture2D> FTextureAtlasPool::CreateVSMDepthTexture(ID3D11Device* 
 	return NewTexture;
 }
 
-TComPtr<ID3D11Texture2D> FTextureAtlasPool::CreateVSMMomentTexture(ID3D11Device* Device)
-{
-	D3D11_TEXTURE2D_DESC desc = {};
-	desc.Width = TextureSize;
-	desc.Height = TextureSize;
-	desc.MipLevels = 1;
-	desc.ArraySize = TextureLayerSize;
-	desc.Format = DXGI_FORMAT_R32G32_FLOAT;
-	desc.SampleDesc.Count = 1;
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.MiscFlags = 0;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-	desc.CPUAccessFlags = 0;
-
-	TComPtr<ID3D11Texture2D> NewTexture;
-	HRESULT hr = Device->CreateTexture2D(&desc, nullptr, NewTexture.GetAddressOf());
-	assert(SUCCEEDED(hr));
-
-	return NewTexture;
-}
-
-void FTextureAtlasPool::RebuildVSMMomentSRV(
-	ID3D11Device* Device,
-	ID3D11Texture2D* InTexture,
-	TComPtr<ID3D11ShaderResourceView>& OutSRV)
+void FTextureAtlasPool::RebuildSRV(ID3D11Device* Device, ID3D11Texture2D* InTexture)
 {
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
 	srvDesc.Texture2DArray.MostDetailedMip = 0;
 	srvDesc.Texture2DArray.MipLevels = 1;
 	srvDesc.Texture2DArray.FirstArraySlice = 0;
 	srvDesc.Texture2DArray.ArraySize = TextureLayerSize;
+	srvDesc.Format = IsVSMMode() ? DXGI_FORMAT_R32G32_FLOAT : DXGI_FORMAT_R32_FLOAT;
 
-	OutSRV.Reset();
-	HRESULT hr = Device->CreateShaderResourceView(InTexture, &srvDesc, OutSRV.GetAddressOf());
+	SRV.Reset();
+	HRESULT hr = Device->CreateShaderResourceView(InTexture, &srvDesc, SRV.GetAddressOf());
 	assert(SUCCEEDED(hr));
-}
 
-void FTextureAtlasPool::RebuildSliceSRVs(
-	ID3D11Device* Device,
-	ID3D11Texture2D* InTexture,
-	DXGI_FORMAT Format,
-	TArray<TComPtr<ID3D11ShaderResourceView>>& OutSRVs)
-{
-	OutSRVs.clear();
-	OutSRVs.resize(TextureLayerSize);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = Format;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-	srvDesc.Texture2DArray.MostDetailedMip = 0;
-	srvDesc.Texture2DArray.MipLevels = 1;
-	srvDesc.Texture2DArray.ArraySize = 1;
-
-	for (uint32 SliceIndex = 0; SliceIndex < TextureLayerSize; ++SliceIndex)
-	{
-		srvDesc.Texture2DArray.FirstArraySlice = SliceIndex;
-
-		HRESULT hr = Device->CreateShaderResourceView(
-			InTexture,
-			&srvDesc,
-			OutSRVs[SliceIndex].GetAddressOf());
-
-		assert(SUCCEEDED(hr));
-	}
-}
-
-void FTextureAtlasPool::RebuildVSMMomentRTVs(
-	ID3D11Device* Device,
-	ID3D11Texture2D* InTexture,
-	TArray<TComPtr<ID3D11RenderTargetView>>& OutRTVs)
-{
-	OutRTVs.clear();
-	OutRTVs.resize(TextureLayerSize);
-
-	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-	rtvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-	rtvDesc.Texture2DArray.MipSlice = 0;
-	rtvDesc.Texture2DArray.ArraySize = 1;
-
-	for (uint32 SliceIndex = 0; SliceIndex < TextureLayerSize; ++SliceIndex)
-	{
-		rtvDesc.Texture2DArray.FirstArraySlice = SliceIndex;
-
-		HRESULT hr = Device->CreateRenderTargetView(
-			InTexture,
-			&rtvDesc,
-			OutRTVs[SliceIndex].GetAddressOf());
-
-		assert(SUCCEEDED(hr));
-	}
-}
-
-void FTextureAtlasPool::RebuildVSMBlurResources(ID3D11Device* Device)
-{
-	// Blur shader를 연결할 때 사용하는 보조 리소스들이다.
-	// 계약은 Raw(Texture/SRV) -> Temp(RTV/SRV) -> Filtered(RTV/SRV) 순서다.
-	VSMFilteredTexture = CreateVSMMomentTexture(Device);
-	VSMTempTexture = CreateVSMMomentTexture(Device);
-
-	RebuildVSMMomentSRV(Device, VSMFilteredTexture.Get(), VSMFilteredSRV);
-	RebuildVSMMomentSRV(Device, VSMTempTexture.Get(), VSMTempSRV);
-	RebuildVSMMomentRTVs(Device, VSMFilteredTexture.Get(), VSMFilteredRTVs);
-	RebuildVSMMomentRTVs(Device, VSMTempTexture.Get(), VSMTempRTVs);
-}
-
-void FTextureAtlasPool::RebuildSRV(ID3D11Device* Device, ID3D11Texture2D* InTexture)
-{
 	if (IsVSMMode())
 	{
-		RebuildVSMMomentSRV(Device, InTexture, SRV);
-		RebuildSliceSRVs(Device, InTexture, DXGI_FORMAT_R32G32_FLOAT, SliceSRVs);
 		RebuildRTVs(Device, InTexture);
-		RebuildVSMBlurResources(Device);
 	}
 	else
 	{
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		srvDesc.Texture2DArray.MostDetailedMip = 0;
-		srvDesc.Texture2DArray.MipLevels = 1;
-		srvDesc.Texture2DArray.FirstArraySlice = 0;
-		srvDesc.Texture2DArray.ArraySize = TextureLayerSize;
-		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-
-		SRV.Reset();
-		HRESULT hr = Device->CreateShaderResourceView(InTexture, &srvDesc, SRV.GetAddressOf());
-		assert(SUCCEEDED(hr));
-		RebuildSliceSRVs(Device, InTexture, DXGI_FORMAT_R32_FLOAT, SliceSRVs);
-
 		RTVs.clear();
-		VSMFilteredTexture.Reset();
-		VSMTempTexture.Reset();
-		VSMFilteredSRV.Reset();
-		VSMTempSRV.Reset();
-		VSMFilteredRTVs.clear();
-		VSMTempRTVs.clear();
 	}
 }
 
@@ -821,7 +630,6 @@ void FTextureAtlasPool::RebuildDSV(ID3D11Device* Device, ID3D11Texture2D* InText
 	{
 		VSMDepthTexture.Reset();
 		FTexturePoolBase::RebuildDSV(Device, InTexture);
-		UpdateMemoryStats();
 		return;
 	}
 
@@ -847,33 +655,31 @@ void FTextureAtlasPool::RebuildDSV(ID3D11Device* Device, ID3D11Texture2D* InText
 		);
 		assert(SUCCEEDED(hr));
 	}
-
-	UpdateMemoryStats();
 }
 
 void FTextureAtlasPool::RebuildRTVs(ID3D11Device* Device, ID3D11Texture2D* InTexture)
 {
-	RebuildVSMMomentRTVs(Device, InTexture, RTVs);
-}
+	RTVs.clear();
+	RTVs.resize(TextureLayerSize);
 
-void FTextureAtlasPool::UpdateMemoryStats()
-{
-	uint64 NewMemory = 0;
-	NewMemory += MemoryStats::CalculateTextureMemory(Texture.Get());
-	NewMemory += MemoryStats::CalculateTextureMemory(VSMDepthTexture.Get());
-	NewMemory += MemoryStats::CalculateTextureMemory(VSMFilteredTexture.Get());
-	NewMemory += MemoryStats::CalculateTextureMemory(VSMTempTexture.Get());
+	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+	rtvDesc.Texture2DArray.MipSlice = 0;
+	rtvDesc.Texture2DArray.ArraySize = 1;
 
-	if (NewMemory > TrackedShadowAtlasMemory)
+	for (uint32 SliceIndex = 0; SliceIndex < TextureLayerSize; ++SliceIndex)
 	{
-		MemoryStats::AddShadowAtlasMemory(NewMemory - TrackedShadowAtlasMemory);
-	}
-	else if (TrackedShadowAtlasMemory > NewMemory)
-	{
-		MemoryStats::SubShadowAtlasMemory(TrackedShadowAtlasMemory - NewMemory);
-	}
+		rtvDesc.Texture2DArray.FirstArraySlice = SliceIndex;
 
-	TrackedShadowAtlasMemory = NewMemory;
+		HRESULT hr = Device->CreateRenderTargetView(
+			InTexture,
+			&rtvDesc,
+			RTVs[SliceIndex].GetAddressOf()
+		);
+
+		assert(SUCCEEDED(hr));
+	}
 }
 
 void FTextureAtlasPool::OnSetTextureSize()
@@ -894,7 +700,7 @@ void FTextureAtlasPool::OnSetTextureLayerSize()
 	for (uint32 i = CurrentManagersCount; i < TargetCount; ++i)
 	{
 		auto NewManager = std::make_unique<FGridUVManager>();
-		NewManager->Initialize(TextureSize, 256);
+		NewManager->Initialize(TextureSize, 1024);
 
 		UVManagers.push_back(std::move(NewManager));
 	}

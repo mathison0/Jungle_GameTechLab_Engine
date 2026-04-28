@@ -30,6 +30,15 @@ namespace
 		uint32  _pad[3];
 	};
 
+	struct FVSMBlurPassConstants
+	{
+		float SourceUVRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+		float InvTextureSize[2] = { 1.0f, 1.0f };
+		float BlurDirection[2] = { 1.0f, 0.0f };
+		uint32 SourceSlice = 0;
+		uint32 Padding[3] = {};
+	};
+
 	class FShadowUtil
 	{
 	public:
@@ -302,6 +311,7 @@ void FRenderer::Create(HWND hWindow)
 
 	Builder.Create(Device.GetDevice(), Device.GetDeviceContext(), &PassRenderStateTable);
 	ShadowPassBuffer.Create(Device.GetDevice(), sizeof(FShadowPassConstants));
+	VSMBlurPassBuffer.Create(Device.GetDevice(), sizeof(FVSMBlurPassConstants));
 
 	FGPUProfiler::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext());
 }
@@ -311,6 +321,7 @@ void FRenderer::Release()
 	FGPUProfiler::Get().Shutdown();
 
 	ShadowPassBuffer.Release();
+	VSMBlurPassBuffer.Release();
 	Builder.Release();
 
 	Resources.Release();
@@ -342,6 +353,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 
 	const bool bUseVSM = Frame.RenderOptions.ShadowFilterMode == EShadowFilterMode::VSM;
 	FTextureAtlasPool::Get().EnsureAtlasMode(Frame.RenderOptions.ShadowFilterMode);
+	FTextureCubeShadowPool::Get().EnsureVSMMode(bUseVSM);
 
 	const uint32 AtlasTextureSize = FTextureAtlasPool::Get().GetTextureSize();
 	const uint32 NumPointLights = Env.GetNumPointLights();
@@ -456,7 +468,8 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		bool bAllFacesValid = true;
 		for (uint32 FaceIndex = 0; FaceIndex < FTextureCubeShadowPool::CubeFaceCount; ++FaceIndex)
 		{
-			if (!FTextureCubeShadowPool::Get().GetFaceDSV(CubeHandle, FaceIndex))
+			if (!FTextureCubeShadowPool::Get().GetFaceDSV(CubeHandle, FaceIndex)
+				|| (bUseVSM && !FTextureCubeShadowPool::Get().GetFaceVSMRTV(CubeHandle, FaceIndex)))
 			{
 				bAllFacesValid = false;
 				break;
@@ -483,6 +496,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 			Task.ShadowFrustum.UpdateFromMatrix(LightVP);
 			Task.Viewport = CubeViewport;
 			Task.DSV = FTextureCubeShadowPool::Get().GetFaceDSV(CubeHandle, FaceIndex);
+			Task.RTV = bUseVSM ? FTextureCubeShadowPool::Get().GetFaceVSMRTV(CubeHandle, FaceIndex) : nullptr;
 			Task.CubeIndex = CubeHandle.CubeIndex;
 			Task.CubeFaceIndex = FaceIndex;
 			Task.ShadowDepthBias = PointLight->GetShadowBias();
@@ -559,7 +573,11 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		Info.LightIndex = NumPointLights + SpotIndex;
 		Info.LightVP = LightVP;
 		Info.SampleData = FVector4(AtlasUVs[0].u1, AtlasUVs[0].v1, AtlasUVs[0].u2, AtlasUVs[0].v2);
-		Info.ShadowParams = FVector4(SpotLight->GetShadowBias(), SpotLight->GetShadowSlopeBias(), SpotLight->GetShadowSharpen(), NearZ);
+		Info.ShadowParams = FVector4(
+			SpotLight->GetShadowBias(), 
+			SpotLight->GetShadowSlopeBias(), 
+			SpotLight->GetShadowSharpen(), 
+			NearZ);
 
 		const int32 ShadowInfoIndex = static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
 		OutShadowPassData.BindingData.ShadowInfos.push_back(Info);
@@ -843,7 +861,7 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 			continue;
 		}
 
-		const bool bWriteMoments = bUseVSM && Task.TargetType == EShadowRenderTargetType::Atlas2D && Task.RTV != nullptr;
+		const bool bWriteMoments = bUseVSM && Task.RTV != nullptr;
 		FShader* ActiveShadowClearShader = bWriteMoments ? ShadowClearShaderVSM : ShadowClearShader;
 		FShader* ActiveShadowDepthShader = bWriteMoments ? ShadowDepthShaderVSM : ShadowDepthShader;
 
@@ -958,16 +976,10 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 		Resources.ResetRenderStateCache();
 	}
 
-		//VSM이면 이후 블러 작업 필요
-		//한 요쯤에 들어갈듯?
-	// Blur shader가 아직 연결되지 않았으므로 실행 경로는 막아 둔다.
-	// 아래 블록은 H/V blur shader를 준비한 뒤 다시 활성화한다.
-	/*
 	if (bUseVSM)
 	{
 		RenderVSMBlurPass(ShadowPassData);
 	}
-	*/
 
 	Resources.ResetRenderStateCache();
 
@@ -1006,7 +1018,10 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 	ID3D11ShaderResourceView* RawSRV = AtlasPool.GetRawSRV();
 	ID3D11ShaderResourceView* TempSRV = AtlasPool.GetTempSRV();
 	ID3D11ShaderResourceView* FilteredSRV = AtlasPool.GetFilteredSRV();
-	if (!Ctx || !RawSRV || !TempSRV || !FilteredSRV)
+	FShader* BlurShader = FShaderManager::Get().GetOrCreate(EShaderPath::Gaussianblur);
+	ID3D11Buffer* BlurPassCBHandle = VSMBlurPassBuffer.GetBuffer();
+
+	if (!Ctx || !RawSRV || !TempSRV || !FilteredSRV || !BlurShader || !BlurShader->IsValid() || !BlurPassCBHandle)
 	{
 		return;
 	}
@@ -1064,6 +1079,8 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 	Ctx->IASetVertexBuffers(0, 1, &NullVB, &NullStride, &NullOffset);
 	Ctx->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
 	Ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	BlurShader->Bind(Ctx);
+	Ctx->PSSetConstantBuffers(ECBSlot::PerShader0, 1, &BlurPassCBHandle);
 
 	for (const FPreparedVSMBlurRegion& Region : PreparedRegions)
 	{
@@ -1088,26 +1105,26 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 
 		Ctx->RSSetViewports(1, &BlurViewport);
 		Ctx->RSSetScissorRects(1, &BlurScissor);
+		FVSMBlurPassConstants BlurConstants = {};
+		BlurConstants.SourceUVRect[0] = static_cast<float>(Region.Box.left) / static_cast<float>(AtlasTextureSize);
+		BlurConstants.SourceUVRect[1] = static_cast<float>(Region.Box.top) / static_cast<float>(AtlasTextureSize);
+		BlurConstants.SourceUVRect[2] = static_cast<float>(Region.Box.right) / static_cast<float>(AtlasTextureSize);
+		BlurConstants.SourceUVRect[3] = static_cast<float>(Region.Box.bottom) / static_cast<float>(AtlasTextureSize);
+		BlurConstants.InvTextureSize[0] = 1.0f / static_cast<float>(AtlasTextureSize);
+		BlurConstants.InvTextureSize[1] = 1.0f / static_cast<float>(AtlasTextureSize);
+		BlurConstants.SourceSlice = Region.SliceIndex;
 
-		Ctx->VSSetShader(nullptr, nullptr, 0);
-		Ctx->PSSetShader(nullptr, nullptr, 0);
-
-		// Horizontal blur shader bind 지점:
-		// - fullscreen triangle용 VS/PS를 bind한다.
-		// - blur 방향/texel size를 담는 constant buffer가 필요하면 여기서 bind/update한다.
-		// - 입력 텍스처는 t0(BlurSRVSlot)에서 읽는 계약으로 맞춘다.
+		BlurConstants.BlurDirection[0] = 1.0f;
+		BlurConstants.BlurDirection[1] = 0.0f;
+		VSMBlurPassBuffer.Update(Ctx, &BlurConstants, sizeof(FVSMBlurPassConstants));
 		Ctx->OMSetRenderTargets(1, &Region.TempRTV, nullptr);
 		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &RawSRV);
 		Ctx->Draw(3, 0);
 		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &NullSRV);
 
-		Ctx->VSSetShader(nullptr, nullptr, 0);
-		Ctx->PSSetShader(nullptr, nullptr, 0);
-
-		// Vertical blur shader bind 지점:
-		// - fullscreen triangle용 VS/PS를 bind한다.
-		// - vertical direction 상수를 갱신해야 하면 여기서 처리한다.
-		// - 입력 텍스처는 t0(BlurSRVSlot)에서 읽는 계약으로 맞춘다.
+		BlurConstants.BlurDirection[0] = 0.0f;
+		BlurConstants.BlurDirection[1] = 1.0f;
+		VSMBlurPassBuffer.Update(Ctx, &BlurConstants, sizeof(FVSMBlurPassConstants));
 		Ctx->OMSetRenderTargets(1, &Region.FilteredRTV, nullptr);
 		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &TempSRV);
 		Ctx->Draw(3, 0);
@@ -1131,6 +1148,8 @@ void FRenderer::Render(const FFrameContext& Frame, FScene& Scene)
 	}
 
 	Resources.BindSystemSamplers(Device);
+
+	Resources.UnbindShadowResources(Device);
 
 	FShadowPassData ShadowPassData;
 	BuildShadowPassData(Frame, Scene, ShadowPassData);
@@ -1250,5 +1269,3 @@ void FRenderer::EndFrame()
 {
 	Device.Present();
 }
-
-

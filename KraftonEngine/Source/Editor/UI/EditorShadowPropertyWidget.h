@@ -23,14 +23,22 @@ protected:
 
 public:
 	void ShowShadowProperty(ULightComponent* LightComponent);
-	void ShowShadowParameter();
 	bool GetEnablePointer() { return bIsEnabled; }
 	void SetEnabled(bool InEnable) { bIsEnabled = InEnable; }
+
 private:
+	enum class EShadowPreviewMode : uint8
+	{
+		SelectedLight = 0,
+		AtlasLayer = 1
+	};
+
 	void ShowShadowMapPropertWindow();
 
 private:
 	ULightComponent* CurrentShowLightComponent = nullptr;
-	bool bIsEnabled;
+	EShadowPreviewMode PreviewMode = EShadowPreviewMode::SelectedLight;
+	int32 PreviewAtlasLayerIndex = 0;
+	bool bIsEnabled = false;
 };
 
