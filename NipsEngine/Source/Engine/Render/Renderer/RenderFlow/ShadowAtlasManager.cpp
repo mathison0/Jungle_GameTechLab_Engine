@@ -219,6 +219,10 @@ void FShadowAtlasManager::Release()
     DirectionalVSMAtlasSRV.Reset();
     DirectionalVSMAtlasRTV.Reset();
     DirectionalVSMAtlasTexture.Reset();
+    
+    PointCubeArraySRV.Reset();
+    PointCubeFaceDSVs.clear();
+    PointCubeArrayTexture.Reset();
 }
 
 void FShadowAtlasManager::BeginSpotFrame()
@@ -409,4 +413,68 @@ const TArray<FDirectionalAtlasSlotDesc>& FShadowAtlasManager::GetDirectionalCasc
     }
     
     return DirectionalCascadeSlots;
+}
+
+bool FShadowAtlasManager::InitializePointCubeArray(ID3D11Device* Device)
+{
+    if (Device == nullptr)
+    {
+        return false;
+    }
+    
+    if (PointCubeArrayTexture && PointCubeArraySRV)
+    {
+        return true;
+    }
+    
+    const uint32 TotalSlices = MaxPointShadowCount * PointCubeFaceCount;
+    
+    // 1) Texture2DArray (TEXTURECUBE)
+    D3D11_TEXTURE2D_DESC Desc = {};
+    Desc.Width      = PointCubeResolution;
+    Desc.Height     = PointCubeResolution;
+    Desc.MipLevels  = 1;
+    Desc.ArraySize  = TotalSlices;
+    Desc.Format     = DXGI_FORMAT_R32_TYPELESS;
+    Desc.SampleDesc.Count = 1;
+    Desc.Usage      = D3D11_USAGE_DEFAULT;
+    Desc.BindFlags  = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+    Desc.MiscFlags  = D3D11_RESOURCE_MISC_TEXTURECUBE;  // ★ 큐브로 인식시키는 플래그
+
+    if (FAILED(Device->CreateTexture2D(&Desc, nullptr, PointCubeArrayTexture.GetAddressOf())))
+        return false;
+
+    // 2) DSV per face — 6 * N 개
+    PointCubeFaceDSVs.resize(TotalSlices);
+    for (uint32 i = 0; i < TotalSlices; ++i)
+    {
+        D3D11_DEPTH_STENCIL_VIEW_DESC DSVDesc = {};
+        DSVDesc.Format = DXGI_FORMAT_D32_FLOAT;
+        DSVDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+        DSVDesc.Texture2DArray.MipSlice        = 0;
+        DSVDesc.Texture2DArray.FirstArraySlice = i;   // cube*6 + face
+        DSVDesc.Texture2DArray.ArraySize       = 1;
+
+        if (FAILED(Device->CreateDepthStencilView(PointCubeArrayTexture.Get(), &DSVDesc, PointCubeFaceDSVs[i].GetAddressOf())))
+        {
+            Release();
+            return false;
+        }
+    }
+
+    // 3) SRV — TextureCubeArray
+    D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+    SRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+    SRVDesc.TextureCubeArray.MostDetailedMip   = 0;
+    SRVDesc.TextureCubeArray.MipLevels         = 1;
+    SRVDesc.TextureCubeArray.First2DArrayFace  = 0;
+    SRVDesc.TextureCubeArray.NumCubes          = MaxPointShadowCount;
+
+    if (FAILED(Device->CreateShaderResourceView(PointCubeArrayTexture.Get(), &SRVDesc, PointCubeArraySRV.GetAddressOf())))
+    {
+        Release();
+        return false;
+    }
+    return true;
 }

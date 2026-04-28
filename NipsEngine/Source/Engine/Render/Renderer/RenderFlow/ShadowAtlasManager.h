@@ -50,6 +50,10 @@ public:
     static constexpr uint32 DirectionalAtlasResolution = DirectionalCascadeResolution * DirectionalAtlasGridDimension;
     static constexpr uint32 DirectionalCascadeCount = 4;
     
+    static constexpr uint32 PointCubeResolution = 512;
+    static constexpr uint32 MaxPointShadowCount = 8;
+    static constexpr uint32 PointCubeFaceCount = 6;
+    
 public:
     // Spot shadow atlas 텍스처/DSV/SRV를 생성합니다.
     bool Initialize(ID3D11Device* Device);
@@ -84,6 +88,15 @@ public:
     
     static const TArray<FDirectionalAtlasSlotDesc>& GetDirectionalCascadeSlots();
 
+    bool InitializePointCubeArray(ID3D11Device* Device);
+    ID3D11DepthStencilView* GetPointCubeFaceDSV(uint32 CubeIndex, uint32 FaceIndex) const
+    {
+        const uint32 FlatIndex = CubeIndex * PointCubeFaceCount + FaceIndex;
+        if (FlatIndex >= PointCubeFaceDSVs.size()) return nullptr;
+        return PointCubeFaceDSVs[FlatIndex].Get();
+    }
+    ID3D11ShaderResourceView* GetPointCubeArraySRV() const {return PointCubeArraySRV.Get();}
+
 private:
     // allocator가 실제로 처리 가능한 PoT 타일 크기로 보정합니다.
     // 반환값은 256 / 512 / 1024 / 2048 중 하나입니다.
@@ -116,4 +129,8 @@ private:
     TComPtr<ID3D11ShaderResourceView> DirectionalVSMAtlasSRV;
     
     static TArray<FDirectionalAtlasSlotDesc> DirectionalCascadeSlots;
+    
+    TComPtr<ID3D11Texture2D> PointCubeArrayTexture;
+    TArray<TComPtr<ID3D11DepthStencilView>> PointCubeFaceDSVs;
+    TComPtr<ID3D11ShaderResourceView> PointCubeArraySRV;
 };
