@@ -44,7 +44,7 @@ float4 PS(VSOut In) : SV_TARGET
     float2 AtlasUV = lerp(SrcUVRect.xy, SrcUVRect.zw, In.UV);
     float d = gShadowAtlas.SampleLevel(gPointClampSampler, float3(AtlasUV, SrcSlice), 0).r;
 
-    float v = (bReversedZ != 0)
+    float v = (bReversedZ == 0)
         ? saturate(d * Contrast)
         : saturate((1.0f - d) * Contrast);
 
