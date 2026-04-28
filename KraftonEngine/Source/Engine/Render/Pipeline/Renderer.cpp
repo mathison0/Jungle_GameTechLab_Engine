@@ -2,7 +2,7 @@
 
 #include "Render/Types/RenderTypes.h"
 #include "Render/Resource/ShaderManager.h"
-#include "Render/Resource/TexturePool/TextureAtalsPool.h"
+#include "Render/Resource/TexturePool/TextureAtlasPool.h"
 #include "Render/Resource/TexturePool/TextureCubeShadowPool.h"
 #include "Core/Log.h"
 #include "Render/Proxy/FScene.h"
