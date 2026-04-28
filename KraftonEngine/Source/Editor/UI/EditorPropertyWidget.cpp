@@ -608,10 +608,22 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 		ImGui::EndCombo();
 	}
 
-	bool bOverrideCamera = RenderOptions.bOverrideCameraWithSelectedLight;
-	if (ImGui::Checkbox("Override camera with light's perspective", &bOverrideCamera))
+	float ShadowBias = LightComponent->GetShadowBias();
+	if (ImGui::DragFloat("Shadow Bias", &ShadowBias, 0.001f, 0.0f, 1.0f, "%.3f"))
 	{
-		RenderOptions.bOverrideCameraWithSelectedLight = bOverrideCamera;
+		LightComponent->SetShadowBias(ShadowBias);
+	}
+
+	float ShadowSlopeBias = LightComponent->GetShadowSlopeBias();
+	if (ImGui::DragFloat("Shadow Slope Bias", &ShadowSlopeBias, 0.001f, 0.0f, 1.0f, "%.3f"))
+	{
+		LightComponent->SetShadowSlopeBias(ShadowSlopeBias);
+	}
+
+	float ShadowSharpen = LightComponent->GetShadowSharpen();
+	if (ImGui::DragFloat("Shadow Sharpen", &ShadowSharpen, 0.01f, 0.0f, 1.0f, "%.2f"))
+	{
+		LightComponent->SetShadowSharpen(ShadowSharpen);
 	}
 
 	if (LightComponent->GetClass() == UPointLightComponent::StaticClass())
@@ -640,14 +652,6 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 	}
 
 	FEditorShadowPropertyWidget::Get().ShowShadowProperty(LightComponent);
-		
-
-	
-
-	ImGui::BeginDisabled(true);
-	ImGui::Text("Shadow Filter: %s",
-		RenderOptions.ShadowFilterMode == EShadowFilterMode::VSM ? "VSM" : "PCF");
-	ImGui::EndDisabled();
 
 	static constexpr const char* MethodLabels[] = { "Standard", "PSM", "CSM" };
 	int32 MethodIndex = static_cast<int32>(RenderOptions.ShadowMethod);
