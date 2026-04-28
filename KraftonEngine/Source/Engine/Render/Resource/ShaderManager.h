@@ -109,7 +109,7 @@ namespace EUberLitDefines
 	inline const D3D_SHADER_MACRO PhongVSM[]	= { {"LIGHTING_MODEL_PHONG",	"1"},	{"SHADOW_ENABLE_VSM", "1"}, {nullptr, nullptr} };
 	inline const D3D_SHADER_MACRO ToonVSM[]		= { {"LIGHTING_MODEL_TOON",		"1"},	{"SHADOW_ENABLE_VSM", "1"}, {nullptr, nullptr} };
 }
-
+// Shadow Pass에서 사용하는 매크로
 namespace EShadowPassDefines
 {
 	inline const D3D_SHADER_MACRO VSM[]			= { {"SHADOW_ENABLE_VSM",		"1"},								{nullptr, nullptr} };

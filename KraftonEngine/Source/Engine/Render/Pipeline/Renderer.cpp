@@ -493,7 +493,11 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 		Info.LightIndex = NumPointLights + SpotIndex;
 		Info.LightVP = LightVP;
 		Info.SampleData = FVector4(AtlasUVs[0].u1, AtlasUVs[0].v1, AtlasUVs[0].u2, AtlasUVs[0].v2);
-		Info.ShadowParams = FVector4(SpotLight->GetShadowBias(), SpotLight->GetShadowSlopeBias(), SpotLight->GetShadowSharpen(), NearZ);
+		Info.ShadowParams = FVector4(
+			SpotLight->GetShadowBias(), 
+			SpotLight->GetShadowSlopeBias(), 
+			SpotLight->GetShadowSharpen(), 
+			NearZ);
 
 		const int32 ShadowInfoIndex = static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
 		OutShadowPassData.BindingData.ShadowInfos.push_back(Info);
@@ -560,7 +564,11 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 					Info.bIsPSM = bIsPSM_Flag;
 					Info.LightVP = FinalLightVP;
 					Info.SampleData = FVector4(AtlasUVs[0].u1, AtlasUVs[0].v1, AtlasUVs[0].u2, AtlasUVs[0].v2);
-					Info.ShadowParams = FVector4(DirectionalLight->GetShadowBias(), DirectionalLight->GetShadowSlopeBias(), DirectionalLight->GetShadowSharpen(), ShadowNearZ);
+					Info.ShadowParams = FVector4(
+						DirectionalLight->GetShadowBias(), 
+						DirectionalLight->GetShadowSlopeBias(), 
+						DirectionalLight->GetShadowSharpen(), 
+						ShadowNearZ);
 
 					OutShadowPassData.BindingData.DirectionalShadowIndex =
 						static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
@@ -658,7 +666,11 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 						Info.bIsPSM = 0;
 						Info.LightVP = LightVP;
 						Info.SampleData = FVector4(AtlasUVs[i].u1, AtlasUVs[i].v1, AtlasUVs[i].u2, AtlasUVs[i].v2);
-						Info.ShadowParams = FVector4(DirectionalLight->GetShadowBias(), DirectionalLight->GetShadowSlopeBias(), DirectionalLight->GetShadowSharpen(), 0.1f);
+						Info.ShadowParams = FVector4(
+							DirectionalLight->GetShadowBias(), 
+							DirectionalLight->GetShadowSlopeBias(), 
+							DirectionalLight->GetShadowSharpen(), 
+							0.1f);
 
 						OutShadowPassData.BindingData.CascadeMatrices[i] = LightVP;
 						OutShadowPassData.BindingData.ShadowInfos.push_back(Info);

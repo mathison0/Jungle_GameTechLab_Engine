@@ -1,0 +1,394 @@
+#ifndef SHADOW_FUNCTIONS_HLSLI
+#define SHADOW_FUNCTIONS_HLSLI
+
+#include "Common/ForwardLightData.hlsli"
+#include "Common/ConstantBuffers.hlsli"
+#include "Common/SystemSamplers.hlsli"
+
+#ifndef SHADOW_METHOD_STANDARD
+#define SHADOW_METHOD_STANDARD 0
+#endif
+
+#ifndef SHADOW_METHOD_PSM
+#define SHADOW_METHOD_PSM 1
+#endif
+
+#ifndef SHADOW_METHOD_CSM
+#define SHADOW_METHOD_CSM 2
+#endif
+
+// =========================================================================
+// Shadow 계산 헬퍼 함수(Bias + Bleeding)
+// =========================================================================
+
+float GetShadowDepthBias(FShadowInfo info)
+{
+    return max(info.ShadowParams.x, 0.00001f);
+}
+
+float GetShadowSlopeBias(FShadowInfo info)
+{
+    return info.ShadowParams.y;
+}
+
+float GetShadowSharpen(FShadowInfo info)
+{
+    return saturate(info.ShadowParams.z);
+}
+
+float GetShadowNearZ(FShadowInfo info)
+{
+    return max(info.ShadowParams.w, 0.0001f);
+}
+
+float ApplyShadowSharpen(float shadow, FShadowInfo info)
+{
+    float sharpen = GetShadowSharpen(info);
+    float contrast = 1.0f + sharpen * 4.0f;
+    return saturate((shadow - 0.5f) * contrast + 0.5f);
+}
+
+// Light Bleeding 방지 함수
+float ReduceLightBleed(float probability)
+{
+    const float bleedReduction = 0.2f;
+    return saturate((probability - bleedReduction) / (1.0f - bleedReduction));
+}
+
+// =========================================================================
+// Hard Shadow(No Filter) Function
+// =========================================================================
+
+// Hard Atlas Shadow 계산 함수
+float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+{
+    float shadow = 1.0f;
+    float4 shadowPos = mul(float4(worldPos, 1.0f), lightVP);
+    bool validClip = true;
+    
+    if (info.bIsPSM != 0u) // PSM
+    {
+        float4 viewPos = mul(float4(worldPos, 1.0f), View);
+        float4 cameraNDC = mul(viewPos, Projection);
+
+        if (abs(cameraNDC.w) < 1e-5f)
+        {
+            validClip = false;
+        }
+        else
+        {
+            // Camera Clip -> Camera NDC
+            cameraNDC.xyz /= cameraNDC.w;
+            cameraNDC.w = 1.0f;
+
+            shadowPos = mul(cameraNDC, lightVP);
+        }
+    }
+
+    if (validClip && abs(shadowPos.w) >= 1e-5f)
+    {
+        // light ndc 공간
+        float3 ndc = shadowPos.xyz / shadowPos.w;
+
+        // ndc 공간 [-1, 1] -> [0, 1]
+        float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
+        float depth = ndc.z + GetShadowDepthBias(info);
+
+        // uv, depth 범위 체크
+        if (!any(uv < 0.0f) && !any(uv > 1.0f) && depth >= 0.0f && depth <= 1.0f)
+        {
+            float2 atlasMin = info.SampleData.xy;
+            float2 atlasMax = info.SampleData.zw;
+            float2 atlasUV = lerp(atlasMin, atlasMax, uv);
+
+            shadow = gShadowAtlasArray.SampleCmpLevelZero(
+                ShadowCmpSampler,
+                float3(atlasUV, info.ArrayIndex),
+                depth);
+        }
+    }
+
+    return shadow;
+}
+
+float SampleCubeShadow(FShadowInfo info, float3 worldPos)
+{
+    float3 lightPos = info.SampleData.xyz;
+    float nearZ = GetShadowNearZ(info);
+    float farZ = max(info.SampleData.w, nearZ + 0.0001f);
+
+    float3 toPixel = worldPos - lightPos;
+    float3 absToPixel = abs(toPixel);
+    float faceDepth = max(max(absToPixel.x, absToPixel.y), absToPixel.z);
+    if (faceDepth < nearZ || faceDepth > farZ)
+    {
+        return 1.0f;
+    }
+
+    float3 dir = toPixel / max(faceDepth, 0.0001f);
+    float depth = (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ)) + GetShadowDepthBias(info);
+    uint cubeTier = min(info.CubeTierIndex, 3u);
+
+
+    if (cubeTier == 0u)
+    {
+        return gShadowCubeArrayTier0.SampleCmpLevelZero(
+            ShadowCmpSampler,
+            float4(dir, info.ArrayIndex),
+            depth);
+    }
+    if (cubeTier == 1u)
+    {
+        return gShadowCubeArrayTier1.SampleCmpLevelZero(
+            ShadowCmpSampler,
+            float4(dir, info.ArrayIndex),
+            depth);
+    }
+    if (cubeTier == 2u)
+    {
+        return gShadowCubeArrayTier2.SampleCmpLevelZero(
+            ShadowCmpSampler,
+            float4(dir, info.ArrayIndex),
+            depth);
+    }
+
+    return gShadowCubeArrayTier3.SampleCmpLevelZero(
+        ShadowCmpSampler,
+        float4(dir, info.ArrayIndex),
+        depth);
+}
+
+// =========================================================================
+// PCF(Percentage-Closer Filtering) Functions
+// =========================================================================
+
+float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+{
+    float result = 1.0f;
+    float4 shadowPos = mul(float4(worldPos, 1.0f), lightVP);
+    bool validClip = true;
+
+    if (info.bIsPSM != 0u)
+    {
+        float4 viewPos = mul(float4(worldPos, 1.0f), View);
+        float4 cameraNDC = mul(viewPos, Projection);
+
+        if (abs(cameraNDC.w) < 1e-5f)
+        {
+            validClip = false;
+        }
+        else
+        {
+            cameraNDC.xyz /= cameraNDC.w;
+            cameraNDC.w = 1.0f;
+
+            shadowPos = mul(cameraNDC, lightVP);
+        }
+    }
+
+    if (validClip && abs(shadowPos.w) >= 1e-5f)
+    {
+        float3 ndc = shadowPos.xyz / shadowPos.w;
+
+        // NDC [-1, 1] -> UV [0, 1]
+        float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
+
+        // 기존 Hard Shadow 함수와 동일한 depth convention 유지
+        float depth = ndc.z + GetShadowDepthBias(info);
+
+        if (!any(uv < 0.0f) && !any(uv > 1.0f) && depth >= 0.0f && depth <= 1.0f)
+        {
+            float2 atlasMin = info.SampleData.xy;
+            float2 atlasMax = info.SampleData.zw;
+            float2 atlasUV = lerp(atlasMin, atlasMax, uv);
+
+            uint atlasWidth;
+            uint atlasHeight;
+            uint atlasSlices;
+            gShadowAtlasArray.GetDimensions(atlasWidth, atlasHeight, atlasSlices);
+
+            float2 texelSize = 1.0f / float2(atlasWidth, atlasHeight);
+
+            // atlas tile 경계를 넘어가면 옆 shadow map을 샘플링할 수 있으니 tile 내부로 제한
+            float2 clampMin = atlasMin + texelSize * 0.5f;
+            float2 clampMax = atlasMax - texelSize * 0.5f;
+
+            float shadow = 0.0f;
+            float weightSum = 0.0f;
+
+            // 3x3 weighted PCF
+            // weight:
+            // 1 2 1
+            // 2 4 2
+            // 1 2 1
+            [unroll]
+            for (int y = -1; y <= 1; ++y)
+            {
+                [unroll]
+                for (int x = -1; x <= 1; ++x)
+                {
+                    float2 offset = float2((float) x, (float) y);
+
+                    float weight = 1.0f;
+                    if (x == 0 && y == 0)
+                    {
+                        weight = 4.0f;
+                    }
+                    else if (x == 0 || y == 0)
+                    {
+                        weight = 2.0f;
+                    }
+
+                    float2 sampleUV = atlasUV + offset * texelSize;
+                    sampleUV = clamp(sampleUV, clampMin, clampMax);
+
+                    shadow += weight * gShadowAtlasArray.SampleCmpLevelZero(
+                        ShadowCmpSampler,
+                        float3(sampleUV, info.ArrayIndex),
+                        depth);
+
+                    weightSum += weight;
+                }
+            }
+
+            result = shadow / weightSum;
+        }
+    }
+
+    return result;
+}
+
+// =========================================================================
+// VSM(Variance Shadow Map) Functions
+// =========================================================================
+
+float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+{
+    float result = 1.0f;
+    float4 lightClip = mul(float4(worldPos, 1.0f), lightVP);
+    bool validClip = true;
+
+    if (info.bIsPSM != 0u)
+    {
+        float4 viewPos = mul(float4(worldPos, 1.0f), View);
+        float4 cameraNDC = mul(viewPos, Projection);
+        if (abs(cameraNDC.w) < 1e-5f)
+        {
+            validClip = false;
+        }
+        else
+        {
+            cameraNDC.xyz /= cameraNDC.w;
+            cameraNDC.w = 1.0f;
+            lightClip = mul(cameraNDC, lightVP);
+        }
+    }
+
+    if (validClip && abs(lightClip.w) >= 1e-5f)
+    {
+        float3 ndc = lightClip.xyz / lightClip.w;
+        float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
+        float depth = (1.0f - ndc.z) + GetShadowDepthBias(info);
+
+        if (!any(uv < 0.0f) && !any(uv > 1.0f) && depth >= 0.0f && depth <= 1.0f)
+        {
+            float2 atlasMin = info.SampleData.xy;
+            float2 atlasMax = info.SampleData.zw;
+            float2 atlasUV = lerp(atlasMin, atlasMax, uv);
+            float2 moments = gShadowAtlasArray.SampleLevel(
+                LinearClampSampler,
+                float3(atlasUV, info.ArrayIndex),
+                0.0f).xy;
+
+            if (depth > moments.x)
+            {
+                float variance = max(moments.y - moments.x * moments.x, 0.00002f);
+                float delta = depth - moments.x;
+                float probability = variance / (variance + delta * delta);
+                result = ReduceLightBleed(probability);
+            }
+        }
+    }
+
+    return result;
+}
+
+// =========================================================================
+// Shadow 분기 처리 함수
+// =========================================================================
+
+float GetLightShadow(FLightInfo light, float3 worldPos)
+{
+    if (light.ShadowIndex < 0)
+    {
+        return 1.0f;
+    }
+
+    FShadowInfo info = gShadowInfos[light.ShadowIndex];
+    float shadow = 1.0f;
+    if (info.Type == SHADOW_INFO_TYPE_ATLAS2D)
+    {
+#if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
+        shadow = SampleAtlasShadowVSM(info, worldPos, info.LightVP);
+#elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
+        shadow = SampleAtlasShadowPCF(info, worldPos, info.LightVP);
+#else
+        shadow = SampleAtlasShadow(info, worldPos, info.LightVP);
+#endif
+    }
+    else
+    {
+        shadow = SampleCubeShadow(info, worldPos);
+    }
+    return ApplyShadowSharpen(shadow, info);
+}
+
+// =========================================================================
+// Directional Light Shadow 분기 처리 함수
+// =========================================================================
+float GetDirectionalShadow(float3 worldPos)
+{
+    if (DirectionalLight.ShadowIndex < 0)
+    {
+        return 1.0f;
+    }
+
+    float shadow = 1.0f;
+    if (ShadowMethod == SHADOW_METHOD_CSM)
+    {
+        float4 viewPos = mul(float4(worldPos, 1.0f), View);
+        float depth = abs(viewPos.z);
+
+        int cascadeIdx = 0;
+        if (depth > CascadeSplits.x) cascadeIdx = 1;
+        if (depth > CascadeSplits.y) cascadeIdx = 2;
+        if (depth > CascadeSplits.z) cascadeIdx = 3;
+
+        if (cascadeIdx >= (int) NumCascades)
+        {
+            return 1.0f;
+        }
+
+        FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex + cascadeIdx];
+#if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
+        shadow = SampleAtlasShadowVSM(info, worldPos, CascadeMatrices[cascadeIdx]);
+#elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
+        shadow = SampleAtlasShadowPCF(info, worldPos, CascadeMatrices[cascadeIdx]);
+#else
+        shadow = SampleAtlasShadow(info, worldPos, CascadeMatrices[cascadeIdx]);
+#endif
+        return ApplyShadowSharpen(shadow, info);
+    }
+
+    FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex];
+#if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
+    shadow = SampleAtlasShadowVSM(info, worldPos, info.LightVP);
+#elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
+    shadow = SampleAtlasShadowPCF(info, worldPos, info.LightVP);
+#else
+    shadow = SampleAtlasShadow(info, worldPos, info.LightVP);
+#endif
+    return ApplyShadowSharpen(shadow, info);
+}
+
+#endif // SHADOW_FUNCTIONS_HLSLI

@@ -69,6 +69,7 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::PhongVSM),		EUberLitDefines::PhongVSM);
 	PreCompile(FShaderKey(EShaderPath::UberLit,		EUberLitDefines::ToonVSM),		EUberLitDefines::ToonVSM);
 
+	// Shadow Pass에서 사용하는 셰이더
 	PreCompile(FShaderKey(EShaderPath::ShadowDepth, EShadowPassDefines::VSM),		EShadowPassDefines::VSM);
 	PreCompile(FShaderKey(EShaderPath::ShadowClear, EShadowPassDefines::VSM),		EShadowPassDefines::VSM);
 
