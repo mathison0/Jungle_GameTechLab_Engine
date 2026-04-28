@@ -46,6 +46,10 @@ public:
 	virtual TexturePoolHandleSet* TryGetTextureHandleNoResize(TexturePoolHandleRequest HandleRequest);
 	bool CanAllocateTextureHandleSet(const TexturePoolHandleRequest& HandleRequest) const;
 	float EstimateAllocationCost(const TexturePoolHandleRequest& HandleRequest) const;
+	uint32 GetAllocatorFreeRectCount() const;
+	uint64 GetAllocatorTotalFreeArea() const;
+	uint64 GetAllocatorLargestFreeRectArea() const;
+	float GetAllocatorFragmentationRatio() const;
 	virtual void ReleaseHandleSet(TexturePoolHandleSet* InHandleSet);
 	virtual ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandle& InHandle) = 0;
 	virtual ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandleSet* InHandleSet) = 0;

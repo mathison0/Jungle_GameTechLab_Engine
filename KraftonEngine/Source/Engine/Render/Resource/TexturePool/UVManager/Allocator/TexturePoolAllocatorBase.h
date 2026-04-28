@@ -28,6 +28,10 @@ public:
 	virtual FAtlasUV GetAtlasUV(const FTexturePoolHandle& InHandle) = 0;
 	virtual void ReleaseHandle(const FTexturePoolHandle& InHandle) = 0;
 	virtual void BroadcastEntries() = 0;
+	virtual uint32 GetFreeRectCount() const { return 0; }
+	virtual uint64 GetTotalFreeArea() const { return 0; }
+	virtual uint64 GetLargestFreeRectArea() const { return 0; }
+	virtual float GetFragmentationRatio() const { return 1.0f; }
 
 	virtual void SetSize(uint32 InNewTextureSize);
 	virtual void SetLayerCount(uint32 InNewLayerCount);

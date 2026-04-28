@@ -14,11 +14,15 @@ public:
 	virtual FAtlasUV GetAtlasUV(const FTexturePoolHandle& InHandle) override;
 	virtual void ReleaseHandle(const FTexturePoolHandle& InHandle) override;
 	virtual void BroadcastEntries() override;
+	virtual uint32 GetFreeRectCount() const override;
+	virtual uint64 GetTotalFreeArea() const override;
+	virtual uint64 GetLargestFreeRectArea() const override;
+	virtual float GetFragmentationRatio() const override;
 	virtual void SetSize(uint32 InNewTextureSize) override;
 	virtual void SetLayerCount(uint32 InNewLayerCount) override;
 
 private:
-	struct FEntry
+	struct FAtlasRect
 	{
 		uint32 X = 0;
 		uint32 Y = 0;
@@ -32,18 +36,23 @@ private:
 
 	uint32 Index(uint32 X, uint32 Y) const;
 	void ResetSliceOccupancy(uint32 InLayerCount);
-	void RebuildOccupancyFromEntries();
-	bool IsFreeRect(uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H) const;
-	bool FindFreeRect(uint32 SliceIndex, uint32 W, uint32 H, uint32& OutX, uint32& OutY) const;
+	void ResetFreeRects(uint32 InLayerCount);
+	void ResetAllocationState(uint32 InLayerCount);
 	void MarkRect(uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H, bool bOccupied);
-	bool IsFreeRectInOccupancy(const std::vector<std::vector<bool>>& Occupancy, uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H) const;
-	bool FindFreeRectInOccupancy(const std::vector<std::vector<bool>>& Occupancy, uint32 SliceIndex, uint32 W, uint32 H, uint32& OutX, uint32& OutY) const;
 	void MarkRectInOccupancy(std::vector<std::vector<bool>>& Occupancy, uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H, bool bOccupied) const;
+	uint32 GetBlockCount(float TextureSize) const;
+	int32 FindBestFreeRect(uint32 W, uint32 H, const TArray<FAtlasRect>& InFreeRects) const;
+	bool TryPlaceRectIntoFreeRects(TArray<FAtlasRect>& InOutFreeRects, uint32 W, uint32 H, FAtlasRect& OutRect) const;
+	void SplitFreeRect(TArray<FAtlasRect>& InOutFreeRects, uint32 FreeRectIndex, const FAtlasRect& Used) const;
+	void PruneContainedFreeRects(TArray<FAtlasRect>& InOutFreeRects) const;
+	void MergeAdjacentFreeRects(TArray<FAtlasRect>& InOutFreeRects) const;
+	bool IsContained(const FAtlasRect& Inner, const FAtlasRect& Outer) const;
 
 private:
 	uint32 GridCount = 4;
 	uint32 NextHandle = 1;
 
 	std::vector<std::vector<bool>> OccupiedBySlice;
-	std::unordered_map<uint32, FEntry> Entries;
+	TArray<FAtlasRect> FreeRects;
+	std::unordered_map<uint32, FAtlasRect> AllocatedRects;
 };

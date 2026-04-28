@@ -104,4 +104,5 @@ private:
 
 	FTileBasedLightCulling TileBasedCulling;
 	FClusteredLightCuller ClusteredLightCuller;
+	uint64 ShadowAtlasFrameIndex = 1;
 };

@@ -65,7 +65,7 @@ FTexturePoolBase::TexturePoolHandleSet* FTexturePoolBase::GetTextureHandle(Textu
 
 FTexturePoolBase::TexturePoolHandleSet* FTexturePoolBase::TryGetTextureHandleNoResize(TexturePoolHandleRequest HandleRequest)
 {
-	if (!Allocator || !Allocator->CanAllocateHandleSet(HandleRequest))
+	if (!Allocator)
 	{
 		return nullptr;
 	}
@@ -106,6 +106,26 @@ float FTexturePoolBase::EstimateAllocationCost(const TexturePoolHandleRequest& H
 uint32 FTexturePoolBase::GetAllocatorMinBlockSize() const
 {
 	return Allocator ? Allocator->GetMinBlockSize() : 0;
+}
+
+uint32 FTexturePoolBase::GetAllocatorFreeRectCount() const
+{
+	return Allocator ? Allocator->GetFreeRectCount() : 0;
+}
+
+uint64 FTexturePoolBase::GetAllocatorTotalFreeArea() const
+{
+	return Allocator ? Allocator->GetTotalFreeArea() : 0;
+}
+
+uint64 FTexturePoolBase::GetAllocatorLargestFreeRectArea() const
+{
+	return Allocator ? Allocator->GetLargestFreeRectArea() : 0;
+}
+
+float FTexturePoolBase::GetAllocatorFragmentationRatio() const
+{
+	return Allocator ? Allocator->GetFragmentationRatio() : 1.0f;
 }
 
 void FTexturePoolBase::ReleaseHandleSet(TexturePoolHandleSet* InHandleSet)

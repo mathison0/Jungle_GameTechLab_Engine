@@ -277,6 +277,7 @@ namespace
 
 		bool bMustAllocate = false;
 		bool bSelected = false;
+		bool bAllocationFailed = false;
 		const char* RejectionReason = "not selected";
 	};
 
@@ -290,6 +291,10 @@ namespace
 	constexpr float ShadowAtlasHysteresisFactor = 1.25f;
 	constexpr uint32 ShadowAtlasMinSpotResolution = 256;
 	constexpr uint32 ShadowAtlasMaxDirectionalCascades = 4;
+	constexpr uint64 ShadowAtlasReleaseGraceFrames = 8;
+	constexpr uint64 ShadowAtlasDirectionalReleaseGraceFrames = 16;
+	constexpr uint64 ShadowAtlasAllocationFailureCooldownFrames = 12;
+	constexpr bool bShadowAtlasVerboseLog = false;
 
 	float Clamp01(float Value)
 	{
@@ -425,6 +430,7 @@ namespace
 		const FSceneEnvironment& Env,
 		const TArray<uint32>& ShadowedSpotIndices,
 		bool bShadowDirectional,
+		uint64 ShadowAtlasFrameIndex,
 		TArray<FShadowAtlasRequest>& OutRequests)
 	{
 		FTextureAtlasPool& AtlasPool = FTextureAtlasPool::Get();
@@ -443,6 +449,7 @@ namespace
 				Request.Type = EShadowAtlasRequestType::DirectionalCascade;
 				Request.Light = DirectionalLight;
 				Request.ExistingHandleSet = DirectionalLight->PeekShadowHandleSet();
+				const_cast<UDirectionalLightComponent*>(DirectionalLight)->MarkShadowAtlasRequested(ShadowAtlasFrameIndex);
 				Request.DesiredHandleRequest = MakeDirectionalHandleRequest(BaseResolution, false);
 				Request.LightContributionScore = ComputeLightContributionScore(Params.Intensity, Params.LightColor);
 				Request.ProximityScore = 1.0f;
@@ -489,6 +496,7 @@ namespace
 			Request.Light = SpotLight;
 			Request.SpotIndex = SpotIndex;
 			Request.ExistingHandleSet = SpotLight->PeekShadowHandleSet();
+			const_cast<USpotLightComponent*>(SpotLight)->MarkShadowAtlasRequested(ShadowAtlasFrameIndex);
 			Request.ScreenCoverageScore = EstimateSphereScreenCoverage(Frame, Params.Position, Params.AttenuationRadius);
 			Request.LightContributionScore = ComputeLightContributionScore(Params.Intensity, Params.LightColor);
 			Request.ProximityScore = EstimateInfluenceProximityScore(Frame, Params.Position, Params.AttenuationRadius);
@@ -524,6 +532,8 @@ namespace
 
 	void ReleaseInvalidExistingHandleSets(TArray<FShadowAtlasRequest>& Requests)
 	{
+		// This only cleans invalid handles for lights that produced a current-frame atlas request.
+		// Off-screen stale handle lifetime is handled by ReleaseStaleAtlasShadowHandles().
 		for (FShadowAtlasRequest& Request : Requests)
 		{
 			if (Request.ExistingHandleSet && !Request.ExistingHandleSet->bIsValid)
@@ -534,7 +544,7 @@ namespace
 		}
 	}
 
-	bool TryAllocateRequest(FShadowAtlasRequest& Request, FTextureAtlasPool& AtlasPool)
+	bool TryAllocateRequest(FShadowAtlasRequest& Request, FTextureAtlasPool& AtlasPool, uint64 ShadowAtlasFrameIndex)
 	{
 		if (Request.ExistingHandleSet && Request.ExistingHandleSet->bIsValid)
 		{
@@ -542,6 +552,7 @@ namespace
 			Request.AllocatedHandleRequest = Request.DesiredHandleRequest;
 			Request.bSelected = true;
 			Request.RejectionReason = "kept existing";
+			const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
 			return true;
 		}
 
@@ -566,14 +577,28 @@ namespace
 				Request.bSelected = true;
 				Request.RejectionReason = "allocated";
 				const_cast<ULightComponent*>(Request.Light)->SetShadowHandleSetForRenderer(HandleSet);
+				const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
 				return true;
 			}
 
 			Request.RejectionReason = "no space";
+			Request.bAllocationFailed = true;
+			const uint32 FailedResolution = Request.DesiredHandleRequest.Sizes.empty() ? 0u : Request.DesiredHandleRequest.Sizes[0];
+			const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasAllocationFailed(ShadowAtlasFrameIndex, FailedResolution);
 			return false;
 		}
 
 		uint32 Resolution = Request.Pieces.empty() ? ShadowAtlasMinSpotResolution : Request.Pieces[0].DesiredResolution;
+		if (!Request.bMustAllocate
+			&& const_cast<ULightComponent*>(Request.Light)->ShouldSkipShadowAtlasAllocation(
+				ShadowAtlasFrameIndex,
+				Resolution,
+				ShadowAtlasAllocationFailureCooldownFrames))
+		{
+			Request.RejectionReason = "cooldown";
+			return false;
+		}
+
 		while (Resolution >= ShadowAtlasMinSpotResolution)
 		{
 			FTexturePoolHandleRequest Attempt;
@@ -588,6 +613,7 @@ namespace
 				Request.bSelected = true;
 				Request.RejectionReason = "allocated";
 				const_cast<ULightComponent*>(Request.Light)->SetShadowHandleSetForRenderer(HandleSet);
+				const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
 				return true;
 			}
 
@@ -599,13 +625,15 @@ namespace
 		}
 
 		Request.RejectionReason = "no space";
+		Request.bAllocationFailed = true;
+		const uint32 FailedResolution = Request.Pieces.empty() ? ShadowAtlasMinSpotResolution : Request.Pieces[0].DesiredResolution;
+		const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasAllocationFailed(ShadowAtlasFrameIndex, FailedResolution);
 		return false;
 	}
 
-	void SelectShadowAtlasRequests(TArray<FShadowAtlasRequest>& Requests, EShadowMethod ShadowMethod)
+	void SelectShadowAtlasRequests(TArray<FShadowAtlasRequest>& Requests, EShadowMethod ShadowMethod, uint64 ShadowAtlasFrameIndex)
 	{
 		FTextureAtlasPool& AtlasPool = FTextureAtlasPool::Get();
-		ReleaseInvalidExistingHandleSets(Requests);
 
 		for (FShadowAtlasRequest& Request : Requests)
 		{
@@ -654,7 +682,7 @@ namespace
 			});
 
 		// TODO: Add skyline/best-fit fragmentation estimator.
-		// Current grid allocator uses first-fit, so large high-priority requests are sorted earlier to reduce fragmentation.
+		// Current grid allocator uses best-area-fit FreeRects; large high-priority requests are still sorted earlier to reduce fragmentation.
 		for (uint32 RequestIndex : Order)
 		{
 			FShadowAtlasRequest& Request = Requests[RequestIndex];
@@ -664,11 +692,35 @@ namespace
 				continue;
 			}
 
-			TryAllocateRequest(Request, AtlasPool);
+			TryAllocateRequest(Request, AtlasPool, ShadowAtlasFrameIndex);
 		}
 	}
 
-	void LogShadowAtlasSelection(const TArray<FShadowAtlasRequest>& Requests)
+	uint32 ReleaseStaleAtlasShadowHandles(const FSceneEnvironment& Env, uint64 ShadowAtlasFrameIndex)
+	{
+		uint32 ReleasedCount = 0;
+		for (uint32 SpotIndex = 0; SpotIndex < Env.GetNumSpotLights(); ++SpotIndex)
+		{
+			USpotLightComponent* SpotLight = const_cast<USpotLightComponent*>(Env.GetSpotLightOwner(SpotIndex));
+			if (SpotLight && SpotLight->ShouldReleaseShadowAtlasHandle(ShadowAtlasFrameIndex, ShadowAtlasReleaseGraceFrames))
+			{
+				SpotLight->ReleaseShadowHandleSetForRenderer();
+				++ReleasedCount;
+			}
+		}
+
+		UDirectionalLightComponent* DirectionalLight = const_cast<UDirectionalLightComponent*>(Env.GetGlobalDirectionalLightOwner());
+		if (DirectionalLight && DirectionalLight->ShouldReleaseShadowAtlasHandle(ShadowAtlasFrameIndex, ShadowAtlasDirectionalReleaseGraceFrames))
+		{
+			DirectionalLight->ReleaseShadowHandleSetForRenderer();
+			++ReleasedCount;
+		}
+
+		// TODO: Add stale lifetime management for FTextureCubeShadowPool point-light handles separately.
+		return ReleasedCount;
+	}
+
+	void LogShadowAtlasSelection(const TArray<FShadowAtlasRequest>& Requests, uint32 StaleReleasedCount)
 	{
 		static uint32 LogFrameCounter = 0;
 		if ((LogFrameCounter++ % 120u) != 0u)
@@ -677,15 +729,29 @@ namespace
 		}
 
 		uint32 SelectedCount = 0;
+		uint32 AllocationFailureCount = 0;
 		for (const FShadowAtlasRequest& Request : Requests)
 		{
 			SelectedCount += Request.bSelected ? 1u : 0u;
+			AllocationFailureCount += Request.bAllocationFailed ? 1u : 0u;
 		}
 
-		UE_LOG("[ShadowAtlas] candidates=%u selected=%u rejected=%u",
+		FTextureAtlasPool& AtlasPool = FTextureAtlasPool::Get();
+		UE_LOG("[ShadowAtlas] candidates=%u selected=%u rejected=%u staleReleased=%u allocFailed=%u freeRects=%u totalFree=%llu largestFree=%llu fragmentation=%.2f",
 			static_cast<uint32>(Requests.size()),
 			SelectedCount,
-			static_cast<uint32>(Requests.size()) - SelectedCount);
+			static_cast<uint32>(Requests.size()) - SelectedCount,
+			StaleReleasedCount,
+			AllocationFailureCount,
+			AtlasPool.GetAllocatorFreeRectCount(),
+			AtlasPool.GetAllocatorTotalFreeArea(),
+			AtlasPool.GetAllocatorLargestFreeRectArea(),
+			AtlasPool.GetAllocatorFragmentationRatio());
+
+		if (!bShadowAtlasVerboseLog)
+		{
+			return;
+		}
 
 		for (const FShadowAtlasRequest& Request : Requests)
 		{
@@ -759,12 +825,14 @@ void FRenderer::BeginFrame()
 void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Scene, FShadowPassData& OutShadowPassData)
 {
 	const FSceneEnvironment& Env = Scene.GetEnvironment();
+	const uint64 CurrentShadowAtlasFrame = ShadowAtlasFrameIndex++;
 	OutShadowPassData.BindingData.PointLightShadowIndices.assign(Env.GetNumPointLights(), -1);
 	OutShadowPassData.BindingData.SpotLightShadowIndices.assign(Env.GetNumSpotLights(), -1);
 	OutShadowPassData.BindingData.DirectionalShadowIndex = -1;
 
 	if (Frame.RenderOptions.ViewMode == EViewMode::Unlit)
 	{
+		ReleaseStaleAtlasShadowHandles(Env, CurrentShadowAtlasFrame);
 		return;
 	}
 
@@ -828,9 +896,11 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 #pragma endregion	
 
 	TArray<FShadowAtlasRequest> AtlasRequests;
-	BuildShadowAtlasRequests(Frame, Env, ShadowedSpotIndices, bShadowDirectional, AtlasRequests);
-	SelectShadowAtlasRequests(AtlasRequests, Frame.RenderOptions.ShadowMethod);
-	LogShadowAtlasSelection(AtlasRequests);
+	BuildShadowAtlasRequests(Frame, Env, ShadowedSpotIndices, bShadowDirectional, CurrentShadowAtlasFrame, AtlasRequests);
+	ReleaseInvalidExistingHandleSets(AtlasRequests);
+	SelectShadowAtlasRequests(AtlasRequests, Frame.RenderOptions.ShadowMethod, CurrentShadowAtlasFrame);
+	const uint32 StaleReleasedCount = ReleaseStaleAtlasShadowHandles(Env, CurrentShadowAtlasFrame);
+	LogShadowAtlasSelection(AtlasRequests, StaleReleasedCount);
 
 	// Point lights keep the cube-shadow path. Atlas2D requests are allocated only after priority selection.
 #pragma region CreateRenderTask
