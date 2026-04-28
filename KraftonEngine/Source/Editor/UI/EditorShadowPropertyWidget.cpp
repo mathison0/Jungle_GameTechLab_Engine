@@ -1,14 +1,16 @@
 ﻿#include "EditorShadowPropertyWidget.h"
+#include "Editor/EditorEngine.h"
+#include "Editor/Viewport/LevelEditorViewportClient.h"
+#include "Engine/Runtime/Engine.h"
 #include "imgui.h"
 #include "Engine/Component/Light/PointLightComponent.h"
 
 void FEditorShadowPropertyWidget::ShowShadowProperty(ULightComponent* LightComponent)
 {
-	if (LightComponent->StaticClass() == UPointLightComponent::StaticClass())
-		return;
-
 	if (CurrentShowLightComponent != LightComponent)
+	{
 		CurrentShowLightComponent = LightComponent;
+	}
 
 	if (!ImGui::Begin("Where there is light, there is also shadow."))
 	{
@@ -16,70 +18,9 @@ void FEditorShadowPropertyWidget::ShowShadowProperty(ULightComponent* LightCompo
 		return;
 	}
 
-	ShowShadowParameter();
 	ShowShadowMapPropertWindow();
 	ImGui::End();
 }
-
-void FEditorShadowPropertyWidget::ShowShadowParameter()
-{
-	if (!CurrentShowLightComponent)
-	{
-		ImGui::TextUnformatted("No light selected.");
-		return;
-	}
-
-	static constexpr int32 ResolutionOptions[] = { 256, 512, 1024, 2048 };
-	static constexpr const char* ResolutionLabels[] = { "256", "512", "1024", "2048" };
-	static constexpr float ResolutionScales[] = { 0.25f, 0.5f, 1.0f, 2.0f };
-
-	int32 ResolutionIndex = 2;
-	for (int32 Index = 0; Index < static_cast<int32>(std::size(ResolutionOptions)); ++Index)
-	{
-		if (CurrentShowLightComponent->GetShadowResolutionScale() <= ResolutionScales[Index])
-		{
-			ResolutionIndex = Index;
-			break;
-		}
-	}
-
-	if (ImGui::BeginCombo("Shadow Map Resolution", ResolutionLabels[ResolutionIndex]))
-	{
-		for (int32 Index = 0; Index < static_cast<int32>(std::size(ResolutionOptions)); ++Index)
-		{
-			const bool bSelected = (ResolutionIndex == Index);
-			if (ImGui::Selectable(ResolutionLabels[Index], bSelected))
-			{
-				CurrentShowLightComponent->SetShadowResolutionScale(ResolutionScales[Index]);
-				ResolutionIndex = Index;
-			}
-			if (bSelected)
-			{
-				ImGui::SetItemDefaultFocus();
-			}
-		}
-		ImGui::EndCombo();
-	}
-
-	float ShadowBias = CurrentShowLightComponent->GetShadowBias();
-	if (ImGui::DragFloat("Shadow Bias", &ShadowBias, 0.001f, 0.0f, 1.0f, "%.3f"))
-	{
-		CurrentShowLightComponent->SetShadowBias(ShadowBias);
-	}
-
-	float ShadowSlopeBias = CurrentShowLightComponent->GetShadowSlopeBias();
-	if (ImGui::DragFloat("Shadow Slope Bias", &ShadowSlopeBias, 0.001f, 0.0f, 1.0f, "%.3f"))
-	{
-		CurrentShowLightComponent->SetShadowSlopeBias(ShadowSlopeBias);
-	}
-
-	float ShadowSharpen = CurrentShowLightComponent->GetShadowSharpen();
-	if (ImGui::DragFloat("Shadow Sharpen", &ShadowSharpen, 0.01f, 0.0f, 1.0f, "%.2f"))
-	{
-		CurrentShowLightComponent->SetShadowSharpen(ShadowSharpen);
-	}
-}
-
 
 void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 {
@@ -88,6 +29,55 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 		ImGui::TextUnformatted("No light selected.");
 		return;
 	}
+
+	if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
+	{
+		if (FLevelEditorViewportClient* ActiveViewport = EditorEngine->GetActiveViewport())
+		{
+			FViewportRenderOptions& RenderOptions = ActiveViewport->GetRenderOptions();
+			bool bOverrideCamera = RenderOptions.bOverrideCameraWithSelectedLight;
+			if (ImGui::Checkbox("Override camera with light's perspective", &bOverrideCamera))
+			{
+				RenderOptions.bOverrideCameraWithSelectedLight = bOverrideCamera;
+			}
+
+			if (CurrentShowLightComponent->GetClass() == UPointLightComponent::StaticClass())
+			{
+				static constexpr const char* FaceLabels[] = { "+X", "-X", "+Y", "-Y", "+Z", "-Z" };
+				RenderOptions.PointLightPreviewFaceIndex = RenderOptions.PointLightPreviewFaceIndex < static_cast<uint32>(std::size(FaceLabels))
+					? RenderOptions.PointLightPreviewFaceIndex
+					: 0u;
+
+				if (ImGui::BeginCombo("Point Light Preview Face", FaceLabels[RenderOptions.PointLightPreviewFaceIndex]))
+				{
+					for (uint32 FaceIndex = 0; FaceIndex < static_cast<uint32>(std::size(FaceLabels)); ++FaceIndex)
+					{
+						const bool bSelected = RenderOptions.PointLightPreviewFaceIndex == FaceIndex;
+						if (ImGui::Selectable(FaceLabels[FaceIndex], bSelected))
+						{
+							RenderOptions.PointLightPreviewFaceIndex = FaceIndex;
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
+			}
+
+			ImGui::BeginDisabled(true);
+			ImGui::Text("Shadow Filter: %s",
+				RenderOptions.ShadowFilterMode == EShadowFilterMode::VSM ? "VSM" : "PCF");
+			ImGui::EndDisabled();
+		}
+		else
+		{
+			ImGui::TextDisabled("Shadow viewport settings unavailable without an active viewport.");
+		}
+	}
+
+	ImGui::Separator();
 
 	if (ImGui::RadioButton("Selected Light ShadowMap", PreviewMode == EShadowPreviewMode::SelectedLight))
 	{
@@ -131,6 +121,7 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 	else
 	{
 		PreviewSRV = AtlasPool.GetDebugLayerSRV(static_cast<uint32>(PreviewAtlasLayerIndex));
+		//PreviewSRV = AtlasPool.GetSliceSRV(PreviewAtlasLayerIndex);
 		if (!PreviewSRV)
 		{
 			ImGui::TextUnformatted("Atlas layer preview unavailable.");
