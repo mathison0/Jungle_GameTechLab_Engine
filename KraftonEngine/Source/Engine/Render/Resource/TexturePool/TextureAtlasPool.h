@@ -38,7 +38,7 @@ public:
 	FAtlasUV GetAtlasUV(const TexturePoolHandle& InHandle) { return UVManagers[InHandle.ArrayIndex].get()->GetAtlasUV(InHandle.InternalIndex); }
 	TArray<FAtlasUV> GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet);
 
-	ID3D11ShaderResourceView* GetSRV() { return SRV.Get(); }
+	ID3D11ShaderResourceView* GetSRV() { return IsVSMMode() && VSMFilteredSRV ? VSMFilteredSRV.Get() : SRV.Get(); }
 	ID3D11ShaderResourceView* GetRawSRV() { return SRV.Get(); }
 	ID3D11ShaderResourceView* GetFilteredSRV() { return VSMFilteredSRV.Get(); }
 	ID3D11ShaderResourceView* GetTempSRV() { return VSMTempSRV.Get(); }

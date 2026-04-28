@@ -113,7 +113,7 @@ void AccumulatePointSpotDiffuse(float3 worldPos, float3 N, float4 screenPos, ino
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[TileLightIndices[gridData.x + t]];
-            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
     else if (LightCullingMode == LIGHT_CULLING_CLUSTER)
@@ -123,7 +123,7 @@ void AccumulatePointSpotDiffuse(float3 worldPos, float3 N, float4 screenPos, ino
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[g_ClusterLightIndices[gridData.x + t]];
-            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
     else
@@ -131,7 +131,7 @@ void AccumulatePointSpotDiffuse(float3 worldPos, float3 N, float4 screenPos, ino
         for (uint i = 0; i < NumActivePointLights + NumActiveSpotLights; ++i)
         {
             FLightInfo light = AllLights[i];
-            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
 }
@@ -146,7 +146,7 @@ void AccumulatePointSpotSpecular(float3 worldPos, float3 N, float3 V, float shin
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[TileLightIndices[gridData.x + t]];
-            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos);
+            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos, N);
         }
     }
     else if (LightCullingMode == LIGHT_CULLING_CLUSTER)
@@ -156,7 +156,7 @@ void AccumulatePointSpotSpecular(float3 worldPos, float3 N, float3 V, float shin
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[g_ClusterLightIndices[gridData.x + t]];
-            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos);
+            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos, N);
         }
     }
     else
@@ -164,7 +164,7 @@ void AccumulatePointSpotSpecular(float3 worldPos, float3 N, float3 V, float shin
         for (uint i = 0; i < NumActivePointLights + NumActiveSpotLights; ++i)
         {
             FLightInfo light = AllLights[i];
-            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos);
+            result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos, N);
         }
     }
 }
@@ -225,7 +225,7 @@ void AccumulatePointSpotToonDiffuse(float3 worldPos, float3 N, float4 screenPos,
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[TileLightIndices[gridData.x + t]];
-            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
     else if (LightCullingMode == LIGHT_CULLING_CLUSTER)
@@ -235,7 +235,7 @@ void AccumulatePointSpotToonDiffuse(float3 worldPos, float3 N, float4 screenPos,
         for (uint t = 0; t < gridData.y; ++t)
         {
             FLightInfo light = AllLights[g_ClusterLightIndices[gridData.x + t]];
-            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
     else
@@ -243,7 +243,7 @@ void AccumulatePointSpotToonDiffuse(float3 worldPos, float3 N, float4 screenPos,
         for (uint i = 0; i < NumActivePointLights + NumActiveSpotLights; ++i)
         {
             FLightInfo light = AllLights[i];
-            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos);
+            result += CalcLightToonDiffuse(light, worldPos, N) * GetLightShadow(light, worldPos, N);
         }
     }
 }
@@ -253,7 +253,7 @@ float3 AccumulateToonDiffuse(float3 worldPos, float3 N, float4 screenPos)
     float3 result = float3(0, 0, 0);
     result += CalcAmbient(AmbientLight.Color.rgb, AmbientLight.Intensity);
     result += CalcDirectionalToonDiffuse(DirectionalLight.Color.rgb, DirectionalLight.Direction,
-                                         DirectionalLight.Intensity, N) * GetDirectionalShadow(worldPos);
+                                         DirectionalLight.Intensity, N) * GetDirectionalShadow(worldPos, N);
     AccumulatePointSpotToonDiffuse(worldPos, N, screenPos, result);
     return result;
 }
@@ -264,7 +264,7 @@ float3 AccumulateDiffuse(float3 worldPos, float3 N, float4 screenPos)
     float3 result = float3(0, 0, 0);
     result += CalcAmbient(AmbientLight.Color.rgb, AmbientLight.Intensity);
     result += CalcDirectionalDiffuse(DirectionalLight.Color.rgb, DirectionalLight.Direction,
-                                     DirectionalLight.Intensity, N) * GetDirectionalShadow(worldPos);
+                                     DirectionalLight.Intensity, N) * GetDirectionalShadow(worldPos, N);
     AccumulatePointSpotDiffuse(worldPos, N, screenPos, result);
     return result;
 }
@@ -273,7 +273,7 @@ float3 AccumulateSpecular(float3 worldPos, float3 N, float3 V, float shininess, 
 {
     float3 result = float3(0, 0, 0);
     result += CalcDirectionalSpecular(DirectionalLight.Color.rgb, DirectionalLight.Direction,
-                                      DirectionalLight.Intensity, N, V, shininess) * GetDirectionalShadow(worldPos);
+                                      DirectionalLight.Intensity, N, V, shininess) * GetDirectionalShadow(worldPos, N);
     AccumulatePointSpotSpecular(worldPos, N, V, shininess, screenPos, result);
     return result;
 }

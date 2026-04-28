@@ -21,14 +21,14 @@
 // Shadow 계산 헬퍼 함수(Bias + Bleeding)
 // =========================================================================
 
-float GetShadowDepthBias(FShadowInfo info)
+float GetShadowConstantBias(FShadowInfo info)
 {
-    return max(info.ShadowParams.x, 0.00001f);
+    return max(info.ShadowParams.x, 0.0f);
 }
 
 float GetShadowSlopeBias(FShadowInfo info)
 {
-    return info.ShadowParams.y;
+    return max(info.ShadowParams.y, 0.0f);
 }
 
 float GetShadowSharpen(FShadowInfo info)
@@ -39,6 +39,30 @@ float GetShadowSharpen(FShadowInfo info)
 float GetShadowNearZ(FShadowInfo info)
 {
     return max(info.ShadowParams.w, 0.0001f);
+}
+
+float3 SafeNormalize(float3 value, float3 fallback)
+{
+    float lenSq = dot(value, value);
+    if (lenSq <= 1e-8f)
+    {
+        return fallback;
+    }
+
+    return value * rsqrt(lenSq);
+}
+
+float GetReceiverShadowBias(FShadowInfo info, float3 normal, float3 lightVector)
+{
+    float3 N = SafeNormalize(normal, float3(0.0f, 1.0f, 0.0f));
+    float3 L = SafeNormalize(lightVector, float3(0.0f, 0.0f, 1.0f));
+    float angleFactor = 1.0f - saturate(dot(N, L));
+
+    // ShadowParams.x/y는 셰이더 샘플링 단계에서 쓰는 constant/slope bias 계약이다.
+    // 렌더러 rasterizer depth bias와는 단위/적용 위치가 다르므로 여기서도 유지한다.
+    float constantBias = GetShadowConstantBias(info);
+    float slopeBias = GetShadowSlopeBias(info) * angleFactor;
+    return max(constantBias + slopeBias, 0.00001f);
 }
 
 float ApplyShadowSharpen(float shadow, FShadowInfo info)
@@ -83,7 +107,7 @@ bool BuildCubeShadowLookup(FShadowInfo info, float3 worldPos, out float3 outDir,
 // =========================================================================
 
 // Hard Atlas Shadow 계산 함수
-float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float4 shadowPos;
     if (info.bIsPSM)
@@ -104,7 +128,7 @@ float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 
     float3 ndc = shadowPos.xyz / shadowPos.w;
     float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-    float depth = ndc.z + GetShadowDepthBias(info);
+    float depth = ndc.z + receiverBias;
 
     if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
     {
@@ -121,7 +145,7 @@ float SampleAtlasShadow(FShadowInfo info, float3 worldPos, float4x4 lightVP)
         depth);
 }
 
-float SampleCubeShadow(FShadowInfo info, float3 worldPos)
+float SampleCubeShadow(FShadowInfo info, float3 worldPos, float receiverBias)
 {
     float3 lightPos = info.SampleData.xyz;
     float nearZ = GetShadowNearZ(info);
@@ -136,7 +160,7 @@ float SampleCubeShadow(FShadowInfo info, float3 worldPos)
     }
 
     float3 dir = toPixel / max(faceDepth, 0.0001f);
-    float depth = (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ)) + GetShadowDepthBias(info);
+    float depth = (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ)) + receiverBias;
     uint cubeTier = min(info.CubeTierIndex, 3u);
 
 
@@ -172,7 +196,7 @@ float SampleCubeShadow(FShadowInfo info, float3 worldPos)
 // PCF(Percentage-Closer Filtering) Functions
 // =========================================================================
 
-float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float result = 1.0f;
     float4 shadowPos = mul(float4(worldPos, 1.0f), lightVP);
@@ -204,7 +228,7 @@ float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
         float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
 
         // 기존 Hard Shadow 함수와 동일한 depth convention 유지
-        float depth = ndc.z + GetShadowDepthBias(info);
+        float depth = ndc.z + receiverBias;
 
         if (!any(uv < 0.0f) && !any(uv > 1.0f) && depth >= 0.0f && depth <= 1.0f)
         {
@@ -268,7 +292,7 @@ float SampleAtlasShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
     return result;
 }
 
-float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float3 lightPos = info.SampleData.xyz;
     float nearZ = GetShadowNearZ(info);
@@ -288,7 +312,7 @@ float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
     // 기존 SampleCubeShadow와 같은 depth convention 유지
     float receiverDepth =
         (nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ))
-        + GetShadowDepthBias(info);
+        + receiverBias;
 
     float3 dir = normalize(toPixel);
 
@@ -398,7 +422,7 @@ float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 // VSM(Variance Shadow Map) Functions
 // =========================================================================
 
-float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float4 lightClip;
     if (info.bIsPSM)
@@ -419,7 +443,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 
     float3 ndc = lightClip.xyz / lightClip.w;
     float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-    float depth = (1.0f - ndc.z) + GetShadowDepthBias(info);
+    float depth = (1.0f - ndc.z) + receiverBias;
 
     if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
     {
@@ -445,7 +469,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
     return ReduceLightBleed(probability);
 }
 
-float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
+float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float result = 1.0f;
 
@@ -471,7 +495,7 @@ float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 
     // ShadowDepth.hlsl의 VSM 저장 방식:
     // depth = 1.0f - input.Position.z
-    float receiverDepth = saturate((1.0f - hardwareDepth) + GetShadowDepthBias(info));
+    float receiverDepth = saturate((1.0f - hardwareDepth) + receiverBias);
 
     uint cubeTier = min(info.CubeTierIndex, 3u);
 
@@ -523,7 +547,7 @@ float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP)
 // Shadow 분기 처리 함수
 // =========================================================================
 
-float GetLightShadow(FLightInfo light, float3 worldPos)
+float GetLightShadow(FLightInfo light, float3 worldPos, float3 normal)
 {
     if (light.ShadowIndex < 0)
     {
@@ -531,25 +555,27 @@ float GetLightShadow(FLightInfo light, float3 worldPos)
     }
 
     FShadowInfo info = gShadowInfos[light.ShadowIndex];
+    float3 lightVector = light.Position - worldPos;
+    float receiverBias = GetReceiverShadowBias(info, normal, lightVector);
     float shadow = 1.0f;
     if (info.Type == SHADOW_INFO_TYPE_ATLAS2D)
     {
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-        shadow = SampleAtlasShadowVSM(info, worldPos, info.LightVP);
+        shadow = SampleAtlasShadowVSM(info, worldPos, info.LightVP, receiverBias);
 #elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
-        shadow = SampleAtlasShadowPCF(info, worldPos, info.LightVP);
+        shadow = SampleAtlasShadowPCF(info, worldPos, info.LightVP, receiverBias);
 #else
-        shadow = SampleAtlasShadow(info, worldPos, info.LightVP);
+        shadow = SampleAtlasShadow(info, worldPos, info.LightVP, receiverBias);
 #endif
     }
     else
     {
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-        shadow = SampleCubeShadowVSM(info, worldPos, info.LightVP);
+        shadow = SampleCubeShadowVSM(info, worldPos, info.LightVP, receiverBias);
 #elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
-        shadow = SampleCubeShadowPCF(info, worldPos, info.LightVP);
+        shadow = SampleCubeShadowPCF(info, worldPos, info.LightVP, receiverBias);
 #else
-        shadow = SampleCubeShadow(info, worldPos);
+        shadow = SampleCubeShadow(info, worldPos, receiverBias);
 #endif
     }
     return ApplyShadowSharpen(shadow, info);
@@ -558,13 +584,14 @@ float GetLightShadow(FLightInfo light, float3 worldPos)
 // =========================================================================
 // Directional Light Shadow 분기 처리 함수
 // =========================================================================
-float GetDirectionalShadow(float3 worldPos)
+float GetDirectionalShadow(float3 worldPos, float3 normal)
 {
     if (DirectionalLight.ShadowIndex < 0)
     {
         return 1.0f;
     }
 
+    float3 lightVector = -DirectionalLight.Direction;
     float shadow = 1.0f;
     if (ShadowMethod == SHADOW_METHOD_CSM)
     {
@@ -582,24 +609,26 @@ float GetDirectionalShadow(float3 worldPos)
         }
 
         FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex + cascadeIdx];
+        float receiverBias = GetReceiverShadowBias(info, normal, lightVector);
         
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-        shadow = SampleAtlasShadowVSM(info, worldPos, CascadeMatrices[cascadeIdx]);
+        shadow = SampleAtlasShadowVSM(info, worldPos, CascadeMatrices[cascadeIdx], receiverBias);
 #elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
-        shadow = SampleAtlasShadowPCF(info, worldPos, CascadeMatrices[cascadeIdx]);
+        shadow = SampleAtlasShadowPCF(info, worldPos, CascadeMatrices[cascadeIdx], receiverBias);
 #else
-        shadow = SampleAtlasShadow(info, worldPos, CascadeMatrices[cascadeIdx]);
+        shadow = SampleAtlasShadow(info, worldPos, CascadeMatrices[cascadeIdx], receiverBias);
 #endif
         return ApplyShadowSharpen(shadow, info);
     }
 
     FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex];
+    float receiverBias = GetReceiverShadowBias(info, normal, lightVector);
 #if defined(SHADOW_ENABLE_VSM) && SHADOW_ENABLE_VSM
-    shadow = SampleAtlasShadowVSM(info, worldPos, info.LightVP);
+    shadow = SampleAtlasShadowVSM(info, worldPos, info.LightVP, receiverBias);
 #elif defined(SHADOW_ENABLE_PCF) && SHADOW_ENABLE_PCF
-    shadow = SampleAtlasShadowPCF(info, worldPos, info.LightVP);
+    shadow = SampleAtlasShadowPCF(info, worldPos, info.LightVP, receiverBias);
 #else
-    shadow = SampleAtlasShadow(info, worldPos, info.LightVP);
+    shadow = SampleAtlasShadow(info, worldPos, info.LightVP, receiverBias);
 #endif
     return ApplyShadowSharpen(shadow, info);
 }
