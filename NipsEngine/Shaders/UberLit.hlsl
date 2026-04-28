@@ -93,9 +93,12 @@ struct FPointShadowConstants
     row_major float4x4 LightViewProj[6];
     float3 LightPosition;
     float FarPlane;
+
+    float4 FaceAtlasRects[6];
+    
     float ShadowBias;
     float ShadowResolution;
-    uint CubeSliceIndex;
+    uint AtlasIndex;
     uint bHasShadowMap;
 };
 
@@ -126,7 +129,7 @@ Texture2D<float2> SpotShadowVSMMap : register(t15);
 Texture2D<float2> DirectionalShadowVSMMap : register(t16);
 
 StructuredBuffer<FPointShadowConstants> PointShadowData  : register(t14);
-TextureCubeArray<float> PointShadowMap : register(t17);
+Texture2D<float> PointShadowMap : register(t17);
 
 static const int kCascadeShadowResoultion = 2048; // ShadowPass::CascadeShadowResolution과 일치
 static const int kDirectionalAtlasResolution = 4096;
@@ -186,22 +189,52 @@ float ComputePointShadowFactor(float3 WorldPos, uint bCastShadows, int ShadowMap
 
     const FPointShadowConstants Shadow = PointShadowData[Slice];
 
-    // 픽셀 → 라이트로의 벡터 (방향 + 거리)
     const float3 ToFromLight = WorldPos - Shadow.LightPosition;
     const float Dist = length(ToFromLight);
 
-    // 라이트 영향권 밖이면 그림자 영향 없음
-    if (Dist >= Shadow.FarPlane)
+    if (Dist <= 1.0e-5f || Dist >= Shadow.FarPlane)
         return 1.0f;
 
-    // depth pass와 동일한 정규화
     const float CurrentDepth = Dist / Shadow.FarPlane;
     const float Bias = max(LightShadowBias, Shadow.ShadowBias);
-    // TextureCubeArray는 (방향벡터.xyz, slice index)로 샘플
-    const float4 SampleCoord = float4(ToFromLight, (float)Shadow.CubeSliceIndex);
-    const float StoredDepth = PointShadowMap.SampleLevel(SampleState, SampleCoord, 0);
 
-    // hard 비교: 저장된 거리가 현재 거리보다 작으면 가려짐
+    const float3 AbsDir = abs(ToFromLight);
+    uint FaceIndex = 0u;
+
+    if (AbsDir.X >= AbsDir.Y && AbsDir.X >= AbsDir.Z)
+    {
+        FaceIndex = (ToFromLight.X >= 0.0f) ? 0u : 1u;
+    }
+    else if (AbsDir.Y >= AbsDir.X && AbsDir.Y >= AbsDir.Z)
+    {
+        FaceIndex = (ToFromLight.Y >= 0.0f) ? 2u : 3u;
+    }
+    else
+    {
+        FaceIndex = (ToFromLight.Z >= 0.0f) ? 4u : 5u;
+    }
+
+    const float4 ShadowClip = mul(float4(WorldPos, 1.0f), Shadow.LightViewProj[FaceIndex]);
+    if (ShadowClip.w <= 1.0e-5f)
+        return 1.0f;
+
+    const float3 ShadowNDC = ShadowClip.xyz / ShadowClip.w;
+    if (ShadowNDC.x < -1.0f || ShadowNDC.x > 1.0f ||
+        ShadowNDC.y < -1.0f || ShadowNDC.y > 1.0f ||
+        ShadowNDC.z < 0.0f || ShadowNDC.z > 1.0f)
+    {
+        return 1.0f;
+    }
+
+    const float2 LocalUV = float2(
+        ShadowNDC.x * 0.5f + 0.5f,
+        0.5f - ShadowNDC.y * 0.5f);
+
+    const float4 AtlasRect = Shadow.FaceAtlasRects[FaceIndex];
+    const float2 AtlasUV = AtlasRect.xy + LocalUV * AtlasRect.zw;
+
+    const float StoredDepth = PointShadowMap.SampleLevel(SampleState, AtlasUV, 0);
+
     return (CurrentDepth - Bias) > StoredDepth ? 0.0f : 1.0f;
 }
 

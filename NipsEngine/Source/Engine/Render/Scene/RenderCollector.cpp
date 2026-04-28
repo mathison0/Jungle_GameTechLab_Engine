@@ -108,6 +108,7 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
     
     // Spot atlas allocation 상태는 프레임마다 다시 시작함.
     FShadowAtlasManager::BeginSpotFrame();
+    FShadowAtlasManager::BeginPointFrame();    
     
 	for (const FLightSlot& Slot : LightSlots)
 	{
@@ -200,24 +201,37 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const 
 		        break;
 		    }
 		    
-		    const int32 CubeSliceIndex = NextPointShadowIndex++;
+		    FPointAtlasSlotDesc PointAtlasSlot = {};
+		    if (!FShadowAtlasManager::RequestPointAtlasSlot(PointAtlasSlot))
+		    {
+		        RenderBus.AddLight(RenderLight);
+		        break;
+		    }
+		    
+		    const int32 PointShadowIndex = NextPointShadowIndex++;
 		    const float NearPlane = PointShadowNearPlane;
 		    const float FarPlane = std::max(Attenuation, NearPlane + 1.0f);
 		    const float ShadowBias = LightComponent->GetShadowBias();
-		    
+
 		    RenderLight.bCastShadows = 1;
-		    RenderLight.ShadowMapIndex = CubeSliceIndex;
+		    RenderLight.ShadowMapIndex = PointShadowIndex;
 		    RenderLight.ShadowBias = ShadowBias;
-		    
+
 		    FPointShadowConstants ShadowData = {};
 		    MakePointShadowViewProjections(LightLocation, NearPlane, FarPlane, ShadowData.LightViewProj);
 		    ShadowData.LightPosition = LightLocation;
 		    ShadowData.FarPlane = FarPlane;
+
+		    for (uint32 FaceIndex = 0; FaceIndex < 6; ++FaceIndex)
+		    {
+		        ShadowData.FaceAtlasRects[FaceIndex] = PointAtlasSlot.FaceAtlasRects[FaceIndex];
+		    }
+
 		    ShadowData.ShadowBias = ShadowBias;
-		    ShadowData.ShadowResolution = static_cast<float>(PointShadowResolution);
-		    ShadowData.CubeSliceIndex = static_cast<uint32>(CubeSliceIndex);
+		    ShadowData.ShadowResolution = static_cast<float>(FShadowAtlasManager::PointAtlasTileResolution);
+		    ShadowData.AtlasIndex = PointAtlasSlot.CubeIndex;
 		    ShadowData.bHasShadowMap = 1;
-		    
+
 		    RenderBus.AddCastPointShadowLight(ShadowData);
 		    RenderBus.AddLight(RenderLight);
 		    break;

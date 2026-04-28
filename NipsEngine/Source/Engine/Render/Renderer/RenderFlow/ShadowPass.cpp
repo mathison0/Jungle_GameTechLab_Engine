@@ -299,39 +299,38 @@ bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
     ID3D11ShaderResourceView* NullPointShadowSRV = nullptr;
     Context->DeviceContext->PSSetShaderResources(17, 1, &NullPointShadowSRV);
     
+    ID3D11DepthStencilView* PointAtlasDSV = ShadowAtlasManager.GetPointAtlasDSV();
+    if (PointAtlasDSV == nullptr)
+    {
+        return false;
+    }
+
     Context->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     
-    ID3D11DepthStencilState* PointDepthStencilState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::Default, Context->Device);
+    ID3D11DepthStencilState* PointDepthStencilState =
+                FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::Default, Context->Device);
     Context->DeviceContext->OMSetDepthStencilState(PointDepthStencilState, 0);
+
     ID3D11RasterizerState* PointShadowRasterizerState =
         FResourceManager::Get().GetOrCreateRasterizerState(ERasterizerType::SolidNoCull, Context->Device);
     Context->DeviceContext->RSSetState(PointShadowRasterizerState);
 
-    const D3D11_VIEWPORT FaceViewport = {
-    0.0f, 0.0f,
-        static_cast<float>(FShadowAtlasManager::PointCubeResolution),
-        static_cast<float>(FShadowAtlasManager::PointCubeResolution),
-    0.0f, 1.0f
-    };
-    Context->DeviceContext->RSSetViewports(1, &FaceViewport);
+    Context->DeviceContext->OMSetRenderTargets(0, nullptr, PointAtlasDSV);
+    Context->DeviceContext->ClearDepthStencilView(PointAtlasDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
     
-    uint32 RenderedPointCubeCount = 0;
+    uint32 RenderedPointShadowCount = 0;
     for (const FPointShadowConstants& PointShadow : PointShadows)
     {
         for (uint32 Face = 0; Face < 6; ++Face)
         {
-            ID3D11DepthStencilView* FaceDSV = ShadowAtlasManager.GetPointCubeFaceDSV(PointShadow.CubeSliceIndex, Face);
-            if (FaceDSV == nullptr) continue;
-
-            Context->DeviceContext->OMSetRenderTargets(0, nullptr, FaceDSV);
-            Context->DeviceContext->ClearDepthStencilView(FaceDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-            // cbuffer 채우기 — 면별 ViewProj + 거리 정규화용 LightPos/FarPlane
+            const D3D11_VIEWPORT FaceViewport = MakeViewportFromAtlasRect(PointShadow.FaceAtlasRects[Face], static_cast<float>(FShadowAtlasManager::PointAtlasResolution));    
+            Context->DeviceContext->RSSetViewports(1, &FaceViewport);
+            
             PointShaderBinding->SetMatrix4("LightViewProj", PointShadow.LightViewProj[Face]);
             PointShaderBinding->SetVector3("LightPosition", PointShadow.LightPosition);
-            PointShaderBinding->SetFloat  ("FarPlane", PointShadow.FarPlane);
-            PointShaderBinding->SetFloat  ("ShadowBias", PointShadow.ShadowBias);
-
+            PointShaderBinding->SetFloat("FarPlane", PointShadow.FarPlane);
+            PointShaderBinding->SetFloat("ShadowBias", PointShadow.ShadowBias);
+            
             for (const FRenderCommand& Cmd : Commands)
             {
                 if (Cmd.Type == ERenderCommandType::PostProcessOutline)
@@ -349,17 +348,19 @@ bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
                 {
                     continue;
                 }
+
                 const uint32 VertexCount = Cmd.MeshBuffer->GetVertexBuffer().GetVertexCount();
                 const uint32 Stride = Cmd.MeshBuffer->GetVertexBuffer().GetStride();
                 if (VertexCount == 0 || Stride == 0)
                 {
                     continue;
                 }
+
                 uint32 Offset = 0;
-                
+
                 PointShaderBinding->SetMatrix4("World", Cmd.PerObjectConstants.Model);
                 PointShaderBinding->Bind(Context->DeviceContext);
-                
+
                 Context->DeviceContext->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
 
                 ID3D11Buffer* IndexBuffer = Cmd.MeshBuffer->GetIndexBuffer().GetBuffer();
@@ -373,16 +374,14 @@ bool FShadowPass::DrawCommand(const FRenderPassContext* Context)
                     Context->DeviceContext->Draw(VertexCount, 0);
                 }
             }
+            ++RenderedPointShadowCount;
         }
-        ++RenderedPointCubeCount;
+        if (Context->RenderTargets != nullptr)
+        {
+            Context->RenderTargets->PointShadowSRV = ShadowAtlasManager.GetPointAtlasSRV();
+            Context->RenderTargets->PointShadowCount = RenderedPointShadowCount;
+        }
     }
-
-    if (Context->RenderTargets != nullptr) {
-        Context->RenderTargets->PointShadowSRV   = ShadowAtlasManager.GetPointCubeArraySRV();
-        Context->RenderTargets->PointShadowCount = RenderedPointCubeCount;
-    }
-    
-    return true;
 }
 
 bool FShadowPass::End(const FRenderPassContext* Context)
@@ -510,9 +509,9 @@ bool FShadowPass::EnsurePointShadowResources(ID3D11Device* Device)
         return false;
     }
 
-    if (!ShadowAtlasManager.InitializePointCubeArray(Device))
+    if (!ShadowAtlasManager.InitializePointAtlas(Device))
     {
-        UE_LOG("Failed to initialize point shadow");
+        UE_LOG("Failed to initialize point shadow atlas");
         return false;
     }
 

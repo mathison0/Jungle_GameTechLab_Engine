@@ -28,6 +28,23 @@ struct FDirectionalAtlasSlotDesc
     FVector4 AtlasRect = FVector4(0.0f, 0.0f, 1.0f, 1.0f);
 };
 
+struct FPointAtlasSlotDesc
+{
+    uint32 CubeIndex = 0;
+    uint32 BaseCellX = 0;
+    uint32 BaseCellY = 0;
+    uint32 TileResolution = 0;
+    FVector4 FaceAtlasRects[6] =
+    {
+        FVector4(0.0f, 0.0f, 1.0f, 1.0f),
+        FVector4(0.0f, 0.0f, 1.0f, 1.0f),
+        FVector4(0.0f, 0.0f, 1.0f, 1.0f),
+        FVector4(0.0f, 0.0f, 1.0f, 1.0f),
+        FVector4(0.0f, 0.0f, 1.0f, 1.0f),
+        FVector4(0.0f, 0.0f, 1.0f, 1.0f)
+    };
+};
+
 class FShadowAtlasManager
 {
 public:
@@ -53,6 +70,12 @@ public:
     static constexpr uint32 PointCubeResolution = 512;
     static constexpr uint32 MaxPointShadowCount = 8;
     static constexpr uint32 PointCubeFaceCount = 6;
+
+    static constexpr uint32 PointAtlasResolution = 4096;
+    static constexpr uint32 PointAtlasTileResolution = 512;
+    static constexpr uint32 PointAtlasCellsPerRow = PointAtlasResolution / PointAtlasTileResolution;
+    static constexpr uint32 PointAtlasBlockWidthInCells = 3;
+    static constexpr uint32 PointAtlasBlockHeightInCells = 2;
     
 public:
     // Spot shadow atlas 텍스처/DSV/SRV를 생성합니다.
@@ -88,14 +111,12 @@ public:
     
     static const TArray<FDirectionalAtlasSlotDesc>& GetDirectionalCascadeSlots();
 
-    bool InitializePointCubeArray(ID3D11Device* Device);
-    ID3D11DepthStencilView* GetPointCubeFaceDSV(uint32 CubeIndex, uint32 FaceIndex) const
-    {
-        const uint32 FlatIndex = CubeIndex * PointCubeFaceCount + FaceIndex;
-        if (FlatIndex >= PointCubeFaceDSVs.size()) return nullptr;
-        return PointCubeFaceDSVs[FlatIndex].Get();
-    }
-    ID3D11ShaderResourceView* GetPointCubeArraySRV() const {return PointCubeArraySRV.Get();}
+    bool InitializePointAtlas(ID3D11Device* Device);
+    static void BeginPointFrame();
+    static bool RequestPointAtlasSlot(FPointAtlasSlotDesc& OutSlot);
+    static const TArray<FPointAtlasSlotDesc>& GetActivePointSlots() { return ActivePointSlots; }
+    ID3D11DepthStencilView* GetPointAtlasDSV() const { return PointAtlasDSV.Get(); }
+    ID3D11ShaderResourceView* GetPointAtlasSRV() const { return PointAtlasSRV.Get(); }
 
 private:
     // allocator가 실제로 처리 가능한 PoT 타일 크기로 보정합니다.
@@ -105,8 +126,13 @@ private:
     static bool IsSpotRegionFree(uint32 CellX, uint32 CellY, uint32 CellSpan);
     static void MarkSpotRegion(uint32 CellX, uint32 CellY, uint32 CellSpan, bool bOccupied);
     static void BuildSpotSlotDesc(uint32 CellX, uint32 CellY, uint32 TileResolution, uint32 TileIndex, FSpotAtlasSlotDesc& OutSlot);
+  
+    static bool IsPointRegionFree(uint32 CellX, uint32 CellY);
+    static void MarkPointRegion(uint32 CellX, uint32 CellY, bool bOccupied);
+    static void BuildPointSlotDesc(uint32 CellX, uint32 CellY, uint32 CubeIndex, FPointAtlasSlotDesc& OutSlot);
     
 private:
+    // --- Spot Atlas --- 
     TComPtr<ID3D11Texture2D> SpotAtlasTexture;
     TComPtr<ID3D11DepthStencilView> SpotAtlasDSV;
     TComPtr<ID3D11ShaderResourceView> SpotAtlasSRV;
@@ -120,6 +146,7 @@ private:
     static TArray<uint8> SpotCellOccupancy;
     static TArray<FSpotAtlasSlotDesc> ActiveSpotSlots;
     
+    // --- Directional Atlas ---
     TComPtr<ID3D11Texture2D> DirectionalAtlasTexture;
     TComPtr<ID3D11DepthStencilView> DirectionalAtlasDSV;
     TComPtr<ID3D11ShaderResourceView> DirectionalAtlasSRV;
@@ -130,7 +157,14 @@ private:
     
     static TArray<FDirectionalAtlasSlotDesc> DirectionalCascadeSlots;
     
-    TComPtr<ID3D11Texture2D> PointCubeArrayTexture;
-    TArray<TComPtr<ID3D11DepthStencilView>> PointCubeFaceDSVs;
-    TComPtr<ID3D11ShaderResourceView> PointCubeArraySRV;
+    // --- Point Atlas ---
+    // TComPtr<ID3D11Texture2D> PointCubeArrayTexture;
+    // TArray<TComPtr<ID3D11DepthStencilView>> PointCubeFaceDSVs;
+    // TComPtr<ID3D11ShaderResourceView> PointCubeArraySRV;
+    TComPtr<ID3D11Texture2D> PointAtlasTexture;
+    TComPtr<ID3D11DepthStencilView> PointAtlasDSV;
+    TComPtr<ID3D11ShaderResourceView> PointAtlasSRV;
+
+    static TArray<uint8> PointAtlasCellOccupancy;
+    static TArray<FPointAtlasSlotDesc> ActivePointSlots;
 };
