@@ -11,7 +11,11 @@ void FTexturePoolHandleSet::Release()
 
 FTexturePoolBase::~FTexturePoolBase() = default;
 
-void FTexturePoolBase::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InTextureSize)
+void FTexturePoolBase::Initialize(
+	ID3D11Device* InDevice,
+	ID3D11DeviceContext* InDeviceContext,
+	uint32 InTextureSize,
+	uint32 InAllocatorMinBlockSize)
 {
 	Device = InDevice;
 	DeviceContext = InDeviceContext;
@@ -19,7 +23,7 @@ void FTexturePoolBase::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* I
 
 	if (Allocator)
 	{
-		Allocator->Initialize(InTextureSize, 1);
+		Allocator->Initialize(InTextureSize, 1, InAllocatorMinBlockSize);
 	}
 
 	SetTextureSize(InTextureSize);

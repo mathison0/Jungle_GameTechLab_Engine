@@ -192,16 +192,20 @@ namespace
 	}
 }
 
-void FTextureAtlasPool::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InTextureSize)
+void FTextureAtlasPool::Initialize(
+	ID3D11Device* InDevice,
+	ID3D11DeviceContext* InDeviceContext,
+	uint32 InTextureSize,
+	uint32 InAllocatorMinBlockSize)
 {
 	CurrentFilterMode = EShadowFilterMode::PCF;
-	FTexturePoolBase::Initialize(InDevice, InDeviceContext, InTextureSize);
+	FTexturePoolBase::Initialize(InDevice, InDeviceContext, InTextureSize, InAllocatorMinBlockSize);
 	CreateDebugPassResources();
 }
 
 std::unique_ptr<FTexturePoolAllocatorBase> FTextureAtlasPool::CreateAllocator()
 {
-	return std::make_unique<FGuillotineAllocator>();
+	return std::make_unique<FBuddyTexturePoolAllocator>();
 }
 
 void FTextureAtlasPool::EnsureAtlasMode(EShadowFilterMode InFilterMode)

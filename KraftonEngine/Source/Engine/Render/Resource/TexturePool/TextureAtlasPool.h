@@ -3,7 +3,7 @@
 #include "TexturePool.h"
 #include "Render/Resource/Buffer.h"
 #include "Render/Types/ViewTypes.h"
-#include "Render/Resource/TexturePool/UVManager/Allocator/GuillotineAllocator.h"
+#include "Render/Resource/TexturePool/UVManager/TexturePoolAllocator.h"
 
 class FTextureAtlasPool final : public FTexturePoolBase
 {
@@ -29,7 +29,11 @@ protected:
 #pragma endregion
 
 public:
-	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InTextureSize) override;
+	void Initialize(
+		ID3D11Device* InDevice,
+		ID3D11DeviceContext* InDeviceContext,
+		uint32 InTextureSize,
+		uint32 InAllocatorMinBlockSize = 256) override;
 	void EnsureAtlasMode(EShadowFilterMode InFilterMode);
 
 	FAtlasUV GetAtlasUV(const TexturePoolHandle& InHandle)

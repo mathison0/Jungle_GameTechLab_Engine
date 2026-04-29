@@ -36,7 +36,11 @@ protected:
 public:
 	virtual ~FTexturePoolBase();
 
-	virtual void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InTextureSize);
+	virtual void Initialize(
+		ID3D11Device* InDevice,
+		ID3D11DeviceContext* InDeviceContext,
+		uint32 InTextureSize,
+		uint32 InAllocatorMinBlockSize = 32);
 	uint32 GetTextureSize() const { return TextureSize; }
 	uint32 GetAllocatedLayerCount() const { return TextureLayerSize; }
 	uint32 GetAllocatorMinBlockSize() const;
