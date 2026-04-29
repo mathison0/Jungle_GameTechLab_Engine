@@ -5,7 +5,10 @@
 struct FShadowBlurConstants
 {
     uint32 BlurDirection; // 0 = Horizontal, 1 = Vertical
-    uint32 Pad0, Pad1, Pad2;
+    // uint32 Pad0, Pad1, Pad2;
+    uint32 TileBaseX; // 픽셀 단위. blur 클램프 좌상단
+    uint32 TileBaseY;
+    uint32 TileSize; // 픽셀 단위. tile의 한 변 크기
 };
 
 class FBlurPass : public FBaseRenderPass
@@ -25,13 +28,15 @@ private:
     bool EnsureDirectionalShadowBlurResources(ID3D11Device* Device);
     bool EnsurePointShadowBlurResources(ID3D11Device* Device);
 
-	void DrawBlurCommand(const FRenderPassContext* Context, uint32 Resolution,
+	void DrawBlurCommand(const FRenderPassContext* Context, 
+	                     uint32 TileBaseX, uint32 TileBaseY, uint32 TileSize,
                          ID3D11ShaderResourceView* ShadowBlurTempSRV,
                          ID3D11UnorderedAccessView* ShadowBlurTempUAV,
                          ID3D11ShaderResourceView* ShadowBlurFinalSRV,
                          ID3D11UnorderedAccessView* ShadowBlurFinalUAV);
 
-    void UpdateConstantBuffer(ID3D11DeviceContext* DeviceContext, uint32 BlurDirection);
+    void UpdateConstantBuffer(ID3D11DeviceContext* DeviceContext, uint32 BlurDirection,
+                                uint32 TileBaseX, uint32 TileBaseY, uint32 TileSize);
 
 private:
     uint32 DirectionalShadowResolution = 2048;

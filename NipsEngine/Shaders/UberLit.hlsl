@@ -249,6 +249,60 @@ float3 OffsetPointShadowReceiver(
     return WorldPos + normalize(N) * NormalOffset * (1.0f - CosTheta);
 }
 
+float3 PointShadowLocalUVToDirection(uint FaceIndex, float2 LocalUV)
+{
+    const float3 Forward = GetPointShadowFaceForward(FaceIndex);
+    const float3 Up = GetPointShadowFaceUp(FaceIndex);
+    const float3 Right = normalize(cross(Up, Forward));
+    const float NDCx = LocalUV.x * 2.0f - 1.0f;
+    const float NDCy = 1.0f - LocalUV.y * 2.0f;
+    return normalize(Forward + Right * (NDCx * POINT_SHADOW_FACE_EXTENT) + Up * (NDCy * POINT_SHADOW_FACE_EXTENT));
+}
+
+float2 LoadPointShadowVSMMomentDirectional(
+    FPointShadowConstants Shadow,
+    float3 SampleDirection,
+    int AtlasSize)
+{
+    const uint Face = SelectPointShadowFace(SampleDirection);
+    const float2 SampleLocalUV = InsetPointShadowLocalUV(
+        ProjectPointShadowDirectionToFaceUV(SampleDirection, Face),
+        Shadow.ShadowResolution);
+    const float4 SampleAtlasRect = Shadow.FaceAtlasRects[Face];
+    const int2 SampleTileBase = (int2)(SampleAtlasRect.xy * (float)AtlasSize);
+    const int2 SampleTileSpan = (int2)(SampleAtlasRect.zw * (float)AtlasSize);
+    const int2 SampleTileMax = SampleTileBase + SampleTileSpan - int2(1, 1);
+    const float2 SampleAtlasUV = SampleAtlasRect.xy + SampleLocalUV * SampleAtlasRect.zw;
+    const int2 SampleTexel = clamp((int2)floor(SampleAtlasUV * (float)AtlasSize), SampleTileBase, SampleTileMax);
+    return PointShadowVSMMap.Load(int3(SampleTexel, 0)).xy;
+}
+
+float2 SamplePointShadowMomentsBilinearCubeAware(
+    FPointShadowConstants Shadow,
+    float3 DirectionFromLight,
+    int AtlasSize)
+{
+    const uint CenterFace = SelectPointShadowFace(DirectionFromLight);
+    const float2 CenterLocalUV = ProjectPointShadowDirectionToFaceUV(DirectionFromLight, CenterFace);
+    const float Resolution = max(Shadow.ShadowResolution, 1.0f);
+    const float2 PixelPos = CenterLocalUV * Resolution - 0.5f.xx;
+    const float2 BasePixel = floor(PixelPos);
+    const float2 Frac = saturate(PixelPos - BasePixel);
+
+    float2 Corners[4];
+    [unroll]
+    for (int i = 0; i < 4; ++i)
+    {
+        const float2 CornerOffset = float2((i & 1) ? 1.0f : 0.0f, (i & 2) ? 1.0f : 0.0f);
+        const float2 CornerLocalUV = (BasePixel + CornerOffset + 0.5f.xx) / Resolution;
+        const float3 SampleDirection = PointShadowLocalUVToDirection(CenterFace, CornerLocalUV);
+        Corners[i] = LoadPointShadowVSMMomentDirectional(Shadow, SampleDirection, AtlasSize);
+    }
+    const float2 M0 = lerp(Corners[0], Corners[1], Frac.x);
+    const float2 M1 = lerp(Corners[2], Corners[3], Frac.x);
+    return lerp(M0, M1, Frac.y);
+}
+
 float4 GetDirectionalCascadeAtlasRect(int CascadeIndex)
 {
     if (CascadeIndex == 0) return float4(0.0f, 0.0f, 0.5f, 0.5f);
@@ -434,13 +488,13 @@ float ComputePointShadowFactor(float3 WorldPos, float3 N, uint bCastShadows, int
     }
     else if (PointShadowFilterType == SHADOW_FILTER_TYPE_ESM)
     {
-        const float2 ClampedAtlasUV = ClampPointShadowFilteredAtlasUV(AtlasUV, AtlasRect, int2(AtlasSize, AtlasSize));
-        return SampleShadowESM(ClampedAtlasUV, CurrentDepth - Bias, PointShadowVSMMap, int2(AtlasSize, AtlasSize));
+        const float2 Moments = SamplePointShadowMomentsBilinearCubeAware(Shadow, DirectionFromLight, AtlasSize);
+        return SampleShadowESMFromStored(Moments.x, CurrentDepth - Bias);
     }
     else
     {
-        const float2 ClampedAtlasUV = ClampPointShadowFilteredAtlasUV(AtlasUV, AtlasRect, int2(AtlasSize, AtlasSize));
-        return SampleShadowVSM(ClampedAtlasUV, CurrentDepth - Bias, PointShadowVSMMap, int2(AtlasSize, AtlasSize));
+        const float2 Moments = SamplePointShadowMomentsBilinearCubeAware(Shadow, DirectionFromLight, AtlasSize);
+        return SampleShadowVSMFromMoments(Moments, CurrentDepth - Bias);
     }
 }
 
