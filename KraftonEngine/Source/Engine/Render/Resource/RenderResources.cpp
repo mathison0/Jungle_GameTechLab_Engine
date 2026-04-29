@@ -9,6 +9,7 @@
 #include "Engine/Runtime/Engine.h"
 #include "Profiling/Timer.h"
 #include <cstring>
+#include "Settings/EditorSettings.h"
 
 //헤더에 선언된 함수들이 이동해서 변경량이 많아 보일 뿐임
 //추가된 부분은 FShadowInfoResource밖에 없고 나머지 녀석들 변경점은 Structured Buffer에 넘길 내용 채워주기 추가됨
@@ -405,7 +406,8 @@ void FSystemResources::BindShadowResources(FD3DDevice& Device)
 {
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
 	ID3D11ShaderResourceView* ShadowInfoSRV = ShadowInfos.SRV;
-	ID3D11ShaderResourceView* ShadowAtlasSRV = FTextureAtlasPool::Get().GetSRV();
+	ID3D11ShaderResourceView* ShadowAtlasSRV = FTextureAtlasPool::Get().IsVSMMode()  
+		? FTextureAtlasPool::Get().GetFilteredSRV() : FTextureAtlasPool::Get().GetSRV();
 	ID3D11ShaderResourceView* ShadowCubeSRVs[FTextureCubeShadowPool::TierCount] =
 	{
 		FTextureCubeShadowPool::Get().GetSRV(0),
