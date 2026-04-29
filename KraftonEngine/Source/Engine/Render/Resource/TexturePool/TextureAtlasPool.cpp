@@ -15,6 +15,7 @@ namespace
 {
 	constexpr uint32 HandleDebugKeyPrefix = 0x40000000u;
 	constexpr uint32 LayerDebugKeyPrefix = 0x80000000u;
+	constexpr uint32 ShadowAtlasLayerCount = 2;
 	constexpr float ShadowDebugContrast = 75.0f;
 
 	template<typename T>
@@ -201,6 +202,10 @@ void FTextureAtlasPool::Initialize(
 {
 	CurrentFilterMode = EShadowFilterMode::PCF;
 	FTexturePoolBase::Initialize(InDevice, InDeviceContext, InTextureSize, InAllocatorMinBlockSize);
+	if (GetAllocatedLayerCount() < ShadowAtlasLayerCount)
+	{
+		ResizeLayer(ShadowAtlasLayerCount);
+	}
 	CreateDebugPassResources();
 }
 
