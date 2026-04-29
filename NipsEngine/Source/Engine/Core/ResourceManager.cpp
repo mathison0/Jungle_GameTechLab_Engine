@@ -1,6 +1,7 @@
 ﻿#include "Core/ResourceManager.h"
 
 #include "Core/Paths.h"
+#include "Core/PlatformTime.h"
 #include "SimpleJSON/json.hpp"
 
 #include <algorithm>
@@ -94,6 +95,27 @@ namespace
 		return NormalizeShaderMacros(std::move(Macros));
 	}
 
+	FString BuildShaderMacroLogString(const TArray<FShaderMacro>& Macros)
+	{
+		if (Macros.empty())
+		{
+			return "none";
+		}
+
+		FString Result;
+		for (size_t Index = 0; Index < Macros.size(); ++Index)
+		{
+			if (Index > 0)
+			{
+				Result += ", ";
+			}
+
+			Result += Macros[Index].Name + "=" + Macros[Index].Value;;
+		}
+
+		return Result;
+	}
+
 	FShaderCompileKey NormalizeShaderCompileKey(FShaderCompileKey CompileKey)
 	{
 		CompileKey.Macros = NormalizeShaderMacros(std::move(CompileKey.Macros));
@@ -101,9 +123,9 @@ namespace
 	}
 
 	FShaderCompileKey BuildShaderCompileKey(const FString& FilePath,
-	                                       const FString& VSEntryPoint,
-	                                       const FString& PSEntryPoint,
-	                                       const D3D_SHADER_MACRO* Defines)
+										   const FString& VSEntryPoint,
+										   const FString& PSEntryPoint,
+										   const D3D_SHADER_MACRO* Defines)
 	{
 		FShaderCompileKey CompileKey;
 		CompileKey.FilePath = FilePath;
@@ -621,7 +643,7 @@ FTextureAssetMeta FResourceManager::LoadOrCreateTextureMeta(const std::filesyste
 		if (MetaFile.is_open())
 		{
 			FString Content((std::istreambuf_iterator<char>(MetaFile)),
-			                std::istreambuf_iterator<char>());
+							std::istreambuf_iterator<char>());
 
 			JSON Root = JSON::Load(Content);
 			if (Root.JSONType() == JSON::Class::Object)
@@ -829,7 +851,7 @@ void FResourceManager::InitializeDefaultResources(ID3D11Device* Device)
 	OutlineMat->SetParam("OutlineColor", FMaterialParamValue(FVector4(1.0f, 0.5f, 0.0f, 1.0f)));
 	OutlineMat->SetParam("OutlineThicknessPixels", FMaterialParamValue(5.0f));
 	OutlineMat->SetParam("OutlineViewportSize", FMaterialParamValue(FVector2(800.0f, 600.0f)));
-    OutlineMat->SetParam("OutlineViewportOrigin", FMaterialParamValue(FVector2(0.0f, 0.0f)));
+	OutlineMat->SetParam("OutlineViewportOrigin", FMaterialParamValue(FVector2(0.0f, 0.0f)));
 }
 
 void FResourceManager::ReleaseGPUResources()
@@ -923,9 +945,9 @@ void FResourceManager::ReleaseGPUResources()
 }
 
 bool FResourceManager::LoadShader(const FString& FilePath,
-                                  const FString& VSEntryPoint,
-                                  const FString& PSEntryPoint,
-                                  const D3D_SHADER_MACRO* Defines)
+								  const FString& VSEntryPoint,
+								  const FString& PSEntryPoint,
+								  const D3D_SHADER_MACRO* Defines)
 {
 	return LoadShaderInternal(
 		BuildShaderCompileKey(FilePath, VSEntryPoint, PSEntryPoint, Defines),
@@ -935,11 +957,11 @@ bool FResourceManager::LoadShader(const FString& FilePath,
 }
 
 bool FResourceManager::LoadShader(const FString& FilePath,
-                                  const FString& VSEntryPoint,
-                                  const FString& PSEntryPoint,
-                                  const D3D11_INPUT_ELEMENT_DESC* InputElements,
-                                  UINT InputElementCount,
-                                  const D3D_SHADER_MACRO* Defines)
+								  const FString& VSEntryPoint,
+								  const FString& PSEntryPoint,
+								  const D3D11_INPUT_ELEMENT_DESC* InputElements,
+								  UINT InputElementCount,
+								  const D3D_SHADER_MACRO* Defines)
 {
 	return LoadShaderInternal(
 		BuildShaderCompileKey(FilePath, VSEntryPoint, PSEntryPoint, Defines),
@@ -954,16 +976,16 @@ bool FResourceManager::LoadShader(const FShaderCompileKey& CompileKey)
 }
 
 bool FResourceManager::LoadShader(const FShaderCompileKey& CompileKey,
-                                  const D3D11_INPUT_ELEMENT_DESC* InputElements,
-                                  UINT InputElementCount)
+								  const D3D11_INPUT_ELEMENT_DESC* InputElements,
+								  UINT InputElementCount)
 {
 	return LoadShaderInternal(CompileKey, InputElements, InputElementCount, false);
 }
 
 bool FResourceManager::LoadShaderInternal(const FShaderCompileKey& CompileKey,
-                                          const D3D11_INPUT_ELEMENT_DESC* InputElements,
-                                          UINT InputElementCount,
-                                          bool bRegisterPathAlias)
+										  const D3D11_INPUT_ELEMENT_DESC* InputElements,
+										  UINT InputElementCount,
+										  bool bRegisterPathAlias)
 {
 	if (!CachedDevice.Get())
 	{
@@ -988,9 +1010,17 @@ bool FResourceManager::LoadShaderInternal(const FShaderCompileKey& CompileKey,
 	TComPtr<ID3DBlob> ErrorBlob;
 	const FCompiledShaderMacroData MacroData = BuildCompiledShaderMacroData(NormalizedKey.Macros);
 	const D3D_SHADER_MACRO* RawMacros = MacroData.Macros.empty() ? nullptr : MacroData.Macros.data();
+	const FString MacroLog = BuildShaderMacroLogString(NormalizedKey.Macros);
 
+	const double VSCompileStartSeconds = FPlatformTime::Seconds();
 	HRESULT hr = D3DCompileFromFile(FPaths::ToWide(NormalizedKey.FilePath).c_str(), RawMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		NormalizedKey.VSEntryPoint.c_str(), "vs_5_0", 0, 0, &VSBlob, &ErrorBlob);
+	const double VSCompileMS = (FPlatformTime::Seconds() - VSCompileStartSeconds) * 1000.0;
+	UE_LOG("[ShaderCompile] VS %.3f ms | File: %s | Entry: %s | Macros: %s",
+		VSCompileMS,
+		NormalizedKey.FilePath.c_str(),
+		NormalizedKey.VSEntryPoint.c_str(),
+		MacroLog.c_str());
 	if (FAILED(hr))
 	{
 		if (ErrorBlob)
@@ -1012,8 +1042,15 @@ bool FResourceManager::LoadShaderInternal(const FShaderCompileKey& CompileKey,
 	}
 	ErrorBlob.Reset();
 
+	const double PSCompileStartSeconds = FPlatformTime::Seconds();
 	hr = D3DCompileFromFile(FPaths::ToWide(NormalizedKey.FilePath).c_str(), RawMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		NormalizedKey.PSEntryPoint.c_str(), "ps_5_0", 0, 0, &PSBlob, &ErrorBlob);
+	const double PSCompileMS = (FPlatformTime::Seconds() - PSCompileStartSeconds) * 1000.0;
+	UE_LOG("[ShaderCompile] PS %.3f ms | File: %s | Entry: %s | Macros: %s",
+		PSCompileMS,
+		NormalizedKey.FilePath.c_str(),
+		NormalizedKey.PSEntryPoint.c_str(),
+		MacroLog.c_str());
 	if (FAILED(hr))
 	{
 		if (ErrorBlob)
@@ -1892,7 +1929,7 @@ UStaticMesh* FResourceManager::LoadStaticMeshWithOptions(const FString& Path, co
 		if (LoadedMeshData == nullptr)
 		{
 			UE_LOG("[StaticMeshLoad] Failed | Path=%s | BinarySec=%.6f | ObjSec=%.6f", Path.c_str(), BinaryLoadSec,
-			       ObjLoadSec);
+				   ObjLoadSec);
 			return nullptr;
 		}
 
@@ -1925,26 +1962,26 @@ UStaticMesh* FResourceManager::LoadStaticMeshWithOptions(const FString& Path, co
 		}
 	}
 
-    UStaticMesh* LoadedMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
-    LoadedMesh->SetMeshData(LoadedMeshData);
+	UStaticMesh* LoadedMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
+	LoadedMesh->SetMeshData(LoadedMeshData);
 
-    if (FEditorSettings::Get().ShowFlags.bEnableLOD)
-    {
-        const auto LodStart = std::chrono::steady_clock::now();
-        FStaticMeshSimplifier::BuildLODs(LoadedMesh);
-        const auto LodEnd = std::chrono::steady_clock::now();
-        double LodSec = std::chrono::duration<double>(LodEnd - LodStart).count();
-        UE_LOG("[StaticMeshLoad] Generated %d LODs for %s in %.3f sec",
-               LoadedMesh->GetValidLODCount(), Path.c_str(), LodSec);
-    }
-    else
-    {
-        UE_LOG("[StaticMeshLoad] LOD generation skipped for %s (Enable LOD is off)", Path.c_str());
-    }
+	if (FEditorSettings::Get().ShowFlags.bEnableLOD)
+	{
+		const auto LodStart = std::chrono::steady_clock::now();
+		FStaticMeshSimplifier::BuildLODs(LoadedMesh);
+		const auto LodEnd = std::chrono::steady_clock::now();
+		double LodSec = std::chrono::duration<double>(LodEnd - LodStart).count();
+		UE_LOG("[StaticMeshLoad] Generated %d LODs for %s in %.3f sec",
+			   LoadedMesh->GetValidLODCount(), Path.c_str(), LodSec);
+	}
+	else
+	{
+		UE_LOG("[StaticMeshLoad] LOD generation skipped for %s (Enable LOD is off)", Path.c_str());
+	}
 
-    StaticMeshes.insert({CacheKey, LoadedMesh});
+	StaticMeshes.insert({CacheKey, LoadedMesh});
 
-    return LoadedMesh;
+	return LoadedMesh;
 }
 
 UStaticMesh* FResourceManager::FindStaticMesh(const FString& Path) const
