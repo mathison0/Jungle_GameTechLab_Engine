@@ -9,7 +9,8 @@ cbuffer UberFrame : register(b0)
     float _UberFramePad0;
     float bIsWireframe;
     float bLightingEnabled;
-    float2 _UberFramePad1;
+    float UberDebugViewMode;
+    float _UberFramePad1;
     float3 WireframeRGB;
     float _UberFramePad2;
 }
@@ -199,6 +200,15 @@ FUberPSOutput ComposeOutput(FUberSurfaceData Surface, float3 FinalColor)
 
     Output.Color = float4(ResolvedColor, 1.0f);
     Output.Normal = float4(Surface.WorldNormal * 0.5f + 0.5f, NormalAlpha);
+    Output.WorldPos = float4(Surface.WorldPos, 1.0f);
+    return Output;
+}
+
+FUberPSOutput ComposeDebugOutput(FUberSurfaceData Surface, float3 DebugColor)
+{
+    FUberPSOutput Output;
+    Output.Color = float4(DebugColor, 1.0f);
+    Output.Normal = float4(Surface.WorldNormal * 0.5f + 0.5f, 1.0f);
     Output.WorldPos = float4(Surface.WorldPos, 1.0f);
     return Output;
 }

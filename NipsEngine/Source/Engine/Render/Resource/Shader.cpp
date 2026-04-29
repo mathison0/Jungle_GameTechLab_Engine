@@ -501,6 +501,7 @@ void FShaderBindingInstance::ApplyFrameParameters(const FRenderBus& RenderBus, I
 	SetVector3("CameraPosition", RenderBus.GetCameraPosition());
 	SetFloat("bIsWireframe", RenderBus.GetViewMode() == EViewMode::Wireframe ? 1.0f : 0.0f);
 	SetFloat("bLightingEnabled", RenderBus.GetViewMode() == EViewMode::Lit ? 1.0f : 0.0f);
+	SetFloat("UberDebugViewMode", static_cast<float>(RenderBus.GetViewMode()));
 	SetVector3("WireframeRGB", RenderBus.GetWireframeColor());
 	SetVector2("ViewportSize", RenderBus.GetViewportSize());
 	SetUInt("SceneGlobalLightCount", SceneGlobalLightCount);

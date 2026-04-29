@@ -12,6 +12,9 @@ enum class EViewMode : int32
     Wireframe,
     SceneDepth,
     WorldNormal,
+    PointShadowFace,
+    PointShadowDepthDelta,
+    PointShadowPCF,
     Count
 };
 
@@ -26,7 +29,11 @@ inline bool IsBufferVisualizationViewMode(EViewMode ViewMode)
 // 새 view mode가 decal/fog/fxaa를 건너뛰어야 하면 각 패스를 따로 늘리지 말고 여기서 정의한다.
 inline bool ShouldBypassSceneCompositePasses(EViewMode ViewMode)
 {
-    return ViewMode == EViewMode::Wireframe || IsBufferVisualizationViewMode(ViewMode);
+    return ViewMode == EViewMode::Wireframe ||
+        IsBufferVisualizationViewMode(ViewMode) ||
+        ViewMode == EViewMode::PointShadowFace ||
+        ViewMode == EViewMode::PointShadowDepthDelta ||
+        ViewMode == EViewMode::PointShadowPCF;
 }
 
 struct FShowFlags
