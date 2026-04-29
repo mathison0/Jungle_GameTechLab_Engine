@@ -2,7 +2,7 @@
   "Actors" : [{
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
-      "PrimitiveKey" : "112",
+      "PrimitiveKey" : "61",
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
@@ -32,7 +32,7 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "117",
+      "PrimitiveKey" : "66",
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
@@ -54,7 +54,7 @@
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
-      "PrimitiveKey" : "121",
+      "PrimitiveKey" : "70",
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
@@ -76,7 +76,7 @@
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
-      "PrimitiveKey" : "123",
+      "PrimitiveKey" : "72",
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
@@ -138,16 +138,11 @@
             "Children" : [],
             "ClassName" : "UDirectionalLightComponent",
             "Properties" : {
-              "CastShadow" : true,
               "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
               "Intensity" : 1.000000,
               "Location" : [0.000000, 0.000000, 0.000000],
               "Rotation" : [45.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "ShadowBias" : 0.500000,
-              "ShadowResolutionScale" : 2.000000,
-              "ShadowSharpen" : 0.000000,
-              "ShadowSlopeBias" : 0.500000,
               "Visible" : true,
               "bEditorOnly" : false,
               "bTickEnable" : true
@@ -161,7 +156,7 @@
           "Material" : {
             "Path" : "Asset/Materials/Editor/DirectionalLight.mat"
           },
-          "Rotation" : [89.900002, 0.000000, 0.000000],
+          "Rotation" : [89.899994, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
           "Visible" : true,
           "Width" : 1.000000,
@@ -179,17 +174,12 @@
             "ClassName" : "UPointLightComponent",
             "Properties" : {
               "AttenuationRadius" : 6.340000,
-              "CastShadow" : true,
               "Color" : [0.970464, 0.000000, 0.859905, 1.000000],
               "Intensity" : 2.000000,
               "LightFalloffExponent" : 1.000000,
               "Location" : [0.000000, 0.000000, 0.000000],
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "ShadowBias" : 0.500000,
-              "ShadowResolutionScale" : 2.000000,
-              "ShadowSharpen" : 0.000000,
-              "ShadowSlopeBias" : 0.500000,
               "Visible" : true,
               "bEditorOnly" : false,
               "bTickEnable" : true
@@ -221,7 +211,6 @@
             "ClassName" : "USpotLightComponent",
             "Properties" : {
               "AttenuationRadius" : 10.000000,
-              "CastShadow" : true,
               "Color" : [0.110381, 0.843882, 0.240369, 1.000000],
               "InnerConeAngle" : 20.000000,
               "Intensity" : 3.000000,
@@ -230,10 +219,6 @@
               "OuterConeAngle" : 40.000000,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "ShadowBias" : 0.500000,
-              "ShadowResolutionScale" : 2.000000,
-              "ShadowSharpen" : 0.000000,
-              "ShadowSlopeBias" : 0.500000,
               "Visible" : true,
               "bEditorOnly" : false,
               "bTickEnable" : true
@@ -256,48 +241,6 @@
         }
       },
       "bVisible" : true
-    }, {
-      "ClassName" : "APointLightActor",
-      "NonSceneComponents" : [],
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UPointLightComponent",
-            "Properties" : {
-              "AttenuationRadius" : 4.530000,
-              "CastShadow" : true,
-              "Color" : [0.000000, 0.050633, 1.000000, 1.000000],
-              "Intensity" : 1.000000,
-              "LightFalloffExponent" : 1.000000,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "ShadowBias" : 0.500000,
-              "ShadowResolutionScale" : 2.000000,
-              "ShadowSharpen" : 0.000000,
-              "ShadowSlopeBias" : 0.500000,
-              "Visible" : true,
-              "bEditorOnly" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UBillboardComponent",
-        "Properties" : {
-          "CastShadow" : true,
-          "Height" : 1.000000,
-          "Location" : [-1.977729, -3.844872, 2.284252],
-          "Material" : {
-            "Path" : "Asset/Materials/Editor/PointLight.mat"
-          },
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Visible" : true,
-          "Width" : 1.000000,
-          "bEditorOnly" : true,
-          "bTickEnable" : true
-        }
-      },
-      "bVisible" : true
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
@@ -311,28 +254,28 @@
     "Rotation" : [0.000000, 29.117857, -142.798859]
   },
   "Primitives" : {
-    "112" : {
+    "61" : {
       "Location" : [0.000000, 0.000000, -1.472475],
       "ObjStaticMeshAsset" : "Data/BasicShape/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
       "Scale" : [100.000000, 100.000000, 1.000000],
       "Type" : "StaticMeshComp"
     },
-    "117" : {
+    "66" : {
       "Location" : [3.260895, -3.694888, 0.752228],
       "ObjStaticMeshAsset" : "Data/BasicShape/Sphere_Lowpoly.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],
       "Type" : "StaticMeshComp"
     },
-    "121" : {
+    "70" : {
       "Location" : [0.000000, -7.322516, 1.174526],
       "ObjStaticMeshAsset" : "Data/BasicShape/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],
       "Type" : "StaticMeshComp"
     },
-    "123" : {
+    "72" : {
       "Location" : [4.959550, -8.842095, -0.122843],
       "ObjStaticMeshAsset" : "Data/BasicShape/Sphere.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],

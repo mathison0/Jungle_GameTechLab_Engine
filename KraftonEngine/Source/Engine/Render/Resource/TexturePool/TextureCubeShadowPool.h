@@ -43,7 +43,7 @@ public:
 	FTextureCubeShadowPool(FTextureCubeShadowPool&&) = delete;
 	FTextureCubeShadowPool& operator=(FTextureCubeShadowPool&&) = delete;
 
-	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InBaseResolution, uint32 InitialCubeCapacity = 1);
+	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InBaseResolution, uint32 InitialCubeCapacity = 0);
 	void Release();
 	bool EnsureVSMMode(bool bUseVSM);
 

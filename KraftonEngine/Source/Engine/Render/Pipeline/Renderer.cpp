@@ -302,7 +302,7 @@ void FRenderer::Create(HWND hWindow)
 	FShaderManager::Get().Initialize(Device.GetDevice());
 	Resources.Create(Device.GetDevice());
 	FTextureAtlasPool::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext(), 4096);
-	FTextureCubeShadowPool::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext(), 1024, 4);
+	FTextureCubeShadowPool::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext(), 1024);
 
 	TileBasedCulling.Initialize(Device.GetDevice());
 	ClusteredLightCuller.Initialize(Device.GetDevice(), Device.GetDeviceContext());
