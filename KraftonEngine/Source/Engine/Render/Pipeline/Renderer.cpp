@@ -8,6 +8,7 @@
 #include "Render/Proxy/FScene.h"
 #include "Render/Proxy/SceneEnvironment.h"
 #include "Render/Proxy/PrimitiveSceneProxy.h"
+#include "GameFramework/World.h"
 #include "Component/Light/PointLightComponent.h"
 #include "Component/Light/SpotLightComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
@@ -22,6 +23,17 @@
 
 namespace
 {
+	const char* GetShadowLogWorldTypeName(EWorldType WorldType)
+	{
+		switch (WorldType)
+		{
+		case EWorldType::Editor: return "Editor";
+		case EWorldType::Game: return "Game";
+		case EWorldType::PIE: return "PIE";
+		default: return "Unknown";
+		}
+	}
+
 	struct FShadowPassConstants
 	{
 		FMatrix LightVP;
@@ -201,9 +213,9 @@ namespace
 			const FVector Corners[8] =
 			{
 				FVector(-1.0f, -1.0f, 0.0f), FVector(-1.0f,  1.0f, 0.0f),
-				FVector( 1.0f, -1.0f, 0.0f), FVector( 1.0f,  1.0f, 0.0f),
+				FVector(1.0f, -1.0f, 0.0f), FVector(1.0f,  1.0f, 0.0f),
 				FVector(-1.0f, -1.0f, 1.0f), FVector(-1.0f,  1.0f, 1.0f),
-				FVector( 1.0f, -1.0f, 1.0f), FVector( 1.0f,  1.0f, 1.0f)
+				FVector(1.0f, -1.0f, 1.0f), FVector(1.0f,  1.0f, 1.0f)
 			};
 
 			float MinX = FLT_MAX;
@@ -288,6 +300,891 @@ namespace
 		bOutValid = Box.right > Box.left && Box.bottom > Box.top;
 		return Box;
 	}
+
+	struct FShadowScreenRect
+	{
+		float MinX = FLT_MAX;
+		float MinY = FLT_MAX;
+		float MaxX = -FLT_MAX;
+		float MaxY = -FLT_MAX;
+		bool bValid = false;
+
+		void Expand(float X, float Y)
+		{
+			MinX = std::min(MinX, X);
+			MinY = std::min(MinY, Y);
+			MaxX = std::max(MaxX, X);
+			MaxY = std::max(MaxY, Y);
+			bValid = true;
+		}
+
+		float Width() const
+		{
+			return bValid ? std::max(MaxX - MinX, 0.0f) : 0.0f;
+		}
+
+		float Height() const
+		{
+			return bValid ? std::max(MaxY - MinY, 0.0f) : 0.0f;
+		}
+	};
+
+	enum class EShadowAtlasRequestType
+	{
+		DirectionalCascade,
+		Spot
+	};
+
+	struct FShadowAtlasPieceRequest
+	{
+		uint32 PieceIndex = 0;
+		uint32 DesiredResolution = 0;
+		uint32 MinResolution = 0;
+
+		float Priority = 0.0f;
+		float Cost = 0.0f;
+		bool bMustAllocate = false;
+		bool bSelected = false;
+	};
+
+	struct FShadowAtlasRequest
+	{
+		EShadowAtlasRequestType Type = EShadowAtlasRequestType::Spot;
+		const ULightComponent* Light = nullptr;
+
+		uint32 SpotIndex = static_cast<uint32>(-1);
+		uint32 CascadeIndex = 0;
+
+		TArray<FShadowAtlasPieceRequest> Pieces;
+		FShadowHandleSet* ExistingHandleSet = nullptr;
+		FShadowHandleSet* AllocatedHandleSet = nullptr;
+		FTexturePoolHandleRequest DesiredHandleRequest;
+		FTexturePoolHandleRequest AllocatedHandleRequest;
+
+		float ScreenCoverageScore = 0.0f;
+		float LightContributionScore = 0.0f;
+		float ProximityScore = 0.0f;
+		float CasterReceiverScore = 0.0f;
+		float StabilityScore = 0.0f;
+		float FragmentationPenalty = 0.0f;
+
+		float FinalPriority = 0.0f;
+		float EfficiencyScore = 0.0f;
+		float ProjectedWidthPx = 0.0f;
+		float ProjectedHeightPx = 0.0f;
+		uint32 MaxAllowedResolution = 0;
+		uint32 ExistingResolution = 0;
+
+		bool bMustAllocate = false;
+		bool bSelected = false;
+		bool bAllocationFailed = false;
+		const char* RejectionReason = "not selected";
+	};
+
+	constexpr float ShadowAtlasScreenCoverageWeight = 0.35f;
+	constexpr float ShadowAtlasLightContributionWeight = 0.25f;
+	constexpr float ShadowAtlasProximityWeight = 0.20f;
+	constexpr float ShadowAtlasCasterReceiverWeight = 0.15f;
+	constexpr float ShadowAtlasStabilityWeight = 0.05f;
+	constexpr float ShadowAtlasSpotMustCoverageThreshold = 0.15f;
+	constexpr float ShadowAtlasSpotMustProximityThreshold = 0.65f;
+	constexpr float ShadowAtlasHysteresisFactor = 1.25f;
+	constexpr float ShadowAtlasProjectedResolutionScale = 1.5f;
+	constexpr uint32 ShadowAtlasMinSpotResolution = 256;
+	constexpr uint32 ShadowAtlasMaxDirectionalCascades = 4;
+	constexpr uint64 ShadowAtlasReleaseGraceFrames = 8;
+	constexpr uint64 ShadowAtlasDirectionalReleaseGraceFrames = 16;
+	constexpr uint64 ShadowAtlasAllocationFailureCooldownFrames = 12;
+	constexpr uint64 ShadowAtlasDownscaleStableFrames = 16;
+	constexpr bool bShadowAtlasVerboseLog = false;
+
+	float Clamp01(float Value)
+	{
+		return FMath::Clamp(Value, 0.0f, 1.0f);
+	}
+
+	bool ProjectWorldPointToScreen(
+		const FVector& WorldPosition,
+		const FMatrix& ViewProjection,
+		float ViewportWidth,
+		float ViewportHeight,
+		float& OutX,
+		float& OutY)
+	{
+		const float X =
+			WorldPosition.X * ViewProjection.M[0][0] +
+			WorldPosition.Y * ViewProjection.M[1][0] +
+			WorldPosition.Z * ViewProjection.M[2][0] +
+			ViewProjection.M[3][0];
+
+		const float Y =
+			WorldPosition.X * ViewProjection.M[0][1] +
+			WorldPosition.Y * ViewProjection.M[1][1] +
+			WorldPosition.Z * ViewProjection.M[2][1] +
+			ViewProjection.M[3][1];
+
+		const float W =
+			WorldPosition.X * ViewProjection.M[0][3] +
+			WorldPosition.Y * ViewProjection.M[1][3] +
+			WorldPosition.Z * ViewProjection.M[2][3] +
+			ViewProjection.M[3][3];
+
+		if (W <= 0.0001f)
+		{
+			return false;
+		}
+
+		const float NdcX = X / W;
+		const float NdcY = Y / W;
+		OutX = (NdcX * 0.5f + 0.5f) * ViewportWidth;
+		OutY = (-NdcY * 0.5f + 0.5f) * ViewportHeight;
+		return true;
+	}
+
+	FShadowScreenRect ProjectSphereBoundsToScreen(
+		const FFrameContext& Frame,
+		const FVector& Center,
+		float Radius)
+	{
+		FShadowScreenRect Rect;
+		if (Radius <= 0.0f || Frame.ViewportWidth <= 0.0f || Frame.ViewportHeight <= 0.0f)
+		{
+			return Rect;
+		}
+
+		if (FVector::Distance(Frame.CameraPosition, Center) <= Radius)
+		{
+			Rect.MinX = 0.0f;
+			Rect.MinY = 0.0f;
+			Rect.MaxX = Frame.ViewportWidth;
+			Rect.MaxY = Frame.ViewportHeight;
+			Rect.bValid = true;
+			return Rect;
+		}
+
+		const FMatrix ViewProjection = Frame.View * Frame.Proj;
+		const FVector Corners[8] =
+		{
+			Center + FVector(-Radius, -Radius, -Radius),
+			Center + FVector(-Radius, -Radius,  Radius),
+			Center + FVector(-Radius,  Radius, -Radius),
+			Center + FVector(-Radius,  Radius,  Radius),
+			Center + FVector(Radius, -Radius, -Radius),
+			Center + FVector(Radius, -Radius,  Radius),
+			Center + FVector(Radius,  Radius, -Radius),
+			Center + FVector(Radius,  Radius,  Radius)
+		};
+
+		for (const FVector& Corner : Corners)
+		{
+			float ScreenX = 0.0f;
+			float ScreenY = 0.0f;
+			if (ProjectWorldPointToScreen(Corner, ViewProjection, Frame.ViewportWidth, Frame.ViewportHeight, ScreenX, ScreenY))
+			{
+				Rect.Expand(ScreenX, ScreenY);
+			}
+		}
+
+		if (!Rect.bValid)
+		{
+			return Rect;
+		}
+
+		// TODO: Clip sphere bounds against the near plane instead of relying only on valid projected corners.
+		Rect.MinX = FMath::Clamp(Rect.MinX, 0.0f, Frame.ViewportWidth);
+		Rect.MinY = FMath::Clamp(Rect.MinY, 0.0f, Frame.ViewportHeight);
+		Rect.MaxX = FMath::Clamp(Rect.MaxX, 0.0f, Frame.ViewportWidth);
+		Rect.MaxY = FMath::Clamp(Rect.MaxY, 0.0f, Frame.ViewportHeight);
+		if (Rect.Width() <= 0.0f || Rect.Height() <= 0.0f)
+		{
+			Rect.bValid = false;
+		}
+		return Rect;
+	}
+
+	uint32 QuantizeShadowResolution(uint32 RequiredPixels)
+	{
+		if (RequiredPixels > 1024u)
+		{
+			return 2048;
+		}
+		if (RequiredPixels > 512u)
+		{
+			return 1024;
+		}
+		if (RequiredPixels > 256u)
+		{
+			return 512;
+		}
+		return 256;
+	}
+
+	uint32 ChooseSpotShadowResolutionFromProjectedRect(
+		const FShadowScreenRect& Rect,
+		uint32 MaxResolution)
+	{
+		if (!Rect.bValid || MaxResolution == 0)
+		{
+			return 0;
+		}
+
+		const float ProjectedPixels = std::max(Rect.Width(), Rect.Height());
+		const uint32 RequiredPixels = static_cast<uint32>(std::ceil(ProjectedPixels * ShadowAtlasProjectedResolutionScale));
+		const uint32 QuantizedResolution = QuantizeShadowResolution(RequiredPixels);
+		return std::min(QuantizedResolution, MaxResolution);
+	}
+
+	[[maybe_unused]] uint32 ComputeProjectedSpotShadowResolution(
+		const FFrameContext& Frame,
+		const FVector& LightPosition,
+		float AttenuationRadius,
+		uint32 MaxResolution)
+	{
+		const FShadowScreenRect Rect = ProjectSphereBoundsToScreen(Frame, LightPosition, AttenuationRadius);
+		return ChooseSpotShadowResolutionFromProjectedRect(Rect, MaxResolution);
+	}
+
+	uint32 GetHandleSetPrimaryResolution(const FShadowHandleSet* HandleSet)
+	{
+		return HandleSet && !HandleSet->AllocatedSizes.empty()
+			? HandleSet->AllocatedSizes[0]
+			: 0;
+	}
+
+	FTexturePoolHandleRequest MakeHandleRequestFromAllocatedSizes(
+		const FShadowHandleSet* HandleSet,
+		const FTexturePoolHandleRequest& FallbackRequest)
+	{
+		if (!HandleSet || HandleSet->AllocatedSizes.empty())
+		{
+			return FallbackRequest;
+		}
+
+		FTexturePoolHandleRequest Request;
+		Request.Sizes = HandleSet->AllocatedSizes;
+		return Request;
+	}
+
+	float ComputeShadowPriority(
+		float ScreenCoverageScore,
+		float LightContributionScore,
+		float ProximityScore,
+		float CasterReceiverScore,
+		float StabilityScore,
+		float FragmentationPenalty)
+	{
+		return ScreenCoverageScore * ShadowAtlasScreenCoverageWeight
+			+ LightContributionScore * ShadowAtlasLightContributionWeight
+			+ ProximityScore * ShadowAtlasProximityWeight
+			+ CasterReceiverScore * ShadowAtlasCasterReceiverWeight
+			+ StabilityScore * ShadowAtlasStabilityWeight
+			- FragmentationPenalty;
+	}
+
+	float ComputeLuminance(const FVector4& Color)
+	{
+		return Color.R * 0.2126f + Color.G * 0.7152f + Color.B * 0.0722f;
+	}
+
+	float ComputeLightContributionScore(float Intensity, const FVector4& Color)
+	{
+		return Clamp01((std::max(Intensity, 0.0f) * ComputeLuminance(Color)) / 8.0f);
+	}
+
+	float EstimateSphereScreenCoverage(const FFrameContext& Frame, const FVector& Center, float Radius)
+	{
+		if (Radius <= 0.0f || Frame.ViewportWidth <= 0.0f || Frame.ViewportHeight <= 0.0f)
+		{
+			return 0.0f;
+		}
+
+		if (Frame.bIsOrtho)
+		{
+			const float OrthoWidth = std::max(Frame.OrthoWidth, 1.0f);
+			const float NormalizedRadius = Radius / OrthoWidth;
+			return Clamp01(NormalizedRadius * NormalizedRadius * 4.0f);
+		}
+
+		const float DistanceToCenter = std::max(FVector::Distance(Frame.CameraPosition, Center), 1.0f);
+		const float MinViewportExtent = std::max(std::min(Frame.ViewportWidth, Frame.ViewportHeight), 1.0f);
+		const float ProjectedRadiusPixels = (Radius * Frame.Proj.M[1][1] / DistanceToCenter) * (Frame.ViewportHeight * 0.5f);
+		const float NormalizedRadius = ProjectedRadiusPixels / MinViewportExtent;
+		return Clamp01(NormalizedRadius * NormalizedRadius * 4.0f);
+	}
+
+	float EstimateInfluenceProximityScore(const FFrameContext& Frame, const FVector& Center, float Radius)
+	{
+		const float DistanceToInfluence = std::max(FVector::Distance(Frame.CameraPosition, Center) - Radius, 0.0f);
+		const float ReferenceDistance = std::max(Frame.FarClip * 0.25f, 1.0f);
+		return Clamp01(1.0f - (DistanceToInfluence / ReferenceDistance));
+	}
+
+	uint32 HalveResolution(uint32 Resolution, uint32 MinResolution)
+	{
+		return std::max(Resolution / 2u, MinResolution);
+	}
+
+	FTexturePoolHandleRequest MakeDirectionalHandleRequest(uint32 BaseResolution, bool bDownscaleFarCascades)
+	{
+		FTexturePoolHandleRequest Request;
+		for (uint32 CascadeIndex = 0; CascadeIndex < ShadowAtlasMaxDirectionalCascades; ++CascadeIndex)
+		{
+			uint32 Resolution = std::max(BaseResolution >> CascadeIndex, 1u);
+			if (bDownscaleFarCascades && CascadeIndex > 0)
+			{
+				Resolution = HalveResolution(Resolution, ShadowAtlasMinSpotResolution);
+			}
+			Request.Sizes.push_back(Resolution);
+		}
+		return Request;
+	}
+
+	void UpdateRequestCost(FShadowAtlasRequest& Request, FTextureAtlasPool& AtlasPool)
+	{
+		Request.FinalPriority = 0.0f;
+		for (FShadowAtlasPieceRequest& Piece : Request.Pieces)
+		{
+			FTexturePoolHandleRequest PieceCostRequest;
+			PieceCostRequest.Sizes.push_back(Piece.DesiredResolution);
+			Piece.Cost = AtlasPool.EstimateAllocationCost(PieceCostRequest);
+			Request.FinalPriority = std::max(Request.FinalPriority, Piece.Priority);
+			Request.bMustAllocate = Request.bMustAllocate || Piece.bMustAllocate;
+		}
+
+		const float TotalAtlasCost = std::max(AtlasPool.EstimateAllocationCost(Request.DesiredHandleRequest), 1.0f);
+		Request.EfficiencyScore = Request.FinalPriority / TotalAtlasCost;
+	}
+
+	void SelectDirectionalPieces(FShadowAtlasRequest& Request, EShadowMethod ShadowMethod)
+	{
+		if (Request.Pieces.empty())
+		{
+			return;
+		}
+
+		Request.Pieces[0].bSelected = true;
+		if (ShadowMethod != EShadowMethod::CSM)
+		{
+			return;
+		}
+
+		const float Thresholds[ShadowAtlasMaxDirectionalCascades] = { 0.0f, 0.58f, 0.42f, 0.28f };
+		for (uint32 CascadeIndex = 1; CascadeIndex < std::min<uint32>(static_cast<uint32>(Request.Pieces.size()), ShadowAtlasMaxDirectionalCascades); ++CascadeIndex)
+		{
+			Request.Pieces[CascadeIndex].bSelected = Request.Pieces[CascadeIndex].Priority >= Thresholds[CascadeIndex];
+		}
+	}
+
+	uint32 GetContiguousSelectedCascadeCount(const FShadowAtlasRequest& Request)
+	{
+		uint32 Count = 0;
+		for (const FShadowAtlasPieceRequest& Piece : Request.Pieces)
+		{
+			if (!Piece.bSelected)
+			{
+				break;
+			}
+			++Count;
+		}
+		return Count;
+	}
+
+	void BuildShadowAtlasRequests(
+		const FFrameContext& Frame,
+		const FSceneEnvironment& Env,
+		FTextureAtlasPool& AtlasPool,
+		const TArray<uint32>& ShadowedSpotIndices,
+		bool bShadowDirectional,
+		uint64 ShadowAtlasFrameIndex,
+		TArray<FShadowAtlasRequest>& OutRequests)
+	{
+		if (bShadowDirectional)
+		{
+			const UDirectionalLightComponent* DirectionalLight = Env.GetGlobalDirectionalLightOwner();
+			if (DirectionalLight)
+			{
+				const FGlobalDirectionalLightParams& Params = Env.GetGlobalDirectionalLightParams();
+				const uint32 BaseResolution = DirectionalLight->GetShadowResolution();
+				const bool bUseCSM = Frame.RenderOptions.ShadowMethod == EShadowMethod::CSM;
+				const uint32 PieceCount = bUseCSM ? ShadowAtlasMaxDirectionalCascades : 1u;
+
+				FShadowAtlasRequest Request = {};
+				Request.Type = EShadowAtlasRequestType::DirectionalCascade;
+				Request.Light = DirectionalLight;
+				Request.ExistingHandleSet = DirectionalLight->PeekShadowHandleSet();
+				const_cast<UDirectionalLightComponent*>(DirectionalLight)->MarkShadowAtlasRequested(ShadowAtlasFrameIndex);
+				Request.DesiredHandleRequest = MakeDirectionalHandleRequest(BaseResolution, false);
+				Request.LightContributionScore = ComputeLightContributionScore(Params.Intensity, Params.LightColor);
+				Request.ProximityScore = 1.0f;
+				// TODO: Replace this constant with caster/receiver overlap tests.
+				Request.CasterReceiverScore = 1.0f;
+				Request.StabilityScore = (Request.ExistingHandleSet && Request.ExistingHandleSet->bIsValid) ? 1.0f : 0.0f;
+				Request.FragmentationPenalty = 0.0f;
+
+				const float CascadeCoverage[ShadowAtlasMaxDirectionalCascades] = { 1.0f, 0.72f, 0.42f, 0.22f };
+				for (uint32 CascadeIndex = 0; CascadeIndex < PieceCount; ++CascadeIndex)
+				{
+					FShadowAtlasPieceRequest Piece = {};
+					Piece.PieceIndex = CascadeIndex;
+					Piece.DesiredResolution = std::max(BaseResolution >> CascadeIndex, 1u);
+					Piece.MinResolution = CascadeIndex == 0 ? Piece.DesiredResolution : HalveResolution(Piece.DesiredResolution, ShadowAtlasMinSpotResolution);
+					Piece.bMustAllocate = CascadeIndex == 0;
+					Piece.Priority = ComputeShadowPriority(
+						CascadeCoverage[CascadeIndex],
+						Request.LightContributionScore,
+						Request.ProximityScore,
+						Request.CasterReceiverScore,
+						Request.StabilityScore,
+						Request.FragmentationPenalty);
+					Request.Pieces.push_back(Piece);
+				}
+
+				Request.ScreenCoverageScore = Request.Pieces.empty() ? 0.0f : Request.Pieces[0].Priority;
+				UpdateRequestCost(Request, AtlasPool);
+				OutRequests.push_back(Request);
+			}
+		}
+
+		for (uint32 SpotIndex : ShadowedSpotIndices)
+		{
+			const USpotLightComponent* SpotLight = Env.GetSpotLightOwner(SpotIndex);
+			if (!SpotLight)
+			{
+				continue;
+			}
+
+			const FSpotLightParams& Params = Env.GetSpotLight(SpotIndex);
+			FShadowAtlasRequest Request = {};
+			Request.Type = EShadowAtlasRequestType::Spot;
+			Request.Light = SpotLight;
+			Request.SpotIndex = SpotIndex;
+			Request.ExistingHandleSet = SpotLight->PeekShadowHandleSet();
+			const_cast<USpotLightComponent*>(SpotLight)->MarkShadowAtlasRequested(ShadowAtlasFrameIndex);
+			Request.ExistingResolution = GetHandleSetPrimaryResolution(Request.ExistingHandleSet);
+			Request.ScreenCoverageScore = EstimateSphereScreenCoverage(Frame, Params.Position, Params.AttenuationRadius);
+			Request.LightContributionScore = ComputeLightContributionScore(Params.Intensity, Params.LightColor);
+			Request.ProximityScore = EstimateInfluenceProximityScore(Frame, Params.Position, Params.AttenuationRadius);
+			// TODO: Replace this constant with caster/receiver overlap tests.
+			Request.CasterReceiverScore = 1.0f;
+			Request.StabilityScore = (Request.ExistingHandleSet && Request.ExistingHandleSet->bIsValid) ? 1.0f : 0.0f;
+			Request.FragmentationPenalty = 0.0f;
+			Request.FinalPriority = ComputeShadowPriority(
+				Request.ScreenCoverageScore,
+				Request.LightContributionScore,
+				Request.ProximityScore,
+				Request.CasterReceiverScore,
+				Request.StabilityScore,
+				Request.FragmentationPenalty);
+			Request.bMustAllocate = Request.ScreenCoverageScore >= ShadowAtlasSpotMustCoverageThreshold
+				&& Request.ProximityScore >= ShadowAtlasSpotMustProximityThreshold;
+
+			Request.MaxAllowedResolution = SpotLight->GetShadowResolution();
+			const FShadowScreenRect ProjectedRect = ProjectSphereBoundsToScreen(Frame, Params.Position, Params.AttenuationRadius);
+			Request.ProjectedWidthPx = ProjectedRect.Width();
+			Request.ProjectedHeightPx = ProjectedRect.Height();
+			const uint32 DesiredResolution = ChooseSpotShadowResolutionFromProjectedRect(ProjectedRect, Request.MaxAllowedResolution);
+			if (DesiredResolution == 0)
+			{
+				if (bShadowAtlasVerboseLog)
+				{
+					UE_LOG("[ShadowAtlas] skipped spot light=%u: projected attenuation sphere is not visible", SpotIndex);
+				}
+				continue;
+			}
+			Request.DesiredHandleRequest.Sizes.push_back(DesiredResolution);
+
+			FShadowAtlasPieceRequest Piece = {};
+			Piece.PieceIndex = 0;
+			Piece.DesiredResolution = DesiredResolution;
+			Piece.MinResolution = ShadowAtlasMinSpotResolution;
+			Piece.Priority = Request.FinalPriority;
+			Piece.bMustAllocate = Request.bMustAllocate;
+			Request.Pieces.push_back(Piece);
+
+			UpdateRequestCost(Request, AtlasPool);
+			OutRequests.push_back(Request);
+		}
+	}
+
+	void ReleaseInvalidExistingHandleSets(TArray<FShadowAtlasRequest>& Requests, FTextureAtlasPool& AtlasPool)
+	{
+		// This only cleans invalid handles for lights that produced a current-frame atlas request.
+		// Off-screen stale handle lifetime is handled by ReleaseStaleAtlasShadowHandles().
+		for (FShadowAtlasRequest& Request : Requests)
+		{
+			if (Request.ExistingHandleSet
+				&& (!Request.ExistingHandleSet->bIsValid || Request.ExistingHandleSet->GetPool() != &AtlasPool))
+			{
+				const_cast<ULightComponent*>(Request.Light)->ReleaseShadowHandleSetForRenderer();
+				Request.ExistingHandleSet = nullptr;
+			}
+		}
+	}
+
+	void LogShadowAtlasAllocation(const FShadowAtlasRequest& Request, FTextureAtlasPool& AtlasPool)
+	{
+		const UWorld* World = Request.Light ? Request.Light->GetWorld() : nullptr;
+		const EWorldType WorldType = World ? World->GetWorldType() : EWorldType::Editor;
+		UE_LOG("[ShadowAtlas] Allocate Light=%p WorldType=%s Pool=%p HandlePool=%p",
+			static_cast<const void*>(Request.Light),
+			GetShadowLogWorldTypeName(WorldType),
+			static_cast<void*>(&AtlasPool),
+			Request.AllocatedHandleSet ? static_cast<void*>(Request.AllocatedHandleSet->GetPool()) : nullptr);
+	}
+
+	bool TryAllocateRequest(FShadowAtlasRequest& Request, FTextureAtlasPool& AtlasPool, uint64 ShadowAtlasFrameIndex)
+	{
+		if (Request.ExistingHandleSet && Request.ExistingHandleSet->bIsValid)
+		{
+			if (Request.Type == EShadowAtlasRequestType::DirectionalCascade)
+			{
+				Request.AllocatedHandleSet = Request.ExistingHandleSet;
+				Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+				Request.bSelected = true;
+				Request.RejectionReason = "kept existing";
+				const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+				return true;
+			}
+
+			const uint32 CurrentResolution = GetHandleSetPrimaryResolution(Request.ExistingHandleSet);
+			const uint32 DesiredResolution = Request.Pieces.empty()
+				? (Request.DesiredHandleRequest.Sizes.empty() ? ShadowAtlasMinSpotResolution : Request.DesiredHandleRequest.Sizes[0])
+				: Request.Pieces[0].DesiredResolution;
+			Request.ExistingResolution = CurrentResolution;
+			ULightComponent* MutableLight = const_cast<ULightComponent*>(Request.Light);
+
+			if (CurrentResolution == DesiredResolution && CurrentResolution > 0)
+			{
+				MutableLight->ClearShadowAtlasDownscaleCandidate();
+
+				Request.AllocatedHandleSet = Request.ExistingHandleSet;
+				Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+				Request.bSelected = true;
+				Request.RejectionReason = "kept existing same resolution";
+				MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+				return true;
+			}
+
+			if (CurrentResolution < DesiredResolution)
+			{
+				MutableLight->ClearShadowAtlasDownscaleCandidate();
+
+				FTexturePoolHandleRequest UpgradeAttempt;
+				UpgradeAttempt.Sizes.push_back(DesiredResolution);
+				FShadowHandleSet* UpgradedHandleSet = AtlasPool.TryGetTextureHandleNoResize(UpgradeAttempt);
+				if (UpgradedHandleSet)
+				{
+					Request.AllocatedHandleSet = UpgradedHandleSet;
+					Request.AllocatedHandleRequest = UpgradeAttempt;
+					if (!Request.Pieces.empty())
+					{
+						Request.Pieces[0].DesiredResolution = DesiredResolution;
+					}
+					Request.bSelected = true;
+					Request.RejectionReason = "upgraded resolution step";
+					MutableLight->SetShadowHandleSetForRenderer(UpgradedHandleSet);
+					MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+					LogShadowAtlasAllocation(Request, AtlasPool);
+					return true;
+				}
+
+				Request.AllocatedHandleSet = Request.ExistingHandleSet;
+				Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+				Request.bSelected = true;
+				Request.bAllocationFailed = true;
+				Request.RejectionReason = "kept lower-res existing after upgrade failed";
+				MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+				MutableLight->MarkShadowAtlasAllocationFailed(ShadowAtlasFrameIndex, DesiredResolution);
+				return true;
+			}
+
+			if (CurrentResolution > DesiredResolution && DesiredResolution >= ShadowAtlasMinSpotResolution)
+			{
+				const bool bCanDownscale = MutableLight->UpdateShadowAtlasDownscaleCandidate(
+					DesiredResolution,
+					ShadowAtlasFrameIndex,
+					ShadowAtlasDownscaleStableFrames);
+
+				if (!bCanDownscale)
+				{
+					Request.AllocatedHandleSet = Request.ExistingHandleSet;
+					Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+					Request.bSelected = true;
+					Request.RejectionReason = "kept larger existing waiting downscale hysteresis";
+					MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+					return true;
+				}
+
+				MutableLight->ReleaseShadowHandleSetForRenderer();
+				Request.ExistingHandleSet = nullptr;
+
+				FTexturePoolHandleRequest DownscaleAttempt;
+				DownscaleAttempt.Sizes.push_back(DesiredResolution);
+				FShadowHandleSet* DownscaledHandleSet = AtlasPool.TryGetTextureHandleNoResize(DownscaleAttempt);
+				if (DownscaledHandleSet)
+				{
+					Request.AllocatedHandleSet = DownscaledHandleSet;
+					Request.AllocatedHandleRequest = DownscaleAttempt;
+					if (!Request.Pieces.empty())
+					{
+						Request.Pieces[0].DesiredResolution = DesiredResolution;
+					}
+					Request.bSelected = true;
+					Request.RejectionReason = "downscaled resolution step";
+					MutableLight->SetShadowHandleSetForRenderer(DownscaledHandleSet);
+					MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+					MutableLight->ClearShadowAtlasDownscaleCandidate();
+					LogShadowAtlasAllocation(Request, AtlasPool);
+					return true;
+				}
+
+				Request.RejectionReason = "downscale failed after release";
+				Request.bAllocationFailed = true;
+				MutableLight->MarkShadowAtlasAllocationFailed(ShadowAtlasFrameIndex, DesiredResolution);
+				MutableLight->ClearShadowAtlasDownscaleCandidate();
+				if (bShadowAtlasVerboseLog)
+				{
+					UE_LOG("[ShadowAtlas] spot downscale failed after releasing existing handle desired=%u current=%u", DesiredResolution, CurrentResolution);
+				}
+				return false;
+			}
+
+			Request.AllocatedHandleSet = Request.ExistingHandleSet;
+			Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+			Request.bSelected = true;
+			Request.RejectionReason = "kept existing invalid desired resolution";
+			MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+			return true;
+		}
+
+		if (Request.Type == EShadowAtlasRequestType::DirectionalCascade)
+		{
+			FTexturePoolHandleRequest Attempts[2] =
+			{
+				MakeDirectionalHandleRequest(Request.DesiredHandleRequest.Sizes.empty() ? 1024u : Request.DesiredHandleRequest.Sizes[0], false),
+				MakeDirectionalHandleRequest(Request.DesiredHandleRequest.Sizes.empty() ? 1024u : Request.DesiredHandleRequest.Sizes[0], true)
+			};
+
+			for (const FTexturePoolHandleRequest& Attempt : Attempts)
+			{
+				FShadowHandleSet* HandleSet = AtlasPool.TryGetTextureHandleNoResize(Attempt);
+				if (!HandleSet)
+				{
+					continue;
+				}
+
+				Request.AllocatedHandleSet = HandleSet;
+				Request.AllocatedHandleRequest = Attempt;
+				Request.bSelected = true;
+				Request.RejectionReason = "allocated";
+				const_cast<ULightComponent*>(Request.Light)->SetShadowHandleSetForRenderer(HandleSet);
+				const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+				LogShadowAtlasAllocation(Request, AtlasPool);
+				return true;
+			}
+
+			Request.RejectionReason = "no space";
+			Request.bAllocationFailed = true;
+			const uint32 FailedResolution = Request.DesiredHandleRequest.Sizes.empty() ? 0u : Request.DesiredHandleRequest.Sizes[0];
+			const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasAllocationFailed(ShadowAtlasFrameIndex, FailedResolution);
+			return false;
+		}
+
+		uint32 Resolution = Request.Pieces.empty() ? ShadowAtlasMinSpotResolution : Request.Pieces[0].DesiredResolution;
+		if (!Request.bMustAllocate
+			&& const_cast<ULightComponent*>(Request.Light)->ShouldSkipShadowAtlasAllocation(
+				ShadowAtlasFrameIndex,
+				Resolution,
+				ShadowAtlasAllocationFailureCooldownFrames))
+		{
+			Request.RejectionReason = "cooldown";
+			return false;
+		}
+
+		while (Resolution >= ShadowAtlasMinSpotResolution)
+		{
+			FTexturePoolHandleRequest Attempt;
+			Attempt.Sizes.push_back(Resolution);
+
+			FShadowHandleSet* HandleSet = AtlasPool.TryGetTextureHandleNoResize(Attempt);
+			if (HandleSet)
+			{
+				Request.AllocatedHandleSet = HandleSet;
+				Request.AllocatedHandleRequest = Attempt;
+				Request.Pieces[0].DesiredResolution = Resolution;
+				Request.bSelected = true;
+				Request.RejectionReason = "allocated";
+				const_cast<ULightComponent*>(Request.Light)->SetShadowHandleSetForRenderer(HandleSet);
+				const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+				LogShadowAtlasAllocation(Request, AtlasPool);
+				return true;
+			}
+
+			if (Resolution == ShadowAtlasMinSpotResolution)
+			{
+				break;
+			}
+			Resolution = HalveResolution(Resolution, ShadowAtlasMinSpotResolution);
+		}
+
+		Request.RejectionReason = "no space";
+		Request.bAllocationFailed = true;
+		const uint32 FailedResolution = Request.Pieces.empty() ? ShadowAtlasMinSpotResolution : Request.Pieces[0].DesiredResolution;
+		const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasAllocationFailed(ShadowAtlasFrameIndex, FailedResolution);
+		return false;
+	}
+
+	void SelectShadowAtlasRequests(
+		TArray<FShadowAtlasRequest>& Requests,
+		FTextureAtlasPool& AtlasPool,
+		EShadowMethod ShadowMethod,
+		uint64 ShadowAtlasFrameIndex)
+	{
+		for (FShadowAtlasRequest& Request : Requests)
+		{
+			if (Request.Type == EShadowAtlasRequestType::DirectionalCascade)
+			{
+				SelectDirectionalPieces(Request, ShadowMethod);
+			}
+		}
+
+		TArray<uint32> Order;
+		Order.reserve(Requests.size());
+		for (uint32 Index = 0; Index < static_cast<uint32>(Requests.size()); ++Index)
+		{
+			Order.push_back(Index);
+		}
+
+		std::sort(Order.begin(), Order.end(), [&Requests, &AtlasPool](uint32 A, uint32 B)
+			{
+				const FShadowAtlasRequest& Left = Requests[A];
+				const FShadowAtlasRequest& Right = Requests[B];
+				const bool bLeftExisting = Left.ExistingHandleSet && Left.ExistingHandleSet->bIsValid;
+				const bool bRightExisting = Right.ExistingHandleSet && Right.ExistingHandleSet->bIsValid;
+				if (bLeftExisting != bRightExisting)
+				{
+					const FShadowAtlasRequest& Existing = bLeftExisting ? Left : Right;
+					const FShadowAtlasRequest& NewRequest = bLeftExisting ? Right : Left;
+					const bool bNewBeatsHysteresis = NewRequest.FinalPriority > Existing.FinalPriority * ShadowAtlasHysteresisFactor;
+					if (!bNewBeatsHysteresis)
+					{
+						return bLeftExisting;
+					}
+				}
+				if (Left.bMustAllocate != Right.bMustAllocate)
+				{
+					return Left.bMustAllocate;
+				}
+				if (Left.bMustAllocate && Right.bMustAllocate)
+				{
+					if (Left.FinalPriority != Right.FinalPriority)
+					{
+						return Left.FinalPriority > Right.FinalPriority;
+					}
+					return AtlasPool.EstimateAllocationCost(Left.DesiredHandleRequest) > AtlasPool.EstimateAllocationCost(Right.DesiredHandleRequest);
+				}
+				return Left.EfficiencyScore > Right.EfficiencyScore;
+			});
+
+		// TODO: Add skyline/best-fit fragmentation estimator.
+		// Current grid allocator uses best-area-fit FreeRects; large high-priority requests are still sorted earlier to reduce fragmentation.
+		for (uint32 RequestIndex : Order)
+		{
+			FShadowAtlasRequest& Request = Requests[RequestIndex];
+			if (!Request.bMustAllocate && Request.EfficiencyScore <= 0.0f)
+			{
+				Request.RejectionReason = "low priority";
+				continue;
+			}
+
+			TryAllocateRequest(Request, AtlasPool, ShadowAtlasFrameIndex);
+		}
+	}
+
+	uint32 ReleaseStaleAtlasShadowHandles(const FSceneEnvironment& Env, uint64 ShadowAtlasFrameIndex)
+	{
+		uint32 ReleasedCount = 0;
+		for (uint32 SpotIndex = 0; SpotIndex < Env.GetNumSpotLights(); ++SpotIndex)
+		{
+			USpotLightComponent* SpotLight = const_cast<USpotLightComponent*>(Env.GetSpotLightOwner(SpotIndex));
+			if (SpotLight && SpotLight->ShouldReleaseShadowAtlasHandle(ShadowAtlasFrameIndex, ShadowAtlasReleaseGraceFrames))
+			{
+				SpotLight->ReleaseShadowHandleSetForRenderer();
+				++ReleasedCount;
+			}
+		}
+
+		UDirectionalLightComponent* DirectionalLight = const_cast<UDirectionalLightComponent*>(Env.GetGlobalDirectionalLightOwner());
+		if (DirectionalLight && DirectionalLight->ShouldReleaseShadowAtlasHandle(ShadowAtlasFrameIndex, ShadowAtlasDirectionalReleaseGraceFrames))
+		{
+			DirectionalLight->ReleaseShadowHandleSetForRenderer();
+			++ReleasedCount;
+		}
+
+		// TODO: Add stale lifetime management for FTextureCubeShadowPool point-light handles separately.
+		return ReleasedCount;
+	}
+
+	void LogShadowAtlasSelection(
+		const TArray<FShadowAtlasRequest>& Requests,
+		FTextureAtlasPool& AtlasPool,
+		uint32 StaleReleasedCount)
+	{
+		static uint32 LogFrameCounter = 0;
+		if ((LogFrameCounter++ % 120u) != 0u)
+		{
+			return;
+		}
+
+		uint32 SelectedCount = 0;
+		uint32 AllocationFailureCount = 0;
+		for (const FShadowAtlasRequest& Request : Requests)
+		{
+			SelectedCount += Request.bSelected ? 1u : 0u;
+			AllocationFailureCount += Request.bAllocationFailed ? 1u : 0u;
+		}
+
+		UE_LOG("[ShadowAtlas] Pool=%p candidates=%u selected=%u rejected=%u staleReleased=%u allocFailed=%u freeRects=%u totalFree=%llu largestFree=%llu fragmentation=%.2f",
+			static_cast<void*>(&AtlasPool),
+			static_cast<uint32>(Requests.size()),
+			SelectedCount,
+			static_cast<uint32>(Requests.size()) - SelectedCount,
+			StaleReleasedCount,
+			AllocationFailureCount,
+			AtlasPool.GetAllocatorFreeRectCount(),
+			AtlasPool.GetAllocatorTotalFreeArea(),
+			AtlasPool.GetAllocatorLargestFreeRectArea(),
+			AtlasPool.GetAllocatorFragmentationRatio());
+
+		if (!bShadowAtlasVerboseLog)
+		{
+			return;
+		}
+
+		for (const FShadowAtlasRequest& Request : Requests)
+		{
+			const char* TypeName = Request.Type == EShadowAtlasRequestType::DirectionalCascade ? "Directional" : "Spot";
+			const uint32 LightIndex = Request.Type == EShadowAtlasRequestType::Spot ? Request.SpotIndex : 0xffffffffu;
+			const uint32 AllocatedResolution = Request.AllocatedHandleRequest.Sizes.empty() ? 0u : Request.AllocatedHandleRequest.Sizes[0];
+			const uint32 DesiredResolution = Request.DesiredHandleRequest.Sizes.empty() ? 0u : Request.DesiredHandleRequest.Sizes[0];
+
+			UE_LOG("[ShadowAtlas] type=%s light=%u cascade=%u existing=%u desired=%u allocated=%u max=%u projected=(%.1f x %.1f) priority=%.3f efficiency=%.6f must=%u selected=%u reason=%s",
+				TypeName,
+				LightIndex,
+				Request.CascadeIndex,
+				Request.ExistingResolution,
+				DesiredResolution,
+				AllocatedResolution,
+				Request.MaxAllowedResolution,
+				Request.ProjectedWidthPx,
+				Request.ProjectedHeightPx,
+				Request.FinalPriority,
+				Request.EfficiencyScore,
+				Request.bMustAllocate ? 1u : 0u,
+				Request.bSelected ? 1u : 0u,
+				Request.RejectionReason);
+		}
+	}
 }
 
 void FRenderer::Create(HWND hWindow)
@@ -301,8 +1198,7 @@ void FRenderer::Create(HWND hWindow)
 
 	FShaderManager::Get().Initialize(Device.GetDevice());
 	Resources.Create(Device.GetDevice());
-	FTextureAtlasPool::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext(), 4096);
-	FTextureCubeShadowPool::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext(), 1024);
+	FTextureCubeShadowPool::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext(), 1024, 4);
 
 	TileBasedCulling.Initialize(Device.GetDevice());
 	ClusteredLightCuller.Initialize(Device.GetDevice(), Device.GetDeviceContext());
@@ -339,23 +1235,34 @@ void FRenderer::BeginFrame()
 }
 
 //ShadowMap을 그리기 위한 ShadowRenderTask생성하는 부분
-void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Scene, FShadowPassData& OutShadowPassData)
+void FRenderer::BuildShadowPassData(const FFrameContext& Frame, FScene& Scene, FShadowPassData& OutShadowPassData)
 {
 	const FSceneEnvironment& Env = Scene.GetEnvironment();
+	FTextureAtlasPool& AtlasPool = Scene.GetShadowAtlasPool();
+	const uint64 CurrentShadowAtlasFrame = ShadowAtlasFrameIndex++;
+	static const FTextureAtlasPool* LastShadowPassLoggedPool = nullptr;
+	if (LastShadowPassLoggedPool != &AtlasPool)
+	{
+		LastShadowPassLoggedPool = &AtlasPool;
+		UE_LOG("[ShadowAtlas] ShadowPass Scene=%s Pool=%p",
+			GetShadowLogWorldTypeName(Scene.GetDebugWorldType()),
+			static_cast<void*>(&AtlasPool));
+	}
 	OutShadowPassData.BindingData.PointLightShadowIndices.assign(Env.GetNumPointLights(), -1);
 	OutShadowPassData.BindingData.SpotLightShadowIndices.assign(Env.GetNumSpotLights(), -1);
 	OutShadowPassData.BindingData.DirectionalShadowIndex = -1;
 
 	if (Frame.RenderOptions.ViewMode == EViewMode::Unlit)
 	{
+		ReleaseStaleAtlasShadowHandles(Env, CurrentShadowAtlasFrame);
 		return;
 	}
 
 	const bool bUseVSM = Frame.RenderOptions.ShadowFilterMode == EShadowFilterMode::VSM;
-	FTextureAtlasPool::Get().EnsureAtlasMode(Frame.RenderOptions.ShadowFilterMode);
+	AtlasPool.EnsureAtlasMode(Frame.RenderOptions.ShadowFilterMode);
 	FTextureCubeShadowPool::Get().EnsureVSMMode(bUseVSM);
 
-	const uint32 AtlasTextureSize = FTextureAtlasPool::Get().GetTextureSize();
+	const uint32 AtlasTextureSize = AtlasPool.GetTextureSize();
 	const uint32 NumPointLights = Env.GetNumPointLights();
 	const bool bShadowDirectional = [&Env]()
 		{
@@ -410,36 +1317,14 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 	}
 #pragma endregion	
 
-	// 1차 패스: 필요한 핸들을 모두 확보해 atlas resize를 먼저 끝낸다.
-	//라고는 하는데 Atlas 크기 제한있어서 이거 나중에 제한 걸거임, 애초에 위의 오브젝트 컬링 단계에서 필요한 놈들만 골랐으면 안걸어도 괜찮을지도
-#pragma region ResizeState
-	if (bShadowDirectional)
-	{
-		const UDirectionalLightComponent* DirectionalLight = Env.GetGlobalDirectionalLightOwner();
-		if (DirectionalLight)
-		{
-			const_cast<UDirectionalLightComponent*>(DirectionalLight)->GetShadowHandleSet();
-		}
-	}
-	for (uint32 SpotIndex : ShadowedSpotIndices)
-	{
-		const USpotLightComponent* SpotLight = Env.GetSpotLightOwner(SpotIndex);
-		if (SpotLight)
-		{
-			const_cast<USpotLightComponent*>(SpotLight)->GetShadowHandleSet();
-		}
-	}
-	for (uint32 PointIndex : ShadowedPointIndices)
-	{
-		const UPointLightComponent* PointLight = Env.GetPointLightOwner(PointIndex);
-		if (PointLight)
-		{
-			const_cast<UPointLightComponent*>(PointLight)->GetShadowMapKey();
-		}
-	}
-#pragma endregion
+	TArray<FShadowAtlasRequest> AtlasRequests;
+	BuildShadowAtlasRequests(Frame, Env, AtlasPool, ShadowedSpotIndices, bShadowDirectional, CurrentShadowAtlasFrame, AtlasRequests);
+	ReleaseInvalidExistingHandleSets(AtlasRequests, AtlasPool);
+	SelectShadowAtlasRequests(AtlasRequests, AtlasPool, Frame.RenderOptions.ShadowMethod, CurrentShadowAtlasFrame);
+	const uint32 StaleReleasedCount = ReleaseStaleAtlasShadowHandles(Env, CurrentShadowAtlasFrame);
+	LogShadowAtlasSelection(AtlasRequests, AtlasPool, StaleReleasedCount);
 
-	// 2차 패스: 최종적으로 안정화된 handle/DSV/UV로 render task를 만든다.
+	// Point lights keep the cube-shadow path. Atlas2D requests are allocated only after priority selection.
 #pragma region CreateRenderTask
 
 	//PointLightTask 생성 관련
@@ -526,19 +1411,25 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 
 	//SpotLightTask 생성 관련
 #pragma region SpotLightTask
-	for (uint32 SpotIndex : ShadowedSpotIndices)
+	for (const FShadowAtlasRequest& AtlasRequest : AtlasRequests)
 	{
+		if (AtlasRequest.Type != EShadowAtlasRequestType::Spot || !AtlasRequest.bSelected)
+		{
+			continue;
+		}
+
+		const uint32 SpotIndex = AtlasRequest.SpotIndex;
 		const USpotLightComponent* SpotLight = Env.GetSpotLightOwner(SpotIndex);
 		const FSpotLightParams& Params = Env.GetSpotLight(SpotIndex);
-		FShadowHandleSet* HandleSet = SpotLight ? const_cast<USpotLightComponent*>(SpotLight)->GetShadowHandleSet() : nullptr;
+		FShadowHandleSet* HandleSet = AtlasRequest.AllocatedHandleSet;
 		if (!HandleSet)
 		{
 			continue;
 		}
 
-		TArray<FAtlasUV> AtlasUVs = FTextureAtlasPool::Get().GetAtlasUVArray(HandleSet);
-		TArray<ID3D11DepthStencilView*> DSVs = FTextureAtlasPool::Get().GetDSVs(HandleSet);
-		TArray<ID3D11RenderTargetView*> RTVs = bUseVSM ? FTextureAtlasPool::Get().GetRTVs(HandleSet) : TArray<ID3D11RenderTargetView*>();
+		TArray<FAtlasUV> AtlasUVs = AtlasPool.GetAtlasUVArray(HandleSet);
+		TArray<ID3D11DepthStencilView*> DSVs = AtlasPool.GetDSVs(HandleSet);
+		TArray<ID3D11RenderTargetView*> RTVs = bUseVSM ? AtlasPool.GetRTVs(HandleSet) : TArray<ID3D11RenderTargetView*>();
 		const bool bMissingVSMTarget = bUseVSM && (RTVs.empty() || !RTVs[0]);
 		if (AtlasUVs.empty() || DSVs.empty() || !DSVs[0] || bMissingVSMTarget)
 		{
@@ -592,10 +1483,20 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 	const UDirectionalLightComponent* DirectionalLight = Env.GetGlobalDirectionalLightOwner();
 	if (bShadowDirectional && DirectionalLight)
 	{
-		FShadowHandleSet* HandleSet = const_cast<UDirectionalLightComponent*>(DirectionalLight)->GetShadowHandleSet();
-		TArray<FAtlasUV> AtlasUVs = HandleSet ? FTextureAtlasPool::Get().GetAtlasUVArray(HandleSet) : TArray<FAtlasUV>();
-		TArray<ID3D11DepthStencilView*> DSVs = HandleSet ? FTextureAtlasPool::Get().GetDSVs(HandleSet) : TArray<ID3D11DepthStencilView*>();
-		TArray<ID3D11RenderTargetView*> RTVs = (bUseVSM && HandleSet) ? FTextureAtlasPool::Get().GetRTVs(HandleSet) : TArray<ID3D11RenderTargetView*>();
+		const FShadowAtlasRequest* DirectionalRequest = nullptr;
+		for (const FShadowAtlasRequest& AtlasRequest : AtlasRequests)
+		{
+			if (AtlasRequest.Type == EShadowAtlasRequestType::DirectionalCascade && AtlasRequest.bSelected)
+			{
+				DirectionalRequest = &AtlasRequest;
+				break;
+			}
+		}
+
+		FShadowHandleSet* HandleSet = DirectionalRequest ? DirectionalRequest->AllocatedHandleSet : nullptr;
+		TArray<FAtlasUV> AtlasUVs = HandleSet ? AtlasPool.GetAtlasUVArray(HandleSet) : TArray<FAtlasUV>();
+		TArray<ID3D11DepthStencilView*> DSVs = HandleSet ? AtlasPool.GetDSVs(HandleSet) : TArray<ID3D11DepthStencilView*>();
+		TArray<ID3D11RenderTargetView*> RTVs = (bUseVSM && HandleSet) ? AtlasPool.GetRTVs(HandleSet) : TArray<ID3D11RenderTargetView*>();
 		OutShadowPassData.BindingData.ShadowMethod = static_cast<uint32>(Frame.RenderOptions.ShadowMethod);
 
 		if (!AtlasUVs.empty() && !DSVs.empty() && DSVs[0] && (!bUseVSM || (!RTVs.empty() && RTVs[0])))
@@ -679,13 +1580,18 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 			{
 				int32 MaxCascades = static_cast<int32>(std::min(AtlasUVs.size(), DSVs.size()));
 				if (bUseVSM && !RTVs.empty()) MaxCascades = static_cast<int32>(std::min(static_cast<size_t>(MaxCascades), RTVs.size()));
-				const int32 NumCascades = std::min(MaxCascades, 4);
+				const int32 SelectedCascadeCount = DirectionalRequest ? static_cast<int32>(GetContiguousSelectedCascadeCount(*DirectionalRequest)) : 0;
+				const int32 NumCascades = std::min(std::min(MaxCascades, 4), SelectedCascadeCount);
 				OutShadowPassData.BindingData.NumCascades = NumCascades;
 				const int32 BaseShadowInfoIndex = static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
 
 				if (NumCascades > 0)
 				{
 					float CascadeRanges[5]; // Near, Split1, Split2, Split3, Far
+					for (float& CascadeRange : CascadeRanges)
+					{
+						CascadeRange = std::min(Frame.FarClip, 200.0f);
+					}
 					CascadeRanges[0] = Frame.NearClip;
 					CascadeRanges[NumCascades] = std::min(Frame.FarClip, 200.0f); // Limit shadow distance
 
@@ -800,7 +1706,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 }
 
 //생성된 ShadowTask들에 대해서 렌더링해서 ShadowMap 생성하는 과정. VSM 아직 불가
-void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene, const FShadowPassData& ShadowPassData)
+void FRenderer::RenderShadowPass(const FFrameContext& Frame, FScene& Scene, const FShadowPassData& ShadowPassData)
 {
 	if (ShadowPassData.RenderTasks.empty())
 	{
@@ -829,57 +1735,59 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 	ID3D11Buffer* ShadowPassCBHandle = ShadowPassBuffer.GetBuffer();
 	ID3D11Device* D3DDevice = Device.GetDevice();
 	auto CreateShadowRasterizerState = [D3DDevice](const FShadowRenderTask& Task) -> ID3D11RasterizerState*
-	{
-		if (!D3DDevice)
 		{
-			return nullptr;
-		}
+			if (!D3DDevice)
+			{
+				return nullptr;
+			}
 
-		constexpr float DepthBiasScale = 100000.0f;
-		const float ClampedDepthBias = FMath::Clamp(Task.ShadowDepthBias, 0.0f, 0.05f);
-		const float ClampedSlopeBias = FMath::Clamp(Task.ShadowSlopeBias, 0.0f, 10.0f);
+			constexpr float DepthBiasScale = 100000.0f;
+			const float ClampedDepthBias = FMath::Clamp(Task.ShadowDepthBias, 0.0f, 0.05f);
+			const float ClampedSlopeBias = FMath::Clamp(Task.ShadowSlopeBias, 0.0f, 10.0f);
 
-		D3D11_RASTERIZER_DESC RasterizerDesc = {};
-		RasterizerDesc.FillMode = D3D11_FILL_SOLID;
-		RasterizerDesc.CullMode = D3D11_CULL_BACK;
-		RasterizerDesc.FrontCounterClockwise = FALSE;
-		RasterizerDesc.DepthBias = -static_cast<INT>(ClampedDepthBias * DepthBiasScale);
-		RasterizerDesc.DepthBiasClamp = 0.0f;
-		RasterizerDesc.SlopeScaledDepthBias = -ClampedSlopeBias;
-		RasterizerDesc.DepthClipEnable = TRUE;
-		RasterizerDesc.ScissorEnable = FALSE;
-		RasterizerDesc.MultisampleEnable = FALSE;
-		RasterizerDesc.AntialiasedLineEnable = FALSE;
+			D3D11_RASTERIZER_DESC RasterizerDesc = {};
+			RasterizerDesc.FillMode = D3D11_FILL_SOLID;
+			RasterizerDesc.CullMode = D3D11_CULL_BACK;
+			RasterizerDesc.FrontCounterClockwise = FALSE;
+			RasterizerDesc.DepthBias = -static_cast<INT>(ClampedDepthBias * DepthBiasScale);
+			RasterizerDesc.DepthBiasClamp = 0.0f;
+			RasterizerDesc.SlopeScaledDepthBias = -ClampedSlopeBias;
+			RasterizerDesc.DepthClipEnable = TRUE;
+			RasterizerDesc.ScissorEnable = FALSE;
+			RasterizerDesc.MultisampleEnable = FALSE;
+			RasterizerDesc.AntialiasedLineEnable = FALSE;
 
-		ID3D11RasterizerState* RasterizerState = nullptr;
-		if (FAILED(D3DDevice->CreateRasterizerState(&RasterizerDesc, &RasterizerState)))
-		{
-			return nullptr;
-		}
-		return RasterizerState;
-	};
+			ID3D11RasterizerState* RasterizerState = nullptr;
+			if (FAILED(D3DDevice->CreateRasterizerState(&RasterizerDesc, &RasterizerState)))
+			{
+				return nullptr;
+			}
+			return RasterizerState;
+		};
 
 	for (const FShadowRenderTask& Task : ShadowPassData.RenderTasks)
 	{
-		if (!Task.DSV)
+		ID3D11DepthStencilView* TaskDSV = Task.DSV.Get();
+		ID3D11RenderTargetView* TaskRTV = Task.RTV.Get();
+		if (!TaskDSV)
 		{
 			continue;
 		}
 
-		const bool bWriteMoments = bUseVSM && Task.RTV != nullptr;
+		const bool bWriteMoments = bUseVSM && TaskRTV != nullptr;
 		FShader* ActiveShadowClearShader = bWriteMoments ? ShadowClearShaderVSM : ShadowClearShader;
 		FShader* ActiveShadowDepthShader = bWriteMoments ? ShadowDepthShaderVSM : ShadowDepthShader;
 
 		Resources.SetBlendState(Device, bWriteMoments ? EBlendState::Opaque : EBlendState::NoColor);
 		Resources.SetRasterizerState(Device, ERasterizerState::SolidBackCull);
 
-		if (Task.RTV)
+		if (TaskRTV)
 		{
-			Ctx->OMSetRenderTargets(1, &Task.RTV, Task.DSV);
+			Ctx->OMSetRenderTargets(1, &TaskRTV, TaskDSV);
 		}
 		else
 		{
-			Ctx->OMSetRenderTargets(0, nullptr, Task.DSV);
+			Ctx->OMSetRenderTargets(0, nullptr, TaskDSV);
 		}
 		Ctx->RSSetViewports(1, &Task.Viewport);
 
@@ -983,7 +1891,7 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 
 	if (bUseVSM)
 	{
-		RenderVSMBlurPass(ShadowPassData);
+		RenderVSMBlurPass(Scene.GetShadowAtlasPool(), ShadowPassData);
 	}
 
 	Resources.ResetRenderStateCache();
@@ -1008,7 +1916,7 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 	Ctx->RSSetViewports(1, &MainViewport);
 }
 
-void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
+void FRenderer::RenderVSMBlurPass(FTextureAtlasPool& AtlasPool, const FShadowPassData& ShadowPassData)
 {
 	struct FPreparedVSMBlurRegion
 	{
@@ -1021,7 +1929,6 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 		ID3D11RenderTargetView* FilteredRTV = nullptr;
 	};
 
-	FTextureAtlasPool& AtlasPool = FTextureAtlasPool::Get();
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
 	ID3D11ShaderResourceView* RawSRV = AtlasPool.GetRawSRV();
 	ID3D11ShaderResourceView* TempSRV = AtlasPool.GetTempSRV();
@@ -1041,7 +1948,7 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 	for (const FShadowRenderTask& Task : ShadowPassData.RenderTasks)
 	{
 		if (Task.TargetType != EShadowRenderTargetType::Atlas2D
-			|| !Task.RTV
+			|| !Task.RTV.Get()
 			|| Task.AtlasSliceIndex == static_cast<uint32>(-1))
 		{
 			continue;
@@ -1193,6 +2100,7 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 void FRenderer::Render(const FFrameContext& Frame, FScene& Scene)
 {
 	FDrawCallStats::Reset();
+	Scene.InitializeShadowAtlas(Device.GetDevice(), Device.GetDeviceContext(), 4096);
 
 	{
 		SCOPE_STAT_CAT("UpdateFrameBuffer", "4_ExecutePass");
@@ -1223,7 +2131,7 @@ void FRenderer::Render(const FFrameContext& Frame, FScene& Scene)
 		Resources.UpdateLightBuffer(Device, Scene, Frame, &ClusterState, &ShadowPassData.BindingData);
 	}
 
-	Resources.BindShadowResources(Device);
+	Resources.BindShadowResources(Device, Scene.GetShadowAtlasPool());
 
 	FDrawCommandList& CommandList = Builder.GetCommandList();
 	CommandList.Sort();

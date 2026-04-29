@@ -41,6 +41,92 @@ void ULightComponent::InvalidateShadowHandleSet()
 	}
 }
 
+void ULightComponent::SetShadowHandleSetForRenderer(FShadowHandleSet* InHandleSet)
+{
+	if (ShadowHandleSet && ShadowHandleSet != InHandleSet)
+	{
+		ShadowHandleSet->Release();
+	}
+
+	ShadowHandleSet = InHandleSet;
+}
+
+void ULightComponent::ReleaseShadowHandleSetForRenderer()
+{
+	if (ShadowHandleSet)
+	{
+		ShadowHandleSet->Release();
+		ShadowHandleSet = nullptr;
+	}
+}
+
+void ULightComponent::MarkShadowAtlasRequested(uint64 FrameIndex)
+{
+	LastShadowAtlasRequestedFrame = FrameIndex;
+}
+
+void ULightComponent::MarkShadowAtlasSelected(uint64 FrameIndex)
+{
+	LastShadowAtlasSelectedFrame = FrameIndex;
+}
+
+bool ULightComponent::ShouldReleaseShadowAtlasHandle(uint64 FrameIndex, uint64 GraceFrameCount) const
+{
+	if (!ShadowHandleSet || LastShadowAtlasRequestedFrame == 0 || FrameIndex <= LastShadowAtlasRequestedFrame)
+	{
+		return false;
+	}
+
+	return FrameIndex - LastShadowAtlasRequestedFrame > GraceFrameCount;
+}
+
+void ULightComponent::MarkShadowAtlasAllocationFailed(uint64 FrameIndex, uint32 Resolution)
+{
+	LastShadowAtlasAllocationFailedFrame = FrameIndex;
+	LastFailedShadowResolution = Resolution;
+}
+
+bool ULightComponent::ShouldSkipShadowAtlasAllocation(uint64 FrameIndex, uint32 RequestedResolution, uint64 CooldownFrameCount) const
+{
+	if (LastShadowAtlasAllocationFailedFrame == 0 || FrameIndex <= LastShadowAtlasAllocationFailedFrame)
+	{
+		return false;
+	}
+
+	return FrameIndex - LastShadowAtlasAllocationFailedFrame <= CooldownFrameCount
+		&& RequestedResolution >= LastFailedShadowResolution;
+}
+
+bool ULightComponent::UpdateShadowAtlasDownscaleCandidate(uint32 DesiredResolution, uint64 FrameIndex, uint64 StableFrameCount)
+{
+	if (DesiredResolution == 0)
+	{
+		PendingShadowAtlasDownscaleResolution = 0;
+		PendingShadowAtlasDownscaleStartFrame = 0;
+		return false;
+	}
+
+	if (PendingShadowAtlasDownscaleResolution != DesiredResolution)
+	{
+		PendingShadowAtlasDownscaleResolution = DesiredResolution;
+		PendingShadowAtlasDownscaleStartFrame = FrameIndex;
+		return false;
+	}
+
+	if (FrameIndex <= PendingShadowAtlasDownscaleStartFrame)
+	{
+		return false;
+	}
+
+	return FrameIndex - PendingShadowAtlasDownscaleStartFrame >= StableFrameCount;
+}
+
+void ULightComponent::ClearShadowAtlasDownscaleCandidate()
+{
+	PendingShadowAtlasDownscaleResolution = 0;
+	PendingShadowAtlasDownscaleStartFrame = 0;
+}
+
 void ULightComponent::Serialize(FArchive& Ar)
 {
 	ULightComponentBase::Serialize(Ar);

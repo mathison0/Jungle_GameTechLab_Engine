@@ -193,11 +193,20 @@ namespace
 	}
 }
 
-void FTextureAtlasPool::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InTextureSize)
+void FTextureAtlasPool::Initialize(
+	ID3D11Device* InDevice,
+	ID3D11DeviceContext* InDeviceContext,
+	uint32 InTextureSize,
+	uint32 InAllocatorMinBlockSize)
 {
 	CurrentFilterMode = EShadowFilterMode::PCF;
-	FTexturePoolBase::Initialize(InDevice, InDeviceContext, InTextureSize);
+	FTexturePoolBase::Initialize(InDevice, InDeviceContext, InTextureSize, InAllocatorMinBlockSize);
 	CreateDebugPassResources();
+}
+
+std::unique_ptr<FTexturePoolAllocatorBase> FTextureAtlasPool::CreateAllocator()
+{
+	return std::make_unique<FBuddyTexturePoolAllocator>();
 }
 
 void FTextureAtlasPool::EnsureAtlasMode(EShadowFilterMode InFilterMode)
@@ -225,50 +234,6 @@ void FTextureAtlasPool::RecreateAtlasResources()
 	RebuildDSV(Device, Texture.Get());
 	UpdateMemoryStats();
 	BroadCastHandlesUnvalid();
-}
-
-TexturePoolHandleSet* FTextureAtlasPool::GetTextureHandle(TexturePoolHandleRequest HandleRequest)
-{
-	uint32 ManagerCount = static_cast<uint32>(UVManagers.size());
-
-	std::unique_ptr<TexturePoolHandleSet> HandleSet = std::make_unique<TexturePoolHandleSet>(
-		this,
-		static_cast<uint32>(AllocatedHandleList.size()));
-
-	for (uint32 Size : HandleRequest.Sizes)
-	{
-		TexturePoolHandle Handle;
-		bool bAllocated = false;
-		while (!bAllocated)
-		{
-			for (uint32 i = 0; i < ManagerCount; ++i)
-			{
-				if (UVManagers[i].get()->GetHandle(static_cast<float>(Size), Handle.InternalIndex))
-				{
-					Handle.ArrayIndex = i;
-					bAllocated = true;
-					break;
-				}
-			}
-
-			if (!bAllocated)
-			{
-				ResizeLayer();
-				ManagerCount = static_cast<uint32>(UVManagers.size());
-			}
-		}
-
-		HandleSet.get()->Handles.push_back(Handle);
-	}
-
-	HandleSet->bIsValid = true;
-	AllocatedHandleList.push_back(std::move(HandleSet));
-	return AllocatedHandleList.back().get();
-}
-
-void FTextureAtlasPool::ReleaseHandle(TexturePoolHandle& InHandle)
-{
-	UVManagers[InHandle.ArrayIndex].get()->ReleaseUV(InHandle.InternalIndex);
 }
 
 TArray<FAtlasUV> FTextureAtlasPool::GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet)
@@ -879,25 +844,12 @@ void FTextureAtlasPool::UpdateMemoryStats()
 void FTextureAtlasPool::OnSetTextureSize()
 {
 	DebugResource.clear();
-	for (const auto& UVManager : UVManagers)
-	{
-		UVManager.get()->SetSize(TextureSize);
-	}
 }
 
 void FTextureAtlasPool::OnSetTextureLayerSize()
 {
-	const uint32 CurrentManagersCount = static_cast<uint32>(UVManagers.size());
 	const uint32 TargetCount = GetTextureLayerSize();
 	SliceDebugVersions.resize(TargetCount, 1);
-
-	for (uint32 i = CurrentManagersCount; i < TargetCount; ++i)
-	{
-		auto NewManager = std::make_unique<FGridUVManager>();
-		NewManager->Initialize(TextureSize, 256);
-
-		UVManagers.push_back(std::move(NewManager));
-	}
 }
 
 bool FTextureAtlasPool::CreateDebugResource(SRVResource& OutResource, uint32 Width, uint32 Height)
