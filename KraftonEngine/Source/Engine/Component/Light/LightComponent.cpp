@@ -36,7 +36,7 @@ uint32 ULightComponent::GetShadowResolution() const
 
 void ULightComponent::SetShadowSharpen(float InShadowSharpen)
 {
-	ShadowSharpen = FMath::Clamp(InShadowSharpen, 0.0f, 0.95f);
+	ShadowSharpen = FMath::Clamp(InShadowSharpen, 0.0f, 0.5f);
 }
 
 void ULightComponent::InvalidateShadowHandleSet()
@@ -143,6 +143,6 @@ void ULightComponent::Serialize(FArchive& Ar)
 
 	if (Ar.IsLoading())
 	{
-		ShadowSharpen = FMath::Clamp(ShadowSharpen, 0.0f, 0.95f);
+		ShadowSharpen = FMath::Clamp(ShadowSharpen, 0.0f, 0.5f);
 	}
 }

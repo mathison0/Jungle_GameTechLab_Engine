@@ -40,7 +40,7 @@ float GetShadowSlopeBias(FShadowInfo info)
 // 1.0에 가까우면 remap 분모가 너무 작아지므로 안전 범위로 clamp한다.
 float GetShadowBleedReduction(FShadowInfo info)
 {
-    return clamp(info.ShadowParams.z, 0.0f, 0.95f);
+    return clamp(info.ShadowParams.z, 0.0f, 0.5f);
 }
 
 // ShadowParams.w에 저장된 near plane 값을 안전한 최소값과 함께 반환한다.

@@ -627,7 +627,7 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 	}
 
 	float ShadowSharpen = LightComponent->GetShadowSharpen();
-	if (ImGui::DragFloat("Shadow Sharpen (VSM)", &ShadowSharpen, 0.01f, 0.0f, 0.95f, "%.2f"))
+	if (ImGui::DragFloat("Shadow Sharpen (VSM)", &ShadowSharpen, 0.01f, 0.0f, 0.5f, "%.2f"))
 	{
 		LightComponent->SetShadowSharpen(ShadowSharpen);
 	}
