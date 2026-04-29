@@ -123,11 +123,13 @@ void FTextureCubeShadowPool::Initialize(ID3D11Device* InDevice, ID3D11DeviceCont
 	BaseResolution = InBaseResolution > 0 ? InBaseResolution : 1024;
 	bVSMMode = false;
 
-	const uint32 SafeInitialCapacity = InitialCubeCapacity > 0 ? InitialCubeCapacity : 1;
 	for (uint32 TierIndex = 0; TierIndex < TierCount; ++TierIndex)
 	{
 		Tiers[TierIndex].Resolution = MakeTierResolution(BaseResolution, TierIndex);
-		RebuildResources(TierIndex, SafeInitialCapacity);
+		if (InitialCubeCapacity > 0)
+		{
+			RebuildResources(TierIndex, InitialCubeCapacity);
+		}
 	}
 }
 
