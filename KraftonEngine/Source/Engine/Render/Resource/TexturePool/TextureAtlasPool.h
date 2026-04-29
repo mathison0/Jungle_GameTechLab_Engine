@@ -3,7 +3,7 @@
 #include "TexturePool.h"
 #include "Render/Resource/Buffer.h"
 #include "Render/Types/ViewTypes.h"
-#include "UVManager/TexturePoolAllocator.h"
+#include "Render/Resource/TexturePool/UVManager/Allocator/GuillotineAllocator.h"
 
 class FTextureAtlasPool final : public FTexturePoolBase
 {
