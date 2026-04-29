@@ -34,7 +34,6 @@ public:
 	void SetShadowSharpen(float InShadowSharpen) { ShadowSharpen = InShadowSharpen; }
 	void InvalidateShadowHandleSet();
 
-	virtual void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 	virtual void Serialize(FArchive& Ar) override;
 
 	virtual FShadowHandleSet* GetShadowHandleSet() { return ShadowHandleSet; }
