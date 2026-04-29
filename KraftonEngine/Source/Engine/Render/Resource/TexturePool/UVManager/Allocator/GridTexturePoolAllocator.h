@@ -37,11 +37,8 @@ private:
 	static uint32 CeilDiv(uint32 A, uint32 B);
 
 	uint32 Index(uint32 X, uint32 Y) const;
-	void ResetSliceOccupancy(uint32 InLayerCount);
 	void ResetFreeRects(uint32 InLayerCount);
 	void ResetAllocationState(uint32 InLayerCount);
-	void MarkRect(uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H, bool bOccupied);
-	void MarkRectInOccupancy(std::vector<std::vector<bool>>& Occupancy, uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H, bool bOccupied) const;
 	uint32 GetBlockCount(float TextureSize) const;
 	int32 FindBestFreeRect(uint32 W, uint32 H, const TArray<FAtlasRect>& InFreeRects) const;
 	bool TryPlaceRectIntoFreeRects(TArray<FAtlasRect>& InOutFreeRects, uint32 W, uint32 H, FAtlasRect& OutRect) const;
@@ -54,7 +51,6 @@ private:
 	uint32 GridCount = 4;
 	uint32 NextHandle = 1;
 
-	std::vector<std::vector<bool>> OccupiedBySlice;
 	TArray<FAtlasRect> FreeRects;
 	std::unordered_map<uint32, FAtlasRect> AllocatedRects;
 };

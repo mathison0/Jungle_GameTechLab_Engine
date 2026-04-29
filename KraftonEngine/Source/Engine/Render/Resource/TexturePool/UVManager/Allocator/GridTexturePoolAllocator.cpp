@@ -26,8 +26,6 @@ bool FGridTexturePoolAllocator::AllocateHandle(float TextureSize, FTexturePoolHa
 		return false;
 	}
 
-	MarkRect(UsedRect.ArrayIndex, UsedRect.X, UsedRect.Y, UsedRect.W, UsedRect.H, true);
-
 	const uint32 HandleId = NextHandle++;
 	AllocatedRects.emplace(HandleId, UsedRect);
 
@@ -98,7 +96,6 @@ void FGridTexturePoolAllocator::ReleaseHandle(const FTexturePoolHandle& InHandle
 	}
 
 	const FAtlasRect FreedRect = It->second;
-	MarkRect(FreedRect.ArrayIndex, FreedRect.X, FreedRect.Y, FreedRect.W, FreedRect.H, false);
 	AllocatedRects.erase(It);
 
 	FreeRects.push_back(FreedRect);
@@ -197,13 +194,6 @@ void FGridTexturePoolAllocator::SetLayerCount(uint32 InNewLayerCount)
 
 	if (InNewLayerCount >= OldLayerCount && !AllocatedRects.empty())
 	{
-		ResetSliceOccupancy(InNewLayerCount);
-		for (const auto& Pair : AllocatedRects)
-		{
-			const FAtlasRect& Rect = Pair.second;
-			MarkRect(Rect.ArrayIndex, Rect.X, Rect.Y, Rect.W, Rect.H, true);
-		}
-
 		for (uint32 SliceIndex = OldLayerCount; SliceIndex < InNewLayerCount; ++SliceIndex)
 		{
 			FreeRects.push_back({ 0, 0, GridCount, GridCount, SliceIndex });
@@ -226,12 +216,6 @@ uint32 FGridTexturePoolAllocator::Index(uint32 X, uint32 Y) const
 	return Y * GridCount + X;
 }
 
-void FGridTexturePoolAllocator::ResetSliceOccupancy(uint32 InLayerCount)
-{
-	const size_t CellCount = static_cast<size_t>(GridCount) * static_cast<size_t>(GridCount);
-	OccupiedBySlice.assign(InLayerCount, std::vector<bool>(CellCount, false));
-}
-
 void FGridTexturePoolAllocator::ResetFreeRects(uint32 InLayerCount)
 {
 	FreeRects.clear();
@@ -250,37 +234,7 @@ void FGridTexturePoolAllocator::ResetFreeRects(uint32 InLayerCount)
 void FGridTexturePoolAllocator::ResetAllocationState(uint32 InLayerCount)
 {
 	AllocatedRects.clear();
-	ResetSliceOccupancy(InLayerCount);
 	ResetFreeRects(InLayerCount);
-}
-
-void FGridTexturePoolAllocator::MarkRect(uint32 SliceIndex, uint32 X, uint32 Y, uint32 W, uint32 H, bool bOccupied)
-{
-	MarkRectInOccupancy(OccupiedBySlice, SliceIndex, X, Y, W, H, bOccupied);
-}
-
-void FGridTexturePoolAllocator::MarkRectInOccupancy(
-	std::vector<std::vector<bool>>& Occupancy,
-	uint32 SliceIndex,
-	uint32 X,
-	uint32 Y,
-	uint32 W,
-	uint32 H,
-	bool bOccupied) const
-{
-	if (SliceIndex >= Occupancy.size() || X + W > GridCount || Y + H > GridCount)
-	{
-		return;
-	}
-
-	std::vector<bool>& Occupied = Occupancy[SliceIndex];
-	for (uint32 yy = Y; yy < Y + H; ++yy)
-	{
-		for (uint32 xx = X; xx < X + W; ++xx)
-		{
-			Occupied[Index(xx, yy)] = bOccupied;
-		}
-	}
 }
 
 uint32 FGridTexturePoolAllocator::GetBlockCount(float TextureSize) const
