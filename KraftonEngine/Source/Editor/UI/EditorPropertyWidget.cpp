@@ -654,13 +654,13 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 		ImGui::EndCombo();
 	}
 
-	ImGui::Spacing();
+	/*ImGui::Spacing();
 	ImGui::Text("PSM Depth Map");
 	ImGui::BeginChild("##PSMDepthPreview", ImVec2(0.0f, 180.0f), true);
 	ImGui::TextDisabled("Preview will appear here after the PSM pass is wired.");
 	ImGui::TextDisabled("Current light: %s", LightComponent->GetClass()->GetName());
 	ImGui::TextDisabled("CastShadow: %s", LightComponent->IsCastShadow() ? "On" : "Off");
-	ImGui::EndChild();
+	ImGui::EndChild();*/
 }
 
 void FEditorPropertyWidget::PropagatePropertyChange(const FString& PropName, const TArray<AActor*>& SelectedActors)
