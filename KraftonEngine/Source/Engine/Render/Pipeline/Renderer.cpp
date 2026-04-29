@@ -836,6 +836,29 @@ namespace
 				return Clamp01((std::max(Intensity, 0.0f) * ComputeLuminance(Color)) / 8.0f);
 			}
 
+			// Legacy distance-based approximation. Do not use for spot atlas request priority;
+			// spot atlas metrics must come from ComputeSpotShadowScreenMetrics().
+			float EstimateSphereScreenCoverage(const FFrameContext & Frame, const FVector & Center, float Radius)
+			{
+				if (Radius <= 0.0f || Frame.ViewportWidth <= 0.0f || Frame.ViewportHeight <= 0.0f)
+				{
+					return 0.0f;
+				}
+
+				if (Frame.bIsOrtho)
+				{
+					const float OrthoWidth = std::max(Frame.OrthoWidth, 1.0f);
+					const float NormalizedRadius = Radius / OrthoWidth;
+					return Clamp01(NormalizedRadius * NormalizedRadius * 4.0f);
+				}
+
+				const float DistanceToCenter = std::max(FVector::Distance(Frame.CameraPosition, Center), 1.0f);
+				const float MinViewportExtent = std::max(std::min(Frame.ViewportWidth, Frame.ViewportHeight), 1.0f);
+				const float ProjectedRadiusPixels = (Radius * Frame.Proj.M[1][1] / DistanceToCenter) * (Frame.ViewportHeight * 0.5f);
+				const float NormalizedRadius = ProjectedRadiusPixels / MinViewportExtent;
+				return Clamp01(NormalizedRadius * NormalizedRadius * 4.0f);
+			}
+
 			float EstimateInfluenceProximityScore(const FFrameContext & Frame, const FVector & Center, float Radius)
 			{
 				const float DistanceToInfluence = std::max(FVector::Distance(Frame.CameraPosition, Center) - Radius, 0.0f);
