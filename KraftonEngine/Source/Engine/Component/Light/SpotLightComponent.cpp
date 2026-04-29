@@ -7,6 +7,11 @@
 
 IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
 
+USpotLightComponent::USpotLightComponent()
+{
+	ShadowResolutionScale = 2.0f;
+}
+
 void USpotLightComponent::ContributeSelectedVisuals(FScene& Scene) const
 {
 	const FVector Apex = GetWorldLocation();

@@ -278,6 +278,11 @@ ID3D11DepthStencilView* FTextureCubeShadowPool::GetFaceDSV(FCubeShadowHandle Han
 		return nullptr;
 	}
 
+	if (bVSMMode)
+	{
+		return !Tier->FaceDSVs.empty() ? Tier->FaceDSVs[0].Get() : nullptr;
+	}
+
 	const uint32 SliceIndex = GetSliceIndex(Handle, FaceIndex);
 	if (SliceIndex >= Tier->FaceDSVs.size())
 	{
@@ -504,13 +509,13 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 	TextureDesc.Width = Tier->Resolution;
 	TextureDesc.Height = Tier->Resolution;
 	TextureDesc.MipLevels = 1;
-	TextureDesc.ArraySize = TotalSlices;
+	TextureDesc.ArraySize = bVSMMode ? 1 : TotalSlices;
 	TextureDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 	TextureDesc.SampleDesc.Count = 1;
 	TextureDesc.Usage = D3D11_USAGE_DEFAULT;
 	TextureDesc.BindFlags = bVSMMode ? D3D11_BIND_DEPTH_STENCIL : (D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL);
 	TextureDesc.CPUAccessFlags = 0;
-	TextureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	TextureDesc.MiscFlags = bVSMMode ? 0 : D3D11_RESOURCE_MISC_TEXTURECUBE;
 
 	HRESULT hr = Device->CreateTexture2D(&TextureDesc, nullptr, NewTexture.GetAddressOf());
 	if (FAILED(hr))
@@ -521,9 +526,17 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 
 	if (bVSMMode)
 	{
-		D3D11_TEXTURE2D_DESC MomentTextureDesc = TextureDesc;
+		D3D11_TEXTURE2D_DESC MomentTextureDesc = {};
+		MomentTextureDesc.Width = Tier->Resolution;
+		MomentTextureDesc.Height = Tier->Resolution;
+		MomentTextureDesc.MipLevels = 1;
+		MomentTextureDesc.ArraySize = TotalSlices;
 		MomentTextureDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+		MomentTextureDesc.SampleDesc.Count = 1;
+		MomentTextureDesc.Usage = D3D11_USAGE_DEFAULT;
 		MomentTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+		MomentTextureDesc.CPUAccessFlags = 0;
+		MomentTextureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
 		hr = Device->CreateTexture2D(&MomentTextureDesc, nullptr, NewTempMomentTexture.GetAddressOf());
 		if (FAILED(hr))
@@ -607,20 +620,29 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 		}
 	}
 
-	NewFaceDSVs.resize(TotalSlices);
+	const uint32 DSVCount = bVSMMode ? 1 : TotalSlices;
+	NewFaceDSVs.resize(DSVCount);
 	if (bVSMMode)
 	{
 		NewTempFaceVSMRTVs.resize(TotalSlices);
 		NewFilteredFaceVSMRTVs.resize(TotalSlices);
 	}
-	for (uint32 SliceIndex = 0; SliceIndex < TotalSlices; ++SliceIndex)
+	for (uint32 SliceIndex = 0; SliceIndex < DSVCount; ++SliceIndex)
 	{
 		D3D11_DEPTH_STENCIL_VIEW_DESC DSVDesc = {};
 		DSVDesc.Format = DXGI_FORMAT_D32_FLOAT;
-		DSVDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-		DSVDesc.Texture2DArray.MipSlice = 0;
-		DSVDesc.Texture2DArray.FirstArraySlice = SliceIndex;
-		DSVDesc.Texture2DArray.ArraySize = 1;
+		if (bVSMMode)
+		{
+			DSVDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+			DSVDesc.Texture2D.MipSlice = 0;
+		}
+		else
+		{
+			DSVDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+			DSVDesc.Texture2DArray.MipSlice = 0;
+			DSVDesc.Texture2DArray.FirstArraySlice = SliceIndex;
+			DSVDesc.Texture2DArray.ArraySize = 1;
+		}
 
 		hr = Device->CreateDepthStencilView(NewTexture.Get(), &DSVDesc, NewFaceDSVs[SliceIndex].GetAddressOf());
 		if (FAILED(hr))
@@ -629,7 +651,11 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 			return false;
 		}
 
-		if (bVSMMode)
+	}
+
+	if (bVSMMode)
+	{
+		for (uint32 SliceIndex = 0; SliceIndex < TotalSlices; ++SliceIndex)
 		{
 			D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
 			RTVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;

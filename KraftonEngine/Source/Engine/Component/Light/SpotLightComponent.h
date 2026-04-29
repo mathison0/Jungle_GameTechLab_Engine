@@ -5,6 +5,7 @@ class USpotLightComponent : public UPointLightComponent
 {
 public:
 	DECLARE_CLASS(USpotLightComponent, UPointLightComponent)
+	USpotLightComponent();
 	virtual void ContributeSelectedVisuals(FScene& Scene) const override;
 	virtual void PushToScene() override;
 	virtual void DestroyFromScene() override;

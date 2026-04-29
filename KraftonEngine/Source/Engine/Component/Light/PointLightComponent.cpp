@@ -28,6 +28,11 @@ namespace
 
 IMPLEMENT_CLASS(UPointLightComponent, ULightComponent)
 
+UPointLightComponent::UPointLightComponent()
+{
+	ShadowResolutionScale = 0.5f;
+}
+
 UPointLightComponent::~UPointLightComponent()
 {
 	ReleaseCubeShadowHandle();
