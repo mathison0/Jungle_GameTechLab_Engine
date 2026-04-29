@@ -133,7 +133,7 @@ void FEditorConsoleWidget::Initialize(UEditorEngine* InEditorEngine)
 
 			if (Args.size() < 2)
 			{
-				AddLog("Usage: stat fps | stat memory | stat light | stat none\n");
+				AddLog("Usage: stat fps | stat memory | stat light | stat psm [on|off|toggle] | stat none\n");
 				return;
 			}
 
@@ -155,6 +155,40 @@ void FEditorConsoleWidget::Initialize(UEditorEngine* InEditorEngine)
 				StatSystem.ShowLight(true);
 				AddLog("Overlay stat enabled: light\n");
 			}
+			else if (SubCommand == "psm")
+			{
+				FLevelEditorViewportClient* ActiveViewport = EditorEngine->GetActiveViewport();
+				if (ActiveViewport == nullptr)
+				{
+					AddLog("[ERROR] No active viewport.\n");
+					return;
+				}
+
+				FViewportRenderOptions& RenderOptions = ActiveViewport->GetRenderOptions();
+				bool bEnable = !RenderOptions.ShowFlags.bPSMDebugLines;
+				if (Args.size() >= 3)
+				{
+					FString Value = Args[2];
+					std::transform(Value.begin(), Value.end(), Value.begin(), ::tolower);
+					if (Value == "on" || Value == "1" || Value == "true")
+					{
+						bEnable = true;
+					}
+					else if (Value == "off" || Value == "0" || Value == "false")
+					{
+						bEnable = false;
+					}
+					else if (Value != "toggle")
+					{
+						AddLog("[ERROR] Unknown stat psm value: '%s'\n", Args[2].c_str());
+						AddLog("Usage: stat psm [on|off|toggle]\n");
+						return;
+					}
+				}
+
+				RenderOptions.ShowFlags.bPSMDebugLines = bEnable;
+				AddLog("PSM debug lines %s.\n", bEnable ? "enabled" : "disabled");
+			}
 			else if (SubCommand == "none")
 			{
 				StatSystem.HideAll();
@@ -163,7 +197,7 @@ void FEditorConsoleWidget::Initialize(UEditorEngine* InEditorEngine)
 			else
 			{
 				AddLog("[ERROR] Unknown stat command: '%s'\n", SubCommand.c_str());
-				AddLog("Usage: stat fps | stat memory | stat light | stat none\n");
+				AddLog("Usage: stat fps | stat memory | stat light | stat psm [on|off|toggle] | stat none\n");
 			}
 		});
 
