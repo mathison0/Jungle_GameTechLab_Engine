@@ -31,7 +31,7 @@ public:
 	float GetShadowSlopeBias() const { return ShadowSlopeBias; }
 	void SetShadowSlopeBias(float InShadowSlopeBias) { ShadowSlopeBias = InShadowSlopeBias; }
 	float GetShadowSharpen() const { return ShadowSharpen; }
-	void SetShadowSharpen(float InShadowSharpen) { ShadowSharpen = InShadowSharpen; }
+	void SetShadowSharpen(float InShadowSharpen);
 	void InvalidateShadowHandleSet();
 	void SetCastShadow(bool bInCastShadow) { bCastShadow = bInCastShadow; }
 

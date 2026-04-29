@@ -36,10 +36,11 @@ float GetShadowSlopeBias(FShadowInfo info)
     return max(info.ShadowParams.y, 0.0f) * SHADOW_SLOPE_BIAS;
 }
 
-// ShadowParams.z를 [0, 1] 범위의 sharpen 강도로 해석한다.
-float GetShadowSharpen(FShadowInfo info)
+// ShadowParams.z를 VSM light bleeding reduction 값으로 해석한다.
+// 1.0에 가까우면 remap 분모가 너무 작아지므로 안전 범위로 clamp한다.
+float GetShadowBleedReduction(FShadowInfo info)
 {
-    return saturate(info.ShadowParams.z);
+    return clamp(info.ShadowParams.z, 0.0f, 0.95f);
 }
 
 // ShadowParams.w에 저장된 near plane 값을 안전한 최소값과 함께 반환한다.
@@ -89,18 +90,11 @@ float GetReceiverShadowBias(FShadowInfo info, float3 normal, float3 lightVector)
     return max(constantBias + slopeBias, 0.00001f);
 }
 
-// 필터링이 끝난 shadow 값에 대비를 더해 그림자 경계를 조금 또렷하게 만든다.
-float ApplyShadowSharpen(float shadow, FShadowInfo info)
-{
-    float sharpen = GetShadowSharpen(info);
-    float contrast = 1.0f + sharpen * 4.0f;
-    return saturate((shadow - 0.5f) * contrast + 0.5f);
-}
-
 // VSM 확률값을 remap해서 밝은 누수(light bleeding)를 줄인다.
-float ReduceLightBleed(float probability)
+// ShadowSharpen 프로퍼티를 reduction amount로 재해석한다.
+float ReduceLightBleed(float probability, FShadowInfo info)
 {
-    const float bleedReduction = 0.2f;
+    float bleedReduction = GetShadowBleedReduction(info);
     return saturate((probability - bleedReduction) / (1.0f - bleedReduction));
 }
 
@@ -486,7 +480,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
     float variance = max(moments.y - moments.x * moments.x, 0.00002f);
     float delta = depth - moments.x;
     float probability = variance / (variance + delta * delta);
-    return ReduceLightBleed(probability);
+    return ReduceLightBleed(probability, info);
 }
 
 // Cube shadow용 VSM moments를 읽어 point light shadow 값을 계산한다.
@@ -560,7 +554,7 @@ float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, f
         float delta = receiverDepth - moments.x;
         float probability = variance / (variance + delta * delta);
 
-        result = ReduceLightBleed(probability);
+        result = ReduceLightBleed(probability, info);
     }
 
     return result;
@@ -604,7 +598,7 @@ float GetLightShadow(FLightInfo light, float3 worldPos, float3 normal)
         shadow = SampleCubeShadow(info, worldPos, receiverBias);
 #endif
     }
-    return ApplyShadowSharpen(shadow, info);
+    return shadow;
 }
 
 // =========================================================================
@@ -647,7 +641,7 @@ float GetDirectionalShadow(float3 worldPos, float3 normal)
 #else
         shadow = SampleAtlasShadow(info, worldPos, CascadeMatrices[cascadeIdx], receiverBias);
 #endif
-        return ApplyShadowSharpen(shadow, info);
+        return shadow;
     }
 
     FShadowInfo info = gShadowInfos[DirectionalLight.ShadowIndex];
@@ -660,7 +654,7 @@ float GetDirectionalShadow(float3 worldPos, float3 normal)
 #else
     shadow = SampleAtlasShadow(info, shadowWorldPos, info.LightVP, receiverBias);
 #endif
-    return ApplyShadowSharpen(shadow, info);
+    return shadow;
 }
 
 #endif // SHADOW_FUNCTIONS_HLSLI
