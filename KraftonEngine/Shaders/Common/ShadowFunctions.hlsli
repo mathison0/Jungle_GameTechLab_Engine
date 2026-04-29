@@ -443,6 +443,7 @@ float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, f
 
 // Atlas에 저장된 VSM moments를 읽어 확률 기반 shadow 값을 계산한다.
 // Raw reversed-Z를 저장하므로 receiver depth가 first moment보다 작을 때만 variance test를 수행한다.
+// receiver depth가 first moment보다 뒤에 있을 때만 variance test를 수행한다.
 float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float4 lightClip;
@@ -490,6 +491,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
 
 // Cube shadow용 VSM moments를 읽어 point light shadow 값을 계산한다.
 // Raw reversed-Z를 저장하므로 receiver depth가 first moment보다 작을 때만 variance test를 적용한다.
+// cube shadow depth를 VSM 저장 규약에 맞게 변환한 뒤 variance test를 적용한다.
 float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float result = 1.0f;
@@ -515,6 +517,9 @@ float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, f
         nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ);
     
     float receiverDepth = saturate(hardwareDepth + receiverBias);
+
+    // ShadowDepth.hlsl의 VSM 저장 방식:
+    // depth = 1.0f - input.Position.z
 
     uint cubeTier = min(info.CubeTierIndex, 3u);
 

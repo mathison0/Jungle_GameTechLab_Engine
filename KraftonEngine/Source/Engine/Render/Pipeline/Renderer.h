@@ -14,6 +14,7 @@
 #include "Render/Resource/RenderResources.h"
 #include "Render/Culling/TileBasedLightCulling.h"
 #include "Render/Culling/ClusteredLightCuller.h"
+#include <wrl/client.h>
 
 class FScene;
 
@@ -59,12 +60,15 @@ private:
 	//ShadowMap 렌더링에 필요한 정보 담는 녀석
 	struct FShadowRenderTask
 	{
+		template<typename T>
+		using TComPtr = Microsoft::WRL::ComPtr<T>;
+
 		EShadowRenderTargetType TargetType = EShadowRenderTargetType::Atlas2D;
 		FMatrix LightVP = FMatrix::Identity;
 		FConvexVolume ShadowFrustum;
 		D3D11_VIEWPORT Viewport = {};
-		ID3D11DepthStencilView* DSV = nullptr;
-		ID3D11RenderTargetView* RTV = nullptr;
+		TComPtr<ID3D11DepthStencilView> DSV;
+		TComPtr<ID3D11RenderTargetView> RTV;
 		uint32 AtlasSliceIndex = static_cast<uint32>(-1);
 		uint32 CubeIndex = static_cast<uint32>(-1);
 		uint32 CubeTierIndex = static_cast<uint32>(-1);
@@ -89,9 +93,9 @@ private:
 		D3D11_BOX Box = {};
 	};
 
-	void BuildShadowPassData(const FFrameContext& Frame, const FScene& Scene, FShadowPassData& OutShadowPassData);
-	void RenderShadowPass(const FFrameContext& Frame, const FScene& Scene, const FShadowPassData& ShadowPassData);
-	void RenderVSMBlurPass(const FShadowPassData& ShadowPassData);
+	void BuildShadowPassData(const FFrameContext& Frame, FScene& Scene, FShadowPassData& OutShadowPassData);
+	void RenderShadowPass(const FFrameContext& Frame, FScene& Scene, const FShadowPassData& ShadowPassData);
+	void RenderVSMBlurPass(FTextureAtlasPool& AtlasPool, const FShadowPassData& ShadowPassData);
 	void CleanupPassState(FStateCache& Cache);
 
 private:
@@ -106,4 +110,5 @@ private:
 
 	FTileBasedLightCulling TileBasedCulling;
 	FClusteredLightCuller ClusteredLightCuller;
+	uint64 ShadowAtlasFrameIndex = 1;
 };
