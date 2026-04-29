@@ -100,7 +100,7 @@ struct FPointShadowConstants
     
     float ShadowBias;
     float ShadowResolution;
-    uint AtlasIndex;
+    float ShadowSharpen;
     uint bHasShadowMap;
 };
 
@@ -314,7 +314,7 @@ float ComputePointShadowFactor(float3 WorldPos, uint bCastShadows, int ShadowMap
     {
         float ShadowFactor = 0.0f;
         const float2 TexelSize = 1.0f / (float2)AtlasSize;
-        const float Spread = 2.0f;
+        const float Spread = (1.0f - Shadow.ShadowSharpen) * 2.0f;
         const float Angle = frac(sin(dot(AtlasUV, float2(12.9898, 78.233))) * 43758.5453) * 6.283185f;
         const float2x2 RotationMatrix = float2x2(cos(Angle), -sin(Angle), sin(Angle), cos(Angle));
 

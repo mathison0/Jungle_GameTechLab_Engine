@@ -651,6 +651,7 @@ void FLightRenderCollector::CollectPointLight(
 	const float NearPlane = PointShadowNearPlane;
 	const float FarPlane = std::max(Attenuation, NearPlane + 1.0f);
 	const float ShadowBias = LightComponent->GetShadowBias();
+	const float ShadowSharpen = LightComponent->GetShadowSharpen();
 
 	RenderLight.bCastShadows = 1;
 	RenderLight.ShadowMapIndex = PointShadowIndex;
@@ -668,7 +669,7 @@ void FLightRenderCollector::CollectPointLight(
 
 	ShadowData.ShadowBias = ShadowBias;
 	ShadowData.ShadowResolution = static_cast<float>(PointAtlasSlot.TileResolution);
-	ShadowData.AtlasIndex = PointAtlasSlot.CubeIndex;
+	ShadowData.ShadowSharpen = ShadowSharpen;
 	ShadowData.bHasShadowMap = 1;
 
 	++GetStats().Shadow.PointShadowCount;

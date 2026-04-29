@@ -263,7 +263,7 @@ struct FPointShadowConstants
     
     float ShadowBias = 0.0f;
     float ShadowResolution = 0.0f;
-    uint32 AtlasIndex = 0;
+    float ShadowSharpen = 0.0f;
     uint32 bHasShadowMap = 0;
 };
 
