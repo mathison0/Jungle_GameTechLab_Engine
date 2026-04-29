@@ -39,7 +39,7 @@ private:
                                 uint32 TileBaseX, uint32 TileBaseY, uint32 TileSize);
 
 private:
-    uint32 DirectionalShadowResolution = 2048;
+    uint32 DirectionalShadowResolution = 4096;
 
     uint32 MaxSpotShadowCount = 8;
     uint32 SpotShadowResolution = 4096;
