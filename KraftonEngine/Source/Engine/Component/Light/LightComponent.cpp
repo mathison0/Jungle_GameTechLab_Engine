@@ -1,6 +1,7 @@
 ﻿#include "Component/Light/LightComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Engine/Serialization/Archive.h"
+#include "Math/MathUtils.h"
 
 IMPLEMENT_ABSTRACT_CLASS(ULightComponent, ULightComponentBase)
 
@@ -31,6 +32,11 @@ uint32 ULightComponent::GetShadowResolution() const
 		return 1024;
 	}
 	return 2048;
+}
+
+void ULightComponent::SetShadowSharpen(float InShadowSharpen)
+{
+	ShadowSharpen = FMath::Clamp(InShadowSharpen, 0.0f, 0.95f);
 }
 
 void ULightComponent::InvalidateShadowHandleSet()
@@ -134,4 +140,9 @@ void ULightComponent::Serialize(FArchive& Ar)
 	Ar << ShadowBias;
 	Ar << ShadowSlopeBias;
 	Ar << ShadowSharpen;
+
+	if (Ar.IsLoading())
+	{
+		ShadowSharpen = FMath::Clamp(ShadowSharpen, 0.0f, 0.95f);
+	}
 }
