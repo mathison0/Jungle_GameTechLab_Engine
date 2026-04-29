@@ -146,9 +146,9 @@ namespace
 			const FVector Corners[8] =
 			{
 				FVector(-1.0f, -1.0f, 0.0f), FVector(-1.0f,  1.0f, 0.0f),
-				FVector( 1.0f, -1.0f, 0.0f), FVector( 1.0f,  1.0f, 0.0f),
+				FVector(1.0f, -1.0f, 0.0f), FVector(1.0f,  1.0f, 0.0f),
 				FVector(-1.0f, -1.0f, 1.0f), FVector(-1.0f,  1.0f, 1.0f),
-				FVector( 1.0f, -1.0f, 1.0f), FVector( 1.0f,  1.0f, 1.0f)
+				FVector(1.0f, -1.0f, 1.0f), FVector(1.0f,  1.0f, 1.0f)
 			};
 
 			float MinX = FLT_MAX;
@@ -401,10 +401,10 @@ namespace
 			Center + FVector(-Radius, -Radius,  Radius),
 			Center + FVector(-Radius,  Radius, -Radius),
 			Center + FVector(-Radius,  Radius,  Radius),
-			Center + FVector( Radius, -Radius, -Radius),
-			Center + FVector( Radius, -Radius,  Radius),
-			Center + FVector( Radius,  Radius, -Radius),
-			Center + FVector( Radius,  Radius,  Radius)
+			Center + FVector(Radius, -Radius, -Radius),
+			Center + FVector(Radius, -Radius,  Radius),
+			Center + FVector(Radius,  Radius, -Radius),
+			Center + FVector(Radius,  Radius,  Radius)
 		};
 
 		for (const FVector& Corner : Corners)
@@ -1600,57 +1600,59 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 	ID3D11Buffer* ShadowPassCBHandle = ShadowPassBuffer.GetBuffer();
 	ID3D11Device* D3DDevice = Device.GetDevice();
 	auto CreateShadowRasterizerState = [D3DDevice](const FShadowRenderTask& Task) -> ID3D11RasterizerState*
-	{
-		if (!D3DDevice)
 		{
-			return nullptr;
-		}
+			if (!D3DDevice)
+			{
+				return nullptr;
+			}
 
-		constexpr float DepthBiasScale = 100000.0f;
-		const float ClampedDepthBias = FMath::Clamp(Task.ShadowDepthBias, 0.0f, 0.05f);
-		const float ClampedSlopeBias = FMath::Clamp(Task.ShadowSlopeBias, 0.0f, 10.0f);
+			constexpr float DepthBiasScale = 100000.0f;
+			const float ClampedDepthBias = FMath::Clamp(Task.ShadowDepthBias, 0.0f, 0.05f);
+			const float ClampedSlopeBias = FMath::Clamp(Task.ShadowSlopeBias, 0.0f, 10.0f);
 
-		D3D11_RASTERIZER_DESC RasterizerDesc = {};
-		RasterizerDesc.FillMode = D3D11_FILL_SOLID;
-		RasterizerDesc.CullMode = D3D11_CULL_BACK;
-		RasterizerDesc.FrontCounterClockwise = FALSE;
-		RasterizerDesc.DepthBias = -static_cast<INT>(ClampedDepthBias * DepthBiasScale);
-		RasterizerDesc.DepthBiasClamp = 0.0f;
-		RasterizerDesc.SlopeScaledDepthBias = -ClampedSlopeBias;
-		RasterizerDesc.DepthClipEnable = TRUE;
-		RasterizerDesc.ScissorEnable = FALSE;
-		RasterizerDesc.MultisampleEnable = FALSE;
-		RasterizerDesc.AntialiasedLineEnable = FALSE;
+			D3D11_RASTERIZER_DESC RasterizerDesc = {};
+			RasterizerDesc.FillMode = D3D11_FILL_SOLID;
+			RasterizerDesc.CullMode = D3D11_CULL_BACK;
+			RasterizerDesc.FrontCounterClockwise = FALSE;
+			RasterizerDesc.DepthBias = -static_cast<INT>(ClampedDepthBias * DepthBiasScale);
+			RasterizerDesc.DepthBiasClamp = 0.0f;
+			RasterizerDesc.SlopeScaledDepthBias = -ClampedSlopeBias;
+			RasterizerDesc.DepthClipEnable = TRUE;
+			RasterizerDesc.ScissorEnable = FALSE;
+			RasterizerDesc.MultisampleEnable = FALSE;
+			RasterizerDesc.AntialiasedLineEnable = FALSE;
 
-		ID3D11RasterizerState* RasterizerState = nullptr;
-		if (FAILED(D3DDevice->CreateRasterizerState(&RasterizerDesc, &RasterizerState)))
-		{
-			return nullptr;
-		}
-		return RasterizerState;
-	};
+			ID3D11RasterizerState* RasterizerState = nullptr;
+			if (FAILED(D3DDevice->CreateRasterizerState(&RasterizerDesc, &RasterizerState)))
+			{
+				return nullptr;
+			}
+			return RasterizerState;
+		};
 
 	for (const FShadowRenderTask& Task : ShadowPassData.RenderTasks)
 	{
-		if (!Task.DSV)
+		ID3D11DepthStencilView* TaskDSV = Task.DSV.Get();
+		ID3D11RenderTargetView* TaskRTV = Task.RTV.Get();
+		if (!TaskDSV)
 		{
 			continue;
 		}
 
-		const bool bWriteMoments = bUseVSM && Task.RTV != nullptr;
+		const bool bWriteMoments = bUseVSM && TaskRTV != nullptr;
 		FShader* ActiveShadowClearShader = bWriteMoments ? ShadowClearShaderVSM : ShadowClearShader;
 		FShader* ActiveShadowDepthShader = bWriteMoments ? ShadowDepthShaderVSM : ShadowDepthShader;
 
 		Resources.SetBlendState(Device, bWriteMoments ? EBlendState::Opaque : EBlendState::NoColor);
 		Resources.SetRasterizerState(Device, ERasterizerState::SolidBackCull);
 
-		if (Task.RTV)
+		if (TaskRTV)
 		{
-			Ctx->OMSetRenderTargets(1, &Task.RTV, Task.DSV);
+			Ctx->OMSetRenderTargets(1, &TaskRTV, TaskDSV);
 		}
 		else
 		{
-			Ctx->OMSetRenderTargets(0, nullptr, Task.DSV);
+			Ctx->OMSetRenderTargets(0, nullptr, TaskDSV);
 		}
 		Ctx->RSSetViewports(1, &Task.Viewport);
 
@@ -1752,16 +1754,16 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 		Resources.ResetRenderStateCache();
 	}
 
-		//VSM이면 이후 블러 작업 필요
-		//한 요쯤에 들어갈듯?
-	// Blur shader가 아직 연결되지 않았으므로 실행 경로는 막아 둔다.
-	// 아래 블록은 H/V blur shader를 준비한 뒤 다시 활성화한다.
-	/*
-	if (bUseVSM)
-	{
-		RenderVSMBlurPass(ShadowPassData);
-	}
-	*/
+	//VSM이면 이후 블러 작업 필요
+	//한 요쯤에 들어갈듯?
+// Blur shader가 아직 연결되지 않았으므로 실행 경로는 막아 둔다.
+// 아래 블록은 H/V blur shader를 준비한 뒤 다시 활성화한다.
+/*
+if (bUseVSM)
+{
+	RenderVSMBlurPass(ShadowPassData);
+}
+*/
 
 	Resources.ResetRenderStateCache();
 
@@ -1813,7 +1815,7 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 	for (const FShadowRenderTask& Task : ShadowPassData.RenderTasks)
 	{
 		if (Task.TargetType != EShadowRenderTargetType::Atlas2D
-			|| !Task.RTV
+			|| !Task.RTV.Get()
 			|| Task.AtlasSliceIndex == static_cast<uint32>(-1))
 		{
 			continue;

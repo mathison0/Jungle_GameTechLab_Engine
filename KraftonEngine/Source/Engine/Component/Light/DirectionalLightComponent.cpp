@@ -93,15 +93,15 @@ FShadowMapKey UDirectionalLightComponent::GetShadowMapKey()
 
 FShadowHandleSet* UDirectionalLightComponent::GetShadowHandleSet()
 {
-	if (!ShadowHandleSet || !ShadowHandleSet->bIsValid)
-	{
-		if (ShadowHandleSet)
-		{
-			ShadowHandleSet->Release();
-		}
-		const uint32 BaseResolution = GetShadowResolution();
-		ShadowHandleSet = FTextureAtlasPool::Get().GetTextureHandle(
-			{ BaseResolution, BaseResolution / 2u, BaseResolution / 4u, BaseResolution / 8u });
-	}
+	//if (!ShadowHandleSet || !ShadowHandleSet->bIsValid)
+	//{
+	//	if (ShadowHandleSet)
+	//	{
+	//		ShadowHandleSet->Release();
+	//	}
+	//	const uint32 BaseResolution = GetShadowResolution();
+	//	ShadowHandleSet = FTextureAtlasPool::Get().GetTextureHandle(
+	//		{ BaseResolution, BaseResolution / 2u, BaseResolution / 4u, BaseResolution / 8u });
+	//}
 	return ShadowHandleSet;
 }

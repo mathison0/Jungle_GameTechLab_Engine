@@ -82,14 +82,14 @@ void USpotLightComponent::DestroyFromScene()
 
 FShadowHandleSet* USpotLightComponent::GetShadowHandleSet()
 {
-	if (!ShadowHandleSet || !ShadowHandleSet->bIsValid)
-	{
-		if (ShadowHandleSet)
-		{
-			ShadowHandleSet->Release();
-		}
-		ShadowHandleSet = FTextureAtlasPool::Get().GetTextureHandle(GetShadowResolution());
-	}
+	//if (!ShadowHandleSet || !ShadowHandleSet->bIsValid)
+	//{
+	//	if (ShadowHandleSet)
+	//	{
+	//		ShadowHandleSet->Release();
+	//	}
+	//	ShadowHandleSet = FTextureAtlasPool::Get().GetTextureHandle(GetShadowResolution());
+	//}
 	return ShadowHandleSet;
 }
 
