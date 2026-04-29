@@ -5,7 +5,8 @@ cbuffer ShadowPassBuffer : register(b2)
     row_major float4x4 LightVP;
     row_major float4x4 CameraVP;
     uint bIsPSM;
-    uint3 _pad;
+    uint bPSMFlipNegativeW;
+    uint2 _pad;
 };
 
 struct VSInput
@@ -29,6 +30,10 @@ VSOutput VS(VSInput input)
     else
     {
         output.Position = mul(worldPos, LightVP);
+    }
+    if (bPSMFlipNegativeW != 0 && output.Position.w < 0.0f)
+    {
+        output.Position *= -1.0f;
     }
     return output;
 }

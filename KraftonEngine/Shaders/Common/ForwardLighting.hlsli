@@ -143,7 +143,7 @@ void AccumulatePointSpotSpecular(float3 worldPos, float3 N, float3 V, float shin
         uint2 tileCoord = min(uint2(screenPos.xy) / TILE_SIZE, uint2(NumTilesX - 1, NumTilesY - 1));
         uint tileIdx = tileCoord.y * NumTilesX + tileCoord.x;
         uint2 gridData = TileLightGrid[tileIdx];
-        for (uint t = 0; t < gridData.y; ++t)
+        for (uint t = 0; t < gridData.y; ++t)  
         {
             FLightInfo light = AllLights[TileLightIndices[gridData.x + t]];
             result += CalcLightSpecular(light, worldPos, N, V, shininess) * GetLightShadow(light, worldPos, N);
