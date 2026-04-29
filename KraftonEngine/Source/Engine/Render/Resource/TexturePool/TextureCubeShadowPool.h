@@ -2,6 +2,7 @@
 
 #include "Core/CoreTypes.h"
 #include "Math/Vector.h"
+#include "Render/Resource/Buffer.h"
 #include <d3d11.h>
 #include <wrl/client.h>
 
@@ -42,7 +43,7 @@ public:
 	FTextureCubeShadowPool(FTextureCubeShadowPool&&) = delete;
 	FTextureCubeShadowPool& operator=(FTextureCubeShadowPool&&) = delete;
 
-	void Initialize(ID3D11Device* InDevice, uint32 InBaseResolution, uint32 InitialCubeCapacity = 1);
+	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InBaseResolution, uint32 InitialCubeCapacity = 1);
 	void Release();
 	bool EnsureVSMMode(bool bUseVSM);
 
@@ -52,8 +53,8 @@ public:
 	ID3D11ShaderResourceView* GetSRV(uint32 TierIndex) const;
 	ID3D11DepthStencilView* GetFaceDSV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
 	ID3D11RenderTargetView* GetFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
+	ID3D11ShaderResourceView* GetDebugSRV(FCubeShadowHandle Handle);
 	static FPointShadowFaceBasis GetFaceBasis(uint32 FaceIndex);
-	static FPointShadowFaceBasis GetPreviewFaceBasis(uint32 FaceIndex);
 
 	uint32 GetResolution(FCubeShadowHandle Handle) const;
 	uint32 GetResolutionForTier(uint32 TierIndex) const;
@@ -74,6 +75,7 @@ private:
 
 		TComPtr<ID3D11Texture2D> Texture;
 		TComPtr<ID3D11ShaderResourceView> SRV;
+		TComPtr<ID3D11ShaderResourceView> DebugArraySRV;
 		TComPtr<ID3D11Texture2D> MomentTexture;
 		TArray<TComPtr<ID3D11DepthStencilView>> FaceDSVs;
 		TArray<TComPtr<ID3D11RenderTargetView>> FaceVSMRTVs;
@@ -81,6 +83,17 @@ private:
 		TArray<uint32> FreeCubeIndices;
 	};
 
+	struct FDebugPreviewResource
+	{
+		TComPtr<ID3D11Texture2D> Texture;
+		TComPtr<ID3D11RenderTargetView> RTV;
+		TComPtr<ID3D11ShaderResourceView> SRV;
+		uint32 Width = 0;
+		uint32 Height = 0;
+	};
+
+	bool CreateDebugResource(FDebugPreviewResource& OutResource, uint32 Width, uint32 Height);
+	bool CreateDebugPassResources();
 	void Resize(uint32 TierIndex, uint32 NewCubeCapacity);
 	bool RebuildResources(uint32 TierIndex, uint32 NewCubeCapacity);
 	void UpdateMemoryStats();
@@ -90,8 +103,14 @@ private:
 
 private:
 	ID3D11Device* Device = nullptr;
+	ID3D11DeviceContext* DeviceContext = nullptr;
 	uint32 BaseResolution = 1024;
 	bool bVSMMode = false;
 	uint64 TrackedShadowCubeMemory = 0;
 	FTierPool Tiers[TierCount];
+	TMap<uint32, FDebugPreviewResource> DebugResources;
+	FConstantBuffer DebugConstantBuffer;
+	TComPtr<ID3D11SamplerState> DebugPointClampSampler;
+	TComPtr<ID3D11RasterizerState> DebugRasterizerState;
+	TComPtr<ID3D11DepthStencilState> DebugDepthStencilState;
 };

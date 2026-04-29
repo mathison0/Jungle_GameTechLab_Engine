@@ -1,7 +1,22 @@
 ﻿#include "TextureCubeShadowPool.h"
 #include "Profiling/MemoryStats.h"
+#include "Render/Pipeline/RenderConstants.h"
+#include "Render/Resource/ShaderManager.h"
+#include <array>
 namespace
 {
+	constexpr float ShadowDebugContrast = 75.0f;
+
+	template<typename T>
+	void SafeRelease(T*& Ptr)
+	{
+		if (Ptr)
+		{
+			Ptr->Release();
+			Ptr = nullptr;
+		}
+	}
+
 	uint32 MakeTierResolution(uint32 BaseResolution, uint32 TierIndex)
 	{
 		const uint32 SafeBase = BaseResolution > 0 ? BaseResolution : 1024;
@@ -13,13 +28,98 @@ namespace
 		default: return SafeBase * 2;
 		}
 	}
+
+	struct FDebugShadowConstants
+	{
+		float SrcUVRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+		uint32 SrcSlice = 0;
+		uint32 bReversedZ = 1;
+		float Contrast = ShadowDebugContrast;
+		float Padding = 0.0f;
+	};
+
+	struct FDebugPassStateBackup
+	{
+		std::array<ID3D11RenderTargetView*, D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT> RenderTargets = {};
+		ID3D11DepthStencilView* DepthStencilView = nullptr;
+		std::array<D3D11_VIEWPORT, D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE> Viewports = {};
+		UINT ViewportCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+		ID3D11VertexShader* VertexShader = nullptr;
+		ID3D11PixelShader* PixelShader = nullptr;
+		ID3D11InputLayout* InputLayout = nullptr;
+		D3D11_PRIMITIVE_TOPOLOGY PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+		ID3D11ShaderResourceView* PSSRV0 = nullptr;
+		ID3D11SamplerState* PSSampler0 = nullptr;
+		ID3D11Buffer* VSCB = nullptr;
+		ID3D11Buffer* PSCB = nullptr;
+		ID3D11RasterizerState* RasterizerState = nullptr;
+		ID3D11BlendState* BlendState = nullptr;
+		float BlendFactor[4] = {};
+		UINT SampleMask = 0xffffffffu;
+		ID3D11DepthStencilState* DepthStencilState = nullptr;
+		UINT StencilRef = 0;
+
+		void Capture(ID3D11DeviceContext* Context)
+		{
+			Context->OMGetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, RenderTargets.data(), &DepthStencilView);
+			Context->RSGetViewports(&ViewportCount, Viewports.data());
+			Context->VSGetShader(&VertexShader, nullptr, nullptr);
+			Context->PSGetShader(&PixelShader, nullptr, nullptr);
+			Context->IAGetInputLayout(&InputLayout);
+			Context->IAGetPrimitiveTopology(&PrimitiveTopology);
+			Context->PSGetShaderResources(0, 1, &PSSRV0);
+			Context->PSGetSamplers(0, 1, &PSSampler0);
+			Context->VSGetConstantBuffers(ECBSlot::PerShader0, 1, &VSCB);
+			Context->PSGetConstantBuffers(ECBSlot::PerShader0, 1, &PSCB);
+			Context->RSGetState(&RasterizerState);
+			Context->OMGetBlendState(&BlendState, BlendFactor, &SampleMask);
+			Context->OMGetDepthStencilState(&DepthStencilState, &StencilRef);
+		}
+
+		void Restore(ID3D11DeviceContext* Context)
+		{
+			Context->OMSetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, RenderTargets.data(), DepthStencilView);
+			if (ViewportCount > 0)
+			{
+				Context->RSSetViewports(ViewportCount, Viewports.data());
+			}
+			Context->VSSetShader(VertexShader, nullptr, 0);
+			Context->PSSetShader(PixelShader, nullptr, 0);
+			Context->IASetInputLayout(InputLayout);
+			Context->IASetPrimitiveTopology(PrimitiveTopology);
+			Context->PSSetShaderResources(0, 1, &PSSRV0);
+			Context->PSSetSamplers(0, 1, &PSSampler0);
+			Context->VSSetConstantBuffers(ECBSlot::PerShader0, 1, &VSCB);
+			Context->PSSetConstantBuffers(ECBSlot::PerShader0, 1, &PSCB);
+			Context->RSSetState(RasterizerState);
+			Context->OMSetBlendState(BlendState, BlendFactor, SampleMask);
+			Context->OMSetDepthStencilState(DepthStencilState, StencilRef);
+
+			for (ID3D11RenderTargetView*& RenderTarget : RenderTargets)
+			{
+				SafeRelease(RenderTarget);
+			}
+			SafeRelease(DepthStencilView);
+			SafeRelease(VertexShader);
+			SafeRelease(PixelShader);
+			SafeRelease(InputLayout);
+			SafeRelease(PSSRV0);
+			SafeRelease(PSSampler0);
+			SafeRelease(VSCB);
+			SafeRelease(PSCB);
+			SafeRelease(RasterizerState);
+			SafeRelease(BlendState);
+			SafeRelease(DepthStencilState);
+		}
+	};
 }
 
-void FTextureCubeShadowPool::Initialize(ID3D11Device* InDevice, uint32 InBaseResolution, uint32 InitialCubeCapacity)
+void FTextureCubeShadowPool::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InBaseResolution, uint32 InitialCubeCapacity)
 {
 	Release();
 
 	Device = InDevice;
+	DeviceContext = InDeviceContext;
 	BaseResolution = InBaseResolution > 0 ? InBaseResolution : 1024;
 	bVSMMode = false;
 
@@ -45,6 +145,7 @@ void FTextureCubeShadowPool::Release()
 		Tier.FaceVSMRTVs.clear();
 		Tier.MomentTexture.Reset();
 		Tier.SRV.Reset();
+		Tier.DebugArraySRV.Reset();
 		Tier.Texture.Reset();
 		Tier.AllocationFlags.clear();
 		Tier.FreeCubeIndices.clear();
@@ -53,7 +154,13 @@ void FTextureCubeShadowPool::Release()
 		Tier.AllocatedCount = 0;
 	}
 
+	DebugResources.clear();
+	DebugConstantBuffer.Release();
+	DebugPointClampSampler.Reset();
+	DebugRasterizerState.Reset();
+	DebugDepthStencilState.Reset();
 	Device = nullptr;
+	DeviceContext = nullptr;
 	BaseResolution = 1024;
 	bVSMMode = false;
 }
@@ -180,6 +287,75 @@ ID3D11RenderTargetView* FTextureCubeShadowPool::GetFaceVSMRTV(FCubeShadowHandle 
 	return Tier->FaceVSMRTVs[SliceIndex].Get();
 }
 
+ID3D11ShaderResourceView* FTextureCubeShadowPool::GetDebugSRV(FCubeShadowHandle Handle)
+{
+	const FTierPool* Tier = GetTier(Handle.TierIndex);
+	if (!Handle.IsValid() || !Tier || !Tier->DebugArraySRV || Tier->Resolution == 0 || !CreateDebugPassResources())
+	{
+		return nullptr;
+	}
+
+	const uint32 Width = Tier->Resolution * 3;
+	const uint32 Height = Tier->Resolution * 2;
+	const uint32 CacheKey = (Handle.TierIndex << 16) | Handle.CubeIndex;
+	FDebugPreviewResource& DebugResource = DebugResources[CacheKey];
+	if (!CreateDebugResource(DebugResource, Width, Height))
+	{
+		return nullptr;
+	}
+
+	FShader* DebugShader = FShaderManager::Get().GetOrCreate(EShaderPath::ShadowDepthDebug);
+	if (!DebugShader || !DebugShader->IsValid())
+	{
+		return nullptr;
+	}
+
+	FDebugPassStateBackup SavedState;
+	SavedState.Capture(DeviceContext);
+
+	ID3D11ShaderResourceView* NullSRV = nullptr;
+	DeviceContext->PSSetShaderResources(0, 1, &NullSRV);
+
+	const float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	ID3D11RenderTargetView* DebugRTV = DebugResource.RTV.Get();
+	ID3D11ShaderResourceView* SourceSRV = Tier->DebugArraySRV.Get();
+	ID3D11SamplerState* Sampler = DebugPointClampSampler.Get();
+	ID3D11Buffer* ConstantBufferHandle = DebugConstantBuffer.GetBuffer();
+
+	DeviceContext->OMSetRenderTargets(1, &DebugRTV, nullptr);
+	DeviceContext->ClearRenderTargetView(DebugRTV, ClearColor);
+	DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffffu);
+	DeviceContext->OMSetDepthStencilState(DebugDepthStencilState.Get(), 0);
+	DeviceContext->RSSetState(DebugRasterizerState.Get());
+	DebugShader->Bind(DeviceContext);
+	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	DeviceContext->VSSetConstantBuffers(ECBSlot::PerShader0, 1, &ConstantBufferHandle);
+	DeviceContext->PSSetConstantBuffers(ECBSlot::PerShader0, 1, &ConstantBufferHandle);
+	DeviceContext->PSSetSamplers(0, 1, &Sampler);
+	DeviceContext->PSSetShaderResources(0, 1, &SourceSRV);
+
+	for (uint32 FaceIndex = 0; FaceIndex < CubeFaceCount; ++FaceIndex)
+	{
+		FDebugShadowConstants Constants = {};
+		Constants.SrcSlice = GetSliceIndex(Handle, FaceIndex);
+		DebugConstantBuffer.Update(DeviceContext, &Constants, sizeof(Constants));
+
+		D3D11_VIEWPORT Viewport = {};
+		Viewport.TopLeftX = static_cast<float>((FaceIndex % 3) * Tier->Resolution);
+		Viewport.TopLeftY = static_cast<float>((FaceIndex / 3) * Tier->Resolution);
+		Viewport.Width = static_cast<float>(Tier->Resolution);
+		Viewport.Height = static_cast<float>(Tier->Resolution);
+		Viewport.MinDepth = 0.0f;
+		Viewport.MaxDepth = 1.0f;
+		DeviceContext->RSSetViewports(1, &Viewport);
+		DeviceContext->Draw(3, 0);
+	}
+
+	DeviceContext->PSSetShaderResources(0, 1, &NullSRV);
+	SavedState.Restore(DeviceContext);
+	return DebugResource.SRV.Get();
+}
+
 FPointShadowFaceBasis FTextureCubeShadowPool::GetFaceBasis(uint32 FaceIndex)
 {
 	static const FVector FaceForwards[CubeFaceCount] =
@@ -197,39 +373,6 @@ FPointShadowFaceBasis FTextureCubeShadowPool::GetFaceBasis(uint32 FaceIndex)
 		FVector(0.0f, 1.0f, 0.0f),
 		FVector(0.0f, 1.0f, 0.0f),
 		FVector(0.0f, 0.0f, -1.0f),
-		FVector(0.0f, 0.0f, 1.0f),
-		FVector(0.0f, 1.0f, 0.0f),
-		FVector(0.0f, 1.0f, 0.0f)
-	};
-
-	const uint32 SafeFaceIndex = FaceIndex < CubeFaceCount ? FaceIndex : 0;
-	const FVector Forward = FaceForwards[SafeFaceIndex];
-	const FVector Up = FaceUps[SafeFaceIndex];
-
-	FPointShadowFaceBasis Basis;
-	Basis.Forward = Forward;
-	Basis.Up = Up;
-	Basis.Right = Up.Cross(Forward);
-	return Basis;
-}
-
-FPointShadowFaceBasis FTextureCubeShadowPool::GetPreviewFaceBasis(uint32 FaceIndex)
-{
-	static const FVector FaceForwards[CubeFaceCount] =
-	{
-		FVector(1.0f, 0.0f, 0.0f),
-		FVector(-1.0f, 0.0f, 0.0f),
-		FVector(0.0f, 1.0f, 0.0f),
-		FVector(0.0f, -1.0f, 0.0f),
-		FVector(0.0f, 0.0f, 1.0f),
-		FVector(0.0f, 0.0f, -1.0f)
-	};
-
-	static const FVector FaceUps[CubeFaceCount] =
-	{
-		FVector(0.0f, 0.0f, 1.0f),
-		FVector(0.0f, 0.0f, 1.0f),
-		FVector(0.0f, 0.0f, 1.0f),
 		FVector(0.0f, 0.0f, 1.0f),
 		FVector(0.0f, 1.0f, 0.0f),
 		FVector(0.0f, 1.0f, 0.0f)
@@ -308,6 +451,7 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 
 	TComPtr<ID3D11Texture2D> NewTexture;
 	TComPtr<ID3D11ShaderResourceView> NewSRV;
+	TComPtr<ID3D11ShaderResourceView> NewDebugArraySRV;
 	TComPtr<ID3D11Texture2D> NewMomentTexture;
 	TArray<TComPtr<ID3D11DepthStencilView>> NewFaceDSVs;
 	TArray<TComPtr<ID3D11RenderTargetView>> NewFaceVSMRTVs;
@@ -360,6 +504,21 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 			assert(false);
 			return false;
 		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC DebugSRVDesc = {};
+		DebugSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+		DebugSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		DebugSRVDesc.Texture2DArray.MostDetailedMip = 0;
+		DebugSRVDesc.Texture2DArray.MipLevels = 1;
+		DebugSRVDesc.Texture2DArray.FirstArraySlice = 0;
+		DebugSRVDesc.Texture2DArray.ArraySize = TotalSlices;
+
+		hr = Device->CreateShaderResourceView(NewMomentTexture.Get(), &DebugSRVDesc, NewDebugArraySRV.GetAddressOf());
+		if (FAILED(hr))
+		{
+			assert(false);
+			return false;
+		}
 	}
 	else
 	{
@@ -372,6 +531,21 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 		SRVDesc.TextureCubeArray.NumCubes = NewCubeCapacity;
 
 		hr = Device->CreateShaderResourceView(NewTexture.Get(), &SRVDesc, NewSRV.GetAddressOf());
+		if (FAILED(hr))
+		{
+			assert(false);
+			return false;
+		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC DebugSRVDesc = {};
+		DebugSRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		DebugSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		DebugSRVDesc.Texture2DArray.MostDetailedMip = 0;
+		DebugSRVDesc.Texture2DArray.MipLevels = 1;
+		DebugSRVDesc.Texture2DArray.FirstArraySlice = 0;
+		DebugSRVDesc.Texture2DArray.ArraySize = TotalSlices;
+
+		hr = Device->CreateShaderResourceView(NewTexture.Get(), &DebugSRVDesc, NewDebugArraySRV.GetAddressOf());
 		if (FAILED(hr))
 		{
 			assert(false);
@@ -422,10 +596,12 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 
 	Tier->Texture = std::move(NewTexture);
 	Tier->SRV = std::move(NewSRV);
+	Tier->DebugArraySRV = std::move(NewDebugArraySRV);
 	Tier->MomentTexture = std::move(NewMomentTexture);
 	Tier->FaceDSVs = std::move(NewFaceDSVs);
 	Tier->FaceVSMRTVs = std::move(NewFaceVSMRTVs);
 	Tier->CubeCapacity = NewCubeCapacity;
+	DebugResources.clear();
 
 	Tier->AllocationFlags.resize(Tier->CubeCapacity, 0);
 	for (uint32 CubeIndex = Tier->CubeCapacity; CubeIndex > OldCapacity; --CubeIndex)
@@ -435,6 +611,128 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 
 	UpdateMemoryStats();
 	return true;
+}
+
+bool FTextureCubeShadowPool::CreateDebugResource(FDebugPreviewResource& OutResource, uint32 Width, uint32 Height)
+{
+	if (OutResource.Texture && OutResource.RTV && OutResource.SRV && OutResource.Width == Width && OutResource.Height == Height)
+	{
+		return true;
+	}
+
+	if (!Device || Width == 0 || Height == 0)
+	{
+		return false;
+	}
+
+	OutResource.Texture.Reset();
+	OutResource.RTV.Reset();
+	OutResource.SRV.Reset();
+
+	D3D11_TEXTURE2D_DESC TextureDesc = {};
+	TextureDesc.Width = Width;
+	TextureDesc.Height = Height;
+	TextureDesc.MipLevels = 1;
+	TextureDesc.ArraySize = 1;
+	TextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	TextureDesc.SampleDesc.Count = 1;
+	TextureDesc.Usage = D3D11_USAGE_DEFAULT;
+	TextureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	HRESULT hr = Device->CreateTexture2D(&TextureDesc, nullptr, OutResource.Texture.GetAddressOf());
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+	RTVDesc.Format = TextureDesc.Format;
+	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	RTVDesc.Texture2D.MipSlice = 0;
+
+	hr = Device->CreateRenderTargetView(OutResource.Texture.Get(), &RTVDesc, OutResource.RTV.GetAddressOf());
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.Format = TextureDesc.Format;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SRVDesc.Texture2D.MostDetailedMip = 0;
+	SRVDesc.Texture2D.MipLevels = 1;
+
+	hr = Device->CreateShaderResourceView(OutResource.Texture.Get(), &SRVDesc, OutResource.SRV.GetAddressOf());
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	OutResource.Width = Width;
+	OutResource.Height = Height;
+	return true;
+}
+
+bool FTextureCubeShadowPool::CreateDebugPassResources()
+{
+	if (!Device || !DeviceContext)
+	{
+		return false;
+	}
+
+	if (!DebugConstantBuffer.GetBuffer())
+	{
+		DebugConstantBuffer.Create(Device, sizeof(FDebugShadowConstants));
+	}
+
+	if (!DebugPointClampSampler)
+	{
+		D3D11_SAMPLER_DESC SamplerDesc = {};
+		SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+		SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		SamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+		SamplerDesc.MinLOD = 0.0f;
+		SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+		HRESULT hr = Device->CreateSamplerState(&SamplerDesc, DebugPointClampSampler.GetAddressOf());
+		if (FAILED(hr))
+		{
+			return false;
+		}
+	}
+
+	if (!DebugRasterizerState)
+	{
+		D3D11_RASTERIZER_DESC RasterizerDesc = {};
+		RasterizerDesc.FillMode = D3D11_FILL_SOLID;
+		RasterizerDesc.CullMode = D3D11_CULL_NONE;
+		RasterizerDesc.DepthClipEnable = TRUE;
+
+		HRESULT hr = Device->CreateRasterizerState(&RasterizerDesc, DebugRasterizerState.GetAddressOf());
+		if (FAILED(hr))
+		{
+			return false;
+		}
+	}
+
+	if (!DebugDepthStencilState)
+	{
+		D3D11_DEPTH_STENCIL_DESC DepthStencilDesc = {};
+		DepthStencilDesc.DepthEnable = FALSE;
+		DepthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+		DepthStencilDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
+		DepthStencilDesc.StencilEnable = FALSE;
+
+		HRESULT hr = Device->CreateDepthStencilState(&DepthStencilDesc, DebugDepthStencilState.GetAddressOf());
+		if (FAILED(hr))
+		{
+			return false;
+		}
+	}
+
+	return DebugConstantBuffer.GetBuffer() && DebugPointClampSampler && DebugRasterizerState && DebugDepthStencilState;
 }
 
 void FTextureCubeShadowPool::UpdateMemoryStats()

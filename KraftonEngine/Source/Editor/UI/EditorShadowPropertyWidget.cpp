@@ -4,6 +4,7 @@
 #include "Engine/Runtime/Engine.h"
 #include "imgui.h"
 #include "Engine/Component/Light/PointLightComponent.h"
+#include "Engine/Render/Resource/TexturePool/TextureCubeShadowPool.h"
 
 void FEditorShadowPropertyWidget::ShowShadowProperty(ULightComponent* LightComponent)
 {
@@ -110,8 +111,16 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 	ID3D11ShaderResourceView* PreviewSRV = nullptr;
 	if (PreviewMode == EShadowPreviewMode::SelectedLight)
 	{
-		FShadowHandleSet* Handle = CurrentShowLightComponent->GetShadowHandleSet();
-		PreviewSRV = Handle ? AtlasPool.GetDebugSRV(Handle) : nullptr;
+		if (CurrentShowLightComponent->GetClass() == UPointLightComponent::StaticClass())
+		{
+			const FShadowMapKey ShadowMapKey = CurrentShowLightComponent->GetShadowMapKey();
+			PreviewSRV = FTextureCubeShadowPool::Get().GetDebugSRV(ShadowMapKey.CubeMap);
+		}
+		else
+		{
+			FShadowHandleSet* Handle = CurrentShowLightComponent->GetShadowHandleSet();
+			PreviewSRV = Handle ? AtlasPool.GetDebugSRV(Handle) : nullptr;
+		}
 		if (!PreviewSRV)
 		{
 			ImGui::TextUnformatted("No shadow map for selected light.");

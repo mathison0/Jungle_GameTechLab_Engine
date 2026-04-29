@@ -8,6 +8,7 @@
 #include "Engine/Runtime/WindowsWindow.h"
 
 #include "Component/CameraComponent.h"
+#include "Component/Light/DirectionalLightComponent.h"
 #include "Component/Light/LightComponent.h"
 #include "Component/Light/PointLightComponent.h"
 #include "Component/Light/SpotLightComponent.h"
@@ -204,6 +205,9 @@ void FEditorViewportClient::SaveCameraOverrideSnapshot()
 	CameraOverrideSnapshot.bValid = true;
 	CameraOverrideSnapshot.Location = Camera->GetWorldLocation();
 	CameraOverrideSnapshot.FocusPoint = CameraOverrideSnapshot.Location + CameraForward * 100.0f;
+	CameraOverrideSnapshot.Forward = CameraForward;
+	CameraOverrideSnapshot.Right = Camera->GetRightVector();
+	CameraOverrideSnapshot.Up = Camera->GetUpVector();
 	CameraOverrideSnapshot.Rotation = Camera->GetRelativeRotation();
 	CameraOverrideSnapshot.FOV = CameraState.FOV;
 	CameraOverrideSnapshot.NearZ = CameraState.NearZ;
@@ -324,17 +328,24 @@ void FEditorViewportClient::SyncLightCameraOverride()
 	}
 	else if (PreviewLightComponent->IsA<UPointLightComponent>())
 	{
-		const FPointShadowFaceBasis FaceBasis = FTextureCubeShadowPool::GetPreviewFaceBasis(RenderOptions.PointLightPreviewFaceIndex);
+		const FPointShadowFaceBasis FaceBasis = FTextureCubeShadowPool::GetFaceBasis(RenderOptions.PointLightPreviewFaceIndex);
 		Camera->SetWorldLocation(LightLocation + FaceBasis.Forward * PreviewBackoff);
 		SetCameraOrientationFromBasis(Camera, FaceBasis.Forward, FaceBasis.Right, FaceBasis.Up);
 		OverrideState.bIsOrthogonal = false;
 		OverrideState.FOV = 90.0f * FMath::DegToRad;
 		RenderOptions.ViewportType = ELevelViewportType::Perspective;
 	}
-	else
+	else if (PreviewLightComponent->IsA<UDirectionalLightComponent>())
 	{
-		const float DirectionalDistance = 100.0f;
-		Camera->SetWorldLocation(FocusPoint - LightForward * DirectionalDistance);
+		FVector PreviewLocation = FocusPoint - LightForward * 100.0f;
+		if (!CameraOverrideSnapshot.bIsOrthographic
+			&& CameraOverrideSnapshot.FarZ > CameraOverrideSnapshot.NearZ + 1.0f)
+		{
+			const float VirtualSlideBack = FMath::Clamp(CameraOverrideSnapshot.FarZ * 0.01f, 1.0f, 10.0f);
+			PreviewLocation = CameraOverrideSnapshot.Location - CameraOverrideSnapshot.Forward * VirtualSlideBack;
+		}
+
+		Camera->SetWorldLocation(PreviewLocation);
 		SetCameraOrientationFromBasis(Camera,
 			LightForward,
 			PreviewLightComponent->GetRightVector(),

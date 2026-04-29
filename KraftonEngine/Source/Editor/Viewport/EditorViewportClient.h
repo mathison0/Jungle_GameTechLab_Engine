@@ -91,6 +91,9 @@ private:
 		bool bValid = false;
 		FVector Location = FVector(0.0f, 0.0f, 0.0f);
 		FVector FocusPoint = FVector(0.0f, 0.0f, 0.0f);
+		FVector Forward = FVector(1.0f, 0.0f, 0.0f);
+		FVector Right = FVector(0.0f, 1.0f, 0.0f);
+		FVector Up = FVector(0.0f, 0.0f, 1.0f);
 		FRotator Rotation;
 		float FOV = 3.14159265358979f / 3.0f;
 		float NearZ = 0.1f;
