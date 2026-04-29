@@ -25,8 +25,9 @@ enum class ELightCullingMode : uint32
 
 enum class EShadowFilterMode : uint32
 {
-	PCF = 0,
-	VSM = 1
+	None = 0,		// Hard Shadow
+	PCF = 1,		// Percentage-Closer Filtering
+	VSM = 2			// Variance Shadow Mapping
 };
 
 enum class EShadowMethod : uint32

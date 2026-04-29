@@ -43,7 +43,7 @@ public:
 	FTextureCubeShadowPool(FTextureCubeShadowPool&&) = delete;
 	FTextureCubeShadowPool& operator=(FTextureCubeShadowPool&&) = delete;
 
-	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InBaseResolution, uint32 InitialCubeCapacity = 1);
+	void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, uint32 InBaseResolution, uint32 InitialCubeCapacity = 0);
 	void Release();
 	bool EnsureVSMMode(bool bUseVSM);
 
@@ -51,7 +51,7 @@ public:
 	void ReleaseHandle(FCubeShadowHandle Handle);
 
 	ID3D11ShaderResourceView* GetSRV(uint32 TierIndex) const;
-	ID3D11ShaderResourceView* GetRawVSMArraySRV(uint32 TierIndex) const;
+	ID3D11ShaderResourceView* GetFilteredVSMArraySRV(uint32 TierIndex) const;
 	ID3D11ShaderResourceView* GetTempVSMArraySRV(uint32 TierIndex) const;
 	ID3D11DepthStencilView* GetFaceDSV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
 	ID3D11RenderTargetView* GetFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
@@ -80,13 +80,10 @@ private:
 		TComPtr<ID3D11Texture2D> Texture;
 		TComPtr<ID3D11ShaderResourceView> SRV;
 		TComPtr<ID3D11ShaderResourceView> DebugArraySRV;
-		TComPtr<ID3D11Texture2D> MomentTexture;
 		TComPtr<ID3D11Texture2D> TempMomentTexture;
 		TComPtr<ID3D11Texture2D> FilteredMomentTexture;
-		TComPtr<ID3D11ShaderResourceView> RawVSMArraySRV;
 		TComPtr<ID3D11ShaderResourceView> TempVSMArraySRV;
 		TArray<TComPtr<ID3D11DepthStencilView>> FaceDSVs;
-		TArray<TComPtr<ID3D11RenderTargetView>> FaceVSMRTVs;
 		TArray<TComPtr<ID3D11RenderTargetView>> TempFaceVSMRTVs;
 		TArray<TComPtr<ID3D11RenderTargetView>> FilteredFaceVSMRTVs;
 		TArray<uint8> AllocationFlags;
