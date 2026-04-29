@@ -25,6 +25,7 @@ struct FTexturePoolHandleSet
 	}
 
 	void Release();
+	FTexturePoolBase* GetPool() const { return Pool; }
 
 	uint32 InternalIndex = static_cast<uint32>(-1);
 	bool bIsValid = false;

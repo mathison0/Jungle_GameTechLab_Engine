@@ -10,25 +10,14 @@ class FTextureAtlasPool final : public FTexturePoolBase
 	template<typename T>
 	using TComPtr = Microsoft::WRL::ComPtr<T>;
 
-#pragma region DefineSingleton
 public:
-	static FTextureAtlasPool& Get()
-	{
-		static FTextureAtlasPool Instance;
-		return Instance;
-	}
-
+	FTextureAtlasPool() = default;
+	~FTextureAtlasPool() = default;
 	FTextureAtlasPool(const FTextureAtlasPool&) = delete;
 	FTextureAtlasPool& operator=(const FTextureAtlasPool&) = delete;
 	FTextureAtlasPool(FTextureAtlasPool&&) = delete;
 	FTextureAtlasPool& operator=(FTextureAtlasPool&&) = delete;
 
-protected:
-	FTextureAtlasPool() = default;
-	~FTextureAtlasPool() = default;
-#pragma endregion
-
-public:
 	void Initialize(
 		ID3D11Device* InDevice,
 		ID3D11DeviceContext* InDeviceContext,

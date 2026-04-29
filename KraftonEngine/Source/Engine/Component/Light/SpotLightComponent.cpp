@@ -82,21 +82,12 @@ void USpotLightComponent::DestroyFromScene()
 
 FShadowHandleSet* USpotLightComponent::GetShadowHandleSet()
 {
-	//if (!ShadowHandleSet || !ShadowHandleSet->bIsValid)
-	//{
-	//	if (ShadowHandleSet)
-	//	{
-	//		ShadowHandleSet->Release();
-	//	}
-	//	ShadowHandleSet = FTextureAtlasPool::Get().GetTextureHandle(GetShadowResolution());
-	//}
 	return ShadowHandleSet;
 }
 
 FShadowMapKey USpotLightComponent::GetShadowMapKey()
 {
 	FShadowMapKey Result;
-	Result.Atlas = FTextureAtlasPool::Get().GetAtlasUVArray(ShadowHandleSet);
 	return Result;
 }
 

@@ -7,6 +7,7 @@
 #include "Render/Pipeline/FrameContext.h"
 #include "Render/Proxy/FScene.h"
 #include "Engine/Runtime/Engine.h"
+#include "Core/Log.h"
 #include "Profiling/Timer.h"
 #include <cstring>
 
@@ -401,11 +402,11 @@ void FSystemResources::UnbindTileCullingBuffers(FD3DDevice& Device)
 	Ctx->CSSetShaderResources(ELightTexSlot::TileLightIndices, 2, NullSRVs);
 }
 
-void FSystemResources::BindShadowResources(FD3DDevice& Device)
+void FSystemResources::BindShadowResources(FD3DDevice& Device, FTextureAtlasPool& AtlasPool)
 {
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
 	ID3D11ShaderResourceView* ShadowInfoSRV = ShadowInfos.SRV;
-	ID3D11ShaderResourceView* ShadowAtlasSRV = FTextureAtlasPool::Get().GetSRV();
+	ID3D11ShaderResourceView* ShadowAtlasSRV = AtlasPool.GetSRV();
 	ID3D11ShaderResourceView* ShadowCubeSRVs[FTextureCubeShadowPool::TierCount] =
 	{
 		FTextureCubeShadowPool::Get().GetSRV(0),
@@ -417,6 +418,12 @@ void FSystemResources::BindShadowResources(FD3DDevice& Device)
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowInfos, 1, &ShadowInfoSRV);
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowAtlasArray, 1, &ShadowAtlasSRV);
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowCubeArrayTier0, FTextureCubeShadowPool::TierCount, ShadowCubeSRVs);
+	static const FTextureAtlasPool* LastBindLoggedPool = nullptr;
+	if (LastBindLoggedPool != &AtlasPool)
+	{
+		LastBindLoggedPool = &AtlasPool;
+		UE_LOG("[ShadowAtlas] Bind SRV Pool=%p", static_cast<void*>(&AtlasPool));
+	}
 }
 
 void FSystemResources::UnbindShadowResources(FD3DDevice& Device)

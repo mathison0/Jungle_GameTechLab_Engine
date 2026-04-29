@@ -4,6 +4,7 @@
 #include "Engine/Runtime/Engine.h"
 #include "imgui.h"
 #include "Engine/Component/Light/PointLightComponent.h"
+#include "GameFramework/World.h"
 #include <algorithm>
 #include <cstdio>
 
@@ -186,7 +187,19 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 		PreviewMode = EShadowPreviewMode::AtlasLayer;
 	}
 
-	FTextureAtlasPool& AtlasPool = FTextureAtlasPool::Get();
+	UWorld* World = CurrentShowLightComponent->GetWorld();
+	if (!World)
+	{
+		ImGui::TextUnformatted("No world for selected light.");
+		return;
+	}
+	if (!World->GetScene().IsShadowAtlasInitialized())
+	{
+		ImGui::TextUnformatted("Shadow atlas is not initialized for selected light's world.");
+		return;
+	}
+
+	FTextureAtlasPool& AtlasPool = World->GetScene().GetShadowAtlasPool();
 	const uint32 AllocatedLayerCount = AtlasPool.GetAllocatedLayerCount();
 	const int32 MaxLayerIndex = AllocatedLayerCount > 0 ? static_cast<int32>(AllocatedLayerCount - 1) : 0;
 

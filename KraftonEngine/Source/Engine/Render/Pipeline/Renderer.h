@@ -92,9 +92,9 @@ private:
 		D3D11_BOX Box = {};
 	};
 
-	void BuildShadowPassData(const FFrameContext& Frame, const FScene& Scene, FShadowPassData& OutShadowPassData);
-	void RenderShadowPass(const FFrameContext& Frame, const FScene& Scene, const FShadowPassData& ShadowPassData);
-	void RenderVSMBlurPass(const FShadowPassData& ShadowPassData);
+	void BuildShadowPassData(const FFrameContext& Frame, FScene& Scene, FShadowPassData& OutShadowPassData);
+	void RenderShadowPass(const FFrameContext& Frame, FScene& Scene, const FShadowPassData& ShadowPassData);
+	void RenderVSMBlurPass(FTextureAtlasPool& AtlasPool, const FShadowPassData& ShadowPassData);
 	void CleanupPassState(FStateCache& Cache);
 
 private:
