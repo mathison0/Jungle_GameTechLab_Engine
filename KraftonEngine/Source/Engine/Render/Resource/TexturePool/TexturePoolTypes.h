@@ -30,6 +30,7 @@ struct FTexturePoolHandleSet
 	bool bIsValid = false;
 	uint64 DebugVersion = 1;
 	TArray<FTexturePoolHandle> Handles;
+	TArray<uint32> AllocatedSizes;
 
 private:
 	FTexturePoolBase* Pool = nullptr;

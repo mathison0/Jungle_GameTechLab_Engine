@@ -49,6 +49,8 @@ public:
 	bool ShouldReleaseShadowAtlasHandle(uint64 FrameIndex, uint64 GraceFrameCount) const;
 	void MarkShadowAtlasAllocationFailed(uint64 FrameIndex, uint32 Resolution);
 	bool ShouldSkipShadowAtlasAllocation(uint64 FrameIndex, uint32 RequestedResolution, uint64 CooldownFrameCount) const;
+	bool UpdateShadowAtlasDownscaleCandidate(uint32 DesiredResolution, uint64 FrameIndex, uint64 StableFrameCount);
+	void ClearShadowAtlasDownscaleCandidate();
 
 protected:
 	float ShadowResolutionScale = 1.0f;
@@ -61,4 +63,6 @@ protected:
 	uint64 LastShadowAtlasSelectedFrame = 0;
 	uint64 LastShadowAtlasAllocationFailedFrame = 0;
 	uint32 LastFailedShadowResolution = 0;
+	uint32 PendingShadowAtlasDownscaleResolution = 0;
+	uint64 PendingShadowAtlasDownscaleStartFrame = 0;
 };

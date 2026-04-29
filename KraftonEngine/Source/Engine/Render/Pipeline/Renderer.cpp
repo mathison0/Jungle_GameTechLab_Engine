@@ -233,6 +233,34 @@ namespace
 		return Box;
 	}
 
+	struct FShadowScreenRect
+	{
+		float MinX = FLT_MAX;
+		float MinY = FLT_MAX;
+		float MaxX = -FLT_MAX;
+		float MaxY = -FLT_MAX;
+		bool bValid = false;
+
+		void Expand(float X, float Y)
+		{
+			MinX = std::min(MinX, X);
+			MinY = std::min(MinY, Y);
+			MaxX = std::max(MaxX, X);
+			MaxY = std::max(MaxY, Y);
+			bValid = true;
+		}
+
+		float Width() const
+		{
+			return bValid ? std::max(MaxX - MinX, 0.0f) : 0.0f;
+		}
+
+		float Height() const
+		{
+			return bValid ? std::max(MaxY - MinY, 0.0f) : 0.0f;
+		}
+	};
+
 	enum class EShadowAtlasRequestType
 	{
 		DirectionalCascade,
@@ -274,6 +302,10 @@ namespace
 
 		float FinalPriority = 0.0f;
 		float EfficiencyScore = 0.0f;
+		float ProjectedWidthPx = 0.0f;
+		float ProjectedHeightPx = 0.0f;
+		uint32 MaxAllowedResolution = 0;
+		uint32 ExistingResolution = 0;
 
 		bool bMustAllocate = false;
 		bool bSelected = false;
@@ -289,16 +321,180 @@ namespace
 	constexpr float ShadowAtlasSpotMustCoverageThreshold = 0.15f;
 	constexpr float ShadowAtlasSpotMustProximityThreshold = 0.65f;
 	constexpr float ShadowAtlasHysteresisFactor = 1.25f;
+	constexpr float ShadowAtlasProjectedResolutionScale = 1.5f;
 	constexpr uint32 ShadowAtlasMinSpotResolution = 256;
 	constexpr uint32 ShadowAtlasMaxDirectionalCascades = 4;
 	constexpr uint64 ShadowAtlasReleaseGraceFrames = 8;
 	constexpr uint64 ShadowAtlasDirectionalReleaseGraceFrames = 16;
 	constexpr uint64 ShadowAtlasAllocationFailureCooldownFrames = 12;
+	constexpr uint64 ShadowAtlasDownscaleStableFrames = 16;
 	constexpr bool bShadowAtlasVerboseLog = false;
 
 	float Clamp01(float Value)
 	{
 		return FMath::Clamp(Value, 0.0f, 1.0f);
+	}
+
+	bool ProjectWorldPointToScreen(
+		const FVector& WorldPosition,
+		const FMatrix& ViewProjection,
+		float ViewportWidth,
+		float ViewportHeight,
+		float& OutX,
+		float& OutY)
+	{
+		const float X =
+			WorldPosition.X * ViewProjection.M[0][0] +
+			WorldPosition.Y * ViewProjection.M[1][0] +
+			WorldPosition.Z * ViewProjection.M[2][0] +
+			ViewProjection.M[3][0];
+
+		const float Y =
+			WorldPosition.X * ViewProjection.M[0][1] +
+			WorldPosition.Y * ViewProjection.M[1][1] +
+			WorldPosition.Z * ViewProjection.M[2][1] +
+			ViewProjection.M[3][1];
+
+		const float W =
+			WorldPosition.X * ViewProjection.M[0][3] +
+			WorldPosition.Y * ViewProjection.M[1][3] +
+			WorldPosition.Z * ViewProjection.M[2][3] +
+			ViewProjection.M[3][3];
+
+		if (W <= 0.0001f)
+		{
+			return false;
+		}
+
+		const float NdcX = X / W;
+		const float NdcY = Y / W;
+		OutX = (NdcX * 0.5f + 0.5f) * ViewportWidth;
+		OutY = (-NdcY * 0.5f + 0.5f) * ViewportHeight;
+		return true;
+	}
+
+	FShadowScreenRect ProjectSphereBoundsToScreen(
+		const FFrameContext& Frame,
+		const FVector& Center,
+		float Radius)
+	{
+		FShadowScreenRect Rect;
+		if (Radius <= 0.0f || Frame.ViewportWidth <= 0.0f || Frame.ViewportHeight <= 0.0f)
+		{
+			return Rect;
+		}
+
+		if (FVector::Distance(Frame.CameraPosition, Center) <= Radius)
+		{
+			Rect.MinX = 0.0f;
+			Rect.MinY = 0.0f;
+			Rect.MaxX = Frame.ViewportWidth;
+			Rect.MaxY = Frame.ViewportHeight;
+			Rect.bValid = true;
+			return Rect;
+		}
+
+		const FMatrix ViewProjection = Frame.View * Frame.Proj;
+		const FVector Corners[8] =
+		{
+			Center + FVector(-Radius, -Radius, -Radius),
+			Center + FVector(-Radius, -Radius,  Radius),
+			Center + FVector(-Radius,  Radius, -Radius),
+			Center + FVector(-Radius,  Radius,  Radius),
+			Center + FVector( Radius, -Radius, -Radius),
+			Center + FVector( Radius, -Radius,  Radius),
+			Center + FVector( Radius,  Radius, -Radius),
+			Center + FVector( Radius,  Radius,  Radius)
+		};
+
+		for (const FVector& Corner : Corners)
+		{
+			float ScreenX = 0.0f;
+			float ScreenY = 0.0f;
+			if (ProjectWorldPointToScreen(Corner, ViewProjection, Frame.ViewportWidth, Frame.ViewportHeight, ScreenX, ScreenY))
+			{
+				Rect.Expand(ScreenX, ScreenY);
+			}
+		}
+
+		if (!Rect.bValid)
+		{
+			return Rect;
+		}
+
+		// TODO: Clip sphere bounds against the near plane instead of relying only on valid projected corners.
+		Rect.MinX = FMath::Clamp(Rect.MinX, 0.0f, Frame.ViewportWidth);
+		Rect.MinY = FMath::Clamp(Rect.MinY, 0.0f, Frame.ViewportHeight);
+		Rect.MaxX = FMath::Clamp(Rect.MaxX, 0.0f, Frame.ViewportWidth);
+		Rect.MaxY = FMath::Clamp(Rect.MaxY, 0.0f, Frame.ViewportHeight);
+		if (Rect.Width() <= 0.0f || Rect.Height() <= 0.0f)
+		{
+			Rect.bValid = false;
+		}
+		return Rect;
+	}
+
+	uint32 QuantizeShadowResolution(uint32 RequiredPixels)
+	{
+		if (RequiredPixels > 1024u)
+		{
+			return 2048;
+		}
+		if (RequiredPixels > 512u)
+		{
+			return 1024;
+		}
+		if (RequiredPixels > 256u)
+		{
+			return 512;
+		}
+		return 256;
+	}
+
+	uint32 ChooseSpotShadowResolutionFromProjectedRect(
+		const FShadowScreenRect& Rect,
+		uint32 MaxResolution)
+	{
+		if (!Rect.bValid || MaxResolution == 0)
+		{
+			return 0;
+		}
+
+		const float ProjectedPixels = std::max(Rect.Width(), Rect.Height());
+		const uint32 RequiredPixels = static_cast<uint32>(std::ceil(ProjectedPixels * ShadowAtlasProjectedResolutionScale));
+		const uint32 QuantizedResolution = QuantizeShadowResolution(RequiredPixels);
+		return std::min(QuantizedResolution, MaxResolution);
+	}
+
+	[[maybe_unused]] uint32 ComputeProjectedSpotShadowResolution(
+		const FFrameContext& Frame,
+		const FVector& LightPosition,
+		float AttenuationRadius,
+		uint32 MaxResolution)
+	{
+		const FShadowScreenRect Rect = ProjectSphereBoundsToScreen(Frame, LightPosition, AttenuationRadius);
+		return ChooseSpotShadowResolutionFromProjectedRect(Rect, MaxResolution);
+	}
+
+	uint32 GetHandleSetPrimaryResolution(const FShadowHandleSet* HandleSet)
+	{
+		return HandleSet && !HandleSet->AllocatedSizes.empty()
+			? HandleSet->AllocatedSizes[0]
+			: 0;
+	}
+
+	FTexturePoolHandleRequest MakeHandleRequestFromAllocatedSizes(
+		const FShadowHandleSet* HandleSet,
+		const FTexturePoolHandleRequest& FallbackRequest)
+	{
+		if (!HandleSet || HandleSet->AllocatedSizes.empty())
+		{
+			return FallbackRequest;
+		}
+
+		FTexturePoolHandleRequest Request;
+		Request.Sizes = HandleSet->AllocatedSizes;
+		return Request;
 	}
 
 	float ComputeShadowPriority(
@@ -497,6 +693,7 @@ namespace
 			Request.SpotIndex = SpotIndex;
 			Request.ExistingHandleSet = SpotLight->PeekShadowHandleSet();
 			const_cast<USpotLightComponent*>(SpotLight)->MarkShadowAtlasRequested(ShadowAtlasFrameIndex);
+			Request.ExistingResolution = GetHandleSetPrimaryResolution(Request.ExistingHandleSet);
 			Request.ScreenCoverageScore = EstimateSphereScreenCoverage(Frame, Params.Position, Params.AttenuationRadius);
 			Request.LightContributionScore = ComputeLightContributionScore(Params.Intensity, Params.LightColor);
 			Request.ProximityScore = EstimateInfluenceProximityScore(Frame, Params.Position, Params.AttenuationRadius);
@@ -514,12 +711,24 @@ namespace
 			Request.bMustAllocate = Request.ScreenCoverageScore >= ShadowAtlasSpotMustCoverageThreshold
 				&& Request.ProximityScore >= ShadowAtlasSpotMustProximityThreshold;
 
-			const uint32 Resolution = SpotLight->GetShadowResolution();
-			Request.DesiredHandleRequest.Sizes.push_back(Resolution);
+			Request.MaxAllowedResolution = SpotLight->GetShadowResolution();
+			const FShadowScreenRect ProjectedRect = ProjectSphereBoundsToScreen(Frame, Params.Position, Params.AttenuationRadius);
+			Request.ProjectedWidthPx = ProjectedRect.Width();
+			Request.ProjectedHeightPx = ProjectedRect.Height();
+			const uint32 DesiredResolution = ChooseSpotShadowResolutionFromProjectedRect(ProjectedRect, Request.MaxAllowedResolution);
+			if (DesiredResolution == 0)
+			{
+				if (bShadowAtlasVerboseLog)
+				{
+					UE_LOG("[ShadowAtlas] skipped spot light=%u: projected attenuation sphere is not visible", SpotIndex);
+				}
+				continue;
+			}
+			Request.DesiredHandleRequest.Sizes.push_back(DesiredResolution);
 
 			FShadowAtlasPieceRequest Piece = {};
 			Piece.PieceIndex = 0;
-			Piece.DesiredResolution = Resolution;
+			Piece.DesiredResolution = DesiredResolution;
 			Piece.MinResolution = ShadowAtlasMinSpotResolution;
 			Piece.Priority = Request.FinalPriority;
 			Piece.bMustAllocate = Request.bMustAllocate;
@@ -548,11 +757,122 @@ namespace
 	{
 		if (Request.ExistingHandleSet && Request.ExistingHandleSet->bIsValid)
 		{
+			if (Request.Type == EShadowAtlasRequestType::DirectionalCascade)
+			{
+				Request.AllocatedHandleSet = Request.ExistingHandleSet;
+				Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+				Request.bSelected = true;
+				Request.RejectionReason = "kept existing";
+				const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+				return true;
+			}
+
+			const uint32 CurrentResolution = GetHandleSetPrimaryResolution(Request.ExistingHandleSet);
+			const uint32 DesiredResolution = Request.Pieces.empty()
+				? (Request.DesiredHandleRequest.Sizes.empty() ? ShadowAtlasMinSpotResolution : Request.DesiredHandleRequest.Sizes[0])
+				: Request.Pieces[0].DesiredResolution;
+			Request.ExistingResolution = CurrentResolution;
+			ULightComponent* MutableLight = const_cast<ULightComponent*>(Request.Light);
+
+			if (CurrentResolution == DesiredResolution && CurrentResolution > 0)
+			{
+				MutableLight->ClearShadowAtlasDownscaleCandidate();
+
+				Request.AllocatedHandleSet = Request.ExistingHandleSet;
+				Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+				Request.bSelected = true;
+				Request.RejectionReason = "kept existing same resolution";
+				MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+				return true;
+			}
+
+			if (CurrentResolution < DesiredResolution)
+			{
+				MutableLight->ClearShadowAtlasDownscaleCandidate();
+
+				FTexturePoolHandleRequest UpgradeAttempt;
+				UpgradeAttempt.Sizes.push_back(DesiredResolution);
+				FShadowHandleSet* UpgradedHandleSet = AtlasPool.TryGetTextureHandleNoResize(UpgradeAttempt);
+				if (UpgradedHandleSet)
+				{
+					Request.AllocatedHandleSet = UpgradedHandleSet;
+					Request.AllocatedHandleRequest = UpgradeAttempt;
+					if (!Request.Pieces.empty())
+					{
+						Request.Pieces[0].DesiredResolution = DesiredResolution;
+					}
+					Request.bSelected = true;
+					Request.RejectionReason = "upgraded resolution step";
+					MutableLight->SetShadowHandleSetForRenderer(UpgradedHandleSet);
+					MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+					return true;
+				}
+
+				Request.AllocatedHandleSet = Request.ExistingHandleSet;
+				Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+				Request.bSelected = true;
+				Request.bAllocationFailed = true;
+				Request.RejectionReason = "kept lower-res existing after upgrade failed";
+				MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+				MutableLight->MarkShadowAtlasAllocationFailed(ShadowAtlasFrameIndex, DesiredResolution);
+				return true;
+			}
+
+			if (CurrentResolution > DesiredResolution && DesiredResolution >= ShadowAtlasMinSpotResolution)
+			{
+				const bool bCanDownscale = MutableLight->UpdateShadowAtlasDownscaleCandidate(
+					DesiredResolution,
+					ShadowAtlasFrameIndex,
+					ShadowAtlasDownscaleStableFrames);
+
+				if (!bCanDownscale)
+				{
+					Request.AllocatedHandleSet = Request.ExistingHandleSet;
+					Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
+					Request.bSelected = true;
+					Request.RejectionReason = "kept larger existing waiting downscale hysteresis";
+					MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+					return true;
+				}
+
+				MutableLight->ReleaseShadowHandleSetForRenderer();
+				Request.ExistingHandleSet = nullptr;
+
+				FTexturePoolHandleRequest DownscaleAttempt;
+				DownscaleAttempt.Sizes.push_back(DesiredResolution);
+				FShadowHandleSet* DownscaledHandleSet = AtlasPool.TryGetTextureHandleNoResize(DownscaleAttempt);
+				if (DownscaledHandleSet)
+				{
+					Request.AllocatedHandleSet = DownscaledHandleSet;
+					Request.AllocatedHandleRequest = DownscaleAttempt;
+					if (!Request.Pieces.empty())
+					{
+						Request.Pieces[0].DesiredResolution = DesiredResolution;
+					}
+					Request.bSelected = true;
+					Request.RejectionReason = "downscaled resolution step";
+					MutableLight->SetShadowHandleSetForRenderer(DownscaledHandleSet);
+					MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+					MutableLight->ClearShadowAtlasDownscaleCandidate();
+					return true;
+				}
+
+				Request.RejectionReason = "downscale failed after release";
+				Request.bAllocationFailed = true;
+				MutableLight->MarkShadowAtlasAllocationFailed(ShadowAtlasFrameIndex, DesiredResolution);
+				MutableLight->ClearShadowAtlasDownscaleCandidate();
+				if (bShadowAtlasVerboseLog)
+				{
+					UE_LOG("[ShadowAtlas] spot downscale failed after releasing existing handle desired=%u current=%u", DesiredResolution, CurrentResolution);
+				}
+				return false;
+			}
+
 			Request.AllocatedHandleSet = Request.ExistingHandleSet;
-			Request.AllocatedHandleRequest = Request.DesiredHandleRequest;
+			Request.AllocatedHandleRequest = MakeHandleRequestFromAllocatedSizes(Request.ExistingHandleSet, Request.DesiredHandleRequest);
 			Request.bSelected = true;
-			Request.RejectionReason = "kept existing";
-			const_cast<ULightComponent*>(Request.Light)->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
+			Request.RejectionReason = "kept existing invalid desired resolution";
+			MutableLight->MarkShadowAtlasSelected(ShadowAtlasFrameIndex);
 			return true;
 		}
 
@@ -757,15 +1077,19 @@ namespace
 		{
 			const char* TypeName = Request.Type == EShadowAtlasRequestType::DirectionalCascade ? "Directional" : "Spot";
 			const uint32 LightIndex = Request.Type == EShadowAtlasRequestType::Spot ? Request.SpotIndex : 0xffffffffu;
-			const uint32 Resolution = Request.AllocatedHandleRequest.Sizes.empty()
-				? (Request.DesiredHandleRequest.Sizes.empty() ? 0u : Request.DesiredHandleRequest.Sizes[0])
-				: Request.AllocatedHandleRequest.Sizes[0];
+			const uint32 AllocatedResolution = Request.AllocatedHandleRequest.Sizes.empty() ? 0u : Request.AllocatedHandleRequest.Sizes[0];
+			const uint32 DesiredResolution = Request.DesiredHandleRequest.Sizes.empty() ? 0u : Request.DesiredHandleRequest.Sizes[0];
 
-			UE_LOG("[ShadowAtlas] type=%s light=%u cascade=%u res=%u priority=%.3f efficiency=%.6f must=%u selected=%u reason=%s",
+			UE_LOG("[ShadowAtlas] type=%s light=%u cascade=%u existing=%u desired=%u allocated=%u max=%u projected=(%.1f x %.1f) priority=%.3f efficiency=%.6f must=%u selected=%u reason=%s",
 				TypeName,
 				LightIndex,
 				Request.CascadeIndex,
-				Resolution,
+				Request.ExistingResolution,
+				DesiredResolution,
+				AllocatedResolution,
+				Request.MaxAllowedResolution,
+				Request.ProjectedWidthPx,
+				Request.ProjectedHeightPx,
 				Request.FinalPriority,
 				Request.EfficiencyScore,
 				Request.bMustAllocate ? 1u : 0u,

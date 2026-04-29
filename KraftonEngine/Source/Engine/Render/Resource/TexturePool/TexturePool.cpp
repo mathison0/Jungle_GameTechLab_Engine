@@ -60,6 +60,7 @@ FTexturePoolBase::TexturePoolHandleSet* FTexturePoolBase::GetTextureHandle(Textu
 	}
 
 	HandleSet->bIsValid = true;
+	HandleSet->AllocatedSizes = HandleRequest.Sizes;
 	return Allocator->RegisterHandleSet(std::move(HandleSet));
 }
 
@@ -90,6 +91,7 @@ FTexturePoolBase::TexturePoolHandleSet* FTexturePoolBase::TryGetTextureHandleNoR
 	}
 
 	HandleSet->bIsValid = true;
+	HandleSet->AllocatedSizes = HandleRequest.Sizes;
 	return Allocator->RegisterHandleSet(std::move(HandleSet));
 }
 
