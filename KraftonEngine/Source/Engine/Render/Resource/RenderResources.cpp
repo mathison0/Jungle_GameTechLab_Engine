@@ -6,6 +6,8 @@
 #include "Render/Pipeline/ForwardLightData.h"
 #include "Render/Pipeline/FrameContext.h"
 #include "Render/Proxy/FScene.h"
+#include "Component/Light/PointLightComponent.h"
+#include "Component/Light/SpotLightComponent.h"
 #include "Engine/Runtime/Engine.h"
 #include "Core/Log.h"
 #include "Profiling/Timer.h"
@@ -305,30 +307,54 @@ void FSystemResources::UpdateLightBuffer(FD3DDevice& Device, const FScene& Scene
 
 	const uint32 NumPointLights = Env.GetNumPointLights();
 	const uint32 NumSpotLights = Env.GetNumSpotLights();
-	GlobalLightingData.NumActivePointLights = NumPointLights;
-	GlobalLightingData.NumActiveSpotLights = NumSpotLights;
 
 	TArray<FLightInfo> Infos;
 	Infos.reserve(NumPointLights + NumSpotLights);
+	uint32 NumUploadedPointLights = 0;
+	uint32 NumUploadedSpotLights = 0;
 	for (uint32 i = 0; i < NumPointLights; ++i)
 	{
+		const UPointLightComponent* PointLight = Env.GetPointLightOwner(i);
+		const bool bRequiresShadowResource = PointLight && PointLight->IsCastShadow();
+		const bool bHasShadowResource = ShadowBindingData
+			&& i < ShadowBindingData->ActivePointLightMask.size()
+			&& ShadowBindingData->ActivePointLightMask[i] != 0;
+		if (ShadowBindingData && bRequiresShadowResource && !bHasShadowResource)
+		{
+			continue;
+		}
+
 		FLightInfo Info = Env.GetPointLight(i).ToLightInfo();
 		if (ShadowBindingData && i < ShadowBindingData->PointLightShadowIndices.size())
 		{
 			Info.ShadowIndex = ShadowBindingData->PointLightShadowIndices[i];
 		}
 		Infos.push_back(Info);
+		++NumUploadedPointLights;
 	}
 	for (uint32 i = 0; i < NumSpotLights; ++i)
 	{
+		const USpotLightComponent* SpotLight = Env.GetSpotLightOwner(i);
+		const bool bRequiresShadowResource = SpotLight && SpotLight->IsCastShadow();
+		const bool bHasShadowResource = ShadowBindingData
+			&& i < ShadowBindingData->ActiveSpotLightMask.size()
+			&& ShadowBindingData->ActiveSpotLightMask[i] != 0;
+		if (ShadowBindingData && bRequiresShadowResource && !bHasShadowResource)
+		{
+			continue;
+		}
+
 		FLightInfo Info = Env.GetSpotLight(i).ToLightInfo();
 		if (ShadowBindingData && i < ShadowBindingData->SpotLightShadowIndices.size())
 		{
 			Info.ShadowIndex = ShadowBindingData->SpotLightShadowIndices[i];
 		}
 		Infos.push_back(Info);
+		++NumUploadedSpotLights;
 	}
 
+	GlobalLightingData.NumActivePointLights = NumUploadedPointLights;
+	GlobalLightingData.NumActiveSpotLights = NumUploadedSpotLights;
 	LastNumLights = static_cast<uint32>(Infos.size());
 
 	GlobalLightingData.LightCullingMode = static_cast<uint32>(Frame.RenderOptions.LightCullingMode);
