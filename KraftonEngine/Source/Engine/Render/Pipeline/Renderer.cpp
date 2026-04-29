@@ -1100,7 +1100,7 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 		Region.Box.right = CubeTextureSize;
 		Region.Box.bottom = CubeTextureSize;
 		Region.Box.back = 1;
-		Region.SourceSRV = FTextureCubeShadowPool::Get().GetRawVSMArraySRV(Task.CubeTierIndex);
+		Region.SourceSRV = FTextureCubeShadowPool::Get().GetFilteredVSMArraySRV(Task.CubeTierIndex);
 		Region.TempSRV = FTextureCubeShadowPool::Get().GetTempVSMArraySRV(Task.CubeTierIndex);
 		Region.TempRTV = FTextureCubeShadowPool::Get().GetTempFaceVSMRTV(CubeHandle, Task.CubeFaceIndex);
 		Region.FilteredRTV = FTextureCubeShadowPool::Get().GetFilteredFaceVSMRTV(CubeHandle, Task.CubeFaceIndex);

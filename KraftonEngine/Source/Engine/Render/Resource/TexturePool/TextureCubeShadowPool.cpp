@@ -144,15 +144,12 @@ void FTextureCubeShadowPool::Release()
 	for (FTierPool& Tier : Tiers)
 	{
 		Tier.FaceDSVs.clear();
-		Tier.FaceVSMRTVs.clear();
 		Tier.TempFaceVSMRTVs.clear();
 		Tier.FilteredFaceVSMRTVs.clear();
-		Tier.MomentTexture.Reset();
 		Tier.TempMomentTexture.Reset();
 		Tier.FilteredMomentTexture.Reset();
 		Tier.SRV.Reset();
 		Tier.DebugArraySRV.Reset();
-		Tier.RawVSMArraySRV.Reset();
 		Tier.TempVSMArraySRV.Reset();
 		Tier.Texture.Reset();
 		Tier.AllocationFlags.clear();
@@ -261,10 +258,10 @@ ID3D11ShaderResourceView* FTextureCubeShadowPool::GetSRV(uint32 TierIndex) const
 	return Tier ? Tier->SRV.Get() : nullptr;
 }
 
-ID3D11ShaderResourceView* FTextureCubeShadowPool::GetRawVSMArraySRV(uint32 TierIndex) const
+ID3D11ShaderResourceView* FTextureCubeShadowPool::GetFilteredVSMArraySRV(uint32 TierIndex) const
 {
 	const FTierPool* Tier = GetTier(TierIndex);
-	return Tier ? Tier->RawVSMArraySRV.Get() : nullptr;
+	return Tier ? Tier->DebugArraySRV.Get() : nullptr;
 }
 
 ID3D11ShaderResourceView* FTextureCubeShadowPool::GetTempVSMArraySRV(uint32 TierIndex) const
@@ -292,19 +289,7 @@ ID3D11DepthStencilView* FTextureCubeShadowPool::GetFaceDSV(FCubeShadowHandle Han
 
 ID3D11RenderTargetView* FTextureCubeShadowPool::GetFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const
 {
-	const FTierPool* Tier = GetTier(Handle.TierIndex);
-	if (!Handle.IsValid() || !Tier || FaceIndex >= CubeFaceCount)
-	{
-		return nullptr;
-	}
-
-	const uint32 SliceIndex = GetSliceIndex(Handle, FaceIndex);
-	if (SliceIndex >= Tier->FaceVSMRTVs.size())
-	{
-		return nullptr;
-	}
-
-	return Tier->FaceVSMRTVs[SliceIndex].Get();
+	return GetFilteredFaceVSMRTV(Handle, FaceIndex);
 }
 
 ID3D11RenderTargetView* FTextureCubeShadowPool::GetTempFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const
@@ -506,13 +491,10 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 	TComPtr<ID3D11Texture2D> NewTexture;
 	TComPtr<ID3D11ShaderResourceView> NewSRV;
 	TComPtr<ID3D11ShaderResourceView> NewDebugArraySRV;
-	TComPtr<ID3D11Texture2D> NewMomentTexture;
 	TComPtr<ID3D11Texture2D> NewTempMomentTexture;
 	TComPtr<ID3D11Texture2D> NewFilteredMomentTexture;
-	TComPtr<ID3D11ShaderResourceView> NewRawVSMArraySRV;
 	TComPtr<ID3D11ShaderResourceView> NewTempVSMArraySRV;
 	TArray<TComPtr<ID3D11DepthStencilView>> NewFaceDSVs;
-	TArray<TComPtr<ID3D11RenderTargetView>> NewFaceVSMRTVs;
 	TArray<TComPtr<ID3D11RenderTargetView>> NewTempFaceVSMRTVs;
 	TArray<TComPtr<ID3D11RenderTargetView>> NewFilteredFaceVSMRTVs;
 
@@ -543,12 +525,6 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 		MomentTextureDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
 		MomentTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 
-		hr = Device->CreateTexture2D(&MomentTextureDesc, nullptr, NewMomentTexture.GetAddressOf());
-		if (FAILED(hr))
-		{
-			assert(false);
-			return false;
-		}
 		hr = Device->CreateTexture2D(&MomentTextureDesc, nullptr, NewTempMomentTexture.GetAddressOf());
 		if (FAILED(hr))
 		{
@@ -585,12 +561,6 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 		DebugSRVDesc.Texture2DArray.FirstArraySlice = 0;
 		DebugSRVDesc.Texture2DArray.ArraySize = TotalSlices;
 
-		hr = Device->CreateShaderResourceView(NewMomentTexture.Get(), &DebugSRVDesc, NewRawVSMArraySRV.GetAddressOf());
-		if (FAILED(hr))
-		{
-			assert(false);
-			return false;
-		}
 		hr = Device->CreateShaderResourceView(NewTempMomentTexture.Get(), &DebugSRVDesc, NewTempVSMArraySRV.GetAddressOf());
 		if (FAILED(hr))
 		{
@@ -640,7 +610,6 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 	NewFaceDSVs.resize(TotalSlices);
 	if (bVSMMode)
 	{
-		NewFaceVSMRTVs.resize(TotalSlices);
 		NewTempFaceVSMRTVs.resize(TotalSlices);
 		NewFilteredFaceVSMRTVs.resize(TotalSlices);
 	}
@@ -669,13 +638,6 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 			RTVDesc.Texture2DArray.FirstArraySlice = SliceIndex;
 			RTVDesc.Texture2DArray.ArraySize = 1;
 
-			hr = Device->CreateRenderTargetView(NewMomentTexture.Get(), &RTVDesc, NewFaceVSMRTVs[SliceIndex].GetAddressOf());
-			if (FAILED(hr))
-			{
-				assert(false);
-				return false;
-			}
-
 			hr = Device->CreateRenderTargetView(NewTempMomentTexture.Get(), &RTVDesc, NewTempFaceVSMRTVs[SliceIndex].GetAddressOf());
 			if (FAILED(hr))
 			{
@@ -697,13 +659,10 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 	Tier->Texture = std::move(NewTexture);
 	Tier->SRV = std::move(NewSRV);
 	Tier->DebugArraySRV = std::move(NewDebugArraySRV);
-	Tier->MomentTexture = std::move(NewMomentTexture);
 	Tier->TempMomentTexture = std::move(NewTempMomentTexture);
 	Tier->FilteredMomentTexture = std::move(NewFilteredMomentTexture);
-	Tier->RawVSMArraySRV = std::move(NewRawVSMArraySRV);
 	Tier->TempVSMArraySRV = std::move(NewTempVSMArraySRV);
 	Tier->FaceDSVs = std::move(NewFaceDSVs);
-	Tier->FaceVSMRTVs = std::move(NewFaceVSMRTVs);
 	Tier->TempFaceVSMRTVs = std::move(NewTempFaceVSMRTVs);
 	Tier->FilteredFaceVSMRTVs = std::move(NewFilteredFaceVSMRTVs);
 	Tier->CubeCapacity = NewCubeCapacity;
@@ -847,7 +806,6 @@ void FTextureCubeShadowPool::UpdateMemoryStats()
 	for (const FTierPool& Tier : Tiers)
 	{
 		NewMemory += MemoryStats::CalculateTextureMemory(Tier.Texture.Get());
-		NewMemory += MemoryStats::CalculateTextureMemory(Tier.MomentTexture.Get());
 		NewMemory += MemoryStats::CalculateTextureMemory(Tier.TempMomentTexture.Get());
 		NewMemory += MemoryStats::CalculateTextureMemory(Tier.FilteredMomentTexture.Get());
 	}
