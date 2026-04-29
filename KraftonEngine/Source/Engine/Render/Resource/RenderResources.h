@@ -26,6 +26,8 @@ struct FShadowFrameBindingData
 	TArray<FShadowInfo> ShadowInfos;
 	TArray<int32> PointLightShadowIndices;
 	TArray<int32> SpotLightShadowIndices;
+	TArray<uint8> ActivePointLightMask;
+	TArray<uint8> ActiveSpotLightMask;
 	int32 DirectionalShadowIndex = -1;
 
 	uint32 ShadowMethod = 0;

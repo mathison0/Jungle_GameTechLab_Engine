@@ -1515,6 +1515,8 @@ namespace
 			}
 			OutShadowPassData.BindingData.PointLightShadowIndices.assign(Env.GetNumPointLights(), -1);
 			OutShadowPassData.BindingData.SpotLightShadowIndices.assign(Env.GetNumSpotLights(), -1);
+			OutShadowPassData.BindingData.ActivePointLightMask.assign(Env.GetNumPointLights(), 0);
+			OutShadowPassData.BindingData.ActiveSpotLightMask.assign(Env.GetNumSpotLights(), 0);
 			OutShadowPassData.BindingData.DirectionalShadowIndex = -1;
 
 			if (Frame.RenderOptions.ViewMode == EViewMode::Unlit)
@@ -1728,6 +1730,7 @@ namespace
 				const int32 ShadowInfoIndex = static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
 				OutShadowPassData.BindingData.ShadowInfos.push_back(Info);
 				OutShadowPassData.BindingData.PointLightShadowIndices[PointIndex] = ShadowInfoIndex;
+				OutShadowPassData.BindingData.ActivePointLightMask[PointIndex] = 1;
 			}
 #pragma endregion
 
@@ -1796,6 +1799,7 @@ namespace
 				const int32 ShadowInfoIndex = static_cast<int32>(OutShadowPassData.BindingData.ShadowInfos.size());
 				OutShadowPassData.BindingData.ShadowInfos.push_back(Info);
 				OutShadowPassData.BindingData.SpotLightShadowIndices[SpotIndex] = ShadowInfoIndex;
+				OutShadowPassData.BindingData.ActiveSpotLightMask[SpotIndex] = 1;
 			}
 #pragma endregion
 			//DirectionLightTask 생성 관련
