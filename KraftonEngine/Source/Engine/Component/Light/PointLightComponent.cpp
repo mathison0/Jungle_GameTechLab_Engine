@@ -75,7 +75,7 @@ void UPointLightComponent::DestroyFromScene()
 	ReleaseCubeShadowHandle();
 }
 
-FShadowCubeHandle UPointLightComponent::GetCubeShadowHandle()
+FShadowCubeHandle UPointLightComponent::AcquireCubeShadowHandleForRenderer()
 {
 	const uint32 DesiredTierIndex = FTextureCubeShadowPool::Get().GetTierIndexForScale(GetShadowResolutionScale());
 	if (CubeShadowHandle.IsValid() && CubeShadowHandle.TierIndex != DesiredTierIndex)
@@ -102,10 +102,20 @@ void UPointLightComponent::ReleaseCubeShadowHandle()
 	CubeShadowHandle = {};
 }
 
+void UPointLightComponent::ReleaseCubeShadowHandleForRenderer()
+{
+	ReleaseCubeShadowHandle();
+}
+
 FShadowMapKey UPointLightComponent::GetShadowMapKey()
 {
 	FShadowMapKey Result;
-	Result.CubeMap = GetCubeShadowHandle();
+	const uint32 DesiredTierIndex = FTextureCubeShadowPool::Get().GetTierIndexForScale(GetShadowResolutionScale());
+	if (CubeShadowHandle.IsValid() && CubeShadowHandle.TierIndex != DesiredTierIndex)
+	{
+		ReleaseCubeShadowHandle();
+	}
+	Result.CubeMap = CubeShadowHandle;
 	return Result;
 }
 

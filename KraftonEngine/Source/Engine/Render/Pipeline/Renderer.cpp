@@ -594,6 +594,18 @@ namespace
 				const char* RejectionReason = "not selected";
 			};
 
+			struct FPointShadowRequest
+			{
+				uint32 PointIndex = static_cast<uint32>(-1);
+				float ScreenCoverageScore = 0.0f;
+				float LightContributionScore = 0.0f;
+				float ProximityScore = 0.0f;
+				float CasterReceiverScore = 0.0f;
+				float StabilityScore = 0.0f;
+				float FinalPriority = 0.0f;
+			};
+
+			constexpr uint32 MaxShadowedPointLights = 4;
 			constexpr float ShadowAtlasScreenCoverageWeight = 0.35f;
 			constexpr float ShadowAtlasLightContributionWeight = 0.25f;
 			constexpr float ShadowAtlasProximityWeight = 0.20f;
@@ -1484,6 +1496,14 @@ namespace
 
 			if (Frame.RenderOptions.ViewMode == EViewMode::Unlit)
 			{
+				for (uint32 PointIndex = 0; PointIndex < Env.GetNumPointLights(); ++PointIndex)
+				{
+					UPointLightComponent* PointLight = const_cast<UPointLightComponent*>(Env.GetPointLightOwner(PointIndex));
+					if (PointLight)
+					{
+						PointLight->ReleaseCubeShadowHandleForRenderer();
+					}
+				}
 				ReleaseStaleAtlasShadowHandles(Env, CurrentShadowAtlasFrame);
 				return;
 			}
@@ -1506,6 +1526,8 @@ namespace
 #pragma region SearchUpdateNeededPointLight
 			TArray<uint32> ShadowedPointIndices;
 			ShadowedPointIndices.reserve(Env.GetNumPointLights());
+			TArray<FPointShadowRequest> PointShadowRequests;
+			PointShadowRequests.reserve(Env.GetNumPointLights());
 
 			for (uint32 PointIndex = 0; PointIndex < Env.GetNumPointLights(); ++PointIndex)
 			{
@@ -1516,12 +1538,59 @@ namespace
 				}
 
 				const FPointLightParams& Params = Env.GetPointLight(PointIndex);
-				if (!Frame.FrustumVolume.IntersectAABB(FShadowUtil::MakeSphereBounds(Params.Position, Params.AttenuationRadius)))
+				if (!Frame.bIsOrtho
+					&& !Frame.FrustumVolume.IntersectAABB(FShadowUtil::MakeSphereBounds(Params.Position, Params.AttenuationRadius)))
 				{
 					continue;
 				}
 
-				ShadowedPointIndices.push_back(PointIndex);
+				FPointShadowRequest Request = {};
+				Request.PointIndex = PointIndex;
+				Request.ScreenCoverageScore = EstimateSphereScreenCoverage(Frame, Params.Position, Params.AttenuationRadius);
+				Request.LightContributionScore = ComputeLightContributionScore(Params.Intensity, Params.LightColor);
+				Request.ProximityScore = EstimateInfluenceProximityScore(Frame, Params.Position, Params.AttenuationRadius);
+				Request.CasterReceiverScore = 1.0f;
+				Request.StabilityScore = PointLight->PeekCubeShadowHandle().IsValid() ? 1.0f : 0.0f;
+				Request.FinalPriority = ComputeShadowPriority(
+					Request.ScreenCoverageScore,
+					Request.LightContributionScore,
+					Request.ProximityScore,
+					Request.CasterReceiverScore,
+					Request.StabilityScore,
+					0.0f);
+				PointShadowRequests.push_back(Request);
+			}
+
+			std::sort(PointShadowRequests.begin(), PointShadowRequests.end(),
+				[](const FPointShadowRequest& Left, const FPointShadowRequest& Right)
+				{
+					if (Left.FinalPriority != Right.FinalPriority)
+					{
+						return Left.FinalPriority > Right.FinalPriority;
+					}
+					return Left.PointIndex < Right.PointIndex;
+				});
+
+			TArray<uint8> bSelectedPointShadow;
+			bSelectedPointShadow.assign(Env.GetNumPointLights(), 0);
+			const uint32 SelectedPointCount = std::min(MaxShadowedPointLights, static_cast<uint32>(PointShadowRequests.size()));
+			for (uint32 RequestIndex = 0; RequestIndex < SelectedPointCount; ++RequestIndex)
+			{
+				const uint32 PointIndex = PointShadowRequests[RequestIndex].PointIndex;
+				if (PointIndex < bSelectedPointShadow.size())
+				{
+					bSelectedPointShadow[PointIndex] = 1;
+					ShadowedPointIndices.push_back(PointIndex);
+				}
+			}
+
+			for (uint32 PointIndex = 0; PointIndex < Env.GetNumPointLights(); ++PointIndex)
+			{
+				UPointLightComponent* PointLight = const_cast<UPointLightComponent*>(Env.GetPointLightOwner(PointIndex));
+				if (PointLight && (PointIndex >= bSelectedPointShadow.size() || bSelectedPointShadow[PointIndex] == 0))
+				{
+					PointLight->ReleaseCubeShadowHandleForRenderer();
+				}
 			}
 #pragma endregion
 
@@ -1538,7 +1607,8 @@ namespace
 				}
 
 				const FSpotLightParams& Params = Env.GetSpotLight(SpotIndex);
-				if (!Frame.FrustumVolume.IntersectAABB(FShadowUtil::MakeSphereBounds(Params.Position, Params.AttenuationRadius)))
+				if (!Frame.bIsOrtho
+					&& !Frame.FrustumVolume.IntersectAABB(FShadowUtil::MakeSphereBounds(Params.Position, Params.AttenuationRadius)))
 				{
 					continue;
 				}
@@ -1568,8 +1638,7 @@ namespace
 					continue;
 				}
 
-				const FShadowMapKey ShadowMapKey = const_cast<UPointLightComponent*>(PointLight)->GetShadowMapKey();
-				FShadowCubeHandle CubeHandle = ShadowMapKey.CubeMap;
+				FShadowCubeHandle CubeHandle = const_cast<UPointLightComponent*>(PointLight)->AcquireCubeShadowHandleForRenderer();
 				if (!CubeHandle.IsValid())
 				{
 					continue;

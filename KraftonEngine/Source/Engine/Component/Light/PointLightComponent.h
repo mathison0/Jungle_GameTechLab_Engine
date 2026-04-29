@@ -13,13 +13,15 @@ public:
 	virtual void Serialize(FArchive& Ar) override;
 	virtual void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 	FShadowMapKey GetShadowMapKey() override;
+	FShadowCubeHandle PeekCubeShadowHandle() const { return CubeShadowHandle; }
+	FShadowCubeHandle AcquireCubeShadowHandleForRenderer();
+	void ReleaseCubeShadowHandleForRenderer();
 
 protected:
 	float AttenuationRadius = 1.f;
 	float LightFalloffExponent = 1.f;
 
 private:
-	FShadowCubeHandle GetCubeShadowHandle();
 	void ReleaseCubeShadowHandle();
 
 	FShadowCubeHandle CubeShadowHandle;
