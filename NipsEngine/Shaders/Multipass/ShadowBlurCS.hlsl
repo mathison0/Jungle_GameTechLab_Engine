@@ -1,9 +1,9 @@
 cbuffer FBlurConstants : register(b10)
 {
     uint BlurDirection; // 0 = Horizontal, 1 = Vertical
-    uint Pad0;
-    uint Pad1;
-    uint Pad2;
+    uint TileBaseX;     // 픽셀 단위. blur clamp 영역의 좌상단
+    uint TileBaseY;
+    uint TileSize;      // 픽셀 단위. tile의 한 변 크기
 };
 
 Texture2D<float2> InputMap : register(t14);
@@ -28,14 +28,16 @@ void mainCS(
     uint3 GroupThreadID : SV_GroupThreadID,
     uint3 DispatchID : SV_DispatchThreadID)
 {
-    int Width, Height;
-    InputMap.GetDimensions(Width, Height);
+    const int2 TileBase = int2((int)TileBaseX, (int)TileBaseY);
+    const int TileMaxX = (int)TileBaseX + (int)TileSize - 1;
+    const int TileMaxY = (int)TileBaseY + (int)TileSize - 1;
 
-    int2 TexelBase = int2(GroupID.xy) * TILE_SIZE;
+    // 그룹의 첫 픽셀 좌표 (atlas 절대 좌표)
+    int2 TexelBase = TileBase + int2(GroupID.xy) * TILE_SIZE;
 
     if (BlurDirection == 0)
     {
-        // Horizontal
+        // Horizontal — 캐시 행은 GroupThreadID.y 기준, 열은 KERNEL_RADIUS 만큼 좌우 확장
         int CacheColsPerThread = (CACHE_SIZE + TILE_SIZE - 1) / TILE_SIZE; // 3
 
         for (int c = 0; c < CacheColsPerThread; ++c)
@@ -44,15 +46,15 @@ void mainCS(
             if (CacheCol >= CACHE_SIZE)
                 break;
 
-            int TexCol = clamp(TexelBase.x + CacheCol - KERNEL_RADIUS, 0, Width - 1);
-            int TexRow = clamp(TexelBase.y + (int) GroupThreadID.y, 0, Height - 1);
+            int TexCol = clamp(TexelBase.x + CacheCol - KERNEL_RADIUS, (int)TileBaseX, TileMaxX);
+            int TexRow = clamp(TexelBase.y + (int) GroupThreadID.y, (int)TileBaseY, TileMaxY);
 
             Cache[GroupThreadID.y][CacheCol] = InputMap.Load(int3(TexCol, TexRow, 0));
         }
     }
     else
     {
-        // Vertical
+        /// Vertical — 캐시 열은 GroupThreadID.x 기준, 행은 KERNEL_RADIUS 만큼 상하 확장
         int CacheRowsPerThread = (CACHE_SIZE + TILE_SIZE - 1) / TILE_SIZE; // 3
 
         for (int r = 0; r < CacheRowsPerThread; ++r)
@@ -61,8 +63,8 @@ void mainCS(
             if (CacheRow >= CACHE_SIZE)
                 break;
 
-            int TexRow = clamp(TexelBase.y + CacheRow - KERNEL_RADIUS, 0, Height - 1);
-            int TexCol = clamp(TexelBase.x + (int) GroupThreadID.x, 0, Width - 1);
+            int TexRow = clamp(TexelBase.y + CacheRow - KERNEL_RADIUS, (int)TileBaseY, TileMaxY);
+            int TexCol = clamp(TexelBase.x + (int) GroupThreadID.x, (int)TileBaseX, TileMaxX);
 
             Cache[GroupThreadID.x][CacheRow] = InputMap.Load(int3(TexCol, TexRow, 0));
         }
@@ -70,9 +72,11 @@ void mainCS(
 
     GroupMemoryBarrierWithGroupSync();
 
-    if ((int) DispatchID.x >= Width || (int) DispatchID.y >= Height)
+    if ((int) DispatchID.x >= (int) TileSize || (int) DispatchID.y >= (int) TileSize)
         return;
 
+    const int2 OutPos = TileBase + int2(DispatchID.xy);
+    
     // 가우시안 합산
     float2 BlurResult = float2(0.0f, 0.0f);
 
@@ -93,5 +97,5 @@ void mainCS(
         }
     }
 
-    OutputMap[DispatchID.xy] = BlurResult;
+    OutputMap[OutPos] = BlurResult;
 }

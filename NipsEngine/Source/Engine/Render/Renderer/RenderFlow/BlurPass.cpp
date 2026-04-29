@@ -94,29 +94,46 @@ bool FBlurPass::DrawCommand(const FRenderPassContext* Context)
 
 	// Spot
 	ShadowVSMInputSRV = Context->RenderTargets->SpotShadowVSMSRV;
-    DrawBlurCommand(Context, SpotShadowResolution, 
+    DrawBlurCommand(Context, 0, 0, SpotShadowResolution, 
 		ShadowBlurTempSRV.Get(), ShadowBlurTempUAV.Get(), 
 		ShadowBlurFinalSRV.Get(), ShadowBlurFinalUAV.Get());
     Context->RenderTargets->SpotShadowVSMSRV = ShadowBlurFinalSRV.Get();
 
 	// Directional
 	ShadowVSMInputSRV = Context->RenderTargets->DirectionalShadowVSMSRV;
-    DrawBlurCommand(Context, DirectionalShadowResolution,
+    DrawBlurCommand(Context, 0, 0, DirectionalShadowResolution,
                     DirectionalShadowBlurTempSRV.Get(), DirectionalShadowBlurTempUAV.Get(),
                     DirectionalShadowBlurFinalSRV.Get(), DirectionalShadowBlurFinalUAV.Get());
     Context->RenderTargets->DirectionalShadowVSMSRV = DirectionalShadowBlurFinalSRV.Get();
 
-    // Point
+    // Point: face tile별로 분리 dispatch — face 경계 너머로 blur가 새지 않도록 함
     ShadowVSMInputSRV = Context->RenderTargets->PointShadowVSMSRV;
-    DrawBlurCommand(Context, PointShadowResolution,
-                    PointShadowBlurTempSRV.Get(), PointShadowBlurTempUAV.Get(),
-                    PointShadowBlurFinalSRV.Get(), PointShadowBlurFinalUAV.Get());
+    {
+        const auto& PointSlots = FShadowAtlasManager::GetActivePointSlots();
+        const float AtlasSizeF = static_cast<float>(PointShadowResolution);
+        for (const FPointAtlasSlotDesc& Slot : PointSlots)
+        {
+            for (uint32 FaceIndex = 0; FaceIndex < 6; ++FaceIndex)
+            {
+                const FVector4& Rect = Slot.FaceAtlasRects[FaceIndex];
+                const uint32 TileBaseX = static_cast<uint32>(Rect.X * AtlasSizeF + 0.5f);
+                const uint32 TileBaseY = static_cast<uint32>(Rect.Y * AtlasSizeF + 0.5f);
+                const uint32 TileSize = Slot.TileResolution;
+                if (TileSize == 0)
+                    continue;
+                DrawBlurCommand(Context, TileBaseX, TileBaseY, TileSize,
+                                PointShadowBlurTempSRV.Get(), PointShadowBlurTempUAV.Get(),
+                                PointShadowBlurFinalSRV.Get(), PointShadowBlurFinalUAV.Get());
+            }
+        }
+    }
     Context->RenderTargets->PointShadowVSMSRV = PointShadowBlurFinalSRV.Get();
 
     return true;
 }
 
-void FBlurPass::DrawBlurCommand(const FRenderPassContext* Context, uint32 Resolution, 
+void FBlurPass::DrawBlurCommand(const FRenderPassContext* Context, 
+    uint32 TileBaseX, uint32 TileBaseY, uint32 TileSize,
 	ID3D11ShaderResourceView* ShadowBlurTempSRV, 
 	ID3D11UnorderedAccessView* ShadowBlurTempUAV, 
 	ID3D11ShaderResourceView* ShadowBlurFinalSRV, 
@@ -124,8 +141,8 @@ void FBlurPass::DrawBlurCommand(const FRenderPassContext* Context, uint32 Resolu
 {
     ID3D11DeviceContext* DC = Context->DeviceContext;
 
-    const uint32 GroupX = (Resolution + 7) / 8;
-    const uint32 GroupY = (Resolution + 7) / 8;
+    const uint32 GroupX = (TileSize + 7) / 8;
+    const uint32 GroupY = (TileSize + 7) / 8;
 
     ID3D11ShaderResourceView* NullSRV = nullptr;
     ID3D11UnorderedAccessView* NullUAV = nullptr;
@@ -138,7 +155,7 @@ void FBlurPass::DrawBlurCommand(const FRenderPassContext* Context, uint32 Resolu
     //   Input  : ShadowVSMInputSRV  (t14)
     //   Output : ShadowBlurTempUAV  (u0)
     // ----------------------------------------------------------------
-    UpdateConstantBuffer(DC, 0);
+    UpdateConstantBuffer(DC, 0, TileBaseX, TileBaseY, TileSize);
 
     ID3D11Buffer* CB = ConstantBuffer.Get();
     ID3D11ShaderResourceView* InSRV = ShadowVSMInputSRV.Get();
@@ -158,7 +175,7 @@ void FBlurPass::DrawBlurCommand(const FRenderPassContext* Context, uint32 Resolu
     //   Input  : ShadowBlurTempSRV   (t14)
     //   Output : ShadowBlurFinalUAV  (u0)
     // ----------------------------------------------------------------
-    UpdateConstantBuffer(DC, 1);
+    UpdateConstantBuffer(DC, 1, TileBaseX, TileBaseY, TileSize);
 
     ID3D11ShaderResourceView* TempSRV = ShadowBlurTempSRV;
     ID3D11UnorderedAccessView* FinalUAV = ShadowBlurFinalUAV;
@@ -181,7 +198,8 @@ bool FBlurPass::End(const FRenderPassContext* Context)
     return true;
 }
 
-void FBlurPass::UpdateConstantBuffer(ID3D11DeviceContext* DeviceContext, uint32 BlurDirection)
+void FBlurPass::UpdateConstantBuffer(ID3D11DeviceContext* DeviceContext, uint32 BlurDirection,
+    uint32 TileBaseX, uint32 TileBaseY, uint32 TileSize)
 {
     D3D11_MAPPED_SUBRESOURCE Mapped = {};
     if (FAILED(DeviceContext->Map(ConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
@@ -189,9 +207,9 @@ void FBlurPass::UpdateConstantBuffer(ID3D11DeviceContext* DeviceContext, uint32 
 
     FShadowBlurConstants* CB = static_cast<FShadowBlurConstants*>(Mapped.pData);
     CB->BlurDirection = BlurDirection;
-    CB->Pad0 = 0;
-    CB->Pad1 = 0;
-    CB->Pad2 = 0;
+    CB->TileBaseX = TileBaseX;
+    CB->TileBaseY = TileBaseY;
+    CB->TileSize = TileSize;
 
     DeviceContext->Unmap(ConstantBuffer.Get(), 0);
 }

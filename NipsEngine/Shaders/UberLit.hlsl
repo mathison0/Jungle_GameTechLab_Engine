@@ -161,6 +161,149 @@ static const float3 DEFAULT_AMBIENT_COLOR = float3(0.02f, 0.02f, 0.02f);
 static const uint SHADOW_FILTER_TYPE_PCF = 0u;
 static const uint SHADOW_FILTER_TYPE_VSM = 1u;
 static const uint SHADOW_FILTER_TYPE_ESM = 2u;
+static const uint VIEW_MODE_POINT_SHADOW_FACE = 5u;
+static const uint VIEW_MODE_POINT_SHADOW_DEPTH_DELTA = 6u;
+static const uint VIEW_MODE_POINT_SHADOW_PCF = 7u;
+static const float POINT_SHADOW_FACE_EXTENT = 1.008765f; // tan(radians(90.5 * 0.5))
+
+float3 GetPointShadowFaceForward(uint FaceIndex)
+{
+    if (FaceIndex == 0u) return float3(1.0f, 0.0f, 0.0f);
+    if (FaceIndex == 1u) return float3(-1.0f, 0.0f, 0.0f);
+    if (FaceIndex == 2u) return float3(0.0f, 1.0f, 0.0f);
+    if (FaceIndex == 3u) return float3(0.0f, -1.0f, 0.0f);
+    if (FaceIndex == 4u) return float3(0.0f, 0.0f, 1.0f);
+    return float3(0.0f, 0.0f, -1.0f);
+}
+
+float3 GetPointShadowFaceUp(uint FaceIndex)
+{
+    if (FaceIndex == 4u) return float3(-1.0f, 0.0f, 0.0f);
+    if (FaceIndex == 5u) return float3(1.0f, 0.0f, 0.0f);
+    return float3(0.0f, 0.0f, 1.0f);
+}
+
+uint SelectPointShadowFace(float3 DirectionFromLight)
+{
+    const float3 AbsDir = abs(DirectionFromLight);
+    if (AbsDir.x >= AbsDir.y && AbsDir.x >= AbsDir.z)
+    {
+        return (DirectionFromLight.x >= 0.0f) ? 0u : 1u;
+    }
+    if (AbsDir.y >= AbsDir.x && AbsDir.y >= AbsDir.z)
+    {
+        return (DirectionFromLight.y >= 0.0f) ? 2u : 3u;
+    }
+    return (DirectionFromLight.z >= 0.0f) ? 4u : 5u;
+}
+
+float2 ProjectPointShadowDirectionToFaceUV(float3 DirectionFromLight, uint FaceIndex)
+{
+    const float3 Forward = GetPointShadowFaceForward(FaceIndex);
+    const float3 Up = GetPointShadowFaceUp(FaceIndex);
+    const float3 Right = normalize(cross(Up, Forward));
+    const float ForwardDistance = max(dot(DirectionFromLight, Forward), 1.0e-5f);
+    const float2 NDC = float2(
+        dot(DirectionFromLight, Right) / (ForwardDistance * POINT_SHADOW_FACE_EXTENT),
+        dot(DirectionFromLight, Up) / (ForwardDistance * POINT_SHADOW_FACE_EXTENT));
+    return float2(NDC.x * 0.5f + 0.5f, 0.5f - NDC.y * 0.5f);
+}
+
+void BuildPointShadowDirectionBasis(float3 DirectionFromLight, out float3 Tangent, out float3 Bitangent)
+{
+    const float3 UpCandidate = abs(DirectionFromLight.z) < 0.999f
+        ? float3(0.0f, 0.0f, 1.0f)
+        : float3(0.0f, 1.0f, 0.0f);
+    Tangent = normalize(cross(UpCandidate, DirectionFromLight));
+    Bitangent = normalize(cross(DirectionFromLight, Tangent));
+}
+
+float2 InsetPointShadowLocalUV(float2 LocalUV, float ShadowResolution)
+{
+    const float Inset = 0.5f / max(ShadowResolution, 1.0f);
+    return clamp(LocalUV, Inset.xx, (1.0f - Inset).xx);
+}
+
+float2 ClampPointShadowFilteredAtlasUV(float2 AtlasUV, float4 AtlasRect, int2 AtlasSize)
+{
+    const float2 Border = 6.0f / (float2)AtlasSize;
+    const float2 MinUV = AtlasRect.xy + Border;
+    const float2 MaxUV = AtlasRect.xy + AtlasRect.zw - Border;
+    const float2 CenterUV = AtlasRect.xy + AtlasRect.zw * 0.5f;
+    return (MaxUV.x <= MinUV.x || MaxUV.y <= MinUV.y)
+        ? CenterUV
+        : clamp(AtlasUV, MinUV, MaxUV);
+}
+
+float3 OffsetPointShadowReceiver(
+    FPointShadowConstants Shadow,
+    float3 WorldPos,
+    float3 N,
+    float3 DirectionFromLight,
+    float LightShadowBias)
+{
+    const float3 ToLight = -DirectionFromLight;
+    float CosTheta = saturate(dot(normalize(N), ToLight));
+    const float TexelWorldSize = Shadow.FarPlane / max(Shadow.ShadowResolution, 1.0f);
+    const float BiasWorldSize = max(LightShadowBias, Shadow.ShadowBias) * Shadow.FarPlane;
+    const float NormalOffset = min(max(BiasWorldSize, TexelWorldSize * 0.25f), TexelWorldSize);
+
+    return WorldPos + normalize(N) * NormalOffset * (1.0f - CosTheta);
+}
+
+float3 PointShadowLocalUVToDirection(uint FaceIndex, float2 LocalUV)
+{
+    const float3 Forward = GetPointShadowFaceForward(FaceIndex);
+    const float3 Up = GetPointShadowFaceUp(FaceIndex);
+    const float3 Right = normalize(cross(Up, Forward));
+    const float NDCx = LocalUV.x * 2.0f - 1.0f;
+    const float NDCy = 1.0f - LocalUV.y * 2.0f;
+    return normalize(Forward + Right * (NDCx * POINT_SHADOW_FACE_EXTENT) + Up * (NDCy * POINT_SHADOW_FACE_EXTENT));
+}
+
+float2 LoadPointShadowVSMMomentDirectional(
+    FPointShadowConstants Shadow,
+    float3 SampleDirection,
+    int AtlasSize)
+{
+    const uint Face = SelectPointShadowFace(SampleDirection);
+    const float2 SampleLocalUV = InsetPointShadowLocalUV(
+        ProjectPointShadowDirectionToFaceUV(SampleDirection, Face),
+        Shadow.ShadowResolution);
+    const float4 SampleAtlasRect = Shadow.FaceAtlasRects[Face];
+    const int2 SampleTileBase = (int2)(SampleAtlasRect.xy * (float)AtlasSize);
+    const int2 SampleTileSpan = (int2)(SampleAtlasRect.zw * (float)AtlasSize);
+    const int2 SampleTileMax = SampleTileBase + SampleTileSpan - int2(1, 1);
+    const float2 SampleAtlasUV = SampleAtlasRect.xy + SampleLocalUV * SampleAtlasRect.zw;
+    const int2 SampleTexel = clamp((int2)floor(SampleAtlasUV * (float)AtlasSize), SampleTileBase, SampleTileMax);
+    return PointShadowVSMMap.Load(int3(SampleTexel, 0)).xy;
+}
+
+float2 SamplePointShadowMomentsBilinearCubeAware(
+    FPointShadowConstants Shadow,
+    float3 DirectionFromLight,
+    int AtlasSize)
+{
+    const uint CenterFace = SelectPointShadowFace(DirectionFromLight);
+    const float2 CenterLocalUV = ProjectPointShadowDirectionToFaceUV(DirectionFromLight, CenterFace);
+    const float Resolution = max(Shadow.ShadowResolution, 1.0f);
+    const float2 PixelPos = CenterLocalUV * Resolution - 0.5f.xx;
+    const float2 BasePixel = floor(PixelPos);
+    const float2 Frac = saturate(PixelPos - BasePixel);
+
+    float2 Corners[4];
+    [unroll]
+    for (int i = 0; i < 4; ++i)
+    {
+        const float2 CornerOffset = float2((i & 1) ? 1.0f : 0.0f, (i & 2) ? 1.0f : 0.0f);
+        const float2 CornerLocalUV = (BasePixel + CornerOffset + 0.5f.xx) / Resolution;
+        const float3 SampleDirection = PointShadowLocalUVToDirection(CenterFace, CornerLocalUV);
+        Corners[i] = LoadPointShadowVSMMomentDirectional(Shadow, SampleDirection, AtlasSize);
+    }
+    const float2 M0 = lerp(Corners[0], Corners[1], Frac.x);
+    const float2 M1 = lerp(Corners[2], Corners[3], Frac.x);
+    return lerp(M0, M1, Frac.y);
+}
 
 float4 GetDirectionalCascadeAtlasRect(int CascadeIndex)
 {
@@ -260,7 +403,15 @@ float ComputePointShadowFactor(float3 WorldPos, float3 N, uint bCastShadows, int
     if (Shadow.bHasShadowMap == 0u)
         return 1.0f;
 
-    const float3 ToFromLight = WorldPos - Shadow.LightPosition;
+    const float3 InitialToFromLight = WorldPos - Shadow.LightPosition;
+    const float InitialDist = length(InitialToFromLight);
+
+    if (InitialDist <= 1.0e-5f || InitialDist >= Shadow.FarPlane)
+        return 1.0f;
+
+    const float3 InitialDirectionFromLight = InitialToFromLight / InitialDist;
+    const float3 ShadowWorldPos = OffsetPointShadowReceiver(Shadow, WorldPos, N, InitialDirectionFromLight, LightShadowBias);
+    const float3 ToFromLight = ShadowWorldPos - Shadow.LightPosition;
     const float Dist = length(ToFromLight);
 
     if (Dist <= 1.0e-5f || Dist >= Shadow.FarPlane)
@@ -277,23 +428,10 @@ float ComputePointShadowFactor(float3 WorldPos, float3 N, uint bCastShadows, int
     const float NormalizedSlopeBias = Shadow.ShadowSlopeBias / max(Shadow.FarPlane, 1.0e-4f);
     const float Bias = max(LightShadowBias, Shadow.ShadowBias) + NormalizedSlopeBias * TanTheta;
 
-    const float3 AbsDir = abs(ToFromLight);
-    uint FaceIndex = 0u;
+    const float3 DirectionFromLight = ToFromLight / Dist;
+    uint FaceIndex = SelectPointShadowFace(DirectionFromLight);
 
-    if (AbsDir.x >= AbsDir.y && AbsDir.x >= AbsDir.z)
-    {
-        FaceIndex = (ToFromLight.x >= 0.0f) ? 0u : 1u;
-    }
-    else if (AbsDir.y >= AbsDir.x && AbsDir.y >= AbsDir.z)
-    {
-        FaceIndex = (ToFromLight.y >= 0.0f) ? 2u : 3u;
-    }
-    else
-    {
-        FaceIndex = (ToFromLight.z >= 0.0f) ? 4u : 5u;
-    }
-
-    const float4 ShadowClip = mul(float4(WorldPos, 1.0f), Shadow.LightViewProj[FaceIndex]);
+    const float4 ShadowClip = mul(float4(ShadowWorldPos, 1.0f), Shadow.LightViewProj[FaceIndex]);
     if (ShadowClip.w <= 1.0e-5f)
         return 1.0f;
 
@@ -305,9 +443,9 @@ float ComputePointShadowFactor(float3 WorldPos, float3 N, uint bCastShadows, int
         return 1.0f;
     }
 
-    const float2 LocalUV = float2(
+    const float2 LocalUV = InsetPointShadowLocalUV(float2(
         ShadowNDC.x * 0.5f + 0.5f,
-        0.5f - ShadowNDC.y * 0.5f);
+        0.5f - ShadowNDC.y * 0.5f), Shadow.ShadowResolution);
 
     const float4 AtlasRect = Shadow.FaceAtlasRects[FaceIndex];
 
@@ -321,20 +459,37 @@ float ComputePointShadowFactor(float3 WorldPos, float3 N, uint bCastShadows, int
     const float2 AtlasUV   = AtlasRect.xy + LocalUV * AtlasRect.zw;
     const int2   RawTexel  = (int2)floor(AtlasUV * (float)AtlasSize);
     const int2   ShadowTexel = clamp(RawTexel, TileBase, TileMax);
+    const int2   GuardTileBase = min(TileBase + int2(1, 1), TileMax);
+    const int2   GuardTileMax = max(TileMax - int2(1, 1), TileBase);
 
     if (PointShadowFilterType == SHADOW_FILTER_TYPE_PCF)
     {
         float ShadowFactor = 0.0f;
-        const float2 TexelSize = 1.0f / (float2)AtlasSize;
         const float Spread = (1.0f - Shadow.ShadowSharpen) * 2.0f;
-        const float Angle = frac(sin(dot(AtlasUV, float2(12.9898, 78.233))) * 43758.5453) * 6.283185f;
+        const float DirectionTexelSize = 2.0f / max(Shadow.ShadowResolution, 1.0f);
+        const float Angle = frac(sin(dot(DirectionFromLight, float3(12.9898, 78.233, 37.719))) * 43758.5453) * 6.283185f;
         const float2x2 RotationMatrix = float2x2(cos(Angle), -sin(Angle), sin(Angle), cos(Angle));
+        float3 DirectionTangent = 0.0f.xxx;
+        float3 DirectionBitangent = 0.0f.xxx;
+        BuildPointShadowDirectionBasis(DirectionFromLight, DirectionTangent, DirectionBitangent);
 
         [unroll]
         for (int SampleIndex = 0; SampleIndex < 16; ++SampleIndex)
         {
-            const float2 Offset = mul(PoissonDisk[SampleIndex], RotationMatrix) * TexelSize * Spread;
-            const int2 SampleTexel = clamp((int2)floor((AtlasUV + Offset) * (float)AtlasSize), TileBase, TileMax);
+            const float2 Offset = mul(PoissonDisk[SampleIndex], RotationMatrix) * DirectionTexelSize * Spread;
+            const float3 SampleDirection = normalize(DirectionFromLight + DirectionTangent * Offset.x + DirectionBitangent * Offset.y);
+            const uint SampleFaceIndex = SelectPointShadowFace(SampleDirection);
+            const float2 SampleLocalUV = InsetPointShadowLocalUV(
+                ProjectPointShadowDirectionToFaceUV(SampleDirection, SampleFaceIndex),
+                Shadow.ShadowResolution);
+            const float4 SampleAtlasRect = Shadow.FaceAtlasRects[SampleFaceIndex];
+            const int2 SampleTileBase = (int2)(SampleAtlasRect.xy * (float)AtlasSize);
+            const int2 SampleTileSpan = (int2)(SampleAtlasRect.zw * (float)AtlasSize);
+            const int2 SampleTileMax = SampleTileBase + SampleTileSpan - int2(1, 1);
+            const int2 SampleGuardTileBase = min(SampleTileBase + int2(1, 1), SampleTileMax);
+            const int2 SampleGuardTileMax = max(SampleTileMax - int2(1, 1), SampleTileBase);
+            const float2 SampleAtlasUV = SampleAtlasRect.xy + SampleLocalUV * SampleAtlasRect.zw;
+            const int2 SampleTexel = clamp((int2)floor(SampleAtlasUV * (float)AtlasSize), SampleGuardTileBase, SampleGuardTileMax);
             const float StoredDepth = PointShadowMap.Load(int3(SampleTexel, 0));
             ShadowFactor += ((CurrentDepth - Bias) <= StoredDepth) ? 1.0f : 0.0f;
         }
@@ -343,17 +498,167 @@ float ComputePointShadowFactor(float3 WorldPos, float3 N, uint bCastShadows, int
     }
     else if (PointShadowFilterType == SHADOW_FILTER_TYPE_ESM)
     {
-        const float2 ClampedAtlasUV = ClampShadowUVToAtlasRect(AtlasUV, AtlasRect, int2(AtlasSize, AtlasSize));
-        return SampleShadowESM(ClampedAtlasUV, CurrentDepth - Bias, PointShadowVSMMap, int2(AtlasSize, AtlasSize));
+        const float2 Moments = SamplePointShadowMomentsBilinearCubeAware(Shadow, DirectionFromLight, AtlasSize);
+        return SampleShadowESMFromStored(Moments.x, CurrentDepth - Bias);
     }
     else
     {
-        const float2 ClampedAtlasUV = ClampShadowUVToAtlasRect(AtlasUV, AtlasRect, int2(AtlasSize, AtlasSize));
-        return SampleShadowVSM(ClampedAtlasUV, CurrentDepth - Bias, PointShadowVSMMap, int2(AtlasSize, AtlasSize));
+        const float2 Moments = SamplePointShadowMomentsBilinearCubeAware(Shadow, DirectionFromLight, AtlasSize);
+        return SampleShadowVSMFromMoments(Moments, CurrentDepth - Bias);
     }
 }
 
 // ─────────────────── Lights ───────────────────
+bool ResolvePointShadowSampleData(
+    float3 WorldPos,
+    float3 N,
+    uint bCastShadows,
+    int ShadowMapIndex,
+    float LightShadowBias,
+    out uint OutFaceIndex,
+    out float OutCurrentDepth,
+    out float OutBias,
+    out float4 OutAtlasRect,
+    out float2 OutAtlasUV,
+    out int2 OutTileBase,
+    out int2 OutTileMax)
+{
+    OutFaceIndex = 0u;
+    OutCurrentDepth = 0.0f;
+    OutBias = 0.0f;
+    OutAtlasRect = 0.0f.xxxx;
+    OutAtlasUV = 0.0f.xx;
+    OutTileBase = int2(0, 0);
+    OutTileMax = int2(0, 0);
+
+    if (bCastShadows == 0u || ShadowMapIndex < 0)
+        return false;
+
+    const uint Slice = (uint)ShadowMapIndex;
+    if (Slice >= PointShadowCount)
+        return false;
+
+    const FPointShadowConstants Shadow = PointShadowData[Slice];
+    if (Shadow.bHasShadowMap == 0u)
+        return false;
+
+    const float3 InitialToFromLight = WorldPos - Shadow.LightPosition;
+    const float InitialDist = length(InitialToFromLight);
+    if (InitialDist <= 1.0e-5f || InitialDist >= Shadow.FarPlane)
+        return false;
+
+    const float3 InitialDirectionFromLight = InitialToFromLight / InitialDist;
+    const float3 ShadowWorldPos = OffsetPointShadowReceiver(Shadow, WorldPos, N, InitialDirectionFromLight, LightShadowBias);
+    const float3 ToFromLight = ShadowWorldPos - Shadow.LightPosition;
+    const float Dist = length(ToFromLight);
+    if (Dist <= 1.0e-5f || Dist >= Shadow.FarPlane)
+        return false;
+
+    const float3 DirectionFromLight = ToFromLight / Dist;
+    OutFaceIndex = SelectPointShadowFace(DirectionFromLight);
+
+    const float4 ShadowClip = mul(float4(ShadowWorldPos, 1.0f), Shadow.LightViewProj[OutFaceIndex]);
+    if (ShadowClip.w <= 1.0e-5f)
+        return false;
+
+    const float3 ShadowNDC = ShadowClip.xyz / ShadowClip.w;
+    if (ShadowNDC.x < -1.0f || ShadowNDC.x > 1.0f ||
+        ShadowNDC.y < -1.0f || ShadowNDC.y > 1.0f ||
+        ShadowNDC.z < 0.0f || ShadowNDC.z > 1.0f)
+    {
+        return false;
+    }
+
+    const float2 LocalUV = InsetPointShadowLocalUV(
+        float2(ShadowNDC.x * 0.5f + 0.5f, 0.5f - ShadowNDC.y * 0.5f),
+        Shadow.ShadowResolution);
+    OutAtlasRect = Shadow.FaceAtlasRects[OutFaceIndex];
+    OutAtlasUV = OutAtlasRect.xy + LocalUV * OutAtlasRect.zw;
+
+    const int AtlasSize = (int)PointAtlasResolution;
+    const int2 TileSpan = (int2)(OutAtlasRect.zw * (float)AtlasSize);
+    OutTileBase = (int2)(OutAtlasRect.xy * (float)AtlasSize);
+    OutTileMax = OutTileBase + TileSpan - int2(1, 1);
+    OutCurrentDepth = Dist / Shadow.FarPlane;
+    OutBias = max(LightShadowBias, Shadow.ShadowBias);
+    return true;
+}
+
+float3 GetPointShadowFaceDebugColor(uint FaceIndex)
+{
+    if (FaceIndex == 0u) return float3(1.0f, 0.1f, 0.1f);
+    if (FaceIndex == 1u) return float3(0.1f, 1.0f, 0.1f);
+    if (FaceIndex == 2u) return float3(0.1f, 0.3f, 1.0f);
+    if (FaceIndex == 3u) return float3(1.0f, 1.0f, 0.1f);
+    if (FaceIndex == 4u) return float3(0.1f, 1.0f, 1.0f);
+    return float3(1.0f, 0.1f, 1.0f);
+}
+
+float3 GetPointShadowDebugColor(float3 WorldPos, float3 N)
+{
+    const uint DebugMode = (uint)(UberDebugViewMode + 0.5f);
+
+    [loop]
+    for (uint LightIndex = 0u; LightIndex < VisibleLightCount; ++LightIndex)
+    {
+        const FVisibleLightData Light = VisibleLights[LightIndex];
+        if (Light.Type != LIGHT_TYPE_POINT || Light.bCastShadows == 0u || Light.ShadowMapIndex < 0)
+        {
+            continue;
+        }
+
+        uint FaceIndex = 0u;
+        float CurrentDepth = 0.0f;
+        float Bias = 0.0f;
+        float4 AtlasRect = 0.0f.xxxx;
+        float2 AtlasUV = 0.0f.xx;
+        int2 TileBase = int2(0, 0);
+        int2 TileMax = int2(0, 0);
+        if (!ResolvePointShadowSampleData(
+            WorldPos,
+            N,
+            Light.bCastShadows,
+            Light.ShadowMapIndex,
+            Light.ShadowBias,
+            FaceIndex,
+            CurrentDepth,
+            Bias,
+            AtlasRect,
+            AtlasUV,
+            TileBase,
+            TileMax))
+        {
+            return float3(0.02f, 0.02f, 0.08f);
+        }
+
+        if (DebugMode == VIEW_MODE_POINT_SHADOW_FACE)
+        {
+            return GetPointShadowFaceDebugColor(FaceIndex);
+        }
+
+        const int AtlasSize = (int)PointAtlasResolution;
+        const int2 CenterTexel = clamp((int2)floor(AtlasUV * (float)AtlasSize), TileBase, TileMax);
+        const float StoredDepth = PointShadowMap.Load(int3(CenterTexel, 0));
+        const float DepthDelta = StoredDepth - (CurrentDepth - Bias);
+
+        if (DebugMode == VIEW_MODE_POINT_SHADOW_DEPTH_DELTA)
+        {
+            const float Intensity = saturate(abs(DepthDelta) * 512.0f);
+            return (DepthDelta >= 0.0f)
+                ? float3(0.0f, Intensity, 0.0f)
+                : float3(Intensity, 0.0f, 0.0f);
+        }
+
+        if (DebugMode == VIEW_MODE_POINT_SHADOW_PCF)
+        {
+            const float ShadowFactor = ComputePointShadowFactor(WorldPos, N, Light.bCastShadows, Light.ShadowMapIndex, Light.ShadowBias);
+            return ShadowFactor.xxx;
+        }
+    }
+
+    return float3(0.15f, 0.0f, 0.15f);
+}
+
 struct FLightingResult
 {
     float3 Diffuse;
@@ -803,6 +1108,14 @@ FUberPSInput mainVS(FUberVSInput Input)
 FUberPSOutput mainPS(FUberPSInput Input)
 {
     const FUberSurfaceData Surface = EvaluateSurface(Input);
+    const uint DebugViewMode = (uint)(UberDebugViewMode + 0.5f);
+    if (DebugViewMode == VIEW_MODE_POINT_SHADOW_FACE ||
+        DebugViewMode == VIEW_MODE_POINT_SHADOW_DEPTH_DELTA ||
+        DebugViewMode == VIEW_MODE_POINT_SHADOW_PCF)
+    {
+        return ComposeDebugOutput(Surface, GetPointShadowDebugColor(Surface.WorldPos, Surface.WorldNormal));
+    }
+
     FLightingResult Lighting;
 
 #if defined(LIGHTING_MODEL_GOURAUD)
