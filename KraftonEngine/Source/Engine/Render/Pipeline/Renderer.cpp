@@ -529,6 +529,19 @@ namespace
 				}
 			};
 
+			struct FShadowScreenMetrics
+			{
+				FShadowScreenRect Rect;
+
+				float CoverageRatio = 0.0f;
+				float CoverageScore = 0.0f;
+
+				float ProjectedWidthPx = 0.0f;
+				float ProjectedHeightPx = 0.0f;
+
+				uint32 DesiredResolution = 0;
+			};
+
 			enum class EShadowAtlasRequestType
 			{
 				DirectionalCascade,
@@ -734,14 +747,34 @@ namespace
 				return std::min(QuantizedResolution, MaxResolution);
 			}
 
-			[[maybe_unused]] uint32 ComputeProjectedSpotShadowResolution(
-				const FFrameContext & Frame,
-				const FVector & LightPosition,
-				float AttenuationRadius,
-				uint32 MaxResolution)
+			float ConvertScreenCoverageToPriorityScore(float CoverageRatio)
 			{
-				const FShadowScreenRect Rect = ProjectSphereBoundsToScreen(Frame, LightPosition, AttenuationRadius);
-				return ChooseSpotShadowResolutionFromProjectedRect(Rect, MaxResolution);
+				constexpr float FullCoverageReference = 0.20f;
+				return Clamp01(CoverageRatio / FullCoverageReference);
+			}
+
+			FShadowScreenMetrics ComputeSpotShadowScreenMetrics(
+				const FFrameContext & Frame,
+				const FVector & Center,
+				float Radius,
+				uint32 MaxAllowedResolution)
+			{
+				FShadowScreenMetrics Metrics = {};
+				Metrics.Rect = ProjectSphereBoundsToScreen(Frame, Center, Radius);
+				if (!Metrics.Rect.bValid)
+				{
+					return Metrics;
+				}
+
+				Metrics.ProjectedWidthPx = Metrics.Rect.Width();
+				Metrics.ProjectedHeightPx = Metrics.Rect.Height();
+
+				const float ScreenArea = std::max(Frame.ViewportWidth * Frame.ViewportHeight, 1.0f);
+				const float RectArea = Metrics.ProjectedWidthPx * Metrics.ProjectedHeightPx;
+				Metrics.CoverageRatio = Clamp01(RectArea / ScreenArea);
+				Metrics.CoverageScore = ConvertScreenCoverageToPriorityScore(Metrics.CoverageRatio);
+				Metrics.DesiredResolution = ChooseSpotShadowResolutionFromProjectedRect(Metrics.Rect, MaxAllowedResolution);
+				return Metrics;
 			}
 
 			uint32 GetHandleSetPrimaryResolution(const FShadowHandleSet * HandleSet)
@@ -789,27 +822,6 @@ namespace
 			float ComputeLightContributionScore(float Intensity, const FVector4 & Color)
 			{
 				return Clamp01((std::max(Intensity, 0.0f) * ComputeLuminance(Color)) / 8.0f);
-			}
-
-			float EstimateSphereScreenCoverage(const FFrameContext & Frame, const FVector & Center, float Radius)
-			{
-				if (Radius <= 0.0f || Frame.ViewportWidth <= 0.0f || Frame.ViewportHeight <= 0.0f)
-				{
-					return 0.0f;
-				}
-
-				if (Frame.bIsOrtho)
-				{
-					const float OrthoWidth = std::max(Frame.OrthoWidth, 1.0f);
-					const float NormalizedRadius = Radius / OrthoWidth;
-					return Clamp01(NormalizedRadius * NormalizedRadius * 4.0f);
-				}
-
-				const float DistanceToCenter = std::max(FVector::Distance(Frame.CameraPosition, Center), 1.0f);
-				const float MinViewportExtent = std::max(std::min(Frame.ViewportWidth, Frame.ViewportHeight), 1.0f);
-				const float ProjectedRadiusPixels = (Radius * Frame.Proj.M[1][1] / DistanceToCenter) * (Frame.ViewportHeight * 0.5f);
-				const float NormalizedRadius = ProjectedRadiusPixels / MinViewportExtent;
-				return Clamp01(NormalizedRadius * NormalizedRadius * 4.0f);
 			}
 
 			float EstimateInfluenceProximityScore(const FFrameContext & Frame, const FVector & Center, float Radius)
@@ -939,7 +951,7 @@ namespace
 							Request.Pieces.push_back(Piece);
 						}
 
-						Request.ScreenCoverageScore = Request.Pieces.empty() ? 0.0f : Request.Pieces[0].Priority;
+						Request.ScreenCoverageScore = PieceCount > 0 ? CascadeCoverage[0] : 0.0f;
 						UpdateRequestCost(Request, AtlasPool);
 						OutRequests.push_back(Request);
 					}
@@ -961,7 +973,22 @@ namespace
 					Request.ExistingHandleSet = SpotLight->PeekShadowHandleSet();
 					const_cast<USpotLightComponent*>(SpotLight)->MarkShadowAtlasRequested(ShadowAtlasFrameIndex);
 					Request.ExistingResolution = GetHandleSetPrimaryResolution(Request.ExistingHandleSet);
-					Request.ScreenCoverageScore = EstimateSphereScreenCoverage(Frame, Params.Position, Params.AttenuationRadius);
+					Request.MaxAllowedResolution = SpotLight->GetShadowResolution();
+					const FShadowScreenMetrics Metrics = ComputeSpotShadowScreenMetrics(
+						Frame,
+						Params.Position,
+						Params.AttenuationRadius,
+						Request.MaxAllowedResolution);
+					if (Metrics.DesiredResolution == 0)
+					{
+						if (bShadowAtlasVerboseLog)
+						{
+							UE_LOG("[ShadowAtlas] skipped spot light=%u: projected attenuation sphere is not visible", SpotIndex);
+						}
+						continue;
+					}
+
+					Request.ScreenCoverageScore = Metrics.CoverageScore;
 					Request.LightContributionScore = ComputeLightContributionScore(Params.Intensity, Params.LightColor);
 					Request.ProximityScore = EstimateInfluenceProximityScore(Frame, Params.Position, Params.AttenuationRadius);
 					// TODO: Replace this constant with caster/receiver overlap tests.
@@ -978,19 +1005,9 @@ namespace
 					Request.bMustAllocate = Request.ScreenCoverageScore >= ShadowAtlasSpotMustCoverageThreshold
 						&& Request.ProximityScore >= ShadowAtlasSpotMustProximityThreshold;
 
-					Request.MaxAllowedResolution = SpotLight->GetShadowResolution();
-					const FShadowScreenRect ProjectedRect = ProjectSphereBoundsToScreen(Frame, Params.Position, Params.AttenuationRadius);
-					Request.ProjectedWidthPx = ProjectedRect.Width();
-					Request.ProjectedHeightPx = ProjectedRect.Height();
-					const uint32 DesiredResolution = ChooseSpotShadowResolutionFromProjectedRect(ProjectedRect, Request.MaxAllowedResolution);
-					if (DesiredResolution == 0)
-					{
-						if (bShadowAtlasVerboseLog)
-						{
-							UE_LOG("[ShadowAtlas] skipped spot light=%u: projected attenuation sphere is not visible", SpotIndex);
-						}
-						continue;
-					}
+					Request.ProjectedWidthPx = Metrics.ProjectedWidthPx;
+					Request.ProjectedHeightPx = Metrics.ProjectedHeightPx;
+					const uint32 DesiredResolution = Metrics.DesiredResolution;
 					Request.DesiredHandleRequest.Sizes.push_back(DesiredResolution);
 
 					FShadowAtlasPieceRequest Piece = {};
@@ -1000,6 +1017,19 @@ namespace
 					Piece.Priority = Request.FinalPriority;
 					Piece.bMustAllocate = Request.bMustAllocate;
 					Request.Pieces.push_back(Piece);
+
+					if (bShadowAtlasVerboseLog)
+					{
+						UE_LOG(
+							"[ShadowAtlas] spot=%u coverageRatio=%.4f coverageScore=%.4f projected=(%.1f, %.1f) desired=%u priority=%.3f",
+							SpotIndex,
+							Metrics.CoverageRatio,
+							Metrics.CoverageScore,
+							Metrics.ProjectedWidthPx,
+							Metrics.ProjectedHeightPx,
+							DesiredResolution,
+							Request.FinalPriority);
+					}
 
 					UpdateRequestCost(Request, AtlasPool);
 					OutRequests.push_back(Request);
