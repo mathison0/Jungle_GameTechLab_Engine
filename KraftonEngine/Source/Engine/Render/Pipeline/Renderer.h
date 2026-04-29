@@ -67,6 +67,7 @@ private:
 		ID3D11RenderTargetView* RTV = nullptr;
 		uint32 AtlasSliceIndex = static_cast<uint32>(-1);
 		uint32 CubeIndex = static_cast<uint32>(-1);
+		uint32 CubeTierIndex = static_cast<uint32>(-1);
 		uint32 CubeFaceIndex = 0;
 		FMatrix CameraVP = FMatrix::Identity;
 		float ShadowDepthBias = 0.0f;

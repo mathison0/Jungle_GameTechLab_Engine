@@ -498,6 +498,7 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 			Task.DSV = FTextureCubeShadowPool::Get().GetFaceDSV(CubeHandle, FaceIndex);
 			Task.RTV = bUseVSM ? FTextureCubeShadowPool::Get().GetFaceVSMRTV(CubeHandle, FaceIndex) : nullptr;
 			Task.CubeIndex = CubeHandle.CubeIndex;
+			Task.CubeTierIndex = CubeHandle.TierIndex;
 			Task.CubeFaceIndex = FaceIndex;
 			Task.ShadowDepthBias = PointLight->GetShadowBias();
 			Task.ShadowSlopeBias = PointLight->GetShadowSlopeBias();
@@ -1011,8 +1012,11 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 {
 	struct FPreparedVSMBlurRegion
 	{
+		uint32 TextureSize = 0;
 		uint32 SliceIndex = static_cast<uint32>(-1);
 		D3D11_BOX Box = {};
+		ID3D11ShaderResourceView* SourceSRV = nullptr;
+		ID3D11ShaderResourceView* TempSRV = nullptr;
 		ID3D11RenderTargetView* TempRTV = nullptr;
 		ID3D11RenderTargetView* FilteredRTV = nullptr;
 	};
@@ -1021,11 +1025,10 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
 	ID3D11ShaderResourceView* RawSRV = AtlasPool.GetRawSRV();
 	ID3D11ShaderResourceView* TempSRV = AtlasPool.GetTempSRV();
-	ID3D11ShaderResourceView* FilteredSRV = AtlasPool.GetFilteredSRV();
 	FShader* BlurShader = FShaderManager::Get().GetOrCreate(EShaderPath::Gaussianblur);
 	ID3D11Buffer* BlurPassCBHandle = VSMBlurPassBuffer.GetBuffer();
 
-	if (!Ctx || !RawSRV || !TempSRV || !FilteredSRV || !BlurShader || !BlurShader->IsValid() || !BlurPassCBHandle)
+	if (!Ctx || !BlurShader || !BlurShader->IsValid() || !BlurPassCBHandle)
 	{
 		return;
 	}
@@ -1052,11 +1055,56 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 		}
 
 		FPreparedVSMBlurRegion Region = {};
+		Region.TextureSize = AtlasTextureSize;
 		Region.SliceIndex = Task.AtlasSliceIndex;
 		Region.Box = BlurBox;
+		Region.SourceSRV = RawSRV;
+		Region.TempSRV = TempSRV;
 		Region.TempRTV = AtlasPool.GetTempRTV(Task.AtlasSliceIndex);
 		Region.FilteredRTV = AtlasPool.GetFilteredRTV(Task.AtlasSliceIndex);
-		if (!Region.TempRTV || !Region.FilteredRTV)
+		if (!Region.SourceSRV || !Region.TempSRV || !Region.TempRTV || !Region.FilteredRTV)
+		{
+			continue;
+		}
+
+		PreparedRegions.push_back(Region);
+	}
+
+	for (const FShadowRenderTask& Task : ShadowPassData.RenderTasks)
+	{
+		if (Task.TargetType != EShadowRenderTargetType::CubeFace
+			|| !Task.RTV
+			|| Task.CubeIndex == static_cast<uint32>(-1)
+			|| Task.CubeTierIndex == static_cast<uint32>(-1)
+			|| Task.CubeFaceIndex >= FTextureCubeShadowPool::CubeFaceCount)
+		{
+			continue;
+		}
+
+		FShadowCubeHandle CubeHandle;
+		CubeHandle.CubeIndex = Task.CubeIndex;
+		CubeHandle.TierIndex = Task.CubeTierIndex;
+
+		const uint32 CubeTextureSize = FTextureCubeShadowPool::Get().GetResolution(CubeHandle);
+		if (CubeTextureSize == 0)
+		{
+			continue;
+		}
+
+		FPreparedVSMBlurRegion Region = {};
+		Region.TextureSize = CubeTextureSize;
+		Region.SliceIndex = Task.CubeIndex * FTextureCubeShadowPool::CubeFaceCount + Task.CubeFaceIndex;
+		Region.Box.left = 0;
+		Region.Box.top = 0;
+		Region.Box.front = 0;
+		Region.Box.right = CubeTextureSize;
+		Region.Box.bottom = CubeTextureSize;
+		Region.Box.back = 1;
+		Region.SourceSRV = FTextureCubeShadowPool::Get().GetRawVSMArraySRV(Task.CubeTierIndex);
+		Region.TempSRV = FTextureCubeShadowPool::Get().GetTempVSMArraySRV(Task.CubeTierIndex);
+		Region.TempRTV = FTextureCubeShadowPool::Get().GetTempFaceVSMRTV(CubeHandle, Task.CubeFaceIndex);
+		Region.FilteredRTV = FTextureCubeShadowPool::Get().GetFilteredFaceVSMRTV(CubeHandle, Task.CubeFaceIndex);
+		if (!Region.SourceSRV || !Region.TempSRV || !Region.TempRTV || !Region.FilteredRTV)
 		{
 			continue;
 		}
@@ -1088,7 +1136,7 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 
 	for (const FPreparedVSMBlurRegion& Region : PreparedRegions)
 	{
-		if (!Region.TempRTV || !Region.FilteredRTV)
+		if (!Region.SourceSRV || !Region.TempSRV || !Region.TempRTV || !Region.FilteredRTV || Region.TextureSize == 0)
 		{
 			continue;
 		}
@@ -1110,19 +1158,19 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 		Ctx->RSSetViewports(1, &BlurViewport);
 		Ctx->RSSetScissorRects(1, &BlurScissor);
 		FVSMBlurPassConstants BlurConstants = {};
-		BlurConstants.SourceUVRect[0] = static_cast<float>(Region.Box.left) / static_cast<float>(AtlasTextureSize);
-		BlurConstants.SourceUVRect[1] = static_cast<float>(Region.Box.top) / static_cast<float>(AtlasTextureSize);
-		BlurConstants.SourceUVRect[2] = static_cast<float>(Region.Box.right) / static_cast<float>(AtlasTextureSize);
-		BlurConstants.SourceUVRect[3] = static_cast<float>(Region.Box.bottom) / static_cast<float>(AtlasTextureSize);
-		BlurConstants.InvTextureSize[0] = 1.0f / static_cast<float>(AtlasTextureSize);
-		BlurConstants.InvTextureSize[1] = 1.0f / static_cast<float>(AtlasTextureSize);
+		BlurConstants.SourceUVRect[0] = static_cast<float>(Region.Box.left) / static_cast<float>(Region.TextureSize);
+		BlurConstants.SourceUVRect[1] = static_cast<float>(Region.Box.top) / static_cast<float>(Region.TextureSize);
+		BlurConstants.SourceUVRect[2] = static_cast<float>(Region.Box.right) / static_cast<float>(Region.TextureSize);
+		BlurConstants.SourceUVRect[3] = static_cast<float>(Region.Box.bottom) / static_cast<float>(Region.TextureSize);
+		BlurConstants.InvTextureSize[0] = 1.0f / static_cast<float>(Region.TextureSize);
+		BlurConstants.InvTextureSize[1] = 1.0f / static_cast<float>(Region.TextureSize);
 		BlurConstants.SourceSlice = Region.SliceIndex;
 
 		BlurConstants.BlurDirection[0] = 1.0f;
 		BlurConstants.BlurDirection[1] = 0.0f;
 		VSMBlurPassBuffer.Update(Ctx, &BlurConstants, sizeof(FVSMBlurPassConstants));
 		Ctx->OMSetRenderTargets(1, &Region.TempRTV, nullptr);
-		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &RawSRV);
+		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &Region.SourceSRV);
 		Ctx->Draw(3, 0);
 		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &NullSRV);
 
@@ -1130,7 +1178,7 @@ void FRenderer::RenderVSMBlurPass(const FShadowPassData& ShadowPassData)
 		BlurConstants.BlurDirection[1] = 1.0f;
 		VSMBlurPassBuffer.Update(Ctx, &BlurConstants, sizeof(FVSMBlurPassConstants));
 		Ctx->OMSetRenderTargets(1, &Region.FilteredRTV, nullptr);
-		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &TempSRV);
+		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &Region.TempSRV);
 		Ctx->Draw(3, 0);
 		Ctx->PSSetShaderResources(BlurSRVSlot, 1, &NullSRV);
 	}

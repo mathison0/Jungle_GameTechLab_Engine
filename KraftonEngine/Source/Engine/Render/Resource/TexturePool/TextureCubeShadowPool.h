@@ -51,8 +51,12 @@ public:
 	void ReleaseHandle(FCubeShadowHandle Handle);
 
 	ID3D11ShaderResourceView* GetSRV(uint32 TierIndex) const;
+	ID3D11ShaderResourceView* GetRawVSMArraySRV(uint32 TierIndex) const;
+	ID3D11ShaderResourceView* GetTempVSMArraySRV(uint32 TierIndex) const;
 	ID3D11DepthStencilView* GetFaceDSV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
 	ID3D11RenderTargetView* GetFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
+	ID3D11RenderTargetView* GetTempFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
+	ID3D11RenderTargetView* GetFilteredFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const;
 	ID3D11ShaderResourceView* GetDebugSRV(FCubeShadowHandle Handle);
 	static FPointShadowFaceBasis GetFaceBasis(uint32 FaceIndex);
 
@@ -77,8 +81,14 @@ private:
 		TComPtr<ID3D11ShaderResourceView> SRV;
 		TComPtr<ID3D11ShaderResourceView> DebugArraySRV;
 		TComPtr<ID3D11Texture2D> MomentTexture;
+		TComPtr<ID3D11Texture2D> TempMomentTexture;
+		TComPtr<ID3D11Texture2D> FilteredMomentTexture;
+		TComPtr<ID3D11ShaderResourceView> RawVSMArraySRV;
+		TComPtr<ID3D11ShaderResourceView> TempVSMArraySRV;
 		TArray<TComPtr<ID3D11DepthStencilView>> FaceDSVs;
 		TArray<TComPtr<ID3D11RenderTargetView>> FaceVSMRTVs;
+		TArray<TComPtr<ID3D11RenderTargetView>> TempFaceVSMRTVs;
+		TArray<TComPtr<ID3D11RenderTargetView>> FilteredFaceVSMRTVs;
 		TArray<uint8> AllocationFlags;
 		TArray<uint32> FreeCubeIndices;
 	};

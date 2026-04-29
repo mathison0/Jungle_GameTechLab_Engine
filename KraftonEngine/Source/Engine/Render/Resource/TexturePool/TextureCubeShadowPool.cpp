@@ -143,9 +143,15 @@ void FTextureCubeShadowPool::Release()
 	{
 		Tier.FaceDSVs.clear();
 		Tier.FaceVSMRTVs.clear();
+		Tier.TempFaceVSMRTVs.clear();
+		Tier.FilteredFaceVSMRTVs.clear();
 		Tier.MomentTexture.Reset();
+		Tier.TempMomentTexture.Reset();
+		Tier.FilteredMomentTexture.Reset();
 		Tier.SRV.Reset();
 		Tier.DebugArraySRV.Reset();
+		Tier.RawVSMArraySRV.Reset();
+		Tier.TempVSMArraySRV.Reset();
 		Tier.Texture.Reset();
 		Tier.AllocationFlags.clear();
 		Tier.FreeCubeIndices.clear();
@@ -253,6 +259,18 @@ ID3D11ShaderResourceView* FTextureCubeShadowPool::GetSRV(uint32 TierIndex) const
 	return Tier ? Tier->SRV.Get() : nullptr;
 }
 
+ID3D11ShaderResourceView* FTextureCubeShadowPool::GetRawVSMArraySRV(uint32 TierIndex) const
+{
+	const FTierPool* Tier = GetTier(TierIndex);
+	return Tier ? Tier->RawVSMArraySRV.Get() : nullptr;
+}
+
+ID3D11ShaderResourceView* FTextureCubeShadowPool::GetTempVSMArraySRV(uint32 TierIndex) const
+{
+	const FTierPool* Tier = GetTier(TierIndex);
+	return Tier ? Tier->TempVSMArraySRV.Get() : nullptr;
+}
+
 ID3D11DepthStencilView* FTextureCubeShadowPool::GetFaceDSV(FCubeShadowHandle Handle, uint32 FaceIndex) const
 {
 	const FTierPool* Tier = GetTier(Handle.TierIndex);
@@ -285,6 +303,40 @@ ID3D11RenderTargetView* FTextureCubeShadowPool::GetFaceVSMRTV(FCubeShadowHandle 
 	}
 
 	return Tier->FaceVSMRTVs[SliceIndex].Get();
+}
+
+ID3D11RenderTargetView* FTextureCubeShadowPool::GetTempFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const
+{
+	const FTierPool* Tier = GetTier(Handle.TierIndex);
+	if (!Handle.IsValid() || !Tier || FaceIndex >= CubeFaceCount)
+	{
+		return nullptr;
+	}
+
+	const uint32 SliceIndex = GetSliceIndex(Handle, FaceIndex);
+	if (SliceIndex >= Tier->TempFaceVSMRTVs.size())
+	{
+		return nullptr;
+	}
+
+	return Tier->TempFaceVSMRTVs[SliceIndex].Get();
+}
+
+ID3D11RenderTargetView* FTextureCubeShadowPool::GetFilteredFaceVSMRTV(FCubeShadowHandle Handle, uint32 FaceIndex) const
+{
+	const FTierPool* Tier = GetTier(Handle.TierIndex);
+	if (!Handle.IsValid() || !Tier || FaceIndex >= CubeFaceCount)
+	{
+		return nullptr;
+	}
+
+	const uint32 SliceIndex = GetSliceIndex(Handle, FaceIndex);
+	if (SliceIndex >= Tier->FilteredFaceVSMRTVs.size())
+	{
+		return nullptr;
+	}
+
+	return Tier->FilteredFaceVSMRTVs[SliceIndex].Get();
 }
 
 ID3D11ShaderResourceView* FTextureCubeShadowPool::GetDebugSRV(FCubeShadowHandle Handle)
@@ -453,8 +505,14 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 	TComPtr<ID3D11ShaderResourceView> NewSRV;
 	TComPtr<ID3D11ShaderResourceView> NewDebugArraySRV;
 	TComPtr<ID3D11Texture2D> NewMomentTexture;
+	TComPtr<ID3D11Texture2D> NewTempMomentTexture;
+	TComPtr<ID3D11Texture2D> NewFilteredMomentTexture;
+	TComPtr<ID3D11ShaderResourceView> NewRawVSMArraySRV;
+	TComPtr<ID3D11ShaderResourceView> NewTempVSMArraySRV;
 	TArray<TComPtr<ID3D11DepthStencilView>> NewFaceDSVs;
 	TArray<TComPtr<ID3D11RenderTargetView>> NewFaceVSMRTVs;
+	TArray<TComPtr<ID3D11RenderTargetView>> NewTempFaceVSMRTVs;
+	TArray<TComPtr<ID3D11RenderTargetView>> NewFilteredFaceVSMRTVs;
 
 	const uint32 TotalSlices = NewCubeCapacity * CubeFaceCount;
 
@@ -489,6 +547,18 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 			assert(false);
 			return false;
 		}
+		hr = Device->CreateTexture2D(&MomentTextureDesc, nullptr, NewTempMomentTexture.GetAddressOf());
+		if (FAILED(hr))
+		{
+			assert(false);
+			return false;
+		}
+		hr = Device->CreateTexture2D(&MomentTextureDesc, nullptr, NewFilteredMomentTexture.GetAddressOf());
+		if (FAILED(hr))
+		{
+			assert(false);
+			return false;
+		}
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
 		SRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
@@ -498,7 +568,7 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 		SRVDesc.TextureCubeArray.First2DArrayFace = 0;
 		SRVDesc.TextureCubeArray.NumCubes = NewCubeCapacity;
 
-		hr = Device->CreateShaderResourceView(NewMomentTexture.Get(), &SRVDesc, NewSRV.GetAddressOf());
+		hr = Device->CreateShaderResourceView(NewFilteredMomentTexture.Get(), &SRVDesc, NewSRV.GetAddressOf());
 		if (FAILED(hr))
 		{
 			assert(false);
@@ -513,7 +583,19 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 		DebugSRVDesc.Texture2DArray.FirstArraySlice = 0;
 		DebugSRVDesc.Texture2DArray.ArraySize = TotalSlices;
 
-		hr = Device->CreateShaderResourceView(NewMomentTexture.Get(), &DebugSRVDesc, NewDebugArraySRV.GetAddressOf());
+		hr = Device->CreateShaderResourceView(NewMomentTexture.Get(), &DebugSRVDesc, NewRawVSMArraySRV.GetAddressOf());
+		if (FAILED(hr))
+		{
+			assert(false);
+			return false;
+		}
+		hr = Device->CreateShaderResourceView(NewTempMomentTexture.Get(), &DebugSRVDesc, NewTempVSMArraySRV.GetAddressOf());
+		if (FAILED(hr))
+		{
+			assert(false);
+			return false;
+		}
+		hr = Device->CreateShaderResourceView(NewFilteredMomentTexture.Get(), &DebugSRVDesc, NewDebugArraySRV.GetAddressOf());
 		if (FAILED(hr))
 		{
 			assert(false);
@@ -557,6 +639,8 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 	if (bVSMMode)
 	{
 		NewFaceVSMRTVs.resize(TotalSlices);
+		NewTempFaceVSMRTVs.resize(TotalSlices);
+		NewFilteredFaceVSMRTVs.resize(TotalSlices);
 	}
 	for (uint32 SliceIndex = 0; SliceIndex < TotalSlices; ++SliceIndex)
 	{
@@ -589,6 +673,20 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 				assert(false);
 				return false;
 			}
+
+			hr = Device->CreateRenderTargetView(NewTempMomentTexture.Get(), &RTVDesc, NewTempFaceVSMRTVs[SliceIndex].GetAddressOf());
+			if (FAILED(hr))
+			{
+				assert(false);
+				return false;
+			}
+
+			hr = Device->CreateRenderTargetView(NewFilteredMomentTexture.Get(), &RTVDesc, NewFilteredFaceVSMRTVs[SliceIndex].GetAddressOf());
+			if (FAILED(hr))
+			{
+				assert(false);
+				return false;
+			}
 		}
 	}
 
@@ -598,8 +696,14 @@ bool FTextureCubeShadowPool::RebuildResources(uint32 TierIndex, uint32 NewCubeCa
 	Tier->SRV = std::move(NewSRV);
 	Tier->DebugArraySRV = std::move(NewDebugArraySRV);
 	Tier->MomentTexture = std::move(NewMomentTexture);
+	Tier->TempMomentTexture = std::move(NewTempMomentTexture);
+	Tier->FilteredMomentTexture = std::move(NewFilteredMomentTexture);
+	Tier->RawVSMArraySRV = std::move(NewRawVSMArraySRV);
+	Tier->TempVSMArraySRV = std::move(NewTempVSMArraySRV);
 	Tier->FaceDSVs = std::move(NewFaceDSVs);
 	Tier->FaceVSMRTVs = std::move(NewFaceVSMRTVs);
+	Tier->TempFaceVSMRTVs = std::move(NewTempFaceVSMRTVs);
+	Tier->FilteredFaceVSMRTVs = std::move(NewFilteredFaceVSMRTVs);
 	Tier->CubeCapacity = NewCubeCapacity;
 	DebugResources.clear();
 
@@ -742,6 +846,8 @@ void FTextureCubeShadowPool::UpdateMemoryStats()
 	{
 		NewMemory += MemoryStats::CalculateTextureMemory(Tier.Texture.Get());
 		NewMemory += MemoryStats::CalculateTextureMemory(Tier.MomentTexture.Get());
+		NewMemory += MemoryStats::CalculateTextureMemory(Tier.TempMomentTexture.Get());
+		NewMemory += MemoryStats::CalculateTextureMemory(Tier.FilteredMomentTexture.Get());
 	}
 
 	if (NewMemory > TrackedShadowCubeMemory)
