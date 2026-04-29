@@ -243,7 +243,7 @@
   <ItemGroup>
     <ClCompile Include="Source\Editor\UI\EditorShadowPropertyWidget.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\TexturePool\TextureCubeShadowPool.cpp" />
-    <ClCompile Include="Source\Engine\Render\Resource\TexturePool\UVManager\Allocator\GridTexturePoolAllocator.cpp" />
+    <ClCompile Include="Source\Engine\Render\Resource\TexturePool\UVManager\Allocator\GuillotineAllocator.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\TexturePool\UVManager\Allocator\TexturePoolAllocatorBase.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\EditorRenderPipeline.cpp" />
@@ -401,7 +401,7 @@
   <ItemGroup>
     <ClInclude Include="Source\Editor\UI\EditorShadowPropertyWidget.h" />
     <ClInclude Include="Source\Engine\Render\Resource\TexturePool\TextureCubeShadowPool.h" />
-    <ClInclude Include="Source\Engine\Render\Resource\TexturePool\UVManager\Allocator\GridTexturePoolAllocator.h" />
+    <ClInclude Include="Source\Engine\Render\Resource\TexturePool\UVManager\Allocator\GuillotineAllocator.h" />
     <ClInclude Include="Source\Engine\Render\Resource\TexturePool\UVManager\Allocator\TexturePoolAllocatorBase.h" />
     <ClInclude Include="Source\Engine\Render\Resource\TexturePool\UVManager\TexturePoolAllocator.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />

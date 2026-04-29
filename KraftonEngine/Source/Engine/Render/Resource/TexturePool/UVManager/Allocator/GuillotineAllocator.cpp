@@ -1,10 +1,10 @@
-﻿#include "Render/Resource/TexturePool/UVManager/Allocator/GridTexturePoolAllocator.h"
+﻿#include "Render/Resource/TexturePool/UVManager/Allocator/GuillotineAllocator.h"
 #include <algorithm>
 #include <cmath>
 #include <functional>
 #include <limits>
 
-void FGridTexturePoolAllocator::Initialize(uint32 InAtlasSize, uint32 InLayerCount, uint32 InMinBlockSize)
+void FGuillotineAllocator::Initialize(uint32 InAtlasSize, uint32 InLayerCount, uint32 InMinBlockSize)
 {
 	FTexturePoolAllocatorBase::Initialize(InAtlasSize, InLayerCount, InMinBlockSize);
 	GridCount = MinBlockSize > 0 ? AtlasSize / MinBlockSize : 0;
@@ -12,7 +12,7 @@ void FGridTexturePoolAllocator::Initialize(uint32 InAtlasSize, uint32 InLayerCou
 	NextHandle = 1;
 }
 
-bool FGridTexturePoolAllocator::AllocateHandle(float TextureSize, FTexturePoolHandle& OutHandle)
+bool FGuillotineAllocator::AllocateHandle(float TextureSize, FTexturePoolHandle& OutHandle)
 {
 	const uint32 BlockCount = GetBlockCount(TextureSize);
 	if (BlockCount == 0 || BlockCount > GridCount)
@@ -34,13 +34,13 @@ bool FGridTexturePoolAllocator::AllocateHandle(float TextureSize, FTexturePoolHa
 	return true;
 }
 
-bool FGridTexturePoolAllocator::CanAllocateHandle(float TextureSize) const
+bool FGuillotineAllocator::CanAllocateHandle(float TextureSize) const
 {
 	const uint32 BlockCount = GetBlockCount(TextureSize);
 	return BlockCount > 0 && BlockCount <= GridCount && FindBestFreeRect(BlockCount, BlockCount, FreeRects) >= 0;
 }
 
-bool FGridTexturePoolAllocator::CanAllocateHandleSet(const FTexturePoolHandleRequest& Request) const
+bool FGuillotineAllocator::CanAllocateHandleSet(const FTexturePoolHandleRequest& Request) const
 {
 	TArray<uint32> SortedSizes = Request.Sizes;
 	std::sort(SortedSizes.begin(), SortedSizes.end(), std::greater<uint32>());
@@ -64,7 +64,7 @@ bool FGridTexturePoolAllocator::CanAllocateHandleSet(const FTexturePoolHandleReq
 	return true;
 }
 
-FAtlasUV FGridTexturePoolAllocator::GetAtlasUV(const FTexturePoolHandle& InHandle)
+FAtlasUV FGuillotineAllocator::GetAtlasUV(const FTexturePoolHandle& InHandle)
 {
 	auto It = AllocatedRects.find(InHandle.InternalIndex);
 	if (It == AllocatedRects.end())
@@ -87,7 +87,7 @@ FAtlasUV FGridTexturePoolAllocator::GetAtlasUV(const FTexturePoolHandle& InHandl
 	return UV;
 }
 
-void FGridTexturePoolAllocator::ReleaseHandle(const FTexturePoolHandle& InHandle)
+void FGuillotineAllocator::ReleaseHandle(const FTexturePoolHandle& InHandle)
 {
 	auto It = AllocatedRects.find(InHandle.InternalIndex);
 	if (It == AllocatedRects.end())
@@ -103,17 +103,17 @@ void FGridTexturePoolAllocator::ReleaseHandle(const FTexturePoolHandle& InHandle
 	PruneContainedFreeRects(FreeRects);
 }
 
-void FGridTexturePoolAllocator::BroadcastEntries()
+void FGuillotineAllocator::BroadcastEntries()
 {
 	// UVs are computed on demand from the current atlas size.
 }
 
-uint32 FGridTexturePoolAllocator::GetFreeRectCount() const
+uint32 FGuillotineAllocator::GetFreeRectCount() const
 {
 	return static_cast<uint32>(FreeRects.size());
 }
 
-uint64 FGridTexturePoolAllocator::GetTotalFreeArea() const
+uint64 FGuillotineAllocator::GetTotalFreeArea() const
 {
 	uint64 TotalArea = 0;
 	for (const FAtlasRect& Rect : FreeRects)
@@ -123,7 +123,7 @@ uint64 FGridTexturePoolAllocator::GetTotalFreeArea() const
 	return TotalArea;
 }
 
-uint64 FGridTexturePoolAllocator::GetLargestFreeRectArea() const
+uint64 FGuillotineAllocator::GetLargestFreeRectArea() const
 {
 	uint64 LargestArea = 0;
 	for (const FAtlasRect& Rect : FreeRects)
@@ -133,7 +133,7 @@ uint64 FGridTexturePoolAllocator::GetLargestFreeRectArea() const
 	return LargestArea;
 }
 
-float FGridTexturePoolAllocator::GetFragmentationRatio() const
+float FGuillotineAllocator::GetFragmentationRatio() const
 {
 	const uint64 TotalArea = GetTotalFreeArea();
 	if (TotalArea == 0)
@@ -144,7 +144,7 @@ float FGridTexturePoolAllocator::GetFragmentationRatio() const
 	return 1.0f - (static_cast<float>(GetLargestFreeRectArea()) / static_cast<float>(TotalArea));
 }
 
-void FGridTexturePoolAllocator::GetFreeRects(TArray<FAtlasDebugRect>& OutRects) const
+void FGuillotineAllocator::GetFreeRects(TArray<FAtlasDebugRect>& OutRects) const
 {
 	OutRects.reserve(OutRects.size() + FreeRects.size());
 	for (const FAtlasRect& Rect : FreeRects)
@@ -160,7 +160,7 @@ void FGridTexturePoolAllocator::GetFreeRects(TArray<FAtlasDebugRect>& OutRects) 
 	}
 }
 
-void FGridTexturePoolAllocator::GetAllocatedRects(TArray<FAtlasDebugRect>& OutRects) const
+void FGuillotineAllocator::GetAllocatedRects(TArray<FAtlasDebugRect>& OutRects) const
 {
 	OutRects.reserve(OutRects.size() + AllocatedRects.size());
 	for (const auto& Pair : AllocatedRects)
@@ -179,7 +179,7 @@ void FGridTexturePoolAllocator::GetAllocatedRects(TArray<FAtlasDebugRect>& OutRe
 	}
 }
 
-void FGridTexturePoolAllocator::SetSize(uint32 InNewTextureSize)
+void FGuillotineAllocator::SetSize(uint32 InNewTextureSize)
 {
 	FTexturePoolAllocatorBase::SetSize(InNewTextureSize);
 	AtlasSize = InNewTextureSize;
@@ -187,7 +187,7 @@ void FGridTexturePoolAllocator::SetSize(uint32 InNewTextureSize)
 	ResetAllocationState(GetLayerCount());
 }
 
-void FGridTexturePoolAllocator::SetLayerCount(uint32 InNewLayerCount)
+void FGuillotineAllocator::SetLayerCount(uint32 InNewLayerCount)
 {
 	const uint32 OldLayerCount = GetLayerCount();
 	FTexturePoolAllocatorBase::SetLayerCount(InNewLayerCount);
@@ -206,17 +206,17 @@ void FGridTexturePoolAllocator::SetLayerCount(uint32 InNewLayerCount)
 	ResetAllocationState(InNewLayerCount);
 }
 
-uint32 FGridTexturePoolAllocator::CeilDiv(uint32 A, uint32 B)
+uint32 FGuillotineAllocator::CeilDiv(uint32 A, uint32 B)
 {
 	return B == 0 ? 0 : (A + B - 1) / B;
 }
 
-uint32 FGridTexturePoolAllocator::Index(uint32 X, uint32 Y) const
+uint32 FGuillotineAllocator::Index(uint32 X, uint32 Y) const
 {
 	return Y * GridCount + X;
 }
 
-void FGridTexturePoolAllocator::ResetFreeRects(uint32 InLayerCount)
+void FGuillotineAllocator::ResetFreeRects(uint32 InLayerCount)
 {
 	FreeRects.clear();
 	if (GridCount == 0)
@@ -231,13 +231,13 @@ void FGridTexturePoolAllocator::ResetFreeRects(uint32 InLayerCount)
 	}
 }
 
-void FGridTexturePoolAllocator::ResetAllocationState(uint32 InLayerCount)
+void FGuillotineAllocator::ResetAllocationState(uint32 InLayerCount)
 {
 	AllocatedRects.clear();
 	ResetFreeRects(InLayerCount);
 }
 
-uint32 FGridTexturePoolAllocator::GetBlockCount(float TextureSize) const
+uint32 FGuillotineAllocator::GetBlockCount(float TextureSize) const
 {
 	if (MinBlockSize == 0)
 	{
@@ -248,7 +248,7 @@ uint32 FGridTexturePoolAllocator::GetBlockCount(float TextureSize) const
 	return CeilDiv(RequestSize, MinBlockSize);
 }
 
-int32 FGridTexturePoolAllocator::FindBestFreeRect(uint32 W, uint32 H, const TArray<FAtlasRect>& InFreeRects) const
+int32 FGuillotineAllocator::FindBestFreeRect(uint32 W, uint32 H, const TArray<FAtlasRect>& InFreeRects) const
 {
 	int32 BestIndex = -1;
 	uint64 BestWaste = std::numeric_limits<uint64>::max();
@@ -288,7 +288,7 @@ int32 FGridTexturePoolAllocator::FindBestFreeRect(uint32 W, uint32 H, const TArr
 	return BestIndex;
 }
 
-bool FGridTexturePoolAllocator::TryPlaceRectIntoFreeRects(TArray<FAtlasRect>& InOutFreeRects, uint32 W, uint32 H, FAtlasRect& OutRect) const
+bool FGuillotineAllocator::TryPlaceRectIntoFreeRects(TArray<FAtlasRect>& InOutFreeRects, uint32 W, uint32 H, FAtlasRect& OutRect) const
 {
 	const int32 BestIndex = FindBestFreeRect(W, H, InOutFreeRects);
 	if (BestIndex < 0)
@@ -304,7 +304,7 @@ bool FGridTexturePoolAllocator::TryPlaceRectIntoFreeRects(TArray<FAtlasRect>& In
 	return true;
 }
 
-void FGridTexturePoolAllocator::SplitFreeRect(TArray<FAtlasRect>& InOutFreeRects, uint32 FreeRectIndex, const FAtlasRect& Used) const
+void FGuillotineAllocator::SplitFreeRect(TArray<FAtlasRect>& InOutFreeRects, uint32 FreeRectIndex, const FAtlasRect& Used) const
 {
 	if (FreeRectIndex >= InOutFreeRects.size())
 	{
@@ -335,7 +335,7 @@ void FGridTexturePoolAllocator::SplitFreeRect(TArray<FAtlasRect>& InOutFreeRects
 	}
 }
 
-void FGridTexturePoolAllocator::PruneContainedFreeRects(TArray<FAtlasRect>& InOutFreeRects) const
+void FGuillotineAllocator::PruneContainedFreeRects(TArray<FAtlasRect>& InOutFreeRects) const
 {
 	for (uint32 i = 0; i < InOutFreeRects.size(); ++i)
 	{
@@ -359,7 +359,7 @@ void FGridTexturePoolAllocator::PruneContainedFreeRects(TArray<FAtlasRect>& InOu
 	}
 }
 
-void FGridTexturePoolAllocator::MergeAdjacentFreeRects(TArray<FAtlasRect>& InOutFreeRects) const
+void FGuillotineAllocator::MergeAdjacentFreeRects(TArray<FAtlasRect>& InOutFreeRects) const
 {
 	bool bMerged = true;
 	while (bMerged)
@@ -418,7 +418,7 @@ void FGridTexturePoolAllocator::MergeAdjacentFreeRects(TArray<FAtlasRect>& InOut
 	}
 }
 
-bool FGridTexturePoolAllocator::IsContained(const FAtlasRect& Inner, const FAtlasRect& Outer) const
+bool FGuillotineAllocator::IsContained(const FAtlasRect& Inner, const FAtlasRect& Outer) const
 {
 	return Inner.ArrayIndex == Outer.ArrayIndex
 		&& Inner.X >= Outer.X

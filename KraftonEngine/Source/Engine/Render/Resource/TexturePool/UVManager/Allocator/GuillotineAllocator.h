@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-class FGridTexturePoolAllocator : public FTexturePoolAllocatorBase
+class FGuillotineAllocator : public FTexturePoolAllocatorBase
 {
 public:
 	virtual void Initialize(uint32 InAtlasSize, uint32 InLayerCount, uint32 InMinBlockSize = 32) override;

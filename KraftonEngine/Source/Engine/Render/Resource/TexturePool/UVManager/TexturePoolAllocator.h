@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#include "Render/Resource/TexturePool/UVManager/Allocator/GridTexturePoolAllocator.h"
+#include "Render/Resource/TexturePool/UVManager/Allocator/GuillotineAllocator.h"
