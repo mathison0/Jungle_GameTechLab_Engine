@@ -68,8 +68,10 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 			}
 
 			ImGui::BeginDisabled(true);
+			EShadowFilterMode FilterMode = RenderOptions.ShadowFilterMode;
 			ImGui::Text("Shadow Filter: %s",
-				RenderOptions.ShadowFilterMode == EShadowFilterMode::VSM ? "VSM" : "PCF");
+					FilterMode == EShadowFilterMode::VSM ? "VSM" : 
+					FilterMode == EShadowFilterMode::PCF ?  "PCF" : "None");
 			ImGui::EndDisabled();
 		}
 		else

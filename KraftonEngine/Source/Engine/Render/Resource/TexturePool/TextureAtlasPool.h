@@ -59,6 +59,7 @@ public:
 	ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandle& InHandle) override;
 	ID3D11ShaderResourceView* GetDebugSRV(const TexturePoolHandleSet* InHandleSet) override;
 	ID3D11ShaderResourceView* GetDebugLayerSRV(uint32 SliceIndex);
+	bool IsVSMMode() const { return CurrentFilterMode == EShadowFilterMode::VSM; }
 
 protected:
 	TComPtr<ID3D11Texture2D> CreateTexture(ID3D11Device* Device) override;
@@ -85,7 +86,6 @@ private:
 	void RebuildVSMMomentRTVs(ID3D11Device* Device, ID3D11Texture2D* InTexture, TArray<TComPtr<ID3D11RenderTargetView>>& OutRTVs);
 	void RebuildVSMBlurResources(ID3D11Device* Device);
 	void UpdateMemoryStats();
-	bool IsVSMMode() const { return CurrentFilterMode == EShadowFilterMode::VSM; }
 
 private:
 	TArray<std::unique_ptr<FUVManagerBase>> UVManagers;
