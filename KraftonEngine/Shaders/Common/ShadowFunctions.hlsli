@@ -442,7 +442,7 @@ float SampleCubeShadowPCF(FShadowInfo info, float3 worldPos, float4x4 lightVP, f
 // =========================================================================
 
 // Atlas에 저장된 VSM moments를 읽어 확률 기반 shadow 값을 계산한다.
-// receiver depth가 first moment보다 뒤에 있을 때만 variance test를 수행한다.
+// Raw reversed-Z를 저장하므로 receiver depth가 first moment보다 작을 때만 variance test를 수행한다.
 float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float4 lightClip;
@@ -462,7 +462,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
 
     float3 ndc = lightClip.xyz / lightClip.w;
     float2 uv = ndc.xy * float2(0.5f, -0.5f) + 0.5f;
-    float depth = (1.0f - ndc.z) + receiverBias;
+    float depth = ndc.z + receiverBias;
 
     if (any(uv < 0.0f) || any(uv > 1.0f) || depth < 0.0f || depth > 1.0f)
     {
@@ -477,7 +477,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
         float3(atlasUV, info.ArrayIndex),
         0.0f).xy;
 
-    if (depth <= moments.x)
+    if (depth >= moments.x)
     {
         return 1.0f;
     }
@@ -489,7 +489,7 @@ float SampleAtlasShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, 
 }
 
 // Cube shadow용 VSM moments를 읽어 point light shadow 값을 계산한다.
-// cube shadow depth를 VSM 저장 규약에 맞게 변환한 뒤 variance test를 적용한다.
+// Raw reversed-Z를 저장하므로 receiver depth가 first moment보다 작을 때만 variance test를 적용한다.
 float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, float receiverBias)
 {
     float result = 1.0f;
@@ -513,10 +513,8 @@ float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, f
     // 기존 SampleCubeShadow의 comparison depth와 같은 base depth
     float hardwareDepth =
         nearZ * (farZ / faceDepth - 1.0f) / (farZ - nearZ);
-
-    // ShadowDepth.hlsl의 VSM 저장 방식:
-    // depth = 1.0f - input.Position.z
-    float receiverDepth = saturate((1.0f - hardwareDepth) + receiverBias);
+    
+    float receiverDepth = saturate(hardwareDepth + receiverBias);
 
     uint cubeTier = min(info.CubeTierIndex, 3u);
 
@@ -551,7 +549,7 @@ float SampleCubeShadowVSM(FShadowInfo info, float3 worldPos, float4x4 lightVP, f
             0.0f).xy;
     }
 
-    if (receiverDepth > moments.x)
+    if (receiverDepth < moments.x)
     {
         float variance = max(moments.y - moments.x * moments.x, 0.00002f);
         float delta = receiverDepth - moments.x;

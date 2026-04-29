@@ -42,11 +42,11 @@ VSOut VS(uint VertexID : SV_VertexID)
 float4 PS(VSOut In) : SV_TARGET
 {
     float2 AtlasUV = lerp(SrcUVRect.xy, SrcUVRect.zw, In.UV);
-    float d = gShadowAtlas.SampleLevel(gPointClampSampler, float3(AtlasUV, SrcSlice), 0).r;
+    float2 d = gShadowAtlas.SampleLevel(gPointClampSampler, float3(AtlasUV, SrcSlice), 0).rg;
 
-    float v = (bReversedZ == 0)
+    float2 v = (bReversedZ != 0)
         ? saturate(d * Contrast)
         : saturate((1.0f - d) * Contrast);
-
-    return float4(v, v, v, 1.0f);
+    
+    return float4(v, 0.f, 1.0f);
 }
