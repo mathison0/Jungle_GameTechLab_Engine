@@ -39,6 +39,8 @@ private:
 	ULightComponent* CurrentShowLightComponent = nullptr;
 	EShadowPreviewMode PreviewMode = EShadowPreviewMode::SelectedLight;
 	int32 PreviewAtlasLayerIndex = 0;
+	bool bShowAtlasRectOverlay = true;
+	bool bShowAtlasAllocatedIndices = true;
 	bool bIsEnabled = false;
 };
 

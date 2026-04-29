@@ -87,21 +87,10 @@ void UDirectionalLightComponent::DestroyFromScene()
 FShadowMapKey UDirectionalLightComponent::GetShadowMapKey()
 {
 	FShadowMapKey Result;
-	Result.Atlas = FTextureAtlasPool::Get().GetAtlasUVArray(ShadowHandleSet);
 	return Result;
 }
 
 FShadowHandleSet* UDirectionalLightComponent::GetShadowHandleSet()
 {
-	if (!ShadowHandleSet || !ShadowHandleSet->bIsValid)
-	{
-		if (ShadowHandleSet)
-		{
-			ShadowHandleSet->Release();
-		}
-		const uint32 BaseResolution = GetShadowResolution();
-		ShadowHandleSet = FTextureAtlasPool::Get().GetTextureHandle(
-			{ BaseResolution, BaseResolution / 2u, BaseResolution / 4u, BaseResolution / 8u });
-	}
 	return ShadowHandleSet;
 }
