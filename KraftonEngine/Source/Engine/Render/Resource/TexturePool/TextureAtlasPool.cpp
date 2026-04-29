@@ -194,6 +194,11 @@ namespace
 	}
 }
 
+FTextureAtlasPool::~FTextureAtlasPool()
+{
+	Release();
+}
+
 void FTextureAtlasPool::Initialize(
 	ID3D11Device* InDevice,
 	ID3D11DeviceContext* InDeviceContext,
@@ -207,6 +212,40 @@ void FTextureAtlasPool::Initialize(
 		ResizeLayer(ShadowAtlasLayerCount);
 	}
 	CreateDebugPassResources();
+}
+
+void FTextureAtlasPool::Release()
+{
+	if (TrackedShadowAtlasMemory > 0)
+	{
+		MemoryStats::SubShadowAtlasMemory(TrackedShadowAtlasMemory);
+		TrackedShadowAtlasMemory = 0;
+	}
+
+	DebugResource.clear();
+	SliceDebugVersions.clear();
+
+	DSVs.clear();
+	SliceSRVs.clear();
+	RTVs.clear();
+	VSMFilteredRTVs.clear();
+	VSMTempRTVs.clear();
+
+	VSMFilteredSRV.Reset();
+	VSMTempSRV.Reset();
+	SRV.Reset();
+
+	VSMDepthTexture.Reset();
+	VSMFilteredTexture.Reset();
+	VSMTempTexture.Reset();
+	Texture.Reset();
+
+	DebugConstantBuffer.Release();
+	DebugPointClampSampler.Reset();
+	DebugRasterizerState.Reset();
+	DebugDepthStencilState.Reset();
+
+	CurrentFilterMode = EShadowFilterMode::PCF;
 }
 
 std::unique_ptr<FTexturePoolAllocatorBase> FTextureAtlasPool::CreateAllocator()

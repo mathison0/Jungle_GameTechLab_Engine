@@ -102,6 +102,46 @@ namespace
 			}
 		}
 	}
+
+	void DrawAtlasPriorityControls(FShadowAtlasPrioritySettings& Settings)
+	{
+		ImGui::Separator();
+		ImGui::TextUnformatted("Atlas Priority");
+
+		ImGui::DragFloat("Screen Coverage Weight", &Settings.ScreenCoverageWeight, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Light Contribution Weight", &Settings.LightContributionWeight, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Proximity Weight", &Settings.ProximityWeight, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Caster Receiver Weight", &Settings.CasterReceiverWeight, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Stability Weight", &Settings.StabilityWeight, 0.01f, 0.0f, 1.0f, "%.2f");
+
+		if (ImGui::Button("Normalize Weights"))
+		{
+			const float Sum =
+				Settings.ScreenCoverageWeight +
+				Settings.LightContributionWeight +
+				Settings.ProximityWeight +
+				Settings.CasterReceiverWeight +
+				Settings.StabilityWeight;
+			if (Sum > 0.0001f)
+			{
+				Settings.ScreenCoverageWeight /= Sum;
+				Settings.LightContributionWeight /= Sum;
+				Settings.ProximityWeight /= Sum;
+				Settings.CasterReceiverWeight /= Sum;
+				Settings.StabilityWeight /= Sum;
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Reset Defaults"))
+		{
+			Settings = FShadowAtlasPrioritySettings{};
+		}
+
+		ImGui::DragFloat("Must Coverage Threshold", &Settings.SpotMustCoverageThreshold, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Must Proximity Threshold", &Settings.SpotMustProximityThreshold, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Hysteresis Factor", &Settings.HysteresisFactor, 0.01f, 1.0f, 4.0f, "%.2f");
+		ImGui::DragFloat("Projected Resolution Scale", &Settings.ProjectedResolutionScale, 0.01f, 0.25f, 4.0f, "%.2f");
+	}
 }
 
 void FEditorShadowPropertyWidget::ShowShadowProperty(ULightComponent* LightComponent)
@@ -129,11 +169,13 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 		return;
 	}
 
+	FViewportRenderOptions* ActiveRenderOptions = nullptr;
 	if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
 	{
 		if (FLevelEditorViewportClient* ActiveViewport = EditorEngine->GetActiveViewport())
 		{
 			FViewportRenderOptions& RenderOptions = ActiveViewport->GetRenderOptions();
+			ActiveRenderOptions = &RenderOptions;
 			bool bOverrideCamera = RenderOptions.bOverrideCameraWithSelectedLight;
 			if (ImGui::Checkbox("Override camera with light's perspective", &bOverrideCamera))
 			{
@@ -215,14 +257,6 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 		PreviewAtlasLayerIndex = MaxLayerIndex;
 	}
 
-	if (PreviewMode == EShadowPreviewMode::AtlasLayer)
-	{
-		ImGui::SliderInt("Atlas Layer", &PreviewAtlasLayerIndex, 0, MaxLayerIndex);
-		ImGui::Checkbox("Show Atlas Rect Overlay", &bShowAtlasRectOverlay);
-		ImGui::SameLine();
-		ImGui::Checkbox("Show Allocated Indices", &bShowAtlasAllocatedIndices);
-	}
-
 	ID3D11ShaderResourceView* PreviewSRV = nullptr;
 	if (PreviewMode == EShadowPreviewMode::SelectedLight)
 	{
@@ -253,14 +287,45 @@ void FEditorShadowPropertyWidget::ShowShadowMapPropertWindow()
 		}
 	}
 
-	ImGui::Image(PreviewSRV, ImVec2(500, 500));
-	if (PreviewMode == EShadowPreviewMode::AtlasLayer && bShowAtlasRectOverlay)
+	const ImVec2 PreviewImageSize(500, 500);
+	if (PreviewMode == EShadowPreviewMode::AtlasLayer)
 	{
-		DrawAtlasDebugRects(
-			AtlasPool,
-			static_cast<uint32>(PreviewAtlasLayerIndex),
-			ImGui::GetItemRectMin(),
-			ImGui::GetItemRectMax(),
-			bShowAtlasAllocatedIndices);
+		if (ImGui::BeginTable("ShadowAtlasPreviewLayout", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoSavedSettings))
+		{
+			ImGui::TableSetupColumn("Preview", ImGuiTableColumnFlags_WidthFixed, PreviewImageSize.x + 8.0f);
+			ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthStretch);
+
+			ImGui::TableNextColumn();
+			ImGui::Image(PreviewSRV, PreviewImageSize);
+			const ImVec2 ImageMin = ImGui::GetItemRectMin();
+			const ImVec2 ImageMax = ImGui::GetItemRectMax();
+			if (bShowAtlasRectOverlay)
+			{
+				DrawAtlasDebugRects(
+					AtlasPool,
+					static_cast<uint32>(PreviewAtlasLayerIndex),
+					ImageMin,
+					ImageMax,
+					bShowAtlasAllocatedIndices);
+			}
+
+			ImGui::TableNextColumn();
+			ImGui::SliderInt("Atlas Layer", &PreviewAtlasLayerIndex, 0, MaxLayerIndex);
+			ImGui::Checkbox("Show Atlas Rect Overlay", &bShowAtlasRectOverlay);
+			ImGui::Checkbox("Show Allocated Indices", &bShowAtlasAllocatedIndices);
+			if (ActiveRenderOptions)
+			{
+				DrawAtlasPriorityControls(ActiveRenderOptions->ShadowAtlasPriority);
+			}
+			else
+			{
+				ImGui::TextDisabled("Atlas priority controls unavailable without an active viewport.");
+			}
+
+			ImGui::EndTable();
+		}
+		return;
 	}
+
+	ImGui::Image(PreviewSRV, PreviewImageSize);
 }

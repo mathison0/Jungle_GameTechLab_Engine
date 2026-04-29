@@ -12,12 +12,13 @@ class FTextureAtlasPool final : public FTexturePoolBase
 
 public:
 	FTextureAtlasPool() = default;
-	~FTextureAtlasPool() = default;
+	~FTextureAtlasPool();
 	FTextureAtlasPool(const FTextureAtlasPool&) = delete;
 	FTextureAtlasPool& operator=(const FTextureAtlasPool&) = delete;
 	FTextureAtlasPool(FTextureAtlasPool&&) = delete;
 	FTextureAtlasPool& operator=(FTextureAtlasPool&&) = delete;
 
+	void Release();
 	void Initialize(
 		ID3D11Device* InDevice,
 		ID3D11DeviceContext* InDeviceContext,

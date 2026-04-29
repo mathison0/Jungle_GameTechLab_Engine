@@ -83,11 +83,6 @@ void FScene::InitializeShadowAtlas(ID3D11Device* Device, ID3D11DeviceContext* Co
 
 	ShadowAtlasPool.Initialize(Device, Context, AtlasSize);
 	bShadowAtlasInitialized = true;
-	UE_LOG(
-		"[ShadowAtlas] Scene=%s Pool=%p Layers=%u",
-		GetSceneWorldTypeName(DebugWorldType),
-		static_cast<void*>(&ShadowAtlasPool),
-		ShadowAtlasPool.GetAllocatedLayerCount());
 }
 
 // ============================================================

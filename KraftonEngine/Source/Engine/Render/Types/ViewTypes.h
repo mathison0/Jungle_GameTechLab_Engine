@@ -67,6 +67,19 @@ enum class ELevelViewportType : uint8
 	FreeOrthographic	// 자유 각도 Orthographic
 };
 
+struct FShadowAtlasPrioritySettings
+{
+	float ScreenCoverageWeight = 0.35f;
+	float LightContributionWeight = 0.25f;
+	float ProximityWeight = 0.20f;
+	float CasterReceiverWeight = 0.15f;
+	float StabilityWeight = 0.05f;
+	float SpotMustCoverageThreshold = 0.15f;
+	float SpotMustProximityThreshold = 0.65f;
+	float HysteresisFactor = 1.25f;
+	float ProjectedResolutionScale = 1.5f;
+};
+
 // 뷰포트별 렌더 옵션 — 각 뷰포트 클라이언트가 독립적으로 소유
 struct FViewportRenderOptions
 {
@@ -100,4 +113,5 @@ struct FViewportRenderOptions
 	int32 ShadowMapResolution = 2048;
 	EShadowFilterMode ShadowFilterMode = EShadowFilterMode::PCF;
 	EShadowMethod ShadowMethod = EShadowMethod::Standard;
+	FShadowAtlasPrioritySettings ShadowAtlasPriority;
 };
