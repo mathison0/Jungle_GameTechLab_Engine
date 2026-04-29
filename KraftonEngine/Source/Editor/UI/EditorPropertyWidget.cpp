@@ -608,6 +608,12 @@ void FEditorPropertyWidget::RenderLightShadowSettings(ULightComponent* LightComp
 		ImGui::EndCombo();
 	}
 
+	bool bCastShadow = LightComponent->IsCastShadow();
+	if (ImGui::Checkbox("Cast Shadow", &bCastShadow))
+	{
+		LightComponent->SetCastShadow(bCastShadow);
+	}
+
 	float ShadowBias = LightComponent->GetShadowBias();
 	if (ImGui::DragFloat("Shadow Bias", &ShadowBias, 0.001f, 0.0f, 1.0f, "%.3f"))
 	{

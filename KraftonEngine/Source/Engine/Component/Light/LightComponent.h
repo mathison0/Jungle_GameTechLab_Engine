@@ -33,6 +33,7 @@ public:
 	float GetShadowSharpen() const { return ShadowSharpen; }
 	void SetShadowSharpen(float InShadowSharpen) { ShadowSharpen = InShadowSharpen; }
 	void InvalidateShadowHandleSet();
+	void SetCastShadow(bool bInCastShadow) { bCastShadow = bInCastShadow; }
 
 	virtual void Serialize(FArchive& Ar) override;
 
