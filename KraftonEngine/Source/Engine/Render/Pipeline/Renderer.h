@@ -73,6 +73,7 @@ private:
 		float ShadowDepthBias = 0.0f;
 		float ShadowSlopeBias = 0.0f;
 		bool bIsPSM = false;
+		bool bPSMFlipNegativeW = false;
 		bool bCullWithShadowFrustum = true;
 	};
 
@@ -81,6 +82,7 @@ private:
 	{
 		FShadowFrameBindingData BindingData;
 		TArray<FShadowRenderTask> RenderTasks;
+		TArray<FEditorDebugLine> DebugLines;
 	};
 
 	struct FVSMBlurRegion

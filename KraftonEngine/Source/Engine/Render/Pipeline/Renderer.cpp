@@ -27,7 +27,8 @@ namespace
 		FMatrix LightVP;
 		FMatrix CameraVP;
 		uint32  bIsPSM;
-		uint32  _pad[3];
+		uint32  bPSMFlipNegativeW;
+		uint32  _pad[2];
 	};
 
 	struct FVSMBlurPassConstants
@@ -38,6 +39,22 @@ namespace
 		uint32 SourceSlice = 0;
 		uint32 Padding[3] = {};
 	};
+
+	struct FPerspectiveShadowDebugData
+	{
+		FMatrix PostPerspectiveLightVP = FMatrix::Identity;
+		FVector4 LightPP = FVector4(0.0f, 0.0f, 0.0f, 0.0f);
+		bool bFlipNegativeW = false;
+	};
+
+	FVector4 TransformVector4(const FVector4& Vector, const FMatrix& Matrix)
+	{
+		return FVector4(
+			Vector.X * Matrix.M[0][0] + Vector.Y * Matrix.M[1][0] + Vector.Z * Matrix.M[2][0] + Vector.W * Matrix.M[3][0],
+			Vector.X * Matrix.M[0][1] + Vector.Y * Matrix.M[1][1] + Vector.Z * Matrix.M[2][1] + Vector.W * Matrix.M[3][1],
+			Vector.X * Matrix.M[0][2] + Vector.Y * Matrix.M[1][2] + Vector.Z * Matrix.M[2][2] + Vector.W * Matrix.M[3][2],
+			Vector.X * Matrix.M[0][3] + Vector.Y * Matrix.M[1][3] + Vector.Z * Matrix.M[2][3] + Vector.W * Matrix.M[3][3]);
+	}
 
 	class FShadowUtil
 	{
@@ -70,6 +87,25 @@ namespace
 				0.0f, Cot, 0.0f, 0.0f,
 				0.0f, 0.0f, NearZ / Denom, 1.0f,
 				0.0f, 0.0f, -(FarZ * NearZ) / Denom, 0.0f);
+		}
+
+		static FMatrix MakeViewToTarget(const FVector& Eye, const FVector& Target)
+		{
+			FVector Forward = (Target - Eye).Normalized();
+			if (Forward.Length() <= 0.0001f)
+			{
+				Forward = FVector(0.0f, 0.0f, 1.0f);
+			}
+
+			FVector UpHint(0.0f, 1.0f, 0.0f);
+			if (fabsf(UpHint.Dot(Forward)) > 0.99f)
+			{
+				UpHint = FVector(1.0f, 0.0f, 0.0f);
+			}
+
+			FVector Right = UpHint.Cross(Forward).Normalized();
+			FVector Up = Forward.Cross(Right).Normalized();
+			return MakeAxesViewMatrix(Eye, Right, Up, Forward);
 		}
 
 		static FMatrix MakePointShadowProjection(float AttenuationRadius, float& OutNearZ, float& OutFarZ)
@@ -159,8 +195,11 @@ namespace
 			const FFrameContext& Frame,
 			const UDirectionalLightComponent& DirectionalLight,
 			FMatrix& OutLightVP,
-			float& OutNearZ)
+			float& OutNearZ,
+			bool& bOutFlipNegativeW,
+			FPerspectiveShadowDebugData* OutDebugData = nullptr)
 		{
+			bOutFlipNegativeW = false;
 			if (Frame.bIsOrtho)
 			{
 				return false;
@@ -178,66 +217,77 @@ namespace
 				Frame.CameraForward);
 			const FMatrix VirtualCameraProj = MakeReversedZPerspective(VerticalFov, Aspect, VirtualNearZ, Frame.FarClip);
 			const FMatrix CameraVP = VirtualCameraView * VirtualCameraProj;
-			const FVector LightDir = DirectionalLight.GetForwardVector().Normalized();
-			const float FocusDistance = FMath::Clamp(Frame.FarClip * 0.05f, VirtualNearZ + 1.0f, 50.0f);
-			const FVector FocusPoint = VirtualCameraPosition + Frame.CameraForward * FocusDistance;
-			const FVector PSMDir = (CameraVP.TransformPositionWithW(FocusPoint + LightDir * FocusDistance)
-				- CameraVP.TransformPositionWithW(FocusPoint)).Normalized();
 
-			if (PSMDir.Length() < 0.0001f)
+			const FVector CubeCenterPP(0.0f, 0.0f, 0.5f);
+			const float CubeRadiusPP = FVector(1.0f, 1.0f, 0.5f).Length();
+			const FVector LightTravelDir = DirectionalLight.GetForwardVector().Normalized();
+			const FVector LightSourceDir = (LightTravelDir * -1.0f).Normalized();
+			const FVector EyeLightDir = VirtualCameraView.TransformVector(LightSourceDir);
+			const FVector4 LightPP = TransformVector4(FVector4(EyeLightDir, 0.0f), VirtualCameraProj);
+			if (OutDebugData)
 			{
-				return false;
+				OutDebugData->LightPP = LightPP;
 			}
 
-			FVector UpHint(0.0f, 1.0f, 0.0f);
-			if (fabsf(PSMDir.Dot(UpHint)) > 0.95f)
+			const float W_Epsilon = 0.001f;
+			const bool bLightAtInfinity = fabsf(LightPP.W) <= W_Epsilon;
+			FMatrix ViewPP = FMatrix::Identity;
+			FMatrix ProjPP = FMatrix::Identity;
+
+			if (bLightAtInfinity)
 			{
-				UpHint = FVector(1.0f, 0.0f, 0.0f);
+				FVector LightDirPP(LightPP.X, LightPP.Y, LightPP.Z);
+				if (LightDirPP.Length() <= 0.0001f)
+				{
+					return false;
+				}
+				LightDirPP.Normalize();
+
+				const FVector LightPosPP = CubeCenterPP + LightDirPP * (CubeRadiusPP * 2.0f);
+				const float DistToCenter = (LightPosPP - CubeCenterPP).Length();
+				OutNearZ = std::max(0.001f, DistToCenter - CubeRadiusPP);
+				ViewPP = MakeViewToTarget(LightPosPP, CubeCenterPP);
+				ProjPP = MakeReversedZOrthographic(CubeRadiusPP * 2.0f, CubeRadiusPP * 2.0f, OutNearZ, DistToCenter + CubeRadiusPP);
+			}
+			else
+			{
+				const FVector LightPosPP(
+					LightPP.X / LightPP.W,
+					LightPP.Y / LightPP.W,
+					LightPP.Z / LightPP.W);
+				FVector LookAtCubePP = CubeCenterPP - LightPosPP;
+				float DistToCenter = LookAtCubePP.Length();
+				if (DistToCenter <= 0.0001f)
+				{
+					return false;
+				}
+				LookAtCubePP /= DistToCenter;
+
+				ViewPP = MakeViewToTarget(LightPosPP, CubeCenterPP);
+				const float FovPP = std::min(2.8f, 2.0f * atanf(CubeRadiusPP / DistToCenter));
+
+				if (LightPP.W < 0.0f)
+				{
+					const float NearMagnitude = std::max(0.1f, DistToCenter - CubeRadiusPP);
+					OutNearZ = NearMagnitude;
+					ProjPP = MakeReversedZPerspective(FovPP, 1.0f, -NearMagnitude, NearMagnitude);
+					bOutFlipNegativeW = true;
+				}
+				else
+				{
+					const float NearPP = std::max(0.1f, DistToCenter - CubeRadiusPP);
+					const float FarPP = std::max(NearPP + 0.001f, DistToCenter + CubeRadiusPP);
+					OutNearZ = NearPP;
+					ProjPP = MakeReversedZPerspective(FovPP, 1.0f, NearPP, FarPP);
+				}
 			}
 
-			FVector Right = UpHint.Cross(PSMDir).Normalized();
-			FVector Up = PSMDir.Cross(Right).Normalized();
-
-			const FVector Corners[8] =
+			if (OutDebugData)
 			{
-				FVector(-1.0f, -1.0f, 0.0f), FVector(-1.0f,  1.0f, 0.0f),
-				FVector( 1.0f, -1.0f, 0.0f), FVector( 1.0f,  1.0f, 0.0f),
-				FVector(-1.0f, -1.0f, 1.0f), FVector(-1.0f,  1.0f, 1.0f),
-				FVector( 1.0f, -1.0f, 1.0f), FVector( 1.0f,  1.0f, 1.0f)
-			};
-
-			float MinX = FLT_MAX;
-			float MinY = FLT_MAX;
-			float MinZ = FLT_MAX;
-			float MaxX = -FLT_MAX;
-			float MaxY = -FLT_MAX;
-			float MaxZ = -FLT_MAX;
-
-			const FMatrix BasisView = MakeAxesViewMatrix(FVector(0.0f, 0.0f, 0.0f), Right, Up, PSMDir);
-			for (const FVector& Corner : Corners)
-			{
-				const FVector LightSpaceCorner = BasisView.TransformPositionWithW(Corner);
-				MinX = std::min(MinX, LightSpaceCorner.X);
-				MinY = std::min(MinY, LightSpaceCorner.Y);
-				MinZ = std::min(MinZ, LightSpaceCorner.Z);
-				MaxX = std::max(MaxX, LightSpaceCorner.X);
-				MaxY = std::max(MaxY, LightSpaceCorner.Y);
-				MaxZ = std::max(MaxZ, LightSpaceCorner.Z);
+				OutDebugData->PostPerspectiveLightVP = ViewPP * ProjPP;
+				OutDebugData->bFlipNegativeW = bOutFlipNegativeW;
 			}
-
-			const float XYPadding = 0.02f;
-			const float ZPadding = 0.05f;
-			const float Width = std::max(MaxX - MinX + XYPadding * 2.0f, 0.001f);
-			const float Height = std::max(MaxY - MinY + XYPadding * 2.0f, 0.001f);
-			const float Depth = std::max(MaxZ - MinZ + ZPadding * 2.0f, 0.001f);
-			const FVector Eye = Right * ((MinX + MaxX) * 0.5f)
-				+ Up * ((MinY + MaxY) * 0.5f)
-				+ PSMDir * (MinZ - ZPadding);
-
-			OutNearZ = ZPadding;
-			OutLightVP = CameraVP
-				* MakeAxesViewMatrix(Eye, Right, Up, PSMDir)
-				* MakeReversedZOrthographic(Width, Height, OutNearZ, Depth + OutNearZ);
+			OutLightVP = CameraVP * ViewPP * ProjPP;
 			return true;
 		}
 
@@ -287,6 +337,156 @@ namespace
 		Box.back = 1;
 		bOutValid = Box.right > Box.left && Box.bottom > Box.top;
 		return Box;
+	}
+
+	bool BuildSpaceCornersFromClip(const FMatrix& ClipFromSpace, FVector(&OutCorners)[8])
+	{
+		const FMatrix SpaceFromClip = ClipFromSpace.GetInverse();
+		const FVector ClipCorners[8] = {
+			FVector(-1.0f, -1.0f, 0.0f),
+			FVector( 1.0f, -1.0f, 0.0f),
+			FVector( 1.0f,  1.0f, 0.0f),
+			FVector(-1.0f,  1.0f, 0.0f),
+			FVector(-1.0f, -1.0f, 1.0f),
+			FVector( 1.0f, -1.0f, 1.0f),
+			FVector( 1.0f,  1.0f, 1.0f),
+			FVector(-1.0f,  1.0f, 1.0f),
+		};
+
+		for (int32 i = 0; i < 8; ++i)
+		{
+			OutCorners[i] = SpaceFromClip.TransformPositionWithW(ClipCorners[i]);
+			if (!std::isfinite(OutCorners[i].X)
+				|| !std::isfinite(OutCorners[i].Y)
+				|| !std::isfinite(OutCorners[i].Z))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	void AddDebugBoxLines(TArray<FEditorDebugLine>& Lines, const FVector(&Corners)[8], const FColor& Color)
+	{
+		static constexpr int32 Edges[12][2] = {
+			{0, 1}, {1, 2}, {2, 3}, {3, 0},
+			{4, 5}, {5, 6}, {6, 7}, {7, 4},
+			{0, 4}, {1, 5}, {2, 6}, {3, 7},
+		};
+
+		for (const int32(&Edge)[2] : Edges)
+		{
+			Lines.push_back({ Corners[Edge[0]], Corners[Edge[1]], Color });
+		}
+	}
+
+	FVector TransformPostPerspectiveDebugPoint(const FFrameContext& Frame, const FVector& Point, const FVector& Center, float Radius)
+	{
+		constexpr float Distance = 8.0f;
+		constexpr float MiniScale = 1.6f;
+		const FVector Anchor = Frame.CameraPosition
+			+ Frame.CameraForward * Distance
+			- Frame.CameraRight * 3.0f
+			+ Frame.CameraUp * 1.8f;
+		const FVector Local = (Point - Center) * (MiniScale / std::max(Radius, 0.001f));
+		return Anchor
+			+ Frame.CameraRight * Local.X
+			+ Frame.CameraUp * Local.Y
+			+ Frame.CameraForward * Local.Z;
+	}
+
+	void AddDebugBoxInPostPerspectiveMiniView(TArray<FEditorDebugLine>& Lines, const FFrameContext& Frame, const FVector(&Corners)[8], const FVector& Center, float Radius, const FColor& Color)
+	{
+		FVector WorldCorners[8];
+		for (int32 i = 0; i < 8; ++i)
+		{
+			WorldCorners[i] = TransformPostPerspectiveDebugPoint(Frame, Corners[i], Center, Radius);
+		}
+		AddDebugBoxLines(Lines, WorldCorners, Color);
+	}
+
+	void ExpandDebugBounds(FBoundingBox& Bounds, const FVector& Point)
+	{
+		if (std::isfinite(Point.X) && std::isfinite(Point.Y) && std::isfinite(Point.Z))
+		{
+			Bounds.Expand(Point);
+		}
+	}
+
+	void AddPerspectiveShadowDebug(TArray<FEditorDebugLine>& Lines, const FFrameContext& Frame, const FPerspectiveShadowDebugData& DebugData)
+	{
+		const FVector UnitCubePP[8] = {
+			FVector(-1.0f, -1.0f, 0.0f),
+			FVector( 1.0f, -1.0f, 0.0f),
+			FVector( 1.0f,  1.0f, 0.0f),
+			FVector(-1.0f,  1.0f, 0.0f),
+			FVector(-1.0f, -1.0f, 1.0f),
+			FVector( 1.0f, -1.0f, 1.0f),
+			FVector( 1.0f,  1.0f, 1.0f),
+			FVector(-1.0f,  1.0f, 1.0f),
+		};
+
+		FVector LightFrustumPP[8];
+		const bool bHasLightFrustum = BuildSpaceCornersFromClip(DebugData.PostPerspectiveLightVP, LightFrustumPP);
+
+		FBoundingBox Bounds;
+		for (const FVector& Corner : UnitCubePP)
+		{
+			ExpandDebugBounds(Bounds, Corner);
+		}
+		if (bHasLightFrustum)
+		{
+			for (const FVector& Corner : LightFrustumPP)
+			{
+				ExpandDebugBounds(Bounds, Corner);
+			}
+		}
+
+		constexpr float W_Epsilon = 0.001f;
+		const bool bHasFiniteLightPP = fabsf(DebugData.LightPP.W) > W_Epsilon;
+		FVector LightPosPP(0.0f, 0.0f, 0.5f);
+		FVector LightDirPP(DebugData.LightPP.X, DebugData.LightPP.Y, DebugData.LightPP.Z);
+		if (bHasFiniteLightPP)
+		{
+			LightPosPP = FVector(
+				DebugData.LightPP.X / DebugData.LightPP.W,
+				DebugData.LightPP.Y / DebugData.LightPP.W,
+				DebugData.LightPP.Z / DebugData.LightPP.W);
+			ExpandDebugBounds(Bounds, LightPosPP);
+		}
+		else if (LightDirPP.Length() > 0.0001f)
+		{
+			LightDirPP.Normalize();
+			ExpandDebugBounds(Bounds, FVector(0.0f, 0.0f, 0.5f) - LightDirPP * 2.0f);
+			ExpandDebugBounds(Bounds, FVector(0.0f, 0.0f, 0.5f) + LightDirPP * 2.0f);
+		}
+
+		const FVector Center = Bounds.GetCenter();
+		const FVector Extent = Bounds.GetExtent();
+		const float Radius = std::max(std::max(Extent.X, Extent.Y), Extent.Z);
+
+		AddDebugBoxInPostPerspectiveMiniView(Lines, Frame, UnitCubePP, Center, Radius, FColor::Yellow());
+		if (bHasLightFrustum)
+		{
+			AddDebugBoxInPostPerspectiveMiniView(Lines, Frame, LightFrustumPP, Center, Radius, FColor(255, 0, 255));
+		}
+
+		if (bHasFiniteLightPP)
+		{
+			const FVector LightWorld = TransformPostPerspectiveDebugPoint(Frame, LightPosPP, Center, Radius);
+			const FVector CubeCenterWorld = TransformPostPerspectiveDebugPoint(Frame, FVector(0.0f, 0.0f, 0.5f), Center, Radius);
+			const float CrossSize = 0.08f;
+			Lines.push_back({ LightWorld - Frame.CameraRight * CrossSize, LightWorld + Frame.CameraRight * CrossSize, FColor::Red() });
+			Lines.push_back({ LightWorld - Frame.CameraUp * CrossSize, LightWorld + Frame.CameraUp * CrossSize, FColor::Red() });
+			Lines.push_back({ LightWorld - Frame.CameraForward * CrossSize, LightWorld + Frame.CameraForward * CrossSize, FColor::Red() });
+			Lines.push_back({ LightWorld, CubeCenterWorld, FColor::Red() });
+		}
+		else if (LightDirPP.Length() > 0.0001f)
+		{
+			const FVector LineA = TransformPostPerspectiveDebugPoint(Frame, FVector(0.0f, 0.0f, 0.5f) - LightDirPP * 2.0f, Center, Radius);
+			const FVector LineB = TransformPostPerspectiveDebugPoint(Frame, FVector(0.0f, 0.0f, 0.5f) + LightDirPP * 2.0f, Center, Radius);
+			Lines.push_back({ LineA, LineB, FColor::Red() });
+		}
 	}
 }
 
@@ -603,11 +803,13 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 			if (Frame.RenderOptions.ShadowMethod == EShadowMethod::Standard || Frame.RenderOptions.ShadowMethod == EShadowMethod::PSM)
 			{
 				FMatrix FinalLightVP = FMatrix::Identity;
+				FPerspectiveShadowDebugData PerspectiveDebugData;
 				float ShadowNearZ = 0.1f;
 				uint32 bIsPSM_Flag = 0;
+				bool bPSMFlipNegativeW = false;
 
 				if (Frame.RenderOptions.ShadowMethod == EShadowMethod::PSM
-					&& FShadowUtil::MakePerspectiveShadowMatrix(Frame, *DirectionalLight, FinalLightVP, ShadowNearZ))
+					&& FShadowUtil::MakePerspectiveShadowMatrix(Frame, *DirectionalLight, FinalLightVP, ShadowNearZ, bPSMFlipNegativeW, &PerspectiveDebugData))
 				{
 					bIsPSM_Flag = 1;
 				}
@@ -639,6 +841,11 @@ void FRenderer::BuildShadowPassData(const FFrameContext& Frame, const FScene& Sc
 				Task.bCullWithShadowFrustum = !Task.bIsPSM;
 				Task.ShadowDepthBias = DirectionalShadowBias;
 				Task.ShadowSlopeBias = DirectionalShadowSlopeBias;
+				Task.bPSMFlipNegativeW = bPSMFlipNegativeW;
+				if (Task.bIsPSM)
+				{
+					AddPerspectiveShadowDebug(OutShadowPassData.DebugLines, Frame, PerspectiveDebugData);
+				}
 
 				if (Task.bIsPSM)
 				{
@@ -841,12 +1048,12 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 
 		D3D11_RASTERIZER_DESC RasterizerDesc = {};
 		RasterizerDesc.FillMode = D3D11_FILL_SOLID;
-		RasterizerDesc.CullMode = D3D11_CULL_BACK;
+		RasterizerDesc.CullMode = Task.bIsPSM ? D3D11_CULL_NONE : D3D11_CULL_BACK;
 		RasterizerDesc.FrontCounterClockwise = FALSE;
 		RasterizerDesc.DepthBias = -static_cast<INT>(ClampedDepthBias * DepthBiasScale);
 		RasterizerDesc.DepthBiasClamp = 0.0f;
 		RasterizerDesc.SlopeScaledDepthBias = -ClampedSlopeBias;
-		RasterizerDesc.DepthClipEnable = TRUE;
+		RasterizerDesc.DepthClipEnable = Task.bIsPSM ? FALSE : TRUE;
 		RasterizerDesc.ScissorEnable = FALSE;
 		RasterizerDesc.MultisampleEnable = FALSE;
 		RasterizerDesc.AntialiasedLineEnable = FALSE;
@@ -909,6 +1116,7 @@ void FRenderer::RenderShadowPass(const FFrameContext& Frame, const FScene& Scene
 		ShadowPassConstants.LightVP = Task.LightVP;
 		ShadowPassConstants.CameraVP = Task.CameraVP;
 		ShadowPassConstants.bIsPSM = Task.bIsPSM ? 1u : 0u;
+		ShadowPassConstants.bPSMFlipNegativeW = Task.bPSMFlipNegativeW ? 1u : 0u;
 		ShadowPassBuffer.Update(Ctx, &ShadowPassConstants, sizeof(FShadowPassConstants));
 		Ctx->VSSetConstantBuffers(ECBSlot::PerShader0, 1, &ShadowPassCBHandle);
 
@@ -1205,6 +1413,10 @@ void FRenderer::Render(const FFrameContext& Frame, FScene& Scene)
 
 	FShadowPassData ShadowPassData;
 	BuildShadowPassData(Frame, Scene, ShadowPassData);
+	if (!ShadowPassData.DebugLines.empty())
+	{
+		Builder.BuildLateEditorLineCommands(Frame.RenderOptions.ViewMode, ShadowPassData.DebugLines);
+	}
 
 	{
 		SCOPE_STAT_CAT("ShadowPass", "4_ExecutePass");

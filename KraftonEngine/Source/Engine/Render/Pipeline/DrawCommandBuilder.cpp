@@ -23,6 +23,7 @@ void FDrawCommandBuilder::Create(ID3D11Device* InDevice, ID3D11DeviceContext* In
 
 	EditorLines.Create(InDevice);
 	GridLines.Create(InDevice);
+	LateEditorLines.Create(InDevice);
 	FontGeometry.Create(InDevice);
 
 	FogCB.Create(InDevice, sizeof(FFogConstants));
@@ -35,6 +36,7 @@ void FDrawCommandBuilder::Release()
 {
 	EditorLines.Release();
 	GridLines.Release();
+	LateEditorLines.Release();
 	FontGeometry.Release();
 
 	for (FConstantBuffer& CB : PerObjectCBPool)
@@ -67,6 +69,7 @@ void FDrawCommandBuilder::BeginCollect(const FFrameContext& Frame, uint32 MaxPro
 	// 동적 지오메트리 초기화
 	EditorLines.Clear();
 	GridLines.Clear();
+	LateEditorLines.Clear();
 	FontGeometry.Clear();
 	FontGeometry.ClearScreen();
 
@@ -275,6 +278,20 @@ void FDrawCommandBuilder::BuildDynamicCommands(const FFrameContext& Frame, const
 {
 	PrepareDynamicGeometry(Frame, Scene);
 	BuildDynamicDrawCommands(Frame, Scene);
+}
+
+void FDrawCommandBuilder::BuildLateEditorLineCommands(EViewMode ViewMode, const TArray<FEditorDebugLine>& Lines)
+{
+	LateEditorLines.Clear();
+	for (const FEditorDebugLine& Line : Lines)
+	{
+		LateEditorLines.AddLine(Line.Start, Line.End, Line.Color.ToVector4());
+	}
+
+	FShader* EditorShader = FShaderManager::Get().GetOrCreate(EShaderPath::Editor);
+	FDrawCommandRenderState EditorLinesRS = PassRenderStateTable->ToDrawCommandState(ERenderPass::EditorLines, ViewMode);
+	EditorLinesRS.DepthStencil = EDepthStencilState::NoDepth;
+	EmitLineCommand(LateEditorLines, EditorShader, EditorLinesRS);
 }
 
 // ============================================================
