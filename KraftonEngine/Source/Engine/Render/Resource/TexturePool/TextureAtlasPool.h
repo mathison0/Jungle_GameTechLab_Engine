@@ -35,7 +35,12 @@ public:
 	TexturePoolHandleSet* GetTextureHandle(TexturePoolHandleRequest HandleRequest) override;
 	void ReleaseHandle(TexturePoolHandle& InHandle) override;
 
-	FAtlasUV GetAtlasUV(const TexturePoolHandle& InHandle) { return UVManagers[InHandle.ArrayIndex].get()->GetAtlasUV(InHandle.InternalIndex); }
+	FAtlasUV GetAtlasUV(const TexturePoolHandle& InHandle)
+	{
+		FAtlasUV UV = UVManagers[InHandle.ArrayIndex].get()->GetAtlasUV(InHandle.InternalIndex);
+		UV.ArrayIndex = InHandle.ArrayIndex;
+		return UV;
+	}
 	TArray<FAtlasUV> GetAtlasUVArray(const TexturePoolHandleSet* InHandleSet);
 
 	ID3D11ShaderResourceView* GetSRV() { return SRV.Get(); }
