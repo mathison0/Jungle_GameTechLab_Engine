@@ -177,7 +177,7 @@ void FEditorConsoleWidget::Initialize(UEditorEngine* InEditorEngine)
 
 			if (Args.size() < 2)
 			{
-				AddLog("Usage: shadow_filter PCF | shadow_filter VSM\n");
+				AddLog("Usage: shadow_filter None | shadow_filter PCF | shadow_filter VSM\n");
 				return;
 			}
 
@@ -192,7 +192,12 @@ void FEditorConsoleWidget::Initialize(UEditorEngine* InEditorEngine)
 			std::transform(FilterMode.begin(), FilterMode.end(), FilterMode.begin(), ::toupper);
 
 			FViewportRenderOptions& RenderOptions = ActiveViewport->GetRenderOptions();
-			if (FilterMode == "PCF")
+			if (FilterMode == "NONE")
+			{
+				RenderOptions.ShadowFilterMode = EShadowFilterMode::None;
+				AddLog("Shadow filter set to None.\n");
+			}
+			else if (FilterMode == "PCF")
 			{
 				RenderOptions.ShadowFilterMode = EShadowFilterMode::PCF;
 				AddLog("Shadow filter set to PCF.\n");
@@ -205,7 +210,7 @@ void FEditorConsoleWidget::Initialize(UEditorEngine* InEditorEngine)
 			else
 			{
 				AddLog("[ERROR] Unknown shadow filter: '%s'\n", Args[1].c_str());
-				AddLog("Usage: shadow_filter PCF | shadow_filter VSM\n");
+				AddLog("Usage: shadow_filter None | shadow_filter PCF | shadow_filter VSM\n");
 			}
 		});
 }
