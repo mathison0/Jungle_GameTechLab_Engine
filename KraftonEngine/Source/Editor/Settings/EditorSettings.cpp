@@ -30,6 +30,7 @@ namespace Key
 	constexpr const char* bOctree = "bOctree";
 	constexpr const char* bFog = "bFog";
 	constexpr const char* bShadows = "bShadows";
+	constexpr const char* bPSMDebugLines = "bPSMDebugLines";
 	constexpr const char* GridSpacing = "GridSpacing";
 	constexpr const char* GridHalfLineCount = "GridHalfLineCount";
 	constexpr const char* CameraMoveSensitivity = "CameraMoveSensitivity";
@@ -126,6 +127,7 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 		SlotObj[Key::bOctree] = Opts.ShowFlags.bOctree;
 		SlotObj[Key::bFog] = Opts.ShowFlags.bFog;
 		SlotObj[Key::bShadows] = Opts.ShowFlags.bShadows;
+		SlotObj[Key::bPSMDebugLines] = Opts.ShowFlags.bPSMDebugLines;
 		SlotObj[Key::GridSpacing] = Opts.GridSpacing;
 		SlotObj[Key::GridHalfLineCount] = Opts.GridHalfLineCount;
 		SlotObj[Key::CameraMoveSensitivity] = Opts.CameraMoveSensitivity;
@@ -285,6 +287,8 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 					Opts.ShowFlags.bFog = S[Key::bFog].ToBool();
 				if (S.hasKey(Key::bShadows))
 					Opts.ShowFlags.bShadows = S[Key::bShadows].ToBool();
+				if (S.hasKey(Key::bPSMDebugLines))
+					Opts.ShowFlags.bPSMDebugLines = S[Key::bPSMDebugLines].ToBool();
 				if (S.hasKey(Key::GridSpacing))
 					Opts.GridSpacing = static_cast<float>(S[Key::GridSpacing].ToFloat());
 				if (S.hasKey(Key::GridHalfLineCount))

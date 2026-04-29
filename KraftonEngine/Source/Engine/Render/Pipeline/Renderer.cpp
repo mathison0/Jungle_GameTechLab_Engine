@@ -1856,7 +1856,7 @@ namespace
 						Task.ShadowDepthBias = DirectionalShadowBias;
 						Task.ShadowSlopeBias = DirectionalShadowSlopeBias;
 						Task.bPSMFlipNegativeW = bPSMFlipNegativeW;
-						if (Task.bIsPSM)
+						if (Task.bIsPSM && Frame.RenderOptions.ShowFlags.bPSMDebugLines)
 						{
 							AddPerspectiveShadowDebug(OutShadowPassData.DebugLines, Frame, PerspectiveDebugData);
 						}
