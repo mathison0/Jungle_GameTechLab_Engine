@@ -287,6 +287,7 @@
     <ClCompile Include="Source\Engine\Object\EngineStatics.cpp" />
     <ClCompile Include="Source\Engine\Object\FName.cpp" />
     <ClCompile Include="Source\Engine\Object\Object.cpp" />
+    <ClCompile Include="Source\Engine\Render\Collector\LightRenderCollector.cpp" />
     <ClCompile Include="Source\Engine\Render\Collector\RenderCollector.cpp" />
     <ClCompile Include="Source\Engine\Render\FontBatcher.cpp" />
     <ClCompile Include="Source\Engine\Render\LineBatcher.cpp" />
@@ -487,6 +488,7 @@
     <ClInclude Include="Source\Engine\Object\Object.h" />
     <ClInclude Include="Source\Engine\Object\ObjectFactory.h" />
     <ClInclude Include="Source\Engine\Object\ObjectIterator.h" />
+    <ClInclude Include="Source\Engine\Render\Collector\LightRenderCollector.h" />
     <ClInclude Include="Source\Engine\Render\Collector\RenderCollectionStats.h" />
     <ClInclude Include="Source\Engine\Render\Collector\RenderCollector.h" />
     <ClInclude Include="Source\Engine\Render\FontBatcher.h" />
