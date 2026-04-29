@@ -448,11 +448,11 @@ void FSystemResources::BindShadowResources(FD3DDevice& Device, FTextureAtlasPool
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowAtlasArray, 1, &ShadowAtlasSRV);
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowCubeArrayTier0, FTextureCubeShadowPool::TierCount, ShadowCubeSRVs);
 	static const FTextureAtlasPool* LastBindLoggedPool = nullptr;
-	if (LastBindLoggedPool != &AtlasPool)
-	{
-		LastBindLoggedPool = &AtlasPool;
-		UE_LOG("[ShadowAtlas] Bind SRV Pool=%p", static_cast<void*>(&AtlasPool));
-	}
+	//if (LastBindLoggedPool != &AtlasPool)
+	//{
+	//	LastBindLoggedPool = &AtlasPool;
+	//	UE_LOG("[ShadowAtlas] Bind SRV Pool=%p", static_cast<void*>(&AtlasPool));
+	//}
 }
 
 void FSystemResources::UnbindShadowResources(FD3DDevice& Device)

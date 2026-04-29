@@ -40,6 +40,15 @@ namespace Key
 	constexpr const char* bOverrideCameraWithSelectedLight = "bOverrideCameraWithSelectedLight";
 	constexpr const char* ShadowMapResolution = "ShadowMapResolution";
 	constexpr const char* ShadowFilterMode = "ShadowFilterMode";
+	constexpr const char* ShadowAtlasScreenCoverageWeight = "ShadowAtlasScreenCoverageWeight";
+	constexpr const char* ShadowAtlasLightContributionWeight = "ShadowAtlasLightContributionWeight";
+	constexpr const char* ShadowAtlasProximityWeight = "ShadowAtlasProximityWeight";
+	constexpr const char* ShadowAtlasCasterReceiverWeight = "ShadowAtlasCasterReceiverWeight";
+	constexpr const char* ShadowAtlasStabilityWeight = "ShadowAtlasStabilityWeight";
+	constexpr const char* ShadowAtlasSpotMustCoverageThreshold = "ShadowAtlasSpotMustCoverageThreshold";
+	constexpr const char* ShadowAtlasSpotMustProximityThreshold = "ShadowAtlasSpotMustProximityThreshold";
+	constexpr const char* ShadowAtlasHysteresisFactor = "ShadowAtlasHysteresisFactor";
+	constexpr const char* ShadowAtlasProjectedResolutionScale = "ShadowAtlasProjectedResolutionScale";
 
 	// Paths
 	constexpr const char* EditorStartLevel = "EditorStartLevel";
@@ -127,6 +136,15 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 		//SlotObj[Key::bOverrideCameraWithSelectedLight] = Opts.bOverrideCameraWithSelectedLight;
 		SlotObj[Key::ShadowMapResolution] = Opts.ShadowMapResolution;
 		SlotObj[Key::ShadowFilterMode] = static_cast<int32>(Opts.ShadowFilterMode);
+		SlotObj[Key::ShadowAtlasScreenCoverageWeight] = Opts.ShadowAtlasPriority.ScreenCoverageWeight;
+		SlotObj[Key::ShadowAtlasLightContributionWeight] = Opts.ShadowAtlasPriority.LightContributionWeight;
+		SlotObj[Key::ShadowAtlasProximityWeight] = Opts.ShadowAtlasPriority.ProximityWeight;
+		SlotObj[Key::ShadowAtlasCasterReceiverWeight] = Opts.ShadowAtlasPriority.CasterReceiverWeight;
+		SlotObj[Key::ShadowAtlasStabilityWeight] = Opts.ShadowAtlasPriority.StabilityWeight;
+		SlotObj[Key::ShadowAtlasSpotMustCoverageThreshold] = Opts.ShadowAtlasPriority.SpotMustCoverageThreshold;
+		SlotObj[Key::ShadowAtlasSpotMustProximityThreshold] = Opts.ShadowAtlasPriority.SpotMustProximityThreshold;
+		SlotObj[Key::ShadowAtlasHysteresisFactor] = Opts.ShadowAtlasPriority.HysteresisFactor;
+		SlotObj[Key::ShadowAtlasProjectedResolutionScale] = Opts.ShadowAtlasPriority.ProjectedResolutionScale;
 		SlotsArr.append(SlotObj);
 	}
 	LayoutObj[Key::Slots] = SlotsArr;
@@ -287,6 +305,24 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 					Opts.ShadowMapResolution = S[Key::ShadowMapResolution].ToInt();
 				if (S.hasKey(Key::ShadowFilterMode))
 					Opts.ShadowFilterMode = static_cast<EShadowFilterMode>(S[Key::ShadowFilterMode].ToInt());
+				if (S.hasKey(Key::ShadowAtlasScreenCoverageWeight))
+					Opts.ShadowAtlasPriority.ScreenCoverageWeight = static_cast<float>(S[Key::ShadowAtlasScreenCoverageWeight].ToFloat());
+				if (S.hasKey(Key::ShadowAtlasLightContributionWeight))
+					Opts.ShadowAtlasPriority.LightContributionWeight = static_cast<float>(S[Key::ShadowAtlasLightContributionWeight].ToFloat());
+				if (S.hasKey(Key::ShadowAtlasProximityWeight))
+					Opts.ShadowAtlasPriority.ProximityWeight = static_cast<float>(S[Key::ShadowAtlasProximityWeight].ToFloat());
+				if (S.hasKey(Key::ShadowAtlasCasterReceiverWeight))
+					Opts.ShadowAtlasPriority.CasterReceiverWeight = static_cast<float>(S[Key::ShadowAtlasCasterReceiverWeight].ToFloat());
+				if (S.hasKey(Key::ShadowAtlasStabilityWeight))
+					Opts.ShadowAtlasPriority.StabilityWeight = static_cast<float>(S[Key::ShadowAtlasStabilityWeight].ToFloat());
+				if (S.hasKey(Key::ShadowAtlasSpotMustCoverageThreshold))
+					Opts.ShadowAtlasPriority.SpotMustCoverageThreshold = static_cast<float>(S[Key::ShadowAtlasSpotMustCoverageThreshold].ToFloat());
+				if (S.hasKey(Key::ShadowAtlasSpotMustProximityThreshold))
+					Opts.ShadowAtlasPriority.SpotMustProximityThreshold = static_cast<float>(S[Key::ShadowAtlasSpotMustProximityThreshold].ToFloat());
+				if (S.hasKey(Key::ShadowAtlasHysteresisFactor))
+					Opts.ShadowAtlasPriority.HysteresisFactor = static_cast<float>(S[Key::ShadowAtlasHysteresisFactor].ToFloat());
+				if (S.hasKey(Key::ShadowAtlasProjectedResolutionScale))
+					Opts.ShadowAtlasPriority.ProjectedResolutionScale = static_cast<float>(S[Key::ShadowAtlasProjectedResolutionScale].ToFloat());
 			}
 		}
 
