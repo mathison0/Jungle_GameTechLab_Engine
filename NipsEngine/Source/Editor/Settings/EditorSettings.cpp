@@ -37,6 +37,7 @@ namespace EditorKey
 	constexpr const char* bBoundingVolume = "bBoundingVolume";
 	constexpr const char* bEnableLOD = "bEnableLOD";
 	constexpr const char* bBVHBoundingVolume = "bBVHBoundingVolume";
+	constexpr const char* bShadow = "bShadow";
 	constexpr const char* bCascadeDebug = "bCascadeDebug";
 	constexpr const char* FXAAEnabled = "FXAAEnabled";
 	constexpr const char* FXAAThreshold = "FXAAThreshold"; // Backward compatibility
@@ -97,7 +98,7 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	ViewObj[EditorKey::bBoundingVolume] = ShowFlags.bBoundingVolume;
 	ViewObj[EditorKey::bEnableLOD] = ShowFlags.bEnableLOD;
 	ViewObj[EditorKey::bBVHBoundingVolume] = ShowFlags.bBVHBoundingVolume;
-	ViewObj[EditorKey::bCascadeDebug] = ShowFlags.bCascadeDebug;
+	ViewObj[EditorKey::bShadow] = ShowFlags.bShadow;
 	ViewObj[EditorKey::FXAAEnabled] = bEnableFXAA;
 	ViewObj[EditorKey::ShadowFilterType] = static_cast<int32>(ShadowFilterType);
 	Root[EditorKey::View] = ViewObj;
@@ -229,8 +230,10 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			ShowFlags.bEnableLOD = ViewObj[EditorKey::bEnableLOD].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBVHBoundingVolume))
 			ShowFlags.bBVHBoundingVolume = ViewObj[EditorKey::bBVHBoundingVolume].ToBool();
-		if (ViewObj.hasKey(EditorKey::bCascadeDebug))
-			ShowFlags.bCascadeDebug = ViewObj[EditorKey::bCascadeDebug].ToBool();
+		if (ViewObj.hasKey(EditorKey::bShadow))
+			ShowFlags.bShadow = ViewObj[EditorKey::bShadow].ToBool();
+		if (ViewObj.hasKey(EditorKey::bCascadeDebug) && ViewObj[EditorKey::bCascadeDebug].ToBool())
+			ViewMode = EViewMode::CascadeShadow;
 		if (ViewObj.hasKey(EditorKey::FXAAEnabled))
 			bEnableFXAA = ViewObj[EditorKey::FXAAEnabled].ToBool();
 		else if (ViewObj.hasKey(EditorKey::FXAAThreshold))

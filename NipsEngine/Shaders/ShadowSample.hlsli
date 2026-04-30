@@ -1,6 +1,11 @@
 // Shadow Sampling 함수 모음
 
 // Poisson Disk Distribution에 의한 16개의 샘플 오프셋
+#ifndef NIPS_SAMPLE_STATE_DECLARED
+#define NIPS_SAMPLE_STATE_DECLARED
+SamplerState SampleState : register(s0);
+#endif
+
 static const float2 PoissonDisk[16] =
 {
     float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),

@@ -121,7 +121,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
 	ImGui::Checkbox("Enable LOD", &Settings.ShowFlags.bEnableLOD);
 	ImGui::Checkbox("Decals", &Settings.ShowFlags.bDecals);
 	ImGui::Checkbox("Fog", &Settings.ShowFlags.bFog);
-	ImGui::Checkbox("Cascade Shadow", &Settings.ShowFlags.bCascadeDebug);
+	ImGui::Checkbox("Shadow", &Settings.ShowFlags.bShadow);
 
 	ImGui::Separator();
 
@@ -951,6 +951,7 @@ namespace
 		case EViewMode::Wireframe:   return "Wireframe";
 		case EViewMode::SceneDepth:  return "Scene Depth";
 		case EViewMode::WorldNormal: return "World Normal";
+		case EViewMode::CascadeShadow: return "Cascade Shadow";
 		default:                     return "Lit";
 		}
 	}

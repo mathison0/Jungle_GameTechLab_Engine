@@ -540,7 +540,7 @@ void FLightRenderCollector::CollectDirectionalLight(const ULightComponent* Light
 	RenderLight.Direction = Direction;
 
 	// 씬의 첫 번째 Directional Light만 그림자를 반영한다.
-	if (!RenderBus.HasDirectionalShadow() && LightComponent->IsCastShadows())
+	if (RenderBus.GetShowFlags().bShadow && !RenderBus.HasDirectionalShadow() && LightComponent->IsCastShadows())
 	{
 		const UDirectionalLightComponent* DirectionalLight = Cast<UDirectionalLightComponent>(LightComponent);
 		if (DirectionalLight != nullptr)
@@ -549,7 +549,7 @@ void FLightRenderCollector::CollectDirectionalLight(const ULightComponent* Light
 			ShadowConstants.ShadowBias = LightComponent->GetShadowBias();
 			ShadowConstants.ShadowSlopeBias = LightComponent->GetShadowSlopeBias();
 			ShadowConstants.ShadowSharpen = LightComponent->GetShadowSharpen();
-			ShadowConstants.bCascadeDebug = RenderBus.GetShowFlags().bCascadeDebug ? 1 : 0;
+			ShadowConstants.bCascadeDebug = RenderBus.GetViewMode() == EViewMode::CascadeShadow ? 1 : 0;
 
 			bool bBuiltDirectionalShadow = false;
 			switch (DirectionalLight->GetShadowMode())
@@ -625,7 +625,7 @@ void FLightRenderCollector::CollectPointLight(
 	RenderLight.Radius = Attenuation;
 	RenderLight.FalloffExponent = PointLight->GetLightFalloffExponent();
 
-	if (!LightComponent->IsCastShadows())
+	if (!RenderBus.GetShowFlags().bShadow || !LightComponent->IsCastShadows())
 	{
 		RenderBus.AddLight(RenderLight);
 		return;
@@ -741,7 +741,7 @@ void FLightRenderCollector::CollectSpotLight(
 	RenderLight.SpotInnerCos = std::cos(MathUtil::DegreesToRadians(InnerAngle));
 	RenderLight.SpotOuterCos = std::cos(MathUtil::DegreesToRadians(OuterAngle));
 
-	if (!LightComponent->IsCastShadows())
+	if (!RenderBus.GetShowFlags().bShadow || !LightComponent->IsCastShadows())
 	{
 		RenderBus.AddLight(RenderLight);
 		return;

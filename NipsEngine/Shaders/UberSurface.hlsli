@@ -42,7 +42,10 @@ Texture2D DiffuseMap : register(t0);
 Texture2D SpecularMap : register(t1);
 Texture2D NormalMap : register(t2);
 
+#ifndef NIPS_SAMPLE_STATE_DECLARED
+#define NIPS_SAMPLE_STATE_DECLARED
 SamplerState SampleState : register(s0);
+#endif
 
 struct FUberVSInput
 {

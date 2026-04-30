@@ -86,7 +86,10 @@ void FRenderCollector::CollectWorld(UWorld* World, const FShowFlags& ShowFlags, 
 		return;
 
 	CollectLight(World, RenderBus, ViewFrustum);
-	CollectShadowCasters(World, RenderBus);
+	if (ShowFlags.bShadow)
+	{
+		CollectShadowCasters(World, RenderBus);
+	}
 
 	if (ViewFrustum)
 	{

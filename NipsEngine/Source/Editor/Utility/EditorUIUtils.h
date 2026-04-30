@@ -39,6 +39,7 @@ enum class EStatType
 	NameTable,
 	LightCull,
 	Shadow,
+	ShadowAtlas,
 	Count
 };
 
@@ -89,11 +90,12 @@ struct FEditorViewportState
 	{
 		switch (Type)
 		{
-		case EStatType::FPS:       bShowStatFPS = bEnabled; break;
-		case EStatType::Memory:    bShowStatMemory = bEnabled; break;
-		case EStatType::NameTable: bShowStatNameTable = bEnabled; break;
-		case EStatType::LightCull: bShowStatLightCull = bEnabled; break;
-		case EStatType::Shadow:    bShowStatShadow = bEnabled; break;
+		case EStatType::FPS:         bShowStatFPS = bEnabled; break;
+		case EStatType::Memory:      bShowStatMemory = bEnabled; break;
+		case EStatType::NameTable:   bShowStatNameTable = bEnabled; break;
+		case EStatType::LightCull:   bShowStatLightCull = bEnabled; break;
+		case EStatType::Shadow:      bShowStatShadow = bEnabled; break;
+		case EStatType::ShadowAtlas: bShowStatShadowAtlas = bEnabled; break;
 		}
 	}
 
