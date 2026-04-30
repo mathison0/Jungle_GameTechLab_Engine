@@ -585,7 +585,7 @@ bool FEditorViewportClient::RequestActorPlacement(float X, float Y, float PopupX
 	if (!bHasHit)
 		return false;
 
-	PendingActorPlacementLocation = BestHit.Location;
+	PendingActorPlacementLocation = BestHit.Location + BestHit.Normal;
 	PendingActorPlacementPopupPos = { static_cast<LONG>(PopupX), static_cast<LONG>(PopupY) };
 	bPendingActorPlacement = true;
 	return true;

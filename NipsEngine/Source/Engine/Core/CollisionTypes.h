@@ -30,3 +30,14 @@ struct FHitResult
 		return bHit && (HitComponent != nullptr);
 	}
 };
+
+struct FOverlapResult
+{
+    class AActor* OtherActor = nullptr;
+    class UPrimitiveComponent* OtherComp = nullptr;
+
+    bool operator==(const FOverlapResult& Other) const
+    {
+        return OtherActor == Other.OtherActor && OtherComp == Other.OtherComp;
+    }
+};

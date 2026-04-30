@@ -43,6 +43,9 @@
     <Filter Include="Source\Engine\Component">
       <UniqueIdentifier>{20a3ff62-6666-58c6-dd73-8a4513da2ca3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Component\Collision">
+      <UniqueIdentifier>{550e1854-76bd-0f6f-46d4-82fb32fd537b}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Component\Light">
       <UniqueIdentifier>{1daf6c6d-1874-958b-b9e2-685d9ca6646b}</UniqueIdentifier>
     </Filter>
@@ -370,6 +373,18 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Collision\BoxComponent.cpp">
+      <Filter>Source\Engine\Component\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Collision\CapsuleComponent.cpp">
+      <Filter>Source\Engine\Component\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Collision\ShapeComponent.cpp">
+      <Filter>Source\Engine\Component\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Collision\SphereComponent.cpp">
+      <Filter>Source\Engine\Component\Collision</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Light\AmbientLightComponent.cpp">
       <Filter>Source\Engine\Component\Light</Filter>
@@ -747,7 +762,6 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="HighPerformanceGpuHint.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -893,6 +907,18 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h">
       <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Collision\BoxComponent.h">
+      <Filter>Source\Engine\Component\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Collision\CapsuleComponent.h">
+      <Filter>Source\Engine\Component\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Collision\ShapeComponent.h">
+      <Filter>Source\Engine\Component\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Collision\SphereComponent.h">
+      <Filter>Source\Engine\Component\Collision</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Light\AmbientLightComponent.h">
       <Filter>Source\Engine\Component\Light</Filter>

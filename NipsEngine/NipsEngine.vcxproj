@@ -202,13 +202,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="HighPerformanceGpuHint.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\EditorRenderPipeline.cpp" />
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
@@ -252,6 +245,10 @@
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\BoxComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\CapsuleComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\ShapeComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\SphereComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\AmbientLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\DirectionalLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\LightComponent.cpp" />
@@ -428,6 +425,10 @@
     <ClInclude Include="Source\Engine\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h" />
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\BoxComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\CapsuleComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\ShapeComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\SphereComponent.h" />
     <ClInclude Include="Source\Engine\Component\Light\AmbientLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\Light\DirectionalLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\Light\LightComponent.h" />

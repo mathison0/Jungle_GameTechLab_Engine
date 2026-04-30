@@ -1,0 +1,62 @@
+﻿#include "SphereComponent.h"
+
+#include "Core/PropertyTypes.h"
+#include "Engine/Serialization/Archive.h"
+
+DEFINE_CLASS(USphereComponent, UShapeComponent)
+
+USphereComponent::USphereComponent()
+{
+}
+
+void USphereComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
+{
+    UShapeComponent::GetEditableProperties(OutProps);
+    OutProps.push_back({ "Sphere Radius", EPropertyType::Float, &SphereRadius, 0.0f, FLT_MAX, 1.0f });
+}
+
+void USphereComponent::PostEditProperty(const char* PropertyName)
+{
+    UShapeComponent::PostEditProperty(PropertyName);
+    if (SphereRadius < 0.0f)
+    {
+        SphereRadius = 0.0f;
+    }
+    UpdateBodySetup();
+}
+
+void USphereComponent::Serialize(FArchive& Ar)
+{
+    UShapeComponent::Serialize(Ar);
+    Ar << "SphereRadius" << SphereRadius;
+}
+
+// 임시 AABB RayCasting 처리
+void USphereComponent::UpdateWorldAABB() const
+{
+    const float SafeRadius = std::fabs(SphereRadius);
+    const FVector LocalExtent(SafeRadius, SafeRadius, SafeRadius);
+    const FAABB LocalAABB(-LocalExtent, LocalExtent);
+    WorldAABB = FAABB::TransformAABB(LocalAABB, GetWorldMatrix());
+}
+
+bool USphereComponent::RaycastMesh(const FRay& Ray, FHitResult& OutHitResult)
+{
+    float HitT = 0.0f;
+    if (!GetWorldAABB().IntersectRay(Ray, HitT))
+    {
+        return false;
+    }
+
+    OutHitResult.HitComponent = this;
+    OutHitResult.Distance = HitT;
+    OutHitResult.Location = Ray.Origin + (Ray.Direction * HitT);
+    OutHitResult.bHit = true;
+    return true;
+}
+
+void USphereComponent::SetSphereRadius(float InSphereRadius)
+{
+    SphereRadius = std::max(0.0f, InSphereRadius);
+    UpdateBodySetup();
+}

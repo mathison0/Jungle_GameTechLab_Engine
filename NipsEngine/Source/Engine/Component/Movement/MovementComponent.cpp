@@ -36,9 +36,9 @@ void UMovementComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutP
     // CopyPropertiesFrom 은 포인터 복원을 건너뛰며, Actor::Duplicate() 에서 재매핑합니다.
     OutProps.push_back({ "Updated Component", EPropertyType::SceneComponentRef, &UpdatedComponent });
 
-    // Velocity는 하위 컴포넌트에서 필요한 경우 추가, 당장 필요하지 않은 프로퍼티 주석 처리
-    // OutProps.push_back({ "Plane Constraint Normal", EPropertyType::Vec3, &PlaneConstraintNormal });
-    // OutProps.push_back({ "Constrain To Plane", EPropertyType::Bool, &bConstrainToPlane });
+    // Velocity는 하위 컴포넌트에서 필요한 경우 추가
+    OutProps.push_back({ "Plane Constraint Normal", EPropertyType::Vec3, &PlaneConstraintNormal });
+    OutProps.push_back({ "Constrain To Plane", EPropertyType::Bool, &bConstrainToPlane });
     OutProps.push_back({ "Update Only If Rendered", EPropertyType::Bool, &bUpdateOnlyIfRendered });
 }
 

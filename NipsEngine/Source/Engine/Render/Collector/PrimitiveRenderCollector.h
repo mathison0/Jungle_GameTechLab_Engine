@@ -9,8 +9,9 @@ class AActor;
 class FLineBatcher;
 class FMeshBufferManager;
 class UPrimitiveComponent;
+class FRenderCollector;
 
-class FPrimitiveRenderCollector
+class FPrimitiveRenderCollector // RenderCollector와 has-a 구조
 {
 public:
 	void Initialize(FMeshBufferManager* InMeshBufferManager) { MeshBufferManager = InMeshBufferManager; }
