@@ -55,6 +55,10 @@ public:
     virtual void OnRegister() override;
     virtual void OnUnregister() override;
 
+	FComponentHitSignature OnComponentHit;
+    FComponentBeginOverlapSignature OnComponentBeginOverlap;
+    FComponentEndOverlapSignature OnComponentEndOverlap;
+
 protected:
     void OnTransformDirty() override;
     void NotifySpatialIndexDirty() const;

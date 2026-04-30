@@ -47,3 +47,4 @@
 #include "Engine/Geometry/Triangle.h"
 #include "Engine/Geometry/Frustum.h"
 #include "Engine/Geometry/Edge.h"
+#include "Engine/Core/Delegate.h"

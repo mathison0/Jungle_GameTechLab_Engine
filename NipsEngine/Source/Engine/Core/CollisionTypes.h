@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Math/Vector.h" // 필요한 최소한의 수학 라이브러리만
+#include "Delegate.h"
 
 struct FHitResult 
 {
@@ -30,3 +31,14 @@ struct FHitResult
 		return bHit && (HitComponent != nullptr);
 	}
 };
+
+struct FOverlapResult
+{
+    class UPrimitiveComponent* MyComponent = nullptr;
+    class UPrimitiveComponent* OtherComponent = nullptr;
+    bool bOverlap = false;
+};
+
+DECLARE_DELEGATE(FComponentHitSignature, const FHitResult&);
+DECLARE_DELEGATE(FComponentBeginOverlapSignature, const FOverlapResult&);
+DECLARE_DELEGATE(FComponentEndOverlapSignature, const FOverlapResult&);
