@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -241,6 +241,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\Collision\CollisionShapeGeometry.h" />
     <ClCompile Include="Source\Engine\Component\Collision\BoxComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Collision\CapsuleComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Collision\ShapeComponent.cpp" />
@@ -275,6 +276,7 @@
     <ClCompile Include="Source\Engine\Collision\RayUtils.cpp" />
     <ClCompile Include="Source\Engine\Collision\RayUtilsSIMD.cpp" />
     <ClCompile Include="Source\Engine\Collision\SpatialPartition.cpp" />
+    <ClCompile Include="Source\Engine\Collision\CollisionShapeQuery.cpp" />
     <ClCompile Include="Source\Engine\Collision\Sphere.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\EditorHelperBVH.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\EditorPickingBVH.cpp" />
@@ -489,6 +491,7 @@
     <ClInclude Include="Source\Engine\Collision\RayUtils.h" />
     <ClInclude Include="Source\Engine\Collision\RayUtilsSIMD.h" />
     <ClInclude Include="Source\Engine\Collision\SpatialPartition.h" />
+    <ClInclude Include="Source\Engine\Collision\CollisionShapeQuery.h" />
     <ClInclude Include="Source\Engine\Collision\Sphere.h" />
     <ClInclude Include="Source\Engine\Collision\BVH\EditorPickingBVH.h" />
     <ClInclude Include="Source\Engine\Collision\BVH\ScenePrimitiveBVH.h" />

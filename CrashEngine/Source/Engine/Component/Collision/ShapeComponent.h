@@ -1,13 +1,7 @@
 ﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
-
-enum class ECollisionShapeType
-{
-	Box,
-	Sphere,
-	Capsule
-};
+#include "Collision/CollisionShapeGeometry.h"
 
 class UShapeComponent : public UPrimitiveComponent
 {
