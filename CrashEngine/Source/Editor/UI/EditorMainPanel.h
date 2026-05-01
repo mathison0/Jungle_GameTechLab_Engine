@@ -32,6 +32,18 @@ public:
     }
 
 private:
+    enum class EEditorDrawer
+    {
+        None,
+        Content,
+        OutputLog,
+    };
+
+    void RenderBottomDrawerBar();
+    void RenderActiveDrawer();
+    void DrawDrawerButton(const char* Label, EEditorDrawer Drawer);
+
+private:
     FWindowsWindow* Window = nullptr;
     UEditorEngine* EditorEngine = nullptr;
     FEditorLogBuffer LogBuffer;
@@ -44,6 +56,8 @@ private:
     bool bHideEditorWindows = false;
     bool bHasSavedUIVisibility = false;
     bool bSavedShowPanelList = false;
+    EEditorDrawer ActiveDrawer = EEditorDrawer::None;
+    float DrawerHeight = 320.0f;
     FEditorSettings::FUIVisibility SavedUIVisibility{};
 
 	FGuiInputCaptureState GuiInputCaptureState{};

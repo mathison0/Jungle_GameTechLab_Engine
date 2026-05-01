@@ -20,6 +20,7 @@
 #include "Platform/Paths.h"
 
 #include <commdlg.h>
+#include <algorithm>
 #include <filesystem>
 
 #include "Core/Logging/LogBuffer.h"
@@ -367,8 +368,102 @@ void FEditorMainPanel::Render(float DeltaTime)
         DetailsPanel.RenderShadowAtlasDebugWindow();
     }
 
+    if (!bHideEditorWindows)
+    {
+        SCOPE_STAT_CAT("EditorDrawer.Render", "5_UI");
+        RenderBottomDrawerBar();
+        RenderActiveDrawer();
+    }
+
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+void FEditorMainPanel::RenderBottomDrawerBar()
+{
+    ImGuiViewport* Viewport = ImGui::GetMainViewport();
+    const float BarHeight = 36.0f;
+
+    ImGuiWindowFlags Flags = ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoDocking;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 5.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
+    if (ImGui::BeginViewportSideBar("##EditorBottomDrawerBar", Viewport, ImGuiDir_Down, BarHeight, Flags))
+    {
+        DrawDrawerButton("Content Drawer", EEditorDrawer::Content);
+        ImGui::SameLine();
+        DrawDrawerButton("Output Log", EEditorDrawer::OutputLog);
+    }
+
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
+}
+
+void FEditorMainPanel::RenderActiveDrawer()
+{
+    if (ActiveDrawer == EEditorDrawer::None)
+    {
+        return;
+    }
+
+    ImGuiViewport* Viewport = ImGui::GetMainViewport();
+    const float Height = (std::min)(DrawerHeight, (std::max)(160.0f, Viewport->Size.y * 0.45f));
+
+    ImGuiWindowFlags Flags = ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoDocking;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.10f, 0.10f, 0.10f, 1.0f));
+    if (ImGui::BeginViewportSideBar("##EditorBottomDrawer", Viewport, ImGuiDir_Down, Height, Flags))
+    {
+        if (ActiveDrawer == EEditorDrawer::Content)
+        {
+            ImGui::TextUnformatted("Content Drawer");
+            ImGui::Separator();
+            ImGui::TextDisabled("Asset/Content");
+            ImGui::TextDisabled("Asset/Scripts");
+        }
+        else if (ActiveDrawer == EEditorDrawer::OutputLog)
+        {
+            ImGui::TextUnformatted("Output Log");
+            ImGui::Separator();
+            ImGui::TextDisabled("Output log drawer will use the editor log buffer.");
+        }
+    }
+
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+}
+
+void FEditorMainPanel::DrawDrawerButton(const char* Label, EEditorDrawer Drawer)
+{
+    const bool bActive = ActiveDrawer == Drawer;
+    if (bActive)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+
+    if (ImGui::Button(Label))
+    {
+        ActiveDrawer = bActive ? EEditorDrawer::None : Drawer;
+    }
+
+    if (bActive)
+    {
+        ImGui::PopStyleColor();
+    }
 }
 
 
