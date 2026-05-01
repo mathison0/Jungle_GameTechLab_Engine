@@ -1,1 +1,0 @@
-Log("Test.lua loaded")

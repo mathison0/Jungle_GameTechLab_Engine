@@ -58,9 +58,6 @@ void UEngine::Init(FWindowsWindow* InWindow)
     UE_LOG(Engine, Info, "Runtime engine initialization completed.");
 
 	ScriptSystem.Initialize();
-	// TODO : Test
-	std::wstring ScriptsPath = FPaths::ScriptsDir() + L"Test.lua";
-	ScriptSystem.ExecuteFile(FPaths::ToUtf8(ScriptsPath));
 }
 
 void UEngine::Shutdown()

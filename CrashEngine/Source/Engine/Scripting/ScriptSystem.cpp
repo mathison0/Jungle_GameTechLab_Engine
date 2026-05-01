@@ -4,12 +4,14 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <ranges>
 
+#include "LuaScriptAsset.h"
 #include "Core/Logging/LogMacros.h"
+#include "Platform/Paths.h"
 
 FScriptSystem::FScriptSystem()
-{
-}
+= default;
 
 FScriptSystem::~FScriptSystem()
 {
@@ -28,86 +30,211 @@ bool FScriptSystem::Initialize()
 
 	RegisterEngineAPI();
 
+	ScanScripts();
+	LoadAllScripts();
+
 	return true;
 }
 
 void FScriptSystem::Shutdown()
 {
-	Lua.reset();
+	ScriptAssets.clear();
+	AvailableScriptPaths.clear();
+	Lua = nullptr;
 }
 
-bool FScriptSystem::ExecuteString(const FString& Code) const
+void FScriptSystem::ScanScripts()
 {
-	sol::load_result Loaded = Lua->load(Code);
+	AvailableScriptPaths.clear();
 
-	if (!Loaded.valid())
+	const std::filesystem::path Root = FPaths::ToPath(FPaths::ScriptsDir());
+
+	std::error_code Ec;
+	if (!std::filesystem::exists(Root, Ec))
 	{
-		sol::error Err = Loaded;
-		UE_LOG([Lua], Error, "Lua Load Error : %s", Err.what());
-		return false;
+		ScriptAssets.clear();
+		return;
 	}
 
-	sol::protected_function Function = Loaded;
-	sol::protected_function_result Result = Function();
+	TSet<FString> Seen;
 
-	if (!Result.valid())
+	for (const std::filesystem::directory_entry& Entry : std::filesystem::recursive_directory_iterator(Root, Ec))
 	{
-		sol::error Err = Result;
-		UE_LOG([Lua], Error, "Lua Runtime Error : %s", Err.what());
-		return false;
+	    if (Ec)
+	    {
+			break;
+	    }
+
+		if (!Entry.is_regular_file())
+		{
+			continue;
+		}
+
+		if (Entry.path().extension() != L".lua")
+		{
+			continue;
+		}
+
+		FString RelativePath = MakeScriptRelativePath(Entry.path());
+		FString FullPath = FPaths::ToUtf8(Entry.path().wstring());
+		Seen.insert(RelativePath);
+		AvailableScriptPaths.push_back(RelativePath);
+
+		if (!ScriptAssets.contains(RelativePath))
+		{
+			ScriptAssets.emplace(RelativePath, std::make_unique<FLuaScriptAsset>(RelativePath, FullPath));
+		}
 	}
 
-	return true;
+	for (auto It = ScriptAssets.begin(); It != ScriptAssets.end();)
+	{
+	    if (!Seen.contains(It->first))
+	    {
+			It = ScriptAssets.erase(It);
+	    }
+		else
+		{
+			++It;
+		}
+	}
+
+	std::ranges::sort(AvailableScriptPaths);
 }
 
-bool FScriptSystem::ExecuteFile(const FString& Path)
+void FScriptSystem::LoadAllScripts()
 {
-	// TODO : FPaths와 FResourceManager와 연동해야할 거 같음.
-	std::ifstream File(Path);
-
-	if (!File.is_open())
+	if (!Lua)
 	{
-		UE_LOG([Lua], Error, "Failed to open : %s", Path.c_str());
-		return false;
+		return;
 	}
 
-	std::stringstream Buffer;
-	Buffer << File.rdbuf();
-
-	FString Code = Buffer.str();
-	FString ChunkName = "@" + Path;
-
-	sol::load_result Loaded = Lua->load(Code, ChunkName);
-
-	if (!Loaded.valid())
+	for (const auto& Asset : ScriptAssets | std::views::values)
 	{
-		sol::error Err = Loaded;
-		UE_LOG([Lua], Error, "Lua Load Error : %s", Err.what());
-		return false;
+		Asset->Load(*Lua);
 	}
-
-	sol::protected_function Function = Loaded;
-	sol::protected_function_result Result = Function();
-
-	if (!Result.valid())
-	{
-		sol::error Err = Result;
-		UE_LOG([Lua], Error, "Lua Runtime Error : %s", Err.what());
-		return false;
-	}
-
-	return true;
 }
 
-sol::state& FScriptSystem::GetLua()
+void FScriptSystem::ReloadChangedScripts() const
 {
-	return *Lua;
+	if (!Lua)
+	{
+		return;
+	}
+
+	for (const auto& Val : ScriptAssets | std::views::values)
+	{
+		Val->ReloadIfChange(*Lua);
+	}
 }
 
-void FScriptSystem::RegisterEngineAPI()
+FLuaScriptAsset* FScriptSystem::GetScriptAsset(const FString& RelativePath)
+{
+	auto It = ScriptAssets.find(RelativePath);
+	if (It == ScriptAssets.end())
+	{
+		return nullptr;
+	}
+
+	return It->second.get();
+}
+
+sol::table FScriptSystem::CreateScriptInstance(const FString& RelativePath)
+{
+	if (!Lua)
+	{
+		return {};
+	}
+
+	FLuaScriptAsset* Asset = GetScriptAsset(RelativePath);
+	if (!Asset || !Asset->IsUsable())
+	{
+		return {};
+	}
+
+	return Asset->CreateInstance(*Lua);
+}
+
+FString FScriptSystem::MakeScriptRelativePath(const std::filesystem::path& FullPath) const
+{
+	const std::filesystem::path Root = FPaths::ToPath(FPaths::ScriptsDir());
+
+	std::error_code Ec;
+	std::filesystem::path Relative = std::filesystem::relative(FullPath, Root, Ec);
+	if (Ec)
+	{
+		Relative = FullPath.filename();
+	}
+
+	return FPaths::ToUtf8(Relative.generic_wstring());
+}
+
+void FScriptSystem::RegisterEngineAPI() const
 {
 	Lua->set_function("Log", [](const FString& Message)
 		{
 			UE_LOG([Lua], Info, "%s", Message.c_str());
 		});
 }
+
+//bool FScriptSystem::ExecuteString(const FString& Code) const
+//{
+//	sol::load_result Loaded = Lua->load(Code);
+//
+//	if (!Loaded.valid())
+//	{
+//		sol::error Err = Loaded;
+//		UE_LOG([Lua], Error, "Lua Load Error : %s", Err.what());
+//		return false;
+//	}
+//
+//	sol::protected_function Function = Loaded;
+//	sol::protected_function_result Result = Function();
+//
+//	if (!Result.valid())
+//	{
+//		sol::error Err = Result;
+//		UE_LOG([Lua], Error, "Lua Runtime Error : %s", Err.what());
+//		return false;
+//	}
+//
+//	return true;
+//}
+//
+//bool FScriptSystem::ExecuteFile(const FString& Path)
+//{
+//	// TODO : FPaths와 FResourceManager와 연동해야할 거 같음.
+//	std::ifstream File(Path);
+//
+//	if (!File.is_open())
+//	{
+//		UE_LOG([Lua], Error, "Failed to open : %s", Path.c_str());
+//		return false;
+//	}
+//
+//	std::stringstream Buffer;
+//	Buffer << File.rdbuf();
+//
+//	FString Code = Buffer.str();
+//	FString ChunkName = "@" + Path;
+//
+//	sol::load_result Loaded = Lua->load(Code, ChunkName);
+//
+//	if (!Loaded.valid())
+//	{
+//		sol::error Err = Loaded;
+//		UE_LOG([Lua], Error, "Lua Load Error : %s", Err.what());
+//		return false;
+//	}
+//
+//	sol::protected_function Function = Loaded;
+//	sol::protected_function_result Result = Function();
+//
+//	if (!Result.valid())
+//	{
+//		sol::error Err = Result;
+//		UE_LOG([Lua], Error, "Lua Runtime Error : %s", Err.what());
+//		return false;
+//	}
+//
+//	return true;
+//}

@@ -241,6 +241,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\Scripting\LuaScriptAsset.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
@@ -294,6 +295,7 @@
     <ClCompile Include="Source\Engine\Component\ProjectileMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\RotatingMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SceneComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\ScriptComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SpotLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp" />
@@ -481,6 +483,7 @@
     <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Scripting\LuaScriptAsset.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
     <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
@@ -539,6 +542,7 @@
     <ClInclude Include="Source\Engine\Component\ProjectileMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\RotatingMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\SceneComponent.h" />
+    <ClInclude Include="Source\Engine\Component\ScriptComponent.h" />
     <ClInclude Include="Source\Engine\Component\SpotLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h" />

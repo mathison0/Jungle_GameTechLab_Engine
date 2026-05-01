@@ -1093,6 +1093,8 @@
     <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
     <ClCompile Include="Source\Engine\Scripting\ScriptSystem.cpp" />
     <ClCompile Include="Source\Engine\Core\Logging\LogBuffer.cpp" />
+    <ClCompile Include="Source\Engine\Component\ScriptComponent.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaScriptAsset.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1966,6 +1968,8 @@
     <ClInclude Include="Source\Engine\Scripting\ScriptSystem.h" />
     <ClInclude Include="Source\Engine\Core\Logging\LogEntry.h" />
     <ClInclude Include="Source\Engine\Core\Logging\LogBuffer.h" />
+    <ClInclude Include="Source\Engine\Component\ScriptComponent.h" />
+    <ClInclude Include="Source\Engine\Scripting\LuaScriptAsset.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

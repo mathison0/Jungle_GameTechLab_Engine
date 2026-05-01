@@ -62,6 +62,9 @@ public:
     void SetGameViewportClient(UGameViewportClient* InClient) { GameViewportClient = InClient; }
     UGameViewportClient* GetGameViewportClient() const { return GameViewportClient; }
 
+	FScriptSystem& GetScriptSystem() { return ScriptSystem; }
+	const FScriptSystem& GetScriptSystem() const { return ScriptSystem; }
+
 protected:
     virtual void Render(float DeltaTime);
     virtual void OnRenderSceneCleared() {}
