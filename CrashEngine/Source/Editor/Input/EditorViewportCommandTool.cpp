@@ -102,6 +102,8 @@ bool FEditorViewportCommandTool::HandleInput(float DeltaTime)
                     AActor* Dup = Cast<AActor>(Src->Duplicate(nullptr));
                     if (Dup)
                     {
+                        FString NewName = Src->GetFName().ToString() + " (Copy)";
+                        Dup->SetFName(FName(NewName));
                         NewSelection.push_back(Dup);
                     }
                 }

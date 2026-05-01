@@ -24,4 +24,7 @@ private:
     float NewSceneNotificationTimer = 0.f;
     float SceneSaveNotificationTimer = 0.f;
     float SceneLoadNotificationTimer = 0.f;
+
+    class AActor* RenamingActor = nullptr;
+    char RenameBuffer[128] = "";
 };

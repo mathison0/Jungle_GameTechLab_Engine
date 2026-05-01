@@ -60,6 +60,9 @@ void FEditorScenePanel::RenderActorOutliner()
         }
     }
 
+    AActor* ActorToDestroy = nullptr;
+    AActor* ActorToDuplicate = nullptr;
+
     int32 SelectedCount = 0;
     for (int32 Row = 0; Row < static_cast<int32>(ValidActorIndices.size()); ++Row)
     {
@@ -241,20 +244,55 @@ void FEditorScenePanel::RenderActorOutliner()
             }
 
             ImGui::TableSetColumnIndex(1);
-            FString ActorName = Actor->GetFName().ToString();
-            if (ActorName.empty())
+            if (RenamingActor == Actor)
             {
-                ActorName = Actor->GetClass()->GetName();
-            }
-            if (DrawPaddedSelectableInColumn(ActorName.c_str(), bSelected, 8.0f))
-            {
-                if (ImGui::GetIO().KeyShift)
+                ImGui::SetNextItemWidth(-1.0f);
+                ImGui::SetKeyboardFocusHere();
+                if (ImGui::InputText("##Rename", RenameBuffer, sizeof(RenameBuffer), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
                 {
-                    Selection.ToggleSelect(Actor);
+                    Actor->SetFName(FName(RenameBuffer));
+                    RenamingActor = nullptr;
                 }
-                else
+                if (!ImGui::IsItemActive() && (ImGui::IsMouseClicked(0) || ImGui::IsKeyPressed(ImGuiKey_Escape)))
                 {
-                    Selection.Select(Actor);
+                    RenamingActor = nullptr;
+                }
+            }
+            else
+            {
+                FString ActorName = Actor->GetFName().ToString();
+                if (ActorName.empty())
+                {
+                    ActorName = Actor->GetClass()->GetName();
+                }
+                if (DrawPaddedSelectableInColumn(ActorName.c_str(), bSelected, 8.0f))
+                {
+                    if (ImGui::GetIO().KeyShift)
+                    {
+                        Selection.ToggleSelect(Actor);
+                    }
+                    else
+                    {
+                        Selection.Select(Actor);
+                    }
+                }
+
+                if (ImGui::BeginPopupContextItem())
+                {
+                    if (ImGui::MenuItem("Rename"))
+                    {
+                        RenamingActor = Actor;
+                        strncpy_s(RenameBuffer, Actor->GetFName().ToString().c_str(), sizeof(RenameBuffer) - 1);
+                    }
+                    if (ImGui::MenuItem("Duplicate"))
+                    {
+                        ActorToDuplicate = Actor;
+                    }
+                    if (ImGui::MenuItem("Delete"))
+                    {
+                        ActorToDestroy = Actor;
+                    }
+                    ImGui::EndPopup();
                 }
             }
 
@@ -269,5 +307,26 @@ void FEditorScenePanel::RenderActorOutliner()
         }
 
         ImGui::EndTable();
+    }
+
+    if (ActorToDuplicate)
+    {
+        AActor* Dup = Cast<AActor>(ActorToDuplicate->Duplicate(nullptr));
+        if (Dup)
+        {
+            FString NewName = ActorToDuplicate->GetFName().ToString() + " (Copy)";
+            Dup->SetFName(FName(NewName));
+
+            Selection.ClearSelection();
+            Selection.Select(Dup);
+        }
+    }
+    if (ActorToDestroy)
+    {
+        Selection.Deselect(ActorToDestroy);
+        
+        World->BeginDeferredPickingBVHUpdate();
+        World->DestroyActor(ActorToDestroy);
+        World->EndDeferredPickingBVHUpdate();
     }
 }
