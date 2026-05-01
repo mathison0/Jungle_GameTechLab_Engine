@@ -445,6 +445,38 @@
     <ClCompile Include="ThirdParty\ImGui\imgui_tables.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ThirdParty\Lua\src\lapi.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lauxlib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lbaselib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lcode.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lcorolib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lctype.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ldblib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ldebug.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ldo.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ldump.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lfunc.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lgc.c" />
+    <ClCompile Include="ThirdParty\Lua\src\linit.c" />
+    <ClCompile Include="ThirdParty\Lua\src\liolib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\llex.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lmathlib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lmem.c" />
+    <ClCompile Include="ThirdParty\Lua\src\loadlib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lobject.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lopcodes.c" />
+    <ClCompile Include="ThirdParty\Lua\src\loslib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lparser.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lstate.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lstring.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lstrlib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ltable.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ltablib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ltm.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lundump.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lutf8lib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lvm.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h" />
@@ -727,7 +759,38 @@
     <ClInclude Include="ThirdParty\ImGui\imstb_rectpack.h" />
     <ClInclude Include="ThirdParty\ImGui\imstb_textedit.h" />
     <ClInclude Include="ThirdParty\ImGui\imstb_truetype.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lapi.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lauxlib.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lcode.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lctype.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ldebug.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ldo.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lfunc.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lgc.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ljumptab.h" />
+    <ClInclude Include="ThirdParty\Lua\src\llex.h" />
+    <ClInclude Include="ThirdParty\Lua\src\llimits.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lmem.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lobject.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lopcodes.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lopnames.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lparser.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lprefix.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lstate.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lstring.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ltable.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ltm.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lua.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lua.hpp" />
+    <ClInclude Include="ThirdParty\Lua\src\luaconf.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lualib.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lundump.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lvm.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lzio.h" />
     <ClInclude Include="ThirdParty\SimpleJSON\json.hpp" />
+    <ClInclude Include="ThirdParty\Sol\config.hpp" />
+    <ClInclude Include="ThirdParty\Sol\forward.hpp" />
+    <ClInclude Include="ThirdParty\Sol\sol.hpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">
@@ -1057,6 +1120,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ThirdParty\Lua\src\Makefile" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
