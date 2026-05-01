@@ -1,6 +1,7 @@
 {
   "Actors" : [{
       "ClassName" : "AStaticMeshActor",
+      "Name" : "AStaticMeshActor_0",
       "NonSceneComponents" : [],
       "PrimitiveKey" : "13",
       "RootComponent" : {
@@ -41,6 +42,7 @@
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
+      "Name" : "Tank",
       "NonSceneComponents" : [{
           "ClassName" : "UTankMovementComponent",
           "Properties" : {
@@ -127,6 +129,7 @@
       "bVisible" : true
     }, {
       "ClassName" : "ADirectionalLightActor",
+      "Name" : "ADirectionalLightActor_0",
       "NonSceneComponents" : [],
       "RootComponent" : {
         "Children" : [{
@@ -189,6 +192,7 @@
       "bVisible" : true
     }, {
       "ClassName" : "AAmbientLightActor",
+      "Name" : "AAmbientLightActor_0",
       "NonSceneComponents" : [],
       "RootComponent" : {
         "Children" : [{
@@ -248,6 +252,7 @@
       "bVisible" : true
     }, {
       "ClassName" : "APointLightActor",
+      "Name" : "APointLightActor_0",
       "NonSceneComponents" : [],
       "RootComponent" : {
         "Children" : [{
@@ -312,13 +317,13 @@
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
   "ContextName" : "Default",
-  "Name" : "InputTest",
+  "Name" : "TankMovementTest",
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
     "Location" : [9.115824, 42.712772, 52.901390],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000003, 57.099571, -103.668983]
+    "Rotation" : [0.000003, 57.099571, -103.668953]
   },
   "Primitives" : {
     "13" : {
