@@ -86,12 +86,12 @@ void UWorld::Tick(float DeltaTime)
 
     if (WorldType == EWorldType::Editor)
         PersistentLevel->TickEditor(DeltaTime);
-    else
-        PersistentLevel->TickGame(DeltaTime);
-
-    // 월드 틱에서 발생한 bounds 변경을 충돌 쿼리 전에 한 번만 BVH에 반영한다.
-    SyncSpatialIndex();
-    FCollisionSystem::UpdateWorldCollision(this);
+	else if (WorldType == EWorldType::PIE || WorldType == EWorldType::Game)
+	{
+		PersistentLevel->TickGame(DeltaTime);
+		SyncSpatialIndex();
+		FCollisionSystem::UpdateWorldCollision(this);
+	}
 }
 
 void UWorld::EndPlay(EEndPlayReason::Type EndPlayReason)
