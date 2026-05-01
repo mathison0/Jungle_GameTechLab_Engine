@@ -1,22 +1,21 @@
--- LuaScriptComponent contract
--- owner: AActor bound from C++
--- otherActor: AActor or nil
--- hit: FHitResult
-
-function BeginPlay(owner)
+function BeginPlay()
+    print("[BeginPlay] " .. obj.UUID)
+    obj:PrintLocation()
 end
 
-function Tick(owner, deltaTime)
+function EndPlay()
+    print("[EndPlay] " .. obj.UUID)
+    obj:PrintLocation()
 end
 
-function EndPlay(owner)
+function OnOverlap(OtherActor)
+    OtherActor:PrintLocation()
 end
 
-function OnOverlap(owner, otherActor)
+function OnHit(HitResult)
 end
 
-function OnEndOverlap(owner, otherActor)
-end
-
-function OnHit(owner, hit)
+function Tick(dt)
+    obj.Location = obj.Location + obj.Velocity * dt
+    obj:PrintLocation()
 end
