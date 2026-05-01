@@ -33,13 +33,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -87,14 +87,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;.;$(IncludePath)</IncludePath>
+    <IncludePath>$(VcpkgInstallRoot)include\luajit;$(VcpkgInstallRoot)include;Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;.;$(IncludePath)</IncludePath>
+    <IncludePath>$(VcpkgInstallRoot)include\luajit;$(VcpkgInstallRoot)include;Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
@@ -108,14 +108,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>$(VcpkgInstallRoot)include\luajit;$(VcpkgInstallRoot)include;Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;.;$(IncludePath)</IncludePath>
+    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>$(VcpkgInstallRoot)include\luajit;$(VcpkgInstallRoot)include;Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;.;$(IncludePath)</IncludePath>
+    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
@@ -161,7 +161,6 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>Async</ExceptionHandling>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\jungle\source\repos\sol2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -248,10 +247,10 @@
     <ClCompile Include="Source\Engine\Asset\ParticleAtlasLoader.cpp" />
     <ClCompile Include="Source\Engine\Asset\StaticMesh.cpp" />
     <ClCompile Include="Source\Engine\Asset\StaticMeshSimplifier.cpp" />
+    <ClCompile Include="Source\Engine\Audio\AudioSystem.cpp" />
     <ClCompile Include="Source\Engine\Collision\Collision.cpp" />
     <ClCompile Include="Source\Engine\Collision\CollisionSystem.cpp" />
     <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp" />
-    <ClCompile Include="Source\Engine\Audio\AudioSystem.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\AudioComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\AudioZoneComponent.cpp" />
@@ -370,13 +369,13 @@
     <ClCompile Include="Source\Engine\Runtime\WindowsApplication.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsPlatformTime.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaBindings.cpp" />
     <ClCompile Include="Source\Engine\Scripting\LuaCoroutineScheduler.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaScriptSystem.cpp" />
     <ClCompile Include="Source\Engine\Scripting\ScriptUtils.cpp" />
     <ClCompile Include="Source\Engine\Serialization\JsonReader.cpp" />
     <ClCompile Include="Source\Engine\Serialization\JsonWriter.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\LuaBindings.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\LuaScriptSystem.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitter.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitterCross.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitterH.cpp" />
@@ -439,10 +438,10 @@
     <ClInclude Include="Source\Engine\Asset\StaticMesh.h" />
     <ClInclude Include="Source\Engine\Asset\StaticMeshSimplifier.h" />
     <ClInclude Include="Source\Engine\Asset\StaticMeshTypes.h" />
+    <ClInclude Include="Source\Engine\Audio\AudioSystem.h" />
     <ClInclude Include="Source\Engine\Collision\Collision.h" />
     <ClInclude Include="Source\Engine\Collision\CollisionSystem.h" />
     <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h" />
-    <ClInclude Include="Source\Engine\Audio\AudioSystem.h" />
     <ClInclude Include="Source\Engine\Component\ActorComponent.h" />
     <ClInclude Include="Source\Engine\Component\AudioComponent.h" />
     <ClInclude Include="Source\Engine\Component\AudioZoneComponent.h" />
@@ -602,15 +601,15 @@
     <ClInclude Include="Source\Engine\Runtime\WindowsPlatformTime.h" />
     <ClInclude Include="Source\Engine\Runtime\WindowsWindow.h" />
     <ClInclude Include="Source\Engine\Runtime\Stats\ScopeCycleCounter.h" />
+    <ClInclude Include="Source\Engine\Scripting\LuaBindings.h" />
     <ClInclude Include="Source\Engine\Scripting\LuaCoroutineScheduler.h" />
+    <ClInclude Include="Source\Engine\Scripting\LuaScriptSystem.h" />
     <ClInclude Include="Source\Engine\Scripting\ScriptUtils.h" />
     <ClInclude Include="Source\Engine\Serialization\Archive.h" />
     <ClInclude Include="Source\Engine\Serialization\JsonReader.h" />
     <ClInclude Include="Source\Engine\Serialization\JsonWriter.h" />
     <ClInclude Include="Source\Engine\Serialization\MemoryWriter.h" />
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h" />
-    <ClInclude Include="Source\Engine\Scripting\LuaBindings.h" />
-    <ClInclude Include="Source\Engine\Scripting\LuaScriptSystem.h" />
     <ClInclude Include="Source\Engine\Slate\ISlateViewport.h" />
     <ClInclude Include="Source\Engine\Slate\SSplitter.h" />
     <ClInclude Include="Source\Engine\Slate\SSplitterCross.h" />
@@ -642,6 +641,118 @@
     <ClInclude Include="ThirdParty\ImGui\imstb_textedit.h" />
     <ClInclude Include="ThirdParty\ImGui\imstb_truetype.h" />
     <ClInclude Include="ThirdParty\SimpleJSON\json.hpp" />
+    <ClInclude Include="ThirdParty\sol\as_args.hpp" />
+    <ClInclude Include="ThirdParty\sol\as_returns.hpp" />
+    <ClInclude Include="ThirdParty\sol\assert.hpp" />
+    <ClInclude Include="ThirdParty\sol\base_traits.hpp" />
+    <ClInclude Include="ThirdParty\sol\bind_traits.hpp" />
+    <ClInclude Include="ThirdParty\sol\bytecode.hpp" />
+    <ClInclude Include="ThirdParty\sol\call.hpp" />
+    <ClInclude Include="ThirdParty\sol\compatibility.hpp" />
+    <ClInclude Include="ThirdParty\sol\config.hpp" />
+    <ClInclude Include="ThirdParty\sol\coroutine.hpp" />
+    <ClInclude Include="ThirdParty\sol\debug.hpp" />
+    <ClInclude Include="ThirdParty\sol\demangle.hpp" />
+    <ClInclude Include="ThirdParty\sol\deprecate.hpp" />
+    <ClInclude Include="ThirdParty\sol\dump_handler.hpp" />
+    <ClInclude Include="ThirdParty\sol\ebco.hpp" />
+    <ClInclude Include="ThirdParty\sol\environment.hpp" />
+    <ClInclude Include="ThirdParty\sol\epilogue.hpp" />
+    <ClInclude Include="ThirdParty\sol\error.hpp" />
+    <ClInclude Include="ThirdParty\sol\error_handler.hpp" />
+    <ClInclude Include="ThirdParty\sol\forward.hpp" />
+    <ClInclude Include="ThirdParty\sol\forward_detail.hpp" />
+    <ClInclude Include="ThirdParty\sol\function.hpp" />
+    <ClInclude Include="ThirdParty\sol\function_result.hpp" />
+    <ClInclude Include="ThirdParty\sol\function_types.hpp" />
+    <ClInclude Include="ThirdParty\sol\function_types_core.hpp" />
+    <ClInclude Include="ThirdParty\sol\function_types_overloaded.hpp" />
+    <ClInclude Include="ThirdParty\sol\function_types_stateful.hpp" />
+    <ClInclude Include="ThirdParty\sol\function_types_stateless.hpp" />
+    <ClInclude Include="ThirdParty\sol\function_types_templated.hpp" />
+    <ClInclude Include="ThirdParty\sol\in_place.hpp" />
+    <ClInclude Include="ThirdParty\sol\inheritance.hpp" />
+    <ClInclude Include="ThirdParty\sol\load_result.hpp" />
+    <ClInclude Include="ThirdParty\sol\lua_table.hpp" />
+    <ClInclude Include="ThirdParty\sol\lua_value.hpp" />
+    <ClInclude Include="ThirdParty\sol\make_reference.hpp" />
+    <ClInclude Include="ThirdParty\sol\metatable.hpp" />
+    <ClInclude Include="ThirdParty\sol\object.hpp" />
+    <ClInclude Include="ThirdParty\sol\object_base.hpp" />
+    <ClInclude Include="ThirdParty\sol\optional.hpp" />
+    <ClInclude Include="ThirdParty\sol\optional_implementation.hpp" />
+    <ClInclude Include="ThirdParty\sol\overload.hpp" />
+    <ClInclude Include="ThirdParty\sol\packaged_coroutine.hpp" />
+    <ClInclude Include="ThirdParty\sol\pairs_iterator.hpp" />
+    <ClInclude Include="ThirdParty\sol\pointer_like.hpp" />
+    <ClInclude Include="ThirdParty\sol\policies.hpp" />
+    <ClInclude Include="ThirdParty\sol\prologue.hpp" />
+    <ClInclude Include="ThirdParty\sol\property.hpp" />
+    <ClInclude Include="ThirdParty\sol\protect.hpp" />
+    <ClInclude Include="ThirdParty\sol\protected_function.hpp" />
+    <ClInclude Include="ThirdParty\sol\protected_function_result.hpp" />
+    <ClInclude Include="ThirdParty\sol\protected_handler.hpp" />
+    <ClInclude Include="ThirdParty\sol\proxy_base.hpp" />
+    <ClInclude Include="ThirdParty\sol\raii.hpp" />
+    <ClInclude Include="ThirdParty\sol\reference.hpp" />
+    <ClInclude Include="ThirdParty\sol\resolve.hpp" />
+    <ClInclude Include="ThirdParty\sol\sol.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_check.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_check_get.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_check_get_qualified.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_check_get_unqualified.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_check_qualified.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_check_unqualified.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_core.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_field.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_get.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_get_qualified.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_get_unqualified.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_guard.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_iterator.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_pop.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_probe.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_proxy.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_proxy_base.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_push.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack_reference.hpp" />
+    <ClInclude Include="ThirdParty\sol\state.hpp" />
+    <ClInclude Include="ThirdParty\sol\state_handling.hpp" />
+    <ClInclude Include="ThirdParty\sol\state_view.hpp" />
+    <ClInclude Include="ThirdParty\sol\string_view.hpp" />
+    <ClInclude Include="ThirdParty\sol\table.hpp" />
+    <ClInclude Include="ThirdParty\sol\table_core.hpp" />
+    <ClInclude Include="ThirdParty\sol\table_iterator.hpp" />
+    <ClInclude Include="ThirdParty\sol\table_proxy.hpp" />
+    <ClInclude Include="ThirdParty\sol\thread.hpp" />
+    <ClInclude Include="ThirdParty\sol\tie.hpp" />
+    <ClInclude Include="ThirdParty\sol\traits.hpp" />
+    <ClInclude Include="ThirdParty\sol\trampoline.hpp" />
+    <ClInclude Include="ThirdParty\sol\tuple.hpp" />
+    <ClInclude Include="ThirdParty\sol\types.hpp" />
+    <ClInclude Include="ThirdParty\sol\unicode.hpp" />
+    <ClInclude Include="ThirdParty\sol\unique_usertype_traits.hpp" />
+    <ClInclude Include="ThirdParty\sol\unsafe_function.hpp" />
+    <ClInclude Include="ThirdParty\sol\unsafe_function_result.hpp" />
+    <ClInclude Include="ThirdParty\sol\userdata.hpp" />
+    <ClInclude Include="ThirdParty\sol\usertype.hpp" />
+    <ClInclude Include="ThirdParty\sol\usertype_container.hpp" />
+    <ClInclude Include="ThirdParty\sol\usertype_container_launch.hpp" />
+    <ClInclude Include="ThirdParty\sol\usertype_core.hpp" />
+    <ClInclude Include="ThirdParty\sol\usertype_proxy.hpp" />
+    <ClInclude Include="ThirdParty\sol\usertype_storage.hpp" />
+    <ClInclude Include="ThirdParty\sol\usertype_traits.hpp" />
+    <ClInclude Include="ThirdParty\sol\variadic_args.hpp" />
+    <ClInclude Include="ThirdParty\sol\variadic_results.hpp" />
+    <ClInclude Include="ThirdParty\sol\version.hpp" />
+    <ClInclude Include="ThirdParty\sol\wrapper.hpp" />
+    <ClInclude Include="ThirdParty\sol\compatibility\compat-5.3.c.h" />
+    <ClInclude Include="ThirdParty\sol\compatibility\compat-5.3.h" />
+    <ClInclude Include="ThirdParty\sol\compatibility\compat-5.4.h" />
+    <ClInclude Include="ThirdParty\sol\compatibility\lua_version.hpp" />
+    <ClInclude Include="ThirdParty\sol\detail\build_version.hpp" />
+    <ClInclude Include="ThirdParty\sol\stack\detail\pairs.hpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\BillboardSelectionMask.hlsl">
