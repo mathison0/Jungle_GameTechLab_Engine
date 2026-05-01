@@ -1,7 +1,8 @@
 ﻿#include "SphereComponent.h"
 #include "Object/ObjectFactory.h"
+#include "Render/Scene/Debug/DebugRenderAPI.h"
 #include "Serialization/Archive.h"
-#include "CapsuleComponent.h"
+#include <algorithm>
 
 IMPLEMENT_CLASS(USphereComponent, UShapeComponent)
 
@@ -25,4 +26,17 @@ void USphereComponent::Serialize(FArchive& Ar)
 void USphereComponent::SetRadius(float NewRadius)
 {
     SphereRadius = NewRadius;
+}
+
+float USphereComponent::GetScaledSphereRadius() const
+{
+    const FVector Scale = GetAbsWorldScale();
+    const float MaxScale = std::max(Scale.X, std::max(Scale.Y, Scale.Z));
+
+	return SphereRadius * MaxScale;
+}
+
+void USphereComponent::RenderDebugShape(FScene& Scene) const
+{
+    RenderDebugSphere(Scene, GetShapeWorldLocation(), GetScaledSphereRadius(), 24, GetDebugShapeColor(), 0.0f);
 }

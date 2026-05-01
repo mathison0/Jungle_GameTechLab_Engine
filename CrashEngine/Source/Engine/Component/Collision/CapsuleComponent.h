@@ -16,10 +16,16 @@ public:
 
 	void SetHalfHeight(float NewHalfHeight);
     void SetRadius(float NewRadius);
-	const float GetHalfHeight() const { return CapsuleHalfHeight; }
-    const float SetRadius() const { return CapsuleRadius; }
+	float GetHalfHeight() const { return CapsuleHalfHeight; }
+    float GetRadius() const { return CapsuleRadius; }
+    float GetScaledCapsuleRadius() const;
+    float GetScaledCapsuleHalfHeight() const;
+    FVector GetCapsuleAxis() const;
 
 protected:
-    float CapsuleHalfHeight = 88.0f;
-    float CapsuleRadius = 34.0f;
+    void RenderDebugShape(FScene& Scene) const override;
+
+protected:
+    float CapsuleHalfHeight = 3.0f;
+    float CapsuleRadius = 1.0f;
 };

@@ -1,6 +1,9 @@
 ﻿#include "CapsuleComponent.h"
 #include "Object/ObjectFactory.h"
+#include "Render/Scene/Debug/DebugRenderAPI.h"
 #include "Serialization/Archive.h"
+
+#include <algorithm>
 
 IMPLEMENT_CLASS(UCapsuleComponent, UShapeComponent)
 
@@ -31,4 +34,36 @@ void UCapsuleComponent::SetHalfHeight(float NewHalfHeight)
 void UCapsuleComponent::SetRadius(float NewRadius)
 {
     CapsuleRadius = NewRadius;
+}
+
+float UCapsuleComponent::GetScaledCapsuleRadius() const
+{
+    const FVector Scale = GetAbsWorldScale();
+    const float RadiusScale = std::max(Scale.X, Scale.Y);
+
+	return CapsuleRadius * RadiusScale;
+}
+
+float UCapsuleComponent::GetScaledCapsuleHalfHeight() const
+{
+    const FVector Scale = GetAbsWorldScale();
+
+	return CapsuleHalfHeight * Scale.Z;
+}
+
+FVector UCapsuleComponent::GetCapsuleAxis() const
+{
+    return GetUpVector();
+}
+
+void UCapsuleComponent::RenderDebugShape(FScene& Scene) const
+{
+    RenderDebugCapsule(Scene,
+                       GetShapeWorldLocation(),
+                       GetCapsuleAxis(),
+                       GetScaledCapsuleRadius(),
+                       GetScaledCapsuleHalfHeight(),
+                       24,
+                       GetDebugShapeColor(),
+                       0.0f);
 }

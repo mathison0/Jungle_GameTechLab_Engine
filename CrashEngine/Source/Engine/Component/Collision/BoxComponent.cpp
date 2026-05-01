@@ -1,5 +1,6 @@
 ﻿#include "BoxComponent.h"
 #include "Object/ObjectFactory.h"
+#include "Render/Scene/Debug/DebugRenderAPI.h"
 #include "Serialization/Archive.h"
 
 IMPLEMENT_CLASS(UBoxComponent, UShapeComponent)
@@ -24,4 +25,36 @@ void UBoxComponent::Serialize(FArchive& Ar)
 void UBoxComponent::SetBoxExtent(const FVector& NewBoxExtent)
 {
     BoxExtent = NewBoxExtent;
+}
+
+FVector UBoxComponent::GetScaledBoxExtent() const
+{
+    const FVector Scale = GetAbsWorldScale();
+
+	return FVector(
+        BoxExtent.X * Scale.X,
+        BoxExtent.Y * Scale.Y,
+        BoxExtent.Z * Scale.Z);
+}
+
+void UBoxComponent::RenderDebugShape(FScene& Scene) const
+{
+    const FVector Extent = GetScaledBoxExtent();
+    const FVector Center = GetShapeWorldLocation();
+    const FVector Forward = GetForwardVector();
+    const FVector Right = GetRightVector();
+    const FVector Up = GetUpVector();
+
+    FVector P[8] = {
+        Center - Forward * Extent.X - Right * Extent.Y - Up * Extent.Z,
+        Center + Forward * Extent.X - Right * Extent.Y - Up * Extent.Z,
+        Center + Forward * Extent.X + Right * Extent.Y - Up * Extent.Z,
+        Center - Forward * Extent.X + Right * Extent.Y - Up * Extent.Z,
+        Center - Forward * Extent.X - Right * Extent.Y + Up * Extent.Z,
+        Center + Forward * Extent.X - Right * Extent.Y + Up * Extent.Z,
+        Center + Forward * Extent.X + Right * Extent.Y + Up * Extent.Z,
+        Center - Forward * Extent.X + Right * Extent.Y + Up * Extent.Z
+    };
+
+    RenderDebugBox(Scene, P[0], P[1], P[2], P[3], P[4], P[5], P[6], P[7], GetDebugShapeColor(), 0.0f);
 }

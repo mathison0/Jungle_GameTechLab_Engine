@@ -17,6 +17,11 @@ public:
 	const float GetRadius() const { return SphereRadius; }
 	void SetRadius(float NewRadius);
 
+	float GetScaledSphereRadius() const;
+
 protected:
-    float SphereRadius = 50.0f;
+    void RenderDebugShape(FScene& Scene) const override;
+
+protected:
+    float SphereRadius = 1.0f;
 };

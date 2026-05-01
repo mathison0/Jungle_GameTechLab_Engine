@@ -45,6 +45,14 @@ void RenderDebugSphere(FScene&        Scene,
     Scene.GetDebugPrimitiveQueue().AddSphere(Center, Radius, Segments, Color, Duration);
 }
 
+void RenderDebugCapsule(FScene&        Scene,
+                        const FVector& Center, const FVector& Axis,
+                        float Radius, float HalfHeight,
+                        int32 Segments, const FColor& Color, float Duration)
+{
+    Scene.GetDebugPrimitiveQueue().AddCapsule(Center, Axis, Radius, HalfHeight, Segments, Color, Duration);
+}
+
 void RenderDebugArrow(FScene&        Scene,
                       const FVector& Start, const FVector& Direction,
                       float         Length,
@@ -113,6 +121,17 @@ void RenderDebugSphere(UWorld*        World,
     if (World)
     {
         RenderDebugSphere(World->GetScene(), Center, Radius, Segments, Color, Duration);
+    }
+}
+
+void RenderDebugCapsule(UWorld*        World,
+                        const FVector& Center, const FVector& Axis,
+                        float Radius, float HalfHeight,
+                        int32 Segments, const FColor& Color, float Duration)
+{
+    if (World)
+    {
+        RenderDebugCapsule(World->GetScene(), Center, Axis, Radius, HalfHeight, Segments, Color, Duration);
     }
 }
 

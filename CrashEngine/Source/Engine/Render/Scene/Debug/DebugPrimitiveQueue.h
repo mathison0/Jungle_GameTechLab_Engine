@@ -36,6 +36,10 @@ public:
     void AddSphere(const FVector& Center, float Radius, int32 Segments,
                    const FColor& Color, float Duration);
 
+    void AddCapsule(const FVector& Center, const FVector& Axis,
+                    float Radius, float HalfHeight, int32 Segments,
+                    const FColor& Color, float Duration);
+
     void AddArrow(const FVector& Start, const FVector& Direction,
                   float Length, const FColor& Color, float Duration,
                   int32 Segments = 8);

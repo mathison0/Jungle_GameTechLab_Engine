@@ -15,7 +15,11 @@ public:
 	const FVector& GetBoxExtent() const { return BoxExtent; }
     void SetBoxExtent(const FVector& NewBoxExtent);
 
+	FVector GetScaledBoxExtent() const;
 
-	protected:
-    FVector BoxExtent;
+protected:
+    void RenderDebugShape(FScene& Scene) const override;
+
+protected:
+    FVector BoxExtent = FVector(1.0f, 1.0f, 1.0f);
 };

@@ -41,6 +41,13 @@ void RenderDebugSphere(FScene&        Scene,
                        const FColor& Color    = FColor::White(),
                        float         Duration = 0.0f);
 
+void RenderDebugCapsule(FScene&        Scene,
+                        const FVector& Center, const FVector& Axis,
+                        float         Radius, float HalfHeight,
+                        int32         Segments = 16,
+                        const FColor& Color    = FColor::White(),
+                        float         Duration = 0.0f);
+
 void RenderDebugArrow(FScene&        Scene,
                       const FVector& Start, const FVector& Direction,
                       float         Length,
@@ -83,6 +90,13 @@ void RenderDebugSphere(UWorld*        World,
                        const FColor& Color    = FColor::White(),
                        float         Duration = 0.0f);
 
+void RenderDebugCapsule(UWorld*        World,
+                        const FVector& Center, const FVector& Axis,
+                        float         Radius, float HalfHeight,
+                        int32         Segments = 16,
+                        const FColor& Color    = FColor::White(),
+                        float         Duration = 0.0f);
+
 void RenderDebugArrow(UWorld*        World,
                       const FVector& Start, const FVector& Direction,
                       float         Length,
@@ -102,6 +116,7 @@ inline void RenderDebugBox(FScene&, const FVector&, const FVector&, const FColor
 inline void RenderDebugBox(FScene&, const FVector&, const FVector&, const FVector&, const FVector&, const FColor& = FColor::White(), float = 0.0f) {}
 inline void RenderDebugBox(FScene&, const FVector&, const FVector&, const FVector&, const FVector&, const FVector&, const FVector&, const FVector&, const FVector&, const FColor& = FColor::White(), float = 0.0f) {}
 inline void RenderDebugSphere(FScene&, const FVector&, float, int32 = 16, const FColor& = FColor::White(), float = 0.0f) {}
+inline void RenderDebugCapsule(FScene&, const FVector&, const FVector&, float, float, int32 = 16, const FColor& = FColor::White(), float = 0.0f) {}
 inline void RenderDebugArrow(FScene&, const FVector&, const FVector&, float, const FColor& = FColor::White(), float = 0.0f, int32 = 8) {}
 inline void RenderDebugPoint(FScene&, const FVector&, float = 0.1f, const FColor& = FColor::White(), float = 0.0f) {}
 
@@ -110,6 +125,7 @@ inline void RenderDebugBox(UWorld*, const FVector&, const FVector&, const FColor
 inline void RenderDebugBox(UWorld*, const FVector&, const FVector&, const FVector&, const FVector&, const FColor& = FColor::White(), float = 0.0f) {}
 inline void RenderDebugBox(UWorld*, const FVector&, const FVector&, const FVector&, const FVector&, const FVector&, const FVector&, const FVector&, const FVector&, const FColor& = FColor::White(), float = 0.0f) {}
 inline void RenderDebugSphere(UWorld*, const FVector&, float, int32 = 16, const FColor& = FColor::White(), float = 0.0f) {}
+inline void RenderDebugCapsule(UWorld*, const FVector&, const FVector&, float, float, int32 = 16, const FColor& = FColor::White(), float = 0.0f) {}
 inline void RenderDebugArrow(UWorld*, const FVector&, const FVector&, float, const FColor& = FColor::White(), float = 0.0f, int32 = 8) {}
 inline void RenderDebugPoint(UWorld*, const FVector&, float = 0.1f, const FColor& = FColor::White(), float = 0.0f) {}
 

@@ -320,6 +320,14 @@ void FRenderer::CollectOverlayText(const FOverlayStatSystem& OverlaySystem, cons
 
 void FRenderer::CollectDebugRender(const FScene& Scene)
 {
+    for (FPrimitiveProxy* Proxy : DrawCollector.GetCollectedSceneData().Primitives.VisibleProxies)
+    {
+        if (Proxy && Proxy->bSelected)
+        {
+            Proxy->CollectSelectedVisuals(const_cast<FScene&>(Scene));
+        }
+    }
+
     DrawCollector.CollectDebugRender(Scene);
 }
 

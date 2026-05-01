@@ -3,6 +3,7 @@
 
 #include "Math/MathUtils.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace
@@ -84,6 +85,51 @@ void FDebugPrimitiveQueue::AddSphere(const FVector& Center, float Radius, int32 
     AddCircle(*this, Center, FVector(1.0f, 0.0f, 0.0f), FVector(0.0f, 1.0f, 0.0f), Radius, Color, Duration, Segments);
     AddCircle(*this, Center, FVector(1.0f, 0.0f, 0.0f), FVector(0.0f, 0.0f, 1.0f), Radius, Color, Duration, Segments);
     AddCircle(*this, Center, FVector(0.0f, 1.0f, 0.0f), FVector(0.0f, 0.0f, 1.0f), Radius, Color, Duration, Segments);
+}
+
+void FDebugPrimitiveQueue::AddCapsule(const FVector& Center, const FVector& Axis,
+                                      float Radius, float HalfHeight, int32 Segments,
+                                      const FColor& Color, float Duration)
+{
+    if (Radius <= FMath::Epsilon || HalfHeight <= FMath::Epsilon)
+    {
+        return;
+    }
+
+    if (Segments < 8)
+    {
+        Segments = 8;
+    }
+
+    const FVector CapsuleAxis = Axis.Normalized();
+    if (CapsuleAxis.LengthSquared() <= FMath::Epsilon)
+    {
+        return;
+    }
+
+    FVector BasisUp(0.0f, 0.0f, 1.0f);
+    if (fabsf(CapsuleAxis.Dot(BasisUp)) > 0.98f)
+    {
+        BasisUp = FVector(1.0f, 0.0f, 0.0f);
+    }
+
+    const FVector AxisX             = CapsuleAxis.Cross(BasisUp).Normalized();
+    const FVector AxisY             = CapsuleAxis.Cross(AxisX).Normalized();
+    const float   SegmentHalfLength = std::max(0.0f, HalfHeight - Radius);
+    const FVector BottomCenter      = Center - CapsuleAxis * SegmentHalfLength;
+    const FVector TopCenter         = Center + CapsuleAxis * SegmentHalfLength;
+
+    AddSphere(BottomCenter, Radius, Segments, Color, Duration);
+    AddSphere(TopCenter, Radius, Segments, Color, Duration);
+    AddCircle(*this, BottomCenter, AxisX, AxisY, Radius, Color, Duration, Segments);
+    AddCircle(*this, TopCenter, AxisX, AxisY, Radius, Color, Duration, Segments);
+
+    for (int32 Index = 0; Index < 4; ++Index)
+    {
+        const float   Angle  = kTwoPi * static_cast<float>(Index) / 4.0f;
+        const FVector Offset = AxisX * (cosf(Angle) * Radius) + AxisY * (sinf(Angle) * Radius);
+        AddLineInternal(BottomCenter + Offset, TopCenter + Offset, Color, Duration);
+    }
 }
 
 void FDebugPrimitiveQueue::AddArrow(const FVector& Start, const FVector& Direction,

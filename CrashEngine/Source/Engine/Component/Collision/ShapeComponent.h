@@ -18,13 +18,25 @@ public:
     void PostEditProperty(const char* PropertyName) override;
 
     void Serialize(FArchive& Ar) override;
+    void ContributeSelectedVisuals(FScene& Scene) const override;
 
     void SetShapeColor(FColor NewColor);
+    const FVector4& GetShapeColor() const { return ShapeColor; }
     void SetDrawOnlyIfSelected(bool bNewDrawOnlyIfSelected);
+    bool ShouldDrawOnlyIfSelected() const { return bDrawOnlyIfSelected; }
 
 	virtual ECollisionShapeType GetCollisionShapeType() const = 0;
 
+	FVector GetShapeWorldLocation() const;
+    FVector GetAbsWorldScale() const;
+
 protected:
-    FColor ShapeColor = FColor::Yellow();
+    void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
+    virtual void RenderDebugShape(FScene& Scene) const = 0;
+    bool ShouldRenderDebugShape() const;
+    FColor GetDebugShapeColor() const;
+
+protected:
+    FVector4 ShapeColor = FColor::Yellow().ToVector4();
     bool bDrawOnlyIfSelected = true;
 };
