@@ -276,6 +276,7 @@
     <ClCompile Include="Source\Engine\Collision\RayUtils.cpp" />
     <ClCompile Include="Source\Engine\Collision\RayUtilsSIMD.cpp" />
     <ClCompile Include="Source\Engine\Collision\SpatialPartition.cpp" />
+    <ClCompile Include="Source\Engine\Collision\CollisionManager.cpp" />
     <ClCompile Include="Source\Engine\Collision\CollisionShapeQuery.cpp" />
     <ClCompile Include="Source\Engine\Collision\Sphere.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\EditorHelperBVH.cpp" />
@@ -452,6 +453,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Collision\OverlapInfo.h" />
     <ClInclude Include="Source\Engine\Component\Collision\BoxComponent.h" />
     <ClInclude Include="Source\Engine\Component\Collision\CapsuleComponent.h" />
     <ClInclude Include="Source\Engine\Component\Collision\ShapeComponent.h" />
@@ -491,6 +493,7 @@
     <ClInclude Include="Source\Engine\Collision\RayUtils.h" />
     <ClInclude Include="Source\Engine\Collision\RayUtilsSIMD.h" />
     <ClInclude Include="Source\Engine\Collision\SpatialPartition.h" />
+    <ClInclude Include="Source\Engine\Collision\CollisionManager.h" />
     <ClInclude Include="Source\Engine\Collision\CollisionShapeQuery.h" />
     <ClInclude Include="Source\Engine\Collision\Sphere.h" />
     <ClInclude Include="Source\Engine\Collision\BVH\EditorPickingBVH.h" />

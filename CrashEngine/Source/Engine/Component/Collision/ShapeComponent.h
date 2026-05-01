@@ -14,8 +14,6 @@ public:
     void Serialize(FArchive& Ar) override;
     void ContributeSelectedVisuals(FScene& Scene) const override;
 
-    bool IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const override;
-
     void SetShapeColor(FColor NewColor);
     const FVector4& GetShapeColor() const { return ShapeColor; }
     void SetDebugOverlapping(bool bNewDebugOverlapping);

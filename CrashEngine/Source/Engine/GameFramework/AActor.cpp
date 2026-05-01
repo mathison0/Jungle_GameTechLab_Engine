@@ -266,11 +266,10 @@ bool AActor::IsOverlappingActor(const AActor* OtherActor) const
     {
         if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(OwnedComp))
         {
-            //if ((PrimComp->GetOverlapInfos().Num() > 0) && PrimComp->IsOverlappingActor(OtherActor))
-            //{
-            //    // found one, finished
-            //    return true;
-            //}
+            if (!PrimComp->GetOverlapInfos().empty() && PrimComp->IsOverlappingActor(OtherActor))
+            {
+                return true;
+            }
         }
     }
     return false;

@@ -518,6 +518,9 @@
     <ClCompile Include="Source\Engine\Collision\SpatialPartition.cpp">
       <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Collision\CollisionManager.cpp">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\CollisionShapeQuery.cpp">
       <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
@@ -1142,6 +1145,9 @@
       <Filter>Source\Engine\Collision</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\SpatialPartition.h">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Collision\CollisionManager.h">
       <Filter>Source\Engine\Collision</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\CollisionShapeQuery.h">

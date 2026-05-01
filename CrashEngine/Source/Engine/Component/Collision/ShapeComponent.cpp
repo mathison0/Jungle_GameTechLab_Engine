@@ -1,5 +1,4 @@
 ﻿#include "ShapeComponent.h"
-#include "Collision/CollisionShapeQuery.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Object/ObjectFactory.h"
@@ -42,29 +41,6 @@ void UShapeComponent::SetDebugOverlapping(bool bNewDebugOverlapping)
 void UShapeComponent::SetDrawOnlyIfSelected(bool bNewDrawOnlyIfSelected)
 {
     bDrawOnlyIfSelected = bNewDrawOnlyIfSelected;
-}
-
-bool UShapeComponent::IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const
-{
-    if (!OtherPrimitive || OtherPrimitive == this)
-    {
-        return false;
-    }
-
-    if (!ShouldGenerateOverlapEvents() || !OtherPrimitive->ShouldGenerateOverlapEvents())
-    {
-        return false;
-    }
-
-    const UShapeComponent* OtherShape = Cast<UShapeComponent>(OtherPrimitive);
-    if (!OtherShape)
-    {
-        return false;
-    }
-
-    return CollisionShapeQuery::OverlapShapeGeometry(
-        GetCollisionShapeGeometry(),
-        OtherShape->GetCollisionShapeGeometry());
 }
 
 void UShapeComponent::ContributeSelectedVisuals(FScene& Scene) const

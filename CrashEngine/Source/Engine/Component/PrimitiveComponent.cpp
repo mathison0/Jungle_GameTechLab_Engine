@@ -132,13 +132,60 @@ bool UPrimitiveComponent::ShouldRenderInCurrentWorld() const
     return ShouldRenderInWorld(World ? World->GetWorldType() : EWorldType::Game);
 }
 
+const TArray<FOverlapInfo>& UPrimitiveComponent::GetOverlapInfos() const
+{
+    return OverlapInfos;
+}
+
+void UPrimitiveComponent::AddOverlapInfo(UPrimitiveComponent* OtherPrimitive)
+{
+    OverlapInfos.emplace_back(FOverlapInfo(OtherPrimitive));
+}
+
+void UPrimitiveComponent::ClearOverlapInfos()
+{
+    OverlapInfos.clear();
+}
+
 bool UPrimitiveComponent::IsOverlappingActor(const AActor* OtherActor) const
 {
+    if (!OtherActor)
+    {
+        return false;
+    }
+
+    for (const FOverlapInfo& Info : OverlapInfos)
+    {
+        const UPrimitiveComponent* OtherComponent = Info.OverlappedComponent;
+        if (!OtherComponent)
+        {
+            continue;
+        }
+
+        if (OtherComponent->GetOwner() == OtherActor)
+        {
+            return true;
+        }
+    }
+
     return false;
 }
 
 bool UPrimitiveComponent::IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const
 {
+    if (!OtherPrimitive)
+    {
+        return false;
+    }
+
+    for (const FOverlapInfo& Info : OverlapInfos)
+    {
+        if (Info.OverlappedComponent == OtherPrimitive)
+        {
+            return true;
+        }
+    }
+
     return false;
 }
 

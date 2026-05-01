@@ -10,6 +10,7 @@
 #include "Render/RHI/D3D11/Buffers/VertexTypes.h"
 #include "Render/Scene/SceneProxyDirtyFlag.h"
 #include "GameFramework/WorldContext.h"
+#include "Collision/OverlapInfo.h"
 
 class FPrimitiveProxy;
 class FScene;
@@ -46,6 +47,9 @@ public:
     bool ShouldRenderInCurrentWorld() const;
 
 	//Collision
+    const TArray<FOverlapInfo>& GetOverlapInfos() const;
+    void AddOverlapInfo(UPrimitiveComponent* OtherPrimitive);
+    void ClearOverlapInfos();
     virtual bool IsOverlappingActor(const AActor* OtherActor) const;
     virtual bool IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const;
 
@@ -168,6 +172,7 @@ protected:
     FOctree* OctreeNode = nullptr;
     bool bInOctreeOverflow = false;
 
+	TArray<FOverlapInfo> OverlapInfos;
 	bool bGenerateOverlapEvents = false;
     bool bGenerateHitEvents = false;
     bool bBlockComponent = true;
