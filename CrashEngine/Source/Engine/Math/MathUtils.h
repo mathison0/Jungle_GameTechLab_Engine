@@ -16,6 +16,16 @@ inline float Clamp(float Val, float Lo, float Hi)
         return Lo;
     return Val;
 }
+
+inline float Lerp(float A, float B, float T)
+{
+    return A + (B-A) * T;
+}
+
+inline FVector Lerp(FVector A, FVector B, float T)
+{
+    return A + (B-A) * T;
+}
 } // namespace FMath
 
 // 기존 매크로 호환 — 이행 완료 후 제거

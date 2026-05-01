@@ -17,4 +17,9 @@ private:
     float MoveSpeed = 1.0f;
     float RotateSpeed = 1.0f;
     FVector Velocity = {0, 0, 0};  // 기존 속도
+    
+    // 드리프트 관련 수치
+    float _BaseFriction = 0.1f;
+    float _DriftFactor = 0.3f;
+    float _DriftSmoothness = 0.1f;
 };

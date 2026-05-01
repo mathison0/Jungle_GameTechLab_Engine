@@ -2,7 +2,7 @@
   "Actors" : [{
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
-      "PrimitiveKey" : "65",
+      "PrimitiveKey" : "13",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -45,13 +45,16 @@
           "ClassName" : "UTankMovementComponent",
           "Properties" : {
             "Auto Register Updated" : true,
-            "Move Speed" : 10.000000,
+            "Base Friction" : 0.100000,
+            "Drift Factor" : 0.300000,
+            "Drift Smoothness" : 0.100000,
+            "Move Speed" : 20.000000,
             "Rotate Speed" : 30.000000,
             "Updated Component" : "",
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "68",
+      "PrimitiveKey" : "16",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -80,7 +83,7 @@
                   },
                   "Is Editor Helper" : false,
                   "Location" : [2.000000, 0.000000, 0.000000],
-                  "Rotation" : [-0.000000, 0.000000, 0.000000],
+                  "Rotation" : [0.000000, 0.000000, 0.000000],
                   "Scale" : [1.000000, 0.200000, 0.300000],
                   "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
                   "Visible" : true,
@@ -137,7 +140,7 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 72",
+              "Text" : "UUID : 22",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -197,9 +200,9 @@
               "Font Size" : 1.000000,
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 79",
+              "Text" : "UUID : 28",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -215,7 +218,7 @@
               "Material" : {
                 "Path" : "Asset/Editor/Icons/Materials/AmbientLightIcon.json"
               },
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Visible" : true,
               "Visible In Editor" : true,
@@ -233,7 +236,7 @@
           "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
           "Location" : [0.000000, 0.000000, 0.000000],
           "Normal Bias" : 0.000000,
-          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
           "Shadow Resolution" : 2048,
           "Shadow Sharpen" : 0.000000,
@@ -256,9 +259,9 @@
               "Font Size" : 1.000000,
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 83",
+              "Text" : "UUID : 34",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -274,7 +277,7 @@
               "Material" : {
                 "Path" : "Asset/Editor/Icons/Materials/PointLightIcon.json"
               },
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Visible" : true,
               "Visible In Editor" : true,
@@ -294,7 +297,7 @@
           "LightFalloffExponent" : 2.000000,
           "Location" : [0.000000, 0.000000, 7.582762],
           "Normal Bias" : 0.000000,
-          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
           "Shadow Resolution" : 2048,
           "Shadow Sharpen" : 0.000000,
@@ -313,19 +316,19 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [8.256270, 39.582218, 23.217209],
+    "Location" : [9.115824, 42.712772, 52.901390],
     "NearClip" : 0.100000,
-    "Rotation" : [-0.000001, 25.179607, -104.509010]
+    "Rotation" : [0.000003, 57.099571, -103.668983]
   },
   "Primitives" : {
-    "65" : {
+    "13" : {
       "Location" : [0.000000, 0.000000, -1.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
       "Scale" : [100.000000, 100.000000, 1.000000],
       "Type" : "StaticMeshComp"
     },
-    "68" : {
+    "16" : {
       "Location" : [0.000000, 0.000000, 0.646355],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
