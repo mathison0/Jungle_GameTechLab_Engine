@@ -43,6 +43,7 @@ public:
 	// ---- 초기화 / 해제 ----
 	void Create(ID3D11Device* Device);
 	void Release();
+	void SetDepthStencilType(EDepthStencilType InDepthStencilType) { DepthStencilType = InDepthStencilType; }
 
 	// ---- 라인 축적 API ----
 
@@ -97,6 +98,7 @@ public:
 
 private:
 	UMaterialInterface* Material = nullptr;
+	EDepthStencilType DepthStencilType = EDepthStencilType::Default;
 
 	TArray<FLineVertex> IndexedVertices;
 	TArray<uint32> Indices;

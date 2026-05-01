@@ -181,7 +181,6 @@ void FLineBatcher::Create(ID3D11Device* InDevice)
 	}
 
 	UMaterial* LineMaterial = FResourceManager::Get().GetMaterial("LineMat");
-	LineMaterial->DepthStencilType = EDepthStencilType::Default;
 	LineMaterial->BlendType = EBlendType::AlphaBlend;
 	LineMaterial->RasterizerType = ERasterizerType::SolidBackCull;
 	LineMaterial->SamplerType = ESamplerType::EST_Linear;
@@ -461,6 +460,10 @@ void FLineBatcher::Flush(ID3D11DeviceContext* Context, const FRenderBus* RenderB
 	memcpy(MappedResource.pData, Indices.data(), sizeof(uint32) * RequiredIndexCount);
 	Context->Unmap(IndexBuffer.Get(), 0);
 
+	if (UMaterial* LineMaterial = Cast<UMaterial>(Material))
+	{
+		LineMaterial->DepthStencilType = DepthStencilType;
+	}
 	Material->Bind(Context, RenderBus);
 
 	UINT Stride = sizeof(FLineVertex);
@@ -625,25 +628,25 @@ void FLineBatcher::AddSingleCone(const FVector& Position, const FVector& Forward
 void FLineBatcher::AddCapsule(const FVector& Position, float HalfHeight, float Radius, const FVector& UpVector, const FVector& RightVector, const FVector& ForwardVector, const FColor& InColor)
 {
     const FVector4 CapsuleColor = InColor.ToVector4();
-    
     const float CylinderHalfHeight = (std::max)(0.0f, HalfHeight - Radius);
-    
     const FVector Up = UpVector.GetSafeNormal();
     const FVector Right = RightVector.GetSafeNormal();
     const FVector Forward = ForwardVector.GetSafeNormal();
-
     const FVector TopCenter = Position + (Up * CylinderHalfHeight);
     const FVector BottomCenter = Position - (Up * CylinderHalfHeight);
 
     AddCircle(TopCenter, Right, Forward, Radius, CapsuleColor);
     AddCircle(BottomCenter, Right, Forward, Radius, CapsuleColor);
 
-    AddLine(TopCenter + Right * Radius, BottomCenter + Right * Radius, CapsuleColor);
-    AddLine(TopCenter - Right * Radius, BottomCenter - Right * Radius, CapsuleColor);
-    AddLine(TopCenter + Forward * Radius, BottomCenter + Forward * Radius, CapsuleColor);
-    AddLine(TopCenter - Forward * Radius, BottomCenter - Forward * Radius, CapsuleColor);
+    constexpr int32 VerticalLineCount = 8;
+    FVector SideAxes[VerticalLineCount];
+    for (int32 i = 0; i < VerticalLineCount; ++i)
+    {
+        const float Angle = (static_cast<float>(i) / VerticalLineCount) * MathUtil::TwoPi;
+        SideAxes[i] = Right * std::cos(Angle) + Forward * std::sin(Angle);
+        AddLine(TopCenter + SideAxes[i] * Radius, BottomCenter + SideAxes[i] * Radius, CapsuleColor);
+    }
 
-    // 반구(Hemisphere)를 그리기 위한 내부 람다 함수 (180도 Arc)
     auto AddHalfCircle = [&](const FVector& Base, const FVector& AxisA, const FVector& AxisB)
     {
         constexpr int32 Segments = 16;
@@ -663,9 +666,9 @@ void FLineBatcher::AddCapsule(const FVector& Position, float HalfHeight, float R
         }
     };
 
-    AddHalfCircle(TopCenter, Right, Up);
-    AddHalfCircle(TopCenter, Forward, Up);
-
-    AddHalfCircle(BottomCenter, Right, -Up);
-    AddHalfCircle(BottomCenter, Forward, -Up);
+    for (const FVector& Axis : SideAxes)
+    {
+        AddHalfCircle(TopCenter, Axis, Up);
+        AddHalfCircle(BottomCenter, Axis, -Up);
+    }
 }
