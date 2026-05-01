@@ -951,9 +951,14 @@ void FEditorDetailsPanel::RenderSceneComponentNode(USceneComponent* Comp)
     bool bDeleted = false;
     if (ImGui::BeginPopupContextItem())
     {
-        if (ImGui::MenuItem("Delete"))
+        // Root Component는 삭제할 수 없도록 예외 처리
+        if (ImGui::MenuItem("Delete", nullptr, false, !bIsRoot))
         {
             bDeleted = true;
+        }
+        if (bIsRoot && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        {
+            ImGui::SetTooltip("Root Component cannot be deleted.");
         }
         ImGui::EndPopup();
     }
