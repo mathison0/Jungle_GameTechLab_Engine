@@ -385,6 +385,27 @@ bool FAudioSystem::IsPlaying(FAudioHandle Handle) const
 #endif
 }
 
+void FAudioSystem::SetVolume(FAudioHandle Handle, float Volume)
+{
+#if NIPS_WITH_MINIAUDIO
+	if (!Impl->bInitialized || !Handle.IsValid())
+	{
+		return;
+	}
+
+	auto It = Impl->ActiveSounds.find(Handle.Id);
+	if (It == Impl->ActiveSounds.end() || !It->second.Sound)
+	{
+		return;
+	}
+
+	ma_sound_set_volume(It->second.Sound.get(), ClampVolume(Volume));
+#else
+	(void)Handle;
+	(void)Volume;
+#endif
+}
+
 void FAudioSystem::SetPlaybackTime(FAudioHandle Handle, float TimeSeconds)
 {
 #if NIPS_WITH_MINIAUDIO

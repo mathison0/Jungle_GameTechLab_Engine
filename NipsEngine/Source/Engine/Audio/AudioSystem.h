@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Containers/String.h"
 #include "Core/CoreTypes.h"
@@ -22,6 +22,22 @@ struct FAudioPlayParams
 	float MinDistance = 1.0f;
 	float MaxDistance = 8.0f;
 	FVector Location = FVector::ZeroVector;
+};
+
+enum class EAudioOutsideBehavior : int32
+{
+	ContinuePlaying = 0,
+	PauseAndResume,
+	StopAndRestart,
+	Count
+};
+
+enum class EAudioStartBehavior : int32
+{
+	OnBeginPlay = 0,
+	OnFirstEnter,
+	ManualOnly,
+	Count
 };
 
 struct FAudioSystemImpl;
@@ -48,6 +64,7 @@ public:
 	void Restart(FAudioHandle Handle);
 	void StopAll();
 	bool IsPlaying(FAudioHandle Handle) const;
+	void SetVolume(FAudioHandle Handle, float Volume);
 
 	void SetPlaybackTime(FAudioHandle Handle, float TimeSeconds);
 	float GetPlaybackTime(FAudioHandle Handle) const;

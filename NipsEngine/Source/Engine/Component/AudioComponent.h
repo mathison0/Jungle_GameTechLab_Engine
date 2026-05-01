@@ -32,6 +32,9 @@ public:
 
 	const FString& GetSoundPath() const { return SoundPath; }
 	void SetSoundPath(const FString& InSoundPath) { SoundPath = InSoundPath; }
+	bool IsSpatial() const { return bSpatial; }
+	float GetMinDistance() const { return MinDistance; }
+	float GetMaxDistance() const { return MaxDistance; }
 
 	void SetLooping(bool bInLoop) { bLoop = bInLoop; }
 	void SetSpatial(bool bInSpatial) { bSpatial = bInSpatial; }
@@ -43,13 +46,22 @@ protected:
 private:
 	FAudioPlayParams MakePlayParams() const;
 	FVector GetOwnerLocation() const;
+	FVector GetListenerLocation() const;
+	bool IsListenerOutsideMaxDistance() const;
+	EAudioOutsideBehavior GetOutsideRangeBehavior() const;
+	EAudioStartBehavior GetStartBehavior() const;
+	bool ShouldAutoStart() const;
 
 	FString SoundPath;
-	bool bPlayOnBeginPlay = true;
+	int32 StartBehavior = static_cast<int32>(EAudioStartBehavior::OnBeginPlay);
 	bool bLoop = false;
 	bool bSpatial = true;
+	int32 OutsideRangeBehavior = static_cast<int32>(EAudioOutsideBehavior::ContinuePlaying);
 	float Volume = 1.0f;
 	float MinDistance = 1.0f;
 	float MaxDistance = 8.0f;
+	bool bPausedByOutsideRange = false;
+	bool bStoppedByOutsideRange = false;
+	bool bStartedByStartBehavior = false;
 	FAudioHandle PlaybackHandle;
 };

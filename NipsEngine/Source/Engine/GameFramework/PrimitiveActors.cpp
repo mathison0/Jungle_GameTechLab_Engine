@@ -11,6 +11,7 @@
 #include "Component/Light/PointLightComponent.h"
 #include "Component/Light/SpotLightComponent.h"
 #include "Component/HeightFogComponent.h"
+#include "Component/AudioVolumeComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Core/ResourceManager.h"
@@ -54,6 +55,9 @@ REGISTER_FACTORY(ASkyAtmosphereActor)
 
 DEFINE_CLASS(AHeightFogActor, AActor)
 REGISTER_FACTORY(AHeightFogActor)
+
+DEFINE_CLASS(AAudioVolumeActor, AActor)
+REGISTER_FACTORY(AAudioVolumeActor)
 
 void ASceneActor::InitDefaultComponents()
 {
@@ -161,6 +165,17 @@ void AHeightFogActor::InitDefaultComponents()
 	Billboard->SetEditorOnly(true);
 	Billboard->SetHiddenInEditor(true);
 	Billboard->SetTexturePath("Asset/Texture/Icons/S_ExpoHeightFog.PNG");
+}
+
+void AAudioVolumeActor::InitDefaultComponents()
+{
+	UAudioVolumeComponent* AudioVolume = AddComponent<UAudioVolumeComponent>();
+	SetRootComponent(AudioVolume);
+
+	UBillboardComponent* Billboard = AddComponent<UBillboardComponent>();
+	Billboard->AttachToComponent(AudioVolume);
+	Billboard->SetEditorOnly(true);
+	Billboard->SetTexturePath("Asset/Texture/Icons/EmptyActor.PNG");
 }
 
 void ALightActor::PostDuplicate(UObject* Original)

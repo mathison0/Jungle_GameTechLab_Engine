@@ -110,6 +110,7 @@ namespace
 		{ "Ambient Light", SpawnActorAt<AAmbientLightActor> },
 		{ "Point Light", SpawnActorAt<APointLightActor> },
 		{ "Spot Light", SpawnActorAt<ASpotLightActor> },
+		{ "Audio Volume", SpawnActorAt<AAudioVolumeActor> },
 	};
 }
 
@@ -153,6 +154,8 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
 	{
 		ImGui::Indent();
 		ImGui::Checkbox("BVH Bounding Volume", &Settings.ShowFlags.bBVHBoundingVolume);
+		ImGui::Checkbox("Audio Component Range", &Settings.ShowFlags.bAudioComponentRange);
+		ImGui::Checkbox("Audio Volume Range", &Settings.ShowFlags.bAudioVolumeRange);
 		ImGui::Unindent();
 	}
 	ImGui::Checkbox("LOD", &Settings.ShowFlags.bEnableLOD);

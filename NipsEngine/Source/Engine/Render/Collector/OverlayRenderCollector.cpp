@@ -1,6 +1,8 @@
 ﻿#include "OverlayRenderCollector.h"
 
 #include "Component/ActorComponent.h"
+#include "Component/AudioComponent.h"
+#include "Component/AudioVolumeComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/Collision/BoxComponent.h"
 #include "Component/Collision/CapsuleComponent.h"
@@ -166,6 +168,36 @@ namespace
 		default:
 			return true;
 		}
+	}
+
+	void DrawAudioComponentRange(const UAudioComponent* AudioComponent, FLineBatcher* LineBatcher)
+	{
+		if (AudioComponent == nullptr || LineBatcher == nullptr || !AudioComponent->IsSpatial())
+		{
+			return;
+		}
+
+		const AActor* Owner = AudioComponent->GetOwner();
+		const USceneComponent* Root = Owner ? Owner->GetRootComponent() : nullptr;
+		const FVector Center = Root ? Root->GetWorldLocation() : FVector::ZeroVector;
+		const FVector Right = Root ? Root->GetRightVector() : FVector::UnitY();
+		const FVector Up = Root ? Root->GetUpVector() : FVector::UnitZ();
+
+		LineBatcher->AddSphere(Center, AudioComponent->GetMinDistance(), Right, Up, FColor(80, 220, 255));
+		LineBatcher->AddSphere(Center, AudioComponent->GetMaxDistance(), Right, Up, FColor(40, 120, 255));
+	}
+
+	void DrawAudioVolumeRange(const UAudioVolumeComponent* AudioVolumeComponent, FLineBatcher* LineBatcher)
+	{
+		if (AudioVolumeComponent == nullptr || LineBatcher == nullptr)
+		{
+			return;
+		}
+
+		const FVector Center = AudioVolumeComponent->GetWorldLocation();
+		const FVector Extent = AudioVolumeComponent->GetBoxExtent();
+		const FAABB Box(Center - Extent, Center + Extent);
+		LineBatcher->AddAABB(Box, FColor(80, 255, 180));
 	}
 }
 
@@ -382,6 +414,22 @@ bool FOverlayRenderCollector::CollectFromSelectedActor(
 
 	for (UActorComponent* Component : Actor->GetComponents())
 	{
+		if (ShowFlags.bBoundingVolume && ShowFlags.bAudioComponentRange)
+		{
+			if (const UAudioComponent* AudioComponent = Cast<UAudioComponent>(Component))
+			{
+				DrawAudioComponentRange(AudioComponent, LineBatcher);
+			}
+		}
+
+		if (ShowFlags.bBoundingVolume && ShowFlags.bAudioVolumeRange)
+		{
+			if (const UAudioVolumeComponent* AudioVolumeComponent = Cast<UAudioVolumeComponent>(Component))
+			{
+				DrawAudioVolumeRange(AudioVolumeComponent, LineBatcher);
+			}
+		}
+
 		const ULightComponent* LightComponent = Cast<ULightComponent>(Component);
 		if (LightComponent == nullptr || !LightComponent->IsVisible() || LineBatcher == nullptr)
 		{

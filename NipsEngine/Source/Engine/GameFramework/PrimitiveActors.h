@@ -117,3 +117,11 @@ public:
 
 	void InitDefaultComponents();
 };
+
+class AAudioVolumeActor : public AActor {
+public:
+	DECLARE_CLASS(AAudioVolumeActor, AActor)
+	AAudioVolumeActor() = default;
+
+	void InitDefaultComponents();
+};

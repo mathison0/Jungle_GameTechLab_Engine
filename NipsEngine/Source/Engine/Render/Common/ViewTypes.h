@@ -40,6 +40,8 @@ struct FShowFlags
 	bool bBillboardText = false;
 	bool bBoundingVolume = false;
 	bool bBVHBoundingVolume = false;
+	bool bAudioComponentRange = true;
+	bool bAudioVolumeRange = true;
 	bool bEnableLOD = true;
 	bool bDecals = true;
 	bool bFog = true;
