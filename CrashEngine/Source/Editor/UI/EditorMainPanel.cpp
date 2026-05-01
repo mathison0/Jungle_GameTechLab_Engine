@@ -22,6 +22,8 @@
 #include <commdlg.h>
 #include <filesystem>
 
+#include "Core/Logging/LogBuffer.h"
+
 namespace
 {
 void SaveEditorSettings()
@@ -153,7 +155,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 
     Window = InWindow;
     EditorEngine = InEditorEngine;
-    GLog = &LogBuffer;
+    //GLog = &LogBuffer;
 
     IO.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\malgun.ttf", 18.0f, nullptr, IO.Fonts->GetGlyphRangesKorean());
     IO.FontGlobalScale = 1.05f;
@@ -162,7 +164,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
     ImGui_ImplWin32_Init((void*)InWindow->GetHWND());
     ImGui_ImplDX11_Init(InRenderer.GetFD3DDevice().GetDevice(), InRenderer.GetFD3DDevice().GetDeviceContext());
 
-    ConsolePanel.Initialize(InEditorEngine, &LogBuffer);
+    ConsolePanel.Initialize(InEditorEngine, &GetGlobalLogBuffer());
     ControlPanel.Initialize(InEditorEngine);
     DetailsPanel.Initialize(InEditorEngine);
     ScenePanel.Initialize(InEditorEngine);
