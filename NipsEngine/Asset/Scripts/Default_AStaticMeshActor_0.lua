@@ -14,4 +14,3 @@ end
 
 function Tick(owner, deltaTime)
 end
-zjap
