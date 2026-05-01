@@ -21,12 +21,26 @@ enum class EPropertyType : uint8_t
     StaticMeshRef, // UStaticMesh* 에셋 레퍼런스 (드롭다운 선택)
     MaterialSlot,  // FMaterialSlot — 머티리얼 경로
     ComponentRef,  // 액터 내 SceneComponent 참조 — 계층 경로 문자열 ("Root", "0", "1/0" …)
+    Enum,          // int 기반 enum — FEnumPropertyMeta로 표시 이름을 제공
 };
 
 // 머티리얼 슬롯: 경로를 하나의 단위로 관리
 struct FMaterialSlot
 {
     std::string Path;
+};
+
+struct FEnumPropertyOption
+{
+    const char* Label;
+    int32_t Value;
+};
+
+struct FEnumPropertyMeta
+{
+    const char* Name;
+    const FEnumPropertyOption* Options;
+    int32_t NumOptions;
 };
 
 // 컴포넌트가 노출하는 편집 가능한 프로퍼티 디스크립터
@@ -40,4 +54,6 @@ struct FPropertyDescriptor
     float Min = 0.0f;
     float Max = 0.0f;
     float Speed = 0.1f;
+
+    const FEnumPropertyMeta* EnumMeta = nullptr;
 };

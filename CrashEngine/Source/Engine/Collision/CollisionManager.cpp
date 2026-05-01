@@ -102,21 +102,20 @@ void FCollisionManager::ResolveBlock(UShapeComponent* ShapeA, UShapeComponent* S
 	const FVector Correction = Contact.Normal * (Contact.PenetrationDepth + 0.001f);
 	const FVector HalfCorrection = Correction * 0.5f;
 
-	if (AActor* OwnerA = ShapeA->GetOwner())
-	{
-		OwnerA->AddActorWorldOffset(HalfCorrection * -1.0f);
-	}
-	else
-	{
-		ShapeA->AddWorldOffset(HalfCorrection * -1.0f);
-	}
+	const bool bAMovable = ShapeA->IsMovable();
+    const bool bBMovable = ShapeB->IsMovable();
 
-	if (AActor* OwnerB = ShapeB->GetOwner())
-	{
-		OwnerB->AddActorWorldOffset(HalfCorrection);
-	}
-	else
-	{
-		ShapeB->AddWorldOffset(HalfCorrection);
-	}
+    if (bAMovable && bBMovable)
+    {
+        ShapeA->AddWorldOffset(Correction * -0.5f);
+        ShapeB->AddWorldOffset(Correction * 0.5f);
+    }
+    else if (bAMovable)
+    {
+        ShapeA->AddWorldOffset(Correction * -1.0f);
+    }
+    else if (bBMovable)
+    {
+        ShapeB->AddWorldOffset(Correction);
+    }
 }

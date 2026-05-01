@@ -154,6 +154,12 @@ public:
 	bool ShouldGenerateOverlapEvents() const { return bGenerateOverlapEvents; }
     bool IsBlockComponents() const { return bBlockComponent; }
 
+	EComponentMobility GetMobility() const { return Mobility; }
+    void SetMobility(EComponentMobility NewMobility);
+    bool IsMovable() const;
+    bool IsStatic() const;
+
+
 protected:
     void OnTransformDirty() override;
     void EnsureWorldAABBUpdated() const;
@@ -173,6 +179,7 @@ protected:
     bool bInOctreeOverflow = false;
 
 	TArray<FOverlapInfo> OverlapInfos;
+    EComponentMobility Mobility = EComponentMobility::Movable;
 	bool bGenerateOverlapEvents = false;
     bool bGenerateHitEvents = false;
     bool bBlockComponent = true;

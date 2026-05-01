@@ -1550,6 +1550,52 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
         bChanged = ImGui::DragInt(WidgetLabel.c_str(), Val);
         break;
     }
+    case EPropertyType::Enum:
+    {
+        int32* Val = static_cast<int32*>(Prop.ValuePtr);
+        const FEnumPropertyMeta* Meta = Prop.EnumMeta;
+        const char* Preview = "Unknown";
+
+        if (Meta)
+        {
+            for (int32 OptionIndex = 0; OptionIndex < Meta->NumOptions; ++OptionIndex)
+            {
+                const FEnumPropertyOption& Option = Meta->Options[OptionIndex];
+                if (Option.Value == *Val)
+                {
+                    Preview = Option.Label;
+                    break;
+                }
+            }
+        }
+
+        ImGui::Text("%s", DisplayName.c_str());
+        ImGui::SameLine(120);
+        ImGui::SetNextItemWidth(-1.0f);
+        if (ImGui::BeginCombo(("##enum_" + Prop.Name).c_str(), Preview))
+        {
+            if (Meta)
+            {
+                for (int32 OptionIndex = 0; OptionIndex < Meta->NumOptions; ++OptionIndex)
+                {
+                    const FEnumPropertyOption& Option = Meta->Options[OptionIndex];
+                    const bool bSelected = (Option.Value == *Val);
+                    if (ImGui::Selectable(Option.Label, bSelected))
+                    {
+                        *Val = Option.Value;
+                        bChanged = true;
+                    }
+
+                    if (bSelected)
+                    {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+            }
+            ImGui::EndCombo();
+        }
+        break;
+    }
     case EPropertyType::Float:
     {
         float* Val = static_cast<float*>(Prop.ValuePtr);

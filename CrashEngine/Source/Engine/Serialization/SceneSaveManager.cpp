@@ -305,6 +305,7 @@ json::JSON FSceneSaveManager::SerializePropertyValue(const FPropertyDescriptor& 
         return JSON(*static_cast<bool*>(Prop.ValuePtr));
 
     case EPropertyType::Int:
+    case EPropertyType::Enum:
         return JSON(*static_cast<int32*>(Prop.ValuePtr));
 
     case EPropertyType::Float:
@@ -745,6 +746,7 @@ void FSceneSaveManager::DeserializePropertyValue(FPropertyDescriptor& Prop, json
         break;
 
     case EPropertyType::Int:
+    case EPropertyType::Enum:
         *static_cast<int32*>(Prop.ValuePtr) = Value.ToInt();
         break;
 

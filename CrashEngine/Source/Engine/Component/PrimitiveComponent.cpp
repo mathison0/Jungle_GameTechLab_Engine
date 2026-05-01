@@ -35,6 +35,20 @@ bool HasSameTransformBasis(const FMatrix& A, const FMatrix& B)
 
 IMPLEMENT_CLASS(UPrimitiveComponent, USceneComponent)
 
+namespace
+{
+constexpr FEnumPropertyOption GComponentMobilityOptions[] = {
+    { "Static", static_cast<int32_t>(EComponentMobility::Static) },
+    { "Movable", static_cast<int32_t>(EComponentMobility::Movable) },
+};
+
+constexpr FEnumPropertyMeta GComponentMobilityMeta = {
+    "EComponentMobility",
+    GComponentMobilityOptions,
+    static_cast<int32_t>(sizeof(GComponentMobilityOptions) / sizeof(GComponentMobilityOptions[0])),
+};
+}
+
 UPrimitiveComponent::~UPrimitiveComponent()
 {
     DestroyRenderState();
@@ -57,6 +71,7 @@ void UPrimitiveComponent::Serialize(FArchive& Ar)
     Ar << bGenerateOverlapEvents;
     Ar << bBlockComponent;
     Ar << bIsEditorHelper;
+    Ar << Mobility;
 }
 
 void UPrimitiveComponent::SetVisibility(bool bNewVisible)
@@ -232,6 +247,7 @@ void UPrimitiveComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
     OutProps.push_back({ "Generate Overlap Events", EPropertyType::Bool, &bGenerateOverlapEvents });
     OutProps.push_back({ "Generate Hit Events", EPropertyType::Bool, &bGenerateHitEvents });
     OutProps.push_back({ "Block Component", EPropertyType::Bool, &bBlockComponent });
+    OutProps.push_back({ "Mobility", EPropertyType::Enum, &Mobility, 0.0f, 0.0f, 0.1f, &GComponentMobilityMeta });
 }
 
 void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
@@ -392,6 +408,21 @@ void UPrimitiveComponent::SetGenerateHitEvents(bool bNewGenerate)
 void UPrimitiveComponent::SetBlockComponent(bool bNewBlockComponent)
 {
     bBlockComponent = bNewBlockComponent;
+}
+
+void UPrimitiveComponent::SetMobility(EComponentMobility NewMobility)
+{
+    Mobility = NewMobility;
+}
+
+bool UPrimitiveComponent::IsMovable() const
+{
+    return Mobility == EComponentMobility::Movable;
+}
+
+bool UPrimitiveComponent::IsStatic() const
+{
+    return Mobility == EComponentMobility::Static;
 }
 
 void UPrimitiveComponent::OnTransformDirty()

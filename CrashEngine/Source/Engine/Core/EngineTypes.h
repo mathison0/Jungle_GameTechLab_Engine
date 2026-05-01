@@ -122,3 +122,12 @@ enum EEngineShowFlags : uint32
 
     SF_All = SF_Primitives | SF_Text | SF_Grid | SF_BoundingBox | SF_UUIDText | SF_Gizmo
 };
+
+// ============================================================
+// EComponentMobility - 컴포넌트의 엔진 공통 속성(Stationary, Kinematic, Simulated 추가 가능)
+// ============================================================
+enum EComponentMobility
+{
+	Static,
+	Movable,
+};
