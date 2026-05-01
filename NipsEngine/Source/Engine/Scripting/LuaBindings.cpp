@@ -2,8 +2,10 @@
 
 #if WITH_LUA
 #include "GameFramework/AActor.h"
+#include "Component/PrimitiveComponent.h"
 #include "Math/Vector.h"
 #include "Object/Object.h"
+#include "Core/CollisionTypes.h"
 
 void RegisterLuaBindings(sol::state& Lua)
 {
@@ -36,6 +38,17 @@ void RegisterLuaBindings(sol::state& Lua)
 		"SetActorScale", &AActor::SetActorScale,
 		"GetName", [](AActor& Actor) { return Actor.GetFName().ToString(); },
 		"GetUUID", &AActor::GetUUID
+	);
+
+	Lua.new_usertype<FHitResult>(
+		"FHitResult",
+		"HitComponent", &FHitResult::HitComponent,
+		"Distance", &FHitResult::Distance,
+		"Location", &FHitResult::Location,
+		"Normal", &FHitResult::Normal,
+		"FaceIndex", &FHitResult::FaceIndex,
+		"bHit", &FHitResult::bHit,
+		"IsValid", &FHitResult::IsValid
 	);
 }
 #endif

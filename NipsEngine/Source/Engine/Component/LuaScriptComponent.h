@@ -23,7 +23,10 @@ public:
 	bool EnsureScriptFile();
 
 	const FString& GetScriptPath() const { return ScriptPath; }
-	void SetScriptPath(const FString& InScriptPath) { ScriptPath = InScriptPath; }
+	void SetScriptPath(const FString& InScriptPath);
+	bool IsScriptLoaded() const { return bLoaded; }
+	bool IsLuaRuntimeEnabled() const;
+	const FString& GetLastScriptError() const { return LastScriptError; }
 
 	void HandleBeginOverlap(const FOverlapResult& Overlap);
 	void HandleEndOverlap(const FOverlapResult& Overlap);
@@ -36,10 +39,14 @@ private:
 	void BindCollisionEvents();
 	void UnbindCollisionEvents();
 	FString MakeDefaultScriptPath() const;
+	void SetLastScriptError(const FString& Error);
 
 	FString ScriptPath;
+	FString LastScriptError;
 	bool bAutoLoad = true;
 	bool bAutoCreateScript = true;
 	bool bLoaded = false;
 	bool bCollisionEventsBound = false;
+	bool bUseDefaultScriptPath = true;
+	bool bLoggedRuntimeDisabled = false;
 };

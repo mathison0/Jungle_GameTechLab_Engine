@@ -5,6 +5,7 @@
 #include "GameFramework/AActor.h"
 #include "Object/ObjectFactory.h"
 #include "Scripting/LuaScriptSystem.h"
+#include "UI/EditorConsoleWidget.h"
 
 #include <filesystem>
 #include <fstream>
@@ -38,12 +39,10 @@ namespace
 ULuaScriptComponent::ULuaScriptComponent()
 {
 	bCanEverTick = true;
-	ScriptPath = "Asset/Scripts/template.lua";
 }
 
 ULuaScriptComponent::~ULuaScriptComponent()
 {
-	UnbindCollisionEvents();
 	FLuaScriptSystem::Get().UnloadScript(this);
 }
 
@@ -52,9 +51,10 @@ void ULuaScriptComponent::BeginPlay()
 	UActorComponent::BeginPlay();
 	BindCollisionEvents();
 
-	if (ScriptPath.empty())
+	if (bUseDefaultScriptPath || ScriptPath.empty())
 	{
 		ScriptPath = MakeDefaultScriptPath();
+		bUseDefaultScriptPath = true;
 	}
 
 	if (bAutoCreateScript)
@@ -86,7 +86,17 @@ void ULuaScriptComponent::EndPlay()
 
 void ULuaScriptComponent::OnRegister()
 {
+	if (bRegistered)
+	{
+		return;
+	}
+
 	bRegistered = true;
+
+	if (GetOwner())
+	{
+		BindCollisionEvents();
+	}
 }
 
 void ULuaScriptComponent::OnUnregister()
@@ -103,11 +113,18 @@ void ULuaScriptComponent::Serialize(FArchive& Ar)
 	Ar << "ScriptPath" << ScriptPath;
 	Ar << "AutoLoad" << bAutoLoad;
 	Ar << "AutoCreateScript" << bAutoCreateScript;
+	Ar << "UseDefaultScriptPath" << bUseDefaultScriptPath;
+
+	if (Ar.IsLoading())
+	{
+		bUseDefaultScriptPath = bUseDefaultScriptPath || ScriptPath.empty();
+	}
 }
 
 void ULuaScriptComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
 	UActorComponent::GetEditableProperties(OutProps);
+	OutProps.push_back({ "Use Default Script Path", EPropertyType::Bool, &bUseDefaultScriptPath });
 	OutProps.push_back({ "Script Path", EPropertyType::String, &ScriptPath });
 	OutProps.push_back({ "Auto Load", EPropertyType::Bool, &bAutoLoad });
 	OutProps.push_back({ "Auto Create Script", EPropertyType::Bool, &bAutoCreateScript });
@@ -119,45 +136,85 @@ void ULuaScriptComponent::PostEditProperty(const char* PropertyName)
 	if (PropertyName && strcmp(PropertyName, "Script Path") == 0)
 	{
 		bLoaded = false;
+		if (ScriptPath.empty())
+		{
+			bUseDefaultScriptPath = true;
+		}
+	}
+	else if (PropertyName && strcmp(PropertyName, "Use Default Script Path") == 0)
+	{
+		bLoaded = false;
+		if (bUseDefaultScriptPath)
+		{
+			ScriptPath = MakeDefaultScriptPath();
+		}
 	}
 }
 
 bool ULuaScriptComponent::ReloadScript()
 {
-	if (ScriptPath.empty())
+	if (bUseDefaultScriptPath || ScriptPath.empty())
 	{
 		ScriptPath = MakeDefaultScriptPath();
+		bUseDefaultScriptPath = true;
 	}
 
 	bLoaded = FLuaScriptSystem::Get().ReloadScript(this, FPaths::ToAbsoluteString(FPaths::ToWide(ScriptPath)));
+	SetLastScriptError(FLuaScriptSystem::Get().GetLastError());
+
+	if (!bLoaded && !IsLuaRuntimeEnabled() && !bLoggedRuntimeDisabled)
+	{
+		UE_LOG("LuaScriptComponent: Lua runtime is disabled. Script '%s' was not loaded.", ScriptPath.c_str());
+		bLoggedRuntimeDisabled = true;
+	}
+	else if (!bLoaded && !LastScriptError.empty())
+	{
+		UE_LOG("LuaScriptComponent: failed to load '%s': %s", ScriptPath.c_str(), LastScriptError.c_str());
+	}
+
 	return bLoaded;
 }
 
 bool ULuaScriptComponent::EnsureScriptFile()
 {
-	if (ScriptPath.empty())
+	if (bUseDefaultScriptPath || ScriptPath.empty())
 	{
 		ScriptPath = MakeDefaultScriptPath();
+		bUseDefaultScriptPath = true;
 	}
 
 	std::filesystem::path Target(FPaths::ToAbsolute(FPaths::ToWide(ScriptPath)));
 	if (std::filesystem::exists(Target))
 	{
+		SetLastScriptError("");
 		return true;
 	}
 
-	std::filesystem::create_directories(Target.parent_path());
+	std::error_code ErrorCode;
+	std::filesystem::create_directories(Target.parent_path(), ErrorCode);
+	if (ErrorCode)
+	{
+		SetLastScriptError("Failed to create script directory: " + ErrorCode.message());
+		UE_LOG("LuaScriptComponent: %s", LastScriptError.c_str());
+		return false;
+	}
 
 	std::filesystem::path Template(FPaths::ToAbsolute(L"Asset/Scripts/template.lua"));
 	if (std::filesystem::exists(Template))
 	{
-		std::filesystem::copy_file(Template, Target, std::filesystem::copy_options::overwrite_existing);
-		return true;
+		std::filesystem::copy_file(Template, Target, std::filesystem::copy_options::overwrite_existing, ErrorCode);
+		if (!ErrorCode)
+		{
+			SetLastScriptError("");
+			return true;
+		}
 	}
 
 	std::ofstream Out(Target);
 	if (!Out.is_open())
 	{
+		SetLastScriptError("Failed to create script file: " + FPaths::ToUtf8(Target.wstring()));
+		UE_LOG("LuaScriptComponent: %s", LastScriptError.c_str());
 		return false;
 	}
 
@@ -167,6 +224,7 @@ bool ULuaScriptComponent::EnsureScriptFile()
 	Out << "function OnOverlap(owner, otherActor)\nend\n\n";
 	Out << "function OnEndOverlap(owner, otherActor)\nend\n\n";
 	Out << "function OnHit(owner, hit)\nend\n";
+	SetLastScriptError("");
 	return true;
 }
 
@@ -194,8 +252,27 @@ void ULuaScriptComponent::HandleHit(const FHitResult& Hit)
 	}
 }
 
+void ULuaScriptComponent::SetScriptPath(const FString& InScriptPath)
+{
+	ScriptPath = InScriptPath;
+	bLoaded = false;
+	bUseDefaultScriptPath = ScriptPath.empty();
+	SetLastScriptError("");
+	bLoggedRuntimeDisabled = false;
+}
+
+bool ULuaScriptComponent::IsLuaRuntimeEnabled() const
+{
+	return FLuaScriptSystem::Get().IsLuaEnabled();
+}
+
 void ULuaScriptComponent::TickComponent(float DeltaTime)
 {
+	if (!bCollisionEventsBound)
+	{
+		BindCollisionEvents();
+	}
+
 	if (bLoaded)
 	{
 		FLuaScriptSystem::Get().CallTick(this, GetOwner(), DeltaTime);
@@ -215,6 +292,7 @@ void ULuaScriptComponent::BindCollisionEvents()
 		return;
 	}
 
+	bool bAnyBound = false;
 	for (UPrimitiveComponent* Primitive : OwnerActor->GetPrimitiveComponents())
 	{
 		if (!Primitive)
@@ -225,9 +303,10 @@ void ULuaScriptComponent::BindCollisionEvents()
 		Primitive->OnComponentBeginOverlap.AddDynamic(this, &ULuaScriptComponent::HandleBeginOverlap);
 		Primitive->OnComponentEndOverlap.AddDynamic(this, &ULuaScriptComponent::HandleEndOverlap);
 		Primitive->OnComponentHit.AddDynamic(this, &ULuaScriptComponent::HandleHit);
+		bAnyBound = true;
 	}
 
-	bCollisionEventsBound = true;
+	bCollisionEventsBound = bAnyBound;
 }
 
 void ULuaScriptComponent::UnbindCollisionEvents()
@@ -264,4 +343,9 @@ FString ULuaScriptComponent::MakeDefaultScriptPath() const
 	const AActor* OwnerActor = GetOwner();
 	const FString ActorName = OwnerActor ? OwnerActor->GetFName().ToString() : "Actor";
 	return "Asset/Scripts/" + SanitizeScriptName(ActorName) + ".lua";
+}
+
+void ULuaScriptComponent::SetLastScriptError(const FString& Error)
+{
+	LastScriptError = Error;
 }

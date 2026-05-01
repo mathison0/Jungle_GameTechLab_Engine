@@ -1,3 +1,8 @@
+-- LuaScriptComponent contract
+-- owner: AActor bound from C++
+-- otherActor: AActor or nil
+-- hit: FHitResult
+
 function BeginPlay(owner)
 end
 
