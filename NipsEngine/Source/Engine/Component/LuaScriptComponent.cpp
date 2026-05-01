@@ -265,31 +265,21 @@ bool ULuaScriptComponent::EnsureScriptFile()
 	}
 
 	std::filesystem::path Template(FPaths::ToAbsolute(L"Asset/Scripts/template.lua"));
-	if (std::filesystem::exists(Template))
+	if (!std::filesystem::exists(Template))
 	{
-		std::filesystem::copy_file(Template, Target, std::filesystem::copy_options::overwrite_existing, ErrorCode);
-		if (!ErrorCode)
-		{
-			SetLastScriptError("");
-			RefreshScriptWriteTime();
-			return true;
-		}
-	}
-
-	std::ofstream Out(Target);
-	if (!Out.is_open())
-	{
-		SetLastScriptError("Failed to create script file: " + FPaths::ToUtf8(Target.wstring()));
+		SetLastScriptError("Template script does not exist: Asset/Scripts/template.lua");
 		UE_LOG("LuaScriptComponent: %s", LastScriptError.c_str());
 		return false;
 	}
 
-	Out << "function BeginPlay(owner)\nend\n\n";
-	Out << "function Tick(owner, deltaTime)\nend\n\n";
-	Out << "function EndPlay(owner)\nend\n\n";
-	Out << "function OnOverlap(owner, otherActor)\nend\n\n";
-	Out << "function OnEndOverlap(owner, otherActor)\nend\n\n";
-	Out << "function OnHit(owner, hit)\nend\n";
+	std::filesystem::copy_file(Template, Target, std::filesystem::copy_options::overwrite_existing, ErrorCode);
+	if (ErrorCode)
+	{
+		SetLastScriptError("Failed to copy template.lua: " + ErrorCode.message());
+		UE_LOG("LuaScriptComponent: %s", LastScriptError.c_str());
+		return false;
+	}
+
 	SetLastScriptError("");
 	RefreshScriptWriteTime();
 	return true;
@@ -324,35 +314,24 @@ bool ULuaScriptComponent::CreateScriptFileFromName(const FString& InScriptName, 
 	}
 
 	const std::filesystem::path Template(FPaths::ToAbsolute(L"Asset/Scripts/template.lua"));
-	if (std::filesystem::exists(Template))
+	if (!std::filesystem::exists(Template))
 	{
-		const auto CopyOptions = bOverwriteExisting
-			? std::filesystem::copy_options::overwrite_existing
-			: std::filesystem::copy_options::none;
-		std::filesystem::copy_file(Template, Target, CopyOptions, ErrorCode);
-		if (!ErrorCode)
-		{
-			SetLastScriptError("");
-			RefreshScriptWriteTime();
-			UE_LOG("LuaScriptComponent: %s script '%s'.", bOverwriteExisting ? "overwrote" : "created", ScriptPath.c_str());
-			return true;
-		}
-	}
-
-	std::ofstream Out(Target, std::ios::trunc);
-	if (!Out.is_open())
-	{
-		SetLastScriptError("Failed to create script file: " + FPaths::ToUtf8(Target.wstring()));
+		SetLastScriptError("Template script does not exist: Asset/Scripts/template.lua");
 		UE_LOG("LuaScriptComponent: %s", LastScriptError.c_str());
 		return false;
 	}
 
-	Out << "function BeginPlay(owner)\nend\n\n";
-	Out << "function Tick(owner, deltaTime)\nend\n\n";
-	Out << "function EndPlay(owner)\nend\n\n";
-	Out << "function OnOverlap(owner, otherActor)\nend\n\n";
-	Out << "function OnEndOverlap(owner, otherActor)\nend\n\n";
-	Out << "function OnHit(owner, hit)\nend\n";
+	const auto CopyOptions = bOverwriteExisting
+		? std::filesystem::copy_options::overwrite_existing
+		: std::filesystem::copy_options::none;
+	std::filesystem::copy_file(Template, Target, CopyOptions, ErrorCode);
+	if (ErrorCode)
+	{
+		SetLastScriptError("Failed to copy template.lua: " + ErrorCode.message());
+		UE_LOG("LuaScriptComponent: %s", LastScriptError.c_str());
+		return false;
+	}
+
 	SetLastScriptError("");
 	RefreshScriptWriteTime();
 	UE_LOG("LuaScriptComponent: %s script '%s'.", bOverwriteExisting ? "overwrote" : "created", ScriptPath.c_str());
