@@ -44,7 +44,7 @@ public:
             std::remove_if(
                 Handlers.begin(), Handlers.end(),
                 [Instance](const FHandlerElement& Node) {
-                    return Node.TargetObject == Instance;
+                    return Node.Target == Instance;
                 }
             ), 
             Handlers.end()
