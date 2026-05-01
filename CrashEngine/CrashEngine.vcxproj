@@ -401,11 +401,9 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\AtlasBuddyAllocator2D.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp" />
@@ -675,13 +673,10 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasBuddyAllocator2D.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasRegistry.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasSystem.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.h" />
