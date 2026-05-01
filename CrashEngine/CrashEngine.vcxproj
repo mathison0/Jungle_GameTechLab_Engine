@@ -241,6 +241,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\LUA\FCoroutineSceduler.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
@@ -446,6 +447,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\LUA\FCoroutineSceduler.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
     <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
