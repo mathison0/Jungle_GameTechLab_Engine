@@ -7,4 +7,4 @@ extern "C"
 
 	// AMD PowerXpress: 고성능 AMD CPU 사용 요청
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
-}
+} 

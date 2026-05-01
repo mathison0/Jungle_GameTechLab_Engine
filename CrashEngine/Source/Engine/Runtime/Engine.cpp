@@ -59,6 +59,8 @@ void UEngine::Init(FWindowsWindow* InWindow)
     FMeshBufferManager::Get().Initialize(Device);
     FResourceManager::Get().LoadFromFile(FPaths::ToUtf8(FPaths::ResourceFilePath()), Device);
     UE_LOG(Engine, Info, "Runtime engine initialization completed.");
+
+	ScriptSystem.Initialize();
 }
 
 void UEngine::Shutdown()
@@ -69,6 +71,8 @@ void UEngine::Shutdown()
     FObjManager::ReleaseAllGPU();
     FMeshBufferManager::Get().Release();
     Renderer.Release();
+
+	ScriptSystem.Shutdown();
 }
 
 void UEngine::BeginPlay()

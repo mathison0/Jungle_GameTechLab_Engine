@@ -1,15 +1,16 @@
-// 에디터 영역의 세부 동작을 구현합니다.
+﻿// 에디터 영역의 세부 동작을 구현합니다.
 #include "Editor/UI/EditorConsolePanel.h"
 
 #include "Core/Logging/LogMacros.h"
 #include "Editor/EditorEngine.h"
-#include "Editor/Logging/EditorLogBuffer.h"
 #include "Editor/Subsystem/OverlayStatSystem.h"
 #include "Render/Resources/Shadows/ShadowFilterSettings.h"
 #include "Render/Resources/Shadows/ShadowMapSettings.h"
 
 #include <algorithm>
 #include <cctype>
+
+#include "Core/Logging/LogBuffer.h"
 
 namespace
 {
@@ -108,7 +109,7 @@ FString ToLowerAsciiCopy(const FString& Value)
 }
 } // namespace
 
-void FEditorConsolePanel::Initialize(UEditorEngine* InEditorEngine, FEditorLogBuffer* InLogBuffer)
+void FEditorConsolePanel::Initialize(UEditorEngine* InEditorEngine, FLogBuffer* InLogBuffer)
 {
     FEditorPanel::Initialize(InEditorEngine);
     LogBuffer = InLogBuffer;
@@ -352,8 +353,8 @@ void FEditorConsolePanel::DrawLogOutput()
 
     if (LogBuffer)
     {
-        const TArray<FEditorLogEntry>& Entries = LogBuffer->GetEntries();
-        for (const FEditorLogEntry& Entry : Entries)
+        const TArray<FLogEntry>& Entries = LogBuffer->GetEntries();
+        for (const FLogEntry& Entry : Entries)
         {
             if (!ShouldDisplayEntry(Entry.Level, Entry.FormattedMessage))
             {

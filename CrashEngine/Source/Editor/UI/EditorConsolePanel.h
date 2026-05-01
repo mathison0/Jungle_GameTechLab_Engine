@@ -1,4 +1,4 @@
-// 에디터 영역에서 공유되는 타입과 인터페이스를 정의합니다.
+﻿// 에디터 영역에서 공유되는 타입과 인터페이스를 정의합니다.
 #pragma once
 
 #include "Core/CoreTypes.h"
@@ -14,13 +14,13 @@
 #include "Core/Logging/LogOutputDevice.h"
 #include "Editor/UI/EditorPanel.h"
 
-class FEditorLogBuffer;
+class FLogBuffer;
 
 // FEditorConsolePanel는 에디터 UI 표시와 입력 처리를 담당합니다.
 class FEditorConsolePanel : public FEditorPanel
 {
 public:
-    void Initialize(UEditorEngine* InEditorEngine, FEditorLogBuffer* InLogBuffer);
+    void Initialize(UEditorEngine* InEditorEngine, FLogBuffer* InLogBuffer);
     virtual void Initialize(UEditorEngine* InEditorEngine) override;
     virtual void Render(float DeltaTime) override;
 
@@ -38,7 +38,7 @@ private:
     bool bReclaimFocus = false;
     ELogLevel MinimumVisibleLevel = ELogLevel::Verbose;
     std::array<bool, LogLevelCount> LevelVisibility{ true, true, true, true, true };
-    FEditorLogBuffer* LogBuffer = nullptr;
+    FLogBuffer* LogBuffer = nullptr;
 
     using CommandFn = std::function<void(const TArray<FString>& args)>;
     TMap<FString, CommandFn> Commands;
