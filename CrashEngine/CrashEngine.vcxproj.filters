@@ -1091,6 +1091,8 @@
     <ClCompile Include="ThirdParty\Lua\src\lutf8lib.c" />
     <ClCompile Include="ThirdParty\Lua\src\lvm.c" />
     <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
+    <ClCompile Include="Source\Engine\Scripting\ScriptSystem.cpp" />
+    <ClCompile Include="Source\Engine\Core\Logging\LogBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1961,6 +1963,9 @@
     <ClInclude Include="ThirdParty\Lua\src\lundump.h" />
     <ClInclude Include="ThirdParty\Lua\src\lvm.h" />
     <ClInclude Include="ThirdParty\Lua\src\lzio.h" />
+    <ClInclude Include="Source\Engine\Scripting\ScriptSystem.h" />
+    <ClInclude Include="Source\Engine\Core\Logging\LogEntry.h" />
+    <ClInclude Include="Source\Engine\Core\Logging\LogBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include "Scripting/ScriptSystem.h"
+
 class FWindowsWindow;
 class FTimer;
 class UCameraComponent;
@@ -76,6 +78,8 @@ protected:
     UGameViewportClient* GameViewportClient = nullptr;
 
     FRenderer Renderer;
+
+	FScriptSystem ScriptSystem;
 
 protected:
     FSceneView SceneView;

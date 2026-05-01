@@ -1,7 +1,16 @@
-#include "Core/CoreGlobals.h"
+﻿#include "Core/CoreGlobals.h"
 
-ILogOutputDevice* GLog = nullptr;
-ELogLevel         GMinimumLogLevel = ELogLevel::Verbose;
+#include "Logging/LogBuffer.h"
+
+ELogLevel GMinimumLogLevel = ELogLevel::Verbose;
+
+FLogBuffer& GetGlobalLogBuffer()
+{
+	static FLogBuffer Buffer;
+	return Buffer;
+}
+
+ILogOutputDevice* GLog = &GetGlobalLogBuffer();
 
 const char* GetLogLevelLabel(ELogLevel Level)
 {
