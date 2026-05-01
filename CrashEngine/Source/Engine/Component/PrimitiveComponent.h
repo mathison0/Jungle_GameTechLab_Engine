@@ -139,6 +139,13 @@ public:
         bInOctreeOverflow = false;
     }
 
+	void SetGenerateOverlapEvents(bool bNewGenerate);
+    void SetGenerateHitEvents(bool bNewGenerate);
+    void SetBlockComponent(bool bMewBlockComponent);
+    bool ShouldGenerateHitEvents() const { return bGenerateHitEvents; }
+	bool ShouldGenerateOverlapEvents() const { return bGenerateOverlapEvents; }
+    bool IsBlockComponents() const { return bBlockComponent; }
+
 protected:
     void OnTransformDirty() override;
     void EnsureWorldAABBUpdated() const;
@@ -156,5 +163,9 @@ protected:
 
     FOctree* OctreeNode = nullptr;
     bool bInOctreeOverflow = false;
+
+	bool bGenerateOverlapEvents = false;
+    bool bGenerateHitEvents = false;
+    bool bBlockComponent = true;
 };
 

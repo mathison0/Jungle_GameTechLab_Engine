@@ -53,6 +53,9 @@ void UPrimitiveComponent::Serialize(FArchive& Ar)
     Ar << bIsVisible;
     Ar << bVisibleInEditor;
     Ar << bVisibleInGame;
+    Ar << bGenerateHitEvents;
+    Ar << bGenerateOverlapEvents;
+    Ar << bBlockComponent;
     Ar << bIsEditorHelper;
 }
 
@@ -169,6 +172,9 @@ void UPrimitiveComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
     OutProps.push_back({ "Visible In Editor", EPropertyType::Bool, &bVisibleInEditor });
     OutProps.push_back({ "Visible In Game", EPropertyType::Bool, &bVisibleInGame });
     OutProps.push_back({ "Is Editor Helper", EPropertyType::Bool, &bIsEditorHelper });
+    OutProps.push_back({ "Generate Overlap Events", EPropertyType::Bool, &bGenerateOverlapEvents });
+    OutProps.push_back({ "Generate Hit Events", EPropertyType::Bool, &bGenerateHitEvents });
+    OutProps.push_back({ "Block Component", EPropertyType::Bool, &bBlockComponent });
 }
 
 void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
@@ -314,6 +320,21 @@ void UPrimitiveComponent::MarkRenderStateDirty()
 {
     DestroyRenderState();
     CreateRenderState();
+}
+
+void UPrimitiveComponent::SetGenerateOverlapEvents(bool bNewGenerateOverlap)
+{
+    bGenerateOverlapEvents = bNewGenerateOverlap;
+}
+
+void UPrimitiveComponent::SetGenerateHitEvents(bool bNewGenerate)
+{
+    bGenerateHitEvents = bNewGenerate;
+}
+
+void UPrimitiveComponent::SetBlockComponent(bool bNewBlockComponent)
+{
+    bBlockComponent = bNewBlockComponent;
 }
 
 void UPrimitiveComponent::OnTransformDirty()
