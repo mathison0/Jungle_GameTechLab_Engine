@@ -1,4 +1,4 @@
-#include "Component/LuaScriptComponent.h"
+﻿#include "Component/LuaScriptComponent.h"
 
 #include "Component/PrimitiveComponent.h"
 #include "Core/Paths.h"
