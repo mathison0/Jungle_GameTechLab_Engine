@@ -26,7 +26,7 @@ bool FScriptSystem::Initialize()
 	// sol::lib::package
 	// sol::lib::debug
 	// sol::lib::coroutine
-	Lua->open_libraries(sol::lib::base, sol::lib::math, sol::lib::table, sol::lib::string);
+    Lua->open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::math, sol::lib::table, sol::lib::string);
 
 	RegisterEngineAPI();
 
