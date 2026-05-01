@@ -14,6 +14,7 @@ public:
 	void Initialize(UEditorEngine* InEditorEngine) override;
 
 	UActorComponent* GetSelectedComponent() const { return SelectedComponent; }
+	UActorComponent* GetSelectedDetailComponent() const { return bActorSelected ? nullptr : SelectedComponent; }
 	bool IsActorSelected() const { return bActorSelected; }
 	bool IsModalInputBlocking() const;
 

@@ -75,7 +75,10 @@ void ULuaScriptComponent::BeginPlay()
 
 	if (!ScriptPath.empty())
 	{
-		ReloadScript();
+		if (!bUseDefaultScriptPath || HasScriptFile())
+		{
+			ReloadScript();
+		}
 	}
 
 	if (bLoaded)
@@ -133,11 +136,6 @@ void ULuaScriptComponent::PostDuplicate(UObject* Original)
 		if (!OriginalScript->ScriptPath.empty())
 		{
 			ScriptPath = OriginalScript->ScriptPath;
-		}
-		else
-		{
-			ScriptPath = MakeDefaultScriptPathForActor(OriginalScript->GetOwner());
-			bUseDefaultScriptPath = true;
 		}
 	}
 

@@ -79,9 +79,15 @@ void FEditorPropertyWidget::ResetSelection()
 
 void FEditorPropertyWidget::RestoreSelection(AActor* Actor, UActorComponent* Component, bool bInActorSelected)
 {
+	if (Component != nullptr && Component->GetOwner() != Actor)
+	{
+		Component = nullptr;
+		bInActorSelected = true;
+	}
+
 	LastSelectedActor = Actor;
 	SelectedComponent = Component;
-	bActorSelected = bInActorSelected || Component == nullptr;
+	bActorSelected = Component == nullptr ? bInActorSelected : false;
 }
 
 bool FEditorPropertyWidget::IsModalInputBlocking() const
