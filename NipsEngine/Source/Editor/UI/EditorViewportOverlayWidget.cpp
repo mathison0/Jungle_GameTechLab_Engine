@@ -1049,6 +1049,7 @@ namespace
 		case EViewMode::SceneDepth:  return "Scene Depth";
 		case EViewMode::WorldNormal: return "World Normal";
 		case EViewMode::CascadeShadow: return "Cascade Shadow";
+		case EViewMode::DebugCollision: return "Collision";
 		default:                     return "Lit";
 		}
 	}

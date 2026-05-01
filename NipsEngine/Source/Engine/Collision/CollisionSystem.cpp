@@ -38,6 +38,8 @@ void FCollisionSystem::UpdateWorldCollision(UWorld* World)
 	{
 		ProcessBroadCollision(World, Candidate);
 	}
+
+	ClearStaleCollisions(Candidates);
 }
 
 // 월드에서 충돌 처리가 필요한 ShapeComponent 후보를 수집합니다.
@@ -201,5 +203,36 @@ void FCollisionSystem::ProcessNarrowCollision(const FCollisionCandidate& A, cons
 		FOverlapResult BeginOverlapInfo{ A.Actor, A.Component };
 		B.Component->AddOverlapInfo(A.Actor, A.Component);
 		B.Component->OnComponentBeginOverlap.Broadcast(BeginOverlapInfo);
+	}
+}
+
+void FCollisionSystem::ClearStaleCollisions(const TArray<FCollisionCandidate>& Candidates)
+{
+	for (const FCollisionCandidate& C : Candidates)
+	{
+		UPrimitiveComponent* Comp = C.Component;
+		if (Comp == nullptr)
+			continue;
+
+		TArray<FOverlapResult> StaleOverlaps;
+		for (const FOverlapResult& Info : Comp->GetOverlapInfos())
+		{
+			if (Info.OtherComp == nullptr || !FCollision::TestOverlap(Comp, Info.OtherComp))
+				StaleOverlaps.push_back(Info);
+		}
+		for (const FOverlapResult& Stale : StaleOverlaps)
+		{
+			Comp->RemoveOverlapInfo(Stale.OtherActor, Stale.OtherComp);
+			Comp->OnComponentEndOverlap.Broadcast(Stale);
+		}
+
+		TArray<FBlockingResult> StaleBlockings;
+		for (const FBlockingResult& Info : Comp->GetBlockingInfos())
+		{
+			if (Info.OtherComp == nullptr || !FCollision::TestOverlap(Comp, Info.OtherComp))
+				StaleBlockings.push_back(Info);
+		}
+		for (const FBlockingResult& Stale : StaleBlockings)
+			Comp->RemoveBlockingInfo(Stale.OtherActor, Stale.OtherComp);
 	}
 }

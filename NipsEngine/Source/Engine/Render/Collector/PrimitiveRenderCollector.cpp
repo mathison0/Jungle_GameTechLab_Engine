@@ -4,6 +4,7 @@
 #include "Component/DecalComponent.h"
 #include "Component/HeightFogComponent.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/Collision/ShapeComponent.h"
 #include "Component/SkyAtmosphereComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
@@ -63,6 +64,24 @@ namespace
 		}
 
 		return MaxLOD;
+	}
+
+	// ShapeComponent에 충돌 정보가 저장되므로 Actor 단위로 ShapeComponent를 순회해서 확인한다.
+	bool ShouldHighlightDebugCollision(const UPrimitiveComponent* Primitive, EViewMode ViewMode)
+	{
+		if (ViewMode != EViewMode::DebugCollision || Primitive == nullptr)
+			return false;
+
+		const AActor* Owner = Primitive->GetOwner();
+		if (Owner == nullptr)
+			return false;
+
+		for (UPrimitiveComponent* Comp : Owner->GetPrimitiveComponents())
+		{
+			if (Cast<UShapeComponent>(Comp) && (Comp->GetOverlapInfos().size() || Comp->GetBlockingInfos().size()))
+				return true;
+		}
+		return false;
 	}
 }
 
@@ -127,6 +146,8 @@ void FPrimitiveRenderCollector::CollectFromComponent(
 
 		const FStaticMesh* MeshData = StaticMesh->GetMeshData(SelectedLOD);
 		const TArray<FStaticMeshSection>& Sections = MeshData->Sections;
+		const bool bDebugCollisionHighlight = ShouldHighlightDebugCollision(Primitive, ViewMode);
+		const FVector4 PrimitiveColor = bDebugCollisionHighlight ? FColor::Red().ToVector4() : FColor::White().ToVector4();
 
 		for (int32 SectionIdx = 0; SectionIdx < static_cast<int32>(Sections.size()); ++SectionIdx)
 		{
@@ -140,9 +161,16 @@ void FPrimitiveRenderCollector::CollectFromComponent(
 					continue;
 				}
 			}
+			else if (bDebugCollisionHighlight)
+			{
+				if (UMaterialInterface* DebugMaterial = FResourceManager::Get().GetMaterial("DefaultWhite"))
+				{
+					Material = DebugMaterial;
+				}
+			}
 
 			FRenderCommand Cmd = {};
-			Cmd.PerObjectConstants = FPerObjectConstants{ Primitive->GetWorldMatrix(), FColor::White().ToVector4() };
+			Cmd.PerObjectConstants = FPerObjectConstants{ Primitive->GetWorldMatrix(), PrimitiveColor };
 			Cmd.Type = ERenderCommandType::StaticMesh;
 			Cmd.MeshBuffer = MeshBuffer;
 
