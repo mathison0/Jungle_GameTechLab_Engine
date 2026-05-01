@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include "Scripting/ScriptSystem.h"
+
 class FWindowsWindow;
 class FTimer;
 class UCameraComponent;
@@ -60,6 +62,10 @@ public:
     void SetGameViewportClient(UGameViewportClient* InClient) { GameViewportClient = InClient; }
     UGameViewportClient* GetGameViewportClient() const { return GameViewportClient; }
 
+    virtual void RequestEndPlayMap() {}
+    FScriptSystem& GetScriptSystem() { return ScriptSystem; }
+    const FScriptSystem& GetScriptSystem() const { return ScriptSystem; }
+
 protected:
     virtual void Render(float DeltaTime);
     virtual void OnRenderSceneCleared() {}
@@ -76,6 +82,8 @@ protected:
     UGameViewportClient* GameViewportClient = nullptr;
 
     FRenderer Renderer;
+
+	FScriptSystem ScriptSystem;
 
 protected:
     FSceneView SceneView;

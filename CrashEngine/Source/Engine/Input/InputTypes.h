@@ -8,9 +8,11 @@ enum class EKeyEventType : uint8
 {
     Pressed,
     Released,
+    // 키를 꾹 누른 상태로 InitialKeyRepeatDelay가 지나면 KeyRepeatInterval 마다 Repeat 이벤트 발생
     Repeat
 };
 
+// 마우스, 터치스크린 등 Pointer 타입 입력 장치의 버튼
 enum class EPointerButton : uint8
 {
     None,

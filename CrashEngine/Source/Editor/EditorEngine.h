@@ -86,7 +86,7 @@ public:
     void CancelRequestPlaySession();
     bool HasPlaySessionRequest() const { return PlaySessionRequest.has_value(); }
 
-    void RequestEndPlayMap();
+    void RequestEndPlayMap() override;
     bool IsPlayingInEditor() const { return PlayInEditorSessionInfo.has_value(); }
     bool IsPausedInEditor() const;
     void PausePlayInEditor();

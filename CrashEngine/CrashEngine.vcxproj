@@ -99,42 +99,42 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
+    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\Sol;ThirdParty\Lua\src;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
+    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\Sol;ThirdParty\Lua\src;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
+    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\Sol;ThirdParty\Lua\src;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
+    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\Sol;ThirdParty\Lua\src;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
+    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\Sol;ThirdParty\Lua\src;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)Build\$(Configuration)\</IntDir>
-    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
+    <IncludePath>Source\Engine;Source;ThirdParty;ThirdParty\Sol;ThirdParty\Lua\src;ThirdParty\ImGui;Source\Editor;Source\ObjViewer;.;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
@@ -142,7 +142,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;WITH_EDITOR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SOL_INSIDE_UNREAL=1;WIN32;_DEBUG;_CONSOLE;WITH_EDITOR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -159,7 +159,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;WITH_EDITOR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SOL_INSIDE_UNREAL=1;WIN32;NDEBUG;_CONSOLE;WITH_EDITOR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -174,7 +174,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;WITH_EDITOR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SOL_INSIDE_UNREAL=1;_DEBUG;_CONSOLE;WITH_EDITOR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -192,7 +192,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;WITH_EDITOR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SOL_INSIDE_UNREAL=1;NDEBUG;_CONSOLE;WITH_EDITOR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -210,7 +210,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;WITH_EDITOR=1;IS_OBJ_VIEWER=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SOL_INSIDE_UNREAL=1;NDEBUG;_CONSOLE;WITH_EDITOR=1;IS_OBJ_VIEWER=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -228,7 +228,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;WITH_EDITOR=1;STATS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SOL_INSIDE_UNREAL=1;NDEBUG;_CONSOLE;WITH_EDITOR=1;STATS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -242,8 +242,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\LUA\FCoroutineSceduler.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaScriptAsset.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
-    <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorSelectionTool.cpp" />
@@ -251,30 +251,31 @@
     <ClCompile Include="Source\Editor\Input\EditorViewportContextMenuTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorViewportInputController.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorViewportTool.cpp" />
+    <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp" />
     <ClCompile Include="Source\Editor\Subsystem\OverlayStatSystem.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorConsolePanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorControlPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorDetailsPanel.cpp" />
-    <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorMainPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorMaterialPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorSceneManagerPanel.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorStatPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorToolbarPanel.cpp" />
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp" />
-    <ClCompile Include="Source\Engine\Collision\BVH\DecalVolumeBVH.cpp" />
-    <ClCompile Include="Source\Engine\Collision\BVH\MeshTriangleBVH.cpp" />
     <ClCompile Include="Source\Engine\Collision\Octree.cpp" />
     <ClCompile Include="Source\Engine\Collision\RayUtils.cpp" />
     <ClCompile Include="Source\Engine\Collision\RayUtilsSIMD.cpp" />
     <ClCompile Include="Source\Engine\Collision\SpatialPartition.cpp" />
     <ClCompile Include="Source\Engine\Collision\Sphere.cpp" />
+    <ClCompile Include="Source\Engine\Collision\BVH\DecalVolumeBVH.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\EditorHelperBVH.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\EditorPickingBVH.cpp" />
+    <ClCompile Include="Source\Engine\Collision\BVH\MeshTriangleBVH.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\ScenePrimitiveBVH.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\AmbientLightComponent.cpp" />
@@ -295,13 +296,17 @@
     <ClCompile Include="Source\Engine\Component\ProjectileMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\RotatingMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SceneComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\ScriptComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SpotLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\TestInputComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\UUIDTextRenderComponent.cpp" />
     <ClCompile Include="Source\Engine\Core\CoreGlobals.cpp" />
     <ClCompile Include="Source\Engine\Core\EngineTypes.cpp" />
+    <ClCompile Include="Source\Engine\Core\HighPerformaceGpuHint.cpp" />
+    <ClCompile Include="Source\Engine\Core\Logging\LogBuffer.cpp" />
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\AActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\AmbientLightActor.cpp" />
@@ -315,6 +320,8 @@
     <ClCompile Include="Source\Engine\GameFramework\SpotLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\World.cpp" />
+    <ClCompile Include="Source\Engine\Input\GameViewportInputController.cpp" />
+    <ClCompile Include="Source\Engine\Input\GameInput.cpp" />
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Engine\Input\ViewportInputRouter.cpp" />
     <ClCompile Include="Source\Engine\Materials\Material.cpp" />
@@ -401,6 +408,12 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Batching\FontBatch.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Batching\LineBatch.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectOverlay.cpp" />
@@ -408,12 +421,6 @@
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectScenePrimitives.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectShadowCasters.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\DrawCollector.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Command\BuildDrawCommand.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Command\DrawCommandList.cpp" />
     <ClCompile Include="Source\Engine\Render\Visibility\Frustum\ConvexVolume.cpp" />
@@ -426,6 +433,7 @@
     <ClCompile Include="Source\Engine\Runtime\Launch.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsApplication.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\ScriptSystem.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
     <ClCompile Include="Source\Engine\Texture\Texture2D.cpp" />
     <ClCompile Include="Source\Engine\UI\SSplitter.cpp" />
@@ -445,12 +453,41 @@
     <ClCompile Include="ThirdParty\ImGui\imgui_tables.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ThirdParty\Lua\src\lapi.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lauxlib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lbaselib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lcode.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lcorolib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lctype.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ldblib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ldebug.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ldo.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ldump.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lfunc.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lgc.c" />
+    <ClCompile Include="ThirdParty\Lua\src\linit.c" />
+    <ClCompile Include="ThirdParty\Lua\src\liolib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\llex.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lmathlib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lmem.c" />
+    <ClCompile Include="ThirdParty\Lua\src\loadlib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lobject.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lopcodes.c" />
+    <ClCompile Include="ThirdParty\Lua\src\loslib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lparser.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lstate.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lstring.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lstrlib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ltable.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ltablib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\ltm.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lundump.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lutf8lib.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lvm.c" />
+    <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\LUA\FCoroutineSceduler.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
-    <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
-    <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorSelectionTool.h" />
@@ -458,6 +495,8 @@
     <ClInclude Include="Source\Editor\Input\EditorViewportContextMenuTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorViewportInputController.h" />
     <ClInclude Include="Source\Editor\Input\EditorViewportTool.h" />
+    <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
+    <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
     <ClInclude Include="Source\Editor\PIE\PIETypes.h" />
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h" />
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h" />
@@ -474,17 +513,17 @@
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\FLevelViewportLayout.h" />
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h" />
-    <ClInclude Include="Source\Engine\Collision\BVH\BVH.h" />
-    <ClInclude Include="Source\Engine\Collision\BVH\DecalVolumeBVH.h" />
-    <ClInclude Include="Source\Engine\Collision\BVH\EditorHelperBVH.h" />
-    <ClInclude Include="Source\Engine\Collision\BVH\MeshTriangleBVH.h" />
     <ClInclude Include="Source\Engine\Collision\OBB.h" />
     <ClInclude Include="Source\Engine\Collision\Octree.h" />
     <ClInclude Include="Source\Engine\Collision\RayUtils.h" />
     <ClInclude Include="Source\Engine\Collision\RayUtilsSIMD.h" />
     <ClInclude Include="Source\Engine\Collision\SpatialPartition.h" />
     <ClInclude Include="Source\Engine\Collision\Sphere.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\BVH.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\DecalVolumeBVH.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\EditorHelperBVH.h" />
     <ClInclude Include="Source\Engine\Collision\BVH\EditorPickingBVH.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\MeshTriangleBVH.h" />
     <ClInclude Include="Source\Engine\Collision\BVH\ScenePrimitiveBVH.h" />
     <ClInclude Include="Source\Engine\Component\ActorComponent.h" />
     <ClInclude Include="Source\Engine\Component\AmbientLightComponent.h" />
@@ -506,9 +545,11 @@
     <ClInclude Include="Source\Engine\Component\ProjectileMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\RotatingMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\SceneComponent.h" />
+    <ClInclude Include="Source\Engine\Component\ScriptComponent.h" />
     <ClInclude Include="Source\Engine\Component\SpotLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h" />
+    <ClInclude Include="Source\Engine\Component\TestInputComponent.h" />
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h" />
     <ClInclude Include="Source\Engine\Component\UUIDTextRenderComponent.h" />
     <ClInclude Include="Source\Engine\Core\ClassTypes.h" />
@@ -516,14 +557,17 @@
     <ClInclude Include="Source\Engine\Core\Common.h" />
     <ClInclude Include="Source\Engine\Core\CoreGlobals.h" />
     <ClInclude Include="Source\Engine\Core\CoreTypes.h" />
+    <ClInclude Include="Source\Engine\Core\Delegate.h" />
     <ClInclude Include="Source\Engine\Core\EngineTypes.h" />
-    <ClInclude Include="Source\Engine\Core\Logging\LogMacros.h" />
-    <ClInclude Include="Source\Engine\Core\Logging\LogOutputDevice.h" />
+    <ClInclude Include="Source\Engine\Core\Logging\LogBuffer.h" />
+    <ClInclude Include="Source\Engine\Core\Logging\LogEntry.h" />
     <ClInclude Include="Source\Engine\Core\PropertyTypes.h" />
     <ClInclude Include="Source\Engine\Core\RayTypes.h" />
     <ClInclude Include="Source\Engine\Core\ResourceTypes.h" />
     <ClInclude Include="Source\Engine\Core\Singleton.h" />
     <ClInclude Include="Source\Engine\Core\TickFunction.h" />
+    <ClInclude Include="Source\Engine\Core\Logging\LogMacros.h" />
+    <ClInclude Include="Source\Engine\Core\Logging\LogOutputDevice.h" />
     <ClInclude Include="Source\Engine\GameFramework\AActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DecalActor.h" />
@@ -537,8 +581,13 @@
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\World.h" />
     <ClInclude Include="Source\Engine\GameFramework\WorldContext.h" />
+    <ClInclude Include="Source\Engine\Input\GameInputTool.h" />
+    <ClInclude Include="Source\Engine\Input\GameViewportInputController.h" />
+    <ClInclude Include="Source\Engine\Input\GameViewportTool.h" />
+    <ClInclude Include="Source\Engine\Input\GameInput.h" />
     <ClInclude Include="Source\Engine\Input\InputSystem.h" />
     <ClInclude Include="Source\Engine\Input\InputTypes.h" />
+    <ClInclude Include="Source\Engine\Input\PIEExitCommandTool.h" />
     <ClInclude Include="Source\Engine\Input\ViewportInputRouter.h" />
     <ClInclude Include="Source\Engine\Materials\Material.h" />
     <ClInclude Include="Source\Engine\Materials\MaterialCore.h" />
@@ -627,6 +676,7 @@
     <ClInclude Include="Source\Engine\Render\Resources\Shaders\ShaderVariantCache.h" />
     <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowFilterSettings.h" />
     <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowMapSettings.h" />
+    <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowResolutionSettings.h" />
     <ClInclude Include="Source\Engine\Render\Resources\State\RenderStateNames.h" />
     <ClInclude Include="Source\Engine\Render\Resources\State\RenderStateTypes.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\Buffers.h" />
@@ -673,8 +723,13 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\BatchBuffer.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\FontBatch.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\LineBatch.h" />
@@ -682,14 +737,6 @@
     <ClInclude Include="Source\Engine\Render\Submission\Collect\CollectedOverlayData.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Collect\CollectedSceneData.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Collect\DrawCollector.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Command\BuildDrawCommand.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Command\DrawCommand.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Command\DrawCommandList.h" />
@@ -705,6 +752,7 @@
     <ClInclude Include="Source\Engine\Runtime\WindowsApplication.h" />
     <ClInclude Include="Source\Engine\Runtime\WindowsWindow.h" />
     <ClInclude Include="Source\Engine\Runtime\resource.h" />
+    <ClInclude Include="Source\Engine\Scripting\ScriptSystem.h" />
     <ClInclude Include="Source\Engine\Serialization\Archive.h" />
     <ClInclude Include="Source\Engine\Serialization\MemoryArchive.h" />
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h" />
@@ -728,7 +776,38 @@
     <ClInclude Include="ThirdParty\ImGui\imstb_rectpack.h" />
     <ClInclude Include="ThirdParty\ImGui\imstb_textedit.h" />
     <ClInclude Include="ThirdParty\ImGui\imstb_truetype.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lapi.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lauxlib.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lcode.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lctype.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ldebug.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ldo.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lfunc.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lgc.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ljumptab.h" />
+    <ClInclude Include="ThirdParty\Lua\src\llex.h" />
+    <ClInclude Include="ThirdParty\Lua\src\llimits.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lmem.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lobject.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lopcodes.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lopnames.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lparser.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lprefix.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lstate.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lstring.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ltable.h" />
+    <ClInclude Include="ThirdParty\Lua\src\ltm.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lua.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lua.hpp" />
+    <ClInclude Include="ThirdParty\Lua\src\luaconf.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lualib.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lundump.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lvm.h" />
+    <ClInclude Include="ThirdParty\Lua\src\lzio.h" />
     <ClInclude Include="ThirdParty\SimpleJSON\json.hpp" />
+    <ClInclude Include="ThirdParty\Sol\config.hpp" />
+    <ClInclude Include="ThirdParty\Sol\forward.hpp" />
+    <ClInclude Include="ThirdParty\Sol\sol.hpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">
@@ -786,6 +865,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\Scene\Shared\DepthOnlyPass.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Passes\Scene\Shared\ShadowDepthPreviewPass.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
@@ -1058,6 +1143,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ThirdParty\Lua\src\Makefile" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

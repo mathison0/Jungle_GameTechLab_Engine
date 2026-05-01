@@ -7,6 +7,8 @@
 #include "Component/CameraComponent.h"
 #include "GameFramework/World.h"
 #include "Editor/Viewport/LevelEditorViewportClient.h"
+#include "Viewport/GameViewportClient.h"
+#include "Viewport/Viewport.h"
 #include "Object/ObjectFactory.h"
 #include "Mesh/ObjManager.h"
 #include "Input/InputSystem.h"
@@ -420,6 +422,13 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 
     SetActiveWorld(FName("PIE"));
 
+    if (GameViewportClient && PIEViewportClient && PIEViewportClient->GetViewport())
+    {
+        GameViewportClient->SetViewport(PIEViewportClient->GetViewport());
+        ViewportInputRouter.SetKeyTargetViewport(PIEViewportClient->GetViewport());
+        PIEViewportClient->GetViewport()->SetClient(GameViewportClient);
+    }
+
     OnRenderSceneCleared();
 
     if (UCameraComponent* VCCamera = PIEViewportClient->GetCamera())
@@ -492,6 +501,10 @@ void UEditorEngine::EndPlayMap()
         if (VC)
         {
             VC->SetPlayState(EEditorViewportPlayState::Stopped);
+            if (VC->GetViewport() && VC->GetViewport()->GetClient() == GameViewportClient)
+            {
+                VC->GetViewport()->SetClient(VC);
+            }
         }
     }
 
@@ -735,9 +748,15 @@ void UEditorEngine::RegisterViewportInputTargets()
             continue;
         }
 
+        FViewportClient* ClientToRegister = VC;
+        if (IsPlayingInEditor() && VC->GetPlayState() == EEditorViewportPlayState::Playing && GameViewportClient)
+        {
+            ClientToRegister = GameViewportClient;
+        }
+
         ViewportInputRouter.RegisterTarget(
             VC->GetViewport(),
-            VC,
+            ClientToRegister,
             [VC](FRect& OutRect)
             {
                 const FRect& Rect = VC->GetViewportScreenRect();
