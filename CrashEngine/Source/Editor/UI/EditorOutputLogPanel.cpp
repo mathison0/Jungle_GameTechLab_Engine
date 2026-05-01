@@ -282,6 +282,22 @@ int32 CountTextLines(const FString& Text)
     return LineCount;
 }
 
+float CalculateLogEntryRowHeight(const FLogEntry& Entry)
+{
+    const int32 MessageLineCount = CountTextLines(Entry.Message);
+    return ImGui::GetTextLineHeight() * static_cast<float>(MessageLineCount) +
+           ImGui::GetStyle().ItemSpacing.y * static_cast<float>((std::max)(0, MessageLineCount - 1)) +
+           6.0f;
+}
+
+float CalculateLogEntryRowWidth(const FLogEntry& Entry, float AvailableWidth)
+{
+    const float MessageWidth = ImGui::CalcTextSize(Entry.Message.c_str()).x;
+    return (std::max)(
+        AvailableWidth,
+        SeverityColumnWidth + CategoryColumnWidth + MessageWidth + RowHorizontalPadding * 4.0f);
+}
+
 void DrawHighlightedMultilineText(ImDrawList* DrawList, ImVec2 Pos, const FString& Text, const FString& SearchText, ImU32 TextColor)
 {
     const float LineStride = ImGui::GetTextLineHeightWithSpacing();
@@ -687,6 +703,8 @@ void FEditorOutputLogPanel::DrawLogOutput()
     }
 
     const bool bWasAtBottom = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 2.0f;
+    const float ClipMinY = ImGui::GetWindowPos().y;
+    const float ClipMaxY = ClipMinY + ImGui::GetWindowSize().y;
     int32 VisibleRows = 0;
 
     if (LogBuffer)
@@ -710,7 +728,18 @@ void FEditorOutputLogPanel::DrawLogOutput()
                 continue;
             }
 
-            DrawLogEntryRow(Entry, EntryIndex, SearchBuf.data());
+            const float RowHeight = CalculateLogEntryRowHeight(Entry);
+            const float RowWidth = CalculateLogEntryRowWidth(Entry, ImGui::GetContentRegionAvail().x);
+            const float RowStartY = ImGui::GetCursorScreenPos().y;
+            const float RowEndY = RowStartY + RowHeight;
+            if (RowEndY < ClipMinY || RowStartY > ClipMaxY)
+            {
+                ImGui::Dummy(ImVec2(RowWidth, RowHeight));
+            }
+            else
+            {
+                DrawLogEntryRow(Entry, EntryIndex, SearchBuf.data());
+            }
             ++VisibleRows;
         }
     }
@@ -745,14 +774,8 @@ void FEditorOutputLogPanel::DrawLogOutput()
 
 void FEditorOutputLogPanel::DrawLogEntryRow(const FLogEntry& Entry, int32 EntryIndex, const FString& SearchText)
 {
-    const int32 MessageLineCount = CountTextLines(Entry.Message);
-    const float RowHeight = ImGui::GetTextLineHeight() * static_cast<float>(MessageLineCount) +
-                            ImGui::GetStyle().ItemSpacing.y * static_cast<float>((std::max)(0, MessageLineCount - 1)) +
-                            6.0f;
-    const float MessageWidth = ImGui::CalcTextSize(Entry.Message.c_str()).x;
-    const float RowWidth = (std::max)(
-        ImGui::GetContentRegionAvail().x,
-        SeverityColumnWidth + CategoryColumnWidth + MessageWidth + RowHorizontalPadding * 4.0f);
+    const float RowHeight = CalculateLogEntryRowHeight(Entry);
+    const float RowWidth = CalculateLogEntryRowWidth(Entry, ImGui::GetContentRegionAvail().x);
 
     ImGui::PushID(EntryIndex);
     const bool bSelected = SelectedLogIndex == EntryIndex;
@@ -869,29 +892,23 @@ void FEditorOutputLogPanel::RenderContent(float DeltaTime)
 
 void FEditorOutputLogPanel::DrawCommandSuggestions(bool bInputFocused)
 {
-    constexpr const char* PopupId = "OutputLogCommandSuggestionsPopup";
-    const bool bPopupOpen = ImGui::IsPopupOpen(PopupId);
-    if (!bInputFocused && !bPopupOpen)
-    {
-        return;
-    }
-
     const FString CommandLine(InputBuf.data());
     const size_t FirstNonWhitespace = CommandLine.find_first_not_of(" \t");
-    if (FirstNonWhitespace != FString::npos &&
-        CommandLine.find_first_of(" \t", FirstNonWhitespace) != FString::npos)
+    const bool bOnlyEditingCommandName =
+        FirstNonWhitespace != FString::npos &&
+        CommandLine.find_first_of(" \t", FirstNonWhitespace) == FString::npos;
+    const FString Prefix = bOnlyEditingCommandName ? GetCurrentCommandPrefix() : "";
+    const TArray<FString> Candidates = !Prefix.empty() ? BuildCommandCandidates(Prefix) : TArray<FString>();
+    if (bInputFocused && !Candidates.empty())
     {
-        return;
+        bCommandSuggestionsOpen = true;
+    }
+    else if (Prefix.empty() || Candidates.empty())
+    {
+        bCommandSuggestionsOpen = false;
     }
 
-    const FString Prefix = GetCurrentCommandPrefix();
-    if (Prefix.empty())
-    {
-        return;
-    }
-
-    const TArray<FString> Candidates = BuildCommandCandidates(Prefix);
-    if (Candidates.empty())
+    if (!bCommandSuggestionsOpen)
     {
         return;
     }
@@ -899,14 +916,9 @@ void FEditorOutputLogPanel::DrawCommandSuggestions(bool bInputFocused)
     const ImVec2 InputMin = ImGui::GetItemRectMin();
     const ImVec2 InputSize = ImGui::GetItemRectSize();
     const int32 MaxVisibleCandidates = 6;
-    const int32 VisibleCandidateCount = (std::min)(MaxVisibleCandidates, static_cast<int32>(Candidates.size()));
+    const int32 VisibleCandidateCount = (std::max)(1, (std::min)(MaxVisibleCandidates, static_cast<int32>(Candidates.size())));
     const float PopupHeight = ImGui::GetStyle().WindowPadding.y * 2.0f +
                               ImGui::GetTextLineHeightWithSpacing() * static_cast<float>(VisibleCandidateCount);
-
-    if (bInputFocused)
-    {
-        ImGui::OpenPopup(PopupId);
-    }
 
     ImGui::SetNextWindowPos(ImVec2(InputMin.x, InputMin.y - PopupHeight - 4.0f), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(InputSize.x, PopupHeight), ImGuiCond_Always);
@@ -917,8 +929,9 @@ void FEditorOutputLogPanel::DrawCommandSuggestions(bool bInputFocused)
                                    ImGuiWindowFlags_NoSavedSettings |
                                    ImGuiWindowFlags_NoFocusOnAppearing;
 
-    if (!ImGui::BeginPopup(PopupId, Flags))
+    if (!ImGui::Begin("##OutputLogCommandSuggestions", nullptr, Flags))
     {
+        ImGui::End();
         return;
     }
 
@@ -934,7 +947,7 @@ void FEditorOutputLogPanel::DrawCommandSuggestions(bool bInputFocused)
         {
             std::snprintf(InputBuf.data(), InputBuf.size(), "%s ", Candidate.c_str());
             bReclaimFocus = true;
-            ImGui::CloseCurrentPopup();
+            bCommandSuggestionsOpen = false;
         }
         if (!Description.empty() && ImGui::IsItemHovered())
         {
@@ -942,7 +955,13 @@ void FEditorOutputLogPanel::DrawCommandSuggestions(bool bInputFocused)
         }
     }
 
-    ImGui::EndPopup();
+    const bool bSuggestionsHovered = ImGui::IsWindowHovered();
+    ImGui::End();
+
+    if (!bInputFocused && !bSuggestionsHovered)
+    {
+        bCommandSuggestionsOpen = false;
+    }
 }
 
 FString FEditorOutputLogPanel::GetCurrentCommandPrefix() const
@@ -1205,16 +1224,7 @@ int32 FEditorOutputLogPanel::TextEditCallback(ImGuiInputTextCallbackData* Data)
         const int32 WordLength = static_cast<int32>(WordEnd - WordStart);
         const FString Prefix(WordStart, static_cast<size_t>(WordLength));
 
-        TArray<FString> Candidates;
-        for (const auto& Pair : OutputLog->Commands)
-        {
-            const FString& Name = Pair.first;
-            if (StartsWith(Name, Prefix))
-            {
-                Candidates.push_back(Name);
-            }
-        }
-        std::sort(Candidates.begin(), Candidates.end());
+        TArray<FString> Candidates = OutputLog->BuildCommandCandidates(Prefix);
 
         if (Candidates.size() == 1)
         {
@@ -1231,13 +1241,15 @@ int32 FEditorOutputLogPanel::TextEditCallback(ImGuiInputTextCallbackData* Data)
                 Data->InsertChars(WordStartOffset, CommonPrefix.c_str());
             }
 
-            UE_LOG(OutputLog, Info, "Possible completions:");
+            FString CompletionText = "Possible completions:";
             for (const FString& Candidate : Candidates)
             {
                 const auto It = OutputLog->Commands.find(Candidate);
                 const FString Usage = It != OutputLog->Commands.end() ? It->second.Usage : Candidate;
-                UE_LOG(OutputLog, Info, "  %s", Usage.c_str());
+                CompletionText += "\n  ";
+                CompletionText += Usage;
             }
+            UE_LOG(OutputLog, Info, "%s", CompletionText.c_str());
             OutputLog->ScrollToBottom = true;
         }
         else

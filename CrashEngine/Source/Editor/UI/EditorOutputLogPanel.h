@@ -36,6 +36,7 @@ private:
     bool bShowWarnings = true;
     bool bShowErrors = true;
     bool bHasUnreadLogs = false;
+    bool bCommandSuggestionsOpen = false;
     int32 SelectedLogIndex = -1;
     int32 LastLogEntryCount = 0;
     FLogBuffer* LogBuffer = nullptr;
