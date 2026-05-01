@@ -27,7 +27,6 @@
 
 #define IMPLEMENT_ABSTRACT_CLASS(ClassName, ParentClass)         \
     DEFINE_CLASS_WITH_FLAGS(ClassName, ParentClass, CF_Abstract) \
-    REGISTER_FACTORY(ClassName)
 
 // FObjectFactory는 오브젝트 영역의 핵심 동작을 담당합니다.
 class FObjectFactory : public TSingleton<FObjectFactory>

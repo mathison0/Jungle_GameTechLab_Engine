@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "ShapeComponent.h"
 
@@ -11,6 +11,11 @@ public:
     void PostEditProperty(const char* PropertyName) override;
 
     void Serialize(FArchive& Ar) override;
+
+    ECollisionShapeType GetCollisionShapeType() const override { return ECollisionShapeType::Sphere; }
+
+	const float GetRadius() const { return SphereRadius; }
+	void SetRadius(float NewRadius);
 
 protected:
     float SphereRadius = 50.0f;

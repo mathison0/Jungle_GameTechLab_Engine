@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "ShapeComponent.h"
 
@@ -11,6 +11,13 @@ public:
     void PostEditProperty(const char* PropertyName) override;
 
     void Serialize(FArchive& Ar) override;
+
+    ECollisionShapeType GetCollisionShapeType() const override { return ECollisionShapeType::Capsule; }
+
+	void SetHalfHeight(float NewHalfHeight);
+    void SetRadius(float NewRadius);
+	const float GetHalfHeight() const { return CapsuleHalfHeight; }
+    const float SetRadius() const { return CapsuleRadius; }
 
 protected:
     float CapsuleHalfHeight = 88.0f;

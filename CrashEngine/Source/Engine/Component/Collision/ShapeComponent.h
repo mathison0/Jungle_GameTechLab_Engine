@@ -1,6 +1,14 @@
 ﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
+
+enum class ECollisionShapeType
+{
+	Box,
+	Sphere,
+	Capsule
+};
+
 class UShapeComponent : public UPrimitiveComponent
 {
 public:
@@ -13,6 +21,8 @@ public:
 
     void SetShapeColor(FColor NewColor);
     void SetDrawOnlyIfSelected(bool bNewDrawOnlyIfSelected);
+
+	virtual ECollisionShapeType GetCollisionShapeType() const = 0;
 
 protected:
     FColor ShapeColor = FColor::Yellow();

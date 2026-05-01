@@ -2,7 +2,7 @@
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 
-IMPLEMENT_CLASS(UShapeComponent, UPrimitiveComponent)
+IMPLEMENT_ABSTRACT_CLASS(UShapeComponent, UPrimitiveComponent)
 
 void UShapeComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {

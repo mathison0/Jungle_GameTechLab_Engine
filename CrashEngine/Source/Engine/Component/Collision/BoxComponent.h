@@ -10,6 +10,12 @@ public:
 
     void Serialize(FArchive& Ar) override;
 
+	ECollisionShapeType GetCollisionShapeType() const override{ return ECollisionShapeType::Box; }
+
+	const FVector& GetBoxExtent() const { return BoxExtent; }
+    void SetBoxExtent(const FVector& NewBoxExtent);
+
+
 	protected:
     FVector BoxExtent;
 };

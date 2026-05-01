@@ -20,3 +20,8 @@ void UBoxComponent::Serialize(FArchive& Ar)
     UShapeComponent::Serialize(Ar);
     Ar << BoxExtent;
 }
+
+void UBoxComponent::SetBoxExtent(const FVector& NewBoxExtent)
+{
+    BoxExtent = NewBoxExtent;
+}

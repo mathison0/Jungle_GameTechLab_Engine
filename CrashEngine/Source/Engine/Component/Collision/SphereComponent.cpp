@@ -1,6 +1,7 @@
 ﻿#include "SphereComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
+#include "CapsuleComponent.h"
 
 IMPLEMENT_CLASS(USphereComponent, UShapeComponent)
 
@@ -19,4 +20,9 @@ void USphereComponent::Serialize(FArchive& Ar)
 {
     UShapeComponent::Serialize(Ar);
     Ar << SphereRadius;
+}
+
+void USphereComponent::SetRadius(float NewRadius)
+{
+    SphereRadius = NewRadius;
 }

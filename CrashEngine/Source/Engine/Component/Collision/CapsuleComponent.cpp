@@ -1,4 +1,4 @@
-#include "CapsuleComponent.h"
+﻿#include "CapsuleComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 
@@ -21,4 +21,14 @@ void UCapsuleComponent::Serialize(FArchive& Ar)
     UShapeComponent::Serialize(Ar);
     Ar << CapsuleHalfHeight;
     Ar << CapsuleRadius;
+}
+
+void UCapsuleComponent::SetHalfHeight(float NewHalfHeight)
+{
+    CapsuleHalfHeight = NewHalfHeight;
+}
+
+void UCapsuleComponent::SetRadius(float NewRadius)
+{
+    CapsuleRadius = NewRadius;
 }
