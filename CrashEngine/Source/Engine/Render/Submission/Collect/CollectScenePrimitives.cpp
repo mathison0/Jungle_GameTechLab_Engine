@@ -115,7 +115,7 @@ void FDrawCollector::CollectWorld(UWorld* World, FRenderCollectContext& CollectC
         {
             for (FLightProxy* Light : CollectedSceneData.Lights.VisibleLightProxies)
             {
-                if (Light)
+                if (Light && Light->LightProxyInfo.LightType != static_cast<uint32>(ELightType::Ambient))
                 {
                     ShadowPass->UpdateLightShadowAllocation(*Light, CollectContext.Renderer->GetFD3DDevice().GetDevice());
                 }
