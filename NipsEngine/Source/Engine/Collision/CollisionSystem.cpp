@@ -13,6 +13,15 @@ namespace
 	{
 		return Component != nullptr && (Component->IsGenerateOverlapEvents() || Component->IsBlockComponent());
 	}
+
+	FHitResult MakeReverseHit(const FHitResult& Hit, UPrimitiveComponent* HitComponent)
+	{
+		FHitResult Result = Hit;
+		Result.HitComponent = HitComponent;
+		Result.Normal = Hit.Normal * -1.0f;
+		Result.bHit = (HitComponent != nullptr);
+		return Result;
+	}
 }
 
 void FCollisionSystem::UpdateWorldCollision(UWorld* World)
@@ -130,5 +139,67 @@ void FCollisionSystem::ProcessNarrowCollision(const FCollisionCandidate& A, cons
 	if (!FCollision::TestOverlap(A.Component, B.Component, &Hit))
 	{
 		return;
+	}
+
+	const bool bShouldBlock = A.Component->IsBlockComponent() || B.Component->IsBlockComponent();
+	const bool bWasAOverlapping = A.Component->HasOverlapInfo(B.Actor, B.Component);
+	const bool bWasBOverlapping = B.Component->HasOverlapInfo(A.Actor, A.Component);
+	const bool bWasABlocking = A.Component->HasBlockingInfo(B.Actor, B.Component);
+	const bool bWasBBlocking = B.Component->HasBlockingInfo(A.Actor, A.Component);
+
+	if (bShouldBlock)
+	{
+		if (bWasAOverlapping)
+		{
+			FOverlapResult EndOverlapInfo{ B.Actor, B.Component };
+			A.Component->RemoveOverlapInfo(B.Actor, B.Component);
+			A.Component->OnComponentEndOverlap.Broadcast(EndOverlapInfo);
+		}
+
+		if (bWasBOverlapping)
+		{
+			FOverlapResult EndOverlapInfo{ A.Actor, A.Component };
+			B.Component->RemoveOverlapInfo(A.Actor, A.Component);
+			B.Component->OnComponentEndOverlap.Broadcast(EndOverlapInfo);
+		}
+
+		if (!bWasABlocking)
+		{
+			A.Component->AddBlockingInfo(B.Actor, B.Component, Hit);
+			A.Component->OnComponentHit.Broadcast(Hit);
+		}
+
+		if (!bWasBBlocking)
+		{
+			const FHitResult ReverseHit = MakeReverseHit(Hit, A.Component);
+			B.Component->AddBlockingInfo(A.Actor, A.Component, ReverseHit);
+			B.Component->OnComponentHit.Broadcast(ReverseHit);
+		}
+
+		return;
+	}
+
+	if (bWasABlocking)
+	{
+		A.Component->RemoveBlockingInfo(B.Actor, B.Component);
+	}
+
+	if (bWasBBlocking)
+	{
+		B.Component->RemoveBlockingInfo(A.Actor, A.Component);
+	}
+
+	if (A.Component->IsGenerateOverlapEvents() && !bWasAOverlapping)
+	{
+		FOverlapResult BeginOverlapInfo{ B.Actor, B.Component };
+		A.Component->AddOverlapInfo(B.Actor, B.Component);
+		A.Component->OnComponentBeginOverlap.Broadcast(BeginOverlapInfo);
+	}
+
+	if (B.Component->IsGenerateOverlapEvents() && !bWasBOverlapping)
+	{
+		FOverlapResult BeginOverlapInfo{ A.Actor, A.Component };
+		B.Component->AddOverlapInfo(A.Actor, A.Component);
+		B.Component->OnComponentBeginOverlap.Broadcast(BeginOverlapInfo);
 	}
 }
