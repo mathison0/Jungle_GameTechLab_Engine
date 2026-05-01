@@ -34,6 +34,7 @@ FCollisionShapeGeometry UCapsuleComponent::GetCollisionShapeGeometry() const
     Geometry.HalfHeight = GetScaledCapsuleHalfHeight();
     Geometry.Center = GetShapeWorldLocation();
     Geometry.Rotation = GetWorldRotation();
+    Geometry.Axis = GetCapsuleAxis();
     return Geometry;
 }
 
