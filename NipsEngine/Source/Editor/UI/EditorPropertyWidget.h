@@ -14,10 +14,12 @@ public:
 	void Initialize(UEditorEngine* InEditorEngine) override;
 
 	UActorComponent* GetSelectedComponent() const { return SelectedComponent; }
+	UActorComponent* GetSelectedDetailComponent() const { return bActorSelected ? nullptr : SelectedComponent; }
 	bool IsActorSelected() const { return bActorSelected; }
 	bool IsModalInputBlocking() const;
 
 	void ResetSelection();
+	void RestoreSelection(AActor* Actor, UActorComponent* Component, bool bInActorSelected);
 
 private:
 	// 선택 상태 관리

@@ -1,4 +1,4 @@
-#include "Scripting/LuaBindings.h"
+﻿#include "Scripting/LuaBindings.h"
 
 #if WITH_LUA
 #include "GameFramework/AActor.h"
@@ -21,7 +21,7 @@ void RegisterLuaBindings(sol::state& Lua)
 		"x", &FVector::X,
 		"y", &FVector::Y,
 		"z", &FVector::Z,
-		"X", &FVector::X,
+		"X", &FVector::X,  
 		"Y", &FVector::Y,
 		"Z", &FVector::Z
 	);
@@ -42,6 +42,8 @@ void RegisterLuaBindings(sol::state& Lua)
 		"SetActorRotation", &AActor::SetActorRotation,
 		"GetActorScale", &AActor::GetActorScale,
 		"SetActorScale", &AActor::SetActorScale,
+		"IsVisible", &AActor::IsVisible,
+		"SetVisible", &AActor::SetVisible,
 		"GetName", [](AActor& Actor) { return Actor.GetFName().ToString(); },
 		"GetUUID", &AActor::GetUUID
 	);

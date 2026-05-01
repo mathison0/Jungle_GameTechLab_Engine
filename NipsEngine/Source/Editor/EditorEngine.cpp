@@ -8,6 +8,7 @@
 #include "Component/GizmoComponent.h"
 #include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/SceneComponent.h"
 #include "GameFramework/World.h"
 #include "Editor/EditorRenderPipeline.h"
 #include "Core/Logging/Stats.h"
@@ -18,6 +19,244 @@
 
 DEFINE_CLASS(UEditorEngine, UEngine)
 REGISTER_FACTORY(UEditorEngine)
+
+namespace
+{
+	int32 FindComponentIndex(AActor* Actor, UActorComponent* Component)
+	{
+		if (Actor == nullptr || Component == nullptr)
+		{
+			return -1;
+		}
+
+		const TArray<UActorComponent*>& Components = Actor->GetComponents();
+		for (int32 Index = 0; Index < static_cast<int32>(Components.size()); ++Index)
+		{
+			if (Components[Index] == Component)
+			{
+				return Index;
+			}
+		}
+
+		return -1;
+	}
+
+	int32 FindNonSceneComponentTypeOccurrence(AActor* Actor, UActorComponent* Component)
+	{
+		if (Actor == nullptr || Component == nullptr || Component->IsA<USceneComponent>())
+		{
+			return -1;
+		}
+
+		const auto* ComponentType = Component->GetTypeInfo();
+		int32 Occurrence = 0;
+		for (UActorComponent* Candidate : Actor->GetComponents())
+		{
+			if (Candidate == nullptr || Candidate->IsA<USceneComponent>() || Candidate->IsEditorOnly())
+			{
+				continue;
+			}
+
+			if (Candidate->GetTypeInfo() != ComponentType)
+			{
+				continue;
+			}
+
+			if (Candidate == Component)
+			{
+				return Occurrence;
+			}
+
+			++Occurrence;
+		}
+
+		return -1;
+	}
+
+	UActorComponent* ResolveNonSceneComponentByTypeOccurrence(AActor* Actor, UActorComponent* SourceComponent, int32 Occurrence)
+	{
+		if (Actor == nullptr || SourceComponent == nullptr || Occurrence < 0)
+		{
+			return nullptr;
+		}
+
+		const auto* SourceType = SourceComponent->GetTypeInfo();
+		int32 CurrentOccurrence = 0;
+		for (UActorComponent* Candidate : Actor->GetComponents())
+		{
+			if (Candidate == nullptr || Candidate->IsA<USceneComponent>() || Candidate->IsEditorOnly())
+			{
+				continue;
+			}
+
+			if (Candidate->GetTypeInfo() != SourceType)
+			{
+				continue;
+			}
+
+			if (CurrentOccurrence == Occurrence)
+			{
+				return Candidate;
+			}
+
+			++CurrentOccurrence;
+		}
+
+		return nullptr;
+	}
+
+	bool BuildSceneComponentPathRecursive(USceneComponent* Current, USceneComponent* Target, TArray<int32>& OutPath)
+	{
+		if (Current == nullptr || Target == nullptr)
+		{
+			return false;
+		}
+
+		if (Current == Target)
+		{
+			return true;
+		}
+
+		const TArray<USceneComponent*>& Children = Current->GetChildren();
+		int32 RuntimeChildIndex = 0;
+		for (int32 Index = 0; Index < static_cast<int32>(Children.size()); ++Index)
+		{
+			USceneComponent* Child = Children[Index];
+			if (Child == nullptr || Child->IsEditorOnly())
+			{
+				continue;
+			}
+
+			OutPath.push_back(RuntimeChildIndex);
+			if (BuildSceneComponentPathRecursive(Child, Target, OutPath))
+			{
+				return true;
+			}
+			OutPath.pop_back();
+			++RuntimeChildIndex;
+		}
+
+		return false;
+	}
+
+	bool TryBuildSceneComponentPath(AActor* Actor, UActorComponent* Component, TArray<int32>& OutPath)
+	{
+		OutPath.clear();
+
+		USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
+		if (Actor == nullptr || SceneComponent == nullptr || Actor->GetRootComponent() == nullptr)
+		{
+			return false;
+		}
+
+		return BuildSceneComponentPathRecursive(Actor->GetRootComponent(), SceneComponent, OutPath);
+	}
+
+	USceneComponent* ResolveSceneComponentPath(AActor* Actor, const TArray<int32>& Path)
+	{
+		if (Actor == nullptr)
+		{
+			return nullptr;
+		}
+
+		USceneComponent* Current = Actor->GetRootComponent();
+		for (int32 ChildIndex : Path)
+		{
+			if (Current == nullptr)
+			{
+				return nullptr;
+			}
+
+			const TArray<USceneComponent*>& Children = Current->GetChildren();
+			USceneComponent* MatchedChild = nullptr;
+			int32 RuntimeChildIndex = 0;
+			for (USceneComponent* Child : Children)
+			{
+				if (Child == nullptr || Child->IsEditorOnly())
+				{
+					continue;
+				}
+
+				if (RuntimeChildIndex == ChildIndex)
+				{
+					MatchedChild = Child;
+					break;
+				}
+
+				++RuntimeChildIndex;
+			}
+
+			if (MatchedChild == nullptr)
+			{
+				return nullptr;
+			}
+
+			Current = MatchedChild;
+		}
+
+		return Current;
+	}
+
+	UActorComponent* FindMatchingComponent(
+		AActor* SourceActor,
+		AActor* TargetActor,
+		UActorComponent* SourceComponent,
+		int32 FallbackIndex,
+		int32 NonSceneTypeOccurrence,
+		bool bHasScenePath,
+		const TArray<int32>& ScenePath)
+	{
+		if (SourceActor == nullptr || TargetActor == nullptr || SourceComponent == nullptr)
+		{
+			return nullptr;
+		}
+
+		if (bHasScenePath)
+		{
+			if (USceneComponent* SceneComponent = ResolveSceneComponentPath(TargetActor, ScenePath))
+			{
+				if (SceneComponent->GetTypeInfo() == SourceComponent->GetTypeInfo())
+				{
+					return SceneComponent;
+				}
+			}
+		}
+
+		if (!SourceComponent->IsA<USceneComponent>())
+		{
+			if (UActorComponent* OccurrenceMatchedComponent =
+				ResolveNonSceneComponentByTypeOccurrence(TargetActor, SourceComponent, NonSceneTypeOccurrence))
+			{
+				return OccurrenceMatchedComponent;
+			}
+		}
+
+		const FName SourceName = SourceComponent->GetFName();
+		const auto* SourceType = SourceComponent->GetTypeInfo();
+		const TArray<UActorComponent*>& TargetComponents = TargetActor->GetComponents();
+
+		for (UActorComponent* TargetComponent : TargetComponents)
+		{
+			if (TargetComponent != nullptr &&
+				TargetComponent->GetFName() == SourceName &&
+				TargetComponent->GetTypeInfo() == SourceType)
+			{
+				return TargetComponent;
+			}
+		}
+
+		if (FallbackIndex >= 0 && FallbackIndex < static_cast<int32>(TargetComponents.size()))
+		{
+			UActorComponent* FallbackComponent = TargetComponents[FallbackIndex];
+			if (FallbackComponent != nullptr && FallbackComponent->GetTypeInfo() == SourceType)
+			{
+				return FallbackComponent;
+			}
+		}
+
+		return nullptr;
+	}
+}
 
 //  Init
 void UEditorEngine::Init(FWindowsWindow* InWindow)
@@ -129,7 +368,19 @@ void UEditorEngine::StartPlaySession()
 
     if (!FocusedWorld) return;
 
-    FocusedClient->SaveCameraSnapshot();
+	const TArray<AActor*> PreviousSelectedActors = SelectionManager.GetSelectedActors();
+	AActor* PreviousPrimaryActor = SelectionManager.GetPrimarySelection();
+	UActorComponent* PreviousSelectedComponent = MainPanel.GetPropertyWidget().GetSelectedDetailComponent();
+	const bool bPreviousActorSelected = MainPanel.GetPropertyWidget().IsActorSelected();
+	const int32 PreviousSelectedComponentIndex = FindComponentIndex(PreviousPrimaryActor, PreviousSelectedComponent);
+	const int32 PreviousNonSceneTypeOccurrence = FindNonSceneComponentTypeOccurrence(PreviousPrimaryActor, PreviousSelectedComponent);
+	TArray<int32> PreviousSelectedComponentScenePath;
+	const bool bPreviousHasScenePath = TryBuildSceneComponentPath(
+		PreviousPrimaryActor,
+		PreviousSelectedComponent,
+		PreviousSelectedComponentScenePath);
+
+	FocusedClient->SaveCameraSnapshot();
 
 	// 주의! Editor State는 실제 에디터의 상태가 아닌, 현재 에디터가 포커스한 뷰포트의 상태를 의미합니다.
     SetEditorState(EViewportPlayState::Playing); 
@@ -150,7 +401,67 @@ void UEditorEngine::StartPlaySession()
 
     FocusedClient->LockCursorToViewport();
     InputSystem::Get().SetCursorVisibility(false);
-    SelectionManager.ClearSelection();
+
+	const TArray<AActor*> EditorActors = FocusedWorld->GetActors();
+	const TArray<AActor*> PIEActors = PIEWorld->GetActors();
+	TArray<AActor*> MappedSelectedActors;
+	MappedSelectedActors.reserve(PreviousSelectedActors.size());
+	AActor* MappedPrimaryActor = nullptr;
+
+	for (AActor* PreviousActor : PreviousSelectedActors)
+	{
+		AActor* MappedActor = nullptr;
+		for (int32 Index = 0; Index < static_cast<int32>(EditorActors.size()); ++Index)
+		{
+			if (EditorActors[Index] == PreviousActor && Index < static_cast<int32>(PIEActors.size()))
+			{
+				MappedActor = PIEActors[Index];
+				break;
+			}
+		}
+
+		if (MappedActor != nullptr)
+		{
+			MappedSelectedActors.push_back(MappedActor);
+			if (PreviousActor == PreviousPrimaryActor)
+			{
+				MappedPrimaryActor = MappedActor;
+			}
+		}
+	}
+
+	if (MappedPrimaryActor == nullptr && !MappedSelectedActors.empty())
+	{
+		MappedPrimaryActor = MappedSelectedActors.front();
+	}
+
+	SelectionManager.ClearSelection();
+	if (MappedPrimaryActor != nullptr)
+	{
+		SelectionManager.AddSelect(MappedPrimaryActor);
+	}
+	for (AActor* MappedActor : MappedSelectedActors)
+	{
+		if (MappedActor != MappedPrimaryActor)
+		{
+			SelectionManager.AddSelect(MappedActor);
+		}
+	}
+
+	UActorComponent* MappedSelectedComponent = nullptr;
+	if (MappedPrimaryActor != nullptr && PreviousSelectedComponent != nullptr)
+	{
+		MappedSelectedComponent = FindMatchingComponent(
+			PreviousPrimaryActor,
+			MappedPrimaryActor,
+			PreviousSelectedComponent,
+			PreviousSelectedComponentIndex,
+			PreviousNonSceneTypeOccurrence,
+			bPreviousHasScenePath,
+			PreviousSelectedComponentScenePath);
+	}
+
+	MainPanel.GetPropertyWidget().RestoreSelection(MappedPrimaryActor, MappedSelectedComponent, bPreviousActorSelected);
 
     PIEWorld->SetActiveCamera(FocusedClient->GetCamera());
     PIEWorld->BeginPlay();
@@ -195,15 +506,33 @@ void UEditorEngine::StopPlaySession()
     const int32 FocusedIdx = ViewportLayout.GetLastFocusedViewportIndex();
     FEditorViewportClient* FocusedClient = ViewportLayout.GetViewportClient(FocusedIdx);
 
+	UWorld* PIEWorld = nullptr;
+	FName PIEHandle = FName::None;
+	TArray<AActor*> PIESelectedActors;
+	AActor* PIEPrimaryActor = SelectionManager.GetPrimarySelection();
+	UActorComponent* PIESelectedComponent = MainPanel.GetPropertyWidget().GetSelectedDetailComponent();
+	const bool bPIEActorSelected = MainPanel.GetPropertyWidget().IsActorSelected();
+	int32 PIESelectedComponentIndex = FindComponentIndex(PIEPrimaryActor, PIESelectedComponent);
+	const int32 PIENonSceneTypeOccurrence = FindNonSceneComponentTypeOccurrence(PIEPrimaryActor, PIESelectedComponent);
+	TArray<int32> PIESelectedComponentScenePath;
+	const bool bPIEHasScenePath = TryBuildSceneComponentPath(
+		PIEPrimaryActor,
+		PIESelectedComponent,
+		PIESelectedComponentScenePath);
+
     // 기존 PIE 월드를 해제합니다.
     auto HandleIt = ViewportPIEHandles.find(FocusedIdx);
     if (HandleIt != ViewportPIEHandles.end())
     {
-        FName PIEHandle = HandleIt->second;
+        PIEHandle = HandleIt->second;
+		if (FWorldContext* PIECtx = GetWorldContextFromHandle(PIEHandle))
+		{
+			PIEWorld = PIECtx->World;
+			PIESelectedActors = SelectionManager.GetSelectedActors();
+		}
+
         ViewportPIEHandles.erase(HandleIt);
-        
-        UnregisterWorld(PIEHandle);
-    }
+	}
 
     // 원본 에디터 월드를 검색합니다.
     FName EditorHandle = GetEditorWorldHandle();
@@ -218,6 +547,60 @@ void UEditorEngine::StopPlaySession()
         }
     }
 
+	TArray<AActor*> RestoredSelectedActors;
+	AActor* RestoredPrimaryActor = nullptr;
+	UActorComponent* RestoredSelectedComponent = nullptr;
+	if (PIEWorld != nullptr && EditorWorld != nullptr)
+	{
+		const TArray<AActor*> PIEActors = PIEWorld->GetActors();
+		const TArray<AActor*> EditorActors = EditorWorld->GetActors();
+		RestoredSelectedActors.reserve(PIESelectedActors.size());
+
+		for (AActor* SelectedActor : PIESelectedActors)
+		{
+			AActor* MappedActor = nullptr;
+			for (int32 Index = 0; Index < static_cast<int32>(PIEActors.size()); ++Index)
+			{
+				if (PIEActors[Index] == SelectedActor && Index < static_cast<int32>(EditorActors.size()))
+				{
+					MappedActor = EditorActors[Index];
+					break;
+				}
+			}
+
+			if (MappedActor != nullptr)
+			{
+				RestoredSelectedActors.push_back(MappedActor);
+				if (SelectedActor == PIEPrimaryActor)
+				{
+					RestoredPrimaryActor = MappedActor;
+				}
+			}
+		}
+
+		if (RestoredPrimaryActor == nullptr && !RestoredSelectedActors.empty())
+		{
+			RestoredPrimaryActor = RestoredSelectedActors.front();
+		}
+
+		if (RestoredPrimaryActor != nullptr && PIESelectedComponent != nullptr)
+		{
+			RestoredSelectedComponent = FindMatchingComponent(
+				PIEPrimaryActor,
+				RestoredPrimaryActor,
+				PIESelectedComponent,
+				PIESelectedComponentIndex,
+				PIENonSceneTypeOccurrence,
+				bPIEHasScenePath,
+				PIESelectedComponentScenePath);
+		}
+	}
+
+	if (PIEHandle != FName::None)
+	{
+		UnregisterWorld(PIEHandle);
+	}
+
     // 원본 에디터 월드로 뷰포트 및 상태를 복구합니다.
     FocusedClient->EndPIE(EditorWorld);
     SetEditorState(EViewportPlayState::Editing);
@@ -228,8 +611,27 @@ void UEditorEngine::StopPlaySession()
         InputSystem::Get().SetCursorVisibility(true);
     }
 
-    MainPanel.ResetWidgetSelections();
-    SelectionManager.ClearSelection();
+	SelectionManager.ClearSelection();
+	if (RestoredPrimaryActor != nullptr)
+	{
+		SelectionManager.AddSelect(RestoredPrimaryActor);
+	}
+	for (AActor* RestoredActor : RestoredSelectedActors)
+	{
+		if (RestoredActor != RestoredPrimaryActor)
+		{
+			SelectionManager.AddSelect(RestoredActor);
+		}
+	}
+
+	if (RestoredSelectedActors.empty())
+	{
+		MainPanel.ResetWidgetSelections();
+	}
+	else
+	{
+		MainPanel.GetPropertyWidget().RestoreSelection(RestoredPrimaryActor, RestoredSelectedComponent, bPIEActorSelected);
+	}
 }
 
 void UEditorEngine::ResetViewport()

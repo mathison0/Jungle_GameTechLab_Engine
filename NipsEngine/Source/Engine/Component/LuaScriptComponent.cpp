@@ -75,7 +75,10 @@ void ULuaScriptComponent::BeginPlay()
 
 	if (!ScriptPath.empty())
 	{
-		ReloadScript();
+		if (!bUseDefaultScriptPath || HasScriptFile())
+		{
+			ReloadScript();
+		}
 	}
 
 	if (bLoaded)
@@ -133,11 +136,6 @@ void ULuaScriptComponent::PostDuplicate(UObject* Original)
 		if (!OriginalScript->ScriptPath.empty())
 		{
 			ScriptPath = OriginalScript->ScriptPath;
-		}
-		else
-		{
-			ScriptPath = MakeDefaultScriptPathForActor(OriginalScript->GetOwner());
-			bUseDefaultScriptPath = true;
 		}
 	}
 
@@ -421,6 +419,14 @@ void ULuaScriptComponent::HandleHit(const FHitResult& Hit)
 	if (bLoaded)
 	{
 		FLuaScriptSystem::Get().CallHit(this, GetOwner(), Hit);
+	}
+}
+
+void ULuaScriptComponent::HandleInteract(AActor* Interactor)
+{
+	if (bLoaded)
+	{
+		FLuaScriptSystem::Get().CallInteract(this, GetOwner(), Interactor);
 	}
 }
 
