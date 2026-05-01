@@ -20,25 +20,25 @@ using BVHDetail::GetAxisValue;
 
 namespace
 {
-    // AABB와 world-space bounding sphere가 겹치는지 판정합니다.
-    bool IntersectsSphere(const FAABB& Bounds, const FVector& Center, float RadiusSquared)
-    {
-		float DistanceSquared = 0.0f;
+	// AABB와 world-space bounding sphere가 겹치는지 판정합니다.
+	bool IntersectsSphere(const FAABB& Bounds, const FVector& Center, float RadiusSquared)
+	{
+		float DistSq = 0.0f;
 		for (int32 Axis = 0; Axis < 3; ++Axis)
 		{
 			const float Value = Center[Axis];
 			if (Value < Bounds.Min[Axis])
 			{
 				const float Delta = Bounds.Min[Axis] - Value;
-				DistanceSquared += Delta * Delta;
+				DistSq += Delta * Delta;
 			}
 			else if (Value > Bounds.Max[Axis])
 			{
 				const float Delta = Value - Bounds.Max[Axis];
-				DistanceSquared += Delta * Delta;
+				DistSq += Delta * Delta;
 			}
 		}
-		return DistanceSquared <= RadiusSquared;
+		return DistSq <= RadiusSquared;
 	}
 }
 

@@ -30,6 +30,8 @@ public:
 	void EndPlay(EEndPlayReason::Type EndPlayReason);
 
 private:
+	void UpdateCollision();
+
 	TArray<AActor*> Actors;
 };
 

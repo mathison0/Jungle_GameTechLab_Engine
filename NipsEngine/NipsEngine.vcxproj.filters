@@ -329,6 +329,9 @@
     <ClCompile Include="Source\Engine\Asset\StaticMeshSimplifier.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Collision\Collision.cpp">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp">
       <Filter>Source\Engine\Collision\RayCollision</Filter>
     </ClCompile>
@@ -453,6 +456,9 @@
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Geometry\AABB.cpp">
+      <Filter>Source\Engine\Geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Geometry\Capsule.cpp">
       <Filter>Source\Engine\Geometry</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Geometry\Frustum.cpp">
@@ -863,6 +869,9 @@
     <ClInclude Include="Source\Engine\Asset\StaticMeshTypes.h">
       <Filter>Source\Engine\Asset</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Collision\Collision.h">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h">
       <Filter>Source\Engine\Collision\RayCollision</Filter>
     </ClInclude>
@@ -971,6 +980,9 @@
     <ClInclude Include="Source\Engine\Core\Debug.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Delegate.h">
+      <Filter>Source\Engine\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Core\EngineTypes.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
@@ -1046,6 +1058,9 @@
     <ClInclude Include="Source\Engine\Geometry\AABB.h">
       <Filter>Source\Engine\Geometry</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Geometry\Capsule.h">
+      <Filter>Source\Engine\Geometry</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Geometry\Edge.h">
       <Filter>Source\Engine\Geometry</Filter>
     </ClInclude>
@@ -1083,9 +1098,6 @@
       <Filter>Source\Engine\Input\Controller\EditorController</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Color.h">
-      <Filter>Source\Engine\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Math\Edge.h">
       <Filter>Source\Engine\Math</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Matrix.h">
@@ -1438,9 +1450,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\SimpleJSON\json.hpp">
       <Filter>ThirdParty\SimpleJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Core\Delegate.h">
-      <Filter>Source\Engine\Core</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

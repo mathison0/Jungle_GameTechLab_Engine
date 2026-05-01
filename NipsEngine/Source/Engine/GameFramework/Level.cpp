@@ -1,6 +1,5 @@
 ﻿#include "Level.h"
 #include "Component/PrimitiveComponent.h"
-#include "UI/EditorConsoleWidget.h"
 
 DEFINE_CLASS(ULevel, UObject)
 REGISTER_FACTORY(ULevel)
@@ -19,6 +18,15 @@ namespace
 		AActor* Actor = nullptr;
 		UPrimitiveComponent* Component = nullptr;
 	};
+
+	FHitResult MakeHitResult(UPrimitiveComponent* HitComponent)
+	{
+		FHitResult Hit;
+		Hit.HitComponent = HitComponent;
+		Hit.Location = HitComponent ? HitComponent->GetWorldAABB().GetCenter() : FVector::ZeroVector;
+		Hit.bHit = (HitComponent != nullptr);
+		return Hit;
+	}
 }
 
 // 소멸될 때 가지고 있던 모든 액터들을 메모리에서 완전히 해제한다.
@@ -81,7 +89,12 @@ void ULevel::TickGame(float DeltaTime)
 		}
 	}
 
-	// brute-force O(n²) 충돌 처리
+	UpdateCollision();
+}
+
+// brute-force O(n²) 충돌 처리
+void ULevel::UpdateCollision()
+{
 	TArray<FPrimitiveOverlapCandidate> Candidates;
 	for (AActor* Actor : Actors)
 	{
@@ -92,7 +105,7 @@ void ULevel::TickGame(float DeltaTime)
 
 		for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
 		{
-			if (Primitive && Primitive->IsGenerateOverlapEvents())
+			if (Primitive)
 			{
 				Candidates.push_back({ Actor, Primitive });
 			}
@@ -111,18 +124,105 @@ void ULevel::TickGame(float DeltaTime)
 				continue;
 			}
 
+			const bool bAHasCollisionEvent = A.Component->IsGenerateOverlapEvents() || A.Component->IsBlockComponent();
+			const bool bBHasCollisionEvent = B.Component->IsGenerateOverlapEvents() || B.Component->IsBlockComponent();
+			if (!bAHasCollisionEvent && !bBHasCollisionEvent)
+			{
+				continue;
+			}
+
 			const bool bIsOverlapping = IsOverlapping(A.Component->GetWorldAABB(), B.Component->GetWorldAABB());
+			const bool bShouldBlock = A.Component->IsBlockComponent() || B.Component->IsBlockComponent();
+
+			const bool bWasAOverlapping = A.Component->HasOverlapInfo(B.Actor, B.Component);
+			const bool bWasBOverlapping = B.Component->HasOverlapInfo(A.Actor, A.Component);
+			const bool bWasABlocking = A.Component->HasBlockingInfo(B.Actor, B.Component);
+			const bool bWasBBlocking = B.Component->HasBlockingInfo(A.Actor, A.Component);
 
 			if (bIsOverlapping)
 			{
-				UE_LOG("Actors A and B Collided.");
-				A.Component->AddOverlapInfo(B.Actor, B.Component);
-				B.Component->AddOverlapInfo(A.Actor, A.Component);
+				if (bShouldBlock)
+				{
+					if (bWasAOverlapping)
+					{
+						FOverlapResult EndOverlapInfo{ B.Actor, B.Component };
+						A.Component->RemoveOverlapInfo(B.Actor, B.Component);
+						A.Component->OnComponentEndOverlap.Broadcast(EndOverlapInfo);
+					}
+
+					if (bWasBOverlapping)
+					{
+						FOverlapResult EndOverlapInfo{ A.Actor, A.Component };
+						B.Component->RemoveOverlapInfo(A.Actor, A.Component);
+						B.Component->OnComponentEndOverlap.Broadcast(EndOverlapInfo);
+					}
+
+					if (!bWasABlocking)
+					{
+						FHitResult HitA = MakeHitResult(B.Component);
+						A.Component->AddBlockingInfo(B.Actor, B.Component, HitA);
+						A.Component->OnComponentHit.Broadcast(HitA);
+					}
+
+					if (!bWasBBlocking)
+					{
+						FHitResult HitB = MakeHitResult(A.Component);
+						B.Component->AddBlockingInfo(A.Actor, A.Component, HitB);
+						B.Component->OnComponentHit.Broadcast(HitB);
+					}
+				}
+				else
+				{
+					if (bWasABlocking)
+					{
+						A.Component->RemoveBlockingInfo(B.Actor, B.Component);
+					}
+
+					if (bWasBBlocking)
+					{
+						B.Component->RemoveBlockingInfo(A.Actor, A.Component);
+					}
+
+					if (A.Component->IsGenerateOverlapEvents() && !bWasAOverlapping)
+					{
+						FOverlapResult Result{ B.Actor, B.Component };
+						A.Component->AddOverlapInfo(B.Actor, B.Component);
+						A.Component->OnComponentBeginOverlap.Broadcast(Result);
+					}
+
+					if (B.Component->IsGenerateOverlapEvents() && !bWasBOverlapping)
+					{
+						FOverlapResult Result{ A.Actor, A.Component };
+						B.Component->AddOverlapInfo(A.Actor, A.Component);
+						B.Component->OnComponentBeginOverlap.Broadcast(Result);
+					}
+				}
 			}
 			else
 			{
-				A.Component->RemoveOverlapInfo(B.Actor, B.Component);
-				B.Component->RemoveOverlapInfo(A.Actor, A.Component);
+				if (bWasAOverlapping)
+				{
+					FOverlapResult Result{ B.Actor, B.Component };
+					A.Component->RemoveOverlapInfo(B.Actor, B.Component);
+					A.Component->OnComponentEndOverlap.Broadcast(Result);
+				}
+
+				if (bWasBOverlapping)
+				{
+					FOverlapResult Result{ A.Actor, A.Component };
+					B.Component->RemoveOverlapInfo(A.Actor, A.Component);
+					B.Component->OnComponentEndOverlap.Broadcast(Result);
+				}
+
+				if (bWasABlocking)
+				{
+					A.Component->RemoveBlockingInfo(B.Actor, B.Component);
+				}
+
+				if (bWasBBlocking)
+				{
+					B.Component->RemoveBlockingInfo(A.Actor, A.Component);
+				}
 			}
 		}
 	}
