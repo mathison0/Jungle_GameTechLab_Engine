@@ -57,36 +57,20 @@ public:
 
 	void SetRootComponent(USceneComponent* Comp);
 	USceneComponent* GetRootComponent() const { return RootComponent; }
-
 	const TArray<UActorComponent*>& GetComponents() const { return OwnedComponents; }
 
 	// Transform — Location
 	FVector GetActorLocation() const;
 	void SetActorLocation(const FVector& Location);
-	void AddActorWorldOffset(const FVector& Delta)
-	{
-		if (RootComponent) RootComponent->AddWorldOffset(Delta);
-	}
+	void AddActorWorldOffset(const FVector& Delta) { if (RootComponent) RootComponent->AddWorldOffset(Delta); }
 
 	// Transform — Rotation
-	FVector GetActorRotation() const
-	{
-		return RootComponent ? RootComponent->GetRelativeRotation() : FVector(0, 0, 0);
-	}
-	void SetActorRotation(const FVector& NewRotation)
-	{
-		if (RootComponent) RootComponent->SetRelativeRotation(NewRotation);
-	}
+	FVector GetActorRotation() const { return RootComponent ? RootComponent->GetRelativeRotation() : FVector(0, 0, 0); }
+	void SetActorRotation(const FVector& NewRotation) { if (RootComponent) RootComponent->SetRelativeRotation(NewRotation); }
 
 	// Transform — Scale
-	FVector GetActorScale() const
-	{
-		return RootComponent ? RootComponent->GetRelativeScale() : FVector(1, 1, 1);
-	}
-	void SetActorScale(const FVector& NewScale)
-	{
-		if (RootComponent) RootComponent->SetRelativeScale(NewScale);
-	}
+	FVector GetActorScale() const { return RootComponent ? RootComponent->GetRelativeScale() : FVector(1, 1, 1); }
+	void SetActorScale(const FVector& NewScale) { if (RootComponent) RootComponent->SetRelativeScale(NewScale); }
 
 	// Direction
 	FVector GetActorForward() const
@@ -105,6 +89,9 @@ public:
 	// 프로퍼티 시스템 — UObject 에서 상속
 	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 	void PostEditProperty(const char* PropertyName) override {}
+
+	// 충돌 처리
+	bool IsOverlappingActor(const AActor* Other) const;
 
 	const TArray<UPrimitiveComponent*>& GetPrimitiveComponents() const;
 

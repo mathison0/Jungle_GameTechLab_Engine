@@ -169,7 +169,9 @@ void FEditorPropertyWidget::RenderMultiSelectionHeader(AActor* PrimaryActor, con
 
 	if (bActorSelected)
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+
 	ImGui::Text("Name: %s (+%d)", PrimaryName.c_str(), SelectionCount - 1);
+
 	if (bActorSelected)
 		ImGui::PopStyleColor();
 
@@ -202,18 +204,17 @@ void FEditorPropertyWidget::RenderSingleSelectionHeader(AActor* PrimaryActor)
 	if (SelectedComponent == nullptr)
 		SelectedComponent = PrimaryActor->GetRootComponent();
 
-	ImGui::Text("Actor: %s", PrimaryActor->GetFName().ToString().c_str());
-	ImGui::Text("Component: %s", SelectedComponent ? SelectedComponent->GetTypeInfo()->name : "None");
+	if (bActorSelected) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+	if (bActorSelected) ImGui::PopStyleColor();
 
-	if (bActorSelected)
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
-	if (ImGui::IsItemClicked())
+	FString ActorLabel = "Actor: " + PrimaryActor->GetFName().ToString();
+	if (ImGui::Selectable(ActorLabel.c_str(), bActorSelected))
 	{
 		bActorSelected = true;
 		SelectedComponent = nullptr;
 	}
-	if (bActorSelected)
-		ImGui::PopStyleColor();
+	
+	ImGui::Text("Component: %s", SelectedComponent ? SelectedComponent->GetTypeInfo()->name : "None");
 
 	ImGui::SameLine();
 	if (ImGui::SmallButton("Remove"))

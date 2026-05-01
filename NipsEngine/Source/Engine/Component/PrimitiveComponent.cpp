@@ -1,8 +1,11 @@
 ﻿#include "PrimitiveComponent.h"
 #include "Engine/Geometry/Ray.h"
 #include "Core/CollisionTypes.h"
+#include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Math/Utils.h"
+
+#include <algorithm>
 
 DEFINE_CLASS(UPrimitiveComponent, USceneComponent)
 
@@ -12,6 +15,8 @@ void UPrimitiveComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
 
 	OutProps.push_back({"Visible", EPropertyType::Bool, &bIsVisible});
 	OutProps.push_back({"Enable Cull", EPropertyType::Bool, &bEnableCull});
+	OutProps.push_back({"Generate Overlap Events", EPropertyType::Bool, &bGenerateOverlapEvents});
+	OutProps.push_back({"Block Component", EPropertyType::Bool, &bBlockComponent});
 }
 
 void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
@@ -24,7 +29,9 @@ void UPrimitiveComponent::Serialize(FArchive& Ar)
 {
 	USceneComponent::Serialize(Ar);
 	Ar << "Visible" << bIsVisible;
-	Ar << "Enable Cull" << bEnableCull;
+	Ar << "EnableCull" << bEnableCull;
+	Ar << "GenerateOverlapEvents" << bGenerateOverlapEvents;
+	Ar << "BlockComponent" << bBlockComponent;
 }
 
 void UPrimitiveComponent::SetVisibility(bool bVisible)
@@ -115,22 +122,22 @@ void UPrimitiveComponent::OnTransformDirty()
 
 void UPrimitiveComponent::OnRegister()
 {
-    if (!Owner || bRegistered) { return; }
-    UWorld* World = Owner->GetFocusedWorld();
-    if (!World) { return; }
+	if (!Owner || bRegistered) { return; }
+	UWorld* World = Owner->GetFocusedWorld();
+	if (!World) { return; }
 
-    World->GetSpatialIndex().RegisterPrimitive(this);
-    bRegistered = true;
+	World->GetSpatialIndex().RegisterPrimitive(this);
+	bRegistered = true;
 }
 
 void UPrimitiveComponent::OnUnregister()
 {
-    if (!Owner || !bRegistered) { return; }
-    UWorld* World = Owner->GetFocusedWorld();
-    if (!World) { return; }
+	if (!Owner || !bRegistered) { return; }
+	UWorld* World = Owner->GetFocusedWorld();
+	if (!World) { return; }
 
-    World->GetSpatialIndex().UnregisterPrimitive(this);
-    bRegistered = false;
+	World->GetSpatialIndex().UnregisterPrimitive(this);
+	bRegistered = false;
 }
 
 void UPrimitiveComponent::NotifySpatialIndexDirty() const
@@ -148,4 +155,55 @@ void UPrimitiveComponent::NotifySpatialIndexDirty() const
 	}
 
 	World->GetSpatialIndex().MarkPrimitiveDirty(const_cast<UPrimitiveComponent*>(this));
+}
+
+// 저장된 overlap 목록에 대상 Actor가 포함되어 있는지 확인한다.
+bool UPrimitiveComponent::IsOverlappingActor(const AActor* Other) const
+{
+	for (const FOverlapResult& OverlapInfo : OverlapInfos)
+	{
+		if (OverlapInfo.OtherActor == Other)
+		{
+			return true;
+		}
+
+		if (OverlapInfo.OtherComp && OverlapInfo.OtherComp->GetOwner() == Other)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// 같은 Actor/Component pair가 중복 저장되지 않도록 overlap 정보를 추가한다.
+void UPrimitiveComponent::AddOverlapInfo(AActor* OtherActor, UPrimitiveComponent* OtherComp)
+{
+	for (const FOverlapResult& OverlapInfo : OverlapInfos)
+	{
+		if (OverlapInfo.OtherActor == OtherActor && OverlapInfo.OtherComp == OtherComp)
+		{
+			return;
+		}
+	}
+
+	FOverlapResult OverlapInfo;
+	OverlapInfo.OtherActor = OtherActor;
+	OverlapInfo.OtherComp = OtherComp;
+	OverlapInfos.push_back(OverlapInfo);
+}
+
+// 지정한 Actor/Component 조건과 일치하는 overlap 정보를 제거한다.
+void UPrimitiveComponent::RemoveOverlapInfo(AActor* OtherActor, UPrimitiveComponent* OtherComp)
+{
+	const int32 OverlapCount = static_cast<int32>(OverlapInfos.size());
+	for (int32 i = OverlapCount - 1; i >= 0; --i)
+	{
+		const auto& it = OverlapInfos[i];
+		if (it.OtherActor == OtherActor && it.OtherComp == OtherComp)
+		{
+			std::swap(OverlapInfos[i], OverlapInfos.back());
+			OverlapInfos.pop_back(); // swap-erase
+		}
+	}
 }

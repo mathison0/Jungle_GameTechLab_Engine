@@ -1,6 +1,7 @@
 ﻿#include "EditorComponentFactory.h"
 
 #include "Engine/GameFramework/AActor.h"
+#include "Selection/SelectionManager.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/TextRenderComponent.h"
@@ -11,12 +12,14 @@
 #include "Component/Movement/InterpToMovementComponent.h"
 #include "Component/Movement/PursuitMovementComponent.h"
 #include "Component/SkyAtmosphereComponent.h"
-#include "Selection/SelectionManager.h"
 #include "Component/HeightFogComponent.h"
 #include "Component/Light/AmbientLightComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Component/Light/PointLightComponent.h"
 #include "Component/Light/SpotLightComponent.h"
+#include "Component/Collision/BoxComponent.h"
+#include "Component/Collision/SphereComponent.h"
+#include "Component/Collision/CapsuleComponent.h"
 
 // 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
 template<typename ComponentType>
@@ -113,6 +116,10 @@ const TArray<FComponentMenuEntry>& FEditorComponentFactory::GetMenuRegistry()
         { "DirectionalLight Component", "Light", RegisterLightComp<UDirectionalLightComponent> },
         { "PointLight Component", "Light", RegisterLightComp<UPointLightComponent> },
         { "SpotLight Component", "Light", RegisterLightComp<USpotLightComponent> },
+
+        { "Box Component", "Collision", RegisterComp<UBoxComponent> },
+        { "Sphere Component", "Collision", RegisterComp<USphereComponent> },
+        { "Capsule Component", "Collision", RegisterComp<UCapsuleComponent> },
     };
 
     return Registry;

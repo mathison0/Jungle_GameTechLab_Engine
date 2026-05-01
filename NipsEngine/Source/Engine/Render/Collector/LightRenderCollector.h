@@ -10,8 +10,9 @@ class UPrimitiveComponent;
 class USpotLightComponent;
 class UWorld;
 struct FFrustum;
+class FRenderCollector;
 
-class FLightRenderCollector
+class FLightRenderCollector // RenderCollector와 has-a 구조
 {
 public:
 	void Initialize(FMeshBufferManager* InMeshBufferManager) { MeshBufferManager = InMeshBufferManager; }

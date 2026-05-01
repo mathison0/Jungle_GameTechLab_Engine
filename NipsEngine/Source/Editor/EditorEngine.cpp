@@ -97,8 +97,7 @@ void UEditorEngine::WorldTick(float DeltaTime)
         }
     }
 
-    // WorldList의 모든 월드에 대해 Tick()을 넣어줍니다.
-    // UWorld::Tick에서 EWorldType에 따라 TickEditor / TickGame이 분기됩니다.
+    // WorldList의 모든 월드에 대해 Tick()을 넣어줍니다. UWorld::Tick에서 EWorldType에 따라 TickEditor / TickGame이 분기됩니다.
     for (FWorldContext& Ctx : WorldList)
     {
         if (!Ctx.World || Ctx.bPaused)

@@ -8,8 +8,9 @@ class FLineBatcher;
 class FMeshBufferManager;
 class UGizmoComponent;
 class UPrimitiveComponent;
+class FRenderCollector;
 
-class FOverlayRenderCollector
+class FOverlayRenderCollector // RenderCollector와 has-a 구조
 {
 public:
 	void Initialize(FMeshBufferManager* InMeshBufferManager) { MeshBufferManager = InMeshBufferManager; }

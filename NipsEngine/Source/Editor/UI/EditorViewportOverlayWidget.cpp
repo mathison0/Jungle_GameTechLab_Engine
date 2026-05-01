@@ -414,7 +414,7 @@ void FEditorViewportOverlayWidget::RenderActorPlacementPopup()
 
 	if (ImGui::BeginPopup("Actor Placement##Popup"))
 	{
-		ImGui::TextUnformatted("Spawn Actor");
+		ImGui::TextColored(ColorMint, "Spawn Actor");
 		ImGui::Separator();
 
 		for (const FPlacementActorEntry& Entry : PlacementActorTypes)

@@ -39,10 +39,10 @@ struct FAABB
         return FVector(Extent);
     }
 
-    bool         IntersectRay(const FRay& Ray, float& OutT) const;
-    bool         IntersectRay(const FRay& Ray, float& OutTMin, float& OutTMax) const;
+    bool IntersectRay(const FRay& Ray, float& OutT) const;
+    bool IntersectRay(const FRay& Ray, float& OutTMin, float& OutTMax) const;
     static FAABB TransformAABB(const FAABB& InLocalAABB, const FMatrix& InMatrix);
-    void         ExpandToInclude(const FAABB& Other);
-    bool         NearlyEqualAABB(const FAABB& Other) const;
-    static bool         NearlyEqualAABB(const FAABB& A, const FAABB& B);
+    void ExpandToInclude(const FAABB& Other);
+    bool NearlyEqualAABB(const FAABB& Other) const;
+    static bool NearlyEqualAABB(const FAABB& A, const FAABB& B);
 };

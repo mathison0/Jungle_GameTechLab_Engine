@@ -34,9 +34,13 @@ struct FHitResult
 
 struct FOverlapResult
 {
-    class UPrimitiveComponent* MyComponent = nullptr;
-    class UPrimitiveComponent* OtherComponent = nullptr;
-    bool bOverlap = false;
+    class AActor* OtherActor = nullptr;
+    class UPrimitiveComponent* OtherComp = nullptr;
+
+    bool operator==(const FOverlapResult& Other) const
+    {
+        return OtherActor == Other.OtherActor && OtherComp == Other.OtherComp;
+    }
 };
 
 DECLARE_DELEGATE(FComponentHitSignature, const FHitResult&);

@@ -107,10 +107,7 @@ public:
 	bool LoadShader(const FShaderCompileKey& CompileKey);
 	bool LoadShader(const FShaderCompileKey& CompileKey,
 	                const D3D11_INPUT_ELEMENT_DESC* InputElements, UINT InputElementCount);
-    //ID3DBlob* CompileShaderWithDefines(const WCHAR* filename,
-    //                                   const D3D_SHADER_MACRO* defines,
-    //                                   const char* entryPoint,
-    //                                   const char* shaderModel);
+    //ID3DBlob* CompileShaderWithDefines(const WCHAR* filename, onst D3D_SHADER_MACRO* defines, const char* entryPoint, const char* shaderModel);
 
 	UMaterial* GetMaterial(const FString& Path) const;
 	UMaterial* GetOrCreateMaterial(const FString& Path, const FString& ShaderName);
