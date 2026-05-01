@@ -14,9 +14,12 @@ public:
 	void Initialize(UEditorEngine* InEditorEngine) override;
 
 	UActorComponent* GetSelectedComponent() const { return SelectedComponent; }
+	UActorComponent* GetSelectedDetailComponent() const { return bActorSelected ? nullptr : SelectedComponent; }
 	bool IsActorSelected() const { return bActorSelected; }
+	bool IsModalInputBlocking() const;
 
 	void ResetSelection();
+	void RestoreSelection(AActor* Actor, UActorComponent* Component, bool bInActorSelected);
 
 private:
 	// 선택 상태 관리
@@ -39,6 +42,8 @@ private:
 	bool RenderPropertyWidget(struct FPropertyDescriptor& Prop);
 	void RenderSceneComponentRefWidget(struct FPropertyDescriptor& Prop, AActor* Owner);
 	void RenderInterpControlPoints(class UInterpToMovementComponent* Comp);
+	void RenderLuaScriptControls(class ULuaScriptComponent* Comp);
+	void RenderLuaScriptCreatePopup();
 
 	// 유틸리티
 	void AttachAndSelectNewComponent(AActor* PrimaryActor, UActorComponent* NewComp);

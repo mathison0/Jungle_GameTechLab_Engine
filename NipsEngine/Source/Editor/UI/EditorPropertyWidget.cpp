@@ -6,13 +6,19 @@
 #include "Core/PropertyTypes.h"
 #include "Math/Color.h"
 #include "Core/ResourceManager.h"
+#include "Core/Paths.h"
 #include "Object/FName.h"
 #include <cctype>
+#include <cstring>
 #include <functional>
+#include <Windows.h>
+#include <commdlg.h>
+#include <filesystem>
 
 #include "Editor/Utility/EditorComponentFactory.h"
 
 #include "GameFramework/AActor.h"
+#include "Component/LuaScriptComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/GizmoComponent.h"
 #include "Component/Light/LightComponent.h"
@@ -20,6 +26,9 @@
 #include "Editor/Viewport/ViewportLayout.h"
 #include "Editor/Utility/EditorUIUtils.h"
 #include "Engine/Render/Renderer/RenderFlow/ShadowAtlasManager.h"
+#include "Engine/Input/InputSystem.h"
+#include "Engine/Scripting/ScriptUtils.h"
+#include "Editor/UI/EditorConsoleWidget.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
@@ -33,6 +42,14 @@ namespace
 	const ImU32 ColorHighlightRect = IM_COL32(255, 220, 0, 220);
 	const ImU32 ColorHighlightText = IM_COL32(255, 220, 0, 255);
 
+	ULuaScriptComponent* PendingLuaScriptComponent = nullptr;
+	char PendingLuaScriptName[256] = "";
+	bool bPendingUseActorNameScript = true;
+	bool bRequestOpenCreateLuaScriptPopup = false;
+	FString PendingOverwriteScriptName;
+	bool bCloseCreateLuaScriptPopup = false;
+	bool bLuaScriptPopupInputBlocking = false;
+
 	// ─────────────────── Light & Shadow ───────────────────
 	void DrawAtlasGrid(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, uint32 GridDimension);
 	void DrawEmptyShadowPreview(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max);
@@ -43,6 +60,10 @@ namespace
 
 	// ─────────────────── Helper ───────────────────────────
 	int32 ExtractActorID(const AActor* Actor);
+	FString GetEditorScriptSceneName(UEditorEngine* EditorEngine);
+	FString GetEditorScriptActorName(const AActor* Actor);
+	FString GetEditorLuaScriptName(UEditorEngine* EditorEngine, const AActor* Actor);
+	bool OpenLuaScriptFileDialog(FString& OutFilePath);
 }
 
 void FEditorPropertyWidget::Initialize(UEditorEngine* InEditorEngine)
@@ -57,6 +78,35 @@ void FEditorPropertyWidget::ResetSelection()
 	SelectedComponent = nullptr;
 	LastSelectedActor = nullptr;
 	bActorSelected = true;
+}
+
+void FEditorPropertyWidget::RestoreSelection(AActor* Actor, UActorComponent* Component, bool bInActorSelected)
+{
+	if (Component != nullptr && Component->GetOwner() != Actor)
+	{
+		Component = nullptr;
+		bInActorSelected = true;
+	}
+
+	LastSelectedActor = Actor;
+	SelectedComponent = Component;
+	bActorSelected = Component == nullptr ? bInActorSelected : false;
+}
+
+bool FEditorPropertyWidget::IsModalInputBlocking() const
+{
+	return bLuaScriptPopupInputBlocking || bRequestOpenCreateLuaScriptPopup || PendingLuaScriptComponent != nullptr;
+}
+
+namespace
+{
+	void BlockViewportInputForLuaScriptPopup()
+	{
+		FGuiInputState& GuiState = InputSystem::Get().GetGuiInputState();
+		GuiState.bUsingMouse = true;
+		GuiState.bUsingKeyboard = true;
+		GuiState.bBlockViewportInput = true;
+	}
 }
 
 // 전체 프로퍼티 윈도우의 레이아웃을 구성하고 그리는 메인 함수입니다.
@@ -74,6 +124,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		LastSelectedActor = nullptr;
 		bActorSelected = true;
 		ImGui::Text("No object selected.");
+		RenderLuaScriptCreatePopup();
 		ImGui::End();
 		return;
 	}
@@ -94,6 +145,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 
 	if (SelectionManager->GetPrimarySelection() == nullptr)
 	{
+		RenderLuaScriptCreatePopup();
 		ImGui::End();
 		return;
 	}
@@ -113,6 +165,8 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		RenderDetails(PrimaryActor, SelectedActors);
 	}
 	ImGui::EndChild();
+
+	RenderLuaScriptCreatePopup();
 
 	ImGui::End();
 }
@@ -181,20 +235,6 @@ void FEditorPropertyWidget::RenderMultiSelectionHeader(AActor* PrimaryActor, con
 		SelectedComponent = nullptr;
 	}
 
-	ImGui::SameLine();
-	char RemoveLabel[64];
-	snprintf(RemoveLabel, sizeof(RemoveLabel), "Remove %d Objects", SelectionCount);
-	if (ImGui::SmallButton(RemoveLabel))
-	{
-		for (AActor* Actor : SelectedActors)
-		{
-			if (Actor && Actor->GetFocusedWorld())
-				Actor->GetFocusedWorld()->DestroyActor(Actor);
-		}
-		SelectionManager->ClearSelection();
-		SelectedComponent = nullptr;
-		LastSelectedActor = nullptr;
-	}
 }
 
 // 단일 액터의 이름 표시와 새로운 컴포넌트를 추가할 수 있는 버튼을 렌더링합니다.
@@ -215,16 +255,6 @@ void FEditorPropertyWidget::RenderSingleSelectionHeader(AActor* PrimaryActor)
 	}
 	
 	ImGui::Text("Component: %s", SelectedComponent ? SelectedComponent->GetTypeInfo()->name : "None");
-
-	ImGui::SameLine();
-	if (ImGui::SmallButton("Remove"))
-	{
-		if (PrimaryActor->GetFocusedWorld())
-			PrimaryActor->GetFocusedWorld()->DestroyActor(PrimaryActor);
-		SelectionManager->ClearSelection();
-		SelectedComponent = nullptr;
-		LastSelectedActor = nullptr;
-	}
 
 	ImGui::Spacing();
 	RenderAddComponentPopup(PrimaryActor);
@@ -533,9 +563,20 @@ void FEditorPropertyWidget::RenderComponentProperties()
 
 	AActor* Owner = SelectedComponent->GetOwner();
 
+	if (ULuaScriptComponent* LuaComp = Cast<ULuaScriptComponent>(SelectedComponent))
+	{
+		RenderLuaScriptControls(LuaComp);
+	}
+
 	bool bAnyChanged = false;
+	const bool bIsLuaScriptComponent = SelectedComponent->IsA<ULuaScriptComponent>();
 	for (auto& Prop : Props)
 	{
+		if (bIsLuaScriptComponent && strcmp(Prop.Name, "Script Path") == 0)
+		{
+			continue;
+		}
+
 		if (Prop.Type == EPropertyType::SceneComponentRef)
 		{
 			RenderSceneComponentRefWidget(Prop, Owner);
@@ -572,6 +613,188 @@ void FEditorPropertyWidget::RenderComponentProperties()
 		static_cast<USceneComponent*>(SelectedComponent)->MarkTransformDirty();
 		SelectionManager->GetGizmo()->UpdateGizmoTransform();
 	}
+}
+
+void FEditorPropertyWidget::RenderLuaScriptControls(ULuaScriptComponent* Comp)
+{
+	if (!Comp)
+	{
+		return;
+	}
+
+	ImGui::Spacing();
+
+	ImGui::TextWrapped("Selected Script: %s", Comp->GetScriptPath().empty() ? "(none)" : Comp->GetScriptPath().c_str());
+
+	if (ImGui::Button("Select Script", ImVec2(-1, 0)))
+	{
+		FString SelectedScriptPath;
+		if (OpenLuaScriptFileDialog(SelectedScriptPath))
+		{
+			Comp->SetScriptPath(SelectedScriptPath);
+			UE_LOG("LuaScriptComponent: selected script '%s'.", Comp->GetScriptPath().c_str());
+		}
+	}
+
+	const float ButtonWidth = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+	if (ImGui::Button("Create Script", ImVec2(ButtonWidth, 0)))
+	{
+		PendingLuaScriptComponent = Comp;
+		bPendingUseActorNameScript = true;
+		bRequestOpenCreateLuaScriptPopup = true;
+		PendingOverwriteScriptName.clear();
+		bCloseCreateLuaScriptPopup = false;
+		strncpy_s(PendingLuaScriptName, sizeof(PendingLuaScriptName),
+			GetEditorLuaScriptName(EditorEngine, Comp->GetOwner()).c_str(), _TRUNCATE);
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Open Script", ImVec2(ButtonWidth, 0)))
+	{
+		Comp->OpenScriptFile();
+	}
+
+	if (ImGui::Button("Reload Script", ImVec2(-1, 0)))
+	{
+		if (Comp->ReloadScript())
+		{
+			UE_LOG("LuaScriptComponent: reloaded script '%s'.", Comp->GetScriptPath().c_str());
+		}
+		else
+		{
+			const FString& Error = Comp->GetLastScriptError();
+			UE_LOG("LuaScriptComponent: failed to reload script '%s': %s",
+				Comp->GetScriptPath().empty() ? "(none)" : Comp->GetScriptPath().c_str(),
+				Error.empty() ? "unknown error" : Error.c_str());
+		}
+	}
+
+	const FString& Error = Comp->GetLastScriptError();
+	if (!Error.empty())
+	{
+		ImGui::TextWrapped("Last Error: %s", Error.c_str());
+	}
+}
+
+void FEditorPropertyWidget::RenderLuaScriptCreatePopup()
+{
+	bLuaScriptPopupInputBlocking = false;
+
+	if (bRequestOpenCreateLuaScriptPopup)
+	{
+		BlockViewportInputForLuaScriptPopup();
+		bRequestOpenCreateLuaScriptPopup = false;
+		ImGui::OpenPopup("Create Lua Script");
+	}
+
+	const ImGuiViewport* Viewport = ImGui::GetMainViewport();
+	const ImVec2 Center(
+		Viewport->WorkPos.x + Viewport->WorkSize.x * 0.5f,
+		Viewport->WorkPos.y + Viewport->WorkSize.y * 0.5f);
+	ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+	if (ImGui::BeginPopupModal("Create Lua Script", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		bLuaScriptPopupInputBlocking = true;
+		BlockViewportInputForLuaScriptPopup();
+		ULuaScriptComponent* TargetComp = PendingLuaScriptComponent;
+		if (!TargetComp || !UObject::IsValid(TargetComp))
+		{
+			PendingLuaScriptComponent = nullptr;
+			ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+			ImGui::PopStyleColor();
+			return;
+		}
+
+		if (ImGui::Checkbox("Use Actor Name Script", &bPendingUseActorNameScript))
+		{
+			if (bPendingUseActorNameScript)
+			{
+				strncpy_s(PendingLuaScriptName, sizeof(PendingLuaScriptName),
+					GetEditorLuaScriptName(EditorEngine, TargetComp->GetOwner()).c_str(), _TRUNCATE);
+			}
+		}
+
+		ImGui::TextDisabled("Scene name and actor name will be used as the script name when enabled.");
+
+		if (bPendingUseActorNameScript)
+		{
+			strncpy_s(PendingLuaScriptName, sizeof(PendingLuaScriptName),
+				GetEditorLuaScriptName(EditorEngine, TargetComp->GetOwner()).c_str(), _TRUNCATE);
+			ImGui::BeginDisabled();
+		}
+
+		ImGui::InputText("Script Name", PendingLuaScriptName, sizeof(PendingLuaScriptName));
+
+		if (bPendingUseActorNameScript)
+		{
+			ImGui::EndDisabled();
+		}
+
+		const FString NewScriptName = PendingLuaScriptName;
+		const FString PreviewPath = TargetComp->GetScriptPathForName(NewScriptName);
+		ImGui::TextWrapped("Preview: %s", PreviewPath.c_str());
+
+		if (ImGui::Button("Create", ImVec2(120.0f, 0)))
+		{
+			if (TargetComp->DoesScriptFileExistForName(NewScriptName))
+			{
+				PendingOverwriteScriptName = NewScriptName;
+				ImGui::OpenPopup("Overwrite Lua Script?");
+			}
+			else if (TargetComp->CreateScriptFileFromName(NewScriptName, false))
+			{
+				ImGui::CloseCurrentPopup();
+				PendingLuaScriptComponent = nullptr;
+			}
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120.0f, 0)))
+		{
+			ImGui::CloseCurrentPopup();
+			PendingLuaScriptComponent = nullptr;
+		}
+
+		ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		if (ImGui::BeginPopupModal("Overwrite Lua Script?", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			bLuaScriptPopupInputBlocking = true;
+			BlockViewportInputForLuaScriptPopup();
+			const FString ExistingPath = TargetComp->GetScriptPathForName(PendingOverwriteScriptName);
+			ImGui::TextWrapped("Script already exists:");
+			ImGui::TextWrapped("%s", ExistingPath.c_str());
+			ImGui::TextWrapped("Overwrite this file?");
+
+			if (ImGui::Button("Overwrite", ImVec2(120.0f, 0)))
+			{
+				if (TargetComp->CreateScriptFileFromName(PendingOverwriteScriptName, true))
+				{
+					bCloseCreateLuaScriptPopup = true;
+				}
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2(120.0f, 0)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
+		if (bCloseCreateLuaScriptPopup)
+		{
+			bCloseCreateLuaScriptPopup = false;
+			ImGui::CloseCurrentPopup();
+			PendingLuaScriptComponent = nullptr;
+		}
+
+		ImGui::EndPopup();
+	}
+	ImGui::PopStyleColor();
 }
 
 // 다른 씬 컴포넌트를 참조할 수 있도록 액터 내 컴포넌트 목록을 드롭다운으로 보여줍니다.
@@ -811,6 +1034,27 @@ void FEditorPropertyWidget::AttachAndSelectNewComponent(AActor* PrimaryActor, UA
 			MoveComp->SetUpdatedComponent(AttachTarget);
 	}
 
+	if (ULuaScriptComponent* LuaComp = Cast<ULuaScriptComponent>(NewComp))
+	{
+		const FString ScriptName = GetEditorLuaScriptName(EditorEngine, PrimaryActor);
+		if (LuaComp->DoesScriptFileExistForName(ScriptName))
+		{
+			LuaComp->SetScriptPath(LuaComp->GetScriptPathForName(ScriptName));
+			LuaComp->SetEditorScriptName(ScriptName);
+			UE_LOG("LuaScriptComponent: assigned existing script '%s'.", LuaComp->GetScriptPath().c_str());
+		}
+		else if (LuaComp->CreateScriptFileFromName(ScriptName, false))
+		{
+			UE_LOG("LuaScriptComponent: auto-created script '%s'.", LuaComp->GetScriptPath().c_str());
+		}
+		else
+		{
+			UE_LOG("LuaScriptComponent: failed to auto-create script '%s': %s",
+				LuaComp->GetScriptPathForName(ScriptName).c_str(),
+				LuaComp->GetLastScriptError().empty() ? "unknown error" : LuaComp->GetLastScriptError().c_str());
+		}
+	}
+
 	SelectedComponent = NewComp;
 	bActorSelected = false;
 }
@@ -1019,6 +1263,84 @@ namespace
 		}
 
 		return Result;
+	}
+
+	FString GetEditorScriptSceneName(UEditorEngine* EditorEngine)
+	{
+		if (EditorEngine == nullptr)
+		{
+			return "DefaultScene";
+		}
+
+		const char* SceneName = EditorEngine->GetMainPanel().GetSceneWidget().GetCurrentSceneName();
+		return (SceneName && SceneName[0] != '\0') ? FString(SceneName) : FString("DefaultScene");
+	}
+
+	FString GetEditorScriptActorName(const AActor* Actor)
+	{
+		if (Actor == nullptr)
+		{
+			return "Actor";
+		}
+
+		FString ActorName = Actor->GetFName().ToString();
+		if (ActorName.empty() && Actor->GetTypeInfo())
+		{
+			ActorName = Actor->GetTypeInfo()->name;
+		}
+
+		return ActorName.empty() ? FString("Actor") : ActorName;
+	}
+
+	FString GetEditorLuaScriptName(UEditorEngine* EditorEngine, const AActor* Actor)
+	{
+		return FScriptUtils::MakeScriptFileName(
+			GetEditorScriptSceneName(EditorEngine),
+			GetEditorScriptActorName(Actor));
+	}
+
+	bool OpenLuaScriptFileDialog(FString& OutFilePath)
+	{
+		OutFilePath.clear();
+
+		std::filesystem::path ScriptDir(FPaths::ToAbsolute(FPaths::ToWide(FScriptUtils::GetScriptDirectory())));
+		ScriptDir = ScriptDir.lexically_normal();
+		ScriptDir.make_preferred();
+
+		std::error_code Ec;
+		std::filesystem::create_directories(ScriptDir, Ec);
+
+		WCHAR FileBuffer[MAX_PATH] = { 0 };
+		const std::filesystem::path OpenPattern = ScriptDir / L"*.lua";
+		wcsncpy_s(FileBuffer, MAX_PATH, OpenPattern.wstring().c_str(), _TRUNCATE);
+		const std::wstring InitialDir = ScriptDir.wstring();
+
+		const std::filesystem::path PrevCwd = std::filesystem::current_path();
+		std::error_code ChdirEc;
+		std::filesystem::current_path(ScriptDir, ChdirEc);
+
+		OPENFILENAMEW DialogDesc = {};
+		DialogDesc.lStructSize = sizeof(DialogDesc);
+		DialogDesc.hwndOwner = static_cast<HWND>(ImGui::GetMainViewport()->PlatformHandleRaw);
+		DialogDesc.lpstrFilter = L"Lua Scripts (*.lua)\0*.lua\0All Files (*.*)\0*.*\0";
+		DialogDesc.lpstrFile = FileBuffer;
+		DialogDesc.nMaxFile = MAX_PATH;
+		DialogDesc.lpstrInitialDir = InitialDir.c_str();
+		DialogDesc.lpstrDefExt = L"lua";
+		DialogDesc.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+		const BOOL bPicked = GetOpenFileNameW(&DialogDesc);
+
+		std::error_code RestoreEc;
+		std::filesystem::current_path(PrevCwd, RestoreEc);
+
+		if (!bPicked)
+		{
+			return false;
+		}
+
+		OutFilePath = FPaths::Normalize(FPaths::ToRelativeString(FileBuffer));
+		return true;
 	}
 }
 

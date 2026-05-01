@@ -7,6 +7,7 @@
 #include "ImGui/imgui.h"
 #include "Component/GizmoComponent.h"
 #include "Serialization/SceneSaveManager.h"
+#include "Editor/Utility/EditorUIUtils.h"
 
 #include <filesystem>
 
@@ -38,6 +39,7 @@ void FEditorSceneWidget::NewScene()
 
 	EditorEngine->GetMainPanel().ResetWidgetSelections();
 	EditorEngine->NewScene();
+	strncpy_s(SceneName, IM_ARRAYSIZE(SceneName), "Default", _TRUNCATE);
 	NewSceneNotificationTimer = common::constants::ImGui::NotificationTimer;
 }
 
@@ -119,6 +121,12 @@ void FEditorSceneWidget::LoadSceneFromFilePath(const FString& FilePath)
 	{
 		return;
 	}
+
+	const std::filesystem::path SourcePath(FPaths::ToWide(FilePath));
+	const FString LoadedSceneName = FPaths::ToUtf8(SourcePath.stem().wstring());
+	strncpy_s(SceneName, IM_ARRAYSIZE(SceneName),
+		LoadedSceneName.empty() ? "Default" : LoadedSceneName.c_str(),
+		_TRUNCATE);
 
 	EditorEngine->GetMainPanel().ResetWidgetSelections();
 	EditorEngine->ClearScene();
@@ -262,6 +270,8 @@ void FEditorSceneWidget::Render(float DeltaTime)
         }
     };
 
+    AActor* ActorToDelete = nullptr;
+
     // UI 렌더링 영역
     ImGui::BeginChild("ActorList", ImVec2(0, 0), ImGuiChildFlags_Borders);
 
@@ -284,11 +294,20 @@ void FEditorSceneWidget::Render(float DeltaTime)
             ImGui::PushID(i);
 
             bool bIsSelected = Selection.IsSelected(Actor);
-            
+
             // Selectable이 클릭되었을 때만 로직 호출
-            if (ImGui::Selectable(ActorName.c_str(), bIsSelected))
+            const float SelectableWidth = std::max(1.0f, ImGui::GetContentRegionAvail().x - UIConstants::ClipMargin);
+            if (ImGui::Selectable(ActorName.c_str(), bIsSelected, 0, ImVec2(SelectableWidth, 0.0f)))
             {
                 HandleActorSelection(Actor, i);
+            }
+
+            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - UIConstants::TreeRightMargin);
+            char XId[64];
+            EditorUIUtils::MakeXButtonId(XId, sizeof(XId), Actor);
+            if (EditorUIUtils::DrawXButton(XId))
+            {
+                ActorToDelete = Actor;
             }
 
             ImGui::PopID();
@@ -297,5 +316,18 @@ void FEditorSceneWidget::Render(float DeltaTime)
 
     Clipper.End();
     ImGui::EndChild();
+
+    if (ActorToDelete)
+    {
+        UWorld* ActorWorld = ActorToDelete->GetFocusedWorld();
+        Selection.Deselect(ActorToDelete);
+        EditorEngine->GetMainPanel().ResetWidgetSelections();
+        LastClickedActorIndex = -1;
+        if (ActorWorld)
+        {
+            ActorWorld->DestroyActor(ActorToDelete);
+        }
+    }
+
     ImGui::End(); // Begin("Scene Manager")에 대한 End
 }
