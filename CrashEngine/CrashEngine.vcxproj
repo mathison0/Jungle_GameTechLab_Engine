@@ -297,6 +297,7 @@
     <ClCompile Include="Source\Engine\Component\SpotLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\TestInputComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\UUIDTextRenderComponent.cpp" />
     <ClCompile Include="Source\Engine\Core\CoreGlobals.cpp" />
@@ -315,6 +316,8 @@
     <ClCompile Include="Source\Engine\GameFramework\SpotLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\World.cpp" />
+    <ClCompile Include="Source\Engine\Input\GameViewportInputController.cpp" />
+    <ClCompile Include="Source\Engine\Input\GameInput.cpp" />
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Engine\Input\ViewportInputRouter.cpp" />
     <ClCompile Include="Source\Engine\Materials\Material.cpp" />
@@ -508,6 +511,7 @@
     <ClInclude Include="Source\Engine\Component\SpotLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h" />
+    <ClInclude Include="Source\Engine\Component\TestInputComponent.h" />
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h" />
     <ClInclude Include="Source\Engine\Component\UUIDTextRenderComponent.h" />
     <ClInclude Include="Source\Engine\Core\ClassTypes.h" />
@@ -537,8 +541,13 @@
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\World.h" />
     <ClInclude Include="Source\Engine\GameFramework\WorldContext.h" />
+    <ClInclude Include="Source\Engine\Input\GameInputTool.h" />
+    <ClInclude Include="Source\Engine\Input\GameViewportInputController.h" />
+    <ClInclude Include="Source\Engine\Input\GameViewportTool.h" />
+    <ClInclude Include="Source\Engine\Input\GameInput.h" />
     <ClInclude Include="Source\Engine\Input\InputSystem.h" />
     <ClInclude Include="Source\Engine\Input\InputTypes.h" />
+    <ClInclude Include="Source\Engine\Input\PIEExitCommandTool.h" />
     <ClInclude Include="Source\Engine\Input\ViewportInputRouter.h" />
     <ClInclude Include="Source\Engine\Materials\Material.h" />
     <ClInclude Include="Source\Engine\Materials\MaterialCore.h" />

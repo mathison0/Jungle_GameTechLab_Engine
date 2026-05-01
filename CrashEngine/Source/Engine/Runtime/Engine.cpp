@@ -52,6 +52,9 @@ void UEngine::Init(FWindowsWindow* InWindow)
     Renderer.Create(Window->GetHWND());
     UE_LOG(Engine, Debug, "Renderer created.");
 
+    GameViewportClient = UObjectManager::Get().CreateObject<UGameViewportClient>();
+    UE_LOG(Engine, Debug, "GameViewportClient created.");
+
     ID3D11Device* Device = Renderer.GetFD3DDevice().GetDevice();
     FMeshBufferManager::Get().Initialize(Device);
     FResourceManager::Get().LoadFromFile(FPaths::ToUtf8(FPaths::ResourceFilePath()), Device);
@@ -83,6 +86,12 @@ void UEngine::BeginPlay()
 void UEngine::Tick(float DeltaTime)
 {
     InputSystem::Get().Tick(Window->IsForeground());
+
+    if (GameViewportClient)
+    {
+        GameViewportClient->ResetInputState();
+    }
+
     WorldTick(DeltaTime);
     Render(DeltaTime);
 }

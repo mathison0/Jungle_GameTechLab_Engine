@@ -60,6 +60,8 @@ public:
     void SetGameViewportClient(UGameViewportClient* InClient) { GameViewportClient = InClient; }
     UGameViewportClient* GetGameViewportClient() const { return GameViewportClient; }
 
+    virtual void RequestEndPlayMap() {}
+
 protected:
     virtual void Render(float DeltaTime);
     virtual void OnRenderSceneCleared() {}
