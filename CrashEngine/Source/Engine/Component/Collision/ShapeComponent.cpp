@@ -64,7 +64,7 @@ void UShapeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 {
     UPrimitiveComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    if (bDrawOnlyIfSelected || TickType != ELevelTick::LEVELTICK_All || !ShouldRenderDebugShape())
+    if (bDrawOnlyIfSelected || TickType == ELevelTick::LEVELTICK_All || !ShouldRenderDebugShape())
     {
         return;
     }
