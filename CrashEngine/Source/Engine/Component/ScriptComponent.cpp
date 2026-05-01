@@ -1,4 +1,4 @@
-#include "ScriptComponent.h"
+﻿#include "ScriptComponent.h"
 
 #include "Core/Logging/LogMacros.h"
 #include "Object/ObjectFactory.h"
@@ -42,7 +42,9 @@ void UScriptComponent::Serialize(FArchive& Ar)
 void UScriptComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
 	UActorComponent::GetEditableProperties(OutProps);
-	OutProps.push_back({ "Script", EPropertyType::String, &ScriptPath });
+	OutProps.push_back({ .Name = "Script",
+		.Type = EPropertyType::String,
+	    .ValuePtr = &ScriptPath });
 }
 
 void UScriptComponent::PostEditProperty(const char* PropertyName)
