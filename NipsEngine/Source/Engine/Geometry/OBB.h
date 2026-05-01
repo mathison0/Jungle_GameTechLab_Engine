@@ -154,49 +154,55 @@ inline bool FOBB::Intersects(const FAABB& AABB) const
 
 inline bool FOBB::Intersects(const FOBB& Other) const
 {
+    // SAT: 두 박스 축 간 내적 R[i][j] = AxesA[i]·AxesB[j]를 미리 캐싱해 face 6축 + edge cross 9축의 모든 투영을 R/AbsR/Ta만으로 표현한다.
     FVector AxesA[3], AxesB[3];
     GetAxes(AxesA[0], AxesA[1], AxesA[2]);
     Other.GetAxes(AxesB[0], AxesB[1], AxesB[2]);
 
-    const FVector T = Other.Center - Center;
-
-    // Box A 로컬 축 3개
-    for (int i = 0; i < 3; ++i)
-    {
-        float rA = Extents[i];
-        float rB = Other.Extents.X * MathUtil::Abs(AxesA[i].DotProduct(AxesB[0]))
-                 + Other.Extents.Y * MathUtil::Abs(AxesA[i].DotProduct(AxesB[1]))
-                 + Other.Extents.Z * MathUtil::Abs(AxesA[i].DotProduct(AxesB[2]));
-        if (MathUtil::Abs(T.DotProduct(AxesA[i])) > rA + rB) return false;
-    }
-
-    // Box B 로컬 축 3개
-    for (int i = 0; i < 3; ++i)
-    {
-        float rA = Extents.X * MathUtil::Abs(AxesB[i].DotProduct(AxesA[0]))
-                 + Extents.Y * MathUtil::Abs(AxesB[i].DotProduct(AxesA[1]))
-                 + Extents.Z * MathUtil::Abs(AxesB[i].DotProduct(AxesA[2]));
-        float rB = Other.Extents[i];
-        if (MathUtil::Abs(T.DotProduct(AxesB[i])) > rA + rB) return false;
-    }
-
-    // 교차축 A[i] × B[j] 9개
+    float R[3][3];
+    float AbsR[3][3];
     for (int i = 0; i < 3; ++i)
     {
         for (int j = 0; j < 3; ++j)
         {
-            FVector L = FVector::CrossProduct(AxesA[i], AxesB[j]);
-            if (L.SizeSquared() < MathUtil::Epsilon) continue; // 평행 축 스킵
-
-            float rA = Extents.X * MathUtil::Abs(L.DotProduct(AxesA[0]))
-                     + Extents.Y * MathUtil::Abs(L.DotProduct(AxesA[1]))
-                     + Extents.Z * MathUtil::Abs(L.DotProduct(AxesA[2]));
-            float rB = Other.Extents.X * MathUtil::Abs(L.DotProduct(AxesB[0]))
-                     + Other.Extents.Y * MathUtil::Abs(L.DotProduct(AxesB[1]))
-                     + Other.Extents.Z * MathUtil::Abs(L.DotProduct(AxesB[2]));
-            if (MathUtil::Abs(T.DotProduct(L)) > rA + rB) return false;
+            R[i][j] = AxesA[i].DotProduct(AxesB[j]);
+            AbsR[i][j] = MathUtil::Abs(R[i][j]) + MathUtil::Epsilon;
         }
     }
+
+    const FVector T = Other.Center - Center;
+    const float Ta[3] = { T.DotProduct(AxesA[0]), T.DotProduct(AxesA[1]), T.DotProduct(AxesA[2]) };
+
+    const FVector& Ea = Extents;
+    const FVector& Eb = Other.Extents;
+
+    // L = AxesA[i] (face axes of A)
+    for (int i = 0; i < 3; ++i)
+    {
+        const float rA = Ea[i];
+        const float rB = Eb.X * AbsR[i][0] + Eb.Y * AbsR[i][1] + Eb.Z * AbsR[i][2];
+        if (MathUtil::Abs(Ta[i]) > rA + rB) return false;
+    }
+
+    // L = AxesB[j] (face axes of B); T·AxesB[j] = Σ Ta[k]·R[k][j]
+    for (int j = 0; j < 3; ++j)
+    {
+        const float rA = Ea.X * AbsR[0][j] + Ea.Y * AbsR[1][j] + Ea.Z * AbsR[2][j];
+        const float rB = Eb[j];
+        const float Tb = Ta[0] * R[0][j] + Ta[1] * R[1][j] + Ta[2] * R[2][j];
+        if (MathUtil::Abs(Tb) > rA + rB) return false;
+    }
+
+    // L = AxesA[i] × AxesB[j] (edge cross axes, 9개)
+    if (MathUtil::Abs(Ta[2] * R[1][0] - Ta[1] * R[2][0]) > Ea.Y * AbsR[2][0] + Ea.Z * AbsR[1][0] + Eb.Y * AbsR[0][2] + Eb.Z * AbsR[0][1]) return false; 
+    if (MathUtil::Abs(Ta[2] * R[1][1] - Ta[1] * R[2][1]) > Ea.Y * AbsR[2][1] + Ea.Z * AbsR[1][1] + Eb.X * AbsR[0][2] + Eb.Z * AbsR[0][0]) return false; 
+    if (MathUtil::Abs(Ta[2] * R[1][2] - Ta[1] * R[2][2]) > Ea.Y * AbsR[2][2] + Ea.Z * AbsR[1][2] + Eb.X * AbsR[0][1] + Eb.Y * AbsR[0][0]) return false;
+    if (MathUtil::Abs(Ta[0] * R[2][0] - Ta[2] * R[0][0]) > Ea.X * AbsR[2][0] + Ea.Z * AbsR[0][0] + Eb.Y * AbsR[1][2] + Eb.Z * AbsR[1][1]) return false;
+    if (MathUtil::Abs(Ta[0] * R[2][1] - Ta[2] * R[0][1]) > Ea.X * AbsR[2][1] + Ea.Z * AbsR[0][1] + Eb.X * AbsR[1][2] + Eb.Z * AbsR[1][0]) return false;
+    if (MathUtil::Abs(Ta[0] * R[2][2] - Ta[2] * R[0][2]) > Ea.X * AbsR[2][2] + Ea.Z * AbsR[0][2] + Eb.X * AbsR[1][1] + Eb.Y * AbsR[1][0]) return false;
+    if (MathUtil::Abs(Ta[1] * R[0][0] - Ta[0] * R[1][0]) > Ea.X * AbsR[1][0] + Ea.Y * AbsR[0][0] + Eb.Y * AbsR[2][2] + Eb.Z * AbsR[2][1]) return false;
+    if (MathUtil::Abs(Ta[1] * R[0][1] - Ta[0] * R[1][1]) > Ea.X * AbsR[1][1] + Ea.Y * AbsR[0][1] + Eb.X * AbsR[2][2] + Eb.Z * AbsR[2][0]) return false;
+    if (MathUtil::Abs(Ta[1] * R[0][2] - Ta[0] * R[1][2]) > Ea.X * AbsR[1][2] + Ea.Y * AbsR[0][2] + Eb.X * AbsR[2][1] + Eb.Y * AbsR[2][0]) return false;
 
     return true;
 }
