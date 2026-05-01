@@ -2,6 +2,7 @@
 
 #include "Component/SceneComponent.h"
 #include "Audio/AudioSystem.h"
+#include "Render/Common/ViewTypes.h"
 
 class UAudioZoneComponent : public USceneComponent
 {
@@ -21,6 +22,7 @@ public:
 
 	const FVector& GetBoxExtent() const { return BoxExtent; }
 	FVector GetScaledBoxExtent() const;
+	bool ShouldDrawAudioRange(bool bGlobalEnabled) const { return ResolveDebugDrawVisibility(AudioRangeVisibility, bGlobalEnabled); }
 
 protected:
 	void TickComponent(float DeltaTime) override;
@@ -40,5 +42,6 @@ private:
 	float SFXVolume = 1.0f;
 	float MusicVolume = 1.0f;
 	float AmbientVolume = 1.0f;
+	int32 AudioRangeVisibility = static_cast<int32>(EDebugDrawVisibility::UseGlobal);
 	float CurrentWeight = 0.0f;
 };

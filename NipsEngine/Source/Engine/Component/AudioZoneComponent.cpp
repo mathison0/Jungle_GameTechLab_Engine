@@ -53,6 +53,7 @@ void UAudioZoneComponent::Serialize(FArchive& Ar)
 	Ar << "SFXVolume" << SFXVolume;
 	Ar << "MusicVolume" << MusicVolume;
 	Ar << "AmbientVolume" << AmbientVolume;
+	Ar << "AudioRangeVisibility" << AudioRangeVisibility;
 
 	if (Ar.IsLoading())
 	{
@@ -62,6 +63,8 @@ void UAudioZoneComponent::Serialize(FArchive& Ar)
 
 void UAudioZoneComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
+	static const char* AudioRangeVisibilityNames[] = { "Use Global", "Force Show", "Force Hide" };
+
 	OutProps.push_back({ "Location", EPropertyType::Vec3, &RelativeLocation, 0.0f, 0.0f, 0.1f });
 	OutProps.push_back({ "Rotation", EPropertyType::Vec3, &RelativeRotation, 0.0f, 0.0f, 0.1f });
 	OutProps.push_back({ "Scale", EPropertyType::Vec3, &RelativeScale3D, 0.0f, 0.0f, 0.1f });
@@ -73,6 +76,7 @@ void UAudioZoneComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
 	OutProps.push_back({ "SFX Volume", EPropertyType::Float, &SFXVolume, 0.0f, 2.0f, 0.01f });
 	OutProps.push_back({ "Music Volume", EPropertyType::Float, &MusicVolume, 0.0f, 2.0f, 0.01f });
 	OutProps.push_back({ "Ambient Volume", EPropertyType::Float, &AmbientVolume, 0.0f, 2.0f, 0.01f });
+	OutProps.push_back({ "Show Audio Range", EPropertyType::Enum, &AudioRangeVisibility, 0.0f, 0.0f, 0.0f, AudioRangeVisibilityNames, 3 });
 	OutProps.push_back({ "Enable Tick", EPropertyType::Bool, &bCanEverTick });
 	OutProps.push_back({ "Editor Only", EPropertyType::Bool, &bIsEditorOnly });
 }
@@ -175,4 +179,5 @@ void UAudioZoneComponent::ClampEditableValues()
 	SFXVolume = std::clamp(SFXVolume, 0.0f, 2.0f);
 	MusicVolume = std::clamp(MusicVolume, 0.0f, 2.0f);
 	AmbientVolume = std::clamp(AmbientVolume, 0.0f, 2.0f);
+	AudioRangeVisibility = std::clamp(AudioRangeVisibility, 0, static_cast<int32>(EDebugDrawVisibility::Count) - 1);
 }

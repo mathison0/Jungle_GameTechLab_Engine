@@ -2,6 +2,7 @@
 
 #include "Component/SceneComponent.h"
 #include "Audio/AudioSystem.h"
+#include "Render/Common/ViewTypes.h"
 
 class UAudioComponent : public USceneComponent
 {
@@ -45,6 +46,7 @@ public:
 	bool IsSpatial() const { return bSpatial; }
 	float GetMinDistance() const { return MinDistance; }
 	float GetMaxDistance() const { return MaxDistance; }
+	bool ShouldDrawAudioRange(bool bGlobalEnabled) const { return ResolveDebugDrawVisibility(AudioRangeVisibility, bGlobalEnabled); }
 
 	void SetLooping(bool bInLoop) { bLoop = bInLoop; }
 	void SetSpatial(bool bInSpatial) { bSpatial = bInSpatial; }
@@ -71,6 +73,7 @@ private:
 	float Volume = 1.0f;
 	float MinDistance = 1.0f;
 	float MaxDistance = 8.0f;
+	int32 AudioRangeVisibility = static_cast<int32>(EDebugDrawVisibility::UseGlobal);
 	bool bPausedByOutsideRange = false;
 	bool bStoppedByOutsideRange = false;
 	bool bStartedByStartBehavior = false;

@@ -64,6 +64,7 @@ void UAudioComponent::Serialize(FArchive& Ar)
 	Ar << "Volume" << Volume;
 	Ar << "MinDistance" << MinDistance;
 	Ar << "MaxDistance" << MaxDistance;
+	Ar << "AudioRangeVisibility" << AudioRangeVisibility;
 
 	if (Ar.IsLoading())
 	{
@@ -76,6 +77,7 @@ void UAudioComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProp
 	static const char* StartBehaviorNames[] = { "On BeginPlay", "On First In Range", "Manual Only" };
 	static const char* OutsideBehaviorNames[] = { "Continue Playing", "Pause And Resume", "Stop And Restart" };
 	static const char* AudioBusNames[] = { "SFX", "Music", "Ambient" };
+	static const char* AudioRangeVisibilityNames[] = { "Use Global", "Force Show", "Force Hide" };
 
 	OutProps.push_back({ "Sound Path", EPropertyType::String, &SoundPath });
 	OutProps.push_back({ "Audio Bus", EPropertyType::Enum, &AudioBus, 0.0f, 0.0f, 0.0f, AudioBusNames, 3 });
@@ -84,6 +86,7 @@ void UAudioComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProp
 	OutProps.push_back({ "Spatial", EPropertyType::Bool, &bSpatial });
 	OutProps.push_back({ "Min Distance", EPropertyType::Float, &MinDistance, 0.01f, 10000.0f, 1.0f });
 	OutProps.push_back({ "Max Distance", EPropertyType::Float, &MaxDistance, 0.01f, 10000.0f, 1.0f });
+	OutProps.push_back({ "Show Audio Range", EPropertyType::Enum, &AudioRangeVisibility, 0.0f, 0.0f, 0.0f, AudioRangeVisibilityNames, 3 });
 	OutProps.push_back({ "Start Behavior", EPropertyType::Enum, &StartBehavior, 0.0f, 0.0f, 0.0f, StartBehaviorNames, 3 });
 	OutProps.push_back({ "Outside Range Behavior", EPropertyType::Enum, &OutsideRangeBehavior, 0.0f, 0.0f, 0.0f, OutsideBehaviorNames, 3 });
 	OutProps.push_back({ "Location", EPropertyType::Vec3, &RelativeLocation, 0.0f, 0.0f, 0.1f });
@@ -109,6 +112,7 @@ void UAudioComponent::PostEditProperty(const char* PropertyName)
 	StartBehavior = std::clamp(StartBehavior, 0, static_cast<int32>(EAudioStartBehavior::Count) - 1);
 	AudioBus = std::clamp(AudioBus, 0, static_cast<int32>(EAudioBus::Count) - 1);
 	OutsideRangeBehavior = std::clamp(OutsideRangeBehavior, 0, static_cast<int32>(EAudioOutsideBehavior::Count) - 1);
+	AudioRangeVisibility = std::clamp(AudioRangeVisibility, 0, static_cast<int32>(EDebugDrawVisibility::Count) - 1);
 
 	if (PlaybackHandle.IsValid())
 	{

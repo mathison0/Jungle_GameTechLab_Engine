@@ -250,12 +250,6 @@ void FOverlayRenderCollector::CollectDebugBounds(
 		return;
 	}
 
-	if (!ShowFlags.bBoundingVolume &&
-		!(ShowFlags.bAudioRange && (ShowFlags.bAudioComponentRange || ShowFlags.bAudioZoneRange)))
-	{
-		return;
-	}
-
 	std::unordered_set<int32> SeenBVHNodeIndices;
 	for (TActorIterator<AActor> Iter(World); Iter; ++Iter)
 	{
@@ -499,7 +493,7 @@ void FOverlayRenderCollector::CollectDebugBoundsFromActor(
 
 	for (UPrimitiveComponent* PrimitiveComponent : Actor->GetPrimitiveComponents())
 	{
-		if (PrimitiveComponent == nullptr || !PrimitiveComponent->IsVisible())
+		if (PrimitiveComponent == nullptr || !PrimitiveComponent->IsVisible() || PrimitiveComponent->IsHiddenInEditor())
 		{
 			continue;
 		}
@@ -513,7 +507,8 @@ void FOverlayRenderCollector::CollectDebugBoundsFromActor(
 			}
 		}
 
-		if (ShowFlags.bBoundingVolume)
+		const bool bDrawBounds = PrimitiveComponent->ShouldDrawDebugBounds(ShowFlags.bBoundingVolume);
+		if (bDrawBounds)
 		{
 			if (!DrawShapeComponent(PrimitiveComponent, LineBatcher))
 			{
@@ -524,24 +519,21 @@ void FOverlayRenderCollector::CollectDebugBoundsFromActor(
 		CollectBVHInternalNodeAABBs(PrimitiveComponent, ShowFlags, RenderBus, LineBatcher, SeenBVHNodeIndices);
 	}
 
-	if (!ShowFlags.bAudioRange || (!ShowFlags.bAudioComponentRange && !ShowFlags.bAudioZoneRange))
-	{
-		return;
-	}
-
 	for (UActorComponent* Component : Actor->GetComponents())
 	{
-		if (ShowFlags.bAudioRange && ShowFlags.bAudioComponentRange)
+		if (const UAudioComponent* AudioComponent = Cast<UAudioComponent>(Component))
 		{
-			if (const UAudioComponent* AudioComponent = Cast<UAudioComponent>(Component))
+			const bool bGlobalAudioComponentRange = ShowFlags.bAudioRange && ShowFlags.bAudioComponentRange;
+			if (AudioComponent->ShouldDrawAudioRange(bGlobalAudioComponentRange))
 			{
 				DrawAudioComponentRange(AudioComponent, LineBatcher);
 			}
 		}
 
-		if (ShowFlags.bAudioRange && ShowFlags.bAudioZoneRange)
+		if (const UAudioZoneComponent* AudioZoneComponent = Cast<UAudioZoneComponent>(Component))
 		{
-			if (const UAudioZoneComponent* AudioZoneComponent = Cast<UAudioZoneComponent>(Component))
+			const bool bGlobalAudioZoneRange = ShowFlags.bAudioRange && ShowFlags.bAudioZoneRange;
+			if (AudioZoneComponent->ShouldDrawAudioRange(bGlobalAudioZoneRange))
 			{
 				DrawAudioZoneRange(AudioZoneComponent, LineBatcher);
 			}
@@ -556,7 +548,8 @@ void FOverlayRenderCollector::CollectBVHInternalNodeAABBs(
 	FLineBatcher* LineBatcher,
 	std::unordered_set<int32>& SeenNodeIndices)
 {
-	if (!ShowFlags.bBoundingVolume || !ShowFlags.bBVHBoundingVolume || PrimitiveComponent == nullptr || LineBatcher == nullptr)
+	if (PrimitiveComponent == nullptr || LineBatcher == nullptr ||
+		!PrimitiveComponent->ShouldDrawDebugBounds(ShowFlags.bBoundingVolume) || !ShowFlags.bBVHBoundingVolume)
 	{
 		return;
 	}
