@@ -11,6 +11,7 @@ public:
     void Serialize(FArchive& Ar) override;
 
 	ECollisionShapeType GetCollisionShapeType() const override{ return ECollisionShapeType::Box; }
+    FCollisionShapeGeometry GetCollisionShapeGeometry() const override;
 
 	const FVector& GetBoxExtent() const { return BoxExtent; }
     void SetBoxExtent(const FVector& NewBoxExtent);

@@ -367,6 +367,39 @@ FVector USceneComponent::GetWorldLocation() const
     return FVector(WorldMatrix.M[3][0], WorldMatrix.M[3][1], WorldMatrix.M[3][2]);
 }
 
+FQuat USceneComponent::GetWorldRotation() const
+{
+    const FMatrix& WorldMatrix = GetWorldMatrix();
+
+    FVector AxisX(WorldMatrix.M[0][0], WorldMatrix.M[0][1], WorldMatrix.M[0][2]);
+    FVector AxisY(WorldMatrix.M[1][0], WorldMatrix.M[1][1], WorldMatrix.M[1][2]);
+    FVector AxisZ(WorldMatrix.M[2][0], WorldMatrix.M[2][1], WorldMatrix.M[2][2]);
+
+    if (AxisX.LengthSquared() <= FMath::Epsilon ||
+        AxisY.LengthSquared() <= FMath::Epsilon ||
+        AxisZ.LengthSquared() <= FMath::Epsilon)
+    {
+        return FQuat::Identity;
+    }
+
+    AxisX.Normalize();
+    AxisY.Normalize();
+    AxisZ.Normalize();
+
+    FMatrix RotationMatrix = FMatrix::Identity;
+    RotationMatrix.M[0][0] = AxisX.X;
+    RotationMatrix.M[0][1] = AxisX.Y;
+    RotationMatrix.M[0][2] = AxisX.Z;
+    RotationMatrix.M[1][0] = AxisY.X;
+    RotationMatrix.M[1][1] = AxisY.Y;
+    RotationMatrix.M[1][2] = AxisY.Z;
+    RotationMatrix.M[2][0] = AxisZ.X;
+    RotationMatrix.M[2][1] = AxisZ.Y;
+    RotationMatrix.M[2][2] = AxisZ.Z;
+
+    return RotationMatrix.ToQuat();
+}
+
 FVector USceneComponent::GetWorldScale() const
 {
     const FMatrix& WorldMatrix = GetWorldMatrix();

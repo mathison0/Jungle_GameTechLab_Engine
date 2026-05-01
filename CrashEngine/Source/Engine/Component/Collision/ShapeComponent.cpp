@@ -1,4 +1,5 @@
 ﻿#include "ShapeComponent.h"
+#include "Collision/CollisionShapeQuery.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Object/ObjectFactory.h"
@@ -33,9 +34,37 @@ void UShapeComponent::SetShapeColor(FColor NewColor)
     ShapeColor = NewColor.ToVector4();
 }
 
+void UShapeComponent::SetDebugOverlapping(bool bNewDebugOverlapping)
+{
+    bDebugOverlapping = bNewDebugOverlapping;
+}
+
 void UShapeComponent::SetDrawOnlyIfSelected(bool bNewDrawOnlyIfSelected)
 {
     bDrawOnlyIfSelected = bNewDrawOnlyIfSelected;
+}
+
+bool UShapeComponent::IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const
+{
+    if (!OtherPrimitive || OtherPrimitive == this)
+    {
+        return false;
+    }
+
+    if (!ShouldGenerateOverlapEvents() || !OtherPrimitive->ShouldGenerateOverlapEvents())
+    {
+        return false;
+    }
+
+    const UShapeComponent* OtherShape = Cast<UShapeComponent>(OtherPrimitive);
+    if (!OtherShape)
+    {
+        return false;
+    }
+
+    return CollisionShapeQuery::OverlapShapeGeometry(
+        GetCollisionShapeGeometry(),
+        OtherShape->GetCollisionShapeGeometry());
 }
 
 void UShapeComponent::ContributeSelectedVisuals(FScene& Scene) const
@@ -96,6 +125,11 @@ bool UShapeComponent::ShouldRenderDebugShape() const
 
 FColor UShapeComponent::GetDebugShapeColor() const
 {
+    if (bDebugOverlapping)
+    {
+        return FColor::Red();
+    }
+
     auto ToByte = [](float Value) -> uint32
     {
         return static_cast<uint32>(std::clamp(Value, 0.0f, 1.0f) * 255.0f);

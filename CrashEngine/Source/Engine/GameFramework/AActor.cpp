@@ -255,6 +255,27 @@ void AActor::BeginPlay()
     }
 }
 
+bool AActor::IsOverlappingActor(const AActor* OtherActor) const
+{
+    if (!OtherActor || OtherActor == this)
+    {
+        return false;
+    }
+
+	for (UActorComponent* OwnedComp : OwnedComponents)
+    {
+        if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(OwnedComp))
+        {
+            //if ((PrimComp->GetOverlapInfos().Num() > 0) && PrimComp->IsOverlappingActor(OtherActor))
+            //{
+            //    // found one, finished
+            //    return true;
+            //}
+        }
+    }
+    return false;
+}
+
 // 엔진 단계에서의 틱
 void AActor::TickActor(float DeltaSeconds, ELevelTick TickType, FActorTickFunction& ThisTickFunction)
 {

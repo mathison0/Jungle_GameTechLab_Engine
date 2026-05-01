@@ -26,6 +26,17 @@ void UCapsuleComponent::Serialize(FArchive& Ar)
     Ar << CapsuleRadius;
 }
 
+FCollisionShapeGeometry UCapsuleComponent::GetCollisionShapeGeometry() const
+{
+    FCollisionShapeGeometry Geometry;
+    Geometry.Type = GetCollisionShapeType();
+    Geometry.Radius = GetScaledCapsuleRadius();
+    Geometry.HalfHeight = GetScaledCapsuleHalfHeight();
+    Geometry.Center = GetShapeWorldLocation();
+    Geometry.Rotation = GetWorldRotation();
+    return Geometry;
+}
+
 void UCapsuleComponent::SetHalfHeight(float NewHalfHeight)
 {
     CapsuleHalfHeight = NewHalfHeight;

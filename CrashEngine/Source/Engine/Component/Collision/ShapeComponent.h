@@ -14,13 +14,16 @@ public:
     void Serialize(FArchive& Ar) override;
     void ContributeSelectedVisuals(FScene& Scene) const override;
 
+    bool IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const override;
+
     void SetShapeColor(FColor NewColor);
     const FVector4& GetShapeColor() const { return ShapeColor; }
+    void SetDebugOverlapping(bool bNewDebugOverlapping);
     void SetDrawOnlyIfSelected(bool bNewDrawOnlyIfSelected);
     bool ShouldDrawOnlyIfSelected() const { return bDrawOnlyIfSelected; }
 
 	virtual ECollisionShapeType GetCollisionShapeType() const = 0;
-
+    virtual FCollisionShapeGeometry GetCollisionShapeGeometry() const = 0;
 	FVector GetShapeWorldLocation() const;
     FVector GetAbsWorldScale() const;
 
@@ -31,6 +34,8 @@ protected:
     FColor GetDebugShapeColor() const;
 
 protected:
+    FCollisionShapeGeometry Geometry;
     FVector4 ShapeColor = FColor::Yellow().ToVector4();
+    bool bDebugOverlapping = false;
     bool bDrawOnlyIfSelected = true;
 };

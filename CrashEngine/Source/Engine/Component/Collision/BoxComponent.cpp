@@ -22,6 +22,16 @@ void UBoxComponent::Serialize(FArchive& Ar)
     Ar << BoxExtent;
 }
 
+FCollisionShapeGeometry UBoxComponent::GetCollisionShapeGeometry() const
+{
+    FCollisionShapeGeometry Geometry;
+    Geometry.Type = GetCollisionShapeType();
+    Geometry.Center = GetShapeWorldLocation();
+    Geometry.Rotation = GetWorldRotation();
+	Geometry.BoxExtent = GetBoxExtent();
+    return Geometry;
+}
+
 void UBoxComponent::SetBoxExtent(const FVector& NewBoxExtent)
 {
     BoxExtent = NewBoxExtent;

@@ -23,6 +23,16 @@ void USphereComponent::Serialize(FArchive& Ar)
     Ar << SphereRadius;
 }
 
+FCollisionShapeGeometry USphereComponent::GetCollisionShapeGeometry() const
+{
+    FCollisionShapeGeometry Geometry;
+    Geometry.Type = GetCollisionShapeType();
+    Geometry.Radius = GetScaledSphereRadius();
+    Geometry.Rotation = GetWorldRotation();
+    Geometry.Center = GetShapeWorldLocation();
+    return Geometry;
+}
+
 void USphereComponent::SetRadius(float NewRadius)
 {
     SphereRadius = NewRadius;

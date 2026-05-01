@@ -45,6 +45,10 @@ public:
     bool ShouldRenderInWorld(EWorldType WorldType) const;
     bool ShouldRenderInCurrentWorld() const;
 
+	//Collision
+    virtual bool IsOverlappingActor(const AActor* OtherActor) const;
+    virtual bool IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const;
+
     /*
         현재 월드 공간 AABB를 반환합니다.
     */

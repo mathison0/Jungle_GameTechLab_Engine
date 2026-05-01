@@ -101,6 +101,9 @@ public:
 
     FActorTickFunction PrimaryActorTick;
 
+	//Collision
+    bool IsOverlappingActor(const AActor* OtherActor) const;
+
 protected:
     virtual void TickActor(float DeltaSeconds, ELevelTick TickType, FActorTickFunction& ThisTickFunction);
 

@@ -13,6 +13,7 @@ public:
     void Serialize(FArchive& Ar) override;
 
     ECollisionShapeType GetCollisionShapeType() const override { return ECollisionShapeType::Capsule; }
+    FCollisionShapeGeometry GetCollisionShapeGeometry() const override;
 
 	void SetHalfHeight(float NewHalfHeight);
     void SetRadius(float NewRadius);

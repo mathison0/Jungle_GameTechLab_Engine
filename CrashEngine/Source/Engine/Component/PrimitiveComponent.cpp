@@ -132,6 +132,16 @@ bool UPrimitiveComponent::ShouldRenderInCurrentWorld() const
     return ShouldRenderInWorld(World ? World->GetWorldType() : EWorldType::Game);
 }
 
+bool UPrimitiveComponent::IsOverlappingActor(const AActor* OtherActor) const
+{
+    return false;
+}
+
+bool UPrimitiveComponent::IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const
+{
+    return false;
+}
+
 // ============================================================
 // MarkRenderTransformDirty / MarkRenderVisibilityDirty
 // ============================================================

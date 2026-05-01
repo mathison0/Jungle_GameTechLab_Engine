@@ -13,6 +13,7 @@ public:
     void Serialize(FArchive& Ar) override;
 
     ECollisionShapeType GetCollisionShapeType() const override { return ECollisionShapeType::Sphere; }
+    FCollisionShapeGeometry GetCollisionShapeGeometry() const override;
 
 	const float GetRadius() const { return SphereRadius; }
 	void SetRadius(float NewRadius);
