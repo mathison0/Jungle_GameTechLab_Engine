@@ -45,8 +45,6 @@ private:
 		std::unique_ptr<sol::state> Lua;
 		FString ScriptPath;
 		FLuaCoroutineScheduler CoroutineScheduler;
-		sol::function NativeCoroutineCreate;
-		sol::function NativeCoroutineResume;
 	};
 
 	FScriptState* FindScript(ULuaScriptComponent* Component);

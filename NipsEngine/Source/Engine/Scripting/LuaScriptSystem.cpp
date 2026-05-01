@@ -180,36 +180,6 @@ void FLuaScriptSystem::BindCoroutineAPI(ULuaScriptComponent* Component, FScriptS
 		return std::max(0.0f, Seconds);
 	}));
 
-	sol::table CoroutineTable = (*State.Lua)["coroutine"];
-	State.NativeCoroutineCreate = CoroutineTable["create"];
-	State.NativeCoroutineResume = CoroutineTable["resume"];
-
-	CoroutineTable.set_function("create", [this, Component](sol::function Function)
-	{
-		return CreateCoroutine(Component, Function, true).Id;
-	});
-
-	CoroutineTable.set_function("resume", [this, Component](int32 CoroutineId)
-	{
-		return ResumeCoroutine(Component, FLuaCoroutineHandle{ CoroutineId });
-	});
-
-	CoroutineTable.set_function("yield", sol::yielding([](sol::optional<float> Seconds)
-	{
-		return std::max(0.0f, Seconds.value_or(0.0f));
-	}));
-
-	CoroutineTable.set_function("status", [this, Component](int32 CoroutineId)
-	{
-		FScriptState* ScriptState = FindScript(Component);
-		if (ScriptState == nullptr)
-		{
-			return FString("dead");
-		}
-
-		return ScriptState->CoroutineScheduler.IsRunning(FLuaCoroutineHandle{ CoroutineId }) ? FString("suspended") : FString("dead");
-	});
-
 	State.Lua->set_function("yield", sol::yielding([](sol::optional<float> Seconds)
 	{
 		return std::max(0.0f, Seconds.value_or(0.0f));
@@ -250,14 +220,15 @@ FLuaCoroutineHandle FLuaScriptSystem::CreateCoroutine(ULuaScriptComponent* Compo
 		return {};
 	}
 
-	if (!State->NativeCoroutineCreate.valid() || !State->NativeCoroutineResume.valid())
+	sol::table CoroutineTable = (*State->Lua)["coroutine"];
+	sol::protected_function NativeCreate = CoroutineTable["create"];
+	sol::protected_function NativeResume = CoroutineTable["resume"];
+	if (!NativeCreate.valid() || !NativeResume.valid())
 	{
 		UE_LOG("Lua coroutine error: native coroutine API is not available.");
 		return {};
 	}
 
-	sol::protected_function NativeCreate = State->NativeCoroutineCreate;
-	sol::protected_function NativeResume = State->NativeCoroutineResume;
 	sol::protected_function_result CreateResult = NativeCreate(Function);
 	if (!CreateResult.valid())
 	{
