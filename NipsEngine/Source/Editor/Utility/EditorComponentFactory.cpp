@@ -20,6 +20,7 @@
 #include "Component/Collision/BoxComponent.h"
 #include "Component/Collision/SphereComponent.h"
 #include "Component/Collision/CapsuleComponent.h"
+#include "Component/LuaScriptComponent.h"
 
 // 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
 template<typename ComponentType>
@@ -111,6 +112,8 @@ const TArray<FComponentMenuEntry>& FEditorComponentFactory::GetMenuRegistry()
         { "InterpToMovement Component", "Movement", RegisterComp<UInterpToMovementComponent> },
         { "PursuitMovement Component", "Movement", RegisterComp<UPursuitMovementComponent> },
         { "ProjectileMovement Component", "Movement", RegisterComp<UProjectileMovementComponent> },
+
+        { "LuaScript Component", "Scripting", RegisterComp<ULuaScriptComponent> },
 
         { "AmbientLight Component", "Light", RegisterLightComp<UAmbientLightComponent> },
         { "DirectionalLight Component", "Light", RegisterLightComp<UDirectionalLightComponent> },

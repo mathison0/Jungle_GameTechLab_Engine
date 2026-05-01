@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <functional>
+#include <algorithm>
+#include <type_traits>
 #include <vector>
 
 bool IsUObjectAlive(const void* Ptr);
@@ -16,7 +18,11 @@ public:
 
 	void Add(const HandlerType& handler)
 	{
-        Handlers.push_back(handler);
+		FDelegateEntry NewEntry;
+		NewEntry.Owner = nullptr;
+		NewEntry.Callback = handler;
+		NewEntry.IsAlive = []() { return true; };
+		Handlers.push_back(NewEntry);
 	}
 
 	template <typename T>
@@ -27,11 +33,26 @@ public:
         const void* ObjPtr = static_cast<const void*>(Instance);
         
 		FDelegateEntry NewEntry;
+		NewEntry.Owner = Instance;
         NewEntry.Callback = [Instance, Func](Args... args)
         { (Instance->*Func)(args...); };
         NewEntry.IsAlive = [ObjPtr]() { return IsUObjectAlive(ObjPtr); };
 
         Handlers.push_back(NewEntry);
+	}
+
+	template <typename T>
+	void RemoveDynamic(T* Instance)
+	{
+		Handlers.erase(
+			std::remove_if(
+				Handlers.begin(),
+				Handlers.end(),
+				[Instance](const FDelegateEntry& Entry)
+				{
+					return Entry.Owner == Instance;
+				}),
+			Handlers.end());
 	}
 
 	void Broadcast(Args... args)
@@ -60,6 +81,7 @@ public:
 	private:
 		struct FDelegateEntry
 		{
+			void* Owner = nullptr;
             HandlerType Callback;
             std::function<bool()> IsAlive;
 		};
