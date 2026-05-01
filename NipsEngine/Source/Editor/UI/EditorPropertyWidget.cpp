@@ -87,6 +87,7 @@ namespace
 		FGuiInputState& GuiState = InputSystem::Get().GetGuiInputState();
 		GuiState.bUsingMouse = true;
 		GuiState.bUsingKeyboard = true;
+		GuiState.bBlockViewportInput = true;
 	}
 }
 

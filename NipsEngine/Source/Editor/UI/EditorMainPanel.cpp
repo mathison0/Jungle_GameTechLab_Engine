@@ -210,8 +210,10 @@ void FEditorMainPanel::Update()
 	}
 
 	const bool bPropertyModalBlockingInput = PropertyWidget.IsModalInputBlocking();
-	InputSystem::Get().GetGuiInputState().bUsingMouse = bPropertyModalBlockingInput || (bViewportOperationActive ? false : IO.WantCaptureMouse);
-	InputSystem::Get().GetGuiInputState().bUsingKeyboard = bPropertyModalBlockingInput || IO.WantCaptureKeyboard;
+	FGuiInputState& GuiState = InputSystem::Get().GetGuiInputState();
+	GuiState.bBlockViewportInput = bPropertyModalBlockingInput;
+	GuiState.bUsingMouse = bPropertyModalBlockingInput || (bViewportOperationActive ? false : IO.WantCaptureMouse);
+	GuiState.bUsingKeyboard = bPropertyModalBlockingInput || IO.WantCaptureKeyboard;
 
 	//	Focus는 MainPanel에서 입력 받음
 	if (EditorEngine && InputSystem::Get().GetKeyUp('F') && !IO.WantTextInput && !bPropertyModalBlockingInput)

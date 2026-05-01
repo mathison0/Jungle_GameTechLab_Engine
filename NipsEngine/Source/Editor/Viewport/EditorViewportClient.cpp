@@ -251,7 +251,7 @@ void FEditorViewportClient::TickCursorCapture()
 		return;
 
 	const InputSystem& IS = InputSystem::Get();
-	if (IS.GetGuiInputState().bUsingMouse)
+	if (IS.GetGuiInputState().bBlockViewportInput)
 	{
 		return;
 	}
@@ -282,7 +282,7 @@ void FEditorViewportClient::TickKeyboardInput()
 
 	if (bControlLocked) return;
 	const InputSystem& IS = InputSystem::Get();
-	if (IS.GetGuiInputState().bUsingKeyboard)
+	if (IS.GetGuiInputState().bBlockViewportInput || IS.GetGuiInputState().bUsingKeyboard)
 	{
 		return;
 	}
@@ -302,7 +302,7 @@ void FEditorViewportClient::TickEditorShortcuts()
 		return;
 
 	const InputSystem& IS        = InputSystem::Get();
-	if (IS.GetGuiInputState().bUsingKeyboard)
+	if (IS.GetGuiInputState().bBlockViewportInput || IS.GetGuiInputState().bUsingKeyboard)
 	{
 		return;
 	}
@@ -358,7 +358,7 @@ void FEditorViewportClient::TickPIEShortCuts()
 	if (InputRouter.GetActiveController() != EActiveEditorController::PIEController) return;
 
 	InputSystem& IS = InputSystem::Get();
-	if (IS.GetGuiInputState().bUsingKeyboard)
+	if (IS.GetGuiInputState().bBlockViewportInput || IS.GetGuiInputState().bUsingKeyboard)
 	{
 		return;
 	}
@@ -380,7 +380,7 @@ void FEditorViewportClient::TickMouseInput(float VX, float VY)
 {
 	if (bControlLocked) return;
 	const InputSystem& IS = InputSystem::Get();
-	if (IS.GetGuiInputState().bUsingMouse)
+	if (IS.GetGuiInputState().bBlockViewportInput)
 	{
 		return;
 	}
