@@ -238,6 +238,7 @@
     <ClCompile Include="Source\Engine\Component\GizmoComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\HeightFogComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\LineBatchComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\LuaScriptComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SceneComponent.cpp" />
@@ -348,6 +349,8 @@
     <ClCompile Include="Source\Engine\Serialization\JsonReader.cpp" />
     <ClCompile Include="Source\Engine\Serialization\JsonWriter.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaBindings.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaScriptSystem.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitter.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitterCross.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitterH.cpp" />
@@ -418,6 +421,7 @@
     <ClInclude Include="Source\Engine\Component\GizmoComponent.h" />
     <ClInclude Include="Source\Engine\Component\HeightFogComponent.h" />
     <ClInclude Include="Source\Engine\Component\LineBatchComponent.h" />
+    <ClInclude Include="Source\Engine\Component\LuaScriptComponent.h" />
     <ClInclude Include="Source\Engine\Component\MeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h" />
     <ClInclude Include="Source\Engine\Component\SceneComponent.h" />
@@ -572,6 +576,8 @@
     <ClInclude Include="Source\Engine\Serialization\JsonWriter.h" />
     <ClInclude Include="Source\Engine\Serialization\MemoryWriter.h" />
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h" />
+    <ClInclude Include="Source\Engine\Scripting\LuaBindings.h" />
+    <ClInclude Include="Source\Engine\Scripting\LuaScriptSystem.h" />
     <ClInclude Include="Source\Engine\Slate\ISlateViewport.h" />
     <ClInclude Include="Source\Engine\Slate\SSplitter.h" />
     <ClInclude Include="Source\Engine\Slate\SSplitterCross.h" />

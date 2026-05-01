@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <functional>
+#include <algorithm>
 #include <vector>
 
 #define DECLARE_DELEGATE(Name, ...) using Name = TDelegate<__VA_ARGS__>
@@ -13,25 +14,40 @@ public:
 
 	void Add(const HandlerType& handler)
 	{
-        Handlers.push_back(handler);
+        Handlers.push_back({ nullptr, handler });
 	}
 
 	template <typename T> 
 	void AddDynamic(T* Instance, void (T::* Func)(Args...))
 	{
-        Handlers.push_back([Instance, Func](Args... args)
+        Handlers.push_back({ Instance, [Instance, Func](Args... args)
         { 
 			(Instance->*Func)(args...);
-	    });
+	    } });
+	}
+
+	template <typename T>
+	void RemoveDynamic(T* Instance)
+	{
+		Handlers.erase(
+			std::remove_if(
+				Handlers.begin(),
+				Handlers.end(),
+				[Instance](const FHandlerEntry& Entry)
+				{
+					return Entry.Owner == Instance;
+				}),
+			Handlers.end());
 	}
 
 	void Broadcast(Args... args)
 	{
-		for (auto& handler : Handlers)
+		auto HandlersCopy = Handlers;
+		for (auto& Entry : HandlersCopy)
 		{
-			if (handler)
+			if (Entry.Handler)
 			{
-                handler(args...);
+                Entry.Handler(args...);
 			}
 		}
 	}
@@ -42,5 +58,11 @@ public:
     }
 
 	private:
-		std::vector<HandlerType> Handlers;
+		struct FHandlerEntry
+		{
+			void* Owner = nullptr;
+			HandlerType Handler;
+		};
+
+		std::vector<FHandlerEntry> Handlers;
 };
