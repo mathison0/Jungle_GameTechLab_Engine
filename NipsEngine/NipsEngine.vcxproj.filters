@@ -368,6 +368,9 @@
     <ClCompile Include="Source\Engine\Component\AudioComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\AudioZoneComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\BillboardComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -930,6 +933,9 @@
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\AudioComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\AudioZoneComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\BillboardComponent.h">

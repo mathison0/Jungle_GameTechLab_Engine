@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Containers/String.h"
 #include "Core/CoreTypes.h"
@@ -14,14 +14,39 @@ struct FAudioHandle
 	bool IsValid() const { return Id != 0; }
 };
 
+enum class EAudioBus : int32
+{
+	SFX = 0,
+	Music,
+	Ambient,
+	Count
+};
+
 struct FAudioPlayParams
 {
 	bool bLoop = false;
 	bool bSpatial = false;
+	EAudioBus Bus = EAudioBus::SFX;
 	float Volume = 1.0f;
 	float MinDistance = 1.0f;
 	float MaxDistance = 8.0f;
 	FVector Location = FVector::ZeroVector;
+};
+
+enum class EAudioOutsideBehavior : int32
+{
+	ContinuePlaying = 0,
+	PauseAndResume,
+	StopAndRestart,
+	Count
+};
+
+enum class EAudioStartBehavior : int32
+{
+	OnBeginPlay = 0,
+	OnFirstEnter,
+	ManualOnly,
+	Count
 };
 
 struct FAudioSystemImpl;
@@ -47,7 +72,10 @@ public:
 	void Resume(FAudioHandle Handle);
 	void Restart(FAudioHandle Handle);
 	void StopAll();
+	bool IsHandleActive(FAudioHandle Handle) const;
 	bool IsPlaying(FAudioHandle Handle) const;
+	void SetVolume(FAudioHandle Handle, float Volume);
+	void SetLooping(FAudioHandle Handle, bool bLoop);
 
 	void SetPlaybackTime(FAudioHandle Handle, float TimeSeconds);
 	float GetPlaybackTime(FAudioHandle Handle) const;
@@ -56,6 +84,9 @@ public:
 
 	void SetSoundPosition(FAudioHandle Handle, const FVector& Location);
 	void SetListenerTransform(const FVector& Location, const FVector& Forward, const FVector& Up);
+	void SubmitZoneMix(uint32 ZoneId, int32 Priority, float Weight,
+		float MasterVolume, float SFXVolume, float MusicVolume, float AmbientVolume);
+	void RemoveZoneMix(uint32 ZoneId);
 
 private:
 	FAudioSystem();
