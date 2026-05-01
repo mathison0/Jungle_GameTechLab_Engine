@@ -209,4 +209,75 @@ inline bool IntersectOBBAABB(const FVector& Center, const FVector& Extent, const
 
     return true;
 }
+
+inline bool IntersectOBBOBB(
+    const FVector& CenterA,
+    const FVector& ExtentA,
+    const FVector (&AxesA)[3],
+    const FVector& CenterB,
+    const FVector& ExtentB,
+    const FVector (&AxesB)[3])
+{
+    float RotationMatrix[3][3];
+    float AbsRotation[3][3];
+    for (int32 I = 0; I < 3; ++I)
+    {
+        for (int32 J = 0; J < 3; ++J)
+        {
+            RotationMatrix[I][J] = AxesA[I].Dot(AxesB[J]);
+            AbsRotation[I][J] = std::abs(RotationMatrix[I][J]) + 1e-6f;
+        }
+    }
+
+    const FVector Translation = CenterB - CenterA;
+    const FVector LocalTranslation(
+        Translation.Dot(AxesA[0]),
+        Translation.Dot(AxesA[1]),
+        Translation.Dot(AxesA[2]));
+
+    float RadiusA = 0.0f;
+    float RadiusB = 0.0f;
+
+    for (int32 I = 0; I < 3; ++I)
+    {
+        RadiusA = ExtentA.Data[I];
+        RadiusB = ExtentB.X * AbsRotation[I][0] + ExtentB.Y * AbsRotation[I][1] + ExtentB.Z * AbsRotation[I][2];
+        if (std::abs(LocalTranslation.Data[I]) > RadiusA + RadiusB)
+        {
+            return false;
+        }
+    }
+
+    for (int32 J = 0; J < 3; ++J)
+    {
+        RadiusA = ExtentA.X * AbsRotation[0][J] + ExtentA.Y * AbsRotation[1][J] + ExtentA.Z * AbsRotation[2][J];
+        RadiusB = ExtentB.Data[J];
+        const float Distance = std::abs(
+            LocalTranslation.X * RotationMatrix[0][J] +
+            LocalTranslation.Y * RotationMatrix[1][J] +
+            LocalTranslation.Z * RotationMatrix[2][J]);
+        if (Distance > RadiusA + RadiusB)
+        {
+            return false;
+        }
+    }
+
+    for (int32 I = 0; I < 3; ++I)
+    {
+        for (int32 J = 0; J < 3; ++J)
+        {
+            RadiusA = ExtentA.Data[(I + 1) % 3] * AbsRotation[(I + 2) % 3][J] + ExtentA.Data[(I + 2) % 3] * AbsRotation[(I + 1) % 3][J];
+            RadiusB = ExtentB.Data[(J + 1) % 3] * AbsRotation[I][(J + 2) % 3] + ExtentB.Data[(J + 2) % 3] * AbsRotation[I][(J + 1) % 3];
+            const float Distance = std::abs(
+                LocalTranslation.Data[(I + 2) % 3] * RotationMatrix[(I + 1) % 3][J] -
+                LocalTranslation.Data[(I + 1) % 3] * RotationMatrix[(I + 2) % 3][J]);
+            if (Distance > RadiusA + RadiusB)
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
 } // namespace FMath

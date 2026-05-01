@@ -28,7 +28,7 @@ FCollisionShapeGeometry UBoxComponent::GetCollisionShapeGeometry() const
     Geometry.Type = GetCollisionShapeType();
     Geometry.Center = GetShapeWorldLocation();
     Geometry.Rotation = GetWorldRotation();
-	Geometry.BoxExtent = GetBoxExtent();
+    Geometry.BoxExtent = GetScaledBoxExtent();
     return Geometry;
 }
 

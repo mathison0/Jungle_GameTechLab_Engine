@@ -1,5 +1,6 @@
 ﻿#include "CollisionShapeQuery.h"
 
+#include "Math/Intersection.h"
 #include "Math/MathUtils.h"
 
 namespace CollisionShapeQuery
@@ -22,6 +23,22 @@ bool OverlapBoxSphere(const FCollisionShapeGeometry& Box, const FCollisionShapeG
     return (LocalSphereCenter - ClosestPoint).LengthSquared() <= Sphere.Radius * Sphere.Radius;
 }
 
+bool OverlapBoxBox(const FCollisionShapeGeometry& A, const FCollisionShapeGeometry& B)
+{
+    const FVector AxesA[3] = {
+        A.Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f)).Normalized(),
+        A.Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f)).Normalized(),
+        A.Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f)).Normalized()
+    };
+    const FVector AxesB[3] = {
+        B.Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f)).Normalized(),
+        B.Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f)).Normalized(),
+        B.Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f)).Normalized()
+    };
+
+    return FMath::IntersectOBBOBB(A.Center, A.BoxExtent, AxesA, B.Center, B.BoxExtent, AxesB);
+}
+
 bool OverlapShapeGeometry(const FCollisionShapeGeometry& A, const FCollisionShapeGeometry& B)
 {
     switch (A.Type)
@@ -41,6 +58,8 @@ bool OverlapShapeGeometry(const FCollisionShapeGeometry& A, const FCollisionShap
     case ECollisionShapeType::Box:
         switch (B.Type)
         {
+        case ECollisionShapeType::Box:
+            return OverlapBoxBox(A, B);
         case ECollisionShapeType::Sphere:
             return OverlapBoxSphere(A, B);
         default:
