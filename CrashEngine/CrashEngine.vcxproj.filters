@@ -67,6 +67,12 @@
     <Filter Include="Source\Editor">
       <UniqueIdentifier>{42df3a8d-bb22-e89a-3284-92b6ffa9424b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Input">
+      <UniqueIdentifier>{9b69d503-2014-1327-db04-20d7f8fd69b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Logging">
+      <UniqueIdentifier>{e80c6796-d55d-f4ca-8468-f3639d1db8f2}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\PIE">
       <UniqueIdentifier>{3fb7a3d8-b9cb-b13d-a373-7e1d66bc01de}</UniqueIdentifier>
     </Filter>
@@ -85,9 +91,6 @@
     <Filter Include="Source\Editor\Viewport">
       <UniqueIdentifier>{2c84039e-664e-c1f0-136b-05679e9af067}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Editor\Input">
-      <UniqueIdentifier>{d6ca3b25-711d-4bf2-9186-601d8d24d912}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Engine">
       <UniqueIdentifier>{f4f9fc6a-b333-ccb1-c33c-42c295088767}</UniqueIdentifier>
     </Filter>
@@ -102,6 +105,9 @@
     </Filter>
     <Filter Include="Source\Engine\Core">
       <UniqueIdentifier>{9bb28b55-bfc6-d321-69c1-370d4d2acc79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Core\Logging">
+      <UniqueIdentifier>{e43dcd81-4b2f-9bae-9fa9-02e65172fc3e}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\GameFramework">
       <UniqueIdentifier>{350afe18-dbbc-9b5c-a905-9539a3e4bbf2}</UniqueIdentifier>
@@ -229,6 +235,9 @@
     <Filter Include="Source\Engine\Render\Submission\Atlas">
       <UniqueIdentifier>{70f7481f-54d6-984c-5924-7556b6b68d74}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Render\Submission\Atlas\Allocator">
+      <UniqueIdentifier>{c09cf964-93ee-dea7-2884-7431a36ef17e}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Render\Submission\Batching">
       <UniqueIdentifier>{c7538955-25fb-56de-2cc2-46cabb1105e9}</UniqueIdentifier>
     </Filter>
@@ -237,12 +246,6 @@
     </Filter>
     <Filter Include="Source\Engine\Render\Submission\Command">
       <UniqueIdentifier>{415045d8-4e23-0336-e0e6-370f6c3e8e93}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Render\Submission\Atlas">
-      <UniqueIdentifier>{f5bfe6ab-2cfd-4d73-9154-e17b4629f316}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Render\Submission\Atlas\Allocator">
-      <UniqueIdentifier>{e7a7c0c2-2d86-45af-b555-4f094126d0ef}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Render\Visibility">
       <UniqueIdentifier>{b65f75d2-8132-419f-abd2-e160ae5f5b7b}</UniqueIdentifier>
@@ -319,6 +322,9 @@
       <Filter>Shaders\Passes\Scene\Forward</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\Scene\Shared\DepthOnlyPass.hlsl">
+      <Filter>Shaders\Passes\Scene\Shared</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Passes\Scene\Shared\ShadowDepthPreviewPass.hlsl">
       <Filter>Shaders\Passes\Scene\Shared</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\Scene\Shared\ShadowEncodePass.hlsl">
@@ -458,6 +464,30 @@
     <ClCompile Include="Source\Editor\EditorEngine.cpp">
       <Filter>Source\Editor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp">
+      <Filter>Source\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp">
+      <Filter>Source\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Input\EditorSelectionTool.cpp">
+      <Filter>Source\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Input\EditorViewportCommandTool.cpp">
+      <Filter>Source\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Input\EditorViewportContextMenuTool.cpp">
+      <Filter>Source\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Input\EditorViewportInputController.cpp">
+      <Filter>Source\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Input\EditorViewportTool.cpp">
+      <Filter>Source\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp">
+      <Filter>Source\Editor\Logging</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp">
       <Filter>Source\Editor\Selection</Filter>
     </ClCompile>
@@ -476,9 +506,6 @@
     <ClCompile Include="Source\Editor\UI\EditorDetailsPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp">
-      <Filter>Source\Editor\UI</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorMainPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -489,6 +516,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorSceneManagerPanel.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorStatPanel.cpp">
@@ -605,7 +635,13 @@
     <ClCompile Include="Source\Engine\Component\UUIDTextRenderComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Core\CoreGlobals.cpp">
+      <Filter>Source\Engine\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Core\EngineTypes.cpp">
+      <Filter>Source\Engine\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\HighPerformaceGpuHint.cpp">
       <Filter>Source\Engine\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp">
@@ -905,6 +941,30 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.cpp">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\AtlasBuddyAllocator2D.cpp">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.cpp">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.cpp">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasRegistry.cpp">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.cpp">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp">
+      <Filter>Source\Engine\Render\Submission\Atlas\Allocator</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Submission\Batching\FontBatch.cpp">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClCompile>
@@ -925,24 +985,6 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Submission\Collect\DrawCollector.cpp">
       <Filter>Source\Engine\Render\Submission\Collect</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp">
-      <Filter>Source\Engine\Render\Submission\Atlas\Allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.cpp">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.cpp">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.cpp">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Submission\Command\BuildDrawCommand.cpp">
       <Filter>Source\Engine\Render\Submission\Command</Filter>
@@ -1035,34 +1077,37 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Editor\Input\EditorViewportCommandTool.cpp">
-      <Filter>Source\Editor\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Input\EditorViewportContextMenuTool.cpp">
-      <Filter>Source\Editor\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp">
-      <Filter>Source\Editor\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp">
-      <Filter>Source\Editor\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Input\EditorSelectionTool.cpp">
-      <Filter>Source\Editor\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Input\EditorViewportInputController.cpp">
-      <Filter>Source\Editor\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Input\EditorViewportTool.cpp">
-      <Filter>Source\Editor\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
-    <ClCompile Include="Source\Engine\Core\CoreGlobals.cpp" />
-    <ClCompile Include="Source\Engine\Core\HighPerformaceGpuHint.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
       <Filter>Source\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h">
+      <Filter>Source\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h">
+      <Filter>Source\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Input\EditorSelectionTool.h">
+      <Filter>Source\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Input\EditorViewportCommandTool.h">
+      <Filter>Source\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Input\EditorViewportContextMenuTool.h">
+      <Filter>Source\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Input\EditorViewportInputController.h">
+      <Filter>Source\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Input\EditorViewportTool.h">
+      <Filter>Source\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h">
+      <Filter>Source\Editor\Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h">
+      <Filter>Source\Editor\Logging</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\PIE\PIETypes.h">
       <Filter>Source\Editor\PIE</Filter>
@@ -1232,7 +1277,13 @@
     <ClInclude Include="Source\Engine\Core\Common.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Core\CoreGlobals.h">
+      <Filter>Source\Engine\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Core\CoreTypes.h">
+      <Filter>Source\Engine\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Delegate.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\EngineTypes.h">
@@ -1252,6 +1303,12 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\TickFunction.h">
       <Filter>Source\Engine\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Logging\LogMacros.h">
+      <Filter>Source\Engine\Core\Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Logging\LogOutputDevice.h">
+      <Filter>Source\Engine\Core\Logging</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\AActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
@@ -1559,6 +1616,12 @@
     <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowFilterSettings.h">
       <Filter>Source\Engine\Render\Resources\Shadows</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowMapSettings.h">
+      <Filter>Source\Engine\Render\Resources\Shadows</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowResolutionSettings.h">
+      <Filter>Source\Engine\Render\Resources\Shadows</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resources\State\RenderStateNames.h">
       <Filter>Source\Engine\Render\Resources\State</Filter>
     </ClInclude>
@@ -1694,14 +1757,38 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.h">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasBuddyAllocator2D.h">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.h">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.h">
       <Filter>Source\Engine\Render\Submission\Atlas</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h">
       <Filter>Source\Engine\Render\Submission\Atlas</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasRegistry.h">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasSystem.h">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h">
       <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.h">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.h">
+      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.h">
+      <Filter>Source\Engine\Render\Submission\Atlas\Allocator</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Batching\BatchBuffer.h">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
@@ -1723,30 +1810,6 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Collect\DrawCollector.h">
       <Filter>Source\Engine\Render\Submission\Collect</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.h">
-      <Filter>Source\Engine\Render\Submission\Atlas\Allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.h">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.h">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.h">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.h">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h">
-      <Filter>Source\Engine\Render\Submission\Atlas</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Command\BuildDrawCommand.h">
       <Filter>Source\Engine\Render\Submission\Command</Filter>
@@ -1865,36 +1928,6 @@
     <ClInclude Include="ThirdParty\SimpleJSON\json.hpp">
       <Filter>ThirdParty\SimpleJSON</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Input\EditorViewportInputController.h">
-      <Filter>Source\Editor\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Input\EditorViewportCommandTool.h">
-      <Filter>Source\Editor\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Input\EditorViewportContextMenuTool.h">
-      <Filter>Source\Editor\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h">
-      <Filter>Source\Editor\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h">
-      <Filter>Source\Editor\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Input\EditorSelectionTool.h">
-      <Filter>Source\Editor\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Input\EditorViewportTool.h">
-      <Filter>Source\Editor\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
-    <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
-    <ClInclude Include="Source\Engine\Core\CoreGlobals.h" />
-    <ClInclude Include="Source\Engine\Core\Logging\LogMacros.h" />
-    <ClInclude Include="Source\Engine\Core\Logging\LogOutputDevice.h" />
-    <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowMapSettings.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
