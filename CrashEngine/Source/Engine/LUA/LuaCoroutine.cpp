@@ -84,39 +84,16 @@ bool CoroutineExecutor::IsValid()
     return false; // Command도 끝나고 Yield상태도 아니면 더 이상 이 객체는 필요가 없습니다.
 }
 
-bool FCoroutineExecutorSet::Start(const sol::function& LuaFunc)
+uint32 FCoroutineExecutorSet::Start(const sol::function& LuaFunc)
 {
     if (!LuaFunc.valid())
     {
-        return false;
+        return -1;
     }
 
-    if (bIsTicking)
-    {
-        return false;
-    }
+    uint32 FunctionKey = NextExecutorId++;
 
-    const void* FunctionKey = LuaFunc.pointer();
-    if (!FunctionKey)
-    {
-        return false;
-    }
-
-    auto Existing = Executors.find(FunctionKey);
-    if (Existing != Executors.end())
-    {
-        CoroutineExecutor* ExistingExecutor = Existing->second;
-        if (ExistingExecutor && ExistingExecutor->IsValid() && !PendingStopKeys.contains(FunctionKey))
-        {
-            return false;
-        }
-
-        delete ExistingExecutor;
-        Executors.erase(Existing);
-    }
-
-    const uint32 ExecutorId = ++NextExecutorId;
-    const FString ThreadFunctionName = "__coroutine_entry_" + std::to_string(ExecutorId);
+    const FString ThreadFunctionName = "__coroutine_entry_" + std::to_string(FunctionKey);
 
     FLuaCoroutineTask Task;
 
@@ -135,19 +112,12 @@ bool FCoroutineExecutorSet::Start(const sol::function& LuaFunc)
 
 
     Executors[FunctionKey] = new CoroutineExecutor(std::move(Task));
-    return true;
+    return FunctionKey;
 }
 
-bool FCoroutineExecutorSet::Stop(const sol::function& LuaFunc)
+bool FCoroutineExecutorSet::Stop(uint32 FuncKey)
 {
-    if (!LuaFunc.valid())
-    {
-        UE_LOG([Coroutine], Warning, "Lua function is invalid for stop.");
-        return false;
-    }
-
-    const void* FunctionKey = LuaFunc.pointer();
-    auto It = Executors.find(FunctionKey);
+    auto It = Executors.find(FuncKey);
     if (It == Executors.end())
     {
         return false;
@@ -155,7 +125,7 @@ bool FCoroutineExecutorSet::Stop(const sol::function& LuaFunc)
 
     if (bIsTicking)
     {
-        PendingStopKeys.insert(FunctionKey);
+        PendingStopKeys.insert(FuncKey);
         return true;
     }
 
@@ -170,10 +140,10 @@ void FCoroutineExecutorSet::Tick(const FCouroutineContext& Context)
     bIsTicking = true;
     for (auto& pair : Executors)
     {
-        if (!PendingStopKeys.contains(pair.first))
-        {
-            pair.second->Tick(Context);
-        }
+        if (PendingStopKeys.contains(pair.first))
+            continue;
+
+        pair.second->Tick(Context);
     }
     bIsTicking = false;
 

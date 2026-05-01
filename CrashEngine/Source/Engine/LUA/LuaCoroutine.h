@@ -99,13 +99,13 @@ private:
 class FCoroutineExecutorSet
 {
 public:
-    bool Start(const sol::function& LuaFunc);
-    bool Stop(const sol::function& LuaFunc);
+    uint32 Start(const sol::function& LuaFunc);
+    bool Stop(uint32 FuncKey);
     void Tick(const FCouroutineContext& Context);
 
 private:
-    TMap<const void*, CoroutineExecutor*> Executors;
-    TSet<const void*> PendingStopKeys;
+    TMap<uint32, CoroutineExecutor*> Executors;
+    TSet<uint32> PendingStopKeys;
     uint32 NextExecutorId = 0;
     bool bIsTicking = false;
 };

@@ -128,10 +128,10 @@ void UScriptComponent::CallLuaTick(float DeltaTime)
 void UScriptComponent::BindFunctions()
 {
     BindFunction("start_coroutine",
-                 [this](sol::table Self, sol::function Func)
+                 [this](sol::table Self, sol::function Func) -> uint32
                  { return CoroutineExecutorSet.Start(Func); });
 
     BindFunction("stop_coroutine",
-                 [this](sol::table Self, sol::function Func)
-                 { return CoroutineExecutorSet.Stop(Func); });
+                 [this](sol::table Self, uint32 FuncKey) -> bool
+                 { return CoroutineExecutorSet.Stop(FuncKey); });
 }

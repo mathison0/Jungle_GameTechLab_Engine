@@ -17,7 +17,7 @@ end
 
 function Script:BeginPlay()
     Log("Template.lua BeginPlay")
-    self:start_coroutine(EnemyAI.start)
+    self.ai = self:start_coroutine(EnemyAI.start)
 end
 
 function Script:Tick(deltaTime)
@@ -34,7 +34,7 @@ function Script:Tick(deltaTime)
 end
 
 function Script:EndPlay()
-    self:stop_coroutine(EnemyAI.start)
+    self:stop_coroutine(self.ai)
     Log("Template.lua EndPlay")
 end
 
