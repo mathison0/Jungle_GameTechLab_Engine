@@ -5,10 +5,12 @@
 #include "Engine/Input/ViewportInputRouter.h"
 #include "Editor/Logging/EditorLogBuffer.h"
 #include "Editor/Settings/EditorSettings.h"
-#include "Editor/UI/EditorConsolePanel.h"
+#include "Editor/UI/EditorBottomBar.h"
+#include "Editor/UI/EditorContentDrawerPanel.h"
 #include "Editor/UI/EditorControlPanel.h"
 #include "Editor/UI/EditorDetailsPanel.h"
 #include "Editor/UI/EditorSceneManagerPanel.h"
+#include "Editor/UI/EditorOutputLogPanel.h"
 #include "Editor/UI/EditorStatPanel.h"
 
 class FRenderer;
@@ -32,22 +34,12 @@ public:
     }
 
 private:
-    enum class EEditorDrawer
-    {
-        None,
-        Content,
-        OutputLog,
-    };
-
-    void RenderBottomDrawerBar();
-    void RenderActiveDrawer();
-    void DrawDrawerButton(const char* Label, EEditorDrawer Drawer);
-
-private:
     FWindowsWindow* Window = nullptr;
     UEditorEngine* EditorEngine = nullptr;
     FEditorLogBuffer LogBuffer;
-    FEditorConsolePanel ConsolePanel;
+    FEditorBottomBar BottomBar;
+    FEditorContentDrawerPanel ContentDrawerPanel;
+    FEditorOutputLogPanel OutputLogPanel;
     FEditorControlPanel ControlPanel;
     FEditorDetailsPanel DetailsPanel;
     FEditorScenePanel ScenePanel;
@@ -56,8 +48,6 @@ private:
     bool bHideEditorWindows = false;
     bool bHasSavedUIVisibility = false;
     bool bSavedShowPanelList = false;
-    EEditorDrawer ActiveDrawer = EEditorDrawer::None;
-    float DrawerHeight = 320.0f;
     FEditorSettings::FUIVisibility SavedUIVisibility{};
 
 	FGuiInputCaptureState GuiInputCaptureState{};

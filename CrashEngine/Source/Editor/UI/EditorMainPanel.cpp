@@ -20,7 +20,6 @@
 #include "Platform/Paths.h"
 
 #include <commdlg.h>
-#include <algorithm>
 #include <filesystem>
 
 #include "Core/Logging/LogBuffer.h"
@@ -165,9 +164,10 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
     ImGui_ImplWin32_Init((void*)InWindow->GetHWND());
     ImGui_ImplDX11_Init(InRenderer.GetFD3DDevice().GetDevice(), InRenderer.GetFD3DDevice().GetDeviceContext());
 
-    ConsolePanel.Initialize(InEditorEngine, &GetGlobalLogBuffer());
+    OutputLogPanel.Initialize(InEditorEngine, &GetGlobalLogBuffer());
     ControlPanel.Initialize(InEditorEngine);
     DetailsPanel.Initialize(InEditorEngine);
+    ContentDrawerPanel.Initialize(InEditorEngine);
     ScenePanel.Initialize(InEditorEngine);
     StatPanel.Initialize(InEditorEngine);
     UE_LOG(EditorUI, Info, "Editor main panel initialized.");
@@ -242,7 +242,6 @@ void FEditorMainPanel::Render(float DeltaTime)
         if (ImGui::BeginMenu("Windows"))
         {
             FEditorSettings& S = FEditorSettings::Get();
-            ImGui::MenuItem("Console", nullptr, &S.UI.bConsole);
             ImGui::MenuItem("Control Panel", nullptr, &S.UI.bControl);
             ImGui::MenuItem("Details", nullptr, &S.UI.bProperty);
             ImGui::MenuItem("Scene Manager", nullptr, &S.UI.bScene);
@@ -332,12 +331,6 @@ void FEditorMainPanel::Render(float DeltaTime)
 
     const FEditorSettings& Settings = FEditorSettings::Get();
 
-    if (!bHideEditorWindows && Settings.UI.bConsole)
-    {
-        SCOPE_STAT_CAT("ConsolePanel.Render", "5_UI");
-        ConsolePanel.Render(DeltaTime);
-    }
-
     if (!bHideEditorWindows && Settings.UI.bControl)
     {
         SCOPE_STAT_CAT("ControlPanel.Render", "5_UI");
@@ -371,101 +364,28 @@ void FEditorMainPanel::Render(float DeltaTime)
     if (!bHideEditorWindows)
     {
         SCOPE_STAT_CAT("EditorDrawer.Render", "5_UI");
-        RenderBottomDrawerBar();
-        RenderActiveDrawer();
+        BottomBar.Render(DeltaTime);
+        if (BottomBar.BeginDrawerOverlay())
+        {
+            switch (BottomBar.GetVisibleDrawer())
+            {
+            case EEditorDrawer::Content:
+                ContentDrawerPanel.Render(DeltaTime);
+                break;
+            case EEditorDrawer::OutputLog:
+                OutputLogPanel.RenderContent(DeltaTime);
+                break;
+            case EEditorDrawer::None:
+            default:
+                break;
+            }
+            BottomBar.EndDrawerOverlay();
+        }
     }
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
-
-void FEditorMainPanel::RenderBottomDrawerBar()
-{
-    ImGuiViewport* Viewport = ImGui::GetMainViewport();
-    const float BarHeight = 36.0f;
-
-    ImGuiWindowFlags Flags = ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoScrollWithMouse |
-        ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoDocking;
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 5.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
-    if (ImGui::BeginViewportSideBar("##EditorBottomDrawerBar", Viewport, ImGuiDir_Down, BarHeight, Flags))
-    {
-        DrawDrawerButton("Content Drawer", EEditorDrawer::Content);
-        ImGui::SameLine();
-        DrawDrawerButton("Output Log", EEditorDrawer::OutputLog);
-    }
-
-    ImGui::End();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar(2);
-}
-
-void FEditorMainPanel::RenderActiveDrawer()
-{
-    if (ActiveDrawer == EEditorDrawer::None)
-    {
-        return;
-    }
-
-    ImGuiViewport* Viewport = ImGui::GetMainViewport();
-    const float Height = (std::min)(DrawerHeight, (std::max)(160.0f, Viewport->Size.y * 0.45f));
-
-    ImGuiWindowFlags Flags = ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoDocking;
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.10f, 0.10f, 0.10f, 1.0f));
-    if (ImGui::BeginViewportSideBar("##EditorBottomDrawer", Viewport, ImGuiDir_Down, Height, Flags))
-    {
-        if (ActiveDrawer == EEditorDrawer::Content)
-        {
-            ImGui::TextUnformatted("Content Drawer");
-            ImGui::Separator();
-            ImGui::TextDisabled("Asset/Content");
-            ImGui::TextDisabled("Asset/Scripts");
-        }
-        else if (ActiveDrawer == EEditorDrawer::OutputLog)
-        {
-            ImGui::TextUnformatted("Output Log");
-            ImGui::Separator();
-            ImGui::TextDisabled("Output log drawer will use the editor log buffer.");
-        }
-    }
-
-    ImGui::End();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
-}
-
-void FEditorMainPanel::DrawDrawerButton(const char* Label, EEditorDrawer Drawer)
-{
-    const bool bActive = ActiveDrawer == Drawer;
-    if (bActive)
-    {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-    }
-
-    if (ImGui::Button(Label))
-    {
-        ActiveDrawer = bActive ? EEditorDrawer::None : Drawer;
-    }
-
-    if (bActive)
-    {
-        ImGui::PopStyleColor();
-    }
-}
-
 
 void FEditorMainPanel::Update()
 {
@@ -540,7 +460,6 @@ void FEditorMainPanel::HideEditorWindowsForPIE()
     bHideEditorWindows = true;
     bShowPanelList = false;
 
-    Settings.UI.bConsole = false;
     Settings.UI.bControl = false;
     Settings.UI.bProperty = false;
     Settings.UI.bScene = false;
