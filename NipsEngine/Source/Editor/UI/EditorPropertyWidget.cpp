@@ -8,25 +8,27 @@
 #include "Core/ResourceManager.h"
 #include "Core/Paths.h"
 #include "Object/FName.h"
+#include <cctype>
+#include <cstring>
+#include <functional>
 #include <Windows.h>
 #include <commdlg.h>
-#include <cctype>
 #include <filesystem>
-#include <functional>
 
 #include "Editor/Utility/EditorComponentFactory.h"
 
 #include "GameFramework/AActor.h"
+#include "Component/LuaScriptComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/GizmoComponent.h"
-#include "Component/LuaScriptComponent.h"
 #include "Component/Light/LightComponent.h"
 #include "Component/Movement/InterpToMovementComponent.h"
 #include "Editor/Viewport/ViewportLayout.h"
 #include "Editor/Utility/EditorUIUtils.h"
 #include "Engine/Render/Renderer/RenderFlow/ShadowAtlasManager.h"
 #include "Engine/Input/InputSystem.h"
-#include "UI/EditorConsoleWidget.h"
+#include "Engine/Scripting/ScriptUtils.h"
+#include "Editor/UI/EditorConsoleWidget.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
@@ -575,8 +577,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 	}
 
 	bool bAnyChanged = false;
+	const bool bIsLuaScriptComponent = SelectedComponent->IsA<ULuaScriptComponent>();
 	for (auto& Prop : Props)
 	{
+		if (bIsLuaScriptComponent && strcmp(Prop.Name, "Script Path") == 0)
+		{
+			continue;
+		}
+
 		if (Prop.Type == EPropertyType::SceneComponentRef)
 		{
 			RenderSceneComponentRefWidget(Prop, Owner);
@@ -1245,24 +1253,26 @@ namespace
 	{
 		OutFilePath.clear();
 
-		std::filesystem::path InitialDir(FPaths::ToAbsolute(L"Asset/Scripts"));
-		InitialDir = InitialDir.lexically_normal();
-		InitialDir.make_preferred();
-		std::error_code ErrorCode;
-		std::filesystem::create_directories(InitialDir, ErrorCode);
+		std::filesystem::path ScriptDir(FPaths::ToAbsolute(FPaths::ToWide(FScriptUtils::GetScriptDirectory())));
+		ScriptDir = ScriptDir.lexically_normal();
+		ScriptDir.make_preferred();
+
+		std::error_code Ec;
+		std::filesystem::create_directories(ScriptDir, Ec);
 
 		WCHAR FileBuffer[MAX_PATH] = { 0 };
-		const std::wstring OpenPattern = (InitialDir / L"*.lua").wstring();
-		wcsncpy_s(FileBuffer, MAX_PATH, OpenPattern.c_str(), _TRUNCATE);
+		const std::filesystem::path OpenPattern = ScriptDir / L"*.lua";
+		wcsncpy_s(FileBuffer, MAX_PATH, OpenPattern.wstring().c_str(), _TRUNCATE);
+		const std::wstring InitialDir = ScriptDir.wstring();
 
 		const std::filesystem::path PrevCwd = std::filesystem::current_path();
 		std::error_code ChdirEc;
-		std::filesystem::current_path(InitialDir, ChdirEc);
+		std::filesystem::current_path(ScriptDir, ChdirEc);
 
 		OPENFILENAMEW DialogDesc = {};
 		DialogDesc.lStructSize = sizeof(DialogDesc);
 		DialogDesc.hwndOwner = static_cast<HWND>(ImGui::GetMainViewport()->PlatformHandleRaw);
-		DialogDesc.lpstrFilter = L"Lua Script Files (*.lua)\0*.lua\0All Files (*.*)\0*.*\0";
+		DialogDesc.lpstrFilter = L"Lua Scripts (*.lua)\0*.lua\0All Files (*.*)\0*.*\0";
 		DialogDesc.lpstrFile = FileBuffer;
 		DialogDesc.nMaxFile = MAX_PATH;
 		DialogDesc.lpstrInitialDir = InitialDir.c_str();
@@ -1270,8 +1280,10 @@ namespace
 		DialogDesc.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
 		const BOOL bPicked = GetOpenFileNameW(&DialogDesc);
+
 		std::error_code RestoreEc;
 		std::filesystem::current_path(PrevCwd, RestoreEc);
+
 		if (!bPicked)
 		{
 			return false;

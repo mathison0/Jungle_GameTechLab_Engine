@@ -118,6 +118,9 @@
     <Filter Include="Source\Engine\Runtime\Stats">
       <UniqueIdentifier>{b73b3ffd-cc3e-3e73-cd5e-4c862ce12d43}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Scripting">
+      <UniqueIdentifier>{6d54fbc9-92d3-4d56-9b22-0d3e5850d1ab}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Serialization">
       <UniqueIdentifier>{2da23669-dc56-0f8c-0400-ac456128f1fa}</UniqueIdentifier>
     </Filter>
@@ -332,6 +335,12 @@
     <ClCompile Include="Source\Engine\Asset\StaticMeshSimplifier.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Collision\Collision.cpp">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Collision\CollisionSystem.cpp">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp">
       <Filter>Source\Engine\Collision\RayCollision</Filter>
     </ClCompile>
@@ -459,6 +468,9 @@
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Geometry\AABB.cpp">
+      <Filter>Source\Engine\Geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Geometry\Capsule.cpp">
       <Filter>Source\Engine\Geometry</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Geometry\Frustum.cpp">
@@ -680,6 +692,12 @@
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp">
       <Filter>Source\Engine\Runtime</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\LuaCoroutineScheduler.cpp">
+      <Filter>Source\Engine\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\ScriptUtils.cpp">
+      <Filter>Source\Engine\Scripting</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Serialization\JsonReader.cpp">
       <Filter>Source\Engine\Serialization</Filter>
     </ClCompile>
@@ -875,6 +893,12 @@
     <ClInclude Include="Source\Engine\Asset\StaticMeshTypes.h">
       <Filter>Source\Engine\Asset</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Collision\Collision.h">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Collision\CollisionSystem.h">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h">
       <Filter>Source\Engine\Collision\RayCollision</Filter>
     </ClInclude>
@@ -986,6 +1010,9 @@
     <ClInclude Include="Source\Engine\Core\Debug.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Delegate.h">
+      <Filter>Source\Engine\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Core\EngineTypes.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
@@ -1061,6 +1088,9 @@
     <ClInclude Include="Source\Engine\Geometry\AABB.h">
       <Filter>Source\Engine\Geometry</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Geometry\Capsule.h">
+      <Filter>Source\Engine\Geometry</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Geometry\Edge.h">
       <Filter>Source\Engine\Geometry</Filter>
     </ClInclude>
@@ -1098,9 +1128,6 @@
       <Filter>Source\Engine\Input\Controller\EditorController</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Color.h">
-      <Filter>Source\Engine\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Math\Edge.h">
       <Filter>Source\Engine\Math</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Matrix.h">
@@ -1346,6 +1373,12 @@
     <ClInclude Include="Source\Engine\Runtime\Stats\ScopeCycleCounter.h">
       <Filter>Source\Engine\Runtime\Stats</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Scripting\LuaCoroutineScheduler.h">
+      <Filter>Source\Engine\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Scripting\ScriptUtils.h">
+      <Filter>Source\Engine\Scripting</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\Archive.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
@@ -1459,9 +1492,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\SimpleJSON\json.hpp">
       <Filter>ThirdParty\SimpleJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Core\Delegate.h">
-      <Filter>Source\Engine\Core</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
