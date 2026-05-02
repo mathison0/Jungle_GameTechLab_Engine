@@ -36,6 +36,7 @@ IMPLEMENT_CLASS(UPrimitiveComponent, USceneComponent)
 
 namespace
 {
+	//누군가 이 노가다를 멈춰주세요..
 constexpr FEnumPropertyOption GComponentMobilityOptions[] = {
     { "Static", static_cast<int32_t>(EComponentMobility::Static) },
     { "Movable", static_cast<int32_t>(EComponentMobility::Movable) },
@@ -45,6 +46,22 @@ constexpr FEnumPropertyMeta GComponentMobilityMeta = {
     "EComponentMobility",
     GComponentMobilityOptions,
     static_cast<int32_t>(sizeof(GComponentMobilityOptions) / sizeof(GComponentMobilityOptions[0])),
+};
+
+constexpr FEnumPropertyOption GCollisionChannels[] = {
+    { "WorldStatic", static_cast<int32_t>(ECollisionChannel::WorldStatic) },
+    { "WorldDynamic", static_cast<int32_t>(ECollisionChannel::WorldDynamic) },
+    { "Enemy", static_cast<int32_t>(ECollisionChannel::Enemy) },
+    { "Player", static_cast<int32_t>(ECollisionChannel::Player) },
+    { "Projectile", static_cast<int32_t>(ECollisionChannel::Projectile) },
+    { "Pickup", static_cast<int32_t>(ECollisionChannel::Pickup) },
+    { "Trigger", static_cast<int32_t>(ECollisionChannel::Trigger) }
+};
+
+constexpr FEnumPropertyMeta GCollisionChannelMeta = {
+    "ECollisionChannel",
+    GCollisionChannels,
+    static_cast<int32_t>(sizeof(GCollisionChannels) / sizeof(GCollisionChannels[0])),
 };
 }
 
@@ -68,9 +85,9 @@ void UPrimitiveComponent::Serialize(FArchive& Ar)
     Ar << bVisibleInGame;
     Ar << bGenerateHitEvents;
     Ar << bGenerateOverlapEvents;
-    Ar << bBlockComponent;
     Ar << bIsEditorHelper;
     Ar << Mobility;
+    Ar << CollisionChannel;
 }
 
 void UPrimitiveComponent::SetVisibility(bool bNewVisible)
@@ -203,6 +220,11 @@ bool UPrimitiveComponent::IsOverlappingComponent(const UPrimitiveComponent* Othe
     return false;
 }
 
+void UPrimitiveComponent::SetCollisionChannel(ECollisionChannel NewChannel)
+{
+    CollisionChannel = NewChannel;
+}
+
 // ============================================================
 // MarkRenderTransformDirty / MarkRenderVisibilityDirty
 // ============================================================
@@ -245,8 +267,8 @@ void UPrimitiveComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
     OutProps.push_back({ "Is Editor Helper", EPropertyType::Bool, &bIsEditorHelper });
     OutProps.push_back({ "Generate Overlap Events", EPropertyType::Bool, &bGenerateOverlapEvents });
     OutProps.push_back({ "Generate Hit Events", EPropertyType::Bool, &bGenerateHitEvents });
-    OutProps.push_back({ "Block Component", EPropertyType::Bool, &bBlockComponent });
     OutProps.push_back({ "Mobility", EPropertyType::Enum, &Mobility, 0.0f, 0.0f, 0.1f, &GComponentMobilityMeta });
+    OutProps.push_back({ "CollisionChannel", EPropertyType::Enum, &CollisionChannel, 0.0f, 0.0f, 0.1f, &GCollisionChannelMeta });
 }
 
 void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
@@ -402,11 +424,6 @@ void UPrimitiveComponent::SetGenerateOverlapEvents(bool bNewGenerateOverlap)
 void UPrimitiveComponent::SetGenerateHitEvents(bool bNewGenerate)
 {
     bGenerateHitEvents = bNewGenerate;
-}
-
-void UPrimitiveComponent::SetBlockComponent(bool bNewBlockComponent)
-{
-    bBlockComponent = bNewBlockComponent;
 }
 
 void UPrimitiveComponent::SetMobility(EComponentMobility NewMobility)

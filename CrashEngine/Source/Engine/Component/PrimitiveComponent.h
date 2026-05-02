@@ -11,6 +11,7 @@
 #include "Render/Scene/SceneProxyDirtyFlag.h"
 #include "GameFramework/WorldContext.h"
 #include "Collision/OverlapInfo.h"
+#include "Collision/CollisionChannels.h"
 
 class FPrimitiveProxy;
 class FScene;
@@ -46,12 +47,14 @@ public:
     bool ShouldRenderInWorld(EWorldType WorldType) const;
     bool ShouldRenderInCurrentWorld() const;
 
-	//Collision
+    // Collision
     const TArray<FOverlapInfo>& GetOverlapInfos() const;
     void AddOverlapInfo(UPrimitiveComponent* OtherPrimitive);
     void ClearOverlapInfos();
     virtual bool IsOverlappingActor(const AActor* OtherActor) const;
     virtual bool IsOverlappingComponent(const UPrimitiveComponent* OtherPrimitive) const;
+    ECollisionChannel GetCollisionChannel() const { return CollisionChannel; };
+    void SetCollisionChannel(ECollisionChannel NewChannel);
 
     /*
         현재 월드 공간 AABB를 반환합니다.
@@ -149,10 +152,8 @@ public:
 
 	void SetGenerateOverlapEvents(bool bNewGenerate);
     void SetGenerateHitEvents(bool bNewGenerate);
-    void SetBlockComponent(bool bMewBlockComponent);
     bool ShouldGenerateHitEvents() const { return bGenerateHitEvents; }
 	bool ShouldGenerateOverlapEvents() const { return bGenerateOverlapEvents; }
-    bool IsBlockComponents() const { return bBlockComponent; }
 
 	EComponentMobility GetMobility() const { return Mobility; }
     void SetMobility(EComponentMobility NewMobility);
@@ -178,10 +179,13 @@ protected:
     FOctree* OctreeNode = nullptr;
     bool bInOctreeOverflow = false;
 
+	//Collision
 	TArray<FOverlapInfo> OverlapInfos;
     EComponentMobility Mobility = EComponentMobility::Movable;
 	bool bGenerateOverlapEvents = false;
     bool bGenerateHitEvents = false;
-    bool bBlockComponent = true;
+
+	ECollisionChannel CollisionChannel = ECollisionChannel::WorldDynamic;
+
 };
 

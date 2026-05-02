@@ -18,11 +18,10 @@ private:
 	void BuildCollisionPairs(const TArray<UCollider2DComponent*>& Colliders, TArray<FCollision2DPair>& OutPairs);
 	void ProcessCollisionPairs(const TArray<FCollision2DPair>& CollisionPairs, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs);
 	void ProcessCollisionPair(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs);
-    bool CanCollide(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB);
     bool ComputePenetration(const FCollision2DShapeGeometry& A, const FCollision2DShapeGeometry& B, FCollision2DContact& OutContact) const;
-	void HandleBlockingCollision(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, const FCollision2DContact& Contact);
-	void HandleOverlapCollision(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs);
-    void ResolveBlock(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, const FCollision2DContact& Contact);
+	void HandleBlockingCollision(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, const FCollision2DContact& Contact);
+	void HandleOverlapCollision(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs);
+    void ResolveBlock(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, const FCollision2DContact& Contact);
 	void DispatchEndOverlapEvents(const TMap<uint64, FCollision2DPair>& CurrentOverlapPairs);
 
 	private:

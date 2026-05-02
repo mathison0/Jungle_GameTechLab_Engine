@@ -9,44 +9,46 @@
 
 void FCollisionManager::Update(UWorld& World)
 {
-    TArray<UShapeComponent*> ShapeComponents;
-    CollectShapes(World, ShapeComponents);
-    ShapeBVH.Build(ShapeComponents);
+	//게임잼이 2D 충돌을 쓰는 관계로 잠시 유기합니다.
+	
+    //TArray<UShapeComponent*> ShapeComponents;
+    //CollectShapes(World, ShapeComponents);
+    //ShapeBVH.Build(ShapeComponents);
 
-    TArray<FShapeCollisionPair> CandidateShapePairs;
-    ShapeBVH.QueryOverlappingPairs(CandidateShapePairs);
+    //TArray<FShapeCollisionPair> CandidateShapePairs;
+    //ShapeBVH.QueryOverlappingPairs(CandidateShapePairs);
 
-    for (const FShapeCollisionPair& Pair : CandidateShapePairs)
-    {
-        UShapeComponent* AShapeComp = Pair.ShapeCompA;
-        UShapeComponent* BShapeComp = Pair.ShapeCompB;
+    //for (const FShapeCollisionPair& Pair : CandidateShapePairs)
+    //{
+    //    UShapeComponent* AShapeComp = Pair.ShapeCompA;
+    //    UShapeComponent* BShapeComp = Pair.ShapeCompB;
 
-        if (!CanCollide(AShapeComp, BShapeComp))
-        {
-            continue;
-        }
+    //    if (!CanCollide(AShapeComp, BShapeComp))
+    //    {
+    //        continue;
+    //    }
 
-        FCollisionContact Contact;
-        if (CollisionShapeQuery::ComputePenetration(
-                AShapeComp->GetCollisionShapeGeometry(),
-                BShapeComp->GetCollisionShapeGeometry(),
-                Contact))
-        {
-            const bool bBlocking = AShapeComp->IsBlockComponents() && BShapeComp->IsBlockComponents();
-            if (bBlocking)
-            {
-                ResolveBlock(AShapeComp, BShapeComp, Contact);
-            }
-            else if (AShapeComp->ShouldGenerateOverlapEvents() && BShapeComp->ShouldGenerateOverlapEvents())
-            {
-                AShapeComp->AddOverlapInfo(BShapeComp);
-                BShapeComp->AddOverlapInfo(AShapeComp);
-            }
+    //    FCollisionContact Contact;
+    //    if (CollisionShapeQuery::ComputePenetration(
+    //            AShapeComp->GetCollisionShapeGeometry(),
+    //            BShapeComp->GetCollisionShapeGeometry(),
+    //            Contact))
+    //    {
+    //        const bool bBlocking = AShapeComp->IsBlockComponents() && BShapeComp->IsBlockComponents();
+    //        if (bBlocking)
+    //        {
+    //            ResolveBlock(AShapeComp, BShapeComp, Contact);
+    //        }
+    //        else if (AShapeComp->ShouldGenerateOverlapEvents() && BShapeComp->ShouldGenerateOverlapEvents())
+    //        {
+    //            AShapeComp->AddOverlapInfo(BShapeComp);
+    //            BShapeComp->AddOverlapInfo(AShapeComp);
+    //        }
 
-            AShapeComp->SetDebugOverlapping(true);
-            BShapeComp->SetDebugOverlapping(true);
-        }
-    }
+    //        AShapeComp->SetDebugOverlapping(true);
+    //        BShapeComp->SetDebugOverlapping(true);
+    //    }
+    //}
 }
 
 void FCollisionManager::CollectShapes(UWorld& World, TArray<UShapeComponent*>& OutShapes)
@@ -91,10 +93,9 @@ bool FCollisionManager::CanCollide(UShapeComponent* ShapeA, UShapeComponent* Sha
 	}
 
 	const bool bWantsOverlap = ShapeA->ShouldGenerateOverlapEvents() && ShapeB->ShouldGenerateOverlapEvents();
-	const bool bWantsBlock = ShapeA->IsBlockComponents() && ShapeB->IsBlockComponents();
 	const bool bWantsHit = ShapeA->ShouldGenerateHitEvents() || ShapeB->ShouldGenerateHitEvents();
 
-	return bWantsOverlap || bWantsBlock || bWantsHit;
+	return bWantsOverlap || bWantsHit;
 }
 
 void FCollisionManager::ResolveBlock(UShapeComponent* ShapeA, UShapeComponent* ShapeB, const FCollisionContact& Contact)

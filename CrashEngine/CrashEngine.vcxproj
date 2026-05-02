@@ -504,6 +504,8 @@
     <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Collision\CollisionChannels.h" />
+    <ClInclude Include="Source\Engine\Collision\CollisionMatrix.h" />
     <ClInclude Include="Source\Engine\Lua\CoroutineCommand.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
