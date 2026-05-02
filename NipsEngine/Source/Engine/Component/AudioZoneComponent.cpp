@@ -52,6 +52,12 @@ void UAudioZoneComponent::Serialize(FArchive& Ar)
 	Ar << "ExteriorSFXVolume" << ExteriorSFXVolume;
 	Ar << "ExteriorMusicVolume" << ExteriorMusicVolume;
 	Ar << "ExteriorAmbientVolume" << ExteriorAmbientVolume;
+	Ar << "InteriorLowPassCutoff" << InteriorLowPassCutoff;
+	Ar << "ExteriorLowPassCutoff" << ExteriorLowPassCutoff;
+	Ar << "InteriorReverbWet" << InteriorReverbWet;
+	Ar << "InteriorReverbDecay" << InteriorReverbDecay;
+	Ar << "ExteriorReverbWet" << ExteriorReverbWet;
+	Ar << "ExteriorReverbDecay" << ExteriorReverbDecay;
 	Ar << "AudioRangeVisibility" << AudioRangeVisibility;
 
 	if (Ar.IsLoading())
@@ -79,6 +85,12 @@ void UAudioZoneComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
 	OutProps.push_back({ "Exterior SFX Volume", EPropertyType::Float, &ExteriorSFXVolume, 0.0f, 2.0f, 0.01f });
 	OutProps.push_back({ "Exterior Music Volume", EPropertyType::Float, &ExteriorMusicVolume, 0.0f, 2.0f, 0.01f });
 	OutProps.push_back({ "Exterior Ambient Volume", EPropertyType::Float, &ExteriorAmbientVolume, 0.0f, 2.0f, 0.01f });
+	OutProps.push_back({ "Interior LowPass Cutoff", EPropertyType::Float, &InteriorLowPassCutoff, 100.0f, 20000.0f, 100.0f });
+	OutProps.push_back({ "Exterior LowPass Cutoff", EPropertyType::Float, &ExteriorLowPassCutoff, 100.0f, 20000.0f, 100.0f });
+	OutProps.push_back({ "Interior Reverb Wet", EPropertyType::Float, &InteriorReverbWet, 0.0f, 1.0f, 0.01f });
+	OutProps.push_back({ "Interior Reverb Decay", EPropertyType::Float, &InteriorReverbDecay, 0.0f, 1.0f, 0.01f });
+	OutProps.push_back({ "Exterior Reverb Wet", EPropertyType::Float, &ExteriorReverbWet, 0.0f, 1.0f, 0.01f });
+	OutProps.push_back({ "Exterior Reverb Decay", EPropertyType::Float, &ExteriorReverbDecay, 0.0f, 1.0f, 0.01f });
 	OutProps.push_back({ "Show Audio Range", EPropertyType::Enum, &AudioRangeVisibility, 0.0f, 0.0f, 0.0f, AudioRangeVisibilityNames, 3 });
 	OutProps.push_back({ "Enable Tick", EPropertyType::Bool, &bCanEverTick });
 	OutProps.push_back({ "Editor Only", EPropertyType::Bool, &bIsEditorOnly });
@@ -124,7 +136,13 @@ void UAudioZoneComponent::SubmitMix()
 		ExteriorMasterVolume,
 		ExteriorSFXVolume,
 		ExteriorMusicVolume,
-		ExteriorAmbientVolume);
+		ExteriorAmbientVolume,
+		InteriorLowPassCutoff,
+		ExteriorLowPassCutoff,
+		InteriorReverbWet,
+		InteriorReverbDecay,
+		ExteriorReverbWet,
+		ExteriorReverbDecay);
 }
 
 void UAudioZoneComponent::RemoveMix()
@@ -147,5 +165,11 @@ void UAudioZoneComponent::ClampEditableValues()
 	ExteriorSFXVolume = std::clamp(ExteriorSFXVolume, 0.0f, 2.0f);
 	ExteriorMusicVolume = std::clamp(ExteriorMusicVolume, 0.0f, 2.0f);
 	ExteriorAmbientVolume = std::clamp(ExteriorAmbientVolume, 0.0f, 2.0f);
+	InteriorLowPassCutoff = std::clamp(InteriorLowPassCutoff, 100.0f, 20000.0f);
+	ExteriorLowPassCutoff = std::clamp(ExteriorLowPassCutoff, 100.0f, 20000.0f);
+	InteriorReverbWet = std::clamp(InteriorReverbWet, 0.0f, 1.0f);
+	InteriorReverbDecay = std::clamp(InteriorReverbDecay, 0.0f, 1.0f);
+	ExteriorReverbWet = std::clamp(ExteriorReverbWet, 0.0f, 1.0f);
+	ExteriorReverbDecay = std::clamp(ExteriorReverbDecay, 0.0f, 1.0f);
 	AudioRangeVisibility = std::clamp(AudioRangeVisibility, 0, static_cast<int32>(EDebugDrawVisibility::Count) - 1);
 }
