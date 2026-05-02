@@ -108,48 +108,43 @@ void FEditorViewportLayout::UpdateHoverStates()
 		return;
 	}
 
-	// Find Active Viewport 
-	int32 ActiveOpViewport = -1;
-	for (int32 i = 0; i < MaxViewports; ++i)
+	int32 HoveredViewport = -1;
+	for (int32 i = 0; i < FEditorViewportLayout::MaxViewports; ++i)
 	{
-		if (GetViewportClient(i)->IsActiveOperation())
+		if (GetSceneViewport(i).GetRect().Contains(MouseX, MouseY))
 		{
-			ActiveOpViewport = i;
+			HoveredViewport = i;
 			break;
 		}
 	}
+
+	const bool bMouseButtonPressed =
+		InputSystem::Get().GetKeyDown(VK_LBUTTON) ||
+		InputSystem::Get().GetKeyDown(VK_RBUTTON) ||
+		InputSystem::Get().GetKeyDown(VK_MBUTTON);
+	if (HoveredViewport >= 0 && bMouseButtonPressed)
+	{
+		SetLastFocusedViewportIndex(HoveredViewport);
+	}
+
+	const bool bAnyActiveOperation =
+		InputSystem::Get().GetRightDragging() ||
+		InputSystem::Get().GetMiddleDragging();
+	const int32 ActiveOpViewport = bAnyActiveOperation ? LastFocusedViewportIndex : -1;
 
 	// 독점 조작하는 뷰포트가 있다면 상태값 유지 + 포커스 인덱스 갱신
 	if (ActiveOpViewport >= 0)
 	{
 		for (int32 i = 0; i < FEditorViewportLayout::MaxViewports; ++i)
 			GetViewportState(i).bHovered = (i == ActiveOpViewport);
-
-		SetLastFocusedViewportIndex(ActiveOpViewport);
 	}
 	else
 	{
 		// Hover 된 뷰포트 찾아서 상태값 변경하기
-		bool bFoundHover = false;
 		for (int32 i = 0; i < FEditorViewportLayout::MaxViewports; ++i)
 		{
 			FEditorViewportState& ViewportState = GetViewportState(i);
-			FViewportRect ViewportRect = GetSceneViewport(i).GetRect();
-			if (!bFoundHover && ViewportRect.Contains(MouseX, MouseY))
-			{
-				ViewportState.bHovered = true;
-				bFoundHover = true;
-
-				// 좌클릭 시 해당 뷰포트를 마지막 포커스로 등록
-				if (InputSystem::Get().GetKeyDown(VK_LBUTTON))
-				{
-					SetLastFocusedViewportIndex(i);
-				}
-			}
-			else
-			{
-				ViewportState.bHovered = false;
-			}
+			ViewportState.bHovered = (i == HoveredViewport);
 		}
 	}
 }

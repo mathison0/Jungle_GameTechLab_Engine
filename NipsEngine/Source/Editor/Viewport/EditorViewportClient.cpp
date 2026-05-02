@@ -157,7 +157,7 @@ void FEditorViewportClient::BuildSceneView(FSceneView& OutView) const
 
 	OutView.bOrthographic = Camera.IsOrthographic();
 
-    OutView.CameraOrthoHeight = Camera.GetOrthoHeight();
+	OutView.CameraOrthoHeight = Camera.GetOrthoHeight();
 
 	OutView.CameraFrustum = Camera.GetFrustum();
 
@@ -252,7 +252,7 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 	}
 
 	const float VX = State ? static_cast<float>(Viewport->GetRect().X) : 0.f;
-    const float VY = State ? static_cast<float>(Viewport->GetRect().Y) : 0.f;
+	const float VY = State ? static_cast<float>(Viewport->GetRect().Y) : 0.f;
 
 	TickCursorCapture();
 	InputRouter.SetViewportDim(VX, VY, WindowWidth, WindowHeight);
@@ -351,35 +351,35 @@ void FEditorViewportClient::TickEditorShortcuts()
 
 	if (IS.GetKeyUp('G'))
 	{
-        const int GridSizeX = 10;
-        const int GridSizeY = 10;
-        const int GridSizeZ = 10;
-        const float Spacing = 3.0f; // 라이트 간격
+		const int GridSizeX = 10;
+		const int GridSizeY = 10;
+		const int GridSizeZ = 10;
+		const float Spacing = 3.0f; // 라이트 간격
 
-        for (int i = 0; i < GridSizeX; i++)
-        {
-            for (int j = 0; j < GridSizeY; j++)
-            {
+		for (int i = 0; i < GridSizeX; i++)
+		{
+			for (int j = 0; j < GridSizeY; j++)
+			{
 				for (int k = 0; k < GridSizeZ; k++)
-                {
-                    const float X = (i - GridSizeX * 0.5f) * Spacing;
-                    const float Y = (j - GridSizeY * 0.5f) * Spacing;
-                    const float Z = (k - GridSizeZ * 0.5f) * Spacing;
+				{
+					const float X = (i - GridSizeX * 0.5f) * Spacing;
+					const float Y = (j - GridSizeY * 0.5f) * Spacing;
+					const float Z = (k - GridSizeZ * 0.5f) * Spacing;
 
-                    FVector Location(X, Y, Z);
+					FVector Location(X, Y, Z);
 
-                    APointLightActor* Actor = World->SpawnActor<APointLightActor>();
-                    Actor->InitDefaultComponents();
-                    Actor->SetActorLocation(Location);
+					APointLightActor* Actor = World->SpawnActor<APointLightActor>();
+					Actor->InitDefaultComponents();
+					Actor->SetActorLocation(Location);
 
 
-                    AStaticMeshActor* MeshActor = World->SpawnActor<AStaticMeshActor>();
-                    MeshActor->InitDefaultComponents();
-                    MeshActor->SetActorLocation(Location);
+					AStaticMeshActor* MeshActor = World->SpawnActor<AStaticMeshActor>();
+					MeshActor->InitDefaultComponents();
+					MeshActor->SetActorLocation(Location);
 
 				}
-            }
-        }
+			}
+		}
 	}
 }
 
@@ -497,8 +497,8 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 	}
 
 	if (Window) MousePoint = Window->ScreenToClientPoint(MousePoint);
-    const float VX = State ? static_cast<float>(Viewport->GetRect().X) : 0.f;
-    const float VY = State ? static_cast<float>(Viewport->GetRect().Y) : 0.f;
+	const float VX = State ? static_cast<float>(Viewport->GetRect().X) : 0.f;
+	const float VY = State ? static_cast<float>(Viewport->GetRect().Y) : 0.f;
 	const float LocalX = static_cast<float>(MousePoint.x) - VX;
 	const float LocalY = static_cast<float>(MousePoint.y) - VY;
 
@@ -537,11 +537,11 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 void FEditorViewportClient::LockCursorToViewport()
 {
 	// State->Rect is in client space; LockMouse needs screen space.
-    POINT Origin = { Viewport->GetRect().X, Viewport->GetRect().Y };
+	POINT Origin = { Viewport->GetRect().X, Viewport->GetRect().Y };
 	if (Window)
 		::ClientToScreen(Window->GetHWND(), &Origin);
 	InputSystem::Get().LockMouse(true, static_cast<float>(Origin.x), static_cast<float>(Origin.y),
-                                 static_cast<float>(Viewport->GetRect().Width), static_cast<float>(Viewport->GetRect().Height));
+								 static_cast<float>(Viewport->GetRect().Width), static_cast<float>(Viewport->GetRect().Height));
 }
 
 bool FEditorViewportClient::TryProjectWorldToViewport(const FVector& WorldPos, float& OutViewportX, float& OutViewportY, float& OutDepth) const
@@ -696,7 +696,7 @@ void FEditorViewportClient::DeleteSelectedActors()
 			ActorWorld->DestroyActor(Actor);
 	}
 	SelectionManager->ClearSelection();
-    Editor->GetMainPanel().GetPropertyWidget().ResetSelection();
+	Editor->GetMainPanel().GetPropertyWidget().ResetSelection();
 }
 
 void FEditorViewportClient::SelectAllActors()
@@ -715,14 +715,6 @@ void FEditorViewportClient::SelectAllActors()
 void FEditorViewportClient::SaveCameraSnapshot()
 {
 	const FViewportCamera* SnapshotSource = GetCamera();
-	if (Editor)
-	{
-		if (const FViewportCamera* PerspectiveCamera = Editor->GetCamera())
-		{
-			SnapshotSource = PerspectiveCamera;
-		}
-	}
-
 	if (!SnapshotSource)
 	{
 		bHasCameraSnapshot = false;
@@ -731,7 +723,7 @@ void FEditorViewportClient::SaveCameraSnapshot()
 
 	SavedCamera.Location = SnapshotSource->GetLocation();
 	SavedCamera.Rotation = SnapshotSource->GetRotation();
-	SavedCamera.ProjectionType = EViewportProjectionType::Perspective;
+	SavedCamera.ProjectionType = SnapshotSource->GetProjectionType();
 	SavedCamera.Width = SnapshotSource->GetWidth();
 	SavedCamera.Height = SnapshotSource->GetHeight();
 	SavedCamera.FOV = SnapshotSource->GetFOV();
