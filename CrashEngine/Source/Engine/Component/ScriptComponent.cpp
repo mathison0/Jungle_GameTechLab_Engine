@@ -134,4 +134,12 @@ void UScriptComponent::BindFunctions()
     BindFunction("stop_coroutine",
                  [this](uint32 FuncKey) -> bool
                  { return CoroutineExecutorSet.Stop(FuncKey); });
+
+	BindFunction("get_location",
+                 [this]()
+                 { return Owner->GetActorLocation(); });
+
+	BindFunction("get_rotation",
+                 [this]()
+                 { return Owner->GetActorRotation(); });
 }

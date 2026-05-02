@@ -6,22 +6,15 @@
 class UScriptComponent : public UActorComponent
 {
 public:
-	DECLARE_CLASS(UScriptComponent, UActorComponent)
-	
-	void BeginPlay() override;
-	void EndPlay() override;
-	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
+    DECLARE_CLASS(UScriptComponent, UActorComponent)
 
-	void Serialize(FArchive& Ar) override;
-	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
-	void PostEditProperty(const char* PropertyName) override;
+    void BeginPlay() override;
+    void EndPlay() override;
+    void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
-private:
-	bool LoadScript();
-	void CallLuaFunction(const char* Name);
-	void CallLuaTick(float DeltaTime);
-
-	void BindFunctions();
+    void Serialize(FArchive& Ar) override;
+    void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
+    void PostEditProperty(const char* PropertyName) override;
 
     template <typename TFunc>
     void BindFunction(const char* Name, TFunc&& Function)
@@ -35,8 +28,14 @@ private:
     }
 
 private:
-	sol::table ScriptInstance;
-	FString ScriptPath;
+    bool LoadScript();
+    void CallLuaFunction(const char* Name);
+    void CallLuaTick(float DeltaTime);
+    void BindFunctions();
 
-	FCoroutineExecutorSet CoroutineExecutorSet;
+private:
+    sol::table ScriptInstance;
+    FString ScriptPath;
+
+    FCoroutineExecutorSet CoroutineExecutorSet;
 };
