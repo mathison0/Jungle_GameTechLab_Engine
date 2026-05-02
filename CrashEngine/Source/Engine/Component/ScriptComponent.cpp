@@ -25,44 +25,6 @@ bool IsLuaPropertyIdentifier(const char* Name)
     return Name && std::strncmp(Name, LuaPropertyPrefix, std::strlen(LuaPropertyPrefix)) == 0;
 }
 
-EPropertyType ToEditorPropertyType(ELuaScriptPropertyType Type)
-{
-    switch (Type)
-    {
-    case ELuaScriptPropertyType::Bool:
-        return EPropertyType::Bool;
-    case ELuaScriptPropertyType::Int:
-        return EPropertyType::Int;
-    case ELuaScriptPropertyType::Float:
-        return EPropertyType::Float;
-    case ELuaScriptPropertyType::String:
-        return EPropertyType::String;
-    case ELuaScriptPropertyType::Vec3:
-		return EPropertyType::Vec3;
-    default:
-        return EPropertyType::String;
-    }
-}
-
-void* GetLuaScriptValuePtr(FLuaScriptValue& Value)
-{
-    switch (Value.Type)
-    {
-    case ELuaScriptPropertyType::Bool:
-        return &Value.BoolValue;
-    case ELuaScriptPropertyType::Int:
-        return &Value.IntValue;
-    case ELuaScriptPropertyType::Float:
-        return &Value.FloatValue;
-    case ELuaScriptPropertyType::String:
-        return &Value.StringValue;
-    case ELuaScriptPropertyType::Vec3:
-		return Value.Vec3Value.Data;
-    default:
-        return nullptr;
-    }
-}
-
 FLuaScriptPropertyOverride* FindScriptPropertyOverride(TArray<FLuaScriptPropertyOverride>& Properties, const FString& Name)
 {
     auto It = std::find_if(Properties.begin(), Properties.end(),
@@ -149,7 +111,7 @@ void UScriptComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutPro
         }
 
         OutProps.push_back({ .Name = MakeLuaPropertyIdentifier(Desc.Name),
-                             .Type = ToEditorPropertyType(Desc.Type),
+                             .Type = GetLuaScriptEditorPropertyType(Desc.Type),
                              .ValuePtr = ValuePtr,
                              .Min = Desc.Min,
                              .Max = Desc.Max,

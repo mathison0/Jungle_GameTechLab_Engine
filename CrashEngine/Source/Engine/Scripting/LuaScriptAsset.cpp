@@ -2,21 +2,11 @@
 
 #include <fstream>
 #include <sstream>
-#include <algorithm>
-#include <cctype>
-
 #include "Core/Logging/LogMacros.h"
 #include "Platform/Paths.h"
 
 namespace
 {
-FString ToLowerAscii(FString Value)
-{
-	std::ranges::transform(Value, Value.begin(),
-                           [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
-	return Value;
-}
-
 bool IsReservedLuaPropertyName(const FString& Name)
 {
 	return Name.empty() ||
@@ -26,164 +16,6 @@ bool IsReservedLuaPropertyName(const FString& Name)
 		Name == "EndPlay" ||
 		Name == "start_coroutine" ||
 		Name == "stop_coroutine";
-}
-
-bool ParseLuaPropertyTypeName(const FString& TypeName, ELuaScriptPropertyType& OutType)
-{
-	const FString LowerType = ToLowerAscii(TypeName);
-	if (LowerType == "bool" || LowerType == "boolean")
-	{
-		OutType = ELuaScriptPropertyType::Bool;
-		return true;
-	}
-	if (LowerType == "int" || LowerType == "integer")
-	{
-		OutType = ELuaScriptPropertyType::Int;
-		return true;
-	}
-	if (LowerType == "float" || LowerType == "number")
-	{
-		OutType = ELuaScriptPropertyType::Float;
-		return true;
-	}
-	if (LowerType == "string")
-	{
-		OutType = ELuaScriptPropertyType::String;
-		return true;
-	}
-	if (LowerType == "vec3" || LowerType == "vector3")
-	{
-		OutType = ELuaScriptPropertyType::Vec3;
-		return true;
-	}
-	return false;
-}
-
-bool InferLuaPropertyType(const sol::object& ValueObject, ELuaScriptPropertyType& OutType)
-{
-	switch (ValueObject.get_type())
-	{
-	case sol::type::boolean:
-		OutType = ELuaScriptPropertyType::Bool;
-		return true;
-	case sol::type::number:
-		OutType = ELuaScriptPropertyType::Float;
-		return true;
-	case sol::type::string:
-		OutType = ELuaScriptPropertyType::String;
-		return true;
-	default:
-		return false;
-	}
-}
-
-FLuaScriptValue MakeDefaultLuaScriptValue(ELuaScriptPropertyType Type)
-{
-	FLuaScriptValue Value;
-	Value.Type = Type;
-	return Value;
-}
-
-bool ReadLuaScriptValue(const sol::object& ValueObject, ELuaScriptPropertyType Type, FLuaScriptValue& OutValue)
-{
-	OutValue = MakeDefaultLuaScriptValue(Type);
-
-	if (!ValueObject.valid() || ValueObject == sol::nil)
-	{
-		return true;
-	}
-
-	switch (Type)
-	{
-	case ELuaScriptPropertyType::Bool:
-		if (ValueObject.get_type() != sol::type::boolean)
-		{
-			return false;
-		}
-		OutValue.BoolValue = ValueObject.as<bool>();
-		return true;
-	case ELuaScriptPropertyType::Int:
-		if (ValueObject.get_type() != sol::type::number)
-		{
-			return false;
-		}
-		OutValue.IntValue = ValueObject.as<int32>();
-		return true;
-	case ELuaScriptPropertyType::Float:
-		if (ValueObject.get_type() != sol::type::number)
-		{
-			return false;
-		}
-		OutValue.FloatValue = ValueObject.as<float>();
-		return true;
-	case ELuaScriptPropertyType::String:
-		if (ValueObject.get_type() != sol::type::string)
-		{
-			return false;
-		}
-		OutValue.StringValue = ValueObject.as<FString>();
-		return true;
-	case ELuaScriptPropertyType::Vec3:
-	{
-		if (!ValueObject.is<sol::table>())
-		{
-			return false;
-		}
-
-		sol::table Table = ValueObject.as<sol::table>();
-
-		sol::object XObject = Table[1];
-		sol::object YObject = Table[2];
-		sol::object ZObject = Table[3];
-
-		if (XObject.get_type() != sol::type::number ||
-			YObject.get_type() != sol::type::number ||
-			ZObject.get_type() != sol::type::number)
-		{
-			return false;
-		}
-
-		OutValue.Vec3Value.X = XObject.as<float>();
-		OutValue.Vec3Value.Y = YObject.as<float>();
-		OutValue.Vec3Value.Z = ZObject.as<float>();
-		return true;
-	}
-	default:
-		return false;
-	}
-}
-
-void SetLuaTableValue(sol::state& Lua, sol::table Table, const FString& Name, const FLuaScriptValue& Value)
-{
-	switch (Value.Type)
-	{
-	case ELuaScriptPropertyType::Bool:
-		Table[Name] = Value.BoolValue;
-		break;
-	case ELuaScriptPropertyType::Int:
-		Table[Name] = Value.IntValue;
-		break;
-	case ELuaScriptPropertyType::Float:
-		Table[Name] = Value.FloatValue;
-		break;
-	case ELuaScriptPropertyType::String:
-		Table[Name] = Value.StringValue;
-		break;
-	case ELuaScriptPropertyType::Vec3:
-	{
-		sol::table Vec = Lua.create_table();
-		Vec[1] = Value.Vec3Value.X;
-		Vec[2] = Value.Vec3Value.Y;
-		Vec[3] = Value.Vec3Value.Z;
-		Vec["x"] = Value.Vec3Value.X;
-		Vec["y"] = Value.Vec3Value.Y;
-		Vec["z"] = Value.Vec3Value.Z;
-		Table[Name] = Vec;
-		break;
-	}
-	default:
-		break;
-	}
 }
 } // namespace
 
@@ -262,14 +94,14 @@ sol::table FLuaScriptAsset::CreateInstance(sol::state& Lua, const TArray<FLuaScr
 
 	for (const FLuaScriptPropertyDesc& Desc : PropertyDescriptors)
 	{
-		SetLuaTableValue(Lua, Instance, Desc.Name, Desc.DefaultValue);
+		SetLuaScriptTableValue(Lua, Instance, Desc.Name, Desc.DefaultValue);
 	}
 
 	if (PropertyOverrides)
 	{
 		for (const FLuaScriptPropertyOverride& Override : *PropertyOverrides)
 		{
-			SetLuaTableValue(Lua, Instance, Override.Name, Override.Value);
+			SetLuaScriptTableValue(Lua, Instance, Override.Name, Override.Value);
 		}
 	}
 
@@ -420,13 +252,13 @@ bool FLuaScriptAsset::ParsePropertyDescriptors(sol::table ScriptTable, TArray<FL
 			sol::object DefaultObject = DescriptorTable["default"];
 			if (TypeObject.valid() && TypeObject != sol::nil)
 			{
-				if (!TypeObject.is<FString>() || !ParseLuaPropertyTypeName(TypeObject.as<FString>(), Desc.Type))
+				if (!TypeObject.is<FString>() || !ParseLuaScriptPropertyTypeName(TypeObject.as<FString>(), Desc.Type))
 				{
 					LastError = "Lua script property has unsupported type: " + Desc.Name;
 					return false;
 				}
 			}
-			else if (!InferLuaPropertyType(DefaultObject, Desc.Type))
+			else if (!InferLuaScriptPropertyType(DefaultObject, Desc.Type))
 			{
 				LastError = "Lua script property needs a type or default value: " + Desc.Name;
 				return false;
@@ -456,7 +288,7 @@ bool FLuaScriptAsset::ParsePropertyDescriptors(sol::table ScriptTable, TArray<FL
 		}
 		else
 		{
-			if (!InferLuaPropertyType(DescriptorObject, Desc.Type))
+			if (!InferLuaScriptPropertyType(DescriptorObject, Desc.Type))
 			{
 				LastError = "Lua script property descriptor must be a supported value or table: " + Desc.Name;
 				return false;
