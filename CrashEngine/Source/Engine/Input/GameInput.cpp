@@ -1,26 +1,27 @@
 #include "Input/GameInput.h"
+#include "Core/CoreTypes.h"
 
-GameInput::FState GameInput::CurrentState = {};
+FGameInput::FState FGameInput::CurrentState = {};
 
-bool GameInput::GetKey(int vk)
+bool FGameInput::GetKey(int vk)
 {
     if (vk < 0 || vk >= 256) return false;
     return CurrentState.KeyDown[vk];
 }
 
-bool GameInput::GetKeyDown(int vk)
+bool FGameInput::GetKeyDown(int vk)
 {
     if (vk < 0 || vk >= 256) return false;
     return CurrentState.KeyPressed[vk];
 }
 
-bool GameInput::GetKeyUp(int vk)
+bool FGameInput::GetKeyUp(int vk)
 {
     if (vk < 0 || vk >= 256) return false;
     return CurrentState.KeyReleased[vk];
 }
 
-float GameInput::GetAxis(const std::string& axisName)
+float FGameInput::GetAxis(const FString& axisName)
 {
     if (axisName == "Horizontal")
     {
@@ -39,7 +40,7 @@ float GameInput::GetAxis(const std::string& axisName)
     return 0.0f;
 }
 
-void GameInput::UpdateKeyState(int vk, bool bDown, bool bPressed, bool bReleased)
+void FGameInput::UpdateKeyState(int vk, bool bDown, bool bPressed, bool bReleased)
 {
     if (vk < 0 || vk >= 256) return;
     CurrentState.KeyDown[vk] = bDown;
@@ -47,7 +48,7 @@ void GameInput::UpdateKeyState(int vk, bool bDown, bool bPressed, bool bReleased
     if (bReleased) CurrentState.KeyReleased[vk] = true;
 }
 
-void GameInput::ResetFrameState()
+void FGameInput::ResetFrameState()
 {
     for (int i = 0; i < 256; ++i)
     {

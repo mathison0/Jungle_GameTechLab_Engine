@@ -55,6 +55,12 @@
             "Updated Component" : "",
             "bTickEnable" : true
           }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Properties" : {
+            "Script" : "Tank.lua",
+            "bTickEnable" : true
+          }
         }],
       "PrimitiveKey" : "16",
       "RootComponent" : {
@@ -367,8 +373,8 @@
     "16" : {
       "Location" : [0.000000, -22.410915, 1.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 44.479134],
-      "Scale" : [0.999999, 0.999999, 0.500000],
+      "Rotation" : [0.000000, -0.000000, 44.479233],
+      "Scale" : [1.000000, 1.000000, 0.500000],
       "Type" : "StaticMeshComp"
     }
   },

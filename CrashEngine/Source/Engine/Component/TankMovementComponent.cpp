@@ -11,9 +11,9 @@ void UTankMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
     (void)DeltaTime;
 
-    float InputH = GameInput::GetAxis("Horizontal");
-    float InputV = GameInput::GetAxis("Vertical");
-    bool bDriftButton = GameInput::GetKey(VK_SHIFT);
+    float InputH = FGameInput::GetAxis("Horizontal");
+    float InputV = FGameInput::GetAxis("Vertical");
+    bool bDriftButton = FGameInput::GetKey(VK_SHIFT);
     
     {
         // --- 기존 설정 및 입력 ---

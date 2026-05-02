@@ -8,7 +8,13 @@
 
 #include "LuaScriptAsset.h"
 #include "Core/Logging/LogMacros.h"
+#include "Input/GameInput.h"
 #include "Platform/Paths.h"
+
+namespace
+{
+constexpr float EditorScriptRefreshInterval = 0.5f;
+}
 
 FScriptSystem::FScriptSystem()
 = default;
@@ -21,6 +27,7 @@ FScriptSystem::~FScriptSystem()
 bool FScriptSystem::Initialize()
 {
 	Lua = std::make_unique<sol::state>();
+	EditorRefreshAccumulator = 0.0f;
 
 	// TODO : 나중에 필요하면 추가하기
 	// sol::lib::package
@@ -41,6 +48,7 @@ void FScriptSystem::Shutdown()
 {
 	ScriptAssets.clear();
 	AvailableScriptPaths.clear();
+	EditorRefreshAccumulator = 0.0f;
 	Lua = nullptr;
 }
 
@@ -128,6 +136,28 @@ void FScriptSystem::ReloadChangedScripts() const
 	}
 }
 
+void FScriptSystem::TickEditor(float DeltaTime)
+{
+	if (!Lua)
+	{
+		return;
+	}
+
+	if (DeltaTime > 0.0f)
+	{
+		EditorRefreshAccumulator += DeltaTime;
+	}
+
+	if (EditorRefreshAccumulator < EditorScriptRefreshInterval)
+	{
+		return;
+	}
+
+	EditorRefreshAccumulator = 0.0f;
+	ScanScripts();
+	ReloadChangedScripts();
+}
+
 FLuaScriptAsset* FScriptSystem::GetScriptAsset(const FString& RelativePath)
 {
 	auto It = ScriptAssets.find(RelativePath);
@@ -139,7 +169,7 @@ FLuaScriptAsset* FScriptSystem::GetScriptAsset(const FString& RelativePath)
 	return It->second.get();
 }
 
-sol::table FScriptSystem::CreateScriptInstance(const FString& RelativePath)
+sol::table FScriptSystem::CreateScriptInstance(const FString& RelativePath, const TArray<FLuaScriptPropertyOverride>* PropertyOverrides)
 {
 	if (!Lua)
 	{
@@ -152,7 +182,7 @@ sol::table FScriptSystem::CreateScriptInstance(const FString& RelativePath)
 		return {};
 	}
 
-	return Asset->CreateInstance(*Lua);
+	return Asset->CreateInstance(*Lua, PropertyOverrides);
 }
 
 FString FScriptSystem::MakeScriptRelativePath(const std::filesystem::path& FullPath) const
@@ -175,6 +205,15 @@ void FScriptSystem::RegisterEngineAPI() const
 		{
 			UE_LOG([Lua], Info, "%s", Message.c_str());
 		});
+    
+    // 입력 처리
+    Lua->new_usertype<FGameInput>("Input", 
+        "GetKey", &FGameInput::GetKey,
+        "GetKeyDown", &FGameInput::GetKeyDown,
+        "GetKeyUp", &FGameInput::GetKeyUp,
+        "GetAxis", &FGameInput::GetAxis
+    );
+    
 }
 
 void FScriptSystem::BindPackagePath() const
