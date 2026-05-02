@@ -54,6 +54,7 @@ public:
 	void RemoveComponent(UActorComponent* Component);
 	void RemoveComponentWithChildren(USceneComponent* Comp);
 	void RegisterComponent(UActorComponent* Comp);
+	void UnregisterAllComponents();
 
 	void SetRootComponent(USceneComponent* Comp);
 	USceneComponent* GetRootComponent() const { return RootComponent; }

@@ -10,13 +10,7 @@ REGISTER_FACTORY(AActor)
 
 AActor::~AActor()
 {
-	for (auto* Comp : OwnedComponents)
-	{
-		if (Comp && Comp->IsRegistered())
-		{
-			Comp->OnUnregister();
-		}
-	}
+	UnregisterAllComponents();
 
 	if (OwningWorld != nullptr)
 	{
@@ -183,6 +177,17 @@ void AActor::RegisterComponent(UActorComponent* Comp)
 		OwnedComponents.push_back(Comp);
 		bPrimitiveCacheDirty = true;
 		Comp->OnRegister();
+	}
+}
+
+void AActor::UnregisterAllComponents()
+{
+	for (UActorComponent* Comp : OwnedComponents)
+	{
+		if (Comp && Comp->IsRegistered())
+		{
+			Comp->OnUnregister();
+		}
 	}
 }
 
