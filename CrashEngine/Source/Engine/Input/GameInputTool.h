@@ -16,12 +16,12 @@ public:
         
         if (Event.Type == EKeyEventType::Released) bDown = false;
 
-        GameInput::UpdateKeyState(Event.Key, bDown, bPressed, bReleased);
+        FGameInput::UpdateKeyState(Event.Key, bDown, bPressed, bReleased);
         return false; // Allow other tools to see it
     }
 
     void BeginInputFrame() override
     {
-        GameInput::ResetFrameState();
+        FGameInput::ResetFrameState();
     }
 };

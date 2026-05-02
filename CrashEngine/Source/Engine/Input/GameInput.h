@@ -5,7 +5,7 @@
 
 // Unity 스타일의 입력 관리자
 // GameInputTool까지 Unreal 스타일로 입력을 처리하다가 여기서 Unity 스타일로 래핑
-struct GameInput {
+struct FGameInput {
     static bool GetKey(int vk);
     static bool GetKeyDown(int vk);
     static bool GetKeyUp(int vk);

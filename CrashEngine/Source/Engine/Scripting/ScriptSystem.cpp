@@ -8,6 +8,7 @@
 
 #include "LuaScriptAsset.h"
 #include "Core/Logging/LogMacros.h"
+#include "Input/GameInput.h"
 #include "Platform/Paths.h"
 
 FScriptSystem::FScriptSystem()
@@ -175,6 +176,15 @@ void FScriptSystem::RegisterEngineAPI() const
 		{
 			UE_LOG([Lua], Info, "%s", Message.c_str());
 		});
+    
+    // 입력 처리
+    Lua->new_usertype<FGameInput>("Input", 
+        "GetKey", &FGameInput::GetKey,
+        "GetKeyDown", &FGameInput::GetKeyDown,
+        "GetKeyUp", &FGameInput::GetKeyUp,
+        "GetAxis", &FGameInput::GetAxis
+    );
+    
 }
 
 void FScriptSystem::BindPackagePath() const
