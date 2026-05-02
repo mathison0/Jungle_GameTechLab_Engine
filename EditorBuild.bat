@@ -23,7 +23,7 @@ echo ============================================
 :: 1. MSBuild로 Release x64 빌드
 echo.
 echo [1/3] Building Release x64...
-msbuild "%SOLUTION_DIR%CrashEngine.sln" /p:Configuration=Release /p:Platform=x64 /m /v:minimal
+msbuild "%SOLUTION_DIR%CrashEngine.sln" /p:Configuration=EditorRelease /p:Platform=x64 /m /v:minimal
 if %ERRORLEVEL% neq 0 (
     echo BUILD FAILED
     pause

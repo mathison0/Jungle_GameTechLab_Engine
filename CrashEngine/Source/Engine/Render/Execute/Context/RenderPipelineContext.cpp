@@ -2,6 +2,7 @@
 #include "Render/Execute/Context/RenderPipelineContext.h"
 
 #include "Render/Execute/Context/Viewport/ViewportRenderTargets.h"
+#include "Render/RHI/D3D11/Device/D3DDevice.h"
 
 const FRenderPassPreset& FRenderPipelineContext::GetRenderPassPreset(ERenderPass Pass) const
 {
@@ -15,10 +16,18 @@ const FRenderPassDrawPreset& FRenderPipelineContext::GetRenderPassDrawPreset(ERe
 
 ID3D11RenderTargetView* FRenderPipelineContext::GetViewportRTV() const
 {
-    return Targets ? Targets->ViewportRTV : nullptr;
+    if (Targets && Targets->ViewportRTV)
+    {
+        return Targets->ViewportRTV;
+    }
+    return Device ? Device->GetFrameBufferRTV() : nullptr;
 }
 
 ID3D11DepthStencilView* FRenderPipelineContext::GetViewportDSV() const
 {
-    return Targets ? Targets->ViewportDSV : nullptr;
+    if (Targets && Targets->ViewportDSV)
+    {
+        return Targets->ViewportDSV;
+    }
+    return Device ? Device->GetDepthStencilView() : nullptr;
 }

@@ -115,8 +115,6 @@ private:
     bool bRequestEndPlayMapQueued = false;
     FGPUOcclusionCulling GPUOcclusion;
 
-	FViewportInputRouter ViewportInputRouter;
-
 private:
     // Tick 내에서 호출 — 큐에 요청이 있으면 StartPlayInEditorSession 실행
     void StartQueuedPlaySessionRequest();

@@ -74,6 +74,10 @@ std::wstring FPaths::SettingsFilePath()
 {
     return SettingsDir() + L"Editor.ini";
 }
+std::wstring FPaths::GameSettingsFilePath()
+{
+    return SettingsDir() + L"Game.ini";
+}
 std::wstring FPaths::ResourceFilePath()
 {
     return SettingsDir() + L"Resource.ini";

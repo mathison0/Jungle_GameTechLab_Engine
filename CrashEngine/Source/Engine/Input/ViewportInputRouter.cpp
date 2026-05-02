@@ -13,7 +13,7 @@ void FViewportInputRouter::RegisterTarget(
     FViewportClient* InClient,
     FRectProvider InRectProvider)
 {
-    if (!InViewport || !InClient || !InRectProvider)
+    if (!InClient || !InRectProvider)
     {
         return;
     }

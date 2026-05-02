@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "Core/Logging/LogMacros.h"
+#include "GameFramework/World.h"
 
 IMPLEMENT_CLASS(UCameraComponent, USceneComponent)
 
@@ -11,6 +12,16 @@ void UCameraComponent::BeginPlay()
 {
     USceneComponent::BeginPlay();
     Main = this;
+
+    // 월드에 활성 카메라가 없으면 자신을 등록합니다.
+    if (UWorld* World = GetWorld())
+    {
+        if (World->GetActiveCamera() == nullptr)
+        {
+            World->SetActiveCamera(this);
+        }
+    }
+
     UE_LOG(CameraComponent, Info, "Camera::Main set to %p", this);
 }
 
