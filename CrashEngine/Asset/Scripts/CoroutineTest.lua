@@ -1,14 +1,13 @@
 local Script = {}
 
-function Wait(Time)
-    coroutine.yield("wait_time", Time)
-end
+local Co = require("LuaCoroutine")
+
 
 EnemyAI = {}
 
 function EnemyAI.start()
     for i = 1, 3 do
-        Wait(2.0)
+        Co.Wait(2.0)
         Log("[AI] CoroutineCalled")
     end
     Log("[AI] End")
