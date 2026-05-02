@@ -22,6 +22,7 @@ public:
 
 	void SetSimulatePhysics(bool bInSimulate) { bSimulatePhysics = bInSimulate; }
 	bool IsSimulatingPhysics() const { return bSimulatePhysics; }
+	bool IsUsingJoltPhysics() const { return JoltBodyHandle != InvalidJoltBodyHandle; }
 
 	void SetHeldByPhysicsHandle(bool bHeld);
 	bool IsHeldByPhysicsHandle() const { return bHeldByPhysicsHandle; }
@@ -30,14 +31,7 @@ public:
 	void SetCanBePickedUp(bool bInCanBePickedUp) { bCanBePickedUp = bInCanBePickedUp; }
 
 	const FVector& GetVelocity() const { return Velocity; }
-	void SetVelocity(const FVector& InVelocity)
-	{
-		Velocity = InVelocity;
-		if (Velocity.Z > 0.0f)
-		{
-			bGrounded = false;
-		}
-	}
+	void SetVelocity(const FVector& InVelocity);
 	const FVector& GetAngularVelocity() const { return AngularVelocity; }
 	void SetAngularVelocity(const FVector& InAngularVelocity) { AngularVelocity = InAngularVelocity; }
 	void AddImpulse(const FVector& Impulse);
@@ -48,6 +42,18 @@ public:
 
 	void PlayPickupSound() const;
 	void PlayDropSound() const;
+
+	float GetMass() const { return Mass; }
+	float GetGravityScale() const { return GravityScale; }
+	float GetLinearDamping() const { return LinearDamping; }
+	float GetAngularDamping() const { return AngularDamping; }
+	float GetMaxSpeed() const { return MaxSpeed; }
+	float GetMaxAngularSpeed() const { return MaxAngularSpeed; }
+	bool IsGravityEnabled() const { return bUseGravity; }
+
+	uint32 GetJoltBodyHandle() const { return JoltBodyHandle; }
+	void SetJoltBodyHandle(uint32 InBodyHandle) { JoltBodyHandle = InBodyHandle; }
+	void ClearJoltBodyHandle() { JoltBodyHandle = InvalidJoltBodyHandle; }
 
 protected:
 	void TickComponent(float DeltaTime) override;
@@ -78,9 +84,12 @@ private:
 	bool FindSupportState(float Tolerance, FSupportState& OutSupport) const;
 
 private:
+	static constexpr uint32 InvalidJoltBodyHandle = 0xffffffffu;
+
 	USceneComponent* UpdatedComponent = nullptr;
 	FVector Velocity = FVector::ZeroVector;
 	FVector AngularVelocity = FVector::ZeroVector;
+	uint32 JoltBodyHandle = InvalidJoltBodyHandle;
 
 	bool bSimulatePhysics = true;
 	bool bUseGravity = true;

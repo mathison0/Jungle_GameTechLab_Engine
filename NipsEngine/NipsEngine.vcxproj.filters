@@ -61,6 +61,9 @@
     <Filter Include="Source\Engine\Component\Physics">
       <UniqueIdentifier>{77d72843-56b7-4687-8ae2-07b1d8e6ed59}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Physics">
+      <UniqueIdentifier>{7d0b2509-2e01-40f1-b6c5-768f35257981}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Core">
       <UniqueIdentifier>{8b69df27-06f7-dea9-00be-7dcc5bcae5a6}</UniqueIdentifier>
     </Filter>
@@ -490,6 +493,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Physics\RigidBodyComponent.cpp">
       <Filter>Source\Engine\Component\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\JoltPhysicsSystem.cpp">
+      <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Core\CrashDump.cpp">
       <Filter>Source\Engine\Core</Filter>
@@ -1090,6 +1096,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Physics\RigidBodyComponent.h">
       <Filter>Source\Engine\Component\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\JoltPhysicsSystem.h">
+      <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\CollisionTypes.h">
       <Filter>Source\Engine\Core</Filter>
