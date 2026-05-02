@@ -62,7 +62,12 @@ void FPIEController::OnMouseMove(float DeltaX, float DeltaY)
 
 void FPIEController::OnLeftMouseClick(float X, float Y)
 {
-    // Does nothing for now
+    if (!InputSystem::Get().IsMouseLocked() || InputSystem::Get().GetGuiInputState().bBlockViewportInput)
+    {
+        return;
+    }
+
+    TogglePickup();
 }
 
 void FPIEController::OnLeftMouseDragEnd(float X, float Y)
@@ -102,9 +107,6 @@ void FPIEController::OnKeyPressed(int VK)
     case VK_ESCAPE:
         if (OnRequestEndPIE)
             OnRequestEndPIE();
-        break;
-    case 'E':
-        TogglePickup();
         break;
     }
 }

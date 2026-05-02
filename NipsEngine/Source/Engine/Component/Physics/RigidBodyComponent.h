@@ -61,8 +61,6 @@ protected:
 private:
 	void ClampEditableValues();
 	void ApplyBlockingResponse();
-	void CacheInitialRotationIfNeeded();
-	void ResetRotationToInitial();
 
 private:
 	static constexpr uint32 InvalidJoltBodyHandle = 0xffffffffu;
@@ -79,8 +77,6 @@ private:
 	bool bWasSimulatingBeforeHold = true;
 	bool bGrounded = false;
 	bool bGroundPushOutSinceLastTick = false;
-	bool bHasInitialRelativeRotation = false;
-	FVector InitialRelativeRotation = FVector::ZeroVector;
 
 	float Mass = 1.0f;
 	float GravityScale = 1.0f;
