@@ -491,6 +491,22 @@ bool FLuaComponentHandle::IsOverlappingComponent(const FLuaComponentHandle& Othe
 
 void RegisterLuaEngineBindings(sol::state& Lua)
 {
+    Lua.new_usertype<FVector>(
+        "FVector",
+        sol::constructors<FVector(), FVector(float, float, float)>(),
+
+        "X", &FVector::X,
+        "Y", &FVector::Y,
+        "Z", &FVector::Z,
+
+        sol::meta_function::addition, [](const FVector& A, const FVector& B) { return A + B; },
+        sol::meta_function::subtraction, [](const FVector& A, const FVector& B) { return A - B; },
+        sol::meta_function::multiplication, sol::overload(
+            [](const FVector& V, float Scalar) { return V * Scalar; },
+            [](float Scalar, const FVector& V) { return V * Scalar; }
+        )
+    );
+
 	Lua.new_usertype<FLuaActorHandle>(
 		"Actor",
 		sol::no_constructor,

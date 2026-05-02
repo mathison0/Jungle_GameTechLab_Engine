@@ -1,4 +1,4 @@
-local Co = require("Package.LuaCoroutine")
+local Co = require("LuaCoroutine")
 
 ---@class CoroutineTest : ScriptComponent
 local Script = {}
@@ -17,7 +17,7 @@ end
 
 function Script:BeginPlay()
     Log("Template.lua BeginPlay")
-    self.ai = self:start_coroutine(EnemyAI.start)
+    self.ai = self.StartCoroutine(EnemyAI.start)
 end
 
 function Script:Tick(deltaTime)
@@ -34,7 +34,7 @@ function Script:Tick(deltaTime)
 end
 
 function Script:EndPlay()
-    self:stop_coroutine(self.ai)
+    self.StopCoroutine(self.ai)
     Log("Template.lua EndPlay")
 end
 

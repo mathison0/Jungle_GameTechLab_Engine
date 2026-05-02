@@ -14,8 +14,9 @@ bool IsReservedLuaPropertyName(const FString& Name)
 		Name == "BeginPlay" ||
 		Name == "Tick" ||
 		Name == "EndPlay" ||
-		Name == "start_coroutine" ||
-		Name == "stop_coroutine";
+		Name == "StartCoroutine" ||
+		Name == "StopCoroutine" ||
+		Name == "StopAllCoroutines";
 }
 } // namespace
 

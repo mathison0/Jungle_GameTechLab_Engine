@@ -94,6 +94,12 @@ FLuaScriptValue MakeDefaultLuaScriptValue(ELuaScriptPropertyType Type)
 
 bool ReadLuaVec3(const sol::object& ValueObject, FVector& OutValue)
 {
+    if (ValueObject.is<FVector>())
+    {
+        OutValue = ValueObject.as<FVector>();
+        return true;
+    }
+
     if (!ValueObject.is<sol::table>())
     {
         return false;

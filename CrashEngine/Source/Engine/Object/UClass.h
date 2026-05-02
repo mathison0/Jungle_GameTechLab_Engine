@@ -51,6 +51,24 @@ public:
         return Registry;
     }
 
+	static UClass* FindClassByName(const FString& ClassName)
+    {
+        if (ClassName.empty())
+        {
+            return nullptr;
+        }
+
+        for (UClass* Class : UClass::GetAllClasses())
+        {
+            if (Class && ClassName == Class->GetName())
+            {
+                return Class;
+            }
+        }
+
+        return nullptr;
+    }
+
 private:
     const char* Name = nullptr;
     UClass* SuperClass = nullptr;

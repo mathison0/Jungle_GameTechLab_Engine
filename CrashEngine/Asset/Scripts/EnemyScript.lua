@@ -3,7 +3,7 @@ local EnemyAI = require("AI.EnemyAI")
 local Script = {}
 
 function Script:BeginPlay()
-    self.ai = self:start_coroutine(function()
+    self.ai = self.StartCoroutine(function()
         EnemyAI.ChaseTarget(self, "Player")
     end)
 end
@@ -13,7 +13,7 @@ end
 
 function Script:EndPlay()
     if self.ai ~= nil then
-        self:stop_coroutine(self.ai)
+        self.StopCoroutine(self.ai)
         self.ai = nil
     end
 end

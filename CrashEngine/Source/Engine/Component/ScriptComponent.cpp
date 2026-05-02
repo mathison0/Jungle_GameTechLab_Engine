@@ -1,13 +1,18 @@
 ﻿#include "ScriptComponent.h"
 
+#include "Component/SceneComponent.h"
 #include "Core/Logging/LogMacros.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
+#include "Math/MathUtils.h"
 #include "Object/ObjectFactory.h"
 #include "Runtime/Engine.h"
 #include "Serialization/Archive.h"
 #include "Scripting/LuaScriptAsset.h"
 
 #include <algorithm>
+#include <cfloat>
+#include <cmath>
 #include <cstring>
 
 IMPLEMENT_CLASS(UScriptComponent, UActorComponent)
@@ -104,6 +109,31 @@ bool ReadFirstUIntArgument(sol::variadic_args Args, uint32& OutValue)
         }
     }
     return false;
+}
+
+bool ReadFirstFloatArgument(sol::variadic_args Args, float& OutValue)
+{
+    for (const sol::object& Arg : Args)
+    {
+        if (Arg.get_type() == sol::type::number)
+        {
+            OutValue = Arg.as<float>();
+            return true;
+        }
+    }
+    return false;
+}
+
+void CollectStringArguments(sol::variadic_args Args, TArray<FString>& OutStrings)
+{
+    OutStrings.clear();
+    for (const sol::object& Arg : Args)
+    {
+        if (Arg.is<FString>())
+        {
+            OutStrings.push_back(Arg.as<FString>());
+        }
+    }
 }
 } // namespace
 
@@ -335,45 +365,130 @@ void UScriptComponent::CallLuaTick(float DeltaTime)
 
 void UScriptComponent::BindFunctions()
 {
-	BindFunction("GetActor",
-		[this](sol::variadic_args) ->  FLuaActorHandle
-		{
-			return FLuaActorHandle(GetOwner());
-		});
-
-	BindFunction("GetComponent",
-		[this](const sol::variadic_args& Args) -> FLuaComponentHandle
-		{
-			return FLuaActorHandle(GetOwner()).GetComponent(Args);
-		});
-
-	BindFunction("GetComponents",
-        [this](sol::this_state State, const sol::variadic_args& Args) -> sol::table
+    BindFunction("GetActor",
+        [this](sol::variadic_args) -> FLuaActorHandle
         {
-			return FLuaActorHandle(GetOwner()).GetComponents(State, Args);
+            return FLuaActorHandle(GetOwner());
         });
 
-	BindFunction("start_coroutine",
-		[this](const sol::variadic_args& Args) -> uint32
-		{
-			sol::function Func;
-			if (!ReadFirstFunctionArgument(Args, Func))
-			{
-				UE_LOG([Lua], Warning, "start_coroutine expects a function in '%s'", ScriptPath.c_str());
-				return 0;
-			}
-			return CoroutineExecutorSet.Start(Func);
-		});
+    BindFunction("GetComponent",
+        [this](const sol::variadic_args& Args) -> FLuaComponentHandle
+        {
+            return FLuaActorHandle(GetOwner()).GetComponent(Args);
+        });
 
-	BindFunction("stop_coroutine",
-		[this](const sol::variadic_args& Args) -> bool
-		{
-			uint32 FuncKey = 0;
-			if (!ReadFirstUIntArgument(Args, FuncKey))
-			{
-				UE_LOG([Lua], Warning, "stop_coroutine expects a coroutine id in '%s'", ScriptPath.c_str());
-				return false;
-			}
-			return CoroutineExecutorSet.Stop(FuncKey);
-		});
+    BindFunction("GetComponents",
+        [this](sol::this_state State, const sol::variadic_args& Args) -> sol::table
+        {
+            return FLuaActorHandle(GetOwner()).GetComponents(State, Args);
+        });
+
+    BindFunction("StartCoroutine",
+        [this](const sol::variadic_args& Args) -> uint32
+        {
+            sol::function Func;
+            if (!ReadFirstFunctionArgument(Args, Func))
+            {
+                UE_LOG([Lua], Warning, "StartCoroutine expects a function in '%s'", ScriptPath.c_str());
+                return 0;
+            }
+            return CoroutineExecutorSet.Start(Func);
+        });
+
+    BindFunction("StopCoroutine",
+        [this](const sol::variadic_args& Args) -> bool
+        {
+            uint32 FuncKey = 0;
+            if (!ReadFirstUIntArgument(Args, FuncKey))
+            {
+                UE_LOG([Lua], Warning, "StopCoroutine expects a coroutine id in '%s'", ScriptPath.c_str());
+                return false;
+            }
+            return CoroutineExecutorSet.Stop(FuncKey);
+        });
+
+    BindFunction("StopAllCoroutines",
+        [this]()
+        {
+            CoroutineExecutorSet.Clear();
+        });
+
+    BindFunction("GetComponentByName",
+        [this](const sol::variadic_args& Args) -> FLuaComponentHandle
+        {
+            AActor* OwnerActor = GetOwner();
+            if (!OwnerActor)
+            {
+                return FLuaComponentHandle();
+            }
+
+            TArray<FString> Strings;
+            CollectStringArguments(Args, Strings);
+            const FString ClassName = !Strings.empty() ? Strings[0] : FString();
+            const FString ComponentName = Strings.size() > 1 ? Strings[1] : FString();
+
+            for (UActorComponent* Component : OwnerActor->GetComponents())
+            {
+                if (!Component || ClassName.empty())
+                    continue;
+
+                UClass* TargetClass = UClass::FindClassByName(ClassName);
+                bool IsValid = TargetClass && Component->GetClass() && Component->GetClass()->IsA(TargetClass);
+
+                if (!IsValid)
+                {
+                    continue;
+                }
+                if (!ComponentName.empty() && Component->GetFName().ToString() != ComponentName)
+                {
+                    continue;
+                }
+                return FLuaComponentHandle(Component);
+            }
+
+            return FLuaComponentHandle();
+        });
+
+    BindFunction("QueryActorByTagClosest",
+        [this](const sol::variadic_args& Args) -> FLuaActorHandle
+        {
+            TArray<FString> Strings;
+            CollectStringArguments(Args, Strings);
+            if (Strings.empty())
+            {
+                return FLuaActorHandle();
+            }
+
+            FVector Position;
+            float Radius = 0.0f;
+            AActor* OwnerActor = GetOwner();
+            UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+            if (!World || !ReadFirstVec3Argument(Args, Position) || !ReadFirstFloatArgument(Args, Radius) || Radius < 0.0f)
+            {
+                return FLuaActorHandle();
+            }
+
+            const FString& Tag = Strings[0];
+            const float RadiusSquared = Radius * Radius;
+            float BestDistanceSquared = FLT_MAX;
+            AActor* BestActor = nullptr;
+
+			//액터 탐색 로직, 이후 변경 필요
+            for (AActor* Actor : World->GetActors())
+            {
+                if (!Actor || Actor->GetFName().ToString() != Tag)
+                {
+                    continue;
+                }
+
+                const float DistanceSquared = FVector::DistSquared(Actor->GetActorLocation(), Position);
+                if (DistanceSquared <= RadiusSquared && DistanceSquared < BestDistanceSquared)
+                {
+                    BestDistanceSquared = DistanceSquared;
+                    BestActor = Actor;
+                }
+            }
+
+            return FLuaActorHandle(BestActor);
+        });
 }
