@@ -180,23 +180,30 @@ void UEditorEngine::Tick(float DeltaTime)
 
     RegisterViewportInputTargets();
 
-	for (FEditorViewportClient* VC : ViewportLayout.GetAllViewportClients())
+    TArray<FViewportClient*> AllViewportClients;
+    for (FEditorViewportClient* VC : ViewportLayout.GetAllViewportClients())
     {
         if (VC)
         {
-            VC->BeginInputFrame();
+            AllViewportClients.push_back(VC);
         }
+    }
+    if (GameViewportClient)
+    {
+        AllViewportClients.push_back(GameViewportClient);
+    }
+
+    for (FViewportClient* VC : AllViewportClients)
+    {
+        VC->BeginInputFrame();
     }
 
     ViewportInputRouter.Tick(Input, DeltaTime);
     ViewportLayout.SyncActiveViewportFromKeyTargetViewport(ViewportInputRouter.GetKeyTargetViewport());
 
-    for (FEditorViewportClient* VC: ViewportLayout.GetAllViewportClients())
+    for (FViewportClient* VC : AllViewportClients)
     {
-		if (VC)
-        {
-            VC->Tick(DeltaTime);
-		}
+        VC->Tick(DeltaTime);
     }
 
     const bool bPIEPaused = IsPausedInEditor();

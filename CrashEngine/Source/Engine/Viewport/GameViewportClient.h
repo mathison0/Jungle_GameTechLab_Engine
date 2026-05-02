@@ -20,6 +20,8 @@ public:
 
     // FViewportClient 인터페이스입니다.
     void Draw(FViewport* Viewport, float DeltaTime) override {}
+    void BeginInputFrame() override;
+    void Tick(float DeltaTime) override;
 
     bool InputKey(const FViewportKeyEvent& Event) override
     {

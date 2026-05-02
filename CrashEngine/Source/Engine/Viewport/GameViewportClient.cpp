@@ -10,3 +10,19 @@ UGameViewportClient::UGameViewportClient()
 }
 
 UGameViewportClient::~UGameViewportClient() = default;
+
+void UGameViewportClient::BeginInputFrame()
+{
+    if (InputController)
+    {
+        InputController->BeginInputFrame();
+    }
+}
+
+void UGameViewportClient::Tick(float DeltaTime)
+{
+    if (InputController)
+    {
+        InputController->HandleInput(DeltaTime);
+    }
+}
