@@ -118,8 +118,8 @@
                     "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
                   },
                   "Is Editor Helper" : false,
-                  "Location" : [0.000000, 0.000000, 0.000000],
-                  "Rotation" : [-0.000000, 0.000000, 0.000000],
+                  "Location" : [0.000000, 0.000000, 4.200000],
+                  "Rotation" : [0.000000, 0.000000, 0.000000],
                   "Scale" : [1.000000, 0.400000, 1.000000],
                   "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
                   "Visible" : true,
@@ -147,8 +147,8 @@
             "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
           },
           "Is Editor Helper" : false,
-          "Location" : [0.000000, -5.045577, 0.646355],
-          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Location" : [0.000000, -22.410915, 1.000000],
+          "Rotation" : [0.000000, 44.479233, 0.000000],
           "Scale" : [1.000000, 1.000000, 0.500000],
           "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
           "Visible" : true,
@@ -174,7 +174,7 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 22",
+              "Text" : "UUID : 24",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -202,10 +202,10 @@
         "ClassName" : "UDirectionalLightComponent",
         "Properties" : {
           "CSM Max Distance" : 2000.000000,
-          "Cascade Count" : 3,
+          "Cascade Count" : 4,
           "Cascade Distribution" : 1.000000,
           "Cast Shadows" : true,
-          "Depth Bias" : 0.003000,
+          "Depth Bias" : 0.000100,
           "ESM Exponent" : 40.000000,
           "Intensity" : 1.300000,
           "LightColor" : [1.000000, 0.929412, 0.752941, 1.000000],
@@ -237,7 +237,7 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 28",
+              "Text" : "UUID : 30",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -297,7 +297,7 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 34",
+              "Text" : "UUID : 36",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -352,23 +352,23 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [5.393847, 14.634126, 10.788693],
+    "Location" : [-11.979224, -26.897789, 15.999136],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 15.939607, -94.009422]
+    "Rotation" : [0.000000, 39.039612, 16.450710]
   },
   "Primitives" : {
     "13" : {
       "Location" : [0.000000, 0.000000, -1.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.839999],
+      "Rotation" : [0.000000, -0.000000, 0.839996],
       "Scale" : [100.000000, 100.000000, 1.000000],
       "Type" : "StaticMeshComp"
     },
     "16" : {
-      "Location" : [0.000000, -5.045577, 0.646355],
+      "Location" : [0.000000, -22.410915, 1.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 0.500000],
+      "Rotation" : [0.000000, -0.000000, 44.479134],
+      "Scale" : [0.999999, 0.999999, 0.500000],
       "Type" : "StaticMeshComp"
     }
   },
