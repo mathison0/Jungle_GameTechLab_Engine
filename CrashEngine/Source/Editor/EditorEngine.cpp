@@ -188,7 +188,7 @@ void UEditorEngine::Tick(float DeltaTime)
             AllViewportClients.push_back(VC);
         }
     }
-    if (GameViewportClient)
+    if (IsPlayingInEditor() && GameViewportClient)
     {
         AllViewportClients.push_back(GameViewportClient);
     }
@@ -432,6 +432,8 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
     if (GameViewportClient && PIEViewportClient && PIEViewportClient->GetViewport())
     {
         GameViewportClient->SetViewport(PIEViewportClient->GetViewport());
+        GameViewportClient->SetFallbackCamera(PIEViewportClient->GetCamera());
+        GameViewportClient->SetOverlayStatSystem(&GetOverlayStatSystem());
         ViewportInputRouter.SetKeyTargetViewport(PIEViewportClient->GetViewport());
         PIEViewportClient->GetViewport()->SetClient(GameViewportClient);
     }
@@ -516,6 +518,9 @@ void UEditorEngine::EndPlayMap()
     }
 
     PlayInEditorSessionInfo.reset();
+
+    UCameraComponent::Main = nullptr;
+    GetOverlayStatSystem().ShowNoCameraWarning(false);
 }
 
 
@@ -560,6 +565,7 @@ void UEditorEngine::ClearScene()
     WorldList.clear();
     ActiveWorldHandle = FName::None;
 
+    UCameraComponent::Main = nullptr;
     ViewportLayout.DestroyAllCameras();
 }
 
@@ -611,12 +617,12 @@ void UEditorEngine::Render(float DeltaTime)
 
 void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
 {
-    UCameraComponent* Camera = VC->GetCamera();
-    if (!Camera)
-        return;
-
     FViewport* VP = VC->GetViewport();
     if (!VP)
+        return;
+
+    UCameraComponent* Camera = VP->GetClient() ? VP->GetClient()->GetCamera() : VC->GetCamera();
+    if (!Camera)
         return;
 
     ID3D11DeviceContext* Ctx = Renderer.GetFD3DDevice().GetDeviceContext();

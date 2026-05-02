@@ -18,6 +18,8 @@ public:
     virtual void BeginInputFrame() {}
     virtual void Tick(float DeltaTime) {}
 
+    virtual class UCameraComponent* GetCamera() const { return nullptr; }
+
 	virtual bool InputKey(const FViewportKeyEvent& Event) { return false; }
     virtual bool InputAxis(const FViewportAxisEvent& Event) { return false; }
     virtual bool InputPointer(const FViewportPointerEvent& Event) { return false; }

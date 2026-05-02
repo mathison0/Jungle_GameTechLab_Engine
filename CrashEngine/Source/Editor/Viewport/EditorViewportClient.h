@@ -59,7 +59,7 @@ public:
     void CreateCamera();
     void DestroyCamera();
     void ResetCamera();
-    UCameraComponent* GetCamera() const { return Camera; }
+    UCameraComponent* GetCamera() const override { return Camera; }
 
     void Tick(float DeltaTime) override;
     void PilotSelectedActor(AActor* Actor);

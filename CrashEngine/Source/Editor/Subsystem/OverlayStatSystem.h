@@ -37,6 +37,8 @@ public:
     void ShowShadow(bool bEnable = true);
     void ShowLightCull(bool bEnable = true);
     void RecordPickingAttempt(double ElapsedMs);
+    void ShowNoCameraWarning(bool bEnable = true);
+    bool IsNoCameraWarningEnabled() const { return bShowNoCameraWarning; }
     void HideAll();
 
     const FOverlayStatLayout& GetLayout() const { return Layout; }
@@ -56,6 +58,7 @@ private:
     bool bShowMemory = false;
     bool bShowShadow = false;
     bool bShowLightCull = false;
+    bool bShowNoCameraWarning = false;
     double LastPickingTimeMs = 0.0;
     double AccumulatedPickingTimeMs = 0.0;
     uint32 PickingAttemptCount = 0;
