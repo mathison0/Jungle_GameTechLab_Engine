@@ -44,6 +44,8 @@ namespace
 		return Value;
 	}
 
+	constexpr float ZoneReverbBypassWetThreshold = 0.001f;
+
 	FVector ToAudioVector(const FVector& WorldVector)
 	{
 		return FVector(WorldVector.X, -WorldVector.Y, WorldVector.Z);
@@ -120,6 +122,7 @@ struct FAudioSystemImpl
 	float CurrentZoneLowPassCutoff = 20000.0f;
 	float CurrentZoneReverbWet = 0.0f;
 	float CurrentZoneReverbDecay = 0.35f;
+	bool bZoneReverbBypassed = true;
 	ma_uint32 EffectChannels = 2;
 	ma_uint32 EffectSampleRate = 48000;
 	std::unordered_map<uint32, FActiveSound> ActiveSounds;
@@ -289,6 +292,25 @@ struct FAudioSystemImpl
 		OutDecay = Clamp01(TargetDecay);
 	}
 
+	bool SetZoneReverbBypassed(bool bBypass)
+	{
+		if (!ZoneLowPassNode || !ZoneReverbNode)
+		{
+			return false;
+		}
+
+		ma_node* TargetNode = bBypass ? ma_engine_get_endpoint(&Engine) : reinterpret_cast<ma_node*>(ZoneReverbNode.get());
+		const ma_result Result = ma_node_attach_output_bus(ZoneLowPassNode.get(), 0, TargetNode, 0);
+		if (Result != MA_SUCCESS)
+		{
+			UE_LOG("AudioSystem: failed to route zone reverb bypass. error=%d", static_cast<int>(Result));
+			return false;
+		}
+
+		bZoneReverbBypassed = bBypass;
+		return true;
+	}
+
 	void ApplyVolume(FActiveSound& ActiveSound)
 	{
 		if (ActiveSound.Sound)
@@ -323,6 +345,12 @@ struct FAudioSystemImpl
 		float ReverbWet = 0.0f;
 		float ReverbDecay = 0.35f;
 		GetZoneEffectReverb(ReverbWet, ReverbDecay);
+		const bool bShouldBypassReverb = ReverbWet <= ZoneReverbBypassWetThreshold;
+		if (bZoneReverbBypassed != bShouldBypassReverb)
+		{
+			SetZoneReverbBypassed(bShouldBypassReverb);
+		}
+
 		if (std::fabs(CurrentZoneReverbWet - ReverbWet) > 0.001f)
 		{
 			ma_delay_node_set_wet(ZoneReverbNode.get(), ReverbWet);
@@ -496,7 +524,7 @@ struct FAudioSystemImpl
 
 		ma_delay_node_set_wet(ZoneReverbNode.get(), 0.0f);
 		ma_delay_node_set_dry(ZoneReverbNode.get(), 1.0f);
-		Result = ma_node_attach_output_bus(ZoneLowPassNode.get(), 0, ZoneReverbNode.get(), 0);
+		Result = ma_node_attach_output_bus(ZoneLowPassNode.get(), 0, ma_engine_get_endpoint(&Engine), 0);
 		if (Result != MA_SUCCESS)
 		{
 			UE_LOG("AudioSystem: failed to route zone low pass node. Audio zone effects disabled. error=%d", static_cast<int>(Result));
@@ -536,6 +564,7 @@ struct FAudioSystemImpl
 		CurrentZoneLowPassCutoff = 20000.0f;
 		CurrentZoneReverbWet = 0.0f;
 		CurrentZoneReverbDecay = 0.35f;
+		bZoneReverbBypassed = true;
 		return true;
 	}
 
