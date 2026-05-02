@@ -179,7 +179,7 @@ struct FAudioSystemImpl
 		return ActiveSound.bAffectedByAudioZones
 			&& bZoneEffectBusReady
 			&& ZoneEffectGroup
-			&& IsListenerInsideAnyZone();
+			&& FindBestListenerZone() != nullptr;
 	}
 
 	float GetZoneBusVolume(const FZoneMix& Zone, EAudioBus Bus, bool bSourceInside) const
