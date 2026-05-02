@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstring>
+#include <fstream>
 #include <system_error>
 
 namespace
@@ -21,6 +23,7 @@ namespace
 constexpr float SidebarWidth = 230.0f;
 constexpr float TileWidth = 148.0f;
 constexpr float TileHeight = 86.0f;
+constexpr float ToolbarActionButtonHeight = 28.0f;
 
 const char* ContentAssetPayloadType = "CRASH_CONTENT_ASSET_PATH";
 const char* LuaScriptPayloadType = "CRASH_LUA_SCRIPT_PATH";
@@ -30,6 +33,23 @@ FString ToLowerAscii(FString Value)
     std::transform(Value.begin(), Value.end(), Value.begin(),
                    [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
     return Value;
+}
+
+FString TrimAscii(const FString& Value)
+{
+    size_t First = 0;
+    while (First < Value.size() && std::isspace(static_cast<unsigned char>(Value[First])))
+    {
+        ++First;
+    }
+
+    size_t Last = Value.size();
+    while (Last > First && std::isspace(static_cast<unsigned char>(Value[Last - 1])))
+    {
+        --Last;
+    }
+
+    return Value.substr(First, Last - First);
 }
 
 FString PathDisplayName(const std::filesystem::path& Path)
@@ -42,6 +62,73 @@ FString ExtensionLower(const std::filesystem::path& Path)
     return ToLowerAscii(FPaths::FromPath(Path.extension()));
 }
 
+bool HasInvalidFileNameChar(const FString& Name)
+{
+    constexpr const char* InvalidChars = "<>:\"|?*";
+    for (const unsigned char Ch : Name)
+    {
+        if (Ch < 32 || Ch == '/' || Ch == '\\' || std::strchr(InvalidChars, Ch) != nullptr)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+FString MakeLuaClassName(const FString& FileStem)
+{
+    FString ClassName;
+    ClassName.reserve(FileStem.size());
+
+    for (const unsigned char Ch : FileStem)
+    {
+        if (std::isalnum(Ch))
+        {
+            ClassName.push_back(static_cast<char>(Ch));
+        }
+        else if (Ch == '_' || (!ClassName.empty() && ClassName.back() != '_'))
+        {
+            ClassName.push_back('_');
+        }
+    }
+
+    while (!ClassName.empty() && ClassName.back() == '_')
+    {
+        ClassName.pop_back();
+    }
+
+    if (ClassName.empty())
+    {
+        return "LuaScript";
+    }
+    if (std::isdigit(static_cast<unsigned char>(ClassName.front())))
+    {
+        return FString("Lua") + ClassName;
+    }
+    return ClassName;
+}
+
+FString BuildLuaScriptTemplate(const FString& ClassName)
+{
+    return FString(
+        "---@class ") + ClassName + " : ScriptComponent\n"
+        "local Script = {\n"
+        "    properties = {\n"
+        "    }\n"
+        "}\n"
+        "\n"
+        "function Script:BeginPlay()\n"
+        "end\n"
+        "\n"
+        "function Script:Tick(deltaTime)\n"
+        "end\n"
+        "\n"
+        "function Script:EndPlay()\n"
+        "end\n"
+        "\n"
+        "return Script\n";
+}
+
 FString NormalizePathKey(const std::filesystem::path& Path)
 {
     return ToLowerAscii(FPaths::FromPath(Path.lexically_normal()));
@@ -50,6 +137,63 @@ FString NormalizePathKey(const std::filesystem::path& Path)
 bool PathEquals(const std::filesystem::path& A, const std::filesystem::path& B)
 {
     return NormalizePathKey(A) == NormalizePathKey(B);
+}
+
+void AlignCurrentItemToToolbarRow(float RowTop, float RowHeight, float ItemHeight)
+{
+    ImVec2 CursorPos = ImGui::GetCursorScreenPos();
+    CursorPos.y = RowTop + (std::max)(0.0f, (RowHeight - ItemHeight) * 0.5f);
+    ImGui::SetCursorScreenPos(CursorPos);
+}
+
+bool DrawToolbarActionButton(const char* Id, const char* Label)
+{
+    constexpr float IconSize = 14.0f;
+    constexpr float PaddingX = 10.0f;
+    constexpr float IconGap = 7.0f;
+
+    const ImVec2 TextSize = ImGui::CalcTextSize(Label);
+    const ImVec2 Size(PaddingX * 2.0f + IconSize + IconGap + TextSize.x, ToolbarActionButtonHeight);
+    const ImVec2 Pos = ImGui::GetCursorScreenPos();
+
+    const bool bPressed = ImGui::InvisibleButton(Id, Size);
+    const bool bHovered = ImGui::IsItemHovered();
+    const bool bActive = ImGui::IsItemActive();
+
+    ImDrawList* DrawList = ImGui::GetWindowDrawList();
+    const ImVec2 Max(Pos.x + Size.x, Pos.y + Size.y);
+    const ImU32 BgColor = bActive
+                               ? IM_COL32(55, 75, 105, 255)
+                               : (bHovered ? IM_COL32(44, 53, 66, 255) : IM_COL32(33, 37, 44, 255));
+    const ImU32 BorderColor = bHovered ? IM_COL32(93, 139, 205, 255) : IM_COL32(61, 67, 78, 255);
+    const ImU32 IconColor = IM_COL32(112, 178, 255, 255);
+    const ImU32 TextColor = IM_COL32(230, 233, 238, 255);
+
+    DrawList->AddRectFilled(Pos, Max, BgColor, 5.0f);
+    DrawList->AddRect(Pos, Max, BorderColor, 5.0f);
+
+    const ImVec2 IconCenter(Pos.x + PaddingX + IconSize * 0.5f, Pos.y + ToolbarActionButtonHeight * 0.5f);
+    constexpr float PlusHalf = 5.0f;
+    DrawList->AddLine(ImVec2(IconCenter.x - PlusHalf, IconCenter.y),
+                      ImVec2(IconCenter.x + PlusHalf, IconCenter.y),
+                      IconColor,
+                      1.8f);
+    DrawList->AddLine(ImVec2(IconCenter.x, IconCenter.y - PlusHalf),
+                      ImVec2(IconCenter.x, IconCenter.y + PlusHalf),
+                      IconColor,
+                      1.8f);
+
+    DrawList->AddText(ImVec2(Pos.x + PaddingX + IconSize + IconGap,
+                             Pos.y + (ToolbarActionButtonHeight - TextSize.y) * 0.5f),
+                      TextColor,
+                      Label);
+
+    if (bHovered)
+    {
+        ImGui::SetTooltip("Create Lua script");
+    }
+
+    return bPressed;
 }
 
 FString TrimToWidth(FString Text, float MaxWidth)
@@ -124,6 +268,8 @@ void FEditorContentDrawerPanel::Render(float DeltaTime)
         DrawAssetArea();
     }
     ImGui::EndChild();
+
+    DrawNewLuaScriptPopup();
 }
 
 void FEditorContentDrawerPanel::EnsureInitialized()
@@ -156,17 +302,38 @@ void FEditorContentDrawerPanel::SetCurrentContentDirectory(EContentRoot Root, co
 
 void FEditorContentDrawerPanel::DrawToolbar()
 {
+    const ImVec2 RowStart = ImGui::GetCursorScreenPos();
+    constexpr float RowHeight = ToolbarActionButtonHeight;
+
+    AlignCurrentItemToToolbarRow(RowStart.y, RowHeight, ImGui::GetTextLineHeight());
     ImGui::TextUnformatted("Content Drawer");
-    ImGui::SameLine();
+    ImGui::SameLine(0.0f, 12.0f);
+
+    if (CurrentRoot == EContentRoot::Scripts)
+    {
+        AlignCurrentItemToToolbarRow(RowStart.y, RowHeight, ToolbarActionButtonHeight);
+        if (DrawToolbarActionButton("##NewLuaScriptToolbarButton", "Lua Script"))
+        {
+            OpenNewLuaScriptPopup();
+        }
+        ImGui::SameLine(0.0f, 10.0f);
+    }
 
     const float SearchWidth = (std::max)(240.0f, ImGui::GetContentRegionAvail().x * 0.38f);
     ImGui::SetCursorPosX((std::max)(ImGui::GetCursorPosX(), ImGui::GetWindowContentRegionMax().x - SearchWidth));
+    AlignCurrentItemToToolbarRow(RowStart.y, RowHeight, ImGui::GetFrameHeight());
     ImGui::SetNextItemWidth(SearchWidth);
     ImGui::InputTextWithHint("##ContentDrawerSearch", "Search current folder", SearchBuf.data(), SearchBuf.size());
     if (bReclaimSearchFocus)
     {
         ImGui::SetKeyboardFocusHere(-1);
         bReclaimSearchFocus = false;
+    }
+
+    const float RowBottom = RowStart.y + RowHeight + ImGui::GetStyle().ItemSpacing.y;
+    if (ImGui::GetCursorScreenPos().y < RowBottom)
+    {
+        ImGui::SetCursorScreenPos(ImVec2(RowStart.x, RowBottom));
     }
 }
 
@@ -242,6 +409,7 @@ void FEditorContentDrawerPanel::DrawAssetArea()
 {
     DrawBreadcrumb();
     ImGui::Separator();
+    DrawAssetAreaContextMenu();
 
     TArray<FContentItem> Items = BuildCurrentItems();
     const int32 ItemCount = static_cast<int32>(Items.size());
@@ -363,18 +531,12 @@ void FEditorContentDrawerPanel::DrawItemTile(const FContentItem& Item)
     {
         SetCurrentContentDirectory(CurrentRoot, Item.FullPath);
     }
-    else if (!Item.bDirectory && Item.Extension == ".scene" && bHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+    else if (!Item.bDirectory && bHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
     {
-        LoadSceneFile(Item.FullPath);
+        OpenContentItem(Item);
     }
-    else if (!Item.bDirectory && CurrentRoot == EContentRoot::Scripts && Item.Extension == ".lua" && bHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-    {
-        if (!FPlatformProcess::OpenFile(Item.FullPath))
-        {
-            const FString FilePath = FPaths::FromPath(Item.FullPath);
-            UE_LOG(EditorUI, Warning, "Failed to open Lua script: %s", FilePath.c_str());
-        }
-    }
+
+    DrawItemContextMenu(Item);
 
     if (!Item.bDirectory && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
     {
@@ -412,6 +574,247 @@ void FEditorContentDrawerPanel::DrawItemTile(const FContentItem& Item)
     DrawList->AddText(ImVec2(TilePos.x + 10.0f, TilePos.y + 58.0f), MutedTextColor, PathText.c_str());
 
     ImGui::PopID();
+}
+
+void FEditorContentDrawerPanel::DrawItemContextMenu(const FContentItem& Item)
+{
+    if (!ImGui::BeginPopupContextItem("ContentItemContextMenu", ImGuiPopupFlags_MouseButtonRight))
+    {
+        return;
+    }
+
+    if (ImGui::MenuItem("Open"))
+    {
+        OpenContentItem(Item);
+    }
+
+    if (ImGui::MenuItem("Open in Explorer"))
+    {
+        const std::filesystem::path ExplorerPath = Item.bDirectory ? Item.FullPath : Item.FullPath.parent_path();
+        if (!FPlatformProcess::OpenFile(ExplorerPath))
+        {
+            const FString PathText = FPaths::FromPath(ExplorerPath);
+            UE_LOG(EditorUI, Warning, "Failed to open folder: %s", PathText.c_str());
+        }
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::MenuItem("Copy Project Path"))
+    {
+        ImGui::SetClipboardText(Item.ProjectRelativePath.c_str());
+    }
+
+    if (CurrentRoot == EContentRoot::Scripts && !Item.bDirectory && Item.Extension == ".lua")
+    {
+        if (ImGui::MenuItem("Copy Script Path"))
+        {
+            ImGui::SetClipboardText(Item.RootRelativePath.c_str());
+        }
+    }
+
+    if (ImGui::MenuItem("Copy Full Path"))
+    {
+        const FString FullPath = FPaths::FromPath(Item.FullPath);
+        ImGui::SetClipboardText(FullPath.c_str());
+    }
+
+    ImGui::EndPopup();
+}
+
+void FEditorContentDrawerPanel::DrawAssetAreaContextMenu()
+{
+    if (CurrentRoot != EContentRoot::Scripts)
+    {
+        return;
+    }
+
+    if (ImGui::BeginPopupContextWindow("ContentDrawerAssetAreaContext",
+                                       ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
+    {
+        if (ImGui::MenuItem("New Lua Script"))
+        {
+            OpenNewLuaScriptPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
+void FEditorContentDrawerPanel::OpenNewLuaScriptPopup()
+{
+    NewLuaScriptNameBuf.fill('\0');
+    std::snprintf(NewLuaScriptNameBuf.data(), NewLuaScriptNameBuf.size(), "NewScript.lua");
+    NewLuaScriptError.clear();
+    bOpenNewLuaScriptPopup = true;
+    bFocusNewLuaScriptName = true;
+}
+
+void FEditorContentDrawerPanel::DrawNewLuaScriptPopup()
+{
+    if (bOpenNewLuaScriptPopup)
+    {
+        ImGui::OpenPopup("New Lua Script");
+        bOpenNewLuaScriptPopup = false;
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(420.0f, 0.0f), ImGuiCond_Appearing);
+    if (!ImGui::BeginPopupModal("New Lua Script", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings))
+    {
+        return;
+    }
+
+    ImGui::TextUnformatted("Create a Lua script in the current Scripts folder.");
+    ImGui::Spacing();
+    ImGui::TextDisabled("%s", MakeRootRelativePath(CurrentRoot, CurrentDirectory).c_str());
+
+    ImGui::SetNextItemWidth(360.0f);
+    const bool bSubmitted = ImGui::InputTextWithHint(
+        "##NewLuaScriptName",
+        "ScriptName.lua",
+        NewLuaScriptNameBuf.data(),
+        NewLuaScriptNameBuf.size(),
+        ImGuiInputTextFlags_EnterReturnsTrue);
+    if (bFocusNewLuaScriptName)
+    {
+        ImGui::SetKeyboardFocusHere(-1);
+        bFocusNewLuaScriptName = false;
+    }
+
+    if (!NewLuaScriptError.empty())
+    {
+        ImGui::TextColored(ImVec4(0.95f, 0.34f, 0.28f, 1.0f), "%s", NewLuaScriptError.c_str());
+    }
+
+    ImGui::Spacing();
+    if (ImGui::Button("Create", ImVec2(110.0f, 0.0f)) || bSubmitted)
+    {
+        if (CreateLuaScriptFromInput())
+        {
+            ImGui::CloseCurrentPopup();
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(110.0f, 0.0f)))
+    {
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
+}
+
+bool FEditorContentDrawerPanel::CreateLuaScriptFromInput()
+{
+    if (CurrentRoot != EContentRoot::Scripts)
+    {
+        NewLuaScriptError = "Lua scripts can only be created inside Scripts.";
+        return false;
+    }
+
+    const FString InputName = TrimAscii(NewLuaScriptNameBuf.data());
+    if (InputName.empty())
+    {
+        NewLuaScriptError = "Enter a script name.";
+        return false;
+    }
+    if (HasInvalidFileNameChar(InputName))
+    {
+        NewLuaScriptError = "Script name contains an invalid file character.";
+        return false;
+    }
+
+    std::filesystem::path FileName = FPaths::ToPath(InputName).filename();
+    if (FileName.empty() || FileName == L"." || FileName == L"..")
+    {
+        NewLuaScriptError = "Enter a valid script file name.";
+        return false;
+    }
+
+    const FString Extension = ExtensionLower(FileName);
+    if (Extension.empty())
+    {
+        FileName.replace_extension(L".lua");
+    }
+    else if (Extension != ".lua")
+    {
+        NewLuaScriptError = "Lua script names must use the .lua extension.";
+        return false;
+    }
+
+    const std::filesystem::path TargetPath = (CurrentDirectory / FileName).lexically_normal();
+    std::error_code Ec;
+    if (std::filesystem::exists(TargetPath, Ec))
+    {
+        NewLuaScriptError = "A script with that name already exists.";
+        return false;
+    }
+
+    std::filesystem::create_directories(CurrentDirectory, Ec);
+    if (Ec)
+    {
+        NewLuaScriptError = "Failed to create the target folder.";
+        return false;
+    }
+
+    const FString ClassName = MakeLuaClassName(FPaths::FromPath(FileName.stem()));
+    const FString Source = BuildLuaScriptTemplate(ClassName);
+
+    std::ofstream File(TargetPath, std::ios::binary);
+    if (!File.is_open())
+    {
+        NewLuaScriptError = "Failed to create the Lua script file.";
+        return false;
+    }
+
+    File.write(Source.data(), static_cast<std::streamsize>(Source.size()));
+    if (!File.good())
+    {
+        NewLuaScriptError = "Failed to write the Lua script file.";
+        return false;
+    }
+
+    SearchBuf.fill('\0');
+    const FString ProjectPath = MakeProjectRelativePath(TargetPath);
+    UE_LOG(EditorUI, Info, "Created Lua script: %s", ProjectPath.c_str());
+
+    OpenLuaScriptFile(TargetPath);
+
+    return true;
+}
+
+void FEditorContentDrawerPanel::OpenContentItem(const FContentItem& Item)
+{
+    if (Item.bDirectory)
+    {
+        SetCurrentContentDirectory(CurrentRoot, Item.FullPath);
+        return;
+    }
+
+    if (Item.Extension == ".scene")
+    {
+        LoadSceneFile(Item.FullPath);
+        return;
+    }
+
+    if (CurrentRoot == EContentRoot::Scripts && Item.Extension == ".lua")
+    {
+        OpenLuaScriptFile(Item.FullPath);
+        return;
+    }
+
+    if (!FPlatformProcess::OpenFile(Item.FullPath))
+    {
+        const FString FilePath = FPaths::FromPath(Item.FullPath);
+        UE_LOG(EditorUI, Warning, "Failed to open asset file: %s", FilePath.c_str());
+    }
+}
+
+void FEditorContentDrawerPanel::OpenLuaScriptFile(const std::filesystem::path& ScriptPath)
+{
+    if (!FPlatformProcess::OpenFile(ScriptPath))
+    {
+        const FString FilePath = FPaths::FromPath(ScriptPath);
+        UE_LOG(EditorUI, Warning, "Failed to open Lua script: %s", FilePath.c_str());
+    }
 }
 
 void FEditorContentDrawerPanel::LoadSceneFile(const std::filesystem::path& ScenePath)
