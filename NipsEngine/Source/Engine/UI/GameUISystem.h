@@ -59,10 +59,23 @@ public:
     void SetProgress(float InProgress);             // 0.0 ~ 1.0
     void SetCurrentItem(const char* Name, const char* Desc);
 
+    // 일시정지 메뉴
+    void SetPauseMenuOpen(bool bOpen);
+    bool IsPauseMenuOpen() const { return bPauseMenuOpen; }
+
+    // 게임 데이터 초기화 (Retry 시 호출)
+    void ResetGameData();
+
     // getter (패널에서 사용)
     float         GetProgress()     const { return CleanProgress; }
     const char*   GetItemName()     const { return CurrentItemName.c_str(); }
     const char*   GetItemDesc()     const { return CurrentItemDesc.c_str(); }
+    int           GetItemCount()    const { return ItemCount; }
+    float         GetElapsedTime()  const { return ElapsedTime; }
+
+    // 아이템 갯수 / 경과 시간 setter
+    void SetItemCount(int Count);
+    void SetElapsedTime(float Seconds);
 
 private:
     GameUISystem() = default;
@@ -70,13 +83,16 @@ private:
     // 현재 상태에 맞는 패널을 그린다
     void RenderCurrentPanel(EUIRenderMode Mode);
 
-    EGameUIState CurrentState = EGameUIState::InGame;
+    EGameUIState CurrentState  = EGameUIState::InGame;
+    bool         bPauseMenuOpen = false;
 
     // ImGui 소유권 (게임 빌드에서만 true)
     bool bOwnsImGui = false;
 
     // 게임 데이터
     float       CleanProgress    = 0.f;
+    int         ItemCount        = 0;
+    float       ElapsedTime      = 0.f;
     std::string CurrentItemName;
     std::string CurrentItemDesc;
 };

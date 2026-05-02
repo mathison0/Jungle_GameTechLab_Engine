@@ -412,6 +412,7 @@
     <ClCompile Include="Source\Engine\Spatial\WorldSpatialIndex.cpp" />
     <ClCompile Include="Source\Engine\UI\GameUISystem.cpp" />
     <ClCompile Include="Source\Engine\UI\HUDPanel.cpp" />
+    <ClCompile Include="Source\Engine\UI\PauseMenuPanel.cpp" />
     <ClCompile Include="Source\Misc\ObjViewer\ObjViewerEngine.cpp" />
     <ClCompile Include="Source\Misc\ObjViewer\ObjViewerRenderPipeline.cpp" />
     <ClCompile Include="Source\Misc\ObjViewer\Settings\ObjViewerSettings.cpp" />
@@ -653,6 +654,7 @@
     <ClInclude Include="Source\Engine\Spatial\WorldSpatialIndex.h" />
     <ClInclude Include="Source\Engine\UI\GameUISystem.h" />
     <ClInclude Include="Source\Engine\UI\HUDPanel.h" />
+    <ClInclude Include="Source\Engine\UI\PauseMenuPanel.h" />
     <ClInclude Include="Source\Misc\ObjViewer\ObjViewerEngine.h" />
     <ClInclude Include="Source\Misc\ObjViewer\ObjViewerRenderPipeline.h" />
     <ClInclude Include="Source\Misc\ObjViewer\Settings\ObjViewerSettings.h" />

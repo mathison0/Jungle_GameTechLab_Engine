@@ -86,6 +86,43 @@ void RegisterLuaBindings(sol::state& Lua)
 		GameUISystem::Get().SetCurrentItem(Name.c_str(), Desc.c_str());
 	});
 
+	Lua.set_function("SetItemCount", [](int Count)
+	{
+		GameUISystem::Get().SetItemCount(Count);
+	});
+
+	Lua.set_function("SetElapsedTime", [](float Seconds)
+	{
+		GameUISystem::Get().SetElapsedTime(Seconds);
+	});
+
+	Lua.set_function("SetPauseMenuOpen", [](bool bOpen)
+	{
+		GameUISystem::Get().SetPauseMenuOpen(bOpen);
+	});
+
+	Lua.set_function("IsPauseMenuOpen", []()
+	{
+		return GameUISystem::Get().IsPauseMenuOpen();
+	});
+
+	// 키 입력 (Windows Virtual Key Code)
+	// 자주 쓰는 상수를 Lua 전역으로 노출
+	Lua.set("KEY_ESCAPE", 0x1B);
+	Lua.set("KEY_P",      0x50);
+	Lua.set("KEY_TAB",    0x09);
+	Lua.set("KEY_ENTER",  0x0D);
+
+	Lua.set_function("GetKeyDown", [](int VK)
+	{
+		return InputSystem::Get().GetKeyDown(VK);
+	});
+
+	Lua.set_function("GetKeyUp", [](int VK)
+	{
+		return InputSystem::Get().GetKeyUp(VK);
+	});
+
 	Lua.new_usertype<FHitResult>(
 		"FHitResult",
 		"HitComponent", &FHitResult::HitComponent,

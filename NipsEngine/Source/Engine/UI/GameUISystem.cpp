@@ -1,6 +1,8 @@
 #include "Engine/UI/GameUISystem.h"
 
 #include "Engine/UI/HUDPanel.h"
+#include "Engine/UI/PauseMenuPanel.h"
+#include "Engine/Input/InputSystem.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_dx11.h"
@@ -77,7 +79,28 @@ void GameUISystem::RenderPanelsOnly(EUIRenderMode Mode)
 // -------------------------------------------------------
 void GameUISystem::SetState(EGameUIState NewState)
 {
-    CurrentState = NewState;
+    CurrentState  = NewState;
+    bPauseMenuOpen = false;  // 상태 바뀌면 일시정지 해제
+}
+
+// -------------------------------------------------------
+// 일시정지 메뉴
+// -------------------------------------------------------
+void GameUISystem::SetPauseMenuOpen(bool bOpen)
+{
+    bPauseMenuOpen = bOpen;
+}
+
+// -------------------------------------------------------
+// 게임 데이터 초기화 (Retry)
+// -------------------------------------------------------
+void GameUISystem::ResetGameData()
+{
+    CleanProgress  = 0.f;
+    ItemCount      = 0;
+    ElapsedTime    = 0.f;
+    CurrentItemName.clear();
+    CurrentItemDesc.clear();
 }
 
 // -------------------------------------------------------
@@ -94,12 +117,29 @@ void GameUISystem::SetCurrentItem(const char* Name, const char* Desc)
     CurrentItemDesc = Desc ? Desc : "";
 }
 
+void GameUISystem::SetItemCount(int Count)
+{
+    ItemCount = Count;
+}
+
+void GameUISystem::SetElapsedTime(float Seconds)
+{
+    ElapsedTime = Seconds;
+}
+
 // -------------------------------------------------------
 // 현재 상태에 맞는 패널 디스패치
-// TODO: 각 패널을 구현한 뒤 아래 주석을 해제하고 호출하세요.
 // -------------------------------------------------------
 void GameUISystem::RenderCurrentPanel(EUIRenderMode Mode)
 {
+    // InGame 일 때 Q 키로 일시정지 토글 (Play 모드에서만)
+    // TODO: 나중에 원하는 키로 변경
+    if (Mode == EUIRenderMode::Play && CurrentState == EGameUIState::InGame)
+    {
+        if (InputSystem::Get().GetKeyUp(0x51))  // Q
+            bPauseMenuOpen = !bPauseMenuOpen;
+    }
+
     switch (CurrentState)
     {
     case EGameUIState::StartMenu:
@@ -112,6 +152,8 @@ void GameUISystem::RenderCurrentPanel(EUIRenderMode Mode)
 
     case EGameUIState::InGame:
         HUDPanel::Render(Mode);
+        if (bPauseMenuOpen)
+            PauseMenuPanel::Render(Mode);
         break;
 
     case EGameUIState::Ending:

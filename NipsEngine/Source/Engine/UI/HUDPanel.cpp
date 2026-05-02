@@ -1,4 +1,4 @@
-#include "Engine/UI/HUDPanel.h"
+﻿#include "Engine/UI/HUDPanel.h"
 
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Runtime/ViewportRect.h"
@@ -20,7 +20,7 @@ void HUDPanel::Render(EUIRenderMode Mode)
     const float BarW = VW * 0.4f;
     const float BarH = 28.f;
     const float PosX = VX + (VW - BarW) * 0.5f;
-    const float PosY = VY + 14.f;
+    const float PosY = VY + 40.f;
     const float Rounding = 6.f;
 
     const float Progress = (Mode == EUIRenderMode::Play)

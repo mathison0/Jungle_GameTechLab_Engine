@@ -817,6 +817,7 @@
     <ClCompile Include="Source\Engine\Runtime\GameEngine.cpp" />
     <ClCompile Include="Source\Engine\UI\GameUISystem.cpp" />
     <ClCompile Include="Source\Engine\UI\HUDPanel.cpp" />
+    <ClCompile Include="Source\Engine\UI\PauseMenuPanel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1531,6 +1532,7 @@
     <ClInclude Include="Source\Engine\Runtime\GameEngine.h" />
     <ClInclude Include="Source\Engine\UI\GameUISystem.h" />
     <ClInclude Include="Source\Engine\UI\HUDPanel.h" />
+    <ClInclude Include="Source\Engine\UI\PauseMenuPanel.h" />
     <ClInclude Include="ThirdParty\sol\as_args.hpp">
       <Filter>ThirdParty\sol</Filter>
     </ClInclude>
