@@ -1,5 +1,6 @@
 local Co = require("LuaCoroutine")
 
+---@class CoroutineTest : ScriptComponent
 local Script = {}
 
 

@@ -2,6 +2,7 @@
 BUTTON_SPACE = 0x20
 -- 키 설정 --
 
+---@class InputTest : ScriptComponent
 local Script = {
     
 }
