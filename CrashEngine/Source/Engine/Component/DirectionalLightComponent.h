@@ -23,7 +23,7 @@ public:
 protected:
     FVector Direction = FVector(0.0f, 0.0f, -1.0f); // 기본값: 아래로 향하는 빛
     
-    int32 CascadeCount = 3; // 최대 3개 사용
+    int32 CascadeCount = 4; // 최대 4개 사용
     float DynamicShadowDistance = 2000.0f;
     float CascadeDistribution = 1.0f;
 };

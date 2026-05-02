@@ -249,7 +249,7 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
         Partition.FlushPrimitive();
     }
 
-    CollisionManager.Update(*this);
+    //CollisionManager.Update(*this);
     Collision2DManager.Update(*this);
 
     Scene.GetDebugPrimitiveQueue().ClearOneFramePrimitives();

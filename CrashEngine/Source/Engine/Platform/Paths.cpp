@@ -39,6 +39,12 @@ std::wstring FPaths::EditorDir()
 {
     return AssetDir() + L"Editor\\";
 }
+
+std::wstring FPaths::ScriptsDir()
+{
+	return AssetDir() + L"Scripts\\";
+}
+
 std::wstring FPaths::ShaderDir()
 {
     return RootDir() + L"Shaders\\";

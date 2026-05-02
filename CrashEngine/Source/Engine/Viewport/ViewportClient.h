@@ -15,6 +15,10 @@ public:
     virtual ~FViewportClient() = default;
 
     virtual void Draw(FViewport* Viewport, float DeltaTime) {}
+    virtual void BeginInputFrame() {}
+    virtual void Tick(float DeltaTime) {}
+
+    virtual class UCameraComponent* GetCamera() const { return nullptr; }
 
 	virtual bool InputKey(const FViewportKeyEvent& Event) { return false; }
     virtual bool InputAxis(const FViewportAxisEvent& Event) { return false; }

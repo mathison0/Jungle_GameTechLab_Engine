@@ -27,6 +27,10 @@ public:
 
     UCameraComponent() = default;
 
+    inline static UCameraComponent* Main = nullptr;
+
+    void BeginPlay() override;
+
     void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 
     void LookAt(const FVector& Target);

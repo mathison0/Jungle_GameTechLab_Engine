@@ -17,6 +17,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SceneComponent.h"
+#include "Component/ScriptComponent.h"
 #include "Core/PropertyTypes.h"
 #include "Core/ClassTypes.h"
 #include "Resource/ResourceManager.h"
@@ -30,6 +31,7 @@
 #include <Windows.h>
 #include <commdlg.h>
 #include <cctype>
+#include <cstring>
 #include <cmath>
 #include <filesystem>
 #include <functional>
@@ -40,6 +42,11 @@
 #include "Render/Resources/Shadows/ShadowFilterSettings.h"
 #include "Render/Resources/Shadows/ShadowResolutionSettings.h"
 #include "Render/Scene/Proxies/Light/LightProxy.h"
+
+namespace
+{
+constexpr const char* LuaScriptPayloadType = "CRASH_LUA_SCRIPT_PATH";
+}
 
 #define SEPARATOR()     \
     ;                   \
@@ -272,24 +279,30 @@ static FString BuildShadowAtlasOwnerLabel(const FShadowAtlasOwnerInfo& Info)
 
 static FString GetEditorFriendlyPropertyName(const FString& RawName)
 {
-    if (RawName == "bTickEnable")
+    constexpr const char* LuaPropertyPrefix = "Lua.";
+    FString Name = RawName;
+    if (Name.rfind(LuaPropertyPrefix, 0) == 0)
+    {
+        Name = Name.substr(std::strlen(LuaPropertyPrefix));
+    }
+
+    if (Name == "bTickEnable")
     {
         return "Tick Enabled";
     }
-    if (RawName == "bAffectsWorld")
+    if (Name == "bAffectsWorld")
     {
         return "Affects World";
     }
-    if (RawName == "Cast Shadows")
+    if (Name == "Cast Shadows")
     {
         return "Cast Shadows";
     }
-    if (RawName == "CSM Max Distance")
+    if (Name == "CSM Max Distance")
     {
         return "CSM Max Distance";
     }
 
-    FString Name = RawName;
     if (Name.size() > 1 && Name[0] == 'b' && std::isupper(static_cast<unsigned char>(Name[1])))
     {
         Name.erase(Name.begin());
@@ -660,29 +673,13 @@ void FEditorDetailsPanel::Render(float DeltaTime)
     const TArray<AActor*>& SelectedActors = FallbackActors.empty() ? Selection.GetSelectedActors() : FallbackActors;
     const int32 SelectionCount = static_cast<int32>(SelectedActors.size());
 
-    // ========== 고정 영역: Actor Info ==========
-    ImGui::Text("Class: %s", PrimaryActor->GetClass()->GetName());
-
-    FString PrimaryName = PrimaryActor->GetFName().ToString();
-    if (PrimaryName.empty())
-        PrimaryName = PrimaryActor->GetClass()->GetName();
-
-    if (bActorSelected)
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
     if (SelectionCount > 1)
     {
-        ImGui::Text("Name: %s (+%d)", PrimaryName.c_str(), SelectionCount - 1);
+        ImGui::Text("Selected: %d Actors", SelectionCount);
     }
     else
     {
-        ImGui::Text("Name: %s", PrimaryName.c_str());
-    }
-    if (bActorSelected)
-        ImGui::PopStyleColor();
-    if (ImGui::IsItemClicked())
-    {
-        bActorSelected = true;
-        SelectedComponent = nullptr;
+        ImGui::Text("Class: %s", PrimaryActor->GetClass()->GetName());
     }
 
     // ========== 고정 영역: Component Tree ==========
@@ -863,33 +860,89 @@ void FEditorDetailsPanel::RenderComponentTree(AActor* Actor)
 
     ImGui::Separator();
 
-    if (Root)
+    // Actor Node
+    ImGuiTreeNodeFlags ActorFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
+    if (bActorSelected)
+        ActorFlags |= ImGuiTreeNodeFlags_Selected;
+
+    FString ActorLabel = Actor->GetFName().ToString();
+    if (ActorLabel.empty())
+        ActorLabel = Actor->GetClass()->GetName();
+
+    bool bActorOpen = ImGui::TreeNodeEx(Actor, ActorFlags, "[Actor] %s", ActorLabel.c_str());
+    if (ImGui::IsItemClicked())
     {
-        RenderSceneComponentNode(Root);
+        SelectedComponent = nullptr;
+        bActorSelected = true;
+    }
+    FString DroppedActorScriptPath;
+    if (AcceptLuaScriptDrop(DroppedActorScriptPath))
+    {
+        AssignLuaScriptToActor(Actor, DroppedActorScriptPath);
     }
 
-    // Non-scene ActorComponents
-    for (UActorComponent* Comp : Actor->GetComponents())
+    if (bActorOpen)
     {
-        if (!Comp)
-            continue;
-        if (Comp->IsA<USceneComponent>())
-            continue;
-
-        FString Label = BuildComponentDisplayLabel(Comp);
-
-        ImGui::Indent(12.0f);
-        ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-        if (!bActorSelected && SelectedComponent == Comp)
-            Flags |= ImGuiTreeNodeFlags_Selected;
-
-        ImGui::TreeNodeEx(Comp, Flags, "%s", Label.c_str());
-        if (ImGui::IsItemClicked())
+        if (Root)
         {
-            SelectedComponent = Comp;
-            bActorSelected = false;
+            RenderSceneComponentNode(Root);
         }
-        ImGui::Unindent(12.0f);
+
+        // Non-scene ActorComponents
+        TArray<UActorComponent*> Comps = Actor->GetComponents();
+        UActorComponent* ComponentToDelete = nullptr;
+
+        for (UActorComponent* Comp : Comps)
+        {
+            if (!Comp)
+                continue;
+            if (Comp->IsA<USceneComponent>())
+                continue;
+
+            FString Label = BuildComponentDisplayLabel(Comp);
+
+            ImGui::Indent(12.0f);
+            ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+            if (!bActorSelected && SelectedComponent == Comp)
+                Flags |= ImGuiTreeNodeFlags_Selected;
+
+            ImGui::TreeNodeEx(Comp, Flags, "%s", Label.c_str());
+            if (ImGui::IsItemClicked())
+            {
+                SelectedComponent = Comp;
+                bActorSelected = false;
+            }
+            if (UScriptComponent* ScriptComponent = Cast<UScriptComponent>(Comp))
+            {
+                FString DroppedScriptPath;
+                if (AcceptLuaScriptDrop(DroppedScriptPath))
+                {
+                    AssignLuaScriptToComponent(ScriptComponent, DroppedScriptPath);
+                }
+            }
+
+            if (ImGui::BeginPopupContextItem())
+            {
+                if (ImGui::MenuItem("Delete"))
+                {
+                    ComponentToDelete = Comp;
+                }
+                ImGui::EndPopup();
+            }
+
+            ImGui::Unindent(12.0f);
+        }
+
+        if (ComponentToDelete)
+        {
+            Actor->RemoveComponent(ComponentToDelete);
+            if (SelectedComponent == ComponentToDelete)
+            {
+                SelectedComponent = nullptr;
+                bActorSelected = true;
+            }
+        }
+        ImGui::TreePop();
     }
 }
 
@@ -921,6 +974,38 @@ void FEditorDetailsPanel::RenderSceneComponentNode(USceneComponent* Comp)
         bActorSelected = false;
     }
 
+    bool bDeleted = false;
+    if (ImGui::BeginPopupContextItem())
+    {
+        // Root Component는 삭제할 수 없도록 예외 처리
+        if (ImGui::MenuItem("Delete", nullptr, false, !bIsRoot))
+        {
+            bDeleted = true;
+        }
+        if (bIsRoot && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        {
+            ImGui::SetTooltip("Root Component cannot be deleted.");
+        }
+        ImGui::EndPopup();
+    }
+
+    if (bDeleted)
+    {
+        AActor* Actor = Comp->GetOwner();
+        if (Actor)
+        {
+            Actor->RemoveComponent(Comp);
+            if (SelectedComponent == Comp)
+            {
+                SelectedComponent = nullptr;
+                bActorSelected = true;
+            }
+        }
+        if (bOpen)
+            ImGui::TreePop();
+        return;
+    }
+
     if (bOpen)
     {
         for (USceneComponent* Child : Children)
@@ -929,6 +1014,66 @@ void FEditorDetailsPanel::RenderSceneComponentNode(USceneComponent* Comp)
         }
         ImGui::TreePop();
     }
+}
+
+bool FEditorDetailsPanel::AcceptLuaScriptDrop(FString& OutScriptPath)
+{
+    if (!ImGui::BeginDragDropTarget())
+    {
+        return false;
+    }
+
+    bool bAccepted = false;
+    if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(LuaScriptPayloadType))
+    {
+        const char* ScriptPath = static_cast<const char*>(Payload->Data);
+        if (ScriptPath && Payload->DataSize > 0)
+        {
+            OutScriptPath = ScriptPath;
+            bAccepted = !OutScriptPath.empty();
+        }
+    }
+
+    ImGui::EndDragDropTarget();
+    return bAccepted;
+}
+
+UScriptComponent* FEditorDetailsPanel::FindOrAddScriptComponent(AActor* Actor)
+{
+    if (!Actor)
+    {
+        return nullptr;
+    }
+
+    for (UActorComponent* Component : Actor->GetComponents())
+    {
+        if (UScriptComponent* ScriptComponent = Cast<UScriptComponent>(Component))
+        {
+            return ScriptComponent;
+        }
+    }
+
+    return Cast<UScriptComponent>(Actor->AddComponentByClass(UScriptComponent::StaticClass()));
+}
+
+bool FEditorDetailsPanel::AssignLuaScriptToActor(AActor* Actor, const FString& ScriptPath)
+{
+    UScriptComponent* ScriptComponent = FindOrAddScriptComponent(Actor);
+    return AssignLuaScriptToComponent(ScriptComponent, ScriptPath);
+}
+
+bool FEditorDetailsPanel::AssignLuaScriptToComponent(UScriptComponent* ScriptComponent, const FString& ScriptPath)
+{
+    if (!ScriptComponent || ScriptPath.empty())
+    {
+        return false;
+    }
+
+    ScriptComponent->SetScriptPath(ScriptPath);
+    SelectedComponent = ScriptComponent;
+    LastSelectedActor = ScriptComponent->GetOwner();
+    bActorSelected = false;
+    return true;
 }
 
 void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)
@@ -1650,12 +1795,26 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
     case EPropertyType::String:
     {
         FString* Val = static_cast<FString*>(Prop.ValuePtr);
+        const bool bAcceptLuaScriptDrop = Prop.Name == "Script";
         char Buf[256];
         strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
         if (ImGui::InputText(WidgetLabel.c_str(), Buf, sizeof(Buf)))
         {
             *Val = Buf;
             bChanged = true;
+        }
+        if (bAcceptLuaScriptDrop && ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(LuaScriptPayloadType))
+            {
+                const char* ScriptPath = static_cast<const char*>(Payload->Data);
+                if (ScriptPath && Payload->DataSize > 0)
+                {
+                    *Val = ScriptPath;
+                    bChanged = true;
+                }
+            }
+            ImGui::EndDragDropTarget();
         }
         break;
     }

@@ -985,6 +985,7 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
             }
         }
 
+        // Pilot mode 오버레이 표시
         if (ActiveViewportClient && ActiveViewportClient->IsPilotingActor())
         {
             TArray<FString> PilotLines;
@@ -1033,6 +1034,47 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
                     PilotTextPos.y += PilotLineHeight;
                 }
             }
+        }
+
+        // 우상단 "No Camera" 경고 오버레이
+        if (OverlaySystem.IsNoCameraWarningEnabled())
+        {
+            const float WarningFontSize = ImGui::GetFontSize() * 1.6f;
+            const char* WarningText = "[ WARNING ] No Camera::Main found in Scene!";
+            ImVec2 TextSize = OverlayFont->CalcTextSizeA(WarningFontSize, FLT_MAX, 0.0f, WarningText);
+
+            const float WarningPadding = 18.0f;
+            const ImVec2 WarningBoxSize(TextSize.x + WarningPadding * 2.0f, TextSize.y + WarningPadding * 2.0f);
+            
+            const ImVec2 WarningPos(
+                OverlayAnchorRect.X + OverlayAnchorRect.Width - WarningBoxSize.x - 16.0f,
+                OverlayAnchorRect.Y + Toolbar.GetDesiredHeight() + 16.0f
+            );
+
+            // 반투명 검은 배경 박스
+            OverlayDrawList->AddRectFilled(
+                WarningPos,
+                ImVec2(WarningPos.x + WarningBoxSize.x, WarningPos.y + WarningBoxSize.y),
+                IM_COL32(0, 0, 0, 180),
+                8.0f
+            );
+
+            // 붉은색 테두리에 붉은색 텍스트
+            OverlayDrawList->AddRect(
+                WarningPos,
+                ImVec2(WarningPos.x + WarningBoxSize.x, WarningPos.y + WarningBoxSize.y),
+                IM_COL32(255, 60, 60, 200),
+                8.0f,
+                0,
+                2.0f
+            );
+            OverlayDrawList->AddText(
+                OverlayFont,
+                WarningFontSize,
+                ImVec2(WarningPos.x + WarningPadding, WarningPos.y + WarningPadding),
+                IM_COL32(255, 80, 80, 255),
+                WarningText
+            );
         }
     }
 

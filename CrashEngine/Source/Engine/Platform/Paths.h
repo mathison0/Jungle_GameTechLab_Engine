@@ -16,6 +16,7 @@ public:
     static std::wstring AssetDir();    // Asset/
     static std::wstring ContentDir();  // Asset/Content/
     static std::wstring EditorDir();   // Asset/Editor/
+	static std::wstring ScriptsDir();  // Asset/Scripts/
     static std::wstring ShaderDir();   // Shaders/
     static std::wstring SavedDir();    // Saved/
     static std::wstring ShaderCacheDir(); // Saved/ShaderCache/

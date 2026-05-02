@@ -59,9 +59,9 @@ public:
     void CreateCamera();
     void DestroyCamera();
     void ResetCamera();
-    UCameraComponent* GetCamera() const { return Camera; }
+    UCameraComponent* GetCamera() const override { return Camera; }
 
-    void Tick(float DeltaTime);
+    void Tick(float DeltaTime) override;
     void PilotSelectedActor(AActor* Actor);
     void StopPilotingActor();
     void UpdateViewFromPilotedActor();
@@ -100,10 +100,10 @@ public:
     void ResetInputState() override;
     void ResetKeyboardInputState() override;
 
-	const FRect& GetViewportScreenRect() const { return ViewportScreenRect; }
+    const FRect& GetViewportScreenRect() const { return ViewportScreenRect; }
     const FRect& GetViewportFrameRect() const { return ViewportFrameRect; }
 
-    void BeginInputFrame();
+    void BeginInputFrame() override;
     bool ConsumeContextMenuRequest(FEditorViewportContextMenuRequest& OutRequest);
 
 	FEditorViewportInputController* GetInputController() const

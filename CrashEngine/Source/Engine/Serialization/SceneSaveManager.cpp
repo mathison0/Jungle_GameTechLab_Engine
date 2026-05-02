@@ -227,6 +227,7 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor)
     using namespace json;
     JSON a = json::Object();
     a[SceneKeys::ClassName] = Actor->GetClass()->GetName();
+    a[SceneKeys::Name] = Actor->GetFName().ToString();
     a[SceneKeys::Visible] = Actor->IsVisible();
 
     // RootComponent 트리 직렬화
@@ -581,6 +582,11 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
             if (ActorJSON.hasKey(SceneKeys::Visible))
             {
                 Actor->SetVisible(ActorJSON[SceneKeys::Visible].ToBool());
+            }
+
+            if (ActorJSON.hasKey(SceneKeys::Name))
+            {
+                Actor->SetFName(FName(ActorJSON[SceneKeys::Name].ToString()));
             }
 
             // RootComponent 트리 복원

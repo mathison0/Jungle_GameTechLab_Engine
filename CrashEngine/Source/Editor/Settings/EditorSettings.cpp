@@ -55,7 +55,6 @@ constexpr const char* SplitterRatios = "SplitterRatios";
 
 // UI Panels
 constexpr const char* UIWidgets = "UIWidgets";
-constexpr const char* ShowConsole = "ShowConsole";
 constexpr const char* ShowControlPanel = "ShowControlPanel";
 constexpr const char* ShowPropertyWindow = "ShowPropertyWindow";
 constexpr const char* ShowSceneManager = "ShowSceneManager";
@@ -143,7 +142,6 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 
     // UI Panels
     JSON WidgetsObj = Object();
-    WidgetsObj[Key::ShowConsole] = UI.bConsole;
     WidgetsObj[Key::ShowControlPanel] = UI.bControl;
     WidgetsObj[Key::ShowPropertyWindow] = UI.bProperty;
     WidgetsObj[Key::ShowSceneManager] = UI.bScene;
@@ -322,8 +320,6 @@ void FEditorSettings::LoadFromFile(const FString& Path)
     if (Root.hasKey(Key::UIWidgets))
     {
         JSON W = Root[Key::UIWidgets];
-        if (W.hasKey(Key::ShowConsole))
-            UI.bConsole = W[Key::ShowConsole].ToBool();
         if (W.hasKey(Key::ShowControlPanel))
             UI.bControl = W[Key::ShowControlPanel].ToBool();
         if (W.hasKey(Key::ShowPropertyWindow))
