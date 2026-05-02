@@ -17,6 +17,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SceneComponent.h"
+#include "Component/ScriptComponent.h"
 #include "Core/PropertyTypes.h"
 #include "Core/ClassTypes.h"
 #include "Resource/ResourceManager.h"
@@ -30,6 +31,7 @@
 #include <Windows.h>
 #include <commdlg.h>
 #include <cctype>
+#include <cstring>
 #include <cmath>
 #include <filesystem>
 #include <functional>
@@ -277,24 +279,30 @@ static FString BuildShadowAtlasOwnerLabel(const FShadowAtlasOwnerInfo& Info)
 
 static FString GetEditorFriendlyPropertyName(const FString& RawName)
 {
-    if (RawName == "bTickEnable")
+    constexpr const char* LuaPropertyPrefix = "Lua.";
+    FString Name = RawName;
+    if (Name.rfind(LuaPropertyPrefix, 0) == 0)
+    {
+        Name = Name.substr(std::strlen(LuaPropertyPrefix));
+    }
+
+    if (Name == "bTickEnable")
     {
         return "Tick Enabled";
     }
-    if (RawName == "bAffectsWorld")
+    if (Name == "bAffectsWorld")
     {
         return "Affects World";
     }
-    if (RawName == "Cast Shadows")
+    if (Name == "Cast Shadows")
     {
         return "Cast Shadows";
     }
-    if (RawName == "CSM Max Distance")
+    if (Name == "CSM Max Distance")
     {
         return "CSM Max Distance";
     }
 
-    FString Name = RawName;
     if (Name.size() > 1 && Name[0] == 'b' && std::isupper(static_cast<unsigned char>(Name[1])))
     {
         Name.erase(Name.begin());
@@ -867,6 +875,11 @@ void FEditorDetailsPanel::RenderComponentTree(AActor* Actor)
         SelectedComponent = nullptr;
         bActorSelected = true;
     }
+    FString DroppedActorScriptPath;
+    if (AcceptLuaScriptDrop(DroppedActorScriptPath))
+    {
+        AssignLuaScriptToActor(Actor, DroppedActorScriptPath);
+    }
 
     if (bActorOpen)
     {
@@ -898,6 +911,14 @@ void FEditorDetailsPanel::RenderComponentTree(AActor* Actor)
             {
                 SelectedComponent = Comp;
                 bActorSelected = false;
+            }
+            if (UScriptComponent* ScriptComponent = Cast<UScriptComponent>(Comp))
+            {
+                FString DroppedScriptPath;
+                if (AcceptLuaScriptDrop(DroppedScriptPath))
+                {
+                    AssignLuaScriptToComponent(ScriptComponent, DroppedScriptPath);
+                }
             }
 
             if (ImGui::BeginPopupContextItem())
@@ -993,6 +1014,66 @@ void FEditorDetailsPanel::RenderSceneComponentNode(USceneComponent* Comp)
         }
         ImGui::TreePop();
     }
+}
+
+bool FEditorDetailsPanel::AcceptLuaScriptDrop(FString& OutScriptPath)
+{
+    if (!ImGui::BeginDragDropTarget())
+    {
+        return false;
+    }
+
+    bool bAccepted = false;
+    if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(LuaScriptPayloadType))
+    {
+        const char* ScriptPath = static_cast<const char*>(Payload->Data);
+        if (ScriptPath && Payload->DataSize > 0)
+        {
+            OutScriptPath = ScriptPath;
+            bAccepted = !OutScriptPath.empty();
+        }
+    }
+
+    ImGui::EndDragDropTarget();
+    return bAccepted;
+}
+
+UScriptComponent* FEditorDetailsPanel::FindOrAddScriptComponent(AActor* Actor)
+{
+    if (!Actor)
+    {
+        return nullptr;
+    }
+
+    for (UActorComponent* Component : Actor->GetComponents())
+    {
+        if (UScriptComponent* ScriptComponent = Cast<UScriptComponent>(Component))
+        {
+            return ScriptComponent;
+        }
+    }
+
+    return Cast<UScriptComponent>(Actor->AddComponentByClass(UScriptComponent::StaticClass()));
+}
+
+bool FEditorDetailsPanel::AssignLuaScriptToActor(AActor* Actor, const FString& ScriptPath)
+{
+    UScriptComponent* ScriptComponent = FindOrAddScriptComponent(Actor);
+    return AssignLuaScriptToComponent(ScriptComponent, ScriptPath);
+}
+
+bool FEditorDetailsPanel::AssignLuaScriptToComponent(UScriptComponent* ScriptComponent, const FString& ScriptPath)
+{
+    if (!ScriptComponent || ScriptPath.empty())
+    {
+        return false;
+    }
+
+    ScriptComponent->SetScriptPath(ScriptPath);
+    SelectedComponent = ScriptComponent;
+    LastSelectedActor = ScriptComponent->GetOwner();
+    bActorSelected = false;
+    return true;
 }
 
 void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)

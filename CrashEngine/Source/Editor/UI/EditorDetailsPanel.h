@@ -8,6 +8,7 @@
 class UActorComponent;
 class AActor;
 class ULightComponent;
+class UScriptComponent;
 class FEditorDetailsPanel;
 
 void RenderEditorShadowAtlasDebugWindow(FEditorDetailsPanel& DetailsPanel);
@@ -40,6 +41,10 @@ private:
     void RenderActorProperties(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
     void RenderLightShadowSettings(ULightComponent* LightComponent);
     bool RenderDetailsPanel(TArray<struct FPropertyDescriptor>& Props, int32& Index);
+    bool AcceptLuaScriptDrop(FString& OutScriptPath);
+    bool AssignLuaScriptToActor(AActor* Actor, const FString& ScriptPath);
+    bool AssignLuaScriptToComponent(UScriptComponent* ScriptComponent, const FString& ScriptPath);
+    UScriptComponent* FindOrAddScriptComponent(AActor* Actor);
 
     static FString OpenObjFileDialog();
 

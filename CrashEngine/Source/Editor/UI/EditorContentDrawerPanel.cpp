@@ -5,6 +5,7 @@
 #include "Core/Logging/LogMacros.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/LevelEditorViewportClient.h"
+#include "Platform/PlatformProcess.h"
 #include "Platform/Paths.h"
 #include "Serialization/SceneSaveManager.h"
 
@@ -365,6 +366,14 @@ void FEditorContentDrawerPanel::DrawItemTile(const FContentItem& Item)
     else if (!Item.bDirectory && Item.Extension == ".scene" && bHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
     {
         LoadSceneFile(Item.FullPath);
+    }
+    else if (!Item.bDirectory && CurrentRoot == EContentRoot::Scripts && Item.Extension == ".lua" && bHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+    {
+        if (!FPlatformProcess::OpenFile(Item.FullPath))
+        {
+            const FString FilePath = FPaths::FromPath(Item.FullPath);
+            UE_LOG(EditorUI, Warning, "Failed to open Lua script: %s", FilePath.c_str());
+        }
     }
 
     if (!Item.bDirectory && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
