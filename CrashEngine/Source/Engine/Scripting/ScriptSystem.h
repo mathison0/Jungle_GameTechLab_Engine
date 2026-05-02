@@ -6,6 +6,7 @@
 #include "Core/CoreTypes.h"
 
 class FLuaScriptAsset;
+struct FLuaScriptPropertyOverride;
 
 class FScriptSystem
 {
@@ -21,11 +22,12 @@ public:
 	void ScanScripts();
 	void LoadAllScripts();
 	void ReloadChangedScripts() const;
+	void TickEditor(float DeltaTime);
 	
 	FLuaScriptAsset* GetScriptAsset(const FString& RelativePath);
 	const TArray<FString>& GetAvailableScriptPaths() const { return AvailableScriptPaths; }
 
-	sol::table CreateScriptInstance(const FString& RelativePath);
+	sol::table CreateScriptInstance(const FString& RelativePath, const TArray<FLuaScriptPropertyOverride>* PropertyOverrides = nullptr);
 private:
 	FString MakeScriptRelativePath(const std::filesystem::path& FullPath) const;
 
@@ -38,4 +40,5 @@ private:
 
 	TMap<FString, std::unique_ptr<FLuaScriptAsset>> ScriptAssets;
 	TArray<FString> AvailableScriptPaths;
+	float EditorRefreshAccumulator = 0.0f;
 };
