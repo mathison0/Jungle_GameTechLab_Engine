@@ -68,6 +68,8 @@ FGraphicsProgramDesc MakeCustomGraphicsDesc(const FString& InPath)
 }
 } // namespace
 
+bool FShaderManager::bHotReloadEnabled = true;
+
 // ========== 생명 주기 ==========
 
 /*
@@ -122,7 +124,7 @@ void FShaderManager::Release()
 void FShaderManager::TickHotReload()
 {
 #if defined(_DEBUG)
-    if (!Device)
+    if (!bHotReloadEnabled || !Device)
     {
         return;
     }

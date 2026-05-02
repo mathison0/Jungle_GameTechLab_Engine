@@ -1,6 +1,7 @@
 ﻿// 렌더 영역의 세부 동작을 구현합니다.
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
 #include "Render/Resources/Shadows/ShadowFilterSettings.h"
+#include "Render/Resources/Shaders/ShaderManager.h"
 
 namespace ViewModePassConfigUtils
 {
@@ -436,7 +437,10 @@ void FViewModePassRegistry::Release()
 
 void FViewModePassRegistry::TickHotReload()
 {
-    VariantCache.TickHotReload();
+    if (FShaderManager::IsHotReloadEnabled())
+    {
+        VariantCache.TickHotReload();
+    }
 }
 
 

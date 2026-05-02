@@ -36,6 +36,9 @@ public:
     FGraphicsProgram* GetCustomShader(const FString& Key);
     FGraphicsProgram* CreateCustomShader(ID3D11Device* InDevice, const wchar_t* InFilePath);
 
+    static void SetHotReloadEnabled(bool bInEnable) { bHotReloadEnabled = bInEnable; }
+    static bool IsHotReloadEnabled() { return bHotReloadEnabled; }
+
 private:
     FShaderManager() = default;
 
@@ -48,6 +51,7 @@ private:
     std::array<bool, static_cast<uint32>(EShaderType::MAX)> MissingBuiltInShaderWarnings{};
     TMap<FString, FCustomShaderCacheEntry> CustomShaderCache;
 
+    static bool   bHotReloadEnabled;
     ID3D11Device* Device         = nullptr;
     bool          bIsInitialized = false;
 };

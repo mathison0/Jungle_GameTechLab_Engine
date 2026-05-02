@@ -154,6 +154,9 @@ void UEditorEngine::OnWindowResized(uint32 Width, uint32 Height)
 
 void UEditorEngine::Tick(float DeltaTime)
 {
+    // PIE or Gameplay 중에는 셰이더 핫 리로드를 비활성화하여 스터터링 방지
+    FShaderManager::SetHotReloadEnabled(!IsPlayingInEditor());
+
     if (bRequestEndPlayMapQueued)
     {
         bRequestEndPlayMapQueued = false;
