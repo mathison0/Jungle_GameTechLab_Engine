@@ -38,6 +38,13 @@ private:
     void DrawAssetArea();
     void DrawBreadcrumb();
     void DrawItemTile(const FContentItem& Item);
+    void DrawItemContextMenu(const FContentItem& Item);
+    void DrawAssetAreaContextMenu();
+    void OpenNewLuaScriptPopup();
+    void DrawNewLuaScriptPopup();
+    bool CreateLuaScriptFromInput();
+    void OpenContentItem(const FContentItem& Item);
+    void OpenLuaScriptFile(const std::filesystem::path& ScriptPath);
     void LoadSceneFile(const std::filesystem::path& ScenePath);
 
     TArray<FContentItem> BuildCurrentItems() const;
@@ -51,9 +58,13 @@ private:
 
 private:
     std::array<char, 128> SearchBuf{};
+    std::array<char, 128> NewLuaScriptNameBuf{};
+    FString NewLuaScriptError;
     TSet<FString> OpenDirectoryKeys;
     EContentRoot CurrentRoot = EContentRoot::Content;
     std::filesystem::path CurrentDirectory;
     bool bInitialized = false;
     bool bReclaimSearchFocus = false;
+    bool bOpenNewLuaScriptPopup = false;
+    bool bFocusNewLuaScriptName = false;
 };
