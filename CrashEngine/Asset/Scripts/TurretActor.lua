@@ -5,7 +5,6 @@ local Script = {
         TargetTag = { type = "string", default = "Player" },
         LeftHead = { type = "string", default = "LeftHead" },
         RightHead = { type = "string", default = "RightHead" },
-        RotateSpeed = { type = "float", default = 90.0, min = 0.0, max = 1080.0, speed = 10.0 },
         TargetSearchRadius = { type = "float", default = 10000.0, min = 0.0, max = 100000.0, speed = 100.0 },
     }
 }
