@@ -241,6 +241,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\Scripting\LuaEngineBinding.cpp" />
     <ClCompile Include="Source\Engine\Lua\CoroutineCommand.cpp" />
     <ClCompile Include="Source\Engine\Lua\LuaCoroutine.cpp" />
     <ClCompile Include="Source\Engine\Scripting\LuaScriptAsset.cpp" />
@@ -504,6 +505,7 @@
     <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Scripting\LuaEngineBinding.h" />
     <ClInclude Include="Source\Engine\Lua\CoroutineCommand.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />

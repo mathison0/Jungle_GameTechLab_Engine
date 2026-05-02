@@ -3,6 +3,7 @@
 #include "sol.hpp"
 #include "Engine/LUA/LuaCoroutine.h"
 #include "Engine/Scripting/LuaScriptTypes.h"
+#include "Engine/Scripting/LuaEngineBinding.h"
 
 class UScriptComponent : public UActorComponent
 {
