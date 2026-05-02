@@ -96,6 +96,25 @@ float FVector::DistSquared(const FVector& V1, const FVector& V2)
     return (DX * DX) + (DY * DY) + (DZ * DZ);
 }
 
+FVector FVector::MoveToward(FVector current, FVector target, float maxDistanceDelta)
+{
+    float num = target.X - current.X;
+    float num2 = target.Y - current.Y;
+    float num3 = target.Z - current.Z;
+    float num4 = num * num + num2 * num2 + num3 * num3;
+    if (num4 == 0.f || (maxDistanceDelta >= 0.f && num4 <= maxDistanceDelta * maxDistanceDelta))
+    {
+        return target;
+    }
+
+    float num5 = (float)std::sqrt(num4);
+    FVector result;
+    result.X = current.X + num / num5 * maxDistanceDelta;
+    result.Y = current.Y + num2 / num5 * maxDistanceDelta;
+    result.Z = current.Z + num3 / num5 * maxDistanceDelta;
+    return result;
+}
+
 FVector FVector::operator+(const FVector& Other) const
 {
     FVector ret;
