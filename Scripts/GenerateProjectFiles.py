@@ -33,6 +33,17 @@ CONFIGURATIONS = [
     ("Game", "x64"),
 ]
 
+SOLUTION_CONFIGURATIONS = [
+    ("Debug", "x64", "Debug", "x64"),
+    ("Debug", "x86", "Debug", "Win32"),
+    ("Game", "x64", "Game", "x64"),
+    ("Game", "x86", "Game", "x64"),
+    ("ObjViewer", "x64", "ObjViewer", "x64"),
+    ("ObjViewer", "x86", "ObjViewer", "x64"),
+    ("Release", "x64", "Release", "x64"),
+    ("Release", "x86", "Release", "Win32"),
+]
+
 # Directories to recursively scan for source files
 SCAN_DIRS = ["Source", "ThirdParty"]
 
@@ -453,7 +464,7 @@ def generate_sln():
     lines.append("")
     lines.append("Microsoft Visual Studio Solution File, Format Version 12.00")
     lines.append("# Visual Studio Version 17")
-    lines.append("VisualStudioVersion = 17.14.37012.4 d17.14")
+    lines.append("VisualStudioVersion = 17.14.37012.4")
     lines.append("MinimumVisualStudioVersion = 10.0.40219.1")
 
     guid_upper = PROJECT_GUID.upper()
@@ -467,17 +478,15 @@ def generate_sln():
 
     # SolutionConfigurationPlatforms
     lines.append("\tGlobalSection(SolutionConfigurationPlatforms) = preSolution")
-    for cfg, plat in CONFIGURATIONS:
-        sln_plat = "x86" if plat == "Win32" else plat
-        lines.append(f"\t\t{cfg}|{sln_plat} = {cfg}|{sln_plat}")
+    for sln_cfg, sln_plat, _, _ in SOLUTION_CONFIGURATIONS:
+        lines.append(f"\t\t{sln_cfg}|{sln_plat} = {sln_cfg}|{sln_plat}")
     lines.append("\tEndGlobalSection")
 
     # ProjectConfigurationPlatforms
     lines.append("\tGlobalSection(ProjectConfigurationPlatforms) = postSolution")
-    for cfg, plat in CONFIGURATIONS:
-        sln_plat = "x86" if plat == "Win32" else plat
-        lines.append(f"\t\t{guid_upper}.{cfg}|{sln_plat}.ActiveCfg = {cfg}|{plat}")
-        lines.append(f"\t\t{guid_upper}.{cfg}|{sln_plat}.Build.0 = {cfg}|{plat}")
+    for sln_cfg, sln_plat, proj_cfg, proj_plat in SOLUTION_CONFIGURATIONS:
+        lines.append(f"\t\t{guid_upper}.{sln_cfg}|{sln_plat}.ActiveCfg = {proj_cfg}|{proj_plat}")
+        lines.append(f"\t\t{guid_upper}.{sln_cfg}|{sln_plat}.Build.0 = {proj_cfg}|{proj_plat}")
     lines.append("\tEndGlobalSection")
 
     lines.append("\tGlobalSection(SolutionProperties) = preSolution")
