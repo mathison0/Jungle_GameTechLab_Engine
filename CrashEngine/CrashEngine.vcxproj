@@ -256,11 +256,13 @@
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp" />
     <ClCompile Include="Source\Editor\Subsystem\OverlayStatSystem.cpp" />
-    <ClCompile Include="Source\Editor\UI\EditorConsolePanel.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorBottomBar.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorContentDrawerPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorControlPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorDetailsPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorMainPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorMaterialPanel.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorOutputLogPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorSceneManagerPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp" />
@@ -301,7 +303,7 @@
     <ClCompile Include="Source\Engine\Component\SpotLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\TestInputComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\TankMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\UUIDTextRenderComponent.cpp" />
     <ClCompile Include="Source\Engine\Core\CoreGlobals.cpp" />
@@ -503,11 +505,13 @@
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h" />
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h" />
     <ClInclude Include="Source\Editor\Subsystem\OverlayStatSystem.h" />
-    <ClInclude Include="Source\Editor\UI\EditorConsolePanel.h" />
+    <ClInclude Include="Source\Editor\UI\EditorBottomBar.h" />
+    <ClInclude Include="Source\Editor\UI\EditorContentDrawerPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorControlPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorDetailsPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorMaterialPanel.h" />
+    <ClInclude Include="Source\Editor\UI\EditorOutputLogPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorSceneManagerPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorStatPanel.h" />
@@ -551,7 +555,7 @@
     <ClInclude Include="Source\Engine\Component\SpotLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h" />
-    <ClInclude Include="Source\Engine\Component\TestInputComponent.h" />
+    <ClInclude Include="Source\Engine\Component\TankMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h" />
     <ClInclude Include="Source\Engine\Component\UUIDTextRenderComponent.h" />
     <ClInclude Include="Source\Engine\Core\ClassTypes.h" />

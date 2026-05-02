@@ -3,7 +3,16 @@
 #include "Object/ObjectFactory.h"
 #include <cmath>
 
+#include "Core/Logging/LogMacros.h"
+
 IMPLEMENT_CLASS(UCameraComponent, USceneComponent)
+
+void UCameraComponent::BeginPlay()
+{
+    USceneComponent::BeginPlay();
+    Main = this;
+    UE_LOG(CameraComponent, Info, "Camera::Main set to %p", this);
+}
 
 FMatrix UCameraComponent::GetViewMatrix() const
 {

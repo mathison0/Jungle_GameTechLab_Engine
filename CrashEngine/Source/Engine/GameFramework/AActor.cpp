@@ -385,6 +385,8 @@ UObject* AActor::Duplicate(UObject* NewOuter) const
     {
         return nullptr;
     }
+    // 원본 이름 승계 (=PIE 복제 시 이름 유지)
+    Dup->SetFName(GetFName());
 
     // 2) 얕은 복사로 따라온 컴포넌트 컨테이너 즉시 비우기 (안전장치)
     Dup->OwnedComponents.clear();

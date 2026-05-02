@@ -26,6 +26,25 @@
 
 namespace
 {
+constexpr int32 EditorShortcutGraveKey = VK_OEM_3;
+
+bool IsValidVirtualKey(int32 Key)
+{
+    return Key >= 0 && Key < 256;
+}
+
+void ClearKeyForViewport(FInputSnapshot& Input, int32 Key)
+{
+    if (!IsValidVirtualKey(Key))
+    {
+        return;
+    }
+
+    Input.KeyDown[Key] = false;
+    Input.KeyPressed[Key] = false;
+    Input.KeyReleased[Key] = false;
+}
+
 void SaveEditorSettings()
 {
     FEditorSettings::Get().SaveToFile(FEditorSettings::GetDefaultSettingsPath());
@@ -164,9 +183,10 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
     ImGui_ImplWin32_Init((void*)InWindow->GetHWND());
     ImGui_ImplDX11_Init(InRenderer.GetFD3DDevice().GetDevice(), InRenderer.GetFD3DDevice().GetDeviceContext());
 
-    ConsolePanel.Initialize(InEditorEngine, &GetGlobalLogBuffer());
+    OutputLogPanel.Initialize(InEditorEngine, &GetGlobalLogBuffer());
     ControlPanel.Initialize(InEditorEngine);
     DetailsPanel.Initialize(InEditorEngine);
+    ContentDrawerPanel.Initialize(InEditorEngine);
     ScenePanel.Initialize(InEditorEngine);
     StatPanel.Initialize(InEditorEngine);
     UE_LOG(EditorUI, Info, "Editor main panel initialized.");
@@ -241,7 +261,6 @@ void FEditorMainPanel::Render(float DeltaTime)
         if (ImGui::BeginMenu("Windows"))
         {
             FEditorSettings& S = FEditorSettings::Get();
-            ImGui::MenuItem("Console", nullptr, &S.UI.bConsole);
             ImGui::MenuItem("Control Panel", nullptr, &S.UI.bControl);
             ImGui::MenuItem("Details", nullptr, &S.UI.bProperty);
             ImGui::MenuItem("Scene Manager", nullptr, &S.UI.bScene);
@@ -331,12 +350,6 @@ void FEditorMainPanel::Render(float DeltaTime)
 
     const FEditorSettings& Settings = FEditorSettings::Get();
 
-    if (!bHideEditorWindows && Settings.UI.bConsole)
-    {
-        SCOPE_STAT_CAT("ConsolePanel.Render", "5_UI");
-        ConsolePanel.Render(DeltaTime);
-    }
-
     if (!bHideEditorWindows && Settings.UI.bControl)
     {
         SCOPE_STAT_CAT("ControlPanel.Render", "5_UI");
@@ -367,10 +380,31 @@ void FEditorMainPanel::Render(float DeltaTime)
         DetailsPanel.RenderShadowAtlasDebugWindow();
     }
 
+    if (!bHideEditorWindows)
+    {
+        SCOPE_STAT_CAT("EditorDrawer.Render", "5_UI");
+        BottomBar.Render(DeltaTime);
+        if (BottomBar.BeginDrawerOverlay())
+        {
+            switch (BottomBar.GetVisibleDrawer())
+            {
+            case EEditorDrawer::Content:
+                ContentDrawerPanel.Render(DeltaTime);
+                break;
+            case EEditorDrawer::OutputLog:
+                OutputLogPanel.RenderContent(DeltaTime);
+                break;
+            case EEditorDrawer::None:
+            default:
+                break;
+            }
+            BottomBar.EndDrawerOverlay();
+        }
+    }
+
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
-
 
 void FEditorMainPanel::Update()
 {
@@ -429,6 +463,116 @@ void FEditorMainPanel::Update()
     }
 }
 
+void FEditorMainPanel::HandleShortcuts(const FInputSnapshot& Input, FInputSnapshot& InOutViewportInput)
+{
+    ApplyShortcutKeySuppressions(Input, InOutViewportInput);
+
+    if (bHideEditorWindows)
+    {
+        return;
+    }
+
+    // 이번 국소 패치는 PIE 중 게임 입력과 충돌하지 않도록 에디터 상태에서만 drawer 단축키를 처리합니다.
+    if (EditorEngine && EditorEngine->IsPlayingInEditor())
+    {
+        return;
+    }
+
+    const bool bCtrl = Input.Modifiers.bCtrl;
+    const bool bAlt = Input.Modifiers.bAlt;
+    const bool bShift = Input.Modifiers.bShift;
+
+    if (BottomBar.GetActiveDrawer() == EEditorDrawer::Content && bCtrl && !bAlt && Input.KeyPressed[VK_SPACE])
+    {
+        BottomBar.CloseDrawer();
+        ImGui::ClearActiveID();
+        SuppressShortcutKey(InOutViewportInput, VK_SPACE);
+        return;
+    }
+
+    if (BottomBar.GetActiveDrawer() == EEditorDrawer::OutputLog && bAlt && !bCtrl && Input.KeyPressed[EditorShortcutGraveKey])
+    {
+        BottomBar.CloseDrawer();
+        ImGui::ClearActiveID();
+        SuppressShortcutKey(InOutViewportInput, EditorShortcutGraveKey);
+        return;
+    }
+
+    ImGuiIO& IO = ImGui::GetIO();
+    const bool bTextInputActive = IO.WantTextInput;
+    const bool bAnyItemActive = ImGui::IsAnyItemActive();
+    const bool bAnyPopupOpen = ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId);
+    if (bTextInputActive || bAnyItemActive || bAnyPopupOpen)
+    {
+        return;
+    }
+
+    if (Input.KeyPressed[VK_ESCAPE] && BottomBar.IsDrawerOpen())
+    {
+        BottomBar.CloseDrawer();
+        SuppressShortcutKey(InOutViewportInput, VK_ESCAPE);
+        return;
+    }
+
+    if (bCtrl && !bAlt && Input.KeyPressed[VK_SPACE])
+    {
+        BottomBar.ToggleDrawer(EEditorDrawer::Content);
+        if (BottomBar.GetActiveDrawer() == EEditorDrawer::Content)
+        {
+            ContentDrawerPanel.RequestSearchFocus();
+        }
+        SuppressShortcutKey(InOutViewportInput, VK_SPACE);
+        return;
+    }
+
+    if (bAlt && !bCtrl && Input.KeyPressed[EditorShortcutGraveKey])
+    {
+        BottomBar.ToggleDrawer(EEditorDrawer::OutputLog);
+        if (BottomBar.GetActiveDrawer() == EEditorDrawer::OutputLog)
+        {
+            OutputLogPanel.RequestCommandInputFocus();
+        }
+        SuppressShortcutKey(InOutViewportInput, EditorShortcutGraveKey);
+        return;
+    }
+
+    if (!bCtrl && !bAlt && !bShift && Input.KeyPressed[EditorShortcutGraveKey])
+    {
+        BottomBar.OpenDrawer(EEditorDrawer::OutputLog);
+        OutputLogPanel.RequestCommandInputFocus();
+        SuppressShortcutKey(InOutViewportInput, EditorShortcutGraveKey);
+    }
+}
+
+void FEditorMainPanel::ApplyShortcutKeySuppressions(const FInputSnapshot& Input, FInputSnapshot& InOutViewportInput)
+{
+    for (int32 Key = 0; Key < 256; ++Key)
+    {
+        if (!bSuppressShortcutKeyUntilRelease[Key])
+        {
+            continue;
+        }
+
+        ClearKeyForViewport(InOutViewportInput, Key);
+
+        if (Input.KeyReleased[Key] || !Input.KeyDown[Key])
+        {
+            bSuppressShortcutKeyUntilRelease[Key] = false;
+        }
+    }
+}
+
+void FEditorMainPanel::SuppressShortcutKey(FInputSnapshot& InOutViewportInput, int32 Key)
+{
+    if (!IsValidVirtualKey(Key))
+    {
+        return;
+    }
+
+    bSuppressShortcutKeyUntilRelease[Key] = true;
+    ClearKeyForViewport(InOutViewportInput, Key);
+}
+
 void FEditorMainPanel::HideEditorWindowsForPIE()
 {
     if (bHasSavedUIVisibility)
@@ -445,7 +589,6 @@ void FEditorMainPanel::HideEditorWindowsForPIE()
     bHideEditorWindows = true;
     bShowPanelList = false;
 
-    Settings.UI.bConsole = false;
     Settings.UI.bControl = false;
     Settings.UI.bProperty = false;
     Settings.UI.bScene = false;

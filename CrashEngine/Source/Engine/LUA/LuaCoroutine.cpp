@@ -30,11 +30,13 @@ void CoroutineExecutor::Tick(const FCouroutineContext& Context)
         FString NextCommand; // 그렇다면 Command를 봅니다
         if (!Command->TryGetResultParam<FString>(0, NextCommand))
         {
+            UE_LOG([Coroutine], Warning, "Failed to read coroutine command name from yield result.");
             Command->Invalidate();
             return;
         } 
 
 		FExecuteCommand* ExecuteCommand = nullptr;
+        const char* FailureReason = nullptr;
         // Command는 LUA의 Coroutine.Yield의 첫번째 파라메터에 1:1 로 대응되야 합니다.
         if (NextCommand == "wait_time") // 기다리라네요
         {
@@ -43,6 +45,10 @@ void CoroutineExecutor::Tick(const FCouroutineContext& Context)
 			{
                 ExecuteCommand = new FWaitRealTime(TargetTime); // 대기 명령을 시간을 할당해서 설정해줍니다
 			}
+            else
+            {
+                FailureReason = "missing or invalid wait_time duration parameter";
+            }
         }
         else if (NextCommand == "wait_until") // 무언가를 기다리라네요
         {
@@ -51,6 +57,10 @@ void CoroutineExecutor::Tick(const FCouroutineContext& Context)
             {
                 ExecuteCommand = new FWaitUntilPredicate(Predicate); // 대기 명령 렛츠고
             } 
+            else
+            {
+                FailureReason = "missing or invalid wait_until predicate parameter";
+            }
         }
         else if (NextCommand == "wait_next_frame") // 다음 프레임을 기다리라네요
         {
@@ -67,6 +77,8 @@ void CoroutineExecutor::Tick(const FCouroutineContext& Context)
 			SetCommand(ExecuteCommand);
 		else
 		{
+            UE_LOG([Coroutine], Warning, "Failed to create coroutine command '%s': %s",
+                   NextCommand.c_str(), FailureReason ? FailureReason : "unknown reason");
             Command->Invalidate();
 		}
 

@@ -93,6 +93,11 @@ void FOverlayStatSystem::RecordPickingAttempt(double ElapsedMs)
     ++PickingAttemptCount;
 }
 
+void FOverlayStatSystem::ShowNoCameraWarning(bool bEnable)
+{
+    bShowNoCameraWarning = bEnable;
+}
+
 void FOverlayStatSystem::ClearDisplayFlags()
 {
     bShowFPS = false;
@@ -100,6 +105,7 @@ void FOverlayStatSystem::ClearDisplayFlags()
     bShowMemory = false;
     bShowShadow = false;
     bShowLightCull = false;
+    bShowNoCameraWarning = false;
 }
 
 void FOverlayStatSystem::ShowFPS(bool bEnable)

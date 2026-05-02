@@ -26,7 +26,8 @@ bool FScriptSystem::Initialize()
 	// sol::lib::package
 	// sol::lib::debug
 	// sol::lib::coroutine
-    Lua->open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::math, sol::lib::table, sol::lib::string);
+    Lua->open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::math, sol::lib::table, sol::lib::string, sol::lib::package);
+    BindPackagePath();
 
 	RegisterEngineAPI();
 
@@ -174,4 +175,17 @@ void FScriptSystem::RegisterEngineAPI() const
 		{
 			UE_LOG([Lua], Info, "%s", Message.c_str());
 		});
+}
+
+void FScriptSystem::BindPackagePath() const
+{
+    sol::table Package = (*Lua)["package"];
+
+    std::string OldPath = Package["path"].get_or<std::string>("");
+
+    std::string ExtraPath =
+        ";Asset/Scripts/?.lua"
+        ";Asset/Scripts/?/init.lua";
+
+    Package["path"] = OldPath + ExtraPath;
 }

@@ -93,7 +93,8 @@ void UEngine::Tick(float DeltaTime)
 
     if (GameViewportClient)
     {
-        GameViewportClient->ResetInputState();
+        GameViewportClient->BeginInputFrame();
+        GameViewportClient->Tick(DeltaTime);
     }
 
     WorldTick(DeltaTime);

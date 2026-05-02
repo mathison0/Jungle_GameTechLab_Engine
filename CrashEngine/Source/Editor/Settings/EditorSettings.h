@@ -41,7 +41,6 @@ public:
     // FUIVisibility는 에디터 처리에 필요한 데이터를 묶는 구조체입니다.
     struct FUIVisibility
     {
-        bool bConsole = true;
         bool bControl = true;
         bool bProperty = true;
         bool bScene = true;

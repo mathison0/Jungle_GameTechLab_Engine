@@ -1,6 +1,6 @@
-local Script = {}
-
 local Co = require("LuaCoroutine")
+
+local Script = {}
 
 
 EnemyAI = {}

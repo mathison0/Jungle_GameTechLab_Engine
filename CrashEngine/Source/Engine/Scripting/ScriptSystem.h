@@ -30,6 +30,8 @@ private:
 	FString MakeScriptRelativePath(const std::filesystem::path& FullPath) const;
 
 	void RegisterEngineAPI() const;
+
+	void BindPackagePath() const;
 	
 private:
 	std::unique_ptr<sol::state> Lua;
