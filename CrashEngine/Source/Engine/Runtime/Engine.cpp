@@ -130,11 +130,30 @@ void UEngine::BeginPlay()
     if (!StartupScenePath.empty())
     {
         UE_LOG(Engine, Info, "Loading startup scene: %s", StartupScenePath.c_str());
+        
+        FWorldContext LoadCtx;
+        FPerspectiveCameraData DummyCam;
+        FSceneSaveManager::LoadSceneFromJSON(FPaths::ToUtf8(FPaths::ContentDir()) + "Scene/" + StartupScenePath, LoadCtx, DummyCam);
+        
+        if (LoadCtx.World)
+        {
+            LoadCtx.WorldType = EWorldType::Game;
+            LoadCtx.World->SetWorldType(EWorldType::Game);
+            WorldList.push_back(LoadCtx);
+            SetActiveWorld(LoadCtx.ContextHandle);
+        }
+        else
+        {
+            UE_LOG(Engine, Error, "Failed to load startup scene. Creating default world.");
+            FWorldContext& Context = CreateWorldContext(EWorldType::Game, FName("GameWorld"));
+            SetActiveWorld(Context.ContextHandle);
+        }
+    }
+    else
+    {
+        // 지정된 시작 씬이 없으면 빈 기본 월드 생성
         FWorldContext& Context = CreateWorldContext(EWorldType::Game, FName("GameWorld"));
         SetActiveWorld(Context.ContextHandle);
-
-        FPerspectiveCameraData DummyCam;
-        FSceneSaveManager::LoadSceneFromJSON(FPaths::ToUtf8(FPaths::ContentDir()) + "Scene/" + StartupScenePath, Context, DummyCam);
     }
 
     FWorldContext* Context = GetWorldContextFromHandle(ActiveWorldHandle);
@@ -186,6 +205,13 @@ void UEngine::Render(float DeltaTime)
 
     UWorld* World = GetWorld();
     UCameraComponent* Camera = World ? World->GetActiveCamera() : nullptr;
+
+    // 활성 카메라가 없으면 전역 Main 카메라로 폴백합니다.
+    if (!Camera)
+    {
+        Camera = UCameraComponent::Main;
+    }
+
     FScene* Scene = nullptr;
     if (Camera)
     {
@@ -194,6 +220,7 @@ void UEngine::Render(float DeltaTime)
 
         SceneView.SetCameraInfo(Camera);
         SceneView.SetRenderSettings(ViewMode, ShowFlags);
+
         if (Viewport && DeviceContext)
         {
             if (Viewport->ApplyPendingResize())
@@ -201,12 +228,16 @@ void UEngine::Render(float DeltaTime)
                 Camera->OnResize(static_cast<int32>(Viewport->GetWidth()), static_cast<int32>(Viewport->GetHeight()));
             }
 
-            Viewport->BeginRender(DeviceContext);
+            // Viewport 기반 렌더링 환경 설정
             RenderTargets.SetFromViewport(Viewport);
             SceneView.SetViewportInfo(Viewport);
         }
         else
         {
+            // Viewport가 없는 경우 (Standalone 기본), 디바이스의 메인 백버퍼 정보를 사용합니다.
+            const D3D11_VIEWPORT& DevVP = Renderer.GetFD3DDevice().GetViewport();
+            SceneView.ViewportWidth = DevVP.Width;
+            SceneView.ViewportHeight = DevVP.Height;
             Renderer.ReleaseViewModeSurfaces();
         }
 
@@ -221,7 +252,8 @@ void UEngine::Render(float DeltaTime)
         CollectContext.ViewModePassRegistry = Renderer.GetViewModePassRegistry();
         CollectContext.ActiveViewMode = SceneView.ViewMode;
 
-        Renderer.CollectWorld(World, CollectContext);
+        UWorld* CameraWorld = Camera->GetWorld();
+        Renderer.CollectWorld(CameraWorld ? CameraWorld : World, CollectContext);
         Renderer.CollectDebugRender(*Scene);
     }
     else
@@ -232,14 +264,18 @@ void UEngine::Render(float DeltaTime)
 
     {
         FRenderPipelineContext PipelineContext = Renderer.CreatePipelineContext(SceneView, &RenderTargets, Scene);
-        if (Viewport && Renderer.GetViewModePassRegistry() &&
-            Renderer.GetViewModePassRegistry()->HasConfig(SceneView.ViewMode))
+        
+        // 지연된 Surface 확보
+        if (Renderer.GetViewModePassRegistry() && Renderer.GetViewModePassRegistry()->HasConfig(SceneView.ViewMode))
         {
             PipelineContext.ViewMode.Surfaces =
-                Renderer.AcquireViewModeSurfaces(Viewport, Viewport->GetWidth(), Viewport->GetHeight());
+                Renderer.AcquireViewModeSurfaces(Viewport, (uint32)SceneView.ViewportWidth, (uint32)SceneView.ViewportHeight);
         }
+
         Renderer.BuildDrawCommands(PipelineContext);
-        Renderer.RunRootPipeline(ERenderPipelineType::DefaultRootPipeline, PipelineContext);
+        
+        // RenderFrame을 통해 BeginFrame -> RunRootPipeline -> EndFrame(Present) 과정을 완결합니다.
+        Renderer.RenderFrame(ERenderPipelineType::DefaultRootPipeline, PipelineContext);
     }
 
     if (FRenderPass* Pass = Renderer.GetPassRegistry().FindPass(ERenderPassNodeType::ShadowMapPass))
@@ -257,6 +293,11 @@ void UEngine::OnWindowResized(uint32 Width, uint32 Height)
 
     UE_LOG(Engine, Debug, "Window resized to %ux%u.", Width, Height);
     Renderer.GetFD3DDevice().OnResizeViewport(Width, Height);
+
+    if (GameViewportClient && GameViewportClient->GetViewport())
+    {
+        GameViewportClient->GetViewport()->Resize(Width, Height);
+    }
 }
 
 void UEngine::WorldTick(float DeltaTime)

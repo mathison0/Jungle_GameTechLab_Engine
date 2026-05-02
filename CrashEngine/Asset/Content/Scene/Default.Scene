@@ -13,17 +13,21 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "635",
+      "PrimitiveKey" : "79",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
             "Properties" : {
               "Billboard" : true,
+              "Block Component" : true,
               "Font" : "Default",
               "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Text" : "UUID : 11",
@@ -35,12 +39,79 @@
           }],
         "ClassName" : "UStaticMeshComponent",
         "Properties" : {
+          "Block Component" : true,
           "Element 0" : {
             "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
           },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
           "Location" : [0.000000, 0.000000, 0.000000],
+          "Mobility" : 1,
           "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "bVisible" : true
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "MainCamera",
+      "NonSceneComponents" : [],
+      "PrimitiveKey" : "84",
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Properties" : {
+              "Billboard" : true,
+              "Block Component" : true,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 84",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UCameraComponent",
+            "Properties" : {
+              "FOV" : 1.047198,
+              "Far Z" : 1000.000000,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Near Z" : 0.100000,
+              "Ortho Width" : 10.000000,
+              "Orthographic" : false,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UStaticMeshComponent",
+        "Properties" : {
+          "Block Component" : true,
+          "Element 0" : {
+            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+          },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
+          "Is Editor Helper" : false,
+          "Location" : [-10.000000, 0.000000, 0.000000],
+          "Mobility" : 1,
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
           "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
           "Visible" : true,
@@ -54,17 +125,24 @@
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
   "ContextName" : "Default",
-  "Name" : "LuaTest",
+  "Name" : "Default",
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
     "Location" : [5.764837, 8.347419, 6.006690],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000004, 32.739746, -111.228828]
+    "Rotation" : [0.000000, 30.219757, -121.728951]
   },
   "Primitives" : {
-    "635" : {
+    "79" : {
       "Location" : [0.000000, 0.000000, 0.000000],
+      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
+      "Rotation" : [0.000000, -0.000000, 0.000000],
+      "Scale" : [1.000000, 1.000000, 1.000000],
+      "Type" : "StaticMeshComp"
+    },
+    "84" : {
+      "Location" : [-10.000000, 0.000000, 0.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],
