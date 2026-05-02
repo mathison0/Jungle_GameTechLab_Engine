@@ -83,6 +83,7 @@ void UAudioZoneComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
 	OutProps.push_back({ "Scale", EPropertyType::Vec3, &RelativeScale3D, 0.0f, 0.0f, 0.1f });
 	OutProps.push_back({ "Box Extent", EPropertyType::Vec3, &BoxExtent, 0.01f, 10000.0f, 0.1f });
 	OutProps.push_back({ "Priority", EPropertyType::Int, &Priority, -1000.0f, 1000.0f, 1.0f });
+	OutProps.push_back({ "Show Audio Range", EPropertyType::Enum, &AudioRangeVisibility, 0.0f, 0.0f, 0.0f, AudioRangeVisibilityNames, 3 });
 	OutProps.push_back({ "Enable Tick", EPropertyType::Bool, &bCanEverTick });
 	OutProps.push_back({ "Editor Only", EPropertyType::Bool, &bIsEditorOnly });
 	OutProps.push_back({ "Interior Master Volume", EPropertyType::Float, &MasterVolume, 0.0f, 2.0f, 0.01f });
@@ -99,7 +100,6 @@ void UAudioZoneComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
 	OutProps.push_back({ "Interior Reverb Decay", EPropertyType::Float, &InteriorReverbDecay, 0.0f, 1.0f, 0.01f });
 	OutProps.push_back({ "Exterior Reverb Wet", EPropertyType::Float, &ExteriorReverbWet, 0.0f, 1.0f, 0.01f });
 	OutProps.push_back({ "Exterior Reverb Decay", EPropertyType::Float, &ExteriorReverbDecay, 0.0f, 1.0f, 0.01f });
-	OutProps.push_back({ "Show Audio Range", EPropertyType::Enum, &AudioRangeVisibility, 0.0f, 0.0f, 0.0f, AudioRangeVisibilityNames, 3 });
 }
 
 void UAudioZoneComponent::PostEditProperty(const char* PropertyName)

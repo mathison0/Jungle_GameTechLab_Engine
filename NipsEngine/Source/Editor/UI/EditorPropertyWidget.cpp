@@ -605,12 +605,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 		}
 		else if (bIsAudioZoneComponent && strcmp(Prop.Name, "Interior LowPass Cutoff") == 0)
 		{
-			SEPARATOR();
 			ImGui::SeparatorText("Effects");
-		}
-		else if (bIsAudioZoneComponent && strcmp(Prop.Name, "Show Audio Range") == 0)
-		{
-			SEPARATOR();
 		}
 
 		if (Prop.Type == EPropertyType::SceneComponentRef)
