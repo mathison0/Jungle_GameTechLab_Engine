@@ -3,6 +3,12 @@
 
 void InputSystem::Tick()
 {
+    bIgnoreMouseDelta = IgnoreMouseDeltaTicks > 0;
+    if (IgnoreMouseDeltaTicks > 0)
+    {
+        --IgnoreMouseDeltaTicks;
+    }
+
     // 윈도우 포커스가 없으면 모든 입력 상태 해제
     if (OwnerHWnd && GetForegroundWindow() != OwnerHWnd)
     {
@@ -32,6 +38,8 @@ void InputSystem::Tick()
         // 마우스 위치 동기화 (복귀 시 델타 점프 방지)
         GetCursorPos(&MousePos);
         PrevMousePos = MousePos;
+        bIgnoreMouseDelta = true;
+        IgnoreMouseDeltaTicks = 1;
         return;
     }
 
@@ -189,13 +197,32 @@ float InputSystem::GetRightDragDistance() const
 // --- Mouse lock ------------------------------------------------
 void InputSystem::LockMouse(bool bLock, float x, float y, float w, float h)
 {
+    const bool bWasMouseLocked = bIsMouseLocked;
+
     bIsMouseLocked = bLock;
     if (bIsMouseLocked)
     {
         auto WarpX = x + w * 0.5f;
 		auto WarpY = y + h * 0.5f;
-        LockedCenterScreen = {static_cast<LONG>(WarpX), static_cast<LONG>(WarpY)};
-        SetCursorPos(LockedCenterScreen.x, LockedCenterScreen.y);
+        POINT NewLockedCenterScreen = {static_cast<LONG>(WarpX), static_cast<LONG>(WarpY)};
+        const bool bLockCenterChanged = NewLockedCenterScreen.x != LockedCenterScreen.x || NewLockedCenterScreen.y != LockedCenterScreen.y;
+
+        LockedCenterScreen = NewLockedCenterScreen;
+        if (!bWasMouseLocked || bLockCenterChanged)
+        {
+            SetCursorPos(LockedCenterScreen.x, LockedCenterScreen.y);
+            MousePos = LockedCenterScreen;
+            PrevMousePos = LockedCenterScreen;
+            bIgnoreMouseDelta = true;
+            IgnoreMouseDeltaTicks = 1;
+        }
+    }
+    else if (bWasMouseLocked)
+    {
+        GetCursorPos(&MousePos);
+        PrevMousePos = MousePos;
+        bIgnoreMouseDelta = true;
+        IgnoreMouseDeltaTicks = 1;
     }
 }
 

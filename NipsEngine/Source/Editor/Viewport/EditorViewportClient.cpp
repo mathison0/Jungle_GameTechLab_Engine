@@ -42,7 +42,12 @@ void FEditorViewportClient::SetWorld(UWorld* InWorld)
 void FEditorViewportClient::StartPIE(UWorld* InWorld)
 {
 	World = InWorld;
+	GamePlayerController.SetCamera(nullptr);
 	GamePlayerController.SetFreeCamera(&Camera);
+	if (bHasCameraSnapshot)
+	{
+		GamePlayerController.InitializeFreeCameraFromSnapshot(SavedCamera);
+	}
 	InputRouter.SetWorldType(EWorldType::PIE);
 }
 
@@ -53,6 +58,7 @@ void FEditorViewportClient::EndPIE(UWorld* InWorld)
 	EditorWorldController.SetWorld(InWorld);
 	InputRouter.SetWorldType(EWorldType::Editor);
 	EditorWorldController.ResetTargetLocation();
+	GamePlayerController.SetCamera(nullptr);
 	GamePlayerController.SetFreeCamera(nullptr);
 	ClearEndPIECallback();
 	InputSystem::Get().LockMouse(false);
@@ -708,10 +714,48 @@ void FEditorViewportClient::SelectAllActors()
 
 void FEditorViewportClient::SaveCameraSnapshot()
 {
-	FViewportCamera CameraStae;
+	const FViewportCamera* SnapshotSource = GetCamera();
+	if (Editor)
+	{
+		if (const FViewportCamera* PerspectiveCamera = Editor->GetCamera())
+		{
+			SnapshotSource = PerspectiveCamera;
+		}
+	}
+
+	if (!SnapshotSource)
+	{
+		bHasCameraSnapshot = false;
+		return;
+	}
+
+	SavedCamera.Location = SnapshotSource->GetLocation();
+	SavedCamera.Rotation = SnapshotSource->GetRotation();
+	SavedCamera.ProjectionType = EViewportProjectionType::Perspective;
+	SavedCamera.Width = SnapshotSource->GetWidth();
+	SavedCamera.Height = SnapshotSource->GetHeight();
+	SavedCamera.FOV = SnapshotSource->GetFOV();
+	SavedCamera.NearPlane = SnapshotSource->GetNearPlane();
+	SavedCamera.FarPlane = SnapshotSource->GetFarPlane();
+	SavedCamera.OrthoHeight = SnapshotSource->GetOrthoHeight();
+	bHasCameraSnapshot = true;
 }
 
 void FEditorViewportClient::RestoreCameraSnapshot()
 {
+	if (!bHasCamera || !bHasCameraSnapshot)
+	{
+		return;
+	}
 
+	Camera.ClearCustomLookDir();
+	Camera.SetLocation(SavedCamera.Location);
+	Camera.SetRotation(SavedCamera.Rotation);
+	Camera.SetProjectionType(SavedCamera.ProjectionType);
+	Camera.OnResize(SavedCamera.Width, SavedCamera.Height);
+	Camera.SetFOV(SavedCamera.FOV);
+	Camera.SetNearPlane(SavedCamera.NearPlane);
+	Camera.SetFarPlane(SavedCamera.FarPlane);
+	Camera.SetOrthoHeight(SavedCamera.OrthoHeight);
+	EditorWorldController.ResetTargetLocation();
 }

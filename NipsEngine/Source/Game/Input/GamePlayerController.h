@@ -8,6 +8,7 @@ class AActor;
 struct FSceneView;
 class FViewportCamera;
 struct FViewportRect;
+struct FCameraSnapshot;
 class UCameraComponent;
 
 class FGamePlayerController : public IBaseGameController
@@ -40,6 +41,7 @@ public:
 
 	void SetFreeCamera(FViewportCamera* InCamera);
 	FViewportCamera* GetFreeCamera() const { return FreeCamera; }
+	void InitializeFreeCameraFromSnapshot(const FCameraSnapshot& Snapshot);
 
 	void SetMoveSpeed(float InMoveSpeed) { MoveSpeed = InMoveSpeed; }
 	void SetRotateSensitivity(float InSensitivity) { RotateSensitivity = InSensitivity; }

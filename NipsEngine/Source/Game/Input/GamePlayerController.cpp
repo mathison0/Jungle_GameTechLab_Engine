@@ -157,6 +157,27 @@ void FGamePlayerController::SetFreeCamera(FViewportCamera* InCamera)
 	SyncFreeCameraAngles();
 }
 
+void FGamePlayerController::InitializeFreeCameraFromSnapshot(const FCameraSnapshot& Snapshot)
+{
+	if (!FreeCamera)
+	{
+		return;
+	}
+
+	FreeCamera->ClearCustomLookDir();
+	FreeCamera->SetLocation(Snapshot.Location);
+	FreeCamera->SetRotation(Snapshot.Rotation);
+	FreeCamera->SetProjectionType(Snapshot.ProjectionType);
+	FreeCamera->OnResize(Snapshot.Width, Snapshot.Height);
+	FreeCamera->SetFOV(Snapshot.FOV);
+	FreeCamera->SetNearPlane(Snapshot.NearPlane);
+	FreeCamera->SetFarPlane(Snapshot.FarPlane);
+	FreeCamera->SetOrthoHeight(Snapshot.OrthoHeight);
+
+	bFreeCameraInitialized = false;
+	SyncFreeCameraAngles();
+}
+
 void FGamePlayerController::BuildSceneView(FSceneView& OutView, const FViewportRect& ViewRect, EViewMode ViewMode) const
 {
 	if (Camera)

@@ -133,9 +133,6 @@
     <Filter Include="Source\Engine\Spatial">
       <UniqueIdentifier>{f8334c36-7f14-c751-7bba-2157775fd0eb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\UI">
-      <UniqueIdentifier>{b9e951bb-3501-2ca8-5cf4-bb4e6ec9edc2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Engine\Viewport">
       <UniqueIdentifier>{267a334b-b2ac-5fd7-67a5-5bdb67375b74}</UniqueIdentifier>
     </Filter>
@@ -150,6 +147,9 @@
     </Filter>
     <Filter Include="Source\Game\Settings">
       <UniqueIdentifier>{01fbe95f-106d-f15c-9519-d37eb877a7df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\UI">
+      <UniqueIdentifier>{24b0520d-f070-bb4e-e2fa-92d953623ce5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Game\Viewport">
       <UniqueIdentifier>{24b40836-3894-0777-eac4-651121dc7f81}</UniqueIdentifier>
@@ -788,24 +788,6 @@
     <ClCompile Include="Source\Engine\Spatial\WorldSpatialIndex.cpp">
       <Filter>Source\Engine\Spatial</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\UI\DialoguePanel.cpp">
-      <Filter>Source\Engine\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\UI\EndingPanel.cpp">
-      <Filter>Source\Engine\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\UI\GameUISystem.cpp">
-      <Filter>Source\Engine\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\UI\HUDPanel.cpp">
-      <Filter>Source\Engine\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\UI\PauseMenuPanel.cpp">
-      <Filter>Source\Engine\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\UI\StartMenuPanel.cpp">
-      <Filter>Source\Engine\UI</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Viewport\ViewportCamera.cpp">
       <Filter>Source\Engine\Viewport</Filter>
     </ClCompile>
@@ -823,6 +805,24 @@
     </ClCompile>
     <ClCompile Include="Source\Game\Render\GameRenderPipeline.cpp">
       <Filter>Source\Game\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\DialoguePanel.cpp">
+      <Filter>Source\Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\EndingPanel.cpp">
+      <Filter>Source\Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\GameUISystem.cpp">
+      <Filter>Source\Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\HUDPanel.cpp">
+      <Filter>Source\Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\PauseMenuPanel.cpp">
+      <Filter>Source\Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\StartMenuPanel.cpp">
+      <Filter>Source\Game\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Viewport\GameViewportClient.cpp">
       <Filter>Source\Game\Viewport</Filter>
@@ -1529,24 +1529,6 @@
     <ClInclude Include="Source\Engine\Spatial\WorldSpatialIndex.h">
       <Filter>Source\Engine\Spatial</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\UI\DialoguePanel.h">
-      <Filter>Source\Engine\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\UI\EndingPanel.h">
-      <Filter>Source\Engine\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\UI\GameUISystem.h">
-      <Filter>Source\Engine\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\UI\HUDPanel.h">
-      <Filter>Source\Engine\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\UI\PauseMenuPanel.h">
-      <Filter>Source\Engine\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\UI\StartMenuPanel.h">
-      <Filter>Source\Engine\UI</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Viewport\Viewport.h">
       <Filter>Source\Engine\Viewport</Filter>
     </ClInclude>
@@ -1576,6 +1558,24 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Settings\GameSettings.h">
       <Filter>Source\Game\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\UI\DialoguePanel.h">
+      <Filter>Source\Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\UI\EndingPanel.h">
+      <Filter>Source\Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\UI\GameUISystem.h">
+      <Filter>Source\Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\UI\HUDPanel.h">
+      <Filter>Source\Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\UI\PauseMenuPanel.h">
+      <Filter>Source\Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\UI\StartMenuPanel.h">
+      <Filter>Source\Game\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Viewport\GameViewportClient.h">
       <Filter>Source\Game\Viewport</Filter>

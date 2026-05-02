@@ -34,8 +34,22 @@ class InputSystem : public TSingleton<InputSystem>
 
     // Mouse position
     POINT GetMousePos() const { return MousePos; }
-    int MouseDeltaX() const { if (bIsMouseLocked) return MousePos.x - LockedCenterScreen.x; return MousePos.x - PrevMousePos.x; }
-	int MouseDeltaY() const { if (bIsMouseLocked) return MousePos.y - LockedCenterScreen.y; return MousePos.y - PrevMousePos.y; }
+    int MouseDeltaX() const
+    {
+        if (bIgnoreMouseDelta)
+            return 0;
+        if (bIsMouseLocked)
+            return MousePos.x - LockedCenterScreen.x;
+        return MousePos.x - PrevMousePos.x;
+    }
+	int MouseDeltaY() const
+    {
+        if (bIgnoreMouseDelta)
+            return 0;
+        if (bIsMouseLocked)
+            return MousePos.y - LockedCenterScreen.y;
+        return MousePos.y - PrevMousePos.y;
+    }
     bool  MouseMoved() const { return MouseDeltaX() != 0 || MouseDeltaY() != 0; }
 
     // Left drag
@@ -86,6 +100,8 @@ class InputSystem : public TSingleton<InputSystem>
     POINT LockedCenterScreen;
 	bool  bIsMouseLocked = false;
     bool  bIsCursorVisible = false;
+    bool  bIgnoreMouseDelta = false;
+    int   IgnoreMouseDeltaTicks = 0;
 
     bool bLeftDragCandidate = false;
     bool bMiddleDragCandidate = false;

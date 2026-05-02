@@ -454,45 +454,39 @@
     <ClCompile Include="Source\Engine\Spatial\BVH.cpp" />
     <ClCompile Include="Source\Engine\Spatial\KDTree.cpp" />
     <ClCompile Include="Source\Engine\Spatial\WorldSpatialIndex.cpp" />
-    <ClCompile Include="Source\Game\UI\DialoguePanel.cpp" />
-    <ClCompile Include="Source\Game\UI\EndingPanel.cpp" />
-    <ClCompile Include="Source\Game\UI\GameUISystem.cpp" />
-    <ClCompile Include="Source\Game\UI\HUDPanel.cpp" />
-    <ClCompile Include="Source\Game\UI\PauseMenuPanel.cpp" />
-    <ClCompile Include="Source\Game\UI\StartMenuPanel.cpp" />
     <ClCompile Include="Source\Engine\Viewport\ViewportCamera.cpp" />
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp" />
     <ClCompile Include="Source\Game\GameEngine.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Game\GameTypes.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Game\Input\GamePlayerController.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Game\Render\GameRenderPipeline.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\DialoguePanel.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\EndingPanel.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\GameUISystem.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\HUDPanel.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\PauseMenuPanel.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\StartMenuPanel.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Game\Viewport\GameViewportClient.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Misc\ObjViewer\ObjViewerEngine.cpp">
@@ -747,12 +741,6 @@
     <ClInclude Include="Source\Engine\Spatial\BVH.h" />
     <ClInclude Include="Source\Engine\Spatial\KDTree.h" />
     <ClInclude Include="Source\Engine\Spatial\WorldSpatialIndex.h" />
-    <ClInclude Include="Source\Game\UI\DialoguePanel.h" />
-    <ClInclude Include="Source\Game\UI\EndingPanel.h" />
-    <ClInclude Include="Source\Game\UI\GameUISystem.h" />
-    <ClInclude Include="Source\Game\UI\HUDPanel.h" />
-    <ClInclude Include="Source\Game\UI\PauseMenuPanel.h" />
-    <ClInclude Include="Source\Game\UI\StartMenuPanel.h" />
     <ClInclude Include="Source\Engine\Viewport\Viewport.h" />
     <ClInclude Include="Source\Engine\Viewport\ViewportCamera.h" />
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h" />
@@ -763,6 +751,12 @@
     <ClInclude Include="Source\Game\Input\GamePlayerController.h" />
     <ClInclude Include="Source\Game\Render\GameRenderPipeline.h" />
     <ClInclude Include="Source\Game\Settings\GameSettings.h" />
+    <ClInclude Include="Source\Game\UI\DialoguePanel.h" />
+    <ClInclude Include="Source\Game\UI\EndingPanel.h" />
+    <ClInclude Include="Source\Game\UI\GameUISystem.h" />
+    <ClInclude Include="Source\Game\UI\HUDPanel.h" />
+    <ClInclude Include="Source\Game\UI\PauseMenuPanel.h" />
+    <ClInclude Include="Source\Game\UI\StartMenuPanel.h" />
     <ClInclude Include="Source\Game\Viewport\GameViewportClient.h" />
     <ClInclude Include="Source\Misc\ObjViewer\ObjViewerEngine.h" />
     <ClInclude Include="Source\Misc\ObjViewer\ObjViewerRenderPipeline.h" />

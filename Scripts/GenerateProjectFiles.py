@@ -173,7 +173,9 @@ def should_exclude_from_config(rel_path: str, cfg: str) -> bool:
     normalized = rel_path.replace("/", "\\")
     if cfg == "Game":
         return normalized.startswith(GAME_EXCLUDED_PREFIXES)
-    return normalized.startswith(EDITOR_EXCLUDED_PREFIXES)
+    if cfg == "ObjViewer":
+        return normalized.startswith(EDITOR_EXCLUDED_PREFIXES)
+    return False
 
 
 def add_source_exclusions(elem, rel_path: str):
