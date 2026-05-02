@@ -128,6 +128,7 @@ struct FAudioSystemImpl
 	std::unordered_map<uint32, FActiveSound> ActiveSounds;
 	std::unordered_map<uint32, FZoneMix> ZoneMixes;
 	FVector ListenerLocation = FVector::ZeroVector;
+	uint32 LastListenerZoneId = 0;
 
 	bool IsPointInsideZone(const FVector& Point, const FZoneMix& Zone) const
 	{
@@ -160,6 +161,29 @@ struct FAudioSystemImpl
 			}
 		}
 		return BestZone;
+	}
+
+	uint32 FindBestContainingListenerZoneId() const
+	{
+		uint32 BestZoneId = 0;
+		const FZoneMix* BestZone = nullptr;
+		for (const auto& Pair : ZoneMixes)
+		{
+			const FZoneMix& Zone = Pair.second;
+			if (!IsPointInsideZone(ListenerLocation, Zone))
+			{
+				continue;
+			}
+
+			if (!BestZone ||
+				Zone.Priority > BestZone->Priority ||
+				(Zone.Priority == BestZone->Priority && Pair.first == LastListenerZoneId))
+			{
+				BestZoneId = Pair.first;
+				BestZone = &Zone;
+			}
+		}
+		return BestZoneId;
 	}
 
 	bool IsListenerInsideAnyZone() const
@@ -216,9 +240,9 @@ struct FAudioSystemImpl
 		const FZoneMix* BestZone = ActiveSound.bAffectedByAudioZones ? FindBestListenerZone() : nullptr;
 		if (BestZone)
 		{
-			const bool bSourceInside = IsPointInsideZone(ActiveSound.Location, *BestZone);
-			const float Master = bSourceInside ? BestZone->InteriorMasterVolume : BestZone->ExteriorMasterVolume;
-			const float BusVolume = GetZoneBusVolume(*BestZone, ActiveSound.Bus, bSourceInside);
+			const bool bListenerInside = IsPointInsideZone(ListenerLocation, *BestZone);
+			const float Master = bListenerInside ? BestZone->InteriorMasterVolume : BestZone->ExteriorMasterVolume;
+			const float BusVolume = GetZoneBusVolume(*BestZone, ActiveSound.Bus, bListenerInside);
 			const float Weight = std::clamp(BestZone->Weight, 0.0f, 1.0f);
 			Multiplier = 1.0f + ((Master * BusVolume) - 1.0f) * Weight;
 		}
@@ -234,8 +258,8 @@ struct FAudioSystemImpl
 			return 20000.0f;
 		}
 
-		const bool bSourceInside = IsPointInsideZone(ActiveSound.Location, *BestZone);
-		const float TargetCutoff = bSourceInside ? BestZone->InteriorLowPassCutoff : BestZone->ExteriorLowPassCutoff;
+		const bool bListenerInside = IsPointInsideZone(ListenerLocation, *BestZone);
+		const float TargetCutoff = bListenerInside ? BestZone->InteriorLowPassCutoff : BestZone->ExteriorLowPassCutoff;
 		const float Weight = std::clamp(BestZone->Weight, 0.0f, 1.0f);
 		return ClampLowPassCutoff(20000.0f + (TargetCutoff - 20000.0f) * Weight);
 	}
@@ -251,9 +275,9 @@ struct FAudioSystemImpl
 			return;
 		}
 
-		const bool bSourceInside = IsPointInsideZone(ActiveSound.Location, *BestZone);
-		const float TargetWet = bSourceInside ? BestZone->InteriorReverbWet : BestZone->ExteriorReverbWet;
-		const float TargetDecay = bSourceInside ? BestZone->InteriorReverbDecay : BestZone->ExteriorReverbDecay;
+		const bool bListenerInside = IsPointInsideZone(ListenerLocation, *BestZone);
+		const float TargetWet = bListenerInside ? BestZone->InteriorReverbWet : BestZone->ExteriorReverbWet;
+		const float TargetDecay = bListenerInside ? BestZone->InteriorReverbDecay : BestZone->ExteriorReverbDecay;
 		const float Weight = std::clamp(BestZone->Weight, 0.0f, 1.0f);
 		OutWet = Clamp01(TargetWet * Weight);
 		OutDecay = Clamp01(TargetDecay);
@@ -570,26 +594,22 @@ struct FAudioSystemImpl
 
 	void UpdateZoneWeights(float DeltaTime)
 	{
+		(void)DeltaTime;
+
+		const uint32 ContainingZoneId = FindBestContainingListenerZoneId();
+		if (ContainingZoneId != 0)
+		{
+			LastListenerZoneId = ContainingZoneId;
+		}
+		else if (LastListenerZoneId != 0 && ZoneMixes.find(LastListenerZoneId) == ZoneMixes.end())
+		{
+			LastListenerZoneId = 0;
+		}
+
 		for (auto& Pair : ZoneMixes)
 		{
 			FZoneMix& Zone = Pair.second;
-			const bool bListenerInside = IsPointInsideZone(ListenerLocation, Zone);
-			const float TargetWeight = bListenerInside ? 1.0f : 0.0f;
-			const float FadeTime = bListenerInside ? Zone.FadeInTime : Zone.FadeOutTime;
-			if (FadeTime <= 0.0f)
-			{
-				Zone.Weight = TargetWeight;
-				continue;
-			}
-			const float Step = DeltaTime / FadeTime;
-			if (Zone.Weight < TargetWeight)
-			{
-				Zone.Weight = std::min(TargetWeight, Zone.Weight + Step);
-			}
-			else if (Zone.Weight > TargetWeight)
-			{
-				Zone.Weight = std::max(TargetWeight, Zone.Weight - Step);
-			}
+			Zone.Weight = Pair.first == LastListenerZoneId ? 1.0f : 0.0f;
 		}
 	}
 };
@@ -651,6 +671,7 @@ void FAudioSystem::Shutdown()
 	StopAll();
 	Impl->ShutdownZoneEffectBus();
 	Impl->ZoneMixes.clear();
+	Impl->LastListenerZoneId = 0;
 	ma_engine_uninit(&Impl->Engine);
 	Impl->bInitialized = false;
 	UE_LOG("AudioSystem: shutdown.");
@@ -1220,6 +1241,10 @@ void FAudioSystem::RemoveZoneMix(uint32 ZoneId)
 	}
 
 	Impl->ZoneMixes.erase(ZoneId);
+	if (Impl->LastListenerZoneId == ZoneId)
+	{
+		Impl->LastListenerZoneId = 0;
+	}
 	Impl->ApplyVolumes();
 #else
 	(void)ZoneId;
