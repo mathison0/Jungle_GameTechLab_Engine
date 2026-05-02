@@ -2,6 +2,7 @@
 
 #include "ShapeComponent.h"
 #include "Collision/Collision2DShapeGeometry.h"
+#include "Core/Delegate.h"
 
 class UCollider2DComponent : public UShapeComponent
 {
@@ -9,6 +10,7 @@ public:
     DECLARE_CLASS(UCollider2DComponent, UShapeComponent)
 
     UCollider2DComponent();
+    ~UCollider2DComponent();
 
     void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
     void Serialize(FArchive& Ar) override;
@@ -18,6 +20,14 @@ public:
 
     virtual ECollision2DShapeType GetCollision2DShapeType() const = 0;
     virtual FCollision2DShapeGeometry GetCollision2DShapeGeometry() const = 0;
+
+	DECLARE_DELEGATE(OnComponentHit2D, UCollider2DComponent*);
+	DECLARE_DELEGATE(OnComponentBeginOverlap2D, UCollider2DComponent*);
+	DECLARE_DELEGATE(OnComponentEndOverlap2D, UCollider2DComponent*);
+
+	void OnComponentHit(UCollider2DComponent* OtherCollider);
+	void OnComponentBeginOverlap(UCollider2DComponent* OtherCollider);
+	void OnComponentEndOverlap(UCollider2DComponent* OtherCollider);
 
     FVector2 GetShapeWorldLocation2D() const;
     float GetCollisionPlaneZ() const;

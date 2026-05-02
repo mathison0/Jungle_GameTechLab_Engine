@@ -1,6 +1,7 @@
 ﻿#include "Collider2DComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
+#include "Core/Logging/LogMacros.h"
 
 #include <cmath>
 
@@ -8,7 +9,18 @@ IMPLEMENT_ABSTRACT_CLASS(UCollider2DComponent, UShapeComponent)
 
 UCollider2DComponent::UCollider2DComponent()
 {
-    ShapeColor = FColor(0, 220, 255, 255).ToVector4();
+	ShapeColor = FColor(0, 220, 255, 255).ToVector4();
+
+	OnComponentHit2D.AddDynamic(this,&UCollider2DComponent::OnComponentHit);
+	OnComponentBeginOverlap2D.AddDynamic(this, &UCollider2DComponent::OnComponentBeginOverlap);
+	OnComponentEndOverlap2D.AddDynamic(this, &UCollider2DComponent::OnComponentEndOverlap);
+}
+
+UCollider2DComponent::~UCollider2DComponent()
+{
+    OnComponentHit2D.RemoveDynamic(this);
+	OnComponentBeginOverlap2D.RemoveDynamic(this);
+	OnComponentEndOverlap2D.RemoveDynamic(this);
 }
 
 void UCollider2DComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
@@ -30,6 +42,18 @@ FCollisionShapeGeometry UCollider2DComponent::GetCollisionShapeGeometry() const
     Geometry.Center = GetShapeWorldLocation();
     Geometry.BoxExtent = LocalExtents;
     return Geometry;
+}
+
+void UCollider2DComponent::OnComponentHit(UCollider2DComponent* OtherCollider)
+{
+}
+
+void UCollider2DComponent::OnComponentBeginOverlap(UCollider2DComponent* OtherCollider)
+{
+}
+
+void UCollider2DComponent::OnComponentEndOverlap(UCollider2DComponent* OtherCollider)
+{
 }
 
 FVector2 UCollider2DComponent::GetShapeWorldLocation2D() const

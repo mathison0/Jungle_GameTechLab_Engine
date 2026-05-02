@@ -12,6 +12,19 @@
 
 namespace
 {
+uint64 MakeCollider2DPairKey(const UCollider2DComponent* A, const UCollider2DComponent* B)
+{
+    uint32 AId = A->GetUUID();
+    uint32 BId = B->GetUUID();
+
+    if (AId > BId)
+    {
+        std::swap(AId, BId);
+    }
+
+    return (static_cast<uint64>(AId) << 32) | static_cast<uint64>(BId);
+}
+
 float Dot2D(const FVector2& A, const FVector2& B)
 {
     return A.X * B.X + A.Y * B.Y;
@@ -137,40 +150,54 @@ void FCollision2DManager::Update(UWorld& World)
     TArray<UCollider2DComponent*> Colliders;
     CollectColliders(World, Colliders);
 
+	TArray<FCollision2DPair> CollisionPairs;
+	BuildCollisionPairs(Colliders, CollisionPairs);
+
+	TMap<uint64, FCollision2DPair> CurrentOverlapPairs;
+	ProcessCollisionPairs(CollisionPairs, CurrentOverlapPairs);
+
+	DispatchEndOverlapEvents(CurrentOverlapPairs);
+	PreviousOverlapPairs = std::move(CurrentOverlapPairs);
+}
+
+void FCollision2DManager::BuildCollisionPairs(const TArray<UCollider2DComponent*>& Colliders, TArray<FCollision2DPair>& OutPairs)
+{
 	SpatialHash.Build(Colliders);
-    TArray<FCollision2DPair> CollisionPairs;
-    SpatialHash.QueryPairs(CollisionPairs);
+	SpatialHash.QueryPairs(OutPairs);
+}
 
-	for (FCollision2DPair& Pair : CollisionPairs)
+void FCollision2DManager::ProcessCollisionPairs(const TArray<FCollision2DPair>& CollisionPairs, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs)
+{
+	for (const FCollision2DPair& Pair : CollisionPairs)
 	{
-        UCollider2DComponent* ColliderA = Pair.A;
-        UCollider2DComponent* ColliderB = Pair.B;
-
-		if (!CanCollide(ColliderA, ColliderB))
-        {
-            continue;
-        }
-
-		FCollision2DContact Contact;
-        if (ComputePenetration(ColliderA->GetCollision2DShapeGeometry(), ColliderB->GetCollision2DShapeGeometry(), Contact))
-        {
-            const bool bBlocking = ColliderA->IsBlockComponents() && ColliderB->IsBlockComponents();
-            if (bBlocking)
-            {
-				//Generate HitEvent
-                ResolveBlock(ColliderA, ColliderB, Contact);
-            }
-            else if (ColliderA->ShouldGenerateOverlapEvents() && ColliderB->ShouldGenerateOverlapEvents())
-            {
-				//Generate Overlap Event
-                ColliderA->AddOverlapInfo(ColliderB);
-                ColliderB->AddOverlapInfo(ColliderA);
-            }
-
-            ColliderA->SetDebugOverlapping(true);
-            ColliderB->SetDebugOverlapping(true);
-        }
+		ProcessCollisionPair(Pair.A, Pair.B, OutCurrentOverlapPairs);
 	}
+}
+
+void FCollision2DManager::ProcessCollisionPair(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs)
+{
+	if (!CanCollide(ColliderA, ColliderB))
+	{
+		return;
+	}
+
+	FCollision2DContact Contact;
+	if (!ComputePenetration(ColliderA->GetCollision2DShapeGeometry(), ColliderB->GetCollision2DShapeGeometry(), Contact))
+	{
+		return;
+	}
+
+	//디버그용 색 변경 로직입니다.
+	ColliderA->SetDebugOverlapping(true);
+	ColliderB->SetDebugOverlapping(true);
+
+	if (ColliderA->IsBlockComponents() && ColliderB->IsBlockComponents())
+	{
+		HandleBlockingCollision(ColliderA, ColliderB, Contact);
+		return;
+	}
+
+	HandleOverlapCollision(ColliderA, ColliderB, OutCurrentOverlapPairs);
 }
 
 void FCollision2DManager::CollectColliders(UWorld& World, TArray<UCollider2DComponent*>& OutColliders)
@@ -238,6 +265,41 @@ bool FCollision2DManager::ComputePenetration(const FCollision2DShapeGeometry& A,
     return false;
 }
 
+void FCollision2DManager::HandleBlockingCollision(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, const FCollision2DContact& Contact)
+{
+	ResolveBlock(ShapeA, ShapeB, Contact);
+
+	if (ShapeA->ShouldGenerateHitEvents())
+	{
+		ShapeA->OnComponentHit2D.Broadcast(ShapeB);
+	}
+
+	if (ShapeB->ShouldGenerateHitEvents())
+	{
+		ShapeB->OnComponentHit2D.Broadcast(ShapeA);
+	}
+}
+
+void FCollision2DManager::HandleOverlapCollision(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs)
+{
+	if (!ShapeA->ShouldGenerateOverlapEvents() || !ShapeB->ShouldGenerateOverlapEvents())
+	{
+		return;
+	}
+
+	const uint64 PairKey = MakeCollider2DPairKey(ShapeA, ShapeB);
+	OutCurrentOverlapPairs[PairKey] = { ShapeA, ShapeB };
+
+	ShapeA->AddOverlapInfo(ShapeB);
+	ShapeB->AddOverlapInfo(ShapeA);
+
+	if (PreviousOverlapPairs.find(PairKey) == PreviousOverlapPairs.end())
+	{
+		ShapeA->OnComponentBeginOverlap2D.Broadcast(ShapeB);
+		ShapeB->OnComponentBeginOverlap2D.Broadcast(ShapeA);
+	}
+}
+
 void FCollision2DManager::ResolveBlock(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, const FCollision2DContact& Contact)
 {
     if (!ShapeA || !ShapeB || Contact.PenetrationDepth <= FMath::Epsilon)
@@ -263,4 +325,25 @@ void FCollision2DManager::ResolveBlock(UCollider2DComponent* ShapeA, UCollider2D
     {
         ShapeB->AddWorldOffset(Correction);
     }
+}
+
+void FCollision2DManager::DispatchEndOverlapEvents(const TMap<uint64, FCollision2DPair>& CurrentOverlapPairs)
+{
+	for (const auto& PreviousPair : PreviousOverlapPairs)
+	{
+		const uint64 PairKey = PreviousPair.first;
+		if (CurrentOverlapPairs.find(PairKey) != CurrentOverlapPairs.end())
+		{
+			continue;
+		}
+
+		UCollider2DComponent* ColliderA = PreviousPair.second.A;
+		UCollider2DComponent* ColliderB = PreviousPair.second.B;
+
+		if (ColliderA && ColliderB)
+		{
+			ColliderA->OnComponentEndOverlap2D.Broadcast(ColliderB);
+			ColliderB->OnComponentEndOverlap2D.Broadcast(ColliderA);
+		}
+	}
 }
