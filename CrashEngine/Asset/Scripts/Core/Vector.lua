@@ -4,6 +4,12 @@ local function NewVector(X, Y, Z)
     return FVector.new(X or 0.0, Y or 0.0, Z or 0.0)
 end
 
+local function Components(V)
+    return V.X or V.x or V[1] or 0.0,
+           V.Y or V.y or V[2] or 0.0,
+           V.Z or V.z or V[3] or 0.0
+end
+
 function Vec.New(X, Y, Z)
     return NewVector(X, Y, Z)
 end
@@ -12,10 +18,25 @@ function Vec.Zero()
     return NewVector(0.0, 0.0, 0.0)
 end
 
+function Vec.Add(A, B)
+    local AX, AY, AZ = Components(A)
+    local BX, BY, BZ = Components(B)
+    return NewVector(AX + BX, AY + BY, AZ + BZ)
+end
+
+function Vec.Sub(A, B)
+    local AX, AY, AZ = Components(A)
+    local BX, BY, BZ = Components(B)
+    return NewVector(AX - BX, AY - BY, AZ - BZ)
+end
+
+function Vec.Mul(V, Scalar)
+    local X, Y, Z = Components(V)
+    return NewVector(X * Scalar, Y * Scalar, Z * Scalar)
+end
+
 function Vec.LengthSquared(V)
-    local X = V.X or V.x or V[1] or 0.0
-    local Y = V.Y or V.y or V[2] or 0.0
-    local Z = V.Z or V.z or V[3] or 0.0
+    local X, Y, Z = Components(V)
     return X * X + Y * Y + Z * Z
 end
 
@@ -29,15 +50,15 @@ function Vec.Normalized(V)
         return Vec.Zero()
     end
 
-    return V * (1.0 / Length)
+    return Vec.Mul(V, 1.0 / Length)
 end
 
 function Vec.DirectionTo(From, To)
-    return Vec.Normalized(To - From)
+    return Vec.Normalized(Vec.Sub(To, From))
 end
 
 function Vec.DistanceSquared(A, B)
-    return Vec.LengthSquared(B - A)
+    return Vec.LengthSquared(Vec.Sub(B, A))
 end
 
 return Vec

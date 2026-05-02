@@ -28,7 +28,8 @@ function EnemyAI.ChaseTarget(self, TargetTag, DeltaTime)
             Log("[EnemyAI] Chase Start")
             local targetPos = self.target:GetLocation()
             local dir = Vec.DirectionTo(myPos, targetPos)
-            actor:SetLocation(myPos + dir * (self.MoveSpeed or 1.0) * DeltaTime)
+            local moveDelta = Vec.Mul(dir, (self.MoveSpeed or 1.0) * DeltaTime)
+            actor:SetLocation(Vec.Add(myPos, moveDelta))
         end
 end
 
