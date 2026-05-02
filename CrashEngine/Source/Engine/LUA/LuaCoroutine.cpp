@@ -2,30 +2,6 @@
 #include "Core/Logging/LogMacros.h"
 #include "Engine/Runtime/Engine.h"
 
-void FExecuteCommand::ParseResult(sol::protected_function_result InResult)
-{
-    bIsValid = InResult.valid();
-    Status = InResult.status();
-
-    for (int i = 0; i < InResult.return_count(); ++i)
-    {
-        Args.push_back(InResult.get<sol::object>(i));
-    }
-}
-
-void FWaitCommandRealTime::Run(sol::coroutine& InCoroutine, const FCouroutineContext& Context)
-{
-    CurrentTime += Context.DeltaTime;
-
-    if (CurrentTime >= TargetTime)
-        ParseResult(InCoroutine());
-}
-
-void FWaitNextFrame::Run(sol::coroutine& InCoroutine, const FCouroutineContext& Context)
-{
-    ParseResult(InCoroutine(Context.DeltaTime));
-}
-
 void CoroutineExecutor::SetCommand(FExecuteCommand* NewCommand)
 {
     if (Command)
@@ -51,19 +27,50 @@ void CoroutineExecutor::Tick(const FCouroutineContext& Context)
 
     if (Command->GetStatus() == sol::call_status::yielded) // 코루틴 결과를 봅니다. 혹시 yield 인가요
     {
-        FString NextCommand = Command->GetResultParam<FString>(0); // 그렇다면 Command를 봅니다
-        UE_LOG([Coroutine], Info, "NextCommand %s", NextCommand);
+        FString NextCommand; // 그렇다면 Command를 봅니다
+        if (!Command->TryGetResultParam<FString>(0, NextCommand))
+        {
+            Command->Invalidate();
+            return;
+        } 
+
+		FExecuteCommand* ExecuteCommand = nullptr;
         // Command는 LUA의 Coroutine.Yield의 첫번째 파라메터에 1:1 로 대응되야 합니다.
         if (NextCommand == "wait_time") // 기다리라네요
         {
-            float TargetTime = Command->GetResultParam<float>(1); // 몇 초동안이요
-            SetCommand(new FWaitCommandRealTime(TargetTime));     // 대기 명령을 시간을 할당해서 설정해줍니다
+            float TargetTime = 0; // 몇 초동안이요
+            if (Command->TryGetResultParam<float>(1, TargetTime))
+			{
+                ExecuteCommand = new FWaitRealTime(TargetTime); // 대기 명령을 시간을 할당해서 설정해줍니다
+			}
         }
         else if (NextCommand == "wait_until") // 무언가를 기다리라네요
         {
-            auto Predicate = Command->GetResultParam<sol::function>(1); // 뭘 기다릴까요
-            SetCommand(new FWaitUntilPredicate(Predicate));             // 대기 명령 렛츠고
+            sol::function Predicate;
+            if (Command->TryGetResultParam<sol::function>(1, Predicate))  // 뭘 기다릴까요
+            {
+                ExecuteCommand = new FWaitUntilPredicate(Predicate); // 대기 명령 렛츠고
+            } 
         }
+        else if (NextCommand == "wait_next_frame") // 다음 프레임을 기다리라네요
+        {
+            ExecuteCommand = new FWaitNextFrame();// 대기 명령 렛츠고
+        }
+        else
+        {
+            UE_LOG([Coroutine], Warning, "Unknown coroutine command: %s", NextCommand.c_str());
+            Command->Invalidate();
+            return;
+        }
+
+		if (ExecuteCommand)
+			SetCommand(ExecuteCommand);
+		else
+		{
+            Command->Invalidate();
+		}
+
+        return;
     }
     UE_LOG([Coroutine], Info, "Coroutine End");
 
@@ -88,18 +95,29 @@ uint32 FCoroutineExecutorSet::Start(const sol::function& LuaFunc)
 {
     if (!LuaFunc.valid())
     {
-        return -1;
+        return 0;
     }
 
-    uint32 FunctionKey = NextExecutorId++;
+    ++NextExecutorId;
+    if (bIsTicking)
+    {
+        PendingStarts.push_back({ NextExecutorId, LuaFunc });
+        return NextExecutorId;
+    }
 
-    const FString ThreadFunctionName = "__coroutine_entry_" + std::to_string(FunctionKey);
+    StartInternal(NextExecutorId, LuaFunc);
+    return NextExecutorId;
+}
+
+void FCoroutineExecutorSet::StartInternal(uint32 FuncKey, const sol::function& LuaFunc)
+{
+    const FString ThreadFunctionName = "__coroutine_entry_" + std::to_string(FuncKey);
 
     FLuaCoroutineTask Task;
 
     // Lua VM 안에 코루틴용 thread 생성
     sol::state* Lua = &GEngine->GetScriptSystem().GetLua();
-	Task.Thread = sol::thread::create(*Lua);
+    Task.Thread = sol::thread::create(*Lua);
 
     // thread 내부 state에 접근하기 위한 view
     sol::state_view ThreadState = Task.Thread.state();
@@ -111,14 +129,12 @@ uint32 FCoroutineExecutorSet::Start(const sol::function& LuaFunc)
     Task.Coroutine = sol::coroutine(ThreadState[ThreadFunctionName]);
 
 
-    Executors[FunctionKey] = new CoroutineExecutor(std::move(Task));
-    return FunctionKey;
+    Executors[FuncKey] = new CoroutineExecutor(std::move(Task));
 }
 
 bool FCoroutineExecutorSet::Stop(uint32 FuncKey)
 {
-    auto It = Executors.find(FuncKey);
-    if (It == Executors.end())
+    if (FuncKey == 0)
     {
         return false;
     }
@@ -127,6 +143,12 @@ bool FCoroutineExecutorSet::Stop(uint32 FuncKey)
     {
         PendingStopKeys.insert(FuncKey);
         return true;
+    }
+
+    auto It = Executors.find(FuncKey);
+    if (It == Executors.end())
+    {
+        return false;
     }
 
     delete It->second;
@@ -162,5 +184,29 @@ void FCoroutineExecutorSet::Tick(const FCouroutineContext& Context)
             ++It;
         }
     }
+
+	for (const auto& Pending : PendingStarts)
+	{
+        if (PendingStopKeys.contains(Pending.CoroutineId))
+        {
+            continue;
+        }
+
+        StartInternal(Pending.CoroutineId, Pending.Func);
+	}
+
     PendingStopKeys.clear();
+    PendingStarts.clear();
+}
+
+void FCoroutineExecutorSet::Clear()
+{
+    for (auto& Pair : Executors)
+    {
+        delete Pair.second;
+    }
+
+    Executors.clear();
+    PendingStopKeys.clear();
+    PendingStarts.clear();
 }
