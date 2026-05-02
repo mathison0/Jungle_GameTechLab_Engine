@@ -57,7 +57,13 @@ void UEngine::Init(FWindowsWindow* InWindow)
     Renderer.Create(Window->GetHWND());
     UE_LOG(Engine, Debug, "Renderer created.");
 
-    // Game.ini 로드 (해상도 설정 등)
+	ViewportInputRouter.SetOwnerWindow(Window->GetHWND());
+
+    uint32 InitWidth = Window->GetWidth();
+    uint32 InitHeight = Window->GetHeight();
+
+#if !WITH_EDITOR
+    // Game.ini 로드 (해상도 설정 등 - Standalone 전용)
     std::wstring GameIniPath = FPaths::GameSettingsFilePath();
     if (std::filesystem::exists(GameIniPath))
     {
@@ -68,18 +74,26 @@ void UEngine::Init(FWindowsWindow* InWindow)
             json::JSON Config = json::JSON::Load(Content);
             if (Config.hasKey("Resolution"))
             {
-                int Width = Config["Resolution"][0].ToInt();
-                int Height = Config["Resolution"][1].ToInt();
-                UE_LOG(Engine, Info, "Setting resolution from Game.ini: %dx%d", Width, Height);
-                // 실제 창 크기 조절 로직은 WinApplication에서 처리하는 것이 좋으나, 
-                // 여기서는 렌더러 리사이즈 정도만 보장
-                Renderer.GetFD3DDevice().OnResizeViewport(Width, Height);
+                InitWidth = (uint32)Config["Resolution"][0].ToInt();
+                InitHeight = (uint32)Config["Resolution"][1].ToInt();
+                UE_LOG(Engine, Info, "Setting resolution from Game.ini: %dx%d", InitWidth, InitHeight);
+                Renderer.GetFD3DDevice().OnResizeViewport(InitWidth, InitHeight);
             }
         }
     }
+#endif
 
     GameViewportClient = UObjectManager::Get().CreateObject<UGameViewportClient>();
     UE_LOG(Engine, Debug, "GameViewportClient created.");
+
+#if !WITH_EDITOR
+    // Standalone 용 뷰포트 인프라 구축
+    FViewport* MainViewport = new FViewport();
+    MainViewport->Initialize(Renderer.GetFD3DDevice().GetDevice(), InitWidth, InitHeight);
+    MainViewport->SetClient(GameViewportClient);
+    GameViewportClient->SetViewport(MainViewport);
+    UE_LOG(Engine, Debug, "Main Viewport initialized for Standalone.");
+#endif
 
     ID3D11Device* Device = Renderer.GetFD3DDevice().GetDevice();
     FMeshBufferManager::Get().Initialize(Device);
@@ -99,6 +113,14 @@ void UEngine::Init(FWindowsWindow* InWindow)
 void UEngine::Shutdown()
 {
     UE_LOG(Engine, Info, "Shutting down runtime engine.");
+
+    if (GameViewportClient && GameViewportClient->GetViewport())
+    {
+        FViewport* VP = GameViewportClient->GetViewport();
+        GameViewportClient->SetViewport(nullptr);
+        delete VP;
+    }
+
     FResourceManager::Get().ReleaseGPUResources();
     UTexture2D::ReleaseAllGPU();
     FObjManager::ReleaseAllGPU();
@@ -169,25 +191,38 @@ void UEngine::BeginPlay()
 void UEngine::Tick(float DeltaTime)
 {
     InputSystem::Get().Tick(Window->IsForeground());
-
-    // FGameInput 상태 업데이트 (정적 입력 브릿지)
     const FInputSnapshot& Snapshot = InputSystem::Get().GetSnapshot();
-    for (int i = 0; i < 256; ++i)
+
+    ViewportInputRouter.ClearTargets();
+    if (GameViewportClient && GameViewportClient->GetViewport())
     {
-        FGameInput::UpdateKeyState(i, Snapshot.KeyDown[i], Snapshot.KeyPressed[i], Snapshot.KeyReleased[i]);
+        FViewport* VP = GameViewportClient->GetViewport();
+
+        // Standalone 모드에서는 메인 윈도우 전체를 타겟으로 등록
+        ViewportInputRouter.RegisterTarget(
+            VP,
+            GameViewportClient,
+            [this](FRect& OutRect)
+            {
+                OutRect = FRect{ 0.0f, 0.0f, static_cast<float>(Window->GetWidth()), static_cast<float>(Window->GetHeight()) };
+                return true;
+            });
+        
+        // 키보드 입력을 받을 기본 타겟으로 설정
+        ViewportInputRouter.SetKeyTargetViewport(VP);
+
+        GameViewportClient->BeginInputFrame();
     }
+
+    ViewportInputRouter.Tick(Snapshot, DeltaTime);
 
     if (GameViewportClient)
     {
-        GameViewportClient->BeginInputFrame();
         GameViewportClient->Tick(DeltaTime);
     }
 
     WorldTick(DeltaTime);
     Render(DeltaTime);
-
-    // 프레임 종료 시 입력 상태 리셋 (Pressed/Released 플래그)
-    FGameInput::ResetFrameState();
 }
 
 void UEngine::Render(float DeltaTime)
@@ -231,14 +266,6 @@ void UEngine::Render(float DeltaTime)
             // Viewport 기반 렌더링 환경 설정
             RenderTargets.SetFromViewport(Viewport);
             SceneView.SetViewportInfo(Viewport);
-        }
-        else
-        {
-            // Viewport가 없는 경우 (Standalone 기본), 디바이스의 메인 백버퍼 정보를 사용합니다.
-            const D3D11_VIEWPORT& DevVP = Renderer.GetFD3DDevice().GetViewport();
-            SceneView.ViewportWidth = DevVP.Width;
-            SceneView.ViewportHeight = DevVP.Height;
-            Renderer.ReleaseViewModeSurfaces();
         }
 
         Scene = &World->GetScene();
