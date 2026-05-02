@@ -26,6 +26,25 @@
 
 namespace
 {
+constexpr int32 EditorShortcutGraveKey = VK_OEM_3;
+
+bool IsValidVirtualKey(int32 Key)
+{
+    return Key >= 0 && Key < 256;
+}
+
+void ClearKeyForViewport(FInputSnapshot& Input, int32 Key)
+{
+    if (!IsValidVirtualKey(Key))
+    {
+        return;
+    }
+
+    Input.KeyDown[Key] = false;
+    Input.KeyPressed[Key] = false;
+    Input.KeyReleased[Key] = false;
+}
+
 void SaveEditorSettings()
 {
     FEditorSettings::Get().SaveToFile(FEditorSettings::GetDefaultSettingsPath());
@@ -442,6 +461,116 @@ void FEditorMainPanel::Update()
             ImmAssociateContext(hWnd, NULL);
         }
     }
+}
+
+void FEditorMainPanel::HandleShortcuts(const FInputSnapshot& Input, FInputSnapshot& InOutViewportInput)
+{
+    ApplyShortcutKeySuppressions(Input, InOutViewportInput);
+
+    if (bHideEditorWindows)
+    {
+        return;
+    }
+
+    // 이번 국소 패치는 PIE 중 게임 입력과 충돌하지 않도록 에디터 상태에서만 drawer 단축키를 처리합니다.
+    if (EditorEngine && EditorEngine->IsPlayingInEditor())
+    {
+        return;
+    }
+
+    const bool bCtrl = Input.Modifiers.bCtrl;
+    const bool bAlt = Input.Modifiers.bAlt;
+    const bool bShift = Input.Modifiers.bShift;
+
+    if (BottomBar.GetActiveDrawer() == EEditorDrawer::Content && bCtrl && !bAlt && Input.KeyPressed[VK_SPACE])
+    {
+        BottomBar.CloseDrawer();
+        ImGui::ClearActiveID();
+        SuppressShortcutKey(InOutViewportInput, VK_SPACE);
+        return;
+    }
+
+    if (BottomBar.GetActiveDrawer() == EEditorDrawer::OutputLog && bAlt && !bCtrl && Input.KeyPressed[EditorShortcutGraveKey])
+    {
+        BottomBar.CloseDrawer();
+        ImGui::ClearActiveID();
+        SuppressShortcutKey(InOutViewportInput, EditorShortcutGraveKey);
+        return;
+    }
+
+    ImGuiIO& IO = ImGui::GetIO();
+    const bool bTextInputActive = IO.WantTextInput;
+    const bool bAnyItemActive = ImGui::IsAnyItemActive();
+    const bool bAnyPopupOpen = ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId);
+    if (bTextInputActive || bAnyItemActive || bAnyPopupOpen)
+    {
+        return;
+    }
+
+    if (Input.KeyPressed[VK_ESCAPE] && BottomBar.IsDrawerOpen())
+    {
+        BottomBar.CloseDrawer();
+        SuppressShortcutKey(InOutViewportInput, VK_ESCAPE);
+        return;
+    }
+
+    if (bCtrl && !bAlt && Input.KeyPressed[VK_SPACE])
+    {
+        BottomBar.ToggleDrawer(EEditorDrawer::Content);
+        if (BottomBar.GetActiveDrawer() == EEditorDrawer::Content)
+        {
+            ContentDrawerPanel.RequestSearchFocus();
+        }
+        SuppressShortcutKey(InOutViewportInput, VK_SPACE);
+        return;
+    }
+
+    if (bAlt && !bCtrl && Input.KeyPressed[EditorShortcutGraveKey])
+    {
+        BottomBar.ToggleDrawer(EEditorDrawer::OutputLog);
+        if (BottomBar.GetActiveDrawer() == EEditorDrawer::OutputLog)
+        {
+            OutputLogPanel.RequestCommandInputFocus();
+        }
+        SuppressShortcutKey(InOutViewportInput, EditorShortcutGraveKey);
+        return;
+    }
+
+    if (!bCtrl && !bAlt && !bShift && Input.KeyPressed[EditorShortcutGraveKey])
+    {
+        BottomBar.OpenDrawer(EEditorDrawer::OutputLog);
+        OutputLogPanel.RequestCommandInputFocus();
+        SuppressShortcutKey(InOutViewportInput, EditorShortcutGraveKey);
+    }
+}
+
+void FEditorMainPanel::ApplyShortcutKeySuppressions(const FInputSnapshot& Input, FInputSnapshot& InOutViewportInput)
+{
+    for (int32 Key = 0; Key < 256; ++Key)
+    {
+        if (!bSuppressShortcutKeyUntilRelease[Key])
+        {
+            continue;
+        }
+
+        ClearKeyForViewport(InOutViewportInput, Key);
+
+        if (Input.KeyReleased[Key] || !Input.KeyDown[Key])
+        {
+            bSuppressShortcutKeyUntilRelease[Key] = false;
+        }
+    }
+}
+
+void FEditorMainPanel::SuppressShortcutKey(FInputSnapshot& InOutViewportInput, int32 Key)
+{
+    if (!IsValidVirtualKey(Key))
+    {
+        return;
+    }
+
+    bSuppressShortcutKeyUntilRelease[Key] = true;
+    ClearKeyForViewport(InOutViewportInput, Key);
 }
 
 void FEditorMainPanel::HideEditorWindowsForPIE()
