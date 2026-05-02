@@ -32,7 +32,8 @@ namespace
 		if (Context.World)
 		{
 			Context.World->SetWorldType(EWorldType::Game);
-			FEngineSettings::Get().ApplyToSpatialPolicy(Context.World->GetSpatialIndex().GetMaintenancePolicy());
+			FWorldSpatialIndex::FMaintenancePolicy& Policy = Context.World->GetSpatialIndex().GetMaintenancePolicy();
+			FEngineSettings::Get().ApplyToSpatialPolicy(Policy);
 		}
 	}
 }
@@ -48,10 +49,7 @@ void UGameEngine::Init(FWindowsWindow* InWindow)
 
 void UGameEngine::LoadStartupScene()
 {
-    const FString ScenePath = FPaths::ToString(
-        FPaths::Combine(FPaths::SceneDir(), GameConfig::StartupSceneName));
-
-    GameLog(("Loading startup scene: " + ScenePath).c_str());
+    const FString ScenePath = FPaths::ToString(FPaths::Combine(FPaths::SceneDir(), GameConfig::StartupSceneName));
 
     FWorldContext Ctx;
     FSceneSaveManager::Load(ScenePath, Ctx, nullptr);
