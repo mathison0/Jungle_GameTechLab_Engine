@@ -1,3 +1,4 @@
+---@class Template : ScriptComponent
 local Script = {
     properties = {
         Message = { type = "string", default = "Template.lua" },
