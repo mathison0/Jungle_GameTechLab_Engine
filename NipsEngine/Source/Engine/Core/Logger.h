@@ -6,10 +6,10 @@
 class FLogger
 {
 public:
-	using FLogMessage = void(*)(const char* Message);
+	using FLogRouter = void(*)(const char* Message);
 
-	static void SetMessage(FLogMessage InSink);
-	static void ClearMessage(FLogMessage InSink = nullptr);
+	static void SetMessage(FLogRouter InRouter);
+	static void ClearMessage(FLogRouter InRouter = nullptr);
 	static void Log(const char* Format, ...);
 };
 

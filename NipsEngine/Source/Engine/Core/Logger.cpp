@@ -6,19 +6,19 @@
 
 namespace
 {
-	FLogger::FLogMessage GLogMessage = nullptr;
+	FLogger::FLogRouter GLogRouter = nullptr;
 }
 
-void FLogger::SetMessage(FLogMessage InSink)
+void FLogger::SetMessage(FLogRouter InRouter)
 {
-	GLogMessage = InSink;
+	GLogRouter = InRouter;
 }
 
-void FLogger::ClearMessage(FLogMessage InSink)
+void FLogger::ClearMessage(FLogRouter InRouter)
 {
-	if (InSink == nullptr || GLogMessage == InSink)
+	if (InRouter == nullptr || GLogRouter == InRouter)
 	{
-		GLogMessage = nullptr;
+		GLogRouter = nullptr;
 	}
 }
 
@@ -31,9 +31,9 @@ void FLogger::Log(const char* Format, ...)
 	vsnprintf(Buffer, sizeof(Buffer), Format, Args);
 	va_end(Args);
 
-	if (GLogMessage)
+	if (GLogRouter)
 	{
-		GLogMessage(Buffer);
+		GLogRouter(Buffer);
 		return;
 	}
 
