@@ -97,7 +97,7 @@ void FD3DDevice::CreateDeviceAndSwapChain(HWND InHWindow)
     DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
     swapChainDesc.BufferDesc.Width     = 0;
     swapChainDesc.BufferDesc.Height    = 0;
-    swapChainDesc.BufferDesc.Format    = DXGI_FORMAT_B8G8R8A8_UNORM;
+    swapChainDesc.BufferDesc.Format    = DXGI_FORMAT_R8G8B8A8_UNORM;
     swapChainDesc.SampleDesc.Count     = 1;
     swapChainDesc.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.BufferCount          = 2;
@@ -197,7 +197,7 @@ void FD3DDevice::CreateFrameBuffer()
     SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&FrameBuffer);
 
     CD3D11_RENDER_TARGET_VIEW_DESC frameBufferRTVDesc = {};
-    frameBufferRTVDesc.Format                         = DXGI_FORMAT_B8G8R8A8_UNORM;
+    frameBufferRTVDesc.Format                         = DXGI_FORMAT_R8G8B8A8_UNORM;
     frameBufferRTVDesc.ViewDimension                  = D3D11_RTV_DIMENSION_TEXTURE2D;
 
     Device->CreateRenderTargetView(FrameBuffer, &frameBufferRTVDesc, &FrameBufferRTV);

@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "Scripting/ScriptSystem.h"
+#include "Input/ViewportInputRouter.h"
 
 class FWindowsWindow;
 class FTimer;
@@ -80,6 +81,7 @@ protected:
     FTimer* Timer = nullptr;
 
     UGameViewportClient* GameViewportClient = nullptr;
+    FViewportInputRouter ViewportInputRouter;
 
     FRenderer Renderer;
 
