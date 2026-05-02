@@ -1,4 +1,4 @@
-#include "Engine/Scripting/LuaScriptTypes.h"
+﻿#include "Engine/Scripting/LuaScriptTypes.h"
 
 #include "Serialization/Archive.h"
 
@@ -9,8 +9,8 @@ namespace
 {
 FString ToLowerAscii(FString Value)
 {
-    std::transform(Value.begin(), Value.end(), Value.begin(),
-                   [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
+    std::ranges::transform(Value, Value.begin(),
+                           [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
     return Value;
 }
 }
@@ -92,6 +92,68 @@ FLuaScriptValue MakeDefaultLuaScriptValue(ELuaScriptPropertyType Type)
     return Value;
 }
 
+bool ReadLuaVec3(const sol::object& ValueObject, FVector& OutValue)
+{
+    if (!ValueObject.is<sol::table>())
+    {
+        return false;
+    }
+
+    sol::table Table = ValueObject.as<sol::table>();
+    sol::object XObject = Table["x"];
+    sol::object YObject = Table["y"];
+    sol::object ZObject = Table["z"];
+
+    if (!XObject.valid() || XObject == sol::nil)
+    {
+        XObject = Table["X"];
+    }
+    if (!YObject.valid() || YObject == sol::nil)
+    {
+        YObject = Table["Y"];
+    }
+    if (!ZObject.valid() || ZObject == sol::nil)
+    {
+        ZObject = Table["Z"];
+    }
+    if (!XObject.valid() || XObject == sol::nil)
+    {
+        XObject = Table[1];
+    }
+    if (!YObject.valid() || YObject == sol::nil)
+    {
+        YObject = Table[2];
+    }
+    if (!ZObject.valid() || ZObject == sol::nil)
+    {
+        ZObject = Table[3];
+    }
+
+    if (XObject.get_type() != sol::type::number ||
+        YObject.get_type() != sol::type::number ||
+        ZObject.get_type() != sol::type::number)
+    {
+        return false;
+    }
+
+    OutValue.X = XObject.as<float>();
+    OutValue.Y = YObject.as<float>();
+    OutValue.Z = ZObject.as<float>();
+    return true;
+}
+
+sol::table MakeLuaVec3(sol::state_view Lua, const FVector& Value)
+{
+    sol::table Vec = Lua.create_table();
+    Vec[1] = Value.X;
+    Vec[2] = Value.Y;
+    Vec[3] = Value.Z;
+    Vec["x"] = Value.X;
+    Vec["y"] = Value.Y;
+    Vec["z"] = Value.Z;
+    return Vec;
+}
+
 bool ReadLuaScriptValue(const sol::object& ValueObject, ELuaScriptPropertyType Type, FLuaScriptValue& OutValue)
 {
     // Lua default 값을 FLuaScriptValue에 저장하는 확장 지점입니다.
@@ -134,26 +196,10 @@ bool ReadLuaScriptValue(const sol::object& ValueObject, ELuaScriptPropertyType T
         return true;
     case ELuaScriptPropertyType::Vec3:
     {
-        if (!ValueObject.is<sol::table>())
+        if (!ReadLuaVec3(ValueObject, OutValue.Vec3Value))
         {
             return false;
         }
-
-        sol::table Table = ValueObject.as<sol::table>();
-        sol::object XObject = Table[1];
-        sol::object YObject = Table[2];
-        sol::object ZObject = Table[3];
-
-        if (XObject.get_type() != sol::type::number ||
-            YObject.get_type() != sol::type::number ||
-            ZObject.get_type() != sol::type::number)
-        {
-            return false;
-        }
-
-        OutValue.Vec3Value.X = XObject.as<float>();
-        OutValue.Vec3Value.Y = YObject.as<float>();
-        OutValue.Vec3Value.Z = ZObject.as<float>();
         return true;
     }
     default:
@@ -180,14 +226,7 @@ void SetLuaScriptTableValue(sol::state& Lua, sol::table Table, const FString& Na
         break;
     case ELuaScriptPropertyType::Vec3:
     {
-        sol::table Vec = Lua.create_table();
-        Vec[1] = Value.Vec3Value.X;
-        Vec[2] = Value.Vec3Value.Y;
-        Vec[3] = Value.Vec3Value.Z;
-        Vec["x"] = Value.Vec3Value.X;
-        Vec["y"] = Value.Vec3Value.Y;
-        Vec["z"] = Value.Vec3Value.Z;
-        Table[Name] = Vec;
+        Table[Name] = MakeLuaVec3(Lua, Value.Vec3Value);
         break;
     }
     default:

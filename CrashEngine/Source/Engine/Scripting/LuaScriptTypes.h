@@ -93,6 +93,8 @@ FArchive& operator<<(FArchive& Ar, FLuaScriptPropertyOverride& Override);
 bool ParseLuaScriptPropertyTypeName(const FString& TypeName, ELuaScriptPropertyType& OutType);
 bool InferLuaScriptPropertyType(const sol::object& ValueObject, ELuaScriptPropertyType& OutType);
 FLuaScriptValue MakeDefaultLuaScriptValue(ELuaScriptPropertyType Type);
+bool ReadLuaVec3(const sol::object& ValueObject, FVector& OutValue);
+sol::table MakeLuaVec3(sol::state_view Lua, const FVector& Value);
 bool ReadLuaScriptValue(const sol::object& ValueObject, ELuaScriptPropertyType Type, FLuaScriptValue& OutValue);
 void SetLuaScriptTableValue(sol::state& Lua, sol::table Table, const FString& Name, const FLuaScriptValue& Value);
 EPropertyType GetLuaScriptEditorPropertyType(ELuaScriptPropertyType Type);

@@ -1,6 +1,7 @@
 ﻿#include "ScriptComponent.h"
 
 #include "Core/Logging/LogMacros.h"
+#include "GameFramework/AActor.h"
 #include "Object/ObjectFactory.h"
 #include "Runtime/Engine.h"
 #include "Serialization/Archive.h"
@@ -33,6 +34,76 @@ FLuaScriptPropertyOverride* FindScriptPropertyOverride(TArray<FLuaScriptProperty
                                return Property.Name == Name;
                            });
     return It != Properties.end() ? &(*It) : nullptr;
+}
+
+bool IsScriptInstanceArgument(const sol::object& Arg)
+{
+    if (!Arg.is<sol::table>())
+    {
+        return false;
+    }
+
+    sol::table Table = Arg.as<sol::table>();
+    sol::object AssetPath = Table["__assetPath"];
+    sol::object AssetVersion = Table["__assetVersion"];
+    return AssetPath.valid() && AssetPath != sol::nil &&
+           AssetVersion.valid() && AssetVersion != sol::nil;
+}
+
+bool ReadFirstVec3Argument(sol::variadic_args Args, FVector& OutValue)
+{
+    for (const sol::object& Arg : Args)
+    {
+        if (IsScriptInstanceArgument(Arg))
+        {
+            continue;
+        }
+
+        if (ReadLuaVec3(Arg, OutValue))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ReadFirstBoolArgument(sol::variadic_args Args, bool& OutValue)
+{
+    for (const sol::object& Arg : Args)
+    {
+        if (Arg.get_type() == sol::type::boolean)
+        {
+            OutValue = Arg.as<bool>();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ReadFirstFunctionArgument(sol::variadic_args Args, sol::function& OutValue)
+{
+    for (const sol::object& Arg : Args)
+    {
+        if (Arg.get_type() == sol::type::function)
+        {
+            OutValue = Arg.as<sol::function>();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ReadFirstUIntArgument(sol::variadic_args Args, uint32& OutValue)
+{
+    for (const sol::object& Arg : Args)
+    {
+        if (Arg.get_type() == sol::type::number)
+        {
+            OutValue = Arg.as<uint32>();
+            return true;
+        }
+    }
+    return false;
 }
 } // namespace
 
@@ -265,10 +336,165 @@ void UScriptComponent::CallLuaTick(float DeltaTime)
 void UScriptComponent::BindFunctions()
 {
     BindFunction("start_coroutine",
-                 [this](sol::function Func) -> uint32
-                 { return CoroutineExecutorSet.Start(Func); });
+                 [this](const sol::variadic_args& Args) -> uint32
+                 {
+                     sol::function Func;
+                     if (!ReadFirstFunctionArgument(Args, Func))
+                     {
+                         UE_LOG([Lua], Warning, "start_coroutine expects a function in '%s'", ScriptPath.c_str());
+                         return 0;
+                     }
+                     return CoroutineExecutorSet.Start(Func);
+                 });
 
     BindFunction("stop_coroutine",
-                 [this](uint32 FuncKey) -> bool
-                 { return CoroutineExecutorSet.Stop(FuncKey); });
+                 [this](const sol::variadic_args& Args) -> bool
+                 {
+                     uint32 FuncKey = 0;
+                     if (!ReadFirstUIntArgument(Args, FuncKey))
+                     {
+                         UE_LOG([Lua], Warning, "stop_coroutine expects a coroutine id in '%s'", ScriptPath.c_str());
+                         return false;
+                     }
+                     return CoroutineExecutorSet.Stop(FuncKey);
+                 });
+
+    BindFunction("GetActorLocation",
+                 [this](sol::variadic_args, sol::this_state State) -> sol::table
+                 {
+                     sol::state_view Lua(State);
+                     AActor* Owner = GetOwner();
+                     return MakeLuaVec3(Lua, Owner ? Owner->GetActorLocation() : FVector(0.0f, 0.0f, 0.0f));
+                 });
+
+    BindFunction("SetActorLocation",
+                 [this](const sol::variadic_args& Args) -> bool
+                 {
+                     FVector Location;
+                     if (!ReadFirstVec3Argument(Args, Location))
+                     {
+                         UE_LOG([Lua], Warning, "SetActorLocation expects a vec3 table in '%s'", ScriptPath.c_str());
+                         return false;
+                     }
+
+                     AActor* Owner = GetOwner();
+                     if (!Owner)
+                     {
+                         return false;
+                     }
+
+                     Owner->SetActorLocation(Location);
+                     return true;
+                 });
+
+    BindFunction("AddActorWorldOffset",
+                 [this](const sol::variadic_args& Args) -> bool
+                 {
+                     FVector Delta;
+                     if (!ReadFirstVec3Argument(Args, Delta))
+                     {
+                         UE_LOG([Lua], Warning, "AddActorWorldOffset expects a vec3 table in '%s'", ScriptPath.c_str());
+                         return false;
+                     }
+
+                     AActor* Owner = GetOwner();
+                     if (!Owner)
+                     {
+                         return false;
+                     }
+
+                     Owner->AddActorWorldOffset(Delta);
+                     return true;
+                 });
+
+    BindFunction("GetActorRotation",
+                 [this](sol::variadic_args, sol::this_state State) -> sol::table
+                 {
+                     sol::state_view Lua(State);
+                     AActor* Owner = GetOwner();
+                     return MakeLuaVec3(Lua, Owner ? Owner->GetActorRotation().ToVector() : FVector(0.0f, 0.0f, 0.0f));
+                 });
+
+    BindFunction("SetActorRotation",
+                 [this](const sol::variadic_args& Args) -> bool
+                 {
+                     FVector Rotation;
+                     if (!ReadFirstVec3Argument(Args, Rotation))
+                     {
+                         UE_LOG([Lua], Warning, "SetActorRotation expects a vec3 table in '%s'", ScriptPath.c_str());
+                         return false;
+                     }
+
+                     AActor* Owner = GetOwner();
+                     if (!Owner)
+                     {
+                         return false;
+                     }
+
+                     Owner->SetActorRotation(Rotation);
+                     return true;
+                 });
+
+    BindFunction("GetActorScale",
+                 [this](sol::variadic_args, sol::this_state State) -> sol::table
+                 {
+                     sol::state_view Lua(State);
+                     AActor* Owner = GetOwner();
+                     return MakeLuaVec3(Lua, Owner ? Owner->GetActorScale() : FVector(1.0f, 1.0f, 1.0f));
+                 });
+
+    BindFunction("SetActorScale",
+                 [this](const sol::variadic_args& Args) -> bool
+                 {
+                     FVector Scale;
+                     if (!ReadFirstVec3Argument(Args, Scale))
+                     {
+                         UE_LOG([Lua], Warning, "SetActorScale expects a vec3 table in '%s'", ScriptPath.c_str());
+                         return false;
+                     }
+
+                     AActor* Owner = GetOwner();
+                     if (!Owner)
+                     {
+                         return false;
+                     }
+
+                     Owner->SetActorScale(Scale);
+                     return true;
+                 });
+
+    BindFunction("GetActorForward",
+                 [this](sol::variadic_args, sol::this_state State) -> sol::table
+                 {
+                     sol::state_view Lua(State);
+                     AActor* Owner = GetOwner();
+                     return MakeLuaVec3(Lua, Owner ? Owner->GetActorForward() : FVector(0.0f, 0.0f, 1.0f));
+                 });
+
+    BindFunction("IsActorVisible",
+                 [this](sol::variadic_args) -> bool
+                 {
+                     AActor* Owner = GetOwner();
+                     return Owner ? Owner->IsVisible() : false;
+                 });
+
+    BindFunction("SetActorVisible",
+                 [this](const sol::variadic_args& Args) -> bool
+                 {
+                     bool bVisible = false;
+                     if (!ReadFirstBoolArgument(Args, bVisible))
+                     {
+                         UE_LOG([Lua], Warning, "SetActorVisible expects a bool in '%s'", ScriptPath.c_str());
+                         return false;
+                     }
+
+                     AActor* Owner = GetOwner();
+                     if (!Owner)
+                     {
+                         return false;
+                     }
+
+                     Owner->SetVisible(bVisible);
+                     return true;
+                 });
 }
