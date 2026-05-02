@@ -1,6 +1,7 @@
 ﻿#include "GameFramework/World.h"
 #include "Collision/CollisionSystem.h"
 #include "Component/Light/LightComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Audio/AudioSystem.h"
 #include "Engine/Viewport/ViewportCamera.h"
 
@@ -118,6 +119,49 @@ void UWorld::RebuildSpatialIndex()
 void UWorld::SyncSpatialIndex()
 {
     SpatialIndex.FlushDirtyBounds();
+}
+
+bool UWorld::LineTraceSingle(const FRay& Ray, float MaxDistance, FHitResult& OutHit, const AActor* IgnoredActor)
+{
+    OutHit.Reset();
+
+    if (MaxDistance <= 0.0f)
+    {
+        return false;
+    }
+
+    FWorldSpatialIndex::FPrimitiveRayQueryScratch Scratch;
+    TArray<UPrimitiveComponent*> Candidates;
+    TArray<float> BroadHitTs;
+    SpatialIndex.RayQueryPrimitives(Ray, Candidates, BroadHitTs, Scratch);
+
+    bool bFoundHit = false;
+    float ClosestDistance = MaxDistance;
+
+    for (UPrimitiveComponent* Candidate : Candidates)
+    {
+        if (Candidate == nullptr || Candidate->GetOwner() == IgnoredActor)
+        {
+            continue;
+        }
+
+        FHitResult CandidateHit;
+        if (!Candidate->Raycast(Ray, CandidateHit) || !CandidateHit.IsValid())
+        {
+            continue;
+        }
+
+        if (CandidateHit.Distance < 0.0f || CandidateHit.Distance > ClosestDistance)
+        {
+            continue;
+        }
+
+        ClosestDistance = CandidateHit.Distance;
+        OutHit = CandidateHit;
+        bFoundHit = true;
+    }
+
+    return bFoundHit;
 }
 
 FLightHandle UWorld::RegisterLight(ULightComponentBase* Comp)
