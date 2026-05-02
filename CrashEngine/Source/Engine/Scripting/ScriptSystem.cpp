@@ -10,6 +10,7 @@
 #include "Core/Logging/LogMacros.h"
 #include "Input/GameInput.h"
 #include "Platform/Paths.h"
+#include "LuaEngineBinding.h"
 
 namespace
 {
@@ -214,6 +215,7 @@ void FScriptSystem::RegisterEngineAPI() const
         "GetAxis", &FGameInput::GetAxis
     );
     
+	RegisterLuaEngineBindings(*Lua);
 }
 
 void FScriptSystem::BindPackagePath() const
