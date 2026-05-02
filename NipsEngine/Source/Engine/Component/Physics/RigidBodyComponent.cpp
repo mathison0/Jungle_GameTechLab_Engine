@@ -54,8 +54,6 @@ void URigidBodyComponent::BeginPlay()
 	{
 		UpdatedComponent = Owner->GetRootComponent();
 	}
-
-	CacheInitialRotationIfNeeded();
 }
 
 void URigidBodyComponent::Serialize(FArchive& Ar)
@@ -97,7 +95,6 @@ void URigidBodyComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
 	OutProps.push_back({ "Linear Damping", EPropertyType::Float, &LinearDamping, 0.0f, 50.0f, 0.01f });
 	OutProps.push_back({ "Max Speed", EPropertyType::Float, &MaxSpeed, 0.0f, 1000.0f, 0.1f });
 	OutProps.push_back({ "Sleep Speed", EPropertyType::Float, &SleepSpeed, 0.0f, 10.0f, 0.01f });
-	OutProps.push_back({ "Angular Velocity", EPropertyType::Vec3, &AngularVelocity });
 	OutProps.push_back({ "Angular Damping", EPropertyType::Float, &AngularDamping, 0.0f, 50.0f, 0.01f });
 	OutProps.push_back({ "Max Angular Speed", EPropertyType::Float, &MaxAngularSpeed, 0.0f, 720.0f, 1.0f });
 	OutProps.push_back({ "Pickup Sound", EPropertyType::String, &PickupSoundPath });
@@ -141,7 +138,6 @@ void URigidBodyComponent::SetHeldByPhysicsHandle(bool bHeld)
 		bGrounded = false;
 		Velocity = FVector::ZeroVector;
 		AngularVelocity = FVector::ZeroVector;
-		ResetRotationToInitial();
 		FJoltPhysicsSystem::Get().SetBodyKinematic(this);
 		FJoltPhysicsSystem::Get().SetBodyTransformFromComponent(this);
 	}
@@ -355,29 +351,5 @@ void URigidBodyComponent::ApplyBlockingResponse()
 				Velocity.Z = 0.0f;
 			}
 		}
-	}
-}
-
-void URigidBodyComponent::CacheInitialRotationIfNeeded()
-{
-	if (bHasInitialRelativeRotation)
-	{
-		return;
-	}
-
-	if (const USceneComponent* Scene = GetUpdatedComponent())
-	{
-		InitialRelativeRotation = Scene->GetRelativeRotation();
-		bHasInitialRelativeRotation = true;
-	}
-}
-
-void URigidBodyComponent::ResetRotationToInitial()
-{
-	CacheInitialRotationIfNeeded();
-
-	if (USceneComponent* Scene = GetUpdatedComponent())
-	{
-		Scene->SetRelativeRotation(InitialRelativeRotation);
 	}
 }
