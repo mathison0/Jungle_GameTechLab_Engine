@@ -3,7 +3,7 @@
 #include "Renderer.h"
 #include "Engine/Runtime/Engine.h"
 #include "Engine/UI/GameUISystem.h"
-#include "Editor/Viewport/ViewportCamera.h"
+#include "Engine/Viewport/ViewportCamera.h"
 #include "GameFramework/World.h"
 
 FGameRenderPipeline::FGameRenderPipeline(UEngine* InEngine, FRenderer& InRenderer)

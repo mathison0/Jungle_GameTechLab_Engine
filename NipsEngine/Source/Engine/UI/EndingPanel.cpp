@@ -2,7 +2,7 @@
 #include "Engine/UI/DialoguePanel.h"
 #include "Engine/UI/GameUISystem.h"
 #include "Engine/Input/InputSystem.h"
-#include "Engine/Runtime/ViewportRect.h"
+#include "Engine/Viewport/ViewportRect.h"
 #include "ImGui/imgui.h"
 
 float EndingPanel::FadeTimer   = 0.f;
