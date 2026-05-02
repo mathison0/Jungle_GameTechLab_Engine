@@ -28,7 +28,7 @@ namespace
 void FGamePlayerController::Tick(float DeltaTime)
 {
 	IBaseGameController::Tick(DeltaTime);
-	SyncDebugCameraAngles();
+	SyncFreeCameraAngles();
 }
 
 void FGamePlayerController::OnMouseMove(float DeltaX, float DeltaY)
@@ -92,8 +92,8 @@ void FGamePlayerController::OnKeyDown(int VK)
 {
 	FVector Direction = FVector::ZeroVector;
 
-	const float Yaw = Camera ? Camera->GetYawDegrees() : DebugCameraYaw;
-	const float Pitch = Camera ? Camera->GetPitchDegrees() : DebugCameraPitch;
+	const float Yaw = Camera ? Camera->GetYawDegrees() : FreeCameraYaw;
+	const float Pitch = Camera ? Camera->GetPitchDegrees() : FreeCameraPitch;
 	const FVector Forward = ToForward(Pitch, Yaw);
 	const FVector Right = ToRight(Yaw);
 	const FVector Up = FVector::UpVector;
@@ -104,13 +104,8 @@ void FGamePlayerController::OnKeyDown(int VK)
 	case 'S': Direction -= Forward; break;
 	case 'D': Direction += Right; break;
 	case 'A': Direction -= Right; break;
-	case 'E':
-	case VK_SPACE:
-		Direction += Up;
-		break;
-	case 'Q':
-		Direction -= Up;
-		break;
+	case 'E': Direction += Up; break;
+	case 'Q': Direction -= Up; break;
 	case VK_LEFT:
 		RotateActiveCamera(-60.0f * DeltaTime / RotateSensitivity, 0.0f);
 		return;
@@ -140,8 +135,8 @@ void FGamePlayerController::OnKeyReleased(int VK)
 
 void FGamePlayerController::OnWheelScrolled(float Notch)
 {
-	MoveActiveCamera(ToForward(Camera ? Camera->GetPitchDegrees() : DebugCameraPitch,
-		Camera ? Camera->GetYawDegrees() : DebugCameraYaw), Notch * MoveSpeed * 0.25f);
+	MoveActiveCamera(ToForward(Camera ? Camera->GetPitchDegrees() : FreeCameraPitch,
+		Camera ? Camera->GetYawDegrees() : FreeCameraYaw), Notch * MoveSpeed * 0.25f);
 }
 
 void FGamePlayerController::SetCamera(UCameraComponent* InCamera)
@@ -153,11 +148,11 @@ void FGamePlayerController::SetCamera(UCameraComponent* InCamera)
 	}
 }
 
-void FGamePlayerController::SetDebugCamera(FViewportCamera* InCamera)
+void FGamePlayerController::SetFreeCamera(FViewportCamera* InCamera)
 {
-	DebugCamera = InCamera;
-	bDebugCameraInitialized = false;
-	SyncDebugCameraAngles();
+	FreeCamera = InCamera;
+	bFreeCameraInitialized = false;
+	SyncFreeCameraAngles();
 }
 
 void FGamePlayerController::RotateActiveCamera(float DeltaX, float DeltaY)
@@ -169,16 +164,16 @@ void FGamePlayerController::RotateActiveCamera(float DeltaX, float DeltaY)
 		return;
 	}
 
-	if (!DebugCamera)
+	if (!FreeCamera)
 	{
 		return;
 	}
 
-	SyncDebugCameraAngles();
-	DebugCameraYaw += DeltaX * RotateSensitivity;
-	DebugCameraPitch -= DeltaY * RotateSensitivity;
-	DebugCameraPitch = MathUtil::Clamp(DebugCameraPitch, -89.0f, 89.0f);
-	UpdateDebugCameraRotation();
+	SyncFreeCameraAngles();
+	FreeCameraYaw += DeltaX * RotateSensitivity;
+	FreeCameraPitch -= DeltaY * RotateSensitivity;
+	FreeCameraPitch = MathUtil::Clamp(FreeCameraPitch, -89.0f, 89.0f);
+	UpdateFreeCameraRotation();
 }
 
 void FGamePlayerController::MoveActiveCamera(const FVector& Direction, float Scale)
@@ -189,29 +184,29 @@ void FGamePlayerController::MoveActiveCamera(const FVector& Direction, float Sca
 		return;
 	}
 
-	if (DebugCamera)
+	if (FreeCamera)
 	{
-		DebugCamera->SetLocation(DebugCamera->GetLocation() + Direction * Scale);
+		FreeCamera->SetLocation(FreeCamera->GetLocation() + Direction * Scale);
 	}
 }
 
-void FGamePlayerController::SyncDebugCameraAngles()
+void FGamePlayerController::SyncFreeCameraAngles()
 {
-	if (!DebugCamera || bDebugCameraInitialized)
+	if (!FreeCamera || bFreeCameraInitialized)
 		return;
 
-	const FVector Forward = DebugCamera->GetForwardVector().GetSafeNormal();
-	DebugCameraPitch = MathUtil::RadiansToDegrees(std::asin(MathUtil::Clamp(Forward.Z, -1.0f, 1.0f)));
-	DebugCameraYaw = MathUtil::RadiansToDegrees(std::atan2(Forward.Y, Forward.X));
-	bDebugCameraInitialized = true;
+	const FVector Forward = FreeCamera->GetForwardVector().GetSafeNormal();
+	FreeCameraPitch = MathUtil::RadiansToDegrees(std::asin(MathUtil::Clamp(Forward.Z, -1.0f, 1.0f)));
+	FreeCameraYaw = MathUtil::RadiansToDegrees(std::atan2(Forward.Y, Forward.X));
+	bFreeCameraInitialized = true;
 }
 
-void FGamePlayerController::UpdateDebugCameraRotation()
+void FGamePlayerController::UpdateFreeCameraRotation()
 {
-	if (!DebugCamera)
+	if (!FreeCamera)
 		return;
 
-	const FVector Forward = ToForward(DebugCameraPitch, DebugCameraYaw);
+	const FVector Forward = ToForward(FreeCameraPitch, FreeCameraYaw);
 	const FVector Right = FVector::CrossProduct(FVector::UpVector, Forward).GetSafeNormal();
 	if (Right.IsNearlyZero())
 		return;
@@ -223,5 +218,5 @@ void FGamePlayerController::UpdateDebugCameraRotation()
 
 	FQuat Rotation(RotationMatrix);
 	Rotation.Normalize();
-	DebugCamera->SetRotation(Rotation);
+	FreeCamera->SetRotation(Rotation);
 }

@@ -32,35 +32,47 @@ namespace
 	}
 } // namespace
 
+FGameViewportClient::~FGameViewportClient()
+{
+	ReleaseMouseCursor();
+	ShowMouseCursor();
+}
+
+// 디버그용 Free Camera와 PlayerController를 초기화합니다.
 void FGameViewportClient::Initialize(FWindowsWindow* InWindow)
 {
 	FViewportClient::Initialize(InWindow);
-	DebugCamera.OnResize(static_cast<uint32>(WindowWidth), static_cast<uint32>(WindowHeight));
-	DebugCamera.SetLocation(FVector(-5.0f, -5.0f, 3.0f));
-	DebugCamera.SetLookAt(FVector::ZeroVector);
-	InputRouter.GetPlayerController().SetDebugCamera(&DebugCamera);
+	FreeCamera.OnResize(static_cast<uint32>(WindowWidth), static_cast<uint32>(WindowHeight));
+	FreeCamera.SetLocation(FVector(-5.0f, -5.0f, 3.0f));
+	FreeCamera.SetLookAt(FVector::ZeroVector);
+	InputRouter.GetPlayerController().SetFreeCamera(&FreeCamera);
 	UpdateControllerViewportDim();
+	UpdateCursorCapture();
 }
 
+// 현재 활성화된 카메라에 맞춰 뷰포트 크기를 적용합니다.
 void FGameViewportClient::SetViewportSize(float InWidth, float InHeight)
 {
 	FViewportClient::SetViewportSize(InWidth, InHeight);
-	DebugCamera.OnResize(static_cast<uint32>(WindowWidth), static_cast<uint32>(WindowHeight));
+	FreeCamera.OnResize(static_cast<uint32>(WindowWidth), static_cast<uint32>(WindowHeight));
 	if (ActiveCamera)
 	{
 		ActiveCamera->OnResize(static_cast<int32>(WindowWidth), static_cast<int32>(WindowHeight));
 	}
 	UpdateControllerViewportDim();
+	UpdateCursorCapture();
 }
 
 void FGameViewportClient::Tick(float DeltaTime)
 {
+	UpdateCursorCapture();
 	UpdateControllerViewportDim();
 	InputRouter.Tick(DeltaTime);
 	TickKeyboardInput();
 	TickMouseInput();
 }
 
+// 카메라 활성화 여부에 따라 적절한 카메라를 선택하여 렌더러에 넘겨줄 FSceneView 구조체의 내용을 채웁니다.
 void FGameViewportClient::BuildSceneView(FSceneView& OutView) const
 {
 	if (ActiveCamera)
@@ -82,20 +94,20 @@ void FGameViewportClient::BuildSceneView(FSceneView& OutView) const
 	}
 	else
 	{
-		OutView.ViewMatrix = DebugCamera.GetViewMatrix();
-		OutView.ProjectionMatrix = DebugCamera.GetProjectionMatrix();
+		OutView.ViewMatrix = FreeCamera.GetViewMatrix();
+		OutView.ProjectionMatrix = FreeCamera.GetProjectionMatrix();
 		OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
 
-		OutView.CameraPosition = DebugCamera.GetLocation();
-		OutView.CameraForward = DebugCamera.GetForwardVector();
-		OutView.CameraRight = DebugCamera.GetRightVector();
-		OutView.CameraUp = DebugCamera.GetUpVector();
+		OutView.CameraPosition = FreeCamera.GetLocation();
+		OutView.CameraForward = FreeCamera.GetForwardVector();
+		OutView.CameraRight = FreeCamera.GetRightVector();
+		OutView.CameraUp = FreeCamera.GetUpVector();
 
-		OutView.NearPlane = DebugCamera.GetNearPlane();
-		OutView.FarPlane = DebugCamera.GetFarPlane();
-		OutView.bOrthographic = DebugCamera.IsOrthographic();
-		OutView.CameraOrthoHeight = DebugCamera.GetOrthoHeight();
-		OutView.CameraFrustum = DebugCamera.GetFrustum();
+		OutView.NearPlane = FreeCamera.GetNearPlane();
+		OutView.FarPlane = FreeCamera.GetFarPlane();
+		OutView.bOrthographic = FreeCamera.IsOrthographic();
+		OutView.CameraOrthoHeight = FreeCamera.GetOrthoHeight();
+		OutView.CameraFrustum = FreeCamera.GetFrustum();
 	}
 
 	OutView.ViewRect = FViewportRect(0, 0, static_cast<int32>(WindowWidth), static_cast<int32>(WindowHeight));
@@ -107,7 +119,7 @@ void FGameViewportClient::SetWorld(UWorld* InWorld)
 	World = InWorld;
 	if (World)
 	{
-		World->SetActiveCamera(&DebugCamera);
+		World->SetActiveCamera(&FreeCamera);
 	}
 }
 
@@ -121,13 +133,17 @@ void FGameViewportClient::SetCamera(UCameraComponent* InCamera)
 	}
 }
 
+// 프레임당 키보드 입력을 처리합니다.
 void FGameViewportClient::TickKeyboardInput()
 {
 	const InputSystem& IS = InputSystem::Get();
-	if (IS.GetGuiInputState().bBlockViewportInput || IS.GetGuiInputState().bUsingKeyboard)
-	{
+	
+	// F4 키로 커서 숨김, 마우스/키보드 입력 처리 여부를 토글합니다.
+	if (!ActiveCamera && IS.GetKeyDown(VK_F4))
+		ToggleInteractionMode();
+
+	if (IS.GetGuiInputState().bBlockViewportInput || (!ActiveCamera && !bInputActive))
 		return;
-	}
 
 	for (int VK : GameInputKeys)
 	{
@@ -146,13 +162,12 @@ void FGameViewportClient::TickKeyboardInput()
 	}
 }
 
+// 프레임당 마우스 입력을 처리합니다.
 void FGameViewportClient::TickMouseInput()
 {
 	const InputSystem& IS = InputSystem::Get();
-	if (IS.GetGuiInputState().bBlockViewportInput)
-	{
+	if (IS.GetGuiInputState().bBlockViewportInput || (!ActiveCamera && !bInputActive))
 		return;
-	}
 
 	POINT MousePoint = IS.GetMousePos();
 	if (Window)
@@ -206,7 +221,110 @@ void FGameViewportClient::TickMouseInput()
 	}
 }
 
+// PlayerController에 현재 뷰포트 크기를 적용합니다.
 void FGameViewportClient::UpdateControllerViewportDim()
 {
 	InputRouter.GetPlayerController().SetViewportDim(0.0f, 0.0f, WindowWidth, WindowHeight);
+}
+
+// 윈도우 포커스 여부에 따라 마우스 커서를 숨길지, 보일지 결정합니다.
+void FGameViewportClient::UpdateCursorCapture()
+{
+	if (!bInputActive || !Window || !Window->GetHWND())
+	{
+		ReleaseMouseCursor();
+		ShowMouseCursor();
+		return;
+	}
+
+	if (GetForegroundWindow() == Window->GetHWND())
+	{
+		HideMouseCursor();
+		ConfineMouseCursorToWindow();
+		LockMouseCursor();
+	}
+	else
+	{
+		ReleaseMouseCursor();
+		ShowMouseCursor();
+	}
+}
+ 
+void FGameViewportClient::HideMouseCursor()
+{
+	if (!bCursorVisible)
+		return;
+
+	while (ShowCursor(FALSE) >= 0);
+	bCursorVisible = false;
+}
+
+void FGameViewportClient::ShowMouseCursor()
+{
+	if (bCursorVisible)
+		return;
+
+	while (ShowCursor(TRUE) < 0);
+	bCursorVisible = true;
+}
+
+// 마우스 커서가 윈도우 밖으로 나가지 못하게 합니다.
+void FGameViewportClient::ConfineMouseCursorToWindow()
+{
+	if (!Window || !Window->GetHWND())
+		return;
+
+	RECT ClientRect{};
+	GetClientRect(Window->GetHWND(), &ClientRect);
+
+	POINT LeftTop{ ClientRect.left, ClientRect.top };
+	POINT RightBottom{ ClientRect.right, ClientRect.bottom };
+	ClientToScreen(Window->GetHWND(), &LeftTop);
+	ClientToScreen(Window->GetHWND(), &RightBottom);
+
+	RECT ClipRect{ LeftTop.x, LeftTop.y, RightBottom.x, RightBottom.y };
+	ClipCursor(&ClipRect);
+	bCursorConfined = true;
+}
+
+// 마우스 커서가 화면 중앙을 벗어나지 못하도록 합니다.
+void FGameViewportClient::LockMouseCursor()
+{
+	if (!Window || !Window->GetHWND())
+	{
+		return;
+	}
+
+	RECT ClientRect{};
+	GetClientRect(Window->GetHWND(), &ClientRect);
+
+	POINT Center{(ClientRect.left + ClientRect.right) / 2, (ClientRect.top + ClientRect.bottom) / 2};
+
+	ClientToScreen(Window->GetHWND(), &Center);
+	const float ScreenX = static_cast<float>(Center.x) - (ClientRect.right - ClientRect.left) * 0.5f;
+	const float ScreenY = static_cast<float>(Center.y) - (ClientRect.bottom - ClientRect.top) * 0.5f;
+
+	InputSystem::Get().LockMouse(true, ScreenX, ScreenY, static_cast<float>(ClientRect.right - ClientRect.left), static_cast<float>(ClientRect.bottom - ClientRect.top));
+}
+
+// 마우스 커서가 윈도우 밖으로 나갈 수 있도록 합니다.
+void FGameViewportClient::ReleaseMouseCursor()
+{
+	if (!bCursorConfined)
+		return;
+
+	ClipCursor(nullptr);
+	InputSystem::Get().LockMouse(false);
+	bCursorConfined = false;
+}
+
+// 마우스 커서를 표시하고, 입력을 받을지 여부를 토글합니다.
+void FGameViewportClient::ToggleInteractionMode()
+{
+	bInputActive = !bInputActive;
+	if (!bInputActive)
+	{
+		ReleaseMouseCursor();
+		ShowMouseCursor();
+	}
 }

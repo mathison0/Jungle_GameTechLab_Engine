@@ -10,8 +10,10 @@
 #include "Engine/Core/Paths.h"
 #include "Engine/Settings/EngineSettings.h"
 #include "Engine/GameFramework/World.h"
+#include "Engine/Runtime/WindowsWindow.h"
 
 #include <Windows.h>
+#include <commdlg.h>
 
 DEFINE_CLASS(UGameEngine, UEngine)
 REGISTER_FACTORY(UGameEngine)
@@ -45,6 +47,30 @@ namespace
 			FEngineSettings::Get().ApplyToSpatialPolicy(Policy);
 		}
 	}
+
+	// 디버그용 임시 함수: 추후 GameSettings에 저장된 Scene 파일을 불러오도록 변경
+	FString OpenScene(HWND OwnerWindow)
+	{
+		WCHAR FileBuffer[MAX_PATH] = {};
+		const std::wstring InitialDir = FPaths::SceneDir();
+
+		OPENFILENAMEW Ofn{};
+		Ofn.lStructSize = sizeof(Ofn);
+		Ofn.hwndOwner = OwnerWindow;
+		Ofn.lpstrFilter = L"Nips Scene (*.Scene)\0*.Scene\0All Files (*.*)\0*.*\0";
+		Ofn.lpstrFile = FileBuffer;
+		Ofn.nMaxFile = MAX_PATH;
+		Ofn.lpstrInitialDir = InitialDir.c_str();
+		Ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+		Ofn.lpstrDefExt = L"Scene";
+
+		if (!GetOpenFileNameW(&Ofn))
+		{
+			return "";
+		}
+
+		return FPaths::ToUtf8(FileBuffer);
+	}
 }
 
 void UGameEngine::Init(FWindowsWindow* InWindow)
@@ -64,7 +90,11 @@ void UGameEngine::Init(FWindowsWindow* InWindow)
 
 void UGameEngine::LoadStartupScene()
 {
-	const FString ScenePath = FPaths::ToString(FPaths::Combine(FPaths::SceneDir(), GameSettings::StartupSceneName));
+	FString ScenePath = OpenScene(Window ? Window->GetHWND() : nullptr);
+	if (ScenePath.empty())
+	{
+		ScenePath = FPaths::ToString(FPaths::Combine(FPaths::SceneDir(), GameSettings::StartupSceneName));
+	}
 
 	FWorldContext Ctx;
 	FSceneSaveManager::Load(ScenePath, Ctx, nullptr);
@@ -78,11 +108,8 @@ void UGameEngine::LoadStartupScene()
 	}
 
 	ApplyDefaultContext(Ctx);
-
 	WorldList.push_back(Ctx);
 	SetActiveWorld(Ctx.ContextHandle);
-
-	GameLog(("Startup scene loaded. Handle: " + Ctx.ContextHandle.ToString()).c_str());
 }
 
 void UGameEngine::Tick(float DeltaTime)
@@ -109,3 +136,4 @@ void UGameEngine::OnWindowResized(uint32 Width, uint32 Height)
 		GameViewport->SetViewportSize(static_cast<float>(Width), static_cast<float>(Height));
 	}
 }
+	

@@ -35,8 +35,8 @@ public:
 	void SetCamera(UCameraComponent* InCamera);
 	UCameraComponent* GetCamera() const { return Camera; }
 
-	void SetDebugCamera(FViewportCamera* InCamera);
-	FViewportCamera* GetDebugCamera() const { return DebugCamera; }
+	void SetFreeCamera(FViewportCamera* InCamera);
+	FViewportCamera* GetFreeCamera() const { return FreeCamera; }
 
 	void SetMoveSpeed(float InMoveSpeed) { MoveSpeed = InMoveSpeed; }
 	void SetRotateSensitivity(float InSensitivity) { RotateSensitivity = InSensitivity; }
@@ -44,17 +44,17 @@ public:
 private:
 	void RotateActiveCamera(float DeltaX, float DeltaY);
 	void MoveActiveCamera(const FVector& Direction, float Scale);
-	void SyncDebugCameraAngles();
-	void UpdateDebugCameraRotation();
+	void SyncFreeCameraAngles();
+	void UpdateFreeCameraRotation();
 
 private:
 	AActor* Player = nullptr;
 	UCameraComponent* Camera = nullptr;
-	FViewportCamera* DebugCamera = nullptr;
+	FViewportCamera* FreeCamera = nullptr;
 
 	float MoveSpeed = 10.0f;
 	float RotateSensitivity = 0.15f;
-	float DebugCameraYaw = 0.0f;
-	float DebugCameraPitch = 0.0f;
-	bool bDebugCameraInitialized = false;
+	float FreeCameraYaw = 0.0f;
+	float FreeCameraPitch = 0.0f;
+	bool bFreeCameraInitialized = false;
 };
