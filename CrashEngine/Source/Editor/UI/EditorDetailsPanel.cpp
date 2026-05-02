@@ -41,6 +41,11 @@
 #include "Render/Resources/Shadows/ShadowResolutionSettings.h"
 #include "Render/Scene/Proxies/Light/LightProxy.h"
 
+namespace
+{
+constexpr const char* LuaScriptPayloadType = "CRASH_LUA_SCRIPT_PATH";
+}
+
 #define SEPARATOR()     \
     ;                   \
     ImGui::Spacing();   \
@@ -1657,12 +1662,26 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
     case EPropertyType::String:
     {
         FString* Val = static_cast<FString*>(Prop.ValuePtr);
+        const bool bAcceptLuaScriptDrop = Prop.Name == "Script";
         char Buf[256];
         strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
         if (ImGui::InputText(WidgetLabel.c_str(), Buf, sizeof(Buf)))
         {
             *Val = Buf;
             bChanged = true;
+        }
+        if (bAcceptLuaScriptDrop && ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(LuaScriptPayloadType))
+            {
+                const char* ScriptPath = static_cast<const char*>(Payload->Data);
+                if (ScriptPath && Payload->DataSize > 0)
+                {
+                    *Val = ScriptPath;
+                    bChanged = true;
+                }
+            }
+            ImGui::EndDragDropTarget();
         }
         break;
     }

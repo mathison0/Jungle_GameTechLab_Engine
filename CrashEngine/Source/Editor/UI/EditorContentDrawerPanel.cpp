@@ -162,6 +162,11 @@ void FEditorContentDrawerPanel::DrawToolbar()
     ImGui::SetCursorPosX((std::max)(ImGui::GetCursorPosX(), ImGui::GetWindowContentRegionMax().x - SearchWidth));
     ImGui::SetNextItemWidth(SearchWidth);
     ImGui::InputTextWithHint("##ContentDrawerSearch", "Search current folder", SearchBuf.data(), SearchBuf.size());
+    if (bReclaimSearchFocus)
+    {
+        ImGui::SetKeyboardFocusHere(-1);
+        bReclaimSearchFocus = false;
+    }
 }
 
 void FEditorContentDrawerPanel::DrawSidebar()

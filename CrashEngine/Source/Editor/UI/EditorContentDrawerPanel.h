@@ -11,6 +11,7 @@ class FEditorContentDrawerPanel : public FEditorPanel
 {
 public:
     virtual void Render(float DeltaTime) override;
+    void RequestSearchFocus() { bReclaimSearchFocus = true; }
 
 private:
     enum class EContentRoot
@@ -54,4 +55,5 @@ private:
     EContentRoot CurrentRoot = EContentRoot::Content;
     std::filesystem::path CurrentDirectory;
     bool bInitialized = false;
+    bool bReclaimSearchFocus = false;
 };

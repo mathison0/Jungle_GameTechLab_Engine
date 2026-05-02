@@ -169,6 +169,9 @@ void UEditorEngine::Tick(float DeltaTime)
     InputSystem::Get().Tick(Window->IsForeground());
 
     const FInputSnapshot& Input = InputSystem::Get().GetSnapshot();
+    FInputSnapshot ViewportInput = Input;
+    MainPanel.HandleShortcuts(Input, ViewportInput);
+
     const FGuiInputCaptureState& GuiCapture = MainPanel.GetGuiInputCaptureState();
 
 	ViewportInputRouter.SetGuiCaptureState(GuiCapture);
@@ -198,7 +201,7 @@ void UEditorEngine::Tick(float DeltaTime)
         VC->BeginInputFrame();
     }
 
-    ViewportInputRouter.Tick(Input, DeltaTime);
+    ViewportInputRouter.Tick(ViewportInput, DeltaTime);
     ViewportLayout.SyncActiveViewportFromKeyTargetViewport(ViewportInputRouter.GetKeyTargetViewport());
 
     for (FViewportClient* VC : AllViewportClients)

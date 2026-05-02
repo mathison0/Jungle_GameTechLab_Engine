@@ -27,6 +27,20 @@ float EaseOutCubic(float Value)
     const float Inverse = 1.0f - T;
     return 1.0f - Inverse * Inverse * Inverse;
 }
+
+const char* GetDrawerShortcutText(EEditorDrawer Drawer)
+{
+    switch (Drawer)
+    {
+    case EEditorDrawer::Content:
+        return "Shortcut: Ctrl + Space";
+    case EEditorDrawer::OutputLog:
+        return "Shortcut: Alt + `\nCommand input focus: `";
+    case EEditorDrawer::None:
+    default:
+        return "";
+    }
+}
 } // namespace
 
 void FEditorBottomBar::Render(float DeltaTime)
@@ -109,6 +123,40 @@ void FEditorBottomBar::EndDrawerOverlay()
     bDrawerOverlayBegun = false;
 }
 
+void FEditorBottomBar::ToggleDrawer(EEditorDrawer Drawer)
+{
+    if (Drawer == EEditorDrawer::None)
+    {
+        CloseDrawer();
+        return;
+    }
+
+    if (ActiveDrawer == Drawer)
+    {
+        CloseDrawer();
+        return;
+    }
+
+    OpenDrawer(Drawer);
+}
+
+void FEditorBottomBar::OpenDrawer(EEditorDrawer Drawer)
+{
+    if (Drawer == EEditorDrawer::None)
+    {
+        CloseDrawer();
+        return;
+    }
+
+    ActiveDrawer = Drawer;
+    VisibleDrawer = Drawer;
+}
+
+void FEditorBottomBar::CloseDrawer()
+{
+    ActiveDrawer = EEditorDrawer::None;
+}
+
 void FEditorBottomBar::UpdateDrawerAnimation(float DeltaTime)
 {
     if (ActiveDrawer != EEditorDrawer::None)
@@ -170,17 +218,22 @@ void FEditorBottomBar::DrawDrawerButton(const char* Label, EEditorDrawer Drawer)
 
     if (bPressed)
     {
-        ActiveDrawer = bActive ? EEditorDrawer::None : Drawer;
-        if (ActiveDrawer != EEditorDrawer::None)
-        {
-            VisibleDrawer = ActiveDrawer;
-        }
+        ToggleDrawer(Drawer);
     }
 
     if (bActive || bHovered)
     {
         const ImU32 BgColor = bActive ? IM_COL32(54, 54, 54, 255) : IM_COL32(42, 42, 42, 255);
         DrawList->AddRectFilled(Pos, ImVec2(Pos.x + Size.x, Pos.y + Size.y), BgColor, 3.0f);
+    }
+
+    if (bHovered)
+    {
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted(Label);
+        ImGui::Separator();
+        ImGui::TextUnformatted(GetDrawerShortcutText(Drawer));
+        ImGui::EndTooltip();
     }
 
     if (bActive)

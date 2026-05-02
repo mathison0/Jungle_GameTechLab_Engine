@@ -17,10 +17,23 @@ public:
 
     bool BeginDrawerOverlay();
     void EndDrawerOverlay();
+    void ToggleDrawer(EEditorDrawer Drawer);
+    void OpenDrawer(EEditorDrawer Drawer);
+    void CloseDrawer();
 
     EEditorDrawer GetVisibleDrawer() const
     {
         return VisibleDrawer;
+    }
+
+    EEditorDrawer GetActiveDrawer() const
+    {
+        return ActiveDrawer;
+    }
+
+    bool IsDrawerOpen() const
+    {
+        return ActiveDrawer != EEditorDrawer::None;
     }
 
 private:

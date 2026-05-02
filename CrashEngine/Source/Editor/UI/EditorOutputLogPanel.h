@@ -23,6 +23,7 @@ public:
 
     void RenderContent(float DeltaTime);
     void Clear();
+    void RequestCommandInputFocus() { bReclaimFocus = true; }
 
 private:
     std::array<char, 256> InputBuf{};
