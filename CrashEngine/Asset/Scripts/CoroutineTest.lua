@@ -1,4 +1,4 @@
-local Co = require("LuaCoroutine")
+local Co = require("Package.LuaCoroutine")
 
 local Script = {}
 
