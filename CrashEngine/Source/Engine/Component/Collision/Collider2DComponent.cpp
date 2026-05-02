@@ -1,4 +1,4 @@
-#include "Collider2DComponent.h"
+﻿#include "Collider2DComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 

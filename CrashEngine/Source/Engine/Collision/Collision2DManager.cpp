@@ -1,6 +1,7 @@
 ﻿#include "Collision2DManager.h"
 
 #include "Collision/Collision2DShapeGeometry.h"
+#include "Collision/SpatialHash.h"
 #include "Component/Collision/Collider2DComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
@@ -136,37 +137,40 @@ void FCollision2DManager::Update(UWorld& World)
     TArray<UCollider2DComponent*> Colliders;
     CollectColliders(World, Colliders);
 
-    for (int32 IndexA = 0; IndexA < static_cast<int32>(Colliders.size()); ++IndexA)
-    {
-        for (int32 IndexB = IndexA + 1; IndexB < static_cast<int32>(Colliders.size()); ++IndexB)
+	SpatialHash.Build(Colliders);
+    TArray<FCollision2DPair> CollisionPairs;
+    SpatialHash.QueryPairs(CollisionPairs);
+
+	for (FCollision2DPair& Pair : CollisionPairs)
+	{
+        UCollider2DComponent* ColliderA = Pair.A;
+        UCollider2DComponent* ColliderB = Pair.B;
+
+		if (!CanCollide(ColliderA, ColliderB))
         {
-            UCollider2DComponent* ColliderA = Colliders[IndexA];
-            UCollider2DComponent* ColliderB = Colliders[IndexB];
-
-            if (!CanCollide(ColliderA, ColliderB))
-            {
-                continue;
-            }
-
-            FCollision2DContact Contact;
-            if (ComputePenetration(ColliderA->GetCollision2DShapeGeometry(), ColliderB->GetCollision2DShapeGeometry(), Contact))
-            {
-                const bool bBlocking = ColliderA->IsBlockComponents() && ColliderB->IsBlockComponents();
-                if (bBlocking)
-                {
-                    ResolveBlock(ColliderA, ColliderB, Contact);
-                }
-                else if (ColliderA->ShouldGenerateOverlapEvents() && ColliderB->ShouldGenerateOverlapEvents())
-                {
-                    ColliderA->AddOverlapInfo(ColliderB);
-                    ColliderB->AddOverlapInfo(ColliderA);
-                }
-
-                ColliderA->SetDebugOverlapping(true);
-                ColliderB->SetDebugOverlapping(true);
-            }
+            continue;
         }
-    }
+
+		FCollision2DContact Contact;
+        if (ComputePenetration(ColliderA->GetCollision2DShapeGeometry(), ColliderB->GetCollision2DShapeGeometry(), Contact))
+        {
+            const bool bBlocking = ColliderA->IsBlockComponents() && ColliderB->IsBlockComponents();
+            if (bBlocking)
+            {
+				//Generate HitEvent
+                ResolveBlock(ColliderA, ColliderB, Contact);
+            }
+            else if (ColliderA->ShouldGenerateOverlapEvents() && ColliderB->ShouldGenerateOverlapEvents())
+            {
+				//Generate Overlap Event
+                ColliderA->AddOverlapInfo(ColliderB);
+                ColliderB->AddOverlapInfo(ColliderA);
+            }
+
+            ColliderA->SetDebugOverlapping(true);
+            ColliderB->SetDebugOverlapping(true);
+        }
+	}
 }
 
 void FCollision2DManager::CollectColliders(UWorld& World, TArray<UCollider2DComponent*>& OutColliders)

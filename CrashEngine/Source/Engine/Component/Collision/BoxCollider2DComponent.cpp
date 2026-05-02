@@ -1,4 +1,4 @@
-#include "BoxCollider2DComponent.h"
+﻿#include "BoxCollider2DComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Render/Scene/Debug/DebugRenderAPI.h"
 #include "Serialization/Archive.h"
@@ -50,6 +50,26 @@ FVector2 UBoxCollider2DComponent::GetScaledBoxExtent2D() const
 {
     const FVector Scale = GetAbsWorldScale();
     return FVector2(BoxExtent2D.X * Scale.X, BoxExtent2D.Y * Scale.Y);
+}
+
+FCollision2DBounds UBoxCollider2DComponent::GetCollision2DBounds() const
+{
+    const FCollision2DShapeGeometry Geometry = GetCollision2DShapeGeometry();
+
+    const float ExtentX =
+        std::abs(Geometry.AxisX.X) * Geometry.BoxExtent.X +
+        std::abs(Geometry.AxisY.X) * Geometry.BoxExtent.Y;
+
+    const float ExtentY =
+        std::abs(Geometry.AxisX.Y) * Geometry.BoxExtent.X +
+        std::abs(Geometry.AxisY.Y) * Geometry.BoxExtent.Y;
+
+    const FVector2 Extent(ExtentX, ExtentY);
+
+    FCollision2DBounds Bounds;
+    Bounds.Min = Geometry.Center - Extent;
+    Bounds.Max = Geometry.Center + Extent;
+    return Bounds;
 }
 
 void UBoxCollider2DComponent::RenderDebugShape(FScene& Scene) const

@@ -1,4 +1,4 @@
-#include "CircleCollider2DComponent.h"
+﻿#include "CircleCollider2DComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Render/Scene/Debug/DebugRenderAPI.h"
 #include "Serialization/Archive.h"
@@ -51,6 +51,17 @@ float UCircleCollider2DComponent::GetScaledCircleRadius() const
 {
     const FVector Scale = GetAbsWorldScale();
     return CircleRadius * std::max(Scale.X, Scale.Y);
+}
+
+FCollision2DBounds UCircleCollider2DComponent::GetCollision2DBounds() const
+{
+    const FCollision2DShapeGeometry Geometry = GetCollision2DShapeGeometry();
+    const FVector2 Extent(Geometry.Radius, Geometry.Radius);
+
+    FCollision2DBounds Bounds;
+    Bounds.Min = Geometry.Center - Extent;
+    Bounds.Max = Geometry.Center + Extent;
+    return Bounds;
 }
 
 void UCircleCollider2DComponent::RenderDebugShape(FScene& Scene) const

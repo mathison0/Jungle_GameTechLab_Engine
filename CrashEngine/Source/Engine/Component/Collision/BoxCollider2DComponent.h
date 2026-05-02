@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Collider2DComponent.h"
 
@@ -19,6 +19,8 @@ public:
     const FVector2& GetBoxExtent2D() const { return BoxExtent2D; }
     void SetBoxExtent2D(const FVector2& NewBoxExtent);
     FVector2 GetScaledBoxExtent2D() const;
+
+	FCollision2DBounds GetCollision2DBounds() const override;
 
 protected:
     void RenderDebugShape(FScene& Scene) const override;

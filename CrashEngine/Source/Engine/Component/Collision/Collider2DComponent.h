@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "ShapeComponent.h"
 #include "Collision/Collision2DShapeGeometry.h"
@@ -21,6 +21,7 @@ public:
 
     FVector2 GetShapeWorldLocation2D() const;
     float GetCollisionPlaneZ() const;
+    virtual FCollision2DBounds GetCollision2DBounds() const = 0;
 
 protected:
     FVector2 ProjectWorldVectorTo2D(const FVector& Vector) const;

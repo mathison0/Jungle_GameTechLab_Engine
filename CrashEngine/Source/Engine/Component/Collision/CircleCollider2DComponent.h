@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Collider2DComponent.h"
 
@@ -19,6 +19,9 @@ public:
     float GetRadius() const { return CircleRadius; }
     void SetRadius(float NewRadius);
     float GetScaledCircleRadius() const;
+
+	FCollision2DBounds GetCollision2DBounds() const override;
+
 
 protected:
     void RenderDebugShape(FScene& Scene) const override;
