@@ -241,6 +241,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\Lua\CoroutineCommand.cpp" />
+    <ClCompile Include="Source\Engine\Lua\LuaCoroutine.cpp" />
     <ClCompile Include="Source\Engine\Scripting\LuaScriptAsset.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
@@ -488,7 +490,7 @@
     <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\Scripting\LuaScriptAsset.h" />
+    <ClInclude Include="Source\Engine\Lua\CoroutineCommand.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
@@ -593,6 +595,7 @@
     <ClInclude Include="Source\Engine\Input\InputTypes.h" />
     <ClInclude Include="Source\Engine\Input\PIEExitCommandTool.h" />
     <ClInclude Include="Source\Engine\Input\ViewportInputRouter.h" />
+    <ClInclude Include="Source\Engine\Lua\LuaCoroutine.h" />
     <ClInclude Include="Source\Engine\Materials\Material.h" />
     <ClInclude Include="Source\Engine\Materials\MaterialCore.h" />
     <ClInclude Include="Source\Engine\Materials\MaterialManager.h" />

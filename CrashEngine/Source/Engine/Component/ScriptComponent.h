@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "ActorComponent.h"
 #include "sol.hpp"
+#include "Engine/LUA/LuaCoroutine.h"
 
 class UScriptComponent : public UActorComponent
 {
@@ -20,7 +21,22 @@ private:
 	void CallLuaFunction(const char* Name);
 	void CallLuaTick(float DeltaTime);
 
+	void BindFunctions();
+
+    template <typename TFunc>
+    void BindFunction(const char* Name, TFunc&& Function)
+    {
+        if (!ScriptInstance.valid())
+        {
+            return;
+        }
+
+        ScriptInstance.set_function(Name, std::forward<TFunc>(Function));
+    }
+
 private:
 	sol::table ScriptInstance;
 	FString ScriptPath;
+
+	FCoroutineExecutorSet CoroutineExecutorSet;
 };
