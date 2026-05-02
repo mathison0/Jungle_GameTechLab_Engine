@@ -818,6 +818,7 @@
     <ClCompile Include="Source\Engine\UI\GameUISystem.cpp" />
     <ClCompile Include="Source\Engine\UI\HUDPanel.cpp" />
     <ClCompile Include="Source\Engine\UI\PauseMenuPanel.cpp" />
+    <ClCompile Include="Source\Engine\UI\DialoguePanel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1872,5 +1873,6 @@
     <ClInclude Include="Source\Engine\Input\IInputController.h">
       <Filter>Source\Engine\Input</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\UI\DialoguePanel.h" />
   </ItemGroup>
 </Project>

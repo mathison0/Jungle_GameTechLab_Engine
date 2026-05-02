@@ -410,6 +410,7 @@
     <ClCompile Include="Source\Engine\Spatial\BVH.cpp" />
     <ClCompile Include="Source\Engine\Spatial\KDTree.cpp" />
     <ClCompile Include="Source\Engine\Spatial\WorldSpatialIndex.cpp" />
+    <ClCompile Include="Source\Engine\UI\DialoguePanel.cpp" />
     <ClCompile Include="Source\Engine\UI\GameUISystem.cpp" />
     <ClCompile Include="Source\Engine\UI\HUDPanel.cpp" />
     <ClCompile Include="Source\Engine\UI\PauseMenuPanel.cpp" />
@@ -652,6 +653,7 @@
     <ClInclude Include="Source\Engine\Spatial\BVH.h" />
     <ClInclude Include="Source\Engine\Spatial\KDTree.h" />
     <ClInclude Include="Source\Engine\Spatial\WorldSpatialIndex.h" />
+    <ClInclude Include="Source\Engine\UI\DialoguePanel.h" />
     <ClInclude Include="Source\Engine\UI\GameUISystem.h" />
     <ClInclude Include="Source\Engine\UI\HUDPanel.h" />
     <ClInclude Include="Source\Engine\UI\PauseMenuPanel.h" />

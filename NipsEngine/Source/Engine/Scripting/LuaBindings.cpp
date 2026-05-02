@@ -106,8 +106,32 @@ void RegisterLuaBindings(sol::state& Lua)
 		return GameUISystem::Get().IsPauseMenuOpen();
 	});
 
+	// -------------------------------------------------------
+	// Dialogue
+	// -------------------------------------------------------
+	Lua.set_function("ShowDialogue", [](const std::string& Speaker, const std::string& Text)
+	{
+		GameUISystem::Get().ShowDialogue(Speaker.c_str(), Text.c_str());
+	});
+
+	Lua.set_function("QueueDialogue", [](const std::string& Speaker, const std::string& Text)
+	{
+		GameUISystem::Get().QueueDialogue(Speaker.c_str(), Text.c_str());
+	});
+
+	Lua.set_function("HideDialogue", []()
+	{
+		GameUISystem::Get().HideDialogue();
+	});
+
+	Lua.set_function("IsDialogueActive", []()
+	{
+		return GameUISystem::Get().IsDialogueActive();
+	});
+
 	// 키 입력 (Windows Virtual Key Code)
 	// 자주 쓰는 상수를 Lua 전역으로 노출
+	Lua.set("KEY_SPACE",  0x20);
 	Lua.set("KEY_ESCAPE", 0x1B);
 	Lua.set("KEY_P",      0x50);
 	Lua.set("KEY_TAB",    0x09);

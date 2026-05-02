@@ -42,12 +42,12 @@ void PauseMenuPanel::Render(EUIRenderMode Mode)
 
     ImGui::SetNextWindowPos(ImVec2(PanelX, PanelY));
     ImGui::SetNextWindowSize(ImVec2(PanelW, PanelH));
+    ImGui::SetNextWindowFocus();  // 에디터 패널보다 앞으로 이동
 
     constexpr ImGuiWindowFlags MenuFlags =
         ImGuiWindowFlags_NoDecoration   |
         ImGuiWindowFlags_NoMove         |
-        ImGuiWindowFlags_NoSavedSettings|
-        ImGuiWindowFlags_NoFocusOnAppearing;
+        ImGuiWindowFlags_NoSavedSettings;
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.08f, 0.08f, 0.97f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.f);

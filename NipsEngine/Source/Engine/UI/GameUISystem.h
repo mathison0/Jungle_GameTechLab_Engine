@@ -77,6 +77,14 @@ public:
     void SetItemCount(int Count);
     void SetElapsedTime(float Seconds);
 
+    // -------------------------------------------------------
+    // 대화창
+    // -------------------------------------------------------
+    void ShowDialogue(const char* Speaker, const char* Text);   // 즉시 표시 (큐 초기화)
+    void QueueDialogue(const char* Speaker, const char* Text);  // 큐에 추가
+    void HideDialogue();
+    bool IsDialogueActive() const;
+
 private:
     GameUISystem() = default;
 

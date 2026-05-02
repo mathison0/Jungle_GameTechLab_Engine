@@ -1,6 +1,7 @@
 #include "Engine/UI/GameUISystem.h"
 
 #include "Engine/UI/HUDPanel.h"
+#include "Engine/UI/DialoguePanel.h"
 #include "Engine/UI/PauseMenuPanel.h"
 #include "Engine/Input/InputSystem.h"
 
@@ -79,8 +80,8 @@ void GameUISystem::RenderPanelsOnly(EUIRenderMode Mode)
 // -------------------------------------------------------
 void GameUISystem::SetState(EGameUIState NewState)
 {
-    CurrentState  = NewState;
-    bPauseMenuOpen = false;  // 상태 바뀌면 일시정지 해제
+    CurrentState = NewState;
+    SetPauseMenuOpen(false);  // 커서/마우스 복원 포함
 }
 
 // -------------------------------------------------------
@@ -88,7 +89,28 @@ void GameUISystem::SetState(EGameUIState NewState)
 // -------------------------------------------------------
 void GameUISystem::SetPauseMenuOpen(bool bOpen)
 {
+    if (bPauseMenuOpen == bOpen) return;
     bPauseMenuOpen = bOpen;
+
+    if (bOpen)
+    {
+        // 메뉴 진입 - 마우스 언락 + 커서 표시
+        InputSystem::Get().LockMouse(false);
+        InputSystem::Get().SetCursorVisibility(true);
+    }
+    else
+    {
+        // 메뉴 종료 - 커서 숨김 + PIE/게임 모드면 뷰포트 재잠금
+        InputSystem::Get().SetCursorVisibility(false);
+        const FViewportRect& VR = InputSystem::Get().GetGuiInputState().ViewportHostRect;
+        if (VR.Width > 0)
+        {
+            InputSystem::Get().LockMouse(
+                true,
+                static_cast<float>(VR.X), static_cast<float>(VR.Y),
+                static_cast<float>(VR.Width), static_cast<float>(VR.Height));
+        }
+    }
 }
 
 // -------------------------------------------------------
@@ -128,16 +150,38 @@ void GameUISystem::SetElapsedTime(float Seconds)
 }
 
 // -------------------------------------------------------
+// 대화창
+// -------------------------------------------------------
+void GameUISystem::ShowDialogue(const char* Speaker, const char* Text)
+{
+    DialoguePanel::Show(Speaker, Text);
+}
+
+void GameUISystem::QueueDialogue(const char* Speaker, const char* Text)
+{
+    DialoguePanel::Enqueue(Speaker, Text);
+}
+
+void GameUISystem::HideDialogue()
+{
+    DialoguePanel::Hide();
+}
+
+bool GameUISystem::IsDialogueActive() const
+{
+    return DialoguePanel::IsActive();
+}
+
+// -------------------------------------------------------
 // 현재 상태에 맞는 패널 디스패치
 // -------------------------------------------------------
 void GameUISystem::RenderCurrentPanel(EUIRenderMode Mode)
 {
-    // InGame 일 때 Q 키로 일시정지 토글 (Play 모드에서만)
-    // TODO: 나중에 원하는 키로 변경
+    // InGame 일 때 P 키로 일시정지 토글 (Play 모드에서만)
     if (Mode == EUIRenderMode::Play && CurrentState == EGameUIState::InGame)
     {
-        if (InputSystem::Get().GetKeyUp(0x51))  // Q
-            bPauseMenuOpen = !bPauseMenuOpen;
+        if (InputSystem::Get().GetKeyUp(0x50))  // P
+            SetPauseMenuOpen(!bPauseMenuOpen);
     }
 
     switch (CurrentState)
@@ -152,6 +196,7 @@ void GameUISystem::RenderCurrentPanel(EUIRenderMode Mode)
 
     case EGameUIState::InGame:
         HUDPanel::Render(Mode);
+        DialoguePanel::Render(Mode);
         if (bPauseMenuOpen)
             PauseMenuPanel::Render(Mode);
         break;
