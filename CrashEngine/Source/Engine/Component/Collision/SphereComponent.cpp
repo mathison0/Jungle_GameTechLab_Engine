@@ -6,6 +6,11 @@
 
 IMPLEMENT_CLASS(USphereComponent, UShapeComponent)
 
+USphereComponent::USphereComponent()
+{
+    SyncLocalBoundsToCollision();
+}
+
 void USphereComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
     UShapeComponent::GetEditableProperties(OutProps);
@@ -15,12 +20,14 @@ void USphereComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutPro
 void USphereComponent::PostEditProperty(const char* PropertyName)
 {
     UShapeComponent::PostEditProperty(PropertyName);
+    SyncLocalBoundsToCollision();
 }
 
 void USphereComponent::Serialize(FArchive& Ar)
 {
     UShapeComponent::Serialize(Ar);
     Ar << SphereRadius;
+    SyncLocalBoundsToCollision();
 }
 
 FCollisionShapeGeometry USphereComponent::GetCollisionShapeGeometry() const
@@ -36,6 +43,7 @@ FCollisionShapeGeometry USphereComponent::GetCollisionShapeGeometry() const
 void USphereComponent::SetRadius(float NewRadius)
 {
     SphereRadius = NewRadius;
+    SyncLocalBoundsToCollision();
 }
 
 float USphereComponent::GetScaledSphereRadius() const
@@ -49,4 +57,10 @@ float USphereComponent::GetScaledSphereRadius() const
 void USphereComponent::RenderDebugShape(FScene& Scene) const
 {
     RenderDebugSphere(Scene, GetShapeWorldLocation(), GetScaledSphereRadius(), 24, GetDebugShapeColor(), 0.0f);
+}
+
+void USphereComponent::SyncLocalBoundsToCollision()
+{
+    LocalExtents = FVector(SphereRadius, SphereRadius, SphereRadius);
+    MarkWorldBoundsDirty();
 }

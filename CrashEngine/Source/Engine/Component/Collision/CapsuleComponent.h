@@ -7,6 +7,8 @@ class UCapsuleComponent : public UShapeComponent
 public:
     DECLARE_CLASS(UCapsuleComponent, UShapeComponent)
 
+    UCapsuleComponent();
+
     void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
     void PostEditProperty(const char* PropertyName) override;
 
@@ -25,6 +27,7 @@ public:
 
 protected:
     void RenderDebugShape(FScene& Scene) const override;
+    void SyncLocalBoundsToCollision();
 
 protected:
     float CapsuleHalfHeight = 3.0f;

@@ -7,6 +7,8 @@ class USphereComponent : public UShapeComponent
 public:
     DECLARE_CLASS(USphereComponent, UShapeComponent)
 
+    USphereComponent();
+
     void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
     void PostEditProperty(const char* PropertyName) override;
 
@@ -22,6 +24,7 @@ public:
 
 protected:
     void RenderDebugShape(FScene& Scene) const override;
+    void SyncLocalBoundsToCollision();
 
 protected:
     float SphereRadius = 1.0f;

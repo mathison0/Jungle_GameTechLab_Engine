@@ -7,6 +7,11 @@
 
 IMPLEMENT_CLASS(UCapsuleComponent, UShapeComponent)
 
+UCapsuleComponent::UCapsuleComponent()
+{
+    SyncLocalBoundsToCollision();
+}
+
 void UCapsuleComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
     UShapeComponent::GetEditableProperties(OutProps);
@@ -17,6 +22,7 @@ void UCapsuleComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutPr
 void UCapsuleComponent::PostEditProperty(const char* PropertyName)
 {
     UShapeComponent::PostEditProperty(PropertyName);
+    SyncLocalBoundsToCollision();
 }
 
 void UCapsuleComponent::Serialize(FArchive& Ar)
@@ -24,6 +30,7 @@ void UCapsuleComponent::Serialize(FArchive& Ar)
     UShapeComponent::Serialize(Ar);
     Ar << CapsuleHalfHeight;
     Ar << CapsuleRadius;
+    SyncLocalBoundsToCollision();
 }
 
 FCollisionShapeGeometry UCapsuleComponent::GetCollisionShapeGeometry() const
@@ -41,11 +48,13 @@ FCollisionShapeGeometry UCapsuleComponent::GetCollisionShapeGeometry() const
 void UCapsuleComponent::SetHalfHeight(float NewHalfHeight)
 {
     CapsuleHalfHeight = NewHalfHeight;
+    SyncLocalBoundsToCollision();
 }
 
 void UCapsuleComponent::SetRadius(float NewRadius)
 {
     CapsuleRadius = NewRadius;
+    SyncLocalBoundsToCollision();
 }
 
 float UCapsuleComponent::GetScaledCapsuleRadius() const
@@ -78,4 +87,10 @@ void UCapsuleComponent::RenderDebugShape(FScene& Scene) const
                        24,
                        GetDebugShapeColor(),
                        0.0f);
+}
+
+void UCapsuleComponent::SyncLocalBoundsToCollision()
+{
+    LocalExtents = FVector(CapsuleRadius, CapsuleRadius, CapsuleHalfHeight);
+    MarkWorldBoundsDirty();
 }

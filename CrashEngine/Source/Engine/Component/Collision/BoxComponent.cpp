@@ -5,6 +5,11 @@
 
 IMPLEMENT_CLASS(UBoxComponent, UShapeComponent)
 
+UBoxComponent::UBoxComponent()
+{
+    SyncLocalBoundsToCollision();
+}
+
 void UBoxComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
     UShapeComponent::GetEditableProperties(OutProps);
@@ -14,12 +19,14 @@ void UBoxComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 void UBoxComponent::PostEditProperty(const char* PropertyName)
 {
     UShapeComponent::PostEditProperty(PropertyName);
+    SyncLocalBoundsToCollision();
 }
 
 void UBoxComponent::Serialize(FArchive& Ar)
 {
     UShapeComponent::Serialize(Ar);
     Ar << BoxExtent;
+    SyncLocalBoundsToCollision();
 }
 
 FCollisionShapeGeometry UBoxComponent::GetCollisionShapeGeometry() const
@@ -35,6 +42,7 @@ FCollisionShapeGeometry UBoxComponent::GetCollisionShapeGeometry() const
 void UBoxComponent::SetBoxExtent(const FVector& NewBoxExtent)
 {
     BoxExtent = NewBoxExtent;
+    SyncLocalBoundsToCollision();
 }
 
 FVector UBoxComponent::GetScaledBoxExtent() const
@@ -67,4 +75,10 @@ void UBoxComponent::RenderDebugShape(FScene& Scene) const
     };
 
     RenderDebugBox(Scene, P[0], P[1], P[2], P[3], P[4], P[5], P[6], P[7], GetDebugShapeColor(), 0.0f);
+}
+
+void UBoxComponent::SyncLocalBoundsToCollision()
+{
+    LocalExtents = BoxExtent;
+    MarkWorldBoundsDirty();
 }

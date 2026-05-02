@@ -9,7 +9,6 @@
 #include "Render/Scene/Scene.h"
 #include "Render/Scene/Proxies/Primitive/PrimitiveProxy.h"
 #include "GameFramework/World.h"
-#include "Object/ObjectFactory.h"
 
 #include <cmath>
 #include <cstring>

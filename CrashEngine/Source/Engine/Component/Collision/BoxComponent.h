@@ -5,6 +5,8 @@ class UBoxComponent : public UShapeComponent
 public:
     DECLARE_CLASS(UBoxComponent, UShapeComponent)
 
+    UBoxComponent();
+
 	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
     void PostEditProperty(const char* PropertyName) override;
 
@@ -20,6 +22,7 @@ public:
 
 protected:
     void RenderDebugShape(FScene& Scene) const override;
+    void SyncLocalBoundsToCollision();
 
 protected:
     FVector BoxExtent = FVector(1.0f, 1.0f, 1.0f);
