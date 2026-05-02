@@ -44,6 +44,15 @@ To make an object pickable during PIE, the actor should have:
 The engine pickup handle preserves the object's current rotation when grabbed.
 If a game object should snap to a specific viewing pose, handle that in game logic or Lua instead of relying on the engine default.
 
+Use these physics settings as the baseline:
+
+- Fixed room geometry, walls, floors, and furniture that should never move: blocking shape enabled, `Simulate Physics` disabled.
+- Heavy props that can move but should resist being pushed: blocking shape enabled, `Simulate Physics` enabled, high `Mass`, `Can Be Picked Up` disabled.
+- Small props the player can hold: blocking shape enabled, `Simulate Physics` enabled, lower `Mass`, `Can Be Picked Up` enabled.
+
+`Mass` is applied to Jolt dynamic bodies when `Simulate Physics` is enabled.
+Turning `Use Gravity` off only disables gravity; it does not make the object fixed.
+
 ## 실행 준비
 
 이 프로젝트는 Windows, Visual Studio 2022, DirectX 11, ImGui 기반의 C++ 3D 엔진입니다. 처음 실행하는 팀원은 프로젝트 루트에서 아래 순서대로 준비하면 됩니다.
