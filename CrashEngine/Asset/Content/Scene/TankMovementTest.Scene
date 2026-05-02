@@ -30,7 +30,7 @@
           },
           "Is Editor Helper" : false,
           "Location" : [0.000000, 0.000000, -1.000000],
-          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 0.839996, 0.000000],
           "Scale" : [100.000000, 100.000000, 1.000000],
           "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
           "Visible" : true,
@@ -109,6 +109,37 @@
               "Visible In Game" : true,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [{
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "Properties" : {
+                  "Element 0" : {
+                    "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+                  },
+                  "Is Editor Helper" : false,
+                  "Location" : [0.000000, 0.000000, 0.000000],
+                  "Rotation" : [-0.000000, 0.000000, 0.000000],
+                  "Scale" : [1.000000, 0.400000, 1.000000],
+                  "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+                  "Visible" : true,
+                  "Visible In Editor" : true,
+                  "Visible In Game" : true,
+                  "bTickEnable" : true
+                }
+              }],
+            "ClassName" : "UCameraComponent",
+            "Properties" : {
+              "FOV" : 1.047198,
+              "Far Z" : 1000.000000,
+              "Location" : [-2.000000, 0.000000, 6.800000],
+              "Near Z" : 0.100000,
+              "Ortho Width" : 10.000000,
+              "Orthographic" : false,
+              "Rotation" : [16.500000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UStaticMeshComponent",
         "Properties" : {
@@ -116,7 +147,7 @@
             "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
           },
           "Is Editor Helper" : false,
-          "Location" : [0.000000, 0.000000, 0.646355],
+          "Location" : [0.000000, -5.045577, 0.646355],
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 0.500000],
           "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
@@ -321,20 +352,20 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [9.115824, 42.712772, 52.901390],
+    "Location" : [5.393847, 14.634126, 10.788693],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000003, 57.099571, -103.668953]
+    "Rotation" : [0.000000, 15.939607, -94.009422]
   },
   "Primitives" : {
     "13" : {
       "Location" : [0.000000, 0.000000, -1.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
+      "Rotation" : [0.000000, -0.000000, 0.839999],
       "Scale" : [100.000000, 100.000000, 1.000000],
       "Type" : "StaticMeshComp"
     },
     "16" : {
-      "Location" : [0.000000, 0.000000, 0.646355],
+      "Location" : [0.000000, -5.045577, 0.646355],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
       "Scale" : [1.000000, 1.000000, 0.500000],

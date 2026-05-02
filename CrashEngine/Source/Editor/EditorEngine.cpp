@@ -180,23 +180,30 @@ void UEditorEngine::Tick(float DeltaTime)
 
     RegisterViewportInputTargets();
 
-	for (FEditorViewportClient* VC : ViewportLayout.GetAllViewportClients())
+    TArray<FViewportClient*> AllViewportClients;
+    for (FEditorViewportClient* VC : ViewportLayout.GetAllViewportClients())
     {
         if (VC)
         {
-            VC->BeginInputFrame();
+            AllViewportClients.push_back(VC);
         }
+    }
+    if (IsPlayingInEditor() && GameViewportClient)
+    {
+        AllViewportClients.push_back(GameViewportClient);
+    }
+
+    for (FViewportClient* VC : AllViewportClients)
+    {
+        VC->BeginInputFrame();
     }
 
     ViewportInputRouter.Tick(Input, DeltaTime);
     ViewportLayout.SyncActiveViewportFromKeyTargetViewport(ViewportInputRouter.GetKeyTargetViewport());
 
-    for (FEditorViewportClient* VC: ViewportLayout.GetAllViewportClients())
+    for (FViewportClient* VC : AllViewportClients)
     {
-		if (VC)
-        {
-            VC->Tick(DeltaTime);
-		}
+        VC->Tick(DeltaTime);
     }
 
     const bool bPIEPaused = IsPausedInEditor();
@@ -425,6 +432,8 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
     if (GameViewportClient && PIEViewportClient && PIEViewportClient->GetViewport())
     {
         GameViewportClient->SetViewport(PIEViewportClient->GetViewport());
+        GameViewportClient->SetFallbackCamera(PIEViewportClient->GetCamera());
+        GameViewportClient->SetOverlayStatSystem(&GetOverlayStatSystem());
         ViewportInputRouter.SetKeyTargetViewport(PIEViewportClient->GetViewport());
         PIEViewportClient->GetViewport()->SetClient(GameViewportClient);
     }
@@ -509,6 +518,9 @@ void UEditorEngine::EndPlayMap()
     }
 
     PlayInEditorSessionInfo.reset();
+
+    UCameraComponent::Main = nullptr;
+    GetOverlayStatSystem().ShowNoCameraWarning(false);
 }
 
 
@@ -553,6 +565,7 @@ void UEditorEngine::ClearScene()
     WorldList.clear();
     ActiveWorldHandle = FName::None;
 
+    UCameraComponent::Main = nullptr;
     ViewportLayout.DestroyAllCameras();
 }
 
@@ -604,12 +617,12 @@ void UEditorEngine::Render(float DeltaTime)
 
 void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
 {
-    UCameraComponent* Camera = VC->GetCamera();
-    if (!Camera)
-        return;
-
     FViewport* VP = VC->GetViewport();
     if (!VP)
+        return;
+
+    UCameraComponent* Camera = VP->GetClient() ? VP->GetClient()->GetCamera() : VC->GetCamera();
+    if (!Camera)
         return;
 
     ID3D11DeviceContext* Ctx = Renderer.GetFD3DDevice().GetDeviceContext();
