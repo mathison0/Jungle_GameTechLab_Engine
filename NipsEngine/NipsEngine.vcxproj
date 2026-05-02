@@ -457,7 +457,6 @@
     <ClCompile Include="Source\Engine\Render\Scene\RenderBus.cpp" />
     <ClCompile Include="Source\Engine\Runtime\Engine.cpp" />
     <ClCompile Include="Source\Engine\Runtime\EngineLoop.cpp" />
-    <ClCompile Include="Source\Engine\Runtime\GameEngine.cpp" />
     <ClCompile Include="Source\Engine\Runtime\Launch.cpp" />
     <ClCompile Include="Source\Engine\Runtime\ViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsApplication.cpp" />
@@ -482,17 +481,11 @@
     <ClCompile Include="Source\Engine\Spatial\KDTree.cpp" />
     <ClCompile Include="Source\Engine\Spatial\WorldSpatialIndex.cpp" />
     <ClCompile Include="Source\Engine\UI\DialoguePanel.cpp" />
+    <ClCompile Include="Source\Engine\UI\EndingPanel.cpp" />
     <ClCompile Include="Source\Engine\UI\GameUISystem.cpp" />
     <ClCompile Include="Source\Engine\UI\HUDPanel.cpp" />
     <ClCompile Include="Source\Engine\UI\PauseMenuPanel.cpp" />
-    <ClCompile Include="Source\Misc\ObjViewer\ObjViewerEngine.cpp" />
-    <ClCompile Include="Source\Misc\ObjViewer\ObjViewerRenderPipeline.cpp" />
-    <ClCompile Include="Source\Misc\ObjViewer\Settings\ObjViewerSettings.cpp" />
-    <ClCompile Include="Source\Misc\ObjViewer\UI\ObjViewerControlWidget.cpp" />
-    <ClCompile Include="Source\Misc\ObjViewer\UI\ObjViewerMainPanel.cpp" />
-    <ClCompile Include="Source\Misc\ObjViewer\UI\ObjViewerMenuBarWIdget.cpp" />
-    <ClCompile Include="Source\Misc\ObjViewer\UI\ObjViewerStatWidget.cpp" />
-    <ClCompile Include="Source\Misc\ObjViewer\Viewport\ObjViewerViewportClient.cpp" />
+    <ClCompile Include="Source\Engine\UI\StartMenuPanel.cpp" />
     <ClCompile Include="Source\Engine\Viewport\ViewportCamera.cpp" />
     <ClCompile Include="Source\Game\GameEngine.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -732,7 +725,6 @@
     <ClInclude Include="Source\Engine\Render\Scene\RenderCommand.h" />
     <ClInclude Include="Source\Engine\Runtime\Engine.h" />
     <ClInclude Include="Source\Engine\Runtime\EngineLoop.h" />
-    <ClInclude Include="Source\Engine\Runtime\GameEngine.h" />
     <ClInclude Include="Source\Engine\Runtime\Launch.h" />
     <ClInclude Include="Source\Engine\Runtime\SceneView.h" />
     <ClInclude Include="Source\Engine\Runtime\Viewport.h" />
@@ -767,9 +759,11 @@
     <ClInclude Include="Source\Engine\Spatial\KDTree.h" />
     <ClInclude Include="Source\Engine\Spatial\WorldSpatialIndex.h" />
     <ClInclude Include="Source\Engine\UI\DialoguePanel.h" />
+    <ClInclude Include="Source\Engine\UI\EndingPanel.h" />
     <ClInclude Include="Source\Engine\UI\GameUISystem.h" />
     <ClInclude Include="Source\Engine\UI\HUDPanel.h" />
     <ClInclude Include="Source\Engine\UI\PauseMenuPanel.h" />
+    <ClInclude Include="Source\Engine\UI\StartMenuPanel.h" />
     <ClInclude Include="Source\Engine\Viewport\ViewportCamera.h" />
     <ClInclude Include="Source\Game\GameEngine.h" />
     <ClInclude Include="Source\Game\GameTypes.h" />

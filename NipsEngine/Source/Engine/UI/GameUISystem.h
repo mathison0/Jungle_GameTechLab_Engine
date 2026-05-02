@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 
 struct HWND__;
@@ -85,14 +86,25 @@ public:
     void HideDialogue();
     bool IsDialogueActive() const;
 
+    // -------------------------------------------------------
+    // PIE / 플레이 종료 콜백
+    //   에디터: StartPlaySession 에서 StopPlaySession 바인딩
+    //   게임 빌드: 아무것도 바인딩하지 않음 → 자동 종료 없음
+    // -------------------------------------------------------
+    void SetExitPlayCallback(std::function<void()> Callback);
+    void RequestExitPlay();   // EndingPanel 에서 호출
+
 private:
     GameUISystem() = default;
 
-    // 현재 상태에 맞는 패널을 그린다
     void RenderCurrentPanel(EUIRenderMode Mode);
+    // 상태에 따라 커서/마우스 잠금을 자동으로 맞춤
+    void ApplyCursorForState(EGameUIState State);
 
-    EGameUIState CurrentState  = EGameUIState::InGame;
-    bool         bPauseMenuOpen = false;
+    EGameUIState CurrentState        = EGameUIState::StartMenu;
+    bool         bPauseMenuOpen     = false;
+    bool         bFirstRender       = true;   // 첫 렌더 시 초기 상태 커서 적용
+    bool         bPrevDialogueActive = false;  // 대화 중 마우스 잠금 관리용
 
     // ImGui 소유권 (게임 빌드에서만 true)
     bool bOwnsImGui = false;
@@ -103,4 +115,6 @@ private:
     float       ElapsedTime      = 0.f;
     std::string CurrentItemName;
     std::string CurrentItemDesc;
+
+    std::function<void()> ExitPlayCallback;
 };
