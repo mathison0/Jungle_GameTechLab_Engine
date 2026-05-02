@@ -19,6 +19,11 @@
 #include "Render/Execute/Context/ViewMode/ViewModeSurfaces.h"
 #include "Render/Execute/Passes/Scene/ShadowMapPass.h"
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
+#include "Serialization/SceneSaveManager.h"
+#include "Materials/MaterialManager.h"
+#include "SimpleJSON/json.hpp"
+#include <fstream>
+#include "Input/GameInput.h"
 
 DEFINE_CLASS(UEngine, UObject)
 
@@ -52,11 +57,39 @@ void UEngine::Init(FWindowsWindow* InWindow)
     Renderer.Create(Window->GetHWND());
     UE_LOG(Engine, Debug, "Renderer created.");
 
+    // Game.ini 로드 (해상도 설정 등)
+    std::wstring GameIniPath = FPaths::GameSettingsFilePath();
+    if (std::filesystem::exists(GameIniPath))
+    {
+        std::ifstream File(GameIniPath);
+        if (File.is_open())
+        {
+            std::string Content((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
+            json::JSON Config = json::JSON::Load(Content);
+            if (Config.hasKey("Resolution"))
+            {
+                int Width = Config["Resolution"][0].ToInt();
+                int Height = Config["Resolution"][1].ToInt();
+                UE_LOG(Engine, Info, "Setting resolution from Game.ini: %dx%d", Width, Height);
+                // 실제 창 크기 조절 로직은 WinApplication에서 처리하는 것이 좋으나, 
+                // 여기서는 렌더러 리사이즈 정도만 보장
+                Renderer.GetFD3DDevice().OnResizeViewport(Width, Height);
+            }
+        }
+    }
+
     GameViewportClient = UObjectManager::Get().CreateObject<UGameViewportClient>();
     UE_LOG(Engine, Debug, "GameViewportClient created.");
 
     ID3D11Device* Device = Renderer.GetFD3DDevice().GetDevice();
     FMeshBufferManager::Get().Initialize(Device);
+
+    // 에셋 자동 스캔 (스탠드얼론 대응)
+    FObjManager::ScanMeshAssets();
+    FObjManager::ScanObjSourceFiles();
+    FMaterialManager::Get().ScanMaterialAssets();
+    UE_LOG(Engine, Info, "Asset registries scanned for runtime.");
+
     FResourceManager::Get().LoadFromFile(FPaths::ToUtf8(FPaths::ResourceFilePath()), Device);
     UE_LOG(Engine, Info, "Runtime engine initialization completed.");
 
@@ -77,6 +110,33 @@ void UEngine::Shutdown()
 
 void UEngine::BeginPlay()
 {
+    // Startup Scene 로드
+    std::wstring GameIniPath = FPaths::GameSettingsFilePath();
+    FString StartupScenePath;
+    if (std::filesystem::exists(GameIniPath))
+    {
+        std::ifstream File(GameIniPath);
+        if (File.is_open())
+        {
+            std::string Content((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
+            json::JSON Config = json::JSON::Load(Content);
+            if (Config.hasKey("StartupScene"))
+            {
+                StartupScenePath = Config["StartupScene"].ToString();
+            }
+        }
+    }
+
+    if (!StartupScenePath.empty())
+    {
+        UE_LOG(Engine, Info, "Loading startup scene: %s", StartupScenePath.c_str());
+        FWorldContext& Context = CreateWorldContext(EWorldType::Game, FName("GameWorld"));
+        SetActiveWorld(Context.ContextHandle);
+
+        FPerspectiveCameraData DummyCam;
+        FSceneSaveManager::LoadSceneFromJSON(FPaths::ToUtf8(FPaths::ContentDir()) + "Scene/" + StartupScenePath, Context, DummyCam);
+    }
+
     FWorldContext* Context = GetWorldContextFromHandle(ActiveWorldHandle);
     if (Context && Context->World)
     {
@@ -91,6 +151,13 @@ void UEngine::Tick(float DeltaTime)
 {
     InputSystem::Get().Tick(Window->IsForeground());
 
+    // FGameInput 상태 업데이트 (정적 입력 브릿지)
+    const FInputSnapshot& Snapshot = InputSystem::Get().GetSnapshot();
+    for (int i = 0; i < 256; ++i)
+    {
+        FGameInput::UpdateKeyState(i, Snapshot.KeyDown[i], Snapshot.KeyPressed[i], Snapshot.KeyReleased[i]);
+    }
+
     if (GameViewportClient)
     {
         GameViewportClient->BeginInputFrame();
@@ -99,6 +166,9 @@ void UEngine::Tick(float DeltaTime)
 
     WorldTick(DeltaTime);
     Render(DeltaTime);
+
+    // 프레임 종료 시 입력 상태 리셋 (Pressed/Released 플래그)
+    FGameInput::ResetFrameState();
 }
 
 void UEngine::Render(float DeltaTime)

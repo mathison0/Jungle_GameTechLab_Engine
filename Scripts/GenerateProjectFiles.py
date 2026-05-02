@@ -29,15 +29,26 @@ CONFIGURATIONS = [
     ("Release", "Win32"),
     ("Debug", "x64"),
     ("Release", "x64"),
+    ("GameDebug", "x64"),
+    ("GameRelease", "x64"),
     ("ObjViewDebug", "x64"),
     ("Demo", "x64"),
 ]
 
 # Per-configuration overrides (base is derived from the name)
 #   "release_like"  : True = Release optimizations, False = Debug
+#   "with_editor"   : True = WITH_EDITOR=1, False = omit (default: True)
 #   "extra_defines" : additional preprocessor definitions
 #   "subsystem"     : override link subsystem (default: per-platform)
 CONFIG_PROPS = {
+    "GameDebug": {
+        "release_like": False,
+        "with_editor": False,
+    },
+    "GameRelease": {
+        "release_like": True,
+        "with_editor": False,
+    },
     "ObjViewDebug": {
         "release_like": True,
         "extra_defines": ["IS_OBJ_VIEWER=1"],
@@ -63,6 +74,9 @@ NONE_EXTS = {".natstepfilter", ".config"}
 
 RC_EXTS = {".rc"}
 
+# Files to specifically exclude (e.g., standalone interpreter entry points)
+EXCLUDE_FILES = {"lua.c", "luac.c"}
+
 # Root-level files to include (relative to project dir)
 ROOT_FILES = ["main.cpp"]
 
@@ -71,6 +85,8 @@ INCLUDE_PATHS = [
     "Source\\Engine",
     "Source",
     "ThirdParty",
+    "ThirdParty\\Sol",
+    "ThirdParty\\Lua\\src",
     "ThirdParty\\ImGui",
     "Source\\Editor",
     "Source\\ObjViewer",
@@ -102,6 +118,8 @@ def scan_files(project_dir: Path) -> dict[str, list[str]]:
             continue
         for dirpath, _, filenames in os.walk(full_dir):
             for fname in sorted(filenames):
+                if fname in EXCLUDE_FILES:
+                    continue
                 full = Path(dirpath) / fname
                 rel = full.relative_to(project_dir)
                 rel_str = str(rel).replace("/", "\\")
@@ -232,6 +250,9 @@ def generate_vcxproj(files: dict[str, list[str]]):
         if is_release:
             ET.SubElement(pg, "WholeProgramOptimization").text = "true"
         ET.SubElement(pg, "CharacterSet").text = "Unicode"
+        
+        # NuGet/Library mapping: Force non-standard configurations to pick correct libraries
+        ET.SubElement(pg, "NuGetConfiguration").text = "Release" if is_release else "Debug"
 
     ET.SubElement(proj, "Import", Project="$(VCTargetsPath)\\Microsoft.Cpp.props")
     ET.SubElement(proj, "ImportGroup", Label="ExtensionSettings")
@@ -273,16 +294,25 @@ def generate_vcxproj(files: dict[str, list[str]]):
         is_x64 = plat == "x64"
 
         if is_release:
+            ET.SubElement(cl, "Optimization").text = "MaxSpeed"
             ET.SubElement(cl, "FunctionLevelLinking").text = "true"
             ET.SubElement(cl, "IntrinsicFunctions").text = "true"
+            ET.SubElement(cl, "RuntimeLibrary").text = "MultiThreadedDLL"
+        else:
+            ET.SubElement(cl, "Optimization").text = "Disabled"
+            ET.SubElement(cl, "RuntimeLibrary").text = "MultiThreadedDebugDLL"
 
         ET.SubElement(cl, "SDLCheck").text = "true"
 
-        base_defs = []
+        base_defs = ["SOL_INSIDE_UNREAL=1"]
         if is_win32:
             base_defs.append("WIN32")
         base_defs.append("NDEBUG" if is_release else "_DEBUG")
-        base_defs.extend(["_CONSOLE", "WITH_EDITOR=1"])
+        base_defs.append("_CONSOLE")
+        
+        if props.get("with_editor", True):
+            base_defs.append("WITH_EDITOR=1")
+            
         base_defs.extend(props.get("extra_defines", []))
         base_defs.append("%(PreprocessorDefinitions)")
         ET.SubElement(cl, "PreprocessorDefinitions").text = ";".join(base_defs)
@@ -484,6 +514,7 @@ def generate_sln():
     lines.append("\t\tHideSolutionNode = FALSE")
     lines.append("\tEndGlobalSection")
 
+    # ExtensibilityGlobals
     lines.append("\tGlobalSection(ExtensibilityGlobals) = postSolution")
     lines.append(f"\t\tSolutionGuid = {SOLUTION_GUID}")
     lines.append("\tEndGlobalSection")
