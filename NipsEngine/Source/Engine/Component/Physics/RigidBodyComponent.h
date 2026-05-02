@@ -38,6 +38,8 @@ public:
 			bGrounded = false;
 		}
 	}
+	const FVector& GetAngularVelocity() const { return AngularVelocity; }
+	void SetAngularVelocity(const FVector& InAngularVelocity) { AngularVelocity = InAngularVelocity; }
 	void AddImpulse(const FVector& Impulse);
 	void NotifyBlockingPushOut(const FVector& PushDelta);
 
@@ -51,15 +53,31 @@ protected:
 	void TickComponent(float DeltaTime) override;
 
 private:
+	struct FSupportState
+	{
+		bool bHasSupport = false;
+		bool bStable = true;
+		float SnapDeltaZ = 0.0f;
+		FVector PivotWorld = FVector::ZeroVector;
+		FVector CenterWorld = FVector::ZeroVector;
+		FVector Torque = FVector::ZeroVector;
+	};
+
 	void ClampEditableValues();
 	void ApplyBlockingResponse();
+	bool ApplyTipTorque(const FSupportState& Support, float DeltaTime, const FVector* AxisWorld = nullptr);
+	bool ApplyGroundAlignmentTorque(const FSupportState& Support, float DeltaTime);
+	void ConstrainAngularVelocityToAxis(const FVector& AxisWorld);
+	void ApplyAngularMotion(float DeltaTime, bool bAllowSleep, const FVector* PivotWorld = nullptr);
+	float ComputeRotationalInertia(const FVector& Axis) const;
 	bool HasBlockingContact() const;
 	bool HasGroundContact() const;
-	bool FindRestingSupport(float Tolerance, float& OutSnapDeltaZ) const;
+	bool FindSupportState(float Tolerance, FSupportState& OutSupport) const;
 
 private:
 	USceneComponent* UpdatedComponent = nullptr;
 	FVector Velocity = FVector::ZeroVector;
+	FVector AngularVelocity = FVector::ZeroVector;
 
 	bool bSimulatePhysics = true;
 	bool bUseGravity = true;
@@ -68,12 +86,29 @@ private:
 	bool bWasSimulatingBeforeHold = true;
 	bool bGrounded = false;
 	bool bGroundPushOutSinceLastTick = false;
+	bool bTipping = false;
+	float TippingTimeWithoutSupport = 0.0f;
+	FVector TippingPivotWorld = FVector::ZeroVector;
+	FVector TippingAxisWorld = FVector::ZeroVector;
+	bool bDebugSupportStateInitialized = false;
+	bool bDebugPrevHasSupport = false;
+	bool bDebugPrevStable = true;
+	bool bDebugPrevHasTipTorque = false;
+	bool bDebugPrevTipping = false;
+	float DebugSupportLogTimer = 0.0f;
+	mutable float DebugSupportProbeLogTimer = 0.0f;
+	USceneComponent* DebugPrevUpdatedComponent = nullptr;
 
 	float Mass = 1.0f;
 	float GravityScale = 1.0f;
 	float LinearDamping = 1.5f;
 	float MaxSpeed = 50.0f;
 	float SleepSpeed = 0.03f;
+	float AngularDamping = 1.5f;
+	float TipTorqueStrength = 1.0f;
+	float MaxAngularSpeed = 180.0f;
+	float TipOverAngle = 12.0f;
+	float TippingSupportGraceTime = 0.25f;
 
 	FString PickupSoundPath;
 	FString DropSoundPath;
