@@ -10,36 +10,40 @@ void FCollisionManager::Update(UWorld& World)
 {
     TArray<UShapeComponent*> ShapeComponents;
     CollectShapes(World, ShapeComponents);
+    ShapeBVH.Build(ShapeComponents);
 
-    for (size_t i = 0; i < ShapeComponents.size(); ++i)
+    TArray<FShapeCollisionPair> CandidateShapePairs;
+    ShapeBVH.QueryOverlappingPairs(CandidateShapePairs);
+
+    for (const FShapeCollisionPair& Pair : CandidateShapePairs)
     {
-        for (size_t j = i + 1; j < ShapeComponents.size(); ++j)
+        UShapeComponent* AShapeComp = Pair.ShapeCompA;
+        UShapeComponent* BShapeComp = Pair.ShapeCompB;
+
+        if (!CanCollide(AShapeComp, BShapeComp))
         {
-            UShapeComponent* AShapeComp = ShapeComponents[i];
-            UShapeComponent* BShapeComp = ShapeComponents[j];
+            continue;
+        }
 
-			if (!CanCollide(AShapeComp, BShapeComp))
-			{
-				continue;
-			}
+        FCollisionContact Contact;
+        if (CollisionShapeQuery::ComputePenetration(
+                AShapeComp->GetCollisionShapeGeometry(),
+                BShapeComp->GetCollisionShapeGeometry(),
+                Contact))
+        {
+            const bool bBlocking = AShapeComp->IsBlockComponents() && BShapeComp->IsBlockComponents();
+            if (bBlocking)
+            {
+                ResolveBlock(AShapeComp, BShapeComp, Contact);
+            }
+            else if (AShapeComp->ShouldGenerateOverlapEvents() && BShapeComp->ShouldGenerateOverlapEvents())
+            {
+                AShapeComp->AddOverlapInfo(BShapeComp);
+                BShapeComp->AddOverlapInfo(AShapeComp);
+            }
 
-			FCollisionContact Contact;
-			if (CollisionShapeQuery::ComputePenetration(AShapeComp->GetCollisionShapeGeometry(), BShapeComp->GetCollisionShapeGeometry(), Contact))
-			{
-				const bool bBlocking = AShapeComp->IsBlockComponents() && BShapeComp->IsBlockComponents();
-				if (bBlocking)
-				{
-					ResolveBlock(AShapeComp, BShapeComp, Contact);
-				}
-				else if (AShapeComp->ShouldGenerateOverlapEvents() && BShapeComp->ShouldGenerateOverlapEvents())
-				{
-					AShapeComp->AddOverlapInfo(BShapeComp);
-					BShapeComp->AddOverlapInfo(AShapeComp);
-				}
-
-				AShapeComp->SetDebugOverlapping(true);
-				BShapeComp->SetDebugOverlapping(true);
-			}
+            AShapeComp->SetDebugOverlapping(true);
+            BShapeComp->SetDebugOverlapping(true);
         }
     }
 }

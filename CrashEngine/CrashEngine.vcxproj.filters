@@ -1079,6 +1079,8 @@
     <ClCompile Include="Source\Engine\Component\Collision\SphereComponent.cpp">
       <Filter>Source\Engine\Component\Collision</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Collision\CollisionShapeGeometry.h" />
+    <ClCompile Include="Source\Engine\Collision\BVH\ShapeCollisionBVH.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1933,6 +1935,11 @@
     <ClInclude Include="Source\Engine\Component\Collision\SphereComponent.h">
       <Filter>Source\Engine\Component\Collision</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Collision\OverlapInfo.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\ShapeCollisionBVH.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
