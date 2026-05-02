@@ -2,6 +2,7 @@
 
 #include "Collision/Collision2DShapeGeometry.h"
 #include "Collision/SpatialHash.h"
+#include "Collision/CollisionMatrix.h"
 #include "Component/Collision/Collider2DComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
@@ -176,9 +177,15 @@ void FCollision2DManager::ProcessCollisionPairs(const TArray<FCollision2DPair>& 
 
 void FCollision2DManager::ProcessCollisionPair(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs)
 {
-	if (!CanCollide(ColliderA, ColliderB))
+    if (!ColliderA || !ColliderB || ColliderA == ColliderB || ColliderA->GetOwner() == ColliderB->GetOwner())
+    {
+        return;
+    }
+
+    ECollisionResponse Response = FCollisionMatrix::GetResponse(ColliderA->GetCollisionChannel(), ColliderB->GetCollisionChannel());
+	if (Response == ECollisionResponse::Ignore)
 	{
-		return;
+        return;
 	}
 
 	FCollision2DContact Contact;
@@ -191,13 +198,18 @@ void FCollision2DManager::ProcessCollisionPair(UCollider2DComponent* ColliderA, 
 	ColliderA->SetDebugOverlapping(true);
 	ColliderB->SetDebugOverlapping(true);
 
-	if (ColliderA->IsBlockComponents() && ColliderB->IsBlockComponents())
-	{
-		HandleBlockingCollision(ColliderA, ColliderB, Contact);
-		return;
-	}
+	switch (Response)
+    {
+    case ECollisionResponse::Overlap:
+        HandleOverlapCollision(ColliderA, ColliderB, OutCurrentOverlapPairs);
+		break;
+    case ECollisionResponse::Block:
+        HandleBlockingCollision(ColliderA, ColliderB, Contact);
+		break;
+    default:
+        break;
+    }
 
-	HandleOverlapCollision(ColliderA, ColliderB, OutCurrentOverlapPairs);
 }
 
 void FCollision2DManager::CollectColliders(UWorld& World, TArray<UCollider2DComponent*>& OutColliders)
@@ -222,20 +234,6 @@ void FCollision2DManager::CollectColliders(UWorld& World, TArray<UCollider2DComp
             OutColliders.push_back(Collider);
         }
     }
-}
-
-bool FCollision2DManager::CanCollide(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB)
-{
-    if (!ShapeA || !ShapeB || ShapeA == ShapeB || ShapeA->GetOwner() == ShapeB->GetOwner())
-    {
-        return false;
-    }
-
-    const bool bWantsOverlap = ShapeA->ShouldGenerateOverlapEvents() && ShapeB->ShouldGenerateOverlapEvents();
-    const bool bWantsBlock = ShapeA->IsBlockComponents() && ShapeB->IsBlockComponents();
-    const bool bWantsHit = ShapeA->ShouldGenerateHitEvents() || ShapeB->ShouldGenerateHitEvents();
-
-    return bWantsOverlap || bWantsBlock || bWantsHit;
 }
 
 bool FCollision2DManager::ComputePenetration(const FCollision2DShapeGeometry& A, const FCollision2DShapeGeometry& B, FCollision2DContact& OutContact) const
@@ -265,65 +263,65 @@ bool FCollision2DManager::ComputePenetration(const FCollision2DShapeGeometry& A,
     return false;
 }
 
-void FCollision2DManager::HandleBlockingCollision(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, const FCollision2DContact& Contact)
+void FCollision2DManager::HandleBlockingCollision(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, const FCollision2DContact& Contact)
 {
-	ResolveBlock(ShapeA, ShapeB, Contact);
+	ResolveBlock(ColliderA, ColliderB, Contact);
 
-	if (ShapeA->ShouldGenerateHitEvents())
+	if (ColliderA->ShouldGenerateHitEvents())
 	{
-		ShapeA->OnComponentHit2D.Broadcast(ShapeB);
+		ColliderA->OnComponentHit2D.Broadcast(ColliderB);
 	}
 
-	if (ShapeB->ShouldGenerateHitEvents())
+	if (ColliderB->ShouldGenerateHitEvents())
 	{
-		ShapeB->OnComponentHit2D.Broadcast(ShapeA);
+		ColliderB->OnComponentHit2D.Broadcast(ColliderA);
 	}
 }
 
-void FCollision2DManager::HandleOverlapCollision(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs)
+void FCollision2DManager::HandleOverlapCollision(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs)
 {
-	if (!ShapeA->ShouldGenerateOverlapEvents() || !ShapeB->ShouldGenerateOverlapEvents())
+	if (!ColliderA->ShouldGenerateOverlapEvents() || !ColliderB->ShouldGenerateOverlapEvents())
 	{
 		return;
 	}
 
-	const uint64 PairKey = MakeCollider2DPairKey(ShapeA, ShapeB);
-	OutCurrentOverlapPairs[PairKey] = { ShapeA, ShapeB };
+	const uint64 PairKey = MakeCollider2DPairKey(ColliderA, ColliderB);
+	OutCurrentOverlapPairs[PairKey] = { ColliderA, ColliderB };
 
-	ShapeA->AddOverlapInfo(ShapeB);
-	ShapeB->AddOverlapInfo(ShapeA);
+	ColliderA->AddOverlapInfo(ColliderB);
+	ColliderB->AddOverlapInfo(ColliderA);
 
 	if (PreviousOverlapPairs.find(PairKey) == PreviousOverlapPairs.end())
 	{
-		ShapeA->OnComponentBeginOverlap2D.Broadcast(ShapeB);
-		ShapeB->OnComponentBeginOverlap2D.Broadcast(ShapeA);
+		ColliderA->OnComponentBeginOverlap2D.Broadcast(ColliderB);
+		ColliderB->OnComponentBeginOverlap2D.Broadcast(ColliderA);
 	}
 }
 
-void FCollision2DManager::ResolveBlock(UCollider2DComponent* ShapeA, UCollider2DComponent* ShapeB, const FCollision2DContact& Contact)
+void FCollision2DManager::ResolveBlock(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, const FCollision2DContact& Contact)
 {
-    if (!ShapeA || !ShapeB || Contact.PenetrationDepth <= FMath::Epsilon)
+    if (!ColliderA || !ColliderB || Contact.PenetrationDepth <= FMath::Epsilon)
     {
         return;
     }
 
     const FVector Correction = FVector(Contact.Normal.X, Contact.Normal.Y, 0.0f) * (Contact.PenetrationDepth + 0.001f);
 
-    const bool bAMovable = ShapeA->IsMovable();
-    const bool bBMovable = ShapeB->IsMovable();
+    const bool bAMovable = ColliderA->IsMovable();
+    const bool bBMovable = ColliderB->IsMovable();
 
     if (bAMovable && bBMovable)
     {
-        ShapeA->AddWorldOffset(Correction * -0.5f);
-        ShapeB->AddWorldOffset(Correction * 0.5f);
+        ColliderA->AddWorldOffset(Correction * -0.5f);
+        ColliderB->AddWorldOffset(Correction * 0.5f);
     }
     else if (bAMovable)
     {
-        ShapeA->AddWorldOffset(Correction * -1.0f);
+        ColliderA->AddWorldOffset(Correction * -1.0f);
     }
     else if (bBMovable)
     {
-        ShapeB->AddWorldOffset(Correction);
+        ColliderB->AddWorldOffset(Correction);
     }
 }
 
