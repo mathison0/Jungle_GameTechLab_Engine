@@ -4,7 +4,7 @@ local Script = {}
 
 function Script:BeginPlay()
     self.ai = self:start_coroutine(function()
-        EnemyAI.Patrol(self)
+        EnemyAI.ChaseTarget(self, "Player")
     end)
 end
 
