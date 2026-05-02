@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -241,14 +241,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Engine\Collision\BVH\ShapeCollisionBVH.cpp" />
-    <ClCompile Include="Source\Engine\Collision\CollisionShapeGeometry.h" />
-    <ClCompile Include="Source\Engine\Component\Collision\BoxComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\Collision\CapsuleComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\Collision\ShapeComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\Collision\SphereComponent.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
-    <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorSelectionTool.cpp" />
@@ -256,33 +249,36 @@
     <ClCompile Include="Source\Editor\Input\EditorViewportContextMenuTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorViewportInputController.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorViewportTool.cpp" />
+    <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp" />
     <ClCompile Include="Source\Editor\Subsystem\OverlayStatSystem.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorConsolePanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorControlPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorDetailsPanel.cpp" />
-    <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorMainPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorMaterialPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorSceneManagerPanel.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorStatPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorToolbarPanel.cpp" />
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp" />
-    <ClCompile Include="Source\Engine\Collision\BVH\DecalVolumeBVH.cpp" />
-    <ClCompile Include="Source\Engine\Collision\BVH\MeshTriangleBVH.cpp" />
+    <ClCompile Include="Source\Engine\Collision\Collision2DManager.cpp" />
+    <ClCompile Include="Source\Engine\Collision\CollisionManager.cpp" />
+    <ClCompile Include="Source\Engine\Collision\CollisionShapeQuery.cpp" />
     <ClCompile Include="Source\Engine\Collision\Octree.cpp" />
     <ClCompile Include="Source\Engine\Collision\RayUtils.cpp" />
     <ClCompile Include="Source\Engine\Collision\RayUtilsSIMD.cpp" />
     <ClCompile Include="Source\Engine\Collision\SpatialPartition.cpp" />
-    <ClCompile Include="Source\Engine\Collision\CollisionManager.cpp" />
-    <ClCompile Include="Source\Engine\Collision\CollisionShapeQuery.cpp" />
     <ClCompile Include="Source\Engine\Collision\Sphere.cpp" />
+    <ClCompile Include="Source\Engine\Collision\BVH\DecalVolumeBVH.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\EditorHelperBVH.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\EditorPickingBVH.cpp" />
+    <ClCompile Include="Source\Engine\Collision\BVH\MeshTriangleBVH.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\ScenePrimitiveBVH.cpp" />
+    <ClCompile Include="Source\Engine\Collision\BVH\ShapeCollisionBVH.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\AmbientLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\BillboardComponent.cpp" />
@@ -307,6 +303,13 @@
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\UUIDTextRenderComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\BoxCollider2DComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\BoxComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\CapsuleComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\CircleCollider2DComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\Collider2DComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\ShapeComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Collision\SphereComponent.cpp" />
     <ClCompile Include="Source\Engine\Core\CoreGlobals.cpp" />
     <ClCompile Include="Source\Engine\Core\EngineTypes.cpp" />
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp" />
@@ -408,6 +411,12 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Batching\FontBatch.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Batching\LineBatch.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectOverlay.cpp" />
@@ -415,12 +424,6 @@
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectScenePrimitives.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectShadowCasters.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\DrawCollector.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Command\BuildDrawCommand.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Command\DrawCommandList.cpp" />
     <ClCompile Include="Source\Engine\Render\Visibility\Frustum\ConvexVolume.cpp" />
@@ -454,15 +457,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\Collision\BVH\ShapeCollisionBVH.h" />
-    <ClInclude Include="Source\Engine\Collision\OverlapInfo.h" />
-    <ClInclude Include="Source\Engine\Component\Collision\BoxComponent.h" />
-    <ClInclude Include="Source\Engine\Component\Collision\CapsuleComponent.h" />
-    <ClInclude Include="Source\Engine\Component\Collision\ShapeComponent.h" />
-    <ClInclude Include="Source\Engine\Component\Collision\SphereComponent.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
-    <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
-    <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorSelectionTool.h" />
@@ -470,6 +465,8 @@
     <ClInclude Include="Source\Editor\Input\EditorViewportContextMenuTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorViewportInputController.h" />
     <ClInclude Include="Source\Editor\Input\EditorViewportTool.h" />
+    <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
+    <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
     <ClInclude Include="Source\Editor\PIE\PIETypes.h" />
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h" />
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h" />
@@ -486,20 +483,25 @@
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\FLevelViewportLayout.h" />
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h" />
-    <ClInclude Include="Source\Engine\Collision\BVH\BVH.h" />
-    <ClInclude Include="Source\Engine\Collision\BVH\DecalVolumeBVH.h" />
-    <ClInclude Include="Source\Engine\Collision\BVH\EditorHelperBVH.h" />
-    <ClInclude Include="Source\Engine\Collision\BVH\MeshTriangleBVH.h" />
+    <ClInclude Include="Source\Engine\Collision\Collision2DManager.h" />
+    <ClInclude Include="Source\Engine\Collision\Collision2DShapeGeometry.h" />
+    <ClInclude Include="Source\Engine\Collision\CollisionManager.h" />
+    <ClInclude Include="Source\Engine\Collision\CollisionShapeGeometry.h" />
+    <ClInclude Include="Source\Engine\Collision\CollisionShapeQuery.h" />
     <ClInclude Include="Source\Engine\Collision\OBB.h" />
     <ClInclude Include="Source\Engine\Collision\Octree.h" />
+    <ClInclude Include="Source\Engine\Collision\OverlapInfo.h" />
     <ClInclude Include="Source\Engine\Collision\RayUtils.h" />
     <ClInclude Include="Source\Engine\Collision\RayUtilsSIMD.h" />
     <ClInclude Include="Source\Engine\Collision\SpatialPartition.h" />
-    <ClInclude Include="Source\Engine\Collision\CollisionManager.h" />
-    <ClInclude Include="Source\Engine\Collision\CollisionShapeQuery.h" />
     <ClInclude Include="Source\Engine\Collision\Sphere.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\BVH.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\DecalVolumeBVH.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\EditorHelperBVH.h" />
     <ClInclude Include="Source\Engine\Collision\BVH\EditorPickingBVH.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\MeshTriangleBVH.h" />
     <ClInclude Include="Source\Engine\Collision\BVH\ScenePrimitiveBVH.h" />
+    <ClInclude Include="Source\Engine\Collision\BVH\ShapeCollisionBVH.h" />
     <ClInclude Include="Source\Engine\Component\ActorComponent.h" />
     <ClInclude Include="Source\Engine\Component\AmbientLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\BillboardComponent.h" />
@@ -525,19 +527,26 @@
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h" />
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h" />
     <ClInclude Include="Source\Engine\Component\UUIDTextRenderComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\BoxCollider2DComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\BoxComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\CapsuleComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\CircleCollider2DComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\Collider2DComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\ShapeComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Collision\SphereComponent.h" />
     <ClInclude Include="Source\Engine\Core\ClassTypes.h" />
     <ClInclude Include="Source\Engine\Core\CollisionTypes.h" />
     <ClInclude Include="Source\Engine\Core\Common.h" />
     <ClInclude Include="Source\Engine\Core\CoreGlobals.h" />
     <ClInclude Include="Source\Engine\Core\CoreTypes.h" />
     <ClInclude Include="Source\Engine\Core\EngineTypes.h" />
-    <ClInclude Include="Source\Engine\Core\Logging\LogMacros.h" />
-    <ClInclude Include="Source\Engine\Core\Logging\LogOutputDevice.h" />
     <ClInclude Include="Source\Engine\Core\PropertyTypes.h" />
     <ClInclude Include="Source\Engine\Core\RayTypes.h" />
     <ClInclude Include="Source\Engine\Core\ResourceTypes.h" />
     <ClInclude Include="Source\Engine\Core\Singleton.h" />
     <ClInclude Include="Source\Engine\Core\TickFunction.h" />
+    <ClInclude Include="Source\Engine\Core\Logging\LogMacros.h" />
+    <ClInclude Include="Source\Engine\Core\Logging\LogOutputDevice.h" />
     <ClInclude Include="Source\Engine\GameFramework\AActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DecalActor.h" />
@@ -641,6 +650,7 @@
     <ClInclude Include="Source\Engine\Render\Resources\Shaders\ShaderVariantCache.h" />
     <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowFilterSettings.h" />
     <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowMapSettings.h" />
+    <ClInclude Include="Source\Engine\Render\Resources\Shadows\ShadowResolutionSettings.h" />
     <ClInclude Include="Source\Engine\Render\Resources\State\RenderStateNames.h" />
     <ClInclude Include="Source\Engine\Render\Resources\State\RenderStateTypes.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\Buffers.h" />
@@ -686,9 +696,17 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasBuddyAllocator2D.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasRegistry.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasSystem.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\BatchBuffer.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\FontBatch.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\LineBatch.h" />
@@ -696,14 +714,6 @@
     <ClInclude Include="Source\Engine\Render\Submission\Collect\CollectedOverlayData.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Collect\CollectedSceneData.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Collect\DrawCollector.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowMomentFilter.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasTypes.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Command\BuildDrawCommand.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Command\DrawCommand.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Command\DrawCommandList.h" />
@@ -800,6 +810,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\Scene\Shared\DepthOnlyPass.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Passes\Scene\Shared\ShadowDepthPreviewPass.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>

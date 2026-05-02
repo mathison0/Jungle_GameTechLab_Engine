@@ -1,5 +1,6 @@
 ﻿#include "CollisionManager.h"
 
+#include "Component/Collision/Collider2DComponent.h"
 #include "Component/Collision/ShapeComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
@@ -60,7 +61,7 @@ void FCollisionManager::CollectShapes(UWorld& World, TArray<UShapeComponent*>& O
         for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
         {
             UShapeComponent* Shape = Cast<UShapeComponent>(Primitive);
-            if (!Shape)
+            if (!Shape || Cast<UCollider2DComponent>(Shape))
             {
                 continue;
             }

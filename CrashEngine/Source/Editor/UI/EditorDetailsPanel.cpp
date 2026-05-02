@@ -1605,6 +1605,12 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
             bChanged = ImGui::DragFloat(WidgetLabel.c_str(), Val, Prop.Speed);
         break;
     }
+    case EPropertyType::Vec2:
+    {
+        float* Val = static_cast<float*>(Prop.ValuePtr);
+        bChanged = ImGui::DragFloat2(WidgetLabel.c_str(), Val, Prop.Speed);
+        break;
+    }
     case EPropertyType::Vec3:
     {
         float* Val = static_cast<float*>(Prop.ValuePtr);

@@ -250,6 +250,7 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
     }
 
     CollisionManager.Update(*this);
+    Collision2DManager.Update(*this);
 
     Scene.GetDebugPrimitiveQueue().ClearOneFramePrimitives();
     Scene.GetDebugPrimitiveQueue().Tick(DeltaTime);

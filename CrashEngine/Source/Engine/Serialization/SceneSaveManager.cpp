@@ -311,6 +311,14 @@ json::JSON FSceneSaveManager::SerializePropertyValue(const FPropertyDescriptor& 
     case EPropertyType::Float:
         return JSON(static_cast<double>(*static_cast<float*>(Prop.ValuePtr)));
 
+    case EPropertyType::Vec2:
+    {
+        float* v = static_cast<float*>(Prop.ValuePtr);
+        JSON arr = json::Array();
+        arr.append(static_cast<double>(v[0]));
+        arr.append(static_cast<double>(v[1]));
+        return arr;
+    }
     case EPropertyType::Vec3:
     {
         float* v = static_cast<float*>(Prop.ValuePtr);
@@ -754,6 +762,18 @@ void FSceneSaveManager::DeserializePropertyValue(FPropertyDescriptor& Prop, json
         *static_cast<float*>(Prop.ValuePtr) = static_cast<float>(Value.ToFloat());
         break;
 
+    case EPropertyType::Vec2:
+    {
+        float* v = static_cast<float*>(Prop.ValuePtr);
+        int i = 0;
+        for (auto& elem : Value.ArrayRange())
+        {
+            if (i < 2)
+                v[i] = static_cast<float>(elem.ToFloat());
+            i++;
+        }
+        break;
+    }
     case EPropertyType::Vec3:
     {
         float* v = static_cast<float*>(Prop.ValuePtr);

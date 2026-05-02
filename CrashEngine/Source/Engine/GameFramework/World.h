@@ -1,6 +1,7 @@
 ﻿// 게임 프레임워크 영역에서 공유되는 타입과 인터페이스를 정의합니다.
 #pragma once
 #include "Object/Object.h"
+#include "Collision/Collision2DManager.h"
 #include "Collision/CollisionManager.h"
 #include "Core/RayTypes.h"
 #include "Core/CollisionTypes.h"
@@ -93,6 +94,7 @@ private:
     FTickManager TickManager;
 
     FCollisionManager CollisionManager;
+    FCollision2DManager Collision2DManager;
     FSpatialPartition Partition;
     EWorldType WorldType = EWorldType::Editor;
 };

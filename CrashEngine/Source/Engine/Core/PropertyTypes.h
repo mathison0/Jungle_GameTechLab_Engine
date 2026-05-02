@@ -12,6 +12,7 @@ enum class EPropertyType : uint8_t
     ByteBool, // uint8을 bool처럼 사용 (std::vector<bool> 회피용)
     Int,
     Float,
+    Vec2,
     Vec3,
     Vec4,
     Rotator, // FRotator (Pitch, Yaw, Roll)
