@@ -20,10 +20,13 @@ namespace
 	constexpr float GroundSupportTolerance = 0.05f;
 	constexpr float GroundSupportHorizontalSlop = 0.001f;
 	constexpr float AngularSleepSpeed = 0.5f;
-	constexpr float GroundedAngularDamping = 18.0f;
+	constexpr float GroundedAngularDamping = 6.0f;
 	constexpr float RestingAngularStopDelay = 0.18f;
+	constexpr float ForcedRestingAlignmentDelay = 0.65f;
+	constexpr float ForcedRestingLinearSpeed = 0.08f;
 	constexpr float GravityAcceleration = 9.8f;
 	constexpr float RadiansToDegrees = 57.29577951308232f;
+	constexpr float GroundPostAngularSnapTolerance = 0.25f;
 
 	bool IsLiveObjectPointer(const UObject* Object)
 	{
@@ -56,6 +59,20 @@ namespace
 	FString GetObjectNameForLog(const UObject* Object)
 	{
 		return Object != nullptr ? Object->GetName() : "None";
+	}
+
+	float NormalizeAngleDelta(float Degrees)
+	{
+		float Result = std::fmod(Degrees, 360.0f);
+		if (Result > 180.0f)
+		{
+			Result -= 360.0f;
+		}
+		else if (Result < -180.0f)
+		{
+			Result += 360.0f;
+		}
+		return Result;
 	}
 }
 
@@ -174,6 +191,7 @@ void URigidBodyComponent::SetHeldByPhysicsHandle(bool bHeld)
 		bSimulatePhysics = false;
 		bGrounded = false;
 		StableRestTime = 0.0f;
+		RestingContactTime = 0.0f;
 		Velocity = FVector::ZeroVector;
 		AngularVelocity = FVector::ZeroVector;
 		ClearTippingState();
@@ -191,6 +209,7 @@ void URigidBodyComponent::AddImpulse(const FVector& Impulse)
 	Velocity += Impulse / Mass;
 	bGrounded = false;
 	StableRestTime = 0.0f;
+	RestingContactTime = 0.0f;
 	ClearTippingState();
 	bGroundPushOutSinceLastTick = false;
 }
@@ -281,6 +300,7 @@ void URigidBodyComponent::TickComponent(float DeltaTime)
 	if (bHasUnstableSupport)
 	{
 		StableRestTime = 0.0f;
+		RestingContactTime = 0.0f;
 		const FVector CandidateAxis = Support.Torque.GetSafeNormal();
 		if (!bTipping && !CandidateAxis.IsNearlyZero())
 		{
@@ -294,6 +314,7 @@ void URigidBodyComponent::TickComponent(float DeltaTime)
 	else if (bTipping)
 	{
 		StableRestTime = 0.0f;
+		RestingContactTime = 0.0f;
 		TippingTimeWithoutSupport += DeltaTime;
 		if (bHasRestingSupport && Support.bStable)
 		{
@@ -307,6 +328,7 @@ void URigidBodyComponent::TickComponent(float DeltaTime)
 	else if (!bHasStableSupport)
 	{
 		StableRestTime = 0.0f;
+		RestingContactTime = 0.0f;
 	}
 
 	bGrounded = bHasStableSupport;
@@ -347,26 +369,67 @@ void URigidBodyComponent::TickComponent(float DeltaTime)
 			AngularPivot = &TippingPivotWorld;
 		}
 		ApplyAngularMotion(DeltaTime, bGrounded, AngularPivot);
+
+		FSupportState PostAngularSupport;
+		if (bGrounded &&
+			FindSupportState(GroundPostAngularSnapTolerance, PostAngularSupport) &&
+			PostAngularSupport.bStable &&
+			std::fabs(PostAngularSupport.SnapDeltaZ) > 0.0001f)
+		{
+			if (AActor* OwnerActor = Owner)
+			{
+				OwnerActor->AddActorWorldOffset(FVector(0.0f, 0.0f, PostAngularSupport.SnapDeltaZ));
+			}
+		}
 	}
 
 	const bool bCanStopRestingAngularMotion =
 		bGrounded &&
 		!bTipping &&
-		Velocity.SizeSquared() <= SleepSpeed * SleepSpeed;
+		Velocity.SizeSquared() <= SleepSpeed * SleepSpeed &&
+		AngularVelocity.SizeSquared() <= AngularSleepSpeed * AngularSleepSpeed;
 	if (bCanStopRestingAngularMotion)
 	{
 		StableRestTime += DeltaTime;
 		if (StableRestTime >= RestingAngularStopDelay)
 		{
+			SnapRestingRotationToStableFace(Support);
 			Velocity = FVector::ZeroVector;
 			AngularVelocity = FVector::ZeroVector;
 			ClearTippingState();
 			StableRestTime = 0.0f;
+			RestingContactTime = 0.0f;
 		}
 	}
 	else
 	{
 		StableRestTime = 0.0f;
+	}
+
+	const bool bCanForceRestingAlignment =
+		bGrounded &&
+		!bTipping &&
+		Velocity.SizeSquared() <= ForcedRestingLinearSpeed * ForcedRestingLinearSpeed;
+	if (bCanForceRestingAlignment)
+	{
+		RestingContactTime += DeltaTime;
+		if (RestingContactTime >= ForcedRestingAlignmentDelay)
+		{
+			FSupportState FreshSupport = Support;
+			if (FindSupportState(GroundPostAngularSnapTolerance, FreshSupport) && FreshSupport.bStable)
+			{
+				SnapRestingRotationToStableFace(FreshSupport);
+				Velocity = FVector::ZeroVector;
+				AngularVelocity = FVector::ZeroVector;
+				ClearTippingState();
+				StableRestTime = 0.0f;
+				RestingContactTime = 0.0f;
+			}
+		}
+	}
+	else
+	{
+		RestingContactTime = 0.0f;
 	}
 
 	if (bGrounded &&
@@ -483,6 +546,7 @@ void URigidBodyComponent::TickComponent(float DeltaTime)
 	{
 		bGrounded = false;
 		StableRestTime = 0.0f;
+		RestingContactTime = 0.0f;
 	}
 }
 
@@ -705,6 +769,64 @@ void URigidBodyComponent::ResetRotationToInitial()
 	if (USceneComponent* Scene = GetUpdatedComponent())
 	{
 		Scene->SetRelativeRotation(InitialRelativeRotation);
+	}
+}
+
+void URigidBodyComponent::SnapRestingRotationToStableFace(const FSupportState& Support)
+{
+	USceneComponent* Scene = GetUpdatedComponent();
+	if (Scene == nullptr || Owner == nullptr || !Support.bHasSupport || !Support.bStable)
+	{
+		return;
+	}
+
+	const FQuat CurrentQuat = Scene->GetRelativeQuat().GetNormalized();
+	const FVector CurrentRotation = Scene->GetRelativeRotation();
+	const float CurrentYaw = CurrentRotation.Z;
+	const FVector StableRotations[] =
+	{
+		FVector(0.0f, 0.0f, CurrentYaw),
+		FVector(90.0f, 0.0f, CurrentYaw),
+		FVector(-90.0f, 0.0f, CurrentYaw),
+		FVector(180.0f, 0.0f, CurrentYaw),
+		FVector(-180.0f, 0.0f, CurrentYaw),
+		FVector(0.0f, 90.0f, CurrentYaw),
+		FVector(0.0f, -90.0f, CurrentYaw),
+		FVector(0.0f, 180.0f, CurrentYaw),
+		FVector(0.0f, -180.0f, CurrentYaw)
+	};
+
+	FVector BestRotation = StableRotations[0];
+	float BestScore = std::numeric_limits<float>::max();
+	for (const FVector& CandidateRotation : StableRotations)
+	{
+		const FQuat CandidateQuat = FQuat::MakeFromEuler(CandidateRotation).GetNormalized();
+		const float RotationDistance = CurrentQuat.AngularDistance(CandidateQuat);
+		const float EulerDistance =
+			std::fabs(NormalizeAngleDelta(CurrentRotation.X - CandidateRotation.X)) +
+			std::fabs(NormalizeAngleDelta(CurrentRotation.Y - CandidateRotation.Y));
+		const float Score = RotationDistance + EulerDistance * 0.001f;
+		if (Score < BestScore)
+		{
+			BestScore = Score;
+			BestRotation = CandidateRotation;
+		}
+	}
+
+	Scene->SetRelativeRotation(BestRotation);
+
+	float NewBottomZ = std::numeric_limits<float>::max();
+	for (UPrimitiveComponent* Primitive : Owner->GetPrimitiveComponents())
+	{
+		if (Primitive != nullptr && Primitive->IsBlockComponent())
+		{
+			NewBottomZ = std::min(NewBottomZ, Primitive->GetWorldAABB().Min.Z);
+		}
+	}
+
+	if (NewBottomZ != std::numeric_limits<float>::max())
+	{
+		Scene->AddWorldOffset(FVector(0.0f, 0.0f, Support.PivotWorld.Z - NewBottomZ));
 	}
 }
 

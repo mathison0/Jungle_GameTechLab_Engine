@@ -70,6 +70,7 @@ private:
 	void ClearTippingState();
 	void CacheInitialRotationIfNeeded();
 	void ResetRotationToInitial();
+	void SnapRestingRotationToStableFace(const FSupportState& Support);
 	void ApplyAngularMotion(float DeltaTime, bool bAllowSleep, const FVector* PivotWorld = nullptr);
 	float ComputeRotationalInertia(const FVector& Axis) const;
 	bool HasBlockingContact() const;
@@ -91,6 +92,7 @@ private:
 	bool bTipping = false;
 	bool bHasInitialRelativeRotation = false;
 	float StableRestTime = 0.0f;
+	float RestingContactTime = 0.0f;
 	float TippingTimeWithoutSupport = 0.0f;
 	FVector InitialRelativeRotation = FVector::ZeroVector;
 	FVector TippingPivotWorld = FVector::ZeroVector;
