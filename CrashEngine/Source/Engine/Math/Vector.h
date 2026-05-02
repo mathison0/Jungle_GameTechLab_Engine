@@ -63,6 +63,7 @@ struct FVector
     static FVector Cross(const FVector& v1, const FVector& v2) { return v1.Cross(v2); }
     static float Distance(const FVector& V1, const FVector& V2);
     static float DistSquared(const FVector& V1, const FVector& V2);
+    static FVector MoveToward(FVector current, FVector target, float maxDistanceDelta);
 
     FVector operator+(const FVector& Other) const;
     FVector operator-(const FVector& Other) const;
