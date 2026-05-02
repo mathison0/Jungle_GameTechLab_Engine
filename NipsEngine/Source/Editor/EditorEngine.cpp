@@ -2,9 +2,10 @@
 
 #include "Engine/Runtime/WindowsWindow.h"
 #include "Engine/Serialization/SceneSaveManager.h"
+#include "Engine/UI/GameUISystem.h"
 #include "Engine/Slate/SlateApplication.h"
 #include "Engine/Input/InputSystem.h"
-#include "Runtime/ViewportRect.h"
+#include "Viewport/ViewportRect.h"
 #include "Component/GizmoComponent.h"
 #include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
@@ -259,7 +260,7 @@ namespace
 		return nullptr;
 	}
 
-	void SyncEngineSettingsFromEditorSettings()
+	void SyncEngineSettings()
 	{
 		const FEditorSettings& EditorSettings = FEditorSettings::Get();
 		FEngineSettings& EngineSettings = FEngineSettings::Get();
@@ -278,7 +279,7 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 {
     UEngine::Init(InWindow);
     FEditorSettings::Get().LoadFromFile(FEditorSettings::GetDefaultSettingsPath());
-	SyncEngineSettingsFromEditorSettings();
+	SyncEngineSettings();
 
     MainPanel.Create(Window, Renderer, this);
     if (WorldList.empty())
@@ -421,6 +422,11 @@ void UEditorEngine::StartPlaySession()
 
     FocusedClient->LockCursorToViewport();
     InputSystem::Get().SetCursorVisibility(false);
+
+    // PIE 진입마다 시작화면부터 (커서/마우스 상태는 SetState 내부에서 처리)
+    GameUISystem::Get().ResetGameData();
+    GameUISystem::Get().SetState(EGameUIState::StartMenu);
+    GameUISystem::Get().SetExitPlayCallback([this]() { StopPlaySession(); });
 
 	const TArray<AActor*> EditorActors = FocusedWorld->GetActors();
 	const TArray<AActor*> PIEActors = PIEWorld->GetActors();
@@ -626,6 +632,10 @@ void UEditorEngine::StopPlaySession()
     SetEditorState(EViewportPlayState::Editing);
     FocusedClient->RestoreCameraSnapshot();
 
+    // PIE 종료 시 게임 UI 상태 초기화 (Ending 화면 등이 에디터에 남지 않도록)
+    GameUISystem::Get().SetState(EGameUIState::StartMenu);
+    GameUISystem::Get().SetExitPlayCallback(nullptr);
+
     if (ViewportPIEHandles.empty())
     {
         InputSystem::Get().SetCursorVisibility(true);
@@ -711,8 +721,7 @@ void UEditorEngine::NewScene()
 
 void UEditorEngine::ApplySpatialIndexMaintenanceSettings(UWorld* TargetWorld)
 {
-    // Init 초반에는 ViewportLayout이 아직 연결되지 않았을 수 있으므로
-    // FocusedWorld보다 ActiveWorld(GetWorld) 경로를 우선 사용한다.
+    // Init 초반에는 ViewportLayout이 아직 연결되지 않았을 수 있으므로 FocusedWorld보다 ActiveWorld(GetWorld) 경로를 우선 사용한다.
     UWorld* World = (TargetWorld != nullptr) ? TargetWorld : GetWorld();
     if (World == nullptr)
     {
@@ -723,7 +732,7 @@ void UEditorEngine::ApplySpatialIndexMaintenanceSettings(UWorld* TargetWorld)
         }
     }
 
-	SyncEngineSettingsFromEditorSettings();
+	SyncEngineSettings();
     FWorldSpatialIndex::FMaintenancePolicy& Policy = World->GetSpatialIndex().GetMaintenancePolicy();
 	FEngineSettings::Get().ApplyToSpatialPolicy(Policy);
 }

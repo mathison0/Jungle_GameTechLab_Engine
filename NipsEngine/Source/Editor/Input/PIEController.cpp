@@ -1,5 +1,5 @@
 #include "PIEController.h"
-#include "Editor/Viewport/ViewportCamera.h"
+#include "Engine/Viewport/ViewportCamera.h"
 #include "Engine/Input/InputSystem.h"
 #include "Component/Physics/PhysicsHandleComponent.h"
 #include "Object/Object.h"
@@ -35,6 +35,10 @@ void FPIEController::Tick(float InDeltaTime)
 void FPIEController::OnMouseMove(float DeltaX, float DeltaY)
 {
     if (!Camera)
+        return;
+
+    // 마우스가 잠금 해제 상태(메뉴, 대화, 엔딩 등)이면 카메라 회전 차단
+    if (!InputSystem::Get().IsMouseLocked())
         return;
 
     if (Camera->IsOrthographic())

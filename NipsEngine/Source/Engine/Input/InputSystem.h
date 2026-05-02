@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <windows.h>
 #include "Core/Singleton.h"
-#include "Runtime/ViewportRect.h"
+#include "Viewport/ViewportRect.h"
 
 struct FGuiInputState
 {
@@ -30,6 +30,7 @@ class InputSystem : public TSingleton<InputSystem>
 	// Mouse lock
     void	 SetCursorVisibility(bool bVisible);
     void	 LockMouse(bool bLock, float x = 0, float y = 0, float w = 0, float h = 0);
+    bool     IsMouseLocked() const { return bIsMouseLocked; }
 
     // Mouse position
     POINT GetMousePos() const { return MousePos; }
