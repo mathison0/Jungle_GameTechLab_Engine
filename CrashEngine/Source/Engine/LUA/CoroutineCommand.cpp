@@ -27,6 +27,8 @@ void FWaitRealTime::Run(sol::coroutine& InCoroutine, const FCouroutineContext& C
 void FWaitNextFrame::Run(sol::coroutine& InCoroutine, const FCouroutineContext& Context)
 {
     GetResult(InCoroutine(Context.DeltaTime));
+
+	bIsEnd = GetStatus() != sol::call_status::yielded;
 }
 
 void FWaitUntilPredicate::Run(sol::coroutine& InCoroutine, const FCouroutineContext& Context)

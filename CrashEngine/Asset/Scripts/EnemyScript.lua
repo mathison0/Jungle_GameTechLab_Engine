@@ -1,10 +1,13 @@
 local EnemyAI = require("AI.EnemyAI")
 
-local Script = {}
+local Script = {
+    properties = EnemyAI.properties
+}
 
 function Script:BeginPlay()
+    Log("[EnemyAI] BeginPlay");
     self.ai = self.StartCoroutine(function()
-        EnemyAI.ChaseTarget(self, "Player")
+        EnemyAI.ChaseTargetCoroutine(self, "Tank")
     end)
 end
 

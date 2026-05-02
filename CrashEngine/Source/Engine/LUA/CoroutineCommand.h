@@ -68,6 +68,10 @@ class FWaitNextFrame final : public FExecuteCommand
 {
 public:
     void Run(sol::coroutine& InCoroutine, const FCouroutineContext& Context) override;
+    virtual bool IsEnd() override { return bIsEnd; }
+
+private:
+    bool bIsEnd = false;
 };
 
 class FWaitUntilPredicate final : public FExecuteCommand

@@ -449,6 +449,7 @@ void UScriptComponent::BindFunctions()
             return FLuaComponentHandle();
         });
 
+	//현재는 이름기반, 태그 추가시 변경
     BindFunction("QueryActorByTagClosest",
         [this](const sol::variadic_args& Args) -> FLuaActorHandle
         {

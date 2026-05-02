@@ -8,22 +8,36 @@ local EnemyAI = {
     }
 }
 
-function EnemyAI.ChaseTarget(self, TargetTag)
-    while true do
-        local deltaTime = Co.WaitNextFrame()
+function EnemyAI.ChaseTarget(self, TargetTag, DeltaTime)
+        Log("[EnemyAI] ChaseTargetInternal")
+
         local actor = self.GetActor()
         if actor == nil or not actor:IsValid() then
             return
         end
 
         local myPos = actor:GetLocation()
-        local target = self.QueryActorByTagClosest(TargetTag, myPos, self.TargetSearchRadius or 10000.0)
 
-        if target ~= nil and target:IsValid() then
-            local targetPos = target:GetLocation()
-            local dir = Vec.DirectionTo(myPos, targetPos)
-            actor:SetLocation(myPos + dir * (self.MoveSpeed or 1.0) * deltaTime)
+        if(self.target == nil or not self.target:IsValid()) then
+            Log("[EnemyAI] Search Target")
+            self.target = self.QueryActorByTagClosest(TargetTag, myPos, self.TargetSearchRadius or 10000.0)
         end
+
+        Log("[EnemyAI] Test Valid")
+        if self.target ~= nil and self.target:IsValid() then
+            Log("[EnemyAI] Chase Start")
+            local targetPos = self.target:GetLocation()
+            local dir = Vec.DirectionTo(myPos, targetPos)
+            actor:SetLocation(myPos + dir * (self.MoveSpeed or 1.0) * DeltaTime)
+        end
+end
+
+function EnemyAI.ChaseTargetCoroutine(self, TargetTag)
+    Log("[EnemyAI] Start ChaseCoroutine")
+
+    while true do
+        local deltaTime = Co.WaitNextFrame()
+        EnemyAI.ChaseTarget(self, TargetTag, deltaTime)
     end
 end
 
