@@ -24,6 +24,7 @@ public:
 private:
 	// 선택 상태 관리
 	void UpdateSelectionState(AActor* PrimaryActor);
+	void SyncGizmoToSelection(AActor* PrimaryActor);
 
 	// 헤더 영역
 	void RenderActorHeaderRegion(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);

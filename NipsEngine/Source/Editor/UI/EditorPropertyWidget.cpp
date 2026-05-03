@@ -166,6 +166,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 	// 컴포넌트 트리 영역
 	SEPARATOR();
 	RenderComponentTree(PrimaryActor);
+	SyncGizmoToSelection(PrimaryActor);
 
 	// 디테일 프로퍼티 영역
 	SEPARATOR();
@@ -211,6 +212,26 @@ void FEditorPropertyWidget::UpdateSelectionState(AActor* PrimaryActor)
 }
 
 // 단일 선택과 다중 선택 상황에 맞춰 상단 헤더 영역을 그립니다.
+void FEditorPropertyWidget::SyncGizmoToSelection(AActor* PrimaryActor)
+{
+	if (!SelectionManager || !SelectionManager->GetGizmo() || !PrimaryActor)
+	{
+		return;
+	}
+
+	if (!bActorSelected)
+	{
+		if (USceneComponent* SceneComp = Cast<USceneComponent>(SelectedComponent))
+		{
+			SelectionManager->GetGizmo()->SetTargetComponent(SceneComp);
+			return;
+		}
+	}
+
+	SelectionManager->GetGizmo()->SetTarget(PrimaryActor);
+	SelectionManager->GetGizmo()->SetSelectedActors(&SelectionManager->GetSelectedActors());
+}
+
 void FEditorPropertyWidget::RenderActorHeaderRegion(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors)
 {
 	const int32 SelectionCount = static_cast<int32>(SelectedActors.size());

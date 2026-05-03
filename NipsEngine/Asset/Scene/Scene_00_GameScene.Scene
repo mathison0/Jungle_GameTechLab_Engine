@@ -2,13 +2,13 @@
   "ClassName" : "UWorld",
   "GameUIBootMode" : "InGame",
   "Name" : "Scene_00_GameScene",
-  "NextUUID" : 13409,
+  "NextUUID" : 14103,
   "PerspectiveCamera" : {
     "FOV" : 90.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-20.807045, -5.870497, 5.165849],
+    "Location" : [-13.644817, -3.130146, 5.646073],
     "NearClip" : 0.100000,
-    "Rotation" : [0.402010, -2.097412, 10.852817]
+    "Rotation" : [1.802544, 0.645127, -70.314178]
   },
   "Primitives" : {
     "11356" : {
@@ -158,6 +158,25 @@
       "Type" : "UBillboardComponent",
       "Visible" : true,
       "Width" : 1.000000
+    },
+    "13648" : {
+      "BlockComponent" : true,
+      "BoxExtent" : [0.500000, 0.085333, 0.100000],
+      "DebugBoundsVisibility" : 0,
+      "DrawOnlyIfSelected" : false,
+      "EditorOnly" : false,
+      "EnableCull" : false,
+      "EnableTick" : true,
+      "GenerateOverlapEvents" : false,
+      "HiddenInEditor" : false,
+      "LineThickness" : 1.000000,
+      "Location" : [0.132017, 0.040526, -0.036863],
+      "ParentUUID" : 450,
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.000000, 1.000000, 1.000000],
+      "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
+      "Type" : "UBoxComponent",
+      "Visible" : true
     },
     "1474" : {
       "ActorClass" : "AStaticMeshActor",
@@ -2601,11 +2620,11 @@
       "EnableTick" : true,
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
-      "Location" : [-11.134586, -6.332959, 4.504965],
+      "Location" : [-11.134586, -6.222004, 4.518785],
       "Materials" : ["lambert1.001"],
       "NormalizeOnImport" : false,
       "ObjStaticMeshAsset" : "Asset/Mesh/Game/Mop/Mop.obj",
-      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Rotation" : [-90.000000, 0.000000, -0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],
       "Scroll U" : 0.000000,
       "Scroll V" : 0.000000,
@@ -2755,7 +2774,7 @@
     },
     "7595" : {
       "BlockComponent" : true,
-      "BoxExtent" : [0.750000, 0.850000, 1.900000],
+      "BoxExtent" : [0.100000, 0.100000, 1.800000],
       "DebugBoundsVisibility" : 0,
       "DrawOnlyIfSelected" : false,
       "EditorOnly" : false,
@@ -2764,9 +2783,9 @@
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
       "LineThickness" : 1.000000,
-      "Location" : [0.000000, 0.000000, -0.900000],
+      "Location" : [0.116299, -1.869073, 0.000000],
       "ParentUUID" : 450,
-      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Rotation" : [90.000000, 0.000000, -0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],
       "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
       "Type" : "UBoxComponent",

@@ -519,9 +519,24 @@ void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FVector& CameraL
 	const FVector Target = GetHoldTarget(CameraLocation, CameraForward, TargetOffset);
 	if (bSnapToTarget)
 	{
-		HoldLocation = Target;
-		HoldVelocity = DeltaTime > 0.0f ? (HoldLocation - LastHoldLocation) / DeltaTime : FVector::ZeroVector;
+		const FVector DesiredDelta = Target - HoldLocation;
+		const FVector ResolvedDelta = ResolveHeldBodyMovement(HeldWorld, HeldBody, DesiredDelta);
+		HoldLocation += ResolvedDelta;
+		HoldVelocity = DeltaTime > 0.0f ? ResolvedDelta / DeltaTime : FVector::ZeroVector;
 		HeldBody->SetPhysicsLocation(HoldLocation);
+		const FVector PenetrationPush = ResolveHeldBodyPenetration(HeldWorld, HeldBody);
+		if (!PenetrationPush.IsNearlyZero())
+		{
+			const FVector PushNormal = PenetrationPush.GetSafeNormal();
+			const float IntoSurfaceSpeed = FVector::DotProduct(HoldVelocity, PushNormal);
+			if (IntoSurfaceSpeed < 0.0f)
+			{
+				HoldVelocity -= PushNormal * IntoSurfaceSpeed;
+			}
+
+			HoldLocation += PenetrationPush;
+			HeldBody->SetPhysicsLocation(HoldLocation);
+		}
 		if (TargetRotation)
 		{
 			HeldBody->SetPhysicsRotation(*TargetRotation);
