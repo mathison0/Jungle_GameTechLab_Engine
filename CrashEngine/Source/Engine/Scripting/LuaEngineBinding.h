@@ -59,6 +59,8 @@ struct FLuaActorHandle
 	bool IsVisible() const;
 	bool SetVisible(bool bVisible) const;
 
+	bool InitFlyingWave(const sol::object& Dirobj, float Speed, float LifeTime) const;
+
 	FLuaComponentHandle GetComponent(const sol::variadic_args& Args) const;
 	sol::table GetComponents(sol::this_state State, const sol::variadic_args& Args) const;
 };

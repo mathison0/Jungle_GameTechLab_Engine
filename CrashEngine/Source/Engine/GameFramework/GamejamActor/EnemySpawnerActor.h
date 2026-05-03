@@ -18,29 +18,11 @@ public:
     AEnemySpawnerActor() = default;
 
     void BeginPlay() override;
-    void Tick(float DeltaTime) override;
     void EndPlay() override;
     void InitDefaultComponents() override;
-
-    uint32 GetDesiredEnemyCount(float Time) const;
-    float GetSpawnRate(float Time) const;
-
-    static const TArray<FEnemySpawnPhase> SpawnTable;
-
-private:
-    const FEnemySpawnPhase& GetPhase(float Time) const;
-    FVector GetSpawnPosition(const FVector& PlayerPosition);
 
 private:
     UScriptComponent* ScriptComponent = nullptr;
 
     FActorPoolManager* PoolManager = nullptr;
-    float GameTime = 0.0f;
-    float SpawnBudget;
-
-    uint32 DesiredEnemyCount;
-
-    float SpawnRate;
-    float MinSpawnRadius = 30.0f;
-    float MaxSpawnRadius = 50.0f;
 };
