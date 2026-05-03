@@ -12,6 +12,10 @@
 #include "Audio/AudioSystem.h"
 #include "Engine/Input/InputRouter.h"
 #include "Game/UI/GameUISystem.h"
+#include "Game/Systems/GameContext.h"
+#include "Game/Systems/CleaningToolSystem.h"
+#include "Game/Systems/ItemSystem.h"
+#include "Scripting/LuaScriptSystem.h"
 
 void RegisterLuaBindings(sol::state& Lua)
 {
@@ -132,6 +136,75 @@ void RegisterLuaBindings(sol::state& Lua)
 	{
 		return GameUISystem::Get().IsDialogueActive();
 	});
+
+	// 아이템 상호작용
+	Lua.set_function("PlaceItemInKeepBox", [](const std::string& ItemId)
+	{
+		return FItemSystem::Get().PlaceItemInDecisionBox(ItemId, EItemDecisionBoxType::KeepBox);
+	});
+
+	Lua.set_function("PlaceItemInDiscardBox", [](const std::string& ItemId)
+	{
+		return FItemSystem::Get().PlaceItemInDecisionBox(ItemId, EItemDecisionBoxType::DiscardBox);
+	});
+
+	Lua.set_function("ClassifyItem", [](const std::string& ItemId, const std::string& Disposition)
+	{
+		if (Disposition == "Kept")
+		{
+			return FItemSystem::Get().ClassifyItem(ItemId, EGameItemDisposition::Kept);
+		}
+
+		if (Disposition == "Discarded")
+		{
+			return FItemSystem::Get().ClassifyItem(ItemId, EGameItemDisposition::Discarded);
+		}
+
+		return false;
+	});
+
+	Lua.set_function("GetItemDisplayName", [](const std::string& ItemId)
+	{
+		const FGameItemData* ItemData = FItemSystem::Get().FindItemData(ItemId);
+		return ItemData ? ItemData->DisplayName : FString();
+	});
+
+	Lua.set_function("GetItemDescription", [](const std::string& ItemId)
+	{
+		return FItemSystem::Get().GetDescriptionForCurrentState(ItemId);
+	});
+
+	Lua.set_function("GetResolvedItemCount", []()
+	{
+		return static_cast<int32>(GGameContext::Get().GetResolvedItemCount());
+	});
+
+	Lua.set_function("SelectCleaningTool", [](const std::string& ToolId)
+	{
+		return FCleaningToolSystem::Get().SelectTool(ToolId);
+	});
+
+	Lua.set_function("RegisterCleaningToolActor", [](AActor* Actor, const std::string& ToolId)
+	{
+		if (!Actor || ToolId.empty())
+		{
+			UE_LOG("[CleaningTool] RegisterCleaningToolActor failed. actor=%s toolId=%s",
+				Actor ? Actor->GetFName().ToString().c_str() : "null",
+				ToolId.c_str());
+			return false;
+		}
+
+		const FString ActorName = Actor->GetFName().ToString();
+		const FString Key = "CleaningTool:" + ActorName;
+		const bool bRegistered = FLuaScriptSystem::Get().SetStringGameStateValue(Key, ToolId);
+		UE_LOG("[CleaningTool] Registered actor=%s key=%s toolId=%s result=%d",
+			ActorName.c_str(),
+			Key.c_str(),
+			ToolId.c_str(),
+			bRegistered ? 1 : 0);
+		return bRegistered;
+	});
+
 
 	// 키 입력 (Windows Virtual Key Code)
 	// 자주 쓰는 상수를 Lua 전역으로 노출

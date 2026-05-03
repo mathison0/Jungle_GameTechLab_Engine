@@ -2,6 +2,8 @@
 
 #include "Game/Settings/GameSettings.h"
 #include "Game/Systems/GameContext.h"
+#include "Game/Systems/GameItemDataLoader.h"
+#include "Game/Systems/CleaningToolSystem.h"
 #include "Game/Systems/ItemSystem.h"
 #include "Game/Viewport/GameViewportClient.h"
 #include "Game/Render/GameRenderPipeline.h"
@@ -65,11 +67,16 @@ void UGameEngine::Init(FWindowsWindow* InWindow)
 		GetRenderer().GetFD3DDevice().GetDeviceContext()
 	);
 
+	FItemSystem& Items = FItemSystem::Get();
+	Items.ClearItemData();
+	FCleaningToolSystem::Get().ClearToolData();
+	FGameItemDataLoader::LoadFromFile("Asset/Data/Items.json", Items);
 	GGameContext::Get().Reset();
 	FItemSystem::Get().ResetRuntimeState();
 	GameUISystem::Get().ResetGameData();
 	GameUISystem::Get().SetState(EGameUIState::StartMenu);
 	GameUISystem::Get().SetStartGameCallback([this]() { StartMainGame(); });
+	Items.ResetRuntimeState();
 
 	LoadStartupScene();
 

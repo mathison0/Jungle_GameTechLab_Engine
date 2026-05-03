@@ -307,6 +307,7 @@ void UPhysicsHandleComponent::Serialize(FArchive& Ar)
 {
 	UActorComponent::Serialize(Ar);
 	Ar << "TraceDistance" << TraceDistance;
+	Ar << "DefaultHoldDistance" << DefaultHoldDistance;
 	Ar << "HoldDistance" << HoldDistance;
 	Ar << "SizeDistanceScale" << SizeDistanceScale;
 	Ar << "MaxSizeDistanceOffset" << MaxSizeDistanceOffset;
@@ -324,6 +325,7 @@ void UPhysicsHandleComponent::GetEditableProperties(TArray<FPropertyDescriptor>&
 {
 	UActorComponent::GetEditableProperties(OutProps);
 	OutProps.push_back({ "Trace Distance", EPropertyType::Float, &TraceDistance, 0.1f, 100.0f, 0.1f });
+	OutProps.push_back({ "Default Hold Distance", EPropertyType::Float, &DefaultHoldDistance, 0.1f, 20.0f, 0.1f });
 	OutProps.push_back({ "Hold Distance", EPropertyType::Float, &HoldDistance, 0.1f, 20.0f, 0.1f });
 	OutProps.push_back({ "Size Distance Scale", EPropertyType::Float, &SizeDistanceScale, 0.0f, 5.0f, 0.05f });
 	OutProps.push_back({ "Max Size Distance Offset", EPropertyType::Float, &MaxSizeDistanceOffset, 0.0f, 20.0f, 0.1f });
@@ -416,17 +418,17 @@ void UPhysicsHandleComponent::Release()
 	CurrentHoldDistance = 0.0f;
 }
 
-void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FViewportCamera* Camera)
+void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FViewportCamera* Camera, const FVector& TargetOffset, const FQuat* TargetRotation, bool bSnapToTarget)
 {
 	if (Camera == nullptr)
 	{
 		return;
 	}
 
-	TickHandle(DeltaTime, Camera->GetLocation(), Camera->GetForwardVector());
+	TickHandle(DeltaTime, Camera->GetLocation(), Camera->GetForwardVector(), TargetOffset, TargetRotation, bSnapToTarget);
 }
 
-void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FVector& CameraLocation, const FVector& CameraForward)
+void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FVector& CameraLocation, const FVector& CameraForward, const FVector& TargetOffset, const FQuat* TargetRotation, bool bSnapToTarget)
 {
 	if (DeltaTime <= 0.0f || HeldBody == nullptr)
 	{
@@ -448,7 +450,20 @@ void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FVector& CameraL
 	HoldLocation = HeldBody->GetPhysicsLocation();
 	LastHoldLocation = HoldLocation;
 
-	const FVector Target = GetHoldTarget(CameraLocation, CameraForward);
+	const FVector Target = GetHoldTarget(CameraLocation, CameraForward, TargetOffset);
+	if (bSnapToTarget)
+	{
+		HoldLocation = Target;
+		HoldVelocity = DeltaTime > 0.0f ? (HoldLocation - LastHoldLocation) / DeltaTime : FVector::ZeroVector;
+		HeldBody->SetPhysicsLocation(HoldLocation);
+		if (TargetRotation)
+		{
+			HeldBody->SetPhysicsRotation(*TargetRotation);
+		}
+		HeldBody->SetVelocity(HoldVelocity);
+		return;
+	}
+
 	const FVector ToTarget = Target - HoldLocation;
 	const FVector Acceleration = ToTarget * SpringStrength - HoldVelocity * Damping;
 	HoldVelocity += Acceleration * DeltaTime;
@@ -477,6 +492,10 @@ void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FVector& CameraL
 		HoldLocation += PenetrationPush;
 		HeldBody->SetPhysicsLocation(HoldLocation);
 	}
+	if (TargetRotation)
+	{
+		HeldBody->SetPhysicsRotation(*TargetRotation);
+	}
 	HeldBody->SetVelocity(HoldVelocity);
 }
 
@@ -503,10 +522,10 @@ URigidBodyComponent* UPhysicsHandleComponent::FindRigidBodyFromHit(const FHitRes
 	return nullptr;
 }
 
-FVector UPhysicsHandleComponent::GetHoldTarget(const FVector& CameraLocation, const FVector& CameraForward) const
+FVector UPhysicsHandleComponent::GetHoldTarget(const FVector& CameraLocation, const FVector& CameraForward, const FVector& TargetOffset) const
 {
 	const float TargetDistance = CurrentHoldDistance > 0.0f ? CurrentHoldDistance : (HoldDistance + HoldDistanceOffset);
-	return CameraLocation + CameraForward.GetSafeNormal() * TargetDistance;
+	return CameraLocation + CameraForward.GetSafeNormal() * TargetDistance + TargetOffset;
 }
 
 float UPhysicsHandleComponent::ComputeHoldDistanceOffset(URigidBodyComponent* Body, const FVector& CameraLocation, const FVector& CameraForward) const
@@ -564,6 +583,7 @@ float UPhysicsHandleComponent::ComputeHoldDistanceOffset(URigidBodyComponent* Bo
 void UPhysicsHandleComponent::ClampEditableValues()
 {
 	TraceDistance = std::max(0.1f, TraceDistance);
+	DefaultHoldDistance = std::max(0.1f, DefaultHoldDistance);
 	HoldDistance = std::max(0.1f, HoldDistance);
 	SizeDistanceScale = std::max(0.0f, SizeDistanceScale);
 	MaxSizeDistanceOffset = std::max(0.0f, MaxSizeDistanceOffset);

@@ -63,11 +63,14 @@ public:
 private:
 	void SetupDefaultInputMappings();
 	void ApplyInputAxes();
+	bool TryBeginCleaningUse();
+	void EndCleaningUse();
 	void TogglePickup();
 	UPhysicsHandleComponent* GetPhysicsHandle();
 	void DestroyPhysicsHandle();
 	void RefreshPawnComponents();
 	bool GetActiveCameraFrame(FVector& OutLocation, FVector& OutForward) const;
+	bool GetActiveCameraBasis(FVector& OutLocation, FVector& OutForward, FVector& OutRight, FVector& OutUp) const;
 	void CaptureInitialRigidBodyRotations();
 	void ResetHeldBodyRotationToInitial();
 	bool IsRuntimeWorld() const;
@@ -91,6 +94,7 @@ private:
 	float FreeCameraPitch = 0.0f;
 	bool bFreeCameraInitialized = false;
 	bool bInitialRigidBodyRotationsCaptured = false;
+	bool bIsCleaningUseHeld = false;
 	std::function<void()> OnRequestToggleInputCapture;
 	std::function<void()> OnRequestTogglePause;
 };

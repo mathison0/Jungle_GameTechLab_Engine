@@ -2,6 +2,7 @@
 
 #include "Component/ActorComponent.h"
 #include "Core/CollisionTypes.h"
+#include "Math/Quat.h"
 #include "Math/Vector.h"
 
 class FViewportCamera;
@@ -22,18 +23,19 @@ public:
 	bool TryGrab(UWorld* World, const FViewportCamera* Camera);
 	bool TryGrab(UWorld* World, const FVector& CameraLocation, const FVector& CameraForward);
 	void Release();
-	void TickHandle(float DeltaTime, const FViewportCamera* Camera);
-	void TickHandle(float DeltaTime, const FVector& CameraLocation, const FVector& CameraForward);
+	void TickHandle(float DeltaTime, const FViewportCamera* Camera, const FVector& TargetOffset = FVector::ZeroVector, const FQuat* TargetRotation = nullptr, bool bSnapToTarget = false);
+	void TickHandle(float DeltaTime, const FVector& CameraLocation, const FVector& CameraForward, const FVector& TargetOffset = FVector::ZeroVector, const FQuat* TargetRotation = nullptr, bool bSnapToTarget = false);
 
 	bool IsHolding() const { return HeldBody != nullptr; }
 	URigidBodyComponent* GetHeldBody() const { return HeldBody; }
 
 	void SetTraceDistance(float InTraceDistance) { TraceDistance = InTraceDistance; }
-	void SetHoldDistance(float InHoldDistance) { HoldDistance = InHoldDistance; }
+	void SetHoldDistance(float InHoldDistance) { HoldDistance = InHoldDistance; ClampEditableValues(); CurrentHoldDistance = HoldDistance + HoldDistanceOffset; }
+	void ResetHoldDistance() { HoldDistance = DefaultHoldDistance; ClampEditableValues(); CurrentHoldDistance = HoldDistance + HoldDistanceOffset; }
 
 private:
 	URigidBodyComponent* FindRigidBodyFromHit(const FHitResult& Hit) const;
-	FVector GetHoldTarget(const FVector& CameraLocation, const FVector& CameraForward) const;
+	FVector GetHoldTarget(const FVector& CameraLocation, const FVector& CameraForward, const FVector& TargetOffset) const;
 	float ComputeHoldDistanceOffset(URigidBodyComponent* Body, const FVector& CameraLocation, const FVector& CameraForward) const;
 	void ClampEditableValues();
 
@@ -47,10 +49,11 @@ private:
 	float CurrentHoldDistance = 0.0f;
 
 	float TraceDistance = 5.0f;
-	float HoldDistance = 1.5f;
+	float DefaultHoldDistance = 4.0f;
+	float HoldDistance = 4.0f;
 	float SizeDistanceScale = 2.0f;
 	float MaxSizeDistanceOffset = 5.0f;
-	float SpringStrength = 150.0f;
-	float Damping = 20.0f;
-	float MaxHoldSpeed = 150.0f;
+	float SpringStrength = 70.0f;
+	float Damping = 12.0f;
+	float MaxHoldSpeed = 30.0f;
 };

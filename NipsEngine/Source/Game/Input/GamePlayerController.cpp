@@ -4,15 +4,22 @@
 #include "Component/Physics/PhysicsHandleComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
 #include "Component/SceneComponent.h"
+#include "Core/Logger.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
+#include "Game/Systems/CleaningToolAnimator.h"
+#include "Game/Systems/CleaningToolSystem.h"
+#include "Game/Systems/GameContext.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Math/Matrix.h"
 #include "Math/Utils.h"
 #include "Object/Object.h"
 #include "Physics/JoltPhysicsSystem.h"
+#include "Scripting/LuaScriptSystem.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <windows.h>
 
@@ -81,6 +88,97 @@ namespace
 		const float YawRad = MathUtil::DegreesToRadians(YawDegrees);
 		return FVector(-std::sin(YawRad), std::cos(YawRad), 0.0f).GetSafeNormal();
 	}
+
+	FVector ToWorldOffset(const FVector& CameraForward, const FVector& CameraRight, const FVector& CameraUp, const FVector& CameraLocalOffset)
+	{
+		return CameraForward.GetSafeNormal() * CameraLocalOffset.X
+			+ CameraRight.GetSafeNormal() * CameraLocalOffset.Y
+			+ CameraUp.GetSafeNormal() * CameraLocalOffset.Z;
+	}
+
+	FVector ToWorldOffset(const FViewportCamera* Camera, const FVector& CameraLocalOffset)
+	{
+		if (!Camera)
+		{
+			return FVector::ZeroVector;
+		}
+
+		return ToWorldOffset(Camera->GetForwardVector(), Camera->GetRightVector(), Camera->GetUpVector(), CameraLocalOffset);
+	}
+
+	FQuat BuildCameraLocalHandleRotation(const FVector& CameraForward, const FVector& CameraRight, const FVector& CameraUp, const FVector& HandleCameraLocalDirection)
+	{
+		const FVector Forward = CameraForward.GetSafeNormal();
+		const FVector HandleWorldDirection = ToWorldOffset(Forward, CameraRight, CameraUp, HandleCameraLocalDirection).GetSafeNormal();
+		if (HandleWorldDirection.IsNearlyZero() || Forward.IsNearlyZero())
+		{
+			return FQuat::Identity;
+		}
+
+		FVector YAxis = FVector::CrossProduct(Forward, HandleWorldDirection).GetSafeNormal();
+		if (YAxis.IsNearlyZero())
+		{
+			YAxis = CameraRight.GetSafeNormal();
+		}
+
+		const FVector ZAxis = FVector::CrossProduct(HandleWorldDirection, YAxis).GetSafeNormal();
+		FMatrix RotationMatrix = FMatrix::Identity;
+		RotationMatrix.SetAxes(HandleWorldDirection, YAxis, ZAxis);
+
+		FQuat Rotation(RotationMatrix);
+		Rotation.Normalize();
+		return Rotation;
+	}
+
+	FQuat BuildCameraLocalHandleRotation(const FViewportCamera* Camera, const FVector& HandleCameraLocalDirection)
+	{
+		if (!Camera)
+		{
+			return FQuat::Identity;
+		}
+
+		return BuildCameraLocalHandleRotation(Camera->GetForwardVector(), Camera->GetRightVector(), Camera->GetUpVector(), HandleCameraLocalDirection);
+	}
+
+	FString NormalizeToolMatchKey(FString Value)
+	{
+		std::replace(Value.begin(), Value.end(), '\\', '/');
+		std::transform(Value.begin(), Value.end(), Value.begin(), [](unsigned char C)
+		{
+			return static_cast<char>(std::tolower(C));
+		});
+		return Value;
+	}
+
+	FString FindCleaningToolIdFromActor(const AActor* Actor)
+	{
+		if (!Actor)
+		{
+			return "";
+		}
+
+		const FString ScriptToolId = FLuaScriptSystem::Get().GetStringGameStateValue("CleaningTool:" + Actor->GetFName().ToString());
+		if (!ScriptToolId.empty())
+		{
+			UE_LOG("[CleaningTool] Actor=%s resolved by Lua toolId=%s", Actor->GetFName().ToString().c_str(), ScriptToolId.c_str());
+			return ScriptToolId;
+		}
+
+		const FString ActorName = NormalizeToolMatchKey(Actor->GetName());
+		UE_LOG("[CleaningTool] Actor=%s has no Lua tool id. Trying fallback match.", Actor->GetFName().ToString().c_str());
+		const TArray<FCleaningToolData>& ToolDataList = FCleaningToolSystem::Get().GetAllToolData();
+		for (const FCleaningToolData& ToolData : ToolDataList)
+		{
+			if (ActorName == NormalizeToolMatchKey(ToolData.ToolId))
+			{
+				UE_LOG("[CleaningTool] Actor=%s resolved by actor name toolId=%s", Actor->GetFName().ToString().c_str(), ToolData.ToolId.c_str());
+				return ToolData.ToolId;
+			}
+		}
+
+		UE_LOG("[CleaningTool] Actor=%s is not a registered cleaning tool.", Actor->GetFName().ToString().c_str());
+		return "";
+	}
 }
 
 FGamePlayerController::FGamePlayerController()
@@ -99,14 +197,31 @@ void FGamePlayerController::Tick(float DeltaTime)
 	CaptureInitialRigidBodyRotations();
 	SyncFreeCameraAngles();
 	ApplyInputAxes();
+	FCleaningToolAnimator::Get().Tick(DeltaTime);
 	if (UPhysicsHandleComponent* Handle = GetPhysicsHandle())
 	{
 		FVector CameraLocation;
 		FVector CameraForward;
-		if (GetActiveCameraFrame(CameraLocation, CameraForward))
+		FVector CameraRight;
+		FVector CameraUp;
+		if (!GetActiveCameraBasis(CameraLocation, CameraForward, CameraRight, CameraUp))
 		{
-			Handle->TickHandle(DeltaTime, CameraLocation, CameraForward);
+			return;
 		}
+
+		const FString& CurrentToolId = GGameContext::Get().GetCurrentToolId();
+		const FCleaningToolData* ToolData = CurrentToolId.empty() ? nullptr : FCleaningToolSystem::Get().FindToolData(CurrentToolId);
+		const FVector ToolCameraLocalOffset = FCleaningToolAnimator::Get().GetHoldCameraLocalOffset()
+			+ FCleaningToolAnimator::Get().GetCameraLocalOffset();
+		const FVector ToolOffset = ToWorldOffset(CameraForward, CameraRight, CameraUp, ToolCameraLocalOffset);
+		FQuat ToolRotation = FQuat::Identity;
+		const FQuat* ToolRotationPtr = nullptr;
+		if (ToolData && !ToolData->HandleCameraLocalDirection.IsNearlyZero())
+		{
+			ToolRotation = BuildCameraLocalHandleRotation(CameraForward, CameraRight, CameraUp, ToolData->HandleCameraLocalDirection);
+			ToolRotationPtr = &ToolRotation;
+		}
+		Handle->TickHandle(DeltaTime, CameraLocation, CameraForward, ToolOffset, ToolRotationPtr, ToolData != nullptr);
 	}
 }
 
@@ -125,10 +240,7 @@ void FGamePlayerController::OnLeftMouseClick(float X, float Y)
 {
 	(void)X;
 	(void)Y;
-	if (InputMapping.IsActionKey(ActionPickup(), VK_LBUTTON))
-	{
-		TogglePickup();
-	}
+	TryBeginCleaningUse();
 }
 
 void FGamePlayerController::OnLeftMouseDrag(float X, float Y)
@@ -141,12 +253,14 @@ void FGamePlayerController::OnLeftMouseDragEnd(float X, float Y)
 {
 	(void)X;
 	(void)Y;
+	EndCleaningUse();
 }
 
 void FGamePlayerController::OnLeftMouseButtonUp(float X, float Y)
 {
 	(void)X;
 	(void)Y;
+	EndCleaningUse();
 }
 
 void FGamePlayerController::OnRightMouseClick(float DeltaX, float DeltaY)
@@ -171,6 +285,11 @@ void FGamePlayerController::OnKeyPressed(int VK)
 	if (InputMapping.IsActionKey(ActionToggleInputCapture(), VK) && !Camera && OnRequestToggleInputCapture)
 	{
 		OnRequestToggleInputCapture();
+	}
+
+	if (InputMapping.IsActionKey(ActionPickup(), VK))
+	{
+		TogglePickup();
 	}
 }
 
@@ -308,7 +427,7 @@ void FGamePlayerController::SetupDefaultInputMappings()
 	// 예: InputMapping.AddActionMapping(ActionInteract(), 'E');
 	InputMapping.AddActionMapping(ActionToggleInputCapture(), VK_F4);
 	InputMapping.AddActionMapping(ActionTogglePause(), 'P');
-	InputMapping.AddActionMapping(ActionPickup(), VK_LBUTTON);
+	InputMapping.AddActionMapping(ActionPickup(), 'E');
 
 	// Axis Mapping: 여러 키를 하나의 연속 값으로 합칩니다.
 	// 예를 들어 W는 MoveForward에 +1, S는 -1을 더합니다.
@@ -362,6 +481,54 @@ void FGamePlayerController::ApplyInputAxes()
 	}
 }
 
+bool FGamePlayerController::TryBeginCleaningUse()
+{
+	if (!IsInputEnabled())
+	{
+		UE_LOG("[CleaningTool] BeginUse blocked: input disabled.");
+		return false;
+	}
+
+	if (!PhysicsHandle || !PhysicsHandle->IsHolding())
+	{
+		UE_LOG("[CleaningTool] BeginUse blocked: no held physics object.");
+		return false;
+	}
+
+	const FString& CurrentToolId = GGameContext::Get().GetCurrentToolId();
+	if (CurrentToolId.empty())
+	{
+		UE_LOG("[CleaningTool] BeginUse blocked: current tool id is empty.");
+		return false;
+	}
+
+	const FCleaningToolData* ToolData = FCleaningToolSystem::Get().FindToolData(CurrentToolId);
+	if (!ToolData)
+	{
+		UE_LOG("[CleaningTool] BeginUse blocked: tool data not found for toolId=%s.", CurrentToolId.c_str());
+		return false;
+	}
+
+	bIsCleaningUseHeld = true;
+	FCleaningToolAnimator::Get().BeginUse(*ToolData);
+	UE_LOG("[CleaningTool] BeginUse started: toolId=%s amplitude=%.3f speed=%.3f.",
+		CurrentToolId.c_str(),
+		ToolData->UseBobAmplitude,
+		ToolData->UseBobSpeed);
+	return true;
+}
+
+void FGamePlayerController::EndCleaningUse()
+{
+	if (!bIsCleaningUseHeld)
+	{
+		return;
+	}
+
+	bIsCleaningUseHeld = false;
+	FCleaningToolAnimator::Get().EndUse();
+}
+
 void FGamePlayerController::TogglePickup()
 {
 	if (!World || !IsInputEnabled())
@@ -377,7 +544,12 @@ void FGamePlayerController::TogglePickup()
 
 	if (Handle->IsHolding())
 	{
+		UE_LOG("[CleaningTool] Releasing held object. currentToolId=%s", GGameContext::Get().GetCurrentToolId().c_str());
+		EndCleaningUse();
+		FCleaningToolAnimator::Get().Reset();
+		GGameContext::Get().SetCurrentTool("");
 		Handle->Release();
+		Handle->ResetHoldDistance();
 		return;
 	}
 
@@ -391,6 +563,35 @@ void FGamePlayerController::TogglePickup()
 	if (Handle->TryGrab(World, CameraLocation, CameraForward))
 	{
 		ResetHeldBodyRotationToInitial();
+		bool bSelectedHeldTool = false;
+		if (URigidBodyComponent* HeldBody = Handle->GetHeldBody())
+		{
+			if (AActor* HeldActor = HeldBody->GetOwner())
+			{
+				const FString HeldToolId = FindCleaningToolIdFromActor(HeldActor);
+				bSelectedHeldTool = !HeldToolId.empty() && FCleaningToolSystem::Get().SelectTool(HeldToolId);
+				if (bSelectedHeldTool)
+				{
+					if (const FCleaningToolData* ToolData = FCleaningToolSystem::Get().FindToolData(HeldToolId))
+					{
+						Handle->SetHoldDistance(ToolData->HoldDistance);
+						FCleaningToolAnimator::Get().SetActiveTool(*ToolData);
+					}
+				}
+				UE_LOG("[CleaningTool] Picked actor=%s resolvedToolId=%s selected=%d",
+					HeldActor->GetFName().ToString().c_str(),
+					HeldToolId.c_str(),
+					bSelectedHeldTool ? 1 : 0);
+			}
+		}
+
+		if (!bSelectedHeldTool)
+		{
+			UE_LOG("[CleaningTool] Picked object is not a cleaning tool. Clearing current tool.");
+			GGameContext::Get().SetCurrentTool("");
+			FCleaningToolAnimator::Get().Reset();
+			Handle->ResetHoldDistance();
+		}
 	}
 }
 
@@ -443,10 +644,19 @@ void FGamePlayerController::RefreshPawnComponents()
 
 bool FGamePlayerController::GetActiveCameraFrame(FVector& OutLocation, FVector& OutForward) const
 {
+	FVector Right;
+	FVector Up;
+	return GetActiveCameraBasis(OutLocation, OutForward, Right, Up);
+}
+
+bool FGamePlayerController::GetActiveCameraBasis(FVector& OutLocation, FVector& OutForward, FVector& OutRight, FVector& OutUp) const
+{
 	if (Camera != nullptr)
 	{
 		OutLocation = Camera->GetWorldLocation();
 		OutForward = Camera->GetForwardVector();
+		OutRight = Camera->GetRightVector();
+		OutUp = Camera->GetUpVector();
 		return !OutForward.IsNearlyZero();
 	}
 
@@ -454,6 +664,8 @@ bool FGamePlayerController::GetActiveCameraFrame(FVector& OutLocation, FVector& 
 	{
 		OutLocation = FreeCamera->GetLocation();
 		OutForward = FreeCamera->GetForwardVector();
+		OutRight = FreeCamera->GetRightVector();
+		OutUp = FreeCamera->GetUpVector();
 		return !OutForward.IsNearlyZero();
 	}
 
