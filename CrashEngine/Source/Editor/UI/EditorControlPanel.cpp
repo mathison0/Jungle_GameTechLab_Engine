@@ -16,6 +16,7 @@
 #include "GameFramework/SpotLightActor.h"
 #include "GameFramework/GamejamActor/EnemySpawnerActor.h"
 #include "Engine/Platform/Paths.h"
+#include "Engine/GameFramework/TankActor.h"
 
 #define SEPARATOR()     \
     ;                   \
@@ -67,6 +68,7 @@ constexpr FSpawnEntry SpawnTable[] = {
     SPAWN_ACTOR("Point Light", APointLightActor, false),
     SPAWN_ACTOR("Spot Light", ASpotLightActor, false),
     SPAWN_ACTOR("EnemySpawner", AEnemySpawnerActor, false),
+    SPAWN_ACTOR("Tank", ATankActor, true),
 };
 
 #undef SPAWN_MESH

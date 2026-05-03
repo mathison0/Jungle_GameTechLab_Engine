@@ -145,6 +145,10 @@ void UScriptComponent::BeginPlay()
     if (LoadScript())
     {
         BindFunctions();
+        if (AActor* OwnerActor = GetOwner())
+        {
+            OwnerActor->BindScriptFunctions(*this);
+        }
         CallLuaFunction("BeginPlay");
     }
 

@@ -1,5 +1,7 @@
 ﻿#include "CoroutineCommand.h"
 
+#include "Core/Logging/LogMacros.h"
+
 void FExecuteCommand::GetResult(const sol::protected_function_result& InResult)
 {
     Args.clear();
@@ -8,7 +10,11 @@ void FExecuteCommand::GetResult(const sol::protected_function_result& InResult)
     Status = InResult.status();
 
     if (!bIsValid)
+    {
+        sol::error Err = InResult;
+        UE_LOG([Coroutine], Error, "Lua coroutine failed: %s", Err.what());
         return;
+    }
 
     for (int i = 0; i < InResult.return_count(); ++i)
     {

@@ -349,6 +349,8 @@
     <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
+    <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp" />
@@ -571,6 +573,7 @@
     <ClCompile Include="Source\ObjViewer\ObjViewerPanel.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerRenderPipeline.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerViewportClient.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\TankActor.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_demo.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_draw.cpp" />
@@ -616,6 +619,8 @@
     <ClInclude Include="Source\Engine\Core\Random.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
+    <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
@@ -924,6 +929,7 @@
     <ClInclude Include="Source\ObjViewer\ObjViewerPanel.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerRenderPipeline.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerViewportClient.h" />
+    <ClInclude Include="Source\Engine\GameFramework\TankActor.h" />
     <ClInclude Include="ThirdParty\ImGui\imconfig.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui_impl_dx11.h" />

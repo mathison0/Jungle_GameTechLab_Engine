@@ -266,6 +266,10 @@ void AActor::RequestReturnToPool()
     OnPoolReturnRequested.Broadcast(this);
 }
 
+void AActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
+{
+}
+
 bool AActor::IsOverlappingActor(const AActor* OtherActor) const
 {
     if (!OtherActor || OtherActor == this)

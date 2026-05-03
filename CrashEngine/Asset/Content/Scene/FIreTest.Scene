@@ -57,7 +57,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -109,7 +109,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "Default",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -169,7 +169,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -229,7 +229,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -289,7 +289,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -349,7 +349,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -409,7 +409,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -469,7 +469,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -529,7 +529,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -589,7 +589,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -649,7 +649,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -709,7 +709,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -769,7 +769,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -829,7 +829,7 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "ADirectionalLightActor",
@@ -904,7 +904,7 @@
           "bTickEnable" : false
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "Default",
       "bVisible" : true
     }, {
       "ClassName" : "AAmbientLightActor",
@@ -976,7 +976,7 @@
           "bTickEnable" : false
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "Default",
       "bVisible" : true
     }, {
       "ClassName" : "ATankActor",
@@ -988,19 +988,12 @@
             "Script" : "TankScript.lua",
             "bTickEnable" : true
           }
-        }, {
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_16",
-          "Properties" : {
-            "Script" : "TankScript.lua",
-            "bTickEnable" : true
-          }
         }],
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_19",
+            "Name" : "UUUIDTextRenderComponent_20",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -1013,7 +1006,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 96",
+              "Text" : "UUID : 90",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -1034,7 +1027,7 @@
               "Is Editor Helper" : false,
               "Location" : [0.000000, 0.000000, 0.000000],
               "Mobility" : 1,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
               "Visible" : true,
@@ -1053,7 +1046,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [-9.062050, -20.007736, 1.159253],
+          "Location" : [7.484433, -17.308605, 1.516087],
           "Mobility" : 1,
           "Rotation" : [-0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
@@ -1064,19 +1057,19 @@
           "bTickEnable" : true
         }
       },
-      "Tag" : "Name_None",
+      "Tag" : "Player",
       "bVisible" : true
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
   "ContextName" : "Default",
-  "Name" : "TargetingTest",
+  "Name" : "FIreTest",
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-16.268740, -27.259869, 8.793526],
+    "Location" : [-11.896534, -23.292747, 17.615086],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000001, 25.179733, 36.610695]
+    "Rotation" : [-0.000006, 29.799530, 49.210613]
   },
   "Version" : 3,
   "WorldType" : "Editor"
