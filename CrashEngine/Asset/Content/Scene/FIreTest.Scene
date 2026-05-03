@@ -11,7 +11,6 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "23",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -29,7 +28,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 102",
+              "Text" : "UUID : 23",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -58,12 +57,12 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_0",
       "NonSceneComponents" : [],
-      "PrimitiveKey" : "26",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -81,7 +80,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 11",
+              "Text" : "UUID : 27",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -110,6 +109,7 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "Default",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -123,7 +123,6 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "32",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -141,7 +140,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 56",
+              "Text" : "UUID : 30",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -170,6 +169,7 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -183,7 +183,366 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "35",
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_4",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 34",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_4",
+        "Properties" : {
+          "Cast Shadow" : true,
+          "CollisionChannel" : 1,
+          "Element 0" : {
+            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+          },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
+          "Is Editor Helper" : false,
+          "Location" : [0.000000, -7.589233, 0.000000],
+          "Mobility" : 1,
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "TestEnemy",
+      "bVisible" : true
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "TestEnemy",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_2",
+          "Properties" : {
+            "Lua.MoveSpeed" : 1.000000,
+            "Script" : "EnemyScript.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_4",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 38",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_4",
+        "Properties" : {
+          "Cast Shadow" : true,
+          "CollisionChannel" : 1,
+          "Element 0" : {
+            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+          },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
+          "Is Editor Helper" : false,
+          "Location" : [19.735401, -7.589233, 0.000000],
+          "Mobility" : 1,
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "TestEnemy",
+      "bVisible" : true
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "TestEnemy",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_2",
+          "Properties" : {
+            "Lua.MoveSpeed" : 1.000000,
+            "Script" : "EnemyScript.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_4",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 42",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_4",
+        "Properties" : {
+          "Cast Shadow" : true,
+          "CollisionChannel" : 1,
+          "Element 0" : {
+            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+          },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
+          "Is Editor Helper" : false,
+          "Location" : [19.735401, -28.420626, 0.000000],
+          "Mobility" : 1,
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "TestEnemy",
+      "bVisible" : true
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "TestEnemy",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_2",
+          "Properties" : {
+            "Lua.MoveSpeed" : 1.000000,
+            "Script" : "EnemyScript.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_4",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 46",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_4",
+        "Properties" : {
+          "Cast Shadow" : true,
+          "CollisionChannel" : 1,
+          "Element 0" : {
+            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+          },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
+          "Is Editor Helper" : false,
+          "Location" : [-17.971600, -28.420626, 0.000000],
+          "Mobility" : 1,
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "TestEnemy",
+      "bVisible" : true
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "TestEnemy",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_2",
+          "Properties" : {
+            "Lua.MoveSpeed" : 1.000000,
+            "Script" : "EnemyScript.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_4",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 50",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_4",
+        "Properties" : {
+          "Cast Shadow" : true,
+          "CollisionChannel" : 1,
+          "Element 0" : {
+            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+          },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
+          "Is Editor Helper" : false,
+          "Location" : [-17.971600, -40.617657, 0.000000],
+          "Mobility" : 1,
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "TestEnemy",
+      "bVisible" : true
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "TestEnemy",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_2",
+          "Properties" : {
+            "Lua.MoveSpeed" : 1.000000,
+            "Script" : "EnemyScript.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_4",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 54",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_4",
+        "Properties" : {
+          "Cast Shadow" : true,
+          "CollisionChannel" : 1,
+          "Element 0" : {
+            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+          },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
+          "Is Editor Helper" : false,
+          "Location" : [8.965349, -40.617657, 0.000000],
+          "Mobility" : 1,
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "TestEnemy",
+      "bVisible" : true
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "TestEnemy",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_2",
+          "Properties" : {
+            "Lua.MoveSpeed" : 1.000000,
+            "Script" : "EnemyScript.lua",
+            "bTickEnable" : true
+          }
+        }],
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -219,7 +578,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [0.000000, -7.589233, 0.000000],
+          "Location" : [8.965349, 17.204201, 0.000000],
           "Mobility" : 1,
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
@@ -230,6 +589,7 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -243,7 +603,6 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "38",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -279,7 +638,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [19.735401, -7.589233, 0.000000],
+          "Location" : [-7.684698, 17.204201, 0.000000],
           "Mobility" : 1,
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
@@ -290,6 +649,7 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -303,7 +663,6 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "41",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -339,7 +698,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [19.735401, -28.420626, 0.000000],
+          "Location" : [-7.684698, 8.897030, 0.000000],
           "Mobility" : 1,
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
@@ -350,6 +709,7 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -363,7 +723,6 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "44",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -399,7 +758,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [-17.971600, -28.420626, 0.000000],
+          "Location" : [-30.739559, 8.897030, 0.000000],
           "Mobility" : 1,
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
@@ -410,6 +769,7 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
@@ -423,7 +783,6 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "47",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -442,366 +801,6 @@
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Text" : "UUID : 74",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UStaticMeshComponent",
-        "Name" : "UStaticMeshComponent_4",
-        "Properties" : {
-          "Cast Shadow" : true,
-          "CollisionChannel" : 1,
-          "Element 0" : {
-            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
-          },
-          "Generate Hit Events" : false,
-          "Generate Overlap Events" : false,
-          "Is Editor Helper" : false,
-          "Location" : [-17.971600, -40.617657, 0.000000],
-          "Mobility" : 1,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
-          "Visible" : true,
-          "Visible In Editor" : true,
-          "Visible In Game" : true,
-          "bTickEnable" : true
-        }
-      },
-      "bVisible" : true
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "TestEnemy",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_2",
-          "Properties" : {
-            "Lua.MoveSpeed" : 1.000000,
-            "Script" : "EnemyScript.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "PrimitiveKey" : "50",
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_4",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Mobility" : 1,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 78",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UStaticMeshComponent",
-        "Name" : "UStaticMeshComponent_4",
-        "Properties" : {
-          "Cast Shadow" : true,
-          "CollisionChannel" : 1,
-          "Element 0" : {
-            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
-          },
-          "Generate Hit Events" : false,
-          "Generate Overlap Events" : false,
-          "Is Editor Helper" : false,
-          "Location" : [8.965349, -40.617657, 0.000000],
-          "Mobility" : 1,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
-          "Visible" : true,
-          "Visible In Editor" : true,
-          "Visible In Game" : true,
-          "bTickEnable" : true
-        }
-      },
-      "bVisible" : true
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "TestEnemy",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_2",
-          "Properties" : {
-            "Lua.MoveSpeed" : 1.000000,
-            "Script" : "EnemyScript.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "PrimitiveKey" : "53",
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_4",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Mobility" : 1,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 82",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UStaticMeshComponent",
-        "Name" : "UStaticMeshComponent_4",
-        "Properties" : {
-          "Cast Shadow" : true,
-          "CollisionChannel" : 1,
-          "Element 0" : {
-            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
-          },
-          "Generate Hit Events" : false,
-          "Generate Overlap Events" : false,
-          "Is Editor Helper" : false,
-          "Location" : [8.965349, 17.204201, 0.000000],
-          "Mobility" : 1,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
-          "Visible" : true,
-          "Visible In Editor" : true,
-          "Visible In Game" : true,
-          "bTickEnable" : true
-        }
-      },
-      "bVisible" : true
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "TestEnemy",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_2",
-          "Properties" : {
-            "Lua.MoveSpeed" : 1.000000,
-            "Script" : "EnemyScript.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "PrimitiveKey" : "56",
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_4",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Mobility" : 1,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 86",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UStaticMeshComponent",
-        "Name" : "UStaticMeshComponent_4",
-        "Properties" : {
-          "Cast Shadow" : true,
-          "CollisionChannel" : 1,
-          "Element 0" : {
-            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
-          },
-          "Generate Hit Events" : false,
-          "Generate Overlap Events" : false,
-          "Is Editor Helper" : false,
-          "Location" : [-7.684698, 17.204201, 0.000000],
-          "Mobility" : 1,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
-          "Visible" : true,
-          "Visible In Editor" : true,
-          "Visible In Game" : true,
-          "bTickEnable" : true
-        }
-      },
-      "bVisible" : true
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "TestEnemy",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_2",
-          "Properties" : {
-            "Lua.MoveSpeed" : 1.000000,
-            "Script" : "EnemyScript.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "PrimitiveKey" : "59",
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_4",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Mobility" : 1,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 90",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UStaticMeshComponent",
-        "Name" : "UStaticMeshComponent_4",
-        "Properties" : {
-          "Cast Shadow" : true,
-          "CollisionChannel" : 1,
-          "Element 0" : {
-            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
-          },
-          "Generate Hit Events" : false,
-          "Generate Overlap Events" : false,
-          "Is Editor Helper" : false,
-          "Location" : [-7.684698, 8.897030, 0.000000],
-          "Mobility" : 1,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
-          "Visible" : true,
-          "Visible In Editor" : true,
-          "Visible In Game" : true,
-          "bTickEnable" : true
-        }
-      },
-      "bVisible" : true
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "TestEnemy",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_2",
-          "Properties" : {
-            "Lua.MoveSpeed" : 1.000000,
-            "Script" : "EnemyScript.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "PrimitiveKey" : "62",
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_4",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Mobility" : 1,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 94",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UStaticMeshComponent",
-        "Name" : "UStaticMeshComponent_4",
-        "Properties" : {
-          "Cast Shadow" : true,
-          "CollisionChannel" : 1,
-          "Element 0" : {
-            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
-          },
-          "Generate Hit Events" : false,
-          "Generate Overlap Events" : false,
-          "Is Editor Helper" : false,
-          "Location" : [-30.739559, 8.897030, 0.000000],
-          "Mobility" : 1,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
-          "Visible" : true,
-          "Visible In Editor" : true,
-          "Visible In Game" : true,
-          "bTickEnable" : true
-        }
-      },
-      "bVisible" : true
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "TestEnemy",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_2",
-          "Properties" : {
-            "Lua.MoveSpeed" : 1.000000,
-            "Script" : "EnemyScript.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "PrimitiveKey" : "65",
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_4",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Mobility" : 1,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 98",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -830,6 +829,7 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "TestEnemy",
       "bVisible" : true
     }, {
       "ClassName" : "ADirectionalLightActor",
@@ -852,7 +852,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 74",
+              "Text" : "UUID : 78",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -904,6 +904,7 @@
           "bTickEnable" : false
         }
       },
+      "Tag" : "Default",
       "bVisible" : true
     }, {
       "ClassName" : "AAmbientLightActor",
@@ -926,7 +927,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 80",
+              "Text" : "UUID : 84",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -975,6 +976,7 @@
           "bTickEnable" : false
         }
       },
+      "Tag" : "Default",
       "bVisible" : true
     }, {
       "ClassName" : "ATankActor",
@@ -987,7 +989,6 @@
             "bTickEnable" : true
           }
         }],
-      "PrimitiveKey" : "105",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -1003,9 +1004,9 @@
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 105",
+              "Text" : "UUID : 90",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -1026,7 +1027,7 @@
               "Is Editor Helper" : false,
               "Location" : [0.000000, 0.000000, 0.000000],
               "Mobility" : 1,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
               "Visible" : true,
@@ -1045,7 +1046,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [0.000000, 0.000000, 1.516087],
+          "Location" : [7.484433, -17.308605, 1.516087],
           "Mobility" : 1,
           "Rotation" : [-0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
@@ -1056,6 +1057,7 @@
           "bTickEnable" : true
         }
       },
+      "Tag" : "Player",
       "bVisible" : true
     }],
   "ClassName" : "UWorld",
@@ -1067,115 +1069,8 @@
     "FarClip" : 1000.000000,
     "Location" : [-11.896534, -23.292747, 17.615086],
     "NearClip" : 0.100000,
-    "Rotation" : [-0.000003, 29.799530, 49.210617]
+    "Rotation" : [-0.000006, 29.799530, 49.210613]
   },
-  "Primitives" : {
-    "105" : {
-      "Location" : [0.000000, 0.000000, 1.516087],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "23" : {
-      "Location" : [-17.343311, -12.288460, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "26" : {
-      "Location" : [0.000000, 0.000000, -1.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.839996],
-      "Scale" : [100.000000, 100.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "32" : {
-      "Location" : [0.000000, 0.000000, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "35" : {
-      "Location" : [0.000000, -7.589233, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "38" : {
-      "Location" : [19.735401, -7.589233, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "41" : {
-      "Location" : [19.735401, -28.420626, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "44" : {
-      "Location" : [-17.971600, -28.420626, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "47" : {
-      "Location" : [-17.971600, -40.617657, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "50" : {
-      "Location" : [8.965349, -40.617657, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "53" : {
-      "Location" : [8.965349, 17.204201, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "56" : {
-      "Location" : [-7.684698, 17.204201, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "59" : {
-      "Location" : [-7.684698, 8.897030, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "62" : {
-      "Location" : [-30.739559, 8.897030, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "65" : {
-      "Location" : [-30.739559, -12.288460, 0.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    }
-  },
-  "Version" : 2,
+  "Version" : 3,
   "WorldType" : "Editor"
 }
