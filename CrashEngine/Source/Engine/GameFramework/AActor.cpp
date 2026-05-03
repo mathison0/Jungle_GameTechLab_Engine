@@ -17,6 +17,7 @@ IMPLEMENT_CLASS(AActor, UObject)
 
 AActor::AActor()
 {
+    ActorTag = FName("Default");
     PrimaryActorTick.SetTarget(this);
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bTickEnabled = true;
