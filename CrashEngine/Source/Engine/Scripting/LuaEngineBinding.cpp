@@ -88,6 +88,21 @@ FString FLuaActorHandle::GetActorClassName() const
     return Actor && Actor->GetClass() ? Actor->GetClass()->GetName() : "";
 }
 
+FString FLuaActorHandle::GetTag() const
+{
+    AActor* Actor = Resolve();
+    return Actor ? Actor->GetActorTag().ToString() : "";
+}
+
+void FLuaActorHandle::SetTag(const FString& InTag) const
+{
+    AActor* Actor = Resolve();
+    if (Actor)
+    {
+        Actor->SetActorTag(FName(InTag));
+    }
+}
+
 sol::table FLuaActorHandle::GetLocation(sol::this_state State) const
 {
     sol::state_view Lua(State);
@@ -686,6 +701,9 @@ void RegisterLuaEngineBindings(sol::state& Lua)
         "IsValid", &FLuaActorHandle::IsValid,
         "GetName", &FLuaActorHandle::GetName,
         "GetClassName", &FLuaActorHandle::GetActorClassName,
+
+        "GetTag", &FLuaActorHandle::GetTag,
+        "SetTag", &FLuaActorHandle::SetTag,
 
         "GetLocation", &FLuaActorHandle::GetLocation,
         "SetLocation", &FLuaActorHandle::SetLocation,

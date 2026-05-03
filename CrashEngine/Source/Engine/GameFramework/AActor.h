@@ -111,6 +111,9 @@ public:
     UWorld* GetWorld() const;
     ULevel* GetLevel() const;
 
+    FName GetActorTag() const { return ActorTag; }
+    void SetActorTag(FName InTag) { ActorTag = InTag; }
+
     bool IsVisible() const { return bVisible; }
     void SetVisible(bool Visible);
 
@@ -145,6 +148,7 @@ protected:
     FVector PendingActorLocation = FVector(0, 0, 0);
     bool bVisible = true;
     FString EditorFolderPath;
+    FName ActorTag;
 
     TArray<UActorComponent*> OwnedComponents;
 

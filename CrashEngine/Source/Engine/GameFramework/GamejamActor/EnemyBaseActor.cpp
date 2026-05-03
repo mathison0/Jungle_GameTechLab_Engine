@@ -10,6 +10,7 @@ void AEnemyBaseActor::BeginPlay()
 {
     AActor::BeginPlay();
     SetVisible(true);
+    SetActorTag(FName("Enemy"));
 }
 
 void AEnemyBaseActor::Tick(float DeltaTime)

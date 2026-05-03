@@ -23,6 +23,9 @@ struct FLuaActorHandle
 	FString GetName() const;
 	FString GetActorClassName() const;
 
+	FString GetTag() const;
+	void SetTag(const FString& InTag) const;
+
 	sol::table GetLocation(sol::this_state State) const;
 	bool SetLocation(const sol::object& Value) const;
 	bool AddWorldOffset(const sol::object& Value) const;
