@@ -77,6 +77,17 @@ UStaticMesh* UStaticMeshComponent::GetStaticMesh() const
     return StaticMesh;
 }
 
+void UStaticMeshComponent::SetCastShadow(bool bNewCastShadow)
+{
+    if (bCastShadow == bNewCastShadow)
+    {
+        return;
+    }
+
+    bCastShadow = bNewCastShadow;
+    MarkProxyDirty(ESceneProxyDirtyFlag::Shadow);
+}
+
 void UStaticMeshComponent::SetMaterial(int32 ElementIndex, UMaterial* InMaterial)
 {
     if (ElementIndex >= 0 && ElementIndex < static_cast<int32>(OverrideMaterials.size()))
@@ -201,6 +212,7 @@ void UStaticMeshComponent::Serialize(FArchive& Ar)
     UMeshComponent::Serialize(Ar);
     Ar << StaticMeshPath;
     Ar << MaterialSlots;
+    Ar << bCastShadow;
 }
 
 void UStaticMeshComponent::PostDuplicate()
@@ -245,6 +257,7 @@ void UStaticMeshComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Ou
 {
     UPrimitiveComponent::GetEditableProperties(OutProps);
     OutProps.push_back({ "Static Mesh", EPropertyType::StaticMeshRef, &StaticMeshPath });
+    OutProps.push_back({ "Cast Shadow", EPropertyType::Bool, &bCastShadow });
 
     for (int32 i = 0; i < (int32)MaterialSlots.size(); ++i)
     {
@@ -274,6 +287,10 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
         }
         CacheLocalBounds();
         MarkWorldBoundsDirty();
+    }
+    else if (strcmp(PropertyName, "Cast Shadow") == 0)
+    {
+        MarkProxyDirty(ESceneProxyDirtyFlag::Shadow);
     }
 
     if (strncmp(PropertyName, "Element ", 8) == 0)

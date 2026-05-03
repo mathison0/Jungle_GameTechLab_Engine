@@ -36,6 +36,8 @@ private:
     void FocusComponentDetails(UActorComponent* Component, int32 CascadeIndex = -1, int32 FaceIndex = -1);
     void RenderComponentTree(AActor* Actor);
     void RenderSceneComponentNode(class USceneComponent* Comp);
+    void BeginComponentRename(UActorComponent* Component);
+    bool RenderComponentRenameInput(UActorComponent* Component);
     void RenderDetails(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
     void RenderComponentProperties(AActor* Actor);
     void RenderActorProperties(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
@@ -49,7 +51,9 @@ private:
     static FString OpenObjFileDialog();
 
     UActorComponent* SelectedComponent = nullptr;
+    UActorComponent* RenamingComponent = nullptr;
     AActor* LastSelectedActor = nullptr;
+    char ComponentRenameBuffer[256] = {};
     bool bActorSelected = true; // true: Actor details, false: Component details
     bool bShowShadowAtlasDebugWindow = false;
     int32 SelectedPointLightShadowFace = 0;

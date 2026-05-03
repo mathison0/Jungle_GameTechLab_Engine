@@ -906,8 +906,14 @@ void FEditorDetailsPanel::RenderComponentTree(AActor* Actor)
             if (!bActorSelected && SelectedComponent == Comp)
                 Flags |= ImGuiTreeNodeFlags_Selected;
 
-            ImGui::TreeNodeEx(Comp, Flags, "%s", Label.c_str());
-            if (ImGui::IsItemClicked())
+            const bool bIsRenaming = (RenamingComponent == Comp);
+            ImGui::TreeNodeEx(Comp, Flags, "%s", bIsRenaming ? "" : Label.c_str());
+            if (bIsRenaming)
+            {
+                ImGui::SameLine();
+                RenderComponentRenameInput(Comp);
+            }
+            if (!bIsRenaming && ImGui::IsItemClicked())
             {
                 SelectedComponent = Comp;
                 bActorSelected = false;
@@ -923,6 +929,10 @@ void FEditorDetailsPanel::RenderComponentTree(AActor* Actor)
 
             if (ImGui::BeginPopupContextItem())
             {
+                if (ImGui::MenuItem("Rename"))
+                {
+                    BeginComponentRename(Comp);
+                }
                 if (ImGui::MenuItem("Delete"))
                 {
                     ComponentToDelete = Comp;
@@ -936,6 +946,10 @@ void FEditorDetailsPanel::RenderComponentTree(AActor* Actor)
         if (ComponentToDelete)
         {
             Actor->RemoveComponent(ComponentToDelete);
+            if (RenamingComponent == ComponentToDelete)
+            {
+                RenamingComponent = nullptr;
+            }
             if (SelectedComponent == ComponentToDelete)
             {
                 SelectedComponent = nullptr;
@@ -963,12 +977,18 @@ void FEditorDetailsPanel::RenderSceneComponentNode(USceneComponent* Comp)
         Flags |= ImGuiTreeNodeFlags_Selected;
 
     bool bIsRoot = (Comp->GetParent() == nullptr);
+    const bool bIsRenaming = (RenamingComponent == Comp);
     bool bOpen = ImGui::TreeNodeEx(
         Comp, Flags, "%s%s",
         bIsRoot ? "[Root] " : "",
-        Label.c_str());
+        bIsRenaming ? "" : Label.c_str());
+    if (bIsRenaming)
+    {
+        ImGui::SameLine();
+        RenderComponentRenameInput(Comp);
+    }
 
-    if (ImGui::IsItemClicked())
+    if (!bIsRenaming && ImGui::IsItemClicked())
     {
         SelectedComponent = Comp;
         bActorSelected = false;
@@ -977,6 +997,10 @@ void FEditorDetailsPanel::RenderSceneComponentNode(USceneComponent* Comp)
     bool bDeleted = false;
     if (ImGui::BeginPopupContextItem())
     {
+        if (ImGui::MenuItem("Rename"))
+        {
+            BeginComponentRename(Comp);
+        }
         // Root Component는 삭제할 수 없도록 예외 처리
         if (ImGui::MenuItem("Delete", nullptr, false, !bIsRoot))
         {
@@ -995,6 +1019,10 @@ void FEditorDetailsPanel::RenderSceneComponentNode(USceneComponent* Comp)
         if (Actor)
         {
             Actor->RemoveComponent(Comp);
+            if (RenamingComponent == Comp)
+            {
+                RenamingComponent = nullptr;
+            }
             if (SelectedComponent == Comp)
             {
                 SelectedComponent = nullptr;
@@ -1014,6 +1042,45 @@ void FEditorDetailsPanel::RenderSceneComponentNode(USceneComponent* Comp)
         }
         ImGui::TreePop();
     }
+}
+
+void FEditorDetailsPanel::BeginComponentRename(UActorComponent* Component)
+{
+    if (!Component)
+    {
+        return;
+    }
+
+    RenamingComponent = Component;
+    strncpy_s(ComponentRenameBuffer, Component->GetFName().ToString().c_str(), _TRUNCATE);
+}
+
+bool FEditorDetailsPanel::RenderComponentRenameInput(UActorComponent* Component)
+{
+    if (!Component)
+    {
+        RenamingComponent = nullptr;
+        return false;
+    }
+
+    ImGui::SetNextItemWidth(-1.0f);
+    ImGui::SetKeyboardFocusHere();
+    if (ImGui::InputText("##ComponentRename", ComponentRenameBuffer, sizeof(ComponentRenameBuffer), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+    {
+        if (ComponentRenameBuffer[0] != '\0')
+        {
+            Component->SetFName(FName(ComponentRenameBuffer));
+        }
+        RenamingComponent = nullptr;
+        return true;
+    }
+
+    if (!ImGui::IsItemActive() && (ImGui::IsMouseClicked(0) || ImGui::IsKeyPressed(ImGuiKey_Escape)))
+    {
+        RenamingComponent = nullptr;
+    }
+
+    return false;
 }
 
 bool FEditorDetailsPanel::AcceptLuaScriptDrop(FString& OutScriptPath)

@@ -1,4 +1,4 @@
-// 렌더 영역의 세부 동작을 구현합니다.
+﻿// 렌더 영역의 세부 동작을 구현합니다.
 #include "Render/Resources/Buffers/ConstantBufferData.h"
 #include "Render/Execute/Registry/RenderPassTypes.h"
 #include "Render/Scene/Proxies/Primitive/PrimitiveProxy.h"
@@ -55,6 +55,10 @@ void FPrimitiveProxy::UpdateMesh()
     MeshBuffer = Owner->GetMeshBuffer();
     Shader     = FShaderManager::Get().GetShader(EShaderType::Primitive);
     Pass       = ERenderPass::Opaque;
+}
+
+void FPrimitiveProxy::UpdateShadow()
+{
 }
 
 void FPrimitiveProxy::CollectSelectedVisuals(FScene& Scene) const

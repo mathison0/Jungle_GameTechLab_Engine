@@ -6,6 +6,7 @@
 #include "Render/Resources/Shadows/ShadowMapSettings.h"
 #include "Render/Submission/Atlas/ShadowAtlasTypes.h"
 #include "Render/Scene/Proxies/Light/LightProxy.h"
+#include "Render/Scene/Proxies/Primitive/PrimitiveProxy.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -497,6 +498,15 @@ void FDrawCollector::CollectShadowCasters(UWorld* World, const FSceneView* Scene
             const FConvexVolume& CasterQueryFrustum =
                 GetShadowMapMethod() == EShadowMapMethod::PSM ? SceneView->FrustumVolume : Light->ShadowViewFrustum;
             World->GetPartition().QueryFrustumAllProxies(CasterQueryFrustum, Light->VisibleShadowCasters);
+            Light->VisibleShadowCasters.erase(
+                std::remove_if(
+                    Light->VisibleShadowCasters.begin(),
+                    Light->VisibleShadowCasters.end(),
+                    [](const FPrimitiveProxy* Proxy)
+                    {
+                        return !Proxy || !Proxy->bCastShadow;
+                    }),
+                Light->VisibleShadowCasters.end());
             continue;
         }
 
@@ -505,6 +515,15 @@ void FDrawCollector::CollectShadowCasters(UWorld* World, const FSceneView* Scene
             ComputeSpotShadowMatrices(Light);
             Light->ShadowViewFrustum.UpdateFromMatrix(Light->LightViewProj);
             World->GetPartition().QueryFrustumAllProxies(Light->ShadowViewFrustum, Light->VisibleShadowCasters);
+            Light->VisibleShadowCasters.erase(
+                std::remove_if(
+                    Light->VisibleShadowCasters.begin(),
+                    Light->VisibleShadowCasters.end(),
+                    [](const FPrimitiveProxy* Proxy)
+                    {
+                        return !Proxy || !Proxy->bCastShadow;
+                    }),
+                Light->VisibleShadowCasters.end());
             continue;
         }
 
@@ -513,6 +532,15 @@ void FDrawCollector::CollectShadowCasters(UWorld* World, const FSceneView* Scene
             ComputePointShadowMatrices(Light);
             Light->ShadowViewFrustum.UpdateFromMatrix(Light->LightViewProj);
             World->GetPartition().QuerySphereAllProxies({LC.Position, LC.AttenuationRadius}, Light->VisibleShadowCasters);
+            Light->VisibleShadowCasters.erase(
+                std::remove_if(
+                    Light->VisibleShadowCasters.begin(),
+                    Light->VisibleShadowCasters.end(),
+                    [](const FPrimitiveProxy* Proxy)
+                    {
+                        return !Proxy || !Proxy->bCastShadow;
+                    }),
+                Light->VisibleShadowCasters.end());
         }
     }
 }
