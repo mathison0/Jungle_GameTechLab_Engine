@@ -1,4 +1,5 @@
 ﻿#include "ProjectileActor.h"
+#include "Core/Logging/LogMacros.h"
 #include "Engine/Component/Collision/CircleCollider2DComponent.h"
 #include "Engine/Component/StaticMeshComponent.h"
 #include "Engine/Runtime/Engine.h"
@@ -11,6 +12,9 @@ void AProjectileActor::InitDefaultComponents()
 {
     auto ColliderComponent = AddComponent<UCircleCollider2DComponent>();
     SetRootComponent(ColliderComponent);
+    ColliderComponent->SetCollisionChannel(ECollisionChannel::Projectile);
+    ColliderComponent->SetGenerateOverlapEvents(true);
+
     auto StaticMeshComponent = AddComponent<UStaticMeshComponent>();
     RootComponent->AddChild(StaticMeshComponent);
 
@@ -40,6 +44,9 @@ void AProjectileActor::InitDefaultComponents()
 
     auto ScriptComponent = AddComponent<UScriptComponent>();
     ScriptComponent->SetScriptPath("ProjectileScript.lua");
+
+	ScriptComponent = AddComponent<UScriptComponent>();
+    ScriptComponent->SetScriptPath("TestBullet.lua");
 }
 
 
@@ -57,6 +64,7 @@ void AProjectileActor::Fire()
     }
 
     movementCompoent->SetInitialVelocity(Direction * Speed);
+    UE_LOG(Projectile, Info, "Projectile Fire: Damage=%.2f Pierce=%d Speed=%.2f", Damage, PierceCount, Speed);
 }
 
 void AProjectileActor::SetProjectileSetting(const ProjectileInfo& InProjectileInfo)
@@ -85,4 +93,5 @@ void AProjectileActor::SetProjectileSetting(const ProjectileInfo& InProjectileIn
     SetSpeed(InProjectileInfo.Speed);
 
 	SetColiderSize(InProjectileInfo.ColliderSize);
+    UE_LOG(Projectile, Info, "SetProjectileSetting: ColliderSize=%.2f Speed=%.2f", InProjectileInfo.ColliderSize, InProjectileInfo.Speed);
 }
