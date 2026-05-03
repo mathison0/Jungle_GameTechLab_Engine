@@ -2,6 +2,7 @@
 #include "GameFramework/AActor.h"
 
 class FActorPoolManager;
+class UScriptComponent;
 
 struct FEnemySpawnPhase
 {
@@ -14,20 +15,24 @@ class AEnemySpawnerActor : public AActor
 {
 public:
     DECLARE_CLASS(AEnemySpawnerActor, AActor)
-    void BeginPlay();
-    void Tick(float DeltaTime);
-    void EndPlay();
+    AEnemySpawnerActor() = default;
+
+    void BeginPlay() override;
+    void Tick(float DeltaTime) override;
+    void EndPlay() override;
+    void InitDefaultComponents() override;
 
     uint32 GetDesiredEnemyCount(float Time) const;
     float GetSpawnRate(float Time) const;
 
-	static const TArray<FEnemySpawnPhase> SpawnTable;
+    static const TArray<FEnemySpawnPhase> SpawnTable;
 
 private:
-    void DeclineEnemyCount(AActor* ReturnActor);
+    const FEnemySpawnPhase& GetPhase(float Time) const;
+    FVector GetSpawnPosition(const FVector& PlayerPosition);
 
 private:
-
+    UScriptComponent* ScriptComponent = nullptr;
 
     FActorPoolManager* PoolManager = nullptr;
     float GameTime = 0.0f;
@@ -36,6 +41,6 @@ private:
     uint32 DesiredEnemyCount;
 
     float SpawnRate;
-    float MinSpawnRadius;
-    float MaxSpawnRadius;
+    float MinSpawnRadius = 30.0f;
+    float MaxSpawnRadius = 50.0f;
 };

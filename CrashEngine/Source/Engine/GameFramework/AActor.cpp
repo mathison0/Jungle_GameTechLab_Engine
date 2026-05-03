@@ -25,6 +25,7 @@ AActor::AActor()
 AActor::~AActor()
 {
     PrimaryActorTick.UnRegisterTickFunction();
+    OnPoolReturnRequested.Clear();
 
     // 계층 구조 파괴 시 OwnedComponents가 재귀적으로 수정되므로
     // 리스트가 비워질 때까지 뒤에서부터 하나씩 제거

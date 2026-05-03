@@ -3,6 +3,7 @@
 #include "Object/Object.h"
 #include "Collision/Collision2DManager.h"
 #include "Collision/CollisionManager.h"
+#include "GameFramework/ActorPoolManager.h"
 #include "Core/RayTypes.h"
 #include "Core/CollisionTypes.h"
 #include "Collision/BVH/EditorPickingBVH.h"
@@ -75,6 +76,8 @@ public:
     EWorldType GetWorldType() const { return WorldType; }
     void UpdateActorInOctree(AActor* actor);
 
+	FActorPoolManager* GetPoolManager() const { return ActorPoolManager.get(); }
+
 private:
     // TArray<AActor*> Actors;
     ULevel* PersistentLevel;
@@ -95,8 +98,10 @@ private:
 
     FCollisionManager CollisionManager;
     FCollision2DManager Collision2DManager;
+    std::unique_ptr<FActorPoolManager> ActorPoolManager;
     FSpatialPartition Partition;
     EWorldType WorldType = EWorldType::Editor;
+	
 };
 
 template <typename T>

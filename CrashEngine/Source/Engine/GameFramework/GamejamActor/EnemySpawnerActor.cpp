@@ -2,10 +2,12 @@
 #include "GameFramework/GamejamActor/EnemyBaseActor.h"
 #include "GameFramework/World.h"
 #include "GameFramework/ActorPoolManager.h"
+#include "Component/ScriptComponent.h"
+#include "Core/Random.h"
 
 IMPLEMENT_CLASS(AEnemySpawnerActor, AActor)
 
-static const TArray<FEnemySpawnPhase> SpawnTable = {
+const TArray<FEnemySpawnPhase> AEnemySpawnerActor::SpawnTable = {
 	//TimeThreshold / DesiredCount / SpawnRate
     { 30.0f, 30, 5.0f },
     { 60.0f, 60, 10.0f },
@@ -16,7 +18,6 @@ static const TArray<FEnemySpawnPhase> SpawnTable = {
 void AEnemySpawnerActor::BeginPlay()
 {
     AActor::BeginPlay();
-
 	PoolManager = GetWorld()->GetPoolManager();
 }
 
@@ -32,7 +33,10 @@ void AEnemySpawnerActor::Tick(float DeltaTime)
 
     while (SpawnBudget >= 1.0f && CurrentEnemyCount < DesiredEnemyCount)
     {
-        PoolManager->Acquire<AEnemyBaseActor>();
+        AEnemyBaseActor* NewEnemyActor = PoolManager->Acquire<AEnemyBaseActor>();
+        FVector SpawnPosition = FVector(5,0,0);
+        NewEnemyActor->SetActorLocation(SpawnPosition);
+
         CurrentEnemyCount++;
         SpawnBudget -= 1.0f;
     }
@@ -43,25 +47,45 @@ void AEnemySpawnerActor::EndPlay()
     PoolManager = nullptr;
 }
 
+void AEnemySpawnerActor::InitDefaultComponents()
+{
+    ScriptComponent = AddComponent<UScriptComponent>();
+    ScriptComponent->SetScriptPath("EnemySpawner.lua");
+}
+
 uint32 AEnemySpawnerActor::GetDesiredEnemyCount(float Time) const
 {
-    if (Time < 30.0f)
-        return 30;
-    if (Time < 60.0f)
-        return 60;
-    if (Time < 120.0f)
-        return 100;
-    return 150;
+    return GetPhase(Time).DesiredCount;
 }
 
 float AEnemySpawnerActor::GetSpawnRate(float Time) const
 {
-    if (Time < 30.0f)
-        return 5.0f;
-    if (Time < 60.0f)
-        return 10.0f;
-    if (Time < 120.0f)
-        return 15.0f;
-    return 20.0f;
+    return GetPhase(Time).SpawnRate;
+}
+
+const FEnemySpawnPhase& AEnemySpawnerActor::GetPhase(float Time) const
+{
+    for (const auto& Phase : SpawnTable)
+    {
+        if (Time < Phase.TimeThreshold)
+        {
+            return Phase;
+        }
+    }
+
+    return SpawnTable.back(); // 안전 fallback
+}
+
+FVector AEnemySpawnerActor::GetSpawnPosition(const FVector& PlayerPosition)
+{
+    float Angle = FRandom::Angle();
+    float Distance = FRandom::Range(MinSpawnRadius, MaxSpawnRadius);
+
+	FVector Offset(
+        cos(Angle) * Distance,
+        sin(Angle) * Distance,
+        0.0f);
+
+    return PlayerPosition + Offset;
 }
 
