@@ -5,6 +5,8 @@
 #include "Core/Logging/LogMacros.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Subsystem/OverlayStatSystem.h"
+#include "Platform/Paths.h"
+#include "Platform/PlatformProcess.h"
 #include "Render/Resources/Shadows/ShadowFilterSettings.h"
 #include "Render/Resources/Shadows/ShadowMapSettings.h"
 
@@ -12,7 +14,9 @@
 #include <cctype>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <string>
+#include <system_error>
 
 namespace
 {
@@ -322,6 +326,120 @@ void DrawHighlightedMultilineText(ImDrawList* DrawList, ImVec2 Pos, const FStrin
         LineStart = LineEnd + 1;
         ++LineIndex;
     }
+}
+
+bool IsLuaPathDelimiter(char Ch)
+{
+    switch (Ch)
+    {
+    case '\'':
+    case '"':
+    case '`':
+    case '<':
+    case '>':
+    case '(':
+    case ')':
+    case '[':
+    case ']':
+    case '{':
+    case '}':
+    case '\r':
+    case '\n':
+    case '\t':
+    case ' ':
+        return true;
+    default:
+        return false;
+    }
+}
+
+FString TrimLuaPathCandidate(FString Value)
+{
+    while (!Value.empty() && (Value.front() == '@' || IsLuaPathDelimiter(Value.front())))
+    {
+        Value.erase(Value.begin());
+    }
+    while (!Value.empty() && IsLuaPathDelimiter(Value.back()))
+    {
+        Value.pop_back();
+    }
+    return Value;
+}
+
+FString ExtractLuaPathCandidate(const FString& Text)
+{
+    const FString LowerText = ToLowerAsciiCopy(Text);
+    size_t LuaExtension = LowerText.find(".lua");
+    while (LuaExtension != FString::npos)
+    {
+        size_t Begin = LuaExtension;
+        while (Begin > 0 && !IsLuaPathDelimiter(Text[Begin - 1]))
+        {
+            --Begin;
+        }
+
+        FString Candidate = Text.substr(Begin, LuaExtension + 4 - Begin);
+        Candidate = TrimLuaPathCandidate(Candidate);
+        if (!Candidate.empty())
+        {
+            return Candidate;
+        }
+
+        LuaExtension = LowerText.find(".lua", LuaExtension + 4);
+    }
+    return "";
+}
+
+std::filesystem::path ResolveLuaScriptPath(const FString& PathCandidate)
+{
+    if (PathCandidate.empty())
+    {
+        return {};
+    }
+
+    auto TryExistingPath = [](const std::filesystem::path& Path) -> std::filesystem::path
+    {
+        const std::filesystem::path Normalized = Path.lexically_normal();
+        std::error_code Ec;
+        if (std::filesystem::exists(Normalized, Ec) && !Ec)
+        {
+            return Normalized;
+        }
+        return {};
+    };
+
+    std::filesystem::path Candidate = FPaths::ToPath(PathCandidate);
+    if (Candidate.is_absolute())
+    {
+        return TryExistingPath(Candidate);
+    }
+
+    if (std::filesystem::path Resolved = TryExistingPath(std::filesystem::path(FPaths::ScriptsDir()) / Candidate);
+        !Resolved.empty())
+    {
+        return Resolved;
+    }
+
+    if (std::filesystem::path Resolved = TryExistingPath(std::filesystem::path(FPaths::RootDir()) / Candidate);
+        !Resolved.empty())
+    {
+        return Resolved;
+    }
+
+    return TryExistingPath(std::filesystem::current_path() / Candidate);
+}
+
+std::filesystem::path ResolveLuaScriptPath(const FLogEntry& Entry)
+{
+    const FString Category = ToLowerAsciiCopy(Entry.Category);
+    const FString SearchText = Entry.Message + "\n" + Entry.FormattedMessage;
+    if (Category.find("lua") == FString::npos &&
+        ToLowerAsciiCopy(SearchText).find(".lua") == FString::npos)
+    {
+        return {};
+    }
+
+    return ResolveLuaScriptPath(ExtractLuaPathCandidate(SearchText));
 }
 } // namespace
 
@@ -776,6 +894,7 @@ void FEditorOutputLogPanel::DrawLogEntryRow(const FLogEntry& Entry, int32 EntryI
 {
     const float RowHeight = CalculateLogEntryRowHeight(Entry);
     const float RowWidth = CalculateLogEntryRowWidth(Entry, ImGui::GetContentRegionAvail().x);
+    const std::filesystem::path LuaScriptPath = ResolveLuaScriptPath(Entry);
 
     ImGui::PushID(EntryIndex);
     const bool bSelected = SelectedLogIndex == EntryIndex;
@@ -786,10 +905,35 @@ void FEditorOutputLogPanel::DrawLogEntryRow(const FLogEntry& Entry, int32 EntryI
     {
         SelectedLogIndex = EntryIndex;
     }
+    if (!LuaScriptPath.empty() && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+    {
+        if (!FPlatformProcess::OpenFile(LuaScriptPath))
+        {
+            const FString FilePath = FPaths::FromPath(LuaScriptPath);
+            UE_LOG(OutputLog, Warning, "Failed to open Lua script: %s", FilePath.c_str());
+        }
+    }
+    if (!LuaScriptPath.empty() && ImGui::IsItemHovered())
+    {
+        const FString FilePath = FPaths::FromPath(LuaScriptPath);
+        ImGui::SetTooltip("Double-click to open %s", FilePath.c_str());
+    }
     ImGui::PopStyleColor(3);
 
     if (ImGui::BeginPopupContextItem("OutputLogRowContext"))
     {
+        if (!LuaScriptPath.empty() && ImGui::MenuItem("Open Lua Script"))
+        {
+            if (!FPlatformProcess::OpenFile(LuaScriptPath))
+            {
+                const FString FilePath = FPaths::FromPath(LuaScriptPath);
+                UE_LOG(OutputLog, Warning, "Failed to open Lua script: %s", FilePath.c_str());
+            }
+        }
+        if (!LuaScriptPath.empty())
+        {
+            ImGui::Separator();
+        }
         if (ImGui::MenuItem("Copy Message"))
         {
             ImGui::SetClipboardText(Entry.Message.c_str());
