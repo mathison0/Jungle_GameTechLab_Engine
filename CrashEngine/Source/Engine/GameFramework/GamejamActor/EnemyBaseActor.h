@@ -14,7 +14,7 @@ public:
     void Tick(float DeltaTime) override;
     void InitDefaultComponents() override;
 
-private:
+protected:
     UCircleCollider2DComponent* ColliderComponent = nullptr;
     UStaticMeshComponent* MeshComponent = nullptr;
     UScriptComponent* EnemyScriptComponent = nullptr;

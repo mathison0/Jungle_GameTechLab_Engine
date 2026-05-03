@@ -55,7 +55,8 @@ constexpr FEnumPropertyOption GCollisionChannels[] = {
     { "Player", static_cast<int32_t>(ECollisionChannel::Player) },
     { "Projectile", static_cast<int32_t>(ECollisionChannel::Projectile) },
     { "Pickup", static_cast<int32_t>(ECollisionChannel::Pickup) },
-    { "Trigger", static_cast<int32_t>(ECollisionChannel::Trigger) }
+    { "Trigger", static_cast<int32_t>(ECollisionChannel::Trigger) },
+    { "FlyingEnemy", static_cast<int32_t>(ECollisionChannel::FlyingEnemy) }
 };
 
 constexpr FEnumPropertyMeta GCollisionChannelMeta = {

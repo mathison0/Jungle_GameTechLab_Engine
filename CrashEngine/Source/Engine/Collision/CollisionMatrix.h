@@ -15,13 +15,14 @@ public:
             return ECollisionResponse::Ignore;
         }
 
-        return Table[(int)A][(int)B];
+        return Table[Row][Col];
     }
 
 private:
     static constexpr ECollisionResponse Table
         [(int)ECollisionChannel::Count]
-        [(int)ECollisionChannel::Count] = { // WorldStatic 기준
+        [(int)ECollisionChannel::Count] = {
+            // WorldStatic 기준
             {
                 ECollisionResponse::Block,  // WorldStatic
                 ECollisionResponse::Block,  // WorldDynamic
@@ -29,7 +30,8 @@ private:
                 ECollisionResponse::Block,  // Enemy
                 ECollisionResponse::Block,  // Player
                 ECollisionResponse::Ignore, // Trigger
-                ECollisionResponse::Ignore  // Pickup
+                ECollisionResponse::Ignore, // Pickup
+                ECollisionResponse::Ignore  // FlyingEnemy
             },
 
             // WorldDynamic 기준
@@ -40,7 +42,8 @@ private:
                 ECollisionResponse::Block,   // Enemy
                 ECollisionResponse::Block,   // Player
                 ECollisionResponse::Overlap, // Trigger
-                ECollisionResponse::Ignore   // Pickup
+                ECollisionResponse::Ignore,  // Pickup
+                ECollisionResponse::Ignore   // FlyingEnemy
             },
 
             // Projectile 기준
@@ -51,7 +54,8 @@ private:
                 ECollisionResponse::Overlap, // Enemy
                 ECollisionResponse::Ignore,  // Player
                 ECollisionResponse::Ignore,  // Trigger
-                ECollisionResponse::Ignore   // Pickup
+                ECollisionResponse::Ignore,  // Pickup
+                ECollisionResponse::Ignore   // FlyingEnemy
             },
 
             // Enemy 기준
@@ -62,7 +66,8 @@ private:
                 ECollisionResponse::Block,   // Enemy
                 ECollisionResponse::Block,   // Player
                 ECollisionResponse::Overlap, // Trigger
-                ECollisionResponse::Ignore   // Pickup
+                ECollisionResponse::Ignore,  // Pickup
+                ECollisionResponse::Ignore   // FlyingEnemy
             },
 
             // Player 기준
@@ -73,7 +78,8 @@ private:
                 ECollisionResponse::Block,   // Enemy
                 ECollisionResponse::Ignore,  // Player
                 ECollisionResponse::Overlap, // Trigger
-                ECollisionResponse::Overlap  // Pickup
+                ECollisionResponse::Overlap, // Pickup
+                ECollisionResponse::Overlap  // FlyingEnemy
             },
 
             // Trigger 기준
@@ -84,7 +90,8 @@ private:
                 ECollisionResponse::Overlap, // Enemy
                 ECollisionResponse::Overlap, // Player
                 ECollisionResponse::Ignore,  // Trigger
-                ECollisionResponse::Ignore   // Pickup
+                ECollisionResponse::Ignore,  // Pickup
+                ECollisionResponse::Ignore   // FlyingEnemy
             },
 
             // Pickup 기준
@@ -95,7 +102,20 @@ private:
                 ECollisionResponse::Ignore,  // Enemy
                 ECollisionResponse::Overlap, // Player
                 ECollisionResponse::Ignore,  // Trigger
-                ECollisionResponse::Ignore   // Pickup
+                ECollisionResponse::Ignore,  // Pickup
+                ECollisionResponse::Ignore   // FlyingEnemy
+            },
+
+            // FlyingEnemy 기준
+            {
+                ECollisionResponse::Ignore,  // WorldStatic
+                ECollisionResponse::Ignore,  // WorldDynamic
+                ECollisionResponse::Ignore,  // Projectile
+                ECollisionResponse::Ignore,  // Enemy
+                ECollisionResponse::Overlap, // Player
+                ECollisionResponse::Ignore,  // Trigger
+                ECollisionResponse::Ignore,  // Pickup
+                ECollisionResponse::Ignore   // FlyingEnemy
             }
         };
 };
