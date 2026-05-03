@@ -25,6 +25,7 @@ AActor::AActor()
 AActor::~AActor()
 {
     PrimaryActorTick.UnRegisterTickFunction();
+    OnPoolReturnRequested.Clear();
 
     // 계층 구조 파괴 시 OwnedComponents가 재귀적으로 수정되므로
     // 리스트가 비워질 때까지 뒤에서부터 하나씩 제거
@@ -255,6 +256,15 @@ void AActor::BeginPlay()
     }
 }
 
+void AActor::InitDefaultComponents()
+{
+}
+
+void AActor::RequestReturnToPool()
+{
+    OnPoolReturnRequested.Broadcast(this);
+}
+
 void AActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
 {
 }
@@ -314,6 +324,28 @@ void AActor::Tick(float DeltaTime)
     }*/
 }
 
+void AActor::Activate()
+{
+    SetVisible(true);
+    PrimaryActorTick.SetTickEnabled(PrimaryActorTick.bStartWithTickEnabled);
+
+	for (UActorComponent* ActorComp : OwnedComponents)
+	{
+        ActorComp->Activate();
+	}
+}
+
+void AActor::Deactivate()
+{
+    SetVisible(false);
+    PrimaryActorTick.SetTickEnabled(false);
+
+    for (UActorComponent* ActorComp : OwnedComponents)
+    {
+        ActorComp->Deactivate();
+    }
+}
+
 FRotator AActor::GetActorRotation() const
 {
     return RootComponent ? RootComponent->GetRelativeRotation() : FRotator();
@@ -364,6 +396,7 @@ void AActor::Serialize(FArchive& Ar)
     // 소유 포인터(OwnedComponents/RootComponent/Outer)는 직렬화 제외 — 복제 단계에서 재구성.
     Ar << bVisible;
     Ar << bNeedsTick;
+    Ar << EditorFolderPath;
 }
 
 // SceneComponent 서브트리를 재귀 복제. 부모 → 자식 순으로 만들되,

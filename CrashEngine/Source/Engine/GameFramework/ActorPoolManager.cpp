@@ -1,0 +1,136 @@
+#include "GameFramework/ActorPoolManager.h"
+#include "GameFramework/ActorPool.h"
+#include "GameFramework/World.h"
+#include "GameFramework/AActor.h"
+
+FActorPoolManager::FActorPoolManager(UWorld* InWorld)
+    : World(InWorld)
+{
+}
+
+FActorPoolManager::~FActorPoolManager()
+{
+    DestroyAll();
+}
+
+void FActorPoolManager::SetWorld(UWorld* InWorld)
+{
+    if (World == InWorld)
+    {
+        return;
+    }
+
+    DestroyAll();
+    World = InWorld;
+}
+
+void FActorPoolManager::Warmup(const FString& ClassName, uint32 Count, const FActorPool::FActorCallback& Initialize)
+{
+    GetOrCreatePool(ClassName).Warmup(Count, Initialize);
+}
+
+AActor* FActorPoolManager::Acquire(const FString& ClassName, const FActorPool::FActorCallback& Activate)
+{
+    FActorPool& Pool = GetOrCreatePool(ClassName);
+    AActor* Actor = Pool.Acquire(Activate);
+    RegisterActiveActor(Actor, &Pool);
+    return Actor;
+}
+
+void FActorPoolManager::Release(AActor* Actor)
+{
+    if (!Actor)
+    {
+        return;
+    }
+
+    auto It = ActiveActorToPool.find(Actor);
+    if (It == ActiveActorToPool.end())
+    {
+        return;
+    }
+
+    FActorPool* Pool = It->second;
+    ActiveActorToPool.erase(It);
+    Pool->Release(Actor);
+}
+
+void FActorPoolManager::DestroyAll()
+{
+    for (AActor* Actor : DelegateBoundActors)
+    {
+        if (Actor)
+        {
+            Actor->OnPoolReturnRequested.RemoveDynamic(this);
+        }
+    }
+
+    DelegateBoundActors.clear();
+    ActiveActorToPool.clear();
+
+    for (auto& Pair : Pools)
+    {
+        if (Pair.second)
+        {
+            Pair.second->DestroyAll();
+        }
+    }
+
+    Pools.clear();
+}
+
+uint32 FActorPoolManager::GetActiveCount(const FString& ClassName) const
+{
+    const FActorPool* Pool = FindPool(ClassName);
+    return Pool ? Pool->GetActiveCount() : 0;
+}
+
+uint32 FActorPoolManager::GetAvailableCount(const FString& ClassName) const
+{
+    const FActorPool* Pool = FindPool(ClassName);
+    return Pool ? Pool->GetAvailableCount() : 0;
+}
+
+FActorPool& FActorPoolManager::GetOrCreatePool(const FString& ClassName)
+{
+    auto It = Pools.find(ClassName);
+    if (It == Pools.end())
+    {
+        auto Pool = std::make_unique<FActorPool>(World, ClassName);
+        FActorPool* RawPool = Pool.get();
+        Pools.emplace(ClassName, std::move(Pool));
+        return *RawPool;
+    }
+
+    return *It->second;
+}
+
+const FActorPool* FActorPoolManager::FindPool(const FString& ClassName) const
+{
+    auto It = Pools.find(ClassName);
+    if (It == Pools.end())
+    {
+        return nullptr;
+    }
+
+    return It->second.get();
+}
+
+void FActorPoolManager::RegisterActiveActor(AActor* Actor, FActorPool* Pool)
+{
+    if (!Actor || !Pool)
+    {
+        return;
+    }
+
+    ActiveActorToPool[Actor] = Pool;
+    if (DelegateBoundActors.insert(Actor).second)
+    {
+        Actor->OnPoolReturnRequested.AddDynamic(this, &FActorPoolManager::HandleActorPoolReturnRequested);
+    }
+}
+
+void FActorPoolManager::HandleActorPoolReturnRequested(AActor* Actor)
+{
+    Release(Actor);
+}

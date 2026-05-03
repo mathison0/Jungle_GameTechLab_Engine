@@ -345,6 +345,10 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
     <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
@@ -367,10 +371,10 @@
     <ClCompile Include="Source\Editor\UI\EditorMaterialPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorOutputLogPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorPanel.cpp" />
-    <ClCompile Include="Source\Editor\UI\EditorSceneManagerPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorStatPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorToolbarPanel.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorWorldOutlinerPanel.cpp" />
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp" />
     <ClCompile Include="Source\Engine\Collision\Collision2DManager.cpp" />
@@ -612,6 +616,9 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Core\Random.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
     <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
     <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
@@ -636,9 +643,9 @@
     <ClInclude Include="Source\Editor\UI\EditorMaterialPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorOutputLogPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorPanel.h" />
-    <ClInclude Include="Source\Editor\UI\EditorSceneManagerPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorStatPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorToolbarPanel.h" />
+    <ClInclude Include="Source\Editor\UI\EditorWorldOutlinerPanel.h" />
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\FLevelViewportLayout.h" />
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h" />
@@ -715,6 +722,8 @@
     <ClInclude Include="Source\Engine\Core\Logging\LogOutputDevice.h" />
     <ClInclude Include="Source\Engine\GameFramework\AActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ActorPool.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ActorPoolManager.h" />
     <ClInclude Include="Source\Engine\GameFramework\DecalActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DirectionalLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\FakeLightActor.h" />

@@ -57,7 +57,7 @@ constexpr const char* SplitterRatios = "SplitterRatios";
 constexpr const char* UIWidgets = "UIWidgets";
 constexpr const char* ShowControlPanel = "ShowControlPanel";
 constexpr const char* ShowPropertyWindow = "ShowPropertyWindow";
-constexpr const char* ShowSceneManager = "ShowSceneManager";
+constexpr const char* ShowWorldOutliner = "ShowWorldOutliner";
 constexpr const char* ShowStatProfiler = "ShowStatProfiler";
 
 // Perspective Camera
@@ -144,7 +144,7 @@ void FEditorSettings::SaveToFile(const FString& Path) const
     JSON WidgetsObj = Object();
     WidgetsObj[Key::ShowControlPanel] = UI.bControl;
     WidgetsObj[Key::ShowPropertyWindow] = UI.bProperty;
-    WidgetsObj[Key::ShowSceneManager] = UI.bScene;
+    WidgetsObj[Key::ShowWorldOutliner] = UI.bWorldOutliner;
     WidgetsObj[Key::ShowStatProfiler] = UI.bStat;
     Root[Key::UIWidgets] = WidgetsObj;
 
@@ -324,8 +324,8 @@ void FEditorSettings::LoadFromFile(const FString& Path)
             UI.bControl = W[Key::ShowControlPanel].ToBool();
         if (W.hasKey(Key::ShowPropertyWindow))
             UI.bProperty = W[Key::ShowPropertyWindow].ToBool();
-        if (W.hasKey(Key::ShowSceneManager))
-            UI.bScene = W[Key::ShowSceneManager].ToBool();
+        if (W.hasKey(Key::ShowWorldOutliner))
+            UI.bWorldOutliner = W[Key::ShowWorldOutliner].ToBool();
         if (W.hasKey(Key::ShowStatProfiler))
             UI.bStat = W[Key::ShowStatProfiler].ToBool();
     }

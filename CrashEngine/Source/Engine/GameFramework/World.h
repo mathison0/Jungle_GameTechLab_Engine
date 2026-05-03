@@ -3,6 +3,7 @@
 #include "Object/Object.h"
 #include "Collision/Collision2DManager.h"
 #include "Collision/CollisionManager.h"
+#include "GameFramework/ActorPoolManager.h"
 #include "Core/RayTypes.h"
 #include "Core/CollisionTypes.h"
 #include "Collision/BVH/EditorPickingBVH.h"
@@ -35,6 +36,7 @@ public:
     // Actor lifecycle
     template <typename T>
     T* SpawnActor();
+    AActor* SpawnActorByClass(const FString& ClassName);
     void DestroyActor(AActor* Actor);
     void AddActor(AActor* Actor);
     void MarkEditorPickingAndScenePrimitiveBVHsDirty();
@@ -48,6 +50,10 @@ public:
     bool RaycastEditorPicking(const FRay& Ray, FHitResult& OutHitResult, AActor*& OutActor) const;
 
     const TArray<AActor*>& GetActors() const { return PersistentLevel->GetActors(); }
+    const TArray<FString>& GetEditorActorFolders() const { return EditorActorFolders; }
+    void SetEditorActorFolders(const TArray<FString>& InFolders) { EditorActorFolders = InFolders; }
+    void AddEditorActorFolder(const FString& FolderPath);
+    void RemoveEditorActorFolder(const FString& FolderPath);
 
     // LOD 컨텍스트를 FSceneView에 전달 (Collect 단계에서 LOD 인라인 갱신용)
     FLODUpdateContext PrepareLODContext();
@@ -75,6 +81,8 @@ public:
     EWorldType GetWorldType() const { return WorldType; }
     void UpdateActorInOctree(AActor* actor);
 
+	FActorPoolManager* GetPoolManager() const { return ActorPoolManager.get(); }
+
 private:
     // TArray<AActor*> Actors;
     ULevel* PersistentLevel;
@@ -90,13 +98,16 @@ private:
     uint32 VisibleProxyBuildFrame = 0;
     FVector LastFullLODUpdateCameraForward = FVector(1, 0, 0);
     FVector LastFullLODUpdateCameraPos = FVector(0, 0, 0);
+    TArray<FString> EditorActorFolders;
     FScene Scene;
     FTickManager TickManager;
 
     FCollisionManager CollisionManager;
     FCollision2DManager Collision2DManager;
+    std::unique_ptr<FActorPoolManager> ActorPoolManager;
     FSpatialPartition Partition;
     EWorldType WorldType = EWorldType::Editor;
+	
 };
 
 template <typename T>
@@ -104,6 +115,7 @@ inline T* UWorld::SpawnActor()
 {
     // create and register an actor
     T* Actor = UObjectManager::Get().CreateObject<T>(PersistentLevel);
+    static_cast<AActor*>(Actor)->InitDefaultComponents();
     AddActor(Actor); // BeginPlay 트리거는 AddActor 내부에서 bHasBegunPlay 가드로 처리
     return Actor;
 }

@@ -2,8 +2,6 @@
 #include "Editor/UI/EditorControlPanel.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Settings/EditorSettings.h"
-#include "Engine/Profiling/Timer.h"
-#include "Engine/Profiling/MemoryStats.h"
 #include "ImGui/imgui.h"
 #include "Component/CameraComponent.h"
 #include "Component/GizmoComponent.h"
@@ -16,6 +14,7 @@
 #include "GameFramework/DirectionalLightActor.h"
 #include "GameFramework/PointLightActor.h"
 #include "GameFramework/SpotLightActor.h"
+#include "GameFramework/GamejamActor/EnemySpawnerActor.h"
 #include "Engine/Platform/Paths.h"
 #include "Engine/GameFramework/TankActor.h"
 
@@ -43,7 +42,10 @@ template <typename TActor, typename... TArgs>
 void SpawnActor(UWorld* World, const FVector& SpawnPoint, bool bInsertToOctree, TArgs&&... Args)
 {
     TActor* Actor = World->SpawnActor<TActor>();
-    Actor->InitDefaultComponents(std::forward<TArgs>(Args)...);
+    if constexpr (sizeof...(Args) > 0)
+    {
+        Actor->InitDefaultComponents(std::forward<TArgs>(Args)...);
+    }
     Actor->SetActorLocation(SpawnPoint);
 
     if (bInsertToOctree)
@@ -65,6 +67,7 @@ constexpr FSpawnEntry SpawnTable[] = {
     SPAWN_ACTOR("Directional Light", ADirectionalLightActor, false),
     SPAWN_ACTOR("Point Light", APointLightActor, false),
     SPAWN_ACTOR("Spot Light", ASpotLightActor, false),
+    SPAWN_ACTOR("EnemySpawner", AEnemySpawnerActor, false),
     SPAWN_ACTOR("Tank", ATankActor, true),
 };
 
@@ -79,10 +82,11 @@ const char* GetSpawnLabel(void*, int idx)
 }
 } // namespace
 
+#include "Math/MathUtils.h"
+
 void FEditorControlPanel::Initialize(UEditorEngine* InEditorEngine)
 {
     FEditorPanel::Initialize(InEditorEngine);
-    SelectedPrimitiveType = 0;
 }
 
 void FEditorControlPanel::Render(float DeltaTime)
@@ -90,27 +94,6 @@ void FEditorControlPanel::Render(float DeltaTime)
     (void)DeltaTime;
     if (!EditorEngine)
         return;
-
-    ImGui::SetNextWindowCollapsed(false, ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(360.0f, 220.0f), ImGuiCond_Once);
-    ImGui::Begin("Place Actors");
-
-    ImGui::Combo("Actor", &SelectedPrimitiveType, GetSpawnLabel, nullptr, SpawnTableSize);
-
-    if (ImGui::Button("Spawn"))
-    {
-        UWorld* World = EditorEngine->GetWorld();
-        if (SelectedPrimitiveType >= 0 && SelectedPrimitiveType < SpawnTableSize)
-        {
-            for (int32 i = 0; i < NumberOfSpawnedActors; ++i)
-            {
-                SpawnTable[SelectedPrimitiveType].Spawn(World, CurSpawnPoint);
-            }
-        }
-        NumberOfSpawnedActors = 1;
-    }
-    ImGui::InputInt("Spawn Count", &NumberOfSpawnedActors, 1, 10);
-    ImGui::End();
 
     UCameraComponent* Camera = EditorEngine->GetCamera();
     if (!Camera)

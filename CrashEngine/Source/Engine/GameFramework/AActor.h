@@ -3,6 +3,7 @@
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include "Component/SceneComponent.h"
+#include "Core/Delegate.h"
 #include "Core/TickFunction.h"
 
 class FArchive;
@@ -29,9 +30,13 @@ public:
     virtual void BeginPlay();
     virtual void Tick(float DeltaTime);
     virtual void EndPlay();
+    virtual void InitDefaultComponents();
+    virtual void Activate();
+    virtual void Deactivate();
     virtual void BindScriptFunctions(UScriptComponent& ScriptComponent);
 
     bool HasActorBegunPlay() const { return bActorHasBegunPlay; }
+    void RequestReturnToPool();
 
     void Serialize(FArchive& Ar) override;
     UObject* Duplicate(UObject* NewOuter = nullptr) const override;
@@ -70,6 +75,22 @@ public:
 
     const TArray<UActorComponent*>& GetComponents() const { return OwnedComponents; }
 
+    template <typename T>
+    T* FindComponentByClass() const
+    {
+        static_assert(std::is_base_of_v<UActorComponent, T>,
+                      "FindComponentByClass<T>: T must derive from UActorComponent");
+
+        for (UActorComponent* Comp : OwnedComponents)
+        {
+            if (T* CastedComp = Cast<T>(Comp))
+            {
+                return CastedComp;
+            }
+        }
+        return nullptr;
+    }
+
     // Transform — Location
     FVector GetActorLocation() const;
     void SetActorLocation(const FVector& Location);
@@ -93,6 +114,9 @@ public:
     bool IsVisible() const { return bVisible; }
     void SetVisible(bool Visible);
 
+    const FString& GetEditorFolderPath() const { return EditorFolderPath; }
+    void SetEditorFolderPath(const FString& InFolderPath) { EditorFolderPath = InFolderPath; }
+
     // Tick 필요 여부 — false면 Tick 호출 자체를 건너뜀 (StaticMesh 등)
     bool bNeedsTick = true;
     bool bTickInEditor = false;
@@ -102,6 +126,7 @@ public:
     void SetQueuedForPartitionUpdate(bool bQueued) { bQueuedForPartitionUpdate = bQueued; }
 
     FActorTickFunction PrimaryActorTick;
+    DECLARE_DELEGATE(OnPoolReturnRequested, AActor*);
 
     // Collision
     bool IsOverlappingActor(const AActor* OtherActor) const;
@@ -119,6 +144,7 @@ protected:
 
     FVector PendingActorLocation = FVector(0, 0, 0);
     bool bVisible = true;
+    FString EditorFolderPath;
 
     TArray<UActorComponent*> OwnedComponents;
 

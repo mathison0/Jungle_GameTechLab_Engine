@@ -21,9 +21,9 @@ public:
     virtual ECollision2DShapeType GetCollision2DShapeType() const = 0;
     virtual FCollision2DShapeGeometry GetCollision2DShapeGeometry() const = 0;
 
-	DECLARE_DELEGATE(OnComponentHit2D, UCollider2DComponent*);
-	DECLARE_DELEGATE(OnComponentBeginOverlap2D, UCollider2DComponent*);
-	DECLARE_DELEGATE(OnComponentEndOverlap2D, UCollider2DComponent*);
+	DECLARE_DELEGATE(OnComponentHit2D, UCollider2DComponent*);              // Collision
+	DECLARE_DELEGATE(OnComponentBeginOverlap2D, UCollider2DComponent*);     // Trigger Begin
+	DECLARE_DELEGATE(OnComponentEndOverlap2D, UCollider2DComponent*);       // Trigger End
 
 	void OnComponentHit(UCollider2DComponent* OtherCollider);
 	void OnComponentBeginOverlap(UCollider2DComponent* OtherCollider);

@@ -3,12 +3,24 @@
 
 #include "Component/CameraComponent.h"
 #include "Component/GizmoComponent.h"
+#include "Component/SceneComponent.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/PIE/PIETypes.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "Editor/Viewport/FLevelViewportLayout.h"
 #include "Editor/Viewport/LevelEditorViewportClient.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/AmbientLightActor.h"
+#include "GameFramework/DecalActor.h"
+#include "GameFramework/DirectionalLightActor.h"
+#include "GameFramework/FakeLightActor.h"
+#include "GameFramework/FireballActor.h"
+#include "GameFramework/HeightFogActor.h"
+#include "GameFramework/PointLightActor.h"
+#include "GameFramework/SpotLightActor.h"
+#include "GameFramework/StaticMeshActor.h"
+#include "GameFramework/GamejamActor/EnemySpawnerActor.h"
+#include "GameFramework/World.h"
 #include "ImGui/imgui.h"
 #include "Math/MathUtils.h"
 #include "Platform/Paths.h"
@@ -17,9 +29,13 @@
 #include "Render/Submission/Atlas/ShadowResolutionPolicy.h"
 #include "WICTextureLoader.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <d3d11.h>
 #include <filesystem>
+#include <string>
+#include <utility>
 
 namespace
 {
@@ -42,6 +58,121 @@ void BeginDisabledUnless(bool bEnabled, T&& Fn)
 ID3D11ShaderResourceView* GPlayStartIcon = nullptr;
 ID3D11ShaderResourceView* GPauseIcon = nullptr;
 ID3D11ShaderResourceView* GStopIcon = nullptr;
+ID3D11ShaderResourceView* GToolbarDirectionalLightIcon = nullptr;
+ID3D11ShaderResourceView* GToolbarPointLightIcon = nullptr;
+ID3D11ShaderResourceView* GToolbarSpotLightIcon = nullptr;
+ID3D11ShaderResourceView* GToolbarAmbientLightIcon = nullptr;
+ID3D11ShaderResourceView* GToolbarDecalIcon = nullptr;
+ID3D11ShaderResourceView* GToolbarHeightFogIcon = nullptr;
+char GAddActorSearch[128] = {};
+
+enum class EAddActorIcon
+{
+    Empty,
+    Cube,
+    Sphere,
+    AmbientLight,
+    DirectionalLight,
+    PointLight,
+    SpotLight,
+    Decal,
+    HeightFog,
+    Effect
+};
+
+struct FAddActorEntry
+{
+    const char* Label;
+    EAddActorIcon Icon;
+    AActor* (*Spawn)(UWorld* World, const FVector& SpawnPoint);
+};
+
+template <typename TActor, typename... TArgs>
+AActor* SpawnToolbarActor(UWorld* World, const FVector& SpawnPoint, bool bInsertToOctree, TArgs&&... Args)
+{
+    if (!World)
+    {
+        return nullptr;
+    }
+
+    TActor* Actor = World->SpawnActor<TActor>();
+    if (!Actor)
+    {
+        return nullptr;
+    }
+
+    Actor->InitDefaultComponents(std::forward<TArgs>(Args)...);
+    Actor->SetActorLocation(SpawnPoint);
+
+    if (bInsertToOctree)
+    {
+        World->InsertActorToOctree(Actor);
+    }
+
+    return Actor;
+}
+
+AActor* SpawnEmptyToolbarActor(UWorld* World, const FVector& SpawnPoint)
+{
+    if (!World)
+    {
+        return nullptr;
+    }
+
+    AActor* Actor = World->SpawnActor<AActor>();
+    if (!Actor)
+    {
+        return nullptr;
+    }
+
+    USceneComponent* RootComponent = Actor->AddComponent<USceneComponent>();
+    if (RootComponent)
+    {
+        Actor->SetRootComponent(RootComponent);
+    }
+
+    Actor->SetActorLocation(SpawnPoint);
+    return Actor;
+}
+
+// Add Actor 메뉴 등록 가이드
+// 1. 새 Actor 헤더를 이 파일 상단에 include한다.
+// 2. 메뉴에 보여줄 아이콘이 기존 분류와 맞지 않으면 EAddActorIcon에 타입을 추가하고 DrawAddActorIcon()에 그리기 처리를 추가한다.
+// 3. 아래 BasicAddActors / LightAddActors / EffectAddActors 중 맞는 카테고리에 한 줄 추가한다.
+//    - 일반 Actor: ADD_ACTOR("메뉴 이름", EAddActorIcon::아이콘, AMyActor, bInsertToOctree)
+//    - StaticMesh 프리셋: ADD_MESH("메뉴 이름", EAddActorIcon::아이콘, "모델 경로")
+//    - InitDefaultComponents 인자가 다르거나 추가 세팅이 필요하면 Empty Actor처럼 직접 lambda를 작성한다.
+// 4. bInsertToOctree는 viewport picking/공간 관리가 필요한 primitive actor면 true, light/fog/helper처럼 별도 proxy 중심이면 false로 둔다.
+// Outliner 전용 아이콘/분류는 EditorWorldOutlinerPanel.cpp의 ResolveActorIconType()에서 별도로 맞춘다.
+#define ADD_MESH(Label, Icon, Path) { Label, Icon, [](UWorld* W, const FVector& P) -> AActor* { return SpawnToolbarActor<AStaticMeshActor>(W, P, true, Path); } }
+#define ADD_ACTOR(Label, Icon, Type, bOctree) { Label, Icon, [](UWorld* W, const FVector& P) -> AActor* { return SpawnToolbarActor<Type>(W, P, bOctree); } }
+
+constexpr FAddActorEntry BasicAddActors[] = {
+    { "Empty Actor", EAddActorIcon::Empty, [](UWorld* W, const FVector& P) -> AActor* { return SpawnEmptyToolbarActor(W, P); } },
+    ADD_MESH("Cube", EAddActorIcon::Cube, FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ")),
+    ADD_MESH("Sphere", EAddActorIcon::Sphere, FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ")),
+};
+
+constexpr FAddActorEntry LightAddActors[] = {
+    ADD_ACTOR("Ambient Light", EAddActorIcon::AmbientLight, AAmbientLightActor, false),
+    ADD_ACTOR("Directional Light", EAddActorIcon::DirectionalLight, ADirectionalLightActor, false),
+    ADD_ACTOR("Point Light", EAddActorIcon::PointLight, APointLightActor, false),
+    ADD_ACTOR("Spot Light", EAddActorIcon::SpotLight, ASpotLightActor, false),
+    ADD_ACTOR("Fake Light", EAddActorIcon::PointLight, AFakeLightActor, false),
+};
+
+constexpr FAddActorEntry EffectAddActors[] = {
+    ADD_ACTOR("Decal", EAddActorIcon::Decal, ADecalActor, true),
+    ADD_ACTOR("Height Fog", EAddActorIcon::HeightFog, AHeightFogActor, false),
+    ADD_ACTOR("Fireball", EAddActorIcon::Effect, AFireballActor, false),
+};
+
+constexpr FAddActorEntry GameAddActors[] = {
+    ADD_ACTOR("Enemy Spawner", EAddActorIcon::Empty, AEnemySpawnerActor, false),
+};
+
+#undef ADD_MESH
+#undef ADD_ACTOR
 
 void SetFixedPopupPosBelowLastItem(float YOffset)
 {
@@ -67,6 +198,351 @@ std::wstring ResolveEditorIconPath(const std::wstring& FileName)
     }
 
     return (std::filesystem::current_path() / L"Asset/Editor/Icons" / FileName).wstring();
+}
+
+void LoadToolbarIcon(ID3D11Device* Device, const std::wstring& FileName, ID3D11ShaderResourceView** OutIcon)
+{
+    if (!Device || !OutIcon || *OutIcon)
+    {
+        return;
+    }
+
+    DirectX::CreateWICTextureFromFile(
+        Device,
+        ResolveEditorIconPath(FileName).c_str(),
+        nullptr,
+        OutIcon);
+}
+
+void ReleaseToolbarIcon(ID3D11ShaderResourceView*& Icon)
+{
+    if (Icon)
+    {
+        Icon->Release();
+        Icon = nullptr;
+    }
+}
+
+std::string ToLowerAscii(const char* Text)
+{
+    std::string Lower = Text ? Text : "";
+    std::transform(Lower.begin(), Lower.end(), Lower.begin(), [](unsigned char Ch)
+                   {
+        return static_cast<char>(std::tolower(Ch));
+    });
+    return Lower;
+}
+
+bool AddActorMatchesFilter(const FAddActorEntry& Entry, const char* Filter)
+{
+    const std::string Needle = ToLowerAscii(Filter);
+    if (Needle.empty())
+    {
+        return true;
+    }
+
+    return ToLowerAscii(Entry.Label).find(Needle) != std::string::npos;
+}
+
+ID3D11ShaderResourceView* GetAddActorIconTexture(EAddActorIcon Icon)
+{
+    switch (Icon)
+    {
+    case EAddActorIcon::AmbientLight:
+        return GToolbarAmbientLightIcon;
+    case EAddActorIcon::DirectionalLight:
+        return GToolbarDirectionalLightIcon;
+    case EAddActorIcon::PointLight:
+        return GToolbarPointLightIcon;
+    case EAddActorIcon::SpotLight:
+        return GToolbarSpotLightIcon;
+    case EAddActorIcon::Decal:
+        return GToolbarDecalIcon;
+    case EAddActorIcon::HeightFog:
+        return GToolbarHeightFogIcon;
+    default:
+        return nullptr;
+    }
+}
+
+void DrawCubeGlyph(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+{
+    const float W = Max.x - Min.x;
+    const float H = Max.y - Min.y;
+    const ImVec2 FrontMin(Min.x + W * 0.25f, Min.y + H * 0.34f);
+    const ImVec2 FrontMax(Min.x + W * 0.70f, Min.y + H * 0.78f);
+    const ImVec2 Offset(W * 0.16f, -H * 0.14f);
+
+    DrawList->AddRect(FrontMin, FrontMax, Color, 1.5f, 0, 1.6f);
+    DrawList->AddLine(FrontMin, ImVec2(FrontMin.x + Offset.x, FrontMin.y + Offset.y), Color, 1.6f);
+    DrawList->AddLine(ImVec2(FrontMax.x, FrontMin.y), ImVec2(FrontMax.x + Offset.x, FrontMin.y + Offset.y), Color, 1.6f);
+    DrawList->AddLine(ImVec2(FrontMax.x, FrontMax.y), ImVec2(FrontMax.x + Offset.x, FrontMax.y + Offset.y), Color, 1.6f);
+    DrawList->AddLine(ImVec2(FrontMin.x + Offset.x, FrontMin.y + Offset.y),
+                      ImVec2(FrontMax.x + Offset.x, FrontMin.y + Offset.y),
+                      Color,
+                      1.6f);
+    DrawList->AddLine(ImVec2(FrontMax.x + Offset.x, FrontMin.y + Offset.y),
+                      ImVec2(FrontMax.x + Offset.x, FrontMax.y + Offset.y),
+                      Color,
+                      1.6f);
+}
+
+void DrawSphereGlyph(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+{
+    const ImVec2 Center((Min.x + Max.x) * 0.5f, (Min.y + Max.y) * 0.5f);
+    const float Radius = (Max.x - Min.x) * 0.27f;
+    DrawList->AddCircle(Center, Radius, Color, 28, 1.6f);
+    DrawList->AddLine(ImVec2(Center.x - Radius * 0.85f, Center.y), ImVec2(Center.x + Radius * 0.85f, Center.y), Color, 1.2f);
+    DrawList->AddLine(ImVec2(Center.x, Center.y - Radius * 0.85f), ImVec2(Center.x, Center.y + Radius * 0.85f), Color, 1.2f);
+}
+
+void DrawEffectGlyph(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+{
+    const ImVec2 Center((Min.x + Max.x) * 0.5f, (Min.y + Max.y) * 0.5f);
+    const float Radius = (Max.x - Min.x) * 0.18f;
+    DrawList->AddCircleFilled(Center, Radius, Color, 16);
+    DrawList->AddCircle(Center, Radius * 1.75f, Color, 18, 1.3f);
+    DrawList->AddLine(ImVec2(Center.x - Radius * 2.1f, Center.y), ImVec2(Center.x - Radius * 1.15f, Center.y), Color, 1.3f);
+    DrawList->AddLine(ImVec2(Center.x + Radius * 1.15f, Center.y), ImVec2(Center.x + Radius * 2.1f, Center.y), Color, 1.3f);
+    DrawList->AddLine(ImVec2(Center.x, Center.y - Radius * 2.1f), ImVec2(Center.x, Center.y - Radius * 1.15f), Color, 1.3f);
+    DrawList->AddLine(ImVec2(Center.x, Center.y + Radius * 1.15f), ImVec2(Center.x, Center.y + Radius * 2.1f), Color, 1.3f);
+}
+
+void DrawEmptyActorGlyph(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+{
+    const ImVec2 Center((Min.x + Max.x) * 0.5f, (Min.y + Max.y) * 0.5f);
+    const float Half = (Max.x - Min.x) * 0.24f;
+    DrawList->AddCircle(Center, Half * 0.95f, Color, 18, 1.4f);
+    DrawList->AddLine(ImVec2(Center.x - Half, Center.y), ImVec2(Center.x + Half, Center.y), Color, 1.3f);
+    DrawList->AddLine(ImVec2(Center.x, Center.y - Half), ImVec2(Center.x, Center.y + Half), Color, 1.3f);
+}
+
+void DrawAddActorIcon(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, EAddActorIcon Icon, bool bEnabled)
+{
+    const ImU32 BgColor = bEnabled ? IM_COL32(30, 34, 40, 235) : IM_COL32(30, 32, 36, 150);
+    const ImU32 BorderColor = bEnabled ? IM_COL32(60, 66, 76, 255) : IM_COL32(52, 54, 58, 180);
+    DrawList->AddRectFilled(Min, Max, BgColor, 3.0f);
+    DrawList->AddRect(Min, Max, BorderColor, 3.0f);
+
+    const ImVec2 IconMin(Min.x + 3.0f, Min.y + 3.0f);
+    const ImVec2 IconMax(Max.x - 3.0f, Max.y - 3.0f);
+    if (ID3D11ShaderResourceView* Texture = GetAddActorIconTexture(Icon))
+    {
+        DrawList->AddImage(
+            reinterpret_cast<ImTextureID>(Texture),
+            IconMin,
+            IconMax,
+            ImVec2(0.0f, 0.0f),
+            ImVec2(1.0f, 1.0f),
+            bEnabled ? IM_COL32(255, 255, 255, 255) : IM_COL32(150, 150, 150, 170));
+        return;
+    }
+
+    const ImU32 GlyphColor = bEnabled ? IM_COL32(128, 184, 240, 255) : IM_COL32(104, 112, 122, 180);
+    switch (Icon)
+    {
+    case EAddActorIcon::Empty:
+        DrawEmptyActorGlyph(DrawList, Min, Max, bEnabled ? IM_COL32(176, 188, 204, 255) : GlyphColor);
+        break;
+    case EAddActorIcon::Cube:
+        DrawCubeGlyph(DrawList, Min, Max, GlyphColor);
+        break;
+    case EAddActorIcon::Sphere:
+        DrawSphereGlyph(DrawList, Min, Max, GlyphColor);
+        break;
+    default:
+        DrawEffectGlyph(DrawList, Min, Max, bEnabled ? IM_COL32(255, 160, 82, 255) : GlyphColor);
+        break;
+    }
+}
+
+void DrawPlusGlyph(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+{
+    const ImVec2 Center((Min.x + Max.x) * 0.5f, (Min.y + Max.y) * 0.5f);
+    const float Half = (Max.x - Min.x) * 0.25f;
+    DrawList->AddLine(ImVec2(Center.x - Half, Center.y), ImVec2(Center.x + Half, Center.y), Color, 1.7f);
+    DrawList->AddLine(ImVec2(Center.x, Center.y - Half), ImVec2(Center.x, Center.y + Half), Color, 1.7f);
+}
+
+void DrawChevronDown(ImDrawList* DrawList, const ImVec2& Center, ImU32 Color)
+{
+    DrawList->AddLine(ImVec2(Center.x - 3.0f, Center.y - 1.5f), ImVec2(Center.x, Center.y + 2.0f), Color, 1.4f);
+    DrawList->AddLine(ImVec2(Center.x, Center.y + 2.0f), ImVec2(Center.x + 3.0f, Center.y - 1.5f), Color, 1.4f);
+}
+
+bool DrawAddActorToolbarButton(const char* Id, bool bOpen)
+{
+    constexpr float Width = 82.0f;
+    constexpr float Height = 28.0f;
+
+    ImGui::PushID(Id);
+    ImGui::InvisibleButton("##AddActorToolbarButton", ImVec2(Width, Height));
+    const bool bClicked = ImGui::IsItemClicked();
+    const bool bHovered = ImGui::IsItemHovered();
+
+    const ImVec2 Min = ImGui::GetItemRectMin();
+    const ImVec2 Max = ImGui::GetItemRectMax();
+    ImDrawList* DrawList = ImGui::GetWindowDrawList();
+
+    const ImU32 BgColor = bOpen ? IM_COL32(63, 68, 76, 255) : (bHovered ? IM_COL32(56, 60, 68, 255) : IM_COL32(43, 47, 54, 255));
+    const ImU32 BorderColor = bOpen || bHovered ? IM_COL32(94, 116, 148, 255) : IM_COL32(62, 67, 76, 255);
+    const ImU32 TextColor = IM_COL32(224, 228, 234, 255);
+    const ImU32 AccentColor = IM_COL32(86, 196, 116, 255);
+
+    DrawList->AddRectFilled(Min, Max, BgColor, 4.0f);
+    DrawList->AddRect(Min, Max, BorderColor, 4.0f);
+
+    const ImVec2 IconMin(Min.x + 8.0f, Min.y + 6.0f);
+    const ImVec2 IconMax(IconMin.x + 16.0f, IconMin.y + 16.0f);
+    DrawList->AddCircleFilled(ImVec2((IconMin.x + IconMax.x) * 0.5f, (IconMin.y + IconMax.y) * 0.5f), 7.0f, IM_COL32(45, 104, 59, 255), 18);
+    DrawPlusGlyph(DrawList, IconMin, IconMax, AccentColor);
+
+    DrawList->AddText(ImVec2(Min.x + 30.0f, Min.y + 6.0f), TextColor, "Add");
+    DrawChevronDown(DrawList, ImVec2(Max.x - 12.0f, Min.y + Height * 0.5f), IM_COL32(172, 178, 188, 255));
+
+    ImGui::PopID();
+    return bClicked;
+}
+
+FVector GetToolbarSpawnPoint(FLevelEditorViewportClient* ViewportClient)
+{
+    UCameraComponent* Camera = ViewportClient ? ViewportClient->GetCamera() : nullptr;
+    if (!Camera)
+    {
+        return FVector(0.0f, 0.0f, 0.0f);
+    }
+
+    return Camera->GetWorldLocation() + Camera->GetForwardVector().Normalized() * 5.0f;
+}
+
+void SpawnFromToolbarEntry(UEditorEngine* Editor, FLevelEditorViewportClient* ViewportClient, const FAddActorEntry& Entry)
+{
+    if (!Editor)
+    {
+        return;
+    }
+
+    UWorld* World = Editor->GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    Editor->SetActiveViewport(ViewportClient);
+    if (AActor* Actor = Entry.Spawn(World, GetToolbarSpawnPoint(ViewportClient)))
+    {
+        Editor->GetSelectionManager().Select(Actor);
+    }
+}
+
+bool DrawAddActorRow(const FAddActorEntry& Entry,
+                     UEditorEngine* Editor,
+                     FLevelEditorViewportClient* ViewportClient,
+                     bool bCanAddActor)
+{
+    constexpr float RowHeight = 30.0f;
+    constexpr float IconSize = 22.0f;
+
+    ImGui::PushID(Entry.Label);
+    const float RowWidth = ImGui::GetContentRegionAvail().x;
+    ImGui::InvisibleButton("##AddActorRow", ImVec2(RowWidth, RowHeight));
+
+    const bool bHovered = bCanAddActor && ImGui::IsItemHovered();
+    const bool bClicked = bCanAddActor && ImGui::IsItemClicked();
+    const ImVec2 RowMin = ImGui::GetItemRectMin();
+    const ImVec2 RowMax = ImGui::GetItemRectMax();
+    ImDrawList* DrawList = ImGui::GetWindowDrawList();
+
+    if (bHovered)
+    {
+        DrawList->AddRectFilled(RowMin, RowMax, IM_COL32(56, 63, 74, 255), 3.0f);
+    }
+
+    const ImVec2 IconMin(RowMin.x + 6.0f, RowMin.y + (RowHeight - IconSize) * 0.5f);
+    const ImVec2 IconMax(IconMin.x + IconSize, IconMin.y + IconSize);
+    DrawAddActorIcon(DrawList, IconMin, IconMax, Entry.Icon, bCanAddActor);
+
+    const ImU32 TextColor = bCanAddActor ? IM_COL32(226, 229, 234, 255) : IM_COL32(126, 130, 138, 190);
+    DrawList->AddText(ImVec2(IconMax.x + 8.0f, RowMin.y + 7.0f), TextColor, Entry.Label);
+
+    ImGui::PopID();
+    return bClicked;
+}
+
+void DrawAddActorSectionHeader(const char* Label)
+{
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.52f, 0.58f, 0.66f, 1.0f));
+    ImGui::TextUnformatted(Label);
+    ImGui::PopStyleColor();
+    ImGui::Separator();
+}
+
+template <size_t Count>
+bool DrawAddActorSection(const char* Label,
+                         const FAddActorEntry (&Entries)[Count],
+                         UEditorEngine* Editor,
+                         FLevelEditorViewportClient* ViewportClient,
+                         const char* Filter,
+                         bool bCanAddActor)
+{
+    bool bDrewHeader = false;
+    bool bDrewAny = false;
+
+    for (const FAddActorEntry& Entry : Entries)
+    {
+        if (!AddActorMatchesFilter(Entry, Filter))
+        {
+            continue;
+        }
+
+        if (!bDrewHeader)
+        {
+            DrawAddActorSectionHeader(Label);
+            bDrewHeader = true;
+        }
+
+        if (DrawAddActorRow(Entry, Editor, ViewportClient, bCanAddActor))
+        {
+            SpawnFromToolbarEntry(Editor, ViewportClient, Entry);
+            ImGui::CloseCurrentPopup();
+        }
+        bDrewAny = true;
+    }
+
+    return bDrewAny;
+}
+
+void DrawAddActorMenu(UEditorEngine* Editor, FLevelEditorViewportClient* ViewportClient)
+{
+    const bool bCanAddActor = Editor && !Editor->IsPlayingInEditor();
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 4.0f));
+
+    if (ImGui::IsWindowAppearing())
+    {
+        ImGui::SetKeyboardFocusHere();
+    }
+
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    ImGui::InputTextWithHint("##AddActorSearch", "Search Actors", GAddActorSearch, sizeof(GAddActorSearch));
+
+    if (!bCanAddActor)
+    {
+        ImGui::TextDisabled("Actor creation is disabled during PIE.");
+    }
+
+    const bool bAnyBasic = DrawAddActorSection("BASIC", BasicAddActors, Editor, ViewportClient, GAddActorSearch, bCanAddActor);
+    const bool bAnyLights = DrawAddActorSection("LIGHTS", LightAddActors, Editor, ViewportClient, GAddActorSearch, bCanAddActor);
+    const bool bAnyEffects = DrawAddActorSection("EFFECTS", EffectAddActors, Editor, ViewportClient, GAddActorSearch, bCanAddActor);
+    const bool bAnyGames = DrawAddActorSection("GAMES", GameAddActors, Editor, ViewportClient, GAddActorSearch, bCanAddActor);
+
+    if (!bAnyBasic && !bAnyLights && !bAnyEffects)
+    {
+        ImGui::Spacing();
+        ImGui::TextDisabled("No actors found.");
+    }
+
+    ImGui::PopStyleVar();
 }
 } // namespace
 
@@ -105,6 +581,13 @@ void FEditorToolbarPanel::Initialize(UEditorEngine* InEditor, ID3D11Device* InDe
             &GStopIcon);
     }
 
+    LoadToolbarIcon(InDevice, L"DirectionalLight_64x.png", &GToolbarDirectionalLightIcon);
+    LoadToolbarIcon(InDevice, L"PointLight_64x.png", &GToolbarPointLightIcon);
+    LoadToolbarIcon(InDevice, L"SpotLight_64x.png", &GToolbarSpotLightIcon);
+    LoadToolbarIcon(InDevice, L"SkyLightComponent_64x.png", &GToolbarAmbientLightIcon);
+    LoadToolbarIcon(InDevice, L"S_DecalActorIcon.png", &GToolbarDecalIcon);
+    LoadToolbarIcon(InDevice, L"S_ExpoHeightFog.png", &GToolbarHeightFogIcon);
+
     PlayIcon = GPlayStartIcon;
     StopIcon = GStopIcon;
 }
@@ -128,6 +611,13 @@ void FEditorToolbarPanel::Release()
         GStopIcon->Release();
         GStopIcon = nullptr;
     }
+
+    ReleaseToolbarIcon(GToolbarDirectionalLightIcon);
+    ReleaseToolbarIcon(GToolbarPointLightIcon);
+    ReleaseToolbarIcon(GToolbarSpotLightIcon);
+    ReleaseToolbarIcon(GToolbarAmbientLightIcon);
+    ReleaseToolbarIcon(GToolbarDecalIcon);
+    ReleaseToolbarIcon(GToolbarHeightFogIcon);
 
     PlayIcon = nullptr;
     StopIcon = nullptr;
@@ -313,6 +803,30 @@ void FEditorToolbarPanel::RenderPaneToolbar(FLevelViewportLayout* Layout,
             ImGui::EndPopup();
         }
     };
+
+    ImGui::SameLine(0.0f, ButtonSpacingPx);
+    {
+        const ImVec2 CurrentPos = ImGui::GetCursorScreenPos();
+        ImGui::SetCursorScreenPos(ImVec2(CurrentPos.x, TextButtonY));
+
+        const bool bAddPopupOpen = ImGui::IsPopupOpen("AddActorPopup");
+        if (DrawAddActorToolbarButton("AddActor", bAddPopupOpen))
+        {
+            ImGui::OpenPopup("AddActorPopup");
+        }
+
+        SetFixedPopupPosBelowLastItem(PopupOffsetY);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(286.0f, 0.0f), ImVec2(286.0f, 420.0f));
+        PushPopupStyle();
+        const bool bOpened = ImGui::BeginPopup("AddActorPopup");
+        PopPopupStyle();
+
+        if (bOpened)
+        {
+            DrawAddActorMenu(Editor, VC);
+            ImGui::EndPopup();
+        }
+    }
 
     OpenToolbarPopup("Layout", "LayoutPopup", [&]()
                      {

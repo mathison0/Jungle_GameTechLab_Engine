@@ -137,6 +137,61 @@ function Component:IsOverlappingActor(actor) end
 ---@param component Component
 ---@return boolean
 function Component:IsOverlappingComponent(component) end
+
+---@param className string
+---@return any
+function Component:Cast(className) end
+-- ====================================================================
+
+-- Class ActorPoolManager ==============================================
+---@class ActorPoolManager
+local ActorPoolManager = {}
+
+---@return boolean
+function ActorPoolManager:IsValid() end
+
+---@param className string
+---@param count integer
+function ActorPoolManager:Warmup(className, count) end
+
+---@param className string
+---@return Actor
+function ActorPoolManager:Acquire(className) end
+
+---@param actor Actor
+function ActorPoolManager:Release(actor) end
+
+---@param className string
+---@return integer
+function ActorPoolManager:GetActiveCount(className) end
+
+---@return ActorPoolManager
+function GetActorPoolManager() end
+-- ====================================================================
+
+-- Class Collider2D ====================================================
+---@class Collider2D : Component
+local Collider2D = {}
+
+---@return Vec2
+function Collider2D:GetShapeWorldLocation2D() end
+
+---@return number
+function Collider2D:GetCollisionPlaneZ() end
+
+---@return Vec2
+function Collider2D:GetBoxExtent() end
+
+---@param extent Vec2
+---@return boolean
+function Collider2D:SetBoxExtent(extent) end
+
+---@return number
+function Collider2D:GetRadius() end
+
+---@param radius number
+---@return boolean
+function Collider2D:SetRadius(radius) end
 -- ====================================================================
 
 ---@class Vec3
@@ -146,6 +201,13 @@ function Component:IsOverlappingComponent(component) end
 ---@field X number
 ---@field Y number
 ---@field Z number
+---@field [integer] number
+
+---@class Vec2
+---@field x number
+---@field y number
+---@field X number
+---@field Y number
 ---@field [integer] number
 
 ---@class LuaScriptPropertyDescriptor

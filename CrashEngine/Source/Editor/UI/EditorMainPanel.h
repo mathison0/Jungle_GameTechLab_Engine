@@ -9,9 +9,9 @@
 #include "Editor/UI/EditorContentDrawerPanel.h"
 #include "Editor/UI/EditorControlPanel.h"
 #include "Editor/UI/EditorDetailsPanel.h"
-#include "Editor/UI/EditorSceneManagerPanel.h"
 #include "Editor/UI/EditorOutputLogPanel.h"
 #include "Editor/UI/EditorStatPanel.h"
+#include "Editor/UI/EditorWorldOutlinerPanel.h"
 
 class FRenderer;
 class UEditorEngine;
@@ -47,7 +47,7 @@ private:
     FEditorOutputLogPanel OutputLogPanel;
     FEditorControlPanel ControlPanel;
     FEditorDetailsPanel DetailsPanel;
-    FEditorScenePanel ScenePanel;
+    FEditorWorldOutlinerPanel WorldOutlinerPanel;
     FEditorStatPanel StatPanel;
     bool bShowPanelList = false;
     bool bHideEditorWindows = false;

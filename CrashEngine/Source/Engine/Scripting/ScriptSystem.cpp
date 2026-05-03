@@ -11,6 +11,8 @@
 #include "Input/GameInput.h"
 #include "Platform/Paths.h"
 #include "LuaEngineBinding.h"
+#include "GameFramework/World.h"
+#include "Runtime/Engine.h"
 
 namespace
 {
@@ -222,6 +224,12 @@ void FScriptSystem::RegisterEngineAPI() const
             return std::make_tuple(x, y);
         }
     );    
+
+	Lua->set_function("GetActorPoolManager", []() {
+		UWorld* World = GEngine->GetWorld();
+		return FLuaActorPoolManagerHandle(World ? World->GetPoolManager() : nullptr);
+	});
+
 	RegisterLuaEngineBindings(*Lua);
 }
 

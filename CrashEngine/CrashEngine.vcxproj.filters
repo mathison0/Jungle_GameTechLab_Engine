@@ -539,9 +539,6 @@
     <ClCompile Include="Source\Editor\UI\EditorPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\UI\EditorSceneManagerPanel.cpp">
-      <Filter>Source\Editor\UI</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -549,6 +546,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorToolbarPanel.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorWorldOutlinerPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp">
@@ -1261,6 +1261,8 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Source\Engine\Sound\SoundManager.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\TankActor.cpp" />
     <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
@@ -1332,13 +1334,13 @@
     <ClInclude Include="Source\Editor\UI\EditorPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\UI\EditorSceneManagerPanel.h">
-      <Filter>Source\Editor\UI</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorStatPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorToolbarPanel.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorWorldOutlinerPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h">
@@ -1567,6 +1569,12 @@
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\ActorPool.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\ActorPoolManager.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\DecalActor.h">
@@ -2302,6 +2310,9 @@
       <Filter>ThirdParty\Sol</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Sound\SoundManager.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
+    <ClInclude Include="Source\Engine\Core\Random.h" />
     <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\TankActor.h" />
     <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />

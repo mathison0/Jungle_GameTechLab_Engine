@@ -1,5 +1,6 @@
 ﻿// 게임 프레임워크 영역의 세부 동작을 구현합니다.
 #include "GameFramework/World.h"
+#include "GameFramework/ActorPool.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
@@ -7,6 +8,9 @@
 #include "Render/Visibility/LOD/LODContext.h"
 #include <algorithm>
 #include "Profiling/Stats.h"
+
+//풀링 테스트
+#include "GameFramework/GamejamActor/EnemyBaseActor.h"
 
 IMPLEMENT_CLASS(UWorld, UObject)
 
@@ -32,6 +36,7 @@ UObject* UWorld::Duplicate(UObject* NewOuter) const
     NewWorld->SetOuter(NewOuter);
     NewWorld->InitWorld(); // Partition/VisibleSet 초기화 — 이거 없으면 복제 액터가 렌더링되지 않음
     NewWorld->SetWorldType(GetWorldType());
+    NewWorld->SetEditorActorFolders(EditorActorFolders);
 
     for (AActor* Src : GetActors())
     {
@@ -58,6 +63,18 @@ void UWorld::DestroyActor(AActor* Actor)
 
     // Mark for garbage collection
     UObjectManager::Get().DestroyObject(Actor);
+}
+
+AActor* UWorld::SpawnActorByClass(const FString& ClassName)
+{
+    UObject* Obj = FObjectFactory::Get().Create(ClassName, PersistentLevel);
+    AActor* Actor = Cast<AActor>(Obj);
+    if (Actor)
+    {
+        Actor->InitDefaultComponents();
+        AddActor(Actor);
+    }
+    return Actor;
 }
 
 void UWorld::AddActor(AActor* Actor)
@@ -193,6 +210,25 @@ void UWorld::UpdateActorInOctree(AActor* Actor)
     Partition.UpdateActor(Actor);
 }
 
+void UWorld::AddEditorActorFolder(const FString& FolderPath)
+{
+    if (FolderPath.empty())
+    {
+        return;
+    }
+
+    if (std::find(EditorActorFolders.begin(), EditorActorFolders.end(), FolderPath) == EditorActorFolders.end())
+    {
+        EditorActorFolders.push_back(FolderPath);
+    }
+}
+
+void UWorld::RemoveEditorActorFolder(const FString& FolderPath)
+{
+    auto It = std::remove(EditorActorFolders.begin(), EditorActorFolders.end(), FolderPath);
+    EditorActorFolders.erase(It, EditorActorFolders.end());
+}
+
 FLODUpdateContext UWorld::PrepareLODContext()
 {
     if (!ActiveCamera)
@@ -238,6 +274,8 @@ void UWorld::BeginPlay()
 
     if (PersistentLevel)
     {
+        ActorPoolManager = std::make_unique<FActorPoolManager>(this);
+        ActorPoolManager->SetWorld(this);
         PersistentLevel->BeginPlay();
     }
 }
@@ -269,13 +307,15 @@ void UWorld::EndPlay()
         return;
     }
 
+	ActorPoolManager.reset();
+
     PersistentLevel->EndPlay();
+    PersistentLevel->Clear();
 
     // Clear spatial partition while actors/components are still alive.
     // Otherwise Octree teardown can dereference stale primitive pointers during shutdown.
     Partition.Reset(FBoundingBox());
 
-    PersistentLevel->Clear();
     MarkEditorPickingAndScenePrimitiveBVHsDirty();
 
     // PersistentLevel은 CreateObject로 생성되었으므로 DestroyObject로 해제해야 alloc count가 맞음

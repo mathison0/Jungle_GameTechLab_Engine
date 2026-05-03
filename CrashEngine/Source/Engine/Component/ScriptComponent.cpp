@@ -9,6 +9,7 @@
 #include "Runtime/Engine.h"
 #include "Serialization/Archive.h"
 #include "Scripting/LuaScriptAsset.h"
+#include "Collision/Collider2DComponent.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -150,14 +151,65 @@ void UScriptComponent::BeginPlay()
         }
         CallLuaFunction("BeginPlay");
     }
+
+    // 2D 물리 시스템과 연동
+    if (AActor* OwnerActor = GetOwner())
+    {
+        if (UCollider2DComponent* Collider = OwnerActor->FindComponentByClass<UCollider2DComponent>())
+        {
+            Collider->OnComponentHit2D.AddDynamic(this, &UScriptComponent::OnComponentHit);
+            Collider->OnComponentBeginOverlap2D.AddDynamic(this, &UScriptComponent::OnComponentBeginOverlap);
+            Collider->OnComponentEndOverlap2D.AddDynamic(this, &UScriptComponent::OnComponentEndOverlap);
+        }
+    }
 }
 
 void UScriptComponent::EndPlay()
 {
+    if (AActor* OwnerActor = GetOwner())
+    {
+        if (UCollider2DComponent* Collider = OwnerActor->FindComponentByClass<UCollider2DComponent>())
+        {
+            Collider->OnComponentHit2D.RemoveDynamic(this);
+            Collider->OnComponentBeginOverlap2D.RemoveDynamic(this);
+            Collider->OnComponentEndOverlap2D.RemoveDynamic(this);
+        }
+    }
+
     CallLuaFunction("EndPlay");
     ScriptInstance = sol::nil;
 
     UActorComponent::EndPlay();
+}
+
+void UScriptComponent::OnComponentHit(UCollider2DComponent* OtherCollider)
+{
+    if (!ScriptInstance.valid()) return;
+    sol::object Func = ScriptInstance["OnCollision"];
+    if (Func.valid() && Func.get_type() == sol::type::function)
+    {
+        ScriptInstance["OnCollision"](ScriptInstance, FLuaCollider2DHandle(OtherCollider));
+    }
+}
+
+void UScriptComponent::OnComponentBeginOverlap(UCollider2DComponent* OtherCollider)
+{
+    if (!ScriptInstance.valid()) return;
+    sol::object Func = ScriptInstance["OnOverlapBegin"];
+    if (Func.valid() && Func.get_type() == sol::type::function)
+    {
+        ScriptInstance["OnOverlapBegin"](ScriptInstance, FLuaCollider2DHandle(OtherCollider));
+    }
+}
+
+void UScriptComponent::OnComponentEndOverlap(UCollider2DComponent* OtherCollider)
+{
+    if (!ScriptInstance.valid()) return;
+    sol::object Func = ScriptInstance["OnOverlapEnd"];
+    if (Func.valid() && Func.get_type() == sol::type::function)
+    {
+            ScriptInstance["OnOverlapEnd"](ScriptInstance, FLuaCollider2DHandle(OtherCollider));
+    }
 }
 
 void UScriptComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)

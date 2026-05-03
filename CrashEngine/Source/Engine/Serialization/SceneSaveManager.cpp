@@ -61,6 +61,8 @@ static constexpr const char* ContextName = "ContextName";
 static constexpr const char* ContextHandle = "ContextHandle";
 static constexpr const char* Actors = "Actors";
 static constexpr const char* Visible = "bVisible";
+static constexpr const char* ActorFolder = "ActorFolder";
+static constexpr const char* ActorFolders = "ActorFolders";
 static constexpr const char* RootComponent = "RootComponent";
 static constexpr const char* NonSceneComponents = "NonSceneComponents";
 static constexpr const char* Properties = "Properties";
@@ -130,6 +132,35 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
     w[SceneKeys::WorldType] = WorldTypeToString(Ctx.WorldType);
     w[SceneKeys::ContextName] = Ctx.ContextName;
     w[SceneKeys::ContextHandle] = Ctx.ContextHandle.ToString();
+
+    JSON ActorFolders = json::Array();
+    TSet<FString> SeenFolders;
+    auto AppendFolder = [&](const FString& FolderPath)
+    {
+        if (FolderPath.empty() || SeenFolders.find(FolderPath) != SeenFolders.end())
+        {
+            return;
+        }
+
+        SeenFolders.insert(FolderPath);
+        ActorFolders.append(FolderPath);
+    };
+
+    for (const FString& FolderPath : World->GetEditorActorFolders())
+    {
+        AppendFolder(FolderPath);
+    }
+    for (AActor* Actor : World->GetActors())
+    {
+        if (Actor)
+        {
+            AppendFolder(Actor->GetEditorFolderPath());
+        }
+    }
+    if (ActorFolders.size() > 0)
+    {
+        w[SceneKeys::ActorFolders] = ActorFolders;
+    }
 
     // ---- Primitives: gather static mesh components into a top-level block
     JSON Primitives = json::Object();
@@ -229,6 +260,10 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor)
     a[SceneKeys::ClassName] = Actor->GetClass()->GetName();
     a[SceneKeys::Name] = Actor->GetFName().ToString();
     a[SceneKeys::Visible] = Actor->IsVisible();
+    if (!Actor->GetEditorFolderPath().empty())
+    {
+        a[SceneKeys::ActorFolder] = Actor->GetEditorFolderPath();
+    }
 
     // RootComponent 트리 직렬화
     if (Actor->GetRootComponent())
@@ -535,6 +570,18 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 
     World->InitWorld();
 
+    if (root.hasKey(SceneKeys::ActorFolders))
+    {
+        for (auto& FolderJSON : root[SceneKeys::ActorFolders].ArrayRange())
+        {
+            const FString FolderPath = FolderJSON.ToString();
+            if (!FolderPath.empty())
+            {
+                World->AddEditorActorFolder(FolderPath);
+            }
+        }
+    }
+
     // Deserialize Primitives (top-level) and Camera first
     std::unordered_map<string, AActor*> CreatedFromPrimitives;
     if (root.hasKey("Primitives"))
@@ -589,6 +636,13 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
             if (ActorJSON.hasKey(SceneKeys::Name))
             {
                 Actor->SetFName(FName(ActorJSON[SceneKeys::Name].ToString()));
+            }
+
+            if (ActorJSON.hasKey(SceneKeys::ActorFolder))
+            {
+                const FString FolderPath = ActorJSON[SceneKeys::ActorFolder].ToString();
+                Actor->SetEditorFolderPath(FolderPath);
+                World->AddEditorActorFolder(FolderPath);
             }
 
             // RootComponent 트리 복원
