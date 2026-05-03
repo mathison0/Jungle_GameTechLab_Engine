@@ -273,6 +273,24 @@ void USceneComponent::SetRelativeScale(const FVector& NewScale)
     NotifyOctreeTransformChanged(this);
 }
 
+void USceneComponent::LookAt(const FVector& Target)
+{
+    FVector Position = GetWorldLocation();
+    FVector Diff = (Target - Position).Normalized();
+
+    constexpr float Rad2Deg = 180.0f / 3.14159265358979f;
+
+    FRotator LookRotation = GetRelativeRotation();
+    LookRotation.Pitch = -asinf(Diff.Z) * Rad2Deg;
+
+    if (fabsf(Diff.Z) < 0.999f)
+    {
+        LookRotation.Yaw = atan2f(Diff.Y, Diff.X) * Rad2Deg;
+    }
+
+    SetRelativeRotation(LookRotation);
+}
+
 
 void USceneComponent::MarkTransformDirty()
 {
