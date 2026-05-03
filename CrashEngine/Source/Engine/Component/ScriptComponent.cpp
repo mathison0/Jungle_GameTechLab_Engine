@@ -383,6 +383,12 @@ void UScriptComponent::BindFunctions()
             return FLuaActorHandle(GetOwner()).GetComponents(State, Args);
         });
 
+	BindFunction("GetRootComponent",
+		[this](const sol::variadic_args& Args) -> FLuaComponentHandle
+			{
+				return FLuaComponentHandle(GetOwner()->GetRootComponent());
+			});
+
     BindFunction("StartCoroutine",
         [this](const sol::variadic_args& Args) -> uint32
         {
