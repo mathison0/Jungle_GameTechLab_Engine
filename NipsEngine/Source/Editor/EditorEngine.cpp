@@ -334,6 +334,21 @@ void UEditorEngine::OnWindowResized(uint32 Width, uint32 Height)
 void UEditorEngine::Tick(float DeltaTime)
 {
 	FInputRouter::TickInputSystem();
+	for (int32 i = 0; i < FEditorViewportLayout::MaxViewports; ++i)
+	{
+		FEditorViewportClient* ViewportClient = ViewportLayout.GetViewportClient(i);
+		if (!ViewportClient)
+		{
+			continue;
+		}
+
+		FWorldContext* Context = GetWorldContextFromWorld(ViewportClient->GetFocusedWorld());
+		if (!Context)
+		{
+			Context = GetWorldContextFromHandle(ActiveWorldHandle);
+		}
+		ViewportClient->SetInputWorldType(Context ? Context->WorldType : EWorldType::Editor);
+	}
 	ViewportLayout.Tick(DeltaTime);
 	MainPanel.Update();
 	WorldTick(DeltaTime);

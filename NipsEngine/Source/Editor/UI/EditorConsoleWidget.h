@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Core/CoreMinimal.h"
 #include "Core/Logger.h"
 #include <cstdarg>

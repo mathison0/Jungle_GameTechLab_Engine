@@ -100,6 +100,7 @@ public:
 	FSceneViewport*       GetViewport()       { return Viewport; }
 	const FSceneViewport* GetViewport() const { return Viewport; }
 	void                  SetViewport(FSceneViewport* InViewport) { Viewport = InViewport; }
+	void                  SetInputWorldType(EWorldType WorldType) { InputRouter.SetWorldType(WorldType); }
 
 	FEditorViewportState*       GetViewportState()       { return State; }
 	const FEditorViewportState* GetViewportState() const { return State; }

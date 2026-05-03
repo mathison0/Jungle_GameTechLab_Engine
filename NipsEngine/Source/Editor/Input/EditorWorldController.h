@@ -63,6 +63,8 @@ class FEditorWorldController : public IBaseEditorController
 	void NullifyWorld() { World = nullptr; }
 	void SetStartPIECallback(std::function<void()> Callback) { OnRequestStartPIE = std::move(Callback); }
 	void ClearStartPIECallback() { OnRequestStartPIE = nullptr; }
+	void SetFocusSelectionCallback(std::function<void()> Callback) { OnRequestFocusSelection = std::move(Callback); }
+	void ClearFocusSelectionCallback() { OnRequestFocusSelection = nullptr; }
 
   private:
 	void UpdateCameraRotation();
@@ -82,4 +84,5 @@ class FEditorWorldController : public IBaseEditorController
 	FVector TargetLocation;
 	bool    bTargetLocationInitialized = false;
 	std::function<void()> OnRequestStartPIE;
+	std::function<void()> OnRequestFocusSelection;
 };

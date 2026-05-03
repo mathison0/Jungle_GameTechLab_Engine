@@ -24,7 +24,6 @@ void FGameViewportClient::Initialize(FWindowsWindow* InWindow)
 	FreeCamera.SetLookAt(FVector::ZeroVector);
 	PlayerController.SetFreeCamera(&FreeCamera);
 	PlayerController.SetToggleInputCaptureCallback([this]() { ToggleInteractionMode(); });
-	InputRouter.SetWorldType(EWorldType::Game);
 	InputRouter.SetGamePlayerController(&PlayerController);
 	InputRouter.SetViewportDim(0.0f, 0.0f, WindowWidth, WindowHeight);
 }
@@ -74,7 +73,6 @@ void FGameViewportClient::SetWorld(UWorld* InWorld)
 
 		World->SetActiveCamera(&FreeCamera);
 	}
-	InputRouter.SetWorldType(EWorldType::Game);
 }
 
 void FGameViewportClient::SetCamera(UCameraComponent* InCamera)

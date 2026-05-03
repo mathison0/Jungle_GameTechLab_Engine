@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorSceneWidget.h"
+#include "Editor/UI/EditorSceneWidget.h"
 
 #include "Editor/EditorEngine.h"
 #include "Engine/Core/Common.h"

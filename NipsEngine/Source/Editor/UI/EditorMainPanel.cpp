@@ -228,14 +228,6 @@ void FEditorMainPanel::Update()
 	GuiState.bUsingMouse = bPropertyModalBlockingInput || (bViewportOperationActive ? false : IO.WantCaptureMouse);
 	GuiState.bUsingKeyboard = bPropertyModalBlockingInput || IO.WantCaptureKeyboard;
 
-	//	Focus는 MainPanel에서 입력 받음
-	if (EditorEngine && FInputRouter::GetKeyUp('F') && !IO.WantTextInput && !bPropertyModalBlockingInput)
-	{
-		FEditorViewportLayout& Layout = EditorEngine->GetViewportLayout();
-		const int32 FocusedIdx = Layout.GetLastFocusedViewportIndex();
-		Layout.GetViewportClient(FocusedIdx)->FocusSelection();
-	}
-
 	// IME는 ImGui가 텍스트 입력을 원할 때만 활성화.
 	// 그 외에는 OS 수준에서 IME 컨텍스트를 NULL로 연결해 한글 조합이
 	// 뷰포트에 남는 현상을 원천 차단한다.

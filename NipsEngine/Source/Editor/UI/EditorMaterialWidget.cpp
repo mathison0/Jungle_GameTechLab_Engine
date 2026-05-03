@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorMaterialWidget.h"
+#include "Editor/UI/EditorMaterialWidget.h"
 
 #include "Editor/EditorEngine.h"
 #include "Editor/Selection/SelectionManager.h"

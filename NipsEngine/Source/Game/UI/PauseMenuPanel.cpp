@@ -1,4 +1,4 @@
-﻿#include "Game/UI/PauseMenuPanel.h"
+#include "Game/UI/PauseMenuPanel.h"
 
 #include "Engine/Input/InputRouter.h"
 #include "Engine/Viewport/ViewportRect.h"

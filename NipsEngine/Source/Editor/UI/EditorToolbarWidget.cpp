@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorToolbarWidget.h"
+#include "Editor/UI/EditorToolbarWidget.h"
 
 #include "Editor/UI/EditorSceneWidget.h"
 #include "Editor/UI/EditorViewportOverlayWidget.h"

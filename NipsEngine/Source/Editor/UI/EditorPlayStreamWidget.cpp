@@ -1,4 +1,4 @@
-﻿#include "EditorPlayStreamWidget.h"
+#include "EditorPlayStreamWidget.h"
 #include "Editor/EditorEngine.h"
 #include "ImGui/imgui.h"
 #include <algorithm> // std::max 사용을 위해 추가

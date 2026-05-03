@@ -107,11 +107,7 @@ void GameUISystem::ApplyCursorForState(EGameUIState State)
 		// 게임 플레이 구간 - 커서 숨김, PIE면 뷰포트 재잠금
 		FInputRouter::SetCursorVisibility(false);
 		const FViewportRect& VR = FInputRouter::GetGuiInputState().ViewportHostRect;
-		if (VR.Width > 0)
-			FInputRouter::LockMouse(
-				true,
-				static_cast<float>(VR.X), static_cast<float>(VR.Y),
-				static_cast<float>(VR.Width), static_cast<float>(VR.Height));
+		if (VR.Width > 0) FInputRouter::LockMouse(true, static_cast<float>(VR.X), static_cast<float>(VR.Y), static_cast<float>(VR.Width), static_cast<float>(VR.Height));
 		break;
 	}
 	}

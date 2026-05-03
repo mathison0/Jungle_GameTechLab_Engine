@@ -13,7 +13,7 @@ namespace
 		'W', 'A', 'S', 'D', 'Q', 'E',
 		VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN,
 		VK_SPACE, VK_ESCAPE, VK_F4,
-		VK_DELETE, 'X', 'G',
+		VK_DELETE, 'X', 'F', 'G',
 	};
 }
 

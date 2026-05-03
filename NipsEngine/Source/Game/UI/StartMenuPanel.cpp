@@ -1,4 +1,4 @@
-﻿#include "Game/UI/StartMenuPanel.h"
+#include "Game/UI/StartMenuPanel.h"
 
 #include "Engine/Input/InputRouter.h"
 #include "Engine/Viewport/ViewportRect.h"

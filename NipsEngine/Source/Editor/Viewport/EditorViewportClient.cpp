@@ -28,19 +28,19 @@ void FEditorViewportClient::Initialize(FWindowsWindow* InWindow, UEditorEngine* 
 											  {
 		if (Editor)
 			Editor->StartPlaySession(); });
+	EditorWorldController.SetFocusSelectionCallback([this]()
+												   { FocusPrimarySelection(); });
 	PIEController.SetToggleInputCaptureCallback([this]()
 												{ TogglePIEInputCapture(); });
 	InputRouter.SetEditorWorldController(&EditorWorldController);
 	InputRouter.SetPIEController(&PIEController);
 	InputRouter.SetGamePlayerController(&GamePlayerController);
-	InputRouter.SetWorldType(EWorldType::Editor);
 }
 
 void FEditorViewportClient::SetWorld(UWorld* InWorld)
 {
 	World = InWorld;
 	EditorWorldController.SetWorld(InWorld);
-	InputRouter.SetWorldType(InWorld ? InWorld->GetWorldType() : EWorldType::Editor);
 }
 
 void FEditorViewportClient::StartPIE(UWorld* InWorld)
@@ -60,7 +60,6 @@ void FEditorViewportClient::StartPIE(UWorld* InWorld)
 	{
 		GamePlayerController.InitializeFreeCameraFromSnapshot(SavedCamera);
 	}
-	InputRouter.SetWorldType(EWorldType::PIE);
 }
 
 void FEditorViewportClient::EndPIE(UWorld* InWorld)
@@ -68,7 +67,6 @@ void FEditorViewportClient::EndPIE(UWorld* InWorld)
 	World = InWorld;
 	EditorWorldController.SetTargetLocation(Camera.GetLocation());
 	EditorWorldController.SetWorld(InWorld);
-	InputRouter.SetWorldType(EWorldType::Editor);
 	EditorWorldController.ResetTargetLocation();
 	GamePlayerController.SetCamera(nullptr);
 	GamePlayerController.SetFreeCamera(nullptr);
@@ -162,7 +160,7 @@ void FEditorViewportClient::BuildSceneView(FSceneView& OutView) const
 	if (!bHasCamera)
 		return;
 
-	if (InputRouter.GetWorldType() == EWorldType::PIE)
+	if (World && World->GetWorldType() == EWorldType::PIE)
 	{
 		const FViewportRect Rect = State && Viewport
 									   ? Viewport->GetRect()

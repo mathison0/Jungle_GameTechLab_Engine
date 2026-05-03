@@ -368,6 +368,10 @@ void FEditorWorldController::OnKeyReleased(int VK)
 			}
 		}
 		break;
+	case 'F':
+		if (OnRequestFocusSelection)
+			OnRequestFocusSelection();
+		break;
 	default:
 		break;
 	}
