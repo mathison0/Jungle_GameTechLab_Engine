@@ -6,6 +6,9 @@
 #include "Core/Logger.h"
 #include "Object/ObjectFactory.h"
 
+// GameJam
+#include "Runtime/Engine.h"
+
 DEFINE_CLASS(UDecalComponent, UPrimitiveComponent)
 REGISTER_FACTORY(UDecalComponent)
 
@@ -63,6 +66,9 @@ void UDecalComponent::BeginPlay()
 	UPrimitiveComponent::BeginPlay();
 
 	LifeTime = 0.0f;
+
+	//GameJam
+	InitializeMask(256, 256);
 }
 
 void UDecalComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
@@ -129,6 +135,12 @@ void UDecalComponent::TickComponent(float DeltaTime)
 	{
 		TickFadeOut();
 	}
+
+	// GameJam
+	if (bMaskDirty)
+    {
+        UpdateMaskTexture();
+    }
 }
 
 void UDecalComponent::TickFadeIn()
@@ -182,4 +194,94 @@ void UDecalComponent::SetFadeOut(float InStartDelay, float InDuration, bool bInD
 	FadeStartDelay = InStartDelay;
 	FadeDuration = InDuration;
 	bDestroyOwnerAfterFade = bInDestroyOwnerAfterFade;
+}
+
+void UDecalComponent::InitializeMask(uint32 InWidth, uint32 InHeight)
+{
+    MaskWidth = InWidth;
+    MaskHeight = InHeight;
+
+	MaskPixels.resize(MaskWidth * MaskHeight);
+
+	D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = MaskWidth;
+    desc.Height = MaskHeight;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8_UNORM; // 0~255를 0.0~1.0으로 매핑
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DYNAMIC; // CPU에서 쓰기 위해 Dynamic
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE; // CPU에서 GPU로 복사 허용
+
+	D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = MaskPixels.data();
+    initData.SysMemPitch = MaskWidth;
+
+	auto device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+    if (!device)
+        return;
+
+    device->CreateTexture2D(&desc, &initData, MaskTexture.GetAddressOf());
+    device->CreateShaderResourceView(MaskTexture.Get(), nullptr, MaskSRV.GetAddressOf());
+}
+
+void UDecalComponent::PaintMask(FVector2 UV, float Radius, uint8 Value)
+{
+    int32 CenterX = static_cast<int32>(UV.X * MaskWidth);
+    int32 CenterY = static_cast<int32>(UV.Y * MaskHeight);
+    int32 PixelRadius = static_cast<int32>(Radius * MaskWidth);
+
+	int32 StartX = MathUtil::Clamp(CenterX - PixelRadius, 0, (int32)MaskWidth - 1);
+	int32 EndX = MathUtil::Clamp(CenterX + PixelRadius, 0, (int32)MaskWidth - 1);
+	int32 StartY = MathUtil::Clamp(CenterY - PixelRadius, 0, (int32)MaskHeight - 1);
+    int32 EndY = MathUtil::Clamp(CenterY + PixelRadius, 0, (int32)MaskHeight - 1);
+
+	int32 RadiusSq = PixelRadius * PixelRadius;
+
+	for (int32 y = StartY; y <= EndY; y++)
+	{
+		for (int32 x = StartX; x <= EndX; x++)
+		{
+            int32 DiffX = x - CenterX;
+            int32 DiffY = y - CenterY;
+            int32 DistSq = (DiffX * DiffX) + (DiffY * DiffY);
+
+			if (DistSq <= RadiusSq)
+			{
+                int32 CurrentValue = MaskPixels[y * MaskWidth + x];
+                int32 NewValue = CurrentValue - Value;
+
+				MaskPixels[y * MaskWidth + x] = static_cast<uint8>(NewValue < 0 ? 0 : NewValue);
+
+                bMaskDirty = true;
+			}
+		}
+	}
+}
+
+void UDecalComponent::UpdateMaskTexture()
+{
+    if (!bMaskDirty || !MaskTexture)
+        return;
+
+	auto context = GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext();
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+	if (!context)
+        return;
+
+	if (SUCCEEDED(context->Map(MaskTexture.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
+	{
+        uint8_t* dest = static_cast<uint8_t*>(mappedResource.pData);
+        const uint8_t* src = MaskPixels.data();
+
+		for (uint32 i = 0; i < MaskHeight; i++)
+		{
+            memcpy(dest + (i * mappedResource.RowPitch), src + (i * MaskWidth), MaskWidth);
+		}
+
+		context->Unmap(MaskTexture.Get(), 0);
+        bMaskDirty = false;
+	}
 }
