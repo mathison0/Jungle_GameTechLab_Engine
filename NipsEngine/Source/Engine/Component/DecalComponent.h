@@ -48,6 +48,7 @@ public:
 	void UpdateMaskTexture();
 	ID3D11ShaderResourceView* GetMaskSRV() const { return MaskSRV.Get(); }
     float GetCleanPercentage() const;
+    bool WorldPosToDecalUV(const FVector& WorldPos, FVector2& OutUV) const;
 
 protected:
 	void TickComponent(float DeltaTime) override;

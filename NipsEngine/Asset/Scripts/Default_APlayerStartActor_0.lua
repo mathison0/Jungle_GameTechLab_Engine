@@ -5,11 +5,18 @@
 -- Log(message): writes to the editor console
 -- StartCoroutine(function() ... end), wait(seconds): coroutine helpers
 
-local currentTool = nil
-local isCleaning = false
-
 function BeginPlay(owner)
-    Log("Player Script Started: " .. owner:GetName())
+    print("BeginPlay", owner:GetName())
+
+    StartCoroutine(function()
+        print("coroutine start")
+
+        wait(1.0)
+        print("after 1 sec")
+
+        wait(2.0)
+        print("after 3 sec total")
+    end)
 end
 
 function EndPlay(owner)
@@ -28,20 +35,4 @@ function OnInteract(owner, interactor)
 end
 
 function Tick(owner, deltaTime)
-    local hit = RaycastFromCenter(300.0)
-
-    if hit and hit:IsValid() and hit:IsDecal() then
-        local currentTool = GGameContext:GetCurrentToolData()
-
-        if currentTool then
-            SetCurrentItem(currentTool.GetName)
-
-            if GetKeyDown(KEY_E) then
-                hit:PaintMask(currentTool.Radius, currentTool.Strength)  -- radius, value(지우는 강도)
-                local pct = hit:GetCleanPercentage()
-                SetProgress(pct)
-            end
-        end
-       
-    end
 end

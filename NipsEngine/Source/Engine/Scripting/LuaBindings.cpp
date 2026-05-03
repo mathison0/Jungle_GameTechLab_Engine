@@ -3,7 +3,9 @@
 #if WITH_LUA
 #include "GameFramework/AActor.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/DecalComponent.h"
 #include "Math/Vector.h"
+#include "Math/Vector2.h"
 #include "Object/Object.h"
 #include "Core/CollisionTypes.h"
 #include "Core/Logger.h"
@@ -139,20 +141,24 @@ void RegisterLuaBindings(sol::state& Lua)
 	Lua.set("KEY_ENTER",  0x0D);
 
 	// 마우스 입력
-    Lua.set("MOUSE_RIGHT", 0x02);
+    Lua.set("KEY_LEFT_MOUSE", 0x01);
+    Lua.set("KEY_RIGHT_MOUSE", 0x02);
 
 	Lua.set_function("GetKeyDown", [](int VK)
 	{
+		if (GameUISystem::Get().WantsMouseCursor()) return false;
 		return FInputRouter::GetKeyDown(VK);
 	});
 
 	Lua.set_function("GetKey", [](int VK)
-    {
-         return FInputRouter::GetKey(VK);
-    });
+	{
+		if (GameUISystem::Get().WantsMouseCursor()) return false;
+		return FInputRouter::GetKey(VK);
+	});
 
 	Lua.set_function("GetKeyUp", [](int VK)
 	{
+		if (GameUISystem::Get().WantsMouseCursor()) return false;
 		return FInputRouter::GetKeyUp(VK);
 	});
 
@@ -164,7 +170,41 @@ void RegisterLuaBindings(sol::state& Lua)
 		"Normal", &FHitResult::Normal,
 		"FaceIndex", &FHitResult::FaceIndex,
 		"bHit", &FHitResult::bHit,
-		"IsValid", &FHitResult::IsValid
+		"IsValid", &FHitResult::IsValid,
+		"GetDecalComponent", [](FHitResult& Hit) -> UDecalComponent*
+		{
+        if (!Hit.bHit || !Hit.HitComponent) return nullptr;
+
+        // 1. 직접 맞은 게 데칼이면 바로 반환
+        if (auto Decal = Cast<UDecalComponent>(Hit.HitComponent))
+            return Decal;
+
+        // 2. 맞은 컴포넌트의 액터를 가져옴
+        AActor* Owner = Hit.HitComponent->GetOwner();
+        if (!Owner) return nullptr;
+
+        // 3. 액터가 가진 모든 컴포넌트를 순회하며 데칼을 찾음
+        // 엔진 내부의 컴포넌트 리스트 접근 방식(예: Owner->GetComponents())에 따라 수정하세요.
+        for (auto* Comp : Owner->GetComponents()) 
+        {
+            if (auto* DecalComp = Cast<UDecalComponent>(Comp))
+            {
+                return DecalComp;
+            }
+        }
+
+        return nullptr;		}
+	);
+
+	Lua.new_usertype<UDecalComponent>(
+		"UDecalComponent",
+		"GetCleanPercentage", &UDecalComponent::GetCleanPercentage,
+		"PaintAtWorldPos", [](UDecalComponent& Decal, const FVector& WorldPos, float Radius, int Value)
+		{
+			FVector2 UV;
+			if (Decal.WorldPosToDecalUV(WorldPos, UV))
+				Decal.PaintMask(UV, Radius, static_cast<uint8>(Value));
+		}
 	);
 }
 #endif

@@ -931,7 +931,7 @@ FUberSurfaceData EvaluateProjectedDecal(FUberPSInput Input)
     Surface.DiffuseSample = DiffuseMap.Sample(SampleState, Surface.UV);
    
     //GameJam
-    float MaskValue = MaskMap.Sample(SampleState, Surface.UV).r;
+    float MaskValue = DecalMaskMap.Sample(SampleState, Surface.UV).r;
     Surface.DiffuseSample.a *= MaskValue;
 
     Surface.WorldNormal = ResolveSurfaceWorldNormal(Input, Surface.UV, Surface.WorldNormal);

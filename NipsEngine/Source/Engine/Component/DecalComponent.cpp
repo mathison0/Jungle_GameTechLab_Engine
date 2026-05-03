@@ -8,6 +8,7 @@
 
 // GameJam
 #include "Runtime/Engine.h"
+#include <cmath>
 
 DEFINE_CLASS(UDecalComponent, UPrimitiveComponent)
 REGISTER_FACTORY(UDecalComponent)
@@ -26,6 +27,8 @@ UDecalComponent::UDecalComponent()
 	Mat->SamplerType = ESamplerType::EST_Linear;
 
     bEnableCull = false;
+
+    InitializeMask(256, 256);
 }
 
 // Material 포인터는 프로퍼티 시스템에 노출되지 않으므로 직접 복사합니다.
@@ -112,7 +115,20 @@ void UDecalComponent::UpdateWorldAABB() const
 
 bool UDecalComponent::RaycastMesh(const FRay& Ray, FHitResult& OutHitResult)
 {
-	return false;
+	float TMin = 0.0f, TMax = 0.0f;
+	if (!WorldAABB.IntersectRay(Ray, TMin, TMax))
+		return false;
+
+	const float T = TMin >= 0.0f ? TMin : TMax;
+	if (T < 0.0f)
+		return false;
+
+	OutHitResult.bHit = true;
+	OutHitResult.Distance = T;
+	OutHitResult.Location = Ray.Origin + Ray.Direction * T;
+	OutHitResult.Normal = -Ray.Direction;
+	OutHitResult.HitComponent = this;
+	return true;
 }
 
 FMatrix UDecalComponent::GetDecalMatrix() const
@@ -201,7 +217,7 @@ void UDecalComponent::InitializeMask(uint32 InWidth, uint32 InHeight)
     MaskWidth = InWidth;
     MaskHeight = InHeight;
 
-	MaskPixels.resize(MaskWidth * MaskHeight);
+	MaskPixels.assign(MaskWidth * MaskHeight, 255);
 
 	D3D11_TEXTURE2D_DESC desc = {};
     desc.Width = MaskWidth;
@@ -258,6 +274,34 @@ void UDecalComponent::PaintMask(FVector2 UV, float Radius, uint8 Value)
 			}
 		}
 	}
+}
+
+bool UDecalComponent::WorldPosToDecalUV(const FVector& WorldPos, FVector2& OutUV) const
+{
+    FMatrix InvDecal = GetDecalMatrix();
+    InvDecal.Inverse();
+    const FVector Local = InvDecal.TransformPosition(WorldPos);
+
+    if (std::abs(Local.X) > 0.5f || std::abs(Local.Y) > 0.5f || std::abs(Local.Z) > 0.5f)
+        return false;
+
+    OutUV.X = Local.Y + 0.5f;
+    OutUV.Y = 1.0f - (Local.Z + 0.5f);
+    return true;
+}
+
+float UDecalComponent::GetCleanPercentage() const
+{
+    if (MaskPixels.empty())
+        return 0.0f;
+
+    uint64 TotalZero = 0;
+    for (uint8 Pixel : MaskPixels)
+    {
+        if (Pixel == 0)
+            ++TotalZero;
+    }
+    return static_cast<float>(TotalZero) / static_cast<float>(MaskPixels.size());
 }
 
 void UDecalComponent::UpdateMaskTexture()
