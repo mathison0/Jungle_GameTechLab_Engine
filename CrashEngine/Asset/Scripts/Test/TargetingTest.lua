@@ -5,8 +5,9 @@ local Script = {
 }
 
 function Script:BeginPlay()
+    Log("[TargetAi] BeginPlay")
     self.ai = self.StartCoroutine(function()
-        TargetingAI:TargetCoroutine(self.GetomponentByName("RotateTarget"), "Tank", false)
+        Targeting.TargetCoroutine(self, self.GetComponentByName("UStaticMeshComponent", "RotateTarget"), "TestEnemy", false)
     end)
 end
 
