@@ -331,11 +331,13 @@ void FPrimitiveRenderCollector::CollectFromComponent(
 				Cmd.Material = Material;
 				Cmd.Constants.Decal.InvDecalWorld = DecalComp->GetDecalMatrix().GetInverse();
 
+				Cmd.MaskSRV = DecalComp->GetMaskSRV();
+
 				RenderBus.AddCommand(ERenderPass::Decal, Cmd);
 			}
 		}
 
-		if (WorldType == EWorldType::Editor && LineBatcher != nullptr)
+		if (WorldType == EWorldType::Editor && LineBatcher != nullptr && DecalComp->ShouldDrawDebugBounds(ShowFlags.bBoundingVolume))
 		{
 			LineBatcher->AddOBB(DecalOBB, FColor::Green());
 		}
