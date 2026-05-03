@@ -3,14 +3,22 @@ local DamageSystem = {}
 -- UUID -> ScriptInstance 매핑 테이블
 local registry = {}
 
+Log("[DamageSystem] Module Loaded")
+
 --[[
     스크립트 인스턴스를 데미지 시스템에 등록합니다.
     @param actorHandle: 스크립트가 소유한 액터의 핸들
     @param scriptInstance: TakeDamage(amount, attacker) 함수를 가진 Lua 스크립트 인스턴스 (self)
 ]]
 function DamageSystem.Register(actorHandle, scriptInstance)
-    if not actorHandle or not actorHandle:IsValid() then return end
-    registry[actorHandle:GetUUID()] = scriptInstance
+    if not actorHandle or not actorHandle:IsValid() then 
+        Log("[DamageSystem] Error: Invalid actor handle during registration")
+        return 
+    end
+    
+    local uuid = actorHandle:GetUUID()
+    registry[uuid] = scriptInstance
+    Log(string.format("[DamageSystem] Registered Actor: %s (UUID: %d)", actorHandle:GetName(), uuid))
 end
 
 --[[
@@ -18,7 +26,9 @@ end
 ]]
 function DamageSystem.Unregister(actorHandle)
     if not actorHandle then return end
-    registry[actorHandle:GetUUID()] = nil
+    local uuid = actorHandle:GetUUID()
+    registry[uuid] = nil
+    Log(string.format("[DamageSystem] Unregistered Actor: %d", uuid))
 end
 
 --[[
@@ -29,34 +39,31 @@ end
     @return: 데미지 전달 성공 여부
 ]]
 function DamageSystem.ApplyDamage(targetActor, amount, attacker)
-    if not targetActor or not targetActor:IsValid() then return false end
+    if not targetActor or not targetActor:IsValid() then 
+        Log("[DamageSystem] Error: Invalid target actor during ApplyDamage")
+        return false 
+    end
     
-    local script = registry[targetActor:GetUUID()]
-    if script and script.TakeDamage then
-        script:TakeDamage(amount, attacker)
-        return true
+    local uuid = targetActor:GetUUID()
+    local script = registry[uuid]
+    
+    if script then
+        if script.TakeDamage then
+            Log(string.format("[DamageSystem] Applying %d damage to %s (UUID: %d)", amount, targetActor:GetName(), uuid))
+            script:TakeDamage(amount, attacker)
+            return true
+        --[[
+        else
+            Log(string.format("[DamageSystem] Error: Script for Actor %d does not have TakeDamage function", uuid))
+        --]]
+        end
+    --[[
+    else
+        Log(string.format("[DamageSystem] Error: Actor %s (UUID: %d) not found in registry", targetActor:GetName(), uuid))
+    --]]
     end
     
     return false
-end
-
---[[
-    범위 내의 모든 대상에게 데미지를 입힙니다. (C++ 공간 쿼리 활용)
-    @param world: World 핸들
-    @param position: 폭발 중심 (FVector)
-    @param radius: 폭발 반지름
-    @param amount: 데미지 양
-    @param tagFilter: 대상 태그 (예: "Enemy")
-    @param attacker: 공격자 액터 핸들
-]]
-function DamageSystem.ApplyRadialDamage(world, position, radius, amount, tagFilter, attacker)
-    if not world or not world:IsValid() then return end
-    
-    -- Physics2D 기반의 OverlapCircle 사용 (정확한 물리 판정)
-    local targets = world:OverlapCircle(position, radius, tagFilter or "")
-    for _, actor in ipairs(targets) do
-        DamageSystem.ApplyDamage(actor, amount, attacker)
-    end
 end
 
 return DamageSystem
