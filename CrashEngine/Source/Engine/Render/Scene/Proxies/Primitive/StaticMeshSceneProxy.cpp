@@ -145,6 +145,7 @@ FStaticMeshSceneProxy::FStaticMeshSceneProxy(UStaticMeshComponent* InComponent)
     : FPrimitiveProxy(InComponent)
 {
     bAllowViewModeShaderOverride = true;
+    UpdateShadow();
 }
 
 UStaticMeshComponent* FStaticMeshSceneProxy::GetStaticMeshComponent() const
@@ -165,6 +166,12 @@ void FStaticMeshSceneProxy::UpdateMesh()
     Pass   = ERenderPass::Opaque;
 
     RebuildSectionRenderData();
+}
+
+void FStaticMeshSceneProxy::UpdateShadow()
+{
+    UStaticMeshComponent* StaticMesh = GetStaticMeshComponent();
+    bCastShadow = StaticMesh ? StaticMesh->ShouldCastShadow() : true;
 }
 
 void FStaticMeshSceneProxy::UpdateLOD(uint32 LODLevel)

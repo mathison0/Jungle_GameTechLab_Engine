@@ -16,6 +16,7 @@ public:
 
     void UpdateMaterial() override;
     void UpdateMesh() override;
+    void UpdateShadow() override;
     void UpdateLOD(uint32 LODLevel) override;
 
 private:

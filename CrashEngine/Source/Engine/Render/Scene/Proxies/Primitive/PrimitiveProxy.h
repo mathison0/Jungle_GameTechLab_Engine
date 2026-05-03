@@ -28,6 +28,7 @@ public:
     virtual void UpdateMaterial();
     virtual void UpdateVisibility();
     virtual void UpdateMesh();
+    virtual void UpdateShadow();
 
     UPrimitiveComponent* Owner = nullptr;
 
@@ -44,6 +45,7 @@ public:
     bool bSupportsOutline = true;
     bool bNeverCull       = false;
     bool bShowAABB        = true;
+    bool bCastShadow      = true;
 
     ERenderPass Pass = ERenderPass::Opaque;
 

@@ -35,6 +35,9 @@ public:
     void SetStaticMesh(UStaticMesh* InMesh);
     UStaticMesh* GetStaticMesh() const;
 
+    void SetCastShadow(bool bNewCastShadow);
+    bool ShouldCastShadow() const { return bCastShadow; }
+
     void SetMaterial(int32 ElementIndex, UMaterial* InMaterial) override;
     UMaterial* GetMaterial(int32 ElementIndex) const override;
     const TArray<UMaterial*>& GetOverrideMaterials() const { return OverrideMaterials; }
@@ -59,5 +62,6 @@ private:
     FVector CachedLocalCenter = { 0, 0, 0 };
     FVector CachedLocalExtent = { 0.5f, 0.5f, 0.5f };
     bool bHasValidBounds = false;
+    bool bCastShadow = true;
 };
 
