@@ -1,7 +1,6 @@
 ﻿// 게임 프레임워크 영역의 세부 동작을 구현합니다.
 #include "GameFramework/World.h"
 #include "GameFramework/ActorPool.h"
-#include "GameFramework/ActorPoolManager.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
@@ -9,6 +8,9 @@
 #include "Render/Visibility/LOD/LODContext.h"
 #include <algorithm>
 #include "Profiling/Stats.h"
+
+//풀링 테스트
+#include "GameFramework/GamejamActor/EnemyBaseActor.h"
 
 IMPLEMENT_CLASS(UWorld, UObject)
 
@@ -240,6 +242,10 @@ void UWorld::BeginPlay()
 
     if (PersistentLevel)
     {
+        ActorPoolManager = std::make_unique<FActorPoolManager>(this);
+        ActorPoolManager->SetWorld(this);
+        ActorPoolManager->Warmup<AEnemyBaseActor>(100);
+
         PersistentLevel->BeginPlay();
     }
 }
@@ -271,13 +277,15 @@ void UWorld::EndPlay()
         return;
     }
 
+	ActorPoolManager.reset();
+
     PersistentLevel->EndPlay();
+    PersistentLevel->Clear();
 
     // Clear spatial partition while actors/components are still alive.
     // Otherwise Octree teardown can dereference stale primitive pointers during shutdown.
     Partition.Reset(FBoundingBox());
 
-    PersistentLevel->Clear();
     MarkEditorPickingAndScenePrimitiveBVHsDirty();
 
     // PersistentLevel은 CreateObject로 생성되었으므로 DestroyObject로 해제해야 alloc count가 맞음
