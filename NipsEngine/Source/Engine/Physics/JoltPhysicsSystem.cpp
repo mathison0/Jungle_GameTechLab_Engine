@@ -739,6 +739,7 @@ bool FJoltPhysicsSystem::MoveKinematicBody(URigidBodyComponent* Body, FVector& I
 				StartTransform,
 				ToJoltVector(RequestedDelta));
 			JPH::ShapeCastSettings Settings;
+			Settings.mReturnDeepestPoint = true;
 			JPH::IgnoreSingleBodyFilter BodyFilter(BodyID);
 			JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> Collector;
 			Impl->PhysicsSystem.GetNarrowPhaseQuery().CastShape(
@@ -750,10 +751,26 @@ bool FJoltPhysicsSystem::MoveKinematicBody(URigidBodyComponent* Body, FVector& I
 				{},
 				BodyFilter);
 
-			if (Collector.HadHit() && Collector.mHit.mFraction > 0.0f && Collector.mHit.mFraction < 1.0f)
+			if (Collector.HadHit() && Collector.mHit.mFraction < 1.0f)
 			{
-				const float AllowedFraction = std::max(0.0f, Collector.mHit.mFraction - 0.01f);
-				InOutTargetLocation = CurrentLocation + RequestedDelta * AllowedFraction;
+				const JPH::Vec3 LocalExtent = Shape->GetLocalBounds().GetExtent();
+				const float SmallestExtent = std::max(0.01f, LocalExtent.ReduceMin());
+				const float SafetyDistance = std::clamp(SmallestExtent * 0.35f, 0.02f, 0.12f);
+				const float RequestedDistance = RequestedDelta.Size();
+				const float SafetyFraction = RequestedDistance > 0.001f ? SafetyDistance / RequestedDistance : 1.0f;
+				if (Collector.mHit.mFraction <= 0.001f)
+				{
+					const FVector PenetrationAxis = ToEngineVector(Collector.mHit.mPenetrationAxis);
+					if (FVector::DotProduct(RequestedDelta, PenetrationAxis) > 0.0f)
+					{
+						InOutTargetLocation = CurrentLocation;
+					}
+				}
+				else
+				{
+					const float AllowedFraction = std::max(0.0f, Collector.mHit.mFraction - SafetyFraction);
+					InOutTargetLocation = CurrentLocation + RequestedDelta * AllowedFraction;
+				}
 			}
 		}
 	}
