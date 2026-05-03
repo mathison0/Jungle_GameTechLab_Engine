@@ -429,7 +429,13 @@ bool FLuaComponentHandle::LookAt(const sol::object& Value) const
     }
 
     USceneComponent* SceneComponent = Cast<USceneComponent>(Resolve());
+    if (!SceneComponent)
+    {
+        return false;
+    }
+
     SceneComponent->LookAt(Target);
+    return true;
 }
 
 bool FLuaComponentHandle::IsVisible() const
