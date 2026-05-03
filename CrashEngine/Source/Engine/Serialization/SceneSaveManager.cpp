@@ -247,6 +247,7 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor)
 
         JSON c = json::Object();
         c[SceneKeys::ClassName] = Comp->GetClass()->GetName();
+        c[SceneKeys::Name] = Comp->GetFName().ToString();
         c[SceneKeys::Properties] = SerializeProperties(Comp);
         NonScene.append(c);
     }
@@ -260,6 +261,7 @@ json::JSON FSceneSaveManager::SerializeSceneComponentTree(USceneComponent* Comp)
     using namespace json;
     JSON c = json::Object();
     c[SceneKeys::ClassName] = Comp->GetClass()->GetName();
+    c[SceneKeys::Name] = Comp->GetFName().ToString();
     c[SceneKeys::Properties] = SerializeProperties(Comp);
 
     JSON Children = json::Array();
@@ -619,6 +621,11 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
                     UActorComponent* Comp = static_cast<UActorComponent*>(CompObj);
                     Actor->RegisterComponent(Comp);
 
+                    if (CompJSON.hasKey(SceneKeys::Name))
+                    {
+                        Comp->SetFName(FName(CompJSON[SceneKeys::Name].ToString()));
+                    }
+
                     if (CompJSON.hasKey(SceneKeys::Properties))
                     {
                         JSON& PropsJSON = CompJSON[SceneKeys::Properties];
@@ -647,6 +654,11 @@ USceneComponent* FSceneSaveManager::DeserializeSceneComponentTree(json::JSON& No
 
     USceneComponent* Comp = static_cast<USceneComponent*>(Obj);
     Owner->RegisterComponent(Comp);
+
+    if (Node.hasKey(SceneKeys::Name))
+    {
+        Comp->SetFName(FName(Node[SceneKeys::Name].ToString()));
+    }
 
     // Restore properties
     if (Node.hasKey(SceneKeys::Properties))
@@ -677,6 +689,11 @@ void FSceneSaveManager::DeserializeSceneComponentIntoExisting(USceneComponent* E
     using namespace json;
     if (!Existing)
         return;
+
+    if (Node.hasKey(SceneKeys::Name))
+    {
+        Existing->SetFName(FName(Node[SceneKeys::Name].ToString()));
+    }
 
     if (Node.hasKey(SceneKeys::Properties))
     {
