@@ -1,5 +1,6 @@
 ﻿// 게임 프레임워크 영역의 세부 동작을 구현합니다.
 #include "GameFramework/World.h"
+#include "GameFramework/ActorPool.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"

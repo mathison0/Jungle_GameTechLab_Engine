@@ -28,6 +28,7 @@ public:
     virtual void BeginPlay();
     virtual void Tick(float DeltaTime);
     virtual void EndPlay();
+    virtual void InitDefaultComponents();
 
     bool HasActorBegunPlay() const { return bActorHasBegunPlay; }
 

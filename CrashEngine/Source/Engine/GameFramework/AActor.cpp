@@ -255,6 +255,10 @@ void AActor::BeginPlay()
     }
 }
 
+void AActor::InitDefaultComponents()
+{
+}
+
 bool AActor::IsOverlappingActor(const AActor* OtherActor) const
 {
     if (!OtherActor || OtherActor == this)
