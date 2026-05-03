@@ -611,6 +611,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Core\Random.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />

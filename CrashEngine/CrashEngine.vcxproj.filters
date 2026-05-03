@@ -2309,6 +2309,7 @@
     <ClInclude Include="Source\Engine\Sound\SoundManager.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
+    <ClInclude Include="Source\Engine\Core\Random.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
