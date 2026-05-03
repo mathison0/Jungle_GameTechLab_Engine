@@ -143,6 +143,32 @@ function Component:IsOverlappingComponent(component) end
 function Component:Cast(className) end
 -- ====================================================================
 
+-- Class ActorPoolManager ==============================================
+---@class ActorPoolManager
+local ActorPoolManager = {}
+
+---@return boolean
+function ActorPoolManager:IsValid() end
+
+---@param className string
+---@param count integer
+function ActorPoolManager:Warmup(className, count) end
+
+---@param className string
+---@return Actor
+function ActorPoolManager:Acquire(className) end
+
+---@param actor Actor
+function ActorPoolManager:Release(actor) end
+
+---@param className string
+---@return integer
+function ActorPoolManager:GetActiveCount(className) end
+
+---@return ActorPoolManager
+function GetActorPoolManager() end
+-- ====================================================================
+
 -- Class Collider2D ====================================================
 ---@class Collider2D : Component
 local Collider2D = {}

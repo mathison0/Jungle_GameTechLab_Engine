@@ -65,6 +65,18 @@ void UWorld::DestroyActor(AActor* Actor)
     UObjectManager::Get().DestroyObject(Actor);
 }
 
+AActor* UWorld::SpawnActorByClass(const FString& ClassName)
+{
+    UObject* Obj = FObjectFactory::Get().Create(ClassName, PersistentLevel);
+    AActor* Actor = Cast<AActor>(Obj);
+    if (Actor)
+    {
+        Actor->InitDefaultComponents();
+        AddActor(Actor);
+    }
+    return Actor;
+}
+
 void UWorld::AddActor(AActor* Actor)
 {
     if (!Actor)
@@ -264,8 +276,6 @@ void UWorld::BeginPlay()
     {
         ActorPoolManager = std::make_unique<FActorPoolManager>(this);
         ActorPoolManager->SetWorld(this);
-        ActorPoolManager->Warmup<AEnemyBaseActor>(100);
-
         PersistentLevel->BeginPlay();
     }
 }

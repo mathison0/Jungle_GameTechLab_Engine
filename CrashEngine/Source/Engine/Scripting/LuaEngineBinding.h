@@ -112,4 +112,21 @@ struct FLuaCircleCollider2DHandle : public FLuaCollider2DHandle
 	bool SetRadius(float Radius) const;
 };
 
+class FActorPoolManager;
+
+struct FLuaActorPoolManagerHandle
+{
+	FActorPoolManager* Manager = nullptr;
+
+	FLuaActorPoolManagerHandle() = default;
+	explicit FLuaActorPoolManagerHandle(FActorPoolManager* InManager);
+
+	bool IsValid() const;
+
+	void Warmup(const FString& ClassName, uint32 Count) const;
+	FLuaActorHandle Acquire(const FString& ClassName) const;
+	void Release(const FLuaActorHandle& Actor) const;
+	uint32 GetActiveCount(const FString& ClassName) const;
+};
+
 void RegisterLuaEngineBindings(sol::state& Lua);

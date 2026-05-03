@@ -1,244 +1,89 @@
-﻿#pragma once
+#pragma once
 
-#include "GameFramework/ActorPool.h"
-
+#include "Core/CoreTypes.h"
 #include <functional>
 #include <memory>
-#include <typeindex>
-#include <type_traits>
 #include <utility>
+#include "GameFramework/ActorPool.h"
+
+class UWorld;
+class AActor;
 
 /*
-    FActorPoolManager keeps one actor pool per concrete actor type.
+    FActorPoolManager keeps one actor pool per concrete actor class name.
     Pooled actors can call RequestReturnToPool(), and the manager will return
     them to the pool that acquired them.
 */
 class FActorPoolManager
 {
 public:
-    explicit FActorPoolManager(UWorld* InWorld)
-        : World(InWorld)
-    {
-    }
-
+    explicit FActorPoolManager(UWorld* InWorld);
 	FActorPoolManager() = default;
-
-    ~FActorPoolManager()
-    {
-        DestroyAll();
-    }
+    ~FActorPoolManager();
 
     FActorPoolManager(const FActorPoolManager&) = delete;
     FActorPoolManager& operator=(const FActorPoolManager&) = delete;
 
-    void SetWorld(UWorld* InWorld)
-    {
-        if (World == InWorld)
-        {
-            return;
-        }
+    void SetWorld(UWorld* InWorld);
 
-        DestroyAll();
-        World = InWorld;
-    }
-
+    // Helper for C++ usage with types
     template <typename TActor>
-    void Warmup(uint32 Count, const typename TActorPool<TActor>::FActorCallback& Initialize = nullptr)
+    void Warmup(uint32 Count, const std::function<void(TActor*)>& Initialize = nullptr)
     {
-        GetOrCreateEntry<TActor>().Pool.Warmup(Count, Initialize);
+        FActorPool::FActorCallback WrappedInit = nullptr;
+        if (Initialize)
+        {
+            WrappedInit = [Initialize](AActor* A) { Initialize(static_cast<TActor*>(A)); };
+        }
+        Warmup(TActor::StaticClass()->GetName(), Count, WrappedInit);
     }
 
+    void Warmup(const FString& ClassName, uint32 Count, const FActorPool::FActorCallback& Initialize = nullptr);
+
+    // Helper for C++ usage with types
     template <typename TActor>
-    TActor* Acquire(const typename TActorPool<TActor>::FActorCallback& Activate = nullptr)
+    TActor* Acquire(const std::function<void(TActor*)>& Activate = nullptr)
     {
-        TPoolEntry<TActor>& Entry = GetOrCreateEntry<TActor>();
-        TActor* Actor = Entry.Pool.Acquire(Activate);
-        RegisterActiveActor(Actor, &Entry);
-        return Actor;
-    }
-
-    template <typename TActor, typename TActivate>
-    TActor* AcquireWith(TActivate&& Activate)
-    {
-        return Acquire<TActor>(typename TActorPool<TActor>::FActorCallback(std::forward<TActivate>(Activate)));
-    }
-
-    template <typename TActor>
-    void Release(TActor* Actor, const typename TActorPool<TActor>::FActorCallback& Deactivate = nullptr)
-    {
-        if (!Actor)
+        FActorPool::FActorCallback WrappedActivate = nullptr;
+        if (Activate)
         {
-            return;
+            WrappedActivate = [Activate](AActor* A) { Activate(static_cast<TActor*>(A)); };
         }
-
-        TPoolEntry<TActor>& Entry = GetOrCreateEntry<TActor>();
-        ActiveActorToPool.erase(Actor);
-        Entry.ReleaseTyped(Actor, Deactivate);
+        return static_cast<TActor*>(Acquire(TActor::StaticClass()->GetName(), WrappedActivate));
     }
 
-    void Release(AActor* Actor)
-    {
-        if (!Actor)
-        {
-            return;
-        }
+    AActor* Acquire(const FString& ClassName, const FActorPool::FActorCallback& Activate = nullptr);
 
-        auto It = ActiveActorToPool.find(Actor);
-        if (It == ActiveActorToPool.end())
-        {
-            return;
-        }
+    void Release(AActor* Actor);
+    void DestroyAll();
 
-        IPoolEntry* Entry = It->second;
-        ActiveActorToPool.erase(It);
-        Entry->ReleaseActor(Actor);
-    }
-
-    template <typename TActor>
-    void SetDefaultDeactivate(const typename TActorPool<TActor>::FActorCallback& Deactivate)
-    {
-        GetOrCreateEntry<TActor>().DefaultDeactivate = Deactivate;
-    }
-
-    void DestroyAll()
-    {
-        for (AActor* Actor : DelegateBoundActors)
-        {
-            if (Actor)
-            {
-                Actor->OnPoolReturnRequested.RemoveDynamic(this);
-            }
-        }
-
-        DelegateBoundActors.clear();
-        ActiveActorToPool.clear();
-
-        for (auto& Pair : Pools)
-        {
-            if (Pair.second)
-            {
-                Pair.second->DestroyAll();
-            }
-        }
-
-        Pools.clear();
-    }
-
+    // Helper for C++ usage with types
     template <typename TActor>
     uint32 GetActiveCount() const
     {
-        const TPoolEntry<TActor>* Entry = FindEntry<TActor>();
-        return Entry ? Entry->Pool.GetActiveCount() : 0;
+        return GetActiveCount(TActor::StaticClass()->GetName());
     }
 
+    uint32 GetActiveCount(const FString& ClassName) const;
+
+    // Helper for C++ usage with types
     template <typename TActor>
     uint32 GetAvailableCount() const
     {
-        const TPoolEntry<TActor>* Entry = FindEntry<TActor>();
-        return Entry ? Entry->Pool.GetAvailableCount() : 0;
+        return GetAvailableCount(TActor::StaticClass()->GetName());
     }
 
-    template <typename TActor>
-    uint32 GetTotalCount() const
-    {
-        const TPoolEntry<TActor>* Entry = FindEntry<TActor>();
-        return Entry ? Entry->Pool.GetTotalCount() : 0;
-    }
+    uint32 GetAvailableCount(const FString& ClassName) const;
 
 private:
-    struct IPoolEntry
-    {
-        virtual ~IPoolEntry() = default;
-        virtual void ReleaseActor(AActor* Actor) = 0;
-        virtual void DestroyAll() = 0;
-    };
+    FActorPool& GetOrCreatePool(const FString& ClassName);
+    const FActorPool* FindPool(const FString& ClassName) const;
 
-    template <typename TActor>
-    struct TPoolEntry final : IPoolEntry
-    {
-        explicit TPoolEntry(UWorld* InWorld)
-            : Pool(InWorld)
-        {
-        }
-
-        void ReleaseActor(AActor* Actor) override
-        {
-            ReleaseTyped(static_cast<TActor*>(Actor), nullptr);
-        }
-
-        void ReleaseTyped(TActor* Actor, const typename TActorPool<TActor>::FActorCallback& Deactivate)
-        {
-            if (Deactivate)
-            {
-                Pool.Release(Actor, Deactivate);
-            }
-            else
-            {
-                Pool.Release(Actor, DefaultDeactivate);
-            }
-        }
-
-        void DestroyAll() override
-        {
-            Pool.DestroyAll();
-        }
-
-        TActorPool<TActor> Pool;
-        typename TActorPool<TActor>::FActorCallback DefaultDeactivate = nullptr;
-    };
-
-    template <typename TActor>
-    TPoolEntry<TActor>& GetOrCreateEntry()
-    {
-        static_assert(std::is_base_of_v<AActor, TActor>, "FActorPoolManager<TActor>: TActor must derive from AActor.");
-
-        const std::type_index TypeKey(typeid(TActor));
-        auto It = Pools.find(TypeKey);
-        if (It == Pools.end())
-        {
-            auto Entry = std::make_unique<TPoolEntry<TActor>>(World);
-            TPoolEntry<TActor>* RawEntry = Entry.get();
-            Pools.emplace(TypeKey, std::move(Entry));
-            return *RawEntry;
-        }
-
-        return *static_cast<TPoolEntry<TActor>*>(It->second.get());
-    }
-
-    template <typename TActor>
-    const TPoolEntry<TActor>* FindEntry() const
-    {
-        const std::type_index TypeKey(typeid(TActor));
-        auto It = Pools.find(TypeKey);
-        if (It == Pools.end())
-        {
-            return nullptr;
-        }
-
-        return static_cast<const TPoolEntry<TActor>*>(It->second.get());
-    }
-
-    void RegisterActiveActor(AActor* Actor, IPoolEntry* Entry)
-    {
-        if (!Actor || !Entry)
-        {
-            return;
-        }
-
-        ActiveActorToPool[Actor] = Entry;
-        if (DelegateBoundActors.insert(Actor).second)
-        {
-            Actor->OnPoolReturnRequested.AddDynamic(this, &FActorPoolManager::HandleActorPoolReturnRequested);
-        }
-    }
-
-    void HandleActorPoolReturnRequested(AActor* Actor)
-    {
-        Release(Actor);
-    }
+    void RegisterActiveActor(AActor* Actor, FActorPool* Pool);
+    void HandleActorPoolReturnRequested(AActor* Actor);
 
     UWorld* World = nullptr;
-    TMap<std::type_index, std::unique_ptr<IPoolEntry>> Pools;
-    TMap<AActor*, IPoolEntry*> ActiveActorToPool;
+    TMap<FString, std::unique_ptr<FActorPool>> Pools;
+    TMap<AActor*, FActorPool*> ActiveActorToPool;
     TSet<AActor*> DelegateBoundActors;
 };

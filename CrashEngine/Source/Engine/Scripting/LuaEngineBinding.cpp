@@ -7,6 +7,7 @@
 #include "Component/Collision/CircleCollider2DComponent.h"
 #include "Core/Logging/LogMacros.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/ActorPoolManager.h"
 #include "Materials/MaterialCore.h"
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
@@ -595,14 +596,54 @@ float FLuaCircleCollider2DHandle::GetRadius() const
 
 bool FLuaCircleCollider2DHandle::SetRadius(float Radius) const
 {
-    UCircleCollider2DComponent* Circle = Cast<UCircleCollider2DComponent>(Resolve());
-    if (!Circle)
-    {
-        return false;
-    }
+	UCircleCollider2DComponent* Circle = Cast<UCircleCollider2DComponent>(Resolve());
+	if (!Circle)
+	{
+		return false;
+	}
 
-    Circle->SetRadius(Radius);
-    return true;
+	Circle->SetRadius(Radius);
+	return true;
+}
+
+FLuaActorPoolManagerHandle::FLuaActorPoolManagerHandle(FActorPoolManager* InManager)
+	: Manager(InManager)
+{
+}
+
+bool FLuaActorPoolManagerHandle::IsValid() const
+{
+	return Manager != nullptr;
+}
+
+void FLuaActorPoolManagerHandle::Warmup(const FString& ClassName, uint32 Count) const
+{
+	if (Manager)
+	{
+		Manager->Warmup(ClassName, Count);
+	}
+}
+
+FLuaActorHandle FLuaActorPoolManagerHandle::Acquire(const FString& ClassName) const
+{
+	if (!Manager)
+	{
+		return FLuaActorHandle();
+	}
+	return FLuaActorHandle(Manager->Acquire(ClassName));
+}
+
+void FLuaActorPoolManagerHandle::Release(const FLuaActorHandle& Actor) const
+{
+	if (Manager)
+	{
+		Manager->Release(Actor.Resolve());
+	}
+}
+
+uint32 FLuaActorPoolManagerHandle::GetActiveCount(const FString& ClassName) const
+{
+	return Manager ? Manager->GetActiveCount(ClassName) : 0;
 }
 
 void RegisterLuaEngineBindings(sol::state& Lua)
@@ -716,4 +757,14 @@ void RegisterLuaEngineBindings(sol::state& Lua)
         sol::base_classes, sol::bases<FLuaCollider2DHandle>(),
         "GetRadius", &FLuaCircleCollider2DHandle::GetRadius,
         "SetRadius", &FLuaCircleCollider2DHandle::SetRadius);
+
+	Lua.new_usertype<FLuaActorPoolManagerHandle>(
+		"ActorPoolManager",
+		sol::no_constructor,
+
+		"IsValid", &FLuaActorPoolManagerHandle::IsValid,
+		"Warmup", &FLuaActorPoolManagerHandle::Warmup,
+		"Acquire", &FLuaActorPoolManagerHandle::Acquire,
+		"Release", &FLuaActorPoolManagerHandle::Release,
+		"GetActiveCount", &FLuaActorPoolManagerHandle::GetActiveCount);
 }

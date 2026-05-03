@@ -36,6 +36,7 @@ public:
     // Actor lifecycle
     template <typename T>
     T* SpawnActor();
+    AActor* SpawnActorByClass(const FString& ClassName);
     void DestroyActor(AActor* Actor);
     void AddActor(AActor* Actor);
     void MarkEditorPickingAndScenePrimitiveBVHsDirty();
