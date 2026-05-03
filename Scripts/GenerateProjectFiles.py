@@ -64,6 +64,9 @@ INCLUDE_PATHS = [
     "Source",
     "ThirdParty",
     "ThirdParty\\ImGui",
+    "ThirdParty\\RmlUi\\Include",
+    "ThirdParty\\RmlUi\\Source",
+    "ThirdParty\\FreeType\\include",
     "Source\\Editor",
     ".",
     f"$(ProjectDir)..\\vcpkg_installed\\{VCPKG_TRIPLET}\\include",
@@ -73,6 +76,60 @@ INCLUDE_PATHS = [
 GAME_EXCLUDED_PREFIXES = (
     "Source\\Editor\\",
 )
+
+VENDORED_SOURCE_EXCLUDED_PREFIXES = (
+    "ThirdParty\\RmlUi\\Backends\\",
+    "ThirdParty\\RmlUi\\Samples\\",
+    "ThirdParty\\RmlUi\\Tests\\",
+    "ThirdParty\\RmlUi\\Utilities\\",
+    "ThirdParty\\RmlUi\\Source\\Debugger\\",
+    "ThirdParty\\RmlUi\\Source\\Lua\\",
+    "ThirdParty\\RmlUi\\Source\\Lottie\\",
+    "ThirdParty\\RmlUi\\Source\\SVG\\",
+)
+
+FREETYPE_COMPILE_UNITS = {
+    "ThirdParty\\FreeType\\src\\autofit\\autofit.c",
+    "ThirdParty\\FreeType\\src\\base\\ftbase.c",
+    "ThirdParty\\FreeType\\src\\base\\ftbbox.c",
+    "ThirdParty\\FreeType\\src\\base\\ftbdf.c",
+    "ThirdParty\\FreeType\\src\\base\\ftbitmap.c",
+    "ThirdParty\\FreeType\\src\\base\\ftcid.c",
+    "ThirdParty\\FreeType\\src\\base\\ftdebug.c",
+    "ThirdParty\\FreeType\\src\\base\\ftfstype.c",
+    "ThirdParty\\FreeType\\src\\base\\ftgasp.c",
+    "ThirdParty\\FreeType\\src\\base\\ftglyph.c",
+    "ThirdParty\\FreeType\\src\\base\\ftgxval.c",
+    "ThirdParty\\FreeType\\src\\base\\ftinit.c",
+    "ThirdParty\\FreeType\\src\\base\\ftmm.c",
+    "ThirdParty\\FreeType\\src\\base\\ftotval.c",
+    "ThirdParty\\FreeType\\src\\base\\ftpatent.c",
+    "ThirdParty\\FreeType\\src\\base\\ftpfr.c",
+    "ThirdParty\\FreeType\\src\\base\\ftstroke.c",
+    "ThirdParty\\FreeType\\src\\base\\ftsynth.c",
+    "ThirdParty\\FreeType\\src\\base\\ftsystem.c",
+    "ThirdParty\\FreeType\\src\\base\\fttype1.c",
+    "ThirdParty\\FreeType\\src\\base\\ftwinfnt.c",
+    "ThirdParty\\FreeType\\src\\bdf\\bdf.c",
+    "ThirdParty\\FreeType\\src\\cff\\cff.c",
+    "ThirdParty\\FreeType\\src\\cid\\type1cid.c",
+    "ThirdParty\\FreeType\\src\\gzip\\ftgzip.c",
+    "ThirdParty\\FreeType\\src\\lzw\\ftlzw.c",
+    "ThirdParty\\FreeType\\src\\pcf\\pcf.c",
+    "ThirdParty\\FreeType\\src\\pfr\\pfr.c",
+    "ThirdParty\\FreeType\\src\\psaux\\psaux.c",
+    "ThirdParty\\FreeType\\src\\pshinter\\pshinter.c",
+    "ThirdParty\\FreeType\\src\\psnames\\psnames.c",
+    "ThirdParty\\FreeType\\src\\raster\\raster.c",
+    "ThirdParty\\FreeType\\src\\sdf\\sdf.c",
+    "ThirdParty\\FreeType\\src\\sfnt\\sfnt.c",
+    "ThirdParty\\FreeType\\src\\smooth\\smooth.c",
+    "ThirdParty\\FreeType\\src\\svg\\svg.c",
+    "ThirdParty\\FreeType\\src\\truetype\\truetype.c",
+    "ThirdParty\\FreeType\\src\\type1\\type1.c",
+    "ThirdParty\\FreeType\\src\\type42\\type42.c",
+    "ThirdParty\\FreeType\\src\\winfonts\\winfnt.c",
+}
 
 # Library paths (relative to project dir)
 LIBRARY_PATHS = []
@@ -113,7 +170,8 @@ def scan_files(project_dir: Path) -> dict[str, list[str]]:
                 ext = full.suffix.lower()
 
                 if ext in SOURCE_EXTS:
-                    result["ClCompile"].append(rel_str)
+                    if should_include_source_file(rel_str):
+                        result["ClCompile"].append(rel_str)
                 elif ext in HEADER_EXTS:
                     result["ClInclude"].append(rel_str)
                 elif ext in NATVIS_EXTS:
@@ -143,6 +201,19 @@ def scan_files(project_dir: Path) -> dict[str, list[str]]:
             result["ClCompile"].append(root_file.replace("/", "\\"))
 
     return result
+
+
+def should_include_source_file(rel_path: str) -> bool:
+    """Return true when a source file should be compiled by the main project."""
+    normalized = rel_path.replace("/", "\\")
+
+    if normalized.startswith("ThirdParty\\FreeType\\"):
+        return normalized in FREETYPE_COMPILE_UNITS
+
+    if any(normalized.startswith(prefix) for prefix in VENDORED_SOURCE_EXCLUDED_PREFIXES):
+        return False
+
+    return True
 
 
 def get_filter(rel_path: str) -> str:
@@ -329,6 +400,7 @@ def generate_vcxproj(files: dict[str, list[str]]):
         if is_x64:
             defs += "WITH_LUA=1;"
 
+        defs += "RMLUI_STATIC_LIB;RMLUI_FONT_ENGINE_FREETYPE;FT2_BUILD_LIBRARY;_CRT_SECURE_NO_WARNINGS;"
         defs += "NOMINMAX;%(PreprocessorDefinitions);"
         ET.SubElement(cl, "PreprocessorDefinitions").text = defs
 
@@ -356,6 +428,9 @@ def generate_vcxproj(files: dict[str, list[str]]):
     ig = ET.SubElement(proj, "ItemGroup")
     for f in files["ClCompile"]:
         elem = ET.SubElement(ig, "ClCompile", Include=f)
+        ET.SubElement(elem, "ObjectFileName").text = "$(IntDir)%(RelativeDir)"
+        if f.replace("/", "\\").startswith("ThirdParty\\FreeType\\"):
+            ET.SubElement(elem, "AdditionalOptions").text = "/wd4244 /wd4267 %(AdditionalOptions)"
         add_source_exclusions(elem, f)
 
     # ClInclude items
