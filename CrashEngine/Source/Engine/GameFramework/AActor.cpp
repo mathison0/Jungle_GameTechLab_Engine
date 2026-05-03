@@ -380,6 +380,7 @@ static USceneComponent* DuplicateSceneSubtree(
     if (!DupNode)
         return nullptr;
 
+    DupNode->SetFName(Src->GetFName());
     DupNode->SetOwner(DupOwner);
     if (DupParent)
     {
@@ -436,6 +437,7 @@ UObject* AActor::Duplicate(UObject* NewOuter) const
         if (!DupComp)
             continue;
 
+        DupComp->SetFName(Comp->GetFName());
         DupComp->SetOwner(Dup);
         Dup->RegisterComponent(DupComp);
         Visited.insert(Comp);
