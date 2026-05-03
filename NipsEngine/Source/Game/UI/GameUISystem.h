@@ -4,11 +4,14 @@
 #include <memory>
 #include <string>
 
+#include "Engine/Input/IUIInputHandler.h"
+
 struct HWND__;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 class FRmlUiRenderInterfaceD3D11;
 class FRmlUiSystemInterface;
+class FRmlUiClickListener;
 
 namespace Rml
 {
@@ -45,10 +48,11 @@ enum class EUIRenderMode
 //   - 에디터에서는 RenderPanelsOnly() 로 호출 (ImGui 프레임 불필요)
 //   - 게임 빌드에서는 Render() 로 호출 (ImGui 프레임 직접 관리)
 // -------------------------------------------------------
-class GameUISystem
+class GameUISystem : public IUIInputHandler
 {
 public:
     static GameUISystem& Get();
+    ~GameUISystem();
 
     // 게임 빌드 전용 - RmlUi 초기화 / 해제
     void Init(HWND__* Hwnd, ID3D11Device* Device, ID3D11DeviceContext* Context);
@@ -110,12 +114,22 @@ public:
     void SetStartGameCallback(std::function<void()> Callback);
     void RequestStartGame();
 
+    bool OnUIMouseMove(float X, float Y) override;
+    bool OnUIMouseButtonDown(int Button, float X, float Y) override;
+    bool OnUIMouseButtonUp(int Button, float X, float Y) override;
+    bool OnUIKeyDown(int VK) override;
+    bool OnUIKeyUp(int VK) override;
+
 private:
     GameUISystem() = default;
 
     void RenderCurrentPanel(EUIRenderMode Mode);
     void UpdateRmlUiDocument(EUIRenderMode Mode);
-    bool CreateTestDocument();
+    bool CreateGameDocument();
+    void BindRmlUiEvents();
+    void SetElementVisible(const char* Id, bool bVisible);
+    void SetElementText(const char* Id, const std::string& Text);
+    void SetElementProperty(const char* Id, const char* Property, const std::string& Value);
     // 상태에 따라 커서/마우스 잠금을 자동으로 맞춤
 
     EGameUIState CurrentState        = EGameUIState::None;
@@ -127,6 +141,10 @@ private:
     Rml::Context* RmlContext = nullptr;
     Rml::ElementDocument* RmlDocument = nullptr;
     ID3D11DeviceContext* D3DContext = nullptr;
+    std::unique_ptr<FRmlUiClickListener> StartClickListener;
+    std::unique_ptr<FRmlUiClickListener> RetryClickListener;
+    std::unique_ptr<FRmlUiClickListener> ExitClickListener;
+    double LastRmlUpdateTime = 0.0;
 
     // 게임 데이터
     float       CleanProgress    = 0.f;

@@ -28,6 +28,7 @@ void FGameViewportClient::Initialize(FWindowsWindow* InWindow)
 	PlayerController.SetToggleInputCaptureCallback([this]() { ToggleInteractionMode(); });
 	PlayerController.SetTogglePauseCallback(&GameUISystem::TogglePauseMenuIfInGame);
 	InputRouter.SetGamePlayerController(&PlayerController);
+	InputRouter.SetUIInputHandler(&GameUISystem::Get());
 	InputRouter.SetViewportDim(0.0f, 0.0f, WindowWidth, WindowHeight);
 }
 

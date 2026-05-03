@@ -120,6 +120,16 @@ set "MINIAUDIO_H=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\include\miniaudio.h"
 set "JOLT_H=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\include\Jolt\Jolt.h"
 set "JOLT_LIB_DEBUG=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\debug\lib\Jolt.lib"
 set "JOLT_LIB_RELEASE=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\lib\Jolt.lib"
+set "RMLUI_H=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\include\RmlUi\Core.h"
+set "RMLUI_LIB_DEBUG=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\debug\lib\rmlui.lib"
+set "RMLUI_LIB_RELEASE=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\lib\rmlui.lib"
+set "RMLUI_DLL_DEBUG=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\debug\bin\rmlui.dll"
+set "RMLUI_DLL_RELEASE=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\bin\rmlui.dll"
+set "FREETYPE_H=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\include\freetype2\ft2build.h"
+set "FREETYPE_LIB_DEBUG=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\debug\lib\freetype.lib"
+set "FREETYPE_LIB_RELEASE=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\lib\freetype.lib"
+set "FREETYPE_DLL_DEBUG=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\debug\bin\freetyped.dll"
+set "FREETYPE_DLL_RELEASE=%PROJECT_ROOT%\vcpkg_installed\%TRIPLET%\bin\freetype.dll"
 
 set "CHECK_FAILED=0"
 
@@ -158,6 +168,46 @@ if not exist "%JOLT_LIB_DEBUG%" (
 if not exist "%JOLT_LIB_RELEASE%" (
     set "CHECK_FAILED=1"
     echo MISSING: %JOLT_LIB_RELEASE%
+)
+if not exist "%RMLUI_H%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %RMLUI_H%
+)
+if not exist "%RMLUI_LIB_DEBUG%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %RMLUI_LIB_DEBUG%
+)
+if not exist "%RMLUI_LIB_RELEASE%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %RMLUI_LIB_RELEASE%
+)
+if not exist "%RMLUI_DLL_DEBUG%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %RMLUI_DLL_DEBUG%
+)
+if not exist "%RMLUI_DLL_RELEASE%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %RMLUI_DLL_RELEASE%
+)
+if not exist "%FREETYPE_H%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %FREETYPE_H%
+)
+if not exist "%FREETYPE_LIB_DEBUG%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %FREETYPE_LIB_DEBUG%
+)
+if not exist "%FREETYPE_LIB_RELEASE%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %FREETYPE_LIB_RELEASE%
+)
+if not exist "%FREETYPE_DLL_DEBUG%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %FREETYPE_DLL_DEBUG%
+)
+if not exist "%FREETYPE_DLL_RELEASE%" (
+    set "CHECK_FAILED=1"
+    echo MISSING: %FREETYPE_DLL_RELEASE%
 )
 
 if exist "%PROJECT_ROOT%\NipsEngine\Jolt.lib" (

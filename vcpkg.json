@@ -3,6 +3,7 @@
   "dependencies": [
     "luajit",
     "miniaudio",
-    "joltphysics"
+    "joltphysics",
+    "rmlui"
   ]
 }

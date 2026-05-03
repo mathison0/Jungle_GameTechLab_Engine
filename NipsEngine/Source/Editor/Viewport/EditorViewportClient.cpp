@@ -32,6 +32,7 @@ void FEditorViewportClient::Initialize(FWindowsWindow* InWindow, UEditorEngine* 
 	InputRouter.SetEditorWorldController(&EditorWorldController);
 	InputRouter.SetPIEController(&PIEController);
 	InputRouter.SetGamePlayerController(&GamePlayerController);
+	InputRouter.SetUIInputHandler(&GameUISystem::Get());
 }
 
 void FEditorViewportClient::SetWorld(UWorld* InWorld)
