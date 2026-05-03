@@ -41,11 +41,7 @@ struct FSpawnEntry
 template <typename TActor, typename... TArgs>
 void SpawnActor(UWorld* World, const FVector& SpawnPoint, bool bInsertToOctree, TArgs&&... Args)
 {
-    TActor* Actor = World->SpawnActor<TActor>();
-    if constexpr (sizeof...(Args) > 0)
-    {
-        Actor->InitDefaultComponents(std::forward<TArgs>(Args)...);
-    }
+    TActor* Actor = World->SpawnActor<TActor>(std::forward<TArgs>(Args)...);
     Actor->SetActorLocation(SpawnPoint);
 
     if (bInsertToOctree)

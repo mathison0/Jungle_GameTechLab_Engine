@@ -34,8 +34,8 @@ public:
     UObject* Duplicate(UObject* NewOuter = nullptr) const override;
 
     // Actor lifecycle
-    template <typename T>
-    T* SpawnActor();
+    template <typename T, typename... TArgs>
+    T* SpawnActor(TArgs&&... Args);
     AActor* SpawnActorByClass(const FString& ClassName);
     void DestroyActor(AActor* Actor);
     void AddActor(AActor* Actor);
@@ -115,12 +115,12 @@ private:
 	
 };
 
-template <typename T>
-inline T* UWorld::SpawnActor()
+template <typename T, typename... TArgs>
+inline T* UWorld::SpawnActor(TArgs&&... Args)
 {
     // create and register an actor
     T* Actor = UObjectManager::Get().CreateObject<T>(PersistentLevel);
-    static_cast<AActor*>(Actor)->InitDefaultComponents();
+    static_cast<T*>(Actor)->InitDefaultComponents(std::forward<TArgs>(Args)...);
     AddActor(Actor); // BeginPlay 트리거는 AddActor 내부에서 bHasBegunPlay 가드로 처리
     return Actor;
 }

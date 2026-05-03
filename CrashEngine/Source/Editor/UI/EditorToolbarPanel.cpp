@@ -96,13 +96,12 @@ AActor* SpawnToolbarActor(UWorld* World, const FVector& SpawnPoint, bool bInsert
         return nullptr;
     }
 
-    TActor* Actor = World->SpawnActor<TActor>();
+    TActor* Actor = World->SpawnActor<TActor>(std::forward<TArgs>(Args)...);
     if (!Actor)
     {
         return nullptr;
     }
 
-    Actor->InitDefaultComponents(std::forward<TArgs>(Args)...);
     Actor->SetActorLocation(SpawnPoint);
 
     if (bInsertToOctree)
