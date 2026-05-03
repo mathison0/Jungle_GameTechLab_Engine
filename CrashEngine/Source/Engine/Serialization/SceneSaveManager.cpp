@@ -112,7 +112,7 @@ void FSceneSaveManager::SaveSceneAsJSON(const string& InSceneName, FWorldContext
     std::filesystem::create_directories(SceneDir);
 
     JSON Root = SerializeWorld(WorldContext.World, WorldContext, PerspectiveCam);
-    Root[SceneKeys::Version] = 2;
+    Root[SceneKeys::Version] = 3;
     Root[SceneKeys::Name] = FinalName;
 
     std::ofstream File(FileDestination);
@@ -551,6 +551,8 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 
     JSON root = JSON::Load(FileContent);
 
+    int32 SceneVersion = root.hasKey(SceneKeys::Version) ? root[SceneKeys::Version].ToInt() : 1;
+
     string ClassName = root[SceneKeys::ClassName].ToString();
     ClassName = ClassName.empty() ? "UWorld" : ClassName; // Default to "World" if ClassName is missing
     UObject* WorldObj = FObjectFactory::Get().Create(ClassName);
@@ -585,7 +587,8 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 
     // Deserialize Primitives (top-level) and Camera first
     std::unordered_map<string, AActor*> CreatedFromPrimitives;
-    if (root.hasKey("Primitives"))
+    // Actors 대신 Primitives가 있던 구버전 하위 호환
+    if (SceneVersion < 3 && root.hasKey("Primitives"))
     {
         JSON& Prims = root["Primitives"];
         DeserializePrimitives(Prims, World, CreatedFromPrimitives);
