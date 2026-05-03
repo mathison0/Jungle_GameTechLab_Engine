@@ -10,16 +10,15 @@ local TargetingAI = {
 }
 
 function TargetingAI.Targeting(self, ComponentHandle, bZAxisOnly, DeltaTime)
+        Log("TargetingAI.TargetingEntry")
+
     if ComponentHandle == nil or not ComponentHandle:IsValid() then
         return
     end
+        Log("TargetingAI.TargetingInternal")
 
     local myPos = ComponentHandle:GetWorldLocation()
-                    Log("Fuck1")
-
     if self.target ~= nil and self.target:IsValid() then
-                Log("Fuck2")
-
         local targetPos = self.target:GetLocation()
         if bZAxisOnly then
             targetPos.z = myPos.z
