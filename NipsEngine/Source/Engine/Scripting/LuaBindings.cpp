@@ -1,4 +1,4 @@
-#include "Scripting/LuaBindings.h"
+﻿#include "Scripting/LuaBindings.h"
 
 #if WITH_LUA
 #include "GameFramework/AActor.h"
