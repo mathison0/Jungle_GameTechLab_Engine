@@ -78,9 +78,9 @@ function Script:GetSpawnPosition(PlayerPos)
     local Distance = self.MinSpawnRadius + (math.random() * (self.MaxSpawnRadius - self.MinSpawnRadius))
     
     return {
-        x = PlayerPos.x + math.cos(Angle) * Distance,
-        y = PlayerPos.y + math.sin(Angle) * Distance,
-        z = 0.0
+        X = PlayerPos.X + math.cos(Angle) * Distance,
+        Y = PlayerPos.Y + math.sin(Angle) * Distance,
+        Z = 0.0
     }
 end
 
@@ -158,9 +158,9 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
 
     -- 플레이어 바깥쪽에서 생성
     local CenterSpawnPos = {
-        x = PlayerPos.x - MoveDir.x * self.FlyingWaveSpawnDistance,
-        y = PlayerPos.y - MoveDir.y * self.FlyingWaveSpawnDistance,
-        z = PlayerPos.z
+        X = PlayerPos.X - MoveDir.x * self.FlyingWaveSpawnDistance,
+        Y = PlayerPos.Y - MoveDir.y * self.FlyingWaveSpawnDistance,
+        Z = PlayerPos.Z
     }
 
     local RowSpacing = Spacing * 0.866 -- sqrt(3) / 2
@@ -185,11 +185,11 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
             local ColOffset = (col - HalfCols) * Spacing + Stagger
 
             local SpawnPos = {
-                x = CenterSpawnPos.x
+                x = CenterSpawnPos.X
                     + MoveDir.x * RowOffset
                     + Perp.x * ColOffset,
 
-                y = CenterSpawnPos.y
+                y = CenterSpawnPos.Y
                     + MoveDir.y * RowOffset
                     + Perp.y * ColOffset,
 

@@ -1,7 +1,8 @@
-#include "LuaBindingInternal.h"
+﻿#include "LuaBindingInternal.h"
 #include "Scripting/LuaEngineBinding.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "GameFramework/GamejamActor/AFlyingWaveEnemyActor.h"
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include "Scripting/LuaScriptTypes.h"
@@ -199,6 +200,25 @@ sol::table FLuaActorHandle::GetComponents(sol::this_state State, const sol::vari
     return Result;
 }
 
+bool FLuaActorHandle::InitFlyingWave(
+    const sol::object& DirObj,
+    float Speed,
+    float LifeTime) const
+{
+    AActor* Actor = Resolve();
+    AFlyingWaveEnemyActor* Flying = Cast<AFlyingWaveEnemyActor>(Actor);
+
+    if (!Flying)
+        return false;
+
+    FVector MoveDir;
+    if (!ReadLuaVec3(DirObj, MoveDir))
+        return false;
+
+    Flying->InitWave(MoveDir, Speed, LifeTime);
+    return true;
+}
+
 namespace LuaBinding
 {
     void RegisterActor(sol::state& Lua)
@@ -232,6 +252,8 @@ namespace LuaBinding
             "SetVisible", &FLuaActorHandle::SetVisible,
 
             "GetComponent", &FLuaActorHandle::GetComponent,
-            "GetComponents", &FLuaActorHandle::GetComponents);
+            "GetComponents", &FLuaActorHandle::GetComponents,
+
+            "InitFlyingWave", &FLuaActorHandle::InitFlyingWave);
     }
 }
