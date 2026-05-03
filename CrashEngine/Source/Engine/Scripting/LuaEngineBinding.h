@@ -10,6 +10,22 @@ class UCollider2DComponent;
 struct FLuaComponentHandle;
 struct FLuaCollider2DHandle;
 
+class FActorPoolManager;
+class UWorld;
+
+struct FLuaWorldHandle
+{
+	UWorld* World = nullptr;
+
+	FLuaWorldHandle() = default;
+	explicit FLuaWorldHandle(UWorld* InWorld);
+
+	bool IsValid() const;
+
+	sol::table OverlapCircle(sol::this_state State, const sol::object& Position, float Radius, const FString& Tag) const;
+	sol::table GetActorsByTag(sol::this_state State, const FString& Tag) const;
+};
+
 struct FLuaActorHandle
 {
 	uint32 UUID = 0;
@@ -19,6 +35,9 @@ struct FLuaActorHandle
 
 	AActor* Resolve() const;
 	bool IsValid() const;
+
+	uint32 GetUUID() const { return UUID; }
+	FLuaWorldHandle GetWorld() const;
 
 	FString GetName() const;
 	FString GetActorClassName() const;

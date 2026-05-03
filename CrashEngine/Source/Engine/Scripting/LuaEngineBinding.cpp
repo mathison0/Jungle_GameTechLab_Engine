@@ -1,17 +1,20 @@
 ﻿#include "LuaEngineBinding.h"
 
 #include <algorithm>
+#include <set>
 
 #include "Component/PrimitiveComponent.h"
 #include "Component/Collision/BoxCollider2DComponent.h"
 #include "Component/Collision/CircleCollider2DComponent.h"
 #include "Core/Logging/LogMacros.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
 #include "GameFramework/ActorPoolManager.h"
 #include "Materials/MaterialCore.h"
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include "Scripting/LuaScriptTypes.h"
+#include "Render/Scene/Proxies/Primitive/PrimitiveProxy.h"
 
 namespace
 {
@@ -55,6 +58,81 @@ bool DoesComponentMatchClass(UActorComponent* Component, const FString& ClassNam
 }
 } // namespace
 
+FLuaWorldHandle::FLuaWorldHandle(UWorld* InWorld)
+    : World(InWorld)
+{
+}
+
+bool FLuaWorldHandle::IsValid() const
+{
+    return World != nullptr;
+}
+
+sol::table FLuaWorldHandle::OverlapCircle(sol::this_state State, const sol::object& Position, float Radius, const FString& Tag) const
+{
+    sol::state_view Lua(State);
+    sol::table Result = Lua.create_table();
+
+    if (!World || Radius < 0.0f)
+    {
+        return Result;
+    }
+
+    FVector Pos;
+    if (!ReadLuaVec3(Position, Pos))
+    {
+        return Result;
+    }
+
+    TArray<UCollider2DComponent*> Colliders;
+    World->OverlapCircle(FVector2(Pos.X, Pos.Y), Radius, Colliders);
+
+    FName TargetTag(Tag);
+    std::set<AActor*> UniqueActors;
+    for (UCollider2DComponent* Collider : Colliders)
+    {
+        if (Collider)
+        {
+            AActor* Actor = Collider->GetOwner();
+            if (Actor && (Tag.empty() || Actor->GetActorTag() == TargetTag))
+            {
+                UniqueActors.insert(Actor);
+            }
+        }
+    }
+
+    int32 Index = 1;
+    for (AActor* Actor : UniqueActors)
+    {
+        Result[Index++] = FLuaActorHandle(Actor);
+    }
+
+    return Result;
+}
+
+sol::table FLuaWorldHandle::GetActorsByTag(sol::this_state State, const FString& Tag) const
+{
+    sol::state_view Lua(State);
+    sol::table Result = Lua.create_table();
+
+    if (!World)
+    {
+        return Result;
+    }
+
+    FName TargetTag(Tag);
+    int32 Index = 1;
+    for (AActor* Actor : World->GetActors())
+    {
+        if (Actor && Actor->GetActorTag() == TargetTag)
+        {
+            Result[Index++] = FLuaActorHandle(Actor);
+        }
+    }
+
+    return Result;
+}
+
 FLuaActorHandle::FLuaActorHandle(const AActor* InActor)
     : UUID(InActor ? InActor->GetUUID() : 0)
 {
@@ -75,6 +153,13 @@ bool FLuaActorHandle::IsValid() const
 {
     return Resolve() != nullptr;
 }
+
+FLuaWorldHandle FLuaActorHandle::GetWorld() const
+{
+    AActor* Actor = Resolve();
+    return FLuaWorldHandle(Actor ? Actor->GetWorld() : nullptr);
+}
+
 
 FString FLuaActorHandle::GetName() const
 {
@@ -694,11 +779,21 @@ void RegisterLuaEngineBindings(sol::state& Lua)
                                                           { return V * Scalar; }, [](float Scalar, const FVector2& V)
                                                           { return V * Scalar; }));
 
+    Lua.new_usertype<FLuaWorldHandle>(
+        "World",
+        sol::no_constructor,
+
+        "IsValid", &FLuaWorldHandle::IsValid,
+        "OverlapCircle", &FLuaWorldHandle::OverlapCircle,
+        "GetActorsByTag", &FLuaWorldHandle::GetActorsByTag);
+
     Lua.new_usertype<FLuaActorHandle>(
         "Actor",
         sol::no_constructor,
 
         "IsValid", &FLuaActorHandle::IsValid,
+        "GetUUID", &FLuaActorHandle::GetUUID,
+        "GetWorld", &FLuaActorHandle::GetWorld,
         "GetName", &FLuaActorHandle::GetName,
         "GetClassName", &FLuaActorHandle::GetActorClassName,
 
