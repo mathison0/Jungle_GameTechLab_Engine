@@ -4,6 +4,7 @@
 #include "Editor/Settings/EditorSettings.h"
 #include "Engine/Slate/SlateApplication.h"
 #include "EditorEngine.h"
+#include "Game/UI/GameUISystem.h"
 
 #include "GameFramework/World.h"
 #include "Component/GizmoComponent.h"
@@ -32,6 +33,13 @@ void FEditorViewportClient::Initialize(FWindowsWindow* InWindow, UEditorEngine* 
 												   { FocusPrimarySelection(); });
 	PIEController.SetToggleInputCaptureCallback([this]()
 												{ TogglePIEInputCapture(); });
+	GamePlayerController.SetTogglePauseCallback([]()
+												{
+		GameUISystem& UI = GameUISystem::Get();
+		if (UI.GetState() == EGameUIState::InGame)
+		{
+			UI.SetPauseMenuOpen(!UI.IsPauseMenuOpen());
+		} });
 	InputRouter.SetEditorWorldController(&EditorWorldController);
 	InputRouter.SetPIEController(&PIEController);
 	InputRouter.SetGamePlayerController(&GamePlayerController);

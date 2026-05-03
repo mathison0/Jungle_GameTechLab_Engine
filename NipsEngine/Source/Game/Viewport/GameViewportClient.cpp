@@ -25,6 +25,14 @@ void FGameViewportClient::Initialize(FWindowsWindow* InWindow)
 	FreeCamera.SetLookAt(FVector::ZeroVector);
 	PlayerController.SetFreeCamera(&FreeCamera);
 	PlayerController.SetToggleInputCaptureCallback([this]() { ToggleInteractionMode(); });
+	PlayerController.SetTogglePauseCallback([]()
+	{
+		GameUISystem& UI = GameUISystem::Get();
+		if (UI.GetState() == EGameUIState::InGame)
+		{
+			UI.SetPauseMenuOpen(!UI.IsPauseMenuOpen());
+		}
+	});
 	InputRouter.SetGamePlayerController(&PlayerController);
 	InputRouter.SetViewportDim(0.0f, 0.0f, WindowWidth, WindowHeight);
 }

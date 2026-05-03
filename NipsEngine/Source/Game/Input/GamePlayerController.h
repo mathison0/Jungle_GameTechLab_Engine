@@ -50,6 +50,8 @@ public:
 	void SetRotateSensitivity(float InSensitivity) { RotateSensitivity = InSensitivity; }
 	void SetToggleInputCaptureCallback(std::function<void()> Callback) { OnRequestToggleInputCapture = std::move(Callback); }
 	void ClearToggleInputCaptureCallback() { OnRequestToggleInputCapture = nullptr; }
+	void SetTogglePauseCallback(std::function<void()> Callback) { OnRequestTogglePause = std::move(Callback); }
+	void ClearTogglePauseCallback() { OnRequestTogglePause = nullptr; }
 
 	void BuildSceneView(FSceneView& OutView, const FViewportRect& ViewRect, EViewMode ViewMode) const;
 
@@ -73,4 +75,5 @@ private:
 	float FreeCameraPitch = 0.0f;
 	bool bFreeCameraInitialized = false;
 	std::function<void()> OnRequestToggleInputCapture;
+	std::function<void()> OnRequestTogglePause;
 };
