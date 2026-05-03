@@ -252,10 +252,7 @@ void FLuaScriptSystem::BindCoroutineAPI(ULuaScriptComponent* Component, FScriptS
 		float H = static_cast<float>(Cam->GetHeight());
 		FRay Ray = Cam->DeprojectScreenToWorld(W * 0.5f, H * 0.5f, W, H);
 
-		FVector BackshiftedOrigin = Ray.Origin - (Ray.Direction * 20.0f);
-        FRay AdjustedRay(BackshiftedOrigin, Ray.Direction);
-
-		World->LineTraceSingle(AdjustedRay, MaxDistance, Hit, Owner);
+		World->LineTraceSingle(Ray, MaxDistance, Hit, Owner);
 		return Hit;
 	});
 }
