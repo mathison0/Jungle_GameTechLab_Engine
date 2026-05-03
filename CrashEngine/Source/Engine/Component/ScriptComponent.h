@@ -20,6 +20,11 @@ public:
 	void SetScriptPath(const FString& InScriptPath);
 	const FString& GetScriptPath() const { return ScriptPath; }
 
+protected:
+    void OnComponentHit(class UCollider2DComponent* OtherCollider);
+    void OnComponentBeginOverlap(class UCollider2DComponent* OtherCollider);
+    void OnComponentEndOverlap(class UCollider2DComponent* OtherCollider);
+
 private:
 	bool LoadScript();
 	void SyncScriptPropertiesWithAsset();

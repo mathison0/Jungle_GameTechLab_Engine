@@ -160,6 +160,61 @@ sol::table MakeLuaVec3(sol::state_view Lua, const FVector& Value)
     return Vec;
 }
 
+bool ReadLuaVec2(const sol::object& ValueObject, FVector2& OutValue)
+{
+    if (ValueObject.is<FVector2>())
+    {
+        OutValue = ValueObject.as<FVector2>();
+        return true;
+    }
+
+    if (!ValueObject.is<sol::table>())
+    {
+        return false;
+    }
+
+    sol::table Table = ValueObject.as<sol::table>();
+    sol::object XObject = Table["x"];
+    sol::object YObject = Table["y"];
+
+    if (!XObject.valid() || XObject == sol::nil)
+    {
+        XObject = Table["X"];
+    }
+    if (!YObject.valid() || YObject == sol::nil)
+    {
+        YObject = Table["Y"];
+    }
+    if (!XObject.valid() || XObject == sol::nil)
+    {
+        XObject = Table[1];
+    }
+    if (!YObject.valid() || YObject == sol::nil)
+    {
+        YObject = Table[2];
+    }
+
+    if (XObject.get_type() != sol::type::number ||
+        YObject.get_type() != sol::type::number)
+    {
+        return false;
+    }
+
+    OutValue.X = XObject.as<float>();
+    OutValue.Y = YObject.as<float>();
+    return true;
+}
+
+sol::table MakeLuaVec2(sol::state_view Lua, const FVector2& Value)
+{
+    sol::table Vec = Lua.create_table();
+    Vec[1] = Value.X;
+    Vec[2] = Value.Y;
+    Vec["x"] = Value.X;
+    Vec["y"] = Value.Y;
+    return Vec;
+}
+
 bool ReadLuaScriptValue(const sol::object& ValueObject, ELuaScriptPropertyType Type, FLuaScriptValue& OutValue)
 {
     // Lua default 값을 FLuaScriptValue에 저장하는 확장 지점입니다.
