@@ -132,11 +132,11 @@ public:
 
         for (TActor* Actor : Active)
         {
-            World->DestroyActor(Actor);
+            //World->DestroyActor(Actor);
         }
         for (TActor* Actor : Available)
         {
-            World->DestroyActor(Actor);
+            //World->DestroyActor(Actor);
         }
 
         Active.clear();
@@ -167,16 +167,7 @@ private:
             return;
         }
 
-        Actor->SetVisible(true);
-        Actor->PrimaryActorTick.SetTickEnabled(Actor->PrimaryActorTick.bStartWithTickEnabled);
-
-        for (UActorComponent* Component : Actor->GetComponents())
-        {
-            if (Component)
-            {
-                Component->Activate();
-            }
-        }
+		Actor->Activate();
     }
 
     static void DeactivateActor(TActor* Actor)
@@ -185,17 +176,7 @@ private:
         {
             return;
         }
-
-        Actor->SetVisible(false);
-        Actor->PrimaryActorTick.SetTickEnabled(false);
-
-        for (UActorComponent* Component : Actor->GetComponents())
-        {
-            if (Component)
-            {
-                Component->Deactivate();
-            }
-        }
+        Actor->Deactivate();
     }
 
     UWorld* World = nullptr;

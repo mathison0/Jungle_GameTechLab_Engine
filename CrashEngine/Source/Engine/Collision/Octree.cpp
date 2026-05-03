@@ -93,6 +93,11 @@ bool FOctree::RemoveDirect(UPrimitiveComponent* Primitive, bool bTryMergeNow)
         return false;
     }
 
+	if (PrimitiveList.empty())
+	{
+        return false;
+	}
+
     auto It = std::find(PrimitiveList.begin(), PrimitiveList.end(), Primitive);
     if (It == PrimitiveList.end())
     {

@@ -224,7 +224,7 @@ void FCollision2DManager::CollectColliders(UWorld& World, TArray<UCollider2DComp
         for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
         {
             UCollider2DComponent* Collider = Cast<UCollider2DComponent>(Primitive);
-            if (!Collider)
+            if (!Collider || Collider->IsActive() == false)
             {
                 continue;
             }

@@ -287,6 +287,18 @@ void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
     }
 }
 
+void UPrimitiveComponent::Activate()
+{
+    Super::Activate();
+    SetVisibility(true);
+}
+
+void UPrimitiveComponent::Deactivate()
+{
+    Super::Deactivate();
+    SetVisibility(false);
+}
+
 FBoundingBox UPrimitiveComponent::GetWorldBoundingBox() const
 {
     EnsureWorldAABBUpdated();

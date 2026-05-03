@@ -319,6 +319,28 @@ void AActor::Tick(float DeltaTime)
     }*/
 }
 
+void AActor::Activate()
+{
+    SetVisible(true);
+    PrimaryActorTick.SetTickEnabled(PrimaryActorTick.bStartWithTickEnabled);
+
+	for (UActorComponent* ActorComp : OwnedComponents)
+	{
+        ActorComp->Activate();
+	}
+}
+
+void AActor::Deactivate()
+{
+    SetVisible(false);
+    PrimaryActorTick.SetTickEnabled(false);
+
+    for (UActorComponent* ActorComp : OwnedComponents)
+    {
+        ActorComp->Deactivate();
+    }
+}
+
 FRotator AActor::GetActorRotation() const
 {
     return RootComponent ? RootComponent->GetRelativeRotation() : FRotator();

@@ -30,6 +30,8 @@ public:
     virtual void Tick(float DeltaTime);
     virtual void EndPlay();
     virtual void InitDefaultComponents();
+    virtual void Activate();
+    virtual void Deactivate();
 
     bool HasActorBegunPlay() const { return bActorHasBegunPlay; }
     void RequestReturnToPool();

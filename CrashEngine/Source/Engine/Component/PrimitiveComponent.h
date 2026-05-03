@@ -29,6 +29,9 @@ public:
     void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
     void PostEditProperty(const char* PropertyName) override;
 
+	void Activate() override;
+    void Deactivate() override;
+
     void Serialize(FArchive& Ar) override;
 
     virtual FMeshBuffer* GetMeshBuffer() const { return nullptr; }
