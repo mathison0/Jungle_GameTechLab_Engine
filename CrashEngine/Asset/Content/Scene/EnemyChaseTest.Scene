@@ -8,6 +8,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_2",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -28,7 +29,9 @@
             }
           }],
         "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_2",
         "Properties" : {
+          "Cast Shadow" : true,
           "CollisionChannel" : 1,
           "Element 0" : {
             "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
@@ -52,21 +55,23 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "Tank",
       "NonSceneComponents" : [{
-          "ClassName" : "UTankMovementComponent",
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_1",
           "Properties" : {
-            "Auto Register Updated" : true,
-            "Base Friction" : 0.100000,
-            "Drift Factor" : 0.300000,
-            "Drift Smoothness" : 0.100000,
-            "Move Speed" : 20.000000,
-            "Rotate Speed" : 30.000000,
-            "Updated Component" : "",
+            "Lua.BaseFriction" : 0.100000,
+            "Lua.DriftFactor" : 0.300000,
+            "Lua.DriftSmoothness" : 0.100000,
+            "Lua.MoveSpeed" : 20.000000,
+            "Lua.RotateSpeed" : 30.000000,
+            "Script" : "TankMovement.lua",
             "bTickEnable" : true
           }
         }, {
           "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_5",
           "Properties" : {
-            "Script" : "Tank.lua",
+            "Lua.MoveSpeed" : 1.000000,
+            "Script" : "CollisionTest.lua",
             "bTickEnable" : true
           }
         }],
@@ -75,6 +80,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_3",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -97,7 +103,9 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
+                "Name" : "UStaticMeshComponent_6",
                 "Properties" : {
+                  "Cast Shadow" : true,
                   "CollisionChannel" : 1,
                   "Element 0" : {
                     "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
@@ -117,7 +125,9 @@
                 }
               }],
             "ClassName" : "UStaticMeshComponent",
+            "Name" : "UStaticMeshComponent_5",
             "Properties" : {
+              "Cast Shadow" : true,
               "CollisionChannel" : 1,
               "Element 0" : {
                 "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
@@ -139,7 +149,9 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
+                "Name" : "UStaticMeshComponent_7",
                 "Properties" : {
+                  "Cast Shadow" : true,
                   "CollisionChannel" : 1,
                   "Element 0" : {
                     "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
@@ -159,6 +171,7 @@
                 }
               }],
             "ClassName" : "UCameraComponent",
+            "Name" : "UCameraComponent_2",
             "Properties" : {
               "FOV" : 1.047198,
               "Far Z" : 1000.000000,
@@ -170,9 +183,33 @@
               "Scale" : [1.000000, 1.000000, 1.000000],
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "UBoxCollider2DComponent",
+            "Name" : "UBoxCollider2DComponent_1",
+            "Properties" : {
+              "BoxExtent2D" : [1.000000, 1.000000],
+              "CollisionChannel" : 2,
+              "DebugPlaneOffsetZ" : 1.800000,
+              "DrawOnlyIfSelected" : true,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : true,
+              "Is Editor Helper" : false,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Mobility" : 1,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Shape Color" : [0.000000, 0.862745, 1.000000, 1.000000],
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_3",
         "Properties" : {
+          "Cast Shadow" : true,
           "CollisionChannel" : 1,
           "Element 0" : {
             "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
@@ -180,7 +217,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [0.000000, -22.410915, 1.000000],
+          "Location" : [0.000000, -3.566015, 1.000000],
           "Mobility" : 1,
           "Rotation" : [0.000000, 44.479233, 0.000000],
           "Scale" : [1.000000, 1.000000, 0.500000],
@@ -197,9 +234,9 @@
       "Name" : "TestEnemy",
       "NonSceneComponents" : [{
           "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_2",
           "Properties" : {
             "Lua.MoveSpeed" : 1.000000,
-            "Lua.TargetSearchRadius" : 10000.000000,
             "Script" : "EnemyScript.lua",
             "bTickEnable" : true
           }
@@ -209,6 +246,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_4",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -227,9 +265,33 @@
               "Visible In Game" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "UBoxCollider2DComponent",
+            "Name" : "UBoxCollider2DComponent_0",
+            "Properties" : {
+              "BoxExtent2D" : [1.000000, 1.000000],
+              "CollisionChannel" : 3,
+              "DebugPlaneOffsetZ" : 1.900000,
+              "DrawOnlyIfSelected" : true,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : true,
+              "Is Editor Helper" : false,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Mobility" : 1,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Shape Color" : [0.000000, 0.862745, 1.000000, 1.000000],
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UStaticMeshComponent",
+        "Name" : "UStaticMeshComponent_4",
         "Properties" : {
+          "Cast Shadow" : true,
           "CollisionChannel" : 1,
           "Element 0" : {
             "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
@@ -237,7 +299,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [0.000000, 0.000000, 0.000000],
+          "Location" : [0.000000, 0.000000, 1.000000],
           "Mobility" : 1,
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
@@ -257,6 +319,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_5",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -269,7 +332,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 38",
+              "Text" : "UUID : 40",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -278,6 +341,7 @@
           }, {
             "Children" : [],
             "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_0",
             "Properties" : {
               "CollisionChannel" : 1,
               "Generate Hit Events" : false,
@@ -299,6 +363,7 @@
             }
           }],
         "ClassName" : "UDirectionalLightComponent",
+        "Name" : "UDirectionalLightComponent_0",
         "Properties" : {
           "CSM Max Distance" : 2000.000000,
           "Cascade Count" : 4,
@@ -328,6 +393,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_6",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -340,7 +406,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 44",
+              "Text" : "UUID : 46",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -349,6 +415,7 @@
           }, {
             "Children" : [],
             "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_1",
             "Properties" : {
               "CollisionChannel" : 1,
               "Generate Hit Events" : false,
@@ -370,6 +437,7 @@
             }
           }],
         "ClassName" : "UAmbientLightComponent",
+        "Name" : "UAmbientLightComponent_0",
         "Properties" : {
           "Cast Shadows" : true,
           "Depth Bias" : 0.000000,
@@ -396,6 +464,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_7",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -408,7 +477,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 50",
+              "Text" : "UUID : 52",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -417,6 +486,7 @@
           }, {
             "Children" : [],
             "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_2",
             "Properties" : {
               "CollisionChannel" : 1,
               "Generate Hit Events" : false,
@@ -438,6 +508,7 @@
             }
           }],
         "ClassName" : "UPointLightComponent",
+        "Name" : "UPointLightComponent_0",
         "Properties" : {
           "AttenuationRadius" : 60.000000,
           "Cast Shadows" : true,
@@ -467,9 +538,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-11.979224, -26.897789, 15.999136],
+    "Location" : [-7.205380, -5.256469, 8.418805],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 39.039612, 16.450710]
+    "Rotation" : [0.000001, 43.659561, 2.170945]
   },
   "Primitives" : {
     "23" : {
@@ -480,14 +551,14 @@
       "Type" : "StaticMeshComp"
     },
     "26" : {
-      "Location" : [0.000000, -22.410915, 1.000000],
+      "Location" : [0.000000, -3.566015, 1.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 44.479233],
       "Scale" : [1.000000, 1.000000, 0.500000],
       "Type" : "StaticMeshComp"
     },
     "29" : {
-      "Location" : [0.000000, 0.000000, 0.000000],
+      "Location" : [0.000000, 0.000000, 1.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],

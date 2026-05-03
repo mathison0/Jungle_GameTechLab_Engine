@@ -68,6 +68,22 @@ public:
 
     const TArray<UActorComponent*>& GetComponents() const { return OwnedComponents; }
 
+    template <typename T>
+    T* FindComponentByClass() const
+    {
+        static_assert(std::is_base_of_v<UActorComponent, T>,
+                      "FindComponentByClass<T>: T must derive from UActorComponent");
+
+        for (UActorComponent* Comp : OwnedComponents)
+        {
+            if (T* CastedComp = Cast<T>(Comp))
+            {
+                return CastedComp;
+            }
+        }
+        return nullptr;
+    }
+
     // Transform — Location
     FVector GetActorLocation() const;
     void SetActorLocation(const FVector& Location);

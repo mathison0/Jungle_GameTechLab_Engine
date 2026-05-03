@@ -3,6 +3,9 @@
 #include <algorithm>
 
 #include "Component/PrimitiveComponent.h"
+#include "Component/Collision/BoxCollider2DComponent.h"
+#include "Component/Collision/CircleCollider2DComponent.h"
+#include "Core/Logging/LogMacros.h"
 #include "GameFramework/AActor.h"
 #include "Materials/MaterialCore.h"
 #include "Object/Object.h"
@@ -438,6 +441,47 @@ bool FLuaComponentHandle::LookAt(const sol::object& Value) const
     return true;
 }
 
+sol::object FLuaComponentHandle::LuaCast(sol::this_state State, const FString& ClassName) const
+{
+    sol::state_view Lua(State);
+    UActorComponent* Component = Resolve();
+    if (!Component)
+    {
+        return sol::nil;
+    }
+
+    // Collider2D로 Cast
+    if (ClassName == "Collider2D" || ClassName == "UCollider2DComponent")
+    {
+        if (::Cast<UCollider2DComponent>(Component))
+        {
+            return sol::make_object(Lua, FLuaCollider2DHandle(Component));
+        }
+        return sol::nil;
+    }
+
+    // 구체적인 콜라이더 타입으로 Cast (Box, Circle 등)
+    if (ClassName == "BoxCollider2D" || ClassName == "UBoxCollider2DComponent")
+    {
+        if (IsA("UBoxCollider2DComponent"))
+        {
+            return sol::make_object(Lua, FLuaBoxCollider2DHandle(Component));
+        }
+        return sol::nil;
+    }
+    if (ClassName == "CircleCollider2D" || ClassName == "UCircleCollider2DComponent")
+    {
+        if (IsA("UCircleCollider2DComponent"))
+        {
+            return sol::make_object(Lua, FLuaCircleCollider2DHandle(Component));
+        }
+        return sol::nil;
+    }
+
+    UE_LOG("[Lua]", Warning, "LuaCast to %s not supported. See FLuaComponentHandle::LuaCast() definition", ClassName.c_str());
+    return sol::nil;
+}
+
 bool FLuaComponentHandle::IsVisible() const
 {
     UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Resolve());
@@ -500,6 +544,67 @@ bool FLuaComponentHandle::IsOverlappingComponent(const FLuaComponentHandle& Othe
     return PrimitiveComponent->IsOverlappingComponent(OtherPrimitive);
 }
 
+UCollider2DComponent* FLuaCollider2DHandle::ResolveCollider() const
+{
+    return Cast<UCollider2DComponent>(Resolve());
+}
+
+sol::table FLuaCollider2DHandle::GetShapeWorldLocation2D(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    UCollider2DComponent* Collider = ResolveCollider();
+    return MakeLuaVec2(Lua, Collider ? Collider->GetShapeWorldLocation2D() : FVector2(0.f, 0.f));
+}
+
+float FLuaCollider2DHandle::GetCollisionPlaneZ() const
+{
+    UCollider2DComponent* Collider = ResolveCollider();
+    return Collider ? Collider->GetCollisionPlaneZ() : 0.f;
+}
+
+sol::table FLuaBoxCollider2DHandle::GetBoxExtent(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    UBoxCollider2DComponent* Box = Cast<UBoxCollider2DComponent>(Resolve());
+    return MakeLuaVec2(Lua, Box ? Box->GetBoxExtent2D() : FVector2(0.f, 0.f));
+}
+
+bool FLuaBoxCollider2DHandle::SetBoxExtent(const sol::object& Value) const
+{
+    FVector2 Extent;
+    if (!ReadLuaVec2(Value, Extent))
+    {
+        return false;
+    }
+
+    UBoxCollider2DComponent* Box = Cast<UBoxCollider2DComponent>(Resolve());
+    if (!Box)
+    {
+        return false;
+    }
+
+    Box->SetBoxExtent2D(Extent);
+    return true;
+}
+
+float FLuaCircleCollider2DHandle::GetRadius() const
+{
+    UCircleCollider2DComponent* Circle = Cast<UCircleCollider2DComponent>(Resolve());
+    return Circle ? Circle->GetRadius() : 0.f;
+}
+
+bool FLuaCircleCollider2DHandle::SetRadius(float Radius) const
+{
+    UCircleCollider2DComponent* Circle = Cast<UCircleCollider2DComponent>(Resolve());
+    if (!Circle)
+    {
+        return false;
+    }
+
+    Circle->SetRadius(Radius);
+    return true;
+}
+
 void RegisterLuaEngineBindings(sol::state& Lua)
 {
     Lua.new_usertype<FVector>(
@@ -516,6 +621,21 @@ void RegisterLuaEngineBindings(sol::state& Lua)
         { return A - B; },
         sol::meta_function::multiplication, sol::overload([](const FVector& V, float Scalar)
                                                           { return V * Scalar; }, [](float Scalar, const FVector& V)
+                                                          { return V * Scalar; }));
+
+    Lua.new_usertype<FVector2>(
+        "FVector2",
+        sol::constructors<FVector2(), FVector2(float, float)>(),
+
+        "X", &FVector2::X,
+        "Y", &FVector2::Y,
+
+        sol::meta_function::addition, [](const FVector2& A, const FVector2& B)
+        { return A + B; },
+        sol::meta_function::subtraction, [](const FVector2& A, const FVector2& B)
+        { return A - B; },
+        sol::meta_function::multiplication, sol::overload([](const FVector2& V, float Scalar)
+                                                          { return V * Scalar; }, [](float Scalar, const FVector2& V)
                                                           { return V * Scalar; }));
 
     Lua.new_usertype<FLuaActorHandle>(
@@ -563,6 +683,7 @@ void RegisterLuaEngineBindings(sol::state& Lua)
         "SetRelativeLocation", &FLuaComponentHandle::SetRelativeLocation,
         "GetForwardVector", &FLuaComponentHandle::GetForwardVector,
         "LookAt", &FLuaComponentHandle::LookAt,
+        "Cast", &FLuaComponentHandle::LuaCast,
 
         // PrimitiveComponent API
         "IsVisible", &FLuaComponentHandle::IsVisible,
@@ -571,4 +692,28 @@ void RegisterLuaEngineBindings(sol::state& Lua)
         "SetGenerateOverlapEvents", &FLuaComponentHandle::SetGenerateOverlapEvents,
         "IsOverlappingActor", &FLuaComponentHandle::IsOverlappingActor,
         "IsOverlappingComponent", &FLuaComponentHandle::IsOverlappingComponent);
+
+    // ColliderComponent
+    Lua.new_usertype<FLuaCollider2DHandle>(
+        "Collider2D",
+        sol::no_constructor,
+        sol::base_classes, sol::bases<FLuaComponentHandle>(),
+
+        "GetShapeWorldLocation2D", &FLuaCollider2DHandle::GetShapeWorldLocation2D,
+        "GetCollisionPlaneZ", &FLuaCollider2DHandle::GetCollisionPlaneZ);
+    
+    Lua.new_usertype<FLuaBoxCollider2DHandle>(
+        "BoxCollider2D",
+        sol::no_constructor,
+        sol::base_classes, sol::bases<FLuaCollider2DHandle>(),
+
+        "GetBoxExtent", &FLuaBoxCollider2DHandle::GetBoxExtent,
+        "SetBoxExtent", &FLuaBoxCollider2DHandle::SetBoxExtent);
+
+    Lua.new_usertype<FLuaCircleCollider2DHandle>(
+        "CircleCollider2D",
+        sol::no_constructor,
+        sol::base_classes, sol::bases<FLuaCollider2DHandle>(),
+        "GetRadius", &FLuaCircleCollider2DHandle::GetRadius,
+        "SetRadius", &FLuaCircleCollider2DHandle::SetRadius);
 }
