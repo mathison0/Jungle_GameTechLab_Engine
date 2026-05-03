@@ -1,4 +1,4 @@
-#include "Scripting/LuaBindings.h"
+﻿#include "Scripting/LuaBindings.h"
 
 #if WITH_LUA
 #include "GameFramework/AActor.h"
@@ -138,10 +138,18 @@ void RegisterLuaBindings(sol::state& Lua)
 	Lua.set("KEY_TAB",    0x09);
 	Lua.set("KEY_ENTER",  0x0D);
 
+	// 마우스 입력
+    Lua.set("MOUSE_RIGHT", 0x02);
+
 	Lua.set_function("GetKeyDown", [](int VK)
 	{
 		return FInputRouter::GetKeyDown(VK);
 	});
+
+	Lua.set_function("GetKey", [](int VK)
+    {
+         return FInputRouter::GetKey(VK);
+    });
 
 	Lua.set_function("GetKeyUp", [](int VK)
 	{
