@@ -22,7 +22,6 @@ struct FLuaWorldHandle
 
 	bool IsValid() const;
 
-	sol::table OverlapCircle(sol::this_state State, const sol::object& Position, float Radius, const FString& Tag) const;
 	sol::table GetActorsByTag(sol::this_state State, const FString& Tag) const;
 };
 
