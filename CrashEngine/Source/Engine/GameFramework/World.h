@@ -48,6 +48,10 @@ public:
     bool RaycastEditorPicking(const FRay& Ray, FHitResult& OutHitResult, AActor*& OutActor) const;
 
     const TArray<AActor*>& GetActors() const { return PersistentLevel->GetActors(); }
+    const TArray<FString>& GetEditorActorFolders() const { return EditorActorFolders; }
+    void SetEditorActorFolders(const TArray<FString>& InFolders) { EditorActorFolders = InFolders; }
+    void AddEditorActorFolder(const FString& FolderPath);
+    void RemoveEditorActorFolder(const FString& FolderPath);
 
     // LOD 컨텍스트를 FSceneView에 전달 (Collect 단계에서 LOD 인라인 갱신용)
     FLODUpdateContext PrepareLODContext();
@@ -90,6 +94,7 @@ private:
     uint32 VisibleProxyBuildFrame = 0;
     FVector LastFullLODUpdateCameraForward = FVector(1, 0, 0);
     FVector LastFullLODUpdateCameraPos = FVector(0, 0, 0);
+    TArray<FString> EditorActorFolders;
     FScene Scene;
     FTickManager TickManager;
 

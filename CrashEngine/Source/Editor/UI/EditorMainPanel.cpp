@@ -187,7 +187,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
     ControlPanel.Initialize(InEditorEngine);
     DetailsPanel.Initialize(InEditorEngine);
     ContentDrawerPanel.Initialize(InEditorEngine);
-    ScenePanel.Initialize(InEditorEngine);
+    WorldOutlinerPanel.Initialize(InEditorEngine, InRenderer.GetFD3DDevice().GetDevice());
     StatPanel.Initialize(InEditorEngine);
     UE_LOG(EditorUI, Info, "Editor main panel initialized.");
 }
@@ -199,6 +199,7 @@ void FEditorMainPanel::Release()
     {
         GLog = nullptr;
     }
+    WorldOutlinerPanel.Release();
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
@@ -263,7 +264,7 @@ void FEditorMainPanel::Render(float DeltaTime)
             FEditorSettings& S = FEditorSettings::Get();
             ImGui::MenuItem("Control Panel", nullptr, &S.UI.bControl);
             ImGui::MenuItem("Details", nullptr, &S.UI.bProperty);
-            ImGui::MenuItem("Scene Manager", nullptr, &S.UI.bScene);
+            ImGui::MenuItem("World Outliner", nullptr, &S.UI.bWorldOutliner);
             ImGui::MenuItem("Stat Profiler", nullptr, &S.UI.bStat);
             bool bShadowAtlasDebug = DetailsPanel.IsShadowAtlasDebugWindowOpen();
             if (ImGui::MenuItem("Shadow Atlas", nullptr, &bShadowAtlasDebug))
@@ -362,10 +363,10 @@ void FEditorMainPanel::Render(float DeltaTime)
         DetailsPanel.Render(DeltaTime);
     }
 
-    if (!bHideEditorWindows && Settings.UI.bScene)
+    if (!bHideEditorWindows && Settings.UI.bWorldOutliner)
     {
-        SCOPE_STAT_CAT("ScenePanel.Render", "5_UI");
-        ScenePanel.Render(DeltaTime);
+        SCOPE_STAT_CAT("WorldOutlinerPanel.Render", "5_UI");
+        WorldOutlinerPanel.Render(DeltaTime);
     }
 
     if (!bHideEditorWindows && Settings.UI.bStat)
@@ -591,7 +592,7 @@ void FEditorMainPanel::HideEditorWindowsForPIE()
 
     Settings.UI.bControl = false;
     Settings.UI.bProperty = false;
-    Settings.UI.bScene = false;
+    Settings.UI.bWorldOutliner = false;
     Settings.UI.bStat = false;
 }
 
