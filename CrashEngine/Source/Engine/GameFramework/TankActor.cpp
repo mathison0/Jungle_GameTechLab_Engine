@@ -3,8 +3,8 @@
 #include "Engine/Component/StaticMeshComponent.h"
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Component/ScriptComponent.h"
+#include "GameFramework/ActorPoolManager.h"
 #include "GameFramework/World.h"
-#include "Object/ObjectFactory.h"
 
 IMPLEMENT_CLASS(ATankActor, AActor)
 
@@ -89,21 +89,12 @@ UStaticMesh* ATankActor::GetHeadGunProjectile()
 AProjectileActor* ATankActor::GetProjectileActor()
 {
     UWorld* World = GetWorld();
-    ULevel* Level = GetLevel();
-    if (!World || !Level)
+    if (!World || !World->GetPoolManager())
     {
         return nullptr;
     }
 
-    AProjectileActor* Projectile = UObjectManager::Get().CreateObject<AProjectileActor>(Level);
-    if (!Projectile)
-    {
-        return nullptr;
-    }
-
-    Projectile->InitDefaultComponents();
-    World->AddActor(Projectile);
-    return Projectile;
+    return World->GetPoolManager()->Acquire<AProjectileActor>();
 }
 
 void ATankActor::FireHeadMainGun()

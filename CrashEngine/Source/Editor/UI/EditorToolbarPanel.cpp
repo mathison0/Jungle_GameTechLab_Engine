@@ -21,6 +21,7 @@
 #include "GameFramework/StaticMeshActor.h"
 #include "GameFramework/GamejamActor/EnemySpawnerActor.h"
 #include "GameFramework/World.h"
+#include "GameFramework/TankActor.h"
 #include "ImGui/imgui.h"
 #include "Math/MathUtils.h"
 #include "Platform/Paths.h"
@@ -169,6 +170,7 @@ constexpr FAddActorEntry EffectAddActors[] = {
 
 constexpr FAddActorEntry GameAddActors[] = {
     ADD_ACTOR("Enemy Spawner", EAddActorIcon::Empty, AEnemySpawnerActor, false),
+    ADD_ACTOR("Tank", EAddActorIcon::Empty, ATankActor, false),
 };
 
 #undef ADD_MESH

@@ -20,19 +20,6 @@ public:
     void SetScriptPath(const FString& InScriptPath);
     const FString& GetScriptPath() const { return ScriptPath; }
 
-protected:
-    void OnComponentHit(class UCollider2DComponent* OtherCollider);
-    void OnComponentBeginOverlap(class UCollider2DComponent* OtherCollider);
-    void OnComponentEndOverlap(class UCollider2DComponent* OtherCollider);
-
-private:
-	bool LoadScript();
-	void SyncScriptPropertiesWithAsset();
-	void CallLuaFunction(const char* Name);
-	void CallLuaTick(float DeltaTime);
-
-	void BindFunctions();
-
     template <typename TFunc>
     void BindFunction(const char* Name, TFunc&& Function)
     {
@@ -43,6 +30,12 @@ private:
 
         ScriptInstance.set_function(Name, std::forward<TFunc>(Function));
     }
+
+
+protected:
+    void OnComponentHit(class UCollider2DComponent* OtherCollider);
+    void OnComponentBeginOverlap(class UCollider2DComponent* OtherCollider);
+    void OnComponentEndOverlap(class UCollider2DComponent* OtherCollider);
 
 private:
     bool LoadScript();
