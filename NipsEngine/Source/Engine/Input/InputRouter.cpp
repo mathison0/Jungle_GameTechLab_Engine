@@ -346,7 +346,33 @@ void FInputRouter::TickCursorCapture(const FInputRouteContext& Context)
 void FInputRouter::TickKeyboardInput(const FInputRouteContext& Context)
 {
 	const InputSystem& IS = InputSystem::Get();
-	if (IS.GetGuiInputState().bBlockViewportInput || IS.GetGuiInputState().bUsingKeyboard)
+	const FGuiInputState& GuiState = IS.GetGuiInputState();
+	if (GuiState.bBlockViewportInput)
+	{
+		return;
+	}
+
+	if (WorldType == EWorldType::Editor && IS.GetKeyDown(VK_F4))
+	{
+		RouteKeyboardInput(EKeyInputType::KeyPressed, VK_F4);
+		return;
+	}
+
+	if (WorldType == EWorldType::PIE)
+	{
+		if (IS.GetKeyDown(VK_ESCAPE))
+		{
+			RouteKeyboardInput(EKeyInputType::KeyPressed, VK_ESCAPE);
+			return;
+		}
+		if (IS.GetKeyDown(VK_F4))
+		{
+			RouteKeyboardInput(EKeyInputType::KeyPressed, VK_F4);
+			return;
+		}
+	}
+
+	if (GuiState.bUsingKeyboard)
 	{
 		return;
 	}
