@@ -91,6 +91,9 @@ public:
     bool IsVisible() const { return bVisible; }
     void SetVisible(bool Visible);
 
+    const FString& GetEditorFolderPath() const { return EditorFolderPath; }
+    void SetEditorFolderPath(const FString& InFolderPath) { EditorFolderPath = InFolderPath; }
+
     // Tick 필요 여부 — false면 Tick 호출 자체를 건너뜀 (StaticMesh 등)
     bool bNeedsTick = true;
     bool bTickInEditor = false;
@@ -114,6 +117,7 @@ protected:
 
     FVector PendingActorLocation = FVector(0, 0, 0);
     bool bVisible = true;
+    FString EditorFolderPath;
 
     TArray<UActorComponent*> OwnedComponents;
 
