@@ -546,7 +546,7 @@ void UScriptComponent::BindFunctions()
 			//액터 탐색 로직 (태그 기반)
             for (AActor* Actor : World->GetActors())
             {
-                if (!Actor || Actor->GetActorTag() != TargetTag)
+                if (!Actor || Actor->GetActorTag() != TargetTag || !Actor->IsVisible())
                 {
                     continue;
                 }
