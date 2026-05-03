@@ -5,7 +5,6 @@ local Script = {
 }
 
 function Script:BeginPlay()
-    Log("[EnemyAI] BeginPlay");
     self.ai = self.StartCoroutine(function()
         EnemyAI.ChaseTargetCoroutine(self, "Tank")
     end)
