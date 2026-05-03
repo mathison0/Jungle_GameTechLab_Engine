@@ -725,6 +725,21 @@ void FEditorDetailsPanel::RenderActorProperties(AActor* PrimaryActor, const TArr
     ImGui::Text("Actor: %s", PrimaryActor->GetClass()->GetName());
     ImGui::Text("Name: %s", PrimaryActor->GetFName().ToString().c_str());
 
+    char TagBuf[256];
+    strncpy_s(TagBuf, sizeof(TagBuf), PrimaryActor->GetActorTag().ToString().c_str(), _TRUNCATE);
+    if (ImGui::InputText("Tag", TagBuf, sizeof(TagBuf)))
+    {
+        FName NewTag(TagBuf);
+        PrimaryActor->SetActorTag(NewTag);
+        for (AActor* Actor : SelectedActors)
+        {
+            if (Actor && Actor != PrimaryActor)
+            {
+                Actor->SetActorTag(NewTag);
+            }
+        }
+    }
+
     if (PrimaryActor->GetRootComponent())
     {
         ImGui::Separator();
