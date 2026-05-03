@@ -98,6 +98,45 @@ function ScriptComponent:GetComponent(className, index) end
 ---@param className? string
 ---@return Component[]
 function ScriptComponent:GetComponents(className) end
+
+---@return Vec3
+function Component:GetWorldLocation() end
+
+---@param location Vec3
+---@return boolean
+function Component:SetWorldLocation(location) end
+
+---@return Vec3
+function Component:GetRelativeLocation() end
+
+---@param location Vec3
+---@return boolean
+function Component:SetRelativeLocation(location) end
+
+---@return Vec3
+function Component:GetForwardVector() end
+
+---@return boolean
+function Component:IsVisible() end
+
+---@param visible boolean
+---@return boolean
+function Component:SetVisibility(visible) end
+
+---@return boolean
+function Component:ShouldGenerateOverlapEvents() end
+
+---@param generate boolean
+---@return boolean
+function Component:SetGenerateOverlapEvents(generate) end
+
+---@param actor Actor
+---@return boolean
+function Component:IsOverlappingActor(actor) end
+
+---@param component Component
+---@return boolean
+function Component:IsOverlappingComponent(component) end
 -- ====================================================================
 
 ---@class Vec3
