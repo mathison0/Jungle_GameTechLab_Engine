@@ -557,6 +557,12 @@
     <ClCompile Include="Source\Engine\Runtime\Launch.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsApplication.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaActorBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\LuaEngineBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\LuaScriptAsset.cpp" />
     <ClCompile Include="Source\Engine\Scripting\LuaScriptTypes.cpp" />

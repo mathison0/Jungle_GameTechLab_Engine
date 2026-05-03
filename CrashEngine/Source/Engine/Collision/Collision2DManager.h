@@ -13,6 +13,11 @@ class FCollision2DManager
 public:
     void Update(UWorld& World);
 
+    void OverlapCircle(const FVector2& Position, float Radius, TArray<UCollider2DComponent*>& OutColliders) const
+    {
+        SpatialHash.QueryRadius(Position, Radius, OutColliders);
+    }
+
 private:
     void CollectColliders(UWorld& World, TArray<UCollider2DComponent*>& OutColliders);
 	void BuildCollisionPairs(const TArray<UCollider2DComponent*>& Colliders, TArray<FCollision2DPair>& OutPairs);

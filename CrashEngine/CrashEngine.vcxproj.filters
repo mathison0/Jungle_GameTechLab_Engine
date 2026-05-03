@@ -1097,6 +1097,24 @@
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp">
       <Filter>Source\Engine\Runtime</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaActorBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\LuaEngineBinding.cpp">
       <Filter>Source\Engine\Scripting</Filter>
     </ClCompile>

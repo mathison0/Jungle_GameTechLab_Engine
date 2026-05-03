@@ -384,6 +384,11 @@ float FVector2::Length() const
     return std::sqrtf(X * X + Y * Y);
 }
 
+float FVector2::LengthSquared() const
+{
+    return X * X + Y * Y;
+}
+
 void FVector2::Normalize()
 {
     auto length = Length();

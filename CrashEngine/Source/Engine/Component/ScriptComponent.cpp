@@ -427,6 +427,12 @@ void UScriptComponent::BindFunctions()
             return FLuaActorHandle(GetOwner());
         });
 
+    BindFunction("GetWorld",
+        [this](sol::variadic_args) -> FLuaWorldHandle
+        {
+            return FLuaWorldHandle(GetOwner() ? GetOwner()->GetWorld() : nullptr);
+        });
+
     BindFunction("GetComponent",
         [this](const sol::variadic_args& Args) -> FLuaComponentHandle
         {

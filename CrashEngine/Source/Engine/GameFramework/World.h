@@ -81,6 +81,11 @@ public:
     EWorldType GetWorldType() const { return WorldType; }
     void UpdateActorInOctree(AActor* actor);
 
+    void OverlapCircle(const FVector2& Position, float Radius, TArray<UCollider2DComponent*>& OutColliders) const
+    {
+        Collision2DManager.OverlapCircle(Position, Radius, OutColliders);
+    }
+
 	FActorPoolManager* GetPoolManager() const { return ActorPoolManager.get(); }
 
 private:

@@ -217,6 +217,7 @@ struct FVector2
         Y = InY;
     }
     float Length() const;
+    float LengthSquared() const;
     void Normalize();
     FVector2 Normalized() const;
     float Dot(const FVector2& Other) const;
