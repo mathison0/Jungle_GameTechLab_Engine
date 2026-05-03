@@ -52,7 +52,7 @@ namespace
 		const float ProjectedRadius = (SphereRadius / Dist) * ProjMatrix.M[2][1];
 		const float ScreenCoverage = ProjectedRadius;
 
-		static constexpr float Thresholds[] = { 0.15f, 0.08f, 0.05f, 0.02f };
+		static constexpr float Thresholds[] = { 0.06f, 0.03f, 0.02f, 0.008f };
 		static constexpr int32 ThresholdCount = static_cast<int32>(sizeof(Thresholds) / sizeof(Thresholds[0]));
 
 		const int32 MaxLOD = ValidLODCount - 1;

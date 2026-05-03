@@ -32,6 +32,7 @@ void FEditorViewportClient::Initialize(FWindowsWindow* InWindow, UEditorEngine* 
 	InputRouter.SetEditorWorldController(&EditorWorldController);
 	InputRouter.SetPIEController(&PIEController);
 	InputRouter.SetGamePlayerController(&GamePlayerController);
+	InputRouter.SetUIInputHandler(&GameUISystem::Get());
 }
 
 void FEditorViewportClient::SetWorld(UWorld* InWorld)
@@ -150,7 +151,10 @@ void FEditorViewportClient::Tick(float DeltaTime)
 	RouteContext.Window = Window;
 	RouteContext.ViewportRect = Viewport ? Viewport->GetRect() : FViewportRect(0, 0, static_cast<int32>(WindowWidth), static_cast<int32>(WindowHeight));
 	RouteContext.bHovered = State ? State->bHovered : true;
-	RouteContext.bControlLocked = bControlLocked;
+	const bool bUIWantsMouse = GameUISystem::Get().WantsMouseCursor();
+	RouteContext.bControlLocked = bControlLocked || bUIWantsMouse;
+	RouteContext.bInputActive = !bUIWantsMouse;
+	RouteContext.bHasActiveCamera = bHasCamera;
 	InputRouter.Tick(DeltaTime, RouteContext);
 }
 

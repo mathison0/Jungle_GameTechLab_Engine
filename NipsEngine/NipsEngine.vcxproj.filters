@@ -160,6 +160,9 @@
     <Filter Include="Source\Game\UI">
       <UniqueIdentifier>{24b0520d-f070-bb4e-e2fa-92d953623ce5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\UI\RmlUi">
+      <UniqueIdentifier>{521f5ca5-d885-3663-120c-479fd46a0e23}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Game\Viewport">
       <UniqueIdentifier>{24b40836-3894-0777-eac4-651121dc7f81}</UniqueIdentifier>
     </Filter>
@@ -168,24 +171,6 @@
     </Filter>
     <Filter Include="ThirdParty\ImGui">
       <UniqueIdentifier>{5326d6e3-f339-0d51-b7d9-34f630792b9e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ThirdParty\SimpleJSON">
-      <UniqueIdentifier>{60f3c5d4-2dd4-3746-7c69-104344277d07}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ThirdParty\sol">
-      <UniqueIdentifier>{4ad16b79-cf58-e7b8-9c81-29d172773629}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ThirdParty\sol\compatibility">
-      <UniqueIdentifier>{8b1dc63b-7a08-d419-6af8-1dc6c53f5dd2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ThirdParty\sol\detail">
-      <UniqueIdentifier>{e465bae8-823a-3f14-5877-275708ffa864}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ThirdParty\sol\stack">
-      <UniqueIdentifier>{31b5300c-cb86-2279-22b1-255a2dafc84e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ThirdParty\sol\stack\detail">
-      <UniqueIdentifier>{aeb9ca6d-d808-2f28-06b2-0e9712aeacc7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -800,9 +785,6 @@
     <ClCompile Include="Source\Game\GameEngine.cpp">
       <Filter>Source\Game</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\GameTypes.cpp">
-      <Filter>Source\Game</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Input\GamePlayerController.cpp">
       <Filter>Source\Game\Input</Filter>
     </ClCompile>
@@ -838,6 +820,12 @@
     </ClCompile>
     <ClCompile Include="Source\Game\UI\StartMenuPanel.cpp">
       <Filter>Source\Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\RmlUi\RmlUiRenderInterfaceD3D11.cpp">
+      <Filter>Source\Game\UI\RmlUi</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\RmlUi\RmlUiSystemInterface.cpp">
+      <Filter>Source\Game\UI\RmlUi</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Viewport\GameViewportClient.cpp">
       <Filter>Source\Game\Viewport</Filter>
@@ -1211,6 +1199,9 @@
     <ClInclude Include="Source\Engine\Input\IInputController.h">
       <Filter>Source\Engine\Input</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Input\IUIInputHandler.h">
+      <Filter>Source\Engine\Input</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Input\InputMapping.h">
       <Filter>Source\Engine\Input</Filter>
     </ClInclude>
@@ -1547,9 +1538,6 @@
     <ClInclude Include="Source\Game\GameEngine.h">
       <Filter>Source\Game</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\GameTypes.h">
-      <Filter>Source\Game</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Input\BaseGameController.h">
       <Filter>Source\Game\Input</Filter>
     </ClInclude>
@@ -1595,6 +1583,12 @@
     <ClInclude Include="Source\Game\UI\StartMenuPanel.h">
       <Filter>Source\Game\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\UI\RmlUi\RmlUiRenderInterfaceD3D11.h">
+      <Filter>Source\Game\UI\RmlUi</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\UI\RmlUi\RmlUiSystemInterface.h">
+      <Filter>Source\Game\UI\RmlUi</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Game\Viewport\GameViewportClient.h">
       <Filter>Source\Game\Viewport</Filter>
     </ClInclude>
@@ -1621,345 +1615,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\ImGui\imstb_truetype.h">
       <Filter>ThirdParty\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\SimpleJSON\json.hpp">
-      <Filter>ThirdParty\SimpleJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\as_args.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\as_returns.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\assert.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\base_traits.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\bind_traits.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\bytecode.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\call.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\compatibility.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\config.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\coroutine.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\debug.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\demangle.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\deprecate.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\dump_handler.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\ebco.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\environment.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\epilogue.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\error.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\error_handler.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\forward.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\forward_detail.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\function.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\function_result.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\function_types.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\function_types_core.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\function_types_overloaded.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\function_types_stateful.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\function_types_stateless.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\function_types_templated.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\in_place.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\inheritance.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\load_result.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\lua_table.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\lua_value.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\make_reference.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\metatable.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\object.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\object_base.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\optional.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\optional_implementation.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\overload.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\packaged_coroutine.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\pairs_iterator.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\pointer_like.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\policies.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\prologue.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\property.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\protect.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\protected_function.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\protected_function_result.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\protected_handler.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\proxy_base.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\raii.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\reference.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\resolve.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\sol.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_check.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_check_get.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_check_get_qualified.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_check_get_unqualified.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_check_qualified.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_check_unqualified.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_core.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_field.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_get.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_get_qualified.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_get_unqualified.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_guard.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_iterator.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_pop.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_probe.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_proxy.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_proxy_base.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_push.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack_reference.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\state.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\state_handling.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\state_view.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\string_view.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\table.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\table_core.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\table_iterator.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\table_proxy.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\thread.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\tie.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\traits.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\trampoline.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\tuple.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\types.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\unicode.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\unique_usertype_traits.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\unsafe_function.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\unsafe_function_result.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\userdata.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\usertype.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\usertype_container.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\usertype_container_launch.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\usertype_core.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\usertype_proxy.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\usertype_storage.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\usertype_traits.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\variadic_args.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\variadic_results.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\version.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\wrapper.hpp">
-      <Filter>ThirdParty\sol</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\compatibility\compat-5.3.c.h">
-      <Filter>ThirdParty\sol\compatibility</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\compatibility\compat-5.3.h">
-      <Filter>ThirdParty\sol\compatibility</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\compatibility\compat-5.4.h">
-      <Filter>ThirdParty\sol\compatibility</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\compatibility\lua_version.hpp">
-      <Filter>ThirdParty\sol\compatibility</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\detail\build_version.hpp">
-      <Filter>ThirdParty\sol\detail</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\sol\stack\detail\pairs.hpp">
-      <Filter>ThirdParty\sol\stack\detail</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

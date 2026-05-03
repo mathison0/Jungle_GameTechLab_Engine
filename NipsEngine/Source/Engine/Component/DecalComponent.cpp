@@ -279,7 +279,7 @@ void UDecalComponent::PaintMask(FVector2 UV, float Radius, uint8 Value)
 bool UDecalComponent::WorldPosToDecalUV(const FVector& WorldPos, FVector2& OutUV) const
 {
     FMatrix InvDecal = GetDecalMatrix();
-    InvDecal.Inverse();
+    InvDecal = InvDecal.GetInverse();
     const FVector Local = InvDecal.TransformPosition(WorldPos);
 
     if (std::abs(Local.X) > 0.5f || std::abs(Local.Y) > 0.5f || std::abs(Local.Z) > 0.5f)

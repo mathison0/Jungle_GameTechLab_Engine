@@ -8,6 +8,7 @@
 #include "Core/Logging/GPUProfiler.h"
 #include "Runtime/SceneView.h"
 #include "Engine/Component/GizmoComponent.h"
+#include "Game/UI/GameUISystem.h"
 
 FEditorRenderPipeline::FEditorRenderPipeline(UEditorEngine* InEditor, FRenderer& InRenderer) : Editor(InEditor)
 {
@@ -92,6 +93,12 @@ void FEditorRenderPipeline::RenderViewport(FRenderer& Renderer, int32 ViewportIn
 	// CPU 배처 데이터 준비 → GPU 드로우 (SetSubViewport 영역에만 출력됨)
 	Renderer.PrepareBatchers(Bus);
 	Renderer.Render(Bus);
+
+	if (VC->GetPlayState() != EViewportPlayState::Editing &&
+		ViewportIndex == Editor->GetViewportLayout().GetLastFocusedViewportIndex())
+	{
+		GameUISystem::Get().RenderToCurrentTarget(EUIRenderMode::Play, SceneView.ViewRect.Width, SceneView.ViewRect.Height);
+	}
 }
 
 // 지정한 에디터 뷰포트의 렌더 타겟과 RenderBus 기본 상태를 준비합니다.

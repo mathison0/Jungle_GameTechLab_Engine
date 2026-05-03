@@ -211,8 +211,6 @@ void FCollisionSystem::ProcessNarrowCollision(const FCollisionCandidate& A, cons
 
 	FHitResult Hit;
 	const bool bIsOverlapping = FCollision::TestOverlap(A.Component, B.Component, &Hit);
-	const FString ActorNameA = GetActorLogName(A.Actor);
-	const FString ActorNameB = GetActorLogName(B.Actor);
 
 	if (!bIsOverlapping)
 	{
@@ -247,7 +245,6 @@ void FCollisionSystem::ProcessNarrowCollision(const FCollisionCandidate& A, cons
 		{
 			A.Component->AddBlockingInfo(B.Actor, B.Component, Hit);
 			A.Component->OnComponentHit.Broadcast(Hit);
-			// UE_LOG("[Collision] Block Begin %s -> %s", ActorNameA.c_str(), ActorNameB.c_str());
 		}
 
 		if (!bWasBBlocking)
@@ -255,7 +252,6 @@ void FCollisionSystem::ProcessNarrowCollision(const FCollisionCandidate& A, cons
 			const FHitResult ReverseHit = MakeReverseHit(Hit, A.Component);
 			B.Component->AddBlockingInfo(A.Actor, A.Component, ReverseHit);
 			B.Component->OnComponentHit.Broadcast(ReverseHit);
-			// UE_LOG("[Collision] Block Begin %s -> %s", ActorNameB.c_str(), ActorNameA.c_str());
 		}
 
 		return;
@@ -393,8 +389,6 @@ void FCollisionSystem::ClearStaleCollisions(const TArray<FCollisionCandidate>& C
 		{
 			Comp->RemoveOverlapInfo(Stale.OtherActor, Stale.OtherComp);
 			Comp->OnComponentEndOverlap.Broadcast(Stale);
-			const FString ActorNameA = GetActorLogName(C.Actor);
-			const FString ActorNameB = GetActorLogName(Stale.OtherActor);
 		}
 
 		TArray<FBlockingResult> StaleBlockings;
@@ -406,8 +400,6 @@ void FCollisionSystem::ClearStaleCollisions(const TArray<FCollisionCandidate>& C
 		for (const FBlockingResult& Stale : StaleBlockings)
 		{
 			Comp->RemoveBlockingInfo(Stale.OtherActor, Stale.OtherComp);
-			const FString ActorNameA = GetActorLogName(C.Actor);
-			const FString ActorNameB = GetActorLogName(Stale.OtherActor);
 		}
 	}
 }
