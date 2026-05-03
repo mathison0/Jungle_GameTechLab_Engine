@@ -560,6 +560,7 @@
     <ClInclude Include="Source\Engine\Geometry\Transform.h" />
     <ClInclude Include="Source\Engine\Geometry\Triangle.h" />
     <ClInclude Include="Source\Engine\Input\IInputController.h" />
+    <ClInclude Include="Source\Engine\Input\InputMapping.h" />
     <ClInclude Include="Source\Engine\Input\InputRouter.h" />
     <ClInclude Include="Source\Engine\Input\InputSystem.h" />
     <ClInclude Include="Source\Engine\Input\InputTypes.h" />

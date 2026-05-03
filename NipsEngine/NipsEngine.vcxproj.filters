@@ -1190,6 +1190,9 @@
     <ClInclude Include="Source\Engine\Input\IInputController.h">
       <Filter>Source\Engine\Input</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Input\InputMapping.h">
+      <Filter>Source\Engine\Input</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Input\InputRouter.h">
       <Filter>Source\Engine\Input</Filter>
     </ClInclude>

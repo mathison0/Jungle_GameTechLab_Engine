@@ -64,6 +64,10 @@ void FInputRouter::Tick(float DeltaTime, const FInputRouteContext& Context)
 	SetViewportDim(static_cast<float>(Context.ViewportRect.X), static_cast<float>(Context.ViewportRect.Y), static_cast<float>(Context.ViewportRect.Width), static_cast<float>(Context.ViewportRect.Height));
 
 	UpdateControllerModifiers();
+	if (IInputController* Controller = GetActiveController())
+	{
+		Controller->SetInputEnabled(Context.bInputActive && !Context.bControlLocked);
+	}
 	TickCursorCapture(Context);
 	Tick(DeltaTime);
 	TickKeyboardInput(Context);
