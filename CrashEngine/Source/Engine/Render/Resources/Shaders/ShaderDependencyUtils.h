@@ -151,17 +151,24 @@ inline std::filesystem::path ResolveIncludePath(const std::filesystem::path& Inc
     return (Parent / IncludePath).lexically_normal();
 }
 
-// FShaderFileDependency는 셰이더 컴파일 결과와 GPU 바인딩을 관리합니다.
+// FShaderFileDependency는 셰이더 파일과 그 의존성 파일들의 상태를 관리합니다.
+struct FShaderDependencyState
+{
+    FString                         FullPath;
+    std::filesystem::file_time_type LastWriteTime{};
+};
+
 struct FShaderFileDependency
 {
     FString                               FullPath;
     std::filesystem::file_time_type       LastWriteTime{};
-    bool                                  bExists        = false;
+    bool                                  bExists = false;
     uint64                                DependencyHash = 0;
+    std::vector<FShaderDependencyState>   Dependencies;
     std::chrono::steady_clock::time_point LastValidationTime{};
 };
 
-inline uint64 BuildDependencyHashRecursive(const std::filesystem::path& FilePath, std::unordered_set<std::wstring>& Visited)
+inline void GatherDependenciesRecursive(const std::filesystem::path& FilePath, std::unordered_set<std::wstring>& Visited, std::vector<FShaderDependencyState>& OutDeps, uint64& InOutHash)
 {
     std::error_code       Ec;
     std::filesystem::path Canonical = std::filesystem::weakly_canonical(FilePath, Ec);
@@ -173,35 +180,30 @@ inline uint64 BuildDependencyHashRecursive(const std::filesystem::path& FilePath
     const std::wstring CanonicalKey = Canonical.generic_wstring();
     if (!Visited.insert(CanonicalKey).second)
     {
-        return 0;
+        return;
     }
 
-    uint64     Hash    = HashString64(CanonicalKey);
     const bool bExists = std::filesystem::exists(Canonical, Ec) && !Ec;
-    HashCombine64(Hash, bExists ? 1ull : 0ull);
     if (!bExists)
     {
-        return Hash;
+        return;
     }
 
     const auto LastWrite = std::filesystem::last_write_time(Canonical, Ec);
     if (!Ec)
     {
-        HashCombine64(Hash, static_cast<uint64>(LastWrite.time_since_epoch().count()));
+        HashCombine64(InOutHash, static_cast<uint64>(LastWrite.time_since_epoch().count()));
     }
 
     std::ifstream File(Canonical);
     if (!File.is_open())
     {
-        return Hash;
+        return;
     }
 
     std::string Line;
     while (std::getline(File, Line))
     {
-        HashCombine64(Hash, HashString64(Line));
-        HashCombine64(Hash, static_cast<uint64>('\n'));
-
         std::string IncludePath;
         if (!TryExtractIncludePath(Line, IncludePath))
         {
@@ -209,16 +211,19 @@ inline uint64 BuildDependencyHashRecursive(const std::filesystem::path& FilePath
         }
 
         std::filesystem::path IncludedFile = ResolveIncludePath(Canonical, std::filesystem::path(IncludePath));
-        HashCombine64(Hash, BuildDependencyHashRecursive(IncludedFile, Visited));
+        
+        std::error_code DepEc;
+        std::filesystem::path DepCanonical = std::filesystem::weakly_canonical(IncludedFile, DepEc);
+        if (DepEc) DepCanonical = IncludedFile.lexically_normal();
+
+        const auto DepLastWrite = std::filesystem::last_write_time(DepCanonical, DepEc);
+        if (!DepEc)
+        {
+            OutDeps.push_back({ FPaths::FromPath(DepCanonical), DepLastWrite });
+        }
+
+        GatherDependenciesRecursive(DepCanonical, Visited, OutDeps, InOutHash);
     }
-
-    return Hash;
-}
-
-inline uint64 BuildDependencyHash(const std::filesystem::path& FilePath)
-{
-    std::unordered_set<std::wstring> Visited;
-    return BuildDependencyHashRecursive(FilePath, Visited);
 }
 
 inline FShaderFileDependency BuildFileDependency(const FString& FilePath)
@@ -248,9 +253,17 @@ inline FShaderFileDependency BuildFileDependency(const FString& FilePath)
             Dependency.bExists       = false;
             Dependency.LastWriteTime = {};
         }
+
+        if (Dependency.bExists)
+        {
+            Dependency.DependencyHash = HashString64(Dependency.FullPath);
+            HashCombine64(Dependency.DependencyHash, static_cast<uint64>(Dependency.LastWriteTime.time_since_epoch().count()));
+
+            std::unordered_set<std::wstring> Visited;
+            GatherDependenciesRecursive(Canonical, Visited, Dependency.Dependencies, Dependency.DependencyHash);
+        }
     }
 
-    Dependency.DependencyHash = BuildDependencyHash(Canonical);
     return Dependency;
 }
 
@@ -270,15 +283,38 @@ inline bool HasDependencyChanged(FShaderFileDependency& MutableDependency)
     }
     MutableDependency.LastValidationTime = Now;
 
-    const FShaderFileDependency Current = BuildFileDependency(MutableDependency.FullPath);
-    if (Current.bExists != MutableDependency.bExists)
+    std::error_code       Ec;
+    std::filesystem::path RootPath = FPaths::ToPath(MutableDependency.FullPath);
+    const bool            bExists  = std::filesystem::exists(RootPath, Ec) && !Ec;
+
+    if (bExists != MutableDependency.bExists)
     {
         return true;
     }
-    if (!Current.bExists)
+
+    if (!bExists)
     {
         return false;
     }
-    return Current.LastWriteTime != MutableDependency.LastWriteTime || Current.DependencyHash != MutableDependency.DependencyHash;
+
+    const auto LastWrite = std::filesystem::last_write_time(RootPath, Ec);
+    if (!Ec && LastWrite != MutableDependency.LastWriteTime)
+    {
+        return true;
+    }
+
+    // 의존성 파일들 체크
+    for (const auto& Dep : MutableDependency.Dependencies)
+    {
+        std::error_code       DepEc;
+        std::filesystem::path DepPath      = FPaths::ToPath(Dep.FullPath);
+        const auto            CurrentWrite = std::filesystem::last_write_time(DepPath, DepEc);
+        if (!DepEc && CurrentWrite != Dep.LastWriteTime)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 } // namespace ShaderDependencyUtils
