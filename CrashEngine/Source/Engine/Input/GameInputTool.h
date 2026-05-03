@@ -20,6 +20,12 @@ public:
         return false; // Allow other tools to see it
     }
 
+    bool InputPointer(const FViewportPointerEvent& Event) override
+    {
+        FGameInput::UpdatePointerState(Event.Button, Event.Type, Event.LocalPos);
+        return false;
+    }
+
     void BeginInputFrame() override
     {
         FGameInput::ResetFrameState();
