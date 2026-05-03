@@ -3,6 +3,7 @@
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include "Component/SceneComponent.h"
+#include "Core/Delegate.h"
 #include "Core/TickFunction.h"
 
 class FArchive;
@@ -31,6 +32,7 @@ public:
     virtual void InitDefaultComponents();
 
     bool HasActorBegunPlay() const { return bActorHasBegunPlay; }
+    void RequestReturnToPool();
 
     void Serialize(FArchive& Ar) override;
     UObject* Duplicate(UObject* NewOuter = nullptr) const override;
@@ -101,6 +103,7 @@ public:
     void SetQueuedForPartitionUpdate(bool bQueued) { bQueuedForPartitionUpdate = bQueued; }
 
     FActorTickFunction PrimaryActorTick;
+    DECLARE_DELEGATE(OnPoolReturnRequested, AActor*);
 
 	//Collision
     bool IsOverlappingActor(const AActor* OtherActor) const;

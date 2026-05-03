@@ -259,6 +259,11 @@ void AActor::InitDefaultComponents()
 {
 }
 
+void AActor::RequestReturnToPool()
+{
+    OnPoolReturnRequested.Broadcast(this);
+}
+
 bool AActor::IsOverlappingActor(const AActor* OtherActor) const
 {
     if (!OtherActor || OtherActor == this)

@@ -1,10 +1,12 @@
-#pragma once
+﻿#pragma once
 
 #include "GameFramework/World.h"
+#include "GameFramework/AActor.h"
 
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+#include <utility>
 
 /*
     TActorPool owns a reusable set of actors of one concrete type.
@@ -98,7 +100,9 @@ public:
             return;
         }
 
-        Active.erase(It);
+		*It = Active.back();
+        Active.pop_back();
+
         if (Deactivate)
         {
             Deactivate(Actor);
@@ -151,7 +155,7 @@ private:
             return nullptr;
         }
 
-        TActor* Actor = World->SpawnActor<TActor>();
+        TActor* Actor = World->template SpawnActor<TActor>();
         DeactivateActor(Actor);
         return Actor;
     }
