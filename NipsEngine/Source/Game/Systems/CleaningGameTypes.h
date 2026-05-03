@@ -41,7 +41,6 @@ struct FCleaningToolData
 {
 	FString ToolId;
 	FString DisplayName;
-	FString MeshAssetPath;
 	FString AnimationSetId;
 	FString EffectId;
 	float CleaningPower = 1.0f;

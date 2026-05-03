@@ -28,9 +28,8 @@ void FCleaningToolSystem::RegisterToolData(const FCleaningToolData& ToolData)
 		if (ExistingTool.ToolId == ToolData.ToolId)
 		{
 			ExistingTool = ToolData;
-			UE_LOG("[CleaningTool] Updated tool data: toolId=%s mesh=%s animation=%s tools=%d",
+			UE_LOG("[CleaningTool] Updated tool data: toolId=%s animation=%s tools=%d",
 				ToolData.ToolId.c_str(),
-				ToolData.MeshAssetPath.c_str(),
 				ToolData.AnimationSetId.c_str(),
 				static_cast<int32>(Tools.size()));
 			return;
@@ -38,9 +37,8 @@ void FCleaningToolSystem::RegisterToolData(const FCleaningToolData& ToolData)
 	}
 
 	Tools.push_back(ToolData);
-	UE_LOG("[CleaningTool] Registered tool data: toolId=%s mesh=%s animation=%s tools=%d",
+	UE_LOG("[CleaningTool] Registered tool data: toolId=%s animation=%s tools=%d",
 		ToolData.ToolId.c_str(),
-		ToolData.MeshAssetPath.c_str(),
 		ToolData.AnimationSetId.c_str(),
 		static_cast<int32>(Tools.size()));
 }

@@ -13,7 +13,9 @@
       "discardedDesc": "낡은 동화책은 버릴 물건 상자 안으로 들어갔다.",
       "canClassify": true,
       "requiredForSuccessEnding": true,
-      "storyFlags": [ "found_old_book" ]
+      "storyFlags": [
+        "found_old_book"
+      ]
     },
     {
       "id": "chocolate_bar",
@@ -26,7 +28,9 @@
       "discardedDesc": "뜯어져 있는 초콜릿은 버릴 물건 상자 안으로 들어갔다.",
       "canClassify": true,
       "requiredForSuccessEnding": true,
-      "storyFlags": [ "found_chocolate" ]
+      "storyFlags": [
+        "found_chocolate"
+      ]
     },
     {
       "id": "medicine_bottle",
@@ -41,7 +45,9 @@
       "discardedDesc": "빈 약병은 버릴 물건 상자 안으로 들어갔다.",
       "canClassify": true,
       "requiredForSuccessEnding": true,
-      "storyFlags": [ "found_medicine_bottle" ]
+      "storyFlags": [
+        "found_medicine_bottle"
+      ]
     },
     {
       "id": "shell",
@@ -57,7 +63,9 @@
       "discardedDesc": "조개 껍데기는 버릴 물건 상자 안으로 들어갔다.",
       "canClassify": true,
       "requiredForSuccessEnding": true,
-      "storyFlags": [ "found_shell" ]
+      "storyFlags": [
+        "found_shell"
+      ]
     },
     {
       "id": "globe",
@@ -70,7 +78,9 @@
       "discardedDesc": "지구본은 버릴 물건 상자 안으로 들어갔다.",
       "canClassify": true,
       "requiredForSuccessEnding": false,
-      "storyFlags": [ "found_globe" ]
+      "storyFlags": [
+        "found_globe"
+      ]
     },
     {
       "id": "painting",
@@ -84,7 +94,9 @@
       "discardedDesc": "어린아이의 그림은 버릴 물건 상자 안으로 들어갔다.",
       "canClassify": true,
       "requiredForSuccessEnding": false,
-      "storyFlags": [ "found_painting" ]
+      "storyFlags": [
+        "found_painting"
+      ]
     },
     {
       "id": "mop",
@@ -104,7 +116,6 @@
       "useBobSpeed": 9.0,
       "useReturnSpeed": 14.0
     },
-
     {
       "id": "sponge",
       "name": "스펀지",
@@ -115,6 +126,10 @@
       "animationSetId": "sponge_cleaning",
       "effectId": "wet_wipe",
       "cleaningPower": 1.0,
+      "holdDistance": 1.4,
+      "holdCameraLocalOffset": [0.0, 0.0, 0.0],
+      "useStrokeCameraLocalDirection": [0.0, -1.0, 1.0],
+      "handleCameraLocalDirection": [0.0, 1.0, 1.0],
       "useBobAmplitude": 0.18,
       "useBobSpeed": 9.0,
       "useReturnSpeed": 14.0

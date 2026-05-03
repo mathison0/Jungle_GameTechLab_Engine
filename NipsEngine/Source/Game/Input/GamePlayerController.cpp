@@ -4,7 +4,6 @@
 #include "Component/Physics/PhysicsHandleComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
 #include "Component/SceneComponent.h"
-#include "Component/StaticMeshComponent.h"
 #include "Core/Logger.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
@@ -164,33 +163,6 @@ namespace
 			{
 				UE_LOG("[CleaningTool] Actor=%s resolved by actor name toolId=%s", Actor->GetFName().ToString().c_str(), ToolData.ToolId.c_str());
 				return ToolData.ToolId;
-			}
-		}
-
-		for (UActorComponent* Component : Actor->GetComponents())
-		{
-			const UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component);
-			if (!StaticMeshComponent)
-			{
-				continue;
-			}
-
-			const FString MeshPath = NormalizeToolMatchKey(StaticMeshComponent->GetStaticMeshAssetPath());
-			if (MeshPath.empty())
-			{
-				continue;
-			}
-
-			for (const FCleaningToolData& ToolData : ToolDataList)
-			{
-				if (!ToolData.MeshAssetPath.empty() && MeshPath == NormalizeToolMatchKey(ToolData.MeshAssetPath))
-				{
-					UE_LOG("[CleaningTool] Actor=%s resolved by mesh path=%s toolId=%s",
-						Actor->GetFName().ToString().c_str(),
-						StaticMeshComponent->GetStaticMeshAssetPath().c_str(),
-						ToolData.ToolId.c_str());
-					return ToolData.ToolId;
-				}
 			}
 		}
 

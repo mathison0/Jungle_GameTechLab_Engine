@@ -182,7 +182,6 @@ namespace
 		FCleaningToolData ToolData;
 		ToolData.ToolId = ItemData.ItemId;
 		ToolData.DisplayName = ItemData.DisplayName;
-		ToolData.MeshAssetPath = GetStringField(Node, "meshAssetPath");
 		ToolData.AnimationSetId = GetStringField(Node, "animationSetId");
 		ToolData.EffectId = GetStringField(Node, "effectId");
 		ToolData.InteractionSoundId = GetStringField(Node, "interactionSoundId");
@@ -261,9 +260,8 @@ bool FGameItemDataLoader::LoadFromFile(const FString& RelativePath, FItemSystem&
 		ItemSystem.RegisterItemData(ItemData);
 		if (ItemData.ItemType == EGameItemType::CleaningTool)
 		{
-			UE_LOG("[CleaningTool] Loading cleaning tool item: id=%s type=CleaningTool mesh=%s",
-				ItemData.ItemId.c_str(),
-				GetStringField(ItemNode, "meshAssetPath").c_str());
+			UE_LOG("[CleaningTool] Loading cleaning tool item: id=%s type=CleaningTool",
+				ItemData.ItemId.c_str());
 			FCleaningToolSystem::Get().RegisterToolData(ReadCleaningToolData(ItemNode, ItemData));
 		}
 		++LoadedCount;
