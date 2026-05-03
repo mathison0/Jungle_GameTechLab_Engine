@@ -11,6 +11,7 @@ public:
     void Clear();
     void Build(const TArray<UCollider2DComponent*>& Colliders);
     void QueryPairs(TArray<FCollision2DPair>& OutPairs) const;
+    void QueryRadius(const FVector2& Position, float Radius, TArray<UCollider2DComponent*>& OutColliders) const;
 
     void SetCellSize(float NewCellSize);
 
