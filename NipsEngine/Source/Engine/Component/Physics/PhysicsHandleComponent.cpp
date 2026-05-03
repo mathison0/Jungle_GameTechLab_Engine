@@ -3,22 +3,21 @@
 #include "Component/Collision/ShapeComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/SceneComponent.h"
 #include "Engine/Geometry/AABB.h"
 #include "Engine/Viewport/ViewportCamera.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
+#include "Physics/JoltPhysicsSystem.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
 #include <cstring>
-#include <limits>
 
 namespace
 {
-	constexpr float HoldCollisionSkin = 0.005f;
-
 	bool IsLiveObjectPointer(const UObject* Object)
 	{
 		if (Object == nullptr)
@@ -42,68 +41,6 @@ namespace
 		return Primitive != nullptr && Primitive->IsBlockComponent() && Cast<UShapeComponent>(Primitive) != nullptr;
 	}
 
-	URigidBodyComponent* FindRigidBody(AActor* Actor)
-	{
-		if (Actor == nullptr)
-		{
-			return nullptr;
-		}
-
-		for (UActorComponent* Component : Actor->GetComponents())
-		{
-			if (URigidBodyComponent* Body = Cast<URigidBodyComponent>(Component))
-			{
-				if (IsLiveObjectPointer(Body))
-				{
-					return Body;
-				}
-			}
-		}
-
-		return nullptr;
-	}
-
-	bool IsDynamicRigidActor(AActor* Actor)
-	{
-		URigidBodyComponent* Body = FindRigidBody(Actor);
-		return Body != nullptr && Body->IsDynamicBody() && Body->IsSimulatingPhysics();
-	}
-
-	bool IntersectsAABB(const FAABB& A, const FAABB& B)
-	{
-		return A.Min.X < B.Max.X && A.Max.X > B.Min.X &&
-			A.Min.Y < B.Max.Y && A.Max.Y > B.Min.Y &&
-			A.Min.Z < B.Max.Z && A.Max.Z > B.Min.Z;
-	}
-
-	bool OverlapsExceptAxis(const FAABB& A, const FAABB& B, int32 ExcludedAxis)
-	{
-		for (int32 Axis = 0; Axis < 3; ++Axis)
-		{
-			if (Axis == ExcludedAxis)
-			{
-				continue;
-			}
-
-			if (A.Min[Axis] >= B.Max[Axis] || A.Max[Axis] <= B.Min[Axis])
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	float GetAxisOverlap(const FAABB& A, const FAABB& B, int32 Axis)
-	{
-		return std::min(A.Max[Axis], B.Max[Axis]) - std::max(A.Min[Axis], B.Min[Axis]);
-	}
-
-	FAABB ShiftAABB(const FAABB& Bounds, const FVector& Delta)
-	{
-		return FAABB(Bounds.Min + Delta, Bounds.Max + Delta);
-	}
-
 	void GatherBlockingShapes(AActor* Actor, TArray<UPrimitiveComponent*>& OutShapes)
 	{
 		if (Actor == nullptr)
@@ -120,286 +57,52 @@ namespace
 		}
 	}
 
-	float ResolveAxisMove(
-		UWorld* World,
-		const TArray<UPrimitiveComponent*>& HeldShapes,
-		AActor* HeldOwner,
-		const FVector& DeltaBeforeAxis,
-		int32 Axis,
-		float AxisDelta)
+	FQuat GetRigidBodyRotation(URigidBodyComponent* Body)
 	{
-		if (World == nullptr || HeldOwner == nullptr || HeldShapes.empty() || AxisDelta == 0.0f)
+		if (Body == nullptr)
 		{
-			return AxisDelta;
+			return FQuat::Identity;
 		}
 
-		float ResolvedDelta = AxisDelta;
-		const bool bMovingPositive = AxisDelta > 0.0f;
-		for (UPrimitiveComponent* HeldShape : HeldShapes)
+		if (USceneComponent* UpdatedComponent = Body->GetUpdatedComponent())
 		{
-			if (HeldShape == nullptr)
-			{
-				continue;
-			}
-
-			const FAABB CurrentBounds = ShiftAABB(HeldShape->GetWorldAABB(), DeltaBeforeAxis);
-			FVector CandidateDelta = DeltaBeforeAxis;
-			CandidateDelta[Axis] += ResolvedDelta;
-			const FAABB CandidateBounds = ShiftAABB(HeldShape->GetWorldAABB(), CandidateDelta);
-
-			for (AActor* OtherActor : World->GetActors())
-			{
-				if (OtherActor == nullptr || OtherActor == HeldOwner || !OtherActor->IsActive())
-				{
-					continue;
-				}
-
-				for (UPrimitiveComponent* OtherPrimitive : OtherActor->GetPrimitiveComponents())
-				{
-					if (!IsBlockingShape(OtherPrimitive))
-					{
-						continue;
-					}
-
-					if (IsDynamicRigidActor(OtherActor))
-					{
-						continue;
-					}
-
-					const FAABB OtherBounds = OtherPrimitive->GetWorldAABB();
-					const bool bAlreadyOverlapping = IntersectsAABB(CurrentBounds, OtherBounds);
-					const bool bCandidateOverlapping = IntersectsAABB(CandidateBounds, OtherBounds);
-					if (bAlreadyOverlapping)
-					{
-						const float CurrentAxisOverlap = GetAxisOverlap(CurrentBounds, OtherBounds, Axis);
-						const float CandidateAxisOverlap = GetAxisOverlap(CandidateBounds, OtherBounds, Axis);
-						if (CandidateAxisOverlap > CurrentAxisOverlap + HoldCollisionSkin)
-						{
-							ResolvedDelta = 0.0f;
-							return 0.0f;
-						}
-						continue;
-					}
-
-					const bool bSweptIntoBounds = OverlapsExceptAxis(CandidateBounds, OtherBounds, Axis) &&
-						((bMovingPositive && CurrentBounds.Max[Axis] <= OtherBounds.Min[Axis] && CandidateBounds.Max[Axis] > OtherBounds.Min[Axis]) ||
-						(!bMovingPositive && CurrentBounds.Min[Axis] >= OtherBounds.Max[Axis] && CandidateBounds.Min[Axis] < OtherBounds.Max[Axis]));
-					if (!bCandidateOverlapping && !bSweptIntoBounds)
-					{
-						continue;
-					}
-
-					if (bMovingPositive)
-					{
-						const float Allowed = OtherBounds.Min[Axis] - CurrentBounds.Max[Axis] - HoldCollisionSkin;
-						ResolvedDelta = std::min(ResolvedDelta, std::max(0.0f, Allowed));
-					}
-					else
-					{
-						const float Allowed = OtherBounds.Max[Axis] - CurrentBounds.Min[Axis] + HoldCollisionSkin;
-						ResolvedDelta = std::max(ResolvedDelta, std::min(0.0f, Allowed));
-					}
-
-					if (ResolvedDelta == 0.0f)
-					{
-						return 0.0f;
-					}
-				}
-			}
+			return UpdatedComponent->GetWorldTransform().GetRotation();
 		}
 
-		return ResolvedDelta;
+		return FQuat::Identity;
 	}
 
-	void MoveOverlappingDynamicBodies(UWorld* World, URigidBodyComponent* HeldBody, const FVector& Delta, const FVector& Velocity)
+	void MoveHeldBodyToTarget(
+		URigidBodyComponent* Body,
+		const FVector& TargetLocation,
+		const FQuat* TargetRotation,
+		float DeltaTime,
+		FVector& InOutHoldLocation,
+		FVector& OutHoldVelocity)
 	{
-		if (World == nullptr || HeldBody == nullptr || HeldBody->GetOwner() == nullptr || Delta.IsNearlyZero())
+		if (Body == nullptr)
 		{
+			OutHoldVelocity = FVector::ZeroVector;
 			return;
 		}
 
-		TArray<UPrimitiveComponent*> HeldShapes;
-		GatherBlockingShapes(HeldBody->GetOwner(), HeldShapes);
-		if (HeldShapes.empty())
+		const FVector PreviousLocation = Body->GetPhysicsLocation();
+		const FQuat DesiredRotation = TargetRotation != nullptr ? *TargetRotation : GetRigidBodyRotation(Body);
+		FVector ResolvedTargetLocation = TargetLocation;
+		if (FJoltPhysicsSystem::Get().MoveKinematicBody(Body, ResolvedTargetLocation, DesiredRotation, DeltaTime))
 		{
+			InOutHoldLocation = ResolvedTargetLocation;
+			OutHoldVelocity = DeltaTime > 0.0f ? (ResolvedTargetLocation - PreviousLocation) / DeltaTime : FVector::ZeroVector;
 			return;
 		}
 
-		TArray<URigidBodyComponent*> BodiesToMove;
-		for (AActor* OtherActor : World->GetActors())
+		Body->SetPhysicsLocation(TargetLocation);
+		if (TargetRotation != nullptr)
 		{
-			if (OtherActor == nullptr || OtherActor == HeldBody->GetOwner() || !OtherActor->IsActive())
-			{
-				continue;
-			}
-
-			URigidBodyComponent* OtherBody = FindRigidBody(OtherActor);
-			if (OtherBody == nullptr || !OtherBody->IsDynamicBody() || !OtherBody->IsSimulatingPhysics() || OtherBody->IsHeldByPhysicsHandle())
-			{
-				continue;
-			}
-
-			bool bShouldMove = false;
-			for (UPrimitiveComponent* HeldShape : HeldShapes)
-			{
-				if (HeldShape == nullptr)
-				{
-					continue;
-				}
-
-				const FAABB HeldBounds = HeldShape->GetWorldAABB();
-				for (UPrimitiveComponent* OtherPrimitive : OtherActor->GetPrimitiveComponents())
-				{
-					if (!IsBlockingShape(OtherPrimitive))
-					{
-						continue;
-					}
-
-					if (IntersectsAABB(HeldBounds, OtherPrimitive->GetWorldAABB()))
-					{
-						bShouldMove = true;
-						break;
-					}
-				}
-
-				if (bShouldMove)
-				{
-					break;
-				}
-			}
-
-			if (bShouldMove)
-			{
-				BodiesToMove.push_back(OtherBody);
-			}
+			Body->SetPhysicsRotation(*TargetRotation);
 		}
-
-		for (URigidBodyComponent* Body : BodiesToMove)
-		{
-			Body->SetPhysicsLocation(Body->GetPhysicsLocation() + Delta);
-			Body->SetVelocity(Velocity);
-		}
-	}
-
-	FVector ResolveHeldBodyMovement(UWorld* World, URigidBodyComponent* Body, const FVector& DesiredDelta)
-	{
-		if (World == nullptr || Body == nullptr || Body->GetOwner() == nullptr || DesiredDelta.IsNearlyZero())
-		{
-			return DesiredDelta;
-		}
-
-		TArray<UPrimitiveComponent*> HeldShapes;
-		GatherBlockingShapes(Body->GetOwner(), HeldShapes);
-		if (HeldShapes.empty())
-		{
-			return DesiredDelta;
-		}
-
-		FVector ResolvedDelta = FVector::ZeroVector;
-		for (int32 Axis = 0; Axis < 3; ++Axis)
-		{
-			const float AxisDelta = ResolveAxisMove(World, HeldShapes, Body->GetOwner(), ResolvedDelta, Axis, DesiredDelta[Axis]);
-			ResolvedDelta[Axis] += AxisDelta;
-		}
-
-		return ResolvedDelta;
-	}
-
-	FVector ComputeAABBPushOut(const FAABB& MovingBounds, const FAABB& StaticBounds)
-	{
-		if (!IntersectsAABB(MovingBounds, StaticBounds))
-		{
-			return FVector::ZeroVector;
-		}
-
-		const FVector MovingCenter = MovingBounds.GetCenter();
-		const FVector StaticCenter = StaticBounds.GetCenter();
-		float BestOverlap = std::numeric_limits<float>::max();
-		int32 BestAxis = -1;
-		for (int32 Axis = 0; Axis < 3; ++Axis)
-		{
-			const float Overlap = GetAxisOverlap(MovingBounds, StaticBounds, Axis);
-			if (Overlap > 0.0f && Overlap < BestOverlap)
-			{
-				BestOverlap = Overlap;
-				BestAxis = Axis;
-			}
-		}
-
-		if (BestAxis < 0 || BestOverlap == std::numeric_limits<float>::max())
-		{
-			return FVector::ZeroVector;
-		}
-
-		FVector Push = FVector::ZeroVector;
-		const float Direction = MovingCenter[BestAxis] >= StaticCenter[BestAxis] ? 1.0f : -1.0f;
-		Push[BestAxis] = Direction * (BestOverlap + HoldCollisionSkin);
-		return Push;
-	}
-
-	FVector ResolveHeldBodyPenetration(UWorld* World, URigidBodyComponent* Body)
-	{
-		if (World == nullptr || Body == nullptr || Body->GetOwner() == nullptr)
-		{
-			return FVector::ZeroVector;
-		}
-
-		TArray<UPrimitiveComponent*> HeldShapes;
-		GatherBlockingShapes(Body->GetOwner(), HeldShapes);
-		if (HeldShapes.empty())
-		{
-			return FVector::ZeroVector;
-		}
-
-		FVector TotalPush = FVector::ZeroVector;
-		for (int32 Iteration = 0; Iteration < 4; ++Iteration)
-		{
-			FVector IterationPush = FVector::ZeroVector;
-			for (UPrimitiveComponent* HeldShape : HeldShapes)
-			{
-				if (HeldShape == nullptr)
-				{
-					continue;
-				}
-
-				const FAABB HeldBounds = ShiftAABB(HeldShape->GetWorldAABB(), TotalPush);
-				for (AActor* OtherActor : World->GetActors())
-				{
-					if (OtherActor == nullptr || OtherActor == Body->GetOwner() || !OtherActor->IsActive())
-					{
-						continue;
-					}
-
-					for (UPrimitiveComponent* OtherPrimitive : OtherActor->GetPrimitiveComponents())
-					{
-						if (!IsBlockingShape(OtherPrimitive))
-						{
-							continue;
-						}
-
-						if (IsDynamicRigidActor(OtherActor))
-						{
-							continue;
-						}
-
-						const FVector Push = ComputeAABBPushOut(ShiftAABB(HeldBounds, IterationPush), OtherPrimitive->GetWorldAABB());
-						if (!Push.IsNearlyZero())
-						{
-							IterationPush += Push;
-						}
-					}
-				}
-			}
-
-			if (IterationPush.IsNearlyZero())
-			{
-				break;
-			}
-
-			TotalPush += IterationPush;
-		}
-
-		return TotalPush;
+		InOutHoldLocation = TargetLocation;
+		OutHoldVelocity = DeltaTime > 0.0f ? (TargetLocation - PreviousLocation) / DeltaTime : FVector::ZeroVector;
 	}
 
 	bool RaycastPrimitiveForPickup(UPrimitiveComponent* Primitive, const FRay& Ray, FHitResult& OutHit)
@@ -643,30 +346,7 @@ void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FVector& CameraL
 	const FVector Target = GetHoldTarget(CameraLocation, CameraForward, TargetOffset);
 	if (bSnapToTarget)
 	{
-		const FVector DesiredDelta = Target - HoldLocation;
-		const FVector ResolvedDelta = ResolveHeldBodyMovement(HeldWorld, HeldBody, DesiredDelta);
-		HoldLocation += ResolvedDelta;
-		HoldVelocity = DeltaTime > 0.0f ? ResolvedDelta / DeltaTime : FVector::ZeroVector;
-		HeldBody->SetPhysicsLocation(HoldLocation);
-		MoveOverlappingDynamicBodies(HeldWorld, HeldBody, ResolvedDelta, HoldVelocity);
-		const FVector PenetrationPush = ResolveHeldBodyPenetration(HeldWorld, HeldBody);
-		if (!PenetrationPush.IsNearlyZero())
-		{
-			const FVector PushNormal = PenetrationPush.GetSafeNormal();
-			const float IntoSurfaceSpeed = FVector::DotProduct(HoldVelocity, PushNormal);
-			if (IntoSurfaceSpeed < 0.0f)
-			{
-				HoldVelocity -= PushNormal * IntoSurfaceSpeed;
-			}
-
-			HoldLocation += PenetrationPush;
-			HeldBody->SetPhysicsLocation(HoldLocation);
-			MoveOverlappingDynamicBodies(HeldWorld, HeldBody, PenetrationPush, HoldVelocity);
-		}
-		if (TargetRotation)
-		{
-			HeldBody->SetPhysicsRotation(*TargetRotation);
-		}
+		MoveHeldBodyToTarget(HeldBody, Target, TargetRotation, DeltaTime, HoldLocation, HoldVelocity);
 		HeldBody->SetVelocity(HoldVelocity);
 		return;
 	}
@@ -682,29 +362,8 @@ void UPhysicsHandleComponent::TickHandle(float DeltaTime, const FVector& CameraL
 
 	LastHoldLocation = HoldLocation;
 	const FVector DesiredDelta = HoldVelocity * DeltaTime;
-	const FVector ResolvedDelta = ResolveHeldBodyMovement(HeldWorld, HeldBody, DesiredDelta);
-	HoldLocation += ResolvedDelta;
-	HoldVelocity = DeltaTime > 0.0f ? ResolvedDelta / DeltaTime : FVector::ZeroVector;
-	HeldBody->SetPhysicsLocation(HoldLocation);
-	MoveOverlappingDynamicBodies(HeldWorld, HeldBody, ResolvedDelta, HoldVelocity);
-	const FVector PenetrationPush = ResolveHeldBodyPenetration(HeldWorld, HeldBody);
-	if (!PenetrationPush.IsNearlyZero())
-	{
-		const FVector PushNormal = PenetrationPush.GetSafeNormal();
-		const float IntoSurfaceSpeed = FVector::DotProduct(HoldVelocity, PushNormal);
-		if (IntoSurfaceSpeed < 0.0f)
-		{
-			HoldVelocity -= PushNormal * IntoSurfaceSpeed;
-		}
-
-		HoldLocation += PenetrationPush;
-		HeldBody->SetPhysicsLocation(HoldLocation);
-		MoveOverlappingDynamicBodies(HeldWorld, HeldBody, PenetrationPush, HoldVelocity);
-	}
-	if (TargetRotation)
-	{
-		HeldBody->SetPhysicsRotation(*TargetRotation);
-	}
+	const FVector NextLocation = HoldLocation + DesiredDelta;
+	MoveHeldBodyToTarget(HeldBody, NextLocation, TargetRotation, DeltaTime, HoldLocation, HoldVelocity);
 	HeldBody->SetVelocity(HoldVelocity);
 }
 

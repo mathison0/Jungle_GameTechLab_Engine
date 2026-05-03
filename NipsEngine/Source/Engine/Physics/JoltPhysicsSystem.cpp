@@ -25,8 +25,11 @@
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyID.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
@@ -709,6 +712,59 @@ void FJoltPhysicsSystem::SetBodyTransformFromComponent(URigidBodyComponent* Body
 		ToJoltPosition(UpdatedComponent->GetWorldLocation()),
 		ToJoltQuat(GetWorldQuat(UpdatedComponent)),
 		JPH::EActivation::Activate);
+}
+
+bool FJoltPhysicsSystem::MoveKinematicBody(URigidBodyComponent* Body, FVector& InOutTargetLocation, const FQuat& TargetRotation, float DeltaTime)
+{
+	if (Impl == nullptr || Body == nullptr || Impl->DynamicBodies.find(Body) == Impl->DynamicBodies.end() || !Body->IsDynamicBody())
+	{
+		return false;
+	}
+
+	const JPH::BodyID BodyID = Impl->DynamicBodies[Body];
+	JPH::BodyInterface& BodyInterface = Impl->PhysicsSystem.GetBodyInterface();
+	const FVector CurrentLocation = Body->GetPhysicsLocation();
+	const FVector RequestedDelta = InOutTargetLocation - CurrentLocation;
+	if (!RequestedDelta.IsNearlyZero())
+	{
+		JPH::RefConst<JPH::Shape> Shape = BodyInterface.GetShape(BodyID);
+		if (Shape != nullptr)
+		{
+			const JPH::RMat44 StartTransform = JPH::RMat44::sRotationTranslation(
+				ToJoltQuat(TargetRotation),
+				ToJoltPosition(CurrentLocation));
+			const JPH::RShapeCast ShapeCast = JPH::RShapeCast::sFromWorldTransform(
+				Shape,
+				JPH::Vec3::sReplicate(1.0f),
+				StartTransform,
+				ToJoltVector(RequestedDelta));
+			JPH::ShapeCastSettings Settings;
+			JPH::IgnoreSingleBodyFilter BodyFilter(BodyID);
+			JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> Collector;
+			Impl->PhysicsSystem.GetNarrowPhaseQuery().CastShape(
+				ShapeCast,
+				Settings,
+				ToJoltPosition(CurrentLocation),
+				Collector,
+				{},
+				{},
+				BodyFilter);
+
+			if (Collector.HadHit() && Collector.mHit.mFraction > 0.0f && Collector.mHit.mFraction < 1.0f)
+			{
+				const float AllowedFraction = std::max(0.0f, Collector.mHit.mFraction - 0.01f);
+				InOutTargetLocation = CurrentLocation + RequestedDelta * AllowedFraction;
+			}
+		}
+	}
+
+	const float MoveDeltaTime = std::max(DeltaTime, 1.0f / 240.0f);
+	BodyInterface.MoveKinematic(
+		BodyID,
+		ToJoltPosition(InOutTargetLocation),
+		ToJoltQuat(TargetRotation),
+		MoveDeltaTime);
+	return true;
 }
 
 void FJoltPhysicsSystem::SetBodyLinearVelocity(URigidBodyComponent* Body, const FVector& Velocity)
