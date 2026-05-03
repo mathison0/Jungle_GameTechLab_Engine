@@ -4,6 +4,8 @@
 #include "Core/CoreTypes.h"
 #include "Core/Singleton.h"
 
+#include <functional>
+
 // FName는 오브젝트 영역의 핵심 동작을 담당합니다.
 class FName
 {
@@ -35,6 +37,18 @@ private:
     uint32 ComparisonIndex; // 소문자 변환된 문자열의 풀 인덱스 (비교용)
     uint32 DisplayIndex;    // 원본 문자열의 풀 인덱스 (표시용)
 };
+
+namespace std
+{
+template <>
+struct hash<FName>
+{
+    size_t operator()(const FName& Name) const noexcept
+    {
+        return FName::Hash{}(Name);
+    }
+};
+} // namespace std
 
 // FNamePool는 오브젝트 영역의 핵심 동작을 담당합니다.
 class FNamePool : public TSingleton<FNamePool>

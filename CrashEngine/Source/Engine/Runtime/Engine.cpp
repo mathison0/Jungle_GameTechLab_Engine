@@ -9,6 +9,7 @@
 #include "Engine/Runtime/WindowsWindow.h"
 #include "Resource/ResourceManager.h"
 #include "Render/Resources/Buffers/MeshBufferManager.h"
+#include "Sound/SoundManager.h"
 #include "Mesh/ObjManager.h"
 #include "Texture/Texture2D.h"
 #include "GameFramework/World.h"
@@ -107,6 +108,11 @@ void UEngine::Init(FWindowsWindow* InWindow)
     FResourceManager::Get().LoadFromFile(FPaths::ToUtf8(FPaths::ResourceFilePath()), Device);
     UE_LOG(Engine, Info, "Runtime engine initialization completed.");
 
+    if (!FSoundManager::Get().Initialize())
+    {
+        UE_LOG(Engine, Warning, "Sound manager initialization failed. Continuing without audio.");
+    }
+
 	ScriptSystem.Initialize();
 }
 
@@ -126,6 +132,8 @@ void UEngine::Shutdown()
     FObjManager::ReleaseAllGPU();
     FMeshBufferManager::Get().Release();
     Renderer.Release();
+
+    FSoundManager::Get().Shutdown();
 
 	ScriptSystem.Shutdown();
 }
@@ -222,6 +230,7 @@ void UEngine::Tick(float DeltaTime)
     }
 
     WorldTick(DeltaTime);
+    FSoundManager::Get().Tick(DeltaTime);
     Render(DeltaTime);
 }
 
