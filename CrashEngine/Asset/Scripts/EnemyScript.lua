@@ -7,9 +7,9 @@ local Script = {
 }
 
 function Script:BeginPlay()
-    Query.SearchActorClosestByTag(self, self.GetRootComponent(), "Tank")
+    Query.SearchActorClosestByTag(self, self.GetRootComponent(), "Player")
     self.ai = self.StartCoroutine(function()
-        ChaseAI.ChaseTargetCoroutine(self, "Tank", self.GetRootComponent())
+        ChaseAI.ChaseTargetCoroutine(self, "Player", self.GetRootComponent())
     end)
 end
 

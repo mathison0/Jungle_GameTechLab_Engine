@@ -259,6 +259,7 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor)
     JSON a = json::Object();
     a[SceneKeys::ClassName] = Actor->GetClass()->GetName();
     a[SceneKeys::Name] = Actor->GetFName().ToString();
+    a["Tag"] = Actor->GetActorTag().ToString();
     a[SceneKeys::Visible] = Actor->IsVisible();
     if (!Actor->GetEditorFolderPath().empty())
     {
@@ -636,6 +637,11 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
             if (ActorJSON.hasKey(SceneKeys::Name))
             {
                 Actor->SetFName(FName(ActorJSON[SceneKeys::Name].ToString()));
+            }
+
+            if (ActorJSON.hasKey("Tag"))
+            {
+                Actor->SetActorTag(FName(ActorJSON["Tag"].ToString()));
             }
 
             if (ActorJSON.hasKey(SceneKeys::ActorFolder))

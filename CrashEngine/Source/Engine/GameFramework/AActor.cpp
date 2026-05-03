@@ -393,6 +393,7 @@ void AActor::Serialize(FArchive& Ar)
     Ar << bVisible;
     Ar << bNeedsTick;
     Ar << EditorFolderPath;
+    Ar << ActorTag;
 }
 
 // SceneComponent 서브트리를 재귀 복제. 부모 → 자식 순으로 만들되,

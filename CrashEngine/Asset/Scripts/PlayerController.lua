@@ -12,6 +12,7 @@ function Script:BeginPlay()
     if self.bLogBeginPlay then
         Log("PlayerController BeginPlay")
     end
+    self:GetActor():SetTag("Player")
 end
 
 function Script:Tick(deltaTime)

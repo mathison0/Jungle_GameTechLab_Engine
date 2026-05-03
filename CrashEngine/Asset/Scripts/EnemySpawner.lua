@@ -4,7 +4,7 @@ local Vec = require("Core.Vector")
 local Script = {
     properties = {
         EnemyClassName = { type = "string", default = "AEnemyBaseActor" },
-        TargetTagName = { type = "string", default = "Player" }, -- 현재 엔진 구현상 액터의 FName과 매칭됩니다.
+        TargetTagName = { type = "string", default = "Player" }, -- 검색할 대상의 태그입니다.
         MinSpawnRadius = { type = "float", default = 30.0 },
         MaxSpawnRadius = { type = "float", default = 50.0 }
     }
@@ -70,7 +70,7 @@ function Script:Tick(DeltaTime)
     -- 스폰 예산 누적
     self.SpawnBudget = self.SpawnBudget + (SpawnRate * DeltaTime)
     
-    -- 플레이어 위치 찾기 (QueryActorByTagClosest는 현재 액터 이름 기반으로 검색)
+    -- 플레이어 위치 찾기 (태그 기반 검색)
     local PlayerActor = self:QueryActorByTagClosest(self.TargetTagName, {X=0, Y=0, Z=0}, 100000.0)
     local PlayerPos = {X = 0, Y = 0, Z = 0}
     

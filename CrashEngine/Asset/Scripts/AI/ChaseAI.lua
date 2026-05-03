@@ -21,11 +21,11 @@ function ChaseAI.ChaseTarget(self, TargetTag, ComponentHandle, DeltaTime)
         end
 end
 
-function ChaseAI.ChaseTargetCoroutine(self, ComponentHandle, TargetTag)
+function ChaseAI.ChaseTargetCoroutine(self, TargetTag, ComponentHandle)
 
     while true do
         local deltaTime = Co.WaitNextFrame()
-        ChaseAI.ChaseTarget(self, ComponentHandle, TargetTag, deltaTime)
+        ChaseAI.ChaseTarget(self, TargetTag, ComponentHandle, deltaTime)
     end
 end
 

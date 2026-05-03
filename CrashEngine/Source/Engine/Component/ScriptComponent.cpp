@@ -528,14 +528,15 @@ void UScriptComponent::BindFunctions()
             }
 
             const FString& Tag = Strings[0];
+            const FName TargetTag(Tag);
             const float RadiusSquared = Radius * Radius;
             float BestDistanceSquared = FLT_MAX;
             AActor* BestActor = nullptr;
 
-			//액터 탐색 로직, 이후 변경 필요
+			//액터 탐색 로직 (태그 기반)
             for (AActor* Actor : World->GetActors())
             {
-                if (!Actor || Actor->GetFName().ToString() != Tag)
+                if (!Actor || Actor->GetActorTag() != TargetTag)
                 {
                     continue;
                 }
