@@ -48,11 +48,62 @@ void FGameInput::UpdateKeyState(int vk, bool bDown, bool bPressed, bool bRelease
     if (bReleased) CurrentState.KeyReleased[vk] = true;
 }
 
+bool FGameInput::GetMouseButton(int button)
+{
+    if (button < 0 || button >= 6) return false;
+    return CurrentState.MouseButtonDown[button];
+}
+
+bool FGameInput::GetMouseButtonDown(int button)
+{
+    if (button < 0 || button >= 6) return false;
+    return CurrentState.MouseButtonPressed[button];
+}
+
+bool FGameInput::GetMouseButtonUp(int button)
+{
+    if (button < 0 || button >= 6) return false;
+    return CurrentState.MouseButtonReleased[button];
+}
+
+void FGameInput::GetMousePosition(int& outX, int& outY)
+{
+    outX = CurrentState.MousePosition.x;
+    outY = CurrentState.MousePosition.y;
+}
+
+void FGameInput::UpdatePointerState(EPointerButton button, EPointerEventType type, POINT localPos)
+{
+    CurrentState.MousePosition = localPos;
+
+    if (button == EPointerButton::None) return;
+
+    int buttonIdx = (int)button;
+    if (buttonIdx < 0 || buttonIdx >= 6) return;
+
+    if (type == EPointerEventType::Pressed)
+    {
+        CurrentState.MouseButtonDown[buttonIdx] = true;
+        CurrentState.MouseButtonPressed[buttonIdx] = true;
+    }
+    else if (type == EPointerEventType::Released)
+    {
+        CurrentState.MouseButtonDown[buttonIdx] = false;
+        CurrentState.MouseButtonReleased[buttonIdx] = true;
+    }
+}
+
 void FGameInput::ResetFrameState()
 {
     for (int i = 0; i < 256; ++i)
     {
         CurrentState.KeyPressed[i] = false;
         CurrentState.KeyReleased[i] = false;
+    }
+
+    for (int i = 0; i < 6; ++i)
+    {
+        CurrentState.MouseButtonPressed[i] = false;
+        CurrentState.MouseButtonReleased[i] = false;
     }
 }

@@ -25,6 +25,18 @@ function Script:Tick(deltaTime)
         Log("Horizontal input detected")
     end
 
+    if Input.GetMouseButtonDown(1) then
+        Log("Mouse Button Down")
+    end
+    if Input.GetMouseButtonUp(1) then
+        Log("Mouse Button Up")
+    end
+    
+    if Input.GetMouseButton(1) then
+        local mouseX, mouseY = Input.GetMousePosition()
+        Log("MosueX: " .. mouseX .. ", MouseY: " .. mouseY)
+    end
+
     self.elapsed = self.elapsed + deltaTime
     if self.elapsed >= 1.0 then
         Log("Tank.lua Tick")

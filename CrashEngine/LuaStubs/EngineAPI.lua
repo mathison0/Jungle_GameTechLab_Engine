@@ -142,6 +142,21 @@ function Input.GetKeyUp(key) end
 ---@return number
 function Input.GetAxis(axisName) end
 
+---@param button integer
+---@return boolean
+function Input.GetMouseButton(button) end
+
+---@param button integer
+---@return boolean
+function Input.GetMouseButtonDown(button) end
+
+---@param button integer
+---@return boolean
+function Input.GetMouseButtonUp(button) end
+
+---@return integer, integer
+function Input.GetMousePosition() end
+
 function ScriptComponent:BeginPlay() end
 
 ---@param deltaTime number

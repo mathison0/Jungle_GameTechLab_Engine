@@ -208,13 +208,20 @@ void FScriptSystem::RegisterEngineAPI() const
 		});
     
     // 입력 처리
-    Lua->new_usertype<FGameInput>("Input", 
+    Lua->new_usertype<FGameInput>("Input",
         "GetKey", &FGameInput::GetKey,
         "GetKeyDown", &FGameInput::GetKeyDown,
         "GetKeyUp", &FGameInput::GetKeyUp,
-        "GetAxis", &FGameInput::GetAxis
-    );
-    
+        "GetAxis", &FGameInput::GetAxis,
+        "GetMouseButton", &FGameInput::GetMouseButton,
+        "GetMouseButtonDown", &FGameInput::GetMouseButtonDown,
+        "GetMouseButtonUp", &FGameInput::GetMouseButtonUp,
+        "GetMousePosition", []() {
+            int x, y;
+            FGameInput::GetMousePosition(x, y);
+            return std::make_tuple(x, y);
+        }
+    );    
 	RegisterLuaEngineBindings(*Lua);
 }
 
