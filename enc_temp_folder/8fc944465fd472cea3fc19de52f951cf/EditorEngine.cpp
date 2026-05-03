@@ -527,7 +527,7 @@ void UEditorEngine::EndPlayMap()
         }
     }
 
-	GameViewportClient->SetViewport(nullptr);
+	//GameViewportClient->SetViewport(nullptr);
 
     PlayInEditorSessionInfo.reset();
 
