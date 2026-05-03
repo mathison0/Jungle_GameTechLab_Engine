@@ -78,9 +78,9 @@ function Script:GetSpawnPosition(PlayerPos)
     local Distance = self.MinSpawnRadius + (math.random() * (self.MaxSpawnRadius - self.MinSpawnRadius))
     
     return {
-        X = PlayerPos.X + math.cos(Angle) * Distance,
-        Y = PlayerPos.Y + math.sin(Angle) * Distance,
-        Z = 0.0
+        x = PlayerPos.x + math.cos(Angle) * Distance,
+        y = PlayerPos.y + math.sin(Angle) * Distance,
+        z = 0.0
     }
 end
 
@@ -101,8 +101,8 @@ function Script:Tick(DeltaTime)
     self.SpawnBudget = self.SpawnBudget + (SpawnRate * DeltaTime)
     
     -- 플레이어 위치 찾기 (태그 기반 검색)
-    local PlayerActor = self:QueryActorByTagClosest(self.TargetTagName, {X=0, Y=0, Z=0}, 100000.0)
-    local PlayerPos = {X = 0, Y = 0, Z = 0}
+    local PlayerActor = self:QueryActorByTagClosest(self.TargetTagName, {x=0, y=0, z=0}, 100000.0)
+    local PlayerPos = {x = 0, y = 0, z = 0}
     
     if PlayerActor:IsValid() then
         PlayerPos = PlayerActor:GetLocation()
@@ -158,9 +158,9 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
 
     -- 플레이어 바깥쪽에서 생성
     local CenterSpawnPos = {
-        X = PlayerPos.X - MoveDir.x * self.FlyingWaveSpawnDistance,
-        Y = PlayerPos.Y - MoveDir.y * self.FlyingWaveSpawnDistance,
-        Z = PlayerPos.Z
+        x = PlayerPos.x - MoveDir.x * self.FlyingWaveSpawnDistance,
+        y = PlayerPos.y - MoveDir.y * self.FlyingWaveSpawnDistance,
+        z = PlayerPos.z
     }
 
     local RowSpacing = Spacing * 0.866 -- sqrt(3) / 2
@@ -185,11 +185,11 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
             local ColOffset = (col - HalfCols) * Spacing + Stagger
 
             local SpawnPos = {
-                x = CenterSpawnPos.X
+                x = CenterSpawnPos.x
                     + MoveDir.x * RowOffset
                     + Perp.x * ColOffset,
 
-                y = CenterSpawnPos.Y
+                y = CenterSpawnPos.y
                     + MoveDir.y * RowOffset
                     + Perp.y * ColOffset,
 

@@ -292,6 +292,13 @@
           "Name" : "UScriptComponent_15",
           "Properties" : {
             "Lua.EnemyClassName" : "AEnemyBaseActor",
+            "Lua.FlyingEnemyClassName" : "AFlyingWaveEnemyActor",
+            "Lua.FlyingWaveCount" : 12,
+            "Lua.FlyingWaveInterval" : 10.000000,
+            "Lua.FlyingWaveLifeTime" : 5.000000,
+            "Lua.FlyingWaveSpacing" : 8.000000,
+            "Lua.FlyingWaveSpawnDistance" : 80.000000,
+            "Lua.FlyingWaveSpeed" : 60.000000,
             "Lua.MaxSpawnRadius" : 50.000000,
             "Lua.MinSpawnRadius" : 30.000000,
             "Lua.TargetTagName" : "Player",

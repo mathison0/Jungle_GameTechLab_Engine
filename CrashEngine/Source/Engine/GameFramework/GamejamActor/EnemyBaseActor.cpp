@@ -22,7 +22,7 @@ void AEnemyBaseActor::InitDefaultComponents()
     ColliderComponent = AddComponent<UCircleCollider2DComponent>();
     ColliderComponent->SetCollisionChannel(ECollisionChannel::Enemy);
     ColliderComponent->SetGenerateOverlapEvents(true);
-	SetRootComponent(ColliderComponent);
+    SetRootComponent(ColliderComponent);
 
 	ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
     UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ"), Device);
@@ -35,6 +35,5 @@ void AEnemyBaseActor::InitDefaultComponents()
     EnemyScriptComponent->SetScriptPath("EnemyScript.lua");
 
 	EnemyScriptComponent = AddComponent<UScriptComponent>();
-    EnemyScriptComponent->SetScriptPath("EnemyState.lua");
-
+    EnemyScriptComponent->SetScriptPath("Components/EnemyState.lua");
 }
