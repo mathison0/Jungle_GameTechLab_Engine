@@ -10,6 +10,12 @@ enum class EGameItemDisposition
 	Discarded,
 };
 
+enum class EItemDecisionBoxType
+{
+	KeepBox,
+	DiscardBox,
+};
+
 struct FGameItemData
 {
 	FString ItemId;
@@ -18,6 +24,7 @@ struct FGameItemData
 	FString DescriptionWhenKept;
 	FString DescriptionWhenDiscarded;
 	FString IconPath;
+	bool bCanClassify = true;
 	TArray<FString> EndingTags;
 	TArray<FString> StoryFlags;
 };

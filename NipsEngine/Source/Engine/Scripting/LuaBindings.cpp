@@ -12,6 +12,8 @@
 #include "Audio/AudioSystem.h"
 #include "Engine/Input/InputRouter.h"
 #include "Game/UI/GameUISystem.h"
+#include "Game/Systems/GameContext.h"
+#include "Game/Systems/ItemSystem.h"
 
 void RegisterLuaBindings(sol::state& Lua)
 {
@@ -132,6 +134,48 @@ void RegisterLuaBindings(sol::state& Lua)
 	{
 		return GameUISystem::Get().IsDialogueActive();
 	});
+
+	Lua.set_function("PlaceItemInKeepBox", [](const std::string& ItemId)
+	{
+		return FItemSystem::Get().PlaceItemInDecisionBox(ItemId, EItemDecisionBoxType::KeepBox);
+	});
+
+	Lua.set_function("PlaceItemInDiscardBox", [](const std::string& ItemId)
+	{
+		return FItemSystem::Get().PlaceItemInDecisionBox(ItemId, EItemDecisionBoxType::DiscardBox);
+	});
+
+	Lua.set_function("ClassifyItem", [](const std::string& ItemId, const std::string& Disposition)
+	{
+		if (Disposition == "Kept")
+		{
+			return FItemSystem::Get().ClassifyItem(ItemId, EGameItemDisposition::Kept);
+		}
+
+		if (Disposition == "Discarded")
+		{
+			return FItemSystem::Get().ClassifyItem(ItemId, EGameItemDisposition::Discarded);
+		}
+
+		return false;
+	});
+
+	Lua.set_function("GetItemDisplayName", [](const std::string& ItemId)
+	{
+		const FGameItemData* ItemData = FItemSystem::Get().FindItemData(ItemId);
+		return ItemData ? ItemData->DisplayName : FString();
+	});
+
+	Lua.set_function("GetItemDescription", [](const std::string& ItemId)
+	{
+		return FItemSystem::Get().GetDescriptionForCurrentState(ItemId);
+	});
+
+	Lua.set_function("GetResolvedItemCount", []()
+	{
+		return static_cast<int32>(GGameContext::Get().GetResolvedItemCount());
+	});
+
 
 	// 키 입력 (Windows Virtual Key Code)
 	// 자주 쓰는 상수를 Lua 전역으로 노출
