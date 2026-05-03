@@ -28,9 +28,15 @@ function EnemyState:TakeDamage(amount, attacker)
 end
 
 function EnemyState:Die()
-    -- 임시로 Visible만 조절
     Log("[Enemy] Died: " .. self.actor:GetName())
-    self.actor:SetVisible(false)
+    
+    local PoolManager = GetActorPoolManager()
+    if PoolManager:IsValid() then
+        PoolManager:Release(self.actor)
+    else
+        -- Fallback if PoolManager is not available
+        self.actor:SetVisible(false)
+    end
 end
 
 function EnemyState:EndPlay()
