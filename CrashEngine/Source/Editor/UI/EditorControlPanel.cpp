@@ -2,8 +2,6 @@
 #include "Editor/UI/EditorControlPanel.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Settings/EditorSettings.h"
-#include "Engine/Profiling/Timer.h"
-#include "Engine/Profiling/MemoryStats.h"
 #include "ImGui/imgui.h"
 #include "Component/CameraComponent.h"
 #include "Component/GizmoComponent.h"
@@ -82,10 +80,11 @@ const char* GetSpawnLabel(void*, int idx)
 }
 } // namespace
 
+#include "Math/MathUtils.h"
+
 void FEditorControlPanel::Initialize(UEditorEngine* InEditorEngine)
 {
     FEditorPanel::Initialize(InEditorEngine);
-    SelectedPrimitiveType = 0;
 }
 
 void FEditorControlPanel::Render(float DeltaTime)
@@ -93,27 +92,6 @@ void FEditorControlPanel::Render(float DeltaTime)
     (void)DeltaTime;
     if (!EditorEngine)
         return;
-
-    ImGui::SetNextWindowCollapsed(false, ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(360.0f, 220.0f), ImGuiCond_Once);
-    ImGui::Begin("Place Actors");
-
-    ImGui::Combo("Actor", &SelectedPrimitiveType, GetSpawnLabel, nullptr, SpawnTableSize);
-
-    if (ImGui::Button("Spawn"))
-    {
-        UWorld* World = EditorEngine->GetWorld();
-        if (SelectedPrimitiveType >= 0 && SelectedPrimitiveType < SpawnTableSize)
-        {
-            for (int32 i = 0; i < NumberOfSpawnedActors; ++i)
-            {
-                SpawnTable[SelectedPrimitiveType].Spawn(World, CurSpawnPoint);
-            }
-        }
-        NumberOfSpawnedActors = 1;
-    }
-    ImGui::InputInt("Spawn Count", &NumberOfSpawnedActors, 1, 10);
-    ImGui::End();
 
     UCameraComponent* Camera = EditorEngine->GetCamera();
     if (!Camera)

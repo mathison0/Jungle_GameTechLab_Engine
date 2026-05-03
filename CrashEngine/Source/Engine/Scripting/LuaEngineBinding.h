@@ -5,8 +5,10 @@
 
 class AActor;
 class UActorComponent;
+class UCollider2DComponent;
 
 struct FLuaComponentHandle;
+struct FLuaCollider2DHandle;
 
 struct FLuaActorHandle
 {
@@ -70,6 +72,8 @@ struct FLuaComponentHandle
 
 	bool LookAt(const sol::object& State) const;
 
+	sol::object LuaCast(sol::this_state State, const FString& ClassName) const;
+
 	// PrimitiveComponent API
 	bool IsVisible() const;
 	bool SetVisibility(bool bVisible) const;
@@ -79,6 +83,33 @@ struct FLuaComponentHandle
 
 	bool IsOverlappingActor(const FLuaActorHandle& OtherActor) const;
 	bool IsOverlappingComponent(const FLuaComponentHandle& OtherComponent) const;
+};
+
+struct FLuaCollider2DHandle : public FLuaComponentHandle
+{
+	using FLuaComponentHandle::FLuaComponentHandle;
+
+	UCollider2DComponent* ResolveCollider() const;
+
+	// Common Collider2D methods
+	sol::table GetShapeWorldLocation2D(sol::this_state State) const;
+	float GetCollisionPlaneZ() const;
+};
+
+struct FLuaBoxCollider2DHandle : public FLuaCollider2DHandle
+{
+	using FLuaCollider2DHandle::FLuaCollider2DHandle;
+
+	sol::table GetBoxExtent(sol::this_state State) const;
+	bool SetBoxExtent(const sol::object& Value) const;
+};
+
+struct FLuaCircleCollider2DHandle : public FLuaCollider2DHandle
+{
+	using FLuaCollider2DHandle::FLuaCollider2DHandle;
+
+	float GetRadius() const;
+	bool SetRadius(float Radius) const;
 };
 
 void RegisterLuaEngineBindings(sol::state& Lua);

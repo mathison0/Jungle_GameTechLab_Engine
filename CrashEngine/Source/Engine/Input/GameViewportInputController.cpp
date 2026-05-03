@@ -7,11 +7,10 @@
 FGameViewportInputController::FGameViewportInputController(UGameViewportClient* InOwner)
     : Owner(InOwner)
 {
-    // PIE 종료를 위한 툴 (에디터 빌드에서만 활성화하거나 런타임에 제거 가능)
-    Tools.push_back(std::make_unique<FPIEExitCommandTool>(InOwner, this));
-    
-    // 실제 인게임 입력을 위한 툴
-    Tools.push_back(std::make_unique<FGameInputTool>(InOwner, this));
+#if WITH_EDITOR
+    Tools.push_back(std::make_unique<FPIEExitCommandTool>(InOwner, this));  // ESC키로 PIE 종료- 툴
+#endif
+    Tools.push_back(std::make_unique<FGameInputTool>(InOwner, this));       // 실제 인게임 입력을 위한 툴
 }
 
 FGameViewportInputController::~FGameViewportInputController() = default;

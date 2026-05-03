@@ -392,6 +392,7 @@ void AActor::Serialize(FArchive& Ar)
     // 소유 포인터(OwnedComponents/RootComponent/Outer)는 직렬화 제외 — 복제 단계에서 재구성.
     Ar << bVisible;
     Ar << bNeedsTick;
+    Ar << EditorFolderPath;
 }
 
 // SceneComponent 서브트리를 재귀 복제. 부모 → 자식 순으로 만들되,

@@ -36,6 +36,7 @@ UObject* UWorld::Duplicate(UObject* NewOuter) const
     NewWorld->SetOuter(NewOuter);
     NewWorld->InitWorld(); // Partition/VisibleSet 초기화 — 이거 없으면 복제 액터가 렌더링되지 않음
     NewWorld->SetWorldType(GetWorldType());
+    NewWorld->SetEditorActorFolders(EditorActorFolders);
 
     for (AActor* Src : GetActors())
     {
@@ -195,6 +196,25 @@ void UWorld::RemoveActorToOctree(AActor* Actor)
 void UWorld::UpdateActorInOctree(AActor* Actor)
 {
     Partition.UpdateActor(Actor);
+}
+
+void UWorld::AddEditorActorFolder(const FString& FolderPath)
+{
+    if (FolderPath.empty())
+    {
+        return;
+    }
+
+    if (std::find(EditorActorFolders.begin(), EditorActorFolders.end(), FolderPath) == EditorActorFolders.end())
+    {
+        EditorActorFolders.push_back(FolderPath);
+    }
+}
+
+void UWorld::RemoveEditorActorFolder(const FString& FolderPath)
+{
+    auto It = std::remove(EditorActorFolders.begin(), EditorActorFolders.end(), FolderPath);
+    EditorActorFolders.erase(It, EditorActorFolders.end());
 }
 
 FLODUpdateContext UWorld::PrepareLODContext()

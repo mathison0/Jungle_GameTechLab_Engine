@@ -5,6 +5,8 @@
 
 #include <cmath>
 
+#include "GameFramework/AActor.h"
+
 IMPLEMENT_ABSTRACT_CLASS(UCollider2DComponent, UShapeComponent)
 
 UCollider2DComponent::UCollider2DComponent()

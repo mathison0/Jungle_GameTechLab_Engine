@@ -66,7 +66,7 @@ function TankMovement:Tick(DeltaTime)
     actor:SetLocation(NewLocation)
 
     local Rotation = actor:GetRotation()
-    Rotation.Z = Rotation.Z + (TargetAngularSpeed * DeltaTime)
+    Rotation.z = Rotation.z + (TargetAngularSpeed * DeltaTime)
     actor:SetRotation(Rotation)
 end
 

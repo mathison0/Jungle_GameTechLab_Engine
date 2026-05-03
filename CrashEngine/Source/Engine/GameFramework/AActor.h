@@ -73,6 +73,22 @@ public:
 
     const TArray<UActorComponent*>& GetComponents() const { return OwnedComponents; }
 
+    template <typename T>
+    T* FindComponentByClass() const
+    {
+        static_assert(std::is_base_of_v<UActorComponent, T>,
+                      "FindComponentByClass<T>: T must derive from UActorComponent");
+
+        for (UActorComponent* Comp : OwnedComponents)
+        {
+            if (T* CastedComp = Cast<T>(Comp))
+            {
+                return CastedComp;
+            }
+        }
+        return nullptr;
+    }
+
     // Transform — Location
     FVector GetActorLocation() const;
     void SetActorLocation(const FVector& Location);
@@ -95,6 +111,9 @@ public:
 
     bool IsVisible() const { return bVisible; }
     void SetVisible(bool Visible);
+
+    const FString& GetEditorFolderPath() const { return EditorFolderPath; }
+    void SetEditorFolderPath(const FString& InFolderPath) { EditorFolderPath = InFolderPath; }
 
     // Tick 필요 여부 — false면 Tick 호출 자체를 건너뜀 (StaticMesh 등)
     bool bNeedsTick = true;
@@ -120,6 +139,7 @@ protected:
 
     FVector PendingActorLocation = FVector(0, 0, 0);
     bool bVisible = true;
+    FString EditorFolderPath;
 
     TArray<UActorComponent*> OwnedComponents;
 
