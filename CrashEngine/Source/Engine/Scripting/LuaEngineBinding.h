@@ -68,6 +68,8 @@ struct FLuaComponentHandle
 
 	sol::table GetForwardVector(sol::this_state State) const;
 
+	bool LookAt(const sol::object& State) const;
+
 	// PrimitiveComponent API
 	bool IsVisible() const;
 	bool SetVisibility(bool bVisible) const;

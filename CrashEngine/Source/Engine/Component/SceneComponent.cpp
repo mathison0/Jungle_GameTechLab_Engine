@@ -273,6 +273,87 @@ void USceneComponent::SetRelativeScale(const FVector& NewScale)
     NotifyOctreeTransformChanged(this);
 }
 
+void USceneComponent::LookAt(const FVector& Target)
+{
+    const FVector Position = GetWorldLocation();
+    FVector Forward = Target - Position;
+
+    if (Forward.LengthSquared() <= FMath::Epsilon)
+    {
+        return;
+    }
+
+    Forward.Normalize();
+
+    FVector WorldUp(0.0f, 0.0f, 1.0f); 
+
+    FVector Right = WorldUp.Cross(Forward);
+
+    // Target이 거의 수직 위/아래면 WorldUp x Forward가 0에 가까워짐.
+    // 이때는 현재 Right를 유지해서 갑자기 빙글 도는 현상을 막는다.
+    if (Right.LengthSquared() <= FMath::Epsilon)
+    {
+        Right = GetRightVector();
+
+        // 혹시 현재 Right도 이상하면 기본 Right 사용
+        if (Right.LengthSquared() <= FMath::Epsilon)
+        {
+            Right = FVector(0.0f, 1.0f, 0.0f);
+        }
+
+        // Forward에 수직이 되도록 보정
+        Right = Right - Forward * Right.Dot(Forward);
+
+        if (Right.LengthSquared() <= FMath::Epsilon)
+        {
+            Right = FVector(0.0f, 1.0f, 0.0f);
+        }
+    }
+
+    Right.Normalize();
+
+    FVector Up = Forward.Cross(Right);
+    Up.Normalize();
+
+    FMatrix DesiredWorldMatrix = FMatrix::Identity;
+
+    // 네 엔진 convention:
+    // row0 = Forward
+    // row1 = Right
+    // row2 = Up
+    DesiredWorldMatrix.M[0][0] = Forward.X;
+    DesiredWorldMatrix.M[0][1] = Forward.Y;
+    DesiredWorldMatrix.M[0][2] = Forward.Z;
+
+    DesiredWorldMatrix.M[1][0] = Right.X;
+    DesiredWorldMatrix.M[1][1] = Right.Y;
+    DesiredWorldMatrix.M[1][2] = Right.Z;
+
+    DesiredWorldMatrix.M[2][0] = Up.X;
+    DesiredWorldMatrix.M[2][1] = Up.Y;
+    DesiredWorldMatrix.M[2][2] = Up.Z;
+
+    FQuat DesiredWorldRotation = DesiredWorldMatrix.ToQuat();
+    DesiredWorldRotation.Normalize();
+
+    FQuat DesiredRelativeRotation = DesiredWorldRotation;
+
+    if (ParentComponent)
+    {
+        // 중요:
+        // World = Relative * Parent 구조이므로
+        // Quat 변환에서는 이 순서가 맞음.
+        DesiredRelativeRotation =
+            ParentComponent->GetWorldRotation().Inverse() * DesiredWorldRotation;
+    }
+
+    DesiredRelativeRotation.Normalize();
+
+    SetRelativeRotationWithEulerHint(
+        DesiredRelativeRotation,
+        DesiredRelativeRotation.ToRotator());
+}
+
 
 void USceneComponent::MarkTransformDirty()
 {

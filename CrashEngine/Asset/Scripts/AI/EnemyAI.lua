@@ -21,7 +21,6 @@ function EnemyAI.ChaseTarget(self, TargetTag, DeltaTime)
         end
 
         if self.target ~= nil and self.target:IsValid() then
-            Log("[EnemyAI] Chase Start")
             local targetPos = self.target:GetLocation()
             local dir = Vec.DirectionTo(myPos, targetPos)
             local moveDelta = Vec.Mul(dir, (self.MoveSpeed or 1.0) * DeltaTime)
