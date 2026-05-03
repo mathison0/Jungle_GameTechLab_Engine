@@ -1,12 +1,15 @@
-local EnemyAI = require("AI.EnemyAI")
+local ChaseAI = require("AI.ChaseAI")
+local Query = require("Query")
+
 
 local Script = {
-    properties = EnemyAI.properties
+    properties = ChaseAI.properties
 }
 
 function Script:BeginPlay()
+    Query.SearchActorClosestByTag(self, self.GetRootComponent(), "Tank")
     self.ai = self.StartCoroutine(function()
-        EnemyAI.ChaseTargetCoroutine(self, "Tank")
+        ChaseAI.ChaseTargetCoroutine(self, "Tank", self.GetRootComponent())
     end)
 end
 
@@ -14,10 +17,7 @@ function Script:Tick(deltaTime)
 end
 
 function Script:EndPlay()
-    if self.ai ~= nil then
-        self.StopCoroutine(self.ai)
-        self.ai = nil
-    end
+    self.StopAllCoroutines()
 end
 
 return Script

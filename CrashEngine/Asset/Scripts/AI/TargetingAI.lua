@@ -9,19 +9,6 @@ local TargetingAI = {
     }
 }
 
-function TargetingAI.SearchTarget(self, ComponentHandle, TargetTag)
-    Log("SearchTarget")
-    local myPos = ComponentHandle:GetWorldLocation()
-    self.target = self.QueryActorByTagClosest(TargetTag, myPos, self.TargetSearchRadius or 10000.0)
-end
-
-function TargetingAI.SearchTargetCoroutine(self, ComponentHandle, TargetTag)
-    while true do
-        TargetingAI.SearchTarget(self, ComponentHandle, TargetTag)
-        Co.Wait(0.2)
-    end
-end
-
 function TargetingAI.Targeting(self, ComponentHandle, bZAxisOnly, DeltaTime)
     if ComponentHandle == nil or not ComponentHandle:IsValid() then
         return
