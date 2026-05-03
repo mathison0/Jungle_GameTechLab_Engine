@@ -2,35 +2,56 @@ local DamageSystem = require("Core.DamageSystem")
 
 local Bullet = {
     properties = {
-        Damage = 100
+        Damage = { type = "float", default = 100.0 }
     }
 }
 
 function Bullet:BeginPlay()
-    self.actor = self.GetActor()
+    Log("Bullet:BeginPlay")
+
+    self.actor = self:GetActor()
+    if self.actor == nil or not self.actor:IsValid() then
+        Log("[Bullet] Invalid owner actor")
+        return
+    end
+
     Log("[Bullet] Spawned: " .. self.actor:GetName())
 end
 
--- 물리 엔진에 의해 충돌이 발생했을 때 호출됨
 function Bullet:OnOverlapBegin(otherCollider)
+    Log("Bullet:OnOverlapBegin")
+
+    if otherCollider == nil or not otherCollider:IsValid() then
+        Log("[Bullet] Invalid other collider")
+        return
+    end
+
+    if otherCollider.GetOwner == nil then
+        Log("[Bullet] otherCollider has no GetOwner()")
+        return
+    end
+
     local otherActor = otherCollider:GetOwner()
-    if not otherActor:IsValid() then return end
-    
+    if otherActor == nil or not otherActor:IsValid() then
+        return
+    end
+
     local tag = otherActor:GetTag()
     Log(string.format("[Bullet] Overlapped with: %s (Tag: %s)", otherActor:GetName(), tag))
 
     if tag == "Enemy" then
-        -- DamageSystem을 통해 상대방 스크립트의 TakeDamage 호출
-        local success = DamageSystem.ApplyDamage(otherActor, self.Damage, self.actor)
-        
+        local damage = self.Damage or 100.0
+        local success = DamageSystem.ApplyDamage(otherActor, damage, self.actor)
+
         if success then
             Log("[Bullet] Damage applied successfully to " .. otherActor:GetName())
         else
-            Log("[Bullet] Failed to apply damage. Is EnemyState.lua registered?")
+            Log("[Bullet] Failed to apply damage. EnemyState may not be registered.")
         end
-        
-        -- 충돌 후 총알 제거
-        -- self.actor:SetVisible(false)
+
+        if self.actor ~= nil and self.actor:IsValid() then
+            self.actor:SetVisible(false)
+        end
     end
 end
 
