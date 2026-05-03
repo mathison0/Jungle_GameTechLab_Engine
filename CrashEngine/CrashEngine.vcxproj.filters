@@ -671,9 +671,6 @@
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Component\TankMovementComponent.cpp">
-      <Filter>Source\Engine\Component</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -1264,6 +1261,9 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Source\Engine\Sound\SoundManager.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\TankActor.cpp" />
+    <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1486,9 +1486,6 @@
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h">
-      <Filter>Source\Engine\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\TankMovementComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h">
@@ -2305,6 +2302,9 @@
       <Filter>ThirdParty\Sol</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Sound\SoundManager.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\TankActor.h" />
+    <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

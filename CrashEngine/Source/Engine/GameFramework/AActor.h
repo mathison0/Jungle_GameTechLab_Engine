@@ -14,6 +14,7 @@ struct FActorTickFunction;
 class UWorld;
 class ULevel;
 class UPrimitiveComponent;
+class UScriptComponent;
 
 // AActor는 월드에 배치되는 게임 오브젝트를 표현합니다.
 class AActor : public UObject
@@ -28,6 +29,7 @@ public:
     virtual void BeginPlay();
     virtual void Tick(float DeltaTime);
     virtual void EndPlay();
+    virtual void BindScriptFunctions(UScriptComponent& ScriptComponent);
 
     bool HasActorBegunPlay() const { return bActorHasBegunPlay; }
 
@@ -101,7 +103,7 @@ public:
 
     FActorTickFunction PrimaryActorTick;
 
-	//Collision
+    // Collision
     bool IsOverlappingActor(const AActor* OtherActor) const;
 
 protected:
@@ -109,6 +111,9 @@ protected:
 
     void MarkPickingDirty();
     void EnsureDefaultEditorHelperTextComponent();
+
+    template <typename T>
+    T* GetComponent(int index) { return Cast<T>(OwnedComponents[index]); }
 
     USceneComponent* RootComponent = nullptr;
 
