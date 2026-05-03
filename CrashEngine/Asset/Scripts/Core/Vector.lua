@@ -61,4 +61,21 @@ function Vec.DistanceSquared(A, B)
     return Vec.LengthSquared(Vec.Sub(B, A))
 end
 
+function Vec.Lerp(A, B, Alpha)
+    local AX, AY, AZ = Components(A)
+    local BX, BY, BZ = Components(B)
+    local InverseAlpha = 1.0 - Alpha
+    return NewVector(AX * InverseAlpha + BX * Alpha,
+                     AY * InverseAlpha + BY * Alpha,
+                     AZ * InverseAlpha + BZ * Alpha)
+end
+
+function Vec.Cross(A, B)
+    local AX, AY, AZ = Components(A)
+    local BX, BY, BZ = Components(B)
+    return NewVector(AY * BZ - AZ * BY,
+                     AZ * BX - AX * BZ,
+                     AX * BY - AY * BX)
+end
+
 return Vec
