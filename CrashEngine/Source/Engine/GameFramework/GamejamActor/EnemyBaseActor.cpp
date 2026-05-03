@@ -9,7 +9,6 @@ IMPLEMENT_CLASS(AEnemyBaseActor, AActor)
 void AEnemyBaseActor::BeginPlay()
 {
     AActor::BeginPlay();
-    SetVisible(true);
     SetActorTag(FName("Enemy"));
 }
 
