@@ -10,7 +10,6 @@ local TargetingAI = {
 }
 
 function TargetingAI.SearchTarget(self, ComponentHandle, TargetTag)
-    Log("SearchTarget")
     local myPos = ComponentHandle:GetWorldLocation()
     self.target = self.QueryActorByTagClosest(TargetTag, myPos, self.TargetSearchRadius or 10000.0)
 end
