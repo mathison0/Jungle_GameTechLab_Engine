@@ -385,6 +385,18 @@ void FInputRouter::TickKeyboardInput(const FInputRouteContext& Context)
 		}
 	}
 
+	if (WorldType == EWorldType::Game && Context.bControlLocked)
+	{
+		for (int VK = 0; VK < 256; ++VK)
+		{
+			if (IsRoutableKeyboardKey(VK) && IS.GetKeyUp(VK))
+			{
+				RouteKeyboardInput(EKeyInputType::KeyReleased, VK);
+			}
+		}
+		return;
+	}
+
 	if (GuiState.bUsingKeyboard)
 	{
 		return;

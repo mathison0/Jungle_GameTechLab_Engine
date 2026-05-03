@@ -5,7 +5,6 @@
 #include "Game/UI/DialoguePanel.h"
 #include "Game/UI/PauseMenuPanel.h"
 #include "Game/UI/EndingPanel.h"
-#include "Engine/Input/InputRouter.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_dx11.h"
@@ -107,6 +106,15 @@ void GameUISystem::SetPauseMenuOpen(bool bOpen)
 	bPauseMenuOpen = bOpen;
 }
 
+void GameUISystem::TogglePauseMenuIfInGame()
+{
+	GameUISystem& UI = GameUISystem::Get();
+	if (UI.GetState() == EGameUIState::InGame)
+	{
+		UI.SetPauseMenuOpen(!UI.IsPauseMenuOpen());
+	}
+}
+
 // -------------------------------------------------------
 // 게임 데이터 초기화 (Retry)
 // -------------------------------------------------------
@@ -187,13 +195,6 @@ void GameUISystem::RequestExitPlay()
 // -------------------------------------------------------
 void GameUISystem::RenderCurrentPanel(EUIRenderMode Mode)
 {
-	// InGame 일 때 P 키로 일시정지 토글 (Play 모드에서만)
-	if (Mode == EUIRenderMode::Play && CurrentState == EGameUIState::InGame)
-	{
-		if (FInputRouter::GetKeyUp(0x50))  // P
-			SetPauseMenuOpen(!bPauseMenuOpen);
-	}
-
 	switch (CurrentState)
 	{
 	case EGameUIState::StartMenu:
