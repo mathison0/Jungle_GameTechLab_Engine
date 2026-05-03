@@ -106,7 +106,7 @@ public:
     // -------------------------------------------------------
     // PIE / 플레이 종료 콜백
     //   에디터: StartPlaySession 에서 StopPlaySession 바인딩
-    //   게임 빌드: 아무것도 바인딩하지 않음 → 자동 종료 없음
+    //   게임 빌드: 콜백이 없으면 윈도우 종료 요청
     // -------------------------------------------------------
     void SetExitPlayCallback(std::function<void()> Callback);
     void RequestExitPlay();   // EndingPanel 에서 호출

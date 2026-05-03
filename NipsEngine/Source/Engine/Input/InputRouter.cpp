@@ -462,9 +462,6 @@ void FInputRouter::TickMouseInput(const FInputRouteContext& Context)
 	if (IS.GetGuiInputState().bBlockViewportInput)
 		return;
 
-	if (WorldType == EWorldType::Game && !Context.bHasActiveCamera && !Context.bInputActive)
-		return;
-
 	POINT MousePoint = IS.GetMousePos();
 	if (Context.Window)
 	{
@@ -488,6 +485,9 @@ void FInputRouter::TickMouseInput(const FInputRouteContext& Context)
 		if (bUIConsumed)
 			return;
 	}
+
+	if (WorldType == EWorldType::Game && !Context.bHasActiveCamera && !Context.bInputActive)
+		return;
 
 	if (Context.bControlLocked)
 		return;

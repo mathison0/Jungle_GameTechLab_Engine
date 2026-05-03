@@ -757,9 +757,6 @@
     <ClCompile Include="Source\Game\GameEngine.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="Source\Game\GameTypes.cpp">
-      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="Source\Game\Input\GamePlayerController.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -1059,7 +1056,6 @@
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h" />
     <ClInclude Include="Source\Engine\Viewport\ViewportRect.h" />
     <ClInclude Include="Source\Game\GameEngine.h" />
-    <ClInclude Include="Source\Game\GameTypes.h" />
     <ClInclude Include="Source\Game\Input\BaseGameController.h" />
     <ClInclude Include="Source\Game\Input\GamePlayerController.h" />
     <ClInclude Include="Source\Game\Render\GameRenderPipeline.h" />

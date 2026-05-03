@@ -1,4 +1,4 @@
-#include "Game/UI/GameUISystem.h"
+﻿#include "Game/UI/GameUISystem.h"
 
 #include "Game/UI/DialoguePanel.h"
 #include "Game/UI/EndingPanel.h"
@@ -137,6 +137,7 @@ void GameUISystem::Init(HWND__* Hwnd, ID3D11Device* Device, ID3D11DeviceContext*
 		D3DContext = nullptr;
 		return;
 	}
+	bRmlUiInitialized = true;
 
 	Rml::LoadFontFace("C:/Windows/Fonts/malgun.ttf", true);
 
@@ -148,20 +149,26 @@ void GameUISystem::Init(HWND__* Hwnd, ID3D11Device* Device, ID3D11DeviceContext*
 	}
 
 	LastRmlUpdateTime = RmlSystemInterface->GetElapsedTime();
-	bRmlUiInitialized = true;
 }
 
 void GameUISystem::Shutdown()
 {
-	StartClickListener.reset();
-	RetryClickListener.reset();
-	ExitClickListener.reset();
+	if (RmlDocument)
+	{
+		if (Rml::Element* Element = RmlDocument->GetElementById("start-button"))
+			Element->RemoveEventListener("click", StartClickListener.get());
+		if (Rml::Element* Element = RmlDocument->GetElementById("retry-button"))
+			Element->RemoveEventListener("click", RetryClickListener.get());
+		if (Rml::Element* Element = RmlDocument->GetElementById("exit-button"))
+			Element->RemoveEventListener("click", ExitClickListener.get());
+		if (Rml::Element* Element = RmlDocument->GetElementById("pause-exit-button"))
+			Element->RemoveEventListener("click", ExitClickListener.get());
+	}
 
 	if (RmlDocument && RmlContext)
 	{
 		RmlContext->UnloadDocument(RmlDocument);
 		RmlDocument = nullptr;
-		RmlContext->Update();
 	}
 
 	if (RmlContext)
@@ -175,6 +182,10 @@ void GameUISystem::Shutdown()
 		Rml::Shutdown();
 		bRmlUiInitialized = false;
 	}
+
+	StartClickListener.reset();
+	RetryClickListener.reset();
+	ExitClickListener.reset();
 
 	RmlRenderInterface.reset();
 	RmlSystemInterface.reset();
@@ -313,7 +324,7 @@ void GameUISystem::RequestExitPlay()
 	if (ExitPlayCallback)
 		ExitPlayCallback();
 	else
-		SetState(EGameUIState::StartMenu);
+		PostQuitMessage(0);
 }
 
 void GameUISystem::SetStartGameCallback(std::function<void()> Callback)
@@ -367,6 +378,23 @@ bool GameUISystem::OnUIKeyDown(int VK)
 	if (Key != Rml::Input::KI_UNKNOWN)
 		RmlContext->ProcessKeyDown(Key, 0);
 
+	if (CurrentState == EGameUIState::StartMenu)
+	{
+		if (VK == VK_RETURN || VK == VK_SPACE)
+		{
+			RequestStartGame();
+			return true;
+		}
+
+		if (VK == VK_ESCAPE)
+		{
+			RequestExitPlay();
+			return true;
+		}
+
+		return true;
+	}
+
 	return false;
 }
 
@@ -378,6 +406,9 @@ bool GameUISystem::OnUIKeyUp(int VK)
 	const Rml::Input::KeyIdentifier Key = ToRmlKey(VK);
 	if (Key != Rml::Input::KI_UNKNOWN)
 		RmlContext->ProcessKeyUp(Key, 0);
+
+	if (CurrentState == EGameUIState::StartMenu)
+		return true;
 
 	if (VK == VK_SPACE && DialoguePanel::AdvanceOrSkip())
 		return true;
@@ -456,7 +487,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode)
 	SetElementText("pause-item-count", std::to_string(ItemCount));
 	SetElementText("pause-time", FormatTime(ElapsedTime));
 	SetElementText("current-item-name", CurrentItemName.empty() ? "No item" : CurrentItemName);
-	SetElementText("current-item-desc", CurrentItemDesc.empty() ? "Nothing selected" : CurrentItemDesc);
+	// SetElementText("current-item-desc", CurrentItemDesc.empty() ? "Nothing selected" : CurrentItemDesc);
 
 	SetElementText("dialogue-speaker", DialoguePanel::GetSpeaker());
 	SetElementText("dialogue-text", DialoguePanel::GetVisibleText());
@@ -726,8 +757,6 @@ bool GameUISystem::CreateGameDocument()
 
 	<div id="item-status">
 		<div id="current-item-name">No item</div>
-		<div id="current-item-desc">Nothing selected</div>
-		<div>Items: <span id="item-count">0</span></div>
 	</div>
 
 	<div id="pause-layer">
@@ -771,7 +800,8 @@ void GameUISystem::BindRmlUiEvents()
 
 	StartClickListener = std::make_unique<FRmlUiClickListener>([]()
 	{
-		GameUISystem::Get().RequestStartGame();
+		if (GameUISystem::Get().GetState() == EGameUIState::StartMenu)
+			GameUISystem::Get().RequestStartGame();
 	});
 
 	RetryClickListener = std::make_unique<FRmlUiClickListener>([]()
@@ -782,7 +812,7 @@ void GameUISystem::BindRmlUiEvents()
 
 	ExitClickListener = std::make_unique<FRmlUiClickListener>([]()
 	{
-		PostQuitMessage(0);
+		GameUISystem::Get().RequestExitPlay();
 	});
 
 	if (Rml::Element* Element = RmlDocument->GetElementById("start-button"))

@@ -316,6 +316,12 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 	FSlateApplication::Get().Initialize();
 	ViewportLayout.BuildViewportLayout(static_cast<int32>(Window->GetWidth()), static_cast<int32>(Window->GetHeight()));
 
+	GameUISystem::Get().Init(
+		InWindow->GetHWND(),
+		Renderer.GetFD3DDevice().GetDevice(),
+		Renderer.GetFD3DDevice().GetDeviceContext()
+	);
+
 	// Editor용 렌더 파이프라인 세팅
 	SetRenderPipeline(std::make_unique<FEditorRenderPipeline>(this, Renderer));
 }
@@ -333,6 +339,7 @@ void UEditorEngine::Shutdown()
 	CloseScene();
 	SelectionManager.Shutdown();
 	MainPanel.Release();
+	GameUISystem::Get().Shutdown();
 	
 	// CloseScene 이후에 ViewportLayout을 내리면 Client 포인터 단절로 인한 역참조를 피할 수 있습니다.
 	ViewportLayout.Shutdown();           // 위젯 트리 해제 (소유권: UEditorEngine)

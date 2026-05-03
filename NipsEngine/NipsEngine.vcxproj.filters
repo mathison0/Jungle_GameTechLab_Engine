@@ -785,9 +785,6 @@
     <ClCompile Include="Source\Game\GameEngine.cpp">
       <Filter>Source\Game</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\GameTypes.cpp">
-      <Filter>Source\Game</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Input\GamePlayerController.cpp">
       <Filter>Source\Game\Input</Filter>
     </ClCompile>
@@ -1539,9 +1536,6 @@
       <Filter>Source\Engine\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\GameEngine.h">
-      <Filter>Source\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameTypes.h">
       <Filter>Source\Game</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Input\BaseGameController.h">

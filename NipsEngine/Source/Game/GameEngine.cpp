@@ -1,6 +1,5 @@
 ﻿#include "GameEngine.h"
 
-#include "Game/GameTypes.h"
 #include "Game/Settings/GameSettings.h"
 #include "Game/Systems/GameContext.h"
 #include "Game/Systems/ItemSystem.h"
@@ -66,7 +65,6 @@ void UGameEngine::Init(FWindowsWindow* InWindow)
 		GetRenderer().GetFD3DDevice().GetDeviceContext()
 	);
 
-	Game::RegisterGameTypes();
 	GGameContext::Get().Reset();
 	FItemSystem::Get().ResetRuntimeState();
 	GameUISystem::Get().ResetGameData();
