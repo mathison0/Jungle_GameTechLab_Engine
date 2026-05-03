@@ -6,8 +6,12 @@ local Script = {
 
 function Script:BeginPlay()
     Log("[TargetAi] BeginPlay")
-    self.ai = self.StartCoroutine(function()
-        Targeting.TargetCoroutine(self, self.GetComponentByName("UStaticMeshComponent", "RotateTarget"), "TestEnemy", false)
+    local Handle = self.GetComponentByName("UStaticMeshComponent", "RotateTarget");
+    self.search = self.StartCoroutine(function()
+        Targeting.SearchTargetCoroutine(self, Handle, "TestEnemy")
+    end)
+    self.Targeting = self.StartCoroutine(function()
+        Targeting.TargetingCoroutine(self, Handle, false)
     end)
 end
 
@@ -15,10 +19,7 @@ function Script:Tick(deltaTime)
 end
 
 function Script:EndPlay()
-    if self.ai ~= nil then
-        self.StopCoroutine(self.ai)
-        self.ai = nil
-    end
+    self.StopAllCoroutines();
 end
 
 return Script

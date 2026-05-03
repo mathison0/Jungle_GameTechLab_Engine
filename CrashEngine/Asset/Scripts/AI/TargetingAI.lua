@@ -5,42 +5,43 @@ local TargetingAI = {
     properties = {
         MoveSpeed = { type = "float", default = 1.0, min = 0.1, max = 10.0, speed = 0.05},
         TargetSearchRadius = { type = "float", default = 10000.0, min = 0.0, max = 100000.0, speed = 100.0},
+        SearchInterval = { type = "float", default = 0.2, min = 0.01, max = 10.0, speed = 0.2},
     }
 }
 
-function TargetingAI.Target(self, ComponentHandle, TargetTag, bZAxisOnly, DeltaTime)
+function TargetingAI.SearchTarget(self, ComponentHandle, TargetTag)
+    Log("SearchTarget")
+    local myPos = ComponentHandle:GetWorldLocation()
+    self.target = self.QueryActorByTagClosest(TargetTag, myPos, self.TargetSearchRadius or 10000.0)
+end
+
+function TargetingAI.SearchTargetCoroutine(self, ComponentHandle, TargetTag)
+    while true do
+        TargetingAI.SearchTarget(self, ComponentHandle, TargetTag)
+        Co.Wait(0.2)
+    end
+end
+
+function TargetingAI.Targeting(self, ComponentHandle, bZAxisOnly, DeltaTime)
     if ComponentHandle == nil or not ComponentHandle:IsValid() then
-        Log("[TargetAi] InValid ComponentHandle")
-          local comps = self.GetComponents("UStaticMeshComponent")
-  for i, comp in ipairs(comps) do
-      Log("[TargetAi] Comp: " .. comp:GetName() .. " / " .. comp:GetClassName())
-  end
         return
     end
 
     local myPos = ComponentHandle:GetWorldLocation()
-    Log("[TargetAi] MyPos")
-    if self.target == nil or not self.target:IsValid() then
-        Log("[TargetAi] SearchTarget")
-        self.target = self.QueryActorByTagClosest(TargetTag, myPos, self.TargetSearchRadius or 10000.0)
-    end
-
     if self.target ~= nil and self.target:IsValid() then
         local targetPos = self.target:GetLocation()
-        Log("[TargetAi] SetLook")
         if bZAxisOnly then
-            targetPos[3] = myPos[3]
+            targetPos.z = myPos.z
         end
 
         ComponentHandle:LookAt(targetPos)
     end
 end
 
-function TargetingAI.TargetCoroutine(self, ComponentHandle, TargetTag, bZAxisOnly)
-    Log("[TargetAi] TargetCoroutine")
+function TargetingAI.TargetingCoroutine(self, ComponentHandle, bZAxisOnly)
     while true do
         local deltaTime = Co.WaitNextFrame()
-        TargetingAI.Target(self, ComponentHandle, TargetTag, bZAxisOnly, deltaTime)
+        TargetingAI.Targeting(self, ComponentHandle, bZAxisOnly, deltaTime)
     end
 end
 
