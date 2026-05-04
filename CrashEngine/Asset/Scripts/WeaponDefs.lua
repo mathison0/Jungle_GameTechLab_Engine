@@ -17,7 +17,7 @@ WeaponDefs.MainCannon = {
             Sound = {
                 Fire = "PlayerShot1",
                 Bus = "SFX",
-                Volume = 1.0,
+                Volume = 0.4,
             },
         },
         [2] = {
@@ -30,7 +30,7 @@ WeaponDefs.MainCannon = {
             Sound = {
                 Fire = "PlayerShot2",
                 Bus = "SFX",
-                Volume = 1.0,
+                Volume = 0.4,
             },
         },
         [3] = {
@@ -43,7 +43,7 @@ WeaponDefs.MainCannon = {
             Sound = {
                 Fire = "PlayerShot3",
                 Bus = "SFX",
-                Volume = 1.0,
+                Volume = 0.4,
             },
         },
     },
@@ -152,22 +152,43 @@ WeaponDefs.Aura = {
     MaxLevel = 3,
     Levels = {
         [1] = {
-            Damage = 50,
-            TickInterval = 0.5,
+            Damage = 100,
+            TickInterval = 5.0,
             Radius = 4.0,
             RotateSpeed = 90.0,
+            VisualBurstRotateSpeed = 2880.0,
+            VisualBurstDuration = 1.0,
+            Sound = {
+                Tick = "MP_Air Wrench",
+                Bus = "SFX",
+                Volume = 0.5,
+            },
         },
         [2] = {
-            Damage = 50,
-            TickInterval = 0.4,
-            Radius = 5.0,
-            RotateSpeed = 120.0,
-        },
-        [3] = {
-            Damage = 50,
-            TickInterval = 0.3,
+            Damage = 100,
+            TickInterval = 3.0,
             Radius = 6.0,
             RotateSpeed = 180.0,
+            VisualBurstRotateSpeed = 2880.0,
+            VisualBurstDuration = 1.0,
+            Sound = {
+                Tick = "MP_Air Wrench",
+                Bus = "SFX",
+                Volume = 0.5,
+            },
+        },
+        [3] = {
+            Damage = 100,
+            TickInterval = 1.0,
+            Radius = 8.0,
+            RotateSpeed = 360.0,
+            VisualBurstRotateSpeed = 2880.0,
+            VisualBurstDuration = 1.0,
+            Sound = {
+                Tick = "MP_Air Wrench",
+                Bus = "SFX",
+                Volume = 0.5,
+            },
         },
     },
 }

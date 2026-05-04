@@ -483,7 +483,7 @@ void ATankActor::NotifyInstantHit(const FString& WeaponId, const FTankWeaponAtta
            OriginLocation.X, OriginLocation.Y, OriginLocation.Z,
            TargetActor->GetFName().ToString().c_str());
 	
-	FSoundManager::Get().Play(FName("SubAttack"), ESoundBus::SFX, 1.0f);
+	FSoundManager::Get().Play(FName("SubAttack"), ESoundBus::SFX, 0.2f);
 }
 
 void ATankActor::ApplyAreaDamage(const FString& WeaponId, const FTankWeaponAttackParams& Params, const FVector& Center, float Radius)

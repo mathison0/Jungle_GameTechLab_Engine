@@ -1,5 +1,6 @@
 local ChaseAI = require("AI.ChaseAI")
 local GameManager = require("GameManager")
+local GameplayPause = require("GameplayPause")
 
 local Script = {
     properties = ChaseAI.properties
@@ -22,7 +23,30 @@ function Script:BeginPlay()
     end)
 end
 
+function Script:FaceTarget()
+    if GameplayPause.IsPaused() then
+        return
+    end
+
+    if self.target == nil or not self.target:IsValid() then
+        return
+    end
+
+    local root = self:GetRootComponent()
+    if root == nil or not root:IsValid() then
+        return
+    end
+
+    local myPos = root:GetWorldLocation()
+    local targetPos = self.target:GetLocation()
+    targetPos.z = myPos.z
+
+    root:LookAt(targetPos)
+end
+
 function Script:Tick(deltaTime)
+    self:FaceTarget()
+
     if self.AttackTimer > 0 then
         self.AttackTimer = self.AttackTimer - deltaTime
     end
