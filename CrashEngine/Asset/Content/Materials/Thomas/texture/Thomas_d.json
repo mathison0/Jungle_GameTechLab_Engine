@@ -1,0 +1,14 @@
+{
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "Parameters" : {
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "SpecularPower" : 1000.000000,
+    "SpecularStrength" : 1.000000
+  },
+  "PathFileName" : "Asset/Content/Materials/Thomas/texture/Thomas_d.json",
+  "RasterizerState" : "SolidBackCull",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Content/Models/Thomas/texture/Thomas_d.png"
+  }
+}

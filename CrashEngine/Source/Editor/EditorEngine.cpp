@@ -22,6 +22,7 @@
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
 #include "Render/Execute/Context/RenderCollectContext.h"
 #include "Render/Execute/Context/ViewMode/ViewModeSurfaces.h"
+#include "Sound/SoundManager.h"
 
 #include <algorithm>
 
@@ -249,6 +250,8 @@ void UEditorEngine::Tick(float DeltaTime)
         World->Tick(DeltaTime, TickType);
     }
 
+    FSoundManager::Get().Tick(DeltaTime);
+
     Render(DeltaTime);
     SelectionManager.Tick();
 }
@@ -472,6 +475,8 @@ void UEditorEngine::EndPlayMap()
         return;
     }
     UE_LOG(EditorEngine, Info, "Ending Play In Editor session.");
+
+    FSoundManager::Get().StopAll();
 
     const FName PrevHandle = PlayInEditorSessionInfo->PreviousActiveWorldHandle;
     SetActiveWorld(PrevHandle);

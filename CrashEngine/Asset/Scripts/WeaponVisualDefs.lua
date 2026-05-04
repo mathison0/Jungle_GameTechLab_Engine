@@ -134,6 +134,63 @@ WeaponVisualDefs.MachineTurret = {
     },
 }
 
+WeaponVisualDefs.VehicleRush = {
+    [1] = {
+        Visuals = {
+            {
+                Name = "Visual_VehicleRush_0",
+                Mesh = "Models/Roadroller/roadroller.obj",
+                Parent = "World",
+                Location = { 0.0, 0.0, -1000.0 },
+                Rotation = { 0.0, 0.0, 0.0 },
+                Scale = { 5.0, 5.0, 5.0 },
+            },
+        },
+    },
+
+    [2] = {
+        Visuals = {
+            {
+                Name = "Visual_VehicleRush_0",
+                Mesh = "Models/Roadroller/roadroller.obj",
+                Parent = "World",
+                Location = { 0.0, 0.0, -1000.0 },
+                Rotation = { 0.0, 0.0, 0.0 },
+                Scale = { 5.0, 5.0, 5.0 },
+            },
+            {
+                Name = "Visual_VehicleRush_1",
+                Mesh = "Models/Roadroller/roadroller.obj",
+                Parent = "World",
+                Location = { 0.0, 0.0, -1000.0 },
+                Rotation = { 0.0, 0.0, 0.0 },
+                Scale = { 5.0, 5.0, 5.0 },
+            },
+            {
+                Name = "Visual_VehicleRush_2",
+                Mesh = "Models/Roadroller/roadroller.obj",
+                Parent = "World",
+                Location = { 0.0, 0.0, -1000.0 },
+                Rotation = { 0.0, 0.0, 0.0 },
+                Scale = { 5.0, 5.0, 5.0 },
+            },
+        },
+    },
+
+    [3] = {
+        Visuals = {
+            {
+                Name = "Visual_VehicleRush_0",
+                Mesh = "Models/Thomas/thomas.obj",
+                Parent = "World",
+                Location = { 0.0, 0.0, -2000.0 },
+                Rotation = { 0.0, 0.0, 0.0 },
+                Scale = { 1.0, 1.0, 1.0 },
+            },
+        },
+    },
+}
+
 WeaponVisualDefs.Aura = {
     [1] = {
         Visuals = {

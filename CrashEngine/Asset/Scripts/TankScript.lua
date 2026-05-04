@@ -8,6 +8,9 @@ local Script = {
         DriftSmoothness = { type = "float", default = 0.1 },
         PickupExp = { type = "float", default = 1.0, min = 0.0, max = 1000.0, speed = 1.0 },
         PickupAttractSpeed = { type = "float", default = 20.0, min = 0.0, max = 1000.0, speed = 1.0 },
+        HealthBarWidth = { type = "float", default = 2.0, min = 0.1, max = 10.0, speed = 0.1 },
+        HealthBarHeight = { type = "float", default = 0.16, min = 0.02, max = 2.0, speed = 0.01 },
+        HealthBarOffsetZ = { type = "float", default = 1.8, min = -10.0, max = 10.0, speed = 0.1 },
     }
 }
 local Vec = require("Core.Vector")
@@ -37,6 +40,82 @@ function Script:BeginPlay()
     if self.PickupSensor == nil or not self.PickupSensor:IsValid() then
         Log("Invalid PickupSensor")
     end
+
+    self.HealthBarBack = self.GetComponentByName("UTextureUIComponent", "PlayerHealthBar_Back")
+    self.HealthBarFill = self.GetComponentByName("UTextureUIComponent", "PlayerHealthBar_Fill")
+    self.LastHealthBarRatio = nil
+    self:ConfigureHealthBar()
+    self:UpdateHealthBar()
+end
+
+local function clamp(value, minValue, maxValue)
+    return math.max(minValue, math.min(maxValue, value))
+end
+
+local function lerp(a, b, t)
+    return a + (b - a) * t
+end
+
+function Script:ConfigureHealthBar()
+    local width = self.HealthBarWidth or 2.0
+    local height = self.HealthBarHeight or 0.16
+    local offsetZ = self.HealthBarOffsetZ or 1.8
+
+    if self.HealthBarBack ~= nil and self.HealthBarBack:IsValid() then
+        self.HealthBarBack:SetUIRenderSpace("WorldSpace")
+        self.HealthBarBack:SetUIBillboard(true)
+        self.HealthBarBack:SetUIPivot({ 0.5, 0.5 })
+        self.HealthBarBack:SetUIWorldSize({ width + 0.16, height + 0.08 })
+        self.HealthBarBack:SetRelativeLocation({ x = 0.0, y = 0.0, z = offsetZ })
+        self.HealthBarBack:SetUITint(0.04, 0.04, 0.04, 0.78)
+        self.HealthBarBack:SetUIVisibility(true)
+    end
+
+    if self.HealthBarFill ~= nil and self.HealthBarFill:IsValid() then
+        self.HealthBarFill:SetUIRenderSpace("WorldSpace")
+        self.HealthBarFill:SetUIBillboard(true)
+        self.HealthBarFill:SetUIPivot({ 0.5, 0.5 })
+        self.HealthBarFill:SetRelativeLocation({ x = 0.0, y = 0.0, z = offsetZ })
+        self.HealthBarFill:SetUIVisibility(true)
+    end
+end
+
+function Script:UpdateHealthBar()
+    if self.HealthBarFill == nil or not self.HealthBarFill:IsValid() then
+        return
+    end
+
+    local maxHP = tonumber(GameManager.Stats.MaxHP) or 0.0
+    local currentHP = tonumber(GameManager.Stats.CurrentHP) or 0.0
+    local ratio = 0.0
+    if maxHP > 0.0001 then
+        ratio = clamp(currentHP / maxHP, 0.0, 1.0)
+    end
+
+    local fullWidth = self.HealthBarWidth or 2.0
+    local height = self.HealthBarHeight or 0.16
+    self.HealthBarFill:SetUIWorldSize({ math.max(0.001, fullWidth * ratio), height })
+
+    local red = { r = 0.95, g = 0.16, b = 0.12 }
+    local yellow = { r = 0.95, g = 0.78, b = 0.12 }
+    local green = { r = 0.18, g = 0.95, b = 0.28 }
+    local from = red
+    local to = yellow
+    local t = ratio * 2.0
+    if ratio > 0.5 then
+        from = yellow
+        to = green
+        t = (ratio - 0.5) * 2.0
+    end
+
+    self.HealthBarFill:SetUITint(
+        lerp(from.r, to.r, t),
+        lerp(from.g, to.g, t),
+        lerp(from.b, to.b, t),
+        0.95
+    )
+
+    self.LastHealthBarRatio = ratio
 end
 
 function Script:UpdateMovement(deltaTime)
@@ -171,6 +250,7 @@ end
 function Script:Tick(deltaTime)
     self:UpdateMovement(deltaTime)
     self:UpdatePickups(deltaTime)
+    self:UpdateHealthBar()
 end
 
 function Script:EndPlay()

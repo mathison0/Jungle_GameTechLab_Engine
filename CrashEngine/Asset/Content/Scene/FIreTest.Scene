@@ -454,6 +454,60 @@
       },
       "Tag" : "Player",
       "bVisible" : true
+    }, {
+      "ClassName" : "AActor",
+      "Name" : "InfiniteFloor",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_398",
+          "Properties" : {
+            "Lua.GridSize" : 7,
+            "Lua.MaterialPath" : "Asset/Content/Materials/FloorMaterial.json",
+            "Lua.MeshPath" : "Asset/Content/Models/_Basic/Quad.OBJ",
+            "Lua.Spacing" : 25.000000,
+            "Lua.TargetTag" : "Player",
+            "Lua.TileClassName" : "AStaticMeshActor",
+            "Lua.TileScale" : [25.000000, 25.000000, 1.000000],
+            "Script" : "InfiniteFloor.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_253",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 1466",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_14",
+        "Properties" : {
+          "Location" : [0.295440, -25.808002, 36.934158],
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
@@ -462,9 +516,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [7.791365, -24.579163, 14.707932],
+    "Location" : [0.157094, -29.497738, 40.305614],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000001, 31.479429, 113.051865]
+    "Rotation" : [0.000000, 42.399109, 87.852699]
   },
   "Version" : 3,
   "WorldType" : "Editor"

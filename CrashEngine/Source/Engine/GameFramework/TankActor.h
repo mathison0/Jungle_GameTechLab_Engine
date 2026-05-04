@@ -9,6 +9,7 @@ class USceneComponent;
 class UScriptComponent;
 class UStaticMesh;
 class UStaticMeshComponent;
+class UTextureUIComponent;
 
 struct FTankWeaponAttackParams
 {
@@ -73,12 +74,17 @@ private:
     UStaticMeshComponent* FindStaticMeshComponentByName(const FString& ComponentName) const;
     UStaticMeshComponent* GetOrCreateWeaponVisualComponent(const FString& Name, const FString& MeshPath, const FString& ParentName);
     USceneComponent* GetOrCreateMuzzleComponent(const FString& Name, USceneComponent* Parent);
+    void EnsureHealthBarComponents();
+    UTextureUIComponent* GetOrCreateHealthBarComponent(const FString& Name, USceneComponent* Parent);
+    void ConfigureHealthBarComponent(UTextureUIComponent* Component, const FVector2& WorldSize, const FVector4& TintColor, int32 ZOrder);
     FString ReadLuaStringOrDefault(sol::object Object, const FString& DefaultValue = "") const;
     FVector ReadLuaVec3OrDefault(sol::object Object, const FVector& DefaultValue = FVector::ZeroVector) const;
     FRotator ReadLuaRotatorOrDefault(sol::object Object, const FRotator& DefaultValue = FRotator::ZeroRotator) const;
 
 private:
     UStaticMesh* HeadGunProjectile = nullptr;
+    UTextureUIComponent* HealthBarBack = nullptr;
+    UTextureUIComponent* HealthBarFill = nullptr;
 
     static constexpr const char* TankScriptPath = "TankScript.lua";
 };

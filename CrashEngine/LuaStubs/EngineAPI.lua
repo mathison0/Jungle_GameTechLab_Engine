@@ -153,13 +153,33 @@ function Component:SetUITexturePath(texturePath) end
 ---@return boolean
 function Component:SetUIAnchor(anchor) end
 
+---@param anchor Vec2
+---@return boolean
+function Component:SetUIAnchorMin(anchor) end
+
+---@param anchor Vec2
+---@return boolean
+function Component:SetUIAnchorMax(anchor) end
+
+---@return Vec2
+function Component:GetUIAnchorMin() end
+
+---@return Vec2
+function Component:GetUIAnchorMax() end
+
 ---@param position Vec2
 ---@return boolean
 function Component:SetUIAnchoredPosition(position) end
 
+---@return Vec2
+function Component:GetUIAnchoredPosition() end
+
 ---@param size Vec2
 ---@return boolean
 function Component:SetUISizeDelta(size) end
+
+---@return Vec2
+function Component:GetUISizeDelta() end
 
 ---@param size Vec2
 ---@return boolean
@@ -173,9 +193,15 @@ function Component:SetUIBillboard(billboard) end
 ---@return boolean
 function Component:SetUIPivot(pivot) end
 
+---@return Vec2
+function Component:GetUIPivot() end
+
 ---@param degrees number
 ---@return boolean
 function Component:SetUIRotationDegrees(degrees) end
+
+---@return number
+function Component:GetUIRotationDegrees() end
 
 ---@param r number
 ---@param g number
@@ -184,9 +210,31 @@ function Component:SetUIRotationDegrees(degrees) end
 ---@return boolean
 function Component:SetUITint(r, g, b, a) end
 
+---@return table
+function Component:GetUITint() end
+
 ---@param visible boolean
 ---@return boolean
 function Component:SetUIVisibility(visible) end
+
+---@return boolean
+function Component:IsUIButton() end
+
+---@return boolean
+function Component:IsButtonInteractable() end
+
+---@param interactable boolean
+---@return boolean
+function Component:SetButtonInteractable(interactable) end
+
+---@return boolean
+function Component:IsButtonHovered() end
+
+---@return boolean
+function Component:IsButtonPressed() end
+
+---@return integer
+function Component:GetButtonClickCount() end
 
 ---@param className string
 ---@return any

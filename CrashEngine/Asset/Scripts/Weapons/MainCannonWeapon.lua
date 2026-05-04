@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local Audio = require("Core.Audio")
 local WeaponDefs = require("WeaponDefs")
 
 local MainCannonWeapon = {}
@@ -195,6 +196,7 @@ function MainCannonWeapon:FireLoop()
     while self.IsRunning do
         if self:IsTargetValid() then
             if self.Owner ~= nil and self.Owner.FireLinearProjectile ~= nil then
+                self:PlayFireSound()
                 self.Owner.FireLinearProjectile("MainCannon", self.Data, 0)
             else
                 Log("[MainCannon] FireLinearProjectile is nil")
@@ -203,6 +205,24 @@ function MainCannonWeapon:FireLoop()
 
         Co.Wait(self.Data.FireInterval)
     end
+end
+
+function MainCannonWeapon:PlayFireSound()
+    local sound = self.Data.Sound
+    if sound == nil then
+        return
+    end
+
+    if type(sound) == "string" then
+        Audio.Play(sound, Audio.Bus.SFX, 1.0)
+        return
+    end
+
+    Audio.Play(
+        sound.Fire or sound.Key,
+        sound.Bus or Audio.Bus.SFX,
+        sound.Volume or 1.0
+    )
 end
 
 function MainCannonWeapon:Upgrade()

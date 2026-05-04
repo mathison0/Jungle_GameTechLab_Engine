@@ -44,20 +44,14 @@ function Script:Tick(deltaTime)
 
     -- 2. 회전 제어 (LookAt)
     -- 방향 벡터 (카메라 -> 플레이어)
-    local dir = Vec.DirectionTo(nextLoc, targetLoc)
-
-    -- 수평 거리 계산 (atan2를 위한 평면 거리)
-    local dist2D = math.sqrt(dir.X * dir.X + dir.Y * dir.Y)
-    
-    -- Yaw (Z축 회전): atan(dy, dx)
-    local yaw = math.atan(dir.Y, dir.X) * (180.0 / math.pi)
+    local dir = self.Offset
     
     -- Pitch (Y축 회전): atan(dz, dist2D)
     -- 엔진 컨벤션: 대상이 높으면 Pitch가 음수여야 위를 봄
-    local pitch = math.atan(dir.Z, dist2D) * (180.0 / math.pi)
+    local pitch = math.atan(dir.z, -dir.x) * (180.0 / math.pi)
 
     -- FRotator 매핑: Roll=X, Pitch=Y, Yaw=Z
-    actor:SetRotation({ x = 0.0, y = -pitch, z = yaw })
+    actor:SetRotation({ x = 0.0, y = pitch, z = 0.0 })
 end
 
 function Script:EndPlay()

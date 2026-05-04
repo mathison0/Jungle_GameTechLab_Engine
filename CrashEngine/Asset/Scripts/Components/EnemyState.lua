@@ -10,6 +10,8 @@ local EnemyState = {
 }
 
 function EnemyState:BeginPlay()
+    local wasDead = self.bIsDead == true
+
     self.actor = self:GetActor()
     if self.actor == nil or not self.actor:IsValid() then
         Log("[EnemyState] Invalid owner actor")
@@ -24,6 +26,11 @@ end
 
 function EnemyState:TakeDamage(amount, attacker)
     if self.bIsDead then
+        local actorName = "Unknown"
+        if self.actor ~= nil and self.actor:IsValid() then
+            actorName = self.actor:GetName()
+        end
+
         return
     end
 

@@ -177,6 +177,7 @@ void UScriptComponent::EndPlay()
     }
 
     CallLuaFunction("EndPlay");
+    CoroutineExecutorSet.Clear();
     ScriptInstance = sol::nil;
 
     UActorComponent::EndPlay();

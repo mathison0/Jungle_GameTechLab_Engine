@@ -12,6 +12,8 @@
 #include "GameFramework/ActorPoolManager.h"
 #include "GameFramework/HomingMissileActor.h"
 #include "GameFramework/World.h"
+#include "UI/TextureUIComponent.h"
+#include "Sound/SoundManager.h"
 
 #include <algorithm>
 #include <string>
@@ -35,6 +37,14 @@ int32 MaxInt32(int32 A, int32 B)
     return A > B ? A : B;
 }
 
+constexpr const char* HealthBarBackName = "PlayerHealthBar_Back";
+constexpr const char* HealthBarFillName = "PlayerHealthBar_Fill";
+constexpr float HealthBarWidth = 2.0f;
+constexpr float HealthBarHeight = 0.16f;
+constexpr float HealthBarBackPaddingX = 0.16f;
+constexpr float HealthBarBackPaddingY = 0.08f;
+const FVector HealthBarRelativeLocation(0.0f, 0.0f, 1.8f);
+
 sol::object FindFirstTableArgument(sol::variadic_args Args)
 {
     for (const sol::object& Arg : Args)
@@ -51,6 +61,7 @@ sol::object FindFirstTableArgument(sol::variadic_args Args)
 void ATankActor::BeginPlay()
 {
     GetHeadGunProjectile();
+    EnsureHealthBarComponents();
 
     AActor::BeginPlay();
 }
@@ -163,6 +174,8 @@ void ATankActor::InitDefaultComponents()
 
     auto Script = AddComponent<UScriptComponent>();
     Script->SetScriptPath(TankScriptPath);
+
+    EnsureHealthBarComponents();
 
     HeadGunProjectile = GetBasicMesh("Models/Bullet/DefaultBullet.OBJ");
 }
@@ -384,6 +397,8 @@ void ATankActor::NotifyInstantHit(const FString& WeaponId, const FTankWeaponAtta
            WeaponId.c_str(), SlotIndex, Params.Damage,
            OriginLocation.X, OriginLocation.Y, OriginLocation.Z,
            TargetActor->GetFName().ToString().c_str());
+	
+	FSoundManager::Get().Play(FName("SubAttack"), ESoundBus::SFX, 1.0f);
 }
 
 void ATankActor::ApplyAreaDamage(const FString& WeaponId, const FTankWeaponAttackParams& Params, const FVector& Center, float Radius)
@@ -566,23 +581,33 @@ UStaticMeshComponent* ATankActor::FindStaticMeshComponentByName(const FString& C
 
 UStaticMeshComponent* ATankActor::GetOrCreateWeaponVisualComponent(const FString& Name, const FString& MeshPath, const FString& ParentName)
 {
+    const bool bUseWorldParent = ParentName.empty() || ParentName == "World" || ParentName == "None";
+
     if (UStaticMeshComponent* Existing = FindStaticMeshComponentByName(Name))
     {
         Existing->SetStaticMesh(GetBasicMesh(MeshPath));
         Existing->SetActive(true);
         Existing->SetVisibility(true);
-        if (USceneComponent* Parent = FindSceneComponentByName(ParentName))
+        if (bUseWorldParent)
+        {
+            Existing->SetParent(nullptr);
+        }
+        else if (USceneComponent* Parent = FindSceneComponentByName(ParentName))
         {
             Existing->AttachToComponent(Parent);
         }
         return Existing;
     }
 
-    USceneComponent* Parent = FindSceneComponentByName(ParentName);
-    if (!Parent)
+    USceneComponent* Parent = nullptr;
+    if (!bUseWorldParent)
     {
-        UE_LOG(Tank, Warning, "Weapon visual parent not found: %s", ParentName.c_str());
-        return nullptr;
+        Parent = FindSceneComponentByName(ParentName);
+        if (!Parent)
+        {
+            UE_LOG(Tank, Warning, "Weapon visual parent not found: %s", ParentName.c_str());
+            return nullptr;
+        }
     }
 
     UStaticMeshComponent* Visual = AddComponent<UStaticMeshComponent>();
@@ -592,7 +617,10 @@ UStaticMeshComponent* ATankActor::GetOrCreateWeaponVisualComponent(const FString
     }
 
     Visual->SetFName(Name);
-    Parent->AddChild(Visual);
+    if (Parent)
+    {
+        Parent->AddChild(Visual);
+    }
     Visual->SetStaticMesh(GetBasicMesh(MeshPath));
     Visual->SetActive(true);
     Visual->SetVisibility(true);
@@ -626,6 +654,93 @@ USceneComponent* ATankActor::GetOrCreateMuzzleComponent(const FString& Name, USc
     Parent->AddChild(Muzzle);
     Muzzle->SetActive(true);
     return Muzzle;
+}
+
+void ATankActor::EnsureHealthBarComponents()
+{
+    USceneComponent* Parent = GetRootComponent();
+    if (!Parent)
+    {
+        Parent = FindSceneComponentByName("RootComponent");
+    }
+
+    if (!Parent)
+    {
+        UE_LOG(Tank, Warning, "Health bar setup skipped: root component is null.");
+        return;
+    }
+
+    HealthBarBack = GetOrCreateHealthBarComponent(HealthBarBackName, Parent);
+    HealthBarFill = GetOrCreateHealthBarComponent(HealthBarFillName, Parent);
+
+    ConfigureHealthBarComponent(
+        HealthBarBack,
+        FVector2(HealthBarWidth + HealthBarBackPaddingX, HealthBarHeight + HealthBarBackPaddingY),
+        FVector4(0.04f, 0.04f, 0.04f, 0.78f),
+        0);
+
+    ConfigureHealthBarComponent(
+        HealthBarFill,
+        FVector2(HealthBarWidth, HealthBarHeight),
+        FVector4(0.18f, 0.95f, 0.28f, 0.95f),
+        1);
+}
+
+UTextureUIComponent* ATankActor::GetOrCreateHealthBarComponent(const FString& Name, USceneComponent* Parent)
+{
+    if (USceneComponent* ExistingScene = FindSceneComponentByName(Name))
+    {
+        UTextureUIComponent* Existing = Cast<UTextureUIComponent>(ExistingScene);
+        if (!Existing)
+        {
+            UE_LOG(Tank, Warning, "Health bar component name is already used by non-texture UI component: %s", Name.c_str());
+            return nullptr;
+        }
+
+        Existing->SetActive(true);
+        if (Parent)
+        {
+            Existing->AttachToComponent(Parent);
+        }
+        return Existing;
+    }
+
+    UTextureUIComponent* Component = AddComponent<UTextureUIComponent>();
+    if (!Component)
+    {
+        return nullptr;
+    }
+
+    Component->SetFName(Name);
+    Component->SetActive(true);
+    if (Parent)
+    {
+        Component->AttachToComponent(Parent);
+    }
+    return Component;
+}
+
+void ATankActor::ConfigureHealthBarComponent(UTextureUIComponent* Component, const FVector2& WorldSize, const FVector4& TintColor, int32 ZOrder)
+{
+    if (!Component)
+    {
+        return;
+    }
+
+    Component->SetRenderSpace(EUIRenderSpace::WorldSpace);
+    Component->SetGeometryType(EUIGeometryType::Quad);
+    Component->SetTexturePath("");
+    Component->ResetSubUVRect();
+    Component->SetWorldSize(WorldSize);
+    Component->SetBillboard(true);
+    Component->SetPivot(FVector2(0.5f, 0.5f));
+    Component->SetRotationDegrees(0.0f);
+    Component->SetLayer(100);
+    Component->SetZOrder(ZOrder);
+    Component->SetHitTestVisible(false);
+    Component->SetRelativeLocation(HealthBarRelativeLocation);
+    Component->SetTintColor(TintColor);
+    Component->SetVisibility(true);
 }
 
 FString ATankActor::ReadLuaStringOrDefault(sol::object Object, const FString& DefaultValue) const
