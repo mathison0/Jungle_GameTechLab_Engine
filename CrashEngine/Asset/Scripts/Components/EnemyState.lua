@@ -3,7 +3,8 @@ local DamageSystem = require("Core.DamageSystem")
 local EnemyState = {
     properties = {
         MaxHP = 100,
-        CurrentHP = 100
+        CurrentHP = 100,
+        GemClassName = {type = "string", default = "APickupActor"}
     }
 }
 
@@ -32,6 +33,7 @@ function EnemyState:Die()
     
     local PoolManager = GetActorPoolManager()
     if PoolManager:IsValid() then
+        self:SpawnGem(PoolManager)
         PoolManager:Release(self.actor)
     else
         -- Fallback if PoolManager is not available
@@ -42,6 +44,18 @@ end
 function EnemyState:EndPlay()
     -- 해제 필수
     DamageSystem.Unregister(self.actor)
+end
+
+function EnemyState:SpawnGem(PoolManager)
+    local Gem = PoolManager:Acquire(self.GemClassName)
+    if Gem:IsValid() then
+        local owner = self:GetActor()
+        local SpawnPos = {x =0, y=0, z=0}
+        if owner:IsValid() then
+            SpawnPos = owner:GetLocation()
+        end
+        Gem:SetLocation(SpawnPos)
+    end
 end
 
 return EnemyState

@@ -345,6 +345,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
@@ -630,6 +631,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
     <ClInclude Include="Source\Engine\Core\Random.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
