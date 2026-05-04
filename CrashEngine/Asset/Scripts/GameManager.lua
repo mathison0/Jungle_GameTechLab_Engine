@@ -101,7 +101,7 @@ end
 
 function GameManager.OnGameStart()
     if GameManager.WeaponInventory then
-        GameManager.WeaponInventory:AddWeapon("Aura")
+        GameManager.WeaponInventory:AddWeapon("MainCannon")
     end
     Log("[GameManager] --- GAME START ---")
 end
