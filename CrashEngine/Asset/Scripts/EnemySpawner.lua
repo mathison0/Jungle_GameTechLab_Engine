@@ -148,23 +148,22 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
     local Speed = WaveData.Speed
     local Spacing = self.FlyingWaveSpacing
 
-    local MoveDir = {
+    local Forward = {
         x = math.cos(Angle),
         y = math.sin(Angle),
         z = 0.0
     }
 
-    -- 진행 방향 기준 좌우 방향
-    local Perp = {
-        x = -MoveDir.y,
-        y = MoveDir.x,
+    local Right = {
+        x = -Forward.y,
+        y = Forward.x,
         z = 0.0
     }
 
     -- 플레이어 바깥쪽에서 생성
     local CenterSpawnPos = {
-        x = PlayerPos.x - MoveDir.x * self.FlyingWaveSpawnDistance,
-        y = PlayerPos.y - MoveDir.y * self.FlyingWaveSpawnDistance,
+        x = PlayerPos.x - Forward.x * self.FlyingWaveSpawnDistance,
+        y = PlayerPos.y - Forward.y * self.FlyingWaveSpawnDistance,
         z = PlayerPos.z
     }
 
@@ -176,7 +175,7 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
         local Columns = Pattern[row + 1]
         local HalfCols = (Columns - 1) * 0.5
 
-        -- 진행 방향 기준 앞뒤 배치
+        -- 행은 진행 방향 기준 좌우 축으로 벌린다.
         local RowOffset = (row - HalfRows) * RowSpacing
 
         -- 벌집 배치를 위한 반 칸 밀기
@@ -186,17 +185,17 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
         end
 
         for col = 0, Columns - 1 do
-            -- 진행 방향 기준 좌우 배치
+            -- 열은 진행 방향 기준 앞뒤 축으로 벌린다.
             local ColOffset = (col - HalfCols) * Spacing + Stagger
 
             local SpawnPos = {
                 x = CenterSpawnPos.x
-                    + MoveDir.x * RowOffset
-                    + Perp.x * ColOffset,
+                    + Right.x * RowOffset
+                    + Forward.x * ColOffset,
 
                 y = CenterSpawnPos.y
-                    + MoveDir.y * RowOffset
-                    + Perp.y * ColOffset,
+                    + Right.y * RowOffset
+                    + Forward.y * ColOffset,
 
                 z = CenterSpawnPos.z
             }
@@ -206,7 +205,7 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
             if Enemy:IsValid() then
                 Enemy:SetLocation(SpawnPos)
                 Enemy:InitFlyingWave(
-                    MoveDir,
+                    Forward,
                     Speed,
                     self.FlyingWaveLifeTime
                 )

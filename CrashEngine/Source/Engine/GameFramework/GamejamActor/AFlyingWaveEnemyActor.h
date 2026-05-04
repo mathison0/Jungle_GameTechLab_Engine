@@ -2,6 +2,8 @@
 
 #include "EnemyBaseActor.h"
 
+class UStaticMeshComponent;
+
 class AFlyingWaveEnemyActor : public AEnemyBaseActor
 {
 public:
@@ -12,8 +14,11 @@ public:
 
 	void InitWave(const FVector& NewDirection, float NewSpeed, float InLifeTime);
 
+protected:
+	UStaticMeshComponent* GetDefaultMeshComponent() override;
+
 private:
-    FString MeshFilePath;
+	UStaticMeshComponent* PropellerMeshComponent = nullptr;
     FVector MoveDirection = FVector::ZeroVector;
     float MoveSpeed = 1.0f;
     float LifeTime = 10.0f;

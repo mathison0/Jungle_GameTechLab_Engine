@@ -1,0 +1,14 @@
+{
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "Parameters" : {
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "SpecularPower" : 450.088165,
+    "SpecularStrength" : 0.500000
+  },
+  "PathFileName" : "Asset/Content/Materials/Heli/textures/glass.json",
+  "RasterizerState" : "SolidBackCull",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Content/Models/Heli/textures/hawkAlbedoc.png"
+  }
+}
