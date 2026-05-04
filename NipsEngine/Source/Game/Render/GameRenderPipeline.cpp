@@ -20,7 +20,7 @@ namespace
 		return ShowFlags;
 	}
 
-	constexpr EShadowFilterType GameShadowFilterType = EShadowFilterType::PCF;
+	constexpr EShadowFilterType GameShadowFilterType = EShadowFilterType::ESM;
 }
 
 FGameRenderPipeline::FGameRenderPipeline(UGameEngine* InEngine, FRenderer& InRenderer)
