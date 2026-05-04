@@ -31,4 +31,7 @@ void AEnemyBaseActor::InitDefaultComponents()
 
 	EnemyScriptComponent = AddComponent<UScriptComponent>();
     EnemyScriptComponent->SetScriptPath("EnemyScript.lua");
+
+	StateScriptComponent = AddComponent<UScriptComponent>();
+    StateScriptComponent->SetScriptPath("Components/EnemyState.lua");
 }

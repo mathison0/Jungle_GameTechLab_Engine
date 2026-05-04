@@ -307,10 +307,11 @@ void UWorld::EndPlay()
         return;
     }
 
-	ActorPoolManager.reset();
 
     PersistentLevel->EndPlay();
     PersistentLevel->Clear();
+
+	ActorPoolManager.reset();
 
     // Clear spatial partition while actors/components are still alive.
     // Otherwise Octree teardown can dereference stale primitive pointers during shutdown.

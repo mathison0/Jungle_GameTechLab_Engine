@@ -1097,24 +1097,6 @@
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp">
       <Filter>Source\Engine\Runtime</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaActorBinding.cpp">
-      <Filter>Source\Engine\Scripting\Binding</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp">
-      <Filter>Source\Engine\Scripting\Binding</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp">
-      <Filter>Source\Engine\Scripting\Binding</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp">
-      <Filter>Source\Engine\Scripting\Binding</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp">
-      <Filter>Source\Engine\Scripting\Binding</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp">
-      <Filter>Source\Engine\Scripting\Binding</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\LuaEngineBinding.cpp">
       <Filter>Source\Engine\Scripting</Filter>
     </ClCompile>
@@ -1284,6 +1266,16 @@
     <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\TankActor.cpp" />
     <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaActorBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2334,6 +2326,8 @@
     <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\TankActor.h" />
     <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
