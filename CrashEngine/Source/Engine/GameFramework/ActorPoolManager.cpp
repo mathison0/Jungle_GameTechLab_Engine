@@ -1,7 +1,8 @@
-#include "GameFramework/ActorPoolManager.h"
+﻿#include "GameFramework/ActorPoolManager.h"
 #include "GameFramework/ActorPool.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
+#include "Object/Object.h"
 
 FActorPoolManager::FActorPoolManager(UWorld* InWorld)
     : World(InWorld)
@@ -50,22 +51,44 @@ void FActorPoolManager::Release(AActor* Actor)
         return;
     }
 
+    // 풀에 반납될 때는 델리게이트를 해제하여, 풀에 있는 동안 
+    // 불필요한 호출이 발생하지 않도록 합니다.
+    Actor->OnPoolReturnRequested.RemoveDynamic(this);
+    DelegateBoundActors.erase(Actor);
+
     FActorPool* Pool = It->second;
     ActiveActorToPool.erase(It);
     Pool->Release(Actor);
 }
 
-void FActorPoolManager::DestroyAll()
+void FActorPoolManager::ForgetActor(AActor* Actor)
 {
-    for (AActor* Actor : DelegateBoundActors)
+    if (!Actor)
     {
-        if (Actor)
-        {
-            Actor->OnPoolReturnRequested.RemoveDynamic(this);
-        }
+        return;
     }
 
+    if (DelegateBoundActors.erase(Actor) > 0)
+    {
+        Actor->OnPoolReturnRequested.RemoveDynamic(this);
+    }
+
+    BoundActorUUIDs.erase(Actor);
+    ActiveActorToPool.erase(Actor);
+
+    for (auto& Pair : Pools)
+    {
+        if (Pair.second)
+        {
+            Pair.second->ForgetActor(Actor);
+        }
+    }
+}
+
+void FActorPoolManager::DestroyAll()
+{
     DelegateBoundActors.clear();
+    BoundActorUUIDs.clear();
     ActiveActorToPool.clear();
 
     for (auto& Pair : Pools)
@@ -126,6 +149,7 @@ void FActorPoolManager::RegisterActiveActor(AActor* Actor, FActorPool* Pool)
     ActiveActorToPool[Actor] = Pool;
     if (DelegateBoundActors.insert(Actor).second)
     {
+        BoundActorUUIDs[Actor] = Actor->GetUUID();
         Actor->OnPoolReturnRequested.AddDynamic(this, &FActorPoolManager::HandleActorPoolReturnRequested);
     }
 }
@@ -133,4 +157,28 @@ void FActorPoolManager::RegisterActiveActor(AActor* Actor, FActorPool* Pool)
 void FActorPoolManager::HandleActorPoolReturnRequested(AActor* Actor)
 {
     Release(Actor);
+}
+
+bool FActorPoolManager::IsBoundActorAlive(AActor* Actor) const
+{
+    if (!Actor)
+    {
+        return false;
+    }
+
+    auto UUIDIt = BoundActorUUIDs.find(Actor);
+    if (UUIDIt == BoundActorUUIDs.end())
+    {
+        return false;
+    }
+
+    for (UObject* Object : GUObjectArray)
+    {
+        if (Object == Actor)
+        {
+            return Actor->GetUUID() == UUIDIt->second;
+        }
+    }
+
+    return false;
 }

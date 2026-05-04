@@ -46,6 +46,7 @@ public:
     bool bNeverCull       = false;
     bool bShowAABB        = true;
     bool bCastShadow      = true;
+    bool bReceivesDecals  = true;
 
     ERenderPass Pass = ERenderPass::Opaque;
 

@@ -88,6 +88,7 @@ void UPrimitiveComponent::Serialize(FArchive& Ar)
     Ar << bGenerateHitEvents;
     Ar << bGenerateOverlapEvents;
     Ar << bIsEditorHelper;
+    Ar << bReceivesDecals;
     Ar << Mobility;
     Ar << CollisionChannel;
 }
@@ -137,6 +138,17 @@ void UPrimitiveComponent::SetEditorHelper(bool bNewHelper)
 
     bIsEditorHelper = bNewHelper;
     MarkRenderVisibilityDirty();
+}
+
+void UPrimitiveComponent::SetReceivesDecals(bool bNewReceivesDecals)
+{
+    if (bReceivesDecals == bNewReceivesDecals)
+    {
+        return;
+    }
+
+    bReceivesDecals = bNewReceivesDecals;
+    MarkRenderStateDirty();
 }
 
 bool UPrimitiveComponent::ShouldRenderInWorld(EWorldType WorldType) const
@@ -267,6 +279,7 @@ void UPrimitiveComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Out
     OutProps.push_back({ "Visible In Editor", EPropertyType::Bool, &bVisibleInEditor });
     OutProps.push_back({ "Visible In Game", EPropertyType::Bool, &bVisibleInGame });
     OutProps.push_back({ "Is Editor Helper", EPropertyType::Bool, &bIsEditorHelper });
+    OutProps.push_back({ "Receives Decals", EPropertyType::Bool, &bReceivesDecals });
     OutProps.push_back({ "Generate Overlap Events", EPropertyType::Bool, &bGenerateOverlapEvents });
     OutProps.push_back({ "Generate Hit Events", EPropertyType::Bool, &bGenerateHitEvents });
     OutProps.push_back({ "Mobility", EPropertyType::Enum, &Mobility, 0.0f, 0.0f, 0.1f, &GComponentMobilityMeta });
@@ -286,6 +299,10 @@ void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
     else if (strcmp(PropertyName, "Visible In Editor") == 0 || strcmp(PropertyName, "Visible In Game") == 0 || strcmp(PropertyName, "Is Editor Helper") == 0)
     {
         MarkRenderVisibilityDirty();
+    }
+    else if (strcmp(PropertyName, "Receives Decals") == 0)
+    {
+        MarkRenderStateDirty();
     }
 }
 

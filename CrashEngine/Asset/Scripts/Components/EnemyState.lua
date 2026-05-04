@@ -4,7 +4,8 @@ local EnemyState = {
     properties = {
         MaxHP = 100,
         CurrentHP = 100,
-        GemClassName = {type = "string", default = "APickupActor"}
+        GemClassName = {type = "string", default = "APickupActor"},
+        DeathDecalClassName = {type = "string", default = "ADeathDecalActor"}
     }
 }
 
@@ -16,10 +17,16 @@ function EnemyState:BeginPlay()
     end
 
     self.CurrentHP = self.MaxHP or 100.0
+    self.bIsDead = false
+
     DamageSystem.Register(self.actor, self)
 end
 
 function EnemyState:TakeDamage(amount, attacker)
+    if self.bIsDead then
+        return
+    end
+
     amount = amount or 0.0
 
     self.CurrentHP = (self.CurrentHP or self.MaxHP or 100.0) - amount
@@ -38,11 +45,18 @@ function EnemyState:TakeDamage(amount, attacker)
 end
 
 function EnemyState:Die()
+    if self.bIsDead then
+        return
+    end
+
+    self.bIsDead = true
     Log("[Enemy] Died: " .. self.actor:GetName())
     
     local PoolManager = GetActorPoolManager()
     if PoolManager:IsValid() then
-        self:SpawnGem(PoolManager)
+        local deathLocation = self:GetDeathLocation()
+        self:SpawnGem(PoolManager, deathLocation)
+        self:SpawnDeathDecal(PoolManager, deathLocation)
         PoolManager:Release(self.actor)
     else
         -- Fallback if PoolManager is not available
@@ -56,15 +70,30 @@ function EnemyState:EndPlay()
     end
 end
 
-function EnemyState:SpawnGem(PoolManager)
+function EnemyState:GetDeathLocation()
+    local owner = self:GetActor()
+    if owner:IsValid() then
+        return owner:GetLocation()
+    end
+
+    return {x = 0, y = 0, z = 0}
+end
+
+function EnemyState:SpawnGem(PoolManager, SpawnPos)
     local Gem = PoolManager:Acquire(self.GemClassName)
     if Gem:IsValid() then
-        local owner = self:GetActor()
-        local SpawnPos = {x =0, y=0, z=0}
-        if owner:IsValid() then
-            SpawnPos = owner:GetLocation()
-        end
         Gem:SetLocation(SpawnPos)
+    end
+end
+
+function EnemyState:SpawnDeathDecal(PoolManager, SpawnPos)
+    if self.DeathDecalClassName == nil or self.DeathDecalClassName == "" then
+        return
+    end
+
+    local Decal = PoolManager:Acquire(self.DeathDecalClassName)
+    if Decal:IsValid() then
+        Decal:SetLocation(SpawnPos)
     end
 end
 

@@ -15,6 +15,7 @@ void AProjectileActor::InitDefaultComponents()
     ColliderComponent->SetGenerateOverlapEvents(true);
     SetRootComponent(ColliderComponent);
     auto StaticMeshComponent = AddComponent<UStaticMeshComponent>();
+    StaticMeshComponent->SetReceivesDecals(false);
     RootComponent->AddChild(StaticMeshComponent);
 
     auto MovementComponent = AddComponent<UProjectileMovementComponent2>();

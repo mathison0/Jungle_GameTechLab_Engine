@@ -17,23 +17,41 @@ void AEnemyBaseActor::Tick(float DeltaTime)
     AActor::Tick(DeltaTime);
 }
 
-void AEnemyBaseActor::InitDefaultComponents()
+UStaticMeshComponent* AEnemyBaseActor::GetDefaultMeshComponent()
 {
-    ColliderComponent = AddComponent<UCircleCollider2DComponent>();
-    ColliderComponent->SetCollisionChannel(ECollisionChannel::Enemy);
-    ColliderComponent->SetGenerateOverlapEvents(true);
-    SetRootComponent(ColliderComponent);
-
-	ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+    ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
     UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ"), Device);
 
-	MeshComponent = AddComponent<UStaticMeshComponent>();
-    MeshComponent->SetStaticMesh(Asset);
-    ColliderComponent->AddChild(MeshComponent);
+    UStaticMeshComponent* MeshComp = AddComponent<UStaticMeshComponent>();
+    MeshComp->SetStaticMesh(Asset);
+    MeshComp->SetReceivesDecals(false);
+    return MeshComp;
+}
 
-	EnemyScriptComponent = AddComponent<UScriptComponent>();
+UCollider2DComponent* AEnemyBaseActor::GetDefaultColliderComponent()
+{
+    UCircleCollider2DComponent* Collider = AddComponent<UCircleCollider2DComponent>();
+    Collider->SetCollisionChannel(ECollisionChannel::Enemy);
+    Collider->SetGenerateOverlapEvents(true);
+    return Collider;
+}
+
+void AEnemyBaseActor::InitScriptComponent()
+{
+    UScriptComponent* EnemyScriptComponent = AddComponent<UScriptComponent>();
     EnemyScriptComponent->SetScriptPath("EnemyScript.lua");
 
-	StateScriptComponent = AddComponent<UScriptComponent>();
+    UScriptComponent* StateScriptComponent = AddComponent<UScriptComponent>();
     StateScriptComponent->SetScriptPath("Components/EnemyState.lua");
+}
+
+void AEnemyBaseActor::InitDefaultComponents()
+{
+    ColliderComponent = GetDefaultColliderComponent();
+    SetRootComponent(ColliderComponent);
+
+	MeshComponent = GetDefaultMeshComponent();
+    ColliderComponent->AddChild(MeshComponent);
+
+	InitScriptComponent();
 }

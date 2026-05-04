@@ -124,7 +124,7 @@ void FForwardOpaquePass::PrepareInputs(FRenderPipelineContext& Context)
 
         for (FPrimitiveProxy* Proxy : Context.Submission.SceneData->Primitives.OpaqueProxies)
         {
-            if (!Proxy || Cast<UDecalComponent>(Proxy->Owner))
+            if (!Proxy || Cast<UDecalComponent>(Proxy->Owner) || !Proxy->bReceivesDecals)
             {
                 continue;
             }

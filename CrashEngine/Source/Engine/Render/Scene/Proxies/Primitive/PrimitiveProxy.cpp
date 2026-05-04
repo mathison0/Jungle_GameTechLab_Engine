@@ -14,6 +14,7 @@ FPrimitiveProxy::FPrimitiveProxy(UPrimitiveComponent* InComponent)
     : Owner(InComponent)
 {
     bSupportsOutline = Owner->SupportsOutline();
+    bReceivesDecals = Owner->ReceivesDecals();
 }
 
 void FPrimitiveProxy::UpdateTransform()

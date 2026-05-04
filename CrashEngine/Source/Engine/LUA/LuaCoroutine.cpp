@@ -213,6 +213,17 @@ void FCoroutineExecutorSet::Tick(const FCouroutineContext& Context)
 
 void FCoroutineExecutorSet::Clear()
 {
+    if (bIsTicking)
+    {
+        for (const auto& Pair : Executors)
+        {
+            PendingStopKeys.insert(Pair.first);
+        }
+
+        PendingStarts.clear();
+        return;
+    }
+
     for (auto& Pair : Executors)
     {
         delete Pair.second;

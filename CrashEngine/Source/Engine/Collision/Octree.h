@@ -27,6 +27,7 @@ public:
 
     bool Remove(UPrimitiveComponent* InPrimitivie);
     bool RemoveDirect(UPrimitiveComponent* Primitive, bool bTryMergeNow = true);
+    bool RemoveAll(UPrimitiveComponent* Primitive, bool bTryMergeNow = true);
     void TryMergeUpward();
     void TryMergeRecursive();
 
