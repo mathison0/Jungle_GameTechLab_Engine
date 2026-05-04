@@ -52,6 +52,28 @@ function WeaponInventory:ApplyWeaponVisual(id, level)
     self.Owner.EquipWeaponVisual(id, level, layout)
 end
 
+function WeaponInventory:ApplyWeaponVisualForWeapon(id, weapon)
+    local level = 1
+    if weapon ~= nil and weapon.Level ~= nil then
+        level = weapon.Level
+    end
+
+    local function applyVisual()
+        self:ApplyWeaponVisual(id, level)
+
+        if weapon ~= nil and weapon.OnVisualApplied ~= nil then
+            weapon:OnVisualApplied()
+        end
+    end
+
+    if weapon ~= nil and weapon.RequestVisualApply ~= nil then
+        return weapon:RequestVisualApply(applyVisual)
+    end
+
+    applyVisual()
+    return true
+end
+
 function WeaponInventory:AddWeapon(id)
     if self:HasWeapon(id) then
         return self:UpgradeWeapon(id)
@@ -66,10 +88,7 @@ function WeaponInventory:AddWeapon(id)
     local weapon = constructor.New(self.Owner)
     self.Weapons[id] = weapon
     Log(id .. " added")
-    self:ApplyWeaponVisual(id, weapon.Level or 1)
-    if weapon.OnVisualApplied ~= nil then
-        weapon:OnVisualApplied()
-    end
+    self:ApplyWeaponVisualForWeapon(id, weapon)
 
     if weapon.Start ~= nil then
         weapon:Start()
@@ -90,10 +109,7 @@ function WeaponInventory:UpgradeWeapon(id)
 
     local upgraded = weapon:Upgrade()
     if upgraded then
-        self:ApplyWeaponVisual(id, weapon.Level or 1)
-        if weapon.OnVisualApplied ~= nil then
-            weapon:OnVisualApplied()
-        end
+        self:ApplyWeaponVisualForWeapon(id, weapon)
         if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
             weapon:RebuildTurretSlots()
         end
@@ -148,10 +164,7 @@ function WeaponInventory:EvolveWeapon(id)
 
     local evolved = weapon:Evolve()
     if evolved then
-        self:ApplyWeaponVisual(id, weapon.Level or 1)
-        if weapon.OnVisualApplied ~= nil then
-            weapon:OnVisualApplied()
-        end
+        self:ApplyWeaponVisualForWeapon(id, weapon)
         if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
             weapon:RebuildTurretSlots()
         end
