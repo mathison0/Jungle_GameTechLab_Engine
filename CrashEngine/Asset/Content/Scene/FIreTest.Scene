@@ -695,6 +695,20 @@
             "Script" : "UI/KillCountUI.lua",
             "bTickEnable" : true
           }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "SkillHUDScript",
+          "Properties" : {
+            "Lua.AnchorX" : 0.035000,
+            "Lua.AnchorY" : 0.940000,
+            "Lua.FontSize" : 0.720000,
+            "Lua.IconSize" : 56.000000,
+            "Lua.Layer" : 205,
+            "Lua.LevelTextHeight" : 18.000000,
+            "Lua.SlotGap" : 10.000000,
+            "Script" : "UI/SkillHUD.lua",
+            "bTickEnable" : true
+          }
         }],
       "RootComponent" : {
         "Children" : [{
