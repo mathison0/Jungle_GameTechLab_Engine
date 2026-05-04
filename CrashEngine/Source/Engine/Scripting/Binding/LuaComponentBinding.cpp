@@ -139,6 +139,23 @@ bool FLuaComponentHandle::SetRelativeLocation(const sol::object& Value) const
     return true;
 }
 
+sol::table FLuaComponentHandle::GetRelativeRotation(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    USceneComponent* SceneComponent = Cast<USceneComponent>(Resolve());
+    return MakeLuaVec3(Lua, SceneComponent ? SceneComponent->GetRelativeRotation().ToVector() : FVector(0.0f, 0.0f, 0.0f));
+}
+
+bool FLuaComponentHandle::SetRelativeRotation(const sol::object& Value) const
+{
+    FVector Rotation;
+    if (!ReadLuaVec3(Value, Rotation)) return false;
+    USceneComponent* SceneComponent = Cast<USceneComponent>(Resolve());
+    if (!SceneComponent) return false;
+    SceneComponent->SetRelativeRotation(Rotation);
+    return true;
+}
+
 sol::table FLuaComponentHandle::GetForwardVector(sol::this_state State) const
 {
     sol::state_view Lua(State);
@@ -542,6 +559,8 @@ namespace LuaBinding
             "SetWorldLocation", &FLuaComponentHandle::SetWorldLocation,
             "GetRelativeLocation", &FLuaComponentHandle::GetRelativeLocation,
             "SetRelativeLocation", &FLuaComponentHandle::SetRelativeLocation,
+            "GetRelativeRotation", &FLuaComponentHandle::GetRelativeRotation,
+            "SetRelativeRotation", &FLuaComponentHandle::SetRelativeRotation,
             "GetForwardVector", &FLuaComponentHandle::GetForwardVector,
             "LookAt", &FLuaComponentHandle::LookAt,
             "Cast", &FLuaComponentHandle::LuaCast,

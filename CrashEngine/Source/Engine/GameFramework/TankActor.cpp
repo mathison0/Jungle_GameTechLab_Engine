@@ -3,6 +3,7 @@
 #include "Collision/CollisionChannels.h"
 #include "Core/Logging/LogMacros.h"
 #include "Engine/Component/Collision/CircleCollider2DComponent.h"
+#include "Engine/Component/DecalComponent.h"
 #include "Engine/Component/PrimitiveComponent.h"
 #include "Engine/Component/ScriptComponent.h"
 #include "Engine/Component/StaticMeshComponent.h"
@@ -12,6 +13,7 @@
 #include "GameFramework/ActorPoolManager.h"
 #include "GameFramework/HomingMissileActor.h"
 #include "GameFramework/World.h"
+#include "Materials/MaterialManager.h"
 #include "UI/TextureUIComponent.h"
 #include "Sound/SoundManager.h"
 
@@ -240,16 +242,39 @@ void ATankActor::EquipWeaponVisualFromLua(const FString& WeaponId, int32 Level, 
 
         sol::table VisualDef = VisualObject.as<sol::table>();
         const FString Name = ReadLuaStringOrDefault(VisualDef["Name"]);
+        const FString ComponentType = ReadLuaStringOrDefault(VisualDef["Component"], "StaticMesh");
         const FString Mesh = ReadLuaStringOrDefault(VisualDef["Mesh"]);
+        const FString Material = ReadLuaStringOrDefault(VisualDef["Material"]);
         const FString Parent = ReadLuaStringOrDefault(VisualDef["Parent"], "RootComponent");
 
-        if (Name.empty() || Mesh.empty())
+        if (Name.empty())
         {
             UE_LOG(Tank, Warning, "Invalid visual def. Weapon=%s", WeaponId.c_str());
             continue;
         }
 
-        UStaticMeshComponent* Visual = GetOrCreateWeaponVisualComponent(Name, Mesh, Parent);
+        USceneComponent* Visual = nullptr;
+        if (ComponentType == "Decal" || ComponentType == "UDecalComponent")
+        {
+            if (Material.empty())
+            {
+                UE_LOG(Tank, Warning, "Invalid decal visual def. Weapon=%s Name=%s", WeaponId.c_str(), Name.c_str());
+                continue;
+            }
+
+            Visual = GetOrCreateWeaponDecalComponent(Name, Material, Parent);
+        }
+        else
+        {
+            if (Mesh.empty())
+            {
+                UE_LOG(Tank, Warning, "Invalid mesh visual def. Weapon=%s Name=%s", WeaponId.c_str(), Name.c_str());
+                continue;
+            }
+
+            Visual = GetOrCreateWeaponVisualComponent(Name, Mesh, Parent);
+        }
+
         if (!Visual)
         {
             continue;
@@ -262,7 +287,10 @@ void ATankActor::EquipWeaponVisualFromLua(const FString& WeaponId, int32 Level, 
         Visual->SetRelativeLocation(Location);
         Visual->SetRelativeRotation(Rotation);
         Visual->SetRelativeScale(Scale);
-        Visual->SetVisibility(true);
+        if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Visual))
+        {
+            Primitive->SetVisibility(true);
+        }
 
         const FString MuzzleName = ReadLuaStringOrDefault(VisualDef["MuzzleName"]);
         if (!MuzzleName.empty())
@@ -579,6 +607,19 @@ UStaticMeshComponent* ATankActor::FindStaticMeshComponentByName(const FString& C
     return nullptr;
 }
 
+UDecalComponent* ATankActor::FindDecalComponentByName(const FString& ComponentName) const
+{
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        UDecalComponent* DecalComponent = Cast<UDecalComponent>(Component);
+        if (DecalComponent && DecalComponent->GetFName().ToString() == ComponentName)
+        {
+            return DecalComponent;
+        }
+    }
+    return nullptr;
+}
+
 UStaticMeshComponent* ATankActor::GetOrCreateWeaponVisualComponent(const FString& Name, const FString& MeshPath, const FString& ParentName)
 {
     const bool bUseWorldParent = ParentName.empty() || ParentName == "World" || ParentName == "None";
@@ -625,6 +666,55 @@ UStaticMeshComponent* ATankActor::GetOrCreateWeaponVisualComponent(const FString
     Visual->SetActive(true);
     Visual->SetVisibility(true);
     return Visual;
+}
+
+UDecalComponent* ATankActor::GetOrCreateWeaponDecalComponent(const FString& Name, const FString& MaterialPath, const FString& ParentName)
+{
+    const bool bUseWorldParent = ParentName.empty() || ParentName == "World" || ParentName == "None";
+    UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+
+    if (UDecalComponent* Existing = FindDecalComponentByName(Name))
+    {
+        Existing->SetMaterial(0, Material);
+        Existing->SetActive(true);
+        Existing->SetVisibility(true);
+        if (bUseWorldParent)
+        {
+            Existing->SetParent(nullptr);
+        }
+        else if (USceneComponent* Parent = FindSceneComponentByName(ParentName))
+        {
+            Existing->AttachToComponent(Parent);
+        }
+        return Existing;
+    }
+
+    USceneComponent* Parent = nullptr;
+    if (!bUseWorldParent)
+    {
+        Parent = FindSceneComponentByName(ParentName);
+        if (!Parent)
+        {
+            UE_LOG(Tank, Warning, "Weapon decal parent not found: %s", ParentName.c_str());
+            return nullptr;
+        }
+    }
+
+    UDecalComponent* Decal = AddComponent<UDecalComponent>();
+    if (!Decal)
+    {
+        return nullptr;
+    }
+
+    Decal->SetFName(Name);
+    if (Parent)
+    {
+        Parent->AddChild(Decal);
+    }
+    Decal->SetMaterial(0, Material);
+    Decal->SetActive(true);
+    Decal->SetVisibility(true);
+    return Decal;
 }
 
 USceneComponent* ATankActor::GetOrCreateMuzzleComponent(const FString& Name, USceneComponent* Parent)

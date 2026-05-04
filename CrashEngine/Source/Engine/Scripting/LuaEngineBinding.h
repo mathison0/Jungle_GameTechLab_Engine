@@ -92,6 +92,8 @@ struct FLuaComponentHandle
 
 	sol::table GetRelativeLocation(sol::this_state State) const;
 	bool SetRelativeLocation(const sol::object& Value) const;
+	sol::table GetRelativeRotation(sol::this_state State) const;
+	bool SetRelativeRotation(const sol::object& Value) const;
 
 	sol::table GetForwardVector(sol::this_state State) const;
 

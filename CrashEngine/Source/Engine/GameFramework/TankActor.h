@@ -5,6 +5,7 @@
 #include "sol.hpp"
 
 class AHomingMissileActor;
+class UDecalComponent;
 class USceneComponent;
 class UScriptComponent;
 class UStaticMesh;
@@ -72,7 +73,9 @@ private:
     void HideWeaponVisuals(const FString& WeaponId);
     USceneComponent* FindSceneComponentByName(const FString& ComponentName) const;
     UStaticMeshComponent* FindStaticMeshComponentByName(const FString& ComponentName) const;
+    UDecalComponent* FindDecalComponentByName(const FString& ComponentName) const;
     UStaticMeshComponent* GetOrCreateWeaponVisualComponent(const FString& Name, const FString& MeshPath, const FString& ParentName);
+    UDecalComponent* GetOrCreateWeaponDecalComponent(const FString& Name, const FString& MaterialPath, const FString& ParentName);
     USceneComponent* GetOrCreateMuzzleComponent(const FString& Name, USceneComponent* Parent);
     void EnsureHealthBarComponents();
     UTextureUIComponent* GetOrCreateHealthBarComponent(const FString& Name, USceneComponent* Parent);
