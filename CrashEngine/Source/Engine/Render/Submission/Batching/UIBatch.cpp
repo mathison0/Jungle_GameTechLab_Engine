@@ -7,6 +7,21 @@
 
 namespace
 {
+constexpr float GAsciiAdvanceRatio[95] = {
+    0.280f, 0.250f, 0.344f, 0.438f, 0.438f, 0.688f, 0.531f, 0.250f,
+    0.281f, 0.281f, 0.375f, 0.438f, 0.250f, 0.312f, 0.250f, 0.375f,
+    0.438f, 0.406f, 0.438f, 0.438f, 0.469f, 0.438f, 0.438f, 0.438f,
+    0.438f, 0.438f, 0.250f, 0.250f, 0.438f, 0.438f, 0.438f, 0.375f,
+    0.656f, 0.500f, 0.469f, 0.500f, 0.469f, 0.406f, 0.406f, 0.500f,
+    0.500f, 0.250f, 0.406f, 0.469f, 0.406f, 0.531f, 0.500f, 0.562f,
+    0.469f, 0.562f, 0.469f, 0.469f, 0.500f, 0.500f, 0.500f, 0.625f,
+    0.469f, 0.500f, 0.438f, 0.281f, 0.375f, 0.281f, 0.438f, 0.500f,
+    0.312f, 0.438f, 0.469f, 0.406f, 0.438f, 0.438f, 0.344f, 0.469f,
+    0.438f, 0.250f, 0.312f, 0.438f, 0.250f, 0.625f, 0.438f, 0.438f,
+    0.469f, 0.438f, 0.344f, 0.406f, 0.375f, 0.438f, 0.438f, 0.625f,
+    0.438f, 0.438f, 0.438f, 0.312f, 0.250f, 0.312f, 0.438f
+};
+
 bool DecodeUTF8Codepoint(const uint8*& Ptr, const uint8* End, uint32& OutCodepoint)
 {
     if (Ptr >= End)
@@ -77,6 +92,45 @@ TArray<TArray<uint32>> SplitTextLines(const FString& Text)
     }
 
     return Lines;
+}
+
+bool IsTextWhitespace(uint32 Codepoint)
+{
+    return Codepoint == ' ' || Codepoint == '\t';
+}
+
+float GetTextGlyphAdvance(uint32 Codepoint, float CharW)
+{
+    if (Codepoint >= 32 && Codepoint <= 126)
+    {
+        return CharW * GAsciiAdvanceRatio[Codepoint - 32];
+    }
+
+    if (Codepoint == '\t')
+    {
+        return CharW * 2.0f;
+    }
+
+    return CharW;
+}
+
+float GetTextLineWidth(const TArray<uint32>& Line, float CharW, float LetterSpacing)
+{
+    if (Line.empty())
+    {
+        return 0.0f;
+    }
+
+    float Width = 0.0f;
+    for (size_t Index = 0; Index < Line.size(); ++Index)
+    {
+        Width += GetTextGlyphAdvance(Line[Index], CharW);
+        if (Index + 1 < Line.size())
+        {
+            Width += LetterSpacing;
+        }
+    }
+    return Width;
 }
 
 FVector TransformWorldUILocal(const FUIProxy& Proxy, float LocalY, float LocalZ, const FVector& CameraRight, const FVector& CameraUp)
@@ -273,15 +327,6 @@ FUIBatchRange FUIBatch::AddScreenText(const FUIProxy& Proxy, const FFontResource
         return Range;
     }
 
-    auto GetLineWidth = [CharW, LetterSpacing](size_t GlyphCount) -> float
-    {
-        if (GlyphCount == 0)
-        {
-            return 0.0f;
-        }
-        return static_cast<float>(GlyphCount) * CharW + static_cast<float>(GlyphCount - 1) * LetterSpacing;
-    };
-
     const float BlockHeight =
         static_cast<float>(Lines.size()) * CharH +
         static_cast<float>(Lines.size() > 0 ? Lines.size() - 1 : 0) * LineSpacing;
@@ -326,7 +371,7 @@ FUIBatchRange FUIBatch::AddScreenText(const FUIProxy& Proxy, const FFontResource
     float CursorY = BaseY;
     for (const TArray<uint32>& Line : Lines)
     {
-        const float LineWidth = GetLineWidth(Line.size());
+        const float LineWidth = GetTextLineWidth(Line, CharW, LetterSpacing);
         float CursorX = LocalLeft;
         if (Proxy.TextHAlign == EUITextHAlign::Center)
         {
@@ -339,6 +384,13 @@ FUIBatchRange FUIBatch::AddScreenText(const FUIProxy& Proxy, const FFontResource
 
         for (uint32 Codepoint : Line)
         {
+            const float GlyphAdvance = GetTextGlyphAdvance(Codepoint, CharW);
+            if (IsTextWhitespace(Codepoint))
+            {
+                CursorX += GlyphAdvance + LetterSpacing;
+                continue;
+            }
+
             FVector2 UVMin;
             FVector2 UVMax;
             if (GetCharUV(Codepoint, UVMin, UVMax))
@@ -362,7 +414,7 @@ FUIBatchRange FUIBatch::AddScreenText(const FUIProxy& Proxy, const FFontResource
                 Buffer.Indices.push_back(BaseVertex + 2);
             }
 
-            CursorX += CharW + LetterSpacing;
+            CursorX += GlyphAdvance + LetterSpacing;
         }
 
         CursorY += CharH + LineSpacing;
@@ -400,15 +452,6 @@ FUIBatchRange FUIBatch::AddWorldText(const FUIProxy& Proxy, const FFontResource*
         return Range;
     }
 
-    auto GetLineWidth = [CharW, LetterSpacing](size_t GlyphCount) -> float
-    {
-        if (GlyphCount == 0)
-        {
-            return 0.0f;
-        }
-        return static_cast<float>(GlyphCount) * CharW + static_cast<float>(GlyphCount - 1) * LetterSpacing;
-    };
-
     const float BlockHeight =
         static_cast<float>(Lines.size()) * CharH +
         static_cast<float>(Lines.size() > 0 ? Lines.size() - 1 : 0) * LineSpacing;
@@ -442,7 +485,7 @@ FUIBatchRange FUIBatch::AddWorldText(const FUIProxy& Proxy, const FFontResource*
     float CursorZ = BaseZ;
     for (const TArray<uint32>& Line : Lines)
     {
-        const float LineWidth = GetLineWidth(Line.size());
+        const float LineWidth = GetTextLineWidth(Line, CharW, LetterSpacing);
         float CursorY = LocalLeft;
         if (Proxy.TextHAlign == EUITextHAlign::Center)
         {
@@ -455,6 +498,13 @@ FUIBatchRange FUIBatch::AddWorldText(const FUIProxy& Proxy, const FFontResource*
 
         for (uint32 Codepoint : Line)
         {
+            const float GlyphAdvance = GetTextGlyphAdvance(Codepoint, CharW);
+            if (IsTextWhitespace(Codepoint))
+            {
+                CursorY += GlyphAdvance + LetterSpacing;
+                continue;
+            }
+
             FVector2 UVMin;
             FVector2 UVMax;
             if (GetCharUV(Codepoint, UVMin, UVMax))
@@ -478,7 +528,7 @@ FUIBatchRange FUIBatch::AddWorldText(const FUIProxy& Proxy, const FFontResource*
                 Buffer.Indices.push_back(BaseVertex + 2);
             }
 
-            CursorY += CharW + LetterSpacing;
+            CursorY += GlyphAdvance + LetterSpacing;
         }
 
         CursorZ -= CharH + LineSpacing;

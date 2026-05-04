@@ -39,7 +39,7 @@ float4 PS(PS_Input_UI input) : SV_TARGET
     {
         if (UIFlags.y > 0.5f)
         {
-            float4 texColor = UITexture.Sample(PointClampSampler, input.uv);
+            float4 texColor = UITexture.SampleLevel(PointClampSampler, input.uv, 0.0f);
             float coverage = texColor.r;
             if (coverage < 0.1f)
             {
