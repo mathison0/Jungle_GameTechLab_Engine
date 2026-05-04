@@ -4,6 +4,7 @@
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Component/ProjectileComponent.h"
 #include "Engine/Component/ScriptComponent.h"
+#include "GameFramework/ActorPoolManager.h"
 
 IMPLEMENT_CLASS(AProjectileActor, AActor)
 
@@ -45,6 +46,38 @@ void AProjectileActor::InitDefaultComponents()
 
 	ScriptComponent = AddComponent<UScriptComponent>();
     ScriptComponent->SetScriptPath("Test/TestBullet.lua");
+}
+
+void AProjectileActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
+{
+    ScriptComponent.BindFunction("GetProjectileDamage",
+        [this]() -> float
+        {
+            return Damage;
+        });
+
+    ScriptComponent.BindFunction("GetProjectilePierceCount",
+        [this]() -> int32
+        {
+            return PierceCount;
+        });
+
+    ScriptComponent.BindFunction("ConsumeProjectilePierce",
+        [this]() -> bool
+        {
+            return ConsumePierce();
+        });
+}
+
+bool AProjectileActor::ConsumePierce()
+{
+    if (PierceCount <= 0)
+    {
+        return false;
+    }
+
+    --PierceCount;
+    return true;
 }
 
 

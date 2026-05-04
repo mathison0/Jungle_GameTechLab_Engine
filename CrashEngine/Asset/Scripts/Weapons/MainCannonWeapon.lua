@@ -44,10 +44,12 @@ end
 
 function MainCannonWeapon:FireLoop()
     while self.IsRunning do
-        if self.Owner ~= nil and self.Owner.FireHeadMainGun ~= nil then
+        if self.Owner ~= nil and self.Owner.FireLinearProjectile ~= nil then
+            self.Owner.FireLinearProjectile("MainCannon", self.Data, 0)
+        elseif self.Owner ~= nil and self.Owner.FireHeadMainGun ~= nil then
             self.Owner.FireHeadMainGun(self.Data)
         else
-            Log("FireHeadMainGun is nil")
+            Log("FireLinearProjectile / FireHeadMainGun is nil")
         end
 
         Co.Wait(self.Data.FireInterval)

@@ -10,6 +10,7 @@ function Bullet:BeginPlay()
     Log("Bullet:BeginPlay")
 
     self.actor = self:GetActor()
+    self.PoolManager = GetActorPoolManager()
     if self.actor == nil or not self.actor:IsValid() then
         Log("[Bullet] Invalid owner actor")
         return
@@ -41,6 +42,10 @@ function Bullet:OnOverlapBegin(otherCollider)
 
     if tag == "Enemy" then
         local damage = self.Damage or 100.0
+        if self.GetProjectileDamage ~= nil then
+            damage = self.GetProjectileDamage()
+        end
+
         local success = DamageSystem.ApplyDamage(otherActor, damage, self.actor)
 
         if success then
@@ -49,8 +54,17 @@ function Bullet:OnOverlapBegin(otherCollider)
             Log("[Bullet] Failed to apply damage. EnemyState may not be registered.")
         end
 
+        if self.ConsumeProjectilePierce ~= nil and self.ConsumeProjectilePierce() then
+            return
+        end
+
         if self.actor ~= nil and self.actor:IsValid() then
-            self.actor:SetVisible(false)
+            local poolManager = self.PoolManager or GetActorPoolManager()
+            if poolManager ~= nil and poolManager:IsValid() then
+                poolManager:Release(self.actor)
+            else
+                self.actor:SetVisible(false)
+            end
         end
     end
 end

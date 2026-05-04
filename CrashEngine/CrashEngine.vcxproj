@@ -351,6 +351,7 @@
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
     <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\HomingMissileActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
@@ -628,6 +629,7 @@
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
     <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
+    <ClInclude Include="Source\Engine\GameFramework\HomingMissileActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />

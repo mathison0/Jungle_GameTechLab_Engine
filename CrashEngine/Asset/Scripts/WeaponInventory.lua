@@ -5,12 +5,16 @@ local WeaponConstructors = {
     MainCannon = require("Weapons.MainCannonWeapon"),
     MachineTurret = require("Weapons.MachineTurretWeapon"),
     Aura = require("Weapons.AuraWeapon"),
+    HomingMissile = require("Weapons.HomingMissileWeapon"),
+    SatelliteBeam = require("Weapons.SatelliteBeamWeapon"),
 }
 
 local WeaponIds = {
     "MainCannon",
     "MachineTurret",
     "Aura",
+    "HomingMissile",
+    "SatelliteBeam",
 }
 
 function WeaponInventory.New(owner)
@@ -23,6 +27,12 @@ end
 
 function WeaponInventory:HasWeapon(id)
     return self.Weapons[id] ~= nil
+end
+
+function WeaponInventory:EquipVisual(id, weapon)
+    if self.Owner ~= nil and self.Owner.EquipWeaponVisual ~= nil and weapon ~= nil then
+        self.Owner.EquipWeaponVisual(id, weapon.Level or 1)
+    end
 end
 
 function WeaponInventory:AddWeapon(id)
@@ -39,6 +49,7 @@ function WeaponInventory:AddWeapon(id)
     local weapon = constructor.New(self.Owner)
     self.Weapons[id] = weapon
     Log(id .. " added")
+    self:EquipVisual(id, weapon)
 
     if weapon.Start ~= nil then
         weapon:Start()
@@ -57,7 +68,12 @@ function WeaponInventory:UpgradeWeapon(id)
         return false
     end
 
-    return weapon:Upgrade()
+    local upgraded = weapon:Upgrade()
+    if upgraded then
+        self:EquipVisual(id, weapon)
+    end
+
+    return upgraded
 end
 
 function WeaponInventory:GetUpgradeableWeapons()
@@ -104,7 +120,12 @@ function WeaponInventory:EvolveWeapon(id)
         return false
     end
 
-    return weapon:Evolve()
+    local evolved = weapon:Evolve()
+    if evolved then
+        self:EquipVisual(id, weapon)
+    end
+
+    return evolved
 end
 
 function WeaponInventory:OpenChest()

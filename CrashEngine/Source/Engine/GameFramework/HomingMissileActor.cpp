@@ -1,0 +1,142 @@
+#include "GameFramework/HomingMissileActor.h"
+
+#include "Collision/CollisionChannels.h"
+#include "Core/Logging/LogMacros.h"
+#include "Engine/Component/Collision/CircleCollider2DComponent.h"
+#include "Engine/Component/StaticMeshComponent.h"
+#include "Engine/Runtime/Engine.h"
+#include "Math/MathUtils.h"
+#include "Platform/Paths.h"
+
+#include <algorithm>
+#include <cmath>
+
+IMPLEMENT_CLASS(AHomingMissileActor, AActor)
+
+namespace
+{
+FRotator RotationFromDirection(const FVector& Direction)
+{
+    const FVector Normalized = Direction.Normalized();
+    const float Yaw = std::atan2(Normalized.Y, Normalized.X) * RAD_TO_DEG;
+    const float HorizontalLength = std::sqrt(Normalized.X * Normalized.X + Normalized.Y * Normalized.Y);
+    const float Pitch = std::atan2(Normalized.Z, HorizontalLength) * RAD_TO_DEG;
+    return FRotator(Pitch, Yaw, 0.0f);
+}
+
+float Max3(float A, float B, float C)
+{
+    const float AB = A > B ? A : B;
+    return AB > C ? AB : C;
+}
+}
+
+void AHomingMissileActor::InitDefaultComponents()
+{
+    SetFName("HomingMissile");
+
+    UCircleCollider2DComponent* Collider = AddComponent<UCircleCollider2DComponent>();
+    SetRootComponent(Collider);
+    Collider->SetFName("HomingMissileCollider");
+    Collider->SetCollisionChannel(ECollisionChannel::Projectile);
+    Collider->SetGenerateOverlapEvents(true);
+    Collider->SetRadius(ColliderSize);
+
+    UStaticMeshComponent* Mesh = AddComponent<UStaticMeshComponent>();
+    RootComponent->AddChild(Mesh);
+    Mesh->SetFName("HomingMissileMesh");
+    Mesh->SetRelativeScale(FVector(0.6f, 0.6f, 0.6f));
+    Mesh->SetStaticMesh(LoadDefaultMesh());
+}
+
+void AHomingMissileActor::Tick(float DeltaTime)
+{
+    if (!bActive)
+    {
+        return;
+    }
+
+    if (!TargetActor || !TargetActor->IsVisible())
+    {
+        Explode();
+        return;
+    }
+
+    const FVector CurrentLocation = GetActorLocation();
+    const FVector TargetLocation = TargetActor->GetActorLocation();
+    const FVector ToTarget = TargetLocation - CurrentLocation;
+    const float DistanceSquared = ToTarget.LengthSquared();
+    const float ExplodeDistance = Max3(ColliderSize, ImpactRadius, 0.5f);
+
+    if (DistanceSquared <= ExplodeDistance * ExplodeDistance)
+    {
+        Explode();
+        return;
+    }
+
+    const FVector DesiredDirection = ToTarget.Normalized();
+    const float TurnAlpha = FMath::Clamp((TurnSpeed * DeltaTime) / 180.0f, 0.0f, 1.0f);
+    CurrentDirection = FMath::Lerp(CurrentDirection, DesiredDirection, TurnAlpha).Normalized();
+
+    AddActorWorldOffset(CurrentDirection * Speed * DeltaTime);
+    SetActorRotation(RotationFromDirection(CurrentDirection));
+}
+
+void AHomingMissileActor::Fire()
+{
+    bActive = true;
+    CurrentDirection = GetActorForward().Normalized();
+    if (CurrentDirection.LengthSquared() <= EPSILON)
+    {
+        CurrentDirection = FVector(1.0f, 0.0f, 0.0f);
+    }
+}
+
+UStaticMesh* AHomingMissileActor::LoadDefaultMesh() const
+{
+    if (!GEngine)
+    {
+        return nullptr;
+    }
+
+    ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+    if (!Device)
+    {
+        return nullptr;
+    }
+
+    return FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ"), Device);
+}
+
+void AHomingMissileActor::Explode()
+{
+    if (!bActive)
+    {
+        return;
+    }
+
+    bActive = false;
+
+    if (ImpactRadius > 0.0f)
+    {
+        UE_LOG(Tank, Info, "[HomingMissile] Explode area Damage=%.2f Radius=%.2f", Damage, ImpactRadius);
+    }
+    else if (TargetActor)
+    {
+        UE_LOG(Tank, Info, "[HomingMissile] Explode target Damage=%.2f Target=%s",
+               Damage, TargetActor->GetFName().ToString().c_str());
+    }
+    else
+    {
+        UE_LOG(Tank, Info, "[HomingMissile] Explode Damage=%.2f", Damage);
+    }
+
+    ReturnOrDeactivate();
+}
+
+void AHomingMissileActor::ReturnOrDeactivate()
+{
+    TargetActor = nullptr;
+    RequestReturnToPool();
+    Deactivate();
+}

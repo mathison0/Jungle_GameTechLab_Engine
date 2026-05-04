@@ -38,6 +38,7 @@ public:
     DECLARE_CLASS(AProjectileActor, AActor)
 
     void InitDefaultComponents();
+    void BindScriptFunctions(UScriptComponent& ScriptComponent) override;
     void SetDirection(const FVector& InDirection) { Direction = InDirection.Normalized(); }
     void SetSpeed(float InSpeed) { Speed = InSpeed; }
     virtual FString GetMeshPath() { return FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ"); }
@@ -60,7 +61,10 @@ public:
     void SetProjectileSetting(const ProjectileInfo& InProjectileInfo);
 
     void SetDamage(float InDamage) { Damage = InDamage; }
+    float GetDamage() const { return Damage; }
     void SetPierceCount(int32 InPierceCount) { PierceCount = InPierceCount; }
+    int32 GetPierceCount() const { return PierceCount; }
+    bool ConsumePierce();
 
 private:
     FVector Direction = { 0.f, 0.f, 0.f };
