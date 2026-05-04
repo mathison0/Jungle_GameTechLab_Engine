@@ -329,6 +329,22 @@ void FScriptSystem::RegisterEngineAPI() const
 			FSoundManager::Get().SetSoundVolume(Handle, Volume);
 		});
 
+	Lua->set_function("SetSoundPosition", [](const FSoundHandle& Handle, float PositionMs)
+		{
+			const float ClampedPositionMs = PositionMs < 0.0f ? 0.0f : PositionMs;
+			FSoundManager::Get().SetSoundPosition(Handle, static_cast<uint32>(ClampedPositionMs));
+		});
+
+	Lua->set_function("GetSoundPosition", [](const FSoundHandle& Handle) -> float
+		{
+			return static_cast<float>(FSoundManager::Get().GetSoundPosition(Handle));
+		});
+
+	Lua->set_function("GetSoundLength", [](const FString& Key) -> float
+		{
+			return static_cast<float>(FSoundManager::Get().GetSoundLength(FName(Key)));
+		});
+
 	Lua->set_function("IsSoundPlaying", [](const FSoundHandle& Handle) -> bool
 		{
 			return FSoundManager::Get().IsPlaying(Handle);

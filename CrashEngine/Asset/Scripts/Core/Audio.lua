@@ -85,6 +85,28 @@ function Audio.SetVolume(handle, volume)
     end
 end
 
+function Audio.SetPosition(handle, positionMs)
+    if handle ~= nil and SetSoundPosition ~= nil then
+        SetSoundPosition(handle, positionMs or 0.0)
+    end
+end
+
+function Audio.GetPosition(handle)
+    if handle == nil or GetSoundPosition == nil then
+        return nil
+    end
+
+    return GetSoundPosition(handle)
+end
+
+function Audio.GetLength(key)
+    if not IsValidKey(key) or GetSoundLength == nil then
+        return nil
+    end
+
+    return GetSoundLength(key)
+end
+
 function Audio.IsPlaying(handle)
     if handle == nil or IsSoundPlaying == nil then
         return false

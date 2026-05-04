@@ -22,6 +22,9 @@ inline void InitializeDefaultLogLevel()
 
 inline void LogMessage(ELogLevel Level, const char* Category, const char* Format, ...)
 {
+    if (Level == ELogLevel::Verbose) 
+        return;
+    
     InitializeDefaultLogLevel();
 
     if (!ShouldLog(Level))

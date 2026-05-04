@@ -101,6 +101,11 @@ WeaponDefs.VehicleRush = {
             LaneSpacing = 5.0,
             MinPassOffset = 8.0,
             MaxPassOffset = 18.0,
+            Sound = {
+                Spawn = "car_beep",
+                Bus = "SFX",
+                Volume = 1.0,
+            },
         },
         [2] = {
             Damage = 9999,
@@ -113,6 +118,11 @@ WeaponDefs.VehicleRush = {
             LaneSpacing = 5.0,
             MinPassOffset = 10.0,
             MaxPassOffset = 20.0,
+            Sound = {
+                Spawn = "car_beep",
+                Bus = "SFX",
+                Volume = 1.0,
+            },
         },
         [3] = {
             Damage = 9999,
@@ -125,6 +135,13 @@ WeaponDefs.VehicleRush = {
             LaneSpacing = 0.0,
             MinPassOffset = 9.0,
             MaxPassOffset = 22.0,
+            Sound = {
+                Spawn = "thomas",
+                Bus = "SFX",
+                Volume = 1.5,
+                Resume = true,
+                DurationMs = 30000.0,
+            },
         },
     },
 }

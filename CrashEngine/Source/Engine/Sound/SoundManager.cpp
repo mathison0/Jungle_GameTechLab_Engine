@@ -390,6 +390,67 @@ void FSoundManager::SetSoundVolume(FSoundHandle Handle, float Volume)
     }
 }
 
+void FSoundManager::SetSoundPosition(FSoundHandle Handle, uint32 PositionMs)
+{
+    if (!Handle.IsValid())
+    {
+        return;
+    }
+
+    auto It = PlayingSounds.find(Handle.Id);
+    if (It == PlayingSounds.end() || It->second.Generation != Handle.Generation || !It->second.Channel)
+    {
+        return;
+    }
+
+    const FMOD_RESULT Result = It->second.Channel->setPosition(PositionMs, FMOD_TIMEUNIT_MS);
+    if (Result != FMOD_OK)
+    {
+        UE_LOG(Sound, Warning, "Failed to set sound position: %s", FMOD_ErrorString(Result));
+    }
+}
+
+uint32 FSoundManager::GetSoundPosition(FSoundHandle Handle) const
+{
+    if (!Handle.IsValid())
+    {
+        return 0;
+    }
+
+    auto It = PlayingSounds.find(Handle.Id);
+    if (It == PlayingSounds.end() || It->second.Generation != Handle.Generation || !It->second.Channel)
+    {
+        return 0;
+    }
+
+    uint32 PositionMs = 0;
+    const FMOD_RESULT Result = It->second.Channel->getPosition(&PositionMs, FMOD_TIMEUNIT_MS);
+    if (Result != FMOD_OK)
+    {
+        return 0;
+    }
+
+    return PositionMs;
+}
+
+uint32 FSoundManager::GetSoundLength(const FName& Key) const
+{
+    auto It = Sounds.find(Key);
+    if (It == Sounds.end() || !It->second)
+    {
+        return 0;
+    }
+
+    uint32 LengthMs = 0;
+    const FMOD_RESULT Result = It->second->getLength(&LengthMs, FMOD_TIMEUNIT_MS);
+    if (Result != FMOD_OK)
+    {
+        return 0;
+    }
+
+    return LengthMs;
+}
+
 bool FSoundManager::IsPlaying(FSoundHandle Handle) const
 {
     if (!Handle.IsValid())

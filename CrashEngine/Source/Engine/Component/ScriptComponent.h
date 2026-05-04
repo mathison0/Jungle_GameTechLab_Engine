@@ -45,6 +45,7 @@ private:
     void SyncScriptPropertiesWithAsset();
     bool CallLuaFunction(const char* Name);
     bool CallLuaFunction(const char* Name, const sol::variadic_args* Args);
+    bool CallLuaFunctionWithCollider(const char* Name, class UCollider2DComponent* OtherCollider);
     void CallLuaTick(float DeltaTime);
 
     void BindFunctions();

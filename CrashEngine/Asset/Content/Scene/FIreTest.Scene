@@ -389,11 +389,65 @@
       "Tag" : "Default",
       "bVisible" : true
     }, {
-      "ClassName" : "ATankActor",
-      "Name" : "ATankActor_1",
+      "ClassName" : "AActor",
+      "Name" : "InfiniteFloor",
       "NonSceneComponents" : [{
           "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_5",
+          "Name" : "UScriptComponent_398",
+          "Properties" : {
+            "Lua.GridSize" : 7,
+            "Lua.MaterialPath" : "Asset/Content/Materials/FloorMaterial.json",
+            "Lua.MeshPath" : "Asset/Content/Models/_Basic/Quad.OBJ",
+            "Lua.Spacing" : 25.000000,
+            "Lua.TargetTag" : "Player",
+            "Lua.TileClassName" : "AStaticMeshActor",
+            "Lua.TileScale" : [25.000000, 25.000000, 1.000000],
+            "Script" : "InfiniteFloor.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_253",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 62",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_14",
+        "Properties" : {
+          "Location" : [0.295440, -25.808002, 36.934158],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
+    }, {
+      "ClassName" : "ATankActor",
+      "Name" : "ATankActor_2",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_94",
           "Properties" : {
             "Lua.BaseFriction" : 0.100000,
             "Lua.DriftFactor" : 0.300000,
@@ -413,7 +467,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_8",
+            "Name" : "UUUIDTextRenderComponent_110",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -425,12 +479,35 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 56",
+              "Text" : "UUID : 527",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UCircleCollider2DComponent",
+            "Name" : "Hitbox",
+            "Properties" : {
+              "CircleRadius" : 1.030000,
+              "CollisionChannel" : 9,
+              "DebugPlaneOffsetZ" : 0.000000,
+              "DrawOnlyIfSelected" : true,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : true,
+              "Is Editor Helper" : false,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Shape Color" : [0.000000, 0.862745, 1.000000, 1.000000],
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : true,
               "bTickEnable" : true
             }
           }, {
@@ -472,12 +549,80 @@
               "Location" : [0.000000, 0.000000, 0.000000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
               "Scale" : [0.500000, 0.500000, 0.500000],
               "Static Mesh" : "Asset/Content/Models/Tank/Tank_body.obj",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : true,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UTextureUIComponent",
+            "Name" : "PlayerHealthBar_Back",
+            "Properties" : {
+              "Anchor Max" : [0.000000, 0.000000],
+              "Anchor Min" : [0.000000, 0.000000],
+              "Anchored Position" : [0.000000, 0.000000],
+              "Billboard" : true,
+              "Geometry Type" : 0,
+              "Hit Test Visible" : false,
+              "Layer" : 100,
+              "Location" : [0.000000, 0.000000, 1.800000],
+              "Pivot" : [0.500000, 0.500000],
+              "Render Space" : 1,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation Degrees" : 0.000000,
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Size Delta" : [100.000000, 100.000000],
+              "Sprite Animation" : false,
+              "Sprite Columns" : 1,
+              "Sprite FPS" : 12.000000,
+              "Sprite Frame" : 0,
+              "Sprite Loop" : true,
+              "Sprite Playing" : true,
+              "Sprite Rows" : 1,
+              "SubUV Rect" : [0.000000, 0.000000, 1.000000, 1.000000],
+              "Texture Path" : "",
+              "Tint Color" : [0.040000, 0.040000, 0.040000, 0.780000],
+              "Visible" : true,
+              "World Size" : [2.160000, 0.240000],
+              "Z Order" : 0,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UTextureUIComponent",
+            "Name" : "PlayerHealthBar_Fill",
+            "Properties" : {
+              "Anchor Max" : [0.000000, 0.000000],
+              "Anchor Min" : [0.000000, 0.000000],
+              "Anchored Position" : [0.000000, 0.000000],
+              "Billboard" : true,
+              "Geometry Type" : 0,
+              "Hit Test Visible" : false,
+              "Layer" : 100,
+              "Location" : [0.000000, 0.000000, 1.800000],
+              "Pivot" : [0.500000, 0.500000],
+              "Render Space" : 1,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation Degrees" : 0.000000,
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Size Delta" : [100.000000, 100.000000],
+              "Sprite Animation" : false,
+              "Sprite Columns" : 1,
+              "Sprite FPS" : 12.000000,
+              "Sprite Frame" : 0,
+              "Sprite Loop" : true,
+              "Sprite Playing" : true,
+              "Sprite Rows" : 1,
+              "SubUV Rect" : [0.000000, 0.000000, 1.000000, 1.000000],
+              "Texture Path" : "",
+              "Tint Color" : [0.180000, 0.950000, 0.280000, 0.950000],
+              "Visible" : true,
+              "World Size" : [2.000000, 0.160000],
+              "Z Order" : 1,
               "bTickEnable" : true
             }
           }],
@@ -504,60 +649,6 @@
         }
       },
       "Tag" : "Player",
-      "bVisible" : true
-    }, {
-      "ClassName" : "AActor",
-      "Name" : "InfiniteFloor",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_398",
-          "Properties" : {
-            "Lua.GridSize" : 7,
-            "Lua.MaterialPath" : "Asset/Content/Materials/FloorMaterial.json",
-            "Lua.MeshPath" : "Asset/Content/Models/_Basic/Quad.OBJ",
-            "Lua.Spacing" : 25.000000,
-            "Lua.TargetTag" : "Player",
-            "Lua.TileClassName" : "AStaticMeshActor",
-            "Lua.TileScale" : [25.000000, 25.000000, 1.000000],
-            "Script" : "InfiniteFloor.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_253",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Mobility" : 1,
-              "Receives Decals" : true,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 65",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "USceneComponent",
-        "Name" : "USceneComponent_14",
-        "Properties" : {
-          "Location" : [0.295440, -25.808002, 36.934158],
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "bTickEnable" : true
-        }
-      },
-      "Tag" : "Default",
       "bVisible" : true
     }, {
       "ClassName" : "AExpBarActor",

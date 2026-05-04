@@ -1,8 +1,8 @@
 ---@class TankScript : ScriptComponent
 local Script = {
     properties = {
-        MoveSpeed = { type = "float", default = 1.0 },
-        RotateSpeed = { type = "float", default = 1.0 },
+        MoveSpeed = { type = "float", default = 11.7 },
+        RotateSpeed = { type = "float", default = 60.0 },
         BaseFriction = { type = "float", default = 0.1 },
         DriftFactor = { type = "float", default = 0.3 },
         DriftSmoothness = { type = "float", default = 0.1 },

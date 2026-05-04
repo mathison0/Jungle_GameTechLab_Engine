@@ -3,12 +3,12 @@
   "DepthStencilState" : "Default",
   "Parameters" : {
     "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-    "SpecularPower" : 250.000000,
+    "SpecularPower" : 450.088165,
     "SpecularStrength" : 0.500000
   },
-  "PathFileName" : "Asset/Content/Materials/Tank_body.json",
+  "PathFileName" : "Asset/Content/Materials/Heli/textures/glass.json",
   "RasterizerState" : "SolidBackCull",
   "Textures" : {
-    "DiffuseTexture" : "Asset/Downloads/stylized-tank/source/stylized tank/tankdiffuse.png"
+    "DiffuseTexture" : "Asset/Content/Models/Heli/textures/hawkAlbedoc.png"
   }
 }

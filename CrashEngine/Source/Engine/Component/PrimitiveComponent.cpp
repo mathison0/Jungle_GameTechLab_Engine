@@ -57,7 +57,8 @@ constexpr FEnumPropertyOption GCollisionChannels[] = {
     { "Pickup", static_cast<int32_t>(ECollisionChannel::Pickup) },
     { "Trigger", static_cast<int32_t>(ECollisionChannel::Trigger) },
     { "FlyingEnemy", static_cast<int32_t>(ECollisionChannel::FlyingEnemy) },
-    { "PickupSensor", static_cast<int32_t>(ECollisionChannel::PickupSensor) }
+    { "PickupSensor", static_cast<int32_t>(ECollisionChannel::PickupSensor) },
+    { "PlayerHitbox", static_cast<int32_t>(ECollisionChannel::PlayerHitbox) }
 };
 
 constexpr FEnumPropertyMeta GCollisionChannelMeta = {
