@@ -1,6 +1,7 @@
 ﻿#include "Game/Input/GamePlayerController.h"
 
 #include "Component/CameraComponent.h"
+#include "Component/LuaScriptComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/Physics/PhysicsHandleComponent.h"
 #include "Component/PrimitiveComponent.h"
@@ -9,6 +10,7 @@
 #include "Component/StaticMeshComponent.h"
 #include "Core/Logger.h"
 #include "Engine/Runtime/SceneView.h"
+#include "Engine/Geometry/Ray.h"
 #include "Engine/Viewport/ViewportCamera.h"
 #include "Game/Systems/CleaningToolAnimator.h"
 #include "Game/Systems/CleaningToolSystem.h"
@@ -227,6 +229,51 @@ namespace
 		}
 
 		return "";
+	}
+
+	bool TryGetDecisionBoxTypeFromActor(const AActor* Actor, EItemDecisionBoxType& OutBoxType)
+	{
+		if (Actor == nullptr)
+		{
+			return false;
+		}
+
+		const FString ActorName = NormalizeToolMatchKey(Actor->GetName());
+		if (ActorName.find("keepbox") != FString::npos || ActorName.find("keep_box") != FString::npos)
+		{
+			OutBoxType = EItemDecisionBoxType::KeepBox;
+			return true;
+		}
+
+		if (ActorName.find("discardbox") != FString::npos || ActorName.find("discard_box") != FString::npos)
+		{
+			OutBoxType = EItemDecisionBoxType::DiscardBox;
+			return true;
+		}
+
+		for (UActorComponent* Component : Actor->GetComponents())
+		{
+			const ULuaScriptComponent* ScriptComponent = Cast<ULuaScriptComponent>(Component);
+			if (ScriptComponent == nullptr)
+			{
+				continue;
+			}
+
+			const FString ScriptPath = NormalizeToolMatchKey(ScriptComponent->GetScriptPath());
+			if (ScriptPath.find("keepbox.lua") != FString::npos)
+			{
+				OutBoxType = EItemDecisionBoxType::KeepBox;
+				return true;
+			}
+
+			if (ScriptPath.find("discardbox.lua") != FString::npos)
+			{
+				OutBoxType = EItemDecisionBoxType::DiscardBox;
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 FVector GetCleaningToolAnimationDirection(const FCleaningToolData& ToolData)
@@ -510,6 +557,7 @@ void FGamePlayerController::SetWorld(UWorld* InWorld)
     Camera = nullptr;
     CharacterMovement = nullptr;
     HoveredPickableActor = nullptr;
+    HoveredDecisionBoxActor = nullptr;
     InitialRigidBodyRotations.clear();
     bInitialRigidBodyRotationsCaptured = false;
     DestroyPhysicsHandle();
@@ -769,6 +817,11 @@ void FGamePlayerController::TogglePickup()
 
     if (Handle->IsHolding())
     {
+        if (TryPlaceHeldItemInHoveredDecisionBox())
+        {
+            return;
+        }
+
         UE_LOG("[CleaningTool] Releasing held object. currentToolId=%s", GGameContext::Get().GetCurrentToolId().c_str());
         EndCleaningUse();
         EndCleaningToolViewModel();
@@ -822,6 +875,70 @@ void FGamePlayerController::TogglePickup()
             Handle->ResetHoldDistance();
         }
     }
+}
+
+bool FGamePlayerController::TryPlaceHeldItemInHoveredDecisionBox()
+{
+	UPhysicsHandleComponent* Handle = GetPhysicsHandle();
+	if (World == nullptr || Handle == nullptr || !Handle->IsHolding())
+	{
+		return false;
+	}
+
+	if (!GGameContext::Get().GetCurrentToolId().empty())
+	{
+		return false;
+	}
+
+	URigidBodyComponent* HeldBody = Handle->GetHeldBody();
+	AActor* HeldActor = HeldBody ? HeldBody->GetOwner() : nullptr;
+	if (HeldActor == nullptr)
+	{
+		return false;
+	}
+
+	const FString ItemId = FindItemIdFromActor(HeldActor);
+	if (ItemId.empty())
+	{
+		return false;
+	}
+
+	EItemDecisionBoxType BoxType = EItemDecisionBoxType::KeepBox;
+	AActor* DecisionBoxActor = FindHoveredDecisionBoxActor(BoxType);
+	if (DecisionBoxActor == nullptr)
+	{
+		return false;
+	}
+
+	if (!FItemSystem::Get().PlaceItemInDecisionBox(ItemId, BoxType))
+	{
+		return false;
+	}
+
+	if (const FGameItemData* ItemData = FItemSystem::Get().FindItemData(ItemId))
+	{
+		GameUISystem::Get().SetCurrentItem(ItemData->DisplayName.c_str(), FItemSystem::Get().GetDescriptionForCurrentState(ItemId).c_str());
+	}
+	GameUISystem::Get().SetItemCount(static_cast<int>(GGameContext::Get().GetResolvedItemCount()));
+	GameUISystem::Get().HideItemInspect();
+
+	EndCleaningUse();
+	EndCleaningToolViewModel();
+	FCleaningToolAnimator::Get().Reset();
+	GGameContext::Get().SetCurrentTool("");
+	Handle->Release();
+	Handle->ResetHoldDistance();
+
+	World->DestroyActor(HeldActor);
+	HoveredPickableActor = nullptr;
+	HoveredDecisionBoxActor = nullptr;
+	GameUISystem::Get().SetInteractionHint(EInteractionHintType::None);
+
+	UE_LOG("[ItemDecisionBox] Placed item=%s into box=%s actor=%s",
+		   ItemId.c_str(),
+		   BoxType == EItemDecisionBoxType::KeepBox ? "KeepBox" : "DiscardBox",
+		   DecisionBoxActor->GetFName().ToString().c_str());
+	return true;
 }
 
 void FGamePlayerController::TryInspectHoveredItem()
@@ -889,6 +1006,7 @@ void FGamePlayerController::DestroyPhysicsHandle()
         PhysicsHandle = nullptr;
     }
     HoveredPickableActor = nullptr;
+    HoveredDecisionBoxActor = nullptr;
 }
 
 void FGamePlayerController::RefreshPawnComponents()
@@ -932,6 +1050,7 @@ void FGamePlayerController::RefreshPawnComponents()
 void FGamePlayerController::UpdateHoveredPickableActor()
 {
 	HoveredPickableActor = nullptr;
+	HoveredDecisionBoxActor = nullptr;
 	GameUISystem::Get().SetInteractionHint(EInteractionHintType::None);
 
     if (World == nullptr || !IsInputEnabled())
@@ -954,7 +1073,19 @@ void FGamePlayerController::UpdateHoveredPickableActor()
 			{
 				if (GGameContext::Get().GetCurrentToolId().empty() && !FindItemIdFromActor(HeldActor).empty())
 				{
-					HintType = EInteractionHintType::DropWithInspect;
+					EItemDecisionBoxType BoxType = EItemDecisionBoxType::KeepBox;
+					HoveredDecisionBoxActor = FindHoveredDecisionBoxActor(BoxType);
+					if (HoveredDecisionBoxActor != nullptr)
+					{
+						HoveredDecisionBoxType = BoxType;
+						HintType = BoxType == EItemDecisionBoxType::KeepBox
+							? EInteractionHintType::Keep
+							: EInteractionHintType::Discard;
+					}
+					else
+					{
+						HintType = EInteractionHintType::DropWithInspect;
+					}
 				}
 			}
 		}
@@ -974,6 +1105,45 @@ void FGamePlayerController::UpdateHoveredPickableActor()
 		HoveredPickableActor = Body->GetOwner();
 		GameUISystem::Get().SetInteractionHint(EInteractionHintType::Pickup);
 	}
+}
+
+AActor* FGamePlayerController::FindHoveredDecisionBoxActor(EItemDecisionBoxType& OutBoxType) const
+{
+	if (World == nullptr)
+	{
+		return nullptr;
+	}
+
+	FVector CameraLocation;
+	FVector CameraForward;
+	if (!GetActiveCameraFrame(CameraLocation, CameraForward))
+	{
+		return nullptr;
+	}
+
+	const AActor* IgnoredActor = nullptr;
+	if (PhysicsHandle != nullptr && PhysicsHandle->IsHolding())
+	{
+		if (URigidBodyComponent* HeldBody = PhysicsHandle->GetHeldBody())
+		{
+			IgnoredActor = HeldBody->GetOwner();
+		}
+	}
+
+	FHitResult Hit;
+	constexpr float DecisionBoxTraceDistance = 6.0f;
+	if (!World->LineTraceSingle(FRay(CameraLocation, CameraForward), DecisionBoxTraceDistance, Hit, IgnoredActor) || !Hit.IsValid())
+	{
+		return nullptr;
+	}
+
+	AActor* HitActor = Hit.HitComponent ? Hit.HitComponent->GetOwner() : nullptr;
+	if (!TryGetDecisionBoxTypeFromActor(HitActor, OutBoxType))
+	{
+		return nullptr;
+	}
+
+	return HitActor;
 }
 
 bool FGamePlayerController::GetActiveCameraFrame(FVector& OutLocation, FVector& OutForward) const

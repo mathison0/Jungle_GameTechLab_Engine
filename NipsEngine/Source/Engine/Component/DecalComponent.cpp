@@ -195,7 +195,8 @@ void UDecalComponent::TickFadeOut()
 	float Alpha = 1.0f - (FadeOutTime / FadeDuration);
 	DecalColor.A = MathUtil::Clamp(Alpha, 0.0f, 1.0f);
 
-	if (FadeOutLifeTime >= FadeStartDelay + FadeDuration)
+	// 페이드 아웃이 거의 완료되었거나(Alpha < 0.05), 시간이 다 되면 즉시 삭제
+	if (DecalColor.A < 0.05f || FadeOutLifeTime >= FadeStartDelay + FadeDuration)
 	{
 		SetActive(false);
 		if (bDestroyOwnerAfterFade && GetOwner())
@@ -285,6 +286,15 @@ void UDecalComponent::PaintMask(FVector2 UV, float Radius, uint8 Value)
 
                 bMaskDirty = true;
 			}
+		}
+	}
+
+	// 청소율 체크하여 자동 페이드 아웃 트리거
+	if (bMaskDirty && FadeDuration <= 0.0f)
+	{
+		if (GetCleanPercentage() > 0.95f)
+		{
+			SetFadeOut(0.0f, 1.5f, true);
 		}
 	}
 }

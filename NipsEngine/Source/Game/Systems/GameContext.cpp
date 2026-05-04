@@ -120,7 +120,7 @@ int32 GGameContext::GetRemainingDecalCount() const
 
 	for (const UDecalComponent* Decal : MapDecals)
 	{
-		if (!IsLiveObjectPointer(Decal))
+		if (!UObject::IsValid(Decal))
 		{
 			continue;
 		}

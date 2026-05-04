@@ -361,34 +361,32 @@ body {
 }
 
 .pause-button {
-	position: absolute;
-	left: 48px;
-	width: 264px;
-	height: 42px;
-	padding-top: 10px;
-	text-align: center;
-	font-size: 18px;
-	color: #ededed;
-	background-color: rgba(38, 40, 45, 255);
-	border-width: 1px;
-	border-color: rgba(115, 120, 130, 200);
+    position: absolute;
+    left: 80px; 
+    width: 200px;
+    height: 36px;
+    padding-top: 10px;
+    text-align: center;
+    font-size: 20px; 
+    font-weight: bold; 
+    color: #ededed;
+    background-color: rgba(38, 40, 45, 255);
+    border-width: 1px;
+    border-color: rgba(115, 120, 130, 200);
 }
 
 #retry-button {
-	top: 218px;
-	padding: 8px;
+    top: 218px;
 }
 
 #pause-exit-button {
-	top: 276px;
-	padding: 8px;
+    top: 276px;
 }
 
 .pause-button:hover {
-	background-color: rgba(58, 64, 74, 255);
-	color: #ffdc64;
+    background-color: rgba(58, 64, 74, 255);
+    color: #ffdc64;
 }
-
 #dialogue-panel {
 	position: absolute;
 	left: 10%;
