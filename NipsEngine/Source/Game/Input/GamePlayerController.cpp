@@ -229,9 +229,6 @@ namespace
 		return "";
 	}
 
-		return "";
-	}
-
 FVector GetCleaningToolAnimationDirection(const FCleaningToolData& ToolData)
 {
     if (!ToolData.HandleCameraLocalDirection.IsNearlyZero())
