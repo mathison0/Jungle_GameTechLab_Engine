@@ -152,19 +152,22 @@ WeaponDefs.Aura = {
     MaxLevel = 3,
     Levels = {
         [1] = {
-            Radius = 3.0,
-            Damage = 2,
-            TickInterval = 1.0,
+            Damage = 50,
+            TickInterval = 0.5,
+            Radius = 4.0,
+            RotateSpeed = 90.0,
         },
         [2] = {
-            Radius = 4.0,
-            Damage = 4,
-            TickInterval = 0.8,
+            Damage = 50,
+            TickInterval = 0.4,
+            Radius = 5.0,
+            RotateSpeed = 120.0,
         },
         [3] = {
-            Radius = 5.5,
-            Damage = 7,
-            TickInterval = 0.5,
+            Damage = 50,
+            TickInterval = 0.3,
+            Radius = 6.0,
+            RotateSpeed = 180.0,
         },
     },
 }

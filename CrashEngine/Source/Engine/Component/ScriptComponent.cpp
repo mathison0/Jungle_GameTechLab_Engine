@@ -552,7 +552,6 @@ void UScriptComponent::BindFunctions()
             return FLuaComponentHandle();
         });
 
-	//현재는 이름기반, 태그 추가시 변경
     BindFunction("QueryActorByTagClosest",
         [this](const sol::variadic_args& Args) -> FLuaActorHandle
         {
@@ -596,4 +595,62 @@ void UScriptComponent::BindFunctions()
 
             return FLuaActorHandle(BestActor);
         });
+
+	BindFunction("QueryActorsByTagInRadius",
+		[this](sol::this_state LuaState, const sol::variadic_args& Args) -> sol::table
+			{
+				sol::state_view Lua(LuaState);
+                sol::table Result = Lua.create_table();
+
+                TArray<FString> Strings;
+                CollectStringArguments(Args, Strings);
+                if (Strings.empty())
+                {
+					return Result;
+                }
+
+                FVector Position;
+                float Radius = 0.0f;
+
+                AActor* OwnerActor = GetOwner();
+                UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+
+                if (!World ||
+					!ReadFirstVec3Argument(Args, Position) ||
+					!ReadFirstFloatArgument(Args, Radius) ||
+                    Radius < 0.0f)
+                    {
+						return Result;
+                    }
+
+					const FString& Tag = Strings[0];
+                    const FName TargetTag(Tag);
+
+                    const float RadiusSquared = Radius * Radius;
+
+                    int32 LuaIndex = 1;
+
+                    for (AActor* Actor : World->GetActors())
+                    {
+						if (!Actor ||
+							Actor->GetActorTag() != TargetTag ||
+                            !Actor->IsVisible())
+							{
+								continue;
+							}
+
+                        const float DistanceSquared =
+							FVector::DistSquared(Actor->GetActorLocation(), Position);
+
+                        if (DistanceSquared > RadiusSquared)
+                        {
+							continue;
+                        }
+
+                        Result[LuaIndex++] = FLuaActorHandle(Actor);
+                    }
+
+                    return Result;
+				});
+
 }

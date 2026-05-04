@@ -1,4 +1,4 @@
-local Co = require("LuaCoroutine")
+local DamageSystem = require("Core.DamageSystem")
 local GameplayPause = require("GameplayPause")
 local WeaponDefs = require("WeaponDefs")
 
@@ -7,12 +7,21 @@ AuraWeapon.__index = AuraWeapon
 
 function AuraWeapon.New(owner)
     local self = setmetatable({}, AuraWeapon)
+
     self.Owner = owner
     self.Id = "Aura"
+    self.Def = WeaponDefs.Aura
     self.Level = 1
-    self.Data = WeaponDefs.Aura.Levels[self.Level]
-    self.Coroutine = nil
+    self.Data = self.Def.Levels[1]
+
     self.IsRunning = false
+
+    self.DamageCoroutine = nil
+    self.VisualCoroutine = nil
+
+    self.Visual = nil
+    self.CurrentAngle = 0.0
+
     return self
 end
 
@@ -22,59 +31,164 @@ function AuraWeapon:Start()
     end
 
     self.IsRunning = true
+    self:RefreshVisual()
 
-    if self.Owner ~= nil and self.Owner.StartCoroutine ~= nil then
-        self.Coroutine = self.Owner.StartCoroutine(function()
-            self:DamageLoop()
-        end)
-    else
-        Log("StartCoroutine is nil")
+    if self.Owner == nil or self.Owner.StartCoroutine == nil then
+        Log("[Aura] StartCoroutine is nil")
+        self.IsRunning = false
+        return
     end
+
+    self.DamageCoroutine = self.Owner.StartCoroutine(function()
+        self:DamageLoop()
+    end)
+
+    self.VisualCoroutine = self.Owner.StartCoroutine(function()
+        self:VisualLoop()
+    end)
+
+    Log("[Aura] started")
 end
 
 function AuraWeapon:Stop()
     self.IsRunning = false
 
-    if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil and self.Coroutine ~= nil then
-        self.Owner.StopCoroutine(self.Coroutine)
+    if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil then
+        if self.DamageCoroutine ~= nil then
+            self.Owner.StopCoroutine(self.DamageCoroutine)
+        end
+
+        if self.VisualCoroutine ~= nil then
+            self.Owner.StopCoroutine(self.VisualCoroutine)
+        end
     end
 
-    self.Coroutine = nil
+    self.DamageCoroutine = nil
+    self.VisualCoroutine = nil
 end
 
 function AuraWeapon:DamageLoop()
     while self.IsRunning do
         if not GameplayPause.IsPaused() then
-            local ownerActor = nil
-            if self.Owner ~= nil and self.Owner.GetActor ~= nil then
-                ownerActor = self.Owner.GetActor()
-            end
-
-            if ownerActor ~= nil and ownerActor:IsValid() and self.Owner.ApplyAreaDamage ~= nil then
-                self.Owner.ApplyAreaDamage("Aura", self.Data, ownerActor:GetLocation(), self.Data.Radius or 0.0)
-            else
-                Log("Aura tick. radius = " .. tostring(self.Data.Radius))
-            end
+            self:DamageTick()
         end
 
-        GameplayPause.Wait(self.Data.TickInterval)
+        GameplayPause.Wait(self.Data.TickInterval or 0.5)
+    end
+end
+
+function AuraWeapon:DamageTick()
+    local ownerActor = self:GetOwnerActor()
+    if ownerActor == nil or not ownerActor:IsValid() then
+        return
+    end
+
+    if self.Owner == nil or self.Owner.QueryActorsByTagInRadius == nil then
+        Log("[Aura] QueryActorsByTagInRadius is nil")
+        return
+    end
+
+    local center = ownerActor:GetLocation()
+    local radius = self.Data.Radius or 4.0
+    local damage = self.Data.Damage or 1.0
+
+    local enemies = self.Owner.QueryActorsByTagInRadius("Enemy", center, radius)
+    if enemies == nil then
+        return
+    end
+
+    for _, enemy in pairs(enemies) do
+        if enemy ~= nil and enemy:IsValid() then
+            local success = DamageSystem.ApplyDamage(enemy, damage, ownerActor)
+
+            if not success then
+                Log("[Aura] Damage failed")
+            end
+        end
     end
 end
 
 function AuraWeapon:Upgrade()
     if self:IsMaxLevel() then
-        Log("Aura is max level")
+        Log("[Aura] max level")
         return false
     end
 
     self.Level = self.Level + 1
-    self.Data = WeaponDefs.Aura.Levels[self.Level]
-    Log("Aura upgraded. level = " .. tostring(self.Level) .. ", radius = " .. tostring(self.Data.Radius))
+    self.Data = self.Def.Levels[self.Level]
+
+    self:RefreshVisual()
+
+    Log("[Aura] upgraded to level " .. tostring(self.Level))
+
     return true
 end
 
 function AuraWeapon:IsMaxLevel()
-    return self.Level >= WeaponDefs.Aura.MaxLevel
+    return self.Level >= self.Def.MaxLevel
+end
+
+function AuraWeapon:OnVisualApplied()
+    self:RefreshVisual()
+end
+
+function AuraWeapon:RefreshVisual()
+    if self.Owner == nil or self.Owner.GetComponentByName == nil then
+        return
+    end
+
+    self.Visual = self.Owner.GetComponentByName(
+        "UDecalComponent",
+        "Visual_Aura_0"
+    )
+
+    if self.Visual == nil or not self.Visual:IsValid() then
+        Log("[Aura] Visual_Aura_0 not found")
+    end
+end
+
+function AuraWeapon:GetOwnerActor()
+    if self.Owner ~= nil and self.Owner.GetActor ~= nil then
+        return self.Owner.GetActor()
+    end
+
+    return nil
+end
+
+function AuraWeapon:VisualLoop()
+    while self.IsRunning do
+        local dt, paused = GameplayPause.WaitNextFrame()
+        dt = dt or 0.0
+
+        if self.Visual == nil or not self.Visual:IsValid() then
+            self:RefreshVisual()
+        end
+
+        if self.Visual ~= nil and self.Visual:IsValid() then
+            local ownerActor = self:GetOwnerActor()
+            if ownerActor ~= nil and ownerActor:IsValid() and self.Visual.SetWorldLocation ~= nil then
+                local location = ownerActor:GetLocation()
+                location[3] = (location[3] or location.z or 0.0) + 0.1
+                location.z = location[3]
+                self.Visual:SetWorldLocation(location)
+            end
+
+            if not paused then
+                local speed = self.Data.RotateSpeed or 90.0
+                self.CurrentAngle = self.CurrentAngle + speed * dt
+
+                if self.CurrentAngle >= 360.0 then
+                    self.CurrentAngle = self.CurrentAngle - 360.0
+                end
+            end
+
+            if self.Visual.SetRelativeRotation ~= nil then
+                self.Visual:SetRelativeRotation({ 0.0, 90.0, self.CurrentAngle })
+            elseif self.Visual.SetRotation ~= nil then
+                self.Visual:SetRotation({ 0.0, 90.0, self.CurrentAngle })
+            end
+        end
+    end
 end
 
 return AuraWeapon

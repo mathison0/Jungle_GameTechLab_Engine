@@ -211,7 +211,7 @@
           "ClassName" : "UScriptComponent",
           "Name" : "UScriptComponent_15",
           "Properties" : {
-            "Lua.EnemyClassName" : "AEnemyBaseActor",
+            "Lua.EnemyClassName" : "AGroundEnemyActor",
             "Lua.FlyingEnemyClassName" : "AFlyingWaveEnemyActor",
             "Lua.FlyingWaveCount" : 12,
             "Lua.FlyingWaveInterval" : 10.000000,
