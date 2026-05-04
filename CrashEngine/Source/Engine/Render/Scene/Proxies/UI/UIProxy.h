@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/ResourceTypes.h"
 #include "Render/Scene/Proxies/SceneProxy.h"
 #include "UI/UIComponent.h"
 
@@ -22,6 +23,7 @@ public:
 
     EUIRenderSpace RenderSpace = EUIRenderSpace::ScreenSpace;
     EUIGeometryType GeometryType = EUIGeometryType::Quad;
+    EUIElementType ElementType = EUIElementType::Image;
 
     FVector2 AnchorMin = { 0.0f, 0.0f };
     FVector2 AnchorMax = { 0.0f, 0.0f };
@@ -43,4 +45,13 @@ public:
     UTexture2D* Texture = nullptr;
     ID3D11ShaderResourceView* TextureSRV = nullptr;
     bool bUseTexture = false;
+
+    FString Text;
+    FName FontName = FName("Default");
+    const FFontResource* FontResource = nullptr;
+    float FontSize = 1.0f;
+    float TextLetterSpacing = 0.0f;
+    float TextLineSpacing = 0.0f;
+    EUITextHAlign TextHAlign = EUITextHAlign::Left;
+    EUITextVAlign TextVAlign = EUITextVAlign::Top;
 };

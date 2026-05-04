@@ -8,6 +8,8 @@
 #include "Object/Object.h"
 #include "Scripting/LuaScriptTypes.h"
 #include "UI/ButtonComponent.h"
+#include "UI/TextUIComponent.h"
+#include "UI/TextureUIComponent.h"
 #include "UI/UIComponent.h"
 
 namespace
@@ -226,7 +228,7 @@ bool FLuaComponentHandle::IsUIComponent() const
 
 bool FLuaComponentHandle::SetUITexturePath(const FString& TexturePath) const
 {
-    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    UTextureUIComponent* UI = Cast<UTextureUIComponent>(Resolve());
     if (!UI) return false;
     UI->SetTexturePath(TexturePath);
     return true;
@@ -294,6 +296,41 @@ bool FLuaComponentHandle::SetUIVisibility(bool bVisible) const
     UUIComponent* UI = Cast<UUIComponent>(Resolve());
     if (!UI) return false;
     UI->SetVisibility(bVisible);
+    return true;
+}
+
+bool FLuaComponentHandle::IsUIText() const
+{
+    return Cast<UTextUIComponent>(Resolve()) != nullptr;
+}
+
+FString FLuaComponentHandle::GetUIText() const
+{
+    UTextUIComponent* TextUI = Cast<UTextUIComponent>(Resolve());
+    return TextUI ? TextUI->GetText() : "";
+}
+
+bool FLuaComponentHandle::SetUIText(const FString& Text) const
+{
+    UTextUIComponent* TextUI = Cast<UTextUIComponent>(Resolve());
+    if (!TextUI) return false;
+    TextUI->SetText(Text);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIFont(const FString& FontName) const
+{
+    UTextUIComponent* TextUI = Cast<UTextUIComponent>(Resolve());
+    if (!TextUI) return false;
+    TextUI->SetFont(FName(FontName));
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIFontSize(float FontSize) const
+{
+    UTextUIComponent* TextUI = Cast<UTextUIComponent>(Resolve());
+    if (!TextUI) return false;
+    TextUI->SetFontSize(FontSize);
     return true;
 }
 
@@ -376,6 +413,11 @@ namespace LuaBinding
             "SetUIRotationDegrees", &FLuaComponentHandle::SetUIRotationDegrees,
             "SetUITint", &FLuaComponentHandle::SetUITint,
             "SetUIVisibility", &FLuaComponentHandle::SetUIVisibility,
+            "IsUIText", &FLuaComponentHandle::IsUIText,
+            "GetUIText", &FLuaComponentHandle::GetUIText,
+            "SetUIText", &FLuaComponentHandle::SetUIText,
+            "SetUIFont", &FLuaComponentHandle::SetUIFont,
+            "SetUIFontSize", &FLuaComponentHandle::SetUIFontSize,
 
             "IsUIButton", &FLuaComponentHandle::IsUIButton,
             "IsButtonInteractable", &FLuaComponentHandle::IsButtonInteractable,

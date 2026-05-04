@@ -6,6 +6,47 @@
 #include <filesystem>
 #include <system_error>
 
+namespace
+{
+bool IsCrashEngineRoot(const std::filesystem::path& Path)
+{
+    std::error_code Ec;
+    return std::filesystem::exists(Path / L"Asset", Ec)
+        && std::filesystem::exists(Path / L"Shaders", Ec)
+        && std::filesystem::exists(Path / L"Settings", Ec);
+}
+
+std::filesystem::path FindCrashEngineRoot(std::filesystem::path Start)
+{
+    std::error_code Ec;
+    if (!std::filesystem::is_directory(Start, Ec))
+    {
+        Start = Start.parent_path();
+    }
+
+    Start = std::filesystem::absolute(Start, Ec).lexically_normal();
+    if (Ec)
+    {
+        return {};
+    }
+
+    for (std::filesystem::path Candidate = Start; !Candidate.empty(); Candidate = Candidate.parent_path())
+    {
+        if (IsCrashEngineRoot(Candidate))
+        {
+            return Candidate.lexically_normal();
+        }
+
+        if (Candidate == Candidate.parent_path())
+        {
+            break;
+        }
+    }
+
+    return {};
+}
+} // namespace
+
 std::wstring FPaths::RootDir()
 {
     static std::wstring Cached;
@@ -15,14 +56,17 @@ std::wstring FPaths::RootDir()
         GetModuleFileNameW(nullptr, Buffer, MAX_PATH);
         const std::filesystem::path ExeDir = std::filesystem::path(Buffer).parent_path();
 
-        if (std::filesystem::exists(ExeDir / L"Shaders"))
+        std::filesystem::path Root = FindCrashEngineRoot(ExeDir);
+        if (Root.empty())
         {
-            Cached = (ExeDir.lexically_normal().wstring() + L"\\");
+            Root = FindCrashEngineRoot(std::filesystem::current_path());
         }
-        else
+        if (Root.empty())
         {
-            Cached = (std::filesystem::current_path().lexically_normal().wstring() + L"\\");
+            Root = std::filesystem::current_path().lexically_normal();
         }
+
+        Cached = Root.lexically_normal().wstring() + L"\\";
     }
     return Cached;
 }

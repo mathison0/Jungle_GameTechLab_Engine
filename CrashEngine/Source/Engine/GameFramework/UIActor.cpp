@@ -1,13 +1,13 @@
 #include "GameFramework/UIActor.h"
 
 #include "Object/ObjectFactory.h"
-#include "UI/UIComponent.h"
+#include "UI/TextureUIComponent.h"
 
 IMPLEMENT_CLASS(AUIActor, AActor)
 
 void AUIActor::InitDefaultComponents()
 {
-    UIComponent = AddComponent<UUIComponent>();
+    UIComponent = AddComponent<UTextureUIComponent>();
     if (!UIComponent)
     {
         return;

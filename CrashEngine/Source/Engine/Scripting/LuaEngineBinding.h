@@ -119,6 +119,12 @@ struct FLuaComponentHandle
 	bool SetUITint(float R, float G, float B, float A) const;
 	bool SetUIVisibility(bool bVisible) const;
 
+	bool IsUIText() const;
+	FString GetUIText() const;
+	bool SetUIText(const FString& Text) const;
+	bool SetUIFont(const FString& FontName) const;
+	bool SetUIFontSize(float FontSize) const;
+
 	bool IsUIButton() const;
 	bool IsButtonInteractable() const;
 	bool SetButtonInteractable(bool bInteractable) const;

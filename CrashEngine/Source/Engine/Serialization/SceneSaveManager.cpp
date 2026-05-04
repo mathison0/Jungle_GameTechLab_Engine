@@ -542,6 +542,17 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 USceneComponent* FSceneSaveManager::DeserializeSceneComponentTree(json::JSON& Node, AActor* Owner)
 {
     string ClassName = Node[SceneKeys::ClassName].ToString();
+    if (ClassName == "UUIComponent" && Node.hasKey(SceneKeys::Properties))
+    {
+        json::JSON& PropsJSON = Node[SceneKeys::Properties];
+        if (PropsJSON.hasKey("Texture Path") ||
+            PropsJSON.hasKey("SubUV Rect") ||
+            PropsJSON.hasKey("Sprite Columns"))
+        {
+            ClassName = "UTextureUIComponent";
+        }
+    }
+
     UObject* Obj = FObjectFactory::Get().Create(ClassName, Owner);
     if (!Obj || !Obj->IsA<USceneComponent>())
         return nullptr;

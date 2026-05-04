@@ -34,7 +34,19 @@ float4 PS(PS_Input_UI input) : SV_TARGET
 {
     if (UIFlags.x > 0.5f)
     {
-        return UITexture.Sample(LinearClampSampler, input.uv) * input.color;
+        if (UIFlags.y > 0.5f)
+        {
+            float4 texColor = UITexture.Sample(PointClampSampler, input.uv);
+            float coverage = texColor.r;
+            if (coverage < 0.1f)
+            {
+                discard;
+            }
+            return float4(input.color.rgb, input.color.a * coverage);
+        }
+
+        float4 texColor = UITexture.Sample(LinearClampSampler, input.uv);
+        return texColor * input.color;
     }
 
     return input.color;

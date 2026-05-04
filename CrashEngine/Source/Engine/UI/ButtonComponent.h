@@ -1,14 +1,14 @@
 #pragma once
 
-#include "UI/UIComponent.h"
+#include "UI/TextureUIComponent.h"
 
 #include <functional>
 #include <utility>
 
-class UUIButtonComponent : public UUIComponent
+class UUIButtonComponent : public UTextureUIComponent
 {
 public:
-    DECLARE_CLASS(UUIButtonComponent, UUIComponent)
+    DECLARE_CLASS(UUIButtonComponent, UTextureUIComponent)
 
     using FButtonCallback = std::function<void(UUIButtonComponent*)>;
 

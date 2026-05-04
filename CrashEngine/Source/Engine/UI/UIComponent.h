@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Component/SceneComponent.h"
 
@@ -15,6 +15,27 @@ enum class EUIGeometryType : int32
 {
     Quad,
     Mesh
+};
+
+enum class EUIElementType : int32
+{
+    None,
+    Image,
+    Text
+};
+
+enum class EUITextHAlign : int32
+{
+    Left,
+    Center,
+    Right
+};
+
+enum class EUITextVAlign : int32
+{
+    Top,
+    Center,
+    Bottom
 };
 
 class UUIComponent : public USceneComponent
@@ -39,6 +60,7 @@ public:
 
     void SetGeometryType(EUIGeometryType InType);
     EUIGeometryType GetGeometryType() const { return GeometryType; }
+    virtual EUIElementType GetUIElementType() const { return EUIElementType::None; }
 
     void SetAnchorMin(const FVector2& InAnchorMin);
     const FVector2& GetAnchorMin() const { return AnchorMin; }
@@ -73,33 +95,6 @@ public:
     void SetTintColor(const FVector4& InColor);
     const FVector4& GetTintColor() const { return TintColor; }
 
-    void SetTexturePath(const FString& InTexturePath);
-    void SetTexture(const FString& InTexturePath) { SetTexturePath(InTexturePath); }
-    const FString& GetTexturePath() const { return TexturePath; }
-
-    void SetSubUVRect(const FVector4& InRect);
-    void SetSubUVFrame(int32 Columns, int32 Rows, int32 Index);
-    void ResetSubUVRect();
-    const FVector4& GetSubUVRect() const { return SubUVRect; }
-
-    void SetSpriteSheet(int32 Columns, int32 Rows);
-    void SetSpriteFrame(int32 Index);
-    void SetSpriteFPS(float InFPS);
-    void SetSpriteLoop(bool bInLoop);
-    void SetSpriteAnimationEnabled(bool bEnabled);
-    void PlaySpriteAnimation(bool bRestart = true);
-    void PauseSpriteAnimation();
-    void StopSpriteAnimation();
-
-    int32 GetSpriteColumns() const { return SpriteColumns; }
-    int32 GetSpriteRows() const { return SpriteRows; }
-    int32 GetSpriteFrame() const { return SpriteFrameIndex; }
-    float GetSpriteFPS() const { return SpriteFPS; }
-    bool IsSpriteLoop() const { return bSpriteLoop; }
-    bool IsSpriteAnimationEnabled() const { return bSpriteAnimation; }
-    bool IsSpritePlaying() const { return bSpritePlaying; }
-    bool IsSpriteAnimationFinished() const { return bSpriteFinished; }
-
     FVector2 GetScreenLayoutSize(float ViewportWidth, float ViewportHeight) const;
     FVector2 GetScreenPivotPosition(float ViewportWidth, float ViewportHeight) const;
     bool HitTestScreenPoint(const FVector2& ScreenPoint, float ViewportWidth, float ViewportHeight) const;
@@ -114,7 +109,6 @@ public:
 
 protected:
     void OnTransformDirty() override;
-    void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
     FUIProxy* UIProxy = nullptr;
 
@@ -131,21 +125,4 @@ protected:
     bool bVisible = true;
     bool bHitTestVisible = true;
     FVector4 TintColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-    FString TexturePath;
-    FVector4 SubUVRect = { 0.0f, 0.0f, 1.0f, 1.0f };
-
-    int32 SpriteColumns = 1;
-    int32 SpriteRows = 1;
-    int32 SpriteFrameIndex = 0;
-    float SpriteFPS = 12.0f;
-    bool bSpriteAnimation = false;
-    bool bSpriteLoop = true;
-    bool bSpritePlaying = true;
-    bool bSpriteFinished = false;
-    float SpriteTimeAccumulator = 0.0f;
-
-private:
-    int32 GetSpriteFrameCount() const;
-    void ClampSpriteSheetState();
-    void ApplySpriteFrameToSubUVRect();
 };

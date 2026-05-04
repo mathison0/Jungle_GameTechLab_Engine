@@ -729,8 +729,26 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
     {
         if (!Proxy ||
             !Proxy->bVisible ||
-            Proxy->RenderSpace != EUIRenderSpace::ScreenSpace ||
-            Proxy->GeometryType != EUIGeometryType::Quad)
+            Proxy->RenderSpace != EUIRenderSpace::ScreenSpace)
+        {
+            continue;
+        }
+
+        if (Proxy->ElementType == EUIElementType::Image)
+        {
+            if (Proxy->GeometryType != EUIGeometryType::Quad)
+            {
+                continue;
+            }
+        }
+        else if (Proxy->ElementType == EUIElementType::Text)
+        {
+            if (Proxy->Text.empty() || !Proxy->FontResource || !Proxy->FontResource->IsLoaded())
+            {
+                continue;
+            }
+        }
+        else
         {
             continue;
         }
@@ -773,10 +791,23 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
 
     for (const FSortedUIProxy& Entry : SortedProxies)
     {
-        const FUIBatchRange Range = UIBatch.AddScreenQuad(
-            *Entry.Proxy,
-            Context.SceneView->ViewportWidth,
-            Context.SceneView->ViewportHeight);
+        FUIBatchRange Range = {};
+        if (Entry.Proxy->ElementType == EUIElementType::Text)
+        {
+            Range = UIBatch.AddScreenText(
+                *Entry.Proxy,
+                Entry.Proxy->FontResource,
+                Context.SceneView->ViewportWidth,
+                Context.SceneView->ViewportHeight);
+        }
+        else
+        {
+            Range = UIBatch.AddScreenQuad(
+                *Entry.Proxy,
+                Context.SceneView->ViewportWidth,
+                Context.SceneView->ViewportHeight);
+        }
+
         if (Range.IndexCount > 0)
         {
             Ranges.push_back({ Entry.Proxy, Range });
@@ -819,11 +850,18 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
         Cmd.FirstIndex    = Entry.Range.FirstIndex;
         Cmd.IndexCount    = Entry.Range.IndexCount;
         Cmd.DiffuseSRV    = Entry.Proxy->bUseTexture ? Entry.Proxy->TextureSRV : nullptr;
-        Cmd.PerShaderCB[0] = Entry.Proxy->bUseTexture
-            ? UIBatch.GetTextureParamsCB()
-            : UIBatch.GetSolidParamsCB();
+        if (Entry.Proxy->ElementType == EUIElementType::Text)
+        {
+            Cmd.PerShaderCB[0] = UIBatch.GetFontParamsCB();
+        }
+        else
+        {
+            Cmd.PerShaderCB[0] = Entry.Proxy->bUseTexture
+                ? UIBatch.GetTextureParamsCB()
+                : UIBatch.GetSolidParamsCB();
+        }
         Cmd.Pass      = ERenderPass::UI;
-        Cmd.DebugName = "UI";
+        Cmd.DebugName = Entry.Proxy->ElementType == EUIElementType::Text ? "UIText" : "UI";
         Cmd.SortKey   = BuildUIOrderSortKey(Order++);
     }
 }
