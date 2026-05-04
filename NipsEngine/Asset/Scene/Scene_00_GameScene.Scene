@@ -2,13 +2,13 @@
   "ClassName" : "UWorld",
   "GameUIBootMode" : "InGame",
   "Name" : "Scene_00_GameScene",
-  "NextUUID" : 24482,
+  "NextUUID" : 25212,
   "PerspectiveCamera" : {
     "FOV" : 90.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-19.402018, -8.325604, 5.836682],
+    "Location" : [-7.899240, -2.987315, 3.958777],
     "NearClip" : 0.100000,
-    "Rotation" : [-1.968170, 7.357113, 15.021954]
+    "Rotation" : [14.505089, 6.111233, -67.633057]
   },
   "Primitives" : {
     "11356" : {
@@ -750,6 +750,18 @@
       "Type" : "UStaticMeshComponent",
       "Visible" : true
     },
+    "24775" : {
+      "AutoCreateScript" : true,
+      "AutoLoad" : true,
+      "AutoReloadScript" : true,
+      "EditorOnly" : false,
+      "EnableTick" : true,
+      "HiddenInEditor" : false,
+      "OwnerRootUUID" : 13179,
+      "ScriptPath" : "Asset/Scripts/Player.lua",
+      "Type" : "ULuaScriptComponent",
+      "UseDefaultScriptPath" : false
+    },
     "2652" : {
       "ActorActive" : true,
       "ActorClass" : "AStaticMeshActor",
@@ -1016,7 +1028,7 @@
       "Fade Start Delay" : 0.000000,
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
-      "Location" : [-5.938065, -7.937941, 3.272618],
+      "Location" : [-5.938065, -7.937941, -1.183290],
       "Material" : "Asset/Material/DecalMat_Inst_1.matinst",
       "Rotation" : [90.003654, 85.070244, -90.003326],
       "Scale" : [1.000000, 1.000000, 1.000000],
@@ -1192,7 +1204,7 @@
       "Fade Start Delay" : 0.000000,
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
-      "Location" : [-2.181154, 8.387589, 3.390263],
+      "Location" : [-2.181154, 8.387589, -0.536108],
       "Material" : "DecalMat",
       "Rotation" : [90.000137, 27.044289, -89.999939],
       "Scale" : [1.000000, 0.500000, 0.500000],
@@ -1236,7 +1248,7 @@
       "Fade Start Delay" : 0.000000,
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
-      "Location" : [-2.181154, 6.238372, 3.390263],
+      "Location" : [-2.181154, 6.238372, -0.255028],
       "Material" : "DecalMat",
       "Rotation" : [90.000137, 27.044289, -89.999939],
       "Scale" : [1.000000, 0.500000, 0.500000],
@@ -1324,7 +1336,7 @@
       "Fade Start Delay" : 0.000000,
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
-      "Location" : [3.391964, 6.238372, 3.390263],
+      "Location" : [3.391964, 6.238372, -0.449309],
       "Material" : "DecalMat",
       "Rotation" : [90.000137, 27.044289, -89.999939],
       "Scale" : [1.000000, 0.500000, 0.500000],
@@ -1456,7 +1468,7 @@
       "Fade Start Delay" : 0.000000,
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
-      "Location" : [-5.633029, -6.535170, 2.033923],
+      "Location" : [-5.633029, -6.535170, -0.411577],
       "Material" : "Asset/Material/DecalMat_Inst_2.matinst",
       "Rotation" : [0.000000, 90.000000, 0.000000],
       "Scale" : [1.000000, -0.200000, 0.500000],

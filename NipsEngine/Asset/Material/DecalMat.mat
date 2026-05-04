@@ -10,13 +10,13 @@
             "Type" : "Float",
             "Value" : 1.000000
           }, {
+            "Name" : "DiffuseMap",
+            "Type" : "Texture",
+            "Value" : "Asset/Mesh/Bucket/wooden_bucket_01_diff_1k.jpg"
+          }, {
             "Name" : "EmissiveColor",
             "Type" : "Vector3",
             "Value" : [0.000000, 0.000000, 0.000000]
-          }, {
-            "Name" : "DiffuseMap",
-            "Type" : "Texture",
-            "Value" : "Asset/Texture/Blood_Stain_sgfjdepc_1K.png"
           }, {
             "Name" : "bHasNormalMap",
             "Type" : "Bool",
