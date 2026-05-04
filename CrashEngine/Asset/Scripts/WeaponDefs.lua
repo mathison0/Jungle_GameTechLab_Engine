@@ -153,21 +153,36 @@ WeaponDefs.Aura = {
     Levels = {
         [1] = {
             Damage = 50,
-            TickInterval = 0.5,
+            TickInterval = 5,
             Radius = 4.0,
             RotateSpeed = 90.0,
+            Sound = {
+                Tick = "MP_Air Wrench",
+                Bus = "SFX",
+                Volume = 1.0,
+            },
         },
         [2] = {
             Damage = 50,
-            TickInterval = 0.4,
+            TickInterval = 3,
             Radius = 5.0,
             RotateSpeed = 120.0,
+            Sound = {
+                Tick = "MP_Air Wrench",
+                Bus = "SFX",
+                Volume = 1.0,
+            },
         },
         [3] = {
             Damage = 50,
-            TickInterval = 0.3,
+            TickInterval = 1,
             Radius = 6.0,
             RotateSpeed = 180.0,
+            Sound = {
+                Tick = "MP_Air Wrench",
+                Bus = "SFX",
+                Volume = 1.0,
+            },
         },
     },
 }

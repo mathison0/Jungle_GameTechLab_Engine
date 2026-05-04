@@ -1,3 +1,4 @@
+local Audio = require("Core.Audio")
 local DamageSystem = require("Core.DamageSystem")
 local GameplayPause = require("GameplayPause")
 local WeaponDefs = require("WeaponDefs")
@@ -71,6 +72,7 @@ function AuraWeapon:DamageLoop()
     while self.IsRunning do
         if not GameplayPause.IsPaused() then
             self:DamageTick()
+            self:PlayTickSound()
         end
 
         GameplayPause.Wait(self.Data.TickInterval or 0.5)
@@ -106,6 +108,19 @@ function AuraWeapon:DamageTick()
             end
         end
     end
+end
+
+function AuraWeapon:PlayTickSound()
+    local sound = self.Data.Sound
+    if sound == nil or sound.Tick == nil then
+        return
+    end
+
+    Audio.Play(
+        sound.Tick,
+        sound.Bus or Audio.Bus.SFX,
+        sound.Volume or 1.0
+    )
 end
 
 function AuraWeapon:Upgrade()
