@@ -875,6 +875,7 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
         Cmd.FirstIndex    = Entry.Range.FirstIndex;
         Cmd.IndexCount    = Entry.Range.IndexCount;
         Cmd.DiffuseSRV    = Entry.Proxy->bUseTexture ? Entry.Proxy->TextureSRV : nullptr;
+        Cmd.bForceSRVBind = Entry.Proxy->ElementType == EUIElementType::Image && !Entry.Proxy->bUseTexture;
         if (Entry.Proxy->ElementType == EUIElementType::Text)
         {
             Cmd.PerShaderCB[0] = bWorldSpace ? UIBatch.GetWorldFontParamsCB() : UIBatch.GetFontParamsCB();

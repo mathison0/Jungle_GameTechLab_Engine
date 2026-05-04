@@ -42,6 +42,7 @@ struct FDrawCommand
     ID3D11ShaderResourceView* NormalSRV      = nullptr;
     ID3D11ShaderResourceView* SpecularSRV    = nullptr;
     ID3D11ShaderResourceView* LocalLightSRV  = nullptr; // t6: LocalLights StructuredBuffer
+    bool                      bForceSRVBind  = false;
 
     // ===== Sort =====
     uint64 SortKey = 0;

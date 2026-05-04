@@ -299,7 +299,7 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd, FD3DDevice& Device
 
     if (bUsesPreBoundDecalInputs)
     {
-        if (bForce || Cmd.DiffuseSRV != Cache.DiffuseSRV)
+        if (bForce || Cmd.bForceSRVBind || Cmd.DiffuseSRV != Cache.DiffuseSRV)
         {
             ID3D11ShaderResourceView* DecalSRV = Cmd.DiffuseSRV;
             Ctx->PSSetShaderResources(0, 1, &DecalSRV);
@@ -307,7 +307,7 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd, FD3DDevice& Device
         }
     }
     else if (!bUsesPreBoundLightingInputs &&
-             (bForce || Cmd.DiffuseSRV != Cache.DiffuseSRV || Cmd.NormalSRV != Cache.NormalSRV || Cmd.SpecularSRV != Cache.SpecularSRV))
+             (bForce || Cmd.bForceSRVBind || Cmd.DiffuseSRV != Cache.DiffuseSRV || Cmd.NormalSRV != Cache.NormalSRV || Cmd.SpecularSRV != Cache.SpecularSRV))
     {
         ID3D11ShaderResourceView* SRVs[3] = { Cmd.DiffuseSRV, Cmd.NormalSRV, Cmd.SpecularSRV };
         Ctx->PSSetShaderResources(0, 3, SRVs);
