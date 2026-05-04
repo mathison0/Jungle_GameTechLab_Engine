@@ -6,6 +6,12 @@ local Script = {
     properties = ChaseAI.properties
 }
 function Script:BeginPlay()
+    local actor = self:GetActor()
+    self.UseNativeFlyingWaveMovement =
+        actor ~= nil and
+        actor:IsValid() and
+        actor:GetClassName() == "AFlyingWaveEnemyActor"
+
     -- GameManager가 이번 세션에서 완전히 초기화되었는지 확인 후 플레이어 참조 가져오기
     if GameManager.Initialized and GameManager.PlayerScript and type(GameManager.PlayerScript.GetActor) == "function" then
         self.target = GameManager.PlayerScript:GetActor()
@@ -18,12 +24,18 @@ function Script:BeginPlay()
 
     self.AttackTimer = 0
 
-    self.ai = self.StartCoroutine(function()
-        ChaseAI.ChaseTargetCoroutine(self, "Player", self.GetRootComponent())
-    end)
+    if not self.UseNativeFlyingWaveMovement then
+        self.ai = self.StartCoroutine(function()
+            ChaseAI.ChaseTargetCoroutine(self, "Player", self.GetRootComponent())
+        end)
+    end
 end
 
 function Script:FaceTarget()
+    if self.UseNativeFlyingWaveMovement then
+        return
+    end
+
     if GameplayPause.IsPaused() then
         return
     end
