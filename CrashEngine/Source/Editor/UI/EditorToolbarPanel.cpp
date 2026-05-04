@@ -21,6 +21,8 @@
 #include "GameFramework/SpotLightActor.h"
 #include "GameFramework/StaticMeshActor.h"
 #include "GameFramework/GamejamActor/EnemySpawnerActor.h"
+#include "GameFramework/TextUIActor.h"
+#include "GameFramework/TextureUIActor.h"
 #include "GameFramework/UIActor.h"
 #include "GameFramework/World.h"
 #include "GameFramework/TankActor.h"
@@ -155,6 +157,8 @@ constexpr FAddActorEntry BasicAddActors[] = {
     ADD_MESH("Cube", EAddActorIcon::Cube, FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ")),
     ADD_MESH("Sphere", EAddActorIcon::Sphere, FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ")),
     ADD_ACTOR("UI", EAddActorIcon::UI, AUIActor, false),
+    ADD_ACTOR("Texture UI", EAddActorIcon::UI, ATextureUIActor, false),
+    ADD_ACTOR("Text UI", EAddActorIcon::UI, ATextUIActor, false),
     ADD_ACTOR("Button", EAddActorIcon::UI, AButtonActor, false),
 };
 

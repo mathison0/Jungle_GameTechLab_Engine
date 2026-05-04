@@ -1,3 +1,4 @@
+#include "../../Utils/Functions.hlsl"
 #include "../../Resources/SystemSamplers.hlsl"
 
 struct VS_Input_UI
@@ -24,7 +25,9 @@ Texture2D UITexture : register(t0);
 PS_Input_UI VS(VS_Input_UI input)
 {
     PS_Input_UI output;
-    output.position = float4(input.position, 1.0f);
+    output.position = UIFlags.z > 0.5f
+        ? ApplyVP(input.position)
+        : float4(input.position, 1.0f);
     output.uv = input.uv;
     output.color = input.color;
     return output;
@@ -34,7 +37,19 @@ float4 PS(PS_Input_UI input) : SV_TARGET
 {
     if (UIFlags.x > 0.5f)
     {
-        return UITexture.Sample(LinearClampSampler, input.uv) * input.color;
+        if (UIFlags.y > 0.5f)
+        {
+            float4 texColor = UITexture.Sample(PointClampSampler, input.uv);
+            float coverage = texColor.r;
+            if (coverage < 0.1f)
+            {
+                discard;
+            }
+            return float4(input.color.rgb, input.color.a * coverage);
+        }
+
+        float4 texColor = UITexture.Sample(LinearClampSampler, input.uv);
+        return texColor * input.color;
     }
 
     return input.color;

@@ -1,7 +1,10 @@
 #include "Render/Scene/Proxies/UI/UIProxy.h"
 
 #include "Engine/Runtime/Engine.h"
+#include "Resource/ResourceManager.h"
 #include "Texture/Texture2D.h"
+#include "UI/TextUIComponent.h"
+#include "UI/TextureUIComponent.h"
 
 FUIProxy::FUIProxy(UUIComponent* InOwner)
     : Owner(InOwner)
@@ -20,13 +23,20 @@ void FUIProxy::UpdateLayout()
 
     RenderSpace = Owner->GetRenderSpace();
     GeometryType = Owner->GetGeometryType();
+    ElementType = Owner->GetUIElementType();
     AnchorMin = Owner->GetAnchorMin();
     AnchorMax = Owner->GetAnchorMax();
     AnchoredPosition = Owner->GetAnchoredPosition();
     SizeDelta = Owner->GetSizeDelta();
+    WorldSize = Owner->GetWorldSize();
+    bBillboard = Owner->IsBillboard();
     Pivot = Owner->GetPivot();
     RotationDegrees = Owner->GetRotationDegrees();
-    SubUVRect = Owner->GetSubUVRect();
+    SubUVRect = FVector4(0.0f, 0.0f, 1.0f, 1.0f);
+    if (const UTextureUIComponent* TextureOwner = Cast<UTextureUIComponent>(Owner))
+    {
+        SubUVRect = TextureOwner->GetSubUVRect();
+    }
     WorldMatrix = Owner->GetWorldMatrix();
     Layer = Owner->GetLayer();
     ZOrder = Owner->GetZOrder();
@@ -66,12 +76,60 @@ void FUIProxy::UpdateStyle()
         Texture = nullptr;
         TextureSRV = nullptr;
         bUseTexture = false;
+        Text.clear();
+        FontName = FName("Default");
+        FontResource = nullptr;
+        FontSize = 1.0f;
+        TextLetterSpacing = 0.0f;
+        TextLineSpacing = 0.0f;
+        TextHAlign = EUITextHAlign::Left;
+        TextVAlign = EUITextVAlign::Top;
         return;
     }
 
     TintColor = Owner->GetTintColor();
-    TexturePath = Owner->GetTexturePath();
+    ElementType = Owner->GetUIElementType();
+    TexturePath.clear();
     Texture = nullptr;
+    TextureSRV = nullptr;
+    bUseTexture = false;
+    Text.clear();
+    FontName = FName("Default");
+    FontResource = nullptr;
+    FontSize = 1.0f;
+    TextLetterSpacing = 0.0f;
+    TextLineSpacing = 0.0f;
+    TextHAlign = EUITextHAlign::Left;
+    TextVAlign = EUITextVAlign::Top;
+
+    if (const UTextUIComponent* TextOwner = Cast<UTextUIComponent>(Owner))
+    {
+        Text = TextOwner->GetText();
+        FontName = TextOwner->GetFontName();
+        FontResource = FResourceManager::Get().FindFont(FontName);
+        if (!FontResource || !FontResource->IsLoaded())
+        {
+            FontResource = TextOwner->GetFont();
+        }
+        if (!FontResource || !FontResource->IsLoaded())
+        {
+            FontResource = FResourceManager::Get().FindFont(FName("Default"));
+        }
+
+        FontSize = TextOwner->GetFontSize();
+        TextLetterSpacing = TextOwner->GetLetterSpacing();
+        TextLineSpacing = TextOwner->GetLineSpacing();
+        TextHAlign = TextOwner->GetHorizontalAlignment();
+        TextVAlign = TextOwner->GetVerticalAlignment();
+        TextureSRV = (FontResource && FontResource->IsLoaded()) ? FontResource->SRV : nullptr;
+        bUseTexture = TextureSRV != nullptr;
+        return;
+    }
+
+    if (const UTextureUIComponent* TextureOwner = Cast<UTextureUIComponent>(Owner))
+    {
+        TexturePath = TextureOwner->GetTexturePath();
+    }
 
     if (!TexturePath.empty() && GEngine)
     {

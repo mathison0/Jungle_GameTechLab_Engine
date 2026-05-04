@@ -444,8 +444,11 @@
     <ClCompile Include="Source\Engine\GameFramework\HeightFogActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Level.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\PointLightActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ScriptActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\SpotLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\TextUIActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\TextureUIActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\UIActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\World.cpp" />
     <ClCompile Include="Source\Engine\Input\GameInput.cpp" />
@@ -583,6 +586,8 @@
     <ClCompile Include="Source\Engine\UI\ButtonComponent.cpp" />
     <ClCompile Include="Source\Engine\UI\SSplitter.cpp" />
     <ClCompile Include="Source\Engine\UI\SWindow.cpp" />
+    <ClCompile Include="Source\Engine\UI\TextUIComponent.cpp" />
+    <ClCompile Include="Source\Engine\UI\TextureUIComponent.cpp" />
     <ClCompile Include="Source\Engine\UI\UIComponent.cpp" />
     <ClCompile Include="Source\Engine\Viewport\GameViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Viewport\Viewport.cpp" />
@@ -755,8 +760,11 @@
     <ClInclude Include="Source\Engine\GameFramework\HeightFogActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\Level.h" />
     <ClInclude Include="Source\Engine\GameFramework\PointLightActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ScriptActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\SpotLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\TextUIActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\TextureUIActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\UIActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\World.h" />
     <ClInclude Include="Source\Engine\GameFramework\WorldContext.h" />
@@ -951,6 +959,8 @@
     <ClInclude Include="Source\Engine\UI\SSplitter.h" />
     <ClInclude Include="Source\Engine\UI\SWidget.h" />
     <ClInclude Include="Source\Engine\UI\SWindow.h" />
+    <ClInclude Include="Source\Engine\UI\TextUIComponent.h" />
+    <ClInclude Include="Source\Engine\UI\TextureUIComponent.h" />
     <ClInclude Include="Source\Engine\UI\UIComponent.h" />
     <ClInclude Include="Source\Engine\Viewport\GameViewportClient.h" />
     <ClInclude Include="Source\Engine\Viewport\Viewport.h" />

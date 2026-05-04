@@ -319,15 +319,17 @@ void UWorld::EndPlay()
         return;
     }
 
-
     // Clear spatial partition while actors/components are still alive.
     // Otherwise Octree teardown can dereference stale primitive pointers during shutdown.
     Partition.Reset(FBoundingBox());
 
+    // Script EndPlay can release pooled actors through Lua handles, so keep the
+    // pool manager alive until all actor/component EndPlay callbacks finish.
+    PersistentLevel->EndPlay();
+
     // Drop pool delegates before pooled actors are destroyed by the level.
     ActorPoolManager.reset();
 
-    PersistentLevel->EndPlay();
     PersistentLevel->Clear();
 
     MarkEditorPickingAndScenePrimitiveBVHsDirty();

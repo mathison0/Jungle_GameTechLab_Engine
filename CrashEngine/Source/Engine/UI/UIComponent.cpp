@@ -1,5 +1,6 @@
 ﻿#include "UIComponent.h"
 
+#include "Core/RayTypes.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Object/ObjectFactory.h"
@@ -80,6 +81,8 @@ void UUIComponent::Serialize(FArchive& Ar)
     Ar << AnchorMax;
     Ar << AnchoredPosition;
     Ar << SizeDelta;
+    Ar << WorldSize;
+    Ar << bBillboard;
     Ar << Pivot;
     Ar << RotationDegrees;
     Ar << Layer;
@@ -87,17 +90,6 @@ void UUIComponent::Serialize(FArchive& Ar)
     Ar << bVisible;
     Ar << bHitTestVisible;
     Ar << TintColor;
-    Ar << TexturePath;
-    Ar << SubUVRect;
-    Ar << SpriteColumns;
-    Ar << SpriteRows;
-    Ar << SpriteFrameIndex;
-    Ar << SpriteFPS;
-    Ar << bSpriteAnimation;
-    Ar << bSpriteLoop;
-    Ar << bSpritePlaying;
-    Ar << bSpriteFinished;
-    Ar << SpriteTimeAccumulator;
 }
 
 void UUIComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
@@ -109,6 +101,8 @@ void UUIComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
     OutProps.push_back({ "Anchor Max", EPropertyType::Vec2, &AnchorMax, 0.0f, 1.0f, 0.01f });
     OutProps.push_back({ "Anchored Position", EPropertyType::Vec2, &AnchoredPosition });
     OutProps.push_back({ "Size Delta", EPropertyType::Vec2, &SizeDelta });
+    OutProps.push_back({ "World Size", EPropertyType::Vec2, &WorldSize });
+    OutProps.push_back({ "Billboard", EPropertyType::Bool, &bBillboard });
     OutProps.push_back({ "Pivot", EPropertyType::Vec2, &Pivot });
     OutProps.push_back({ "Rotation Degrees", EPropertyType::Float, &RotationDegrees, -360.0f, 360.0f, 1.0f });
     OutProps.push_back({ "Layer", EPropertyType::Int, &Layer });
@@ -116,15 +110,6 @@ void UUIComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
     OutProps.push_back({ "Visible", EPropertyType::Bool, &bVisible });
     OutProps.push_back({ "Hit Test Visible", EPropertyType::Bool, &bHitTestVisible });
     OutProps.push_back({ "Tint Color", EPropertyType::Color4, &TintColor });
-    OutProps.push_back({ "Texture Path", EPropertyType::String, &TexturePath });
-    OutProps.push_back({ "SubUV Rect", EPropertyType::Vec4, &SubUVRect, 0.0f, 1.0f, 0.01f });
-    OutProps.push_back({ "Sprite Columns", EPropertyType::Int, &SpriteColumns, 1.0f, 64.0f, 1.0f });
-    OutProps.push_back({ "Sprite Rows", EPropertyType::Int, &SpriteRows, 1.0f, 64.0f, 1.0f });
-    OutProps.push_back({ "Sprite Frame", EPropertyType::Int, &SpriteFrameIndex, 0.0f, 4096.0f, 1.0f });
-    OutProps.push_back({ "Sprite FPS", EPropertyType::Float, &SpriteFPS, 0.0f, 120.0f, 1.0f });
-    OutProps.push_back({ "Sprite Animation", EPropertyType::Bool, &bSpriteAnimation });
-    OutProps.push_back({ "Sprite Loop", EPropertyType::Bool, &bSpriteLoop });
-    OutProps.push_back({ "Sprite Playing", EPropertyType::Bool, &bSpritePlaying });
 }
 
 void UUIComponent::PostEditProperty(const char* PropertyName)
@@ -144,44 +129,18 @@ void UUIComponent::PostEditProperty(const char* PropertyName)
         std::strcmp(PropertyName, "Anchor Max") == 0 ||
         std::strcmp(PropertyName, "Anchored Position") == 0 ||
         std::strcmp(PropertyName, "Size Delta") == 0 ||
+        std::strcmp(PropertyName, "World Size") == 0 ||
+        std::strcmp(PropertyName, "Billboard") == 0 ||
         std::strcmp(PropertyName, "Pivot") == 0 ||
         std::strcmp(PropertyName, "Rotation Degrees") == 0 ||
         std::strcmp(PropertyName, "Layer") == 0 ||
-        std::strcmp(PropertyName, "Z Order") == 0 ||
-        std::strcmp(PropertyName, "SubUV Rect") == 0)
+        std::strcmp(PropertyName, "Z Order") == 0)
     {
         MarkUILayoutDirty();
         return;
     }
 
-    if (std::strcmp(PropertyName, "Sprite Columns") == 0 ||
-        std::strcmp(PropertyName, "Sprite Rows") == 0 ||
-        std::strcmp(PropertyName, "Sprite Frame") == 0 ||
-        std::strcmp(PropertyName, "Sprite Animation") == 0)
-    {
-        ClampSpriteSheetState();
-        ApplySpriteFrameToSubUVRect();
-        MarkUILayoutDirty();
-        return;
-    }
-
-    if (std::strcmp(PropertyName, "Sprite FPS") == 0)
-    {
-        SpriteFPS = std::max(SpriteFPS, 0.0f);
-        return;
-    }
-
-    if (std::strcmp(PropertyName, "Sprite Playing") == 0)
-    {
-        if (bSpritePlaying)
-        {
-            bSpriteFinished = false;
-        }
-        return;
-    }
-
-    if (std::strcmp(PropertyName, "Tint Color") == 0 ||
-        std::strcmp(PropertyName, "Texture Path") == 0)
+    if (std::strcmp(PropertyName, "Tint Color") == 0)
     {
         MarkUIStyleDirty();
     }
@@ -255,6 +214,28 @@ void UUIComponent::SetSizeDelta(const FVector2& InSizeDelta)
     }
 
     SizeDelta = InSizeDelta;
+    MarkUILayoutDirty();
+}
+
+void UUIComponent::SetWorldSize(const FVector2& InWorldSize)
+{
+    if (WorldSize.X == InWorldSize.X && WorldSize.Y == InWorldSize.Y)
+    {
+        return;
+    }
+
+    WorldSize = InWorldSize;
+    MarkUILayoutDirty();
+}
+
+void UUIComponent::SetBillboard(bool bInBillboard)
+{
+    if (bBillboard == bInBillboard)
+    {
+        return;
+    }
+
+    bBillboard = bInBillboard;
     MarkUILayoutDirty();
 }
 
@@ -338,130 +319,6 @@ void UUIComponent::SetTintColor(const FVector4& InColor)
     MarkUIStyleDirty();
 }
 
-void UUIComponent::SetTexturePath(const FString& InTexturePath)
-{
-    if (TexturePath == InTexturePath)
-    {
-        return;
-    }
-
-    TexturePath = InTexturePath;
-    MarkUIStyleDirty();
-}
-
-void UUIComponent::SetSubUVRect(const FVector4& InRect)
-{
-    if (SubUVRect.X == InRect.X &&
-        SubUVRect.Y == InRect.Y &&
-        SubUVRect.Z == InRect.Z &&
-        SubUVRect.W == InRect.W)
-    {
-        return;
-    }
-
-    SubUVRect = InRect;
-    MarkUILayoutDirty();
-}
-
-void UUIComponent::SetSubUVFrame(int32 Columns, int32 Rows, int32 Index)
-{
-    SpriteColumns = Columns;
-    SpriteRows = Rows;
-    SpriteFrameIndex = Index;
-    ClampSpriteSheetState();
-    ApplySpriteFrameToSubUVRect();
-    MarkUILayoutDirty();
-}
-
-void UUIComponent::ResetSubUVRect()
-{
-    SetSubUVRect(FVector4(0.0f, 0.0f, 1.0f, 1.0f));
-}
-
-void UUIComponent::SetSpriteSheet(int32 Columns, int32 Rows)
-{
-    if (SpriteColumns == Columns && SpriteRows == Rows)
-    {
-        return;
-    }
-
-    SpriteColumns = Columns;
-    SpriteRows = Rows;
-    ClampSpriteSheetState();
-    ApplySpriteFrameToSubUVRect();
-    MarkUILayoutDirty();
-}
-
-void UUIComponent::SetSpriteFrame(int32 Index)
-{
-    if (SpriteFrameIndex == Index)
-    {
-        return;
-    }
-
-    SpriteFrameIndex = Index;
-    ClampSpriteSheetState();
-    ApplySpriteFrameToSubUVRect();
-    MarkUILayoutDirty();
-}
-
-void UUIComponent::SetSpriteFPS(float InFPS)
-{
-    SpriteFPS = std::max(InFPS, 0.0f);
-}
-
-void UUIComponent::SetSpriteLoop(bool bInLoop)
-{
-    bSpriteLoop = bInLoop;
-}
-
-void UUIComponent::SetSpriteAnimationEnabled(bool bEnabled)
-{
-    if (bSpriteAnimation == bEnabled)
-    {
-        return;
-    }
-
-    bSpriteAnimation = bEnabled;
-    bSpriteFinished = false;
-    SpriteTimeAccumulator = 0.0f;
-    ClampSpriteSheetState();
-    ApplySpriteFrameToSubUVRect();
-    MarkUILayoutDirty();
-}
-
-void UUIComponent::PlaySpriteAnimation(bool bRestart)
-{
-    bSpriteAnimation = true;
-    bSpritePlaying = true;
-    bSpriteFinished = false;
-    SpriteTimeAccumulator = 0.0f;
-
-    if (bRestart)
-    {
-        SpriteFrameIndex = 0;
-    }
-
-    ClampSpriteSheetState();
-    ApplySpriteFrameToSubUVRect();
-    MarkUILayoutDirty();
-}
-
-void UUIComponent::PauseSpriteAnimation()
-{
-    bSpritePlaying = false;
-}
-
-void UUIComponent::StopSpriteAnimation()
-{
-    bSpritePlaying = false;
-    bSpriteFinished = false;
-    SpriteTimeAccumulator = 0.0f;
-    SpriteFrameIndex = 0;
-    ApplySpriteFrameToSubUVRect();
-    MarkUILayoutDirty();
-}
-
 FVector2 UUIComponent::GetScreenLayoutSize(float ViewportWidth, float ViewportHeight) const
 {
     const FVector2 AnchorSize(
@@ -515,6 +372,91 @@ bool UUIComponent::HitTestScreenPoint(const FVector2& ScreenPoint, float Viewpor
 
     return LocalX >= LocalLeft && LocalX < LocalRight &&
            LocalY >= LocalTop && LocalY < LocalBottom;
+}
+
+bool UUIComponent::HitTestWorldRay(const FRay& Ray, const FVector& CameraRight, const FVector& CameraUp, const FVector& CameraForward, float& OutDistance) const
+{
+    OutDistance = 0.0f;
+
+    if (!bVisible || !bHitTestVisible ||
+        RenderSpace != EUIRenderSpace::WorldSpace ||
+        GeometryType != EUIGeometryType::Quad ||
+        WorldSize.X == 0.0f || WorldSize.Y == 0.0f)
+    {
+        return false;
+    }
+
+    FVector LocalHit;
+    if (bBillboard)
+    {
+        const FVector PlaneNormal = CameraForward.Normalized();
+        const float Denom = Ray.Direction.Dot(PlaneNormal);
+        if (std::abs(Denom) < 0.0001f)
+        {
+            return false;
+        }
+
+        const FVector Center = GetWorldLocation();
+        const float RayT = (Center - Ray.Origin).Dot(PlaneNormal) / Denom;
+        if (RayT < 0.0f)
+        {
+            return false;
+        }
+
+        const FVector WorldHit = Ray.Origin + Ray.Direction * RayT;
+        const FVector ToHit = WorldHit - Center;
+        const FVector RightAxis = CameraRight.Normalized();
+        const FVector UpAxis = CameraUp.Normalized();
+        const FVector WorldScale = GetWorldScale();
+        const float ScaleY = std::max(std::abs(WorldScale.Y), 0.0001f);
+        const float ScaleZ = std::max(std::abs(WorldScale.Z), 0.0001f);
+        LocalHit = FVector(0.0f, ToHit.Dot(RightAxis) / ScaleY, ToHit.Dot(UpAxis) / ScaleZ);
+        OutDistance = (WorldHit - Ray.Origin).Length();
+    }
+    else
+    {
+        const FMatrix InvWorldMatrix = GetWorldMatrix().GetInverse();
+        const FVector LocalOrigin = InvWorldMatrix.TransformPositionWithW(Ray.Origin);
+        const FVector LocalDirection = InvWorldMatrix.TransformVector(Ray.Direction).Normalized();
+
+        if (std::abs(LocalDirection.X) < 0.0001f)
+        {
+            return false;
+        }
+
+        const float LocalT = -LocalOrigin.X / LocalDirection.X;
+        if (LocalT < 0.0f)
+        {
+            return false;
+        }
+
+        LocalHit = LocalOrigin + LocalDirection * LocalT;
+    }
+
+    const float Radians = RotationDegrees * 3.14159265358979323846f / 180.0f;
+    const float CosTheta = std::cos(Radians);
+    const float SinTheta = std::sin(Radians);
+
+    const float UnrotatedY = LocalHit.Y * CosTheta + LocalHit.Z * SinTheta;
+    const float UnrotatedZ = -LocalHit.Y * SinTheta + LocalHit.Z * CosTheta;
+
+    const float LocalLeft = -Pivot.X * WorldSize.X;
+    const float LocalRight = LocalLeft + WorldSize.X;
+    const float LocalTop = (1.0f - Pivot.Y) * WorldSize.Y;
+    const float LocalBottom = LocalTop - WorldSize.Y;
+
+    if (UnrotatedY < LocalLeft || UnrotatedY >= LocalRight ||
+        UnrotatedZ > LocalTop || UnrotatedZ <= LocalBottom)
+    {
+        return false;
+    }
+
+    if (!bBillboard)
+    {
+        const FVector WorldHit = GetWorldMatrix().TransformPositionWithW(LocalHit);
+        OutDistance = (WorldHit - Ray.Origin).Length();
+    }
+    return true;
 }
 
 bool UUIComponent::HandleUIPointerEvent(const FViewportPointerEvent& Event)
@@ -573,87 +515,4 @@ void UUIComponent::OnTransformDirty()
 {
     USceneComponent::OnTransformDirty();
     MarkUILayoutDirty();
-}
-
-void UUIComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
-{
-    (void)TickType;
-    (void)ThisTickFunction;
-
-    if (!bSpriteAnimation || !bSpritePlaying || bSpriteFinished || SpriteFPS <= 0.0f)
-    {
-        return;
-    }
-
-    const int32 FrameCount = GetSpriteFrameCount();
-    if (FrameCount <= 1)
-    {
-        return;
-    }
-
-    SpriteTimeAccumulator += DeltaTime;
-    const float FrameDuration = 1.0f / SpriteFPS;
-    bool bFrameChanged = false;
-
-    while (SpriteTimeAccumulator >= FrameDuration)
-    {
-        SpriteTimeAccumulator -= FrameDuration;
-
-        if (SpriteFrameIndex < FrameCount - 1)
-        {
-            ++SpriteFrameIndex;
-            bFrameChanged = true;
-            continue;
-        }
-
-        if (bSpriteLoop)
-        {
-            SpriteFrameIndex = 0;
-            bFrameChanged = true;
-        }
-        else
-        {
-            bSpritePlaying = false;
-            bSpriteFinished = true;
-            SpriteTimeAccumulator = 0.0f;
-            break;
-        }
-    }
-
-    if (bFrameChanged)
-    {
-        ApplySpriteFrameToSubUVRect();
-        MarkUILayoutDirty();
-    }
-}
-
-int32 UUIComponent::GetSpriteFrameCount() const
-{
-    return std::max(SpriteColumns, 1) * std::max(SpriteRows, 1);
-}
-
-void UUIComponent::ClampSpriteSheetState()
-{
-    SpriteColumns = std::max(SpriteColumns, 1);
-    SpriteRows = std::max(SpriteRows, 1);
-
-    const int32 FrameCount = GetSpriteFrameCount();
-    SpriteFrameIndex = std::max(0, std::min(SpriteFrameIndex, FrameCount - 1));
-    SpriteFPS = std::max(SpriteFPS, 0.0f);
-}
-
-void UUIComponent::ApplySpriteFrameToSubUVRect()
-{
-    ClampSpriteSheetState();
-
-    const float CellWidth = 1.0f / static_cast<float>(SpriteColumns);
-    const float CellHeight = 1.0f / static_cast<float>(SpriteRows);
-    const int32 Column = SpriteFrameIndex % SpriteColumns;
-    const int32 Row = SpriteFrameIndex / SpriteColumns;
-
-    SubUVRect = FVector4(
-        static_cast<float>(Column) * CellWidth,
-        static_cast<float>(Row) * CellHeight,
-        CellWidth,
-        CellHeight);
 }

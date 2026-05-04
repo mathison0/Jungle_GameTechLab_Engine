@@ -749,10 +749,19 @@
     <ClCompile Include="Source\Engine\GameFramework\PointLightActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\ScriptActor.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\SpotLightActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\TextUIActor.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\TextureUIActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\UIActor.cpp">
@@ -1140,6 +1149,15 @@
       <Filter>Source\Engine\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\UI\SWindow.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\UI\TextUIComponent.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\UI\TextureUIComponent.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\UI\UIComponent.cpp">
       <Filter>Source\Engine\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Viewport\GameViewportClient.cpp">
@@ -1633,10 +1651,19 @@
     <ClInclude Include="Source\Engine\GameFramework\PointLightActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\ScriptActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\SpotLightActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\TextUIActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\TextureUIActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\UIActor.h">
@@ -2213,6 +2240,15 @@
       <Filter>Source\Engine\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\UI\SWindow.h">
+      <Filter>Source\Engine\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\TextUIComponent.h">
+      <Filter>Source\Engine\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\TextureUIComponent.h">
+      <Filter>Source\Engine\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\UIComponent.h">
       <Filter>Source\Engine\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Viewport\GameViewportClient.h">

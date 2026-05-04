@@ -20,6 +20,8 @@ public:
     void SetScriptPath(const FString& InScriptPath);
     const FString& GetScriptPath() const { return ScriptPath; }
     void CallFunction(const char* Name);
+    bool CallScriptFunction(const FString& FunctionName, const sol::variadic_args& Args);
+    bool CallScriptFunction(const FString& FunctionName);
 
     template <typename TFunc>
     void BindFunction(const char* Name, TFunc&& Function)
@@ -41,7 +43,8 @@ protected:
 private:
     bool LoadScript();
     void SyncScriptPropertiesWithAsset();
-    void CallLuaFunction(const char* Name);
+    bool CallLuaFunction(const char* Name);
+    bool CallLuaFunction(const char* Name, const sol::variadic_args* Args);
     void CallLuaTick(float DeltaTime);
 
     void BindFunctions();
