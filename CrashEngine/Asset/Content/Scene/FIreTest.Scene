@@ -18,9 +18,10 @@
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
+              "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 23",
+              "Text" : "UUID : 1124",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -40,6 +41,7 @@
           "Is Editor Helper" : false,
           "Location" : [0.000000, 0.000000, -1.000000],
           "Mobility" : 1,
+          "Receives Decals" : true,
           "Rotation" : [0.000000, 0.839996, 0.000000],
           "Scale" : [100.000000, 100.000000, 1.000000],
           "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
@@ -70,9 +72,10 @@
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
+              "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 26",
+              "Text" : "UUID : 1127",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -93,6 +96,7 @@
                 "Path" : "Asset/Editor/Icons/Materials/DirectionalLightIcon.json"
               },
               "Mobility" : 1,
+              "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Visible" : true,
@@ -145,9 +149,10 @@
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
+              "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 32",
+              "Text" : "UUID : 1131",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -168,6 +173,7 @@
                 "Path" : "Asset/Editor/Icons/Materials/AmbientLightIcon.json"
               },
               "Mobility" : 1,
+              "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Visible" : true,
@@ -255,9 +261,10 @@
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
+              "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 40",
+              "Text" : "UUID : 1137",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -277,6 +284,7 @@
               "Is Editor Helper" : false,
               "Location" : [0.000000, 0.000000, 0.000000],
               "Mobility" : 1,
+              "Receives Decals" : true,
               "Rotation" : [-0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Shape Color" : [0.000000, 0.862745, 1.000000, 1.000000],
@@ -300,6 +308,7 @@
               "Is Editor Helper" : false,
               "Location" : [-0.200000, 0.000000, 0.000000],
               "Mobility" : 1,
+              "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
@@ -321,6 +330,7 @@
           "Is Editor Helper" : false,
           "Location" : [0.000000, 0.000000, 0.000000],
           "Mobility" : 1,
+          "Receives Decals" : true,
           "Rotation" : [-0.000000, 0.000000, 0.000000],
           "Scale" : [1.900000, 1.000000, 1.000000],
           "Shape Color" : [0.000000, 0.862745, 1.000000, 1.000000],
@@ -332,6 +342,70 @@
       },
       "Tag" : "Player",
       "bVisible" : true
+    }, {
+      "ClassName" : "AActor",
+      "Name" : "Main Camera",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_330",
+          "Properties" : {
+            "Lua.FollowSmooth" : 5.000000,
+            "Lua.Offset" : [-10.000000, 0.000000, 40.000000],
+            "Script" : "CameraFollow.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_191",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 1144",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UCameraComponent",
+            "Name" : "UCameraComponent_8",
+            "Properties" : {
+              "FOV" : 1.047198,
+              "Far Z" : 1000.000000,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Near Z" : 0.100000,
+              "Ortho Width" : 10.000000,
+              "Orthographic" : false,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_7",
+        "Properties" : {
+          "Location" : [-4.147101, -30.335257, 18.069603],
+          "Rotation" : [74.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
@@ -340,9 +414,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-4.985373, -34.496548, 20.711754],
+    "Location" : [-5.086293, -34.997524, 21.029846],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000002, 31.899445, 78.610481]
+    "Rotation" : [-0.000002, 31.899445, 78.610428]
   },
   "Version" : 3,
   "WorldType" : "Editor"
