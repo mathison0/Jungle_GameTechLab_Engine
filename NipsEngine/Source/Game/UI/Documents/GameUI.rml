@@ -60,7 +60,7 @@
 
 	<div id="pause-layer">
 		<div id="pause-panel">
-			<div id="pause-title">[MENU]</div>
+			<div id="pause-title">MENU</div>
 			<div id="pause-items-row" class="stat-row">Items: <span id="pause-item-count" class="stat-value">0</span></div>
 			<div id="pause-time-row" class="stat-row">Time: <span id="pause-time" class="stat-value">0m 00s</span></div>
 			<div id="pause-progress-row" class="stat-row">Progress: <span id="pause-progress" class="stat-value">0%</span></div>
