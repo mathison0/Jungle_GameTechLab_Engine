@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <string>
 
+#include "Component/SpotLightComponent.h"
+
 IMPLEMENT_CLASS(ATankActor, AActor)
 
 namespace
@@ -180,6 +182,54 @@ void ATankActor::InitDefaultComponents()
     BodyMesh->SetStaticMesh(Asset);
     BodyMesh->SetRelativeScale(FVector(0.5f));
     BodyMesh->AttachToComponent(Collider);
+    
+    // 전조등
+    auto FrontLightL = AddComponent<USpotLightComponent>();
+    FrontLightL->SetFName("FrontLightL");
+    FrontLightL->SetRelativeLocation({1.1f, -0.8f, 0.2f});
+    FrontLightL->SetRelativeRotation(FRotator(10.9f, 0, 0));
+    FrontLightL->SetIntensity(4.0f);
+    FrontLightL->SetLightColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+    FrontLightL->SetAttenuationRadius(10.0f);
+    FrontLightL->SetLightFalloffExponent(8.0f);
+    FrontLightL->SetInnerConeAngle(9.0f);
+    FrontLightL->SetOuterConeAngle(19.0f);
+    FrontLightL->AttachToComponent(BodyMesh);
+    auto FrontLightR = AddComponent<USpotLightComponent>();
+    FrontLightR->SetFName("FrontLightR");
+    FrontLightR->SetRelativeLocation({1.1f, 0.8f, 0.2f});
+    FrontLightR->SetRelativeRotation(FRotator(10.9f, 0, 0));
+    FrontLightR->SetIntensity(4.0f);
+    FrontLightR->SetLightColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+    FrontLightR->SetAttenuationRadius(10.0f);
+    FrontLightR->SetLightFalloffExponent(8.0f);
+    FrontLightR->SetInnerConeAngle(9.0f);
+    FrontLightR->SetOuterConeAngle(19.0f);
+    FrontLightR->AttachToComponent(BodyMesh);
+    
+    // 후미등
+    auto RearLightL = AddComponent<USpotLightComponent>();
+    RearLightL->SetFName("RearLightL");
+    RearLightL->SetRelativeLocation({-1.4f, -0.6f, 0.8f});
+    RearLightL->SetRelativeRotation(FRotator(126.0f, 0, 0));
+    RearLightL->SetIntensity(0.5f);
+    RearLightL->SetLightColor(FVector4(1.0f, 0.0f, 0.0f, 1.0f));
+    RearLightL->SetAttenuationRadius(6.0f);
+    RearLightL->SetLightFalloffExponent(20.0f);
+    RearLightL->SetInnerConeAngle(9.0f);
+    RearLightL->SetOuterConeAngle(44.0f);
+    RearLightL->AttachToComponent(BodyMesh);
+    auto RearLightR = AddComponent<USpotLightComponent>();
+    RearLightR->SetFName("RearLightR");
+    RearLightR->SetRelativeLocation({-1.4f, 0.6f, 0.8f});
+    RearLightR->SetRelativeRotation(FRotator(126.0f, 0, 0));
+    RearLightR->SetIntensity(0.5f);
+    RearLightR->SetLightColor(FVector4(1.0f, 0.0f, 0.0f, 1.0f));
+    RearLightR->SetAttenuationRadius(6.0f);
+    RearLightR->SetLightFalloffExponent(20.0f);
+    RearLightR->SetInnerConeAngle(9.0f);
+    RearLightR->SetOuterConeAngle(44.0f);
+    RearLightR->AttachToComponent(BodyMesh);
 
     auto Script = AddComponent<UScriptComponent>();
     Script->SetScriptPath(TankScriptPath);

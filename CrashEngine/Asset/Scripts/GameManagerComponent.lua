@@ -6,6 +6,7 @@
 local Script = {
     properties = {
         GameTimeLimit = { type = "float", default = 600.0, min = 10.0, max = 3600.0, speed = 10.0 },
+        AutoStart = { type = "bool", default = true },
     }
 }
 
@@ -14,7 +15,11 @@ function Script:BeginPlay()
     
     local GameManager = require("GameManager")
     -- 플레이어 등록 여부와 상관없이 세션 설정(시간 제한 등)을 먼저 준비합니다.
-    GameManager.PrepareSession(self.GameTimeLimit)
+    if self.AutoStart == false then
+        GameManager.PrepareMainMenu(self.GameTimeLimit)
+    else
+        GameManager.PrepareSession(self.GameTimeLimit)
+    end
 end
 
 function Script:Tick(deltaTime)

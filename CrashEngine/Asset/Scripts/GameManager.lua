@@ -15,6 +15,7 @@ local GameManager = {
 
     SessionPrepared = false,
     PlayerRegistered = false,
+    GameStartRequested = false,
     Initialized = false,
 
     PlayerScript = nil,
@@ -36,6 +37,9 @@ local function captureWorldFromScript(script)
         local world = script.GetWorld()
         if world ~= nil and world:IsValid() then
             GameManager.World = world
+            if world.SetGameplayPaused ~= nil then
+                world:SetGameplayPaused(GameManager.IsPaused == true)
+            end
         end
     end
 end
@@ -125,6 +129,7 @@ function GameManager._ResetState()
 
     GameManager.SessionPrepared = false
     GameManager.PlayerRegistered = false
+    GameManager.GameStartRequested = false
 
     GameManager.PlayerScript = nil
     GameManager.WeaponInventory = nil
@@ -147,9 +152,36 @@ function GameManager.PrepareSession(gameTimeLimit)
     GameManager.GameTimeLimit = gameTimeLimit or 600.0
     GameManager.TimeRemaining = GameManager.GameTimeLimit
     GameManager.SessionPrepared = true
+    GameManager.GameStartRequested = true
 
     Log("[GameManager] Session Prepared (TimeLimit: " .. tostring(GameManager.GameTimeLimit) .. ")")
     GameManager._CheckAndStart()
+end
+
+function GameManager.PrepareMainMenu(gameTimeLimit)
+    GameManager._ResetState()
+
+    GameManager.GameTimeLimit = gameTimeLimit or 600.0
+    GameManager.TimeRemaining = GameManager.GameTimeLimit
+    GameManager.SessionPrepared = false
+    GameManager.GameStartRequested = false
+    GameManager.SetGameplayPaused(true)
+
+    Log("[GameManager] Main Menu Prepared (TimeLimit: " .. tostring(GameManager.GameTimeLimit) .. ")")
+end
+
+function GameManager.RequestStartGame()
+    if GameManager.Initialized then
+        return true
+    end
+
+    GameManager.TimeRemaining = GameManager.GameTimeLimit or GameManager.TimeRemaining or 600.0
+    GameManager.IsGameOver = false
+    GameManager.SessionPrepared = true
+    GameManager.GameStartRequested = true
+
+    GameManager._CheckAndStart()
+    return GameManager.Initialized == true
 end
 
 function GameManager.RegisterPlayer(playerScript)
@@ -165,7 +197,8 @@ function GameManager.RegisterPlayer(playerScript)
 end
 
 function GameManager._CheckAndStart()
-    if GameManager.SessionPrepared and GameManager.PlayerRegistered and not GameManager.Initialized then
+    if GameManager.SessionPrepared and GameManager.PlayerRegistered and GameManager.GameStartRequested and not GameManager.Initialized then
+        GameManager.SetGameplayPaused(false)
         GameManager.Initialized = true
         GameManager.OnGameStart()
     end
