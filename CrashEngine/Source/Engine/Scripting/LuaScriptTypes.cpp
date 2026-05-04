@@ -160,6 +160,64 @@ sol::table MakeLuaVec3(sol::state_view Lua, const FVector& Value)
     return Vec;
 }
 
+bool ReadLuaVec4(const sol::object& ValueObject, FVector4& OutValue)
+{
+    if (ValueObject.is<FVector4>())
+    {
+        OutValue = ValueObject.as<FVector4>();
+        return true;
+    }
+
+    if (!ValueObject.is<sol::table>())
+    {
+        return false;
+    }
+
+    sol::table Table = ValueObject.as<sol::table>();
+    sol::object XObject = Table["x"];
+    sol::object YObject = Table["y"];
+    sol::object ZObject = Table["z"];
+    sol::object WObject = Table["w"];
+
+    if (!XObject.valid() || XObject == sol::nil) XObject = Table["X"];
+    if (!YObject.valid() || YObject == sol::nil) YObject = Table["Y"];
+    if (!ZObject.valid() || ZObject == sol::nil) ZObject = Table["Z"];
+    if (!WObject.valid() || WObject == sol::nil) WObject = Table["W"];
+
+    if (!XObject.valid() || XObject == sol::nil) XObject = Table[1];
+    if (!YObject.valid() || YObject == sol::nil) YObject = Table[2];
+    if (!ZObject.valid() || ZObject == sol::nil) ZObject = Table[3];
+    if (!WObject.valid() || WObject == sol::nil) WObject = Table[4];
+
+    if (!XObject.valid() || XObject == sol::nil || XObject.get_type() != sol::type::number ||
+        !YObject.valid() || YObject == sol::nil || YObject.get_type() != sol::type::number ||
+        !ZObject.valid() || ZObject == sol::nil || ZObject.get_type() != sol::type::number ||
+        !WObject.valid() || WObject == sol::nil || WObject.get_type() != sol::type::number)
+    {
+        return false;
+    }
+
+    OutValue.X = XObject.as<float>();
+    OutValue.Y = YObject.as<float>();
+    OutValue.Z = ZObject.as<float>();
+    OutValue.W = WObject.as<float>();
+    return true;
+}
+
+sol::table MakeLuaVec4(sol::state_view Lua, const FVector4& Value)
+{
+    sol::table Vec = Lua.create_table();
+    Vec[1] = Value.X;
+    Vec[2] = Value.Y;
+    Vec[3] = Value.Z;
+    Vec[4] = Value.W;
+    Vec["x"] = Value.X;
+    Vec["y"] = Value.Y;
+    Vec["z"] = Value.Z;
+    Vec["w"] = Value.W;
+    return Vec;
+}
+
 bool ReadLuaVec2(const sol::object& ValueObject, FVector2& OutValue)
 {
     if (ValueObject.is<FVector2>())

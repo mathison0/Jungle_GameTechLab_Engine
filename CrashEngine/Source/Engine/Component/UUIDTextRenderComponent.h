@@ -1,3 +1,4 @@
+#if WITH_EDITOR
 #pragma once
 
 #include "Component/TextRenderComponent.h"
@@ -14,3 +15,4 @@ public:
     FMatrix CalculateBillboardWorldMatrix(const FVector& CameraForward) const override;
     bool UsesUUIDTextShowFlag() const override { return true; }
 };
+#endif

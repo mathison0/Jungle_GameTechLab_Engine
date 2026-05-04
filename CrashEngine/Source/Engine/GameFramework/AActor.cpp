@@ -123,26 +123,6 @@ void AActor::EnsureDefaultEditorHelperTextComponent()
 
     for (UActorComponent* Component : OwnedComponents)
     {
-        UUUIDTextRenderComponent* UUIDTextComponent = Cast<UUUIDTextRenderComponent>(Component);
-        if (UUIDTextComponent && UUIDTextComponent->IsEditorHelper())
-        {
-            if (UUIDTextComponent->GetParent() != RootComponent)
-            {
-                UUIDTextComponent->AttachToComponent(RootComponent);
-            }
-
-            UUIDTextComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 1.3f));
-            UUIDTextComponent->SetRelativeRotation(FRotator::ZeroRotator);
-            UUIDTextComponent->SetRelativeScale(FVector(1.0f, 1.0f, 1.0f));
-            UUIDTextComponent->SetBillboard(true);
-            UUIDTextComponent->SetVisibleInEditor(true);
-            UUIDTextComponent->SetVisibleInGame(false);
-            UUIDTextComponent->SetEditorHelper(true);
-            UUIDTextComponent->SetFont(FName("Default"));
-            UUIDTextComponent->SetText("UUID : " + std::to_string(GetUUID()));
-            return;
-        }
-
         UTextRenderComponent* TextComponent = Cast<UTextRenderComponent>(Component);
         if (TextComponent && TextComponent->IsEditorHelper())
         {
@@ -154,21 +134,6 @@ void AActor::EnsureDefaultEditorHelperTextComponent()
     {
         RemoveComponent(LegacyTextComponent);
     }
-
-    UUUIDTextRenderComponent* TextComponent = AddComponent<UUUIDTextRenderComponent>();
-    if (!TextComponent)
-    {
-        return;
-    }
-
-    TextComponent->AttachToComponent(RootComponent);
-    TextComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 1.3f));
-    TextComponent->SetBillboard(true);
-    TextComponent->SetVisibleInEditor(true);
-    TextComponent->SetVisibleInGame(false);
-    TextComponent->SetEditorHelper(true);
-    TextComponent->SetFont(FName("Default"));
-    TextComponent->SetText("UUID : " + std::to_string(GetUUID()));
 }
 
 void AActor::SetRootComponent(USceneComponent* Comp)

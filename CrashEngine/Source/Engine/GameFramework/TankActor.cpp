@@ -7,6 +7,7 @@
 #include "Engine/Component/PrimitiveComponent.h"
 #include "Engine/Component/ScriptComponent.h"
 #include "Engine/Component/StaticMeshComponent.h"
+#include "Engine/Component/PointLightComponent.h"
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Scripting/LuaEngineBinding.h"
 #include "Engine/Scripting/LuaScriptTypes.h"
@@ -320,6 +321,22 @@ void ATankActor::EquipWeaponVisualFromLua(const FString& WeaponId, int32 Level, 
             }
 
             Visual = GetOrCreateWeaponDecalComponent(Name, Material, Parent);
+        }
+        else if (ComponentType == "PointLight" || ComponentType == "UPointLightComponent")
+        {
+            UPointLightComponent* Light = GetOrCreateWeaponLightComponent(Name, Parent);
+            if (Light)
+            {
+                const float Intensity = VisualDef.get_or("Intensity", 2.5f);
+                const FVector4 Color = ReadLuaVec4OrDefault(VisualDef["Color"], FVector4(1, 1, 1, 1));
+                const float Radius = VisualDef.get_or("AttenuationRadius", 10.0f);
+
+                Light->SetIntensity(Intensity);
+                Light->SetLightColor(Color);
+                Light->SetAttenuationRadius(Radius);
+                Light->MarkRenderStateDirty();
+            }
+            Visual = Light;
         }
         else
         {
@@ -927,4 +944,71 @@ FRotator ATankActor::ReadLuaRotatorOrDefault(sol::object Object, const FRotator&
     const FVector DefaultEuler(DefaultValue.Roll, DefaultValue.Pitch, DefaultValue.Yaw);
     const FVector Euler = ReadLuaVec3OrDefault(Object, DefaultEuler);
     return FRotator(Euler.Y, Euler.Z, Euler.X);
+}
+
+FVector4 ATankActor::ReadLuaVec4OrDefault(sol::object Object, const FVector4& DefaultValue) const
+{
+    FVector4 Value = DefaultValue;
+    if (ReadLuaVec4(Object, Value))
+    {
+        return Value;
+    }
+    return DefaultValue;
+}
+
+UPointLightComponent* ATankActor::GetOrCreateWeaponLightComponent(const FString& Name, const FString& ParentName)
+{
+    const bool bUseWorldParent = ParentName.empty() || ParentName == "World" || ParentName == "None";
+
+    if (UPointLightComponent* Existing = FindPointLightComponentByName(Name))
+    {
+        Existing->SetActive(true);
+        if (bUseWorldParent)
+        {
+            Existing->SetParent(nullptr);
+        }
+        else if (USceneComponent* Parent = FindSceneComponentByName(ParentName))
+        {
+            Existing->AttachToComponent(Parent);
+        }
+        return Existing;
+    }
+
+    USceneComponent* Parent = nullptr;
+    if (!bUseWorldParent)
+    {
+        Parent = FindSceneComponentByName(ParentName);
+        if (!Parent)
+        {
+            UE_LOG(Tank, Warning, "Weapon light parent not found: %s", ParentName.c_str());
+            return nullptr;
+        }
+    }
+
+    UPointLightComponent* Light = AddComponent<UPointLightComponent>();
+    if (!Light)
+    {
+        return nullptr;
+    }
+
+    Light->SetFName(Name);
+    if (Parent)
+    {
+        Parent->AddChild(Light);
+    }
+    Light->SetActive(true);
+    return Light;
+}
+
+UPointLightComponent* ATankActor::FindPointLightComponentByName(const FString& ComponentName) const
+{
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        UPointLightComponent* LightComponent = Cast<UPointLightComponent>(Component);
+        if (LightComponent && LightComponent->GetFName().ToString() == ComponentName)
+        {
+            return LightComponent;
+        }
+    }
+    return nullptr;
 }
