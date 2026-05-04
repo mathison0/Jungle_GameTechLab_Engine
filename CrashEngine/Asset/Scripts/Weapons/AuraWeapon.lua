@@ -1,5 +1,7 @@
 local Co = require("LuaCoroutine")
 local WeaponDefs = require("WeaponDefs")
+local DamageSystem = require("Core.DamageSystem")
+
 
 local AuraWeapon = {}
 AuraWeapon.__index = AuraWeapon
@@ -49,6 +51,14 @@ function AuraWeapon:DamageLoop()
         end
 
         if ownerActor ~= nil and ownerActor:IsValid() and self.Owner.ApplyAreaDamage ~= nil then
+            local enemies = self.Owner.QueryActorsByTagInRadius("Enemy", ownerActor:GetLocation(), self.Data.Radius)
+
+            for _, enemy in pairs(enemies) do
+                if enemy ~= nil and enemy:IsValid() then
+                    DamageSystem.ApplyDamage(enemy, self.Data.Damage, ownerActor)
+                end
+            end
+
             self.Owner.ApplyAreaDamage("Aura", self.Data, ownerActor:GetLocation(), self.Data.Radius or 0.0)
         else
             Log("Aura tick. radius = " .. tostring(self.Data.Radius))

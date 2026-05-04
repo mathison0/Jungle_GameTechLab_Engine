@@ -76,17 +76,17 @@ WeaponDefs.Aura = {
     Levels = {
         [1] = {
             Radius = 3.0,
-            Damage = 2,
+            Damage = 50,
             TickInterval = 1.0,
         },
         [2] = {
             Radius = 4.0,
-            Damage = 4,
+            Damage = 50,
             TickInterval = 0.8,
         },
         [3] = {
             Radius = 5.5,
-            Damage = 7,
+            Damage = 50,
             TickInterval = 0.5,
         },
     },
