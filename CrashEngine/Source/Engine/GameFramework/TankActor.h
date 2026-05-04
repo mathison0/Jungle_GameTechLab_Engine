@@ -60,9 +60,6 @@ public:
     void FireHeadMainGun();
 
 private:
-    void CacheComponentIndices();
-
-    UStaticMeshComponent* GetHeadMainGun();
     UStaticMesh* GetHeadGunProjectile();
     UStaticMesh* GetBasicMesh(const FString& RelativePath);
     UStaticMesh* GetProjectileMeshForWeapon(const FString& WeaponId);
@@ -83,8 +80,5 @@ private:
 private:
     UStaticMesh* HeadGunProjectile = nullptr;
 
-    int32 HeadMainGunIndex = -1;
-
     static constexpr const char* TankScriptPath = "TankScript.lua";
-    static constexpr const char* HeadMainGunName = "HeadMainGun";
 };

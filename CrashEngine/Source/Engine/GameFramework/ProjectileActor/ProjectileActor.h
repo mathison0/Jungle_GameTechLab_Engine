@@ -64,7 +64,10 @@ public:
     float GetDamage() const { return Damage; }
     void SetPierceCount(int32 InPierceCount) { PierceCount = InPierceCount; }
     int32 GetPierceCount() const { return PierceCount; }
-    bool ConsumePierce();
+    int32 ConsumePierce();
+
+private:
+    void NotifyProjectileFiredToScript();
 
 private:
     FVector Direction = { 0.f, 0.f, 0.f };

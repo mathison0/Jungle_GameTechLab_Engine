@@ -43,46 +43,45 @@ void AProjectileActor::InitDefaultComponents()
 
     auto ScriptComponent = AddComponent<UScriptComponent>();
     ScriptComponent->SetScriptPath("ProjectileScript.lua");
-
-	ScriptComponent = AddComponent<UScriptComponent>();
-    ScriptComponent->SetScriptPath("Test/TestBullet.lua");
 }
 
 void AProjectileActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
 {
+    if (ScriptComponent.GetScriptPath() != "ProjectileScript.lua")
+    {
+        return;
+    }
+
     ScriptComponent.BindFunction("GetProjectileDamage",
         [this]() -> float
         {
             return Damage;
         });
 
-    ScriptComponent.BindFunction("GetProjectilePierceCount",
+    ScriptComponent.BindFunction("ConsumePierce",
         [this]() -> int32
-        {
-            return PierceCount;
-        });
-
-    ScriptComponent.BindFunction("ConsumeProjectilePierce",
-        [this]() -> bool
         {
             return ConsumePierce();
         });
+
+    ScriptComponent.BindFunction("ReturnToPool",
+        [this]()
+        {
+            RequestReturnToPool();
+        });
 }
 
-bool AProjectileActor::ConsumePierce()
+int32 AProjectileActor::ConsumePierce()
 {
-    if (PierceCount <= 0)
-    {
-        return false;
-    }
-
     --PierceCount;
-    return true;
+    return PierceCount;
 }
 
 
 void AProjectileActor::Fire()
 {
+    NotifyProjectileFiredToScript();
+
     if (MovementComponentIndex < 0 || MovementComponentIndex >= static_cast<int>(OwnedComponents.size()))
     {
         return;
@@ -95,6 +94,20 @@ void AProjectileActor::Fire()
     }
 
     movementCompoent->SetInitialVelocity(Direction * Speed);
+}
+
+void AProjectileActor::NotifyProjectileFiredToScript()
+{
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        UScriptComponent* Script = Cast<UScriptComponent>(Component);
+        if (!Script || Script->GetScriptPath() != "ProjectileScript.lua")
+        {
+            continue;
+        }
+
+        Script->CallFunction("OnProjectileFired");
+    }
 }
 
 void AProjectileActor::SetProjectileSetting(const ProjectileInfo& InProjectileInfo)

@@ -117,19 +117,15 @@ void AHomingMissileActor::Explode()
 
     bActive = false;
 
-    if (ImpactRadius > 0.0f)
-    {
-        UE_LOG(Tank, Info, "[HomingMissile] Explode area Damage=%.2f Radius=%.2f", Damage, ImpactRadius);
-    }
-    else if (TargetActor)
-    {
-        UE_LOG(Tank, Info, "[HomingMissile] Explode target Damage=%.2f Target=%s",
-               Damage, TargetActor->GetFName().ToString().c_str());
-    }
-    else
-    {
-        UE_LOG(Tank, Info, "[HomingMissile] Explode Damage=%.2f", Damage);
-    }
+    // TODO:
+    // - ImpactRadius > 0: query enemies in radius and apply Damage.
+    // - ImpactRadius <= 0: apply Damage to TargetActor.
+    // - DamageSystem is Lua-based, so decide whether this actor calls Lua or delegates to a script.
+    UE_LOG(Tank, Warning,
+           "[HomingMissile] Explode called but damage application is not implemented yet. Damage=%.2f Radius=%.2f Target=%s",
+           Damage,
+           ImpactRadius,
+           TargetActor ? TargetActor->GetFName().ToString().c_str() : "None");
 
     ReturnOrDeactivate();
 }

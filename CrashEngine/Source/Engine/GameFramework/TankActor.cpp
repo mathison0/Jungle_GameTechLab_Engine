@@ -1,4 +1,4 @@
-#include "TankActor.h"
+﻿#include "TankActor.h"
 
 #include "Collision/CollisionChannels.h"
 #include "Core/Logging/LogMacros.h"
@@ -50,7 +50,6 @@ sol::object FindFirstTableArgument(sol::variadic_args Args)
 
 void ATankActor::BeginPlay()
 {
-    CacheComponentIndices();
     GetHeadGunProjectile();
 
     AActor::BeginPlay();
@@ -62,8 +61,6 @@ void ATankActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
     {
         return;
     }
-
-    CacheComponentIndices();
 
     ScriptComponent.BindFunction("EquipWeaponVisual",
         [this](const std::string& WeaponId, int32 Level, sol::object LayoutObject)
@@ -158,16 +155,7 @@ void ATankActor::InitDefaultComponents()
     auto Script = AddComponent<UScriptComponent>();
     Script->SetScriptPath(TankScriptPath);
 
-    UStaticMeshComponent* HeadMainGun = AddComponent<UStaticMeshComponent>();
-    RootComponent->AddChild(HeadMainGun);
-    HeadMainGun->SetFName(HeadMainGunName);
-    HeadMainGun->SetRelativeLocation(FVector(1.2f, 0.0f, 0.5f));
-    HeadMainGun->SetRelativeScale(FVector(1.0f, 0.35f, 0.35f));
-    HeadMainGun->SetStaticMesh(GetBasicMesh("Models/_Basic/Cube.OBJ"));
-
     HeadGunProjectile = GetBasicMesh("Models/_Basic/Sphere.OBJ");
-
-    CacheComponentIndices();
 }
 
 FTankWeaponAttackParams ATankActor::ReadWeaponAttackParamsFromLua(sol::object ParamsObject) const
@@ -289,7 +277,7 @@ void ATankActor::FireLinearProjectile(const FString& WeaponId, const FTankWeapon
     }
 
     const FVector FireDir = Muzzle->GetForwardVector();
-    const FVector SpawnLocation = Muzzle->GetWorldLocation() + FireDir * 3.0f;
+    const FVector SpawnLocation = Muzzle->GetWorldLocation();
 
     Projectile->SetProjectileSetting({
         GetProjectileMeshForWeapon(WeaponId),
@@ -332,7 +320,7 @@ void ATankActor::FireHomingMissile(const FString& WeaponId, const FTankWeaponAtt
         return;
     }
 
-    Missile->SetActorLocation(Muzzle->GetWorldLocation() + Muzzle->GetForwardVector() * 3.0f);
+    Missile->SetActorLocation(Muzzle->GetWorldLocation());
     Missile->SetActorRotation(Muzzle->GetWorldRotation().ToRotator());
     Missile->SetActorScale(FVector(Params.ProjectileScale, Params.ProjectileScale, Params.ProjectileScale));
     Missile->SetTargetActor(TargetActor);
@@ -351,10 +339,12 @@ void ATankActor::ApplyTargetDamage(const FString& WeaponId, const FTankWeaponAtt
 {
     if (!TargetActor)
     {
+        UE_LOG(Tank, Warning, "[%s] ApplyTargetDamage skipped: target is null. Damage is handled by Lua.",
+               WeaponId.c_str());
         return;
     }
 
-    UE_LOG(Tank, Info, "[%s] ApplyTargetDamage Damage=%.2f Target=%s",
+    UE_LOG(Tank, Info, "[%s] ApplyTargetDamage effect hook only. Damage=%.2f Target=%s",
            WeaponId.c_str(), Params.Damage, TargetActor->GetFName().ToString().c_str());
 }
 
@@ -362,30 +352,55 @@ void ATankActor::NotifyInstantHit(const FString& WeaponId, const FTankWeaponAtta
 {
     if (!TargetActor)
     {
+        UE_LOG(Tank, Warning, "[%s] NotifyInstantHit skipped: target is null. Slot=%d",
+               WeaponId.c_str(), SlotIndex);
         return;
     }
 
-    UE_LOG(Tank, Info, "[%s] NotifyInstantHit Slot=%d Damage=%.2f Target=%s",
-           WeaponId.c_str(), SlotIndex, Params.Damage, TargetActor->GetFName().ToString().c_str());
+    USceneComponent* Origin = GetWeaponMuzzle(WeaponId, SlotIndex);
+    if (!Origin)
+    {
+        Origin = FindSceneComponentByName(MakeWeaponIndexedComponentName("Visual", WeaponId, SlotIndex));
+    }
+
+    if (!Origin)
+    {
+        UE_LOG(Tank, Warning, "[%s] NotifyInstantHit failed: visual/muzzle not found. Slot=%d",
+               WeaponId.c_str(), SlotIndex);
+        return;
+    }
+
+    const FVector OriginLocation = Origin->GetWorldLocation();
+    UE_LOG(Tank, Info, "[%s] NotifyInstantHit effect hook only. Slot=%d Damage=%.2f Origin=(%.2f, %.2f, %.2f) Target=%s",
+           WeaponId.c_str(), SlotIndex, Params.Damage,
+           OriginLocation.X, OriginLocation.Y, OriginLocation.Z,
+           TargetActor->GetFName().ToString().c_str());
 }
 
 void ATankActor::ApplyAreaDamage(const FString& WeaponId, const FTankWeaponAttackParams& Params, const FVector& Center, float Radius)
 {
-    UE_LOG(Tank, Info, "[%s] ApplyAreaDamage Damage=%.2f Center=(%.2f, %.2f, %.2f) Radius=%.2f",
+    UE_LOG(Tank, Warning, "[%s] ApplyAreaDamage is a stub. Damage=%.2f Center=(%.2f, %.2f, %.2f) Radius=%.2f. Implement radius query or use Lua DamageSystem.",
            WeaponId.c_str(), Params.Damage, Center.X, Center.Y, Center.Z, Radius);
 }
 
 void ATankActor::SpawnInstallable(const FString& WeaponId, const FTankWeaponAttackParams& Params, const FVector& Position)
 {
-    UE_LOG(Tank, Info, "[%s] SpawnInstallable Damage=%.2f Position=(%.2f, %.2f, %.2f)",
+    UE_LOG(Tank, Warning, "[%s] SpawnInstallable is not implemented yet. Damage=%.2f Position=(%.2f, %.2f, %.2f)",
            WeaponId.c_str(), Params.Damage, Position.X, Position.Y, Position.Z);
 }
 
 void ATankActor::SpawnSummon(const FString& WeaponId, const FTankWeaponAttackParams& Params, int32 MuzzleIndex)
 {
     USceneComponent* Muzzle = GetWeaponMuzzle(WeaponId, MuzzleIndex);
-    const FVector Position = Muzzle ? Muzzle->GetWorldLocation() : GetActorLocation();
-    UE_LOG(Tank, Info, "[%s] SpawnSummon Damage=%.2f Muzzle=%d Position=(%.2f, %.2f, %.2f)",
+    if (!Muzzle)
+    {
+        UE_LOG(Tank, Warning, "[%s] SpawnSummon failed: muzzle not found. Muzzle=%d",
+               WeaponId.c_str(), MuzzleIndex);
+        return;
+    }
+
+    const FVector Position = Muzzle->GetWorldLocation();
+    UE_LOG(Tank, Warning, "[%s] SpawnSummon is not implemented yet. Damage=%.2f Muzzle=%d Position=(%.2f, %.2f, %.2f)",
            WeaponId.c_str(), Params.Damage, MuzzleIndex, Position.X, Position.Y, Position.Z);
 }
 
@@ -397,41 +412,6 @@ void ATankActor::FireHeadMainGun(const FTankWeaponAttackParams& Params)
 void ATankActor::FireHeadMainGun()
 {
     FireHeadMainGun(FTankWeaponAttackParams{});
-}
-
-void ATankActor::CacheComponentIndices()
-{
-    HeadMainGunIndex = -1;
-
-    for (int32 i = 0; i < static_cast<int32>(OwnedComponents.size()); ++i)
-    {
-        UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(OwnedComponents[i]);
-        if (StaticMeshComponent && StaticMeshComponent->GetFName().ToString() == HeadMainGunName)
-        {
-            HeadMainGunIndex = i;
-            return;
-        }
-    }
-}
-
-UStaticMeshComponent* ATankActor::GetHeadMainGun()
-{
-    if (HeadMainGunIndex >= 0 && HeadMainGunIndex < static_cast<int32>(OwnedComponents.size()))
-    {
-        UStaticMeshComponent* HeadMainGun = Cast<UStaticMeshComponent>(OwnedComponents[HeadMainGunIndex]);
-        if (HeadMainGun && HeadMainGun->GetFName().ToString() == HeadMainGunName)
-        {
-            return HeadMainGun;
-        }
-    }
-
-    CacheComponentIndices();
-    if (HeadMainGunIndex >= 0 && HeadMainGunIndex < static_cast<int32>(OwnedComponents.size()))
-    {
-        return Cast<UStaticMeshComponent>(OwnedComponents[HeadMainGunIndex]);
-    }
-
-    return nullptr;
 }
 
 UStaticMesh* ATankActor::GetHeadGunProjectile()
@@ -519,11 +499,7 @@ USceneComponent* ATankActor::GetWeaponMuzzle(const FString& WeaponId, int32 Muzz
         return Muzzle;
     }
 
-    if (WeaponId == "MainCannon")
-    {
-        return GetHeadMainGun();
-    }
-
+    UE_LOG(Tank, Warning, "Muzzle not found. Weapon=%s Index=%d", WeaponId.c_str(), MuzzleIndex);
     return nullptr;
 }
 

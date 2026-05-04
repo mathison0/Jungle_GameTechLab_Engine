@@ -1,53 +1,126 @@
 ---@class ProjectileScript : ScriptComponent
 local Script = {
     properties = {
-        LifeTimeSeconds = { type = "float", default = 3.0 }
-    }
+        LifeTimeSeconds = { type = "float", default = 3.0 },
+    },
 }
 
+local Co = require("LuaCoroutine")
+local DamageSystem = require("Core.DamageSystem")
+
 function Script:BeginPlay()
-    self.ElapsedTime = 0.0
-    self.bReturnedToPool = false
-    self.PoolManager = GetActorPoolManager()
+    self.actor = self:GetActor()
+    self.HitActors = {}
+    self.bAlive = false
+    self.LifeId = 0
 end
 
-function Script:ResetLifeTime()
-    self.ElapsedTime = 0.0
-    self.bReturnedToPool = false
+function Script:OnProjectileFired()
+    self.actor = self:GetActor()
+    self.bAlive = true
+    self.HitActors = {}
+    self.LifeId = (self.LifeId or 0) + 1
+
+    local lifeId = self.LifeId
+    local lifeTime = self.LifeTimeSeconds or 3.0
+
+    self.StartCoroutine(function()
+        Co.Wait(lifeTime)
+
+        if self.LifeId ~= lifeId then
+            return
+        end
+
+        if not self.bAlive then
+            return
+        end
+
+        self.bAlive = false
+
+        if self.ReturnToPool ~= nil then
+            self.ReturnToPool()
+        end
+    end)
 end
 
-function Script:Tick(deltaTime)
-    if self.bReturnedToPool then
-        self:ResetLifeTime()
-    end
-
-    self.ElapsedTime = (self.ElapsedTime or 0.0) + deltaTime
-
-    local LifeTimeSeconds = self.LifeTimeSeconds or 3.0
-    if self.ElapsedTime < LifeTimeSeconds then
+function Script:OnOverlapBegin(otherCollider)
+    if not self.bAlive then
         return
     end
 
-    local PoolManager = self.PoolManager or GetActorPoolManager()
-    if PoolManager ~= nil and not PoolManager:IsValid() then
-        PoolManager = GetActorPoolManager()
-        self.PoolManager = PoolManager
-    end
-
-    if PoolManager == nil or not PoolManager:IsValid() then
+    if otherCollider == nil or not otherCollider:IsValid() then
         return
     end
 
-    local Owner = self:GetActor()
-    if Owner == nil or not Owner:IsValid() then
+    if otherCollider.GetOwner == nil then
         return
     end
 
-    self.bReturnedToPool = true
-    PoolManager:Release(Owner)
+    local otherActor = otherCollider:GetOwner()
+    if otherActor == nil or not otherActor:IsValid() then
+        return
+    end
+
+    if self.actor ~= nil and otherActor == self.actor then
+        return
+    end
+
+    local tag = nil
+    if otherActor.GetActorTag ~= nil then
+        tag = otherActor:GetActorTag()
+    elseif otherActor.GetTag ~= nil then
+        tag = otherActor:GetTag()
+    end
+
+    if tag ~= "Enemy" then
+        return
+    end
+
+    local uuid = nil
+    if otherActor.GetUUID ~= nil then
+        uuid = otherActor:GetUUID()
+    else
+        uuid = tostring(otherActor)
+    end
+
+    if self.HitActors[uuid] then
+        return
+    end
+
+    self.HitActors[uuid] = true
+
+    local damage = 100.0
+    if self.GetProjectileDamage ~= nil then
+        damage = self.GetProjectileDamage()
+    elseif self.Damage ~= nil then
+        damage = self.Damage
+    end
+
+    local success = DamageSystem.ApplyDamage(otherActor, damage, self.actor)
+    if success then
+        Log("[Projectile] Damage applied: " .. tostring(damage))
+    else
+        Log("[Projectile] Damage failed")
+    end
+
+    local remainPierce = -1
+    if self.ConsumePierce ~= nil then
+        remainPierce = self.ConsumePierce()
+    end
+
+    if remainPierce < 0 then
+        self.bAlive = false
+
+        if self.ReturnToPool ~= nil then
+            self.ReturnToPool()
+        end
+    end
 end
 
 function Script:EndPlay()
+    self.bAlive = false
+    self.LifeId = (self.LifeId or 0) + 1
+    self.StopAllCoroutines()
 end
 
 return Script
