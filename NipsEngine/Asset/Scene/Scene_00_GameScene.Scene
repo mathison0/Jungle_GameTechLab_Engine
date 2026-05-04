@@ -2,7 +2,7 @@
   "ClassName" : "UWorld",
   "GameUIBootMode" : "InGame",
   "Name" : "Scene_00_GameScene",
-  "NextUUID" : 39004,
+  "NextUUID" : 39006,
   "PerspectiveCamera" : {
     "FOV" : 90.000000,
     "FarClip" : 2000.000000,
@@ -767,6 +767,25 @@
       "Type" : "ULuaScriptComponent",
       "UseDefaultScriptPath" : false
     },
+    "26215" : {
+      "BlockComponent" : true,
+      "BoxExtent" : [0.100000, 0.300000, 0.400000],
+      "DebugBoundsVisibility" : 0,
+      "DrawOnlyIfSelected" : false,
+      "EditorOnly" : false,
+      "EnableCull" : false,
+      "EnableTick" : true,
+      "GenerateOverlapEvents" : false,
+      "HiddenInEditor" : false,
+      "LineThickness" : 1.000000,
+      "Location" : [1.043679, 1.607427, -0.922055],
+      "ParentUUID" : 597,
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.000000, 1.000000, 1.000000],
+      "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
+      "Type" : "UBoxComponent",
+      "Visible" : true
+    },
     "26369" : {
       "AngularDamping" : 1.500000,
       "AngularVelocity" : [0.000000, 0.000000, 0.000000],
@@ -1378,6 +1397,30 @@
       "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
       "Type" : "UBoxComponent",
       "Visible" : true
+    },
+    "39004" : {
+      "AutoCreateScript" : true,
+      "AutoLoad" : true,
+      "AutoReloadScript" : true,
+      "EditorOnly" : false,
+      "EnableTick" : true,
+      "HiddenInEditor" : false,
+      "OwnerRootUUID" : 483,
+      "ScriptPath" : "Asset/Scripts/MedicineBottle.lua",
+      "Type" : "ULuaScriptComponent",
+      "UseDefaultScriptPath" : false
+    },
+    "39005" : {
+      "AutoCreateScript" : true,
+      "AutoLoad" : true,
+      "AutoReloadScript" : true,
+      "EditorOnly" : false,
+      "EnableTick" : true,
+      "HiddenInEditor" : false,
+      "OwnerRootUUID" : 160,
+      "ScriptPath" : "Asset/Scripts/OldFairyTaleBook.lua",
+      "Type" : "ULuaScriptComponent",
+      "UseDefaultScriptPath" : false
     },
     "32389" : {
       "BlockComponent" : true,
