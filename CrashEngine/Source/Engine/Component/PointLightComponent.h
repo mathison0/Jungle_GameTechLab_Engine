@@ -17,8 +17,10 @@ public:
     FLightProxy* CreateLightProxy() override;
 
     float GetAttenuationRadius() const { return AttenuationRadius; }
+    void SetAttenuationRadius(float InValue) { AttenuationRadius = InValue; }
     float GetLightFalloffExponent() const { return LightFalloffExponent; }
-
+    void SetLightFalloffExponent(float InValue) { LightFalloffExponent = InValue; }
+    
 protected:
     float AttenuationRadius = 10.0f; // 1 Unit을 1cm로 계산합니다.
     float LightFalloffExponent = 8.0f;
