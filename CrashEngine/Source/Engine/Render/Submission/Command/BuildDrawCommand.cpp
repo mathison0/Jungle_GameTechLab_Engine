@@ -714,6 +714,11 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
         return;
     }
 
+    if (!Context.SceneView->ShowFlags.bUI)
+    {
+        return;
+    }
+
     struct FSortedUIProxy
     {
         const FUIProxy* Proxy = nullptr;

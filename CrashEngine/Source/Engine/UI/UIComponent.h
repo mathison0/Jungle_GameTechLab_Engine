@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Component/SceneComponent.h"
-#include "Object/FName.h"
 
 class FUIProxy;
+struct FViewportPointerEvent;
 
 enum class EUIRenderSpace : int32
 {
@@ -40,14 +40,23 @@ public:
     void SetGeometryType(EUIGeometryType InType);
     EUIGeometryType GetGeometryType() const { return GeometryType; }
 
-    void SetScreenPosition(const FVector2& InPosition);
-    const FVector2& GetScreenPosition() const { return ScreenPosition; }
+    void SetAnchorMin(const FVector2& InAnchorMin);
+    const FVector2& GetAnchorMin() const { return AnchorMin; }
 
-    void SetSize(const FVector2& InSize);
-    const FVector2& GetSize() const { return Size; }
+    void SetAnchorMax(const FVector2& InAnchorMax);
+    const FVector2& GetAnchorMax() const { return AnchorMax; }
+
+    void SetAnchoredPosition(const FVector2& InPosition);
+    const FVector2& GetAnchoredPosition() const { return AnchoredPosition; }
+
+    void SetSizeDelta(const FVector2& InSizeDelta);
+    const FVector2& GetSizeDelta() const { return SizeDelta; }
 
     void SetPivot(const FVector2& InPivot);
     const FVector2& GetPivot() const { return Pivot; }
+
+    void SetRotationDegrees(float InDegrees);
+    float GetRotationDegrees() const { return RotationDegrees; }
 
     void SetLayer(int32 InLayer);
     int32 GetLayer() const { return Layer; }
@@ -64,8 +73,39 @@ public:
     void SetTintColor(const FVector4& InColor);
     const FVector4& GetTintColor() const { return TintColor; }
 
-    void SetTexture(const FName& InTextureName);
-    const FName& GetTextureName() const { return TextureName; }
+    void SetTexturePath(const FString& InTexturePath);
+    void SetTexture(const FString& InTexturePath) { SetTexturePath(InTexturePath); }
+    const FString& GetTexturePath() const { return TexturePath; }
+
+    void SetSubUVRect(const FVector4& InRect);
+    void SetSubUVFrame(int32 Columns, int32 Rows, int32 Index);
+    void ResetSubUVRect();
+    const FVector4& GetSubUVRect() const { return SubUVRect; }
+
+    void SetSpriteSheet(int32 Columns, int32 Rows);
+    void SetSpriteFrame(int32 Index);
+    void SetSpriteFPS(float InFPS);
+    void SetSpriteLoop(bool bInLoop);
+    void SetSpriteAnimationEnabled(bool bEnabled);
+    void PlaySpriteAnimation(bool bRestart = true);
+    void PauseSpriteAnimation();
+    void StopSpriteAnimation();
+
+    int32 GetSpriteColumns() const { return SpriteColumns; }
+    int32 GetSpriteRows() const { return SpriteRows; }
+    int32 GetSpriteFrame() const { return SpriteFrameIndex; }
+    float GetSpriteFPS() const { return SpriteFPS; }
+    bool IsSpriteLoop() const { return bSpriteLoop; }
+    bool IsSpriteAnimationEnabled() const { return bSpriteAnimation; }
+    bool IsSpritePlaying() const { return bSpritePlaying; }
+    bool IsSpriteAnimationFinished() const { return bSpriteFinished; }
+
+    FVector2 GetScreenLayoutSize(float ViewportWidth, float ViewportHeight) const;
+    FVector2 GetScreenPivotPosition(float ViewportWidth, float ViewportHeight) const;
+    bool HitTestScreenPoint(const FVector2& ScreenPoint, float ViewportWidth, float ViewportHeight) const;
+    virtual bool HandleUIPointerEvent(const FViewportPointerEvent& Event);
+    virtual void OnUIPointerEnter(const FViewportPointerEvent& Event);
+    virtual void OnUIPointerLeave(const FViewportPointerEvent& Event);
 
     void MarkUIRenderStateDirty();
     void MarkUILayoutDirty();
@@ -74,18 +114,38 @@ public:
 
 protected:
     void OnTransformDirty() override;
+    void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
     FUIProxy* UIProxy = nullptr;
 
     EUIRenderSpace RenderSpace = EUIRenderSpace::ScreenSpace;
     EUIGeometryType GeometryType = EUIGeometryType::Quad;
-    FVector2 ScreenPosition = { 0.0f, 0.0f };
-    FVector2 Size = { 100.0f, 100.0f };
+    FVector2 AnchorMin = { 0.0f, 0.0f };
+    FVector2 AnchorMax = { 0.0f, 0.0f };
+    FVector2 AnchoredPosition = { 0.0f, 0.0f };
+    FVector2 SizeDelta = { 100.0f, 100.0f };
     FVector2 Pivot = { 0.5f, 0.5f };
+    float RotationDegrees = 0.0f;
     int32 Layer = 0;
     int32 ZOrder = 0;
     bool bVisible = true;
     bool bHitTestVisible = true;
     FVector4 TintColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-    FName TextureName = FName::None;
+    FString TexturePath;
+    FVector4 SubUVRect = { 0.0f, 0.0f, 1.0f, 1.0f };
+
+    int32 SpriteColumns = 1;
+    int32 SpriteRows = 1;
+    int32 SpriteFrameIndex = 0;
+    float SpriteFPS = 12.0f;
+    bool bSpriteAnimation = false;
+    bool bSpriteLoop = true;
+    bool bSpritePlaying = true;
+    bool bSpriteFinished = false;
+    float SpriteTimeAccumulator = 0.0f;
+
+private:
+    int32 GetSpriteFrameCount() const;
+    void ClampSpriteSheetState();
+    void ApplySpriteFrameToSubUVRect();
 };

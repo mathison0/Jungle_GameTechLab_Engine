@@ -4,6 +4,7 @@
 #include "UI/UIComponent.h"
 
 struct ID3D11ShaderResourceView;
+class UTexture2D;
 
 class FUIProxy : public FSceneProxy
 {
@@ -14,14 +15,20 @@ public:
     virtual void UpdateStyle();
     virtual void UpdateVisibility();
 
+    FVector2 GetScreenLayoutSize(float ViewportWidth, float ViewportHeight) const;
+    FVector2 GetScreenPivotPosition(float ViewportWidth, float ViewportHeight) const;
+
     UUIComponent* Owner = nullptr;
 
     EUIRenderSpace RenderSpace = EUIRenderSpace::ScreenSpace;
     EUIGeometryType GeometryType = EUIGeometryType::Quad;
 
-    FVector2 ScreenPosition = { 0.0f, 0.0f };
-    FVector2 Size = { 100.0f, 100.0f };
+    FVector2 AnchorMin = { 0.0f, 0.0f };
+    FVector2 AnchorMax = { 0.0f, 0.0f };
+    FVector2 AnchoredPosition = { 0.0f, 0.0f };
+    FVector2 SizeDelta = { 100.0f, 100.0f };
     FVector2 Pivot = { 0.5f, 0.5f };
+    float RotationDegrees = 0.0f;
 
     FMatrix WorldMatrix;
     int32 Layer = 0;
@@ -31,7 +38,9 @@ public:
     bool bHitTestVisible = true;
 
     FVector4 TintColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-    FName TextureName = FName::None;
+    FString TexturePath;
+    FVector4 SubUVRect = { 0.0f, 0.0f, 1.0f, 1.0f };
+    UTexture2D* Texture = nullptr;
     ID3D11ShaderResourceView* TextureSRV = nullptr;
     bool bUseTexture = false;
 };

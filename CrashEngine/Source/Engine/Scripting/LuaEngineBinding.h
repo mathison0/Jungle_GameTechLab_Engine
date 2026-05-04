@@ -79,6 +79,13 @@ struct FLuaComponentHandle
 
 	bool IsOverlappingActor(const FLuaActorHandle& OtherActor) const;
 	bool IsOverlappingComponent(const FLuaComponentHandle& OtherComponent) const;
+
+	bool IsUIButton() const;
+	bool IsButtonInteractable() const;
+	bool SetButtonInteractable(bool bInteractable) const;
+	bool IsButtonHovered() const;
+	bool IsButtonPressed() const;
+	int32 GetButtonClickCount() const;
 };
 
 void RegisterLuaEngineBindings(sol::state& Lua);

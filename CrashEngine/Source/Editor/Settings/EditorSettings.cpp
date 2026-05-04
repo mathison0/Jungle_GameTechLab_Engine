@@ -23,6 +23,7 @@ constexpr const char* InitLookAt = "InitLookAt";
 // Slot Render Options
 constexpr const char* ViewMode = "ViewMode";
 constexpr const char* bPrimitives = "bPrimitives";
+constexpr const char* bUI = "bUI";
 constexpr const char* bText = "bText";
 constexpr const char* bGrid = "bGrid";
 constexpr const char* bWorldAxis = "bWorldAxis";
@@ -111,6 +112,7 @@ void FEditorSettings::SaveToFile(const FString& Path) const
         SlotObj[Key::ViewMode] = static_cast<int32>(Opts.ViewMode);
         SlotObj[Key::ViewportType] = static_cast<int32>(Opts.ViewportType);
         SlotObj[Key::bPrimitives] = Opts.ShowFlags.bPrimitives;
+        SlotObj[Key::bUI] = Opts.ShowFlags.bUI;
         SlotObj[Key::bText] = Opts.ShowFlags.bText;
         SlotObj[Key::bGrid] = Opts.ShowFlags.bGrid;
         SlotObj[Key::bWorldAxis] = Opts.ShowFlags.bWorldAxis;
@@ -254,6 +256,8 @@ void FEditorSettings::LoadFromFile(const FString& Path)
                     Opts.ViewportType = static_cast<ELevelViewportType>(S[Key::ViewportType].ToInt());
                 if (S.hasKey(Key::bPrimitives))
                     Opts.ShowFlags.bPrimitives = S[Key::bPrimitives].ToBool();
+                if (S.hasKey(Key::bUI))
+                    Opts.ShowFlags.bUI = S[Key::bUI].ToBool();
                 if (S.hasKey(Key::bText))
                     Opts.ShowFlags.bText = S[Key::bText].ToBool();
                 if (S.hasKey(Key::bGrid))

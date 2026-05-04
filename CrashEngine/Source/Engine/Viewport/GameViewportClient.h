@@ -9,6 +9,8 @@
 
 class FViewport;
 class FOverlayStatSystem;
+class UUIComponent;
+struct FViewportPointerEvent;
 
 // UGameViewportClient는 게임 월드와 실제 뷰포트 출력을 연결합니다.
 class UGameViewportClient : public UObject, public FViewportClient
@@ -38,6 +40,11 @@ public:
 
     bool InputPointer(const FViewportPointerEvent& Event) override
     {
+        if (RouteUIPointerEvent(Event))
+        {
+            return true;
+        }
+
         return InputController && InputController->InputPointer(Event);
     }
 
@@ -57,9 +64,17 @@ public:
     void SetOverlayStatSystem(FOverlayStatSystem* InOverlayStatSystem) { OverlayStatSystem = InOverlayStatSystem; }
 
 private:
+    bool RouteUIPointerEvent(const FViewportPointerEvent& Event);
+    UUIComponent* FindTopmostUIComponentAt(const FVector2& ScreenPoint, float ViewportWidth, float ViewportHeight) const;
+    bool IsUIComponentRegistered(const UUIComponent* Component) const;
+    void UpdateUIHover(UUIComponent* NewHovered, const FViewportPointerEvent& Event);
+
+private:
     FViewport* Viewport = nullptr;
     std::unique_ptr<FGameViewportInputController> InputController;
 
     class UCameraComponent* FallbackCamera = nullptr;
     FOverlayStatSystem* OverlayStatSystem = nullptr;
+    UUIComponent* HoveredUIComponent = nullptr;
+    UUIComponent* CapturedUIComponent = nullptr;
 };

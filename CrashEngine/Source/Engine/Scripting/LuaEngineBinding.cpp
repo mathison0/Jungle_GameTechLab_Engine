@@ -8,6 +8,7 @@
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include "Scripting/LuaScriptTypes.h"
+#include "UI/ButtonComponent.h"
 
 namespace
 {
@@ -500,6 +501,47 @@ bool FLuaComponentHandle::IsOverlappingComponent(const FLuaComponentHandle& Othe
     return PrimitiveComponent->IsOverlappingComponent(OtherPrimitive);
 }
 
+bool FLuaComponentHandle::IsUIButton() const
+{
+    return Cast<UUIButtonComponent>(Resolve()) != nullptr;
+}
+
+bool FLuaComponentHandle::IsButtonInteractable() const
+{
+    UUIButtonComponent* Button = Cast<UUIButtonComponent>(Resolve());
+    return Button ? Button->IsInteractable() : false;
+}
+
+bool FLuaComponentHandle::SetButtonInteractable(bool bInteractable) const
+{
+    UUIButtonComponent* Button = Cast<UUIButtonComponent>(Resolve());
+    if (!Button)
+    {
+        return false;
+    }
+
+    Button->SetInteractable(bInteractable);
+    return true;
+}
+
+bool FLuaComponentHandle::IsButtonHovered() const
+{
+    UUIButtonComponent* Button = Cast<UUIButtonComponent>(Resolve());
+    return Button ? Button->IsHovered() : false;
+}
+
+bool FLuaComponentHandle::IsButtonPressed() const
+{
+    UUIButtonComponent* Button = Cast<UUIButtonComponent>(Resolve());
+    return Button ? Button->IsPressed() : false;
+}
+
+int32 FLuaComponentHandle::GetButtonClickCount() const
+{
+    UUIButtonComponent* Button = Cast<UUIButtonComponent>(Resolve());
+    return Button ? Button->GetClickCount() : 0;
+}
+
 void RegisterLuaEngineBindings(sol::state& Lua)
 {
     Lua.new_usertype<FVector>(
@@ -570,5 +612,13 @@ void RegisterLuaEngineBindings(sol::state& Lua)
         "ShouldGenerateOverlapEvents", &FLuaComponentHandle::ShouldGenerateOverlapEvents,
         "SetGenerateOverlapEvents", &FLuaComponentHandle::SetGenerateOverlapEvents,
         "IsOverlappingActor", &FLuaComponentHandle::IsOverlappingActor,
-        "IsOverlappingComponent", &FLuaComponentHandle::IsOverlappingComponent);
+        "IsOverlappingComponent", &FLuaComponentHandle::IsOverlappingComponent,
+
+        // UIButtonComponent API
+        "IsUIButton", &FLuaComponentHandle::IsUIButton,
+        "IsButtonInteractable", &FLuaComponentHandle::IsButtonInteractable,
+        "SetButtonInteractable", &FLuaComponentHandle::SetButtonInteractable,
+        "IsButtonHovered", &FLuaComponentHandle::IsButtonHovered,
+        "IsButtonPressed", &FLuaComponentHandle::IsButtonPressed,
+        "GetButtonClickCount", &FLuaComponentHandle::GetButtonClickCount);
 }

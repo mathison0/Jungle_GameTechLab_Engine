@@ -11,6 +11,7 @@
 #include "Editor/Viewport/LevelEditorViewportClient.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/AmbientLightActor.h"
+#include "GameFramework/ButtonActor.h"
 #include "GameFramework/DecalActor.h"
 #include "GameFramework/DirectionalLightActor.h"
 #include "GameFramework/FakeLightActor.h"
@@ -153,6 +154,7 @@ constexpr FAddActorEntry BasicAddActors[] = {
     ADD_MESH("Cube", EAddActorIcon::Cube, FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ")),
     ADD_MESH("Sphere", EAddActorIcon::Sphere, FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ")),
     ADD_ACTOR("UI", EAddActorIcon::UI, AUIActor, false),
+    ADD_ACTOR("Button", EAddActorIcon::UI, AButtonActor, false),
 };
 
 constexpr FAddActorEntry LightAddActors[] = {
@@ -1024,6 +1026,7 @@ void FEditorToolbarPanel::RenderPaneToolbar(FLevelViewportLayout* Layout,
         if (ImGui::CollapsingHeader("Common Show Flags", ImGuiTreeNodeFlags_DefaultOpen))
         {
             ImGui::Checkbox("Primitives", &Opts.ShowFlags.bPrimitives);
+            ImGui::Checkbox("UI", &Opts.ShowFlags.bUI);
             ImGui::Checkbox("Text", &Opts.ShowFlags.bText);
         }
 

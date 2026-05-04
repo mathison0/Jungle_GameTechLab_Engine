@@ -15,8 +15,10 @@ void AUIActor::InitDefaultComponents()
 
     UIComponent->SetRenderSpace(EUIRenderSpace::ScreenSpace);
     UIComponent->SetGeometryType(EUIGeometryType::Quad);
-    UIComponent->SetScreenPosition(FVector2(100.0f, 100.0f));
-    UIComponent->SetSize(FVector2(200.0f, 80.0f));
+    UIComponent->SetAnchorMin(FVector2(0.0f, 0.0f));
+    UIComponent->SetAnchorMax(FVector2(0.0f, 0.0f));
+    UIComponent->SetAnchoredPosition(FVector2(100.0f, 100.0f));
+    UIComponent->SetSizeDelta(FVector2(200.0f, 80.0f));
     UIComponent->SetPivot(FVector2(0.0f, 0.0f));
     UIComponent->SetTintColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
 
