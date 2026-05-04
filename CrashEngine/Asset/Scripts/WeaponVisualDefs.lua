@@ -5,11 +5,11 @@ WeaponVisualDefs.MainCannon = {
         Visuals = {
             {
                 Name = "Visual_MainCannon_0",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Tank/Tank_head.obj",
                 Parent = "RootComponent",
                 Location = { 0.0, 0.0, 1.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
-                Scale = { 1.0, 0.4, 0.4 },
+                Scale = { 0.4, 0.4, 0.4 },
                 MuzzleName = "Muzzle_MainCannon_0",
                 MuzzleLocation = { 1.5, 0.0, 0.0 },
             },
@@ -20,11 +20,11 @@ WeaponVisualDefs.MainCannon = {
         Visuals = {
             {
                 Name = "Visual_MainCannon_0",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Tank/Tank_head.obj",
                 Parent = "RootComponent",
                 Location = { 0.0, 0.0, 1.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
-                Scale = { 1.2, 0.45, 0.45 },
+                Scale = { 0.45, 0.45, 0.45 },
                 MuzzleName = "Muzzle_MainCannon_0",
                 MuzzleLocation = { 1.7, 0.0, 0.0 },
             },
@@ -35,11 +35,11 @@ WeaponVisualDefs.MainCannon = {
         Visuals = {
             {
                 Name = "Visual_MainCannon_0",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Tank/Tank_head.obj",
                 Parent = "RootComponent",
                 Location = { 0.0, 0.0, 1.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
-                Scale = { 1.8, 0.7, 0.7 },
+                Scale = { 0.5, 0.5, 0.5 },
                 MuzzleName = "Muzzle_MainCannon_0",
                 MuzzleLocation = { 2.0, 0.0, 0.0 },
             },

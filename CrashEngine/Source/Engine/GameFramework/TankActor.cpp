@@ -139,6 +139,7 @@ void ATankActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
 void ATankActor::InitDefaultComponents()
 {
     SetActorTag("Player");
+    
     auto Collider = AddComponent<UCircleCollider2DComponent>();
     SetRootComponent(Collider);
     Collider->SetFName({ "RootComponent" });
@@ -151,6 +152,14 @@ void ATankActor::InitDefaultComponents()
     PickupSensor->SetCollisionChannel(ECollisionChannel::PickupSensor);
     PickupSensor->SetGenerateOverlapEvents(true);
     PickupSensor->AttachToComponent(Collider);
+    
+    ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+    UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/Tank/Tank_body.obj"), Device);
+    auto BodyMesh = AddComponent<UStaticMeshComponent>();
+    BodyMesh->SetFName("BodyMesh");
+    BodyMesh->SetStaticMesh(Asset);
+    BodyMesh->SetRelativeScale(FVector(0.5f));
+    BodyMesh->AttachToComponent(Collider);
 
     auto Script = AddComponent<UScriptComponent>();
     Script->SetScriptPath(TankScriptPath);
