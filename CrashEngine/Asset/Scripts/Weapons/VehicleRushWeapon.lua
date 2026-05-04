@@ -1,0 +1,304 @@
+local Co = require("LuaCoroutine")
+local DamageSystem = require("Core.DamageSystem")
+local Vec = require("Core.Vector")
+local WeaponDefs = require("WeaponDefs")
+
+local VehicleRushWeapon = {}
+VehicleRushWeapon.__index = VehicleRushWeapon
+
+local function Components(v)
+    return v.x or v.X or v[1] or 0.0,
+           v.y or v.Y or v[2] or 0.0,
+           v.z or v.Z or v[3] or 0.0
+end
+
+local function Dot2(a, b)
+    local ax, ay = Components(a)
+    local bx, by = Components(b)
+    return ax * bx + ay * by
+end
+
+local function IsValidActor(actor)
+    if actor == nil or not actor:IsValid() then
+        return false
+    end
+
+    if actor.IsVisible ~= nil and not actor:IsVisible() then
+        return false
+    end
+
+    return true
+end
+
+local function GetActorKey(actor)
+    if actor ~= nil and actor.GetUUID ~= nil then
+        return tostring(actor:GetUUID())
+    end
+
+    return tostring(actor)
+end
+
+function VehicleRushWeapon.New(owner)
+    local self = setmetatable({}, VehicleRushWeapon)
+    self.Owner = owner
+    self.Id = "VehicleRush"
+    self.Def = WeaponDefs.VehicleRush
+    self.Level = 1
+    self.Data = self.Def.Levels[self.Level]
+    self.Coroutine = nil
+    self.IsRunning = false
+    self.Visuals = {}
+    return self
+end
+
+function VehicleRushWeapon:Start()
+    if self.IsRunning then
+        return
+    end
+
+    self.IsRunning = true
+    self:OnVisualApplied()
+
+    if self.Owner ~= nil and self.Owner.StartCoroutine ~= nil then
+        self.Coroutine = self.Owner.StartCoroutine(function()
+            self:AttackLoop()
+        end)
+    else
+        Log("[VehicleRush] StartCoroutine is nil")
+    end
+end
+
+function VehicleRushWeapon:Stop()
+    self.IsRunning = false
+
+    if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil and self.Coroutine ~= nil then
+        self.Owner.StopCoroutine(self.Coroutine)
+    end
+
+    self.Coroutine = nil
+    self:HideVisuals()
+end
+
+function VehicleRushWeapon:AttackLoop()
+    while self.IsRunning do
+        self:RunVehiclePass()
+        Co.Wait(self.Data.FireInterval or 5.0)
+    end
+end
+
+function VehicleRushWeapon:Upgrade()
+    if self:IsMaxLevel() then
+        Log("[VehicleRush] is max level")
+        return false
+    end
+
+    self.Level = self.Level + 1
+    self.Data = self.Def.Levels[self.Level]
+    Log("[VehicleRush] upgraded. level = " .. tostring(self.Level))
+    return true
+end
+
+function VehicleRushWeapon:IsMaxLevel()
+    return self.Level >= self.Def.MaxLevel
+end
+
+function VehicleRushWeapon:OnVisualApplied()
+    self.Visuals = {}
+    self:RefreshVisuals()
+    self:HideVisuals()
+end
+
+function VehicleRushWeapon:RefreshVisuals()
+    if self.Owner == nil or self.Owner.GetComponentByName == nil then
+        return
+    end
+
+    local maxCount = self.Def.MaxVehicleCount or 1
+    for i = 1, maxCount do
+        local name = "Visual_VehicleRush_" .. tostring(i - 1)
+        local visual = self.Owner.GetComponentByName("UStaticMeshComponent", name)
+        if visual ~= nil and visual:IsValid() then
+            self.Visuals[i] = visual
+        end
+    end
+end
+
+function VehicleRushWeapon:HideVisuals()
+    for _, visual in pairs(self.Visuals) do
+        if visual ~= nil and visual:IsValid() then
+            visual:SetVisibility(false)
+        end
+    end
+end
+
+function VehicleRushWeapon:GetOwnerActor()
+    if self.Owner == nil or self.Owner.GetActor == nil then
+        return nil
+    end
+
+    local ownerActor = self.Owner.GetActor()
+    if ownerActor ~= nil and ownerActor:IsValid() then
+        return ownerActor
+    end
+
+    return nil
+end
+
+function VehicleRushWeapon:GetWorld(ownerActor)
+    if self.Owner ~= nil and self.Owner.GetWorld ~= nil then
+        local world = self.Owner.GetWorld()
+        if world ~= nil and world:IsValid() then
+            return world
+        end
+    end
+
+    if ownerActor ~= nil and ownerActor.GetWorld ~= nil then
+        local world = ownerActor:GetWorld()
+        if world ~= nil and world:IsValid() then
+            return world
+        end
+    end
+
+    return nil
+end
+
+function VehicleRushWeapon:RunVehiclePass()
+    local ownerActor = self:GetOwnerActor()
+    if ownerActor == nil then
+        return
+    end
+
+    local world = self:GetWorld(ownerActor)
+    if world == nil then
+        return
+    end
+
+    self:RefreshVisuals()
+
+    local playerPos = ownerActor:GetLocation()
+    local angle = math.random() * math.pi * 2.0
+    local dir = Vec.New(math.cos(angle), math.sin(angle), 0.0)
+    local side = Vec.New(-math.sin(angle), math.cos(angle), 0.0)
+    local minOffset = self.Data.MinPassOffset or 8.0
+    local maxOffset = math.max(self.Data.MaxPassOffset or 18.0, minOffset)
+    local offsetDistance = minOffset + math.random() * (maxOffset - minOffset)
+
+    if math.random(0, 1) == 0 then
+        offsetDistance = -offsetDistance
+    end
+
+    local origin = Vec.Add(playerPos, Vec.Mul(side, offsetDistance))
+
+    local spawnDistance = self.Data.SpawnDistance or 50.0
+    local speed = math.max(self.Data.VehicleSpeed or 35.0, 0.001)
+    local duration = (spawnDistance * 2.0) / speed
+    local count = self.Data.VehicleCount or 1
+    local laneSpacing = self.Data.LaneSpacing or 5.0
+    local halfCount = (count - 1) * 0.5
+    local vehicles = {}
+
+    for i = 1, count do
+        local laneOffset = (i - 1 - halfCount) * laneSpacing
+        local laneBase = Vec.Add(origin, Vec.Mul(side, laneOffset))
+        local startPos = Vec.Sub(laneBase, Vec.Mul(dir, spawnDistance))
+        local endPos = Vec.Add(laneBase, Vec.Mul(dir, spawnDistance))
+        local visual = self.Visuals[i]
+
+        if visual ~= nil and visual:IsValid() then
+            visual:SetWorldLocation(startPos)
+            visual:LookAt(endPos)
+            visual:SetVisibility(true)
+        end
+
+        table.insert(vehicles, {
+            Start = startPos,
+            End = endPos,
+            Previous = startPos,
+            Visual = visual,
+        })
+    end
+
+    Log("[VehicleRush] vehicle pass started. count=" ..
+        tostring(count) ..
+        " offset=" ..
+        tostring(offsetDistance))
+
+    local elapsed = 0.0
+    local hitActors = {}
+
+    self:UpdateVehicles(world, ownerActor, vehicles, dir, side, 0.0, hitActors)
+
+    while self.IsRunning and elapsed < duration do
+        local dt = Co.WaitNextFrame() or 0.0
+        elapsed = elapsed + dt
+
+        local alpha = elapsed / duration
+        if alpha > 1.0 then
+            alpha = 1.0
+        end
+
+        self:UpdateVehicles(world, ownerActor, vehicles, dir, side, alpha, hitActors)
+    end
+
+    for _, vehicle in ipairs(vehicles) do
+        local visual = vehicle.Visual
+        if visual ~= nil and visual:IsValid() then
+            visual:SetVisibility(false)
+        end
+    end
+end
+
+function VehicleRushWeapon:UpdateVehicles(world, ownerActor, vehicles, dir, side, alpha, hitActors)
+    for _, vehicle in ipairs(vehicles) do
+        local position = Vec.Lerp(vehicle.Start, vehicle.End, alpha)
+        local previous = vehicle.Previous or position
+        local visual = vehicle.Visual
+
+        if visual ~= nil and visual:IsValid() then
+            visual:SetWorldLocation(position)
+        end
+
+        self:DamageEnemiesOnSegment(world, ownerActor, previous, position, dir, side, hitActors)
+        vehicle.Previous = position
+    end
+end
+
+function VehicleRushWeapon:DamageEnemiesOnSegment(world, ownerActor, previous, position, dir, side, hitActors)
+    local enemies = world:GetActorsByTag("Enemy")
+    if enemies == nil then
+        return
+    end
+
+    local halfLength = (self.Data.VehicleLength or 5.0) * 0.5
+    local halfWidth = (self.Data.VehicleWidth or 2.0) * 0.5
+    local damage = self.Data.Damage or 20.0
+    local segmentLength = math.sqrt(Vec.DistanceSquared(previous, position))
+
+    for _, enemy in ipairs(enemies) do
+        if IsValidActor(enemy) then
+            local key = GetActorKey(enemy)
+            if hitActors[key] == nil then
+                local targetLocation = enemy:GetLocation()
+                local targetRadius = self.Data.TargetRadius or 0.5
+                local offset = Vec.Sub(targetLocation, previous)
+                local forwardDistance = Dot2(offset, dir)
+                local sideDistance = math.abs(Dot2(offset, side))
+
+                if forwardDistance >= -halfLength - targetRadius and
+                    forwardDistance <= segmentLength + halfLength + targetRadius and
+                    sideDistance <= halfWidth + targetRadius then
+                    local success = DamageSystem.ApplyDamage(enemy, damage, ownerActor)
+
+                    if success then
+                        hitActors[key] = true
+                        Log("[VehicleRush] hit " .. enemy:GetName() .. " damage=" .. tostring(damage))
+                    else
+                        Log("[VehicleRush] damage failed. target=" .. enemy:GetName())
+                    end
+                end
+            end
+        end
+    end
+end
+
+return VehicleRushWeapon

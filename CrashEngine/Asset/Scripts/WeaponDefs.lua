@@ -69,6 +69,51 @@ WeaponDefs.MachineTurret = {
     },
 }
 
+WeaponDefs.VehicleRush = {
+    DisplayName = "Vehicle Rush",
+    AttackType = "MovingAreaDamage",
+    MaxLevel = 3,
+    MaxVehicleCount = 3,
+    Levels = {
+        [1] = {
+            Damage = 9999,
+            FireInterval = 5.5,
+            VehicleSpeed = 36.0,
+            SpawnDistance = 55.0,
+            VehicleLength = 11.0,
+            VehicleWidth = 4.8,
+            VehicleCount = 1,
+            LaneSpacing = 5.0,
+            MinPassOffset = 8.0,
+            MaxPassOffset = 18.0,
+        },
+        [2] = {
+            Damage = 9999,
+            FireInterval = 5.0,
+            VehicleSpeed = 40.0,
+            SpawnDistance = 58.0,
+            VehicleLength = 12.0,
+            VehicleWidth = 5.2,
+            VehicleCount = 3,
+            LaneSpacing = 5.0,
+            MinPassOffset = 10.0,
+            MaxPassOffset = 20.0,
+        },
+        [3] = {
+            Damage = 9999,
+            FireInterval = 5.0,
+            VehicleSpeed = 32.0,
+            SpawnDistance = 70.0,
+            VehicleLength = 28.0,
+            VehicleWidth = 3.0,
+            VehicleCount = 1,
+            LaneSpacing = 0.0,
+            MinPassOffset = 9.0,
+            MaxPassOffset = 22.0,
+        },
+    },
+}
+
 WeaponDefs.Aura = {
     DisplayName = "Aura",
     AttackType = "AreaTickDamage",

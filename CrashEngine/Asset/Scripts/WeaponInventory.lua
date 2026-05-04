@@ -5,6 +5,7 @@ local WeaponVisualDefs = require("WeaponVisualDefs")
 local WeaponConstructors = {
     MainCannon = require("Weapons.MainCannonWeapon"),
     MachineTurret = require("Weapons.MachineTurretWeapon"),
+    VehicleRush = require("Weapons.VehicleRushWeapon"),
     Aura = require("Weapons.AuraWeapon"),
     HomingMissile = require("Weapons.HomingMissileWeapon"),
     SatelliteBeam = require("Weapons.SatelliteBeamWeapon"),
@@ -13,6 +14,7 @@ local WeaponConstructors = {
 local WeaponIds = {
     "MainCannon",
     "MachineTurret",
+    "VehicleRush",
     "Aura",
     "HomingMissile",
     "SatelliteBeam",
@@ -65,6 +67,9 @@ function WeaponInventory:AddWeapon(id)
     self.Weapons[id] = weapon
     Log(id .. " added")
     self:ApplyWeaponVisual(id, weapon.Level or 1)
+    if weapon.OnVisualApplied ~= nil then
+        weapon:OnVisualApplied()
+    end
 
     if weapon.Start ~= nil then
         weapon:Start()
@@ -86,6 +91,9 @@ function WeaponInventory:UpgradeWeapon(id)
     local upgraded = weapon:Upgrade()
     if upgraded then
         self:ApplyWeaponVisual(id, weapon.Level or 1)
+        if weapon.OnVisualApplied ~= nil then
+            weapon:OnVisualApplied()
+        end
         if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
             weapon:RebuildTurretSlots()
         end
@@ -141,6 +149,9 @@ function WeaponInventory:EvolveWeapon(id)
     local evolved = weapon:Evolve()
     if evolved then
         self:ApplyWeaponVisual(id, weapon.Level or 1)
+        if weapon.OnVisualApplied ~= nil then
+            weapon:OnVisualApplied()
+        end
         if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
             weapon:RebuildTurretSlots()
         end
