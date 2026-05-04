@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local GameplayPause = require("GameplayPause")
 local Vec = require("Core.Vector")
 
 local ChaseAI = {
@@ -36,8 +37,10 @@ end
 function ChaseAI.ChaseTargetCoroutine(self, TargetTag, ComponentHandle)
 
     while true do
-        local deltaTime = Co.WaitNextFrame()
-        ChaseAI.ChaseTarget(self, TargetTag, ComponentHandle, deltaTime)
+        local deltaTime, paused = GameplayPause.WaitNextFrame()
+        if not paused then
+            ChaseAI.ChaseTarget(self, TargetTag, ComponentHandle, deltaTime)
+        end
     end
 end
 

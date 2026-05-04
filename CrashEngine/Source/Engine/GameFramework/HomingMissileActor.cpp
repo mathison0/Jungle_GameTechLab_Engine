@@ -5,6 +5,7 @@
 #include "Engine/Component/Collision/CircleCollider2DComponent.h"
 #include "Engine/Component/StaticMeshComponent.h"
 #include "Engine/Runtime/Engine.h"
+#include "GameFramework/World.h"
 #include "Math/MathUtils.h"
 #include "Platform/Paths.h"
 
@@ -51,6 +52,14 @@ void AHomingMissileActor::InitDefaultComponents()
 
 void AHomingMissileActor::Tick(float DeltaTime)
 {
+    if (UWorld* World = GetWorld())
+    {
+        if (World->IsGameplayPaused())
+        {
+            return;
+        }
+    }
+
     if (!bActive)
     {
         return;

@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local GameplayPause = require("GameplayPause")
 local WeaponDefs = require("WeaponDefs")
 
 local HomingMissileWeapon = {}
@@ -43,26 +44,28 @@ end
 
 function HomingMissileWeapon:FireLoop()
     while self.IsRunning do
-        local target = nil
-        local ownerActor = nil
+        if not GameplayPause.IsPaused() then
+            local target = nil
+            local ownerActor = nil
 
-        if self.Owner ~= nil and self.Owner.GetActor ~= nil then
-            ownerActor = self.Owner.GetActor()
+            if self.Owner ~= nil and self.Owner.GetActor ~= nil then
+                ownerActor = self.Owner.GetActor()
+            end
+
+            if ownerActor ~= nil and ownerActor:IsValid() and self.Owner.QueryActorByTagClosest ~= nil then
+                target = self.Owner.QueryActorByTagClosest(
+                    "Enemy",
+                    ownerActor:GetLocation(),
+                    self.Data.Range or 10000.0
+                )
+            end
+
+            if target ~= nil and target:IsValid() and self.Owner.FireHomingMissile ~= nil then
+                self.Owner.FireHomingMissile("HomingMissile", self.Data, 0, target)
+            end
         end
 
-        if ownerActor ~= nil and ownerActor:IsValid() and self.Owner.QueryActorByTagClosest ~= nil then
-            target = self.Owner.QueryActorByTagClosest(
-                "Enemy",
-                ownerActor:GetLocation(),
-                self.Data.Range or 10000.0
-            )
-        end
-
-        if target ~= nil and target:IsValid() and self.Owner.FireHomingMissile ~= nil then
-            self.Owner.FireHomingMissile("HomingMissile", self.Data, 0, target)
-        end
-
-        Co.Wait(self.Data.FireInterval)
+        GameplayPause.Wait(self.Data.FireInterval)
     end
 end
 

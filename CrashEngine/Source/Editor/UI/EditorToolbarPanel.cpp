@@ -42,6 +42,8 @@
 #include <string>
 #include <utility>
 
+#include "GameFramework/ExpBarActor.h"
+
 namespace
 {
 template <typename T>
@@ -179,6 +181,7 @@ constexpr FAddActorEntry EffectAddActors[] = {
 constexpr FAddActorEntry GameAddActors[] = {
     ADD_ACTOR("Enemy Spawner", EAddActorIcon::Empty, AEnemySpawnerActor, false),
     ADD_ACTOR("Tank", EAddActorIcon::Empty, ATankActor, false),
+	ADD_ACTOR("Exp Bar UI", EAddActorIcon::Empty, AExpBarActor, false),
 };
 
 #undef ADD_MESH

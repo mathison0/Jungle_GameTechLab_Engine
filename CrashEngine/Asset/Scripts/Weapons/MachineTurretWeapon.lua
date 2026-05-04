@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local GameplayPause = require("GameplayPause")
 local DamageSystem = require("Core.DamageSystem")
 local WeaponDefs = require("WeaponDefs")
 
@@ -235,15 +236,19 @@ end
 
 function MachineTurretWeapon:TurretSearchLoop(slot)
     while self.IsRunning and slot.IsRunning do
-        self:UpdateSlotTarget(slot)
-        Co.Wait(slot.TargetRefreshInterval)
+        if not GameplayPause.IsPaused() then
+            self:UpdateSlotTarget(slot)
+        end
+        GameplayPause.Wait(slot.TargetRefreshInterval)
     end
 end
 
 function MachineTurretWeapon:TurretAimLoop(slot)
     while self.IsRunning and slot.IsRunning do
-        Co.WaitNextFrame()
-        self:UpdateSlotAim(slot)
+        local _, paused = GameplayPause.WaitNextFrame()
+        if not paused then
+            self:UpdateSlotAim(slot)
+        end
     end
 end
 
@@ -257,14 +262,16 @@ function MachineTurretWeapon:TurretFireLoop(slot)
                 break
             end
             
-            self:FireSlot(slot)
+            if not GameplayPause.IsPaused() then
+                self:FireSlot(slot)
+            end
 
             if i < rapidCount then
-                Co.Wait(rapidInterval)
+                GameplayPause.Wait(rapidInterval)
             end
         end
 
-        Co.Wait(slot.FireInterval)
+        GameplayPause.Wait(slot.FireInterval)
     end
 end
 

@@ -423,6 +423,30 @@ bool FLuaComponentHandle::SetUIVisibility(bool bVisible) const
     return true;
 }
 
+bool FLuaComponentHandle::SetUIHitTestVisible(bool bHitTestVisible) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetHitTestVisible(bHitTestVisible);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUILayer(int32 Layer) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetLayer(Layer);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIZOrder(int32 ZOrder) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetZOrder(ZOrder);
+    return true;
+}
+
 bool FLuaComponentHandle::SetStaticMesh(const FString& MeshPath) const
 {
     UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Resolve());
@@ -574,6 +598,9 @@ namespace LuaBinding
             "SetUITint", &FLuaComponentHandle::SetUITint,
             "GetUITint", &FLuaComponentHandle::GetUITint,
             "SetUIVisibility", &FLuaComponentHandle::SetUIVisibility,
+            "SetUIHitTestVisible", &FLuaComponentHandle::SetUIHitTestVisible,
+            "SetUILayer", &FLuaComponentHandle::SetUILayer,
+            "SetUIZOrder", &FLuaComponentHandle::SetUIZOrder,
             "SetStaticMesh", &FLuaComponentHandle::SetStaticMesh,
             "SetMaterial", &FLuaComponentHandle::SetMaterial,
             "IsUIText", &FLuaComponentHandle::IsUIText,

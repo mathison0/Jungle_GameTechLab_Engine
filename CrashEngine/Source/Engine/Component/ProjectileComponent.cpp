@@ -2,11 +2,20 @@
 #include "Object/ObjectFactory.h"
 #include "SceneComponent.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
 
 IMPLEMENT_CLASS(UProjectileMovementComponent2, UMovementComponent)
 
 void UProjectileMovementComponent2::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
+    if (UWorld* World = GetWorld())
+    {
+        if (World->IsGameplayPaused())
+        {
+            return;
+        }
+    }
+
     if (!UpdatedComponent)
         return;
 

@@ -1,5 +1,6 @@
 local Co = require("LuaCoroutine")
 local Audio = require("Core.Audio")
+local GameplayPause = require("GameplayPause")
 local WeaponDefs = require("WeaponDefs")
 
 local MainCannonWeapon = {}
@@ -158,43 +159,47 @@ end
 
 function MainCannonWeapon:SearchLoop()
     while self.IsRunning do
-        self:SearchTarget()
+        if not GameplayPause.IsPaused() then
+            self:SearchTarget()
+        end
 
         local interval =
             self.Data.TargetRefreshInterval or
             self.Data.SearchInterval or
             DEFAULT_SEARCH_INTERVAL
 
-        Co.Wait(interval)
+        GameplayPause.Wait(interval)
     end
 end
 
 function MainCannonWeapon:TargetingLoop()
     while self.IsRunning do
-        Co.WaitNextFrame()
+        local _, paused = GameplayPause.WaitNextFrame()
 
-        if self.VisualComponent == nil or not self.VisualComponent:IsValid() then
-            self:RefreshComponents()
-        end
-
-        if self.VisualComponent ~= nil and self.VisualComponent:IsValid() and self:IsTargetValid() then
-            local myPos = self:GetSearchOrigin()
-            local targetPos = self.Target:GetLocation()
-
-            local z = myPos.z or myPos[3]
-            if z ~= nil then
-                targetPos[3] = z
-                targetPos.z = z
+        if not paused then
+            if self.VisualComponent == nil or not self.VisualComponent:IsValid() then
+                self:RefreshComponents()
             end
 
-            self.VisualComponent:LookAt(targetPos)
+            if self.VisualComponent ~= nil and self.VisualComponent:IsValid() and self:IsTargetValid() then
+                local myPos = self:GetSearchOrigin()
+                local targetPos = self.Target:GetLocation()
+
+                local z = myPos.z or myPos[3]
+                if z ~= nil then
+                    targetPos[3] = z
+                    targetPos.z = z
+                end
+
+                self.VisualComponent:LookAt(targetPos)
+            end
         end
     end
 end
 
 function MainCannonWeapon:FireLoop()
     while self.IsRunning do
-        if self:IsTargetValid() then
+        if not GameplayPause.IsPaused() and self:IsTargetValid() then
             if self.Owner ~= nil and self.Owner.FireLinearProjectile ~= nil then
                 self:PlayFireSound()
                 self.Owner.FireLinearProjectile("MainCannon", self.Data, 0)
@@ -203,7 +208,7 @@ function MainCannonWeapon:FireLoop()
             end
         end
 
-        Co.Wait(self.Data.FireInterval)
+        GameplayPause.Wait(self.Data.FireInterval)
     end
 end
 

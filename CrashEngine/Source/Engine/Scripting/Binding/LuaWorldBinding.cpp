@@ -16,6 +16,19 @@ bool FLuaWorldHandle::IsValid() const
     return World != nullptr;
 }
 
+bool FLuaWorldHandle::IsGameplayPaused() const
+{
+    return World ? World->IsGameplayPaused() : false;
+}
+
+void FLuaWorldHandle::SetGameplayPaused(bool bPaused) const
+{
+    if (World)
+    {
+        World->SetGameplayPaused(bPaused);
+    }
+}
+
 sol::table FLuaWorldHandle::GetActorsByTag(sol::this_state State, const FString& Tag) const
 {
     sol::state_view Lua(State);
@@ -41,6 +54,8 @@ namespace LuaBinding
             "World",
             sol::no_constructor,
             "IsValid", &FLuaWorldHandle::IsValid,
+            "IsGameplayPaused", &FLuaWorldHandle::IsGameplayPaused,
+            "SetGameplayPaused", &FLuaWorldHandle::SetGameplayPaused,
             "GetActorsByTag", &FLuaWorldHandle::GetActorsByTag);
     }
 }

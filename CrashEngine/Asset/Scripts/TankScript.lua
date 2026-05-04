@@ -64,7 +64,7 @@ function Script:ConfigureHealthBar()
     if self.HealthBarBack ~= nil and self.HealthBarBack:IsValid() then
         self.HealthBarBack:SetUIRenderSpace("WorldSpace")
         self.HealthBarBack:SetUIBillboard(true)
-        self.HealthBarBack:SetUIPivot({ 0.5, 0.5 })
+        self.HealthBarBack:SetUIPivot({ 0.5, 8.5 })
         self.HealthBarBack:SetUIWorldSize({ width + 0.16, height + 0.08 })
         self.HealthBarBack:SetRelativeLocation({ x = 0.0, y = 0.0, z = offsetZ })
         self.HealthBarBack:SetUITint(0.04, 0.04, 0.04, 0.78)
@@ -74,7 +74,7 @@ function Script:ConfigureHealthBar()
     if self.HealthBarFill ~= nil and self.HealthBarFill:IsValid() then
         self.HealthBarFill:SetUIRenderSpace("WorldSpace")
         self.HealthBarFill:SetUIBillboard(true)
-        self.HealthBarFill:SetUIPivot({ 0.5, 0.5 })
+        self.HealthBarFill:SetUIPivot({ 0.5, 12.5 })
         self.HealthBarFill:SetRelativeLocation({ x = 0.0, y = 0.0, z = offsetZ })
         self.HealthBarFill:SetUIVisibility(true)
     end
@@ -248,6 +248,11 @@ function Script:UpdatePickups(deltaTime)
 end
 
 function Script:Tick(deltaTime)
+    if GameManager.IsGameplayPaused ~= nil and GameManager.IsGameplayPaused() then
+        self:UpdateHealthBar()
+        return
+    end
+
     self:UpdateMovement(deltaTime)
     self:UpdatePickups(deltaTime)
     self:UpdateHealthBar()

@@ -439,6 +439,7 @@
     <ClCompile Include="Source\Engine\GameFramework\ButtonActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\DecalActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\DirectionalLightActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ExpBarActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\FakeLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\FireballActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\HeightFogActor.cpp" />
@@ -755,6 +756,7 @@
     <ClInclude Include="Source\Engine\GameFramework\ButtonActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DecalActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DirectionalLightActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ExpBarActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\FakeLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\FireballActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\HeightFogActor.h" />

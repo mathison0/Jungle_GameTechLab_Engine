@@ -6,6 +6,7 @@ local Script = {
 }
 
 local Co = require("LuaCoroutine")
+local GameplayPause = require("GameplayPause")
 local DamageSystem = require("Core.DamageSystem")
 
 function Script:BeginPlay()
@@ -25,7 +26,7 @@ function Script:OnProjectileFired()
     local lifeTime = self.LifeTimeSeconds or 3.0
 
     self.StartCoroutine(function()
-        Co.Wait(lifeTime)
+        GameplayPause.Wait(lifeTime)
 
         if self.LifeId ~= lifeId then
             return
@@ -44,6 +45,10 @@ function Script:OnProjectileFired()
 end
 
 function Script:OnOverlapBegin(otherCollider)
+    if GameplayPause.IsPaused() then
+        return
+    end
+
     if not self.bAlive then
         return
     end

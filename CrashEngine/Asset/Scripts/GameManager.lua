@@ -1,84 +1,95 @@
---[[
-    GameManager.lua
-    순서 독립적으로 초기화되는 전역 매니저.
-]]
-
 local WeaponInventory = require("WeaponInventory")
 local LevelSystem = require("LevelSystem")
 
 local GameManager = {
-    -- Config (From Component)
     GameTimeLimit = 600.0,
-    
-    -- State
+
     TimeRemaining = 600.0,
     KillCount = 0,
     IsGameOver = false,
     IsPaused = false,
-    
-    -- Flags
+
     SessionPrepared = false,
     PlayerRegistered = false,
     Initialized = false,
 
-    -- Player Data
     PlayerScript = nil,
     WeaponInventory = nil,
     LevelSystem = nil,
+    World = nil,
+    LevelUpUI = nil,
+    ExpBarUI = nil,
+    IsLevelUpSelectionActive = false,
+    CurrentLevelUpOptions = nil,
     Stats = {}
 }
 
--- [내부 리셋 함수]
+local function captureWorldFromScript(script)
+    if script ~= nil and type(script.GetWorld) == "function" then
+        local world = script.GetWorld()
+        if world ~= nil and world:IsValid() then
+            GameManager.World = world
+        end
+    end
+end
+
 function GameManager._ResetState()
-    -- 스탯 리셋
+    if GameManager.World ~= nil and GameManager.World:IsValid() and GameManager.World.SetGameplayPaused ~= nil then
+        GameManager.World:SetGameplayPaused(false)
+    end
+
     GameManager.Stats = {
-        MaxHP = 100.0, CurrentHP = 100.0,
-        MoveSpeedMult = 1.0, ExpMult = 1.0,
-        PickupRangeMult = 1.0, DamageMult = 1.0,
+        MaxHP = 100.0,
+        CurrentHP = 100.0,
+        MoveSpeedMult = 1.0,
+        ExpMult = 1.0,
+        PickupRangeMult = 1.0,
+        DamageMult = 1.0,
     }
-    
-    -- 상태 및 플래그 완전 초기화 (세션 영속성 방지)
+
     GameManager.KillCount = 0
     GameManager.IsGameOver = false
     GameManager.IsPaused = false
     GameManager.Initialized = false
-    
+
     GameManager.SessionPrepared = false
     GameManager.PlayerRegistered = false
-    
+
     GameManager.PlayerScript = nil
     GameManager.WeaponInventory = nil
     GameManager.LevelSystem = nil
-    
+    GameManager.World = nil
+    GameManager.LevelUpUI = nil
+    GameManager.ExpBarUI = nil
+    GameManager.IsLevelUpSelectionActive = false
+    GameManager.CurrentLevelUpOptions = nil
+
     Log("[GameManager] Session State Fully Reset.")
 end
 
--- [1단계: 세션 설정 준비]
 function GameManager.PrepareSession(gameTimeLimit)
-    GameManager._ResetState() -- 새로운 세션 시작 시 무조건 리셋
-    
+    GameManager._ResetState()
+
     GameManager.GameTimeLimit = gameTimeLimit or 600.0
     GameManager.TimeRemaining = GameManager.GameTimeLimit
     GameManager.SessionPrepared = true
-    
+
     Log("[GameManager] Session Prepared (TimeLimit: " .. tostring(GameManager.GameTimeLimit) .. ")")
     GameManager._CheckAndStart()
 end
 
--- [2단계: 플레이어 등록]
 function GameManager.RegisterPlayer(playerScript)
     GameManager.PlayerScript = playerScript
-    
-    -- 서브시스템 생성 (테이블 참조 유지)
+    captureWorldFromScript(playerScript)
+
     GameManager.WeaponInventory = WeaponInventory.New(playerScript)
     GameManager.LevelSystem = LevelSystem.New(playerScript, GameManager.WeaponInventory)
-    
+
     GameManager.PlayerRegistered = true
     Log("[GameManager] Player Registered.")
     GameManager._CheckAndStart()
 end
 
--- [3단계: 조건 충족 시 시작]
 function GameManager._CheckAndStart()
     if GameManager.SessionPrepared and GameManager.PlayerRegistered and not GameManager.Initialized then
         GameManager.Initialized = true
@@ -93,8 +104,98 @@ function GameManager.OnGameStart()
     Log("[GameManager] --- GAME START ---")
 end
 
+function GameManager.IsGameplayPaused()
+    return GameManager.IsPaused == true
+end
+
+function GameManager.SetGameplayPaused(paused)
+    GameManager.IsPaused = paused == true
+
+    local world = GameManager.World
+    if world ~= nil and world:IsValid() and world.SetGameplayPaused ~= nil then
+        world:SetGameplayPaused(GameManager.IsPaused)
+    end
+end
+
+function GameManager.RegisterLevelUpUI(uiScript)
+    GameManager.LevelUpUI = uiScript
+    captureWorldFromScript(uiScript)
+
+    if GameManager.IsLevelUpSelectionActive and GameManager.CurrentLevelUpOptions ~= nil and
+       uiScript ~= nil and type(uiScript.Show) == "function" then
+        uiScript:Show(GameManager.CurrentLevelUpOptions)
+    end
+end
+
+function GameManager.RegisterExpBarUI(expBarScript)
+    GameManager.ExpBarUI = expBarScript
+    captureWorldFromScript(expBarScript)
+
+    if expBarScript ~= nil and type(expBarScript.SetLevelUpMode) == "function" then
+        expBarScript:SetLevelUpMode(GameManager.IsLevelUpSelectionActive)
+    end
+end
+
+function GameManager.BeginLevelUpSelection(options)
+    if options == nil or #options <= 0 then
+        return false
+    end
+
+    if GameManager.LevelUpUI == nil or type(GameManager.LevelUpUI.Show) ~= "function" then
+        Log("[GameManager] LevelUpUI is not registered.")
+        return false
+    end
+
+    GameManager.CurrentLevelUpOptions = options
+    GameManager.IsLevelUpSelectionActive = true
+    GameManager.SetGameplayPaused(true)
+
+    if GameManager.ExpBarUI ~= nil and type(GameManager.ExpBarUI.SetLevelUpMode) == "function" then
+        GameManager.ExpBarUI:SetLevelUpMode(true)
+    end
+
+    GameManager.LevelUpUI:Show(options)
+    return true
+end
+
+function GameManager.ConfirmLevelUpChoice(index)
+    if not GameManager.IsLevelUpSelectionActive or GameManager.LevelSystem == nil then
+        return false
+    end
+
+    local selected = GameManager.LevelSystem:SelectPendingOption(index)
+    if not selected then
+        return false
+    end
+
+    GameManager.IsLevelUpSelectionActive = false
+    GameManager.CurrentLevelUpOptions = nil
+
+    if GameManager.LevelSystem.PendingLevelUps > 0 then
+        return GameManager.LevelSystem:RequestLevelUpSelection()
+    end
+
+    GameManager.EndLevelUpSelection()
+    return true
+end
+
+function GameManager.EndLevelUpSelection()
+    GameManager.IsLevelUpSelectionActive = false
+    GameManager.CurrentLevelUpOptions = nil
+
+    if GameManager.LevelUpUI ~= nil and type(GameManager.LevelUpUI.Hide) == "function" then
+        GameManager.LevelUpUI:Hide()
+    end
+
+    if GameManager.ExpBarUI ~= nil and type(GameManager.ExpBarUI.SetLevelUpMode) == "function" then
+        GameManager.ExpBarUI:SetLevelUpMode(false)
+    end
+
+    GameManager.SetGameplayPaused(false)
+end
+
 function GameManager.Tick(deltaTime)
-    if not GameManager.Initialized or GameManager.IsGameOver or GameManager.IsPaused then
+    if not GameManager.Initialized or GameManager.IsGameOver or GameManager.IsGameplayPaused() then
         return
     end
 
@@ -106,20 +207,20 @@ function GameManager.Tick(deltaTime)
     end
 end
 
--- ... (나머지 데미지, 스탯 처리 함수들은 동일) ...
-
 function GameManager.PlayerGetDamage(damage)
-    if GameManager.IsGameOver then return end
+    if GameManager.IsGameOver or GameManager.IsGameplayPaused() then return end
     GameManager.Stats.CurrentHP = math.max(0, GameManager.Stats.CurrentHP - damage)
     if GameManager.Stats.CurrentHP <= 0 then GameManager.OnGameOver("Player Died") end
 end
 
 function GameManager.OnPickupExp(baseAmount)
+    if GameManager.IsGameplayPaused() then return end
     local totalExp = baseAmount * (GameManager.Stats.ExpMult or 1.0)
     if GameManager.LevelSystem then GameManager.LevelSystem:AddExp(totalExp) end
 end
 
 function GameManager.OnPickupChest()
+    if GameManager.IsGameplayPaused() then return false end
     if GameManager.WeaponInventory then return GameManager.WeaponInventory:OpenChest() end
     return false
 end

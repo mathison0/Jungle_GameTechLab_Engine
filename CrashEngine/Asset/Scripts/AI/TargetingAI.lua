@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local GameplayPause = require("GameplayPause")
 local Vec = require("Core.Vector")
 
 local TargetingAI = {
@@ -27,8 +28,10 @@ end
 
 function TargetingAI.TargetingCoroutine(self, ComponentHandle, bZAxisOnly)
     while true do
-        local deltaTime = Co.WaitNextFrame()
-        TargetingAI.Targeting(self, ComponentHandle, bZAxisOnly, deltaTime)
+        local deltaTime, paused = GameplayPause.WaitNextFrame()
+        if not paused then
+            TargetingAI.Targeting(self, ComponentHandle, bZAxisOnly, deltaTime)
+        end
     end
 end
 

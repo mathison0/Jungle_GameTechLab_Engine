@@ -1,10 +1,19 @@
 ﻿#include "AFlyingWaveEnemyActor.h"
 #include "Component/Collision/CircleCollider2DComponent.h"
+#include "GameFramework/World.h"
 
 IMPLEMENT_CLASS(AFlyingWaveEnemyActor, AEnemyBaseActor)
 
 void AFlyingWaveEnemyActor::Tick(float DeltaTime)
 {
+    if (UWorld* World = GetWorld())
+    {
+        if (World->IsGameplayPaused())
+        {
+            return;
+        }
+    }
+
     AEnemyBaseActor::Tick(DeltaTime);
 
     AddActorWorldOffset(MoveDirection * MoveSpeed * DeltaTime);

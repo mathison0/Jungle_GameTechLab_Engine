@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local GameplayPause = require("GameplayPause")
 local Vec = require("Core.Vector")
 
 local Query = {}
@@ -10,8 +11,10 @@ end
 
 function Query.SearchActorClosestByTagCoroutine(self, ComponentHandle, TargetTag)
     while true do
-        Query.SearchActorClosestByTag(self, ComponentHandle, TargetTag)
-        Co.Wait(0.2)
+        if not GameplayPause.IsPaused() then
+            Query.SearchActorClosestByTag(self, ComponentHandle, TargetTag)
+        end
+        GameplayPause.Wait(0.2)
     end
 end
 

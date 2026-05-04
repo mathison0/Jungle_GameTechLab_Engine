@@ -36,6 +36,7 @@ UObject* UWorld::Duplicate(UObject* NewOuter) const
     NewWorld->SetOuter(NewOuter);
     NewWorld->InitWorld(); // Partition/VisibleSet 초기화 — 이거 없으면 복제 액터가 렌더링되지 않음
     NewWorld->SetWorldType(GetWorldType());
+    NewWorld->SetGameplayPaused(IsGameplayPaused());
     NewWorld->SetEditorActorFolders(EditorActorFolders);
 
     for (AActor* Src : GetActors())
@@ -275,6 +276,7 @@ FLODUpdateContext UWorld::PrepareLODContext()
 
 void UWorld::InitWorld()
 {
+    bGameplayPaused = false;
     Partition.Reset(FBoundingBox());
     PersistentLevel = UObjectManager::Get().CreateObject<ULevel>(this);
     PersistentLevel->SetWorld(this);
@@ -312,6 +314,7 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 void UWorld::EndPlay()
 {
     bHasBegunPlay = false;
+    bGameplayPaused = false;
     TickManager.Reset();
 
     if (!PersistentLevel)

@@ -12,6 +12,7 @@
 #include "GameFramework/StaticMeshActor.h"
 #include "GameFramework/AmbientLightActor.h"
 #include "GameFramework/DirectionalLightActor.h"
+#include "GameFramework/ExpBarActor.h"
 #include "GameFramework/PointLightActor.h"
 #include "GameFramework/SpotLightActor.h"
 #include "GameFramework/GamejamActor/EnemySpawnerActor.h"
@@ -65,6 +66,7 @@ constexpr FSpawnEntry SpawnTable[] = {
     SPAWN_ACTOR("Spot Light", ASpotLightActor, false),
     SPAWN_ACTOR("EnemySpawner", AEnemySpawnerActor, false),
     SPAWN_ACTOR("Tank", ATankActor, true),
+    SPAWN_ACTOR("Exp Bar", AExpBarActor, false),
 };
 
 #undef SPAWN_MESH
