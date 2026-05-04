@@ -19,6 +19,7 @@ local GameManager = {
     World = nil,
     LevelUpUI = nil,
     ExpBarUI = nil,
+    KillCountUI = nil,
     IsLevelUpSelectionActive = false,
     CurrentLevelUpOptions = nil,
     Stats = {}
@@ -61,6 +62,7 @@ function GameManager._ResetState()
     GameManager.World = nil
     GameManager.LevelUpUI = nil
     GameManager.ExpBarUI = nil
+    GameManager.KillCountUI = nil
     GameManager.IsLevelUpSelectionActive = false
     GameManager.CurrentLevelUpOptions = nil
 
@@ -134,6 +136,35 @@ function GameManager.RegisterExpBarUI(expBarScript)
     if expBarScript ~= nil and type(expBarScript.SetLevelUpMode) == "function" then
         expBarScript:SetLevelUpMode(GameManager.IsLevelUpSelectionActive)
     end
+end
+
+function GameManager.RegisterKillCountUI(uiScript)
+    GameManager.KillCountUI = uiScript
+    captureWorldFromScript(uiScript)
+
+    if uiScript ~= nil and type(uiScript.SetKillCount) == "function" then
+        uiScript:SetKillCount(GameManager.KillCount or 0)
+    end
+end
+
+function GameManager.UnregisterKillCountUI(uiScript)
+    if GameManager.KillCountUI == uiScript then
+        GameManager.KillCountUI = nil
+    end
+end
+
+function GameManager.OnEnemyKilled(enemyActor)
+    if GameManager.IsGameOver then
+        return GameManager.KillCount or 0
+    end
+
+    GameManager.KillCount = (GameManager.KillCount or 0) + 1
+
+    if GameManager.KillCountUI ~= nil and type(GameManager.KillCountUI.SetKillCount) == "function" then
+        GameManager.KillCountUI:SetKillCount(GameManager.KillCount)
+    end
+
+    return GameManager.KillCount
 end
 
 function GameManager.BeginLevelUpSelection(options)

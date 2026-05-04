@@ -320,17 +320,17 @@
           "Properties" : {
             "Lua.AutoStart" : false,
             "Lua.CornerBand" : 0.220000,
-            "Lua.EndSizeScale" : 0.350000,
+            "Lua.EndSizeScale" : 0.100000,
             "Lua.FallDistance" : 760.000000,
             "Lua.InitialBurst" : 10,
-            "Lua.MaxGems" : 28,
+            "Lua.MaxGems" : 400,
             "Lua.MaxHorizontalDrift" : 0.055000,
             "Lua.MaxRotationSpeed" : 90.000000,
             "Lua.MaxSpeed" : 320.000000,
             "Lua.MinSpeed" : 140.000000,
             "Lua.Seed" : 31,
-            "Lua.SpawnInterval" : 0.120000,
-            "Lua.StartSize" : 72.000000,
+            "Lua.SpawnInterval" : 0.010000,
+            "Lua.StartSize" : 62.000000,
             "Lua.TopOffset" : -72.000000,
             "Script" : "UI/GemRain.lua",
             "bTickEnable" : true
@@ -339,15 +339,15 @@
           "ClassName" : "UScriptComponent",
           "Name" : "DamageNumberScript",
           "Properties" : {
-            "Lua.FontSize" : 1.350000,
+            "Lua.FontSize" : 10.000000,
             "Lua.Lifetime" : 0.750000,
             "Lua.MaxActive" : 64,
             "Lua.RandomRadius" : 0.250000,
             "Lua.RiseDistance" : 1.100000,
             "Lua.SpawnHeight" : 1.600000,
             "Lua.WarmupCount" : 32,
-            "Lua.WorldHeight" : 0.900000,
-            "Lua.WorldWidth" : 2.600000,
+            "Lua.WorldHeight" : 9.000000,
+            "Lua.WorldWidth" : 26.000000,
             "Script" : "UI/DamageNumberUI.lua",
             "bTickEnable" : true
           }
@@ -398,6 +398,9 @@
             "Lua.BaseFriction" : 0.100000,
             "Lua.DriftFactor" : 0.300000,
             "Lua.DriftSmoothness" : 0.100000,
+            "Lua.HealthBarHeight" : 0.160000,
+            "Lua.HealthBarOffsetZ" : 1.800000,
+            "Lua.HealthBarWidth" : 2.000000,
             "Lua.MoveSpeed" : 11.700000,
             "Lua.PickupAttractSpeed" : 20.000000,
             "Lua.PickupExp" : 1.000000,
@@ -424,7 +427,7 @@
               "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 53",
+              "Text" : "UUID : 56",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -536,9 +539,9 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 1466",
+              "Text" : "UUID : 65",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -549,7 +552,7 @@
         "Name" : "USceneComponent_14",
         "Properties" : {
           "Location" : [0.295440, -25.808002, 36.934158],
-          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
           "bTickEnable" : true
         }
@@ -569,6 +572,36 @@
             "Lua.RightAnchor" : 0.920000,
             "Lua.TopAnchor" : 0.035000,
             "Script" : "UI/ExpBar.lua",
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "TimerScript",
+          "Properties" : {
+            "Lua.AnchorX" : 0.500000,
+            "Lua.AnchorY" : 0.035000,
+            "Lua.FontSize" : 1.400000,
+            "Lua.Layer" : 205,
+            "Lua.TextHeight" : 32.000000,
+            "Lua.TextWidth" : 140.000000,
+            "Lua.YOffset" : 36.000000,
+            "Script" : "UI/GameTimerUI.lua",
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "KillCountScript",
+          "Properties" : {
+            "Lua.AnchorX" : 0.920000,
+            "Lua.AnchorY" : 0.035000,
+            "Lua.FontSize" : 1.800000,
+            "Lua.IconSize" : 28.000000,
+            "Lua.Layer" : 205,
+            "Lua.TextGap" : 6.000000,
+            "Lua.TextHeight" : 32.000000,
+            "Lua.TextWidth" : 96.000000,
+            "Lua.YOffset" : 36.000000,
+            "Script" : "UI/KillCountUI.lua",
             "bTickEnable" : true
           }
         }],
@@ -605,6 +638,29 @@
               "Visible" : false,
               "World Size" : [1.000000, 1.000000],
               "Z Order" : 1,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_9",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 69",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
               "bTickEnable" : true
             }
           }],

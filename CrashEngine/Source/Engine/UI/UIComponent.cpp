@@ -347,7 +347,8 @@ FVector2 UUIComponent::GetScreenPivotPosition(float ViewportWidth, float Viewpor
 bool UUIComponent::HitTestScreenPoint(const FVector2& ScreenPoint, float ViewportWidth, float ViewportHeight) const
 {
     const FVector2 LayoutSize = GetScreenLayoutSize(ViewportWidth, ViewportHeight);
-    if (!bVisible || !bHitTestVisible ||
+    const bool bActorVisible = !Owner || Owner->IsVisible();
+    if (!bActorVisible || !bVisible || !bHitTestVisible ||
         RenderSpace != EUIRenderSpace::ScreenSpace ||
         GeometryType != EUIGeometryType::Quad ||
         LayoutSize.X == 0.0f || LayoutSize.Y == 0.0f)
@@ -378,7 +379,8 @@ bool UUIComponent::HitTestWorldRay(const FRay& Ray, const FVector& CameraRight, 
 {
     OutDistance = 0.0f;
 
-    if (!bVisible || !bHitTestVisible ||
+    const bool bActorVisible = !Owner || Owner->IsVisible();
+    if (!bActorVisible || !bVisible || !bHitTestVisible ||
         RenderSpace != EUIRenderSpace::WorldSpace ||
         GeometryType != EUIGeometryType::Quad ||
         WorldSize.X == 0.0f || WorldSize.Y == 0.0f)

@@ -1,5 +1,6 @@
 local DamageSystem = require("Core.DamageSystem")
 local DamageNumberSystem = require("UI.DamageNumberSystem")
+local GameManager = require("GameManager")
 
 local EnemyState = {
     properties = {
@@ -61,6 +62,7 @@ function EnemyState:Die()
 
     self.bIsDead = true
     Log("[Enemy] Died: " .. self.actor:GetName())
+    GameManager.OnEnemyKilled(self.actor)
     
     local PoolManager = GetActorPoolManager()
     if PoolManager:IsValid() then

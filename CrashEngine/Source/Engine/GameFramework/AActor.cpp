@@ -5,6 +5,7 @@
 #include "Component/TextRenderComponent.h"
 #include "Component/UUIDTextRenderComponent.h"
 #include "Component/ActorComponent.h"
+#include "UI/UIComponent.h"
 #include "Math/Rotator.h"
 #include "GameFramework/Level.h"
 #include "GameFramework/World.h"
@@ -203,6 +204,14 @@ void AActor::SetVisible(bool Visible)
         if (Prim)
         {
             Prim->MarkRenderVisibilityDirty();
+        }
+    }
+
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        if (UUIComponent* UI = Cast<UUIComponent>(Component))
+        {
+            UI->MarkUIVisibilityDirty();
         }
     }
 }

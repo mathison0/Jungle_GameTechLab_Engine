@@ -1,6 +1,7 @@
 #include "Render/Scene/Proxies/UI/UIProxy.h"
 
 #include "Engine/Runtime/Engine.h"
+#include "GameFramework/AActor.h"
 #include "Resource/ResourceManager.h"
 #include "Texture/Texture2D.h"
 #include "UI/TextUIComponent.h"
@@ -150,6 +151,8 @@ void FUIProxy::UpdateVisibility()
         return;
     }
 
-    bVisible = Owner->IsVisible();
-    bHitTestVisible = Owner->IsHitTestVisible();
+    const AActor* OwnerActor = Owner->GetOwner();
+    const bool bActorVisible = !OwnerActor || OwnerActor->IsVisible();
+    bVisible = bActorVisible && Owner->IsVisible();
+    bHitTestVisible = bVisible && Owner->IsHitTestVisible();
 }

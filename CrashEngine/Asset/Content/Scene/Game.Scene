@@ -21,7 +21,7 @@
               "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 1020",
+              "Text" : "UUID : 25",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -34,17 +34,17 @@
           "Cast Shadow" : true,
           "CollisionChannel" : 1,
           "Element 0" : {
-            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+            "Path" : "Asset/Content/Materials/FloorMaterial.json"
           },
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [0.000000, 0.000000, -1.000000],
+          "Location" : [0.000000, 0.000000, 0.000000],
           "Mobility" : 1,
           "Receives Decals" : true,
-          "Rotation" : [0.000000, 0.839996, 0.000000],
-          "Scale" : [100.000000, 100.000000, 1.000000],
-          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [25.000000, 25.000000, 1.000000],
+          "Static Mesh" : "Asset/Content/Models/_Basic/Quad.OBJ",
           "Visible" : true,
           "Visible In Editor" : true,
           "Visible In Game" : true,
@@ -75,7 +75,7 @@
               "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 1023",
+              "Text" : "UUID : 30",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -152,7 +152,7 @@
               "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 1027",
+              "Text" : "UUID : 36",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -259,7 +259,7 @@
               "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 1039",
+              "Text" : "UUID : 44",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -293,15 +293,114 @@
       "Tag" : "Default",
       "bVisible" : true
     }, {
-      "ClassName" : "ATankActor",
-      "Name" : "ATankActor_6",
+      "ClassName" : "AActor",
+      "Name" : "GameManager",
       "NonSceneComponents" : [{
           "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_300",
+          "Name" : "UScriptComponent_4",
+          "Properties" : {
+            "Lua.GameTimeLimit" : 600.000000,
+            "Script" : "GameManagerComponent.lua",
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "LevelUpChoiceScript",
+          "Properties" : {
+            "Lua.OptionHeight" : 78.000000,
+            "Lua.OptionWidth" : 520.000000,
+            "Lua.PanelHeight" : 430.000000,
+            "Lua.PanelWidth" : 620.000000,
+            "Script" : "UI/LevelUpChoice.lua",
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "GemRainScript",
+          "Properties" : {
+            "Lua.AutoStart" : false,
+            "Lua.CornerBand" : 0.220000,
+            "Lua.EndSizeScale" : 0.100000,
+            "Lua.FallDistance" : 760.000000,
+            "Lua.InitialBurst" : 10,
+            "Lua.MaxGems" : 400,
+            "Lua.MaxHorizontalDrift" : 0.055000,
+            "Lua.MaxRotationSpeed" : 90.000000,
+            "Lua.MaxSpeed" : 320.000000,
+            "Lua.MinSpeed" : 140.000000,
+            "Lua.Seed" : 31,
+            "Lua.SpawnInterval" : 0.010000,
+            "Lua.StartSize" : 62.000000,
+            "Lua.TopOffset" : -72.000000,
+            "Script" : "UI/GemRain.lua",
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "DamageNumberScript",
+          "Properties" : {
+            "Lua.FontSize" : 30.000000,
+            "Lua.Lifetime" : 0.750000,
+            "Lua.MaxActive" : 64,
+            "Lua.RandomRadius" : 0.250000,
+            "Lua.RiseDistance" : 1.100000,
+            "Lua.SpawnHeight" : 1.600000,
+            "Lua.WarmupCount" : 32,
+            "Lua.WorldHeight" : 9.000000,
+            "Lua.WorldWidth" : 26.000000,
+            "Script" : "UI/DamageNumberUI.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_7",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 49",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_1",
+        "Properties" : {
+          "Location" : [-4.248018, -30.836235, 18.387695],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
+    }, {
+      "ClassName" : "ATankActor",
+      "Name" : "ATankActor_1",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_5",
           "Properties" : {
             "Lua.BaseFriction" : 0.100000,
             "Lua.DriftFactor" : 0.300000,
             "Lua.DriftSmoothness" : 0.100000,
+            "Lua.HealthBarHeight" : 0.160000,
+            "Lua.HealthBarOffsetZ" : 1.800000,
+            "Lua.HealthBarWidth" : 2.000000,
             "Lua.MoveSpeed" : 11.700000,
             "Lua.PickupAttractSpeed" : 20.000000,
             "Lua.PickupExp" : 1.000000,
@@ -314,7 +413,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_175",
+            "Name" : "UUUIDTextRenderComponent_8",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -326,9 +425,9 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 1045",
+              "Text" : "UUID : 56",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -373,7 +472,7 @@
               "Location" : [0.000000, 0.000000, 0.000000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [0.500000, 0.500000, 0.500000],
               "Static Mesh" : "Asset/Content/Models/Tank/Tank_body.obj",
               "Visible" : true,
@@ -392,7 +491,7 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : true,
           "Is Editor Helper" : false,
-          "Location" : [-4.248018, -30.836235, 0.000000],
+          "Location" : [0.000000, 0.000000, 0.000000],
           "Mobility" : 1,
           "Receives Decals" : true,
           "Rotation" : [-0.000000, 0.000000, 0.000000],
@@ -408,45 +507,19 @@
       "bVisible" : true
     }, {
       "ClassName" : "AActor",
-      "Name" : "GameManager",
+      "Name" : "InfiniteFloor",
       "NonSceneComponents" : [{
           "ClassName" : "UScriptComponent",
-          "Name" : "GameManagerScript",
+          "Name" : "UScriptComponent_398",
           "Properties" : {
-            "Lua.GameTimeLimit" : 600.000000,
-            "Script" : "GameManagerComponent.lua",
-            "bTickEnable" : true
-          }
-        }, {
-          "ClassName" : "UScriptComponent",
-          "Name" : "LevelUpChoiceScript",
-          "Properties" : {
-            "Lua.OptionHeight" : 78.000000,
-            "Lua.OptionWidth" : 520.000000,
-            "Lua.PanelHeight" : 430.000000,
-            "Lua.PanelWidth" : 620.000000,
-            "Script" : "UI/LevelUpChoice.lua",
-            "bTickEnable" : true
-          }
-        }, {
-          "ClassName" : "UScriptComponent",
-          "Name" : "GemRainScript",
-          "Properties" : {
-            "Lua.AutoStart" : false,
-            "Lua.CornerBand" : 0.220000,
-            "Lua.EndSizeScale" : 0.350000,
-            "Lua.FallDistance" : 760.000000,
-            "Lua.InitialBurst" : 10,
-            "Lua.MaxGems" : 28,
-            "Lua.MaxHorizontalDrift" : 0.055000,
-            "Lua.MaxRotationSpeed" : 90.000000,
-            "Lua.MaxSpeed" : 320.000000,
-            "Lua.MinSpeed" : 140.000000,
-            "Lua.Seed" : 31,
-            "Lua.SpawnInterval" : 0.120000,
-            "Lua.StartSize" : 72.000000,
-            "Lua.TopOffset" : -72.000000,
-            "Script" : "UI/GemRain.lua",
+            "Lua.GridSize" : 7,
+            "Lua.MaterialPath" : "Asset/Content/Materials/FloorMaterial.json",
+            "Lua.MeshPath" : "Asset/Content/Models/_Basic/Quad.OBJ",
+            "Lua.Spacing" : 25.000000,
+            "Lua.TargetTag" : "Player",
+            "Lua.TileClassName" : "AStaticMeshActor",
+            "Lua.TileScale" : [25.000000, 25.000000, 1.000000],
+            "Script" : "InfiniteFloor.lua",
             "bTickEnable" : true
           }
         }],
@@ -454,7 +527,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_231",
+            "Name" : "UUUIDTextRenderComponent_253",
             "Properties" : {
               "Billboard" : true,
               "CollisionChannel" : 1,
@@ -466,9 +539,9 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 1377",
+              "Text" : "UUID : 65",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -476,10 +549,10 @@
             }
           }],
         "ClassName" : "USceneComponent",
-        "Name" : "USceneComponent_7",
+        "Name" : "USceneComponent_14",
         "Properties" : {
-          "Location" : [-4.214220, -30.301989, 1.563050],
-          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Location" : [0.295440, -25.808002, 36.934158],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
           "bTickEnable" : true
         }
@@ -487,7 +560,6 @@
       "Tag" : "Default",
       "bVisible" : true
     }, {
-      "ActorFolder" : "UI",
       "ClassName" : "AExpBarActor",
       "Name" : "PlayerExpBar",
       "NonSceneComponents" : [{
@@ -500,6 +572,22 @@
             "Lua.RightAnchor" : 0.920000,
             "Lua.TopAnchor" : 0.035000,
             "Script" : "UI/ExpBar.lua",
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "KillCountScript",
+          "Properties" : {
+            "Lua.AnchorX" : 0.920000,
+            "Lua.AnchorY" : 0.035000,
+            "Lua.FontSize" : 0.900000,
+            "Lua.IconSize" : 28.000000,
+            "Lua.Layer" : 205,
+            "Lua.TextGap" : 6.000000,
+            "Lua.TextHeight" : 32.000000,
+            "Lua.TextWidth" : 96.000000,
+            "Lua.YOffset" : 36.000000,
+            "Script" : "UI/KillCountUI.lua",
             "bTickEnable" : true
           }
         }],
@@ -536,6 +624,29 @@
               "Visible" : false,
               "World Size" : [1.000000, 1.000000],
               "Z Order" : 1,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_9",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 69",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
               "bTickEnable" : true
             }
           }],
@@ -582,9 +693,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-4.858987, -34.243813, 4.570756],
+    "Location" : [0.157094, -29.497738, 40.305614],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 36.980350, 80.710342]
+    "Rotation" : [0.000000, 42.399109, 87.852699]
   },
   "Version" : 3,
   "WorldType" : "Editor"
