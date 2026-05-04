@@ -38,7 +38,14 @@ end
 
 function EnemyState:Die()
     Log("[Enemy] Died: " .. self.actor:GetName())
-    self.actor:SetVisible(false)
+    
+    local PoolManager = GetActorPoolManager()
+    if PoolManager:IsValid() then
+        PoolManager:Release(self.actor)
+    else
+        -- Fallback if PoolManager is not available
+        self.actor:SetVisible(false)
+    end
 end
 
 function EnemyState:EndPlay()
