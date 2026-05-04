@@ -1,7 +1,6 @@
+#if WITH_EDITOR
+
 #include "UUIDTextRenderComponent.h"
-
-#include <cmath>
-
 #include "Object/ObjectFactory.h"
 
 namespace
@@ -52,3 +51,4 @@ FMatrix UUUIDTextRenderComponent::CalculateBillboardWorldMatrix(const FVector& C
 {
     return BuildStableUUIDTextBillboardMatrix(CameraForward, GetWorldLocation(), GetWorldScale());
 }
+#endif
