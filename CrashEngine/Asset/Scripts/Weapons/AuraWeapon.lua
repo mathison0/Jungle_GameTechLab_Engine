@@ -6,6 +6,23 @@ local WeaponDefs = require("WeaponDefs")
 local AuraWeapon = {}
 AuraWeapon.__index = AuraWeapon
 
+local function Clamp01(value)
+    if value < 0.0 then
+        return 0.0
+    end
+
+    if value > 1.0 then
+        return 1.0
+    end
+
+    return value
+end
+
+local function SmoothStep01(t)
+    t = Clamp01(t)
+    return t * t * (3.0 - 2.0 * t)
+end
+
 function AuraWeapon.New(owner)
     local self = setmetatable({}, AuraWeapon)
 
@@ -22,6 +39,8 @@ function AuraWeapon.New(owner)
 
     self.Visual = nil
     self.CurrentAngle = 0.0
+    self.VisualBurstTimer = 0.0
+    self.VisualBurstDuration = 0.0
 
     return self
 end
@@ -73,9 +92,10 @@ function AuraWeapon:DamageLoop()
         if not GameplayPause.IsPaused() then
             self:DamageTick()
             self:PlayTickSound()
+            self:TriggerVisualBurst()
         end
 
-        GameplayPause.Wait(self.Data.TickInterval or 0.5)
+        GameplayPause.Wait(self.Data.TickInterval or 1.0)
     end
 end
 
@@ -121,6 +141,11 @@ function AuraWeapon:PlayTickSound()
         sound.Bus or Audio.Bus.SFX,
         sound.Volume or 1.0
     )
+end
+
+function AuraWeapon:TriggerVisualBurst()
+    self.VisualBurstDuration = self.Data.VisualBurstDuration or 1.0
+    self.VisualBurstTimer = self.VisualBurstDuration
 end
 
 function AuraWeapon:Upgrade()
@@ -189,11 +214,34 @@ function AuraWeapon:VisualLoop()
             end
 
             if not paused then
-                local speed = self.Data.RotateSpeed or 90.0
+                local baseSpeed = self.Data.RotateSpeed or 25.0
+                local burstSpeed = self.Data.VisualBurstRotateSpeed or 360.0
+
+                local burstAlpha = 0.0
+
+                if self.VisualBurstTimer ~= nil and self.VisualBurstTimer > 0.0 then
+                    local duration = self.VisualBurstDuration or 1.0
+
+                    if duration > 0.0 then
+                        local t = self.VisualBurstTimer / duration
+                        burstAlpha = SmoothStep01(t)
+                    end
+
+                    self.VisualBurstTimer = self.VisualBurstTimer - dt
+                    if self.VisualBurstTimer < 0.0 then
+                        self.VisualBurstTimer = 0.0
+                    end
+                end
+
+                local speed = baseSpeed + burstSpeed * burstAlpha
                 self.CurrentAngle = self.CurrentAngle + speed * dt
 
-                if self.CurrentAngle >= 360.0 then
+                while self.CurrentAngle >= 360.0 do
                     self.CurrentAngle = self.CurrentAngle - 360.0
+                end
+
+                while self.CurrentAngle < 0.0 do
+                    self.CurrentAngle = self.CurrentAngle + 360.0
                 end
             end
 
