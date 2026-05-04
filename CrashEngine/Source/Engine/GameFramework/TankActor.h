@@ -76,6 +76,7 @@ private:
     UDecalComponent* FindDecalComponentByName(const FString& ComponentName) const;
     UStaticMeshComponent* GetOrCreateWeaponVisualComponent(const FString& Name, const FString& MeshPath, const FString& ParentName);
     UDecalComponent* GetOrCreateWeaponDecalComponent(const FString& Name, const FString& MaterialPath, const FString& ParentName);
+    class UPointLightComponent* GetOrCreateWeaponLightComponent(const FString& Name, const FString& ParentName);
     USceneComponent* GetOrCreateMuzzleComponent(const FString& Name, USceneComponent* Parent);
     void EnsureHealthBarComponents();
     UTextureUIComponent* GetOrCreateTextureUIComponent(const FString& Name, USceneComponent* Parent);
@@ -83,6 +84,10 @@ private:
     FString ReadLuaStringOrDefault(sol::object Object, const FString& DefaultValue = "") const;
     FVector ReadLuaVec3OrDefault(sol::object Object, const FVector& DefaultValue = FVector::ZeroVector) const;
     FRotator ReadLuaRotatorOrDefault(sol::object Object, const FRotator& DefaultValue = FRotator::ZeroRotator) const;
+    FVector4 ReadLuaVec4OrDefault(sol::object Object, const FVector4& DefaultValue = FVector4(1, 1, 1, 1)) const;
+
+private:
+    UPointLightComponent* FindPointLightComponentByName(const FString& ComponentName) const;
 
 private:
     UStaticMesh* HeadGunProjectile = nullptr;

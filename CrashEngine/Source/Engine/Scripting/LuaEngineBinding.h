@@ -142,6 +142,8 @@ struct FLuaComponentHandle
 	bool SetMaterial(int32 Index, const FString& MaterialPath) const;
 	bool SetMaterialVector4Parameter(int32 Index, const FString& ParamName, const sol::table& Value) const;
 
+	bool SetIntensity(float Intensity) const;
+
 	bool IsUIText() const;
 	FString GetUIText() const;
 	bool SetUIText(const FString& Text) const;
