@@ -119,8 +119,9 @@ enum EEngineShowFlags : uint32
     SF_BoundingBox = 1 << 3, // AABB 바운딩 박스
     SF_UUIDText = 1 << 4,    // UUID 텍스트
     SF_Gizmo = 1 << 5,       // 트랜스폼 기즈모
+    SF_UI = 1 << 6,          // 스크린 UI
 
-    SF_All = SF_Primitives | SF_Text | SF_Grid | SF_BoundingBox | SF_UUIDText | SF_Gizmo
+    SF_All = SF_Primitives | SF_Text | SF_Grid | SF_BoundingBox | SF_UUIDText | SF_Gizmo | SF_UI
 };
 
 // ============================================================

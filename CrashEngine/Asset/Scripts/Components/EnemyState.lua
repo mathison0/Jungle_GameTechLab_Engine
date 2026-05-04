@@ -10,11 +10,15 @@ local EnemyState = {
 }
 
 function EnemyState:BeginPlay()
-    self.actor = self.GetActor()
-    self.CurrentHP = self.MaxHP
+    self.actor = self:GetActor()
+    if self.actor == nil or not self.actor:IsValid() then
+        Log("[EnemyState] Invalid owner actor")
+        return
+    end
+
+    self.CurrentHP = self.MaxHP or 100.0
     self.bIsDead = false
-    
-    -- 데미지 시스템에 등록 (UUID 기반 룩업)
+
     DamageSystem.Register(self.actor, self)
 end
 
@@ -23,12 +27,18 @@ function EnemyState:TakeDamage(amount, attacker)
         return
     end
 
-    self.CurrentHP = self.CurrentHP - amount
-    local attackerName = attacker and attacker:GetName() or "Unknown"
-    
-    Log(string.format("[Enemy:%s] Received %d damage from [%s]. HP: %d/%d", 
-        self.actor:GetName(), amount, attackerName, self.CurrentHP, self.MaxHP))
-    
+    amount = amount or 0.0
+
+    self.CurrentHP = (self.CurrentHP or self.MaxHP or 100.0) - amount
+
+    local attackerName = "Unknown"
+    if attacker ~= nil and attacker:IsValid() then
+        attackerName = attacker:GetName()
+    end
+
+    Log(string.format("[Enemy:%s] Received %.1f damage from [%s]. HP: %.1f/%.1f",
+        self.actor:GetName(), amount, attackerName, self.CurrentHP, self.MaxHP or 100.0))
+
     if self.CurrentHP <= 0 then
         self:Die()
     end
@@ -55,8 +65,9 @@ function EnemyState:Die()
 end
 
 function EnemyState:EndPlay()
-    -- 해제 필수
-    DamageSystem.Unregister(self.actor)
+    if self.actor ~= nil and self.actor:IsValid() then
+        DamageSystem.Unregister(self.actor)
+    end
 end
 
 function EnemyState:GetDeathLocation()

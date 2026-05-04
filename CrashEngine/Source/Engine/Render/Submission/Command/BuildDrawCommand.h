@@ -22,5 +22,7 @@ void BuildOverlayTextDrawCommand(FRenderPipelineContext& Context, FDrawCommandLi
 
 void BuildBatchedWorldTextDrawCommands(FRenderPipelineContext& Context, FDrawCommandList& OutList);
 
+void BuildUIDrawCommands(FRenderPipelineContext& Context, FDrawCommandList& OutList);
+
 void BuildDecalDrawCommand(const FPrimitiveProxy& Proxy, FRenderPipelineContext& Context, FDrawCommandList& OutList);
 } // namespace DrawCommandBuild

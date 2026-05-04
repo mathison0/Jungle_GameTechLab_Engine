@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include "GameFramework/AActor.h"
+#include "Mesh/StaticMesh.h"
 
-class UCircleCollider2DComponent;
+class UCollider2DComponent;
 class UStaticMeshComponent;
 class UScriptComponent;
 
@@ -15,8 +16,10 @@ public:
     void InitDefaultComponents() override;
 
 protected:
-    UCircleCollider2DComponent* ColliderComponent = nullptr;
+    virtual UStaticMeshComponent* GetDefaultMeshComponent();
+    virtual UCollider2DComponent* GetDefaultColliderComponent();
+    void InitScriptComponent();
+
+    UCollider2DComponent* ColliderComponent = nullptr;
     UStaticMeshComponent* MeshComponent = nullptr;
-    UScriptComponent* EnemyScriptComponent = nullptr;
-    UScriptComponent* StateScriptComponent = nullptr;
 };

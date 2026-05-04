@@ -6,30 +6,10 @@ local Script = {
     }
 }
 local Vec = require("Core.Vector")
-local Query = require("Query")
-local Targeting = require("AI.TargetingAI")
 local WeaponInventory = require("WeaponInventory")
 local LevelSystem = require("LevelSystem")
 
 function Script:BeginPlay()
-    Log("TankScript BeginPlay")
-
-    Log("SearchHeadMainGun")
-    self.HeadMainGun = self.GetComponentByName("UStaticMeshComponent", "HeadMainGun")
-    if self.HeadMainGun == nil or not self.HeadMainGun:IsValid() then
-        Log("Invalid HeadMainGun")
-    else
-        Log("StarCoroutineSearch")
-        self.Search = self.StartCoroutine(function()
-            Query.SearchActorClosestByTagCoroutine(self, self.HeadMainGun, "Enemy")
-        end)
-
-        Log("StarCoroutineTargeting")
-        self.Targeting = self.StartCoroutine(function()
-            Targeting.TargetingCoroutine(self, self.HeadMainGun, true)
-        end)
-    end
-
     self.WeaponInventory = WeaponInventory.New(self)
     self.LevelSystem = LevelSystem.New(self, self.WeaponInventory)
 

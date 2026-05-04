@@ -56,6 +56,7 @@ void FRenderPipelineRegistry::Initialize()
             PipelineNode(ERenderPipelineType::DeferredPipeline),
             PipelineNode(ERenderPipelineType::ForwardPipeline),
             PipelineNode(ERenderPipelineType::PostProcessPipeline),
+            PassNode(ERenderPassNodeType::UIPass),
         });
 
     AddPipeline(

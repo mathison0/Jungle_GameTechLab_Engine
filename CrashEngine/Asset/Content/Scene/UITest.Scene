@@ -1,0 +1,67 @@
+{
+  "Actors" : [{
+      "ClassName" : "AUIActor",
+      "Name" : "AUIActor_0",
+      "NonSceneComponents" : [],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_2",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 21",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UUIComponent",
+        "Name" : "UUIComponent_0",
+        "Properties" : {
+          "Geometry Type" : 0,
+          "Hit Test Visible" : true,
+          "Anchor Min" : [0.000000, 0.000000],
+          "Anchor Max" : [0.000000, 0.000000],
+          "Anchored Position" : [100.000000, 100.000000],
+          "Layer" : 0,
+          "Location" : [6.901050, -1.349531, 2.688785],
+          "Pivot" : [0.000000, 0.000000],
+          "Render Space" : 0,
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Size Delta" : [200.000000, 80.000000],
+          "Texture Path" : "Asset/Content/Textures/brick_diff-512.png",
+          "Tint Color" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "Visible" : true,
+          "Z Order" : 0,
+          "bTickEnable" : true
+        }
+      },
+      "bVisible" : true
+    }],
+  "ClassName" : "UWorld",
+  "ContextHandle" : "Default",
+  "ContextName" : "Default",
+  "Name" : "UITest",
+  "PerspectiveCamera" : {
+    "FOV" : 1.047198,
+    "FarClip" : 1000.000000,
+    "Location" : [8.406437, -5.896305, 6.413276],
+    "NearClip" : 0.100000,
+    "Rotation" : [0.000000, -4.219757, 89.889191]
+  },
+  "Version" : 2,
+  "WorldType" : "Editor"
+}

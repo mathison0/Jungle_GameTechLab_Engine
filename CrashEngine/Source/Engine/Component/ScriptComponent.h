@@ -19,6 +19,7 @@ public:
     void PostEditProperty(const char* PropertyName) override;
     void SetScriptPath(const FString& InScriptPath);
     const FString& GetScriptPath() const { return ScriptPath; }
+    void CallFunction(const char* Name);
 
     template <typename TFunc>
     void BindFunction(const char* Name, TFunc&& Function)

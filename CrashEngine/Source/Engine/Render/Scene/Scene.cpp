@@ -5,7 +5,9 @@
 
 #include "Component/LightComponent.h"
 #include "Component/PrimitiveComponent.h"
+#include "Render/Scene/Proxies/UI/UIProxy.h"
 #include "Profiling/Stats.h"
+#include "UI/UIComponent.h"
 
 namespace
 {
@@ -49,6 +51,12 @@ FScene::~FScene()
         delete Proxy;
     }
     PrimitiveProxyRegistry.Reset();
+
+    for (FUIProxy* Proxy : UIProxyRegistry.Proxies)
+    {
+        delete Proxy;
+    }
+    UIProxyRegistry.Reset();
 
     for (FLightProxy* Proxy : LightProxyRegistry.Proxies)
     {
@@ -150,6 +158,74 @@ void FScene::RemovePrimitive(FPrimitiveProxy* Proxy)
     delete Proxy;
 }
 
+void FScene::RegisterUIProxy(FUIProxy* Proxy)
+{
+    if (!Proxy)
+    {
+        return;
+    }
+
+    Proxy->DirtyFlags = ESceneProxyDirtyFlag::All;
+
+    if (!UIProxyRegistry.FreeSlots.empty())
+    {
+        const uint32 Slot = UIProxyRegistry.FreeSlots.back();
+        UIProxyRegistry.FreeSlots.pop_back();
+        Proxy->ProxyId                 = Slot;
+        UIProxyRegistry.Proxies[Slot]  = Proxy;
+    }
+    else
+    {
+        Proxy->ProxyId = static_cast<uint32>(UIProxyRegistry.Proxies.size());
+        UIProxyRegistry.Proxies.push_back(Proxy);
+    }
+
+    EnqueueDirtyProxy(UIProxyRegistry.DirtyProxies, Proxy);
+}
+
+FUIProxy* FScene::AddUI(UUIComponent* Component)
+{
+    if (!Component)
+    {
+        return nullptr;
+    }
+
+    FUIProxy* Proxy = Component->CreateUIProxy();
+    if (!Proxy)
+    {
+        return nullptr;
+    }
+
+    RegisterUIProxy(Proxy);
+    return Proxy;
+}
+
+void FScene::RemoveUI(FUIProxy* Proxy)
+{
+    if (!Proxy || Proxy->ProxyId == UINT32_MAX)
+    {
+        return;
+    }
+
+    const uint32 Slot = Proxy->ProxyId;
+
+    if (Proxy->bQueuedForDirtyUpdate)
+    {
+        auto DirtyIt = std::find(UIProxyRegistry.DirtyProxies.begin(), UIProxyRegistry.DirtyProxies.end(), Proxy);
+        if (DirtyIt != UIProxyRegistry.DirtyProxies.end())
+        {
+            *DirtyIt = UIProxyRegistry.DirtyProxies.back();
+            UIProxyRegistry.DirtyProxies.pop_back();
+        }
+        Proxy->bQueuedForDirtyUpdate = false;
+    }
+
+    UIProxyRegistry.Proxies[Slot] = nullptr;
+    UIProxyRegistry.FreeSlots.push_back(Slot);
+
+    delete Proxy;
+}
+
 void FScene::UpdateDirtyProxies()
 {
     SCOPE_STAT_CAT("UpdateDirtyProxies", "3_Collect");
@@ -193,6 +269,43 @@ void FScene::UpdateDirtyProxies()
         if (HasFlag(FlagsToProcess, ESceneProxyDirtyFlag::Shadow))
         {
             Proxy->UpdateShadow();
+        }
+    }
+}
+
+void FScene::UpdateDirtyUIProxies()
+{
+    TArray<FUIProxy*> PendingDirtyProxies = std::move(UIProxyRegistry.DirtyProxies);
+    UIProxyRegistry.DirtyProxies.clear();
+
+    for (FUIProxy* Proxy : PendingDirtyProxies)
+    {
+        if (!Proxy)
+        {
+            continue;
+        }
+
+        Proxy->bQueuedForDirtyUpdate = false;
+        if (!Proxy->Owner)
+        {
+            continue;
+        }
+
+        const ESceneProxyDirtyFlag FlagsToProcess = Proxy->DirtyFlags;
+        Proxy->DirtyFlags                         = ESceneProxyDirtyFlag::None;
+
+        if (HasFlag(FlagsToProcess, ESceneProxyDirtyFlag::Transform) ||
+            HasFlag(FlagsToProcess, ESceneProxyDirtyFlag::Mesh))
+        {
+            Proxy->UpdateLayout();
+        }
+        if (HasFlag(FlagsToProcess, ESceneProxyDirtyFlag::Material))
+        {
+            Proxy->UpdateStyle();
+        }
+        if (HasFlag(FlagsToProcess, ESceneProxyDirtyFlag::Visibility))
+        {
+            Proxy->UpdateVisibility();
         }
     }
 }
@@ -242,6 +355,17 @@ void FScene::MarkProxyDirty(FPrimitiveProxy* Proxy, ESceneProxyDirtyFlag Flag)
 
     Proxy->MarkDirty(Flag);
     EnqueueDirtyProxy(PrimitiveProxyRegistry.DirtyProxies, Proxy);
+}
+
+void FScene::MarkUIProxyDirty(FUIProxy* Proxy, ESceneProxyDirtyFlag Flag)
+{
+    if (!Proxy)
+    {
+        return;
+    }
+
+    Proxy->MarkDirty(Flag);
+    EnqueueDirtyProxy(UIProxyRegistry.DirtyProxies, Proxy);
 }
 
 void FScene::MarkLightProxyDirty(FLightProxy* Proxy, ESceneProxyDirtyFlag Flag)

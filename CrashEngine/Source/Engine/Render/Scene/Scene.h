@@ -8,8 +8,10 @@
 #include "Render/Scene/SceneProxyRegistry.h"
 
 class UPrimitiveComponent;
+class UUIComponent;
 class ULightComponent;
 class UHeightFogComponent;
+class FUIProxy;
 
 // FScene는 렌더 영역의 핵심 동작을 담당합니다.
 class FScene
@@ -22,6 +24,10 @@ public:
     void             RegisterPrimitiveProxy(FPrimitiveProxy* Proxy);
     void             RemovePrimitive(FPrimitiveProxy* Proxy);
 
+    FUIProxy* AddUI(UUIComponent* Component);
+    void      RegisterUIProxy(FUIProxy* Proxy);
+    void      RemoveUI(FUIProxy* Proxy);
+
     FLightProxy* AddLight(ULightComponent* Component);
     void         RegisterLightProxy(FLightProxy* Proxy);
     void         RemoveLight(FLightProxy* Proxy);
@@ -30,8 +36,10 @@ public:
     void            RemoveFog(const UHeightFogComponent* Owner);
 
     void UpdateDirtyProxies();
+    void UpdateDirtyUIProxies();
     void UpdateDirtyLightProxies();
     void MarkProxyDirty(FPrimitiveProxy* Proxy, ESceneProxyDirtyFlag Flag);
+    void MarkUIProxyDirty(FUIProxy* Proxy, ESceneProxyDirtyFlag Flag);
     void MarkLightProxyDirty(FLightProxy* Proxy, ESceneProxyDirtyFlag Flag);
     void MarkAllPerObjectCBDirty();
     void ClearFrameData() {}
@@ -41,6 +49,7 @@ public:
 
     const TArray<FPrimitiveProxy*>& GetPrimitiveProxies() const { return PrimitiveProxyRegistry.Proxies; }
     const TArray<FPrimitiveProxy*>& GetNeverCullProxies() const { return PrimitiveProxyRegistry.NeverCullProxies; }
+    const TArray<FUIProxy*>&        GetUIProxies() const { return UIProxyRegistry.Proxies; }
     const TArray<FLightProxy*>&     GetLightProxies() const { return LightProxyRegistry.Proxies; }
     const TArray<FFogSceneProxy*>&  GetFogProxies() const { return FogProxyRegistry.Proxies; }
     uint32                          GetPrimitiveProxyCount() const { return static_cast<uint32>(PrimitiveProxyRegistry.Proxies.size()); }
@@ -55,6 +64,7 @@ public:
 
 private:
     FPrimitiveProxyRegistry             PrimitiveProxyRegistry;
+    TSceneProxyRegistry<FUIProxy>       UIProxyRegistry;
     TSceneProxyRegistry<FLightProxy>    LightProxyRegistry;
     TSceneProxyRegistry<FFogSceneProxy> FogProxyRegistry; // TODO: FSceneEffectProxy로 변경=
 

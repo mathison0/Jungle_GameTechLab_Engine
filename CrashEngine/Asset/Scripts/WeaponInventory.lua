@@ -1,16 +1,21 @@
 local WeaponInventory = {}
 WeaponInventory.__index = WeaponInventory
+local WeaponVisualDefs = require("WeaponVisualDefs")
 
 local WeaponConstructors = {
     MainCannon = require("Weapons.MainCannonWeapon"),
     MachineTurret = require("Weapons.MachineTurretWeapon"),
     Aura = require("Weapons.AuraWeapon"),
+    HomingMissile = require("Weapons.HomingMissileWeapon"),
+    SatelliteBeam = require("Weapons.SatelliteBeamWeapon"),
 }
 
 local WeaponIds = {
     "MainCannon",
     "MachineTurret",
     "Aura",
+    "HomingMissile",
+    "SatelliteBeam",
 }
 
 function WeaponInventory.New(owner)
@@ -23,6 +28,26 @@ end
 
 function WeaponInventory:HasWeapon(id)
     return self.Weapons[id] ~= nil
+end
+
+function WeaponInventory:ApplyWeaponVisual(id, level)
+    if self.Owner == nil or self.Owner.EquipWeaponVisual == nil then
+        return
+    end
+
+    local weaponVisual = WeaponVisualDefs[id]
+    if weaponVisual == nil then
+        Log("[WeaponInventory] Visual def not found: " .. tostring(id))
+        return
+    end
+
+    local layout = weaponVisual[level]
+    if layout == nil then
+        Log("[WeaponInventory] Visual layout not found: " .. tostring(id) .. " level=" .. tostring(level))
+        return
+    end
+
+    self.Owner.EquipWeaponVisual(id, level, layout)
 end
 
 function WeaponInventory:AddWeapon(id)
@@ -39,6 +64,7 @@ function WeaponInventory:AddWeapon(id)
     local weapon = constructor.New(self.Owner)
     self.Weapons[id] = weapon
     Log(id .. " added")
+    self:ApplyWeaponVisual(id, weapon.Level or 1)
 
     if weapon.Start ~= nil then
         weapon:Start()
@@ -57,7 +83,15 @@ function WeaponInventory:UpgradeWeapon(id)
         return false
     end
 
-    return weapon:Upgrade()
+    local upgraded = weapon:Upgrade()
+    if upgraded then
+        self:ApplyWeaponVisual(id, weapon.Level or 1)
+        if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
+            weapon:RebuildTurretSlots()
+        end
+    end
+
+    return upgraded
 end
 
 function WeaponInventory:GetUpgradeableWeapons()
@@ -104,7 +138,15 @@ function WeaponInventory:EvolveWeapon(id)
         return false
     end
 
-    return weapon:Evolve()
+    local evolved = weapon:Evolve()
+    if evolved then
+        self:ApplyWeaponVisual(id, weapon.Level or 1)
+        if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
+            weapon:RebuildTurretSlots()
+        end
+    end
+
+    return evolved
 end
 
 function WeaponInventory:OpenChest()
