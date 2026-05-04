@@ -428,6 +428,9 @@
     <ClCompile Include="Source\Engine\Component\Collision\CapsuleComponent.cpp">
       <Filter>Source\Engine\Component\Collision</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Collision\CylinderComponent.cpp">
+      <Filter>Source\Engine\Component\Collision</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\Collision\ShapeComponent.cpp">
       <Filter>Source\Engine\Component\Collision</Filter>
     </ClCompile>
@@ -1038,6 +1041,9 @@
       <Filter>Source\Engine\Component\Collision</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Collision\CapsuleComponent.h">
+      <Filter>Source\Engine\Component\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Collision\CylinderComponent.h">
       <Filter>Source\Engine\Component\Collision</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Collision\ShapeComponent.h">
