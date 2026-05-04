@@ -11,17 +11,27 @@ local Script = {
     }
 }
 local Vec = require("Core.Vector")
-local WeaponInventory = require("WeaponInventory")
-local LevelSystem = require("LevelSystem")
+local GameManager = require("GameManager")
 
 local KEY_SHIFT = 0x10
 
 function Script:BeginPlay()
     self.Velocity = Vec.Zero()
-    self.WeaponInventory = WeaponInventory.New(self)
-    self.LevelSystem = LevelSystem.New(self, self.WeaponInventory)
+    
+    -- 플레이어 태그 설정 (GameManager 및 적 탐색용)
+    local actor = self:GetActor()
+    if actor then
+        actor:SetTag("Player")
+    end
 
-    self.WeaponInventory:AddWeapon("MainCannon")
+    -- GameManager 초기화 및 시작 (GameManagerComponent가 없을 경우를 위한 대비)
+    -- 이미 초기화되어 있다면 Init 내부에서 걸러짐
+    if not GameManager.Initialized then
+        Log("TankScript: Initializing GameManager (Fallback)...")
+        GameManager.Init(self, 600.0) 
+        GameManager.OnGameStart()
+    end
+
     self.RootCollider = self.GetRootComponent()
     if self.RootCollider == nil or not self.RootCollider:IsValid() then
         Log("Invalid RootCollider")
@@ -59,8 +69,12 @@ function Script:UpdateMovement(deltaTime)
     end
 
     local trackWidth = 0.8
-    local leftTrackSpeed = (self.MoveSpeed or 1.0) * inputV + currentRotateSpeed * inputH * rotateSpeedSign
-    local rightTrackSpeed = (self.MoveSpeed or 1.0) * inputV - currentRotateSpeed * inputH * rotateSpeedSign
+    
+    -- GameManager의 이동 속도 배율 적용
+    local finalMoveSpeed = (self.MoveSpeed or 1.0) * (GameManager.Stats.MoveSpeedMult or 1.0)
+    
+    local leftTrackSpeed = finalMoveSpeed * inputV + currentRotateSpeed * inputH * rotateSpeedSign
+    local rightTrackSpeed = finalMoveSpeed * inputV - currentRotateSpeed * inputH * rotateSpeedSign
 
     local targetForwardSpeed = (leftTrackSpeed + rightTrackSpeed) * 0.5
     local targetAngularSpeed = (leftTrackSpeed - rightTrackSpeed) / trackWidth
@@ -85,17 +99,11 @@ function Script:UpdateMovement(deltaTime)
 end
 
 function Script:AddExp(amount)
-    if self.LevelSystem ~= nil then
-        self.LevelSystem:AddExp(amount)
-    end
+    GameManager.OnPickupExp(amount)
 end
 
 function Script:OpenChest()
-    if self.WeaponInventory ~= nil then
-        return self.WeaponInventory:OpenChest()
-    end
-
-    return false
+    return GameManager.OnPickupChest()
 end
 
 function Script:AttractPickup(pickup, deltaTime)
@@ -116,11 +124,14 @@ function Script:AttractPickup(pickup, deltaTime)
         return
     end
 
-    local step = math.min(distance, (self.PickupAttractSpeed or 20.0) * deltaTime)
+    -- 자석 속도와 범위 배율 적용 가능
+    local attractSpeed = (self.PickupAttractSpeed or 20.0)
+    local step = math.min(distance, attractSpeed * deltaTime)
     pickup:SetLocation(Vec.Add(pickupPos, Vec.Mul(toTarget, step / distance)))
 end
 
 function Script:CollectPickup(pickup, poolManager)
+    -- 보석의 경우 경험치 지급 (추후 pickup 종류에 따라 분기 가능)
     self:AddExp(self.PickupExp or 1)
 
     if poolManager ~= nil and poolManager:IsValid() then
@@ -167,8 +178,8 @@ function Script:Tick(deltaTime)
 end
 
 function Script:EndPlay()
-    if self.WeaponInventory ~= nil then
-        for _, weapon in pairs(self.WeaponInventory.Weapons) do
+    if GameManager.WeaponInventory ~= nil then
+        for _, weapon in pairs(GameManager.WeaponInventory.Weapons) do
             if weapon.Stop ~= nil then
                 weapon:Stop()
             end

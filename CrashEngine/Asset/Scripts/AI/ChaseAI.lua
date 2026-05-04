@@ -12,6 +12,18 @@ function ChaseAI.ChaseTarget(self, TargetTag, ComponentHandle, DeltaTime)
             return
         end
 
+        -- self.target이 이미 설정되어 있거나, 없으면 태그로 찾음 (이미 EnemyScript에서 설정함)
+        if self.target == nil or not self.target:IsValid() then
+            -- Fallback: 태그로 찾기 (GameManager가 아직 준비 안 된 경우 등)
+            local world = self:GetWorld()
+            if world then
+                local players = world:GetActorsByTag(TargetTag)
+                if players and #players > 0 then
+                    self.target = players[1]
+                end
+            end
+        end
+
         local myPos = ComponentHandle:GetWorldLocation()
         if self.target ~= nil and self.target:IsValid() then
             local targetPos = self.target:GetLocation()
