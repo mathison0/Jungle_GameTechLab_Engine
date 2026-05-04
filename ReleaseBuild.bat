@@ -3,7 +3,7 @@ setlocal
 
 set SOLUTION_DIR=%~dp0
 set PROJECT_DIR=%SOLUTION_DIR%NipsEngine
-set BUILD_OUTPUT=%PROJECT_DIR%\Bin\Release
+set BUILD_OUTPUT=%PROJECT_DIR%\Bin\Game
 set RELEASE_DIR=%SOLUTION_DIR%ReleaseBuild
 set VCPKG_BIN=%SOLUTION_DIR%vcpkg_installed\x64-windows\bin
 
@@ -21,10 +21,10 @@ echo ============================================
 echo  Release Build Script
 echo ============================================
 
-:: 1. MSBuild로 Release x64 빌드
+:: 1. MSBuild로 Game x64 빌드
 echo.
-echo [1/3] Building Release x64...
-msbuild "%SOLUTION_DIR%NipsEngine.sln" /p:Configuration=Release /p:Platform=x64 /m /v:minimal
+echo [1/3] Building Game x64...
+msbuild "%SOLUTION_DIR%NipsEngine.sln" /p:Configuration=Game /p:Platform=x64 /m /v:minimal
 if %ERRORLEVEL% neq 0 (
     echo BUILD FAILED
     pause
