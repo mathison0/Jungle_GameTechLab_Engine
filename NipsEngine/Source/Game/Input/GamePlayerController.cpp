@@ -869,32 +869,34 @@ void FGamePlayerController::TogglePickup()
 		return;
 	}
 
-	if (Handle->TryGrab(World, CameraLocation, CameraForward))
-	{
-		ResetHeldBodyRotationToInitial();
-		bool bSelectedHeldTool = false;
-		if (URigidBodyComponent* HeldBody = Handle->GetHeldBody())
-		{
-			if (AActor* HeldActor = HeldBody->GetOwner())
-			{
-				const FString HeldToolId = FindCleaningToolIdFromActor(HeldActor);
-				bSelectedHeldTool = !HeldToolId.empty() && FCleaningToolSystem::Get().SelectTool(HeldToolId);
-				if (bSelectedHeldTool)
-				{
-					if (const FCleaningToolData* ToolData = FCleaningToolSystem::Get().FindToolData(HeldToolId))
-					{
-						Handle->SetHoldDistance(ToolData->HoldDistance, false);
-						Handle->SetHeldMovementCollisionSuppressed(true);
-						FCleaningToolAnimator::Get().SetActiveTool(*ToolData);
-						BeginCleaningToolViewModel(*ToolData);
-					}
-				}
-				UE_LOG("[CleaningTool] Picked actor=%s resolvedToolId=%s selected=%d",
-					   HeldActor->GetFName().ToString().c_str(),
-					   HeldToolId.c_str(),
-					   bSelectedHeldTool ? 1 : 0);
-			}
-		}
+    if (Handle->TryGrab(World, CameraLocation, CameraForward))
+    {
+        ResetHeldBodyRotationToInitial();
+        bool bSelectedHeldTool = false;
+        if (URigidBodyComponent* HeldBody = Handle->GetHeldBody())
+        {
+            if (AActor* HeldActor = HeldBody->GetOwner())
+            {
+                NotifyPickedUp(HeldActor);
+
+                const FString HeldToolId = FindCleaningToolIdFromActor(HeldActor);
+                bSelectedHeldTool = !HeldToolId.empty() && FCleaningToolSystem::Get().SelectTool(HeldToolId);
+                if (bSelectedHeldTool)
+                {
+                    if (const FCleaningToolData* ToolData = FCleaningToolSystem::Get().FindToolData(HeldToolId))
+                    {
+                        Handle->SetHoldDistance(ToolData->HoldDistance, false);
+                        Handle->SetHeldMovementCollisionSuppressed(true);
+                        FCleaningToolAnimator::Get().SetActiveTool(*ToolData);
+                        BeginCleaningToolViewModel(*ToolData);
+                    }
+                }
+                UE_LOG("[CleaningTool] Picked actor=%s resolvedToolId=%s selected=%d",
+                       HeldActor->GetFName().ToString().c_str(),
+                       HeldToolId.c_str(),
+                       bSelectedHeldTool ? 1 : 0);
+            }
+        }
 
 		if (!bSelectedHeldTool)
 		{
@@ -973,46 +975,65 @@ bool FGamePlayerController::TryPlaceHeldItemInHoveredDecisionBox()
 
 void FGamePlayerController::TryInspectHoveredItem()
 {
-	if (!World || !IsInputEnabled())
-	{
-		return;
-	}
+    if (!World || !IsInputEnabled())
+    {
+        return;
+    }
 
-	UPhysicsHandleComponent* Handle = GetPhysicsHandle();
-	if (Handle == nullptr || !Handle->IsHolding())
-	{
-		return;
-	}
+    UPhysicsHandleComponent* Handle = GetPhysicsHandle();
+    if (Handle == nullptr || !Handle->IsHolding())
+    {
+        return;
+    }
 
-	URigidBodyComponent* HeldBody = Handle->GetHeldBody();
-	AActor* HeldActor = HeldBody ? HeldBody->GetOwner() : nullptr;
-	if (HeldActor == nullptr || !FindCleaningToolIdFromActor(HeldActor, false).empty())
-	{
-		return;
-	}
+    URigidBodyComponent* HeldBody = Handle->GetHeldBody();
+    AActor* HeldActor = HeldBody ? HeldBody->GetOwner() : nullptr;
+    if (HeldActor == nullptr || !FindCleaningToolIdFromActor(HeldActor, false).empty())
+    {
+        return;
+    }
 
-	const FString ItemId = FindItemIdFromActor(HeldActor);
-	if (ItemId.empty())
-	{
-		return;
-	}
+    const FString ItemId = FindItemIdFromActor(HeldActor);
+    if (ItemId.empty())
+    {
+        return;
+    }
 
-	if (!FItemSystem::Get().InspectItem(ItemId))
-	{
-		return;
-	}
+    if (!FItemSystem::Get().InspectItem(ItemId))
+    {
+        return;
+    }
 
-	const FGameItemData* ItemData = FItemSystem::Get().FindItemData(ItemId);
-	if (ItemData == nullptr)
-	{
-		return;
-	}
+    const FGameItemData* ItemData = FItemSystem::Get().FindItemData(ItemId);
+    if (ItemData == nullptr)
+    {
+        return;
+    }
 
-	const FString Description = FItemSystem::Get().GetDescriptionForCurrentState(ItemId);
-	GameUISystem::Get().ShowItemInspect(
-		ItemData->DisplayName.c_str(),
-		Description.c_str(),
-		ItemData->IconPath.c_str());
+    const FString Description = FItemSystem::Get().GetDescriptionForCurrentState(ItemId);
+    GameUISystem::Get().ShowItemInspect(
+        ItemData->DisplayName.c_str(),
+        Description.c_str(),
+        ItemData->IconPath.c_str());
+}
+
+void FGamePlayerController::NotifyPickedUp(AActor* PickedActor)
+{
+    if (PickedActor == nullptr)
+    {
+        return;
+    }
+
+    for (UActorComponent* Component : PickedActor->GetComponents())
+    {
+        ULuaScriptComponent* LuaComponent = Cast<ULuaScriptComponent>(Component);
+        if (LuaComponent == nullptr)
+        {
+            continue;
+        }
+
+        LuaComponent->HandlePickedUp(Player);
+    }
 }
 
 UPhysicsHandleComponent* FGamePlayerController::GetPhysicsHandle()
