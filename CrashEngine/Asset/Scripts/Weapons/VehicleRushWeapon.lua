@@ -38,6 +38,15 @@ local function GetActorKey(actor)
     return tostring(actor)
 end
 
+local function SetVehicleVisualPose(visual, position, target)
+    if visual == nil or not visual:IsValid() then
+        return
+    end
+
+    visual:SetWorldLocation(position)
+    visual:LookAt(target)
+end
+
 function VehicleRushWeapon.New(owner)
     local self = setmetatable({}, VehicleRushWeapon)
     self.Owner = owner
@@ -205,8 +214,7 @@ function VehicleRushWeapon:RunVehiclePass()
         local visual = self.Visuals[i]
 
         if visual ~= nil and visual:IsValid() then
-            visual:SetWorldLocation(startPos)
-            visual:LookAt(endPos)
+            SetVehicleVisualPose(visual, startPos, endPos)
             visual:SetVisibility(true)
         end
 
@@ -255,7 +263,7 @@ function VehicleRushWeapon:UpdateVehicles(world, ownerActor, vehicles, dir, side
         local visual = vehicle.Visual
 
         if visual ~= nil and visual:IsValid() then
-            visual:SetWorldLocation(position)
+            SetVehicleVisualPose(visual, position, vehicle.End)
         end
 
         self:DamageEnemiesOnSegment(world, ownerActor, previous, position, dir, side, hitActors)

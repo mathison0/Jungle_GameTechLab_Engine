@@ -140,7 +140,7 @@ WeaponVisualDefs.VehicleRush = {
             {
                 Name = "Visual_VehicleRush_0",
                 Mesh = "Models/Roadroller/roadroller.obj",
-                Parent = "RootComponent",
+                Parent = "World",
                 Location = { 0.0, 0.0, -1000.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 5.5, 2.4, 0.8 },
@@ -153,7 +153,7 @@ WeaponVisualDefs.VehicleRush = {
             {
                 Name = "Visual_VehicleRush_0",
                 Mesh = "Models/Roadroller/roadroller.obj",
-                Parent = "RootComponent",
+                Parent = "World",
                 Location = { 0.0, 0.0, -1000.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 5.0, 5.0, 5.0 },
@@ -161,7 +161,7 @@ WeaponVisualDefs.VehicleRush = {
             {
                 Name = "Visual_VehicleRush_1",
                 Mesh = "Models/Roadroller/roadroller.obj",
-                Parent = "RootComponent",
+                Parent = "World",
                 Location = { 0.0, 0.0, -1000.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 5.0, 5.0, 5.0 },
@@ -169,7 +169,7 @@ WeaponVisualDefs.VehicleRush = {
             {
                 Name = "Visual_VehicleRush_2",
                 Mesh = "Models/Roadroller/roadroller.obj",
-                Parent = "RootComponent",
+                Parent = "World",
                 Location = { 0.0, 0.0, -1000.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 5.0, 5.0, 5.0 },
@@ -182,7 +182,7 @@ WeaponVisualDefs.VehicleRush = {
             {
                 Name = "Visual_VehicleRush_0",
                 Mesh = "Models/Thomas/thomas.obj",
-                Parent = "RootComponent",
+                Parent = "World",
                 Location = { 0.0, 0.0, -2000.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 1.0, 1.0, 1.0 },

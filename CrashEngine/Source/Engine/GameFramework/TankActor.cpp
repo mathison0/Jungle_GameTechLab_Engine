@@ -578,23 +578,33 @@ UStaticMeshComponent* ATankActor::FindStaticMeshComponentByName(const FString& C
 
 UStaticMeshComponent* ATankActor::GetOrCreateWeaponVisualComponent(const FString& Name, const FString& MeshPath, const FString& ParentName)
 {
+    const bool bUseWorldParent = ParentName.empty() || ParentName == "World" || ParentName == "None";
+
     if (UStaticMeshComponent* Existing = FindStaticMeshComponentByName(Name))
     {
         Existing->SetStaticMesh(GetBasicMesh(MeshPath));
         Existing->SetActive(true);
         Existing->SetVisibility(true);
-        if (USceneComponent* Parent = FindSceneComponentByName(ParentName))
+        if (bUseWorldParent)
+        {
+            Existing->SetParent(nullptr);
+        }
+        else if (USceneComponent* Parent = FindSceneComponentByName(ParentName))
         {
             Existing->AttachToComponent(Parent);
         }
         return Existing;
     }
 
-    USceneComponent* Parent = FindSceneComponentByName(ParentName);
-    if (!Parent)
+    USceneComponent* Parent = nullptr;
+    if (!bUseWorldParent)
     {
-        UE_LOG(Tank, Warning, "Weapon visual parent not found: %s", ParentName.c_str());
-        return nullptr;
+        Parent = FindSceneComponentByName(ParentName);
+        if (!Parent)
+        {
+            UE_LOG(Tank, Warning, "Weapon visual parent not found: %s", ParentName.c_str());
+            return nullptr;
+        }
     }
 
     UStaticMeshComponent* Visual = AddComponent<UStaticMeshComponent>();
@@ -604,7 +614,10 @@ UStaticMeshComponent* ATankActor::GetOrCreateWeaponVisualComponent(const FString
     }
 
     Visual->SetFName(Name);
-    Parent->AddChild(Visual);
+    if (Parent)
+    {
+        Parent->AddChild(Visual);
+    }
     Visual->SetStaticMesh(GetBasicMesh(MeshPath));
     Visual->SetActive(true);
     Visual->SetVisibility(true);
