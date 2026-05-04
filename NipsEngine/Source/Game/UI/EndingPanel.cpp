@@ -36,7 +36,7 @@ std::vector<const char*> GetEndingLines(EEndingType Type)
 	case EEndingType::Bad:
 		return {
 			"고생하셨어요.",
-			"이 물건들은…",
+			"이 물건들은...",
 			"잘 모르겠네요.",
 			"정리하셔도 될 것 같아요."
 		};
@@ -102,13 +102,13 @@ const char* EndingPanel::GetImagePath()
 	switch (ActiveEndingType)
 	{
 	case EEndingType::Good:
-		return "Asset/Texture/water.png";
+		return "Asset/Texture/GoodEnding.png";
 	case EEndingType::Bad:
-		return "Asset/Texture/TitleBackground.png";
+		return "Asset/Texture/BadEnding.png";
 	case EEndingType::Normal:
 	case EEndingType::None:
 	default:
-		return "Asset/Texture/TitleBackground.png";
+		return "Asset/Texture/NormalEnding.png";
 	}
 }
 
