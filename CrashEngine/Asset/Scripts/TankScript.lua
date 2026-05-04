@@ -18,19 +18,15 @@ local KEY_SHIFT = 0x10
 function Script:BeginPlay()
     self.Velocity = Vec.Zero()
     
-    -- 플레이어 태그 설정 (GameManager 및 적 탐색용)
+    -- 1. 플레이어 태그 설정
     local actor = self:GetActor()
     if actor then
         actor:SetTag("Player")
     end
 
-    -- GameManager 초기화 및 시작 (GameManagerComponent가 없을 경우를 위한 대비)
-    -- 이미 초기화되어 있다면 Init 내부에서 걸러짐
-    if not GameManager.Initialized then
-        Log("TankScript: Initializing GameManager (Fallback)...")
-        GameManager.Init(self, 600.0) 
-        GameManager.OnGameStart()
-    end
+    -- 2. GameManager에 자신(Lua 스크립트 테이블)을 등록
+    -- 이를 통해 GameManager는 플레이어의 Lua 메서드(EquipWeaponVisual 등)에 접근할 수 있게 됩니다.
+    GameManager.RegisterPlayer(self)
 
     self.RootCollider = self.GetRootComponent()
     if self.RootCollider == nil or not self.RootCollider:IsValid() then
@@ -178,14 +174,6 @@ function Script:Tick(deltaTime)
 end
 
 function Script:EndPlay()
-    if GameManager.WeaponInventory ~= nil then
-        for _, weapon in pairs(GameManager.WeaponInventory.Weapons) do
-            if weapon.Stop ~= nil then
-                weapon:Stop()
-            end
-        end
-    end
-
     self.StopAllCoroutines()
 end
 
