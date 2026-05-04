@@ -52,6 +52,12 @@ namespace
 		return Name;
 	}
 
+	const FName& ActionInspect()
+	{
+		static const FName Name("Inspect");
+		return Name;
+	}
+
 	// 새 Axis를 추가하려면:
 	// 1. 여기에 이름 함수를 하나 더 만듭니다. 예: AxisMoveForward() -> "MoveForward"
 	// 2. SetupDefaultInputMappings()에서 키와 Scale을 AddAxisMapping으로 연결합니다.
@@ -425,6 +431,11 @@ void FGamePlayerController::OnKeyPressed(int VK)
     {
         TogglePickup();
     }
+
+	if (InputMapping.IsActionKey(ActionInspect(), VK))
+	{
+		TryInspectHoveredItem();
+	}
 }
 
 void FGamePlayerController::OnKeyDown(int VK)
@@ -589,6 +600,7 @@ void FGamePlayerController::SetupDefaultInputMappings()
     InputMapping.AddActionMapping(ActionToggleInputCapture(), VK_F4);
     InputMapping.AddActionMapping(ActionTogglePause(), 'P');
     InputMapping.AddActionMapping(ActionPickup(), 'E');
+    InputMapping.AddActionMapping(ActionInspect(), 'Q');
 
     // Axis Mapping: 여러 키를 하나의 연속 값으로 합칩니다.
     // 예를 들어 W는 MoveForward에 +1, S는 -1을 더합니다.
@@ -778,6 +790,42 @@ void FGamePlayerController::TogglePickup()
             Handle->ResetHoldDistance();
         }
     }
+}
+
+void FGamePlayerController::TryInspectHoveredItem()
+{
+	if (!World || !IsInputEnabled() || HoveredPickableActor == nullptr)
+	{
+		return;
+	}
+
+	if (!FindCleaningToolIdFromActor(HoveredPickableActor, false).empty())
+	{
+		return;
+	}
+
+	const FString ItemId = FindItemIdFromActor(HoveredPickableActor);
+	if (ItemId.empty())
+	{
+		return;
+	}
+
+	if (!FItemSystem::Get().InspectItem(ItemId))
+	{
+		return;
+	}
+
+	const FGameItemData* ItemData = FItemSystem::Get().FindItemData(ItemId);
+	if (ItemData == nullptr)
+	{
+		return;
+	}
+
+	const FString Description = FItemSystem::Get().GetDescriptionForCurrentState(ItemId);
+	GameUISystem::Get().ShowItemInspect(
+		ItemData->DisplayName.c_str(),
+		Description.c_str(),
+		ItemData->IconPath.c_str());
 }
 
 UPhysicsHandleComponent* FGamePlayerController::GetPhysicsHandle()

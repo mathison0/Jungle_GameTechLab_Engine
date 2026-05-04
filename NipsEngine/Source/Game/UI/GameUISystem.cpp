@@ -282,6 +282,7 @@ bool GameUISystem::WantsMouseCursor() const
 	return CurrentState == EGameUIState::StartMenu ||
 		   CurrentState == EGameUIState::Prologue ||
 		   CurrentState == EGameUIState::Ending ||
+		   bItemInspectOpen ||
 		   bPauseMenuOpen ||
 		   DialoguePanel::IsActive();
 }
@@ -309,6 +310,7 @@ void GameUISystem::ResetGameData()
 	CurrentItemName.clear();
 	CurrentItemDesc.clear();
 	InteractionHintType = EInteractionHintType::None;
+	HideItemInspect();
 }
 
 void GameUISystem::SetProgress(float InProgress)
@@ -325,6 +327,22 @@ void GameUISystem::SetCurrentItem(const char* Name, const char* Desc)
 void GameUISystem::SetInteractionHint(EInteractionHintType Type)
 {
 	InteractionHintType = Type;
+}
+
+void GameUISystem::ShowItemInspect(const char* Name, const char* Desc, const char* IconPath)
+{
+	InspectItemName = Name ? Name : "";
+	InspectItemDesc = Desc ? Desc : "";
+	InspectItemIconPath = IconPath ? IconPath : "";
+	bItemInspectOpen = true;
+}
+
+void GameUISystem::HideItemInspect()
+{
+	bItemInspectOpen = false;
+	InspectItemName.clear();
+	InspectItemDesc.clear();
+	InspectItemIconPath.clear();
 }
 
 void GameUISystem::SetItemCount(int Count)
@@ -438,6 +456,13 @@ bool GameUISystem::OnUIKeyDown(int VK)
 		return true;
 	}
 
+	if (bItemInspectOpen)
+	{
+		if (VK == VK_ESCAPE || VK == 'Q')
+			HideItemInspect();
+		return true;
+	}
+
 	return false;
 }
 
@@ -451,6 +476,9 @@ bool GameUISystem::OnUIKeyUp(int VK)
 		RmlContext->ProcessKeyUp(Key, 0);
 
 	if (CurrentState == EGameUIState::StartMenu)
+		return true;
+
+	if (bItemInspectOpen)
 		return true;
 
 	if (VK == VK_SPACE && DialoguePanel::AdvanceOrSkip())
@@ -512,7 +540,8 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 		(CurrentState == EGameUIState::InGame || CurrentState == EGameUIState::Ending || CurrentState == EGameUIState::Prologue);
 	const bool bShowEnding = CurrentState == EGameUIState::Ending;
 	const bool bShowTheEnd = bShowEnding && EndingPanel::ShouldShowTheEnd();
-	const bool bShowInteractionHint = bShowHud && !bShowPause && !bShowDialogue && InteractionHintType != EInteractionHintType::None;
+	const bool bShowItemInspect = bShowHud && bItemInspectOpen;
+	const bool bShowInteractionHint = bShowHud && !bShowPause && !bShowDialogue && !bShowItemInspect && InteractionHintType != EInteractionHintType::None;
 
 	SetElementVisible("start-menu", bShowStart);
 	SetElementVisible("hud-panel", bShowHud);
@@ -520,6 +549,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	SetElementVisible("crosshair-dot", bShowHud && !bShowPause);
 	SetElementVisible("interaction-hint", bShowInteractionHint);
 	SetElementVisible("pause-layer", bShowPause);
+	SetElementVisible("item-inspect-panel", bShowItemInspect);
 	SetElementVisible("dialogue-panel", bShowDialogue);
 	SetElementVisible("ending-panel", bShowEnding);
 	SetElementVisible("the-end", bShowTheEnd);
@@ -561,18 +591,29 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	switch (InteractionHintType)
 	{
 	case EInteractionHintType::Pickup:
+		SetElementText("interaction-key", "E");
 		SetElementText("interaction-hint-text", "잡기");
 		break;
 	case EInteractionHintType::Clean:
+		SetElementText("interaction-key", "E");
 		SetElementText("interaction-hint-text", "놓기");
 		break;
 	case EInteractionHintType::Inspect:
+		SetElementText("interaction-key", "Q");
 		SetElementText("interaction-hint-text", "살펴보기");
 		break;
 	default:
+		SetElementText("interaction-key", "");
 		SetElementText("interaction-hint-text", "");
 		break;
 	}
+
+	SetElementText("item-inspect-title", InspectItemName.empty() ? "Item" : InspectItemName);
+	SetElementText("item-inspect-desc", InspectItemDesc);
+	SetElementVisible("item-inspect-image", !InspectItemIconPath.empty());
+	SetElementVisible("item-inspect-image-placeholder", InspectItemIconPath.empty());
+	if (!InspectItemIconPath.empty())
+		SetElementAttribute("item-inspect-image", "src", InspectItemIconPath);
 
 	SetElementText("dialogue-speaker", DialoguePanel::GetSpeaker());
 	SetElementText("dialogue-text", DialoguePanel::GetVisibleText());
@@ -657,4 +698,13 @@ void GameUISystem::SetElementProperty(const char* Id, const char* Property, cons
 
 	if (Rml::Element* Element = RmlDocument->GetElementById(Id))
 		Element->SetProperty(Property, Value);
+}
+
+void GameUISystem::SetElementAttribute(const char* Id, const char* Attribute, const std::string& Value)
+{
+	if (!RmlDocument)
+		return;
+
+	if (Rml::Element* Element = RmlDocument->GetElementById(Id))
+		Element->SetAttribute(Attribute, Value);
 }

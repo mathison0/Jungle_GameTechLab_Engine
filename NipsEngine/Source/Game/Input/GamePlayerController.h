@@ -71,6 +71,7 @@ private:
 	bool TryBeginCleaningUse();
 	void EndCleaningUse();
 	void TogglePickup();
+	void TryInspectHoveredItem();
 	UPhysicsHandleComponent* GetPhysicsHandle();
 	UCharacterMovementComponent* GetCharacterMovement();
 	void DestroyPhysicsHandle();

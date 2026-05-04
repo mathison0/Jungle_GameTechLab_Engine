@@ -36,6 +36,19 @@
 		<span id="interaction-hint-text"></span>
 	</div>
 
+	<div id="item-inspect-panel">
+		<div id="item-inspect-content">
+			<div id="item-inspect-image-frame">
+				<img id="item-inspect-image" />
+				<div id="item-inspect-image-placeholder"></div>
+			</div>
+			<div id="item-inspect-text">
+				<div id="item-inspect-title"></div>
+				<div id="item-inspect-desc"></div>
+			</div>
+		</div>
+	</div>
+
 	<div id="pause-layer">
 		<div id="pause-panel">
 			<div id="pause-title">[MENU]</div>

@@ -83,6 +83,8 @@ public:
     void SetProgress(float InProgress);             // 0.0 ~ 1.0
     void SetCurrentItem(const char* Name, const char* Desc);
     void SetInteractionHint(EInteractionHintType Type);
+    void ShowItemInspect(const char* Name, const char* Desc, const char* IconPath);
+    void HideItemInspect();
 
     // 일시정지 메뉴
     static void TogglePauseMenuIfInGame();
@@ -139,6 +141,7 @@ private:
     void SetElementVisible(const char* Id, bool bVisible);
     void SetElementText(const char* Id, const std::string& Text);
     void SetElementProperty(const char* Id, const char* Property, const std::string& Value);
+    void SetElementAttribute(const char* Id, const char* Attribute, const std::string& Value);
     // 상태에 따라 커서/마우스 잠금을 자동으로 맞춤
 
     EGameUIState CurrentState        = EGameUIState::None;
@@ -162,6 +165,10 @@ private:
     std::string CurrentItemName;
     std::string CurrentItemDesc;
     EInteractionHintType InteractionHintType = EInteractionHintType::None;
+    bool bItemInspectOpen = false;
+    std::string InspectItemName;
+    std::string InspectItemDesc;
+    std::string InspectItemIconPath;
 
     std::function<void()> ExitPlayCallback;
     std::function<void()> StartGameCallback;
