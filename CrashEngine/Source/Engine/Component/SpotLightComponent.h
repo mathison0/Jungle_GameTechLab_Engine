@@ -16,7 +16,9 @@ public:
     FLightProxy* CreateLightProxy() override;
 
     float GetInnerConeAngle() const { return InnerConeAngle; }
+    void SetInnerConeAngle(float InValue) { InnerConeAngle = InValue; }
     float GetOuterConeAngle() const { return OuterConeAngle; }
+    void SetOuterConeAngle(float InValue) { OuterConeAngle = InValue; }
 
 private:
     // ─── UE5 Default Value ───

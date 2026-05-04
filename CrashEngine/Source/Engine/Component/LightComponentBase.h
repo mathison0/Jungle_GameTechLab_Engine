@@ -20,7 +20,9 @@ public:
     void PostEditProperty(const char* PropertyName) override;
 
     float GetIntensity() const { return Intensity; }
+    void SetIntensity(float InValue) { Intensity = InValue; } 
     const FVector4& GetLightColor() const { return LightColor; }
+    void SetLightColor(FVector4 InValue) { LightColor = InValue; }
     bool AffectsWorld() const { return bAffectsWorld; }
     bool DoesCastShadows() const { return bCastShadows; }
     EShadowResolution GetShadowResolutionTier() const { return ShadowResolution; }
