@@ -315,9 +315,11 @@ void UWorld::EndPlay()
         return;
     }
 
-	ActorPoolManager.reset();
-
+    // Script EndPlay can release pooled actors through Lua handles, so keep the
+    // pool manager alive until all actor/component EndPlay callbacks finish.
     PersistentLevel->EndPlay();
+    ActorPoolManager.reset();
+
     PersistentLevel->Clear();
 
     // Clear spatial partition while actors/components are still alive.

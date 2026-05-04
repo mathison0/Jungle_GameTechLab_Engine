@@ -298,6 +298,16 @@ void UScriptComponent::SetScriptPath(const FString& InScriptPath)
     SyncScriptPropertiesWithAsset();
 }
 
+bool UScriptComponent::CallScriptFunction(const FString& FunctionName, const sol::variadic_args& Args)
+{
+    return CallLuaFunction(FunctionName.c_str(), &Args);
+}
+
+bool UScriptComponent::CallScriptFunction(const FString& FunctionName)
+{
+    return CallLuaFunction(FunctionName.c_str());
+}
+
 bool UScriptComponent::LoadScript()
 {
     ScriptInstance = sol::nil;
@@ -373,27 +383,35 @@ void UScriptComponent::SyncScriptPropertiesWithAsset()
     SyncedScriptVersion = Asset->GetVersion();
 }
 
-void UScriptComponent::CallLuaFunction(const char* Name)
+bool UScriptComponent::CallLuaFunction(const char* Name)
 {
-    if (!ScriptInstance.valid())
+    return CallLuaFunction(Name, nullptr);
+}
+
+bool UScriptComponent::CallLuaFunction(const char* Name, const sol::variadic_args* Args)
+{
+    if (!Name || Name[0] == '\0' || !ScriptInstance.valid())
     {
-        return;
+        return false;
     }
 
     sol::object FunctionObject = ScriptInstance[Name];
     if (!FunctionObject.valid() || FunctionObject.get_type() != sol::type::function)
     {
-        return;
+        return false;
     }
 
     sol::protected_function Function = FunctionObject;
-    sol::protected_function_result Result = Function(ScriptInstance);
+    sol::protected_function_result Result = Args ? Function(ScriptInstance, *Args) : Function(ScriptInstance);
     if (!Result.valid())
     {
         sol::error Err = Result;
         UE_LOG([Lua], Error, "Lua script function '%s' failed in '%s': %s",
                Name, ScriptPath.c_str(), Err.what());
+        return false;
     }
+
+    return true;
 }
 
 void UScriptComponent::CallLuaTick(float DeltaTime)

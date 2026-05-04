@@ -83,6 +83,8 @@ struct FLuaComponentHandle
 
 	bool IsActive() const;
 	bool SetActive(bool bActive) const;
+	bool IsScriptComponent() const;
+	bool CallScript(const FString& FunctionName, const sol::variadic_args& Args) const;
 
 	// SceneComponent API
 	sol::table GetWorldLocation(sol::this_state State) const;
@@ -106,6 +108,16 @@ struct FLuaComponentHandle
 
 	bool IsOverlappingActor(const FLuaActorHandle& OtherActor) const;
 	bool IsOverlappingComponent(const FLuaComponentHandle& OtherComponent) const;
+
+	bool IsUIComponent() const;
+	bool SetUITexturePath(const FString& TexturePath) const;
+	bool SetUIAnchor(const sol::object& Value) const;
+	bool SetUIAnchoredPosition(const sol::object& Value) const;
+	bool SetUISizeDelta(const sol::object& Value) const;
+	bool SetUIPivot(const sol::object& Value) const;
+	bool SetUIRotationDegrees(float Degrees) const;
+	bool SetUITint(float R, float G, float B, float A) const;
+	bool SetUIVisibility(bool bVisible) const;
 
 	bool IsUIButton() const;
 	bool IsButtonInteractable() const;

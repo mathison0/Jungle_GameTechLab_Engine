@@ -1,12 +1,14 @@
 #include "LuaBindingInternal.h"
 #include "Scripting/LuaEngineBinding.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/ScriptComponent.h"
 #include "Component/Collision/Collider2DComponent.h"
 #include "Core/Logging/LogMacros.h"
 #include "GameFramework/AActor.h"
 #include "Object/Object.h"
 #include "Scripting/LuaScriptTypes.h"
 #include "UI/ButtonComponent.h"
+#include "UI/UIComponent.h"
 
 namespace
 {
@@ -83,6 +85,18 @@ bool FLuaComponentHandle::SetActive(bool bActive) const
     if (!Component) return false;
     Component->SetActive(bActive);
     return true;
+}
+
+bool FLuaComponentHandle::IsScriptComponent() const
+{
+    return Cast<UScriptComponent>(Resolve()) != nullptr;
+}
+
+bool FLuaComponentHandle::CallScript(const FString& FunctionName, const sol::variadic_args& Args) const
+{
+    UScriptComponent* ScriptComponent = Cast<UScriptComponent>(Resolve());
+    if (!ScriptComponent) return false;
+    return ScriptComponent->CallScriptFunction(FunctionName, Args);
 }
 
 sol::table FLuaComponentHandle::GetWorldLocation(sol::this_state State) const
@@ -205,6 +219,84 @@ bool FLuaComponentHandle::IsOverlappingComponent(const FLuaComponentHandle& Othe
     return PrimitiveComponent->IsOverlappingComponent(OtherPrimitive);
 }
 
+bool FLuaComponentHandle::IsUIComponent() const
+{
+    return Cast<UUIComponent>(Resolve()) != nullptr;
+}
+
+bool FLuaComponentHandle::SetUITexturePath(const FString& TexturePath) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetTexturePath(TexturePath);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIAnchor(const sol::object& Value) const
+{
+    FVector2 Anchor;
+    if (!ReadLuaVec2(Value, Anchor)) return false;
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetAnchorMin(Anchor);
+    UI->SetAnchorMax(Anchor);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIAnchoredPosition(const sol::object& Value) const
+{
+    FVector2 Position;
+    if (!ReadLuaVec2(Value, Position)) return false;
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetAnchoredPosition(Position);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUISizeDelta(const sol::object& Value) const
+{
+    FVector2 Size;
+    if (!ReadLuaVec2(Value, Size)) return false;
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetSizeDelta(Size);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIPivot(const sol::object& Value) const
+{
+    FVector2 Pivot;
+    if (!ReadLuaVec2(Value, Pivot)) return false;
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetPivot(Pivot);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIRotationDegrees(float Degrees) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetRotationDegrees(Degrees);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUITint(float R, float G, float B, float A) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetTintColor(FVector4(R, G, B, A));
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIVisibility(bool bVisible) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetVisibility(bVisible);
+    return true;
+}
+
 bool FLuaComponentHandle::IsUIButton() const
 {
     return Cast<UUIButtonComponent>(Resolve()) != nullptr;
@@ -257,6 +349,8 @@ namespace LuaBinding
             "GetOwner", &FLuaComponentHandle::GetOwner,
             "IsActive", &FLuaComponentHandle::IsActive,
             "SetActive", &FLuaComponentHandle::SetActive,
+            "IsScriptComponent", &FLuaComponentHandle::IsScriptComponent,
+            "CallScript", &FLuaComponentHandle::CallScript,
 
             "GetWorldLocation", &FLuaComponentHandle::GetWorldLocation,
             "SetWorldLocation", &FLuaComponentHandle::SetWorldLocation,
@@ -272,6 +366,16 @@ namespace LuaBinding
             "SetGenerateOverlapEvents", &FLuaComponentHandle::SetGenerateOverlapEvents,
             "IsOverlappingActor", &FLuaComponentHandle::IsOverlappingActor,
             "IsOverlappingComponent", &FLuaComponentHandle::IsOverlappingComponent,
+
+            "IsUIComponent", &FLuaComponentHandle::IsUIComponent,
+            "SetUITexturePath", &FLuaComponentHandle::SetUITexturePath,
+            "SetUIAnchor", &FLuaComponentHandle::SetUIAnchor,
+            "SetUIAnchoredPosition", &FLuaComponentHandle::SetUIAnchoredPosition,
+            "SetUISizeDelta", &FLuaComponentHandle::SetUISizeDelta,
+            "SetUIPivot", &FLuaComponentHandle::SetUIPivot,
+            "SetUIRotationDegrees", &FLuaComponentHandle::SetUIRotationDegrees,
+            "SetUITint", &FLuaComponentHandle::SetUITint,
+            "SetUIVisibility", &FLuaComponentHandle::SetUIVisibility,
 
             "IsUIButton", &FLuaComponentHandle::IsUIButton,
             "IsButtonInteractable", &FLuaComponentHandle::IsButtonInteractable,

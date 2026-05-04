@@ -90,6 +90,8 @@ private:
     void EnsureViewportSlots(int32 RequiredCount);
     void ShrinkViewportSlots(int32 RequiredCount);
     void ResetAllViewportInputStates();
+    void HandleLuaScriptDropTargets();
+    AActor* SpawnScriptActorFromLuaDrop(FLevelEditorViewportClient* ViewportClient, const FString& ScriptPath);
 
     // 아이콘 텍스처
     void LoadLayoutIcons(ID3D11Device* Device);
