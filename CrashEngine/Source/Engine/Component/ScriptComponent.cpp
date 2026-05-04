@@ -185,32 +185,17 @@ void UScriptComponent::EndPlay()
 
 void UScriptComponent::OnComponentHit(UCollider2DComponent* OtherCollider)
 {
-    if (!ScriptInstance.valid()) return;
-    sol::object Func = ScriptInstance["OnCollision"];
-    if (Func.valid() && Func.get_type() == sol::type::function)
-    {
-        ScriptInstance["OnCollision"](ScriptInstance, FLuaCollider2DHandle(OtherCollider));
-    }
+    CallLuaFunctionWithCollider("OnCollision", OtherCollider);
 }
 
 void UScriptComponent::OnComponentBeginOverlap(UCollider2DComponent* OtherCollider)
 {
-    if (!ScriptInstance.valid()) return;
-    sol::object Func = ScriptInstance["OnOverlapBegin"];
-    if (Func.valid() && Func.get_type() == sol::type::function)
-    {
-        ScriptInstance["OnOverlapBegin"](ScriptInstance, FLuaCollider2DHandle(OtherCollider));
-    }
+    CallLuaFunctionWithCollider("OnOverlapBegin", OtherCollider);
 }
 
 void UScriptComponent::OnComponentEndOverlap(UCollider2DComponent* OtherCollider)
 {
-    if (!ScriptInstance.valid()) return;
-    sol::object Func = ScriptInstance["OnOverlapEnd"];
-    if (Func.valid() && Func.get_type() == sol::type::function)
-    {
-            ScriptInstance["OnOverlapEnd"](ScriptInstance, FLuaCollider2DHandle(OtherCollider));
-    }
+    CallLuaFunctionWithCollider("OnOverlapEnd", OtherCollider);
 }
 
 void UScriptComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
@@ -404,6 +389,32 @@ bool UScriptComponent::CallLuaFunction(const char* Name, const sol::variadic_arg
 
     sol::protected_function Function = FunctionObject;
     sol::protected_function_result Result = Args ? Function(ScriptInstance, *Args) : Function(ScriptInstance);
+    if (!Result.valid())
+    {
+        sol::error Err = Result;
+        UE_LOG([Lua], Error, "Lua script function '%s' failed in '%s': %s",
+               Name, ScriptPath.c_str(), Err.what());
+        return false;
+    }
+
+    return true;
+}
+
+bool UScriptComponent::CallLuaFunctionWithCollider(const char* Name, UCollider2DComponent* OtherCollider)
+{
+    if (!Name || Name[0] == '\0' || !ScriptInstance.valid())
+    {
+        return false;
+    }
+
+    sol::object FunctionObject = ScriptInstance[Name];
+    if (!FunctionObject.valid() || FunctionObject.get_type() != sol::type::function)
+    {
+        return false;
+    }
+
+    sol::protected_function Function = FunctionObject;
+    sol::protected_function_result Result = Function(ScriptInstance, FLuaCollider2DHandle(OtherCollider));
     if (!Result.valid())
     {
         sol::error Err = Result;

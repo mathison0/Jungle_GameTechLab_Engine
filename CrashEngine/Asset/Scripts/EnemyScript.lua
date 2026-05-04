@@ -45,10 +45,6 @@ function Script:ApplyAttack()
 end
 
 local function HandleAttack(self, other)
-    if otherActor:GetTag() == "Player" then
-        Log("Collision with player")
-    end
-
     if self.AttackTimer > 0 then
         return
     end
@@ -59,6 +55,7 @@ local function HandleAttack(self, other)
     if not otherActor or not otherActor:IsValid() then return end
 
     if otherActor:GetTag() == "Player" then
+        Log("Collision with player")
         self:ApplyAttack()
     end
 end
