@@ -24,6 +24,11 @@ FString MakeIndexedComponentName(const FString& Prefix, int32 Index)
     return Prefix + std::to_string(Index > 0 ? Index : 0);
 }
 
+FString MakeMachineTurretComponentName(const FString& Prefix, int32 Index)
+{
+    return Prefix + "_MachineTurret_" + std::to_string(Index > 0 ? Index : 0);
+}
+
 int32 MaxInt32(int32 A, int32 B)
 {
     return A > B ? A : B;
@@ -84,6 +89,13 @@ void ATankActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
         {
             const FTankWeaponAttackParams Params = ReadWeaponAttackParamsFromLua(ParamsObject);
             ApplyTargetDamage(FString(WeaponId), Params, TargetActor.Resolve());
+        });
+
+    ScriptComponent.BindFunction("NotifyInstantHit",
+        [this](const std::string& WeaponId, sol::object ParamsObject, int32 SlotIndex, const FLuaActorHandle& TargetActor)
+        {
+            const FTankWeaponAttackParams Params = ReadWeaponAttackParamsFromLua(ParamsObject);
+            NotifyInstantHit(FString(WeaponId), Params, SlotIndex, TargetActor.Resolve());
         });
 
     ScriptComponent.BindFunction("ApplyAreaDamage",
@@ -193,10 +205,20 @@ void ATankActor::EquipWeaponVisual(const FString& WeaponId, int32 Level)
 
     if (WeaponId == "MachineTurret")
     {
-        const int32 VisualCount = Level >= 3 ? 6 : MaxInt32(1, Level);
+        const int32 VisualCount = Level >= 3 ? 4 : MaxInt32(1, Level);
         for (int32 Index = 0; Index < VisualCount; ++Index)
         {
-            GetWeaponMuzzle(WeaponId, Index);
+            const float Lane = static_cast<float>(Index) - static_cast<float>(VisualCount - 1) * 0.5f;
+            EnsureWeaponVisualComponent(
+                MakeMachineTurretComponentName("Visual", Index),
+                "Models/_Basic/Cube.OBJ",
+                FVector(0.7f, Lane * 0.45f, 0.65f),
+                FVector(0.35f, 0.25f, 0.25f));
+            EnsureWeaponVisualComponent(
+                MakeMachineTurretComponentName("Muzzle", Index),
+                "Models/_Basic/Sphere.OBJ",
+                FVector(1.0f, Lane * 0.45f, 0.65f),
+                FVector(0.12f, 0.12f, 0.12f));
         }
         UE_LOG(Tank, Info, "EquipWeaponVisual MachineTurret Level=%d", Level);
         return;
@@ -310,6 +332,17 @@ void ATankActor::ApplyTargetDamage(const FString& WeaponId, const FTankWeaponAtt
 
     UE_LOG(Tank, Info, "[%s] ApplyTargetDamage Damage=%.2f Target=%s",
            WeaponId.c_str(), Params.Damage, TargetActor->GetFName().ToString().c_str());
+}
+
+void ATankActor::NotifyInstantHit(const FString& WeaponId, const FTankWeaponAttackParams& Params, int32 SlotIndex, AActor* TargetActor)
+{
+    if (!TargetActor)
+    {
+        return;
+    }
+
+    UE_LOG(Tank, Info, "[%s] NotifyInstantHit Slot=%d Damage=%.2f Target=%s",
+           WeaponId.c_str(), SlotIndex, Params.Damage, TargetActor->GetFName().ToString().c_str());
 }
 
 void ATankActor::ApplyAreaDamage(const FString& WeaponId, const FTankWeaponAttackParams& Params, const FVector& Center, float Radius)
@@ -468,10 +501,11 @@ USceneComponent* ATankActor::GetWeaponMuzzle(const FString& WeaponId, int32 Muzz
 
     if (WeaponId == "MachineTurret")
     {
-        ComponentName = MakeIndexedComponentName("MachineTurretMuzzle", SafeIndex);
+        ComponentName = MakeMachineTurretComponentName("Muzzle", SafeIndex);
         const float Lane = static_cast<float>(SafeIndex) - 2.5f;
         RelativeLocation = FVector(0.7f, Lane * 0.35f, 0.65f);
-        RelativeScale = FVector(0.35f, 0.25f, 0.25f);
+        RelativeScale = FVector(0.12f, 0.12f, 0.12f);
+        MeshPath = "Models/_Basic/Sphere.OBJ";
     }
     else if (WeaponId == "HomingMissile")
     {
