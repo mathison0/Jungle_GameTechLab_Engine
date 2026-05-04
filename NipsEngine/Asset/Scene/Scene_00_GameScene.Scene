@@ -2,13 +2,13 @@
   "ClassName" : "UWorld",
   "GameUIBootMode" : "InGame",
   "Name" : "Scene_00_GameScene",
-  "NextUUID" : 42483,
+  "NextUUID" : 42925,
   "PerspectiveCamera" : {
     "FOV" : 90.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-27.081438, -3.743393, 5.464131],
+    "Location" : [-30.352739, -4.415438, 6.530747],
     "NearClip" : 0.100000,
-    "Rotation" : [-0.027252, -0.248749, -6.252686]
+    "Rotation" : [0.123290, -0.536255, 12.947948]
   },
   "Primitives" : {
     "11356" : {
