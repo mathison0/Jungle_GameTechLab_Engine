@@ -33,6 +33,7 @@ UCollider2DComponent* AEnemyBaseActor::GetDefaultColliderComponent()
     UCircleCollider2DComponent* Collider = AddComponent<UCircleCollider2DComponent>();
     Collider->SetCollisionChannel(ECollisionChannel::Enemy);
     Collider->SetGenerateOverlapEvents(true);
+    Collider->SetGenerateHitEvents(true);
     return Collider;
 }
 

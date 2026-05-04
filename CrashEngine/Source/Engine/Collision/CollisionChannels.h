@@ -13,6 +13,7 @@ enum class ECollisionChannel
     Pickup,
     FlyingEnemy,
     PickupSensor,
+    PlayerHitbox,
 
     Count
 };

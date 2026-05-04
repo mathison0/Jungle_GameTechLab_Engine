@@ -155,6 +155,13 @@ void ATankActor::InitDefaultComponents()
     Collider->SetFName({ "RootComponent" });
     Collider->SetCollisionChannel(ECollisionChannel::Player);
     Collider->SetGenerateOverlapEvents(true);
+    
+    auto Hitbox = AddComponent<UCircleCollider2DComponent>();
+    Hitbox->SetFName("Hitbox");
+    Hitbox->SetRadius(Collider->GetRadius() * 1.03f);
+    Hitbox->SetCollisionChannel(ECollisionChannel::PlayerHitbox);
+    Hitbox->SetGenerateOverlapEvents(true);
+    Hitbox->AttachToComponent(Collider);
 
     auto PickupSensor = AddComponent<UCircleCollider2DComponent>();
     PickupSensor->SetFName("PickupSensor");
