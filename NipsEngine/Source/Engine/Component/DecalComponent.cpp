@@ -17,7 +17,7 @@ REGISTER_FACTORY(UDecalComponent)
 
 namespace
 {
-	constexpr float CleanCompleteThreshold = 0.75f;
+	constexpr float CleanCompleteThreshold = 0.66f;
 	constexpr float CleanCompleteFlashDuration = 0.22f;
 	constexpr float CleanCompleteFadeOutDuration = 0.65f;
 }
