@@ -3,10 +3,7 @@ LevelSystem.__index = LevelSystem
 
 local WeaponDefs = require("WeaponDefs")
 
-local HiddenLevelUpWeaponIds = {
-    HomingMissile = true,
-    SatelliteBeam = true,
-}
+local HiddenLevelUpWeaponIds = {}
 
 local function getGameManager()
     return package.loaded["GameManager"]

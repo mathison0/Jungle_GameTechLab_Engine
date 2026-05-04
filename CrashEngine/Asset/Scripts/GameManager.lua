@@ -4,6 +4,10 @@ local Audio = require("Core.Audio")
 
 local BACKGROUND_MUSIC_KEY = "background"
 local BACKGROUND_MUSIC_VOLUME = 0.7
+local KEY_CONTROL = 0x11
+local KEY_LEFT_CONTROL = 0xA2
+local KEY_RIGHT_CONTROL = 0xA3
+local KEY_Z = 0x5A
 
 local GameManager = {
     GameTimeLimit = 600.0,
@@ -12,6 +16,7 @@ local GameManager = {
     KillCount = 0,
     IsGameOver = false,
     IsPaused = false,
+    GodMode = false,
 
     SessionPrepared = false,
     PlayerRegistered = false,
@@ -40,7 +45,6 @@ local GAMEPLAY_POOL_CLASSES = {
     "AFlyingWaveEnemyActor",
     "AEnemyBaseActor",
     "AProjectileActor",
-    "AHomingMissileActor",
     "APickupActor",
     "ADeathDecalActor",
 }
@@ -119,6 +123,7 @@ local function resetRunState()
     GameManager.TimeRemaining = GameManager.GameTimeLimit or 600.0
     GameManager.KillCount = 0
     GameManager.IsGameOver = false
+    GameManager.GodMode = false
     GameManager.IsLevelUpSelectionActive = false
     GameManager.CurrentLevelUpOptions = nil
     GameManager.LastResult = nil
@@ -215,6 +220,7 @@ function GameManager._ResetState()
 
     GameManager.KillCount = 0
     GameManager.IsGameOver = false
+    GameManager.GodMode = false
     GameManager.IsPaused = false
     GameManager.Initialized = false
 
@@ -314,6 +320,38 @@ end
 
 function GameManager.IsGameplayPaused()
     return GameManager.IsPaused == true
+end
+
+local function isGodModeHotkeyPressed()
+    if Input == nil or Input.GetKeyDown == nil or Input.GetKey == nil then
+        return false
+    end
+
+    local ctrlDown =
+        Input.GetKey(KEY_CONTROL) or
+        Input.GetKey(KEY_LEFT_CONTROL) or
+        Input.GetKey(KEY_RIGHT_CONTROL)
+
+    return ctrlDown and Input.GetKeyDown(KEY_Z)
+end
+
+function GameManager.ActivateGodMode()
+    GameManager.GodMode = true
+
+    if GameManager.Stats ~= nil then
+        GameManager.Stats.CurrentHP = GameManager.Stats.MaxHP or GameManager.Stats.CurrentHP or 100.0
+    end
+
+    local activatedCount = 0
+    if GameManager.WeaponInventory ~= nil and GameManager.WeaponInventory.ActivateAllWeaponsAtLevel ~= nil then
+        activatedCount = GameManager.WeaponInventory:ActivateAllWeaponsAtLevel(3)
+    end
+
+    if GameManager.PlayerScript ~= nil and GameManager.PlayerScript.UpdateHealthBar ~= nil then
+        GameManager.PlayerScript:UpdateHealthBar()
+    end
+
+    Log("[GameManager] GodMode enabled. weapons level 3 activated = " .. tostring(activatedCount))
 end
 
 function GameManager.SetGameplayPaused(paused)
@@ -455,6 +493,10 @@ function GameManager.EndLevelUpSelection()
 end
 
 function GameManager.Tick(deltaTime)
+    if GameManager.Initialized and not GameManager.IsGameOver and isGodModeHotkeyPressed() then
+        GameManager.ActivateGodMode()
+    end
+
     if not GameManager.Initialized or GameManager.IsGameOver or GameManager.IsGameplayPaused() then
         return
     end
@@ -469,6 +511,11 @@ end
 
 function GameManager.PlayerGetDamage(damage)
     if GameManager.IsGameOver or GameManager.IsGameplayPaused() then return end
+    if GameManager.GodMode then
+        GameManager.Stats.CurrentHP = GameManager.Stats.MaxHP or GameManager.Stats.CurrentHP or 100.0
+        return
+    end
+
     GameManager.Stats.CurrentHP = math.max(0, GameManager.Stats.CurrentHP - damage)
 
     -- 피격 시 0.1초 동안 빨간색으로 표시

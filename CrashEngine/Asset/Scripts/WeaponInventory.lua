@@ -1,14 +1,13 @@
 local WeaponInventory = {}
 WeaponInventory.__index = WeaponInventory
 local WeaponVisualDefs = require("WeaponVisualDefs")
+local WeaponDefs = require("WeaponDefs")
 
 local WeaponConstructors = {
     MainCannon = require("Weapons.MainCannonWeapon"),
     MachineTurret = require("Weapons.MachineTurretWeapon"),
     VehicleRush = require("Weapons.VehicleRushWeapon"),
     Aura = require("Weapons.AuraWeapon"),
-    HomingMissile = require("Weapons.HomingMissileWeapon"),
-    SatelliteBeam = require("Weapons.SatelliteBeamWeapon"),
 }
 
 local WeaponIds = {
@@ -16,8 +15,6 @@ local WeaponIds = {
     "MachineTurret",
     "VehicleRush",
     "Aura",
-    "HomingMissile",
-    "SatelliteBeam",
 }
 
 function WeaponInventory.New(owner)
@@ -116,6 +113,54 @@ function WeaponInventory:UpgradeWeapon(id)
     end
 
     return upgraded
+end
+
+function WeaponInventory:SetWeaponLevel(id, targetLevel)
+    if not self:HasWeapon(id) then
+        if not self:AddWeapon(id) then
+            return false
+        end
+    end
+
+    local weapon = self.Weapons[id]
+    local definition = WeaponDefs[id]
+    if weapon == nil or definition == nil or definition.Levels == nil then
+        return false
+    end
+
+    local maxLevel = definition.MaxLevel or targetLevel or 1
+    local level = math.max(1, math.min(targetLevel or maxLevel, maxLevel))
+    local data = definition.Levels[level]
+    if data == nil then
+        return false
+    end
+
+    weapon.Level = level
+    weapon.Data = data
+
+    self:ApplyWeaponVisualForWeapon(id, weapon)
+
+    if weapon.RefreshComponents ~= nil then
+        weapon:RefreshComponents()
+    end
+
+    if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
+        weapon:RebuildTurretSlots()
+    end
+
+    return true
+end
+
+function WeaponInventory:ActivateAllWeaponsAtLevel(targetLevel)
+    local activatedCount = 0
+
+    for _, id in ipairs(WeaponIds) do
+        if self:SetWeaponLevel(id, targetLevel) then
+            activatedCount = activatedCount + 1
+        end
+    end
+
+    return activatedCount
 end
 
 function WeaponInventory:GetUpgradeableWeapons()
