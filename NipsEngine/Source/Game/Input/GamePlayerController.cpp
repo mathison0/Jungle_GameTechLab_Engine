@@ -763,8 +763,17 @@ void FGamePlayerController::UpdateHoveredPickableActor()
 	}
 
 	UPhysicsHandleComponent* Handle = GetPhysicsHandle();
-	if (Handle == nullptr || Handle->IsHolding())
+	if (Handle == nullptr)
 	{
+		return;
+	}
+
+	if (Handle->IsHolding())
+	{
+		if (!GGameContext::Get().GetCurrentToolId().empty())
+		{
+			GameUISystem::Get().SetInteractionHint(EInteractionHintType::Clean);
+		}
 		return;
 	}
 
@@ -778,13 +787,15 @@ void FGamePlayerController::UpdateHoveredPickableActor()
 	if (URigidBodyComponent* Body = Handle->FindPickableBody(World, CameraLocation, CameraForward))
 	{
 		HoveredPickableActor = Body->GetOwner();
-		if (!FindCleaningToolIdFromActor(HoveredPickableActor, false).empty())
-		{
-			GameUISystem::Get().SetInteractionHint(EInteractionHintType::Clean);
-		}
-		else if (!FindItemIdFromActor(HoveredPickableActor).empty())
+		const bool bIsCleaningTool = !FindCleaningToolIdFromActor(HoveredPickableActor, false).empty();
+		const bool bIsItem = !FindItemIdFromActor(HoveredPickableActor).empty();
+		if (!bIsCleaningTool && bIsItem)
 		{
 			GameUISystem::Get().SetInteractionHint(EInteractionHintType::Inspect);
+		}
+		else
+		{
+			GameUISystem::Get().SetInteractionHint(EInteractionHintType::Pickup);
 		}
 	}
 }

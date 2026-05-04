@@ -45,6 +45,7 @@ enum class EUIRenderMode
 enum class EInteractionHintType
 {
     None,
+    Pickup,
     Clean,
     Inspect,
 };

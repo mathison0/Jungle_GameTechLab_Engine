@@ -11,8 +11,12 @@
 		<div id="game-title">
 			<img id="title-image" src="Asset/Texture/Title.png" />
 		</div>
-		<div id="start-button" class="menu-button">START</div>
-		<div id="exit-button" class="menu-button">EXIT</div>
+		<div id="title-menu">
+			<div class="title-menu-row"><img id="start-button" class="title-menu-button" src="Asset/Texture/TitleStartButton.png" /></div>
+			<div class="title-menu-row"><img id="settings-button" class="title-menu-button" src="Asset/Texture/TitleSettingsButton.png" /></div>
+			<div class="title-menu-row"><img id="credits-button" class="title-menu-button" src="Asset/Texture/TitleCreditsButton.png" /></div>
+			<div class="title-menu-row"><img id="exit-button" class="title-menu-button" src="Asset/Texture/TitleExitButton.png" /></div>
+		</div>
 	</div>
 
 	<div id="hud-panel">
@@ -28,7 +32,8 @@
 	<div id="crosshair-dot"></div>
 
 	<div id="interaction-hint">
-		<div id="interaction-hint-text"></div>
+		<span id="interaction-key">E</span>
+		<span id="interaction-hint-text"></span>
 	</div>
 
 	<div id="pause-layer">
