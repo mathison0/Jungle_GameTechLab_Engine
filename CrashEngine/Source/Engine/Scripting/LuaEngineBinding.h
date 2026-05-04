@@ -110,10 +110,13 @@ struct FLuaComponentHandle
 	bool IsOverlappingComponent(const FLuaComponentHandle& OtherComponent) const;
 
 	bool IsUIComponent() const;
+	bool SetUIRenderSpace(const FString& RenderSpace) const;
 	bool SetUITexturePath(const FString& TexturePath) const;
 	bool SetUIAnchor(const sol::object& Value) const;
 	bool SetUIAnchoredPosition(const sol::object& Value) const;
 	bool SetUISizeDelta(const sol::object& Value) const;
+	bool SetUIWorldSize(const sol::object& Value) const;
+	bool SetUIBillboard(bool bBillboard) const;
 	bool SetUIPivot(const sol::object& Value) const;
 	bool SetUIRotationDegrees(float Degrees) const;
 	bool SetUITint(float R, float G, float B, float A) const;

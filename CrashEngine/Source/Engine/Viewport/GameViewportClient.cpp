@@ -2,6 +2,7 @@
 #include "Viewport/GameViewportClient.h"
 #include "Input/GameViewportInputController.h"
 #include "Component/CameraComponent.h"
+#include "Core/RayTypes.h"
 #include "Editor/Subsystem/OverlayStatSystem.h"
 #include "GameFramework/World.h"
 #include "Render/Scene/Proxies/UI/UIProxy.h"
@@ -122,12 +123,23 @@ UUIComponent* UGameViewportClient::FindTopmostUIComponentAt(const FVector2& Scre
 
     const TArray<FUIProxy*>& UIProxies = World->GetScene().GetUIProxies();
     const FUIProxy* BestProxy = nullptr;
+    float BestDistance = 0.0f;
 
-    auto IsHigher = [](const FUIProxy* A, const FUIProxy* B)
+    UCameraComponent* Camera = GetCamera();
+    const bool bCanHitWorldUI = Camera != nullptr;
+    const FRay WorldRay = bCanHitWorldUI
+        ? Camera->DeprojectScreenToWorld(ScreenPoint.X, ScreenPoint.Y, ViewportWidth, ViewportHeight)
+        : FRay{};
+
+    auto IsHigher = [](const FUIProxy* A, float ADistance, const FUIProxy* B, float BDistance)
     {
         if (!B)
         {
             return true;
+        }
+        if (A->RenderSpace != B->RenderSpace)
+        {
+            return A->RenderSpace == EUIRenderSpace::ScreenSpace;
         }
         if (A->Layer != B->Layer)
         {
@@ -136,6 +148,10 @@ UUIComponent* UGameViewportClient::FindTopmostUIComponentAt(const FVector2& Scre
         if (A->ZOrder != B->ZOrder)
         {
             return A->ZOrder > B->ZOrder;
+        }
+        if (A->RenderSpace == EUIRenderSpace::WorldSpace && ADistance != BDistance)
+        {
+            return ADistance < BDistance;
         }
         return A->ProxyId > B->ProxyId;
     };
@@ -146,15 +162,31 @@ UUIComponent* UGameViewportClient::FindTopmostUIComponentAt(const FVector2& Scre
             !Proxy->Owner ||
             !Proxy->bVisible ||
             !Proxy->bHitTestVisible ||
-            Proxy->RenderSpace != EUIRenderSpace::ScreenSpace ||
             Proxy->GeometryType != EUIGeometryType::Quad)
         {
             continue;
         }
 
-        if (Proxy->Owner->HitTestScreenPoint(ScreenPoint, ViewportWidth, ViewportHeight) && IsHigher(Proxy, BestProxy))
+        float HitDistance = 0.0f;
+        bool bHit = false;
+        if (Proxy->RenderSpace == EUIRenderSpace::ScreenSpace)
+        {
+            bHit = Proxy->Owner->HitTestScreenPoint(ScreenPoint, ViewportWidth, ViewportHeight);
+        }
+        else if (Proxy->RenderSpace == EUIRenderSpace::WorldSpace && bCanHitWorldUI)
+        {
+            bHit = Proxy->Owner->HitTestWorldRay(
+                WorldRay,
+                Camera->GetRightVector(),
+                Camera->GetUpVector(),
+                Camera->GetForwardVector(),
+                HitDistance);
+        }
+
+        if (bHit && IsHigher(Proxy, HitDistance, BestProxy, BestDistance))
         {
             BestProxy = Proxy;
+            BestDistance = HitDistance;
         }
     }
 

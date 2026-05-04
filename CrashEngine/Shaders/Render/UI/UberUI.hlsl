@@ -1,3 +1,4 @@
+#include "../../Utils/Functions.hlsl"
 #include "../../Resources/SystemSamplers.hlsl"
 
 struct VS_Input_UI
@@ -24,7 +25,9 @@ Texture2D UITexture : register(t0);
 PS_Input_UI VS(VS_Input_UI input)
 {
     PS_Input_UI output;
-    output.position = float4(input.position, 1.0f);
+    output.position = UIFlags.z > 0.5f
+        ? ApplyVP(input.position)
+        : float4(input.position, 1.0f);
     output.uv = input.uv;
     output.color = input.color;
     return output;

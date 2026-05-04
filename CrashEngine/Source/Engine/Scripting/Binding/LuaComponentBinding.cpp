@@ -226,6 +226,25 @@ bool FLuaComponentHandle::IsUIComponent() const
     return Cast<UUIComponent>(Resolve()) != nullptr;
 }
 
+bool FLuaComponentHandle::SetUIRenderSpace(const FString& RenderSpace) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+
+    if (RenderSpace == "WorldSpace" || RenderSpace == "World")
+    {
+        UI->SetRenderSpace(EUIRenderSpace::WorldSpace);
+        return true;
+    }
+    if (RenderSpace == "ScreenSpace" || RenderSpace == "Screen")
+    {
+        UI->SetRenderSpace(EUIRenderSpace::ScreenSpace);
+        return true;
+    }
+
+    return false;
+}
+
 bool FLuaComponentHandle::SetUITexturePath(const FString& TexturePath) const
 {
     UTextureUIComponent* UI = Cast<UTextureUIComponent>(Resolve());
@@ -262,6 +281,24 @@ bool FLuaComponentHandle::SetUISizeDelta(const sol::object& Value) const
     UUIComponent* UI = Cast<UUIComponent>(Resolve());
     if (!UI) return false;
     UI->SetSizeDelta(Size);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIWorldSize(const sol::object& Value) const
+{
+    FVector2 Size;
+    if (!ReadLuaVec2(Value, Size)) return false;
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetWorldSize(Size);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIBillboard(bool bBillboard) const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetBillboard(bBillboard);
     return true;
 }
 
@@ -405,10 +442,13 @@ namespace LuaBinding
             "IsOverlappingComponent", &FLuaComponentHandle::IsOverlappingComponent,
 
             "IsUIComponent", &FLuaComponentHandle::IsUIComponent,
+            "SetUIRenderSpace", &FLuaComponentHandle::SetUIRenderSpace,
             "SetUITexturePath", &FLuaComponentHandle::SetUITexturePath,
             "SetUIAnchor", &FLuaComponentHandle::SetUIAnchor,
             "SetUIAnchoredPosition", &FLuaComponentHandle::SetUIAnchoredPosition,
             "SetUISizeDelta", &FLuaComponentHandle::SetUISizeDelta,
+            "SetUIWorldSize", &FLuaComponentHandle::SetUIWorldSize,
+            "SetUIBillboard", &FLuaComponentHandle::SetUIBillboard,
             "SetUIPivot", &FLuaComponentHandle::SetUIPivot,
             "SetUIRotationDegrees", &FLuaComponentHandle::SetUIRotationDegrees,
             "SetUITint", &FLuaComponentHandle::SetUITint,

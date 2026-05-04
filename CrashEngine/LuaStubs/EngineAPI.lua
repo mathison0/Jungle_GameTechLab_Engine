@@ -138,6 +138,56 @@ function Component:IsOverlappingActor(actor) end
 ---@return boolean
 function Component:IsOverlappingComponent(component) end
 
+---@return boolean
+function Component:IsUIComponent() end
+
+---@param renderSpace '"ScreenSpace"'|'"WorldSpace"'|'"Screen"'|'"World"'
+---@return boolean
+function Component:SetUIRenderSpace(renderSpace) end
+
+---@param texturePath string
+---@return boolean
+function Component:SetUITexturePath(texturePath) end
+
+---@param anchor Vec2
+---@return boolean
+function Component:SetUIAnchor(anchor) end
+
+---@param position Vec2
+---@return boolean
+function Component:SetUIAnchoredPosition(position) end
+
+---@param size Vec2
+---@return boolean
+function Component:SetUISizeDelta(size) end
+
+---@param size Vec2
+---@return boolean
+function Component:SetUIWorldSize(size) end
+
+---@param billboard boolean
+---@return boolean
+function Component:SetUIBillboard(billboard) end
+
+---@param pivot Vec2
+---@return boolean
+function Component:SetUIPivot(pivot) end
+
+---@param degrees number
+---@return boolean
+function Component:SetUIRotationDegrees(degrees) end
+
+---@param r number
+---@param g number
+---@param b number
+---@param a number
+---@return boolean
+function Component:SetUITint(r, g, b, a) end
+
+---@param visible boolean
+---@return boolean
+function Component:SetUIVisibility(visible) end
+
 ---@param className string
 ---@return any
 function Component:Cast(className) end

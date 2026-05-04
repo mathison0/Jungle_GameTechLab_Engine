@@ -1,5 +1,6 @@
 ﻿#include "UIComponent.h"
 
+#include "Core/RayTypes.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Object/ObjectFactory.h"
@@ -7,6 +8,7 @@
 #include "Render/Scene/Scene.h"
 #include "Serialization/Archive.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -79,6 +81,8 @@ void UUIComponent::Serialize(FArchive& Ar)
     Ar << AnchorMax;
     Ar << AnchoredPosition;
     Ar << SizeDelta;
+    Ar << WorldSize;
+    Ar << bBillboard;
     Ar << Pivot;
     Ar << RotationDegrees;
     Ar << Layer;
@@ -97,6 +101,8 @@ void UUIComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
     OutProps.push_back({ "Anchor Max", EPropertyType::Vec2, &AnchorMax, 0.0f, 1.0f, 0.01f });
     OutProps.push_back({ "Anchored Position", EPropertyType::Vec2, &AnchoredPosition });
     OutProps.push_back({ "Size Delta", EPropertyType::Vec2, &SizeDelta });
+    OutProps.push_back({ "World Size", EPropertyType::Vec2, &WorldSize });
+    OutProps.push_back({ "Billboard", EPropertyType::Bool, &bBillboard });
     OutProps.push_back({ "Pivot", EPropertyType::Vec2, &Pivot });
     OutProps.push_back({ "Rotation Degrees", EPropertyType::Float, &RotationDegrees, -360.0f, 360.0f, 1.0f });
     OutProps.push_back({ "Layer", EPropertyType::Int, &Layer });
@@ -123,6 +129,8 @@ void UUIComponent::PostEditProperty(const char* PropertyName)
         std::strcmp(PropertyName, "Anchor Max") == 0 ||
         std::strcmp(PropertyName, "Anchored Position") == 0 ||
         std::strcmp(PropertyName, "Size Delta") == 0 ||
+        std::strcmp(PropertyName, "World Size") == 0 ||
+        std::strcmp(PropertyName, "Billboard") == 0 ||
         std::strcmp(PropertyName, "Pivot") == 0 ||
         std::strcmp(PropertyName, "Rotation Degrees") == 0 ||
         std::strcmp(PropertyName, "Layer") == 0 ||
@@ -206,6 +214,28 @@ void UUIComponent::SetSizeDelta(const FVector2& InSizeDelta)
     }
 
     SizeDelta = InSizeDelta;
+    MarkUILayoutDirty();
+}
+
+void UUIComponent::SetWorldSize(const FVector2& InWorldSize)
+{
+    if (WorldSize.X == InWorldSize.X && WorldSize.Y == InWorldSize.Y)
+    {
+        return;
+    }
+
+    WorldSize = InWorldSize;
+    MarkUILayoutDirty();
+}
+
+void UUIComponent::SetBillboard(bool bInBillboard)
+{
+    if (bBillboard == bInBillboard)
+    {
+        return;
+    }
+
+    bBillboard = bInBillboard;
     MarkUILayoutDirty();
 }
 
@@ -342,6 +372,91 @@ bool UUIComponent::HitTestScreenPoint(const FVector2& ScreenPoint, float Viewpor
 
     return LocalX >= LocalLeft && LocalX < LocalRight &&
            LocalY >= LocalTop && LocalY < LocalBottom;
+}
+
+bool UUIComponent::HitTestWorldRay(const FRay& Ray, const FVector& CameraRight, const FVector& CameraUp, const FVector& CameraForward, float& OutDistance) const
+{
+    OutDistance = 0.0f;
+
+    if (!bVisible || !bHitTestVisible ||
+        RenderSpace != EUIRenderSpace::WorldSpace ||
+        GeometryType != EUIGeometryType::Quad ||
+        WorldSize.X == 0.0f || WorldSize.Y == 0.0f)
+    {
+        return false;
+    }
+
+    FVector LocalHit;
+    if (bBillboard)
+    {
+        const FVector PlaneNormal = CameraForward.Normalized();
+        const float Denom = Ray.Direction.Dot(PlaneNormal);
+        if (std::abs(Denom) < 0.0001f)
+        {
+            return false;
+        }
+
+        const FVector Center = GetWorldLocation();
+        const float RayT = (Center - Ray.Origin).Dot(PlaneNormal) / Denom;
+        if (RayT < 0.0f)
+        {
+            return false;
+        }
+
+        const FVector WorldHit = Ray.Origin + Ray.Direction * RayT;
+        const FVector ToHit = WorldHit - Center;
+        const FVector RightAxis = CameraRight.Normalized();
+        const FVector UpAxis = CameraUp.Normalized();
+        const FVector WorldScale = GetWorldScale();
+        const float ScaleY = std::max(std::abs(WorldScale.Y), 0.0001f);
+        const float ScaleZ = std::max(std::abs(WorldScale.Z), 0.0001f);
+        LocalHit = FVector(0.0f, ToHit.Dot(RightAxis) / ScaleY, ToHit.Dot(UpAxis) / ScaleZ);
+        OutDistance = (WorldHit - Ray.Origin).Length();
+    }
+    else
+    {
+        const FMatrix InvWorldMatrix = GetWorldMatrix().GetInverse();
+        const FVector LocalOrigin = InvWorldMatrix.TransformPositionWithW(Ray.Origin);
+        const FVector LocalDirection = InvWorldMatrix.TransformVector(Ray.Direction).Normalized();
+
+        if (std::abs(LocalDirection.X) < 0.0001f)
+        {
+            return false;
+        }
+
+        const float LocalT = -LocalOrigin.X / LocalDirection.X;
+        if (LocalT < 0.0f)
+        {
+            return false;
+        }
+
+        LocalHit = LocalOrigin + LocalDirection * LocalT;
+    }
+
+    const float Radians = RotationDegrees * 3.14159265358979323846f / 180.0f;
+    const float CosTheta = std::cos(Radians);
+    const float SinTheta = std::sin(Radians);
+
+    const float UnrotatedY = LocalHit.Y * CosTheta + LocalHit.Z * SinTheta;
+    const float UnrotatedZ = -LocalHit.Y * SinTheta + LocalHit.Z * CosTheta;
+
+    const float LocalLeft = -Pivot.X * WorldSize.X;
+    const float LocalRight = LocalLeft + WorldSize.X;
+    const float LocalTop = (1.0f - Pivot.Y) * WorldSize.Y;
+    const float LocalBottom = LocalTop - WorldSize.Y;
+
+    if (UnrotatedY < LocalLeft || UnrotatedY >= LocalRight ||
+        UnrotatedZ > LocalTop || UnrotatedZ <= LocalBottom)
+    {
+        return false;
+    }
+
+    if (!bBillboard)
+    {
+        const FVector WorldHit = GetWorldMatrix().TransformPositionWithW(LocalHit);
+        OutDistance = (WorldHit - Ray.Origin).Length();
+    }
+    return true;
 }
 
 bool UUIComponent::HandleUIPointerEvent(const FViewportPointerEvent& Event)

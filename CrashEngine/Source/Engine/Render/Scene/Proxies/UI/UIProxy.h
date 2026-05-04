@@ -18,6 +18,7 @@ public:
 
     FVector2 GetScreenLayoutSize(float ViewportWidth, float ViewportHeight) const;
     FVector2 GetScreenPivotPosition(float ViewportWidth, float ViewportHeight) const;
+    const FVector2& GetWorldLayoutSize() const { return WorldSize; }
 
     UUIComponent* Owner = nullptr;
 
@@ -29,6 +30,8 @@ public:
     FVector2 AnchorMax = { 0.0f, 0.0f };
     FVector2 AnchoredPosition = { 0.0f, 0.0f };
     FVector2 SizeDelta = { 100.0f, 100.0f };
+    FVector2 WorldSize = { 1.0f, 1.0f };
+    bool bBillboard = false;
     FVector2 Pivot = { 0.5f, 0.5f };
     float RotationDegrees = 0.0f;
 

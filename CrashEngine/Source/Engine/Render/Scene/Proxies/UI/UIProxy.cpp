@@ -28,6 +28,8 @@ void FUIProxy::UpdateLayout()
     AnchorMax = Owner->GetAnchorMax();
     AnchoredPosition = Owner->GetAnchoredPosition();
     SizeDelta = Owner->GetSizeDelta();
+    WorldSize = Owner->GetWorldSize();
+    bBillboard = Owner->IsBillboard();
     Pivot = Owner->GetPivot();
     RotationDegrees = Owner->GetRotationDegrees();
     SubUVRect = FVector4(0.0f, 0.0f, 1.0f, 1.0f);

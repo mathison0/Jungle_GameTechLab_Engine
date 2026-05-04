@@ -78,6 +78,20 @@ TArray<TArray<uint32>> SplitTextLines(const FString& Text)
 
     return Lines;
 }
+
+FVector TransformWorldUILocal(const FUIProxy& Proxy, float LocalY, float LocalZ, const FVector& CameraRight, const FVector& CameraUp)
+{
+    if (!Proxy.bBillboard)
+    {
+        return Proxy.WorldMatrix.TransformPositionWithW(FVector(0.0f, LocalY, LocalZ));
+    }
+
+    const FVector Center = Proxy.WorldMatrix.GetLocation();
+    const FVector WorldScale = Proxy.WorldMatrix.GetScale();
+    const FVector Right = CameraRight.Normalized() * WorldScale.Y;
+    const FVector Up = CameraUp.Normalized() * WorldScale.Z;
+    return Center + Right * LocalY + Up * LocalZ;
+}
 } // namespace
 
 void FUIBatch::Create(ID3D11Device* InDevice)
@@ -86,12 +100,18 @@ void FUIBatch::Create(ID3D11Device* InDevice)
     SolidParamsCB.Create(InDevice, sizeof(FUIParamsCBData));
     TextureParamsCB.Create(InDevice, sizeof(FUIParamsCBData));
     FontParamsCB.Create(InDevice, sizeof(FUIParamsCBData));
+    WorldSolidParamsCB.Create(InDevice, sizeof(FUIParamsCBData));
+    WorldTextureParamsCB.Create(InDevice, sizeof(FUIParamsCBData));
+    WorldFontParamsCB.Create(InDevice, sizeof(FUIParamsCBData));
 }
 
 void FUIBatch::Release()
 {
     CharInfoMap.clear();
     Clear();
+    WorldFontParamsCB.Release();
+    WorldTextureParamsCB.Release();
+    WorldSolidParamsCB.Release();
     FontParamsCB.Release();
     SolidParamsCB.Release();
     TextureParamsCB.Release();
@@ -157,6 +177,61 @@ FUIBatchRange FUIBatch::AddScreenQuad(const FUIProxy& Proxy, float ViewportWidth
     Buffer.Vertices.push_back({ FVector(PixelToClipX(TopRight.X), PixelToClipY(TopRight.Y), 0.0f), FVector2(U1, V0), Proxy.TintColor });
     Buffer.Vertices.push_back({ FVector(PixelToClipX(BottomLeft.X), PixelToClipY(BottomLeft.Y), 0.0f), FVector2(U0, V1), Proxy.TintColor });
     Buffer.Vertices.push_back({ FVector(PixelToClipX(BottomRight.X), PixelToClipY(BottomRight.Y), 0.0f), FVector2(U1, V1), Proxy.TintColor });
+
+    Buffer.Indices.push_back(BaseVertex);
+    Buffer.Indices.push_back(BaseVertex + 1);
+    Buffer.Indices.push_back(BaseVertex + 2);
+    Buffer.Indices.push_back(BaseVertex + 1);
+    Buffer.Indices.push_back(BaseVertex + 3);
+    Buffer.Indices.push_back(BaseVertex + 2);
+
+    Range.FirstIndex = BaseIndex;
+    Range.IndexCount = 6;
+    return Range;
+}
+
+FUIBatchRange FUIBatch::AddWorldQuad(const FUIProxy& Proxy, const FVector& CameraRight, const FVector& CameraUp)
+{
+    FUIBatchRange Range = {};
+    const FVector2 LayoutSize = Proxy.GetWorldLayoutSize();
+    if (LayoutSize.X == 0.0f || LayoutSize.Y == 0.0f)
+    {
+        return Range;
+    }
+
+    const float Left = -Proxy.Pivot.X * LayoutSize.X;
+    const float Right = Left + LayoutSize.X;
+    const float Top = (1.0f - Proxy.Pivot.Y) * LayoutSize.Y;
+    const float Bottom = Top - LayoutSize.Y;
+
+    const float Radians = Proxy.RotationDegrees * 3.14159265358979323846f / 180.0f;
+    const float CosTheta = std::cos(Radians);
+    const float SinTheta = std::sin(Radians);
+
+    auto TransformCorner = [&](float Y, float Z) -> FVector
+    {
+        const float RotY = Y * CosTheta - Z * SinTheta;
+        const float RotZ = Y * SinTheta + Z * CosTheta;
+        return TransformWorldUILocal(Proxy, RotY, RotZ, CameraRight, CameraUp);
+    };
+
+    const FVector TopLeft = TransformCorner(Left, Top);
+    const FVector TopRight = TransformCorner(Right, Top);
+    const FVector BottomLeft = TransformCorner(Left, Bottom);
+    const FVector BottomRight = TransformCorner(Right, Bottom);
+
+    const uint32 BaseVertex = static_cast<uint32>(Buffer.Vertices.size());
+    const uint32 BaseIndex = static_cast<uint32>(Buffer.Indices.size());
+
+    const float U0 = Proxy.SubUVRect.X;
+    const float V0 = Proxy.SubUVRect.Y;
+    const float U1 = Proxy.SubUVRect.X + Proxy.SubUVRect.Z;
+    const float V1 = Proxy.SubUVRect.Y + Proxy.SubUVRect.W;
+
+    Buffer.Vertices.push_back({ TopLeft, FVector2(U0, V0), Proxy.TintColor });
+    Buffer.Vertices.push_back({ TopRight, FVector2(U1, V0), Proxy.TintColor });
+    Buffer.Vertices.push_back({ BottomLeft, FVector2(U0, V1), Proxy.TintColor });
+    Buffer.Vertices.push_back({ BottomRight, FVector2(U1, V1), Proxy.TintColor });
 
     Buffer.Indices.push_back(BaseVertex);
     Buffer.Indices.push_back(BaseVertex + 1);
@@ -298,6 +373,122 @@ FUIBatchRange FUIBatch::AddScreenText(const FUIProxy& Proxy, const FFontResource
     return Range;
 }
 
+FUIBatchRange FUIBatch::AddWorldText(const FUIProxy& Proxy, const FFontResource* Font, const FVector& CameraRight, const FVector& CameraUp)
+{
+    FUIBatchRange Range = {};
+    if (Proxy.Text.empty() || !Font || !Font->IsLoaded())
+    {
+        return Range;
+    }
+
+    EnsureCharInfoMap(Font);
+
+    const FVector2 LayoutSize = Proxy.GetWorldLayoutSize();
+    if (LayoutSize.X == 0.0f || LayoutSize.Y == 0.0f)
+    {
+        return Range;
+    }
+
+    const float CharW = 0.23f * std::max(Proxy.FontSize, 0.01f);
+    const float CharH = 0.23f * std::max(Proxy.FontSize, 0.01f);
+    const float LetterSpacing = Proxy.TextLetterSpacing;
+    const float LineSpacing = Proxy.TextLineSpacing;
+
+    TArray<TArray<uint32>> Lines = SplitTextLines(Proxy.Text);
+    if (Lines.empty())
+    {
+        return Range;
+    }
+
+    auto GetLineWidth = [CharW, LetterSpacing](size_t GlyphCount) -> float
+    {
+        if (GlyphCount == 0)
+        {
+            return 0.0f;
+        }
+        return static_cast<float>(GlyphCount) * CharW + static_cast<float>(GlyphCount - 1) * LetterSpacing;
+    };
+
+    const float BlockHeight =
+        static_cast<float>(Lines.size()) * CharH +
+        static_cast<float>(Lines.size() > 0 ? Lines.size() - 1 : 0) * LineSpacing;
+
+    const float LocalLeft = -Proxy.Pivot.X * LayoutSize.X;
+    const float LocalTop = (1.0f - Proxy.Pivot.Y) * LayoutSize.Y;
+
+    float BaseZ = LocalTop;
+    if (Proxy.TextVAlign == EUITextVAlign::Center)
+    {
+        BaseZ -= (LayoutSize.Y - BlockHeight) * 0.5f;
+    }
+    else if (Proxy.TextVAlign == EUITextVAlign::Bottom)
+    {
+        BaseZ -= LayoutSize.Y - BlockHeight;
+    }
+
+    const float Radians = Proxy.RotationDegrees * 3.14159265358979323846f / 180.0f;
+    const float CosTheta = std::cos(Radians);
+    const float SinTheta = std::sin(Radians);
+
+    auto TransformLocal = [&](float Y, float Z) -> FVector
+    {
+        const float RotY = Y * CosTheta - Z * SinTheta;
+        const float RotZ = Y * SinTheta + Z * CosTheta;
+        return TransformWorldUILocal(Proxy, RotY, RotZ, CameraRight, CameraUp);
+    };
+
+    const uint32 BaseIndex = static_cast<uint32>(Buffer.Indices.size());
+
+    float CursorZ = BaseZ;
+    for (const TArray<uint32>& Line : Lines)
+    {
+        const float LineWidth = GetLineWidth(Line.size());
+        float CursorY = LocalLeft;
+        if (Proxy.TextHAlign == EUITextHAlign::Center)
+        {
+            CursorY += (LayoutSize.X - LineWidth) * 0.5f;
+        }
+        else if (Proxy.TextHAlign == EUITextHAlign::Right)
+        {
+            CursorY += LayoutSize.X - LineWidth;
+        }
+
+        for (uint32 Codepoint : Line)
+        {
+            FVector2 UVMin;
+            FVector2 UVMax;
+            if (GetCharUV(Codepoint, UVMin, UVMax))
+            {
+                const FVector TopLeft = TransformLocal(CursorY, CursorZ);
+                const FVector TopRight = TransformLocal(CursorY + CharW, CursorZ);
+                const FVector BottomLeft = TransformLocal(CursorY, CursorZ - CharH);
+                const FVector BottomRight = TransformLocal(CursorY + CharW, CursorZ - CharH);
+
+                const uint32 BaseVertex = static_cast<uint32>(Buffer.Vertices.size());
+                Buffer.Vertices.push_back({ TopLeft, FVector2(UVMin.X, UVMin.Y), Proxy.TintColor });
+                Buffer.Vertices.push_back({ TopRight, FVector2(UVMax.X, UVMin.Y), Proxy.TintColor });
+                Buffer.Vertices.push_back({ BottomLeft, FVector2(UVMin.X, UVMax.Y), Proxy.TintColor });
+                Buffer.Vertices.push_back({ BottomRight, FVector2(UVMax.X, UVMax.Y), Proxy.TintColor });
+
+                Buffer.Indices.push_back(BaseVertex);
+                Buffer.Indices.push_back(BaseVertex + 1);
+                Buffer.Indices.push_back(BaseVertex + 2);
+                Buffer.Indices.push_back(BaseVertex + 1);
+                Buffer.Indices.push_back(BaseVertex + 3);
+                Buffer.Indices.push_back(BaseVertex + 2);
+            }
+
+            CursorY += CharW + LetterSpacing;
+        }
+
+        CursorZ -= CharH + LineSpacing;
+    }
+
+    Range.FirstIndex = BaseIndex;
+    Range.IndexCount = static_cast<uint32>(Buffer.Indices.size()) - BaseIndex;
+    return Range;
+}
+
 bool FUIBatch::UploadBuffers(ID3D11DeviceContext* Context)
 {
     return Buffer.Upload(Context);
@@ -321,6 +512,18 @@ void FUIBatch::UpdateParams(ID3D11DeviceContext* Context)
     FUIParamsCBData FontParams = {};
     FontParams.Flags = FVector4(1.0f, 1.0f, 0.0f, 0.0f);
     FontParamsCB.Update(Context, &FontParams, sizeof(FontParams));
+
+    FUIParamsCBData WorldSolidParams = {};
+    WorldSolidParams.Flags = FVector4(0.0f, 0.0f, 1.0f, 0.0f);
+    WorldSolidParamsCB.Update(Context, &WorldSolidParams, sizeof(WorldSolidParams));
+
+    FUIParamsCBData WorldTextureParams = {};
+    WorldTextureParams.Flags = FVector4(1.0f, 0.0f, 1.0f, 0.0f);
+    WorldTextureParamsCB.Update(Context, &WorldTextureParams, sizeof(WorldTextureParams));
+
+    FUIParamsCBData WorldFontParams = {};
+    WorldFontParams.Flags = FVector4(1.0f, 1.0f, 1.0f, 0.0f);
+    WorldFontParamsCB.Update(Context, &WorldFontParams, sizeof(WorldFontParams));
 }
 
 void FUIBatch::BuildCharInfoMap(uint32 Columns, uint32 Rows)

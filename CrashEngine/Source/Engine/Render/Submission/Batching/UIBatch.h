@@ -37,6 +37,8 @@ public:
 
     FUIBatchRange AddScreenQuad(const FUIProxy& Proxy, float ViewportWidth, float ViewportHeight);
     FUIBatchRange AddScreenText(const FUIProxy& Proxy, const FFontResource* Font, float ViewportWidth, float ViewportHeight);
+    FUIBatchRange AddWorldQuad(const FUIProxy& Proxy, const FVector& CameraRight, const FVector& CameraUp);
+    FUIBatchRange AddWorldText(const FUIProxy& Proxy, const FFontResource* Font, const FVector& CameraRight, const FVector& CameraUp);
     bool UploadBuffers(ID3D11DeviceContext* Context);
     void UpdateParams(ID3D11DeviceContext* Context);
 
@@ -48,6 +50,9 @@ public:
     FConstantBuffer* GetSolidParamsCB() { return &SolidParamsCB; }
     FConstantBuffer* GetTextureParamsCB() { return &TextureParamsCB; }
     FConstantBuffer* GetFontParamsCB() { return &FontParamsCB; }
+    FConstantBuffer* GetWorldSolidParamsCB() { return &WorldSolidParamsCB; }
+    FConstantBuffer* GetWorldTextureParamsCB() { return &WorldTextureParamsCB; }
+    FConstantBuffer* GetWorldFontParamsCB() { return &WorldFontParamsCB; }
 
 private:
     void BuildCharInfoMap(uint32 Columns, uint32 Rows);
@@ -58,6 +63,9 @@ private:
     FConstantBuffer SolidParamsCB;
     FConstantBuffer TextureParamsCB;
     FConstantBuffer FontParamsCB;
+    FConstantBuffer WorldSolidParamsCB;
+    FConstantBuffer WorldTextureParamsCB;
+    FConstantBuffer WorldFontParamsCB;
     TMap<uint32, FUICharacterInfo> CharInfoMap;
     uint32 CachedFontColumns = 0;
     uint32 CachedFontRows = 0;

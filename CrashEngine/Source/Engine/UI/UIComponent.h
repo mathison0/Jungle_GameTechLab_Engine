@@ -3,6 +3,7 @@
 #include "Component/SceneComponent.h"
 
 class FUIProxy;
+struct FRay;
 struct FViewportPointerEvent;
 
 enum class EUIRenderSpace : int32
@@ -74,6 +75,12 @@ public:
     void SetSizeDelta(const FVector2& InSizeDelta);
     const FVector2& GetSizeDelta() const { return SizeDelta; }
 
+    void SetWorldSize(const FVector2& InWorldSize);
+    const FVector2& GetWorldSize() const { return WorldSize; }
+
+    void SetBillboard(bool bInBillboard);
+    bool IsBillboard() const { return bBillboard; }
+
     void SetPivot(const FVector2& InPivot);
     const FVector2& GetPivot() const { return Pivot; }
 
@@ -98,6 +105,7 @@ public:
     FVector2 GetScreenLayoutSize(float ViewportWidth, float ViewportHeight) const;
     FVector2 GetScreenPivotPosition(float ViewportWidth, float ViewportHeight) const;
     bool HitTestScreenPoint(const FVector2& ScreenPoint, float ViewportWidth, float ViewportHeight) const;
+    bool HitTestWorldRay(const FRay& Ray, const FVector& CameraRight, const FVector& CameraUp, const FVector& CameraForward, float& OutDistance) const;
     virtual bool HandleUIPointerEvent(const FViewportPointerEvent& Event);
     virtual void OnUIPointerEnter(const FViewportPointerEvent& Event);
     virtual void OnUIPointerLeave(const FViewportPointerEvent& Event);
@@ -118,6 +126,8 @@ protected:
     FVector2 AnchorMax = { 0.0f, 0.0f };
     FVector2 AnchoredPosition = { 0.0f, 0.0f };
     FVector2 SizeDelta = { 100.0f, 100.0f };
+    FVector2 WorldSize = { 1.0f, 1.0f };
+    bool bBillboard = false;
     FVector2 Pivot = { 0.5f, 0.5f };
     float RotationDegrees = 0.0f;
     int32 Layer = 0;
