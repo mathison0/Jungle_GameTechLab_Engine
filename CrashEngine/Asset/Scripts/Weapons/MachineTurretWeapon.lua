@@ -256,8 +256,7 @@ function MachineTurretWeapon:TurretFireLoop(slot)
             if not self.IsRunning or not slot.IsRunning then
                 break
             end
-
-            Log("Fire")
+            
             self:FireSlot(slot)
 
             if i < rapidCount then

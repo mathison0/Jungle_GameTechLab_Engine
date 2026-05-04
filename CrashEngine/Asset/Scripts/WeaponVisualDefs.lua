@@ -52,9 +52,9 @@ WeaponVisualDefs.MachineTurret = {
         Visuals = {
             {
                 Name = "Visual_MachineTurret_0",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Drone/Drone.OBJ",
                 Parent = "RootComponent",
-                Location = { 0.5, 0.8, 0.8 },
+                Location = { 0.0, 0.0, 2.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 0.5, 0.3, 0.3 },
                 MuzzleName = "Muzzle_MachineTurret_0",
@@ -67,9 +67,9 @@ WeaponVisualDefs.MachineTurret = {
         Visuals = {
             {
                 Name = "Visual_MachineTurret_0",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Drone/Drone.OBJ",
                 Parent = "RootComponent",
-                Location = { 0.5, 0.8, 0.8 },
+                Location = { 0.0, 2.0, 2.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 0.5, 0.3, 0.3 },
                 MuzzleName = "Muzzle_MachineTurret_0",
@@ -77,9 +77,9 @@ WeaponVisualDefs.MachineTurret = {
             },
             {
                 Name = "Visual_MachineTurret_1",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Drone/Drone.OBJ",
                 Parent = "RootComponent",
-                Location = { 0.5, -0.8, 0.8 },
+                Location = { 0.0, -2.0, 2.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 0.5, 0.3, 0.3 },
                 MuzzleName = "Muzzle_MachineTurret_1",
@@ -92,9 +92,9 @@ WeaponVisualDefs.MachineTurret = {
         Visuals = {
             {
                 Name = "Visual_MachineTurret_0",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Drone/Drone.OBJ",
                 Parent = "RootComponent",
-                Location = { 0.6, 0.8, 0.8 },
+                Location = { 2.0, 2.0, 2.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 0.6, 0.35, 0.35 },
                 MuzzleName = "Muzzle_MachineTurret_0",
@@ -102,9 +102,9 @@ WeaponVisualDefs.MachineTurret = {
             },
             {
                 Name = "Visual_MachineTurret_1",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Drone/Drone.OBJ",
                 Parent = "RootComponent",
-                Location = { 0.6, -0.8, 0.8 },
+                Location = { -2.0, 2.0, 2.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 0.6, 0.35, 0.35 },
                 MuzzleName = "Muzzle_MachineTurret_1",
@@ -112,9 +112,9 @@ WeaponVisualDefs.MachineTurret = {
             },
             {
                 Name = "Visual_MachineTurret_2",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Drone/Drone.OBJ",
                 Parent = "RootComponent",
-                Location = { -0.7, 0.8, 0.8 },
+                Location = { 2.0, -2.0, 2.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 0.6, 0.35, 0.35 },
                 MuzzleName = "Muzzle_MachineTurret_2",
@@ -122,9 +122,9 @@ WeaponVisualDefs.MachineTurret = {
             },
             {
                 Name = "Visual_MachineTurret_3",
-                Mesh = "Models/_Basic/Cube.OBJ",
+                Mesh = "Models/Drone/Drone.OBJ",
                 Parent = "RootComponent",
-                Location = { -0.7, -0.8, 0.8 },
+                Location = { -2.0, -2.0, 2.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
                 Scale = { 0.6, 0.35, 0.35 },
                 MuzzleName = "Muzzle_MachineTurret_3",
