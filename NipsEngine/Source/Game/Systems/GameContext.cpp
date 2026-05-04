@@ -222,14 +222,16 @@ void GGameContext::ClearMapDecals()
 void GGameContext::RefreshCleanProgressFromDecals()
 {
 	const int32 InitialCleanableCount = InitialDecalCount + InitialCleanlinessItemCount;
-	if (InitialCleanableCount <= 0)
+	const int32 RequiredCleanableCount = std::max(InitialCleanableCount - 2, 0);
+	if (RequiredCleanableCount <= 0)
 	{
 		SetCleanProgress(1.0f);
 		return;
 	}
 
 	const int32 RemainingCleanableCount = GetRemainingDecalCount() + GetRemainingCleanlinessItemCount();
-	const float CleanedRatio = 1.0f - (static_cast<float>(RemainingCleanableCount) / static_cast<float>(InitialCleanableCount));
+	const int32 CleanedCleanableCount = std::clamp(InitialCleanableCount - RemainingCleanableCount, 0, RequiredCleanableCount);
+	const float CleanedRatio = static_cast<float>(CleanedCleanableCount) / static_cast<float>(RequiredCleanableCount);
 	SetCleanProgress(CleanedRatio);
 	if (HasCleanedAnyDecal() && CompleteMissionInternal(EGameMissionType::CleanDust))
 	{
