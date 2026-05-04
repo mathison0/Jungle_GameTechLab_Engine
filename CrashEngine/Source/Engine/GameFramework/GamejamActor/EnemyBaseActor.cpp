@@ -20,6 +20,8 @@ void AEnemyBaseActor::Tick(float DeltaTime)
 void AEnemyBaseActor::InitDefaultComponents()
 {
     ColliderComponent = AddComponent<UCircleCollider2DComponent>();
+    ColliderComponent->SetCollisionChannel(ECollisionChannel::Enemy);
+    ColliderComponent->SetGenerateOverlapEvents(true);
     SetRootComponent(ColliderComponent);
 
 	ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();

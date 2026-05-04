@@ -10,6 +10,8 @@ IMPLEMENT_CLASS(AProjectileActor, AActor)
 void AProjectileActor::InitDefaultComponents()
 {
     auto ColliderComponent = AddComponent<UCircleCollider2DComponent>();
+    ColliderComponent->SetCollisionChannel(ECollisionChannel::Projectile);
+    ColliderComponent->SetGenerateOverlapEvents(true);
     SetRootComponent(ColliderComponent);
     auto StaticMeshComponent = AddComponent<UStaticMeshComponent>();
     RootComponent->AddChild(StaticMeshComponent);
@@ -40,6 +42,9 @@ void AProjectileActor::InitDefaultComponents()
 
     auto ScriptComponent = AddComponent<UScriptComponent>();
     ScriptComponent->SetScriptPath("ProjectileScript.lua");
+
+	ScriptComponent = AddComponent<UScriptComponent>();
+    ScriptComponent->SetScriptPath("Test/TestBullet.lua");
 }
 
 

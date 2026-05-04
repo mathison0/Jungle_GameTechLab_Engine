@@ -15,7 +15,7 @@ function Script:BeginPlay()
     else
         Log("StarCoroutineSearch")
         self.Search = self.StartCoroutine(function()
-            Query.SearchActorClosestByTagCoroutine(self, self.HeadMainGun, "TestEnemy")
+            Query.SearchActorClosestByTagCoroutine(self, self.HeadMainGun, "Enemy")
         end)
 
         Log("StarCoroutineTargeting")

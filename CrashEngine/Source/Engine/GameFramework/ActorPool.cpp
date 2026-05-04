@@ -136,5 +136,7 @@ void FActorPool::DeactivateActor(AActor* Actor)
     if (Actor)
     {
         Actor->Deactivate();
+        // 비활성화된 액터가 쿼리나 물리에 잡히지 않도록 아주 먼 곳으로 이동
+        Actor->SetActorLocation(FVector(9999.0f, 0.0f, 0.0f));
     }
 }
