@@ -406,6 +406,54 @@
       },
       "Tag" : "Default",
       "bVisible" : true
+    }, {
+      "ClassName" : "AActor",
+      "Name" : "GameManager",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_4",
+          "Properties" : {
+            "Lua.GameTimeLimit" : 600.000000,
+            "Script" : "GameManagerComponent.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_7",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 52",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_1",
+        "Properties" : {
+          "Location" : [-4.248018, -30.836235, 18.387695],
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
@@ -416,7 +464,7 @@
     "FarClip" : 1000.000000,
     "Location" : [-5.086293, -34.997524, 21.029846],
     "NearClip" : 0.100000,
-    "Rotation" : [-0.000006, 31.899446, 78.610420]
+    "Rotation" : [-0.000012, 31.899445, 78.610420]
   },
   "Version" : 3,
   "WorldType" : "Editor"
