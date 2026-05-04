@@ -5,13 +5,52 @@ local WeaponDefs = require("WeaponDefs")
 local MachineTurretWeapon = {}
 MachineTurretWeapon.__index = MachineTurretWeapon
 
-local function IsValidTarget(target)
+local function GetVecAxis(v, axisName, axisIndex)
+    if v == nil then
+        return nil
+    end
+
+    return v[axisName] or v[axisIndex]
+end
+
+local function IsValidTarget(target, origin, range)
     if target == nil or not target:IsValid() then
         return false
     end
 
     if target.IsVisible ~= nil and not target:IsVisible() then
         return false
+    end
+
+    if origin ~= nil and range ~= nil then
+        local targetPos = target:GetLocation()
+        if targetPos == nil then
+            return false
+        end
+
+        local ox = GetVecAxis(origin, "x", 1)
+        local oy = GetVecAxis(origin, "y", 2)
+        local oz = GetVecAxis(origin, "z", 3)
+
+        local tx = GetVecAxis(targetPos, "x", 1)
+        local ty = GetVecAxis(targetPos, "y", 2)
+        local tz = GetVecAxis(targetPos, "z", 3)
+
+        if ox == nil or oy == nil or oz == nil or
+           tx == nil or ty == nil or tz == nil then
+            return false
+        end
+
+        local dx = tx - ox
+        local dy = ty - oy
+        local dz = tz - oz
+
+        local distSq = dx * dx + dy * dy + dz * dz
+        local rangeSq = range * range
+
+        if distSq > rangeSq then
+            return false
+        end
     end
 
     return true
@@ -46,8 +85,18 @@ function MachineTurretWeapon:Stop()
     for _, slot in pairs(self.TurretSlots) do
         slot.IsRunning = false
 
-        if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil and slot.Coroutine ~= nil then
-            self.Owner.StopCoroutine(slot.Coroutine)
+        if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil then
+            if slot.SearchCoroutine ~= nil then
+                self.Owner.StopCoroutine(slot.SearchCoroutine)
+            end
+
+            if slot.AimCoroutine ~= nil then
+                self.Owner.StopCoroutine(slot.AimCoroutine)
+            end
+
+            if slot.FireCoroutine ~= nil then
+                self.Owner.StopCoroutine(slot.FireCoroutine)
+            end
         end
     end
 end
@@ -73,8 +122,18 @@ function MachineTurretWeapon:RebuildTurretSlots()
     for _, slot in pairs(self.TurretSlots) do
         slot.IsRunning = false
 
-        if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil and slot.Coroutine ~= nil then
-            self.Owner.StopCoroutine(slot.Coroutine)
+        if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil then
+            if slot.SearchCoroutine ~= nil then
+                self.Owner.StopCoroutine(slot.SearchCoroutine)
+            end
+
+            if slot.AimCoroutine ~= nil then
+                self.Owner.StopCoroutine(slot.AimCoroutine)
+            end
+
+            if slot.FireCoroutine ~= nil then
+                self.Owner.StopCoroutine(slot.FireCoroutine)
+            end
         end
     end
 
@@ -126,10 +185,33 @@ function MachineTurretWeapon:CreateTurretSlot(index)
         Range = self.Data.Range or 10000.0,
         Damage = self.Data.Damage or 1.0,
 
-        FireTimer = 0.0,
-        TargetTimer = 0.0,
-        Coroutine = nil,
+        SearchCoroutine = nil,
+        AimCoroutine = nil,
+        FireCoroutine = nil,
     }
+end
+
+function MachineTurretWeapon:GetSlotOrigin(slot)
+    if slot == nil then
+        return nil
+    end
+
+    if slot.Muzzle ~= nil and slot.Muzzle:IsValid() then
+        return slot.Muzzle:GetWorldLocation()
+    end
+
+    if slot.Visual ~= nil and slot.Visual:IsValid() then
+        return slot.Visual:GetWorldLocation()
+    end
+
+    if self.Owner ~= nil and self.Owner.GetActor ~= nil then
+        local ownerActor = self.Owner.GetActor()
+        if ownerActor ~= nil and ownerActor:IsValid() then
+            return ownerActor:GetLocation()
+        end
+    end
+
+    return nil
 end
 
 function MachineTurretWeapon:StartTurretSlot(slot)
@@ -138,49 +220,63 @@ function MachineTurretWeapon:StartTurretSlot(slot)
         return
     end
 
-    slot.Coroutine = self.Owner.StartCoroutine(function()
-        self:TurretSlotLoop(slot)
+    slot.SearchCoroutine = self.Owner.StartCoroutine(function()
+        self:TurretSearchLoop(slot)
+    end)
+
+    slot.AimCoroutine = self.Owner.StartCoroutine(function()
+        self:TurretAimLoop(slot)
+    end)
+
+    slot.FireCoroutine = self.Owner.StartCoroutine(function()
+        self:TurretFireLoop(slot)
     end)
 end
 
-function MachineTurretWeapon:TurretSlotLoop(slot)
+function MachineTurretWeapon:TurretSearchLoop(slot)
     while self.IsRunning and slot.IsRunning do
-        local dt = Co.WaitNextFrame() or 0.0
+        self:UpdateSlotTarget(slot)
+        Co.Wait(slot.TargetRefreshInterval)
+    end
+end
 
-        slot.FireTimer = slot.FireTimer + dt
-        slot.TargetTimer = slot.TargetTimer + dt
-
-        if slot.TargetTimer >= slot.TargetRefreshInterval then
-            slot.TargetTimer = 0.0
-            self:UpdateSlotTarget(slot)
-        end
-
+function MachineTurretWeapon:TurretAimLoop(slot)
+    while self.IsRunning and slot.IsRunning do
+        Co.WaitNextFrame()
         self:UpdateSlotAim(slot)
+    end
+end
 
-        if slot.FireTimer >= slot.FireInterval then
-            slot.FireTimer = 0.0
+function MachineTurretWeapon:TurretFireLoop(slot)
+    while self.IsRunning and slot.IsRunning do
+        local rapidCount = self.Data.RapidCount or 1
+        local rapidInterval = self.Data.RapidInterval or 0.05
+
+        for i = 1, rapidCount do
+            if not self.IsRunning or not slot.IsRunning then
+                break
+            end
+
+            Log("Fire")
             self:FireSlot(slot)
+
+            if i < rapidCount then
+                Co.Wait(rapidInterval)
+            end
         end
+
+        Co.Wait(slot.FireInterval)
     end
 end
 
 function MachineTurretWeapon:UpdateSlotTarget(slot)
-    if IsValidTarget(slot.Target) then
+    local origin = self:GetSlotOrigin(slot)
+
+    if IsValidTarget(slot.Target, origin, slot.Range) then
         return
     end
 
     slot.Target = nil
-
-    local origin = nil
-
-    if slot.Visual ~= nil and slot.Visual:IsValid() then
-        origin = slot.Visual:GetWorldLocation()
-    elseif self.Owner ~= nil and self.Owner.GetActor ~= nil then
-        local ownerActor = self.Owner.GetActor()
-        if ownerActor ~= nil and ownerActor:IsValid() then
-            origin = ownerActor:GetLocation()
-        end
-    end
 
     if origin == nil then
         return
@@ -192,7 +288,9 @@ function MachineTurretWeapon:UpdateSlotTarget(slot)
 end
 
 function MachineTurretWeapon:UpdateSlotAim(slot)
-    if not IsValidTarget(slot.Target) then
+    local origin = self:GetSlotOrigin(slot)
+
+    if not IsValidTarget(slot.Target, origin, slot.Range) then
         return
     end
 
@@ -213,7 +311,10 @@ function MachineTurretWeapon:UpdateSlotAim(slot)
 end
 
 function MachineTurretWeapon:FireSlot(slot)
-    if not IsValidTarget(slot.Target) then
+    local origin = self:GetSlotOrigin(slot)
+
+    if not IsValidTarget(slot.Target, origin, slot.Range) then
+        slot.Target = nil
         return
     end
 
@@ -224,8 +325,8 @@ function MachineTurretWeapon:FireSlot(slot)
 
     local success = DamageSystem.ApplyDamage(slot.Target, slot.Damage, ownerActor)
 
-    if success then
-        Log("[MachineTurret] Instant hit. slot=" ..
+    if not success then
+        Log("[MachineTurret] Damage failed. slot=" ..
             tostring(slot.Index) ..
             " damage=" ..
             tostring(slot.Damage))
