@@ -1,6 +1,7 @@
 ﻿// 에디터 영역의 세부 동작을 구현합니다.
 #include "Editor/Viewport/FLevelViewportLayout.h"
 
+#include "Core/Logging/LogMacros.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/LevelEditorViewportClient.h"
 #include "Editor/Settings/EditorSettings.h"
@@ -12,12 +13,18 @@
 #include "Math/MathUtils.h"
 #include "Platform/Paths.h"
 #include "ImGui/imgui.h"
+#include "ImGui/imgui_internal.h"
 #include "WICTextureLoader.h"
 #include "Component/CameraComponent.h"
 #include "Component/GizmoComponent.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/ScriptActor.h"
+#include "GameFramework/World.h"
 #include <cfloat>
+#include <cmath>
 #include <filesystem>
+
+constexpr const char* LuaScriptPayloadType = "CRASH_LUA_SCRIPT_PATH";
 
 // ─── 레이아웃별 슬롯 수 ─────────────────────────────────────
 
@@ -105,6 +112,50 @@ void PushViewportContextPopupStyle()
 void PopViewportContextPopupStyle()
 {
     ImGui::PopStyleVar(3);
+}
+
+FVector ResolveLuaScriptDropLocation(FLevelEditorViewportClient* ViewportClient)
+{
+    if (!ViewportClient || !ViewportClient->GetCamera())
+    {
+        return FVector(0.0f, 0.0f, 0.0f);
+    }
+
+    const FRect& Rect = ViewportClient->GetViewportScreenRect();
+    FViewport* Viewport = ViewportClient->GetViewport();
+    const float ViewportWidth = Viewport ? static_cast<float>(Viewport->GetWidth()) : Rect.Width;
+    const float ViewportHeight = Viewport ? static_cast<float>(Viewport->GetHeight()) : Rect.Height;
+    if (ViewportWidth <= 0.0f || ViewportHeight <= 0.0f)
+    {
+        return ViewportClient->GetCamera()->GetWorldLocation();
+    }
+
+    const ImVec2 MousePos = ImGui::GetIO().MousePos;
+    const float LocalX = MousePos.x - Rect.X;
+    const float LocalY = MousePos.y - Rect.Y;
+    const FRay Ray = ViewportClient->GetCamera()->DeprojectScreenToWorld(LocalX, LocalY, ViewportWidth, ViewportHeight);
+
+    constexpr float GroundPlaneZ = 0.0f;
+    if (std::fabs(Ray.Direction.Z) > 0.0001f)
+    {
+        const float T = (GroundPlaneZ - Ray.Origin.Z) / Ray.Direction.Z;
+        if (T >= 0.0f)
+        {
+            return Ray.Origin + Ray.Direction * T;
+        }
+    }
+
+    return Ray.Origin + Ray.Direction * 10.0f;
+}
+
+FString MakeScriptActorName(const FString& ScriptPath)
+{
+    FString Stem = FPaths::FromPath(FPaths::ToPath(ScriptPath).stem());
+    if (Stem.empty())
+    {
+        Stem = "Script";
+    }
+    return Stem + "_Actor";
 }
 
 // ─── 아이콘 로드/해제 ────────────────────────────────────────
@@ -355,6 +406,83 @@ void FLevelViewportLayout::ResetAllViewportInputStates()
             Client->ResetInputState();
         }
     }
+}
+
+void FLevelViewportLayout::HandleLuaScriptDropTargets()
+{
+    if (!Editor || Editor->IsPlayingInEditor())
+    {
+        return;
+    }
+
+    for (int32 i = 0; i < ActiveSlotCount && i < static_cast<int32>(LevelViewportClients.size()); ++i)
+    {
+        FLevelEditorViewportClient* ViewportClient = LevelViewportClients[i];
+        if (!ViewportClient)
+        {
+            continue;
+        }
+
+        const FRect& Rect = ViewportClient->GetViewportScreenRect();
+        if (Rect.Width <= 0.0f || Rect.Height <= 0.0f)
+        {
+            continue;
+        }
+
+        const ImRect DropRect(ImVec2(Rect.X, Rect.Y), ImVec2(Rect.X + Rect.Width, Rect.Y + Rect.Height));
+        const FString TargetIdText = "ViewportLuaDropTarget" + std::to_string(i);
+        if (!ImGui::BeginDragDropTargetCustom(DropRect, ImGui::GetID(TargetIdText.c_str())))
+        {
+            continue;
+        }
+
+        if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(LuaScriptPayloadType))
+        {
+            if (Payload->IsDelivery() && Payload->Data && Payload->DataSize > 0)
+            {
+                const char* ScriptPath = static_cast<const char*>(Payload->Data);
+                if (ScriptPath && ScriptPath[0] != '\0')
+                {
+                    SpawnScriptActorFromLuaDrop(ViewportClient, ScriptPath);
+                }
+            }
+        }
+
+        ImGui::EndDragDropTarget();
+    }
+}
+
+AActor* FLevelViewportLayout::SpawnScriptActorFromLuaDrop(FLevelEditorViewportClient* ViewportClient, const FString& ScriptPath)
+{
+    if (!Editor || !ViewportClient || ScriptPath.empty())
+    {
+        return nullptr;
+    }
+
+    UWorld* World = Editor->GetWorld();
+    if (!World || World->GetWorldType() == EWorldType::PIE)
+    {
+        return nullptr;
+    }
+
+    AScriptActor* Actor = World->SpawnActor<AScriptActor>(ScriptPath);
+    if (!Actor)
+    {
+        return nullptr;
+    }
+
+    Actor->SetFName(FName(MakeScriptActorName(ScriptPath)));
+    Actor->SetActorLocation(ResolveLuaScriptDropLocation(ViewportClient));
+    World->MarkEditorPickingAndScenePrimitiveBVHsDirty();
+
+    Editor->SetActiveViewport(ViewportClient);
+    if (SelectionManager)
+    {
+        SelectionManager->Select(Actor);
+    }
+
+    UE_LOG(EditorUI, Info, "Created script actor for Lua script: %s", ScriptPath.c_str());
+    return Actor;
 }
 
 // ─── 뷰포트 슬롯 관리 ───────────────────────────────────────
@@ -714,6 +842,8 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
                 LevelViewportClients[i]->RenderViewportBorder();
             }
         }
+
+        HandleLuaScriptDropTargets();
 
         // 분할 바 렌더
         if (RootSplitter)

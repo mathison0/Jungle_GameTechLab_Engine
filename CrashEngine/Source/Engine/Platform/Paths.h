@@ -9,7 +9,7 @@
 class FPaths
 {
 public:
-    // 프로젝트 루트 (실행 파일이 있는 디렉터리)
+    // 프로젝트 루트 (Asset/Shaders/Settings가 있는 디렉터리)
     static std::wstring RootDir();
 
     // 주요 디렉터리

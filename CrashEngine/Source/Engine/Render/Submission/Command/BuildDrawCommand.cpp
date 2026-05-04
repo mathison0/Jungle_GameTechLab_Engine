@@ -728,9 +728,26 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
     for (const FUIProxy* Proxy : Context.Scene->GetUIProxies())
     {
         if (!Proxy ||
-            !Proxy->bVisible ||
-            Proxy->RenderSpace != EUIRenderSpace::ScreenSpace ||
-            Proxy->GeometryType != EUIGeometryType::Quad)
+            !Proxy->bVisible)
+        {
+            continue;
+        }
+
+        if (Proxy->ElementType == EUIElementType::Image)
+        {
+            if (Proxy->GeometryType != EUIGeometryType::Quad)
+            {
+                continue;
+            }
+        }
+        else if (Proxy->ElementType == EUIElementType::Text)
+        {
+            if (Proxy->Text.empty() || !Proxy->FontResource || !Proxy->FontResource->IsLoaded())
+            {
+                continue;
+            }
+        }
+        else
         {
             continue;
         }
@@ -748,6 +765,10 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
         SortedProxies.end(),
         [](const FSortedUIProxy& A, const FSortedUIProxy& B)
         {
+            if (A.Proxy->RenderSpace != B.Proxy->RenderSpace)
+            {
+                return A.Proxy->RenderSpace == EUIRenderSpace::WorldSpace;
+            }
             if (A.Proxy->Layer != B.Proxy->Layer)
             {
                 return A.Proxy->Layer < B.Proxy->Layer;
@@ -773,10 +794,44 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
 
     for (const FSortedUIProxy& Entry : SortedProxies)
     {
-        const FUIBatchRange Range = UIBatch.AddScreenQuad(
-            *Entry.Proxy,
-            Context.SceneView->ViewportWidth,
-            Context.SceneView->ViewportHeight);
+        FUIBatchRange Range = {};
+        if (Entry.Proxy->ElementType == EUIElementType::Text)
+        {
+            if (Entry.Proxy->RenderSpace == EUIRenderSpace::WorldSpace)
+            {
+                Range = UIBatch.AddWorldText(
+                    *Entry.Proxy,
+                    Entry.Proxy->FontResource,
+                    Context.SceneView->CameraRight,
+                    Context.SceneView->CameraUp);
+            }
+            else
+            {
+                Range = UIBatch.AddScreenText(
+                    *Entry.Proxy,
+                    Entry.Proxy->FontResource,
+                    Context.SceneView->ViewportWidth,
+                    Context.SceneView->ViewportHeight);
+            }
+        }
+        else
+        {
+            if (Entry.Proxy->RenderSpace == EUIRenderSpace::WorldSpace)
+            {
+                Range = UIBatch.AddWorldQuad(
+                    *Entry.Proxy,
+                    Context.SceneView->CameraRight,
+                    Context.SceneView->CameraUp);
+            }
+            else
+            {
+                Range = UIBatch.AddScreenQuad(
+                    *Entry.Proxy,
+                    Context.SceneView->ViewportWidth,
+                    Context.SceneView->ViewportHeight);
+            }
+        }
+
         if (Range.IndexCount > 0)
         {
             Ranges.push_back({ Entry.Proxy, Range });
@@ -808,8 +863,9 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
     for (const FUICommandRange& Entry : Ranges)
     {
         FDrawCommand& Cmd = OutList.AddCommand();
+        const bool bWorldSpace = Entry.Proxy->RenderSpace == EUIRenderSpace::WorldSpace;
         Cmd.Shader        = Shader;
-        Cmd.DepthStencil  = State.DepthStencil;
+        Cmd.DepthStencil  = bWorldSpace ? EDepthStencilState::DepthReadOnly : State.DepthStencil;
         Cmd.Blend         = State.Blend;
         Cmd.Rasterizer    = State.Rasterizer;
         Cmd.Topology      = State.Topology;
@@ -819,11 +875,20 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
         Cmd.FirstIndex    = Entry.Range.FirstIndex;
         Cmd.IndexCount    = Entry.Range.IndexCount;
         Cmd.DiffuseSRV    = Entry.Proxy->bUseTexture ? Entry.Proxy->TextureSRV : nullptr;
-        Cmd.PerShaderCB[0] = Entry.Proxy->bUseTexture
-            ? UIBatch.GetTextureParamsCB()
-            : UIBatch.GetSolidParamsCB();
+        if (Entry.Proxy->ElementType == EUIElementType::Text)
+        {
+            Cmd.PerShaderCB[0] = bWorldSpace ? UIBatch.GetWorldFontParamsCB() : UIBatch.GetFontParamsCB();
+        }
+        else
+        {
+            Cmd.PerShaderCB[0] = Entry.Proxy->bUseTexture
+                ? (bWorldSpace ? UIBatch.GetWorldTextureParamsCB() : UIBatch.GetTextureParamsCB())
+                : (bWorldSpace ? UIBatch.GetWorldSolidParamsCB() : UIBatch.GetSolidParamsCB());
+        }
         Cmd.Pass      = ERenderPass::UI;
-        Cmd.DebugName = "UI";
+        Cmd.DebugName = Entry.Proxy->ElementType == EUIElementType::Text
+            ? (bWorldSpace ? "WorldUIText" : "UIText")
+            : (bWorldSpace ? "WorldUI" : "UI");
         Cmd.SortKey   = BuildUIOrderSortKey(Order++);
     }
 }

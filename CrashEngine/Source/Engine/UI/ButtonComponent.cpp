@@ -7,7 +7,7 @@
 #include <cstring>
 #include <utility>
 
-IMPLEMENT_CLASS(UUIButtonComponent, UUIComponent)
+IMPLEMENT_CLASS(UUIButtonComponent, UTextureUIComponent)
 
 UUIButtonComponent::UUIButtonComponent()
 {
@@ -16,7 +16,7 @@ UUIButtonComponent::UUIButtonComponent()
 
 void UUIButtonComponent::Serialize(FArchive& Ar)
 {
-    UUIComponent::Serialize(Ar);
+    UTextureUIComponent::Serialize(Ar);
     Ar << bInteractable;
     Ar << ClickCount;
     Ar << NormalTint;
@@ -27,7 +27,7 @@ void UUIButtonComponent::Serialize(FArchive& Ar)
 
 void UUIButtonComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
-    UUIComponent::GetEditableProperties(OutProps);
+    UTextureUIComponent::GetEditableProperties(OutProps);
     OutProps.push_back({ "Button Interactable", EPropertyType::Bool, &bInteractable });
     OutProps.push_back({ "Button Normal Tint", EPropertyType::Color4, &NormalTint });
     OutProps.push_back({ "Button Hovered Tint", EPropertyType::Color4, &HoveredTint });
@@ -38,7 +38,7 @@ void UUIButtonComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutP
 
 void UUIButtonComponent::PostEditProperty(const char* PropertyName)
 {
-    UUIComponent::PostEditProperty(PropertyName);
+    UTextureUIComponent::PostEditProperty(PropertyName);
 
     if (std::strcmp(PropertyName, "Button Interactable") == 0)
     {
