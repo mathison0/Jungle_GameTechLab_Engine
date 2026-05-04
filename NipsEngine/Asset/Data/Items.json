@@ -34,7 +34,9 @@
       "endingRole": "Bad",
       "storyFlags": [
         "found_chocolate"
-      ]
+      ],
+      "pickSoundId": "pick-item-5",
+      "dropSoundId": "drop-item-5"
     },
     {
       "id": "medicine_bottle",
