@@ -17,7 +17,7 @@ WeaponDefs.MainCannon = {
             Sound = {
                 Fire = "PlayerShot1",
                 Bus = "SFX",
-                Volume = 1.0,
+                Volume = 0.4,
             },
         },
         [2] = {
@@ -30,7 +30,7 @@ WeaponDefs.MainCannon = {
             Sound = {
                 Fire = "PlayerShot2",
                 Bus = "SFX",
-                Volume = 1.0,
+                Volume = 0.4,
             },
         },
         [3] = {
@@ -43,7 +43,7 @@ WeaponDefs.MainCannon = {
             Sound = {
                 Fire = "PlayerShot3",
                 Bus = "SFX",
-                Volume = 1.0,
+                Volume = 0.4,
             },
         },
     },
@@ -161,7 +161,7 @@ WeaponDefs.Aura = {
             Sound = {
                 Tick = "MP_Air Wrench",
                 Bus = "SFX",
-                Volume = 0.3,
+                Volume = 0.5,
             },
         },
         [2] = {
@@ -174,7 +174,7 @@ WeaponDefs.Aura = {
             Sound = {
                 Tick = "MP_Air Wrench",
                 Bus = "SFX",
-                Volume = 0.3,
+                Volume = 0.5,
             },
         },
         [3] = {
@@ -187,7 +187,7 @@ WeaponDefs.Aura = {
             Sound = {
                 Tick = "MP_Air Wrench",
                 Bus = "SFX",
-                Volume = 0.3,
+                Volume = 0.5,
             },
         },
     },
