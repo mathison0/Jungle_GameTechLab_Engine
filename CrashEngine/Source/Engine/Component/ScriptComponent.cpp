@@ -396,6 +396,11 @@ void UScriptComponent::CallLuaFunction(const char* Name)
     }
 }
 
+void UScriptComponent::CallFunction(const char* Name)
+{
+    CallLuaFunction(Name);
+}
+
 void UScriptComponent::CallLuaTick(float DeltaTime)
 {
     if (!ScriptInstance.valid())
