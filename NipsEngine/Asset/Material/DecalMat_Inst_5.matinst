@@ -1,17 +1,5 @@
 {
         "Name" : "Asset/Material/DecalMat_Inst_5.matinst",
-        "OverridedParams" : [{
-            "Name" : "DiffuseMap",
-            "Type" : "Texture",
-            "Value" : "Asset/Mesh/Bucket/wooden_bucket_01_diff_1k.jpg"
-          }, {
-            "Name" : "NormalMap",
-            "Type" : "Texture",
-            "Value" : "Asset/Mesh/Bucket/wooden_bucket_01_diff_1k.jpg"
-          }, {
-            "Name" : "bHasNormalMap",
-            "Type" : "Bool",
-            "Value" : false
-          }],
+        "OverridedParams" : [],
         "Parent" : "DecalMat"
       }

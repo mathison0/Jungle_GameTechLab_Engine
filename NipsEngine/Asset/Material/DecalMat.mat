@@ -16,7 +16,7 @@
           }, {
             "Name" : "DiffuseMap",
             "Type" : "Texture",
-            "Value" : "Asset/Texture/Blood_Stain_sgfjdepc_1K.png"
+            "Value" : "Asset/Texture/stainpink.png"
           }, {
             "Name" : "bHasNormalMap",
             "Type" : "Bool",

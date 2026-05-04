@@ -17,7 +17,7 @@ REGISTER_FACTORY(UDecalComponent)
 
 namespace
 {
-	constexpr float CleanCompleteThreshold = 0.85f;
+	constexpr float CleanCompleteThreshold = 0.75f;
 	constexpr float CleanCompleteFlashDuration = 0.22f;
 	constexpr float CleanCompleteFadeOutDuration = 0.65f;
 }
@@ -253,7 +253,7 @@ void UDecalComponent::StartCleanCompleteFlash(float CleanAlpha)
 	DecalColor.R = 1.0f;
 	DecalColor.G = 1.0f;
 	DecalColor.B = 1.0f;
-	DecalColor.A = std::max(CleanAlpha, 0.85f);
+	DecalColor.A = std::max(CleanAlpha, 0.75f);
 }
 
 void UDecalComponent::TickCleanCompleteFlash(float DeltaTime)

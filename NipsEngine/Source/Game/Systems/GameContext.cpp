@@ -13,7 +13,7 @@
 
 namespace
 {
-	constexpr float CleanDecalThreshold = 0.85f;
+	constexpr float CleanDecalThreshold = 0.75f;
 	constexpr const char* CleanlinessItemId = "crumpled_paper";
 
 	bool IsLiveObjectPointer(const UObject* Object)

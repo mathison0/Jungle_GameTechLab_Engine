@@ -3,7 +3,7 @@
         "OverridedParams" : [{
             "Name" : "DiffuseMap",
             "Type" : "Texture",
-            "Value" : "Asset/Mesh/Bucket/wooden_bucket_01_diff_1k.jpg"
+            "Value" : "Asset/Texture/stain5.png"
           }],
         "Parent" : "DecalMat"
       }
