@@ -95,7 +95,9 @@ function Script:UpdateHealthBar()
 
     local fullWidth = self.HealthBarWidth or 2.0
     local height = self.HealthBarHeight or 0.16
-    self.HealthBarFill:SetUIWorldSize({ math.max(0.001, fullWidth * ratio), height })
+    local fillWidth = math.max(0.001, fullWidth * ratio)
+    self.HealthBarFill:SetUIPivot({ fullWidth * 0.5 / fillWidth, 12.5 })
+    self.HealthBarFill:SetUIWorldSize({ fillWidth, height })
 
     local red = { r = 0.95, g = 0.16, b = 0.12 }
     local yellow = { r = 0.95, g = 0.78, b = 0.12 }
