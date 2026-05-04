@@ -39,6 +39,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <functional>
 #include <fstream>
 #include <iostream>
@@ -658,7 +659,7 @@ void GameUISystem::RequestSaveScore()
 	FPaths::CreateDir(SavesDir);
 
 	const std::wstring ScorePath = FPaths::Combine(SavesDir, L"Scores.txt");
-	std::ofstream File(FPaths::ToUtf8(ScorePath), std::ios::app);
+	std::ofstream File{ std::filesystem::path(ScorePath), std::ios::app };
 	if (!File.is_open())
 		return;
 
@@ -813,7 +814,7 @@ bool GameUISystem::WriteScoreRecord(const std::string& PlayerId)
 	FPaths::CreateDir(SavesDir);
 
 	const std::wstring ScorePath = GetScoreFilePath();
-	std::ofstream File(FPaths::ToUtf8(ScorePath), std::ios::app);
+	std::ofstream File{ std::filesystem::path(ScorePath), std::ios::app };
 	if (!File.is_open())
 		return false;
 
@@ -843,7 +844,7 @@ void GameUISystem::LoadScoreboard()
 {
 	ScoreboardEntries.clear();
 
-	std::ifstream File(FPaths::ToUtf8(GetScoreFilePath()));
+	std::ifstream File{ std::filesystem::path(GetScoreFilePath()) };
 	if (!File.is_open())
 		return;
 
@@ -1065,7 +1066,7 @@ void GameUISystem::ApplySettings()
 void GameUISystem::LoadSettings()
 {
 	const std::wstring SettingsPath = FPaths::Combine(FPaths::SettingsDir(), L"Game.ini");
-	std::ifstream File(FPaths::ToUtf8(SettingsPath));
+	std::ifstream File{ std::filesystem::path(SettingsPath) };
 	if (!File.is_open())
 		return;
 
@@ -1095,7 +1096,7 @@ void GameUISystem::SaveSettings()
 	FPaths::CreateDir(SettingsDir);
 
 	const std::wstring SettingsPath = FPaths::Combine(SettingsDir, L"Game.ini");
-	std::ofstream File(FPaths::ToUtf8(SettingsPath));
+	std::ofstream File{ std::filesystem::path(SettingsPath) };
 	if (!File.is_open())
 		return;
 
