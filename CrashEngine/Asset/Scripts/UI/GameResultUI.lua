@@ -10,9 +10,32 @@ local Script = {
 }
 
 local GameManager = require("GameManager")
+local UIStyle = require("UI.UIStyle")
 
 local function vec2(x, y)
     return { x = x, y = y }
+end
+
+local function clamp(value, minValue, maxValue)
+    if value < minValue then
+        return minValue
+    end
+    if value > maxValue then
+        return maxValue
+    end
+    return value
+end
+
+local function lerp(a, b, t)
+    return a + (b - a) * t
+end
+
+local function setTint(ui, tint)
+    if ui == nil or not ui:IsValid() or tint == nil then
+        return
+    end
+
+    ui:SetUITint(tint[1], tint[2], tint[3], tint[4])
 end
 
 local function formatTime(timeRemaining)
@@ -53,10 +76,7 @@ local function configureUI(ui, anchor, position, size, layer, zOrder, tint, hitT
     ui:SetUIZOrder(zOrder)
     ui:SetUIHitTestVisible(hitTest == true)
 
-    if tint ~= nil then
-        ui:SetUITint(tint[1], tint[2], tint[3], tint[4])
-    end
-
+    setTint(ui, tint)
     ui:SetUIVisibility(true)
     return true
 end
@@ -67,6 +87,27 @@ local function resultTitle(resultType)
     end
 
     return "GAME OVER"
+end
+
+local function resultShort(resultType)
+    if resultType == "GameClear" then
+        return "CLEAR"
+    end
+
+    return "OVER"
+end
+
+local function rankColor(rank)
+    if rank == 1 then
+        return UIStyle.Colors.Gold
+    end
+    if rank == 2 then
+        return UIStyle.Colors.Silver
+    end
+    if rank == 3 then
+        return UIStyle.Colors.Bronze
+    end
+    return UIStyle.Colors.Text
 end
 
 function Script:BeginPlay()
@@ -109,6 +150,10 @@ function Script:CreateImage(anchor, position, size, layer, zOrder, tint)
         return nil
     end
 
+    if ui.SetUITexturePath ~= nil then
+        ui:SetUITexturePath("")
+    end
+
     return ui
 end
 
@@ -119,7 +164,7 @@ function Script:CreateText(text, anchor, position, size, layer, zOrder, fontSize
     end
 
     local ui = actor:GetComponent("UTextUIComponent")
-    if not configureUI(ui, anchor, position, size, layer, zOrder, tint or { 1.0, 1.0, 1.0, 1.0 }, false) then
+    if not configureUI(ui, anchor, position, size, layer, zOrder, tint or UIStyle.Colors.Text, false) then
         return nil
     end
 
@@ -138,15 +183,17 @@ function Script:CreateButton(label, anchor, position, action)
     end
 
     local layer = self.Layer or 380
+    local width = self.ButtonWidth or 260.0
+    local height = self.ButtonHeight or 58.0
     local button = actor:GetComponent("UUIButtonComponent")
     if not configureUI(
         button,
         anchor,
         position,
-        vec2(self.ButtonWidth or 260.0, self.ButtonHeight or 58.0),
+        vec2(width, height),
         layer + 4,
         0,
-        { 0.10, 0.18, 0.28, 0.92 },
+        UIStyle.Colors.Button,
         true
     ) then
         return nil
@@ -155,22 +202,27 @@ function Script:CreateButton(label, anchor, position, action)
     button:SetUITexturePath("")
     button:SetButtonInteractable(true)
 
-    self:CreateText(
+    local labelUI = self:CreateText(
         label,
         anchor,
         position,
-        vec2((self.ButtonWidth or 260.0) - 20.0, self.ButtonHeight or 58.0),
+        vec2(width - 20.0, height),
         layer + 5,
         0,
-        1.0,
-        { 1.0, 1.0, 1.0, 1.0 },
+        0.96,
+        UIStyle.Colors.Text,
         "Center"
     )
 
     table.insert(self.buttons, {
         component = button,
+        label = labelUI,
         lastClickCount = button:GetButtonClickCount() or 0,
         action = action,
+        width = width,
+        height = height,
+        scale = 1.0,
+        tint = UIStyle.Colors.Button,
     })
 
     return button
@@ -212,40 +264,86 @@ function Script:GetRecords(source)
     return {}
 end
 
-function Script:CreateFrame(title)
+function Script:CreateFrame(title, titleTint)
     local layer = self.Layer or 380
-    self:CreateImage(vec2(0.5, 0.5), vec2(0.0, 0.0), vec2(4000.0, 4000.0), layer, 0, { 0.0, 0.0, 0.0, 0.56 })
-    self:CreateImage(
-        vec2(0.5, 0.5),
-        vec2(0.0, 0.0),
-        vec2(self.PanelWidth or 720.0, self.PanelHeight or 560.0),
-        layer + 1,
-        0,
-        { 0.035, 0.045, 0.070, 0.96 }
-    )
-    self:CreateText(title, vec2(0.5, 0.245), vec2(0.0, 0.0), vec2(620.0, 58.0), layer + 2, 0, 1.45, { 1.0, 0.92, 0.62, 1.0 })
+    local panelWidth = self.PanelWidth or 720.0
+    local panelHeight = self.PanelHeight or 560.0
+    self:CreateImage(vec2(0.5, 0.5), vec2(0.0, 0.0), vec2(4000.0, 4000.0), layer, 0, UIStyle.Colors.Overlay)
+    self:CreateImage(vec2(0.5, 0.5), vec2(0.0, 0.0), vec2(panelWidth, panelHeight), layer + 1, 0, UIStyle.Colors.Panel)
+    self:CreateImage(vec2(0.5, 0.252), vec2(0.0, 0.0), vec2(220.0, 3.0), layer + 2, 0, UIStyle.Colors.PanelAccent)
+    self:CreateText(title, vec2(0.5, 0.225), vec2(0.0, 0.0), vec2(640.0, 62.0), layer + 3, 0, 1.42, titleTint or UIStyle.Colors.Gold)
 end
 
-function Script:CreateScoreRows(records, startY, layer)
-    self:CreateText("RANK   RESULT       TIME    KILLS", vec2(0.5, startY), vec2(0.0, 0.0), vec2(620.0, 26.0), layer, 0, 0.68, { 0.72, 0.78, 0.88, 1.0 })
+function Script:CreateStatChip(label, value, xOffset, yAnchor, accentColor)
+    local layer = (self.Layer or 380) + 2
+    self:CreateImage(vec2(0.5, yAnchor), vec2(xOffset, 0.0), vec2(178.0, 62.0), layer, 0, { 0.070, 0.088, 0.120, 0.94 })
+    self:CreateImage(vec2(0.5, yAnchor), vec2(xOffset, -29.0), vec2(144.0, 2.0), layer + 1, 0, accentColor or UIStyle.Colors.Gold)
+    self:CreateText(label, vec2(0.5, yAnchor), vec2(xOffset, -13.0), vec2(150.0, 18.0), layer + 2, 0, 0.52, UIStyle.Colors.MutedText)
+    self:CreateText(value, vec2(0.5, yAnchor), vec2(xOffset, 12.0), vec2(150.0, 28.0), layer + 2, 1, 0.88, UIStyle.Colors.Text)
+end
 
-    local rowY = startY + 0.036
-    local maxRows = math.min(10, #(records or {}))
+function Script:CreateScoreHeader(yAnchor, layer)
+    local headerTint = { 0.055, 0.070, 0.100, 0.98 }
+    self:CreateImage(vec2(0.5, yAnchor), vec2(0.0, 0.0), vec2(620.0, 28.0), layer, 0, headerTint)
+    self:CreateText("RANK", vec2(0.5, yAnchor), vec2(-252.0, 0.0), vec2(80.0, 24.0), layer + 1, 0, 0.54, UIStyle.Colors.MutedText)
+    self:CreateText("RESULT", vec2(0.5, yAnchor), vec2(-125.0, 0.0), vec2(120.0, 24.0), layer + 1, 0, 0.54, UIStyle.Colors.MutedText)
+    self:CreateText("TIME", vec2(0.5, yAnchor), vec2(40.0, 0.0), vec2(120.0, 24.0), layer + 1, 0, 0.54, UIStyle.Colors.MutedText)
+    self:CreateText("KILLS", vec2(0.5, yAnchor), vec2(218.0, 0.0), vec2(100.0, 24.0), layer + 1, 0, 0.54, UIStyle.Colors.MutedText)
+end
+
+function Script:CreateScoreRow(record, index, yAnchor, layer, highlightRank)
+    local rank = tonumber(record.Rank) or index
+    local isHighlight = highlightRank ~= nil and rank == highlightRank
+    local rowTint = index % 2 == 0 and { 0.050, 0.062, 0.086, 0.86 } or { 0.038, 0.050, 0.074, 0.86 }
+    if isHighlight then
+        rowTint = UIStyle.Colors.CardHighlight
+    end
+
+    self:CreateImage(vec2(0.5, yAnchor), vec2(0.0, 0.0), vec2(620.0, 28.0), layer, index, rowTint)
+
+    local result = resultShort(record.ResultType)
+    local resultTint = record.ResultType == "GameClear" and UIStyle.Colors.Clear or UIStyle.Colors.Over
+    local rankTint = rankColor(rank)
+    if isHighlight then
+        rankTint = UIStyle.Colors.Gold
+    end
+
+    self:CreateText("#" .. string.format("%02d", rank), vec2(0.5, yAnchor), vec2(-252.0, 0.0), vec2(80.0, 24.0), layer + 1, index, 0.58, rankTint)
+    self:CreateText(result, vec2(0.5, yAnchor), vec2(-125.0, 0.0), vec2(120.0, 24.0), layer + 1, index, 0.58, resultTint)
+    self:CreateText(formatTime(record.RemainingTime), vec2(0.5, yAnchor), vec2(40.0, 0.0), vec2(120.0, 24.0), layer + 1, index, 0.58, UIStyle.Colors.Text)
+    self:CreateText(tostring(record.KillCount or 0), vec2(0.5, yAnchor), vec2(218.0, 0.0), vec2(100.0, 24.0), layer + 1, index, 0.58, UIStyle.Colors.Text)
+end
+
+function Script:CreateScoreRows(records, startY, layer, highlightRank, highlightRecord)
+    local rowStep = 0.029
+    self:CreateScoreHeader(startY, layer)
+
+    local displayRecords = {}
+    local sourceRecords = records or {}
+    local sourceCount = #sourceRecords
+    local maxRows = math.min(10, sourceCount)
+    if highlightRecord ~= nil and highlightRank ~= nil and highlightRank > 10 then
+        maxRows = math.min(9, sourceCount)
+    end
+
+    for index = 1, maxRows do
+        table.insert(displayRecords, sourceRecords[index])
+    end
+
+    if highlightRecord ~= nil and highlightRank ~= nil and highlightRank > 10 then
+        table.insert(displayRecords, highlightRecord)
+    end
+
+    maxRows = #displayRecords
     if maxRows <= 0 then
-        self:CreateText("NO RECORDS", vec2(0.5, rowY + 0.03), vec2(0.0, 0.0), vec2(620.0, 30.0), layer, 0, 0.8, { 0.9, 0.9, 0.9, 1.0 })
+        self:CreateImage(vec2(0.5, startY + 0.080), vec2(0.0, 0.0), vec2(620.0, 74.0), layer, 1, { 0.045, 0.057, 0.080, 0.88 })
+        self:CreateText("NO RECORDS YET", vec2(0.5, startY + 0.064), vec2(0.0, 0.0), vec2(620.0, 30.0), layer + 1, 1, 0.78, UIStyle.Colors.Text)
+        self:CreateText("Finish a run to place your first score.", vec2(0.5, startY + 0.103), vec2(0.0, 0.0), vec2(620.0, 24.0), layer + 1, 2, 0.54, UIStyle.Colors.MutedText)
         return
     end
 
     for index = 1, maxRows do
-        local record = records[index]
-        local rank = record.Rank or index
-        local result = record.ResultType == "GameClear" and "CLEAR" or "OVER "
-        local text = string.format("#%02d    %-6s      %s    %d", rank, result, formatTime(record.RemainingTime), record.KillCount or 0)
-        local tint = { 0.96, 0.96, 0.96, 1.0 }
-        if record.ResultType == "GameClear" then
-            tint = { 0.70, 1.0, 0.78, 1.0 }
-        end
-        self:CreateText(text, vec2(0.5, rowY + (index - 1) * 0.035), vec2(0.0, 0.0), vec2(620.0, 28.0), layer, index, 0.74, tint)
+        self:CreateScoreRow(displayRecords[index], index, startY + rowStep * index, layer, highlightRank)
     end
 end
 
@@ -258,20 +356,21 @@ function Script:ShowResult(record)
 
     local layer = self.Layer or 380
     local resultType = record ~= nil and record.ResultType or "GameOver"
-    local title = resultTitle(resultType)
-    self:CreateFrame(title)
+    local titleTint = resultType == "GameClear" and UIStyle.Colors.Clear or UIStyle.Colors.Over
+    self:CreateFrame(resultTitle(resultType), titleTint)
 
     local remainingTime = record ~= nil and record.RemainingTime or 0.0
     local killCount = record ~= nil and record.KillCount or 0
-    local rank = record ~= nil and record.Rank or 0
-    local rankText = rank > 0 and ("RANK #" .. tostring(rank)) or "RANK --"
+    local rank = record ~= nil and (tonumber(record.Rank) or 0) or 0
+    local rankText = rank > 0 and ("#" .. tostring(rank)) or "--"
 
-    self:CreateText("TIME LEFT  " .. formatTime(remainingTime), vec2(0.5, 0.335), vec2(0.0, 0.0), vec2(520.0, 34.0), layer + 2, 0, 0.88, { 1.0, 1.0, 1.0, 1.0 })
-    self:CreateText("KILLS  " .. tostring(killCount), vec2(0.5, 0.382), vec2(0.0, 0.0), vec2(520.0, 34.0), layer + 2, 0, 0.88, { 1.0, 1.0, 1.0, 1.0 })
-    self:CreateText(rankText, vec2(0.5, 0.428), vec2(0.0, 0.0), vec2(520.0, 34.0), layer + 2, 0, 0.94, { 1.0, 0.88, 0.48, 1.0 })
+    self:CreateStatChip("TIME LEFT", formatTime(remainingTime), -205.0, 0.335, UIStyle.Colors.Gold)
+    self:CreateStatChip("KILLS", tostring(killCount), 0.0, 0.335, UIStyle.Colors.Clear)
+    self:CreateStatChip("RANK", rankText, 205.0, 0.335, UIStyle.Colors.PanelAccent)
 
-    self:CreateScoreRows(self:GetRecords(record), 0.488, layer + 2)
-    self:CreateButton("MAIN MENU", vec2(0.5, 0.790), vec2(0.0, 0.0), "MainMenu")
+    self:CreateText("TOP RECORDS", vec2(0.5, 0.425), vec2(0.0, 0.0), vec2(620.0, 28.0), layer + 3, 0, 0.70, UIStyle.Colors.MutedText)
+    self:CreateScoreRows(self:GetRecords(record), 0.462, layer + 2, rank > 0 and rank or nil, record)
+    self:CreateButton("MAIN MENU", vec2(0.5, 0.805), vec2(0.0, 0.0), "MainMenu")
 end
 
 function Script:ShowScoreBoard()
@@ -282,30 +381,61 @@ function Script:ShowScoreBoard()
     self.buttons = {}
 
     local layer = self.Layer or 380
-    self:CreateFrame("SCORE BOARD")
-    self:CreateScoreRows(self:GetRecords(nil), 0.345, layer + 2)
+    self:CreateFrame("SCORE BOARD", UIStyle.Colors.Gold)
+    self:CreateText("BEST RUNS", vec2(0.5, 0.315), vec2(0.0, 0.0), vec2(620.0, 30.0), layer + 3, 0, 0.72, UIStyle.Colors.MutedText)
+    self:CreateScoreRows(self:GetRecords(nil), 0.360, layer + 2, nil, nil)
     self:CreateButton("CLOSE", vec2(0.5, 0.790), vec2(0.0, 0.0), "Close")
 end
 
+function Script:UpdateButton(entry, deltaTime)
+    local button = entry.component
+    if button == nil or not button:IsValid() then
+        return
+    end
+
+    local hovered = button.IsButtonHovered ~= nil and button:IsButtonHovered()
+    local pressed = button.IsButtonPressed ~= nil and button:IsButtonPressed()
+    local targetScale = 1.0
+    local targetTint = UIStyle.Colors.Button
+    if hovered then
+        targetScale = 1.04
+        targetTint = UIStyle.Colors.ButtonHover
+    end
+    if pressed then
+        targetScale = 0.96
+        targetTint = UIStyle.Colors.ButtonPressed
+    end
+
+    local alpha = clamp((deltaTime or 0.0) * 18.0, 0.0, 1.0)
+    entry.scale = lerp(entry.scale or 1.0, targetScale, alpha)
+    entry.tint = UIStyle.LerpColor(entry.tint or UIStyle.Colors.Button, targetTint, alpha)
+    button:SetUISizeDelta(vec2(entry.width * entry.scale, entry.height * entry.scale))
+    setTint(button, entry.tint)
+    setTint(entry.label, hovered and UIStyle.Colors.Gold or UIStyle.Colors.Text)
+end
+
 function Script:Tick(deltaTime)
-    if not self.visible or self.locked then
+    if not self.visible then
         return
     end
 
     for _, entry in ipairs(self.buttons or {}) do
-        local button = entry.component
-        if button ~= nil and button:IsValid() then
-            local clickCount = button:GetButtonClickCount() or 0
-            if clickCount > (entry.lastClickCount or 0) then
-                entry.lastClickCount = clickCount
-                self.locked = true
+        self:UpdateButton(entry, deltaTime)
+        if not self.locked then
+            local button = entry.component
+            if button ~= nil and button:IsValid() then
+                local clickCount = button:GetButtonClickCount() or 0
+                if clickCount > (entry.lastClickCount or 0) then
+                    entry.lastClickCount = clickCount
+                    self.locked = true
 
-                if entry.action == "MainMenu" then
-                    GameManager.ReturnToMainMenu()
-                else
-                    self:Hide()
+                    if entry.action == "MainMenu" then
+                        GameManager.ReturnToMainMenu()
+                    else
+                        self:Hide()
+                    end
+                    return
                 end
-                return
             end
         end
     end
