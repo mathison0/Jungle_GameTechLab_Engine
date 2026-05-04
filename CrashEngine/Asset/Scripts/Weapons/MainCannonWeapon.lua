@@ -109,7 +109,7 @@ end
 function MainCannonWeapon:GetSearchOrigin()
     if self.MuzzleComponent ~= nil and self.MuzzleComponent:IsValid() then
         return self.MuzzleComponent:GetWorldLocation()
-    end
+    end  
 
     if self.VisualComponent ~= nil and self.VisualComponent:IsValid() then
         return self.VisualComponent:GetWorldLocation()
@@ -177,7 +177,7 @@ function MainCannonWeapon:TargetingLoop()
         end
 
         if self.VisualComponent ~= nil and self.VisualComponent:IsValid() and self:IsTargetValid() then
-            local myPos = self.VisualComponent:GetWorldLocation()
+            local myPos = self:GetSearchOrigin()
             local targetPos = self.Target:GetLocation()
 
             local z = myPos.z or myPos[3]

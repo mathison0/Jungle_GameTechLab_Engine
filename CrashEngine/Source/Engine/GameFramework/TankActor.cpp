@@ -155,7 +155,7 @@ void ATankActor::InitDefaultComponents()
     auto Script = AddComponent<UScriptComponent>();
     Script->SetScriptPath(TankScriptPath);
 
-    HeadGunProjectile = GetBasicMesh("Models/_Basic/Sphere.OBJ");
+    HeadGunProjectile = GetBasicMesh("Models/Bullet/DefaultBullet.OBJ");
 }
 
 FTankWeaponAttackParams ATankActor::ReadWeaponAttackParamsFromLua(sol::object ParamsObject) const
@@ -418,7 +418,7 @@ UStaticMesh* ATankActor::GetHeadGunProjectile()
 {
     if (!HeadGunProjectile)
     {
-        HeadGunProjectile = GetBasicMesh("Models/_Basic/Sphere.OBJ");
+        HeadGunProjectile = GetBasicMesh("Models/Bullet/DefaultBullet.OBJ");
     }
     return HeadGunProjectile;
 }
