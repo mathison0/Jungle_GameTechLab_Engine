@@ -5,13 +5,42 @@
 #include "GameFramework/World.h"
 #include "Component/CameraComponent.h"
 #include "Component/DecalComponent.h"
+#include "Core/Paths.h"
 #include "Scripting/LuaBindings.h"
 #include "Core/Logger.h"
 #include "GameFramework/PrimitiveActors.h"
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <utility>
+
+#if WITH_LUA
+namespace
+{
+	bool LoadLuaSourceFromFile(const FString& ScriptPath, FString& OutSource, FString& OutError)
+	{
+		const std::filesystem::path WidePath(FPaths::ToAbsolute(FPaths::ToWide(ScriptPath)));
+		std::ifstream File(WidePath, std::ios::binary);
+		if (!File.is_open())
+		{
+			OutError = "failed to open script file.";
+			return false;
+		}
+
+		OutSource.assign(std::istreambuf_iterator<char>(File), std::istreambuf_iterator<char>());
+		if (File.bad())
+		{
+			OutError = "failed to read script file.";
+			return false;
+		}
+
+		return true;
+	}
+}
+#endif
 
 FLuaScriptSystem::FLuaScriptSystem()
 {
@@ -35,7 +64,16 @@ bool FLuaScriptSystem::LoadScript(ULuaScriptComponent* Component, const FString&
 	RegisterLuaBindings(*State.Lua);
 	BindCoroutineAPI(Component, State);
 
-	sol::protected_function_result Result = State.Lua->safe_script_file(ScriptPath, sol::script_pass_on_error);
+	FString ScriptSource;
+	FString ReadError;
+	if (!LoadLuaSourceFromFile(ScriptPath, ScriptSource, ReadError))
+	{
+		SetLastError(ReadError);
+		UE_LOG("LuaScriptSystem: failed to load '%s': %s", ScriptPath.c_str(), LastError.c_str());
+		return false;
+	}
+
+	sol::protected_function_result Result = State.Lua->safe_script(ScriptSource, sol::script_pass_on_error);
 	if (!Result.valid())
 	{
 		sol::error Error = Result;
