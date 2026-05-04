@@ -74,6 +74,7 @@ void AProjectileActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
 
 int32 AProjectileActor::ConsumePierce()
 {
+    // PierceCount stores extra pierces after the first hit.
     --PierceCount;
     return PierceCount;
 }

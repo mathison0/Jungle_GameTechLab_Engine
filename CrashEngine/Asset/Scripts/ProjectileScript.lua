@@ -108,6 +108,8 @@ function Script:OnOverlapBegin(otherCollider)
         Log("[Projectile] Damage failed")
     end
 
+    -- Pierce is extra enemies after the first hit, so the projectile expires
+    -- only after the consumed remaining pierce count drops below zero.
     local remainPierce = -1
     if self.ConsumePierce ~= nil then
         remainPierce = self.ConsumePierce()

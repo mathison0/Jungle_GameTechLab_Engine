@@ -67,6 +67,7 @@ function EnemyState:Die()
     local PoolManager = GetActorPoolManager()
     if PoolManager:IsValid() then
         local deathLocation = self:GetDeathLocation()
+        deathLocation.z = deathLocation.z + 0.3
         self:SpawnGem(PoolManager, deathLocation)
         self:SpawnDeathDecal(PoolManager, deathLocation)
         PoolManager:Release(self.actor)
