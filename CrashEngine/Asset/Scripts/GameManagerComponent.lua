@@ -24,7 +24,7 @@ function Script:Tick(deltaTime)
 end
 
 function Script:EndPlay()
-    Log("GameManagerComponent: EndPlay")
+    Log("--- GameManagerComponent: EndPlay ---")
     
     local GameManager = require("GameManager")
     if GameManager.WeaponInventory ~= nil then
@@ -34,6 +34,9 @@ function Script:EndPlay()
             end
         end
     end
+
+    -- 세션 종료 시 전역 상태 초기화 (PIE 재시작 시 stale reference 방지)
+    GameManager._ResetState()
 end
 
 return Script

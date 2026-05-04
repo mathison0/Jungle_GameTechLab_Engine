@@ -5,6 +5,9 @@ local Vec = require("Core.Vector")
 local ChaseAI = {
     properties = {
         MoveSpeed = { type = "float", default = 1.0, min = 0.1, max = 10.0, speed = 0.05},
+        Damage = { type = "float", default = 10.0, min = 0.0, max = 100.0, speed = 1.0 },
+        AttackInterval = { type = "float", default = 1.0, min = 0.1, max = 10.0, speed = 0.1 },
+        CollisionRadius = { type = "float", default = 1.0, min = 0.1, max = 10.0, speed = 0.1 },
     }
 }
 
