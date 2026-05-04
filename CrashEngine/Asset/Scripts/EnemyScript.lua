@@ -6,8 +6,8 @@ local Script = {
 }
 
 function Script:BeginPlay()
-    -- GameManager에서 플레이어 액터를 가져오되, 세션 간 잔류 데이터로 인한 에러 방지
-    if GameManager.PlayerScript and type(GameManager.PlayerScript.GetActor) == "function" then
+    -- GameManager가 이번 세션에서 완전히 초기화되었는지 확인 후 플레이어 참조 가져오기
+    if GameManager.Initialized and GameManager.PlayerScript and type(GameManager.PlayerScript.GetActor) == "function" then
         self.target = GameManager.PlayerScript:GetActor()
     end
 
