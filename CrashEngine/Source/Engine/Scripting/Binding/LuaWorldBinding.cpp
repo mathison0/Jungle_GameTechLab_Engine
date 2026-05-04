@@ -25,7 +25,10 @@ sol::table FLuaWorldHandle::GetActorsByTag(sol::this_state State, const FString&
     int32 Index = 1;
     for (AActor* Actor : World->GetActors())
     {
-        if (Actor && Actor->GetActorTag() == TargetTag) Result[Index++] = FLuaActorHandle(Actor);
+        if (Actor && Actor->IsVisible() && Actor->GetActorTag() == TargetTag)
+        {
+            Result[Index++] = FLuaActorHandle(Actor);
+        }
     }
     return Result;
 }

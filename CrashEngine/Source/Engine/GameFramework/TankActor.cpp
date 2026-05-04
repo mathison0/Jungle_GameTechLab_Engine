@@ -13,6 +13,7 @@
 #include "GameFramework/HomingMissileActor.h"
 #include "GameFramework/World.h"
 #include "UI/TextureUIComponent.h"
+#include "Sound/SoundManager.h"
 
 #include <algorithm>
 #include <string>
@@ -396,6 +397,8 @@ void ATankActor::NotifyInstantHit(const FString& WeaponId, const FTankWeaponAtta
            WeaponId.c_str(), SlotIndex, Params.Damage,
            OriginLocation.X, OriginLocation.Y, OriginLocation.Z,
            TargetActor->GetFName().ToString().c_str());
+	
+	FSoundManager::Get().Play(FName("SubAttack"), ESoundBus::SFX, 1.0f);
 }
 
 void ATankActor::ApplyAreaDamage(const FString& WeaponId, const FTankWeaponAttackParams& Params, const FVector& Center, float Radius)

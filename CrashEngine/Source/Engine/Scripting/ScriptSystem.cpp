@@ -1,6 +1,8 @@
 ﻿#include "ScriptSystem.h"
 
 #include <Sol/sol.hpp>
+#include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -13,10 +15,80 @@
 #include "LuaEngineBinding.h"
 #include "GameFramework/World.h"
 #include "Runtime/Engine.h"
+#include "Sound/SoundManager.h"
 
 namespace
 {
 constexpr float EditorScriptRefreshInterval = 0.5f;
+
+ESoundBus ParseSoundBus(const FString& BusName)
+{
+	FString Lower = BusName;
+	std::transform(Lower.begin(), Lower.end(), Lower.begin(),
+		[](unsigned char Ch)
+		{
+			return static_cast<char>(std::tolower(Ch));
+		});
+
+	if (Lower == "master")
+	{
+		return ESoundBus::Master;
+	}
+	if (Lower == "bgm")
+	{
+		return ESoundBus::BGM;
+	}
+	if (Lower == "ui")
+	{
+		return ESoundBus::UI;
+	}
+	if (Lower == "player")
+	{
+		return ESoundBus::Player;
+	}
+	if (Lower == "ambience" || Lower == "ambient")
+	{
+		return ESoundBus::Ambience;
+	}
+
+	return ESoundBus::SFX;
+}
+
+void ReadSoundPlayArgs(const sol::variadic_args& Args, FString& OutBusName, float& OutVolume)
+{
+	bool bBusRead = false;
+	bool bVolumeRead = false;
+
+	for (const sol::object& Arg : Args)
+	{
+		if (!bBusRead && Arg.is<FString>())
+		{
+			OutBusName = Arg.as<FString>();
+			bBusRead = true;
+			continue;
+		}
+
+		if (!bVolumeRead && Arg.is<float>())
+		{
+			OutVolume = Arg.as<float>();
+			bVolumeRead = true;
+			continue;
+		}
+
+		if (!bVolumeRead && Arg.is<double>())
+		{
+			OutVolume = static_cast<float>(Arg.as<double>());
+			bVolumeRead = true;
+			continue;
+		}
+
+		if (!bVolumeRead && Arg.is<int>())
+		{
+			OutVolume = static_cast<float>(Arg.as<int>());
+			bVolumeRead = true;
+		}
+	}
+}
 }
 
 FScriptSystem::FScriptSystem()
@@ -207,6 +279,59 @@ void FScriptSystem::RegisterEngineAPI() const
 	Lua->set_function("Log", [](const FString& Message)
 		{
 			UE_LOG([Lua], Info, "%s", Message.c_str());
+		});
+
+	Lua->new_usertype<FSoundHandle>(
+		"SoundHandle",
+		sol::constructors<FSoundHandle()>(),
+		"Id", &FSoundHandle::Id,
+		"Generation", &FSoundHandle::Generation,
+		"IsValid", &FSoundHandle::IsValid);
+
+	Lua->set_function("PlaySound", [](const FString& Key, const sol::variadic_args& Args) -> FSoundHandle
+		{
+			FString BusName = "SFX";
+			float Volume = 1.0f;
+			ReadSoundPlayArgs(Args, BusName, Volume);
+			return FSoundManager::Get().Play(FName(Key), ParseSoundBus(BusName), Volume);
+		});
+
+	Lua->set_function("PlayLoopSound", [](const FString& Key, const sol::variadic_args& Args) -> FSoundHandle
+		{
+			FString BusName = "SFX";
+			float Volume = 1.0f;
+			ReadSoundPlayArgs(Args, BusName, Volume);
+			return FSoundManager::Get().PlayLoop(FName(Key), ParseSoundBus(BusName), Volume);
+		});
+
+	Lua->set_function("StopSound", [](const FSoundHandle& Handle)
+		{
+			FSoundManager::Get().Stop(Handle);
+		});
+
+	Lua->set_function("StopSoundBus", [](const FString& BusName)
+		{
+			FSoundManager::Get().StopBus(ParseSoundBus(BusName));
+		});
+
+	Lua->set_function("SetSoundBusVolume", [](const FString& BusName, float Volume)
+		{
+			FSoundManager::Get().SetBusVolume(ParseSoundBus(BusName), Volume);
+		});
+
+	Lua->set_function("SetMasterSoundVolume", [](float Volume)
+		{
+			FSoundManager::Get().SetMasterVolume(Volume);
+		});
+
+	Lua->set_function("SetSoundVolume", [](const FSoundHandle& Handle, float Volume)
+		{
+			FSoundManager::Get().SetSoundVolume(Handle, Volume);
+		});
+
+	Lua->set_function("IsSoundPlaying", [](const FSoundHandle& Handle) -> bool
+		{
+			return FSoundManager::Get().IsPlaying(Handle);
 		});
     
     // 입력 처리

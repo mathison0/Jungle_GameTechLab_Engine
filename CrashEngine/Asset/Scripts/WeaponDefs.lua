@@ -14,6 +14,11 @@ WeaponDefs.MainCannon = {
             Pierce = 1,
             ProjectileScale = 0.2,
             ColliderSize = 1.0,
+            Sound = {
+                Fire = "PlayerShot1",
+                Bus = "SFX",
+                Volume = 1.0,
+            },
         },
         [2] = {
             Damage = 50,
@@ -22,14 +27,24 @@ WeaponDefs.MainCannon = {
             Pierce = 5,
             ProjectileScale = 0.4,
             ColliderSize = 1.0,
+            Sound = {
+                Fire = "PlayerShot2",
+                Bus = "SFX",
+                Volume = 1.0,
+            },
         },
         [3] = {
             Damage = 50,
-            FireInterval = 0.4,
+            FireInterval = 0.5,
             ProjectileSpeed = 150,
             Pierce = 999,
             ProjectileScale = 0.6,
             ColliderSize = 4.0,
+            Sound = {
+                Fire = "PlayerShot3",
+                Bus = "SFX",
+                Volume = 1.0,
+            },
         },
     },
 }
