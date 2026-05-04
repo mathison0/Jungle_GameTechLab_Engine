@@ -54,6 +54,7 @@ void ATankActor::InitDefaultComponents()
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
     UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ"), Device);
     HeadMainGun->SetStaticMesh(Asset);
+    HeadMainGun->SetReceivesDecals(false);
     HeadMainGun->SetFName("HeadMainGun");
 
     HeadGunProjectile = FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ"), Device);

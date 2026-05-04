@@ -41,11 +41,13 @@ public:
     void SetVisibleInEditor(bool bNewVisible);
     void SetVisibleInGame(bool bNewVisible);
     void SetEditorHelper(bool bNewHelper);
+    void SetReceivesDecals(bool bNewReceivesDecals);
 
     inline bool IsVisible() const { return bIsVisible; }
     inline bool IsVisibleInEditor() const { return bVisibleInEditor; }
     inline bool IsVisibleInGame() const { return bVisibleInGame; }
     inline bool IsEditorHelper() const { return bIsEditorHelper; }
+    inline bool ReceivesDecals() const { return bReceivesDecals; }
 
     bool ShouldRenderInWorld(EWorldType WorldType) const;
     bool ShouldRenderInCurrentWorld() const;
@@ -177,6 +179,7 @@ protected:
     bool bVisibleInEditor = true;
     bool bVisibleInGame = true;
     bool bIsEditorHelper = false;
+    bool bReceivesDecals = true;
     FPrimitiveProxy* SceneProxy = nullptr;
 
     FOctree* OctreeNode = nullptr;

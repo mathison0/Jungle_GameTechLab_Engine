@@ -29,6 +29,7 @@ void AEnemyBaseActor::InitDefaultComponents()
 
 	MeshComponent = AddComponent<UStaticMeshComponent>();
     MeshComponent->SetStaticMesh(Asset);
+    MeshComponent->SetReceivesDecals(false);
     ColliderComponent->AddChild(MeshComponent);
 
 	EnemyScriptComponent = AddComponent<UScriptComponent>();
