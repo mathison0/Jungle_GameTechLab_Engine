@@ -2,13 +2,13 @@
   "ClassName" : "UWorld",
   "GameUIBootMode" : "InGame",
   "Name" : "Scene_00_GameScene",
-  "NextUUID" : 39674,
+  "NextUUID" : 41615,
   "PerspectiveCamera" : {
     "FOV" : 90.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-15.783359, -4.676114, 5.188953],
+    "Location" : [10.709423, -1.069189, 5.615912],
     "NearClip" : 0.100000,
-    "Rotation" : [0.237505, -2.488953, 5.452566]
+    "Rotation" : [15.057868, 20.319670, -37.766144]
   },
   "Primitives" : {
     "11356" : {
@@ -727,6 +727,8 @@
       "MaxWalkSpeed" : 3.500000,
       "OwnerRootUUID" : 13179,
       "RigidBodyUUID" : 22230,
+      "SprintFootstepStepDistanceScale" : 1.500000,
+      "SprintFootstepVolumeScale" : 2.000000,
       "Type" : "UCharacterMovementComponent",
       "UpdateOnlyIfRendered" : false,
       "UpdatedComponentUUID" : 13179,
@@ -1232,7 +1234,7 @@
     },
     "28341" : {
       "BlockComponent" : true,
-      "BoxExtent" : [0.072882, 0.419035, 0.596505],
+      "BoxExtent" : [0.074695, 0.405187, 0.592204],
       "DebugBoundsVisibility" : 0,
       "DrawOnlyIfSelected" : false,
       "EditorOnly" : false,
@@ -1241,9 +1243,9 @@
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
       "LineThickness" : 1.000000,
-      "Location" : [0.074653, -0.372493, -0.617114],
+      "Location" : [0.101385, -0.372538, -0.603270],
       "ParentUUID" : 160,
-      "Rotation" : [2.155000, -14.973000, 1.551844],
+      "Rotation" : [2.551796, -14.390930, -0.343933],
       "Scale" : [1.000000, 1.000000, 1.000000],
       "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
       "Type" : "UBoxComponent",
@@ -2938,6 +2940,25 @@
       "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
+    },
+    "41612" : {
+      "BlockComponent" : true,
+      "BoxExtent" : [0.282686, 0.538429, 0.280625],
+      "DebugBoundsVisibility" : 0,
+      "DrawOnlyIfSelected" : false,
+      "EditorOnly" : false,
+      "EnableCull" : false,
+      "EnableTick" : true,
+      "GenerateOverlapEvents" : false,
+      "HiddenInEditor" : false,
+      "LineThickness" : 1.000000,
+      "Location" : [0.540606, 0.588418, 1.727317],
+      "ParentUUID" : 230,
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.000000, 1.000000, 1.000000],
+      "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
+      "Type" : "UBoxComponent",
+      "Visible" : true
     },
     "447" : {
       "ActorActive" : true,

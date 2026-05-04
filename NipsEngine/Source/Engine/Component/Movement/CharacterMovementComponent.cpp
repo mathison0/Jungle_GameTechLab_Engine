@@ -67,6 +67,8 @@ void UCharacterMovementComponent::Serialize(FArchive& Ar)
 	Ar << "FootstepVolume" << FootstepVolume;
 	Ar << "FootstepStepDistance" << FootstepStepDistance;
 	Ar << "FootstepMinSpeed" << FootstepMinSpeed;
+	Ar << "SprintFootstepStepDistanceScale" << SprintFootstepStepDistanceScale;
+	Ar << "SprintFootstepVolumeScale" << SprintFootstepVolumeScale;
 
 	if (Ar.IsLoading())
 	{
@@ -106,6 +108,8 @@ void UCharacterMovementComponent::GetEditableProperties(TArray<FPropertyDescript
 	OutProps.push_back({ "Footstep Volume", EPropertyType::Float, &FootstepVolume, 0.0f, 2.0f, 0.05f });
 	OutProps.push_back({ "Footstep Step Distance", EPropertyType::Float, &FootstepStepDistance, 0.1f, 5.0f, 0.05f });
 	OutProps.push_back({ "Footstep Min Speed", EPropertyType::Float, &FootstepMinSpeed, 0.0f, 5.0f, 0.05f });
+	OutProps.push_back({ "Sprint Footstep Step Distance Scale", EPropertyType::Float, &SprintFootstepStepDistanceScale, 1.0f, 4.0f, 0.05f });
+	OutProps.push_back({ "Sprint Footstep Volume Scale", EPropertyType::Float, &SprintFootstepVolumeScale, 1.0f, 2.0f, 0.05f });
 }
 
 void UCharacterMovementComponent::TickComponent(float DeltaTime)
@@ -255,6 +259,8 @@ void UCharacterMovementComponent::ClampEditableValues()
 	FootstepVolume = std::clamp(FootstepVolume, 0.0f, 2.0f);
 	FootstepStepDistance = std::max(0.1f, FootstepStepDistance);
 	FootstepMinSpeed = std::max(0.0f, FootstepMinSpeed);
+	SprintFootstepStepDistanceScale = std::max(1.0f, SprintFootstepStepDistanceScale);
+	SprintFootstepVolumeScale = std::max(1.0f, SprintFootstepVolumeScale);
 }
 
 float UCharacterMovementComponent::MoveToward(float Current, float Target, float MaxDelta) const
@@ -286,15 +292,19 @@ void UCharacterMovementComponent::UpdateFootsteps(float DeltaTime, const FVector
 		return;
 	}
 
+	const bool bSprinting = SpeedMultiplier > 1.05f;
+	const float CurrentStepDistance = FootstepStepDistance * (bSprinting ? SprintFootstepStepDistanceScale : 1.0f);
+	const float CurrentVolumeScale = bSprinting ? SprintFootstepVolumeScale : 1.0f;
+
 	FootstepAccumulatedDistance += HorizontalDistance;
-	while (FootstepAccumulatedDistance >= FootstepStepDistance)
+	while (FootstepAccumulatedDistance >= CurrentStepDistance)
 	{
-		FootstepAccumulatedDistance -= FootstepStepDistance;
-		PlayFootstep();
+		FootstepAccumulatedDistance -= CurrentStepDistance;
+		PlayFootstep(CurrentVolumeScale);
 	}
 }
 
-void UCharacterMovementComponent::PlayFootstep()
+void UCharacterMovementComponent::PlayFootstep(float VolumeScale)
 {
 	const FString& FootstepPath = GetFootstepPath(FootstepIndex);
 	FAudioPlayParams Params;
@@ -302,7 +312,7 @@ void UCharacterMovementComponent::PlayFootstep()
 	Params.bLoop = false;
 	Params.bAffectedByAudioZones = false;
 	Params.Bus = EAudioBus::SFX;
-	Params.Volume = FootstepVolume;
+	Params.Volume = std::clamp(FootstepVolume * VolumeScale, 0.0f, 2.0f);
 	FAudioSystem::Get().Play(FootstepPath, Params);
 	++FootstepIndex;
 }
