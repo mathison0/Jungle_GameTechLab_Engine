@@ -69,5 +69,11 @@
 		<div id="dialogue-text"></div>
 		<div id="dialogue-hint">[SPACE] &gt;</div>
 	</div>
+
+	<div id="title-intro-layer">
+		<img id="title-intro-icon" src="Asset/Texture/GameTitleIcon.png" />
+	</div>
+
+	<div id="screen-fade-layer"></div>
 </body>
 </rml>

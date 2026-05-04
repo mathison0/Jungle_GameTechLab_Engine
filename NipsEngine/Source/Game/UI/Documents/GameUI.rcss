@@ -7,7 +7,7 @@ body {
 	color: #ffffff;
 }
 
-#start-menu, #pause-layer, #ending-panel {
+#start-menu, #pause-layer, #ending-panel, #title-intro-layer, #screen-fade-layer {
 	position: absolute;
 	left: 0px;
 	top: 0px;
@@ -17,6 +17,24 @@ body {
 
 #start-menu {
 	background-color: rgba(9, 10, 16, 255);
+}
+
+#title-intro-layer {
+	background-color: rgba(0, 0, 0, 255);
+}
+
+#title-intro-icon {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 360px;
+	height: auto;
+	margin-left: -180px;
+	margin-top: -135px;
+}
+
+#screen-fade-layer {
+	background-color: rgba(0, 0, 0, 0);
 }
 
 #title-background {

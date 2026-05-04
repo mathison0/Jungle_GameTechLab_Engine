@@ -136,6 +136,10 @@ private:
 
     void RenderCurrentPanel(EUIRenderMode Mode);
     void UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height);
+    void ResetTitleIntro();
+    void TickTitleTransitions(float DeltaTime);
+    void UpdateTitleTransitionElements();
+    void FinishStartGameTransition();
     bool CreateGameDocument();
     void BindRmlUiEvents();
     void SetElementVisible(const char* Id, bool bVisible);
@@ -157,6 +161,11 @@ private:
     std::unique_ptr<FRmlUiClickListener> RetryClickListener;
     std::unique_ptr<FRmlUiClickListener> ExitClickListener;
     double LastRmlUpdateTime = 0.0;
+
+    float TitleIntroElapsed = 0.0f;
+    bool bStartGameTransitionActive = false;
+    float StartGameTransitionElapsed = 0.0f;
+    bool bStartGameTransitionReady = false;
 
     // 게임 데이터
     float       CleanProgress    = 0.f;

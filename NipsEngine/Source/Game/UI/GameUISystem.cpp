@@ -109,6 +109,27 @@ namespace
 		return Buffer;
 	}
 
+	std::string FormatOpacity(float Value)
+	{
+		char Buffer[32] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "%.3f", std::clamp(Value, 0.0f, 1.0f));
+		return Buffer;
+	}
+
+	std::string FormatAlphaColor(float Red, float Green, float Blue, float Alpha)
+	{
+		char Buffer[64] = {};
+		std::snprintf(
+			Buffer,
+			sizeof(Buffer),
+			"rgba(%d, %d, %d, %d)",
+			static_cast<int>(std::clamp(Red, 0.0f, 255.0f)),
+			static_cast<int>(std::clamp(Green, 0.0f, 255.0f)),
+			static_cast<int>(std::clamp(Blue, 0.0f, 255.0f)),
+			static_cast<int>(std::clamp(Alpha, 0.0f, 1.0f) * 255.0f));
+		return Buffer;
+	}
+
 	std::string LoadTextResource(int ResourceId)
 	{
 		HMODULE Module = GetModuleHandleW(nullptr);
@@ -272,6 +293,8 @@ void GameUISystem::SetState(EGameUIState NewState)
 {
 	if (NewState == EGameUIState::Ending)
 		EndingPanel::Reset();
+	if (NewState == EGameUIState::StartMenu && CurrentState != EGameUIState::StartMenu)
+		ResetTitleIntro();
 
 	CurrentState = NewState;
 	SetPauseMenuOpen(false);
@@ -395,6 +418,17 @@ void GameUISystem::SetStartGameCallback(std::function<void()> Callback)
 
 void GameUISystem::RequestStartGame()
 {
+	if (bStartGameTransitionActive)
+		return;
+
+	if (CurrentState == EGameUIState::StartMenu)
+	{
+		bStartGameTransitionActive = true;
+		StartGameTransitionElapsed = 0.0f;
+		bStartGameTransitionReady = false;
+		return;
+	}
+
 	if (StartGameCallback)
 		StartGameCallback();
 	else
@@ -530,6 +564,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	DialoguePanel::Tick(DeltaTime, Mode);
 	if (CurrentState == EGameUIState::Ending)
 		EndingPanel::Tick(DeltaTime);
+	TickTitleTransitions(DeltaTime);
 
 	RmlDocument->SetClass("is-preview", Mode == EUIRenderMode::Preview);
 
@@ -553,6 +588,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	SetElementVisible("dialogue-panel", bShowDialogue);
 	SetElementVisible("ending-panel", bShowEnding);
 	SetElementVisible("the-end", bShowTheEnd);
+	UpdateTitleTransitionElements();
 
 	constexpr float TitleBackgroundAspect = 2760.0f / 1504.0f;
 	float TitleBackgroundWidth = static_cast<float>(Width);
@@ -621,6 +657,65 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 
 	const int Alpha = static_cast<int>(EndingPanel::GetFadeAlpha() * 255.0f);
 	SetElementProperty("the-end", "color", "rgba(220, 210, 190, " + std::to_string(Alpha) + ")");
+
+	if (bStartGameTransitionReady)
+		FinishStartGameTransition();
+}
+
+void GameUISystem::ResetTitleIntro()
+{
+	TitleIntroElapsed = 0.0f;
+	bStartGameTransitionActive = false;
+	StartGameTransitionElapsed = 0.0f;
+	bStartGameTransitionReady = false;
+}
+
+void GameUISystem::TickTitleTransitions(float DeltaTime)
+{
+	if (CurrentState == EGameUIState::StartMenu)
+		TitleIntroElapsed += std::max(0.0f, DeltaTime);
+
+	if (!bStartGameTransitionActive)
+		return;
+
+	constexpr float TransitionDuration = 1.5f;
+	StartGameTransitionElapsed += std::max(0.0f, DeltaTime);
+	if (StartGameTransitionElapsed >= TransitionDuration)
+		bStartGameTransitionReady = true;
+}
+
+void GameUISystem::UpdateTitleTransitionElements()
+{
+	const bool bInStartMenu = CurrentState == EGameUIState::StartMenu;
+
+	constexpr float IntroHoldDuration = 1.5f;
+	constexpr float IntroTotalDuration = 3.0f;
+	const float IntroFadeProgress = (TitleIntroElapsed - IntroHoldDuration) / (IntroTotalDuration - IntroHoldDuration);
+	const float IntroAlpha = bInStartMenu ? 1.0f - std::clamp(IntroFadeProgress, 0.0f, 1.0f) : 0.0f;
+	const bool bShowIntro = bInStartMenu && TitleIntroElapsed < IntroTotalDuration && !bStartGameTransitionActive;
+
+	constexpr float StartFadeDuration = 1.5f;
+	const float StartFadeAlpha = bStartGameTransitionActive ? std::clamp(StartGameTransitionElapsed / StartFadeDuration, 0.0f, 1.0f) : 0.0f;
+
+	SetElementVisible("title-intro-layer", bShowIntro);
+	SetElementProperty("title-intro-layer", "background-color", FormatAlphaColor(0.0f, 0.0f, 0.0f, IntroAlpha));
+	SetElementProperty("title-intro-icon", "opacity", FormatOpacity(IntroAlpha));
+
+	SetElementVisible("screen-fade-layer", bStartGameTransitionActive);
+	SetElementProperty("screen-fade-layer", "background-color", FormatAlphaColor(0.0f, 0.0f, 0.0f, StartFadeAlpha));
+}
+
+void GameUISystem::FinishStartGameTransition()
+{
+	bStartGameTransitionReady = false;
+
+	if (StartGameCallback)
+		StartGameCallback();
+	else
+		SetState(EGameUIState::InGame);
+
+	bStartGameTransitionActive = false;
+	StartGameTransitionElapsed = 0.0f;
 }
 
 bool GameUISystem::CreateGameDocument()
