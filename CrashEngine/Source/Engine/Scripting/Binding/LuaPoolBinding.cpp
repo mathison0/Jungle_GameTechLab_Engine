@@ -28,6 +28,11 @@ void FLuaActorPoolManagerHandle::Release(const FLuaActorHandle& Actor) const
 	if (Manager) Manager->Release(Actor.Resolve());
 }
 
+void FLuaActorPoolManagerHandle::ReleaseActiveByClass(const FString& ClassName) const
+{
+	if (Manager) Manager->ReleaseActiveByClass(ClassName);
+}
+
 uint32 FLuaActorPoolManagerHandle::GetActiveCount(const FString& ClassName) const
 {
 	return Manager ? Manager->GetActiveCount(ClassName) : 0;
@@ -44,6 +49,7 @@ namespace LuaBinding
             "Warmup", &FLuaActorPoolManagerHandle::Warmup,
             "Acquire", &FLuaActorPoolManagerHandle::Acquire,
             "Release", &FLuaActorPoolManagerHandle::Release,
+            "ReleaseActiveByClass", &FLuaActorPoolManagerHandle::ReleaseActiveByClass,
             "GetActiveCount", &FLuaActorPoolManagerHandle::GetActiveCount);
     }
 }

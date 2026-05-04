@@ -3,11 +3,15 @@
 #include <Sol/sol.hpp>
 #include <algorithm>
 #include <cctype>
+#include <cmath>
+#include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <ranges>
 
+#include "SimpleJSON/json.hpp"
 #include "LuaScriptAsset.h"
 #include "Core/Logging/LogMacros.h"
 #include "Input/GameInput.h"
@@ -20,6 +24,166 @@
 namespace
 {
 constexpr float EditorScriptRefreshInterval = 0.5f;
+constexpr int32 MaxScoreBoardRecords = 100;
+
+struct FScoreBoardRecord
+{
+	FString ResultType;
+	double RemainingTime = 0.0;
+	int32 KillCount = 0;
+	FString RecordedAt;
+	int32 Rank = 0;
+};
+
+std::filesystem::path GetScoreBoardPath()
+{
+	return std::filesystem::path(FPaths::SavedDir()) / L"ScoreBoard.json";
+}
+
+FString MakeScoreBoardTimestamp()
+{
+	std::time_t Now = std::time(nullptr);
+	std::tm LocalTime{};
+	localtime_s(&LocalTime, &Now);
+
+	char Buffer[32] = {};
+	std::strftime(Buffer, sizeof(Buffer), "%Y-%m-%d %H:%M:%S", &LocalTime);
+	return Buffer;
+}
+
+bool IsScoreRecordHigher(const FScoreBoardRecord& A, const FScoreBoardRecord& B)
+{
+	const double TimeDelta = A.RemainingTime - B.RemainingTime;
+	if (std::fabs(TimeDelta) > 0.0001)
+	{
+		return A.RemainingTime < B.RemainingTime;
+	}
+
+	if (A.KillCount != B.KillCount)
+	{
+		return A.KillCount > B.KillCount;
+	}
+
+	return A.RecordedAt < B.RecordedAt;
+}
+
+void SortScoreBoardRecords(TArray<FScoreBoardRecord>& Records)
+{
+	std::stable_sort(Records.begin(), Records.end(), IsScoreRecordHigher);
+
+	for (int32 Index = 0; Index < static_cast<int32>(Records.size()); ++Index)
+	{
+		Records[Index].Rank = Index + 1;
+	}
+}
+
+TArray<FScoreBoardRecord> LoadScoreBoardRecordsFromDisk()
+{
+	TArray<FScoreBoardRecord> Records;
+	const std::filesystem::path Path = GetScoreBoardPath();
+
+	std::error_code Ec;
+	if (!std::filesystem::exists(Path, Ec))
+	{
+		return Records;
+	}
+
+	std::ifstream File(Path, std::ios::binary);
+	if (!File.is_open())
+	{
+		return Records;
+	}
+
+	const FString Content((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
+	if (Content.empty())
+	{
+		return Records;
+	}
+
+	json::JSON Root = json::JSON::Load(Content);
+	if (!Root.hasKey("Records"))
+	{
+		return Records;
+	}
+
+	for (auto& Entry : Root["Records"].ArrayRange())
+	{
+		FScoreBoardRecord Record;
+		Record.ResultType = Entry.hasKey("ResultType") ? Entry["ResultType"].ToString() : "GameOver";
+		Record.RemainingTime = Entry.hasKey("RemainingTime") ? Entry["RemainingTime"].ToFloat() : 0.0;
+		Record.KillCount = Entry.hasKey("KillCount") ? Entry["KillCount"].ToInt() : 0;
+		Record.RecordedAt = Entry.hasKey("RecordedAt") ? Entry["RecordedAt"].ToString() : "";
+		Records.push_back(Record);
+	}
+
+	SortScoreBoardRecords(Records);
+	return Records;
+}
+
+void SaveScoreBoardRecordsToDisk(const TArray<FScoreBoardRecord>& Records)
+{
+	using namespace json;
+
+	FPaths::CreateDir(FPaths::SavedDir());
+
+	JSON Root = Object();
+	JSON RecordArray = Array();
+	for (const FScoreBoardRecord& Record : Records)
+	{
+		JSON Entry = Object();
+		Entry["ResultType"] = Record.ResultType;
+		Entry["RemainingTime"] = Record.RemainingTime;
+		Entry["KillCount"] = Record.KillCount;
+		Entry["RecordedAt"] = Record.RecordedAt;
+		RecordArray.append(Entry);
+	}
+
+	Root["Records"] = RecordArray;
+
+	std::ofstream File(GetScoreBoardPath(), std::ios::binary | std::ios::trunc);
+	if (File.is_open())
+	{
+		File << Root.dump();
+	}
+}
+
+int32 FindScoreBoardRecordRank(const TArray<FScoreBoardRecord>& Records, const FScoreBoardRecord& Needle)
+{
+	for (const FScoreBoardRecord& Record : Records)
+	{
+		if (Record.ResultType == Needle.ResultType &&
+			Record.KillCount == Needle.KillCount &&
+			Record.RecordedAt == Needle.RecordedAt &&
+			std::fabs(Record.RemainingTime - Needle.RemainingTime) <= 0.0001)
+		{
+			return Record.Rank;
+		}
+	}
+
+	return 0;
+}
+
+sol::table MakeLuaScoreRecord(sol::state_view Lua, const FScoreBoardRecord& Record)
+{
+	sol::table Table = Lua.create_table();
+	Table["ResultType"] = Record.ResultType;
+	Table["RemainingTime"] = Record.RemainingTime;
+	Table["KillCount"] = Record.KillCount;
+	Table["RecordedAt"] = Record.RecordedAt;
+	Table["Rank"] = Record.Rank;
+	return Table;
+}
+
+sol::table MakeLuaScoreRecordArray(sol::state_view Lua, const TArray<FScoreBoardRecord>& Records)
+{
+	sol::table Table = Lua.create_table();
+	int32 LuaIndex = 1;
+	for (const FScoreBoardRecord& Record : Records)
+	{
+		Table[LuaIndex++] = MakeLuaScoreRecord(Lua, Record);
+	}
+	return Table;
+}
 
 ESoundBus ParseSoundBus(const FString& BusName)
 {
@@ -369,6 +533,39 @@ void FScriptSystem::RegisterEngineAPI() const
 	Lua->set_function("GetActorPoolManager", []() {
 		UWorld* World = GEngine->GetWorld();
 		return FLuaActorPoolManagerHandle(World ? World->GetPoolManager() : nullptr);
+	});
+
+	Lua->set_function("ScoreBoard_LoadRecords", [](sol::this_state State) -> sol::table {
+		sol::state_view Lua(State);
+		return MakeLuaScoreRecordArray(Lua, LoadScoreBoardRecordsFromDisk());
+	});
+
+	Lua->set_function("ScoreBoard_AddRecord", [](sol::this_state State, const FString& ResultType, double RemainingTime, int32 KillCount) -> sol::table {
+		sol::state_view Lua(State);
+
+		FScoreBoardRecord AddedRecord;
+		AddedRecord.ResultType = ResultType.empty() ? FString("GameOver") : ResultType;
+		AddedRecord.RemainingTime = (std::max)(0.0, RemainingTime);
+		AddedRecord.KillCount = (std::max)(0, KillCount);
+		AddedRecord.RecordedAt = MakeScoreBoardTimestamp();
+
+		TArray<FScoreBoardRecord> Records = LoadScoreBoardRecordsFromDisk();
+		Records.push_back(AddedRecord);
+		SortScoreBoardRecords(Records);
+
+		const int32 Rank = FindScoreBoardRecordRank(Records, AddedRecord);
+
+		if (Records.size() > MaxScoreBoardRecords)
+		{
+			Records.resize(MaxScoreBoardRecords);
+		}
+
+		SaveScoreBoardRecordsToDisk(Records);
+
+		AddedRecord.Rank = Rank;
+		sol::table Result = MakeLuaScoreRecord(Lua, AddedRecord);
+		Result["Records"] = MakeLuaScoreRecordArray(Lua, Records);
+		return Result;
 	});
 
 	RegisterLuaEngineBindings(*Lua);

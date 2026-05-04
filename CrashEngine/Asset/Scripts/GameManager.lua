@@ -25,11 +25,24 @@ local GameManager = {
     LevelUpUI = nil,
     ExpBarUI = nil,
     KillCountUI = nil,
+    ResultUI = nil,
+    MainMenuController = nil,
     BackgroundMusicHandle = nil,
     BackgroundMusicPositionMs = 0.0,
     IsLevelUpSelectionActive = false,
     CurrentLevelUpOptions = nil,
+    LastResult = nil,
     Stats = {}
+}
+
+local GAMEPLAY_POOL_CLASSES = {
+    "AGroundEnemyActor",
+    "AFlyingWaveEnemyActor",
+    "AEnemyBaseActor",
+    "AProjectileActor",
+    "AHomingMissileActor",
+    "APickupActor",
+    "ADeathDecalActor",
 }
 
 local function captureWorldFromScript(script)
@@ -53,6 +66,91 @@ local function normalizeSoundPosition(key, positionMs)
     end
 
     return position
+end
+
+local function resetStats()
+    GameManager.Stats = {
+        MaxHP = 100.0,
+        CurrentHP = 100.0,
+        MoveSpeedMult = 1.0,
+        ExpMult = 1.0,
+        PickupRangeMult = 1.0,
+        DamageMult = 1.0,
+    }
+end
+
+local function stopAllWeapons()
+    if GameManager.WeaponInventory == nil or GameManager.WeaponInventory.Weapons == nil then
+        return
+    end
+
+    for _, weapon in pairs(GameManager.WeaponInventory.Weapons) do
+        if weapon.Stop ~= nil then
+            weapon:Stop()
+        end
+    end
+end
+
+local function cleanupGameplayActors()
+    if type(GetActorPoolManager) ~= "function" then
+        return
+    end
+
+    local pool = GetActorPoolManager()
+    if pool == nil or not pool:IsValid() or pool.ReleaseActiveByClass == nil then
+        return
+    end
+
+    for _, className in ipairs(GAMEPLAY_POOL_CLASSES) do
+        pool:ReleaseActiveByClass(className)
+    end
+end
+
+local function updateKillCountUI()
+    if GameManager.KillCountUI ~= nil and type(GameManager.KillCountUI.SetKillCount) == "function" then
+        GameManager.KillCountUI:SetKillCount(GameManager.KillCount or 0)
+    end
+end
+
+local function resetRunState()
+    stopAllWeapons()
+    resetStats()
+
+    GameManager.TimeRemaining = GameManager.GameTimeLimit or 600.0
+    GameManager.KillCount = 0
+    GameManager.IsGameOver = false
+    GameManager.IsLevelUpSelectionActive = false
+    GameManager.CurrentLevelUpOptions = nil
+    GameManager.LastResult = nil
+
+    if GameManager.LevelUpUI ~= nil and type(GameManager.LevelUpUI.Hide) == "function" then
+        GameManager.LevelUpUI:Hide()
+    end
+
+    if GameManager.ExpBarUI ~= nil and type(GameManager.ExpBarUI.SetLevelUpMode) == "function" then
+        GameManager.ExpBarUI:SetLevelUpMode(false)
+    end
+
+    if GameManager.PlayerScript ~= nil then
+        GameManager.WeaponInventory = WeaponInventory.New(GameManager.PlayerScript)
+        GameManager.LevelSystem = LevelSystem.New(GameManager.PlayerScript, GameManager.WeaponInventory)
+    else
+        GameManager.WeaponInventory = nil
+        GameManager.LevelSystem = nil
+    end
+
+    updateKillCountUI()
+end
+
+local function buildFallbackResult(resultType, reason)
+    return {
+        ResultType = resultType,
+        Reason = reason,
+        RemainingTime = math.max(0.0, tonumber(GameManager.TimeRemaining) or 0.0),
+        KillCount = GameManager.KillCount or 0,
+        Rank = 0,
+        Records = {},
+    }
 end
 
 function GameManager.PlayBackgroundMusic()
@@ -113,14 +211,7 @@ function GameManager._ResetState()
         GameManager.World:SetGameplayPaused(false)
     end
 
-    GameManager.Stats = {
-        MaxHP = 100.0,
-        CurrentHP = 100.0,
-        MoveSpeedMult = 1.0,
-        ExpMult = 1.0,
-        PickupRangeMult = 1.0,
-        DamageMult = 1.0,
-    }
+    resetStats()
 
     GameManager.KillCount = 0
     GameManager.IsGameOver = false
@@ -138,10 +229,13 @@ function GameManager._ResetState()
     GameManager.LevelUpUI = nil
     GameManager.ExpBarUI = nil
     GameManager.KillCountUI = nil
+    GameManager.ResultUI = nil
+    GameManager.MainMenuController = nil
     GameManager.BackgroundMusicHandle = nil
     GameManager.BackgroundMusicPositionMs = 0.0
     GameManager.IsLevelUpSelectionActive = false
     GameManager.CurrentLevelUpOptions = nil
+    GameManager.LastResult = nil
 
     Log("[GameManager] Session State Fully Reset.")
 end
@@ -175,10 +269,15 @@ function GameManager.RequestStartGame()
         return true
     end
 
-    GameManager.TimeRemaining = GameManager.GameTimeLimit or GameManager.TimeRemaining or 600.0
-    GameManager.IsGameOver = false
+    cleanupGameplayActors()
+    resetRunState()
+
     GameManager.SessionPrepared = true
     GameManager.GameStartRequested = true
+
+    if GameManager.ResultUI ~= nil and type(GameManager.ResultUI.Hide) == "function" then
+        GameManager.ResultUI:Hide()
+    end
 
     GameManager._CheckAndStart()
     return GameManager.Initialized == true
@@ -252,6 +351,26 @@ function GameManager.RegisterKillCountUI(uiScript)
     if uiScript ~= nil and type(uiScript.SetKillCount) == "function" then
         uiScript:SetKillCount(GameManager.KillCount or 0)
     end
+end
+
+function GameManager.RegisterResultUI(uiScript)
+    GameManager.ResultUI = uiScript
+    captureWorldFromScript(uiScript)
+
+    if GameManager.LastResult ~= nil and uiScript ~= nil and type(uiScript.ShowResult) == "function" then
+        uiScript:ShowResult(GameManager.LastResult)
+    end
+end
+
+function GameManager.UnregisterResultUI(uiScript)
+    if GameManager.ResultUI == uiScript then
+        GameManager.ResultUI = nil
+    end
+end
+
+function GameManager.RegisterMainMenuController(controller)
+    GameManager.MainMenuController = controller
+    captureWorldFromScript(controller)
 end
 
 function GameManager.UnregisterKillCountUI(uiScript)
@@ -344,7 +463,7 @@ function GameManager.Tick(deltaTime)
 
     GameManager.TimeRemaining = math.max(0, GameManager.TimeRemaining - deltaTime)
     if GameManager.TimeRemaining <= 0 then
-        GameManager.OnGameOver("Time Up!")
+        GameManager.OnGameClear()
     end
 end
 
@@ -391,11 +510,85 @@ function GameManager.OnPickupChest()
     return false
 end
 
-function GameManager.OnGameOver(reason)
+function GameManager.FinishRun(resultType, reason)
     if GameManager.IsGameOver then return end
     GameManager.IsGameOver = true
+    GameManager.Initialized = false
+    GameManager.SetGameplayPaused(true)
     GameManager.StopBackgroundMusic(true)
-    Log("[GameManager] GAME OVER: " .. tostring(reason))
+    stopAllWeapons()
+
+    if GameManager.LevelUpUI ~= nil and type(GameManager.LevelUpUI.Hide) == "function" then
+        GameManager.LevelUpUI:Hide()
+    end
+
+    if GameManager.ExpBarUI ~= nil and type(GameManager.ExpBarUI.SetLevelUpMode) == "function" then
+        GameManager.ExpBarUI:SetLevelUpMode(false)
+    end
+
+    cleanupGameplayActors()
+
+    local remainingTime = math.max(0.0, tonumber(GameManager.TimeRemaining) or 0.0)
+    local killCount = GameManager.KillCount or 0
+    local record = nil
+    if type(ScoreBoard_AddRecord) == "function" then
+        record = ScoreBoard_AddRecord(resultType, remainingTime, killCount)
+    end
+
+    if record == nil then
+        record = buildFallbackResult(resultType, reason)
+    else
+        record.Reason = reason
+        record.ResultType = record.ResultType or resultType
+        record.RemainingTime = record.RemainingTime or remainingTime
+        record.KillCount = record.KillCount or killCount
+        record.Records = record.Records or {}
+    end
+
+    GameManager.LastResult = record
+
+    if GameManager.ResultUI ~= nil and type(GameManager.ResultUI.ShowResult) == "function" then
+        GameManager.ResultUI:ShowResult(record)
+    end
+
+    Log("[GameManager] " .. tostring(resultType) .. ": " .. tostring(reason))
+end
+
+function GameManager.OnGameClear()
+    GameManager.TimeRemaining = 0.0
+    GameManager.FinishRun("GameClear", "Time Cleared")
+end
+
+function GameManager.OnGameOver(reason)
+    GameManager.FinishRun("GameOver", reason or "Game Over")
+end
+
+function GameManager.ShowScoreBoard()
+    if GameManager.ResultUI ~= nil and type(GameManager.ResultUI.ShowScoreBoard) == "function" then
+        GameManager.ResultUI:ShowScoreBoard()
+        return true
+    end
+
+    return false
+end
+
+function GameManager.ReturnToMainMenu()
+    if GameManager.ResultUI ~= nil and type(GameManager.ResultUI.Hide) == "function" then
+        GameManager.ResultUI:Hide()
+    end
+
+    cleanupGameplayActors()
+    resetRunState()
+
+    GameManager.SessionPrepared = false
+    GameManager.GameStartRequested = false
+    GameManager.Initialized = false
+    GameManager.SetGameplayPaused(true)
+    GameManager.StopBackgroundMusic(true)
+
+    if GameManager.MainMenuController ~= nil and type(GameManager.MainMenuController.ShowMenu) == "function" then
+        GameManager.MainMenuController:ShowMenu()
+    end
 end
 
 return GameManager

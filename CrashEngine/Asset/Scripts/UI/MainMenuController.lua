@@ -51,6 +51,16 @@ function Script:CollectTaggedActors(tag)
     return result
 end
 
+function Script:EnsureActorLists()
+    if self.menuActors == nil or #self.menuActors == 0 then
+        self.menuActors = self:CollectTaggedActors(self.MainMenuTag or "MainMenu")
+    end
+
+    if self.hudActors == nil or #self.hudActors == 0 then
+        self.hudActors = self:CollectTaggedActors(self.HudTag or "UI")
+    end
+end
+
 function Script:SetActorsVisible(actors, visible)
     for _, actor in ipairs(actors or {}) do
         if isValid(actor) and actor.SetVisible ~= nil then
@@ -88,6 +98,12 @@ function Script:SetButtonInteractable(name, interactable)
     end
 end
 
+function Script:SetAllButtonsInteractable(interactable)
+    self:SetButtonInteractable("GameStartBT", interactable)
+    self:SetButtonInteractable("ScoreBoardBT", interactable)
+    self:SetButtonInteractable("GameEndBT", interactable)
+end
+
 function Script:BeginPlay()
     self.started = false
     self.menuActors = self:CollectTaggedActors(self.MainMenuTag or "MainMenu")
@@ -96,10 +112,22 @@ function Script:BeginPlay()
     self:SetActorsVisible(self.menuActors, true)
     self:SetActorsVisible(self.hudActors, false)
     self:CollectButtons()
+    self:SetAllButtonsInteractable(true)
+    GameManager.RegisterMainMenuController(self)
 
     if self.buttons["GameStartBT"] == nil then
         Log("[MainMenuController] GameStartBT not found.")
     end
+end
+
+function Script:ShowMenu()
+    self.started = false
+    self:EnsureActorLists()
+
+    self:SetActorsVisible(self.menuActors, true)
+    self:SetActorsVisible(self.hudActors, false)
+    self:CollectButtons()
+    self:SetAllButtonsInteractable(true)
 end
 
 function Script:StartGame()
@@ -108,9 +136,7 @@ function Script:StartGame()
     end
 
     self.started = true
-    self:SetButtonInteractable("GameStartBT", false)
-    self:SetButtonInteractable("ScoreBoardBT", false)
-    self:SetButtonInteractable("GameEndBT", false)
+    self:SetAllButtonsInteractable(false)
 
     self:SetActorsVisible(self.menuActors, false)
     self:SetActorsVisible(self.hudActors, true)
@@ -122,7 +148,7 @@ function Script:HandleButtonClick(name)
     if name == "GameStartBT" then
         self:StartGame()
     elseif name == "ScoreBoardBT" then
-        Log("[MainMenuController] ScoreBoard is not implemented yet.")
+        GameManager.ShowScoreBoard()
     elseif name == "GameEndBT" then
         Log("[MainMenuController] GameEnd is not implemented yet.")
     end
