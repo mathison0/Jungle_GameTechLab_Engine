@@ -7,7 +7,7 @@ body {
 	color: #ffffff;
 }
 
-#start-menu, #pause-layer, #ending-panel, #title-intro-layer, #screen-fade-layer {
+#start-menu, #settings-layer, #pause-layer, #ending-panel, #title-intro-layer, #screen-fade-layer {
 	position: absolute;
 	left: 0px;
 	top: 0px;
@@ -85,6 +85,92 @@ body {
 
 .title-menu-button:hover {
 	opacity: 0.82;
+}
+
+#settings-layer {
+	background-color: rgba(0, 0, 0, 140);
+}
+
+#settings-panel {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 480px;
+	height: 326px;
+	margin-left: -240px;
+	margin-top: -163px;
+	background-color: rgba(20, 20, 22, 245);
+	border-width: 1px;
+	border-color: rgba(130, 130, 145, 180);
+}
+
+#settings-title {
+	position: absolute;
+	left: 0px;
+	top: 28px;
+	width: 100%;
+	text-align: center;
+	font-size: 28px;
+	color: #ffffff;
+}
+
+.settings-row {
+	position: absolute;
+	left: 44px;
+	width: 392px;
+	height: 42px;
+}
+
+#settings-mouse-row {
+	top: 88px;
+}
+
+#settings-bgm-row {
+	top: 142px;
+}
+
+#settings-sfx-row {
+	top: 196px;
+}
+
+.settings-label {
+	display: inline-block;
+	width: 204px;
+	padding-top: 9px;
+	font-size: 17px;
+	color: #dcdcdc;
+}
+
+.settings-value {
+	display: inline-block;
+	width: 72px;
+	padding-top: 9px;
+	text-align: center;
+	font-size: 17px;
+	color: #9bd2ff;
+}
+
+.settings-step-button {
+	display: inline-block;
+	width: 34px;
+	height: 30px;
+	padding-top: 4px;
+	text-align: center;
+	font-size: 22px;
+	color: #ededed;
+	background-color: rgba(38, 40, 45, 255);
+	border-width: 1px;
+	border-color: rgba(115, 120, 130, 200);
+}
+
+.settings-step-button:hover {
+	background-color: rgba(58, 64, 74, 255);
+	color: #ffdc64;
+}
+
+#settings-close-button {
+	left: 140px;
+	top: 264px;
 }
 
 #game-cursor {
@@ -342,9 +428,9 @@ body {
 	left: 50%;
 	top: 50%;
 	width: 360px;
-	height: 340px;
+	height: 398px;
 	margin-left: -180px;
-	margin-top: -170px;
+	margin-top: -199px;
 	background-color: rgba(20, 20, 22, 245);
 	border-width: 1px;
 	border-color: rgba(130, 130, 145, 180);
@@ -386,31 +472,35 @@ body {
 }
 
 .pause-button {
-    position: absolute;
-    left: 80px; 
-    width: 200px;
-    height: 36px;
-    padding-top: 10px;
-    text-align: center;
-    font-size: 20px; 
-    font-weight: bold; 
-    color: #ededed;
-    background-color: rgba(38, 40, 45, 255);
-    border-width: 1px;
-    border-color: rgba(115, 120, 130, 200);
+	position: absolute;
+	left: 80px; 
+	width: 200px;
+	height: 36px;
+	padding-top: 10px;
+	text-align: center;
+	font-size: 20px; 
+	font-weight: bold; 
+	color: #ededed;
+	background-color: rgba(38, 40, 45, 255);
+	border-width: 1px;
+	border-color: rgba(115, 120, 130, 200);
 }
 
 #retry-button {
-    top: 218px;
+	top: 218px;
+}
+
+#pause-title-button {
+	top: 276px;
 }
 
 #pause-exit-button {
-    top: 276px;
+	top: 334px;
 }
 
 .pause-button:hover {
-    background-color: rgba(58, 64, 74, 255);
-    color: #ffdc64;
+	background-color: rgba(58, 64, 74, 255);
+	color: #ffdc64;
 }
 #dialogue-panel {
 	position: absolute;

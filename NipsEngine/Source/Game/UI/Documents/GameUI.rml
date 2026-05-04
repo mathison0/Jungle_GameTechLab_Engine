@@ -19,6 +19,31 @@
 		</div>
 	</div>
 
+	<div id="settings-layer">
+		<div id="settings-panel">
+			<div id="settings-title">SETTINGS</div>
+			<div id="settings-mouse-row" class="settings-row">
+				<span class="settings-label">Mouse Sensitivity</span>
+				<span id="settings-mouse-minus" class="settings-step-button">-</span>
+				<span id="settings-mouse-value" class="settings-value">100%</span>
+				<span id="settings-mouse-plus" class="settings-step-button">+</span>
+			</div>
+			<div id="settings-bgm-row" class="settings-row">
+				<span class="settings-label">BGM Volume</span>
+				<span id="settings-bgm-minus" class="settings-step-button">-</span>
+				<span id="settings-bgm-value" class="settings-value">100%</span>
+				<span id="settings-bgm-plus" class="settings-step-button">+</span>
+			</div>
+			<div id="settings-sfx-row" class="settings-row">
+				<span class="settings-label">SFX Volume</span>
+				<span id="settings-sfx-minus" class="settings-step-button">-</span>
+				<span id="settings-sfx-value" class="settings-value">100%</span>
+				<span id="settings-sfx-plus" class="settings-step-button">+</span>
+			</div>
+			<div id="settings-close-button" class="pause-button">Back</div>
+		</div>
+	</div>
+
 	<div id="hud-panel">
 		<div id="progress-track"></div>
 		<div id="progress-fill"></div>
@@ -70,7 +95,8 @@
 			<div id="pause-time-row" class="stat-row">Time: <span id="pause-time" class="stat-value">0m 00s</span></div>
 			<div id="pause-progress-row" class="stat-row">Progress: <span id="pause-progress" class="stat-value">0%</span></div>
 			<div id="retry-button" class="pause-button">Resume</div>
-			<div id="pause-exit-button" class="pause-button">Quit Game</div>
+			<div id="pause-title-button" class="pause-button">Exit to Title</div>
+			<div id="pause-exit-button" class="pause-button">Exit to Desktop</div>
 		</div>
 	</div>
 
