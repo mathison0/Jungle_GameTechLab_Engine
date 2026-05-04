@@ -1,4 +1,4 @@
-local WASH_SOUND = "Asset/Audio/drop-item-into-water.wav"
+local WASH_SOUND = "Asset/Audio/water-pouring.wav"
 local INTERACT_DISTANCE = 3.0
 local wasShowingHint = false
 
