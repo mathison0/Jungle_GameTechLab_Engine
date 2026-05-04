@@ -27,6 +27,7 @@ private:
 	void HandleBlockingCollision(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, const FCollision2DContact& Contact);
 	void HandleOverlapCollision(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs);
     void ResolveBlock(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, const FCollision2DContact& Contact);
+    void PruneInvalidOverlapPairs(TMap<uint64, FCollision2DPair>& InOutOverlapPairs);
 	void DispatchEndOverlapEvents(const TMap<uint64, FCollision2DPair>& CurrentOverlapPairs);
 
 	private:

@@ -7,6 +7,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Math/MathUtils.h"
+#include "Object/Object.h"
 
 #include <algorithm>
 #include <cmath>
@@ -144,6 +145,47 @@ bool ComputeBoxCircle(const FCollision2DShapeGeometry& Box, const FCollision2DSh
     OutContact.PenetrationDepth = (bUseX ? XDepth : YDepth) + Circle.Radius;
     return true;
 }
+
+bool IsLiveObjectPointer(const UObject* Object)
+{
+    if (!Object)
+    {
+        return false;
+    }
+
+    return std::find(GUObjectArray.begin(), GUObjectArray.end(), Object) != GUObjectArray.end();
+}
+
+bool IsLiveCollider2D(const UCollider2DComponent* Collider)
+{
+    return IsLiveObjectPointer(static_cast<const UObject*>(Collider));
+}
+
+bool IsCollider2DActiveForCollision(UCollider2DComponent* Collider)
+{
+    if (!IsLiveCollider2D(Collider))
+    {
+        return false;
+    }
+
+    AActor* Owner = Collider->GetOwner();
+    if (!IsLiveObjectPointer(static_cast<const UObject*>(Owner)))
+    {
+        return false;
+    }
+
+    return Collider->IsActive() && Owner->IsVisible();
+}
+
+bool CanDispatchOverlapEvent(UCollider2DComponent* Collider)
+{
+    return IsCollider2DActiveForCollision(Collider) && Collider->ShouldGenerateOverlapEvents();
+}
+
+bool CanDispatchHitEvent(UCollider2DComponent* Collider)
+{
+    return IsCollider2DActiveForCollision(Collider) && Collider->ShouldGenerateHitEvents();
+}
 } // namespace
 
 void FCollision2DManager::Update(UWorld& World)
@@ -157,6 +199,7 @@ void FCollision2DManager::Update(UWorld& World)
 	TMap<uint64, FCollision2DPair> CurrentOverlapPairs;
 	ProcessCollisionPairs(CollisionPairs, CurrentOverlapPairs);
 
+    PruneInvalidOverlapPairs(CurrentOverlapPairs);
 	DispatchEndOverlapEvents(CurrentOverlapPairs);
 	PreviousOverlapPairs = std::move(CurrentOverlapPairs);
 }
@@ -177,7 +220,10 @@ void FCollision2DManager::ProcessCollisionPairs(const TArray<FCollision2DPair>& 
 
 void FCollision2DManager::ProcessCollisionPair(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs)
 {
-    if (!ColliderA || !ColliderB || ColliderA == ColliderB || ColliderA->GetOwner() == ColliderB->GetOwner())
+    if (!IsCollider2DActiveForCollision(ColliderA) ||
+        !IsCollider2DActiveForCollision(ColliderB) ||
+        ColliderA == ColliderB ||
+        ColliderA->GetOwner() == ColliderB->GetOwner())
     {
         return;
     }
@@ -267,12 +313,12 @@ void FCollision2DManager::HandleBlockingCollision(UCollider2DComponent* Collider
 {
 	ResolveBlock(ColliderA, ColliderB, Contact);
 
-	if (ColliderA->ShouldGenerateHitEvents())
+	if (CanDispatchHitEvent(ColliderA) && IsCollider2DActiveForCollision(ColliderB))
 	{
 		ColliderA->OnComponentHit2D.Broadcast(ColliderB);
 	}
 
-	if (ColliderB->ShouldGenerateHitEvents())
+	if (CanDispatchHitEvent(ColliderA) && CanDispatchHitEvent(ColliderB))
 	{
 		ColliderB->OnComponentHit2D.Broadcast(ColliderA);
 	}
@@ -280,7 +326,7 @@ void FCollision2DManager::HandleBlockingCollision(UCollider2DComponent* Collider
 
 void FCollision2DManager::HandleOverlapCollision(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, TMap<uint64, FCollision2DPair>& OutCurrentOverlapPairs)
 {
-	if (!ColliderA->ShouldGenerateOverlapEvents() || !ColliderB->ShouldGenerateOverlapEvents())
+	if (!CanDispatchOverlapEvent(ColliderA) || !CanDispatchOverlapEvent(ColliderB))
 	{
 		return;
 	}
@@ -294,8 +340,16 @@ void FCollision2DManager::HandleOverlapCollision(UCollider2DComponent* ColliderA
 	if (PreviousOverlapPairs.find(PairKey) == PreviousOverlapPairs.end())
 	{
 		ColliderA->OnComponentBeginOverlap2D.Broadcast(ColliderB);
-		ColliderB->OnComponentBeginOverlap2D.Broadcast(ColliderA);
+        if (CanDispatchOverlapEvent(ColliderA) && CanDispatchOverlapEvent(ColliderB))
+        {
+		    ColliderB->OnComponentBeginOverlap2D.Broadcast(ColliderA);
+        }
 	}
+
+    if (!CanDispatchOverlapEvent(ColliderA) || !CanDispatchOverlapEvent(ColliderB))
+    {
+        OutCurrentOverlapPairs.erase(PairKey);
+    }
 }
 
 void FCollision2DManager::ResolveBlock(UCollider2DComponent* ColliderA, UCollider2DComponent* ColliderB, const FCollision2DContact& Contact)
@@ -325,6 +379,22 @@ void FCollision2DManager::ResolveBlock(UCollider2DComponent* ColliderA, UCollide
     }
 }
 
+void FCollision2DManager::PruneInvalidOverlapPairs(TMap<uint64, FCollision2DPair>& InOutOverlapPairs)
+{
+    for (auto It = InOutOverlapPairs.begin(); It != InOutOverlapPairs.end();)
+    {
+        UCollider2DComponent* ColliderA = It->second.A;
+        UCollider2DComponent* ColliderB = It->second.B;
+        if (!CanDispatchOverlapEvent(ColliderA) || !CanDispatchOverlapEvent(ColliderB))
+        {
+            It = InOutOverlapPairs.erase(It);
+            continue;
+        }
+
+        ++It;
+    }
+}
+
 void FCollision2DManager::DispatchEndOverlapEvents(const TMap<uint64, FCollision2DPair>& CurrentOverlapPairs)
 {
 	for (const auto& PreviousPair : PreviousOverlapPairs)
@@ -338,10 +408,13 @@ void FCollision2DManager::DispatchEndOverlapEvents(const TMap<uint64, FCollision
 		UCollider2DComponent* ColliderA = PreviousPair.second.A;
 		UCollider2DComponent* ColliderB = PreviousPair.second.B;
 
-		if (ColliderA && ColliderB)
+		if (CanDispatchOverlapEvent(ColliderA) && CanDispatchOverlapEvent(ColliderB))
 		{
 			ColliderA->OnComponentEndOverlap2D.Broadcast(ColliderB);
-			ColliderB->OnComponentEndOverlap2D.Broadcast(ColliderA);
+            if (CanDispatchOverlapEvent(ColliderA) && CanDispatchOverlapEvent(ColliderB))
+            {
+			    ColliderB->OnComponentEndOverlap2D.Broadcast(ColliderA);
+            }
 		}
 	}
 }

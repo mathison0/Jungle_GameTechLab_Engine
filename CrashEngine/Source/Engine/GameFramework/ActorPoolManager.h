@@ -55,6 +55,7 @@ public:
     AActor* Acquire(const FString& ClassName, const FActorPool::FActorCallback& Activate = nullptr);
 
     void Release(AActor* Actor);
+    void ReleaseActiveByClass(const FString& ClassName);
     void ForgetActor(AActor* Actor);
     void DestroyAll();
 

@@ -61,6 +61,29 @@ void FActorPoolManager::Release(AActor* Actor)
     Pool->Release(Actor);
 }
 
+void FActorPoolManager::ReleaseActiveByClass(const FString& ClassName)
+{
+    const FActorPool* Pool = FindPool(ClassName);
+    if (!Pool)
+    {
+        return;
+    }
+
+    TArray<AActor*> ActorsToRelease;
+    for (const auto& Pair : ActiveActorToPool)
+    {
+        if (Pair.second == Pool)
+        {
+            ActorsToRelease.push_back(Pair.first);
+        }
+    }
+
+    for (AActor* Actor : ActorsToRelease)
+    {
+        Release(Actor);
+    }
+}
+
 void FActorPoolManager::ForgetActor(AActor* Actor)
 {
     if (!Actor)

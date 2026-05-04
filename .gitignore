@@ -467,3 +467,6 @@ CMakeLists.txt
 
 # Caching
 *.cso
+
+# Runtime generated engine data
+CrashEngine/Saved/

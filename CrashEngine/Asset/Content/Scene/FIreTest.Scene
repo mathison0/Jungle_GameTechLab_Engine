@@ -362,6 +362,18 @@
             "Script" : "UI/MainMenuController.lua",
             "bTickEnable" : true
           }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "GameResultScript",
+          "Properties" : {
+            "Lua.ButtonHeight" : 58.000000,
+            "Lua.ButtonWidth" : 260.000000,
+            "Lua.Layer" : 380,
+            "Lua.PanelHeight" : 560.000000,
+            "Lua.PanelWidth" : 720.000000,
+            "Script" : "UI/GameResultUI.lua",
+            "bTickEnable" : true
+          }
         }],
       "RootComponent" : {
         "Children" : [{

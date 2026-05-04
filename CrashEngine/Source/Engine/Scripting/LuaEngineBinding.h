@@ -199,6 +199,7 @@ struct FLuaActorPoolManagerHandle
 	void Warmup(const FString& ClassName, uint32 Count) const;
 	FLuaActorHandle Acquire(const FString& ClassName) const;
 	void Release(const FLuaActorHandle& Actor) const;
+	void ReleaseActiveByClass(const FString& ClassName) const;
 	uint32 GetActiveCount(const FString& ClassName) const;
 };
 
