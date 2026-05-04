@@ -95,6 +95,8 @@ bool InferLuaScriptPropertyType(const sol::object& ValueObject, ELuaScriptProper
 FLuaScriptValue MakeDefaultLuaScriptValue(ELuaScriptPropertyType Type);
 bool ReadLuaVec3(const sol::object& ValueObject, FVector& OutValue);
 sol::table MakeLuaVec3(sol::state_view Lua, const FVector& Value);
+bool ReadLuaVec4(const sol::object& ValueObject, FVector4& OutValue);
+sol::table MakeLuaVec4(sol::state_view Lua, const FVector4& Value);
 bool ReadLuaVec2(const sol::object& ValueObject, FVector2& OutValue);
 sol::table MakeLuaVec2(sol::state_view Lua, const FVector2& Value);
 bool ReadLuaScriptValue(const sol::object& ValueObject, ELuaScriptPropertyType Type, FLuaScriptValue& OutValue);

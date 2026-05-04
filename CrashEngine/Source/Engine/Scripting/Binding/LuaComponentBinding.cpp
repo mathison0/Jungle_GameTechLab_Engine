@@ -15,6 +15,7 @@
 #include "Mesh/ObjManager.h"
 #include "Materials/MaterialManager.h"
 #include "Engine/Runtime/Engine.h"
+#include "Component/PointLightComponent.h"
 
 namespace
 {
@@ -577,6 +578,19 @@ bool FLuaComponentHandle::SetMaterialVector4Parameter(int32 Index, const FString
     return true;
 }
 
+bool FLuaComponentHandle::SetIntensity(float Intensity) const
+{
+    ULightComponentBase* LightBase = Cast<ULightComponentBase>(Resolve());
+    if (!LightBase) return false;
+    LightBase->SetIntensity(Intensity);
+
+    if (ULightComponent* Light = Cast<ULightComponent>(LightBase))
+    {
+        Light->MarkRenderStateDirty();
+    }
+    return true;
+}
+
 bool FLuaComponentHandle::IsUIText() const
 {
     return Cast<UTextUIComponent>(Resolve()) != nullptr;
@@ -735,6 +749,7 @@ namespace LuaBinding
             "SetStaticMesh", &FLuaComponentHandle::SetStaticMesh,
             "SetMaterial", &FLuaComponentHandle::SetMaterial,
             "SetMaterialVector4Parameter", &FLuaComponentHandle::SetMaterialVector4Parameter,
+            "SetIntensity", &FLuaComponentHandle::SetIntensity,
             "IsUIText", &FLuaComponentHandle::IsUIText,
             "GetUIText", &FLuaComponentHandle::GetUIText,
             "SetUIText", &FLuaComponentHandle::SetUIText,

@@ -24,6 +24,7 @@ function MainCannonWeapon.New(owner)
 
     self.VisualComponent = nil
     self.MuzzleComponent = nil
+    self.MuzzleFlashComponent = nil
 
     self.SearchCoroutine = nil
     self.TargetingCoroutine = nil
@@ -99,12 +100,21 @@ function MainCannonWeapon:RefreshComponents()
         "Muzzle_MainCannon_0"
     )
 
+    self.MuzzleFlashComponent = self.Owner.GetComponentByName(
+        "UPointLightComponent",
+        "MuzzleFlash_MainCannon_0"
+    )
+
     if self.VisualComponent == nil or not self.VisualComponent:IsValid() then
         Log("[MainCannon] Visual_MainCannon_0 not found")
     end
 
     if self.MuzzleComponent == nil or not self.MuzzleComponent:IsValid() then
         Log("[MainCannon] Muzzle_MainCannon_0 not found")
+    end
+
+    if self.MuzzleFlashComponent ~= nil and self.MuzzleFlashComponent:IsValid() then
+        self.MuzzleFlashComponent:SetIntensity(0.0)
     end
 end
 
@@ -203,6 +213,17 @@ function MainCannonWeapon:FireLoop()
             if self.Owner ~= nil and self.Owner.FireLinearProjectile ~= nil then
                 self:PlayFireSound()
                 self.Owner.FireLinearProjectile("MainCannon", self.Data, 0)
+
+                -- 포인트 라이트를 이용한 포구 화염 연출 (0.1초)
+                if self.MuzzleFlashComponent ~= nil and self.MuzzleFlashComponent:IsValid() then
+                    self.Owner.StartCoroutine(function()
+                        self.MuzzleFlashComponent:SetIntensity(5.0) -- 화염 강도
+                        coroutine.yield("wait_time", 0.1)
+                        if self.MuzzleFlashComponent:IsValid() then
+                            self.MuzzleFlashComponent:SetIntensity(0.0)
+                        end
+                    end)
+                end
             else
                 Log("[MainCannon] FireLinearProjectile is nil")
             end
