@@ -122,6 +122,9 @@ struct FLuaComponentHandle
 	bool SetUITint(float R, float G, float B, float A) const;
 	bool SetUIVisibility(bool bVisible) const;
 
+	bool SetStaticMesh(const FString& MeshPath) const;
+	bool SetMaterial(int32 Index, const FString& MaterialPath) const;
+
 	bool IsUIText() const;
 	FString GetUIText() const;
 	bool SetUIText(const FString& Text) const;

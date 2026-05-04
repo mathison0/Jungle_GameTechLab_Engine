@@ -11,6 +11,10 @@
 #include "UI/TextUIComponent.h"
 #include "UI/TextureUIComponent.h"
 #include "UI/UIComponent.h"
+#include "Component/StaticMeshComponent.h"
+#include "Mesh/ObjManager.h"
+#include "Materials/MaterialManager.h"
+#include "Engine/Runtime/Engine.h"
 
 namespace
 {
@@ -336,6 +340,31 @@ bool FLuaComponentHandle::SetUIVisibility(bool bVisible) const
     return true;
 }
 
+bool FLuaComponentHandle::SetStaticMesh(const FString& MeshPath) const
+{
+    UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Resolve());
+    if (!MeshComp) return false;
+
+    ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+    UStaticMesh* Mesh = FObjManager::LoadObjStaticMesh(MeshPath, Device);
+    if (!Mesh) return false;
+
+    MeshComp->SetStaticMesh(Mesh);
+    return true;
+}
+
+bool FLuaComponentHandle::SetMaterial(int32 Index, const FString& MaterialPath) const
+{
+    UMeshComponent* MeshComp = Cast<UMeshComponent>(Resolve());
+    if (!MeshComp) return false;
+
+    UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+    if (!Material) return false;
+
+    MeshComp->SetMaterial(Index, Material);
+    return true;
+}
+
 bool FLuaComponentHandle::IsUIText() const
 {
     return Cast<UTextUIComponent>(Resolve()) != nullptr;
@@ -453,6 +482,8 @@ namespace LuaBinding
             "SetUIRotationDegrees", &FLuaComponentHandle::SetUIRotationDegrees,
             "SetUITint", &FLuaComponentHandle::SetUITint,
             "SetUIVisibility", &FLuaComponentHandle::SetUIVisibility,
+            "SetStaticMesh", &FLuaComponentHandle::SetStaticMesh,
+            "SetMaterial", &FLuaComponentHandle::SetMaterial,
             "IsUIText", &FLuaComponentHandle::IsUIText,
             "GetUIText", &FLuaComponentHandle::GetUIText,
             "SetUIText", &FLuaComponentHandle::SetUIText,

@@ -8,6 +8,12 @@
 
 IMPLEMENT_CLASS(AStaticMeshActor, AActor)
 
+void AStaticMeshActor::InitDefaultComponents()
+{
+    StaticMeshComponent = AddComponent<UStaticMeshComponent>();
+    SetRootComponent(StaticMeshComponent);
+}
+
 void AStaticMeshActor::InitDefaultComponents(const FString& UStaticMeshFileName)
 {
     StaticMeshComponent = AddComponent<UStaticMeshComponent>();

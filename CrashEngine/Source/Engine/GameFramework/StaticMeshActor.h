@@ -14,6 +14,7 @@ public:
     DECLARE_CLASS(AStaticMeshActor, AActor)
     AStaticMeshActor() {}
 
+    void InitDefaultComponents() override;
     void InitDefaultComponents(const FString& UStaticMeshFileName);
 
 private:

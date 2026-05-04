@@ -1,0 +1,19 @@
+{
+    "BlendState": "Opaque",
+    "DepthStencilState": "Default",
+    "Parameters": {
+        "SectionColor": [
+            1.000000,
+            1.000000,
+            1.000000,
+            1.000000
+        ],
+        "SpecularPower": 16.000000,
+        "SpecularStrength": 0.500000
+    },
+    "PathFileName": "Asset/Content/Materials/FloorMaterial.json",
+    "RasterizerState": "SolidBackCull",
+    "Textures": {
+        "DiffuseTexture": "Asset/Content/Textures/floor.jpg"
+    }
+}
