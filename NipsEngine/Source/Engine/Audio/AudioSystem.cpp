@@ -63,7 +63,7 @@ namespace
 		return FVector(WorldVector.X, -WorldVector.Y, WorldVector.Z);
 	}
 
-	FString ResolveAudioPath(const FString& SoundPath)
+	std::wstring ResolveAudioPath(const FString& SoundPath)
 	{
 		if (SoundPath.empty())
 		{
@@ -73,10 +73,10 @@ namespace
 		std::filesystem::path Path(FPaths::ToWide(SoundPath));
 		if (Path.is_absolute())
 		{
-			return FPaths::ToUtf8(Path.wstring());
+			return Path.lexically_normal().generic_wstring();
 		}
 
-		return FPaths::ToAbsoluteString(FPaths::ToWide(SoundPath));
+		return FPaths::ToAbsolute(FPaths::ToWide(SoundPath));
 	}
 }
 
@@ -85,7 +85,7 @@ struct FAudioSystemImpl
 	struct FActiveSound
 	{
 		std::unique_ptr<ma_sound> Sound;
-		FString ResolvedSoundPath;
+		std::wstring ResolvedSoundPath;
 		bool bLoop = false;
 		bool bSpatial = false;
 		bool bAffectedByAudioZones = true;
@@ -454,13 +454,13 @@ struct FAudioSystemImpl
 	{
 		ma_sound_group* TargetGroup = bUseZoneEffectBus ? ZoneEffectGroup.get() : nullptr;
 		auto NewSound = std::make_unique<ma_sound>();
-		ma_result Result = ma_sound_init_from_file(&Engine, ActiveSound.ResolvedSoundPath.c_str(), 0, TargetGroup, nullptr, NewSound.get());
+		ma_result Result = ma_sound_init_from_file_w(&Engine, ActiveSound.ResolvedSoundPath.c_str(), 0, TargetGroup, nullptr, NewSound.get());
 		if (Result != MA_SUCCESS && TargetGroup)
 		{
 			UE_LOG("AudioSystem: failed to load sound through zone effect bus '%s'. Retrying without effects. error=%d", LogPath.c_str(), static_cast<int>(Result));
 			TargetGroup = nullptr;
 			NewSound = std::make_unique<ma_sound>();
-			Result = ma_sound_init_from_file(&Engine, ActiveSound.ResolvedSoundPath.c_str(), 0, nullptr, nullptr, NewSound.get());
+			Result = ma_sound_init_from_file_w(&Engine, ActiveSound.ResolvedSoundPath.c_str(), 0, nullptr, nullptr, NewSound.get());
 		}
 		if (Result != MA_SUCCESS)
 		{
@@ -506,7 +506,7 @@ struct FAudioSystemImpl
 			float CursorSeconds = 0.0f;
 			ma_sound_get_cursor_in_seconds(ActiveSound.Sound.get(), &CursorSeconds);
 			const bool bWasPlaying = ma_sound_is_playing(ActiveSound.Sound.get()) == MA_TRUE;
-			const FString LogPath = ActiveSound.ResolvedSoundPath;
+			const FString LogPath = FPaths::ToUtf8(ActiveSound.ResolvedSoundPath);
 
 			ma_sound_stop(ActiveSound.Sound.get());
 			ma_sound_uninit(ActiveSound.Sound.get());
@@ -800,14 +800,14 @@ FAudioHandle FAudioSystem::Play(const FString& SoundPath, const FAudioPlayParams
 		return {};
 	}
 
-	const FString AbsolutePath = ResolveAudioPath(SoundPath);
+	const std::wstring AbsolutePath = ResolveAudioPath(SoundPath);
 	if (AbsolutePath.empty())
 	{
 		UE_LOG("AudioSystem: empty sound path.");
 		return {};
 	}
 
-	if (!std::filesystem::exists(std::filesystem::path(FPaths::ToWide(AbsolutePath))))
+	if (!std::filesystem::exists(std::filesystem::path(AbsolutePath)))
 	{
 		UE_LOG("AudioSystem: sound file not found: %s", SoundPath.c_str());
 		return {};
@@ -1203,14 +1203,14 @@ float FAudioSystem::GetDuration(FAudioHandle Handle) const
 float FAudioSystem::GetSoundDuration(const FString& SoundPath) const
 {
 #if NIPS_WITH_MINIAUDIO
-	const FString AbsolutePath = ResolveAudioPath(SoundPath);
-	if (AbsolutePath.empty() || !std::filesystem::exists(std::filesystem::path(FPaths::ToWide(AbsolutePath))))
+	const std::wstring AbsolutePath = ResolveAudioPath(SoundPath);
+	if (AbsolutePath.empty() || !std::filesystem::exists(std::filesystem::path(AbsolutePath)))
 	{
 		return 0.0f;
 	}
 
 	ma_decoder Decoder{};
-	if (ma_decoder_init_file(AbsolutePath.c_str(), nullptr, &Decoder) != MA_SUCCESS)
+	if (ma_decoder_init_file_w(AbsolutePath.c_str(), nullptr, &Decoder) != MA_SUCCESS)
 	{
 		return 0.0f;
 	}
