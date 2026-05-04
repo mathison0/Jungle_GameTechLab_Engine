@@ -9,7 +9,7 @@
 
 namespace
 {
-	constexpr float CleanDecalThreshold = 0.99f;
+	constexpr float CleanDecalThreshold = 0.95f;
 
 	bool IsLiveObjectPointer(const UObject* Object)
 	{
@@ -120,12 +120,18 @@ int32 GGameContext::GetRemainingDecalCount() const
 
 	for (const UDecalComponent* Decal : MapDecals)
 	{
-		if (!UObject::IsValid(Decal))
+		if (!IsLiveObjectPointer(Decal))
 		{
 			continue;
 		}
 
-		if (Decal->GetCleanPercentage() < CleanDecalThreshold)
+		const AActor* DecalOwner = Decal->GetOwner();
+		if (DecalOwner == nullptr || !DecalOwner->IsActive())
+		{
+			continue;
+		}
+
+		if (Decal->GetCleanPercentage() <= CleanDecalThreshold)
 		{
 			++RemainingCount;
 		}
