@@ -18,11 +18,14 @@
 #include "Render/Resources/Shaders/ShaderManager.h"
 #include "Render/Scene/Proxies/Primitive/PrimitiveProxy.h"
 #include "Render/Scene/Proxies/Primitive/TextRenderSceneProxy.h"
+#include "Render/Scene/Proxies/UI/UIProxy.h"
+#include "Render/Scene/Scene.h"
 #include "Render/Resources/State/RenderStateTypes.h"
 #include "Render/Submission/Command/DrawCommand.h"
 #include "Render/Submission/Command/DrawCommandList.h"
 #include "Resource/ResourceManager.h"
 
+#include <algorithm>
 #include <vector>
 
 void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERenderPass Pass, FRenderPipelineContext& Context, FDrawCommandList& OutList, uint16 UserBits)
@@ -199,7 +202,7 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
             (reinterpret_cast<uintptr_t>(Cmd.SpecularSRV) >> 24);
         
         const uint8 FinalUserBits = static_cast<uint8>(UserBits & 0xFFu);
-        const uint32 FinalMaterialHash = static_cast<uint32>(MaterialHash & 0xFFFFFu);
+        const uint32 FinalMaterialHash = static_cast<uint32>(MaterialHash & 0xFFFFu);
 
         Cmd.SortKey = FDrawCommand::BuildSortKey(
             Pass,
@@ -704,6 +707,126 @@ void DrawCommandBuild::BuildBatchedWorldTextDrawCommands(FRenderPipelineContext&
     }
 }
 
+void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDrawCommandList& OutList)
+{
+    if (!Context.Scene || !Context.SceneView || !Context.Resources || !Context.Context)
+    {
+        return;
+    }
+
+    if (!Context.SceneView->ShowFlags.bUI)
+    {
+        return;
+    }
+
+    struct FSortedUIProxy
+    {
+        const FUIProxy* Proxy = nullptr;
+    };
+
+    TArray<FSortedUIProxy> SortedProxies;
+    for (const FUIProxy* Proxy : Context.Scene->GetUIProxies())
+    {
+        if (!Proxy ||
+            !Proxy->bVisible ||
+            Proxy->RenderSpace != EUIRenderSpace::ScreenSpace ||
+            Proxy->GeometryType != EUIGeometryType::Quad)
+        {
+            continue;
+        }
+
+        SortedProxies.push_back({ Proxy });
+    }
+
+    if (SortedProxies.empty())
+    {
+        return;
+    }
+
+    std::sort(
+        SortedProxies.begin(),
+        SortedProxies.end(),
+        [](const FSortedUIProxy& A, const FSortedUIProxy& B)
+        {
+            if (A.Proxy->Layer != B.Proxy->Layer)
+            {
+                return A.Proxy->Layer < B.Proxy->Layer;
+            }
+            if (A.Proxy->ZOrder != B.Proxy->ZOrder)
+            {
+                return A.Proxy->ZOrder < B.Proxy->ZOrder;
+            }
+            return A.Proxy->ProxyId < B.Proxy->ProxyId;
+        });
+
+    FUIBatch& UIBatch = Context.Resources->UIBatch;
+    UIBatch.Clear();
+
+    struct FUICommandRange
+    {
+        const FUIProxy* Proxy = nullptr;
+        FUIBatchRange Range;
+    };
+
+    TArray<FUICommandRange> Ranges;
+    Ranges.reserve(SortedProxies.size());
+
+    for (const FSortedUIProxy& Entry : SortedProxies)
+    {
+        const FUIBatchRange Range = UIBatch.AddScreenQuad(
+            *Entry.Proxy,
+            Context.SceneView->ViewportWidth,
+            Context.SceneView->ViewportHeight);
+        if (Range.IndexCount > 0)
+        {
+            Ranges.push_back({ Entry.Proxy, Range });
+        }
+    }
+
+    if (Ranges.empty() || !UIBatch.UploadBuffers(Context.Context))
+    {
+        return;
+    }
+
+    UIBatch.UpdateParams(Context.Context);
+
+    FGraphicsProgram* Shader = FShaderManager::Get().GetShader(EShaderType::UI);
+    if (!Shader)
+    {
+        return;
+    }
+
+    const FRenderPassDrawPreset& State = Context.GetRenderPassDrawPreset(ERenderPass::UI);
+
+    auto BuildUIOrderSortKey = [](uint32 Order) -> uint64
+    {
+        return (static_cast<uint64>(ERenderPass::UI) << 56) |
+               (static_cast<uint64>(Order) & 0x00FFFFFFFFFFFFFFull);
+    };
+
+    uint32 Order = 0;
+    for (const FUICommandRange& Entry : Ranges)
+    {
+        FDrawCommand& Cmd = OutList.AddCommand();
+        Cmd.Shader        = Shader;
+        Cmd.DepthStencil  = State.DepthStencil;
+        Cmd.Blend         = State.Blend;
+        Cmd.Rasterizer    = State.Rasterizer;
+        Cmd.Topology      = State.Topology;
+        Cmd.RawVB         = UIBatch.GetVBBuffer();
+        Cmd.RawVBStride   = UIBatch.GetVBStride();
+        Cmd.RawIB         = UIBatch.GetIBBuffer();
+        Cmd.FirstIndex    = Entry.Range.FirstIndex;
+        Cmd.IndexCount    = Entry.Range.IndexCount;
+        Cmd.DiffuseSRV    = Entry.Proxy->bUseTexture ? Entry.Proxy->TextureSRV : nullptr;
+        Cmd.PerShaderCB[0] = Entry.Proxy->bUseTexture
+            ? UIBatch.GetTextureParamsCB()
+            : UIBatch.GetSolidParamsCB();
+        Cmd.Pass      = ERenderPass::UI;
+        Cmd.DebugName = "UI";
+        Cmd.SortKey   = BuildUIOrderSortKey(Order++);
+    }
+}
 
 void DrawCommandBuild::BuildDecalDrawCommand(const FPrimitiveProxy& Proxy, FRenderPipelineContext& Context, FDrawCommandList& OutList)
 {

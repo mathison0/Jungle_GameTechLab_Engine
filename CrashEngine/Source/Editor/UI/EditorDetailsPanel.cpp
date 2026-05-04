@@ -45,6 +45,7 @@
 
 namespace
 {
+constexpr const char* ContentAssetPayloadType = "CRASH_CONTENT_ASSET_PATH";
 constexpr const char* LuaScriptPayloadType = "CRASH_LUA_SCRIPT_PATH";
 }
 
@@ -1878,22 +1879,38 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
     {
         FString* Val = static_cast<FString*>(Prop.ValuePtr);
         const bool bAcceptLuaScriptDrop = Prop.Name == "Script";
-        char Buf[256];
+        const bool bAcceptContentAssetDrop = Prop.Name == "Texture Path";
+        char Buf[512];
         strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
         if (ImGui::InputText(WidgetLabel.c_str(), Buf, sizeof(Buf)))
         {
             *Val = Buf;
             bChanged = true;
         }
-        if (bAcceptLuaScriptDrop && ImGui::BeginDragDropTarget())
+        if ((bAcceptLuaScriptDrop || bAcceptContentAssetDrop) && ImGui::BeginDragDropTarget())
         {
-            if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(LuaScriptPayloadType))
+            if (bAcceptLuaScriptDrop)
             {
-                const char* ScriptPath = static_cast<const char*>(Payload->Data);
-                if (ScriptPath && Payload->DataSize > 0)
+                if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(LuaScriptPayloadType))
                 {
-                    *Val = ScriptPath;
-                    bChanged = true;
+                    const char* ScriptPath = static_cast<const char*>(Payload->Data);
+                    if (ScriptPath && Payload->DataSize > 0)
+                    {
+                        *Val = ScriptPath;
+                        bChanged = true;
+                    }
+                }
+            }
+            if (bAcceptContentAssetDrop)
+            {
+                if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(ContentAssetPayloadType))
+                {
+                    const char* AssetPath = static_cast<const char*>(Payload->Data);
+                    if (AssetPath && Payload->DataSize > 0)
+                    {
+                        *Val = AssetPath;
+                        bChanged = true;
+                    }
                 }
             }
             ImGui::EndDragDropTarget();

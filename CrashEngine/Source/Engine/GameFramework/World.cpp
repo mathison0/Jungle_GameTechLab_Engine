@@ -87,17 +87,25 @@ void UWorld::AddActor(AActor* Actor)
     PersistentLevel->AddActor(Actor);
 
     // 액터 생성자 시점에는 Outer가 아직 Level/World에 연결되지 않았을 수 있다.
-    // 그 상태에서 만들어진 primitive component는 CreateRenderState()가 early-out 되므로
+    // 그 상태에서 만들어진 컴포넌트는 CreateRenderState()가 early-out 되므로
     // 월드 등록 직후 누락된 렌더 스테이트를 한 번 더 보정한다.
     for (UActorComponent* Component : Actor->GetComponents())
     {
+        if (!Component)
+        {
+            continue;
+        }
+
         if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
         {
             if (!Primitive->GetSceneProxy())
             {
                 Primitive->CreateRenderState();
             }
+            continue;
         }
+
+        Component->CreateRenderState();
     }
 
     InsertActorToOctree(Actor);

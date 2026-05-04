@@ -74,6 +74,7 @@ void FShaderProgramRegistry::Initialize()
     AddDefine(ShadowEncodeESM, "SHADOW_FILTER_METHOD", GetShadowFilterMethodDefineValue(EShadowFilterMethod::ESM));
     Add(EShaderType::ShadowEncodeESM, ShadowEncodeESM);
     Add(EShaderType::LightHitMap, MakeGraphicsProgramDesc("LightHitMap", "Shaders/Passes/PostProcess/LightHitMapPass.hlsl"));
+    Add(EShaderType::UI, MakeGraphicsProgramDesc("UI", "Shaders/Render/UI/UberUI.hlsl"));
 
     FGraphicsProgramDesc SceneDepth = MakeGraphicsProgramDesc("SceneDepth", "Shaders/Render/Scene/ViewModes/NonLitViewMode.hlsl");
     AddDefine(SceneDepth, "NON_LIT_VIEW_SCENE_DEPTH", "1");

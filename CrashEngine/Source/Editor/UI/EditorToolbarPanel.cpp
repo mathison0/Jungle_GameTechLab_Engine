@@ -11,6 +11,7 @@
 #include "Editor/Viewport/LevelEditorViewportClient.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/AmbientLightActor.h"
+#include "GameFramework/ButtonActor.h"
 #include "GameFramework/DecalActor.h"
 #include "GameFramework/DirectionalLightActor.h"
 #include "GameFramework/FakeLightActor.h"
@@ -20,6 +21,7 @@
 #include "GameFramework/SpotLightActor.h"
 #include "GameFramework/StaticMeshActor.h"
 #include "GameFramework/GamejamActor/EnemySpawnerActor.h"
+#include "GameFramework/UIActor.h"
 #include "GameFramework/World.h"
 #include "GameFramework/TankActor.h"
 #include "ImGui/imgui.h"
@@ -78,6 +80,7 @@ enum class EAddActorIcon
     SpotLight,
     Decal,
     HeightFog,
+    UI,
     Effect
 };
 
@@ -151,6 +154,8 @@ constexpr FAddActorEntry BasicAddActors[] = {
     { "Empty Actor", EAddActorIcon::Empty, [](UWorld* W, const FVector& P) -> AActor* { return SpawnEmptyToolbarActor(W, P); } },
     ADD_MESH("Cube", EAddActorIcon::Cube, FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ")),
     ADD_MESH("Sphere", EAddActorIcon::Sphere, FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ")),
+    ADD_ACTOR("UI", EAddActorIcon::UI, AUIActor, false),
+    ADD_ACTOR("Button", EAddActorIcon::UI, AButtonActor, false),
 };
 
 constexpr FAddActorEntry LightAddActors[] = {
@@ -318,6 +323,22 @@ void DrawEmptyActorGlyph(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& 
     DrawList->AddLine(ImVec2(Center.x, Center.y - Half), ImVec2(Center.x, Center.y + Half), Color, 1.3f);
 }
 
+void DrawUIGlyph(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+{
+    const float W = Max.x - Min.x;
+    const float H = Max.y - Min.y;
+    const ImVec2 PanelMin(Min.x + W * 0.22f, Min.y + H * 0.28f);
+    const ImVec2 PanelMax(Min.x + W * 0.78f, Min.y + H * 0.72f);
+    DrawList->AddRect(PanelMin, PanelMax, Color, 2.0f, 0, 1.6f);
+    DrawList->AddLine(
+        ImVec2(PanelMin.x + W * 0.08f, PanelMin.y + H * 0.12f),
+        ImVec2(PanelMax.x - W * 0.08f, PanelMin.y + H * 0.12f),
+        Color,
+        1.3f);
+    DrawList->AddCircleFilled(ImVec2(PanelMin.x + W * 0.12f, PanelMax.y - H * 0.12f), 1.6f, Color, 8);
+    DrawList->AddCircleFilled(ImVec2(PanelMin.x + W * 0.24f, PanelMax.y - H * 0.12f), 1.6f, Color, 8);
+}
+
 void DrawAddActorIcon(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, EAddActorIcon Icon, bool bEnabled)
 {
     const ImU32 BgColor = bEnabled ? IM_COL32(30, 34, 40, 235) : IM_COL32(30, 32, 36, 150);
@@ -350,6 +371,9 @@ void DrawAddActorIcon(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max
         break;
     case EAddActorIcon::Sphere:
         DrawSphereGlyph(DrawList, Min, Max, GlyphColor);
+        break;
+    case EAddActorIcon::UI:
+        DrawUIGlyph(DrawList, Min, Max, bEnabled ? IM_COL32(116, 210, 186, 255) : GlyphColor);
         break;
     default:
         DrawEffectGlyph(DrawList, Min, Max, bEnabled ? IM_COL32(255, 160, 82, 255) : GlyphColor);
@@ -1009,6 +1033,7 @@ void FEditorToolbarPanel::RenderPaneToolbar(FLevelViewportLayout* Layout,
         if (ImGui::CollapsingHeader("Common Show Flags", ImGuiTreeNodeFlags_DefaultOpen))
         {
             ImGui::Checkbox("Primitives", &Opts.ShowFlags.bPrimitives);
+            ImGui::Checkbox("UI", &Opts.ShowFlags.bUI);
             ImGui::Checkbox("Text", &Opts.ShowFlags.bText);
         }
 
