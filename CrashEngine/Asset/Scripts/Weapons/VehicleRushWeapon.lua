@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local Audio = require("Core.Audio")
 local DamageSystem = require("Core.DamageSystem")
 local Vec = require("Core.Vector")
 local WeaponDefs = require("WeaponDefs")
@@ -57,6 +58,9 @@ function VehicleRushWeapon.New(owner)
     self.Coroutine = nil
     self.IsRunning = false
     self.Visuals = {}
+    self.ResumeSoundPositions = {}
+    self.ActiveSpawnSound = nil
+    self.ActiveSpawnSoundElapsed = 0.0
     return self
 end
 
@@ -85,6 +89,9 @@ function VehicleRushWeapon:Stop()
     end
 
     self.Coroutine = nil
+    self:FinishSpawnSound(self.ActiveSpawnSound, self.ActiveSpawnSoundElapsed)
+    self.ActiveSpawnSound = nil
+    self.ActiveSpawnSoundElapsed = 0.0
     self:HideVisuals()
 end
 
@@ -138,6 +145,77 @@ function VehicleRushWeapon:HideVisuals()
             visual:SetVisibility(false)
         end
     end
+end
+
+function VehicleRushWeapon:PlaySpawnSound()
+    local sound = self.Data.Sound
+    if sound == nil then
+        return nil
+    end
+
+    if type(sound) == "string" then
+        Audio.Play(sound, Audio.Bus.SFX, 1.0)
+        return nil
+    end
+
+    local key = sound.Spawn or sound.Key
+    local handle = Audio.Play(
+        key,
+        sound.Bus or Audio.Bus.SFX,
+        sound.Volume or 1.0
+    )
+
+    if handle == nil or sound.Resume ~= true then
+        return nil
+    end
+
+    local durationMs = Audio.GetLength(key) or 0.0
+    if durationMs <= 0.0 then
+        durationMs = sound.DurationMs or 0.0
+    end
+    local startPositionMs = self.ResumeSoundPositions[key] or 0.0
+    if durationMs > 0.0 then
+        startPositionMs = startPositionMs % durationMs
+    end
+
+    Audio.SetPosition(handle, startPositionMs)
+
+    return {
+        Handle = handle,
+        Key = key,
+        Sound = sound,
+        StartPositionMs = startPositionMs,
+        DurationMs = durationMs,
+    }
+end
+
+function VehicleRushWeapon:FinishSpawnSound(playback, elapsed)
+    if playback == nil then
+        return
+    end
+
+    local key = playback.Key
+    local handle = playback.Handle
+    local sound = playback.Sound or {}
+    local positionMs = Audio.GetPosition(handle)
+
+    if positionMs == nil or positionMs <= 0.0 then
+        positionMs = (playback.StartPositionMs or 0.0) + ((elapsed or 0.0) * 1000.0)
+    end
+
+    local durationMs = playback.DurationMs or Audio.GetLength(key) or 0.0
+    if durationMs <= 0.0 then
+        durationMs = sound.DurationMs or 0.0
+    end
+    if durationMs > 0.0 then
+        positionMs = positionMs % durationMs
+    end
+
+    if key ~= nil then
+        self.ResumeSoundPositions[key] = positionMs
+    end
+
+    Audio.Stop(handle)
 end
 
 function VehicleRushWeapon:GetOwnerActor()
@@ -226,6 +304,10 @@ function VehicleRushWeapon:RunVehiclePass()
         })
     end
 
+    local spawnSound = self:PlaySpawnSound()
+    self.ActiveSpawnSound = spawnSound
+    self.ActiveSpawnSoundElapsed = 0.0
+
     Log("[VehicleRush] vehicle pass started. count=" ..
         tostring(count) ..
         " offset=" ..
@@ -239,6 +321,7 @@ function VehicleRushWeapon:RunVehiclePass()
     while self.IsRunning and elapsed < duration do
         local dt = Co.WaitNextFrame() or 0.0
         elapsed = elapsed + dt
+        self.ActiveSpawnSoundElapsed = elapsed
 
         local alpha = elapsed / duration
         if alpha > 1.0 then
@@ -254,6 +337,10 @@ function VehicleRushWeapon:RunVehiclePass()
             visual:SetVisibility(false)
         end
     end
+
+    self:FinishSpawnSound(spawnSound, elapsed)
+    self.ActiveSpawnSound = nil
+    self.ActiveSpawnSoundElapsed = 0.0
 end
 
 function VehicleRushWeapon:UpdateVehicles(world, ownerActor, vehicles, dir, side, alpha, hitActors)

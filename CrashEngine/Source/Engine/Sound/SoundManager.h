@@ -78,6 +78,9 @@ public:
 	void SetMasterVolume(float Volume);
 	float GetMasterVolume() const;
 	void SetSoundVolume(FSoundHandle Handle, float Volume);
+	void SetSoundPosition(FSoundHandle Handle, uint32 PositionMs);
+	uint32 GetSoundPosition(FSoundHandle Handle) const;
+	uint32 GetSoundLength(const FName& Key) const;
 	bool IsPlaying(FSoundHandle Handle) const;
 
 private:
