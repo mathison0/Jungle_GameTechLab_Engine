@@ -1,5 +1,6 @@
 ﻿#include "Game/Input/GamePlayerController.h"
 
+#include "Audio/AudioSystem.h"
 #include "Component/CameraComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/Physics/PhysicsHandleComponent.h"
@@ -78,6 +79,18 @@ namespace
 	{
 		static const FName Name("LookPitch");
 		return Name;
+	}
+
+	const FString& MopToolId()
+	{
+		static const FString Id("mop");
+		return Id;
+	}
+
+	const FString& MopCleaningLoopSoundPath()
+	{
+		static const FString Path("Asset/Audio/mopping-floor.wav");
+		return Path;
 	}
 
 	FVector ToForward(float PitchDegrees, float YawDegrees)
@@ -321,6 +334,7 @@ FGamePlayerController::FGamePlayerController()
 
 FGamePlayerController::~FGamePlayerController()
 {
+    StopCleaningLoopSound();
     DestroyPhysicsHandle();
 }
 
@@ -494,6 +508,7 @@ void FGamePlayerController::SetWorld(UWorld* InWorld)
     }
 
     EndCleaningToolViewModel();
+    StopCleaningLoopSound();
     World = InWorld;
     Player = nullptr;
     Camera = nullptr;
@@ -512,6 +527,7 @@ void FGamePlayerController::SetPlayer(AActor* InPlayer)
     }
 
     EndCleaningToolViewModel();
+    StopCleaningLoopSound();
     DestroyPhysicsHandle();
     CharacterMovement = nullptr;
     Player = InPlayer;
@@ -698,6 +714,11 @@ bool FGamePlayerController::TryBeginCleaningUse()
         return false;
     }
 
+    if (bIsCleaningUseHeld)
+    {
+        return true;
+    }
+
     if (!PhysicsHandle || !PhysicsHandle->IsHolding())
     {
         UE_LOG("[CleaningTool] BeginUse blocked: no held physics object.");
@@ -724,6 +745,7 @@ bool FGamePlayerController::TryBeginCleaningUse()
         HeldBody->SetAngularVelocity(FVector::ZeroVector);
     }
     FCleaningToolAnimator::Get().BeginUse(*ToolData);
+    StartCleaningLoopSound(*ToolData);
     UE_LOG("[CleaningTool] BeginUse started: toolId=%s amplitude=%.3f speed=%.3f.",
            CurrentToolId.c_str(),
            ToolData->UseBobAmplitude,
@@ -740,6 +762,30 @@ void FGamePlayerController::EndCleaningUse()
 
     bIsCleaningUseHeld = false;
     FCleaningToolAnimator::Get().EndUse();
+    StopCleaningLoopSound();
+}
+
+void FGamePlayerController::StartCleaningLoopSound(const FCleaningToolData& ToolData)
+{
+    StopCleaningLoopSound();
+
+    if (ToolData.ToolId != MopToolId())
+    {
+        return;
+    }
+
+    CleaningLoopSoundHandle = FAudioSystem::Get().Play2D(MopCleaningLoopSoundPath(), 1.0f, true);
+}
+
+void FGamePlayerController::StopCleaningLoopSound()
+{
+    if (!CleaningLoopSoundHandle.IsValid())
+    {
+        return;
+    }
+
+    FAudioSystem::Get().Stop(CleaningLoopSoundHandle);
+    CleaningLoopSoundHandle = {};
 }
 
 void FGamePlayerController::TogglePickup()
@@ -826,6 +872,7 @@ UCharacterMovementComponent* FGamePlayerController::GetCharacterMovement()
 
 void FGamePlayerController::DestroyPhysicsHandle()
 {
+    StopCleaningLoopSound();
     EndCleaningToolViewModel();
     if (PhysicsHandle)
     {
