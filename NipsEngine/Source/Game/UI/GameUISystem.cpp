@@ -564,7 +564,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 		SetElementText("interaction-hint-text", "잡기");
 		break;
 	case EInteractionHintType::Clean:
-		SetElementText("interaction-hint-text", "청소하기");
+		SetElementText("interaction-hint-text", "놓기");
 		break;
 	case EInteractionHintType::Inspect:
 		SetElementText("interaction-hint-text", "살펴보기");
