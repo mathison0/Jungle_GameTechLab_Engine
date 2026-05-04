@@ -54,6 +54,10 @@ void UWorld::DestroyActor(AActor* Actor)
     // remove and clean up
     if (!Actor)
         return;
+    if (ActorPoolManager)
+    {
+        ActorPoolManager->ForgetActor(Actor);
+    }
     Actor->EndPlay();
     // Remove from actor list
     PersistentLevel->RemoveActor(Actor);
@@ -308,14 +312,15 @@ void UWorld::EndPlay()
     }
 
 
-    PersistentLevel->EndPlay();
-    PersistentLevel->Clear();
-
-	ActorPoolManager.reset();
-
     // Clear spatial partition while actors/components are still alive.
     // Otherwise Octree teardown can dereference stale primitive pointers during shutdown.
     Partition.Reset(FBoundingBox());
+
+    // Drop pool delegates before pooled actors are destroyed by the level.
+    ActorPoolManager.reset();
+
+    PersistentLevel->EndPlay();
+    PersistentLevel->Clear();
 
     MarkEditorPickingAndScenePrimitiveBVHsDirty();
 

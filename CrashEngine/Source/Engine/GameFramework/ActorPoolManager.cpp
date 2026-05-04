@@ -1,7 +1,8 @@
-#include "GameFramework/ActorPoolManager.h"
+﻿#include "GameFramework/ActorPoolManager.h"
 #include "GameFramework/ActorPool.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
+#include "Object/Object.h"
 
 FActorPoolManager::FActorPoolManager(UWorld* InWorld)
     : World(InWorld)
@@ -55,17 +56,42 @@ void FActorPoolManager::Release(AActor* Actor)
     Pool->Release(Actor);
 }
 
+void FActorPoolManager::ForgetActor(AActor* Actor)
+{
+    if (!Actor)
+    {
+        return;
+    }
+
+    if (DelegateBoundActors.erase(Actor) > 0)
+    {
+        Actor->OnPoolReturnRequested.RemoveDynamic(this);
+    }
+
+    BoundActorUUIDs.erase(Actor);
+    ActiveActorToPool.erase(Actor);
+
+    for (auto& Pair : Pools)
+    {
+        if (Pair.second)
+        {
+            Pair.second->ForgetActor(Actor);
+        }
+    }
+}
+
 void FActorPoolManager::DestroyAll()
 {
     for (AActor* Actor : DelegateBoundActors)
     {
-        if (Actor)
+        if (IsBoundActorAlive(Actor))
         {
             Actor->OnPoolReturnRequested.RemoveDynamic(this);
         }
     }
 
     DelegateBoundActors.clear();
+    BoundActorUUIDs.clear();
     ActiveActorToPool.clear();
 
     for (auto& Pair : Pools)
@@ -126,6 +152,7 @@ void FActorPoolManager::RegisterActiveActor(AActor* Actor, FActorPool* Pool)
     ActiveActorToPool[Actor] = Pool;
     if (DelegateBoundActors.insert(Actor).second)
     {
+        BoundActorUUIDs[Actor] = Actor->GetUUID();
         Actor->OnPoolReturnRequested.AddDynamic(this, &FActorPoolManager::HandleActorPoolReturnRequested);
     }
 }
@@ -133,4 +160,28 @@ void FActorPoolManager::RegisterActiveActor(AActor* Actor, FActorPool* Pool)
 void FActorPoolManager::HandleActorPoolReturnRequested(AActor* Actor)
 {
     Release(Actor);
+}
+
+bool FActorPoolManager::IsBoundActorAlive(AActor* Actor) const
+{
+    if (!Actor)
+    {
+        return false;
+    }
+
+    auto UUIDIt = BoundActorUUIDs.find(Actor);
+    if (UUIDIt == BoundActorUUIDs.end())
+    {
+        return false;
+    }
+
+    for (UObject* Object : GUObjectArray)
+    {
+        if (Object == Actor)
+        {
+            return Actor->GetUUID() == UUIDIt->second;
+        }
+    }
+
+    return false;
 }

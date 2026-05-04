@@ -27,6 +27,7 @@ public:
     AActor* Acquire(const FActorCallback& Activate = nullptr);
     void Release(AActor* Actor, const FActorCallback& Deactivate = nullptr);
     void ReleaseAll(const FActorCallback& Deactivate = nullptr);
+    void ForgetActor(AActor* Actor);
     void DestroyAll();
 
     uint32 GetActiveCount() const { return static_cast<uint32>(Active.size()); }

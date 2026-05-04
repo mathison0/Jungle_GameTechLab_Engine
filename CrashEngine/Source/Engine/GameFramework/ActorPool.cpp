@@ -95,6 +95,20 @@ void FActorPool::ReleaseAll(const FActorCallback& Deactivate)
     }
 }
 
+void FActorPool::ForgetActor(AActor* Actor)
+{
+    if (!Actor)
+    {
+        return;
+    }
+
+    auto ActiveIt = std::remove(Active.begin(), Active.end(), Actor);
+    Active.erase(ActiveIt, Active.end());
+
+    auto AvailableIt = std::remove(Available.begin(), Available.end(), Actor);
+    Available.erase(AvailableIt, Available.end());
+}
+
 void FActorPool::DestroyAll()
 {
     if (!World)

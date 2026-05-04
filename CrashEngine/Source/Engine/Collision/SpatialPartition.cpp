@@ -30,6 +30,16 @@ void ExpandBoundsByBox(FBoundingBox& AccumulatedBounds, const FBoundingBox& Box)
     AccumulatedBounds.Expand(Box.Max);
 }
 
+void AddUniquePrimitive(TArray<UPrimitiveComponent*>& Primitives, UPrimitiveComponent* Primitive)
+{
+    if (!Primitive || std::find(Primitives.begin(), Primitives.end(), Primitive) != Primitives.end())
+    {
+        return;
+    }
+
+    Primitives.push_back(Primitive);
+}
+
 bool ShouldTrackInScenePartition(const UPrimitiveComponent* Primitive)
 {
     return Primitive && Primitive->ShouldRenderInCurrentWorld() && !Primitive->IsEditorHelper();
@@ -120,8 +130,18 @@ void FSpatialPartition::RebuildRootBounds(const FBoundingBox& RequiredBounds)
     }
 
     TArray<UPrimitiveComponent*> AllPrimitives;
-    Octree->GetAllPrimitives(AllPrimitives);
-    AllPrimitives.insert(AllPrimitives.end(), OverflowPrimitives.begin(), OverflowPrimitives.end());
+    TArray<UPrimitiveComponent*> OctreePrimitives;
+    Octree->GetAllPrimitives(OctreePrimitives);
+
+    for (UPrimitiveComponent* Prim : OctreePrimitives)
+    {
+        AddUniquePrimitive(AllPrimitives, Prim);
+    }
+
+    for (UPrimitiveComponent* Prim : OverflowPrimitives)
+    {
+        AddUniquePrimitive(AllPrimitives, Prim);
+    }
 
     FBoundingBox NewRootBounds = RequiredBounds;
     for (UPrimitiveComponent* Prim : AllPrimitives)
@@ -216,45 +236,11 @@ void FSpatialPartition::FlushPrimitive()
 
             if (!ShouldTrackInScenePartition(Prim))
             {
-                if (Prim->IsInOctreeOverflow())
-                {
-                    RemovePrimitive(Prim);
-                }
-                else if (FOctree* Node = Prim->GetOctreeNode())
-                {
-                    Node->RemoveDirect(Prim, false);
-                }
+                RemoveSinglePrimitive(Prim);
                 continue;
             }
 
-            const FBoundingBox PrimBox = Prim->GetWorldBoundingBox();
-
-            if (Prim->IsInOctreeOverflow())
-            {
-                RemovePrimitive(Prim);
-
-                if (!Octree->Insert(Prim))
-                {
-                    InsertPrimitive(Prim);
-                }
-                continue;
-            }
-
-            if (FOctree* Node = Prim->GetOctreeNode())
-            {
-                if (Node->GetLooseBounds().IsContains(PrimBox))
-                {
-                    continue;
-                }
-
-                Node->RemoveDirect(Prim, false);
-
-                if (!Octree->Insert(Prim))
-                {
-                    InsertPrimitive(Prim);
-                }
-                continue;
-            }
+            RemoveSinglePrimitive(Prim);
 
             if (!Octree->Insert(Prim))
             {
@@ -506,18 +492,20 @@ void FSpatialPartition::RemoveSinglePrimitive(UPrimitiveComponent* Primitive)
     if (!Primitive)
         return;
 
+    bool bRemoved = false;
+
     if (Primitive->IsInOctreeOverflow())
     {
         RemovePrimitive(Primitive);
-    }
-    else if (FOctree* Node = Primitive->GetOctreeNode())
-    {
-        Node->RemoveDirect(Primitive);
+        bRemoved = true;
     }
     else if (Octree)
     {
-        Octree->Remove(Primitive);
+        bRemoved = Octree->RemoveAll(Primitive);
     }
+
+    (void)bRemoved;
+    Primitive->ClearOctreeLocation();
 }
 
 void FSpatialPartition::RemovePrimitive(UPrimitiveComponent* Primitive)

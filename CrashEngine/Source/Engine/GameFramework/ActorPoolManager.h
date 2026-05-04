@@ -55,6 +55,7 @@ public:
     AActor* Acquire(const FString& ClassName, const FActorPool::FActorCallback& Activate = nullptr);
 
     void Release(AActor* Actor);
+    void ForgetActor(AActor* Actor);
     void DestroyAll();
 
     // Helper for C++ usage with types
@@ -81,9 +82,11 @@ private:
 
     void RegisterActiveActor(AActor* Actor, FActorPool* Pool);
     void HandleActorPoolReturnRequested(AActor* Actor);
+    bool IsBoundActorAlive(AActor* Actor) const;
 
     UWorld* World = nullptr;
     TMap<FString, std::unique_ptr<FActorPool>> Pools;
     TMap<AActor*, FActorPool*> ActiveActorToPool;
+    TMap<AActor*, uint32> BoundActorUUIDs;
     TSet<AActor*> DelegateBoundActors;
 };

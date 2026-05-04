@@ -171,6 +171,38 @@ bool FOctree::Remove(UPrimitiveComponent* Primitive)
     return RemoveDirect(Primitive, true);
 }
 
+bool FOctree::RemoveAll(UPrimitiveComponent* Primitive, bool bTryMergeNow)
+{
+    if (!Primitive)
+    {
+        return false;
+    }
+
+    bool bRemoved = false;
+    while (RemoveDirect(Primitive, false))
+    {
+        bRemoved = true;
+    }
+
+    if (!IsLeaf())
+    {
+        for (FOctree* Child : Children)
+        {
+            if (Child && Child->RemoveAll(Primitive, false))
+            {
+                bRemoved = true;
+            }
+        }
+    }
+
+    if (bRemoved && bTryMergeNow)
+    {
+        TryMerge();
+    }
+
+    return bRemoved;
+}
+
 void FOctree::TryMerge()
 {
     if (IsLeaf())
