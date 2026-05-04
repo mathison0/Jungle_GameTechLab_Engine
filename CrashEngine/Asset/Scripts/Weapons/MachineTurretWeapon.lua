@@ -6,12 +6,84 @@ local WeaponDefs = require("WeaponDefs")
 local MachineTurretWeapon = {}
 MachineTurretWeapon.__index = MachineTurretWeapon
 
+local DEFAULT_AIM_TURN_SPEED = 360.0
+
 local function GetVecAxis(v, axisName, axisIndex)
     if v == nil then
         return nil
     end
 
-    return v[axisName] or v[axisIndex]
+    return v[axisName] or v[string.upper(axisName)] or v[axisIndex]
+end
+
+local function SetVecAxis(v, axisName, axisIndex, value)
+    if v == nil then
+        return
+    end
+
+    v[axisName] = value
+    v[string.upper(axisName)] = value
+    v[axisIndex] = value
+end
+
+local function NormalizeAngleDegrees(angle)
+    angle = (angle or 0.0) + 180.0
+    angle = angle % 360.0
+    if angle < 0.0 then
+        angle = angle + 360.0
+    end
+    return angle - 180.0
+end
+
+local function MoveAngleTowards(current, target, maxDelta)
+    local delta = NormalizeAngleDegrees(target - current)
+
+    if delta > maxDelta then
+        delta = maxDelta
+    elseif delta < -maxDelta then
+        delta = -maxDelta
+    end
+
+    return current + delta
+end
+
+local function Atan2(y, x)
+    if math.atan2 ~= nil then
+        return math.atan2(y, x)
+    end
+
+    if x > 0.0 then
+        return math.atan(y / x)
+    end
+
+    if x < 0.0 and y >= 0.0 then
+        return math.atan(y / x) + math.pi
+    end
+
+    if x < 0.0 and y < 0.0 then
+        return math.atan(y / x) - math.pi
+    end
+
+    if y > 0.0 then
+        return math.pi * 0.5
+    end
+
+    if y < 0.0 then
+        return -math.pi * 0.5
+    end
+
+    return 0.0
+end
+
+local function GetYawToTarget(fromPos, targetPos)
+    local dx = GetVecAxis(targetPos, "x", 1) - GetVecAxis(fromPos, "x", 1)
+    local dy = GetVecAxis(targetPos, "y", 2) - GetVecAxis(fromPos, "y", 2)
+
+    if math.abs(dx) <= 0.0001 and math.abs(dy) <= 0.0001 then
+        return nil
+    end
+
+    return math.deg(Atan2(dy, dx))
 end
 
 local function IsValidTarget(target, origin, range)
@@ -215,6 +287,20 @@ function MachineTurretWeapon:GetSlotOrigin(slot)
     return nil
 end
 
+function MachineTurretWeapon:GetOwnerYaw()
+    if self.Owner == nil or self.Owner.GetActor == nil then
+        return 0.0
+    end
+
+    local ownerActor = self.Owner.GetActor()
+    if ownerActor == nil or not ownerActor:IsValid() then
+        return 0.0
+    end
+
+    local rotation = ownerActor:GetRotation()
+    return GetVecAxis(rotation, "z", 3) or 0.0
+end
+
 function MachineTurretWeapon:StartTurretSlot(slot)
     if self.Owner == nil or self.Owner.StartCoroutine == nil then
         Log("[MachineTurret] StartCoroutine is nil")
@@ -245,9 +331,9 @@ end
 
 function MachineTurretWeapon:TurretAimLoop(slot)
     while self.IsRunning and slot.IsRunning do
-        local _, paused = GameplayPause.WaitNextFrame()
+        local deltaTime, paused = GameplayPause.WaitNextFrame()
         if not paused then
-            self:UpdateSlotAim(slot)
+            self:UpdateSlotAim(slot, deltaTime, false)
         end
     end
 end
@@ -293,7 +379,7 @@ function MachineTurretWeapon:UpdateSlotTarget(slot)
     end
 end
 
-function MachineTurretWeapon:UpdateSlotAim(slot)
+function MachineTurretWeapon:UpdateSlotAim(slot, deltaTime, snap)
     local origin = self:GetSlotOrigin(slot)
 
     if not IsValidTarget(slot.Target, origin, slot.Range) then
@@ -306,14 +392,39 @@ function MachineTurretWeapon:UpdateSlotAim(slot)
 
     local myPos = slot.Visual:GetWorldLocation()
     local targetPos = slot.Target:GetLocation()
-    local z = myPos.z or myPos[3]
 
-    if z ~= nil then
-        targetPos[3] = z
-        targetPos.z = z
+    if myPos == nil or targetPos == nil then
+        return false
     end
 
-    slot.Visual:LookAt(targetPos)
+    local z = GetVecAxis(myPos, "z", 3)
+
+    if z ~= nil then
+        SetVecAxis(targetPos, "z", 3, z)
+    end
+
+    if snap then
+        return slot.Visual:LookAt(targetPos)
+    end
+
+    local desiredWorldYaw = GetYawToTarget(myPos, targetPos)
+    if desiredWorldYaw == nil then
+        return false
+    end
+
+    local rotation = slot.Visual:GetRelativeRotation()
+    if rotation == nil then
+        return false
+    end
+
+    local currentYaw = GetVecAxis(rotation, "z", 3) or 0.0
+    local desiredYaw = NormalizeAngleDegrees(desiredWorldYaw - self:GetOwnerYaw())
+    local turnSpeed = slot.AimTurnSpeed or self.Data.AimTurnSpeed or DEFAULT_AIM_TURN_SPEED
+    local maxDelta = turnSpeed * math.max(deltaTime or 0.0, 0.0)
+    local newYaw = NormalizeAngleDegrees(MoveAngleTowards(currentYaw, desiredYaw, maxDelta))
+
+    SetVecAxis(rotation, "z", 3, newYaw)
+    return slot.Visual:SetRelativeRotation(rotation)
 end
 
 function MachineTurretWeapon:FireSlot(slot)
@@ -323,6 +434,8 @@ function MachineTurretWeapon:FireSlot(slot)
         slot.Target = nil
         return
     end
+
+    self:UpdateSlotAim(slot, 0.0, true)
 
     local ownerActor = nil
     if self.Owner ~= nil and self.Owner.GetActor ~= nil then

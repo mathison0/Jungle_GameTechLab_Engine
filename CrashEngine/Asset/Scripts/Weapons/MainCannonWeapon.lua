@@ -9,6 +9,85 @@ MainCannonWeapon.__index = MainCannonWeapon
 local TARGET_TAG = "Enemy"
 local DEFAULT_RANGE = 10000.0
 local DEFAULT_SEARCH_INTERVAL = 0.2
+local DEFAULT_AIM_TURN_SPEED = 360.0
+
+local function GetVecAxis(v, axisName, axisIndex)
+    if v == nil then
+        return nil
+    end
+
+    return v[axisName] or v[string.upper(axisName)] or v[axisIndex]
+end
+
+local function SetVecAxis(v, axisName, axisIndex, value)
+    if v == nil then
+        return
+    end
+
+    v[axisName] = value
+    v[string.upper(axisName)] = value
+    v[axisIndex] = value
+end
+
+local function NormalizeAngleDegrees(angle)
+    angle = (angle or 0.0) + 180.0
+    angle = angle % 360.0
+    if angle < 0.0 then
+        angle = angle + 360.0
+    end
+    return angle - 180.0
+end
+
+local function MoveAngleTowards(current, target, maxDelta)
+    local delta = NormalizeAngleDegrees(target - current)
+
+    if delta > maxDelta then
+        delta = maxDelta
+    elseif delta < -maxDelta then
+        delta = -maxDelta
+    end
+
+    return current + delta
+end
+
+local function Atan2(y, x)
+    if math.atan2 ~= nil then
+        return math.atan2(y, x)
+    end
+
+    if x > 0.0 then
+        return math.atan(y / x)
+    end
+
+    if x < 0.0 and y >= 0.0 then
+        return math.atan(y / x) + math.pi
+    end
+
+    if x < 0.0 and y < 0.0 then
+        return math.atan(y / x) - math.pi
+    end
+
+    if y > 0.0 then
+        return math.pi * 0.5
+    end
+
+    if y < 0.0 then
+        return -math.pi * 0.5
+    end
+
+    return 0.0
+end
+
+local function GetYawToTarget(fromPos, targetPos)
+    local dx = GetVecAxis(targetPos, "x", 1) - GetVecAxis(fromPos, "x", 1)
+    local dy = GetVecAxis(targetPos, "y", 2) - GetVecAxis(fromPos, "y", 2)
+
+    if math.abs(dx) <= 0.0001 and math.abs(dy) <= 0.0001 then
+        return nil
+    end
+
+    return math.deg(Atan2(dy, dx))
+end
 
 function MainCannonWeapon.New(owner)
     local self = setmetatable({}, MainCannonWeapon)
@@ -139,6 +218,20 @@ function MainCannonWeapon:GetSearchOrigin()
     return nil
 end
 
+function MainCannonWeapon:GetOwnerYaw()
+    if self.Owner == nil or self.Owner.GetActor == nil then
+        return 0.0
+    end
+
+    local actor = self.Owner.GetActor()
+    if actor == nil or not actor:IsValid() then
+        return 0.0
+    end
+
+    local rotation = actor:GetRotation()
+    return GetVecAxis(rotation, "z", 3) or 0.0
+end
+
 function MainCannonWeapon:IsTargetValid()
     return self.Target ~= nil and self.Target:IsValid()
 end
@@ -182,27 +275,57 @@ function MainCannonWeapon:SearchLoop()
     end
 end
 
+function MainCannonWeapon:AimAtCurrentTarget(deltaTime, snap)
+    if self.VisualComponent == nil or not self.VisualComponent:IsValid() then
+        self:RefreshComponents()
+    end
+
+    if self.VisualComponent == nil or not self.VisualComponent:IsValid() or not self:IsTargetValid() then
+        return false
+    end
+
+    local myPos = self.VisualComponent:GetWorldLocation()
+    local targetPos = self.Target:GetLocation()
+
+    if myPos == nil or targetPos == nil then
+        return false
+    end
+
+    local z = GetVecAxis(myPos, "z", 3)
+    if z ~= nil then
+        SetVecAxis(targetPos, "z", 3, z)
+    end
+
+    if snap then
+        return self.VisualComponent:LookAt(targetPos)
+    end
+
+    local desiredWorldYaw = GetYawToTarget(myPos, targetPos)
+    if desiredWorldYaw == nil then
+        return false
+    end
+
+    local rotation = self.VisualComponent:GetRelativeRotation()
+    if rotation == nil then
+        return false
+    end
+
+    local currentYaw = GetVecAxis(rotation, "z", 3) or 0.0
+    local desiredYaw = NormalizeAngleDegrees(desiredWorldYaw - self:GetOwnerYaw())
+    local turnSpeed = self.Data.AimTurnSpeed or DEFAULT_AIM_TURN_SPEED
+    local maxDelta = turnSpeed * math.max(deltaTime or 0.0, 0.0)
+    local newYaw = NormalizeAngleDegrees(MoveAngleTowards(currentYaw, desiredYaw, maxDelta))
+
+    SetVecAxis(rotation, "z", 3, newYaw)
+    return self.VisualComponent:SetRelativeRotation(rotation)
+end
+
 function MainCannonWeapon:TargetingLoop()
     while self.IsRunning do
-        local _, paused = GameplayPause.WaitNextFrame()
+        local deltaTime, paused = GameplayPause.WaitNextFrame()
 
         if not paused then
-            if self.VisualComponent == nil or not self.VisualComponent:IsValid() then
-                self:RefreshComponents()
-            end
-
-            if self.VisualComponent ~= nil and self.VisualComponent:IsValid() and self:IsTargetValid() then
-                local myPos = self:GetSearchOrigin()
-                local targetPos = self.Target:GetLocation()
-
-                local z = myPos.z or myPos[3]
-                if z ~= nil then
-                    targetPos[3] = z
-                    targetPos.z = z
-                end
-
-                self.VisualComponent:LookAt(targetPos)
-            end
+            self:AimAtCurrentTarget(deltaTime, false)
         end
     end
 end
@@ -211,6 +334,7 @@ function MainCannonWeapon:FireLoop()
     while self.IsRunning do
         if not GameplayPause.IsPaused() and self:IsTargetValid() then
             if self.Owner ~= nil and self.Owner.FireLinearProjectile ~= nil then
+                self:AimAtCurrentTarget(0.0, true)
                 self:PlayFireSound()
                 self.Owner.FireLinearProjectile("MainCannon", self.Data, 0)
 
