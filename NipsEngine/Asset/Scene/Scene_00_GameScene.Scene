@@ -2,13 +2,13 @@
   "ClassName" : "UWorld",
   "GameUIBootMode" : "InGame",
   "Name" : "Scene_00_GameScene",
-  "NextUUID" : 49392,
+  "NextUUID" : 50459,
   "PerspectiveCamera" : {
     "FOV" : 90.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-4.338264, 1.542046, 8.276839],
+    "Location" : [-1.418007, -8.913631, 3.974465],
     "NearClip" : 0.100000,
-    "Rotation" : [-1.565063, 6.720932, 13.140833]
+    "Rotation" : [-22.958130, 20.806395, 50.019192]
   },
   "Primitives" : {
     "11356" : {
@@ -3804,7 +3804,7 @@
       "EnableTick" : true,
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
-      "Location" : [2.284536, -2.259614, 1.416948],
+      "Location" : [2.284536, -2.259614, 1.725485],
       "Materials" : ["standardSurface2"],
       "NormalizeOnImport" : false,
       "ObjStaticMeshAsset" : "Asset/Mesh/Game/KidsRoom/DrawingPaper.obj",
@@ -4427,7 +4427,7 @@
       "SimulatePhysics" : true,
       "SleepSpeed" : 0.030000,
       "Type" : "URigidBodyComponent",
-      "UpdatedComponentUUID" : 49339,
+      "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
     },
@@ -4504,7 +4504,7 @@
       "SimulatePhysics" : true,
       "SleepSpeed" : 0.030000,
       "Type" : "URigidBodyComponent",
-      "UpdatedComponentUUID" : 49344,
+      "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
     },
@@ -4581,7 +4581,7 @@
       "SimulatePhysics" : true,
       "SleepSpeed" : 0.030000,
       "Type" : "URigidBodyComponent",
-      "UpdatedComponentUUID" : 49349,
+      "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
     },
@@ -4658,7 +4658,7 @@
       "SimulatePhysics" : true,
       "SleepSpeed" : 0.030000,
       "Type" : "URigidBodyComponent",
-      "UpdatedComponentUUID" : 49354,
+      "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
     },
@@ -4747,7 +4747,7 @@
       "SimulatePhysics" : true,
       "SleepSpeed" : 0.030000,
       "Type" : "URigidBodyComponent",
-      "UpdatedComponentUUID" : 49359,
+      "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
     },
@@ -4824,7 +4824,7 @@
       "SimulatePhysics" : true,
       "SleepSpeed" : 0.030000,
       "Type" : "URigidBodyComponent",
-      "UpdatedComponentUUID" : 49364,
+      "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
     },
@@ -4901,7 +4901,7 @@
       "SimulatePhysics" : true,
       "SleepSpeed" : 0.030000,
       "Type" : "URigidBodyComponent",
-      "UpdatedComponentUUID" : 49369,
+      "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
     },
@@ -4966,7 +4966,7 @@
       "SimulatePhysics" : true,
       "SleepSpeed" : 0.030000,
       "Type" : "URigidBodyComponent",
-      "UpdatedComponentUUID" : 49374,
+      "UpdatedComponentUUID" : 0,
       "UseGravity" : true,
       "Velocity" : [0.000000, 0.000000, 0.000000]
     },
@@ -4993,7 +4993,7 @@
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
       "LineThickness" : 1.000000,
-      "Location" : [2.189741, -0.027258, 0.000000],
+      "Location" : [2.189741, -0.027258, -0.065959],
       "ParentUUID" : 456,
       "Rotation" : [0.000000, 0.000000, -23.129486],
       "Scale" : [1.000000, 1.000000, 1.000000],
@@ -5012,7 +5012,7 @@
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
       "LineThickness" : 1.000000,
-      "Location" : [-2.452521, -0.062079, 0.000000],
+      "Location" : [-2.452521, -0.062079, -0.117506],
       "ParentUUID" : 456,
       "Rotation" : [0.000000, 0.000000, 0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],
@@ -5067,7 +5067,7 @@
       "EnableTick" : true,
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
-      "Location" : [0.000000, -7.972172, 1.461397],
+      "Location" : [0.000000, -7.972172, 1.750740],
       "Materials" : ["WoodToy2"],
       "NormalizeOnImport" : false,
       "ObjStaticMeshAsset" : "Asset/Mesh/Game/Toy/dogtoy.obj",
@@ -5090,10 +5090,10 @@
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
       "LineThickness" : 1.000000,
-      "Location" : [0.158781, -0.209242, 1.883929],
+      "Location" : [0.158781, -0.095197, 1.695506],
       "ParentUUID" : 49386,
-      "Rotation" : [-170.783508, -80.644318, 145.564011],
-      "Scale" : [2.206398, 1.000000, 2.749253],
+      "Rotation" : [-168.983994, -77.543999, 145.564011],
+      "Scale" : [2.434195, 1.934995, 3.337310],
       "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
       "Type" : "UCapsuleComponent",
       "Visible" : true
@@ -5110,10 +5110,10 @@
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
       "LineThickness" : 1.000000,
-      "Location" : [-2.545947, -0.024358, 4.709734],
+      "Location" : [-2.111349, 0.158707, 5.501095],
       "ParentUUID" : 49386,
       "Rotation" : [20.251329, 76.847076, 3.206310],
-      "Scale" : [1.350444, 1.000000, 2.537368],
+      "Scale" : [1.485905, 1.429426, 2.928340],
       "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
       "Type" : "UCapsuleComponent",
       "Visible" : true
@@ -5158,6 +5158,26 @@
       "Scale" : [1.000000, 1.000000, 1.000000],
       "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
       "Type" : "UBoxComponent",
+      "Visible" : true
+    },
+    "50458" : {
+      "BlockComponent" : true,
+      "CapsuleHalfHeight" : 1.000000,
+      "CapsuleRadius" : 0.500000,
+      "DebugBoundsVisibility" : 0,
+      "DrawOnlyIfSelected" : false,
+      "EditorOnly" : false,
+      "EnableCull" : false,
+      "EnableTick" : true,
+      "GenerateOverlapEvents" : false,
+      "HiddenInEditor" : false,
+      "LineThickness" : 1.000000,
+      "Location" : [-1.356346, 0.013349, 6.250853],
+      "ParentUUID" : 49386,
+      "Rotation" : [-91.219727, 0.000000, 0.000000],
+      "Scale" : [1.000000, 0.697046, 3.018515],
+      "ShapeColor" : [0.874510, 0.584314, 0.615686, 1.000000],
+      "Type" : "UCapsuleComponent",
       "Visible" : true
     },
     "597" : {
