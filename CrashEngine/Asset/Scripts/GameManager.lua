@@ -175,7 +175,7 @@ function GameManager.OnGameStart()
     GameManager.PlayBackgroundMusic()
 
     if GameManager.WeaponInventory then
-        GameManager.WeaponInventory:AddWeapon("MainCannon")
+        GameManager.WeaponInventory:AddWeapon("Aura")
     end
     Log("[GameManager] --- GAME START ---")
 end
