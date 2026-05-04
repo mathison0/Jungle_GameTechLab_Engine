@@ -1,5 +1,9 @@
 ---@class TankScript : ScriptComponent
-local Script = {}
+local Script = {
+    properties = {
+        PickupExp = { type = "float", default = 1.0, min = 0.0, max = 1000.0, speed = 1.0 },
+    }
+}
 local Query = require("Query")
 local Targeting = require("AI.TargetingAI")
 local WeaponInventory = require("WeaponInventory")
@@ -28,9 +32,10 @@ function Script:BeginPlay()
     self.LevelSystem = LevelSystem.New(self, self.WeaponInventory)
 
     self.WeaponInventory:AddWeapon("MainCannon")
-
-    -- Test only. In actual gameplay, enemy kills should call AddExp.
-    self.LevelSystem:AddExp(30)
+    self.PickupSensor = self.GetComponentByName("UCircleCollider2DComponent", "PickupSensor")
+    if self.PickupSensor == nil or not self.PickupSensor:IsValid() then
+        Log("Invalid PickupSensor")
+    end
 end
 
 function Script:AddExp(amount)
@@ -47,8 +52,36 @@ function Script:OpenChest()
     return false
 end
 
-function Script:Tick(deltaTime)
+function Script:CollectOverlappingPickups()
+    if self.PickupSensor == nil or not self.PickupSensor:IsValid() then
+        return
+    end
 
+    local world = self.GetWorld()
+    if world == nil or not world:IsValid() then
+        return
+    end
+
+    local pickups = world:GetActorsByTag("Pickup")
+    if pickups == nil then
+        return
+    end
+
+    local poolManager = GetActorPoolManager()
+    for _, pickup in ipairs(pickups) do
+        if pickup:IsValid() and pickup:IsVisible() and self.PickupSensor:IsOverlappingActor(pickup) then
+            self:AddExp(self.PickupExp or 1)
+
+            if poolManager ~= nil and poolManager:IsValid() then
+                poolManager:Release(pickup)
+            end
+            pickup:SetVisible(false)
+        end
+    end
+end
+
+function Script:Tick(deltaTime)
+    self:CollectOverlappingPickups()
 end
 
 function Script:EndPlay()

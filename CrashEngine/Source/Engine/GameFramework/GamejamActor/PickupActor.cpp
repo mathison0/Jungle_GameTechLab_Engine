@@ -11,11 +11,13 @@ IMPLEMENT_CLASS(APickupActor, AActor)
 APickupActor::APickupActor()
 {
     bNeedsTick = false;
+    SetActorTag(FName("Pickup"));
 }
 
 void APickupActor::InitDefaultComponents()
 {
     ColliderComponent = AddComponent<UCircleCollider2DComponent>();
+    ColliderComponent->SetFName("PickupCollider");
     ColliderComponent->SetCollisionChannel(ECollisionChannel::Pickup);
     ColliderComponent->SetGenerateOverlapEvents(true);
     SetRootComponent(ColliderComponent);

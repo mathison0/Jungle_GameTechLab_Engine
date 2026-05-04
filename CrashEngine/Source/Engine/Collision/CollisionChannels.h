@@ -12,6 +12,7 @@ enum class ECollisionChannel
     Trigger,
     Pickup,
     FlyingEnemy,
+    PickupSensor,
 
     Count
 };

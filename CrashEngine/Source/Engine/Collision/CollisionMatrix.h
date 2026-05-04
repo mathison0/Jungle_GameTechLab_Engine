@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "CollisionChannels.h"
 
 class FCollisionMatrix
@@ -31,7 +31,8 @@ private:
                 ECollisionResponse::Block,  // Player
                 ECollisionResponse::Ignore, // Trigger
                 ECollisionResponse::Ignore, // Pickup
-                ECollisionResponse::Ignore  // FlyingEnemy
+                ECollisionResponse::Ignore, // FlyingEnemy
+                ECollisionResponse::Ignore  // PickupSensor
             },
 
             // WorldDynamic 기준
@@ -43,7 +44,8 @@ private:
                 ECollisionResponse::Block,   // Player
                 ECollisionResponse::Overlap, // Trigger
                 ECollisionResponse::Ignore,  // Pickup
-                ECollisionResponse::Ignore   // FlyingEnemy
+                ECollisionResponse::Ignore,  // FlyingEnemy
+                ECollisionResponse::Ignore   // PickupSensor
             },
 
             // Projectile 기준
@@ -55,7 +57,8 @@ private:
                 ECollisionResponse::Ignore,  // Player
                 ECollisionResponse::Ignore,  // Trigger
                 ECollisionResponse::Ignore,  // Pickup
-                ECollisionResponse::Ignore   // FlyingEnemy
+                ECollisionResponse::Ignore,  // FlyingEnemy
+                ECollisionResponse::Ignore   // PickupSensor
             },
 
             // Enemy 기준
@@ -67,7 +70,8 @@ private:
                 ECollisionResponse::Block,   // Player
                 ECollisionResponse::Overlap, // Trigger
                 ECollisionResponse::Ignore,  // Pickup
-                ECollisionResponse::Ignore   // FlyingEnemy
+                ECollisionResponse::Ignore,  // FlyingEnemy
+                ECollisionResponse::Ignore   // PickupSensor
             },
 
             // Player 기준
@@ -78,8 +82,9 @@ private:
                 ECollisionResponse::Block,   // Enemy
                 ECollisionResponse::Ignore,  // Player
                 ECollisionResponse::Overlap, // Trigger
-                ECollisionResponse::Overlap, // Pickup
-                ECollisionResponse::Overlap  // FlyingEnemy
+                ECollisionResponse::Ignore,  // Pickup
+                ECollisionResponse::Overlap, // FlyingEnemy
+                ECollisionResponse::Ignore   // PickupSensor
             },
 
             // Trigger 기준
@@ -91,7 +96,8 @@ private:
                 ECollisionResponse::Overlap, // Player
                 ECollisionResponse::Ignore,  // Trigger
                 ECollisionResponse::Ignore,  // Pickup
-                ECollisionResponse::Ignore   // FlyingEnemy
+                ECollisionResponse::Ignore,  // FlyingEnemy
+                ECollisionResponse::Ignore   // PickupSensor
             },
 
             // Pickup 기준
@@ -100,10 +106,11 @@ private:
                 ECollisionResponse::Ignore,  // WorldDynamic
                 ECollisionResponse::Ignore,  // Projectile
                 ECollisionResponse::Ignore,  // Enemy
-                ECollisionResponse::Overlap, // Player
+                ECollisionResponse::Ignore,  // Player
                 ECollisionResponse::Ignore,  // Trigger
                 ECollisionResponse::Ignore,  // Pickup
-                ECollisionResponse::Ignore   // FlyingEnemy
+                ECollisionResponse::Ignore,  // FlyingEnemy
+                ECollisionResponse::Overlap  // PickupSensor
             },
 
             // FlyingEnemy 기준
@@ -115,7 +122,21 @@ private:
                 ECollisionResponse::Overlap, // Player
                 ECollisionResponse::Ignore,  // Trigger
                 ECollisionResponse::Ignore,  // Pickup
-                ECollisionResponse::Ignore   // FlyingEnemy
+                ECollisionResponse::Ignore,  // FlyingEnemy
+                ECollisionResponse::Ignore   // PickupSensor
+            },
+
+            // PickupSensor 기준
+            {
+                ECollisionResponse::Ignore,  // WorldStatic
+                ECollisionResponse::Ignore,  // WorldDynamic
+                ECollisionResponse::Ignore,  // Projectile
+                ECollisionResponse::Ignore,  // Enemy
+                ECollisionResponse::Ignore,  // Player
+                ECollisionResponse::Ignore,  // Trigger
+                ECollisionResponse::Overlap, // Pickup
+                ECollisionResponse::Ignore,  // FlyingEnemy
+                ECollisionResponse::Ignore   // PickupSensor
             }
         };
 };

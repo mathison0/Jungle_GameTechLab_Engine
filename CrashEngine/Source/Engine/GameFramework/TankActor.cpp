@@ -36,6 +36,14 @@ void ATankActor::InitDefaultComponents()
     auto Collider = AddComponent<UCircleCollider2DComponent>();
     SetRootComponent(Collider);
     Collider->SetFName({ "RootComponent" });
+    Collider->SetCollisionChannel(ECollisionChannel::Player);
+
+    auto PickupSensor = AddComponent<UCircleCollider2DComponent>();
+    PickupSensor->SetFName("PickupSensor");
+    PickupSensor->SetRadius(Collider->GetRadius() * 1.5f);
+    PickupSensor->SetCollisionChannel(ECollisionChannel::PickupSensor);
+    PickupSensor->SetGenerateOverlapEvents(true);
+    PickupSensor->AttachToComponent(Collider);
 
     auto Script = AddComponent<UScriptComponent>();
     Script->SetScriptPath("TankScript.lua");
