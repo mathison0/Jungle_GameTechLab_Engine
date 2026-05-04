@@ -547,6 +547,10 @@ void GameUISystem::ResetGameData()
 void GameUISystem::SetProgress(float InProgress)
 {
 	CleanProgress = std::clamp(InProgress, 0.0f, 1.0f);
+	if (CurrentState == EGameUIState::InGame && CleanProgress >= 1.0f)
+	{
+		SetState(EGameUIState::Ending);
+	}
 }
 
 void GameUISystem::SetCurrentItem(const char* Name, const char* Desc)
