@@ -2,6 +2,9 @@
 
 #include "Game/Systems/CleaningGameTypes.h"
 
+class UDecalComponent;
+class UWorld;
+
 class GGameContext
 {
 public:
@@ -11,6 +14,12 @@ public:
 
 	void SetCleanProgress(float InProgress);
 	float GetCleanProgress() const { return CleanProgress; }
+	void RegisterMapDecals(UWorld* World);
+	void ClearMapDecals();
+	void RefreshCleanProgressFromDecals();
+	const TArray<UDecalComponent*>& GetMapDecals() const { return MapDecals; }
+	int32 GetInitialDecalCount() const { return InitialDecalCount; }
+	int32 GetRemainingDecalCount() const;
 
 	void SetCurrentTool(const FString& ToolId);
 	const FString& GetCurrentToolId() const { return CurrentToolId; }
@@ -49,6 +58,8 @@ private:
 	void BroadcastChanged();
 
 	float CleanProgress = 0.0f;
+	TArray<UDecalComponent*> MapDecals;
+	int32 InitialDecalCount = 0;
 	FString CurrentToolId;
 	FString CurrentInspectedItemId;
 
