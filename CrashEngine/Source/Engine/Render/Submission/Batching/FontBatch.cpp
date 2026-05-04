@@ -63,18 +63,19 @@ void FFontBatch::EnsureCharInfoMap(const FFontResource* Resource)
     BuildCharInfoMap(Resource->Columns, Resource->Rows);
 }
 
-void FFontBatch::GetCharUV(uint32 Codepoint, FVector2& OutUVMin, FVector2& OutUVMax) const
+bool FFontBatch::GetCharUV(uint32 Codepoint, FVector2& OutUVMin, FVector2& OutUVMax) const
 {
     const auto It = CharInfoMap.find(Codepoint);
     if (It == CharInfoMap.end())
     {
         OutUVMin = FVector2(0, 0);
         OutUVMax = FVector2(0, 0);
-        return;
+        return false;
     }
     const FCharacterInfo& Info = It->second;
     OutUVMin                   = FVector2(Info.U, Info.V);
     OutUVMax                   = FVector2(Info.U + Info.Width, Info.V + Info.Height);
+    return true;
 }
 
 void FFontBatch::ClearWorld()
@@ -101,17 +102,104 @@ void FFontBatch::ClearAll()
 
 namespace
 {
-uint32 CountUTF8Codepoints(const FString& Text)
+constexpr float GAsciiAdvanceRatio[95] = {
+    0.280f, 0.250f, 0.344f, 0.438f, 0.438f, 0.688f, 0.531f, 0.250f,
+    0.281f, 0.281f, 0.375f, 0.438f, 0.250f, 0.312f, 0.250f, 0.375f,
+    0.438f, 0.406f, 0.438f, 0.438f, 0.469f, 0.438f, 0.438f, 0.438f,
+    0.438f, 0.438f, 0.250f, 0.250f, 0.438f, 0.438f, 0.438f, 0.375f,
+    0.656f, 0.500f, 0.469f, 0.500f, 0.469f, 0.406f, 0.406f, 0.500f,
+    0.500f, 0.250f, 0.406f, 0.469f, 0.406f, 0.531f, 0.500f, 0.562f,
+    0.469f, 0.562f, 0.469f, 0.469f, 0.500f, 0.500f, 0.500f, 0.625f,
+    0.469f, 0.500f, 0.438f, 0.281f, 0.375f, 0.281f, 0.438f, 0.500f,
+    0.312f, 0.438f, 0.469f, 0.406f, 0.438f, 0.438f, 0.344f, 0.469f,
+    0.438f, 0.250f, 0.312f, 0.438f, 0.250f, 0.625f, 0.438f, 0.438f,
+    0.469f, 0.438f, 0.344f, 0.406f, 0.375f, 0.438f, 0.438f, 0.625f,
+    0.438f, 0.438f, 0.438f, 0.312f, 0.250f, 0.312f, 0.438f
+};
+
+bool DecodeUTF8Codepoint(const uint8*& Ptr, const uint8* End, uint32& OutCodepoint)
 {
-    uint32 Count = 0;
-    for (size_t i = 0; i < Text.size(); ++i)
+    if (Ptr >= End)
     {
-        if ((static_cast<unsigned char>(Text[i]) & 0xC0) != 0x80)
-        {
-            ++Count;
-        }
+        return false;
     }
-    return Count;
+
+    if (Ptr[0] < 0x80)
+    {
+        OutCodepoint = Ptr[0];
+        Ptr += 1;
+        return true;
+    }
+
+    if ((Ptr[0] & 0xE0) == 0xC0 && Ptr + 1 < End)
+    {
+        OutCodepoint = ((Ptr[0] & 0x1F) << 6) | (Ptr[1] & 0x3F);
+        Ptr += 2;
+        return true;
+    }
+
+    if ((Ptr[0] & 0xF0) == 0xE0 && Ptr + 2 < End)
+    {
+        OutCodepoint = ((Ptr[0] & 0x0F) << 12) | ((Ptr[1] & 0x3F) << 6) | (Ptr[2] & 0x3F);
+        Ptr += 3;
+        return true;
+    }
+
+    if ((Ptr[0] & 0xF8) == 0xF0 && Ptr + 3 < End)
+    {
+        OutCodepoint = ((Ptr[0] & 0x07) << 18) | ((Ptr[1] & 0x3F) << 12) | ((Ptr[2] & 0x3F) << 6) | (Ptr[3] & 0x3F);
+        Ptr += 4;
+        return true;
+    }
+
+    ++Ptr;
+    return false;
+}
+
+bool IsTextWhitespace(uint32 Codepoint)
+{
+    return Codepoint == ' ' || Codepoint == '\t';
+}
+
+float GetTextGlyphAdvance(uint32 Codepoint, float CharW)
+{
+    if (Codepoint >= 32 && Codepoint <= 126)
+    {
+        return CharW * GAsciiAdvanceRatio[Codepoint - 32];
+    }
+
+    if (Codepoint == '\t')
+    {
+        return CharW * 2.0f;
+    }
+
+    return CharW;
+}
+
+float MeasureUTF8TextWidth(const FString& Text, float CharW, float LetterSpacing)
+{
+    float Width = 0.0f;
+    bool bHasGlyph = false;
+
+    const uint8* Ptr = reinterpret_cast<const uint8*>(Text.c_str());
+    const uint8* const End = Ptr + Text.size();
+    while (Ptr < End)
+    {
+        uint32 Codepoint = 0;
+        if (!DecodeUTF8Codepoint(Ptr, End, Codepoint))
+        {
+            continue;
+        }
+
+        if (bHasGlyph)
+        {
+            Width += LetterSpacing;
+        }
+        Width += GetTextGlyphAdvance(Codepoint, CharW);
+        bHasGlyph = true;
+    }
+
+    return Width;
 }
 
 void AddWorldTextToBuffer(TBatchBuffer<FTextureVertex>& Buffer, const FFontBatch* Batch, const FString& Text,
@@ -124,8 +212,8 @@ void AddWorldTextToBuffer(TBatchBuffer<FTextureVertex>& Buffer, const FFontBatch
     const float  CharW       = 0.5f * Scale * WorldScale.Y;
     const float  CharH       = 0.5f * Scale * WorldScale.Z;
     const size_t ByteCount   = Text.size();
-    const uint32 GlyphCount  = CountUTF8Codepoints(Text);
-    float        CharCursorX = (GlyphCount > 0) ? (-0.5f * static_cast<float>(GlyphCount - 1) * CharW) : 0.0f;
+    const float  TextWidth   = MeasureUTF8TextWidth(Text, CharW, 0.0f);
+    float        CharCursorX = -0.5f * TextWidth;
 
     const uint32 Base    = static_cast<uint32>(Buffer.Vertices.size());
     const uint32 IdxBase = static_cast<uint32>(Buffer.Indices.size());
@@ -145,54 +233,38 @@ void AddWorldTextToBuffer(TBatchBuffer<FTextureVertex>& Buffer, const FFontBatch
     while (Ptr < End)
     {
         uint32 CP = 0;
-        if (Ptr[0] < 0x80)
+        if (!DecodeUTF8Codepoint(Ptr, End, CP))
         {
-            CP = Ptr[0];
-            Ptr += 1;
-        }
-        else if ((Ptr[0] & 0xE0) == 0xC0 && Ptr + 1 < End)
-        {
-            CP = ((Ptr[0] & 0x1F) << 6) | (Ptr[1] & 0x3F);
-            Ptr += 2;
-        }
-        else if ((Ptr[0] & 0xF0) == 0xE0 && Ptr + 2 < End)
-        {
-            CP = ((Ptr[0] & 0x0F) << 12) | ((Ptr[1] & 0x3F) << 6) | (Ptr[2] & 0x3F);
-            Ptr += 3;
-        }
-        else if ((Ptr[0] & 0xF8) == 0xF0 && Ptr + 3 < End)
-        {
-            CP = ((Ptr[0] & 0x07) << 18) | ((Ptr[1] & 0x3F) << 12) | ((Ptr[2] & 0x3F) << 6) | (Ptr[3] & 0x3F);
-            Ptr += 4;
-        }
-        else
-        {
-            ++Ptr;
             continue;
         }
 
-        FVector2 UVMin, UVMax;
-        Batch->GetCharUV(CP, UVMin, UVMax);
+        const float GlyphAdvance = GetTextGlyphAdvance(CP, CharW);
+        if (!IsTextWhitespace(CP))
+        {
+            FVector2 UVMin, UVMax;
+            if (Batch->GetCharUV(CP, UVMin, UVMax))
+            {
+                const FVector Center = WorldPos + CamRight * (CharCursorX + GlyphAdvance * 0.5f);
 
-        const FVector Center = WorldPos + CamRight * CharCursorX;
+                pV[0] = { Center + HalfUp - HalfRight, { UVMin.X, UVMin.Y } };
+                pV[1] = { Center + HalfUp + HalfRight, { UVMax.X, UVMin.Y } };
+                pV[2] = { Center - HalfUp - HalfRight, { UVMin.X, UVMax.Y } };
+                pV[3] = { Center - HalfUp + HalfRight, { UVMax.X, UVMax.Y } };
 
-        pV[0] = { Center + HalfUp - HalfRight, { UVMin.X, UVMin.Y } };
-        pV[1] = { Center + HalfUp + HalfRight, { UVMax.X, UVMin.Y } };
-        pV[2] = { Center - HalfUp - HalfRight, { UVMin.X, UVMax.Y } };
-        pV[3] = { Center - HalfUp + HalfRight, { UVMax.X, UVMax.Y } };
+                const uint32 Vi = Base + CharIdx * 4;
+                pI[0]           = Vi;
+                pI[1]           = Vi + 1;
+                pI[2]           = Vi + 2;
+                pI[3]           = Vi + 1;
+                pI[4]           = Vi + 3;
+                pI[5]           = Vi + 2;
 
-        const uint32 Vi = Base + CharIdx * 4;
-        pI[0]           = Vi;
-        pI[1]           = Vi + 1;
-        pI[2]           = Vi + 2;
-        pI[3]           = Vi + 1;
-        pI[4]           = Vi + 3;
-        pI[5]           = Vi + 2;
-
-        pV += 4;
-        pI += 6;
-        ++CharIdx;
-        CharCursorX += CharW;
+                pV += 4;
+                pI += 6;
+                ++CharIdx;
+            }
+        }
+        CharCursorX += GlyphAdvance;
     }
 
     Buffer.Vertices.resize(Base + CharIdx * 4);
@@ -263,57 +335,41 @@ void FFontBatch::AddScreenText(const FString& Text,
     while (Ptr < End)
     {
         uint32 CP = 0;
-        if (Ptr[0] < 0x80)
+        if (!DecodeUTF8Codepoint(Ptr, End, CP))
         {
-            CP = Ptr[0];
-            Ptr += 1;
-        }
-        else if ((Ptr[0] & 0xE0) == 0xC0 && Ptr + 1 < End)
-        {
-            CP = ((Ptr[0] & 0x1F) << 6) | (Ptr[1] & 0x3F);
-            Ptr += 2;
-        }
-        else if ((Ptr[0] & 0xF0) == 0xE0 && Ptr + 2 < End)
-        {
-            CP = ((Ptr[0] & 0x0F) << 12) | ((Ptr[1] & 0x3F) << 6) | (Ptr[2] & 0x3F);
-            Ptr += 3;
-        }
-        else if ((Ptr[0] & 0xF8) == 0xF0 && Ptr + 3 < End)
-        {
-            CP = ((Ptr[0] & 0x07) << 18) | ((Ptr[1] & 0x3F) << 12) | ((Ptr[2] & 0x3F) << 6) | (Ptr[3] & 0x3F);
-            Ptr += 4;
-        }
-        else
-        {
-            ++Ptr;
             continue;
         }
 
-        FVector2 UVMin, UVMax;
-        GetCharUV(CP, UVMin, UVMax);
+        const float GlyphAdvance = GetTextGlyphAdvance(CP, CharW);
+        if (!IsTextWhitespace(CP))
+        {
+            FVector2 UVMin, UVMax;
+            if (GetCharUV(CP, UVMin, UVMax))
+            {
+                const float Left   = PixelToClipX(CursorX);
+                const float Right  = PixelToClipX(CursorX + CharW);
+                const float Top    = PixelToClipY(ScreenY);
+                const float Bottom = PixelToClipY(ScreenY + CharH);
 
-        const float Left   = PixelToClipX(CursorX);
-        const float Right  = PixelToClipX(CursorX + CharW);
-        const float Top    = PixelToClipY(ScreenY);
-        const float Bottom = PixelToClipY(ScreenY + CharH);
+                pV[0] = { FVector(Left, Top, 0.0f), FVector2(UVMin.X, UVMin.Y) };
+                pV[1] = { FVector(Right, Top, 0.0f), FVector2(UVMax.X, UVMin.Y) };
+                pV[2] = { FVector(Left, Bottom, 0.0f), FVector2(UVMin.X, UVMax.Y) };
+                pV[3] = { FVector(Right, Bottom, 0.0f), FVector2(UVMax.X, UVMax.Y) };
 
-        pV[0] = { FVector(Left, Top, 0.0f), FVector2(UVMin.X, UVMin.Y) };
-        pV[1] = { FVector(Right, Top, 0.0f), FVector2(UVMax.X, UVMin.Y) };
-        pV[2] = { FVector(Left, Bottom, 0.0f), FVector2(UVMin.X, UVMax.Y) };
-        pV[3] = { FVector(Right, Bottom, 0.0f), FVector2(UVMax.X, UVMax.Y) };
+                const uint32 Vi = Base + CharIdx * 4;
+                pI[0]           = Vi;
+                pI[1]           = Vi + 1;
+                pI[2]           = Vi + 2;
+                pI[3]           = Vi + 1;
+                pI[4]           = Vi + 3;
+                pI[5]           = Vi + 2;
 
-        const uint32 Vi = Base + CharIdx * 4;
-        pI[0]           = Vi;
-        pI[1]           = Vi + 1;
-        pI[2]           = Vi + 2;
-        pI[3]           = Vi + 1;
-        pI[4]           = Vi + 3;
-        pI[5]           = Vi + 2;
-
-        pV += 4;
-        pI += 6;
-        ++CharIdx;
-        CursorX += CharW + LetterSpacing;
+                pV += 4;
+                pI += 6;
+                ++CharIdx;
+            }
+        }
+        CursorX += GlyphAdvance + LetterSpacing;
     }
 
     ScreenBuffer.Vertices.resize(Base + CharIdx * 4);
