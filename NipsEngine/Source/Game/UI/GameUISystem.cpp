@@ -7,6 +7,7 @@
 #include "Game/UI/RmlUi/RmlUiDocumentsResource.h"
 #include "Game/UI/RmlUi/RmlUiRenderInterfaceD3D11.h"
 #include "Game/UI/RmlUi/RmlUiSystemInterface.h"
+#include "Game/UI/RmlUi/RmlUiFileInterface.h"
 #include "Game/UI/StartMenuPanel.h"
 
 #include "Audio/AudioSystem.h"
@@ -272,8 +273,10 @@ void GameUISystem::Init(HWND__* Hwnd, ID3D11Device* Device, ID3D11DeviceContext*
 	D3DContext = Context;
 	RmlSystemInterface = std::make_unique<FRmlUiSystemInterface>();
 	RmlRenderInterface = std::make_unique<FRmlUiRenderInterfaceD3D11>();
+	RmlFileInterface = std::make_unique<FRmlUiFileInterface>();
 	if (!RmlRenderInterface->Initialize(Device, Context))
 	{
+		RmlFileInterface.reset();
 		RmlRenderInterface.reset();
 		RmlSystemInterface.reset();
 		D3DContext = nullptr;
@@ -282,8 +285,10 @@ void GameUISystem::Init(HWND__* Hwnd, ID3D11Device* Device, ID3D11DeviceContext*
 
 	Rml::SetSystemInterface(RmlSystemInterface.get());
 	Rml::SetRenderInterface(RmlRenderInterface.get());
+	Rml::SetFileInterface(RmlFileInterface.get());
 	if (!Rml::Initialise())
 	{
+		RmlFileInterface.reset();
 		RmlRenderInterface.reset();
 		RmlSystemInterface.reset();
 		D3DContext = nullptr;
@@ -396,6 +401,7 @@ void GameUISystem::Shutdown()
 
 	RmlRenderInterface.reset();
 	RmlSystemInterface.reset();
+	RmlFileInterface.reset();
 	D3DContext = nullptr;
 	LastRmlUpdateTime = 0.0;
 }
@@ -1589,6 +1595,30 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	SetElementVisible("dialogue-hint", DialoguePanel::IsTextComplete());
 
 	SetElementAttribute("ending-visual-image", "src", EndingPanel::GetImagePath());
+
+	const float FrameWidth = static_cast<float>(Width) * 0.9f;
+	const float FrameHeight = static_cast<float>(Height) * 0.6f;
+	constexpr float EndingAspect = 16.0f / 9.0f;
+	float ImgWidth = FrameWidth;
+	float ImgHeight = FrameHeight;
+	if (Width > 0 && Height > 0)
+	{
+		const float FrameAspect = FrameWidth / FrameHeight;
+		if (FrameAspect > EndingAspect)
+		{
+			ImgHeight = FrameHeight;
+			ImgWidth = ImgHeight * EndingAspect;
+		}
+		else
+		{
+			ImgWidth = FrameWidth;
+			ImgHeight = ImgWidth / EndingAspect;
+		}
+	}
+	SetElementProperty("ending-visual-image", "width", FormatPixels(ImgWidth));
+	SetElementProperty("ending-visual-image", "height", FormatPixels(ImgHeight));
+	SetElementProperty("ending-visual-image", "left", FormatPixels((FrameWidth - ImgWidth) * 0.5f));
+	SetElementProperty("ending-visual-image", "top", FormatPixels((FrameHeight - ImgHeight) * 0.5f));
 
 	const int Alpha = static_cast<int>(EndingPanel::GetFadeAlpha() * 255.0f);
 	SetElementProperty("the-end", "color", "rgba(220, 210, 190, " + std::to_string(Alpha) + ")");
