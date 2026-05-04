@@ -2,8 +2,10 @@
 local Script = {
     properties = {
         PickupExp = { type = "float", default = 1.0, min = 0.0, max = 1000.0, speed = 1.0 },
+        PickupAttractSpeed = { type = "float", default = 20.0, min = 0.0, max = 1000.0, speed = 1.0 },
     }
 }
+local Vec = require("Core.Vector")
 local Query = require("Query")
 local Targeting = require("AI.TargetingAI")
 local WeaponInventory = require("WeaponInventory")
@@ -32,6 +34,11 @@ function Script:BeginPlay()
     self.LevelSystem = LevelSystem.New(self, self.WeaponInventory)
 
     self.WeaponInventory:AddWeapon("MainCannon")
+    self.RootCollider = self.GetRootComponent()
+    if self.RootCollider == nil or not self.RootCollider:IsValid() then
+        Log("Invalid RootCollider")
+    end
+
     self.PickupSensor = self.GetComponentByName("UCircleCollider2DComponent", "PickupSensor")
     if self.PickupSensor == nil or not self.PickupSensor:IsValid() then
         Log("Invalid PickupSensor")
@@ -52,8 +59,42 @@ function Script:OpenChest()
     return false
 end
 
-function Script:CollectOverlappingPickups()
+function Script:AttractPickup(pickup, deltaTime)
+    if pickup == nil or not pickup:IsValid() then
+        return
+    end
+
+    local owner = self.GetActor()
+    if owner == nil or not owner:IsValid() then
+        return
+    end
+
+    local pickupPos = pickup:GetLocation()
+    local targetPos = owner:GetLocation()
+    local toTarget = Vec.Sub(targetPos, pickupPos)
+    local distance = Vec.Length(toTarget)
+    if distance <= 0.0001 then
+        return
+    end
+
+    local step = math.min(distance, (self.PickupAttractSpeed or 20.0) * deltaTime)
+    pickup:SetLocation(Vec.Add(pickupPos, Vec.Mul(toTarget, step / distance)))
+end
+
+function Script:CollectPickup(pickup, poolManager)
+    self:AddExp(self.PickupExp or 1)
+
+    if poolManager ~= nil and poolManager:IsValid() then
+        poolManager:Release(pickup)
+    end
+    pickup:SetVisible(false)
+end
+
+function Script:UpdatePickups(deltaTime)
     if self.PickupSensor == nil or not self.PickupSensor:IsValid() then
+        return
+    end
+    if self.RootCollider == nil or not self.RootCollider:IsValid() then
         return
     end
 
@@ -69,19 +110,20 @@ function Script:CollectOverlappingPickups()
 
     local poolManager = GetActorPoolManager()
     for _, pickup in ipairs(pickups) do
-        if pickup:IsValid() and pickup:IsVisible() and self.PickupSensor:IsOverlappingActor(pickup) then
-            self:AddExp(self.PickupExp or 1)
-
-            if poolManager ~= nil and poolManager:IsValid() then
-                poolManager:Release(pickup)
+        if pickup:IsValid() and pickup:IsVisible() then
+            if self.PickupSensor:IsOverlappingActor(pickup) then
+                self:AttractPickup(pickup, deltaTime)
             end
-            pickup:SetVisible(false)
+
+            if self.RootCollider:IsOverlappingActor(pickup) then
+                self:CollectPickup(pickup, poolManager)
+            end
         end
     end
 end
 
 function Script:Tick(deltaTime)
-    self:CollectOverlappingPickups()
+    self:UpdatePickups(deltaTime)
 end
 
 function Script:EndPlay()

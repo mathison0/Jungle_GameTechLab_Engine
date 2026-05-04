@@ -82,7 +82,7 @@ private:
                 ECollisionResponse::Block,   // Enemy
                 ECollisionResponse::Ignore,  // Player
                 ECollisionResponse::Overlap, // Trigger
-                ECollisionResponse::Ignore,  // Pickup
+                ECollisionResponse::Overlap, // Pickup
                 ECollisionResponse::Overlap, // FlyingEnemy
                 ECollisionResponse::Ignore   // PickupSensor
             },
@@ -106,7 +106,7 @@ private:
                 ECollisionResponse::Ignore,  // WorldDynamic
                 ECollisionResponse::Ignore,  // Projectile
                 ECollisionResponse::Ignore,  // Enemy
-                ECollisionResponse::Ignore,  // Player
+                ECollisionResponse::Overlap, // Player
                 ECollisionResponse::Ignore,  // Trigger
                 ECollisionResponse::Ignore,  // Pickup
                 ECollisionResponse::Ignore,  // FlyingEnemy
