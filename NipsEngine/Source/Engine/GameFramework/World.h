@@ -109,6 +109,7 @@ public:
     void SetActiveCamera(FViewportCamera* InCamera) { ActiveCamera = InCamera; ActiveCameraComponent = nullptr; }
 	void SetActiveCameraComponent(UCameraComponent* InCamera) { ActiveCameraComponent = InCamera; ActiveCamera = nullptr; }
 	FViewportCamera* GetActiveCamera() const { return ActiveCamera; }
+    UCameraComponent* GetActiveCameraComponent() const { return ActiveCameraComponent; }
 
     /** @brief Access the world-level primitive AABB/BVH manager. */
     FWorldSpatialIndex& GetSpatialIndex() { return SpatialIndex; }

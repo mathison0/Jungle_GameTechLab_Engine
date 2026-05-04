@@ -3,7 +3,7 @@
 #include "Component/LuaScriptComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
-#include "Engine/Viewport/ViewportCamera.h"
+#include "Component/CameraComponent.h"
 #include "Scripting/LuaBindings.h"
 #include "Core/Logger.h"
 
@@ -245,11 +245,14 @@ void FLuaScriptSystem::BindCoroutineAPI(ULuaScriptComponent* Component, FScriptS
 		const AActor* Owner = Component->GetOwner();
 		UWorld* World = Owner ? Owner->GetFocusedWorld() : nullptr;
 		if (!World) return Hit;
-		FViewportCamera* Cam = World->GetActiveCamera();
-		if (!Cam) return Hit;
+		UCameraComponent* Cam = World->GetActiveCameraComponent();
+        if (!Cam)
+        {
+            return Hit;
+        }
 
-		float W = static_cast<float>(Cam->GetWidth());
-		float H = static_cast<float>(Cam->GetHeight());
+		float W = Cam->GetWidth();
+		float H = Cam->GetHeight();
 		FRay Ray = Cam->DeprojectScreenToWorld(W * 0.5f, H * 0.5f, W, H);
 
 		World->LineTraceSingle(Ray, MaxDistance, Hit, Owner);
