@@ -50,6 +50,11 @@ void FActorPoolManager::Release(AActor* Actor)
         return;
     }
 
+    // 풀에 반납될 때는 델리게이트를 해제하여, 풀에 있는 동안 
+    // 불필요한 호출이 발생하지 않도록 합니다.
+    Actor->OnPoolReturnRequested.RemoveDynamic(this);
+    DelegateBoundActors.erase(Actor);
+
     FActorPool* Pool = It->second;
     ActiveActorToPool.erase(It);
     Pool->Release(Actor);
@@ -57,14 +62,6 @@ void FActorPoolManager::Release(AActor* Actor)
 
 void FActorPoolManager::DestroyAll()
 {
-    for (AActor* Actor : DelegateBoundActors)
-    {
-        if (Actor)
-        {
-            Actor->OnPoolReturnRequested.RemoveDynamic(this);
-        }
-    }
-
     DelegateBoundActors.clear();
     ActiveActorToPool.clear();
 
