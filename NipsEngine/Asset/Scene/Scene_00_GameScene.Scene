@@ -2,13 +2,13 @@
   "ClassName" : "UWorld",
   "GameUIBootMode" : "InGame",
   "Name" : "Scene_00_GameScene",
-  "NextUUID" : 47831,
+  "NextUUID" : 48690,
   "PerspectiveCamera" : {
     "FOV" : 90.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-7.927526, -6.026091, 4.230519],
+    "Location" : [-12.471292, -2.562595, 4.658271],
     "NearClip" : 0.100000,
-    "Rotation" : [29.651274, -32.623474, -133.441940]
+    "Rotation" : [1.166009, -2.155365, -151.578476]
   },
   "Primitives" : {
     "11356" : {
@@ -727,8 +727,8 @@
       "MaxWalkSpeed" : 3.500000,
       "OwnerRootUUID" : 13179,
       "RigidBodyUUID" : 22230,
-      "SprintFootstepStepDistanceScale" : 1.000000,
-      "SprintFootstepVolumeScale" : 1.000000,
+      "SprintFootstepStepDistanceScale" : 1.600000,
+      "SprintFootstepVolumeScale" : 3.000000,
       "Type" : "UCharacterMovementComponent",
       "UpdateOnlyIfRendered" : false,
       "UpdatedComponentUUID" : 13179,
@@ -4080,7 +4080,7 @@
     },
     "47252" : {
       "BlockComponent" : true,
-      "BoxExtent" : [4.000000, 8.500000, 0.500000],
+      "BoxExtent" : [4.000000, 8.500000, 1.092303],
       "DebugBoundsVisibility" : 0,
       "DrawOnlyIfSelected" : false,
       "EditorOnly" : false,
@@ -4089,7 +4089,7 @@
       "GenerateOverlapEvents" : false,
       "HiddenInEditor" : false,
       "LineThickness" : 1.000000,
-      "Location" : [0.000000, 0.000000, 0.000000],
+      "Location" : [0.000000, 0.435502, 0.258570],
       "ParentUUID" : 46870,
       "Rotation" : [0.000000, 0.000000, 0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],
