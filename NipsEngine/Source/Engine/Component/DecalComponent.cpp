@@ -153,20 +153,36 @@ void UDecalComponent::TickComponent(float DeltaTime)
 
 	LifeTime += DeltaTime;
 
+	// GameJam
+	if (bMaskDirty)
+	{
+		UpdateMaskTexture();
+	}
+
 	if (FadeInStartDelay + FadeInDuration > 0 && LifeTime < FadeInStartDelay + FadeInDuration)
 	{
 		TickFadeIn();
 	}
-	else if (FadeStartDelay + FadeDuration > 0 && LifeTime >= FadeInStartDelay + FadeInDuration)
+	else
 	{
-		TickFadeOut();
-	}
+		// 기본적으로 청소된 만큼 투명해집니다 (비례)
+		const float CleanAlpha = MathUtil::Clamp(1.0f - CachedCleanPercentage, 0.0f, 1.0f);
 
-	// GameJam
-	if (bMaskDirty)
-    {
-        UpdateMaskTexture();
-    }
+		if (FadeStartDelay + FadeDuration > 0)
+		{
+			TickFadeOut();
+		}
+		else
+		{
+			DecalColor.A = CleanAlpha;
+
+			// 95% 이상 청소되면 자동 페이드 아웃 및 파괴 시퀀스 시작
+			if (CachedCleanPercentage > 0.95f)
+			{
+				SetFadeOut(0.0f, 1.0f, true);
+			}
+		}
+	}
 }
 
 void UDecalComponent::TickFadeIn()
@@ -199,12 +215,16 @@ void UDecalComponent::TickFadeOut()
 	float Alpha = 1.0f - (FadeOutTime / FadeDuration);
 	DecalColor.A = MathUtil::Clamp(Alpha, 0.0f, 1.0f);
 
-	if (FadeOutLifeTime >= FadeStartDelay + FadeDuration)
+	// 페이드 아웃이 거의 완료되었거나(Alpha < 0.05), 시간이 다 되면 즉시 삭제
+	if (DecalColor.A < 0.05f || FadeOutLifeTime >= FadeStartDelay + FadeDuration)
 	{
 		SetActive(false);
 		if (bDestroyOwnerAfterFade && GetOwner())
 		{
-			GetOwner()->GetFocusedWorld()->DestroyActor(GetOwner());
+			if (UWorld* World = GetOwner()->GetFocusedWorld())
+			{
+				World->DeactivateActor(GetOwner());
+			}
 		}
 	}
 }
@@ -247,6 +267,7 @@ void UDecalComponent::InitializeMask(uint32 InWidth, uint32 InHeight)
     MaskHeight = InHeight;
 
 	MaskPixels.assign(MaskWidth * MaskHeight, 255);
+	CachedCleanPercentage = 0.0f;
 
 	D3D11_TEXTURE2D_DESC desc = {};
     desc.Width = MaskWidth;
@@ -332,16 +353,7 @@ bool UDecalComponent::WorldPosToDecalUV(const FVector& WorldPos, FVector2& OutUV
 
 float UDecalComponent::GetCleanPercentage() const
 {
-    if (MaskPixels.empty())
-        return 0.0f;
-
-    uint64 TotalZero = 0;
-    for (uint8 Pixel : MaskPixels)
-    {
-        if (Pixel == 0)
-            ++TotalZero;
-    }
-    return static_cast<float>(TotalZero) / static_cast<float>(MaskPixels.size());
+    return CachedCleanPercentage;
 }
 
 bool UDecalComponent::IsPixelCleanAt(FVector2 UV) const
@@ -387,12 +399,23 @@ void UDecalComponent::UpdateMaskTexture()
         uint8_t* dest = static_cast<uint8_t*>(mappedResource.pData);
         const uint8_t* src = MaskPixels.data();
 
+		uint64 TotalValue = 0;
 		for (uint32 i = 0; i < MaskHeight; i++)
 		{
             memcpy(dest + (i * mappedResource.RowPitch), src + (i * MaskWidth), MaskWidth);
+			
+			// 청소율 계산용 합계 (최적화: 텍스처 복사 시 함께 수행)
+			for (uint32 j = 0; j < MaskWidth; j++)
+			{
+				TotalValue += src[i * MaskWidth + j];
+			}
 		}
 
 		context->Unmap(MaskTexture.Get(), 0);
         bMaskDirty = false;
+
+		// 캐시된 청소율 갱신 (0~1 범위)
+		float MaxTotal = static_cast<float>(MaskWidth * MaskHeight) * 255.0f;
+		CachedCleanPercentage = 1.0f - (static_cast<float>(TotalValue) / MaxTotal);
 	}
 }

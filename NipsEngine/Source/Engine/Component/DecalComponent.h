@@ -84,4 +84,5 @@ private:
 	TComPtr<ID3D11ShaderResourceView> MaskSRV;
 
 	bool bMaskDirty = false;
+	float CachedCleanPercentage = 0.0f; // 디버그용, 추후 수정 필요할 시 변경
 };
