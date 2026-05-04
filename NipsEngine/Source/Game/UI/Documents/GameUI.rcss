@@ -83,10 +83,6 @@ body {
 	margin-right: auto;
 }
 
-.title-menu-button:hover {
-	opacity: 0.82;
-}
-
 #hud-panel {
 	position: absolute;
 	left: 30%;

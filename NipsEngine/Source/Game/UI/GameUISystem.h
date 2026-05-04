@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "Engine/Input/IUIInputHandler.h"
 
@@ -139,6 +140,7 @@ private:
     void ResetTitleIntro();
     void TickTitleTransitions(float DeltaTime);
     void UpdateTitleTransitionElements();
+    void UpdateTitleMenuButtonEffects();
     void FinishStartGameTransition();
     bool CreateGameDocument();
     void BindRmlUiEvents();
@@ -160,9 +162,13 @@ private:
     std::unique_ptr<FRmlUiClickListener> StartClickListener;
     std::unique_ptr<FRmlUiClickListener> RetryClickListener;
     std::unique_ptr<FRmlUiClickListener> ExitClickListener;
+    std::vector<std::unique_ptr<FRmlUiClickListener>> TitleButtonHoverEnterListeners;
+    std::vector<std::unique_ptr<FRmlUiClickListener>> TitleButtonHoverLeaveListeners;
     double LastRmlUpdateTime = 0.0;
 
     float TitleIntroElapsed = 0.0f;
+    float TitleButtonBlinkElapsed = 0.0f;
+    std::string HoveredTitleButtonId;
     bool bStartGameTransitionActive = false;
     float StartGameTransitionElapsed = 0.0f;
     bool bStartGameTransitionReady = false;

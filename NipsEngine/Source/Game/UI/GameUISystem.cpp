@@ -29,6 +29,7 @@
 #include "RmlUi/Core/StringUtilities.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <functional>
 #include <string>
@@ -158,6 +159,16 @@ namespace
 			Position += Value.length();
 		}
 	}
+
+	constexpr const char* TitleButtonIds[] =
+	{
+		"start-button",
+		"settings-button",
+		"credits-button",
+		"exit-button",
+	};
+
+	constexpr size_t TitleButtonCount = sizeof(TitleButtonIds) / sizeof(TitleButtonIds[0]);
 }
 
 GameUISystem& GameUISystem::Get()
@@ -221,6 +232,16 @@ void GameUISystem::Shutdown()
 			Element->RemoveEventListener("click", ExitClickListener.get());
 		if (Rml::Element* Element = RmlDocument->GetElementById("pause-exit-button"))
 			Element->RemoveEventListener("click", ExitClickListener.get());
+		for (size_t Index = 0; Index < TitleButtonHoverEnterListeners.size() && Index < TitleButtonCount; ++Index)
+		{
+			if (Rml::Element* Element = RmlDocument->GetElementById(TitleButtonIds[Index]))
+				Element->RemoveEventListener("mouseover", TitleButtonHoverEnterListeners[Index].get());
+		}
+		for (size_t Index = 0; Index < TitleButtonHoverLeaveListeners.size() && Index < TitleButtonCount; ++Index)
+		{
+			if (Rml::Element* Element = RmlDocument->GetElementById(TitleButtonIds[Index]))
+				Element->RemoveEventListener("mouseout", TitleButtonHoverLeaveListeners[Index].get());
+		}
 	}
 
 	if (RmlDocument && RmlContext)
@@ -244,6 +265,8 @@ void GameUISystem::Shutdown()
 	StartClickListener.reset();
 	RetryClickListener.reset();
 	ExitClickListener.reset();
+	TitleButtonHoverEnterListeners.clear();
+	TitleButtonHoverLeaveListeners.clear();
 
 	RmlRenderInterface.reset();
 	RmlSystemInterface.reset();
@@ -298,6 +321,8 @@ void GameUISystem::SetState(EGameUIState NewState)
 
 	CurrentState = NewState;
 	SetPauseMenuOpen(false);
+	if (CurrentState != EGameUIState::StartMenu)
+		HoveredTitleButtonId.clear();
 }
 
 bool GameUISystem::WantsMouseCursor() const
@@ -565,6 +590,8 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	if (CurrentState == EGameUIState::Ending)
 		EndingPanel::Tick(DeltaTime);
 	TickTitleTransitions(DeltaTime);
+	if (CurrentState == EGameUIState::StartMenu)
+		TitleButtonBlinkElapsed += std::max(0.0f, DeltaTime);
 
 	RmlDocument->SetClass("is-preview", Mode == EUIRenderMode::Preview);
 
@@ -589,6 +616,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	SetElementVisible("ending-panel", bShowEnding);
 	SetElementVisible("the-end", bShowTheEnd);
 	UpdateTitleTransitionElements();
+	UpdateTitleMenuButtonEffects();
 
 	constexpr float TitleBackgroundAspect = 2760.0f / 1504.0f;
 	float TitleBackgroundWidth = static_cast<float>(Width);
@@ -665,6 +693,8 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 void GameUISystem::ResetTitleIntro()
 {
 	TitleIntroElapsed = 0.0f;
+	TitleButtonBlinkElapsed = 0.0f;
+	HoveredTitleButtonId.clear();
 	bStartGameTransitionActive = false;
 	StartGameTransitionElapsed = 0.0f;
 	bStartGameTransitionReady = false;
@@ -688,13 +718,13 @@ void GameUISystem::UpdateTitleTransitionElements()
 {
 	const bool bInStartMenu = CurrentState == EGameUIState::StartMenu;
 
-	constexpr float IntroHoldDuration = 1.5f;
-	constexpr float IntroTotalDuration = 3.0f;
+	constexpr float IntroHoldDuration = 3.0f;
+	constexpr float IntroTotalDuration = 4.0f;
 	const float IntroFadeProgress = (TitleIntroElapsed - IntroHoldDuration) / (IntroTotalDuration - IntroHoldDuration);
 	const float IntroAlpha = bInStartMenu ? 1.0f - std::clamp(IntroFadeProgress, 0.0f, 1.0f) : 0.0f;
 	const bool bShowIntro = bInStartMenu && TitleIntroElapsed < IntroTotalDuration && !bStartGameTransitionActive;
 
-	constexpr float StartFadeDuration = 1.5f;
+	constexpr float StartFadeDuration = 1.0f;
 	const float StartFadeAlpha = bStartGameTransitionActive ? std::clamp(StartGameTransitionElapsed / StartFadeDuration, 0.0f, 1.0f) : 0.0f;
 
 	SetElementVisible("title-intro-layer", bShowIntro);
@@ -703,6 +733,19 @@ void GameUISystem::UpdateTitleTransitionElements()
 
 	SetElementVisible("screen-fade-layer", bStartGameTransitionActive);
 	SetElementProperty("screen-fade-layer", "background-color", FormatAlphaColor(0.0f, 0.0f, 0.0f, StartFadeAlpha));
+}
+
+void GameUISystem::UpdateTitleMenuButtonEffects()
+{
+	const bool bCanBlink = CurrentState == EGameUIState::StartMenu && !bStartGameTransitionActive && !HoveredTitleButtonId.empty();
+	const float Blink = (std::sin(TitleButtonBlinkElapsed * 18.0f) + 1.0f) * 0.5f;
+	const std::string HoverOpacity = FormatOpacity(0.42f + Blink * 0.58f);
+
+	for (const char* ButtonId : TitleButtonIds)
+	{
+		const bool bHovered = bCanBlink && HoveredTitleButtonId == ButtonId;
+		SetElementProperty(ButtonId, "opacity", bHovered ? HoverOpacity : "1.000");
+	}
 }
 
 void GameUISystem::FinishStartGameTransition()
@@ -770,6 +813,29 @@ void GameUISystem::BindRmlUiEvents()
 		Element->AddEventListener("click", ExitClickListener.get());
 	if (Rml::Element* Element = RmlDocument->GetElementById("pause-exit-button"))
 		Element->AddEventListener("click", ExitClickListener.get());
+
+	for (const char* ButtonId : TitleButtonIds)
+	{
+		TitleButtonHoverEnterListeners.emplace_back(std::make_unique<FRmlUiClickListener>([ButtonId]()
+		{
+			GameUISystem& UI = GameUISystem::Get();
+			UI.HoveredTitleButtonId = ButtonId;
+			UI.TitleButtonBlinkElapsed = 0.0f;
+		}));
+
+		TitleButtonHoverLeaveListeners.emplace_back(std::make_unique<FRmlUiClickListener>([ButtonId]()
+		{
+			GameUISystem& UI = GameUISystem::Get();
+			if (UI.HoveredTitleButtonId == ButtonId)
+				UI.HoveredTitleButtonId.clear();
+		}));
+
+		if (Rml::Element* Element = RmlDocument->GetElementById(ButtonId))
+		{
+			Element->AddEventListener("mouseover", TitleButtonHoverEnterListeners.back().get());
+			Element->AddEventListener("mouseout", TitleButtonHoverLeaveListeners.back().get());
+		}
+	}
 }
 
 void GameUISystem::SetElementVisible(const char* Id, bool bVisible)
