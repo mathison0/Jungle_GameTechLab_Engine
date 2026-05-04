@@ -20,7 +20,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 27",
+              "Text" : "UUID : 23",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -72,7 +72,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 78",
+              "Text" : "UUID : 26",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -147,7 +147,7 @@
               "Mobility" : 1,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 84",
+              "Text" : "UUID : 32",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -199,92 +199,6 @@
       "Tag" : "Default",
       "bVisible" : true
     }, {
-      "ClassName" : "ATankActor",
-      "Name" : "Tank",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "UScriptComponent_15",
-          "Properties" : {
-            "Lua.BaseFriction" : 0.100000,
-            "Lua.DriftFactor" : 0.300000,
-            "Lua.DriftSmoothness" : 0.100000,
-            "Lua.MoveSpeed" : 1.000000,
-            "Lua.RotateSpeed" : 1.000000,
-            "Script" : "TankScript.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UUUIDTextRenderComponent",
-            "Name" : "UUUIDTextRenderComponent_20",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Mobility" : 1,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 90",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }, {
-            "Children" : [],
-            "ClassName" : "UStaticMeshComponent",
-            "Name" : "HeadMainGun",
-            "Properties" : {
-              "Cast Shadow" : true,
-              "CollisionChannel" : 1,
-              "Element 0" : {
-                "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
-              },
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : false,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Mobility" : 1,
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : true,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UCircleCollider2DComponent",
-        "Name" : "RootComponent",
-        "Properties" : {
-          "CircleRadius" : 1.000000,
-          "CollisionChannel" : 1,
-          "DebugPlaneOffsetZ" : 0.000000,
-          "DrawOnlyIfSelected" : true,
-          "Generate Hit Events" : false,
-          "Generate Overlap Events" : false,
-          "Is Editor Helper" : false,
-          "Location" : [7.484433, -17.308605, 1.516087],
-          "Mobility" : 1,
-          "Rotation" : [-0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Shape Color" : [0.000000, 0.862745, 1.000000, 1.000000],
-          "Visible" : true,
-          "Visible In Editor" : true,
-          "Visible In Game" : true,
-          "bTickEnable" : true
-        }
-      },
-      "Tag" : "Player",
-      "bVisible" : true
-    }, {
       "ClassName" : "AEnemySpawnerActor",
       "Name" : "AEnemySpawnerActor_0",
       "NonSceneComponents" : [{
@@ -308,6 +222,116 @@
         }],
       "Tag" : "Default",
       "bVisible" : true
+    }, {
+      "ClassName" : "ATankActor",
+      "Name" : "ATankActor_1",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "UScriptComponent_3",
+          "Properties" : {
+            "Lua.BaseFriction" : 0.100000,
+            "Lua.DriftFactor" : 0.300000,
+            "Lua.DriftSmoothness" : 0.100000,
+            "Lua.MoveSpeed" : 11.700000,
+            "Lua.PickupAttractSpeed" : 20.000000,
+            "Lua.PickupExp" : 1.000000,
+            "Lua.RotateSpeed" : 60.000000,
+            "Script" : "TankScript.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_6",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 40",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UCircleCollider2DComponent",
+            "Name" : "PickupSensor",
+            "Properties" : {
+              "CircleRadius" : 3.000000,
+              "CollisionChannel" : 8,
+              "DebugPlaneOffsetZ" : 0.000000,
+              "DrawOnlyIfSelected" : true,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : true,
+              "Is Editor Helper" : false,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Mobility" : 1,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Shape Color" : [0.000000, 0.862745, 1.000000, 1.000000],
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : true,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "UStaticMeshComponent",
+            "Name" : "UStaticMeshComponent_4",
+            "Properties" : {
+              "Cast Shadow" : true,
+              "CollisionChannel" : 1,
+              "Element 0" : {
+                "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
+              },
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : false,
+              "Location" : [-0.200000, 0.000000, 0.000000],
+              "Mobility" : 1,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : true,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UCircleCollider2DComponent",
+        "Name" : "RootComponent",
+        "Properties" : {
+          "CircleRadius" : 1.000000,
+          "CollisionChannel" : 4,
+          "DebugPlaneOffsetZ" : 0.000000,
+          "DrawOnlyIfSelected" : true,
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : true,
+          "Is Editor Helper" : false,
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Mobility" : 1,
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Scale" : [1.900000, 1.000000, 1.000000],
+          "Shape Color" : [0.000000, 0.862745, 1.000000, 1.000000],
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Player",
+      "bVisible" : true
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
@@ -316,9 +340,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-22.100677, -35.118790, 26.560490],
+    "Location" : [-4.985373, -34.496548, 20.711754],
     "NearClip" : 0.100000,
-    "Rotation" : [-0.000006, 29.799530, 49.210613]
+    "Rotation" : [0.000002, 31.899445, 78.610481]
   },
   "Version" : 3,
   "WorldType" : "Editor"

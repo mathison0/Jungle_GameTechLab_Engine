@@ -1,6 +1,11 @@
 ---@class TankScript : ScriptComponent
 local Script = {
     properties = {
+        MoveSpeed = { type = "float", default = 1.0 },
+        RotateSpeed = { type = "float", default = 1.0 },
+        BaseFriction = { type = "float", default = 0.1 },
+        DriftFactor = { type = "float", default = 0.3 },
+        DriftSmoothness = { type = "float", default = 0.1 },
         PickupExp = { type = "float", default = 1.0, min = 0.0, max = 1000.0, speed = 1.0 },
         PickupAttractSpeed = { type = "float", default = 20.0, min = 0.0, max = 1000.0, speed = 1.0 },
     }
@@ -9,7 +14,10 @@ local Vec = require("Core.Vector")
 local WeaponInventory = require("WeaponInventory")
 local LevelSystem = require("LevelSystem")
 
+local KEY_SHIFT = 0x10
+
 function Script:BeginPlay()
+    self.Velocity = Vec.Zero()
     self.WeaponInventory = WeaponInventory.New(self)
     self.LevelSystem = LevelSystem.New(self, self.WeaponInventory)
 
@@ -23,6 +31,57 @@ function Script:BeginPlay()
     if self.PickupSensor == nil or not self.PickupSensor:IsValid() then
         Log("Invalid PickupSensor")
     end
+end
+
+function Script:UpdateMovement(deltaTime)
+    local actor = self.GetActor()
+    if actor == nil or not actor:IsValid() then
+        return
+    end
+
+    local inputH = Input.GetAxis("Horizontal")
+    local inputV = Input.GetAxis("Vertical")
+    local driftButton = Input.GetKey(KEY_SHIFT)
+
+    local rotateSpeedSign = 1.0
+    if inputV < 0.0 then
+        rotateSpeedSign = -1.0
+    end
+
+    local driftSmoothness = 0.8
+    if driftButton then
+        driftSmoothness = self.DriftSmoothness or 0.1
+    end
+
+    local currentRotateSpeed = self.RotateSpeed or 1.0
+    if driftButton then
+        currentRotateSpeed = currentRotateSpeed * 1.5
+    end
+
+    local trackWidth = 0.8
+    local leftTrackSpeed = (self.MoveSpeed or 1.0) * inputV + currentRotateSpeed * inputH * rotateSpeedSign
+    local rightTrackSpeed = (self.MoveSpeed or 1.0) * inputV - currentRotateSpeed * inputH * rotateSpeedSign
+
+    local targetForwardSpeed = (leftTrackSpeed + rightTrackSpeed) * 0.5
+    local targetAngularSpeed = (leftTrackSpeed - rightTrackSpeed) / trackWidth
+
+    local forward = actor:GetForward()
+    local intendedVelocity = Vec.Mul(forward, targetForwardSpeed)
+
+    if self.Velocity == nil then
+        self.Velocity = Vec.Zero()
+    end
+
+    local lerpAlpha = math.min(1.0, driftSmoothness * deltaTime * 10.0)
+    self.Velocity = Vec.Lerp(self.Velocity, intendedVelocity, lerpAlpha)
+
+    local location = actor:GetLocation()
+    local newLocation = Vec.Add(location, Vec.Mul(self.Velocity, deltaTime))
+    actor:SetLocation(newLocation)
+
+    local rotation = actor:GetRotation()
+    rotation.z = rotation.z + targetAngularSpeed * deltaTime
+    actor:SetRotation(rotation)
 end
 
 function Script:AddExp(amount)
@@ -103,6 +162,7 @@ function Script:UpdatePickups(deltaTime)
 end
 
 function Script:Tick(deltaTime)
+    self:UpdateMovement(deltaTime)
     self:UpdatePickups(deltaTime)
 end
 
