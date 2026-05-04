@@ -68,6 +68,10 @@ private:
 
 namespace
 {
+	constexpr float GameTimeLimitSeconds = 600.0f;
+	constexpr float MaxRemainingTimeForScoreSeconds = GameTimeLimitSeconds;
+	constexpr int MaxRemainingTimeScore = 6000;
+
 	Rml::Input::KeyIdentifier ToRmlKey(int VK)
 	{
 		if (VK >= '0' && VK <= '9')
@@ -671,15 +675,12 @@ void GameUISystem::RequestSaveScore()
 
 void GameUISystem::RecalculateEndingScore()
 {
-	constexpr float MaxRemainingTimeForScore = 300.0f;
-	constexpr float GameTimeLimit = 300.0f;
-
 	const float CleanRatio = std::clamp(CleanProgress, 0.0f, 1.0f);
-	const float RemainingTime = std::max(0.0f, GameTimeLimit - ElapsedTime);
-	const float TimeRatio = std::clamp(RemainingTime / MaxRemainingTimeForScore, 0.0f, 1.0f);
+	const float RemainingTime = std::max(0.0f, GameTimeLimitSeconds - ElapsedTime);
+	const float TimeRatio = std::clamp(RemainingTime / MaxRemainingTimeForScoreSeconds, 0.0f, 1.0f);
 
 	EndingCleanScore = ScoreFromRatio(CleanRatio, 5000);
-	EndingTimeScore = ScoreFromRatio(TimeRatio, 3000);
+	EndingTimeScore = ScoreFromRatio(TimeRatio, MaxRemainingTimeScore);
 	EndingItemScore = 0;
 	EndingMissionScore = GGameContext::Get().GetMissionBonusScore();
 
@@ -826,7 +827,7 @@ bool GameUISystem::WriteScoreRecord(const std::string& PlayerId)
 		 << "," << EndingItemScore
 		 << "," << EndingMissionScore
 		 << "," << static_cast<int>(std::round(std::clamp(CleanProgress, 0.0f, 1.0f) * 100.0f))
-		 << "," << FormatTime(std::max(0.0f, 300.0f - ElapsedTime))
+		 << "," << FormatTime(std::max(0.0f, GameTimeLimitSeconds - ElapsedTime))
 		 << "," << DateBuf
 		 << "\n";
 
@@ -1440,8 +1441,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 		ElapsedTime += std::max(0.0f, DeltaTime);
 	}
 
-	float MaxTime = 300.0f; // 5분
-	float RemainingTime = std::max(0.0f, MaxTime - ElapsedTime);
+	float RemainingTime = std::max(0.0f, GameTimeLimitSeconds - ElapsedTime);
 
 	if (RemainingTime <= 0.0f && CurrentState == EGameUIState::InGame && Mode == EUIRenderMode::Play)
 	{
