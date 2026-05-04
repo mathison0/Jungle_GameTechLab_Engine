@@ -11,6 +11,7 @@
 
 #include "Audio/AudioSystem.h"
 #include "Core/Paths.h"
+#include "Game/Systems/EndingSystem.h"
 #include "Render/Common/RenderTypes.h"
 
 #include <Windows.h>
@@ -155,6 +156,15 @@ namespace
 			static_cast<int>(std::clamp(Blue, 0.0f, 255.0f)),
 			static_cast<int>(std::clamp(Alpha, 0.0f, 1.0f) * 255.0f));
 		return Buffer;
+	}
+
+	EEndingType EndingTypeFromId(const FString& EndingId)
+	{
+		if (EndingId == "Ending_Good")
+			return EEndingType::Good;
+		if (EndingId == "Ending_Bad")
+			return EEndingType::Bad;
+		return EEndingType::Normal;
 	}
 
 	std::string LoadTextResource(int ResourceId)
@@ -390,7 +400,11 @@ void GameUISystem::RenderPanelsOnly(EUIRenderMode Mode)
 void GameUISystem::SetState(EGameUIState NewState)
 {
 	if (NewState == EGameUIState::Ending)
+	{
+		if (CurrentEndingType == EEndingType::None)
+			CurrentEndingType = EndingTypeFromId(FEndingSystem::Get().EvaluateEnding().EndingId);
 		EndingPanel::Reset();
+	}
 	if (NewState == EGameUIState::StartMenu && CurrentState != EGameUIState::StartMenu)
 		ResetTitleIntro();
 
@@ -457,6 +471,7 @@ void GameUISystem::ResetGameData()
 	CurrentItemName.clear();
 	CurrentItemDesc.clear();
 	InteractionHintType = EInteractionHintType::None;
+	CurrentEndingType = EEndingType::None;
 	bSettingsOpen = false;
 	bCreditsOpen = false;
 	HideItemInspect();
@@ -869,6 +884,8 @@ bool GameUISystem::OnUIMouseButtonUp(int Button, float X, float Y)
 		EndSettingsSliderDrag();
 		return true;
 	}
+	if (Button == 0 && CurrentState == EGameUIState::Ending && DialoguePanel::AdvanceOrSkip())
+		return true;
 	return WantsMouseCursor();
 }
 
@@ -1025,6 +1042,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 		(CurrentState == EGameUIState::InGame || CurrentState == EGameUIState::Ending || CurrentState == EGameUIState::Prologue);
 	const bool bShowEnding = CurrentState == EGameUIState::Ending;
 	const bool bShowTheEnd = bShowEnding && EndingPanel::ShouldShowTheEnd();
+	const bool bShowEndingVisual = bShowEnding && !bShowTheEnd;
 	const bool bShowEndingButtons = bShowTheEnd && EndingPanel::GetFadeAlpha() >= 0.8f;
 	const bool bShowItemInspect = bShowHud && bItemInspectOpen;
 	const bool bShowInteractionHint = bShowHud && !bShowPause && !bShowDialogue && !bShowItemInspect && InteractionHintType != EInteractionHintType::None;
@@ -1042,6 +1060,7 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	SetElementVisible("debug-menu-layer", bDebugMenuOpen);
 	SetElementVisible("dialogue-panel", bShowDialogue);
 	SetElementVisible("ending-panel", bShowEnding);
+	SetElementVisible("ending-visual-frame", bShowEndingVisual);
 	SetElementVisible("the-end", bShowTheEnd);
 	SetElementVisible("ending-buttons", bShowEndingButtons);
 	UpdateTitleTransitionElements();
@@ -1136,7 +1155,10 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 
 	SetElementText("dialogue-speaker", DialoguePanel::GetSpeaker());
 	SetElementText("dialogue-text", DialoguePanel::GetVisibleText());
+	SetElementText("dialogue-hint", CurrentState == EGameUIState::Ending ? "[CLICK] >" : "[SPACE] >");
 	SetElementVisible("dialogue-hint", DialoguePanel::IsTextComplete());
+
+	SetElementAttribute("ending-visual-image", "src", EndingPanel::GetImagePath());
 
 	const int Alpha = static_cast<int>(EndingPanel::GetFadeAlpha() * 255.0f);
 	SetElementProperty("the-end", "color", "rgba(220, 210, 190, " + std::to_string(Alpha) + ")");
