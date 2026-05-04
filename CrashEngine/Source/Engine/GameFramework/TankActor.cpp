@@ -121,13 +121,19 @@ void ATankActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
 
 void ATankActor::InitDefaultComponents()
 {
-    SetFName("Tank");
-    SetActorTag(FName("Player"));
-
+    SetActorTag("Player");
     auto Collider = AddComponent<UCircleCollider2DComponent>();
     SetRootComponent(Collider);
-    Collider->SetFName("RootComponent");
+    Collider->SetFName({ "RootComponent" });
     Collider->SetCollisionChannel(ECollisionChannel::Player);
+    Collider->SetGenerateOverlapEvents(true);
+
+    auto PickupSensor = AddComponent<UCircleCollider2DComponent>();
+    PickupSensor->SetFName("PickupSensor");
+    PickupSensor->SetRadius(Collider->GetRadius() * 3.0f);
+    PickupSensor->SetCollisionChannel(ECollisionChannel::PickupSensor);
+    PickupSensor->SetGenerateOverlapEvents(true);
+    PickupSensor->AttachToComponent(Collider);
 
     auto Script = AddComponent<UScriptComponent>();
     Script->SetScriptPath(TankScriptPath);

@@ -24,5 +24,6 @@ enum class EShaderType : uint32
     NormalView,
     FXAA,
     LightHitMap,
+    UI,
     MAX,
 };

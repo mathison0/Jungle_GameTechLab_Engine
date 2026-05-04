@@ -18,4 +18,5 @@ protected:
     UCircleCollider2DComponent* ColliderComponent = nullptr;
     UStaticMeshComponent* MeshComponent = nullptr;
     UScriptComponent* EnemyScriptComponent = nullptr;
+    UScriptComponent* StateScriptComponent = nullptr;
 };

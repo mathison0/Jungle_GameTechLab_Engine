@@ -345,6 +345,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
@@ -433,6 +434,7 @@
     <ClCompile Include="Source\Engine\Core\Logging\LogBuffer.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\AActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\AmbientLightActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ButtonActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\DecalActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\DirectionalLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\FakeLightActor.cpp" />
@@ -442,6 +444,7 @@
     <ClCompile Include="Source\Engine\GameFramework\PointLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\SpotLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\UIActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\World.cpp" />
     <ClCompile Include="Source\Engine\Input\GameInput.cpp" />
     <ClCompile Include="Source\Engine\Input\GameViewportInputController.cpp" />
@@ -491,6 +494,7 @@
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DeferredOpaquePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.cpp" />
@@ -518,6 +522,7 @@
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\State\BlendStateManager.cpp" />
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\State\DepthStencilStateManager.cpp" />
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\State\RasterizerStateManager.cpp" />
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Scene.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Debug\DebugPrimitiveQueue.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Debug\DebugRenderAPI.cpp" />
@@ -541,6 +546,7 @@
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Batching\FontBatch.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Batching\UIBatch.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Batching\LineBatch.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectOverlay.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectSceneLights.cpp" />
@@ -572,8 +578,10 @@
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
     <ClCompile Include="Source\Engine\Sound\SoundManager.cpp" />
     <ClCompile Include="Source\Engine\Texture\Texture2D.cpp" />
+    <ClCompile Include="Source\Engine\UI\ButtonComponent.cpp" />
     <ClCompile Include="Source\Engine\UI\SSplitter.cpp" />
     <ClCompile Include="Source\Engine\UI\SWindow.cpp" />
+    <ClCompile Include="Source\Engine\UI\UIComponent.cpp" />
     <ClCompile Include="Source\Engine\Viewport\GameViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Viewport\Viewport.cpp" />
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp" />
@@ -624,6 +632,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
     <ClInclude Include="Source\Engine\Core\Random.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
@@ -734,6 +743,7 @@
     <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\ActorPool.h" />
     <ClInclude Include="Source\Engine\GameFramework\ActorPoolManager.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ButtonActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DecalActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DirectionalLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\FakeLightActor.h" />
@@ -743,6 +753,7 @@
     <ClInclude Include="Source\Engine\GameFramework\PointLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\SpotLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\UIActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\World.h" />
     <ClInclude Include="Source\Engine\GameFramework\WorldContext.h" />
     <ClInclude Include="Source\Engine\Input\GameInput.h" />
@@ -813,6 +824,7 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DeferredOpaquePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.h" />
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.h" />
@@ -866,6 +878,7 @@
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\State\DepthStencilStateManager.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\State\RasterizerStateManager.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Textures\SurfaceTexture.h" />
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Scene.h" />
     <ClInclude Include="Source\Engine\Render\Scene\SceneProxyDirtyFlag.h" />
     <ClInclude Include="Source\Engine\Render\Scene\SceneProxyRegistry.h" />
@@ -899,6 +912,7 @@
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\BatchBuffer.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\FontBatch.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Batching\UIBatch.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\LineBatch.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\OverlayBatchSet.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Collect\CollectedOverlayData.h" />
@@ -929,9 +943,11 @@
     <ClInclude Include="Source\Engine\Serialization\WindowsArchive.h" />
     <ClInclude Include="Source\Engine\Sound\SoundManager.h" />
     <ClInclude Include="Source\Engine\Texture\Texture2D.h" />
+    <ClInclude Include="Source\Engine\UI\ButtonComponent.h" />
     <ClInclude Include="Source\Engine\UI\SSplitter.h" />
     <ClInclude Include="Source\Engine\UI\SWidget.h" />
     <ClInclude Include="Source\Engine\UI\SWindow.h" />
+    <ClInclude Include="Source\Engine\UI\UIComponent.h" />
     <ClInclude Include="Source\Engine\Viewport\GameViewportClient.h" />
     <ClInclude Include="Source\Engine\Viewport\Viewport.h" />
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h" />
@@ -1183,6 +1199,14 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Render\Editor\ShaderOverlayFont.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Render\UI\UberUI.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>

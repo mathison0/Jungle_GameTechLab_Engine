@@ -1,4 +1,4 @@
-﻿#include "LuaEngineBinding.h"
+#include "LuaEngineBinding.h"
 #include "Binding/LuaBindingInternal.h"
 
 void RegisterLuaEngineBindings(sol::state& Lua)

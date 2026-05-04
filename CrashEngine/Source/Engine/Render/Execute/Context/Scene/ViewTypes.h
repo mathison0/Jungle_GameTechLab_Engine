@@ -30,6 +30,7 @@ enum class ERenderShadingPath : int32
 struct FShowFlags
 {
     bool  bPrimitives                = true;
+    bool  bUI                        = true;
     bool  bText                      = true;
     bool  bGrid                      = true;
     bool  bWorldAxis                 = true;

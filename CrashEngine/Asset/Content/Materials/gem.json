@@ -1,0 +1,14 @@
+{
+  "BlendState" : "AlphaBlend",
+  "DepthStencilState" : "NoDepth",
+  "Parameters" : {
+    "SectionColor" : [0.000000, 0.000000, 0.000000, 0.000000],
+    "SpecularPower" : 0.000000,
+    "SpecularStrength" : 0.000000
+  },
+  "PathFileName" : "Asset/Content/Materials/gem.json",
+  "RasterizerState" : "SolidNoCull",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Content/Materials/Game/Gem.png"
+  }
+}

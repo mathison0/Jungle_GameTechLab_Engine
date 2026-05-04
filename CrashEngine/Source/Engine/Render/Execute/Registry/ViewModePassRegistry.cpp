@@ -369,7 +369,7 @@ void InitializeViewModePassConfig(FViewModePassConfig& Config, EViewMode InViewM
         Config.bEnableDecal          = true;
         Config.bEnableLighting       = false;
         Config.bEnableAdditiveDecal  = false;
-        Config.bEnableAlphaBlend     = false;
+        Config.bEnableAlphaBlend     = true;
         Config.bEnableNonLitViewMode = false;
         Config.bEnableHeightFog      = true;
         Config.bEnableFXAA           = true;
@@ -385,7 +385,7 @@ void InitializeViewModePassConfig(FViewModePassConfig& Config, EViewMode InViewM
         Config.bEnableDecal          = true;
         Config.bEnableLighting       = true;
         Config.bEnableAdditiveDecal  = false;
-        Config.bEnableAlphaBlend     = false;
+        Config.bEnableAlphaBlend     = true;
         Config.bEnableNonLitViewMode = false;
         Config.bEnableHeightFog      = true;
         Config.bEnableFXAA           = true;

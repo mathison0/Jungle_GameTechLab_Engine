@@ -34,6 +34,13 @@ struct FTextureVertex
     float    _pad[3];
 };
 
+struct FUIVertex
+{
+    FVector  Position;
+    FVector2 UV;
+    FVector4 Color;
+};
+
 // Position + Normal + Color + UV (NormalMap이 없는 StaticMesh GPU용 정점 형식)
 struct FVertexPNCT
 {
