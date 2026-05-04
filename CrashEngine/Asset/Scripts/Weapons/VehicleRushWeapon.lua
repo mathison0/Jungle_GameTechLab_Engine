@@ -1,6 +1,6 @@
-local Co = require("LuaCoroutine")
 local Audio = require("Core.Audio")
 local DamageSystem = require("Core.DamageSystem")
+local GameplayPause = require("GameplayPause")
 local Vec = require("Core.Vector")
 local WeaponDefs = require("WeaponDefs")
 
@@ -61,6 +61,8 @@ function VehicleRushWeapon.New(owner)
     self.ResumeSoundPositions = {}
     self.ActiveSpawnSound = nil
     self.ActiveSpawnSoundElapsed = 0.0
+    self.IsPassActive = false
+    self.PendingVisualApply = nil
     return self
 end
 
@@ -92,13 +94,28 @@ function VehicleRushWeapon:Stop()
     self:FinishSpawnSound(self.ActiveSpawnSound, self.ActiveSpawnSoundElapsed)
     self.ActiveSpawnSound = nil
     self.ActiveSpawnSoundElapsed = 0.0
+    self.IsPassActive = false
+    self.PendingVisualApply = nil
     self:HideVisuals()
 end
 
 function VehicleRushWeapon:AttackLoop()
     while self.IsRunning do
-        self:RunVehiclePass()
-        Co.Wait(self.Data.FireInterval or 5.0)
+        self:WaitWhilePaused()
+
+        if self.IsRunning then
+            self:RunVehiclePass()
+        end
+
+        if self.IsRunning then
+            GameplayPause.Wait(self.Data.FireInterval or 5.0)
+        end
+    end
+end
+
+function VehicleRushWeapon:WaitWhilePaused()
+    while self.IsRunning and GameplayPause.IsPaused() do
+        GameplayPause.WaitNextFrame()
     end
 end
 
@@ -116,6 +133,28 @@ end
 
 function VehicleRushWeapon:IsMaxLevel()
     return self.Level >= self.Def.MaxLevel
+end
+
+function VehicleRushWeapon:RequestVisualApply(applyVisual)
+    if self.IsPassActive then
+        self.PendingVisualApply = applyVisual
+        return false
+    end
+
+    if type(applyVisual) == "function" then
+        applyVisual()
+    end
+
+    return true
+end
+
+function VehicleRushWeapon:ApplyPendingVisual()
+    local applyVisual = self.PendingVisualApply
+    self.PendingVisualApply = nil
+
+    if type(applyVisual) == "function" then
+        applyVisual()
+    end
 end
 
 function VehicleRushWeapon:OnVisualApplied()
@@ -147,8 +186,10 @@ function VehicleRushWeapon:HideVisuals()
     end
 end
 
-function VehicleRushWeapon:PlaySpawnSound()
-    local sound = self.Data.Sound
+function VehicleRushWeapon:PlaySpawnSound(data)
+    data = data or self.Data
+
+    local sound = data.Sound
     if sound == nil then
         return nil
     end
@@ -262,12 +303,13 @@ function VehicleRushWeapon:RunVehiclePass()
 
     self:RefreshVisuals()
 
+    local data = self.Data
     local playerPos = ownerActor:GetLocation()
     local angle = math.random() * math.pi * 2.0
     local dir = Vec.New(math.cos(angle), math.sin(angle), 0.0)
     local side = Vec.New(-math.sin(angle), math.cos(angle), 0.0)
-    local minOffset = self.Data.MinPassOffset or 8.0
-    local maxOffset = math.max(self.Data.MaxPassOffset or 18.0, minOffset)
+    local minOffset = data.MinPassOffset or 8.0
+    local maxOffset = math.max(data.MaxPassOffset or 18.0, minOffset)
     local offsetDistance = minOffset + math.random() * (maxOffset - minOffset)
 
     if math.random(0, 1) == 0 then
@@ -276,11 +318,11 @@ function VehicleRushWeapon:RunVehiclePass()
 
     local origin = Vec.Add(playerPos, Vec.Mul(side, offsetDistance))
 
-    local spawnDistance = self.Data.SpawnDistance or 50.0
-    local speed = math.max(self.Data.VehicleSpeed or 35.0, 0.001)
+    local spawnDistance = data.SpawnDistance or 50.0
+    local speed = math.max(data.VehicleSpeed or 35.0, 0.001)
     local duration = (spawnDistance * 2.0) / speed
-    local count = self.Data.VehicleCount or 1
-    local laneSpacing = self.Data.LaneSpacing or 5.0
+    local count = data.VehicleCount or 1
+    local laneSpacing = data.LaneSpacing or 5.0
     local halfCount = (count - 1) * 0.5
     local vehicles = {}
 
@@ -304,9 +346,10 @@ function VehicleRushWeapon:RunVehiclePass()
         })
     end
 
-    local spawnSound = self:PlaySpawnSound()
+    local spawnSound = self:PlaySpawnSound(data)
     self.ActiveSpawnSound = spawnSound
     self.ActiveSpawnSoundElapsed = 0.0
+    self.IsPassActive = true
 
     Log("[VehicleRush] vehicle pass started. count=" ..
         tostring(count) ..
@@ -316,19 +359,23 @@ function VehicleRushWeapon:RunVehiclePass()
     local elapsed = 0.0
     local hitActors = {}
 
-    self:UpdateVehicles(world, ownerActor, vehicles, dir, side, 0.0, hitActors)
+    self:UpdateVehicles(world, ownerActor, vehicles, dir, side, 0.0, hitActors, data)
 
     while self.IsRunning and elapsed < duration do
-        local dt = Co.WaitNextFrame() or 0.0
-        elapsed = elapsed + dt
-        self.ActiveSpawnSoundElapsed = elapsed
+        local dt, paused = GameplayPause.WaitNextFrame()
+        dt = dt or 0.0
 
-        local alpha = elapsed / duration
-        if alpha > 1.0 then
-            alpha = 1.0
+        if not paused then
+            elapsed = elapsed + dt
+            self.ActiveSpawnSoundElapsed = elapsed
+
+            local alpha = elapsed / duration
+            if alpha > 1.0 then
+                alpha = 1.0
+            end
+
+            self:UpdateVehicles(world, ownerActor, vehicles, dir, side, alpha, hitActors, data)
         end
-
-        self:UpdateVehicles(world, ownerActor, vehicles, dir, side, alpha, hitActors)
     end
 
     for _, vehicle in ipairs(vehicles) do
@@ -341,9 +388,11 @@ function VehicleRushWeapon:RunVehiclePass()
     self:FinishSpawnSound(spawnSound, elapsed)
     self.ActiveSpawnSound = nil
     self.ActiveSpawnSoundElapsed = 0.0
+    self.IsPassActive = false
+    self:ApplyPendingVisual()
 end
 
-function VehicleRushWeapon:UpdateVehicles(world, ownerActor, vehicles, dir, side, alpha, hitActors)
+function VehicleRushWeapon:UpdateVehicles(world, ownerActor, vehicles, dir, side, alpha, hitActors, data)
     for _, vehicle in ipairs(vehicles) do
         local position = Vec.Lerp(vehicle.Start, vehicle.End, alpha)
         local previous = vehicle.Previous or position
@@ -353,20 +402,22 @@ function VehicleRushWeapon:UpdateVehicles(world, ownerActor, vehicles, dir, side
             SetVehicleVisualPose(visual, position, vehicle.End)
         end
 
-        self:DamageEnemiesOnSegment(world, ownerActor, previous, position, dir, side, hitActors)
+        self:DamageEnemiesOnSegment(world, ownerActor, previous, position, dir, side, hitActors, data)
         vehicle.Previous = position
     end
 end
 
-function VehicleRushWeapon:DamageEnemiesOnSegment(world, ownerActor, previous, position, dir, side, hitActors)
+function VehicleRushWeapon:DamageEnemiesOnSegment(world, ownerActor, previous, position, dir, side, hitActors, data)
     local enemies = world:GetActorsByTag("Enemy")
     if enemies == nil then
         return
     end
 
-    local halfLength = (self.Data.VehicleLength or 5.0) * 0.5
-    local halfWidth = (self.Data.VehicleWidth or 2.0) * 0.5
-    local damage = self.Data.Damage or 20.0
+    data = data or self.Data
+
+    local halfLength = (data.VehicleLength or 5.0) * 0.5
+    local halfWidth = (data.VehicleWidth or 2.0) * 0.5
+    local damage = data.Damage or 20.0
     local segmentLength = math.sqrt(Vec.DistanceSquared(previous, position))
 
     for _, enemy in ipairs(enemies) do
@@ -374,7 +425,7 @@ function VehicleRushWeapon:DamageEnemiesOnSegment(world, ownerActor, previous, p
             local key = GetActorKey(enemy)
             if hitActors[key] == nil then
                 local targetLocation = enemy:GetLocation()
-                local targetRadius = self.Data.TargetRadius or 0.5
+                local targetRadius = data.TargetRadius or 0.5
                 local offset = Vec.Sub(targetLocation, previous)
                 local forwardDistance = Dot2(offset, dir)
                 local sideDistance = math.abs(Dot2(offset, side))

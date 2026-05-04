@@ -185,7 +185,7 @@ WeaponVisualDefs.VehicleRush = {
                 Parent = "World",
                 Location = { 0.0, 0.0, -2000.0 },
                 Rotation = { 0.0, 0.0, 0.0 },
-                Scale = { 1.0, 1.0, 1.0 },
+                Scale = { 3.0, 3.0, 3.0 },
             },
         },
     },

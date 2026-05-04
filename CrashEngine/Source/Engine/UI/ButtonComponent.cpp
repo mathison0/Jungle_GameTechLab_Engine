@@ -3,9 +3,15 @@
 #include "Input/InputTypes.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
+#include "Sound/SoundManager.h"
 
 #include <cstring>
 #include <utility>
+
+namespace
+{
+    const FName UIClickSoundKey("ui_click");
+}
 
 IMPLEMENT_CLASS(UUIButtonComponent, UTextureUIComponent)
 
@@ -90,6 +96,7 @@ bool UUIButtonComponent::HandleUIPointerEvent(const FViewportPointerEvent& Event
         if (bWasPressed && bHovered)
         {
             ++ClickCount;
+            FSoundManager::Get().Play(UIClickSoundKey, ESoundBus::UI, 1.0f);
             if (OnClicked)
             {
                 OnClicked(this);

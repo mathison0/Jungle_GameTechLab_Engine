@@ -14,6 +14,7 @@ local Script = {
     }
 }
 local Vec = require("Core.Vector")
+local Audio = require("Core.Audio")
 local GameManager = require("GameManager")
 
 local KEY_SHIFT = 0x10
@@ -208,6 +209,7 @@ end
 function Script:CollectPickup(pickup, poolManager)
     -- 보석의 경우 경험치 지급 (추후 pickup 종류에 따라 분기 가능)
     self:AddExp(self.PickupExp or 1)
+    Audio.Play("pickup", Audio.Bus.SFX, 1.0)
 
     if poolManager ~= nil and poolManager:IsValid() then
         poolManager:Release(pickup)
