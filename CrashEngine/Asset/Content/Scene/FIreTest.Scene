@@ -335,6 +335,22 @@
             "Script" : "UI/GemRain.lua",
             "bTickEnable" : true
           }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "DamageNumberScript",
+          "Properties" : {
+            "Lua.FontSize" : 1.350000,
+            "Lua.Lifetime" : 0.750000,
+            "Lua.MaxActive" : 64,
+            "Lua.RandomRadius" : 0.250000,
+            "Lua.RiseDistance" : 1.100000,
+            "Lua.SpawnHeight" : 1.600000,
+            "Lua.WarmupCount" : 32,
+            "Lua.WorldHeight" : 0.900000,
+            "Lua.WorldWidth" : 2.600000,
+            "Script" : "UI/DamageNumberUI.lua",
+            "bTickEnable" : true
+          }
         }],
       "RootComponent" : {
         "Children" : [{

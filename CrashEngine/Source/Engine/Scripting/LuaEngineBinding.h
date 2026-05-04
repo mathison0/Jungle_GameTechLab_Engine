@@ -144,6 +144,8 @@ struct FLuaComponentHandle
 	bool SetUIText(const FString& Text) const;
 	bool SetUIFont(const FString& FontName) const;
 	bool SetUIFontSize(float FontSize) const;
+	bool SetUITextHorizontalAlignment(const FString& Alignment) const;
+	bool SetUITextVerticalAlignment(const FString& Alignment) const;
 
 	bool IsUIButton() const;
 	bool IsButtonInteractable() const;

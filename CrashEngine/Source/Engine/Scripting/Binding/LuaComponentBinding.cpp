@@ -36,6 +36,46 @@ namespace
         if (!TargetClass || !Component->GetClass()) return false;
         return Component->GetClass()->IsA(TargetClass);
     }
+
+    bool ParseTextHorizontalAlignment(const FString& Alignment, EUITextHAlign& OutAlign)
+    {
+        if (Alignment == "Left")
+        {
+            OutAlign = EUITextHAlign::Left;
+            return true;
+        }
+        if (Alignment == "Center" || Alignment == "Centre")
+        {
+            OutAlign = EUITextHAlign::Center;
+            return true;
+        }
+        if (Alignment == "Right")
+        {
+            OutAlign = EUITextHAlign::Right;
+            return true;
+        }
+        return false;
+    }
+
+    bool ParseTextVerticalAlignment(const FString& Alignment, EUITextVAlign& OutAlign)
+    {
+        if (Alignment == "Top")
+        {
+            OutAlign = EUITextVAlign::Top;
+            return true;
+        }
+        if (Alignment == "Center" || Alignment == "Centre" || Alignment == "Middle")
+        {
+            OutAlign = EUITextVAlign::Center;
+            return true;
+        }
+        if (Alignment == "Bottom")
+        {
+            OutAlign = EUITextVAlign::Bottom;
+            return true;
+        }
+        return false;
+    }
 }
 
 FLuaComponentHandle::FLuaComponentHandle(const UActorComponent* InComponent)
@@ -507,6 +547,30 @@ bool FLuaComponentHandle::SetUIFontSize(float FontSize) const
     return true;
 }
 
+bool FLuaComponentHandle::SetUITextHorizontalAlignment(const FString& Alignment) const
+{
+    UTextUIComponent* TextUI = Cast<UTextUIComponent>(Resolve());
+    if (!TextUI) return false;
+
+    EUITextHAlign Align = EUITextHAlign::Left;
+    if (!ParseTextHorizontalAlignment(Alignment, Align)) return false;
+
+    TextUI->SetHorizontalAlignment(Align);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUITextVerticalAlignment(const FString& Alignment) const
+{
+    UTextUIComponent* TextUI = Cast<UTextUIComponent>(Resolve());
+    if (!TextUI) return false;
+
+    EUITextVAlign Align = EUITextVAlign::Top;
+    if (!ParseTextVerticalAlignment(Alignment, Align)) return false;
+
+    TextUI->SetVerticalAlignment(Align);
+    return true;
+}
+
 bool FLuaComponentHandle::IsUIButton() const
 {
     return Cast<UUIButtonComponent>(Resolve()) != nullptr;
@@ -608,6 +672,8 @@ namespace LuaBinding
             "SetUIText", &FLuaComponentHandle::SetUIText,
             "SetUIFont", &FLuaComponentHandle::SetUIFont,
             "SetUIFontSize", &FLuaComponentHandle::SetUIFontSize,
+            "SetUITextHorizontalAlignment", &FLuaComponentHandle::SetUITextHorizontalAlignment,
+            "SetUITextVerticalAlignment", &FLuaComponentHandle::SetUITextVerticalAlignment,
 
             "IsUIButton", &FLuaComponentHandle::IsUIButton,
             "IsButtonInteractable", &FLuaComponentHandle::IsButtonInteractable,

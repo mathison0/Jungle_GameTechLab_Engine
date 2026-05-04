@@ -1,4 +1,5 @@
 local DamageSystem = require("Core.DamageSystem")
+local DamageNumberSystem = require("UI.DamageNumberSystem")
 
 local EnemyState = {
     properties = {
@@ -45,6 +46,8 @@ function EnemyState:TakeDamage(amount, attacker)
 
     Log(string.format("[Enemy:%s] Received %.1f damage from [%s]. HP: %.1f/%.1f",
         self.actor:GetName(), amount, attackerName, self.CurrentHP, self.MaxHP or 100.0))
+
+    DamageNumberSystem.ShowDamage(self.actor, amount)
 
     if self.CurrentHP <= 0 then
         self:Die()
