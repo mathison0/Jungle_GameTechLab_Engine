@@ -2,6 +2,9 @@ local WeaponInventory = require("WeaponInventory")
 local LevelSystem = require("LevelSystem")
 local Audio = require("Core.Audio")
 
+local BACKGROUND_MUSIC_KEY = "background"
+local BACKGROUND_MUSIC_VOLUME = 0.7
+
 local GameManager = {
     GameTimeLimit = 600.0,
 
@@ -21,6 +24,8 @@ local GameManager = {
     LevelUpUI = nil,
     ExpBarUI = nil,
     KillCountUI = nil,
+    BackgroundMusicHandle = nil,
+    BackgroundMusicPositionMs = 0.0,
     IsLevelUpSelectionActive = false,
     CurrentLevelUpOptions = nil,
     Stats = {}
@@ -35,7 +40,71 @@ local function captureWorldFromScript(script)
     end
 end
 
+local function normalizeSoundPosition(key, positionMs)
+    local position = positionMs or 0.0
+    local duration = Audio.GetLength(key) or 0.0
+
+    if duration > 0.0 then
+        position = position % duration
+    end
+
+    return position
+end
+
+function GameManager.PlayBackgroundMusic()
+    if GameManager.IsGameOver then
+        return
+    end
+
+    if GameManager.BackgroundMusicHandle ~= nil and Audio.IsPlaying(GameManager.BackgroundMusicHandle) then
+        return
+    end
+
+    local handle = Audio.PlayLoop(BACKGROUND_MUSIC_KEY, Audio.Bus.BGM, BACKGROUND_MUSIC_VOLUME)
+    GameManager.BackgroundMusicHandle = handle
+
+    if handle ~= nil then
+        Audio.SetPosition(handle, normalizeSoundPosition(BACKGROUND_MUSIC_KEY, GameManager.BackgroundMusicPositionMs))
+    end
+end
+
+function GameManager.PauseBackgroundMusic()
+    local handle = GameManager.BackgroundMusicHandle
+    if handle ~= nil then
+        local position = Audio.GetPosition(handle)
+        if position ~= nil then
+            GameManager.BackgroundMusicPositionMs = normalizeSoundPosition(BACKGROUND_MUSIC_KEY, position)
+        end
+
+        Audio.Stop(handle)
+    end
+
+    GameManager.BackgroundMusicHandle = nil
+end
+
+function GameManager.StopBackgroundMusic(resetPosition)
+    local handle = GameManager.BackgroundMusicHandle
+    if handle ~= nil then
+        if resetPosition ~= true then
+            local position = Audio.GetPosition(handle)
+            if position ~= nil then
+                GameManager.BackgroundMusicPositionMs = normalizeSoundPosition(BACKGROUND_MUSIC_KEY, position)
+            end
+        end
+
+        Audio.Stop(handle)
+    end
+
+    GameManager.BackgroundMusicHandle = nil
+
+    if resetPosition == true then
+        GameManager.BackgroundMusicPositionMs = 0.0
+    end
+end
+
 function GameManager._ResetState()
+    GameManager.StopBackgroundMusic(true)
+
     if GameManager.World ~= nil and GameManager.World:IsValid() and GameManager.World.SetGameplayPaused ~= nil then
         GameManager.World:SetGameplayPaused(false)
     end
@@ -64,6 +133,8 @@ function GameManager._ResetState()
     GameManager.LevelUpUI = nil
     GameManager.ExpBarUI = nil
     GameManager.KillCountUI = nil
+    GameManager.BackgroundMusicHandle = nil
+    GameManager.BackgroundMusicPositionMs = 0.0
     GameManager.IsLevelUpSelectionActive = false
     GameManager.CurrentLevelUpOptions = nil
 
@@ -101,6 +172,8 @@ function GameManager._CheckAndStart()
 end
 
 function GameManager.OnGameStart()
+    GameManager.PlayBackgroundMusic()
+
     if GameManager.WeaponInventory then
         GameManager.WeaponInventory:AddWeapon("MainCannon")
     end
@@ -181,6 +254,7 @@ function GameManager.BeginLevelUpSelection(options)
     GameManager.CurrentLevelUpOptions = options
     GameManager.IsLevelUpSelectionActive = true
     GameManager.SetGameplayPaused(true)
+    GameManager.PauseBackgroundMusic()
     Audio.Play("levelup", Audio.Bus.UI, 1.0)
 
     if GameManager.ExpBarUI ~= nil and type(GameManager.ExpBarUI.SetLevelUpMode) == "function" then
@@ -225,6 +299,7 @@ function GameManager.EndLevelUpSelection()
     end
 
     GameManager.SetGameplayPaused(false)
+    GameManager.PlayBackgroundMusic()
 end
 
 function GameManager.Tick(deltaTime)
@@ -286,6 +361,7 @@ end
 function GameManager.OnGameOver(reason)
     if GameManager.IsGameOver then return end
     GameManager.IsGameOver = true
+    GameManager.StopBackgroundMusic(true)
     Log("[GameManager] GAME OVER: " .. tostring(reason))
 end
 
