@@ -237,7 +237,7 @@
           "Name" : "UScriptComponent_330",
           "Properties" : {
             "Lua.FollowSmooth" : 5.000000,
-            "Lua.Offset" : [-10.000000, 0.000000, 29.400000],
+            "Lua.Offset" : [-15.000000, 0.000000, 15.000000],
             "Script" : "CameraFollow.lua",
             "bTickEnable" : true
           }
@@ -447,7 +447,7 @@
               "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 56",
+              "Text" : "UUID : 57",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -577,7 +577,7 @@
               "Receives Decals" : true,
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 77",
+              "Text" : "UUID : 61",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -656,9 +656,9 @@
               "Location" : [0.000000, 0.000000, 1.300000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 102",
+              "Text" : "UUID : 69",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -826,7 +826,7 @@
               "Location" : [0.000000, 0.000000, 0.000000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [0.500000, 0.500000, 0.500000],
               "Static Mesh" : "Asset/Content/Models/Tank/Tank_body.obj",
               "Visible" : true,
@@ -849,7 +849,7 @@
               "Location" : [0.000000, 0.000000, 1.800000],
               "Pivot" : [0.500000, 8.500000],
               "Render Space" : 1,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Rotation Degrees" : 0.000000,
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Size Delta" : [100.000000, 100.000000],
@@ -883,7 +883,7 @@
               "Location" : [0.000000, 0.000000, 1.800000],
               "Pivot" : [0.500000, 12.500000],
               "Render Space" : 1,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Rotation Degrees" : 0.000000,
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Size Delta" : [100.000000, 100.000000],
@@ -933,7 +933,30 @@
       "Name" : "TitleBG",
       "NonSceneComponents" : [],
       "RootComponent" : {
-        "Children" : [],
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_10",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 85",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
         "ClassName" : "UTextureUIComponent",
         "Name" : "TitleBG_UI",
         "Properties" : {
@@ -992,7 +1015,30 @@
           }
         }],
       "RootComponent" : {
-        "Children" : [],
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_11",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 88",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
         "ClassName" : "UTextureUIComponent",
         "Name" : "MainTitle_UI",
         "Properties" : {
@@ -1037,9 +1083,16 @@
           "Name" : "ButtonIntroScript",
           "Properties" : {
             "Lua.AutoPlay" : true,
+            "Lua.ClickPulseDuration" : 0.180000,
+            "Lua.ClickPulseScale" : 1.080000,
             "Lua.Delay" : 0.860000,
             "Lua.EnterDuration" : 0.300000,
+            "Lua.HoverScale" : 1.045000,
+            "Lua.HoverTintScale" : 1.120000,
+            "Lua.InteractionLerpSpeed" : 16.000000,
             "Lua.OvershootScale" : 1.045000,
+            "Lua.PressedScale" : 0.955000,
+            "Lua.PressedTintScale" : 0.820000,
             "Lua.SettleDuration" : 0.120000,
             "Lua.SettleYOffset" : -5.000000,
             "Lua.StartScale" : 0.860000,
@@ -1049,7 +1102,30 @@
           }
         }],
       "RootComponent" : {
-        "Children" : [],
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_12",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 92",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
         "ClassName" : "UUIButtonComponent",
         "Name" : "GameStartBT_Button",
         "Properties" : {
@@ -1100,9 +1176,16 @@
           "Name" : "ButtonIntroScript",
           "Properties" : {
             "Lua.AutoPlay" : true,
+            "Lua.ClickPulseDuration" : 0.180000,
+            "Lua.ClickPulseScale" : 1.080000,
             "Lua.Delay" : 0.980000,
             "Lua.EnterDuration" : 0.300000,
+            "Lua.HoverScale" : 1.045000,
+            "Lua.HoverTintScale" : 1.120000,
+            "Lua.InteractionLerpSpeed" : 16.000000,
             "Lua.OvershootScale" : 1.045000,
+            "Lua.PressedScale" : 0.955000,
+            "Lua.PressedTintScale" : 0.820000,
             "Lua.SettleDuration" : 0.120000,
             "Lua.SettleYOffset" : -5.000000,
             "Lua.StartScale" : 0.860000,
@@ -1112,7 +1195,30 @@
           }
         }],
       "RootComponent" : {
-        "Children" : [],
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_13",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 96",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
         "ClassName" : "UUIButtonComponent",
         "Name" : "ScoreBoardBT_Button",
         "Properties" : {
@@ -1163,9 +1269,16 @@
           "Name" : "ButtonIntroScript",
           "Properties" : {
             "Lua.AutoPlay" : true,
+            "Lua.ClickPulseDuration" : 0.180000,
+            "Lua.ClickPulseScale" : 1.080000,
             "Lua.Delay" : 1.100000,
             "Lua.EnterDuration" : 0.300000,
+            "Lua.HoverScale" : 1.045000,
+            "Lua.HoverTintScale" : 1.120000,
+            "Lua.InteractionLerpSpeed" : 16.000000,
             "Lua.OvershootScale" : 1.045000,
+            "Lua.PressedScale" : 0.955000,
+            "Lua.PressedTintScale" : 0.820000,
             "Lua.SettleDuration" : 0.120000,
             "Lua.SettleYOffset" : -5.000000,
             "Lua.StartScale" : 0.860000,
@@ -1175,7 +1288,30 @@
           }
         }],
       "RootComponent" : {
-        "Children" : [],
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UUUIDTextRenderComponent",
+            "Name" : "UUUIDTextRenderComponent_14",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 1.300000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "UUID : 100",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "bTickEnable" : true
+            }
+          }],
         "ClassName" : "UUIButtonComponent",
         "Name" : "GameEndBT_Button",
         "Properties" : {
@@ -1227,7 +1363,7 @@
     "FarClip" : 1000.000000,
     "Location" : [3.182306, 18.600988, 17.769386],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 49.539055, -108.410728]
+    "Rotation" : [0.000003, 49.539051, -108.410721]
   },
   "Version" : 3,
   "WorldType" : "Editor"
