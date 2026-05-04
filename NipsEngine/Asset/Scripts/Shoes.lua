@@ -19,7 +19,7 @@ function OnPickedUp(owner, picker)
     shellDropped = true
     StartCoroutine(function()
         wait(1.0)
-        local dropped = DropRegisteredItemFromActor("shell", owner, FVector.new(-0.5, -0.1, 0.6))
+        local dropped = DropRegisteredItemFromActor("shell", owner, FVector.new(-0.5, -0.1, 0.4))
         print("[Item][Lua] Drop shell result=" .. tostring(dropped))
         if not dropped then
             shellDropped = false
