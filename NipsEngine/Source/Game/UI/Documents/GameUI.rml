@@ -24,21 +24,27 @@
 			<div id="settings-title">SETTINGS</div>
 			<div id="settings-mouse-row" class="settings-row">
 				<span class="settings-label">Mouse Sensitivity</span>
-				<span id="settings-mouse-minus" class="settings-step-button">-</span>
+				<span id="settings-mouse-slider" class="settings-slider">
+					<span id="settings-mouse-fill" class="settings-slider-fill"></span>
+					<span id="settings-mouse-knob" class="settings-slider-knob"></span>
+				</span>
 				<span id="settings-mouse-value" class="settings-value">100%</span>
-				<span id="settings-mouse-plus" class="settings-step-button">+</span>
 			</div>
 			<div id="settings-bgm-row" class="settings-row">
 				<span class="settings-label">BGM Volume</span>
-				<span id="settings-bgm-minus" class="settings-step-button">-</span>
+				<span id="settings-bgm-slider" class="settings-slider">
+					<span id="settings-bgm-fill" class="settings-slider-fill"></span>
+					<span id="settings-bgm-knob" class="settings-slider-knob"></span>
+				</span>
 				<span id="settings-bgm-value" class="settings-value">100%</span>
-				<span id="settings-bgm-plus" class="settings-step-button">+</span>
 			</div>
 			<div id="settings-sfx-row" class="settings-row">
 				<span class="settings-label">SFX Volume</span>
-				<span id="settings-sfx-minus" class="settings-step-button">-</span>
+				<span id="settings-sfx-slider" class="settings-slider">
+					<span id="settings-sfx-fill" class="settings-slider-fill"></span>
+					<span id="settings-sfx-knob" class="settings-slider-knob"></span>
+				</span>
 				<span id="settings-sfx-value" class="settings-value">100%</span>
-				<span id="settings-sfx-plus" class="settings-step-button">+</span>
 			</div>
 			<div id="settings-close-button" class="pause-button">Back</div>
 		</div>
@@ -48,19 +54,19 @@
 		<div id="credits-panel">
 			<div id="credits-title">CREDITS</div>
 			<div id="credits-row-1" class="credits-row">
-				<span class="credits-name">Yoonji Nam</span>
+				<span class="credits-name">남윤지</span>
 				<span class="credits-role">Lead Developer</span>
 			</div>
 			<div id="credits-row-2" class="credits-row">
-				<span class="credits-name">Hyeongil Jeon</span>
+				<span class="credits-name">전현길</span>
 				<span class="credits-role">First Developer</span>
 			</div>
 			<div id="credits-row-3" class="credits-row">
-				<span class="credits-name">Seyeong Park</span>
+				<span class="credits-name">박세영</span>
 				<span class="credits-role">Master Developer</span>
 			</div>
 			<div id="credits-row-4" class="credits-row">
-				<span class="credits-name">Kihoon Kim</span>
+				<span class="credits-name">김기훈</span>
 				<span class="credits-role">Best Developer</span>
 			</div>
 			<div id="credits-close-button" class="pause-button">Back</div>

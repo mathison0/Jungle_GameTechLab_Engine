@@ -152,11 +152,21 @@ private:
     void CloseSettings();
     void OpenCredits();
     void CloseCredits();
-    void AdjustMouseSensitivity(float Delta);
-    void AdjustBgmVolume(float Delta);
-    void AdjustSfxVolume(float Delta);
     void ApplySettings();
     void UpdateSettingsElements();
+    enum class ESettingsSlider
+    {
+        None,
+        MouseSensitivity,
+        Bgm,
+        Sfx,
+    };
+    bool TryBeginSettingsSliderDrag(float X, float Y);
+    void UpdateSettingsSliderDrag(float X, float Y);
+    void EndSettingsSliderDrag();
+    bool GetSettingsSliderRect(ESettingsSlider Slider, float& Left, float& Top, float& Width, float& Height) const;
+    float GetSettingsSliderNormalized(ESettingsSlider Slider) const;
+    void SetSettingsSliderNormalized(ESettingsSlider Slider, float Normalized);
     bool CreateGameDocument();
     void BindRmlUiEvents();
     void SetElementVisible(const char* Id, bool bVisible);
@@ -182,10 +192,11 @@ private:
     std::unique_ptr<FRmlUiClickListener> CreditsOpenClickListener;
     std::unique_ptr<FRmlUiClickListener> CreditsCloseClickListener;
     std::unique_ptr<FRmlUiClickListener> PauseTitleClickListener;
-    std::vector<std::unique_ptr<FRmlUiClickListener>> SettingsStepClickListeners;
     std::vector<std::unique_ptr<FRmlUiClickListener>> TitleButtonHoverEnterListeners;
     std::vector<std::unique_ptr<FRmlUiClickListener>> TitleButtonHoverLeaveListeners;
     double LastRmlUpdateTime = 0.0;
+    int LastUiWidth = 1280;
+    int LastUiHeight = 720;
 
     float TitleIntroElapsed = 0.0f;
     float CustomCursorX = 0.0f;
@@ -196,6 +207,7 @@ private:
     bool bStartGameTransitionReady = false;
     bool bSettingsOpen = false;
     bool bCreditsOpen = false;
+    ESettingsSlider ActiveSettingsSlider = ESettingsSlider::None;
     float MouseSensitivityScale = 1.0f;
     float BgmVolume = 1.0f;
     float SfxVolume = 1.0f;

@@ -112,6 +112,13 @@ namespace
 		return std::to_string(Percent) + "%";
 	}
 
+	std::string FormatCssPercent(float Value)
+	{
+		char Buffer[32] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "%.2f%%", std::clamp(Value, 0.0f, 1.0f) * 100.0f);
+		return Buffer;
+	}
+
 	std::string FormatPixels(float Value)
 	{
 		char Buffer[32] = {};
@@ -179,22 +186,15 @@ namespace
 
 	constexpr size_t TitleButtonCount = sizeof(TitleButtonIds) / sizeof(TitleButtonIds[0]);
 
-	struct FSettingsStepBinding
-	{
-		const char* Id = "";
-		int Action = 0;
-	};
-
-	constexpr FSettingsStepBinding SettingsStepBindings[] =
-	{
-		{ "settings-mouse-minus", 0 },
-		{ "settings-mouse-plus", 1 },
-		{ "settings-bgm-minus", 2 },
-		{ "settings-bgm-plus", 3 },
-		{ "settings-sfx-minus", 4 },
-		{ "settings-sfx-plus", 5 },
-	};
-
+	constexpr float SettingsPanelWidth = 480.0f;
+	constexpr float SettingsPanelHeight = 326.0f;
+	constexpr float SettingsRowLeft = 44.0f;
+	constexpr float SettingsSliderLeft = 202.0f;
+	constexpr float SettingsSliderTop = 17.0f;
+	constexpr float SettingsSliderWidth = 132.0f;
+	constexpr float SettingsSliderHitHeight = 28.0f;
+	constexpr float MouseSensitivityMin = 0.2f;
+	constexpr float MouseSensitivityMax = 3.0f;
 }
 
 GameUISystem& GameUISystem::Get()
@@ -272,11 +272,6 @@ void GameUISystem::Shutdown()
 			Element->RemoveEventListener("click", CreditsCloseClickListener.get());
 		if (Rml::Element* Element = RmlDocument->GetElementById("pause-title-button"))
 			Element->RemoveEventListener("click", PauseTitleClickListener.get());
-		for (size_t Index = 0; Index < SettingsStepClickListeners.size() && Index < std::size(SettingsStepBindings); ++Index)
-		{
-			if (Rml::Element* Element = RmlDocument->GetElementById(SettingsStepBindings[Index].Id))
-				Element->RemoveEventListener("click", SettingsStepClickListeners[Index].get());
-		}
 		for (size_t Index = 0; Index < TitleButtonHoverEnterListeners.size() && Index < TitleButtonCount; ++Index)
 		{
 			if (Rml::Element* Element = RmlDocument->GetElementById(TitleButtonIds[Index]))
@@ -315,7 +310,6 @@ void GameUISystem::Shutdown()
 	CreditsOpenClickListener.reset();
 	CreditsCloseClickListener.reset();
 	PauseTitleClickListener.reset();
-	SettingsStepClickListeners.clear();
 	TitleButtonHoverEnterListeners.clear();
 	TitleButtonHoverLeaveListeners.clear();
 
@@ -374,6 +368,7 @@ void GameUISystem::SetState(EGameUIState NewState)
 	SetPauseMenuOpen(false);
 	bSettingsOpen = false;
 	bCreditsOpen = false;
+	EndSettingsSliderDrag();
 }
 
 bool GameUISystem::WantsMouseCursor() const
@@ -403,6 +398,11 @@ void GameUISystem::SetPauseMenuOpen(bool bOpen)
 	{
 		bSettingsOpen = false;
 		bCreditsOpen = false;
+		EndSettingsSliderDrag();
+	}
+	else
+	{
+		EndSettingsSliderDrag();
 	}
 }
 
@@ -517,6 +517,7 @@ void GameUISystem::RequestExitToTitle()
 	bPauseMenuOpen = false;
 	bSettingsOpen = false;
 	bCreditsOpen = false;
+	EndSettingsSliderDrag();
 	if (ExitToTitleCallback)
 	{
 		ExitToTitleCallback();
@@ -561,6 +562,7 @@ void GameUISystem::OpenSettings()
 void GameUISystem::CloseSettings()
 {
 	bSettingsOpen = false;
+	EndSettingsSliderDrag();
 }
 
 void GameUISystem::OpenCredits()
@@ -572,27 +574,6 @@ void GameUISystem::OpenCredits()
 void GameUISystem::CloseCredits()
 {
 	bCreditsOpen = false;
-}
-
-void GameUISystem::AdjustMouseSensitivity(float Delta)
-{
-	MouseSensitivityScale = std::clamp(MouseSensitivityScale + Delta, 0.2f, 3.0f);
-	ApplySettings();
-	UpdateSettingsElements();
-}
-
-void GameUISystem::AdjustBgmVolume(float Delta)
-{
-	BgmVolume = std::clamp(BgmVolume + Delta, 0.0f, 1.0f);
-	ApplySettings();
-	UpdateSettingsElements();
-}
-
-void GameUISystem::AdjustSfxVolume(float Delta)
-{
-	SfxVolume = std::clamp(SfxVolume + Delta, 0.0f, 1.0f);
-	ApplySettings();
-	UpdateSettingsElements();
 }
 
 void GameUISystem::ApplySettings()
@@ -611,6 +592,130 @@ void GameUISystem::UpdateSettingsElements()
 	SetElementText("settings-mouse-value", FormatValuePercent(MouseSensitivityScale));
 	SetElementText("settings-bgm-value", FormatValuePercent(BgmVolume));
 	SetElementText("settings-sfx-value", FormatValuePercent(SfxVolume));
+
+	const float MouseNormalized = GetSettingsSliderNormalized(ESettingsSlider::MouseSensitivity);
+	const float BgmNormalized = GetSettingsSliderNormalized(ESettingsSlider::Bgm);
+	const float SfxNormalized = GetSettingsSliderNormalized(ESettingsSlider::Sfx);
+
+	SetElementProperty("settings-mouse-fill", "width", FormatCssPercent(MouseNormalized));
+	SetElementProperty("settings-mouse-knob", "left", FormatCssPercent(MouseNormalized));
+	SetElementProperty("settings-bgm-fill", "width", FormatCssPercent(BgmNormalized));
+	SetElementProperty("settings-bgm-knob", "left", FormatCssPercent(BgmNormalized));
+	SetElementProperty("settings-sfx-fill", "width", FormatCssPercent(SfxNormalized));
+	SetElementProperty("settings-sfx-knob", "left", FormatCssPercent(SfxNormalized));
+}
+
+bool GameUISystem::TryBeginSettingsSliderDrag(float X, float Y)
+{
+	if (!bSettingsOpen)
+		return false;
+
+	const ESettingsSlider Sliders[] = { ESettingsSlider::MouseSensitivity, ESettingsSlider::Bgm, ESettingsSlider::Sfx };
+	for (ESettingsSlider Slider : Sliders)
+	{
+		float Left = 0.0f;
+		float Top = 0.0f;
+		float Width = 0.0f;
+		float Height = 0.0f;
+		if (!GetSettingsSliderRect(Slider, Left, Top, Width, Height))
+			continue;
+
+		if (X >= Left && X <= Left + Width && Y >= Top && Y <= Top + Height)
+		{
+			ActiveSettingsSlider = Slider;
+			UpdateSettingsSliderDrag(X, Y);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void GameUISystem::UpdateSettingsSliderDrag(float X, float Y)
+{
+	(void)Y;
+	if (ActiveSettingsSlider == ESettingsSlider::None)
+		return;
+
+	float Left = 0.0f;
+	float Top = 0.0f;
+	float Width = 0.0f;
+	float Height = 0.0f;
+	if (!GetSettingsSliderRect(ActiveSettingsSlider, Left, Top, Width, Height) || Width <= 0.0f)
+		return;
+
+	const float Normalized = std::clamp((X - Left) / Width, 0.0f, 1.0f);
+	SetSettingsSliderNormalized(ActiveSettingsSlider, Normalized);
+}
+
+void GameUISystem::EndSettingsSliderDrag()
+{
+	ActiveSettingsSlider = ESettingsSlider::None;
+}
+
+bool GameUISystem::GetSettingsSliderRect(ESettingsSlider Slider, float& Left, float& Top, float& Width, float& Height) const
+{
+	float RowTop = 0.0f;
+	switch (Slider)
+	{
+	case ESettingsSlider::MouseSensitivity:
+		RowTop = 88.0f;
+		break;
+	case ESettingsSlider::Bgm:
+		RowTop = 142.0f;
+		break;
+	case ESettingsSlider::Sfx:
+		RowTop = 196.0f;
+		break;
+	default:
+		return false;
+	}
+
+	const float PanelLeft = static_cast<float>(LastUiWidth) * 0.5f - SettingsPanelWidth * 0.5f;
+	const float PanelTop = static_cast<float>(LastUiHeight) * 0.5f - SettingsPanelHeight * 0.5f;
+	Left = PanelLeft + SettingsRowLeft + SettingsSliderLeft;
+	Top = PanelTop + RowTop + SettingsSliderTop - (SettingsSliderHitHeight - 8.0f) * 0.5f;
+	Width = SettingsSliderWidth;
+	Height = SettingsSliderHitHeight;
+	return true;
+}
+
+float GameUISystem::GetSettingsSliderNormalized(ESettingsSlider Slider) const
+{
+	switch (Slider)
+	{
+	case ESettingsSlider::MouseSensitivity:
+		return (std::clamp(MouseSensitivityScale, MouseSensitivityMin, MouseSensitivityMax) - MouseSensitivityMin) /
+			(MouseSensitivityMax - MouseSensitivityMin);
+	case ESettingsSlider::Bgm:
+		return std::clamp(BgmVolume, 0.0f, 1.0f);
+	case ESettingsSlider::Sfx:
+		return std::clamp(SfxVolume, 0.0f, 1.0f);
+	default:
+		return 0.0f;
+	}
+}
+
+void GameUISystem::SetSettingsSliderNormalized(ESettingsSlider Slider, float Normalized)
+{
+	Normalized = std::clamp(Normalized, 0.0f, 1.0f);
+	switch (Slider)
+	{
+	case ESettingsSlider::MouseSensitivity:
+		MouseSensitivityScale = MouseSensitivityMin + Normalized * (MouseSensitivityMax - MouseSensitivityMin);
+		break;
+	case ESettingsSlider::Bgm:
+		BgmVolume = Normalized;
+		break;
+	case ESettingsSlider::Sfx:
+		SfxVolume = Normalized;
+		break;
+	default:
+		return;
+	}
+
+	ApplySettings();
+	UpdateSettingsElements();
 }
 
 bool GameUISystem::OnUIMouseMove(float X, float Y)
@@ -621,6 +726,11 @@ bool GameUISystem::OnUIMouseMove(float X, float Y)
 	CustomCursorX = X;
 	CustomCursorY = Y;
 	RmlContext->ProcessMouseMove(static_cast<int>(X), static_cast<int>(Y), 0);
+	if (ActiveSettingsSlider != ESettingsSlider::None)
+	{
+		UpdateSettingsSliderDrag(X, Y);
+		return true;
+	}
 	return WantsMouseCursor();
 }
 
@@ -631,6 +741,8 @@ bool GameUISystem::OnUIMouseButtonDown(int Button, float X, float Y)
 
 	RmlContext->ProcessMouseMove(static_cast<int>(X), static_cast<int>(Y), 0);
 	RmlContext->ProcessMouseButtonDown(Button, 0);
+	if (Button == 0 && TryBeginSettingsSliderDrag(X, Y))
+		return true;
 	return WantsMouseCursor();
 }
 
@@ -641,6 +753,11 @@ bool GameUISystem::OnUIMouseButtonUp(int Button, float X, float Y)
 
 	RmlContext->ProcessMouseMove(static_cast<int>(X), static_cast<int>(Y), 0);
 	RmlContext->ProcessMouseButtonUp(Button, 0);
+	if (Button == 0 && ActiveSettingsSlider != ESettingsSlider::None)
+	{
+		EndSettingsSliderDrag();
+		return true;
+	}
 	return WantsMouseCursor();
 }
 
@@ -757,6 +874,9 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 {
 	if (!RmlDocument)
 		return;
+
+	LastUiWidth = Width;
+	LastUiHeight = Height;
 
 	double Now = LastRmlUpdateTime;
 	if (RmlSystemInterface)
@@ -950,8 +1070,8 @@ void GameUISystem::UpdateTitleTransitionElements()
 	const bool bShowIntro = bInStartMenu && TitleIntroElapsed < IntroTotalDuration && !bStartGameTransitionActive;
 
 	float IntroIconBlink = 0.0f;
-	constexpr float BlinkStartTime = 0.8f;
-	constexpr float BlinkDuration = 0.6f;
+	constexpr float BlinkStartTime = 1.5f;
+	constexpr float BlinkDuration = 0.8f;
 	if (TitleIntroElapsed >= BlinkStartTime && TitleIntroElapsed < BlinkStartTime + BlinkDuration)
 	{
 		float t = (TitleIntroElapsed - BlinkStartTime) / BlinkDuration;
@@ -1075,29 +1195,6 @@ void GameUISystem::BindRmlUiEvents()
 		Element->AddEventListener("click", CreditsCloseClickListener.get());
 	if (Rml::Element* Element = RmlDocument->GetElementById("pause-title-button"))
 		Element->AddEventListener("click", PauseTitleClickListener.get());
-
-	for (const FSettingsStepBinding& Binding : SettingsStepBindings)
-	{
-		SettingsStepClickListeners.emplace_back(std::make_unique<FRmlUiClickListener>([Action = Binding.Action]()
-		{
-			GameUISystem& UI = GameUISystem::Get();
-			switch (Action)
-			{
-			case 0: UI.AdjustMouseSensitivity(-0.1f); break;
-			case 1: UI.AdjustMouseSensitivity(0.1f); break;
-			case 2: UI.AdjustBgmVolume(-0.1f); break;
-			case 3: UI.AdjustBgmVolume(0.1f); break;
-			case 4: UI.AdjustSfxVolume(-0.1f); break;
-			case 5: UI.AdjustSfxVolume(0.1f); break;
-			default: break;
-			}
-		}));
-
-		if (Rml::Element* Element = RmlDocument->GetElementById(Binding.Id))
-		{
-			Element->AddEventListener("click", SettingsStepClickListeners.back().get());
-		}
-	}
 
 	for (const char* ButtonId : TitleButtonIds)
 	{
