@@ -264,6 +264,40 @@ bool FLuaComponentHandle::SetUIAnchor(const sol::object& Value) const
     return true;
 }
 
+bool FLuaComponentHandle::SetUIAnchorMin(const sol::object& Value) const
+{
+    FVector2 Anchor;
+    if (!ReadLuaVec2(Value, Anchor)) return false;
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetAnchorMin(Anchor);
+    return true;
+}
+
+bool FLuaComponentHandle::SetUIAnchorMax(const sol::object& Value) const
+{
+    FVector2 Anchor;
+    if (!ReadLuaVec2(Value, Anchor)) return false;
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    if (!UI) return false;
+    UI->SetAnchorMax(Anchor);
+    return true;
+}
+
+sol::table FLuaComponentHandle::GetUIAnchorMin(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    return MakeLuaVec2(Lua, UI ? UI->GetAnchorMin() : FVector2(0.0f, 0.0f));
+}
+
+sol::table FLuaComponentHandle::GetUIAnchorMax(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    return MakeLuaVec2(Lua, UI ? UI->GetAnchorMax() : FVector2(0.0f, 0.0f));
+}
+
 bool FLuaComponentHandle::SetUIAnchoredPosition(const sol::object& Value) const
 {
     FVector2 Position;
@@ -274,6 +308,13 @@ bool FLuaComponentHandle::SetUIAnchoredPosition(const sol::object& Value) const
     return true;
 }
 
+sol::table FLuaComponentHandle::GetUIAnchoredPosition(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    return MakeLuaVec2(Lua, UI ? UI->GetAnchoredPosition() : FVector2(0.0f, 0.0f));
+}
+
 bool FLuaComponentHandle::SetUISizeDelta(const sol::object& Value) const
 {
     FVector2 Size;
@@ -282,6 +323,13 @@ bool FLuaComponentHandle::SetUISizeDelta(const sol::object& Value) const
     if (!UI) return false;
     UI->SetSizeDelta(Size);
     return true;
+}
+
+sol::table FLuaComponentHandle::GetUISizeDelta(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    return MakeLuaVec2(Lua, UI ? UI->GetSizeDelta() : FVector2(0.0f, 0.0f));
 }
 
 bool FLuaComponentHandle::SetUIWorldSize(const sol::object& Value) const
@@ -312,6 +360,13 @@ bool FLuaComponentHandle::SetUIPivot(const sol::object& Value) const
     return true;
 }
 
+sol::table FLuaComponentHandle::GetUIPivot(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    return MakeLuaVec2(Lua, UI ? UI->GetPivot() : FVector2(0.5f, 0.5f));
+}
+
 bool FLuaComponentHandle::SetUIRotationDegrees(float Degrees) const
 {
     UUIComponent* UI = Cast<UUIComponent>(Resolve());
@@ -320,12 +375,40 @@ bool FLuaComponentHandle::SetUIRotationDegrees(float Degrees) const
     return true;
 }
 
+float FLuaComponentHandle::GetUIRotationDegrees() const
+{
+    UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    return UI ? UI->GetRotationDegrees() : 0.0f;
+}
+
 bool FLuaComponentHandle::SetUITint(float R, float G, float B, float A) const
 {
     UUIComponent* UI = Cast<UUIComponent>(Resolve());
     if (!UI) return false;
     UI->SetTintColor(FVector4(R, G, B, A));
     return true;
+}
+
+sol::table FLuaComponentHandle::GetUITint(sol::this_state State) const
+{
+    sol::state_view Lua(State);
+    sol::table Color = Lua.create_table();
+    const UUIComponent* UI = Cast<UUIComponent>(Resolve());
+    const FVector4 Tint = UI ? UI->GetTintColor() : FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    Color[1] = Tint.R;
+    Color[2] = Tint.G;
+    Color[3] = Tint.B;
+    Color[4] = Tint.A;
+    Color["r"] = Tint.R;
+    Color["g"] = Tint.G;
+    Color["b"] = Tint.B;
+    Color["a"] = Tint.A;
+    Color["x"] = Tint.X;
+    Color["y"] = Tint.Y;
+    Color["z"] = Tint.Z;
+    Color["w"] = Tint.W;
+    return Color;
 }
 
 bool FLuaComponentHandle::SetUIVisibility(bool bVisible) const
@@ -445,13 +528,22 @@ namespace LuaBinding
             "SetUIRenderSpace", &FLuaComponentHandle::SetUIRenderSpace,
             "SetUITexturePath", &FLuaComponentHandle::SetUITexturePath,
             "SetUIAnchor", &FLuaComponentHandle::SetUIAnchor,
+            "SetUIAnchorMin", &FLuaComponentHandle::SetUIAnchorMin,
+            "SetUIAnchorMax", &FLuaComponentHandle::SetUIAnchorMax,
+            "GetUIAnchorMin", &FLuaComponentHandle::GetUIAnchorMin,
+            "GetUIAnchorMax", &FLuaComponentHandle::GetUIAnchorMax,
             "SetUIAnchoredPosition", &FLuaComponentHandle::SetUIAnchoredPosition,
+            "GetUIAnchoredPosition", &FLuaComponentHandle::GetUIAnchoredPosition,
             "SetUISizeDelta", &FLuaComponentHandle::SetUISizeDelta,
+            "GetUISizeDelta", &FLuaComponentHandle::GetUISizeDelta,
             "SetUIWorldSize", &FLuaComponentHandle::SetUIWorldSize,
             "SetUIBillboard", &FLuaComponentHandle::SetUIBillboard,
             "SetUIPivot", &FLuaComponentHandle::SetUIPivot,
+            "GetUIPivot", &FLuaComponentHandle::GetUIPivot,
             "SetUIRotationDegrees", &FLuaComponentHandle::SetUIRotationDegrees,
+            "GetUIRotationDegrees", &FLuaComponentHandle::GetUIRotationDegrees,
             "SetUITint", &FLuaComponentHandle::SetUITint,
+            "GetUITint", &FLuaComponentHandle::GetUITint,
             "SetUIVisibility", &FLuaComponentHandle::SetUIVisibility,
             "IsUIText", &FLuaComponentHandle::IsUIText,
             "GetUIText", &FLuaComponentHandle::GetUIText,

@@ -113,13 +113,22 @@ struct FLuaComponentHandle
 	bool SetUIRenderSpace(const FString& RenderSpace) const;
 	bool SetUITexturePath(const FString& TexturePath) const;
 	bool SetUIAnchor(const sol::object& Value) const;
+	bool SetUIAnchorMin(const sol::object& Value) const;
+	bool SetUIAnchorMax(const sol::object& Value) const;
+	sol::table GetUIAnchorMin(sol::this_state State) const;
+	sol::table GetUIAnchorMax(sol::this_state State) const;
 	bool SetUIAnchoredPosition(const sol::object& Value) const;
+	sol::table GetUIAnchoredPosition(sol::this_state State) const;
 	bool SetUISizeDelta(const sol::object& Value) const;
+	sol::table GetUISizeDelta(sol::this_state State) const;
 	bool SetUIWorldSize(const sol::object& Value) const;
 	bool SetUIBillboard(bool bBillboard) const;
 	bool SetUIPivot(const sol::object& Value) const;
+	sol::table GetUIPivot(sol::this_state State) const;
 	bool SetUIRotationDegrees(float Degrees) const;
+	float GetUIRotationDegrees() const;
 	bool SetUITint(float R, float G, float B, float A) const;
+	sol::table GetUITint(sol::this_state State) const;
 	bool SetUIVisibility(bool bVisible) const;
 
 	bool IsUIText() const;
