@@ -30,16 +30,27 @@ local GameManager = {
 
 -- [내부 리셋 함수]
 function GameManager._ResetState()
+    -- 스탯 리셋
     GameManager.Stats = {
         MaxHP = 100.0, CurrentHP = 100.0,
         MoveSpeedMult = 1.0, ExpMult = 1.0,
         PickupRangeMult = 1.0, DamageMult = 1.0,
     }
+    
+    -- 상태 및 플래그 완전 초기화 (세션 영속성 방지)
     GameManager.KillCount = 0
     GameManager.IsGameOver = false
     GameManager.IsPaused = false
     GameManager.Initialized = false
-    Log("[GameManager] State Reset Complete.")
+    
+    GameManager.SessionPrepared = false
+    GameManager.PlayerRegistered = false
+    
+    GameManager.PlayerScript = nil
+    GameManager.WeaponInventory = nil
+    GameManager.LevelSystem = nil
+    
+    Log("[GameManager] Session State Fully Reset.")
 end
 
 -- [1단계: 세션 설정 준비]

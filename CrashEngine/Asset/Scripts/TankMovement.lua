@@ -3,8 +3,8 @@ local Vec = require("Core.Vector")
 ---@class TankMovement : ScriptComponent
 local TankMovement = {
     properties = {
-        MoveSpeed = { type = "float", default = 1.0 },
-        RotateSpeed = { type = "float", default = 1.0 },
+        MoveSpeed = { type = "float", default = 20.0 },
+        RotateSpeed = { type = "float", default = 30.0 },
         BaseFriction = { type = "float", default = 0.1 },
         DriftFactor = { type = "float", default = 0.3 },
         DriftSmoothness = { type = "float", default = 0.1 }
