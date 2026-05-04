@@ -121,6 +121,23 @@ void UDecalComponent::SetMaterial(int32 ElementIndex, UMaterial* InMaterial)
     MarkProxyDirty(ESceneProxyDirtyFlag::Material);
 }
 
+void UDecalComponent::SetFade(float InFadeInDelay, float InFadeInDuration, float InFadeOutDelay, float InFadeOutDuration)
+{
+    FadeInDelay = InFadeInDelay;
+    FadeInDuration = InFadeInDuration;
+    FadeOutDelay = InFadeOutDelay;
+    FadeOutDuration = InFadeOutDuration;
+    ResetFade();
+}
+
+void UDecalComponent::ResetFade()
+{
+    FadeTimer = 0.0f;
+    FadeOpacity = FadeInDuration > 0.0f ? 0.0f : 1.0f;
+    bFadeOutEnded = false;
+    MarkProxyDirty(ESceneProxyDirtyFlag::Material);
+}
+
 void UDecalComponent::OnTransformDirty()
 {
     UPrimitiveComponent::OnTransformDirty();
@@ -154,6 +171,11 @@ void UDecalComponent::HandleFade(float DeltaTime)
         if (FadeTimer > OutEnd)
         {
             Alpha = 0.0f;
+            if (!bFadeOutEnded)
+            {
+                bFadeOutEnded = true;
+                OnEndedFadeOut.Broadcast();
+            }
         }
         else if (FadeTimer > OutStart)
         {

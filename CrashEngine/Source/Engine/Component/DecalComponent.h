@@ -3,6 +3,7 @@
 #include "Collision/OBB.h"
 #include "PrimitiveComponent.h"
 #include "Core/ResourceTypes.h"
+#include "Core/Delegate.h"
 
 // UDecalComponent 컴포넌트이다.
 class UDecalComponent : public UPrimitiveComponent
@@ -32,7 +33,12 @@ public:
     UMaterial* GetMaterial(int32 ElementIndex) const override { return Material; }
     FOBB GetWorldOBB() const;
 
+    void SetFade(float InFadeInDelay, float InFadeInDuration, float InFadeOutDelay, float InFadeOutDuration);
+    void ResetFade();
+
     void OnTransformDirty() override;
+
+	DECLARE_DELEGATE(OnEndedFadeOut);
 
 private:
     bool ShouldRenderDebugBox() const;
@@ -51,6 +57,7 @@ private:
     float FadeOutDuration = 0;
     float FadeTimer = 0;
     float FadeOpacity = 1.0f;
+    bool bFadeOutEnded = false;
     mutable FOBB WorldOBB;
     mutable bool bWorldOBBDirty = true;
 };
