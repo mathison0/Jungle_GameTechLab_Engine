@@ -448,6 +448,54 @@ bool FLuaComponentHandle::SetMaterial(int32 Index, const FString& MaterialPath) 
     return true;
 }
 
+bool FLuaComponentHandle::SetMaterialVector4Parameter(int32 Index, const FString& ParamName, const sol::table& Value) const
+{
+    UMeshComponent* MeshComp = Cast<UMeshComponent>(Resolve());
+    if (!MeshComp) return false;
+
+    UMaterial* Material = MeshComp->GetMaterial(Index);
+    if (!Material) return false;
+
+    FVector4 Vec(0, 0, 0, 1);
+    sol::object XObj = Value["x"];
+    if (!XObj.valid() || XObj == sol::nil)
+    {
+        XObj = Value["X"];
+    }
+
+    if (XObj.valid() && XObj.get_type() == sol::type::number)
+    {
+        sol::optional<float> x = Value["x"];
+        sol::optional<float> X = Value["X"];
+        sol::optional<float> y = Value["y"];
+        sol::optional<float> Y = Value["Y"];
+        sol::optional<float> z = Value["z"];
+        sol::optional<float> Z = Value["Z"];
+        sol::optional<float> w = Value["w"];
+        sol::optional<float> W = Value["W"];
+
+        Vec.X = x.value_or(X.value_or(0.0f));
+        Vec.Y = y.value_or(Y.value_or(0.0f));
+        Vec.Z = z.value_or(Z.value_or(0.0f));
+        Vec.W = w.value_or(W.value_or(1.0f));
+    }
+    else
+    {
+        sol::optional<float> v1 = Value[1];
+        sol::optional<float> v2 = Value[2];
+        sol::optional<float> v3 = Value[3];
+        sol::optional<float> v4 = Value[4];
+        Vec.X = v1.value_or(0.0f);
+        Vec.Y = v2.value_or(0.0f);
+        Vec.Z = v3.value_or(0.0f);
+        Vec.W = v4.value_or(1.0f);
+    }
+
+    Material->SetVector4Parameter(ParamName, Vec);
+    MeshComp->MarkRenderStateDirty();
+    return true;
+}
+
 bool FLuaComponentHandle::IsUIText() const
 {
     return Cast<UTextUIComponent>(Resolve()) != nullptr;
@@ -576,6 +624,7 @@ namespace LuaBinding
             "SetUIVisibility", &FLuaComponentHandle::SetUIVisibility,
             "SetStaticMesh", &FLuaComponentHandle::SetStaticMesh,
             "SetMaterial", &FLuaComponentHandle::SetMaterial,
+            "SetMaterialVector4Parameter", &FLuaComponentHandle::SetMaterialVector4Parameter,
             "IsUIText", &FLuaComponentHandle::IsUIText,
             "GetUIText", &FLuaComponentHandle::GetUIText,
             "SetUIText", &FLuaComponentHandle::SetUIText,

@@ -111,6 +111,31 @@ end
 function GameManager.PlayerGetDamage(damage)
     if GameManager.IsGameOver then return end
     GameManager.Stats.CurrentHP = math.max(0, GameManager.Stats.CurrentHP - damage)
+
+    -- 피격 시 0.1초 동안 빨간색으로 표시
+    if GameManager.PlayerScript and GameManager.PlayerScript.StartCoroutine then
+        GameManager.PlayerScript:StartCoroutine(function()
+            local visual = GameManager.PlayerScript:GetComponentByName("UStaticMeshComponent", "BodyMesh")
+            local turret = GameManager.PlayerScript:GetComponentByName("UStaticMeshComponent", "Visual_MainCannon_0")
+
+            local comps = {}
+            if visual and visual:IsValid() then table.insert(comps, visual) end
+            if turret and turret:IsValid() then table.insert(comps, turret) end
+
+            for _, comp in ipairs(comps) do
+                comp:SetMaterialVector4Parameter(0, "SectionColor", {1.0, 0.0, 0.0, 1.0})
+            end
+
+            coroutine.yield("wait_time", 0.1)
+
+            for _, comp in ipairs(comps) do
+                if comp:IsValid() then
+                    comp:SetMaterialVector4Parameter(0, "SectionColor", {1.0, 1.0, 1.0, 1.0})
+                end
+            end
+        end)
+    end
+
     if GameManager.Stats.CurrentHP <= 0 then GameManager.OnGameOver("Player Died") end
 end
 
