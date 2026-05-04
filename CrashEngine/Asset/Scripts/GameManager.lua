@@ -1,5 +1,6 @@
 local WeaponInventory = require("WeaponInventory")
 local LevelSystem = require("LevelSystem")
+local Audio = require("Core.Audio")
 
 local GameManager = {
     GameTimeLimit = 600.0,
@@ -180,6 +181,7 @@ function GameManager.BeginLevelUpSelection(options)
     GameManager.CurrentLevelUpOptions = options
     GameManager.IsLevelUpSelectionActive = true
     GameManager.SetGameplayPaused(true)
+    Audio.Play("levelup", Audio.Bus.UI, 1.0)
 
     if GameManager.ExpBarUI ~= nil and type(GameManager.ExpBarUI.SetLevelUpMode) == "function" then
         GameManager.ExpBarUI:SetLevelUpMode(true)
