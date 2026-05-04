@@ -1,5 +1,6 @@
 local WeaponInventory = {}
 WeaponInventory.__index = WeaponInventory
+local WeaponVisualDefs = require("WeaponVisualDefs")
 
 local WeaponConstructors = {
     MainCannon = require("Weapons.MainCannonWeapon"),
@@ -29,10 +30,24 @@ function WeaponInventory:HasWeapon(id)
     return self.Weapons[id] ~= nil
 end
 
-function WeaponInventory:EquipVisual(id, weapon)
-    if self.Owner ~= nil and self.Owner.EquipWeaponVisual ~= nil and weapon ~= nil then
-        self.Owner.EquipWeaponVisual(id, weapon.Level or 1)
+function WeaponInventory:ApplyWeaponVisual(id, level)
+    if self.Owner == nil or self.Owner.EquipWeaponVisual == nil then
+        return
     end
+
+    local weaponVisual = WeaponVisualDefs[id]
+    if weaponVisual == nil then
+        Log("[WeaponInventory] Visual def not found: " .. tostring(id))
+        return
+    end
+
+    local layout = weaponVisual[level]
+    if layout == nil then
+        Log("[WeaponInventory] Visual layout not found: " .. tostring(id) .. " level=" .. tostring(level))
+        return
+    end
+
+    self.Owner.EquipWeaponVisual(id, level, layout)
 end
 
 function WeaponInventory:AddWeapon(id)
@@ -49,7 +64,7 @@ function WeaponInventory:AddWeapon(id)
     local weapon = constructor.New(self.Owner)
     self.Weapons[id] = weapon
     Log(id .. " added")
-    self:EquipVisual(id, weapon)
+    self:ApplyWeaponVisual(id, weapon.Level or 1)
 
     if weapon.Start ~= nil then
         weapon:Start()
@@ -70,7 +85,10 @@ function WeaponInventory:UpgradeWeapon(id)
 
     local upgraded = weapon:Upgrade()
     if upgraded then
-        self:EquipVisual(id, weapon)
+        self:ApplyWeaponVisual(id, weapon.Level or 1)
+        if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
+            weapon:RebuildTurretSlots()
+        end
     end
 
     return upgraded
@@ -122,7 +140,10 @@ function WeaponInventory:EvolveWeapon(id)
 
     local evolved = weapon:Evolve()
     if evolved then
-        self:EquipVisual(id, weapon)
+        self:ApplyWeaponVisual(id, weapon.Level or 1)
+        if weapon.IsRunning and weapon.RebuildTurretSlots ~= nil then
+            weapon:RebuildTurretSlots()
+        end
     end
 
     return evolved

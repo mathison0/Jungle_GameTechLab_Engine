@@ -61,12 +61,6 @@ function MachineTurretWeapon:Upgrade()
     self.Level = self.Level + 1
     self.Data = self.Def.Levels[self.Level]
 
-    if self.Owner ~= nil and self.Owner.EquipWeaponVisual ~= nil then
-        self.Owner.EquipWeaponVisual(self.Id, self.Level)
-    end
-
-    self:RebuildTurretSlots()
-
     Log("[MachineTurret] upgraded to level " .. tostring(self.Level))
     return true
 end

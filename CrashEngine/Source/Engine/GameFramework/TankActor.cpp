@@ -3,6 +3,7 @@
 #include "Collision/CollisionChannels.h"
 #include "Core/Logging/LogMacros.h"
 #include "Engine/Component/Collision/CircleCollider2DComponent.h"
+#include "Engine/Component/PrimitiveComponent.h"
 #include "Engine/Component/ScriptComponent.h"
 #include "Engine/Component/StaticMeshComponent.h"
 #include "Engine/Runtime/Engine.h"
@@ -19,14 +20,14 @@ IMPLEMENT_CLASS(ATankActor, AActor)
 
 namespace
 {
-FString MakeIndexedComponentName(const FString& Prefix, int32 Index)
+FString MakeWeaponIndexedComponentName(const FString& Prefix, const FString& WeaponId, int32 Index)
 {
-    return Prefix + std::to_string(Index > 0 ? Index : 0);
+    return Prefix + "_" + WeaponId + "_" + std::to_string(Index > 0 ? Index : 0);
 }
 
-FString MakeMachineTurretComponentName(const FString& Prefix, int32 Index)
+bool StartsWith(const FString& Value, const FString& Prefix)
 {
-    return Prefix + "_MachineTurret_" + std::to_string(Index > 0 ? Index : 0);
+    return Value.size() >= Prefix.size() && Value.compare(0, Prefix.size(), Prefix) == 0;
 }
 
 int32 MaxInt32(int32 A, int32 B)
@@ -65,9 +66,16 @@ void ATankActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
     CacheComponentIndices();
 
     ScriptComponent.BindFunction("EquipWeaponVisual",
-        [this](const std::string& WeaponId, int32 Level)
+        [this](const std::string& WeaponId, int32 Level, sol::object LayoutObject)
         {
-            EquipWeaponVisual(FString(WeaponId), Level);
+            if (!LayoutObject.valid() || LayoutObject == sol::nil || !LayoutObject.is<sol::table>())
+            {
+                UE_LOG(Tank, Warning, "EquipWeaponVisual failed: layout is not table. Weapon=%s Level=%d",
+                       WeaponId.c_str(), Level);
+                return;
+            }
+
+            EquipWeaponVisualFromLua(FString(WeaponId), Level, LayoutObject.as<sol::table>());
         });
 
     ScriptComponent.BindFunction("FireLinearProjectile",
@@ -195,57 +203,73 @@ FTankWeaponAttackParams ATankActor::ReadWeaponAttackParamsFromLua(sol::object Pa
 
 void ATankActor::EquipWeaponVisual(const FString& WeaponId, int32 Level)
 {
-    if (WeaponId == "MainCannon")
+    UE_LOG(Tank, Warning, "EquipWeaponVisual(WeaponId, Level) is deprecated. Weapon=%s Level=%d",
+           WeaponId.c_str(), Level);
+}
+
+void ATankActor::EquipWeaponVisualFromLua(const FString& WeaponId, int32 Level, sol::table LayoutTable)
+{
+    HideWeaponVisuals(WeaponId);
+
+    sol::object VisualsObject = LayoutTable["Visuals"];
+    if (!VisualsObject.valid() || VisualsObject == sol::nil || !VisualsObject.is<sol::table>())
     {
-        EnsureWeaponVisualComponent(HeadMainGunName, "Models/_Basic/Cube.OBJ", FVector(1.2f, 0.0f, 0.5f), FVector(1.0f, 0.35f, 0.35f));
-        CacheComponentIndices();
-        UE_LOG(Tank, Info, "EquipWeaponVisual MainCannon Level=%d", Level);
+        UE_LOG(Tank, Warning, "EquipWeaponVisualFromLua failed: Visuals missing. Weapon=%s Level=%d",
+               WeaponId.c_str(), Level);
         return;
     }
 
-    if (WeaponId == "MachineTurret")
+    sol::table Visuals = VisualsObject.as<sol::table>();
+    for (const auto& Pair : Visuals)
     {
-        const int32 VisualCount = Level >= 3 ? 4 : MaxInt32(1, Level);
-        for (int32 Index = 0; Index < VisualCount; ++Index)
+        sol::object VisualObject = Pair.second;
+        if (!VisualObject.valid() || VisualObject == sol::nil || !VisualObject.is<sol::table>())
         {
-            const float Lane = static_cast<float>(Index) - static_cast<float>(VisualCount - 1) * 0.5f;
-            EnsureWeaponVisualComponent(
-                MakeMachineTurretComponentName("Visual", Index),
-                "Models/_Basic/Cube.OBJ",
-                FVector(0.7f, Lane * 0.45f, 0.65f),
-                FVector(0.35f, 0.25f, 0.25f));
-            EnsureWeaponVisualComponent(
-                MakeMachineTurretComponentName("Muzzle", Index),
-                "Models/_Basic/Sphere.OBJ",
-                FVector(1.0f, Lane * 0.45f, 0.65f),
-                FVector(0.12f, 0.12f, 0.12f));
+            continue;
         }
-        UE_LOG(Tank, Info, "EquipWeaponVisual MachineTurret Level=%d", Level);
-        return;
+
+        sol::table VisualDef = VisualObject.as<sol::table>();
+        const FString Name = ReadLuaStringOrDefault(VisualDef["Name"]);
+        const FString Mesh = ReadLuaStringOrDefault(VisualDef["Mesh"]);
+        const FString Parent = ReadLuaStringOrDefault(VisualDef["Parent"], "RootComponent");
+
+        if (Name.empty() || Mesh.empty())
+        {
+            UE_LOG(Tank, Warning, "Invalid visual def. Weapon=%s", WeaponId.c_str());
+            continue;
+        }
+
+        UStaticMeshComponent* Visual = GetOrCreateWeaponVisualComponent(Name, Mesh, Parent);
+        if (!Visual)
+        {
+            continue;
+        }
+
+        const FVector Location = ReadLuaVec3OrDefault(VisualDef["Location"], FVector::ZeroVector);
+        const FRotator Rotation = ReadLuaRotatorOrDefault(VisualDef["Rotation"], FRotator::ZeroRotator);
+        const FVector Scale = ReadLuaVec3OrDefault(VisualDef["Scale"], FVector(1.0f, 1.0f, 1.0f));
+
+        Visual->SetRelativeLocation(Location);
+        Visual->SetRelativeRotation(Rotation);
+        Visual->SetRelativeScale(Scale);
+        Visual->SetVisibility(true);
+
+        const FString MuzzleName = ReadLuaStringOrDefault(VisualDef["MuzzleName"]);
+        if (!MuzzleName.empty())
+        {
+            USceneComponent* Muzzle = GetOrCreateMuzzleComponent(MuzzleName, Visual);
+            if (Muzzle)
+            {
+                const FVector MuzzleLocation = ReadLuaVec3OrDefault(VisualDef["MuzzleLocation"], FVector::ZeroVector);
+                const FRotator MuzzleRotation = ReadLuaRotatorOrDefault(VisualDef["MuzzleRotation"], FRotator::ZeroRotator);
+                Muzzle->SetRelativeLocation(MuzzleLocation);
+                Muzzle->SetRelativeRotation(MuzzleRotation);
+                Muzzle->SetActive(true);
+            }
+        }
     }
 
-    if (WeaponId == "Aura")
-    {
-        EnsureWeaponVisualComponent("AuraVisual", "Models/_Basic/Sphere.OBJ", FVector(0.0f, 0.0f, 0.05f), FVector(0.25f, 0.25f, 0.25f));
-        UE_LOG(Tank, Info, "EquipWeaponVisual Aura Level=%d", Level);
-        return;
-    }
-
-    if (WeaponId == "HomingMissile")
-    {
-        GetWeaponMuzzle(WeaponId, 0);
-        UE_LOG(Tank, Info, "EquipWeaponVisual HomingMissile Level=%d", Level);
-        return;
-    }
-
-    if (WeaponId == "SatelliteBeam")
-    {
-        EnsureWeaponVisualComponent("SatelliteBeamVisual", "Models/_Basic/Sphere.OBJ", FVector(0.0f, 0.0f, 1.2f), FVector(0.35f, 0.35f, 0.35f));
-        UE_LOG(Tank, Info, "EquipWeaponVisual SatelliteBeam Level=%d", Level);
-        return;
-    }
-
-    UE_LOG(Tank, Warning, "Unknown WeaponId in EquipWeaponVisual: %s", WeaponId.c_str());
+    UE_LOG(Tank, Info, "EquipWeaponVisualFromLua success. Weapon=%s Level=%d", WeaponId.c_str(), Level);
 }
 
 void ATankActor::FireLinearProjectile(const FString& WeaponId, const FTankWeaponAttackParams& Params, int32 MuzzleIndex)
@@ -488,38 +512,58 @@ AHomingMissileActor* ATankActor::AcquireHomingMissile()
 
 USceneComponent* ATankActor::GetWeaponMuzzle(const FString& WeaponId, int32 MuzzleIndex)
 {
+    const int32 SafeIndex = MaxInt32(0, MuzzleIndex);
+    USceneComponent* Muzzle = FindSceneComponentByName(MakeWeaponIndexedComponentName("Muzzle", WeaponId, SafeIndex));
+    if (Muzzle)
+    {
+        return Muzzle;
+    }
+
     if (WeaponId == "MainCannon")
     {
         return GetHeadMainGun();
     }
 
-    const int32 SafeIndex = MaxInt32(0, MuzzleIndex);
-    FString ComponentName;
-    FVector RelativeLocation(1.4f, 0.0f, 0.5f);
-    FVector RelativeScale(0.35f, 0.35f, 0.35f);
-    FString MeshPath = "Models/_Basic/Cube.OBJ";
+    return nullptr;
+}
 
-    if (WeaponId == "MachineTurret")
-    {
-        ComponentName = MakeMachineTurretComponentName("Muzzle", SafeIndex);
-        const float Lane = static_cast<float>(SafeIndex) - 2.5f;
-        RelativeLocation = FVector(0.7f, Lane * 0.35f, 0.65f);
-        RelativeScale = FVector(0.12f, 0.12f, 0.12f);
-        MeshPath = "Models/_Basic/Sphere.OBJ";
-    }
-    else if (WeaponId == "HomingMissile")
-    {
-        ComponentName = MakeIndexedComponentName("HomingMissileMuzzle", SafeIndex);
-        RelativeLocation = FVector(0.35f, SafeIndex == 0 ? 0.55f : -0.55f, 0.75f);
-        RelativeScale = FVector(0.35f, 0.35f, 0.35f);
-    }
-    else
-    {
-        ComponentName = MakeIndexedComponentName(WeaponId + "Muzzle", SafeIndex);
-        RelativeLocation = FVector(1.0f, 0.0f, 0.55f);
-    }
+void ATankActor::HideWeaponVisuals(const FString& WeaponId)
+{
+    const FString VisualPrefix = "Visual_" + WeaponId + "_";
+    const FString MuzzlePrefix = "Muzzle_" + WeaponId + "_";
 
-    return EnsureWeaponVisualComponent(ComponentName, MeshPath, RelativeLocation, RelativeScale);
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        if (!Component)
+        {
+            continue;
+        }
+
+        const FString ComponentName = Component->GetFName().ToString();
+        if (!StartsWith(ComponentName, VisualPrefix) && !StartsWith(ComponentName, MuzzlePrefix))
+        {
+            continue;
+        }
+
+        Component->SetActive(false);
+        if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
+        {
+            Primitive->SetVisibility(false);
+        }
+    }
+}
+
+USceneComponent* ATankActor::FindSceneComponentByName(const FString& ComponentName) const
+{
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
+        if (SceneComponent && SceneComponent->GetFName().ToString() == ComponentName)
+        {
+            return SceneComponent;
+        }
+    }
+    return nullptr;
 }
 
 UStaticMeshComponent* ATankActor::FindStaticMeshComponentByName(const FString& ComponentName) const
@@ -535,29 +579,103 @@ UStaticMeshComponent* ATankActor::FindStaticMeshComponentByName(const FString& C
     return nullptr;
 }
 
-UStaticMeshComponent* ATankActor::EnsureWeaponVisualComponent(
-    const FString& ComponentName,
-    const FString& MeshPath,
-    const FVector& RelativeLocation,
-    const FVector& RelativeScale)
+UStaticMeshComponent* ATankActor::GetOrCreateWeaponVisualComponent(const FString& Name, const FString& MeshPath, const FString& ParentName)
 {
-    if (UStaticMeshComponent* Existing = FindStaticMeshComponentByName(ComponentName))
+    if (UStaticMeshComponent* Existing = FindStaticMeshComponentByName(Name))
     {
-        Existing->SetRelativeLocation(RelativeLocation);
-        Existing->SetRelativeScale(RelativeScale);
+        Existing->SetStaticMesh(GetBasicMesh(MeshPath));
+        Existing->SetActive(true);
+        Existing->SetVisibility(true);
+        if (USceneComponent* Parent = FindSceneComponentByName(ParentName))
+        {
+            Existing->AttachToComponent(Parent);
+        }
         return Existing;
     }
 
-    if (!RootComponent)
+    USceneComponent* Parent = FindSceneComponentByName(ParentName);
+    if (!Parent)
+    {
+        UE_LOG(Tank, Warning, "Weapon visual parent not found: %s", ParentName.c_str());
+        return nullptr;
+    }
+
+    UStaticMeshComponent* Visual = AddComponent<UStaticMeshComponent>();
+    if (!Visual)
     {
         return nullptr;
     }
 
-    UStaticMeshComponent* Component = AddComponent<UStaticMeshComponent>();
-    RootComponent->AddChild(Component);
-    Component->SetFName(ComponentName);
-    Component->SetRelativeLocation(RelativeLocation);
-    Component->SetRelativeScale(RelativeScale);
-    Component->SetStaticMesh(GetBasicMesh(MeshPath));
-    return Component;
+    Visual->SetFName(Name);
+    Parent->AddChild(Visual);
+    Visual->SetStaticMesh(GetBasicMesh(MeshPath));
+    Visual->SetActive(true);
+    Visual->SetVisibility(true);
+    return Visual;
+}
+
+USceneComponent* ATankActor::GetOrCreateMuzzleComponent(const FString& Name, USceneComponent* Parent)
+{
+    if (USceneComponent* Existing = FindSceneComponentByName(Name))
+    {
+        Existing->SetActive(true);
+        if (Parent)
+        {
+            Existing->AttachToComponent(Parent);
+        }
+        return Existing;
+    }
+
+    if (!Parent)
+    {
+        return nullptr;
+    }
+
+    USceneComponent* Muzzle = AddComponent<USceneComponent>();
+    if (!Muzzle)
+    {
+        return nullptr;
+    }
+
+    Muzzle->SetFName(Name);
+    Parent->AddChild(Muzzle);
+    Muzzle->SetActive(true);
+    return Muzzle;
+}
+
+FString ATankActor::ReadLuaStringOrDefault(sol::object Object, const FString& DefaultValue) const
+{
+    if (!Object.valid() || Object == sol::nil)
+    {
+        return DefaultValue;
+    }
+
+    if (Object.is<std::string>())
+    {
+        return FString(Object.as<std::string>());
+    }
+
+    if (Object.is<FString>())
+    {
+        return Object.as<FString>();
+    }
+
+    return DefaultValue;
+}
+
+FVector ATankActor::ReadLuaVec3OrDefault(sol::object Object, const FVector& DefaultValue) const
+{
+    FVector Value = DefaultValue;
+    if (ReadLuaVec3(Object, Value))
+    {
+        return Value;
+    }
+    return DefaultValue;
+}
+
+FRotator ATankActor::ReadLuaRotatorOrDefault(sol::object Object, const FRotator& DefaultValue) const
+{
+    const FVector DefaultEuler(DefaultValue.Roll, DefaultValue.Pitch, DefaultValue.Yaw);
+    const FVector Euler = ReadLuaVec3OrDefault(Object, DefaultEuler);
+    return FRotator(Euler.Y, Euler.Z, Euler.X);
 }
