@@ -149,6 +149,7 @@ function Script:ReleaseGem(index)
     end
 
     if gem.ui ~= nil and gem.ui:IsValid() then
+        gem.ui:SetUIRotationDegrees(0.0)
         gem.ui:SetUIVisibility(false)
     end
 

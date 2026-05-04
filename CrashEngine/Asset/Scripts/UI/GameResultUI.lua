@@ -72,6 +72,7 @@ local function configureUI(ui, anchor, position, size, layer, zOrder, tint, hitT
     ui:SetUIAnchoredPosition(position or vec2(0.0, 0.0))
     ui:SetUISizeDelta(size)
     ui:SetUIPivot(vec2(0.5, 0.5))
+    ui:SetUIRotationDegrees(0.0)
     ui:SetUILayer(layer)
     ui:SetUIZOrder(zOrder)
     ui:SetUIHitTestVisible(hitTest == true)
