@@ -21,6 +21,8 @@ struct FLuaWorldHandle
 	explicit FLuaWorldHandle(UWorld* InWorld);
 
 	bool IsValid() const;
+	bool IsGameplayPaused() const;
+	void SetGameplayPaused(bool bPaused) const;
 
 	sol::table GetActorsByTag(sol::this_state State, const FString& Tag) const;
 };
@@ -130,6 +132,9 @@ struct FLuaComponentHandle
 	bool SetUITint(float R, float G, float B, float A) const;
 	sol::table GetUITint(sol::this_state State) const;
 	bool SetUIVisibility(bool bVisible) const;
+	bool SetUIHitTestVisible(bool bHitTestVisible) const;
+	bool SetUILayer(int32 Layer) const;
+	bool SetUIZOrder(int32 ZOrder) const;
 
 	bool SetStaticMesh(const FString& MeshPath) const;
 	bool SetMaterial(int32 Index, const FString& MaterialPath) const;

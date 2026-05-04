@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local GameplayPause = require("GameplayPause")
 local DamageSystem = require("Core.DamageSystem")
 local WeaponDefs = require("WeaponDefs")
 
@@ -44,30 +45,32 @@ end
 
 function SatelliteBeamWeapon:FireLoop()
     while self.IsRunning do
-        local target = nil
-        local ownerActor = nil
+        if not GameplayPause.IsPaused() then
+            local target = nil
+            local ownerActor = nil
 
-        if self.Owner ~= nil and self.Owner.GetActor ~= nil then
-            ownerActor = self.Owner.GetActor()
-        end
+            if self.Owner ~= nil and self.Owner.GetActor ~= nil then
+                ownerActor = self.Owner.GetActor()
+            end
 
-        if ownerActor ~= nil and ownerActor:IsValid() and self.Owner.QueryActorByTagClosest ~= nil then
-            target = self.Owner.QueryActorByTagClosest(
-                "Enemy",
-                ownerActor:GetLocation(),
-                self.Data.Range or 10000.0
-            )
-        end
+            if ownerActor ~= nil and ownerActor:IsValid() and self.Owner.QueryActorByTagClosest ~= nil then
+                target = self.Owner.QueryActorByTagClosest(
+                    "Enemy",
+                    ownerActor:GetLocation(),
+                    self.Data.Range or 10000.0
+                )
+            end
 
-        if target ~= nil and target:IsValid() then
-            DamageSystem.ApplyDamage(target, self.Data.Damage or 10.0, ownerActor)
+            if target ~= nil and target:IsValid() then
+                DamageSystem.ApplyDamage(target, self.Data.Damage or 10.0, ownerActor)
 
-            if self.Owner.ApplyTargetDamage ~= nil then
-                self.Owner.ApplyTargetDamage("SatelliteBeam", self.Data, target)
+                if self.Owner.ApplyTargetDamage ~= nil then
+                    self.Owner.ApplyTargetDamage("SatelliteBeam", self.Data, target)
+                end
             end
         end
 
-        Co.Wait(self.Data.FireInterval)
+        GameplayPause.Wait(self.Data.FireInterval)
     end
 end
 

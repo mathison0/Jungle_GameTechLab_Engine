@@ -654,30 +654,32 @@ void ATankActor::EnsureHealthBarComponents()
         return;
     }
 
-    HealthBarBack = GetOrCreateHealthBarComponent(HealthBarBackName, Parent);
-    HealthBarFill = GetOrCreateHealthBarComponent(HealthBarFillName, Parent);
+    HealthBarBack = GetOrCreateTextureUIComponent(HealthBarBackName, Parent);
+    HealthBarFill = GetOrCreateTextureUIComponent(HealthBarFillName, Parent);
 
     ConfigureHealthBarComponent(
         HealthBarBack,
         FVector2(HealthBarWidth + HealthBarBackPaddingX, HealthBarHeight + HealthBarBackPaddingY),
+        FVector2(0.5f, 8.5f),
         FVector4(0.04f, 0.04f, 0.04f, 0.78f),
         0);
 
     ConfigureHealthBarComponent(
         HealthBarFill,
         FVector2(HealthBarWidth, HealthBarHeight),
+        FVector2(0.5f, 12.5f),
         FVector4(0.18f, 0.95f, 0.28f, 0.95f),
         1);
 }
 
-UTextureUIComponent* ATankActor::GetOrCreateHealthBarComponent(const FString& Name, USceneComponent* Parent)
+UTextureUIComponent* ATankActor::GetOrCreateTextureUIComponent(const FString& Name, USceneComponent* Parent)
 {
     if (USceneComponent* ExistingScene = FindSceneComponentByName(Name))
     {
         UTextureUIComponent* Existing = Cast<UTextureUIComponent>(ExistingScene);
         if (!Existing)
         {
-            UE_LOG(Tank, Warning, "Health bar component name is already used by non-texture UI component: %s", Name.c_str());
+            UE_LOG(Tank, Warning, "UI component name is already used by non-texture UI component: %s", Name.c_str());
             return nullptr;
         }
 
@@ -704,7 +706,7 @@ UTextureUIComponent* ATankActor::GetOrCreateHealthBarComponent(const FString& Na
     return Component;
 }
 
-void ATankActor::ConfigureHealthBarComponent(UTextureUIComponent* Component, const FVector2& WorldSize, const FVector4& TintColor, int32 ZOrder)
+void ATankActor::ConfigureHealthBarComponent(UTextureUIComponent* Component, const FVector2& WorldSize, const FVector2& Pivot, const FVector4& TintColor, int32 ZOrder)
 {
     if (!Component)
     {
@@ -717,7 +719,7 @@ void ATankActor::ConfigureHealthBarComponent(UTextureUIComponent* Component, con
     Component->ResetSubUVRect();
     Component->SetWorldSize(WorldSize);
     Component->SetBillboard(true);
-    Component->SetPivot(FVector2(0.5f, 0.5f));
+    Component->SetPivot(Pivot);
     Component->SetRotationDegrees(0.0f);
     Component->SetLayer(100);
     Component->SetZOrder(ZOrder);

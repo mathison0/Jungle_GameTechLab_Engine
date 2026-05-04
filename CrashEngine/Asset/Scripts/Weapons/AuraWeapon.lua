@@ -1,4 +1,5 @@
 local Co = require("LuaCoroutine")
+local GameplayPause = require("GameplayPause")
 local WeaponDefs = require("WeaponDefs")
 
 local AuraWeapon = {}
@@ -43,18 +44,20 @@ end
 
 function AuraWeapon:DamageLoop()
     while self.IsRunning do
-        local ownerActor = nil
-        if self.Owner ~= nil and self.Owner.GetActor ~= nil then
-            ownerActor = self.Owner.GetActor()
+        if not GameplayPause.IsPaused() then
+            local ownerActor = nil
+            if self.Owner ~= nil and self.Owner.GetActor ~= nil then
+                ownerActor = self.Owner.GetActor()
+            end
+
+            if ownerActor ~= nil and ownerActor:IsValid() and self.Owner.ApplyAreaDamage ~= nil then
+                self.Owner.ApplyAreaDamage("Aura", self.Data, ownerActor:GetLocation(), self.Data.Radius or 0.0)
+            else
+                Log("Aura tick. radius = " .. tostring(self.Data.Radius))
+            end
         end
 
-        if ownerActor ~= nil and ownerActor:IsValid() and self.Owner.ApplyAreaDamage ~= nil then
-            self.Owner.ApplyAreaDamage("Aura", self.Data, ownerActor:GetLocation(), self.Data.Radius or 0.0)
-        else
-            Log("Aura tick. radius = " .. tostring(self.Data.Radius))
-        end
-
-        Co.Wait(self.Data.TickInterval)
+        GameplayPause.Wait(self.Data.TickInterval)
     end
 end
 

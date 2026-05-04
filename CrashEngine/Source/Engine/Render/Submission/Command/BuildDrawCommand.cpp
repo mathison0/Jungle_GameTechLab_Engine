@@ -865,7 +865,7 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
         FDrawCommand& Cmd = OutList.AddCommand();
         const bool bWorldSpace = Entry.Proxy->RenderSpace == EUIRenderSpace::WorldSpace;
         Cmd.Shader        = Shader;
-        Cmd.DepthStencil  = bWorldSpace ? EDepthStencilState::DepthReadOnly : State.DepthStencil;
+        Cmd.DepthStencil  = bWorldSpace ? EDepthStencilState::NoDepth : State.DepthStencil;
         Cmd.Blend         = State.Blend;
         Cmd.Rasterizer    = State.Rasterizer;
         Cmd.Topology      = State.Topology;

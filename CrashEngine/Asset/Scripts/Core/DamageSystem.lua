@@ -1,4 +1,5 @@
 local DamageSystem = {}
+local GameplayPause = require("GameplayPause")
 
 -- UUID -> ScriptInstance 매핑 테이블
 local registry = {}
@@ -39,6 +40,10 @@ end
     @return: 데미지 전달 성공 여부
 ]]
 function DamageSystem.ApplyDamage(targetActor, amount, attacker)
+    if GameplayPause.IsPaused() then
+        return false
+    end
+
     if not targetActor or not targetActor:IsValid() then 
         Log("[DamageSystem] Error: Invalid target actor during ApplyDamage")
         return false 

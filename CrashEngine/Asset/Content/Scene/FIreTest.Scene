@@ -303,6 +303,38 @@
             "Script" : "GameManagerComponent.lua",
             "bTickEnable" : true
           }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "LevelUpChoiceScript",
+          "Properties" : {
+            "Lua.OptionHeight" : 78.000000,
+            "Lua.OptionWidth" : 520.000000,
+            "Lua.PanelHeight" : 430.000000,
+            "Lua.PanelWidth" : 620.000000,
+            "Script" : "UI/LevelUpChoice.lua",
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UScriptComponent",
+          "Name" : "GemRainScript",
+          "Properties" : {
+            "Lua.AutoStart" : false,
+            "Lua.CornerBand" : 0.220000,
+            "Lua.EndSizeScale" : 0.350000,
+            "Lua.FallDistance" : 760.000000,
+            "Lua.InitialBurst" : 10,
+            "Lua.MaxGems" : 28,
+            "Lua.MaxHorizontalDrift" : 0.055000,
+            "Lua.MaxRotationSpeed" : 90.000000,
+            "Lua.MaxSpeed" : 320.000000,
+            "Lua.MinSpeed" : 140.000000,
+            "Lua.Seed" : 31,
+            "Lua.SpawnInterval" : 0.120000,
+            "Lua.StartSize" : 72.000000,
+            "Lua.TopOffset" : -72.000000,
+            "Script" : "UI/GemRain.lua",
+            "bTickEnable" : true
+          }
         }],
       "RootComponent" : {
         "Children" : [{
@@ -453,6 +485,93 @@
         }
       },
       "Tag" : "Player",
+      "bVisible" : true
+    }, {
+      "ClassName" : "AExpBarActor",
+      "Name" : "PlayerExpBar",
+      "NonSceneComponents" : [{
+          "ClassName" : "UScriptComponent",
+          "Name" : "ExpBarScript",
+          "Properties" : {
+            "Lua.BackHeight" : 18.000000,
+            "Lua.FillHeight" : 12.000000,
+            "Lua.LeftAnchor" : 0.080000,
+            "Lua.RightAnchor" : 0.920000,
+            "Lua.TopAnchor" : 0.035000,
+            "Script" : "UI/ExpBar.lua",
+            "bTickEnable" : true
+          }
+        }],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UTextureUIComponent",
+            "Name" : "PlayerExpBar_Fill",
+            "Properties" : {
+              "Anchor Max" : [0.080000, 0.035000],
+              "Anchor Min" : [0.080000, 0.035000],
+              "Anchored Position" : [0.000000, 0.000000],
+              "Billboard" : false,
+              "Geometry Type" : 0,
+              "Hit Test Visible" : false,
+              "Layer" : 200,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Pivot" : [0.000000, 0.500000],
+              "Render Space" : 0,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Rotation Degrees" : 0.000000,
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Size Delta" : [0.000000, 12.000000],
+              "Sprite Animation" : false,
+              "Sprite Columns" : 1,
+              "Sprite FPS" : 12.000000,
+              "Sprite Frame" : 0,
+              "Sprite Loop" : true,
+              "Sprite Playing" : true,
+              "Sprite Rows" : 1,
+              "SubUV Rect" : [0.000000, 0.000000, 1.000000, 1.000000],
+              "Texture Path" : "",
+              "Tint Color" : [0.360000, 0.720000, 1.000000, 0.950000],
+              "Visible" : false,
+              "World Size" : [1.000000, 1.000000],
+              "Z Order" : 1,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UTextureUIComponent",
+        "Name" : "PlayerExpBar_Back",
+        "Properties" : {
+          "Anchor Max" : [0.920000, 0.035000],
+          "Anchor Min" : [0.080000, 0.035000],
+          "Anchored Position" : [0.000000, 0.000000],
+          "Billboard" : false,
+          "Geometry Type" : 0,
+          "Hit Test Visible" : false,
+          "Layer" : 200,
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Pivot" : [0.500000, 0.500000],
+          "Render Space" : 0,
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Rotation Degrees" : 0.000000,
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Size Delta" : [0.000000, 18.000000],
+          "Sprite Animation" : false,
+          "Sprite Columns" : 1,
+          "Sprite FPS" : 12.000000,
+          "Sprite Frame" : 0,
+          "Sprite Loop" : true,
+          "Sprite Playing" : true,
+          "Sprite Rows" : 1,
+          "SubUV Rect" : [0.000000, 0.000000, 1.000000, 1.000000],
+          "Texture Path" : "",
+          "Tint Color" : [0.035000, 0.040000, 0.065000, 0.840000],
+          "Visible" : true,
+          "World Size" : [1.000000, 1.000000],
+          "Z Order" : 0,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "UI",
       "bVisible" : true
     }],
   "ClassName" : "UWorld",

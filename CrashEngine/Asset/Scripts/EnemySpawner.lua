@@ -1,4 +1,5 @@
 local Vec = require("Core.Vector")
+local GameplayPause = require("GameplayPause")
 
 ---@class EnemySpawner : ScriptComponent
 local Script = {
@@ -85,6 +86,10 @@ function Script:GetSpawnPosition(PlayerPos)
 end
 
 function Script:Tick(DeltaTime)
+    if GameplayPause.IsPaused() then
+        return
+    end
+
     if not self.PoolManager:IsValid() then return end
 
     self.GameTime = self.GameTime + DeltaTime

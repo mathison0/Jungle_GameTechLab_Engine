@@ -3,6 +3,7 @@
 
 #include "Component/SceneComponent.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
 #include "Math/MathUtils.h"
 #include "Object/ObjectFactory.h"
 #include "Render/Scene/Debug/DebugRenderAPI.h"
@@ -19,6 +20,14 @@ void UProjectileMovementComponent::BeginPlay()
 void UProjectileMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
     UMovementComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    if (UWorld* World = GetWorld())
+    {
+        if (World->IsGameplayPaused())
+        {
+            return;
+        }
+    }
 
     USceneComponent* UpdatedSceneComponent = GetUpdatedComponent();
     if (!UpdatedSceneComponent)

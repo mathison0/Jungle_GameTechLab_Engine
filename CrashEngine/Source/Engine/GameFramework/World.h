@@ -64,6 +64,8 @@ public:
     void EndPlay();                                  // Cleanup before world is destroyed
 
     bool HasBegunPlay() const { return bHasBegunPlay; }
+    void SetGameplayPaused(bool bPaused) { bGameplayPaused = bPaused; }
+    bool IsGameplayPaused() const { return bGameplayPaused; }
 
     // Active Camera — EditorViewportClient 또는 PlayerController가 세팅
     void SetActiveCamera(UCameraComponent* InCamera) { ActiveCamera = InCamera; }
@@ -95,6 +97,7 @@ private:
     UCameraComponent* ActiveCamera = nullptr;
     UCameraComponent* LastLODUpdateCamera = nullptr;
     bool bHasBegunPlay = false;
+    bool bGameplayPaused = false;
     bool bHasLastFullLODUpdateCameraPos = false;
     mutable FEditorPickingBVH EditorPickingBVH;
     mutable FScenePrimitiveBVH ScenePrimitiveBVH;
