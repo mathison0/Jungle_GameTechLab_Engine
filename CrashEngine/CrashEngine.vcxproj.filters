@@ -34,6 +34,9 @@
     <Filter Include="Shaders\Render\Editor">
       <UniqueIdentifier>{b9111df0-011b-5a42-cb3b-ada3e423b36c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\Render\UI">
+      <UniqueIdentifier>{9c3486f7-7e11-4f1f-8a31-352ac0c96a4d}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Shaders\Render\Scene">
       <UniqueIdentifier>{b3941d3d-7535-6fe0-f7e0-2d7e985e641a}</UniqueIdentifier>
     </Filter>
@@ -389,6 +392,9 @@
     </FxCompile>
     <FxCompile Include="Shaders\Render\Editor\ShaderOverlayFont.hlsl">
       <Filter>Shaders\Render\Editor</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Render\UI\UberUI.hlsl">
+      <Filter>Shaders\Render\UI</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Render\Editor\ShaderSubUV.hlsl">
       <Filter>Shaders\Render\Editor</Filter>
@@ -749,6 +755,9 @@
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\UIActor.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\World.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
@@ -894,6 +903,9 @@
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.cpp">
+      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.cpp">
@@ -1044,6 +1056,9 @@
       <Filter>Source\Engine\Render\Submission\Atlas\Allocator</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Submission\Batching\FontBatch.cpp">
+      <Filter>Source\Engine\Render\Submission\Batching</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Submission\Batching\UIBatch.cpp">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Submission\Batching\LineBatch.cpp">
@@ -1599,6 +1614,9 @@
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\UIActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\World.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
@@ -1807,6 +1825,9 @@
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.h">
+      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.h">
@@ -2065,6 +2086,9 @@
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Batching\FontBatch.h">
+      <Filter>Source\Engine\Render\Submission\Batching</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Batching\UIBatch.h">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Batching\LineBatch.h">

@@ -4,6 +4,7 @@
 #include "Render/Resources/Bindings/RenderBindingSlots.h"
 #include "Render/Resources/Buffers/ConstantBufferData.h"
 #include "Render/Submission/Batching/FontBatch.h"
+#include "Render/Submission/Batching/UIBatch.h"
 
 class FPrimitiveProxy;
 
@@ -40,6 +41,7 @@ struct FFrameResources
 
     TArray<FConstantBuffer> PerObjectCBPool;
     FFontBatch              TextBatch;
+    FUIBatch                UIBatch;
 
     void Create(ID3D11Device* InDevice);
     void Release();

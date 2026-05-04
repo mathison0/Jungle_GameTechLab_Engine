@@ -114,6 +114,8 @@ ERenderPassNodeType MapPassToNodeType(ERenderPass Pass, const FRenderPipelineCon
         return ERenderPassNodeType::OverlayBillboardPass;
     case ERenderPass::FXAA:
         return ERenderPassNodeType::FXAAPass;
+    case ERenderPass::UI:
+        return ERenderPassNodeType::UIPass;
     case ERenderPass::GizmoOuter:
     case ERenderPass::GizmoInner:
         return ERenderPassNodeType::GizmoPass;
@@ -282,6 +284,7 @@ void FRenderer::BeginCollect(const FSceneView& SceneView, uint32 MaxProxyCount)
     OverlayBatches.GridLines.Clear();
     OverlayBatches.DebugLines.Clear();
     FrameResources.TextBatch.ClearAll();
+    FrameResources.UIBatch.Clear();
 
     // 프록시 수가 예측 가능하면 PerObject 상수 버퍼 풀을 미리 확보합니다.
     if (MaxProxyCount > 0)
@@ -559,6 +562,11 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
                 Pass->BuildDrawCommands(PipelineContext);
             }
         }
+    }
+
+    if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::UIPass))
+    {
+        Pass->BuildDrawCommands(PipelineContext);
     }
 
     // 에디터 오버레이 및 보조 패스 명령 생성

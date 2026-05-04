@@ -44,6 +44,7 @@ enum class EOutlinerActorIcon
     AmbientLight,
     Decal,
     HeightFog,
+    UI,
     Effect
 };
 
@@ -148,6 +149,10 @@ EOutlinerActorIcon ResolveActorIconType(AActor* Actor)
     if (ActorClassContains(Actor, "Decal") || ActorComponentClassContains(Actor, "Decal"))
     {
         return EOutlinerActorIcon::Decal;
+    }
+    if (ActorClassContains(Actor, "UI") || ActorComponentClassContains(Actor, "UI"))
+    {
+        return EOutlinerActorIcon::UI;
     }
     if (ActorClassContains(Actor, "Camera") || ActorComponentClassContains(Actor, "Camera"))
     {
@@ -434,6 +439,23 @@ void DrawGenericActorIcon(ImDrawList* DrawList, const ImVec2& Min, const ImVec2&
     DrawList->AddCircleFilled(Center, 1.7f, Color, 8);
 }
 
+void DrawUIIcon(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+{
+    const float W = Max.x - Min.x;
+    const float H = Max.y - Min.y;
+    const ImVec2 PanelMin(Min.x + W * 0.17f, Min.y + H * 0.27f);
+    const ImVec2 PanelMax(Min.x + W * 0.83f, Min.y + H * 0.74f);
+
+    DrawList->AddRect(PanelMin, PanelMax, Color, 2.0f, 0, 1.2f);
+    DrawList->AddLine(
+        ImVec2(PanelMin.x + W * 0.10f, PanelMin.y + H * 0.13f),
+        ImVec2(PanelMax.x - W * 0.10f, PanelMin.y + H * 0.13f),
+        Color,
+        1.0f);
+    DrawList->AddCircleFilled(ImVec2(PanelMin.x + W * 0.13f, PanelMax.y - H * 0.13f), 1.2f, Color, 8);
+    DrawList->AddCircleFilled(ImVec2(PanelMin.x + W * 0.25f, PanelMax.y - H * 0.13f), 1.2f, Color, 8);
+}
+
 void DrawFolderIcon(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, bool bOpen, bool bMuted)
 {
     const ImU32 FillColor = bMuted ? IM_COL32(84, 78, 55, 150) : IM_COL32(196, 148, 62, 235);
@@ -485,6 +507,8 @@ ImU32 GetVectorIconColor(EOutlinerActorIcon IconType, bool bVisible)
         return IM_COL32(170, 204, 230, 255);
     case EOutlinerActorIcon::Effect:
         return IM_COL32(255, 158, 88, 255);
+    case EOutlinerActorIcon::UI:
+        return IM_COL32(116, 210, 186, 255);
     default:
         return IM_COL32(170, 182, 198, 255);
     }
@@ -527,6 +551,9 @@ void DrawActorTypeIcon(ImDrawList* DrawList,
         break;
     case EOutlinerActorIcon::Effect:
         DrawEffectIcon(DrawList, Min, Max, IconColor);
+        break;
+    case EOutlinerActorIcon::UI:
+        DrawUIIcon(DrawList, Min, Max, IconColor);
         break;
     default:
         DrawGenericActorIcon(DrawList, Min, Max, IconColor);

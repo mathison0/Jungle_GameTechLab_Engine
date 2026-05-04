@@ -151,6 +151,7 @@ void FDrawCollector::CollectScenePrimitives(UWorld* World, FRenderCollectContext
     FScene&           Scene     = *CollectContext.Scene;
 
     Scene.UpdateDirtyProxies();
+    Scene.UpdateDirtyUIProxies();
     Scene.UpdateDirtyLightProxies();
 
     {
