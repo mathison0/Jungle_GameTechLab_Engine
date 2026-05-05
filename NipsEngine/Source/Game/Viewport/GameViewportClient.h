@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Engine/Camera/PlayerCameraManager.h"
 #include "Engine/Input/InputRouter.h"
 #include "Engine/Viewport/ViewportCamera.h"
 #include "Engine/Viewport/ViewportClient.h"
@@ -27,7 +28,9 @@ public:
 	UCameraComponent* GetCamera() const { return ActiveCamera; }
 
 	FViewportCamera& GetFreeCamera() { return FreeCamera; }
-	const FViewportCamera& GetFreeCamera() const { return FreeCamera; }
+const FViewportCamera& GetFreeCamera() const { return FreeCamera; }
+	APlayerCameraManager& GetPlayerCameraManager() { return PlayerCameraManager; }
+	const APlayerCameraManager& GetPlayerCameraManager() const { return PlayerCameraManager; }
 
 	FInputRouter& GetInputRouter() { return InputRouter; }
 	const FInputRouter& GetInputRouter() const { return InputRouter; }
@@ -41,6 +44,7 @@ private:
 	UWorld* World = nullptr;
 	UCameraComponent* ActiveCamera = nullptr;
 	FViewportCamera FreeCamera;
+	APlayerCameraManager PlayerCameraManager;
 	FGamePlayerController PlayerController;
 	FInputRouter InputRouter;
 	bool bInputActive = true;

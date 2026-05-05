@@ -40,6 +40,9 @@
     <Filter Include="Source\Engine\Audio">
       <UniqueIdentifier>{5d843f8d-b5cb-a273-a55f-dcee8cb071ed}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Camera">
+      <UniqueIdentifier>{9d2087df-7f3d-4db6-a98f-8330f4e9b28c}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Collision">
       <UniqueIdentifier>{b6e31b62-ff44-29dc-3a64-69f9805cba88}</UniqueIdentifier>
     </Filter>
@@ -361,6 +364,12 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Audio\AudioSystem.cpp">
       <Filter>Source\Engine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\CameraModifier.cpp">
+      <Filter>Source\Engine\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\PlayerCameraManager.cpp">
+      <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <Filter>Source\Engine\Collision</Filter>
@@ -976,6 +985,12 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Audio\AudioSystem.h">
       <Filter>Source\Engine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\CameraModifier.h">
+      <Filter>Source\Engine\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h">
+      <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\Collision.h">
       <Filter>Source\Engine\Collision</Filter>

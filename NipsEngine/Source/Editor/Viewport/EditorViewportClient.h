@@ -3,6 +3,7 @@
 #include "Render/Common/RenderTypes.h"
 #include "Engine/Geometry/Ray.h"
 #include "Core/CollisionTypes.h"
+#include "Engine/Camera/PlayerCameraManager.h"
 #include "Engine/Input/InputRouter.h"
 #include "Viewport/ViewportClient.h"
 #include "Editor/Input/EditorWorldController.h"
@@ -103,6 +104,8 @@ public:
 	void                  SetViewport(FSceneViewport* InViewport) { Viewport = InViewport; }
 	FGamePlayerController& GetGamePlayerController() { return GamePlayerController; }
 	const FGamePlayerController& GetGamePlayerController() const { return GamePlayerController; }
+	APlayerCameraManager& GetPlayerCameraManager() { return PlayerCameraManager; }
+	const APlayerCameraManager& GetPlayerCameraManager() const { return PlayerCameraManager; }
 
 	FEditorViewportState*       GetViewportState()       { return State; }
 	const FEditorViewportState* GetViewportState() const { return State; }
@@ -152,6 +155,7 @@ private:
 	FEditorWorldController EditorWorldController;
 	FPIEController		   PIEController;
 	FGamePlayerController  GamePlayerController;
+	APlayerCameraManager   PlayerCameraManager;
 	FInputRouter		   InputRouter;
 	bool				   bHasCamera		= false;
 
