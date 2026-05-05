@@ -222,7 +222,7 @@ void GGameContext::ClearMapDecals()
 void GGameContext::RefreshCleanProgressFromDecals()
 {
 	const int32 InitialCleanableCount = InitialDecalCount + InitialCleanlinessItemCount;
-	const int32 RequiredCleanableCount = std::max(InitialCleanableCount - 2, 0);
+	const int32 RequiredCleanableCount = std::max(InitialCleanableCount, 0);
 	if (RequiredCleanableCount <= 0)
 	{
 		SetCleanProgress(1.0f);

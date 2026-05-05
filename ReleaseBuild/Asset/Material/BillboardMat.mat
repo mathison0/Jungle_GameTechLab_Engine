@@ -1,5 +1,0 @@
-{
-    "Name": "BillboardMat",
-    "Shader": "Shaders/ShaderBillboard.hlsl",
-    "Params": []
-}
