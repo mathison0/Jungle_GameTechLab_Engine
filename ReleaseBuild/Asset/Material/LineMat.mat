@@ -1,5 +1,0 @@
-{
-    "Name": "LineMat",
-    "Shader": "Shaders/ShaderLine.hlsl",
-    "Params": []
-}
