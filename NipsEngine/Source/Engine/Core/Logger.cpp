@@ -31,12 +31,11 @@ void FLogger::Log(const char* Format, ...)
 	vsnprintf(Buffer, sizeof(Buffer), Format, Args);
 	va_end(Args);
 
+	OutputDebugStringA(Buffer);
+	OutputDebugStringA("\n");
+
 	if (GLogRouter)
 	{
 		GLogRouter(Buffer);
-		return;
 	}
-
-	OutputDebugStringA(Buffer);
-	OutputDebugStringA("\n");
 }

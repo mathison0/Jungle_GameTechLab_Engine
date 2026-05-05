@@ -3,6 +3,7 @@
 #include "Audio/AudioSystem.h"
 #include "Component/DecalComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
+#include "Engine/Core/Logger.h"
 #include "Engine/GameFramework/AActor.h"
 #include "Engine/GameFramework/World.h"
 #include "Game/Systems/ItemSystem.h"
@@ -222,7 +223,7 @@ void GGameContext::ClearMapDecals()
 void GGameContext::RefreshCleanProgressFromDecals()
 {
 	const int32 InitialCleanableCount = InitialDecalCount + InitialCleanlinessItemCount;
-	const int32 RequiredCleanableCount = std::max(InitialCleanableCount - 2, 0);
+	const int32 RequiredCleanableCount = std::max(InitialCleanableCount, 0);
 	if (RequiredCleanableCount <= 0)
 	{
 		SetCleanProgress(1.0f);
@@ -230,6 +231,8 @@ void GGameContext::RefreshCleanProgressFromDecals()
 	}
 
 	const int32 RemainingCleanableCount = GetRemainingDecalCount() + GetRemainingCleanlinessItemCount();
+	UE_LOG("Decal : %d, Garbage: %d", GetRemainingDecalCount(), GetRemainingCleanlinessItemCount());
+
 	const int32 CleanedCleanableCount = std::clamp(InitialCleanableCount - RemainingCleanableCount, 0, RequiredCleanableCount);
 	const float CleanedRatio = static_cast<float>(CleanedCleanableCount) / static_cast<float>(RequiredCleanableCount);
 	SetCleanProgress(CleanedRatio);

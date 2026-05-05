@@ -11,6 +11,7 @@
 #include "Engine/Input/InputRouter.h"
 #include "Engine/Serialization/SceneSaveManager.h"
 #include "Engine/Core/Paths.h"
+#include "Engine/Core/Logger.h"
 #include "Engine/Settings/EngineSettings.h"
 #include "Engine/GameFramework/World.h"
 #include "Engine/Runtime/WindowsWindow.h"
@@ -23,14 +24,6 @@ REGISTER_FACTORY(UGameEngine)
 
 UGameEngine::UGameEngine() = default;
 UGameEngine::~UGameEngine() = default;
-
-// GameEngine 전역 Logger
-static void GameLog(const char* Msg)
-{
-	OutputDebugStringA("[GameEngine] ");
-	OutputDebugStringA(Msg);
-	OutputDebugStringA("\n");
-}
 
 namespace
 {
