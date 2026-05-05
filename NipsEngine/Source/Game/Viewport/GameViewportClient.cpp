@@ -67,6 +67,7 @@ void FGameViewportClient::Initialize(FWindowsWindow* InWindow)
 	FreeCamera.OnResize(static_cast<uint32>(WindowWidth), static_cast<uint32>(WindowHeight));
 	FreeCamera.SetLocation(FVector(-5.0f, -5.0f, 3.0f));
 	FreeCamera.SetLookAt(FVector::ZeroVector);
+	PlayerCameraManager.SetFallbackCamera(&FreeCamera);
 	PlayerController.SetFreeCamera(&FreeCamera);
 	PlayerController.SetWorld(World);
 	PlayerController.SetToggleInputCaptureCallback([this]() { ToggleInteractionMode(); });
@@ -106,12 +107,13 @@ void FGameViewportClient::Tick(float DeltaTime)
 void FGameViewportClient::LateTick(float DeltaTime)
 {
 	PlayerController.LateTick(DeltaTime);
+	PlayerCameraManager.UpdateCamera(DeltaTime);
 }
 
 // 카메라 활성화 여부에 따라 적절한 카메라를 선택하여 렌더러에 넘겨줄 FSceneView 구조체의 내용을 채웁니다.
 void FGameViewportClient::BuildSceneView(FSceneView& OutView) const
 {
-	PlayerController.BuildSceneView(OutView, FViewportRect(0, 0, static_cast<int32>(WindowWidth), static_cast<int32>(WindowHeight)), EViewMode::Lit);
+	PlayerCameraManager.BuildSceneView(OutView, FViewportRect(0, 0, static_cast<int32>(WindowWidth), static_cast<int32>(WindowHeight)), EViewMode::Lit);
 }
 
 void FGameViewportClient::SetWorld(UWorld* InWorld)
@@ -144,6 +146,7 @@ void FGameViewportClient::SetCamera(UCameraComponent* InCamera)
 {
 	ActiveCamera = InCamera;
 	PlayerController.SetCamera(InCamera);
+	PlayerCameraManager.SetViewTarget(InCamera);
 	if (World)
 	{
 		World->SetActiveCameraComponent(InCamera);

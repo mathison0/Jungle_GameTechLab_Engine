@@ -120,14 +120,17 @@ void FEditorViewportClient::StartPIE(UWorld* InWorld)
 	GamePlayerController.SetWorld(InWorld);
 	GamePlayerController.SetPlayer(Pawn);
 	GamePlayerController.SetCamera(PawnCamera);
+	PlayerCameraManager.SetViewTarget(PawnCamera);
 	if (PawnCamera != nullptr)
 	{
 		GamePlayerController.SetFreeCamera(nullptr);
+		PlayerCameraManager.SetFallbackCamera(nullptr);
 		InWorld->SetActiveCameraComponent(PawnCamera);
 	}
 	else
 	{
 		GamePlayerController.SetFreeCamera(&Camera);
+		PlayerCameraManager.SetFallbackCamera(&Camera);
 		if (bHasCameraSnapshot)
 		{
 			GamePlayerController.InitializeFreeCameraFromSnapshot(SavedCamera);
@@ -145,6 +148,8 @@ void FEditorViewportClient::EndPIE(UWorld* InWorld)
 	GamePlayerController.SetCamera(nullptr);
 	GamePlayerController.SetFreeCamera(nullptr);
 	GamePlayerController.SetWorld(nullptr);
+	PlayerCameraManager.SetViewTarget(nullptr);
+	PlayerCameraManager.SetFallbackCamera(&Camera);
 	ClearEndPIECallback();
 	FInputRouter::LockMouse(false);
 	bControlLocked = false;
@@ -163,6 +168,7 @@ void FEditorViewportClient::CreateCamera()
 	Camera.OnResize(static_cast<uint32>(WindowWidth), static_cast<uint32>(WindowHeight));
 	EditorWorldController.SetCamera(&Camera);
 	GamePlayerController.SetFreeCamera(&Camera);
+	PlayerCameraManager.SetFallbackCamera(&Camera);
 	EditorWorldController.ResetTargetLocation();
 }
 
@@ -171,6 +177,7 @@ void FEditorViewportClient::DestroyCamera()
 	bHasCamera = false;
 	EditorWorldController.NullifyCamera();
 	GamePlayerController.SetFreeCamera(nullptr);
+	PlayerCameraManager.SetFallbackCamera(nullptr);
 }
 
 void FEditorViewportClient::ResetCamera()
@@ -237,6 +244,7 @@ void FEditorViewportClient::LateTick(float DeltaTime)
 	if (World && World->GetWorldType() == EWorldType::PIE)
 	{
 		GamePlayerController.LateTick(DeltaTime);
+		PlayerCameraManager.UpdateCamera(DeltaTime);
 	}
 }
 
@@ -250,7 +258,7 @@ void FEditorViewportClient::BuildSceneView(FSceneView& OutView) const
 		const FViewportRect Rect = State && Viewport
 									   ? Viewport->GetRect()
 									   : FViewportRect(0, 0, static_cast<int32>(WindowWidth), static_cast<int32>(WindowHeight));
-		GamePlayerController.BuildSceneView(OutView, Rect, State ? State->ViewMode : EViewMode::Lit);
+		PlayerCameraManager.BuildSceneView(OutView, Rect, State ? State->ViewMode : EViewMode::Lit);
 		return;
 	}
 
