@@ -148,18 +148,18 @@ bool FWindowsApplication::Init(HINSTANCE InHInstance)
 	WndClass.lpszClassName = WindowClass;
 
 	RegisterClassW(&WndClass);
+	
+	DWORD ScreenMode = WS_OVERLAPPEDWINDOW | WS_VISIBLE; // 창 모드
+	int ScreenWidth = 1920;
+	int ScreenHeight = 1080;
+	
+#if WITH_GAME
+	ScreenMode = WS_POPUP | WS_VISIBLE; // 테두리 없는 창 모드
+	ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+	ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+#endif
 
-	int ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
-	int ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
-
-	HWND HWindow = CreateWindowExW(
-		0,
-		WindowClass,
-		Title,
-		WS_POPUP,
-		0, 0,
-		ScreenWidth, ScreenHeight,
-		nullptr, nullptr, HInstance, this);
+	HWND HWindow = CreateWindowExW(0, WindowClass, Title, ScreenMode, 0, 0, ScreenWidth, ScreenHeight, nullptr, nullptr, HInstance, this);
 
 	if (!HWindow)
 	{
