@@ -1,20 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "Render/Execute/Passes/Base/PostProcessPassBase.h"
 
-class FLetterboxPass : public FPostProcessPassBase
+class FLetterboxPass : public FPostProcessVariantPassBase
 {
-public:
-    void PrepareInputs(FRenderPipelineContext& Context) override;
-    void BuildDrawCommands(FRenderPipelineContext& Context) override;
-    void BuildDrawCommands(FRenderPipelineContext& Context, const FPrimitiveProxy& Proxy) override
-    {
-        (void)Context;
-        (void)Proxy;
-    }
-    void SubmitDrawCommands(FRenderPipelineContext& Context) override;
-    bool BindLetterboxConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command);
-
 protected:
     bool IsEnabled(const FRenderPipelineContext& Context) const override;
+    EViewModePostProcessVariant GetPostProcessVariant() const override { return EViewModePostProcessVariant::Letterbox; }
+    bool BindPostProcessConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command) override;
 };

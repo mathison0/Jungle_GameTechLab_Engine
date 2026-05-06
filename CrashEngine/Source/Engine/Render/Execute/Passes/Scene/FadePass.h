@@ -1,20 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "Render/Execute/Passes/Base/PostProcessPassBase.h"
 
-class FFadePass : public FPostProcessPassBase
+class FFadePass : public FPostProcessVariantPassBase
 {
-public:
-    void PrepareInputs(FRenderPipelineContext& Context) override;
-    void BuildDrawCommands(FRenderPipelineContext& Context) override;
-    void BuildDrawCommands(FRenderPipelineContext& Context, const FPrimitiveProxy& Proxy) override
-    {
-        (void)Context;
-        (void)Proxy;
-    }
-    void SubmitDrawCommands(FRenderPipelineContext& Context) override;
-    bool BindFadeConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command);
-
 protected:
     bool IsEnabled(const FRenderPipelineContext& Context) const override;
+    EViewModePostProcessVariant GetPostProcessVariant() const override { return EViewModePostProcessVariant::Fade; }
+    bool BindPostProcessConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command) override;
 };

@@ -9,18 +9,10 @@
     - Registers: PS t11 SceneColor, PS t0 SceneColorCopy when prebound.
     - State: uses the shared PostProcess bucket, but GammaCorrection variant overrides blend to Opaque.
 */
-class FGammaCorrectionPass : public FPostProcessPassBase
+class FGammaCorrectionPass : public FPostProcessVariantPassBase
 {
-public:
-    void PrepareInputs(FRenderPipelineContext& Context) override;
-    void BuildDrawCommands(FRenderPipelineContext& Context) override;
-    void BuildDrawCommands(FRenderPipelineContext& Context, const FPrimitiveProxy& Proxy) override
-    {
-        (void)Context;
-        (void)Proxy;
-    }
-    void SubmitDrawCommands(FRenderPipelineContext& Context) override;
-
 protected:
     bool IsEnabled(const FRenderPipelineContext& Context) const override;
+    EViewModePostProcessVariant GetPostProcessVariant() const override { return EViewModePostProcessVariant::GammaCorrection; }
+    bool BindPostProcessConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command) override;
 };
