@@ -11,90 +11,90 @@
 
 namespace
 {
-	FQuat MakeCameraRotation(const FVector& Forward, const FVector& Right, const FVector& Up)
-	{
-		FMatrix RotationMatrix = FMatrix::Identity;
-		RotationMatrix.SetAxes(Forward.GetSafeNormal(), Right.GetSafeNormal(), Up.GetSafeNormal());
+FQuat MakeCameraRotation(const FVector& Forward, const FVector& Right, const FVector& Up)
+{
+    FMatrix RotationMatrix = FMatrix::Identity;
+    RotationMatrix.SetAxes(Forward.GetSafeNormal(), Right.GetSafeNormal(), Up.GetSafeNormal());
 
-		FQuat Rotation(RotationMatrix);
-		Rotation.Normalize();
-		return Rotation;
-	}
+    FQuat Rotation(RotationMatrix);
+    Rotation.Normalize();
+    return Rotation;
+}
 
-	bool BuildCameraComponentView(UCameraComponent* Camera, FCameraViewInfo& OutView)
-	{
-		if (Camera == nullptr)
-		{
-			return false;
-		}
+bool BuildCameraComponentView(UCameraComponent* Camera, FCameraViewInfo& OutView)
+{
+    if (Camera == nullptr)
+    {
+        return false;
+    }
 
-		const float Height = Camera->GetHeight();
+    const float Height = Camera->GetHeight();
 
-		OutView.Location = Camera->GetWorldLocation();
-		OutView.Rotation = MakeCameraRotation(Camera->GetForwardVector(), Camera->GetRightVector(), Camera->GetUpVector());
-		OutView.FOV = Camera->GetFOV();
-		OutView.AspectRatio = Height > 0.0f ? Camera->GetWidth() / Height : 16.0f / 9.0f;
-		OutView.NearPlane = Camera->GetNearPlane();
-		OutView.FarPlane = Camera->GetFarPlane();
-		OutView.OrthoWidth = Camera->GetOrthoWidth();
-		OutView.OrthoHeight = OutView.AspectRatio > 0.0f ? OutView.OrthoWidth / OutView.AspectRatio : OutView.OrthoWidth;
-		OutView.bOrthographic = Camera->IsOrthogonal();
-		return true;
-	}
+    OutView.Location = Camera->GetWorldLocation();
+    OutView.Rotation = MakeCameraRotation(Camera->GetForwardVector(), Camera->GetRightVector(), Camera->GetUpVector());
+    OutView.FOV = Camera->GetFOV();
+    OutView.AspectRatio = Height > 0.0f ? Camera->GetWidth() / Height : 16.0f / 9.0f;
+    OutView.NearPlane = Camera->GetNearPlane();
+    OutView.FarPlane = Camera->GetFarPlane();
+    OutView.OrthoWidth = Camera->GetOrthoWidth();
+    OutView.OrthoHeight = OutView.AspectRatio > 0.0f ? OutView.OrthoWidth / OutView.AspectRatio : OutView.OrthoWidth;
+    OutView.bOrthographic = Camera->IsOrthogonal();
+    return true;
+}
 
-	// 3D Bezier Curve의 값을 계산합니다.
-	float Evaluate3DBezier(float T, float ControlPointA, float ControlPointB)
-	{
-		const float U = 1.0f - T;
-		return (3.0f * U * U * T * ControlPointA) + (3.0f * U * T * T * ControlPointB) + (T * T * T);
-	}
+// 3D Bezier Curve의 값을 계산합니다.
+float Evaluate3DBezier(float T, float ControlPointA, float ControlPointB)
+{
+    const float U = 1.0f - T;
+    return (3.0f * U * U * T * ControlPointA) + (3.0f * U * T * T * ControlPointB) + (T * T * T);
+}
 
-	// 3D Bezier Curve의 도함수를 계산합니다.
-	float Evaluate3DBezierDerivative(float T, float ControlPointA, float ControlPointB)
-	{
-		const float U = 1.0f - T;
-		return (3.0f * U * U * ControlPointA) + (6.0f * U * T * (ControlPointB - ControlPointA)) + (3.0f * T * T * (1.0f - ControlPointB));
-	}
+// 3D Bezier Curve의 도함수를 계산합니다.
+float Evaluate3DBezierDerivative(float T, float ControlPointA, float ControlPointB)
+{
+    const float U = 1.0f - T;
+    return (3.0f * U * U * ControlPointA) + (6.0f * U * T * (ControlPointB - ControlPointA)) + (3.0f * T * T * (1.0f - ControlPointB));
+}
 
-	// 목표 시간 진행도(X)가 주어졌을 때, 그에 대응하는 Bezier Curve의 T를 역으로 산출합니다.
-	float SolveBezierTForX(float X, float ControlPointA, float ControlPointB)
-	{
-		float T = X;
-		for (int32 Iteration = 0; Iteration < 5; ++Iteration) // Newton-Raphson Approximation
-		{
-			const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
-			const float Slope = Evaluate3DBezierDerivative(T, ControlPointA, ControlPointB);
-			if (std::abs(Slope) < 1.0e-5f)
-			{
-				break;
-			}
+// 목표 시간 진행도(X)가 주어졌을 때, 그에 대응하는 Bezier Curve의 T를 역으로 산출합니다.
+float SolveBezierTForX(float X, float ControlPointA, float ControlPointB)
+{
+    float T = X;
+    for (int32 Iteration = 0; Iteration < 5; ++Iteration) // Newton-Raphson Approximation
+    {
+        const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
+        const float Slope = Evaluate3DBezierDerivative(T, ControlPointA, ControlPointB);
+        if (std::abs(Slope) < 1.0e-5f)
+        {
+            break;
+        }
 
-			T = MathUtil::Clamp(T - (CurrentX - X) / Slope, 0.0f, 1.0f);
-		}
+        T = MathUtil::Clamp(T - (CurrentX - X) / Slope, 0.0f, 1.0f);
+    }
 
-		float MinT = 0.0f;
-		float MaxT = 1.0f;
-		for (int32 Iteration = 0; Iteration < 8; ++Iteration) // Correction From Binary-Search
-		{
-			const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
-			if (std::abs(CurrentX - X) < 1.0e-5f)
-			{
-				break;
-			}
+    float MinT = 0.0f;
+    float MaxT = 1.0f;
+    for (int32 Iteration = 0; Iteration < 8; ++Iteration) // Correction From Binary-Search
+    {
+        const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
+        if (std::abs(CurrentX - X) < 1.0e-5f)
+        {
+            break;
+        }
 
-			if (CurrentX < X)
-			{
-				MinT = T;
-			}
-			else
-			{
-				MaxT = T;
-			}
-			T = 0.5f * (MinT + MaxT);
-		}
+        if (CurrentX < X)
+        {
+            MinT = T;
+        }
+        else
+        {
+            MaxT = T;
+        }
+        T = 0.5f * (MinT + MaxT);
+    }
 
-		return T;
-	}
+    return T;
+}
 }
 
 void APlayerCameraManager::SetViewTarget(UCameraComponent* InCamera)
@@ -134,17 +134,17 @@ void APlayerCameraManager::SetViewTargetWithBlend(UCameraComponent* InCamera, fl
 
 void APlayerCameraManager::SetFallbackCamera(FViewportCamera* InCamera)
 {
-	FallbackCamera = InCamera;
+    FallbackCamera = InCamera;
 }
 
 void APlayerCameraManager::UpdateCamera(float DeltaTime)
 {
-	FCameraViewInfo NewView;
-	if (!BuildBaseCameraView(NewView))
-	{
-		bHasCachedCameraView = false;
-		return;
-	}
+    FCameraViewInfo NewView;
+    if (!BuildBaseCameraView(NewView))
+    {
+        bHasCachedCameraView = false;
+        return;
+    }
 
 	if (Transition.bActive)
 	{
@@ -158,46 +158,45 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 
 void APlayerCameraManager::BuildSceneView(FSceneView& OutView, const FViewportRect& ViewRect, EViewMode ViewMode) const
 {
-	FCameraViewInfo ViewInfo = CachedCameraView;
-	if (!bHasCachedCameraView && !BuildBaseCameraView(ViewInfo))
-	{
-		OutView.ViewRect = ViewRect;
-		OutView.ViewMode = ViewMode;
-		return;
-	}
+    FCameraViewInfo ViewInfo = CachedCameraView;
+    if (!bHasCachedCameraView && !BuildBaseCameraView(ViewInfo))
+    {
+        OutView.ViewRect = ViewRect;
+        OutView.ViewMode = ViewMode;
+        return;
+    }
 
-	FillSceneView(OutView, ViewInfo, ViewRect, ViewMode);
+    FillSceneView(OutView, ViewInfo, ViewRect, ViewMode);
 }
 
 void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 {
-	if (Modifier == nullptr)
-	{
-		return;
-	}
+    if (Modifier == nullptr)
+    {
+        return;
+    }
 
-	if (std::find(CameraModifiers.begin(), CameraModifiers.end(), Modifier) != CameraModifiers.end())
-	{
-		return;
-	}
+    if (std::find(CameraModifiers.begin(), CameraModifiers.end(), Modifier) != CameraModifiers.end())
+    {
+        return;
+    }
 
-	CameraModifiers.push_back(Modifier);
-	std::sort(CameraModifiers.begin(), CameraModifiers.end(), [](const UCameraModifier* A, const UCameraModifier* B)
-	{
+    CameraModifiers.push_back(Modifier);
+    std::sort(CameraModifiers.begin(), CameraModifiers.end(), [](const UCameraModifier* A, const UCameraModifier* B)
+              {
 		const int32 APriority = A ? A->GetPriority() : 0;
 		const int32 BPriority = B ? B->GetPriority() : 0;
-		return APriority < BPriority;
-	});
+		return APriority < BPriority; });
 }
 
 void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 {
-	CameraModifiers.erase(std::remove(CameraModifiers.begin(), CameraModifiers.end(), Modifier), CameraModifiers.end());
+    CameraModifiers.erase(std::remove(CameraModifiers.begin(), CameraModifiers.end(), Modifier), CameraModifiers.end());
 }
 
 void APlayerCameraManager::ClearCameraModifiers()
 {
-	CameraModifiers.clear();
+    CameraModifiers.clear();
 }
 
 
@@ -242,6 +241,7 @@ void APlayerCameraManager::UpdateCameraTransition(float DeltaTime, FCameraViewIn
 		return;
 	}
 
+	Transition.ToView = InOutView;
 	Transition.Elapsed += DeltaTime;
 	float NormalizedTime = MathUtil::Clamp(Transition.Elapsed / Transition.Duration, 0.0f, 1.0f);
 	float Alpha = EvaluateTransitionAlpha(NormalizedTime);
@@ -317,70 +317,70 @@ bool APlayerCameraManager::BuildBaseCameraView(FCameraViewInfo& OutView) const
 		return true;
 	}
 
-	if (FallbackCamera)
-	{
-		OutView.Location = FallbackCamera->GetLocation();
-		OutView.Rotation = FallbackCamera->GetRotation();
-		OutView.FOV = FallbackCamera->GetFOV();
-		OutView.AspectRatio = FallbackCamera->GetAspectRatio();
-		OutView.NearPlane = FallbackCamera->GetNearPlane();
-		OutView.FarPlane = FallbackCamera->GetFarPlane();
-		OutView.OrthoWidth = FallbackCamera->GetOrthoHeight() * FallbackCamera->GetAspectRatio();
-		OutView.OrthoHeight = FallbackCamera->GetOrthoHeight();
-		OutView.bOrthographic = FallbackCamera->IsOrthographic();
-		return true;
-	}
+    if (FallbackCamera)
+    {
+        OutView.Location = FallbackCamera->GetLocation();
+        OutView.Rotation = FallbackCamera->GetRotation();
+        OutView.FOV = FallbackCamera->GetFOV();
+        OutView.AspectRatio = FallbackCamera->GetAspectRatio();
+        OutView.NearPlane = FallbackCamera->GetNearPlane();
+        OutView.FarPlane = FallbackCamera->GetFarPlane();
+        OutView.OrthoWidth = FallbackCamera->GetOrthoHeight() * FallbackCamera->GetAspectRatio();
+        OutView.OrthoHeight = FallbackCamera->GetOrthoHeight();
+        OutView.bOrthographic = FallbackCamera->IsOrthographic();
+        return true;
+    }
 
-	return false;
+    return false;
 }
 
 void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
-	{
-		if (Modifier == nullptr || !Modifier->IsEnabled())
-		{
-			continue;
-		}
+    for (UCameraModifier* Modifier : CameraModifiers)
+    {
+        if (Modifier == nullptr || !Modifier->IsEnabled())
+        {
+            continue;
+        }
 
-		Modifier->ModifyCamera(DeltaTime, InOutView);
-	}
+        Modifier->ModifyCamera(DeltaTime, InOutView);
+    }
 }
 
 void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewInfo& CameraView, const FViewportRect& ViewRect, EViewMode ViewMode) const
 {
-	const FVector Forward = CameraView.GetForwardVector().GetSafeNormal();
-	const FVector Right = CameraView.GetRightVector().GetSafeNormal();
-	const FVector Up = CameraView.GetUpVector().GetSafeNormal();
+    const FVector Forward = CameraView.GetForwardVector().GetSafeNormal();
+    const FVector Right = CameraView.GetRightVector().GetSafeNormal();
+    const FVector Up = CameraView.GetUpVector().GetSafeNormal();
 
-	OutView.ViewMatrix = FMatrix::MakeViewLookAtLH(CameraView.Location, CameraView.Location + Forward, Up);
-	if (CameraView.bOrthographic)
-	{
-		OutView.ProjectionMatrix = FMatrix::MakeOrthographicLH(
-			CameraView.OrthoWidth,
-			CameraView.OrthoHeight,
-			CameraView.NearPlane,
-			CameraView.FarPlane);
-	}
-	else
-	{
-		OutView.ProjectionMatrix = FMatrix::MakePerspectiveFovLH(
-			CameraView.FOV,
-			CameraView.AspectRatio,
-			CameraView.NearPlane,
-			CameraView.FarPlane);
-	}
+    OutView.ViewMatrix = FMatrix::MakeViewLookAtLH(CameraView.Location, CameraView.Location + Forward, Up);
+    if (CameraView.bOrthographic)
+    {
+        OutView.ProjectionMatrix = FMatrix::MakeOrthographicLH(
+            CameraView.OrthoWidth,
+            CameraView.OrthoHeight,
+            CameraView.NearPlane,
+            CameraView.FarPlane);
+    }
+    else
+    {
+        OutView.ProjectionMatrix = FMatrix::MakePerspectiveFovLH(
+            CameraView.FOV,
+            CameraView.AspectRatio,
+            CameraView.NearPlane,
+            CameraView.FarPlane);
+    }
 
-	OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
-	OutView.CameraPosition = CameraView.Location;
-	OutView.CameraForward = Forward;
-	OutView.CameraRight = Right;
-	OutView.CameraUp = Up;
-	OutView.NearPlane = CameraView.NearPlane;
-	OutView.FarPlane = CameraView.FarPlane;
-	OutView.bOrthographic = CameraView.bOrthographic;
-	OutView.CameraOrthoHeight = CameraView.OrthoHeight;
-	OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
-	OutView.ViewRect = ViewRect;
-	OutView.ViewMode = ViewMode;
+    OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
+    OutView.CameraPosition = CameraView.Location;
+    OutView.CameraForward = Forward;
+    OutView.CameraRight = Right;
+    OutView.CameraUp = Up;
+    OutView.NearPlane = CameraView.NearPlane;
+    OutView.FarPlane = CameraView.FarPlane;
+    OutView.bOrthographic = CameraView.bOrthographic;
+    OutView.CameraOrthoHeight = CameraView.OrthoHeight;
+    OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
+    OutView.ViewRect = ViewRect;
+    OutView.ViewMode = ViewMode;
 }
