@@ -46,6 +46,7 @@ struct FShowFlags
     float SpotLightDebugScale        = 1.0f;
     bool  bFog                       = true;
     bool  bFXAA                      = false;
+    bool  bGammaCorrection           = false;
     bool  bLightHitMap               = false;
     bool  b25DCulling                = true; // false는 tile_based_culling
 };

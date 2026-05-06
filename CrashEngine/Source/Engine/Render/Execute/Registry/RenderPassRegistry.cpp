@@ -17,6 +17,7 @@
 #include "Render/Execute/Passes/Scene/ShadowMapPass.h"
 #include "Render/Execute/Passes/Scene/UIPass.h"
 #include "Render/Execute/Passes/Scene/FXAAPass.h"
+#include "Render/Execute/Passes/Scene/GammaCorrectionPass.h"
 #include "Render/Execute/Passes/Scene/HeightFogPass.h"
 #include "Render/Execute/Passes/Scene/LightCullingPass.h"
 #include "Render/Execute/Passes/Scene/DeferredLightingPass.h"
@@ -49,6 +50,7 @@ void FRenderPassRegistry::Initialize()
     Passes.emplace((int32)ERenderPassNodeType::NonLitViewModePass, new FNonLitViewModePass());
     Passes.emplace((int32)ERenderPassNodeType::HeightFogPass, new FHeightFogPass());
     Passes.emplace((int32)ERenderPassNodeType::FXAAPass, new FFXAAPass());
+    Passes.emplace((int32)ERenderPassNodeType::GammaCorrectionPass, new FGammaCorrectionPass());
     Passes.emplace((int32)ERenderPassNodeType::UIPass, new FUIPass());
     Passes.emplace((int32)ERenderPassNodeType::PresentPass, new FPresentPass());
 

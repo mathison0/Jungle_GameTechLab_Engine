@@ -38,6 +38,7 @@ constexpr const char* DirectionalLightDebugScale = "DirectionalLightDebugScale";
 constexpr const char* PointLightDebugScale = "PointLightDebugScale";
 constexpr const char* SpotLightDebugScale = "SpotLightDebugScale";
 constexpr const char* bFog = "bFog";
+constexpr const char* bGammaCorrection = "bGammaCorrection";
 constexpr const char* GridSpacing = "GridSpacing";
 constexpr const char* GridHalfLineCount = "GridHalfLineCount";
 constexpr const char* CameraMoveSensitivity = "CameraMoveSensitivity";
@@ -126,6 +127,7 @@ void FEditorSettings::SaveToFile(const FString& Path) const
         SlotObj[Key::PointLightDebugScale] = Opts.ShowFlags.PointLightDebugScale;
         SlotObj[Key::SpotLightDebugScale] = Opts.ShowFlags.SpotLightDebugScale;
         SlotObj[Key::bFog] = Opts.ShowFlags.bFog;
+        SlotObj[Key::bGammaCorrection] = Opts.ShowFlags.bGammaCorrection;
         SlotObj[Key::GridSpacing] = Opts.GridSpacing;
         SlotObj[Key::GridHalfLineCount] = Opts.GridHalfLineCount;
         SlotObj[Key::CameraMoveSensitivity] = Opts.CameraMoveSensitivity;
@@ -296,6 +298,8 @@ void FEditorSettings::LoadFromFile(const FString& Path)
                 }
                 if (S.hasKey(Key::bFog))
                     Opts.ShowFlags.bFog = S[Key::bFog].ToBool();
+                if (S.hasKey(Key::bGammaCorrection))
+                    Opts.ShowFlags.bGammaCorrection = S[Key::bGammaCorrection].ToBool();
                 if (S.hasKey(Key::GridSpacing))
                     Opts.GridSpacing = static_cast<float>(S[Key::GridSpacing].ToFloat());
                 if (S.hasKey(Key::GridHalfLineCount))
