@@ -2,7 +2,9 @@
 #include "TickFunction.h"
 #include "Component/ActorComponent.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/AWorldSettings.h"
 #include "GameFramework/World.h"
+#include "Runtime/Engine.h"
 
 namespace
 {
@@ -44,6 +46,8 @@ void FTickFunction::UnRegisterTickFunction()
 void FTickManager::Tick(UWorld* World, float DeltaTime, ELevelTick TickType)
 {
     GatherTickFunctions(World, TickType);
+    // Apply Global Time Dilation
+    DeltaTime *= GEngine->GetWorld()->GetWorldSettings()->GetEffectiveTimeDilation();
 
     for (int GroupIndex = 0; GroupIndex < TG_MAX; ++GroupIndex)
     {
