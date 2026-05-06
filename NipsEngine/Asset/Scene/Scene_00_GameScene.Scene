@@ -5126,6 +5126,31 @@
       "UseRigidBodyImpulse" : true,
       "VerticalBoost" : 5.000000
     },
+    "58480" : {
+      "AutoCreateScript" : true,
+      "AutoLoad" : true,
+      "AutoReloadScript" : true,
+      "EditorOnly" : false,
+      "EnableTick" : true,
+      "HiddenInEditor" : false,
+      "OwnerRootUUID" : 3666,
+      "ScriptPath" : "Asset/Scripts/PrologueCinematic.lua",
+      "Type" : "ULuaScriptComponent",
+      "UseDefaultScriptPath" : false
+    },
+    "58482" : {
+      "EditorOnly" : false,
+      "EnableTick" : true,
+      "Gamma" : false,
+      "Gamma Value" : 2.200000,
+      "HiddenInEditor" : false,
+      "OwnerRootUUID" : 13179,
+      "Type" : "UPostProcessComponent",
+      "Vignette" : false,
+      "VignetteIntensity" : 0.500000,
+      "VignetteRadius" : 0.750000,
+      "VignetteSoftness" : 0.250000
+    },
     "597" : {
       "ActorActive" : true,
       "ActorClass" : "AStaticMeshActor",

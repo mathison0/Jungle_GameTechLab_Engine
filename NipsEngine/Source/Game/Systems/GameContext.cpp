@@ -149,6 +149,7 @@ void GGameContext::Reset()
 	bMissionKeepImportantItemCompleted = false;
 	bMissionDiscardTrashCompleted = false;
 	bMissionCleanDustCompleted = false;
+	bCinematicInputBlocked = false;
 
 	if (PreviousHeldObjectInfo.IsHolding())
 	{
@@ -156,6 +157,17 @@ void GGameContext::Reset()
 		OnHeldObjectChanged.Broadcast(HeldObjectInfo);
 	}
 
+	BroadcastChanged();
+}
+
+void GGameContext::SetCinematicInputBlocked(bool bBlocked)
+{
+	if (bCinematicInputBlocked == bBlocked)
+	{
+		return;
+	}
+
+	bCinematicInputBlocked = bBlocked;
 	BroadcastChanged();
 }
 

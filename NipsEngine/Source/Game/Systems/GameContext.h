@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Game/Systems/CleaningGameTypes.h"
 
@@ -92,6 +92,9 @@ public:
 	bool HasStoryFlag(const FString& Flag) const;
 	const TSet<FString>& GetUnlockedStoryFlags() const { return UnlockedStoryFlags; }
 
+	void SetCinematicInputBlocked(bool bBlocked);
+	bool IsCinematicInputBlocked() const { return bCinematicInputBlocked; }
+
 	DECLARE_DELEGATE(FOnGameContextChanged);
 	DECLARE_DELEGATE(FOnItemDispositionChanged, const FString&, EGameItemDisposition);
 	DECLARE_DELEGATE(FOnHeldObjectChanged, const FHeldObjectInfo&);
@@ -125,4 +128,5 @@ private:
 	bool bMissionKeepImportantItemCompleted = false;
 	bool bMissionDiscardTrashCompleted = false;
 	bool bMissionCleanDustCompleted = false;
+	bool bCinematicInputBlocked = false;
 };

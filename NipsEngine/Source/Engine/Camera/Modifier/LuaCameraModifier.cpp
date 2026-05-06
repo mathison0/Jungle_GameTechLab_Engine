@@ -331,6 +331,21 @@ bool ULuaCameraModifier::ReloadScript()
 		LuaState.reset();
 		return false;
 	}
+	
+	// OnLoaded가 있다면 한 번 호출
+	sol::protected_function OnLoaded = (*LuaState)["OnLoaded"];
+	if (OnLoaded.valid())
+	{
+		sol::protected_function_result OnLoadedResult = OnLoaded();
+		if (!OnLoadedResult.valid())
+		{
+			sol::error Error = OnLoadedResult;
+			SetLastScriptError(Error.what());
+			UE_LOG("LuaCameraModifier: failed to call OnLoaded in '%s': %s", ScriptPath.c_str(), LastScriptError.c_str());
+			LuaState.reset();
+			return false;
+		}
+	}
 
 	bHasModifierDataTable = false;
 	ElapsedTime = 0.0f;

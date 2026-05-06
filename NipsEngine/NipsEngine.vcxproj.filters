@@ -302,7 +302,7 @@
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp">
       <Filter>Source\Editor\Settings</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\UI\Bezier.cpp">
+    <ClCompile Include="Source\Editor\UI\BezierUI.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorCameraShakeWidget.cpp">
@@ -434,9 +434,6 @@
     <ClCompile Include="Source\Engine\Component\KnockbackComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Component\PostProcessComponent.cpp">
-      <Filter>Source\Engine\Component</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Component\LuaCameraModifierComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -447,6 +444,9 @@
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\PostProcessComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp">
@@ -950,7 +950,7 @@
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h">
       <Filter>Source\Editor\Settings</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\UI\Bezier.h">
+    <ClInclude Include="Source\Editor\UI\BezierUI.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorCameraShakeWidget.h">
@@ -1097,9 +1097,6 @@
     <ClInclude Include="Source\Engine\Component\KnockbackComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Component\PostProcessComponent.h">
-      <Filter>Source\Engine\Component</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Component\LuaCameraModifierComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
@@ -1110,6 +1107,9 @@
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\MeshComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\PostProcessComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h">

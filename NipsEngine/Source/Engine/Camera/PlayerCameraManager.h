@@ -49,6 +49,7 @@ struct FCameraTransitionState
 	FVector ControlPointA = FVector::ZeroVector;
 	FVector ControlPointB = FVector::ZeroVector;
 	bool bUseBezierCurve = false;
+	bool bHoldFinalView = false;
 
 	float Duration = 0.0f;
 	float Elapsed = 0.0f;
@@ -99,6 +100,8 @@ public:
 	const FCameraViewInfo& GetCameraView() const { return CachedCameraView; }
 	const FPostProcessSettings& GetPostProcessSettings() const { return CachedPostProcessSettings; }
 	const FCameraOverlaySettings& GetOverlaySettings() const { return CachedCameraOverlaySettings; }
+	void SetManualCameraView(const FCameraViewInfo& View);
+	void ClearManualCameraView();
 	ULetterBoxCameraModifier* GetLetterBoxCameraModifier();
 	const ULetterBoxCameraModifier* GetLetterBoxCameraModifier() const { return LetterBoxCameraModifier; }
 
@@ -168,6 +171,8 @@ private:
 	
 	bool bHasCachedCameraView = false;
 	FCameraViewInfo CachedCameraView;
+	bool bHasManualCameraView = false;
+	FCameraViewInfo ManualCameraView;
 	FPostProcessSettings CachedPostProcessSettings;
 	FCameraOverlaySettings CachedCameraOverlaySettings;
 

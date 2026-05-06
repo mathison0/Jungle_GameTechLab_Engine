@@ -10,11 +10,16 @@
 #include "Component/SubUVComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
 #include "Engine/Camera/PlayerCameraManager.h"
+#include "Engine/Camera/Modifier/LuaCameraModifier.h"
 #include "Engine/Camera/Modifier/CameraShakeModifier.h"
+#include "Engine/Runtime/Engine.h"
+#include "Game/GameEngine.h"
+#include "Game/Viewport/GameViewportClient.h"
 #include "Math/Vector.h"
 #include "Math/Vector2.h"
 #include "Math/Vector4.h"
 #include "Math/Quat.h"
+#include "Math/Matrix.h"
 #include "Math/Color.h"
 #include "Object/Object.h"
 #include "Core/CollisionTypes.h"
@@ -22,6 +27,7 @@
 #include "Audio/AudioSystem.h"
 #include "Engine/Input/InputRouter.h"
 #include "Game/UI/GameUISystem.h"
+#include "Game/UI/DialoguePanel.h"
 #include "Game/Systems/GameContext.h"
 #include "Game/Systems/TimeDilationSystem.h"
 #include "Game/Systems/CleaningToolSystem.h"
@@ -29,8 +35,47 @@
 #include "GameFramework/World.h"
 #include "Scripting/LuaScriptSystem.h"
 
+#include <cmath>
+
 namespace
 {
+	FGameViewportClient* GetLuaGameViewport()
+	{
+		UGameEngine* GameEngine = Cast<UGameEngine>(GEngine);
+		return GameEngine ? GameEngine->GetGameViewport() : nullptr;
+	}
+
+	APlayerCameraManager* GetLuaPlayerCameraManager()
+	{
+		FGameViewportClient* Viewport = GetLuaGameViewport();
+		return Viewport ? &Viewport->GetPlayerCameraManager() : nullptr;
+	}
+
+	FQuat MakeLookAtRotation(const FVector& Location, const FVector& Target)
+	{
+		FVector Forward = (Target - Location).GetSafeNormal();
+		if (Forward.IsNearlyZero())
+		{
+			return FQuat::Identity;
+		}
+
+		FVector Up = FVector::UpVector;
+		if (std::abs(FVector::DotProduct(Forward, Up)) > 0.98f)
+		{
+			Up = FVector::RightVector;
+		}
+
+		const FVector Right = FVector::CrossProduct(Up, Forward).GetSafeNormal();
+		const FVector CorrectedUp = FVector::CrossProduct(Forward, Right).GetSafeNormal();
+
+		FMatrix RotationMatrix = FMatrix::Identity;
+		RotationMatrix.SetAxes(Forward, Right, CorrectedUp);
+
+		FQuat Rotation(RotationMatrix);
+		Rotation.Normalize();
+		return Rotation;
+	}
+
 	AActor* FindRegisteredItemActor(UWorld* World, const FString& ItemId)
 	{
 		if (World == nullptr || ItemId.empty())
@@ -185,6 +230,7 @@ void RegisterLuaBindings(sol::state& Lua)
 
 	Lua.new_usertype<FCameraViewInfo>(
 		"FCameraViewInfo",
+		sol::constructors<FCameraViewInfo()>(),
 		"Location", &FCameraViewInfo::Location,
 		"Rotation", &FCameraViewInfo::Rotation,
 		"FOV", &FCameraViewInfo::FOV,
@@ -198,6 +244,24 @@ void RegisterLuaBindings(sol::state& Lua)
 		"GetRightVector", &FCameraViewInfo::GetRightVector,
 		"GetUpVector", &FCameraViewInfo::GetUpVector
 	);
+
+	Lua.set_function("MakeCameraView", [](const FVector& Location, const FVector& Target, sol::optional<float> FOV)
+	{
+		FCameraViewInfo View;
+		View.Location = Location;
+		View.Rotation = MakeLookAtRotation(Location, Target);
+		if (FOV)
+		{
+			View.FOV = FOV.value();
+		}
+		return View;
+	});
+
+	Lua.set_function("SetCameraViewLookAt", [](FCameraViewInfo& View, const FVector& Location, const FVector& Target)
+	{
+		View.Location = Location;
+		View.Rotation = MakeLookAtRotation(Location, Target);
+	});
 
 	Lua.new_usertype<UCameraComponent>(
 		"UCameraComponent",
@@ -372,6 +436,16 @@ void RegisterLuaBindings(sol::state& Lua)
 	Lua.set_function("IsDialogueActive", []()
 	{
 		return GameUISystem::Get().IsDialogueActive();
+	});
+
+	Lua.set_function("IsDialogueTextComplete", []()
+	{
+		return DialoguePanel::IsTextComplete();
+	});
+
+	Lua.set_function("AdvanceDialogue", []()
+	{
+		return DialoguePanel::AdvanceOrSkip();
 	});
 
 	Lua.set_function("GetEndingType", []()
@@ -641,18 +715,21 @@ void RegisterLuaBindings(sol::state& Lua)
 
 	Lua.set_function("GetKeyDown", [](int VK)
 	{
+		if (GGameContext::Get().IsCinematicInputBlocked()) return false;
 		if (GameUISystem::Get().WantsMouseCursor()) return false;
 		return FInputRouter::GetKeyDown(VK);
 	});
 
 	Lua.set_function("GetKey", [](int VK)
 	{
+		if (GGameContext::Get().IsCinematicInputBlocked()) return false;
 		if (GameUISystem::Get().WantsMouseCursor()) return false;
 		return FInputRouter::GetKey(VK);
 	});
 
 	Lua.set_function("GetKeyUp", [](int VK)
 	{
+		if (GGameContext::Get().IsCinematicInputBlocked()) return false;
 		if (GameUISystem::Get().WantsMouseCursor()) return false;
 		return FInputRouter::GetKeyUp(VK);
 	});
@@ -717,7 +794,130 @@ void RegisterLuaBindings(sol::state& Lua)
 		}
 	);
 
-	// PostProcess Component
+	Lua.new_usertype<APlayerCameraManager>(
+		"APlayerCameraManager",
+		"GetCameraView", [](APlayerCameraManager& Manager) { return Manager.GetCameraView(); },
+		"SetManualCameraViewLookAt", [](APlayerCameraManager& Manager, const FVector& Location, const FVector& Target, sol::optional<float> FOV)
+		{
+			FCameraViewInfo View = Manager.GetCameraView();
+			View.Location = Location;
+			View.Rotation = MakeLookAtRotation(Location, Target);
+			if (FOV)
+			{
+				View.FOV = FOV.value();
+			}
+			Manager.SetManualCameraView(View);
+		},
+		"ClearManualCameraView", &APlayerCameraManager::ClearManualCameraView,
+		"StartCameraFade", [](APlayerCameraManager& Manager, const FVector& Color, float FromAlpha, float ToAlpha, float Duration, sol::optional<bool> bHold)
+		{
+			Manager.StartCameraFade(Color, FromAlpha, ToAlpha, Duration, bHold.value_or(false));
+		},
+		"SetManualCameraFade", &APlayerCameraManager::SetManualCameraFade,
+		"StopCameraFade", &APlayerCameraManager::StopCameraFade,
+
+		"StartLetterBox", &APlayerCameraManager::StartLetterBox,
+		"SetLetterBox", &APlayerCameraManager::SetLetterBox,
+		"ClearLetterBox", &APlayerCameraManager::ClearLetterBox,
+
+		"StartCameraTransition", &APlayerCameraManager::StartCameraTransition,
+		"StartCameraTransitionBezier", &APlayerCameraManager::StartCameraTransitionBezier,
+		"StartCameraTransitionLookAtBezier", [](APlayerCameraManager& Manager, const FVector& ToLocation, const FVector& Target, float Duration, sol::optional<float> HandleDistance, sol::optional<float> UpOffset, sol::optional<float> SideOffset)
+		{
+			FCameraViewInfo FromView = Manager.GetCameraView();
+			FCameraViewInfo ToView = FromView;
+			ToView.Location = ToLocation;
+			ToView.Rotation = MakeLookAtRotation(ToLocation, Target);
+
+			const FVector Delta = ToView.Location - FromView.Location;
+			const float Distance = Delta.Size();
+			const FVector Direction = Distance > 0.001f ? Delta / Distance : FromView.GetForwardVector().GetSafeNormal();
+			const float Handle = HandleDistance.value_or(Distance * 0.33f);
+			const FVector Lift = FVector::UpVector * UpOffset.value_or(0.0f);
+			const FVector MidPoint = (FromView.Location + ToView.Location) * 0.5f;
+			FVector Outward = (MidPoint - Target).GetSafeNormal2D();
+			if (Outward.IsNearlyZero())
+			{
+				Outward = FVector(-Direction.Y, Direction.X, 0.0f).GetSafeNormal2D();
+			}
+
+			const FVector Side = Outward * SideOffset.value_or(0.0f);
+			const FVector ControlPointA = FromView.Location + Direction * Handle + Side + Lift;
+			const FVector ControlPointB = ToView.Location - Direction * Handle + Side + Lift;
+
+			Manager.StartCameraTransitionBezier(FromView, ToView, ControlPointA, ControlPointB, Duration);
+		},
+		"StopCameraTransition", &APlayerCameraManager::StopCameraTransition,
+		"StopCameraShake",  &APlayerCameraManager::StopCameraShake,
+		"IsCameraShaking",  &APlayerCameraManager::IsCameraShaking,
+		"StartCameraShake", [](APlayerCameraManager& Manager, sol::table t)
+		{
+			FCameraShakeParams Params;
+
+			auto ReadFloat = [&](const char* Key, float Default) -> float
+			{
+				sol::object v = t[Key];
+				return (v.valid() && v.is<float>()) ? v.as<float>() : Default;
+			};
+			auto ReadBool = [&](const char* Key, bool Default) -> bool
+			{
+				sol::object v = t[Key];
+				return (v.valid() && v.is<bool>()) ? v.as<bool>() : Default;
+			};
+			auto ReadArray = [&](const char* Key, float* Out, int Count)
+			{
+				sol::object v = t[Key];
+				if (!v.valid() || !v.is<sol::table>()) return;
+				sol::table arr = v.as<sol::table>();
+				for (int i = 0; i < Count; ++i)
+				{
+					sol::object elem = arr[i + 1];
+					if (elem.valid() && elem.is<float>()) Out[i] = elem.as<float>();
+				}
+			};
+
+			Params.Duration = ReadFloat("Duration", Params.Duration);
+			Params.bLoop    = ReadBool("bLoop", false);
+			ReadArray("RotAmplitude", Params.RotAmplitude, 3);
+			ReadArray("RotFrequency", Params.RotFrequency, 3);
+			ReadArray("LocAmplitude", Params.LocAmplitude, 3);
+			ReadArray("LocFrequency", Params.LocFrequency, 3);
+			ReadArray("RotBezierCP",  Params.RotBezierCP,  6);
+			ReadArray("LocBezierCP",  Params.LocBezierCP,  6);
+			ReadArray("FOVBezierCP",  Params.FOVBezierCP,  6);
+			Params.FOVAmplitude = ReadFloat("FOVAmplitude", Params.FOVAmplitude);
+			Params.FOVFrequency = ReadFloat("FOVFrequency", Params.FOVFrequency);
+
+			Manager.StartCameraShake(Params);
+		}
+	);
+
+	Lua.set_function("GetPlayerCameraManager", []() -> APlayerCameraManager*
+	{
+		return GetLuaPlayerCameraManager();
+	});
+
+	Lua.set_function("AddLuaCameraModifier", [](const FString& ScriptPath)
+	{
+		APlayerCameraManager* CameraManager = GetLuaPlayerCameraManager();
+		if (CameraManager == nullptr || ScriptPath.empty())
+		{
+			return false;
+		}
+
+		return CameraManager->AddLuaCameraModifier(ScriptPath) != nullptr;
+	});
+
+	Lua.set_function("SetCinematicInputBlocked", [](bool bBlocked)
+	{
+		GGameContext::Get().SetCinematicInputBlocked(bBlocked);
+	});
+
+	Lua.set_function("IsCinematicInputBlocked", []()
+	{
+		return GGameContext::Get().IsCinematicInputBlocked();
+	});
+	
 	Lua.new_usertype<UPostProcessComponent>(
 		"UPostProcessComponent",
 		"SetVignetteEnabled", &UPostProcessComponent::SetVignetteEnabled,
@@ -783,56 +983,6 @@ void RegisterLuaBindings(sol::state& Lua)
 				SubUV->SetTintColor(Tint);
 		}
 	});
-
-	// -------------------------------------------------------
-	// APlayerCameraManager — camera shake
-	// -------------------------------------------------------
-	Lua.new_usertype<APlayerCameraManager>(
-		"APlayerCameraManager",
-		"StopCameraShake",  &APlayerCameraManager::StopCameraShake,
-		"IsCameraShaking",  &APlayerCameraManager::IsCameraShaking,
-		"StartCameraShake", [](APlayerCameraManager* Mgr, sol::table t)
-		{
-			if (!Mgr) return;
-			FCameraShakeParams Params;
-
-			auto ReadFloat = [&](const char* Key, float Default) -> float
-			{
-				sol::object v = t[Key];
-				return (v.valid() && v.is<float>()) ? v.as<float>() : Default;
-			};
-			auto ReadBool = [&](const char* Key, bool Default) -> bool
-			{
-				sol::object v = t[Key];
-				return (v.valid() && v.is<bool>()) ? v.as<bool>() : Default;
-			};
-			auto ReadArray = [&](const char* Key, float* Out, int Count)
-			{
-				sol::object v = t[Key];
-				if (!v.valid() || !v.is<sol::table>()) return;
-				sol::table arr = v.as<sol::table>();
-				for (int i = 0; i < Count; ++i)
-				{
-					sol::object elem = arr[i + 1];
-					if (elem.valid() && elem.is<float>()) Out[i] = elem.as<float>();
-				}
-			};
-
-			Params.Duration = ReadFloat("Duration", Params.Duration);
-			Params.bLoop    = ReadBool("bLoop", false);
-			ReadArray("RotAmplitude", Params.RotAmplitude, 3);
-			ReadArray("RotFrequency", Params.RotFrequency, 3);
-			ReadArray("LocAmplitude", Params.LocAmplitude, 3);
-			ReadArray("LocFrequency", Params.LocFrequency, 3);
-			ReadArray("RotBezierCP",  Params.RotBezierCP,  6);
-			ReadArray("LocBezierCP",  Params.LocBezierCP,  6);
-			ReadArray("FOVBezierCP",  Params.FOVBezierCP,  6);
-			Params.FOVAmplitude = ReadFloat("FOVAmplitude", Params.FOVAmplitude);
-			Params.FOVFrequency = ReadFloat("FOVFrequency", Params.FOVFrequency);
-
-			Mgr->StartCameraShake(Params);
-		}
-	);
 
 }
 #endif

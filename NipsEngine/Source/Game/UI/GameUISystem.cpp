@@ -1746,13 +1746,6 @@ void GameUISystem::StartPrologue()
 {
 	SetState(EGameUIState::Prologue);
 	bPrologueFinishing = false;
-
-	DialoguePanel::Show("", "저 방이에요.");
-	DialoguePanel::Enqueue("", "오랫동안 손을 못 댔어요.");
-	DialoguePanel::Enqueue("", "…청소 부탁드려요.");
-	DialoguePanel::Enqueue("", "들었던 대로 낡고 더러운 방이다.");
-	DialoguePanel::Enqueue("", "하지만 귀중한 물건도 몇 개 있는 것 같은데...");
-	DialoguePanel::Enqueue("", "보관해 뒀다가 청소가 끝나면 돌려주자.");
 }
 
 void GameUISystem::FinishPrologue()
