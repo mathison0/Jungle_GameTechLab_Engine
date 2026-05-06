@@ -427,6 +427,37 @@ function MachineTurretWeapon:UpdateSlotAim(slot, deltaTime, snap)
     return slot.Visual:SetRelativeRotation(rotation)
 end
 
+function MachineTurretWeapon:PlayVfx(preset, location)
+    if type(GetActorPoolManager) ~= "function" then return end
+    
+    local pool = GetActorPoolManager()
+    if pool == nil or not pool:IsValid() then return end
+    
+    local vfxActor = pool:Acquire("ASubUVVfxActor")
+    if vfxActor ~= nil and vfxActor:IsValid() then
+        vfxActor:SetLocation(location)
+        
+        -- 머신건 이펙트 설정 (크기 2배, 재생 속도 20)
+        vfxActor:SetScale({4.0, 4.0, 4.0})
+        local subUV = vfxActor:GetComponentByName("USubUVComponent", "SubUV")
+        if subUV ~= nil and subUV:IsValid() then
+            subUV:SetFrameRate(20.0)
+        end
+        
+        vfxActor:SetVfxPreset(preset)
+        
+        -- 일정 시간 후 반납
+        if self.Owner ~= nil and self.Owner.StartCoroutine ~= nil then
+            self.Owner.StartCoroutine(function()
+                Co.Wait(0.5) -- 이펙트 재생 시간 충분히 확보
+                if vfxActor:IsValid() and pool:IsValid() then
+                    pool:Release(vfxActor)
+                end
+            end)
+        end
+    end
+end
+
 function MachineTurretWeapon:FireSlot(slot)
     local origin = self:GetSlotOrigin(slot)
 
@@ -444,7 +475,19 @@ function MachineTurretWeapon:FireSlot(slot)
 
     local success = DamageSystem.ApplyDamage(slot.Target, slot.Damage, ownerActor)
 
-    if not success then
+    if success then
+        -- 피격 이펙트
+        local targetPos = slot.Target:GetLocation()
+        if targetPos ~= nil then
+            -- 땅에 묻히지 않도록 오프셋 추가
+            local offsetPos = {
+                x = targetPos.x,
+                y = targetPos.y,
+                z = targetPos.z + 0.5
+            }
+            self:PlayVfx("MachineGunHit", offsetPos)
+        end
+    else
         Log("[MachineTurret] Damage failed. slot=" ..
             tostring(slot.Index) ..
             " damage=" ..

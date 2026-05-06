@@ -6,6 +6,7 @@ IMPLEMENT_CLASS(ASubUVVfxActor, AActor)
 void ASubUVVfxActor::InitDefaultComponents()
 {
     SubUV = AddComponent<USubUVComponent>();
+    SubUV->SetFName(FName("SubUV"));
     SetRootComponent(SubUV);
     SubUV->SetParticle("Explode");
     SubUV->SetFrameRate(240.0f);

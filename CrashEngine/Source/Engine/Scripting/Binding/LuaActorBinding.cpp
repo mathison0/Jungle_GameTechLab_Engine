@@ -195,6 +195,34 @@ FLuaComponentHandle FLuaActorHandle::GetComponent(const sol::variadic_args& Args
     return FLuaComponentHandle();
 }
 
+FLuaComponentHandle FLuaActorHandle::GetComponentByName(const sol::variadic_args& Args) const
+{
+    FString ClassName;
+    FString ComponentName;
+
+    int32 StringIdx = 0;
+    for (const sol::object& Arg : Args)
+    {
+        if (Arg.is<FString>())
+        {
+            if (StringIdx == 0) ClassName = Arg.as<FString>();
+            else if (StringIdx == 1) ComponentName = Arg.as<FString>();
+            StringIdx++;
+        }
+    }
+
+    AActor* Actor = Resolve();
+    if (!Actor) return FLuaComponentHandle();
+
+    for (UActorComponent* Component : Actor->GetComponents())
+    {
+        if (!DoesComponentMatchClass(Component, ClassName)) continue;
+        if (!ComponentName.empty() && Component->GetFName().ToString() != ComponentName) continue;
+        return FLuaComponentHandle(Component);
+    }
+    return FLuaComponentHandle();
+}
+
 sol::table FLuaActorHandle::GetComponents(sol::this_state State, const sol::variadic_args& Args) const
 {
     sol::state_view Lua(State);
@@ -280,6 +308,7 @@ namespace LuaBinding
             "SetCustomTimeDilation", &FLuaActorHandle::SetCustomTimeDilation,
 
             "GetComponent", &FLuaActorHandle::GetComponent,
+            "GetComponentByName", &FLuaActorHandle::GetComponentByName,
             "GetComponents", &FLuaActorHandle::GetComponents,
             "InitFlyingWave", &FLuaActorHandle::InitFlyingWave,
             "SetVfxPreset", &FLuaActorHandle::SetVfxPreset);

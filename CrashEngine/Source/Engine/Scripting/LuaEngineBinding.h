@@ -113,6 +113,7 @@ struct FLuaActorHandle
 	bool SetVfxPreset(const FString& PresetName) const;
 
 	FLuaComponentHandle GetComponent(const sol::variadic_args& Args) const;
+	FLuaComponentHandle GetComponentByName(const sol::variadic_args& Args) const;
 	sol::table GetComponents(sol::this_state State, const sol::variadic_args& Args) const;
 };
 
