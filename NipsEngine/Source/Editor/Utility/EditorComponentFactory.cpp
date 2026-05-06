@@ -7,6 +7,7 @@
 #include "Component/TextRenderComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/GizmoComponent.h"
+#include "Component/PostProcessComponent.h"
 #include "Component/Movement/RotatingMovementComponent.h"
 #include "Component/Movement/ProjectileMovementComponent.h"
 #include "Component/Movement/InterpToMovementComponent.h"
@@ -141,6 +142,7 @@ const TArray<FComponentMenuEntry>& FEditorComponentFactory::GetMenuRegistry()
         { "Billboard Component", "Common", RegisterComp<UBillboardComponent> },
         { "HeightFog Component", "Common", RegisterComp<UHeightFogComponent> },
         { "SkyAtmosphere Component", "Common", RegisterComp<USkyAtmosphereComponent> },
+		{ "PostProcess Component", "Common", RegisterComp<UPostProcessComponent> },
 
         { "RotatingMovement Component", "Movement", RegisterComp<URotatingMovementComponent> },
         { "InterpToMovement Component", "Movement", RegisterComp<UInterpToMovementComponent> },

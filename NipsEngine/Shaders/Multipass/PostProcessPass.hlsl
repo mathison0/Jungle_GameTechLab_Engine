@@ -48,13 +48,22 @@ float4 mainPS(VSOutput input) : SV_TARGET
     float ratio = saturate(LetterBoxRatio);
     if (uv.y < ratio || uv.y > 1.0f - ratio)
     {
-        color.rgb = float3(0.0f, 0.0f, 0.0f);
+        return float4(0.0f, 0.0f, 0.0f, 1.0f);
     }
+    
+    // Vignetting
+    float2 distVec = uv - 0.5f; // 중앙까지의 거리 벡터
+    float dist = length(distVec);
+    float vignette = smoothstep(VignetteRadius, VignetteRadius - VignetteSoftness, dist);
+    color.rgb *= lerp(1.0f, vignette, VignetteIntensity);
 
     // Fade In/Out
     float fadeAlpha = saturate(FadeColor.a);
     color.rgb = lerp(color.rgb, FadeColor.rgb, fadeAlpha);
+    
+    // Gamma Correction: 항상 최종 단계에 수행
+    color.rgb = pow(abs(color.rgb), 1.0f / max(Gamma, 0.01f));
     color.a = 1.0f;
-
+    
     return color;
 }

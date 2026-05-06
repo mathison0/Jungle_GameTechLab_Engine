@@ -1,6 +1,8 @@
 ﻿#include "Engine/Camera/PlayerCameraManager.h"
 
-#include "Component/CameraComponent.h"
+#include "Engine/Component/CameraComponent.h"
+#include "Engine/Component/PostProcessComponent.h"
+#include "Engine/GameFramework/AActor.h"
 #include "Engine/Camera/Modifier/LetterBoxCameraModifier.h"
 #include "Engine/Camera/Modifier/CameraShakeModifier.h"
 #include "Engine/Camera/Modifier/LuaCameraModifier.h"
@@ -106,6 +108,7 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 	UpdateCameraFade(DeltaTime);
 
 	ApplyCameraModifiers(DeltaTime, NewView);
+	ApplyPostProcessComponent(NewPostProcess);
 	ApplyPostProcessModifiers(DeltaTime, NewPostProcess);
 	ApplyOverlayModifiers(DeltaTime, NewOverlay);
 	ApplyCameraFade(NewOverlay);
@@ -492,11 +495,6 @@ void APlayerCameraManager::UpdateCameraFade(float DeltaTime)
 	}
 }
 
-void APlayerCameraManager::ApplyCameraFade(FCameraOverlaySettings& InOutOverlay) const
-{
-	InOutOverlay.FadeColor = FVector4(FadeState.Color, MathUtil::Clamp(FadeState.CurrentAlpha, 0.0f, 1.0f));
-}
-
 void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView)
 {
 	for (UCameraModifier* Modifier : ModifierList)
@@ -529,6 +527,50 @@ void APlayerCameraManager::ApplyOverlayModifiers(float DeltaTime, FCameraOverlay
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled()) continue;
 		Modifier->ModifyOverlay(DeltaTime, InOutOverlay);
+	}
+}
+
+void APlayerCameraManager::ApplyCameraFade(FCameraOverlaySettings& InOutOverlay) const
+{
+	InOutOverlay.FadeColor = FVector4(FadeState.Color, MathUtil::Clamp(FadeState.CurrentAlpha, 0.0f, 1.0f));
+}
+
+// UCameraComponent의 Owner Actor를 찾은 뒤 Owner에게 PostProcessComponent가 있다면 적용합니다.
+// 추후 Volume이 있는 UPostProcessComponent를 추가한다면 변경합니다.
+void APlayerCameraManager::ApplyPostProcessComponent(FPostProcessSettings& InOutSettings)
+{
+	if (ViewTarget == nullptr)
+	{
+		return;
+	}
+
+	AActor* OwnerActor = ViewTarget->GetOwner();
+	if (OwnerActor == nullptr)
+	{
+		return;
+	}
+
+	for (UActorComponent* Component : OwnerActor->GetComponents())
+	{
+		UPostProcessComponent* PostProcess = Cast<UPostProcessComponent>(Component);
+		if (PostProcess == nullptr || !PostProcess->IsActive())
+		{
+			continue;
+		}
+
+		if (PostProcess->IsEnableVignette())
+		{
+			InOutSettings.VignetteIntensity = PostProcess->GetVignetteIntensity();
+			InOutSettings.VignetteRadius = PostProcess->GetVignetteRadius();
+			InOutSettings.VignetteSoftness = PostProcess->GetVignetteSoftness();
+		}
+
+		if (PostProcess->IsEnableGammaCorrection())
+		{
+			InOutSettings.Gamma = PostProcess->GetGamma();
+		}
+		
+		break;
 	}
 }
 
