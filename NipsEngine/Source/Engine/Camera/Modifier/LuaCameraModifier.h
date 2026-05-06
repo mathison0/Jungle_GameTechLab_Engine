@@ -22,6 +22,8 @@ public:
 
 	void SetScriptPath(const FString& InScriptPath);
 	const FString& GetScriptPath() const { return ScriptPath; }
+	void SetActionSourceName(const FString& InSourceName) { ActionSourceName = InSourceName; }
+	const FString& GetActionSourceName() const { return ActionSourceName; }
 	bool ReloadScript();
 	void UnloadScript();
 	bool IsScriptLoaded() const { return bScriptLoaded; }
@@ -46,6 +48,7 @@ private:
 
 private:
 	FString ScriptPath;
+	FString ActionSourceName;
 	FString LastScriptError;
 	APlayerCameraManager* CameraOwner = nullptr;
 	bool bScriptLoaded = false;

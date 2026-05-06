@@ -11,6 +11,7 @@
 #include "Component/Physics/RigidBodyComponent.h"
 #include "Engine/Camera/PlayerCameraManager.h"
 #include "Engine/Camera/Modifier/LuaCameraModifier.h"
+#include "Engine/Camera/Modifier/CameraShakeModifier.h"
 #include "Engine/Runtime/Engine.h"
 #include "Game/GameEngine.h"
 #include "Game/Viewport/GameViewportClient.h"
@@ -846,7 +847,49 @@ void RegisterLuaBindings(sol::state& Lua)
 
 			Manager.StartCameraTransitionBezier(FromView, ToView, ControlPointA, ControlPointB, Duration);
 		},
-		"StopCameraTransition", &APlayerCameraManager::StopCameraTransition
+		"StopCameraTransition", &APlayerCameraManager::StopCameraTransition,
+		"StopCameraShake",  &APlayerCameraManager::StopCameraShake,
+		"IsCameraShaking",  &APlayerCameraManager::IsCameraShaking,
+		"StartCameraShake", [](APlayerCameraManager& Manager, sol::table t)
+		{
+			FCameraShakeParams Params;
+
+			auto ReadFloat = [&](const char* Key, float Default) -> float
+			{
+				sol::object v = t[Key];
+				return (v.valid() && v.is<float>()) ? v.as<float>() : Default;
+			};
+			auto ReadBool = [&](const char* Key, bool Default) -> bool
+			{
+				sol::object v = t[Key];
+				return (v.valid() && v.is<bool>()) ? v.as<bool>() : Default;
+			};
+			auto ReadArray = [&](const char* Key, float* Out, int Count)
+			{
+				sol::object v = t[Key];
+				if (!v.valid() || !v.is<sol::table>()) return;
+				sol::table arr = v.as<sol::table>();
+				for (int i = 0; i < Count; ++i)
+				{
+					sol::object elem = arr[i + 1];
+					if (elem.valid() && elem.is<float>()) Out[i] = elem.as<float>();
+				}
+			};
+
+			Params.Duration = ReadFloat("Duration", Params.Duration);
+			Params.bLoop    = ReadBool("bLoop", false);
+			ReadArray("RotAmplitude", Params.RotAmplitude, 3);
+			ReadArray("RotFrequency", Params.RotFrequency, 3);
+			ReadArray("LocAmplitude", Params.LocAmplitude, 3);
+			ReadArray("LocFrequency", Params.LocFrequency, 3);
+			ReadArray("RotBezierCP",  Params.RotBezierCP,  6);
+			ReadArray("LocBezierCP",  Params.LocBezierCP,  6);
+			ReadArray("FOVBezierCP",  Params.FOVBezierCP,  6);
+			Params.FOVAmplitude = ReadFloat("FOVAmplitude", Params.FOVAmplitude);
+			Params.FOVFrequency = ReadFloat("FOVFrequency", Params.FOVFrequency);
+
+			Manager.StartCameraShake(Params);
+		}
 	);
 
 	Lua.set_function("GetPlayerCameraManager", []() -> APlayerCameraManager*

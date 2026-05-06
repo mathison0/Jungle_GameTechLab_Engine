@@ -18,6 +18,7 @@ struct FCameraShakeParams
     float FOVFrequency = 15.0f;
 
     float Duration = 0.5f;
+    bool  bLoop    = false;
 
     // [0]=CP1x [1]=CP1y [2]=CP2x [3]=CP2y [4]=P0y(시작) [5]=P3y(끝)
     float RotBezierCP[6] = { 0.25f, 0.1f, 0.75f, 0.9f, 1.0f, 0.0f };

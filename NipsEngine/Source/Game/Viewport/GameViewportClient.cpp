@@ -76,6 +76,7 @@ void FGameViewportClient::Initialize(FWindowsWindow* InWindow)
 	PlayerCameraManager.SetFallbackCamera(&FreeCamera);
 	PlayerCameraManager.InitializeDefaultModifiers();
 	PlayerController.SetFreeCamera(&FreeCamera);
+	PlayerController.SetPlayerCameraManager(&PlayerCameraManager);
 	PlayerController.SetWorld(World);
 	PlayerController.SetToggleInputCaptureCallback([this]() { ToggleInteractionMode(); });
 	PlayerController.SetTogglePauseCallback(&GameUISystem::TogglePauseMenuIfInGame);

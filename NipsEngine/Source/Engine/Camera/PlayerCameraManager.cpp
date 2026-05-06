@@ -11,8 +11,10 @@
 #include "Engine/Viewport/ViewportCamera.h"
 #include "Engine/Math/Bezier.h"
 #include "Engine/Math/Utils.h"
+#include "Core/Logger.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 
 namespace
@@ -73,6 +75,34 @@ bool BuildCameraComponentView(UCameraComponent* Camera, FCameraViewInfo& OutView
 	OutView.OrthoHeight = OutView.AspectRatio > 0.0f ? OutView.OrthoWidth / OutView.AspectRatio : OutView.OrthoWidth;
 	OutView.bOrthographic = Camera->IsOrthogonal();
 	return true;
+}
+
+FString NormalizeCameraShakeName(FString ShakeName)
+{
+	std::transform(ShakeName.begin(), ShakeName.end(), ShakeName.begin(),
+				   [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
+
+	if (ShakeName == "walk")
+	{
+		return "Walk";
+	}
+
+	if (ShakeName == "falldown" || ShakeName == "fall_down" || ShakeName == "fall-down")
+	{
+		return "FallDown";
+	}
+
+	return "";
+}
+
+FString GetCameraShakeAssetPath(const FString& NormalizedName)
+{
+	if (NormalizedName.empty())
+	{
+		return "";
+	}
+
+	return "Asset/CameraShake/" + NormalizedName + ".lua";
 }
 }
 
@@ -177,6 +207,7 @@ void APlayerCameraManager::Shutdown()
 {
 	ClearModifierList();
 	LuaCameraModifierComponentBindings.clear();
+	NamedLuaCameraShakeModifiers.clear();
 
 	for (UCameraModifier* Modifier : OwnedModifierList)
 	{
@@ -186,6 +217,7 @@ void APlayerCameraManager::Shutdown()
 
 	LetterBoxCameraModifier = nullptr;
 	CameraShakeModifier = nullptr;
+	ActiveNamedCameraShake.clear();
 	LuaCameraModifierComponentBindings.clear();
 	ViewTarget = nullptr;
 	FallbackCamera = nullptr;
@@ -371,6 +403,57 @@ UCameraShakeModifier* APlayerCameraManager::GetCameraShakeModifier()
 }
 void APlayerCameraManager::StartCameraShake(const FCameraShakeParams& Params)
 {
+	ActiveNamedCameraShake.clear();
+
+	UCameraShakeModifier* Modifier = GetCameraShakeModifier();
+	if (Modifier == nullptr)
+		return;
+
+	Modifier->StartShake(Params);
+}
+
+bool APlayerCameraManager::StartCameraShakeByName(const FString& ShakeName)
+{
+	const FString NormalizedName = NormalizeCameraShakeName(ShakeName);
+	const FString ScriptPath = GetCameraShakeAssetPath(NormalizedName);
+	if (NormalizedName.empty() || ScriptPath.empty())
+	{
+		UE_LOG("PlayerCameraManager: unknown camera shake asset '%s'.", ShakeName.c_str());
+		return false;
+	}
+
+	ULuaCameraModifier* Modifier = nullptr;
+	const auto It = NamedLuaCameraShakeModifiers.find(NormalizedName);
+	if (It != NamedLuaCameraShakeModifiers.end())
+	{
+		Modifier = It->second;
+	}
+
+	if (Modifier == nullptr)
+	{
+		Modifier = AddLuaCameraModifier(ScriptPath);
+		NamedLuaCameraShakeModifiers[NormalizedName] = Modifier;
+	}
+	else
+	{
+		Modifier->SetScriptPath(ScriptPath);
+		Modifier->ReloadScript();
+	}
+
+	Modifier->SetActionSourceName(NormalizedName);
+	if (!Modifier->IsScriptLoaded())
+	{
+		UE_LOG("PlayerCameraManager: failed to load camera shake asset '%s': %s", ScriptPath.c_str(), Modifier->GetLastScriptError().c_str());
+		return false;
+	}
+
+	return true;
+}
+
+void APlayerCameraManager::StartNamedCameraShake(const FString& ShakeName, const FCameraShakeParams& Params)
+{
+	ActiveNamedCameraShake = NormalizeCameraShakeName(ShakeName);
+
 	UCameraShakeModifier* Modifier = GetCameraShakeModifier();
 	if (Modifier == nullptr)
 		return;
@@ -380,9 +463,20 @@ void APlayerCameraManager::StartCameraShake(const FCameraShakeParams& Params)
 
 void APlayerCameraManager::StopCameraShake()
 {
+	ActiveNamedCameraShake.clear();
+
 	if (CameraShakeModifier)
 	{
 		CameraShakeModifier->StopShake();
+	}
+}
+
+void APlayerCameraManager::StopCameraShakeByName(const FString& ShakeName)
+{
+	const FString NormalizedName = NormalizeCameraShakeName(ShakeName);
+	if (!NormalizedName.empty() && ActiveNamedCameraShake == NormalizedName)
+	{
+		StopCameraShake();
 	}
 }
 

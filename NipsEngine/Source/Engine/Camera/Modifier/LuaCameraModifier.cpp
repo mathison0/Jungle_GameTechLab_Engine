@@ -623,7 +623,15 @@ bool ULuaCameraModifier::ProcessDataDrivenActions()
 				ReadFloatArrayField(Entry, "FOVBezierCP", Params.FOVBezierCP, 6, ElapsedTime);
 				Params.FOVAmplitude = EvaluateFloatField(Entry, "FOVAmplitude", Params.FOVAmplitude, ElapsedTime);
 				Params.FOVFrequency = EvaluateFloatField(Entry, "FOVFrequency", Params.FOVFrequency, ElapsedTime);
-				CameraOwner->StartCameraShake(Params);
+				Params.bLoop = ReadBoolField(Entry, "bLoop", false);
+				if (ActionSourceName.empty())
+				{
+					CameraOwner->StartCameraShake(Params);
+				}
+				else
+				{
+					CameraOwner->StartNamedCameraShake(ActionSourceName, Params);
+				}
 			}
 
 			TriggeredActionKeys.push_back(TriggerKey);

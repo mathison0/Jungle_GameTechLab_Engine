@@ -88,6 +88,7 @@ void FEditorViewportClient::Initialize(FWindowsWindow* InWindow, UEditorEngine* 
 	EditorWorldController.SetFocusSelectionCallback([this]() { FocusPrimarySelection(); });
 	PIEController.SetToggleInputCaptureCallback([this]() { TogglePIEInputCapture(); });
 	GamePlayerController.SetTogglePauseCallback(&GameUISystem::TogglePauseMenuIfInGame);
+	GamePlayerController.SetPlayerCameraManager(&PlayerCameraManager);
 	PlayerCameraManager.InitializeDefaultModifiers();
 	InputRouter.SetEditorWorldController(&EditorWorldController);
 	InputRouter.SetPIEController(&PIEController);
