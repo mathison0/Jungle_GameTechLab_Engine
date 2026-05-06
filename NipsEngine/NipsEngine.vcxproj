@@ -399,6 +399,7 @@
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\PostProcessComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -940,6 +941,7 @@
     <ClInclude Include="Source\Engine\Component\LineBatchComponent.h" />
     <ClInclude Include="Source\Engine\Component\LuaScriptComponent.h" />
     <ClInclude Include="Source\Engine\Component\MeshComponent.h" />
+    <ClInclude Include="Source\Engine\Component\PostProcessComponent.h" />
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h" />
     <ClInclude Include="Source\Engine\Component\SceneComponent.h" />
     <ClInclude Include="Source\Engine\Component\SkyAtmosphereComponent.h" />
