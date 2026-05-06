@@ -14,6 +14,7 @@
 #include "Texture/Texture2D.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
+#include "Engine/Classes/Camera/CameraManager.h"
 #include "Core/TickFunction.h"
 #include "Viewport/GameViewportClient.h"
 #include "Viewport/Viewport.h"
@@ -44,6 +45,24 @@ ELevelTick ToLevelTickType(EWorldType WorldType)
     default:
         return ELevelTick::LEVELTICK_TimeOnly;
     }
+}
+
+APlayerCameraManager* FindPlayerCameraManagerInLevel(ULevel* Level)
+{
+    if (!Level)
+    {
+        return nullptr;
+    }
+
+    for (AActor* Actor : Level->GetActors())
+    {
+        if (APlayerCameraManager* CameraManager = Cast<APlayerCameraManager>(Actor))
+        {
+            return CameraManager;
+        }
+    }
+
+    return nullptr;
 }
 } // namespace
 
@@ -234,6 +253,63 @@ void UEngine::Tick(float DeltaTime)
     Render(DeltaTime);
 }
 
+APlayerCameraManager* UEngine::ResolvePlayerCameraManager(UWorld* World)
+{
+    if (!World)
+    {
+        CachedPlayerCameraManagerUUID = 0;
+        return nullptr;
+    }
+
+    if (CachedPlayerCameraManagerUUID != 0)
+    {
+        if (UObject* CachedObject = UObjectManager::Get().FindByUUID(CachedPlayerCameraManagerUUID))
+        {
+            if (APlayerCameraManager* CachedCameraManager = Cast<APlayerCameraManager>(CachedObject))
+            {
+                if (CachedCameraManager->GetWorld() == World)
+                {
+                    return CachedCameraManager;
+                }
+            }
+        }
+
+        CachedPlayerCameraManagerUUID = 0;
+    }
+
+    APlayerCameraManager* CameraManager = FindPlayerCameraManagerInLevel(World->GetActiveLevel());
+    if (!CameraManager)
+    {
+        CameraManager = FindPlayerCameraManagerInLevel(World->GetPersistentLevel());
+    }
+
+    CachedPlayerCameraManagerUUID = CameraManager ? CameraManager->GetUUID() : 0;
+    return CameraManager;
+}
+
+bool UEngine::TrySetSceneViewFromPlayerCameraManager(UWorld* World, FSceneView& OutSceneView)
+{
+    APlayerCameraManager* PlayerCameraManager = ResolvePlayerCameraManager(World);
+    if (!PlayerCameraManager || !PlayerCameraManager->HasValidCameraCache())
+    {
+        return false;
+    }
+
+    OutSceneView.SetCameraInfo(PlayerCameraManager->GetCameraCacheView());
+    return true;
+}
+
+void UEngine::LogCameraManagerFallbackOnce()
+{
+    if (bLoggedCameraManagerFallback)
+    {
+        return;
+    }
+
+    UE_LOG(Engine, Warning, "CameraManager cache is invalid. Using fallback camera.");
+    bLoggedCameraManagerFallback = true;
+}
+
 void UEngine::Render(float DeltaTime)
 {
     SCOPE_STAT_CAT("UEngine::Render", "2_Render");
@@ -248,28 +324,37 @@ void UEngine::Render(float DeltaTime)
     ID3D11DeviceContext* DeviceContext = Renderer.GetFD3DDevice().GetDeviceContext();
 
     UWorld* World = GetWorld();
-    UCameraComponent* Camera = World ? World->GetActiveCamera() : nullptr;
+    UCameraComponent* FallbackCamera = World ? World->GetActiveCamera() : nullptr;
 
     // 활성 카메라가 없으면 전역 Main 카메라로 폴백합니다.
-    if (!Camera)
+    if (!FallbackCamera)
     {
-        Camera = UCameraComponent::Main;
+        FallbackCamera = UCameraComponent::Main;
     }
 
     FScene* Scene = nullptr;
-    if (Camera)
+    const bool bUsingCameraManager = TrySetSceneViewFromPlayerCameraManager(World, SceneView);
+    if (!bUsingCameraManager && FallbackCamera)
+    {
+        LogCameraManagerFallbackOnce();
+        SceneView.SetCameraInfo(FallbackCamera);
+    }
+
+    if ((bUsingCameraManager || FallbackCamera) && World)
     {
         FShowFlags ShowFlags;
         EViewMode ViewMode = EViewMode::Lit_Phong;
 
-        SceneView.SetCameraInfo(Camera);
         SceneView.SetRenderSettings(ViewMode, ShowFlags);
 
         if (Viewport && DeviceContext)
         {
             if (Viewport->ApplyPendingResize())
             {
-                Camera->OnResize(static_cast<int32>(Viewport->GetWidth()), static_cast<int32>(Viewport->GetHeight()));
+                if (FallbackCamera)
+                {
+                    FallbackCamera->OnResize(static_cast<int32>(Viewport->GetWidth()), static_cast<int32>(Viewport->GetHeight()));
+                }
             }
 
             // Viewport 기반 렌더링 환경 설정
@@ -288,8 +373,8 @@ void UEngine::Render(float DeltaTime)
         CollectContext.ViewModePassRegistry = Renderer.GetViewModePassRegistry();
         CollectContext.ActiveViewMode = SceneView.ViewMode;
 
-        UWorld* CameraWorld = Camera->GetWorld();
-        Renderer.CollectWorld(CameraWorld ? CameraWorld : World, CollectContext);
+        UWorld* CameraWorld = FallbackCamera ? FallbackCamera->GetWorld() : nullptr;
+        Renderer.CollectWorld(bUsingCameraManager ? World : (CameraWorld ? CameraWorld : World), CollectContext);
         Renderer.CollectDebugRender(*Scene);
     }
     else

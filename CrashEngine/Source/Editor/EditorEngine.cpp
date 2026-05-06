@@ -639,8 +639,6 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
         return;
 
     UCameraComponent* Camera = VP->GetClient() ? VP->GetClient()->GetCamera() : VC->GetCamera();
-    if (!Camera)
-        return;
 
     ID3D11DeviceContext* Ctx = Renderer.GetFD3DDevice().GetDeviceContext();
     if (!Ctx)
@@ -648,6 +646,14 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
 
     UWorld* World = GetWorld();
     if (!World)
+        return;
+
+    const bool bUsePlayerCameraManager =
+        IsPlayingInEditor() && VC->GetPlayState() != EEditorViewportPlayState::Stopped;
+    const bool bUsingCameraManager =
+        bUsePlayerCameraManager && TrySetSceneViewFromPlayerCameraManager(World, SceneView);
+
+    if (!bUsingCameraManager && !Camera)
         return;
 
     if (!GPUOcclusion.IsInitialized())
@@ -673,7 +679,10 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
 
     if (VP->ApplyPendingResize())
     {
-        Camera->OnResize(static_cast<int32>(VP->GetWidth()), static_cast<int32>(VP->GetHeight()));
+        if (Camera)
+        {
+            Camera->OnResize(static_cast<int32>(VP->GetWidth()), static_cast<int32>(VP->GetHeight()));
+        }
     }
 
     VP->BeginRender(Ctx);
@@ -683,7 +692,14 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
     FScene& Scene = World->GetScene();
     Scene.ClearFrameData();
 
-    SceneView.SetCameraInfo(Camera);
+    if (!bUsingCameraManager)
+    {
+        if (bUsePlayerCameraManager)
+        {
+            LogCameraManagerFallbackOnce();
+        }
+        SceneView.SetCameraInfo(Camera);
+    }
     SceneView.SetRenderSettings(ViewMode, EffectiveShowFlags);
     SceneView.SetRenderOptions(Opts);
     SceneView.RenderPath = FEditorSettings::Get().RenderShadingPath;

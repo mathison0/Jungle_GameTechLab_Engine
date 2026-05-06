@@ -9,6 +9,11 @@
 
 IMPLEMENT_CLASS(APlayerCameraManager, AActor)
 
+APlayerCameraManager::APlayerCameraManager()
+{
+    PrimaryActorTick.SetTickGroup(TG_PostUpdateWork);
+}
+
 float FViewTargetTransitionParams::GetBlendAlpha(float TimePct) const
 {
     const float ClampedPct = FMath::Clamp(TimePct, 0.0f, 1.0f);
@@ -72,7 +77,10 @@ void APlayerCameraManager::InitializeFor(AActor* PC)
 
 void APlayerCameraManager::UpdateCamera(float DeltaTime)
 {
-    check(PCOwner != nullptr);
+    if (PCOwner == nullptr)
+    {
+        return;
+    }
 
     DoUpdateCamera(DeltaTime);
 }
@@ -212,6 +220,11 @@ const FMinimalViewInfo& APlayerCameraManager::GetCameraCacheView() const
 const FMinimalViewInfo& APlayerCameraManager::GetLastFrameCameraCacheView() const
 {
     return LastFrameCameraCachePrivate.POV;
+}
+
+bool APlayerCameraManager::HasValidCameraCache() const
+{
+    return CameraCachePrivate.bValid;
 }
 
 void APlayerCameraManager::GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation) const
@@ -476,8 +489,9 @@ void APlayerCameraManager::FillCameraCache(const FMinimalViewInfo& NewInfo)
     // SetCameraCachePOV(NewInfo);
     // SetCameraCacheTime(CurrentGameTime);
 
-    SetLastFrameCameraCachePOV(GetCameraCacheView());
-    SetCameraCachePOV(NewInfo);
+    LastFrameCameraCachePrivate = CameraCachePrivate;
+    CameraCachePrivate.POV = NewInfo;
+    CameraCachePrivate.bValid = true;
 }
 
 // void APlayerCameraManager::UpdateCameraFade(float DeltaTime)

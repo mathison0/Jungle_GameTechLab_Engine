@@ -17,6 +17,7 @@ class FWindowsWindow;
 class FTimer;
 class UCameraComponent;
 class UGameViewportClient;
+class APlayerCameraManager;
 
 // UEngine는 런타임 영역의 핵심 동작을 담당합니다.
 class UEngine : public UObject
@@ -71,6 +72,9 @@ protected:
     virtual void Render(float DeltaTime);
     virtual void OnRenderSceneCleared() {}
     void WorldTick(float DeltaTime);
+    APlayerCameraManager* ResolvePlayerCameraManager(UWorld* World);
+    bool TrySetSceneViewFromPlayerCameraManager(UWorld* World, FSceneView& OutSceneView);
+    void LogCameraManagerFallbackOnce();
 
 protected:
     FWindowsWindow* Window = nullptr;
@@ -86,6 +90,8 @@ protected:
     FRenderer Renderer;
 
 	FScriptSystem ScriptSystem;
+    uint32 CachedPlayerCameraManagerUUID = 0;
+    bool bLoggedCameraManagerFallback = false;
 
 protected:
     FSceneView SceneView;

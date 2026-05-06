@@ -11,6 +11,7 @@
 class UCameraComponent;
 class FViewport;
 class FGPUOcclusionCulling;
+struct FMinimalViewInfo;
 
 // FSceneView bundles camera state, viewport state, and visibility helpers for one view.
 struct FSceneView
@@ -49,6 +50,7 @@ struct FSceneView
     }
 
     void SetCameraInfo(const UCameraComponent* Camera);
+    void SetCameraInfo(const FMinimalViewInfo& ViewInfo);
     void SetViewportInfo(const FViewport* VP);
 
     void SetViewportSize(float InWidth, float InHeight)

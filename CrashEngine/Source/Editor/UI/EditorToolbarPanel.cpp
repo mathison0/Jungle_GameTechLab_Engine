@@ -43,6 +43,7 @@
 #include <utility>
 
 #include "GameFramework/ExpBarActor.h"
+#include "Engine/Classes/Camera/CameraManager.h"
 
 namespace
 {
@@ -182,6 +183,7 @@ constexpr FAddActorEntry GameAddActors[] = {
     ADD_ACTOR("Enemy Spawner", EAddActorIcon::Empty, AEnemySpawnerActor, false),
     ADD_ACTOR("Tank", EAddActorIcon::Empty, ATankActor, false),
 	ADD_ACTOR("Exp Bar UI", EAddActorIcon::Empty, AExpBarActor, false),
+    ADD_ACTOR("CameraManager", EAddActorIcon::Empty, APlayerCameraManager, false),
 };
 
 #undef ADD_MESH
