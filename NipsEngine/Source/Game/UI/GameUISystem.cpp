@@ -1472,7 +1472,9 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 		(CurrentState == EGameUIState::InGame || CurrentState == EGameUIState::Ending || CurrentState == EGameUIState::Prologue);
 	const bool bShowEnding = CurrentState == EGameUIState::Ending;
 	const bool bShowTheEnd = bShowEnding && EndingPanel::ShouldShowTheEnd();
-	const bool bShowEndingVisual = bShowEnding && !bShowTheEnd;
+	const bool bShowEndingVisual = bShowEnding && EndingPanel::ShouldShowEndingVisual();
+	const bool bShowEndingCredits = bShowEnding && EndingPanel::ShouldShowCredits();
+	const bool bShowEndingBlackFade = bShowEnding && EndingPanel::ShouldShowBlackFade();
 	const bool bShowEndingButtons = bShowTheEnd && EndingPanel::GetFadeAlpha() >= 0.8f;
 	const bool bShowItemInspect = bShowHud && bItemInspectOpen;
 	const bool bShowInteractionHint = bShowHud && !bShowPause && !bShowDialogue && !bShowItemInspect && InteractionHintType != EInteractionHintType::None;
@@ -1494,9 +1496,13 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 	SetElementVisible("dialogue-panel", bShowDialogue);
 	SetElementVisible("ending-panel", bShowEnding);
 	SetElementVisible("ending-visual-frame", bShowEndingVisual);
+	SetElementVisible("ending-black-fade", bShowEndingBlackFade);
+	SetElementVisible("ending-credits", bShowEndingCredits);
 	SetElementVisible("the-end", bShowTheEnd);
 	SetElementVisible("ending-buttons", bShowEndingButtons);
 	SetElementProperty("ending-panel", "background-color", FormatAlphaColor(8.0f, 8.0f, 12.0f, bShowTheEnd ? 0.98f : 0.90f));
+	SetElementProperty("ending-black-fade", "background-color", FormatAlphaColor(0.0f, 0.0f, 0.0f, EndingPanel::GetBlackFadeAlpha()));
+	SetElementProperty("ending-credits", "opacity", FormatOpacity(EndingPanel::GetCreditAlpha()));
 	UpdateEndingScoreElements(bShowEndingButtons);
 	UpdateTitleTransitionElements();
 
