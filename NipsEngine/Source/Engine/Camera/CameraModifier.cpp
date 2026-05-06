@@ -11,10 +11,10 @@ bool UCameraModifier::ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView)
 	return false;
 }
 
-bool UCameraModifier::ModifyOverlay(float DeltaTime, FCameraOverlayInfo& InOutOverlay)
+bool UCameraModifier::ModifyOverlay(float DeltaTime, FPostProcessSettings& InOutSettings)
 {
     (void)DeltaTime;
-    (void)InOutOverlay;
+    (void)InOutSettings;
     return false;
 }
 

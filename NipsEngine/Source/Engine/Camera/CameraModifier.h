@@ -14,7 +14,7 @@ public:
 	~UCameraModifier() override = default;
 
 	virtual bool ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView);
-	virtual bool ModifyOverlay(float DeltaTime, FCameraOverlayInfo& InOutOverlay);
+	virtual bool ModifyPostProcess(float DeltaTime, FPostProcessSettings& InOutSettings);
 
 	virtual void EnableModifier();
 	virtual void DisableModifier();
