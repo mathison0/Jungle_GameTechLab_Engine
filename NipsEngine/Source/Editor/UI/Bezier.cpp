@@ -37,10 +37,10 @@ static void bezier_table(FVector2 P[4], FVector2 results[steps + 1])
 }
 
 // ── t (0~1) 에 대응하는 Bezier 커브 Y 값 반환 ───────────────────────────────────
-float Bezier::BezierValue(float t, const float cp[4])
+float Bezier::BezierValue(float t, const float cp[6])
 {
     enum { STEPS = 256 };
-    FVector2 Q[4]      = { {0.f, 0.f}, {cp[0], cp[1]}, {cp[2], cp[3]}, {1.f, 1.f} };
+    FVector2 Q[4] = { { 0.f, cp[4] }, { cp[0], cp[1] }, { cp[2], cp[3] }, { 1.f, cp[5] } };
     FVector2 results[STEPS + 1];
     bezier_table<STEPS>(Q, results);
     return results[(int)((t < 0.f ? 0.f : t > 1.f ? 1.f : t) * STEPS)].Y;
@@ -102,9 +102,35 @@ int Bezier::Bezier(const char* label, float cp[4])
     }
 
     // 커브 샘플링 — FVector2: 순수 수학 데이터
-    FVector2 Q[4] = { {0.f, 0.f}, {cp[0], cp[1]}, {cp[2], cp[3]}, {1.f, 1.f} };
+    FVector2 Q[4] = { { 0.f, cp[4] }, { cp[0], cp[1] }, { cp[2], cp[3] }, { 1.f, cp[5] } };
     FVector2 results[SMOOTHNESS + 1];
     bezier_table<SMOOTHNESS>(Q, results);
+
+	{
+        ImVec2 p0_pos(bb.Min.x, (1.f - cp[4]) * bbH + bb.Min.y);
+        SetCursorScreenPos(ImVec2(p0_pos.x - GRAB_RADIUS, p0_pos.y - GRAB_RADIUS));
+        InvisibleButton("##P0", ImVec2(2 * GRAB_RADIUS, 2 * GRAB_RADIUS));
+        if (IsItemActive() && IsMouseDragging(0))
+        {
+            cp[4] -= GetIO().MouseDelta.y / Canvas.Y;
+            cp[4] = ImClamp(cp[4], 0.0f, 1.0f);
+            changed = true;
+        }
+        DrawList->AddCircleFilled(p0_pos, GRAB_RADIUS, GetColorU32(ImGuiCol_PlotLinesHovered));
+    }
+
+	{
+        ImVec2 p3_pos(bb.Max.x, (1.f - cp[5]) * bbH + bb.Min.y);
+        SetCursorScreenPos(ImVec2(p3_pos.x - GRAB_RADIUS, p3_pos.y - GRAB_RADIUS));
+        InvisibleButton("##P3", ImVec2(2 * GRAB_RADIUS, 2 * GRAB_RADIUS));
+        if (IsItemActive() && IsMouseDragging(0))
+        {
+            cp[5] -= GetIO().MouseDelta.y / Canvas.Y;
+            cp[5] = ImClamp(cp[5], 0.0f, 1.0f);
+            changed = true;
+        }
+        DrawList->AddCircleFilled(p3_pos, GRAB_RADIUS, GetColorU32(ImGuiCol_PlotLinesHovered));
+    }
 
     {
         // 컨트롤 포인트 핸들 (2개)

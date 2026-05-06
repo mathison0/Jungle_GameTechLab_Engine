@@ -45,5 +45,5 @@ bool UCameraShakeModifier::ModifyCamera(float DeltaTime, FCameraViewInfo& InOutV
     InOutView.Rotation.Y += ShakeY;
     InOutView.Rotation.Z += ShakeZ;
 
-    return false;
+    return true;
 }
