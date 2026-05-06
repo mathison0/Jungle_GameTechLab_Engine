@@ -2,6 +2,7 @@
 
 #include "Audio/AudioSystem.h"
 #include "Component/CameraComponent.h"
+#include "Component/KnockbackComponent.h"
 #include "Component/LuaScriptComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/Physics/PhysicsHandleComponent.h"
@@ -566,6 +567,10 @@ void FGamePlayerController::Tick(float DeltaTime)
 	RefreshPawnComponents();
 	CaptureInitialRigidBodyRotations();
 	SyncFreeCameraAngles();
+	if (IsPlayerControlLocked())
+	{
+		ClearGameplayInputState();
+	}
 	ApplyInputAxes();
 	UpdateHoveredPickableActor();
 	FCleaningToolAnimator::Get().Tick(DeltaTime);
@@ -629,6 +634,11 @@ void FGamePlayerController::LateTick(float DeltaTime)
 
 void FGamePlayerController::OnMouseMove(float DeltaX, float DeltaY)
 {
+	if (!CanProcessGameplayInput())
+	{
+		return;
+	}
+
 	RotateActiveCamera(DeltaX, DeltaY);
 }
 
@@ -642,6 +652,11 @@ void FGamePlayerController::OnLeftMouseClick(float X, float Y)
 {
 	(void)X;
 	(void)Y;
+	if (!CanProcessGameplayInput())
+	{
+		return;
+	}
+
 	TryBeginCleaningUse();
 }
 
@@ -649,6 +664,11 @@ void FGamePlayerController::OnLeftMouseDrag(float X, float Y)
 {
 	(void)X;
 	(void)Y;
+	if (!CanProcessGameplayInput())
+	{
+		return;
+	}
+
 	TryBeginCleaningUse();
 }
 
@@ -674,6 +694,11 @@ void FGamePlayerController::OnRightMouseClick(float DeltaX, float DeltaY)
 
 void FGamePlayerController::OnRightMouseDrag(float DeltaX, float DeltaY)
 {
+	if (!CanProcessGameplayInput())
+	{
+		return;
+	}
+
 	RotateActiveCamera(DeltaX, DeltaY);
 }
 
@@ -688,6 +713,12 @@ void FGamePlayerController::OnKeyPressed(int VK)
 	if (InputMapping.IsActionKey(ActionToggleInputCapture(), VK) && !Camera && OnRequestToggleInputCapture)
 	{
 		OnRequestToggleInputCapture();
+		return;
+	}
+
+	if (!CanProcessGameplayInput())
+	{
+		return;
 	}
 
 	if (InputMapping.IsActionKey(ActionPickup(), VK))
@@ -731,6 +762,11 @@ void FGamePlayerController::OnKeyReleased(int VK)
 
 void FGamePlayerController::OnWheelScrolled(float Notch)
 {
+	if (!CanProcessGameplayInput())
+	{
+		return;
+	}
+
 	if (IsRuntimeWorld())
 	{
 		return;
@@ -754,6 +790,7 @@ void FGamePlayerController::SetWorld(UWorld* InWorld)
 	Player = nullptr;
 	Camera = nullptr;
 	CharacterMovement = nullptr;
+	Knockback = nullptr;
 	HoveredPickableActor = nullptr;
 	HoveredDecisionBoxActor = nullptr;
 	InitialRigidBodyRotations.clear();
@@ -772,6 +809,7 @@ void FGamePlayerController::SetPlayer(AActor* InPlayer)
 	StopCleaningLoopSound();
 	DestroyPhysicsHandle();
 	CharacterMovement = nullptr;
+	Knockback = nullptr;
 	Player = InPlayer;
 	RefreshPawnComponents();
 }
@@ -887,7 +925,7 @@ void FGamePlayerController::SetupDefaultInputMappings()
 
 void FGamePlayerController::ApplyInputAxes()
 {
-	if (!IsInputEnabled())
+	if (!CanProcessGameplayInput())
 	{
 		return;
 	}
@@ -949,7 +987,7 @@ void FGamePlayerController::ApplyInputAxes()
 
 bool FGamePlayerController::TryBeginCleaningUse()
 {
-	if (!IsInputEnabled())
+	if (!CanProcessGameplayInput())
 	{
 		UE_LOG("[CleaningTool] BeginUse blocked: input disabled.");
 		return false;
@@ -1113,7 +1151,7 @@ void FGamePlayerController::PlayNextSpongeCleaningSound()
 
 void FGamePlayerController::TogglePickup()
 {
-	if (!World || !IsInputEnabled())
+	if (!World || !CanProcessGameplayInput())
 	{
 		return;
 	}
@@ -1193,7 +1231,7 @@ void FGamePlayerController::TogglePickup()
 
 void FGamePlayerController::ThrowHeldObject()
 {
-	if (!World || !IsInputEnabled())
+	if (!World || !CanProcessGameplayInput())
 	{
 		return;
 	}
@@ -1310,7 +1348,7 @@ bool FGamePlayerController::TryPlaceHeldItemInHoveredDecisionBox()
 
 void FGamePlayerController::TryInspectHoveredItem()
 {
-    if (!World || !IsInputEnabled())
+    if (!World || !CanProcessGameplayInput())
     {
         return;
     }
@@ -1383,6 +1421,28 @@ UCharacterMovementComponent* FGamePlayerController::GetCharacterMovement()
 	return CharacterMovement;
 }
 
+bool FGamePlayerController::CanProcessGameplayInput() const
+{
+	return IsInputEnabled() && !IsPlayerControlLocked();
+}
+
+bool FGamePlayerController::IsPlayerControlLocked() const
+{
+	return Knockback != nullptr && Knockback->IsControlLocked();
+}
+
+void FGamePlayerController::ClearGameplayInputState()
+{
+	EndCleaningUse();
+
+	if (CharacterMovement != nullptr)
+	{
+		CharacterMovement->SetPendingInputVector(FVector::ZeroVector);
+		CharacterMovement->StopMovementImmediately();
+		CharacterMovement->SetSpeedMultiplier(1.0f);
+	}
+}
+
 void FGamePlayerController::DestroyPhysicsHandle()
 {
 	EndCleaningToolViewModel();
@@ -1402,6 +1462,7 @@ void FGamePlayerController::RefreshPawnComponents()
 	Camera = nullptr;
 	PhysicsHandle = nullptr;
 	CharacterMovement = nullptr;
+	Knockback = nullptr;
 	if (Player == nullptr)
 	{
 		return;
@@ -1428,7 +1489,12 @@ void FGamePlayerController::RefreshPawnComponents()
 			CharacterMovement = Cast<UCharacterMovementComponent>(Component);
 		}
 
-		if (Camera != nullptr && PhysicsHandle != nullptr && CharacterMovement != nullptr)
+		if (Knockback == nullptr)
+		{
+			Knockback = Cast<UKnockbackComponent>(Component);
+		}
+
+		if (Camera != nullptr && PhysicsHandle != nullptr && CharacterMovement != nullptr && Knockback != nullptr)
 		{
 			break;
 		}
@@ -1441,7 +1507,7 @@ void FGamePlayerController::UpdateHoveredPickableActor()
 	HoveredDecisionBoxActor = nullptr;
 	GameUISystem::Get().SetInteractionHint(EInteractionHintType::None);
 
-	if (World == nullptr || !IsInputEnabled())
+	if (World == nullptr || !CanProcessGameplayInput())
 	{
 		return;
 	}

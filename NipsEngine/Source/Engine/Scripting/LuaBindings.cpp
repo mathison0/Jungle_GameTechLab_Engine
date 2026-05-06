@@ -4,6 +4,8 @@
 #include "GameFramework/AActor.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/DecalComponent.h"
+#include "Component/PostProcessComponent.h"
+#include "Component/KnockbackComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
 #include "Engine/Camera/PlayerCameraManager.h"
@@ -63,6 +65,24 @@ namespace
 			if (URigidBodyComponent* Body = Cast<URigidBodyComponent>(Component))
 			{
 				return Body;
+			}
+		}
+
+		return nullptr;
+	}
+
+	UKnockbackComponent* FindFirstKnockback(AActor* Actor)
+	{
+		if (Actor == nullptr)
+		{
+			return nullptr;
+		}
+
+		for (UActorComponent* Component : Actor->GetComponents())
+		{
+			if (UKnockbackComponent* Knockback = Cast<UKnockbackComponent>(Component))
+			{
+				return Knockback;
 			}
 		}
 
@@ -419,6 +439,11 @@ void RegisterLuaBindings(sol::state& Lua)
 		return FLuaScriptSystem::Get().GetStringGameStateValue("Item:" + Actor->GetFName().ToString());
 	});
 
+	Lua.set_function("HasRigidBodyComponent", [](AActor* Actor)
+	{
+		return FindFirstRigidBody(Actor) != nullptr;
+	});
+
 	Lua.set_function("DropRegisteredItemFromActor", [](const std::string& ItemId, AActor* SourceActor, sol::optional<FVector> Offset)
 	{
 		if (ItemId.empty() || SourceActor == nullptr)
@@ -501,6 +526,37 @@ void RegisterLuaBindings(sol::state& Lua)
 		FTimeDilationSystem::Get().TriggerHitStop(Duration, Dilation.value_or(0.0f));
 	});
 
+	Lua.set_function("TriggerKnockback", [](AActor* Actor, const FVector& Direction, float Strength, float Duration)
+	{
+		if (UKnockbackComponent* Knockback = FindFirstKnockback(Actor))
+		{
+			Knockback->TriggerKnockback(Direction, Strength, Duration);
+			return true;
+		}
+
+		return false;
+	});
+
+	Lua.set_function("IsKnockbackActive", [](AActor* Actor)
+	{
+		if (UKnockbackComponent* Knockback = FindFirstKnockback(Actor))
+		{
+			return Knockback->IsKnockbackActive();
+		}
+
+		return false;
+	});
+
+	Lua.set_function("IsKnockbackControlLocked", [](AActor* Actor)
+	{
+		if (UKnockbackComponent* Knockback = FindFirstKnockback(Actor))
+		{
+			return Knockback->IsControlLocked();
+		}
+
+		return false;
+	});
+
 	Lua.set_function("StartSlomo", [](float TargetDilation, float HoldTime, sol::optional<float> BlendInTime, sol::optional<float> BlendOutTime)
 	{
 		FTimeDilationSystem::Get().StartSlomo(
@@ -530,8 +586,8 @@ void RegisterLuaBindings(sol::state& Lua)
 	Lua.set("KEY_ENTER",  0x0D);
 
 	// 마우스 입력
-    Lua.set("KEY_LEFT_MOUSE", 0x01);
-    Lua.set("KEY_RIGHT_MOUSE", 0x02);
+	Lua.set("KEY_LEFT_MOUSE", 0x01);
+	Lua.set("KEY_RIGHT_MOUSE", 0x02);
 
 	Lua.set_function("GetKeyDown", [](int VK)
 	{
@@ -566,27 +622,27 @@ void RegisterLuaBindings(sol::state& Lua)
 		},
 		"GetDecalComponent", [](FHitResult& Hit) -> UDecalComponent*
 		{
-        if (!Hit.bHit || !Hit.HitComponent) return nullptr;
+		if (!Hit.bHit || !Hit.HitComponent) return nullptr;
 
-        // 1. 직접 맞은 게 데칼이면 바로 반환
-        if (auto Decal = Cast<UDecalComponent>(Hit.HitComponent))
-            return Decal;
+		// 1. 직접 맞은 게 데칼이면 바로 반환
+		if (auto Decal = Cast<UDecalComponent>(Hit.HitComponent))
+			return Decal;
 
-        // 2. 맞은 컴포넌트의 액터를 가져옴
-        AActor* Owner = Hit.HitComponent->GetOwner();
-        if (!Owner) return nullptr;
+		// 2. 맞은 컴포넌트의 액터를 가져옴
+		AActor* Owner = Hit.HitComponent->GetOwner();
+		if (!Owner) return nullptr;
 
-        // 3. 액터가 가진 모든 컴포넌트를 순회하며 데칼을 찾음
-        // 엔진 내부의 컴포넌트 리스트 접근 방식(예: Owner->GetComponents())에 따라 수정하세요.
-        for (auto* Comp : Owner->GetComponents()) 
-        {
-            if (auto* DecalComp = Cast<UDecalComponent>(Comp))
-            {
-                return DecalComp;
-            }
-        }
+		// 3. 액터가 가진 모든 컴포넌트를 순회하며 데칼을 찾음
+		// 엔진 내부의 컴포넌트 리스트 접근 방식(예: Owner->GetComponents())에 따라 수정하세요.
+		for (auto* Comp : Owner->GetComponents()) 
+		{
+			if (auto* DecalComp = Cast<UDecalComponent>(Comp))
+			{
+				return DecalComp;
+			}
+		}
 
-        return nullptr;		}
+		return nullptr;		}
 	);
 
 	Lua.new_usertype<UDecalComponent>(
@@ -610,6 +666,35 @@ void RegisterLuaBindings(sol::state& Lua)
 			}
 		}
 	);
+
+	// PostProcess Component
+	Lua.new_usertype<UPostProcessComponent>(
+		"UPostProcessComponent",
+		"SetVignetteEnabled", &UPostProcessComponent::SetVignetteEnabled,
+		"IsVignetteEnabled", &UPostProcessComponent::IsEnableVignette,
+		"SetVignette", &UPostProcessComponent::SetVignette,
+		"SetVignetteIntensity", &UPostProcessComponent::SetVignetteIntensity,
+		"GetVignetteIntensity", &UPostProcessComponent::GetVignetteIntensity,
+		"SetVignetteRadius", &UPostProcessComponent::SetVignetteRadius,
+		"GetVignetteRadius", &UPostProcessComponent::GetVignetteRadius,
+		"SetVignetteSoftness", &UPostProcessComponent::SetVignetteSoftness,
+		"GetVignetteSoftness", &UPostProcessComponent::GetVignetteSoftness,
+		"SetGammaCorrectionEnabled", &UPostProcessComponent::SetGammaCorrectionEnabled,
+		"IsGammaCorrectionEnabled", &UPostProcessComponent::IsEnableGammaCorrection,
+		"SetGamma", &UPostProcessComponent::SetGamma,
+		"GetGamma", &UPostProcessComponent::GetGamma
+	);
+
+	Lua.set_function("GetPostProcessComponent", [](AActor* Actor) -> UPostProcessComponent*
+	{
+		if (!Actor) return nullptr;
+		for (UActorComponent* Comp : Actor->GetComponents())
+		{
+			if (UPostProcessComponent* PostProcess = Cast<UPostProcessComponent>(Comp))
+				return PostProcess;
+		}
+		return nullptr;
+	});
 
 	// -------------------------------------------------------
 	// SubUV Component (오염도 시각화용 색상 틴트)

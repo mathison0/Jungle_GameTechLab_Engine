@@ -103,7 +103,6 @@ bool FRenderPipeline::Initialize()
 
 	RenderPasses.push_back(FogRenderPass);
 	RenderPasses.push_back(FXAARenderPass); 
-	RenderPasses.push_back(PostProcessRenderPass);
 	RenderPasses.push_back(FontRenderPass);
 	RenderPasses.push_back(SubUVRenderPass);
 	RenderPasses.push_back(BillboardRenderPass);
@@ -112,6 +111,7 @@ bool FRenderPipeline::Initialize()
 	RenderPasses.push_back(GridRenderPass);
 	RenderPasses.push_back(EditorRenderPass);
 	RenderPasses.push_back(DepthLessRenderPass);
+	RenderPasses.push_back(PostProcessRenderPass);
 	RenderPasses.push_back(PostProcessOutlineRenderPass);
 
 	return true;
