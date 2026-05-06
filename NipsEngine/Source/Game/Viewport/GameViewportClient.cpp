@@ -68,6 +68,7 @@ void FGameViewportClient::Initialize(FWindowsWindow* InWindow)
 	FreeCamera.SetLocation(FVector(-5.0f, -5.0f, 3.0f));
 	FreeCamera.SetLookAt(FVector::ZeroVector);
 	PlayerCameraManager.SetFallbackCamera(&FreeCamera);
+	PlayerCameraManager.InitializeDefaultModifiers();
 	PlayerController.SetFreeCamera(&FreeCamera);
 	PlayerController.SetWorld(World);
 	PlayerController.SetToggleInputCaptureCallback([this]() { ToggleInteractionMode(); });

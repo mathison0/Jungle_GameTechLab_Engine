@@ -1,7 +1,7 @@
 ﻿#include "Engine/Camera/PlayerCameraManager.h"
 
 #include "Component/CameraComponent.h"
-#include "Engine/Camera/CameraModifier.h"
+#include "Engine/Camera/Modifier/LetterBoxCameraModifier.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
 #include "Engine/Math/Utils.h"
@@ -181,6 +181,20 @@ void APlayerCameraManager::BuildSceneView(FSceneView& OutView, const FViewportRe
 	FillSceneView(OutView, ViewInfo, ViewRect, ViewMode);
 }
 
+void APlayerCameraManager::InitializeDefaultModifiers()
+{
+	if (LetterBoxCameraModifier == nullptr)
+	{
+		LetterBoxCameraModifier = AddNewCameraModifier<ULetterBoxCameraModifier>();
+	}
+}
+
+ULetterBoxCameraModifier* APlayerCameraManager::GetLetterBoxCameraModifier()
+{
+	InitializeDefaultModifiers();
+	return LetterBoxCameraModifier;
+}
+
 void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 {
 	if (Modifier == nullptr)
@@ -249,6 +263,30 @@ void APlayerCameraManager::SetManualCameraFade(const FColor& Color, float Alpha)
 void APlayerCameraManager::StopCameraFade()
 {
 	FadeState = FCameraFadeState();
+}
+
+void APlayerCameraManager::StartLetterBox(float TargetRatio, float Duration)
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->StartLetterBox(TargetRatio, Duration);
+	}
+}
+
+void APlayerCameraManager::SetLetterBox(float Ratio)
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->SetLetterBox(Ratio);
+	}
+}
+
+void APlayerCameraManager::ClearLetterBox()
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->ClearLetterBox();
+	}
 }
 
 // 카메라 Linear 보간 이동
