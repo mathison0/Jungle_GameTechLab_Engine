@@ -100,6 +100,7 @@ public:
 	void UpdateCamera(float DeltaTime);
 	void BuildSceneView(FSceneView& OutView, const FViewportRect& ViewRect, EViewMode ViewMode) const;
 	void InitializeDefaultModifiers();
+	void Shutdown();
 
 	const FCameraViewInfo& GetCameraView() const { return CachedCameraView; }
 	const FPostProcessSettings& GetPostProcessSettings() const { return CachedPostProcessSettings; }
@@ -148,7 +149,8 @@ private:
 private:
 	UCameraComponent* ViewTarget = nullptr;
 	FViewportCamera* FallbackCamera = nullptr;
-	TArray<UCameraModifier*> CameraModifiers;
+	TArray<UCameraModifier*> ModifierList;
+	TArray<UCameraModifier*> OwnedModifierList;
 	ULetterBoxCameraModifier* LetterBoxCameraModifier = nullptr;
 	
 	bool bHasCachedCameraView = false;
@@ -167,5 +169,6 @@ TModifier* APlayerCameraManager::AddNewCameraModifier()
 
 	TModifier* Modifier = UObjectManager::Get().CreateObject<TModifier>();
 	AddCameraModifier(Modifier);
+	OwnedModifierList.push_back(Modifier);
 	return Modifier;
 }

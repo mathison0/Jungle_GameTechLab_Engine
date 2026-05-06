@@ -189,6 +189,27 @@ void APlayerCameraManager::InitializeDefaultModifiers()
 	}
 }
 
+void APlayerCameraManager::Shutdown()
+{
+	ClearCameraModifiers();
+
+	for (UCameraModifier* Modifier : OwnedModifierList)
+	{
+		UObjectManager::Get().DestroyObject(Modifier);
+	}
+	OwnedModifierList.clear();
+
+	LetterBoxCameraModifier = nullptr;
+	ViewTarget = nullptr;
+	FallbackCamera = nullptr;
+	bHasCachedCameraView = false;
+	CachedCameraView = FCameraViewInfo();
+	CachedPostProcessSettings = FPostProcessSettings();
+	CachedCameraOverlaySettings = FCameraOverlaySettings();
+	Transition = FCameraTransitionState();
+	FadeState = FCameraFadeState();
+}
+
 ULetterBoxCameraModifier* APlayerCameraManager::GetLetterBoxCameraModifier()
 {
 	InitializeDefaultModifiers();
@@ -202,13 +223,13 @@ void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 		return;
 	}
 
-	if (std::find(CameraModifiers.begin(), CameraModifiers.end(), Modifier) != CameraModifiers.end())
+	if (std::find(ModifierList.begin(), ModifierList.end(), Modifier) != ModifierList.end())
 	{
 		return;
 	}
 
-	CameraModifiers.push_back(Modifier);
-	std::sort(CameraModifiers.begin(), CameraModifiers.end(), [](const UCameraModifier* A, const UCameraModifier* B)
+	ModifierList.push_back(Modifier);
+	std::sort(ModifierList.begin(), ModifierList.end(), [](const UCameraModifier* A, const UCameraModifier* B)
 			  {
 		const int32 APriority = A ? A->GetPriority() : 0;
 		const int32 BPriority = B ? B->GetPriority() : 0;
@@ -217,12 +238,12 @@ void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 
 void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 {
-	CameraModifiers.erase(std::remove(CameraModifiers.begin(), CameraModifiers.end(), Modifier), CameraModifiers.end());
+	ModifierList.erase(std::remove(ModifierList.begin(), ModifierList.end(), Modifier), ModifierList.end());
 }
 
 void APlayerCameraManager::ClearCameraModifiers()
 {
-	CameraModifiers.clear();
+	ModifierList.clear();
 }
 
 void APlayerCameraManager::StartCameraFade(const FColor& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished)
@@ -454,7 +475,7 @@ void APlayerCameraManager::ApplyCameraFade(FCameraOverlaySettings& InOutOverlay)
 
 void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled())
 		{
@@ -467,7 +488,7 @@ void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo
 
 void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled())
 		{
@@ -480,7 +501,7 @@ void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProce
 
 void APlayerCameraManager::ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled()) continue;
 		Modifier->ModifyOverlay(DeltaTime, InOutOverlay);

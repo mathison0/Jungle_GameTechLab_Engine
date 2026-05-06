@@ -52,6 +52,7 @@ class FEditorViewportClient : public FViewportClient
 {
 public:
 	void Initialize(FWindowsWindow* InWindow, UEditorEngine* InEditor);
+	void ShutdownPlayerCameraManager();
 	UWorld* GetFocusedWorld() const { return World; }
 	void SetWorld(UWorld* InWorld);
 	void StartPIE(UWorld* InWorld);
