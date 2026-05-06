@@ -184,6 +184,9 @@
     <Filter Include="Source\Engine\Render\Execute\Runner">
       <UniqueIdentifier>{a90199fb-a259-6172-2b9d-3ec3a7875884}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Render\PostProcess">
+      <UniqueIdentifier>{a18f0b20-4b14-40c3-8e01-0acdc40c9f19}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Render\RHI">
       <UniqueIdentifier>{35a0c432-b779-9958-31dd-bdd9c905ad73}</UniqueIdentifier>
     </Filter>
@@ -1021,6 +1024,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Runner\RenderPipelineRunner.cpp">
       <Filter>Source\Engine\Render\Execute\Runner</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\PostProcess\FadeController.cpp">
+      <Filter>Source\Engine\Render\PostProcess</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Resources\FrameResources.cpp">
       <Filter>Source\Engine\Render\Resources</Filter>
@@ -2072,6 +2078,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Runner\RenderPipelineRunner.h">
       <Filter>Source\Engine\Render\Execute\Runner</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\PostProcess\FadeController.h">
+      <Filter>Source\Engine\Render\PostProcess</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resources\FrameResources.h">
       <Filter>Source\Engine\Render\Resources</Filter>
