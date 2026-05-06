@@ -48,7 +48,7 @@ struct FShowFlags
 
 	//Post Process Setting으로 떼는 것이..?
     bool  bFog                       = true;
-    bool  bFXAA                      = false;
+    bool  bFXAA                      = true;
     bool  bLightHitMap               = false;
     bool  b25DCulling                = true; // false는 tile_based_culling
 };
