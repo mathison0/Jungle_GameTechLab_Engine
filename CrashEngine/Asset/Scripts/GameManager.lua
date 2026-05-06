@@ -137,6 +137,10 @@ local function resetRunState()
         GameManager.ExpBarUI:SetLevelUpMode(false)
     end
 
+    if GameManager.PlayerScript ~= nil and type(GameManager.PlayerScript.ResetRuntimeAddedComponents) == "function" then
+        GameManager.PlayerScript.ResetRuntimeAddedComponents()
+    end
+
     if GameManager.PlayerScript ~= nil then
         GameManager.WeaponInventory = WeaponInventory.New(GameManager.PlayerScript)
         GameManager.LevelSystem = LevelSystem.New(GameManager.PlayerScript, GameManager.WeaponInventory)
@@ -316,6 +320,8 @@ function GameManager.OnGameStart()
 
     if GameManager.WeaponInventory then
         GameManager.WeaponInventory:AddWeapon("MainCannon")
+        GameManager.WeaponInventory:AddWeapon("MachineTurret")
+
     end
     Log("[GameManager] --- GAME START ---")
 end
