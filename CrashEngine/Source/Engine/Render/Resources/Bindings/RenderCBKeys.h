@@ -10,8 +10,5 @@ constexpr uint32 Outline    = 3;
 constexpr uint32 SceneDepth = 4;
 constexpr uint32 FXAA       = 5;
 constexpr uint32 Light      = 6;
-constexpr uint32 Vignetting = 7;
-constexpr uint32 GammaCorrection = 8;
-constexpr uint32 Letterbox  = 9;
-constexpr uint32 Fade       = 10;
+constexpr uint32 FinalPostProcessComposite = 7;
 } // namespace ERenderCBKey

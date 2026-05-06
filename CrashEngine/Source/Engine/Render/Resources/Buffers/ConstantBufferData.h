@@ -101,38 +101,31 @@ struct FFogCBData
     float    _pad[2];           // 8B
 }; // Total: 48B
 
-struct FVignettingCBData
+struct FFinalPostProcessCompositeCBData
 {
-    float Intensity;
-    float Radius;
-    float Softness;
-    float _pad;
+    float bVignettingEnabled = 0.0f; // 4B
+    float VignetteIntensity  = 0.4f; // 4B
+    float VignetteRadius     = 0.5f; // 4B
+    float VignetteSoftness   = 0.5f; // 4B
 
-	FVector Color;
-    float   bEnabled; 
-};
+    FVector VignetteColor            = FVector(0.0f, 0.0f, 0.0f); // 12B
+    float   bGammaCorrectionEnabled  = 0.0f; // 4B
 
-struct FGammaCorrectionCBData
-{
-    float DisplayGamma = 2.2f;
-    float _pad[3]      = {};
-}; // Total: 16B
+    float DisplayGamma       = 2.2f; // 4B
+    float bFadeEnabled       = 0.0f; // 4B
+    float FadeAlpha          = 0.0f; // 4B
+    float bLetterboxEnabled  = 0.0f; // 4B
 
-struct FLetterboxCBData
-{
-    float   TargetAspectRatio  = 2.39f; // 4B
-    float   ViewportAspectRatio = 1.0f; // 4B
-    float   Opacity             = 1.0f; // 4B
-    float   _pad0               = 0.0f; // 4B
-    FVector Color               = FVector(0.0f, 0.0f, 0.0f); // 12B
-    float   _pad1               = 0.0f; // 4B
-}; // Total: 32B
+    FVector FadeColor         = FVector(0.0f, 0.0f, 0.0f); // 12B
+    float   TargetAspectRatio = 2.39f; // 4B
 
-struct FFadeCBData
-{
-    FVector Color = FVector(0.0f, 0.0f, 0.0f); // 12B
-    float   Alpha = 0.0f; // 4B
-}; // Total: 16B
+    float ViewportAspectRatio = 1.0f; // 4B
+    float LetterboxOpacity    = 1.0f; // 4B
+    float _pad0[2]            = {}; // 8B
+
+    FVector LetterboxColor = FVector(0.0f, 0.0f, 0.0f); // 12B
+    float   _pad1          = 0.0f; // 4B
+}; // Total: 96B
 
 // FFXAACBData는 렌더 처리에 필요한 데이터를 묶는 구조체입니다.
 struct FFXAACBData
