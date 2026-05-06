@@ -207,6 +207,15 @@
 		<div id="ending-visual-frame">
 			<img id="ending-visual-image" src="Asset/Texture/TitleBackground.png" />
 		</div>
+		<div id="ending-black-fade"></div>
+		<div id="ending-credits">
+			<div id="ending-credit-title">Developers</div>
+			<div id="ending-credit-separator"></div>
+			<div class="ending-credit-row"><span class="ending-credit-name">Yoonji Nam</span><span class="ending-credit-role">Lead Developer</span></div>
+			<div class="ending-credit-row"><span class="ending-credit-name">Hyeongil Jeon</span><span class="ending-credit-role">First Developer</span></div>
+			<div class="ending-credit-row"><span class="ending-credit-name">Seyoung Park</span><span class="ending-credit-role">Master Developer</span></div>
+			<div class="ending-credit-row"><span class="ending-credit-name">Kihoon Kim</span><span class="ending-credit-role">Best Developer</span></div>
+		</div>
 		<div id="the-end">THE END</div>
 		<div id="ending-score-panel">
 			<div id="ending-score-separator"></div>
