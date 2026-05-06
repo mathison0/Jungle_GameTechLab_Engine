@@ -211,7 +211,7 @@ void APlayerCameraManager::ClearCameraModifiers()
 	CameraModifiers.clear();
 }
 
-void APlayerCameraManager::StartCameraFade(const FColor& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished)
+void APlayerCameraManager::StartCameraFade(const FVector& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished)
 {
 	FadeState.bActive = true;
 	FadeState.bHoldWhenFinished = bHoldWhenFinished;
@@ -234,7 +234,7 @@ void APlayerCameraManager::StartCameraFade(const FColor& Color, float FromAlpha,
 	}
 }
 
-void APlayerCameraManager::SetManualCameraFade(const FColor& Color, float Alpha)
+void APlayerCameraManager::SetManualCameraFade(const FVector& Color, float Alpha)
 {
 	FadeState.bActive = false;
 	FadeState.bHoldWhenFinished = true;
@@ -410,8 +410,7 @@ void APlayerCameraManager::UpdateCameraFade(float DeltaTime)
 
 void APlayerCameraManager::ApplyCameraFade(FCameraOverlaySettings& InOutOverlay) const
 {
-	InOutOverlay.FadeColor = FadeState.Color;
-	InOutOverlay.FadeAlpha = MathUtil::Clamp(FadeState.CurrentAlpha, 0.0f, 1.0f);
+	InOutOverlay.FadeColor = FVector4(FadeState.Color, MathUtil::Clamp(FadeState.CurrentAlpha, 0.0f, 1.0f));
 }
 
 void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView)

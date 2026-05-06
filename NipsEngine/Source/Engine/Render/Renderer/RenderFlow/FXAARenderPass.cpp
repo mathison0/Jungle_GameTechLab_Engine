@@ -1,4 +1,4 @@
-#include "FXAARenderPass.h"
+﻿#include "FXAARenderPass.h"
 #include "Core/ResourceManager.h"
 #include "Render/Scene/RenderBus.h"
 

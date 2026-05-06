@@ -16,32 +16,3 @@ FDefaultRenderPipeline::~FDefaultRenderPipeline()
 {
 	Collector.Release();
 }
-
-void FDefaultRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
-{
-	Bus.Clear();
-
-	UWorld* World = Engine->GetWorld();
-	FViewportCamera* Camera = World ? World->GetActiveCamera() : nullptr;
-	if (Camera)
-	{
-		FShowFlags ShowFlags;
-		EViewMode ViewMode = EViewMode::Lit;
-
-		FSceneView SceneView;
-		Camera->BuildSceneView(SceneView, ViewMode);
-		Bus.SetSceneView(SceneView);
-		Bus.SetRenderSettings(ViewMode, ShowFlags);
-		Bus.SetFXAAEnabled(true);
-		Renderer.GetEditorLineBatcher().Clear();
-		Collector.SetLineBatcher(&Renderer.GetEditorLineBatcher());
-
-		const FFrustum& ViewFrustum = Camera->GetFrustum();
-		Collector.CollectWorld(World, ShowFlags, ViewMode, Bus, &ViewFrustum);
-	}
-
-	Renderer.PrepareBatchers(Bus);
-	Renderer.BeginFrame();
-	Renderer.Render(Bus);
-	Renderer.EndFrame();
-}

@@ -38,9 +38,8 @@ struct FPostProcessSettings
 // 최종적인 스크린 오버레이 세팅값을 RenderBus에 전달하기 위한 구조체
 struct FCameraOverlaySettings
 {
-	FColor FadeColor = FColor::Black();
-	float FadeAlpha = 0.0f;
-	float LetterboxRatio = 0.0f;
+	FVector4 FadeColor = FVector4(0.0f, 0.0f, 0.0f, 0.0f);
+	float LetterBoxRatio = 0.0f;
 };
 
 inline bool ResolveDebugDrawVisibility(int32 Visibility, bool bGlobalEnabled)

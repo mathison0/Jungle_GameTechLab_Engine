@@ -55,7 +55,7 @@ struct FCameraFadeState
 	bool bActive = false;
 	bool bHoldWhenFinished = false;
 
-	FColor Color = FColor::Black();
+	FVector Color = FVector(0.0f, 0.0f, 0.0f);
 	float FromAlpha = 0.0f;
 	float ToAlpha = 0.0f;
 	float CurrentAlpha = 0.0f;
@@ -84,8 +84,8 @@ public:
 	const FCameraOverlaySettings& GetOverlaySettings() const { return CachedCameraOverlaySettings; }
 
 	// Fade
-	void StartCameraFade(const FColor& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished = false);
-	void SetManualCameraFade(const FColor& Color, float Alpha);
+	void StartCameraFade(const FVector& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished = false);
+	void SetManualCameraFade(const FVector& Color, float Alpha);
 	void StopCameraFade();
 	bool IsCameraFading() const { return FadeState.bActive; }
 

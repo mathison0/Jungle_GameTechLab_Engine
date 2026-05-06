@@ -1,6 +1,9 @@
 #include "../Common.hlsl"
 
-cbuffer PostProcessBuffer : register(b0)
+Texture2D FinalSceneColor : register(t0);
+SamplerState SampleState : register(s0);
+
+cbuffer PostProcessBuffer : register(b10)
 {
     float4 FadeColor;
     
@@ -11,7 +14,7 @@ cbuffer PostProcessBuffer : register(b0)
     
     float Gamma;
     float LetterBoxRatio;
-    float2 Padding4;
+    float2 InvResolution;
 };
 
 struct VSOutput
@@ -37,5 +40,21 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
 
 float4 mainPS(VSOutput input) : SV_TARGET
 {
-    return input;
+    int2 ip = int2(input.ClipPos.xy);
+    float4 color = FinalSceneColor.Load(int3(ip, 0));
+    float2 uv = (float2(ip) + 0.5f) * InvResolution;
+    
+    // Letterbox
+    float ratio = saturate(LetterBoxRatio);
+    if (uv.y < ratio || uv.y > 1.0f - ratio)
+    {
+        color.rgb = float3(0.0f, 0.0f, 0.0f);
+    }
+
+    // Fade In/Out
+    float fadeAlpha = saturate(FadeColor.a);
+    color.rgb = lerp(color.rgb, FadeColor.rgb, fadeAlpha);
+    color.a = 1.0f;
+
+    return color;
 }

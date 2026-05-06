@@ -176,23 +176,6 @@ struct FFXAAConstants
 	float  Padding;
 };
 
-struct alignas(16) FPostProcessConstants
-{
-	// Fade (rgba)
-	FVector4 FadeColor;
-
-	// Vignette
-	float VignetteIntensity;
-	float VignetteRadius;
-	float VignetteSoftness;
-	float Padding0;
-
-	// Gamma, LetterBox
-	float Gamma;
-	float LetterBoxRatio;
-	FVector2 Padding1;
-};
-
 struct FSkyConstants
 {
 	FMatrix InvView = FMatrix::Identity;
@@ -312,7 +295,6 @@ struct FRenderCommand
 		FSkyConstants Sky;
 		FFogConstants Fog;
 		FFXAAConstants FXAA;
-		FPostProcessConstants PostProcess;
 	} Constants;
 
 	ERenderCommandType Type = ERenderCommandType::Primitive;
