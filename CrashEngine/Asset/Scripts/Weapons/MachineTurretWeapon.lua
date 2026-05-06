@@ -9,6 +9,9 @@ MachineTurretWeapon.__index = MachineTurretWeapon
 local DEFAULT_AIM_TURN_SPEED = 360.0
 local DEFAULT_HOVER_AMPLITUDE = 0.25
 local DEFAULT_HOVER_SPEED = 2.0
+local DEFAULT_ORBIT_RADIUS = 2.0
+local DEFAULT_ORBIT_SPEED = 2.0
+local TWO_PI = math.pi * 2.0
 
 local function GetVecAxis(v, axisName, axisIndex)
     if v == nil then
@@ -266,6 +269,15 @@ function MachineTurretWeapon:CreateTurretSlot(index)
     end
 
     local baseLocation = visual:GetRelativeLocation()
+    local baseX = GetVecAxis(baseLocation, "x", 1) or 0.0
+    local baseY = GetVecAxis(baseLocation, "y", 2) or 0.0
+    local orbitRadius = math.sqrt(baseX * baseX + baseY * baseY)
+    local orbitAngle = Atan2(baseY, baseX)
+
+    if orbitRadius <= 0.0001 then
+        orbitRadius = self.Data.OrbitRadius or DEFAULT_ORBIT_RADIUS
+        orbitAngle = (index / math.max(self.Data.TurretCount or 1, 1)) * TWO_PI
+    end
 
     return {
         Index = index,
@@ -273,6 +285,8 @@ function MachineTurretWeapon:CreateTurretSlot(index)
         Visual = visual,
         Muzzle = muzzle,
         BaseRelativeLocation = baseLocation,
+        OrbitRadius = orbitRadius,
+        OrbitAngle = orbitAngle,
 
         Target = nil,
         IsRunning = true,
@@ -392,9 +406,11 @@ function MachineTurretWeapon:TurretFireLoop(slot)
 end
 
 function MachineTurretWeapon:TurretHoverLoop(slot)
-    local elapsed = (slot.Index or 0) * 0.35
+    local elapsed = 0.0
+    local hoverPhase = (slot.Index or 0) * 0.35
     local amplitude = self.Data.HoverAmplitude or DEFAULT_HOVER_AMPLITUDE
-    local speed = self.Data.HoverSpeed or DEFAULT_HOVER_SPEED
+    local hoverSpeed = self.Data.HoverSpeed or DEFAULT_HOVER_SPEED
+    local orbitSpeed = self.Data.OrbitSpeed or DEFAULT_ORBIT_SPEED
 
     while self.IsRunning and slot.IsRunning do
         local deltaTime, paused = GameplayPause.WaitNextFrame()
@@ -405,21 +421,26 @@ function MachineTurretWeapon:TurretHoverLoop(slot)
                 slot.BaseRelativeLocation = slot.Visual:GetRelativeLocation()
             end
 
-            local location = {
-                x = GetVecAxis(slot.BaseRelativeLocation, "x", 1) or 0.0,
-                y = GetVecAxis(slot.BaseRelativeLocation, "y", 2) or 0.0,
-                z = GetVecAxis(slot.BaseRelativeLocation, "z", 3) or 0.0,
-            }
+            local ownerActor = nil
+            if self.Owner ~= nil and self.Owner.GetActor ~= nil then
+                ownerActor = self.Owner.GetActor()
+            end
 
-            SetVecAxis(
-                location,
-                "z",
-                3,
-                (GetVecAxis(slot.BaseRelativeLocation, "z", 3) or 0.0) +
-                    math.sin(elapsed * speed) * amplitude
-            )
+            if ownerActor ~= nil and ownerActor:IsValid() then
+                local ownerLocation = ownerActor:GetLocation()
+                local radius = slot.OrbitRadius or self.Data.OrbitRadius or DEFAULT_ORBIT_RADIUS
+                local angle = (slot.OrbitAngle or 0.0) + elapsed * orbitSpeed
+                local zOffset = (GetVecAxis(slot.BaseRelativeLocation, "z", 3) or 0.0) +
+                    math.sin((elapsed + hoverPhase) * hoverSpeed) * amplitude
 
-            slot.Visual:SetRelativeLocation(location)
+                local location = {
+                    x = (GetVecAxis(ownerLocation, "x", 1) or 0.0) + math.cos(angle) * radius,
+                    y = (GetVecAxis(ownerLocation, "y", 2) or 0.0) + math.sin(angle) * radius,
+                    z = (GetVecAxis(ownerLocation, "z", 3) or 0.0) + zOffset,
+                }
+
+                slot.Visual:SetWorldLocation(location)
+            end
         end
     end
 
