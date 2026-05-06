@@ -50,4 +50,5 @@ private:
     bool bApplyGravityDuringKnockback = true;
     bool bUseDurationFalloff = true;
     bool bUseRigidBodyImpulse = true;
+    bool bControlLockOnly = false;
 };
