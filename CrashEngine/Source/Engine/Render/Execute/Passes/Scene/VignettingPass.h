@@ -11,5 +11,6 @@ public:
         (void)Proxy;
     }
     void SubmitDrawCommands(FRenderPipelineContext& Context) override;
+    bool BindVignettingConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command);
 };
  

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreTypes.h"
 #include "Math/Matrix.h"
@@ -100,6 +100,17 @@ struct FFogCBData
     float    MaxOpacity;        // 4B
     float    _pad[2];           // 8B
 }; // Total: 48B
+
+struct FVignettingCBData
+{
+    float Intensity;
+    float Radius;
+    float Softness;
+    float _pad;
+
+	FVector Color;
+    float   bEnabled; 
+};
 
 // FFXAACBData는 렌더 처리에 필요한 데이터를 묶는 구조체입니다.
 struct FFXAACBData

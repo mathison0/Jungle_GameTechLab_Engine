@@ -6,7 +6,8 @@
 #include "Render/Scene/Proxies/Primitive/PrimitiveProxy.h"
 #include "Render/Execute/Context/Viewport/ViewportRenderTargets.h"
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
-
+#include "Render/Resources/Buffers/ConstantBufferCache.h"
+#include "Render/Resources/Bindings/RenderCBKeys.h"
 
 void FVignettingPass::PrepareInputs(FRenderPipelineContext& Context)
 {
@@ -32,7 +33,14 @@ void FVignettingPass::BuildDrawCommands(FRenderPipelineContext& Context)
         return;
     }
 
+    TArray<FDrawCommand>& Commands           = Context.DrawCommandList->GetCommands();
+    const size_t          CommandCountBefore = Commands.size();
+
     DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass::PostProcess, Context, *Context.DrawCommandList, EViewModePostProcessVariant::Vignetting);
+    if (Commands.size() > CommandCountBefore)
+    {
+        BindVignettingConstantBuffer(Context, Commands.back());
+    }
 }
 
 void FVignettingPass::SubmitDrawCommands(FRenderPipelineContext& Context)
@@ -54,4 +62,31 @@ void FVignettingPass::SubmitDrawCommands(FRenderPipelineContext& Context)
             Context.DrawCommandList->SubmitRange(i, i + 1, *Context.Device, Context.Context, *Context.StateCache);
         }
     }
+}
+
+bool FVignettingPass::BindVignettingConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command)
+{
+    if (!Context.SceneView || !Context.Context)
+    {
+        return false;
+    }
+
+    const FVignettingSettings& Settings = Context.SceneView->PostProcessSettings.Vignetting;
+
+    FVignettingCBData Constants = {};
+    Constants.Intensity         = Settings.Intensity;
+    Constants.Color             = Settings.Color;
+    Constants.Radius            = Settings.Radius;
+    Constants.bEnabled          = static_cast<float>(Settings.bEnabled);
+    Constants.Softness          = Settings.Softness;
+
+    FConstantBuffer* CB = FConstantBufferCache::Get().GetBuffer(ERenderCBKey::Vignetting, sizeof(FVignettingCBData));
+    if (!CB)
+    {
+        return false;
+    }
+
+    CB->Update(Context.Context, &Constants, sizeof(Constants));
+    Command.PerShaderCB[0] = CB;
+    return true;
 }
