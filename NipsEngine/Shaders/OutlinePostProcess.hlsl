@@ -31,26 +31,36 @@ VSOutput VS(uint vertexId : SV_VertexID)
     return output;
 }
 
+float LoadMaskInViewport(int2 pixelCoord, int2 viewportSize)
+{
+    if (pixelCoord.x < 0 || pixelCoord.y < 0 ||
+        pixelCoord.x >= viewportSize.x || pixelCoord.y >= viewportSize.y)
+    {
+        return 0.0f;
+    }
+
+    return SelectionMaskTexture.Load(int3(pixelCoord, 0));
+}
+
 float4 PS(VSOutput input) : SV_TARGET
 {
     const int2 viewportSize = int2(max(OutlineViewportSize, float2(1.0f, 1.0f)));
-    const int2 viewportOrigin = int2(OutlineViewportOrigin);
-    const int2 pixelCoordAbs = int2(input.position.xy);
-    const int2 pixelCoordLocal = pixelCoordAbs - viewportOrigin;
+    const int2 pixelCoord = int2(input.position.xy);
 
-	//	Subviewport local 범위 내 clamp 후, 다시 absolute 좌표로 환산
-    const int2 clampedLocal = clamp(pixelCoordLocal, int2(0, 0), viewportSize - 1);
-    const int2 clampedAbs = clampedLocal + viewportOrigin;
+    if (pixelCoord.x < 0 || pixelCoord.y < 0 || pixelCoord.x >= viewportSize.x || pixelCoord.y >= viewportSize.y)
+    {
+        discard;
+    }
 
-    const float centerMask = SelectionMaskTexture.Load(int3(clampedAbs, 0));
-	
+    const float centerMask = LoadMaskInViewport(pixelCoord, viewportSize);
+    
     //	만일 0.5f 이상이라는 것은 Mask 자체라는 것
     if (centerMask > 0.5f)
     {
         discard;
     }
 
-	//	OutlineThicknessPixel이 integer로 사용될 수 있도록 round 및 최소 1 보장 (몇 픽셀까지 검사할 것인지)
+    //	OutlineThicknessPixel이 integer로 사용될 수 있도록 round 및 최소 1 보장 (몇 픽셀까지 검사할 것인지)
     const int radius = max((int)round(OutlineThicknessPixels), 1);
     
     const int2 neighborOffsets[8] =
@@ -59,7 +69,7 @@ float4 PS(VSOutput input) : SV_TARGET
         int2(-1, -1), int2(-1, 1), int2(1, -1), int2(1, 1)
     };
 
-	//	거리 측정 (Mask로부터 떨어진 거리)
+    //	거리 측정 (Mask로부터 떨어진 거리)
     float minDist = radius + 1;
 
     for (int r = 1; r <= radius; ++r)
@@ -67,13 +77,12 @@ float4 PS(VSOutput input) : SV_TARGET
         [unroll]
         for (int i = 0; i < 8; ++i)
         {
-            const int2 sampleLocal = clamp(clampedLocal + neighborOffsets[i] * r, int2(0, 0), viewportSize - 1);
-            const int2 sampleAbs = sampleLocal + viewportOrigin;
-            float mask = SelectionMaskTexture.Load(int3(sampleAbs, 0));
+            const int2 sampleCoord = pixelCoord + neighborOffsets[i] * r;
+            float mask = LoadMaskInViewport(sampleCoord, viewportSize);
     
-			//	선택된 픽셀인지 0, 1로 check
+            //	선택된 픽셀인지 0, 1로 check
             float hit = step(0.5f, mask);
-			//	lerp(a, b, t) = a * (1 - t) + b * t (분기를 제거하기 위해 lerp 사용)
+            //	lerp(a, b, t) = a * (1 - t) + b * t (분기를 제거하기 위해 lerp 사용)
             float dist = lerp(9999.0f, (float)r, hit);
             minDist = min(minDist, dist);
         }
@@ -89,5 +98,5 @@ float4 PS(VSOutput input) : SV_TARGET
     }
 
     discard;
-	return float4(0.0f, 0.0f, 0.0f, 1.0f);
+    return float4(0.0f, 0.0f, 0.0f, 1.0f);
 }

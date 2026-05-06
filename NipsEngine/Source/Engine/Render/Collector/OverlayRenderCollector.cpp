@@ -262,7 +262,7 @@ void FOverlayRenderCollector::CollectSelection(
 		Material->SetVector4("OutlineColor", FVector4(1.0f, 0.5f, 0.0f, 1.0f));
 		Material->SetFloat("OutlineThicknessPixels", 5.0f);
 		Material->SetVector2("OutlineViewportSize", RenderBus.GetViewportSize());
-		Material->SetVector2("OutlineViewportOrigin", RenderBus.GetViewportOrigin());
+		Material->SetVector2("OutlineViewportOrigin", FVector2(0.0f, 0.0f)); // TODO: 나중에 그냥 OutlineViewportOrigin 제거해야 합니다.
 		Material->DepthStencilType = EDepthStencilType::Default;
 		Material->RasterizerType = ERasterizerType::SolidBackCull;
 		Material->BlendType = EBlendType::AlphaBlend;
@@ -377,7 +377,7 @@ void FOverlayRenderCollector::CollectOutline(
 	PostProcessCmd.Material->SetVector4("OutlineColor", OutlineColor);
 	PostProcessCmd.Material->SetFloat("OutlineThicknessPixels", std::max(1.0f, OutlineThicknessPixels));
 	PostProcessCmd.Material->SetVector2("OutlineViewportSize", RenderBus.GetViewportSize());
-	PostProcessCmd.Material->SetVector2("OutlineViewportOrigin", RenderBus.GetViewportOrigin());
+	PostProcessCmd.Material->SetVector2("OutlineViewportOrigin", FVector2(0.0f, 0.0f)); // TODO: 나중에 그냥 OutlineViewportOrigin 제거해야 합니다.
 
 	if (UMaterial* Material = Cast<UMaterial>(PostProcessCmd.Material))
 	{
