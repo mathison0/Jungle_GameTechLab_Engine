@@ -129,6 +129,7 @@ void FActorTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType)
 {
     if (Target)
     {
+        DeltaTime *= Target->CustomTimeDilation;
         Target->TickActor(DeltaTime, TickType, *this);
     }
 }
@@ -142,6 +143,7 @@ void FActorComponentTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickTy
 {
     if (Target)
     {
+        DeltaTime *= Target->Owner->CustomTimeDilation;
         Target->TickComponent(DeltaTime, TickType, *this);
     }
 }
