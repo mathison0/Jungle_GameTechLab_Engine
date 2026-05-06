@@ -11,7 +11,8 @@ public:
 
 	bool ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView) override;
 
-	float BezierCP[4] = { 0.25f, 0.1f, 0.75f, 0.9f }; // {CP1.x, CP1.y, CP2.x, CP2.y}
+	// [0]=CP1x [1]=CP1y [2]=CP2x [3]=CP2y [4]=P0y(시작) [5]=P3y(끝)
+	float BezierCP[6] = { 0.25f, 0.1f, 0.75f, 0.9f, 1.0f, 0.0f };
 
 	float GetAmplitude() const { return Amplitude; }
 	float GetFrequency() const { return Frequency; }

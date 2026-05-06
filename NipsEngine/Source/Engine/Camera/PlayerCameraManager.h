@@ -108,7 +108,7 @@ public:
 	// Camera shake
 	UCameraShakeModifier* GetCameraShakeModifier();
 	const UCameraShakeModifier* GetCameraShakeModifier() const { return CameraShakeModifier; }
-	void StartCameraShake(float Amplitude, float Frequency, float Duration, const float BezierCP[4]);
+	void StartCameraShake(float Amplitude, float Frequency, float Duration, const float BezierCP[6]);
 	void StopCameraShake();
 	bool IsCameraShaking() const;
 
