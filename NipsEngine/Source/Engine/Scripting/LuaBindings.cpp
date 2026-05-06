@@ -135,6 +135,19 @@ void RegisterLuaBindings(sol::state& Lua)
 		"GetUpVector", &FQuat::GetUpVector
 	);
 
+	Lua.new_usertype<FVector4>(
+		"FVector4",
+		sol::constructors<FVector4(), FVector4(float, float, float, float)>(),
+		"x", &FVector4::X,
+		"y", &FVector4::Y,
+		"z", &FVector4::Z,
+		"w", &FVector4::W,
+		"X", &FVector4::X,
+		"Y", &FVector4::Y,
+		"Z", &FVector4::Z,
+		"W", &FVector4::W
+	);
+
 	Lua.new_usertype<FColor>(
 		"FColor",
 		sol::constructors<FColor(), FColor(float, float, float, float)>(),
@@ -175,8 +188,11 @@ void RegisterLuaBindings(sol::state& Lua)
 	Lua.new_usertype<FCameraOverlaySettings>(
 		"FCameraOverlaySettings",
 		"FadeColor", &FCameraOverlaySettings::FadeColor,
-		"FadeAlpha", &FCameraOverlaySettings::FadeAlpha,
-		"LetterboxRatio", &FCameraOverlaySettings::LetterboxRatio
+		"FadeAlpha", sol::property(
+			[](const FCameraOverlaySettings& Settings) { return Settings.FadeColor.W; },
+			[](FCameraOverlaySettings& Settings, float Alpha) { Settings.FadeColor.W = Alpha; }),
+		"LetterBoxRatio", &FCameraOverlaySettings::LetterBoxRatio,
+		"LetterboxRatio", &FCameraOverlaySettings::LetterBoxRatio
 	);
 
 	Lua.new_usertype<UObject>(
