@@ -8,6 +8,8 @@
 #include "Scripting/LuaScriptTypes.h"
 #include <algorithm>
 
+#include "GameFramework/GamejamActor/SubUVVfxActor.h"
+
 namespace
 {
     UClass* FindClassByName(const FString& ClassName)
@@ -193,6 +195,34 @@ FLuaComponentHandle FLuaActorHandle::GetComponent(const sol::variadic_args& Args
     return FLuaComponentHandle();
 }
 
+FLuaComponentHandle FLuaActorHandle::GetComponentByName(const sol::variadic_args& Args) const
+{
+    FString ClassName;
+    FString ComponentName;
+
+    int32 StringIdx = 0;
+    for (const sol::object& Arg : Args)
+    {
+        if (Arg.is<FString>())
+        {
+            if (StringIdx == 0) ClassName = Arg.as<FString>();
+            else if (StringIdx == 1) ComponentName = Arg.as<FString>();
+            StringIdx++;
+        }
+    }
+
+    AActor* Actor = Resolve();
+    if (!Actor) return FLuaComponentHandle();
+
+    for (UActorComponent* Component : Actor->GetComponents())
+    {
+        if (!DoesComponentMatchClass(Component, ClassName)) continue;
+        if (!ComponentName.empty() && Component->GetFName().ToString() != ComponentName) continue;
+        return FLuaComponentHandle(Component);
+    }
+    return FLuaComponentHandle();
+}
+
 sol::table FLuaActorHandle::GetComponents(sol::this_state State, const sol::variadic_args& Args) const
 {
     sol::state_view Lua(State);
@@ -210,6 +240,17 @@ sol::table FLuaActorHandle::GetComponents(sol::this_state State, const sol::vari
         if (DoesComponentMatchClass(Component, ClassName)) Result[LuaIndex++] = FLuaComponentHandle(Component);
     }
     return Result;
+}
+
+bool FLuaActorHandle::SetVfxPreset(const FString& PresetName) const
+{
+    AActor* Actor = Resolve();
+    ASubUVVfxActor* Vfx = Cast<ASubUVVfxActor>(Actor);
+    if (!Vfx)
+        return false;
+
+    Vfx->SetVfxPreset(PresetName);
+    return true;
 }
 
 bool FLuaActorHandle::InitFlyingWave(
@@ -267,8 +308,9 @@ namespace LuaBinding
             "SetCustomTimeDilation", &FLuaActorHandle::SetCustomTimeDilation,
 
             "GetComponent", &FLuaActorHandle::GetComponent,
+            "GetComponentByName", &FLuaActorHandle::GetComponentByName,
             "GetComponents", &FLuaActorHandle::GetComponents,
-
-            "InitFlyingWave", &FLuaActorHandle::InitFlyingWave);
-    }
-}
+            "InitFlyingWave", &FLuaActorHandle::InitFlyingWave,
+            "SetVfxPreset", &FLuaActorHandle::SetVfxPreset);
+            }
+            }

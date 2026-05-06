@@ -386,6 +386,12 @@ end
 function GameManager.OnGameStart()
     GameManager.PlayBackgroundMusic()
 
+    -- VFX 액터 풀 웜업 (총구 화염, 피격 이펙트, 폭발 등 공유)
+    local pool = GetActorPoolManager()
+    if pool ~= nil and pool:IsValid() then
+        pool:Warmup("ASubUVVfxActor", 20)
+    end
+
     if GameManager.WeaponInventory then
         GameManager.WeaponInventory:AddWeapon("MainCannon")
         GameManager.WeaponInventory:AddWeapon("MachineTurret")
@@ -745,14 +751,7 @@ function GameManager.StartFinishSequence(resultType, reason)
                     Log("[GameManager] GetActorPoolManager function not found")
                 end
 
-                if pool ~= nil and pool:IsValid() then
-                    Log("[GameManager] PoolManager is valid, warming up AExplodeVfxActor")
-                    pool:Warmup("AExplodeVfxActor", 10)
-                else
-                    Log("[GameManager] PoolManager is invalid or nil")
-                end
-
-                -- 0.2초 간격으로 5번 폭발 (Unscaled Time 기준)
+                -- 0.2초 간격으로 10번 폭발 (Unscaled Time 기준)
                 for i = 1, 10 do
                     Log("[GameManager] Spawning explosion " .. tostring(i))
                     -- 구형 범위 내 랜덤 위치 (최소 0.5, 최대 1.5)
@@ -768,12 +767,21 @@ function GameManager.StartFinishSequence(resultType, reason)
 
                     local explosion = nil
                     if pool ~= nil and pool:IsValid() then
-                        explosion = pool:Acquire("AExplodeVfxActor")
+                        explosion = pool:Acquire("ASubUVVfxActor")
                     end
 
                     if explosion ~= nil and explosion:IsValid() then
                         Log("[GameManager] Explosion actor acquired and setting location")
                         explosion:SetLocation(spawnPos)
+                        
+                        -- 폭발 연출을 위한 옵션 초기화 (머신건 이펙트와 공유하므로 필요)
+                        explosion:SetScale({1.0, 1.0, 1.0})
+                        local subUV = explosion:GetComponentByName("USubUVComponent", "SubUV")
+                        if subUV ~= nil and subUV:IsValid() then
+                            subUV:SetFrameRate(240.0)
+                        end
+                        
+                        explosion:SetVfxPreset("Explode")
                         -- 폭발 액터 수동 반납을 위한 지연 처리
                         runner:StartCoroutine(function()
                             -- 0.1배속 상황에서 1.5초 대기는 0.15초 yield
