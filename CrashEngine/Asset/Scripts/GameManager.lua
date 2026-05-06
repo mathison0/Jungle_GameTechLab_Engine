@@ -1,6 +1,7 @@
 local WeaponInventory = require("WeaponInventory")
 local LevelSystem = require("LevelSystem")
 local Audio = require("Core.Audio")
+local CameraShake = require("Core.CameraShake")
 local CameraManager = require("CameraManager")
 local Co = require("LuaCoroutine")
 
@@ -624,7 +625,10 @@ function GameManager.PlayerGetDamage(damage)
         end)
     end
 
-    if GameManager.Stats.CurrentHP <= 0 then GameManager.OnGameOver("Player Died") end
+    if GameManager.Stats.CurrentHP <= 0 then
+        CameraShake.Play("Explosion", 1.0)
+        GameManager.OnGameOver("Player Died")
+    end
 end
 
 function GameManager.OnPickupExp(baseAmount)

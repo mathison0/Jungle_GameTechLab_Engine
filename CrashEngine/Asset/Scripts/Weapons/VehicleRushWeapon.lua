@@ -1,4 +1,5 @@
 local Audio = require("Core.Audio")
+local CameraShake = require("Core.CameraShake")
 local DamageSystem = require("Core.DamageSystem")
 local GameplayPause = require("GameplayPause")
 local Vec = require("Core.Vector")
@@ -342,6 +343,34 @@ function VehicleRushWeapon:FinishSpawnSound(playback, elapsed)
     Audio.Stop(handle)
 end
 
+function VehicleRushWeapon:GetVehicleCameraShakeSettings(data)
+    data = data or self.Data
+
+    local isTrain = (self.Level or 1) >= 3 or (data.VehicleLength or 0.0) >= 40.0
+    local asset = data.CameraShakeAsset or (isTrain and "TrainRush" or "VehicleRush")
+    local scale = data.CameraShakeScale
+    local interval = data.CameraShakeInterval
+
+    if scale == nil then
+        scale = isTrain and 0.32 or 0.24
+        scale = scale + math.max((self.Level or 1) - 1, 0) * 0.03
+    end
+
+    if interval == nil then
+        interval = isTrain and 0.62 or 0.28
+    end
+
+    scale = math.max(scale, 0.0)
+    interval = math.max(interval, 0.05)
+
+    return asset, scale, interval
+end
+
+function VehicleRushWeapon:PlayVehicleCameraShake(data)
+    local asset, scale = self:GetVehicleCameraShakeSettings(data)
+    CameraShake.Play(asset, scale)
+end
+
 function VehicleRushWeapon:GetOwnerActor()
     if self.Owner == nil or self.Owner.GetActor == nil then
         return nil
@@ -435,6 +464,7 @@ function VehicleRushWeapon:RunVehiclePass()
     self.ActiveSpawnSound = spawnSound
     self.ActiveSpawnSoundElapsed = 0.0
     self.IsPassActive = true
+    self:PlayVehicleCameraShake(data)
 
     Log("[VehicleRush] vehicle pass started. count=" ..
         tostring(count) ..
@@ -447,6 +477,8 @@ function VehicleRushWeapon:RunVehiclePass()
 
     local elapsed = 0.0
     local hitActors = {}
+    local _, _, cameraShakeInterval = self:GetVehicleCameraShakeSettings(data)
+    local nextCameraShakeTime = cameraShakeInterval
 
     self:UpdateVehicles(world, ownerActor, vehicles, dir, side, 0.0, hitActors, data)
 
@@ -461,6 +493,13 @@ function VehicleRushWeapon:RunVehiclePass()
             local alpha = elapsed / duration
             if alpha > 1.0 then
                 alpha = 1.0
+            end
+
+            if elapsed >= nextCameraShakeTime and elapsed < duration then
+                self:PlayVehicleCameraShake(data)
+                repeat
+                    nextCameraShakeTime = nextCameraShakeTime + cameraShakeInterval
+                until nextCameraShakeTime > elapsed
             end
 
             self:UpdateVehicles(world, ownerActor, vehicles, dir, side, alpha, hitActors, data)

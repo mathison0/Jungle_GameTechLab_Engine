@@ -4,7 +4,7 @@ local GameManager = require("GameManager")
 
 local EnemyState = {
     properties = {
-        MaxHP = 100,
+        MaxHP = 10000, --테스트
         CurrentHP = 100,
         GemClassName = {type = "string", default = "APickupActor"},
         DeathDecalClassName = {type = "string", default = "ADeathDecalActor"}
@@ -18,6 +18,16 @@ function EnemyState:BeginPlay()
     if self.actor == nil or not self.actor:IsValid() then
         Log("[EnemyState] Invalid owner actor")
         return
+    end
+
+    -- EnemyScript 캐싱 (데미지 연출용)
+    self.EnemyScriptComp = nil
+    local comps = self.actor:GetComponents("UScriptComponent")
+    for _, comp in ipairs(comps) do
+        if comp:IsValid() and comp:GetName() ~= self:GetName() then
+            self.EnemyScriptComp = comp
+            break
+        end
     end
 
     self.CurrentHP = self.MaxHP or 100.0
@@ -49,6 +59,11 @@ function EnemyState:TakeDamage(amount, attacker)
         self.actor:GetName(), amount, attackerName, self.CurrentHP, self.MaxHP or 100.0))
 
     DamageNumberSystem.ShowDamage(self.actor, amount)
+
+    -- 피격 연출 (Squash & Stretch)
+    if self.EnemyScriptComp and self.EnemyScriptComp:IsValid() then
+        self.EnemyScriptComp:CallScript("PlaySquashEffect")
+    end
 
     if self.CurrentHP <= 0 then
         self:Die()

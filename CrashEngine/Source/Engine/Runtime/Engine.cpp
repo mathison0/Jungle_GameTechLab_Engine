@@ -249,6 +249,10 @@ void UEngine::Tick(float DeltaTime)
     }
 
     WorldTick(DeltaTime);
+    if (GameViewportClient)
+    {
+        GameViewportClient->UpdateCameraShakes(DeltaTime);
+    }
     FSoundManager::Get().Tick(DeltaTime);
     Render(DeltaTime);
 }

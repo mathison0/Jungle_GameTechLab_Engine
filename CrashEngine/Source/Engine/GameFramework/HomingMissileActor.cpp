@@ -8,6 +8,7 @@
 #include "GameFramework/World.h"
 #include "Math/MathUtils.h"
 #include "Platform/Paths.h"
+#include "Viewport/GameViewportClient.h"
 
 #include <algorithm>
 #include <cmath>
@@ -29,6 +30,11 @@ float Max3(float A, float B, float C)
 {
     const float AB = A > B ? A : B;
     return AB > C ? AB : C;
+}
+
+FString GetExplosionShakeAssetPath()
+{
+    return FPaths::ContentRelativePath("CameraShakes/Explosion.shake");
 }
 }
 
@@ -125,6 +131,11 @@ void AHomingMissileActor::Explode()
     }
 
     bActive = false;
+
+    if (GEngine && GEngine->GetGameViewportClient())
+    {
+        GEngine->GetGameViewportClient()->StartCameraShakeFromAsset(GetExplosionShakeAssetPath());
+    }
 
     // TODO:
     // - ImpactRadius > 0: query enemies in radius and apply Damage.

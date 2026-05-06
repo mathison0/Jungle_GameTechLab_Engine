@@ -186,7 +186,9 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
     OutputLogPanel.Initialize(InEditorEngine, &GetGlobalLogBuffer());
     ControlPanel.Initialize(InEditorEngine);
     DetailsPanel.Initialize(InEditorEngine);
+    CameraShakePanel.Initialize(InEditorEngine);
     ContentDrawerPanel.Initialize(InEditorEngine);
+    ContentDrawerPanel.SetCameraShakePanel(&CameraShakePanel);
     WorldOutlinerPanel.Initialize(InEditorEngine, InRenderer.GetFD3DDevice().GetDevice());
     StatPanel.Initialize(InEditorEngine);
     UE_LOG(EditorUI, Info, "Editor main panel initialized.");
@@ -199,6 +201,7 @@ void FEditorMainPanel::Release()
     {
         GLog = nullptr;
     }
+    CameraShakePanel.StopPreview();
     WorldOutlinerPanel.Release();
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
@@ -266,6 +269,7 @@ void FEditorMainPanel::Render(float DeltaTime)
             ImGui::MenuItem("Details", nullptr, &S.UI.bProperty);
             ImGui::MenuItem("World Outliner", nullptr, &S.UI.bWorldOutliner);
             ImGui::MenuItem("Stat Profiler", nullptr, &S.UI.bStat);
+            ImGui::MenuItem("Camera Shake Editor", nullptr, &S.UI.bCameraShakeEditor);
             bool bShadowAtlasDebug = DetailsPanel.IsShadowAtlasDebugWindowOpen();
             if (ImGui::MenuItem("Shadow Atlas", nullptr, &bShadowAtlasDebug))
             {
@@ -373,6 +377,16 @@ void FEditorMainPanel::Render(float DeltaTime)
     {
         SCOPE_STAT_CAT("StatPanel.Render", "5_UI");
         StatPanel.Render(DeltaTime);
+    }
+
+    if (!bHideEditorWindows && Settings.UI.bCameraShakeEditor)
+    {
+        SCOPE_STAT_CAT("CameraShakePanel.Render", "5_UI");
+        CameraShakePanel.Render(DeltaTime);
+    }
+    else
+    {
+        CameraShakePanel.StopPreview();
     }
 
     if (!bHideEditorWindows && DetailsPanel.IsShadowAtlasDebugWindowOpen())
@@ -594,6 +608,7 @@ void FEditorMainPanel::HideEditorWindowsForPIE()
     Settings.UI.bProperty = false;
     Settings.UI.bWorldOutliner = false;
     Settings.UI.bStat = false;
+    Settings.UI.bCameraShakeEditor = false;
 }
 
 void FEditorMainPanel::RestoreEditorWindowsAfterPIE()

@@ -4,7 +4,10 @@
 #include "Component/CameraComponent.h"
 #include "Core/RayTypes.h"
 #include "Editor/Subsystem/OverlayStatSystem.h"
+#include "Engine/Classes/Camera/CameraManager.h"
+#include "Engine/Classes/Camera/CameraModifier_CameraShake.h"
 #include "GameFramework/World.h"
+#include "Math/MathUtils.h"
 #include "Render/Scene/Proxies/UI/UIProxy.h"
 #include "Render/Scene/Scene.h"
 #include "UI/UIComponent.h"
@@ -14,15 +17,63 @@
 
 DEFINE_CLASS(UGameViewportClient, UObject)
 
+namespace
+{
+FMinimalViewInfo BuildPOVFromCamera(UCameraComponent* Camera)
+{
+    FMinimalViewInfo POV;
+    if (!Camera)
+    {
+        return POV;
+    }
+
+    POV.Location = Camera->GetWorldLocation();
+    POV.Rotation = Camera->GetRelativeRotation();
+    POV.FOV = Camera->GetFOV() * RAD_TO_DEG;
+    POV.AspectRatio = Camera->GetAspectRatio();
+    POV.NearZ = Camera->GetNearPlane();
+    POV.FarZ = Camera->GetFarPlane();
+    POV.bOrthographic = Camera->IsOrthogonal();
+    POV.OrthoWidth = Camera->GetOrthoWidth();
+    return POV;
+}
+
+void ApplyPOVToCamera(UCameraComponent* Camera, const FMinimalViewInfo& POV)
+{
+    if (!Camera)
+    {
+        return;
+    }
+
+    Camera->SetWorldLocation(POV.Location);
+    Camera->SetRelativeRotation(POV.Rotation);
+
+    FCameraState CameraState = Camera->GetCameraState();
+    CameraState.FOV = POV.FOV * DEG_TO_RAD;
+    Camera->SetCameraState(CameraState);
+}
+} // namespace
+
 UGameViewportClient::UGameViewportClient()
 {
     InputController = std::make_unique<FGameViewportInputController>(this);
 }
 
-UGameViewportClient::~UGameViewportClient() = default;
+UGameViewportClient::~UGameViewportClient()
+{
+    ClearCameraShakeOffsets();
+
+    if (CameraManager)
+    {
+        UObjectManager::Get().DestroyObject(CameraManager);
+        CameraManager = nullptr;
+    }
+}
 
 void UGameViewportClient::BeginInputFrame()
 {
+    ClearCameraShakeOffsets();
+
     if (InputController)
     {
         InputController->BeginInputFrame();
@@ -31,6 +82,8 @@ void UGameViewportClient::BeginInputFrame()
 
 void UGameViewportClient::Tick(float DeltaTime)
 {
+    ClearCameraShakeOffsets();
+
     if (InputController)
     {
         InputController->HandleInput(DeltaTime);
@@ -54,7 +107,86 @@ UCameraComponent* UGameViewportClient::GetCamera() const
         return UCameraComponent::Main;
     }
 
+    UWorld* World = GEngine ? GEngine->GetWorld() : nullptr;
+    if (World && World->GetActiveCamera())
+    {
+        return World->GetActiveCamera();
+    }
+
     return FallbackCamera;
+}
+
+UCameraShakeBase* UGameViewportClient::StartCameraShakeFromAsset(const FString& Path, float Scale)
+{
+    APlayerCameraManager* Manager = GetOrCreateCameraManager();
+    if (!Manager)
+    {
+        return nullptr;
+    }
+
+    FAddCameraShakeParams Params;
+    Params.Scale = Scale;
+    Params.PlaySpace = ECameraShakePlaySpace::CameraLocal;
+    return Manager->StartCameraShakeFromAsset(Path, Params);
+}
+
+void UGameViewportClient::UpdateCameraShakes(float DeltaTime)
+{
+    ClearCameraShakeOffsets();
+
+    if (!CameraManager)
+    {
+        return;
+    }
+
+    UCameraComponent* Camera = GetCamera();
+    if (!Camera)
+    {
+        return;
+    }
+
+    FMinimalViewInfo BasePOV = BuildPOVFromCamera(Camera);
+    FMinimalViewInfo ShakenPOV = BasePOV;
+    CameraManager->ApplyCameraModifiersToPOV(DeltaTime, ShakenPOV);
+
+    AppliedShakeLocation = ShakenPOV.Location - BasePOV.Location;
+    AppliedShakeRotation = ShakenPOV.Rotation - BasePOV.Rotation;
+    AppliedShakeFOVDegrees = ShakenPOV.FOV - BasePOV.FOV;
+    ShakeCamera = Camera;
+
+    ApplyPOVToCamera(Camera, ShakenPOV);
+}
+
+APlayerCameraManager* UGameViewportClient::GetOrCreateCameraManager()
+{
+    if (!CameraManager)
+    {
+        CameraManager = UObjectManager::Get().CreateObject<APlayerCameraManager>(this);
+    }
+
+    return CameraManager;
+}
+
+void UGameViewportClient::ClearCameraShakeOffsets()
+{
+    if (!ShakeCamera)
+    {
+        AppliedShakeLocation = FVector::ZeroVector;
+        AppliedShakeRotation = FRotator::ZeroRotator;
+        AppliedShakeFOVDegrees = 0.0f;
+        return;
+    }
+
+    FMinimalViewInfo RestoredPOV = BuildPOVFromCamera(ShakeCamera);
+    RestoredPOV.Location -= AppliedShakeLocation;
+    RestoredPOV.Rotation -= AppliedShakeRotation;
+    RestoredPOV.FOV -= AppliedShakeFOVDegrees;
+    ApplyPOVToCamera(ShakeCamera, RestoredPOV);
+
+    ShakeCamera = nullptr;
+    AppliedShakeLocation = FVector::ZeroVector;
+    AppliedShakeRotation = FRotator::ZeroRotator;
+    AppliedShakeFOVDegrees = 0.0f;
 }
 
 bool UGameViewportClient::RouteUIPointerEvent(const FViewportPointerEvent& Event)

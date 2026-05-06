@@ -12,6 +12,12 @@ function Script:BeginPlay()
         actor:IsValid() and
         actor:GetClassName() == "AFlyingWaveEnemyActor"
 
+    -- 원본 스케일 저장 (다양한 크기의 적 대응)
+    if actor and actor:IsValid() then
+        local s = actor:GetScale()
+        self.OriginalScale = { x = s.x, y = s.y, z = s.z }
+    end
+
     -- GameManager가 이번 세션에서 완전히 초기화되었는지 확인 후 플레이어 참조 가져오기
     if GameManager.Initialized and GameManager.PlayerScript and type(GameManager.PlayerScript.GetActor) == "function" then
         self.target = GameManager.PlayerScript:GetActor()
@@ -94,6 +100,32 @@ local function HandleAttack(self, other)
         Log("Collision with player")
         self:ApplyAttack()
     end
+end
+
+function Script:PlaySquashEffect()
+    if self.SquashCoroutine then
+        self.StopCoroutine(self.SquashCoroutine)
+    end
+
+    self.SquashCoroutine = self.StartCoroutine(function()
+        local actor = self:GetActor()
+        if not actor or not actor:IsValid() or not self.OriginalScale then
+            return
+        end
+
+        local base = self.OriginalScale
+        -- Squash: 가로로 넓어지고 세로로 짧아짐
+        actor:SetScale({ x = base.x * 1.3, y = base.y * 1.3, z = base.z * 0.7 })
+        coroutine.yield("wait_time", 0.05)
+
+        -- Stretch: 가로로 좁아지고 세로로 길어짐
+        actor:SetScale({ x = base.x * 0.8, y = base.y * 0.8, z = base.z * 1.2 })
+        coroutine.yield("wait_time", 0.05)
+
+        -- 원복
+        actor:SetScale(base)
+        self.SquashCoroutine = nil
+    end)
 end
 
 function Script:OnOverlapBegin(other)

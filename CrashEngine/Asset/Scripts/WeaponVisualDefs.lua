@@ -22,6 +22,15 @@ WeaponVisualDefs.MainCannon = {
                 Color = { 1.0, 0.8, 0.4, 1.0 },
                 AttenuationRadius = 5.0,
             },
+            {
+                Name = "gugugaga",
+                Component = "StaticMeshComponent",
+                Parent = "Visual_MainCannon_0",
+                Mesh = "Models/gugugaga/gugugaga.obj",
+                Location = { -0.2, 0.0, 0.5 },
+                Rotation = { 0.0, 0.0, 0.0 },
+                Scale = { 2.0, 2.0, 2.0 },
+            }
         },
     },
 
@@ -46,6 +55,15 @@ WeaponVisualDefs.MainCannon = {
                 Color = { 1.0, 0.8, 0.4, 1.0 },
                 AttenuationRadius = 5.0,
             },
+            {
+                Name = "gugugaga",
+                Component = "StaticMeshComponent",
+                Parent = "Visual_MainCannon_0",
+                Mesh = "Models/gugugaga/gugugaga.obj",
+                Location = { -0.2, 0.0, 0.5 },
+                Rotation = { 0.0, 0.0, 0.0 },
+                Scale = { 2.0, 2.0, 2.0 },
+            }
         },
     },
 
@@ -70,6 +88,15 @@ WeaponVisualDefs.MainCannon = {
                 Color = { 1.0, 0.8, 0.4, 1.0 },
                 AttenuationRadius = 5.0,
             },
+            {
+                Name = "gugugaga",
+                Component = "StaticMeshComponent",
+                Parent = "Visual_MainCannon_0",
+                Mesh = "Models/gugugaga/gugugaga.obj",
+                Location = { -0.2, 0.0, 0.5 },
+                Rotation = { 0.0, 0.0, 0.0 },
+                Scale = { 2.0, 2.0, 2.0 },
+            }
         },
     },
 }

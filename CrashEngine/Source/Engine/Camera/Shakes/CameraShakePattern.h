@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "CameraShakeBase.h"
+#include "CameraShakeTypes.h"
 #include "Math/Rotator.h"
 #include "Math/Vector.h"
 #include "Object/Object.h"
@@ -44,7 +45,7 @@ struct FCameraShakePatternUpdateParams
 	/** 현재 업데이트 동안 Camera Shake에 적용할 최종 스케일. Shake * DynamicScale과 같다. */
 	float GetTotalScale() const
 	{
-		return std::max(ShakeScale * DynamicScale, 0.f);
+		return (std::max)(ShakeScale * DynamicScale, 0.f);
 	}
 };
 
@@ -72,38 +73,8 @@ struct FCameraShakePatternScrubParams
 	/** 현재 업데이트에서 Camera Shake에 적용할 최종스케일. ShakeScale * DynamicScale과 같다. */
 	float GetTotalScale() const
 	{
-		return std::max(ShakeScale * DynamicScale, 0.f);
+		return (std::max)(ShakeScale * DynamicScale, 0.f);
 	}
-};
-
-enum class ECameraShakePatternUpdateResultFlags : uint8
-{
-	ApplyAsAbsolute = 1 << 0,
-	SkipAutoScale = 1 << 1,
-	SkipAutoPlaySpace = 1 << 2,
-
-	Default = 0
-};
-
-struct FCameraShakePatternUpdateResult
-{
-	FCameraShakePatternUpdateResult()
-		: Location(FVector::ZeroVector)
-		, Rotation(FRotator::ZeroRotator)
-		, FOV(0.f)
-		, Flags(ECameraShakePatternUpdateResultFlags::Default)
-	{
-	}
-
-	FVector Location;
-
-	FRotator Rotation;
-
-	float FOV;
-
-	ECameraShakePatternUpdateResultFlags Flags;
-
-	void ApplyScale(float InScale);
 };
 
 struct FCameraShakePatternStopParams
