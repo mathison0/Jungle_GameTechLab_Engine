@@ -15,12 +15,15 @@ local DIRT_RATE = 0.08
 local DIRT_POWER_PENALTY = 0.9
 local DIRT_POWER_CURVE = 5.0
 
+ThrowSpeed = 20.0
+
 local KEY_H = 0x48
 local KEY_J = 0x4A
 local KEY_K = 0x4B
 
 function BeginPlay(owner)
     print("Player Script Started: ", owner:GetName())
+    SetGameState("ThrowSpeed", ThrowSpeed)
 end
 
 function EndPlay(owner)
@@ -39,6 +42,8 @@ function OnInteract(owner, interactor)
 end
 
 function Tick(owner, deltaTime)
+    SetGameState("ThrowSpeed", ThrowSpeed)
+
     -- 테스트 코드: H 키로 히트스톱, J 키로 슬로모, K 키로 슬로모 해제
     if GetKeyDown(KEY_H) then
         TriggerHitStop(0.5, 0.0)

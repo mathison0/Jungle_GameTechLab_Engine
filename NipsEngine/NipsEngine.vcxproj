@@ -337,6 +337,9 @@
     <ClCompile Include="Source\Engine\Camera\PlayerCameraManager.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.cpp">
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -388,7 +391,9 @@
     <ClCompile Include="Source\Engine\Component\SkyAtmosphereComponent.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Component\SpringArmComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\SpringArmComponent.cpp">
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -815,13 +820,13 @@
     <ClCompile Include="Source\Game\UI\StartMenuPanel.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="Source\Game\UI\RmlUi\RmlUiFileInterface.cpp">
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="Source\Game\UI\RmlUi\RmlUiRenderInterfaceD3D11.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <ClCompile Include="Source\Game\UI\RmlUi\RmlUiSystemInterface.cpp">
-      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="Source\Game\UI\RmlUi\RmlUiFileInterface.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <ClCompile Include="Source\Game\Viewport\GameViewportClient.cpp">
@@ -890,7 +895,7 @@
     <ClInclude Include="Source\Engine\Asset\StaticMeshTypes.h" />
     <ClInclude Include="Source\Engine\Audio\AudioSystem.h" />
     <ClInclude Include="Source\Engine\Camera\CameraModifier.h" />
-    <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h" />
+    <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h" />
     <ClInclude Include="Source\Engine\Collision\Collision.h" />
     <ClInclude Include="Source\Engine\Collision\CollisionSystem.h" />
     <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h" />
@@ -1105,9 +1110,9 @@
     <ClInclude Include="Source\Game\UI\PauseMenuPanel.h" />
     <ClInclude Include="Source\Game\UI\StartMenuPanel.h" />
     <ClInclude Include="Source\Game\UI\RmlUi\RmlUiDocumentsResource.h" />
+    <ClInclude Include="Source\Game\UI\RmlUi\RmlUiFileInterface.h" />
     <ClInclude Include="Source\Game\UI\RmlUi\RmlUiRenderInterfaceD3D11.h" />
     <ClInclude Include="Source\Game\UI\RmlUi\RmlUiSystemInterface.h" />
-    <ClInclude Include="Source\Game\UI\RmlUi\RmlUiFileInterface.h" />
     <ClInclude Include="Source\Game\Viewport\GameViewportClient.h" />
     <ClInclude Include="ThirdParty\ImGui\imconfig.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui.h" />

@@ -693,6 +693,22 @@ FString FLuaScriptSystem::GetStringGameStateValue(const FString& Key) const
 #endif
 }
 
+double FLuaScriptSystem::GetNumberGameStateValue(const FString& Key, double DefaultValue) const
+{
+#if WITH_LUA
+	auto It = GameState.find(Key);
+	if (It == GameState.end() || It->second.Type != FGameStateValue::EType::Number)
+	{
+		return DefaultValue;
+	}
+
+	return It->second.NumberValue;
+#else
+	(void)Key;
+	return DefaultValue;
+#endif
+}
+
 void FLuaScriptSystem::SetLastError(const FString& Error)
 {
 	LastError = Error;

@@ -1,4 +1,4 @@
-#include "Engine/Camera/CameraModifier.h"
+﻿#include "Engine/Camera/CameraModifier.h"
 
 #include "Engine/Camera/PlayerCameraManager.h"
 
@@ -8,6 +8,20 @@ bool UCameraModifier::ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView)
 {
 	(void)DeltaTime;
 	(void)InOutView;
+	return false;
+}
+
+bool UCameraModifier::ModifyPostProcess(float DeltaTime, FPostProcessSettings& InOutSettings)
+{
+	(void)DeltaTime;
+	(void)InOutSettings;
+	return false;
+}
+
+bool UCameraModifier::ModifyOverlay(float DeltaTime, FCameraOverlaySettings& InOutOverlay)
+{
+	(void)DeltaTime;
+	(void)InOutOverlay;
 	return false;
 }
 

@@ -189,7 +189,7 @@ namespace
 
 	std::wstring GetScoreFilePath()
 	{
-		return FPaths::Combine(FPaths::Combine(FPaths::RootDir(), L"Saves"), L"Scores.txt");
+		return FPaths::Combine(FPaths::Combine(FPaths::RootDir(), L"Asset/Data"), L"Scores.txt");
 	}
 
 	std::vector<std::string> SplitScoreLine(const std::string& Line)
@@ -810,7 +810,7 @@ void GameUISystem::CommitScoreNameInput()
 
 bool GameUISystem::WriteScoreRecord(const std::string& PlayerId)
 {
-	const std::wstring SavesDir = FPaths::Combine(FPaths::RootDir(), L"Saves");
+	const std::wstring SavesDir = FPaths::Combine(FPaths::RootDir(), L"Asset/Data");
 	FPaths::CreateDir(SavesDir);
 
 	const std::wstring ScorePath = GetScoreFilePath();
@@ -1572,8 +1572,19 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 		SetElementText("interaction-key-label", "R");
 		SetElementText("interaction-hint-text", "씻기");
 		break;
-	case EInteractionHintType::Drop:
+	case EInteractionHintType::Throw:
+		SetElementText("interaction-secondary-key-label", "E");
+		SetElementText("interaction-secondary-text", "놓기");
+		SetElementText("interaction-key-label", "F");
+		SetElementText("interaction-hint-text", "던지기");
+		break;
 	case EInteractionHintType::DropWithInspect:
+		SetElementText("interaction-secondary-key-label", "Q");
+		SetElementText("interaction-secondary-text", "살펴보기");
+		SetElementText("interaction-key-label", "F");
+		SetElementText("interaction-hint-text", "던지기");
+		break;
+	case EInteractionHintType::Drop:
 		SetElementText("interaction-secondary-key-label", "Q");
 		SetElementText("interaction-secondary-text", "살펴보기");
 		SetElementText("interaction-key-label", "E");

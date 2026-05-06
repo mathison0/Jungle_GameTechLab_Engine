@@ -185,6 +185,7 @@ void RegisterLuaBindings(sol::state& Lua)
 		if      (HintName == "None")    GameUISystem::Get().SetInteractionHint(EInteractionHintType::None);
 		else if (HintName == "Pickup")  GameUISystem::Get().SetInteractionHint(EInteractionHintType::Pickup);
 		else if (HintName == "Drop")    GameUISystem::Get().SetInteractionHint(EInteractionHintType::Drop);
+		else if (HintName == "Throw")   GameUISystem::Get().SetInteractionHint(EInteractionHintType::Throw);
 		else if (HintName == "Keep")    GameUISystem::Get().SetInteractionHint(EInteractionHintType::Keep);
 		else if (HintName == "Discard") GameUISystem::Get().SetInteractionHint(EInteractionHintType::Discard);
 		else if (HintName == "Wash")    GameUISystem::Get().SetInteractionHint(EInteractionHintType::Wash);

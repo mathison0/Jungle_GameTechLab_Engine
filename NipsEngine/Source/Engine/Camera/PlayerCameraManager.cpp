@@ -1,34 +1,135 @@
-#include "Engine/Camera/PlayerCameraManager.h"
+﻿#include "Engine/Camera/PlayerCameraManager.h"
 
 #include "Component/CameraComponent.h"
 #include "Engine/Camera/CameraModifier.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
+#include "Engine/Math/Utils.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
-	FQuat MakeCameraRotation(const FVector& Forward, const FVector& Right, const FVector& Up)
-	{
-		FMatrix RotationMatrix = FMatrix::Identity;
-		RotationMatrix.SetAxes(Forward.GetSafeNormal(), Right.GetSafeNormal(), Up.GetSafeNormal());
+FQuat MakeCameraRotation(const FVector& Forward, const FVector& Right, const FVector& Up)
+{
+	FMatrix RotationMatrix = FMatrix::Identity;
+	RotationMatrix.SetAxes(Forward.GetSafeNormal(), Right.GetSafeNormal(), Up.GetSafeNormal());
 
-		FQuat Rotation(RotationMatrix);
-		Rotation.Normalize();
-		return Rotation;
+	FQuat Rotation(RotationMatrix);
+	Rotation.Normalize();
+	return Rotation;
+}
+
+bool BuildCameraComponentView(UCameraComponent* Camera, FCameraViewInfo& OutView)
+{
+	if (Camera == nullptr)
+	{
+		return false;
 	}
+
+	const float Height = Camera->GetHeight();
+
+	OutView.Location = Camera->GetWorldLocation();
+	OutView.Rotation = MakeCameraRotation(Camera->GetForwardVector(), Camera->GetRightVector(), Camera->GetUpVector());
+	OutView.FOV = Camera->GetFOV();
+	OutView.AspectRatio = Height > 0.0f ? Camera->GetWidth() / Height : 16.0f / 9.0f;
+	OutView.NearPlane = Camera->GetNearPlane();
+	OutView.FarPlane = Camera->GetFarPlane();
+	OutView.OrthoWidth = Camera->GetOrthoWidth();
+	OutView.OrthoHeight = OutView.AspectRatio > 0.0f ? OutView.OrthoWidth / OutView.AspectRatio : OutView.OrthoWidth;
+	OutView.bOrthographic = Camera->IsOrthogonal();
+	return true;
+}
+
+// 3D Bezier Curve의 값을 계산합니다.
+float Evaluate3DBezier(float T, float ControlPointA, float ControlPointB)
+{
+	const float U = 1.0f - T;
+	return (3.0f * U * U * T * ControlPointA) + (3.0f * U * T * T * ControlPointB) + (T * T * T);
+}
+
+// 3D Bezier Curve의 도함수를 계산합니다.
+float Evaluate3DBezierDerivative(float T, float ControlPointA, float ControlPointB)
+{
+	const float U = 1.0f - T;
+	return (3.0f * U * U * ControlPointA) + (6.0f * U * T * (ControlPointB - ControlPointA)) + (3.0f * T * T * (1.0f - ControlPointB));
+}
+
+// 목표 시간 진행도(X)가 주어졌을 때, 그에 대응하는 Bezier Curve의 T를 역으로 산출합니다.
+float SolveBezierTForX(float X, float ControlPointA, float ControlPointB)
+{
+	float T = X;
+	for (int32 Iteration = 0; Iteration < 5; ++Iteration) // Newton-Raphson Approximation
+	{
+		const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
+		const float Slope = Evaluate3DBezierDerivative(T, ControlPointA, ControlPointB);
+		if (std::abs(Slope) < 1.0e-5f)
+		{
+			break;
+		}
+
+		T = MathUtil::Clamp(T - (CurrentX - X) / Slope, 0.0f, 1.0f);
+	}
+
+	float MinT = 0.0f;
+	float MaxT = 1.0f;
+	for (int32 Iteration = 0; Iteration < 8; ++Iteration) // Correction From Binary-Search
+	{
+		const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
+		if (std::abs(CurrentX - X) < 1.0e-5f)
+		{
+			break;
+		}
+
+		if (CurrentX < X)
+		{
+			MinT = T;
+		}
+		else
+		{
+			MaxT = T;
+		}
+		T = 0.5f * (MinT + MaxT);
+	}
+
+	return T;
+}
 }
 
 void APlayerCameraManager::SetViewTarget(UCameraComponent* InCamera)
 {
 	ViewTarget = InCamera;
+	StopCameraTransition();
 }
 
 void APlayerCameraManager::SetViewTargetWithBlend(UCameraComponent* InCamera, float BlendTime)
 {
-	(void)BlendTime;
-	SetViewTarget(InCamera);
+	if (InCamera == nullptr || BlendTime <= 0.0f)
+	{
+		SetViewTarget(InCamera); // give-up blending transition
+		return;
+	}
+
+	FCameraViewInfo ToView;
+	if (!BuildCameraComponentView(InCamera, ToView))
+	{
+		SetViewTarget(InCamera);
+		return;
+	}
+
+	FCameraViewInfo FromView;
+	if (bHasCachedCameraView)
+	{
+		FromView = CachedCameraView;
+	}
+	else if (!BuildBaseCameraView(FromView))
+	{
+		FromView = ToView;
+	}
+
+	ViewTarget = InCamera;
+	StartCameraTransition(FromView, ToView, BlendTime);
 }
 
 void APlayerCameraManager::SetFallbackCamera(FViewportCamera* InCamera)
@@ -39,14 +140,31 @@ void APlayerCameraManager::SetFallbackCamera(FViewportCamera* InCamera)
 void APlayerCameraManager::UpdateCamera(float DeltaTime)
 {
 	FCameraViewInfo NewView;
+	FPostProcessSettings NewPostProcess;
+	FCameraOverlaySettings NewOverlay;
+
 	if (!BuildBaseCameraView(NewView))
 	{
 		bHasCachedCameraView = false;
 		return;
 	}
 
+	if (Transition.bActive)
+	{
+		UpdateCameraTransition(DeltaTime, NewView);
+	}
+
 	ApplyCameraModifiers(DeltaTime, NewView);
+
+	UpdateCameraFade(DeltaTime);
+	ApplyPostProcessModifiers(DeltaTime, NewPostProcess);
+	ApplyOverlayModifiers(DeltaTime, NewOverlay);
+	ApplyCameraFade(NewOverlay);
+
 	CachedCameraView = NewView;
+	CachedPostProcessSettings = NewPostProcess;
+	CachedCameraOverlaySettings = NewOverlay;
+
 	bHasCachedCameraView = true;
 }
 
@@ -77,11 +195,10 @@ void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 
 	CameraModifiers.push_back(Modifier);
 	std::sort(CameraModifiers.begin(), CameraModifiers.end(), [](const UCameraModifier* A, const UCameraModifier* B)
-	{
+			  {
 		const int32 APriority = A ? A->GetPriority() : 0;
 		const int32 BPriority = B ? B->GetPriority() : 0;
-		return APriority < BPriority;
-	});
+		return APriority < BPriority; });
 }
 
 void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
@@ -94,32 +211,161 @@ void APlayerCameraManager::ClearCameraModifiers()
 	CameraModifiers.clear();
 }
 
-void APlayerCameraManager::StartCameraTransition(const FCameraViewInfo& FromView, const FCameraViewInfo& ToView, float Duration)
+void APlayerCameraManager::StartCameraFade(const FColor& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished)
 {
-	(void)FromView;
-	(void)Duration;
-	CachedCameraView = ToView;
-	bHasCachedCameraView = true;
+	FadeState.bActive = true;
+	FadeState.bHoldWhenFinished = bHoldWhenFinished;
+	FadeState.Color = Color;
+	FadeState.FromAlpha = MathUtil::Clamp(FromAlpha, 0.0f, 1.0f);
+	FadeState.ToAlpha = MathUtil::Clamp(ToAlpha, 0.0f, 1.0f);
+	FadeState.CurrentAlpha = FadeState.FromAlpha;
+	FadeState.Duration = std::max(Duration, 0.0f);
+	FadeState.Elapsed = 0.0f;
+
+	if (FadeState.Duration <= 0.0f)
+	{
+		FadeState.CurrentAlpha = FadeState.ToAlpha;
+		FadeState.bActive = false;
+
+		if (!FadeState.bHoldWhenFinished)
+		{
+			FadeState.CurrentAlpha = 0.0f;
+		}
+	}
 }
 
+void APlayerCameraManager::SetManualCameraFade(const FColor& Color, float Alpha)
+{
+	FadeState.bActive = false;
+	FadeState.bHoldWhenFinished = true;
+	FadeState.Color = Color;
+	FadeState.FromAlpha = MathUtil::Clamp(Alpha, 0.0f, 1.0f);
+	FadeState.ToAlpha = FadeState.FromAlpha;
+	FadeState.CurrentAlpha = FadeState.FromAlpha;
+	FadeState.Duration = 0.0f;
+	FadeState.Elapsed = 0.0f;
+}
+
+void APlayerCameraManager::StopCameraFade()
+{
+	FadeState = FCameraFadeState();
+}
+
+
+// 카메라 Linear 보간 이동
+void APlayerCameraManager::StartCameraTransition(const FCameraViewInfo& From, const FCameraViewInfo& To, float Duration)
+{
+	Transition.FromView = From;
+	Transition.ToView = To;
+
+	Transition.Duration = std::max(Duration, 0.001f);
+	Transition.Elapsed = 0.0f;
+
+	Transition.bUseBezierCurve = false;
+	Transition.bActive = true;
+}
+
+// 카메라 Bezier Curve 보간 이동
+void APlayerCameraManager::StartCameraTransitionBezier(const FCameraViewInfo& From, const FCameraViewInfo& To, const FVector& ControlPointA, const FVector& ControlPointB, float Duration)
+{
+	Transition.FromView = From;
+	Transition.ToView = To;
+
+	Transition.ControlPointA = ControlPointA;
+	Transition.ControlPointB = ControlPointB;
+
+	Transition.Duration = std::max(Duration, 0.001f);
+	Transition.Elapsed = 0.0f;
+
+	Transition.bUseBezierCurve = true;
+	Transition.bActive = true;
+}
+
+void APlayerCameraManager::StopCameraTransition()
+{
+	Transition.bActive = false;
+}
+
+void APlayerCameraManager::UpdateCameraTransition(float DeltaTime, FCameraViewInfo& InOutView)
+{
+	if (!Transition.bActive)
+	{
+		return;
+	}
+
+	Transition.ToView = InOutView;
+	Transition.Elapsed += DeltaTime;
+	float NormalizedTime = MathUtil::Clamp(Transition.Elapsed / Transition.Duration, 0.0f, 1.0f);
+	float Alpha = EvaluateTransitionAlpha(NormalizedTime);
+	InOutView = BlendCameraView(Alpha);
+
+	if (NormalizedTime >= 1.0f)
+	{
+		StopCameraTransition();
+	}
+}
+	
+// 정규화된 시간 값을 cubic-bezier easing curve의 x, y 값으로 변환합니다.
+float APlayerCameraManager::EvaluateTransitionAlpha(float NormalizedTime) const
+{
+	const float ClampedTime = MathUtil::Clamp(NormalizedTime, 0.0f, 1.0f);
+	const float ControlPointAX = MathUtil::Clamp(Transition.EaseControlPointA.X, 0.0f, 1.0f);
+	const float ControlPointBX = MathUtil::Clamp(Transition.EaseControlPointB.X, 0.0f, 1.0f);
+	const float CurveT = SolveBezierTForX(ClampedTime, ControlPointAX, ControlPointBX);
+	const float Alpha = Evaluate3DBezier(CurveT, Transition.EaseControlPointA.Y, Transition.EaseControlPointB.Y);
+
+	return MathUtil::Clamp(Alpha, 0.0f, 1.0f);
+}
+
+// 계산된 Transition Alpha 값을 바탕으로 From, To 카메라에 대한 위치, 회전, FOV 값 보간
+FCameraViewInfo APlayerCameraManager::BlendCameraView(float Alpha) const
+{
+	FCameraViewInfo BlendedView;
+
+	if (Transition.bUseBezierCurve)
+	{
+		BlendedView.Location = EvaluateBezierPosition(Alpha);
+	}
+	else
+	{
+		BlendedView.Location = FVector::Lerp(Transition.FromView.Location, Transition.ToView.Location, Alpha);
+	}
+
+	const FCameraViewInfo& From = Transition.FromView;
+	const FCameraViewInfo& To = Transition.ToView;
+
+	BlendedView.Rotation = FQuat::Slerp(From.Rotation, To.Rotation, Alpha);
+	BlendedView.FOV = MathUtil::Lerp(From.FOV, To.FOV, Alpha);
+	BlendedView.AspectRatio = MathUtil::Lerp(From.AspectRatio, To.AspectRatio, Alpha);
+	BlendedView.NearPlane = MathUtil::Lerp(From.NearPlane, To.NearPlane, Alpha);
+	BlendedView.FarPlane = MathUtil::Lerp(From.FarPlane, To.FarPlane, Alpha);
+	BlendedView.OrthoWidth = MathUtil::Lerp(From.OrthoWidth, To.OrthoWidth, Alpha);
+	BlendedView.OrthoHeight = MathUtil::Lerp(From.OrthoHeight, To.OrthoHeight, Alpha);
+	BlendedView.bOrthographic = Alpha < 0.5f ? From.bOrthographic : To.bOrthographic;
+
+	return BlendedView;
+}
+
+FVector APlayerCameraManager::EvaluateBezierPosition(float Alpha) const
+{
+	float T = Alpha;
+	float U = 1.0f - Alpha;
+
+	const FVector& P0 = Transition.FromView.Location;
+	const FVector& P1 = Transition.ControlPointA;
+	const FVector& P2 = Transition.ControlPointB;
+	const FVector& P3 = Transition.ToView.Location;
+
+	FVector Position = (U * U * U * P0) + (3.0f * U * U * T * P1) + (3.0f * U * T * T * P2) + (T * T * T * P3);
+
+	return Position;
+}
+
+// ViewTarget이 유효하다면 ViewTarget을 기준으로 Base Camera View 생성
 bool APlayerCameraManager::BuildBaseCameraView(FCameraViewInfo& OutView) const
 {
-	if (ViewTarget)
+	if (BuildCameraComponentView(ViewTarget, OutView))
 	{
-		const float Height = ViewTarget->GetHeight();
-
-		OutView.Location = ViewTarget->GetWorldLocation();
-		OutView.Rotation = MakeCameraRotation(
-			ViewTarget->GetForwardVector(),
-			ViewTarget->GetRightVector(),
-			ViewTarget->GetUpVector());
-		OutView.FOV = ViewTarget->GetFOV();
-		OutView.AspectRatio = Height > 0.0f ? ViewTarget->GetWidth() / Height : 16.0f / 9.0f;
-		OutView.NearPlane = ViewTarget->GetNearPlane();
-		OutView.FarPlane = ViewTarget->GetFarPlane();
-		OutView.OrthoWidth = ViewTarget->GetOrthoWidth();
-		OutView.OrthoHeight = OutView.AspectRatio > 0.0f ? OutView.OrthoWidth / OutView.AspectRatio : OutView.OrthoWidth;
-		OutView.bOrthographic = ViewTarget->IsOrthogonal();
 		return true;
 	}
 
@@ -140,6 +386,35 @@ bool APlayerCameraManager::BuildBaseCameraView(FCameraViewInfo& OutView) const
 	return false;
 }
 
+void APlayerCameraManager::UpdateCameraFade(float DeltaTime)
+{
+	if (!FadeState.bActive)
+	{
+		return;
+	}
+
+	FadeState.Elapsed += DeltaTime;
+	const float Alpha = FadeState.Duration > 0.0f ? MathUtil::Clamp(FadeState.Elapsed / FadeState.Duration, 0.0f, 1.0f) : 1.0f;
+	FadeState.CurrentAlpha = MathUtil::Lerp(FadeState.FromAlpha, FadeState.ToAlpha, Alpha);
+
+	if (Alpha >= 1.0f)
+	{
+		FadeState.CurrentAlpha = FadeState.ToAlpha;
+		FadeState.bActive = false;
+
+		if (!FadeState.bHoldWhenFinished)
+		{
+			FadeState.CurrentAlpha = 0.0f;
+		}
+	}
+}
+
+void APlayerCameraManager::ApplyCameraFade(FCameraOverlaySettings& InOutOverlay) const
+{
+	InOutOverlay.FadeColor = FadeState.Color;
+	InOutOverlay.FadeAlpha = MathUtil::Clamp(FadeState.CurrentAlpha, 0.0f, 1.0f);
+}
+
 void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView)
 {
 	for (UCameraModifier* Modifier : CameraModifiers)
@@ -150,6 +425,28 @@ void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo
 		}
 
 		Modifier->ModifyCamera(DeltaTime, InOutView);
+	}
+}
+
+void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings)
+{
+	for (UCameraModifier* Modifier : CameraModifiers)
+	{
+		if (Modifier == nullptr || !Modifier->IsEnabled())
+		{
+			continue;
+		}
+
+		Modifier->ModifyPostProcess(DeltaTime, InOutSettings);
+	}
+}
+
+void APlayerCameraManager::ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay)
+{
+	for (UCameraModifier* Modifier : CameraModifiers)
+	{
+		if (Modifier == nullptr || !Modifier->IsEnabled()) continue;
+		Modifier->ModifyOverlay(DeltaTime, InOutOverlay);
 	}
 }
 
@@ -189,4 +486,6 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 	OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
 	OutView.ViewRect = ViewRect;
 	OutView.ViewMode = ViewMode;
+	OutView.PostProcessSettings = CachedPostProcessSettings;
+	OutView.CameraOverlaySettings = CachedCameraOverlaySettings;
 }
