@@ -394,13 +394,6 @@ function GameManager.OnGameStart()
 
     if GameManager.WeaponInventory then
         GameManager.WeaponInventory:AddWeapon("MainCannon")
-        GameManager.WeaponInventory:AddWeapon("MachineTurret")
-                GameManager.WeaponInventory:AddWeapon("MachineTurret")
-
-                        GameManager.WeaponInventory:AddWeapon("MachineTurret")
-
-
-
     end
     GameManager.StartMainCameraSwitchCoroutine()
     Log("[GameManager] --- GAME START ---")
