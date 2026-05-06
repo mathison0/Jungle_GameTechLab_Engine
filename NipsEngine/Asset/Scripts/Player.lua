@@ -39,13 +39,14 @@ function OnInteract(owner, interactor)
 end
 
 function Tick(owner, deltaTime)
+    -- 테스트 코드: H 키로 히트스톱, J 키로 슬로모, K 키로 슬로모 해제
     if GetKeyDown(KEY_H) then
-        TriggerHitStop(0.08, 0.0)
+        TriggerHitStop(0.5, 0.0)
         print("[TimeDilation] HitStop")
     end
 
     if GetKeyDown(KEY_J) then
-        StartSlomo(0.25, 0.8, 0.15, 0.25)
+        StartSlomo(0.25, 0.5, 0.5, 0.5)
         print("[TimeDilation] Slomo")
     end
 
@@ -53,6 +54,7 @@ function Tick(owner, deltaTime)
         StopSlomo()
         print("[TimeDilation] StopSlomo")
     end
+    --
 
     local hit = RaycastCenter(REACH_DISTANCE)
     if not hit or not hit.bHit then

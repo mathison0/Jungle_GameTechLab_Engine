@@ -1,4 +1,4 @@
-#include "Game/Systems/TimeDilationSystem.h"
+﻿#include "Game/Systems/TimeDilationSystem.h"
 
 #include <algorithm>
 
@@ -118,6 +118,7 @@ void FTimeDilationSystem::TickHitStop(float RealDeltaTime)
 		: (bSlomoActive ? SlomoStartDilation : 1.0f);
 }
 
+// 현재는 선형보간인데 SmoothStep이나 EaseOutCubic 에 대해서도 알아볼 예정
 void FTimeDilationSystem::TickSlomo(float RealDeltaTime)
 {
 	SlomoElapsedTime += RealDeltaTime;
@@ -129,7 +130,11 @@ void FTimeDilationSystem::TickSlomo(float RealDeltaTime)
 	if (SlomoBlendInTime > 0.0f && SlomoElapsedTime < BlendInEndTime)
 	{
 		const float Alpha = SlomoElapsedTime / SlomoBlendInTime;
-		GlobalTimeDilation = Lerp(SlomoStartDilation, SlomoTargetDilation, Alpha);
+
+		// EaseOutCubic
+        const float P = 1.0f - Alpha;
+        const float EaseAlpha = 1.0f - P * P * P;
+        GlobalTimeDilation = Lerp(SlomoStartDilation, SlomoTargetDilation, EaseAlpha);
 		return;
 	}
 
@@ -142,7 +147,11 @@ void FTimeDilationSystem::TickSlomo(float RealDeltaTime)
 	if (SlomoBlendOutTime > 0.0f && SlomoElapsedTime < BlendOutEndTime)
 	{
 		const float Alpha = (SlomoElapsedTime - HoldEndTime) / SlomoBlendOutTime;
-		GlobalTimeDilation = Lerp(SlomoTargetDilation, 1.0f, Alpha);
+
+		// EaseOutCubic
+        const float P = 1.0f - Alpha;
+        const float EaseAlpha = 1.0f - P * P * P;
+        GlobalTimeDilation = Lerp(SlomoStartDilation, SlomoTargetDilation, EaseAlpha);
 		return;
 	}
 
