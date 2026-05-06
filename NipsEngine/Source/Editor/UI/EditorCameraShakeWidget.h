@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "Editor/UI/EditorWidget.h"
 
-class UCameraShakeModifier;
 class APlayerCameraManager;
 
 class FEditorCameraShakeWidget : public FEditorWidget
@@ -18,5 +17,4 @@ private:
     float PreviewDuration  = 0.5f;
     float BezierCP[4] = { 0.25f, 0.1f, 0.75f, 0.9f };
 
-    UCameraShakeModifier* ShakeModifier = nullptr;
 };

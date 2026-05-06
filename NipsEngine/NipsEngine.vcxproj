@@ -351,6 +351,9 @@
     <ClCompile Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Modifier\LuaCameraModifier.cpp">
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -734,6 +737,7 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\LuaBindings.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\LuaCoroutineScheduler.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
@@ -920,6 +924,7 @@
     <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h" />
     <ClInclude Include="Source\Engine\Camera\Modifier\CameraShakeModifier.h" />
     <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h" />
+    <ClInclude Include="Source\Engine\Camera\Modifier\LuaCameraModifier.h" />
     <ClInclude Include="Source\Engine\Collision\Collision.h" />
     <ClInclude Include="Source\Engine\Collision\CollisionSystem.h" />
     <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h" />
