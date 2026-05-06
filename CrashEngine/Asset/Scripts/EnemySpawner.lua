@@ -1,51 +1,61 @@
 local Vec = require("Core.Vector")
 local GameplayPause = require("GameplayPause")
 
+local DEFAULT_GAME_TIME_LIMIT = 600.0
+local PHASE_COUNT = 5
+
 ---@class EnemySpawner : ScriptComponent
 local Script = {
     properties = {
         EnemyClassName = { type = "string", default = "AEnemyBaseActor" },
         TargetTagName = { type = "string", default = "Player" }, -- 검색할 대상의 태그입니다.
-        MinSpawnRadius = { type = "float", default = 30.0 },
-        MaxSpawnRadius = { type = "float", default = 50.0 },
-        EnemySpawnViewSafeRadius = { type = "float", default = 78.0 },
-        EnemySpawnOutsidePadding = { type = "float", default = 10.0 },
-        EnemySpawnBandWidth = { type = "float", default = 24.0 },
+        MinSpawnRadius = { type = "float", default = 24.0 },
+        MaxSpawnRadius = { type = "float", default = 44.0 },
+        EnemySpawnViewSafeRadius = { type = "float", default = 58.0 },
+        EnemySpawnOutsidePadding = { type = "float", default = 6.0 },
+        EnemySpawnBandWidth = { type = "float", default = 16.0 },
 
         -- Flying EnemyWave
         FlyingEnemyClassName = { type = "string", default = "AFlyingWaveEnemyActor" },
         FlyingWaveInterval = { type = "float", default = 10.0 },
         FlyingWaveCount = { type = "int", default = 8 },
         FlyingWaveSpacing = { type = "float", default = 8.0 },
-        FlyingWaveSpawnDistance = { type = "float", default = 80.0 },
+        FlyingWaveSpawnDistance = { type = "float", default = 64.0 },
         FlyingWaveSpeed = { type = "float", default = 25.0 },
         FlyingWaveLifeTime = { type = "float", default = 5.0 },
-        FlyingWaveExitPadding = { type = "float", default = 30.0 }
+        FlyingWaveExitPadding = { type = "float", default = 24.0 }
     }
 }
 
--- 스폰 단계 설정 (C++의 SpawnTable과 동일)
 local SpawnPhaseTable = {
     {
-        TimeThreshold = 30.0, 
-        Enemy = {DesiredCount = 30, SpawnRate = 5.0},
-        FlyingWave = {Pattern = { 2, 2, 1 }, Interval = 15.0, Speed = 16.0}
+        ProgressThreshold = 1.0 / PHASE_COUNT,
+        Enemy = { DesiredCount = 25, SpawnRate = 4.0 },
+        FlyingWave = { Pattern = { 2, 2, 1 }, Interval = 16.0, Speed = 18.0 }
     },
 
     {
-        TimeThreshold = 60.0, 
-        Enemy = {DesiredCount = 60, SpawnRate = 10.0}, FlyingWave = {Pattern = { 2, 3, 2 }, Interval = 12.0,  Speed = 20.0}
+        ProgressThreshold = 2.0 / PHASE_COUNT,
+        Enemy = { DesiredCount = 45, SpawnRate = 7.0 },
+        FlyingWave = { Pattern = { 2, 3, 2 }, Interval = 13.0, Speed = 22.0 }
     },
 
     {
-        TimeThreshold = 120.0,
-        Enemy = {DesiredCount = 100, SpawnRate = 15.0}, FlyingWave = {Pattern = { 3, 4, 3}, Interval = 10.0, Speed = 24.0}
+        ProgressThreshold = 3.0 / PHASE_COUNT,
+        Enemy = { DesiredCount = 70, SpawnRate = 10.0 },
+        FlyingWave = { Pattern = { 3, 3, 3 }, Interval = 11.0, Speed = 26.0 }
     },
 
     {
-        TimeThreshold = 1000000.0,
-        Enemy = {DesiredCount = 150,SpawnRate = 20.0},
-        FlyingWave = {Pattern = { 1, 2, 3, 2, 1 },Interval = 8.0, Speed = 24.0}
+        ProgressThreshold = 4.0 / PHASE_COUNT,
+        Enemy = { DesiredCount = 100, SpawnRate = 14.0 },
+        FlyingWave = { Pattern = { 3, 4, 3 }, Interval = 9.0, Speed = 32.0 }
+    },
+
+    {
+        ProgressThreshold = 1.0,
+        Enemy = { DesiredCount = 140, SpawnRate = 18.0 },
+        FlyingWave = { Pattern = { 2, 3, 4, 3, 2 }, Interval = 7.5, Speed = 38.0 }
     }
 }
 
@@ -56,7 +66,7 @@ function Script:BeginPlay()
     self.PoolManager = GetActorPoolManager()
     
     -- 랜덤 시드 초기화
-math.randomseed(12345)
+    math.randomseed(12345)
     
     if self.PoolManager:IsValid() then
         Log("EnemySpawner: PoolManager initialized for " .. self.EnemyClassName)
@@ -66,10 +76,37 @@ math.randomseed(12345)
     end
 end
 
--- 현재 게임 시간에 맞는 스폰 페이즈 반환
+local function GetGameTimeLimit()
+    local gameManager = package.loaded["GameManager"]
+    if gameManager ~= nil then
+        local limit = tonumber(gameManager.GameTimeLimit) or 0.0
+        if limit > 0.0 then
+            return limit
+        end
+    end
+
+    return DEFAULT_GAME_TIME_LIMIT
+end
+
+local function GetGameElapsedTime(FallbackTime)
+    local gameManager = package.loaded["GameManager"]
+    if gameManager ~= nil then
+        local limit = GetGameTimeLimit()
+        local remaining = tonumber(gameManager.TimeRemaining)
+        if remaining ~= nil then
+            return math.max(0.0, math.min(limit, limit - remaining))
+        end
+    end
+
+    return math.max(0.0, tonumber(FallbackTime) or 0.0)
+end
+
+-- 현재 게임 진행률에 맞는 스폰 페이즈 반환
 function Script:GetPhase(Time)
+    local Progress = math.max(0.0, math.min(1.0, GetGameElapsedTime(Time) / GetGameTimeLimit()))
+
     for _, phase in ipairs(SpawnPhaseTable) do
-        if Time < phase.TimeThreshold then
+        if Progress < phase.ProgressThreshold then
             return phase
         end
     end
@@ -80,12 +117,12 @@ end
 -- 플레이어 주변의 랜덤한 스폰 위치 계산
 function Script:GetSpawnPosition(PlayerPos)
     local Angle = math.random() * math.pi * 2.0
-    local MinRadius = self.MinSpawnRadius or 30.0
-    local MaxRadius = self.MaxSpawnRadius or 50.0
-    local OffscreenMinRadius = (self.EnemySpawnViewSafeRadius or 78.0) + (self.EnemySpawnOutsidePadding or 10.0)
+    local MinRadius = self.MinSpawnRadius or 24.0
+    local MaxRadius = self.MaxSpawnRadius or 44.0
+    local OffscreenMinRadius = (self.EnemySpawnViewSafeRadius or 58.0) + (self.EnemySpawnOutsidePadding or 6.0)
 
     MinRadius = math.max(MinRadius, OffscreenMinRadius)
-    MaxRadius = math.max(MaxRadius, MinRadius + (self.EnemySpawnBandWidth or 24.0))
+    MaxRadius = math.max(MaxRadius, MinRadius + (self.EnemySpawnBandWidth or 16.0))
 
     local Distance = MinRadius + (math.random() * (MaxRadius - MinRadius))
     

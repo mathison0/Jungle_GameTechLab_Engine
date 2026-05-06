@@ -130,7 +130,13 @@ UCameraComponent* UGameViewportClient::GetCamera() const
 
 UCameraShakeBase* UGameViewportClient::StartCameraShakeFromAsset(const FString& Path, float Scale)
 {
-    APlayerCameraManager* Manager = GetOrCreateCameraManager();
+    UWorld* World = GEngine ? GEngine->GetWorld() : nullptr;
+    APlayerCameraManager* Manager = GEngine ? GEngine->GetPlayerCameraManager(World) : nullptr;
+    if (!Manager)
+    {
+        Manager = GetOrCreateCameraManager();
+    }
+
     if (!Manager)
     {
         return nullptr;
