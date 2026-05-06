@@ -20,6 +20,7 @@ ThrowSpeed = 20.0
 local KEY_H = 0x48
 local KEY_J = 0x4A
 local KEY_K = 0x4B
+local KEY_SHIFT = 0x10
 
 -- 0.0으로 두면 프로퍼티 값으로 적용됨
 local TEST_KNOCKBACK_STRENGTH = 0.0
@@ -44,6 +45,10 @@ function OnHit(owner, hit)
     -- If the player hits an actor with a RigidBodyComponent, push the player
     -- away from that actor for a short moment.
     if hit == nil or hit:IsValid() == false then
+        return
+    end
+
+    if not GetKey(KEY_SHIFT) then
         return
     end
 

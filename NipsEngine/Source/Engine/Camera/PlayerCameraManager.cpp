@@ -323,24 +323,13 @@ UCameraShakeModifier* APlayerCameraManager::GetCameraShakeModifier()
 
 	return CameraShakeModifier;
 }
-
-void APlayerCameraManager::StartCameraShake(float Amplitude, float Frequency, float Duration, const float BezierCP[4])
+void APlayerCameraManager::StartCameraShake(const FCameraShakeParams& Params)
 {
 	UCameraShakeModifier* Modifier = GetCameraShakeModifier();
 	if (Modifier == nullptr)
-	{
 		return;
-	}
 
-	if (BezierCP)
-	{
-		for (int32 Index = 0; Index < 4; ++Index)
-		{
-			Modifier->BezierCP[Index] = BezierCP[Index];
-		}
-	}
-
-	Modifier->StartShake(Amplitude, Frequency, Duration);
+	Modifier->StartShake(Params);
 }
 
 void APlayerCameraManager::StopCameraShake()

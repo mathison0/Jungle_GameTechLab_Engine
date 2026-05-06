@@ -2,6 +2,7 @@
 
 #if WITH_LUA
 #include "GameFramework/AActor.h"
+#include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/DecalComponent.h"
 #include "Component/PostProcessComponent.h"
@@ -197,6 +198,14 @@ void RegisterLuaBindings(sol::state& Lua)
 		"GetUpVector", &FCameraViewInfo::GetUpVector
 	);
 
+	Lua.new_usertype<UCameraComponent>(
+		"UCameraComponent",
+		"AddPitchInput", &UCameraComponent::AddPitchInput,
+		"AddYawInput", &UCameraComponent::AddYawInput,
+		"GetPitchDegrees", &UCameraComponent::GetPitchDegrees,
+		"GetYawDegrees", &UCameraComponent::GetYawDegrees
+	);
+
 	Lua.new_usertype<FPostProcessSettings>(
 		"FPostProcessSettings",
 		"Gamma", &FPostProcessSettings::Gamma,
@@ -236,6 +245,46 @@ void RegisterLuaBindings(sol::state& Lua)
 		"GetName", [](AActor& Actor) { return Actor.GetFName().ToString(); },
 		"GetUUID", &AActor::GetUUID
 	);
+
+	Lua.set_function("GetCameraComponent", [](AActor* Actor) -> UCameraComponent*
+	{
+		if (!Actor)
+		{
+			return nullptr;
+		}
+
+		for (UActorComponent* Comp : Actor->GetComponents())
+		{
+			if (UCameraComponent* Camera = Cast<UCameraComponent>(Comp))
+			{
+				return Camera;
+			}
+		}
+
+		return nullptr;
+	});
+
+	Lua.set_function("SetActorCollisionEnabled", [](AActor* Actor, bool bEnabled)
+	{
+		if (!Actor)
+		{
+			return false;
+		}
+
+		bool bChangedAny = false;
+		for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
+		{
+			if (!Primitive)
+			{
+				continue;
+			}
+
+			Primitive->SetSceneQueryEnabled(bEnabled);
+			bChangedAny = true;
+		}
+
+		return bChangedAny;
+	});
 
 	// -------------------------------------------------------
 	// GameUI
