@@ -11,7 +11,48 @@ struct FLuaComponentHandle;
 struct FLuaCollider2DHandle;
 
 class FActorPoolManager;
+class FPostProcessController;
 class UWorld;
+
+struct FLuaPostProcessHandle
+{
+	FPostProcessController* Controller = nullptr;
+
+	FLuaPostProcessHandle() = default;
+	explicit FLuaPostProcessHandle(FPostProcessController* InController);
+
+	bool IsValid() const;
+
+	bool FadeIn(float Duration, const sol::variadic_args& Args) const;
+	bool FadeOut(float Duration, const sol::variadic_args& Args) const;
+	bool FadeTo(float TargetAlpha, float Duration, const sol::variadic_args& Args) const;
+	bool SetFadeAlpha(float Alpha, const sol::variadic_args& Args) const;
+	void StopFade() const;
+	void ClearFade() const;
+	bool IsFadePlaying() const;
+	float GetFadeAlpha() const;
+	sol::table GetFadeColor(sol::this_state State) const;
+
+	bool SetVignettingEnabled(bool bEnabled) const;
+	bool SetVignetting(float Intensity, float Radius, float Softness, const sol::variadic_args& Args) const;
+	bool IsVignettingEnabled() const;
+	float GetVignettingIntensity() const;
+	float GetVignettingRadius() const;
+	float GetVignettingSoftness() const;
+	sol::table GetVignettingColor(sol::this_state State) const;
+
+	bool SetGammaCorrectionEnabled(bool bEnabled) const;
+	bool SetDisplayGamma(float DisplayGamma) const;
+	bool IsGammaCorrectionEnabled() const;
+	float GetDisplayGamma() const;
+
+	bool SetLetterboxEnabled(bool bEnabled) const;
+	bool SetLetterbox(float TargetAspectRatio, float Opacity, const sol::variadic_args& Args) const;
+	bool IsLetterboxEnabled() const;
+	float GetLetterboxTargetAspectRatio() const;
+	float GetLetterboxOpacity() const;
+	sol::table GetLetterboxColor(sol::this_state State) const;
+};
 
 struct FLuaWorldHandle
 {

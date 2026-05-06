@@ -468,6 +468,12 @@ void UScriptComponent::BindFunctions()
             return FLuaWorldHandle(GetOwner() ? GetOwner()->GetWorld() : nullptr);
         });
 
+    BindFunction("GetPostProcess",
+        [this](sol::variadic_args) -> FLuaPostProcessHandle
+        {
+            return FLuaPostProcessHandle();
+        });
+
     BindFunction("GetComponent",
         [this](const sol::variadic_args& Args) -> FLuaComponentHandle
         {

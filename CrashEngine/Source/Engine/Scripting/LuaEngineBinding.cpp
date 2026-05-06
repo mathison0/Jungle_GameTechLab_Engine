@@ -8,5 +8,6 @@ void RegisterLuaEngineBindings(sol::state& Lua)
     LuaBinding::RegisterComponent(Lua);
     LuaBinding::RegisterCollider(Lua);
     LuaBinding::RegisterWorld(Lua);
+    LuaBinding::RegisterPostProcess(Lua);
     LuaBinding::RegisterPool(Lua);
 }

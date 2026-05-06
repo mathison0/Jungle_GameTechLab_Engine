@@ -1028,6 +1028,9 @@
     <ClCompile Include="Source\Engine\Render\PostProcess\FadeController.cpp">
       <Filter>Source\Engine\Render\PostProcess</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\PostProcess\PostProcessController.cpp">
+      <Filter>Source\Engine\Render\PostProcess</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Resources\FrameResources.cpp">
       <Filter>Source\Engine\Render\Resources</Filter>
     </ClCompile>
@@ -1224,6 +1227,9 @@
       <Filter>Source\Engine\Scripting\Binding</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPostProcessBinding.cpp">
       <Filter>Source\Engine\Scripting\Binding</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp">
@@ -2080,6 +2086,9 @@
       <Filter>Source\Engine\Render\Execute\Runner</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\PostProcess\FadeController.h">
+      <Filter>Source\Engine\Render\PostProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\PostProcess\PostProcessController.h">
       <Filter>Source\Engine\Render\PostProcess</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resources\FrameResources.h">

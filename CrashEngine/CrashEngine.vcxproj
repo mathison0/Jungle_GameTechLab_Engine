@@ -531,6 +531,7 @@
     <ClCompile Include="Source\Engine\Render\Execute\Registry\ViewModePassRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Runner\RenderPipelineRunner.cpp" />
     <ClCompile Include="Source\Engine\Render\PostProcess\FadeController.cpp" />
+    <ClCompile Include="Source\Engine\Render\PostProcess\PostProcessController.cpp" />
     <ClCompile Include="Source\Engine\Render\Resources\FrameResources.cpp" />
     <ClCompile Include="Source\Engine\Render\Resources\Buffers\ConstantBufferCache.cpp" />
     <ClCompile Include="Source\Engine\Render\Resources\Buffers\MeshBufferManager.cpp" />
@@ -597,6 +598,7 @@
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPostProcessBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
@@ -890,6 +892,7 @@
     <ClInclude Include="Source\Engine\Render\Execute\Runner\RenderMarkers.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Runner\RenderPipelineRunner.h" />
     <ClInclude Include="Source\Engine\Render\PostProcess\FadeController.h" />
+    <ClInclude Include="Source\Engine\Render\PostProcess\PostProcessController.h" />
     <ClInclude Include="Source\Engine\Render\Resources\FrameResources.h" />
     <ClInclude Include="Source\Engine\Render\Resources\Bindings\CBBindingEntry.h" />
     <ClInclude Include="Source\Engine\Render\Resources\Bindings\RenderBindingSlots.h" />
