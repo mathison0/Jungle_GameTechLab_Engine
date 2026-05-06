@@ -1,6 +1,8 @@
 ﻿// 수학 영역에서 공유되는 타입과 인터페이스를 정의합니다.
 #pragma once
 
+#include <cstdlib>
+
 namespace FMath
 {
 constexpr float Pi = 3.14159265358979323846f;
@@ -25,6 +27,12 @@ inline float Lerp(float A, float B, float T)
 inline FVector Lerp(FVector A, FVector B, float T)
 {
     return A + (B-A) * T;
+}
+
+[[nodiscard]] static inline float FRand()
+{
+	constexpr int RandMax = 0x00ffffff < RAND_MAX ? 0x00ffffff : RAND_MAX;
+	return (std::rand() & RandMax) / static_cast<float>(RandMax);
 }
 } // namespace FMath
 

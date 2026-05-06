@@ -1319,6 +1319,10 @@
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeBase.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakePattern.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2408,6 +2412,11 @@
     <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakePattern.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeTypes.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
