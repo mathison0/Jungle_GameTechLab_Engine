@@ -2,6 +2,8 @@
 #include "Engine/Math/Utils.h"
 #include <algorithm>
 
+DEFINE_CLASS(ULetterBoxCameraModifier, UCameraModifier)
+
 void ULetterBoxCameraModifier::StartLetterBox(float InTargetRatio, float Duration)
 {
 	TargetRatio = MathUtil::Clamp(InTargetRatio, 0.0f, 0.5f);

@@ -44,7 +44,6 @@ struct FPostProcessSettings
 	float LetterboxRatio = 0.0f;
 };
 
-
 struct FCameraTransitionState
 {
 	bool bActive = false;
