@@ -146,6 +146,7 @@
       "keptDesc": "구겨진 종이를 보관하기로 했다.",
       "discardedDesc": "구겨진 종이를 버릴 물건 상자에 넣었다.",
       "canClassify": true,
+      "iconPath": "Asset/Texture/ItemDetail/Paper_ItemDetail.png",
       "endingRole": "Bad",
       "storyFlags": [
         "found_crumpled_paper"

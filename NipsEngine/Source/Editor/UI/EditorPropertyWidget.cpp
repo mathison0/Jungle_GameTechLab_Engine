@@ -20,6 +20,7 @@
 #include "Editor/Utility/EditorComponentFactory.h"
 
 #include "GameFramework/AActor.h"
+#include "Component/LuaCameraModifierComponent.h"
 #include "Component/LuaScriptComponent.h"
 #include "Component/AudioComponent.h"
 #include "Component/AudioZoneComponent.h"
@@ -661,6 +662,10 @@ void FEditorPropertyWidget::RenderComponentProperties()
 	{
 		RenderLuaScriptControls(LuaComp);
 	}
+	else if (ULuaCameraModifierComponent* LuaCameraModifierComp = Cast<ULuaCameraModifierComponent>(SelectedComponent))
+	{
+		RenderLuaCameraModifierControls(LuaCameraModifierComp);
+	}
 	else if (UAudioComponent* AudioComp = Cast<UAudioComponent>(SelectedComponent))
 	{
 		RenderAudioControls(AudioComp);
@@ -668,11 +673,16 @@ void FEditorPropertyWidget::RenderComponentProperties()
 
 	bool bAnyChanged = false;
 	const bool bIsLuaScriptComponent = SelectedComponent->IsA<ULuaScriptComponent>();
+	const bool bIsLuaCameraModifierComponent = SelectedComponent->IsA<ULuaCameraModifierComponent>();
 	const bool bIsAudioComponent = SelectedComponent->IsA<UAudioComponent>();
 	const bool bIsAudioZoneComponent = SelectedComponent->IsA<UAudioZoneComponent>();
 	for (auto& Prop : Props)
 	{
 		if (bIsLuaScriptComponent && strcmp(Prop.Name, "Script Path") == 0)
+		{
+			continue;
+		}
+		if (bIsLuaCameraModifierComponent && strcmp(Prop.Name, "Script Path") == 0)
 		{
 			continue;
 		}
@@ -786,6 +796,33 @@ void FEditorPropertyWidget::RenderLuaScriptControls(ULuaScriptComponent* Comp)
 	if (!Error.empty())
 	{
 		ImGui::TextWrapped("Last Error: %s", Error.c_str());
+	}
+}
+
+void FEditorPropertyWidget::RenderLuaCameraModifierControls(ULuaCameraModifierComponent* Comp)
+{
+	if (!Comp)
+	{
+		return;
+	}
+
+	ImGui::Spacing();
+	ImGui::TextWrapped("Selected Modifier Script: %s", Comp->GetScriptPath().empty() ? "(none)" : Comp->GetScriptPath().c_str());
+
+	if (ImGui::Button("Select Modifier Script", ImVec2(-1, 0)))
+	{
+		FString SelectedScriptPath;
+		if (OpenLuaScriptFileDialog(SelectedScriptPath))
+		{
+			Comp->SetScriptPath(SelectedScriptPath);
+			Comp->PostEditProperty("Script Path");
+			UE_LOG("LuaCameraModifierComponent: selected script '%s'.", Comp->GetScriptPath().c_str());
+		}
+	}
+
+	if (Comp->GetScriptPath().empty())
+	{
+		ImGui::TextWrapped("Select a Lua file. During PIE/Game, the active camera's PlayerCameraManager will attach it as a LuaCameraModifier.");
 	}
 }
 

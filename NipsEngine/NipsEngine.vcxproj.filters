@@ -434,6 +434,9 @@
     <ClCompile Include="Source\Engine\Component\KnockbackComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\LuaCameraModifierComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\LineBatchComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -1092,6 +1095,9 @@
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\KnockbackComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\LuaCameraModifierComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\LineBatchComponent.h">
