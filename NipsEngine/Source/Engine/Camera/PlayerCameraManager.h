@@ -124,7 +124,7 @@ public:
 	template <typename TModifier>
 	TModifier* AddNewCameraModifier();
 	void RemoveCameraModifier(UCameraModifier* Modifier);
-	void ClearCameraModifiers();
+	void ClearModifierList();
 
 	// Transition
 	void StartCameraTransition(const FCameraViewInfo& From, const FCameraViewInfo& To, float Duration);
