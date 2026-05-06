@@ -1,6 +1,7 @@
 ﻿#include "Engine/Camera/PlayerCameraManager.h"
 
 #include "Engine/Component/CameraComponent.h"
+#include "Engine/Component/LuaCameraModifierComponent.h"
 #include "Engine/Component/PostProcessComponent.h"
 #include "Engine/GameFramework/AActor.h"
 #include "Engine/Camera/Modifier/LetterBoxCameraModifier.h"
@@ -106,6 +107,7 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 	}
 	
 	UpdateCameraFade(DeltaTime);
+	SyncLuaCameraModifierComponents();
 
 	ApplyCameraModifiers(DeltaTime, NewView);
 	ApplyPostProcessComponent(NewPostProcess);
@@ -144,6 +146,7 @@ void APlayerCameraManager::InitializeDefaultModifiers()
 void APlayerCameraManager::Shutdown()
 {
 	ClearModifierList();
+	LuaCameraModifierComponentBindings.clear();
 
 	for (UCameraModifier* Modifier : OwnedModifierList)
 	{
@@ -153,6 +156,7 @@ void APlayerCameraManager::Shutdown()
 
 	LetterBoxCameraModifier = nullptr;
 	CameraShakeModifier = nullptr;
+	LuaCameraModifierComponentBindings.clear();
 	ViewTarget = nullptr;
 	FallbackCamera = nullptr;
 	bHasCachedCameraView = false;
@@ -214,6 +218,24 @@ void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 	{
 		Modifier->RemovedFromCamera(this);
 	}
+}
+
+void APlayerCameraManager::RemoveLuaCameraModifierComponentBinding(size_t BindingIndex)
+{
+	if (BindingIndex >= LuaCameraModifierComponentBindings.size())
+	{
+		return;
+	}
+
+	ULuaCameraModifier* Modifier = LuaCameraModifierComponentBindings[BindingIndex].Modifier;
+	if (Modifier != nullptr)
+	{
+		RemoveCameraModifier(Modifier);
+		OwnedModifierList.erase(std::remove(OwnedModifierList.begin(), OwnedModifierList.end(), Modifier), OwnedModifierList.end());
+		UObjectManager::Get().DestroyObject(Modifier);
+	}
+
+	LuaCameraModifierComponentBindings.erase(LuaCameraModifierComponentBindings.begin() + BindingIndex);
 }
 
 void APlayerCameraManager::ClearModifierList()
@@ -505,6 +527,61 @@ void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo
 		}
 
 		Modifier->ModifyCamera(DeltaTime, InOutView);
+	}
+}
+
+void APlayerCameraManager::SyncLuaCameraModifierComponents()
+{
+	AActor* OwnerActor = ViewTarget ? ViewTarget->GetOwner() : nullptr;
+
+	TArray<ULuaCameraModifierComponent*> ActiveComponents;
+	if (OwnerActor != nullptr)
+	{
+		for (UActorComponent* Component : OwnerActor->GetComponents())
+		{
+			ULuaCameraModifierComponent* LuaModifierComponent = Cast<ULuaCameraModifierComponent>(Component);
+			if (LuaModifierComponent == nullptr || !LuaModifierComponent->IsActive() || LuaModifierComponent->GetScriptPath().empty())
+			{
+				continue;
+			}
+
+			ActiveComponents.push_back(LuaModifierComponent);
+		}
+	}
+
+	for (size_t BindingIndex = LuaCameraModifierComponentBindings.size(); BindingIndex > 0; --BindingIndex)
+	{
+		FLuaCameraModifierComponentBinding& Binding = LuaCameraModifierComponentBindings[BindingIndex - 1];
+		if (std::find(ActiveComponents.begin(), ActiveComponents.end(), Binding.Component) == ActiveComponents.end())
+		{
+			RemoveLuaCameraModifierComponentBinding(BindingIndex - 1);
+		}
+	}
+
+	for (ULuaCameraModifierComponent* Component : ActiveComponents)
+	{
+		const FString& ScriptPath = Component->GetScriptPath();
+		auto ExistingBinding = std::find_if(
+			LuaCameraModifierComponentBindings.begin(),
+			LuaCameraModifierComponentBindings.end(),
+			[Component](const FLuaCameraModifierComponentBinding& Binding)
+			{
+				return Binding.Component == Component;
+			});
+
+		if (ExistingBinding != LuaCameraModifierComponentBindings.end())
+		{
+			if (ExistingBinding->Modifier != nullptr && ExistingBinding->ScriptPath != ScriptPath)
+			{
+				ExistingBinding->ScriptPath = ScriptPath;
+				ExistingBinding->Modifier->SetScriptPath(ScriptPath);
+				ExistingBinding->Modifier->ReloadScript();
+			}
+			continue;
+		}
+
+		ULuaCameraModifier* Modifier = AddLuaCameraModifier(ScriptPath);
+		LuaCameraModifierComponentBindings.push_back({ Component, ScriptPath, Modifier });
 	}
 }
 
