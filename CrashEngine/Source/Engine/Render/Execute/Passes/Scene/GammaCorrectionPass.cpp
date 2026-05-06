@@ -6,6 +6,35 @@
 #include "Render/Scene/Proxies/Primitive/PrimitiveProxy.h"
 #include "Render/Execute/Context/Viewport/ViewportRenderTargets.h"
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
+#include "Render/Resources/Buffers/ConstantBufferCache.h"
+#include "Render/Resources/Buffers/ConstantBufferData.h"
+#include "Render/Resources/Bindings/RenderCBKeys.h"
+
+namespace
+{
+bool BindGammaCorrectionConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command)
+{
+    if (!Context.SceneView || !Context.Context)
+    {
+        return false;
+    }
+
+    const FGammaCorrectionSettings& Settings = Context.SceneView->PostProcessSettings.GammaCorrection;
+
+    FGammaCorrectionCBData Constants = {};
+    Constants.DisplayGamma           = Settings.DisplayGamma;
+
+    FConstantBuffer* CB = FConstantBufferCache::Get().GetBuffer(ERenderCBKey::GammaCorrection, sizeof(FGammaCorrectionCBData));
+    if (!CB)
+    {
+        return false;
+    }
+
+    CB->Update(Context.Context, &Constants, sizeof(Constants));
+    Command.PerShaderCB[0] = CB;
+    return true;
+}
+} // namespace
 
 bool FGammaCorrectionPass::IsEnabled(const FRenderPipelineContext& Context) const
 {
@@ -36,7 +65,14 @@ void FGammaCorrectionPass::BuildDrawCommands(FRenderPipelineContext& Context)
         return;
     }
 
+    TArray<FDrawCommand>& Commands           = Context.DrawCommandList->GetCommands();
+    const size_t          CommandCountBefore = Commands.size();
+
     DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass::PostProcess, Context, *Context.DrawCommandList, EViewModePostProcessVariant::GammaCorrection);
+    if (Commands.size() > CommandCountBefore)
+    {
+        BindGammaCorrectionConstantBuffer(Context, Commands.back());
+    }
 }
 
 void FGammaCorrectionPass::SubmitDrawCommands(FRenderPipelineContext& Context)

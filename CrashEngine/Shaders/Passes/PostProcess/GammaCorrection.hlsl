@@ -2,7 +2,11 @@
 #include "../../Resources/SystemResources.hlsl"
 #include "../../Resources/SystemSamplers.hlsl"
 
-static const float DisplayGamma = 2.2f;
+cbuffer GammaCorrectionParams : register(b2)
+{
+    float DisplayGamma;
+    float3 Padding;
+};
 
 PS_Input_UV VS(uint vertexID : SV_VertexID)
 {
@@ -12,7 +16,7 @@ PS_Input_UV VS(uint vertexID : SV_VertexID)
 float3 ApplyGammaCorrection(float3 linearColor)
 {
     linearColor = saturate(linearColor);
-    return pow(linearColor, 1.0f / DisplayGamma);
+    return pow(linearColor, 1.0f / max(DisplayGamma, 0.0001f));
 }
 
 float4 PS(PS_Input_UV input) : SV_TARGET

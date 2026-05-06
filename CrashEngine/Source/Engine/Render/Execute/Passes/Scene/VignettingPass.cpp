@@ -9,6 +9,11 @@
 #include "Render/Resources/Buffers/ConstantBufferCache.h"
 #include "Render/Resources/Bindings/RenderCBKeys.h"
 
+bool FVignettingPass::IsEnabled(const FRenderPipelineContext& Context) const
+{
+    return Context.SceneView && Context.SceneView->PostProcessSettings.Vignetting.bEnabled;
+}
+
 void FVignettingPass::PrepareInputs(FRenderPipelineContext& Context)
 {
     if (!Context.Targets || !Context.Targets->SceneColorCopySRV)

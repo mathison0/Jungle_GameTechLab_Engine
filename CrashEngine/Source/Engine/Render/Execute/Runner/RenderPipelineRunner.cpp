@@ -51,6 +51,8 @@ const wchar_t* GetRenderPassMarkerName(ERenderPassNodeType PassType)
         return L"HeightFogPass";
     case ERenderPassNodeType::FXAAPass:
         return L"FXAAPass";
+    case ERenderPassNodeType::VignettingPass:
+        return L"VignettingPass";
     case ERenderPassNodeType::GammaCorrectionPass:
         return L"GammaCorrectionPass";
     case ERenderPassNodeType::UIPass:
@@ -93,6 +95,8 @@ bool ShouldExecutePass(const FRenderPipelineContext& Context, ERenderPassNodeTyp
         return Registry->UsesHeightFog(Context.ViewMode.ActiveViewMode);
     case ERenderPassNodeType::FXAAPass:
         return Registry->UsesFXAA(Context.ViewMode.ActiveViewMode);
+    case ERenderPassNodeType::VignettingPass:
+        return Context.SceneView && Context.SceneView->PostProcessSettings.Vignetting.bEnabled;
     case ERenderPassNodeType::GammaCorrectionPass:
         return Context.SceneView && Context.SceneView->PostProcessSettings.GammaCorrection.bEnabled;
     default:

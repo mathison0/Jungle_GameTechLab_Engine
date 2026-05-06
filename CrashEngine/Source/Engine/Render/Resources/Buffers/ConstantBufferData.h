@@ -112,6 +112,12 @@ struct FVignettingCBData
     float   bEnabled; 
 };
 
+struct FGammaCorrectionCBData
+{
+    float DisplayGamma = 2.2f;
+    float _pad[3]      = {};
+}; // Total: 16B
+
 // FFXAACBData는 렌더 처리에 필요한 데이터를 묶는 구조체입니다.
 struct FFXAACBData
 {

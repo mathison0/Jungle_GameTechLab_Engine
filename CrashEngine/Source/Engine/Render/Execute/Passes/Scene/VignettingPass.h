@@ -12,5 +12,8 @@ public:
     }
     void SubmitDrawCommands(FRenderPipelineContext& Context) override;
     bool BindVignettingConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command);
+
+protected:
+    bool IsEnabled(const FRenderPipelineContext& Context) const override;
 };
  
