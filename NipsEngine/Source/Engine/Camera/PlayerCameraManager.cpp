@@ -2,6 +2,8 @@
 
 #include "Component/CameraComponent.h"
 #include "Engine/Camera/Modifier/LetterBoxCameraModifier.h"
+#include "Engine/Camera/Modifier/CameraShakeModifier.h"
+#include "Engine/Camera/Modifier/LuaCameraModifier.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
 #include "Engine/Math/Bezier.h"
@@ -147,6 +149,7 @@ void APlayerCameraManager::Shutdown()
 	OwnedModifierList.clear();
 
 	LetterBoxCameraModifier = nullptr;
+	CameraShakeModifier = nullptr;
 	ViewTarget = nullptr;
 	FallbackCamera = nullptr;
 	bHasCachedCameraView = false;
@@ -163,33 +166,62 @@ ULetterBoxCameraModifier* APlayerCameraManager::GetLetterBoxCameraModifier()
 	return LetterBoxCameraModifier;
 }
 
-void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
+ULuaCameraModifier* APlayerCameraManager::AddLuaCameraModifier(const FString& ScriptPath)
+{
+	ULuaCameraModifier* Modifier = UObjectManager::Get().CreateObject<ULuaCameraModifier>();
+	Modifier->SetScriptPath(ScriptPath);
+	OwnedModifierList.push_back(Modifier);
+	Modifier->AddedToCamera(this);
+	AddCameraModifierToList(Modifier);
+	return Modifier;
+}
+
+bool APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifier)
+{
+	if (NewModifier == nullptr)
+	{
+		return false;
+	}
+
+	if (std::find(ModifierList.begin(), ModifierList.end(), NewModifier) != ModifierList.end())
+	{
+		return false;
+	}
+
+	ModifierList.push_back(NewModifier);
+	std::sort(ModifierList.begin(), ModifierList.end(), [](const UCameraModifier* A, const UCameraModifier* B)
+			  {
+		const int32 APriority = A ? A->GetPriority() : 0;
+		const int32 BPriority = B ? B->GetPriority() : 0;
+		return APriority < BPriority; });
+
+	return true;
+}
+
+void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 {
 	if (Modifier == nullptr)
 	{
 		return;
 	}
 
-	if (std::find(ModifierList.begin(), ModifierList.end(), Modifier) != ModifierList.end())
-	{
-		return;
-	}
-
-	ModifierList.push_back(Modifier);
-	std::sort(ModifierList.begin(), ModifierList.end(), [](const UCameraModifier* A, const UCameraModifier* B)
-			  {
-		const int32 APriority = A ? A->GetPriority() : 0;
-		const int32 BPriority = B ? B->GetPriority() : 0;
-		return APriority < BPriority; });
-}
-
-void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
-{
+	const auto OldSize = ModifierList.size();
 	ModifierList.erase(std::remove(ModifierList.begin(), ModifierList.end(), Modifier), ModifierList.end());
+	if (ModifierList.size() != OldSize)
+	{
+		Modifier->RemovedFromCamera(this);
+	}
 }
 
 void APlayerCameraManager::ClearModifierList()
 {
+	for (UCameraModifier* Modifier : ModifierList)
+	{
+		if (Modifier)
+		{
+			Modifier->RemovedFromCamera(this);
+		}
+	}
 	ModifierList.clear();
 }
 
@@ -255,6 +287,48 @@ void APlayerCameraManager::ClearLetterBox()
 	{
 		Modifier->ClearLetterBox();
 	}
+}
+
+UCameraShakeModifier* APlayerCameraManager::GetCameraShakeModifier()
+{
+	if (CameraShakeModifier == nullptr)
+	{
+		CameraShakeModifier = AddNewCameraModifier<UCameraShakeModifier>();
+	}
+
+	return CameraShakeModifier;
+}
+
+void APlayerCameraManager::StartCameraShake(float Amplitude, float Frequency, float Duration, const float BezierCP[4])
+{
+	UCameraShakeModifier* Modifier = GetCameraShakeModifier();
+	if (Modifier == nullptr)
+	{
+		return;
+	}
+
+	if (BezierCP)
+	{
+		for (int32 Index = 0; Index < 4; ++Index)
+		{
+			Modifier->BezierCP[Index] = BezierCP[Index];
+		}
+	}
+
+	Modifier->StartShake(Amplitude, Frequency, Duration);
+}
+
+void APlayerCameraManager::StopCameraShake()
+{
+	if (CameraShakeModifier)
+	{
+		CameraShakeModifier->StopShake();
+	}
+}
+
+bool APlayerCameraManager::IsCameraShaking() const
+{
+	return CameraShakeModifier && CameraShakeModifier->GetIsShaking();
 }
 
 // 카메라 Linear 보간 이동

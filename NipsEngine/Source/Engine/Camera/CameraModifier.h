@@ -6,6 +6,7 @@
 struct FCameraViewInfo;
 struct FPostProcessSettings;
 struct FCameraOverlaySettings;
+class APlayerCameraManager;
 
 class UCameraModifier : public UObject
 {
@@ -18,6 +19,9 @@ public:
 	virtual bool ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView);
 	virtual bool ModifyPostProcess(float DeltaTime, FPostProcessSettings& InOutSettings);
 	virtual bool ModifyOverlay(float DeltaTime, FCameraOverlaySettings& InOutOverlay);
+
+	virtual void AddedToCamera(APlayerCameraManager* Camera);
+	virtual void RemovedFromCamera(APlayerCameraManager* Camera);
 
 	virtual void EnableModifier();
 	virtual void DisableModifier();

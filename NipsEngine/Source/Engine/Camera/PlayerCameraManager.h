@@ -14,6 +14,8 @@
 class FViewportCamera;
 class UCameraComponent;
 class ULetterBoxCameraModifier;
+class UCameraShakeModifier;
+class ULuaCameraModifier;
 struct FSceneView;
 enum class EViewMode : int32;
 
@@ -103,12 +105,18 @@ public:
 	void SetLetterBox(float Ratio);
 	void ClearLetterBox();
 
+	// Camera shake
+	UCameraShakeModifier* GetCameraShakeModifier();
+	const UCameraShakeModifier* GetCameraShakeModifier() const { return CameraShakeModifier; }
+	void StartCameraShake(float Amplitude, float Frequency, float Duration, const float BezierCP[4]);
+	void StopCameraShake();
+	bool IsCameraShaking() const;
+
 	// Modifier
-	void AddCameraModifier(UCameraModifier* Modifier);
 	template <typename TModifier>
 	TModifier* AddNewCameraModifier();
+	ULuaCameraModifier* AddLuaCameraModifier(const FString& ScriptPath);
 	void RemoveCameraModifier(UCameraModifier* Modifier);
-	void ClearModifierList();
 
 	// Transition
 	void StartCameraTransition(const FCameraViewInfo& From, const FCameraViewInfo& To, float Duration);
@@ -123,6 +131,9 @@ private:
 	bool BuildBaseCameraView(FCameraViewInfo& OutView) const;
 	void UpdateCameraFade(float DeltaTime);
 
+	bool AddCameraModifierToList(UCameraModifier* NewModifier);
+	void ClearModifierList();
+
 	void ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView);
 	void ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings);
 	void ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay);
@@ -136,6 +147,7 @@ private:
 	TArray<UCameraModifier*> ModifierList;
 	TArray<UCameraModifier*> OwnedModifierList;
 	ULetterBoxCameraModifier* LetterBoxCameraModifier = nullptr;
+	UCameraShakeModifier* CameraShakeModifier = nullptr;
 	
 	bool bHasCachedCameraView = false;
 	FCameraViewInfo CachedCameraView;
@@ -152,7 +164,8 @@ TModifier* APlayerCameraManager::AddNewCameraModifier()
 	static_assert(std::is_base_of_v<UCameraModifier, TModifier>, "TModifier must derive from UCameraModifier");
 
 	TModifier* Modifier = UObjectManager::Get().CreateObject<TModifier>();
-	AddCameraModifier(Modifier);
 	OwnedModifierList.push_back(Modifier);
+	Modifier->AddedToCamera(this);
+	AddCameraModifierToList(Modifier);
 	return Modifier;
 }
