@@ -51,8 +51,10 @@ int BezierUI::Bezier(const char* label, float cp[4])
     if (Window->SkipItems)
         return false;
 
-    // 헤더 슬라이더 — 마지막 인자는 ImGuiSliderFlags (구 float power 폐기됨)
-    int changed = SliderFloat4(label, cp, 0, 1, "%.3f");
+    PushID(label);
+
+    // 헤더 슬라이더 — label은 이미 PushID로 스코프됐으므로 "##v" 사용
+    int changed = SliderFloat4("##v", cp, 0, 1, "%.3f");
     int hovered = IsItemActive() || IsItemHovered();
     Dummy(ImVec2(0, 3));
 
@@ -65,7 +67,10 @@ int BezierUI::Bezier(const char* label, float cp[4])
     ImRect bb(Window->DC.CursorPos, ImVec2(Window->DC.CursorPos.x + Canvas.X, Window->DC.CursorPos.y + Canvas.Y));
     ItemSize(bb);
     if (!ItemAdd(bb, NULL))
+    {
+        PopID();
         return changed;
+    }
 
     // IsHovered(ImRect, id) 는 ImGui 1.78 이후 제거됨 → IsMouseHoveringRect 사용
     hovered |= IsMouseHoveringRect(bb.Min, bb.Max);
@@ -196,5 +201,6 @@ int BezierUI::Bezier(const char* label, float cp[4])
         SetCursorScreenPos(ImVec2(bb.Min.x, bb.Max.y + GRAB_RADIUS));
     }
 
+    PopID();
     return changed;
 }
