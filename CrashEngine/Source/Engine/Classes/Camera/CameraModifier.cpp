@@ -26,7 +26,7 @@ bool UCameraModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& InOutPOV)
 
     InOutPOV.Location = FMath::Lerp(InOutPOV.Location, NewViewLocation, Alpha);
 
-    const FRotator DeltaRot = (NewViewRotation - InOutPOV.Rotation).GetNormalized();
+    const FRotator DeltaRot = FRotator::GetBlendDelta(InOutPOV.Rotation, NewViewRotation);
     InOutPOV.Rotation = InOutPOV.Rotation + DeltaRot * Alpha;
 
     InOutPOV.FOV = FMath::Lerp(InOutPOV.FOV, NewFOV, Alpha);

@@ -37,6 +37,28 @@ bool StartsWith(const FString& Value, const FString& Prefix)
     return Value.size() >= Prefix.size() && Value.compare(0, Prefix.size(), Prefix) == 0;
 }
 
+bool IsRuntimeAddedTankComponentName(const FString& ComponentName)
+{
+    return StartsWith(ComponentName, "Visual_") ||
+           StartsWith(ComponentName, "Muzzle_") ||
+           StartsWith(ComponentName, "MuzzleFlash_");
+}
+
+bool HasRuntimeAddedTankParent(const USceneComponent* SceneComponent)
+{
+    for (const USceneComponent* Parent = SceneComponent ? SceneComponent->GetParent() : nullptr;
+         Parent != nullptr;
+         Parent = Parent->GetParent())
+    {
+        if (IsRuntimeAddedTankComponentName(Parent->GetFName().ToString()))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 int32 MaxInt32(int32 A, int32 B)
 {
     return A > B ? A : B;
@@ -65,6 +87,7 @@ sol::object FindFirstTableArgument(sol::variadic_args Args)
 
 void ATankActor::BeginPlay()
 {
+    ResetRuntimeAddedComponents();
     GetHeadGunProjectile();
     EnsureHealthBarComponents();
 
@@ -149,6 +172,12 @@ void ATankActor::BindScriptFunctions(UScriptComponent& ScriptComponent)
         {
             const FTankWeaponAttackParams Params = ReadWeaponAttackParamsFromLua(FindFirstTableArgument(Args));
             FireHeadMainGun(Params);
+        });
+
+    ScriptComponent.BindFunction("ResetRuntimeAddedComponents",
+        [this]()
+        {
+            ResetRuntimeAddedComponents();
         });
 }
 
@@ -382,6 +411,42 @@ void ATankActor::EquipWeaponVisualFromLua(const FString& WeaponId, int32 Level, 
     }
 
     UE_LOG(Tank, Info, "EquipWeaponVisualFromLua success. Weapon=%s Level=%d", WeaponId.c_str(), Level);
+}
+
+void ATankActor::ResetRuntimeAddedComponents()
+{
+    TArray<UActorComponent*> ComponentsToRemove;
+
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        if (!Component)
+        {
+            continue;
+        }
+
+        if (!IsRuntimeAddedTankComponentName(Component->GetFName().ToString()))
+        {
+            continue;
+        }
+
+        if (USceneComponent* SceneComponent = Cast<USceneComponent>(Component))
+        {
+            if (HasRuntimeAddedTankParent(SceneComponent))
+            {
+                continue;
+            }
+        }
+
+        ComponentsToRemove.push_back(Component);
+    }
+
+    for (UActorComponent* Component : ComponentsToRemove)
+    {
+        if (Component)
+        {
+            RemoveComponent(Component);
+        }
+    }
 }
 
 void ATankActor::FireLinearProjectile(const FString& WeaponId, const FTankWeaponAttackParams& Params, int32 MuzzleIndex)

@@ -7,6 +7,8 @@ local MachineTurretWeapon = {}
 MachineTurretWeapon.__index = MachineTurretWeapon
 
 local DEFAULT_AIM_TURN_SPEED = 360.0
+local DEFAULT_HOVER_AMPLITUDE = 0.25
+local DEFAULT_HOVER_SPEED = 2.0
 
 local function GetVecAxis(v, axisName, axisIndex)
     if v == nil then
@@ -161,16 +163,26 @@ function MachineTurretWeapon:Stop()
         if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil then
             if slot.SearchCoroutine ~= nil then
                 self.Owner.StopCoroutine(slot.SearchCoroutine)
+                slot.SearchCoroutine = nil
             end
 
             if slot.AimCoroutine ~= nil then
                 self.Owner.StopCoroutine(slot.AimCoroutine)
+                slot.AimCoroutine = nil
             end
 
             if slot.FireCoroutine ~= nil then
                 self.Owner.StopCoroutine(slot.FireCoroutine)
+                slot.FireCoroutine = nil
+            end
+
+            if slot.HoverCoroutine ~= nil then
+                self.Owner.StopCoroutine(slot.HoverCoroutine)
+                slot.HoverCoroutine = nil
             end
         end
+
+        self:ResetSlotHover(slot)
     end
 end
 
@@ -198,16 +210,26 @@ function MachineTurretWeapon:RebuildTurretSlots()
         if self.Owner ~= nil and self.Owner.StopCoroutine ~= nil then
             if slot.SearchCoroutine ~= nil then
                 self.Owner.StopCoroutine(slot.SearchCoroutine)
+                slot.SearchCoroutine = nil
             end
 
             if slot.AimCoroutine ~= nil then
                 self.Owner.StopCoroutine(slot.AimCoroutine)
+                slot.AimCoroutine = nil
             end
 
             if slot.FireCoroutine ~= nil then
                 self.Owner.StopCoroutine(slot.FireCoroutine)
+                slot.FireCoroutine = nil
+            end
+
+            if slot.HoverCoroutine ~= nil then
+                self.Owner.StopCoroutine(slot.HoverCoroutine)
+                slot.HoverCoroutine = nil
             end
         end
+
+        self:ResetSlotHover(slot)
     end
 
     self.TurretSlots = {}
@@ -243,11 +265,14 @@ function MachineTurretWeapon:CreateTurretSlot(index)
         return nil
     end
 
+    local baseLocation = visual:GetRelativeLocation()
+
     return {
         Index = index,
 
         Visual = visual,
         Muzzle = muzzle,
+        BaseRelativeLocation = baseLocation,
 
         Target = nil,
         IsRunning = true,
@@ -261,6 +286,7 @@ function MachineTurretWeapon:CreateTurretSlot(index)
         SearchCoroutine = nil,
         AimCoroutine = nil,
         FireCoroutine = nil,
+        HoverCoroutine = nil,
     }
 end
 
@@ -318,6 +344,10 @@ function MachineTurretWeapon:StartTurretSlot(slot)
     slot.FireCoroutine = self.Owner.StartCoroutine(function()
         self:TurretFireLoop(slot)
     end)
+
+    slot.HoverCoroutine = self.Owner.StartCoroutine(function()
+        self:TurretHoverLoop(slot)
+    end)
 end
 
 function MachineTurretWeapon:TurretSearchLoop(slot)
@@ -359,6 +389,49 @@ function MachineTurretWeapon:TurretFireLoop(slot)
 
         GameplayPause.Wait(slot.FireInterval)
     end
+end
+
+function MachineTurretWeapon:TurretHoverLoop(slot)
+    local elapsed = (slot.Index or 0) * 0.35
+    local amplitude = self.Data.HoverAmplitude or DEFAULT_HOVER_AMPLITUDE
+    local speed = self.Data.HoverSpeed or DEFAULT_HOVER_SPEED
+
+    while self.IsRunning and slot.IsRunning do
+        local deltaTime, paused = GameplayPause.WaitNextFrame()
+        if not paused and slot.Visual ~= nil and slot.Visual:IsValid() then
+            elapsed = elapsed + math.max(deltaTime or 0.0, 0.0)
+
+            if slot.BaseRelativeLocation == nil then
+                slot.BaseRelativeLocation = slot.Visual:GetRelativeLocation()
+            end
+
+            local location = {
+                x = GetVecAxis(slot.BaseRelativeLocation, "x", 1) or 0.0,
+                y = GetVecAxis(slot.BaseRelativeLocation, "y", 2) or 0.0,
+                z = GetVecAxis(slot.BaseRelativeLocation, "z", 3) or 0.0,
+            }
+
+            SetVecAxis(
+                location,
+                "z",
+                3,
+                (GetVecAxis(slot.BaseRelativeLocation, "z", 3) or 0.0) +
+                    math.sin(elapsed * speed) * amplitude
+            )
+
+            slot.Visual:SetRelativeLocation(location)
+        end
+    end
+
+    self:ResetSlotHover(slot)
+end
+
+function MachineTurretWeapon:ResetSlotHover(slot)
+    if slot == nil or slot.Visual == nil or not slot.Visual:IsValid() or slot.BaseRelativeLocation == nil then
+        return
+    end
+
+    slot.Visual:SetRelativeLocation(slot.BaseRelativeLocation)
 end
 
 function MachineTurretWeapon:UpdateSlotTarget(slot)

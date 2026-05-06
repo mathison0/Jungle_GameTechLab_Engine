@@ -2,6 +2,8 @@ local WeaponInventory = require("WeaponInventory")
 local LevelSystem = require("LevelSystem")
 local Audio = require("Core.Audio")
 local CameraShake = require("Core.CameraShake")
+local CameraManager = require("CameraManager")
+local Co = require("LuaCoroutine")
 
 local BACKGROUND_MUSIC_KEY = "background"
 local BACKGROUND_MUSIC_VOLUME = 0.7
@@ -39,6 +41,7 @@ local GameManager = {
     CurrentLevelUpOptions = nil,
     LastResult = nil,
     ManagerComponent = nil,
+    CameraSwitchCoroutine = nil,
     Stats = {}
 }
 
@@ -138,6 +141,10 @@ local function resetRunState()
         GameManager.ExpBarUI:SetLevelUpMode(false)
     end
 
+    if GameManager.PlayerScript ~= nil and type(GameManager.PlayerScript.ResetRuntimeAddedComponents) == "function" then
+        GameManager.PlayerScript.ResetRuntimeAddedComponents()
+    end
+
     if GameManager.PlayerScript ~= nil then
         GameManager.WeaponInventory = WeaponInventory.New(GameManager.PlayerScript)
         GameManager.LevelSystem = LevelSystem.New(GameManager.PlayerScript, GameManager.WeaponInventory)
@@ -158,6 +165,69 @@ local function buildFallbackResult(resultType, reason)
         Rank = 0,
         Records = {},
     }
+end
+
+function GameManager.SwitchToMainCameraActor()
+    if GameManager.PlayerScript == nil or type(GameManager.PlayerScript.GetActor) ~= "function" then
+        Log("[GameManager] MainCameraActor switch failed: PlayerScript is nil.")
+        return false
+    end
+
+    local playerActor = GameManager.PlayerScript:GetActor()
+    if playerActor == nil or not playerActor:IsValid() then
+        Log("[GameManager] MainCameraActor switch failed: Player actor is invalid.")
+        return false
+    end
+
+    local runner = GameManager.ManagerComponent or GameManager.PlayerScript
+    if runner == nil or type(runner.QueryActorByTagClosest) ~= "function" then
+        Log("[GameManager] MainCameraActor switch failed: query runner is invalid.")
+        return false
+    end
+
+    local mainCameraActor = runner:QueryActorByTagClosest(
+        "MainCameraActor",
+        playerActor:GetLocation(),
+        100000.0
+    )
+
+    if mainCameraActor == nil or not mainCameraActor:IsValid() then
+        Log("[GameManager] MainCameraActor switch failed: MainCameraActor tag not found.")
+        return false
+    end
+
+    if not CameraManager.InitializeFor(playerActor) then
+        Log("[GameManager] MainCameraActor switch failed: CameraManager.InitializeFor failed.")
+        return false
+    end
+
+    if not CameraManager.SetViewTargetBlend(mainCameraActor, 1.0, "EaseInOut", 2.0, false) then
+        Log("[GameManager] MainCameraActor switch failed: SetViewTargetBlend failed.")
+        return false
+    end
+
+    return true
+end
+
+function GameManager.StartMainCameraSwitchCoroutine()
+    local runner = GameManager.ManagerComponent or GameManager.PlayerScript
+    if runner == nil or type(runner.StartCoroutine) ~= "function" then
+        Log("[GameManager] MainCameraActor switch coroutine failed: StartCoroutine is nil.")
+        return false
+    end
+
+    if GameManager.CameraSwitchCoroutine ~= nil and type(runner.StopCoroutine) == "function" then
+        runner.StopCoroutine(GameManager.CameraSwitchCoroutine)
+        GameManager.CameraSwitchCoroutine = nil
+    end
+
+    GameManager.CameraSwitchCoroutine = runner.StartCoroutine(function()
+        Co.Wait(1.0)
+        GameManager.CameraSwitchCoroutine = nil
+        GameManager.SwitchToMainCameraActor()
+    end)
+
+    return GameManager.CameraSwitchCoroutine ~= nil
 end
 
 function GameManager.PlayBackgroundMusic()
@@ -245,6 +315,7 @@ function GameManager._ResetState()
     GameManager.CurrentLevelUpOptions = nil
     GameManager.LastResult = nil
     GameManager.ManagerComponent = nil
+    GameManager.CameraSwitchCoroutine = nil
 
     Log("[GameManager] Session State Fully Reset.")
 end
@@ -317,7 +388,9 @@ function GameManager.OnGameStart()
 
     if GameManager.WeaponInventory then
         GameManager.WeaponInventory:AddWeapon("MainCannon")
+
     end
+    GameManager.StartMainCameraSwitchCoroutine()
     Log("[GameManager] --- GAME START ---")
 end
 

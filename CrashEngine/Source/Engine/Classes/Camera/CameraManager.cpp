@@ -1,4 +1,7 @@
 ﻿#include "CameraManager.h"
+#include "Engine/Component/ScriptComponent.h"
+#include "Engine/Scripting/LuaEngineBinding.h"
+#include "Engine/Scripting/LuaScriptTypes.h"
 #include "Object/Object.h"
 #include "GameFramework/World.h"
 #include "CameraModifier.h"
@@ -7,8 +10,131 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 IMPLEMENT_CLASS(APlayerCameraManager, AActor)
+
+namespace
+{
+EViewTargetBlendFunction ParseLuaBlendFunction(const sol::object& BlendFunctionObject)
+{
+    if (!BlendFunctionObject.valid() || BlendFunctionObject == sol::nil)
+    {
+        return EViewTargetBlendFunction::Cubic;
+    }
+
+    std::string Name;
+    if (BlendFunctionObject.is<std::string>())
+    {
+        Name = BlendFunctionObject.as<std::string>();
+    }
+    else if (BlendFunctionObject.is<FString>())
+    {
+        Name = BlendFunctionObject.as<FString>();
+    }
+    else
+    {
+        return EViewTargetBlendFunction::Cubic;
+    }
+
+    if (Name == "Linear")
+    {
+        return EViewTargetBlendFunction::Linear;
+    }
+    if (Name == "EaseIn")
+    {
+        return EViewTargetBlendFunction::EaseIn;
+    }
+    if (Name == "EaseOut")
+    {
+        return EViewTargetBlendFunction::EaseOut;
+    }
+    if (Name == "EaseInOut")
+    {
+        return EViewTargetBlendFunction::EaseInOut;
+    }
+    return EViewTargetBlendFunction::Cubic;
+}
+
+FViewTargetTransitionParams MakeLuaTransitionParams(const sol::variadic_args& Args, int32 StartIndex)
+{
+    FViewTargetTransitionParams Params;
+
+    int32 ArgIndex = 0;
+    int32 SourceIndex = 0;
+    for (const sol::object& Arg : Args)
+    {
+        if (SourceIndex++ < StartIndex)
+        {
+            continue;
+        }
+
+        switch (ArgIndex)
+        {
+        case 0:
+            if (Arg.get_type() == sol::type::number)
+            {
+                Params.BlendTime = std::max(0.0f, Arg.as<float>());
+            }
+            break;
+        case 1:
+            Params.BlendFunction = ParseLuaBlendFunction(Arg);
+            break;
+        case 2:
+            if (Arg.get_type() == sol::type::number)
+            {
+                Params.BlendExp = std::max(0.01f, Arg.as<float>());
+            }
+            break;
+        case 3:
+            if (Arg.is<bool>())
+            {
+                Params.bLockOutgoing = Arg.as<bool>();
+            }
+            break;
+        default:
+            break;
+        }
+
+        ++ArgIndex;
+    }
+
+    return Params;
+}
+
+AActor* ReadLuaActorArgument(const sol::variadic_args& Args, int32& OutNextArgIndex)
+{
+    int32 ArgIndex = 0;
+    for (const sol::object& Arg : Args)
+    {
+        if (Arg.is<FLuaActorHandle>())
+        {
+            OutNextArgIndex = ArgIndex + 1;
+            return Arg.as<FLuaActorHandle>().Resolve();
+        }
+
+        ++ArgIndex;
+    }
+
+    OutNextArgIndex = ArgIndex;
+    return nullptr;
+}
+
+sol::table MakeLuaRotator(sol::state_view Lua, const FRotator& Value)
+{
+    sol::table Rotation = Lua.create_table();
+    Rotation[1] = Value.Pitch;
+    Rotation[2] = Value.Yaw;
+    Rotation[3] = Value.Roll;
+    Rotation["x"] = Value.Pitch;
+    Rotation["y"] = Value.Yaw;
+    Rotation["z"] = Value.Roll;
+    Rotation["pitch"] = Value.Pitch;
+    Rotation["yaw"] = Value.Yaw;
+    Rotation["roll"] = Value.Roll;
+    return Rotation;
+}
+} // namespace
 
 APlayerCameraManager::APlayerCameraManager()
 {
@@ -55,6 +181,94 @@ APlayerCameraManager::~APlayerCameraManager()
 
     Modifiers.clear();
     ModifierHandleMap.clear();
+}
+
+void APlayerCameraManager::InitDefaultComponents()
+{
+    AActor::InitDefaultComponents();
+
+    UScriptComponent* Script = AddComponent<UScriptComponent>();
+    if (Script)
+    {
+        Script->SetFName("CameraManagerComponent");
+        Script->SetScriptPath(CameraManagerScriptPath);
+    }
+}
+
+void APlayerCameraManager::BindScriptFunctions(UScriptComponent& ScriptComponent)
+{
+    if (ScriptComponent.GetScriptPath() != CameraManagerScriptPath)
+    {
+        return;
+    }
+
+    ScriptComponent.BindFunction("InitializeFor",
+        [this](const sol::variadic_args& Args) -> bool
+        {
+            int32 NextArgIndex = 0;
+            AActor* Owner = ReadLuaActorArgument(Args, NextArgIndex);
+            if (!Owner)
+            {
+                return false;
+            }
+
+            InitializeFor(Owner);
+            return HasValidCameraCache();
+        });
+
+    ScriptComponent.BindFunction("SetViewTarget",
+        [this](const sol::variadic_args& Args) -> bool
+        {
+            int32 NextArgIndex = 0;
+            AActor* Target = ReadLuaActorArgument(Args, NextArgIndex);
+            if (!Target)
+            {
+                return false;
+            }
+
+            SetViewTarget(Target);
+            return true;
+        });
+
+    ScriptComponent.BindFunction("SetViewTargetBlend",
+        [this](const sol::variadic_args& Args) -> bool
+        {
+            int32 NextArgIndex = 0;
+            AActor* Target = ReadLuaActorArgument(Args, NextArgIndex);
+            if (!Target)
+            {
+                return false;
+            }
+
+            SetViewTarget(Target, MakeLuaTransitionParams(Args, NextArgIndex));
+            return true;
+        });
+
+    ScriptComponent.BindFunction("SetGameCameraCutThisFrame",
+        [this](const sol::variadic_args&)
+        {
+            SetGameCameraCutThisFrame();
+        });
+
+    ScriptComponent.BindFunction("GetCameraLocation",
+        [this](sol::this_state State, const sol::variadic_args&) -> sol::table
+        {
+            sol::state_view Lua(State);
+            return MakeLuaVec3(Lua, GetCameraLocation());
+        });
+
+    ScriptComponent.BindFunction("GetCameraRotation",
+        [this](sol::this_state State, const sol::variadic_args&) -> sol::table
+        {
+            sol::state_view Lua(State);
+            return MakeLuaRotator(Lua, GetCameraRotation());
+        });
+
+    ScriptComponent.BindFunction("HasValidCameraCache",
+        [this](const sol::variadic_args&) -> bool
+        {
+            return HasValidCameraCache();
+        });
 }
 
 // void APlayerCameraManager::InitializeFor(APlayerController* PC)

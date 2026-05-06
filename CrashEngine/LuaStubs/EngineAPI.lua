@@ -444,3 +444,30 @@ function ScriptComponent:GetCustomTimeDilation() end
 
 ---@param timeDilation number
 function ScriptComponent:SetCustomTimeDilation(timeDilation) end
+
+---@param ownerActor Actor
+---@return boolean
+function ScriptComponent:InitializeFor(ownerActor) end
+
+---@param targetActor Actor
+---@return boolean
+function ScriptComponent:SetViewTarget(targetActor) end
+
+---@param targetActor Actor
+---@param blendTime number
+---@param blendFunction? '"Linear"'|'"Cubic"'|'"EaseIn"'|'"EaseOut"'|'"EaseInOut"'
+---@param blendExp? number
+---@param lockOutgoing? boolean
+---@return boolean
+function ScriptComponent:SetViewTargetBlend(targetActor, blendTime, blendFunction, blendExp, lockOutgoing) end
+
+function ScriptComponent:SetGameCameraCutThisFrame() end
+
+---@return Vec3
+function ScriptComponent:GetCameraLocation() end
+
+---@return Vec3
+function ScriptComponent:GetCameraRotation() end
+
+---@return boolean
+function ScriptComponent:HasValidCameraCache() end

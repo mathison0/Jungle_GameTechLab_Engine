@@ -47,6 +47,7 @@ public:
 
     void EquipWeaponVisual(const FString& WeaponId, int32 Level);
     void EquipWeaponVisualFromLua(const FString& WeaponId, int32 Level, sol::table LayoutTable);
+    void ResetRuntimeAddedComponents();
 
     void FireLinearProjectile(const FString& WeaponId, const FTankWeaponAttackParams& Params, int32 MuzzleIndex);
     void FireHomingMissile(const FString& WeaponId, const FTankWeaponAttackParams& Params, int32 MuzzleIndex, AActor* TargetActor);
