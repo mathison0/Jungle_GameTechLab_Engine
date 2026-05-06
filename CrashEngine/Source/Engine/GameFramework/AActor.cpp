@@ -2,6 +2,7 @@
 #include "GameFramework/AActor.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/CameraComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Component/UUIDTextRenderComponent.h"
 #include "Component/ActorComponent.h"
@@ -10,6 +11,7 @@
 #include "GameFramework/Level.h"
 #include "GameFramework/World.h"
 #include "Serialization/Archive.h"
+#include "Engine/Classes/Camera/CameraManager.h"
 
 #include <algorithm>
 #include <string>
@@ -40,6 +42,8 @@ AActor::~AActor()
     }
 
     RootComponent = nullptr;
+
+	OnDestroyed.Broadcast(this);
 }
 
 
@@ -262,6 +266,31 @@ bool AActor::IsOverlappingActor(const AActor* OtherActor) const
         }
     }
     return false;
+}
+
+void AActor::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
+{
+    for (UActorComponent* Compoent : OwnedComponents)
+	{
+        if (UCameraComponent* CameraComponent = Cast<UCameraComponent>(Compoent))
+		{
+			if (CameraComponent->IsActive())
+			{
+                OutResult.Location = CameraComponent->GetWorldLocation();
+                OutResult.Rotation = CameraComponent->GetWorldRotation().ToRotator();
+                OutResult.FOV = CameraComponent->GetFOV();
+                OutResult.AspectRatio = CameraComponent->GetAspectRatio();
+                OutResult.NearZ = CameraComponent->GetNearPlane();
+                OutResult.FarZ = CameraComponent->GetFarPlane();
+                OutResult.bOrthographic = CameraComponent->IsOrthogonal();
+                OutResult.OrthoWidth = CameraComponent->GetOrthoWidth();
+                return;
+			}
+		}
+    }
+
+	OutResult.Location = GetActorLocation();
+    OutResult.Rotation = GetActorRotation();
 }
 
 // 엔진 단계에서의 틱

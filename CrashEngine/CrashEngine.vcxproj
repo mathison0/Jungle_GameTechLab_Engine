@@ -345,6 +345,19 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\Classes\Camera\CameraManager.cpp" />
+    <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
+    <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\HomingMissileActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp" />
@@ -646,6 +659,18 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Classes\Camera\CameraManager.h" />
+    <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
+    <ClInclude Include="Source\Engine\Core\Random.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
+    <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
+    <ClInclude Include="Source\Engine\GameFramework\HomingMissileActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
@@ -793,6 +818,7 @@
     <ClInclude Include="Source\Engine\Materials\MaterialCore.h" />
     <ClInclude Include="Source\Engine\Materials\MaterialManager.h" />
     <ClInclude Include="Source\Engine\Materials\MaterialSemantics.h" />
+    <ClInclude Include="Source\Engine\Math\Color.h" />
     <ClInclude Include="Source\Engine\Math\Intersection.h" />
     <ClInclude Include="Source\Engine\Math\MathUtils.h" />
     <ClInclude Include="Source\Engine\Math\Matrix.h" />

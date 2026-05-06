@@ -16,6 +16,7 @@ class UWorld;
 class ULevel;
 class UPrimitiveComponent;
 class UScriptComponent;
+struct FMinimalViewInfo;
 
 // AActor는 월드에 배치되는 게임 오브젝트를 표현합니다.
 class AActor : public UObject
@@ -131,9 +132,12 @@ public:
 
     FActorTickFunction PrimaryActorTick;
     DECLARE_DELEGATE(OnPoolReturnRequested, AActor*);
+    DECLARE_DELEGATE(OnDestroyed, AActor*);
 
     // Collision
     bool IsOverlappingActor(const AActor* OtherActor) const;
+
+	void CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult);
 
 protected:
     virtual void TickActor(float DeltaSeconds, ELevelTick TickType, FActorTickFunction& ThisTickFunction);
