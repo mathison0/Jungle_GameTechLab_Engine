@@ -44,6 +44,11 @@ bool FPostProcessRenderPass::Begin(const FRenderPassContext* Context)
 	float Width = Context->RenderTargets->Width;
 	float Height = Context->RenderTargets->Height;
 	ShaderBinding->SetVector2("InvResolution", FVector2((Width > 0.0f) ? (1.0f / Width) : 0.0f, (Height > 0.0f) ? (1.0f / Height) : 0.0f));
+	const FPostProcessSettings& PostProcess = Context->RenderBus->GetPostProcessSettings();
+	ShaderBinding->SetFloat("Gamma", PostProcess.Gamma);
+	ShaderBinding->SetFloat("VignetteIntensity", PostProcess.VignetteIntensity);
+	ShaderBinding->SetFloat("VignetteRadius", PostProcess.VignetteRadius);
+	ShaderBinding->SetFloat("VignetteSoftness", PostProcess.VignetteSoftness);
 	ShaderBinding->SetAllSamplers(FResourceManager::Get().GetOrCreateSamplerState(ESamplerType::EST_Linear));
 
 	Context->DeviceContext->IASetInputLayout(nullptr);
@@ -61,19 +66,12 @@ bool FPostProcessRenderPass::DrawCommand(const FRenderPassContext* Context)
 		return false;
 	}
 
-	const FPostProcessSettings& PostProcess = Context->RenderBus->GetPostProcessSettings();
-	const FCameraOverlaySettings& Overlay = Context->RenderBus->GetCameraOverlaySettings();
+	/*  이 패스는 visible pass들이 끝난 뒤 실행되는 범용 scene post process 슬롯입니다.
+		Gamma/Vignette 같은 카메라 색 보정은 Grid/SubUV/Billboard까지 포함한 최종 scene color에 적용하고,
+		fade/letterbox 같은 최종 화면 overlay는 FPostProcessOutlineRenderPass에서 처리합니다.
+		이후 bloom/tonemap/color grading도 이 위치에 추가할 수 있습니다. */
 
 	ShaderBinding->ApplyFrameParameters(*Context->RenderBus);
-
-	ShaderBinding->SetVector4("FadeColor", FVector4(Overlay.FadeColor));
-	ShaderBinding->SetFloat("VignetteIntensity", PostProcess.VignetteIntensity);
-	ShaderBinding->SetFloat("VignetteRadius", PostProcess.VignetteRadius);
-	ShaderBinding->SetFloat("VignetteSoftness", PostProcess.VignetteSoftness);
-
-	ShaderBinding->SetFloat("Gamma", PostProcess.Gamma);
-	ShaderBinding->SetFloat("LetterBoxRatio", Overlay.LetterBoxRatio);
-
 	ShaderBinding->Bind(Context->DeviceContext);
 	Context->DeviceContext->Draw(3, 0);
 	return true;

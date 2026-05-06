@@ -18,7 +18,7 @@ static void bezier_table(FVector2 P[4], FVector2 results[steps + 1])
     if (!K)
     {
         K = C;
-        for (unsigned step = 0; step <= steps; ++step)
+        for (unsigned step = 0; step <= steps; ++step)  
         {
             float t          = (float)step / (float)steps;
             C[step * 4 + 0]  = (1 - t) * (1 - t) * (1 - t); // * P0

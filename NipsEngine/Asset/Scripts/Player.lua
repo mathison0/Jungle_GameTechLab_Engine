@@ -21,6 +21,10 @@ local KEY_H = 0x48
 local KEY_J = 0x4A
 local KEY_K = 0x4B
 
+-- 0.0으로 두면 프로퍼티 값으로 적용됨
+local TEST_KNOCKBACK_STRENGTH = 0.0
+local TEST_KNOCKBACK_DURATION = 0.0
+
 function BeginPlay(owner)
     print("Player Script Started: ", owner:GetName())
     SetGameState("ThrowSpeed", ThrowSpeed)
@@ -36,6 +40,27 @@ function OnEndOverlap(owner, otherActor)
 end
 
 function OnHit(owner, hit)
+    -- Test knockback:
+    -- If the player hits an actor with a RigidBodyComponent, push the player
+    -- away from that actor for a short moment.
+    if hit == nil or hit:IsValid() == false then
+        return
+    end
+
+    local otherActor = hit:GetHitActor()
+    if otherActor == nil or HasRigidBodyComponent(otherActor) == false then
+        return
+    end
+
+    local ownerLocation = owner:GetActorLocation()
+    local otherLocation = otherActor:GetActorLocation()
+    local knockbackDir = FVector.new(ownerLocation.X - otherLocation.X, ownerLocation.Y - otherLocation.Y, 0.0)
+
+    if knockbackDir.X == 0.0 and knockbackDir.Y == 0.0 and knockbackDir.Z == 0.0 then
+        knockbackDir = FVector.new(hit.Normal.X, hit.Normal.Y, 0.0)
+    end
+
+    TriggerKnockback(owner, knockbackDir, TEST_KNOCKBACK_STRENGTH, TEST_KNOCKBACK_DURATION)
 end
 
 function OnInteract(owner, interactor)

@@ -137,6 +137,7 @@ private:
 	void ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView);
 	void ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings);
 	void ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay);
+	void ApplyPostProcessComponent(FPostProcessSettings& InOutSettings);
 	void ApplyCameraFade(FCameraOverlaySettings& InOutOverlay) const;
 
 	void FillSceneView(FSceneView& OutView, const FCameraViewInfo& CameraView, const FViewportRect& ViewRect, EViewMode ViewMode) const;

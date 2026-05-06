@@ -5,16 +5,12 @@ SamplerState SampleState : register(s0);
 
 cbuffer PostProcessBuffer : register(b10)
 {
-    float4 FadeColor;
-    
+    float2 InvResolution;
+    float Gamma;
     float VignetteIntensity;
     float VignetteRadius;
     float VignetteSoftness;
-    float Padding3;
-    
-    float Gamma;
-    float LetterBoxRatio;
-    float2 InvResolution;
+    float2 Padding0;
 };
 
 struct VSOutput
@@ -37,24 +33,25 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
     return output;
 }
 
-
 float4 mainPS(VSOutput input) : SV_TARGET
 {
     int2 ip = int2(input.ClipPos.xy);
-    float4 color = FinalSceneColor.Load(int3(ip, 0));
     float2 uv = (float2(ip) + 0.5f) * InvResolution;
-    
-    // Letterbox
-    float ratio = saturate(LetterBoxRatio);
-    if (uv.y < ratio || uv.y > 1.0f - ratio)
+    float4 color = FinalSceneColor.Load(int3(ip, 0));
+
+    const float vignetteIntensity = saturate(VignetteIntensity);
+    if (vignetteIntensity > 0.0f)
     {
-        color.rgb = float3(0.0f, 0.0f, 0.0f);
+        const float2 centeredUV = uv * 2.0f - 1.0f;
+        const float distanceFromCenter = length(centeredUV);
+        const float radius = max(VignetteRadius, 0.0f);
+        const float softness = max(VignetteSoftness, 0.0001f);
+        const float vignette = smoothstep(radius, radius + softness, distanceFromCenter);
+        color.rgb *= lerp(1.0f, 1.0f - vignette, vignetteIntensity);
     }
 
-    // Fade In/Out
-    float fadeAlpha = saturate(FadeColor.a);
-    color.rgb = lerp(color.rgb, FadeColor.rgb, fadeAlpha);
+    const float safeGamma = max(Gamma, 0.0001f);
+    color.rgb = pow(saturate(color.rgb), 1.0f / safeGamma);
     color.a = 1.0f;
-
     return color;
 }
