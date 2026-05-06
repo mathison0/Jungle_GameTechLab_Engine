@@ -68,10 +68,27 @@ struct FGammaCorrectionSettings
     float DisplayGamma = 2.2f;
 };
 
+struct FLetterboxSettings
+{
+    bool    bEnabled          = false;
+    float   TargetAspectRatio = 2.39f;
+    float   Opacity           = 1.0f;
+    FVector Color             = FVector(0.0f, 0.0f, 0.0f);
+};
+
+struct FFadeSettings
+{
+    bool    bEnabled = false;
+    float   Alpha    = 0.0f;
+    FVector Color    = FVector(0.0f, 0.0f, 0.0f);
+};
+
 struct FPostProcessSettings
 {
     FVignettingSettings       Vignetting;
     FGammaCorrectionSettings  GammaCorrection;
+    FFadeSettings             Fade;
+    FLetterboxSettings        Letterbox;
 };
 
 // 뷰포트 카메라 프리셋 (Perspective / 6방향 Orthographic)

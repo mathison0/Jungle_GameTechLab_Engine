@@ -642,6 +642,7 @@
     <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\VignettingPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\LetterboxPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h" />
@@ -1029,6 +1030,7 @@
     <ClInclude Include="ThirdParty\Sol\forward.hpp" />
     <ClInclude Include="ThirdParty\Sol\sol.hpp" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\VignettingPass.h" />
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\LetterboxPass.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">
@@ -1048,6 +1050,14 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\PostProcess\GammaCorrection.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Passes\PostProcess\LetterboxPass.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>

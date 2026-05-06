@@ -293,6 +293,9 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
         case EViewModePostProcessVariant::Vignetting:
             Shader = FShaderManager::Get().GetShader(EShaderType::Vignetting);
             break;
+        case EViewModePostProcessVariant::Letterbox:
+            Shader = FShaderManager::Get().GetShader(EShaderType::Letterbox);
+            break;
         default:
             Shader = FShaderManager::Get().GetShader(EShaderType::HeightFog);
             break;
@@ -326,11 +329,12 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
     else if (Pass == ERenderPass::PostProcess)
     {
         // PostProcess는 shared pass bucket이고, variant별로 필요한 shader/state만 command 단위로 조정합니다.
-        // GammaCorrection은 scene color를 새 색으로 다시 쓰므로 기본 AlphaBlend 대신 Opaque를 사용합니다.
+        // Scene color를 다시 쓰는 variant는 기본 AlphaBlend 대신 Opaque를 사용합니다.
         switch (PostProcessVariant)
         {
         case EViewModePostProcessVariant::GammaCorrection:
         case EViewModePostProcessVariant::Vignetting:
+        case EViewModePostProcessVariant::Letterbox:
             Cmd.Blend = EBlendState::Opaque;
             Cmd.DiffuseSRV = Targets ? Targets->SceneColorCopySRV : nullptr;
             break;

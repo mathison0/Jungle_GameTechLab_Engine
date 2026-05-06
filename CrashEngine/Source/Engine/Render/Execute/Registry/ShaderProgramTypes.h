@@ -25,6 +25,7 @@ enum class EShaderType : uint32
     FXAA,
     Vignetting,
     GammaCorrection,
+    Letterbox,
     LightHitMap,
     UI,
     MAX,

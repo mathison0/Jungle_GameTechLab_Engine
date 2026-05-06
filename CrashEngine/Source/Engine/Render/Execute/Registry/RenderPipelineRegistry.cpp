@@ -153,6 +153,7 @@ void FRenderPipelineRegistry::Initialize()
             PassNode(ERenderPassNodeType::FXAAPass),
             PassNode(ERenderPassNodeType::VignettingPass),
             PassNode(ERenderPassNodeType::GammaCorrectionPass),
+            PassNode(ERenderPassNodeType::LetterboxPass),
         });
 
     AddPipeline(

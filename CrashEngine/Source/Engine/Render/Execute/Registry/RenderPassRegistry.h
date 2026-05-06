@@ -17,6 +17,7 @@ class FNonLitViewModePass;
 class FFXAAPass;
 class FGammaCorrectionPass;
 class FVignettingPass;
+class FLetterboxPass;
 class FUIPass;
 class FPresentPass;
 class FSelectionMaskPass;
@@ -44,6 +45,7 @@ enum class ERenderPassNodeType
     FXAAPass,
     VignettingPass,
     GammaCorrectionPass,
+    LetterboxPass,
     UIPass,
     PresentPass,
     SelectionMaskPass,

@@ -50,6 +50,8 @@ const char* GetShaderTypeName(EShaderType InType)
         return "GammaCorrection";
 	case EShaderType::Vignetting:
         return "Vignetting";
+    case EShaderType::Letterbox:
+        return "Letterbox";
     case EShaderType::LightHitMap:
         return "LightHitMap";
     case EShaderType::UI:

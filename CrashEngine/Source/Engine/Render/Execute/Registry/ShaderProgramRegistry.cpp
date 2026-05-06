@@ -86,6 +86,7 @@ void FShaderProgramRegistry::Initialize()
 
     Add(EShaderType::GammaCorrection, MakeGraphicsProgramDesc("GammaCorrection", "Shaders/Passes/PostProcess/GammaCorrection.hlsl"));
     Add(EShaderType::Vignetting, MakeGraphicsProgramDesc("Vignetting", "Shaders/Passes/PostProcess/VignettingPass.hlsl"));
+    Add(EShaderType::Letterbox, MakeGraphicsProgramDesc("Letterbox", "Shaders/Passes/PostProcess/LetterboxPass.hlsl"));
 }
 
 /*

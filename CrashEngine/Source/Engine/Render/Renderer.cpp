@@ -582,6 +582,14 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
                     Pass->BuildDrawCommands(PipelineContext);
                 }
             }
+
+            if (PostProcessSettings.Letterbox.bEnabled)
+            {
+                if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::LetterboxPass))
+                {
+                    Pass->BuildDrawCommands(PipelineContext);
+                }
+            }
         }
 
     }
