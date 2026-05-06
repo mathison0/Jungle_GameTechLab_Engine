@@ -58,6 +58,8 @@ protected:
 	void Render(float DeltaTime);
 	void SetRenderPipeline(std::unique_ptr<IRenderPipeline> InPipeline);
 	void UpdateInputWorldType();
+	void TickTimeDilation(float RealDeltaTime);
+	float GetEffectiveWorldDeltaTime(const FWorldContext& Context, float RealDeltaTime) const;
 	virtual void WorldTick(float DeltaTime);
 
 protected:

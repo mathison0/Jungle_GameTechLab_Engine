@@ -8,6 +8,7 @@
 #include "Engine/Runtime/WindowsWindow.h"
 #include "Core/ResourceManager.h"
 #include "Render/Renderer/DefaultRenderPipeline.h"
+#include "Game/Systems/TimeDilationSystem.h"
 #include "GameFramework/World.h"
 #include "Audio/AudioSystem.h"
 
@@ -56,6 +57,7 @@ void UEngine::BeginPlay()
 
 void UEngine::Tick(float DeltaTime)
 {
+	TickTimeDilation(DeltaTime);
 	FInputRouter::TickInputSystem();
 	UpdateInputWorldType();
 	WorldTick(DeltaTime);
@@ -90,11 +92,26 @@ void UEngine::OnWindowResized(uint32 Width, uint32 Height)
 
 void UEngine::WorldTick(float DeltaTime)
 {
-	UWorld* World = GetWorld();
-	if (World)
+	FWorldContext* Context = GetWorldContextFromHandle(ActiveWorldHandle);
+	if (Context && Context->World)
 	{
-		World->Tick(DeltaTime);
+		Context->World->Tick(GetEffectiveWorldDeltaTime(*Context, DeltaTime));
 	}
+}
+
+void UEngine::TickTimeDilation(float RealDeltaTime)
+{
+	FTimeDilationSystem::Get().Tick(RealDeltaTime);
+}
+
+float UEngine::GetEffectiveWorldDeltaTime(const FWorldContext& Context, float RealDeltaTime) const
+{
+	if (Context.WorldType == EWorldType::Game || Context.WorldType == EWorldType::PIE)
+	{
+		return FTimeDilationSystem::Get().GetScaledDeltaTime(RealDeltaTime);
+	}
+
+	return RealDeltaTime;
 }
 
 void UEngine::UpdateInputWorldType()
