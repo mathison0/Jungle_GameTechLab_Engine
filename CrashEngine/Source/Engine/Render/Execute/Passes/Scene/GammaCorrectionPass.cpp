@@ -9,7 +9,7 @@
 
 bool FGammaCorrectionPass::IsEnabled(const FRenderPipelineContext& Context) const
 {
-    return Context.SceneView && Context.SceneView->ShowFlags.bGammaCorrection;
+    return Context.SceneView && Context.SceneView->PostProcessSettings.GammaCorrection.bEnabled;
 }
 
 void FGammaCorrectionPass::PrepareInputs(FRenderPipelineContext& Context)

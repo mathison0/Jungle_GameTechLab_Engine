@@ -49,7 +49,6 @@ struct FShowFlags
 	//Post Process Setting으로 떼는 것이..?
     bool  bFog                       = true;
     bool  bFXAA                      = false;
-    bool  bGammaCorrection           = false;
     bool  bLightHitMap               = false;
     bool  b25DCulling                = true; // false는 tile_based_culling
 };
@@ -63,10 +62,16 @@ struct FVignettingSettings
     FVector Color     = FVector(0.0f, 0.0f, 0.0f);
 };
 
+struct FGammaCorrectionSettings
+{
+    bool  bEnabled     = true;
+    float DisplayGamma = 2.2f;
+};
+
 struct FPostProcessSettings
 {
-    FVignettingSettings Vignetting;
-    bool                bGammaCorrection = true;
+    FVignettingSettings       Vignetting;
+    FGammaCorrectionSettings  GammaCorrection;
 };
 
 // 뷰포트 카메라 프리셋 (Perspective / 6방향 Orthographic)

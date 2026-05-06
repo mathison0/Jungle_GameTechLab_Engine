@@ -1083,7 +1083,6 @@ void FEditorToolbarPanel::RenderPaneToolbar(FLevelViewportLayout* Layout,
         {
             ImGui::Checkbox("Height Distance Fog", &Opts.ShowFlags.bFog);
             ImGui::Checkbox("Anti-Aliasing (FXAA)", &Opts.ShowFlags.bFXAA);
-            ImGui::Checkbox("Gamma Correction", &Opts.ShowFlags.bGammaCorrection);
 
             BeginDisabledUnless(Opts.ShowFlags.bFXAA, [&]()
             {

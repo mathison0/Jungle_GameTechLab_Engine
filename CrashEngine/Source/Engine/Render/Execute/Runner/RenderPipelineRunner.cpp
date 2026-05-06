@@ -94,7 +94,7 @@ bool ShouldExecutePass(const FRenderPipelineContext& Context, ERenderPassNodeTyp
     case ERenderPassNodeType::FXAAPass:
         return Registry->UsesFXAA(Context.ViewMode.ActiveViewMode);
     case ERenderPassNodeType::GammaCorrectionPass:
-        return Context.SceneView && Context.SceneView->ShowFlags.bGammaCorrection;
+        return Context.SceneView && Context.SceneView->PostProcessSettings.GammaCorrection.bEnabled;
     default:
         return true;
     }
