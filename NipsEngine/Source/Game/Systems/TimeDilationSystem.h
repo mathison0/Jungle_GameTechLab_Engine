@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 class FTimeDilationSystem
 {
@@ -13,7 +13,14 @@ public:
 	void StopSlomo();
 
 	float GetGlobalTimeDilation() const { return GlobalTimeDilation; }
-	float GetScaledDeltaTime(float DeltaTime) const { return DeltaTime * GlobalTimeDilation; }
+
+
+	float GetScaledDeltaTime(float DeltaTime) const 
+	{ 
+		return DeltaTime * GlobalTimeDilation; 
+	}
+
+
 
 	bool IsHitStopActive() const { return HitStopRemainingTime > 0.0f; }
 	bool IsSlomoActive() const { return bSlomoActive; }
