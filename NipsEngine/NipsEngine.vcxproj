@@ -337,9 +337,6 @@
     <ClCompile Include="Source\Engine\Camera\PlayerCameraManager.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Camera\Modifier\FadeCameraModifier.cpp">
-      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -898,8 +895,6 @@
     <ClInclude Include="Source\Engine\Asset\StaticMeshTypes.h" />
     <ClInclude Include="Source\Engine\Audio\AudioSystem.h" />
     <ClInclude Include="Source\Engine\Camera\CameraModifier.h" />
-    <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h" />
-    <ClInclude Include="Source\Engine\Camera\Modifier\FadeCameraModifier.h" />
     <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h" />
     <ClInclude Include="Source\Engine\Collision\Collision.h" />
     <ClInclude Include="Source\Engine\Collision\CollisionSystem.h" />

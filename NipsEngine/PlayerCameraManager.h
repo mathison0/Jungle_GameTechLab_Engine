@@ -12,6 +12,7 @@ class UCameraModifier;
 struct FSceneView;
 enum class EViewMode : int32;
 
+// 최종적인 카메라 데이터를 RenderBus에 전달하기 위한 구조체
 struct FCameraViewInfo
 {
 	FVector Location = FVector::ZeroVector;
@@ -30,15 +31,18 @@ struct FCameraViewInfo
 	FVector GetUpVector() const { return Rotation.GetUpVector(); }
 };
 
+// 최종적인 후처리 세팅값을 RenderBus에 전달하기 위한 구조체
 struct FPostProcessSettings
 {
-	// Scene Color Correction
 	float Gamma = 1.0f;
 	float VignetteIntensity = 0.0f;
 	float VignetteRadius = 0.75f;
-	float VignetteSoftness = 0.25f;
+	float VignetteSoftness = 0.25;
+};
 
-	// Screen Overlay
+// 최종적인 스크린 오버레이 세팅값을 RenderBus에 전달하기 위한 구조체
+struct FCameraOverlaySettings
+{
 	FColor FadeColor = FColor::Black();
 	float FadeAlpha = 0.0f;
 	float LetterboxRatio = 0.0f;
@@ -63,6 +67,19 @@ struct FCameraTransitionState
 	FVector2 EaseControlPointB = FVector2(0.75f, 1.0f);
 };
 
+struct FCameraFadeState
+{
+	bool bActive = false;
+	bool bHoldWhenFinished = false;
+
+	FColor Color = FColor::Black();
+	float FromAlpha = 0.0f;
+	float ToAlpha = 0.0f;
+	float CurrentAlpha = 0.0f;
+	float Duration = 0.0f;
+	float Elapsed = 0.0f;
+};
+
 // 게임 내 카메라의 최종 결정자, 최종 위치/회전/FOV 값이 모두 APlayerCameraManager에서 결정
 class APlayerCameraManager
 {
@@ -78,36 +95,52 @@ public:
 
 	void UpdateCamera(float DeltaTime);
 	void BuildSceneView(FSceneView& OutView, const FViewportRect& ViewRect, EViewMode ViewMode) const;
-	const FPostProcessSettings& GetPostProcessSettings() const { return CachedPostProcessSettings; }
 
+	const FCameraViewInfo& GetCameraView() const { return CachedCameraView; }
+	const FPostProcessSettings& GetPostProcessSettings() const { return CachedPostProcessSettings; }
+	const FCameraOverlaySettings& GetOverlaySettings() const { return CachedCameraOverlaySettings; }
+
+	// Fade
+	void StartCameraFade(const FColor& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished = false);
+	void SetManualCameraFade(const FColor& Color, float Alpha);
+	void StopCameraFade();
+	bool IsCameraFading() const { return FadeState.bActive; }
+
+	// Modifier
 	void AddCameraModifier(UCameraModifier* Modifier);
 	void RemoveCameraModifier(UCameraModifier* Modifier);
 	void ClearCameraModifiers();
 
+	// Transition
 	void StartCameraTransition(const FCameraViewInfo& From, const FCameraViewInfo& To, float Duration);
 	void StartCameraTransitionBezier(const FCameraViewInfo& From, const FCameraViewInfo& To, const FVector& ControlPointA, const FVector& ControlPointB, float Duration);
 	void StopCameraTransition();
 	void UpdateCameraTransition(float DeltaTime, FCameraViewInfo& InOutView);
-	
 	float EvaluateTransitionAlpha(float NormalizedTime) const;
 	FCameraViewInfo BlendCameraView(float Alpha) const;
 	FVector EvaluateBezierPosition(float Alpha) const;
 
-	const FCameraViewInfo& GetCameraView() const { return CachedCameraView; }
-
 private:
 	bool BuildBaseCameraView(FCameraViewInfo& OutView) const;
+	void UpdateCameraFade(float DeltaTime);
+
 	void ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView);
 	void ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings);
+	void ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay);
+	void ApplyCameraFade(FCameraOverlaySettings& InOutOverlay) const;
+
 	void FillSceneView(FSceneView& OutView, const FCameraViewInfo& CameraView, const FViewportRect& ViewRect, EViewMode ViewMode) const;
 
 private:
 	UCameraComponent* ViewTarget = nullptr;
 	FViewportCamera* FallbackCamera = nullptr;
 	TArray<UCameraModifier*> CameraModifiers;
+	
+	bool bHasCachedCameraView = false;
 	FCameraViewInfo CachedCameraView;
 	FPostProcessSettings CachedPostProcessSettings;
-	bool bHasCachedCameraView = false;
+	FCameraOverlaySettings CachedCameraOverlaySettings;
 
 	FCameraTransitionState Transition;
+	FCameraFadeState FadeState;
 };

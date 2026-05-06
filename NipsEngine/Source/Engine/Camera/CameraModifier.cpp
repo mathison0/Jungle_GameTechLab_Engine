@@ -18,6 +18,13 @@ bool UCameraModifier::ModifyPostProcess(float DeltaTime, FPostProcessSettings& I
 	return false;
 }
 
+bool UCameraModifier::ModifyOverlay(float DeltaTime, FCameraOverlaySettings& InOutOverlay)
+{
+	(void)DeltaTime;
+	(void)InOutOverlay;
+	return false;
+}
+
 void UCameraModifier::EnableModifier()
 {
 	bEnabled = true;

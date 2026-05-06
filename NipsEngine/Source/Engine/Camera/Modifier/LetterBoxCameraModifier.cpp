@@ -50,8 +50,8 @@ void ULetterBoxCameraModifier::ClearLetterBox()
 	bTransitioning = false;
 }
 
-// Tick마다 호출되며, FPostProcessSettings의 값을 덮어씌우고 성공 여부를 반환합니다.
-bool ULetterBoxCameraModifier::ModifyPostProcess(float DeltaTime, FPostProcessSettings& InOutSettings)
+// Tick마다 호출되며, FCameraOverlaySettings의 값을 덮어씌우고 성공 여부를 반환합니다.
+bool ULetterBoxCameraModifier::ModifyOverlay(float DeltaTime, FCameraOverlaySettings& InOutOverlay)
 {
 	if (bTransitioning)
 	{
@@ -69,7 +69,7 @@ bool ULetterBoxCameraModifier::ModifyPostProcess(float DeltaTime, FPostProcessSe
 		}
 	}
 
-	InOutSettings.LetterboxRatio = MathUtil::Clamp(CurrentRatio, 0.0f, 0.5f);
+	InOutOverlay.LetterboxRatio = MathUtil::Clamp(CurrentRatio, 0.0f, 0.5f);
 
-	return InOutSettings.LetterboxRatio > 0.0f || bTransitioning;
+	return InOutOverlay.LetterboxRatio > 0.0f || bTransitioning;
 }

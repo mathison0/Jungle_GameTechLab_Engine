@@ -374,9 +374,6 @@
     <ClCompile Include="Source\Engine\Camera\PlayerCameraManager.cpp">
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Camera\Modifier\FadeCameraModifier.cpp">
-      <Filter>Source\Engine\Camera\Modifier</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.cpp">
       <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClCompile>
@@ -1006,12 +1003,6 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera\CameraModifier.h">
       <Filter>Source\Engine\Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h">
-      <Filter>Source\Engine\Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Camera\Modifier\FadeCameraModifier.h">
-      <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h">
       <Filter>Source\Engine\Camera\Modifier</Filter>

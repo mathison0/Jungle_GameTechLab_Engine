@@ -4,6 +4,7 @@
 #include "Engine/Camera/PlayerCameraManager.h"
 #include "Math/Color.h"
 
+// Animated Letterbox Camera Modifier, CameraComponent의 고정 Letterbox와 별개로 스르륵 내려오는 효과를 구현
 class ULetterBoxCameraModifier : public UCameraModifier
 {
 public:
@@ -13,7 +14,7 @@ public:
 	void SetLetterBox(float InRatio);
 	void ClearLetterBox();
 
-	bool ModifyPostProcess(float DeltaTime, FPostProcessSettings& InOutSettings) override;
+	bool ModifyOverlay(float DeltaTime, FCameraOverlaySettings& InOutOverlay) override;
 
 	bool IsTransitioning() const { return bTransitioning; }
 
