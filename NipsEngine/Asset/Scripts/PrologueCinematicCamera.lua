@@ -6,6 +6,8 @@ local elapsed = 0.0
 local vignetteInTime = 1.5
 local vignetteOutStart = 10.5
 local vignetteOutEnd = 12.0
+local gammaValue = 1.6
+local defaultGamma = 1. 
 
 local function Saturate(value)
     if value < 0.0 then return 0.0 end
@@ -27,7 +29,7 @@ function ModifyPostProcess(settings, deltaTime)
     settings.VignetteIntensity = 0.55 * alpha
     settings.VignetteRadius = 0.78
     settings.VignetteSoftness = 0.28
-    settings.Gamma = 2.2
+    settings.Gamma = elapsed >= vignetteOutEnd and defaultGamma or gammaValue
 
     return true
 end

@@ -51,6 +51,7 @@ bool BuildCameraComponentView(UCameraComponent* Camera, FCameraViewInfo& OutView
 void APlayerCameraManager::SetViewTarget(UCameraComponent* InCamera)
 {
 	ViewTarget = InCamera;
+	ClearManualCameraView();
 	StopCameraTransition();
 }
 
@@ -80,7 +81,9 @@ void APlayerCameraManager::SetViewTargetWithBlend(UCameraComponent* InCamera, fl
 	}
 
 	ViewTarget = InCamera;
+	ClearManualCameraView();
 	StartCameraTransition(FromView, ToView, BlendTime);
+	Transition.bHoldFinalView = false;
 }
 
 void APlayerCameraManager::SetFallbackCamera(FViewportCamera* InCamera)
@@ -157,10 +160,26 @@ void APlayerCameraManager::Shutdown()
 	FallbackCamera = nullptr;
 	bHasCachedCameraView = false;
 	CachedCameraView = FCameraViewInfo();
+	bHasManualCameraView = false;
+	ManualCameraView = FCameraViewInfo();
 	CachedPostProcessSettings = FPostProcessSettings();
 	CachedCameraOverlaySettings = FCameraOverlaySettings();
 	Transition = FCameraTransitionState();
 	FadeState = FCameraFadeState();
+}
+
+void APlayerCameraManager::SetManualCameraView(const FCameraViewInfo& View)
+{
+	ManualCameraView = View;
+	bHasManualCameraView = true;
+	CachedCameraView = View;
+	bHasCachedCameraView = true;
+}
+
+void APlayerCameraManager::ClearManualCameraView()
+{
+	bHasManualCameraView = false;
+	ManualCameraView = FCameraViewInfo();
 }
 
 ULetterBoxCameraModifier* APlayerCameraManager::GetLetterBoxCameraModifier()
@@ -333,6 +352,7 @@ void APlayerCameraManager::StartCameraTransition(const FCameraViewInfo& From, co
 	Transition.Elapsed = 0.0f;
 
 	Transition.bUseBezierCurve = false;
+	Transition.bHoldFinalView = true;
 	Transition.bActive = true;
 }
 
@@ -349,6 +369,7 @@ void APlayerCameraManager::StartCameraTransitionBezier(const FCameraViewInfo& Fr
 	Transition.Elapsed = 0.0f;
 
 	Transition.bUseBezierCurve = true;
+	Transition.bHoldFinalView = true;
 	Transition.bActive = true;
 }
 
@@ -364,7 +385,6 @@ void APlayerCameraManager::UpdateCameraTransition(float DeltaTime, FCameraViewIn
 		return;
 	}
 
-	Transition.ToView = InOutView;
 	Transition.Elapsed += DeltaTime;
 	float NormalizedTime = MathUtil::Clamp(Transition.Elapsed / Transition.Duration, 0.0f, 1.0f);
 	float Alpha = EvaluateTransitionAlpha(NormalizedTime);
@@ -372,7 +392,13 @@ void APlayerCameraManager::UpdateCameraTransition(float DeltaTime, FCameraViewIn
 
 	if (NormalizedTime >= 1.0f)
 	{
+		const bool bHoldFinalView = Transition.bHoldFinalView;
+		const FCameraViewInfo FinalView = Transition.ToView;
 		StopCameraTransition();
+		if (bHoldFinalView)
+		{
+			SetManualCameraView(FinalView);
+		}
 	}
 }
 	
@@ -380,12 +406,14 @@ void APlayerCameraManager::UpdateCameraTransition(float DeltaTime, FCameraViewIn
 float APlayerCameraManager::EvaluateTransitionAlpha(float NormalizedTime) const
 {
 	const float ClampedTime = MathUtil::Clamp(NormalizedTime, 0.0f, 1.0f);
-	const float ControlPoints[4] =
+	const float ControlPoints[6] =
 	{
 		Transition.EaseControlPointA.X,
 		Transition.EaseControlPointA.Y,
 		Transition.EaseControlPointB.X,
-		Transition.EaseControlPointB.Y
+		Transition.EaseControlPointB.Y,
+		0.0f,
+		1.0f
 	};
 	const float Alpha = Bezier::EvaluateCubicEasing(ClampedTime, ControlPoints);
 
@@ -439,6 +467,12 @@ FVector APlayerCameraManager::EvaluateBezierPosition(float Alpha) const
 // ViewTarget이 유효하다면 ViewTarget을 기준으로 Base Camera View 생성
 bool APlayerCameraManager::BuildBaseCameraView(FCameraViewInfo& OutView) const
 {
+	if (bHasManualCameraView)
+	{
+		OutView = ManualCameraView;
+		return true;
+	}
+
 	if (BuildCameraComponentView(ViewTarget, OutView))
 	{
 		return true;

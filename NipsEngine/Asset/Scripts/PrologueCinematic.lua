@@ -5,7 +5,32 @@
 local started = false
 local CAMERA_MODIFIER_SCRIPT = "Asset/Scripts/PrologueCinematicCamera.lua"
 
-local function WaitForDialogue()
+local function FinishCinematic(cameraManager)
+    if cameraManager ~= nil then
+        cameraManager:ClearManualCameraView()
+        cameraManager:ClearLetterBox()
+        cameraManager:StopCameraFade()
+    end
+
+    SetUIState("InGame")
+    SetCinematicInputBlocked(false)
+    Log("[PrologueCinematic] Finished.")
+end
+
+local function WaitForDialogue(autoAdvanceDelay)
+    local delay = autoAdvanceDelay or 1.0
+
+    while IsDialogueActive() do
+        if IsDialogueTextComplete() then
+            wait(delay)
+            AdvanceDialogue()
+        else
+            wait(0.1)
+        end
+    end
+end
+
+local function WaitForDialogueManual()
     while IsDialogueActive() do
         wait(0.1)
     end
@@ -20,22 +45,14 @@ local function WaitSeconds(seconds)
     end
 end
 
-local function PlayCameraMove(cameraManager, fromView, toLocation, lookAt, duration)
-    local toView = MakeCameraView(toLocation, lookAt, fromView.FOV)
-    toView.AspectRatio = fromView.AspectRatio
-    toView.NearPlane = fromView.NearPlane
-    toView.FarPlane = fromView.FarPlane
-    toView.OrthoWidth = fromView.OrthoWidth
-    toView.OrthoHeight = fromView.OrthoHeight
-    toView.bOrthographic = fromView.bOrthographic
-
-    cameraManager:StartCameraTransition(fromView, toView, duration)
+local function PlayCameraMove(cameraManager, toLocation, lookAt, duration, sideOffset)
+    cameraManager:StartCameraTransitionLookAtBezier(toLocation, lookAt, duration, 3.0, 0.6, sideOffset or 6.0)
     WaitSeconds(duration)
-    return toView
 end
 
 local function RunPrologueCinematic()
     SetCinematicInputBlocked(true)
+    Log("[PrologueCinematic] Started.")
 
     local cameraManager = GetPlayerCameraManager()
     if cameraManager == nil then
@@ -44,32 +61,47 @@ local function RunPrologueCinematic()
         return
     end
 
-    SetUIState("Prologue")
-    ShowDialogue("Narrator", "Replace this line with the first prologue sentence.")
-    QueueDialogue("Narrator", "Replace this line with the second prologue sentence.")
-    WaitForDialogue()
-
     SetUIState("InGame")
-    AddLuaCameraModifier(CAMERA_MODIFIER_SCRIPT)
+    cameraManager:SetManualCameraFade(FVector.new(0.0, 0.0, 0.0), 1.0)
 
-    cameraManager:SetLetterBox(0.12)
-    cameraManager:StartCameraFade(FVector(0.0, 0.0, 0.0), 1.0, 0.0, 1.5, false)
+    ShowDialogue("집주인", "저 방이에요.")
+    QueueDialogue("집주인", "오랫동안 손을 못 댔어요.")
+    QueueDialogue("집주인", "…청소 부탁드려요.")
+    WaitForDialogue(1.2)
+
+    if not AddLuaCameraModifier(CAMERA_MODIFIER_SCRIPT) then
+        Log("[PrologueCinematic] Failed to add camera modifier.")
+    end
+
+    local pointA = FVector.new(13.8, -10.8, 5.2)
+    local lookAtA = FVector.new(-1.3, -1.3, 3.5)
+    local pointB = FVector.new(6.0, 6.7, 9.3)
+    local lookAtB = FVector.new(-2.8, 1.5, 4.2)
+    -- local pointC = FVector.new(-12.4, -7.7, 2.3)
+    -- local lookAtC = FVector.new(-4.5, -3.0, 3.8)
+
+    cameraManager:SetManualCameraViewLookAt(pointA, lookAtA)
+
+    cameraManager:SetLetterBox(0.15)
+    cameraManager:StartCameraFade(FVector.new(0.0, 0.0, 0.0), 1.0, 0.0, 1.5, false)
     WaitSeconds(1.5)
 
-    local lookAt = FVector(0.0, 0.0, 1.2)
-    local view = cameraManager:GetCameraView()
+    PlayCameraMove(cameraManager, pointB, lookAtB, 4.0, 6.0)
+    -- PlayCameraMove(cameraManager, pointC, lookAtC, 7.5, -12.0)
 
-    view = PlayCameraMove(cameraManager, view, FVector(-3.0, -2.0, 1.5), lookAt, 2.5)
-    view = PlayCameraMove(cameraManager, view, FVector( 0.0, -3.2, 1.7), lookAt, 2.5)
-    view = PlayCameraMove(cameraManager, view, FVector( 3.0, -1.5, 1.5), lookAt, 2.5)
-    view = PlayCameraMove(cameraManager, view, FVector( 2.2,  1.8, 1.6), lookAt, 2.5)
-
-    cameraManager:StartCameraFade(FVector(0.0, 0.0, 0.0), 0.0, 1.0, 0.8, true)
+    cameraManager:StartCameraFade(FVector.new(0.0, 0.0, 0.0), 0.0, 1.0, 0.8, true)
     WaitSeconds(0.8)
+    cameraManager:ClearManualCameraView()
     cameraManager:ClearLetterBox()
-    cameraManager:StartCameraFade(FVector(0.0, 0.0, 0.0), 1.0, 0.0, 0.6, false)
+    cameraManager:StartCameraFade(FVector.new(0.0, 0.0, 0.0), 1.0, 0.0, 0.6, false)
+    WaitSeconds(0.6)
 
-    SetCinematicInputBlocked(false)
+    ShowDialogue("주인공", "들었던 대로 낡고 더러운 방이다.")
+    QueueDialogue("주인공", "하지만 귀중한 물건도 보이는 것 같은데...")
+    QueueDialogue("주인공", "상자에 보관해 뒀다가 청소가 끝나면 돌려주자.")
+    WaitForDialogue(1.2)
+
+    FinishCinematic(cameraManager)
 end
 
 function BeginPlay(owner)

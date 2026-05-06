@@ -25,6 +25,7 @@
 #include "Audio/AudioSystem.h"
 #include "Engine/Input/InputRouter.h"
 #include "Game/UI/GameUISystem.h"
+#include "Game/UI/DialoguePanel.h"
 #include "Game/Systems/GameContext.h"
 #include "Game/Systems/TimeDilationSystem.h"
 #include "Game/Systems/CleaningToolSystem.h"
@@ -387,6 +388,16 @@ void RegisterLuaBindings(sol::state& Lua)
 		return GameUISystem::Get().IsDialogueActive();
 	});
 
+	Lua.set_function("IsDialogueTextComplete", []()
+	{
+		return DialoguePanel::IsTextComplete();
+	});
+
+	Lua.set_function("AdvanceDialogue", []()
+	{
+		return DialoguePanel::AdvanceOrSkip();
+	});
+
 	Lua.set_function("GetEndingType", []()
 	{
 		EEndingType Type = GameUISystem::Get().GetEndingType();
@@ -736,6 +747,18 @@ void RegisterLuaBindings(sol::state& Lua)
 	Lua.new_usertype<APlayerCameraManager>(
 		"APlayerCameraManager",
 		"GetCameraView", [](APlayerCameraManager& Manager) { return Manager.GetCameraView(); },
+		"SetManualCameraViewLookAt", [](APlayerCameraManager& Manager, const FVector& Location, const FVector& Target, sol::optional<float> FOV)
+		{
+			FCameraViewInfo View = Manager.GetCameraView();
+			View.Location = Location;
+			View.Rotation = MakeLookAtRotation(Location, Target);
+			if (FOV)
+			{
+				View.FOV = FOV.value();
+			}
+			Manager.SetManualCameraView(View);
+		},
+		"ClearManualCameraView", &APlayerCameraManager::ClearManualCameraView,
 		"StartCameraFade", [](APlayerCameraManager& Manager, const FVector& Color, float FromAlpha, float ToAlpha, float Duration, sol::optional<bool> bHold)
 		{
 			Manager.StartCameraFade(Color, FromAlpha, ToAlpha, Duration, bHold.value_or(false));
@@ -749,6 +772,31 @@ void RegisterLuaBindings(sol::state& Lua)
 
 		"StartCameraTransition", &APlayerCameraManager::StartCameraTransition,
 		"StartCameraTransitionBezier", &APlayerCameraManager::StartCameraTransitionBezier,
+		"StartCameraTransitionLookAtBezier", [](APlayerCameraManager& Manager, const FVector& ToLocation, const FVector& Target, float Duration, sol::optional<float> HandleDistance, sol::optional<float> UpOffset, sol::optional<float> SideOffset)
+		{
+			FCameraViewInfo FromView = Manager.GetCameraView();
+			FCameraViewInfo ToView = FromView;
+			ToView.Location = ToLocation;
+			ToView.Rotation = MakeLookAtRotation(ToLocation, Target);
+
+			const FVector Delta = ToView.Location - FromView.Location;
+			const float Distance = Delta.Size();
+			const FVector Direction = Distance > 0.001f ? Delta / Distance : FromView.GetForwardVector().GetSafeNormal();
+			const float Handle = HandleDistance.value_or(Distance * 0.33f);
+			const FVector Lift = FVector::UpVector * UpOffset.value_or(0.0f);
+			const FVector MidPoint = (FromView.Location + ToView.Location) * 0.5f;
+			FVector Outward = (MidPoint - Target).GetSafeNormal2D();
+			if (Outward.IsNearlyZero())
+			{
+				Outward = FVector(-Direction.Y, Direction.X, 0.0f).GetSafeNormal2D();
+			}
+
+			const FVector Side = Outward * SideOffset.value_or(0.0f);
+			const FVector ControlPointA = FromView.Location + Direction * Handle + Side + Lift;
+			const FVector ControlPointB = ToView.Location - Direction * Handle + Side + Lift;
+
+			Manager.StartCameraTransitionBezier(FromView, ToView, ControlPointA, ControlPointB, Duration);
+		},
 		"StopCameraTransition", &APlayerCameraManager::StopCameraTransition
 	);
 
