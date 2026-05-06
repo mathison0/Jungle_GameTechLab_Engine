@@ -827,6 +827,9 @@
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\ExplodeVfxActor.cpp">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClCompile>
@@ -999,6 +1002,9 @@
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.cpp">
+      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\SubUVPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp">
@@ -1784,6 +1790,9 @@
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\ExplodeVfxActor.h">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClInclude>
@@ -2016,6 +2025,9 @@
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.h">
+      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\SubUVPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h">

@@ -46,7 +46,6 @@ public:
     void PostDuplicate() override;
 
     FPrimitiveProxy* CreateSceneProxy() override;
-    void UpdateWorldAABB() const override;
 
 protected:
     void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;

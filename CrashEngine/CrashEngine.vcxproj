@@ -452,6 +452,7 @@
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\ExplodeVfxActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
@@ -510,6 +511,7 @@
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\PresentPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\SubUVPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPassPresets.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPassRegistry.cpp" />
@@ -773,6 +775,7 @@
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\ExplodeVfxActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
@@ -851,6 +854,7 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\PresentPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.h" />
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\SubUVPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassPresets.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassRegistry.h" />

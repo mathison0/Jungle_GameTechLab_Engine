@@ -41,13 +41,14 @@ void USubUVComponent::PostDuplicate()
 
 USubUVComponent::USubUVComponent()
 {
-    SetVisibility(false);
+    SetVisibility(true);
 }
 
 void USubUVComponent::SetParticle(const FName& InParticleName)
 {
     ParticleName = InParticleName;
     CachedParticle = FResourceManager::Get().FindParticle(InParticleName);
+    MarkWorldBoundsDirty();
 }
 
 void USubUVComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
@@ -84,31 +85,11 @@ void USubUVComponent::PostEditProperty(const char* PropertyName)
     }
 }
 
-void USubUVComponent::UpdateWorldAABB() const
-{
-    FVector LExt = { 0.01f, 0.5f, 0.5f };
-
-    float NewEx = std::abs(CachedWorldMatrix.M[0][0]) * LExt.X +
-                  std::abs(CachedWorldMatrix.M[1][0]) * LExt.Y +
-                  std::abs(CachedWorldMatrix.M[2][0]) * LExt.Z;
-
-    float NewEy = std::abs(CachedWorldMatrix.M[0][1]) * LExt.X +
-                  std::abs(CachedWorldMatrix.M[1][1]) * LExt.Y +
-                  std::abs(CachedWorldMatrix.M[2][1]) * LExt.Z;
-
-    float NewEz = std::abs(CachedWorldMatrix.M[0][2]) * LExt.X +
-                  std::abs(CachedWorldMatrix.M[1][2]) * LExt.Y +
-                  std::abs(CachedWorldMatrix.M[2][2]) * LExt.Z;
-
-    FVector WorldCenter = GetWorldLocation();
-
-    WorldAABBMinLocation = WorldCenter - FVector(NewEx, NewEy, NewEz);
-    WorldAABBMaxLocation = WorldCenter + FVector(NewEx, NewEy, NewEz);
-}
-
 void USubUVComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
-    UBillboardComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    // 부모(BillboardComponent)의 Tick 호출을 제거합니다. 
+    // 부모는 매 프레임 행렬을 직접 업데이트하려 시도하는데, SubUV는 프록시에서 이를 처리하므로 충돌 및 스케일 중복 적용을 유발합니다.
+    UPrimitiveComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
     if (!CachedParticle)
         return;
@@ -121,6 +102,8 @@ void USubUVComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 
     TimeAccumulator += DeltaTime;
     const float FrameDuration = 1.0f / PlayRate;
+    const uint32 OldFrameIndex = FrameIndex;
+
     while (TimeAccumulator >= FrameDuration)
     {
         TimeAccumulator -= FrameDuration;
@@ -143,6 +126,11 @@ void USubUVComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
                 break;
             }
         }
+    }
+
+    if (OldFrameIndex != FrameIndex)
+    {
+        MarkProxyDirty(ESceneProxyDirtyFlag::Mesh);
     }
 }
 

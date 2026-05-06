@@ -78,6 +78,7 @@ void FRenderPipelineRegistry::Initialize()
             PassNode(ERenderPassNodeType::DeferredDecalPass),
             PassNode(ERenderPassNodeType::DeferredLightingPass),
             PassNode(ERenderPassNodeType::AlphaBlendPass),
+            PassNode(ERenderPassNodeType::SubUVPass),
         });
 
     AddPipeline(
@@ -87,6 +88,7 @@ void FRenderPipelineRegistry::Initialize()
             PassNode(ERenderPassNodeType::DeferredOpaquePass),
             PassNode(ERenderPassNodeType::DeferredDecalPass),
             PassNode(ERenderPassNodeType::AlphaBlendPass),
+            PassNode(ERenderPassNodeType::SubUVPass),
         });
 
     AddPipeline(
@@ -121,6 +123,7 @@ void FRenderPipelineRegistry::Initialize()
             PassNode(ERenderPassNodeType::ShadowMapPass),
             PassNode(ERenderPassNodeType::ForwardOpaquePass),
             PassNode(ERenderPassNodeType::AlphaBlendPass),
+            PassNode(ERenderPassNodeType::SubUVPass),
         });
 
     AddPipeline(
@@ -129,6 +132,7 @@ void FRenderPipelineRegistry::Initialize()
             PassNode(ERenderPassNodeType::DepthPrePass),
             PassNode(ERenderPassNodeType::ForwardOpaquePass),
             PassNode(ERenderPassNodeType::AlphaBlendPass),
+            PassNode(ERenderPassNodeType::SubUVPass),
         });
 
     AddPipeline(

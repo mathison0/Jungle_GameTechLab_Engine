@@ -12,6 +12,7 @@ class FDeferredDecalPass;
 class FDeferredLightingPass;
 class FAdditiveDecalPass;
 class FAlphaBlendPass;
+class FSubUVPass;
 class FHeightFogPass;
 class FNonLitViewModePass;
 class FFXAAPass;
@@ -38,6 +39,7 @@ enum class ERenderPassNodeType
     DeferredLightingPass,
     AdditiveDecalPass,
     AlphaBlendPass,
+    SubUVPass,
     NonLitViewModePass,
     HeightFogPass,
     FXAAPass,
