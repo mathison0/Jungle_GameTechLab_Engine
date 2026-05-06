@@ -141,7 +141,7 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 {
 	FCameraViewInfo NewView;
 	FPostProcessSettings NewPostProcess;
-    FCameraOverlaySettings NewOverlay;
+	FCameraOverlaySettings NewOverlay;
 
 	if (!BuildBaseCameraView(NewView))
 	{
@@ -153,17 +153,17 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 	{
 		UpdateCameraTransition(DeltaTime, NewView);
 	}
+	
+	UpdateCameraFade(DeltaTime);
 
 	ApplyCameraModifiers(DeltaTime, NewView);
-
-	UpdateCameraFade(DeltaTime);
 	ApplyPostProcessModifiers(DeltaTime, NewPostProcess);
 	ApplyOverlayModifiers(DeltaTime, NewOverlay);
 	ApplyCameraFade(NewOverlay);
 
 	CachedCameraView = NewView;
-    CachedPostProcessSettings = NewPostProcess;
-    CachedCameraOverlaySettings = NewOverlay;
+	CachedPostProcessSettings = NewPostProcess;
+	CachedCameraOverlaySettings = NewOverlay;
 
 	bHasCachedCameraView = true;
 }
@@ -250,7 +250,6 @@ void APlayerCameraManager::StopCameraFade()
 {
 	FadeState = FCameraFadeState();
 }
-
 
 // 카메라 Linear 보간 이동
 void APlayerCameraManager::StartCameraTransition(const FCameraViewInfo& From, const FCameraViewInfo& To, float Duration)
@@ -444,10 +443,10 @@ void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProce
 void APlayerCameraManager::ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay)
 {
 	for (UCameraModifier* Modifier : CameraModifiers)
-    {
-        if (Modifier == nullptr || !Modifier->IsEnabled()) continue;
-        Modifier->ModifyOverlay(DeltaTime, InOutOverlay);
-    }
+	{
+		if (Modifier == nullptr || !Modifier->IsEnabled()) continue;
+		Modifier->ModifyOverlay(DeltaTime, InOutOverlay);
+	}
 }
 
 void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewInfo& CameraView, const FViewportRect& ViewRect, EViewMode ViewMode) const
@@ -474,17 +473,18 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 			CameraView.FarPlane);
 	}
 
-    OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
-    OutView.CameraPosition = CameraView.Location;
-    OutView.CameraForward = Forward;
-    OutView.CameraRight = Right;
-    OutView.CameraUp = Up;
-    OutView.NearPlane = CameraView.NearPlane;
-    OutView.FarPlane = CameraView.FarPlane;
-    OutView.bOrthographic = CameraView.bOrthographic;
-    OutView.CameraOrthoHeight = CameraView.OrthoHeight;
-    OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
-    OutView.ViewRect = ViewRect;
-    OutView.ViewMode = ViewMode;
-    OutView.PostProcessSettings = CachedPostProcessSettings;
+	OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
+	OutView.CameraPosition = CameraView.Location;
+	OutView.CameraForward = Forward;
+	OutView.CameraRight = Right;
+	OutView.CameraUp = Up;
+	OutView.NearPlane = CameraView.NearPlane;
+	OutView.FarPlane = CameraView.FarPlane;
+	OutView.bOrthographic = CameraView.bOrthographic;
+	OutView.CameraOrthoHeight = CameraView.OrthoHeight;
+	OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
+	OutView.ViewRect = ViewRect;
+	OutView.ViewMode = ViewMode;
+	OutView.PostProcessSettings = CachedPostProcessSettings;
+	OutView.CameraOverlaySettings = CachedCameraOverlaySettings;
 }

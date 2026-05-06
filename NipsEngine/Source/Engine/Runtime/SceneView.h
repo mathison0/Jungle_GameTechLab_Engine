@@ -29,6 +29,7 @@ struct FSceneView
 
 	EViewMode ViewMode = EViewMode::Lit;
 	FPostProcessSettings PostProcessSettings;
+	FCameraOverlaySettings CameraOverlaySettings;
 
 	bool bOrthographic = false;
 };
