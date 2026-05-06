@@ -6,7 +6,7 @@
 #include "Engine/Camera/PlayerCameraManager.h"
 #include "Engine/Camera/Modifier/CameraShakeModifier.h"
 #include "ImGui/imgui.h"
-#include "Bezier.h"
+#include "BezierUI.h"
 
 void FEditorCameraShakeWidget::Initialize(UEditorEngine* InEditorEngine)
 {
@@ -40,7 +40,7 @@ void FEditorCameraShakeWidget::Render(float DeltaTime)
     ImGui::SameLine();
     ImGui::TextDisabled("(drag control points)");
 
-    Bezier::Bezier("##shake_curve", BezierCP);
+    BezierUI::Bezier("##shake_curve", BezierCP);
 
     // ── 현재 커브 미리보기 값 텍스트 ────────────────────────────
     ImGui::Spacing();

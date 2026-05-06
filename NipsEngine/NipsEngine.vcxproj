@@ -243,7 +243,7 @@
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Source\Editor\UI\Bezier.cpp">
+    <ClCompile Include="Source\Editor\UI\BezierUI.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -885,7 +885,7 @@
     <ClInclude Include="Source\Editor\Input\PIEController.h" />
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h" />
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h" />
-    <ClInclude Include="Source\Editor\UI\Bezier.h" />
+    <ClInclude Include="Source\Editor\UI\BezierUI.h" />
     <ClInclude Include="Source\Editor\UI\EditorCameraShakeWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorConsoleWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorControlWidget.h" />
