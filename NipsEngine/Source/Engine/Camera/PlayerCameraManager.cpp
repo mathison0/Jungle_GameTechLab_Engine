@@ -191,7 +191,7 @@ void APlayerCameraManager::InitializeDefaultModifiers()
 
 void APlayerCameraManager::Shutdown()
 {
-	ClearCameraModifiers();
+	ClearModifierList();
 
 	for (UCameraModifier* Modifier : OwnedModifierList)
 	{
@@ -241,7 +241,7 @@ void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 	ModifierList.erase(std::remove(ModifierList.begin(), ModifierList.end(), Modifier), ModifierList.end());
 }
 
-void APlayerCameraManager::ClearCameraModifiers()
+void APlayerCameraManager::ClearModifierList()
 {
 	ModifierList.clear();
 }
