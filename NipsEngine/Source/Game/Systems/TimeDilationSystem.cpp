@@ -158,7 +158,7 @@ void FTimeDilationSystem::TickSlomo(float RealDeltaTime)
         /*const float P = 1.0f - Alpha;
         const float EaseAlpha = 1.0f - P * P * P;*/
 
-        GlobalTimeDilation = Lerp(SlomoStartDilation, SlomoTargetDilation, EaseAlpha);
+        GlobalTimeDilation = Lerp(SlomoTargetDilation, SlomoStartDilation, EaseAlpha);
 		return;
 	}
 
