@@ -69,11 +69,6 @@ void UKnockbackComponent::TriggerKnockback(const FVector& Direction, float Stren
         return;
     }
 
-    if (Direction.IsNearlyZero())
-    {
-        return;
-    }
-
     const float FinalStrength = Strength > 0.0f ? Strength : DefaultStrength;
     const float FinalDuration = Duration > 0.0f ? Duration : DefaultDuration;
     if (FinalStrength <= MathUtil::SmallNumber || FinalDuration <= MathUtil::SmallNumber)
@@ -87,18 +82,24 @@ void UKnockbackComponent::TriggerKnockback(const FVector& Direction, float Stren
         return;
     }
 
-    KnockbackVelocity = Direction.GetSafeNormal() * FinalStrength;
-    KnockbackVelocity.Z += VerticalBoost;
+    bControlLockOnly = Direction.IsNearlyZero();
+    KnockbackVelocity = bControlLockOnly
+        ? FVector::ZeroVector
+        : Direction.GetSafeNormal() * FinalStrength;
+    if (!bControlLockOnly)
+    {
+        KnockbackVelocity.Z += VerticalBoost;
+    }
     RemainingTime = FinalDuration;
     TotalDuration = FinalDuration;
     ClearMovementInputState();
     SuspendMovementComponents();
 
-    if (Body->IsDynamicBody() && bUseRigidBodyImpulse)
+    if (!KnockbackVelocity.IsNearlyZero() && Body->IsDynamicBody() && bUseRigidBodyImpulse)
     {
         Body->AddImpulse(KnockbackVelocity);
     }
-    else if (Body->IsDynamicBody())
+    else if (!KnockbackVelocity.IsNearlyZero() && Body->IsDynamicBody())
     {
         Body->SetVelocity(KnockbackVelocity);
     }
@@ -110,6 +111,7 @@ void UKnockbackComponent::StopKnockback()
     RemainingTime = 0.0f;
     TotalDuration = 0.0f;
     KnockbackVelocity = FVector::ZeroVector;
+    bControlLockOnly = false;
 }
 
 void UKnockbackComponent::TickComponent(float DeltaTime)
@@ -121,6 +123,18 @@ void UKnockbackComponent::TickComponent(float DeltaTime)
 
     const float ClampedDeltaTime = std::max(DeltaTime, 0.0f);
     RemainingTime = std::max(RemainingTime - ClampedDeltaTime, 0.0f);
+
+    if (bControlLockOnly)
+    {
+        if (!IsKnockbackActive())
+        {
+            RestoreMovementComponents(false);
+            TotalDuration = 0.0f;
+            KnockbackVelocity = FVector::ZeroVector;
+            bControlLockOnly = false;
+        }
+        return;
+    }
 
     if (bApplyGravityDuringKnockback)
     {
@@ -146,6 +160,7 @@ void UKnockbackComponent::TickComponent(float DeltaTime)
         RestoreMovementComponents(true);
         TotalDuration = 0.0f;
         KnockbackVelocity = FVector::ZeroVector;
+        bControlLockOnly = false;
     }
 }
 
