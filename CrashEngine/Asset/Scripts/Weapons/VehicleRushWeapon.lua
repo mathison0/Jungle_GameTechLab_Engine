@@ -48,6 +48,66 @@ local function SetVehicleVisualPose(visual, position, target)
     visual:LookAt(target)
 end
 
+local function FindDensestEnemyPosition(world, fallbackPosition, playerPosition, data)
+    if world == nil or world.GetActorsByTag == nil then
+        return fallbackPosition, 0
+    end
+
+    local enemies = world:GetActorsByTag("Enemy")
+    if enemies == nil then
+        return fallbackPosition, 0
+    end
+
+    local cellSize = math.max(data.TargetGridSize or data.VehicleWidth or 6.0, 1.0)
+    local searchRadius = data.TargetSearchRadius or
+        math.max((data.MaxPassOffset or 18.0) + ((data.VehicleWidth or 5.0) * 2.0), 24.0)
+    local searchRadiusSquared = searchRadius * searchRadius
+    local cells = {}
+    local bestCell = nil
+    local _, _, fallbackZ = Components(fallbackPosition)
+
+    for _, enemy in ipairs(enemies) do
+        if IsValidActor(enemy) then
+            local location = enemy:GetLocation()
+            if Vec.DistanceSquared(playerPosition, location) <= searchRadiusSquared then
+                local x, y = Components(location)
+                local cellX = math.floor(x / cellSize)
+                local cellY = math.floor(y / cellSize)
+                local key = tostring(cellX) .. ":" .. tostring(cellY)
+                local cell = cells[key]
+
+                if cell == nil then
+                    cell = {
+                        Count = 0,
+                        SumX = 0.0,
+                        SumY = 0.0,
+                    }
+                    cells[key] = cell
+                end
+
+                cell.Count = cell.Count + 1
+                cell.SumX = cell.SumX + x
+                cell.SumY = cell.SumY + y
+
+                if bestCell == nil or cell.Count > bestCell.Count then
+                    bestCell = cell
+                end
+            end
+        end
+    end
+
+    if bestCell == nil or bestCell.Count <= 0 then
+        return fallbackPosition, 0
+    end
+
+    local invCount = 1.0 / bestCell.Count
+    return Vec.New(
+        bestCell.SumX * invCount,
+        bestCell.SumY * invCount,
+        fallbackZ
+    ), bestCell.Count
+end
+
 function VehicleRushWeapon.New(owner)
     local self = setmetatable({}, VehicleRushWeapon)
     self.Owner = owner
@@ -316,7 +376,8 @@ function VehicleRushWeapon:RunVehiclePass()
         offsetDistance = -offsetDistance
     end
 
-    local origin = Vec.Add(playerPos, Vec.Mul(side, offsetDistance))
+    local randomOrigin = Vec.Add(playerPos, Vec.Mul(side, offsetDistance))
+    local origin, densestEnemyCount = FindDensestEnemyPosition(world, randomOrigin, playerPos, data)
 
     local spawnDistance = data.SpawnDistance or 50.0
     local speed = math.max(data.VehicleSpeed or 35.0, 0.001)
@@ -354,7 +415,9 @@ function VehicleRushWeapon:RunVehiclePass()
     Log("[VehicleRush] vehicle pass started. count=" ..
         tostring(count) ..
         " offset=" ..
-        tostring(offsetDistance))
+        tostring(offsetDistance) ..
+        " densestEnemies=" ..
+        tostring(densestEnemyCount))
 
     local elapsed = 0.0
     local hitActors = {}
