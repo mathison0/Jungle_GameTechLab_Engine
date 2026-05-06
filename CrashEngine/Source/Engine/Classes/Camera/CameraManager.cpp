@@ -48,6 +48,7 @@ APlayerCameraManager::~APlayerCameraManager()
     }
 
     Modifiers.clear();
+    ModifierHandleMap.clear();
 }
 
 // void APlayerCameraManager::InitializeFor(APlayerController* PC)
@@ -230,30 +231,30 @@ FVector APlayerCameraManager::GetCameraLocation() const
     return GetCameraCacheView().Location;
 }
 
-UCameraModifier* APlayerCameraManager::AddCameraModifier(UClass* ModifierUClass)
+uint32 APlayerCameraManager::AddCameraModifier(UClass* ModifierUClass)
 {
     if (ModifierUClass == nullptr)
     {
-        return nullptr;
+        return 0;
     }
 
-    UCameraModifier* Result = AddCameraModifier(ModifierUClass->GetName());
+    uint32 Result = AddCameraModifier(ModifierUClass->GetName());
     return Result;
 }
 
-UCameraModifier* APlayerCameraManager::AddCameraModifier(const char* ModifierName)
+uint32 APlayerCameraManager::AddCameraModifier(const char* ModifierName)
 {
     UObject* NewObject = FObjectFactory::Get().Create(ModifierName, this);
     if (NewObject == nullptr)
     {
-        return nullptr;
+        return 0;
     }
 
     UCameraModifier* NewModifier = Cast<UCameraModifier>(NewObject);
     if (NewModifier == nullptr)
     {
         UObjectManager::Get().DestroyObject(NewObject);
-        return nullptr;
+        return 0;
     }
 
     UCameraModifier* Result = NewModifier;
@@ -261,22 +262,23 @@ UCameraModifier* APlayerCameraManager::AddCameraModifier(const char* ModifierNam
     // 필요하면 여기서 초기화
     // Result->Initialize(this);
 
-
-    if (!AddCameraModifierToList(Result))
+    uint32 Handle = AddCameraModifierToList(Result);
+    if (Handle == 0)
     {
         UObjectManager::Get().DestroyObject(NewModifier);
-        return nullptr;
+        return 0;
     }
 
-	return Result;
+    return Handle;
 }
 
-bool APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifier)
+uint32 APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifier)
 {
+    uint32 Handle = 0;
     if (NewModifier)
     {
         // Look through current modifier list and find slot for this priority
-        int32 BestIdx = static_cast<uint32>(Modifiers.size());
+        int32 BestIdx = static_cast<int32>(Modifiers.size());
         for (int32 ModifierIdx = 0; ModifierIdx < Modifiers.size(); ModifierIdx++)
         {
             UCameraModifier* const M = Modifiers[ModifierIdx];
@@ -285,13 +287,12 @@ bool APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifier)
                 if (M == NewModifier)
                 {
                     // already in list, just bail
-                    return false;
+                    return Handle;
                 }
 
                 // If priority of current index has passed or equaled ours - we have the insert location
                 if (NewModifier->Priority <= M->Priority)
                 {
-
                     // Update best index
                     BestIdx = ModifierIdx;
 
@@ -300,44 +301,78 @@ bool APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifier)
             }
         }
         Modifiers.insert(Modifiers.begin() + BestIdx, NewModifier);
-
+        Handle = NextModifierHandle++;
+        ModifierHandleMap[Handle] = NewModifier;
         // Save camera
         NewModifier->AddedToCamera(this);
-        return true;
+        return Handle;
     }
 
-    return false;
+    return Handle;
 }
 
-bool APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
+uint32 APlayerCameraManager::GetModifierHandle(const char* ModifierUclassName) const
 {
-    if (Modifier == nullptr)
+    for (const auto& Pair : ModifierHandleMap)
+    {
+        if (Pair.second->GetClass()->GetName() == ModifierUclassName)
+        {
+            return Pair.first;
+        }
+    }
+    return 0;
+}
+
+bool APlayerCameraManager::DisableCameraModifier(uint32 ModifierHandle, bool bImmediate)
+{
+    auto It = ModifierHandleMap.find(ModifierHandle);
+    if (It == ModifierHandleMap.end() || It->second == nullptr)
     {
         return false;
     }
 
-    auto It = std::find_if(
+    It->second->DisableModifier(bImmediate);
+    return true;
+}
+
+bool APlayerCameraManager::RemoveCameraModifier(uint32 ModifierHandle)
+{
+    if (ModifierHandle == 0)
+    {
+        return false;
+    }
+
+    auto MapIt = ModifierHandleMap.find(ModifierHandle);
+    if (MapIt == ModifierHandleMap.end() || MapIt->second == nullptr)
+    {
+        return false;
+    }
+
+    UCameraModifier* Modifier = MapIt->second;
+
+    auto It = std::find(
         Modifiers.begin(),
         Modifiers.end(),
-        [Modifier](UCameraModifier*& ExistingModifier)
-        {
-            return ExistingModifier == Modifier;
-        });
+        Modifier);
 
     if (It == Modifiers.end())
     {
+        ModifierHandleMap.erase(MapIt);
         return false;
     }
 
     (*It)->AddedToCamera(nullptr);
     UObjectManager::Get().DestroyObject(*It);
+
     Modifiers.erase(It);
+    ModifierHandleMap.erase(MapIt);
+
     return true;
 }
 
 void APlayerCameraManager::Tick(float DeltaTime)
 {
-	AActor::Tick(DeltaTime);
+    AActor::Tick(DeltaTime);
     UpdateCamera(DeltaTime);
 }
 
