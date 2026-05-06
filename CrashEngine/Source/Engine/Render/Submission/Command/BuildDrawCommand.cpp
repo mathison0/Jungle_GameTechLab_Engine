@@ -290,6 +290,9 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
         case EViewModePostProcessVariant::GammaCorrection:
             Shader = FShaderManager::Get().GetShader(EShaderType::GammaCorrection);
             break;
+        case EViewModePostProcessVariant::Vignetting:
+            Shader = FShaderManager::Get().GetShader(EShaderType::Vignetting);
+            break;
         default:
             Shader = FShaderManager::Get().GetShader(EShaderType::HeightFog);
             break;
@@ -327,6 +330,7 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
         switch (PostProcessVariant)
         {
         case EViewModePostProcessVariant::GammaCorrection:
+        case EViewModePostProcessVariant::Vignetting:
             Cmd.Blend = EBlendState::Opaque;
             Cmd.DiffuseSRV = Targets ? Targets->SceneColorCopySRV : nullptr;
             break;

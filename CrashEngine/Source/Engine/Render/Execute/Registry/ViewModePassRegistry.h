@@ -22,6 +22,7 @@ enum class EViewModePostProcessVariant : uint16
     WorldNormal = 3,
     LightHitMap = 4,
     GammaCorrection = 5,
+	Vignetting	= 6,
 };
 
 uint16 ToPostProcessUserBits(EViewModePostProcessVariant Variant);

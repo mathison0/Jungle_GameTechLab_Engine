@@ -23,6 +23,7 @@ enum class EShaderType : uint32
     SceneDepth,
     NormalView,
     FXAA,
+    Vignetting,
     GammaCorrection,
     LightHitMap,
     UI,

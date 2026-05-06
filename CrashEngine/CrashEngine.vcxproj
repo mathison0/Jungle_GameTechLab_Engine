@@ -641,6 +641,7 @@
     <ClCompile Include="ThirdParty\Lua\src\lvm.c" />
     <ClCompile Include="ThirdParty\Lua\src\lzio.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\VignettingPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h" />
@@ -1027,6 +1028,7 @@
     <ClInclude Include="ThirdParty\Sol\config.hpp" />
     <ClInclude Include="ThirdParty\Sol\forward.hpp" />
     <ClInclude Include="ThirdParty\Sol\sol.hpp" />
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\VignettingPass.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">

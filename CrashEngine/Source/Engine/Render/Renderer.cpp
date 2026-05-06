@@ -563,6 +563,14 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
             }
         }
 
+		if (PipelineContext.SceneView && PipelineContext.SceneView->ShowFlags.bGammaCorrection)
+        {
+            if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::VignettingPass))
+            {
+                Pass->BuildDrawCommands(PipelineContext);
+            }
+        }
+
         if (PipelineContext.SceneView && PipelineContext.SceneView->ShowFlags.bGammaCorrection)
         {
             if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::GammaCorrectionPass))
@@ -570,6 +578,7 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
                 Pass->BuildDrawCommands(PipelineContext);
             }
         }
+
     }
 
     if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::UIPass))

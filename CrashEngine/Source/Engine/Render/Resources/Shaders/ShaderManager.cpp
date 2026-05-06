@@ -48,6 +48,8 @@ const char* GetShaderTypeName(EShaderType InType)
         return "FXAA";
     case EShaderType::GammaCorrection:
         return "GammaCorrection";
+	case EShaderType::Vignetting:
+        return "Vignetting";
     case EShaderType::LightHitMap:
         return "LightHitMap";
     case EShaderType::UI:
