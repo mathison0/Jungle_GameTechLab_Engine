@@ -11,6 +11,7 @@
 #include "GameFramework/Level.h"
 #include "GameFramework/World.h"
 #include "Serialization/Archive.h"
+#include "Engine/Classes/Camera/CameraManager.h"
 
 #include <algorithm>
 #include <string>
@@ -267,7 +268,7 @@ bool AActor::IsOverlappingActor(const AActor* OtherActor) const
     return false;
 }
 
-void AActor::CalcCamera(FVector& OutLocation, FRotator& OutRotation)
+void AActor::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
 {
     for (UActorComponent* Compoent : OwnedComponents)
 	{
@@ -275,15 +276,21 @@ void AActor::CalcCamera(FVector& OutLocation, FRotator& OutRotation)
 		{
 			if (CameraComponent->IsActive())
 			{
-                OutLocation = CameraComponent->GetWorldLocation();
-                OutRotation = CameraComponent->GetWorldRotation().ToRotator();
-				return;
+                OutResult.Location = CameraComponent->GetWorldLocation();
+                OutResult.Rotation = CameraComponent->GetWorldRotation().ToRotator();
+                OutResult.FOV = CameraComponent->GetFOV();
+                OutResult.AspectRatio = CameraComponent->GetAspectRatio();
+                OutResult.NearZ = CameraComponent->GetNearPlane();
+                OutResult.FarZ = CameraComponent->GetFarPlane();
+                OutResult.bOrthographic = CameraComponent->IsOrthogonal();
+                OutResult.OrthoWidth = CameraComponent->GetOrthoWidth();
+                return;
 			}
 		}
     }
 
-	OutLocation = GetActorLocation();
-    OutRotation = GetActorRotation();
+	OutResult.Location = GetActorLocation();
+    OutResult.Rotation = GetActorRotation();
 }
 
 // 엔진 단계에서의 틱

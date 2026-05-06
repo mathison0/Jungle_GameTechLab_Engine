@@ -276,7 +276,7 @@ bool APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifier)
     if (NewModifier)
     {
         // Look through current modifier list and find slot for this priority
-        int32 BestIdx = Modifiers.size();
+        int32 BestIdx = static_cast<uint32>(Modifiers.size());
         for (int32 ModifierIdx = 0; ModifierIdx < Modifiers.size(); ModifierIdx++)
         {
             UCameraModifier* const M = Modifiers[ModifierIdx];
@@ -398,10 +398,6 @@ void APlayerCameraManager::UpdateViewTarget(FViewTarget& OutVT, float DeltaTime)
 {
     if (OutVT.Target)
     {
-        FVector OutLocation;
-        FRotator OutRotation;
-        float OutFOV;
-
         OutVT.CalcCamera(DeltaTime, OutVT.POV);
     }
 }

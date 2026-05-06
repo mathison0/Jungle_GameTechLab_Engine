@@ -35,6 +35,7 @@ struct FMinimalViewInfo
     bool bOrthographic = false;
     float OrthoWidth = 10.0f;
 
+	FMinimalViewInfo() = default;
     void BlendViewInfo(const FMinimalViewInfo& OtherInfo, float OtherWeight)
     {
         Location = FMath::Lerp(Location, OtherInfo.Location, OtherWeight);
@@ -91,7 +92,7 @@ struct FViewTarget
             return;
         }
 
-        Target->CalcCamera(OutResult.Location, OutResult.Rotation);
+        Target->CalcCamera(DeltaTime, OutResult);
     }
 };
 

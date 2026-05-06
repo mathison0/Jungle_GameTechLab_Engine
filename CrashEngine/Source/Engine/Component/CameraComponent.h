@@ -49,6 +49,7 @@ public:
     FConvexVolume GetConvexVolume() const;
 
     float GetFOV() const { return CameraState.FOV; }
+    float GetAspectRatio() const { return CameraState.AspectRatio; }
     float GetNearPlane() const { return CameraState.NearZ; }
     float GetFarPlane() const { return CameraState.FarZ; }
     float GetOrthoWidth() const { return CameraState.OrthoWidth; }
