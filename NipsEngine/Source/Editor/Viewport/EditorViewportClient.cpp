@@ -95,6 +95,11 @@ void FEditorViewportClient::Initialize(FWindowsWindow* InWindow, UEditorEngine* 
 	InputRouter.SetUIInputHandler(&GameUISystem::Get());
 }
 
+void FEditorViewportClient::ShutdownPlayerCameraManager()
+{
+	PlayerCameraManager.Shutdown();
+}
+
 void FEditorViewportClient::SetWorld(UWorld* InWorld)
 {
 	World = InWorld;

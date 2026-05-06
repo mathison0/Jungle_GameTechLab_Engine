@@ -56,8 +56,14 @@ namespace
 
 FGameViewportClient::~FGameViewportClient()
 {
+	ShutdownPlayerCameraManager();
 	FInputRouter::LockMouse(false);
 	FInputRouter::SetCursorVisibility(true);
+}
+
+void FGameViewportClient::ShutdownPlayerCameraManager()
+{
+	PlayerCameraManager.Shutdown();
 }
 
 // 디버그용 Free Camera와 PlayerController를 초기화합니다.

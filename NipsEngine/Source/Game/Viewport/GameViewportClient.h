@@ -16,6 +16,7 @@ public:
 	~FGameViewportClient() override;
 
 	void Initialize(FWindowsWindow* InWindow) override;
+	void ShutdownPlayerCameraManager();
 	void SetViewportSize(float InWidth, float InHeight) override;
 	void Tick(float DeltaTime) override;
 	void LateTick(float DeltaTime);
