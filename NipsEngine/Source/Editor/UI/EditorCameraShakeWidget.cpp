@@ -4,14 +4,12 @@
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/Viewport/ViewportLayout.h"
 #include "Engine/Camera/PlayerCameraManager.h"
-#include "Engine/Camera/Modifier/CameraShakeModifier.h"
 #include "ImGui/imgui.h"
 #include "Bezier.h"
 
 void FEditorCameraShakeWidget::Initialize(UEditorEngine* InEditorEngine)
 {
     FEditorWidget::Initialize(InEditorEngine);
-    ShakeModifier = new UCameraShakeModifier();
 }
 
 void FEditorCameraShakeWidget::Render(float DeltaTime)
@@ -52,21 +50,17 @@ void FEditorCameraShakeWidget::Render(float DeltaTime)
     ImGui::Separator();
     ImGui::Spacing();
 
-    const bool bIsShaking = ShakeModifier && ShakeModifier->GetIsShaking();
+    APlayerCameraManager* Manager = GetCameraManager();
+    const bool bIsShaking = Manager && Manager->IsCameraShaking();
 
     if (bIsShaking)
         ImGui::BeginDisabled();
 
     if (ImGui::Button("Preview Shake", ImVec2(130.0f, 0.0f)))
     {
-        APlayerCameraManager* Manager = GetCameraManager();
-        if (Manager && ShakeModifier)
+        if (Manager)
         {
-            for (int i = 0; i < 4; ++i)
-                ShakeModifier->BezierCP[i] = BezierCP[i];
-
-            Manager->AddCameraModifier(ShakeModifier); // 이걸 asset 만드는 걸로 바꿔야 됨
-            ShakeModifier->StartShake(PreviewAmplitude, PreviewFrequency, PreviewDuration); // 만들어진 에셋을 잠시 플레이
+            Manager->StartCameraShake(PreviewAmplitude, PreviewFrequency, PreviewDuration, BezierCP); // 만들어진 에셋을 잠시 플레이
         }
     }
 
@@ -80,8 +74,8 @@ void FEditorCameraShakeWidget::Render(float DeltaTime)
 
     if (ImGui::Button("Stop", ImVec2(70.0f, 0.0f)))
     {
-        if (ShakeModifier)
-            ShakeModifier->StopShake(); // 만들어진 에셋 리스트에서 빼기
+        if (Manager)
+            Manager->StopCameraShake(); // 만들어진 에셋 리스트에서 빼기
     }
 
     if (!bIsShaking)

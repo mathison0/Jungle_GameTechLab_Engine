@@ -25,6 +25,16 @@ bool UCameraModifier::ModifyOverlay(float DeltaTime, FCameraOverlaySettings& InO
 	return false;
 }
 
+void UCameraModifier::AddedToCamera(APlayerCameraManager* Camera)
+{
+	(void)Camera;
+}
+
+void UCameraModifier::RemovedFromCamera(APlayerCameraManager* Camera)
+{
+	(void)Camera;
+}
+
 void UCameraModifier::EnableModifier()
 {
 	bEnabled = true;
