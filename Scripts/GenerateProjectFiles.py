@@ -85,6 +85,7 @@ INCLUDE_PATHS = [
     "Source\\Engine",
     "Source",
     "ThirdParty",
+    "ThirdParty\\FMod",
     "ThirdParty\\Sol",
     "ThirdParty\\Lua\\src",
     "ThirdParty\\ImGui",
@@ -329,6 +330,14 @@ def generate_vcxproj(files: dict[str, list[str]]):
         subsystem = props.get("subsystem", "Windows" if is_x64 else "Console")
         ET.SubElement(link, "SubSystem").text = subsystem
         ET.SubElement(link, "GenerateDebugInformation").text = "true"
+
+    # PostBuildEvent to copy FMod DLL
+    idg = ET.SubElement(proj, "ItemDefinitionGroup")
+    post = ET.SubElement(idg, "PostBuildEvent")
+    ET.SubElement(post, "Command").text = (
+        'if exist "$(ProjectDir)ThirdParty\\FMod\\fmod.dll" '
+        'copy /Y "$(ProjectDir)ThirdParty\\FMod\\fmod.dll" "$(OutDir)" >nul'
+    )
 
     # ClCompile items
     ig = ET.SubElement(proj, "ItemGroup")
