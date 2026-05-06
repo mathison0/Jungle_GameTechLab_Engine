@@ -516,23 +516,22 @@
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DeferredOpaquePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.cpp" />
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\FadePass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\FinalPostProcessCompositePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.cpp" />
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\GammaCorrectionPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.cpp" />
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\LetterboxPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\PresentPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp" />
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\VignettingPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPassPresets.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPassRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPipelineRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\ShaderProgramRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\ViewModePassRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Runner\RenderPipelineRunner.cpp" />
+    <ClCompile Include="Source\Engine\Render\PostProcess\FadeController.cpp" />
+    <ClCompile Include="Source\Engine\Render\PostProcess\PostProcessController.cpp" />
     <ClCompile Include="Source\Engine\Render\Resources\FrameResources.cpp" />
     <ClCompile Include="Source\Engine\Render\Resources\Buffers\ConstantBufferCache.cpp" />
     <ClCompile Include="Source\Engine\Render\Resources\Buffers\MeshBufferManager.cpp" />
@@ -599,6 +598,7 @@
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPostProcessBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
@@ -873,17 +873,14 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DeferredOpaquePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.h" />
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\FadePass.h" />
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\FinalPostProcessCompositePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.h" />
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\GammaCorrectionPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.h" />
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\LetterboxPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\PresentPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h" />
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\VignettingPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassPresets.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassRegistry.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassTypes.h" />
@@ -894,6 +891,8 @@
     <ClInclude Include="Source\Engine\Render\Execute\Registry\ViewModePassRegistry.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Runner\RenderMarkers.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Runner\RenderPipelineRunner.h" />
+    <ClInclude Include="Source\Engine\Render\PostProcess\FadeController.h" />
+    <ClInclude Include="Source\Engine\Render\PostProcess\PostProcessController.h" />
     <ClInclude Include="Source\Engine\Render\Resources\FrameResources.h" />
     <ClInclude Include="Source\Engine\Render\Resources\Bindings\CBBindingEntry.h" />
     <ClInclude Include="Source\Engine\Render\Resources\Bindings\RenderBindingSlots.h" />
@@ -1077,15 +1076,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Shaders\Passes\PostProcess\FadePass.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="Shaders\Passes\PostProcess\GammaCorrection.hlsl">
+    <FxCompile Include="Shaders\Passes\PostProcess\FinalPostProcessComposite.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
@@ -1094,14 +1085,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\PostProcess\HeightFogPass.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="Shaders\Passes\PostProcess\LetterboxPass.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
@@ -1118,14 +1101,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\PostProcess\OutlinePostProcessPass.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="Shaders\Passes\PostProcess\VignettingPass.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>

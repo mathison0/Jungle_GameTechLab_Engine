@@ -271,6 +271,10 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
     {
         Shader = FShaderManager::Get().GetShader(EShaderType::FXAA);
     }
+    else if (Pass == ERenderPass::FinalPostProcess)
+    {
+        Shader = FShaderManager::Get().GetShader(EShaderType::FinalPostProcessComposite);
+    }
     else if (Pass == ERenderPass::PostProcess)
     {
         switch (PostProcessVariant)
@@ -286,18 +290,6 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
             break;
         case EViewModePostProcessVariant::LightHitMap:
             Shader = FShaderManager::Get().GetShader(EShaderType::LightHitMap);
-            break;
-        case EViewModePostProcessVariant::GammaCorrection:
-            Shader = FShaderManager::Get().GetShader(EShaderType::GammaCorrection);
-            break;
-        case EViewModePostProcessVariant::Vignetting:
-            Shader = FShaderManager::Get().GetShader(EShaderType::Vignetting);
-            break;
-        case EViewModePostProcessVariant::Fade:
-            Shader = FShaderManager::Get().GetShader(EShaderType::Fade);
-            break;
-        case EViewModePostProcessVariant::Letterbox:
-            Shader = FShaderManager::Get().GetShader(EShaderType::Letterbox);
             break;
         default:
             Shader = FShaderManager::Get().GetShader(EShaderType::HeightFog);
@@ -329,22 +321,14 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
         // so SubmitCommand does not overwrite it with nullptr on a forced bind.
         Cmd.DiffuseSRV = Targets ? Targets->SceneColorCopySRV : nullptr;
     }
+    else if (Pass == ERenderPass::FinalPostProcess)
+    {
+        Cmd.DiffuseSRV = Targets ? Targets->SceneColorCopySRV : nullptr;
+    }
     else if (Pass == ERenderPass::PostProcess)
     {
-        // PostProcess는 shared pass bucket이고, variant별로 필요한 shader/state만 command 단위로 조정합니다.
-        // Scene color를 다시 쓰는 variant는 기본 AlphaBlend 대신 Opaque를 사용합니다.
-        switch (PostProcessVariant)
-        {
-        case EViewModePostProcessVariant::GammaCorrection:
-        case EViewModePostProcessVariant::Vignetting:
-        case EViewModePostProcessVariant::Fade:
-        case EViewModePostProcessVariant::Letterbox:
-            Cmd.Blend = EBlendState::Opaque;
-            Cmd.DiffuseSRV = Targets ? Targets->SceneColorCopySRV : nullptr;
-            break;
-        default:
-            break;
-        }
+        // PostProcess is kept for fog and view-mode debug fullscreen variants.
+        // Final color adjustment lives in FinalPostProcess so it does not share this bucket.
     }
 
     auto GetPtrHash = [](const void* Ptr) -> uint32

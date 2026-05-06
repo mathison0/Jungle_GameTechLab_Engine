@@ -1,11 +1,8 @@
-#include "LuaBindingInternal.h"
+﻿#include "LuaBindingInternal.h"
 #include "Scripting/LuaEngineBinding.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AWorldSettings.h"
-#include "Component/Collision/Collider2DComponent.h"
-#include "Scripting/LuaScriptTypes.h"
-#include <set>
 
 FLuaWorldHandle::FLuaWorldHandle(UWorld* InWorld)
     : World(InWorld)
