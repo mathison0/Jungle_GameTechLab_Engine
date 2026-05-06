@@ -1319,10 +1319,15 @@
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp" />
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeBase.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakePattern.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\PerlinNoiseCameraShakePattern.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\SequenceCameraShakePattern.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2412,11 +2417,16 @@
     <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h" />
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakePattern.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeTypes.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\PerlinNoiseCameraShakePattern.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\SequenceCameraShakePattern.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
