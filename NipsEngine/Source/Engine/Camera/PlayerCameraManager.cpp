@@ -455,10 +455,10 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 	const FVector Right = CameraView.GetRightVector().GetSafeNormal();
 	const FVector Up = CameraView.GetUpVector().GetSafeNormal();
 
-	OutView.ViewMatrix = FMatrix::MakeViewLookAtLH(CameraView.Location, CameraView.Location + Forward, Up);
+	OutView.View = FMatrix::MakeViewLookAtLH(CameraView.Location, CameraView.Location + Forward, Up);
 	if (CameraView.bOrthographic)
 	{
-		OutView.ProjectionMatrix = FMatrix::MakeOrthographicLH(
+		OutView.Proj = FMatrix::MakeOrthographicLH(
 			CameraView.OrthoWidth,
 			CameraView.OrthoHeight,
 			CameraView.NearPlane,
@@ -466,14 +466,13 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 	}
 	else
 	{
-		OutView.ProjectionMatrix = FMatrix::MakePerspectiveFovLH(
+		OutView.Proj = FMatrix::MakePerspectiveFovLH(
 			CameraView.FOV,
 			CameraView.AspectRatio,
 			CameraView.NearPlane,
 			CameraView.FarPlane);
 	}
 
-	OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
 	OutView.CameraPosition = CameraView.Location;
 	OutView.CameraForward = Forward;
 	OutView.CameraRight = Right;
@@ -482,7 +481,7 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 	OutView.FarPlane = CameraView.FarPlane;
 	OutView.bOrthographic = CameraView.bOrthographic;
 	OutView.CameraOrthoHeight = CameraView.OrthoHeight;
-	OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
+	OutView.CameraFrustum.UpdateFromCamera(OutView.View, OutView.Proj);
 	OutView.ViewRect = ViewRect;
 	OutView.ViewMode = ViewMode;
 	OutView.PostProcessSettings = CachedPostProcessSettings;

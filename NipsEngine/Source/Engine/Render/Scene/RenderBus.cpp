@@ -1,4 +1,4 @@
-#include "RenderBus.h"
+﻿#include "RenderBus.h"
 #include "Core/Logger.h"
 
 void FRenderBus::Clear()
@@ -29,20 +29,8 @@ const TArray<FRenderCommand>& FRenderBus::GetCommands(ERenderPass Pass) const
 	return PassQueues[static_cast<uint32>(Pass)];
 }
 
-void FRenderBus::SetViewProjection(const FMatrix& InView, const FMatrix& InProj)
-{
-	View = InView;
-	Proj = InProj;
-
-	const FMatrix CameraWorldMatrix = InView.GetInverse();
-	CameraPosition = CameraWorldMatrix.GetOrigin();
-	CameraForward = CameraWorldMatrix.GetForwardVector().GetSafeNormal();
-	CameraRight = CameraWorldMatrix.GetRightVector().GetSafeNormal();
-	CameraUp = CameraWorldMatrix.GetUpVector().GetSafeNormal();
-}
-
 void FRenderBus::SetRenderSettings(const EViewMode NewViewMode, const FShowFlags NewShowFlags)
 {
-	ViewMode = NewViewMode;
+	SceneView.ViewMode = NewViewMode;
 	ShowFlags = NewShowFlags;
 }

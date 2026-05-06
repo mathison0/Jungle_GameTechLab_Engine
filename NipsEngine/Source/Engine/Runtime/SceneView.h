@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include "Engine/Camera/PlayerCameraManager.h"
+#include "Core/CoreMinimal.h"
+#include "Engine/Geometry/Frustum.h"
 #include "Math/Matrix.h"
 #include "Render/Common/ViewTypes.h"
 #include "Viewport/ViewportRect.h"
@@ -12,9 +13,8 @@ struct FSceneView
 {
 	FViewportRect ViewRect;
 
-	FMatrix ViewMatrix;
-	FMatrix ProjectionMatrix;
-	FMatrix ViewProjectionMatrix;
+	FMatrix View;
+	FMatrix Proj;
 
 	FVector CameraPosition;
 	FVector CameraForward;

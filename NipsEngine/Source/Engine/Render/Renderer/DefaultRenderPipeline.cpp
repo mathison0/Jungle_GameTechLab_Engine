@@ -2,6 +2,7 @@
 
 #include "Renderer.h"
 #include "Engine/Runtime/Engine.h"
+#include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
 #include "GameFramework/World.h"
 
@@ -20,19 +21,16 @@ void FDefaultRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 {
 	Bus.Clear();
 
-
 	UWorld* World = Engine->GetWorld();
 	FViewportCamera* Camera = World ? World->GetActiveCamera() : nullptr;
 	if (Camera)
 	{
-		FMatrix ViewMat = Camera->GetViewMatrix();
-		FMatrix ProjMat = Camera->GetProjectionMatrix();
-
 		FShowFlags ShowFlags;
 		EViewMode ViewMode = EViewMode::Lit;
 
-		Bus.SetViewProjection(Camera->GetViewMatrix(), Camera->GetProjectionMatrix());
-		Bus.SetCameraPlane(Camera->GetNearPlane(), Camera->GetFarPlane());
+		FSceneView SceneView;
+		Camera->BuildSceneView(SceneView, ViewMode);
+		Bus.SetSceneView(SceneView);
 		Bus.SetRenderSettings(ViewMode, ShowFlags);
 		Bus.SetFXAAEnabled(true);
 		Renderer.GetEditorLineBatcher().Clear();

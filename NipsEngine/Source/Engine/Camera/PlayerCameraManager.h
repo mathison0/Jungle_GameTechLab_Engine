@@ -3,7 +3,7 @@
 #include "Core/CoreMinimal.h"
 #include "Math/Matrix.h"
 #include "Math/Quat.h"
-#include "Math/Color.h"
+#include "Render/Common/ViewTypes.h"
 #include "Viewport/ViewportRect.h"
 
 class FViewportCamera;
@@ -29,23 +29,6 @@ struct FCameraViewInfo
 	FVector GetForwardVector() const { return Rotation.GetForwardVector(); }
 	FVector GetRightVector() const { return Rotation.GetRightVector(); }
 	FVector GetUpVector() const { return Rotation.GetUpVector(); }
-};
-
-// 최종적인 후처리 세팅값을 RenderBus에 전달하기 위한 구조체
-struct FPostProcessSettings
-{
-	float Gamma = 1.0f;
-	float VignetteIntensity = 0.0f;
-	float VignetteRadius = 0.75f;
-	float VignetteSoftness = 0.25;
-};
-
-// 최종적인 스크린 오버레이 세팅값을 RenderBus에 전달하기 위한 구조체
-struct FCameraOverlaySettings
-{
-	FColor FadeColor = FColor::Black();
-	float FadeAlpha = 0.0f;
-	float LetterboxRatio = 0.0f;
 };
 
 struct FCameraTransitionState
