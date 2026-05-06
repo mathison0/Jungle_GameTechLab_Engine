@@ -1426,6 +1426,12 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp" />
     <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier.cpp" />
     <ClCompile Include="Source\Engine\Classes\Camera\CameraManager.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeBase.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakePattern.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\PerlinNoiseCameraShakePattern.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\SequenceCameraShakePattern.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2602,6 +2608,13 @@
     <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier.h" />
     <ClInclude Include="Source\Engine\Classes\Camera\CameraManager.h" />
     <ClInclude Include="Source\Engine\Math\Color.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakePattern.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeTypes.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\PerlinNoiseCameraShakePattern.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\SequenceCameraShakePattern.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
