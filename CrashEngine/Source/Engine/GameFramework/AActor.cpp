@@ -404,6 +404,16 @@ void AActor::Serialize(FArchive& Ar)
     Ar << ActorTag;
 }
 
+void AActor::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
+{
+    (void)OutProps;
+}
+
+void AActor::PostEditProperty(const char* PropertyName)
+{
+    (void)PropertyName;
+}
+
 // SceneComponent 서브트리를 재귀 복제. 부모 → 자식 순으로 만들되,
 // RegisterComponent(=CreateRenderState/Proxy) 호출 전에 부모에 Attach 해서
 // 프록시가 처음부터 올바른 월드 트랜스폼으로 생성되도록 한다.

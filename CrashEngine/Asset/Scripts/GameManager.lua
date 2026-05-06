@@ -11,6 +11,16 @@ local KEY_CONTROL = 0x11
 local KEY_LEFT_CONTROL = 0xA2
 local KEY_RIGHT_CONTROL = 0xA3
 local KEY_Z = 0x5A
+local START_FADE_DURATION = 1.0
+local START_FADE_COLOR = { 0.0, 0.0, 0.0 }
+local START_FADE_CURVE = "EaseInOut"
+local MAIN_CAMERA_SWITCH_DELAY = 1.0
+local MAIN_CAMERA_BLEND_DURATION = 1.0
+local LETTERBOX_VISIBLE_ASPECT_RATIO = 2.39
+local LETTERBOX_FALLBACK_VIEWPORT_ASPECT_RATIO = 16.0 / 9.0
+local LETTERBOX_OPACITY = 1.0
+local LETTERBOX_OUT_DURATION = 0.65
+local LETTERBOX_COLOR = { 0.0, 0.0, 0.0 }
 
 local GameManager = {
     GameTimeLimit = 600.0,
@@ -35,6 +45,7 @@ local GameManager = {
     KillCountUI = nil,
     ResultUI = nil,
     MainMenuController = nil,
+    FadeInOnNextGameStart = false,
     BackgroundMusicHandle = nil,
     BackgroundMusicPositionMs = 0.0,
     IsLevelUpSelectionActive = false,
@@ -64,6 +75,112 @@ local function captureWorldFromScript(script)
             end
         end
     end
+end
+
+local function playGameStartFadeIn()
+    local runner = GameManager.PlayerScript or GameManager.MainMenuController
+    if runner == nil or type(runner.GetPostProcess) ~= "function" then
+        Log("[GameManager] Game start fade skipped: runner unavailable.")
+        return
+    end
+
+    local postProcess = runner:GetPostProcess()
+    if postProcess == nil or not postProcess:IsValid() then
+        Log("[GameManager] Game start fade skipped: PostProcess handle unavailable.")
+        return
+    end
+
+    postProcess:SetFadeAlpha(1.0, START_FADE_COLOR)
+    postProcess:FadeIn(START_FADE_DURATION, START_FADE_COLOR, START_FADE_CURVE)
+end
+
+local function getPostProcess()
+    local runner = GameManager.PlayerScript or GameManager.MainMenuController or GameManager.ManagerComponent
+    if runner == nil or type(runner.GetPostProcess) ~= "function" then
+        return nil
+    end
+
+    local postProcess = runner:GetPostProcess()
+    if postProcess == nil or not postProcess:IsValid() then
+        return nil
+    end
+
+    return postProcess
+end
+
+local function getLetterboxColor(postProcess)
+    if postProcess ~= nil and type(postProcess.GetLetterboxColor) == "function" then
+        local color = postProcess:GetLetterboxColor()
+        if color ~= nil then
+            return color
+        end
+    end
+
+    return LETTERBOX_COLOR
+end
+
+local function getViewportAspectRatio()
+    if type(GetViewportAspectRatio) == "function" then
+        local aspectRatio = tonumber(GetViewportAspectRatio()) or 0.0
+        if aspectRatio > 0.0 then
+            return aspectRatio
+        end
+    end
+
+    return LETTERBOX_FALLBACK_VIEWPORT_ASPECT_RATIO
+end
+
+local function setLetterboxAspectRatio(postProcess, aspectRatio, bEnabled)
+    if postProcess == nil or type(postProcess.SetLetterbox) ~= "function" then
+        return false
+    end
+
+    local targetAspectRatio = math.max(0.0001, tonumber(aspectRatio) or LETTERBOX_VISIBLE_ASPECT_RATIO)
+    postProcess:SetLetterbox(targetAspectRatio, LETTERBOX_OPACITY, getLetterboxColor(postProcess))
+
+    if type(postProcess.SetLetterboxEnabled) == "function" then
+        postProcess:SetLetterboxEnabled(bEnabled ~= false)
+    end
+
+    return true
+end
+
+local function resetOpeningLetterbox()
+    local postProcess = getPostProcess()
+    if postProcess == nil then
+        return
+    end
+
+    setLetterboxAspectRatio(postProcess, LETTERBOX_VISIBLE_ASPECT_RATIO, true)
+end
+
+local function playLetterboxOut()
+    local postProcess = getPostProcess()
+    if postProcess == nil then
+        Log("[GameManager] Letterbox out skipped: PostProcess handle unavailable.")
+        return
+    end
+
+    local fromAspectRatio = LETTERBOX_VISIBLE_ASPECT_RATIO
+    if type(postProcess.GetLetterboxTargetAspectRatio) == "function" then
+        fromAspectRatio = tonumber(postProcess:GetLetterboxTargetAspectRatio()) or fromAspectRatio
+    end
+
+    local toAspectRatio = getViewportAspectRatio()
+    local elapsed = 0.0
+    local duration = math.max(0.0001, LETTERBOX_OUT_DURATION)
+
+    while elapsed < duration do
+        local deltaTime = Co.WaitNextFrame() or 0.0
+        elapsed = elapsed + math.max(0.0, deltaTime)
+
+        local t = math.max(0.0, math.min(1.0, elapsed / duration))
+        local ease = t * t * (3.0 - 2.0 * t)
+        local aspectRatio = fromAspectRatio + (toAspectRatio - fromAspectRatio) * ease
+        setLetterboxAspectRatio(postProcess, aspectRatio, true)
+    end
+
+    setLetterboxAspectRatio(postProcess, toAspectRatio, false)
 end
 
 local function normalizeSoundPosition(key, positionMs)
@@ -201,7 +318,7 @@ function GameManager.SwitchToMainCameraActor()
         return false
     end
 
-    if not CameraManager.SetViewTargetBlend(mainCameraActor, 1.0, "EaseInOut", 2.0, false) then
+    if not CameraManager.SetViewTargetBlend(mainCameraActor, MAIN_CAMERA_BLEND_DURATION, "EaseInOut", 2.0, false) then
         Log("[GameManager] MainCameraActor switch failed: SetViewTargetBlend failed.")
         return false
     end
@@ -222,9 +339,12 @@ function GameManager.StartMainCameraSwitchCoroutine()
     end
 
     GameManager.CameraSwitchCoroutine = runner.StartCoroutine(function()
-        Co.Wait(1.0)
+        Co.Wait(MAIN_CAMERA_SWITCH_DELAY)
+        if GameManager.SwitchToMainCameraActor() then
+            Co.Wait(MAIN_CAMERA_BLEND_DURATION)
+            playLetterboxOut()
+        end
         GameManager.CameraSwitchCoroutine = nil
-        GameManager.SwitchToMainCameraActor()
     end)
 
     return GameManager.CameraSwitchCoroutine ~= nil
@@ -309,6 +429,7 @@ function GameManager._ResetState()
     GameManager.KillCountUI = nil
     GameManager.ResultUI = nil
     GameManager.MainMenuController = nil
+    GameManager.FadeInOnNextGameStart = false
     GameManager.BackgroundMusicHandle = nil
     GameManager.BackgroundMusicPositionMs = 0.0
     GameManager.IsLevelUpSelectionActive = false
@@ -344,7 +465,7 @@ function GameManager.PrepareMainMenu(gameTimeLimit)
     Log("[GameManager] Main Menu Prepared (TimeLimit: " .. tostring(GameManager.GameTimeLimit) .. ")")
 end
 
-function GameManager.RequestStartGame()
+function GameManager.RequestStartGame(bFadeInOnStart)
     if GameManager.Initialized then
         return true
     end
@@ -354,6 +475,8 @@ function GameManager.RequestStartGame()
 
     GameManager.SessionPrepared = true
     GameManager.GameStartRequested = true
+    GameManager.FadeInOnNextGameStart = bFadeInOnStart == true
+    resetOpeningLetterbox()
 
     if GameManager.ResultUI ~= nil and type(GameManager.ResultUI.Hide) == "function" then
         GameManager.ResultUI:Hide()
@@ -384,12 +507,21 @@ function GameManager._CheckAndStart()
 end
 
 function GameManager.OnGameStart()
+    if GameManager.FadeInOnNextGameStart then
+        GameManager.FadeInOnNextGameStart = false
+        playGameStartFadeIn()
+    end
+
     GameManager.PlayBackgroundMusic()
+
+    -- VFX 액터 풀 웜업 (총구 화염, 피격 이펙트, 폭발 등 공유)
+    local pool = GetActorPoolManager()
+    if pool ~= nil and pool:IsValid() then
+        pool:Warmup("ASubUVVfxActor", 20)
+    end
 
     if GameManager.WeaponInventory then
         GameManager.WeaponInventory:AddWeapon("MainCannon")
-        GameManager.WeaponInventory:AddWeapon("MachineTurret")
-
     end
     GameManager.StartMainCameraSwitchCoroutine()
     Log("[GameManager] --- GAME START ---")
@@ -740,14 +872,7 @@ function GameManager.StartFinishSequence(resultType, reason)
                     Log("[GameManager] GetActorPoolManager function not found")
                 end
 
-                if pool ~= nil and pool:IsValid() then
-                    Log("[GameManager] PoolManager is valid, warming up AExplodeVfxActor")
-                    pool:Warmup("AExplodeVfxActor", 10)
-                else
-                    Log("[GameManager] PoolManager is invalid or nil")
-                end
-
-                -- 0.2초 간격으로 5번 폭발 (Unscaled Time 기준)
+                -- 0.2초 간격으로 10번 폭발 (Unscaled Time 기준)
                 for i = 1, 10 do
                     Log("[GameManager] Spawning explosion " .. tostring(i))
                     -- 구형 범위 내 랜덤 위치 (최소 0.5, 최대 1.5)
@@ -763,12 +888,21 @@ function GameManager.StartFinishSequence(resultType, reason)
 
                     local explosion = nil
                     if pool ~= nil and pool:IsValid() then
-                        explosion = pool:Acquire("AExplodeVfxActor")
+                        explosion = pool:Acquire("ASubUVVfxActor")
                     end
 
                     if explosion ~= nil and explosion:IsValid() then
                         Log("[GameManager] Explosion actor acquired and setting location")
                         explosion:SetLocation(spawnPos)
+                        
+                        -- 폭발 연출을 위한 옵션 초기화 (머신건 이펙트와 공유하므로 필요)
+                        explosion:SetScale({1.0, 1.0, 1.0})
+                        local subUV = explosion:GetComponentByName("USubUVComponent", "SubUV")
+                        if subUV ~= nil and subUV:IsValid() then
+                            subUV:SetFrameRate(240.0)
+                        end
+                        
+                        explosion:SetVfxPreset("Explode")
                         -- 폭발 액터 수동 반납을 위한 지연 처리
                         runner:StartCoroutine(function()
                             -- 0.1배속 상황에서 1.5초 대기는 0.15초 yield

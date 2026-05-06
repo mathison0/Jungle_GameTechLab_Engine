@@ -6,6 +6,7 @@
 #include "Math/MathUtils.h"
 #include "Math/Rotator.h"
 #include "Math/Vector.h"
+#include "Render/PostProcess/PostProcessController.h"
 #include <memory>
 
 
@@ -112,6 +113,7 @@ public:
     void InitDefaultComponents() override;
     void BindScriptFunctions(UScriptComponent& ScriptComponent) override;
 
+    void Serialize(FArchive& Ar) override;
     void InitializeFor(AActor* InOwner);
     void UpdateCamera(float DeltaTime);
 
@@ -125,6 +127,13 @@ public:
     void GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation) const;
     FVector GetCameraLocation() const;
     FRotator GetCameraRotation() const;
+
+    FPostProcessController& GetPostProcessController() { return PostProcessController; }
+    const FPostProcessController& GetPostProcessController() const { return PostProcessController; }
+    FPostProcessSettings GetPostProcessSettings() const { return PostProcessController.GetSettings(); }
+
+    void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
+    void PostEditProperty(const char* PropertyName) override;
 
     void SetGameCameraCutThisFrame() { bGameCameraCutThisFrame = true; }
     bool IsGameCameraCutThisFrame() const { return bGameCameraCutThisFrame; }
@@ -143,17 +152,11 @@ public:
 
     virtual void Tick(float DeltaTime) override;
 
-    //void StartCameraFade(float FromAlpha, float ToAlpha, float Duration, const FLinearColor& Color, bool bHoldWhenFinished = false);
-    //void StopCameraFade();
-    //void SetManualCameraFade(float InFadeAmount, const FLinearColor& Color);
-
 private:
     void DoUpdateCamera(float DeltaTime);
     void UpdateViewTarget(FViewTarget& OutVT, float DeltaTime);
     void ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& InOutPOV);
     UCameraModifier_CameraShake* GetOrCreateCameraShakeModifier();
-
-    //void UpdateCameraFade(float DeltaTime);
 
     void SetCameraCachePOV(const FMinimalViewInfo& InPOV);
     void SetLastFrameCameraCachePOV(const FMinimalViewInfo& InPOV);
@@ -186,16 +189,7 @@ private:
     FCameraCacheEntry CameraCachePrivate;
     FCameraCacheEntry LastFrameCameraCachePrivate;
 
-    // 페이드 상태
-    bool bEnableFading = false;
-    bool bAutoAnimateFade = false;
-    bool bHoldFadeWhenFinished = false;
-
-    FLinearColor FadeColor = FLinearColor::Black();
-    float FadeAmount = 0.0f;
-    FVector2 FadeAlpha = FVector2(0.0f, 0.0f);
-    float FadeTime = 0.0f;
-    float FadeTimeRemaining = 0.0f;
+    FPostProcessController PostProcessController;
 
     // 모디파이어
     TArray<UCameraModifier*> Modifiers;

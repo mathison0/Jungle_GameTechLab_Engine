@@ -97,6 +97,18 @@
     <Filter Include="Source\Engine">
       <UniqueIdentifier>{f4f9fc6a-b333-ccb1-c33c-42c295088767}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Camera">
+      <UniqueIdentifier>{0ab7fb7f-66af-1831-f717-0ce9d1d1d57e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Camera\Shakes">
+      <UniqueIdentifier>{b0b057d4-6c6e-fb22-ea97-cef02ebf72de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Classes">
+      <UniqueIdentifier>{5db94081-27c0-113a-0479-468c887461c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Classes\Camera">
+      <UniqueIdentifier>{b1c68b1a-4c1a-fd3c-59d6-91a086301414}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Collision">
       <UniqueIdentifier>{c9473e67-01af-08d9-c000-4f3a61330e70}</UniqueIdentifier>
     </Filter>
@@ -185,7 +197,7 @@
       <UniqueIdentifier>{a90199fb-a259-6172-2b9d-3ec3a7875884}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Render\PostProcess">
-      <UniqueIdentifier>{a18f0b20-4b14-40c3-8e01-0acdc40c9f19}</UniqueIdentifier>
+      <UniqueIdentifier>{d7bf9818-2ebe-a4ee-11a5-3b427160df94}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Render\RHI">
       <UniqueIdentifier>{35a0c432-b779-9958-31dd-bdd9c905ad73}</UniqueIdentifier>
@@ -590,6 +602,36 @@
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.cpp">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeBase.cpp">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakePattern.cpp">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Shakes\PerlinNoiseCameraShakePattern.cpp">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Shakes\SequenceCameraShakePattern.cpp">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.cpp">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.cpp">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Classes\Camera\CameraManager.cpp">
+      <Filter>Source\Engine\Classes\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier.cpp">
+      <Filter>Source\Engine\Classes\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier_CameraShake.cpp">
+      <Filter>Source\Engine\Classes\Camera</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\Collision2DManager.cpp">
       <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
@@ -833,13 +875,13 @@
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\ExplodeVfxActor.cpp">
-      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\SubUVVfxActor.cpp">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp">
@@ -1238,10 +1280,10 @@
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp">
       <Filter>Source\Engine\Scripting\Binding</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPostProcessBinding.cpp">
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp">
       <Filter>Source\Engine\Scripting\Binding</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp">
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPostProcessBinding.cpp">
       <Filter>Source\Engine\Scripting\Binding</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp">
@@ -1413,36 +1455,6 @@
       <Filter>ThirdParty\Lua\src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Engine\Sound\SoundManager.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\HomingMissileActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\TankActor.cpp" />
-    <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaActorBinding.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp" />
-    <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp" />
-    <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier.cpp" />
-    <ClCompile Include="Source\Engine\Classes\Camera\CameraManager.cpp" />
-    <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier_CameraShake.cpp" />
-    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeBase.cpp" />
-    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.cpp" />
-    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakePattern.cpp" />
-    <ClCompile Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.cpp" />
-    <ClCompile Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.cpp" />
-    <ClCompile Include="Source\Engine\Camera\Shakes\PerlinNoiseCameraShakePattern.cpp" />
-    <ClCompile Include="Source\Engine\Camera\Shakes\SequenceCameraShakePattern.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1531,6 +1543,39 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h">
       <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakePattern.h">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeTypes.h">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Shakes\PerlinNoiseCameraShakePattern.h">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Shakes\SequenceCameraShakePattern.h">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.h">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.h">
+      <Filter>Source\Engine\Camera\Shakes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Classes\Camera\CameraManager.h">
+      <Filter>Source\Engine\Classes\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier.h">
+      <Filter>Source\Engine\Classes\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier_CameraShake.h">
+      <Filter>Source\Engine\Classes\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\Collision2DManager.h">
       <Filter>Source\Engine\Collision</Filter>
@@ -1838,13 +1883,13 @@
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\ExplodeVfxActor.h">
-      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\SubUVVfxActor.h">
       <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h">
@@ -1891,6 +1936,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Materials\MaterialSemantics.h">
       <Filter>Source\Engine\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Math\Color.h">
+      <Filter>Source\Engine\Math</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Intersection.h">
       <Filter>Source\Engine\Math</Filter>
@@ -2612,31 +2660,6 @@
     <ClInclude Include="ThirdParty\Sol\sol.hpp">
       <Filter>ThirdParty\Sol</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Sound\SoundManager.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
-    <ClInclude Include="Source\Engine\Core\Random.h" />
-    <ClInclude Include="Source\Engine\GameFramework\HomingMissileActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\TankActor.h" />
-    <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h" />
-    <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h" />
-    <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier.h" />
-    <ClInclude Include="Source\Engine\Classes\Camera\CameraManager.h" />
-    <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier_CameraShake.h" />
-    <ClInclude Include="Source\Engine\Math\Color.h" />
-    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h" />
-    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h" />
-    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakePattern.h" />
-    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeTypes.h" />
-    <ClInclude Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.h" />
-    <ClInclude Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.h" />
-    <ClInclude Include="Source\Engine\Camera\Shakes\PerlinNoiseCameraShakePattern.h" />
-    <ClInclude Include="Source\Engine\Camera\Shakes\SequenceCameraShakePattern.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

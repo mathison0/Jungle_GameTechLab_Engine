@@ -10,6 +10,7 @@
 #include "Serialization/Archive.h"
 #include "Scripting/LuaScriptAsset.h"
 #include "Collision/Collider2DComponent.h"
+#include "Engine/Classes/Camera/CameraManager.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -477,7 +478,9 @@ void UScriptComponent::BindFunctions()
     BindFunction("GetPostProcess",
         [this](sol::variadic_args) -> FLuaPostProcessHandle
         {
-            return FLuaPostProcessHandle();
+            UWorld* World = GetOwner() ? GetOwner()->GetWorld() : nullptr;
+            APlayerCameraManager* CameraManager = GEngine ? GEngine->GetPlayerCameraManager(World) : nullptr;
+            return CameraManager ? FLuaPostProcessHandle(&CameraManager->GetPostProcessController()) : FLuaPostProcessHandle();
         });
 
     BindFunction("GetComponent",

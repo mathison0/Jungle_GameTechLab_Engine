@@ -709,6 +709,10 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
             LogCameraManagerFallbackOnce();
         }
         SceneView.SetCameraInfo(Camera);
+        if (!bUsePlayerCameraManager)
+        {
+            SceneView.PostProcessSettings = FPostProcessSettings{};
+        }
     }
     SceneView.SetRenderSettings(ViewMode, EffectiveShowFlags);
     SceneView.SetRenderOptions(Opts);

@@ -21,6 +21,7 @@
 #include "Runtime/Engine.h"
 #include "Sound/SoundManager.h"
 #include "Viewport/GameViewportClient.h"
+#include "Viewport/Viewport.h"
 
 namespace
 {
@@ -566,6 +567,22 @@ void FScriptSystem::RegisterEngineAPI() const
 
 			const float Scale = ReadOptionalScaleArg(Args, 1.0f);
 			return GEngine->GetGameViewportClient()->StartCameraShakeFromAsset(ResolvedPath, Scale) != nullptr;
+		});
+
+	Lua->set_function("GetViewportAspectRatio", []() -> float
+		{
+			if (!GEngine || !GEngine->GetGameViewportClient())
+			{
+				return 16.0f / 9.0f;
+			}
+
+			FViewport* Viewport = GEngine->GetGameViewportClient()->GetViewport();
+			if (!Viewport || Viewport->GetHeight() == 0)
+			{
+				return 16.0f / 9.0f;
+			}
+
+			return static_cast<float>(Viewport->GetWidth()) / static_cast<float>(Viewport->GetHeight());
 		});
     
     // 입력 처리

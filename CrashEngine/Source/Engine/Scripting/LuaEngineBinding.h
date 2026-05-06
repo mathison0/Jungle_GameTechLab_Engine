@@ -110,7 +110,10 @@ struct FLuaActorHandle
 
 	bool InitFlyingWave(const sol::object& Dirobj, float Speed, float LifeTime) const;
 
+	bool SetVfxPreset(const FString& PresetName) const;
+
 	FLuaComponentHandle GetComponent(const sol::variadic_args& Args) const;
+	FLuaComponentHandle GetComponentByName(const sol::variadic_args& Args) const;
 	sol::table GetComponents(sol::this_state State, const sol::variadic_args& Args) const;
 };
 
@@ -135,6 +138,12 @@ struct FLuaComponentHandle
 	bool SetActive(bool bActive) const;
 	bool IsScriptComponent() const;
 	bool CallScript(const FString& FunctionName, const sol::variadic_args& Args) const;
+
+	// SubUV API
+	bool SetParticle(const FString& ParticleName) const;
+	bool Play() const;
+	bool SetLoop(bool bLoop) const;
+	bool SetFrameRate(float FPS) const;
 
 	// SceneComponent API
 	sol::table GetWorldLocation(sol::this_state State) const;

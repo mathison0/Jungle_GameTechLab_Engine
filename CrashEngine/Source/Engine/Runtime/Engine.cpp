@@ -8,6 +8,7 @@
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Runtime/WindowsWindow.h"
 #include "Resource/ResourceManager.h"
+#include "Component/CameraComponent.h"
 #include "Render/Resources/Buffers/MeshBufferManager.h"
 #include "Sound/SoundManager.h"
 #include "Mesh/ObjManager.h"
@@ -63,6 +64,50 @@ APlayerCameraManager* FindPlayerCameraManagerInLevel(ULevel* Level)
     }
 
     return nullptr;
+}
+
+AActor* FindCameraViewTarget(UWorld* World)
+{
+    if (!World)
+    {
+        return nullptr;
+    }
+
+    if (UCameraComponent* ActiveCamera = World->GetActiveCamera())
+    {
+        return ActiveCamera->GetOwner();
+    }
+
+    if (UCameraComponent::Main && UCameraComponent::Main->GetWorld() == World)
+    {
+        return UCameraComponent::Main->GetOwner();
+    }
+
+    return nullptr;
+}
+
+bool CanAutoCreatePlayerCameraManager(const UWorld* World)
+{
+    if (!World)
+    {
+        return false;
+    }
+
+    const EWorldType WorldType = World->GetWorldType();
+    return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
+}
+
+void InitializePlayerCameraManagerIfNeeded(UWorld* World, APlayerCameraManager* CameraManager)
+{
+    if (!CameraManager || CameraManager->HasValidCameraCache())
+    {
+        return;
+    }
+
+    if (AActor* ViewTarget = FindCameraViewTarget(World))
+    {
+        CameraManager->InitializeFor(ViewTarget);
+    }
 }
 } // namespace
 
@@ -273,6 +318,7 @@ APlayerCameraManager* UEngine::ResolvePlayerCameraManager(UWorld* World)
             {
                 if (CachedCameraManager->GetWorld() == World)
                 {
+                    InitializePlayerCameraManagerIfNeeded(World, CachedCameraManager);
                     return CachedCameraManager;
                 }
             }
@@ -287,14 +333,39 @@ APlayerCameraManager* UEngine::ResolvePlayerCameraManager(UWorld* World)
         CameraManager = FindPlayerCameraManagerInLevel(World->GetPersistentLevel());
     }
 
+    if (!CameraManager && CanAutoCreatePlayerCameraManager(World))
+    {
+        CameraManager = World->SpawnPersistentActor<APlayerCameraManager>();
+        if (CameraManager)
+        {
+            InitializePlayerCameraManagerIfNeeded(World, CameraManager);
+            UE_LOG(Engine, Info, "Auto-created PlayerCameraManager.");
+        }
+    }
+
+    InitializePlayerCameraManagerIfNeeded(World, CameraManager);
+
     CachedPlayerCameraManagerUUID = CameraManager ? CameraManager->GetUUID() : 0;
     return CameraManager;
+}
+
+APlayerCameraManager* UEngine::GetPlayerCameraManager(UWorld* World)
+{
+    return ResolvePlayerCameraManager(World);
 }
 
 bool UEngine::TrySetSceneViewFromPlayerCameraManager(UWorld* World, FSceneView& OutSceneView)
 {
     APlayerCameraManager* PlayerCameraManager = ResolvePlayerCameraManager(World);
-    if (!PlayerCameraManager || !PlayerCameraManager->HasValidCameraCache())
+    if (!PlayerCameraManager)
+    {
+        OutSceneView.PostProcessSettings = FPostProcessSettings{};
+        return false;
+    }
+
+    OutSceneView.PostProcessSettings = PlayerCameraManager->GetPostProcessSettings();
+
+    if (!PlayerCameraManager->HasValidCameraCache())
     {
         return false;
     }

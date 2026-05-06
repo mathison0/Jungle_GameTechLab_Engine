@@ -17,6 +17,7 @@ class ULevel;
 class UPrimitiveComponent;
 class UScriptComponent;
 struct FMinimalViewInfo;
+struct FPropertyDescriptor;
 
 // AActor는 월드에 배치되는 게임 오브젝트를 표현합니다.
 class AActor : public UObject
@@ -41,6 +42,9 @@ public:
 
     void Serialize(FArchive& Ar) override;
     UObject* Duplicate(UObject* NewOuter = nullptr) const override;
+
+    virtual void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps);
+    virtual void PostEditProperty(const char* PropertyName);
 
     // 컴포넌트 생성 + Owner 설정 + 등록 + 렌더 상태 생성
     template <typename T>

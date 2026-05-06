@@ -41,8 +41,8 @@ float3 ApplyVignetting(float3 sceneColor, float2 uv)
         return sceneColor;
     }
 
-    float2 centerUV = (uv - float2(0.5f, 0.5f)) * 2.0f;
-    float distanceFromCenter = length(centerUV);
+    float2 centerUV = uv - float2(0.5f, 0.5f);
+    float distanceFromCenter = length(centerUV) / length(float2(0.5f, 0.5f));
     float vignetteMask = smoothstep(
         VignetteRadius,
         VignetteRadius + max(VignetteSoftness, 0.0001f),

@@ -196,6 +196,12 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor)
         a[SceneKeys::ActorFolder] = Actor->GetEditorFolderPath();
     }
 
+    JSON ActorProperties = SerializeActorProperties(Actor);
+    if (ActorProperties.size() > 0)
+    {
+        a[SceneKeys::Properties] = ActorProperties;
+    }
+
     // RootComponent 트리 직렬화
     if (Actor->GetRootComponent())
     {
@@ -220,6 +226,27 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor)
     a[SceneKeys::NonSceneComponents] = NonScene;
 
     return a;
+}
+
+json::JSON FSceneSaveManager::SerializeActorProperties(AActor* Actor)
+{
+    using namespace json;
+    JSON props = json::Object();
+
+    if (!Actor)
+    {
+        return props;
+    }
+
+    TArray<FPropertyDescriptor> Descriptors;
+    Actor->GetEditableProperties(Descriptors);
+
+    for (const FPropertyDescriptor& Prop : Descriptors)
+    {
+        props[Prop.Name] = SerializePropertyValue(Prop);
+    }
+
+    return props;
 }
 
 json::JSON FSceneSaveManager::SerializeSceneComponentTree(USceneComponent* Comp)
@@ -493,6 +520,12 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
                 World->AddEditorActorFolder(FolderPath);
             }
 
+            if (ActorJSON.hasKey(SceneKeys::Properties))
+            {
+                JSON& PropsJSON = ActorJSON[SceneKeys::Properties];
+                DeserializeActorProperties(Actor, PropsJSON);
+            }
+
             // RootComponent 트리 복원
             if (ActorJSON.hasKey(SceneKeys::RootComponent))
             {
@@ -587,6 +620,29 @@ USceneComponent* FSceneSaveManager::DeserializeSceneComponentTree(json::JSON& No
     }
 
     return Comp;
+}
+
+void FSceneSaveManager::DeserializeActorProperties(AActor* Actor, json::JSON& PropsJSON)
+{
+    if (!Actor)
+    {
+        return;
+    }
+
+    TArray<FPropertyDescriptor> Descriptors;
+    Actor->GetEditableProperties(Descriptors);
+
+    for (FPropertyDescriptor& Prop : Descriptors)
+    {
+        if (!PropsJSON.hasKey(Prop.Name.c_str()))
+        {
+            continue;
+        }
+
+        json::JSON& Value = PropsJSON[Prop.Name.c_str()];
+        DeserializePropertyValue(Prop, Value);
+        Actor->PostEditProperty(Prop.Name.c_str());
+    }
 }
 
 void FSceneSaveManager::DeserializeProperties(UActorComponent* Comp, json::JSON& PropsJSON)

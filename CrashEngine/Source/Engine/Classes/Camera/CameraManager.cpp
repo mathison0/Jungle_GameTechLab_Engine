@@ -7,6 +7,8 @@
 #include "CameraModifier.h"
 #include "CameraModifier_CameraShake.h"
 #include "GameFramework/AActor.h"
+#include "Core/PropertyTypes.h"
+#include "Serialization/Archive.h"
 
 #include <algorithm>
 #include <cmath>
@@ -269,6 +271,50 @@ void APlayerCameraManager::BindScriptFunctions(UScriptComponent& ScriptComponent
         {
             return HasValidCameraCache();
         });
+	}
+
+void APlayerCameraManager::Serialize(FArchive& Ar)
+{
+    AActor::Serialize(Ar);
+
+    FPostProcessSettings& Settings = PostProcessController.GetMutableSettings();
+    Ar << Settings;
+
+    if (Ar.IsLoading())
+    {
+        PostProcessController.SetSettings(Settings);
+    }
+}
+
+void APlayerCameraManager::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
+{
+    AActor::GetEditableProperties(OutProps);
+
+    FPostProcessSettings& Settings = PostProcessController.GetMutableSettings();
+
+    OutProps.push_back({ "Gamma Enabled", EPropertyType::Bool, &Settings.GammaCorrection.bEnabled });
+    OutProps.push_back({ "Display Gamma", EPropertyType::Float, &Settings.GammaCorrection.DisplayGamma, 0.1f, 5.0f, 0.01f });
+
+    OutProps.push_back({ "Vignette Enabled", EPropertyType::Bool, &Settings.Vignetting.bEnabled });
+    OutProps.push_back({ "Vignette Intensity", EPropertyType::Float, &Settings.Vignetting.Intensity, 0.0f, 10.0f, 0.01f });
+    OutProps.push_back({ "Vignette Radius", EPropertyType::Float, &Settings.Vignetting.Radius, 0.0f, 1.0f, 0.01f });
+    OutProps.push_back({ "Vignette Softness", EPropertyType::Float, &Settings.Vignetting.Softness, 0.001f, 1.0f, 0.01f });
+    OutProps.push_back({ "Vignette Color", EPropertyType::Vec3, &Settings.Vignetting.Color, 0.0f, 0.0f, 0.01f });
+
+    OutProps.push_back({ "Letterbox Enabled", EPropertyType::Bool, &Settings.Letterbox.bEnabled });
+    OutProps.push_back({ "Letterbox Aspect Ratio", EPropertyType::Float, &Settings.Letterbox.TargetAspectRatio, 1.0f, 4.0f, 0.01f });
+    OutProps.push_back({ "Letterbox Opacity", EPropertyType::Float, &Settings.Letterbox.Opacity, 0.0f, 1.0f, 0.01f });
+    OutProps.push_back({ "Letterbox Color", EPropertyType::Vec3, &Settings.Letterbox.Color, 0.0f, 0.0f, 0.01f });
+
+    OutProps.push_back({ "Fade Enabled", EPropertyType::Bool, &Settings.Fade.bEnabled });
+    OutProps.push_back({ "Fade Alpha", EPropertyType::Float, &Settings.Fade.Alpha, 0.0f, 1.0f, 0.01f });
+    OutProps.push_back({ "Fade Color", EPropertyType::Vec3, &Settings.Fade.Color, 0.0f, 0.0f, 0.01f });
+}
+
+void APlayerCameraManager::PostEditProperty(const char* PropertyName)
+{
+    AActor::PostEditProperty(PropertyName);
+    PostProcessController.SetSettings(PostProcessController.GetBaseSettings());
 }
 
 // void APlayerCameraManager::InitializeFor(APlayerController* PC)
@@ -613,6 +659,7 @@ void APlayerCameraManager::ApplyCameraModifiersToPOV(float DeltaTime, FMinimalVi
 void APlayerCameraManager::Tick(float DeltaTime)
 {
     AActor::Tick(DeltaTime);
+    PostProcessController.Update(DeltaTime);
     UpdateCamera(DeltaTime);
 }
 
@@ -661,9 +708,6 @@ void APlayerCameraManager::DoUpdateCamera(float DeltaTime)
 
     // 4. 카메라 모디파이어 적용
     ApplyCameraModifiers(DeltaTime, NewPOV);
-
-    // 5. 페이드 갱신
-    // UpdateCameraFade(DeltaTime);
 
     // 6. 최종 카메라 캐시
     FillCameraCache(NewPOV);
@@ -750,33 +794,3 @@ void APlayerCameraManager::FillCameraCache(const FMinimalViewInfo& NewInfo)
     CameraCachePrivate.POV = NewInfo;
     CameraCachePrivate.bValid = true;
 }
-
-// void APlayerCameraManager::UpdateCameraFade(float DeltaTime)
-//{
-//     if (!bEnableFading)
-//     {
-//         return;
-//     }
-//
-//     if (!bAutoAnimateFade)
-//     {
-//         return;
-//     }
-//
-//     FadeTimeRemaining = FMath::Max(FadeTimeRemaining - DeltaTime, 0.0f);
-//
-//     if (FadeTime > 0.0f)
-//     {
-//         const float Alpha = 1.0f - FadeTimeRemaining / FadeTime;
-//         FadeAmount = FMath::Lerp(FadeAlpha.X, FadeAlpha.Y, Alpha);
-//     }
-//     else
-//     {
-//         FadeAmount = FadeAlpha.Y;
-//     }
-//
-//     if (!bHoldFadeWhenFinished && FadeTimeRemaining <= 0.0f)
-//     {
-//         StopCameraFade();
-//     }
-// }
