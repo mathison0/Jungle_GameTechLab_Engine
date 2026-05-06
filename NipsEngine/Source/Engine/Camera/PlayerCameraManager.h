@@ -117,7 +117,10 @@ public:
 	UCameraShakeModifier* GetCameraShakeModifier();
 	const UCameraShakeModifier* GetCameraShakeModifier() const { return CameraShakeModifier; }
 	void StartCameraShake(const FCameraShakeParams& Params);
+	bool StartCameraShakeByName(const FString& ShakeName);
+	void StartNamedCameraShake(const FString& ShakeName, const FCameraShakeParams& Params);
 	void StopCameraShake();
+	void StopCameraShakeByName(const FString& ShakeName);
 	bool IsCameraShaking() const;
 
 	// Modifier
@@ -158,8 +161,10 @@ private:
 	TArray<UCameraModifier*> ModifierList;
 	TArray<UCameraModifier*> OwnedModifierList;
 	TArray<FLuaCameraModifierComponentBinding> LuaCameraModifierComponentBindings;
+	TMap<FString, ULuaCameraModifier*> NamedLuaCameraShakeModifiers;
 	ULetterBoxCameraModifier* LetterBoxCameraModifier = nullptr;
 	UCameraShakeModifier* CameraShakeModifier = nullptr;
+	FString ActiveNamedCameraShake;
 	
 	bool bHasCachedCameraView = false;
 	FCameraViewInfo CachedCameraView;

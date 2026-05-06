@@ -12,6 +12,7 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Core/Logger.h"
+#include "Engine/Camera/PlayerCameraManager.h"
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Geometry/Ray.h"
@@ -571,7 +572,8 @@ void FGamePlayerController::Tick(float DeltaTime)
 	{
 		ClearGameplayInputState();
 	}
-	ApplyInputAxes();
+	ApplyInputAxes(DeltaTime);
+	UpdateCameraShakeState();
 	UpdateHoveredPickableActor();
 	FCleaningToolAnimator::Get().Tick(DeltaTime);
 	UpdateCleaningUseSound();
@@ -788,6 +790,8 @@ void FGamePlayerController::SetWorld(UWorld* InWorld)
 	StopCleaningLoopSound();
 	World = InWorld;
 	Player = nullptr;
+	bWalkCameraShakeActive = false;
+	bWasKnockbackActive = false;
 	Camera = nullptr;
 	CharacterMovement = nullptr;
 	Knockback = nullptr;
@@ -923,7 +927,7 @@ void FGamePlayerController::SetupDefaultInputMappings()
 	InputMapping.AddAxisMapping(AxisLookPitch(), VK_UP, -1.0f);
 }
 
-void FGamePlayerController::ApplyInputAxes()
+void FGamePlayerController::ApplyInputAxes(float DeltaTime)
 {
 	if (!CanProcessGameplayInput())
 	{
@@ -982,6 +986,45 @@ void FGamePlayerController::ApplyInputAxes()
 		{
 			RotateActiveCamera(LookYawValue * RotateScale, LookPitchValue * RotateScale);
 		}
+	}
+}
+
+void FGamePlayerController::UpdateCameraShakeState()
+{
+	if (PlayerCameraManager == nullptr)
+	{
+		return;
+	}
+
+	const bool bKnockbackActive = Knockback != nullptr && Knockback->IsKnockbackActive();
+	if (bKnockbackActive && !bWasKnockbackActive)
+	{
+		if (bWalkCameraShakeActive)
+		{
+			PlayerCameraManager->StopCameraShakeByName("Walk");
+			bWalkCameraShakeActive = false;
+		}
+
+		PlayerCameraManager->StartCameraShakeByName("FallDown");
+	}
+	bWasKnockbackActive = bKnockbackActive;
+
+	const float MoveForwardValue = InputMapping.GetAxisValue(AxisMoveForward());
+	const float MoveRightValue = InputMapping.GetAxisValue(AxisMoveRight());
+	const bool bHasMoveInput = !MathUtil::IsNearlyZero(MoveForwardValue) || !MathUtil::IsNearlyZero(MoveRightValue);
+	const bool bShouldWalkShake = IsRuntimeWorld() && CanProcessGameplayInput() && !bKnockbackActive && bHasMoveInput;
+
+	if (bShouldWalkShake && !bWalkCameraShakeActive)
+	{
+		if (PlayerCameraManager->StartCameraShakeByName("Walk"))
+		{
+			bWalkCameraShakeActive = true;
+		}
+	}
+	else if (!bShouldWalkShake && bWalkCameraShakeActive)
+	{
+		PlayerCameraManager->StopCameraShakeByName("Walk");
+		bWalkCameraShakeActive = false;
 	}
 }
 

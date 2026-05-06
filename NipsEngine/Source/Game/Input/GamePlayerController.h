@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 class AActor;
+class APlayerCameraManager;
 struct FSceneView;
 class FViewportCamera;
 struct FViewportRect;
@@ -55,6 +56,7 @@ public:
 
     void SetCamera(UCameraComponent* InCamera);
     UCameraComponent* GetCamera() const { return Camera; }
+    void SetPlayerCameraManager(APlayerCameraManager* InCameraManager) { PlayerCameraManager = InCameraManager; }
 
     void SetFreeCamera(FViewportCamera* InCamera);
     FViewportCamera* GetFreeCamera() const { return FreeCamera; }
@@ -73,7 +75,8 @@ public:
 
 private:
     void SetupDefaultInputMappings();
-    void ApplyInputAxes();
+    void ApplyInputAxes(float DeltaTime);
+    void UpdateCameraShakeState();
     bool TryBeginCleaningUse();
     void EndCleaningUse();
     void StartCleaningLoopSound(const struct FCleaningToolData& ToolData);
@@ -115,6 +118,7 @@ private:
 private:
     UWorld* World = nullptr;
     AActor* Player = nullptr;
+    APlayerCameraManager* PlayerCameraManager = nullptr;
     UCameraComponent* Camera = nullptr;
     FViewportCamera* FreeCamera = nullptr;
     UPhysicsHandleComponent* PhysicsHandle = nullptr;
@@ -138,6 +142,8 @@ private:
     bool bFreeCameraInitialized = false;
     bool bInitialRigidBodyRotationsCaptured = false;
     bool bIsCleaningUseHeld = false;
+    bool bWalkCameraShakeActive = false;
+    bool bWasKnockbackActive = false;
     FAudioHandle CleaningLoopSoundHandle;
     FAudioHandle CleaningOneShotSoundHandle;
     int LastSpongeUseStrokeCycle = -1;
