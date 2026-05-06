@@ -743,7 +743,6 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\LuaBindings.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ClCompile Include="Source\Engine\Scripting\LuaCoroutineScheduler.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
