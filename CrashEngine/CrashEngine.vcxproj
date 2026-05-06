@@ -504,6 +504,7 @@
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\GammaCorrectionPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.cpp" />
@@ -642,17 +643,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\GammaCorrectionPass.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
-    <ClInclude Include="Source\Engine\Core\Random.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
-    <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
-    <ClInclude Include="Source\Engine\GameFramework\HomingMissileActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
@@ -855,6 +845,7 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.h" />
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\GammaCorrectionPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.h" />
