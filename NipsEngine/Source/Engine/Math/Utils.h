@@ -45,4 +45,31 @@ namespace MathUtil
     {
         return A + (B - A) * Alpha;
     }
+
+	// CameraShake
+	//static inline float Quintic(float t)
+	//{
+ //       return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+	//}
+
+	//static inline float Hash1D(int32_t x)
+ //   {
+ //       x = (x << 13) ^ x;
+ //       return (1.0f - ((x * (x * x * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0f);
+ //   }
+
+	//static inline float PerlinNoise1D(float x)
+ //   {
+ //       int32_t i = static_cast<int32_t>(std::floor(x));
+ //       float f = x - static_cast<float>(i);
+
+ //       float g0 = Hash1D(i);
+ //       float g1 = Hash1D(i + 1);
+
+ //       float v0 = g0 * f;
+ //       float v1 = g1 * (f - 1.0f);
+
+ //       return Lerp(v0, v1, Quintic(f));
+ //   }
+
 } // namespace MathUtil

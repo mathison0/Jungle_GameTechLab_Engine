@@ -1,4 +1,4 @@
-﻿#include "Bezier.h"
+﻿#include "BezierUI.h"
 
 // 엔진 헤더를 ImGui보다 먼저 포함: Vector2.h 내 FVector 참조가 먼저 정의되어야 함
 #include "Math/Vector.h"   // FVector 정의 (Vector2.h의 CrossProduct 반환 타입)
@@ -37,7 +37,7 @@ static void bezier_table(FVector2 P[4], FVector2 results[steps + 1])
 }
 
 // ── ImGui 커브 에디터 위젯 ────────────────────────────────────────────────────────
-int Bezier::Bezier(const char* label, float cp[4])
+int BezierUI::Bezier(const char* label, float cp[4])
 {
     enum { SMOOTHNESS  = 64 }; // 커브 분할 수
     enum { CURVE_WIDTH = 4  }; // 커브 선 두께
@@ -51,8 +51,10 @@ int Bezier::Bezier(const char* label, float cp[4])
     if (Window->SkipItems)
         return false;
 
-    // 헤더 슬라이더 — 마지막 인자는 ImGuiSliderFlags (구 float power 폐기됨)
-    int changed = SliderFloat4(label, cp, 0, 1, "%.3f");
+    PushID(label);
+
+    // 헤더 슬라이더 — label은 이미 PushID로 스코프됐으므로 "##v" 사용
+    int changed = SliderFloat4("##v", cp, 0, 1, "%.3f");
     int hovered = IsItemActive() || IsItemHovered();
     Dummy(ImVec2(0, 3));
 
@@ -65,7 +67,10 @@ int Bezier::Bezier(const char* label, float cp[4])
     ImRect bb(Window->DC.CursorPos, ImVec2(Window->DC.CursorPos.x + Canvas.X, Window->DC.CursorPos.y + Canvas.Y));
     ItemSize(bb);
     if (!ItemAdd(bb, NULL))
+    {
+        PopID();
         return changed;
+    }
 
     // IsHovered(ImRect, id) 는 ImGui 1.78 이후 제거됨 → IsMouseHoveringRect 사용
     hovered |= IsMouseHoveringRect(bb.Min, bb.Max);
@@ -92,9 +97,35 @@ int Bezier::Bezier(const char* label, float cp[4])
     }
 
     // 커브 샘플링 — FVector2: 순수 수학 데이터
-    FVector2 Q[4] = { {0.f, 0.f}, {cp[0], cp[1]}, {cp[2], cp[3]}, {1.f, 1.f} };
+    FVector2 Q[4] = { { 0.f, cp[4] }, { cp[0], cp[1] }, { cp[2], cp[3] }, { 1.f, cp[5] } };
     FVector2 results[SMOOTHNESS + 1];
     bezier_table<SMOOTHNESS>(Q, results);
+
+	{
+        ImVec2 p0_pos(bb.Min.x, (1.f - cp[4]) * bbH + bb.Min.y);
+        SetCursorScreenPos(ImVec2(p0_pos.x - GRAB_RADIUS, p0_pos.y - GRAB_RADIUS));
+        InvisibleButton("##P0", ImVec2(2 * GRAB_RADIUS, 2 * GRAB_RADIUS));
+        if (IsItemActive() && IsMouseDragging(0))
+        {
+            cp[4] -= GetIO().MouseDelta.y / Canvas.Y;
+            cp[4] = ImClamp(cp[4], 0.0f, 1.0f);
+            changed = true;
+        }
+        DrawList->AddCircleFilled(p0_pos, GRAB_RADIUS, GetColorU32(ImGuiCol_PlotLinesHovered));
+    }
+
+	{
+        ImVec2 p3_pos(bb.Max.x, (1.f - cp[5]) * bbH + bb.Min.y);
+        SetCursorScreenPos(ImVec2(p3_pos.x - GRAB_RADIUS, p3_pos.y - GRAB_RADIUS));
+        InvisibleButton("##P3", ImVec2(2 * GRAB_RADIUS, 2 * GRAB_RADIUS));
+        if (IsItemActive() && IsMouseDragging(0))
+        {
+            cp[5] -= GetIO().MouseDelta.y / Canvas.Y;
+            cp[5] = ImClamp(cp[5], 0.0f, 1.0f);
+            changed = true;
+        }
+        DrawList->AddCircleFilled(p3_pos, GRAB_RADIUS, GetColorU32(ImGuiCol_PlotLinesHovered));
+    }
 
     {
         // 컨트롤 포인트 핸들 (2개)
@@ -170,5 +201,6 @@ int Bezier::Bezier(const char* label, float cp[4])
         SetCursorScreenPos(ImVec2(bb.Min.x, bb.Max.y + GRAB_RADIUS));
     }
 
+    PopID();
     return changed;
 }

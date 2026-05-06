@@ -14,8 +14,8 @@
 class FViewportCamera;
 class UCameraComponent;
 class ULetterBoxCameraModifier;
-class UCameraShakeModifier;
 class ULuaCameraModifier;
+#include "Engine/Camera/Modifier/CameraShakeModifier.h"
 struct FSceneView;
 enum class EViewMode : int32;
 
@@ -108,7 +108,7 @@ public:
 	// Camera shake
 	UCameraShakeModifier* GetCameraShakeModifier();
 	const UCameraShakeModifier* GetCameraShakeModifier() const { return CameraShakeModifier; }
-	void StartCameraShake(float Amplitude, float Frequency, float Duration, const float BezierCP[4]);
+	void StartCameraShake(const FCameraShakeParams& Params);
 	void StopCameraShake();
 	bool IsCameraShaking() const;
 
