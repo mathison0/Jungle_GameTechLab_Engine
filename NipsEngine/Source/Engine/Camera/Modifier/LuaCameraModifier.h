@@ -35,6 +35,10 @@ public:
 	bool ModifyOverlay(float DeltaTime, FCameraOverlaySettings& InOutOverlay) override;
 
 private:
+	bool ApplyDataDrivenCamera(float DeltaTime, FCameraViewInfo& InOutView);
+	bool ApplyDataDrivenPostProcess(float DeltaTime, FPostProcessSettings& InOutSettings);
+	bool ApplyDataDrivenOverlay(float DeltaTime, FCameraOverlaySettings& InOutOverlay);
+	bool ProcessDataDrivenActions();
 	bool CallModifierFunction(const char* FunctionName, float DeltaTime, FCameraViewInfo& InOutView);
 	bool CallModifierFunction(const char* FunctionName, float DeltaTime, FPostProcessSettings& InOutSettings);
 	bool CallModifierFunction(const char* FunctionName, float DeltaTime, FCameraOverlaySettings& InOutOverlay);
@@ -48,5 +52,9 @@ private:
 
 #if WITH_LUA
 	std::unique_ptr<sol::state> LuaState;
+	sol::table ModifierDataTable;
 #endif
+	bool bHasModifierDataTable = false;
+	float ElapsedTime = 0.0f;
+	TArray<FString> TriggeredActionKeys;
 };
