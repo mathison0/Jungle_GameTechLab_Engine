@@ -159,6 +159,18 @@ bool FLuaActorHandle::SetVisible(bool bVisible) const
     return true;
 }
 
+float FLuaActorHandle::GetCustomTimeDilation() const
+{
+    AActor* Actor = Resolve();
+    return Actor ? Actor->CustomTimeDilation : 1.0f;
+}
+
+void FLuaActorHandle::SetCustomTimeDilation(float InTimeDilation) const
+{
+    AActor* Actor = Resolve();
+    if (Actor) Actor->CustomTimeDilation = InTimeDilation;
+}
+
 FLuaComponentHandle FLuaActorHandle::GetComponent(const sol::variadic_args& Args) const
 {
     FString ClassName;
@@ -250,6 +262,9 @@ namespace LuaBinding
 
             "IsVisible", &FLuaActorHandle::IsVisible,
             "SetVisible", &FLuaActorHandle::SetVisible,
+
+            "GetCustomTimeDilation", &FLuaActorHandle::GetCustomTimeDilation,
+            "SetCustomTimeDilation", &FLuaActorHandle::SetCustomTimeDilation,
 
             "GetComponent", &FLuaActorHandle::GetComponent,
             "GetComponents", &FLuaActorHandle::GetComponents,

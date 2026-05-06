@@ -120,6 +120,12 @@ FLuaActorHandle FLuaComponentHandle::GetOwner() const
     return FLuaActorHandle(Component ? Component->GetOwner() : nullptr);
 }
 
+FLuaWorldHandle FLuaComponentHandle::GetWorld() const
+{
+    UActorComponent* Component = Resolve();
+    return FLuaWorldHandle(Component ? Component->GetWorld() : nullptr);
+}
+
 bool FLuaComponentHandle::IsActive() const
 {
     UActorComponent* Component = Resolve();
@@ -700,6 +706,7 @@ namespace LuaBinding
             "GetClassName", &FLuaComponentHandle::GetComponentClassName,
             "IsA", &FLuaComponentHandle::IsA,
             "GetOwner", &FLuaComponentHandle::GetOwner,
+            "GetWorld", &FLuaComponentHandle::GetWorld,
             "IsActive", &FLuaComponentHandle::IsActive,
             "SetActive", &FLuaComponentHandle::SetActive,
             "IsScriptComponent", &FLuaComponentHandle::IsScriptComponent,
