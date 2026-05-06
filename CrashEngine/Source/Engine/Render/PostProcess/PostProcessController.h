@@ -15,6 +15,8 @@ public:
 
 	FPostProcessSettings GetSettings() const;
 	void SetSettings(const FPostProcessSettings& InSettings);
+	FPostProcessSettings& GetMutableSettings() { return Settings; }
+	const FPostProcessSettings& GetBaseSettings() const { return Settings; }
 
 	const FVignettingSettings& GetVignettingSettings() const { return Settings.Vignetting; }
 	void SetVignettingSettings(const FVignettingSettings& InSettings);

@@ -113,6 +113,7 @@ public:
     void InitDefaultComponents() override;
     void BindScriptFunctions(UScriptComponent& ScriptComponent) override;
 
+    void Serialize(FArchive& Ar) override;
     void InitializeFor(AActor* InOwner);
     void UpdateCamera(float DeltaTime);
 
@@ -130,6 +131,9 @@ public:
     FPostProcessController& GetPostProcessController() { return PostProcessController; }
     const FPostProcessController& GetPostProcessController() const { return PostProcessController; }
     FPostProcessSettings GetPostProcessSettings() const { return PostProcessController.GetSettings(); }
+
+    void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
+    void PostEditProperty(const char* PropertyName) override;
 
     void SetGameCameraCutThisFrame() { bGameCameraCutThisFrame = true; }
     bool IsGameCameraCutThisFrame() const { return bGameCameraCutThisFrame; }

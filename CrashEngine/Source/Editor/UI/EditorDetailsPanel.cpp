@@ -813,6 +813,25 @@ void FEditorDetailsPanel::RenderActorProperties(AActor* PrimaryActor, const TArr
     {
         PrimaryActor->SetVisible(bVisible);
     }
+
+    TArray<FPropertyDescriptor> ActorProps;
+    PrimaryActor->GetEditableProperties(ActorProps);
+    if (!ActorProps.empty())
+    {
+        ImGui::Separator();
+        const bool bActorPropertiesOpen = BeginEditorSection("Post Process");
+        if (bActorPropertiesOpen)
+        {
+            for (int32 i = 0; i < static_cast<int32>(ActorProps.size()); ++i)
+            {
+                if (RenderDetailsPanel(ActorProps, i))
+                {
+                    PrimaryActor->PostEditProperty(ActorProps[i].Name.c_str());
+                }
+            }
+        }
+        EndEditorSection(bActorPropertiesOpen);
+    }
 }
 
 void FEditorDetailsPanel::RenderComponentTree(AActor* Actor)

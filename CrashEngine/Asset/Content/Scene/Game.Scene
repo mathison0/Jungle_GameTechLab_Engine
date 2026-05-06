@@ -1088,6 +1088,22 @@
             "bTickEnable" : true
           }
         }],
+      "Properties" : {
+        "Display Gamma" : 2.200000,
+        "Fade Alpha" : 0.000000,
+        "Fade Color" : [0.000000, 0.000000, 0.000000],
+        "Fade Enabled" : false,
+        "Gamma Enabled" : true,
+        "Letterbox Aspect Ratio" : 2.390000,
+        "Letterbox Color" : [0.000000, 0.000000, 0.000000],
+        "Letterbox Enabled" : false,
+        "Letterbox Opacity" : 1.000000,
+        "Vignette Color" : [0.100000, 0.100000, 0.100000],
+        "Vignette Enabled" : true,
+        "Vignette Intensity" : 0.600000,
+        "Vignette Radius" : 0.650000,
+        "Vignette Softness" : 0.400000
+      },
       "Tag" : "Default",
       "bVisible" : true
     }],

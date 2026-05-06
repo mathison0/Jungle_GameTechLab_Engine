@@ -1,4 +1,4 @@
-#include "Render/PostProcess/PostProcessController.h"
+﻿#include "Render/PostProcess/PostProcessController.h"
 
 #include "Math/MathUtils.h"
 
@@ -29,6 +29,12 @@ FLetterboxSettings SanitizeLetterboxSettings(FLetterboxSettings Settings)
 	Settings.Opacity           = Clamp01(Settings.Opacity);
 	return Settings;
 }
+
+FFadeSettings SanitizeFadeSettings(FFadeSettings Settings)
+{
+	Settings.Alpha = Clamp01(Settings.Alpha);
+	return Settings;
+}
 } // namespace
 
 void FPostProcessController::Reset()
@@ -55,10 +61,11 @@ void FPostProcessController::SetSettings(const FPostProcessSettings& InSettings)
 	Settings.Vignetting     = SanitizeVignettingSettings(Settings.Vignetting);
 	Settings.GammaCorrection = SanitizeGammaCorrectionSettings(Settings.GammaCorrection);
 	Settings.Letterbox      = SanitizeLetterboxSettings(Settings.Letterbox);
+	Settings.Fade           = SanitizeFadeSettings(Settings.Fade);
 
-	if (InSettings.Fade.bEnabled || InSettings.Fade.Alpha > FMath::Epsilon)
+	if (Settings.Fade.bEnabled)
 	{
-		FadeController.SetAlpha(InSettings.Fade.Alpha, InSettings.Fade.Color);
+		FadeController.SetAlpha(Settings.Fade.Alpha, Settings.Fade.Color);
 	}
 	else
 	{
