@@ -456,6 +456,12 @@ void UScriptComponent::CallLuaTick(float DeltaTime)
 
 void UScriptComponent::BindFunctions()
 {
+    BindFunction("GetName",
+        [this](sol::variadic_args) -> FString
+        {
+            return GetFName().ToString();
+        });
+
     BindFunction("GetActor",
         [this](sol::variadic_args) -> FLuaActorHandle
         {
