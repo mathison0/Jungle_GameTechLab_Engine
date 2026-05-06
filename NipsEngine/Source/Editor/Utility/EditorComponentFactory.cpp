@@ -26,6 +26,8 @@
 #include "Component/AudioZoneComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
 #include "Component/Physics/PhysicsHandleComponent.h"
+#include "Component/SpringArmComponent.h"
+#include "Component/CameraComponent.h"
 
 // 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정(빌보드 붙이기 등)이 필요한 컴포넌트는 직접 설정합니다.
 template<typename ComponentType>
@@ -159,6 +161,9 @@ const TArray<FComponentMenuEntry>& FEditorComponentFactory::GetMenuRegistry()
         { "Sphere Component", "Collision", RegisterComp<USphereComponent> },
         { "Capsule Component", "Collision", RegisterComp<UCapsuleComponent> },
         { "Cylinder Component", "Collision", RegisterComp<UCylinderComponent> },
+
+		{ "Camera Component", "Camera", RegisterComp<UCameraComponent> },
+		{ "SpringArm Component", "Camera", RegisterComp<USpringArmComponent> }
     };
 
     return Registry;

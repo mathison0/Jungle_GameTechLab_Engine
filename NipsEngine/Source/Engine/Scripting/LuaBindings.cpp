@@ -16,6 +16,7 @@
 #include "Engine/Input/InputRouter.h"
 #include "Game/UI/GameUISystem.h"
 #include "Game/Systems/GameContext.h"
+#include "Game/Systems/TimeDilationSystem.h"
 #include "Game/Systems/CleaningToolSystem.h"
 #include "Game/Systems/ItemSystem.h"
 #include "GameFramework/World.h"
@@ -414,6 +415,29 @@ void RegisterLuaBindings(sol::state& Lua)
 		return FLuaScriptSystem::Get().SetStringGameStateValue(Key, ToolId);
 	});
 
+	Lua.set_function("TriggerHitStop", [](float Duration, sol::optional<float> Dilation)
+	{
+		FTimeDilationSystem::Get().TriggerHitStop(Duration, Dilation.value_or(0.0f));
+	});
+
+	Lua.set_function("StartSlomo", [](float TargetDilation, float HoldTime, sol::optional<float> BlendInTime, sol::optional<float> BlendOutTime)
+	{
+		FTimeDilationSystem::Get().StartSlomo(
+			TargetDilation,
+			HoldTime,
+			BlendInTime.value_or(0.0f),
+			BlendOutTime.value_or(0.0f));
+	});
+
+	Lua.set_function("StopSlomo", []()
+	{
+		FTimeDilationSystem::Get().StopSlomo();
+	});
+
+	Lua.set_function("GetGlobalTimeDilation", []()
+	{
+		return FTimeDilationSystem::Get().GetGlobalTimeDilation();
+	});
 
 	// 키 입력 (Windows Virtual Key Code)
 	// 자주 쓰는 상수를 Lua 전역으로 노출

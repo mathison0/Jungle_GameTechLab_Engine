@@ -41,7 +41,10 @@
       <UniqueIdentifier>{5d843f8d-b5cb-a273-a55f-dcee8cb071ed}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Camera">
-      <UniqueIdentifier>{9d2087df-7f3d-4db6-a98f-8330f4e9b28c}</UniqueIdentifier>
+      <UniqueIdentifier>{e2e2a018-8b8d-f3d4-98e2-c9dcd52bee88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Camera\CameraModifier">
+      <UniqueIdentifier>{d9d59c8f-8109-ae75-8349-ed16e22bd677}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Collision">
       <UniqueIdentifier>{b6e31b62-ff44-29dc-3a64-69f9805cba88}</UniqueIdentifier>
@@ -177,9 +180,6 @@
     </Filter>
     <Filter Include="ThirdParty\ImGui">
       <UniqueIdentifier>{5326d6e3-f339-0d51-b7d9-34f630792b9e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Camera\Modifier">
-      <UniqueIdentifier>{55c4e8de-20b1-4b2f-8c68-a6de93facef2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -374,6 +374,12 @@
     <ClCompile Include="Source\Engine\Camera\PlayerCameraManager.cpp">
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.cpp">
+      <Filter>Source\Engine\Camera\CameraModifier</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\CameraModifier\LetterBoxCameraModifier.cpp">
+      <Filter>Source\Engine\Camera\CameraModifier</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
@@ -423,6 +429,9 @@
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\SkyAtmosphereComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\SpringArmComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp">
@@ -830,6 +839,9 @@
     <ClCompile Include="Source\Game\Systems\ItemSystem.cpp">
       <Filter>Source\Game\Systems</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Systems\TimeDilationSystem.cpp">
+      <Filter>Source\Game\Systems</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\UI\DialoguePanel.cpp">
       <Filter>Source\Game\UI</Filter>
     </ClCompile>
@@ -847,6 +859,9 @@
     </ClCompile>
     <ClCompile Include="Source\Game\UI\StartMenuPanel.cpp">
       <Filter>Source\Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\UI\RmlUi\RmlUiFileInterface.cpp">
+      <Filter>Source\Game\UI\RmlUi</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\UI\RmlUi\RmlUiRenderInterfaceD3D11.cpp">
       <Filter>Source\Game\UI\RmlUi</Filter>
@@ -879,11 +894,6 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Game\UI\RmlUi\RmlUiFileInterface.cpp" />
-    <ClCompile Include="Source\Engine\Camera\CameraModifier\LetterBoxCameraModifier.cpp">
-      <Filter>Source\Engine\Camera\Modifier</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1000,6 +1010,12 @@
     <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h">
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.h">
+      <Filter>Source\Engine\Camera\CameraModifier</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\CameraModifier\LetterBoxCamerModifier.h">
+      <Filter>Source\Engine\Camera\CameraModifier</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Collision\Collision.h">
       <Filter>Source\Engine\Collision</Filter>
     </ClInclude>
@@ -1049,6 +1065,9 @@
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\SkyAtmosphereComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\SpringArmComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\StaticMeshComponent.h">
@@ -1615,6 +1634,9 @@
     <ClInclude Include="Source\Game\Systems\ItemSystem.h">
       <Filter>Source\Game\Systems</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Systems\TimeDilationSystem.h">
+      <Filter>Source\Game\Systems</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Game\UI\DialoguePanel.h">
       <Filter>Source\Game\UI</Filter>
     </ClInclude>
@@ -1634,6 +1656,9 @@
       <Filter>Source\Game\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\UI\RmlUi\RmlUiDocumentsResource.h">
+      <Filter>Source\Game\UI\RmlUi</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\UI\RmlUi\RmlUiFileInterface.h">
       <Filter>Source\Game\UI\RmlUi</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\UI\RmlUi\RmlUiRenderInterfaceD3D11.h">
@@ -1669,9 +1694,6 @@
     <ClInclude Include="ThirdParty\ImGui\imstb_truetype.h">
       <Filter>ThirdParty\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\UI\RmlUi\RmlUiFileInterface.h" />
-    <ClInclude Include="Source\Engine\Camera\CameraModifier\LetterBoxCamerModifier.h" />
-    <ClInclude Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Game\UI\Documents\GameUI.rcss">
