@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Core/CoreTypes.h"
+#include "Math/Color.h"
 
 // 에디터 UI와 렌더러가 공유하는 view mode 정의다.
 // 새 view mode를 추가할 때는 enum만 늘리지 말고 아래 helper 규칙도 함께 확장해야 한다.
@@ -23,6 +24,22 @@ enum class EDebugDrawVisibility : int32
 	ForceShow,
 	ForceHide,
 	Count
+};
+
+// 최종적인 후처리 세팅값을 RenderBus에 전달하기 위한 구조체
+struct FPostProcessSettings
+{
+	float Gamma = 1.0f;
+	float VignetteIntensity = 0.0f;
+	float VignetteRadius = 0.75f;
+	float VignetteSoftness = 0.25f;
+};
+
+// 최종적인 스크린 오버레이 세팅값을 RenderBus에 전달하기 위한 구조체
+struct FCameraOverlaySettings
+{
+	FVector4 FadeColor = FVector4(0.0f, 0.0f, 0.0f, 0.0f);
+	float LetterBoxRatio = 0.0f;
 };
 
 inline bool ResolveDebugDrawVisibility(int32 Visibility, bool bGlobalEnabled)

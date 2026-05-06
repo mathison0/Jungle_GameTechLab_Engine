@@ -6,6 +6,7 @@
 #include "Engine/Camera/Modifier/LuaCameraModifier.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
+#include "Engine/Math/Bezier.h"
 #include "Engine/Math/Utils.h"
 
 #include <algorithm>
@@ -42,60 +43,6 @@ bool BuildCameraComponentView(UCameraComponent* Camera, FCameraViewInfo& OutView
 	OutView.OrthoHeight = OutView.AspectRatio > 0.0f ? OutView.OrthoWidth / OutView.AspectRatio : OutView.OrthoWidth;
 	OutView.bOrthographic = Camera->IsOrthogonal();
 	return true;
-}
-
-// 3D Bezier Curve의 값을 계산합니다.
-float Evaluate3DBezier(float T, float ControlPointA, float ControlPointB)
-{
-	const float U = 1.0f - T;
-	return (3.0f * U * U * T * ControlPointA) + (3.0f * U * T * T * ControlPointB) + (T * T * T);
-}
-
-// 3D Bezier Curve의 도함수를 계산합니다.
-float Evaluate3DBezierDerivative(float T, float ControlPointA, float ControlPointB)
-{
-	const float U = 1.0f - T;
-	return (3.0f * U * U * ControlPointA) + (6.0f * U * T * (ControlPointB - ControlPointA)) + (3.0f * T * T * (1.0f - ControlPointB));
-}
-
-// 목표 시간 진행도(X)가 주어졌을 때, 그에 대응하는 Bezier Curve의 T를 역으로 산출합니다.
-float SolveBezierTForX(float X, float ControlPointA, float ControlPointB)
-{
-	float T = X;
-	for (int32 Iteration = 0; Iteration < 5; ++Iteration) // Newton-Raphson Approximation
-	{
-		const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
-		const float Slope = Evaluate3DBezierDerivative(T, ControlPointA, ControlPointB);
-		if (std::abs(Slope) < 1.0e-5f)
-		{
-			break;
-		}
-
-		T = MathUtil::Clamp(T - (CurrentX - X) / Slope, 0.0f, 1.0f);
-	}
-
-	float MinT = 0.0f;
-	float MaxT = 1.0f;
-	for (int32 Iteration = 0; Iteration < 8; ++Iteration) // Correction From Binary-Search
-	{
-		const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
-		if (std::abs(CurrentX - X) < 1.0e-5f)
-		{
-			break;
-		}
-
-		if (CurrentX < X)
-		{
-			MinT = T;
-		}
-		else
-		{
-			MaxT = T;
-		}
-		T = 0.5f * (MinT + MaxT);
-	}
-
-	return T;
 }
 }
 
@@ -278,7 +225,7 @@ void APlayerCameraManager::ClearModifierList()
 	ModifierList.clear();
 }
 
-void APlayerCameraManager::StartCameraFade(const FColor& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished)
+void APlayerCameraManager::StartCameraFade(const FVector& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished)
 {
 	FadeState.bActive = true;
 	FadeState.bHoldWhenFinished = bHoldWhenFinished;
@@ -301,7 +248,7 @@ void APlayerCameraManager::StartCameraFade(const FColor& Color, float FromAlpha,
 	}
 }
 
-void APlayerCameraManager::SetManualCameraFade(const FColor& Color, float Alpha)
+void APlayerCameraManager::SetManualCameraFade(const FVector& Color, float Alpha)
 {
 	FadeState.bActive = false;
 	FadeState.bHoldWhenFinished = true;
@@ -441,10 +388,14 @@ void APlayerCameraManager::UpdateCameraTransition(float DeltaTime, FCameraViewIn
 float APlayerCameraManager::EvaluateTransitionAlpha(float NormalizedTime) const
 {
 	const float ClampedTime = MathUtil::Clamp(NormalizedTime, 0.0f, 1.0f);
-	const float ControlPointAX = MathUtil::Clamp(Transition.EaseControlPointA.X, 0.0f, 1.0f);
-	const float ControlPointBX = MathUtil::Clamp(Transition.EaseControlPointB.X, 0.0f, 1.0f);
-	const float CurveT = SolveBezierTForX(ClampedTime, ControlPointAX, ControlPointBX);
-	const float Alpha = Evaluate3DBezier(CurveT, Transition.EaseControlPointA.Y, Transition.EaseControlPointB.Y);
+	const float ControlPoints[4] =
+	{
+		Transition.EaseControlPointA.X,
+		Transition.EaseControlPointA.Y,
+		Transition.EaseControlPointB.X,
+		Transition.EaseControlPointB.Y
+	};
+	const float Alpha = Bezier::EvaluateCubicEasing(ClampedTime, ControlPoints);
 
 	return MathUtil::Clamp(Alpha, 0.0f, 1.0f);
 }
@@ -543,8 +494,7 @@ void APlayerCameraManager::UpdateCameraFade(float DeltaTime)
 
 void APlayerCameraManager::ApplyCameraFade(FCameraOverlaySettings& InOutOverlay) const
 {
-	InOutOverlay.FadeColor = FadeState.Color;
-	InOutOverlay.FadeAlpha = MathUtil::Clamp(FadeState.CurrentAlpha, 0.0f, 1.0f);
+	InOutOverlay.FadeColor = FVector4(FadeState.Color, MathUtil::Clamp(FadeState.CurrentAlpha, 0.0f, 1.0f));
 }
 
 void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView)
@@ -588,10 +538,10 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 	const FVector Right = CameraView.GetRightVector().GetSafeNormal();
 	const FVector Up = CameraView.GetUpVector().GetSafeNormal();
 
-	OutView.ViewMatrix = FMatrix::MakeViewLookAtLH(CameraView.Location, CameraView.Location + Forward, Up);
+	OutView.View = FMatrix::MakeViewLookAtLH(CameraView.Location, CameraView.Location + Forward, Up);
 	if (CameraView.bOrthographic)
 	{
-		OutView.ProjectionMatrix = FMatrix::MakeOrthographicLH(
+		OutView.Proj = FMatrix::MakeOrthographicLH(
 			CameraView.OrthoWidth,
 			CameraView.OrthoHeight,
 			CameraView.NearPlane,
@@ -599,14 +549,13 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 	}
 	else
 	{
-		OutView.ProjectionMatrix = FMatrix::MakePerspectiveFovLH(
+		OutView.Proj = FMatrix::MakePerspectiveFovLH(
 			CameraView.FOV,
 			CameraView.AspectRatio,
 			CameraView.NearPlane,
 			CameraView.FarPlane);
 	}
 
-	OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
 	OutView.CameraPosition = CameraView.Location;
 	OutView.CameraForward = Forward;
 	OutView.CameraRight = Right;
@@ -615,7 +564,7 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 	OutView.FarPlane = CameraView.FarPlane;
 	OutView.bOrthographic = CameraView.bOrthographic;
 	OutView.CameraOrthoHeight = CameraView.OrthoHeight;
-	OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
+	OutView.CameraFrustum.UpdateFromCamera(OutView.View, OutView.Proj);
 	OutView.ViewRect = ViewRect;
 	OutView.ViewMode = ViewMode;
 	OutView.PostProcessSettings = CachedPostProcessSettings;

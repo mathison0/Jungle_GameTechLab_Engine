@@ -69,7 +69,7 @@ bool ULetterBoxCameraModifier::ModifyOverlay(float DeltaTime, FCameraOverlaySett
 		}
 	}
 
-	InOutOverlay.LetterboxRatio = MathUtil::Clamp(CurrentRatio, 0.0f, 0.5f);
+	InOutOverlay.LetterBoxRatio = MathUtil::Clamp(CurrentRatio, 0.0f, 0.5f);
 
-	return InOutOverlay.LetterboxRatio > 0.0f || bTransitioning;
+	return InOutOverlay.LetterBoxRatio > 0.0f || bTransitioning;
 }

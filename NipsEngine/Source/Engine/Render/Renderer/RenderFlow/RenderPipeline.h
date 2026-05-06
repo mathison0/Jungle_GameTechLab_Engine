@@ -5,6 +5,7 @@
 class FShadowPass;
 class FBlurPass;
 class FToonOutlineRenderPass;
+class FPostProcessRenderPass;
 class FFXAARenderPass;
 class FFogRenderPass;
 class FSkyRenderPass;
@@ -44,6 +45,7 @@ private:
     std::shared_ptr<FBufferVisualizationRenderPass> BufferVisualizationRenderPass;
     std::shared_ptr<FFogRenderPass> FogRenderPass;
     std::shared_ptr<FFXAARenderPass> FXAARenderPass;
+    std::shared_ptr<FPostProcessRenderPass> PostProcessRenderPass;
     std::shared_ptr<FFontRenderPass> FontRenderPass;
     std::shared_ptr<FSubUVRenderPass> SubUVRenderPass;
     std::shared_ptr<FBillboardRenderPass> BillboardRenderPass;

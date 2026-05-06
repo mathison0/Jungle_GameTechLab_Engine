@@ -4,6 +4,7 @@
 #include "Engine/Camera/CameraModifier.h"
 #include "Math/Matrix.h"
 #include "Math/Quat.h"
+#include "Render/Common/ViewTypes.h"
 #include "Math/Color.h"
 #include "Object/Object.h"
 #include "Viewport/ViewportRect.h"
@@ -37,23 +38,6 @@ struct FCameraViewInfo
 	FVector GetUpVector() const { return Rotation.GetUpVector(); }
 };
 
-// 최종적인 후처리 세팅값을 RenderBus에 전달하기 위한 구조체
-struct FPostProcessSettings
-{
-	float Gamma = 1.0f;
-	float VignetteIntensity = 0.0f;
-	float VignetteRadius = 0.75f;
-	float VignetteSoftness = 0.25;
-};
-
-// 최종적인 스크린 오버레이 세팅값을 RenderBus에 전달하기 위한 구조체
-struct FCameraOverlaySettings
-{
-	FColor FadeColor = FColor::Black();
-	float FadeAlpha = 0.0f;
-	float LetterboxRatio = 0.0f;
-};
-
 struct FCameraTransitionState
 {
 	bool bActive = false;
@@ -78,7 +62,7 @@ struct FCameraFadeState
 	bool bActive = false;
 	bool bHoldWhenFinished = false;
 
-	FColor Color = FColor::Black();
+	FVector Color = FVector(0.0f, 0.0f, 0.0f);
 	float FromAlpha = 0.0f;
 	float ToAlpha = 0.0f;
 	float CurrentAlpha = 0.0f;
@@ -111,8 +95,8 @@ public:
 	const ULetterBoxCameraModifier* GetLetterBoxCameraModifier() const { return LetterBoxCameraModifier; }
 
 	// Fade
-	void StartCameraFade(const FColor& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished = false);
-	void SetManualCameraFade(const FColor& Color, float Alpha);
+	void StartCameraFade(const FVector& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished = false);
+	void SetManualCameraFade(const FVector& Color, float Alpha);
 	void StopCameraFade();
 	bool IsCameraFading() const { return FadeState.bActive; }
 

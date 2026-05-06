@@ -26,6 +26,8 @@ struct FRenderTargetSet
     ID3D11ShaderResourceView* SceneWorldPosSRV = nullptr;
     ID3D11RenderTargetView* SceneFXAARTV = nullptr;
     ID3D11ShaderResourceView* SceneFXAASRV = nullptr;
+	ID3D11RenderTargetView* ScenePostProcessRTV = nullptr;
+    ID3D11ShaderResourceView* ScenePostProcessSRV = nullptr;
     ID3D11RenderTargetView* SelectionMaskRTV = nullptr;
     ID3D11ShaderResourceView* SelectionMaskSRV = nullptr;
     ID3D11DepthStencilView* DepthStencilView = nullptr;
