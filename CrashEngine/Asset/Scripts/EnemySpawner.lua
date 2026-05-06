@@ -8,6 +8,9 @@ local Script = {
         TargetTagName = { type = "string", default = "Player" }, -- 검색할 대상의 태그입니다.
         MinSpawnRadius = { type = "float", default = 30.0 },
         MaxSpawnRadius = { type = "float", default = 50.0 },
+        EnemySpawnViewSafeRadius = { type = "float", default = 78.0 },
+        EnemySpawnOutsidePadding = { type = "float", default = 10.0 },
+        EnemySpawnBandWidth = { type = "float", default = 24.0 },
 
         -- Flying EnemyWave
         FlyingEnemyClassName = { type = "string", default = "AFlyingWaveEnemyActor" },
@@ -77,7 +80,14 @@ end
 -- 플레이어 주변의 랜덤한 스폰 위치 계산
 function Script:GetSpawnPosition(PlayerPos)
     local Angle = math.random() * math.pi * 2.0
-    local Distance = self.MinSpawnRadius + (math.random() * (self.MaxSpawnRadius - self.MinSpawnRadius))
+    local MinRadius = self.MinSpawnRadius or 30.0
+    local MaxRadius = self.MaxSpawnRadius or 50.0
+    local OffscreenMinRadius = (self.EnemySpawnViewSafeRadius or 78.0) + (self.EnemySpawnOutsidePadding or 10.0)
+
+    MinRadius = math.max(MinRadius, OffscreenMinRadius)
+    MaxRadius = math.max(MaxRadius, MinRadius + (self.EnemySpawnBandWidth or 24.0))
+
+    local Distance = MinRadius + (math.random() * (MaxRadius - MinRadius))
     
     return {
         x = PlayerPos.x + math.cos(Angle) * Distance,

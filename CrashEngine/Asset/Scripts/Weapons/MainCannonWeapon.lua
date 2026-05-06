@@ -7,7 +7,7 @@ local MainCannonWeapon = {}
 MainCannonWeapon.__index = MainCannonWeapon
 
 local TARGET_TAG = "Enemy"
-local DEFAULT_RANGE = 10000.0
+local DEFAULT_RANGE = 72.0
 local DEFAULT_SEARCH_INTERVAL = 0.2
 local DEFAULT_AIM_TURN_SPEED = 360.0
 
@@ -87,6 +87,38 @@ local function GetYawToTarget(fromPos, targetPos)
     end
 
     return math.deg(Atan2(dy, dx))
+end
+
+local function IsTargetInRange(target, origin, range)
+    if target == nil or not target:IsValid() then
+        return false
+    end
+
+    if target.IsVisible ~= nil and not target:IsVisible() then
+        return false
+    end
+
+    if origin == nil or range == nil then
+        return false
+    end
+
+    local targetPos = target:GetLocation()
+    if targetPos == nil then
+        return false
+    end
+
+    local ox = GetVecAxis(origin, "x", 1)
+    local oy = GetVecAxis(origin, "y", 2)
+    local tx = GetVecAxis(targetPos, "x", 1)
+    local ty = GetVecAxis(targetPos, "y", 2)
+
+    if ox == nil or oy == nil or tx == nil or ty == nil then
+        return false
+    end
+
+    local dx = tx - ox
+    local dy = ty - oy
+    return (dx * dx + dy * dy) <= (range * range)
 end
 
 function MainCannonWeapon.New(owner)
@@ -233,7 +265,11 @@ function MainCannonWeapon:GetOwnerYaw()
 end
 
 function MainCannonWeapon:IsTargetValid()
-    return self.Target ~= nil and self.Target:IsValid()
+    return IsTargetInRange(self.Target, self:GetSearchOrigin(), self:GetTargetRange())
+end
+
+function MainCannonWeapon:GetTargetRange()
+    return self.Data.Range or self.Data.TargetSearchRadius or DEFAULT_RANGE
 end
 
 function MainCannonWeapon:SearchTarget()
@@ -251,7 +287,7 @@ function MainCannonWeapon:SearchTarget()
         return
     end
 
-    local range = self.Data.Range or self.Data.TargetSearchRadius or DEFAULT_RANGE
+    local range = self:GetTargetRange()
 
     self.Target = self.Owner.QueryActorByTagClosest(
         TARGET_TAG,
