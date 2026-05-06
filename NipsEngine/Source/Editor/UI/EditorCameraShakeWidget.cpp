@@ -65,8 +65,8 @@ void FEditorCameraShakeWidget::Render(float DeltaTime)
             for (int i = 0; i < 4; ++i)
                 ShakeModifier->BezierCP[i] = BezierCP[i];
 
-            Manager->AddCameraModifier(ShakeModifier);
-            ShakeModifier->StartShake(PreviewAmplitude, PreviewFrequency, PreviewDuration);
+            Manager->AddCameraModifier(ShakeModifier); // 이걸 asset 만드는 걸로 바꿔야 됨
+            ShakeModifier->StartShake(PreviewAmplitude, PreviewFrequency, PreviewDuration); // 만들어진 에셋을 잠시 플레이
         }
     }
 
@@ -81,7 +81,7 @@ void FEditorCameraShakeWidget::Render(float DeltaTime)
     if (ImGui::Button("Stop", ImVec2(70.0f, 0.0f)))
     {
         if (ShakeModifier)
-            ShakeModifier->StopShake();
+            ShakeModifier->StopShake(); // 만들어진 에셋 리스트에서 빼기
     }
 
     if (!bIsShaking)

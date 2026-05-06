@@ -1,4 +1,4 @@
-#include "Bezier.h"
+﻿#include "Bezier.h"
 
 // 엔진 헤더를 ImGui보다 먼저 포함: Vector2.h 내 FVector 참조가 먼저 정의되어야 함
 #include "Math/Vector.h"   // FVector 정의 (Vector2.h의 CrossProduct 반환 타입)
@@ -107,19 +107,19 @@ int Bezier::Bezier(const char* label, float cp[4])
     bezier_table<SMOOTHNESS>(Q, results);
 
     {
-        char buf[128];
-        sprintf(buf, "0##%s", label);
-
         // 컨트롤 포인트 핸들 (2개)
         for (int i = 0; i < 2; ++i)
         {
+            PushID(i);
+
             // 커브 공간(0~1) → 스크린 공간. ImVec2는 draw API 인자이므로 유지
             ImVec2 pos(
                 cp[i * 2 + 0] * bbW + bb.Min.x,
                 (1.f - cp[i * 2 + 1]) * bbH + bb.Min.y
             );
             SetCursorScreenPos(ImVec2(pos.x - GRAB_RADIUS, pos.y - GRAB_RADIUS));
-            InvisibleButton((buf[0]++, buf), ImVec2(2 * GRAB_RADIUS, 2 * GRAB_RADIUS));
+
+            InvisibleButton("##handle", ImVec2(2 * GRAB_RADIUS, 2 * GRAB_RADIUS));
 
             if (IsItemActive() || IsItemHovered())
                 SetTooltip("(%4.3f, %4.3f)", cp[i * 2 + 0], cp[i * 2 + 1]);
@@ -128,8 +128,13 @@ int Bezier::Bezier(const char* label, float cp[4])
             {
                 cp[i * 2 + 0] += GetIO().MouseDelta.x / Canvas.X;
                 cp[i * 2 + 1] -= GetIO().MouseDelta.y / Canvas.Y;
+
+				cp[i * 2 + 0] = ImClamp(cp[i * 2 + 0], 0.0f, 1.0f);
+                cp[i * 2 + 1] = ImClamp(cp[i * 2 + 1], 0.0f, 1.0f);
                 changed = true;
             }
+
+			PopID();
         }
 
         if (hovered || changed)
