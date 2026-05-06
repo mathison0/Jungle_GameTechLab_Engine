@@ -241,6 +241,7 @@ void APlayerCameraManager::UpdateCameraTransition(float DeltaTime, FCameraViewIn
 		return;
 	}
 
+	Transition.ToView = InOutView;
 	Transition.Elapsed += DeltaTime;
 	float NormalizedTime = MathUtil::Clamp(Transition.Elapsed / Transition.Duration, 0.0f, 1.0f);
 	float Alpha = EvaluateTransitionAlpha(NormalizedTime);
