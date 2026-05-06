@@ -47,6 +47,7 @@ void FRenderer::Create(HWND hWindow)
 	FResourceManager::Get().LoadShader("Shaders/Multipass/SkyPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
 	FResourceManager::Get().LoadShader("Shaders/Multipass/FogPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
 	FResourceManager::Get().LoadShader("Shaders/Multipass/FXAAPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
+	FResourceManager::Get().LoadShader("Shaders/Multipass/PostProcessPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
 	FResourceManager::Get().LoadShader("Shaders/Multipass/ViewportPresent.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
 	FResourceManager::Get().LoadShader("Shaders/ShaderFont.hlsl", "VS", "PS", TextureVertexInputLayout, ARRAYSIZE(TextureVertexInputLayout), nullptr);
 	FResourceManager::Get().LoadShader("Shaders/ShaderLine.hlsl", "mainVS", "mainPS", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout), nullptr);
@@ -360,7 +361,9 @@ FViewportRenderResource& FRenderer::AcquireViewportResource(uint32 Width, uint32
 	const bool bResourcesValid =
 		(Res.ColorRTV != nullptr) &&
 		(Res.SelectionMaskRTV != nullptr) &&
-		(Res.DepthStencilView != nullptr);
+		(Res.DepthStencilView != nullptr) &&
+		(Res.PostProcessRTV != nullptr) &&
+		(Res.PostProcessSRV != nullptr);
 
 	if (bSameSize && bResourcesValid)
 	{
@@ -418,6 +421,11 @@ void FRenderer::InitializeViewportResource(uint32 Width, uint32 Height, int32 In
 	Res.FXAARTV = RT.RTV;
 	Res.FXAASRV = RT.SRV;
 
+	RT = FRenderTargetFactory::CreateScenePostProcess(Device.GetDevice(), Width, Height);
+	Res.PostProcessTex = RT.Texture;
+	Res.PostProcessRTV = RT.RTV;
+	Res.PostProcessSRV = RT.SRV;
+
 	// Depth
 	FDepthStencilResource DSR =
 		FDepthStencilFactory::CreateDepthStencilView(Device.GetDevice(), Width, Height);
@@ -464,6 +472,10 @@ void FRenderer::ReleaseViewportResource(int32 Index)
 	Res.FXAARTV.Reset();
 	Res.FXAASRV.Reset();
 	Res.FXAATex.Reset();
+
+	Res.PostProcessRTV.Reset();
+	Res.PostProcessSRV.Reset();
+	Res.PostProcessTex.Reset();
 
 	Res.Width = 0;
 	Res.Height = 0;

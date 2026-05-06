@@ -36,16 +36,6 @@ static void bezier_table(FVector2 P[4], FVector2 results[steps + 1])
     }
 }
 
-// ── t (0~1) 에 대응하는 Bezier 커브 Y 값 반환 ───────────────────────────────────
-float Bezier::BezierValue(float t, const float cp[4])
-{
-    enum { STEPS = 256 };
-    FVector2 Q[4]      = { {0.f, 0.f}, {cp[0], cp[1]}, {cp[2], cp[3]}, {1.f, 1.f} };
-    FVector2 results[STEPS + 1];
-    bezier_table<STEPS>(Q, results);
-    return results[(int)((t < 0.f ? 0.f : t > 1.f ? 1.f : t) * STEPS)].Y;
-}
-
 // ── ImGui 커브 에디터 위젯 ────────────────────────────────────────────────────────
 int Bezier::Bezier(const char* label, float cp[4])
 {

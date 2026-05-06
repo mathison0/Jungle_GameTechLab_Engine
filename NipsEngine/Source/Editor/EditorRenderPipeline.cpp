@@ -143,11 +143,8 @@ bool FEditorRenderPipeline::PrepareViewport(FRenderer& Renderer, int32 ViewportI
 
 	const FEditorSettings& Settings = Editor->GetSettings();
 	Bus.Clear();
-	Bus.SetViewProjection(OutSceneView.ViewMatrix, OutSceneView.ProjectionMatrix);
-	Bus.SetCameraPlane(OutSceneView.NearPlane, OutSceneView.FarPlane);
+	Bus.SetSceneView(OutSceneView);
 	Bus.SetRenderSettings(OutSceneView.ViewMode, Settings.ShowFlags);
-	Bus.SetViewportSize(FVector2(static_cast<float>(Rect.Width), static_cast<float>(Rect.Height)));
-	Bus.SetViewportOrigin(FVector2(0.0f, 0.0f));
 	Bus.SetFXAAEnabled(Settings.bEnableFXAA && !OutSceneView.bOrthographic);
 	Bus.SetShadowFilterType(Settings.ShadowFilterType);
 

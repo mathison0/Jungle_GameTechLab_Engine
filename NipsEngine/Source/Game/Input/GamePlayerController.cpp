@@ -833,9 +833,8 @@ void FGamePlayerController::BuildSceneView(FSceneView& OutView, const FViewportR
 {
 	if (Camera)
 	{
-		OutView.ViewMatrix = Camera->GetViewMatrix();
-		OutView.ProjectionMatrix = Camera->GetProjectionMatrix();
-		OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
+		OutView.View = Camera->GetViewMatrix();
+		OutView.Proj = Camera->GetProjectionMatrix();
 
 		OutView.CameraPosition = Camera->GetWorldLocation();
 		OutView.CameraForward = Camera->GetForwardVector();
@@ -846,24 +845,12 @@ void FGamePlayerController::BuildSceneView(FSceneView& OutView, const FViewportR
 		OutView.FarPlane = Camera->GetFarPlane();
 		OutView.bOrthographic = Camera->IsOrthogonal();
 		OutView.CameraOrthoHeight = Camera->GetOrthoWidth();
-		OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
+		OutView.CameraFrustum.UpdateFromCamera(OutView.View, OutView.Proj);
 	}
 	else if (FreeCamera)
 	{
-		OutView.ViewMatrix = FreeCamera->GetViewMatrix();
-		OutView.ProjectionMatrix = FreeCamera->GetProjectionMatrix();
-		OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
-
-		OutView.CameraPosition = FreeCamera->GetLocation();
-		OutView.CameraForward = FreeCamera->GetForwardVector();
-		OutView.CameraRight = FreeCamera->GetRightVector();
-		OutView.CameraUp = FreeCamera->GetUpVector();
-
-		OutView.NearPlane = FreeCamera->GetNearPlane();
-		OutView.FarPlane = FreeCamera->GetFarPlane();
-		OutView.bOrthographic = FreeCamera->IsOrthographic();
-		OutView.CameraOrthoHeight = FreeCamera->GetOrthoHeight();
-		OutView.CameraFrustum = FreeCamera->GetFrustum();
+		FreeCamera->BuildSceneView(OutView, ViewRect, ViewMode);
+		return;
 	}
 
 	OutView.ViewRect = ViewRect;
