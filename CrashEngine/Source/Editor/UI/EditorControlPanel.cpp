@@ -18,6 +18,7 @@
 #include "GameFramework/GamejamActor/EnemySpawnerActor.h"
 #include "Engine/Platform/Paths.h"
 #include "Engine/GameFramework/TankActor.h"
+#include "Engine/Classes/Camera/CameraManager.h"
 
 #define SEPARATOR()     \
     ;                   \
@@ -67,6 +68,7 @@ constexpr FSpawnEntry SpawnTable[] = {
     SPAWN_ACTOR("EnemySpawner", AEnemySpawnerActor, false),
     SPAWN_ACTOR("Tank", ATankActor, true),
     SPAWN_ACTOR("Exp Bar", AExpBarActor, false),
+    SPAWN_ACTOR("CameraManager", APlayerCameraManager, false),
 };
 
 #undef SPAWN_MESH

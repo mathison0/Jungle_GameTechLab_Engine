@@ -62,6 +62,7 @@ struct FViewTargetTransitionParams
 
 struct FCameraCacheEntry
 {
+    bool bValid = false;
     float TimeStamp = 0.0f;
     FMinimalViewInfo POV;
 };
@@ -102,6 +103,7 @@ public:
     DECLARE_CLASS(APlayerCameraManager, AActor)
 
 public:
+    APlayerCameraManager();
     ~APlayerCameraManager() override;
 
     void InitializeFor(AActor* InOwner);
@@ -112,6 +114,7 @@ public:
 
     const FMinimalViewInfo& GetCameraCacheView() const;
     const FMinimalViewInfo& GetLastFrameCameraCacheView() const;
+    bool HasValidCameraCache() const;
 
     void GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation) const;
     FVector GetCameraLocation() const;
