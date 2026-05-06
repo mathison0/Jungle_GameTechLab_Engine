@@ -13,6 +13,7 @@
 
 class FViewportCamera;
 class UCameraComponent;
+class ULuaCameraModifierComponent;
 class ULetterBoxCameraModifier;
 class ULuaCameraModifier;
 #include "Engine/Camera/Modifier/CameraShakeModifier.h"
@@ -68,6 +69,13 @@ struct FCameraFadeState
 	float CurrentAlpha = 0.0f;
 	float Duration = 0.0f;
 	float Elapsed = 0.0f;
+};
+
+struct FLuaCameraModifierComponentBinding
+{
+	ULuaCameraModifierComponent* Component = nullptr;
+	FString ScriptPath;
+	ULuaCameraModifier* Modifier = nullptr;
 };
 
 // 게임 내 카메라의 최종 결정자, 최종 위치/회전/FOV 값이 모두 APlayerCameraManager에서 결정
@@ -139,6 +147,8 @@ private:
 	void ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay);
 	void ApplyPostProcessComponent(FPostProcessSettings& InOutSettings);
 	void ApplyCameraFade(FCameraOverlaySettings& InOutOverlay) const;
+	void SyncLuaCameraModifierComponents();
+	void RemoveLuaCameraModifierComponentBinding(size_t BindingIndex);
 
 	void FillSceneView(FSceneView& OutView, const FCameraViewInfo& CameraView, const FViewportRect& ViewRect, EViewMode ViewMode) const;
 
@@ -147,6 +157,7 @@ private:
 	FViewportCamera* FallbackCamera = nullptr;
 	TArray<UCameraModifier*> ModifierList;
 	TArray<UCameraModifier*> OwnedModifierList;
+	TArray<FLuaCameraModifierComponentBinding> LuaCameraModifierComponentBindings;
 	ULetterBoxCameraModifier* LetterBoxCameraModifier = nullptr;
 	UCameraShakeModifier* CameraShakeModifier = nullptr;
 	

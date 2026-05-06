@@ -24,6 +24,7 @@
 #include "Component/Collision/CylinderComponent.h"
 #include "Component/HitSquashComponent.h"
 #include "Component/KnockbackComponent.h"
+#include "Component/LuaCameraModifierComponent.h"
 #include "Component/LuaScriptComponent.h"
 #include "Component/AudioComponent.h"
 #include "Component/AudioZoneComponent.h"
@@ -156,6 +157,7 @@ const TArray<FComponentMenuEntry>& FEditorComponentFactory::GetMenuRegistry()
         { "PhysicsHandle Component", "Physics", RegisterComp<UPhysicsHandleComponent> },
 
         { "LuaScript Component", "Scripting", RegisterComp<ULuaScriptComponent> },
+        { "LuaCameraModifier Component", "Scripting", RegisterComp<ULuaCameraModifierComponent> },
         { "Audio Component", "Audio", RegisterComp<UAudioComponent> },
         { "AudioZone Component", "Audio", RegisterComp<UAudioZoneComponent> },
 

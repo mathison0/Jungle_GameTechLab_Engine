@@ -44,6 +44,7 @@ private:
 	void RenderSceneComponentRefWidget(struct FPropertyDescriptor& Prop, AActor* Owner);
 	void RenderInterpControlPoints(class UInterpToMovementComponent* Comp);
 	void RenderLuaScriptControls(class ULuaScriptComponent* Comp);
+	void RenderLuaCameraModifierControls(class ULuaCameraModifierComponent* Comp);
 	void RenderAudioControls(class UAudioComponent* Comp);
 	void RenderLuaScriptCreatePopup();
 
