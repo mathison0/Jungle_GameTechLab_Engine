@@ -55,6 +55,8 @@ const wchar_t* GetRenderPassMarkerName(ERenderPassNodeType PassType)
         return L"VignettingPass";
     case ERenderPassNodeType::GammaCorrectionPass:
         return L"GammaCorrectionPass";
+    case ERenderPassNodeType::FadePass:
+        return L"FadePass";
     case ERenderPassNodeType::LetterboxPass:
         return L"LetterboxPass";
     case ERenderPassNodeType::UIPass:
@@ -101,6 +103,8 @@ bool ShouldExecutePass(const FRenderPipelineContext& Context, ERenderPassNodeTyp
         return Context.SceneView && Context.SceneView->PostProcessSettings.Vignetting.bEnabled;
     case ERenderPassNodeType::GammaCorrectionPass:
         return Context.SceneView && Context.SceneView->PostProcessSettings.GammaCorrection.bEnabled;
+    case ERenderPassNodeType::FadePass:
+        return Context.SceneView && Context.SceneView->PostProcessSettings.Fade.bEnabled;
     case ERenderPassNodeType::LetterboxPass:
         return Context.SceneView && Context.SceneView->PostProcessSettings.Letterbox.bEnabled;
     default:

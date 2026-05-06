@@ -128,6 +128,12 @@ struct FLetterboxCBData
     float   _pad1               = 0.0f; // 4B
 }; // Total: 32B
 
+struct FFadeCBData
+{
+    FVector Color = FVector(0.0f, 0.0f, 0.0f); // 12B
+    float   Alpha = 0.0f; // 4B
+}; // Total: 16B
+
 // FFXAACBData는 렌더 처리에 필요한 데이터를 묶는 구조체입니다.
 struct FFXAACBData
 {

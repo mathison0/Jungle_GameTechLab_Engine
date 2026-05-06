@@ -52,6 +52,8 @@ const char* GetShaderTypeName(EShaderType InType)
         return "Vignetting";
     case EShaderType::Letterbox:
         return "Letterbox";
+    case EShaderType::Fade:
+        return "Fade";
     case EShaderType::LightHitMap:
         return "LightHitMap";
     case EShaderType::UI:

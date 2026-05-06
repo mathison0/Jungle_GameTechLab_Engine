@@ -17,6 +17,7 @@ class FNonLitViewModePass;
 class FFXAAPass;
 class FGammaCorrectionPass;
 class FVignettingPass;
+class FFadePass;
 class FLetterboxPass;
 class FUIPass;
 class FPresentPass;
@@ -45,6 +46,7 @@ enum class ERenderPassNodeType
     FXAAPass,
     VignettingPass,
     GammaCorrectionPass,
+    FadePass,
     LetterboxPass,
     UIPass,
     PresentPass,

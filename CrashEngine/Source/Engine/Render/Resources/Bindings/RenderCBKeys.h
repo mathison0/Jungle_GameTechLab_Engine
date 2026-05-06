@@ -13,4 +13,5 @@ constexpr uint32 Light      = 6;
 constexpr uint32 Vignetting = 7;
 constexpr uint32 GammaCorrection = 8;
 constexpr uint32 Letterbox  = 9;
+constexpr uint32 Fade       = 10;
 } // namespace ERenderCBKey
