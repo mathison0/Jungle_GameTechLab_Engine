@@ -64,6 +64,8 @@ public:
     void SetGameViewportClient(UGameViewportClient* InClient) { GameViewportClient = InClient; }
     UGameViewportClient* GetGameViewportClient() const { return GameViewportClient; }
 
+    APlayerCameraManager* GetPlayerCameraManager(UWorld* World);
+
     virtual void RequestEndPlayMap() {}
     FScriptSystem& GetScriptSystem() { return ScriptSystem; }
     const FScriptSystem& GetScriptSystem() const { return ScriptSystem; }

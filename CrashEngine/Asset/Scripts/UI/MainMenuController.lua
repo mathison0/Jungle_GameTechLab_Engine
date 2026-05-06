@@ -141,7 +141,7 @@ function Script:StartGame()
     self:SetActorsVisible(self.menuActors, false)
     self:SetActorsVisible(self.hudActors, true)
 
-    GameManager.RequestStartGame()
+    GameManager.RequestStartGame(true)
 end
 
 function Script:HandleButtonClick(name)

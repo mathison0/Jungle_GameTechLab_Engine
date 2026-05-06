@@ -613,6 +613,7 @@ void APlayerCameraManager::ApplyCameraModifiersToPOV(float DeltaTime, FMinimalVi
 void APlayerCameraManager::Tick(float DeltaTime)
 {
     AActor::Tick(DeltaTime);
+    PostProcessController.Update(DeltaTime);
     UpdateCamera(DeltaTime);
 }
 
@@ -661,9 +662,6 @@ void APlayerCameraManager::DoUpdateCamera(float DeltaTime)
 
     // 4. 카메라 모디파이어 적용
     ApplyCameraModifiers(DeltaTime, NewPOV);
-
-    // 5. 페이드 갱신
-    // UpdateCameraFade(DeltaTime);
 
     // 6. 최종 카메라 캐시
     FillCameraCache(NewPOV);
@@ -750,33 +748,3 @@ void APlayerCameraManager::FillCameraCache(const FMinimalViewInfo& NewInfo)
     CameraCachePrivate.POV = NewInfo;
     CameraCachePrivate.bValid = true;
 }
-
-// void APlayerCameraManager::UpdateCameraFade(float DeltaTime)
-//{
-//     if (!bEnableFading)
-//     {
-//         return;
-//     }
-//
-//     if (!bAutoAnimateFade)
-//     {
-//         return;
-//     }
-//
-//     FadeTimeRemaining = FMath::Max(FadeTimeRemaining - DeltaTime, 0.0f);
-//
-//     if (FadeTime > 0.0f)
-//     {
-//         const float Alpha = 1.0f - FadeTimeRemaining / FadeTime;
-//         FadeAmount = FMath::Lerp(FadeAlpha.X, FadeAlpha.Y, Alpha);
-//     }
-//     else
-//     {
-//         FadeAmount = FadeAlpha.Y;
-//     }
-//
-//     if (!bHoldFadeWhenFinished && FadeTimeRemaining <= 0.0f)
-//     {
-//         StopCameraFade();
-//     }
-// }

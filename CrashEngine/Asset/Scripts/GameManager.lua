@@ -11,6 +11,9 @@ local KEY_CONTROL = 0x11
 local KEY_LEFT_CONTROL = 0xA2
 local KEY_RIGHT_CONTROL = 0xA3
 local KEY_Z = 0x5A
+local START_FADE_DURATION = 1.0
+local START_FADE_COLOR = { 0.0, 0.0, 0.0 }
+local START_FADE_CURVE = "EaseInOut"
 
 local GameManager = {
     GameTimeLimit = 600.0,
@@ -35,6 +38,7 @@ local GameManager = {
     KillCountUI = nil,
     ResultUI = nil,
     MainMenuController = nil,
+    FadeInOnNextGameStart = false,
     BackgroundMusicHandle = nil,
     BackgroundMusicPositionMs = 0.0,
     IsLevelUpSelectionActive = false,
@@ -64,6 +68,23 @@ local function captureWorldFromScript(script)
             end
         end
     end
+end
+
+local function playGameStartFadeIn()
+    local runner = GameManager.PlayerScript or GameManager.MainMenuController
+    if runner == nil or type(runner.GetPostProcess) ~= "function" then
+        Log("[GameManager] Game start fade skipped: runner unavailable.")
+        return
+    end
+
+    local postProcess = runner:GetPostProcess()
+    if postProcess == nil or not postProcess:IsValid() then
+        Log("[GameManager] Game start fade skipped: PostProcess handle unavailable.")
+        return
+    end
+
+    postProcess:SetFadeAlpha(1.0, START_FADE_COLOR)
+    postProcess:FadeIn(START_FADE_DURATION, START_FADE_COLOR, START_FADE_CURVE)
 end
 
 local function normalizeSoundPosition(key, positionMs)
@@ -309,6 +330,7 @@ function GameManager._ResetState()
     GameManager.KillCountUI = nil
     GameManager.ResultUI = nil
     GameManager.MainMenuController = nil
+    GameManager.FadeInOnNextGameStart = false
     GameManager.BackgroundMusicHandle = nil
     GameManager.BackgroundMusicPositionMs = 0.0
     GameManager.IsLevelUpSelectionActive = false
@@ -344,7 +366,7 @@ function GameManager.PrepareMainMenu(gameTimeLimit)
     Log("[GameManager] Main Menu Prepared (TimeLimit: " .. tostring(GameManager.GameTimeLimit) .. ")")
 end
 
-function GameManager.RequestStartGame()
+function GameManager.RequestStartGame(bFadeInOnStart)
     if GameManager.Initialized then
         return true
     end
@@ -354,6 +376,7 @@ function GameManager.RequestStartGame()
 
     GameManager.SessionPrepared = true
     GameManager.GameStartRequested = true
+    GameManager.FadeInOnNextGameStart = bFadeInOnStart == true
 
     if GameManager.ResultUI ~= nil and type(GameManager.ResultUI.Hide) == "function" then
         GameManager.ResultUI:Hide()
@@ -384,6 +407,11 @@ function GameManager._CheckAndStart()
 end
 
 function GameManager.OnGameStart()
+    if GameManager.FadeInOnNextGameStart then
+        GameManager.FadeInOnNextGameStart = false
+        playGameStartFadeIn()
+    end
+
     GameManager.PlayBackgroundMusic()
 
     -- VFX 액터 풀 웜업 (총구 화염, 피격 이펙트, 폭발 등 공유)
