@@ -793,6 +793,9 @@
     <ClCompile Include="Source\Game\Systems\ItemSystem.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="Source\Game\Systems\TimeDilationSystem.cpp">
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="Source\Game\UI\DialoguePanel.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -1092,6 +1095,7 @@
     <ClInclude Include="Source\Game\Systems\GameContext.h" />
     <ClInclude Include="Source\Game\Systems\GameItemDataLoader.h" />
     <ClInclude Include="Source\Game\Systems\ItemSystem.h" />
+    <ClInclude Include="Source\Game\Systems\TimeDilationSystem.h" />
     <ClInclude Include="Source\Game\UI\DialoguePanel.h" />
     <ClInclude Include="Source\Game\UI\EndingPanel.h" />
     <ClInclude Include="Source\Game\UI\GameUISystem.h" />

@@ -1,6 +1,7 @@
 ﻿#include "GameEngine.h"
 
 #include "Game/Settings/GameSettings.h"
+#include "Game/Systems/TimeDilationSystem.h"
 #include "Game/Systems/GameContext.h"
 #include "Game/Systems/GameItemDataLoader.h"
 #include "Game/Systems/CleaningToolSystem.h"
@@ -73,6 +74,7 @@ void UGameEngine::Init(FWindowsWindow* InWindow)
 	FGameItemDataLoader::LoadFromFile("Asset/Data/Items.json", Items);
 	GGameContext::Get().Reset();
 	FItemSystem::Get().ResetRuntimeState();
+	FTimeDilationSystem::Get().Reset();
 	GameUISystem::Get().ResetGameData();
 	GameUISystem::Get().SetState(EGameUIState::StartMenu);
 	GameUISystem::Get().SetStartGameCallback([this]() { StartMainGame(); });
@@ -141,6 +143,7 @@ void UGameEngine::StartMainGame()
 		GameViewport->SetWorld(GetWorld());
 	}
 
+	FTimeDilationSystem::Get().Reset();
 	GameUISystem::Get().ResetGameData();
 	GameUISystem::Get().SetState(EGameUIState::InGame);
 	BeginPlay();
@@ -153,6 +156,7 @@ void UGameEngine::ExitToTitle()
 	FAudioSystem::Get().StopAll();
 	GGameContext::Get().Reset();
 	FItemSystem::Get().ResetRuntimeState();
+	FTimeDilationSystem::Get().Reset();
 	GameUISystem::Get().ResetGameData();
 
 	LoadStartupScene();
@@ -167,10 +171,13 @@ void UGameEngine::ExitToTitle()
 
 void UGameEngine::Tick(float DeltaTime)
 {
+	FTimeDilationSystem::Get().Tick(DeltaTime);
+	const float GameDeltaTime = FTimeDilationSystem::Get().GetScaledDeltaTime(DeltaTime);
+
 	FInputRouter::TickInputSystem();
 	UpdateInputWorldType();
 	GameViewport->Tick(DeltaTime);
-	WorldTick(DeltaTime);
+	WorldTick(GameDeltaTime);
 	if (GameUISystem::Get().GetState() == EGameUIState::InGame)
 	{
 		GGameContext::Get().RefreshCleanProgressFromDecals();
