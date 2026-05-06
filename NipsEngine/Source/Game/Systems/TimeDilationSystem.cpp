@@ -131,9 +131,13 @@ void FTimeDilationSystem::TickSlomo(float RealDeltaTime)
 	{
 		const float Alpha = SlomoElapsedTime / SlomoBlendInTime;
 
+		// EaseInCubic
+		const float EaseAlpha = Alpha * Alpha * Alpha;
+
 		// EaseOutCubic
-        const float P = 1.0f - Alpha;
-        const float EaseAlpha = 1.0f - P * P * P;
+        /*const float P = 1.0f - Alpha;
+        const float EaseAlpha = 1.0f - P * P * P;*/
+
         GlobalTimeDilation = Lerp(SlomoStartDilation, SlomoTargetDilation, EaseAlpha);
 		return;
 	}
@@ -148,9 +152,13 @@ void FTimeDilationSystem::TickSlomo(float RealDeltaTime)
 	{
 		const float Alpha = (SlomoElapsedTime - HoldEndTime) / SlomoBlendOutTime;
 
+		// EaseInCubic
+        const float EaseAlpha = Alpha * Alpha * Alpha;
+
 		// EaseOutCubic
-        const float P = 1.0f - Alpha;
-        const float EaseAlpha = 1.0f - P * P * P;
+        /*const float P = 1.0f - Alpha;
+        const float EaseAlpha = 1.0f - P * P * P;*/
+
         GlobalTimeDilation = Lerp(SlomoStartDilation, SlomoTargetDilation, EaseAlpha);
 		return;
 	}
