@@ -729,11 +729,11 @@
             "Properties" : {
               "FOV" : 1.047198,
               "Far Z" : 1000.000000,
-              "Location" : [3.000000, -3.300000, 2.900000],
+              "Location" : [1.200000, -0.900000, 2.100000],
               "Near Z" : 0.100000,
               "Ortho Width" : 10.000000,
               "Orthographic" : false,
-              "Rotation" : [17.100006, 133.399994, 0.000000],
+              "Rotation" : [17.100006, 136.399994, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "bTickEnable" : true
             }
@@ -1072,39 +1072,6 @@
         }
       },
       "Tag" : "MainMenu",
-      "bVisible" : true
-    }, {
-      "ClassName" : "APlayerCameraManager",
-      "Name" : "APlayerCameraManager_0",
-      "NonSceneComponents" : [{
-          "ClassName" : "UScriptComponent",
-          "Name" : "CameraManagerComponent",
-          "Properties" : {
-            "Lua.AutoInitialize" : true,
-            "Lua.OwnerTag" : "Player",
-            "Lua.PlayerTag" : "",
-            "Lua.SearchRadius" : 100000.000000,
-            "Script" : "CameraManagerComponent.lua",
-            "bTickEnable" : true
-          }
-        }],
-      "Properties" : {
-        "Display Gamma" : 2.200000,
-        "Fade Alpha" : 0.000000,
-        "Fade Color" : [0.000000, 0.000000, 0.000000],
-        "Fade Enabled" : false,
-        "Gamma Enabled" : true,
-        "Letterbox Aspect Ratio" : 2.390000,
-        "Letterbox Color" : [0.000000, 0.000000, 0.000000],
-        "Letterbox Enabled" : true,
-        "Letterbox Opacity" : 1.000000,
-        "Vignette Color" : [0.100000, 0.100000, 0.100000],
-        "Vignette Enabled" : true,
-        "Vignette Intensity" : 0.600000,
-        "Vignette Radius" : 0.650000,
-        "Vignette Softness" : 0.400000
-      },
-      "Tag" : "Default",
       "bVisible" : true
     }],
   "ClassName" : "UWorld",
