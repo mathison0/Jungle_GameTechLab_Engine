@@ -106,6 +106,9 @@ public:
     APlayerCameraManager();
     ~APlayerCameraManager() override;
 
+    void InitDefaultComponents() override;
+    void BindScriptFunctions(UScriptComponent& ScriptComponent) override;
+
     void InitializeFor(AActor* InOwner);
     void UpdateCamera(float DeltaTime);
 
@@ -193,4 +196,6 @@ private:
 
 	uint32 NextModifierHandle = 1;
     TMap<uint32, UCameraModifier*> ModifierHandleMap; // Lua handle용 추가
+
+    static constexpr const char* CameraManagerScriptPath = "CameraManagerComponent.lua";
 };
