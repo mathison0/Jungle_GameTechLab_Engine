@@ -1319,6 +1319,11 @@
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp" />
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp" />
+    <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier.cpp" />
+    <ClCompile Include="Source\Engine\Classes\Camera\CameraManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2408,6 +2413,11 @@
     <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h" />
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h" />
+    <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier.h" />
+    <ClInclude Include="Source\Engine\Classes\Camera\CameraManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

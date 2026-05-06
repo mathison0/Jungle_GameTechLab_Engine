@@ -2,6 +2,7 @@
 #include "GameFramework/AActor.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/CameraComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Component/UUIDTextRenderComponent.h"
 #include "Component/ActorComponent.h"
@@ -40,6 +41,8 @@ AActor::~AActor()
     }
 
     RootComponent = nullptr;
+
+	OnDestroyed.Broadcast(this);
 }
 
 
@@ -262,6 +265,25 @@ bool AActor::IsOverlappingActor(const AActor* OtherActor) const
         }
     }
     return false;
+}
+
+void AActor::CalcCamera(FVector& OutLocation, FRotator& OutRotation)
+{
+    for (UActorComponent* Compoent : OwnedComponents)
+	{
+        if (UCameraComponent* CameraComponent = Cast<UCameraComponent>(Compoent))
+		{
+			if (CameraComponent->IsActive())
+			{
+                OutLocation = CameraComponent->GetWorldLocation();
+                OutRotation = CameraComponent->GetWorldRotation().ToRotator();
+				return;
+			}
+		}
+    }
+
+	OutLocation = GetActorLocation();
+    OutRotation = GetActorRotation();
 }
 
 // 엔진 단계에서의 틱

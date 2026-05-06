@@ -130,9 +130,12 @@ public:
 
     FActorTickFunction PrimaryActorTick;
     DECLARE_DELEGATE(OnPoolReturnRequested, AActor*);
+    DECLARE_DELEGATE(OnDestroyed, AActor*);
 
     // Collision
     bool IsOverlappingActor(const AActor* OtherActor) const;
+
+	void CalcCamera(FVector& OutLocation, FRotator& OutRotation);
 
 protected:
     virtual void TickActor(float DeltaSeconds, ELevelTick TickType, FActorTickFunction& ThisTickFunction);
