@@ -143,6 +143,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	ViewportOverlayWidget.Initialize(InEditorEngine);
 	StatWidget.Initialize(InEditorEngine);
 	PlayStreamWidget.Initialize(InEditorEngine);
+	CameraShakeWidget.Initialize(InEditorEngine);
 	ToolbarWidget.Initialize(InEditorEngine);
 	ToolbarWidget.SetViewportOverlayWidget(&ViewportOverlayWidget);
 	ToolbarWidget.SetSceneWidget(&SceneWidget);
@@ -184,6 +185,8 @@ void FEditorMainPanel::Render(float DeltaTime)
 		SceneWidget.Render(DeltaTime);
 	if (bShowStatProfiler)
 		StatWidget.Render(DeltaTime);
+	if (bShowCameraShake)
+		CameraShakeWidget.Render(DeltaTime);
 	ViewportOverlayWidget.Render(DeltaTime);
 
 	// 게임 UI는 PIE 중에만 표시합니다. 편집 중에는 씬 작업을 방해하지 않습니다.

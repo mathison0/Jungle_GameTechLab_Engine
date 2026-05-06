@@ -64,6 +64,11 @@ void FEditorViewportLayout::Init(FWindowsWindow* InWindow, UWorld* World, FSelec
 
 void FEditorViewportLayout::Shutdown()
 {
+	for (int32 i = 0; i < MaxViewports; ++i)
+	{
+		ViewportClients[i].ShutdownPlayerCameraManager();
+	}
+
 	DestroyViewportLayout();
 }
 

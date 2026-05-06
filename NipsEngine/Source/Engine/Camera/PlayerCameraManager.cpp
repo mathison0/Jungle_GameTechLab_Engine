@@ -1,9 +1,10 @@
 ﻿#include "Engine/Camera/PlayerCameraManager.h"
 
 #include "Component/CameraComponent.h"
-#include "Engine/Camera/CameraModifier.h"
+#include "Engine/Camera/Modifier/LetterBoxCameraModifier.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
+#include "Engine/Math/Bezier.h"
 #include "Engine/Math/Utils.h"
 
 #include <algorithm>
@@ -40,60 +41,6 @@ bool BuildCameraComponentView(UCameraComponent* Camera, FCameraViewInfo& OutView
 	OutView.OrthoHeight = OutView.AspectRatio > 0.0f ? OutView.OrthoWidth / OutView.AspectRatio : OutView.OrthoWidth;
 	OutView.bOrthographic = Camera->IsOrthogonal();
 	return true;
-}
-
-// 3D Bezier Curve의 값을 계산합니다.
-float Evaluate3DBezier(float T, float ControlPointA, float ControlPointB)
-{
-	const float U = 1.0f - T;
-	return (3.0f * U * U * T * ControlPointA) + (3.0f * U * T * T * ControlPointB) + (T * T * T);
-}
-
-// 3D Bezier Curve의 도함수를 계산합니다.
-float Evaluate3DBezierDerivative(float T, float ControlPointA, float ControlPointB)
-{
-	const float U = 1.0f - T;
-	return (3.0f * U * U * ControlPointA) + (6.0f * U * T * (ControlPointB - ControlPointA)) + (3.0f * T * T * (1.0f - ControlPointB));
-}
-
-// 목표 시간 진행도(X)가 주어졌을 때, 그에 대응하는 Bezier Curve의 T를 역으로 산출합니다.
-float SolveBezierTForX(float X, float ControlPointA, float ControlPointB)
-{
-	float T = X;
-	for (int32 Iteration = 0; Iteration < 5; ++Iteration) // Newton-Raphson Approximation
-	{
-		const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
-		const float Slope = Evaluate3DBezierDerivative(T, ControlPointA, ControlPointB);
-		if (std::abs(Slope) < 1.0e-5f)
-		{
-			break;
-		}
-
-		T = MathUtil::Clamp(T - (CurrentX - X) / Slope, 0.0f, 1.0f);
-	}
-
-	float MinT = 0.0f;
-	float MaxT = 1.0f;
-	for (int32 Iteration = 0; Iteration < 8; ++Iteration) // Correction From Binary-Search
-	{
-		const float CurrentX = Evaluate3DBezier(T, ControlPointA, ControlPointB);
-		if (std::abs(CurrentX - X) < 1.0e-5f)
-		{
-			break;
-		}
-
-		if (CurrentX < X)
-		{
-			MinT = T;
-		}
-		else
-		{
-			MaxT = T;
-		}
-		T = 0.5f * (MinT + MaxT);
-	}
-
-	return T;
 }
 }
 
@@ -181,6 +128,41 @@ void APlayerCameraManager::BuildSceneView(FSceneView& OutView, const FViewportRe
 	FillSceneView(OutView, ViewInfo, ViewRect, ViewMode);
 }
 
+void APlayerCameraManager::InitializeDefaultModifiers()
+{
+	if (LetterBoxCameraModifier == nullptr)
+	{
+		LetterBoxCameraModifier = AddNewCameraModifier<ULetterBoxCameraModifier>();
+	}
+}
+
+void APlayerCameraManager::Shutdown()
+{
+	ClearModifierList();
+
+	for (UCameraModifier* Modifier : OwnedModifierList)
+	{
+		UObjectManager::Get().DestroyObject(Modifier);
+	}
+	OwnedModifierList.clear();
+
+	LetterBoxCameraModifier = nullptr;
+	ViewTarget = nullptr;
+	FallbackCamera = nullptr;
+	bHasCachedCameraView = false;
+	CachedCameraView = FCameraViewInfo();
+	CachedPostProcessSettings = FPostProcessSettings();
+	CachedCameraOverlaySettings = FCameraOverlaySettings();
+	Transition = FCameraTransitionState();
+	FadeState = FCameraFadeState();
+}
+
+ULetterBoxCameraModifier* APlayerCameraManager::GetLetterBoxCameraModifier()
+{
+	InitializeDefaultModifiers();
+	return LetterBoxCameraModifier;
+}
+
 void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 {
 	if (Modifier == nullptr)
@@ -188,13 +170,13 @@ void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 		return;
 	}
 
-	if (std::find(CameraModifiers.begin(), CameraModifiers.end(), Modifier) != CameraModifiers.end())
+	if (std::find(ModifierList.begin(), ModifierList.end(), Modifier) != ModifierList.end())
 	{
 		return;
 	}
 
-	CameraModifiers.push_back(Modifier);
-	std::sort(CameraModifiers.begin(), CameraModifiers.end(), [](const UCameraModifier* A, const UCameraModifier* B)
+	ModifierList.push_back(Modifier);
+	std::sort(ModifierList.begin(), ModifierList.end(), [](const UCameraModifier* A, const UCameraModifier* B)
 			  {
 		const int32 APriority = A ? A->GetPriority() : 0;
 		const int32 BPriority = B ? B->GetPriority() : 0;
@@ -203,12 +185,12 @@ void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 
 void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 {
-	CameraModifiers.erase(std::remove(CameraModifiers.begin(), CameraModifiers.end(), Modifier), CameraModifiers.end());
+	ModifierList.erase(std::remove(ModifierList.begin(), ModifierList.end(), Modifier), ModifierList.end());
 }
 
-void APlayerCameraManager::ClearCameraModifiers()
+void APlayerCameraManager::ClearModifierList()
 {
-	CameraModifiers.clear();
+	ModifierList.clear();
 }
 
 void APlayerCameraManager::StartCameraFade(const FVector& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished)
@@ -249,6 +231,30 @@ void APlayerCameraManager::SetManualCameraFade(const FVector& Color, float Alpha
 void APlayerCameraManager::StopCameraFade()
 {
 	FadeState = FCameraFadeState();
+}
+
+void APlayerCameraManager::StartLetterBox(float TargetRatio, float Duration)
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->StartLetterBox(TargetRatio, Duration);
+	}
+}
+
+void APlayerCameraManager::SetLetterBox(float Ratio)
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->SetLetterBox(Ratio);
+	}
+}
+
+void APlayerCameraManager::ClearLetterBox()
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->ClearLetterBox();
+	}
 }
 
 // 카메라 Linear 보간 이동
@@ -308,10 +314,14 @@ void APlayerCameraManager::UpdateCameraTransition(float DeltaTime, FCameraViewIn
 float APlayerCameraManager::EvaluateTransitionAlpha(float NormalizedTime) const
 {
 	const float ClampedTime = MathUtil::Clamp(NormalizedTime, 0.0f, 1.0f);
-	const float ControlPointAX = MathUtil::Clamp(Transition.EaseControlPointA.X, 0.0f, 1.0f);
-	const float ControlPointBX = MathUtil::Clamp(Transition.EaseControlPointB.X, 0.0f, 1.0f);
-	const float CurveT = SolveBezierTForX(ClampedTime, ControlPointAX, ControlPointBX);
-	const float Alpha = Evaluate3DBezier(CurveT, Transition.EaseControlPointA.Y, Transition.EaseControlPointB.Y);
+	const float ControlPoints[4] =
+	{
+		Transition.EaseControlPointA.X,
+		Transition.EaseControlPointA.Y,
+		Transition.EaseControlPointB.X,
+		Transition.EaseControlPointB.Y
+	};
+	const float Alpha = Bezier::EvaluateCubicEasing(ClampedTime, ControlPoints);
 
 	return MathUtil::Clamp(Alpha, 0.0f, 1.0f);
 }
@@ -415,7 +425,7 @@ void APlayerCameraManager::ApplyCameraFade(FCameraOverlaySettings& InOutOverlay)
 
 void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled())
 		{
@@ -428,7 +438,7 @@ void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo
 
 void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled())
 		{
@@ -441,7 +451,7 @@ void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProce
 
 void APlayerCameraManager::ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled()) continue;
 		Modifier->ModifyOverlay(DeltaTime, InOutOverlay);

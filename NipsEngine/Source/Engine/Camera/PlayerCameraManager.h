@@ -1,14 +1,19 @@
 ﻿#pragma once
 
 #include "Core/CoreMinimal.h"
+#include "Engine/Camera/CameraModifier.h"
 #include "Math/Matrix.h"
 #include "Math/Quat.h"
 #include "Render/Common/ViewTypes.h"
+#include "Math/Color.h"
+#include "Object/Object.h"
 #include "Viewport/ViewportRect.h"
+
+#include <type_traits>
 
 class FViewportCamera;
 class UCameraComponent;
-class UCameraModifier;
+class ULetterBoxCameraModifier;
 struct FSceneView;
 enum class EViewMode : int32;
 
@@ -78,10 +83,14 @@ public:
 
 	void UpdateCamera(float DeltaTime);
 	void BuildSceneView(FSceneView& OutView, const FViewportRect& ViewRect, EViewMode ViewMode) const;
+	void InitializeDefaultModifiers();
+	void Shutdown();
 
 	const FCameraViewInfo& GetCameraView() const { return CachedCameraView; }
 	const FPostProcessSettings& GetPostProcessSettings() const { return CachedPostProcessSettings; }
 	const FCameraOverlaySettings& GetOverlaySettings() const { return CachedCameraOverlaySettings; }
+	ULetterBoxCameraModifier* GetLetterBoxCameraModifier();
+	const ULetterBoxCameraModifier* GetLetterBoxCameraModifier() const { return LetterBoxCameraModifier; }
 
 	// Fade
 	void StartCameraFade(const FVector& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished = false);
@@ -89,10 +98,17 @@ public:
 	void StopCameraFade();
 	bool IsCameraFading() const { return FadeState.bActive; }
 
+	// Letterbox
+	void StartLetterBox(float TargetRatio, float Duration);
+	void SetLetterBox(float Ratio);
+	void ClearLetterBox();
+
 	// Modifier
 	void AddCameraModifier(UCameraModifier* Modifier);
+	template <typename TModifier>
+	TModifier* AddNewCameraModifier();
 	void RemoveCameraModifier(UCameraModifier* Modifier);
-	void ClearCameraModifiers();
+	void ClearModifierList();
 
 	// Transition
 	void StartCameraTransition(const FCameraViewInfo& From, const FCameraViewInfo& To, float Duration);
@@ -117,7 +133,9 @@ private:
 private:
 	UCameraComponent* ViewTarget = nullptr;
 	FViewportCamera* FallbackCamera = nullptr;
-	TArray<UCameraModifier*> CameraModifiers;
+	TArray<UCameraModifier*> ModifierList;
+	TArray<UCameraModifier*> OwnedModifierList;
+	ULetterBoxCameraModifier* LetterBoxCameraModifier = nullptr;
 	
 	bool bHasCachedCameraView = false;
 	FCameraViewInfo CachedCameraView;
@@ -127,3 +145,14 @@ private:
 	FCameraTransitionState Transition;
 	FCameraFadeState FadeState;
 };
+
+template <typename TModifier>
+TModifier* APlayerCameraManager::AddNewCameraModifier()
+{
+	static_assert(std::is_base_of_v<UCameraModifier, TModifier>, "TModifier must derive from UCameraModifier");
+
+	TModifier* Modifier = UObjectManager::Get().CreateObject<TModifier>();
+	AddCameraModifier(Modifier);
+	OwnedModifierList.push_back(Modifier);
+	return Modifier;
+}

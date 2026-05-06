@@ -56,8 +56,14 @@ namespace
 
 FGameViewportClient::~FGameViewportClient()
 {
+	ShutdownPlayerCameraManager();
 	FInputRouter::LockMouse(false);
 	FInputRouter::SetCursorVisibility(true);
+}
+
+void FGameViewportClient::ShutdownPlayerCameraManager()
+{
+	PlayerCameraManager.Shutdown();
 }
 
 // 디버그용 Free Camera와 PlayerController를 초기화합니다.
@@ -68,6 +74,7 @@ void FGameViewportClient::Initialize(FWindowsWindow* InWindow)
 	FreeCamera.SetLocation(FVector(-5.0f, -5.0f, 3.0f));
 	FreeCamera.SetLookAt(FVector::ZeroVector);
 	PlayerCameraManager.SetFallbackCamera(&FreeCamera);
+	PlayerCameraManager.InitializeDefaultModifiers();
 	PlayerController.SetFreeCamera(&FreeCamera);
 	PlayerController.SetWorld(World);
 	PlayerController.SetToggleInputCaptureCallback([this]() { ToggleInteractionMode(); });

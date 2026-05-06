@@ -261,6 +261,9 @@
     <FxCompile Include="Shaders\Multipass\PointShadowDepth.hlsl">
       <Filter>Shaders\Multipass</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Multipass\PostProcessPass.hlsl">
+      <Filter>Shaders\Multipass</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Multipass\ShadowBlurCS.hlsl">
       <Filter>Shaders\Multipass</Filter>
     </FxCompile>
@@ -295,6 +298,12 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp">
       <Filter>Source\Editor\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Bezier.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorCameraShakeWidget.cpp">
+      <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorConsoleWidget.cpp">
       <Filter>Source\Editor\UI</Filter>
@@ -374,6 +383,9 @@
     <ClCompile Include="Source\Engine\Camera\PlayerCameraManager.cpp">
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Modifier\CameraShakeModifier.cpp">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.cpp">
       <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClCompile>
@@ -408,6 +420,9 @@
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\HeightFogComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\HitSquashComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\LineBatchComponent.cpp">
@@ -556,6 +571,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp">
       <Filter>Source\Engine\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Math\Bezier.cpp">
+      <Filter>Source\Engine\Math</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Math\Color.cpp">
       <Filter>Source\Engine\Math</Filter>
@@ -917,6 +935,12 @@
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h">
       <Filter>Source\Editor\Settings</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Bezier.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorCameraShakeWidget.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorConsoleWidget.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
@@ -1010,6 +1034,9 @@
     <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h">
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Modifier\CameraShakeModifier.h">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h">
       <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClInclude>
@@ -1044,6 +1071,9 @@
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\HeightFogComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\HitSquashComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\LineBatchComponent.h">
@@ -1273,6 +1303,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Input\InputTypes.h">
       <Filter>Source\Engine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Math\Bezier.h">
+      <Filter>Source\Engine\Math</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Color.h">
       <Filter>Source\Engine\Math</Filter>

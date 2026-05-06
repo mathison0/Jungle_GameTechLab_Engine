@@ -10,6 +10,7 @@
 #include "Editor/UI/EditorStatWidget.h"
 #include "Editor/UI/EditorToolbarWidget.h"
 #include "Editor/UI/EditorPlayStreamWidget.h"
+#include "Editor/UI/EditorCameraShakeWidget.h"
 
 class FRenderer;
 class UEditorEngine;
@@ -53,8 +54,10 @@ private:
 	FEditorStatWidget StatWidget;
 	FEditorToolbarWidget ToolbarWidget;
 	FEditorPlayStreamWidget PlayStreamWidget;
+	FEditorCameraShakeWidget CameraShakeWidget;
 
 	bool bShowConsole = true;
+	bool bShowCameraShake = true;
 	bool bShowControl = true;
 	bool bShowProperty = true;
 	bool bShowSceneManager = true;
