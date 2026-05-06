@@ -1,7 +1,10 @@
 ﻿#pragma once
 #include "Object/Object.h"
+#include "CameraShakeTypes.h"
+#include "Math/Matrix.h"
 
 struct FCameraShakePatternStartParams;
+struct FMinimalViewInfo;
 class UCameraShakePattern;
 
 enum class ECameraShakeDurationType : uint8
@@ -182,6 +185,39 @@ public:
     DECLARE_CLASS(UCameraShakeBase, UObject)
 
     UCameraShakeBase() = default;
-    ~UCameraShakeBase() override {};
+    ~UCameraShakeBase() override;
+
+	void SetRootShakePattern(UCameraShakePattern* InPattern);
+	UCameraShakePattern* GetRootShakePattern() const { return RootShakePattern; }
+
+	void StartShake(const FCameraShakeBaseStartParams& Params);
+	void UpdateAndApplyCameraShake(float DeltaTime, float DynamicScale, FMinimalViewInfo& InOutPOV);
+	void StopShake(bool bImmediately = false);
+	void TeardownShake();
+	bool IsFinished() const;
+	bool IsActive() const { return bIsActive; }
+
+	void SetShakeScale(float InShakeScale) { ShakeScale = InShakeScale; }
+	float GetShakeScale() const { return ShakeScale; }
+
+	APlayerCameraManager* GetCameraManager() const { return CameraManager; }
+	void SetSourceAssetPath(const FString& InSourceAssetPath) { SourceAssetPath = InSourceAssetPath; }
+	const FString& GetSourceAssetPath() const { return SourceAssetPath; }
+
+public:
+	bool bSingleInstance = false;
+
+private:
+	void ApplyResult(const FCameraShakeApplyResultParams& Params, const FCameraShakePatternUpdateResult& Result, FMinimalViewInfo& InOutPOV) const;
+
+private:
+	UCameraShakePattern* RootShakePattern = nullptr;
+	float ShakeScale = 1.f;
+	bool bIsActive = false;
+	APlayerCameraManager* CameraManager = nullptr;
+	ECameraShakePlaySpace PlaySpace = ECameraShakePlaySpace::CameraLocal;
+	FRotator UserPlaySpaceRot = FRotator::ZeroRotator;
+	FMatrix UserPlaySpaceMatrix = FMatrix::Identity;
+	FString SourceAssetPath;
 
 };

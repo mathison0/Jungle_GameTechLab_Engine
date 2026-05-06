@@ -548,6 +548,9 @@
     <ClCompile Include="Source\Editor\UI\EditorBottomBar.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorCameraShakePanel.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorContentDrawerPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -1432,7 +1435,9 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp" />
     <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier.cpp" />
     <ClCompile Include="Source\Engine\Classes\Camera\CameraManager.cpp" />
+    <ClCompile Include="Source\Engine\Classes\Camera\CameraModifier_CameraShake.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeBase.cpp" />
+    <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakePattern.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\WaveOscillatorCameraShakePattern.cpp" />
@@ -1483,6 +1488,9 @@
       <Filter>Source\Editor\Subsystem</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorBottomBar.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorCameraShakePanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorContentDrawerPanel.h">
@@ -2619,8 +2627,10 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h" />
     <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier.h" />
     <ClInclude Include="Source\Engine\Classes\Camera\CameraManager.h" />
+    <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier_CameraShake.h" />
     <ClInclude Include="Source\Engine\Math\Color.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h" />
+    <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakePattern.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeTypes.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\SimpleCameraShakePattern.h" />

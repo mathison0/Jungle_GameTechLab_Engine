@@ -3,6 +3,8 @@
 
 #include "Core/Logging/LogMacros.h"
 #include "Engine/Runtime/Engine.h"
+#include "Math/Rotator.h"
+#include "Math/Vector.h"
 #include "Object/Object.h"
 #include "Viewport/ViewportClient.h"
 #include "Input/GameViewportInputController.h"
@@ -10,6 +12,8 @@
 class FViewport;
 class FOverlayStatSystem;
 class UUIComponent;
+class UCameraShakeBase;
+class APlayerCameraManager;
 struct FViewportPointerEvent;
 
 // UGameViewportClient는 게임 월드와 실제 뷰포트 출력을 연결합니다.
@@ -62,12 +66,16 @@ public:
 
     void SetFallbackCamera(class UCameraComponent* InCamera) { FallbackCamera = InCamera; }
     void SetOverlayStatSystem(FOverlayStatSystem* InOverlayStatSystem) { OverlayStatSystem = InOverlayStatSystem; }
+    UCameraShakeBase* StartCameraShakeFromAsset(const FString& Path, float Scale = 1.0f);
+    void UpdateCameraShakes(float DeltaTime);
 
 private:
     bool RouteUIPointerEvent(const FViewportPointerEvent& Event);
     UUIComponent* FindTopmostUIComponentAt(const FVector2& ScreenPoint, float ViewportWidth, float ViewportHeight) const;
     bool IsUIComponentRegistered(const UUIComponent* Component) const;
     void UpdateUIHover(UUIComponent* NewHovered, const FViewportPointerEvent& Event);
+    APlayerCameraManager* GetOrCreateCameraManager();
+    void ClearCameraShakeOffsets();
 
 private:
     FViewport* Viewport = nullptr;
@@ -77,4 +85,10 @@ private:
     FOverlayStatSystem* OverlayStatSystem = nullptr;
     UUIComponent* HoveredUIComponent = nullptr;
     UUIComponent* CapturedUIComponent = nullptr;
+
+    APlayerCameraManager* CameraManager = nullptr;
+    class UCameraComponent* ShakeCamera = nullptr;
+    FVector AppliedShakeLocation = FVector::ZeroVector;
+    FRotator AppliedShakeRotation = FRotator::ZeroRotator;
+    float AppliedShakeFOVDegrees = 0.0f;
 };

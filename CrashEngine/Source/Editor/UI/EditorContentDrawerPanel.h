@@ -12,6 +12,7 @@ class FEditorContentDrawerPanel : public FEditorPanel
 public:
     virtual void Render(float DeltaTime) override;
     void RequestSearchFocus() { bReclaimSearchFocus = true; }
+    void SetCameraShakePanel(class FEditorCameraShakePanel* InCameraShakePanel) { CameraShakePanel = InCameraShakePanel; }
 
 private:
     enum class EContentRoot
@@ -67,4 +68,5 @@ private:
     bool bReclaimSearchFocus = false;
     bool bOpenNewLuaScriptPopup = false;
     bool bFocusNewLuaScriptName = false;
+    class FEditorCameraShakePanel* CameraShakePanel = nullptr;
 };
