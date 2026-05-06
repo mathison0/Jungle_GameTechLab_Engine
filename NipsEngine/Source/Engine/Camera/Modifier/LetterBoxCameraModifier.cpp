@@ -13,16 +13,16 @@ void ULetterBoxCameraModifier::StartLetterBox(float InTargetRatio, float Duratio
 	TransitionRemainingTime = TransitionTime;
 
 	if (TransitionTime <= 0.0f)
-    {
-        CurrentRatio = TargetRatio;
-        bTransitioning = false;
-    }
-    else
-    {
-        bTransitioning = true;
-    }
-    
-    EnableModifier();
+	{
+		CurrentRatio = TargetRatio;
+		bTransitioning = false;
+	}
+	else
+	{
+		bTransitioning = true;
+	}
+	
+	EnableModifier();
 }
 
 void ULetterBoxCameraModifier::SetLetterBox(float InRatio)
