@@ -48,6 +48,7 @@ void FRenderer::Create(HWND hWindow)
 	FResourceManager::Get().LoadShader("Shaders/Multipass/FogPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
 	FResourceManager::Get().LoadShader("Shaders/Multipass/FXAAPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
 	FResourceManager::Get().LoadShader("Shaders/Multipass/PostProcessPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
+	FResourceManager::Get().LoadShader("Shaders/Multipass/FinalOverlayPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
 	FResourceManager::Get().LoadShader("Shaders/Multipass/ViewportPresent.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
 	FResourceManager::Get().LoadShader("Shaders/ShaderFont.hlsl", "VS", "PS", TextureVertexInputLayout, ARRAYSIZE(TextureVertexInputLayout), nullptr);
 	FResourceManager::Get().LoadShader("Shaders/ShaderLine.hlsl", "mainVS", "mainPS", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout), nullptr);
