@@ -1,0 +1,22 @@
+#include "SubUVVfxActor.h"
+#include "Component/SubUVComponent.h"
+
+IMPLEMENT_CLASS(ASubUVVfxActor, AActor)
+
+void ASubUVVfxActor::InitDefaultComponents()
+{
+    SubUV = AddComponent<USubUVComponent>();
+    SetRootComponent(SubUV);
+    SubUV->SetParticle("Explode");
+    SubUV->SetFrameRate(240.0f);
+    SubUV->SetLoop(false);
+}
+
+void ASubUVVfxActor::SetVfxPreset(const FString& PresetName)
+{
+    if (SubUV)
+    {
+        SubUV->SetParticle(FName(PresetName));
+        SubUV->Play();
+    }
+}

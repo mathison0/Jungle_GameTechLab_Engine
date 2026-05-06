@@ -8,6 +8,8 @@
 #include "Scripting/LuaScriptTypes.h"
 #include <algorithm>
 
+#include "GameFramework/GamejamActor/SubUVVfxActor.h"
+
 namespace
 {
     UClass* FindClassByName(const FString& ClassName)
@@ -212,6 +214,17 @@ sol::table FLuaActorHandle::GetComponents(sol::this_state State, const sol::vari
     return Result;
 }
 
+bool FLuaActorHandle::SetVfxPreset(const FString& PresetName) const
+{
+    AActor* Actor = Resolve();
+    ASubUVVfxActor* Vfx = Cast<ASubUVVfxActor>(Actor);
+    if (!Vfx)
+        return false;
+
+    Vfx->SetVfxPreset(PresetName);
+    return true;
+}
+
 bool FLuaActorHandle::InitFlyingWave(
     const sol::object& DirObj,
     float Speed,
@@ -268,7 +281,7 @@ namespace LuaBinding
 
             "GetComponent", &FLuaActorHandle::GetComponent,
             "GetComponents", &FLuaActorHandle::GetComponents,
-
-            "InitFlyingWave", &FLuaActorHandle::InitFlyingWave);
-    }
-}
+            "InitFlyingWave", &FLuaActorHandle::InitFlyingWave,
+            "SetVfxPreset", &FLuaActorHandle::SetVfxPreset);
+            }
+            }

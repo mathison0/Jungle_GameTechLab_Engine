@@ -16,6 +16,7 @@
 #include "Materials/MaterialManager.h"
 #include "Engine/Runtime/Engine.h"
 #include "Component/PointLightComponent.h"
+#include "Component/SubUVComponent.h"
 
 namespace
 {
@@ -137,6 +138,38 @@ bool FLuaComponentHandle::SetActive(bool bActive) const
     UActorComponent* Component = Resolve();
     if (!Component) return false;
     Component->SetActive(bActive);
+    return true;
+}
+
+bool FLuaComponentHandle::SetParticle(const FString& ParticleName) const
+{
+    USubUVComponent* SubUV = Cast<USubUVComponent>(Resolve());
+    if (!SubUV) return false;
+    SubUV->SetParticle(FName(ParticleName));
+    return true;
+}
+
+bool FLuaComponentHandle::Play() const
+{
+    USubUVComponent* SubUV = Cast<USubUVComponent>(Resolve());
+    if (!SubUV) return false;
+    SubUV->Play();
+    return true;
+}
+
+bool FLuaComponentHandle::SetLoop(bool bLoop) const
+{
+    USubUVComponent* SubUV = Cast<USubUVComponent>(Resolve());
+    if (!SubUV) return false;
+    SubUV->SetLoop(bLoop);
+    return true;
+}
+
+bool FLuaComponentHandle::SetFrameRate(float FPS) const
+{
+    USubUVComponent* SubUV = Cast<USubUVComponent>(Resolve());
+    if (!SubUV) return false;
+    SubUV->SetFrameRate(FPS);
     return true;
 }
 
@@ -709,6 +742,10 @@ namespace LuaBinding
             "GetWorld", &FLuaComponentHandle::GetWorld,
             "IsActive", &FLuaComponentHandle::IsActive,
             "SetActive", &FLuaComponentHandle::SetActive,
+            "SetParticle", &FLuaComponentHandle::SetParticle,
+            "Play", &FLuaComponentHandle::Play,
+            "SetLoop", &FLuaComponentHandle::SetLoop,
+            "SetFrameRate", &FLuaComponentHandle::SetFrameRate,
             "IsScriptComponent", &FLuaComponentHandle::IsScriptComponent,
             "CallScript", &FLuaComponentHandle::CallScript,
 
