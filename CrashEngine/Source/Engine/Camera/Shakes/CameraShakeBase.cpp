@@ -1,6 +1,7 @@
 ﻿#include "Camera/Shakes/CameraShakeBase.h"
 
-#include "CameraShakePattern.h"
+#include "Camera/Shakes/CameraShakePattern.h"
+#include "Engine/Classes/Camera/CameraManager.h"
 #include "Object/ObjectFactory.h"
 
 FCameraShakeState::FCameraShakeState()
@@ -179,3 +180,167 @@ void FCameraShakeState::InitializePlaying()
 }
 
 IMPLEMENT_CLASS(UCameraShakeBase, UObject)
+
+UCameraShakeBase::~UCameraShakeBase()
+{
+	TeardownShake();
+
+	if (RootShakePattern && RootShakePattern->GetOuter() == this)
+	{
+		UObjectManager::Get().DestroyObject(RootShakePattern);
+	}
+	RootShakePattern = nullptr;
+}
+
+void UCameraShakeBase::SetRootShakePattern(UCameraShakePattern* InPattern)
+{
+	if (RootShakePattern == InPattern)
+	{
+		return;
+	}
+
+	if (RootShakePattern && RootShakePattern->GetOuter() == this)
+	{
+		UObjectManager::Get().DestroyObject(RootShakePattern);
+	}
+
+	RootShakePattern = InPattern;
+	if (RootShakePattern)
+	{
+		RootShakePattern->SetOuter(this);
+	}
+}
+
+void UCameraShakeBase::StartShake(const FCameraShakeBaseStartParams& Params)
+{
+	if (RootShakePattern == nullptr)
+	{
+		bIsActive = false;
+		return;
+	}
+
+	const bool bWasActive = bIsActive;
+
+	CameraManager = Params.CameraManager;
+	ShakeScale = Params.ShakeScale;
+	PlaySpace = Params.PlaySpace;
+	UserPlaySpaceRot = Params.UserPlaySpaceRot;
+	UserPlaySpaceMatrix = UserPlaySpaceRot.ToMatrix();
+	bIsActive = true;
+
+	FCameraShakePatternStartParams PatternParams;
+	PatternParams.bIsRestarting = bWasActive;
+	PatternParams.bOverrideDuration = Params.bOverrideDuration;
+	PatternParams.DurationOverride = Params.DurationOverride;
+
+	RootShakePattern->StartShakePattern(PatternParams);
+}
+
+void UCameraShakeBase::UpdateAndApplyCameraShake(float DeltaTime, float DynamicScale, FMinimalViewInfo& InOutPOV)
+{
+	if (!bIsActive || RootShakePattern == nullptr)
+	{
+		return;
+	}
+
+	if (RootShakePattern->IsFinished())
+	{
+		bIsActive = false;
+		return;
+	}
+
+	FCameraShakePatternUpdateParams UpdateParams;
+	UpdateParams.DeltaTime = DeltaTime;
+	UpdateParams.ShakeScale = ShakeScale;
+	UpdateParams.DynamicScale = DynamicScale;
+
+	FCameraShakePatternUpdateResult Result;
+	RootShakePattern->UpdateShakePattern(UpdateParams, Result);
+
+	FCameraShakeApplyResultParams ApplyParams;
+	ApplyParams.ShakeScale = ShakeScale;
+	ApplyParams.DynamicScale = DynamicScale;
+	ApplyParams.PlaySpace = PlaySpace;
+	ApplyParams.CameraRotation = InOutPOV.Rotation;
+	ApplyParams.UserPlaySpaceRot = UserPlaySpaceRot;
+
+	ApplyResult(ApplyParams, Result, InOutPOV);
+
+	if (RootShakePattern->IsFinished())
+	{
+		bIsActive = false;
+	}
+}
+
+void UCameraShakeBase::StopShake(bool bImmediately)
+{
+	if (RootShakePattern == nullptr)
+	{
+		bIsActive = false;
+		return;
+	}
+
+	FCameraShakePatternStopParams StopParams;
+	StopParams.bImmediately = bImmediately;
+	RootShakePattern->StopShakePattern(StopParams);
+
+	if (bImmediately)
+	{
+		bIsActive = false;
+	}
+}
+
+void UCameraShakeBase::TeardownShake()
+{
+	if (RootShakePattern)
+	{
+		RootShakePattern->TeardownShakePattern();
+	}
+
+	bIsActive = false;
+	CameraManager = nullptr;
+}
+
+bool UCameraShakeBase::IsFinished() const
+{
+	return !bIsActive || RootShakePattern == nullptr || RootShakePattern->IsFinished();
+}
+
+void UCameraShakeBase::ApplyResult(const FCameraShakeApplyResultParams& Params, const FCameraShakePatternUpdateResult& Result, FMinimalViewInfo& InOutPOV) const
+{
+	FCameraShakePatternUpdateResult ScaledResult = Result;
+
+	if (!HasCameraShakePatternUpdateResultFlag(ScaledResult.Flags, ECameraShakePatternUpdateResultFlags::SkipAutoScale))
+	{
+		ScaledResult.ApplyScale(Params.GetTotalScale());
+	}
+
+	if (!HasCameraShakePatternUpdateResultFlag(ScaledResult.Flags, ECameraShakePatternUpdateResultFlags::SkipAutoPlaySpace))
+	{
+		switch (Params.PlaySpace)
+		{
+		case ECameraShakePlaySpace::CameraLocal:
+			ScaledResult.Location = Params.CameraRotation.ToMatrix().TransformVector(ScaledResult.Location);
+			break;
+		case ECameraShakePlaySpace::UserDefined:
+			ScaledResult.Location = UserPlaySpaceMatrix.TransformVector(ScaledResult.Location);
+			break;
+		case ECameraShakePlaySpace::World:
+		default:
+			break;
+		}
+	}
+
+	if (HasCameraShakePatternUpdateResultFlag(ScaledResult.Flags, ECameraShakePatternUpdateResultFlags::ApplyAsAbsolute))
+	{
+		InOutPOV.Location = ScaledResult.Location;
+		InOutPOV.Rotation = ScaledResult.Rotation;
+		InOutPOV.FOV = ScaledResult.FOV;
+	}
+	else
+	{
+		InOutPOV.Location += ScaledResult.Location;
+		InOutPOV.Rotation += ScaledResult.Rotation;
+		InOutPOV.FOV += ScaledResult.FOV;
+	}
+}

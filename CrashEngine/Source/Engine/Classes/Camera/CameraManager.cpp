@@ -2,6 +2,7 @@
 #include "Object/Object.h"
 #include "GameFramework/World.h"
 #include "CameraModifier.h"
+#include "CameraModifier_CameraShake.h"
 #include "GameFramework/AActor.h"
 
 #include <algorithm>
@@ -370,6 +371,12 @@ bool APlayerCameraManager::RemoveCameraModifier(uint32 ModifierHandle)
     return true;
 }
 
+UCameraShakeBase* APlayerCameraManager::StartCameraShakeFromAsset(const FString& Path, const FAddCameraShakeParams& Params)
+{
+    UCameraModifier_CameraShake* ShakeModifier = GetOrCreateCameraShakeModifier();
+    return ShakeModifier ? ShakeModifier->AddCameraShakeFromAsset(Path, Params) : nullptr;
+}
+
 void APlayerCameraManager::Tick(float DeltaTime)
 {
     AActor::Tick(DeltaTime);
@@ -451,6 +458,36 @@ void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FMinimalViewInf
             }
         }
     }
+}
+
+UCameraModifier_CameraShake* APlayerCameraManager::GetOrCreateCameraShakeModifier()
+{
+    for (UCameraModifier* Modifier : Modifiers)
+    {
+        if (UCameraModifier_CameraShake* ShakeModifier = Cast<UCameraModifier_CameraShake>(Modifier))
+        {
+            return ShakeModifier;
+        }
+    }
+
+    UObject* NewObject = FObjectFactory::Get().Create("UCameraModifier_CameraShake", this);
+    UCameraModifier_CameraShake* NewModifier = Cast<UCameraModifier_CameraShake>(NewObject);
+    if (!NewModifier)
+    {
+        if (NewObject)
+        {
+            UObjectManager::Get().DestroyObject(NewObject);
+        }
+        return nullptr;
+    }
+
+    if (AddCameraModifierToList(NewModifier) == 0)
+    {
+        UObjectManager::Get().DestroyObject(NewModifier);
+        return nullptr;
+    }
+
+    return NewModifier;
 }
 
 void APlayerCameraManager::SetCameraCachePOV(const FMinimalViewInfo& InPOV)

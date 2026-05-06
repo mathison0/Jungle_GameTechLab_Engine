@@ -4,6 +4,7 @@
 #include "Component/CameraComponent.h"
 #include "Core/Logging/LogMacros.h"
 #include "Editor/EditorEngine.h"
+#include "Editor/UI/EditorCameraShakePanel.h"
 #include "Editor/Viewport/LevelEditorViewportClient.h"
 #include "Platform/PlatformProcess.h"
 #include "Platform/Paths.h"
@@ -242,6 +243,10 @@ const char* KindLabel(bool bDirectory, const FString& Extension)
     if (Extension == ".scene")
     {
         return "[SCN]";
+    }
+    if (Extension == ".shake")
+    {
+        return "[SHK]";
     }
     return "[FILE]";
 }
@@ -792,6 +797,12 @@ void FEditorContentDrawerPanel::OpenContentItem(const FContentItem& Item)
     if (Item.Extension == ".scene")
     {
         LoadSceneFile(Item.FullPath);
+        return;
+    }
+
+    if (Item.Extension == ".shake" && CameraShakePanel)
+    {
+        CameraShakePanel->OpenAsset(Item.ProjectRelativePath);
         return;
     }
 

@@ -10,7 +10,10 @@
 
 
 class UCameraModifier;
+class UCameraShakeBase;
+class UCameraModifier_CameraShake;
 class UClass;
+struct FAddCameraShakeParams;
 
 
 enum EViewTargetBlendFunction
@@ -129,6 +132,7 @@ public:
 	uint32 GetModifierHandle(const char* ModifierUclassName) const;
 	bool DisableCameraModifier(uint32 ModifierHandle, bool bImmediate = false);
     bool RemoveCameraModifier(uint32 ModifierHandle);
+    UCameraShakeBase* StartCameraShakeFromAsset(const FString& Path, const FAddCameraShakeParams& Params);
 
     virtual void Tick(float DeltaTime) override;
 
@@ -140,6 +144,7 @@ private:
     void DoUpdateCamera(float DeltaTime);
     void UpdateViewTarget(FViewTarget& OutVT, float DeltaTime);
     void ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& InOutPOV);
+    UCameraModifier_CameraShake* GetOrCreateCameraShakeModifier();
 
     //void UpdateCameraFade(float DeltaTime);
 

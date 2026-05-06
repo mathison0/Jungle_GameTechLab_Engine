@@ -45,6 +45,7 @@ public:
         bool bProperty = true;
         bool bWorldOutliner = true;
         bool bStat = false;
+        bool bCameraShakeEditor = false;
     } UI;
 
     void SaveToFile(const FString& Path) const;
