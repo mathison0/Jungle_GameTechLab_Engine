@@ -177,6 +177,7 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
 
         if ((Pass == ERenderPass::Opaque ||
              Pass == ERenderPass::AlphaBlend ||
+             Pass == ERenderPass::SubUV ||
              Pass == ERenderPass::OverlayBillboard ||
              Pass == ERenderPass::OverlayTextWorld) &&
             Context.ViewMode.ActiveViewMode == EViewMode::Wireframe)

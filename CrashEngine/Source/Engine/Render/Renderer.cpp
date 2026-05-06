@@ -106,6 +106,8 @@ ERenderPassNodeType MapPassToNodeType(ERenderPass Pass, const FRenderPipelineCon
         return ERenderPassNodeType::AdditiveDecalPass;
     case ERenderPass::AlphaBlend:
         return ERenderPassNodeType::AlphaBlendPass;
+    case ERenderPass::SubUV:
+        return ERenderPassNodeType::SubUVPass;
     case ERenderPass::SelectionMask:
         return ERenderPassNodeType::SelectionMaskPass;
     case ERenderPass::EditorLines:
@@ -501,7 +503,7 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
                 {
                     continue;
                 }
-                if (Proxy->Pass == ERenderPass::AlphaBlend && !bUsesAlphaBlend)
+                if ((Proxy->Pass == ERenderPass::AlphaBlend || Proxy->Pass == ERenderPass::SubUV) && !bUsesAlphaBlend)
                 {
                     continue;
                 }

@@ -7,6 +7,7 @@
 #include "Render/Resources/Bindings/RenderBindingSlots.h"
 #include "Render/Resources/Shaders/ShaderManager.h"
 #include "Render/Resources/Buffers/MeshBufferManager.h"
+#include "Engine/Runtime/Engine.h"
 
 // ============================================================
 // FSubUVSceneProxy
@@ -15,6 +16,11 @@ FSubUVSceneProxy::FSubUVSceneProxy(USubUVComponent* InComponent)
     : FBillboardSceneProxy(static_cast<UBillboardComponent*>(InComponent))
 {
     bShowAABB = false;
+
+    if (GEngine)
+    {
+        UVRegionCB.Create(GEngine->GetRenderer().GetFD3DDevice().GetDevice(), sizeof(FSubUVRegionCBData));
+    }
 }
 
 FSubUVSceneProxy::~FSubUVSceneProxy()
@@ -29,7 +35,7 @@ void FSubUVSceneProxy::UpdateMesh()
     // TexturedQuad (FVertexPNCT with UVs) for rendering
     MeshBuffer = &FMeshBufferManager::Get().GetMeshBuffer(EPrimitiveMeshShape::TexturedQuad);
     Shader     = FShaderManager::Get().GetShader(EShaderType::SubUV);
-    Pass       = ERenderPass::AlphaBlend;
+    Pass       = ERenderPass::SubUV;
 
     ExtraCB.Bind<FSubUVRegionCBData>(&UVRegionCB, ECBSlot::PerShader0);
 
@@ -58,11 +64,7 @@ void FSubUVSceneProxy::UpdatePerViewport(const FSceneView& SceneView)
     // Update DiffuseSRV (may change during play)
     DiffuseSRV = Particle->SRV;
 
-    // Billboard matrix
-    FVector BillboardForward = SceneView.CameraForward * -1.0f;
-    FMatrix RotMatrix;
-    RotMatrix.SetAxes(SceneView.CameraRight, SceneView.CameraUp, BillboardForward);
-    FMatrix BillboardMatrix = FMatrix::MakeScaleMatrix(Comp->GetWorldScale()) * RotMatrix * FMatrix::MakeTranslationMatrix(Comp->GetWorldLocation());
+    FMatrix BillboardMatrix = Comp->ComputeBillboardMatrix(SceneView.CameraForward);
 
     PerObjectConstants = FPerObjectCBData::FromWorldMatrix(BillboardMatrix);
     MarkPerObjectCBDirty();

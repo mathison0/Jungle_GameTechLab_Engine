@@ -638,9 +638,79 @@ function GameManager.StartFinishSequence(resultType, reason)
                 if GameManager.World ~= nil then GameManager.World:SetTimeDilation(1.0) end
             else
                 -- 게임 오버 시 연출 (0.1배속 슬로우 모션 2초)
+                Log("[GameManager] Starting GameOver Sequence")
                 if GameManager.World ~= nil then GameManager.World:SetTimeDilation(0.1) end
-                -- 코루틴 "wait_time"이 TimeDilation에 영향받는 것 고려, 2 * 0.1 = 0.2로 설정
-                coroutine.yield("wait_time", 0.2)
+
+                -- 플레이어 위치 가져오기
+                local playerPos = { x = 0, y = 0, z = 0 }
+                if GameManager.PlayerScript ~= nil then
+                    local actor = GameManager.PlayerScript:GetActor()
+                    if actor ~= nil and actor:IsValid() then
+                        playerPos = actor:GetLocation()
+                        Log("[GameManager] PlayerPos found: " .. tostring(playerPos.x) .. ", " .. tostring(playerPos.y))
+                    else
+                        Log("[GameManager] Player Actor is invalid or nil")
+                    end
+                else
+                    Log("[GameManager] PlayerScript is nil")
+                end
+
+                local pool = nil
+                if type(GetActorPoolManager) == "function" then
+                    pool = GetActorPoolManager()
+                else
+                    Log("[GameManager] GetActorPoolManager function not found")
+                end
+
+                if pool ~= nil and pool:IsValid() then
+                    Log("[GameManager] PoolManager is valid, warming up AExplodeVfxActor")
+                    pool:Warmup("AExplodeVfxActor", 10)
+                else
+                    Log("[GameManager] PoolManager is invalid or nil")
+                end
+
+                -- 0.2초 간격으로 5번 폭발 (Unscaled Time 기준)
+                for i = 1, 10 do
+                    Log("[GameManager] Spawning explosion " .. tostring(i))
+                    -- 구형 범위 내 랜덤 위치 (최소 0.5, 최대 1.5)
+                    local angle = math.random() * math.pi * 2.0
+                    local phi = math.random() * math.pi
+                    local dist = 0.5 + (math.random() * 1.0)
+
+                    local spawnPos = {
+                        x = playerPos.x + math.sin(phi) * math.cos(angle) * dist,
+                        y = playerPos.y + math.sin(phi) * math.sin(angle) * dist,
+                        z = playerPos.z + math.cos(phi) * dist + 1.5
+                    }
+
+                    local explosion = nil
+                    if pool ~= nil and pool:IsValid() then
+                        explosion = pool:Acquire("AExplodeVfxActor")
+                    end
+
+                    if explosion ~= nil and explosion:IsValid() then
+                        Log("[GameManager] Explosion actor acquired and setting location")
+                        explosion:SetLocation(spawnPos)
+                        -- 폭발 액터 수동 반납을 위한 지연 처리
+                        runner:StartCoroutine(function()
+                            -- 0.1배속 상황에서 1.5초 대기는 0.15초 yield
+                            coroutine.yield("wait_time", 0.15)
+                            if explosion:IsValid() and pool ~= nil and pool:IsValid() then
+                                Log("[GameManager] Releasing explosion actor " .. tostring(i))
+                                pool:Release(explosion)
+                            end
+                        end)
+                    else
+                        Log("[GameManager] Failed to acquire explosion actor " .. tostring(i))
+                    end
+
+                    -- 0.1배속 상황에서 0.2초 대기는 0.02초 yield
+                    coroutine.yield("wait_time", 0.02)
+                end
+
+                -- 나머지 시간 대기 (총 2초 연출을 위해 추가 대기, 0.1배속이므로 0.1초 yield)
+                coroutine.yield("wait_time", 0.1)
+                
                 if GameManager.World ~= nil then GameManager.World:SetTimeDilation(1.0) end
             end
 

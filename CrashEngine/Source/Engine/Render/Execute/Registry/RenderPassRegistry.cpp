@@ -10,6 +10,7 @@
 #include "Render/Execute/Passes/Editor/LightHitMapPass.h"
 #include "Render/Execute/Passes/Scene/AdditiveDecalPass.h"
 #include "Render/Execute/Passes/Scene/AlphaBlendPass.h"
+#include "Render/Execute/Passes/Scene/SubUVPass.h"
 #include "Render/Execute/Passes/Scene/DeferredOpaquePass.h"
 #include "Render/Execute/Passes/Scene/ForwardOpaquePass.h"
 #include "Render/Execute/Passes/Scene/DeferredDecalPass.h"
@@ -47,6 +48,7 @@ void FRenderPassRegistry::Initialize()
     Passes.emplace((int32)ERenderPassNodeType::DeferredLightingPass, new FDeferredLightingPass());
     Passes.emplace((int32)ERenderPassNodeType::AdditiveDecalPass, new FAdditiveDecalPass());
     Passes.emplace((int32)ERenderPassNodeType::AlphaBlendPass, new FAlphaBlendPass());
+    Passes.emplace((int32)ERenderPassNodeType::SubUVPass, new FSubUVPass());
     Passes.emplace((int32)ERenderPassNodeType::NonLitViewModePass, new FNonLitViewModePass());
     Passes.emplace((int32)ERenderPassNodeType::HeightFogPass, new FHeightFogPass());
     Passes.emplace((int32)ERenderPassNodeType::FXAAPass, new FFXAAPass());
