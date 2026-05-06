@@ -54,6 +54,9 @@ echo [4/4] Copying files...
 :: 실행 파일
 copy "%BUILD_OUTPUT%\CrashEngine.exe" "%GAME_RELEASE_DIR%\" >nul
 
+:: DLL 및 라이브러리 (FMod 등)
+copy "%PROJECT_DIR%\ThirdParty\FMod\fmod.dll" "%GAME_RELEASE_DIR%\" >nul
+
 :: Asset (Content만 포함, Editor 제외 시도 - 여기서는 단순화)
 mkdir "%GAME_RELEASE_DIR%\Asset"
 xcopy "%PROJECT_DIR%\Asset\Content" "%GAME_RELEASE_DIR%\Asset\Content\" /e /i /q >nul
