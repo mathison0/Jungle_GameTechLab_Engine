@@ -63,6 +63,7 @@ function Script:BeginPlay()
     self.GameTime = 0.0
     self.SpawnBudget = 0.0
     self.FlyingWaveTimer = 0.0
+    self.LastSessionID = 0
     self.PoolManager = GetActorPoolManager()
     
     -- 랜덤 시드 초기화
@@ -74,6 +75,13 @@ function Script:BeginPlay()
         self.PoolManager:Warmup(self.EnemyClassName, 20)
         self.PoolManager:Warmup(self.FlyingEnemyClassName, 20)
     end
+end
+
+function Script:ResetState()
+    self.GameTime = 0.0
+    self.SpawnBudget = 0.0
+    self.FlyingWaveTimer = 0.0
+    Log("EnemySpawner: State reset for new session")
 end
 
 local function GetGameTimeLimit()
@@ -139,6 +147,15 @@ function Script:Tick(DeltaTime)
     end
 
     if not self.PoolManager:IsValid() then return end
+
+    -- 세션 변경 확인 및 리셋
+    local gameManager = package.loaded["GameManager"]
+    if gameManager ~= nil then
+        if self.LastSessionID ~= gameManager.SessionID then
+            self:ResetState()
+            self.LastSessionID = gameManager.SessionID
+        end
+    end
 
     self.GameTime = self.GameTime + DeltaTime
     self.FlyingWaveTimer = self.FlyingWaveTimer + DeltaTime

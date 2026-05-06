@@ -53,6 +53,7 @@ local GameManager = {
     LastResult = nil,
     ManagerComponent = nil,
     CameraSwitchCoroutine = nil,
+    SessionID = 0,
     Stats = {}
 }
 
@@ -482,6 +483,15 @@ function GameManager.RequestStartGame(bFadeInOnStart)
         GameManager.ResultUI:Hide()
     end
 
+    -- 게임 시작 요청 시 카메라 컷을 강제하여 이전 세션의 잔상을 제거합니다.
+    if GameManager.PlayerScript ~= nil then
+        local playerActor = GameManager.PlayerScript:GetActor()
+        if playerActor ~= nil and playerActor:IsValid() then
+            CameraManager.InitializeFor(playerActor)
+            CameraManager.SetGameCameraCutThisFrame()
+        end
+    end
+
     GameManager._CheckAndStart()
     return GameManager.Initialized == true
 end
@@ -507,6 +517,8 @@ function GameManager._CheckAndStart()
 end
 
 function GameManager.OnGameStart()
+    GameManager.SessionID = GameManager.SessionID + 1
+
     if GameManager.FadeInOnNextGameStart then
         GameManager.FadeInOnNextGameStart = false
         playGameStartFadeIn()

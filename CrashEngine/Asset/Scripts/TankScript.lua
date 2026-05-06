@@ -21,6 +21,7 @@ local KEY_SHIFT = 0x10
 
 function Script:BeginPlay()
     self.Velocity = Vec.Zero()
+    self.LastSessionID = 0
     
     -- 1. 플레이어 태그 설정
     local actor = self:GetActor()
@@ -47,6 +48,17 @@ function Script:BeginPlay()
     self.LastHealthBarRatio = nil
     self:ConfigureHealthBar()
     self:UpdateHealthBar()
+end
+
+function Script:ResetState()
+    self.Velocity = Vec.Zero()
+    local actor = self:GetActor()
+    if actor ~= nil and actor:IsValid() then
+        actor:SetRotation({ x = 0, y = 0, z = 0 })
+        actor:SetLocation({ x = 0, y = 0, z = 0 })
+    end
+    self:UpdateHealthBar()
+    Log("TankScript: State reset for new session")
 end
 
 local function clamp(value, minValue, maxValue)
@@ -252,6 +264,12 @@ function Script:UpdatePickups(deltaTime)
 end
 
 function Script:Tick(deltaTime)
+    -- 세션 변경 확인 및 리셋
+    if self.LastSessionID ~= GameManager.SessionID then
+        self:ResetState()
+        self.LastSessionID = GameManager.SessionID
+    end
+
     if not GameManager.IsInputAllowed() then
         self:UpdateHealthBar()
         return
