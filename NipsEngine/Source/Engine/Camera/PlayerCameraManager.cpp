@@ -398,4 +398,5 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
     OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
     OutView.ViewRect = ViewRect;
     OutView.ViewMode = ViewMode;
+    OutView.PostProcessSettings = CachedPostProcessSettings;
 }

@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Engine/Camera/PlayerCameraManager.h"
 #include "Math/Matrix.h"
 #include "Render/Common/ViewTypes.h"
 #include "Viewport/ViewportRect.h"
@@ -27,6 +28,7 @@ struct FSceneView
 	FFrustum CameraFrustum;
 
 	EViewMode ViewMode = EViewMode::Lit;
+	FPostProcessSettings PostProcessSettings;
 
 	bool bOrthographic = false;
 };
