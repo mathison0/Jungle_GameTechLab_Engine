@@ -189,7 +189,7 @@ namespace
 
 	std::wstring GetScoreFilePath()
 	{
-		return FPaths::Combine(FPaths::Combine(FPaths::RootDir(), L"Saves"), L"Scores.txt");
+		return FPaths::Combine(FPaths::Combine(FPaths::RootDir(), L"Asset/Data"), L"Scores.txt");
 	}
 
 	std::vector<std::string> SplitScoreLine(const std::string& Line)
@@ -810,7 +810,7 @@ void GameUISystem::CommitScoreNameInput()
 
 bool GameUISystem::WriteScoreRecord(const std::string& PlayerId)
 {
-	const std::wstring SavesDir = FPaths::Combine(FPaths::RootDir(), L"Saves");
+	const std::wstring SavesDir = FPaths::Combine(FPaths::RootDir(), L"Asset/Data");
 	FPaths::CreateDir(SavesDir);
 
 	const std::wstring ScorePath = GetScoreFilePath();

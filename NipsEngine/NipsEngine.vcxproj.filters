@@ -178,6 +178,9 @@
     <Filter Include="ThirdParty\ImGui">
       <UniqueIdentifier>{5326d6e3-f339-0d51-b7d9-34f630792b9e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Camera\Modifier">
+      <UniqueIdentifier>{55c4e8de-20b1-4b2f-8c68-a6de93facef2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\BillboardSelectionMask.hlsl">
@@ -876,6 +879,11 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Source\Game\UI\RmlUi\RmlUiFileInterface.cpp" />
+    <ClCompile Include="Source\Engine\Camera\CameraModifier\LetterBoxCameraModifier.cpp">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1661,6 +1669,9 @@
     <ClInclude Include="ThirdParty\ImGui\imstb_truetype.h">
       <Filter>ThirdParty\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\UI\RmlUi\RmlUiFileInterface.h" />
+    <ClInclude Include="Source\Engine\Camera\CameraModifier\LetterBoxCamerModifier.h" />
+    <ClInclude Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Game\UI\Documents\GameUI.rcss">

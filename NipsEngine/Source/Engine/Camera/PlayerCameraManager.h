@@ -3,6 +3,7 @@
 #include "Core/CoreMinimal.h"
 #include "Math/Matrix.h"
 #include "Math/Quat.h"
+#include "Math/Color.h"
 #include "Viewport/ViewportRect.h"
 
 class FViewportCamera;
@@ -27,6 +28,14 @@ struct FCameraViewInfo
     FVector GetForwardVector() const { return Rotation.GetForwardVector(); }
     FVector GetRightVector() const { return Rotation.GetRightVector(); }
     FVector GetUpVector() const { return Rotation.GetUpVector(); }
+};
+
+struct FCameraOverlayInfo
+{
+	float FadeAlpha = 0.0f;
+	FColor FadeColor = FColor::Black();
+	
+	float LetterboxRatio = 0.0f; // 0.0f ~ 0.5f
 };
 
 struct FCameraTransitionState

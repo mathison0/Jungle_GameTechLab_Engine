@@ -219,6 +219,8 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.cpp" />
+    <ClCompile Include="Source\Engine\Camera\CameraModifier\LetterBoxCameraModifier.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
@@ -886,6 +888,8 @@
     <ClInclude Include="Source\Engine\Asset\StaticMeshTypes.h" />
     <ClInclude Include="Source\Engine\Audio\AudioSystem.h" />
     <ClInclude Include="Source\Engine\Camera\CameraModifier.h" />
+    <ClInclude Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.h" />
+    <ClInclude Include="Source\Engine\Camera\CameraModifier\LetterBoxCamerModifier.h" />
     <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h" />
     <ClInclude Include="Source\Engine\Collision\Collision.h" />
     <ClInclude Include="Source\Engine\Collision\CollisionSystem.h" />
