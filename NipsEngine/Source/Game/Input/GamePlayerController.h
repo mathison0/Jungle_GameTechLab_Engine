@@ -80,6 +80,7 @@ private:
     void UpdateCleaningUseSound();
     void PlayNextSpongeCleaningSound();
     void TogglePickup();
+    void ThrowHeldObject();
     void NotifyPickedUp(AActor* PickedActor);
     void TryInspectHoveredItem();
     bool TryPlaceHeldItemInHoveredDecisionBox();

@@ -39,6 +39,7 @@ public:
 	const FString& GetLastError() const { return LastError; }
 	bool SetStringGameStateValue(const FString& Key, const FString& Value);
 	FString GetStringGameStateValue(const FString& Key) const;
+	double GetNumberGameStateValue(const FString& Key, double DefaultValue = 0.0) const;
 
 private:
 	FLuaScriptSystem();
