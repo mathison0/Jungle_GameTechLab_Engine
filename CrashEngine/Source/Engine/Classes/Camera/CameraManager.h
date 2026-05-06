@@ -121,11 +121,11 @@ public:
     bool IsGameCameraCutThisFrame() const { return bGameCameraCutThisFrame; }
     void ClearGameCameraCutThisFrame() { bGameCameraCutThisFrame = false; }
 
-    UCameraModifier* AddCameraModifier(UClass* ModifierUClass);
-    UCameraModifier* AddCameraModifier(const char* ModifierName);
+    uint32 AddCameraModifier(UClass* ModifierUClass);
+    uint32 AddCameraModifier(const char* ModifierName);
 
-    bool AddCameraModifierToList(UCameraModifier* NewModifier);
-    bool RemoveCameraModifier(UCameraModifier* Modifier);
+    uint32 AddCameraModifierToList(UCameraModifier* NewModifier);
+    bool RemoveCameraModifier(uint32 ModifierHandle);
 
     virtual void Tick(float DeltaTime) override;
 
@@ -184,4 +184,7 @@ private:
 
     // 모디파이어
     TArray<UCameraModifier*> Modifiers;
+
+	uint32 NextModifierHandle = 1;
+    TMap<uint32, UCameraModifier*> ModifierHandleMap; // Lua handle용 추가
 };
