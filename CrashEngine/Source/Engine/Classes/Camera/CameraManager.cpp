@@ -311,6 +311,30 @@ uint32 APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifie
     return Handle;
 }
 
+uint32 APlayerCameraManager::GetModifierHandle(const char* ModifierUclassName) const
+{
+    for (const auto& Pair : ModifierHandleMap)
+    {
+        if (Pair.second->GetClass()->GetName() == ModifierUclassName)
+        {
+            return Pair.first;
+        }
+    }
+    return 0;
+}
+
+bool APlayerCameraManager::DisableCameraModifier(uint32 ModifierHandle, bool bImmediate)
+{
+    auto It = ModifierHandleMap.find(ModifierHandle);
+    if (It == ModifierHandleMap.end() || It->second == nullptr)
+    {
+        return false;
+    }
+
+    It->second->DisableModifier(bImmediate);
+    return true;
+}
+
 bool APlayerCameraManager::RemoveCameraModifier(uint32 ModifierHandle)
 {
     if (ModifierHandle == 0)

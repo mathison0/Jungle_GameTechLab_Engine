@@ -125,6 +125,9 @@ public:
     uint32 AddCameraModifier(const char* ModifierName);
 
     uint32 AddCameraModifierToList(UCameraModifier* NewModifier);
+
+	uint32 GetModifierHandle(const char* ModifierUclassName) const;
+	bool DisableCameraModifier(uint32 ModifierHandle, bool bImmediate = false);
     bool RemoveCameraModifier(uint32 ModifierHandle);
 
     virtual void Tick(float DeltaTime) override;
