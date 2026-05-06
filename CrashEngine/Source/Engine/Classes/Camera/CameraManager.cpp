@@ -335,6 +335,12 @@ bool APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
     return true;
 }
 
+void APlayerCameraManager::Tick(float DeltaTime)
+{
+	AActor::Tick(DeltaTime);
+    UpdateCamera(DeltaTime);
+}
+
 void APlayerCameraManager::DoUpdateCamera(float DeltaTime)
 {
     // 1. 현재 ViewTarget 갱신

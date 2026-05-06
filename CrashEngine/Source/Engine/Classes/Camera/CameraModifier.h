@@ -17,10 +17,10 @@ public:
 
 protected:
     /** If true, do not apply this modifier to the camera. */
-    uint32 bDisabled : 1;
+    bool bDisabled = false;
 
     /** If true, this modifier will disable itself when finished interpolating out. */
-    uint32 bPendingDisable : 1;
+    bool bPendingDisable = false;
 
 public:
     /** Priority value that determines the order in which modifiers are applied. 0 = highest priority, 255 = lowest. */
@@ -47,14 +47,7 @@ protected:
 
 public:
     UCameraModifier()
-        : UObject()
-        , bDisabled(false)
-        , bPendingDisable(false)
-        , Priority(127)
-        , CameraOwner(nullptr)
-        , AlphaInTime(0.0f)
-        , AlphaOutTime(0.0f)
-        , Alpha(1.0f)
+        : UObject(), bDisabled(false), bPendingDisable(false), Priority(127), CameraOwner(nullptr), AlphaInTime(0.0f), AlphaOutTime(0.0f), Alpha(1.0f)
     {
     }
     /**
@@ -64,7 +57,7 @@ public:
      * @param YL - Vertical spacing.
      * @param YPos - Current vertical space to start writing.
      */
-    //virtual void DisplayDebug(class UCanvas* Canvas, const FDebugDisplayInfo& DebugDisplay, float& YL, float& YPos);
+    // virtual void DisplayDebug(class UCanvas* Canvas, const FDebugDisplayInfo& DebugDisplay, float& YL, float& YPos);
 
     /**
      * Allows any custom initialization. Called immediately after creation.
@@ -79,28 +72,6 @@ public:
      * @return	bool		True if should STOP looping the chain, false otherwise
      */
     virtual bool ModifyCamera(float DeltaTime, struct FMinimalViewInfo& InOutPOV);
-
-    /**
-     * Called per tick that the modifier is active to allow Blueprinted modifiers to modify the camera's transform.
-     * Scaling by Alpha happens after this in code, so no need to deal with that in the blueprint.
-     * @param	DeltaTime	Change in time since last update
-     * @param	ViewLocation		The current camera location.
-     * @param	ViewRotation		The current camera rotation.
-     * @param	FOV					The current camera fov.
-     * @param	NewViewLocation		(out) The modified camera location.
-     * @param	NewViewRotation		(out) The modified camera rotation.
-     * @param	NewFOV				(out) The modified camera FOV.
-     */
-    //void BlueprintModifyCamera(float DeltaTime, FVector ViewLocation, FRotator ViewRotation, float FOV, FVector& NewViewLocation, FRotator& NewViewRotation, float& NewFOV);
-
-    /**
-     * Called per tick that the modifier is active to allow Blueprinted modifiers to modify the camera's postprocess effects.
-     * Scaling by Alpha happens after this in code, so no need to deal with that in the blueprint.
-     * @param	DeltaTime				Change in time since last update
-     * @param	PostProcessBlendWeight	(out) Blend weight applied to the entire postprocess structure.
-     * @param	PostProcessSettings		(out) Post process structure defining what settings and values to override.
-     */
-    //void BlueprintModifyPostProcess(float DeltaTime, float& PostProcessBlendWeight, FPostProcessSettings& PostProcessSettings);
 
     /** @return Returns true if modifier is disabled, false otherwise. */
     virtual bool IsDisabled() const;

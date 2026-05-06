@@ -126,6 +126,8 @@ public:
     bool AddCameraModifierToList(UCameraModifier* NewModifier);
     bool RemoveCameraModifier(UCameraModifier* Modifier);
 
+    virtual void Tick(float DeltaTime) override;
+
     //void StartCameraFade(float FromAlpha, float ToAlpha, float Duration, const FLinearColor& Color, bool bHoldWhenFinished = false);
     //void StopCameraFade();
     //void SetManualCameraFade(float InFadeAmount, const FLinearColor& Color);
