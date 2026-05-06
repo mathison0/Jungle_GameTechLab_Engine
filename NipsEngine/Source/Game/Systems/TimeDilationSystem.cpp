@@ -118,7 +118,6 @@ void FTimeDilationSystem::TickHitStop(float RealDeltaTime)
 		: (bSlomoActive ? SlomoStartDilation : 1.0f);
 }
 
-// 현재는 선형보간인데 SmoothStep이나 EaseOutCubic 에 대해서도 알아볼 예정
 void FTimeDilationSystem::TickSlomo(float RealDeltaTime)
 {
 	SlomoElapsedTime += RealDeltaTime;

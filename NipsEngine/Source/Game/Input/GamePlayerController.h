@@ -17,6 +17,7 @@ struct FViewportRect;
 struct FCameraSnapshot;
 class UCameraComponent;
 class UCharacterMovementComponent;
+class UKnockbackComponent;
 class UPhysicsHandleComponent;
 class UPrimitiveComponent;
 class URigidBodyComponent;
@@ -86,6 +87,9 @@ private:
     bool TryPlaceHeldItemInHoveredDecisionBox();
     UPhysicsHandleComponent* GetPhysicsHandle();
     UCharacterMovementComponent* GetCharacterMovement();
+    bool CanProcessGameplayInput() const;
+    bool IsPlayerControlLocked() const;
+    void ClearGameplayInputState();
     void DestroyPhysicsHandle();
     void RefreshPawnComponents();
     void UpdateHoveredPickableActor();
@@ -115,6 +119,7 @@ private:
     FViewportCamera* FreeCamera = nullptr;
     UPhysicsHandleComponent* PhysicsHandle = nullptr;
     UCharacterMovementComponent* CharacterMovement = nullptr;
+    UKnockbackComponent* Knockback = nullptr;
     UStaticMeshComponent* CleaningToolViewModel = nullptr;
     AActor* HoveredPickableActor = nullptr;
     AActor* HoveredDecisionBoxActor = nullptr;
