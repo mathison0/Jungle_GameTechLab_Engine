@@ -243,6 +243,8 @@
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Bezier.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorCameraShakeWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorConsoleWidget.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
@@ -334,6 +336,7 @@
     <ClCompile Include="Source\Engine\Camera\CameraModifier.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Modifier\CameraShakeModifier.cpp" />
     <ClCompile Include="Source\Engine\Camera\PlayerCameraManager.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -872,6 +875,8 @@
     <ClInclude Include="Source\Editor\Input\PIEController.h" />
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h" />
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h" />
+    <ClInclude Include="Source\Editor\UI\Bezier.h" />
+    <ClInclude Include="Source\Editor\UI\EditorCameraShakeWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorConsoleWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorControlWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanel.h" />
@@ -902,6 +907,7 @@
     <ClInclude Include="Source\Engine\Asset\StaticMeshTypes.h" />
     <ClInclude Include="Source\Engine\Audio\AudioSystem.h" />
     <ClInclude Include="Source\Engine\Camera\CameraModifier.h" />
+    <ClInclude Include="Source\Engine\Camera\Modifier\CameraShakeModifier.h" />
     <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h" />
     <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h" />
     <ClInclude Include="Source\Engine\Camera\Modifier\LuaCameraModifier.h" />
