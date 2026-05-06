@@ -1,7 +1,7 @@
 ﻿#include "Engine/Camera/PlayerCameraManager.h"
 
 #include "Component/CameraComponent.h"
-#include "Engine/Camera/CameraModifier.h"
+#include "Engine/Camera/Modifier/LetterBoxCameraModifier.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
 #include "Engine/Math/Utils.h"
@@ -181,6 +181,41 @@ void APlayerCameraManager::BuildSceneView(FSceneView& OutView, const FViewportRe
 	FillSceneView(OutView, ViewInfo, ViewRect, ViewMode);
 }
 
+void APlayerCameraManager::InitializeDefaultModifiers()
+{
+	if (LetterBoxCameraModifier == nullptr)
+	{
+		LetterBoxCameraModifier = AddNewCameraModifier<ULetterBoxCameraModifier>();
+	}
+}
+
+void APlayerCameraManager::Shutdown()
+{
+	ClearCameraModifiers();
+
+	for (UCameraModifier* Modifier : OwnedModifierList)
+	{
+		UObjectManager::Get().DestroyObject(Modifier);
+	}
+	OwnedModifierList.clear();
+
+	LetterBoxCameraModifier = nullptr;
+	ViewTarget = nullptr;
+	FallbackCamera = nullptr;
+	bHasCachedCameraView = false;
+	CachedCameraView = FCameraViewInfo();
+	CachedPostProcessSettings = FPostProcessSettings();
+	CachedCameraOverlaySettings = FCameraOverlaySettings();
+	Transition = FCameraTransitionState();
+	FadeState = FCameraFadeState();
+}
+
+ULetterBoxCameraModifier* APlayerCameraManager::GetLetterBoxCameraModifier()
+{
+	InitializeDefaultModifiers();
+	return LetterBoxCameraModifier;
+}
+
 void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 {
 	if (Modifier == nullptr)
@@ -188,13 +223,13 @@ void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 		return;
 	}
 
-	if (std::find(CameraModifiers.begin(), CameraModifiers.end(), Modifier) != CameraModifiers.end())
+	if (std::find(ModifierList.begin(), ModifierList.end(), Modifier) != ModifierList.end())
 	{
 		return;
 	}
 
-	CameraModifiers.push_back(Modifier);
-	std::sort(CameraModifiers.begin(), CameraModifiers.end(), [](const UCameraModifier* A, const UCameraModifier* B)
+	ModifierList.push_back(Modifier);
+	std::sort(ModifierList.begin(), ModifierList.end(), [](const UCameraModifier* A, const UCameraModifier* B)
 			  {
 		const int32 APriority = A ? A->GetPriority() : 0;
 		const int32 BPriority = B ? B->GetPriority() : 0;
@@ -203,12 +238,12 @@ void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
 
 void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 {
-	CameraModifiers.erase(std::remove(CameraModifiers.begin(), CameraModifiers.end(), Modifier), CameraModifiers.end());
+	ModifierList.erase(std::remove(ModifierList.begin(), ModifierList.end(), Modifier), ModifierList.end());
 }
 
 void APlayerCameraManager::ClearCameraModifiers()
 {
-	CameraModifiers.clear();
+	ModifierList.clear();
 }
 
 void APlayerCameraManager::StartCameraFade(const FColor& Color, float FromAlpha, float ToAlpha, float Duration, bool bHoldWhenFinished)
@@ -249,6 +284,30 @@ void APlayerCameraManager::SetManualCameraFade(const FColor& Color, float Alpha)
 void APlayerCameraManager::StopCameraFade()
 {
 	FadeState = FCameraFadeState();
+}
+
+void APlayerCameraManager::StartLetterBox(float TargetRatio, float Duration)
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->StartLetterBox(TargetRatio, Duration);
+	}
+}
+
+void APlayerCameraManager::SetLetterBox(float Ratio)
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->SetLetterBox(Ratio);
+	}
+}
+
+void APlayerCameraManager::ClearLetterBox()
+{
+	if (ULetterBoxCameraModifier* Modifier = GetLetterBoxCameraModifier())
+	{
+		Modifier->ClearLetterBox();
+	}
 }
 
 // 카메라 Linear 보간 이동
@@ -416,7 +475,7 @@ void APlayerCameraManager::ApplyCameraFade(FCameraOverlaySettings& InOutOverlay)
 
 void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled())
 		{
@@ -429,7 +488,7 @@ void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo
 
 void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled())
 		{
@@ -442,7 +501,7 @@ void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProce
 
 void APlayerCameraManager::ApplyOverlayModifiers(float DeltaTime, FCameraOverlaySettings& InOutOverlay)
 {
-	for (UCameraModifier* Modifier : CameraModifiers)
+	for (UCameraModifier* Modifier : ModifierList)
 	{
 		if (Modifier == nullptr || !Modifier->IsEnabled()) continue;
 		Modifier->ModifyOverlay(DeltaTime, InOutOverlay);

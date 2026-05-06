@@ -21,6 +21,7 @@
 #include "Component/Collision/SphereComponent.h"
 #include "Component/Collision/CapsuleComponent.h"
 #include "Component/Collision/CylinderComponent.h"
+#include "Component/HitSquashComponent.h"
 #include "Component/LuaScriptComponent.h"
 #include "Component/AudioComponent.h"
 #include "Component/AudioZoneComponent.h"
@@ -144,6 +145,8 @@ const TArray<FComponentMenuEntry>& FEditorComponentFactory::GetMenuRegistry()
         { "InterpToMovement Component", "Movement", RegisterComp<UInterpToMovementComponent> },
         { "PursuitMovement Component", "Movement", RegisterComp<UPursuitMovementComponent> },
         { "ProjectileMovement Component", "Movement", RegisterComp<UProjectileMovementComponent> },
+
+        { "HitSquash Component", "Feedback", RegisterComp<UHitSquashComponent> },
 
         { "RigidBody Component", "Physics", RegisterComp<URigidBodyComponent> },
         { "PhysicsHandle Component", "Physics", RegisterComp<UPhysicsHandleComponent> },
