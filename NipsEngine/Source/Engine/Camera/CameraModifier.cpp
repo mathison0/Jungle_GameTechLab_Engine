@@ -13,9 +13,9 @@ bool UCameraModifier::ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView)
 
 bool UCameraModifier::ModifyPostProcess(float DeltaTime, FPostProcessSettings& InOutSettings)
 {
-    (void)DeltaTime;
-    (void)InOutSettings;
-    return false;
+	(void)DeltaTime;
+	(void)InOutSettings;
+	return false;
 }
 
 void UCameraModifier::EnableModifier()

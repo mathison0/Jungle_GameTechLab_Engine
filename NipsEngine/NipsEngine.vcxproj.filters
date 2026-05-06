@@ -43,8 +43,8 @@
     <Filter Include="Source\Engine\Camera">
       <UniqueIdentifier>{e2e2a018-8b8d-f3d4-98e2-c9dcd52bee88}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\Camera\CameraModifier">
-      <UniqueIdentifier>{d9d59c8f-8109-ae75-8349-ed16e22bd677}</UniqueIdentifier>
+    <Filter Include="Source\Engine\Camera\Modifier">
+      <UniqueIdentifier>{e7cf9b81-f05c-969d-8ef4-bbb28b19ae44}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Collision">
       <UniqueIdentifier>{b6e31b62-ff44-29dc-3a64-69f9805cba88}</UniqueIdentifier>
@@ -374,11 +374,11 @@
     <ClCompile Include="Source\Engine\Camera\PlayerCameraManager.cpp">
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.cpp">
-      <Filter>Source\Engine\Camera\CameraModifier</Filter>
+    <ClCompile Include="Source\Engine\Camera\Modifier\FadeCameraModifier.cpp">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Camera\CameraModifier\LetterBoxCameraModifier.cpp">
-      <Filter>Source\Engine\Camera\CameraModifier</Filter>
+    <ClCompile Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.cpp">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <Filter>Source\Engine\Collision</Filter>
@@ -1010,11 +1010,11 @@
     <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h">
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Camera\CameraModifier\FadeCameraModifier.h">
-      <Filter>Source\Engine\Camera\CameraModifier</Filter>
+    <ClInclude Include="Source\Engine\Camera\Modifier\FadeCameraModifier.h">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Camera\CameraModifier\LetterBoxCamerModifier.h">
-      <Filter>Source\Engine\Camera\CameraModifier</Filter>
+    <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\Collision.h">
       <Filter>Source\Engine\Collision</Filter>

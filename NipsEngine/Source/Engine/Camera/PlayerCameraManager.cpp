@@ -153,6 +153,8 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 
 	ApplyCameraModifiers(DeltaTime, NewView);
 	CachedCameraView = NewView;
+	CachedPostProcessSettings = FPostProcessSettings();
+	ApplyPostProcessModifiers(DeltaTime, CachedPostProcessSettings);
 	bHasCachedCameraView = true;
 }
 
@@ -344,6 +346,19 @@ void APlayerCameraManager::ApplyCameraModifiers(float DeltaTime, FCameraViewInfo
 		}
 
 		Modifier->ModifyCamera(DeltaTime, InOutView);
+	}
+}
+
+void APlayerCameraManager::ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings)
+{
+	for (UCameraModifier* Modifier : CameraModifiers)
+	{
+		if (Modifier == nullptr || !Modifier->IsEnabled())
+		{
+			continue;
+		}
+
+		Modifier->ModifyPostProcess(DeltaTime, InOutSettings);
 	}
 }
 
