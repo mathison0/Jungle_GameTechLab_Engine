@@ -14,6 +14,13 @@ local KEY_Z = 0x5A
 local START_FADE_DURATION = 1.0
 local START_FADE_COLOR = { 0.0, 0.0, 0.0 }
 local START_FADE_CURVE = "EaseInOut"
+local MAIN_CAMERA_SWITCH_DELAY = 1.0
+local MAIN_CAMERA_BLEND_DURATION = 1.0
+local LETTERBOX_VISIBLE_ASPECT_RATIO = 2.39
+local LETTERBOX_FALLBACK_VIEWPORT_ASPECT_RATIO = 16.0 / 9.0
+local LETTERBOX_OPACITY = 1.0
+local LETTERBOX_OUT_DURATION = 0.65
+local LETTERBOX_COLOR = { 0.0, 0.0, 0.0 }
 
 local GameManager = {
     GameTimeLimit = 600.0,
@@ -85,6 +92,95 @@ local function playGameStartFadeIn()
 
     postProcess:SetFadeAlpha(1.0, START_FADE_COLOR)
     postProcess:FadeIn(START_FADE_DURATION, START_FADE_COLOR, START_FADE_CURVE)
+end
+
+local function getPostProcess()
+    local runner = GameManager.PlayerScript or GameManager.MainMenuController or GameManager.ManagerComponent
+    if runner == nil or type(runner.GetPostProcess) ~= "function" then
+        return nil
+    end
+
+    local postProcess = runner:GetPostProcess()
+    if postProcess == nil or not postProcess:IsValid() then
+        return nil
+    end
+
+    return postProcess
+end
+
+local function getLetterboxColor(postProcess)
+    if postProcess ~= nil and type(postProcess.GetLetterboxColor) == "function" then
+        local color = postProcess:GetLetterboxColor()
+        if color ~= nil then
+            return color
+        end
+    end
+
+    return LETTERBOX_COLOR
+end
+
+local function getViewportAspectRatio()
+    if type(GetViewportAspectRatio) == "function" then
+        local aspectRatio = tonumber(GetViewportAspectRatio()) or 0.0
+        if aspectRatio > 0.0 then
+            return aspectRatio
+        end
+    end
+
+    return LETTERBOX_FALLBACK_VIEWPORT_ASPECT_RATIO
+end
+
+local function setLetterboxAspectRatio(postProcess, aspectRatio, bEnabled)
+    if postProcess == nil or type(postProcess.SetLetterbox) ~= "function" then
+        return false
+    end
+
+    local targetAspectRatio = math.max(0.0001, tonumber(aspectRatio) or LETTERBOX_VISIBLE_ASPECT_RATIO)
+    postProcess:SetLetterbox(targetAspectRatio, LETTERBOX_OPACITY, getLetterboxColor(postProcess))
+
+    if type(postProcess.SetLetterboxEnabled) == "function" then
+        postProcess:SetLetterboxEnabled(bEnabled ~= false)
+    end
+
+    return true
+end
+
+local function resetOpeningLetterbox()
+    local postProcess = getPostProcess()
+    if postProcess == nil then
+        return
+    end
+
+    setLetterboxAspectRatio(postProcess, LETTERBOX_VISIBLE_ASPECT_RATIO, true)
+end
+
+local function playLetterboxOut()
+    local postProcess = getPostProcess()
+    if postProcess == nil then
+        Log("[GameManager] Letterbox out skipped: PostProcess handle unavailable.")
+        return
+    end
+
+    local fromAspectRatio = LETTERBOX_VISIBLE_ASPECT_RATIO
+    if type(postProcess.GetLetterboxTargetAspectRatio) == "function" then
+        fromAspectRatio = tonumber(postProcess:GetLetterboxTargetAspectRatio()) or fromAspectRatio
+    end
+
+    local toAspectRatio = getViewportAspectRatio()
+    local elapsed = 0.0
+    local duration = math.max(0.0001, LETTERBOX_OUT_DURATION)
+
+    while elapsed < duration do
+        local deltaTime = Co.WaitNextFrame() or 0.0
+        elapsed = elapsed + math.max(0.0, deltaTime)
+
+        local t = math.max(0.0, math.min(1.0, elapsed / duration))
+        local ease = t * t * (3.0 - 2.0 * t)
+        local aspectRatio = fromAspectRatio + (toAspectRatio - fromAspectRatio) * ease
+        setLetterboxAspectRatio(postProcess, aspectRatio, true)
+    end
+
+    setLetterboxAspectRatio(postProcess, toAspectRatio, false)
 end
 
 local function normalizeSoundPosition(key, positionMs)
@@ -222,7 +318,7 @@ function GameManager.SwitchToMainCameraActor()
         return false
     end
 
-    if not CameraManager.SetViewTargetBlend(mainCameraActor, 1.0, "EaseInOut", 2.0, false) then
+    if not CameraManager.SetViewTargetBlend(mainCameraActor, MAIN_CAMERA_BLEND_DURATION, "EaseInOut", 2.0, false) then
         Log("[GameManager] MainCameraActor switch failed: SetViewTargetBlend failed.")
         return false
     end
@@ -243,9 +339,12 @@ function GameManager.StartMainCameraSwitchCoroutine()
     end
 
     GameManager.CameraSwitchCoroutine = runner.StartCoroutine(function()
-        Co.Wait(1.0)
+        Co.Wait(MAIN_CAMERA_SWITCH_DELAY)
+        if GameManager.SwitchToMainCameraActor() then
+            Co.Wait(MAIN_CAMERA_BLEND_DURATION)
+            playLetterboxOut()
+        end
         GameManager.CameraSwitchCoroutine = nil
-        GameManager.SwitchToMainCameraActor()
     end)
 
     return GameManager.CameraSwitchCoroutine ~= nil
@@ -377,6 +476,7 @@ function GameManager.RequestStartGame(bFadeInOnStart)
     GameManager.SessionPrepared = true
     GameManager.GameStartRequested = true
     GameManager.FadeInOnNextGameStart = bFadeInOnStart == true
+    resetOpeningLetterbox()
 
     if GameManager.ResultUI ~= nil and type(GameManager.ResultUI.Hide) == "function" then
         GameManager.ResultUI:Hide()

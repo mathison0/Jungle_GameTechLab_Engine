@@ -1096,7 +1096,7 @@
         "Gamma Enabled" : true,
         "Letterbox Aspect Ratio" : 2.390000,
         "Letterbox Color" : [0.000000, 0.000000, 0.000000],
-        "Letterbox Enabled" : false,
+        "Letterbox Enabled" : true,
         "Letterbox Opacity" : 1.000000,
         "Vignette Color" : [0.100000, 0.100000, 0.100000],
         "Vignette Enabled" : true,
