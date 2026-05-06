@@ -4,6 +4,13 @@
 DEFINE_CLASS(UPostProcessComponent, UActorComponent)
 REGISTER_FACTORY(UPostProcessComponent)
 
+void UPostProcessComponent::SetVignette(float Intensity, float Radius, float Softness)
+{
+    SetVignetteIntensity(Intensity);
+    SetVignetteRadius(Radius);
+    SetVignetteSoftness(Softness);
+}
+
 void UPostProcessComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
     UActorComponent::GetEditableProperties(OutProps);
