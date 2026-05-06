@@ -367,8 +367,8 @@ bool ULuaCameraModifier::ReloadScript()
 void ULuaCameraModifier::UnloadScript()
 {
 #if WITH_LUA
-	LuaState.reset();
 	ModifierDataTable = sol::nil;
+	LuaState.reset();
 #endif
 	bScriptLoaded = false;
 	bHasModifierDataTable = false;
