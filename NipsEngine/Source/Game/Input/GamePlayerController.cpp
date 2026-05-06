@@ -58,6 +58,12 @@ namespace
 		return Name;
 	}
 
+	const FName& ActionThrow()
+	{
+		static const FName Name("Throw");
+		return Name;
+	}
+
 	const FName& ActionInspect()
 	{
 		static const FName Name("Inspect");
@@ -689,6 +695,11 @@ void FGamePlayerController::OnKeyPressed(int VK)
 		TogglePickup();
 	}
 
+	if (InputMapping.IsActionKey(ActionThrow(), VK))
+	{
+		ThrowHeldObject();
+	}
+
 	if (InputMapping.IsActionKey(ActionInspect(), VK))
 	{
 		TryInspectHoveredItem();
@@ -868,6 +879,7 @@ void FGamePlayerController::SetupDefaultInputMappings()
 	InputMapping.AddActionMapping(ActionToggleInputCapture(), VK_F4);
 	InputMapping.AddActionMapping(ActionTogglePause(), 'P');
 	InputMapping.AddActionMapping(ActionPickup(), 'E');
+	InputMapping.AddActionMapping(ActionThrow(), 'F');
 	InputMapping.AddActionMapping(ActionInspect(), 'Q');
 	InputMapping.AddActionMapping(ActionJump(), VK_SPACE);
 
@@ -1192,6 +1204,48 @@ void FGamePlayerController::TogglePickup()
 	}
 }
 
+void FGamePlayerController::ThrowHeldObject()
+{
+	if (!World || !IsInputEnabled())
+	{
+		return;
+	}
+
+	UPhysicsHandleComponent* Handle = GetPhysicsHandle();
+	if (!Handle || !Handle->IsHolding())
+	{
+		return;
+	}
+
+	FVector CameraLocation;
+	FVector CameraForward;
+	if (!GetActiveCameraFrame(CameraLocation, CameraForward))
+	{
+		return;
+	}
+
+	URigidBodyComponent* HeldBody = Handle->GetHeldBody();
+	if (HeldBody == nullptr)
+	{
+		return;
+	}
+
+	const float ThrowSpeed = static_cast<float>(FLuaScriptSystem::Get().GetNumberGameStateValue("ThrowSpeed", 12.0));
+	const FVector ThrowVelocity = CameraForward.GetSafeNormal() * ThrowSpeed;
+
+	UE_LOG("[CleaningTool] Throwing held object. throwSpeed=%.3f currentToolId=%s",
+		   ThrowSpeed,
+		   GGameContext::Get().GetCurrentToolId().c_str());
+	EndCleaningUse();
+	EndCleaningToolViewModel();
+	FCleaningToolAnimator::Get().Reset();
+	GGameContext::Get().SetCurrentTool("");
+	Handle->Release();
+	HeldBody->SetVelocity(ThrowVelocity);
+	Handle->ResetHoldDistance();
+	GGameContext::Get().ClearHeldObject();
+}
+
 bool FGamePlayerController::TryPlaceHeldItemInHoveredDecisionBox()
 {
 	UPhysicsHandleComponent* Handle = GetPhysicsHandle();
@@ -1413,7 +1467,7 @@ void FGamePlayerController::UpdateHoveredPickableActor()
 
 	if (Handle->IsHolding())
 	{
-		EInteractionHintType HintType = EInteractionHintType::Drop;
+		EInteractionHintType HintType = EInteractionHintType::Throw;
 		if (URigidBodyComponent* HeldBody = Handle->GetHeldBody())
 		{
 			if (AActor* HeldActor = HeldBody->GetOwner())
@@ -1432,7 +1486,7 @@ void FGamePlayerController::UpdateHoveredPickableActor()
 					}
 					else
 					{
-						HintType = IsItemInspectable(HeldItemId) ? EInteractionHintType::DropWithInspect : EInteractionHintType::Drop;
+						HintType = IsItemInspectable(HeldItemId) ? EInteractionHintType::DropWithInspect : EInteractionHintType::Throw;
 					}
 				}
 			}

@@ -1,9 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreMinimal.h"
 #include "Object/Object.h"
 
 struct FCameraViewInfo;
+struct FCameraOverlayInfo;
 
 class UCameraModifier : public UObject
 {
@@ -14,6 +15,7 @@ public:
 	~UCameraModifier() override = default;
 
 	virtual bool ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView);
+	virtual bool ModifyOverlay(float DeltaTime, FCameraOverlayInfo& InOutOverlay);
 
 	virtual void EnableModifier();
 	virtual void DisableModifier();
@@ -22,7 +24,10 @@ public:
 	void SetPriority(int32 InPriority) { Priority = InPriority; }
 	int32 GetPriority() const { return Priority; }
 
+	bool ShouldAutoRemove() const { return bAutoRemoveModifiers; }
+
 private:
 	bool bEnabled = true;
+	bool bAutoRemoveModifiers = true;
 	int32 Priority = 0;
 };

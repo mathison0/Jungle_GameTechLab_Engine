@@ -40,4 +40,9 @@ namespace MathUtil
     {
         return std::min(A, std::min(B, C));
     }
+
+	template <typename T, typename U> static inline T Lerp(const T& A, const T& B, const U& Alpha)
+    {
+        return A + (B - A) * Alpha;
+    }
 } // namespace MathUtil

@@ -58,6 +58,7 @@ enum class EInteractionHintType
     Pickup,
     Drop,
     DropWithInspect,
+    Throw,
     Keep,
     Discard,
     Wash,

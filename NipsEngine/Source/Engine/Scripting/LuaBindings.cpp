@@ -16,6 +16,7 @@
 #include "Engine/Input/InputRouter.h"
 #include "Game/UI/GameUISystem.h"
 #include "Game/Systems/GameContext.h"
+#include "Game/Systems/TimeDilationSystem.h"
 #include "Game/Systems/CleaningToolSystem.h"
 #include "Game/Systems/ItemSystem.h"
 #include "GameFramework/World.h"
@@ -184,6 +185,7 @@ void RegisterLuaBindings(sol::state& Lua)
 		if      (HintName == "None")    GameUISystem::Get().SetInteractionHint(EInteractionHintType::None);
 		else if (HintName == "Pickup")  GameUISystem::Get().SetInteractionHint(EInteractionHintType::Pickup);
 		else if (HintName == "Drop")    GameUISystem::Get().SetInteractionHint(EInteractionHintType::Drop);
+		else if (HintName == "Throw")   GameUISystem::Get().SetInteractionHint(EInteractionHintType::Throw);
 		else if (HintName == "Keep")    GameUISystem::Get().SetInteractionHint(EInteractionHintType::Keep);
 		else if (HintName == "Discard") GameUISystem::Get().SetInteractionHint(EInteractionHintType::Discard);
 		else if (HintName == "Wash")    GameUISystem::Get().SetInteractionHint(EInteractionHintType::Wash);
@@ -414,6 +416,29 @@ void RegisterLuaBindings(sol::state& Lua)
 		return FLuaScriptSystem::Get().SetStringGameStateValue(Key, ToolId);
 	});
 
+	Lua.set_function("TriggerHitStop", [](float Duration, sol::optional<float> Dilation)
+	{
+		FTimeDilationSystem::Get().TriggerHitStop(Duration, Dilation.value_or(0.0f));
+	});
+
+	Lua.set_function("StartSlomo", [](float TargetDilation, float HoldTime, sol::optional<float> BlendInTime, sol::optional<float> BlendOutTime)
+	{
+		FTimeDilationSystem::Get().StartSlomo(
+			TargetDilation,
+			HoldTime,
+			BlendInTime.value_or(0.0f),
+			BlendOutTime.value_or(0.0f));
+	});
+
+	Lua.set_function("StopSlomo", []()
+	{
+		FTimeDilationSystem::Get().StopSlomo();
+	});
+
+	Lua.set_function("GetGlobalTimeDilation", []()
+	{
+		return FTimeDilationSystem::Get().GetGlobalTimeDilation();
+	});
 
 	// 키 입력 (Windows Virtual Key Code)
 	// 자주 쓰는 상수를 Lua 전역으로 노출

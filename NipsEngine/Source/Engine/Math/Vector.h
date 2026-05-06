@@ -370,6 +370,11 @@ public:
 	}
 };
 
+inline constexpr FVector operator*(float Scalar, const FVector& Vector) noexcept
+{
+	return Vector * Scalar;
+}
+
 namespace std
 {
 	template <>
