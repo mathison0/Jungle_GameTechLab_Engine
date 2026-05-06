@@ -13,6 +13,7 @@
 class FViewportCamera;
 class UCameraComponent;
 class ULetterBoxCameraModifier;
+class UCameraShakeModifier;
 class ULuaCameraModifier;
 struct FSceneView;
 enum class EViewMode : int32;
@@ -120,6 +121,13 @@ public:
 	void SetLetterBox(float Ratio);
 	void ClearLetterBox();
 
+	// Camera shake
+	UCameraShakeModifier* GetCameraShakeModifier();
+	const UCameraShakeModifier* GetCameraShakeModifier() const { return CameraShakeModifier; }
+	void StartCameraShake(float Amplitude, float Frequency, float Duration, const float BezierCP[4]);
+	void StopCameraShake();
+	bool IsCameraShaking() const;
+
 	// Modifier
 	template <typename TModifier>
 	TModifier* AddNewCameraModifier();
@@ -155,6 +163,7 @@ private:
 	TArray<UCameraModifier*> ModifierList;
 	TArray<UCameraModifier*> OwnedModifierList;
 	ULetterBoxCameraModifier* LetterBoxCameraModifier = nullptr;
+	UCameraShakeModifier* CameraShakeModifier = nullptr;
 	
 	bool bHasCachedCameraView = false;
 	FCameraViewInfo CachedCameraView;

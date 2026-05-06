@@ -2,6 +2,7 @@
 
 #include "Component/CameraComponent.h"
 #include "Engine/Camera/Modifier/LetterBoxCameraModifier.h"
+#include "Engine/Camera/Modifier/CameraShakeModifier.h"
 #include "Engine/Camera/Modifier/LuaCameraModifier.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
@@ -201,6 +202,7 @@ void APlayerCameraManager::Shutdown()
 	OwnedModifierList.clear();
 
 	LetterBoxCameraModifier = nullptr;
+	CameraShakeModifier = nullptr;
 	ViewTarget = nullptr;
 	FallbackCamera = nullptr;
 	bHasCachedCameraView = false;
@@ -338,6 +340,48 @@ void APlayerCameraManager::ClearLetterBox()
 	{
 		Modifier->ClearLetterBox();
 	}
+}
+
+UCameraShakeModifier* APlayerCameraManager::GetCameraShakeModifier()
+{
+	if (CameraShakeModifier == nullptr)
+	{
+		CameraShakeModifier = AddNewCameraModifier<UCameraShakeModifier>();
+	}
+
+	return CameraShakeModifier;
+}
+
+void APlayerCameraManager::StartCameraShake(float Amplitude, float Frequency, float Duration, const float BezierCP[4])
+{
+	UCameraShakeModifier* Modifier = GetCameraShakeModifier();
+	if (Modifier == nullptr)
+	{
+		return;
+	}
+
+	if (BezierCP)
+	{
+		for (int32 Index = 0; Index < 4; ++Index)
+		{
+			Modifier->BezierCP[Index] = BezierCP[Index];
+		}
+	}
+
+	Modifier->StartShake(Amplitude, Frequency, Duration);
+}
+
+void APlayerCameraManager::StopCameraShake()
+{
+	if (CameraShakeModifier)
+	{
+		CameraShakeModifier->StopShake();
+	}
+}
+
+bool APlayerCameraManager::IsCameraShaking() const
+{
+	return CameraShakeModifier && CameraShakeModifier->GetIsShaking();
 }
 
 // 카메라 Linear 보간 이동
