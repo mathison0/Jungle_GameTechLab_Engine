@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
+
+#include "Engine/Math/Bezier.h"
 
 namespace Bezier
 {
-	float BezierValue(float t, const float cp[4]);
-	int   Bezier(const char* label, float cp[4]);
+	int Bezier(const char* label, float cp[4]);
 }

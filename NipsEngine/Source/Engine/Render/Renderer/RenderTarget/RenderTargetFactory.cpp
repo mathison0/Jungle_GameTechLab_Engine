@@ -71,3 +71,14 @@ FRenderTarget FRenderTargetFactory::CreateSceneFXAA(ID3D11Device* Device, uint32
         .WithSRV()
         .Build(Device);
 }
+
+FRenderTarget FRenderTargetFactory::CreateScenePostProcess(ID3D11Device* Device, uint32 InWidth, uint32 InHeight)
+{
+    return FRenderTargetBuilder()
+        .SetSize(InWidth, InHeight)
+        .SetFormat(DXGI_FORMAT_B8G8R8A8_UNORM)
+        .WithRTV()
+        .WithSRV()
+        .Build(Device);
+}
+

@@ -6,40 +6,58 @@
 */
 
 #include "Core/CoreMinimal.h"
+#include "Engine/Runtime/SceneView.h"
 #include "Render/Scene/RenderCommand.h"
-#include "Render/Common/ViewTypes.h"
 #include <optional>
 
 class FRenderBus
 {
 public:
 	void Clear();
+
 	void AddCommand(ERenderPass Pass, const FRenderCommand& InCommand);
 	void AddCommand(ERenderPass Pass, FRenderCommand&& InCommand);
 	void AddLight(const FRenderLight& InLight) { Lights.push_back(InLight); }
-    void AddCastShadowSpotLight(const FSpotShadowConstants& InCastShadowLight) { CastShadowSpotLights.push_back(InCastShadowLight); }
-    void AddCastPointShadowLight(const FPointShadowConstants& InCastShadowLight) { CastShadowPointLights.push_back(InCastShadowLight); }
-    const TArray<FRenderCommand>& GetCommands(ERenderPass Pass) const;
+	void AddCastShadowSpotLight(const FSpotShadowConstants& InCastShadowLight) { CastShadowSpotLights.push_back(InCastShadowLight); }
+	void AddCastPointShadowLight(const FPointShadowConstants& InCastShadowLight) { CastShadowPointLights.push_back(InCastShadowLight); }
+
+	const TArray<FRenderCommand>& GetCommands(ERenderPass Pass) const;
 	const TArray<FRenderLight>& GetLights() const { return Lights; }
-    const TArray<FSpotShadowConstants>& GetCastShadowSpotLights() const { return CastShadowSpotLights; }
-    const TArray<FPointShadowConstants>& GetCastShadowPointLights() const { return CastShadowPointLights; }
+	const TArray<FSpotShadowConstants>& GetCastShadowSpotLights() const { return CastShadowSpotLights; }
+	const TArray<FPointShadowConstants>& GetCastShadowPointLights() const { return CastShadowPointLights; }
+
+private:
+	TArray<FRenderCommand> PassQueues[(uint32)ERenderPass::MAX];
+	TArray<FRenderLight> Lights;
+	std::optional<FDirectionalShadowConstants> DirectionalShadow;
+	TArray<FSpotShadowConstants> CastShadowSpotLights;
+	TArray<FPointShadowConstants> CastShadowPointLights;
+	
+	FSceneView SceneView;
+	EShadowFilterType ShadowFilterType = EShadowFilterType::PCF;
+
+	FShowFlags ShowFlags;
+	FVector WireframeColor = FVector(1.0f, 1.0f, 1.0f);
+	bool bFXAAEnabled = true;
 
 	// Getter, Setter
-	void SetViewProjection(const FMatrix& InView, const FMatrix& InProj);
-	void SetCameraPlane(float InNear, float InFar) { NearPlane = InNear; FarPlane = InFar; }
+public:
+	void SetSceneView(const FSceneView& InSceneView) { SceneView = InSceneView; }
 	void SetRenderSettings(const EViewMode NewViewMode, const FShowFlags NewShowFlags);
 
-	const FMatrix& GetView() const { return View; }
-	const FMatrix& GetProj() const { return Proj; }
-	const float& GetNear() const { return NearPlane; }
-	const float& GetFar() const { return FarPlane; }
-	const FVector& GetCameraPosition() const { return CameraPosition;  }
-	const FVector& GetCameraForward() const { return CameraForward; }
-	const FVector& GetCameraUp() const { return CameraUp; }
-	const FVector& GetCameraRight() const { return CameraRight; }
-	bool IsOrthographic() const { return Proj.M[3][3] == 1.0f; }
+	const FSceneView& GetSceneView() const { return SceneView; }
+	const FMatrix& GetView() const { return SceneView.View; }
+	const FMatrix& GetProj() const { return SceneView.Proj; }
+	FMatrix GetViewProj() const { return SceneView.View * SceneView.Proj; }
+	float GetNear() const { return SceneView.NearPlane; }
+	float GetFar() const { return SceneView.FarPlane; }
+	const FVector& GetCameraPosition() const { return SceneView.CameraPosition;  }
+	const FVector& GetCameraForward() const { return SceneView.CameraForward; }
+	const FVector& GetCameraUp() const { return SceneView.CameraUp; }
+	const FVector& GetCameraRight() const { return SceneView.CameraRight; }
+	bool IsOrthographic() const { return SceneView.bOrthographic; }
 
-	EViewMode GetViewMode() const { return ViewMode; }
+	EViewMode GetViewMode() const { return SceneView.ViewMode; }
 	FShowFlags GetShowFlags() const { return ShowFlags; }
 	
 	const FVector& GetWireframeColor() const { return WireframeColor; }
@@ -48,42 +66,16 @@ public:
 	bool GetFXAAEnabled() const { return bFXAAEnabled; }
 	void SetFXAAEnabled(bool bInEnabled) { bFXAAEnabled = bInEnabled; }
 
-	void SetViewportSize(const FVector2& InViewportSize) { ViewportSize = InViewportSize; }
-	const FVector2& GetViewportSize() const { return ViewportSize; }
-	void SetViewportOrigin(const FVector2& InViewportOrigin) { ViewportOrigin = InViewportOrigin; }
-	const FVector2& GetViewportOrigin() const { return ViewportOrigin; }
+	FVector2 GetViewportSize() const { return FVector2(static_cast<float>(SceneView.ViewRect.Width), static_cast<float>(SceneView.ViewRect.Height)); }
+	FVector2 GetViewportOrigin() const { return FVector2(static_cast<float>(SceneView.ViewRect.X), static_cast<float>(SceneView.ViewRect.Y)); }
 
 	void SetDirectionalShadow(const FDirectionalShadowConstants& InShadow) { DirectionalShadow = InShadow; }
 	bool HasDirectionalShadow() const { return DirectionalShadow.has_value(); }
 	const FDirectionalShadowConstants* GetDirectionalShadow() const { return DirectionalShadow.has_value() ? &DirectionalShadow.value() : nullptr; }
 
 	EShadowFilterType GetShadowFilterType() const { return ShadowFilterType; }
-    void SetShadowFilterType(const EShadowFilterType NewShadowFilterType) { ShadowFilterType = NewShadowFilterType; }
+	void SetShadowFilterType(const EShadowFilterType NewShadowFilterType) { ShadowFilterType = NewShadowFilterType; }
 
-private:
-	TArray<FRenderCommand> PassQueues[(uint32)ERenderPass::MAX];
-	TArray<FRenderLight> Lights;
-	std::optional<FDirectionalShadowConstants> DirectionalShadow;
-    TArray<FSpotShadowConstants> CastShadowSpotLights;
-    TArray<FPointShadowConstants> CastShadowPointLights;
-
-	EShadowFilterType ShadowFilterType = EShadowFilterType::PCF;
-
-	FMatrix View;
-	FMatrix Proj;
-	FVector CameraPosition;
-	FVector CameraForward;
-	FVector CameraRight;
-	FVector CameraUp;
-	float NearPlane;
-	float FarPlane;
-
-	FVector2 ViewportSize;
-	FVector2 ViewportOrigin = FVector2(0.0f, 0.0f);
-
-	// Editor Settings
-	EViewMode ViewMode = EViewMode::Lit;
-	FShowFlags ShowFlags;
-	FVector WireframeColor = FVector(1.0f, 1.0f, 1.0f);
-	bool bFXAAEnabled = true;
+	const FPostProcessSettings& GetPostProcessSettings() const { return SceneView.PostProcessSettings; }
+	const FCameraOverlaySettings& GetCameraOverlaySettings() const { return SceneView.CameraOverlaySettings; }
 };

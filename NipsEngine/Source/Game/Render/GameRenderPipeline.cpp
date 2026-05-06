@@ -118,12 +118,9 @@ bool FGameRenderPipeline::PrepareViewport(FRenderer& Renderer, FSceneView& OutSc
 
 	const FShowFlags ShowFlags = MakeGameShowFlags();
 	Bus.Clear();
-	Bus.SetViewProjection(OutSceneView.ViewMatrix, OutSceneView.ProjectionMatrix);
-	Bus.SetCameraPlane(OutSceneView.NearPlane, OutSceneView.FarPlane);
+	Bus.SetSceneView(OutSceneView);
 	Bus.SetRenderSettings(OutSceneView.ViewMode, ShowFlags);
 	Bus.SetShadowFilterType(GameShadowFilterType);
-	Bus.SetViewportSize(FVector2(static_cast<float>(Rect.Width), static_cast<float>(Rect.Height)));
-	Bus.SetViewportOrigin(FVector2(0.0f, 0.0f));
 	Bus.SetFXAAEnabled(!OutSceneView.bOrthographic);
 
 	return true;

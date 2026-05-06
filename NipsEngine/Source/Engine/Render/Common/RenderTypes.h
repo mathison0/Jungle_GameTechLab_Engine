@@ -48,6 +48,7 @@ enum class ERenderPass : uint32
 	Light,
     Fog,
     FXAA,
+	PostProcess,
 	Font, // TextRenderComponent → FontBatcher 경유
 	SubUV, // SubUVComponent     → SubUVBatcher 경유
 	Billboard,

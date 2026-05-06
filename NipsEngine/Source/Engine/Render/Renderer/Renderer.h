@@ -51,6 +51,10 @@ struct FViewportRenderResource
 	TComPtr<ID3D11RenderTargetView> FXAARTV;
 	TComPtr<ID3D11ShaderResourceView> FXAASRV;
 
+	TComPtr<ID3D11Texture2D> PostProcessTex;
+	TComPtr<ID3D11RenderTargetView> PostProcessRTV;
+	TComPtr<ID3D11ShaderResourceView> PostProcessSRV;
+
 	TComPtr<ID3D11Texture2D> SelectionMaskTex;
 	TComPtr<ID3D11RenderTargetView> SelectionMaskRTV;
 	TComPtr<ID3D11ShaderResourceView> SelectionMaskSRV;
@@ -85,6 +89,9 @@ struct FViewportRenderResource
 
 		RenderTargetSet.SceneFXAARTV = FXAARTV.Get();
 		RenderTargetSet.SceneFXAASRV = FXAASRV.Get();
+
+		RenderTargetSet.ScenePostProcessRTV = PostProcessRTV.Get();
+		RenderTargetSet.ScenePostProcessSRV = PostProcessSRV.Get();
 
 		RenderTargetSet.SceneDepthSRV = DepthStencilSRV.Get();
 		RenderTargetSet.SelectionMaskRTV = SelectionMaskRTV.Get();

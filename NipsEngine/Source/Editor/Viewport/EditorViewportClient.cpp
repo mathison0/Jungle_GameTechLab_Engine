@@ -268,29 +268,8 @@ void FEditorViewportClient::BuildSceneView(FSceneView& OutView) const
 		return;
 	}
 
-	OutView.ViewMatrix = Camera.GetViewMatrix();
-	OutView.ProjectionMatrix = Camera.GetProjectionMatrix();
-	OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
-
-	OutView.CameraPosition = Camera.GetLocation();
-	OutView.CameraForward = Camera.GetForwardVector();
-	OutView.CameraRight = Camera.GetRightVector();
-	OutView.CameraUp = Camera.GetUpVector();
-
-	OutView.NearPlane = Camera.GetNearPlane();
-	OutView.FarPlane = Camera.GetFarPlane();
-
-	OutView.bOrthographic = Camera.IsOrthographic();
-
-	OutView.CameraOrthoHeight = Camera.GetOrthoHeight();
-
-	OutView.CameraFrustum = Camera.GetFrustum();
-
-	if (State)
-	{
-		OutView.ViewRect = Viewport->GetRect();
-		OutView.ViewMode = State->ViewMode;
-	}
+	const FViewportRect Rect = State && Viewport ? Viewport->GetRect() : FViewportRect(0, 0, static_cast<int32>(WindowWidth), static_cast<int32>(WindowHeight));
+	Camera.BuildSceneView(OutView, Rect, State ? State->ViewMode : EViewMode::Lit);
 }
 
 void FEditorViewportClient::ApplyCameraMode()

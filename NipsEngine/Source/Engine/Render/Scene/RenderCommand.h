@@ -153,27 +153,27 @@ constexpr uint32 MaxFogLayerCount = 32;
 struct FFogConstants
 {
 	FVector4 FogColor;
-    float    FogDensity;
-    float    HeightFalloff;
-    float    FogHeight;
-    float    FogStartDistance;
-    float    FogCutoffDistance;
-    float    FogMaxOpacity;
-    float    Padding[2];
+	float    FogDensity;
+	float    HeightFalloff;
+	float    FogHeight;
+	float    FogStartDistance;
+	float    FogCutoffDistance;
+	float    FogMaxOpacity;
+	float    Padding[2];
 };
 
 struct FFogPassConstants
 {
-    uint32 FogCount = 0;
-    float  Padding0[3] = {0.0f, 0.0f, 0.0f};
-    FFogConstants Layers[MaxFogLayerCount] = {};
+	uint32 FogCount = 0;
+	float  Padding0[3] = {0.0f, 0.0f, 0.0f};
+	FFogConstants Layers[MaxFogLayerCount] = {};
 };
 
 struct FFXAAConstants
 {
-    float InvResolution[2]; // (1/Width, 1/Height)
-    uint32 bEnabled;       // 0: off, 1: on
-    float  Padding;
+	float InvResolution[2]; // (1/Width, 1/Height)
+	uint32 bEnabled;       // 0: off, 1: on
+	float  Padding;
 };
 
 struct FSkyConstants
@@ -193,24 +193,24 @@ struct FSkyConstants
 
 struct alignas(16) FGPULight
 {
-    uint32 Type = static_cast<uint32>(ELightType::Max);
-    float  Intensity = 0.0f;
-    float  Radius = 0.0f;
-    float  FalloffExponent = 1.0f;
+	uint32 Type = static_cast<uint32>(ELightType::Max);
+	float  Intensity = 0.0f;
+	float  Radius = 0.0f;
+	float  FalloffExponent = 1.0f;
 
-    FVector Color = FVector::ZeroVector;
-    float   SpotInnerCos = 0.0f;
+	FVector Color = FVector::ZeroVector;
+	float   SpotInnerCos = 0.0f;
 
-    FVector Position = FVector::ZeroVector;
-    float   SpotOuterCos = 0.0f;
+	FVector Position = FVector::ZeroVector;
+	float   SpotOuterCos = 0.0f;
 
-    FVector Direction = FVector::ZeroVector;
-    uint32	bCastShadows = 0;
+	FVector Direction = FVector::ZeroVector;
+	uint32	bCastShadows = 0;
 
-    int32 ShadowMapIndex = -1;
-    float ShadowBias = 0.0f;
-    float Padding0 = 0.0f;
-    float Padding1 = 0.0f;
+	int32 ShadowMapIndex = -1;
+	float ShadowBias = 0.0f;
+	float Padding0 = 0.0f;
+	float Padding1 = 0.0f;
 };
 
 using FRenderLight = FGPULight;
@@ -221,25 +221,25 @@ static_assert(sizeof(FGPULight) == 80, "FGPULight layout must match the HLSL str
 
 namespace DirectionalShadowModeValue
 {
-    constexpr uint32 CSM = 0u;
-    constexpr uint32 PSM = 1u;
+	constexpr uint32 CSM = 0u;
+	constexpr uint32 PSM = 1u;
 }
 
 struct FDirectionalShadowConstants
 {
-    FMatrix LightViewProj[MAX_CASCADE_COUNT]; // 4 cascades, 64 * 4 = 256B
-    FVector4 SplitDistances;                  // 각 cascade가 차지하는 비율, 16B
-    FVector4 CascadeRadius;                   // 각 cascade의 Bounding Sphere Radius, 16B
-    
+	FMatrix LightViewProj[MAX_CASCADE_COUNT]; // 4 cascades, 64 * 4 = 256B
+	FVector4 SplitDistances;                  // 각 cascade가 차지하는 비율, 16B
+	FVector4 CascadeRadius;                   // 각 cascade의 Bounding Sphere Radius, 16B
+	
 	float ShadowBias = 0.001f;                // 4B
-    float ShadowSlopeBias = 0.5f;             // 4B
-    float ShadowSharpen = 0.0f;               // 4B
-    uint32 bCascadeDebug = 0;                 // 4B
+	float ShadowSlopeBias = 0.5f;             // 4B
+	float ShadowSharpen = 0.0f;               // 4B
+	uint32 bCascadeDebug = 0;                 // 4B
 
-    uint32 bHasShadowMap = 0;                 // 4B
-    uint32 ShadowFilterType = 0;              // 4B
-    uint32 ShadowMode = DirectionalShadowModeValue::CSM; // 4B
-    float Padding = 0.0f;                     // 4B
+	uint32 bHasShadowMap = 0;                 // 4B
+	uint32 ShadowFilterType = 0;              // 4B
+	uint32 ShadowMode = DirectionalShadowModeValue::CSM; // 4B
+	float Padding = 0.0f;                     // 4B
 };
 
 static_assert(sizeof(FDirectionalShadowConstants) % 16 == 0, "FDirectionalShadowConstants must be 16-byte aligned");
@@ -247,30 +247,30 @@ static_assert(sizeof(FDirectionalShadowConstants) % 16 == 0, "FDirectionalShadow
 // Shadow Depth Pass용 Struct
 struct FSpotShadowConstants
 {
-    FMatrix LightViewProj;
-    FVector4 AtlasRect = FVector4(0.0f, 0.0f, 1.0f, 1.0f);
-    float ShadowSlopeBias = 0.0f;
-    float ShadowBias = 0.0f;
-    float ShadowSharpen = 0.0f;
-    float ShadowFarPlane = 1.0f;
+	FMatrix LightViewProj;
+	FVector4 AtlasRect = FVector4(0.0f, 0.0f, 1.0f, 1.0f);
+	float ShadowSlopeBias = 0.0f;
+	float ShadowBias = 0.0f;
+	float ShadowSharpen = 0.0f;
+	float ShadowFarPlane = 1.0f;
 };
 
 static_assert(sizeof(FSpotShadowConstants) == 96, "FSpotShadowConstants layout must match the shadow pass GPU layout.");
 
 struct FPointShadowConstants
 {
-    FMatrix LightViewProj[6]; // 384
-    FVector LightPosition;
-    float FarPlane;
+	FMatrix LightViewProj[6]; // 384
+	FVector LightPosition;
+	float FarPlane;
 
-    FVector4 FaceAtlasRects[6];
-    
-    float ShadowBias = 0.0f;
-    float ShadowResolution = 0.0f;
-    float ShadowSharpen = 0.0f;
-    float ShadowSlopeBias = 0.0f;
-    uint32 bHasShadowMap = 0;
-    float Padding[3] = { 0.0f, 0.0f, 0.0f };
+	FVector4 FaceAtlasRects[6];
+	
+	float ShadowBias = 0.0f;
+	float ShadowResolution = 0.0f;
+	float ShadowSharpen = 0.0f;
+	float ShadowSlopeBias = 0.0f;
+	uint32 bHasShadowMap = 0;
+	float Padding[3] = { 0.0f, 0.0f, 0.0f };
 };
 
 static_assert(sizeof(FPointShadowConstants) == 528 , "FPointShadowConstants layout must match the shadow pass GPU layout.");
@@ -292,9 +292,9 @@ struct FRenderCommand
 		FSubUVConstants SubUV;
 		FBillboardConstants Billboard;
 		FDecalConstants Decal;
-        FSkyConstants Sky;
-        FFogConstants Fog;
-        FFXAAConstants FXAA;
+		FSkyConstants Sky;
+		FFogConstants Fog;
+		FFXAAConstants FXAA;
 	} Constants;
 
 	ERenderCommandType Type = ERenderCommandType::Primitive;

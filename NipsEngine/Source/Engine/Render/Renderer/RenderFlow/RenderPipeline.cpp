@@ -6,6 +6,7 @@
 #include "BufferVisualizationRenderPass.h"
 #include "FogRenderPass.h"
 #include "FXAARenderPass.h"
+#include "PostProcessRenderPass.h"
 #include "FontRenderPass.h"
 #include "SubUVRenderPass.h"
 #include "BillboardRenderPass.h"
@@ -48,6 +49,9 @@ bool FRenderPipeline::Initialize()
 
 	FXAARenderPass = std::make_shared<FFXAARenderPass>();
 	FXAARenderPass->Initialize();
+
+	PostProcessRenderPass = std::make_shared<FPostProcessRenderPass>();
+	PostProcessRenderPass->Initialize();
 
 	FontRenderPass = std::make_shared<FFontRenderPass>();
 	FontRenderPass->Initialize();
@@ -99,6 +103,7 @@ bool FRenderPipeline::Initialize()
 
 	RenderPasses.push_back(FogRenderPass);
 	RenderPasses.push_back(FXAARenderPass); 
+	RenderPasses.push_back(PostProcessRenderPass);
 	RenderPasses.push_back(FontRenderPass);
 	RenderPasses.push_back(SubUVRenderPass);
 	RenderPasses.push_back(BillboardRenderPass);
@@ -195,6 +200,12 @@ void FRenderPipeline::Release()
 	{
 		FXAARenderPass->Release();
 		FXAARenderPass.reset();
+	}
+	
+	if (PostProcessRenderPass)
+	{
+		PostProcessRenderPass->Release();
+		PostProcessRenderPass.reset();
 	}
 
 	if (FontRenderPass)
