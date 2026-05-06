@@ -2,6 +2,7 @@
 #include "Core/CoreTypes.h"
 #include "Object/ObjectFactory.h"
 #include "GameFramework/AActor.h"
+#include "Math/Color.h"
 #include "Math/MathUtils.h"
 #include "Math/Rotator.h"
 #include "Math/Vector.h"
@@ -100,60 +101,84 @@ public:
     DECLARE_CLASS(APlayerCameraManager, AActor)
 
 public:
-    // void InitializeFor(APlayerController* InOwner);
     ~APlayerCameraManager() override;
 
     void InitializeFor(AActor* InOwner);
-
-
     void UpdateCamera(float DeltaTime);
 
     void SetViewTarget(AActor* NewTarget, const FViewTargetTransitionParams& Params = {});
     AActor* GetViewTarget() const;
 
-    virtual const FMinimalViewInfo& GetCameraCacheView() const;
-    virtual const FMinimalViewInfo& GetLastFrameCameraCacheView() const;
+    const FMinimalViewInfo& GetCameraCacheView() const;
+    const FMinimalViewInfo& GetLastFrameCameraCacheView() const;
 
-    virtual void GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation) const;
-    virtual FVector GetCameraLocation() const;
-    virtual FRotator GetCameraRotation() const;
+    void GetCameraViewPoint(FVector& OutLocation, FRotator& OutRotation) const;
+    FVector GetCameraLocation() const;
+    FRotator GetCameraRotation() const;
 
-    virtual void SetGameCameraCutThisFrame() { bGameCameraCutThisFrame = true; }
+    void SetGameCameraCutThisFrame() { bGameCameraCutThisFrame = true; }
+    bool IsGameCameraCutThisFrame() const { return bGameCameraCutThisFrame; }
+    void ClearGameCameraCutThisFrame() { bGameCameraCutThisFrame = false; }
 
     UCameraModifier* AddCameraModifier(UClass* ModifierUClass);
     UCameraModifier* AddCameraModifier(const char* ModifierName);
+
     bool AddCameraModifierToList(UCameraModifier* NewModifier);
     bool RemoveCameraModifier(UCameraModifier* Modifier);
 
+    //void StartCameraFade(float FromAlpha, float ToAlpha, float Duration, const FLinearColor& Color, bool bHoldWhenFinished = false);
+    //void StopCameraFade();
+    //void SetManualCameraFade(float InFadeAmount, const FLinearColor& Color);
+
 private:
     void DoUpdateCamera(float DeltaTime);
-    // void UpdateCameraFade(float DeltaTime);
     void UpdateViewTarget(FViewTarget& OutVT, float DeltaTime);
-    // FMinimalViewInfo BlendViewTargets(const FViewTarget& A, const FViewTarget& B, float Alpha);
     void ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& InOutPOV);
+
+    //void UpdateCameraFade(float DeltaTime);
+
     void SetCameraCachePOV(const FMinimalViewInfo& InPOV);
     void SetLastFrameCameraCachePOV(const FMinimalViewInfo& InPOV);
     void FillCameraCache(const FMinimalViewInfo& NewInfo);
+
     void AssignViewTarget(AActor* NewTarget, FViewTarget& OutViewTarget, const FViewTargetTransitionParams& Params);
 
 private:
-    // APlayerController* PCOwner = nullptr;
     AActor* PCOwner = nullptr;
 
+    // ViewTarget 상태
     FViewTarget ViewTarget;
     FViewTarget PendingViewTarget;
 
     float BlendTimeToGo = 0.0f;
     FViewTargetTransitionParams BlendParams;
 
+    // 기본 카메라 값
     float DefaultAspectRatio = 16.0f / 9.0f;
     bool bDefaultConstrainAspectRatio = false;
     float DefaultFOV = 90.0f;
 
+    // 카메라 스타일
+    FName CameraStyle;
+
+    // 카메라 컷 플래그
     bool bGameCameraCutThisFrame = false;
 
+    // 카메라 캐시
     FCameraCacheEntry CameraCachePrivate;
     FCameraCacheEntry LastFrameCameraCachePrivate;
 
+    // 페이드 상태
+    bool bEnableFading = false;
+    bool bAutoAnimateFade = false;
+    bool bHoldFadeWhenFinished = false;
+
+    FLinearColor FadeColor = FLinearColor::Black();
+    float FadeAmount = 0.0f;
+    FVector2 FadeAlpha = FVector2(0.0f, 0.0f);
+    float FadeTime = 0.0f;
+    float FadeTimeRemaining = 0.0f;
+
+    // 모디파이어
     TArray<UCameraModifier*> Modifiers;
 };

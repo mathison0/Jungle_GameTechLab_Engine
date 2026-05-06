@@ -14,12 +14,6 @@ class UCameraModifier : public UObject
 {
 public:
     DECLARE_CLASS(UCameraModifier, UObject)
-public:
-    /** If true, enables certain debug visualization features. */
-    uint32 bDebug : 1;
-
-    /** If true, no other modifiers of same priority allowed. */
-    uint32 bExclusive : 1;
 
 protected:
     /** If true, do not apply this modifier to the camera. */
@@ -54,8 +48,6 @@ protected:
 public:
     UCameraModifier()
         : UObject()
-        , bDebug(false)
-        , bExclusive(false)
         , bDisabled(false)
         , bPendingDisable(false)
         , Priority(127)
@@ -142,22 +134,10 @@ public:
      * @return Return true to prevent subsequent (lower priority) modifiers to further adjust rotation, false otherwise.
      */
     virtual bool ProcessViewRotation(class AActor* ViewTarget, float DeltaTime, FRotator& OutViewRotation, FRotator& OutDeltaRot);
-
-    /**
-     * Responsible for updating alpha blend value.
-     *
-     * @param	Camera		- Camera that is being updated
-     * @param	DeltaTime	- Amount of time since last update
-     */
     virtual void UpdateAlpha(float DeltaTime);
 
-    /** @return Returns the appropriate world context for this object. */
     UWorld* GetWorld() const;
 
 protected:
-    /** Allows modifying the camera in native code. */
     virtual void ModifyCamera(float DeltaTime, FVector ViewLocation, FRotator ViewRotation, float FOV, FVector& NewViewLocation, FRotator& NewViewRotation, float& NewFOV);
-
-    /** Allows modifying the post process in native code. */
-    //virtual void ModifyPostProcess(float DeltaTime, float& PostProcessBlendWeight, FPostProcessSettings& PostProcessSettings);
 };

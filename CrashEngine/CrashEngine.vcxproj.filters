@@ -2418,6 +2418,7 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h" />
     <ClInclude Include="Source\Engine\Classes\Camera\CameraModifier.h" />
     <ClInclude Include="Source\Engine\Classes\Camera\CameraManager.h" />
+    <ClInclude Include="Source\Engine\Math\Color.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

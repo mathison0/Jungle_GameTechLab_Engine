@@ -291,11 +291,6 @@ bool APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifier)
                 // If priority of current index has passed or equaled ours - we have the insert location
                 if (NewModifier->Priority <= M->Priority)
                 {
-                    // Disallow addition of exclusive modifier if priority is already occupied
-                    if ((NewModifier->bExclusive || M->bExclusive) && NewModifier->Priority == M->Priority)
-                    {
-                        return false;
-                    }
 
                     // Update best index
                     BestIdx = ModifierIdx;
