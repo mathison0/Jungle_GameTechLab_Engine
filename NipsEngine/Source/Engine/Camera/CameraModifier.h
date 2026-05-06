@@ -4,6 +4,7 @@
 #include "Object/Object.h"
 
 struct FCameraViewInfo;
+struct FPostProcessSettings;
 
 class UCameraModifier : public UObject
 {
