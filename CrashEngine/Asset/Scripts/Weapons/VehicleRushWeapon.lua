@@ -108,6 +108,29 @@ local function FindDensestEnemyPosition(world, fallbackPosition, playerPosition,
     ), bestCell.Count
 end
 
+local function ComputeSafePassDistance(origin, playerPosition, dir, data, laneExtent)
+    local minDistance = data.SpawnDistance or 50.0
+    local viewRadius = data.ViewSafeRadius or 78.0
+    local safetyMargin = data.ViewSafeMargin or 10.0
+    local halfLength = (data.VehicleLength or 5.0) * 0.5
+    local radius = viewRadius + safetyMargin + halfLength + (laneExtent or 0.0)
+    local offset = Vec.Sub(origin, playerPosition)
+    local forward = Dot2(offset, dir)
+    local offsetLengthSquared = Dot2(offset, offset)
+    local sideLengthSquared = math.max(offsetLengthSquared - (forward * forward), 0.0)
+    local radiusSquared = radius * radius
+
+    if sideLengthSquared >= radiusSquared then
+        return minDistance
+    end
+
+    local exitDistanceOnLine = math.sqrt(radiusSquared - sideLengthSquared)
+    local forwardExitDistance = -forward + exitDistanceOnLine
+    local backwardExitDistance = forward + exitDistanceOnLine
+
+    return math.max(minDistance, forwardExitDistance, backwardExitDistance)
+end
+
 function VehicleRushWeapon.New(owner)
     local self = setmetatable({}, VehicleRushWeapon)
     self.Owner = owner
@@ -379,12 +402,13 @@ function VehicleRushWeapon:RunVehiclePass()
     local randomOrigin = Vec.Add(playerPos, Vec.Mul(side, offsetDistance))
     local origin, densestEnemyCount = FindDensestEnemyPosition(world, randomOrigin, playerPos, data)
 
-    local spawnDistance = data.SpawnDistance or 50.0
     local speed = math.max(data.VehicleSpeed or 35.0, 0.001)
-    local duration = (spawnDistance * 2.0) / speed
     local count = data.VehicleCount or 1
     local laneSpacing = data.LaneSpacing or 5.0
     local halfCount = (count - 1) * 0.5
+    local laneExtent = math.abs(halfCount * laneSpacing)
+    local spawnDistance = ComputeSafePassDistance(origin, playerPos, dir, data, laneExtent)
+    local duration = (spawnDistance * 2.0) / speed
     local vehicles = {}
 
     for i = 1, count do
@@ -417,7 +441,9 @@ function VehicleRushWeapon:RunVehiclePass()
         " offset=" ..
         tostring(offsetDistance) ..
         " densestEnemies=" ..
-        tostring(densestEnemyCount))
+        tostring(densestEnemyCount) ..
+        " passDistance=" ..
+        tostring(spawnDistance))
 
     local elapsed = 0.0
     local hitActors = {}

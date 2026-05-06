@@ -16,7 +16,8 @@ local Script = {
         FlyingWaveSpacing = { type = "float", default = 8.0 },
         FlyingWaveSpawnDistance = { type = "float", default = 80.0 },
         FlyingWaveSpeed = { type = "float", default = 25.0 },
-        FlyingWaveLifeTime = { type = "float", default = 5.0 }
+        FlyingWaveLifeTime = { type = "float", default = 5.0 },
+        FlyingWaveExitPadding = { type = "float", default = 30.0 }
     }
 }
 
@@ -170,6 +171,25 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
     local RowSpacing = Spacing * 0.866 -- sqrt(3) / 2
     local Rows = #Pattern
     local HalfRows = (Rows - 1) * 0.5
+    local MaxForwardOffset = 0.0
+
+    for row = 0, Rows - 1 do
+        local Columns = Pattern[row + 1]
+        local HalfCols = (Columns - 1) * 0.5
+        local Stagger = 0.0
+        if row % 2 == 1 then
+            Stagger = Spacing * 0.5
+        end
+
+        for col = 0, Columns - 1 do
+            local ColOffset = (col - HalfCols) * Spacing + Stagger
+            MaxForwardOffset = math.max(MaxForwardOffset, math.abs(ColOffset))
+        end
+    end
+
+    local ExitDistance = self.FlyingWaveSpawnDistance + MaxForwardOffset + (self.FlyingWaveExitPadding or 30.0)
+    local SafeLifeTime = (self.FlyingWaveSpawnDistance + ExitDistance) / math.max(Speed, 0.001)
+    local LifeTime = math.max(self.FlyingWaveLifeTime or 0.0, SafeLifeTime)
 
     for row = 0, Rows - 1 do
         local Columns = Pattern[row + 1]
@@ -207,7 +227,7 @@ function Script:SpawnFlyingWave(PlayerPos, WaveData)
                 Enemy:InitFlyingWave(
                     Forward,
                     Speed,
-                    self.FlyingWaveLifeTime
+                    LifeTime
                 )
             end
         end
