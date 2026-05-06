@@ -1,4 +1,4 @@
-// 뷰포트 영역의 세부 동작을 구현합니다.
+﻿// 뷰포트 영역의 세부 동작을 구현합니다.
 #include "Viewport/GameViewportClient.h"
 #include "Input/GameViewportInputController.h"
 #include "Component/CameraComponent.h"
@@ -52,6 +52,24 @@ void ApplyPOVToCamera(UCameraComponent* Camera, const FMinimalViewInfo& POV)
     CameraState.FOV = POV.FOV * DEG_TO_RAD;
     Camera->SetCameraState(CameraState);
 }
+
+bool IsLiveWorld(const UWorld* World)
+{
+    if (!World || !GEngine)
+    {
+        return false;
+    }
+
+    for (const FWorldContext& Context : GEngine->GetWorldList())
+    {
+        if (Context.World == World)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 } // namespace
 
 UGameViewportClient::UGameViewportClient()
@@ -61,13 +79,7 @@ UGameViewportClient::UGameViewportClient()
 
 UGameViewportClient::~UGameViewportClient()
 {
-    ClearCameraShakeOffsets();
-
-    if (CameraManager)
-    {
-        UObjectManager::Get().DestroyObject(CameraManager);
-        CameraManager = nullptr;
-    }
+    ResetCameraShakes();
 }
 
 void UGameViewportClient::BeginInputFrame()
@@ -153,6 +165,7 @@ void UGameViewportClient::UpdateCameraShakes(float DeltaTime)
     AppliedShakeRotation = ShakenPOV.Rotation - BasePOV.Rotation;
     AppliedShakeFOVDegrees = ShakenPOV.FOV - BasePOV.FOV;
     ShakeCamera = Camera;
+    ShakeCameraWorld = Camera->GetWorld();
 
     ApplyPOVToCamera(Camera, ShakenPOV);
 }
@@ -167,23 +180,46 @@ APlayerCameraManager* UGameViewportClient::GetOrCreateCameraManager()
     return CameraManager;
 }
 
+void UGameViewportClient::ResetCameraShakes()
+{
+    ClearCameraShakeOffsets();
+
+    if (CameraManager)
+    {
+        UObjectManager::Get().DestroyObject(CameraManager);
+        CameraManager = nullptr;
+    }
+
+    ShakeCamera = nullptr;
+    ShakeCameraWorld = nullptr;
+    AppliedShakeLocation = FVector::ZeroVector;
+    AppliedShakeRotation = FRotator::ZeroRotator;
+    AppliedShakeFOVDegrees = 0.0f;
+}
+
 void UGameViewportClient::ClearCameraShakeOffsets()
 {
     if (!ShakeCamera)
     {
+        ShakeCameraWorld = nullptr;
         AppliedShakeLocation = FVector::ZeroVector;
         AppliedShakeRotation = FRotator::ZeroRotator;
         AppliedShakeFOVDegrees = 0.0f;
         return;
     }
 
-    FMinimalViewInfo RestoredPOV = BuildPOVFromCamera(ShakeCamera);
-    RestoredPOV.Location -= AppliedShakeLocation;
-    RestoredPOV.Rotation -= AppliedShakeRotation;
-    RestoredPOV.FOV -= AppliedShakeFOVDegrees;
-    ApplyPOVToCamera(ShakeCamera, RestoredPOV);
+    const bool bCameraWorldIsLive = !ShakeCameraWorld || IsLiveWorld(ShakeCameraWorld);
+    if (bCameraWorldIsLive)
+    {
+        FMinimalViewInfo RestoredPOV = BuildPOVFromCamera(ShakeCamera);
+        RestoredPOV.Location -= AppliedShakeLocation;
+        RestoredPOV.Rotation -= AppliedShakeRotation;
+        RestoredPOV.FOV -= AppliedShakeFOVDegrees;
+        ApplyPOVToCamera(ShakeCamera, RestoredPOV);
+    }
 
     ShakeCamera = nullptr;
+    ShakeCameraWorld = nullptr;
     AppliedShakeLocation = FVector::ZeroVector;
     AppliedShakeRotation = FRotator::ZeroRotator;
     AppliedShakeFOVDegrees = 0.0f;

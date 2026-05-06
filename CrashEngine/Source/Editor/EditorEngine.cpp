@@ -483,6 +483,11 @@ void UEditorEngine::EndPlayMap()
 
     FSoundManager::Get().StopAll();
 
+    if (GameViewportClient)
+    {
+        GameViewportClient->ResetCameraShakes();
+    }
+
     const FName PrevHandle = PlayInEditorSessionInfo->PreviousActiveWorldHandle;
     SetActiveWorld(PrevHandle);
 

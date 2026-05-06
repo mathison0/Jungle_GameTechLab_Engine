@@ -1,22 +1,50 @@
 {
-  "Version" : 1,
-  "ShakeClass" : "UCameraShakeBase",
-  "bSingleInstance" : true,
   "RootPattern" : {
+    "BlendInTime" : 0.020000,
+    "BlendOutTime" : 0.120000,
     "Class" : "UWaveOscillatorCameraShakePattern",
-    "Duration" : 0.35,
-    "BlendInTime" : 0.02,
-    "BlendOutTime" : 0.12,
-    "LocationAmplitudeMultiplier" : 1.0,
-    "LocationFrequencyMultiplier" : 1.0,
-    "RotationAmplitudeMultiplier" : 1.0,
-    "RotationFrequencyMultiplier" : 1.0,
-    "X" : { "Amplitude" : 0.8, "Frequency" : 12.0, "InitialOffsetType" : "Random" },
-    "Y" : { "Amplitude" : 1.8, "Frequency" : 10.0, "InitialOffsetType" : "Random" },
-    "Z" : { "Amplitude" : 0.45, "Frequency" : 16.0, "InitialOffsetType" : "Random" },
-    "Pitch" : { "Amplitude" : 0.08, "Frequency" : 11.0, "InitialOffsetType" : "Random" },
-    "Yaw" : { "Amplitude" : 0.05, "Frequency" : 9.0, "InitialOffsetType" : "Random" },
-    "Roll" : { "Amplitude" : 0.16, "Frequency" : 13.0, "InitialOffsetType" : "Random" },
-    "FOV" : { "Amplitude" : 0.05, "Frequency" : 8.0, "InitialOffsetType" : "Zero" }
-  }
+    "Duration" : 0.350000,
+    "FOV" : {
+      "Amplitude" : 0.050000,
+      "Frequency" : 8.000000,
+      "InitialOffsetType" : "Zero"
+    },
+    "LocationAmplitudeMultiplier" : 0.050000,
+    "LocationFrequencyMultiplier" : 1.000000,
+    "Pitch" : {
+      "Amplitude" : 0.080000,
+      "Frequency" : 11.000000,
+      "InitialOffsetType" : "Random"
+    },
+    "Roll" : {
+      "Amplitude" : 0.160000,
+      "Frequency" : 13.000000,
+      "InitialOffsetType" : "Random"
+    },
+    "RotationAmplitudeMultiplier" : 0.050000,
+    "RotationFrequencyMultiplier" : 1.000000,
+    "X" : {
+      "Amplitude" : 0.800000,
+      "Frequency" : 12.000000,
+      "InitialOffsetType" : "Random"
+    },
+    "Y" : {
+      "Amplitude" : 1.800000,
+      "Frequency" : 10.000000,
+      "InitialOffsetType" : "Random"
+    },
+    "Yaw" : {
+      "Amplitude" : 0.050000,
+      "Frequency" : 9.000000,
+      "InitialOffsetType" : "Random"
+    },
+    "Z" : {
+      "Amplitude" : 0.450000,
+      "Frequency" : 16.000000,
+      "InitialOffsetType" : "Random"
+    }
+  },
+  "ShakeClass" : "UCameraShakeBase",
+  "Version" : 1,
+  "bSingleInstance" : true
 }

@@ -68,6 +68,7 @@ public:
     void SetOverlayStatSystem(FOverlayStatSystem* InOverlayStatSystem) { OverlayStatSystem = InOverlayStatSystem; }
     UCameraShakeBase* StartCameraShakeFromAsset(const FString& Path, float Scale = 1.0f);
     void UpdateCameraShakes(float DeltaTime);
+    void ResetCameraShakes();
 
 private:
     bool RouteUIPointerEvent(const FViewportPointerEvent& Event);
@@ -88,6 +89,7 @@ private:
 
     APlayerCameraManager* CameraManager = nullptr;
     class UCameraComponent* ShakeCamera = nullptr;
+    class UWorld* ShakeCameraWorld = nullptr;
     FVector AppliedShakeLocation = FVector::ZeroVector;
     FRotator AppliedShakeRotation = FRotator::ZeroRotator;
     float AppliedShakeFOVDegrees = 0.0f;
