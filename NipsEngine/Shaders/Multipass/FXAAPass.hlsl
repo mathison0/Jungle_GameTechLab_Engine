@@ -55,6 +55,10 @@ cbuffer FXAAConstants : register(b10)
 {
     float2 InvResolution; // (1/Width, 1/Height)
     uint Enabled; // 0: off, 1: on
+    float Gamma;
+    float VignetteIntensity;
+    float VignetteRadius;
+    float VignetteSoftness;
     float Padding;
 }
 
@@ -93,6 +97,24 @@ float FxaaLuma(float3 rgb)
     return rgb.y * (0.587 / 0.299) + rgb.x;
 }
 
+float3 ApplyCameraPostProcess(float3 color, float2 uv)
+{
+    const float vignetteIntensity = saturate(VignetteIntensity);
+    if (vignetteIntensity > 0.0f)
+    {
+        const float2 centeredUV = uv * 2.0f - 1.0f;
+        const float distanceFromCenter = length(centeredUV);
+        const float radius = max(VignetteRadius, 0.0f);
+        const float softness = max(VignetteSoftness, 0.0001f);
+        const float vignette = smoothstep(radius, radius + softness, distanceFromCenter);
+        color *= lerp(1.0f, 1.0f - vignette, vignetteIntensity);
+    }
+
+    const float safeGamma = max(Gamma, 0.0001f);
+    color = pow(saturate(color), 1.0f / safeGamma);
+    return color;
+}
+
 float4 mainPS(VSOutput input) : SV_TARGET
 {
     int2 ip = int2(input.ClipPos.xy);
@@ -101,7 +123,7 @@ float4 mainPS(VSOutput input) : SV_TARGET
     float3 rgbM = FinalSceneColor.Load(int3(ip, 0)).rgb;
     
     if (Enabled == 0)
-        return float4(rgbM, 1);
+        return float4(ApplyCameraPostProcess(rgbM, uv), 1);
 
     float3 rgbN = FinalSceneColor.Load(int3(ip + int2(0, -1), 0)).rgb;
     float3 rgbS = FinalSceneColor.Load(int3(ip + int2(0, 1), 0)).rgb;
@@ -124,7 +146,7 @@ float4 mainPS(VSOutput input) : SV_TARGET
     if (range < max(FXAA_EDGE_THRESHOLD_MIN, rangeMax * FXAA_EDGE_THRESHOLD))
     {
         // Edge 가 아닌 경우 Anti-aliasing X
-        return float4(rgbM, 1);
+        return float4(ApplyCameraPostProcess(rgbM, uv), 1);
     }
 
     /*
@@ -164,8 +186,8 @@ float4 mainPS(VSOutput input) : SV_TARGET
     if ((lumaB < rangeMin) || (lumaB > rangeMax))
     {
         // 과도한 blur 방지
-        return float4(rgbA, 1);
+        return float4(ApplyCameraPostProcess(rgbA, uv), 1);
     }
 
-    return float4(rgbB, 1);
+    return float4(ApplyCameraPostProcess(rgbB, uv), 1);
 }

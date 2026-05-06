@@ -61,19 +61,13 @@ bool FPostProcessRenderPass::DrawCommand(const FRenderPassContext* Context)
 		return false;
 	}
 
-	const FPostProcessSettings& PostProcess = Context->RenderBus->GetPostProcessSettings();
-	const FCameraOverlaySettings& Overlay = Context->RenderBus->GetCameraOverlaySettings();
+	/*  이 패스는 범용 scene post process 슬롯으로 남겨둡니다.
+		anti-aliasing 전후에 맞춰야 하는 카메라 색 보정은 현재 FFXAARenderPass에서 처리하고,
+		fade/letterbox 같은 최종 화면 overlay는 FPostProcessOutlineRenderPass에서 처리합니다.
+		bloom/tonemap/color grading 등이 이곳에 구현되기 전까지는 기존 ScenePostProcess
+		렌더 타겟 handoff를 유지하는 fullscreen pass-through 역할을 합니다. */
 
 	ShaderBinding->ApplyFrameParameters(*Context->RenderBus);
-
-	ShaderBinding->SetVector4("FadeColor", FVector4(Overlay.FadeColor));
-	ShaderBinding->SetFloat("VignetteIntensity", PostProcess.VignetteIntensity);
-	ShaderBinding->SetFloat("VignetteRadius", PostProcess.VignetteRadius);
-	ShaderBinding->SetFloat("VignetteSoftness", PostProcess.VignetteSoftness);
-
-	ShaderBinding->SetFloat("Gamma", PostProcess.Gamma);
-	ShaderBinding->SetFloat("LetterBoxRatio", Overlay.LetterBoxRatio);
-
 	ShaderBinding->Bind(Context->DeviceContext);
 	Context->DeviceContext->Draw(3, 0);
 	return true;

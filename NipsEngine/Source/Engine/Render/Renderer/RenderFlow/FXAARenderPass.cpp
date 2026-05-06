@@ -59,6 +59,11 @@ bool FFXAARenderPass::Begin(const FRenderPassContext* Context)
             (Context->RenderTargets->Width > 0.0f) ? (1.0f / Context->RenderTargets->Width) : 0.0f,
             (Context->RenderTargets->Height > 0.0f) ? (1.0f / Context->RenderTargets->Height) : 0.0f));
     ShaderBinding->SetUInt("Enabled", Context->RenderBus->GetFXAAEnabled() ? 1u : 0u);
+    const FPostProcessSettings& PostProcess = Context->RenderBus->GetPostProcessSettings();
+    ShaderBinding->SetFloat("Gamma", PostProcess.Gamma);
+    ShaderBinding->SetFloat("VignetteIntensity", PostProcess.VignetteIntensity);
+    ShaderBinding->SetFloat("VignetteRadius", PostProcess.VignetteRadius);
+    ShaderBinding->SetFloat("VignetteSoftness", PostProcess.VignetteSoftness);
     ShaderBinding->SetAllSamplers(FResourceManager::Get().GetOrCreateSamplerState(ESamplerType::EST_Linear));
 
     Context->DeviceContext->IASetInputLayout(nullptr);
