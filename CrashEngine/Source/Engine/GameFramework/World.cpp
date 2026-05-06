@@ -1,6 +1,7 @@
 ﻿// 게임 프레임워크 영역의 세부 동작을 구현합니다.
 #include "GameFramework/World.h"
 #include "GameFramework/ActorPool.h"
+#include "GameFramework/AWorldSettings.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
@@ -16,7 +17,7 @@ IMPLEMENT_CLASS(UWorld, UObject)
 
 UWorld::~UWorld()
 {
-    if (PersistentLevel && !PersistentLevel->GetActors().empty())
+    if ((ActiveLevel && !ActiveLevel->GetActors().empty()) || (PersistentLevel && !PersistentLevel->GetActors().empty()))
     {
         EndPlay();
     }
@@ -39,11 +40,19 @@ UObject* UWorld::Duplicate(UObject* NewOuter) const
     NewWorld->SetGameplayPaused(IsGameplayPaused());
     NewWorld->SetEditorActorFolders(EditorActorFolders);
 
-    for (AActor* Src : GetActors())
+    // Duplicate both levels
+    for (AActor* Src : ActiveLevel->GetActors())
     {
         if (!Src)
             continue;
-        Src->Duplicate(NewWorld);
+        Src->Duplicate(NewWorld->GetActiveLevel());
+    }
+    for (AActor* Src : PersistentLevel->GetActors())
+    {
+        if (!Src || Src->IsA<AWorldSettings>())
+            continue;
+
+        Src->Duplicate(NewWorld->GetPersistentLevel());
     }
 
     NewWorld->PostDuplicate();
@@ -60,17 +69,37 @@ void UWorld::DestroyActor(AActor* Actor)
         ActorPoolManager->ForgetActor(Actor);
     }
     Actor->EndPlay();
-    // Remove from actor list
-    PersistentLevel->RemoveActor(Actor);
 
-    MarkEditorPickingAndScenePrimitiveBVHsDirty();
-    Partition.RemoveActor(Actor);
+    // Remove from correct level
+    ULevel* ActorLevel = Actor->GetTypedOuter<ULevel>();
+    if (ActorLevel)
+    {
+        ActorLevel->RemoveActor(Actor);
+    }
+
+    if (ActorLevel == ActiveLevel)
+    {
+        MarkEditorPickingAndScenePrimitiveBVHsDirty();
+        Partition.RemoveActor(Actor);
+    }
 
     // Mark for garbage collection
     UObjectManager::Get().DestroyObject(Actor);
 }
 
 AActor* UWorld::SpawnActorByClass(const FString& ClassName)
+{
+    UObject* Obj = FObjectFactory::Get().Create(ClassName, ActiveLevel);
+    AActor* Actor = Cast<AActor>(Obj);
+    if (Actor)
+    {
+        Actor->InitDefaultComponents();
+        AddActor(Actor);
+    }
+    return Actor;
+}
+
+AActor* UWorld::SpawnPersistentActorByClass(const FString& ClassName)
 {
     UObject* Obj = FObjectFactory::Get().Create(ClassName, PersistentLevel);
     AActor* Actor = Cast<AActor>(Obj);
@@ -89,7 +118,13 @@ void UWorld::AddActor(AActor* Actor)
         return;
     }
 
-    PersistentLevel->AddActor(Actor);
+    ULevel* ActorLevel = Actor->GetTypedOuter<ULevel>();
+    if (!ActorLevel)
+    {
+        // Default to ActiveLevel if no level is assigned
+        ActorLevel = ActiveLevel;
+    }
+    ActorLevel->AddActor(Actor);
 
     // 액터 생성자 시점에는 Outer가 아직 Level/World에 연결되지 않았을 수 있다.
     // 그 상태에서 만들어진 컴포넌트는 CreateRenderState()가 early-out 되므로
@@ -113,8 +148,11 @@ void UWorld::AddActor(AActor* Actor)
         Component->CreateRenderState();
     }
 
-    InsertActorToOctree(Actor);
-    MarkEditorPickingAndScenePrimitiveBVHsDirty();
+    if (ActorLevel == ActiveLevel)
+    {
+        InsertActorToOctree(Actor);
+        MarkEditorPickingAndScenePrimitiveBVHsDirty();
+    }
 
     // PIE 중 Duplicate(Ctrl+D)나 SpawnActor로 들어온 액터에도 BeginPlay를 보장.
     if (bHasBegunPlay && !Actor->HasActorBegunPlay())
@@ -278,18 +316,27 @@ void UWorld::InitWorld()
 {
     bGameplayPaused = false;
     Partition.Reset(FBoundingBox());
+    ActiveLevel = UObjectManager::Get().CreateObject<ULevel>(this);
+    ActiveLevel->SetWorld(this);
     PersistentLevel = UObjectManager::Get().CreateObject<ULevel>(this);
     PersistentLevel->SetWorld(this);
+
+    WorldSettings = SpawnPersistentActor<AWorldSettings>();
 }
 
 void UWorld::BeginPlay()
 {
     bHasBegunPlay = true;
 
+    ActorPoolManager = std::make_unique<FActorPoolManager>(this);
+    ActorPoolManager->SetWorld(this);
+
+    if (ActiveLevel)
+    {
+        ActiveLevel->BeginPlay();
+    }
     if (PersistentLevel)
     {
-        ActorPoolManager = std::make_unique<FActorPoolManager>(this);
-        ActorPoolManager->SetWorld(this);
         PersistentLevel->BeginPlay();
     }
 }
@@ -317,27 +364,36 @@ void UWorld::EndPlay()
     bGameplayPaused = false;
     TickManager.Reset();
 
-    if (!PersistentLevel)
-    {
-        return;
-    }
-
     // Clear spatial partition while actors/components are still alive.
     // Otherwise Octree teardown can dereference stale primitive pointers during shutdown.
     Partition.Reset(FBoundingBox());
 
     // Script EndPlay can release pooled actors through Lua handles, so keep the
     // pool manager alive until all actor/component EndPlay callbacks finish.
-    PersistentLevel->EndPlay();
+    if (ActiveLevel)
+    {
+        ActiveLevel->EndPlay();
+    }
+    if (PersistentLevel)
+    {
+        PersistentLevel->EndPlay();
+    }
 
     // Drop pool delegates before pooled actors are destroyed by the level.
     ActorPoolManager.reset();
 
-    PersistentLevel->Clear();
+    if (ActiveLevel)
+    {
+        ActiveLevel->Clear();
+        UObjectManager::Get().DestroyObject(ActiveLevel);
+        ActiveLevel = nullptr;
+    }
+    if (PersistentLevel)
+    {
+        PersistentLevel->Clear();
+        UObjectManager::Get().DestroyObject(PersistentLevel);
+        PersistentLevel = nullptr;
+    }
 
     MarkEditorPickingAndScenePrimitiveBVHsDirty();
-
-    // PersistentLevel은 CreateObject로 생성되었으므로 DestroyObject로 해제해야 alloc count가 맞음
-    UObjectManager::Get().DestroyObject(PersistentLevel);
-    PersistentLevel = nullptr;
 }

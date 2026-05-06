@@ -562,6 +562,44 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
                 Pass->BuildDrawCommands(PipelineContext);
             }
         }
+
+        if (PipelineContext.SceneView)
+        {
+            const auto& PostProcessSettings = PipelineContext.SceneView->PostProcessSettings;
+
+            if (PostProcessSettings.Vignetting.bEnabled)
+            {
+                if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::VignettingPass))
+                {
+                    Pass->BuildDrawCommands(PipelineContext);
+                }
+            }
+
+            if (PostProcessSettings.GammaCorrection.bEnabled)
+            {
+                if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::GammaCorrectionPass))
+                {
+                    Pass->BuildDrawCommands(PipelineContext);
+                }
+            }
+
+            if (PostProcessSettings.Fade.bEnabled)
+            {
+                if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::FadePass))
+                {
+                    Pass->BuildDrawCommands(PipelineContext);
+                }
+            }
+
+            if (PostProcessSettings.Letterbox.bEnabled)
+            {
+                if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::LetterboxPass))
+                {
+                    Pass->BuildDrawCommands(PipelineContext);
+                }
+            }
+        }
+
     }
 
     if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::UIPass))

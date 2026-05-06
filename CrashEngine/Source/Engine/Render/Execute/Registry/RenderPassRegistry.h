@@ -15,6 +15,10 @@ class FAlphaBlendPass;
 class FHeightFogPass;
 class FNonLitViewModePass;
 class FFXAAPass;
+class FGammaCorrectionPass;
+class FVignettingPass;
+class FFadePass;
+class FLetterboxPass;
 class FUIPass;
 class FPresentPass;
 class FSelectionMaskPass;
@@ -40,6 +44,10 @@ enum class ERenderPassNodeType
     NonLitViewModePass,
     HeightFogPass,
     FXAAPass,
+    VignettingPass,
+    GammaCorrectionPass,
+    FadePass,
+    LetterboxPass,
     UIPass,
     PresentPass,
     SelectionMaskPass,

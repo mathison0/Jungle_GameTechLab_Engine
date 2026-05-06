@@ -148,7 +148,6 @@ public:
 struct FActorComponentTickFunction : public FTickFunction
 {
     UActorComponent* Target = nullptr;
-    ;
 
 public:
     void SetTarget(UActorComponent* InTarget) { Target = InTarget; }

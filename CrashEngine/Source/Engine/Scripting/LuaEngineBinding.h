@@ -24,6 +24,9 @@ struct FLuaWorldHandle
 	bool IsGameplayPaused() const;
 	void SetGameplayPaused(bool bPaused) const;
 
+	float GetTimeDilation() const;
+	void SetTimeDilation(float InTimeDilation) const;
+
 	sol::table GetActorsByTag(sol::this_state State, const FString& Tag) const;
 };
 
@@ -61,6 +64,9 @@ struct FLuaActorHandle
 	bool IsVisible() const;
 	bool SetVisible(bool bVisible) const;
 
+	float GetCustomTimeDilation() const;
+	void SetCustomTimeDilation(float InTimeDilation) const;
+
 	bool InitFlyingWave(const sol::object& Dirobj, float Speed, float LifeTime) const;
 
 	FLuaComponentHandle GetComponent(const sol::variadic_args& Args) const;
@@ -82,6 +88,7 @@ struct FLuaComponentHandle
 	bool IsA(const FString& ClassName) const;
 
 	FLuaActorHandle GetOwner() const;
+	FLuaWorldHandle GetWorld() const;
 
 	bool IsActive() const;
 	bool SetActive(bool bActive) const;

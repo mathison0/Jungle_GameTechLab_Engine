@@ -14,7 +14,7 @@ struct FViewportRenderTargets
     ID3D11RenderTargetView* ViewportRTV    = nullptr;
     ID3D11DepthStencilView* ViewportDSV    = nullptr;
 
-    // 최종 색상 복사본. Fog / FXAA / Outline 입력으로 사용합니다.
+    // 최종 색상 복사본. Fog / FXAA / GammaCorrection / Outline 입력으로 사용합니다.
     ID3D11ShaderResourceView* SceneColorCopySRV     = nullptr;
     ID3D11Texture2D*          SceneColorCopyTexture = nullptr;
     ID3D11Texture2D*          ViewportRenderTexture = nullptr;

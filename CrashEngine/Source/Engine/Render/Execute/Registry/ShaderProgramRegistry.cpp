@@ -83,6 +83,11 @@ void FShaderProgramRegistry::Initialize()
     FGraphicsProgramDesc NormalView = MakeGraphicsProgramDesc("NormalView", "Shaders/Render/Scene/ViewModes/NonLitViewMode.hlsl");
     AddDefine(NormalView, "NON_LIT_VIEW_WORLD_NORMAL", "1");
     Add(EShaderType::NormalView, NormalView);
+
+    Add(EShaderType::GammaCorrection, MakeGraphicsProgramDesc("GammaCorrection", "Shaders/Passes/PostProcess/GammaCorrection.hlsl"));
+    Add(EShaderType::Vignetting, MakeGraphicsProgramDesc("Vignetting", "Shaders/Passes/PostProcess/VignettingPass.hlsl"));
+    Add(EShaderType::Letterbox, MakeGraphicsProgramDesc("Letterbox", "Shaders/Passes/PostProcess/LetterboxPass.hlsl"));
+    Add(EShaderType::Fade, MakeGraphicsProgramDesc("Fade", "Shaders/Passes/PostProcess/FadePass.hlsl"));
 }
 
 /*

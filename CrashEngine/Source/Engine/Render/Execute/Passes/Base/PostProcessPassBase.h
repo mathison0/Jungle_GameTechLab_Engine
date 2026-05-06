@@ -2,7 +2,9 @@
 
 #include "Render/Execute/Passes/Base/FullscreenPassBase.h"
 #include "Render/Execute/Context/Viewport/ViewportRenderTargets.h"
+#include "Render/Execute/Registry/ViewModePassRegistry.h"
 #include "Render/Resources/Bindings/RenderBindingSlots.h"
+#include "Render/Submission/Command/BuildDrawCommand.h"
 
 /*
     Pass Summary
@@ -20,6 +22,23 @@ public:
     }
 
 protected:
+    bool HasSceneColorCopyInput(const FRenderPipelineContext& Context) const
+    {
+        const FViewportRenderTargets* Targets = Context.Targets;
+        return Targets && Targets->SceneColorCopySRV && Targets->SceneColorCopyTexture;
+    }
+
+    void PrepareSceneColorCopyInput(FRenderPipelineContext& Context) const
+    {
+        if (!Context.Context || !HasSceneColorCopyInput(Context))
+        {
+            return;
+        }
+
+        CopyViewportColorToSceneColor(Context);
+        BindSceneColorInput(Context, true);
+    }
+
     void UnbindTargetsForCopy(FRenderPipelineContext& Context) const
     {
         Context.Context->OMSetRenderTargets(0, nullptr, nullptr);
@@ -115,5 +134,75 @@ protected:
             Context.StateCache->PerShaderCB[1] = nullptr;
             Context.StateCache->bForceAll      = true;
         }
+    }
+};
+
+class FPostProcessVariantPassBase : public FPostProcessPassBase
+{
+public:
+    void PrepareInputs(FRenderPipelineContext& Context) override
+    {
+        PrepareSceneColorCopyInput(Context);
+    }
+
+    void BuildDrawCommands(FRenderPipelineContext& Context) override
+    {
+        if (!IsEnabled(Context) || !HasSceneColorCopyInput(Context) || !Context.DrawCommandList)
+        {
+            return;
+        }
+
+        TArray<FDrawCommand>& Commands           = Context.DrawCommandList->GetCommands();
+        const size_t          CommandCountBefore = Commands.size();
+
+        DrawCommandBuild::BuildFullscreenDrawCommand(
+            ERenderPass::PostProcess,
+            Context,
+            *Context.DrawCommandList,
+            GetPostProcessVariant());
+
+        if (Commands.size() > CommandCountBefore)
+        {
+            (void)BindPostProcessConstantBuffer(Context, Commands.back());
+        }
+    }
+
+    void BuildDrawCommands(FRenderPipelineContext& Context, const FPrimitiveProxy& Proxy) override
+    {
+        (void)Context;
+        (void)Proxy;
+    }
+
+    void SubmitDrawCommands(FRenderPipelineContext& Context) override
+    {
+        if (!Context.DrawCommandList || !Context.Device || !Context.Context || !Context.StateCache)
+        {
+            return;
+        }
+
+        uint32 Start = 0;
+        uint32 End   = 0;
+        Context.DrawCommandList->GetPassRange(ERenderPass::PostProcess, Start, End);
+
+        const uint8 TargetUserBits = static_cast<uint8>(ToPostProcessUserBits(GetPostProcessVariant()));
+        for (uint32 i = Start; i < End; ++i)
+        {
+            const FDrawCommand& Command  = Context.DrawCommandList->GetCommands()[i];
+            const uint8         UserBits = static_cast<uint8>((Command.SortKey >> 48) & 0xFFu);
+            if (UserBits == TargetUserBits)
+            {
+                Context.DrawCommandList->SubmitRange(i, i + 1, *Context.Device, Context.Context, *Context.StateCache);
+            }
+        }
+    }
+
+protected:
+    virtual EViewModePostProcessVariant GetPostProcessVariant() const = 0;
+
+    virtual bool BindPostProcessConstantBuffer(FRenderPipelineContext& Context, FDrawCommand& Command)
+    {
+        (void)Context;
+        (void)Command;
+        return true;
     }
 };

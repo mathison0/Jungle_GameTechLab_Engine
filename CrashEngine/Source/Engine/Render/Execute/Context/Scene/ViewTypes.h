@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Core/CoreTypes.h"
+#include "Math/Vector.h"
 
 /*
     뷰 모드, ShowFlag, 뷰포트 카메라 프리셋, 뷰포트 렌더 옵션을 정의합니다.
@@ -44,10 +45,50 @@ struct FShowFlags
     float DirectionalLightDebugScale = 1.0f;
     float PointLightDebugScale       = 1.0f;
     float SpotLightDebugScale        = 1.0f;
+
+	//Post Process Setting으로 떼는 것이..?
     bool  bFog                       = true;
     bool  bFXAA                      = false;
     bool  bLightHitMap               = false;
     bool  b25DCulling                = true; // false는 tile_based_culling
+};
+
+struct FVignettingSettings
+{
+    bool    bEnabled  = true;
+    float   Intensity = 0.5f;
+    float   Radius    = 0.75f;
+    float   Softness  = 0.25f;
+    FVector Color     = FVector(0.0f, 0.0f, 0.0f);
+};
+
+struct FGammaCorrectionSettings
+{
+    bool  bEnabled     = true;
+    float DisplayGamma = 2.2f;
+};
+
+struct FLetterboxSettings
+{
+    bool    bEnabled          = false;
+    float   TargetAspectRatio = 2.39f;
+    float   Opacity           = 1.0f;
+    FVector Color             = FVector(0.0f, 0.0f, 0.0f);
+};
+
+struct FFadeSettings
+{
+    bool    bEnabled = false;
+    float   Alpha    = 0.0f;
+    FVector Color    = FVector(0.0f, 0.0f, 0.0f);
+};
+
+struct FPostProcessSettings
+{
+    FVignettingSettings       Vignetting;
+    FGammaCorrectionSettings  GammaCorrection;
+    FFadeSettings             Fade;
+    FLetterboxSettings        Letterbox;
 };
 
 // 뷰포트 카메라 프리셋 (Perspective / 6방향 Orthographic)

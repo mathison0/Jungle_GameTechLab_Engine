@@ -653,4 +653,19 @@ void UScriptComponent::BindFunctions()
                     return Result;
 				});
 
+    BindFunction("GetCustomTimeDilation",
+        [this](sol::variadic_args) -> float
+        {
+            return FLuaActorHandle(GetOwner()).GetCustomTimeDilation();
+        });
+
+    BindFunction("SetCustomTimeDilation",
+        [this](const sol::variadic_args& Args) -> void
+        {
+            float TimeDilation = 1.0f;
+            if (ReadFirstFloatArgument(Args, TimeDilation))
+            {
+                FLuaActorHandle(GetOwner()).SetCustomTimeDilation(TimeDilation);
+            }
+        });
 }

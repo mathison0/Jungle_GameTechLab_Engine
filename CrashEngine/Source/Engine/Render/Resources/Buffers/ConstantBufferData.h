@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreTypes.h"
 #include "Math/Matrix.h"
@@ -100,6 +100,39 @@ struct FFogCBData
     float    MaxOpacity;        // 4B
     float    _pad[2];           // 8B
 }; // Total: 48B
+
+struct FVignettingCBData
+{
+    float Intensity;
+    float Radius;
+    float Softness;
+    float _pad;
+
+	FVector Color;
+    float   bEnabled; 
+};
+
+struct FGammaCorrectionCBData
+{
+    float DisplayGamma = 2.2f;
+    float _pad[3]      = {};
+}; // Total: 16B
+
+struct FLetterboxCBData
+{
+    float   TargetAspectRatio  = 2.39f; // 4B
+    float   ViewportAspectRatio = 1.0f; // 4B
+    float   Opacity             = 1.0f; // 4B
+    float   _pad0               = 0.0f; // 4B
+    FVector Color               = FVector(0.0f, 0.0f, 0.0f); // 12B
+    float   _pad1               = 0.0f; // 4B
+}; // Total: 32B
+
+struct FFadeCBData
+{
+    FVector Color = FVector(0.0f, 0.0f, 0.0f); // 12B
+    float   Alpha = 0.0f; // 4B
+}; // Total: 16B
 
 // FFXAACBData는 렌더 처리에 필요한 데이터를 묶는 구조체입니다.
 struct FFXAACBData

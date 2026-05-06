@@ -252,7 +252,7 @@ function Script:UpdatePickups(deltaTime)
 end
 
 function Script:Tick(deltaTime)
-    if GameManager.IsGameplayPaused ~= nil and GameManager.IsGameplayPaused() then
+    if not GameManager.IsInputAllowed() then
         self:UpdateHealthBar()
         return
     end

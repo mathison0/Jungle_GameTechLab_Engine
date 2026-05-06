@@ -14,6 +14,8 @@ function Script:BeginPlay()
     Log("--- GameManagerComponent: BeginPlay ---")
     
     local GameManager = require("GameManager")
+    GameManager.ManagerComponent = self
+    
     -- 플레이어 등록 여부와 상관없이 세션 설정(시간 제한 등)을 먼저 준비합니다.
     if self.AutoStart == false then
         GameManager.PrepareMainMenu(self.GameTimeLimit)

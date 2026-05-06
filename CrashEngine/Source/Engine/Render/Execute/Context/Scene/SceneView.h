@@ -36,6 +36,7 @@ struct FSceneView
     EViewMode              ViewMode = EViewMode::Lit_Phong;
     ERenderShadingPath     RenderPath = ERenderShadingPath::Forward;
     FShowFlags             ShowFlags;
+    FPostProcessSettings   PostProcessSettings;
     FVector                WireframeColor = FVector(0.0f, 0.0f, 0.7f);
 
     FGPUOcclusionCulling* OcclusionCulling = nullptr;

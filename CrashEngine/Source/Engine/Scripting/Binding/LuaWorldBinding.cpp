@@ -2,6 +2,7 @@
 #include "Scripting/LuaEngineBinding.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "GameFramework/AWorldSettings.h"
 #include "Component/Collision/Collider2DComponent.h"
 #include "Scripting/LuaScriptTypes.h"
 #include <set>
@@ -26,6 +27,23 @@ void FLuaWorldHandle::SetGameplayPaused(bool bPaused) const
     if (World)
     {
         World->SetGameplayPaused(bPaused);
+    }
+}
+
+float FLuaWorldHandle::GetTimeDilation() const
+{
+    if (World && World->GetWorldSettings())
+    {
+        return World->GetWorldSettings()->GetEffectiveTimeDilation();
+    }
+    return 1.0f;
+}
+
+void FLuaWorldHandle::SetTimeDilation(float InTimeDilation) const
+{
+    if (World && World->GetWorldSettings())
+    {
+        World->GetWorldSettings()->SetTimeDilation(InTimeDilation);
     }
 }
 
@@ -56,6 +74,8 @@ namespace LuaBinding
             "IsValid", &FLuaWorldHandle::IsValid,
             "IsGameplayPaused", &FLuaWorldHandle::IsGameplayPaused,
             "SetGameplayPaused", &FLuaWorldHandle::SetGameplayPaused,
+            "GetTimeDilation", &FLuaWorldHandle::GetTimeDilation,
+            "SetTimeDilation", &FLuaWorldHandle::SetTimeDilation,
             "GetActorsByTag", &FLuaWorldHandle::GetActorsByTag);
     }
 }
