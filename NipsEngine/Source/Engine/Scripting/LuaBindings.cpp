@@ -5,6 +5,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Component/DecalComponent.h"
 #include "Component/PostProcessComponent.h"
+#include "Component/KnockbackComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
 #include "Engine/Camera/PlayerCameraManager.h"
@@ -64,6 +65,24 @@ namespace
 			if (URigidBodyComponent* Body = Cast<URigidBodyComponent>(Component))
 			{
 				return Body;
+			}
+		}
+
+		return nullptr;
+	}
+
+	UKnockbackComponent* FindFirstKnockback(AActor* Actor)
+	{
+		if (Actor == nullptr)
+		{
+			return nullptr;
+		}
+
+		for (UActorComponent* Component : Actor->GetComponents())
+		{
+			if (UKnockbackComponent* Knockback = Cast<UKnockbackComponent>(Component))
+			{
+				return Knockback;
 			}
 		}
 
@@ -420,6 +439,11 @@ void RegisterLuaBindings(sol::state& Lua)
 		return FLuaScriptSystem::Get().GetStringGameStateValue("Item:" + Actor->GetFName().ToString());
 	});
 
+	Lua.set_function("HasRigidBodyComponent", [](AActor* Actor)
+	{
+		return FindFirstRigidBody(Actor) != nullptr;
+	});
+
 	Lua.set_function("DropRegisteredItemFromActor", [](const std::string& ItemId, AActor* SourceActor, sol::optional<FVector> Offset)
 	{
 		if (ItemId.empty() || SourceActor == nullptr)
@@ -500,6 +524,37 @@ void RegisterLuaBindings(sol::state& Lua)
 	Lua.set_function("TriggerHitStop", [](float Duration, sol::optional<float> Dilation)
 	{
 		FTimeDilationSystem::Get().TriggerHitStop(Duration, Dilation.value_or(0.0f));
+	});
+
+	Lua.set_function("TriggerKnockback", [](AActor* Actor, const FVector& Direction, float Strength, float Duration)
+	{
+		if (UKnockbackComponent* Knockback = FindFirstKnockback(Actor))
+		{
+			Knockback->TriggerKnockback(Direction, Strength, Duration);
+			return true;
+		}
+
+		return false;
+	});
+
+	Lua.set_function("IsKnockbackActive", [](AActor* Actor)
+	{
+		if (UKnockbackComponent* Knockback = FindFirstKnockback(Actor))
+		{
+			return Knockback->IsKnockbackActive();
+		}
+
+		return false;
+	});
+
+	Lua.set_function("IsKnockbackControlLocked", [](AActor* Actor)
+	{
+		if (UKnockbackComponent* Knockback = FindFirstKnockback(Actor))
+		{
+			return Knockback->IsControlLocked();
+		}
+
+		return false;
 	});
 
 	Lua.set_function("StartSlomo", [](float TargetDilation, float HoldTime, sol::optional<float> BlendInTime, sol::optional<float> BlendOutTime)
