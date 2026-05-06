@@ -1573,8 +1573,8 @@ void GameUISystem::UpdateRmlUiDocument(EUIRenderMode Mode, int Width, int Height
 		SetElementText("interaction-hint-text", "씻기");
 		break;
 	case EInteractionHintType::Throw:
-		SetElementText("interaction-secondary-key-label", "");
-		SetElementText("interaction-secondary-text", "");
+		SetElementText("interaction-secondary-key-label", "E");
+		SetElementText("interaction-secondary-text", "놓기");
 		SetElementText("interaction-key-label", "F");
 		SetElementText("interaction-hint-text", "던지기");
 		break;

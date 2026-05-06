@@ -1,4 +1,4 @@
-#include "Engine/Camera/CameraModifier.h"
+﻿#include "Engine/Camera/CameraModifier.h"
 
 #include "Engine/Camera/PlayerCameraManager.h"
 
@@ -9,6 +9,13 @@ bool UCameraModifier::ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView)
 	(void)DeltaTime;
 	(void)InOutView;
 	return false;
+}
+
+bool UCameraModifier::ModifyOverlay(float DeltaTime, FCameraOverlayInfo& InOutOverlay)
+{
+    (void)DeltaTime;
+    (void)InOutOverlay;
+    return false;
 }
 
 void UCameraModifier::EnableModifier()

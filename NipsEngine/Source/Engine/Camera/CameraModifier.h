@@ -5,12 +5,6 @@
 
 struct FCameraViewInfo;
 
-enum class ECameraModifierResult : uint8
-{
-	Continue, // 다음 Camera Modifier 계속 실행
-	Stop      // 이후의 Camera Modifier 연산 중단
-};
-
 class UCameraModifier : public UObject
 {
 public:
@@ -20,6 +14,7 @@ public:
 	~UCameraModifier() override = default;
 
 	virtual bool ModifyCamera(float DeltaTime, FCameraViewInfo& InOutView);
+	virtual bool ModifyOverlay(float DeltaTime, FCameraOverlayInfo& InOutOverlay);
 
 	virtual void EnableModifier();
 	virtual void DisableModifier();
