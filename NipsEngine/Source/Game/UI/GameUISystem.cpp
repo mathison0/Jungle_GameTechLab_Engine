@@ -897,7 +897,7 @@ void GameUISystem::UpdateEndingScoreElements(bool bShowScorePanel)
 		RecalculateEndingScore();
 
 	SetElementVisible("ending-score-panel", bShowScorePanel);
-	SetElementVisible("score-name-modal", bShowScorePanel && bScoreNameInputOpen);
+	SetElementVisible("score-name-modal", CurrentState == EGameUIState::Ending && bScoreNameInputOpen);
 
 	if (!bShowScorePanel)
 		return;
