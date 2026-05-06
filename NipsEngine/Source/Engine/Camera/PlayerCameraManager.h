@@ -13,6 +13,7 @@
 class FViewportCamera;
 class UCameraComponent;
 class ULetterBoxCameraModifier;
+class ULuaCameraModifier;
 struct FSceneView;
 enum class EViewMode : int32;
 
@@ -120,11 +121,10 @@ public:
 	void ClearLetterBox();
 
 	// Modifier
-	void AddCameraModifier(UCameraModifier* Modifier);
 	template <typename TModifier>
 	TModifier* AddNewCameraModifier();
+	ULuaCameraModifier* AddLuaCameraModifier(const FString& ScriptPath);
 	void RemoveCameraModifier(UCameraModifier* Modifier);
-	void ClearModifierList();
 
 	// Transition
 	void StartCameraTransition(const FCameraViewInfo& From, const FCameraViewInfo& To, float Duration);
@@ -138,6 +138,9 @@ public:
 private:
 	bool BuildBaseCameraView(FCameraViewInfo& OutView) const;
 	void UpdateCameraFade(float DeltaTime);
+
+	bool AddCameraModifierToList(UCameraModifier* NewModifier);
+	void ClearModifierList();
 
 	void ApplyCameraModifiers(float DeltaTime, FCameraViewInfo& InOutView);
 	void ApplyPostProcessModifiers(float DeltaTime, FPostProcessSettings& InOutSettings);
@@ -168,7 +171,8 @@ TModifier* APlayerCameraManager::AddNewCameraModifier()
 	static_assert(std::is_base_of_v<UCameraModifier, TModifier>, "TModifier must derive from UCameraModifier");
 
 	TModifier* Modifier = UObjectManager::Get().CreateObject<TModifier>();
-	AddCameraModifier(Modifier);
 	OwnedModifierList.push_back(Modifier);
+	Modifier->AddedToCamera(this);
+	AddCameraModifierToList(Modifier);
 	return Modifier;
 }

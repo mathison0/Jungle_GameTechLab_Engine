@@ -377,6 +377,9 @@
     <ClCompile Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.cpp">
       <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\Modifier\LuaCameraModifier.cpp">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
@@ -1011,6 +1014,9 @@
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h">
+      <Filter>Source\Engine\Camera\Modifier</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\Modifier\LuaCameraModifier.h">
       <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\Collision.h">

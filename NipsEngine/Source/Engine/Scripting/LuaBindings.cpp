@@ -6,9 +6,12 @@
 #include "Component/DecalComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/Physics/RigidBodyComponent.h"
+#include "Engine/Camera/PlayerCameraManager.h"
 #include "Math/Vector.h"
 #include "Math/Vector2.h"
 #include "Math/Vector4.h"
+#include "Math/Quat.h"
+#include "Math/Color.h"
 #include "Object/Object.h"
 #include "Core/CollisionTypes.h"
 #include "Core/Logger.h"
@@ -113,6 +116,67 @@ void RegisterLuaBindings(sol::state& Lua)
 		"X", &FVector::X,  
 		"Y", &FVector::Y,
 		"Z", &FVector::Z
+	);
+
+	Lua.new_usertype<FQuat>(
+		"FQuat",
+		sol::constructors<FQuat(), FQuat(float, float, float, float)>(),
+		"x", &FQuat::X,
+		"y", &FQuat::Y,
+		"z", &FQuat::Z,
+		"w", &FQuat::W,
+		"X", &FQuat::X,
+		"Y", &FQuat::Y,
+		"Z", &FQuat::Z,
+		"W", &FQuat::W,
+		"Normalize", &FQuat::Normalize,
+		"GetForwardVector", &FQuat::GetForwardVector,
+		"GetRightVector", &FQuat::GetRightVector,
+		"GetUpVector", &FQuat::GetUpVector
+	);
+
+	Lua.new_usertype<FColor>(
+		"FColor",
+		sol::constructors<FColor(), FColor(float, float, float, float)>(),
+		"r", &FColor::r,
+		"g", &FColor::g,
+		"b", &FColor::b,
+		"a", &FColor::a,
+		"R", &FColor::R,
+		"G", &FColor::G,
+		"B", &FColor::B,
+		"A", &FColor::A
+	);
+
+	Lua.new_usertype<FCameraViewInfo>(
+		"FCameraViewInfo",
+		"Location", &FCameraViewInfo::Location,
+		"Rotation", &FCameraViewInfo::Rotation,
+		"FOV", &FCameraViewInfo::FOV,
+		"AspectRatio", &FCameraViewInfo::AspectRatio,
+		"NearPlane", &FCameraViewInfo::NearPlane,
+		"FarPlane", &FCameraViewInfo::FarPlane,
+		"OrthoWidth", &FCameraViewInfo::OrthoWidth,
+		"OrthoHeight", &FCameraViewInfo::OrthoHeight,
+		"bOrthographic", &FCameraViewInfo::bOrthographic,
+		"GetForwardVector", &FCameraViewInfo::GetForwardVector,
+		"GetRightVector", &FCameraViewInfo::GetRightVector,
+		"GetUpVector", &FCameraViewInfo::GetUpVector
+	);
+
+	Lua.new_usertype<FPostProcessSettings>(
+		"FPostProcessSettings",
+		"Gamma", &FPostProcessSettings::Gamma,
+		"VignetteIntensity", &FPostProcessSettings::VignetteIntensity,
+		"VignetteRadius", &FPostProcessSettings::VignetteRadius,
+		"VignetteSoftness", &FPostProcessSettings::VignetteSoftness
+	);
+
+	Lua.new_usertype<FCameraOverlaySettings>(
+		"FCameraOverlaySettings",
+		"FadeColor", &FCameraOverlaySettings::FadeColor,
+		"FadeAlpha", &FCameraOverlaySettings::FadeAlpha,
+		"LetterboxRatio", &FCameraOverlaySettings::LetterboxRatio
 	);
 
 	Lua.new_usertype<UObject>(

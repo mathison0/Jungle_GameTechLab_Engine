@@ -2,6 +2,7 @@
 
 #include "Component/CameraComponent.h"
 #include "Engine/Camera/Modifier/LetterBoxCameraModifier.h"
+#include "Engine/Camera/Modifier/LuaCameraModifier.h"
 #include "Engine/Runtime/SceneView.h"
 #include "Engine/Viewport/ViewportCamera.h"
 #include "Engine/Math/Utils.h"
@@ -216,33 +217,62 @@ ULetterBoxCameraModifier* APlayerCameraManager::GetLetterBoxCameraModifier()
 	return LetterBoxCameraModifier;
 }
 
-void APlayerCameraManager::AddCameraModifier(UCameraModifier* Modifier)
+ULuaCameraModifier* APlayerCameraManager::AddLuaCameraModifier(const FString& ScriptPath)
+{
+	ULuaCameraModifier* Modifier = UObjectManager::Get().CreateObject<ULuaCameraModifier>();
+	Modifier->SetScriptPath(ScriptPath);
+	OwnedModifierList.push_back(Modifier);
+	Modifier->AddedToCamera(this);
+	AddCameraModifierToList(Modifier);
+	return Modifier;
+}
+
+bool APlayerCameraManager::AddCameraModifierToList(UCameraModifier* NewModifier)
+{
+	if (NewModifier == nullptr)
+	{
+		return false;
+	}
+
+	if (std::find(ModifierList.begin(), ModifierList.end(), NewModifier) != ModifierList.end())
+	{
+		return false;
+	}
+
+	ModifierList.push_back(NewModifier);
+	std::sort(ModifierList.begin(), ModifierList.end(), [](const UCameraModifier* A, const UCameraModifier* B)
+			  {
+		const int32 APriority = A ? A->GetPriority() : 0;
+		const int32 BPriority = B ? B->GetPriority() : 0;
+		return APriority < BPriority; });
+
+	return true;
+}
+
+void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 {
 	if (Modifier == nullptr)
 	{
 		return;
 	}
 
-	if (std::find(ModifierList.begin(), ModifierList.end(), Modifier) != ModifierList.end())
-	{
-		return;
-	}
-
-	ModifierList.push_back(Modifier);
-	std::sort(ModifierList.begin(), ModifierList.end(), [](const UCameraModifier* A, const UCameraModifier* B)
-			  {
-		const int32 APriority = A ? A->GetPriority() : 0;
-		const int32 BPriority = B ? B->GetPriority() : 0;
-		return APriority < BPriority; });
-}
-
-void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
-{
+	const auto OldSize = ModifierList.size();
 	ModifierList.erase(std::remove(ModifierList.begin(), ModifierList.end(), Modifier), ModifierList.end());
+	if (ModifierList.size() != OldSize)
+	{
+		Modifier->RemovedFromCamera(this);
+	}
 }
 
 void APlayerCameraManager::ClearModifierList()
 {
+	for (UCameraModifier* Modifier : ModifierList)
+	{
+		if (Modifier)
+		{
+			Modifier->RemovedFromCamera(this);
+		}
+	}
 	ModifierList.clear();
 }
 
