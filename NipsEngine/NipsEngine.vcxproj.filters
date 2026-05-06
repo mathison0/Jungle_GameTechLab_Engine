@@ -1004,6 +1004,9 @@
     <ClInclude Include="Source\Engine\Camera\CameraModifier.h">
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Camera\PlayerCameraManager.h">
+      <Filter>Source\Engine\Camera</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Camera\Modifier\LetterBoxCameraModifier.h">
       <Filter>Source\Engine\Camera\Modifier</Filter>
     </ClInclude>
