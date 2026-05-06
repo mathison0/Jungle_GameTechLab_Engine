@@ -377,6 +377,12 @@ UCameraShakeBase* APlayerCameraManager::StartCameraShakeFromAsset(const FString&
     return ShakeModifier ? ShakeModifier->AddCameraShakeFromAsset(Path, Params) : nullptr;
 }
 
+void APlayerCameraManager::ApplyCameraModifiersToPOV(float DeltaTime, FMinimalViewInfo& InOutPOV)
+{
+    ApplyCameraModifiers(DeltaTime, InOutPOV);
+    FillCameraCache(InOutPOV);
+}
+
 void APlayerCameraManager::Tick(float DeltaTime)
 {
     AActor::Tick(DeltaTime);

@@ -11,12 +11,12 @@
     "LocationFrequencyMultiplier" : 1.0,
     "RotationAmplitudeMultiplier" : 1.0,
     "RotationFrequencyMultiplier" : 1.0,
-    "X" : { "Amplitude" : 20.0, "Frequency" : 18.0, "InitialOffsetType" : "Random" },
-    "Y" : { "Amplitude" : 10.0, "Frequency" : 22.0, "InitialOffsetType" : "Random" },
-    "Z" : { "Amplitude" : 6.0, "Frequency" : 16.0, "InitialOffsetType" : "Random" },
-    "Pitch" : { "Amplitude" : 1.5, "Frequency" : 20.0, "InitialOffsetType" : "Random" },
-    "Yaw" : { "Amplitude" : 1.0, "Frequency" : 18.0, "InitialOffsetType" : "Random" },
-    "Roll" : { "Amplitude" : 1.0, "Frequency" : 24.0, "InitialOffsetType" : "Random" },
+    "X" : { "Amplitude" : 6.0, "Frequency" : 18.0, "InitialOffsetType" : "Random" },
+    "Y" : { "Amplitude" : 3.0, "Frequency" : 22.0, "InitialOffsetType" : "Random" },
+    "Z" : { "Amplitude" : 2.0, "Frequency" : 16.0, "InitialOffsetType" : "Random" },
+    "Pitch" : { "Amplitude" : 0.45, "Frequency" : 20.0, "InitialOffsetType" : "Random" },
+    "Yaw" : { "Amplitude" : 0.3, "Frequency" : 18.0, "InitialOffsetType" : "Random" },
+    "Roll" : { "Amplitude" : 0.3, "Frequency" : 24.0, "InitialOffsetType" : "Random" },
     "FOV" : { "Amplitude" : 0.0, "Frequency" : 1.0, "InitialOffsetType" : "Zero" }
   }
 }

@@ -133,6 +133,7 @@ public:
 	bool DisableCameraModifier(uint32 ModifierHandle, bool bImmediate = false);
     bool RemoveCameraModifier(uint32 ModifierHandle);
     UCameraShakeBase* StartCameraShakeFromAsset(const FString& Path, const FAddCameraShakeParams& Params);
+    void ApplyCameraModifiersToPOV(float DeltaTime, FMinimalViewInfo& InOutPOV);
 
     virtual void Tick(float DeltaTime) override;
 

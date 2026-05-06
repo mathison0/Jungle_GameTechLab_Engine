@@ -20,6 +20,7 @@
 #include "GameFramework/World.h"
 #include "Runtime/Engine.h"
 #include "Sound/SoundManager.h"
+#include "Viewport/GameViewportClient.h"
 
 namespace
 {
@@ -252,6 +253,42 @@ void ReadSoundPlayArgs(const sol::variadic_args& Args, FString& OutBusName, floa
 			bVolumeRead = true;
 		}
 	}
+}
+
+float ReadOptionalScaleArg(const sol::variadic_args& Args, float DefaultScale)
+{
+	for (const sol::object& Arg : Args)
+	{
+		if (Arg.is<float>())
+		{
+			return Arg.as<float>();
+		}
+		if (Arg.is<double>())
+		{
+			return static_cast<float>(Arg.as<double>());
+		}
+		if (Arg.is<int>())
+		{
+			return static_cast<float>(Arg.as<int>());
+		}
+	}
+
+	return DefaultScale;
+}
+
+FString ResolveCameraShakePath(const FString& Path)
+{
+	if (Path.empty())
+	{
+		return FString();
+	}
+
+	if (Path.find("Asset/") == 0 || Path.find("Asset\\") == 0 || Path.find(':') != FString::npos)
+	{
+		return Path;
+	}
+
+	return FPaths::ContentRelativePath(Path);
 }
 }
 
@@ -512,6 +549,23 @@ void FScriptSystem::RegisterEngineAPI() const
 	Lua->set_function("IsSoundPlaying", [](const FSoundHandle& Handle) -> bool
 		{
 			return FSoundManager::Get().IsPlaying(Handle);
+		});
+
+	Lua->set_function("PlayCameraShake", [](const FString& Path, const sol::variadic_args& Args) -> bool
+		{
+			if (!GEngine || !GEngine->GetGameViewportClient())
+			{
+				return false;
+			}
+
+			const FString ResolvedPath = ResolveCameraShakePath(Path);
+			if (ResolvedPath.empty())
+			{
+				return false;
+			}
+
+			const float Scale = ReadOptionalScaleArg(Args, 1.0f);
+			return GEngine->GetGameViewportClient()->StartCameraShakeFromAsset(ResolvedPath, Scale) != nullptr;
 		});
     
     // 입력 처리

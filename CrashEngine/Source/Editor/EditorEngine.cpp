@@ -250,6 +250,11 @@ void UEditorEngine::Tick(float DeltaTime)
         World->Tick(DeltaTime, TickType);
     }
 
+    if (IsPlayingInEditor() && GameViewportClient)
+    {
+        GameViewportClient->UpdateCameraShakes(DeltaTime);
+    }
+
     FSoundManager::Get().Tick(DeltaTime);
 
     Render(DeltaTime);
