@@ -84,25 +84,31 @@ void FTickManager::GatherTickFunctions(UWorld* World, ELevelTick TickType)
         return;
     }
 
-    for (AActor* Actor : World->GetActors())
-    {
-        if (!ShouldDispatchActorTick(Actor, TickType))
+    auto GatherFromLevel = [&](ULevel* Level) {
+        if (!Level) return;
+        for (AActor* Actor : Level->GetActors())
         {
-            continue;
-        }
-
-        QueueTickFunction(Actor->PrimaryActorTick);
-
-        for (UActorComponent* Component : Actor->GetComponents())
-        {
-            if (!Component)
+            if (!ShouldDispatchActorTick(Actor, TickType))
             {
                 continue;
             }
 
-            QueueTickFunction(Component->PrimaryComponentTick);
+            QueueTickFunction(Actor->PrimaryActorTick);
+
+            for (UActorComponent* Component : Actor->GetComponents())
+            {
+                if (!Component)
+                {
+                    continue;
+                }
+
+                QueueTickFunction(Component->PrimaryComponentTick);
+            }
         }
-    }
+    };
+
+    GatherFromLevel(World->GetActiveLevel());
+    GatherFromLevel(World->GetPersistentLevel());
 }
 
 void FTickManager::QueueTickFunction(FTickFunction& TickFunction)

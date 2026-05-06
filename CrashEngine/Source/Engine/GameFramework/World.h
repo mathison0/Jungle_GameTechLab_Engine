@@ -37,6 +37,11 @@ public:
     template <typename T, typename... TArgs>
     T* SpawnActor(TArgs&&... Args);
     AActor* SpawnActorByClass(const FString& ClassName);
+
+    template <typename T, typename... TArgs>
+    T* SpawnPersistentActor(TArgs&&... Args);
+    AActor* SpawnPersistentActorByClass(const FString& ClassName);
+
     void DestroyActor(AActor* Actor);
     void AddActor(AActor* Actor);
     void MarkEditorPickingAndScenePrimitiveBVHsDirty();
@@ -49,7 +54,10 @@ public:
     void WarmupPickingData() const;
     bool RaycastEditorPicking(const FRay& Ray, FHitResult& OutHitResult, AActor*& OutActor) const;
 
-    const TArray<AActor*>& GetActors() const { return PersistentLevel->GetActors(); }
+    const TArray<AActor*>& GetActors() const { return ActiveLevel->GetActors(); }
+    ULevel* GetActiveLevel() const { return ActiveLevel; }
+    ULevel* GetPersistentLevel() const { return PersistentLevel; }
+
     const TArray<FString>& GetEditorActorFolders() const { return EditorActorFolders; }
     void SetEditorActorFolders(const TArray<FString>& InFolders) { EditorActorFolders = InFolders; }
     void AddEditorActorFolder(const FString& FolderPath);
@@ -88,6 +96,7 @@ public:
 private:
     // TArray<AActor*> Actors;
     ULevel* PersistentLevel;
+    ULevel* ActiveLevel;
 
     UCameraComponent* ActiveCamera = nullptr;
     UCameraComponent* LastLODUpdateCamera = nullptr;
@@ -117,8 +126,18 @@ template <typename T, typename... TArgs>
 inline T* UWorld::SpawnActor(TArgs&&... Args)
 {
     // create and register an actor
-    T* Actor = UObjectManager::Get().CreateObject<T>(PersistentLevel);
+    T* Actor = UObjectManager::Get().CreateObject<T>(ActiveLevel);
     static_cast<T*>(Actor)->InitDefaultComponents(std::forward<TArgs>(Args)...);
     AddActor(Actor); // BeginPlay 트리거는 AddActor 내부에서 bHasBegunPlay 가드로 처리
+    return Actor;
+}
+
+template <typename T, typename... TArgs>
+inline T* UWorld::SpawnPersistentActor(TArgs&&... Args)
+{
+    // create and register a persistent actor
+    T* Actor = UObjectManager::Get().CreateObject<T>(PersistentLevel);
+    static_cast<T*>(Actor)->InitDefaultComponents(std::forward<TArgs>(Args)...);
+    AddActor(Actor);
     return Actor;
 }
