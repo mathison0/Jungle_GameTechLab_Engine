@@ -25,23 +25,23 @@ local SpawnPhaseTable = {
     {
         TimeThreshold = 30.0, 
         Enemy = {DesiredCount = 30, SpawnRate = 5.0},
-        FlyingWave = {Pattern = { 2, 2, 1 }, Interval = 15.0, Speed = 20.0}
+        FlyingWave = {Pattern = { 2, 2, 1 }, Interval = 15.0, Speed = 16.0}
     },
 
     {
         TimeThreshold = 60.0, 
-        Enemy = {DesiredCount = 60, SpawnRate = 10.0}, FlyingWave = {Pattern = { 2, 3, 2 }, Interval = 12.0,  Speed = 24.0}
+        Enemy = {DesiredCount = 60, SpawnRate = 10.0}, FlyingWave = {Pattern = { 2, 3, 2 }, Interval = 12.0,  Speed = 20.0}
     },
 
     {
         TimeThreshold = 120.0,
-        Enemy = {DesiredCount = 100, SpawnRate = 15.0}, FlyingWave = {Pattern = { 2, 3, 4, 3, 2 }, Interval = 10.0, Speed = 28.0}
+        Enemy = {DesiredCount = 100, SpawnRate = 15.0}, FlyingWave = {Pattern = { 3, 4, 3}, Interval = 10.0, Speed = 24.0}
     },
 
     {
         TimeThreshold = 1000000.0,
         Enemy = {DesiredCount = 150,SpawnRate = 20.0},
-        FlyingWave = {Pattern = { 3, 4, 4, 4, 3 },Interval = 8.0, Speed = 32.0}
+        FlyingWave = {Pattern = { 1, 2, 3, 2, 1 },Interval = 8.0, Speed = 24.0}
     }
 }
 
