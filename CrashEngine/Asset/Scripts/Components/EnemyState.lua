@@ -4,7 +4,7 @@ local GameManager = require("GameManager")
 
 local EnemyState = {
     properties = {
-        MaxHP = 10000, --테스트
+        MaxHP = 100,
         CurrentHP = 100,
         GemClassName = {type = "string", default = "APickupActor"},
         DeathDecalClassName = {type = "string", default = "ADeathDecalActor"}
