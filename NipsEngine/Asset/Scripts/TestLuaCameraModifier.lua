@@ -1,26 +1,66 @@
-local Time = 0.0
+return {
+    Modifiers = {
+        {
+            Type = "Camera",
 
-function ModifyCamera(View, DeltaTime)
-    Time = Time + DeltaTime
+            -- FOV is stored in radians.
+            FOVOffset = {
+                Base = 0.0,
+                Amplitude = 0.03,
+                Frequency = 4.0,
+            },
+        },
 
-    -- FOV is stored in radians. Keep the offset small so the test is visible but not extreme.
-    View.FOV = View.FOV + math.sin(Time * 4.0) * 0.03
+        {
+            Type = "PostProcess",
 
-    return true
-end
+            Gamma = {
+                From = 1.0,
+                To = 2.4,
+                Duration = 2.0,
+                Loop = true,
+                PingPong = true,
+            },
 
-function ModifyPostProcess(Settings, DeltaTime)
-    Settings.Gamma = 1.0 + (math.sin(Time * 2.0) * 0.5 + 0.5) * 1.4
-    Settings.VignetteIntensity = 1.0
-    Settings.VignetteRadius = 0.35
-    Settings.VignetteSoftness = 0.45
+            VignetteIntensity = 1.0,
+            VignetteRadius = 0.35,
+            VignetteSoftness = 0.45,
+        },
 
-    return true
-end
+        {
+            Type = "Overlay",
 
-function ModifyOverlay(Overlay, DeltaTime)
-    Overlay.LetterBoxRatio = 0.08
-    Overlay.FadeColor = FVector4(0.0, 0.0, 0.0, 0.15)
+            FadeColor = { R = 0.0, G = 0.0, B = 0.0, A = 0.15 },
+        },
 
-    return true
-end
+        {
+            Type = "LetterBox",
+            Id = "IntroLetterBox",
+
+            TargetRatio = 0.08,
+            Duration = 1.0,
+        },
+
+        {
+            Type = "Fade",
+            Id = "IntroFade",
+
+            Color = { R = 0.0, G = 0.0, B = 0.0, A = 1.0 },
+            FromAlpha = 0.0,
+            ToAlpha = 0.25,
+            Duration = 1.0,
+            Hold = true,
+        },
+
+        {
+            Type = "Shake",
+            Id = "IntroShake",
+
+            Duration = 0.5,
+            RotAmplitude = { 0.02, 0.0, 0.0 },
+            RotFrequency = { 15.0, 15.0, 15.0 },
+            FOVAmplitude = 0.01,
+            FOVFrequency = 12.0,
+        },
+    },
+}

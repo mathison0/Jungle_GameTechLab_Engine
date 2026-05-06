@@ -1,4 +1,4 @@
-#include "Component/LuaCameraModifierComponent.h"
+﻿#include "Component/LuaCameraModifierComponent.h"
 
 #include "Object/ObjectFactory.h"
 
@@ -8,7 +8,7 @@ REGISTER_FACTORY(ULuaCameraModifierComponent)
 void ULuaCameraModifierComponent::Serialize(FArchive& Ar)
 {
 	UActorComponent::Serialize(Ar);
-	Ar << "ScriptPath" << ScriptPath;
+	Ar << "ScriptPath" << ScriptPath; 
 }
 
 void ULuaCameraModifierComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)

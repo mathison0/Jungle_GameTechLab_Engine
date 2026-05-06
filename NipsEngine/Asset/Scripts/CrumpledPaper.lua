@@ -1,6 +1,6 @@
 function BeginPlay(owner)
     if owner == nil then
-        print("[Item][Lua] CrumpledReceipt BeginPlay owner=nil")
+        print("[Item][Lua] CrumpledPaper BeginPlay owner=nil")
         return
     end
 
