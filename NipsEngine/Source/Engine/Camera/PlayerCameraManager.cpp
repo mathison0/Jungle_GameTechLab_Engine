@@ -19,8 +19,35 @@ namespace
 {
 FQuat MakeCameraRotation(const FVector& Forward, const FVector& Right, const FVector& Up)
 {
+	const FVector XAxis = Forward.GetSafeNormal();
+	if (XAxis.IsNearlyZero())
+	{
+		return FQuat::Identity;
+	}
+
+	FVector YAxis = Right - XAxis * FVector::DotProduct(Right, XAxis);
+	YAxis = YAxis.GetSafeNormal();
+	if (YAxis.IsNearlyZero())
+	{
+		YAxis = FVector::CrossProduct(Up, XAxis).GetSafeNormal();
+	}
+
+	if (YAxis.IsNearlyZero())
+	{
+		const FVector UpCandidate = std::abs(XAxis.Z) < 0.999f ? FVector::UpVector : FVector::RightVector;
+		YAxis = FVector::CrossProduct(UpCandidate, XAxis).GetSafeNormal();
+	}
+
+	const FVector ZAxis = FVector::CrossProduct(XAxis, YAxis).GetSafeNormal();
+	if (ZAxis.IsNearlyZero())
+	{
+		return FQuat::Identity;
+	}
+
+	YAxis = FVector::CrossProduct(ZAxis, XAxis).GetSafeNormal();
+
 	FMatrix RotationMatrix = FMatrix::Identity;
-	RotationMatrix.SetAxes(Forward.GetSafeNormal(), Right.GetSafeNormal(), Up.GetSafeNormal());
+	RotationMatrix.SetAxes(XAxis, YAxis, ZAxis);
 
 	FQuat Rotation(RotationMatrix);
 	Rotation.Normalize();
