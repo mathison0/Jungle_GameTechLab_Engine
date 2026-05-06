@@ -171,13 +171,11 @@ void UGameEngine::ExitToTitle()
 
 void UGameEngine::Tick(float DeltaTime)
 {
-	FTimeDilationSystem::Get().Tick(DeltaTime);
-	const float GameDeltaTime = FTimeDilationSystem::Get().GetScaledDeltaTime(DeltaTime);
-
+	TickTimeDilation(DeltaTime);
 	FInputRouter::TickInputSystem();
 	UpdateInputWorldType();
 	GameViewport->Tick(DeltaTime);
-	WorldTick(GameDeltaTime);
+	WorldTick(DeltaTime);
 	if (GameUISystem::Get().GetState() == EGameUIState::InGame)
 	{
 		GGameContext::Get().RefreshCleanProgressFromDecals();

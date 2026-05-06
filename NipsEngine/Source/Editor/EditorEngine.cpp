@@ -7,6 +7,7 @@
 #include "Game/Systems/GameContext.h"
 #include "Game/Systems/GameItemDataLoader.h"
 #include "Game/Systems/ItemSystem.h"
+#include "Game/Systems/TimeDilationSystem.h"
 #include "Game/Settings/GameSettings.h"
 #include "Game/UI/GameUISystem.h"
 #include "Engine/Slate/SlateApplication.h"
@@ -381,6 +382,7 @@ void UEditorEngine::Tick(float DeltaTime)
 	UpdateInputWorldType();
 	ViewportLayout.Tick(DeltaTime);
 	MainPanel.Update();
+	TickTimeDilation(DeltaTime);
 	WorldTick(DeltaTime);
 	ViewportLayout.LateTick(DeltaTime);
 	Render(DeltaTime);
@@ -407,7 +409,7 @@ void UEditorEngine::WorldTick(float DeltaTime)
 	{
 		if (!Ctx.World || Ctx.bPaused)
 			continue;
-		Ctx.World->Tick(DeltaTime);
+		Ctx.World->Tick(GetEffectiveWorldDeltaTime(Ctx, DeltaTime));
 	}
 
 	FAudioSystem::Get().Tick(DeltaTime);
@@ -431,6 +433,7 @@ void UEditorEngine::StartPlaySession()
 
 	FAudioSystem::Get().Init();
 	FAudioSystem::Get().StopAll();
+	FTimeDilationSystem::Get().Reset();
 
 	// 포커스된 뷰포트 클라이언트를 찾고 카메라 상태를 저장한 뒤, 실행 상태를 변경합니다.
 	const int32 FocusedIdx = ViewportLayout.GetLastFocusedViewportIndex();
@@ -610,6 +613,7 @@ void UEditorEngine::StartMainGamePIE()
 		return;
 	}
 
+	FTimeDilationSystem::Get().Reset();
 	MainSceneWorld->SetWorldType(EWorldType::PIE);
 	ApplySpatialIndexMaintenanceSettings(MainSceneWorld);
 
@@ -699,6 +703,8 @@ void UEditorEngine::StopPlaySession()
 {
 	if (GetEditorState() == EViewportPlayState::Editing)
 		return;
+
+	FTimeDilationSystem::Get().Reset();
 
 	const int32 FocusedIdx = ViewportLayout.GetLastFocusedViewportIndex();
 	FEditorViewportClient* FocusedClient = ViewportLayout.GetViewportClient(FocusedIdx);

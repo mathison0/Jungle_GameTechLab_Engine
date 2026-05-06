@@ -30,13 +30,20 @@ struct FCameraViewInfo
     FVector GetUpVector() const { return Rotation.GetUpVector(); }
 };
 
-struct FCameraOverlayInfo
+struct FPostProcessSettings
 {
-	float FadeAlpha = 0.0f;
-	FColor FadeColor = FColor::Black();
-	
-	float LetterboxRatio = 0.0f; // 0.0f ~ 0.5f
+    // Scene Color Correction
+    float Gamma = 1.0f;
+    float VignetteIntensity = 0.0f;
+    float VignetteRadius = 0.75f;
+    float VignetteSoftness = 0.25f;
+
+    // Screen Overlay
+    FColor FadeColor = FColor::Black();
+    float FadeAlpha = 0.0f;
+    float LetterboxRatio = 0.0f;
 };
+
 
 struct FCameraTransitionState
 {
