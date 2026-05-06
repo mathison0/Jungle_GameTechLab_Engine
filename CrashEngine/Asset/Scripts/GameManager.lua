@@ -37,6 +37,7 @@ local GameManager = {
     IsLevelUpSelectionActive = false,
     CurrentLevelUpOptions = nil,
     LastResult = nil,
+    ManagerComponent = nil,
     Stats = {}
 }
 
@@ -242,6 +243,7 @@ function GameManager._ResetState()
     GameManager.IsLevelUpSelectionActive = false
     GameManager.CurrentLevelUpOptions = nil
     GameManager.LastResult = nil
+    GameManager.ManagerComponent = nil
 
     Log("[GameManager] Session State Fully Reset.")
 end
@@ -320,6 +322,13 @@ end
 
 function GameManager.IsGameplayPaused()
     return GameManager.IsPaused == true
+end
+
+function GameManager.IsInputAllowed()
+    if not GameManager.Initialized or GameManager.IsGameOver or GameManager.IsPaused then
+        return false
+    end
+    return true
 end
 
 local function isGodModeHotkeyPressed()
@@ -557,8 +566,7 @@ function GameManager.OnPickupChest()
     return false
 end
 
-function GameManager.FinishRun(resultType, reason)
-    if GameManager.IsGameOver then return end
+function GameManager.FinishRun(resultType, reason, finalRemainingTime, finalKillCount)
     GameManager.IsGameOver = true
     GameManager.Initialized = false
     GameManager.SetGameplayPaused(true)
@@ -575,8 +583,8 @@ function GameManager.FinishRun(resultType, reason)
 
     cleanupGameplayActors()
 
-    local remainingTime = math.max(0.0, tonumber(GameManager.TimeRemaining) or 0.0)
-    local killCount = GameManager.KillCount or 0
+    local remainingTime = finalRemainingTime or math.max(0.0, tonumber(GameManager.TimeRemaining) or 0.0)
+    local killCount = finalKillCount or GameManager.KillCount or 0
     local record = nil
     if type(ScoreBoard_AddRecord) == "function" then
         record = ScoreBoard_AddRecord(resultType, remainingTime, killCount)
@@ -584,6 +592,8 @@ function GameManager.FinishRun(resultType, reason)
 
     if record == nil then
         record = buildFallbackResult(resultType, reason)
+        record.RemainingTime = remainingTime
+        record.KillCount = killCount
     else
         record.Reason = reason
         record.ResultType = record.ResultType or resultType
@@ -601,13 +611,55 @@ function GameManager.FinishRun(resultType, reason)
     Log("[GameManager] " .. tostring(resultType) .. ": " .. tostring(reason))
 end
 
+function GameManager.StartFinishSequence(resultType, reason)
+    if GameManager.IsGameOver then return end
+
+    -- 연출 시작 전 즉시 수행해야 할 로직들 (데이터 고정)
+    local finalRemainingTime = math.max(0.0, tonumber(GameManager.TimeRemaining) or 0.0)
+    local finalKillCount = GameManager.KillCount or 0
+
+    GameManager.IsGameOver = true
+    GameManager.Initialized = false
+
+    -- 무기 발사 중지
+    stopAllWeapons()
+
+    -- 연출을 실행할 코루틴 주체 찾기
+    local runner = GameManager.ManagerComponent or GameManager.PlayerScript
+
+    if runner ~= nil and type(runner.StartCoroutine) == "function" then
+        runner:StartCoroutine(function()
+            -- 여기에 자유롭게 연출 코드를 추가할 수 있습니다.
+            if resultType == "GameClear" then
+                -- 게임 클리어 시 연출 (예: 0.2배속 슬로우 모션 2초)
+                if GameManager.World ~= nil then GameManager.World:SetTimeDilation(0.2) end
+                -- 코루틴 "wait_time"이 TimeDilation에 영향받는 것 고려, 2 * 0.2 = 0.4로 설정
+                coroutine.yield("wait_time", 0.4)
+                if GameManager.World ~= nil then GameManager.World:SetTimeDilation(1.0) end
+            else
+                -- 게임 오버 시 연출 (0.1배속 슬로우 모션 2초)
+                if GameManager.World ~= nil then GameManager.World:SetTimeDilation(0.1) end
+                -- 코루틴 "wait_time"이 TimeDilation에 영향받는 것 고려, 2 * 0.1 = 0.2로 설정
+                coroutine.yield("wait_time", 0.2)
+                if GameManager.World ~= nil then GameManager.World:SetTimeDilation(1.0) end
+            end
+
+            -- 연출 종료 후 최종 처리 호출
+            GameManager.FinishRun(resultType, reason, finalRemainingTime, finalKillCount)
+        end)
+    else
+        -- 코루틴을 실행할 수 없는 경우 즉시 종료 처리
+        GameManager.FinishRun(resultType, reason, finalRemainingTime, finalKillCount)
+    end
+end
+
 function GameManager.OnGameClear()
     GameManager.TimeRemaining = 0.0
-    GameManager.FinishRun("GameClear", "Time Cleared")
+    GameManager.StartFinishSequence("GameClear", "Time Cleared")
 end
 
 function GameManager.OnGameOver(reason)
-    GameManager.FinishRun("GameOver", reason or "Game Over")
+    GameManager.StartFinishSequence("GameOver", reason or "Game Over")
 end
 
 function GameManager.ShowScoreBoard()
