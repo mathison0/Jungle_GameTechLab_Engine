@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cstdarg>
 #include <cmath>
+#include <mutex>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -29,9 +30,11 @@
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/ContactListener.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
@@ -311,6 +314,26 @@ URigidBodyComponent* FindRigidBody(AActor* Actor)
     return nullptr;
 }
 
+UPrimitiveComponent* FindHitEventPrimitive(AActor* Actor)
+{
+    if (Actor == nullptr)
+    {
+        return nullptr;
+    }
+
+    for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
+    {
+        UShapeComponent* Shape = Cast<UShapeComponent>(Primitive);
+        if (Shape != nullptr && Shape->IsBlockComponent())
+        {
+            return Shape;
+        }
+    }
+
+    const TArray<UPrimitiveComponent*>& Primitives = Actor->GetPrimitiveComponents();
+    return Primitives.empty() ? nullptr : Primitives[0];
+}
+
 void ApplyImmediateBodyTransform(
     URigidBodyComponent* Body,
     JPH::BodyInterface& BodyInterface,
@@ -567,6 +590,34 @@ bool JoltAssertFailed(const char* Expression, const char* Message, const char* F
 
 struct FJoltPhysicsSystem::FImpl
 {
+    struct FPendingHitEvent
+    {
+        uint32 BodyA = 0;
+        uint32 BodyB = 0;
+        FVector Location = FVector::ZeroVector;
+        FVector Normal = FVector::ZeroVector;
+    };
+
+    class FContactListener final : public JPH::ContactListener
+    {
+    public:
+        explicit FContactListener(FImpl* InOwner);
+
+        void OnContactAdded(
+            const JPH::Body& BodyA,
+            const JPH::Body& BodyB,
+            const JPH::ContactManifold& Manifold,
+            JPH::ContactSettings& Settings) override;
+
+    private:
+        FImpl* Owner = nullptr;
+    };
+
+    FImpl()
+        : ContactListener(this)
+    {
+    }
+
     JPH::PhysicsSystem PhysicsSystem;
     FBroadPhaseLayerInterface BroadPhaseLayerInterface;
     FObjectVsBroadPhaseLayerFilter ObjectVsBroadPhaseLayerFilter;
@@ -578,10 +629,94 @@ struct FJoltPhysicsSystem::FImpl
     std::vector<JPH::BodyID> BodyIDs;
     std::unordered_map<URigidBodyComponent*, JPH::BodyID> RigidBodies;
     std::unordered_map<URigidBodyComponent*, JPH::BodyID> DynamicBodies;
+    std::unordered_map<uint32, AActor*> BodyActors;
     std::unordered_map<URigidBodyComponent*, JPH::Ref<JPH::CharacterVirtual>> Characters;
     std::unordered_map<URigidBodyComponent*, URigidBodyComponent*> HeldBodyOwners;
     std::unordered_set<URigidBodyComponent*> CollisionSuppressedHeldBodies;
+
+    std::mutex PendingHitMutex;
+    std::vector<FPendingHitEvent> PendingHitEvents;
+    FContactListener ContactListener;
+
+    void QueueHitEvent(const JPH::Body& BodyA, const JPH::Body& BodyB, const JPH::ContactManifold& Manifold)
+    {
+        FPendingHitEvent Event;
+        Event.BodyA = BodyA.GetID().GetIndexAndSequenceNumber();
+        Event.BodyB = BodyB.GetID().GetIndexAndSequenceNumber();
+        Event.Location = ToEngineVector(Manifold.mBaseOffset);
+        Event.Normal = ToEngineVector(Manifold.mWorldSpaceNormal).GetSafeNormal();
+        if (Event.Normal.IsNearlyZero())
+        {
+            Event.Normal = (ToEngineVector(BodyB.GetPosition()) - ToEngineVector(BodyA.GetPosition())).GetSafeNormal();
+        }
+
+        std::lock_guard<std::mutex> Lock(PendingHitMutex);
+        PendingHitEvents.push_back(Event);
+    }
+
+    AActor* ResolveActor(uint32 BodyID) const
+    {
+        auto It = BodyActors.find(BodyID);
+        return It != BodyActors.end() ? It->second : nullptr;
+    }
+
+    void DispatchPendingHitEvents()
+    {
+        std::vector<FPendingHitEvent> Events;
+        {
+            std::lock_guard<std::mutex> Lock(PendingHitMutex);
+            Events.swap(PendingHitEvents);
+        }
+
+        for (const FPendingHitEvent& Event : Events)
+        {
+            AActor* ActorA = ResolveActor(Event.BodyA);
+            AActor* ActorB = ResolveActor(Event.BodyB);
+            if (ActorA == nullptr || ActorB == nullptr || ActorA == ActorB)
+            {
+                continue;
+            }
+
+            UPrimitiveComponent* ComponentA = FindHitEventPrimitive(ActorA);
+            UPrimitiveComponent* ComponentB = FindHitEventPrimitive(ActorB);
+            if (ComponentA == nullptr || ComponentB == nullptr || ComponentA == ComponentB)
+            {
+                continue;
+            }
+
+            FHitResult HitA;
+            HitA.HitComponent = ComponentB;
+            HitA.Location = Event.Location;
+            HitA.Normal = Event.Normal;
+            HitA.Distance = 0.0f;
+            HitA.bHit = true;
+            ComponentA->OnComponentHit.Broadcast(HitA);
+
+            FHitResult HitB = HitA;
+            HitB.HitComponent = ComponentA;
+            HitB.Normal = Event.Normal * -1.0f;
+            ComponentB->OnComponentHit.Broadcast(HitB);
+        }
+    }
 };
+
+FJoltPhysicsSystem::FImpl::FContactListener::FContactListener(FImpl* InOwner)
+    : Owner(InOwner)
+{
+}
+
+void FJoltPhysicsSystem::FImpl::FContactListener::OnContactAdded(
+    const JPH::Body& BodyA,
+    const JPH::Body& BodyB,
+    const JPH::ContactManifold& Manifold,
+    JPH::ContactSettings& Settings)
+{
+    (void)Settings;
+    if (Owner != nullptr)
+    {
+        Owner->QueueHitEvent(BodyA, BodyB, Manifold);
+    }
+}
 
 FJoltPhysicsSystem& FJoltPhysicsSystem::Get()
 {
@@ -639,6 +774,7 @@ bool FJoltPhysicsSystem::Initialize()
     PhysicsSettings.mNumPositionSteps = 8;
     Impl->PhysicsSystem.SetPhysicsSettings(PhysicsSettings);
     Impl->PhysicsSystem.SetGravity(JPH::Vec3(0.0f, 0.0f, -9.8f));
+    Impl->PhysicsSystem.SetContactListener(&Impl->ContactListener);
 
     bInitialized = true;
     UE_LOG("JoltPhysicsSystem: initialized.");
@@ -708,9 +844,14 @@ void FJoltPhysicsSystem::ClearWorld()
     Impl->BodyIDs.clear();
     Impl->RigidBodies.clear();
     Impl->DynamicBodies.clear();
+    Impl->BodyActors.clear();
     Impl->Characters.clear();
     Impl->HeldBodyOwners.clear();
     Impl->CollisionSuppressedHeldBodies.clear();
+    {
+        std::lock_guard<std::mutex> Lock(Impl->PendingHitMutex);
+        Impl->PendingHitEvents.clear();
+    }
 }
 
 void FJoltPhysicsSystem::RebuildWorld(UWorld* World)
@@ -791,6 +932,7 @@ void FJoltPhysicsSystem::RegisterStaticActor(AActor* Actor)
     if (!BodyID.IsInvalid())
     {
         Impl->BodyIDs.push_back(BodyID);
+        Impl->BodyActors[BodyID.GetIndexAndSequenceNumber()] = Actor;
     }
 }
 
@@ -821,6 +963,7 @@ void FJoltPhysicsSystem::RegisterStaticBody(UPrimitiveComponent* ShapeComponent)
     if (!BodyID.IsInvalid())
     {
         Impl->BodyIDs.push_back(BodyID);
+        Impl->BodyActors[BodyID.GetIndexAndSequenceNumber()] = ShapeComponent->GetOwner();
     }
 }
 
@@ -882,6 +1025,7 @@ void FJoltPhysicsSystem::RegisterDynamicBody(URigidBodyComponent* Body)
     Body->SetJoltBodyHandle(BodyID.GetIndexAndSequenceNumber());
     Impl->BodyIDs.push_back(BodyID);
     Impl->RigidBodies[Body] = BodyID;
+    Impl->BodyActors[BodyID.GetIndexAndSequenceNumber()] = Body->GetOwner();
     if (!bStaticBody)
     {
         Impl->DynamicBodies[Body] = BodyID;
@@ -926,6 +1070,8 @@ void FJoltPhysicsSystem::Step(UWorld* World, float DeltaTime)
         Body->SetVelocity(ToEngineVector(LinearVelocity));
         Body->SetAngularVelocity(ToEngineVector(AngularVelocity));
     }
+
+    Impl->DispatchPendingHitEvents();
 }
 
 void FJoltPhysicsSystem::SetBodyKinematic(URigidBodyComponent* Body)
