@@ -1429,7 +1429,7 @@ void FGamePlayerController::TryInspectHoveredItem()
 	const FString Description = FItemSystem::Get().GetDescriptionForCurrentState(ItemId);
 	GameUISystem::Get().ShowItemInspect(
 		ItemData->DisplayName.c_str(),
-		Description.c_str(),
+        ItemData->DescriptionWhenFound.c_str(),
 		ItemData->IconPath.c_str());
 }
 
