@@ -52,6 +52,36 @@ function Actor:IsVisible() end
 ---@param visible boolean
 ---@return boolean
 function Actor:SetVisible(visible) end
+
+---@return number
+function Actor:GetCustomTimeDilation() end
+
+---@param timeDilation number
+function Actor:SetCustomTimeDilation(timeDilation) end
+-- ====================================================================
+
+-- Class World ========================================================
+---@class World
+local World = {}
+
+---@return boolean
+function World:IsValid() end
+
+---@return boolean
+function World:IsGameplayPaused() end
+
+---@param paused boolean
+function World:SetGameplayPaused(paused) end
+
+---@return number
+function World:GetTimeDilation() end
+
+---@param timeDilation number
+function World:SetTimeDilation(timeDilation) end
+
+---@param tag string
+---@return Actor[]
+function World:GetActorsByTag(tag) end
 -- ====================================================================
 
 -- Class Component ====================================================
@@ -73,6 +103,9 @@ function Component:IsA(className) end
 
 ---@return Actor
 function Component:GetOwner() end
+
+---@return World
+function Component:GetWorld() end
 
 ---@return boolean
 function Component:IsActive() end
@@ -405,3 +438,9 @@ function ScriptComponent:IsActorVisible() end
 ---@param visible boolean
 ---@return boolean
 function ScriptComponent:SetActorVisible(visible) end
+
+---@return number
+function ScriptComponent:GetCustomTimeDilation() end
+
+---@param timeDilation number
+function ScriptComponent:SetCustomTimeDilation(timeDilation) end

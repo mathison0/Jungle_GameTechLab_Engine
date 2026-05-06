@@ -19,6 +19,7 @@
 
 class UCameraComponent;
 class UPrimitiveComponent;
+class AWorldSettings;
 
 // UWorld는 월드 실행 상태와 레벨 구성을 관리합니다.
 class UWorld : public UObject
@@ -37,6 +38,11 @@ public:
     template <typename T, typename... TArgs>
     T* SpawnActor(TArgs&&... Args);
     AActor* SpawnActorByClass(const FString& ClassName);
+
+    template <typename T, typename... TArgs>
+    T* SpawnPersistentActor(TArgs&&... Args);
+    AActor* SpawnPersistentActorByClass(const FString& ClassName);
+
     void DestroyActor(AActor* Actor);
     void AddActor(AActor* Actor);
     void MarkEditorPickingAndScenePrimitiveBVHsDirty();
@@ -49,7 +55,12 @@ public:
     void WarmupPickingData() const;
     bool RaycastEditorPicking(const FRay& Ray, FHitResult& OutHitResult, AActor*& OutActor) const;
 
-    const TArray<AActor*>& GetActors() const { return PersistentLevel->GetActors(); }
+    const TArray<AActor*>& GetActors() const { return ActiveLevel->GetActors(); }
+    ULevel* GetActiveLevel() const { return ActiveLevel; }
+    ULevel* GetPersistentLevel() const { return PersistentLevel; }
+
+    AWorldSettings* GetWorldSettings() const { return WorldSettings; }
+
     const TArray<FString>& GetEditorActorFolders() const { return EditorActorFolders; }
     void SetEditorActorFolders(const TArray<FString>& InFolders) { EditorActorFolders = InFolders; }
     void AddEditorActorFolder(const FString& FolderPath);
@@ -83,16 +94,12 @@ public:
     EWorldType GetWorldType() const { return WorldType; }
     void UpdateActorInOctree(AActor* actor);
 
-    void OverlapCircle(const FVector2& Position, float Radius, TArray<UCollider2DComponent*>& OutColliders) const
-    {
-        Collision2DManager.OverlapCircle(Position, Radius, OutColliders);
-    }
-
 	FActorPoolManager* GetPoolManager() const { return ActorPoolManager.get(); }
 
 private:
     // TArray<AActor*> Actors;
     ULevel* PersistentLevel;
+    ULevel* ActiveLevel;
 
     UCameraComponent* ActiveCamera = nullptr;
     UCameraComponent* LastLODUpdateCamera = nullptr;
@@ -115,15 +122,27 @@ private:
     std::unique_ptr<FActorPoolManager> ActorPoolManager;
     FSpatialPartition Partition;
     EWorldType WorldType = EWorldType::Editor;
-	
+
+    AWorldSettings* WorldSettings = nullptr;
+
 };
 
 template <typename T, typename... TArgs>
 inline T* UWorld::SpawnActor(TArgs&&... Args)
 {
     // create and register an actor
-    T* Actor = UObjectManager::Get().CreateObject<T>(PersistentLevel);
+    T* Actor = UObjectManager::Get().CreateObject<T>(ActiveLevel);
     static_cast<T*>(Actor)->InitDefaultComponents(std::forward<TArgs>(Args)...);
     AddActor(Actor); // BeginPlay 트리거는 AddActor 내부에서 bHasBegunPlay 가드로 처리
+    return Actor;
+}
+
+template <typename T, typename... TArgs>
+inline T* UWorld::SpawnPersistentActor(TArgs&&... Args)
+{
+    // create and register a persistent actor
+    T* Actor = UObjectManager::Get().CreateObject<T>(PersistentLevel);
+    static_cast<T*>(Actor)->InitDefaultComponents(std::forward<TArgs>(Args)...);
+    AddActor(Actor);
     return Actor;
 }

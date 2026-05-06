@@ -34,9 +34,6 @@
     <Filter Include="Shaders\Render\Editor">
       <UniqueIdentifier>{b9111df0-011b-5a42-cb3b-ada3e423b36c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\Render\UI">
-      <UniqueIdentifier>{9c3486f7-7e11-4f1f-8a31-352ac0c96a4d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\Render\Scene">
       <UniqueIdentifier>{b3941d3d-7535-6fe0-f7e0-2d7e985e641a}</UniqueIdentifier>
     </Filter>
@@ -54,6 +51,9 @@
     </Filter>
     <Filter Include="Shaders\Render\Scene\ViewModes">
       <UniqueIdentifier>{887115a1-3ced-5bd9-2c2a-6819de18adde}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Render\UI">
+      <UniqueIdentifier>{7494b4a5-adde-35b3-199a-175cc745d1cf}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Resources">
       <UniqueIdentifier>{ba384c7e-7800-3902-a9bc-32c823999572}</UniqueIdentifier>
@@ -117,6 +117,12 @@
     </Filter>
     <Filter Include="Source\Engine\GameFramework">
       <UniqueIdentifier>{350afe18-dbbc-9b5c-a905-9539a3e4bbf2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\GameFramework\GamejamActor">
+      <UniqueIdentifier>{4b12e2bb-a17a-d9d3-03b7-748798a1add1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\GameFramework\ProjectileActor">
+      <UniqueIdentifier>{4d981927-9704-f923-a338-31d295e93012}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Input">
       <UniqueIdentifier>{15a5dcc5-dafe-0714-b75e-3f00a1b93160}</UniqueIdentifier>
@@ -238,6 +244,9 @@
     <Filter Include="Source\Engine\Render\Scene\Proxies\Primitive">
       <UniqueIdentifier>{fac880f3-6b1e-5bfd-1b19-a193a4366eab}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Render\Scene\Proxies\UI">
+      <UniqueIdentifier>{6812c68f-b3b4-9228-9cf3-e63ff6e8c4c1}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Render\Submission">
       <UniqueIdentifier>{225f9b01-0883-a2ae-bd54-727b6f403ccc}</UniqueIdentifier>
     </Filter>
@@ -280,8 +289,14 @@
     <Filter Include="Source\Engine\Scripting">
       <UniqueIdentifier>{737b2de8-372b-3a23-4558-94eec23b4c80}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Scripting\Binding">
+      <UniqueIdentifier>{1d30863c-a9e1-f102-a435-545b9e7cb0cc}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Serialization">
       <UniqueIdentifier>{efc6dab4-5205-3bce-ab46-25759db7fa87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Sound">
+      <UniqueIdentifier>{f3a18dd6-c758-e671-5329-e3dbb040a9e3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Texture">
       <UniqueIdentifier>{4987cd51-6eac-f726-2541-7c3eb1d61a0b}</UniqueIdentifier>
@@ -297,6 +312,9 @@
     </Filter>
     <Filter Include="ThirdParty">
       <UniqueIdentifier>{217d5d8f-d81d-0061-35a2-74edbe63c4a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\FMod">
+      <UniqueIdentifier>{b6fded16-654c-49fa-959f-05568c9f1451}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty\ImGui">
       <UniqueIdentifier>{e08fe955-8119-7c9f-3995-829bd1012a77}</UniqueIdentifier>
@@ -396,9 +414,6 @@
     <FxCompile Include="Shaders\Render\Editor\ShaderOverlayFont.hlsl">
       <Filter>Shaders\Render\Editor</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Render\UI\UberUI.hlsl">
-      <Filter>Shaders\Render\UI</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\Render\Editor\ShaderSubUV.hlsl">
       <Filter>Shaders\Render\Editor</Filter>
     </FxCompile>
@@ -455,6 +470,9 @@
     </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\ViewModes\UberLit.hlsl">
       <Filter>Shaders\Render\Scene\ViewModes</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Render\UI\UberUI.hlsl">
+      <Filter>Shaders\Render\UI</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Resources\BindingSlots.hlsli">
       <Filter>Shaders\Resources</Filter>
@@ -659,6 +677,9 @@
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\ProjectileMovementComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -725,6 +746,18 @@
     <ClCompile Include="Source\Engine\GameFramework\AActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\AInfo.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\AWorldSettings.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\AmbientLightActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
@@ -749,6 +782,9 @@
     <ClCompile Include="Source\Engine\GameFramework\HeightFogActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\HomingMissileActor.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\Level.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
@@ -764,6 +800,9 @@
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\TankActor.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\TextUIActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
@@ -775,6 +814,27 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\World.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.cpp">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.cpp">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp">
+      <Filter>Source\Engine\GameFramework\ProjectileActor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Input\GameInput.cpp">
       <Filter>Source\Engine\Input</Filter>
@@ -920,9 +980,6 @@
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
@@ -939,6 +996,9 @@
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.cpp">
+      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPassPresets.cpp">
@@ -1052,6 +1112,9 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.cpp">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp">
+      <Filter>Source\Engine\Render\Scene\Proxies\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp">
       <Filter>Source\Engine\Render\Submission\Atlas</Filter>
     </ClCompile>
@@ -1073,10 +1136,10 @@
     <ClCompile Include="Source\Engine\Render\Submission\Batching\FontBatch.cpp">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Submission\Batching\UIBatch.cpp">
+    <ClCompile Include="Source\Engine\Render\Submission\Batching\LineBatch.cpp">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Submission\Batching\LineBatch.cpp">
+    <ClCompile Include="Source\Engine\Render\Submission\Batching\UIBatch.cpp">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectOverlay.cpp">
@@ -1142,8 +1205,29 @@
     <ClCompile Include="Source\Engine\Scripting\ScriptSystem.cpp">
       <Filter>Source\Engine\Scripting</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaActorBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp">
       <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Sound\SoundManager.cpp">
+      <Filter>Source\Engine\Sound</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Texture\Texture2D.cpp">
       <Filter>Source\Engine\Texture</Filter>
@@ -1529,6 +1613,9 @@
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\ProjectileComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\ProjectileMovementComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
@@ -1601,6 +1688,9 @@
     <ClInclude Include="Source\Engine\Core\PropertyTypes.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Random.h">
+      <Filter>Source\Engine\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Core\RayTypes.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
@@ -1628,13 +1718,19 @@
     <ClInclude Include="Source\Engine\GameFramework\AActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h">
+    <ClInclude Include="Source\Engine\GameFramework\AInfo.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\AWorldSettings.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\ActorPool.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\ActorPoolManager.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\ButtonActor.h">
@@ -1658,6 +1754,9 @@
     <ClInclude Include="Source\Engine\GameFramework\HeightFogActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\HomingMissileActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\Level.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
@@ -1671,6 +1770,9 @@
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\TankActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\TextUIActor.h">
@@ -1687,6 +1789,27 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\WorldContext.h">
       <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.h">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h">
+      <Filter>Source\Engine\GameFramework\GamejamActor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h">
+      <Filter>Source\Engine\GameFramework\ProjectileActor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Input\GameInput.h">
       <Filter>Source\Engine\Input</Filter>
@@ -1892,9 +2015,6 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
@@ -1911,6 +2031,9 @@
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.h">
+      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassPresets.h">
@@ -2123,6 +2246,9 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.h">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h">
+      <Filter>Source\Engine\Render\Scene\Proxies\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h">
       <Filter>Source\Engine\Render\Submission\Atlas</Filter>
     </ClInclude>
@@ -2153,13 +2279,13 @@
     <ClInclude Include="Source\Engine\Render\Submission\Batching\FontBatch.h">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Submission\Batching\UIBatch.h">
-      <Filter>Source\Engine\Render\Submission\Batching</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Batching\LineBatch.h">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Batching\OverlayBatchSet.h">
+      <Filter>Source\Engine\Render\Submission\Batching</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Submission\Batching\UIBatch.h">
       <Filter>Source\Engine\Render\Submission\Batching</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Submission\Collect\CollectedOverlayData.h">
@@ -2228,6 +2354,9 @@
     <ClInclude Include="Source\Engine\Scripting\ScriptSystem.h">
       <Filter>Source\Engine\Scripting</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Scripting\Binding\LuaBindingInternal.h">
+      <Filter>Source\Engine\Scripting\Binding</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\Archive.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
@@ -2239,6 +2368,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\WindowsArchive.h">
       <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Sound\SoundManager.h">
+      <Filter>Source\Engine\Sound</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Texture\Texture2D.h">
       <Filter>Source\Engine\Texture</Filter>
@@ -2284,6 +2416,30 @@
     </ClInclude>
     <ClInclude Include="Source\ObjViewer\ObjViewerViewportClient.h">
       <Filter>Source\ObjViewer</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\FMod\fmod.h">
+      <Filter>ThirdParty\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\FMod\fmod.hpp">
+      <Filter>ThirdParty\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\FMod\fmod_codec.h">
+      <Filter>ThirdParty\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\FMod\fmod_common.h">
+      <Filter>ThirdParty\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\FMod\fmod_dsp.h">
+      <Filter>ThirdParty\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\FMod\fmod_dsp_effects.h">
+      <Filter>ThirdParty\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\FMod\fmod_errors.h">
+      <Filter>ThirdParty\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\FMod\fmod_output.h">
+      <Filter>ThirdParty\FMod</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\ImGui\imconfig.h">
       <Filter>ThirdParty\ImGui</Filter>

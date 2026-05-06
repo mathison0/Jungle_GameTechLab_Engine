@@ -293,8 +293,6 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -347,18 +345,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\GammaCorrectionPass.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
-    <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\HomingMissileActor.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp" />
@@ -416,6 +402,7 @@
     <ClCompile Include="Source\Engine\Component\PendulumMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\PointLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\ProjectileComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\ProjectileMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\RotatingMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SceneComponent.cpp" />
@@ -438,6 +425,10 @@
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp" />
     <ClCompile Include="Source\Engine\Core\Logging\LogBuffer.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\AActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\AInfo.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\AWorldSettings.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ActorPool.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ActorPoolManager.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\AmbientLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ButtonActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\DecalActor.cpp" />
@@ -446,15 +437,24 @@
     <ClCompile Include="Source\Engine\GameFramework\FakeLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\FireballActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\HeightFogActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\HomingMissileActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Level.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\PointLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\ScriptActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\SpotLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\TankActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\TextUIActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\TextureUIActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\UIActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\World.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\GamejamActor\PickupActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.cpp" />
     <ClCompile Include="Source\Engine\Input\GameInput.cpp" />
     <ClCompile Include="Source\Engine\Input\GameViewportInputController.cpp" />
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp" />
@@ -503,13 +503,13 @@
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DeferredOpaquePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.cpp" />
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\PresentPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPassPresets.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPassRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Registry\RenderPipelineRegistry.cpp" />
@@ -531,7 +531,6 @@
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\State\BlendStateManager.cpp" />
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\State\DepthStencilStateManager.cpp" />
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\State\RasterizerStateManager.cpp" />
-    <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Scene.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Debug\DebugPrimitiveQueue.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Debug\DebugRenderAPI.cpp" />
@@ -548,6 +547,7 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasPage.cpp" />
@@ -555,8 +555,8 @@
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\ShadowResolutionPolicy.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Batching\FontBatch.cpp" />
-    <ClCompile Include="Source\Engine\Render\Submission\Batching\UIBatch.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Batching\LineBatch.cpp" />
+    <ClCompile Include="Source\Engine\Render\Submission\Batching\UIBatch.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectOverlay.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectSceneLights.cpp" />
     <ClCompile Include="Source\Engine\Render\Submission\Collect\CollectScenePrimitives.cpp" />
@@ -574,16 +574,16 @@
     <ClCompile Include="Source\Engine\Runtime\Launch.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsApplication.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaEngineBinding.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaScriptAsset.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\LuaScriptTypes.cpp" />
+    <ClCompile Include="Source\Engine\Scripting\ScriptSystem.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaActorBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaColliderBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaCommonBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaComponentBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaPoolBinding.cpp" />
     <ClCompile Include="Source\Engine\Scripting\Binding\LuaWorldBinding.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\LuaEngineBinding.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\LuaScriptAsset.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\LuaScriptTypes.cpp" />
-    <ClCompile Include="Source\Engine\Scripting\ScriptSystem.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
     <ClCompile Include="Source\Engine\Sound\SoundManager.cpp" />
     <ClCompile Include="Source\Engine\Texture\Texture2D.cpp" />
@@ -600,7 +600,6 @@
     <ClCompile Include="Source\ObjViewer\ObjViewerPanel.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerRenderPipeline.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerViewportClient.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\TankActor.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_demo.cpp" />
     <ClCompile Include="ThirdParty\ImGui\imgui_draw.cpp" />
@@ -721,6 +720,7 @@
     <ClInclude Include="Source\Engine\Component\PendulumMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\PointLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h" />
+    <ClInclude Include="Source\Engine\Component\ProjectileComponent.h" />
     <ClInclude Include="Source\Engine\Component\ProjectileMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\RotatingMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\SceneComponent.h" />
@@ -745,6 +745,7 @@
     <ClInclude Include="Source\Engine\Core\Delegate.h" />
     <ClInclude Include="Source\Engine\Core\EngineTypes.h" />
     <ClInclude Include="Source\Engine\Core\PropertyTypes.h" />
+    <ClInclude Include="Source\Engine\Core\Random.h" />
     <ClInclude Include="Source\Engine\Core\RayTypes.h" />
     <ClInclude Include="Source\Engine\Core\ResourceTypes.h" />
     <ClInclude Include="Source\Engine\Core\Singleton.h" />
@@ -754,9 +755,11 @@
     <ClInclude Include="Source\Engine\Core\Logging\LogMacros.h" />
     <ClInclude Include="Source\Engine\Core\Logging\LogOutputDevice.h" />
     <ClInclude Include="Source\Engine\GameFramework\AActor.h" />
-    <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\AInfo.h" />
+    <ClInclude Include="Source\Engine\GameFramework\AWorldSettings.h" />
     <ClInclude Include="Source\Engine\GameFramework\ActorPool.h" />
     <ClInclude Include="Source\Engine\GameFramework\ActorPoolManager.h" />
+    <ClInclude Include="Source\Engine\GameFramework\AmbientLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\ButtonActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DecalActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\DirectionalLightActor.h" />
@@ -764,16 +767,25 @@
     <ClInclude Include="Source\Engine\GameFramework\FakeLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\FireballActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\HeightFogActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\HomingMissileActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\Level.h" />
     <ClInclude Include="Source\Engine\GameFramework\PointLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\ScriptActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\SpotLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\TankActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\TextUIActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\TextureUIActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\UIActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\World.h" />
     <ClInclude Include="Source\Engine\GameFramework\WorldContext.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\AFlyingWaveEnemyActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\DeathDecalActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemyBaseActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\EnemySpawnerActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\GroundEnemyActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\GamejamActor\PickupActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\ProjectileActor\ProjectileActor.h" />
     <ClInclude Include="Source\Engine\Input\GameInput.h" />
     <ClInclude Include="Source\Engine\Input\GameInputTool.h" />
     <ClInclude Include="Source\Engine\Input\GameViewportInputController.h" />
@@ -842,13 +854,13 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DeferredOpaquePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\FXAAPass.h" />
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ForwardOpaquePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\PresentPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\ShadowMapPass.h" />
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\UIPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassPresets.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassRegistry.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Registry\RenderPassTypes.h" />
@@ -896,7 +908,6 @@
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\State\DepthStencilStateManager.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\State\RasterizerStateManager.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Textures\SurfaceTexture.h" />
-    <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Scene.h" />
     <ClInclude Include="Source\Engine\Render\Scene\SceneProxyDirtyFlag.h" />
     <ClInclude Include="Source\Engine\Render\Scene\SceneProxyRegistry.h" />
@@ -920,6 +931,7 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.h" />
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\UI\UIProxy.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\AtlasPageBase.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\LightShadowAllocationRegistry.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\ShadowAtlasLayoutUtils.h" />
@@ -930,9 +942,9 @@
     <ClInclude Include="Source\Engine\Render\Submission\Atlas\Allocator\BuddyAllocator2D.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\BatchBuffer.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\FontBatch.h" />
-    <ClInclude Include="Source\Engine\Render\Submission\Batching\UIBatch.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\LineBatch.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Batching\OverlayBatchSet.h" />
+    <ClInclude Include="Source\Engine\Render\Submission\Batching\UIBatch.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Collect\CollectedOverlayData.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Collect\CollectedSceneData.h" />
     <ClInclude Include="Source\Engine\Render\Submission\Collect\DrawCollector.h" />
@@ -955,6 +967,7 @@
     <ClInclude Include="Source\Engine\Scripting\LuaScriptAsset.h" />
     <ClInclude Include="Source\Engine\Scripting\LuaScriptTypes.h" />
     <ClInclude Include="Source\Engine\Scripting\ScriptSystem.h" />
+    <ClInclude Include="Source\Engine\Scripting\Binding\LuaBindingInternal.h" />
     <ClInclude Include="Source\Engine\Serialization\Archive.h" />
     <ClInclude Include="Source\Engine\Serialization\MemoryArchive.h" />
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h" />
@@ -975,7 +988,14 @@
     <ClInclude Include="Source\ObjViewer\ObjViewerPanel.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerRenderPipeline.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerViewportClient.h" />
-    <ClInclude Include="Source\Engine\GameFramework\TankActor.h" />
+    <ClInclude Include="ThirdParty\FMod\fmod.h" />
+    <ClInclude Include="ThirdParty\FMod\fmod.hpp" />
+    <ClInclude Include="ThirdParty\FMod\fmod_codec.h" />
+    <ClInclude Include="ThirdParty\FMod\fmod_common.h" />
+    <ClInclude Include="ThirdParty\FMod\fmod_dsp.h" />
+    <ClInclude Include="ThirdParty\FMod\fmod_dsp_effects.h" />
+    <ClInclude Include="ThirdParty\FMod\fmod_errors.h" />
+    <ClInclude Include="ThirdParty\FMod\fmod_output.h" />
     <ClInclude Include="ThirdParty\ImGui\imconfig.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui.h" />
     <ClInclude Include="ThirdParty\ImGui\imgui_impl_dx11.h" />
@@ -1234,14 +1254,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Shaders\Render\UI\UberUI.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
-    </FxCompile>
     <FxCompile Include="Shaders\Render\Editor\ShaderSubUV.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -1387,6 +1399,14 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\ViewModes\UberLit.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Render\UI\UberUI.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>

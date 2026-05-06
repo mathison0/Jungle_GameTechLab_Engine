@@ -2,7 +2,9 @@
 #include "TickFunction.h"
 #include "Component/ActorComponent.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/AWorldSettings.h"
 #include "GameFramework/World.h"
+#include "Runtime/Engine.h"
 
 namespace
 {
@@ -44,6 +46,8 @@ void FTickFunction::UnRegisterTickFunction()
 void FTickManager::Tick(UWorld* World, float DeltaTime, ELevelTick TickType)
 {
     GatherTickFunctions(World, TickType);
+    // Apply Global Time Dilation
+    DeltaTime *= GEngine->GetWorld()->GetWorldSettings()->GetEffectiveTimeDilation();
 
     for (int GroupIndex = 0; GroupIndex < TG_MAX; ++GroupIndex)
     {
@@ -84,25 +88,31 @@ void FTickManager::GatherTickFunctions(UWorld* World, ELevelTick TickType)
         return;
     }
 
-    for (AActor* Actor : World->GetActors())
-    {
-        if (!ShouldDispatchActorTick(Actor, TickType))
+    auto GatherFromLevel = [&](ULevel* Level) {
+        if (!Level) return;
+        for (AActor* Actor : Level->GetActors())
         {
-            continue;
-        }
-
-        QueueTickFunction(Actor->PrimaryActorTick);
-
-        for (UActorComponent* Component : Actor->GetComponents())
-        {
-            if (!Component)
+            if (!ShouldDispatchActorTick(Actor, TickType))
             {
                 continue;
             }
 
-            QueueTickFunction(Component->PrimaryComponentTick);
+            QueueTickFunction(Actor->PrimaryActorTick);
+
+            for (UActorComponent* Component : Actor->GetComponents())
+            {
+                if (!Component)
+                {
+                    continue;
+                }
+
+                QueueTickFunction(Component->PrimaryComponentTick);
+            }
         }
-    }
+    };
+
+    GatherFromLevel(World->GetActiveLevel());
+    GatherFromLevel(World->GetPersistentLevel());
 }
 
 void FTickManager::QueueTickFunction(FTickFunction& TickFunction)
@@ -119,6 +129,7 @@ void FActorTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType)
 {
     if (Target)
     {
+        DeltaTime *= Target->CustomTimeDilation;
         Target->TickActor(DeltaTime, TickType, *this);
     }
 }
@@ -132,6 +143,7 @@ void FActorComponentTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickTy
 {
     if (Target)
     {
+        DeltaTime *= Target->Owner->CustomTimeDilation;
         Target->TickComponent(DeltaTime, TickType, *this);
     }
 }
