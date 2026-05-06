@@ -40,7 +40,7 @@ struct FMinimalViewInfo
     {
         Location = FMath::Lerp(Location, OtherInfo.Location, OtherWeight);
 
-        const FRotator DeltaAng = (OtherInfo.Rotation - Rotation).GetNormalized();
+        const FRotator DeltaAng = FRotator::GetBlendDelta(Rotation, OtherInfo.Rotation);
         Rotation = Rotation + DeltaAng * OtherWeight;
 
         FOV = FMath::Lerp(FOV, OtherInfo.FOV, OtherWeight);

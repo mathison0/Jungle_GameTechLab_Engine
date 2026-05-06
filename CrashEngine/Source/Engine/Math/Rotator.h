@@ -78,6 +78,14 @@ struct FRotator
 
     static const FRotator ZeroRotator;
 
+    static FRotator GetBlendDelta(const FRotator& From, const FRotator& To)
+    {
+        return FRotator(
+            GetBlendDeltaAxis(From.Pitch, To.Pitch),
+            GetBlendDeltaAxis(From.Yaw, To.Yaw),
+            GetBlendDeltaAxis(From.Roll, To.Roll));
+    }
+
     // 변환 — 선언만, 구현은 Rotator.cpp (순환 의존 방지)
     FQuat ToQuaternion() const;
     FMatrix ToMatrix() const;
@@ -102,5 +110,11 @@ private:
         if (Angle < 0.0f)
             Angle += 360.0f;
         return Angle - 180.0f;
+    }
+
+    static float GetBlendDeltaAxis(float From, float To)
+    {
+        const float Delta = To - From;
+        return fabsf(Delta) >= 360.0f ? Delta : ClampAxis(Delta);
     }
 };
