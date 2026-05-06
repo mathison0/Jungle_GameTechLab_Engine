@@ -32,13 +32,13 @@ struct FCameraViewInfo
 
 struct FPostProcessSettings
 {
-    // Scene color correction
+    // Scene Color Correction
     float Gamma = 1.0f;
     float VignetteIntensity = 0.0f;
     float VignetteRadius = 0.75f;
     float VignetteSoftness = 0.25f;
 
-    // Screen overlay
+    // Screen Overlay
     FColor FadeColor = FColor::Black();
     float FadeAlpha = 0.0f;
     float LetterboxRatio = 0.0f;

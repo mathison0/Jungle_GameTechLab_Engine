@@ -13,7 +13,7 @@ public:
 	void SetFade(const FColor& InColor, float Alpha);
 	void ClearFade();
 
-	bool ModifyOverlay(float DeltaTime, FCameraOverlayInfo& InOutOverlay) override;
+	bool ModifyPostProcess(float DeltaTime, FPostProcessSettings& InOutSettings) override;
 
 	bool IsFading() const { return bFading; }
 	float GetFadeAlpha() const { return CurrentAlpha; }
