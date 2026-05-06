@@ -19,6 +19,7 @@
 
 class UCameraComponent;
 class UPrimitiveComponent;
+class AWorldSettings;
 
 // UWorld는 월드 실행 상태와 레벨 구성을 관리합니다.
 class UWorld : public UObject
@@ -57,6 +58,8 @@ public:
     const TArray<AActor*>& GetActors() const { return ActiveLevel->GetActors(); }
     ULevel* GetActiveLevel() const { return ActiveLevel; }
     ULevel* GetPersistentLevel() const { return PersistentLevel; }
+
+    AWorldSettings* GetWorldSettings() const { return WorldSettings; }
 
     const TArray<FString>& GetEditorActorFolders() const { return EditorActorFolders; }
     void SetEditorActorFolders(const TArray<FString>& InFolders) { EditorActorFolders = InFolders; }
@@ -119,7 +122,9 @@ private:
     std::unique_ptr<FActorPoolManager> ActorPoolManager;
     FSpatialPartition Partition;
     EWorldType WorldType = EWorldType::Editor;
-	
+
+    AWorldSettings* WorldSettings = nullptr;
+
 };
 
 template <typename T, typename... TArgs>

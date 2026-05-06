@@ -1,6 +1,7 @@
 ﻿// 게임 프레임워크 영역의 세부 동작을 구현합니다.
 #include "GameFramework/World.h"
 #include "GameFramework/ActorPool.h"
+#include "GameFramework/AWorldSettings.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
@@ -48,8 +49,9 @@ UObject* UWorld::Duplicate(UObject* NewOuter) const
     }
     for (AActor* Src : PersistentLevel->GetActors())
     {
-        if (!Src)
+        if (!Src || Src->IsA<AWorldSettings>())
             continue;
+
         Src->Duplicate(NewWorld->GetPersistentLevel());
     }
 
@@ -318,6 +320,8 @@ void UWorld::InitWorld()
     ActiveLevel->SetWorld(this);
     PersistentLevel = UObjectManager::Get().CreateObject<ULevel>(this);
     PersistentLevel->SetWorld(this);
+
+    WorldSettings = SpawnPersistentActor<AWorldSettings>();
 }
 
 void UWorld::BeginPlay()
