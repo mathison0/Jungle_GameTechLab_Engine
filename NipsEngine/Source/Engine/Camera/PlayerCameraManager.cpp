@@ -474,16 +474,17 @@ void APlayerCameraManager::FillSceneView(FSceneView& OutView, const FCameraViewI
 			CameraView.FarPlane);
 	}
 
-	OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
-	OutView.CameraPosition = CameraView.Location;
-	OutView.CameraForward = Forward;
-	OutView.CameraRight = Right;
-	OutView.CameraUp = Up;
-	OutView.NearPlane = CameraView.NearPlane;
-	OutView.FarPlane = CameraView.FarPlane;
-	OutView.bOrthographic = CameraView.bOrthographic;
-	OutView.CameraOrthoHeight = CameraView.OrthoHeight;
-	OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
-	OutView.ViewRect = ViewRect;
-	OutView.ViewMode = ViewMode;
+    OutView.ViewProjectionMatrix = OutView.ViewMatrix * OutView.ProjectionMatrix;
+    OutView.CameraPosition = CameraView.Location;
+    OutView.CameraForward = Forward;
+    OutView.CameraRight = Right;
+    OutView.CameraUp = Up;
+    OutView.NearPlane = CameraView.NearPlane;
+    OutView.FarPlane = CameraView.FarPlane;
+    OutView.bOrthographic = CameraView.bOrthographic;
+    OutView.CameraOrthoHeight = CameraView.OrthoHeight;
+    OutView.CameraFrustum.UpdateFromCamera(OutView.ViewProjectionMatrix);
+    OutView.ViewRect = ViewRect;
+    OutView.ViewMode = ViewMode;
+    OutView.PostProcessSettings = CachedPostProcessSettings;
 }
