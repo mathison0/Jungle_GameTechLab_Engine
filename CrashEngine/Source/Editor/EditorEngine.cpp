@@ -106,7 +106,7 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
     
 	FObjManager::Get().ScanMeshCacheFiles();
 	FObjManager::Get().ScanObjSourceFiles();
-    FSkeletalMeshManager::Get().ScanMeshAssets();
+    FSkeletalMeshManager::Get().ScanMeshCacheFiles();
     FSkeletalMeshManager::Get().ScanFBXSourceFiles();
 	FMaterialManager::Get().ScanMaterialAssets();
 	UE_LOG(EditorEngine, Debug, "Asset registries scanned.");
@@ -114,7 +114,7 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 	PreloadDefaultObjAssets(Renderer.GetFD3DDevice().GetDevice());
 
 	FObjManager::Get().ScanMeshCacheFiles();
-    FSkeletalMeshManager::Get().ScanMeshAssets();
+    FSkeletalMeshManager::Get().ScanMeshCacheFiles();
 
     FMaterialManager::Get().ScanMaterialAssets();
 

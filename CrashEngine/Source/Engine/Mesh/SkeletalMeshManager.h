@@ -45,7 +45,7 @@ public:
     USkeletalMesh* LoadSkeletalMesh(const FString& PathFileName, bool bRefreshAssetLists = true);
     USkeletalMesh* LoadSkeletalMesh(const FString& PathFileName, const FImportOptions& Options, bool bRefreshAssetLists = true);
     
-    void ScanMeshAssets();
+    void ScanMeshCacheFiles();
     const TArray<FSkeletalMeshAssetListItem>& GetAvailableMeshFiles() const { return AvailableMeshFiles; }
     
     void ScanFBXSourceFiles();

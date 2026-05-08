@@ -170,7 +170,7 @@ void UEngine::Init(FWindowsWindow* InWindow)
     FSkeletalMeshManager::Get().SetDevice(Device);
     FMaterialManager::Get().SetDevice(Device);
     FObjManager::Get().ScanMeshCacheFiles();
-    FSkeletalMeshManager::Get().ScanMeshAssets();
+    FSkeletalMeshManager::Get().ScanMeshCacheFiles();
     FObjManager::Get().ScanObjSourceFiles();
     FSkeletalMeshManager::Get().ScanFBXSourceFiles();
     FMaterialManager::Get().ScanMaterialAssets();

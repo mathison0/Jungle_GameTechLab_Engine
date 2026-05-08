@@ -16,6 +16,7 @@
 #include "Component/LightComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
+#include "Component/SkeletalMeshComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/ScriptComponent.h"
 #include "Core/PropertyTypes.h"
@@ -1198,6 +1199,10 @@ void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)
     {
         return Type == EPropertyType::StaticMeshRef || Name == "Static Mesh" || Name == "StaticMesh";
     };
+    auto IsSkeletalMeshProp = [](const FString& Name, EPropertyType Type)
+    {
+        return Type == EPropertyType::SkeletalMeshRef || Name == "Skeletal Mesh" || Name == "SkeletalMesh";
+    };
     auto IsMaterialProp = [](const FString& Name, EPropertyType Type)
     {
         return Type == EPropertyType::MaterialSlot || Name.rfind("Element ", 0) == 0;
@@ -1240,6 +1245,7 @@ void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)
     EndEditorSection(bTransformOpen);
 
     const bool bIsStaticMeshComponent = SelectedComponent->IsA<UStaticMeshComponent>();
+    const bool bIsSkeletalMeshComponent = SelectedComponent->IsA<USkeletalMeshComponent>();
     UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(SelectedComponent);
     const bool bStaticMeshOpen = bIsStaticMeshComponent && BeginEditorSection("Static Mesh");
     if (bStaticMeshOpen)
@@ -1261,6 +1267,19 @@ void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)
         }
     }
     EndEditorSection(bStaticMeshOpen);
+
+    const bool bSkeletalMeshOpen = bIsSkeletalMeshComponent && BeginEditorSection("Skeletal Mesh");
+    if (bSkeletalMeshOpen)
+    {
+        for (int32 i = 0; i < (int32)Props.size(); ++i)
+        {
+            if (IsSkeletalMeshProp(Props[i].Name, Props[i].Type))
+            {
+                RenderDetailsPanel(Props, i);
+            }
+        }
+    }
+    EndEditorSection(bSkeletalMeshOpen);
 
     bool bHasMaterialProp = false;
     for (const FPropertyDescriptor& Prop : Props)
@@ -1345,7 +1364,7 @@ void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)
     {
         for (const FPropertyDescriptor& Prop : Props)
         {
-            if (IsTransformProp(Prop.Name) || IsStaticMeshProp(Prop.Name, Prop.Type) || IsMaterialProp(Prop.Name, Prop.Type) || IsVisibilityProp(Prop.Name) || IsBehaviorProp(Prop.Name))
+            if (IsTransformProp(Prop.Name) || IsStaticMeshProp(Prop.Name, Prop.Type) || IsSkeletalMeshProp(Prop.Name, Prop.Type) || IsMaterialProp(Prop.Name, Prop.Type) || IsVisibilityProp(Prop.Name) || IsBehaviorProp(Prop.Name))
             {
                 continue;
             }
@@ -1381,7 +1400,7 @@ void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)
 
         for (int32 i = 0; i < (int32)Props.size(); ++i)
         {
-            if (IsTransformProp(Props[i].Name) || IsStaticMeshProp(Props[i].Name, Props[i].Type) || IsMaterialProp(Props[i].Name, Props[i].Type) || IsVisibilityProp(Props[i].Name) || IsBehaviorProp(Props[i].Name))
+            if (IsTransformProp(Props[i].Name) || IsStaticMeshProp(Props[i].Name, Props[i].Type) || IsSkeletalMeshProp(Props[i].Name, Props[i].Type) || IsMaterialProp(Props[i].Name, Props[i].Type) || IsVisibilityProp(Props[i].Name) || IsBehaviorProp(Props[i].Name))
             {
                 continue;
             }
@@ -2015,6 +2034,66 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
                     bChanged = true;
                 }
             }
+        }
+        break;
+    }
+    case EPropertyType::SkeletalMeshRef:
+    {
+        FString* Val = static_cast<FString*>(Prop.ValuePtr);
+
+        FString Preview = Val->empty() ? "None" : GetStemFromPath(*Val);
+        if (*Val == "None")
+            Preview = "None";
+
+        ImGui::Text("%s", DisplayName.c_str());
+        ImGui::SameLine(120);
+        ImGui::SetNextItemWidth(-1.0f);
+
+        if (ImGui::BeginCombo("##SkeletalMesh", Preview.c_str()))
+        {
+            FSkeletalMeshManager::Get().ScanFBXSourceFiles();
+            FSkeletalMeshManager::Get().ScanMeshCacheFiles();
+
+            bool bSelectedNone = (*Val == "None");
+            if (ImGui::Selectable("None", bSelectedNone))
+            {
+                *Val = "None";
+                bChanged = true;
+            }
+            if (bSelectedNone)
+                ImGui::SetItemDefaultFocus();
+
+            ImGui::TextDisabled("FBX Source");
+            const TArray<FSkeletalMeshAssetListItem>& FBXFiles = FSkeletalMeshManager::Get().GetAvailableFBXFiles();
+            for (const FSkeletalMeshAssetListItem& Item : FBXFiles)
+            {
+                const FString Label = Item.DisplayName + "##fbx_" + Item.FullPath;
+                bool bSelected = (*Val == Item.FullPath);
+                if (ImGui::Selectable(Label.c_str(), bSelected))
+                {
+                    *Val = Item.FullPath;
+                    bChanged = true;
+                }
+                if (bSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+
+            ImGui::Separator();
+            ImGui::TextDisabled("Cached Skeletal Mesh");
+            const TArray<FSkeletalMeshAssetListItem>& MeshFiles = FSkeletalMeshManager::Get().GetAvailableMeshFiles();
+            for (const FSkeletalMeshAssetListItem& Item : MeshFiles)
+            {
+                const FString Label = Item.DisplayName + "##bin_" + Item.FullPath;
+                bool bSelected = (*Val == Item.FullPath);
+                if (ImGui::Selectable(Label.c_str(), bSelected))
+                {
+                    *Val = Item.FullPath;
+                    bChanged = true;
+                }
+                if (bSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
         }
         break;
     }

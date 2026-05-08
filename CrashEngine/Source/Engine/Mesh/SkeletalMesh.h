@@ -47,6 +47,7 @@ public:
 
     void Serialize(FArchive& Ar) override;
 
+    const FString& GetAssetPathFileName() const;
     void SetSkeletalMeshAsset(FSkeletalMesh* InMesh);
     FSkeletalMesh* GetSkeletalMeshAsset() const { return SkeletalMeshAsset; }
 

@@ -92,7 +92,7 @@ FString FSkeletalMeshManager::GetBinaryFilePath(const FString& OriginalPath)
     return BuildSubResourceCachePath(SourcePath, SubResource);
 }
 
-void FSkeletalMeshManager::ScanMeshAssets()
+void FSkeletalMeshManager::ScanMeshCacheFiles()
 {
     AvailableMeshFiles.clear();
 
@@ -213,7 +213,7 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
     Mesh->InitResources(Device);
     SkeletalMeshCache[CacheKey] = Mesh;
 
-    if (bRefreshAssetLists) ScanMeshAssets();
+    if (bRefreshAssetLists) ScanMeshCacheFiles();
     return Mesh;
 }
 
@@ -267,7 +267,7 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
     Mesh->InitResources(Device);
     SkeletalMeshCache[CacheKey] = Mesh;
 
-    if (bRefreshAssetLists) ScanMeshAssets();
+    if (bRefreshAssetLists) ScanMeshCacheFiles();
     return Mesh;
 }
 

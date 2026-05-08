@@ -19,8 +19,9 @@ enum class EPropertyType : uint8_t
     String,
     Name,          // FName — 문자열 풀 기반 이름 (리소스 키 등)
     Color4,        // FVector4 RGBA — ImGui::ColorEdit4 위젯
-    StaticMeshRef, // UStaticMesh* 에셋 레퍼런스 (드롭다운 선택)
-    MaterialSlot,  // FMaterialSlot — 머티리얼 경로
+    StaticMeshRef,   // UStaticMesh* 에셋 레퍼런스 (드롭다운 선택)
+    SkeletalMeshRef, // USkeletalMesh* 에셋 레퍼런스 (드롭다운 선택)
+    MaterialSlot,    // FMaterialSlot — 머티리얼 경로
     ComponentRef,  // 액터 내 SceneComponent 참조 — 계층 경로 문자열 ("Root", "0", "1/0" …)
     Enum,          // int 기반 enum — FEnumPropertyMeta로 표시 이름을 제공
 };

@@ -3,6 +3,8 @@
 
 IMPLEMENT_CLASS(USkeletalMesh, UObject)
 
+static const FString EmptyPath;
+
 USkeletalMesh::USkeletalMesh()
 {
 }
@@ -52,6 +54,15 @@ void USkeletalMesh::Serialize(FArchive& Ar)
             }
         }
     }
+}
+
+const FString& USkeletalMesh::GetAssetPathFileName() const
+{
+    if (SkeletalMeshAsset)
+    {
+        return SkeletalMeshAsset->PathFileName;
+    }
+    return EmptyPath;
 }
 
 void USkeletalMesh::SetSkeletalMeshAsset(FSkeletalMesh* InMesh)
