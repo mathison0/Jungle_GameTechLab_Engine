@@ -550,7 +550,7 @@ bool FLuaComponentHandle::SetStaticMesh(const FString& MeshPath) const
     if (!MeshComp) return false;
 
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    UStaticMesh* Mesh = FObjManager::LoadObjStaticMesh(MeshPath, Device);
+    UStaticMesh* Mesh = FObjManager::Get().Load(MeshPath);
     if (!Mesh) return false;
 
     MeshComp->SetStaticMesh(Mesh);

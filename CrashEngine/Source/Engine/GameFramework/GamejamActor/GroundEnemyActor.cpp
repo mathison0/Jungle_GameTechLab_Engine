@@ -10,7 +10,7 @@ IMPLEMENT_CLASS(AGroundEnemyActor, AEnemyBaseActor)
 UStaticMeshComponent* AGroundEnemyActor::GetDefaultMeshComponent()
 {
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/ArmyMan/ArmyMan-posed.obj"), Device);
+    UStaticMesh* Asset = FObjManager::Get().Load(FPaths::ContentRelativePath("Models/ArmyMan/ArmyMan-posed.obj"));
     
     UStaticMeshComponent* MeshComp = AddComponent<UStaticMeshComponent>();
     MeshComp->SetStaticMesh(Asset);

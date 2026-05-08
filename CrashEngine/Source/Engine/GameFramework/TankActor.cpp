@@ -206,7 +206,7 @@ void ATankActor::InitDefaultComponents()
     PickupSensor->AttachToComponent(Collider);
     
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/Tank/Tank_body.obj"), Device);
+    UStaticMesh* Asset = FObjManager::Get().Load(FPaths::ContentRelativePath("Models/Tank/Tank_body.obj"));
     auto BodyMesh = AddComponent<UStaticMeshComponent>();
     BodyMesh->SetFName("BodyMesh");
     BodyMesh->SetStaticMesh(Asset);
@@ -627,7 +627,7 @@ UStaticMesh* ATankActor::GetBasicMesh(const FString& RelativePath)
         return nullptr;
     }
 
-    return FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath(RelativePath), Device);
+    return FObjManager::Get().Load(FPaths::ContentRelativePath(RelativePath));
 }
 
 UStaticMesh* ATankActor::GetProjectileMeshForWeapon(const FString& WeaponId)

@@ -21,8 +21,41 @@ constexpr const char* Columns = "Columns";
 constexpr const char* Rows = "Rows";
 } // namespace ResourceKey
 
+FResourceManager::FResourceManager()
+{
+    FontLoader = std::make_unique<FFontLoader>(FontResources);
+    ParticleLoader = std::make_unique<FParticleLoader>(ParticleResources);
+    TextureLoader = std::make_unique<FTextureLoader>(TextureResources);
+}
+
+void FResourceManager::SetDevice(ID3D11Device* Device)
+{
+    FontLoader->SetDevice(Device);
+    ParticleLoader->SetDevice(Device);
+    TextureLoader->SetDevice(Device);
+}
+
+FFontResource* FResourceManager::FFontLoader::Load(const FString& Path)
+{
+    // Specific implementation for dynamic font loading if needed
+    return nullptr;
+}
+
+FTextureResource* FResourceManager::FTextureLoader::Load(const FString& Path)
+{
+    // Specific implementation for dynamic texture loading if needed
+    return nullptr;
+}
+
+FParticleResource* FResourceManager::FParticleLoader::Load(const FString& Path)
+{
+    // Specific implementation for dynamic particle loading if needed
+    return nullptr;
+}
+
 void FResourceManager::LoadFromFile(const FString& Path, ID3D11Device* InDevice)
 {
+    SetDevice(InDevice);
     using namespace json;
     UE_LOG(Resource, Info, "Loading resource manifest: %s", Path.c_str());
 
@@ -307,14 +340,12 @@ void FResourceManager::ReleaseGPUResources()
 // --- Font ---
 FFontResource* FResourceManager::FindFont(const FName& FontName)
 {
-    auto It = FontResources.find(FontName.ToString());
-    return (It != FontResources.end()) ? &It->second : nullptr;
+    return FontLoader->Find(FontName.ToString());
 }
 
 const FFontResource* FResourceManager::FindFont(const FName& FontName) const
 {
-    auto It = FontResources.find(FontName.ToString());
-    return (It != FontResources.end()) ? &It->second : nullptr;
+    return FontLoader->Find(FontName.ToString());
 }
 
 void FResourceManager::RegisterFont(const FName& FontName, const FString& InPath, uint32 Columns, uint32 Rows)
@@ -331,14 +362,12 @@ void FResourceManager::RegisterFont(const FName& FontName, const FString& InPath
 // --- Particle ---
 FParticleResource* FResourceManager::FindParticle(const FName& ParticleName)
 {
-    auto It = ParticleResources.find(ParticleName.ToString());
-    return (It != ParticleResources.end()) ? &It->second : nullptr;
+    return ParticleLoader->Find(ParticleName.ToString());
 }
 
 const FParticleResource* FResourceManager::FindParticle(const FName& ParticleName) const
 {
-    auto It = ParticleResources.find(ParticleName.ToString());
-    return (It != ParticleResources.end()) ? &It->second : nullptr;
+    return ParticleLoader->Find(ParticleName.ToString());
 }
 
 void FResourceManager::RegisterParticle(const FName& ParticleName, const FString& InPath, uint32 Columns, uint32 Rows)
@@ -377,14 +406,12 @@ TArray<FString> FResourceManager::GetParticleNames() const
 // --- Texture ---
 FTextureResource* FResourceManager::FindTexture(const FName& TextureName)
 {
-    auto It = TextureResources.find(TextureName.ToString());
-    return (It != TextureResources.end()) ? &It->second : nullptr;
+    return TextureLoader->Find(TextureName.ToString());
 }
 
 const FTextureResource* FResourceManager::FindTexture(const FName& TextureName) const
 {
-    auto It = TextureResources.find(TextureName.ToString());
-    return (It != TextureResources.end()) ? &It->second : nullptr;
+    return TextureLoader->Find(TextureName.ToString());
 }
 
 void FResourceManager::RegisterTexture(const FName& TextureName, const FString& InPath)

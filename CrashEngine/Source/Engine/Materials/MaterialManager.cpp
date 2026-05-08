@@ -535,3 +535,32 @@ void FMaterialManager::Release()
 
     Device = nullptr;
 }
+
+UMaterial* FMaterialManager::Find(const FString& Key)
+{
+    const FString NormalizedKey = NormalizeCacheKey(Key);
+    auto It = MaterialCache.find(NormalizedKey);
+    return (It != MaterialCache.end()) ? It->second.Material : nullptr;
+}
+
+void FMaterialManager::Unload(const FString& Key)
+{
+    const FString NormalizedKey = NormalizeCacheKey(Key);
+    auto It = MaterialCache.find(NormalizedKey);
+    if (It != MaterialCache.end())
+    {
+        RetireMaterialCacheEntry(It->second);
+        MaterialCache.erase(It);
+    }
+}
+
+void FMaterialManager::LoadAllMaterials(ID3D11Device* InDevice)
+{
+    Initialize(InDevice);
+
+    ScanMaterialAssets();
+    for (const auto& Asset : AvailableMaterialFiles)
+    {
+        GetOrCreateMaterial(Asset.FullPath);
+    }
+}

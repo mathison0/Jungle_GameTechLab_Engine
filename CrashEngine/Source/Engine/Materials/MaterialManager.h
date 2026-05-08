@@ -4,6 +4,7 @@
 #include "Core/Singleton.h"
 #include "Core/CoreTypes.h"
 #include "Render/RHI/D3D11/Common/D3D11API.h"
+#include "Resource/IAssetLoader.h"
 #include "SimpleJSON/json.hpp"
 #include "Materials/MaterialSemantics.h"
 
@@ -46,7 +47,7 @@ struct FMaterialCacheEntry
 };
 
 // FMaterialManager는 관련 객체의 생성, 조회, 수명 관리를 담당합니다.
-class FMaterialManager : public TSingleton<FMaterialManager>
+class FMaterialManager : public TSingleton<FMaterialManager>, public IAssetLoader<UMaterial>
 {
     friend class TSingleton<FMaterialManager>;
 
@@ -61,6 +62,13 @@ class FMaterialManager : public TSingleton<FMaterialManager>
 
 public:
     ~FMaterialManager();
+
+    // IAssetLoader Implementation
+    virtual void SetDevice(ID3D11Device* InDevice) override { Device = InDevice; }
+    virtual UMaterial* Load(const FString& Path) override { return GetOrCreateMaterial(Path); }
+    virtual UMaterial* Find(const FString& Key) override;
+    virtual void Unload(const FString& Key) override;
+    virtual void UnloadAll() override { Release(); }
 
     void Initialize(ID3D11Device* InDevice) { Device = InDevice; }
     void LoadAllMaterials(ID3D11Device* Device);

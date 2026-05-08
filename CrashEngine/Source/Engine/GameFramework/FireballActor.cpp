@@ -18,7 +18,7 @@ void AFireballActor::InitDefaultComponents()
 {
     StaticMeshComponent = AddComponent<UStaticMeshComponent>();
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(FireballMeshName, Device);
+    UStaticMesh* Asset = FObjManager::Get().Load(FireballMeshName);
     StaticMeshComponent->SetStaticMesh(Asset);
     SetRootComponent(StaticMeshComponent);
 

@@ -164,8 +164,10 @@ void UEngine::Init(FWindowsWindow* InWindow)
     FMeshBufferManager::Get().Initialize(Device);
 
     // 에셋 자동 스캔 (스탠드얼론 대응)
-    FObjManager::ScanMeshAssets();
-    FObjManager::ScanObjSourceFiles();
+    FObjManager::Get().SetDevice(Device);
+    FMaterialManager::Get().SetDevice(Device);
+    FObjManager::Get().ScanMeshAssets();
+    FObjManager::Get().ScanObjSourceFiles();
     FMaterialManager::Get().ScanMaterialAssets();
     UE_LOG(Engine, Info, "Asset registries scanned for runtime.");
 
@@ -193,7 +195,7 @@ void UEngine::Shutdown()
 
     FResourceManager::Get().ReleaseGPUResources();
     UTexture2D::ReleaseAllGPU();
-    FObjManager::ReleaseAllGPU();
+    FObjManager::Get().ReleaseAllGPU();
     FMeshBufferManager::Get().Release();
     Renderer.Release();
 

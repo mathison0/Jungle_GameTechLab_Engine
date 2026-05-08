@@ -21,7 +21,7 @@ namespace
 	UStaticMesh* LoadHelicopterMesh(const char* RelativePath)
 	{
 		ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-		return FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath(RelativePath), Device);
+		return FObjManager::Get().Load(FPaths::ContentRelativePath(RelativePath));
 	}
 
 	FVector NormalizeDirectionOrForward(const FVector& Direction)

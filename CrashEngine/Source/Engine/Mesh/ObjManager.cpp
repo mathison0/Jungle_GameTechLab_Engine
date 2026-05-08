@@ -12,62 +12,62 @@
 #include <cwctype>
 
 // 로드된 UStaticMesh를 바이너리 캐시 경로 기준으로 보관하는 런타임 캐시
-TMap<FString, UStaticMesh*> FObjManager::StaticMeshCache;
+// TMap<FString, UStaticMesh*> FObjManager::StaticMeshCache; // Removed static init
 
 // 에디터/UI에서 보여줄 수 있는 .bin 메쉬 캐시 목록
-TArray<FMeshAssetListItem> FObjManager::AvailableMeshFiles;
+// TArray<FMeshAssetListItem> FObjManager::AvailableMeshFiles; // Removed static init
 
 // 에디터/UI에서 보여줄 수 있는 원본 .obj 목록
-TArray<FMeshAssetListItem> FObjManager::AvailableObjFiles;
+// TArray<FMeshAssetListItem> FObjManager::AvailableObjFiles; // Removed static init
 
 namespace
 {
-static std::filesystem::path NormalizePathForCompare(const FString& InPath)
-{
-    std::filesystem::path Path = FPaths::ToPath(InPath).lexically_normal();
-    std::error_code Ec;
-    std::filesystem::path Canonical = std::filesystem::weakly_canonical(Path, Ec);
-    return Ec ? Path : Canonical;
-}
-
-static bool IsBinExtension(const std::filesystem::path& Path)
-{
-    std::wstring Ext = Path.extension().wstring();
-    std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
-    return Ext == L".bin";
-}
-
-static bool IsObjExtension(const std::filesystem::path& Path)
-{
-    std::wstring Ext = Path.extension().wstring();
-    std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
-    return Ext == L".obj";
-}
-
-static FString BuildSiblingCachePath(const FString& OriginalPath)
-{
-    const std::filesystem::path SourcePath = NormalizePathForCompare(OriginalPath);
-    const std::filesystem::path CacheDir = SourcePath.parent_path() / L"Cache";
-    FPaths::CreateDir(CacheDir.wstring());
-
-    std::filesystem::path CacheFile = CacheDir / SourcePath.filename();
-    CacheFile.replace_extension(L".bin");
-    return FPaths::FromPath(CacheFile.lexically_normal());
-}
-
-static bool IsInsideCacheFolder(const std::filesystem::path& Path)
-{
-    for (const auto& Part : Path)
+    std::filesystem::path NormalizePathForCompare(const FString& InPath)
     {
-        std::wstring Name = Part.wstring();
-        std::transform(Name.begin(), Name.end(), Name.begin(), ::towlower);
-        if (Name == L"cache")
-        {
-            return true;
-        }
+        std::filesystem::path Path = FPaths::ToPath(InPath).lexically_normal();
+        std::error_code Ec;
+        std::filesystem::path Canonical = std::filesystem::weakly_canonical(Path, Ec);
+        return Ec ? Path : Canonical;
     }
-    return false;
-}
+
+    bool IsBinExtension(const std::filesystem::path& Path)
+    {
+        std::wstring Ext = Path.extension().wstring();
+        std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
+        return Ext == L".bin";
+    }
+
+    bool IsObjExtension(const std::filesystem::path& Path)
+    {
+        std::wstring Ext = Path.extension().wstring();
+        std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
+        return Ext == L".obj";
+    }
+
+    FString BuildSiblingCachePath(const FString& OriginalPath)
+    {
+        const std::filesystem::path SourcePath = NormalizePathForCompare(OriginalPath);
+        const std::filesystem::path CacheDir = SourcePath.parent_path() / L"Cache";
+        FPaths::CreateDir(CacheDir.wstring());
+
+        std::filesystem::path CacheFile = CacheDir / SourcePath.filename();
+        CacheFile.replace_extension(L".bin");
+        return FPaths::FromPath(CacheFile.lexically_normal());
+    }
+
+    bool IsInsideCacheFolder(const std::filesystem::path& Path)
+    {
+        for (const auto& Part : Path)
+        {
+            std::wstring Name = Part.wstring();
+            std::transform(Name.begin(), Name.end(), Name.begin(), ::towlower);
+            if (Name == L"cache")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 } // namespace
 
 FString FObjManager::GetBinaryFilePath(const FString& OriginalPath)
@@ -149,16 +149,6 @@ void FObjManager::ScanObjSourceFiles()
     UE_LOG(ObjManager, Debug, "Scanned source obj files. Count=%u", static_cast<uint32>(AvailableObjFiles.size()));
 }
 
-const TArray<FMeshAssetListItem>& FObjManager::GetAvailableMeshFiles()
-{
-    return AvailableMeshFiles;
-}
-
-const TArray<FMeshAssetListItem>& FObjManager::GetAvailableObjFiles()
-{
-    return AvailableObjFiles;
-}
-
 bool FObjManager::TryImportStaticMesh(const FString& ObjPath, const FImportOptions* Options, UStaticMesh* StaticMesh, const FString& BinPath)
 {
     if (!StaticMesh)
@@ -198,7 +188,43 @@ bool FObjManager::TryImportStaticMesh(const FString& ObjPath, const FImportOptio
     return true;
 }
 
-UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const FImportOptions& Options, ID3D11Device* InDevice, bool bRefreshAssetLists)
+UStaticMesh* FObjManager::Find(const FString& Key)
+{
+    const FString CacheKey = GetBinaryFilePath(Key);
+    auto It = StaticMeshCache.find(CacheKey);
+    return (It != StaticMeshCache.end()) ? It->second : nullptr;
+}
+
+void FObjManager::Unload(const FString& Key)
+{
+    const FString CacheKey = GetBinaryFilePath(Key);
+    auto It = StaticMeshCache.find(CacheKey);
+    if (It != StaticMeshCache.end())
+    {
+        UStaticMesh* Mesh = It->second;
+        if (Mesh)
+        {
+            FStaticMesh* Asset = Mesh->GetStaticMeshAsset();
+            if (Asset && Asset->RenderBuffer)
+            {
+                Asset->RenderBuffer->Release();
+                Asset->RenderBuffer.reset();
+            }
+            // LOD buffers release if any
+            for (uint32 LOD = 1; LOD < UStaticMesh::MAX_LOD_COUNT; ++LOD)
+            {
+                FMeshBuffer* LODBuffer = Mesh->GetLODMeshBuffer(LOD);
+                if (LODBuffer)
+                {
+                    LODBuffer->Release();
+                }
+            }
+        }
+        StaticMeshCache.erase(It);
+    }
+}
+
+UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const FImportOptions& Options, bool bRefreshAssetLists)
 {
     const FString CacheKey = GetBinaryFilePath(PathFileName);
     StaticMeshCache.erase(CacheKey);
@@ -209,7 +235,7 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const F
         return nullptr;
     }
 
-    StaticMesh->InitResources(InDevice);
+    StaticMesh->InitResources(Device);
     StaticMeshCache[CacheKey] = StaticMesh;
 
     if (bRefreshAssetLists)
@@ -220,7 +246,7 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const F
     return StaticMesh;
 }
 
-UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, ID3D11Device* InDevice, bool bRefreshAssetLists)
+UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, bool bRefreshAssetLists)
 {
     const FString CacheKey = GetBinaryFilePath(PathFileName);
 
@@ -276,7 +302,7 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, ID3D11D
         return nullptr;
     }
 
-    StaticMesh->InitResources(InDevice);
+    StaticMesh->InitResources(Device);
     StaticMeshCache[CacheKey] = StaticMesh;
 
     if (bRefreshAssetLists)
