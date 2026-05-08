@@ -1,14 +1,13 @@
 #pragma once
 
 #include "Core/CoreTypes.h"
-#include "Mesh/ObjImporter.h" // For FImportOptions, etc.
+#include "Mesh/MeshImporterCommon.h"
 #include <memory>
 
 struct FSkeletalMesh;
 class USkeleton;
 struct FStaticMaterial;
 
-// FBX 파싱 + Raw→Cooked 변환
 struct FFBXImporter
 {
     struct FImportedSkeletalMesh
