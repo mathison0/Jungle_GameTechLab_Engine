@@ -114,9 +114,9 @@ std::unique_ptr<FMaterialConstantBuffer> BuildStaticMeshMaterialCB(const UMateri
     }
 
     auto Buffer = std::make_unique<FMaterialConstantBuffer>();
-    Buffer->Init(Device, sizeof(FStaticMeshMaterialViewCBData), ECBSlot::PerShader0);
+    Buffer->Init(Device, sizeof(FMeshMaterialViewCBData), ECBSlot::PerShader0);
 
-    FStaticMeshMaterialViewCBData Constants;
+    FMeshMaterialViewCBData Constants;
     Constants.SectionColor  = GetVector4OrDefault(Material, MaterialSemantics::SectionColorParameter, MaterialSemantics::GetDefaultSectionColor());
     Constants.MaterialParam = FVector4(
         GetScalarOrDefault(Material, MaterialSemantics::SpecularPowerParameter, MaterialSemantics::DefaultSpecularPower),
@@ -191,6 +191,7 @@ void FStaticMeshSceneProxy::UpdateLOD(uint32 LODLevel)
     std::swap(ActiveOwnedMaterialCBs, LODData[LODLevel].OwnedMaterialCBs);
 }
 
+// Rebuilds the render-ready draw metadata for every section of every LOD in a UStaticMeshComponent.
 void FStaticMeshSceneProxy::RebuildSectionRenderData()
 {
     UStaticMeshComponent* SMC  = GetStaticMeshComponent();

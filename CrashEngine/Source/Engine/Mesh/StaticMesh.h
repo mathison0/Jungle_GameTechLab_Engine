@@ -14,7 +14,7 @@ struct ID3D11Device;
 struct FLODMeshData
 {
     TArray<FStaticMeshSection> Sections;
-    std::unique_ptr<FMeshBuffer> RenderBuffer;
+    std::unique_ptr<FStaticMeshBuffer> RenderBuffer;
 };
 
 // UStaticMesh는 메시 데이터와 렌더 제출 정보를 다룹니다.
@@ -44,7 +44,7 @@ public:
 
     // LOD 접근
     uint32 GetLODCount() const { return bHasLOD ? MAX_LOD_COUNT : 1; }
-    FMeshBuffer* GetLODMeshBuffer(uint32 LODLevel) const;
+    FStaticMeshBuffer* GetLODMeshBuffer(uint32 LODLevel) const;
     const TArray<FStaticMeshSection>& GetLODSections(uint32 LODLevel) const;
 
 private:

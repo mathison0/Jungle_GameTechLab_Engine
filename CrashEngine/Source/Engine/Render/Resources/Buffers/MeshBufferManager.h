@@ -31,7 +31,7 @@ public:
     void Initialize(ID3D11Device* InDevice);
     void Release();
 
-    FMeshBuffer&     GetMeshBuffer(EPrimitiveMeshShape InShape);
+    FStaticMeshBuffer&     GetMeshBuffer(EPrimitiveMeshShape InShape);
     const FMeshData& GetMeshData(EPrimitiveMeshShape InShape) const;
 
 private:
@@ -49,7 +49,7 @@ private:
 
     TMap<EPrimitiveMeshShape, FMeshData>              MeshDataMap;
     TMap<EPrimitiveMeshShape, TMeshData<FVertexPNCT>> PNCTMeshDataMap;
-    TMap<EPrimitiveMeshShape, FMeshBuffer>            MeshBufferMap;
+    TMap<EPrimitiveMeshShape, FStaticMeshBuffer>            MeshBufferMap;
 
     bool bIsInitialized = false;
 };

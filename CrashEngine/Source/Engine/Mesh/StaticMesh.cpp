@@ -83,7 +83,7 @@ void UStaticMesh::InitResources(ID3D11Device* InDevice)
     }
     RenderMeshData.Indices = StaticMeshAsset->Indices;
 
-    StaticMeshAsset->RenderBuffer = std::make_unique<FMeshBuffer>();
+    StaticMeshAsset->RenderBuffer = std::make_unique<FStaticMeshBuffer>();
     StaticMeshAsset->RenderBuffer->Create(InDevice, RenderMeshData);
 
     // ── LOD 생성 (LOD1: 90%, LOD2: 55%, LOD3: 15%) ──
@@ -188,7 +188,7 @@ bool UStaticMesh::RaycastMeshTrianglesWithBVHLocal(const FVector& LocalOrigin, c
     return MeshTrianglePickingBVH.RaycastLocal(LocalOrigin, LocalDirection, *StaticMeshAsset, OutHitResult);
 }
 
-FMeshBuffer* UStaticMesh::GetLODMeshBuffer(uint32 LODLevel) const
+FStaticMeshBuffer* UStaticMesh::GetLODMeshBuffer(uint32 LODLevel) const
 {
     if (LODLevel == 0 && StaticMeshAsset)
         return StaticMeshAsset->RenderBuffer.get();

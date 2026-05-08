@@ -75,7 +75,7 @@ struct FStaticMesh
 
     TArray<FStaticMeshSection> Sections;
 
-    std::unique_ptr<FMeshBuffer> RenderBuffer;
+    std::unique_ptr<FStaticMeshBuffer> RenderBuffer;
 
     // 메시 로컬 바운드 캐시 (정점 순회 1회로 계산)
     FVector BoundsCenter = FVector(0, 0, 0);

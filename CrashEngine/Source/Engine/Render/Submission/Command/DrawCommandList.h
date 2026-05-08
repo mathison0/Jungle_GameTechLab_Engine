@@ -17,7 +17,7 @@ struct FDrawBindStateCache
     ERasterizerState          Rasterizer     = {};
     D3D11_PRIMITIVE_TOPOLOGY  Topology       = {};
     uint8                     StencilRef     = 0;
-    FMeshBuffer*              MeshBuffer     = nullptr;
+    FMeshBuffer*                    MeshBuffer     = nullptr;
     ID3D11Buffer*             RawVB          = nullptr;
     ID3D11Buffer*             RawIB          = nullptr;
     FConstantBuffer*          PerObjectCB    = nullptr;

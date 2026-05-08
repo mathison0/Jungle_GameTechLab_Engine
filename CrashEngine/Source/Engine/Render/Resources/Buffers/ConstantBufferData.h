@@ -318,7 +318,7 @@ struct FForwardDecalGPUData
 }; // Total: 96B
 
 // FStaticMeshMaterialViewCBData는 정적 메시 머티리얼 뷰 상수 버퍼 레이아웃입니다.
-struct FStaticMeshMaterialViewCBData
+struct FMeshMaterialViewCBData
 {
     FVector4 SectionColor       = FVector4(1.0f, 1.0f, 1.0f, 1.0f); // 16B
     FVector4 MaterialParam      = FVector4(32.0f, 0.5f, 0.0f, 1.0f); // 16B

@@ -234,7 +234,7 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
     {
         AddSection(
             0,
-            Proxy.MeshBuffer->GetIndexBuffer().GetIndexCount(),
+            Proxy.MeshBuffer->GetIndexCount(),
             Proxy.DiffuseSRV,
             Proxy.NormalSRV,
             Proxy.SpecularSRV,

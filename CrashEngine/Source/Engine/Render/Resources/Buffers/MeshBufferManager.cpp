@@ -33,7 +33,7 @@ void FMeshBufferManager::Release()
     bIsInitialized = false;
 }
 
-FMeshBuffer& FMeshBufferManager::GetMeshBuffer(EPrimitiveMeshShape InShape)
+FStaticMeshBuffer& FMeshBufferManager::GetMeshBuffer(EPrimitiveMeshShape InShape)
 {
     auto it = MeshBufferMap.find(InShape);
     if (it != MeshBufferMap.end())

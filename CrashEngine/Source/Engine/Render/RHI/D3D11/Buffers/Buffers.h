@@ -6,3 +6,5 @@
 #include "Render/RHI/D3D11/Buffers/DynamicVertexBuffer.h"
 #include "Render/RHI/D3D11/Buffers/DynamicIndexBuffer.h"
 #include "Render/RHI/D3D11/Buffers/MeshBuffer.h"
+#include "Render/RHI/D3D11/Buffers/StaticMeshBuffer.h"
+#include "Render/RHI/D3D11/Buffers/SkeletalMeshBuffer.h"

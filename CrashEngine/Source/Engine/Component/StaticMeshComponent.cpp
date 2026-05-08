@@ -77,7 +77,7 @@ UStaticMesh* UStaticMeshComponent::GetStaticMesh() const
     return StaticMesh;
 }
 
-FMeshBuffer* UStaticMeshComponent::GetMeshBuffer() const
+FStaticMeshBuffer* UStaticMeshComponent::GetMeshBuffer() const
 {
     if (!StaticMesh)
         return nullptr;

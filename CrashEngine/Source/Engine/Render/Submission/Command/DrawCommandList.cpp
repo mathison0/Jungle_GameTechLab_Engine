@@ -208,14 +208,14 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd, FD3DDevice& Device
         if (bForce || Cmd.MeshBuffer != Cache.MeshBuffer)
         {
             uint32        Offset = 0;
-            uint32        Stride = Cmd.MeshBuffer->GetVertexBuffer().GetStride();
-            ID3D11Buffer* VB     = Cmd.MeshBuffer->GetVertexBuffer().GetBuffer();
+            uint32        Stride = Cmd.MeshBuffer->GetVertexStride();
+            ID3D11Buffer* VB     = Cmd.MeshBuffer->GetVertexBufferRaw();
 
             if (VB && Stride > 0)
             {
                 Ctx->IASetVertexBuffers(0, 1, &VB, &Stride, &Offset);
 
-                ID3D11Buffer* IB = Cmd.MeshBuffer->GetIndexBuffer().GetBuffer();
+                ID3D11Buffer* IB = Cmd.MeshBuffer->GetIndexBufferRaw();
                 if (IB)
                 {
                     Ctx->IASetIndexBuffer(IB, DXGI_FORMAT_R32_UINT, 0);
@@ -334,11 +334,11 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd, FD3DDevice& Device
     }
     else if (Cmd.MeshBuffer)
     {
-        const uint32 IdxCount = Cmd.MeshBuffer->GetIndexBuffer().GetIndexCount();
+        const uint32 IdxCount = Cmd.MeshBuffer->GetIndexCount();
         if (IdxCount > 0)
             Ctx->DrawIndexed(IdxCount, 0, 0);
         else
-            Ctx->Draw(Cmd.MeshBuffer->GetVertexBuffer().GetVertexCount(), 0);
+            Ctx->Draw(Cmd.MeshBuffer->GetVertexCount(), 0);
     }
 
     FDrawCallStats::Increment();

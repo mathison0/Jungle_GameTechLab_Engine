@@ -10,16 +10,19 @@ public:
     FDynamicVertexBuffer(const FDynamicVertexBuffer&)            = delete;
     FDynamicVertexBuffer& operator=(const FDynamicVertexBuffer&) = delete;
     void                  Create(ID3D11Device* InDevice, uint32 InMaxCount, uint32 InStride);
+    void                  Create(ID3D11Device* InDevice, const void* InData, uint32 InVertexCount, uint32 InByteWidth, uint32 InStride);
     void                  Release();
     void                  EnsureCapacity(ID3D11Device* InDevice, uint32 RequiredCount);
     bool                  Update(ID3D11DeviceContext* Context, const void* Data, uint32 Count);
     void                  Bind(ID3D11DeviceContext* Context, uint32 Slot = 0);
     uint32                GetMaxCount() const { return MaxCount; }
+    uint32                GetVertexCount() const { return VertexCount; }
     ID3D11Buffer*         GetBuffer() const { return Buffer; }
     uint32                GetStride() const { return Stride; }
 
 private:
     ID3D11Buffer* Buffer   = nullptr;
     uint32        MaxCount = 0;
+    uint32        VertexCount = 0;
     uint32        Stride   = 0;
 };
