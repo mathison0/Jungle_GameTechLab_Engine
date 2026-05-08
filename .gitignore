@@ -470,3 +470,7 @@ CMakeLists.txt
 
 # Runtime generated engine data
 CrashEngine/Saved/
+
+# Include Third-party library
+!CrashEngine/ThirdParty/**/lib/[Dd]ebug/
+!CrashEngine/ThirdParty/**/lib/[Rr]elease/
