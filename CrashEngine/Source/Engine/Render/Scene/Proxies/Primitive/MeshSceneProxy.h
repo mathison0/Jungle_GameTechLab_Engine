@@ -5,7 +5,6 @@
 #include <memory>
 
 class UMeshComponent;
-class UStaticMeshComponent;
 
 class FMeshSceneProxy : public FPrimitiveProxy {
 public:
@@ -47,7 +46,4 @@ protected:
                                                                        ID3D11ShaderResourceView* DiffuseSRV, ID3D11ShaderResourceView* NormalSRV,
                                                                        ID3D11ShaderResourceView* SpecularSRV);
     void SortSectionRenderDataByMaterial(TArray<FMeshSectionRenderData>& Draws);
-
-protected:
-	UMeshComponent* MeshComponent = nullptr;
 };

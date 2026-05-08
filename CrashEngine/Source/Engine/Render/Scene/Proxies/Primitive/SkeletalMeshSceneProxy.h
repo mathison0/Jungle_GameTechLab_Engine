@@ -11,6 +11,6 @@ public:
 
 protected:
 	UMeshComponent* GetMeshComponent() const override;
-    void RebuildSectionRenderData() override { /* SkeletalMesh does not support LOD for now */ }
+    void RebuildSectionRenderData() override;
 
 };
