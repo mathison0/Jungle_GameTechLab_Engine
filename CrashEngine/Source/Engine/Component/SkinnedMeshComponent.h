@@ -21,12 +21,19 @@ public:
     void UpdateSkinningMatrices();
     void UpdateSkinnedVertices();
 
+	void ResetToReferencePose();
+
+	bool SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& LocalMatrix);
+	const FMatrix& GetBoneLocalMatrix(int32 BoneIndex) const;
+	const FMatrix& GetBoneComponentMatrix(int32 BoneIndex) const;
+
+
 	const TArray<FVertexPNCT_T>& GetSkinnedVertices() const;
     const TArray<uint32>& GetIndices() const;
 
     int32 GetNumBones() const;
     const FBoneInfo* GetBoneInfo(int32 BoneIndex) const;
-    const FMatrix& GetBoneWorldMatrix(int32 BoneIndex) const;
+    FMatrix GetBoneWorldMatrix(int32 BoneIndex) const;
     int32 FindBoneIndex(const FName& BoneName) const;
 
 protected:

@@ -37,7 +37,8 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 	}
 
 	RefreshReferencePose();
-    RefreshBoneTransforms();
+    ResetToReferencePose();
+
     UpdateSkinningMatrices();
     UpdateSkinnedVertices();
     
@@ -87,7 +88,7 @@ FMeshDataView USkinnedMeshComponent::GetMeshDataView() const
 
 void USkinnedMeshComponent::RefreshReferencePose()
 {
-    /*RefPoseBoneLocalMatrices.clear();
+    RefPoseBoneLocalMatrices.clear();
     RefPoseBoneGlobalMatrices.clear();
 
     if (!SkeletalMesh)
@@ -95,6 +96,7 @@ void USkinnedMeshComponent::RefreshReferencePose()
         return;
     }
 
+    /*
     const TArray<FBoneInfo>& Bones = SkeletalMesh->GetBones();
     const int32 BoneCount = static_cast<int32>(Bones.size());
 
@@ -122,18 +124,84 @@ void USkinnedMeshComponent::RefreshReferencePose()
 
 void USkinnedMeshComponent::RefreshBoneTransforms()
 {
-    CurrentBoneLocalMatrices.clear();
     CurrentBoneGlobalMatrices.clear();
 
-    if (RefPoseBoneLocalMatrices.empty() || RefPoseBoneGlobalMatrices.empty())
+    const int32 BoneCount = static_cast<int32>(CurrentBoneLocalMatrices.size());
+    if (BoneCount <= 0)
     {
         return;
     }
 
-    CurrentBoneLocalMatrices = RefPoseBoneLocalMatrices;
-    CurrentBoneGlobalMatrices = RefPoseBoneGlobalMatrices;
+    CurrentBoneGlobalMatrices.resize(BoneCount, FMatrix::Identity);
+
+    if (!SkeletalMesh)
+    {
+        CurrentBoneGlobalMatrices = CurrentBoneLocalMatrices;
+        return;
+    }
+
+    /*
+    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetBones();
+    if (static_cast<int32>(Bones.size()) != BoneCount)
+    {
+        CurrentBoneGlobalMatrices = CurrentBoneLocalMatrices;
+        return;
+    }
+
+    for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+    {
+        const int32 ParentIndex = Bones[BoneIndex].ParentIndex;
+        const FMatrix& LocalMatrix = CurrentBoneLocalMatrices[BoneIndex];
+
+        if (ParentIndex >= 0 && ParentIndex < BoneIndex)
+        {
+            CurrentBoneGlobalMatrices[BoneIndex] =
+                LocalMatrix * CurrentBoneGlobalMatrices[ParentIndex];
+        }
+        else
+        {
+            CurrentBoneGlobalMatrices[BoneIndex] = LocalMatrix;
+        }
+    }
+    */
+
+    // TODO: 추후 코드 병합 후 위 코드로 사용 예정
+    CurrentBoneGlobalMatrices = CurrentBoneLocalMatrices;
 }
 
+void USkinnedMeshComponent::ResetToReferencePose()
+{
+    CurrentBoneLocalMatrices = RefPoseBoneLocalMatrices;
+
+    if (!RefPoseBoneGlobalMatrices.empty() &&
+        RefPoseBoneGlobalMatrices.size() == RefPoseBoneLocalMatrices.size())
+    {
+        CurrentBoneGlobalMatrices = RefPoseBoneGlobalMatrices;
+    }
+    else
+    {
+        RefreshBoneTransforms();
+    }
+}
+
+bool USkinnedMeshComponent::SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& LocalMatrix)
+{
+    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(CurrentBoneLocalMatrices.size()))
+    {
+        return false;
+    }
+
+    CurrentBoneLocalMatrices[BoneIndex] = LocalMatrix;
+    RefreshBoneTransforms();
+
+    // CPU skinning
+    // UpdateSkinningMatrices();
+    // UpdateSkinnedVertices();
+    MarkRenderStateDirty();
+    MarkWorldBoundsDirty();
+
+    return true;
+}
 
 //CPU skinning
 void USkinnedMeshComponent::UpdateSkinningMatrices() {};
@@ -163,7 +231,19 @@ const FBoneInfo* USkinnedMeshComponent::GetBoneInfo(int32 BoneIndex) const
     return nullptr;
 }
 
-const FMatrix& USkinnedMeshComponent::GetBoneWorldMatrix(int32 BoneIndex) const
+const FMatrix& USkinnedMeshComponent::GetBoneLocalMatrix(int32 BoneIndex) const
+{
+    static const FMatrix Identity = FMatrix::Identity;
+
+    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(CurrentBoneLocalMatrices.size()))
+    {
+        return Identity;
+    }
+
+    return CurrentBoneLocalMatrices[BoneIndex];
+}
+
+const FMatrix& USkinnedMeshComponent::GetBoneComponentMatrix(int32 BoneIndex) const
 {
     static const FMatrix Identity = FMatrix::Identity;
 
@@ -173,6 +253,11 @@ const FMatrix& USkinnedMeshComponent::GetBoneWorldMatrix(int32 BoneIndex) const
     }
 
     return CurrentBoneGlobalMatrices[BoneIndex];
+}
+
+FMatrix USkinnedMeshComponent::GetBoneWorldMatrix(int32 BoneIndex) const
+{
+    return GetBoneComponentMatrix(BoneIndex) * GetWorldMatrix();
 }
 
 int32 USkinnedMeshComponent::FindBoneIndex(const FName& BoneName) const
