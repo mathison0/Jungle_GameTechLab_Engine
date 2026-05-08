@@ -140,7 +140,7 @@ struct FLuaComponentHandle
 	bool CallScript(const FString& FunctionName, const sol::variadic_args& Args) const;
 
 	// SubUV API
-	bool SetParticle(const FString& ParticleName) const;
+	bool SetSpriteVfx(const FString& SpriteVfxName) const;
 	bool Play() const;
 	bool SetLoop(bool bLoop) const;
 	bool SetFrameRate(float FPS) const;

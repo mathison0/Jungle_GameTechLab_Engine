@@ -20,7 +20,7 @@ void AStaticMeshActor::InitDefaultComponents(const FString& UStaticMeshFileName)
     SetRootComponent(StaticMeshComponent);
 
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(UStaticMeshFileName, Device);
+    UStaticMesh* Asset = FObjManager::Get().Load(UStaticMeshFileName);
 
     StaticMeshComponent->SetStaticMesh(Asset);
 

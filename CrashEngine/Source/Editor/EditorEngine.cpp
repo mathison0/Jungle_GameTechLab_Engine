@@ -37,7 +37,7 @@ void PreloadDefaultObjAssets(ID3D11Device* Device)
         return;
     }
 
-    const TArray<FMeshAssetListItem>& ObjFiles = FObjManager::GetAvailableObjFiles();
+    const TArray<FMeshAssetListItem>& ObjFiles = FObjManager::Get().GetAvailableObjFiles();
     for (const FMeshAssetListItem& Item : ObjFiles)
     {
         if (Item.FullPath.rfind(FPaths::ContentRelativePath("Models/_Basic/"), 0) != 0)
@@ -45,7 +45,7 @@ void PreloadDefaultObjAssets(ID3D11Device* Device)
             continue;
         }
 
-        FObjManager::LoadObjStaticMesh(Item.FullPath, Device, false);
+        FObjManager::Get().Load(Item.FullPath);
     }
 }
 
@@ -101,12 +101,16 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 
 	ViewportInputRouter.SetOwnerWindow(InWindow->GetHWND());
 
-    FObjManager::ScanMeshAssets();
-    FObjManager::ScanObjSourceFiles();
-    FMaterialManager::Get().ScanMaterialAssets();
-    UE_LOG(EditorEngine, Debug, "Asset registries scanned.");
-    PreloadDefaultObjAssets(Renderer.GetFD3DDevice().GetDevice());
-    FObjManager::ScanMeshAssets();
+	FObjManager::Get().ScanMeshAssets();
+	FObjManager::Get().ScanObjSourceFiles();
+	FMaterialManager::Get().ScanMaterialAssets();
+	UE_LOG(EditorEngine, Debug, "Asset registries scanned.");
+	FObjManager::Get().SetDevice(Renderer.GetFD3DDevice().GetDevice());
+	FMaterialManager::Get().SetDevice(Renderer.GetFD3DDevice().GetDevice());
+	PreloadDefaultObjAssets(Renderer.GetFD3DDevice().GetDevice());
+
+	FObjManager::Get().ScanMeshAssets();
+
     FMaterialManager::Get().ScanMaterialAssets();
 
     FEditorSettings::Get().LoadFromFile(FEditorSettings::GetDefaultSettingsPath());

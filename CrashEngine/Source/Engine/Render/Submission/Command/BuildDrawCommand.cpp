@@ -23,7 +23,7 @@
 #include "Render/Resources/State/RenderStateTypes.h"
 #include "Render/Submission/Command/DrawCommand.h"
 #include "Render/Submission/Command/DrawCommandList.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/FontManager.h"
 
 #include <algorithm>
 #include <vector>
@@ -494,7 +494,7 @@ void DrawCommandBuild::BuildOverlayTextDrawCommand(FRenderPipelineContext& Conte
                 const FFontResource* FontRes = TextComp ? TextComp->GetFont() : nullptr;
                 if (!FontRes || !FontRes->IsLoaded())
                 {
-                    FontRes = FResourceManager::Get().FindFont(FName("Default"));
+                    FontRes = FFontManager::Get().FindFont(FName("Default"));
                 }
                 if (!FontRes || !FontRes->IsLoaded())
                 {
@@ -561,7 +561,7 @@ void DrawCommandBuild::BuildOverlayTextDrawCommand(FRenderPipelineContext& Conte
         return;
     }
 
-    const FFontResource* FontRes = FResourceManager::Get().FindFont(FName("Default"));
+    const FFontResource* FontRes = FFontManager::Get().FindFont(FName("Default"));
     if (!FontRes || !FontRes->IsLoaded())
     {
         return;
@@ -657,7 +657,7 @@ void DrawCommandBuild::BuildBatchedWorldTextDrawCommands(FRenderPipelineContext&
         const FFontResource* FontRes = TextComp ? TextComp->GetFont() : nullptr;
         if (!FontRes || !FontRes->IsLoaded())
         {
-            FontRes = FResourceManager::Get().FindFont(FName("Default"));
+            FontRes = FFontManager::Get().FindFont(FName("Default"));
         }
         if (!FontRes || !FontRes->IsLoaded())
         {

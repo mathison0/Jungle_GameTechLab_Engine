@@ -1238,7 +1238,16 @@
     <ClCompile Include="Source\Engine\Render\Visibility\Occlusion\OcclusionCulling.cpp">
       <Filter>Source\Engine\Render\Visibility\Occlusion</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Resource\ResourceManager.cpp">
+    <ClCompile Include="Source\Engine\Resource\FontManager.cpp">
+      <Filter>Source\Engine\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Resource\ResourceLoaderUtils.cpp">
+      <Filter>Source\Engine\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Resource\SpriteVfxManager.cpp">
+      <Filter>Source\Engine\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Resource\TextureManager.cpp">
       <Filter>Source\Engine\Resource</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Runtime\Engine.cpp">
@@ -2426,7 +2435,19 @@
     <ClInclude Include="Source\Engine\Render\Visibility\Occlusion\OcclusionCulling.h">
       <Filter>Source\Engine\Render\Visibility\Occlusion</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Resource\ResourceManager.h">
+    <ClInclude Include="Source\Engine\Resource\FontManager.h">
+      <Filter>Source\Engine\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Resource\IAssetLoader.h">
+      <Filter>Source\Engine\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Resource\ResourceLoaderUtils.h">
+      <Filter>Source\Engine\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Resource\SpriteVfxManager.h">
+      <Filter>Source\Engine\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Resource\TextureManager.h">
       <Filter>Source\Engine\Resource</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Runtime\Engine.h">

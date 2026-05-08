@@ -20,7 +20,9 @@
 #include "Component/ScriptComponent.h"
 #include "Core/PropertyTypes.h"
 #include "Core/ClassTypes.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/FontManager.h"
+#include "Resource/SpriteVfxManager.h"
+#include "Resource/TextureManager.h"
 #include "Object/FName.h"
 #include "Object/ObjectIterator.h"
 #include "Materials/Material.h"
@@ -1952,8 +1954,8 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
 
         if (ImGui::BeginCombo("##Mesh", Preview.c_str()))
         {
-            FObjManager::ScanMeshAssets();
-            FObjManager::ScanObjSourceFiles();
+            FObjManager::Get().ScanMeshAssets();
+            FObjManager::Get().ScanObjSourceFiles();
 
             bool bSelectedNone = (*Val == "None");
             if (ImGui::Selectable("None", bSelectedNone))
@@ -1965,7 +1967,7 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
                 ImGui::SetItemDefaultFocus();
 
             ImGui::TextDisabled("OBJ Source");
-            const TArray<FMeshAssetListItem>& ObjFiles = FObjManager::GetAvailableObjFiles();
+            const TArray<FMeshAssetListItem>& ObjFiles = FObjManager::Get().GetAvailableObjFiles();
             for (const FMeshAssetListItem& Item : ObjFiles)
             {
                 const FString Label = Item.DisplayName + "##obj_" + Item.FullPath;
@@ -1981,7 +1983,7 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
 
             ImGui::Separator();
             ImGui::TextDisabled("Cached Mesh");
-            const TArray<FMeshAssetListItem>& MeshFiles = FObjManager::GetAvailableMeshFiles();
+            const TArray<FMeshAssetListItem>& MeshFiles = FObjManager::Get().GetAvailableMeshFiles();
             for (const FMeshAssetListItem& Item : MeshFiles)
             {
                 const FString Label = Item.DisplayName + "##bin_" + Item.FullPath;
@@ -2006,7 +2008,7 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
             if (!ObjPath.empty())
             {
                 ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-                UStaticMesh* Loaded = FObjManager::LoadObjStaticMesh(ObjPath, Device);
+                UStaticMesh* Loaded = FObjManager::Get().Load(ObjPath);
                 if (Loaded)
                 {
                     *Val = ObjPath;
@@ -2196,11 +2198,11 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
         // 리소스 키와 매칭되는 프로퍼티면 콤보 박스로 렌더링
         TArray<FString> Names;
         if (strcmp(Prop.Name.c_str(), "Font") == 0)
-            Names = FResourceManager::Get().GetFontNames();
-        else if (strcmp(Prop.Name.c_str(), "Particle") == 0)
-            Names = FResourceManager::Get().GetParticleNames();
+            Names = FFontManager::Get().GetFontNames();
+        else if (strcmp(Prop.Name.c_str(), "SpriteVfx") == 0)
+            Names = FSpriteVfxManager::Get().GetSpriteVfxNames();
         else if (strcmp(Prop.Name.c_str(), "Texture") == 0)
-            Names = FResourceManager::Get().GetTextureNames();
+            Names = FTextureManager::Get().GetTextureNames();
 
         if (!Names.empty())
         {

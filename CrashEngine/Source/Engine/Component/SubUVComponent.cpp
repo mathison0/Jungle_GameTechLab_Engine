@@ -4,7 +4,7 @@
 
 #include <cstring>
 #include "Render/Resources/Buffers/MeshBufferManager.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/SpriteVfxManager.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Component/CameraComponent.h"
@@ -22,11 +22,11 @@ void USubUVComponent::Serialize(FArchive& Ar)
 {
     /*
         공통 width/height 직렬화를 위해 부모 빌보드 직렬화를 먼저 호출합니다.
-        SubUV는 별도 particle 리소스를 사용하므로 particle 전용 값은 아래에서 추가로 저장합니다.
+        SubUV는 별도 SpriteVfx 리소스를 사용하므로 SpriteVfx 전용 값은 아래에서 추가로 저장합니다.
     */
     UBillboardComponent::Serialize(Ar);
 
-    Ar << ParticleName;
+    Ar << SpriteVfxName;
     Ar << FrameIndex;
     Ar << PlayRate;
     Ar << bLoop;
@@ -35,8 +35,8 @@ void USubUVComponent::Serialize(FArchive& Ar)
 void USubUVComponent::PostDuplicate()
 {
     UBillboardComponent::PostDuplicate();
-    // particle 리소스를 다시 바인딩합니다.
-    SetParticle(ParticleName);
+    // SpriteVfx 리소스를 다시 바인딩합니다.
+    SetSpriteVfx(SpriteVfxName);
 }
 
 USubUVComponent::USubUVComponent()
@@ -44,10 +44,10 @@ USubUVComponent::USubUVComponent()
     SetVisibility(true);
 }
 
-void USubUVComponent::SetParticle(const FName& InParticleName)
+void USubUVComponent::SetSpriteVfx(const FName& InSpriteVfxName)
 {
-    ParticleName = InParticleName;
-    CachedParticle = FResourceManager::Get().FindParticle(InParticleName);
+    SpriteVfxName = InSpriteVfxName;
+    CachedSpriteVfx = FSpriteVfxManager::Get().FindSpriteVfx(InSpriteVfxName);
     MarkWorldBoundsDirty();
 }
 
@@ -55,10 +55,10 @@ void USubUVComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProp
 {
     /*
         SubUV는 빌보드의 texture 속성을 노출하지 않습니다.
-        primitive 공통 속성과 SubUV 전용 속성만 에디터에 등록합니다.
+        primitive 공통 속성과 SubUV 전용 속만 에디터에 등록합니다.
     */
     UPrimitiveComponent::GetEditableProperties(OutProps);
-    OutProps.push_back({ "Particle", EPropertyType::Name, &ParticleName });
+    OutProps.push_back({ "SpriteVfx", EPropertyType::Name, &SpriteVfxName });
     OutProps.push_back({ "Width", EPropertyType::Float, &Width, 0.1f, 100.0f, 0.1f });
     OutProps.push_back({ "Height", EPropertyType::Float, &Height, 0.1f, 100.0f, 0.1f });
     OutProps.push_back({ "Play Rate", EPropertyType::Float, &PlayRate, 1.0f, 120.0f, 1.0f });
@@ -72,10 +72,10 @@ void USubUVComponent::PostEditProperty(const char* PropertyName)
     */
     UPrimitiveComponent::PostEditProperty(PropertyName);
 
-    if (strcmp(PropertyName, "Particle") == 0)
+    if (strcmp(PropertyName, "SpriteVfx") == 0)
     {
-        SetParticle(ParticleName);
-        // particle 교체는 UV 그리드와 texture를 바꾸므로 메시 단계까지 dirty 처리합니다.
+        SetSpriteVfx(SpriteVfxName);
+        // SpriteVfx 교체는 UV 그리드와 texture를 바꾸므로 메시 단계까지 dirty 처리합니다.
         MarkProxyDirty(ESceneProxyDirtyFlag::Mesh);
     }
     else if (strcmp(PropertyName, "Width") == 0 || strcmp(PropertyName, "Height") == 0)
@@ -91,12 +91,12 @@ void USubUVComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
     // 부모는 매 프레임 행렬을 직접 업데이트하려 시도하는데, SubUV는 프록시에서 이를 처리하므로 충돌 및 스케일 중복 적용을 유발합니다.
     UPrimitiveComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    if (!CachedParticle)
+    if (!CachedSpriteVfx)
         return;
     if (!bLoop && bIsExecute)
         return;
 
-    const uint32 TotalFrames = CachedParticle->Columns * CachedParticle->Rows;
+    const uint32 TotalFrames = CachedSpriteVfx->Columns * CachedSpriteVfx->Rows;
     if (TotalFrames == 0)
         return;
 

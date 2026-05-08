@@ -14,7 +14,7 @@
 // ==================== Materials / Resources ====================
 
 #include "Materials/MaterialManager.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/FontManager.h"
 
 // ==================== Profiling ====================
 
@@ -295,7 +295,7 @@ void FRenderer::BeginCollect(const FSceneView& SceneView, uint32 MaxProxyCount)
     }
 
     // 텍스트 렌더링에 필요한 기본 폰트 문자 정보를 준비합니다.
-    if (const FFontResource* FontRes = FResourceManager::Get().FindFont(FName("Default")))
+    if (const FFontResource* FontRes = FFontManager::Get().FindFont(FName("Default")))
     {
         FrameResources.EnsureTextCharInfoMap(FontRes);
     }

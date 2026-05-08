@@ -1,6 +1,6 @@
 ﻿// 렌더 영역의 세부 동작을 구현합니다.
 #include "Render/Submission/Batching/FontBatch.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/FontManager.h"
 
 void FFontBatch::Create(ID3D11Device* InDevice)
 {
@@ -8,7 +8,7 @@ void FFontBatch::Create(ID3D11Device* InDevice)
     OverlayWorldBuffer.Create(InDevice, 512, 768);
     ScreenBuffer.Create(InDevice, 256, 384);
 
-    if (const FFontResource* DefaultFont = FResourceManager::Get().FindFont(FName("Default")))
+    if (const FFontResource* DefaultFont = FFontManager::Get().FindFont(FName("Default")))
     {
         if (DefaultFont->Columns > 0 && DefaultFont->Rows > 0)
         {

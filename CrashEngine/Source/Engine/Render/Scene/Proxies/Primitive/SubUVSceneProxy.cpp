@@ -39,11 +39,11 @@ void FSubUVSceneProxy::UpdateMesh()
 
     ExtraCB.Bind<FSubUVRegionCBData>(&UVRegionCB, ECBSlot::PerShader0);
 
-    // Set DiffuseSRV from particle resource
-    const FParticleResource* Particle = Comp->GetParticle();
-    if (Particle && Particle->IsLoaded())
+    // Set DiffuseSRV from SpriteVfx resource
+    const FSpriteVfxResource* SpriteVfx = Comp->GetSpriteVfx();
+    if (SpriteVfx && SpriteVfx->IsLoaded())
     {
-        DiffuseSRV = Particle->SRV;
+        DiffuseSRV = SpriteVfx->SRV;
     }
 }
 
@@ -54,15 +54,15 @@ void FSubUVSceneProxy::UpdatePerViewport(const FSceneView& SceneView)
     if (!bVisible)
         return;
 
-    const FParticleResource* Particle = Comp->GetParticle();
-    if (!Particle || !Particle->IsLoaded())
+    const FSpriteVfxResource* SpriteVfx = Comp->GetSpriteVfx();
+    if (!SpriteVfx || !SpriteVfx->IsLoaded())
     {
         bVisible = false;
         return;
     }
 
     // Update DiffuseSRV (may change during play)
-    DiffuseSRV = Particle->SRV;
+    DiffuseSRV = SpriteVfx->SRV;
 
     FMatrix BillboardMatrix = Comp->ComputeBillboardMatrix(SceneView.CameraForward);
 
@@ -70,8 +70,8 @@ void FSubUVSceneProxy::UpdatePerViewport(const FSceneView& SceneView)
     MarkPerObjectCBDirty();
 
     // Update UV region from frame index
-    const uint32 Cols = Particle->Columns;
-    const uint32 Rows = Particle->Rows;
+    const uint32 Cols = SpriteVfx->Columns;
+    const uint32 Rows = SpriteVfx->Rows;
     if (Cols > 0 && Rows > 0)
     {
         const float  FrameW   = 1.0f / static_cast<float>(Cols);

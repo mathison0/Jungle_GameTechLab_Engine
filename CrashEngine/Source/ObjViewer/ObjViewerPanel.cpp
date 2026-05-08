@@ -74,7 +74,7 @@
 //	// OBJ Files 섹션
 //	if (ImGui::CollapsingHeader("OBJ Files", ImGuiTreeNodeFlags_DefaultOpen))
 //	{
-//		const TArray<FMeshAssetListItem>& ObjFiles = FObjManager::GetAvailableObjFiles();
+//		const TArray<FMeshAssetListItem>& ObjFiles = FObjManager::Get().GetAvailableObjFiles();
 //
 //		for (int32 i = 0; i < static_cast<int32>(ObjFiles.size()); ++i)
 //		{
@@ -102,7 +102,7 @@
 //	// Cached Meshes (.bin) 섹션
 //	if (ImGui::CollapsingHeader("Cached Meshes (.bin)", ImGuiTreeNodeFlags_DefaultOpen))
 //	{
-//		const TArray<FMeshAssetListItem>& MeshFiles = FObjManager::GetAvailableMeshFiles();
+//		const TArray<FMeshAssetListItem>& MeshFiles = FObjManager::Get().GetAvailableMeshFiles();
 //
 //		for (int32 i = 0; i < static_cast<int32>(MeshFiles.size()); ++i)
 //		{
@@ -169,7 +169,7 @@
 //		// Import / Cancel 버튼
 //		if (ImGui::Button("Import", ImVec2(120, 0)))
 //		{
-//			const TArray<FMeshAssetListItem>& ObjFiles = FObjManager::GetAvailableObjFiles();
+//			const TArray<FMeshAssetListItem>& ObjFiles = FObjManager::Get().GetAvailableObjFiles();
 //			if (Engine && SelectedObjIndex >= 0 && SelectedObjIndex < static_cast<int32>(ObjFiles.size()))
 //			{
 //				Engine->ImportObjWithOptions(ObjFiles[SelectedObjIndex].FullPath, PendingImportOptions);

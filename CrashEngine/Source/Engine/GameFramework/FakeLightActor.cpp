@@ -21,7 +21,7 @@ void AFakeLightActor::InitDefaultComponents()
 {
     // lamp mesh
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    UStaticMesh* MeshData = FObjManager::LoadObjStaticMesh(LampMeshDir, Device);
+    UStaticMesh* MeshData = FObjManager::Get().Load(LampMeshDir);
     StaticMeshComponent = AddComponent<UStaticMeshComponent>();
     StaticMeshComponent->SetStaticMesh(MeshData);
     SetRootComponent(StaticMeshComponent);

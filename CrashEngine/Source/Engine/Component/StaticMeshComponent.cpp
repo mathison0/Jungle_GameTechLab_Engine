@@ -163,7 +163,7 @@ void UStaticMeshComponent::PostDuplicate()
     if (!StaticMeshPath.empty() && StaticMeshPath != "None")
     {
         ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-        UStaticMesh* Loaded = FObjManager::LoadObjStaticMesh(StaticMeshPath, Device);
+        UStaticMesh* Loaded = FObjManager::Get().Load(StaticMeshPath);
         if (Loaded)
         {
             // Preserve serialized material slot data across SetStaticMesh.
@@ -221,7 +221,7 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
         else
         {
             ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-            UStaticMesh* Loaded = FObjManager::LoadObjStaticMesh(StaticMeshPath, Device);
+            UStaticMesh* Loaded = FObjManager::Get().Load(StaticMeshPath);
             SetStaticMesh(Loaded);
         }
         CacheLocalBounds();

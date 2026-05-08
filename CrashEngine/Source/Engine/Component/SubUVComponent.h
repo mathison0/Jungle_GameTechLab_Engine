@@ -14,11 +14,11 @@ public:
     USubUVComponent();
     ~USubUVComponent() override = default;
 
-    // --- Particle Resource ---
-    // FName 키로 ResourceManager에서 FParticleResource*를 찾아 캐싱
-    void SetParticle(const FName& InParticleName);
-    const FParticleResource* GetParticle() const { return CachedParticle; }
-    const FName& GetParticleName() const { return ParticleName; }
+    // --- SpriteVfx Resource ---
+    // FName 키로 SpriteVfxManager에서 FSpriteVfxResource*를 찾아 캐싱
+    void SetSpriteVfx(const FName& InSpriteVfxName);
+    const FSpriteVfxResource* GetSpriteVfx() const { return CachedSpriteVfx; }
+    const FName& GetSpriteVfxName() const { return SpriteVfxName; }
 
     // --- SubUV Frame ---
     void SetFrameIndex(uint32 InIndex) { FrameIndex = InIndex; }
@@ -51,8 +51,8 @@ protected:
     void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 private:
-    FName ParticleName;
-    FParticleResource* CachedParticle = nullptr; // ResourceManager 소유, 여기선 참조만
+    FName SpriteVfxName;
+    FSpriteVfxResource* CachedSpriteVfx = nullptr; // SpriteVfxManager 소유, 여기선 참조만
 
     uint32 FrameIndex = 0;
     float PlayRate = 30.0f; // 초당 프레임 수

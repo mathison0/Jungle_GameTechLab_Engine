@@ -120,7 +120,7 @@ UStaticMesh* AHomingMissileActor::LoadDefaultMesh() const
         return nullptr;
     }
 
-    return FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ"), Device);
+    return FObjManager::Get().Load(FPaths::ContentRelativePath("Models/_Basic/Sphere.OBJ"));
 }
 
 void AHomingMissileActor::Explode()

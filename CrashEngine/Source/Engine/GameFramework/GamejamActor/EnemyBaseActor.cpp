@@ -20,7 +20,7 @@ void AEnemyBaseActor::Tick(float DeltaTime)
 UStaticMeshComponent* AEnemyBaseActor::GetDefaultMeshComponent()
 {
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    UStaticMesh* Asset = FObjManager::LoadObjStaticMesh(FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ"), Device);
+    UStaticMesh* Asset = FObjManager::Get().Load(FPaths::ContentRelativePath("Models/_Basic/Cube.OBJ"));
 
     UStaticMeshComponent* MeshComp = AddComponent<UStaticMeshComponent>();
     MeshComp->SetStaticMesh(Asset);

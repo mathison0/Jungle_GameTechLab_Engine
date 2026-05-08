@@ -141,11 +141,11 @@ bool FLuaComponentHandle::SetActive(bool bActive) const
     return true;
 }
 
-bool FLuaComponentHandle::SetParticle(const FString& ParticleName) const
+bool FLuaComponentHandle::SetSpriteVfx(const FString& SpriteVfxName) const
 {
     USubUVComponent* SubUV = Cast<USubUVComponent>(Resolve());
     if (!SubUV) return false;
-    SubUV->SetParticle(FName(ParticleName));
+    SubUV->SetSpriteVfx(FName(SpriteVfxName));
     return true;
 }
 
@@ -550,7 +550,7 @@ bool FLuaComponentHandle::SetStaticMesh(const FString& MeshPath) const
     if (!MeshComp) return false;
 
     ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    UStaticMesh* Mesh = FObjManager::LoadObjStaticMesh(MeshPath, Device);
+    UStaticMesh* Mesh = FObjManager::Get().Load(MeshPath);
     if (!Mesh) return false;
 
     MeshComp->SetStaticMesh(Mesh);
@@ -742,7 +742,7 @@ namespace LuaBinding
             "GetWorld", &FLuaComponentHandle::GetWorld,
             "IsActive", &FLuaComponentHandle::IsActive,
             "SetActive", &FLuaComponentHandle::SetActive,
-            "SetParticle", &FLuaComponentHandle::SetParticle,
+            "SetSpriteVfx", &FLuaComponentHandle::SetSpriteVfx,
             "Play", &FLuaComponentHandle::Play,
             "SetLoop", &FLuaComponentHandle::SetLoop,
             "SetFrameRate", &FLuaComponentHandle::SetFrameRate,
