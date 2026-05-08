@@ -1,15 +1,18 @@
 ﻿#include "SkeletalMeshSceneProxy.h"
+#include "Component/SkeletalMeshComponent.h"
+
+FSkeletalMeshSceneProxy::FSkeletalMeshSceneProxy(USkeletalMeshComponent* InComponent) : FMeshSceneProxy(InComponent)
+{
+	UpdateShadow();
+}
 
 void FSkeletalMeshSceneProxy::UpdateShadow() 
 {
-    // TODO: Fix this after the actual class type rolls in
-    // UMeshComponent* Mesh = GetMeshComponent();
-    // bCastShadow          = Mesh ? Mesh->ShouldCastShadow() : true;
+    UMeshComponent* Mesh = GetMeshComponent();
+    bCastShadow          = Mesh ? Mesh->ShouldCastShadow() : true;
 }
 
 UMeshComponent* FSkeletalMeshSceneProxy::GetMeshComponent() const
 {
-	// TODO: Fix this after the actual class type rolls in
-    // return static_cast<USkeletalMeshComponent*>(Owner);
-	return nullptr;
+    return static_cast<USkeletalMeshComponent*>(Owner);
 }
