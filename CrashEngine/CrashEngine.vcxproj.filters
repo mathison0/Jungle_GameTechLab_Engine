@@ -1479,12 +1479,6 @@
       <Filter>ThirdParty\Lua\src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Engine\Component\SkeletalMeshComponent.cpp">
-      <Filter>Source\Engine\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Component\SkinnedMeshComponent.cpp">
-      <Filter>Source\Engine\Component</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2719,12 +2713,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\Sol\sol.hpp">
       <Filter>ThirdParty\Sol</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\SkeletalMeshComponent.h">
-      <Filter>Source\Engine\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\SkinnedMeshComponent.h">
-      <Filter>Source\Engine\Component</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
