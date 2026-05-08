@@ -126,8 +126,8 @@ void UEngine::Init(FWindowsWindow* InWindow)
 
 	ViewportInputRouter.SetOwnerWindow(Window->GetHWND());
 
-    uint32 InitWidth = Window->GetWidth();
-    uint32 InitHeight = Window->GetHeight();
+    uint32 InitWidth = static_cast<uint32>(Window->GetWidth());
+    uint32 InitHeight = static_cast<uint32>(Window->GetHeight());
 
 #if !WITH_EDITOR
     // Game.ini 로드 (해상도 설정 등 - Standalone 전용)
