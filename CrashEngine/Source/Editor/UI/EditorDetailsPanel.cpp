@@ -20,7 +20,9 @@
 #include "Component/ScriptComponent.h"
 #include "Core/PropertyTypes.h"
 #include "Core/ClassTypes.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/FontManager.h"
+#include "Resource/SpriteVfxManager.h"
+#include "Resource/TextureManager.h"
 #include "Object/FName.h"
 #include "Object/ObjectIterator.h"
 #include "Materials/Material.h"
@@ -2196,11 +2198,11 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
         // 리소스 키와 매칭되는 프로퍼티면 콤보 박스로 렌더링
         TArray<FString> Names;
         if (strcmp(Prop.Name.c_str(), "Font") == 0)
-            Names = FResourceManager::Get().GetFontNames();
-        else if (strcmp(Prop.Name.c_str(), "Particle") == 0)
-            Names = FResourceManager::Get().GetParticleNames();
+            Names = FFontManager::Get().GetFontNames();
+        else if (strcmp(Prop.Name.c_str(), "SpriteVfx") == 0)
+            Names = FSpriteVfxManager::Get().GetSpriteVfxNames();
         else if (strcmp(Prop.Name.c_str(), "Texture") == 0)
-            Names = FResourceManager::Get().GetTextureNames();
+            Names = FTextureManager::Get().GetTextureNames();
 
         if (!Names.empty())
         {

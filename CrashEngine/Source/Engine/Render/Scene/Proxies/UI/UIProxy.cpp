@@ -2,7 +2,7 @@
 
 #include "Engine/Runtime/Engine.h"
 #include "GameFramework/AActor.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/FontManager.h"
 #include "Texture/Texture2D.h"
 #include "UI/TextUIComponent.h"
 #include "UI/TextureUIComponent.h"
@@ -107,14 +107,14 @@ void FUIProxy::UpdateStyle()
     {
         Text = TextOwner->GetText();
         FontName = TextOwner->GetFontName();
-        FontResource = FResourceManager::Get().FindFont(FontName);
+        FontResource = FFontManager::Get().FindFont(FontName);
         if (!FontResource || !FontResource->IsLoaded())
         {
             FontResource = TextOwner->GetFont();
         }
         if (!FontResource || !FontResource->IsLoaded())
         {
-            FontResource = FResourceManager::Get().FindFont(FName("Default"));
+            FontResource = FFontManager::Get().FindFont(FName("Default"));
         }
 
         FontSize = TextOwner->GetFontSize();

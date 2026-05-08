@@ -122,10 +122,6 @@ std::wstring FPaths::GameSettingsFilePath()
 {
     return SettingsDir() + L"Game.ini";
 }
-std::wstring FPaths::ResourceFilePath()
-{
-    return SettingsDir() + L"Resource.ini";
-}
 
 std::wstring FPaths::Combine(const std::wstring& Base, const std::wstring& Child)
 {

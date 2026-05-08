@@ -584,7 +584,10 @@
     <ClCompile Include="Source\Engine\Render\Visibility\LightCulling\TileBasedLightCulling.cpp" />
     <ClCompile Include="Source\Engine\Render\Visibility\Occlusion\GPUOcclusionCulling.cpp" />
     <ClCompile Include="Source\Engine\Render\Visibility\Occlusion\OcclusionCulling.cpp" />
-    <ClCompile Include="Source\Engine\Resource\ResourceManager.cpp" />
+    <ClCompile Include="Source\Engine\Resource\FontManager.cpp" />
+    <ClCompile Include="Source\Engine\Resource\ResourceLoaderUtils.cpp" />
+    <ClCompile Include="Source\Engine\Resource\SpriteVfxManager.cpp" />
+    <ClCompile Include="Source\Engine\Resource\TextureManager.cpp" />
     <ClCompile Include="Source\Engine\Runtime\Engine.cpp" />
     <ClCompile Include="Source\Engine\Runtime\EngineLoop.cpp" />
     <ClCompile Include="Source\Engine\Runtime\Launch.cpp" />
@@ -980,7 +983,11 @@
     <ClInclude Include="Source\Engine\Render\Visibility\LOD\LODContext.h" />
     <ClInclude Include="Source\Engine\Render\Visibility\Occlusion\GPUOcclusionCulling.h" />
     <ClInclude Include="Source\Engine\Render\Visibility\Occlusion\OcclusionCulling.h" />
-    <ClInclude Include="Source\Engine\Resource\ResourceManager.h" />
+    <ClInclude Include="Source\Engine\Resource\FontManager.h" />
+    <ClInclude Include="Source\Engine\Resource\IAssetLoader.h" />
+    <ClInclude Include="Source\Engine\Resource\ResourceLoaderUtils.h" />
+    <ClInclude Include="Source\Engine\Resource\SpriteVfxManager.h" />
+    <ClInclude Include="Source\Engine\Resource\TextureManager.h" />
     <ClInclude Include="Source\Engine\Runtime\Engine.h" />
     <ClInclude Include="Source\Engine\Runtime\EngineLoop.h" />
     <ClInclude Include="Source\Engine\Runtime\Launch.h" />

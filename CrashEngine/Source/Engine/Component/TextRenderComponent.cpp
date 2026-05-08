@@ -9,7 +9,7 @@
 #include "Object/ObjectFactory.h"
 #include "Render/Resources/Buffers/MeshBufferManager.h"
 #include "Render/Scene/Proxies/Primitive/TextRenderSceneProxy.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/FontManager.h"
 #include "Serialization/Archive.h"
 
 IMPLEMENT_CLASS(UTextRenderComponent, UPrimitiveComponent)
@@ -59,14 +59,14 @@ FMatrix BuildStableTextBillboardMatrix(const FVector& CameraForward, const FVect
 
 bool UTextRenderComponent::ReacquireDefaultFont()
 {
-    CachedFont = FResourceManager::Get().FindFont(FontName);
+    CachedFont = FFontManager::Get().FindFont(FontName);
     if (CachedFont && CachedFont->IsLoaded())
     {
         return true;
     }
 
     FontName = FName("Default");
-    CachedFont = FResourceManager::Get().FindFont(FontName);
+    CachedFont = FFontManager::Get().FindFont(FontName);
     return CachedFont && CachedFont->IsLoaded();
 }
 
@@ -100,7 +100,7 @@ void UTextRenderComponent::SetFont(const FName& InFontName)
     }
 
     FontName = InFontName;
-    CachedFont = FResourceManager::Get().FindFont(FontName);
+    CachedFont = FFontManager::Get().FindFont(FontName);
     if (!CachedFont || !CachedFont->IsLoaded())
     {
         ReacquireDefaultFont();

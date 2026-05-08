@@ -1,7 +1,7 @@
 #include "UI/TextUIComponent.h"
 
 #include "Object/ObjectFactory.h"
-#include "Resource/ResourceManager.h"
+#include "Resource/FontManager.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
@@ -183,13 +183,13 @@ void UTextUIComponent::SetVerticalAlignment(EUITextVAlign InAlign)
 
 bool UTextUIComponent::ReacquireFont()
 {
-    CachedFont = FResourceManager::Get().FindFont(FontName);
+    CachedFont = FFontManager::Get().FindFont(FontName);
     if (CachedFont && CachedFont->IsLoaded())
     {
         return true;
     }
 
     FontName = FName("Default");
-    CachedFont = FResourceManager::Get().FindFont(FontName);
+    CachedFont = FFontManager::Get().FindFont(FontName);
     return CachedFont && CachedFont->IsLoaded();
 }

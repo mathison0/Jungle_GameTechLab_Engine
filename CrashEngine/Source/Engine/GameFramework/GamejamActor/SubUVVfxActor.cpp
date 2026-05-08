@@ -8,7 +8,7 @@ void ASubUVVfxActor::InitDefaultComponents()
     SubUV = AddComponent<USubUVComponent>();
     SubUV->SetFName(FName("SubUV"));
     SetRootComponent(SubUV);
-    SubUV->SetParticle("Explode");
+    SubUV->SetSpriteVfx("Explode");
     SubUV->SetFrameRate(240.0f);
     SubUV->SetLoop(false);
 }
@@ -17,7 +17,7 @@ void ASubUVVfxActor::SetVfxPreset(const FString& PresetName)
 {
     if (SubUV)
     {
-        SubUV->SetParticle(FName(PresetName));
+        SubUV->SetSpriteVfx(FName(PresetName));
         SubUV->Play();
     }
 }

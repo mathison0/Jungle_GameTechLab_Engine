@@ -79,7 +79,7 @@ public:
 private:
     FString Text;
     FName FontName = FName("Default");
-    FFontResource* CachedFont = nullptr; // ResourceManager 소유, 여기선 참조만
+    FFontResource* CachedFont = nullptr; // FontManager 소유, 여기선 참조만
 
     FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
     float FontSize = 1.0f;
