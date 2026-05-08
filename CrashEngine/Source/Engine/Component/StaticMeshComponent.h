@@ -27,20 +27,12 @@ public:
     FMeshDataView GetMeshDataView() const override;
     bool LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult) override;
     bool LineTraceStaticMeshFast(const FRay& Ray, const FMatrix& WorldMatrix, const FMatrix& WorldInverse, FHitResult& OutHitResult);
-    void UpdateWorldAABB() const override;
 
     // 구체 프록시 생성 (FStaticMeshSceneProxy)
     FPrimitiveProxy* CreateSceneProxy() override;
 
     void SetStaticMesh(UStaticMesh* InMesh);
     UStaticMesh* GetStaticMesh() const;
-
-    void SetCastShadow(bool bNewCastShadow);
-    bool ShouldCastShadow() const { return bCastShadow; }
-
-    void SetMaterial(int32 ElementIndex, UMaterial* InMaterial) override;
-    UMaterial* GetMaterial(int32 ElementIndex) const override;
-    const TArray<UMaterial*>& GetOverrideMaterials() const { return OverrideMaterials; }
 
     void Serialize(FArchive& Ar) override;
     void PostDuplicate() override;
@@ -52,16 +44,9 @@ public:
     const FString& GetStaticMeshPath() const { return StaticMeshPath; }
 
 private:
-    void CacheLocalBounds();
+    void CacheLocalBounds() override;
 
     UStaticMesh* StaticMesh = nullptr;
     FString StaticMeshPath = "None";
-    TArray<UMaterial*> OverrideMaterials;
-    TArray<FMaterialSlot> MaterialSlots; // 경로 + UVScroll 묶음
-
-    FVector CachedLocalCenter = { 0, 0, 0 };
-    FVector CachedLocalExtent = { 0.5f, 0.5f, 0.5f };
-    bool bHasValidBounds = false;
-    bool bCastShadow = true;
 };
 

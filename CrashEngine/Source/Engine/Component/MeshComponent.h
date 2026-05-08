@@ -11,4 +11,27 @@ public:
 
     UMeshComponent() = default;
     ~UMeshComponent() override = default;
+
+    void Serialize(FArchive& Ar) override;
+    void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
+    void PostEditProperty(const char* PropertyName) override;
+
+	void SetCastShadow(bool bNewCastShadow);
+    bool ShouldCastShadow() const { return bCastShadow; }
+
+    void UpdateWorldAABB() const override;
+
+	void SetMaterial(int32 ElementIndex, UMaterial* InMaterial) override;
+    UMaterial* GetMaterial(int32 ElementIndex) const override;
+    const TArray<UMaterial*>& GetOverrideMaterials() const { return OverrideMaterials; }
+
+protected:
+    virtual void CacheLocalBounds();
+
+    bool bCastShadow = true;
+    bool bHasValidBounds = false;
+    FVector CachedLocalCenter = { 0, 0, 0 };
+    FVector CachedLocalExtent = { 0.5f, 0.5f, 0.5f };
+    TArray<UMaterial*> OverrideMaterials;
+    TArray<FMaterialSlot> MaterialSlots; // 경로 + UVScroll 묶음
 };
