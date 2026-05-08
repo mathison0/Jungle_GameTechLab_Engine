@@ -138,6 +138,9 @@ void FSkeletalMeshManager::ScanFBXSourceFiles()
         FSkeletalMeshAssetListItem Item;
         Item.DisplayName = FPaths::ToUtf8(Path.filename().wstring());
         Item.FullPath = FPaths::ToUtf8(Path.lexically_relative(ProjectRoot).generic_wstring());
+        // 테스트로 무조건 Armature만 로드하게 설정
+        Item.FullPath = Item.FullPath + ":Armature";
+        // 테스트로 무조건 Armature만 로드하게 설정
         AvailableFBXFiles.push_back(std::move(Item));
     }
 }

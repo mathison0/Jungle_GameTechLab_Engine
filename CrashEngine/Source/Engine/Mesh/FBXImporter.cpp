@@ -21,19 +21,95 @@ namespace
         std::filesystem::path CacheFile = CacheDir / FPaths::ToPath(CacheFileName);
         return FPaths::FromPath(CacheFile.lexically_normal());
     }
+
+
+    // 테스트용 함수
+    void PrintNode(FbxNode* pNode) {
+        const char* nodeName = pNode->GetName();
+        FbxDouble3 translation = pNode->LclTranslation.Get();
+        FbxDouble3 rotation = pNode->LclRotation.Get();
+        FbxDouble3 scaling = pNode->LclScaling.Get();
+
+        // Print the contents of the node.
+        UE_LOG(FBXImporter, Warning, 
+            "<node name='%s' translation='(%f, %f, %f)' rotation='(%f, %f, %f)' scaling='(%f, %f, %f)'>\n",
+            nodeName,
+            translation[0], translation[1], translation[2],
+            rotation[0], rotation[1], rotation[2],
+            scaling[0], scaling[1], scaling[2]
+            );
+
+        // Print the node's attributes.
+        // for(int i = 0; i < pNode->GetNodeAttributeCount(); i++)
+        //     PrintAttribute(pNode->GetNodeAttributeByIndex(i));
+
+        // Recursively print the children.
+        for(int j = 0; j < pNode->GetChildCount(); j++)
+            PrintNode(pNode->GetChild(j));
+
+        printf("</node>\n");
+    }
 }
 
-bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& Options, FImportedAssets& OutAssets)
+bool FFBXImporter::bInitialized = false;
+FbxManager* FFBXImporter::SdkManager = nullptr;
+
+void FFBXImporter::Initialize()
+{
+    SdkManager = FbxManager::Create();
+    FbxIOSettings *ios = FbxIOSettings::Create(SdkManager, IOSROOT);
+    SdkManager->SetIOSettings(ios);
+    
+    bInitialized = true;
+}
+
+bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& OutAssets)
 {
     // TODO: FBX SDK를 이용한 실제 파싱 로직 구현 (메시 노드 순회, 스켈레톤 추출 등)
     // 현재는 스텁 상태로 빈 데이터를 반환하거나 실패를 알립니다.
     UE_LOG(LogTemp, Warning, "FFBXImporter::ImportAll: FBX SDK integration is not yet implemented.");
-    return false; 
+    
+    // =========================================================================================
+    
+    OutAssets = FImportedFBXAssets();
+    
+    if (!bInitialized)
+    {
+        Initialize();
+    }
+    
+    std::ifstream File(FPaths::ToWide(FBXFilePath), std::ios::binary | std::ios::ate);
+    if (!File.is_open())
+    {
+        UE_LOG(FbxImporter, Error, "Failed to open FBX file: %s", FBXFilePath.c_str());
+        return false;
+    }
+    
+    FbxImporter* Importer = FbxImporter::Create(SdkManager,"");
+    
+    if(!Importer->Initialize(FBXFilePath.c_str(), -1, SdkManager->GetIOSettings()))
+    {
+        printf("Call to FbxImporter::Initialize() failed.\n");
+        printf("Error returned: %s\n\n", Importer->GetStatus().GetErrorString());
+        return false;
+    }
+    
+    FbxScene* Scene = FbxScene::Create(SdkManager,"myScene");
+    Importer->Import(Scene);
+    Importer->Destroy();        // 필요없어진 Importer는 즉시 삭제
+    
+    FbxNode* lRootNode = Scene->GetRootNode();
+    if(lRootNode) {
+        for(int i = 0; i < lRootNode->GetChildCount(); i++)
+            PrintNode(lRootNode->GetChild(i));
+    }
+    
+    return true; 
 }
 
 bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOptions& Options)
 {
-    FImportedAssets Assets;
+    FImportedFBXAssets Assets;
     if (!ImportAll(FBXFilePath, Options, Assets))
     {
         return false;

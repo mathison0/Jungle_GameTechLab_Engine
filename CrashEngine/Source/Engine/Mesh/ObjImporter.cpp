@@ -207,7 +207,7 @@ bool FObjImporter::ParseObj(const FString& ObjFilePath, FObjInfo& OutObjInfo)
         return false;
     }
 
-    size_t FileSize = static_cast<size_t>(File.tellg());
+    uint64 FileSize = File.tellg();
     File.seekg(0, std::ios::beg);
     TArray<char> Buffer(FileSize);
     if (!File.read(Buffer.data(), FileSize))
