@@ -81,7 +81,7 @@ FString FObjManager::GetBinaryFilePath(const FString& OriginalPath)
     return BuildSiblingCachePath(OriginalPath);
 }
 
-void FObjManager::ScanMeshAssets()
+void FObjManager::ScanMeshCacheFiles()
 {
     AvailableMeshFiles.clear();
 
@@ -240,7 +240,7 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const F
 
     if (bRefreshAssetLists)
     {
-        ScanMeshAssets();
+        ScanMeshCacheFiles();
         FMaterialManager::Get().ScanMaterialAssets();
     }
     return StaticMesh;
@@ -307,7 +307,7 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, bool bR
 
     if (bRefreshAssetLists)
     {
-        ScanMeshAssets();
+        ScanMeshCacheFiles();
         FMaterialManager::Get().ScanMaterialAssets();
     }
     UE_LOG(ObjManager, Info, "Static mesh ready: %s", PathFileName.c_str());

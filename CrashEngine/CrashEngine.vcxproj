@@ -388,8 +388,6 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Engine\Component\SkeletalMeshComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\SkinnedMeshComponent.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp" />
@@ -417,6 +415,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Editor\UI\EditorWorldOutlinerPanel.cpp" />
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimationSequence.cpp" />
+    <ClCompile Include="Source\Engine\Animation\Skeleton.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeBase.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakePattern.cpp" />
@@ -463,6 +463,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Engine\Component\RotatingMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\ScriptComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\SkeletalMeshComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\SkinnedMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SpotLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp" />
@@ -526,9 +528,12 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Engine\Math\Rotator.cpp" />
     <ClCompile Include="Source\Engine\Math\Transform.cpp" />
     <ClCompile Include="Source\Engine\Math\Vector.cpp" />
+    <ClCompile Include="Source\Engine\Mesh\FBXImporter.cpp" />
     <ClCompile Include="Source\Engine\Mesh\MeshSimplifier.cpp" />
     <ClCompile Include="Source\Engine\Mesh\ObjImporter.cpp" />
     <ClCompile Include="Source\Engine\Mesh\ObjManager.cpp" />
+    <ClCompile Include="Source\Engine\Mesh\SkeletalMesh.cpp" />
+    <ClCompile Include="Source\Engine\Mesh\SkeletalMeshManager.cpp" />
     <ClCompile Include="Source\Engine\Mesh\StaticMesh.cpp" />
     <ClCompile Include="Source\Engine\Object\FName.cpp" />
     <ClCompile Include="Source\Engine\Object\Object.cpp" />
@@ -707,8 +712,6 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\Component\SkeletalMeshComponent.h" />
-    <ClInclude Include="Source\Engine\Component\SkinnedMeshComponent.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
@@ -738,6 +741,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\FLevelViewportLayout.h" />
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimationSequence.h" />
+    <ClInclude Include="Source\Engine\Animation\Skeleton.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakePattern.h" />
@@ -793,6 +798,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Engine\Component\RotatingMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\SceneComponent.h" />
     <ClInclude Include="Source\Engine\Component\ScriptComponent.h" />
+    <ClInclude Include="Source\Engine\Component\SkeletalMeshComponent.h" />
+    <ClInclude Include="Source\Engine\Component\SkinnedMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\SpotLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h" />
@@ -877,9 +884,12 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Engine\Math\Rotator.h" />
     <ClInclude Include="Source\Engine\Math\Transform.h" />
     <ClInclude Include="Source\Engine\Math\Vector.h" />
+    <ClInclude Include="Source\Engine\Mesh\FBXImporter.h" />
     <ClInclude Include="Source\Engine\Mesh\MeshSimplifier.h" />
     <ClInclude Include="Source\Engine\Mesh\ObjImporter.h" />
     <ClInclude Include="Source\Engine\Mesh\ObjManager.h" />
+    <ClInclude Include="Source\Engine\Mesh\SkeletalMesh.h" />
+    <ClInclude Include="Source\Engine\Mesh\SkeletalMeshManager.h" />
     <ClInclude Include="Source\Engine\Mesh\StaticMesh.h" />
     <ClInclude Include="Source\Engine\Mesh\StaticMeshAsset.h" />
     <ClInclude Include="Source\Engine\Object\FName.h" />

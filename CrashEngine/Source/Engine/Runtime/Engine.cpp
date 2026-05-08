@@ -1,4 +1,4 @@
-﻿// 런타임 영역의 세부 동작을 구현합니다.
+// 런타임 영역의 세부 동작을 구현합니다.
 #include "Render/Execute/Context/Scene/ViewTypes.h"
 #include "Engine/Runtime/Engine.h"
 
@@ -14,6 +14,7 @@
 #include "Render/Resources/Buffers/MeshBufferManager.h"
 #include "Sound/SoundManager.h"
 #include "Mesh/ObjManager.h"
+#include "Mesh/SkeletalMeshManager.h"
 #include "Texture/Texture2D.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
@@ -21,7 +22,6 @@
 #include "Core/TickFunction.h"
 #include "Viewport/GameViewportClient.h"
 #include "Viewport/Viewport.h"
-#include "Render/Execute/Context/ViewMode/ViewModeSurfaces.h"
 #include "Render/Execute/Passes/Scene/ShadowMapPass.h"
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
 #include "Serialization/SceneSaveManager.h"
@@ -167,9 +167,12 @@ void UEngine::Init(FWindowsWindow* InWindow)
 
     // 에셋 자동 스캔 (스탠드얼론 대응)
     FObjManager::Get().SetDevice(Device);
+    FSkeletalMeshManager::Get().SetDevice(Device);
     FMaterialManager::Get().SetDevice(Device);
-    FObjManager::Get().ScanMeshAssets();
+    FObjManager::Get().ScanMeshCacheFiles();
+    FSkeletalMeshManager::Get().ScanMeshAssets();
     FObjManager::Get().ScanObjSourceFiles();
+    FSkeletalMeshManager::Get().ScanFBXSourceFiles();
     FMaterialManager::Get().ScanMaterialAssets();
     UE_LOG(Engine, Info, "Asset registries scanned for runtime.");
 
@@ -211,6 +214,7 @@ void UEngine::Shutdown()
     FTextureManager::Get().ReleaseGPUResources();
     UTexture2D::ReleaseAllGPU();
     FObjManager::Get().ReleaseAllGPU();
+    FSkeletalMeshManager::Get().ReleaseAllGPU();
     FMeshBufferManager::Get().Release();
     Renderer.Release();
 

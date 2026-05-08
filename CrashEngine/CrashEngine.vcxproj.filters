@@ -97,6 +97,9 @@
     <Filter Include="Source\Engine">
       <UniqueIdentifier>{f4f9fc6a-b333-ccb1-c33c-42c295088767}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Animation">
+      <UniqueIdentifier>{308ffc84-7ff6-9ca9-e202-82a89f59cf37}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Camera">
       <UniqueIdentifier>{0ab7fb7f-66af-1831-f717-0ce9d1d1d57e}</UniqueIdentifier>
     </Filter>
@@ -602,6 +605,12 @@
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\AnimationSequence.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\Skeleton.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.cpp">
       <Filter>Source\Engine\Camera\Shakes</Filter>
     </ClCompile>
@@ -738,6 +747,12 @@
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\ScriptComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\SkeletalMeshComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\SkinnedMeshComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\SpotLightComponent.cpp">
@@ -929,6 +944,9 @@
     <ClCompile Include="Source\Engine\Math\Vector.cpp">
       <Filter>Source\Engine\Math</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\FBXImporter.cpp">
+      <Filter>Source\Engine\Mesh</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Mesh\MeshSimplifier.cpp">
       <Filter>Source\Engine\Mesh</Filter>
     </ClCompile>
@@ -936,6 +954,12 @@
       <Filter>Source\Engine\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Mesh\ObjManager.cpp">
+      <Filter>Source\Engine\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\SkeletalMesh.cpp">
+      <Filter>Source\Engine\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\SkeletalMeshManager.cpp">
       <Filter>Source\Engine\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Mesh\StaticMesh.cpp">
@@ -1464,12 +1488,6 @@
       <Filter>ThirdParty\Lua\src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Engine\Component\SkeletalMeshComponent.cpp">
-      <Filter>Source\Engine\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Component\SkinnedMeshComponent.cpp">
-      <Filter>Source\Engine\Component</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1558,6 +1576,12 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h">
       <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\AnimationSequence.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\Skeleton.h">
+      <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h">
       <Filter>Source\Engine\Camera\Shakes</Filter>
@@ -1722,6 +1746,12 @@
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\ScriptComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\SkeletalMeshComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\SkinnedMeshComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\SpotLightComponent.h">
@@ -1976,6 +2006,9 @@
     <ClInclude Include="Source\Engine\Math\Vector.h">
       <Filter>Source\Engine\Math</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Mesh\FBXImporter.h">
+      <Filter>Source\Engine\Mesh</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\MeshSimplifier.h">
       <Filter>Source\Engine\Mesh</Filter>
     </ClInclude>
@@ -1983,6 +2016,12 @@
       <Filter>Source\Engine\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\ObjManager.h">
+      <Filter>Source\Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Mesh\SkeletalMesh.h">
+      <Filter>Source\Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Mesh\SkeletalMeshManager.h">
       <Filter>Source\Engine\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\StaticMesh.h">
@@ -2686,12 +2725,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\Sol\sol.hpp">
       <Filter>ThirdParty\Sol</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\SkeletalMeshComponent.h">
-      <Filter>Source\Engine\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\SkinnedMeshComponent.h">
-      <Filter>Source\Engine\Component</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1954,7 +1954,7 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
 
         if (ImGui::BeginCombo("##Mesh", Preview.c_str()))
         {
-            FObjManager::Get().ScanMeshAssets();
+            FObjManager::Get().ScanMeshCacheFiles();
             FObjManager::Get().ScanObjSourceFiles();
 
             bool bSelectedNone = (*Val == "None");
