@@ -11,6 +11,7 @@ enum class EWorldType : uint32
     Editor, // Editor mode — no BeginPlay
     Game,   // Game mode — BeginPlay/Tick active
     PIE,    // Play In Editor (future use)
+	Preview,// Preview mode - AssetView or Edit
 };
 
 // FWorldContext는 실행 중 공유되는 상태와 참조를 묶어 전달합니다.

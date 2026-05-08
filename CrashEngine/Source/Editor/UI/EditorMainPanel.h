@@ -13,6 +13,7 @@
 #include "Editor/UI/EditorOutputLogPanel.h"
 #include "Editor/UI/EditorStatPanel.h"
 #include "Editor/UI/EditorWorldOutlinerPanel.h"
+#include "Editor/UI/EditorSkeletalMeshViewerPanel.h"
 
 class FRenderer;
 class UEditorEngine;

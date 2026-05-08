@@ -123,6 +123,7 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
     if (WorldList.empty())
     {
         CreateWorldContext(EWorldType::Editor, FName("Default"));
+        //CreateWorldContext(EWorldType::Preview, FName("Skeletal"));
     }
     SetActiveWorld(WorldList[0].ContextHandle);
     GetWorld()->InitWorld();
@@ -131,10 +132,13 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
     SelectionManager.Init();
     SelectionManager.SetWorld(GetWorld());
 
+	
+
     ViewportLayout.Initialize(this, Window, Renderer, &SelectionManager);
     ViewportLayout.LoadFromSettings();
     SetActiveViewport(ViewportLayout.GetActiveViewport());
     UE_LOG(EditorEngine, Info, "Editor engine initialized successfully.");
+    AssetViewerManager.Initialize(this, Renderer.GetFD3DDevice().GetDevice());
 }
 
 void UEditorEngine::Shutdown()
@@ -148,6 +152,7 @@ void UEditorEngine::Shutdown()
     GPUOcclusion.Release();
 
     ViewportLayout.Release();
+    AssetViewerManager.Release();
 
     UEngine::Shutdown();
 }
@@ -177,6 +182,7 @@ void UEditorEngine::Tick(float DeltaTime)
     }
 
     MainPanel.Update();
+    AssetViewerManager.Tick(DeltaTime);
 
     InputSystem::Get().Tick(Window->IsForeground());
 
@@ -576,6 +582,11 @@ void UEditorEngine::NewScene()
     SelectionManager.SetWorld(GetWorld());
 
     ResetViewport();
+}
+
+void UEditorEngine::OpenViewer()
+{
+    AssetViewerManager.OpenSkeletalMeshEditor(nullptr);
 }
 
 void UEditorEngine::ClearScene()

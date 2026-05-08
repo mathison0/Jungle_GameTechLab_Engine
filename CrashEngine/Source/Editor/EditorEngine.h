@@ -9,6 +9,7 @@
 #include "Engine/Runtime/Engine.h"
 
 #include "Editor/Viewport/FLevelViewportLayout.h"
+#include "Editor/Viewport/AssetViewerManager.h"
 #include "Editor/Subsystem/OverlayStatSystem.h"
 #include "Editor/UI/EditorMainPanel.h"
 #include "Editor/Settings/EditorSettings.h"
@@ -46,6 +47,8 @@ public:
     void ResetViewport();
     void CloseScene();
     void NewScene();
+    void OpenViewer();
+    FAssetViewerManager& GetAssetViewerManager() {return AssetViewerManager;}
 
     FEditorSettings& GetSettings() { return FEditorSettings::Get(); }
     const FEditorSettings& GetSettings() const { return FEditorSettings::Get(); }
@@ -106,6 +109,7 @@ private:
     FEditorMainPanel MainPanel;
     FLevelViewportLayout ViewportLayout;
     FOverlayStatSystem OverlayStatSystem;
+    FAssetViewerManager AssetViewerManager;
 
     // PIE 요청 단일 슬롯 (UE TOptional<FRequestPlaySessionParams>).
     std::optional<FRequestPlaySessionParams> PlaySessionRequest;

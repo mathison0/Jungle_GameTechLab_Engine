@@ -388,6 +388,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Editor\Viewport\AssetViewerManager.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp" />
@@ -410,6 +412,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Editor\UI\EditorOutputLogPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorSkeletalMeshViewerPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorStatPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorToolbarPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorWorldOutlinerPanel.cpp" />
@@ -710,6 +713,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\Viewport\AssetViewerManager.h" />
+    <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
@@ -733,6 +738,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Editor\UI\EditorMaterialPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorOutputLogPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorPanel.h" />
+    <ClInclude Include="Source\Editor\UI\EditorSkeletalMeshViewerPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorStatPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorToolbarPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorWorldOutlinerPanel.h" />

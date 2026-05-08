@@ -587,6 +587,9 @@
     <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorSkeletalMeshViewerPanel.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorStatPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -1479,6 +1482,8 @@
       <Filter>ThirdParty\Lua\src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\AssetViewerManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1548,6 +1553,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorPanel.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorSkeletalMeshViewerPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorStatPanel.h">
@@ -2714,6 +2722,8 @@
     <ClInclude Include="ThirdParty\Sol\sol.hpp">
       <Filter>ThirdParty\Sol</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h" />
+    <ClInclude Include="Source\Editor\Viewport\AssetViewerManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

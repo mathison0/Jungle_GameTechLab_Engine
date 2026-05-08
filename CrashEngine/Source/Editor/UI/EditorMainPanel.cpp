@@ -191,6 +191,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
     ContentDrawerPanel.SetCameraShakePanel(&CameraShakePanel);
     WorldOutlinerPanel.Initialize(InEditorEngine, InRenderer.GetFD3DDevice().GetDevice());
     StatPanel.Initialize(InEditorEngine);
+    //SkeletalMeshViewerPanel.Initialize(InEditorEngine, );
     UE_LOG(EditorUI, Info, "Editor main panel initialized.");
 }
 
@@ -231,6 +232,10 @@ void FEditorMainPanel::Render(float DeltaTime)
             if (ImGui::MenuItem("Save Scene..."))
             {
                 SaveSceneFromEditor(EditorEngine);
+            }
+            if (ImGui::MenuItem("Open Viewer..."))
+            {
+                EditorEngine->OpenViewer();
             }
             ImGui::EndMenu();
         }
@@ -415,6 +420,11 @@ void FEditorMainPanel::Render(float DeltaTime)
             }
             BottomBar.EndDrawerOverlay();
         }
+    }
+
+    if (!bHideEditorWindows && EditorEngine)
+    {
+        EditorEngine->GetAssetViewerManager().Render(DeltaTime);
     }
 
     ImGui::Render();

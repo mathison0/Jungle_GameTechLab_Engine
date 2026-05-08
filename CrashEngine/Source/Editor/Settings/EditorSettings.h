@@ -46,6 +46,7 @@ public:
         bool bWorldOutliner = true;
         bool bStat = false;
         bool bCameraShakeEditor = false;
+		bool bSkeletalMeshViewer = false;
     } UI;
 
     void SaveToFile(const FString& Path) const;

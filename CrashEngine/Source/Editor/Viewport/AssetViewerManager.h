@@ -1,0 +1,35 @@
+﻿#pragma once
+#include "Core/CoreGlobals.h"
+#include "Editor/Viewport/SkeletalMeshViewer.h"
+#include "UI/SWindow.h"
+#include <memory>
+#include <d3d11.h>
+
+class SSplitter;
+class SWindow;
+class FEditorViewportClient;
+class FSelectionManager;
+class FEditorSettings;
+class FWindowsWindow;
+class UEditorEngine;
+class USkeletalMesh;
+
+class FAssetViewerManager
+{
+public:
+    void Initialize(UEditorEngine* InEditorEngine, ID3D11Device* InDevice);
+    void Release();
+
+    void Tick(float DeltaTime);
+    void Render(float DeltaTime);
+
+    FSkeletalMeshViewer* OpenSkeletalMeshEditor(USkeletalMesh* Mesh);
+    FSkeletalMeshViewer* FindSkeletalMeshEditor(USkeletalMesh* Mesh);
+
+private:
+    UEditorEngine* EditorEngine = nullptr;
+    ID3D11Device* Device = nullptr;
+    uint32 NextViewerId = 1;
+
+    TArray<std::unique_ptr<FSkeletalMeshViewer>> Viewers;
+};
