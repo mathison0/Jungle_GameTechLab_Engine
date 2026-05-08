@@ -89,6 +89,7 @@ INCLUDE_PATHS = [
     "ThirdParty\\Sol",
     "ThirdParty\\Lua\\src",
     "ThirdParty\\ImGui",
+    "ThirdParty\\FBX_SDK\\include",
     "Source\\Editor",
     "Source\\ObjViewer",
     ".",
@@ -118,6 +119,9 @@ def scan_files(project_dir: Path) -> dict[str, list[str]]:
         if not full_dir.exists():
             continue
         for dirpath, _, filenames in os.walk(full_dir):
+            # Exclude FBX SDK headers from being added to the project items to keep the project clean
+            if "FBX_SDK" in dirpath:
+                continue
             for fname in sorted(filenames):
                 if fname in EXCLUDE_FILES:
                     continue
@@ -305,7 +309,7 @@ def generate_vcxproj(files: dict[str, list[str]]):
 
         ET.SubElement(cl, "SDLCheck").text = "true"
 
-        base_defs = ["SOL_INSIDE_UNREAL=1"]
+        base_defs = ["SOL_INSIDE_UNREAL=1", "FBXSDK_SHARED"]
         if is_win32:
             base_defs.append("WIN32")
         base_defs.append("NDEBUG" if is_release else "_DEBUG")
@@ -331,13 +335,23 @@ def generate_vcxproj(files: dict[str, list[str]]):
         ET.SubElement(link, "SubSystem").text = subsystem
         ET.SubElement(link, "GenerateDebugInformation").text = "true"
 
-    # PostBuildEvent to copy FMod DLL
-    idg = ET.SubElement(proj, "ItemDefinitionGroup")
-    post = ET.SubElement(idg, "PostBuildEvent")
-    ET.SubElement(post, "Command").text = (
-        'if exist "$(ProjectDir)ThirdParty\\FMod\\fmod.dll" '
-        'copy /Y "$(ProjectDir)ThirdParty\\FMod\\fmod.dll" "$(OutDir)" >nul'
-    )
+        # FBX SDK Linker settings
+        fbx_lib_dir = "release" if is_release else "debug"
+        ET.SubElement(link, "AdditionalLibraryDirectories").text = (
+            f"$(ProjectDir)ThirdParty\\FBX_SDK\\lib\\{fbx_lib_dir};%(AdditionalLibraryDirectories)"
+        )
+        ET.SubElement(link, "AdditionalDependencies").text = (
+            f"libfbxsdk.lib;%(AdditionalDependencies)"
+        )
+
+        # Post-build event to copy DLLs
+        post = ET.SubElement(idg, "PostBuildEvent")
+        commands = [
+            'if exist "$(ProjectDir)ThirdParty\\FMod\\fmod.dll" copy /Y "$(ProjectDir)ThirdParty\\FMod\\fmod.dll" "$(OutDir)" >nul',
+            f'if exist "$(ProjectDir)ThirdParty\\FBX_SDK\\lib\\{fbx_lib_dir}\\libfbxsdk.dll" '
+            f'copy /Y "$(ProjectDir)ThirdParty\\FBX_SDK\\lib\\{fbx_lib_dir}\\libfbxsdk.dll" "$(OutDir)" >nul'
+        ]
+        ET.SubElement(post, "Command").text = "\n".join(commands)
 
     # ClCompile items
     ig = ET.SubElement(proj, "ItemGroup")
