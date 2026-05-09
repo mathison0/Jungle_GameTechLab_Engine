@@ -3,6 +3,7 @@
 #include "Viewport/PreviewViewportClient.h"
 #include "Preview/PreviewSceneContext.h"
 #include <d3d11.h>
+#include <Math/Transform.h>
 
 enum ESkeletalMeshPreviewPoseMode
 {
@@ -56,6 +57,7 @@ public:
     bool IsOpen() const;
     void SetOpen(bool bInOpen);
 
+	void SetBoneLocalTransform(int32 BoneIndex, const FTransform& Transform);
     void ApplyPreviewFlags();
     FSkeletalMeshViewerState& GetState();
     FPreviewSceneContext& GetPreviewScene() {return ViewerScene;};

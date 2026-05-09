@@ -22,11 +22,6 @@ void FPreviewSceneContext::Initialize(UEditorEngine* InEditorEngine)
 
         PreviewMeshComponent = PreviewActor->AddComponent<USkeletalMeshComponent>();
         PreviewActor->SetRootComponent(PreviewMeshComponent);
-
-        if (PreviewMeshComponent)
-        {
-            PreviewMeshComponent->CreateTemporaryPreviewMesh(EditorEngine->GetRenderer().GetFD3DDevice().GetDevice());
-        }
 	}
 
     Camera = UObjectManager::Get().CreateObject<UCameraComponent>(PreviewWorld);
@@ -73,10 +68,6 @@ void FPreviewSceneContext::SetSkeletalMesh(USkeletalMesh* SkeletalMesh) {
 
     PreviewMeshComponent->SetSkeletalMesh(SkeletalMesh);
 
-    if (!SkeletalMesh)
-    {
-        PreviewMeshComponent->CreateTemporaryPreviewMesh(EditorEngine->GetRenderer().GetFD3DDevice().GetDevice());
-    }
 }
 
 void FPreviewSceneContext::ResetPose()

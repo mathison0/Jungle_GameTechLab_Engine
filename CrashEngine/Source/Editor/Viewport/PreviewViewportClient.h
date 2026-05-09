@@ -22,6 +22,14 @@ struct FPreviewInput
     float MouseWheel = 0.0f;
 };
 
+struct FPreviewViewportOptions
+{
+    bool bShowMesh = true;
+    bool bShowSkeleton = true;
+    bool bShowBoneNames = false;
+    int32 SelectedBoneIndex = -1;
+};
+
 class FViewport;
 class FPreviewSceneContext;
 class UCameraComponent;
@@ -36,6 +44,7 @@ public:
     void Tick(float DeltaTime);
 
 	void SetInputState(const FPreviewInput& InInput);
+    void SetPreviewOptions(const FPreviewViewportOptions& InOptions);
     void ResetCamera();
 
 	//void SetViewport(FViewport* InViewport) { Viewport = InViewport; }
@@ -45,7 +54,6 @@ public:
 	void RenderViewportImage();
 
     virtual void Draw(FViewport* Viewport, float DeltaTime) override;
-
 private:
     void ApplyOrbitToCamera();
 
@@ -59,6 +67,7 @@ private:
     float ViewportHeight = 256;
 
 	FPreviewInput Input;
+    FPreviewViewportOptions Options;
 
     FVector OrbitPivot = FVector(0.0f, 0.0f, 0.0f);
     float OrbitDistance = 8.0f;

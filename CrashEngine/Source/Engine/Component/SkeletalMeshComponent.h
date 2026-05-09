@@ -3,8 +3,6 @@
 #include "Component/SkinnedMeshComponent.h"
 #include "Render/RHI/D3D11/Buffers/SkeletalMeshBuffer.h"
 
-#include <memory>
-
 class USkeletalMeshComponent : public USkinnedMeshComponent
 {
 public:
@@ -13,21 +11,13 @@ public:
 
 	FPrimitiveProxy* CreateSceneProxy() override;
     FSkeletalMeshBuffer* GetMeshBuffer() const override;
-    FMeshDataView GetMeshDataView() const override;
     ~USkeletalMeshComponent() override = default;
-
-    void CreateTemporaryPreviewMesh(ID3D11Device* Device);
 
 	void Serialize(FArchive& Ar) override;
     void PostDuplicate() override;
 
 	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
 	void PostEditProperty(const char* PropertyName) override;
-
-private:
-    TArray<FVertexPNCT_T> TemporaryPreviewVertices;
-    TArray<uint32> TemporaryPreviewIndices;
-    std::unique_ptr<FSkeletalMeshBuffer> TemporaryPreviewBuffer;
 };
 
 /*

@@ -9,6 +9,8 @@
 #include "Render/Execute/Context/Viewport/ViewportRenderTargets.h"
 #include "Render/Renderer.h"
 #include "Render/Scene/Scene.h"
+#include <Render/Scene/Debug/DebugRenderAPI.h>
+#include <Component/Collision/ShapeComponent.h>
 
 
 void FPreviewViewportClient::Initialize(UEditorEngine* InEditorEngine, ID3D11Device* InDevice, FPreviewSceneContext* InPreviewContext)
@@ -92,6 +94,11 @@ void FPreviewViewportClient::Tick(float DeltaTime)
 void FPreviewViewportClient::SetInputState(const FPreviewInput& InInput)
 {
     Input = InInput;
+}
+
+void FPreviewViewportClient::SetPreviewOptions(const FPreviewViewportOptions& InOptions)
+{
+    Options = InOptions;
 }
 
 void FPreviewViewportClient::ResetCamera()
@@ -253,8 +260,12 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
     CollectContext.ActiveViewMode = ViewMode;
     CollectContext.CollectedPrimitives = const_cast<FCollectedPrimitives*>(&Renderer.GetCollectedPrimitives());
 
-    Renderer.CollectWorld(World, CollectContext);
-    Renderer.CollectGrid(1.0f, 20, Scene);
+    if (Options.bShowMesh)
+    {
+        Renderer.CollectWorld(World, CollectContext);
+    }
+	
+	Renderer.CollectGrid(1.0f, 20, Scene);
     Renderer.CollectDebugRender(Scene);
 
     Renderer.BuildDrawCommands(PipelineContext);
