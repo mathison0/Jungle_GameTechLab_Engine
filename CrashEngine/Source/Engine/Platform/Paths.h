@@ -59,4 +59,11 @@ public:
     static std::string AssetRelativePath(const std::string& RelativePath);
     static std::string ContentRelativePath(const std::string& RelativePath);
     static std::string EditorRelativePath(const std::string& RelativePath);
+
+    // SubResource 유틸리티 (FBX 내 여러 메쉬/스켈레톤 구분용)
+    // InPath: "Asset/Models/Hero.fbx_Armature" -> OutSourcePath: "Asset/Models/Hero.fbx", OutSubResource: "Armature"
+    static void ParseSubResourcePath(const std::string& InPath, std::string& OutSourcePath, std::string& OutSubResource);
+    
+    // 캐시 파일 경로 생성: "Asset/Models/Hero.fbx", "Armature" -> "Asset/Models/Cache/Hero.fbx_Armature.bin"
+    static std::string BuildSubResourceCachePath(const std::string& SourceFilePath, const std::string& SubResourceName);
 };

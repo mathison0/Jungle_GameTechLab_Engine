@@ -5,6 +5,7 @@
 #include <cwctype>
 #include <filesystem>
 #include <system_error>
+#include <vector>
 
 namespace
 {
@@ -289,3 +290,38 @@ std::string FPaths::EditorRelativePath(const std::string& RelativePath)
 {
     return MakeRelativeToRoot(std::filesystem::path(EditorDir()) / ToWide(RelativePath));
 }
+\
+void FPaths::ParseSubResourcePath(const std::string& InPath, std::string& OutSourcePath, std::string& OutSubResource)
+{
+    static const std::vector<std::string> Extensions = { ".fbx", ".obj" };
+
+    for (const auto& Ext : Extensions)
+    {
+        std::string Marker = Ext + "_";
+        size_t Pos = InPath.find(Marker);
+        if (Pos != std::string::npos)
+        {
+            OutSourcePath = InPath.substr(0, Pos + Ext.length());
+            OutSubResource = InPath.substr(Pos + Marker.length());
+            return;
+        }
+    }
+
+    OutSourcePath = InPath;
+    OutSubResource = "";
+}
+
+std::string FPaths::BuildSubResourceCachePath(const std::string& SourceFilePath, const std::string& SubResourceName)
+{
+    if (SubResourceName.empty()) return "";
+
+    std::filesystem::path SourcePath = ToPath(SourceFilePath).lexically_normal();
+    std::filesystem::path CacheDir = SourcePath.parent_path() / L"Cache";
+    CreateDir(CacheDir.wstring());
+
+    std::string FileName = ToUtf8(SourcePath.filename().wstring());
+    std::string CacheFileName = FileName + "_" + SubResourceName + ".bin";
+
+    std::filesystem::path CacheFile = CacheDir / ToPath(CacheFileName);
+    return FromPath(CacheFile.lexically_normal());
+}\

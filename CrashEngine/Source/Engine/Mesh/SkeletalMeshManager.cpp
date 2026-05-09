@@ -12,21 +12,6 @@
 
 namespace
 {
-    void ParseFBXPath(const FString& InPath, FString& OutSourcePath, FString& OutSubResource)
-    {
-        size_t Pos = InPath.find_last_of(':');
-        if (Pos != FString::npos)
-        {
-            OutSourcePath = InPath.substr(0, Pos);
-            OutSubResource = InPath.substr(Pos + 1);
-        }
-        else
-        {
-            OutSourcePath = InPath;
-            OutSubResource = "";
-        }
-    }
-
     std::filesystem::path NormalizePathForCompare(const FString& InPath)
     {
         std::filesystem::path Path = FPaths::ToPath(InPath).lexically_normal();
@@ -49,17 +34,11 @@ namespace
         return Ext == L".fbx";
     }
 
-    FString BuildSubResourceCachePath(const FString& SourceFBX, const FString& SubResource)
+    bool IsOBJExtension(const std::filesystem::path& Path)
     {
-        const std::filesystem::path SrcPath = NormalizePathForCompare(SourceFBX);
-        const std::filesystem::path CacheDir = SrcPath.parent_path() / L"Cache";
-        FPaths::CreateDir(CacheDir.wstring());
-
-        FString FileName = FPaths::ToUtf8(SrcPath.filename().wstring());
-        FString CacheFileName = FileName + ":" + SubResource + ".bin";
-        
-        std::filesystem::path CacheFile = CacheDir / FPaths::ToPath(CacheFileName);
-        return FPaths::FromPath(CacheFile.lexically_normal());
+        std::wstring Ext = Path.extension().wstring();
+        std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
+        return Ext == L".obj";
     }
 
     bool IsInsideCacheFolder(const std::filesystem::path& Path)
@@ -86,10 +65,39 @@ FString FSkeletalMeshManager::GetBinaryFilePath(const FString& OriginalPath)
     }
 
     FString SourcePath, SubResource;
-    ParseFBXPath(OriginalPath, SourcePath, SubResource);
-    if (SubResource.empty()) return "";
+    FPaths::ParseSubResourcePath(OriginalPath, SourcePath, SubResource);
+    
+    // 만약 서브리소스가 지정되었다면 Mesh_ 접두사가 붙어있는지 확인하고 붙여줍니다.
+    if (!SubResource.empty())
+    {
+        if (SubResource.find("Mesh_") != 0)
+        {
+            SubResource = "Mesh_" + SubResource;
+        }
+    }
+    else
+    {
+        // 서브리소스가 지정되지 않았다면 (예: "Hero.fbx")
+        // 현재 스캔된 에셋 목록에서 해당 소스 파일을 사용하는 첫 번째 'Mesh_' 리소스를 찾습니다.
+        for (const auto& Item : FSkeletalMeshManager::Get().AvailableMeshFiles)
+        {
+            FString ItemSource, ItemSub;
+            FPaths::ParseSubResourcePath(Item.FullPath, ItemSource, ItemSub);
+            if (NormalizePathForCompare(ItemSource) == SrcPath && ItemSub.find("Mesh_") == 0)
+            {
+                SourcePath = ItemSource;
+                SubResource = ItemSub;
+                break;
+            }
+        }
+    }
 
-    return BuildSubResourceCachePath(SourcePath, SubResource);
+    if (SubResource.empty())
+    {
+        return "";
+    }
+
+    return FPaths::BuildSubResourceCachePath(SourcePath, SubResource);
 }
 
 void FSkeletalMeshManager::ScanMeshCacheFiles()
@@ -108,13 +116,20 @@ void FSkeletalMeshManager::ScanMeshCacheFiles()
         const std::filesystem::path& Path = Entry.path();
         if (!IsBinExtension(Path) || !IsInsideCacheFolder(Path)) continue;
 
-        // .bin 파일 중 SkeletalMesh 용인지 확인하는 로직이 필요할 수 있으나,
-        // 현재는 Cache 폴더 내 모든 .bin을 후보로 등록 (파일명에 :가 포함됨)
-        if (Path.filename().wstring().find(L':') == std::wstring::npos) continue;
+        // .bin 파일 중 SkeletalMesh 용인지 확인하는 로직
+        // FBX 캐시 파일은 "파일명.fbx_Mesh_서브리소스.bin" 형식을 가집니다.
+        if (Path.filename().wstring().find(L".fbx_Mesh_") == std::wstring::npos &&
+            Path.filename().wstring().find(L".obj_Mesh_") == std::wstring::npos) continue;
 
         FSkeletalMeshAssetListItem Item;
-        Item.DisplayName = FPaths::ToUtf8(Path.stem().wstring());
-        Item.FullPath = FPaths::ToUtf8(Path.lexically_relative(ProjectRoot).generic_wstring());
+        FString Stem = FPaths::ToUtf8(Path.stem().wstring());
+        Item.DisplayName = Stem;
+        
+        // 물리적인 캐시 경로(Asset/.../Cache/abc.bin) 대신 
+        // 논리적인 경로(Asset/.../abc.fbx_Mesh_Sub)를 FullPath로 저장합니다.
+        std::filesystem::path LogicalPath = Path.parent_path().parent_path() / FPaths::ToPath(Stem);
+        Item.FullPath = FPaths::ToUtf8(LogicalPath.lexically_relative(ProjectRoot).generic_wstring());
+        
         AvailableMeshFiles.push_back(std::move(Item));
     }
 }
@@ -138,9 +153,6 @@ void FSkeletalMeshManager::ScanFBXSourceFiles()
         FSkeletalMeshAssetListItem Item;
         Item.DisplayName = FPaths::ToUtf8(Path.filename().wstring());
         Item.FullPath = FPaths::ToUtf8(Path.lexically_relative(ProjectRoot).generic_wstring());
-        // 테스트로 무조건 Armature만 로드하게 설정
-        Item.FullPath = Item.FullPath + ":Armature";
-        // 테스트로 무조건 Armature만 로드하게 설정
         AvailableFBXFiles.push_back(std::move(Item));
     }
 }
@@ -198,7 +210,23 @@ void FSkeletalMeshManager::Unload(const FString& Key)
 
 USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileName, const FImportOptions& Options, bool bRefreshAssetLists)
 {
-    const FString CacheKey = GetBinaryFilePath(PathFileName);
+    FString CacheKey = GetBinaryFilePath(PathFileName);
+    
+    // 캐시가 없으면 원본 파일이 있는지 확인하고 임포트를 시도합니다.
+    if (CacheKey.empty())
+    {
+        FString SourcePath, SubResource;
+        FPaths::ParseSubResourcePath(PathFileName, SourcePath, SubResource);
+        if (std::filesystem::exists(FPaths::ToPath(SourcePath)))
+        {
+            if (FFBXImporter::ImportAndCacheAll(SourcePath, Options))
+            {
+                ScanMeshCacheFiles();
+                CacheKey = GetBinaryFilePath(PathFileName);
+            }
+        }
+    }
+
     if (CacheKey.empty()) return nullptr;
 
     SkeletalMeshCache.erase(CacheKey);
@@ -206,7 +234,7 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
     USkeletalMesh* Mesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
     
     FString SourcePath, SubResource;
-    ParseFBXPath(PathFileName, SourcePath, SubResource);
+    FPaths::ParseSubResourcePath(PathFileName, SourcePath, SubResource);
 
     if (!TryImportSkeletalMesh(SourcePath, SubResource, &Options, Mesh, CacheKey))
     {
@@ -222,7 +250,23 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
 
 USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileName, bool bRefreshAssetLists)
 {
-    const FString CacheKey = GetBinaryFilePath(PathFileName);
+    FString CacheKey = GetBinaryFilePath(PathFileName);
+
+    // 캐시가 없으면 원본 파일이 있는지 확인하고 임포트를 시도합니다.
+    if (CacheKey.empty())
+    {
+        FString SourcePath, SubResource;
+        FPaths::ParseSubResourcePath(PathFileName, SourcePath, SubResource);
+        if (std::filesystem::exists(FPaths::ToPath(SourcePath)))
+        {
+            if (FFBXImporter::ImportAndCacheAll(SourcePath, FImportOptions::Default()))
+            {
+                ScanMeshCacheFiles();
+                CacheKey = GetBinaryFilePath(PathFileName);
+            }
+        }
+    }
+
     if (CacheKey.empty()) return nullptr;
 
     auto It = SkeletalMeshCache.find(CacheKey);
@@ -232,7 +276,7 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
     bool bNeedRebuild = true;
 
     FString SourcePath, SubResource;
-    ParseFBXPath(PathFileName, SourcePath, SubResource);
+    FPaths::ParseSubResourcePath(PathFileName, SourcePath, SubResource);
 
     const std::filesystem::path BinPathW = FPaths::ToPath(CacheKey);
     const std::filesystem::path SourcePathW = FPaths::ToPath(SourcePath);

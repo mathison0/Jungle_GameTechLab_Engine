@@ -533,6 +533,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Engine\Mesh\ObjImporter.cpp" />
     <ClCompile Include="Source\Engine\Mesh\ObjManager.cpp" />
     <ClCompile Include="Source\Engine\Mesh\SkeletalMesh.cpp" />
+    <ClCompile Include="Source\Engine\Animation\SkeletonManager.cpp" />
     <ClCompile Include="Source\Engine\Mesh\SkeletalMeshManager.cpp" />
     <ClCompile Include="Source\Engine\Mesh\StaticMesh.cpp" />
     <ClCompile Include="Source\Engine\Object\FName.cpp" />
@@ -743,6 +744,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationSequence.h" />
     <ClInclude Include="Source\Engine\Animation\Skeleton.h" />
+    <ClInclude Include="Source\Engine\Animation\SkeletonManager.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakePattern.h" />

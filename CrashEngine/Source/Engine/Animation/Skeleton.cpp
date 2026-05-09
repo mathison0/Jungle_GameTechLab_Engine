@@ -1,4 +1,7 @@
 #include "Skeleton.h"
+#include "Object/ObjectFactory.h"
+
+IMPLEMENT_CLASS(USkeleton, UObject)
 
 void USkeleton::Serialize(FArchive& Ar)
 {
@@ -6,13 +9,15 @@ void USkeleton::Serialize(FArchive& Ar)
     Ar << Bones;
 }
 
-void USkeleton::AddBone(const FString& InName, int32 InParentIndex, const FTransform& InRefTransform)
+int32 USkeleton::AddBone(FName InName, int32 InParentIndex, const FTransform& InRefTransform)
 {
     FBoneInfo Bone;
     Bone.Name = InName;
     Bone.ParentIndex = InParentIndex;
     Bone.ReferenceTransform = InRefTransform;
     Bones.push_back(Bone);
+    
+    return static_cast<int32>(Bones.size() - 1);
 }
 
 int32 USkeleton::FindBoneIndex(const FString& InName) const

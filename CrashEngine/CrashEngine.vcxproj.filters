@@ -959,6 +959,9 @@
     <ClCompile Include="Source\Engine\Mesh\SkeletalMesh.cpp">
       <Filter>Source\Engine\Mesh</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\SkeletonManager.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Mesh\SkeletalMeshManager.cpp">
       <Filter>Source\Engine\Mesh</Filter>
     </ClCompile>

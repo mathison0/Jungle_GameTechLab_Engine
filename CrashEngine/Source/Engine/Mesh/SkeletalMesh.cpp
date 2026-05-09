@@ -1,5 +1,10 @@
 #include "Mesh/SkeletalMesh.h"
+
+#include <memory>
+
+#include "Animation/SkeletonManager.h"
 #include "Engine/Profiling/MemoryStats.h"
+#include "Platform/Paths.h"
 
 IMPLEMENT_CLASS(USkeletalMesh, UObject)
 
@@ -18,7 +23,6 @@ USkeletalMesh::~USkeletalMesh()
             static_cast<uint32>(SkeletalMeshAsset->Indices.size() * sizeof(uint32));
 
         MemoryStats::SubStaticMeshCPUMemory(CPUSize); // Using static mesh counter for now or could add skeletal mesh counter
-        delete SkeletalMeshAsset;
     }
 }
 
@@ -34,6 +38,26 @@ void USkeletalMesh::Serialize(FArchive& Ar)
     if (SkeletalMeshAsset)
     {
         SkeletalMeshAsset->Serialize(Ar);
+    }
+
+    // Skeleton Serialization
+    FString SkeletonPath;
+    if (Ar.IsSaving() && Skeleton)
+    {
+        // Skeleton의 경로는 보통 "원본.fbx_Skel_SkeletonName" 형식입니다.
+        if (SkeletalMeshAsset)
+        {
+            FString SourceFBX, Dummy;
+            FPaths::ParseSubResourcePath(SkeletalMeshAsset->PathFileName, SourceFBX, Dummy);
+            SkeletonPath = SourceFBX + "_Skel_" + Skeleton->GetFName().ToString();
+        }
+    }
+    
+    Ar << SkeletonPath;
+    
+    if (Ar.IsLoading() && !SkeletonPath.empty())
+    {
+        Skeleton = FSkeletonManager::Get().Load(SkeletonPath);
     }
 
     Ar << StaticMaterials;

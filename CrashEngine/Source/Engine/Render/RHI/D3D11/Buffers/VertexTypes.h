@@ -68,8 +68,8 @@ struct FVertexSkinned
     FVector4 Color;
     FVector2 UV;
     FVector4 Tangent;
-    uint16   BoneIndices[8];
-    float    BoneWeights[8];
+    uint16   BoneIndices[8] = {0,0,0,0,0,0,0,0};
+    float    BoneWeights[8] = {0,0,0,0,0,0,0,0};
 };
 
 template <typename VertexType>

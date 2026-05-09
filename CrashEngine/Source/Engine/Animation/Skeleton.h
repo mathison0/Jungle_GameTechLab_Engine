@@ -6,7 +6,7 @@
 
 struct FBoneInfo
 {
-    FString Name;
+    FName Name;
     int32 ParentIndex = -1;
     FTransform ReferenceTransform; // Bind pose in local space
 
@@ -26,7 +26,7 @@ public:
     
     void Serialize(FArchive& Ar) override;
 
-    void AddBone(const FString& InName, int32 InParentIndex, const FTransform& InRefTransform);
+    int32 AddBone(FName InName, int32 InParentIndex, const FTransform& InRefTransform);
     int32 FindBoneIndex(const FString& InName) const;
     
     const TArray<FBoneInfo>& GetBones() const { return Bones; }
