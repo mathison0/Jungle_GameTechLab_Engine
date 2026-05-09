@@ -16,6 +16,8 @@ void BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipelineContext& Contex
 
 void BuildLineDrawCommand(FRenderPipelineContext& Context, FDrawCommandList& OutList);
 
+void BuildSkeletalDebugDrawCommand(FRenderPipelineContext& Context, FDrawCommandList& OutList);
+
 void BuildOverlayBillboardDrawCommand(FRenderPipelineContext& Context, FDrawCommandList& OutList);
 
 void BuildOverlayTextDrawCommand(FRenderPipelineContext& Context, FDrawCommandList& OutList);

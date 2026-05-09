@@ -164,6 +164,7 @@ void FRenderPipelineRegistry::Initialize()
             PassNode(ERenderPassNodeType::LightHitMapPass),
             PassNode(ERenderPassNodeType::DebugLinePass),
             PipelineNode(ERenderPipelineType::OutlinePipeline),
+			PassNode(ERenderPassNodeType::SkeletalDebugPass),
             PassNode(ERenderPassNodeType::OverlayBillboardPass),
             PassNode(ERenderPassNodeType::GizmoPass),
             PassNode(ERenderPassNodeType::OverlayTextPass),

@@ -308,7 +308,7 @@ bool FGraphicsProgram::CreateInputLayoutFromReflection(ID3D11Device* InDevice, I
     if (!Elements.empty())
     {
         Hr = InDevice->CreateInputLayout(Elements.data(), static_cast<UINT>(Elements.size()), InVSBlob->GetBufferPointer(), InVSBlob->GetBufferSize(), OutInputLayout);
-        if (FAILED(Hr))
+        if (FAILED(Hr)) 
         {
             _com_error Err(Hr);
             OutputDebugStringW((L"CreateInputLayout failed: " + std::wstring(Err.ErrorMessage())).c_str());

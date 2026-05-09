@@ -42,6 +42,8 @@ struct FShowFlags
     bool  bBoundingVolume            = false;
     bool  bWorldBound                = false;
     bool  bLightDebugLines           = true;
+	bool  bSkeletonMesh				 = true;
+	bool  bSkeletalDebug			 = false;
     float DirectionalLightDebugScale = 1.0f;
     float PointLightDebugScale       = 1.0f;
     float SpotLightDebugScale        = 1.0f;

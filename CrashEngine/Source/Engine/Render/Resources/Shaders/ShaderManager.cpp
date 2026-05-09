@@ -52,6 +52,8 @@ const char* GetShaderTypeName(EShaderType InType)
         return "LightHitMap";
     case EShaderType::UI:
         return "UI";
+    case EShaderType::SkeletalDebug:
+        return "SkeletalDebug";
     case EShaderType::MAX:
     default:
         return "Unknown";

@@ -1,7 +1,6 @@
 ﻿#pragma once
 
-#include "Core/CoreTypes.h"
-#include "Core/EngineTypes.h"
+#include "Render/Scene/Debug/SkeletalDebug.h"
 
 class FPrimitiveProxy;
 
@@ -47,6 +46,7 @@ struct FCollectedOverlayData
     {
         Debug.AABBs.clear();
         Debug.Lines.clear();
+		Debug.SkeletalInstances.clear();
         Guides.Grid = {};
         EditorHelpers.Billboards.clear();
         EditorHelpers.Texts.clear();
@@ -57,6 +57,7 @@ struct FCollectedOverlayData
     int32                           GetGridHalfLineCount() const { return Guides.Grid.HalfLineCount; }
     const TArray<FSceneDebugAABB>&  GetDebugAABBs() const { return Debug.AABBs; }
     const TArray<FSceneDebugLine>&  GetDebugLines() const { return Debug.Lines; }
+	const TArray<FSkeletalDebugInstance>& GetSkeletalDebugInstances() const { return Debug.SkeletalInstances; }
     const TArray<FPrimitiveProxy*>& GetEditorHelperBillboards() const { return EditorHelpers.Billboards; }
     const TArray<FPrimitiveProxy*>& GetEditorHelperTexts() const { return EditorHelpers.Texts; }
 
@@ -65,6 +66,7 @@ struct FCollectedOverlayData
     {
         TArray<FSceneDebugAABB> AABBs;
         TArray<FSceneDebugLine> Lines;
+		TArray<FSkeletalDebugInstance> SkeletalInstances;
     } Debug;
 
     // FGuidePayload는 렌더 처리에 필요한 데이터를 묶는 구조체입니다.

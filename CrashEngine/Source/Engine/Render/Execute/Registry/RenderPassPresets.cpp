@@ -28,6 +28,7 @@ void InitializeDefaultRenderPassPresets(FRenderPassPreset (&OutPresets)[(uint32)
     P[(uint32)E::UI].Draw               = { EDepthStencilState::NoDepth, EBlendState::AlphaBlend, ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::GizmoOuter].Draw       = { EDepthStencilState::GizmoOutside, EBlendState::Opaque, ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::GizmoInner].Draw       = { EDepthStencilState::GizmoInside, EBlendState::AlphaBlend, ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
+	P[(uint32)E::SkeletalDebug].Draw    = { EDepthStencilState::NoDepth, EBlendState::AlphaBlend, ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::OverlayBillboard].Draw = { EDepthStencilState::NoDepth, EBlendState::AlphaBlend, ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::OverlayTextWorld].Draw = { EDepthStencilState::NoDepth, EBlendState::AlphaBlend, ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::OverlayFont].Draw      = { EDepthStencilState::NoDepth, EBlendState::AlphaBlend, ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };

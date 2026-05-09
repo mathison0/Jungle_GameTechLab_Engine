@@ -26,5 +26,6 @@ enum class EShaderType : uint32
     FinalPostProcessComposite,
     LightHitMap,
     UI,
+    SkeletalDebug,
     MAX,
 };

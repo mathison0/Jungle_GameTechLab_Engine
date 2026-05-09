@@ -23,6 +23,10 @@
 #include "Render/Resources/State/RenderStateTypes.h"
 #include "Render/Submission/Command/DrawCommand.h"
 #include "Render/Submission/Command/DrawCommandList.h"
+#include "Mesh/ObjManager.h"
+#include "Mesh/StaticMesh.h"
+#include "Render/RHI/D3D11/Buffers/StaticMeshBuffer.h"
+#include "Engine/Platform/Paths.h"
 #include "Resource/FontManager.h"
 
 #include <algorithm>
@@ -434,6 +438,178 @@ void DrawCommandBuild::BuildLineDrawCommand(FRenderPipelineContext& Context, FDr
     }
 }
 
+namespace
+{
+constexpr float kBoneConeHalfHeight = 0.2f;
+constexpr float kBoneConeBaseRadius = 0.2f;
+constexpr float kBoneConeRadialScaleRatio = 0.1f;
+
+FStaticMeshBuffer* GetBoneConeMeshBuffer()
+{
+    static const FString ConePath = FPaths::ContentRelativePath("Models/_Basic/Cone.OBJ");
+    UStaticMesh* Cone = FObjManager::Get().Find(ConePath);
+    if (!Cone)
+    {
+        // Preload pass missed it (first frame after registry scan): try loading on demand.
+        Cone = FObjManager::Get().Load(ConePath);
+        if (!Cone)
+        {
+            return nullptr;
+        }
+    }
+    return Cone->GetLODMeshBuffer(0);
+}
+
+// Build a row-vector world matrix that maps the cone's local +Z onto the Tail->Head world direction
+FMatrix MakeBoneConeWorld(const FVector& Head, const FVector& Tail)
+{
+    const FVector Delta  = Tail - Head;
+    const float   Length = Delta.Length();
+    if (Length <= 1e-6f)
+    {
+        return FMatrix::MakeTranslationMatrix(Head);
+    }
+
+    const FVector Forward = Delta / Length;
+
+    // Pick a stable reference axis to derive the perpendicular basis.
+    FVector RefUp = FVector(0.0f, 0.0f, 1.0f);
+    if (fabsf(Forward.Z) > 0.999f)
+    {
+        RefUp = FVector(1.0f, 0.0f, 0.0f);
+    }
+
+    FVector Right = RefUp.Cross(Forward);
+    Right.Normalize();
+    FVector Up = Forward.Cross(Right);
+
+    const float ScaleZ = Length / (2.0f * kBoneConeHalfHeight);
+    const float RadiusScale = (Length * kBoneConeRadialScaleRatio) / kBoneConeBaseRadius;
+
+    // Local origin sits at the cone's midpoint, so translate to (Head + Tail) / 2.
+    FMatrix Result;
+    Result.M[0][0] = Right.X * RadiusScale;
+    Result.M[0][1] = Right.Y * RadiusScale;
+    Result.M[0][2] = Right.Z * RadiusScale;
+    Result.M[0][3] = 0.0f;
+
+    Result.M[1][0] = Up.X * RadiusScale;
+    Result.M[1][1] = Up.Y * RadiusScale;
+    Result.M[1][2] = Up.Z * RadiusScale;
+    Result.M[1][3] = 0.0f;
+
+    Result.M[2][0] = Forward.X * ScaleZ;
+    Result.M[2][1] = Forward.Y * ScaleZ;
+    Result.M[2][2] = Forward.Z * ScaleZ;
+    Result.M[2][3] = 0.0f;
+
+    const FVector Mid = (Head + Tail) * 0.5f;
+    Result.M[3][0] = Mid.X;
+    Result.M[3][1] = Mid.Y;
+    Result.M[3][2] = Mid.Z;
+    Result.M[3][3] = 1.0f;
+    return Result;
+}
+} // namespace
+
+void DrawCommandBuild::BuildSkeletalDebugDrawCommand(FRenderPipelineContext& Context, FDrawCommandList& OutList)
+{
+    const FCollectedOverlayData* OverlayData = Context.Submission.OverlayData;
+    if (!OverlayData)
+    {
+        return;
+    }
+
+    FGraphicsProgram* LineShader = FShaderManager::Get().GetShader(EShaderType::Editor);
+    FGraphicsProgram* ConeShader = FShaderManager::Get().GetShader(EShaderType::SkeletalDebug);
+    FStaticMeshBuffer* ConeMesh = GetBoneConeMeshBuffer();
+    if (!LineShader || !ConeShader || !ConeMesh || !ConeMesh->IsValid())
+    {
+        return;
+    }
+
+    FLineBatch& SkeletonLines = Context.Renderer->GetSkeletonLineBatch();
+    SkeletonLines.Clear();
+
+    const auto& SkeletalDebugInstances = OverlayData->GetSkeletalDebugInstances();
+
+    // Pre-reserve the bone CB pool: growing the std::vector inside the loop
+    // would invalidate every FConstantBuffer* already stored in earlier draw commands.
+    uint32 TotalBoneCount = 0;
+    for (const auto& Instance : SkeletalDebugInstances)
+    {
+        TotalBoneCount += static_cast<uint32>(Instance.Bones.size());
+    }
+    Context.Resources->EnsurePerBoneDebugCBCapacity(
+        Context.Device->GetDevice(),
+        Context.Resources->BoneDebugCBCursor + TotalBoneCount);
+
+    const FRenderPassDrawPreset& ConePreset = Context.GetRenderPassDrawPreset(ERenderPass::SkeletalDebug);
+
+    for (const auto& Instance : SkeletalDebugInstances)
+    {
+        for (uint32 i = 0; i < Instance.Bones.size(); i++)
+        {
+            const auto& Bone = Instance.Bones[i];
+            const FVector BonePos = Bone.WorldMatrix.GetLocation();
+
+            FMatrix ConeWorld;
+            if (Bone.ParentIndex != -1 && static_cast<uint32>(Bone.ParentIndex) < Instance.Bones.size())
+            {
+                const FVector ParentPos = Instance.Bones[Bone.ParentIndex].WorldMatrix.GetLocation();
+                ConeWorld = MakeBoneConeWorld(ParentPos, BonePos);
+
+                SkeletonLines.AddLine(ParentPos, BonePos, FVector4(1, 1, 1, 1), FVector4(1, 1, 1, 1));
+            }
+            else
+            {
+                // Root bone
+                ConeWorld = FMatrix::MakeScaleMatrix(FVector(1, 1, 1)) * Bone.WorldMatrix;
+            }
+
+            FPerObjectCBData PerObject = FPerObjectCBData::FromWorldMatrix(ConeWorld);
+            PerObject.Color            = Bone.Color.ToVector4();
+
+            FConstantBuffer* CB = Context.Resources->AcquirePerBoneDebugCB(Context.Device->GetDevice());
+            CB->Update(Context.Context, &PerObject, sizeof(FPerObjectCBData));
+
+            FDrawCommand& Cmd = OutList.AddCommand();
+            Cmd.Shader        = ConeShader;
+            Cmd.MeshBuffer    = ConeMesh;
+            Cmd.FirstIndex    = 0;
+            Cmd.IndexCount    = ConeMesh->GetIndexCount();
+            Cmd.DepthStencil  = ConePreset.DepthStencil;
+            Cmd.Blend         = ConePreset.Blend;
+            Cmd.Rasterizer    = ConePreset.Rasterizer;
+            Cmd.Topology      = ConePreset.Topology;
+            Cmd.PerObjectCB   = CB;
+            Cmd.Pass          = ERenderPass::SkeletalDebug;
+            Cmd.DebugName     = "SkeletalDebugCone";
+            Cmd.SortKey       = FDrawCommand::BuildSortKey(Cmd.Pass, 0, Cmd.Shader, Cmd.MeshBuffer, 0);
+        }
+    }
+
+    // Skeleton line batch shares the SkeletalDebug pass, but uses a different
+    // shader (Editor.hlsl, VS_Input_PC) and the EditorLines preset for line topology.
+    if (SkeletonLines.GetIndexCount() > 0 && SkeletonLines.UploadBuffers(Context.Context))
+    {
+        const FRenderPassDrawPreset& LinePreset = Context.GetRenderPassDrawPreset(ERenderPass::EditorLines);
+
+        FDrawCommand& Cmd = OutList.AddCommand();
+        Cmd.Shader        = LineShader;
+        Cmd.DepthStencil  = LinePreset.DepthStencil;
+        Cmd.Blend         = LinePreset.Blend;
+        Cmd.Rasterizer    = ERasterizerState::SolidNoCull;
+        Cmd.Topology      = LinePreset.Topology;
+        Cmd.RawVB         = SkeletonLines.GetVBBuffer();
+        Cmd.RawVBStride   = SkeletonLines.GetVBStride();
+        Cmd.RawIB         = SkeletonLines.GetIBBuffer();
+        Cmd.IndexCount    = SkeletonLines.GetIndexCount();
+        Cmd.Pass          = ERenderPass::SkeletalDebug;
+        Cmd.DebugName     = "SkeletalDebugLines";
+        Cmd.SortKey       = FDrawCommand::BuildSortKey(Cmd.Pass, 0, Cmd.Shader, nullptr, 0);
+    }
+}
 
 void DrawCommandBuild::BuildOverlayBillboardDrawCommand(FRenderPipelineContext& Context, FDrawCommandList& OutList)
 {

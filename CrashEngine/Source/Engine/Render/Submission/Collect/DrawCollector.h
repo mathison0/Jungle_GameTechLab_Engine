@@ -70,6 +70,7 @@ private:
     static void CollectOctreeDebug(const FOctree* Node, FCollectedOverlayData& OverlayData, uint32 Depth = 0);
     static void CollectScenePrimitiveBVHDebug(const FScenePrimitiveBVH& BVH, FCollectedOverlayData& OverlayData);
     static void CollectWorldBoundsDebug(const TArray<FPrimitiveProxy*>& Proxies, FCollectedOverlayData& OverlayData);
+    static void CollectSkeletalDebug(const TArray<FPrimitiveProxy*>& Proxies, FCollectedOverlayData& OverlayData);
 
 private:
     // ==================== Collected Data ====================

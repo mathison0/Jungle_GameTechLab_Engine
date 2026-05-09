@@ -23,6 +23,7 @@ class FSelectionMaskPass;
 class FOutlinePass;
 class FDebugLinePass;
 class FGizmoPass;
+class FSkeletalDebugPass;
 class FOverlayBillboardPass;
 class FOverlayTextPass;
 
@@ -49,6 +50,7 @@ enum class ERenderPassNodeType
     SelectionMaskPass,
     OutlinePass,
     DebugLinePass,
+	SkeletalDebugPass,
     OverlayBillboardPass,
     GizmoPass,
     OverlayTextPass,

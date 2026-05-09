@@ -85,6 +85,8 @@ void FShaderProgramRegistry::Initialize()
     Add(EShaderType::NormalView, NormalView);
 
     Add(EShaderType::FinalPostProcessComposite, MakeGraphicsProgramDesc("FinalPostProcessComposite", "Shaders/Passes/PostProcess/FinalPostProcessComposite.hlsl"));
+
+    Add(EShaderType::SkeletalDebug, MakeGraphicsProgramDesc("SkeletalDebug", "Shaders/Render/Editor/SkeletalDebug.hlsl"));
 }
 
 /*

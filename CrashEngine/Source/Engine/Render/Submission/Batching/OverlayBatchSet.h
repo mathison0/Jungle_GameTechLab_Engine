@@ -8,4 +8,5 @@ struct FOverlayBatchSet
 {
     FLineBatch GridLines;
     FLineBatch DebugLines;
+	FLineBatch SkeletonLines;
 };

@@ -79,6 +79,9 @@
     <Filter Include="Source\Editor\PIE">
       <UniqueIdentifier>{3fb7a3d8-b9cb-b13d-a373-7e1d66bc01de}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Preview">
+      <UniqueIdentifier>{0414f844-a489-f730-d360-46d22d481c26}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\Selection">
       <UniqueIdentifier>{62537a50-933d-e461-6a5b-e8f67609290e}</UniqueIdentifier>
     </Filter>
@@ -432,6 +435,9 @@
     <FxCompile Include="Shaders\Render\Editor\ShaderSubUV.hlsl">
       <Filter>Shaders\Render\Editor</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Render\Editor\SkeletalDebug.hlsl">
+      <Filter>Shaders\Render\Editor</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\Decal\DecalApply.hlsli">
       <Filter>Shaders\Render\Scene\Decal</Filter>
     </FxCompile>
@@ -548,6 +554,9 @@
     <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp">
       <Filter>Source\Editor\Logging</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Preview\PreviewSceneContext.cpp">
+      <Filter>Source\Editor\Preview</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp">
       <Filter>Source\Editor\Selection</Filter>
     </ClCompile>
@@ -599,10 +608,19 @@
     <ClCompile Include="Source\Editor\UI\EditorWorldOutlinerPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\AssetViewerManager.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.cpp">
@@ -1017,6 +1035,9 @@
       <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Editor\SelectionMaskPass.cpp">
+      <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Editor\SkeletalDebugPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\AdditiveDecalPass.cpp">
@@ -1482,10 +1503,6 @@
       <Filter>ThirdParty\Lua\src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp" />
-    <ClCompile Include="Source\Editor\Viewport\AssetViewerManager.cpp" />
-    <ClCompile Include="Source\Editor\Preview\PreviewSceneContext.cpp" />
-    <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1520,6 +1537,9 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\PIE\PIETypes.h">
       <Filter>Source\Editor\PIE</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Preview\PreviewSceneContext.h">
+      <Filter>Source\Editor\Preview</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h">
       <Filter>Source\Editor\Selection</Filter>
@@ -1569,6 +1589,9 @@
     <ClInclude Include="Source\Editor\UI\EditorWorldOutlinerPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\AssetViewerManager.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
@@ -1576,6 +1599,12 @@
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\PreviewViewportClient.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h">
@@ -2121,6 +2150,9 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Editor\SelectionMaskPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Editor\SkeletalDebugPass.h">
+      <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\AdditiveDecalPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
@@ -2335,6 +2367,9 @@
       <Filter>Source\Engine\Render\Scene\Debug</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Scene\Debug\DebugRenderAPI.h">
+      <Filter>Source\Engine\Render\Scene\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Scene\Debug\SkeletalDebug.h">
       <Filter>Source\Engine\Render\Scene\Debug</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\SceneProxy.h">
@@ -2724,10 +2759,6 @@
     <ClInclude Include="ThirdParty\Sol\sol.hpp">
       <Filter>ThirdParty\Sol</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h" />
-    <ClInclude Include="Source\Editor\Viewport\AssetViewerManager.h" />
-    <ClInclude Include="Source\Editor\Preview\PreviewSceneContext.h" />
-    <ClInclude Include="Source\Editor\Viewport\PreviewViewportClient.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

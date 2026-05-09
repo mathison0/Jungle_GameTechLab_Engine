@@ -161,6 +161,7 @@ void FRenderer::Create(HWND hWindow)
     // 에디터 오버레이 배치 리소스 초기화
     OverlayBatches.GridLines.Create(Device.GetDevice());
     OverlayBatches.DebugLines.Create(Device.GetDevice());
+	OverlayBatches.SkeletonLines.Create(Device.GetDevice());
 
     // 타일 기반 로컬 라이트 컬링 초기화
     LightCulling = std::make_unique<FTileBasedLightCulling>();
@@ -198,6 +199,7 @@ void FRenderer::Release()
     // 오버레이 배치 해제
     OverlayBatches.DebugLines.Release();
     OverlayBatches.GridLines.Release();
+	OverlayBatches.SkeletonLines.Release();
 
     // 공유 리소스와 매니저 해제
     FrameResources.Release();
@@ -285,6 +287,7 @@ void FRenderer::BeginCollect(const FSceneView& SceneView, uint32 MaxProxyCount)
     // 오버레이 배치 초기화
     OverlayBatches.GridLines.Clear();
     OverlayBatches.DebugLines.Clear();
+	OverlayBatches.SkeletonLines.Clear();
     FrameResources.TextBatch.ClearAll();
     FrameResources.UIBatch.Clear();
 
@@ -585,6 +588,10 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
     {
         Pass->BuildDrawCommands(PipelineContext);
     }
+    if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::SkeletalDebugPass))
+    {
+		Pass->BuildDrawCommands(PipelineContext);
+	}
     if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::DebugLinePass))
     {
         Pass->BuildDrawCommands(PipelineContext);
@@ -641,6 +648,8 @@ void FRenderer::BeginFrame(const FSceneView& SceneView, const FViewportRenderTar
 
     Context->RSSetViewports(1, &Viewport);
     Context->OMSetRenderTargets(1, &RTV, DSV);
+
+	FrameResources.BeginFrame();
 }
 
 void FRenderer::RenderFrame(ERenderPipelineType RootType, FRenderPipelineContext& PipelineContext)

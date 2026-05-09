@@ -128,6 +128,7 @@ public:
     FFontBatch&      GetTextBatch() { return FrameResources.TextBatch; }
     FLineBatch&      GetEditorLineBatch() { return OverlayBatches.DebugLines; }
     FLineBatch&      GetGridLineBatch() { return OverlayBatches.GridLines; }
+	FLineBatch&		 GetSkeletonLineBatch() { return OverlayBatches.SkeletonLines; }
 
     // ==================== Pass Preset / Constant Buffer Accessors ====================
 

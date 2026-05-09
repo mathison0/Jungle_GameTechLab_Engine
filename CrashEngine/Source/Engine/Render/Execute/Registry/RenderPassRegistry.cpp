@@ -4,6 +4,7 @@
 #include "Render/Execute/Passes/Editor/DebugLinePass.h"
 #include "Render/Execute/Passes/Editor/GizmoPass.h"
 #include "Render/Execute/Passes/Editor/OverlayBillboardPass.h"
+#include "Render/Execute/Passes/Editor/SkeletalDebugPass.h"
 #include "Render/Execute/Passes/Editor/OutlinePass.h"
 #include "Render/Execute/Passes/Editor/OverlayTextPass.h"
 #include "Render/Execute/Passes/Editor/SelectionMaskPass.h"
@@ -60,6 +61,7 @@ void FRenderPassRegistry::Initialize()
     Passes.emplace((int32)ERenderPassNodeType::SelectionMaskPass, new FSelectionMaskPass());
     Passes.emplace((int32)ERenderPassNodeType::OutlinePass, new FOutlinePass());
     Passes.emplace((int32)ERenderPassNodeType::DebugLinePass, new FDebugLinePass());
+	Passes.emplace((int32)ERenderPassNodeType::SkeletalDebugPass, new FSkeletalDebugPass());
     Passes.emplace((int32)ERenderPassNodeType::OverlayBillboardPass, new FOverlayBillboardPass());
     Passes.emplace((int32)ERenderPassNodeType::GizmoPass, new FGizmoPass());
     Passes.emplace((int32)ERenderPassNodeType::OverlayTextPass, new FOverlayTextPass());

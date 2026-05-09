@@ -39,12 +39,15 @@ struct FFrameResources
     uint32                    ForwardDecalIndexCapacity    = 0;
     uint32                    ForwardDecalIndexCount       = 0;
 
+	uint32                  BoneDebugCBCursor = 0;
     TArray<FConstantBuffer> PerObjectCBPool;
+	TArray<FConstantBuffer> PerBoneDebugCBPool;
     FFontBatch              TextBatch;
     FUIBatch                UIBatch;
 
     void Create(ID3D11Device* InDevice);
     void Release();
+	void BeginFrame();
     void BindSystemSamplers(ID3D11DeviceContext* Ctx);
     void UpdateLocalLights(ID3D11Device* Device, ID3D11DeviceContext* Context, const TArray<FLocalLightCBData>& Lights);
     void UpdateForwardDecals(
@@ -55,5 +58,7 @@ struct FFrameResources
 
     void             EnsurePerObjectCBPoolCapacity(ID3D11Device* Device, uint32 RequiredCount);
     FConstantBuffer* GetPerObjectCBForProxy(ID3D11Device* Device, const FPrimitiveProxy& Proxy);
+    void             EnsurePerBoneDebugCBCapacity(ID3D11Device* Device, uint32 RequiredCount);
+    FConstantBuffer* AcquirePerBoneDebugCB(ID3D11Device* Device);
     void             EnsureTextCharInfoMap(const FFontResource* Resource);
 };

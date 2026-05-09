@@ -1,4 +1,4 @@
-// 렌더 영역의 세부 동작을 구현합니다.
+﻿// 렌더 영역의 세부 동작을 구현합니다.
 #include "Render/Resources/Buffers/ConstantBufferData.h"
 #include "Render/Resources/FrameResources.h"
 
@@ -81,6 +81,12 @@ void FFrameResources::Release()
     }
     PerObjectCBPool.clear();
 
+	for (FConstantBuffer& CB : PerBoneDebugCBPool)
+    {
+		CB.Release();
+	}
+	PerBoneDebugCBPool.clear();
+
     FrameBuffer.Release();
     PerObjectConstantBuffer.Release();
     GlobalLightBuffer.Release();
@@ -154,6 +160,12 @@ void FFrameResources::Release()
         ShadowSampler = nullptr;
     }
 }
+
+void FFrameResources::BeginFrame()
+{
+	BoneDebugCBCursor = 0;
+}
+
 
 void FFrameResources::UpdateLocalLights(ID3D11Device* Device, ID3D11DeviceContext* Context, const TArray<FLocalLightCBData>& Lights)
 {
@@ -352,6 +364,31 @@ FConstantBuffer* FFrameResources::GetPerObjectCBForProxy(ID3D11Device* Device, c
 
     EnsurePerObjectCBPoolCapacity(Device, Proxy.ProxyId + 1);
     return &PerObjectCBPool[Proxy.ProxyId];
+}
+
+void FFrameResources::EnsurePerBoneDebugCBCapacity(ID3D11Device* Device, uint32 RequiredCount)
+{
+    if (PerBoneDebugCBPool.size() >= RequiredCount)
+    {
+        return;
+    }
+
+    const size_t OldCount = PerBoneDebugCBPool.size();
+    PerBoneDebugCBPool.resize(RequiredCount);
+
+    for (size_t Index = OldCount; Index < PerBoneDebugCBPool.size(); ++Index)
+    {
+        PerBoneDebugCBPool[Index].Create(Device, sizeof(FPerObjectCBData));
+    }
+}
+
+FConstantBuffer* FFrameResources::AcquirePerBoneDebugCB(ID3D11Device* Device)
+{
+    // Pre-reserve via EnsurePerBoneDebugCBCapacity before calling this in a loop.
+    // Growing the pool inside the loop dangles every elements returned earlier in the same frame.
+
+    EnsurePerBoneDebugCBCapacity(Device, BoneDebugCBCursor + 1);
+    return &PerBoneDebugCBPool[BoneDebugCBCursor++];
 }
 
 void FFrameResources::EnsureTextCharInfoMap(const FFontResource* Resource)
