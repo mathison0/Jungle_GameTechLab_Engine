@@ -59,7 +59,7 @@ void FPreviewViewportClient::Tick(float DeltaTime)
 
     const float OrbitSpeed = 0.25f;
     const float PanSpeed = 0.5f;
-    const float ZoomSpeed = 10.0f;
+    const float ZoomSpeed = 4.0f;
 
     if (Input.bHovered && Input.MouseWheel != 0.0f)
     {

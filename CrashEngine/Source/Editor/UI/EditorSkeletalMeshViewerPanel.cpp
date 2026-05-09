@@ -96,7 +96,7 @@ void FEditorSkeletalMeshViewerPanel::RenderPreviewViewport(float DeltaTime)
 
 	if (State.bShowSkeleton)
     {
-        RenderBoneDebugLine(RootBoneIndex);
+        RenderBoneDebugLine(RootBoneIndex, false);
 	}
 
     VC.SetPreviewOptions(Options);
@@ -147,6 +147,7 @@ void FEditorSkeletalMeshViewerPanel::RenderBoneNode(uint32 BoneIndex)
 {
     if (BoneInfos.empty() || BoneIndex >= BoneInfos.size())
         return;
+    int32& SelectedBoneIndex = Owner->GetState().SelectedBoneIndex;
 
     const FViewerBoneInfo& Bone = BoneInfos[BoneIndex];
     const bool bSelected = (SelectedBoneIndex == BoneIndex);
@@ -154,7 +155,7 @@ void FEditorSkeletalMeshViewerPanel::RenderBoneNode(uint32 BoneIndex)
 
     ImGuiTreeNodeFlags Flags =
         ImGuiTreeNodeFlags_OpenOnArrow |
-        ImGuiTreeNodeFlags_OpenOnDoubleClick |
+        ImGuiTreeNodeFlags_DefaultOpen |
         ImGuiTreeNodeFlags_SpanAvailWidth;
 
     if (bSelected)
@@ -190,6 +191,7 @@ void FEditorSkeletalMeshViewerPanel::RenderBoneNode(uint32 BoneIndex)
 
 void FEditorSkeletalMeshViewerPanel::RenderSelectedBoneTransformInspector()
 {
+    int32& SelectedBoneIndex = Owner->GetState().SelectedBoneIndex;
     if (SelectedBoneIndex < 0 || SelectedBoneIndex >= static_cast<int32>(BoneInfos.size()))
     {
         ImGui::TextDisabled("No selected Bone");
@@ -207,9 +209,10 @@ void FEditorSkeletalMeshViewerPanel::RenderSelectedBoneTransformInspector()
         ImGui::Text("Parent Name: %s", BoneInfos[Bone.ParentIndex].BoneName.ToString().c_str());
     }
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Local Transform");
 
     FTransform& LocalTransform = CurrentLocalPose[SelectedBoneIndex];
+    FTransform& GlobalTransform = CurrentGlobalPose[SelectedBoneIndex];
 
     float Location[3] = {
         LocalTransform.Location.X,
@@ -242,10 +245,27 @@ void FEditorSkeletalMeshViewerPanel::RenderSelectedBoneTransformInspector()
         LocalTransform.Rotation = FRotator(Rotation[0], Rotation[1], Rotation[2]).ToQuaternion();
         LocalTransform.Scale = FVector(Scale[0], Scale[1], Scale[2]);
 
+        RecalculatePoseFromBone(SelectedBoneIndex);
         Owner->SetBoneLocalTransform(SelectedBoneIndex, LocalTransform);
     }
+    ImGui::Spacing();
+    ImGui::SeparatorText("Global Transform");
+
+    const FVector& GlobalLocation = GlobalTransform.Location;
+    const FRotator GlobalRotation = GlobalTransform.GetRotator();
+    const FVector& GlobalScale = GlobalTransform.Scale;
+
+    ImGui::Text("Global Location: %.3f, %.3f, %.3f",
+                GlobalLocation.X, GlobalLocation.Y, GlobalLocation.Z);
+
+    ImGui::Text("Global Rotation: %.3f, %.3f, %.3f",
+                GlobalRotation.Pitch, GlobalRotation.Yaw, GlobalRotation.Roll);
+
+    ImGui::Text("Global Scale: %.3f, %.3f, %.3f",
+                GlobalScale.X, GlobalScale.Y, GlobalScale.Z);
 }
 
+//저장은 외부에서 진행하게 변경할것
 void FEditorSkeletalMeshViewerPanel::SetSkeletalMesh(USkeletalMesh* InSkeletalMesh)
 {
     SkeletalMesh = InSkeletalMesh;
@@ -254,6 +274,7 @@ void FEditorSkeletalMeshViewerPanel::SetSkeletalMesh(USkeletalMesh* InSkeletalMe
     {
         PreviewMeshComponent->SetSkeletalMesh(InSkeletalMesh);
     }
+    int32& SelectedBoneIndex = Owner->GetState().SelectedBoneIndex;
 
     SelectedBoneIndex = INDEX_NONE;
     Owner->GetState().SelectedBoneIndex = INDEX_NONE;
@@ -304,6 +325,7 @@ void FEditorSkeletalMeshViewerPanel::BuildBoneHierarchy()
                 CurrentGlobalPose[ParentIndex].Location + CurrentLocalPose[BoneIndex].Location;
         }
     }
+    RecalculatePoseFromBone(RootBoneIndex);
 
  //   BonesHierarchy.clear();
  //   BoneInfos.clear();
@@ -333,28 +355,107 @@ void FEditorSkeletalMeshViewerPanel::BuildBoneHierarchy()
  //   }
 }
 
-void FEditorSkeletalMeshViewerPanel::RenderBoneDebugLine(int32 ParentIndex)
+void FEditorSkeletalMeshViewerPanel::RenderBoneDebugLine(int32 BoneIndex, bool bInSelectedSubtree)
 {
-	if (BoneInfos.empty() || ParentIndex < 0 || ParentIndex >= static_cast<int32>(BoneInfos.size()))
+    if (BoneInfos.empty())
+        return;
+
+    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(BoneInfos.size()))
+        return;
+
+    if (BoneIndex >= static_cast<int32>(BonesHierarchy.size()))
+        return;
+
+    if (BoneIndex >= static_cast<int32>(CurrentGlobalPose.size()))
         return;
 
     FScene* ScenePtr = Owner->GetPreviewScene().GetScene();
     if (!ScenePtr)
+        return;
+
+    FScene& Scene = *ScenePtr;
+
+    int32& SelectedBoneIndex = Owner->GetState().SelectedBoneIndex;
+    const bool bThisIsSelected = (BoneIndex == SelectedBoneIndex);
+    const bool bSelectedSubtree = bInSelectedSubtree || bThisIsSelected;
+
+    for (int32 ChildIndex : BonesHierarchy[BoneIndex])
+    {
+        if (ChildIndex < 0 || ChildIndex >= static_cast<int32>(CurrentGlobalPose.size()))
+            continue;
+
+        const FVector ParentJoint = CurrentGlobalPose[BoneIndex].Location;
+        const FVector ChildJoint = CurrentGlobalPose[ChildIndex].Location;
+
+        FColor LineColor = BoneColor;
+        if (BoneIndex == SelectedBoneIndex)
+        {
+            LineColor = SelectedColor;
+        }
+        else if (bSelectedSubtree)
+        {
+            // 선택된 bone 아래 모든 child/descendant line
+            LineColor = SelectedChildColor; // White
+        }
+        else if (ChildIndex == SelectedBoneIndex)
+        {
+            // 선택된 bone으로 들어오는 부모 line
+            LineColor = SelectedParentColor;
+        }
+
+        RenderDebugLine(Scene, ParentJoint, ChildJoint, LineColor, 0.0f);
+
+        RenderBoneDebugLine(ChildIndex, bSelectedSubtree);
+    }
+}
+
+void FEditorSkeletalMeshViewerPanel::RecalculatePoseFromBone(int32 BoneIndex)
+{
+    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(CurrentLocalPose.size()))
     {
         return;
     }
 
-	FScene& Scene = *ScenePtr;
-    const bool bLeaf = BonesHierarchy[ParentIndex].empty();
+    RecalculatePoseRecursive(BoneIndex);
+}
 
-    if (!bLeaf)
+void FEditorSkeletalMeshViewerPanel::RecalculatePoseRecursive(int32 BoneIndex)
+{
+    if (BoneIndex < 0 ||
+        BoneIndex >= static_cast<int32>(BoneInfos.size()) ||
+        BoneIndex >= static_cast<int32>(CurrentLocalPose.size()) ||
+        BoneIndex >= static_cast<int32>(CurrentGlobalPose.size()))
     {
-        for (int32 ChildIndex : BonesHierarchy[ParentIndex])
-        {
-            const FVector ParentJonit = CurrentGlobalPose[ParentIndex].Location;
-            const FVector ChildJonit = CurrentGlobalPose[ChildIndex].Location;
-            RenderDebugLine(Scene, ParentJonit, ChildJonit, FColor::Red(), 0.0f);
-            RenderBoneDebugLine(ChildIndex);
-        }
+        return;
+    }
+
+    const FViewerBoneInfo& Bone = BoneInfos[BoneIndex];
+    const FTransform& LocalTransform = CurrentLocalPose[BoneIndex];
+
+    if (Bone.ParentIndex >= 0 && Bone.ParentIndex < static_cast<int32>(CurrentGlobalPose.size()))
+    {
+        const FTransform& ParentGlobal = CurrentGlobalPose[Bone.ParentIndex];
+        FTransform& GlobalTransform = CurrentGlobalPose[BoneIndex];
+
+        GlobalTransform.Location = ParentGlobal.Location + LocalTransform.Location;
+        GlobalTransform.Rotation = ParentGlobal.Rotation * LocalTransform.Rotation;
+        GlobalTransform.Scale = FVector(
+            ParentGlobal.Scale.X * LocalTransform.Scale.X,
+            ParentGlobal.Scale.Y * LocalTransform.Scale.Y,
+            ParentGlobal.Scale.Z * LocalTransform.Scale.Z);
+    }
+    else
+    {
+        CurrentGlobalPose[BoneIndex] = LocalTransform;
+    }
+
+    if (BoneIndex >= static_cast<int32>(BonesHierarchy.size()))
+    {
+        return;
+    }
+
+    for (int32 ChildIndex : BonesHierarchy[BoneIndex])
+    {
+        RecalculatePoseRecursive(ChildIndex);
     }
 }

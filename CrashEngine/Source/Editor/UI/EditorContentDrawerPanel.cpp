@@ -1,4 +1,4 @@
-// Implements the bottom Content Drawer browser.
+﻿// Implements the bottom Content Drawer browser.
 #include "Editor/UI/EditorContentDrawerPanel.h"
 
 #include "Component/CameraComponent.h"
@@ -797,6 +797,12 @@ void FEditorContentDrawerPanel::OpenContentItem(const FContentItem& Item)
     if (Item.Extension == ".scene")
     {
         LoadSceneFile(Item.FullPath);
+        return;
+    }
+
+    if (Item.Extension == ".fbx")
+    {
+        EditorEngine->GetAssetViewerManager().OpenSkeletalMeshEditor(nullptr);
         return;
     }
 

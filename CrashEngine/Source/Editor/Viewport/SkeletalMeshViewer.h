@@ -15,6 +15,8 @@ enum ESkeletalMeshPreviewPoseMode
 struct FSkeletalMeshViewerState
 {
     USkeletalMesh* ActiveMesh = nullptr;
+	// 뷰어에서 보이고 변경되는 건 복사본
+    //USkeletalMesh ActiveMeshCopy = nullptr;
 
     int32 SelectedBoneIndex = -1;
 

@@ -27,7 +27,7 @@ struct FPreviewViewportOptions
     bool bShowMesh = true;
     bool bShowSkeleton = true;
     bool bShowBoneNames = false;
-    int32 SelectedBoneIndex = -1;
+    int32 SelectedBoneIndex = 0;
 };
 
 class FViewport;

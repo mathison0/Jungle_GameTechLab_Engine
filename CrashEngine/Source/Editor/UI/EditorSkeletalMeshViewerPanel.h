@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Core/EngineTypes.h"
 #include "Editor/UI/EditorPanel.h"
 #include "Object/FName.h"
 #include "Math/Matrix.h"
@@ -42,9 +43,12 @@ public:
 	void RenderSelectedBoneTransformInspector();
 	void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
 	void BuildBoneHierarchy();
-    void RenderBoneDebugLine(int32 index);
+    void RenderBoneDebugLine(int32 index, bool bInSelectedSubtree);
 
 private:
+    void RecalculatePoseFromBone(int32 BoneIndex);
+    void RecalculatePoseRecursive(int32 BoneIndex);
+
     TArray<FTransform> CurrentLocalPose;
     TArray<FTransform> CurrentGlobalPose;
 
@@ -55,8 +59,12 @@ private:
     USkeletalMesh* SkeletalMesh = nullptr;
 	//실제 SkeletalMesh가 아닌 복제
     USkeletalMeshComponent* PreviewMeshComponent = nullptr;
-    int SelectedBoneIndex = INDEX_NONE;
 
     TArray<TArray<uint32>> BonesHierarchy;
     TArray<FViewerBoneInfo> BoneInfos;
+
+	FColor SelectedColor = FColor(124, 252, 0);
+	FColor BoneColor = FColor(0, 0, 55);
+    FColor SelectedChildColor = FColor::White();
+    FColor SelectedParentColor = FColor(255,127,80);
 };

@@ -59,6 +59,7 @@ void FSkeletalMeshViewer::SetBoneLocalTransform(int32 BoneIndex, const FTransfor
     {
 		//여기서 SkeletalMesh LocalMatrix변경 요청함
         //Comp->SetBoneLocalTransform(BoneIndex, Transform);
+
     }
 }
 
