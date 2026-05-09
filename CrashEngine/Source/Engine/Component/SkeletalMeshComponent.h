@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Component/SkinnedMeshComponent.h"
 #include "Core/PropertyTypes.h"
@@ -13,8 +13,8 @@ public:
     USkeletalMeshComponent() = default;
     ~USkeletalMeshComponent() override = default;
 
+    FPrimitiveProxy* CreateSceneProxy() override;
     void SetSkeletalMesh(USkeletalMesh* InMesh);
-    USkeletalMesh* GetSkeletalMesh() const { return SkeletalMesh; }
 
     void Serialize(FArchive& Ar) override;
     
@@ -22,7 +22,4 @@ public:
     void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
     void PostEditProperty(const char* PropertyName) override;
 
-private:
-    USkeletalMesh* SkeletalMesh = nullptr;
-    FString SkeletalMeshPath = "None";
 };

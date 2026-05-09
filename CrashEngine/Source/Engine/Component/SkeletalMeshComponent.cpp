@@ -1,22 +1,17 @@
-#include "Component/SkeletalMeshComponent.h"
+﻿#include "Component/SkeletalMeshComponent.h"
 #include "Engine/Runtime/Engine.h"
+#include "Render/Scene/Proxies/Primitive/SkeletalMeshSceneProxy.h"
 
 IMPLEMENT_CLASS(USkeletalMeshComponent, USkinnedMeshComponent)
 
+FPrimitiveProxy* USkeletalMeshComponent::CreateSceneProxy()
+{
+    return new FSkeletalMeshSceneProxy(this);
+}
+
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
-    SkeletalMesh = InMesh;
-    if (InMesh)
-    {
-        SkeletalMeshPath = InMesh->GetAssetPathFileName();
-    }
-    else
-    {
-        SkeletalMeshPath = "None";
-    }
-    // TODO: Init skeletal mesh resources, update bounds, etc.
-    MarkRenderStateDirty();
-    MarkWorldBoundsDirty();
+    USkinnedMeshComponent::SetSkeletalMesh(InMesh);
 }
 
 void USkeletalMeshComponent::Serialize(FArchive& Ar)
@@ -39,7 +34,7 @@ void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
     {
         if (SkeletalMeshPath.empty() || SkeletalMeshPath == "None")
         {
-            SkeletalMesh = nullptr;
+            SetSkeletalMesh(nullptr);
         }
         else
         {

@@ -1,48 +1,56 @@
 ﻿#include "Component/SkinnedMeshComponent.h"
+
+#include "Mesh/SkeletalMesh.h"
+#include "Mesh/Skeleton.h"
 #include "Object/ObjectFactory.h"
+
+#include <algorithm>
 
 IMPLEMENT_CLASS(USkinnedMeshComponent, UMeshComponent)
 
-// 임시구현 (SkeletalMeshAsset과 SkeletalMesh 작성된 후 최종작성)
 void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
     SkeletalMesh = InMesh;
     OverrideMaterials.clear();
     MaterialSlots.clear();
 
-	if (SkeletalMesh)
+    if (SkeletalMesh)
     {
-        /*SkeletalMeshPath = SkeletalMesh->GetAssetPathFileName();
-        const TArray<FDynamicMaterial>& DefaultMaterials = SkeletalMesh->GetMaterials();
+        SkeletalMeshPath = SkeletalMesh->GetAssetPathFileName();
 
-        OverrideMaterials.resize(DefaultMaterials.size());
-        MaterialSlots.resize(DefaultMaterials.size());
-
-        for (int32 i = 0; i < (int32)DefaultMaterials.size(); ++i)
+        for (USkeletalSubMesh* SubMesh : SkeletalMesh->GetSubMeshes())
         {
-            OverrideMaterials[i] = DefaultMaterials[i].MaterialInterface;
+            if (!SubMesh)
+            {
+                continue;
+            }
 
-            if (OverrideMaterials[i])
-                MaterialSlots[i].Path = OverrideMaterials[i]->GetAssetPathFileName();
-            else
-                MaterialSlots[i].Path = "None";
-        }*/
+            const TArray<FStaticMaterial>& DefaultMaterials = SubMesh->GetStaticMaterials();
+            for (const FStaticMaterial& DefaultMaterial : DefaultMaterials)
+            {
+                OverrideMaterials.push_back(DefaultMaterial.MaterialInterface);
+
+                FMaterialSlot Slot;
+                Slot.Path = DefaultMaterial.MaterialInterface
+                    ? DefaultMaterial.MaterialInterface->GetAssetPathFileName()
+                    : "None";
+                MaterialSlots.push_back(Slot);
+            }
+        }
     }
     else
     {
         SkeletalMeshPath = "None";
-		OverrideMaterials.clear();
-        MaterialSlots.clear();
-		
-	}
+    }
 
-	RefreshReferencePose();
+    RefreshReferencePose();
     ResetToReferencePose();
 
-    UpdateSkinningMatrices();
-    UpdateSkinnedVertices();
-    
-	CacheLocalBounds();
+    // CPU skinning 구현이 붙으면 여기서 갱신한다.
+    // UpdateSkinningMatrices();
+    // UpdateSkinnedVertices();
+
+    CacheLocalBounds();
     MarkRenderStateDirty();
     MarkWorldBoundsDirty();
 }
@@ -50,39 +58,81 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 void USkinnedMeshComponent::CacheLocalBounds()
 {
     bHasValidBounds = false;
-	if (!SkeletalMesh)
+    if (!SkeletalMesh)
+    {
         return;
- //   FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
- //   if (!Asset || Asset->Vertices.empty())
- //       return;
+    }
 
-	//// Reuse cached asset bounds when available.
- //   if (!Asset->bBoundsValid)
- //   {
- //       Asset->CacheBounds();
- //   }
+    bool bFoundVertex = false;
+    FVector LocalMin;
+    FVector LocalMax;
 
- //   CachedLocalCenter = Asset->BoundsCenter;
- //   CachedLocalExtent = Asset->BoundsExtent;
- //   bHasValidBounds = Asset->bBoundsValid;
+    for (USkeletalSubMesh* SubMesh : SkeletalMesh->GetSubMeshes())
+    {
+        if (!SubMesh || !SubMesh->GetSkeletalSubMeshAsset())
+        {
+            continue;
+        }
+
+        const TArray<FVertexSkinned>& Vertices = SubMesh->GetSkeletalSubMeshAsset()->Vertices;
+        for (const FVertexSkinned& Vertex : Vertices)
+        {
+            if (!bFoundVertex)
+            {
+                LocalMin = Vertex.Position;
+                LocalMax = Vertex.Position;
+                bFoundVertex = true;
+                continue;
+            }
+
+            LocalMin.X = (std::min)(LocalMin.X, Vertex.Position.X);
+            LocalMin.Y = (std::min)(LocalMin.Y, Vertex.Position.Y);
+            LocalMin.Z = (std::min)(LocalMin.Z, Vertex.Position.Z);
+            LocalMax.X = (std::max)(LocalMax.X, Vertex.Position.X);
+            LocalMax.Y = (std::max)(LocalMax.Y, Vertex.Position.Y);
+            LocalMax.Z = (std::max)(LocalMax.Z, Vertex.Position.Z);
+        }
+    }
+
+    if (!bFoundVertex)
+    {
+        return;
+    }
+
+    CachedLocalCenter = (LocalMin + LocalMax) * 0.5f;
+    CachedLocalExtent = (LocalMax - LocalMin) * 0.5f;
+    bHasValidBounds = true;
 }
 
 FMeshDataView USkinnedMeshComponent::GetMeshDataView() const
 {
-    /*if (!SkeletalMesh)
+    if (!SkeletalMesh)
+    {
         return {};
-    FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
-    if (!Asset || Asset->Vertices.empty())
-        return {};
+    }
 
-    FMeshDataView View;
-    View.VertexData = Asset->SkinnedVertices.data();
-    View.VertexCount = (uint32)Asset->Vertices.size();
-    View.Stride = sizeof(FVertexPNCT_T);
-    View.IndexData = Asset->Indices.data();
-    View.IndexCount = (uint32)Asset->Indices.size();
+    for (USkeletalSubMesh* SubMesh : SkeletalMesh->GetSubMeshes())
+    {
+        if (!SubMesh || !SubMesh->GetSkeletalSubMeshAsset())
+        {
+            continue;
+        }
 
-    return View;*/
+        const FSkeletalSubMesh* Asset = SubMesh->GetSkeletalSubMeshAsset();
+        if (Asset->Vertices.empty() || Asset->Indices.empty())
+        {
+            continue;
+        }
+
+        FMeshDataView View;
+        View.VertexData = Asset->Vertices.data();
+        View.VertexCount = (uint32)Asset->Vertices.size();
+        View.Stride = sizeof(FVertexSkinned);
+        View.IndexData = Asset->Indices.data();
+        View.IndexCount = (uint32)Asset->Indices.size();
+        return View;
+    }
+
     return {};
 }
 
@@ -91,13 +141,12 @@ void USkinnedMeshComponent::RefreshReferencePose()
     RefPoseBoneLocalMatrices.clear();
     RefPoseBoneGlobalMatrices.clear();
 
-    if (!SkeletalMesh)
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeleton())
     {
         return;
     }
 
-    /*
-    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetBones();
+    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetSkeleton()->GetBones();
     const int32 BoneCount = static_cast<int32>(Bones.size());
 
     RefPoseBoneLocalMatrices.resize(BoneCount, FMatrix::Identity);
@@ -106,20 +155,18 @@ void USkinnedMeshComponent::RefreshReferencePose()
     for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
     {
         const FBoneInfo& Bone = Bones[BoneIndex];
-
-        const FMatrix LocalMatrix = Bone.ReferenceLocalTransform.ToMatrix();
+        const FMatrix LocalMatrix = Bone.ReferenceTransform.ToMatrix();
         RefPoseBoneLocalMatrices[BoneIndex] = LocalMatrix;
 
         if (Bone.ParentIndex >= 0 && Bone.ParentIndex < BoneIndex)
         {
-            RefPoseBoneGlobalMatrices[BoneIndex] =
-                LocalMatrix * RefPoseBoneGlobalMatrices[Bone.ParentIndex];
+            RefPoseBoneGlobalMatrices[BoneIndex] = LocalMatrix * RefPoseBoneGlobalMatrices[Bone.ParentIndex];
         }
         else
         {
             RefPoseBoneGlobalMatrices[BoneIndex] = LocalMatrix;
         }
-    }*/
+    }
 }
 
 void USkinnedMeshComponent::RefreshBoneTransforms()
@@ -134,14 +181,13 @@ void USkinnedMeshComponent::RefreshBoneTransforms()
 
     CurrentBoneGlobalMatrices.resize(BoneCount, FMatrix::Identity);
 
-    if (!SkeletalMesh)
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeleton())
     {
         CurrentBoneGlobalMatrices = CurrentBoneLocalMatrices;
         return;
     }
 
-    /*
-    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetBones();
+    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetSkeleton()->GetBones();
     if (static_cast<int32>(Bones.size()) != BoneCount)
     {
         CurrentBoneGlobalMatrices = CurrentBoneLocalMatrices;
@@ -155,18 +201,13 @@ void USkinnedMeshComponent::RefreshBoneTransforms()
 
         if (ParentIndex >= 0 && ParentIndex < BoneIndex)
         {
-            CurrentBoneGlobalMatrices[BoneIndex] =
-                LocalMatrix * CurrentBoneGlobalMatrices[ParentIndex];
+            CurrentBoneGlobalMatrices[BoneIndex] = LocalMatrix * CurrentBoneGlobalMatrices[ParentIndex];
         }
         else
         {
             CurrentBoneGlobalMatrices[BoneIndex] = LocalMatrix;
         }
     }
-    */
-
-    // TODO: 추후 코드 병합 후 위 코드로 사용 예정
-    CurrentBoneGlobalMatrices = CurrentBoneLocalMatrices;
 }
 
 void USkinnedMeshComponent::ResetToReferencePose()
@@ -193,19 +234,24 @@ bool USkinnedMeshComponent::SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& L
 
     CurrentBoneLocalMatrices[BoneIndex] = LocalMatrix;
     RefreshBoneTransforms();
+    CacheLocalBounds();
 
-    // CPU skinning
+    // CPU skinning 구현이 붙으면 여기서 갱신한다.
     // UpdateSkinningMatrices();
     // UpdateSkinnedVertices();
+
     MarkRenderStateDirty();
     MarkWorldBoundsDirty();
-
     return true;
 }
 
-//CPU skinning
-void USkinnedMeshComponent::UpdateSkinningMatrices() {};
-void USkinnedMeshComponent::UpdateSkinnedVertices() {};
+void USkinnedMeshComponent::UpdateSkinningMatrices()
+{
+}
+
+void USkinnedMeshComponent::UpdateSkinnedVertices()
+{
+}
 
 const TArray<FVertexPNCT_T>& USkinnedMeshComponent::GetSkinnedVertices() const
 {
@@ -216,7 +262,21 @@ const TArray<uint32>& USkinnedMeshComponent::GetIndices() const
 {
     static const TArray<uint32> EmptyIndices;
 
-    // TODO: return SkeletalMesh asset indices after USkeletalMesh API is merged.
+    if (!SkeletalMesh)
+    {
+        return EmptyIndices;
+    }
+
+    for (USkeletalSubMesh* SubMesh : SkeletalMesh->GetSubMeshes())
+    {
+        if (!SubMesh || !SubMesh->GetSkeletalSubMeshAsset())
+        {
+            continue;
+        }
+
+        return SubMesh->GetSkeletalSubMeshAsset()->Indices;
+    }
+
     return EmptyIndices;
 }
 
@@ -227,8 +287,18 @@ int32 USkinnedMeshComponent::GetNumBones() const
 
 const FBoneInfo* USkinnedMeshComponent::GetBoneInfo(int32 BoneIndex) const
 {
-    // TODO: return SkeletalMesh->GetBoneInfo(BoneIndex) after FBoneInfo storage is merged.
-    return nullptr;
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeleton())
+    {
+        return nullptr;
+    }
+
+    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetSkeleton()->GetBones();
+    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(Bones.size()))
+    {
+        return nullptr;
+    }
+
+    return &Bones[BoneIndex];
 }
 
 const FMatrix& USkinnedMeshComponent::GetBoneLocalMatrix(int32 BoneIndex) const
@@ -262,6 +332,10 @@ FMatrix USkinnedMeshComponent::GetBoneWorldMatrix(int32 BoneIndex) const
 
 int32 USkinnedMeshComponent::FindBoneIndex(const FName& BoneName) const
 {
-    // TODO: return SkeletalMesh->FindBoneIndex(BoneName) after skeleton lookup API is merged.
-    return -1;
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeleton())
+    {
+        return -1;
+    }
+
+    return SkeletalMesh->GetSkeleton()->FindBoneIndex(BoneName.ToString());
 }

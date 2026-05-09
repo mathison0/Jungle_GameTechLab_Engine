@@ -52,33 +52,3 @@ protected:
 
     FString SkeletalMeshPath = "None";
 };
-
-/*
-= SkeletalMesh 포인터
-= bone transform 배열
-= reference pose를 실제 본 행렬로 계산
-= CPU skinning
-= skinned vertex 결과
-= bounds cache
-*/
-
-/* 아래와 같은 구조로 가정하고 작성해둠
-struct FSkeletalVertex
-{
-    FVector Position;
-    FVector Normal;
-    FVector4 Color;
-    FVector2 UV;
-    FVector4 Tangent;
-    uint16 BoneIndices[4];
-    float BoneWeights[4];
-};
-
-struct FBoneInfo
-{
-    FName Name;
-    int32 ParentIndex;
-    FTransform ReferenceLocalTransform;
-    FMatrix InverseBindPose;
-};
-*/
