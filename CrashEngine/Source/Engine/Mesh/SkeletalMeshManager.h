@@ -26,8 +26,11 @@ class FSkeletalMeshManager : public TSingleton<FSkeletalMeshManager>, public IAs
 
     // path → USkeletalMesh* 캐시 (소유권은 UObjectManager)
     TMap<FString, USkeletalMesh*> SkeletalMeshCache;
+    TMap<FString, USkeletalSubMesh*> SubMeshCache;
+    
     TArray<FSkeletalMeshAssetListItem> AvailableMeshFiles;
     TArray<FSkeletalMeshAssetListItem> AvailableFBXFiles;
+    TArray<FSkeletalMeshAssetListItem> AvailableSkeletonFiles;
 
     ID3D11Device* Device = nullptr;
 
@@ -45,16 +48,21 @@ public:
     USkeletalMesh* LoadSkeletalMesh(const FString& PathFileName, bool bRefreshAssetLists = true);
     USkeletalMesh* LoadSkeletalMesh(const FString& PathFileName, const FImportOptions& Options, bool bRefreshAssetLists = true);
     
+    USkeletalSubMesh* LoadSkeletalSubMesh(const FString& PathFileName);
+
     void ScanMeshCacheFiles();
     const TArray<FSkeletalMeshAssetListItem>& GetAvailableMeshFiles() const { return AvailableMeshFiles; }
     
     void ScanFBXSourceFiles();
     const TArray<FSkeletalMeshAssetListItem>& GetAvailableFBXFiles() const { return AvailableFBXFiles; }
 
+    void ScanSkeletonCacheFiles();
+    const TArray<FSkeletalMeshAssetListItem>& GetAvailableSkeletonFiles() const { return AvailableSkeletonFiles; }
+
     // 캐시된 SkeletalMesh GPU 리소스 해제
     void ReleaseAllGPU();
 
 private:
     FSkeletalMeshManager() = default;
-    bool TryImportSkeletalMesh(const FString& FBXSourcePath, const FString& SubResourceName, const FImportOptions* Options, USkeletalMesh* SkeletalMesh, const FString& BinPath);
+    bool TryImportSkeletalSubMesh(const FString& FBXSourcePath, const FString& SubResourceName, const FImportOptions* Options, USkeletalSubMesh* SubMesh, const FString& BinPath);
 };

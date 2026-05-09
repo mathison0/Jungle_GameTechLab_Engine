@@ -19,7 +19,7 @@ struct FSkeletalMeshSection
     }
 };
 
-struct FSkeletalMesh
+struct FSkeletalSubMesh
 {
     FString PathFileName;
     TArray<FVertexSkinned> Vertices;
@@ -37,19 +37,19 @@ struct FSkeletalMesh
     }
 };
 
-class USkeletalMesh : public UObject
+class USkeletalSubMesh : public UObject
 {
 public:
-    DECLARE_CLASS(USkeletalMesh, UObject)
+    DECLARE_CLASS(USkeletalSubMesh, UObject)
 
-    USkeletalMesh();
-    ~USkeletalMesh() override;
+    USkeletalSubMesh();
+    ~USkeletalSubMesh() override;
 
     void Serialize(FArchive& Ar) override;
 
     const FString& GetAssetPathFileName() const;
-    void SetSkeletalMeshAsset(FSkeletalMesh* InMesh);
-    FSkeletalMesh* GetSkeletalMeshAsset() const { return SkeletalMeshAsset; }
+    void SetSkeletalSubMeshAsset(FSkeletalSubMesh* InMesh);
+    FSkeletalSubMesh* GetSkeletalSubMeshAsset() const { return SkeletalSubMeshAsset; }
 
     void SetSkeleton(USkeleton* InSkeleton) { Skeleton = InSkeleton; }
     USkeleton* GetSkeleton() const { return Skeleton; }
@@ -60,7 +60,31 @@ public:
     void InitResources(ID3D11Device* InDevice);
 
 private:
-    FSkeletalMesh* SkeletalMeshAsset = nullptr;
+    FSkeletalSubMesh* SkeletalSubMeshAsset = nullptr;
     USkeleton* Skeleton = nullptr;
     TArray<FStaticMaterial> StaticMaterials;
+};
+
+// 새로운 컨테이너 클래스
+class USkeletalMesh : public UObject
+{
+public:
+    DECLARE_CLASS(USkeletalMesh, UObject)
+
+    USkeletalMesh() = default;
+    ~USkeletalMesh() override = default;
+
+    void SetSkeleton(USkeleton* InSkeleton) { Skeleton = InSkeleton; }
+    USkeleton* GetSkeleton() const { return Skeleton; }
+
+    void AddSubMesh(USkeletalSubMesh* InSubMesh) { SubMeshes.push_back(InSubMesh); }
+    const TArray<USkeletalSubMesh*>& GetSubMeshes() const { return SubMeshes; }
+
+    void SetAssetPathFileName(const FString& InPath) { PathFileName = InPath; }
+    const FString& GetAssetPathFileName() const { return PathFileName; }
+
+private:
+    USkeleton* Skeleton = nullptr;
+    TArray<USkeletalSubMesh*> SubMeshes;
+    FString PathFileName;
 };

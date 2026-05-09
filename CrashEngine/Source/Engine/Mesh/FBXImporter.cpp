@@ -92,7 +92,7 @@ FbxManager* FFBXImporter::SdkManager = nullptr;
 TArray<TArray<int>> FFBXImporter::CtrlPointToVertexIndex;
 TArray<TArray<FFBXImporter::FBoneWeighting>> FFBXImporter::BoneWeighting;
 
-FFBXImporter::FImportedSkeletalMesh::FImportedSkeletalMesh(FName InName, FSkeletalMesh* InMeshData, FName InSkeletonName)
+FFBXImporter::FImportedSkeletalMesh::FImportedSkeletalMesh(FName InName, FSkeletalSubMesh* InMeshData, FName InSkeletonName)
     : Name(InName), MeshData(InMeshData), SkeletonName(InSkeletonName)
 {
 }
@@ -159,8 +159,8 @@ bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOp
 
         FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, "Mesh_" + ImportedMesh->Name.ToString());
         
-        USkeletalMesh* TempMesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
-        TempMesh->SetSkeletalMeshAsset(ImportedMesh->MeshData);
+        USkeletalSubMesh* TempMesh = UObjectManager::Get().CreateObject<USkeletalSubMesh>();
+        TempMesh->SetSkeletalSubMeshAsset(ImportedMesh->MeshData);
         ImportedMesh->MeshData = nullptr; 
         
         auto it = std::find_if(Assets.Skeletons.begin(), Assets.Skeletons.end(), 
@@ -260,7 +260,7 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, FImportedFBXAssets& Out
     if (attr && attr->GetAttributeType() == FbxNodeAttribute::eMesh) {
         FbxMesh* fbxMesh = Node->GetMesh();
         
-        std::unique_ptr<FSkeletalMesh> ExtractedMesh = ParseGeometry(fbxMesh);
+        std::unique_ptr<FSkeletalSubMesh> ExtractedMesh = ParseGeometry(fbxMesh);
         if (ExtractedMesh)
         {
             BoneWeighting.assign(ExtractedMesh->Vertices.size(), TArray<FBoneWeighting>());
@@ -310,9 +310,9 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, FImportedFBXAssets& Out
     }
 }
 
-std::unique_ptr<FSkeletalMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh)
+std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh)
 {
-    std::unique_ptr<FSkeletalMesh> Result = std::make_unique<FSkeletalMesh>();
+    std::unique_ptr<FSkeletalSubMesh> Result = std::make_unique<FSkeletalSubMesh>();
     
     FbxVector4* controlPoints = InFbxMesh->GetControlPoints();
     int PolygonCount = InFbxMesh->GetPolygonCount();
@@ -391,7 +391,7 @@ void FFBXImporter::ExtractWeights(FbxCluster* InCluster, int InBoneIndex)
     }
 }
 
-void FFBXImporter::ApplyWeightsToSkeleton(FSkeletalMesh* InMesh)
+void FFBXImporter::ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh)
 {
     for (size_t i = 0; i < InMesh->Vertices.size(); i++)
     {

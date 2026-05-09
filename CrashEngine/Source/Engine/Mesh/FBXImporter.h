@@ -8,7 +8,7 @@
 #include "Mesh/StaticMeshAsset.h"
 #include <memory>
 
-struct FSkeletalMesh;
+struct FSkeletalSubMesh;
 class USkeleton;
 
 struct FFBXImporter
@@ -16,10 +16,10 @@ struct FFBXImporter
     struct FImportedSkeletalMesh
     {
         FName Name;
-        FSkeletalMesh* MeshData;
+        FSkeletalSubMesh* MeshData;
         FName SkeletonName;
 
-        FImportedSkeletalMesh(FName InName, FSkeletalMesh* InMeshData, FName InSkeletonName);
+        FImportedSkeletalMesh(FName InName, FSkeletalSubMesh* InMeshData, FName InSkeletonName);
         ~FImportedSkeletalMesh();
 
         FImportedSkeletalMesh(const FImportedSkeletalMesh&) = delete;
@@ -53,10 +53,10 @@ private:
     static void ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton);
     static void ExtractMeshAndSkinning(FbxNode* Node, FImportedFBXAssets& InAsset);
     static void ExtractAnimations(FbxScene* scene); // Placeholder, 아직 구현 안됨.
-    static std::unique_ptr<FSkeletalMesh> ParseGeometry(FbxMesh* InFbxMesh);
+    static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxMesh* InFbxMesh);
     static FTransform GetTransformFromNode(FbxNode* Node);
     static void ExtractWeights(FbxCluster* InCluster, int InBoneIndex);
-    static void ApplyWeightsToSkeleton(FSkeletalMesh* InMesh);
+    static void ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh);
     
     static bool bInitialized;
     static FbxManager* SdkManager;

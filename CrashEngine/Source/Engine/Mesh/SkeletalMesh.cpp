@@ -6,49 +6,49 @@
 #include "Engine/Profiling/MemoryStats.h"
 #include "Platform/Paths.h"
 
+IMPLEMENT_CLASS(USkeletalSubMesh, UObject)
 IMPLEMENT_CLASS(USkeletalMesh, UObject)
 
 static const FString EmptyPath;
 
-USkeletalMesh::USkeletalMesh()
+USkeletalSubMesh::USkeletalSubMesh()
 {
 }
 
-USkeletalMesh::~USkeletalMesh()
+USkeletalSubMesh::~USkeletalSubMesh()
 {
-    if (SkeletalMeshAsset)
+    if (SkeletalSubMeshAsset)
     {
         const uint32 CPUSize =
-            static_cast<uint32>(SkeletalMeshAsset->Vertices.size() * sizeof(FVertexSkinned)) +
-            static_cast<uint32>(SkeletalMeshAsset->Indices.size() * sizeof(uint32));
+            static_cast<uint32>(SkeletalSubMeshAsset->Vertices.size() * sizeof(FVertexSkinned)) +
+            static_cast<uint32>(SkeletalSubMeshAsset->Indices.size() * sizeof(uint32));
 
-        MemoryStats::SubStaticMeshCPUMemory(CPUSize); // Using static mesh counter for now or could add skeletal mesh counter
+        MemoryStats::SubStaticMeshCPUMemory(CPUSize);
     }
 }
 
-void USkeletalMesh::Serialize(FArchive& Ar)
+void USkeletalSubMesh::Serialize(FArchive& Ar)
 {
     UObject::Serialize(Ar);
 
-    if (Ar.IsLoading() && !SkeletalMeshAsset)
+    if (Ar.IsLoading() && !SkeletalSubMeshAsset)
     {
-        SkeletalMeshAsset = new FSkeletalMesh();
+        SkeletalSubMeshAsset = new FSkeletalSubMesh();
     }
 
-    if (SkeletalMeshAsset)
+    if (SkeletalSubMeshAsset)
     {
-        SkeletalMeshAsset->Serialize(Ar);
+        SkeletalSubMeshAsset->Serialize(Ar);
     }
 
     // Skeleton Serialization
     FString SkeletonPath;
     if (Ar.IsSaving() && Skeleton)
     {
-        // Skeleton의 경로는 보통 "원본.fbx_Skel_SkeletonName" 형식입니다.
-        if (SkeletalMeshAsset)
+        if (SkeletalSubMeshAsset)
         {
             FString SourceFBX, Dummy;
-            FPaths::ParseSubResourcePath(SkeletalMeshAsset->PathFileName, SourceFBX, Dummy);
+            FPaths::ParseSubResourcePath(SkeletalSubMeshAsset->PathFileName, SourceFBX, Dummy);
             SkeletonPath = SourceFBX + "_Skel_" + Skeleton->GetFName().ToString();
         }
     }
@@ -63,9 +63,9 @@ void USkeletalMesh::Serialize(FArchive& Ar)
     Ar << StaticMaterials;
 
     // Cache MaterialIndex
-    if (Ar.IsLoading() && SkeletalMeshAsset)
+    if (Ar.IsLoading() && SkeletalSubMeshAsset)
     {
-        for (FSkeletalMeshSection& Section : SkeletalMeshAsset->Sections)
+        for (FSkeletalMeshSection& Section : SkeletalSubMeshAsset->Sections)
         {
             Section.MaterialIndex = -1;
             for (int32 i = 0; i < (int32)StaticMaterials.size(); ++i)
@@ -80,26 +80,26 @@ void USkeletalMesh::Serialize(FArchive& Ar)
     }
 }
 
-const FString& USkeletalMesh::GetAssetPathFileName() const
+const FString& USkeletalSubMesh::GetAssetPathFileName() const
 {
-    if (SkeletalMeshAsset)
+    if (SkeletalSubMeshAsset)
     {
-        return SkeletalMeshAsset->PathFileName;
+        return SkeletalSubMeshAsset->PathFileName;
     }
     return EmptyPath;
 }
 
-void USkeletalMesh::SetSkeletalMeshAsset(FSkeletalMesh* InMesh)
+void USkeletalSubMesh::SetSkeletalSubMeshAsset(FSkeletalSubMesh* InMesh)
 {
-    if (SkeletalMeshAsset && SkeletalMeshAsset != InMesh)
+    if (SkeletalSubMeshAsset && SkeletalSubMeshAsset != InMesh)
     {
-        delete SkeletalMeshAsset;
+        delete SkeletalSubMeshAsset;
     }
-    SkeletalMeshAsset = InMesh;
+    SkeletalSubMeshAsset = InMesh;
 
-    if (SkeletalMeshAsset)
+    if (SkeletalSubMeshAsset)
     {
-        for (FSkeletalMeshSection& Section : SkeletalMeshAsset->Sections)
+        for (FSkeletalMeshSection& Section : SkeletalSubMeshAsset->Sections)
         {
             Section.MaterialIndex = -1;
             for (int32 i = 0; i < (int32)StaticMaterials.size(); ++i)
@@ -114,20 +114,20 @@ void USkeletalMesh::SetSkeletalMeshAsset(FSkeletalMesh* InMesh)
     }
 }
 
-void USkeletalMesh::InitResources(ID3D11Device* InDevice)
+void USkeletalSubMesh::InitResources(ID3D11Device* InDevice)
 {
-    if (!InDevice || !SkeletalMeshAsset)
+    if (!InDevice || !SkeletalSubMeshAsset)
         return;
 
     const uint32 CPUSize =
-        static_cast<uint32>(SkeletalMeshAsset->Vertices.size() * sizeof(FVertexSkinned)) +
-        static_cast<uint32>(SkeletalMeshAsset->Indices.size() * sizeof(uint32));
+        static_cast<uint32>(SkeletalSubMeshAsset->Vertices.size() * sizeof(FVertexSkinned)) +
+        static_cast<uint32>(SkeletalSubMeshAsset->Indices.size() * sizeof(uint32));
     MemoryStats::AddStaticMeshCPUMemory(CPUSize);
 
     TMeshData<FVertexSkinned> RenderMeshData;
-    RenderMeshData.Vertices = SkeletalMeshAsset->Vertices;
-    RenderMeshData.Indices = SkeletalMeshAsset->Indices;
+    RenderMeshData.Vertices = SkeletalSubMeshAsset->Vertices;
+    RenderMeshData.Indices = SkeletalSubMeshAsset->Indices;
 
-    SkeletalMeshAsset->RenderBuffer = std::make_unique<FMeshBuffer>();
-    SkeletalMeshAsset->RenderBuffer->Create(InDevice, RenderMeshData);
+    SkeletalSubMeshAsset->RenderBuffer = std::make_unique<FMeshBuffer>();
+    SkeletalSubMeshAsset->RenderBuffer->Create(InDevice, RenderMeshData);
 }

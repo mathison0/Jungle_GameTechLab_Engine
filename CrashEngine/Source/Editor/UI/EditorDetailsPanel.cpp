@@ -2079,7 +2079,23 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
             }
 
             ImGui::Separator();
-            ImGui::TextDisabled("Cached Skeletal Mesh");
+            ImGui::TextDisabled("Grouped Skeletons");
+            const TArray<FSkeletalMeshAssetListItem>& SkelFiles = FSkeletalMeshManager::Get().GetAvailableSkeletonFiles();
+            for (const FSkeletalMeshAssetListItem& Item : SkelFiles)
+            {
+                const FString Label = Item.DisplayName + "##skel_" + Item.FullPath;
+                bool bSelected = (*Val == Item.FullPath);
+                if (ImGui::Selectable(Label.c_str(), bSelected))
+                {
+                    *Val = Item.FullPath;
+                    bChanged = true;
+                }
+                if (bSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+
+            ImGui::Separator();
+            ImGui::TextDisabled("Individual Meshes");
             const TArray<FSkeletalMeshAssetListItem>& MeshFiles = FSkeletalMeshManager::Get().GetAvailableMeshFiles();
             for (const FSkeletalMeshAssetListItem& Item : MeshFiles)
             {
