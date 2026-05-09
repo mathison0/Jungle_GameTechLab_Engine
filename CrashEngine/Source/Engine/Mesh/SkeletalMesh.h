@@ -67,7 +67,11 @@ public:
 
 private:
     FSkeletalSubMesh* SkeletalSubMeshAsset = nullptr;
+    
+    // 메시에 연결된 스켈레톤 포인터.
+    // 직렬화되지 않으며, 로드 시에 부모(USkeletalMesh)에게 주입받는 런타임 전용 필드.
     USkeleton* Skeleton = nullptr;
+    
     TArray<FStaticMaterial> StaticMaterials;
 };
 

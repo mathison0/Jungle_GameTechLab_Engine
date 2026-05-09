@@ -47,6 +47,10 @@ void USkeletalMesh::Serialize(FArchive& Ar)
         {
             USkeletalSubMesh* Sub = UObjectManager::Get().CreateObject<USkeletalSubMesh>();
             Sub->Serialize(Ar);
+            
+            // 로드 시점에 부모의 스켈레톤 참조를 자식(SubMesh)에게 주입
+            Sub->SetSkeleton(Skeleton);
+
             SubMeshes.push_back(Sub);
         }
     }
@@ -82,25 +86,6 @@ void USkeletalSubMesh::Serialize(FArchive& Ar)
     if (SkeletalSubMeshAsset)
     {
         SkeletalSubMeshAsset->Serialize(Ar);
-    }
-
-    // Skeleton Serialization
-    FString SkeletonPath;
-    if (Ar.IsSaving() && Skeleton)
-    {
-        if (SkeletalSubMeshAsset)
-        {
-            FString SourceFBX, Dummy;
-            FPaths::ParseSubResourcePath(SkeletalSubMeshAsset->PathFileName, SourceFBX, Dummy);
-            SkeletonPath = SourceFBX + "_" + SkeletalMeshPrefix::Skeleton + Skeleton->GetFName().ToString();
-        }
-    }
-    
-    Ar << SkeletonPath;
-    
-    if (Ar.IsLoading() && !SkeletonPath.empty())
-    {
-        Skeleton = FSkeletonManager::Get().Load(SkeletonPath);
     }
 
     Ar << StaticMaterials;

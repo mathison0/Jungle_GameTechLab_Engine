@@ -26,9 +26,8 @@ class FSkeletalMeshManager : public TSingleton<FSkeletalMeshManager>, public IAs
 
     // path → USkeletalMesh* 캐시 (소유권은 UObjectManager)
     TMap<FString, USkeletalMesh*> SkeletalMeshCache;
-    TMap<FString, USkeletalSubMesh*> SubMeshCache;
-    
-    TArray<FSkeletalMeshAssetListItem> AvailableMeshFiles;
+
+    TArray<FSkeletalMeshAssetListItem> AvailableMeshFiles;    
     TArray<FSkeletalMeshAssetListItem> AvailableFBXFiles;
     TArray<FSkeletalMeshAssetListItem> AvailableSkeletonFiles;
 

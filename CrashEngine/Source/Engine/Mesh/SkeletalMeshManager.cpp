@@ -239,11 +239,5 @@ void FSkeletalMeshManager::Unload(const FString& Key)
 
 void FSkeletalMeshManager::ReleaseAllGPU()
 {
-    for (auto& [Key, Mesh] : SubMeshCache)
-    {
-        if (Mesh && Mesh->GetSkeletalSubMeshAsset() && Mesh->GetSkeletalSubMeshAsset()->RenderBuffer)
-            Mesh->GetSkeletalSubMeshAsset()->RenderBuffer->Release();
-    }
-    SubMeshCache.clear();
     SkeletalMeshCache.clear();
 }
