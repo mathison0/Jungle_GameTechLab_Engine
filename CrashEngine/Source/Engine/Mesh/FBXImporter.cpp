@@ -1,6 +1,7 @@
 #include "Mesh/FBXImporter.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Animation/Skeleton.h"
+#include "Animation/AnimationSequence.h"
 #include "Serialization/WindowsArchive.h"
 #include "Engine/Platform/Paths.h"
 #include "Core/Logging/LogMacros.h"
@@ -108,16 +109,15 @@ FFBXImporter::FImportedFBXAssets::FImportedFBXAssets()
 
 FFBXImporter::FImportedFBXAssets::~FImportedFBXAssets()
 {
-    for (auto* Mesh : SkeletalMeshes)
-    {
-        delete Mesh;
-    }
+    for (auto* Mesh : SkeletalMeshes) delete Mesh;
     SkeletalMeshes.clear();
+    // UObject들은 UObjectManager가 관리하므로 여기서 직접 해제하지 않음
 }
 
 FFBXImporter::FImportedFBXAssets::FImportedFBXAssets(FImportedFBXAssets&& Other) noexcept
     : SkeletalMeshes(std::move(Other.SkeletalMeshes)),
       Skeletons(std::move(Other.Skeletons)),
+      Animations(std::move(Other.Animations)),
       Materials(std::move(Other.Materials))
 {
 }
@@ -129,6 +129,7 @@ FFBXImporter::FImportedFBXAssets& FFBXImporter::FImportedFBXAssets::operator=(FI
         for (auto* Mesh : SkeletalMeshes) delete Mesh;
         SkeletalMeshes = std::move(Other.SkeletalMeshes);
         Skeletons = std::move(Other.Skeletons);
+        Animations = std::move(Other.Animations);
         Materials = std::move(Other.Materials);
     }
     return *this;
@@ -151,43 +152,59 @@ bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOp
         return false;
     }
 
-    // 1. Skeletal Meshes 캐싱
-    for (auto* ImportedMesh : Assets.SkeletalMeshes)
-    {
-        // 논리적 식별자 부여 (예: Asset/Models/Hero.fbx_Mesh_Body)
-        ImportedMesh->MeshData->PathFileName = FBXFilePath + "_Mesh_" + ImportedMesh->Name.ToString();
-
-        FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, "Mesh_" + ImportedMesh->Name.ToString());
-        
-        USkeletalSubMesh* TempMesh = UObjectManager::Get().CreateObject<USkeletalSubMesh>();
-        TempMesh->SetSkeletalSubMeshAsset(ImportedMesh->MeshData);
-        ImportedMesh->MeshData = nullptr; 
-        
-        auto it = std::find_if(Assets.Skeletons.begin(), Assets.Skeletons.end(), 
-            [&](USkeleton* S) { return S->GetFName() == ImportedMesh->SkeletonName; });
-        if (it != Assets.Skeletons.end())
-        {
-            TempMesh->SetSkeleton(*it);
-        }
-        
-        FWindowsBinWriter Writer(BinPath);
-        if (Writer.IsValid())
-        {
-            TempMesh->Serialize(Writer);
-        }
-    }
-
-    // 2. Skeletons 캐싱
+    // 1. Skeletons 캐싱 (내부 데이터용)
     for (auto* Skeleton : Assets.Skeletons)
     {
-        // "Skel_" 접두사 추가
-        FString SubName = "Skel_" + Skeleton->GetFName().ToString();
+        FString SubName = "SkeletonData_" + Skeleton->GetFName().ToString();
         FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, SubName);
         
         FWindowsBinWriter Writer(BinPath);
         if (Writer.IsValid())
         {
             Skeleton->Serialize(Writer);
+        }
+    }
+
+    // 2. USkeletalMesh 단위로 그룹화하여 캐싱 (사용자 노출용)
+    for (auto* Skeleton : Assets.Skeletons)
+    {
+        USkeletalMesh* Container = UObjectManager::Get().CreateObject<USkeletalMesh>();
+        Container->SetSkeleton(Skeleton);
+        FString SkelName = Skeleton->GetFName().ToString();
+        Container->SetAssetPathFileName(FBXFilePath + "_Skel_" + SkelName);
+
+        for (auto* ImportedMesh : Assets.SkeletalMeshes)
+        {
+            if (ImportedMesh->SkeletonName == Skeleton->GetFName())
+            {
+                USkeletalSubMesh* Sub = UObjectManager::Get().CreateObject<USkeletalSubMesh>();
+                Sub->SetSkeletalSubMeshAsset(ImportedMesh->MeshData);
+                ImportedMesh->MeshData = nullptr; // 소유권 이전
+                Sub->SetSkeleton(Skeleton);
+                
+                Container->AddSubMesh(Sub);
+            }
+        }
+
+        if (!Container->GetSubMeshes().empty())
+        {
+            FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, "Skel_" + SkelName);
+            FWindowsBinWriter Writer(BinPath);
+            if (Writer.IsValid())
+            {
+                Container->Serialize(Writer);
+            }
+        }
+    }
+
+    // 3. Animations 캐싱
+    for (auto* Anim : Assets.Animations)
+    {
+        FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, "Anim_" + Anim->GetFName().ToString());
+        FWindowsBinWriter Writer(BinPath);
+        if (Writer.IsValid())
+        {
+            Anim->Serialize(Writer);
         }
     }
 
@@ -201,6 +218,7 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
     for (auto* Mesh : OutAssets.SkeletalMeshes) delete Mesh;
     OutAssets.SkeletalMeshes.clear();
     OutAssets.Skeletons.clear();
+    OutAssets.Animations.clear();
     OutAssets.Materials.clear();
 
     FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
@@ -233,6 +251,7 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
             }
         }
         ExtractMeshAndSkinning(RootNode, OutAssets);
+        ExtractAnimations(Scene, OutAssets);
     }
     
     Scene->Destroy();
@@ -405,4 +424,73 @@ void FFBXImporter::ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh)
     }
 }
 
-void FFBXImporter::ExtractAnimations(FbxScene* scene) {}
+// PlaceHolder, 아직 미구현
+void FFBXImporter::ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets)
+{
+    // 이하 AI가 작성하고 아직 검증되지 않은 코드입니다. 
+    
+    // int AnimStackCount = Scene->GetSrcObjectCount<FbxAnimStack>();
+    // if (AnimStackCount == 0 || OutAssets.Skeletons.empty()) return;
+    //
+    // USkeleton* TargetSkeleton = OutAssets.Skeletons[0];
+    // FbxNode* RootNode = Scene->GetRootNode();
+    //
+    // for (int i = 0; i < AnimStackCount; i++)
+    // {
+    //     FbxAnimStack* AnimStack = Scene->GetSrcObject<FbxAnimStack>(i);
+    //     Scene->SetCurrentAnimationStack(AnimStack);
+    //
+    //     FbxTimeSpan TimeSpan = AnimStack->GetLocalTimeSpan();
+    //     FbxTime Start = TimeSpan.GetStart();
+    //     FbxTime End = TimeSpan.GetStop();
+    //     FbxTime Duration = End - Start;
+    //
+    //     UAnimationSequence* AnimSeq = UObjectManager::Get().CreateObject<UAnimationSequence>();
+    //     AnimSeq->SetFName(AnimStack->GetName());
+    //     AnimSeq->SetSkeleton(TargetSkeleton);
+    //     
+    //     float FPS = 30.0f; 
+    //     FbxTime FrameStep;
+    //     FrameStep.SetTime(0, 0, 0, 1, 0, FbxTime::eFrames30);
+    //     
+    //     int32 NumFrames = (int32)(Duration.Get() / FrameStep.Get()) + 1;
+    //     if (NumFrames <= 0) continue;
+    //
+    //     AnimSeq->SetNumFrames(NumFrames);
+    //     AnimSeq->SetSequenceLength((float)Duration.GetSecondDouble());
+    //     AnimSeq->SetFPS(FPS);
+    //
+    //     const TArray<FBoneInfo>& Bones = TargetSkeleton->GetBones();
+    //     AnimSeq->GetTracks().resize(Bones.size());
+    //
+    //     for (int32 Frame = 0; Frame < NumFrames; Frame++)
+    //     {
+    //         FbxTime CurrentTime = Start + FrameStep * Frame;
+    //         
+    //         for (int32 BoneIdx = 0; BoneIdx < (int32)Bones.size(); BoneIdx++)
+    //         {
+    //             const FBoneInfo& BoneInfo = Bones[BoneIdx];
+    //             FbxNode* BoneNode = RootNode->FindChild(BoneInfo.Name.ToString().c_str(), true);
+    //             
+    //             if (BoneNode)
+    //             {
+    //                 FbxAMatrix LocalMatrix = BoneNode->EvaluateLocalTransform(CurrentTime);
+    //                 FbxVector4 T = LocalMatrix.GetT();
+    //                 FbxQuaternion Q = LocalMatrix.GetQ();
+    //                 FbxVector4 S = LocalMatrix.GetS();
+    //
+    //                 AnimSeq->GetTracks()[BoneIdx].PosKeys.push_back(FVector((float)T[0], (float)T[1], (float)T[2]));
+    //                 AnimSeq->GetTracks()[BoneIdx].RotKeys.push_back(FQuat((float)Q[0], (float)Q[1], (float)Q[2], (float)Q[3]));
+    //                 AnimSeq->GetTracks()[BoneIdx].ScaleKeys.push_back(FVector((float)S[0], (float)S[1], (float)S[2]));
+    //             }
+    //             else
+    //             {
+    //                 AnimSeq->GetTracks()[BoneIdx].PosKeys.push_back(BoneInfo.ReferenceTransform.Location);
+    //                 AnimSeq->GetTracks()[BoneIdx].RotKeys.push_back(BoneInfo.ReferenceTransform.Rotation);
+    //                 AnimSeq->GetTracks()[BoneIdx].ScaleKeys.push_back(BoneInfo.ReferenceTransform.Scale);
+    //             }
+    //         }
+    //     }
+    //     OutAssets.Animations.push_back(AnimSeq);
+    // }
+}

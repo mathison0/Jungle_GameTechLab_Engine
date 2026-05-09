@@ -2,6 +2,21 @@
 
 #include "Object/Object.h"
 #include "Animation/Skeleton.h"
+#include "Math/Vector.h"
+#include "Math/Quat.h"
+
+struct FRawAnimSequenceTrack
+{
+    TArray<FVector> PosKeys;
+    TArray<FQuat> RotKeys;
+    TArray<FVector> ScaleKeys;
+
+    friend FArchive& operator<<(FArchive& Ar, FRawAnimSequenceTrack& Track)
+    {
+        Ar << Track.PosKeys << Track.RotKeys << Track.ScaleKeys;
+        return Ar;
+    }
+};
 
 class UAnimationSequence : public UObject
 {
@@ -10,15 +25,27 @@ public:
 
     UAnimationSequence() = default;
 
-    void Serialize(FArchive& Ar) override
-    {
-        UObject::Serialize(Ar);
-        // Animation data serialization will be implemented in the animation phase
-    }
+    void Serialize(FArchive& Ar) override;
 
     void SetSkeleton(USkeleton* InSkeleton) { Skeleton = InSkeleton; }
     USkeleton* GetSkeleton() const { return Skeleton; }
 
+    void SetNumFrames(int32 InNum) { NumFrames = InNum; }
+    int32 GetNumFrames() const { return NumFrames; }
+
+    void SetSequenceLength(float InLen) { SequenceLength = InLen; }
+    float GetSequenceLength() const { return SequenceLength; }
+
+    void SetFPS(float InFPS) { FPS = InFPS; }
+    float GetFPS() const { return FPS; }
+
+    TArray<FRawAnimSequenceTrack>& GetTracks() { return Tracks; }
+    const TArray<FRawAnimSequenceTrack>& GetTracks() const { return Tracks; }
+
 private:
     USkeleton* Skeleton = nullptr;
+    TArray<FRawAnimSequenceTrack> Tracks; // Index matches bone index in USkeleton
+    int32 NumFrames = 0;
+    float SequenceLength = 0.0f;
+    float FPS = 30.0f;
 };

@@ -2079,11 +2079,11 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
             }
 
             ImGui::Separator();
-            ImGui::TextDisabled("Grouped Skeletons");
-            const TArray<FSkeletalMeshAssetListItem>& SkelFiles = FSkeletalMeshManager::Get().GetAvailableSkeletonFiles();
-            for (const FSkeletalMeshAssetListItem& Item : SkelFiles)
+            ImGui::TextDisabled("Skeletal Mesh Assets (Skeleton Grouped)");
+            const TArray<FSkeletalMeshAssetListItem>& SkelMeshFiles = FSkeletalMeshManager::Get().GetAvailableMeshFiles();
+            for (const FSkeletalMeshAssetListItem& Item : SkelMeshFiles)
             {
-                const FString Label = Item.DisplayName + "##skel_" + Item.FullPath;
+                const FString Label = Item.DisplayName + "##skelmesh_" + Item.FullPath;
                 bool bSelected = (*Val == Item.FullPath);
                 if (ImGui::Selectable(Label.c_str(), bSelected))
                 {
@@ -2095,11 +2095,11 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
             }
 
             ImGui::Separator();
-            ImGui::TextDisabled("Individual Meshes");
-            const TArray<FSkeletalMeshAssetListItem>& MeshFiles = FSkeletalMeshManager::Get().GetAvailableMeshFiles();
-            for (const FSkeletalMeshAssetListItem& Item : MeshFiles)
+            ImGui::TextDisabled("Raw Skeleton Data");
+            const TArray<FSkeletalMeshAssetListItem>& SkelFiles = FSkeletalMeshManager::Get().GetAvailableSkeletonFiles();
+            for (const FSkeletalMeshAssetListItem& Item : SkelFiles)
             {
-                const FString Label = Item.DisplayName + "##bin_" + Item.FullPath;
+                const FString Label = Item.DisplayName + "##skeldata_" + Item.FullPath;
                 bool bSelected = (*Val == Item.FullPath);
                 if (ImGui::Selectable(Label.c_str(), bSelected))
                 {

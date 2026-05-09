@@ -9,10 +9,13 @@ USkeleton* FSkeletonManager::Find(const FString& Key)
     FString SourcePath, SubResource;
     FPaths::ParseSubResourcePath(Key, SourcePath, SubResource);
     
-    // 접두사 보정
-    if (!SubResource.empty() && SubResource.find("Skel_") != 0)
+    // 접두사 보정 (SkeletonData_ 로 변경)
+    if (!SubResource.empty() && SubResource.find("SkeletonData_") != 0)
     {
-        SubResource = "Skel_" + SubResource;
+        if (SubResource.find("Skel_") == 0)
+            SubResource = "SkeletonData_" + SubResource.substr(5);
+        else
+            SubResource = "SkeletonData_" + SubResource;
     }
 
     FString CacheKey = FPaths::BuildSubResourceCachePath(SourcePath, SubResource);
@@ -26,9 +29,12 @@ void FSkeletonManager::Unload(const FString& Key)
     FString SourcePath, SubResource;
     FPaths::ParseSubResourcePath(Key, SourcePath, SubResource);
     
-    if (!SubResource.empty() && SubResource.find("Skel_") != 0)
+    if (!SubResource.empty() && SubResource.find("SkeletonData_") != 0)
     {
-        SubResource = "Skel_" + SubResource;
+        if (SubResource.find("Skel_") == 0)
+            SubResource = "SkeletonData_" + SubResource.substr(5);
+        else
+            SubResource = "SkeletonData_" + SubResource;
     }
 
     FString CacheKey = FPaths::BuildSubResourceCachePath(SourcePath, SubResource);
@@ -42,9 +48,12 @@ USkeleton* FSkeletonManager::LoadSkeleton(const FString& PathFileName)
     FPaths::ParseSubResourcePath(PathFileName, SourcePath, SubResource);
     
     // 접두사 보정
-    if (!SubResource.empty() && SubResource.find("Skel_") != 0)
+    if (!SubResource.empty() && SubResource.find("SkeletonData_") != 0)
     {
-        SubResource = "Skel_" + SubResource;
+        if (SubResource.find("Skel_") == 0)
+            SubResource = "SkeletonData_" + SubResource.substr(5);
+        else
+            SubResource = "SkeletonData_" + SubResource;
     }
     
     FString CacheKey = FPaths::BuildSubResourceCachePath(SourcePath, SubResource);

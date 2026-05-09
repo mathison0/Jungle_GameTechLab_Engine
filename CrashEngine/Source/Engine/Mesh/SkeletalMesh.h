@@ -83,6 +83,8 @@ public:
     void SetAssetPathFileName(const FString& InPath) { PathFileName = InPath; }
     const FString& GetAssetPathFileName() const { return PathFileName; }
 
+    void Serialize(FArchive& Ar) override;
+
 private:
     USkeleton* Skeleton = nullptr;
     TArray<USkeletalSubMesh*> SubMeshes;

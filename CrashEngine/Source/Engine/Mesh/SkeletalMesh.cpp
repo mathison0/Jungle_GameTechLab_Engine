@@ -9,6 +9,48 @@
 IMPLEMENT_CLASS(USkeletalSubMesh, UObject)
 IMPLEMENT_CLASS(USkeletalMesh, UObject)
 
+void USkeletalMesh::Serialize(FArchive& Ar)
+{
+    UObject::Serialize(Ar);
+
+    FString SkeletonPath;
+    if (Ar.IsSaving() && Skeleton)
+    {
+        // Skeleton 자체의 캐시 경로 (예: Hero.fbx_SkeletonData_Humanoid)
+        FString SourceFBX, Sub;
+        FPaths::ParseSubResourcePath(PathFileName, SourceFBX, Sub);
+        SkeletonPath = SourceFBX + "_SkeletonData_" + Skeleton->GetFName().ToString();
+    }
+    
+    Ar << SkeletonPath;
+
+    if (Ar.IsLoading() && !SkeletonPath.empty())
+    {
+        Skeleton = FSkeletonManager::Get().Load(SkeletonPath);
+    }
+
+    int32 SubMeshCount = (int32)SubMeshes.size();
+    Ar << SubMeshCount;
+
+    if (Ar.IsSaving())
+    {
+        for (auto* Sub : SubMeshes)
+        {
+            Sub->Serialize(Ar);
+        }
+    }
+    else
+    {
+        SubMeshes.clear();
+        for (int32 i = 0; i < SubMeshCount; ++i)
+        {
+            USkeletalSubMesh* Sub = UObjectManager::Get().CreateObject<USkeletalSubMesh>();
+            Sub->Serialize(Ar);
+            SubMeshes.push_back(Sub);
+        }
+    }
+}
+
 static const FString EmptyPath;
 
 USkeletalSubMesh::USkeletalSubMesh()

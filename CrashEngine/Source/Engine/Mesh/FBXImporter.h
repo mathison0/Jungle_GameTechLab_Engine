@@ -10,6 +10,7 @@
 
 struct FSkeletalSubMesh;
 class USkeleton;
+class UAnimationSequence;
 
 struct FFBXImporter
 {
@@ -30,6 +31,7 @@ struct FFBXImporter
     {
         TArray<FImportedSkeletalMesh*> SkeletalMeshes;
         TArray<USkeleton*> Skeletons;
+        TArray<UAnimationSequence*> Animations;
         TArray<FStaticMaterial> Materials;
 
         FImportedFBXAssets();
@@ -41,18 +43,18 @@ struct FFBXImporter
         FImportedFBXAssets(FImportedFBXAssets&& Other) noexcept;
         FImportedFBXAssets& operator=(FImportedFBXAssets&& Other) noexcept;
     };
-    
+
     // FBX 파일을 분석하여 발견된 모든 리소스를 각각의 .bin 파일로 캐시 폴더에 저장합니다.
     static bool ImportAndCacheAll(const FString& FBXFilePath, const FImportOptions& Options);
-    
+
     // FBX 파일로부터 모든 메시와 스켈레톤 데이터를 추출합니다.
     static bool ImportAll(const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& OutAssets);
-    
+
 private:
     static void Initialize();
     static void ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton);
     static void ExtractMeshAndSkinning(FbxNode* Node, FImportedFBXAssets& InAsset);
-    static void ExtractAnimations(FbxScene* scene); // Placeholder, 아직 구현 안됨.
+    static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);  // PlaceHolder, 아직 미구현
     static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxMesh* InFbxMesh);
     static FTransform GetTransformFromNode(FbxNode* Node);
     static void ExtractWeights(FbxCluster* InCluster, int InBoneIndex);
