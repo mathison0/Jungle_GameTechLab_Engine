@@ -1,0 +1,54 @@
+{
+  "Actors" : [{
+      "ClassName" : "AActor",
+      "Name" : "AActor_3",
+      "NonSceneComponents" : [],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "USkeletalMeshComponent",
+            "Name" : "USkeletalMeshComponent_0",
+            "Properties" : {
+              "Cast Shadow" : true,
+              "CollisionChannel" : 1,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : false,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Skeletal Mesh" : null,
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : true,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_3",
+        "Properties" : {
+          "Location" : [3.837977, 11.324571, 9.450865],
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
+    }],
+  "ClassName" : "UWorld",
+  "ContextHandle" : "Default",
+  "ContextName" : "Default",
+  "Name" : "FbxTest",
+  "PerspectiveCamera" : {
+    "FOV" : 1.047198,
+    "FarClip" : 1000.000000,
+    "Location" : [4.955251, 14.765008, 12.902689],
+    "NearClip" : 0.100000,
+    "Rotation" : [-0.000007, 43.658997, -107.991074]
+  },
+  "Version" : 3,
+  "WorldType" : "Editor"
+}

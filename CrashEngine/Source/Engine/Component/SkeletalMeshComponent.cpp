@@ -1,97 +1,50 @@
-﻿#include "Component/SkeletalMeshComponent.h"
-#include "Render/Scene/Proxies/Primitive/SkeletalMeshSceneProxy.h"
-#include "Object/ObjectFactory.h"
-#include "Serialization/Archive.h"
+#include "Component/SkeletalMeshComponent.h"
+#include "Engine/Runtime/Engine.h"
 
 IMPLEMENT_CLASS(USkeletalMeshComponent, USkinnedMeshComponent)
 
-FPrimitiveProxy* USkeletalMeshComponent::CreateSceneProxy()
+void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
-    return new FSkeletalMeshSceneProxy(this);
+    SkeletalMesh = InMesh;
+    if (InMesh)
+    {
+        SkeletalMeshPath = InMesh->GetAssetPathFileName();
+    }
+    else
+    {
+        SkeletalMeshPath = "None";
+    }
+    // TODO: Init skeletal mesh resources, update bounds, etc.
+    MarkRenderStateDirty();
+    MarkWorldBoundsDirty();
 }
 
-FSkeletalMeshBuffer* USkeletalMeshComponent::GetMeshBuffer() const 
+void USkeletalMeshComponent::Serialize(FArchive& Ar)
 {
-	// Un-comment once the SkeletalMesh class is ready
-
-    //if (!SkeletalMesh)
-    //    return nullptr;
-    //FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
-    //if (!Asset || !Asset->RenderBuffer)
-    //    return nullptr;
-    //return Asset->RenderBuffer.get();
-	return nullptr;	// Placeholder
+    USkinnedMeshComponent::Serialize(Ar);
+    Ar << SkeletalMeshPath;
 }
 
-void USkeletalMeshComponent::Serialize(FArchive& Ar) 
+void USkeletalMeshComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
-	UMeshComponent::Serialize(Ar);
-	Ar << SkeletalMeshPath;
-	//Ar << MaterialSlots;
-};
-void USkeletalMeshComponent::PostDuplicate() 
-{
- //   UMeshComponent::PostDuplicate();
-	//if (!SkeletalMeshPath.empty() && SkeletalMeshPath != "None")
-	//{
-	//	ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
- //       USkeletalMesh* Loaded; // = FObjManager::LoadObjSkeletalMesh(SkeletalMeshPath, Device);
-	//	if (Loaded)
-	//	{
-	//		SetSkeletalMesh(Loaded);
- //       }
-	//}
-};
-
-void USkeletalMeshComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) 
-{
-    /*UMeshComponent::GetEditableProperties(OutProps);
+    USkinnedMeshComponent::GetEditableProperties(OutProps);
     OutProps.push_back({ "Skeletal Mesh", EPropertyType::SkeletalMeshRef, &SkeletalMeshPath });
+}
 
-	*/
-};
-void USkeletalMeshComponent::PostEditProperty(const char* PropertyName) 
+void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
 {
-    //UMeshComponent::PostEditProperty(PropertyName);
+    USkinnedMeshComponent::PostEditProperty(PropertyName);
 
-    //if (strcmp(PropertyName, "Skeletal Mesh") == 0)
-    //{
-    //    if (SkeletalMeshPath.empty() || SkeletalMeshPath == "None")
-    //    {
-    //        SkeletalMesh = nullptr;
-    //    }
-    //    else
-    //    {
-    //        ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    //        USkeletalMesh* Loaded;// = FObjManager::LoadObjStaticMesh(SkeletalMeshPath, Device);
-    //        SetSkeletalMesh(Loaded);
-    //    }
-    //    CacheLocalBounds();
-    //    MarkWorldBoundsDirty();
-    //}
-
-    //if (strncmp(PropertyName, "Element ", 8) == 0)
-    //{
-    //    // Parse the numeric suffix after the 'Element ' prefix.
-    //    int32 Index = atoi(&PropertyName[8]);
-
-    //    // Validate the material slot index before applying the edit.
-    //    if (Index >= 0 && Index < (int32)MaterialSlots.size())
-    //    {
-    //        FString NewMatPath = MaterialSlots[Index].Path;
-
-    //        if (NewMatPath == "None" || NewMatPath.empty())
-    //        {
-    //            SetMaterial(Index, nullptr);
-    //        }
-    //        else
-    //        {
-    //            UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateStaticMeshMaterial(NewMatPath);
-    //            if (LoadedMat)
-    //            {
-    //                SetMaterial(Index, LoadedMat);
-    //            }
-    //        }
-    //    }
-    //}
-};
+    if (strcmp(PropertyName, "Skeletal Mesh") == 0)
+    {
+        if (SkeletalMeshPath.empty() || SkeletalMeshPath == "None")
+        {
+            SkeletalMesh = nullptr;
+        }
+        else
+        {
+            USkeletalMesh* Loaded = FSkeletalMeshManager::Get().Load(SkeletalMeshPath);
+            SetSkeletalMesh(Loaded);
+        }
+    }
+}

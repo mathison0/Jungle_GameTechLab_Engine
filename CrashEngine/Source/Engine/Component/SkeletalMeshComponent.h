@@ -1,29 +1,28 @@
-﻿#pragma once
+#pragma once
 
 #include "Component/SkinnedMeshComponent.h"
-#include "Render/RHI/D3D11/Buffers/SkeletalMeshBuffer.h"
+#include "Core/PropertyTypes.h"
+#include "Mesh/SkeletalMeshManager.h"
+#include "Mesh/SkeletalMesh.h"
 
 class USkeletalMeshComponent : public USkinnedMeshComponent
 {
 public:
     DECLARE_CLASS(USkeletalMeshComponent, USkinnedMeshComponent)
-    USkeletalMeshComponent() = default;
 
-	FPrimitiveProxy* CreateSceneProxy() override;
-    FSkeletalMeshBuffer* GetMeshBuffer() const override;
+    USkeletalMeshComponent() = default;
     ~USkeletalMeshComponent() override = default;
 
-	void Serialize(FArchive& Ar) override;
-    void PostDuplicate() override;
+    void SetSkeletalMesh(USkeletalMesh* InMesh);
+    USkeletalMesh* GetSkeletalMesh() const { return SkeletalMesh; }
 
-	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
-	void PostEditProperty(const char* PropertyName) override;
+    void Serialize(FArchive& Ar) override;
+    
+    // Property Editor 지원
+    void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
+    void PostEditProperty(const char* PropertyName) override;
+
+private:
+    USkeletalMesh* SkeletalMesh = nullptr;
+    FString SkeletalMeshPath = "None";
 };
-
-/*
-= scene proxy 생성
-= 에디터 property 노출
-= serialize/reload
-= tick 시 pose 갱신 호출
-= 나중에 animation instance 연결
-*/

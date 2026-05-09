@@ -45,6 +45,12 @@ FName::FName()
 {
 }
 
+FName::FName(FName* InName)
+    : ComparisonIndex(InName->ComparisonIndex),
+      DisplayIndex(InName->ComparisonIndex)
+{
+}
+
 FName::FName(const char* InName) : FName(InName ? FString(InName) : FString())
 {
 }

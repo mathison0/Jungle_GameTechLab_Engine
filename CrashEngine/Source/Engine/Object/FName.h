@@ -11,6 +11,7 @@ class FName
 {
 public:
     FName();
+    FName(FName* InName);
     FName(const char* InName);
     FName(const FString& InName);
 

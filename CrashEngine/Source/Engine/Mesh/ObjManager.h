@@ -51,8 +51,10 @@ public:
 
     UStaticMesh* LoadObjStaticMesh(const FString& PathFileName, bool bRefreshAssetLists = true);
     UStaticMesh* LoadObjStaticMesh(const FString& PathFileName, const FImportOptions& Options, bool bRefreshAssetLists = true);
-    void ScanMeshAssets();
+
+    void ScanMeshCacheFiles();
     const TArray<FMeshAssetListItem>& GetAvailableMeshFiles() const { return AvailableMeshFiles; }
+    
     void ScanObjSourceFiles();
     const TArray<FMeshAssetListItem>& GetAvailableObjFiles() const { return AvailableObjFiles; }
 

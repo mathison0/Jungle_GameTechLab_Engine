@@ -207,7 +207,7 @@ bool FObjImporter::ParseObj(const FString& ObjFilePath, FObjInfo& OutObjInfo)
         return false;
     }
 
-    size_t FileSize = static_cast<size_t>(File.tellg());
+    uint64 FileSize = File.tellg();
     File.seekg(0, std::ios::beg);
     TArray<char> Buffer(FileSize);
     if (!File.read(Buffer.data(), FileSize))
@@ -601,27 +601,6 @@ FString FObjImporter::ConvertMtlInfoToJson(const FObjMaterialInfo* MtlInfo)
     return JsonPath;
 }
 
-FVector FObjImporter::RemapPosition(const FVector& ObjPos, EForwardAxis Axis)
-{
-    switch (Axis)
-    {
-    case EForwardAxis::X:
-        return FVector(ObjPos.X, ObjPos.Z, ObjPos.Y);
-    case EForwardAxis::NegX:
-        return FVector(-ObjPos.X, -ObjPos.Z, ObjPos.Y);
-    case EForwardAxis::Y:
-        return FVector(ObjPos.Y, ObjPos.X, ObjPos.Z);
-    case EForwardAxis::NegY:
-        return FVector(-ObjPos.Y, -ObjPos.X, ObjPos.Z);
-    case EForwardAxis::Z:
-        return FVector(ObjPos.Z, ObjPos.X, ObjPos.Y);
-    case EForwardAxis::NegZ:
-        return FVector(-ObjPos.Z, ObjPos.X, ObjPos.Y);
-    default:
-        return FVector(ObjPos.X, ObjPos.Z, ObjPos.Y);
-    }
-}
-
 bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInfo>& MtlInfos, const FImportOptions& Options, FStaticMesh& OutMesh, TArray<FStaticMaterial>& OutMaterials)
 {
     OutMesh = FStaticMesh();
@@ -787,16 +766,16 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
                 {
                     FVertexPNCT_T NewVertex;
 
-                    NewVertex.Position = RemapPosition(ObjInfo.Positions[Key.p], Options.ForwardAxis) * Options.Scale;
+                    NewVertex.Position = FMeshImporterUtils::RemapPosition(ObjInfo.Positions[Key.p], Options.ForwardAxis) * Options.Scale;
 
                     FVector FinalNormal;
                     if (Key.n == -1)
                     {
-                        FinalNormal = RemapPosition(FaceNormal, Options.ForwardAxis).Normalized();
+                        FinalNormal = FMeshImporterUtils::RemapPosition(FaceNormal, Options.ForwardAxis).Normalized();
                     }
                     else
                     {
-                        FinalNormal = RemapPosition(ObjInfo.Normals[Key.n], Options.ForwardAxis).Normalized();
+                        FinalNormal = FMeshImporterUtils::RemapPosition(ObjInfo.Normals[Key.n], Options.ForwardAxis).Normalized();
                     }
                     NewVertex.Normal = FinalNormal;
 
@@ -812,8 +791,8 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
 
                     NewVertex.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-                    FVector WorldT = RemapPosition(T, Options.ForwardAxis).Normalized();
-                    FVector WorldB = RemapPosition(B, Options.ForwardAxis).Normalized();
+                    FVector WorldT = FMeshImporterUtils::RemapPosition(T, Options.ForwardAxis).Normalized();
+                    FVector WorldB = FMeshImporterUtils::RemapPosition(B, Options.ForwardAxis).Normalized();
                     float w = (FinalNormal.Cross(WorldT).Dot(WorldB) < 0.0f) ? -1.0f : 1.0f;
                     NewVertex.Tangent = FVector4(WorldT.X, WorldT.Y, WorldT.Z, w);
 

@@ -1,4 +1,4 @@
-﻿// 에디터 영역의 세부 동작을 구현합니다.
+// 에디터 영역의 세부 동작을 구현합니다.
 #include "Editor/EditorEngine.h"
 
 #include "Core/Logging/LogMacros.h"
@@ -11,11 +11,11 @@
 #include "Viewport/Viewport.h"
 #include "Object/ObjectFactory.h"
 #include "Mesh/ObjManager.h"
+#include "Mesh/SkeletalMeshManager.h"
 #include "Input/InputSystem.h"
 #include "GameFramework/AActor.h"
 #include "Materials/MaterialManager.h"
 #include "Engine/Platform/Paths.h"
-#include "Viewport/Viewport.h"
 #include "Profiling/GPUProfiler.h"
 #include "Profiling/Stats.h"
 #include "Render/Execute/Passes/Scene/ShadowMapPass.h"
@@ -101,15 +101,20 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 
 	ViewportInputRouter.SetOwnerWindow(InWindow->GetHWND());
 
-	FObjManager::Get().ScanMeshAssets();
+	FObjManager::Get().SetDevice(Renderer.GetFD3DDevice().GetDevice());
+    FSkeletalMeshManager::Get().SetDevice(Renderer.GetFD3DDevice().GetDevice());
+    
+	FObjManager::Get().ScanMeshCacheFiles();
 	FObjManager::Get().ScanObjSourceFiles();
+    FSkeletalMeshManager::Get().ScanMeshCacheFiles();
+    FSkeletalMeshManager::Get().ScanFBXSourceFiles();
 	FMaterialManager::Get().ScanMaterialAssets();
 	UE_LOG(EditorEngine, Debug, "Asset registries scanned.");
-	FObjManager::Get().SetDevice(Renderer.GetFD3DDevice().GetDevice());
 	FMaterialManager::Get().SetDevice(Renderer.GetFD3DDevice().GetDevice());
 	PreloadDefaultObjAssets(Renderer.GetFD3DDevice().GetDevice());
 
-	FObjManager::Get().ScanMeshAssets();
+	FObjManager::Get().ScanMeshCacheFiles();
+    FSkeletalMeshManager::Get().ScanMeshCacheFiles();
 
     FMaterialManager::Get().ScanMaterialAssets();
 
@@ -164,7 +169,7 @@ void UEditorEngine::OnWindowResized(uint32 Width, uint32 Height)
 
 void UEditorEngine::Tick(float DeltaTime)
 {
-    // PIE or Gameplay 중에는 셰이더 핫 리로드를 비활성화하여 스터터링 방지
+    // PIE or Gameplay �߿��� ���̴� �� ���ε带 ��Ȱ��ȭ�Ͽ� �����͸� ����
     FShaderManager::SetHotReloadEnabled(!IsPlayingInEditor());
     if (!IsPlayingInEditor())
     {
@@ -195,8 +200,8 @@ void UEditorEngine::Tick(float DeltaTime)
 	ViewportInputRouter.SetGuiCaptureState(GuiCapture);
 
 	/*
-     * note: RegisterViewportInputTargets에서 사용되는 ViewportClient의 Rect는 현재 프레임이 아닌 이전 프레임에서 캐시된 ViewportScreenRect임
-     *       ViewportScreenRect는 FLevelViewportLayout::RenderViewportUI 내의 ImGui 문맥 내에서만 갱신이 가능하기 때문에 이러한 타이밍이 불가피함
+     * note: RegisterViewportInputTargets���� ���Ǵ� ViewportClient�� Rect�� ���� �������� �ƴ� ���� �����ӿ��� ĳ�õ� ViewportScreenRect��
+     *       ViewportScreenRect�� FLevelViewportLayout::RenderViewportUI ���� ImGui ���� �������� ������ �����ϱ� ������ �̷��� Ÿ�̹��� �Ұ�����
 	 */
 
     RegisterViewportInputTargets();
