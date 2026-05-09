@@ -788,6 +788,11 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
             {
                 Renderer.CollectWorldBoundsDebug(Renderer.GetCollectedPrimitives().VisibleProxies, Scene);
             }
+
+			if (true /*ShowFlags.bSkeletalDebug*/)
+            {
+				Renderer.CollectSkeletalDebug(Scene);
+			}
         }
 
         // Stat overlays are rendered by ImGui in FLevelViewportLayout.

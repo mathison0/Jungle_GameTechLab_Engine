@@ -450,7 +450,7 @@ FStaticMeshBuffer* GetBoneConeMeshBuffer()
     UStaticMesh* Cone = FObjManager::Get().Find(ConePath);
     if (!Cone)
     {
-        // Preload pass missed it (first frame after registry scan): try loading on demand.
+        // Retry
         Cone = FObjManager::Get().Load(ConePath);
         if (!Cone)
         {
@@ -559,7 +559,7 @@ void DrawCommandBuild::BuildSkeletalDebugDrawCommand(FRenderPipelineContext& Con
                 const FVector ParentPos = Instance.Bones[Bone.ParentIndex].WorldMatrix.GetLocation();
                 ConeWorld = MakeBoneConeWorld(ParentPos, BonePos);
 
-                SkeletonLines.AddLine(ParentPos, BonePos, FVector4(1, 1, 1, 1), FVector4(1, 1, 1, 1));
+                SkeletonLines.AddLine(ParentPos, BonePos, Bone.Color.ToVector4(), Bone.Color.ToVector4());
             }
             else
             {
