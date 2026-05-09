@@ -2079,7 +2079,7 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
             }
 
             ImGui::Separator();
-            ImGui::TextDisabled("Skeletal Mesh Assets (Skeleton Grouped)");
+            ImGui::TextDisabled("Skeletal Mesh");
             const TArray<FSkeletalMeshAssetListItem>& SkelMeshFiles = FSkeletalMeshManager::Get().GetAvailableMeshFiles();
             for (const FSkeletalMeshAssetListItem& Item : SkelMeshFiles)
             {
@@ -2095,11 +2095,11 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
             }
 
             ImGui::Separator();
-            ImGui::TextDisabled("Raw Skeleton Data");
+            ImGui::TextDisabled("Skeletons");
             const TArray<FSkeletalMeshAssetListItem>& SkelFiles = FSkeletalMeshManager::Get().GetAvailableSkeletonFiles();
             for (const FSkeletalMeshAssetListItem& Item : SkelFiles)
             {
-                const FString Label = Item.DisplayName + "##skeldata_" + Item.FullPath;
+                const FString Label = Item.DisplayName + "##skeleton_" + Item.FullPath;
                 bool bSelected = (*Val == Item.FullPath);
                 if (ImGui::Selectable(Label.c_str(), bSelected))
                 {

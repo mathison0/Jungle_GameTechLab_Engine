@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "Animation/SkeletonManager.h"
+#include "Mesh/SkeletonManager.h"
 #include "Engine/Profiling/MemoryStats.h"
 #include "Platform/Paths.h"
 
@@ -13,13 +13,13 @@ void USkeletalMesh::Serialize(FArchive& Ar)
 {
     UObject::Serialize(Ar);
 
+    // 1. 스켈레톤 참조 정보 직렬화
     FString SkeletonPath;
     if (Ar.IsSaving() && Skeleton)
     {
-        // Skeleton 자체의 캐시 경로 (예: Hero.fbx_SkeletonData_Humanoid)
         FString SourceFBX, Sub;
         FPaths::ParseSubResourcePath(PathFileName, SourceFBX, Sub);
-        SkeletonPath = SourceFBX + "_SkeletonData_" + Skeleton->GetFName().ToString();
+        SkeletonPath = SourceFBX + "_" + SkeletalMeshPrefix::Skeleton + Skeleton->GetFName().ToString();
     }
     
     Ar << SkeletonPath;
@@ -29,6 +29,7 @@ void USkeletalMesh::Serialize(FArchive& Ar)
         Skeleton = FSkeletonManager::Get().Load(SkeletonPath);
     }
 
+    // 2. 하위 메시(SubMesh) 목록 직렬화
     int32 SubMeshCount = (int32)SubMeshes.size();
     Ar << SubMeshCount;
 
@@ -91,7 +92,7 @@ void USkeletalSubMesh::Serialize(FArchive& Ar)
         {
             FString SourceFBX, Dummy;
             FPaths::ParseSubResourcePath(SkeletalSubMeshAsset->PathFileName, SourceFBX, Dummy);
-            SkeletonPath = SourceFBX + "_Skel_" + Skeleton->GetFName().ToString();
+            SkeletonPath = SourceFBX + "_" + SkeletalMeshPrefix::Skeleton + Skeleton->GetFName().ToString();
         }
     }
     

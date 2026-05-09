@@ -1,6 +1,6 @@
 #include "Mesh/FBXImporter.h"
 #include "Mesh/SkeletalMesh.h"
-#include "Animation/Skeleton.h"
+#include "Mesh/Skeleton.h"
 #include "Animation/AnimationSequence.h"
 #include "Serialization/WindowsArchive.h"
 #include "Engine/Platform/Paths.h"
@@ -152,10 +152,10 @@ bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOp
         return false;
     }
 
-    // 1. Skeletons 캐싱 (내부 데이터용)
+    // 1. 스켈레톤 데이터 캐싱 (원본 데이터 보존용)
     for (auto* Skeleton : Assets.Skeletons)
     {
-        FString SubName = "SkeletonData_" + Skeleton->GetFName().ToString();
+        FString SubName = SkeletalMeshPrefix::Skeleton + Skeleton->GetFName().ToString();
         FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, SubName);
         
         FWindowsBinWriter Writer(BinPath);
@@ -165,13 +165,13 @@ bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOp
         }
     }
 
-    // 2. USkeletalMesh 단위로 그룹화하여 캐싱 (사용자 노출용)
+    // 2. 스켈레톤별로 메시를 그룹화하여 번들(.bin) 캐싱
     for (auto* Skeleton : Assets.Skeletons)
     {
         USkeletalMesh* Container = UObjectManager::Get().CreateObject<USkeletalMesh>();
         Container->SetSkeleton(Skeleton);
         FString SkelName = Skeleton->GetFName().ToString();
-        Container->SetAssetPathFileName(FBXFilePath + "_Skel_" + SkelName);
+        Container->SetAssetPathFileName(FBXFilePath + "_" + SkeletalMeshPrefix::Mesh + SkelName);
 
         for (auto* ImportedMesh : Assets.SkeletalMeshes)
         {
@@ -188,7 +188,7 @@ bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOp
 
         if (!Container->GetSubMeshes().empty())
         {
-            FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, "Skel_" + SkelName);
+            FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, SkeletalMeshPrefix::Mesh + SkelName);
             FWindowsBinWriter Writer(BinPath);
             if (Writer.IsValid())
             {
@@ -197,7 +197,7 @@ bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOp
         }
     }
 
-    // 3. Animations 캐싱
+    // 3. 애니메이션 시퀀스 캐싱
     for (auto* Anim : Assets.Animations)
     {
         FString BinPath = FPaths::BuildSubResourceCachePath(FBXFilePath, "Anim_" + Anim->GetFName().ToString());
@@ -215,6 +215,7 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
 {
     Initialize();
     
+    // 이전 에셋 데이터 정리
     for (auto* Mesh : OutAssets.SkeletalMeshes) delete Mesh;
     OutAssets.SkeletalMeshes.clear();
     OutAssets.Skeletons.clear();
@@ -239,6 +240,7 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         FbxGeometryConverter Converter = FbxGeometryConverter(SdkManager);
         Converter.Triangulate(Scene, true);
         
+        // 1. 스켈레톤 구조 추출
         for (int i = 0; i < RootNode->GetChildCount(); i++) {
             FbxNode* ChildNode = RootNode->GetChild(i);
             FbxNodeAttribute* Attr = ChildNode->GetNodeAttribute();
@@ -250,7 +252,11 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
                 OutAssets.Skeletons.push_back(Skeleton);
             }
         }
+
+        // 2. 메시 및 스키닝 데이터 추출
         ExtractMeshAndSkinning(RootNode, OutAssets);
+
+        // 3. 애니메이션 데이터 추출
         ExtractAnimations(Scene, OutAssets);
     }
     
@@ -424,73 +430,71 @@ void FFBXImporter::ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh)
     }
 }
 
-// PlaceHolder, 아직 미구현
+// 이하 AI가 작성하고 아직 검증되지 않은 코드입니다. 
 void FFBXImporter::ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets)
 {
-    // 이하 AI가 작성하고 아직 검증되지 않은 코드입니다. 
-    
-    // int AnimStackCount = Scene->GetSrcObjectCount<FbxAnimStack>();
-    // if (AnimStackCount == 0 || OutAssets.Skeletons.empty()) return;
-    //
-    // USkeleton* TargetSkeleton = OutAssets.Skeletons[0];
-    // FbxNode* RootNode = Scene->GetRootNode();
-    //
-    // for (int i = 0; i < AnimStackCount; i++)
-    // {
-    //     FbxAnimStack* AnimStack = Scene->GetSrcObject<FbxAnimStack>(i);
-    //     Scene->SetCurrentAnimationStack(AnimStack);
-    //
-    //     FbxTimeSpan TimeSpan = AnimStack->GetLocalTimeSpan();
-    //     FbxTime Start = TimeSpan.GetStart();
-    //     FbxTime End = TimeSpan.GetStop();
-    //     FbxTime Duration = End - Start;
-    //
-    //     UAnimationSequence* AnimSeq = UObjectManager::Get().CreateObject<UAnimationSequence>();
-    //     AnimSeq->SetFName(AnimStack->GetName());
-    //     AnimSeq->SetSkeleton(TargetSkeleton);
-    //     
-    //     float FPS = 30.0f; 
-    //     FbxTime FrameStep;
-    //     FrameStep.SetTime(0, 0, 0, 1, 0, FbxTime::eFrames30);
-    //     
-    //     int32 NumFrames = (int32)(Duration.Get() / FrameStep.Get()) + 1;
-    //     if (NumFrames <= 0) continue;
-    //
-    //     AnimSeq->SetNumFrames(NumFrames);
-    //     AnimSeq->SetSequenceLength((float)Duration.GetSecondDouble());
-    //     AnimSeq->SetFPS(FPS);
-    //
-    //     const TArray<FBoneInfo>& Bones = TargetSkeleton->GetBones();
-    //     AnimSeq->GetTracks().resize(Bones.size());
-    //
-    //     for (int32 Frame = 0; Frame < NumFrames; Frame++)
-    //     {
-    //         FbxTime CurrentTime = Start + FrameStep * Frame;
-    //         
-    //         for (int32 BoneIdx = 0; BoneIdx < (int32)Bones.size(); BoneIdx++)
-    //         {
-    //             const FBoneInfo& BoneInfo = Bones[BoneIdx];
-    //             FbxNode* BoneNode = RootNode->FindChild(BoneInfo.Name.ToString().c_str(), true);
-    //             
-    //             if (BoneNode)
-    //             {
-    //                 FbxAMatrix LocalMatrix = BoneNode->EvaluateLocalTransform(CurrentTime);
-    //                 FbxVector4 T = LocalMatrix.GetT();
-    //                 FbxQuaternion Q = LocalMatrix.GetQ();
-    //                 FbxVector4 S = LocalMatrix.GetS();
-    //
-    //                 AnimSeq->GetTracks()[BoneIdx].PosKeys.push_back(FVector((float)T[0], (float)T[1], (float)T[2]));
-    //                 AnimSeq->GetTracks()[BoneIdx].RotKeys.push_back(FQuat((float)Q[0], (float)Q[1], (float)Q[2], (float)Q[3]));
-    //                 AnimSeq->GetTracks()[BoneIdx].ScaleKeys.push_back(FVector((float)S[0], (float)S[1], (float)S[2]));
-    //             }
-    //             else
-    //             {
-    //                 AnimSeq->GetTracks()[BoneIdx].PosKeys.push_back(BoneInfo.ReferenceTransform.Location);
-    //                 AnimSeq->GetTracks()[BoneIdx].RotKeys.push_back(BoneInfo.ReferenceTransform.Rotation);
-    //                 AnimSeq->GetTracks()[BoneIdx].ScaleKeys.push_back(BoneInfo.ReferenceTransform.Scale);
-    //             }
-    //         }
-    //     }
-    //     OutAssets.Animations.push_back(AnimSeq);
-    // }
+    int AnimStackCount = Scene->GetSrcObjectCount<FbxAnimStack>();
+    if (AnimStackCount == 0 || OutAssets.Skeletons.empty()) return;
+
+    USkeleton* TargetSkeleton = OutAssets.Skeletons[0];
+    FbxNode* RootNode = Scene->GetRootNode();
+
+    for (int i = 0; i < AnimStackCount; i++)
+    {
+        FbxAnimStack* AnimStack = Scene->GetSrcObject<FbxAnimStack>(i);
+        Scene->SetCurrentAnimationStack(AnimStack);
+
+        FbxTimeSpan TimeSpan = AnimStack->GetLocalTimeSpan();
+        FbxTime Start = TimeSpan.GetStart();
+        FbxTime End = TimeSpan.GetStop();
+        FbxTime Duration = End - Start;
+
+        UAnimationSequence* AnimSeq = UObjectManager::Get().CreateObject<UAnimationSequence>();
+        AnimSeq->SetFName(AnimStack->GetName());
+        AnimSeq->SetSkeleton(TargetSkeleton);
+        
+        float FPS = 30.0f; 
+        FbxTime FrameStep;
+        FrameStep.SetTime(0, 0, 0, 1, 0, FbxTime::eFrames30);
+        
+        int32 NumFrames = (int32)(Duration.Get() / FrameStep.Get()) + 1;
+        if (NumFrames <= 0) continue;
+
+        AnimSeq->SetNumFrames(NumFrames);
+        AnimSeq->SetSequenceLength((float)Duration.GetSecondDouble());
+        AnimSeq->SetFPS(FPS);
+
+        const TArray<FBoneInfo>& Bones = TargetSkeleton->GetBones();
+        AnimSeq->GetTracks().resize(Bones.size());
+
+        for (int32 Frame = 0; Frame < NumFrames; Frame++)
+        {
+            FbxTime CurrentTime = Start + FrameStep * Frame;
+            
+            for (int32 BoneIdx = 0; BoneIdx < (int32)Bones.size(); BoneIdx++)
+            {
+                const FBoneInfo& BoneInfo = Bones[BoneIdx];
+                FbxNode* BoneNode = RootNode->FindChild(BoneInfo.Name.ToString().c_str(), true);
+                
+                if (BoneNode)
+                {
+                    FbxAMatrix LocalMatrix = BoneNode->EvaluateLocalTransform(CurrentTime);
+                    FbxVector4 T = LocalMatrix.GetT();
+                    FbxQuaternion Q = LocalMatrix.GetQ();
+                    FbxVector4 S = LocalMatrix.GetS();
+
+                    AnimSeq->GetTracks()[BoneIdx].PosKeys.push_back(FVector((float)T[0], (float)T[1], (float)T[2]));
+                    AnimSeq->GetTracks()[BoneIdx].RotKeys.push_back(FQuat((float)Q[0], (float)Q[1], (float)Q[2], (float)Q[3]));
+                    AnimSeq->GetTracks()[BoneIdx].ScaleKeys.push_back(FVector((float)S[0], (float)S[1], (float)S[2]));
+                }
+                else
+                {
+                    AnimSeq->GetTracks()[BoneIdx].PosKeys.push_back(BoneInfo.ReferenceTransform.Location);
+                    AnimSeq->GetTracks()[BoneIdx].RotKeys.push_back(BoneInfo.ReferenceTransform.Rotation);
+                    AnimSeq->GetTracks()[BoneIdx].ScaleKeys.push_back(BoneInfo.ReferenceTransform.Scale);
+                }
+            }
+        }
+        OutAssets.Animations.push_back(AnimSeq);
+    }
 }

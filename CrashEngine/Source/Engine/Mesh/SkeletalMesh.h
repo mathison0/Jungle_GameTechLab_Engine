@@ -3,7 +3,13 @@
 #include "Object/Object.h"
 #include "Mesh/StaticMeshAsset.h"
 #include "Render/RHI/D3D11/Buffers/VertexTypes.h"
-#include "Animation/Skeleton.h"
+#include "Mesh/Skeleton.h"
+
+namespace SkeletalMeshPrefix
+{
+    inline const FString Mesh = "Mesh_";
+    inline const FString Skeleton = "Skeleton_";
+}
 
 struct FSkeletalMeshSection
 {

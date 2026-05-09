@@ -56,8 +56,8 @@ FString FSkeletalMeshManager::GetBinaryFilePath(const FString& OriginalPath)
     
     if (!SubResource.empty())
     {
-        // Skeletal Mesh 컨테이너 요청인 경우
-        if (SubResource.find("Skel_") == 0 || SubResource.find("Mesh_") == 0)
+        // Skeletal Mesh 요청인 경우
+        if (SubResource.find(SkeletalMeshPrefix::Mesh) == 0)
         {
              return FPaths::BuildSubResourceCachePath(SourcePath, SubResource);
         }
@@ -72,14 +72,16 @@ void FSkeletalMeshManager::ScanMeshCacheFiles()
     if (!std::filesystem::exists(AssetRoot)) return;
     const std::filesystem::path ProjectRoot(FPaths::RootDir());
 
+    const std::wstring MeshPrefixW = L".fbx_" + FPaths::ToWide(SkeletalMeshPrefix::Mesh);
+
     for (const auto& Entry : std::filesystem::recursive_directory_iterator(AssetRoot))
     {
         if (!Entry.is_regular_file()) continue;
         const std::filesystem::path& Path = Entry.path();
         if (!IsBinExtension(Path) || !IsInsideCacheFolder(Path)) continue;
         
-        // _Skel_ 로 끝나는 파일이 이제 USkeletalMesh (번들) 자산임
-        if (Path.filename().wstring().find(L".fbx_Skel_") == std::wstring::npos) continue;
+        // 특정 접두사로 끝나는 파일이 USkeletalMesh 자산임
+        if (Path.filename().wstring().find(MeshPrefixW) == std::wstring::npos) continue;
 
         FSkeletalMeshAssetListItem Item;
         FString Stem = FPaths::ToUtf8(Path.stem().wstring());
@@ -92,18 +94,21 @@ void FSkeletalMeshManager::ScanMeshCacheFiles()
 
 void FSkeletalMeshManager::ScanSkeletonCacheFiles()
 {
-    // USkeleton 자체는 이제 _SkeletonData_ 접두사를 사용함
     AvailableSkeletonFiles.clear();
     const std::filesystem::path AssetRoot = std::filesystem::path(FPaths::RootDir()) / L"Asset";
     if (!std::filesystem::exists(AssetRoot)) return;
     const std::filesystem::path ProjectRoot(FPaths::RootDir());
+
+    const std::wstring SkelPrefixW = L".fbx_" + FPaths::ToWide(SkeletalMeshPrefix::Skeleton);
 
     for (const auto& Entry : std::filesystem::recursive_directory_iterator(AssetRoot))
     {
         if (!Entry.is_regular_file()) continue;
         const std::filesystem::path& Path = Entry.path();
         if (!IsBinExtension(Path) || !IsInsideCacheFolder(Path)) continue;
-        if (Path.filename().wstring().find(L".fbx_SkeletonData_") == std::wstring::npos) continue;
+
+        // 원본 스켈레톤 데이터 파일 필터링
+        if (Path.filename().wstring().find(SkelPrefixW) == std::wstring::npos) continue;
 
         FSkeletalMeshAssetListItem Item;
         FString Stem = FPaths::ToUtf8(Path.stem().wstring());
@@ -149,7 +154,7 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
     FString SourcePath, SubResource;
     FPaths::ParseSubResourcePath(PathFileName, SourcePath, SubResource);
 
-    // --- 추가: 캐시가 없는 경우 자동 임포트 시도 ---
+    // 1. 캐시가 없는 경우 원본 FBX로부터 자동 임포트 시도
     bool bHasCacheForThisSource = false;
     const std::filesystem::path RequestedSrcPath = NormalizePathForCompare(SourcePath);
     for (const auto& Item : AvailableMeshFiles)
@@ -174,7 +179,7 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
 
     FString CacheKey = GetBinaryFilePath(PathFileName);
     
-    // --- 추가: 원본 FBX 경로로 요청된 경우, 첫 번째 사용 가능한 번들을 찾음 ---
+    // 2. 원본 FBX 경로로 요청된 경우, 첫 번째 사용 가능한 번들 서브리소스를 찾아 반환
     if (CacheKey.empty())
     {
         const std::filesystem::path RequestedSrcPath = NormalizePathForCompare(SourcePath);
@@ -184,16 +189,15 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
             FPaths::ParseSubResourcePath(Item.FullPath, ItemSource, ItemSub);
             if (NormalizePathForCompare(ItemSource) == RequestedSrcPath)
             {
-                // 첫 번째 매칭되는 번들로 재시도
                 return LoadSkeletalMesh(Item.FullPath, false);
             }
         }
         return nullptr;
     }
-    // ----------------------------------------------------------------------
 
     if (!std::filesystem::exists(FPaths::ToPath(CacheKey))) return nullptr;
 
+    // 3. 번들 파일(.bin) 로드 및 직렬화
     USkeletalMesh* Container = UObjectManager::Get().CreateObject<USkeletalMesh>();
     FWindowsBinReader Reader(CacheKey);
     if (Reader.IsValid())
@@ -201,7 +205,7 @@ USkeletalMesh* FSkeletalMeshManager::LoadSkeletalMesh(const FString& PathFileNam
         Container->SetAssetPathFileName(PathFileName);
         Container->Serialize(Reader);
 
-        // 하위 메시들 GPU 리소스 초기화
+        // 하위 메시들의 GPU 리소스 초기화
         for (auto* Sub : Container->GetSubMeshes())
         {
             Sub->InitResources(Device);

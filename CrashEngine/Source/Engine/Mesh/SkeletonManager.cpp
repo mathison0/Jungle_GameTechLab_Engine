@@ -2,6 +2,7 @@
 #include "Object/Object.h"
 #include "Serialization/WindowsArchive.h"
 #include "Engine/Platform/Paths.h"
+#include "Mesh/SkeletalMesh.h"
 #include <filesystem>
 
 USkeleton* FSkeletonManager::Find(const FString& Key)
@@ -9,13 +10,13 @@ USkeleton* FSkeletonManager::Find(const FString& Key)
     FString SourcePath, SubResource;
     FPaths::ParseSubResourcePath(Key, SourcePath, SubResource);
     
-    // 접두사 보정 (SkeletonData_ 로 변경)
-    if (!SubResource.empty() && SubResource.find("SkeletonData_") != 0)
+    // 접두사 보정 (Skeleton_ 로 변경)
+    if (!SubResource.empty() && SubResource.find(SkeletalMeshPrefix::Skeleton) != 0)
     {
-        if (SubResource.find("Skel_") == 0)
-            SubResource = "SkeletonData_" + SubResource.substr(5);
+        if (SubResource.find(SkeletalMeshPrefix::Mesh) == 0)
+            SubResource = SkeletalMeshPrefix::Skeleton + SubResource.substr(SkeletalMeshPrefix::Mesh.size());
         else
-            SubResource = "SkeletonData_" + SubResource;
+            SubResource = SkeletalMeshPrefix::Skeleton + SubResource;
     }
 
     FString CacheKey = FPaths::BuildSubResourceCachePath(SourcePath, SubResource);
@@ -29,12 +30,12 @@ void FSkeletonManager::Unload(const FString& Key)
     FString SourcePath, SubResource;
     FPaths::ParseSubResourcePath(Key, SourcePath, SubResource);
     
-    if (!SubResource.empty() && SubResource.find("SkeletonData_") != 0)
+    if (!SubResource.empty() && SubResource.find(SkeletalMeshPrefix::Skeleton) != 0)
     {
-        if (SubResource.find("Skel_") == 0)
-            SubResource = "SkeletonData_" + SubResource.substr(5);
+        if (SubResource.find(SkeletalMeshPrefix::Mesh) == 0)
+            SubResource = SkeletalMeshPrefix::Skeleton + SubResource.substr(SkeletalMeshPrefix::Mesh.size());
         else
-            SubResource = "SkeletonData_" + SubResource;
+            SubResource = SkeletalMeshPrefix::Skeleton + SubResource;
     }
 
     FString CacheKey = FPaths::BuildSubResourceCachePath(SourcePath, SubResource);
@@ -48,12 +49,12 @@ USkeleton* FSkeletonManager::LoadSkeleton(const FString& PathFileName)
     FPaths::ParseSubResourcePath(PathFileName, SourcePath, SubResource);
     
     // 접두사 보정
-    if (!SubResource.empty() && SubResource.find("SkeletonData_") != 0)
+    if (!SubResource.empty() && SubResource.find(SkeletalMeshPrefix::Skeleton) != 0)
     {
-        if (SubResource.find("Skel_") == 0)
-            SubResource = "SkeletonData_" + SubResource.substr(5);
+        if (SubResource.find(SkeletalMeshPrefix::Mesh) == 0)
+            SubResource = SkeletalMeshPrefix::Skeleton + SubResource.substr(SkeletalMeshPrefix::Mesh.size());
         else
-            SubResource = "SkeletonData_" + SubResource;
+            SubResource = SkeletalMeshPrefix::Skeleton + SubResource;
     }
     
     FString CacheKey = FPaths::BuildSubResourceCachePath(SourcePath, SubResource);

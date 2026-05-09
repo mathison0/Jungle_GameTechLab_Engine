@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Object/Object.h"
-#include "Animation/Skeleton.h"
+#include "Mesh/Skeleton.h"
 #include "Math/Vector.h"
 #include "Math/Quat.h"
 
@@ -18,6 +18,7 @@ struct FRawAnimSequenceTrack
     }
 };
 
+// WARNING: FBX Importer 작성하면서 AI가 추가한 초안. 테스트되지 않은 코드입니다.
 class UAnimationSequence : public UObject
 {
 public:
@@ -49,3 +50,4 @@ private:
     float SequenceLength = 0.0f;
     float FPS = 30.0f;
 };
+// WARNING: FBX Importer 작성하면서 AI가 추가한 초안. 테스트되지 않은 코드입니다.
