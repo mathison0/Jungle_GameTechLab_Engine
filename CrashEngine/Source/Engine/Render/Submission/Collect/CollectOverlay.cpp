@@ -16,7 +16,7 @@
 #include "GameFramework/AActor.h"
 
 // ==================== Public API ====================
-
+// Likely a dead code
 void FDrawCollector::CollectOverlay(const FCollectOverlayContext& OverlayContext)
 {
     CollectedSceneData.Primitives.OverlayTexts.clear();
@@ -56,7 +56,7 @@ void FDrawCollector::CollectOverlay(const FCollectOverlayContext& OverlayContext
 
 	if (OverlayContext.WorldBoundsProxies && OverlayContext.SceneView && OverlayContext.SceneView->ShowFlags.bSkeletalDebug) 
 	{
-		CollectSkeletalDebug(*OverlayContext.WorldBoundsProxies, CollectedOverlayData);
+		CollectSkeletalDebug(*OverlayContext.WorldBoundsProxies);
     }
 }
 
@@ -264,7 +264,7 @@ void FDrawCollector::CollectWorldBoundsDebug(const TArray<FPrimitiveProxy*>& Pro
     }
 }
 
-void FDrawCollector::CollectSkeletalDebug(const TArray<FPrimitiveProxy*>& Proxies, FCollectedOverlayData& OverlayData)
+void FDrawCollector::CollectSkeletalDebug(const TArray<FPrimitiveProxy*>& Proxies)
 {
     for (FPrimitiveProxy* Proxy : Proxies)
     {
@@ -274,7 +274,9 @@ void FDrawCollector::CollectSkeletalDebug(const TArray<FPrimitiveProxy*>& Proxie
 		FSkeletalDebugInstance Instance = { };
         SkeletalProxy->BuildSkeletalDebugInstance(Instance);
 
-		if (!Instance.Bones.empty()) 
-			OverlayData.Debug.SkeletalInstances.push_back(Instance);
+		if (!Instance.Bones.empty()) {
+			//OverlayData.Debug.SkeletalInstances.push_back(Instance);
+			CollectedOverlayData.Debug.SkeletalInstances.push_back(Instance);
+		}
     }
 }

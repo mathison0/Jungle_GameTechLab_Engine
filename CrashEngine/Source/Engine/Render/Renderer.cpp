@@ -339,6 +339,11 @@ void FRenderer::CollectDebugRender(const FScene& Scene)
     DrawCollector.CollectDebugRender(Scene);
 }
 
+void FRenderer::CollectSkeletalDebug(const FScene& Scene)
+{
+	DrawCollector.CollectSkeletalDebug(Scene.GetPrimitiveProxies());
+}
+
 // ==================== Debug Geometry Collection ====================
 
 void FRenderer::CollectOctreeDebug(const FOctree* Node, FScene& Scene, uint32 Depth)

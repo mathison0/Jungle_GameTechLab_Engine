@@ -78,6 +78,7 @@ public:
     void CollectGrid(float GridSpacing, int32 GridHalfLineCount, FScene& Scene);
     void CollectOverlayText(const FOverlayStatSystem& OverlaySystem, const UEditorEngine& Editor, FScene& Scene);
     void CollectDebugRender(const FScene& Scene);
+	void CollectSkeletalDebug(const FScene& Scene);
 
     // ==================== Debug Geometry Collection ====================
 
