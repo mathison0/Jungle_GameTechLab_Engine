@@ -79,6 +79,9 @@
     <Filter Include="Source\Editor\PIE">
       <UniqueIdentifier>{3fb7a3d8-b9cb-b13d-a373-7e1d66bc01de}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Preview">
+      <UniqueIdentifier>{0414f844-a489-f730-d360-46d22d481c26}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\Selection">
       <UniqueIdentifier>{62537a50-933d-e461-6a5b-e8f67609290e}</UniqueIdentifier>
     </Filter>
@@ -435,6 +438,9 @@
     <FxCompile Include="Shaders\Render\Editor\ShaderSubUV.hlsl">
       <Filter>Shaders\Render\Editor</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Render\Editor\SkeletalDebug.hlsl">
+      <Filter>Shaders\Render\Editor</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\Decal\DecalApply.hlsli">
       <Filter>Shaders\Render\Scene\Decal</Filter>
     </FxCompile>
@@ -551,6 +557,9 @@
     <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp">
       <Filter>Source\Editor\Logging</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Preview\PreviewSceneContext.cpp">
+      <Filter>Source\Editor\Preview</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp">
       <Filter>Source\Editor\Selection</Filter>
     </ClCompile>
@@ -590,6 +599,9 @@
     <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorSkeletalMeshViewerPanel.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorStatPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -599,10 +611,19 @@
     <ClCompile Include="Source\Editor\UI\EditorWorldOutlinerPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\AssetViewerManager.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimationSequence.cpp">
@@ -1037,6 +1058,9 @@
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Editor\SelectionMaskPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Editor\SkeletalDebugPass.cpp">
+      <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\AdditiveDecalPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
@@ -1124,6 +1148,9 @@
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\Buffers\Buffers.cpp">
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.cpp">
+      <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\Device\D3DDevice.cpp">
       <Filter>Source\Engine\Render\RHI\D3D11\Device</Filter>
     </ClCompile>
@@ -1190,7 +1217,13 @@
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\GizmoSceneProxy.cpp">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\MeshSceneProxy.cpp">
+      <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\PrimitiveProxy.cpp">
+      <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\SkeletalMeshSceneProxy.cpp">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.cpp">
@@ -1526,6 +1559,9 @@
     <ClInclude Include="Source\Editor\PIE\PIETypes.h">
       <Filter>Source\Editor\PIE</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Preview\PreviewSceneContext.h">
+      <Filter>Source\Editor\Preview</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h">
       <Filter>Source\Editor\Selection</Filter>
     </ClInclude>
@@ -1562,6 +1598,9 @@
     <ClInclude Include="Source\Editor\UI\EditorPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorSkeletalMeshViewerPanel.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorStatPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
@@ -1571,6 +1610,9 @@
     <ClInclude Include="Source\Editor\UI\EditorWorldOutlinerPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\AssetViewerManager.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
@@ -1578,6 +1620,12 @@
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\PreviewViewportClient.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimationSequence.h">
@@ -2144,6 +2192,9 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Editor\SelectionMaskPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Editor\SkeletalDebugPass.h">
+      <Filter>Source\Engine\Render\Execute\Passes\Editor</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\AdditiveDecalPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
@@ -2297,6 +2348,12 @@
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\MeshBuffer.h">
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.h">
+      <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\StaticMeshBuffer.h">
+      <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\VertexBuffer.h">
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClInclude>
@@ -2354,6 +2411,9 @@
     <ClInclude Include="Source\Engine\Render\Scene\Debug\DebugRenderAPI.h">
       <Filter>Source\Engine\Render\Scene\Debug</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Scene\Debug\SkeletalDebug.h">
+      <Filter>Source\Engine\Render\Scene\Debug</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\SceneProxy.h">
       <Filter>Source\Engine\Render\Scene\Proxies</Filter>
     </ClInclude>
@@ -2393,10 +2453,16 @@
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\GizmoSceneProxy.h">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\MeshSceneProxy.h">
+      <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\MeshSectionRenderData.h">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\PrimitiveProxy.h">
+      <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\SkeletalMeshSceneProxy.h">
       <Filter>Source\Engine\Render\Scene\Proxies\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.h">

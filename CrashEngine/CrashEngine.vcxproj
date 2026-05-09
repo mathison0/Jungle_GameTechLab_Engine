@@ -397,6 +397,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Editor\Input\EditorViewportInputController.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorViewportTool.cpp" />
     <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
+    <ClCompile Include="Source\Editor\Preview\PreviewSceneContext.cpp" />
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp" />
     <ClCompile Include="Source\Editor\Subsystem\OverlayStatSystem.cpp" />
@@ -410,11 +411,15 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Editor\UI\EditorOutputLogPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorShadowAtlasDebugWindow.cpp" />
+    <ClCompile Include="Source\Editor\UI\EditorSkeletalMeshViewerPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorStatPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorToolbarPanel.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorWorldOutlinerPanel.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\AssetViewerManager.cpp" />
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimationSequence.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeBase.cpp" />
@@ -559,6 +564,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Editor\OverlayBillboardPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Editor\OverlayTextPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Editor\SelectionMaskPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Execute\Passes\Editor\SkeletalDebugPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\AdditiveDecalPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\AlphaBlendPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DeferredDecalPass.cpp" />
@@ -588,6 +594,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Engine\Render\Resources\Buffers\MeshBufferManager.cpp" />
     <ClCompile Include="Source\Engine\Render\Resources\Shaders\ShaderManager.cpp" />
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\Buffers\Buffers.cpp" />
+    <ClCompile Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.cpp" />
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\Device\D3DDevice.cpp" />
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\Shaders\ComputeProgram.cpp" />
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\Shaders\ComputeShaderStage.cpp" />
@@ -610,7 +617,9 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\CylindricalBillboardSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\DecalSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\GizmoSceneProxy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\MeshSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\PrimitiveProxy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\SkeletalMeshSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.cpp" />
@@ -724,6 +733,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
     <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
     <ClInclude Include="Source\Editor\PIE\PIETypes.h" />
+    <ClInclude Include="Source\Editor\Preview\PreviewSceneContext.h" />
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h" />
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h" />
     <ClInclude Include="Source\Editor\Subsystem\OverlayStatSystem.h" />
@@ -736,12 +746,16 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Editor\UI\EditorMaterialPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorOutputLogPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorPanel.h" />
+    <ClInclude Include="Source\Editor\UI\EditorSkeletalMeshViewerPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorStatPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorToolbarPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorWorldOutlinerPanel.h" />
+    <ClInclude Include="Source\Editor\Viewport\AssetViewerManager.h" />
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\FLevelViewportLayout.h" />
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h" />
+    <ClInclude Include="Source\Editor\Viewport\PreviewViewportClient.h" />
+    <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationSequence.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeBase.h" />
@@ -930,6 +944,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Editor\OverlayBillboardPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Editor\OverlayTextPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Editor\SelectionMaskPass.h" />
+    <ClInclude Include="Source\Engine\Render\Execute\Passes\Editor\SkeletalDebugPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\AdditiveDecalPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\AlphaBlendPass.h" />
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DeferredDecalPass.h" />
@@ -981,6 +996,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\DynamicVertexBuffer.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\IndexBuffer.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\MeshBuffer.h" />
+    <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.h" />
+    <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\StaticMeshBuffer.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\VertexBuffer.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\VertexTypes.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Common\D3D11API.h" />
@@ -1000,6 +1017,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Engine\Render\Scene\SceneProxyRegistry.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Debug\DebugPrimitiveQueue.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Debug\DebugRenderAPI.h" />
+    <ClInclude Include="Source\Engine\Render\Scene\Debug\SkeletalDebug.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\SceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Effects\FogSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Effects\SceneEffectProxy.h" />
@@ -1013,8 +1031,10 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\CylindricalBillboardSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\DecalSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\GizmoSceneProxy.h" />
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\MeshSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\MeshSectionRenderData.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\PrimitiveProxy.h" />
+    <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\SkeletalMeshSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\StaticMeshSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\SubUVSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Scene\Proxies\Primitive\TextRenderSceneProxy.h" />
@@ -1346,6 +1366,14 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Render\Editor\ShaderSubUV.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Render\Editor\SkeletalDebug.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
