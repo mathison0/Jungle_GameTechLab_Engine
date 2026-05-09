@@ -1484,6 +1484,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp" />
     <ClCompile Include="Source\Editor\Viewport\AssetViewerManager.cpp" />
+    <ClCompile Include="Source\Editor\Preview\PreviewSceneContext.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2724,6 +2726,8 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h" />
     <ClInclude Include="Source\Editor\Viewport\AssetViewerManager.h" />
+    <ClInclude Include="Source\Editor\Preview\PreviewSceneContext.h" />
+    <ClInclude Include="Source\Editor\Viewport\PreviewViewportClient.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

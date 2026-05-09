@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include "Editor/UI/EditorSkeletalMeshViewerPanel.h"
+#include "Viewport/PreviewViewportClient.h"
+#include "Preview/PreviewSceneContext.h"
 #include <d3d11.h>
 
 enum ESkeletalMeshPreviewPoseMode
@@ -33,6 +35,8 @@ struct FSkeletalMeshViewerState
 	}
 };
 
+class FPreviewViewportClient;
+
 class FSkeletalMeshViewer 
 {
 public:
@@ -50,20 +54,22 @@ public:
 
     uint32 GetEditorId() const;
     bool IsOpen() const;
+    void SetOpen(bool bInOpen);
 
     void ApplyPreviewFlags();
     FSkeletalMeshViewerState& GetState();
-    //FSkeletalMeshPreviewScene& GetPreviewScene();
-    //FSkeletalMeshEditorViewportClient& GetViewportClient();
+    FPreviewSceneContext& GetPreviewScene() {return ViewerScene;};
+    FPreviewViewportClient& GetViewportClient() { return ViewportClient;};
 
 private:
 	//외부 Manager에서 확인하기위한 index
     uint32 ViewerID = 0;
-    bool bOpen = true;
+    bool bOpen = false;
 	bool bFlag = false;
 
     FSkeletalMeshViewerState ViewerState;
     FEditorSkeletalMeshViewerPanel ViewerPanel;
-	//FSkeletalMeshEditorViewportClient ViewportClient;
-	//FSkeletalMeshPreviewScene ViewerScene;
+
+	FPreviewViewportClient ViewportClient;
+    FPreviewSceneContext ViewerScene;
 };

@@ -2,38 +2,35 @@
 
 void FSkeletalMeshViewer::Initialize(uint32 InEditorId, UEditorEngine* InEditorEngine, ID3D11Device* InDevice, USkeletalMesh* InSkeletalMesh)
 {
+    bOpen = true;
 	ViewerID = InEditorId;
     ViewerState.reset();
     ViewerState.ActiveMesh = InSkeletalMesh;
 
     ViewerPanel.Initialize(InEditorEngine, this);
 
-    //ViewerScene.Initialize(EditorEngine);
-    //ViewerScene.SetSkeletalMesh(InSkeletalMesh);
-    //ViewportClient.Initialize(EditorEngine, &PreviewScene, Device);
+    ViewerScene.Initialize(InEditorEngine);
+    ViewerScene.SetSkeletalMesh(InSkeletalMesh);
+	
+    ViewportClient.Initialize(InEditorEngine, InDevice, &ViewerScene);
 }
 
 void FSkeletalMeshViewer::Release() 
 {
+    bOpen = false;
     ViewerPanel.Release();
-	//ViewportClient.Release();
-	//ViewerScene.Release();
+	ViewportClient.Release();
+	ViewerScene.Release();
 }
 void FSkeletalMeshViewer::Tick(float DeltaTime) 
 {
-	//client
+    ViewerScene.Tick(DeltaTime);
+	ViewportClient.Tick(DeltaTime);
 }
 
 void FSkeletalMeshViewer::Render(float DeltaTime)
 {
     ViewerPanel.Render(DeltaTime);
-	//scene
-	//client?
-
-	if (bFlag)
-    {
-        //client.Render(DeltaTime);
-	}
 }
 
 void FSkeletalMeshViewer::RequestFocus()
@@ -48,6 +45,11 @@ uint32 FSkeletalMeshViewer::GetEditorId() const
 bool FSkeletalMeshViewer::IsOpen() const
 {
     return bOpen;
+}
+
+void FSkeletalMeshViewer::SetOpen(bool bInOpen)
+{
+    bOpen = bInOpen;
 }
 
 void FSkeletalMeshViewer::ApplyPreviewFlags()

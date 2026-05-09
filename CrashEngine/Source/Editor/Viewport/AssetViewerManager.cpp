@@ -37,7 +37,7 @@ void FAssetViewerManager::Tick(float DeltaTime)
 
 void FAssetViewerManager::Render(float DeltaTime)
 {
-    for (auto It = Viewers.begin(); It != Viewers.end(); It++)
+    for (auto It = Viewers.begin(); It != Viewers.end();)
     {
         FSkeletalMeshViewer* Viewer = It->get();
         if (!Viewer)
@@ -54,6 +54,7 @@ void FAssetViewerManager::Render(float DeltaTime)
         }
 
         Viewer->Render(DeltaTime);
+        ++It;
     }
 }
 

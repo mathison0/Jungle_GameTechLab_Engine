@@ -1,6 +1,7 @@
 ﻿#include "Editor/UI/EditorSkeletalMeshViewerPanel.h"
 
 #include "Core/CoreGlobals.h"
+#include "Component/SkeletalMeshComponent.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Viewport/SkeletalMeshViewer.h"
 
@@ -11,6 +12,7 @@
 
 #include <commdlg.h>
 #include <filesystem>
+#include <string>
 
 void FEditorSkeletalMeshViewerPanel::Release()
 {
@@ -22,11 +24,15 @@ void FEditorSkeletalMeshViewerPanel::Render(float DeltaTime)
 {
     if (!Owner) return;
 
-    if (!ImGui::Begin("SkeletalMesh Viewer", &FEditorSettings::Get().UI.bSkeletalMeshViewer))
+    bool bOpen = Owner->IsOpen();
+    const std::string WindowName = "SkeletalMesh Viewer##" + std::to_string(Owner->GetEditorId());
+    if (!ImGui::Begin(WindowName.c_str(), &bOpen))
     {
+        Owner->SetOpen(bOpen);
         ImGui::End();
         return;
     }
+    Owner->SetOpen(bOpen);
 
     RenderToolbar();
 
@@ -61,7 +67,6 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
 	FSkeletalMeshViewerState& State = Owner->GetState();
 
 	ImGui::Checkbox("Show Mesh", &State.bShowMesh);
-    ImGui::Checkbox("Show Skeleton", &State.bShowSkeleton);
     ImGui::Checkbox("Show Bone Names", &State.bShowBoneNames);
     if (ImGui::Checkbox("Show Skeleton", &State.bShowSkeleton))
     {
@@ -71,103 +76,102 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
 
 void FEditorSkeletalMeshViewerPanel::RenderPreviewViewport(float DeltaTime)
 {
-    //if (!Owner)
-    //{
-    //    return;
-    //}
+    if (!Owner)
+    {
+        return;
+    }
 
-    //auto& VC = Owner->GetViewportClient();
+    auto& VC = Owner->GetViewportClient();
 
-    //ImVec2 Pos = ImGui::GetCursorScreenPos();
-    //ImVec2 Size = ImGui::GetContentRegionAvail();
+    ImVec2 Pos = ImGui::GetCursorScreenPos();
+    ImVec2 Size = ImGui::GetContentRegionAvail();
 
-    //VC.SetViewportRect(Pos.x, Pos.y, Size.x, Size.y);
-    //VC.Draw(VC.GetViewport(), DeltaTime);
-    //VC.RenderViewportImage();
+    VC.SetViewportRect(Pos.x, Pos.y, Size.x, Size.y);
+    VC.Draw(VC.GetViewport(), DeltaTime);
+    VC.RenderViewportImage();
+
+    const bool bHovered = ImGui::IsItemHovered();
+    const bool bActive = ImGui::IsItemActive();
+
+	ImGuiIO& IO = ImGui::GetIO();
+    FPreviewInput Input;
+    Input.bHovered = bHovered;
+    Input.bActive = bActive;
+    Input.bLeftDown = IO.MouseDown[0];
+    Input.bRightDown = IO.MouseDown[1];
+    Input.bMiddleDown = IO.MouseDown[2];
+    Input.bAltDown = IO.KeyAlt;
+    Input.bCtrlDown = IO.KeyCtrl;
+    Input.bShiftDown = IO.KeyShift;
+    Input.MousePos = FVector2(IO.MousePos.x - Pos.x, IO.MousePos.y - Pos.y);
+    Input.MouseDelta = FVector2(IO.MouseDelta.x, IO.MouseDelta.y);
+    Input.MouseWheel = bHovered ? IO.MouseWheel : 0.0f;
+
+    VC.SetInputState(Input);
 }
 
 // TODO: 이름 수정이 가능하게 변경
 //일단 구현됨
 void FEditorSkeletalMeshViewerPanel::RenderBoneHierarchyTree()
 {
-        ImGui::Text("Bone Hierarchy");
-    
-        if (!PreviewMeshComponent)
-        {
-            ImGui::TextDisabled("No Skeletal Mesh");
-            return;
-        }
-    
-        FBorn* RootBone = nullptr;// = PreviewMeshComponent->GetRootBone();
-    
-        ImGui::Separator();
-    
-        if (!RootBone)
-        {
-            ImGui::TextDisabled("No Root Bone");
-            return;
-        }
-    
-        RenderBoneNode(RootBone);
+    ImGui::Text("Bone Hierarchy");
+
+    //if (BoneInfos.empty() || !PreviewMeshComponent)
+    //{
+    //    ImGui::TextDisabled("No skeleton.");
+    //    ImGui::End();
+    //    return;
+    //}
+
+    //ImGui::Text("Bones: %d", static_cast<int>(BoneInfos.size()));
+    //ImGui::Separator();
+
+    //RenderBoneNode(RootBoneIndex);
 }
 
 // 일단 구현됨
-void FEditorSkeletalMeshViewerPanel::RenderBoneNode(FBorn* RootBone)
+void FEditorSkeletalMeshViewerPanel::RenderBoneNode(uint32 BoneIndex)
 {
-    //    if (!Bone)
-    //        return;
-    //
-    //    const TArray<FBorn*>& Children = Bone->GetChildren();
-    //
-    //    ImGuiTreeNodeFlags Flags =
-    //        ImGuiTreeNodeFlags_OpenOnArrow |
-    //        ImGuiTreeNodeFlags_SpanAvailWidth;
-    //
-    //    const bool bLeaf = Children.empty();
-    //
-    //    if (bLeaf)
+    //if (!BoneInfos.empty())
+    //    return;
+
+    //const FBoneInfo& Bone = BoneInfos[BoneIndex];
+    //const bool bSelected = (SelectedBoneIndex == BoneIndex);
+    //const bool bLeaf = BonesHierarchy[BoneIndex].empty();
+
+    //ImGuiTreeNodeFlags Flags =
+    //    ImGuiTreeNodeFlags_OpenOnArrow |
+    //    ImGuiTreeNodeFlags_OpenOnDoubleClick |
+    //    ImGuiTreeNodeFlags_SpanAvailWidth;
+
+    //if (bSelected)
+    //    Flags |= ImGuiTreeNodeFlags_Selected;
+
+    //if (bLeaf)
+    //    Flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+    //ImGui::PushID(BoneIndex);
+
+    //const bool bOpen = ImGui::TreeNodeEx(
+    //    Bone.Name.ToString().c_str(),
+    //    Flags);
+
+    //if (ImGui::IsItemClicked())
+    //{
+    //    SelectedBoneIndex = BoneIndex;
+    //}
+
+    //if (!bLeaf && bOpen)
+    //{
+    //    for (int32 ChildIndex : BonesHierarchy[BoneIndex])
     //    {
-    //        Flags |= ImGuiTreeNodeFlags_Leaf;
-    //        Flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    //        RenderBoneNode(ChildIndex);
     //    }
-    //
-    //    if (SelectedBone == Bone)
-    //    {
-    //        Flags |= ImGuiTreeNodeFlags_Selected;
-    //    }
-    //
-    //    const char* BoneName = Bone->GetName();
-    //
-    //    bool bOpen = ImGui::TreeNodeEx(
-    //        Bone,
-    //        Flags,
-    //        "%s",
-    //        BoneName ? BoneName : "Unnamed Bone");
-    //
-    //    if (ImGui::IsItemClicked())
-    //    {
-    //        SelectedBone = Bone;
-    //    }
-    //
-    //    if (ImGui::BeginPopupContextItem())
-    //    {
-    //        if (ImGui::MenuItem("Copy Name"))
-    //        {
-    //            ImGui::SetClipboardText(BoneName ? BoneName : "");
-    //        }
-    //
-    //        ImGui::EndPopup();
-    //    }
-    //
-    //    if (!bLeaf && bOpen)
-    //    {
-    //        for (FBorn* Child : Children)
-    //        {
-    //            RenderBoneNode(Child);
-    //        }
-    //
-    //        ImGui::TreePop();
-    //    }
+
+    //    ImGui::TreePop();
+    //}
+
+    //ImGui::PopID();
 }
 
 void FEditorSkeletalMeshViewerPanel::RenderSelectedBoneTransformInspector()
@@ -178,12 +182,44 @@ void FEditorSkeletalMeshViewerPanel::RenderSelectedBoneTransformInspector()
 
 void FEditorSkeletalMeshViewerPanel::SetSkeletalMesh(USkeletalMesh* InSkeletalMesh)
 {
-    //SkeletalMesh = InSkeletalMesh;
+    SkeletalMesh = InSkeletalMesh;
 
-    //if (PreviewMeshComponent)
-    //{
-    //    PreviewMeshComponent->SetSkeletalMesh(InSkeletalMesh);
-    //}
+    if (PreviewMeshComponent)
+    {
+        PreviewMeshComponent->SetSkeletalMesh(InSkeletalMesh);
+    }
 
-    //SelectedBoneIndex = INDEX_NONE;
+    SelectedBoneIndex = 0;
+
+	BuildBoneHierarchy();
+}
+
+void FEditorSkeletalMeshViewerPanel::BuildBoneHierarchy()
+{
+ //   BonesHierarchy.clear();
+ //   BoneInfos.clear();
+
+	//BoneInfos = SkeletalMesh->GetAllBoneInfos();
+ //   const int32 BoneCount = static_cast<int32>(BoneInfos.size());
+ //   BonesHierarchy.resize(BoneCount);
+
+ //   for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+ //   {
+ //       const int32 ParentIndex = BoneInfos[BoneIndex].ParentIndex;
+
+ //       if (ParentIndex < 0)
+ //       {
+ //           BonesHierarchy[RootBoneIndex].push_back(BoneIndex);
+ //           continue;
+ //       }
+
+ //       if (ParentIndex >= BoneCount)
+ //       {
+ //           // 잘못된 skeleton 데이터
+ //           BonesHierarchy[RootBoneIndex].push_back(BoneIndex);
+ //           continue;
+ //       }
+
+ //       BonesHierarchy[ParentIndex].push_back(BoneIndex);
+ //   }
 }

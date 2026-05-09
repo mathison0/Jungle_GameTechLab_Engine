@@ -2,11 +2,6 @@
 
 #include "Editor/UI/EditorPanel.h"
 
-struct FBorn
-{
-	
-};
-
 class FSkeletalMeshViewer;
 class USkeletalMesh;
 class USkeletalMeshComponent;
@@ -29,9 +24,10 @@ public:
 	void RenderToolbar();
     void RenderPreviewViewport(float DeltaTime);
 	void RenderBoneHierarchyTree();
-    void RenderBoneNode(FBorn* RootBone);
+    void RenderBoneNode(uint32 RootBone);
 	void RenderSelectedBoneTransformInspector();
 	void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
+	void BuildBoneHierarchy();
 private:
     FSkeletalMeshViewer* Owner = nullptr;
 	//FSkeletalPreviewViewportClient PreviewClient;
@@ -40,4 +36,9 @@ private:
     USkeletalMesh* SkeletalMesh = nullptr;
 	//실제 SkeletalMesh가 아닌 복제
     USkeletalMeshComponent* PreviewMeshComponent = nullptr;
+    int SelectedBoneIndex = 0;
+
+	uint32 RootBoneIndex = 1;
+    TArray<TArray<uint32>> BonesHierarchy;
+    //TArray<FBoneInfo> BoneInfos;
 };
