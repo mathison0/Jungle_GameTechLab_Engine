@@ -1,4 +1,4 @@
-#include "Mesh/SkeletalMesh.h"
+﻿#include "Mesh/SkeletalMesh.h"
 
 #include <memory>
 
@@ -157,8 +157,8 @@ void USkeletalSubMesh::InitResources(ID3D11Device* InDevice)
     RenderMeshData.Indices = SkeletalSubMeshAsset->Indices;
 
     // TODO: Buffer 생성하는 코드 여기에 작성
-    // SkeletalSubMeshAsset->RenderBuffer = std::make_unique<FMeshBuffer>();
-    // SkeletalSubMeshAsset->RenderBuffer->Create(InDevice, RenderMeshData);
-    // NOTE: AI가 작성한 초안이 있었지만 FMeshBuffer 리팩토링과 관련한 Merge Conflict 때문에 
-    //       주석 처리했습니다. 재구현 필요
+     SkeletalSubMeshAsset->RenderBuffer = std::make_unique<FSkeletalMeshBuffer>();
+     SkeletalSubMeshAsset->RenderBuffer->Create(InDevice, RenderMeshData);
+     //NOTE: AI가 작성한 초안이 있었지만 FMeshBuffer 리팩토링과 관련한 Merge Conflict 때문에 
+     //      주석 처리했습니다. 재구현 필요
 }

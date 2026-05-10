@@ -34,10 +34,16 @@
 
 void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERenderPass Pass, FRenderPipelineContext& Context, FDrawCommandList& OutList, uint16 UserBits)
 {
-    const bool bHasMeshBuffer = (Proxy.MeshBuffer != nullptr);
-    const bool bMeshValid     = bHasMeshBuffer && Proxy.MeshBuffer->IsValid();
+    const bool bProxyMeshValid    = Proxy.MeshBuffer && Proxy.MeshBuffer->IsValid();
+    const bool bHasSectionBuffers = std::any_of(
+        Proxy.SectionRenderData.begin(),
+        Proxy.SectionRenderData.end(),
+        [](const FMeshSectionRenderData& S)
+        {
+            return S.MeshBuffer && S.MeshBuffer->IsValid();
+        });
 
-    if (!bMeshValid)
+    if (!bProxyMeshValid && !bHasSectionBuffers)
     {
         return;
     }
@@ -118,7 +124,7 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
     auto AddSection = [&](uint32 FirstIndex, uint32 IndexCount, ID3D11ShaderResourceView* BaseSRV, ID3D11ShaderResourceView* InNormalSRV,
                           ID3D11ShaderResourceView* InSpecularSRV,
                           FConstantBuffer* CB0, FConstantBuffer* CB1,
-                          EBlendState SectionBlend, EDepthStencilState SectionDepthStencil, ERasterizerState SectionRasterizer)
+                          EBlendState SectionBlend, EDepthStencilState SectionDepthStencil, ERasterizerState SectionRasterizer, FMeshBuffer* MeshBuffer = nullptr)
     {
         if (IndexCount == 0)
         {
@@ -127,7 +133,7 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
 
         FDrawCommand& Cmd = OutList.AddCommand();
         Cmd.Shader        = Shader;
-        Cmd.MeshBuffer    = Proxy.MeshBuffer;
+        Cmd.MeshBuffer    = MeshBuffer ? MeshBuffer : Proxy.MeshBuffer;
         Cmd.FirstIndex    = FirstIndex;
         Cmd.IndexCount    = IndexCount;
 
@@ -213,7 +219,7 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
             Pass,
             FinalUserBits,
             Cmd.Shader,
-            Proxy.MeshBuffer,
+            Cmd.MeshBuffer,
             FinalMaterialHash);
     };
 
@@ -231,7 +237,8 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
                 S.MaterialCB[1],
                 S.Blend,
                 S.DepthStencil,
-                S.Rasterizer);
+                S.Rasterizer,
+				S.MeshBuffer);
         }
     }
     else

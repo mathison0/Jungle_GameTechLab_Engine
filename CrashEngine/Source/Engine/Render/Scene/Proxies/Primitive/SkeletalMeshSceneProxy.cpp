@@ -34,7 +34,7 @@ void FSkeletalMeshSceneProxy::BuildSkeletalDebugInstance(FSkeletalDebugInstance&
 
         if (const FBoneInfo* Info = Skinned->GetBoneInfo(BoneIndex))
         {
-            //Bone.ParentIndex = Info->ParentIndex;
+            Bone.ParentIndex = Info->ParentIndex;
         }
 
         OutInstance.Bones.push_back(Bone);
@@ -52,77 +52,99 @@ UMeshComponent* FSkeletalMeshSceneProxy::GetMeshComponent() const
     return static_cast<USkeletalMeshComponent*>(Owner);
 }
 
-// TODO: Finish this stub once the class type rolls in
+// Note: SkeletalMesh does not LOD for now
 void FSkeletalMeshSceneProxy::RebuildSectionRenderData() 
 {
-//    USkinnedMeshComponent* SMC    = static_cast<USkinnedMeshComponent*>(GetMeshComponent());
-//    USkeletalMesh*         Mesh   = SMC->GetSkeletalMesh();
-//    if (!Mesh || !Mesh->GetSkeletalMeshAsset())
-//    {
-//        LODData[0].MeshBuffer = nullptr;
-//        LODData[0].SectionRenderData.clear();
-//        LODData[0].OwnedMaterialCBs.clear();
-//        LODCount   = 1;
-//        CurrentLOD = 0;
-//        MeshBuffer = nullptr;
-//        SectionRenderData.clear();
-//        ActiveOwnedMaterialCBs.clear();
-//        return;
-//    }
+    USkinnedMeshComponent* SMC    = static_cast<USkinnedMeshComponent*>(GetMeshComponent());
+    if (!SMC)
+    {
+        SectionRenderData.clear();
+        ActiveOwnedMaterialCBs.clear();
+        MeshBuffer = nullptr;
+        return;
 
-    //ID3D11Device*        Device  = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
-    //ID3D11DeviceContext* Context = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext() : nullptr;
-
-    //const auto& Slots     = Mesh->GetStaticMaterials();
-    //const auto& Overrides = SMC->GetOverrideMaterials();
-    //LODCount              = Mesh->GetLODCount();
-
-    //const auto& Sections    = Mesh->GetLODSections(lod);
-    //LODData[0].MeshBuffer = Mesh->GetLODMeshBuffer(lod);
-    //LODData[0].SectionRenderData.clear();
-    //LODData[0].OwnedMaterialCBs.clear();
-    //LODData[0].SectionRenderData.reserve(Sections.size());
-    //LODData[0].OwnedMaterialCBs.reserve(Sections.size());
-
-    //for (const FStaticMeshSection& Section : Sections)
-    //{
-    //    FMeshSectionRenderData Draw;
-    //    Draw.FirstIndex    = Section.FirstIndex;
-    //    Draw.IndexCount    = Section.NumTriangles * 3;
-    //    Draw.Blend         = EBlendState::Opaque;
-    //    Draw.DepthStencil  = EDepthStencilState::Default;
-    //    Draw.Rasterizer    = ERasterizerState::SolidBackCull;
-    //    Draw.MaterialCB[0] = nullptr;
-    //    Draw.MaterialCB[1] = nullptr;
-
-    //    UMaterial*  Mat           = nullptr;
-    //    const int32 MaterialIndex = Section.MaterialIndex;
-    //    if (MaterialIndex >= 0 && MaterialIndex < static_cast<int32>(Slots.size()))
-    //    {
-    //        if (MaterialIndex < static_cast<int32>(Overrides.size()) && Overrides[MaterialIndex])
-    //        {
-    //            Mat = Overrides[MaterialIndex];
-    //        }
-    //        else if (Slots[MaterialIndex].MaterialInterface)
-    //        {
-    //            Mat = Slots[MaterialIndex].MaterialInterface;
-    //        }
-    //    }
-
-    //    if (Mat)
-    //    {
-    //        TryGetTextureSRV(Mat, { MaterialSemantics::DiffuseTextureSlot, "BaseColorTexture", "AlbedoTexture", "BaseTexture", "DiffuseMap" }, Draw.DiffuseSRV);
-    //        TryGetTextureSRV(Mat, { MaterialSemantics::NormalTextureSlot, "NormalMap", "NormalMapTexture", "BumpTexture", "BumpMap" }, Draw.NormalSRV);
-    //        TryGetTextureSRV(Mat, { MaterialSemantics::SpecularTextureSlot, "SpecularMap", "SpecularMapTexture", "SpecularMask", "SpecularMaskTexture", "GlossMap" }, Draw.SpecularSRV);
-    //    }
-
-    //    auto MaterialCB = BuildMeshMaterialCB(Mat, Device, Context, Draw.DiffuseSRV, Draw.NormalSRV, Draw.SpecularSRV);
-    //    if (MaterialCB)
-    //    {
-    //        Draw.MaterialCB[0] = MaterialCB->GetConstantBuffer();
-    //        LODData[0].OwnedMaterialCBs.push_back(std::move(MaterialCB));
-    //    }
-
-    //    LODData[0].SectionRenderData.push_back(Draw);
-    //    SortSectionRenderDataByMaterial(LODData[0].SectionRenderData);
     }
+    USkeletalMesh*         Mesh   = SMC->GetSkeletalMesh();
+    if (!Mesh)
+    {
+        SectionRenderData.clear();
+        ActiveOwnedMaterialCBs.clear();
+        MeshBuffer = nullptr;
+        return;
+    }
+
+	LODCount        = 1;
+    CurrentLOD      = 0;
+    auto& Lod0      = LODData[0];
+    Lod0.MeshBuffer = nullptr; // proxy-level buffer unused. Sections carry their own
+    Lod0.SectionRenderData.clear();
+    Lod0.OwnedMaterialCBs.clear();
+
+	int32 GlobalMaterialBase = 0;
+    ID3D11Device*        Device             = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
+    ID3D11DeviceContext* Context            = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext() : nullptr;
+	for (USkeletalSubMesh* SubMesh : Mesh->GetSubMeshes())
+    {
+		if (!SubMesh || !SubMesh->GetSkeletalSubMeshAsset()) continue;
+
+		FSkeletalSubMesh*    Asset   = SubMesh->GetSkeletalSubMeshAsset();
+        FSkeletalMeshBuffer* SubBuffer  = Asset->RenderBuffer.get();
+        const auto&          Slots   = SubMesh->GetStaticMaterials();
+        const auto&          OverAll = SMC->GetOverrideMaterials();
+
+		if (!SubBuffer || !SubBuffer->IsValid())
+        {
+            GlobalMaterialBase += static_cast<int32>(Slots.size());
+            continue;
+        }
+
+		for (const FSkeletalMeshSection& Section : Asset->Sections)
+        {
+            FMeshSectionRenderData Draw;
+            Draw.MeshBuffer = SubBuffer;
+            Draw.FirstIndex = Section.FirstIndex;
+            Draw.IndexCount = Section.NumTriangles * 3;
+			Draw.MaterialCB[0] = nullptr;
+            Draw.MaterialCB[1] = nullptr;
+
+			UMaterial*  Mat           = nullptr;
+            const int32 MaterialIndex = Section.MaterialIndex;
+            if (MaterialIndex >= 0 && MaterialIndex < static_cast<int32>(Slots.size()))
+            {
+                const int32 GlobalIndex = GlobalMaterialBase + MaterialIndex;
+                if (GlobalIndex < static_cast<int32>(OverAll.size()) && OverAll[GlobalIndex])
+                {
+                    Mat = OverAll[GlobalIndex];
+                }
+                else if (Slots[MaterialIndex].MaterialInterface)
+                {
+                    Mat = Slots[MaterialIndex].MaterialInterface;
+                }
+            }
+
+			if (Mat)
+            {
+                TryGetTextureSRV(Mat, { MaterialSemantics::DiffuseTextureSlot, "BaseColorTexture", "AlbedoTexture", "BaseTexture", "DiffuseMap" }, Draw.DiffuseSRV);
+                TryGetTextureSRV(Mat, { MaterialSemantics::NormalTextureSlot, "NormalMap", "NormalMapTexture", "BumpTexture", "BumpMap" }, Draw.NormalSRV);
+                TryGetTextureSRV(Mat, { MaterialSemantics::SpecularTextureSlot, "SpecularMap", "SpecularMapTexture", "SpecularMask", "SpecularMaskTexture", "GlossMap" }, Draw.SpecularSRV);
+            }
+
+			auto MaterialCB = BuildMeshMaterialCB(Mat, Device, Context, Draw.DiffuseSRV, Draw.NormalSRV, Draw.SpecularSRV);
+            if (MaterialCB)
+            {
+                Draw.MaterialCB[0] = MaterialCB->GetConstantBuffer();
+                Lod0.OwnedMaterialCBs.push_back(std::move(MaterialCB));
+            }
+
+            Lod0.SectionRenderData.push_back(Draw);
+        }
+
+        GlobalMaterialBase += static_cast<int32>(Slots.size());
+	}
+
+	
+	SortSectionRenderDataByMaterial(Lod0.SectionRenderData);
+    std::swap(MeshBuffer, Lod0.MeshBuffer);
+    std::swap(SectionRenderData, Lod0.SectionRenderData);
+    std::swap(ActiveOwnedMaterialCBs, Lod0.OwnedMaterialCBs);
+}

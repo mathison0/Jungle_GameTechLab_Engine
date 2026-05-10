@@ -3,11 +3,13 @@
 #include "Render/Resources/State/RenderStateTypes.h"
 
 class FConstantBuffer;
+class FMeshBuffer;
 struct ID3D11ShaderResourceView;
 
 // FMeshSectionRenderData는 메시 데이터와 렌더 제출 정보를 다룹니다.
 struct FMeshSectionRenderData
 {
+	FMeshBuffer*			  MeshBuffer  = nullptr;
     ID3D11ShaderResourceView* DiffuseSRV  = nullptr;
     ID3D11ShaderResourceView* NormalSRV   = nullptr;
     ID3D11ShaderResourceView* SpecularSRV = nullptr;

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Object/Object.h"
 #include "Mesh/StaticMeshAsset.h"
@@ -32,7 +32,7 @@ struct FSkeletalSubMesh
     TArray<uint32> Indices;
     TArray<FSkeletalMeshSection> Sections;
 
-    std::unique_ptr<FMeshBuffer> RenderBuffer;
+    std::unique_ptr<FSkeletalMeshBuffer> RenderBuffer;
 
     void Serialize(FArchive& Ar)
     {
