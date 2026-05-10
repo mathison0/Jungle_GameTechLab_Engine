@@ -91,16 +91,6 @@ void FPreviewViewportClient::Tick(float DeltaTime)
     ApplyOrbitToCamera();
 }
 
-void FPreviewViewportClient::SetInputState(const FPreviewInput& InInput)
-{
-    Input = InInput;
-}
-
-void FPreviewViewportClient::SetPreviewOptions(const FPreviewViewportOptions& InOptions)
-{
-    Options = InOptions;
-}
-
 void FPreviewViewportClient::ResetCamera()
 {
     OrbitPivot = FVector(0.0f, 0.0f, 0.0f);

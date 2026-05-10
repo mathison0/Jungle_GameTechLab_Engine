@@ -11,15 +11,9 @@ void FPreviewSceneContext::Initialize(UEditorEngine* InEditorEngine)
 	PreviewWorld = Context.World;
     PreviewWorld->InitWorld();
 
-    PreviewActor = PreviewWorld->SpawnActor<AStaticMeshActor>();
-    if (PreviewActor && PreviewActor->IsA<AStaticMeshActor>())
+    PreviewActor = PreviewWorld->SpawnActor<AActor>();
+    if (PreviewActor)
     {
-        PreviewMeshComponent_static = Cast<UStaticMeshComponent>(PreviewActor->GetRootComponent());
-        if (PreviewMeshComponent_static)
-        {
-            PreviewMeshComponent_static->SetVisibility(false);
-        }
-
         PreviewMeshComponent = PreviewActor->AddComponent<USkeletalMeshComponent>();
         PreviewActor->SetRootComponent(PreviewMeshComponent);
 	}
@@ -48,7 +42,6 @@ void FPreviewSceneContext::Release()
     PreviewWorld = nullptr;
     PreviewActor = nullptr;
     PreviewMeshComponent = nullptr;
-    PreviewMeshComponent_static = nullptr;
     Camera = nullptr;
     EditorEngine = nullptr;
 }
@@ -67,7 +60,6 @@ void FPreviewSceneContext::SetSkeletalMesh(USkeletalMesh* SkeletalMesh) {
     }
 
     PreviewMeshComponent->SetSkeletalMesh(SkeletalMesh);
-
 }
 
 void FPreviewSceneContext::ResetPose()

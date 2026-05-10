@@ -43,14 +43,15 @@ public:
     void Update();
     void Tick(float DeltaTime);
 
-	void SetInputState(const FPreviewInput& InInput);
-    void SetPreviewOptions(const FPreviewViewportOptions& InOptions);
     void ResetCamera();
 
+	void SetInputState(const FPreviewInput& InInput) { Input = InInput; }
+    void SetPreviewOptions(const FPreviewViewportOptions& InOptions) { Options = InOptions; }
 	//void SetViewport(FViewport* InViewport) { Viewport = InViewport; }
 	void SetViewportRect(float X, float Y, float Width, float Height);
-    UCameraComponent* GetCamera() const override;
+
     FViewport* GetViewport() const override { return Viewport; }
+    UCameraComponent* GetCamera() const override;
 	void RenderViewportImage();
 
     virtual void Draw(FViewport* Viewport, float DeltaTime) override;

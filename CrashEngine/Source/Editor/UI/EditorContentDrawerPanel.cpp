@@ -802,7 +802,8 @@ void FEditorContentDrawerPanel::OpenContentItem(const FContentItem& Item)
 
     if (Item.Extension == ".fbx")
     {
-        EditorEngine->GetAssetViewerManager().OpenSkeletalMeshEditor(nullptr);
+        USkeletalMesh* Loaded = FSkeletalMeshManager::Get().Load(Item.ProjectRelativePath);
+        EditorEngine->GetAssetViewerManager().OpenSkeletalMeshEditor(Loaded);
         return;
     }
 

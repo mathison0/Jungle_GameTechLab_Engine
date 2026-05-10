@@ -30,7 +30,5 @@ private:
     UWorld* PreviewWorld = nullptr;
     AActor* PreviewActor = nullptr;
     USkeletalMeshComponent* PreviewMeshComponent = nullptr;
-	//Debug용 StaticMeshComponent
-    UStaticMeshComponent* PreviewMeshComponent_static = nullptr;
     UCameraComponent* Camera = nullptr;
 };

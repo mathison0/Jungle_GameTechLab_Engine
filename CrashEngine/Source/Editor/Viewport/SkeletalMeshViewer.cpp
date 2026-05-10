@@ -7,11 +7,11 @@ void FSkeletalMeshViewer::Initialize(uint32 InEditorId, UEditorEngine* InEditorE
     ViewerState.reset();
     ViewerState.ActiveMesh = InSkeletalMesh;
 
-    ViewerPanel.Initialize(InEditorEngine, this);
-    ViewerPanel.SetSkeletalMesh(InSkeletalMesh);
-
     ViewerScene.Initialize(InEditorEngine);
     ViewerScene.SetSkeletalMesh(InSkeletalMesh);
+
+    ViewerPanel.Initialize(InEditorEngine, this);
+    ViewerPanel.SetSkeletalMesh(InSkeletalMesh);
 	
     ViewportClient.Initialize(InEditorEngine, InDevice, &ViewerScene);
 }

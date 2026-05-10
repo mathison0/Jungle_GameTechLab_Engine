@@ -1,4 +1,4 @@
-#include "Mesh/FBXImporter.h"
+﻿#include "Mesh/FBXImporter.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/Skeleton.h"
 #include "Animation/AnimationSequence.h"
@@ -396,7 +396,8 @@ FTransform FFBXImporter::GetTransformFromNode(FbxNode* Node)
     FbxVector4 LclT = Node->LclTranslation.Get();
     Result.Location = FVector((float)LclT[0], (float)LclT[1], (float)LclT[2]);
     FbxVector4 LclR = Node->LclRotation.Get();
-    Result.Rotation = FQuat::FromRotator(FRotator((float)LclR[0], (float)LclR[1], (float)LclR[2]));
+    Result.Rotation = FQuat::FromRotator(
+        FRotator((float)LclR[1], (float)LclR[2], (float)LclR[0]));
     FbxVector4 LclS = Node->LclScaling.Get();
     Result.Scale = FVector((float)LclS[0], (float)LclS[1], (float)LclS[2]);
     return Result;
