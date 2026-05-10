@@ -1,8 +1,10 @@
 ﻿#include "Component/SkinnedMeshComponent.h"
 
+#include "Engine/Runtime/Engine.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/Skeleton.h"
 #include "Object/ObjectFactory.h"
+#include "Render/RHI/D3D11/Buffers/SkeletalMeshBuffer.h"
 
 #include <algorithm>
 
@@ -278,6 +280,9 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
     }
 
     uint32 VertexBase = 0;
+    ID3D11Device* Device = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
+    ID3D11DeviceContext* Context = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext() : nullptr;
+
     for (USkeletalSubMesh* SubMesh : SkeletalMesh->GetSubMeshes())
     {
         if (!SubMesh || !SubMesh->GetSkeletalSubMeshAsset())
@@ -285,9 +290,12 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
             continue;
         }
 
-        const FSkeletalSubMesh* Asset = SubMesh->GetSkeletalSubMeshAsset();
+        FSkeletalSubMesh* Asset = SubMesh->GetSkeletalSubMeshAsset();
         SkinnedVertices.reserve(SkinnedVertices.size() + Asset->Vertices.size());
         SkinnedIndices.reserve(SkinnedIndices.size() + Asset->Indices.size());
+
+        TArray<FVertexSkinned> SkinnedRenderVertices;
+        SkinnedRenderVertices.reserve(Asset->Vertices.size());
 
         for (const FVertexSkinned& SourceVertex : Asset->Vertices)
         {
@@ -330,12 +338,43 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
                 SkinnedVertex.Tangent = FVector4(SkinnedTangent, SourceVertex.Tangent.W);
             }
 
+            FVertexSkinned SkinnedRenderVertex = SourceVertex;
+            SkinnedRenderVertex.Position = SkinnedVertex.Position;
+            SkinnedRenderVertex.Normal = SkinnedVertex.Normal;
+            SkinnedRenderVertex.Tangent = SkinnedVertex.Tangent;
+
             SkinnedVertices.push_back(SkinnedVertex);
+            SkinnedRenderVertices.push_back(SkinnedRenderVertex);
         }
 
         for (uint32 Index : Asset->Indices)
         {
             SkinnedIndices.push_back(VertexBase + Index);
+        }
+
+        if (Device && Context && !SkinnedRenderVertices.empty())
+        {
+            FSkeletalMeshBuffer* RenderBuffer = static_cast<FSkeletalMeshBuffer*>(Asset->RenderBuffer.get());
+            const bool bNeedsCreate =
+                !RenderBuffer ||
+                !RenderBuffer->IsValid() ||
+                RenderBuffer->GetVertexStride() != sizeof(FVertexSkinned) ||
+                RenderBuffer->GetVertexCount() != static_cast<uint32>(SkinnedRenderVertices.size());
+
+            if (bNeedsCreate)
+            {
+                TMeshData<FVertexSkinned> RenderMeshData;
+                RenderMeshData.Vertices = SkinnedRenderVertices;
+                RenderMeshData.Indices = Asset->Indices;
+
+                Asset->RenderBuffer = std::make_unique<FSkeletalMeshBuffer>();
+                RenderBuffer = static_cast<FSkeletalMeshBuffer*>(Asset->RenderBuffer.get());
+                RenderBuffer->Create(Device, RenderMeshData);
+            }
+            else
+            {
+                RenderBuffer->UpdateVertex(Context, SkinnedRenderVertices.data(), static_cast<uint32>(SkinnedRenderVertices.size()));
+            }
         }
 
         VertexBase += static_cast<uint32>(Asset->Vertices.size());
