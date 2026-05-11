@@ -41,7 +41,7 @@ struct FSkeletalSubMesh
     TArray<FVertexSkinned> Vertices;
     TArray<uint32> Indices;
     TArray<FSkeletalMeshSection> Sections;
-    FVector MeshBindInverseScale = FVector(1.0f);
+    FMatrix MeshBindGlobalInverse = FMatrix::Identity;
     TArray<FMatrix> InverseBindPoseMatrices;
     TArray<FMatrix> BoneBindGlobalMatrices;
 
@@ -53,7 +53,7 @@ struct FSkeletalSubMesh
         Ar << Vertices;
         Ar << Indices;
         Ar << Sections;
-        Ar << MeshBindInverseScale;
+        Ar << MeshBindGlobalInverse;
         Ar << InverseBindPoseMatrices;
         Ar << BoneBindGlobalMatrices;
     }

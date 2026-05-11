@@ -15,14 +15,6 @@
 
 namespace
 {
-    FVector GetSafeInverseScale(const FVector& Scale)
-    {
-        return FVector(
-            std::abs(Scale.X) > 1e-6f ? 1.0f / Scale.X : 1.0f,
-            std::abs(Scale.Y) > 1e-6f ? 1.0f / Scale.Y : 1.0f,
-            std::abs(Scale.Z) > 1e-6f ? 1.0f / Scale.Z : 1.0f);
-    }
-
     // 테스트용 함수
     void PrintNode(FbxNode* pNode) {
         const char* nodeName = pNode->GetName();
@@ -312,6 +304,12 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         // 같은 기준으로 변환하므로 Transform/TransformLink와 EvaluateGlobalTransform의 축이 어긋나지 않습니다.
         FbxAxisSystem UEAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
         UEAxisSystem.DeepConvertScene(Scene);
+
+        // 단위계도 엔진 기준(미터)으로 정규화. cm 기반 FBX(블렌더/MMD 등)와 m 기반 FBX 모두 동일한 스케일에서 처리하기 위함.
+        if (Scene->GetGlobalSettings().GetSystemUnit() != FbxSystemUnit::m)
+        {
+            FbxSystemUnit::m.ConvertScene(Scene);
+        }
         
         // 1. 스켈레톤 구조 추출
         for (int i = 0; i < RootNode->GetChildCount(); i++) {
@@ -720,8 +718,8 @@ void FFBXImporter::ApplySkinBindDataToMesh(FbxMesh* InFbxMesh, USkeleton* InSkel
     InMesh->BoneBindGlobalMatrices.clear();
     InMesh->BoneBindGlobalMatrices.resize(Bones.size(), FMatrix::Identity);
 
-    bool bHasMeshBindScale = false;
-    InMesh->MeshBindInverseScale = FVector(1.0f);
+    bool bHasMeshBindGlobal = false;
+    InMesh->MeshBindGlobalInverse = FMatrix::Identity;
 
     const int SkinCount = InFbxMesh->GetDeformerCount(FbxDeformer::eSkin);
     for (int SkinIndex = 0; SkinIndex < SkinCount; ++SkinIndex)
@@ -755,10 +753,10 @@ void FFBXImporter::ApplySkinBindDataToMesh(FbxMesh* InFbxMesh, USkeleton* InSkel
             const FMatrix MeshBindGlobal = ConvertFbxMatrix(MeshBindMatrix);
             const FMatrix BoneBindGlobal = ConvertFbxMatrix(BoneBindMatrix);
 
-            if (!bHasMeshBindScale)
+            if (!bHasMeshBindGlobal)
             {
-                InMesh->MeshBindInverseScale = GetSafeInverseScale(MeshBindGlobal.GetScale());
-                bHasMeshBindScale = true;
+                InMesh->MeshBindGlobalInverse = MeshBindGlobal.GetInverse();
+                bHasMeshBindGlobal = true;
             }
 
             InMesh->InverseBindPoseMatrices[BoneIndex] = MeshBindGlobal * BoneBindGlobal.GetInverse();
