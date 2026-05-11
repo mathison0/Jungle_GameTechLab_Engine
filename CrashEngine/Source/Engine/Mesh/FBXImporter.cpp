@@ -16,7 +16,7 @@
 namespace
 {
     // 테스트용 함수
-    void PrintNode(FbxNode* pNode) {
+    void PrintNode(FbxNode* pNode, int depth) {
         const char* nodeName = pNode->GetName();
         FbxDouble3 translation = pNode->LclTranslation.Get();
         FbxDouble3 rotation = pNode->LclRotation.Get();
@@ -77,8 +77,15 @@ namespace
             }
         }
 
+        FString tab = "";
+        for (int i=0; i<depth; i++)
+        {
+            tab = tab + "  ";
+        }
+        
         UE_LOG(FBXImporter, Warning, 
-            "<node name='%s' attribute = '%s' translation='(%f, %f, %f)' rotation='(%f, %f, %f)' scaling='(%f, %f, %f)'>\n",
+            "%s <node name='%s' attribute = '%s' translation='(%f, %f, %f)' rotation='(%f, %f, %f)' scaling='(%f, %f, %f)'>\n",
+            tab.c_str(),
             nodeName, attrStr.c_str(),
             translation[0], translation[1], translation[2],
             rotation[0], rotation[1], rotation[2],
@@ -86,7 +93,7 @@ namespace
             );
 
         for(int j = 0; j < pNode->GetChildCount(); j++)
-            PrintNode(pNode->GetChild(j));
+            PrintNode(pNode->GetChild(j), depth + 1);
     }
 } // namespace
 
@@ -97,6 +104,8 @@ TArray<TArray<FFBXImporter::FBoneWeighting>> FFBXImporter::BoneWeighting;
 
 namespace
 {
+    std::unordered_map<const USkeleton*, FbxNode*> GSkeletonSourceRoots;
+
     FString BuildValidMaterialSlotName(const FString& InName, int32 FallbackIndex)
     {
         if (!InName.empty())
@@ -148,6 +157,72 @@ namespace
 
         return std::clamp(MaterialIndex, 0, MaterialCount - 1);
     }
+
+    bool HasSkeletonNodeInSubtree(FbxNode* Node)
+    {
+        if (!Node)
+        {
+            return false;
+        }
+
+        FbxNodeAttribute* Attr = Node->GetNodeAttribute();
+        if (Attr && Attr->GetAttributeType() == FbxNodeAttribute::eSkeleton)
+        {
+            return true;
+        }
+
+        for (int32 ChildIndex = 0; ChildIndex < Node->GetChildCount(); ++ChildIndex)
+        {
+            if (HasSkeletonNodeInSubtree(Node->GetChild(ChildIndex)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool IsSkeletonHierarchyNode(FbxNode* Node)
+    {
+        if (!Node)
+        {
+            return false;
+        }
+
+        FbxNodeAttribute* Attr = Node->GetNodeAttribute();
+        if (!Attr)
+        {
+            return false;
+        }
+
+        const FbxNodeAttribute::EType AttrType = Attr->GetAttributeType();
+        return AttrType == FbxNodeAttribute::eSkeleton || AttrType == FbxNodeAttribute::eNull;
+    }
+
+    bool IsSkeletonHierarchyRoot(FbxNode* Node)
+    {
+        if (!IsSkeletonHierarchyNode(Node) || !HasSkeletonNodeInSubtree(Node))
+        {
+            return false;
+        }
+
+        FbxNode* ParentNode = Node->GetParent();
+        return !(ParentNode && IsSkeletonHierarchyNode(ParentNode) && HasSkeletonNodeInSubtree(ParentNode));
+    }
+
+    bool IsDescendantOrSelfOf(FbxNode* Node, FbxNode* PotentialAncestor)
+    {
+        for (FbxNode* CurrentNode = Node; CurrentNode != nullptr; CurrentNode = CurrentNode->GetParent())
+        {
+            if (CurrentNode == PotentialAncestor)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }
 
 FFBXImporter::FImportedSkeletalMesh::FImportedSkeletalMesh(FName InName, FSkeletalSubMesh* InMeshData, FName InSkeletonName, TArray<FStaticMaterial>&& InMaterials)
@@ -272,6 +347,7 @@ bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOp
 bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& OutAssets)
 {
     Initialize();
+    GSkeletonSourceRoots.clear();
     
     // 이전 에셋 데이터 정리
     for (auto* Mesh : OutAssets.SkeletalMeshes) delete Mesh;
@@ -312,17 +388,7 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         }
         
         // 1. 스켈레톤 구조 추출
-        for (int i = 0; i < RootNode->GetChildCount(); i++) {
-            FbxNode* ChildNode = RootNode->GetChild(i);
-            FbxNodeAttribute* Attr = ChildNode->GetNodeAttribute();
-            if (Attr && (Attr->GetAttributeType() == FbxNodeAttribute::eSkeleton || Attr->GetAttributeType() == FbxNodeAttribute::eNull))
-            {
-                USkeleton* Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
-                Skeleton->SetFName(ChildNode->GetName());
-                ExtractBoneNodeRecursive(ChildNode, -1, Skeleton);
-                OutAssets.Skeletons.push_back(Skeleton);
-            }
-        }
+        ExtractSkeletonHierarchies(RootNode, OutAssets);
 
         // 2. 메시 및 스키닝 데이터 추출
         ExtractMeshAndSkinning(RootNode, Options, OutAssets);
@@ -333,6 +399,33 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
     
     Scene->Destroy();
     return true; 
+}
+
+void FFBXImporter::ExtractSkeletonHierarchies(FbxNode* Node, FImportedFBXAssets& OutAssets)
+{
+    if (!Node)
+    {
+        return;
+    }
+
+    if (IsSkeletonHierarchyRoot(Node))
+    {
+        USkeleton* Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
+        Skeleton->SetFName(Node->GetName());
+        ExtractBoneNodeRecursive(Node, -1, Skeleton);
+
+        if (!Skeleton->GetBones().empty())
+        {
+            OutAssets.Skeletons.push_back(Skeleton);
+            GSkeletonSourceRoots[Skeleton] = Node;
+        }
+        return;
+    }
+
+    for (int32 ChildIndex = 0; ChildIndex < Node->GetChildCount(); ++ChildIndex)
+    {
+        ExtractSkeletonHierarchies(Node->GetChild(ChildIndex), OutAssets);
+    }
 }
 
 void FFBXImporter::ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton)
@@ -366,21 +459,15 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& O
             BoneWeighting.assign(ExtractedMesh->Vertices.size(), TArray<FBoneWeighting>());
 
             int skinCount = fbxMesh->GetDeformerCount(FbxDeformer::eSkin);
+            bool bImportedAsSkeletalMesh = false;
             if (skinCount > 0)
             {
                 FbxSkin* anySkin = (FbxSkin*)fbxMesh->GetDeformer(0, FbxDeformer::eSkin);
                 if (anySkin && anySkin->GetClusterCount() > 0)
                 {
-                    USkeleton* OwnerSkeleton = nullptr;
-                    FbxNode* currentBone = anySkin->GetCluster(0)->GetLink();
-                    while (currentBone != nullptr)
-                    {
-                        auto it = std::find_if(OutAsset.Skeletons.begin(), OutAsset.Skeletons.end(),
-                            [currentBone](USkeleton* skeleton) { return skeleton->GetFName().ToString() == currentBone->GetName(); });
-
-                        if (it != OutAsset.Skeletons.end()) { OwnerSkeleton = *it; break; }
-                        currentBone = currentBone->GetParent();
-                    }
+                    USkeleton* OwnerSkeleton = FindOwnerSkeletonByBoneNode(
+                        anySkin->GetCluster(0)->GetLink(),
+                        OutAsset.Skeletons);
 
                     if (OwnerSkeleton)
                     {
@@ -402,7 +489,28 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& O
                         FImportedSkeletalMesh* NewMesh = new FImportedSkeletalMesh(
                             FName(Node->GetName()), ExtractedMesh.release(), OwnerSkeleton->GetFName(), std::move(ExtractedMaterials));
                         OutAsset.SkeletalMeshes.push_back(NewMesh);
+                        bImportedAsSkeletalMesh = true;
                     }
+                }
+            }
+
+            if (!bImportedAsSkeletalMesh)
+            {
+                int32 ParentBoneIndex = -1;
+                FbxNode* ParentBoneNode = nullptr;
+                USkeleton* OwnerSkeleton = FindOwnerSkeletonByBoneNode(
+                    Node ? Node->GetParent() : nullptr,
+                    OutAsset.Skeletons,
+                    &ParentBoneIndex,
+                    &ParentBoneNode);
+
+                if (OwnerSkeleton && ApplyRigidParentWeightFallback(Node, OwnerSkeleton, ParentBoneIndex, ParentBoneNode, ExtractedMesh.get()))
+                {
+                    ApplyWeightsToSkeleton(ExtractedMesh.get());
+
+                    FImportedSkeletalMesh* NewMesh = new FImportedSkeletalMesh(
+                        FName(Node->GetName()), ExtractedMesh.release(), OwnerSkeleton->GetFName(), std::move(ExtractedMaterials));
+                    OutAsset.SkeletalMeshes.push_back(NewMesh);
                 }
             }
         }
@@ -608,6 +716,125 @@ FMatrix FFBXImporter::ConvertFbxMatrix(const FbxMatrix& Matrix)
         static_cast<float>(Matrix.Get(1, 0)), static_cast<float>(Matrix.Get(1, 1)), static_cast<float>(Matrix.Get(1, 2)), static_cast<float>(Matrix.Get(1, 3)),
         static_cast<float>(Matrix.Get(2, 0)), static_cast<float>(Matrix.Get(2, 1)), static_cast<float>(Matrix.Get(2, 2)), static_cast<float>(Matrix.Get(2, 3)),
         static_cast<float>(Matrix.Get(3, 0)), static_cast<float>(Matrix.Get(3, 1)), static_cast<float>(Matrix.Get(3, 2)), static_cast<float>(Matrix.Get(3, 3)));
+}
+
+USkeleton* FFBXImporter::FindOwnerSkeletonByBoneNode(
+    FbxNode* BoneNode,
+    const TArray<USkeleton*>& Skeletons,
+    int32* OutBoneIndex,
+    FbxNode** OutMatchedBoneNode)
+{
+    for (FbxNode* CurrentNode = BoneNode; CurrentNode != nullptr; CurrentNode = CurrentNode->GetParent())
+    {
+        for (USkeleton* Skeleton : Skeletons)
+        {
+            if (!Skeleton)
+            {
+                continue;
+            }
+
+            const int32 BoneIndex = Skeleton->FindBoneIndex(CurrentNode->GetName());
+            if (BoneIndex < 0)
+            {
+                continue;
+            }
+
+            if (OutBoneIndex)
+            {
+                *OutBoneIndex = BoneIndex;
+            }
+
+            if (OutMatchedBoneNode)
+            {
+                *OutMatchedBoneNode = CurrentNode;
+            }
+
+            return Skeleton;
+        }
+
+        for (USkeleton* Skeleton : Skeletons)
+        {
+            if (!Skeleton)
+            {
+                continue;
+            }
+
+            auto RootIt = GSkeletonSourceRoots.find(Skeleton);
+            if (RootIt == GSkeletonSourceRoots.end() || !RootIt->second)
+            {
+                continue;
+            }
+
+            if (!IsDescendantOrSelfOf(RootIt->second, CurrentNode))
+            {
+                continue;
+            }
+
+            int32 BoneIndex = Skeleton->FindBoneIndex(CurrentNode->GetName());
+            FbxNode* MatchedBoneNode = CurrentNode;
+            if (BoneIndex < 0)
+            {
+                BoneIndex = Skeleton->FindBoneIndex(RootIt->second->GetName());
+                MatchedBoneNode = RootIt->second;
+            }
+
+            if (BoneIndex < 0)
+            {
+                continue;
+            }
+
+            if (OutBoneIndex)
+            {
+                *OutBoneIndex = BoneIndex;
+            }
+
+            if (OutMatchedBoneNode)
+            {
+                *OutMatchedBoneNode = MatchedBoneNode;
+            }
+
+            return Skeleton;
+        }
+    }
+
+    return nullptr;
+}
+
+bool FFBXImporter::ApplyRigidParentWeightFallback(FbxNode* MeshNode, USkeleton* Skeleton, int32 BoneIndex, FbxNode* BoneNode, FSkeletalSubMesh* Mesh)
+{
+    if (!MeshNode || !Skeleton || !BoneNode || !Mesh || BoneIndex < 0)
+    {
+        return false;
+    }
+
+    const TArray<FBoneInfo>& Bones = Skeleton->GetBones();
+    if (BoneIndex >= static_cast<int32>(Bones.size()))
+    {
+        return false;
+    }
+
+    Mesh->InverseBindPoseMatrices.clear();
+    Mesh->InverseBindPoseMatrices.resize(Bones.size(), FMatrix::Identity);
+    Mesh->BoneBindGlobalMatrices.clear();
+    Mesh->BoneBindGlobalMatrices.resize(Bones.size(), FMatrix::Identity);
+
+    const FMatrix MeshBindGlobal = ConvertFbxMatrix(MeshNode->EvaluateGlobalTransform());
+    const FMatrix BoneBindGlobal = ConvertFbxMatrix(BoneNode->EvaluateGlobalTransform());
+
+    // Rigid-parent fallback vertices are still authored in mesh-local space.
+    // Keep the mesh-local -> bind-global placement in InverseBindPoseMatrices and
+    // skip the normal mesh-bind unapply step used by skinned meshes.
+    Mesh->MeshBindGlobalInverse = FMatrix::Identity;
+    Mesh->InverseBindPoseMatrices[BoneIndex] = MeshBindGlobal * BoneBindGlobal.GetInverse();
+    Mesh->BoneBindGlobalMatrices[BoneIndex] = BoneBindGlobal;
+
+    for (size_t VertexIndex = 0; VertexIndex < BoneWeighting.size(); ++VertexIndex)
+    {
+        BoneWeighting[VertexIndex].clear();
+        BoneWeighting[VertexIndex].push_back({ static_cast<uint16>(BoneIndex), 1.0f });
+    }
+
+    return true;
 }
 
 void FFBXImporter::ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkeleton)

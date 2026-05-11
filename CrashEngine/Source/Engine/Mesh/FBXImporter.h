@@ -53,6 +53,7 @@ struct FFBXImporter
 
 private:
     static void Initialize();
+    static void ExtractSkeletonHierarchies(FbxNode* Node, FImportedFBXAssets& OutAssets);
     static void ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton);
     static void ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& Options, FImportedFBXAssets& InAsset);
     static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);  // PlaceHolder, 아직 미구현
@@ -63,6 +64,8 @@ private:
     static FMatrix ConvertFbxMatrix(const FbxAMatrix& Matrix);
     static void ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkeleton);
     static void ApplySkinBindDataToMesh(FbxMesh* InFbxMesh, USkeleton* InSkeleton, FSkeletalSubMesh* InMesh);
+    static USkeleton* FindOwnerSkeletonByBoneNode(FbxNode* BoneNode, const TArray<USkeleton*>& Skeletons, int32* OutBoneIndex = nullptr, FbxNode** OutMatchedBoneNode = nullptr);
+    static bool ApplyRigidParentWeightFallback(FbxNode* MeshNode, USkeleton* Skeleton, int32 BoneIndex, FbxNode* BoneNode, FSkeletalSubMesh* Mesh);
     static void ExtractWeights(FbxCluster* InCluster, int InBoneIndex);
     static void ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh);
     
