@@ -53,9 +53,9 @@ struct FFBXImporter
 private:
     static void Initialize();
     static void ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton);
-    static void ExtractMeshAndSkinning(FbxNode* Node, FImportedFBXAssets& InAsset);
+    static void ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& Options, FImportedFBXAssets& InAsset);
     static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);  // PlaceHolder, 아직 미구현
-    static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxMesh* InFbxMesh);
+    static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxMesh* InFbxMesh, const FImportOptions& Options);
     static FTransform GetTransformFromNode(FbxNode* Node);
     static void ExtractWeights(FbxCluster* InCluster, int InBoneIndex);
     static void ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh);

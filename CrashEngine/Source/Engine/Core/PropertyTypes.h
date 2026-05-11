@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include "Serialization/Archive.h"
 
 // 에디터에서 자동 위젯 매핑에 사용되는 프로퍼티 타입
 enum class EPropertyType : uint8_t
@@ -29,7 +30,13 @@ enum class EPropertyType : uint8_t
 // 머티리얼 슬롯: 경로를 하나의 단위로 관리
 struct FMaterialSlot
 {
-    std::string Path;
+    FString Path;
+
+    friend FArchive& operator<<(FArchive& Ar, FMaterialSlot& Slot)
+    {
+        Ar << Slot.Path;
+        return Ar;
+    }
 };
 
 struct FEnumPropertyOption

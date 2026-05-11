@@ -5,6 +5,7 @@
 #include "Render/RHI/D3D11/Buffers/MeshBuffer.h"
 #include "Render/RHI/D3D11/Buffers/DynamicVertexBuffer.h"
 #include "Render/RHI/D3D11/Buffers/IndexBuffer.h"
+#include <type_traits>
 
 // FMeshBuffer는 GPU 버퍼 리소스의 생성과 바인딩을 관리합니다.
 class FSkeletalMeshBuffer : public FMeshBuffer
@@ -27,8 +28,33 @@ public:
         }
 
         uint32 VertexCount     = static_cast<uint32>(InMeshData.Vertices.size());
-        uint32 VertexByteWidth = VertexCount * sizeof(VertexType);
-        VertexBuffer.Create(InDevice, InMeshData.Vertices.data(), VertexCount, VertexByteWidth, sizeof(VertexType));
+
+        if constexpr (std::is_same_v<VertexType, FVertexSkinned>)
+        {
+            // GPU에 전송하기 전에 Bone 정보를 제거하고 FVertexPNCT_T 형식으로 변환합니다.
+            // 이는 현재 엔진 렌더러가 Skeletal Mesh 전용 셰이더(매크로 분기)를 완벽히 지원하지 않아 
+            // Static Mesh 셰이더와 호환성을 유지하기 위한 임시 조치입니다.
+            TArray<FVertexPNCT_T> ConvertedVertices;
+            ConvertedVertices.reserve(VertexCount);
+            for (const auto& Vert : InMeshData.Vertices)
+            {
+                FVertexPNCT_T NewVert;
+                NewVert.Position = Vert.Position;
+                NewVert.Normal   = Vert.Normal;
+                NewVert.Color    = Vert.Color;
+                NewVert.UV       = Vert.UV;
+                NewVert.Tangent  = Vert.Tangent;
+                ConvertedVertices.push_back(NewVert);
+            }
+
+            uint32 VertexByteWidth = VertexCount * sizeof(FVertexPNCT_T);
+            VertexBuffer.Create(InDevice, ConvertedVertices.data(), VertexCount, VertexByteWidth, sizeof(FVertexPNCT_T));
+        }
+        else
+        {
+            uint32 VertexByteWidth = VertexCount * sizeof(VertexType);
+            VertexBuffer.Create(InDevice, InMeshData.Vertices.data(), VertexCount, VertexByteWidth, sizeof(VertexType));
+        }
 
         if (!InMeshData.Indices.empty())
         {

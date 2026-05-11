@@ -1,4 +1,4 @@
-﻿#include "Mesh/FBXImporter.h"
+#include "Mesh/FBXImporter.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/Skeleton.h"
 #include "Animation/AnimationSequence.h"
@@ -233,12 +233,18 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
     FbxScene* Scene = FbxScene::Create(SdkManager, "myScene");
     Importer->Import(Scene);
     Importer->Destroy();
-    
+
     FbxNode* RootNode = Scene->GetRootNode();
     if(RootNode)
     {
+        // 먼저 삼각형화 수행
         FbxGeometryConverter Converter = FbxGeometryConverter(SdkManager);
         Converter.Triangulate(Scene, true);
+
+        // 그 후 엔진의 좌표계(Z-up, X-forward, Left-handed)에 맞게 씬 변환
+        // ConvertScene은 좌표계 변환 시 필요에 따라 와인딩 순서도 함께 보정합니다.
+        FbxAxisSystem UEAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
+        UEAxisSystem.ConvertScene(Scene);
         
         // 1. 스켈레톤 구조 추출
         for (int i = 0; i < RootNode->GetChildCount(); i++) {
@@ -254,7 +260,7 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         }
 
         // 2. 메시 및 스키닝 데이터 추출
-        ExtractMeshAndSkinning(RootNode, OutAssets);
+        ExtractMeshAndSkinning(RootNode, Options, OutAssets);
 
         // 3. 애니메이션 데이터 추출
         ExtractAnimations(Scene, OutAssets);
@@ -279,13 +285,13 @@ void FFBXImporter::ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USke
     }
 }
 
-void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, FImportedFBXAssets& OutAsset)
+void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& Options, FImportedFBXAssets& OutAsset)
 {
     FbxNodeAttribute* attr = Node->GetNodeAttribute();
     if (attr && attr->GetAttributeType() == FbxNodeAttribute::eMesh) {
         FbxMesh* fbxMesh = Node->GetMesh();
         
-        std::unique_ptr<FSkeletalSubMesh> ExtractedMesh = ParseGeometry(fbxMesh);
+        std::unique_ptr<FSkeletalSubMesh> ExtractedMesh = ParseGeometry(fbxMesh, Options);
         if (ExtractedMesh)
         {
             BoneWeighting.assign(ExtractedMesh->Vertices.size(), TArray<FBoneWeighting>());
@@ -331,11 +337,11 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, FImportedFBXAssets& Out
     }
     
     for (int i = 0; i < Node->GetChildCount(); i++) {
-        ExtractMeshAndSkinning(Node->GetChild(i), OutAsset);
+        ExtractMeshAndSkinning(Node->GetChild(i), Options, OutAsset);
     }
 }
 
-std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh)
+std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh, const FImportOptions& Options)
 {
     std::unique_ptr<FSkeletalSubMesh> Result = std::make_unique<FSkeletalSubMesh>();
     
@@ -357,6 +363,7 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh
     
     CtrlPointToVertexIndex.assign(InFbxMesh->GetControlPointsCount(), TArray<int>());
     for (int i = 0; i < PolygonCount; ++i) {
+        uint32 TriangleIndices[3];
         for (int j = 0; j < 3; ++j) {
             int ctrlPointIndex = InFbxMesh->GetPolygonVertex(i, j);
             FVertexSkinned vertex;
@@ -378,15 +385,39 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh
             if (uvSetNameList.GetCount() > 0) {
                 FbxVector2 uv; bool unmapped;
                 if (InFbxMesh->GetPolygonVertexUV(i, j, uvSetNameList.GetStringAt(0), uv, unmapped))
-                    vertex.UV = FVector2((float)uv[0], (float)uv[1]);
+                {
+                    vertex.UV = FVector2((float)uv[0], 1.0f - (float)uv[1]); // UV V flip
+                }
             }
 
             Result->Vertices.push_back(vertex);
-            Result->Indices.push_back(VertexCount);
+            TriangleIndices[j] = VertexCount;
             CtrlPointToVertexIndex[ctrlPointIndex].push_back(VertexCount);
             VertexCount++;
         }
+
+        if (Options.WindingOrder == EWindingOrder::CCW_to_CW)
+        {
+            Result->Indices.push_back(TriangleIndices[0]);
+            Result->Indices.push_back(TriangleIndices[2]);
+            Result->Indices.push_back(TriangleIndices[1]);
+        }
+        else
+        {
+            Result->Indices.push_back(TriangleIndices[0]);
+            Result->Indices.push_back(TriangleIndices[1]);
+            Result->Indices.push_back(TriangleIndices[2]);
+        }
     }
+
+    // 모든 정점 데이터를 포함하는 기본 섹션을 추가합니다.
+    FSkeletalMeshSection DefaultSection;
+    DefaultSection.MaterialIndex = 0;
+    DefaultSection.MaterialSlotName = "Default";
+    DefaultSection.FirstIndex = 0;
+    DefaultSection.NumTriangles = (uint32)PolygonCount;
+    Result->Sections.push_back(DefaultSection);
+
     return Result;
 }
 

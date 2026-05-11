@@ -141,13 +141,6 @@ bool UStaticMeshComponent::LineTraceStaticMeshFast(
     return false; // bHit;
 }
 
-// Serializes material slot asset paths; actual material loading happens after duplication.
-static FArchive& operator<<(FArchive& Ar, FMaterialSlot& Slot)
-{
-    Ar << Slot.Path;
-    return Ar;
-}
-
 void UStaticMeshComponent::Serialize(FArchive& Ar)
 {
     UMeshComponent::Serialize(Ar);

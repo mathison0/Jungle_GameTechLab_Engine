@@ -17,7 +17,7 @@
               "Location" : [0.000000, 0.000000, 0.000000],
               "Mobility" : 1,
               "Receives Decals" : true,
-              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Rotation" : [0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Skeletal Mesh" : null,
               "Visible" : true,
@@ -29,10 +29,64 @@
         "ClassName" : "USceneComponent",
         "Name" : "USceneComponent_3",
         "Properties" : {
-          "Location" : [3.837977, 11.324571, 9.450865],
-          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
           "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
+    }, {
+      "ClassName" : "ADirectionalLightActor",
+      "Name" : "ADirectionalLightActor_1",
+      "NonSceneComponents" : [],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_2",
+            "Properties" : {
+              "CollisionChannel" : 1,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Height" : 1.000000,
+              "Is Editor Helper" : true,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Material" : {
+                "Path" : "Asset/Editor/Icons/Materials/DirectionalLightIcon.json"
+              },
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : false,
+              "Width" : 1.000000,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UDirectionalLightComponent",
+        "Name" : "UDirectionalLightComponent_1",
+        "Properties" : {
+          "CSM Max Distance" : 2000.000000,
+          "Cascade Count" : 4,
+          "Cascade Distribution" : 1.000000,
+          "Cast Shadows" : true,
+          "Depth Bias" : 0.000100,
+          "ESM Exponent" : 40.000000,
+          "Intensity" : 2.500000,
+          "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "Location" : [-4.255484, 0.000000, 0.000000],
+          "Normal Bias" : 0.000000,
+          "Rotation" : [49.899994, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Shadow Resolution" : 2048,
+          "Shadow Sharpen" : 0.000000,
+          "Slope Bias" : 0.000000,
+          "bAffectsWorld" : true,
+          "bTickEnable" : false
         }
       },
       "Tag" : "Default",
@@ -45,9 +99,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [4.955251, 14.765008, 12.902689],
+    "Location" : [1.692673, 9.531072, 3.851495],
     "NearClip" : 0.100000,
-    "Rotation" : [-0.000007, 43.658997, -107.991074]
+    "Rotation" : [0.000000, 31.899044, -110.931038]
   },
   "Version" : 3,
   "WorldType" : "Editor"

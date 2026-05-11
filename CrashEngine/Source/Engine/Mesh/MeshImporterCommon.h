@@ -27,7 +27,16 @@ struct FImportOptions
     float Scale = 1.0f;
     EForwardAxis ForwardAxis = EForwardAxis::NegY; // Blender 기본: Z-up, -Y Forward
     EWindingOrder WindingOrder = EWindingOrder::CCW_to_CW;
-    static FImportOptions Default() { return {}; }
+    static FImportOptions Default()
+    {
+        // NOTE: 
+        // FBX SDK에서 축 보정하면서 CCW_to_CW 변환까지 자동으로 적용해주는 경우가 있어서 
+        // Default Option은 WindingOrder 항목을 Keep으로 둡니다.
+        
+        FImportOptions Options;
+        Options.WindingOrder = EWindingOrder::Keep;
+        return Options;
+    }
 };
 
 class FMeshImporterUtils
