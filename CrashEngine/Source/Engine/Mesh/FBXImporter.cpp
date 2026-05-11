@@ -1,4 +1,4 @@
-#include "Mesh/FBXImporter.h"
+﻿#include "Mesh/FBXImporter.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/Skeleton.h"
 #include "Animation/AnimationSequence.h"
@@ -8,12 +8,21 @@
 #include "Object/Object.h"
 #include <filesystem>
 #include <algorithm>
+#include <cmath>
 #include <ranges>
 #include <fstream>
 #include <unordered_map>
 
 namespace
 {
+    FVector GetSafeInverseScale(const FVector& Scale)
+    {
+        return FVector(
+            std::abs(Scale.X) > 1e-6f ? 1.0f / Scale.X : 1.0f,
+            std::abs(Scale.Y) > 1e-6f ? 1.0f / Scale.Y : 1.0f,
+            std::abs(Scale.Z) > 1e-6f ? 1.0f / Scale.Z : 1.0f);
+    }
+
     // 테스트용 함수
     void PrintNode(FbxNode* pNode) {
         const char* nodeName = pNode->GetName();
@@ -243,9 +252,10 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         Converter.Triangulate(Scene, true);
 
         // 그 후 엔진의 좌표계(Z-up, X-forward, Left-handed)에 맞게 씬 변환
-        // ConvertScene은 좌표계 변환 시 필요에 따라 와인딩 순서도 함께 보정합니다.
+        // DeepConvertScene은 노드 transform뿐 아니라 vertex, pose, skin cluster bind matrix까지
+        // 같은 기준으로 변환하므로 Transform/TransformLink와 EvaluateGlobalTransform의 축이 어긋나지 않습니다.
         FbxAxisSystem UEAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
-        UEAxisSystem.ConvertScene(Scene);
+        UEAxisSystem.DeepConvertScene(Scene);
         
         // 1. 스켈레톤 구조 추출
         for (int i = 0; i < RootNode->GetChildCount(); i++) {
@@ -277,9 +287,11 @@ void FFBXImporter::ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USke
     FbxNodeAttribute* Attr = Node->GetNodeAttribute();
     if (Attr && (Attr->GetAttributeType() == FbxNodeAttribute::eSkeleton || Attr->GetAttributeType() == FbxNodeAttribute::eNull))
     {
-        FTransform LocalTransform = GetTransformFromNode(Node);
+        const FMatrix LocalMatrix = ConvertFbxMatrix(Node->EvaluateLocalTransform());
+        FTransform LocalTransform = GetTransformFromMatrix(LocalMatrix);
         currentIndex = OutSkeleton->AddBone(Node->GetName(), ParentIndex, LocalTransform);
         OutSkeleton->SetBoneDisplayTransform(currentIndex, LocalTransform);
+        OutSkeleton->SetBoneDisplayMatrix(currentIndex, LocalMatrix);
     }
 
     for (int i = 0; i < Node->GetChildCount(); i++) {
@@ -318,6 +330,7 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& O
                     if (OwnerSkeleton)
                     {
                         ApplyBindPoseToSkeleton(fbxMesh, OwnerSkeleton);
+                        ApplySkinBindDataToMesh(fbxMesh, OwnerSkeleton, ExtractedMesh.get());
 
                         for (int i = 0; i < skinCount; i++) {
                             FbxSkin* skin = (FbxSkin*)fbxMesh->GetDeformer(i, FbxDeformer::eSkin);
@@ -427,15 +440,12 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh
 
 FTransform FFBXImporter::GetTransformFromNode(FbxNode* Node)
 {
-    FTransform Result;
-    FbxVector4 LclT = Node->LclTranslation.Get();
-    Result.Location = FVector((float)LclT[0], (float)LclT[1], (float)LclT[2]);
-    FbxVector4 LclR = Node->LclRotation.Get();
-    Result.Rotation = FQuat::FromRotator(
-        FRotator((float)LclR[1], (float)LclR[2], (float)LclR[0]));
-    FbxVector4 LclS = Node->LclScaling.Get();
-    Result.Scale = FVector((float)LclS[0], (float)LclS[1], (float)LclS[2]);
-    return Result;
+    if (!Node)
+    {
+        return FTransform();
+    }
+
+    return GetTransformFromMatrix(ConvertFbxMatrix(Node->EvaluateLocalTransform()));
 }
 
 FTransform FFBXImporter::GetTransformFromMatrix(const FMatrix& Matrix)
@@ -581,11 +591,77 @@ void FFBXImporter::ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkel
         }
 
         InSkeleton->SetBoneReferenceTransform(BoneIndex, GetTransformFromMatrix(LocalBindMatrix));
+        InSkeleton->SetBoneReferenceMatrix(BoneIndex, LocalBindMatrix);
+    }
+}
+
+void FFBXImporter::ApplySkinBindDataToMesh(FbxMesh* InFbxMesh, USkeleton* InSkeleton, FSkeletalSubMesh* InMesh)
+{
+    if (!InFbxMesh || !InSkeleton || !InMesh)
+    {
+        return;
+    }
+
+    const TArray<FBoneInfo>& Bones = InSkeleton->GetBones();
+    InMesh->InverseBindPoseMatrices.clear();
+    InMesh->InverseBindPoseMatrices.resize(Bones.size(), FMatrix::Identity);
+    InMesh->BoneBindGlobalMatrices.clear();
+    InMesh->BoneBindGlobalMatrices.resize(Bones.size(), FMatrix::Identity);
+
+    bool bHasMeshBindScale = false;
+    InMesh->MeshBindInverseScale = FVector(1.0f);
+
+    const int SkinCount = InFbxMesh->GetDeformerCount(FbxDeformer::eSkin);
+    for (int SkinIndex = 0; SkinIndex < SkinCount; ++SkinIndex)
+    {
+        FbxSkin* Skin = static_cast<FbxSkin*>(InFbxMesh->GetDeformer(SkinIndex, FbxDeformer::eSkin));
+        if (!Skin)
+        {
+            continue;
+        }
+
+        const int ClusterCount = Skin->GetClusterCount();
+        for (int ClusterIndex = 0; ClusterIndex < ClusterCount; ++ClusterIndex)
+        {
+            FbxCluster* Cluster = Skin->GetCluster(ClusterIndex);
+            if (!Cluster || !Cluster->GetLink())
+            {
+                continue;
+            }
+
+            const int32 BoneIndex = InSkeleton->FindBoneIndex(Cluster->GetLink()->GetName());
+            if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(InMesh->InverseBindPoseMatrices.size()))
+            {
+                continue;
+            }
+
+            FbxAMatrix MeshBindMatrix;
+            FbxAMatrix BoneBindMatrix;
+            Cluster->GetTransformMatrix(MeshBindMatrix);
+            Cluster->GetTransformLinkMatrix(BoneBindMatrix);
+
+            const FMatrix MeshBindGlobal = ConvertFbxMatrix(MeshBindMatrix);
+            const FMatrix BoneBindGlobal = ConvertFbxMatrix(BoneBindMatrix);
+
+            if (!bHasMeshBindScale)
+            {
+                InMesh->MeshBindInverseScale = GetSafeInverseScale(MeshBindGlobal.GetScale());
+                bHasMeshBindScale = true;
+            }
+
+            InMesh->InverseBindPoseMatrices[BoneIndex] = MeshBindGlobal * BoneBindGlobal.GetInverse();
+            InMesh->BoneBindGlobalMatrices[BoneIndex] = BoneBindGlobal;
+        }
     }
 }
 
 void FFBXImporter::ExtractWeights(FbxCluster* InCluster, int InBoneIndex)
 {
+    if (InBoneIndex < 0)
+    {
+        return;
+    }
+
     int CtrlPointCount = InCluster->GetControlPointIndicesCount();
     int* CtrlPoints = InCluster->GetControlPointIndices();
     double* CtrlPointWeights = InCluster->GetControlPointWeights();

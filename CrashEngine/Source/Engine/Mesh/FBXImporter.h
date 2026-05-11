@@ -61,6 +61,7 @@ private:
     static FMatrix ConvertFbxMatrix(const FbxMatrix& Matrix);
     static FMatrix ConvertFbxMatrix(const FbxAMatrix& Matrix);
     static void ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkeleton);
+    static void ApplySkinBindDataToMesh(FbxMesh* InFbxMesh, USkeleton* InSkeleton, FSkeletalSubMesh* InMesh);
     static void ExtractWeights(FbxCluster* InCluster, int InBoneIndex);
     static void ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh);
     

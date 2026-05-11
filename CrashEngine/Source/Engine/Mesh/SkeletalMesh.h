@@ -4,11 +4,21 @@
 #include "Mesh/StaticMeshAsset.h"
 #include "Render/RHI/D3D11/Buffers/VertexTypes.h"
 #include "Mesh/Skeleton.h"
+#include "Math/Matrix.h"
 
 namespace SkeletalMeshPrefix
 {
     inline const FString Mesh = "Mesh_";
     inline const FString Skeleton = "Skeleton_";
+}
+
+inline FArchive& operator<<(FArchive& Ar, FMatrix& Matrix)
+{
+    for (float& Value : Matrix.Data)
+    {
+        Ar << Value;
+    }
+    return Ar;
 }
 
 struct FSkeletalMeshSection
@@ -31,6 +41,9 @@ struct FSkeletalSubMesh
     TArray<FVertexSkinned> Vertices;
     TArray<uint32> Indices;
     TArray<FSkeletalMeshSection> Sections;
+    FVector MeshBindInverseScale = FVector(1.0f);
+    TArray<FMatrix> InverseBindPoseMatrices;
+    TArray<FMatrix> BoneBindGlobalMatrices;
 
     std::unique_ptr<FSkeletalMeshBuffer> RenderBuffer;
 
@@ -40,6 +53,9 @@ struct FSkeletalSubMesh
         Ar << Vertices;
         Ar << Indices;
         Ar << Sections;
+        Ar << MeshBindInverseScale;
+        Ar << InverseBindPoseMatrices;
+        Ar << BoneBindGlobalMatrices;
     }
 };
 

@@ -288,6 +288,7 @@ void FEditorSkeletalMeshViewerPanel::RenderInspector()
     USkeletalMeshComponent* MeshComp = GetPreviewMeshComponent();
     const int32 BoneCount = MeshComp ? MeshComp->GetNumBones() : 0;
     int32& SelectedBoneIndex = Owner->GetState().SelectedBoneIndex;
+
     if (!MeshComp || SelectedBoneIndex < 0 || SelectedBoneIndex >= BoneCount)
     {
         ImGui::TextDisabled("No selected Bone");
@@ -343,13 +344,19 @@ void FEditorSkeletalMeshViewerPanel::RenderInspector()
         LocalTransform.Scale.Z
     };
 
-    bool bChanged = false;
+    const bool bLocationChanged = ImGui::DragFloat3("Local Location", Location, 0.1f);
+    const bool bRotationChanged = ImGui::DragFloat3("Local Rotation", Rotation, 0.1f);
+    const bool bScaleChanged = ImGui::DragFloat3("Local Scale", Scale, 0.01f);
 
-    bChanged |= ImGui::DragFloat3("Local Location", Location, 0.1f);
-    bChanged |= ImGui::DragFloat3("Local Rotation", Rotation, 0.1f);
-    bChanged |= ImGui::DragFloat3("Local Scale", Scale, 0.01f);
-
-    if (bChanged)
+    if (bLocationChanged && !bRotationChanged && !bScaleChanged)
+    {
+        FMatrix EditedMatrix = LocalMatrix;
+        EditedMatrix.M[3][0] = Location[0];
+        EditedMatrix.M[3][1] = Location[1];
+        EditedMatrix.M[3][2] = Location[2];
+        MeshComp->SetBoneLocalMatrix(SelectedBoneIndex, EditedMatrix);
+    }
+    else if (bRotationChanged || bScaleChanged)
     {
         LocalTransform.Location = FVector(Location[0], Location[1], Location[2]);
         LocalTransform.Rotation = FRotator(Rotation[0], Rotation[1], Rotation[2]).ToQuaternion();
