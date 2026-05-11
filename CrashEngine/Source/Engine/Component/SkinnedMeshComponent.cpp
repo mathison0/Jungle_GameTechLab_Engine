@@ -24,6 +24,42 @@ namespace
     }
 }
 
+bool USkinnedMeshComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutHit)
+{
+    if (!SkeletalMesh)
+        return false;
+    float TMin, TMax;
+    if (!FRayUtils::IntersectRayAABB(Ray, GetWorldBoundingBox().Min, GetWorldBoundingBox().Max, TMin, TMax))
+        return false;
+
+    const FMatrix& World = GetWorldMatrix();
+    const FMatrix& WorldInv = GetWorldInverseMatrix();
+
+    bool bAny = false;
+    FHitResult Best{};
+    Best.Distance = FLT_MAX;
+
+    const auto& SubMeshes = SkeletalMesh->GetSubMeshes();
+    FHitResult Hit{};
+    if (FRayUtils::RaycastTriangles(Ray, World, WorldInv,
+                                    SkinnedVertices.data(), sizeof(FVertexPNCT_T),
+                                    SkinnedIndices.data(), (uint32)SkinnedIndices.size(), Hit) &&
+        Hit.Distance < Best.Distance)
+    {
+        Best = Hit;
+        bAny = true;
+    }
+    
+    if (bAny)
+    {
+        Best.HitComponent = this;
+        OutHit = Best;
+        return true;
+    }
+
+    return false;
+}
+
 void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
     SkeletalMesh = InMesh;
