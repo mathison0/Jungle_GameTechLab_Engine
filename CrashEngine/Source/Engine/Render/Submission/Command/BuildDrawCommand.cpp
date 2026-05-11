@@ -490,8 +490,8 @@ FMatrix MakeBoneConeWorld(const FVector& Head, const FVector& Tail)
     Right.Normalize();
     FVector Up = Forward.Cross(Right);
 
-    const float ScaleZ = Length / (2.0f * kBoneConeHalfHeight);
-    const float RadiusScale = (Length * kBoneConeRadialScaleRatio) / kBoneConeBaseRadius;
+    const float ScaleZ = 0.15f * Length / (2.0f * kBoneConeHalfHeight);
+    const float RadiusScale = 0.15f * (Length * kBoneConeRadialScaleRatio) / kBoneConeBaseRadius;
 
     // Local origin sits at the cone's midpoint, so translate to (Head + Tail) / 2.
     FMatrix Result;
@@ -604,7 +604,7 @@ void DrawCommandBuild::BuildSkeletalDebugDrawCommand(FRenderPipelineContext& Con
 
         FDrawCommand& Cmd = OutList.AddCommand();
         Cmd.Shader        = LineShader;
-        Cmd.DepthStencil  = LinePreset.DepthStencil;
+        Cmd.DepthStencil  = EDepthStencilState::NoDepth;
         Cmd.Blend         = LinePreset.Blend;
         Cmd.Rasterizer    = ERasterizerState::SolidNoCull;
         Cmd.Topology      = LinePreset.Topology;
