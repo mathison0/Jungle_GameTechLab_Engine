@@ -1,4 +1,4 @@
-// 에디터 영역의 세부 동작을 구현합니다.
+﻿// 에디터 영역의 세부 동작을 구현합니다.
 #include "Editor/EditorEngine.h"
 
 #include "Core/Logging/LogMacros.h"
@@ -794,7 +794,7 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
                 Renderer.CollectWorldBoundsDebug(Renderer.GetCollectedPrimitives().VisibleProxies, Scene);
             }
 
-			if (true /*ShowFlags.bSkeletalDebug*/)
+			if (ShowFlags.bSkeletalDebug)
             {
 				Renderer.CollectSkeletalDebug(Scene);
 			}

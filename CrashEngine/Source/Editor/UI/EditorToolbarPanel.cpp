@@ -1044,6 +1044,7 @@ void FEditorToolbarPanel::RenderPaneToolbar(FLevelViewportLayout* Layout,
             ImGui::Checkbox("Primitives", &Opts.ShowFlags.bPrimitives);
             ImGui::Checkbox("UI", &Opts.ShowFlags.bUI);
             ImGui::Checkbox("Text", &Opts.ShowFlags.bText);
+			ImGui::Checkbox("Skeleton", &Opts.ShowFlags.bSkeletalDebug);
         }
 
         if (ImGui::CollapsingHeader("Actor Helpers", ImGuiTreeNodeFlags_DefaultOpen))
