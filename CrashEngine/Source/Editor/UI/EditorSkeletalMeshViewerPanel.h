@@ -26,7 +26,7 @@ public:
     void RenderPreviewViewport(float DeltaTime);
 	void RenderBoneHierarchyTree();
     void RenderBoneNode(uint32 RootBone);
-	void RenderSelectedBoneTransformInspector();
+	void RenderInspector();
 	void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
 	void BuildBoneHierarchy();
     void RenderBoneDebugLine(int32 index, bool bInSelectedSubtree);
@@ -34,7 +34,6 @@ public:
 
 private:
     FSkeletalMeshViewer* Owner = nullptr;
-	//FSkeletalPreviewViewportClient PreviewClient;
 
     // 실제 SkeletalMesh 참조
     USkeletalMesh* SkeletalMesh = nullptr;

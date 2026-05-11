@@ -441,7 +441,18 @@ void FShaderProgramBase::ExtractCBufferInfo(ID3DBlob* InShaderBlob, TMap<FString
             Info->Offset                 = VarDesc.StartOffset;
             Info->Size                   = VarDesc.Size;
             Info->BufferSize             = CBDesc.Size;
-            OutLayout[VarDesc.Name]      = Info;
+
+            const FString ParameterName = VarDesc.Name;
+            auto          Existing      = OutLayout.find(ParameterName);
+            if (Existing != OutLayout.end())
+            {
+                delete Existing->second;
+                Existing->second = Info;
+            }
+            else
+            {
+                OutLayout.emplace(ParameterName, Info);
+            }
         }
     }
 

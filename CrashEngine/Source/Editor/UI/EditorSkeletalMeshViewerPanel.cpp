@@ -51,7 +51,7 @@ void FEditorSkeletalMeshViewerPanel::Render(float DeltaTime)
     ImGui::BeginChild("RightPanel", ImVec2(RightPanelWidth, Available.y), true);
     RenderBoneHierarchyTree();
     ImGui::Separator();
-    RenderSelectedBoneTransformInspector();
+    RenderInspector();
     ImGui::EndChild();
 
     ImGui::End();
@@ -121,9 +121,13 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
 	}
 
 	//Save랑 Reset은 기능없음
-	ImGui::Button("Save");
+    if(ImGui::Button("Save"))
+    {
+    }
 	ImGui::SameLine();
-	ImGui::Button("Reset Pose");
+	if(ImGui::Button("Reset Pose")){
+        GetPreviewMeshComponent()->ResetToReferencePose();
+	}
 
 	ImGui::PopStyleVar(2);
 }
@@ -267,7 +271,7 @@ void FEditorSkeletalMeshViewerPanel::RenderBoneNode(uint32 BoneIndex)
     ImGui::PopID();
 }
 
-void FEditorSkeletalMeshViewerPanel::RenderSelectedBoneTransformInspector()
+void FEditorSkeletalMeshViewerPanel::RenderInspector()
 {
     USkeletalMeshComponent* MeshComp = GetPreviewMeshComponent();
     const int32 BoneCount = MeshComp ? MeshComp->GetNumBones() : 0;

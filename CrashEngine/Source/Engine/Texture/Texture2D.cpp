@@ -36,6 +36,9 @@ UTexture2D::~UTexture2D()
 
 void UTexture2D::ReleaseAllGPU()
 {
+    TArray<UTexture2D*> CachedTextures;
+    CachedTextures.reserve(TextureCache.size());
+
     for (auto& [Path, Entry] : TextureCache)
     {
         UTexture2D* Texture = Entry.Texture;
@@ -49,8 +52,17 @@ void UTexture2D::ReleaseAllGPU()
             Texture->SRV->Release();
             Texture->SRV = nullptr;
         }
+        if (Texture)
+        {
+            CachedTextures.push_back(Texture);
+        }
     }
     TextureCache.clear();
+
+    for (UTexture2D* Texture : CachedTextures)
+    {
+        UObjectManager::Get().DestroyObject(Texture);
+    }
 
     for (UTexture2D* Texture : RetiredTextures)
     {
