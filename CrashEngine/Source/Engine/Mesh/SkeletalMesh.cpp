@@ -9,6 +9,30 @@
 IMPLEMENT_CLASS(USkeletalSubMesh, UObject)
 IMPLEMENT_CLASS(USkeletalMesh, UObject)
 
+namespace
+{
+    void RebuildSectionMaterialIndices(FSkeletalSubMesh* SkeletalSubMeshAsset, const TArray<FStaticMaterial>& StaticMaterials)
+    {
+        if (!SkeletalSubMeshAsset)
+        {
+            return;
+        }
+
+        for (FSkeletalMeshSection& Section : SkeletalSubMeshAsset->Sections)
+        {
+            Section.MaterialIndex = -1;
+            for (int32 i = 0; i < static_cast<int32>(StaticMaterials.size()); ++i)
+            {
+                if (StaticMaterials[i].MaterialSlotName == Section.MaterialSlotName)
+                {
+                    Section.MaterialIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 void USkeletalMesh::Serialize(FArchive& Ar)
 {
     UObject::Serialize(Ar);
@@ -90,21 +114,9 @@ void USkeletalSubMesh::Serialize(FArchive& Ar)
 
     Ar << StaticMaterials;
 
-    // Cache MaterialIndex
     if (Ar.IsLoading() && SkeletalSubMeshAsset)
     {
-        for (FSkeletalMeshSection& Section : SkeletalSubMeshAsset->Sections)
-        {
-            Section.MaterialIndex = -1;
-            for (int32 i = 0; i < (int32)StaticMaterials.size(); ++i)
-            {
-                if (StaticMaterials[i].MaterialSlotName == Section.MaterialSlotName)
-                {
-                    Section.MaterialIndex = i;
-                    break;
-                }
-            }
-        }
+        RebuildSectionMaterialIndices(SkeletalSubMeshAsset, StaticMaterials);
     }
 }
 
@@ -127,19 +139,14 @@ void USkeletalSubMesh::SetSkeletalSubMeshAsset(FSkeletalSubMesh* InMesh)
 
     if (SkeletalSubMeshAsset)
     {
-        for (FSkeletalMeshSection& Section : SkeletalSubMeshAsset->Sections)
-        {
-            Section.MaterialIndex = -1;
-            for (int32 i = 0; i < (int32)StaticMaterials.size(); ++i)
-            {
-                if (StaticMaterials[i].MaterialSlotName == Section.MaterialSlotName)
-                {
-                    Section.MaterialIndex = i;
-                    break;
-                }
-            }
-        }
+        RebuildSectionMaterialIndices(SkeletalSubMeshAsset, StaticMaterials);
     }
+}
+
+void USkeletalSubMesh::SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials)
+{
+    StaticMaterials = std::move(InMaterials);
+    RebuildSectionMaterialIndices(SkeletalSubMeshAsset, StaticMaterials);
 }
 
 void USkeletalSubMesh::InitResources(ID3D11Device* InDevice)

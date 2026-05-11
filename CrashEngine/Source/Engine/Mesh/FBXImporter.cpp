@@ -103,8 +103,63 @@ FbxManager* FFBXImporter::SdkManager = nullptr;
 TArray<TArray<int>> FFBXImporter::CtrlPointToVertexIndex;
 TArray<TArray<FFBXImporter::FBoneWeighting>> FFBXImporter::BoneWeighting;
 
-FFBXImporter::FImportedSkeletalMesh::FImportedSkeletalMesh(FName InName, FSkeletalSubMesh* InMeshData, FName InSkeletonName)
-    : Name(InName), MeshData(InMeshData), SkeletonName(InSkeletonName)
+namespace
+{
+    FString BuildValidMaterialSlotName(const FString& InName, int32 FallbackIndex)
+    {
+        if (!InName.empty())
+        {
+            return InName;
+        }
+
+        return "Material_" + std::to_string(FallbackIndex);
+    }
+
+    int32 GetFbxPolygonMaterialIndex(FbxNode* Node, FbxMesh* Mesh, int32 PolygonIndex)
+    {
+        if (!Node || !Mesh)
+        {
+            return 0;
+        }
+
+        const int32 MaterialCount = Node->GetMaterialCount();
+        if (MaterialCount <= 0)
+        {
+            return 0;
+        }
+
+        FbxGeometryElementMaterial* MaterialElement = Mesh->GetElementMaterial();
+        if (!MaterialElement)
+        {
+            return 0;
+        }
+
+        int32 MaterialIndex = 0;
+        switch (MaterialElement->GetMappingMode())
+        {
+        case FbxGeometryElement::eAllSame:
+            if (MaterialElement->GetIndexArray().GetCount() > 0)
+            {
+                MaterialIndex = MaterialElement->GetIndexArray().GetAt(0);
+            }
+            break;
+        case FbxGeometryElement::eByPolygon:
+            if (PolygonIndex >= 0 && PolygonIndex < MaterialElement->GetIndexArray().GetCount())
+            {
+                MaterialIndex = MaterialElement->GetIndexArray().GetAt(PolygonIndex);
+            }
+            break;
+        default:
+            MaterialIndex = 0;
+            break;
+        }
+
+        return std::clamp(MaterialIndex, 0, MaterialCount - 1);
+    }
+}
+
+FFBXImporter::FImportedSkeletalMesh::FImportedSkeletalMesh(FName InName, FSkeletalSubMesh* InMeshData, FName InSkeletonName, TArray<FStaticMaterial>&& InMaterials)
+    : Name(InName), MeshData(InMeshData), SkeletonName(InSkeletonName), Materials(std::move(InMaterials))
 {
 }
 
@@ -188,6 +243,7 @@ bool FFBXImporter::ImportAndCacheAll(const FString& FBXFilePath, const FImportOp
             if (ImportedMesh->SkeletonName == Skeleton->GetFName())
             {
                 USkeletalSubMesh* Sub = UObjectManager::Get().CreateObject<USkeletalSubMesh>();
+                Sub->SetStaticMaterials(std::move(ImportedMesh->Materials));
                 Sub->SetSkeletalSubMeshAsset(ImportedMesh->MeshData);
                 ImportedMesh->MeshData = nullptr; // 소유권 이전
                 Sub->SetSkeleton(Skeleton);
@@ -305,7 +361,8 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& O
     if (attr && attr->GetAttributeType() == FbxNodeAttribute::eMesh) {
         FbxMesh* fbxMesh = Node->GetMesh();
         
-        std::unique_ptr<FSkeletalSubMesh> ExtractedMesh = ParseGeometry(fbxMesh, Options);
+        TArray<FStaticMaterial> ExtractedMaterials;
+        std::unique_ptr<FSkeletalSubMesh> ExtractedMesh = ParseGeometry(Node, fbxMesh, Options, ExtractedMaterials);
         if (ExtractedMesh)
         {
             BoneWeighting.assign(ExtractedMesh->Vertices.size(), TArray<FBoneWeighting>());
@@ -345,7 +402,7 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& O
                         ApplyWeightsToSkeleton(ExtractedMesh.get());
                         
                         FImportedSkeletalMesh* NewMesh = new FImportedSkeletalMesh(
-                            FName(Node->GetName()), ExtractedMesh.release(), OwnerSkeleton->GetFName());
+                            FName(Node->GetName()), ExtractedMesh.release(), OwnerSkeleton->GetFName(), std::move(ExtractedMaterials));
                         OutAsset.SkeletalMeshes.push_back(NewMesh);
                     }
                 }
@@ -358,7 +415,7 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& O
     }
 }
 
-std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh, const FImportOptions& Options)
+std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials)
 {
     std::unique_ptr<FSkeletalSubMesh> Result = std::make_unique<FSkeletalSubMesh>();
     
@@ -378,6 +435,20 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh
     FbxLayerElementArrayTemplate<FbxVector4>* TangentList = nullptr;
     InFbxMesh->GetTangents(&TangentList, 0);
     
+    struct FPendingSectionBuild
+    {
+        FString MaterialSlotName;
+        TArray<uint32> Indices;
+    };
+
+    TArray<FPendingSectionBuild> PendingSections;
+    TArray<int32> FbxMaterialIndexToSectionIndex;
+    const int32 NodeMaterialCount = InNode ? InNode->GetMaterialCount() : 0;
+    if (NodeMaterialCount > 0)
+    {
+        FbxMaterialIndexToSectionIndex.assign(NodeMaterialCount, -1);
+    }
+
     CtrlPointToVertexIndex.assign(InFbxMesh->GetControlPointsCount(), TArray<int>());
     for (int i = 0; i < PolygonCount; ++i) {
         uint32 TriangleIndices[3];
@@ -415,25 +486,66 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseGeometry(FbxMesh* InFbxMesh
 
         if (Options.WindingOrder == EWindingOrder::CCW_to_CW)
         {
-            Result->Indices.push_back(TriangleIndices[0]);
-            Result->Indices.push_back(TriangleIndices[2]);
-            Result->Indices.push_back(TriangleIndices[1]);
+            std::swap(TriangleIndices[1], TriangleIndices[2]);
         }
-        else
+
+        int32 SectionIndex = 0;
+        if (NodeMaterialCount > 0)
         {
-            Result->Indices.push_back(TriangleIndices[0]);
-            Result->Indices.push_back(TriangleIndices[1]);
-            Result->Indices.push_back(TriangleIndices[2]);
+            const int32 FbxMaterialIndex = GetFbxPolygonMaterialIndex(InNode, InFbxMesh, i);
+            SectionIndex = FbxMaterialIndexToSectionIndex[FbxMaterialIndex];
+            if (SectionIndex == -1)
+            {
+                FPendingSectionBuild NewSection;
+                FbxSurfaceMaterial* FbxMaterial = InNode->GetMaterial(FbxMaterialIndex);
+                NewSection.MaterialSlotName = BuildValidMaterialSlotName(
+                    FbxMaterial ? FString(FbxMaterial->GetName()) : FString(),
+                    FbxMaterialIndex);
+                PendingSections.push_back(std::move(NewSection));
+                SectionIndex = static_cast<int32>(PendingSections.size()) - 1;
+                FbxMaterialIndexToSectionIndex[FbxMaterialIndex] = SectionIndex;
+
+                FStaticMaterial NewMaterial;
+                NewMaterial.MaterialInterface = nullptr;
+                NewMaterial.MaterialSlotName = PendingSections[SectionIndex].MaterialSlotName;
+                OutMaterials.push_back(std::move(NewMaterial));
+            }
         }
+        else if (PendingSections.empty())
+        {
+            FPendingSectionBuild DefaultSectionBuild;
+            DefaultSectionBuild.MaterialSlotName = "Default";
+            PendingSections.push_back(std::move(DefaultSectionBuild));
+
+            FStaticMaterial DefaultMaterial;
+            DefaultMaterial.MaterialInterface = nullptr;
+            DefaultMaterial.MaterialSlotName = "Default";
+            OutMaterials.push_back(std::move(DefaultMaterial));
+        }
+
+        PendingSections[SectionIndex].Indices.push_back(TriangleIndices[0]);
+        PendingSections[SectionIndex].Indices.push_back(TriangleIndices[1]);
+        PendingSections[SectionIndex].Indices.push_back(TriangleIndices[2]);
     }
 
-    // 모든 정점 데이터를 포함하는 기본 섹션을 추가합니다.
-    FSkeletalMeshSection DefaultSection;
-    DefaultSection.MaterialIndex = 0;
-    DefaultSection.MaterialSlotName = "Default";
-    DefaultSection.FirstIndex = 0;
-    DefaultSection.NumTriangles = (uint32)PolygonCount;
-    Result->Sections.push_back(DefaultSection);
+    Result->Indices.clear();
+    Result->Indices.reserve(static_cast<size_t>(PolygonCount) * 3);
+    for (int32 SectionIndex = 0; SectionIndex < static_cast<int32>(PendingSections.size()); ++SectionIndex)
+    {
+        const FPendingSectionBuild& PendingSection = PendingSections[SectionIndex];
+        if (PendingSection.Indices.empty())
+        {
+            continue;
+        }
+
+        FSkeletalMeshSection NewSection;
+        NewSection.MaterialIndex = SectionIndex;
+        NewSection.MaterialSlotName = PendingSection.MaterialSlotName;
+        NewSection.FirstIndex = static_cast<uint32>(Result->Indices.size());
+        NewSection.NumTriangles = static_cast<uint32>(PendingSection.Indices.size() / 3);
+        Result->Sections.push_back(NewSection);
+        Result->Indices.insert(Result->Indices.end(), PendingSection.Indices.begin(), PendingSection.Indices.end());
+    }
 
     return Result;
 }

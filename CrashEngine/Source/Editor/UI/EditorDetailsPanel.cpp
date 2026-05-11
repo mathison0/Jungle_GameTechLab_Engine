@@ -2224,6 +2224,30 @@ bool FEditorDetailsPanel::RenderDetailsPanel(TArray<FPropertyDescriptor>& Props,
             if (SMC->GetStaticMesh() && ElemIdx < (int32)SMC->GetStaticMesh()->GetStaticMaterials().size())
                 SlotName = SMC->GetStaticMesh()->GetStaticMaterials()[ElemIdx].MaterialSlotName;
         }
+        else if (ElemIdx != -1 && SelectedComponent && SelectedComponent->IsA<USkeletalMeshComponent>())
+        {
+            USkeletalMeshComponent* SKC = static_cast<USkeletalMeshComponent*>(SelectedComponent);
+            if (USkeletalMesh* SkeletalMesh = SKC->GetSkeletalMesh())
+            {
+                int32 GlobalSlotIndex = 0;
+                for (USkeletalSubMesh* SubMesh : SkeletalMesh->GetSubMeshes())
+                {
+                    if (!SubMesh)
+                    {
+                        continue;
+                    }
+
+                    const TArray<FStaticMaterial>& StaticMaterials = SubMesh->GetStaticMaterials();
+                    if (ElemIdx < GlobalSlotIndex + static_cast<int32>(StaticMaterials.size()))
+                    {
+                        SlotName = StaticMaterials[ElemIdx - GlobalSlotIndex].MaterialSlotName;
+                        break;
+                    }
+
+                    GlobalSlotIndex += static_cast<int32>(StaticMaterials.size());
+                }
+            }
+        }
 
         const bool bIsArrayElementSlot = (ElemIdx != -1);
 

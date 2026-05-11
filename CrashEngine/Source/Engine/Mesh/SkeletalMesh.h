@@ -76,7 +76,7 @@ public:
     void SetSkeleton(USkeleton* InSkeleton) { Skeleton = InSkeleton; }
     USkeleton* GetSkeleton() const { return Skeleton; }
 
-    void SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials) { StaticMaterials = std::move(InMaterials); }
+    void SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials);
     const TArray<FStaticMaterial>& GetStaticMaterials() const { return StaticMaterials; }
 
     void InitResources(ID3D11Device* InDevice);

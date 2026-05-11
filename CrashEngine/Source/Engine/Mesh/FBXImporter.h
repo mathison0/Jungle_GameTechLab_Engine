@@ -19,8 +19,9 @@ struct FFBXImporter
         FName Name;
         FSkeletalSubMesh* MeshData;
         FName SkeletonName;
+        TArray<FStaticMaterial> Materials;
 
-        FImportedSkeletalMesh(FName InName, FSkeletalSubMesh* InMeshData, FName InSkeletonName);
+        FImportedSkeletalMesh(FName InName, FSkeletalSubMesh* InMeshData, FName InSkeletonName, TArray<FStaticMaterial>&& InMaterials);
         ~FImportedSkeletalMesh();
 
         FImportedSkeletalMesh(const FImportedSkeletalMesh&) = delete;
@@ -55,7 +56,7 @@ private:
     static void ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton);
     static void ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& Options, FImportedFBXAssets& InAsset);
     static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);  // PlaceHolder, 아직 미구현
-    static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxMesh* InFbxMesh, const FImportOptions& Options);
+    static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials);
     static FTransform GetTransformFromNode(FbxNode* Node);
     static FTransform GetTransformFromMatrix(const FMatrix& Matrix);
     static FMatrix ConvertFbxMatrix(const FbxMatrix& Matrix);
