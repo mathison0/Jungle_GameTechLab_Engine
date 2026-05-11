@@ -4,7 +4,8 @@
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/Skeleton.h"
 #include "Object/ObjectFactory.h"
-#include "Render/RHI/D3D11/Buffers/SkeletalMeshBuffer.h"
+#include "Render/Scene/Proxies/Primitive/SkeletalMeshSceneProxy.h"
+#include "Collision/RayUtils.h"
 
 #include <algorithm>
 
@@ -410,8 +411,10 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
     ID3D11Device* Device = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
     ID3D11DeviceContext* Context = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext() : nullptr;
 
-    for (USkeletalSubMesh* SubMesh : SkeletalMesh->GetSubMeshes())
+    for (uint32 i = 0; i < SkeletalMesh->GetSubMeshes().size(); i++)
     {
+		auto* SubMesh = SkeletalMesh->GetSubMeshes()[i];
+
         if (!SubMesh || !SubMesh->GetSkeletalSubMeshAsset())
         {
             continue;
@@ -505,29 +508,10 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
             SkinnedIndices.push_back(VertexBase + Index);
         }
 
-        if (Device && Context && !SkinnedRenderVertices.empty())
+		if (FSkeletalMeshSceneProxy* SkeletalProxy = static_cast<FSkeletalMeshSceneProxy*>(SceneProxy))
         {
-            FSkeletalMeshBuffer* RenderBuffer = static_cast<FSkeletalMeshBuffer*>(Asset->RenderBuffer.get());
-            const bool bNeedsCreate =
-                !RenderBuffer ||
-                !RenderBuffer->IsValid() ||
-                RenderBuffer->GetVertexStride() != sizeof(FVertexSkinned) ||
-                RenderBuffer->GetVertexCount() != static_cast<uint32>(SkinnedRenderVertices.size());
-
-            if (bNeedsCreate)
-            {
-                TMeshData<FVertexSkinned> RenderMeshData;
-                RenderMeshData.Vertices = SkinnedRenderVertices;
-                RenderMeshData.Indices = Asset->Indices;
-
-                Asset->RenderBuffer = std::make_unique<FSkeletalMeshBuffer>();
-                RenderBuffer = static_cast<FSkeletalMeshBuffer*>(Asset->RenderBuffer.get());
-                RenderBuffer->Create(Device, RenderMeshData);
-            }
-            else
-            {
-                RenderBuffer->UpdateVertex(Context, SkinnedRenderVertices.data(), static_cast<uint32>(SkinnedRenderVertices.size()));
-            }
+            const uint32 SubMeshVertexCount = static_cast<uint32>(Asset->Vertices.size());
+            SkeletalProxy->UpdateSkinnedSubMeshVertices(i, Context, SkinnedVertices.data() + VertexBase, SubMeshVertexCount);
         }
 
         VertexBase += static_cast<uint32>(Asset->Vertices.size());

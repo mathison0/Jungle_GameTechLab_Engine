@@ -29,25 +29,7 @@ void FStaticMeshBuffer::Release()
 
 bool FSkeletalMeshBuffer::UpdateVertex(ID3D11DeviceContext* Context, const void* Data, uint32 Count)
 {
-    // CPU Skinning 결과를 GPU에 업데이트할 때 Bone 정보를 제거하고 FVertexPNCT_T 형식으로 변환합니다.
-    // 현재는 전달된 Data가 FVertexSkinned 배열임을 가정합니다.
-    const FVertexSkinned* SkinnedData = static_cast<const FVertexSkinned*>(Data);
-    
-    TArray<FVertexPNCT_T> ConvertedVertices;
-    ConvertedVertices.reserve(Count);
-    for (uint32 i = 0; i < Count; ++i)
-    {
-        const FVertexSkinned& Vert = SkinnedData[i];
-        FVertexPNCT_T NewVert;
-        NewVert.Position = Vert.Position;
-        NewVert.Normal   = Vert.Normal;
-        NewVert.Color    = Vert.Color;
-        NewVert.UV       = Vert.UV;
-        NewVert.Tangent  = Vert.Tangent;
-        ConvertedVertices.push_back(NewVert);
-    }
-
-    return VertexBuffer.Update(Context, ConvertedVertices.data(), Count);
+    return VertexBuffer.Update(Context, Data, Count);
 }
 
 void FSkeletalMeshBuffer::Release()
