@@ -254,6 +254,10 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
     {
         Renderer.CollectWorld(World, CollectContext);
     }
+    if (Options.bShowSkeleton)
+    {
+        Renderer.CollectSkeletalDebug(Scene);
+    }
 	
 	Renderer.CollectGrid(1.0f, 20, Scene);
     Renderer.CollectDebugRender(Scene);

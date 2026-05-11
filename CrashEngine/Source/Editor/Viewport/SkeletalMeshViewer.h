@@ -23,6 +23,7 @@ struct FSkeletalMeshViewerState
     bool bShowMesh = true;
     bool bShowSkeleton = true;
     bool bShowBoneNames = false;
+    bool bUseFbxLocalSkeleton = false;
 
     //ESkeletalMeshPreviewPoseMode PoseMode = ESkeletalMeshPreviewPoseMode::BindPose;
 
@@ -33,6 +34,7 @@ struct FSkeletalMeshViewerState
         bShowMesh		= true;
         bShowSkeleton	= true;
         bShowBoneNames	= false;
+        bUseFbxLocalSkeleton = false;
 
         //PoseMode = ESkeletalMeshPreviewPoseMode::TPose;
 	}

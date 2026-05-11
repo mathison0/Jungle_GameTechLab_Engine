@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <ranges>
 #include <fstream>
+#include <unordered_map>
 
 namespace
 {
@@ -278,6 +279,7 @@ void FFBXImporter::ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USke
     {
         FTransform LocalTransform = GetTransformFromNode(Node);
         currentIndex = OutSkeleton->AddBone(Node->GetName(), ParentIndex, LocalTransform);
+        OutSkeleton->SetBoneDisplayTransform(currentIndex, LocalTransform);
     }
 
     for (int i = 0; i < Node->GetChildCount(); i++) {
@@ -315,6 +317,8 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& O
 
                     if (OwnerSkeleton)
                     {
+                        ApplyBindPoseToSkeleton(fbxMesh, OwnerSkeleton);
+
                         for (int i = 0; i < skinCount; i++) {
                             FbxSkin* skin = (FbxSkin*)fbxMesh->GetDeformer(i, FbxDeformer::eSkin);
                             int clusterCount = skin->GetClusterCount();
@@ -432,6 +436,152 @@ FTransform FFBXImporter::GetTransformFromNode(FbxNode* Node)
     FbxVector4 LclS = Node->LclScaling.Get();
     Result.Scale = FVector((float)LclS[0], (float)LclS[1], (float)LclS[2]);
     return Result;
+}
+
+FTransform FFBXImporter::GetTransformFromMatrix(const FMatrix& Matrix)
+{
+    FTransform Result;
+    Result.Location = Matrix.GetLocation();
+    Result.Scale = Matrix.GetScale();
+
+    FMatrix RotationMatrix = Matrix;
+    if (Result.Scale.X > 1e-6f)
+    {
+        RotationMatrix.M[0][0] /= Result.Scale.X;
+        RotationMatrix.M[0][1] /= Result.Scale.X;
+        RotationMatrix.M[0][2] /= Result.Scale.X;
+    }
+    if (Result.Scale.Y > 1e-6f)
+    {
+        RotationMatrix.M[1][0] /= Result.Scale.Y;
+        RotationMatrix.M[1][1] /= Result.Scale.Y;
+        RotationMatrix.M[1][2] /= Result.Scale.Y;
+    }
+    if (Result.Scale.Z > 1e-6f)
+    {
+        RotationMatrix.M[2][0] /= Result.Scale.Z;
+        RotationMatrix.M[2][1] /= Result.Scale.Z;
+        RotationMatrix.M[2][2] /= Result.Scale.Z;
+    }
+
+    RotationMatrix.M[3][0] = 0.0f;
+    RotationMatrix.M[3][1] = 0.0f;
+    RotationMatrix.M[3][2] = 0.0f;
+    RotationMatrix.M[3][3] = 1.0f;
+    Result.Rotation = RotationMatrix.ToQuat();
+    return Result;
+}
+
+FMatrix FFBXImporter::ConvertFbxMatrix(const FbxAMatrix& Matrix)
+{
+    return FMatrix(
+        static_cast<float>(Matrix.Get(0, 0)), static_cast<float>(Matrix.Get(0, 1)), static_cast<float>(Matrix.Get(0, 2)), static_cast<float>(Matrix.Get(0, 3)),
+        static_cast<float>(Matrix.Get(1, 0)), static_cast<float>(Matrix.Get(1, 1)), static_cast<float>(Matrix.Get(1, 2)), static_cast<float>(Matrix.Get(1, 3)),
+        static_cast<float>(Matrix.Get(2, 0)), static_cast<float>(Matrix.Get(2, 1)), static_cast<float>(Matrix.Get(2, 2)), static_cast<float>(Matrix.Get(2, 3)),
+        static_cast<float>(Matrix.Get(3, 0)), static_cast<float>(Matrix.Get(3, 1)), static_cast<float>(Matrix.Get(3, 2)), static_cast<float>(Matrix.Get(3, 3)));
+}
+
+FMatrix FFBXImporter::ConvertFbxMatrix(const FbxMatrix& Matrix)
+{
+    return FMatrix(
+        static_cast<float>(Matrix.Get(0, 0)), static_cast<float>(Matrix.Get(0, 1)), static_cast<float>(Matrix.Get(0, 2)), static_cast<float>(Matrix.Get(0, 3)),
+        static_cast<float>(Matrix.Get(1, 0)), static_cast<float>(Matrix.Get(1, 1)), static_cast<float>(Matrix.Get(1, 2)), static_cast<float>(Matrix.Get(1, 3)),
+        static_cast<float>(Matrix.Get(2, 0)), static_cast<float>(Matrix.Get(2, 1)), static_cast<float>(Matrix.Get(2, 2)), static_cast<float>(Matrix.Get(2, 3)),
+        static_cast<float>(Matrix.Get(3, 0)), static_cast<float>(Matrix.Get(3, 1)), static_cast<float>(Matrix.Get(3, 2)), static_cast<float>(Matrix.Get(3, 3)));
+}
+
+void FFBXImporter::ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkeleton)
+{
+    if (!InFbxMesh || !InSkeleton)
+    {
+        return;
+    }
+
+    std::unordered_map<FbxNode*, FMatrix> GlobalBindMatrices;
+
+    FbxScene* Scene = InFbxMesh->GetScene();
+    if (Scene)
+    {
+        for (int PoseIndex = 0; PoseIndex < Scene->GetPoseCount(); ++PoseIndex)
+        {
+            FbxPose* Pose = Scene->GetPose(PoseIndex);
+            if (!Pose || !Pose->IsBindPose())
+            {
+                continue;
+            }
+
+            for (int NodeIndex = 0; NodeIndex < Pose->GetCount(); ++NodeIndex)
+            {
+                FbxNode* PoseNode = Pose->GetNode(NodeIndex);
+                if (!PoseNode)
+                {
+                    continue;
+                }
+
+                const FbxMatrix& SourceMatrix = Pose->GetMatrix(NodeIndex);
+                GlobalBindMatrices[PoseNode] = ConvertFbxMatrix(SourceMatrix);
+            }
+        }
+    }
+
+    const int SkinCount = InFbxMesh->GetDeformerCount(FbxDeformer::eSkin);
+    for (int SkinIndex = 0; SkinIndex < SkinCount; ++SkinIndex)
+    {
+        FbxSkin* Skin = static_cast<FbxSkin*>(InFbxMesh->GetDeformer(SkinIndex, FbxDeformer::eSkin));
+        if (!Skin)
+        {
+            continue;
+        }
+
+        const int ClusterCount = Skin->GetClusterCount();
+        for (int ClusterIndex = 0; ClusterIndex < ClusterCount; ++ClusterIndex)
+        {
+            FbxCluster* Cluster = Skin->GetCluster(ClusterIndex);
+            if (!Cluster || !Cluster->GetLink())
+            {
+                continue;
+            }
+
+            FbxAMatrix LinkBindMatrix;
+            Cluster->GetTransformLinkMatrix(LinkBindMatrix);
+            GlobalBindMatrices[Cluster->GetLink()] = ConvertFbxMatrix(LinkBindMatrix);
+        }
+    }
+
+    const TArray<FBoneInfo>& Bones = InSkeleton->GetBones();
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(Bones.size()); ++BoneIndex)
+    {
+        const FBoneInfo& Bone = Bones[BoneIndex];
+        FbxNode* BoneNode = nullptr;
+        if (Scene && Scene->GetRootNode())
+        {
+            BoneNode = Scene->GetRootNode()->FindChild(Bone.Name.ToString().c_str(), true);
+        }
+
+        auto BindIt = BoneNode ? GlobalBindMatrices.find(BoneNode) : GlobalBindMatrices.end();
+        if (BindIt == GlobalBindMatrices.end())
+        {
+            continue;
+        }
+
+        FMatrix LocalBindMatrix = BindIt->second;
+        if (Bone.ParentIndex >= 0 && Bone.ParentIndex < static_cast<int32>(Bones.size()))
+        {
+            FbxNode* ParentNode = nullptr;
+            if (Scene && Scene->GetRootNode())
+            {
+                ParentNode = Scene->GetRootNode()->FindChild(Bones[Bone.ParentIndex].Name.ToString().c_str(), true);
+            }
+
+            auto ParentBindIt = ParentNode ? GlobalBindMatrices.find(ParentNode) : GlobalBindMatrices.end();
+            if (ParentBindIt != GlobalBindMatrices.end())
+            {
+                LocalBindMatrix = BindIt->second * ParentBindIt->second.GetInverse();
+            }
+        }
+
+        InSkeleton->SetBoneReferenceTransform(BoneIndex, GetTransformFromMatrix(LocalBindMatrix));
+    }
 }
 
 void FFBXImporter::ExtractWeights(FbxCluster* InCluster, int InBoneIndex)

@@ -6,21 +6,31 @@ IMPLEMENT_CLASS(USkeleton, UObject)
 void USkeleton::Serialize(FArchive& Ar)
 {
     UObject::Serialize(Ar);
-    
-    // NOTE: 
-    // Bones(TArray<FBoneInfo>)는 FBoneInfo가 trivially_copyable로 판정되어 
-    // TArray의 operator<<에서 고속 복사가 일어날 수 있습니다.
-    // 하지만 FBoneInfo::operator<<는 FName을 문자열로 변환하여 저장하는 커스텀 로직을 가지므로,
-    // 반드시 개별 요소별로 루프를 돌며 직렬화해야 합니다.
+
+    // FBoneInfo contains FName, so serialize each element through FBoneInfo::operator<<.
     uint32 ArrayNum = static_cast<uint32>(Bones.size());
     Ar << ArrayNum;
 
     if (Ar.IsLoading())
+    {
         Bones.resize(ArrayNum);
+    }
 
     for (auto& Bone : Bones)
     {
         Ar << Bone;
+    }
+
+    Ar << DisplayTransforms;
+
+    if (Ar.IsLoading() && DisplayTransforms.size() != Bones.size())
+    {
+        DisplayTransforms.clear();
+        DisplayTransforms.reserve(Bones.size());
+        for (const FBoneInfo& Bone : Bones)
+        {
+            DisplayTransforms.push_back(Bone.ReferenceTransform);
+        }
     }
 }
 
@@ -31,8 +41,31 @@ int32 USkeleton::AddBone(FName InName, int32 InParentIndex, const FTransform& In
     Bone.ParentIndex = InParentIndex;
     Bone.ReferenceTransform = InRefTransform;
     Bones.push_back(Bone);
+    DisplayTransforms.push_back(InRefTransform);
     
     return static_cast<int32>(Bones.size() - 1);
+}
+
+bool USkeleton::SetBoneReferenceTransform(int32 BoneIndex, const FTransform& InRefTransform)
+{
+    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(Bones.size()))
+    {
+        return false;
+    }
+
+    Bones[BoneIndex].ReferenceTransform = InRefTransform;
+    return true;
+}
+
+bool USkeleton::SetBoneDisplayTransform(int32 BoneIndex, const FTransform& InDisplayTransform)
+{
+    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(DisplayTransforms.size()))
+    {
+        return false;
+    }
+
+    DisplayTransforms[BoneIndex] = InDisplayTransform;
+    return true;
 }
 
 int32 USkeleton::FindBoneIndex(const FString& InName) const

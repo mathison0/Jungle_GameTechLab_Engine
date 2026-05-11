@@ -8,6 +8,7 @@ struct FSkeletalDebugBone
     FMatrix WorldMatrix = FMatrix::Identity;
     int32   ParentIndex = -1;
     FColor  Color       = FColor(255, 255, 255);
+    bool    bDraw       = true;
 };
 
 struct FSkeletalDebugInstance

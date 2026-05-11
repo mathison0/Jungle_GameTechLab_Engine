@@ -104,6 +104,18 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
 	ImGui::SameLine();
 
 	RenderToggleButton("Bone Names", State.bShowBoneNames);
+	ImGui::SameLine();
+
+	if (RenderToggleButton("FBX Local Bones", State.bUseFbxLocalSkeleton))
+	{
+        if (USkeletalMeshComponent* MeshComp = GetPreviewMeshComponent())
+        {
+            MeshComp->SetSkeletalDebugPoseMode(
+                State.bUseFbxLocalSkeleton
+                    ? ESkeletalDebugPoseMode::FbxLocalPose
+                    : ESkeletalDebugPoseMode::SkinBindPose);
+        }
+	}
 
 	const ImGuiStyle& Style = ImGui::GetStyle();
 	const float SaveWidth = ImGui::CalcTextSize("Save").x + Style.FramePadding.x * 2.0f;
@@ -437,8 +449,8 @@ void FEditorSkeletalMeshViewerPanel::RenderBoneDebugLine(int32 BoneIndex, bool b
         if (ChildIndex < 0 || ChildIndex >= MeshComp->GetNumBones())
             continue;
 
-        const FVector ParentJoint = MeshComp->GetBoneComponentMatrix(BoneIndex).GetLocation();
-        const FVector ChildJoint = MeshComp->GetBoneComponentMatrix(ChildIndex).GetLocation();
+        const FVector ParentJoint = MeshComp->GetBoneDebugWorldMatrix(BoneIndex).GetLocation();
+        const FVector ChildJoint = MeshComp->GetBoneDebugWorldMatrix(ChildIndex).GetLocation();
 
         FColor LineColor = BoneColor;
         if (BoneIndex == SelectedBoneIndex)

@@ -57,6 +57,10 @@ private:
     static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);  // PlaceHolder, 아직 미구현
     static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxMesh* InFbxMesh, const FImportOptions& Options);
     static FTransform GetTransformFromNode(FbxNode* Node);
+    static FTransform GetTransformFromMatrix(const FMatrix& Matrix);
+    static FMatrix ConvertFbxMatrix(const FbxMatrix& Matrix);
+    static FMatrix ConvertFbxMatrix(const FbxAMatrix& Matrix);
+    static void ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkeleton);
     static void ExtractWeights(FbxCluster* InCluster, int InBoneIndex);
     static void ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh);
     

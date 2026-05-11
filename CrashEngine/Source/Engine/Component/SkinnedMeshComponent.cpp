@@ -46,7 +46,17 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
     }
 
     RefreshReferencePose();
-    ResetToReferencePose();
+    RefreshDisplayPose();
+    if (DebugPoseMode == ESkeletalDebugPoseMode::FbxLocalPose &&
+        DisplayPoseBoneLocalMatrices.size() == RefPoseBoneLocalMatrices.size())
+    {
+        CurrentBoneLocalMatrices = DisplayPoseBoneLocalMatrices;
+        RefreshBoneTransforms();
+    }
+    else
+    {
+        ResetToReferencePose();
+    }
 
     UpdateSkinningMatrices();
     UpdateSkinnedVertices();
@@ -177,6 +187,94 @@ void USkinnedMeshComponent::RefreshReferencePose()
     }
 }
 
+void USkinnedMeshComponent::RefreshDisplayPose()
+{
+    DisplayPoseBoneLocalMatrices.clear();
+    DisplayPoseBoneGlobalMatrices.clear();
+    EditedDisplayPoseBoneGlobalMatrices.clear();
+
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeleton())
+    {
+        return;
+    }
+
+    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetSkeleton()->GetBones();
+    const TArray<FTransform>& DisplayTransforms = SkeletalMesh->GetSkeleton()->GetDisplayTransforms();
+    const int32 BoneCount = static_cast<int32>(Bones.size());
+
+    DisplayPoseBoneLocalMatrices.resize(BoneCount, FMatrix::Identity);
+    DisplayPoseBoneGlobalMatrices.resize(BoneCount, FMatrix::Identity);
+
+    for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+    {
+        const FBoneInfo& Bone = Bones[BoneIndex];
+        const FTransform& DisplayTransform =
+            BoneIndex < static_cast<int32>(DisplayTransforms.size())
+                ? DisplayTransforms[BoneIndex]
+                : Bone.ReferenceTransform;
+
+        const FMatrix LocalMatrix = DisplayTransform.ToMatrix();
+        DisplayPoseBoneLocalMatrices[BoneIndex] = LocalMatrix;
+
+        if (Bone.ParentIndex >= 0 && Bone.ParentIndex < BoneIndex)
+        {
+            DisplayPoseBoneGlobalMatrices[BoneIndex] = LocalMatrix * DisplayPoseBoneGlobalMatrices[Bone.ParentIndex];
+        }
+        else
+        {
+            DisplayPoseBoneGlobalMatrices[BoneIndex] = LocalMatrix;
+        }
+    }
+
+    RefreshEditedDisplayPose();
+}
+
+void USkinnedMeshComponent::RefreshEditedDisplayPose()
+{
+    EditedDisplayPoseBoneGlobalMatrices.clear();
+
+    const int32 BoneCount = static_cast<int32>(DisplayPoseBoneLocalMatrices.size());
+    if (BoneCount <= 0)
+    {
+        return;
+    }
+
+    EditedDisplayPoseBoneGlobalMatrices.resize(BoneCount, FMatrix::Identity);
+
+    const bool bCanApplyCurrentEdits =
+        CurrentBoneLocalMatrices.size() == DisplayPoseBoneLocalMatrices.size() &&
+        RefPoseBoneLocalMatrices.size() == DisplayPoseBoneLocalMatrices.size();
+
+    for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+    {
+        FMatrix LocalMatrix = DisplayPoseBoneLocalMatrices[BoneIndex];
+        if (bCanApplyCurrentEdits)
+        {
+            const FMatrix EditDelta = RefPoseBoneLocalMatrices[BoneIndex].GetInverse() * CurrentBoneLocalMatrices[BoneIndex];
+            LocalMatrix = EditDelta * DisplayPoseBoneLocalMatrices[BoneIndex];
+        }
+
+        int32 ParentIndex = -1;
+        if (SkeletalMesh && SkeletalMesh->GetSkeleton())
+        {
+            const TArray<FBoneInfo>& Bones = SkeletalMesh->GetSkeleton()->GetBones();
+            if (BoneIndex < static_cast<int32>(Bones.size()))
+            {
+                ParentIndex = Bones[BoneIndex].ParentIndex;
+            }
+        }
+
+        if (ParentIndex >= 0 && ParentIndex < BoneIndex)
+        {
+            EditedDisplayPoseBoneGlobalMatrices[BoneIndex] = LocalMatrix * EditedDisplayPoseBoneGlobalMatrices[ParentIndex];
+        }
+        else
+        {
+            EditedDisplayPoseBoneGlobalMatrices[BoneIndex] = LocalMatrix;
+        }
+    }
+}
+
 void USkinnedMeshComponent::RefreshBoneTransforms()
 {
     CurrentBoneGlobalMatrices.clear();
@@ -231,6 +329,8 @@ void USkinnedMeshComponent::ResetToReferencePose()
     {
         RefreshBoneTransforms();
     }
+
+    RefreshEditedDisplayPose();
 }
 
 bool USkinnedMeshComponent::SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& LocalMatrix)
@@ -242,6 +342,7 @@ bool USkinnedMeshComponent::SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& L
 
     CurrentBoneLocalMatrices[BoneIndex] = LocalMatrix;
     RefreshBoneTransforms();
+    RefreshEditedDisplayPose();
     UpdateSkinningMatrices();
     UpdateSkinnedVertices();
     CacheLocalBounds();
@@ -438,8 +539,40 @@ const FMatrix& USkinnedMeshComponent::GetBoneComponentMatrix(int32 BoneIndex) co
 
 FMatrix USkinnedMeshComponent::GetBoneWorldMatrix(int32 BoneIndex) const
 {
-	// Blender scaling convention
     return GetBoneComponentMatrix(BoneIndex) * FMatrix::MakeScaleMatrix(0.01f) * GetWorldMatrix();
+}
+
+FMatrix USkinnedMeshComponent::GetBoneDebugWorldMatrix(int32 BoneIndex) const
+{
+    return GetBoneWorldMatrix(BoneIndex);
+}
+
+void USkinnedMeshComponent::SetSkeletalDebugPoseMode(ESkeletalDebugPoseMode InMode)
+{
+    if (DebugPoseMode == InMode)
+    {
+        return;
+    }
+
+    DebugPoseMode = InMode;
+
+    if (DebugPoseMode == ESkeletalDebugPoseMode::FbxLocalPose &&
+        DisplayPoseBoneLocalMatrices.size() == RefPoseBoneLocalMatrices.size())
+    {
+        CurrentBoneLocalMatrices = DisplayPoseBoneLocalMatrices;
+        RefreshBoneTransforms();
+    }
+    else
+    {
+        ResetToReferencePose();
+    }
+
+    UpdateSkinningMatrices();
+    UpdateSkinnedVertices();
+    CacheLocalBounds();
+
+    MarkRenderStateDirty();
+    MarkWorldBoundsDirty();
 }
 
 int32 USkinnedMeshComponent::FindBoneIndex(const FName& BoneName) const

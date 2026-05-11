@@ -30,11 +30,12 @@ void FSkeletalMeshSceneProxy::BuildSkeletalDebugInstance(FSkeletalDebugInstance&
     for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
     {
         FSkeletalDebugBone Bone;
-        Bone.WorldMatrix = Skinned->GetBoneWorldMatrix(BoneIndex);
+        Bone.WorldMatrix = Skinned->GetBoneDebugWorldMatrix(BoneIndex);
 
         if (const FBoneInfo* Info = Skinned->GetBoneInfo(BoneIndex))
         {
             Bone.ParentIndex = Info->ParentIndex;
+            Bone.bDraw = Info->ParentIndex >= 0;
         }
 
         OutInstance.Bones.push_back(Bone);

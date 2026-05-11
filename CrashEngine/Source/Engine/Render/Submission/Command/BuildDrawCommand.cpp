@@ -451,20 +451,42 @@ constexpr float kBoneConeHalfHeight = 0.2f;
 constexpr float kBoneConeBaseRadius = 0.2f;
 constexpr float kBoneConeRadialScaleRatio = 0.1f;
 
-FStaticMeshBuffer* GetBoneConeMeshBuffer()
+FStaticMeshBuffer* GetBonePyramidMeshBuffer(ID3D11Device* Device)
 {
-    static const FString ConePath = FPaths::ContentRelativePath("Models/_Basic/Cone.OBJ");
-    UStaticMesh* Cone = FObjManager::Get().Find(ConePath);
-    if (!Cone)
+    static FStaticMeshBuffer PyramidBuffer;
+    if (PyramidBuffer.IsValid())
     {
-        // Retry
-        Cone = FObjManager::Get().Load(ConePath);
-        if (!Cone)
-        {
-            return nullptr;
-        }
+        return &PyramidBuffer;
     }
-    return Cone->GetLODMeshBuffer(0);
+
+    if (!Device)
+    {
+        return nullptr;
+    }
+
+    const float H = kBoneConeHalfHeight;
+    const float R = kBoneConeBaseRadius;
+    const FVector4 White(1.0f, 1.0f, 1.0f, 1.0f);
+
+    TMeshData<FVertexPNCT_T> MeshData;
+    MeshData.Vertices = {
+        { FVector(-R, -R, -H), FVector(0, 0, -1), White, FVector2(0, 0), FVector4(1, 0, 0, 1) },
+        { FVector( R, -R, -H), FVector(0, 0, -1), White, FVector2(1, 0), FVector4(1, 0, 0, 1) },
+        { FVector( R,  R, -H), FVector(0, 0, -1), White, FVector2(1, 1), FVector4(1, 0, 0, 1) },
+        { FVector(-R,  R, -H), FVector(0, 0, -1), White, FVector2(0, 1), FVector4(1, 0, 0, 1) },
+        { FVector(0, 0, H), FVector(0, 0, 1), White, FVector2(0.5f, 0.5f), FVector4(1, 0, 0, 1) },
+    };
+    MeshData.Indices = {
+        0, 2, 1,
+        0, 3, 2,
+        0, 1, 4,
+        1, 2, 4,
+        2, 3, 4,
+        3, 0, 4,
+    };
+
+    PyramidBuffer.Create(Device, MeshData);
+    return PyramidBuffer.IsValid() ? &PyramidBuffer : nullptr;
 }
 
 // Build a row-vector world matrix that maps the cone's local +Z onto the Tail->Head world direction
@@ -529,7 +551,7 @@ void DrawCommandBuild::BuildSkeletalDebugDrawCommand(FRenderPipelineContext& Con
 
     FGraphicsProgram* LineShader = FShaderManager::Get().GetShader(EShaderType::Editor);
     FGraphicsProgram* ConeShader = FShaderManager::Get().GetShader(EShaderType::SkeletalDebug);
-    FStaticMeshBuffer* ConeMesh = GetBoneConeMeshBuffer();
+    FStaticMeshBuffer* ConeMesh = GetBonePyramidMeshBuffer(Context.Device ? Context.Device->GetDevice() : nullptr);
     if (!LineShader || !ConeShader || !ConeMesh || !ConeMesh->IsValid())
     {
         return;
@@ -558,12 +580,23 @@ void DrawCommandBuild::BuildSkeletalDebugDrawCommand(FRenderPipelineContext& Con
         for (uint32 i = 0; i < Instance.Bones.size(); i++)
         {
             const auto& Bone = Instance.Bones[i];
+            if (!Bone.bDraw)
+            {
+                continue;
+            }
+
             const FVector BonePos = Bone.WorldMatrix.GetLocation();
 
             FMatrix ConeWorld;
             if (Bone.ParentIndex != -1 && static_cast<uint32>(Bone.ParentIndex) < Instance.Bones.size())
             {
-                const FVector ParentPos = Instance.Bones[Bone.ParentIndex].WorldMatrix.GetLocation();
+                const FSkeletalDebugBone& ParentBone = Instance.Bones[Bone.ParentIndex];
+                if (!ParentBone.bDraw)
+                {
+                    continue;
+                }
+
+                const FVector ParentPos = ParentBone.WorldMatrix.GetLocation();
                 ConeWorld = MakeBoneConeWorld(ParentPos, BonePos);
 
                 SkeletonLines.AddLine(ParentPos, BonePos, Bone.Color.ToVector4(), Bone.Color.ToVector4());
