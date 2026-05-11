@@ -11,7 +11,8 @@ void FViewportInputRouter::ClearTargets()
 void FViewportInputRouter::RegisterTarget(
     FViewport* InViewport,
     FViewportClient* InClient,
-    FRectProvider InRectProvider)
+    FRectProvider InRectProvider,
+    bool bInAllowMouseWhenGuiCaptured)
 {
     if (!InClient || !InRectProvider)
     {
@@ -22,6 +23,7 @@ void FViewportInputRouter::RegisterTarget(
     Entry.Viewport = InViewport;
     Entry.Client = InClient;
     Entry.RectProvider = InRectProvider;
+    Entry.bAllowMouseWhenGuiCaptured = bInAllowMouseWhenGuiCaptured;
 
     Targets.push_back(Entry);
 }
@@ -92,8 +94,9 @@ bool FViewportInputRouter::IsPointInRect(const POINT& Point, const FRect& Rect)
 
 FViewportInputRouter::FTargetEntry* FViewportInputRouter::FindHoveredTarget(const POINT& ClientPos, FRect& OutRect)
 {
-    for (FTargetEntry& Entry : Targets)
+    for (auto It = Targets.rbegin(); It != Targets.rend(); ++It)
     {
+        FTargetEntry& Entry = *It;
         FRect Rect{};
         if (!Entry.RectProvider(Rect))
         {
@@ -189,7 +192,7 @@ void FViewportInputRouter::DispatchPointerEvents(FTargetEntry* Target, const FRe
         return;
     }
 
-    if (GuiCaptureState.bMouse && !CapturedViewport)
+    if (GuiCaptureState.bMouse && !CapturedViewport && !Target->bAllowMouseWhenGuiCaptured)
     {
         if (!GuiCaptureState.bKeyboard && Input.KeyPressed[VK_RBUTTON])
         {
@@ -316,7 +319,7 @@ void FViewportInputRouter::DispatchAxisEvents(FTargetEntry* Target, const FInput
         return;
     }
 
-    if (GuiCaptureState.bMouse && !CapturedViewport)
+    if (GuiCaptureState.bMouse && !CapturedViewport && !Target->bAllowMouseWhenGuiCaptured)
     {
         return;
     }

@@ -1,6 +1,8 @@
 ﻿// 렌더 영역의 세부 동작을 구현합니다.
 #include "Render/RHI/D3D11/Shaders/GraphicsProgram.h"
 
+#include "Materials/MaterialCore.h"
+
 #include <comdef.h>
 #include <iostream>
 

@@ -218,6 +218,11 @@ void UEditorEngine::Tick(float DeltaTime)
     {
         AllViewportClients.push_back(GameViewportClient);
     }
+    AssetViewerManager.ForEachOpenViewer(
+        [&AllViewportClients](FSkeletalMeshViewer& Viewer)
+        {
+            AllViewportClients.push_back(&Viewer.GetViewportClient());
+        });
 
     for (FViewportClient* VC : AllViewportClients)
     {
@@ -854,4 +859,23 @@ void UEditorEngine::RegisterViewportInputTargets()
                 return true;
             });
     }
+
+    AssetViewerManager.ForEachOpenViewer(
+        [this](FSkeletalMeshViewer& Viewer)
+        {
+            FPreviewViewportClient& PreviewClient = Viewer.GetViewportClient();
+            if (!PreviewClient.GetViewport())
+            {
+                return;
+            }
+
+            ViewportInputRouter.RegisterTarget(
+                PreviewClient.GetViewport(),
+                &PreviewClient,
+                [&PreviewClient](FRect& OutRect)
+                {
+                    return PreviewClient.GetViewportRect(OutRect);
+                },
+                true);
+        });
 }

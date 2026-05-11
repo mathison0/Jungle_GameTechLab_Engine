@@ -396,6 +396,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Editor\Input\EditorViewportContextMenuTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorViewportInputController.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorViewportTool.cpp" />
+    <ClCompile Include="Source\Editor\Input\PreviewViewportTool.cpp" />
+    <ClCompile Include="Source\Editor\Input\SkelViewerViewportInputController.cpp" />
     <ClCompile Include="Source\Editor\Logging\EditorLogBuffer.cpp" />
     <ClCompile Include="Source\Editor\Preview\PreviewSceneContext.cpp" />
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
@@ -730,6 +732,8 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Editor\Input\EditorViewportContextMenuTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorViewportInputController.h" />
     <ClInclude Include="Source\Editor\Input\EditorViewportTool.h" />
+    <ClInclude Include="Source\Editor\Input\PreviewViewportTool.h" />
+    <ClInclude Include="Source\Editor\Input\SkelViewerViewportInputController.h" />
     <ClInclude Include="Source\Editor\Logging\EditorLogBuffer.h" />
     <ClInclude Include="Source\Editor\Logging\EditorLogEntry.h" />
     <ClInclude Include="Source\Editor\PIE\PIETypes.h" />

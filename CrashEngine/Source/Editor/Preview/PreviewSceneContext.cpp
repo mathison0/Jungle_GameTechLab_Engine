@@ -1,8 +1,9 @@
 ﻿#include "PreviewSceneContext.h"
+#include "Component/GizmoComponent.h"
+#include "Component/SceneComponent.h"
 #include "Component/SkeletalMeshComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "EditorEngine.h"
-#include <GameFramework/StaticMeshActor.h>
 
 void FPreviewSceneContext::Initialize(UEditorEngine* InEditorEngine)
 {
@@ -17,6 +18,19 @@ void FPreviewSceneContext::Initialize(UEditorEngine* InEditorEngine)
         PreviewMeshComponent = PreviewActor->AddComponent<USkeletalMeshComponent>();
         PreviewActor->SetRootComponent(PreviewMeshComponent);
 	}
+
+    BoneGizmoTargetActor = PreviewWorld->SpawnActor<AActor>();
+    if (BoneGizmoTargetActor)
+    {
+        USceneComponent* Root = BoneGizmoTargetActor->AddComponent<USceneComponent>();
+        BoneGizmoTargetActor->SetRootComponent(Root);
+        BoneGizmo = BoneGizmoTargetActor->AddComponent<UGizmoComponent>();
+        if (BoneGizmo)
+        {
+            BoneGizmo->SetWorldSpace(true);
+            BoneGizmo->SetVisibility(false);
+        }
+    }
 
     Camera = UObjectManager::Get().CreateObject<UCameraComponent>(PreviewWorld);
     if (Camera)
@@ -35,13 +49,14 @@ void FPreviewSceneContext::Release()
 
     if (PreviewWorld)
     {
-        PreviewWorld->EndPlay();
         EditorEngine->DestroyWorldContext(FName("Preview"));
     }
 
     PreviewWorld = nullptr;
     PreviewActor = nullptr;
     PreviewMeshComponent = nullptr;
+    BoneGizmoTargetActor = nullptr;
+    BoneGizmo = nullptr;
     Camera = nullptr;
     EditorEngine = nullptr;
 }
@@ -60,9 +75,4 @@ void FPreviewSceneContext::SetSkeletalMesh(USkeletalMesh* SkeletalMesh) {
     }
 
     PreviewMeshComponent->SetSkeletalMesh(SkeletalMesh);
-}
-
-void FPreviewSceneContext::ResetPose()
-{
-    //자세 초기화
 }

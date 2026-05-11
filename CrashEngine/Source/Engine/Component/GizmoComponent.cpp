@@ -22,9 +22,6 @@ FPrimitiveProxy* UGizmoComponent::CreateSceneProxy()
 
 void UGizmoComponent::CreateRenderState()
 {
-    if (SceneProxy)
-        return;
-
     FScene* Scene = RegisteredScene;
     if (!Scene && Owner && Owner->GetWorld())
         Scene = &Owner->GetWorld()->GetScene();
@@ -32,32 +29,37 @@ void UGizmoComponent::CreateRenderState()
         return;
 
     // Register the outer gizmo proxy through the normal primitive path.
-    SceneProxy = Scene->AddPrimitive(this);
+    if (SceneProxies.find(Scene) == SceneProxies.end())
+    {
+        if (FPrimitiveProxy* Proxy = Scene->AddPrimitive(this))
+        {
+            SceneProxies.emplace(Scene, Proxy);
+        }
+    }
 
     // Register the inner gizmo proxy separately for the inner pass.
-    InnerProxy = new FGizmoSceneProxy(this, true);
-    Scene->RegisterPrimitiveProxy(InnerProxy);
+    if (InnerSceneProxies.find(Scene) == InnerSceneProxies.end())
+    {
+        FPrimitiveProxy* InnerProxy = new FGizmoSceneProxy(this, true);
+        Scene->RegisterPrimitiveProxy(InnerProxy);
+        InnerSceneProxies.emplace(Scene, InnerProxy);
+    }
 }
 
 void UGizmoComponent::DestroyRenderState()
 {
-    FScene* Scene = RegisteredScene;
-    if (!Scene && Owner && Owner->GetWorld())
-        Scene = &Owner->GetWorld()->GetScene();
-
-    if (Scene)
+    for (const auto& Entry : InnerSceneProxies)
     {
-        if (InnerProxy)
+        FScene* Scene = Entry.first;
+        FPrimitiveProxy* Proxy = Entry.second;
+        if (Scene && Proxy)
         {
-            Scene->RemovePrimitive(InnerProxy);
-            InnerProxy = nullptr;
-        }
-        if (SceneProxy)
-        {
-            Scene->RemovePrimitive(SceneProxy);
-            SceneProxy = nullptr;
+            Scene->RemovePrimitive(Proxy);
         }
     }
+
+    InnerSceneProxies.clear();
+    UPrimitiveComponent::DestroyRenderState();
 }
 
 #include <cmath>
@@ -683,23 +685,40 @@ void UGizmoComponent::SetWorldSpace(bool bWorldSpace)
 void UGizmoComponent::MarkGizmoDirty(ESceneProxyDirtyFlag Flag)
 {
     FScene* Scene = RegisteredScene;
-    if (!Scene && Owner && Owner->GetWorld())
-    {
-        Scene = &Owner->GetWorld()->GetScene();
-    }
 
-    if (!Scene)
+    auto MarkScene = [this, Flag](FScene* InScene)
     {
+        if (!InScene)
+        {
+            return;
+        }
+
+        if (FPrimitiveProxy* OuterProxy = GetSceneProxy(*InScene))
+        {
+            InScene->MarkProxyDirty(OuterProxy, Flag);
+        }
+
+        auto InnerIt = InnerSceneProxies.find(InScene);
+        if (InnerIt != InnerSceneProxies.end() && InnerIt->second)
+        {
+            InScene->MarkProxyDirty(InnerIt->second, Flag);
+        }
+    };
+
+    if (Scene)
+    {
+        MarkScene(Scene);
         return;
     }
 
-    if (SceneProxy)
+    if (Owner && Owner->GetWorld())
     {
-        Scene->MarkProxyDirty(SceneProxy, Flag);
+        MarkScene(&Owner->GetWorld()->GetScene());
     }
-    if (InnerProxy)
+
+    for (const auto& Entry : InnerSceneProxies)
     {
-        Scene->MarkProxyDirty(InnerProxy, Flag);
+        MarkScene(Entry.first);
     }
 }
 

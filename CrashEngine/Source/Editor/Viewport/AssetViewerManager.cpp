@@ -63,7 +63,7 @@ FSkeletalMeshViewer* FAssetViewerManager::OpenSkeletalMeshEditor(USkeletalMesh* 
 	//이미 존재하는지 확인
     if (FSkeletalMeshViewer* Existing = FindSkeletalMeshEditor(Mesh))
     {
-        Existing->RequestFocus();
+        //Existing->RequestFocus();
         return Existing;
     }
 
@@ -86,4 +86,20 @@ FSkeletalMeshViewer* FAssetViewerManager::FindSkeletalMeshEditor(USkeletalMesh* 
         return Viewer;
 	}
 	return nullptr;
+}
+
+void FAssetViewerManager::ForEachOpenViewer(const std::function<void(FSkeletalMeshViewer&)>& Visitor)
+{
+    if (!Visitor)
+    {
+        return;
+    }
+
+    for (std::unique_ptr<FSkeletalMeshViewer>& Viewer : Viewers)
+    {
+        if (Viewer && Viewer->IsOpen())
+        {
+            Visitor(*Viewer);
+        }
+    }
 }

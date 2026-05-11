@@ -1,19 +1,72 @@
 ﻿#include "SkeletalMeshViewer.h"
 
+#include "Component/GizmoComponent.h"
+#include "Component/SkeletalMeshComponent.h"
+#include "Mesh/SkeletalMesh.h"
+#include "Mesh/Skeleton.h"
+
+#include <algorithm>
+#include <cfloat>
+
+namespace
+{
+float DistanceRaySegmentSq(
+    const FVector& RayOrigin,
+    const FVector& RayDir,
+    const FVector& SegmentStart,
+    const FVector& SegmentEnd,
+    float& OutRayT,
+    float& OutSegmentT)
+{
+    const FVector Segment = SegmentEnd - SegmentStart;
+    const FVector Diff = RayOrigin - SegmentStart;
+
+    const float SegmentLenSq = Segment.LengthSquared();
+    if (SegmentLenSq <= 1e-6f)
+    {
+        OutSegmentT = 0.0f;
+        const float PointRayT = -(Diff.Dot(RayDir));
+        OutRayT = PointRayT > 0.0f ? PointRayT : 0.0f;
+        const FVector ClosestRayPoint = RayOrigin + RayDir * OutRayT;
+        return FVector::DistSquared(ClosestRayPoint, SegmentStart);
+    }
+
+    const float RaySegmentDot = RayDir.Dot(Segment);
+    const float RayDiffDot = RayDir.Dot(Diff);
+    const float SegmentDiffDot = Segment.Dot(Diff);
+    const float Denominator = SegmentLenSq - RaySegmentDot * RaySegmentDot;
+
+    if (Denominator > 1e-6f)
+    {
+        OutSegmentT = std::clamp(
+            (SegmentDiffDot - RaySegmentDot * RayDiffDot) / Denominator, // +s_correct
+            0.0f, 1.0f);
+    }
+    else
+    {
+        OutSegmentT = std::clamp(-SegmentDiffDot / SegmentLenSq, 0.0f, 1.0f);
+    }
+
+    const float ClosestRayT = OutSegmentT * RaySegmentDot - RayDiffDot;
+    OutRayT = ClosestRayT > 0.0f ? ClosestRayT : 0.0f;
+
+    const FVector ClosestRayPoint = RayOrigin + RayDir * OutRayT;
+    const FVector ClosestSegmentPoint = SegmentStart + Segment * OutSegmentT;
+    return FVector::DistSquared(ClosestRayPoint, ClosestSegmentPoint);
+}
+}
+
 void FSkeletalMeshViewer::Initialize(uint32 InEditorId, UEditorEngine* InEditorEngine, ID3D11Device* InDevice, USkeletalMesh* InSkeletalMesh)
 {
     bOpen = true;
 	ViewerID = InEditorId;
     ViewerState.reset();
-    ViewerState.ActiveMesh = InSkeletalMesh;
 
     ViewerScene.Initialize(InEditorEngine);
-    ViewerScene.SetSkeletalMesh(InSkeletalMesh);
-
     ViewerPanel.Initialize(InEditorEngine, this);
-    ViewerPanel.SetSkeletalMesh(InSkeletalMesh);
+    SetSkeletalMesh(InSkeletalMesh);
 	
-    ViewportClient.Initialize(InEditorEngine, InDevice, &ViewerScene);
+    ViewportClient.Initialize(InEditorEngine, InDevice, &ViewerScene, this);
 }
 
 void FSkeletalMeshViewer::Release() 
@@ -26,7 +79,6 @@ void FSkeletalMeshViewer::Release()
 void FSkeletalMeshViewer::Tick(float DeltaTime) 
 {
     ViewerScene.Tick(DeltaTime);
-	ViewportClient.Tick(DeltaTime);
 }
 
 void FSkeletalMeshViewer::Render(float DeltaTime)
@@ -34,41 +86,178 @@ void FSkeletalMeshViewer::Render(float DeltaTime)
     ViewerPanel.Render(DeltaTime);
 }
 
-void FSkeletalMeshViewer::RequestFocus()
+void FSkeletalMeshViewer::RenderBoneDebugLines()
 {
-}
-
-uint32 FSkeletalMeshViewer::GetEditorId() const
-{
-    return ViewerID;
-}
-
-bool FSkeletalMeshViewer::IsOpen() const
-{
-    return bOpen;
-}
-
-void FSkeletalMeshViewer::SetOpen(bool bInOpen)
-{
-    bOpen = bInOpen;
-}
-
-void FSkeletalMeshViewer::SetBoneLocalTransform(int32 BoneIndex, const FTransform& Transform)
-{
-    if (USkeletalMeshComponent* Comp = ViewerScene.GetPreviewMeshComponent())
+    USkeletalMeshComponent* MeshComp = ViewerScene.GetPreviewMeshComponent();
+    const int32 BoneCount = MeshComp ? MeshComp->GetNumBones() : 0;
+    if (BoneCount <= 0)
     {
-		//여기서 SkeletalMesh LocalMatrix변경 요청함
-        //Comp->SetBoneLocalTransform(BoneIndex, Transform);
+        return;
+    }
 
+    for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+    {
+        const FBoneInfo* Bone = MeshComp->GetBoneInfo(BoneIndex);
+        if (Bone && Bone->ParentIndex < 0)
+        {
+            ViewerPanel.RenderBoneDebugLine(BoneIndex, false);
+        }
     }
 }
 
-void FSkeletalMeshViewer::ApplyPreviewFlags()
+//void FSkeletalMeshViewer::RequestFocus()
+//{
+//}
+
+void FSkeletalMeshViewer::SetSkeletalMesh(USkeletalMesh* InSkeletalMesh)
 {
-	bFlag = true;
+    ViewerState.ActiveMesh = InSkeletalMesh;
+    ViewerState.SelectedBoneIndex = -1;
+
+    ViewerScene.SetSkeletalMesh(InSkeletalMesh);
+    if (USkeletalMeshComponent* MeshComp = ViewerScene.GetPreviewMeshComponent())
+    {
+        MeshComp->ResetToReferencePose();
+    }
+
+    BuildBoneHierarchy();
+    ViewerPanel.SetSkelMesh();
 }
 
-FSkeletalMeshViewerState& FSkeletalMeshViewer::GetState()
+void FSkeletalMeshViewer::BuildBoneHierarchy()
 {
-	return ViewerState;
+    ViewerState.BoneHierarchy.clear();
+
+    if (!ViewerState.ActiveMesh || !ViewerState.ActiveMesh->GetSkeleton())
+    {
+        return;
+    }
+
+    const TArray<FBoneInfo>& Bones = ViewerState.ActiveMesh->GetSkeleton()->GetBones();
+    ViewerState.BoneHierarchy.resize(Bones.size());
+
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(Bones.size()); ++BoneIndex)
+    {
+        const int32 ParentIndex = Bones[BoneIndex].ParentIndex;
+        if (ParentIndex < 0)
+        {
+            continue;
+        }
+
+        if (ParentIndex < static_cast<int32>(Bones.size()))
+        {
+            ViewerState.BoneHierarchy[ParentIndex].push_back(BoneIndex);
+        }
+    }
+}
+
+bool FSkeletalMeshViewer::GetCachedBoneLocalTransform(int32 BoneIndex, FTransform& OutTransform)
+{
+    return ViewerPanel.GetCachedBoneLocalTransform(BoneIndex, OutTransform);
+}
+
+bool FSkeletalMeshViewer::SetCachedBoneLocalTransform(
+    int32 BoneIndex,
+    const FTransform& NewTransform,
+    bool bApplyToComponent)
+{
+    return ViewerPanel.SetCachedBoneLocalTransform(BoneIndex, NewTransform, bApplyToComponent);
+}
+
+FQuat FSkeletalMeshViewer::GetCachedBoneComponentRotation(int32 BoneIndex)
+{
+    return ViewerPanel.GetCachedBoneComponentRotation(BoneIndex);
+}
+
+FVector FSkeletalMeshViewer::GetCachedBoneComponentScale(int32 BoneIndex)
+{
+    return ViewerPanel.GetCachedBoneComponentScale(BoneIndex);
+}
+
+void FSkeletalMeshViewer::ClearBoneSelection()
+{
+    ViewerState.SelectedBoneIndex = -1;
+}
+
+void FSkeletalMeshViewer::SelectBone(int32 BoneIndex)
+{
+    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(ViewerState.BoneHierarchy.size()))
+    {
+        ClearBoneSelection();
+        return;
+    }
+
+    if (ViewerState.SelectedBoneIndex == BoneIndex)
+    {
+        return;
+    }
+
+    ViewerState.SelectedBoneIndex = BoneIndex;
+}
+
+bool FSkeletalMeshViewer::RaycastBonePicking(const FRay& Ray, int32& BestBoneIndex)
+{
+    BestBoneIndex = -1;
+
+    USkeletalMeshComponent* MeshComp = ViewerScene.GetPreviewMeshComponent();
+    if (!MeshComp)
+        return false;
+
+    const int32 BoneCount = MeshComp->GetNumBones();
+    if (BoneCount <= 0)
+        return false;
+
+    if (Ray.Direction.LengthSquared() <= EPSILON)
+        return false;
+
+    constexpr float PickRadius = 0.08f;
+    constexpr float PickRadiusSq = PickRadius * PickRadius;
+
+    const FVector RayOrigin = Ray.Origin;
+    const FVector RayDir = Ray.Direction.Normalized();
+
+    float BestDistance = FLT_MAX;
+    bool bHit = false;
+
+    for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+    {
+        const FBoneInfo* BoneInfo = MeshComp->GetBoneInfo(BoneIndex);
+        if (!BoneInfo)
+            continue;
+
+        const int32 ParentIndex = BoneInfo->ParentIndex;
+
+        // Root는 parent-child bone segment가 없으므로 제외
+        if (ParentIndex < 0 || ParentIndex >= BoneCount)
+            continue;
+
+        const FVector ParentPos =
+            MeshComp->GetBoneDebugWorldMatrix(ParentIndex).GetLocation();
+
+        const FVector BonePos =
+            MeshComp->GetBoneDebugWorldMatrix(BoneIndex).GetLocation();
+
+        float RayT = 0.0f;
+        float SegmentT = 0.0f;
+
+        const float DistSq = DistanceRaySegmentSq(
+            RayOrigin,
+            RayDir,
+            ParentPos,
+            BonePos,
+            RayT,
+            SegmentT);
+
+        if (RayT >= 0.0f && DistSq <= PickRadiusSq)
+        {
+            if (RayT < BestDistance)
+            {
+                BestDistance = RayT;
+                BestBoneIndex = BoneIndex;
+                bHit = true;
+            }
+        }
+    }
+
+    return bHit;
 }

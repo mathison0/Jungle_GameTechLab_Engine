@@ -57,7 +57,7 @@ struct FShowFlags
 
 struct FVignettingSettings
 {
-    bool    bEnabled  = true;
+    bool    bEnabled  = false;
     float   Intensity = 0.5f;
     float   Radius    = 0.75f;
     float   Softness  = 0.25f;

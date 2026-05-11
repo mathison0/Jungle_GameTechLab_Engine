@@ -1,35 +1,26 @@
 ﻿#pragma once
-#include "Editor/UI/EditorSkeletalMeshViewerPanel.h"
-#include "Viewport/PreviewViewportClient.h"
+#include "Core/RayTypes.h"
 #include "Preview/PreviewSceneContext.h"
+#include "UI/EditorSkeletalMeshViewerPanel.h"
+#include "Math/Transform.h"
+#include "Viewport/PreviewViewportClient.h"
 #include <d3d11.h>
-#include <Math/Transform.h>
-
-enum ESkeletalMeshPreviewPoseMode
-{
-    TPose,
-	APose,
-	Count
-};
 
 struct FSkeletalMeshViewerState
 {
     USkeletalMesh* ActiveMesh = nullptr;
-	// 뷰어에서 보이고 변경되는 건 복사본
-    //USkeletalMesh ActiveMeshCopy = nullptr;
-
     int32 SelectedBoneIndex = -1;
+    TArray<TArray<uint32>> BoneHierarchy;
 
     bool bShowMesh = true;
     bool bShowSkeleton = true;
     bool bShowBoneNames = false;
     bool bUseFbxLocalSkeleton = false;
 
-    //ESkeletalMeshPreviewPoseMode PoseMode = ESkeletalMeshPreviewPoseMode::BindPose;
-
 	void reset() {
         ActiveMesh			= nullptr;
 		SelectedBoneIndex	= -1;
+        BoneHierarchy.clear();
 
         bShowMesh		= true;
         bShowSkeleton	= true;
@@ -39,8 +30,6 @@ struct FSkeletalMeshViewerState
         //PoseMode = ESkeletalMeshPreviewPoseMode::TPose;
 	}
 };
-
-class FPreviewViewportClient;
 
 class FSkeletalMeshViewer 
 {
@@ -54,24 +43,33 @@ public:
     void Release();
     void Tick(float DeltaTime);
     void Render(float DeltaTime);
-	//outline처럼 이미 존재한다는 것을 보여줌
-    void RequestFocus();
+    void RenderBoneDebugLines();
 
-    uint32 GetEditorId() const;
-    bool IsOpen() const;
-    void SetOpen(bool bInOpen);
+    void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
+    void BuildBoneHierarchy();
+    void ClearBoneSelection();
+    void SelectBone(int32 BoneIndex);
 
-	void SetBoneLocalTransform(int32 BoneIndex, const FTransform& Transform);
-    void ApplyPreviewFlags();
-    FSkeletalMeshViewerState& GetState();
-    FPreviewSceneContext& GetPreviewScene() {return ViewerScene;};
-    FPreviewViewportClient& GetViewportClient() { return ViewportClient;};
+    // Input Picking함수
+    bool RaycastBonePicking(const FRay& Ray, int32& BestBoneIndex);
+	//Gizmo Wrapper함수들
+    bool GetCachedBoneLocalTransform(int32 BoneIndex, FTransform& OutTransform);
+    bool SetCachedBoneLocalTransform(int32 BoneIndex, const FTransform& NewTransform, bool bApplyToComponent = true);
+    FQuat GetCachedBoneComponentRotation(int32 BoneIndex);
+    FVector GetCachedBoneComponentScale(int32 BoneIndex);
+
+    FSkeletalMeshViewerState& GetState() { return ViewerState; }
+    FPreviewSceneContext& GetPreviewScene() { return ViewerScene; };
+    FPreviewViewportClient& GetViewportClient() { return ViewportClient; };
+
+    uint32 GetEditorId() const { return ViewerID; }
+    bool IsOpen() const { return bOpen; }
+    void SetOpen(bool bInOpen) { bOpen = bInOpen; }
 
 private:
 	//외부 Manager에서 확인하기위한 index
     uint32 ViewerID = 0;
     bool bOpen = false;
-	bool bFlag = false;
 
     FSkeletalMeshViewerState ViewerState;
     FEditorSkeletalMeshViewerPanel ViewerPanel;
