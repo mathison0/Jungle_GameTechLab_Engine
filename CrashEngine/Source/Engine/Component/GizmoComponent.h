@@ -111,7 +111,7 @@ private:
     bool bPressedOnHandle = false;
     const FMeshData* MeshData = nullptr;
     uint32 AxisMask = 0x7;                      // Bit 0=X, 1=Y, 2=Z. Rendering proxies compute the final mask.
-    FPrimitiveProxy* InnerProxy = nullptr; // Proxy used by the inner gizmo pass.
-    FScene* RegisteredScene = nullptr;          // Scene used for direct gizmo registration.
+    TMap<FScene*, FPrimitiveProxy*> InnerSceneProxies; // Proxies used by the inner gizmo pass.
+    FScene* RegisteredScene = nullptr;                 // Scene used for direct gizmo registration.
 };
 

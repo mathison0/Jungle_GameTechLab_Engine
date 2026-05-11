@@ -1,26 +1,108 @@
 ﻿#include "Viewport/PreviewViewportClient.h"
+
+#include "Component/SceneComponent.h"
+#include "Component/GizmoComponent.h"
+#include "Component/SkeletalMeshComponent.h"
+#include "EditorEngine.h"
+#include "GameFramework/AActor.h"
+#include "Input/SkelViewerViewportInputController.h"
 #include "Preview/PreviewSceneContext.h"
-#include "Viewport/Viewport.h"
-#include "Editor/EditorEngine.h"
-#include "Editor/Settings/EditorSettings.h"
-#include "ImGui/imgui.h"
 #include "Render/Execute/Context/RenderCollectContext.h"
 #include "Render/Execute/Context/Scene/SceneView.h"
 #include "Render/Execute/Context/Viewport/ViewportRenderTargets.h"
 #include "Render/Renderer.h"
 #include "Render/Scene/Scene.h"
+#include "Settings/EditorSettings.h"
+#include "Mesh/Skeleton.h"
+#include "Viewport/Viewport.h"
+
+#include "ImGui/imgui.h"
 #include <Render/Scene/Debug/DebugRenderAPI.h>
-#include <Component/Collision/ShapeComponent.h>
+#include <cmath>
 
+namespace
+{
+float SafeDiv(float Numerator, float Denominator)
+{
+    return std::abs(Denominator) > FMath::Epsilon ? Numerator / Denominator : Numerator;
+}
 
-void FPreviewViewportClient::Initialize(UEditorEngine* InEditorEngine, ID3D11Device* InDevice, FPreviewSceneContext* InPreviewContext)
+float DeltaDegrees(float From, float To)
+{
+    float Delta = std::fmod(To - From + 180.0f, 360.0f);
+    if (Delta < 0.0f)
+    {
+        Delta += 360.0f;
+    }
+    return Delta - 180.0f;
+}
+
+FQuat ExtractRotationNoScale(const FMatrix& Matrix)
+{
+    FMatrix RotationMatrix = Matrix;
+
+    for (int32 Row = 0; Row < 3; ++Row)
+    {
+        FVector Axis(
+            RotationMatrix.M[Row][0],
+            RotationMatrix.M[Row][1],
+            RotationMatrix.M[Row][2]);
+
+        if (Axis.LengthSquared() > FMath::Epsilon * FMath::Epsilon)
+        {
+            Axis.Normalize();
+            RotationMatrix.M[Row][0] = Axis.X;
+            RotationMatrix.M[Row][1] = Axis.Y;
+            RotationMatrix.M[Row][2] = Axis.Z;
+        }
+    }
+
+    RotationMatrix.M[0][3] = 0.0f;
+    RotationMatrix.M[1][3] = 0.0f;
+    RotationMatrix.M[2][3] = 0.0f;
+    RotationMatrix.M[3][0] = 0.0f;
+    RotationMatrix.M[3][1] = 0.0f;
+    RotationMatrix.M[3][2] = 0.0f;
+    RotationMatrix.M[3][3] = 1.0f;
+
+    return RotationMatrix.ToQuat();
+}
+
+FMatrix GetBoneComponentToDebugWorldMatrix(USkeletalMeshComponent* MeshComp, int32 BoneIndex)
+{
+    if (!MeshComp || BoneIndex < 0 || BoneIndex >= MeshComp->GetNumBones())
+    {
+        return FMatrix::Identity;
+    }
+
+    const FMatrix& BoneComponentMatrix = MeshComp->GetBoneComponentMatrix(BoneIndex);
+    const FMatrix BoneDebugWorldMatrix = MeshComp->GetBoneDebugWorldMatrix(BoneIndex);
+    return BoneComponentMatrix.GetInverse() * BoneDebugWorldMatrix;
+}
+
+FVector DebugWorldToBoneComponentPosition(
+    USkeletalMeshComponent* MeshComp,
+    int32 BoneIndex,
+    const FVector& DebugWorldPosition)
+{
+    const FMatrix ComponentToDebugWorld = GetBoneComponentToDebugWorldMatrix(MeshComp, BoneIndex);
+    return ComponentToDebugWorld.GetInverse().TransformPositionWithW(DebugWorldPosition);
+}
+}
+
+FPreviewViewportClient::FPreviewViewportClient() = default;
+
+void FPreviewViewportClient::Initialize(UEditorEngine* InEditorEngine, ID3D11Device* InDevice, FPreviewSceneContext* InPreviewContext, FSkeletalMeshViewer* InOwner)
 {
     Viewport = new FViewport();
     Viewport->Initialize(InDevice, static_cast<uint32>(ViewportWidth), static_cast<uint32>(ViewportHeight));
     Viewport->SetClient(this);
 
+    InputController = std::make_unique<FSkelViewerViewportInputController>(InOwner, this);
+
     EditorEngine = InEditorEngine;
     PreviewContext = InPreviewContext;
+    OwnerViewer = InOwner;
     ResetCamera();
 }
 
@@ -35,60 +117,191 @@ void FPreviewViewportClient::Release()
 
     PreviewContext = nullptr;
     EditorEngine = nullptr;
-}
-void FPreviewViewportClient::Update()
-{
-	
+    OwnerViewer = nullptr;
 }
 
-//Todo: Input처리시 키보드 입력도 진행할것 
+void FPreviewViewportClient::SyncBoneGizmoToSelection()
+{
+    if (!PreviewContext)
+    {
+        return;
+    }
+
+    UGizmoComponent* Gizmo = PreviewContext->GetBoneGizmo();
+    AActor* TargetActor = PreviewContext->GetBoneGizmoTargetActor();
+    USkeletalMeshComponent* MeshComp = PreviewContext->GetPreviewMeshComponent();
+    if (!Gizmo || !TargetActor || !MeshComp)
+    {
+        return;
+    }
+
+    if (Gizmo->IsHolding())
+    {
+        ApplyBoneGizmoToSelection();
+        return;
+    }
+
+    const int32 BoneIndex = Options.SelectedBoneIndex;
+    if (BoneIndex < 0 || BoneIndex >= MeshComp->GetNumBones())
+    {
+        Gizmo->SetVisibility(false);
+        bHasLastBoneGizmoComponentRotation = false;
+        return;
+    }
+
+    if (!Gizmo->HasTarget())
+    {
+        Gizmo->SetTarget(TargetActor);
+    }
+
+    const FMatrix BoneWorldMatrix = MeshComp->GetBoneDebugWorldMatrix(BoneIndex);
+    if (USceneComponent* Root = TargetActor->GetRootComponent())
+    {
+        Root->SetRelativeLocation(BoneWorldMatrix.GetLocation());
+        Root->SetRelativeRotationWithEulerHint(FQuat::Identity, FRotator());
+        Root->SetRelativeScale(OwnerViewer
+                                   ? OwnerViewer->GetCachedBoneComponentScale(BoneIndex)
+                                   : BoneWorldMatrix.GetScale());
+
+        LastBoneGizmoComponentRotation = FQuat();
+        bHasLastBoneGizmoComponentRotation = true;
+    }
+
+    Gizmo->SetVisibility(true);
+    Gizmo->UpdateGizmoTransform();
+}
+
+void FPreviewViewportClient::ApplyBoneGizmoToSelection()
+{
+    if (!PreviewContext || !OwnerViewer)
+    {
+        return;
+    }
+
+    AActor* TargetActor = PreviewContext->GetBoneGizmoTargetActor();
+    USkeletalMeshComponent* MeshComp = PreviewContext->GetPreviewMeshComponent();
+    if (!TargetActor || !MeshComp)
+    {
+        return;
+    }
+
+    USceneComponent* TargetRoot = TargetActor->GetRootComponent();
+    if (!TargetRoot)
+    {
+        return;
+    }
+
+    const int32 BoneIndex = Options.SelectedBoneIndex;
+    if (BoneIndex < 0 || BoneIndex >= MeshComp->GetNumBones())
+    {
+        return;
+    }
+
+    FTransform CachedTransform;
+    if (!OwnerViewer->GetCachedBoneLocalTransform(BoneIndex, CachedTransform))
+    {
+        return;
+    }
+
+    const FBoneInfo* BoneInfo = MeshComp->GetBoneInfo(BoneIndex);
+    const int32 ParentIndex = BoneInfo ? BoneInfo->ParentIndex : -1;
+
+    UGizmoComponent* Gizmo = PreviewContext->GetBoneGizmo();
+    const EGizmoMode GizmoMode = Gizmo ? Gizmo->GetMode() : EGizmoMode::Translate;
+
+    if (GizmoMode == EGizmoMode::Translate)
+    {
+        // 기즈모가 실제로 놓인 DebugWorld 위치
+        const FVector DebugWorldPosition = TargetRoot->GetWorldLocation();
+
+        // DebugWorld -> SkeletalMesh Component Space
+        const FVector BoneComponentPosition =
+            DebugWorldToBoneComponentPosition(
+                MeshComp,
+                BoneIndex,
+                DebugWorldPosition);
+
+        if (ParentIndex >= 0 && ParentIndex < MeshComp->GetNumBones())
+        {
+            // Component Space -> Parent Bone Local Space
+            const FMatrix ParentComponentInverse =
+                MeshComp->GetBoneComponentMatrix(ParentIndex).GetInverse();
+
+            CachedTransform.Location =
+                ParentComponentInverse.TransformPositionWithW(BoneComponentPosition);
+        }
+        else
+        {
+            // root bone이면 component space 위치가 곧 local location
+            CachedTransform.Location = BoneComponentPosition;
+        }
+    }
+    else if (GizmoMode == EGizmoMode::Rotate)
+    {
+        if (!Gizmo || Gizmo->GetSelectedAxis() < 0)
+        {
+            return;
+        }
+
+        FQuat NewComponentRotation = TargetRoot->GetRelativeRotation().ToQuaternion();
+        NewComponentRotation.Normalize();
+
+        if (!bHasLastBoneGizmoComponentRotation)
+        {
+            LastBoneGizmoComponentRotation = NewComponentRotation;
+            bHasLastBoneGizmoComponentRotation = true;
+            return;
+        }
+
+        // component space에서 이번 프레임 동안 기즈모가 회전한 양
+        FQuat DeltaComponentRotation =
+            NewComponentRotation * LastBoneGizmoComponentRotation.Inverse();
+        DeltaComponentRotation.Normalize();
+
+        // 부모 본의 component rotation
+        FQuat ParentComponentRotation = FQuat::Identity;
+        if (ParentIndex >= 0 && ParentIndex < MeshComp->GetNumBones())
+        {
+            ParentComponentRotation =
+                ExtractRotationNoScale(MeshComp->GetBoneComponentMatrix(ParentIndex));
+            ParentComponentRotation.Normalize();
+        }
+
+        // component-space delta를 parent-local-space delta로 변환
+        FQuat DeltaLocalRotation =
+            ParentComponentRotation.Inverse() * DeltaComponentRotation * ParentComponentRotation;
+        DeltaLocalRotation.Normalize();
+
+        // bone local rotation에 적용
+        CachedTransform.Rotation = DeltaLocalRotation * CachedTransform.Rotation;
+        CachedTransform.Rotation.Normalize();
+
+        LastBoneGizmoComponentRotation = NewComponentRotation;
+    }
+    else if (GizmoMode == EGizmoMode::Scale)
+    {
+        CachedTransform.Scale = TargetRoot->GetRelativeScale();
+
+        if (ParentIndex >= 0 && ParentIndex < MeshComp->GetNumBones())
+        {
+            const FVector ParentScale = OwnerViewer->GetCachedBoneComponentScale(ParentIndex);
+            const FVector ComponentScale = TargetRoot->GetRelativeScale();
+            CachedTransform.Scale = FVector(
+                SafeDiv(ComponentScale.X, ParentScale.X),
+                SafeDiv(ComponentScale.Y, ParentScale.Y),
+                SafeDiv(ComponentScale.Z, ParentScale.Z));
+        }
+    }
+
+    OwnerViewer->SetCachedBoneLocalTransform(BoneIndex, CachedTransform, true);
+}
+
 void FPreviewViewportClient::Tick(float DeltaTime)
 {
-    (void)DeltaTime;
-
-    if (!PreviewContext || (!Input.bHovered && !Input.bActive))
+    if (InputController)
     {
-        return;
+        InputController->HandleInput(DeltaTime);
     }
-
-    UCameraComponent* Camera = PreviewContext->GetCamera();
-    if (!Camera)
-    {
-        return;
-    }
-
-    const float OrbitSpeed = 0.25f;
-    const float PanSpeed = 0.5f;
-    const float ZoomSpeed = 4.0f;
-
-    if (Input.bHovered && Input.MouseWheel != 0.0f)
-    {
-        OrbitDistance -= Input.MouseWheel * ZoomSpeed;
-        OrbitDistance = Clamp(OrbitDistance, 1.0f, 100.0f);
-    }
-
-    // Left drag: orbit
-    if (Input.bActive && Input.bLeftDown)
-    {
-		OrbitYaw += Input.MouseDelta.X * OrbitSpeed;
-		OrbitPitch += Input.MouseDelta.Y * OrbitSpeed;
-
-		OrbitPitch = Clamp(OrbitPitch, -89.0f, 89.0f);
-	}
-
-	// Middle drag: pan
-    if (Input.bActive && Input.bMiddleDown)
-    {
-        const FRotator ViewRotation(OrbitPitch, OrbitYaw, 0.0f);
-        const FVector Right = ViewRotation.GetRightVector();
-        const FVector Up = ViewRotation.GetUpVector();
-        const float ScaledPanSpeed = PanSpeed * (OrbitDistance / 300.0f);
-
-        OrbitPivot -= Right * Input.MouseDelta.X * ScaledPanSpeed;
-        OrbitPivot += Up * Input.MouseDelta.Y * ScaledPanSpeed;
-    }
-
-    ApplyOrbitToCamera();
 }
 
 void FPreviewViewportClient::ResetCamera()
@@ -143,11 +356,34 @@ void FPreviewViewportClient::SetViewportRect(float X, float Y, float Width, floa
     }
 }
 
+bool FPreviewViewportClient::GetViewportRect(FRect& OutRect) const
+{
+    if (!Viewport || ViewportWidth <= 0.0f || ViewportHeight <= 0.0f)
+    {
+        return false;
+    }
+
+    OutRect.X = ViewportX;
+    OutRect.Y = ViewportY;
+    OutRect.Width = ViewportWidth;
+    OutRect.Height = ViewportHeight;
+    return true;
+}
+
 UCameraComponent* FPreviewViewportClient::GetCamera() const
 {
     return PreviewContext ? PreviewContext->GetCamera() : nullptr;
 }
 
+UGizmoComponent* FPreviewViewportClient::GetGizmo()
+{
+    return PreviewContext ? PreviewContext->GetBoneGizmo() : nullptr;
+}
+
+UWorld* FPreviewViewportClient::GetWorld() const
+{
+    return PreviewContext ? PreviewContext->GetWorld() : nullptr;
+}
 
 void FPreviewViewportClient::RenderViewportImage()
 {
@@ -171,11 +407,11 @@ void FPreviewViewportClient::RenderViewportImage()
 
     ImGui::SetCursorScreenPos(Min);
     ImGui::InvisibleButton(
-        "##PreviewViewport",
+        "##PreviewViewportInput",
         ImVec2(ViewportWidth, ViewportHeight),
         ImGuiButtonFlags_MouseButtonLeft |
-            ImGuiButtonFlags_MouseButtonRight |
-            ImGuiButtonFlags_MouseButtonMiddle);
+        ImGuiButtonFlags_MouseButtonRight |
+        ImGuiButtonFlags_MouseButtonMiddle);
 }
 
 void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
@@ -218,7 +454,7 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
 
     FShowFlags ShowFlags = {};
     ShowFlags.bGrid = true;
-    ShowFlags.bGizmo = false;
+    ShowFlags.bGizmo = true;
     ShowFlags.bUUIDText = false;
     ShowFlags.bSceneBVH = false;
     ShowFlags.bSceneOctree = false;
@@ -250,15 +486,17 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
     CollectContext.ActiveViewMode = ViewMode;
     CollectContext.CollectedPrimitives = const_cast<FCollectedPrimitives*>(&Renderer.GetCollectedPrimitives());
 
+    SyncBoneGizmoToSelection();
+
     if (Options.bShowMesh)
     {
         Renderer.CollectWorld(World, CollectContext);
     }
     if (Options.bShowSkeleton)
     {
-        Renderer.CollectSkeletalDebug(Scene);
+        OwnerViewer->RenderBoneDebugLines();
     }
-	
+
 	Renderer.CollectGrid(1.0f, 20, Scene);
     Renderer.CollectDebugRender(Scene);
 
@@ -271,4 +509,45 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
 
     D3D11_VIEWPORT FrameViewport = Renderer.GetFD3DDevice().GetViewport();
     Context->RSSetViewports(1, &FrameViewport);
+}
+
+FPreviewViewportClient::~FPreviewViewportClient() = default;
+
+bool FPreviewViewportClient::InputKey(const FViewportKeyEvent& Event)
+{
+    return InputController ? InputController->InputKey(Event) : false;
+}
+
+bool FPreviewViewportClient::InputAxis(const FViewportAxisEvent& Event)
+{
+    return InputController ? InputController->InputAxis(Event) : false;
+}
+
+bool FPreviewViewportClient::InputPointer(const FViewportPointerEvent& Event)
+{
+    return InputController ? InputController->InputPointer(Event) : false;
+}
+
+void FPreviewViewportClient::ResetInputState()
+{
+    if (InputController)
+    {
+        InputController->ResetInputState();
+    }
+}
+
+void FPreviewViewportClient::ResetKeyboardInputState()
+{
+    if (InputController)
+    {
+        InputController->ResetKeyboardInputState();
+    }
+}
+
+void FPreviewViewportClient::BeginInputFrame()
+{
+    if (InputController)
+    {
+        InputController->BeginInputFrame();
+    }
 }

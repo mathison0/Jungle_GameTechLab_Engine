@@ -133,7 +133,8 @@ public:
     */
     virtual FPrimitiveProxy* CreateSceneProxy();
 
-    FPrimitiveProxy* GetSceneProxy() const { return SceneProxy; }
+    FPrimitiveProxy* GetSceneProxy() const;
+    FPrimitiveProxy* GetSceneProxy(FScene& Scene) const;
 
     /*
         프록시 변경 플래그를 표시하고 씬의 dirty queue에 등록합니다.
@@ -180,7 +181,7 @@ protected:
     bool bVisibleInGame = true;
     bool bIsEditorHelper = false;
     bool bReceivesDecals = true;
-    FPrimitiveProxy* SceneProxy = nullptr;
+    TMap<FScene*, FPrimitiveProxy*> SceneProxies;
 
     FOctree* OctreeNode = nullptr;
     bool bInOctreeOverflow = false;

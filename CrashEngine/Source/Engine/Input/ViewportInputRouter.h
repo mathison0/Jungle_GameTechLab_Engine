@@ -38,7 +38,8 @@ public:
     void RegisterTarget(
         FViewport* InViewport,
         FViewportClient* InClient,
-        FRectProvider InRectProvider);
+        FRectProvider InRectProvider,
+        bool bInAllowMouseWhenGuiCaptured = false);
 
     void Tick(const FInputSnapshot& Input, float DeltaTime);
 
@@ -54,6 +55,7 @@ private:
         FViewport* Viewport = nullptr;
         FViewportClient* Client = nullptr;
         FRectProvider RectProvider;
+        bool bAllowMouseWhenGuiCaptured = false;
     };
 
     static bool IsPointInRect(const POINT& Point, const FRect& Rect);

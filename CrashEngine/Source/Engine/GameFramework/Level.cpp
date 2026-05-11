@@ -91,7 +91,9 @@ void ULevel::BeginPlay()
 
 void ULevel::EndPlay()
 {
-    for (AActor* Actor : Actors)
+    TArray<AActor*> ActorsToDestroy = Actors;
+
+    for (AActor* Actor : ActorsToDestroy)
     {
         if (Actor)
         {
@@ -99,12 +101,13 @@ void ULevel::EndPlay()
         }
     }
 
-    for (AActor* Actor : Actors)
+    Actors.clear();
+
+    for (AActor* Actor : ActorsToDestroy)
     {
         if (Actor)
         {
             UObjectManager::Get().DestroyObject(Actor);
         }
     }
-    Actors.clear();
 }

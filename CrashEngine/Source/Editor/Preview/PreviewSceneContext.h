@@ -6,6 +6,7 @@
 
 class UEditorEngine;
 class UStaticMeshComponent;
+class UGizmoComponent;
 
 // preview 전용 world와 preview object들을 관리하는 wrapper
 class FPreviewSceneContext
@@ -20,15 +21,19 @@ public:
 
 	UCameraComponent* GetCamera() { return Camera; }
     USkeletalMeshComponent* GetPreviewMeshComponent() const { return PreviewMeshComponent; }
+    AActor* GetBoneGizmoTargetActor() const { return BoneGizmoTargetActor; }
+    UGizmoComponent* GetBoneGizmo() { return BoneGizmo; }
 
     void SetSkeletalMesh(USkeletalMesh* InMesh);
-    void ResetPose();
 
 private:
     UEditorEngine* EditorEngine = nullptr;
+    UCameraComponent* Camera = nullptr;
 
     UWorld* PreviewWorld = nullptr;
     AActor* PreviewActor = nullptr;
     USkeletalMeshComponent* PreviewMeshComponent = nullptr;
-    UCameraComponent* Camera = nullptr;
+
+    AActor* BoneGizmoTargetActor = nullptr;
+    UGizmoComponent* BoneGizmo = nullptr;
 };

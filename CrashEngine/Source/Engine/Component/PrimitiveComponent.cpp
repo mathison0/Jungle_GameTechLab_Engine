@@ -75,9 +75,18 @@ UPrimitiveComponent::~UPrimitiveComponent()
 
 void UPrimitiveComponent::MarkProxyDirty(ESceneProxyDirtyFlag Flag) const
 {
-    if (!SceneProxy || !Owner || !Owner->GetWorld())
+    if (SceneProxies.empty())
         return;
-    Owner->GetWorld()->GetScene().MarkProxyDirty(SceneProxy, Flag);
+
+    for (const auto& Entry : SceneProxies)
+    {
+        FScene* Scene = Entry.first;
+        FPrimitiveProxy* Proxy = Entry.second;
+        if (Scene && Proxy)
+        {
+            Scene->MarkProxyDirty(Proxy, Flag);
+        }
+    }
 }
 
 void UPrimitiveComponent::Serialize(FArchive& Ar)
@@ -407,18 +416,52 @@ FPrimitiveProxy* UPrimitiveComponent::CreateSceneProxy()
     return new FPrimitiveProxy(this);
 }
 
+FPrimitiveProxy* UPrimitiveComponent::GetSceneProxy() const
+{
+    if (Owner && Owner->GetWorld())
+    {
+        return GetSceneProxy(Owner->GetWorld()->GetScene());
+    }
+
+    if (SceneProxies.size() == 1)
+    {
+        return SceneProxies.begin()->second;
+    }
+
+    return nullptr;
+}
+
+FPrimitiveProxy* UPrimitiveComponent::GetSceneProxy(FScene& Scene) const
+{
+    auto It = SceneProxies.find(&Scene);
+    if (It != SceneProxies.end())
+    {
+        return It->second;
+	}
+    return nullptr;
+}
+
 void UPrimitiveComponent::CreateRenderState()
 {
     if (!Owner || !Owner->GetWorld())
         return;
 
     UWorld* World = Owner->GetWorld();
+    FScene& Scene = World->GetScene();
 
-    if (!SceneProxy)
+    auto It = SceneProxies.find(&Scene);
+    if (It != SceneProxies.end())
     {
-        FScene& Scene = World->GetScene();
-        SceneProxy = Scene.AddPrimitive(this);
+        return;
     }
+
+    auto* Proxy = Scene.AddPrimitive(this);
+    if (!Proxy)
+    {
+        return;
+    }
+
+    SceneProxies.emplace(&Scene, Proxy);
 
     World->GetPartition().AddSinglePrimitive(this);
     World->MarkEditorPickingAndScenePrimitiveBVHsDirty();
@@ -426,20 +469,24 @@ void UPrimitiveComponent::CreateRenderState()
 
 void UPrimitiveComponent::DestroyRenderState()
 {
-    if (Owner)
+    for (const auto& Entry : SceneProxies)
     {
-        if (UWorld* World = Owner->GetWorld())
+        FScene* Scene = Entry.first;
+        FPrimitiveProxy* Proxy = Entry.second;
+        if (Scene && Proxy)
         {
-            World->GetPartition().RemoveSinglePrimitive(this);
-            World->MarkEditorPickingAndScenePrimitiveBVHsDirty();
-
-            if (SceneProxy)
-            {
-                World->GetScene().RemovePrimitive(SceneProxy);
-            }
+            Scene->RemovePrimitive(Proxy);
         }
     }
-    SceneProxy = nullptr;
+
+    SceneProxies.clear();
+
+    if (Owner && Owner->GetWorld())
+    {
+        UWorld* World = Owner->GetWorld();
+        World->GetPartition().RemoveSinglePrimitive(this);
+        World->MarkEditorPickingAndScenePrimitiveBVHsDirty();
+    }
 }
 
 void UPrimitiveComponent::MarkRenderStateDirty()

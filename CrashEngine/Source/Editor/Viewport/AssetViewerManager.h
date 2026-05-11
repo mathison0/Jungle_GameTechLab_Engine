@@ -3,6 +3,7 @@
 #include "Editor/Viewport/SkeletalMeshViewer.h"
 #include "UI/SWindow.h"
 #include <memory>
+#include <functional>
 #include <d3d11.h>
 
 class SSplitter;
@@ -25,6 +26,7 @@ public:
 
     FSkeletalMeshViewer* OpenSkeletalMeshEditor(USkeletalMesh* Mesh);
     FSkeletalMeshViewer* FindSkeletalMeshEditor(USkeletalMesh* Mesh);
+    void ForEachOpenViewer(const std::function<void(FSkeletalMeshViewer&)>& Visitor);
 
 private:
     UEditorEngine* EditorEngine = nullptr;

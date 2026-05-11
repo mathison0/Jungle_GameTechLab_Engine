@@ -247,7 +247,7 @@ void FSelectionManager::SetActorProxiesSelected(AActor* Actor, bool bSelected)
     FScene& Scene = World->GetScene();
     for (UPrimitiveComponent* Prim : Actor->GetPrimitiveComponents())
     {
-        if (FPrimitiveProxy* Proxy = Prim->GetSceneProxy())
+        if (FPrimitiveProxy* Proxy = Prim->GetSceneProxy(Scene))
         {
             Scene.SetProxySelected(Proxy, bSelected);
         }

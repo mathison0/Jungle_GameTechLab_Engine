@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include "Component/MeshComponent.h"
+#include "Render/RHI/D3D11/Buffers/SkeletalMeshBuffer.h"
+
+#include <memory>
 
 class USkeletalMesh;
 struct FBoneInfo;
@@ -41,6 +44,7 @@ public:
 
 	const TArray<FVertexPNCT_T>& GetSkinnedVertices() const;
     const TArray<uint32>& GetIndices() const;
+    FSkeletalMeshBuffer* GetSkinnedRenderBuffer(int32 SubMeshIndex) const;
 
     int32 GetNumBones() const;
     const FBoneInfo* GetBoneInfo(int32 BoneIndex) const;
@@ -64,6 +68,7 @@ protected:
 
     TArray<FVertexPNCT_T> SkinnedVertices;
     TArray<uint32> SkinnedIndices;
+    TArray<std::unique_ptr<FSkeletalMeshBuffer>> SkinnedRenderBuffers;
 
     FString SkeletalMeshPath = "None";
     ESkeletalDebugPoseMode DebugPoseMode = ESkeletalDebugPoseMode::SkinBindPose;
