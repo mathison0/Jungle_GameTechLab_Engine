@@ -1,4 +1,4 @@
-#include "Mesh/SkeletalMeshManager.h"
+﻿#include "Mesh/SkeletalMeshManager.h"
 #include "Core/Logging/LogMacros.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/FBXImporter.h"
@@ -239,5 +239,19 @@ void FSkeletalMeshManager::Unload(const FString& Key)
 
 void FSkeletalMeshManager::ReleaseAllGPU()
 {
+	for (auto& [Key, Mesh] : SkeletalMeshCache)
+    {
+		if (!Mesh) continue;
+		for (USkeletalSubMesh* SubMesh : Mesh->GetSubMeshes())
+        {
+			if (!SubMesh) continue;
+			FSkeletalSubMesh* Asset = SubMesh->GetSkeletalSubMeshAsset();
+			if (Asset && Asset->RenderBuffer)
+            {
+				Asset->RenderBuffer->Release();
+				Asset->RenderBuffer.reset();
+			}
+		}
+	}
     SkeletalMeshCache.clear();
 }
