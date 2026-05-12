@@ -32,7 +32,6 @@ public:
 	void SetSkelMesh();
     bool GetCachedBoneLocalTransform(int32 BoneIndex, FTransform& OutTransform);
     bool SetCachedBoneLocalTransform(int32 BoneIndex, const FTransform& NewTransform, bool bApplyToComponent = true);
-    FQuat GetCachedBoneComponentRotation(int32 BoneIndex);
     FVector GetCachedBoneComponentScale(int32 BoneIndex);
 
 private:
@@ -43,7 +42,7 @@ private:
 
     FSkeletalMeshViewer* Owner = nullptr;
 
-	TArray<FTransform> BoneLocalTransforms;
+	TArray<FTransform> BoneLocalTransforms;// 헤더에 추가
 
 	FColor SelectedColor = FColor(124, 252, 0);
 	FColor BoneColor = FColor(0, 0, 55);

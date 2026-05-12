@@ -8,7 +8,6 @@
 #include "Collision/RayUtils.h"
 
 #include <algorithm>
-#include <Profiling/Stats.h>
 
 IMPLEMENT_CLASS(USkinnedMeshComponent, UMeshComponent)
 
@@ -381,7 +380,6 @@ void USkinnedMeshComponent::RefreshBoneTransforms()
 
 void USkinnedMeshComponent::RefreshBoneTransformsFrom(int32 BoneIndex)
 {
-    SCOPE_STAT_CAT("RefreshBoneTransformsFrom", "USkinnedMeshComponent");
     const int32 BoneCount = static_cast<int32>(CurrentBoneLocalMatrices.size());
     if (BoneCount <= 0 || !SkeletalMesh || !SkeletalMesh->GetSkeleton())
         return;
@@ -470,8 +468,6 @@ void USkinnedMeshComponent::UpdateSkinningMatrices()
 
 void USkinnedMeshComponent::UpdateSkinnedVertices()
 {
-    SCOPE_STAT_CAT("UpdateSkinnedVertices", "USkinnedMeshComponent");
-
     SkinnedVertices.clear();
     SkinnedIndices.clear();
 
@@ -757,7 +753,6 @@ int32 USkinnedMeshComponent::FindBoneIndex(const FName& BoneName) const
 
 void USkinnedMeshComponent::RefreshEditedDisplayPoseFrom(int32 StartBoneIndex)
 {
-    SCOPE_STAT_CAT("RefreshEditedDisplayPoseFrom", "USkinnedMeshComponent");
     const int32 BoneCount = static_cast<int32>(DisplayPoseBoneLocalMatrices.size());
     if (BoneCount <= 0 || !SkeletalMesh || !SkeletalMesh->GetSkeleton())
         return;
@@ -790,7 +785,6 @@ void USkinnedMeshComponent::RefreshEditedDisplayPoseFrom(int32 StartBoneIndex)
 
 void USkinnedMeshComponent::UpdateSkinningMatricesFrom(int32 StartBoneIndex)
 {
-    SCOPE_STAT_CAT("UpdateSkinningMatricesFrom", "USkinnedMeshComponent");
     const int32 BoneCount = static_cast<int32>(CurrentBoneGlobalMatrices.size());
     if (RefPoseBoneGlobalMatrices.size() != CurrentBoneGlobalMatrices.size())
         return;

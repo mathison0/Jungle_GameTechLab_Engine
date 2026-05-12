@@ -164,11 +164,6 @@ bool FSkeletalMeshViewer::SetCachedBoneLocalTransform(
     return ViewerPanel.SetCachedBoneLocalTransform(BoneIndex, NewTransform, bApplyToComponent);
 }
 
-FQuat FSkeletalMeshViewer::GetCachedBoneComponentRotation(int32 BoneIndex)
-{
-    return ViewerPanel.GetCachedBoneComponentRotation(BoneIndex);
-}
-
 FVector FSkeletalMeshViewer::GetCachedBoneComponentScale(int32 BoneIndex)
 {
     return ViewerPanel.GetCachedBoneComponentScale(BoneIndex);
@@ -253,7 +248,7 @@ bool FSkeletalMeshViewer::RaycastBonePicking(const FRay& Ray, int32& BestBoneInd
             if (RayT < BestDistance)
             {
                 BestDistance = RayT;
-                BestBoneIndex = BoneIndex;
+                BestBoneIndex = ParentIndex;
                 bHit = true;
             }
         }

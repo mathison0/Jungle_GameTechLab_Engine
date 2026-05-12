@@ -463,7 +463,7 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
     ShowFlags.bFog = false;
     ShowFlags.bFXAA = true;
 
-    const EViewMode ViewMode = EViewMode::Lit_Phong;
+    const EViewMode ViewMode = OwnerViewer->GetState().ViewMode;
 
     FSceneView PreviewSceneView = {};
     PreviewSceneView.SetCameraInfo(Camera);
@@ -494,7 +494,7 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
     }
     if (Options.bShowSkeleton)
     {
-        OwnerViewer->RenderBoneDebugLines();
+        //OwnerViewer->RenderBoneDebugLines();
         Renderer.CollectSkeletalDebug(Scene);
     }
 

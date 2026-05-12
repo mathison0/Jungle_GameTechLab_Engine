@@ -4,6 +4,7 @@
 #include "UI/EditorSkeletalMeshViewerPanel.h"
 #include "Math/Transform.h"
 #include "Viewport/PreviewViewportClient.h"
+#include "Render/Execute/Context/Scene/ViewTypes.h"
 #include <d3d11.h>
 
 struct FSkeletalMeshViewerState
@@ -11,6 +12,7 @@ struct FSkeletalMeshViewerState
     USkeletalMesh* ActiveMesh = nullptr;
     int32 SelectedBoneIndex = -1;
     TArray<TArray<uint32>> BoneHierarchy;
+    EViewMode ViewMode;
 
     bool bShowMesh = true;
     bool bShowSkeleton = true;

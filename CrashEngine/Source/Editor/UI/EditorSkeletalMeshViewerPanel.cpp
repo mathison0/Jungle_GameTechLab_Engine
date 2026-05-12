@@ -136,11 +136,44 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
 	ImGui::SameLine();
 
 	RenderToggleButton("Skeleton", State.bShowSkeleton);
-	ImGui::SameLine();
+    ImGui::SameLine();
 
-	RenderToggleButton("Bone Names", State.bShowBoneNames);
-	ImGui::SameLine();
+    ImGui::Text("ViewMode");
+    ImGui::SameLine();
+	auto OpenToolbarPopup =
+        [&](const char* ButtonLabel, const char* PopupId, const std::function<void()>& Body)
+    {
+        ImGui::SameLine();
 
+        if (ImGui::Button(ButtonLabel))
+        {
+            ImGui::OpenPopup(PopupId);
+        }
+
+        if (ImGui::BeginPopup(PopupId))
+        {
+            Body();
+            ImGui::EndPopup();
+        }
+    };
+
+    OpenToolbarPopup("ViewMode", "ViewModePopup", [&]()
+                     {
+        int32 CurrentMode = static_cast<int32>(State.ViewMode);
+
+        ImGui::RadioButton("Lit_Gouraud", &CurrentMode, static_cast<int32>(EViewMode::Lit_Gouraud));
+        ImGui::RadioButton("Lit_Lambert", &CurrentMode, static_cast<int32>(EViewMode::Lit_Lambert));
+        ImGui::RadioButton("Lit_Phong", &CurrentMode, static_cast<int32>(EViewMode::Lit_Phong));
+        ImGui::RadioButton("Unlit", &CurrentMode, static_cast<int32>(EViewMode::Unlit));
+        ImGui::RadioButton("WorldNormal", &CurrentMode, static_cast<int32>(EViewMode::WorldNormal));
+        ImGui::RadioButton("Wireframe", &CurrentMode, static_cast<int32>(EViewMode::Wireframe));
+        ImGui::RadioButton("SceneDepth", &CurrentMode, static_cast<int32>(EViewMode::SceneDepth));
+
+        State.ViewMode = static_cast<EViewMode>(CurrentMode);
+	 });
+
+	ImGui::TextUnformatted("Gizmo");
+    ImGui::SameLine();
     if (UGizmoComponent* Gizmo = Owner->GetPreviewScene().GetBoneGizmo())
     {
         const EGizmoMode Mode = Gizmo->GetMode();
@@ -239,13 +272,6 @@ bool FEditorSkeletalMeshViewerPanel::SetCachedBoneLocalTransform(
     }
 
     return true;
-}
-
-FQuat FEditorSkeletalMeshViewerPanel::GetCachedBoneComponentRotation(int32 BoneIndex)
-{
-    USkeletalMeshComponent* MeshComp = GetPreviewMeshComponent();
-    EnsureBoneLocalTransformCache(MeshComp);
-    return GetCachedGlobalRotation(MeshComp, BoneIndex);
 }
 
 FVector FEditorSkeletalMeshViewerPanel::GetCachedBoneComponentScale(int32 BoneIndex)
@@ -377,7 +403,6 @@ void FEditorSkeletalMeshViewerPanel::RenderPreviewViewport(float DeltaTime)
     FPreviewViewportOptions Options;
     Options.bShowMesh = State.bShowMesh;
     Options.bShowSkeleton = State.bShowSkeleton;
-    Options.bShowBoneNames = State.bShowBoneNames;
     Options.SelectedBoneIndex = State.SelectedBoneIndex;
 
     VC.SetPreviewOptions(Options);
@@ -433,7 +458,6 @@ void FEditorSkeletalMeshViewerPanel::RenderBoneNode(uint32 BoneIndex)
 
     ImGuiTreeNodeFlags Flags =
         ImGuiTreeNodeFlags_OpenOnArrow |
-        ImGuiTreeNodeFlags_DefaultOpen |
         ImGuiTreeNodeFlags_SpanAvailWidth;
 
     if (bSelected)
@@ -441,6 +465,9 @@ void FEditorSkeletalMeshViewerPanel::RenderBoneNode(uint32 BoneIndex)
 
     if (bLeaf)
         Flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+    if (Bone->ParentIndex < 0)
+        Flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
     ImGui::PushID(BoneIndex);
 
@@ -471,7 +498,9 @@ void FEditorSkeletalMeshViewerPanel::RenderInspector()
 {
     USkeletalMeshComponent* MeshComp = GetPreviewMeshComponent();
     const int32 BoneCount = MeshComp ? MeshComp->GetNumBones() : 0;
+
     int32& SelectedBoneIndex = Owner->GetState().SelectedBoneIndex;
+
     if (!MeshComp || SelectedBoneIndex < 0 || SelectedBoneIndex >= BoneCount)
     {
         ImGui::TextDisabled("No selected Bone");
@@ -485,12 +514,6 @@ void FEditorSkeletalMeshViewerPanel::RenderInspector()
         return;
     }
 
-    EnsureBoneLocalTransformCache(MeshComp);
-    if (SelectedBoneIndex >= static_cast<int32>(BoneLocalTransforms.size()))
-    {
-        ImGui::TextDisabled("No selected Bone");
-        return;
-    }
 
     ImGui::Text("Index: %d", SelectedBoneIndex);
     ImGui::Text("Name: %s", Bone->Name.ToString().c_str());
@@ -498,18 +521,22 @@ void FEditorSkeletalMeshViewerPanel::RenderInspector()
 
     if (Bone->ParentIndex >= 0 && Bone->ParentIndex < BoneCount)
     {
-        const FBoneInfo* ParentBone = MeshComp->GetBoneInfo(Bone->ParentIndex);
-        if (ParentBone)
-        {
-            ImGui::Text("Parent Name: %s", ParentBone->Name.ToString().c_str());
-        }
+        const char* ParentName =
+            Bone->ParentIndex < static_cast<int32>(MeshComp->GetNumBones())
+                ? Bone->Name.ToString().c_str()
+                : "InvalidBone";
+
+        ImGui::Text("Parent Name: %s", ParentName);
     }
 
     ImGui::SeparatorText("Local Transform");
 
-    const FMatrix& GlobalMatrix = MeshComp->GetBoneComponentMatrix(SelectedBoneIndex);
+    // 컴포넌트가 가진 현재 Local Matrix를 직접 읽는다.
+    const FMatrix& LocalMatrix = MeshComp->GetBoneLocalMatrix(SelectedBoneIndex);
 
-	FTransform& LocalTransform = BoneLocalTransforms[SelectedBoneIndex];
+    // 기존에 네가 쓰던 Matrix -> FTransform 변환 함수 사용.
+    FTransform LocalTransform = MakeTransformFromMatrixForEditCache(LocalMatrix);
+
     const FRotator LocalRotation = LocalTransform.GetRotator();
 
     float Location[3] = {
@@ -530,51 +557,59 @@ void FEditorSkeletalMeshViewerPanel::RenderInspector()
         LocalTransform.Scale.Z
     };
 
-    const bool bLocChanged =
-        ImGui::DragFloat3("Local Location", Location, 0.1f);
+    bool bChanged = false;
+    bool bEditFinished = false;
 
-    const bool bRotChanged =
-        ImGui::DragFloat3("Local Rotation", Rotation, 0.1f);
+    bChanged |= ImGui::DragFloat3("Local Location", Location, 0.1f);
+    bEditFinished |= ImGui::IsItemDeactivatedAfterEdit();
 
-    const bool bScaleChanged =
-        ImGui::DragFloat3("Local Scale", Scale, 0.01f);
+    bChanged |= ImGui::DragFloat3("Local Rotation", Rotation, 0.1f);
+    bEditFinished |= ImGui::IsItemDeactivatedAfterEdit();
 
-    if (bLocChanged)
+    bChanged |= ImGui::DragFloat3("Local Scale", Scale, 0.01f);
+    bEditFinished |= ImGui::IsItemDeactivatedAfterEdit();
+
+    if (bChanged)
     {
         LocalTransform.Location = FVector(Location[0], Location[1], Location[2]);
-    }
-
-    if (bRotChanged)
-    {
         LocalTransform.Rotation =
-            FRotator(Rotation[0], Rotation[1], Rotation[2]).GetClamped().ToQuaternion();
-
-    }
-
-    if (bScaleChanged)
-    {
+            FRotator(Rotation[0], Rotation[1], Rotation[2])
+                .GetClamped()
+                .ToQuaternion();
         LocalTransform.Scale = FVector(Scale[0], Scale[1], Scale[2]);
+
+        MeshComp->SetBoneLocalMatrix(
+            SelectedBoneIndex,
+            LocalTransform.ToMatrix());
     }
 
-    if (bLocChanged || bRotChanged || bScaleChanged)
-    {
-        MeshComp->SetBoneLocalMatrix(SelectedBoneIndex, LocalTransform.ToMatrix());
-    }
     ImGui::Spacing();
     ImGui::SeparatorText("Global Transform");
 
-    const FVector GlobalLocation = GlobalMatrix.GetLocation();
-    const FVector GlobalRotation = GetCachedGlobalRotation(MeshComp, SelectedBoneIndex).ToRotator().ToVector();
-    const FVector GlobalScale = GetCachedGlobalScale(MeshComp, SelectedBoneIndex);
+    // 수정 후 값을 다시 읽어야 한다.
+    const FMatrix& GlobalMatrix = MeshComp->GetBoneComponentMatrix(SelectedBoneIndex);
+
+    const FTransform GlobalTransform =
+        MakeTransformFromMatrixForEditCache(GlobalMatrix);
+
+    const FVector GlobalLocation = GlobalTransform.Location;
+    const FVector GlobalRotation = GlobalTransform.GetRotator().ToVector();
+    const FVector GlobalScale = GlobalTransform.Scale;
 
     ImGui::Text("Global Location: %.3f, %.3f, %.3f",
-                GlobalLocation.X, GlobalLocation.Y, GlobalLocation.Z);
+                GlobalLocation.X,
+                GlobalLocation.Y,
+                GlobalLocation.Z);
 
     ImGui::Text("Global Rotation: %.3f, %.3f, %.3f",
-                GlobalRotation.X, GlobalRotation.Y, GlobalRotation.Z);
+                GlobalRotation.X,
+                GlobalRotation.Y,
+                GlobalRotation.Z);
 
     ImGui::Text("Global Scale: %.3f, %.3f, %.3f",
-                GlobalScale.X, GlobalScale.Y, GlobalScale.Z);
+                GlobalScale.X,
+                GlobalScale.Y,
+                GlobalScale.Z);
 }
 
 void FEditorSkeletalMeshViewerPanel::RenderBoneDebugLine(int32 BoneIndex, bool bInSelectedSubtree)
