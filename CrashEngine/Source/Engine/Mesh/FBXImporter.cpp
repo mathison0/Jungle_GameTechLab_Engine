@@ -860,7 +860,6 @@ void FFBXImporter::ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USke
         const FMatrix LocalMatrix = ConvertFbxMatrix(Node->EvaluateLocalTransform());
         FTransform LocalTransform = GetTransformFromMatrix(LocalMatrix);
         currentIndex = OutSkeleton->AddBone(Node->GetName(), ParentIndex, LocalTransform);
-        OutSkeleton->SetBoneDisplayTransform(currentIndex, LocalTransform);
         OutSkeleton->SetBoneDisplayMatrix(currentIndex, LocalMatrix);
     }
 

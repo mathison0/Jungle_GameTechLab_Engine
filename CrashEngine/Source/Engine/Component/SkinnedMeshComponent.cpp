@@ -253,7 +253,6 @@ void USkinnedMeshComponent::RefreshDisplayPose()
     }
 
     const TArray<FBoneInfo>& Bones = SkeletalMesh->GetSkeleton()->GetBones();
-    const TArray<FTransform>& DisplayTransforms = SkeletalMesh->GetSkeleton()->GetDisplayTransforms();
     const TArray<FMatrix>& DisplayLocalMatrices = SkeletalMesh->GetSkeleton()->GetDisplayLocalMatrices();
     const int32 BoneCount = static_cast<int32>(Bones.size());
     const bool bHasDisplayLocalMatrices = DisplayLocalMatrices.size() == Bones.size();
@@ -271,11 +270,7 @@ void USkinnedMeshComponent::RefreshDisplayPose()
         }
         else
         {
-            const FTransform& DisplayTransform =
-                BoneIndex < static_cast<int32>(DisplayTransforms.size())
-                    ? DisplayTransforms[BoneIndex]
-                    : Bone.ReferenceTransform;
-            LocalMatrix = DisplayTransform.ToMatrix();
+            LocalMatrix = Bone.ReferenceTransform.ToMatrix();
         }
         DisplayPoseBoneLocalMatrices[BoneIndex] = LocalMatrix;
 

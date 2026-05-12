@@ -63,19 +63,8 @@ void USkeleton::Serialize(FArchive& Ar)
         Ar << Bone;
     }
 
-    Ar << DisplayTransforms;
     SerializeMatrixArray(Ar, ReferenceLocalMatrices);
     SerializeMatrixArray(Ar, DisplayLocalMatrices);
-
-    if (Ar.IsLoading() && DisplayTransforms.size() != Bones.size())
-    {
-        DisplayTransforms.clear();
-        DisplayTransforms.reserve(Bones.size());
-        for (const FBoneInfo& Bone : Bones)
-        {
-            DisplayTransforms.push_back(Bone.ReferenceTransform);
-        }
-    }
 
     if (Ar.IsLoading())
     {
@@ -91,7 +80,6 @@ int32 USkeleton::AddBone(FName InName, int32 InParentIndex, const FTransform& In
     Bone.ParentIndex = InParentIndex;
     Bone.ReferenceTransform = InRefTransform;
     Bones.push_back(Bone);
-    DisplayTransforms.push_back(InRefTransform);
     ReferenceLocalMatrices.push_back(InRefTransform.ToMatrix());
     DisplayLocalMatrices.push_back(InRefTransform.ToMatrix());
     
@@ -109,21 +97,6 @@ bool USkeleton::SetBoneReferenceTransform(int32 BoneIndex, const FTransform& InR
     if (BoneIndex < static_cast<int32>(ReferenceLocalMatrices.size()))
     {
         ReferenceLocalMatrices[BoneIndex] = InRefTransform.ToMatrix();
-    }
-    return true;
-}
-
-bool USkeleton::SetBoneDisplayTransform(int32 BoneIndex, const FTransform& InDisplayTransform)
-{
-    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(DisplayTransforms.size()))
-    {
-        return false;
-    }
-
-    DisplayTransforms[BoneIndex] = InDisplayTransform;
-    if (BoneIndex < static_cast<int32>(DisplayLocalMatrices.size()))
-    {
-        DisplayLocalMatrices[BoneIndex] = InDisplayTransform.ToMatrix();
     }
     return true;
 }
