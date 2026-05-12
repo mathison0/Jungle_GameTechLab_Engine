@@ -354,6 +354,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Shaders\CustomTest.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">
       <Filter>Shaders\Common</Filter>
     </FxCompile>
@@ -462,6 +465,9 @@
     <FxCompile Include="Shaders\Render\Scene\Lighting\LightingCommon.hlsli">
       <Filter>Shaders\Render\Scene\Lighting</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Render\Scene\Lighting\LightingEvaluation.hlsli">
+      <Filter>Shaders\Render\Scene\Lighting</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\Lighting\PointLightShadow.hlsli">
       <Filter>Shaders\Render\Scene\Lighting</Filter>
     </FxCompile>
@@ -478,6 +484,9 @@
       <Filter>Shaders\Render\Scene\Material</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\Material\StaticMeshMaterial.hlsli">
+      <Filter>Shaders\Render\Scene\Material</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Render\Scene\Material\SurfaceEvaluation.hlsli">
       <Filter>Shaders\Render\Scene\Material</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\Shared\FullscreenPassTypes.hlsli">
@@ -2069,6 +2078,9 @@
     <ClInclude Include="Source\Engine\Mesh\FBXImporter.h">
       <Filter>Source\Engine\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Mesh\MeshImportPathUtils.h">
+      <Filter>Source\Engine\Mesh</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\MeshImporterCommon.h">
       <Filter>Source\Engine\Mesh</Filter>
     </ClInclude>
@@ -2303,6 +2315,9 @@
     <ClInclude Include="Source\Engine\Render\Resources\Bindings\RenderCBKeys.h">
       <Filter>Source\Engine\Render\Resources\Bindings</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Resources\Bindings\ShaderResourceBinding.h">
+      <Filter>Source\Engine\Render\Resources\Bindings</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resources\Buffers\ConstantBufferCache.h">
       <Filter>Source\Engine\Render\Resources\Buffers</Filter>
     </ClInclude>
@@ -2311,6 +2326,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resources\Buffers\MeshBufferManager.h">
       <Filter>Source\Engine\Render\Resources\Buffers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Resources\Shaders\MeshPassOverrideSettings.h">
+      <Filter>Source\Engine\Render\Resources\Shaders</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resources\Shaders\ShaderDependencyUtils.h">
       <Filter>Source\Engine\Render\Resources\Shaders</Filter>

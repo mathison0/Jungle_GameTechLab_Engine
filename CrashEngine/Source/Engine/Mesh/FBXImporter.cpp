@@ -1,5 +1,6 @@
 ﻿#include "Mesh/FBXImporter.h"
 #include "Mesh/SkeletalMesh.h"
+#include "Mesh/MeshImportPathUtils.h"
 #include "Mesh/StaticMesh.h"
 #include "Mesh/Skeleton.h"
 #include "Animation/AnimationSequence.h"
@@ -7,24 +8,20 @@
 #include "Engine/Platform/Paths.h"
 #include "Engine/Mesh/ObjManager.h"
 #include "Core/Logging/LogMacros.h"
+#include "Materials/MaterialManager.h"
+#include "Materials/MaterialSemantics.h"
 #include "Object/Object.h"
+#include "SimpleJSON/json.hpp"
 #include <filesystem>
 #include <algorithm>
 #include <cmath>
 #include <ranges>
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace
 {
-    FVector GetSafeInverseScale(const FVector& Scale)
-    {
-        return FVector(
-            std::abs(Scale.X) > 1e-6f ? 1.0f / Scale.X : 1.0f,
-            std::abs(Scale.Y) > 1e-6f ? 1.0f / Scale.Y : 1.0f,
-            std::abs(Scale.Z) > 1e-6f ? 1.0f / Scale.Z : 1.0f);
-    }
-
     // 테스트용 함수
     void PrintNode(FbxNode* pNode, int depth) {
         const char* nodeName = pNode->GetName();
@@ -111,63 +108,381 @@ bool FFBXImporter::bInitialized = false;
 FbxManager* FFBXImporter::SdkManager = nullptr;
 TArray<TArray<int>> FFBXImporter::CtrlPointToVertexIndex;
 TArray<TArray<FFBXImporter::FBoneWeighting>> FFBXImporter::BoneWeighting;
+std::unordered_map<const FbxSurfaceMaterial*, UMaterial*> FFBXImporter::ImportedMaterialCache;
+std::unordered_map<const FbxSurfaceMaterial*, FString> FFBXImporter::ImportedMaterialJsonPaths;
+std::unordered_map<FString, int32> FFBXImporter::GeneratedMaterialNameCounts;
 
 namespace
 {
     std::unordered_map<const USkeleton*, FVector> GSkeletonMeshBindInverseScales;
+}
 
-    FString BuildValidMaterialSlotName(const FString& InName, int32 FallbackIndex)
+int32 FFBXImporter::GetFbxPolygonMaterialIndex(FbxNode* Node, FbxMesh* Mesh, int32 PolygonIndex)
+{
+    if (!Node || !Mesh)
     {
-        if (!InName.empty())
-        {
-            return InName;
-        }
-
-        return "Material_" + std::to_string(FallbackIndex);
+        return 0;
     }
 
-    int32 GetFbxPolygonMaterialIndex(FbxNode* Node, FbxMesh* Mesh, int32 PolygonIndex)
+    const int32 MaterialCount = Node->GetMaterialCount();
+    if (MaterialCount <= 0)
     {
-        if (!Node || !Mesh)
-        {
-            return 0;
-        }
-
-        const int32 MaterialCount = Node->GetMaterialCount();
-        if (MaterialCount <= 0)
-        {
-            return 0;
-        }
-
-        FbxGeometryElementMaterial* MaterialElement = Mesh->GetElementMaterial();
-        if (!MaterialElement)
-        {
-            return 0;
-        }
-
-        int32 MaterialIndex = 0;
-        switch (MaterialElement->GetMappingMode())
-        {
-        case FbxGeometryElement::eAllSame:
-            if (MaterialElement->GetIndexArray().GetCount() > 0)
-            {
-                MaterialIndex = MaterialElement->GetIndexArray().GetAt(0);
-            }
-            break;
-        case FbxGeometryElement::eByPolygon:
-            if (PolygonIndex >= 0 && PolygonIndex < MaterialElement->GetIndexArray().GetCount())
-            {
-                MaterialIndex = MaterialElement->GetIndexArray().GetAt(PolygonIndex);
-            }
-            break;
-        default:
-            MaterialIndex = 0;
-            break;
-        }
-
-        return std::clamp(MaterialIndex, 0, MaterialCount - 1);
+        return 0;
     }
 
+    FbxGeometryElementMaterial* MaterialElement = Mesh->GetElementMaterial();
+    if (!MaterialElement)
+    {
+        return 0;
+    }
+
+    int32 MaterialIndex = 0;
+    switch (MaterialElement->GetMappingMode())
+    {
+    case FbxGeometryElement::eAllSame:
+        if (MaterialElement->GetIndexArray().GetCount() > 0)
+        {
+            MaterialIndex = MaterialElement->GetIndexArray().GetAt(0);
+        }
+        break;
+    case FbxGeometryElement::eByPolygon:
+        if (PolygonIndex >= 0 && PolygonIndex < MaterialElement->GetIndexArray().GetCount())
+        {
+            MaterialIndex = MaterialElement->GetIndexArray().GetAt(PolygonIndex);
+        }
+        break;
+    default:
+        MaterialIndex = 0;
+        break;
+    }
+
+    return std::clamp(MaterialIndex, 0, MaterialCount - 1);
+}
+
+FVector FFBXImporter::GetSafeInverseScale(const FVector& Scale)
+{
+    return FVector(
+        std::abs(Scale.X) > 1e-6f ? 1.0f / Scale.X : 1.0f,
+        std::abs(Scale.Y) > 1e-6f ? 1.0f / Scale.Y : 1.0f,
+        std::abs(Scale.Z) > 1e-6f ? 1.0f / Scale.Z : 1.0f);
+}
+
+FString FFBXImporter::BuildValidMaterialSlotName(const FString& InName, int32 FallbackIndex)
+{
+    if (!InName.empty())
+    {
+        return InName;
+    }
+
+    return "Material_" + std::to_string(FallbackIndex);
+}
+
+FString FFBXImporter::MakeUniqueGeneratedMaterialName(const FString& BaseName)
+{
+    FString Sanitized = MeshImportPathUtils::SanitizeFileNameComponent(BaseName);
+    if (Sanitized.empty())
+    {
+        Sanitized = "Material";
+    }
+
+    auto It = GeneratedMaterialNameCounts.find(Sanitized);
+    if (It == GeneratedMaterialNameCounts.end())
+    {
+        GeneratedMaterialNameCounts.emplace(Sanitized, 1);
+        return Sanitized;
+    }
+
+    const int32 Index = It->second++;
+    return Sanitized + "_" + std::to_string(Index);
+}
+
+void FFBXImporter::AppendFileTexturesFromProperty(const FbxProperty& Property, TArray<FbxFileTexture*>& OutTextures)
+{
+    if (!Property.IsValid())
+    {
+        return;
+    }
+
+    const int32 LayeredTextureCount = Property.GetSrcObjectCount<FbxLayeredTexture>();
+    if (LayeredTextureCount > 0)
+    {
+        for (int32 LayerIndex = 0; LayerIndex < LayeredTextureCount; ++LayerIndex)
+        {
+            FbxLayeredTexture* LayeredTexture = Property.GetSrcObject<FbxLayeredTexture>(LayerIndex);
+            if (!LayeredTexture)
+            {
+                continue;
+            }
+
+            const int32 FileTextureCount = LayeredTexture->GetSrcObjectCount<FbxFileTexture>();
+            for (int32 TextureIndex = 0; TextureIndex < FileTextureCount; ++TextureIndex)
+            {
+                if (FbxFileTexture* Texture = LayeredTexture->GetSrcObject<FbxFileTexture>(TextureIndex))
+                {
+                    OutTextures.push_back(Texture);
+                }
+            }
+        }
+        return;
+    }
+
+    const int32 FileTextureCount = Property.GetSrcObjectCount<FbxFileTexture>();
+    for (int32 TextureIndex = 0; TextureIndex < FileTextureCount; ++TextureIndex)
+    {
+        if (FbxFileTexture* Texture = Property.GetSrcObject<FbxFileTexture>(TextureIndex))
+        {
+            OutTextures.push_back(Texture);
+        }
+    }
+}
+
+FbxFileTexture* FFBXImporter::GetFirstDiffuseTexture(FbxSurfaceMaterial* Material)
+{
+    if (!Material)
+    {
+        return nullptr;
+    }
+
+    TArray<FbxFileTexture*> DiffuseTextures;
+    AppendFileTexturesFromProperty(Material->FindProperty(FbxSurfaceMaterial::sDiffuse), DiffuseTextures);
+    return DiffuseTextures.empty() ? nullptr : DiffuseTextures[0];
+}
+
+std::filesystem::path FFBXImporter::ResolveTexturePathFromFbx(FbxFileTexture* Texture, const FString& FBXFilePath)
+{
+    if (!Texture)
+    {
+        return {};
+    }
+
+    std::error_code Ec;
+    auto TryCandidate = [&](const std::filesystem::path& Candidate) -> std::filesystem::path
+    {
+        if (Candidate.empty())
+        {
+            return {};
+        }
+
+        const std::filesystem::path Normalized = Candidate.lexically_normal();
+        if (std::filesystem::exists(Normalized, Ec) && !Ec)
+        {
+            return std::filesystem::weakly_canonical(Normalized, Ec);
+        }
+
+        return {};
+    };
+
+    if (const char* FileName = Texture->GetFileName(); FileName && FileName[0] != '\0')
+    {
+        if (std::filesystem::path Existing = TryCandidate(FPaths::ToPath(FPaths::ToWide(FileName))); !Existing.empty())
+        {
+            return Existing;
+        }
+    }
+
+    const std::filesystem::path SourceDir = MeshImportPathUtils::ResolveAbsolutePath(FBXFilePath).parent_path();
+    const std::filesystem::path EmbeddedDir = MeshImportPathUtils::BuildFBXEmbeddedTextureDirectory(FBXFilePath);
+    if (const char* RelativeFileName = Texture->GetRelativeFileName(); RelativeFileName && RelativeFileName[0] != '\0')
+    {
+        const std::filesystem::path RelativePath = FPaths::ToPath(FPaths::ToWide(RelativeFileName));
+        if (std::filesystem::path Existing = TryCandidate(SourceDir / RelativePath); !Existing.empty())
+        {
+            return Existing;
+        }
+
+        if (std::filesystem::path Existing = TryCandidate(EmbeddedDir / RelativePath); !Existing.empty())
+        {
+            return Existing;
+        }
+
+        if (std::filesystem::path Existing = TryCandidate(EmbeddedDir / RelativePath.filename()); !Existing.empty())
+        {
+            return Existing;
+        }
+    }
+
+    return {};
+}
+
+FVector4 FFBXImporter::GetMaterialSectionColor(FbxSurfaceMaterial* Material, bool bHasDiffuseTexture)
+{
+    if (!Material || bHasDiffuseTexture)
+    {
+        return MaterialSemantics::GetDefaultSectionColor();
+    }
+
+    const FbxProperty DiffuseProperty = Material->FindProperty(FbxSurfaceMaterial::sDiffuse);
+    if (!DiffuseProperty.IsValid())
+    {
+        return MaterialSemantics::GetDefaultSectionColor();
+    }
+
+    const FbxDouble3 DiffuseColor = DiffuseProperty.Get<FbxDouble3>();
+    double DiffuseFactor = 1.0;
+    const FbxProperty DiffuseFactorProperty = Material->FindProperty(FbxSurfaceMaterial::sDiffuseFactor);
+    if (DiffuseFactorProperty.IsValid())
+    {
+        DiffuseFactor = DiffuseFactorProperty.Get<FbxDouble>();
+    }
+
+    return FVector4(
+        static_cast<float>(DiffuseColor[0] * DiffuseFactor),
+        static_cast<float>(DiffuseColor[1] * DiffuseFactor),
+        static_cast<float>(DiffuseColor[2] * DiffuseFactor),
+        1.0f);
+}
+
+float FFBXImporter::GetMaterialSpecularPower(FbxSurfaceMaterial* Material)
+{
+    if (FbxSurfacePhong* Phong = FbxCast<FbxSurfacePhong>(Material))
+    {
+        return static_cast<float>(Phong->Shininess.Get());
+    }
+
+    return MaterialSemantics::DefaultSpecularPower;
+}
+
+float FFBXImporter::GetMaterialSpecularStrength(FbxSurfaceMaterial* Material)
+{
+    if (FbxSurfacePhong* Phong = FbxCast<FbxSurfacePhong>(Material))
+    {
+        const FbxDouble3 Specular = Phong->Specular.Get();
+        const float Average = static_cast<float>((Specular[0] + Specular[1] + Specular[2]) / 3.0);
+        const float Factor = static_cast<float>(Phong->SpecularFactor.Get());
+        const float Value = Average * Factor;
+        return Value > 0.0f ? Value : MaterialSemantics::DefaultSpecularStrength;
+    }
+
+    return MaterialSemantics::DefaultSpecularStrength;
+}
+
+FString FFBXImporter::CreateOrLoadMaterialAsset(FbxSurfaceMaterial* Material, const FString& FBXFilePath)
+{
+    if (!Material)
+    {
+        return "None";
+    }
+
+    auto CachedPath = ImportedMaterialJsonPaths.find(Material);
+    if (CachedPath != ImportedMaterialJsonPaths.end())
+    {
+        return CachedPath->second;
+    }
+
+    const std::filesystem::path MaterialDir = MeshImportPathUtils::BuildFBXMaterialOutputDirectory(FBXFilePath);
+    FPaths::CreateDir(MaterialDir.wstring());
+
+    const FString MaterialName = BuildValidMaterialSlotName(Material->GetName(), static_cast<int32>(ImportedMaterialJsonPaths.size()));
+    const FString UniqueMaterialName = MakeUniqueGeneratedMaterialName(MaterialName);
+    const std::filesystem::path JsonFullPath = (MaterialDir / FPaths::ToPath(FPaths::ToWide(UniqueMaterialName + ".json"))).lexically_normal();
+    const FString JsonPath = FPaths::MakeRelativeToRoot(JsonFullPath);
+
+    FbxFileTexture* DiffuseTexture = GetFirstDiffuseTexture(Material);
+    const std::filesystem::path DiffuseTexturePath = ResolveTexturePathFromFbx(DiffuseTexture, FBXFilePath);
+    const bool bHasDiffuseTexture = !DiffuseTexturePath.empty();
+
+    json::JSON JsonData;
+    JsonData["PathFileName"] = JsonPath;
+    JsonData["BlendState"] = "Opaque";
+    JsonData["DepthStencilState"] = "Default";
+    JsonData["RasterizerState"] = "SolidBackCull";
+
+    const FVector4 SectionColor = GetMaterialSectionColor(Material, bHasDiffuseTexture);
+    JsonData["Parameters"]["SectionColor"][0] = SectionColor.X;
+    JsonData["Parameters"]["SectionColor"][1] = SectionColor.Y;
+    JsonData["Parameters"]["SectionColor"][2] = SectionColor.Z;
+    JsonData["Parameters"]["SectionColor"][3] = SectionColor.W;
+    JsonData["Parameters"]["SpecularPower"] = GetMaterialSpecularPower(Material);
+    JsonData["Parameters"]["SpecularStrength"] = GetMaterialSpecularStrength(Material);
+
+    if (bHasDiffuseTexture)
+    {
+        JsonData["Textures"]["DiffuseTexture"] = MeshImportPathUtils::MakeProjectRelativePath(DiffuseTexturePath);
+    }
+
+    std::ofstream File(JsonFullPath);
+    File << JsonData.dump();
+    File.close();
+
+    ImportedMaterialJsonPaths.emplace(Material, JsonPath);
+    UMaterial* LoadedMaterial = FMaterialManager::Get().GetOrCreateStaticMeshMaterial(JsonPath);
+    ImportedMaterialCache.emplace(Material, LoadedMaterial);
+    return JsonPath;
+}
+
+UMaterial* FFBXImporter::ResolveNodeMaterialInterface(FbxNode* Node, int32 FbxMaterialIndex, const FString& FBXFilePath)
+{
+    if (!Node || FbxMaterialIndex < 0 || FbxMaterialIndex >= Node->GetMaterialCount())
+    {
+        return FMaterialManager::Get().GetOrCreateMaterial("None");
+    }
+
+    FbxSurfaceMaterial* Material = Node->GetMaterial(FbxMaterialIndex);
+    if (!Material)
+    {
+        return FMaterialManager::Get().GetOrCreateMaterial("None");
+    }
+
+    auto CachedMaterial = ImportedMaterialCache.find(Material);
+    if (CachedMaterial != ImportedMaterialCache.end())
+    {
+        return CachedMaterial->second;
+    }
+
+    const FString JsonPath = CreateOrLoadMaterialAsset(Material, FBXFilePath);
+    UMaterial* LoadedMaterial = FMaterialManager::Get().GetOrCreateStaticMeshMaterial(JsonPath);
+    ImportedMaterialCache[Material] = LoadedMaterial;
+    return LoadedMaterial;
+}
+
+void FFBXImporter::AssignImportedMaterialsToSlots(FbxNode* Node, const FString& FBXFilePath, TArray<FStaticMaterial>& Materials)
+{
+    if (Materials.empty())
+    {
+        return;
+    }
+
+    if (!Node || Node->GetMaterialCount() <= 0)
+    {
+        UMaterial* DefaultMaterial = FMaterialManager::Get().GetOrCreateMaterial("None");
+        for (FStaticMaterial& MaterialSlot : Materials)
+        {
+            MaterialSlot.MaterialInterface = DefaultMaterial;
+        }
+        return;
+    }
+
+    std::unordered_set<int32> AssignedMaterialIndices;
+    for (FStaticMaterial& MaterialSlot : Materials)
+    {
+        MaterialSlot.MaterialInterface = nullptr;
+
+        for (int32 MaterialIndex = 0; MaterialIndex < Node->GetMaterialCount(); ++MaterialIndex)
+        {
+            if (AssignedMaterialIndices.count(MaterialIndex) > 0)
+            {
+                continue;
+            }
+
+            FbxSurfaceMaterial* FbxMaterial = Node->GetMaterial(MaterialIndex);
+            const FString CandidateSlotName = BuildValidMaterialSlotName(
+                FbxMaterial ? FString(FbxMaterial->GetName()) : FString(),
+                MaterialIndex);
+            if (CandidateSlotName != MaterialSlot.MaterialSlotName)
+            {
+                continue;
+            }
+
+            MaterialSlot.MaterialInterface = ResolveNodeMaterialInterface(Node, MaterialIndex, FBXFilePath);
+            AssignedMaterialIndices.insert(MaterialIndex);
+            break;
+        }
+
+        if (!MaterialSlot.MaterialInterface)
+        {
+            MaterialSlot.MaterialInterface = FMaterialManager::Get().GetOrCreateMaterial("None");
+        }
+    }
 }
 
 FFBXImporter::FImportedSkeletalMesh::FImportedSkeletalMesh(FName InName, FSkeletalSubMesh* InMeshData, FName InSkeletonName, TArray<FStaticMaterial>&& InMaterials)
@@ -207,6 +522,7 @@ FFBXImporter::FImportedFBXAssets& FFBXImporter::FImportedFBXAssets::operator=(FI
     if (this != &Other)
     {
         for (auto* Mesh : SkeletalMeshes) delete Mesh;
+        for (auto* Mesh : StaticMeshes) delete Mesh;
         SkeletalMeshes = std::move(Other.SkeletalMeshes);
         Skeletons = std::move(Other.Skeletons);
         Animations = std::move(Other.Animations);
@@ -456,21 +772,37 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
 {
     Initialize();
     GSkeletonMeshBindInverseScales.clear();
+    ImportedMaterialCache.clear();
+    ImportedMaterialJsonPaths.clear();
+    GeneratedMaterialNameCounts.clear();
 
     // 이전 에셋 데이터 정리
     for (auto* Mesh : OutAssets.SkeletalMeshes) delete Mesh;
+    for (auto* Mesh : OutAssets.StaticMeshes) delete Mesh;
     OutAssets.SkeletalMeshes.clear();
+    OutAssets.StaticMeshes.clear();
     OutAssets.Skeletons.clear();
     OutAssets.Animations.clear();
     OutAssets.Materials.clear();
 
     FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
+    const std::filesystem::path EmbeddedTextureDirectory = MeshImportPathUtils::BuildFBXEmbeddedTextureDirectory(FBXFilePath);
+    FPaths::CreateDir(EmbeddedTextureDirectory.wstring());
+    if (FbxIOSettings* IOSettings = SdkManager->GetIOSettings())
+    {
+        IOSettings->SetBoolProp(IMP_FBX_MATERIAL, true);
+        IOSettings->SetBoolProp(IMP_FBX_TEXTURE, true);
+        IOSettings->SetBoolProp(IMP_FBX_EXTRACT_EMBEDDED_DATA, true);
+    }
+    const FString EmbeddedExtractionPath = FPaths::FromPath(EmbeddedTextureDirectory);
+    Importer->SetEmbeddingExtractionFolder(EmbeddedExtractionPath.c_str());
     if(!Importer->Initialize(FBXFilePath.c_str(), -1, SdkManager->GetIOSettings()))
     {
         UE_LOG(FbxImporter, Error, "FbxImporter::Initialize() failed: %s", Importer->GetStatus().GetErrorString());
         Importer->Destroy();
         return false;
     }
+    Importer->SetEmbeddingExtractionFolder(EmbeddedExtractionPath.c_str());
     
     FbxScene* Scene = FbxScene::Create(SdkManager, "myScene");
     Importer->Import(Scene);
@@ -489,11 +821,11 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         // 그대로 쓰면 bone은 변환됐는데 mesh bind만 원래 축에 남는 문제가 생깁니다.
         FbxAxisSystem UEAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
         UEAxisSystem.DeepConvertScene(Scene);
-        // 단위계도 엔진 기준(미터)으로 정규화. cm 기반 FBX(블렌더/MMD 등)와 m 기반 FBX 모두 동일한 스케일에서 처리하기 위함.
-        if (Scene->GetGlobalSettings().GetSystemUnit() != FbxSystemUnit::m)
-        {
-            FbxSystemUnit::m.ConvertScene(Scene);
-        }
+        //// 단위계도 엔진 기준(미터)으로 정규화. cm 기반 FBX(블렌더/MMD 등)와 m 기반 FBX 모두 동일한 스케일에서 처리하기 위함.
+        //if (Scene->GetGlobalSettings().GetSystemUnit() != FbxSystemUnit::m)
+        //{
+        //    FbxSystemUnit::m.ConvertScene(Scene);
+        //}
         
         // 1. 스켈레톤 구조 추출
         for (int i = 0; i < RootNode->GetChildCount(); i++) {
@@ -509,7 +841,7 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         }
 
         // 2. 메시 및 스키닝 데이터 추출
-        ExtractMeshAndSkinning(RootNode, Options, OutAssets);
+        ExtractMeshAndSkinning(RootNode, FBXFilePath, Options, OutAssets);
 
         // 3. 애니메이션 데이터 추출
         ExtractAnimations(Scene, OutAssets);
@@ -528,7 +860,6 @@ void FFBXImporter::ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USke
         const FMatrix LocalMatrix = ConvertFbxMatrix(Node->EvaluateLocalTransform());
         FTransform LocalTransform = GetTransformFromMatrix(LocalMatrix);
         currentIndex = OutSkeleton->AddBone(Node->GetName(), ParentIndex, LocalTransform);
-        OutSkeleton->SetBoneDisplayTransform(currentIndex, LocalTransform);
         OutSkeleton->SetBoneDisplayMatrix(currentIndex, LocalMatrix);
     }
 
@@ -537,7 +868,7 @@ void FFBXImporter::ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USke
     }
 }
 
-void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& Options, FImportedFBXAssets& OutAsset)
+void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& OutAsset)
 {
     auto ImportPass = [&](auto&& Self, FbxNode* CurrentNode, bool bFallbackPass) -> void
     {
@@ -571,6 +902,7 @@ void FFBXImporter::ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& O
             std::unique_ptr<FSkeletalSubMesh> ExtractedMesh = ParseSkeletalGeometry(CurrentNode, fbxMesh, Options, ExtractedMaterials);
             if (ExtractedMesh)
             {
+                AssignImportedMaterialsToSlots(CurrentNode, FBXFilePath, ExtractedMaterials);
                 BoneWeighting.assign(ExtractedMesh->Vertices.size(), TArray<FBoneWeighting>());
 
                 if (!bFallbackPass)
