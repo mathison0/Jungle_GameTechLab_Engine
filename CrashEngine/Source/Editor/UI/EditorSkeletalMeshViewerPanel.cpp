@@ -7,6 +7,8 @@
 #include "Editor/Viewport/SkeletalMeshViewer.h"
 #include "Mesh/Skeleton.h"
 #include "Render/Scene/Debug/DebugRenderAPI.h"
+#include "Editor/EditorEngine.h"
+#include "GameFramework/SkeletalMeshActor.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_internal.h"
@@ -159,6 +161,23 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
             Gizmo->SetScaleMode();
         }
     }
+
+	if (RenderToggleButton("Spawn in Scene"))
+    {
+        TArray<FWorldContext>& WorldList = EditorEngine->GetWorldList();
+		for (FWorldContext& WorldContext : WorldList)
+        {
+			if (WorldContext.WorldType == EWorldType::Editor)
+            {
+				UWorld* EditorWorld = WorldContext.World;
+                ASkeletalMeshActor* Actor = EditorWorld->SpawnActor<ASkeletalMeshActor>();
+                Actor->InitDefaultComponents();
+                Actor->GetSkeletalMeshComponent()->SetSkeletalMesh(ViewerState.ActiveMesh);
+                Actor->SetActorLocation(/* editor camera focal point or origin */);
+                EditorWorld->InsertActorToOctree(Actor);
+			}
+		}
+	}
 
 	if (RenderToggleButton("FBX Local Bones", State.bUseFbxLocalSkeleton))
 	{
