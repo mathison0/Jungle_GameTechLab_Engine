@@ -1275,7 +1275,15 @@ void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)
         {
             if (IsSkeletalMeshProp(Props[i].Name, Props[i].Type))
             {
-                RenderDetailsPanel(Props, i);
+                const bool bChanged = RenderDetailsPanel(Props, i);
+                if (bChanged && Props[i].Type == EPropertyType::SkeletalMeshRef)
+                {
+                    if (SelectedComponent->IsA<USceneComponent>())
+                    {
+                        static_cast<USceneComponent*>(SelectedComponent)->MarkTransformDirty();
+                    }
+                    return;
+                }
             }
         }
     }
