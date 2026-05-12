@@ -7,6 +7,8 @@
 #include "Editor/Viewport/SkeletalMeshViewer.h"
 #include "Mesh/Skeleton.h"
 #include "Render/Scene/Debug/DebugRenderAPI.h"
+#include "Editor/EditorEngine.h"
+#include "GameFramework/SkeletalMeshActor.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_internal.h"
@@ -192,6 +194,48 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
             Gizmo->SetScaleMode();
         }
     }
+
+	USkeletalMesh* ActiveMesh = State.ActiveMesh;
+	const bool bCanSpawn = ActiveMesh != nullptr && EditorEngine && !EditorEngine->IsPlayingInEditor();
+
+	ImGui::BeginDisabled(!bCanSpawn);
+	if (ImGui::Button("Spawn in Scene"))
+	{
+		UWorld* EditorWorld = nullptr;
+		for (FWorldContext& WorldContext : EditorEngine->GetWorldList())
+		{
+			if (WorldContext.WorldType == EWorldType::Editor)
+			{
+				EditorWorld = WorldContext.World;
+				break;
+			}
+		}
+
+		if (EditorWorld)
+		{
+			ASkeletalMeshActor* Actor = EditorWorld->SpawnActor<ASkeletalMeshActor>();
+			Actor->InitDefaultComponents();
+
+			USkeletalMeshComponent* NewComp = Actor->GetSkeletalMeshComponent();
+			NewComp->SetSkeletalMesh(ActiveMesh);
+
+			USkeletalMeshComponent* PreviewComp = GetPreviewMeshComponent();
+			if (PreviewComp)
+			{
+				const int32 NumBones = PreviewComp->GetNumBones();
+				for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+				{
+					NewComp->SetBoneLocalMatrix(BoneIndex, PreviewComp->GetBoneLocalMatrix(BoneIndex));
+				}
+				NewComp->RefreshEditedDisplayPose();
+			}
+
+			Actor->SetActorLocation(FVector::ZeroVector);
+			EditorWorld->InsertActorToOctree(Actor);
+		}
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
 
 	if (RenderToggleButton("FBX Local Bones", State.bUseFbxLocalSkeleton))
 	{

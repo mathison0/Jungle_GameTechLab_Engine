@@ -890,6 +890,9 @@
     <ClCompile Include="Source\Engine\GameFramework\ScriptActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\SkeletalMeshActor.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\SpotLightActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
@@ -1539,6 +1542,9 @@
       <Filter>ThirdParty\Lua\src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\SkeletalMeshActor.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1959,6 +1965,9 @@
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\ScriptActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\SkeletalMeshActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\SpotLightActor.h">
@@ -2830,6 +2839,9 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\Sol\sol.hpp">
       <Filter>ThirdParty\Sol</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\SkeletalMeshActor.h">
+      <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
