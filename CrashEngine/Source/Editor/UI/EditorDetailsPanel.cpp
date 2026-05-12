@@ -584,7 +584,7 @@ FString FEditorDetailsPanel::OpenObjFileDialog()
     Ofn.lpstrFilter = L"OBJ Files (*.obj)\0*.obj\0All Files (*.*)\0*.*\0";
     Ofn.lpstrFile = FilePath;
     Ofn.nMaxFile = MAX_PATH;
-    Ofn.lpstrTitle = L"Import OBJ Mesh";
+    Ofn.lpstrTitle = L"Import Mesh";
     Ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
     if (GetOpenFileNameW(&Ofn))
