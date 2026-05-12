@@ -27,6 +27,7 @@ public:
     FSkeletalMeshViewer* OpenSkeletalMeshEditor(USkeletalMesh* Mesh);
     FSkeletalMeshViewer* FindSkeletalMeshEditor(USkeletalMesh* Mesh);
     void ForEachOpenViewer(const std::function<void(FSkeletalMeshViewer&)>& Visitor);
+    bool IsMouseOverViewport() const;
 
 private:
     UEditorEngine* EditorEngine = nullptr;

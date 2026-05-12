@@ -69,7 +69,7 @@ public:
 
     void RenderViewportUI(float DeltaTime) { ViewportLayout.RenderViewportUI(DeltaTime); }
 
-    bool IsMouseOverViewport() const { return ViewportLayout.IsMouseOverViewport(); }
+    bool IsMouseOverViewport() const { return ViewportLayout.IsMouseOverViewport() || AssetViewerManager.IsMouseOverViewport(); }
 
     void RenderUI(float DeltaTime);
 

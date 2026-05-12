@@ -1,5 +1,7 @@
 ﻿#include "AssetViewerManager.h"
 #include "Editor/Viewport/SkeletalMeshViewer.h"
+#include "Editor/Viewport/PreviewViewportClient.h"
+#include "ImGui/imgui.h"
 
 void FAssetViewerManager::Initialize(UEditorEngine* InEditorEngine, ID3D11Device* InDevice)
 {
@@ -102,4 +104,38 @@ void FAssetViewerManager::ForEachOpenViewer(const std::function<void(FSkeletalMe
             Visitor(*Viewer);
         }
     }
+}
+
+bool FAssetViewerManager::IsMouseOverViewport() const
+{
+    const ImVec2 MousePos = ImGui::GetIO().MousePos;
+
+    for (const std::unique_ptr<FSkeletalMeshViewer>& Viewer : Viewers)
+    {
+        if (!Viewer || !Viewer->IsOpen())
+        {
+            continue;
+        }
+
+        FRect Rect{};
+        if (!Viewer->GetViewportClient().GetViewportRect(Rect))
+        {
+            continue;
+        }
+
+        if (Rect.Width <= 0.0f || Rect.Height <= 0.0f)
+        {
+            continue;
+        }
+
+        if (MousePos.x >= Rect.X &&
+            MousePos.y >= Rect.Y &&
+            MousePos.x < Rect.X + Rect.Width &&
+            MousePos.y < Rect.Y + Rect.Height)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
