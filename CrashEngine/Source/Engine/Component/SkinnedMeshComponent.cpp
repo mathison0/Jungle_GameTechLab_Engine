@@ -8,6 +8,7 @@
 #include "Collision/RayUtils.h"
 
 #include <algorithm>
+#include <Profiling/Stats.h>
 
 IMPLEMENT_CLASS(USkinnedMeshComponent, UMeshComponent)
 
@@ -380,6 +381,34 @@ void USkinnedMeshComponent::RefreshBoneTransforms()
     }
 }
 
+void USkinnedMeshComponent::RefreshBoneTransformsFrom(int32 BoneIndex)
+{
+    SCOPE_STAT_CAT("RefreshBoneTransformsFrom", "USkinnedMeshComponent");
+    const int32 BoneCount = static_cast<int32>(CurrentBoneLocalMatrices.size());
+    if (BoneCount <= 0 || !SkeletalMesh || !SkeletalMesh->GetSkeleton())
+        return;
+
+    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetSkeleton()->GetBones();
+    if (static_cast<int32>(Bones.size()) != BoneCount)
+        return;
+
+    // StartBoneIndex부터만 순회 (그 이전 부모들은 이미 유효)
+    for (int32 i = BoneIndex; i < BoneCount; ++i)
+    {
+        const int32 ParentIndex = Bones[i].ParentIndex;
+        const FMatrix& Local = CurrentBoneLocalMatrices[i];
+
+        if (ParentIndex >= 0 && ParentIndex < i)
+        {
+            CurrentBoneGlobalMatrices[i] = Local * CurrentBoneGlobalMatrices[ParentIndex];
+        }
+        else
+        {
+            CurrentBoneGlobalMatrices[i] = Local;
+        }
+    }
+}
+
 void USkinnedMeshComponent::ResetToReferencePose()
 {
     CurrentBoneLocalMatrices = RefPoseBoneLocalMatrices;
@@ -405,9 +434,10 @@ bool USkinnedMeshComponent::SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& L
     }
 
     CurrentBoneLocalMatrices[BoneIndex] = LocalMatrix;
-    RefreshBoneTransforms();
-    RefreshEditedDisplayPose();
-    UpdateSkinningMatrices();
+    RefreshBoneTransformsFrom(BoneIndex);
+    RefreshEditedDisplayPoseFrom(BoneIndex);
+    UpdateSkinningMatricesFrom(BoneIndex);
+
     UpdateSkinnedVertices();
     CacheLocalBounds();
 
@@ -436,114 +466,129 @@ void USkinnedMeshComponent::UpdateSkinningMatrices()
 
 void USkinnedMeshComponent::UpdateSkinnedVertices()
 {
+    SCOPE_STAT_CAT("UpdateSkinnedVertices", "USkinnedMeshComponent");
+
     SkinnedVertices.clear();
     SkinnedIndices.clear();
 
     if (!SkeletalMesh)
-    {
         return;
-    }
 
-    uint32 VertexBase = 0;
     ID3D11Device* Device = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
     ID3D11DeviceContext* Context = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext() : nullptr;
     const TArray<USkeletalSubMesh*>& SubMeshes = SkeletalMesh->GetSubMeshes();
+
     if (SkinnedRenderBuffers.size() != SubMeshes.size())
     {
         SkinnedRenderBuffers.clear();
         SkinnedRenderBuffers.resize(SubMeshes.size());
     }
 
-    for (uint32 i = 0; i < SubMeshes.size(); i++)
-    {
-		auto* SubMesh = SubMeshes[i];
+    uint32 VertexBase = 0;
 
+    for (uint32 i = 0; i < SubMeshes.size(); ++i)
+    {
+        USkeletalSubMesh* SubMesh = SubMeshes[i];
         if (!SubMesh || !SubMesh->GetSkeletalSubMeshAsset())
-        {
             continue;
-        }
 
         FSkeletalSubMesh* Asset = SubMesh->GetSkeletalSubMeshAsset();
-        SkinnedVertices.reserve(SkinnedVertices.size() + Asset->Vertices.size());
-        SkinnedIndices.reserve(SkinnedIndices.size() + Asset->Indices.size());
+        const uint32 VertexCount = static_cast<uint32>(Asset->Vertices.size());
 
-        TArray<FVertexSkinned> SkinnedRenderVertices;
-        SkinnedRenderVertices.reserve(Asset->Vertices.size());
         const bool bHasFbxSkinningBindData =
             Asset->InverseBindPoseMatrices.size() == CurrentBoneGlobalMatrices.size() &&
             Asset->BoneBindGlobalMatrices.size() == CurrentBoneGlobalMatrices.size() &&
             RefPoseBoneGlobalMatrices.size() == CurrentBoneGlobalMatrices.size() &&
             !Asset->InverseBindPoseMatrices.empty();
+
         const FMatrix MeshBindInverseScale = GetMeshBindInverseScaleMatrix(Asset);
 
-        for (const FVertexSkinned& SourceVertex : Asset->Vertices)
-        {
-            FVertexPNCT_T SkinnedVertex;
-            SkinnedVertex.Position = SourceVertex.Position;
-            SkinnedVertex.Normal = SourceVertex.Normal;
-            SkinnedVertex.Color = SourceVertex.Color;
-            SkinnedVertex.UV = SourceVertex.UV;
-            SkinnedVertex.Tangent = SourceVertex.Tangent;
+        const int32 BoneCount = static_cast<int32>(CurrentBoneGlobalMatrices.size());
+        TArray<FMatrix> PerBoneSkinMatrices;
+        PerBoneSkinMatrices.resize(BoneCount);
 
-            FVector SkinnedPosition(0.0f, 0.0f, 0.0f);
-            FVector SkinnedNormal(0.0f, 0.0f, 0.0f);
-            FVector SkinnedTangent(0.0f, 0.0f, 0.0f);
+        if (bHasFbxSkinningBindData)
+        {
+            for (int32 BoneIdx = 0; BoneIdx < BoneCount; ++BoneIdx)
+            {
+                const FMatrix BoneCurrentForSkin =
+                    Asset->BoneBindGlobalMatrices[BoneIdx] *
+                    RefPoseBoneGlobalMatrices[BoneIdx].GetInverse() *
+                    CurrentBoneGlobalMatrices[BoneIdx];
+
+                PerBoneSkinMatrices[BoneIdx] =
+                    Asset->InverseBindPoseMatrices[BoneIdx] *
+                    BoneCurrentForSkin *
+                    MeshBindInverseScale;
+            }
+        }
+        else
+        {
+            PerBoneSkinMatrices = SkinningMatrices; // 이미 계산된 것 그대로 사용
+        }
+
+        SkinnedVertices.reserve(SkinnedVertices.size() + VertexCount);
+        SkinnedIndices.reserve(SkinnedIndices.size() + Asset->Indices.size());
+
+        TArray<FVertexSkinned> SkinnedRenderVertices;
+        SkinnedRenderVertices.resize(VertexCount); // push_back 대신 인덱스 직접 접근
+
+        for (uint32 VertIdx = 0; VertIdx < VertexCount; ++VertIdx)
+        {
+            const FVertexSkinned& Src = Asset->Vertices[VertIdx];
+
+            FVector SkinnedPosition(0, 0, 0);
+            FVector SkinnedNormal(0, 0, 0);
+            FVector SkinnedTangent(0, 0, 0);
             float TotalWeight = 0.0f;
 
-            for (int32 InfluenceIndex = 0; InfluenceIndex < 8; ++InfluenceIndex)
+            for (int32 Inf = 0; Inf < 8; ++Inf)
             {
-                const float Weight = SourceVertex.BoneWeights[InfluenceIndex];
-                const int32 BoneIndex = static_cast<int32>(SourceVertex.BoneIndices[InfluenceIndex]);
-                const int32 MatrixCount = bHasFbxSkinningBindData
-                    ? static_cast<int32>(CurrentBoneGlobalMatrices.size())
-                    : static_cast<int32>(SkinningMatrices.size());
-                if (Weight <= 0.0f || BoneIndex < 0 || BoneIndex >= MatrixCount)
-                {
+                const float Weight = Src.BoneWeights[Inf];
+                if (Weight <= 0.0f)
                     continue;
-                }
 
-                FMatrix SkinMatrix;
-                if (bHasFbxSkinningBindData)
-                {
-                    const FMatrix BoneCurrentForSkin =
-                        Asset->BoneBindGlobalMatrices[BoneIndex] *
-                        RefPoseBoneGlobalMatrices[BoneIndex].GetInverse() *
-                        CurrentBoneGlobalMatrices[BoneIndex];
+                const int32 BoneIdx = static_cast<int32>(Src.BoneIndices[Inf]);
+                if (BoneIdx < 0 || BoneIdx >= BoneCount)
+                    continue;
 
-                    SkinMatrix =
-                        Asset->InverseBindPoseMatrices[BoneIndex] *
-                        BoneCurrentForSkin *
-                        MeshBindInverseScale;
-                }
-                else
-                {
-                    SkinMatrix = SkinningMatrices[BoneIndex];
-                }
+                const FMatrix& SkinMatrix = PerBoneSkinMatrices[BoneIdx];
 
-                SkinnedPosition += SkinMatrix.TransformPositionWithW(SourceVertex.Position) * Weight;
-                SkinnedNormal += SkinMatrix.TransformVector(SourceVertex.Normal) * Weight;
-                SkinnedTangent += SkinMatrix.TransformVector(FVector(SourceVertex.Tangent.X, SourceVertex.Tangent.Y, SourceVertex.Tangent.Z)) * Weight;
+                SkinnedPosition += SkinMatrix.TransformPositionWithW(Src.Position) * Weight;
+                SkinnedNormal += SkinMatrix.TransformVector(Src.Normal) * Weight;
+                SkinnedTangent += SkinMatrix.TransformVector(
+                                      FVector(Src.Tangent.X, Src.Tangent.Y, Src.Tangent.Z)) *
+                                  Weight;
                 TotalWeight += Weight;
             }
 
+            FVertexPNCT_T Out;
+            Out.Color = Src.Color;
+            Out.UV = Src.UV;
+
             if (TotalWeight > 0.0f)
             {
-                SkinnedVertex.Position = SkinnedPosition / TotalWeight;
-                SkinnedVertex.Normal = SkinnedNormal / TotalWeight;
-                SkinnedVertex.Normal.Normalize();
+                const float InvWeight = 1.0f / TotalWeight;
+                Out.Position = SkinnedPosition * InvWeight;
+                Out.Normal = (SkinnedNormal * InvWeight).Normalized();
 
-                SkinnedTangent /= TotalWeight;
-                SkinnedTangent.Normalize();
-                SkinnedVertex.Tangent = FVector4(SkinnedTangent, SourceVertex.Tangent.W);
+                SkinnedTangent = (SkinnedTangent * InvWeight).Normalized();
+                Out.Tangent = FVector4(SkinnedTangent, Src.Tangent.W);
+            }
+            else
+            {
+                Out.Position = Src.Position;
+                Out.Normal = Src.Normal;
+                Out.Tangent = Src.Tangent;
             }
 
-            FVertexSkinned SkinnedRenderVertex = SourceVertex;
-            SkinnedRenderVertex.Position = SkinnedVertex.Position;
-            SkinnedRenderVertex.Normal = SkinnedVertex.Normal;
-            SkinnedRenderVertex.Tangent = SkinnedVertex.Tangent;
+            SkinnedVertices.push_back(Out);
 
-            SkinnedVertices.push_back(SkinnedVertex);
-            SkinnedRenderVertices.push_back(SkinnedRenderVertex);
+            FVertexSkinned& RenderVert = SkinnedRenderVertices[VertIdx];
+            RenderVert = Src;
+            RenderVert.Position = Out.Position;
+            RenderVert.Normal = Out.Normal;
+            RenderVert.Tangent = Out.Tangent;
         }
 
         for (uint32 Index : Asset->Indices)
@@ -555,12 +600,10 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
         {
             std::unique_ptr<FSkeletalMeshBuffer>& OwnedBuffer = SkinnedRenderBuffers[i];
             FSkeletalMeshBuffer* RenderBuffer = OwnedBuffer.get();
-            const uint32 SubMeshVertexCount = static_cast<uint32>(Asset->Vertices.size());
             const bool bNeedsCreate =
-                !RenderBuffer ||
-                !RenderBuffer->IsValid() ||
+                !RenderBuffer || !RenderBuffer->IsValid() ||
                 RenderBuffer->GetVertexStride() != sizeof(FVertexSkinned) ||
-                RenderBuffer->GetVertexCount() != SubMeshVertexCount;
+                RenderBuffer->GetVertexCount() != VertexCount;
 
             if (bNeedsCreate)
             {
@@ -574,14 +617,13 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
             }
             else
             {
-                RenderBuffer->UpdateVertex(Context, SkinnedRenderVertices.data(), SubMeshVertexCount);
+                RenderBuffer->UpdateVertex(Context, SkinnedRenderVertices.data(), VertexCount);
             }
         }
 
-        VertexBase += static_cast<uint32>(Asset->Vertices.size());
+        VertexBase += VertexCount;
     }
 }
-
 const TArray<FVertexPNCT_T>& USkinnedMeshComponent::GetSkinnedVertices() const
 {
     return SkinnedVertices;
@@ -706,4 +748,51 @@ int32 USkinnedMeshComponent::FindBoneIndex(const FName& BoneName) const
     }
 
     return SkeletalMesh->GetSkeleton()->FindBoneIndex(BoneName.ToString());
+}
+
+void USkinnedMeshComponent::RefreshEditedDisplayPoseFrom(int32 StartBoneIndex)
+{
+    SCOPE_STAT_CAT("RefreshEditedDisplayPoseFrom", "USkinnedMeshComponent");
+    const int32 BoneCount = static_cast<int32>(DisplayPoseBoneLocalMatrices.size());
+    if (BoneCount <= 0 || !SkeletalMesh || !SkeletalMesh->GetSkeleton())
+        return;
+
+    const TArray<FBoneInfo>& Bones = SkeletalMesh->GetSkeleton()->GetBones();
+    const bool bCanApply =
+        CurrentBoneLocalMatrices.size() == DisplayPoseBoneLocalMatrices.size() &&
+        RefPoseBoneLocalMatrices.size() == DisplayPoseBoneLocalMatrices.size();
+
+    for (int32 i = StartBoneIndex; i < BoneCount; ++i)
+    {
+        FMatrix Local = DisplayPoseBoneLocalMatrices[i];
+        if (bCanApply)
+        {
+            const FMatrix EditDelta = RefPoseBoneLocalMatrices[i].GetInverse() * CurrentBoneLocalMatrices[i];
+            Local = EditDelta * DisplayPoseBoneLocalMatrices[i];
+        }
+
+        const int32 ParentIndex = Bones[i].ParentIndex;
+        if (ParentIndex >= 0 && ParentIndex < i)
+        {
+            EditedDisplayPoseBoneGlobalMatrices[i] = Local * EditedDisplayPoseBoneGlobalMatrices[ParentIndex];
+        }
+        else
+        {
+            EditedDisplayPoseBoneGlobalMatrices[i] = Local;
+        }
+    }
+}
+
+void USkinnedMeshComponent::UpdateSkinningMatricesFrom(int32 StartBoneIndex)
+{
+    SCOPE_STAT_CAT("UpdateSkinningMatricesFrom", "USkinnedMeshComponent");
+    const int32 BoneCount = static_cast<int32>(CurrentBoneGlobalMatrices.size());
+    if (RefPoseBoneGlobalMatrices.size() != CurrentBoneGlobalMatrices.size())
+        return;
+
+    for (int32 i = StartBoneIndex; i < BoneCount; ++i)
+    {
+        SkinningMatrices[i] =
+            RefPoseBoneGlobalMatrices[i].GetInverse() * CurrentBoneGlobalMatrices[i];
+    }
 }

@@ -30,8 +30,11 @@ public:
     void RefreshReferencePose();
     void RefreshDisplayPose();
     void RefreshEditedDisplayPose();
+    void RefreshEditedDisplayPoseFrom(int32 BoneIndex);
     void RefreshBoneTransforms();
+    void RefreshBoneTransformsFrom(int32 BoneIndex);
     void UpdateSkinningMatrices();
+    void UpdateSkinningMatricesFrom(int32 BoneIndex);
     void UpdateSkinnedVertices();
 
 	void ResetToReferencePose();
