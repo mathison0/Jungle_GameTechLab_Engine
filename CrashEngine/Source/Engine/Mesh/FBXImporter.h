@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreTypes.h"
 #include "Mesh/MeshImporterCommon.h"
@@ -11,6 +11,7 @@
 struct FSkeletalSubMesh;
 class USkeleton;
 class UAnimationSequence;
+class UStaticMesh;
 
 struct FFBXImporter
 {
@@ -30,6 +31,8 @@ struct FFBXImporter
 
     struct FImportedFBXAssets
     {
+		TArray<FStaticMesh*> StaticMeshes;
+
         TArray<FImportedSkeletalMesh*> SkeletalMeshes;
         TArray<USkeleton*> Skeletons;
         TArray<UAnimationSequence*> Animations;
@@ -47,6 +50,7 @@ struct FFBXImporter
 
     // FBX 파일을 분석하여 발견된 모든 리소스를 각각의 .bin 파일로 캐시 폴더에 저장합니다.
     static bool ImportAndCacheAll(const FString& FBXFilePath, const FImportOptions& Options);
+	static bool ImportStaticAndCacheAll(const FString& FBXFilePath, const FImportOptions& Options, UStaticMesh* OutMesh);
 
     // FBX 파일로부터 모든 메시와 스켈레톤 데이터를 추출합니다.
     static bool ImportAll(const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& OutAssets);
@@ -56,14 +60,15 @@ private:
     static void ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton);
     static void ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& Options, FImportedFBXAssets& InAsset);
     static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);  // PlaceHolder, 아직 미구현
-    static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials);
+    static std::unique_ptr<FSkeletalSubMesh> ParseSkeletalGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials);
+    static std::unique_ptr<FStaticMesh> ParseStaticGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials);
     static FTransform GetTransformFromNode(FbxNode* Node);
     static FTransform GetTransformFromMatrix(const FMatrix& Matrix);
     static FMatrix ConvertFbxMatrix(const FbxMatrix& Matrix);
     static FMatrix ConvertFbxMatrix(const FbxAMatrix& Matrix);
+    static FMatrix GetGeometryMatrix(FbxNode* Node);
     static void ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkeleton);
     static void ApplySkinBindDataToMesh(FbxMesh* InFbxMesh, USkeleton* InSkeleton, FSkeletalSubMesh* InMesh);
-    static bool TryGetBindPoseMatrix(FbxNode* Node, FMatrix& OutMatrix);
     static FVector GetSkeletonMeshBindInverseScale(USkeleton* Skeleton, const FMatrix& FallbackMeshBindGlobal);
     static USkeleton* FindOwnerSkeletonByBoneNode(FbxNode* BoneNode, const TArray<USkeleton*>& Skeletons, int32* OutBoneIndex = nullptr, FbxNode** OutMatchedBoneNode = nullptr);
     static bool ApplyRigidParentWeightFallback(FbxNode* MeshNode, USkeleton* Skeleton, int32 BoneIndex, FbxNode* BoneNode, FSkeletalSubMesh* Mesh);

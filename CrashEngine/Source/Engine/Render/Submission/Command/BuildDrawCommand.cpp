@@ -413,7 +413,7 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
         PerObjCB = &Context.Resources->PerObjectConstantBuffer;
     }
 
-    if (PerObjCB && Ctx && Proxy.NeedsPerObjectCBUpload())
+    if (PerObjCB && Ctx)
     {
         PerObjCB->Update(Ctx, &Proxy.PerObjectConstants, sizeof(FPerObjectCBData));
         Proxy.ClearPerObjectCBDirty();
