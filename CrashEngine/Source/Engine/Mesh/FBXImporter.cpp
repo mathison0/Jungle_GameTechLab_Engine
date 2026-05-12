@@ -23,64 +23,6 @@ namespace
             std::abs(Scale.Z) > 1e-6f ? 1.0f / Scale.Z : 1.0f);
     }
 
-    const char* GetAxisName(FbxAxisSystem::EUpVector UpVector)
-    {
-        switch (UpVector)
-        {
-        case FbxAxisSystem::eXAxis: return "X";
-        case FbxAxisSystem::eYAxis: return "Y";
-        case FbxAxisSystem::eZAxis: return "Z";
-        default: return "Unknown";
-        }
-    }
-
-    const char* GetFrontAxisName(FbxAxisSystem::EUpVector UpVector, FbxAxisSystem::EFrontVector FrontVector)
-    {
-        switch (UpVector)
-        {
-        case FbxAxisSystem::eXAxis:
-            return FrontVector == FbxAxisSystem::eParityEven ? "Y" : "Z";
-        case FbxAxisSystem::eYAxis:
-            return FrontVector == FbxAxisSystem::eParityEven ? "X" : "Z";
-        case FbxAxisSystem::eZAxis:
-            return FrontVector == FbxAxisSystem::eParityEven ? "X" : "Y";
-        default:
-            return "Unknown";
-        }
-    }
-
-    const char* GetCoordSystemName(FbxAxisSystem::ECoordSystem CoordSystem)
-    {
-        switch (CoordSystem)
-        {
-        case FbxAxisSystem::eRightHanded: return "RightHanded";
-        case FbxAxisSystem::eLeftHanded: return "LeftHanded";
-        default: return "Unknown";
-        }
-    }
-
-    void LogAxisSystem(const char* Label, const FbxAxisSystem& AxisSystem)
-    {
-        int UpSign = 1;
-        int FrontSign = 1;
-        const FbxAxisSystem::EUpVector UpVector = AxisSystem.GetUpVector(UpSign);
-        const FbxAxisSystem::EFrontVector FrontVector = AxisSystem.GetFrontVector(FrontSign);
-        const FbxAxisSystem::ECoordSystem CoordSystem = AxisSystem.GetCoorSystem();
-
-        UE_LOG(FBXImporter, Warning,
-            "[FBX Axis] %s Up=%s%s Front=%s%s Coord=%s (UpEnum=%d FrontEnum=%d UpSign=%d FrontSign=%d)",
-            Label,
-            UpSign >= 0 ? "+" : "-",
-            GetAxisName(UpVector),
-            FrontSign >= 0 ? "+" : "-",
-            GetFrontAxisName(UpVector, FrontVector),
-            GetCoordSystemName(CoordSystem),
-            static_cast<int>(UpVector),
-            static_cast<int>(FrontVector),
-            UpSign,
-            FrontSign);
-    }
-
     // 테스트용 함수
     void PrintNode(FbxNode* pNode, int depth) {
         const char* nodeName = pNode->GetName();
@@ -381,11 +323,7 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         // FBX의 pose/skin cluster bind matrix는 변환 후에도 source axis 기준 값이 남는 경우가 있어
         // 그대로 쓰면 bone은 변환됐는데 mesh bind만 원래 축에 남는 문제가 생깁니다.
         FbxAxisSystem UEAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
-        LogAxisSystem("Source metadata before convert", Scene->GetGlobalSettings().GetAxisSystem());
-        LogAxisSystem("Importer target", UEAxisSystem);
         UEAxisSystem.DeepConvertScene(Scene);
-        LogAxisSystem("Scene metadata after convert", Scene->GetGlobalSettings().GetAxisSystem());
-
         //// 단위계도 엔진 기준(미터)으로 정규화. cm 기반 FBX(블렌더/MMD 등)와 m 기반 FBX 모두 동일한 스케일에서 처리하기 위함.
         //if (Scene->GetGlobalSettings().GetSystemUnit() != FbxSystemUnit::m)
         //{
