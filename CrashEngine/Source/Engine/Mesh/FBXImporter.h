@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreTypes.h"
 #include "Math/Transform.h"
@@ -15,6 +15,7 @@ struct FSkeletalSubMesh;
 class UAnimationSequence;
 class UMaterial;
 class USkeleton;
+class UStaticMesh;
 
 struct FFBXImporter
 {
@@ -34,6 +35,8 @@ struct FFBXImporter
 
     struct FImportedFBXAssets
     {
+		TArray<FStaticMesh*> StaticMeshes;
+
         TArray<FImportedSkeletalMesh*> SkeletalMeshes;
         TArray<USkeleton*> Skeletons;
         TArray<UAnimationSequence*> Animations;
@@ -50,6 +53,7 @@ struct FFBXImporter
     };
 
     static bool ImportAndCacheAll(const FString& FBXFilePath, const FImportOptions& Options);
+	static bool ImportStaticAndCacheAll(const FString& FBXFilePath, const FImportOptions& Options, UStaticMesh* OutMesh);
     static bool ImportAll(const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& OutAssets);
 
 private:
@@ -58,7 +62,8 @@ private:
     static void ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton);
     static void ExtractMeshAndSkinning(FbxNode* Node, const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& InAsset);
     static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);
-    static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials);
+    static std::unique_ptr<FSkeletalSubMesh> ParseSkeletalGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials);
+    static std::unique_ptr<FStaticMesh> ParseStaticGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials);
     static int32 GetFbxPolygonMaterialIndex(FbxNode* Node, FbxMesh* Mesh, int32 PolygonIndex);
     static FVector GetSafeInverseScale(const FVector& Scale);
     static FTransform GetTransformFromNode(FbxNode* Node);
