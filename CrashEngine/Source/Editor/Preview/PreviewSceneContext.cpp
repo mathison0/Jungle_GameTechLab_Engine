@@ -4,13 +4,33 @@
 #include "Component/SkeletalMeshComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "EditorEngine.h"
+#include <GameFramework/DirectionalLightActor.h>
+#include <GameFramework/AmbientLightActor.h>
 
 void FPreviewSceneContext::Initialize(UEditorEngine* InEditorEngine)
 {
 	EditorEngine = InEditorEngine;
     auto Context = EditorEngine->CreateWorldContext(EWorldType::Preview, FName("Preview"));
-	PreviewWorld = Context.World;
+
+    PreviewWorld = Context.World;
     PreviewWorld->InitWorld();
+
+	ADirectionalLightActor* DirectionalLight = PreviewWorld->SpawnActor<ADirectionalLightActor>();
+    if (DirectionalLight)
+    {
+        DirectionalLight->InitDefaultComponents();
+        DirectionalLight->SetFName(FName("Directional Light"));
+        DirectionalLight->SetActorLocation(FVector(0.0f, 0.0f, 13.0f));
+        DirectionalLight->SetActorRotation(FVector(0.0f, 44.0f, 0.0f));
+    }
+
+    AAmbientLightActor* AmbientLight = PreviewWorld->SpawnActor<AAmbientLightActor>();
+    if (AmbientLight)
+    {
+        AmbientLight->InitDefaultComponents();
+        AmbientLight->SetFName(FName("Ambient Light"));
+        AmbientLight->SetActorLocation(FVector(0.0f, 0.0f, 15.0f));
+    }
 
     PreviewActor = PreviewWorld->SpawnActor<AActor>();
     if (PreviewActor)

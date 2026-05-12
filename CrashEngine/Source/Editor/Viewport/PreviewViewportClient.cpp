@@ -495,6 +495,7 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
     if (Options.bShowSkeleton)
     {
         OwnerViewer->RenderBoneDebugLines();
+        Renderer.CollectSkeletalDebug(Scene);
     }
 
 	Renderer.CollectGrid(1.0f, 20, Scene);
