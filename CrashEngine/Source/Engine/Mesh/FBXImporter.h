@@ -61,9 +61,9 @@ private:
     static FTransform GetTransformFromMatrix(const FMatrix& Matrix);
     static FMatrix ConvertFbxMatrix(const FbxMatrix& Matrix);
     static FMatrix ConvertFbxMatrix(const FbxAMatrix& Matrix);
+    static FMatrix GetGeometryMatrix(FbxNode* Node);
     static void ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkeleton);
     static void ApplySkinBindDataToMesh(FbxMesh* InFbxMesh, USkeleton* InSkeleton, FSkeletalSubMesh* InMesh);
-    static bool TryGetBindPoseMatrix(FbxNode* Node, FMatrix& OutMatrix);
     static FVector GetSkeletonMeshBindInverseScale(USkeleton* Skeleton, const FMatrix& FallbackMeshBindGlobal);
     static USkeleton* FindOwnerSkeletonByBoneNode(FbxNode* BoneNode, const TArray<USkeleton*>& Skeletons, int32* OutBoneIndex = nullptr, FbxNode** OutMatchedBoneNode = nullptr);
     static bool ApplyRigidParentWeightFallback(FbxNode* MeshNode, USkeleton* Skeleton, int32 BoneIndex, FbxNode* BoneNode, FSkeletalSubMesh* Mesh);
