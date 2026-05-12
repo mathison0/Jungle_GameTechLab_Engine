@@ -13,14 +13,14 @@ IMPLEMENT_CLASS(USkinnedMeshComponent, UMeshComponent)
 
 namespace
 {
-    FMatrix GetMeshBindGlobalInverse(const FSkeletalSubMesh* Asset)
+    FMatrix GetMeshBindInverseScaleMatrix(const FSkeletalSubMesh* Asset)
     {
         if (!Asset)
         {
             return FMatrix::Identity;
         }
 
-        return Asset->MeshBindGlobalInverse;
+        return FMatrix::MakeScaleMatrix(Asset->MeshBindInverseScale);
     }
 }
 
@@ -474,7 +474,7 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
             Asset->BoneBindGlobalMatrices.size() == CurrentBoneGlobalMatrices.size() &&
             RefPoseBoneGlobalMatrices.size() == CurrentBoneGlobalMatrices.size() &&
             !Asset->InverseBindPoseMatrices.empty();
-        const FMatrix MeshBindGlobalInverse = GetMeshBindGlobalInverse(Asset);
+        const FMatrix MeshBindInverseScale = GetMeshBindInverseScaleMatrix(Asset);
 
         for (const FVertexSkinned& SourceVertex : Asset->Vertices)
         {
@@ -513,7 +513,7 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
                     SkinMatrix =
                         Asset->InverseBindPoseMatrices[BoneIndex] *
                         BoneCurrentForSkin *
-                        MeshBindGlobalInverse;
+                        MeshBindInverseScale;
                 }
                 else
                 {
@@ -649,37 +649,20 @@ const FMatrix& USkinnedMeshComponent::GetBoneComponentMatrix(int32 BoneIndex) co
 
 FMatrix USkinnedMeshComponent::GetBoneWorldMatrix(int32 BoneIndex) const
 {
-    const FSkeletalSubMesh* Asset = nullptr;
+    FMatrix DebugScaleMatrix = FMatrix::MakeScaleMatrix(0.01f);
     if (SkeletalMesh)
     {
         for (USkeletalSubMesh* SubMesh : SkeletalMesh->GetSubMeshes())
         {
             if (SubMesh && SubMesh->GetSkeletalSubMeshAsset())
             {
-                Asset = SubMesh->GetSkeletalSubMeshAsset();
+                DebugScaleMatrix = GetMeshBindInverseScaleMatrix(SubMesh->GetSkeletalSubMeshAsset());
                 break;
             }
         }
     }
 
-    const bool bHasFbxSkinningBindData =
-        Asset &&
-        BoneIndex >= 0 &&
-        BoneIndex < static_cast<int32>(Asset->BoneBindGlobalMatrices.size()) &&
-        Asset->BoneBindGlobalMatrices.size() == RefPoseBoneGlobalMatrices.size() &&
-        Asset->BoneBindGlobalMatrices.size() == CurrentBoneGlobalMatrices.size();
-
-    if (bHasFbxSkinningBindData)
-    {
-        const FMatrix BoneInMeshLocal =
-            Asset->BoneBindGlobalMatrices[BoneIndex] *
-            RefPoseBoneGlobalMatrices[BoneIndex].GetInverse() *
-            CurrentBoneGlobalMatrices[BoneIndex] *
-            Asset->MeshBindGlobalInverse;
-        return BoneInMeshLocal * GetWorldMatrix();
-    }
-
-    return GetBoneComponentMatrix(BoneIndex) * GetWorldMatrix();
+    return GetBoneComponentMatrix(BoneIndex) * DebugScaleMatrix * GetWorldMatrix();
 }
 
 FMatrix USkinnedMeshComponent::GetBoneDebugWorldMatrix(int32 BoneIndex) const
