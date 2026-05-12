@@ -9,6 +9,20 @@
 
 class UTexture2D;
 class FArchive;
+class FGraphicsProgram;
+
+struct FMaterialShaderReference
+{
+    FString ShaderPath;
+    FGraphicsProgram* GraphicsProgram = nullptr;
+
+    bool HasShaderPath() const { return !ShaderPath.empty(); }
+    void Reset()
+    {
+        ShaderPath.clear();
+        GraphicsProgram = nullptr;
+    }
+};
 
 // UMaterialInterface는 머티리얼 파라미터와 렌더 리소스를 다룹니다.
 class UMaterialInterface : public UObject
@@ -32,6 +46,7 @@ class UMaterial : public UMaterialInterface
 {
 private:
     FString PathFileName;
+    FMaterialShaderReference ShaderReference;
     uint32 MaterialInstanceID = 0;
     FMaterialTemplate* Template = nullptr;
 
@@ -72,6 +87,15 @@ public:
     const FString& GetTexturePathFileName(const FString& TextureName) const;
     const FString& GetAssetPathFileName() const { return PathFileName; }
     void SetAssetPathFileName(const FString& InPath) { PathFileName = InPath; }
+    const FMaterialShaderReference& GetShaderReference() const { return ShaderReference; }
+    const FString& GetShaderPath() const { return ShaderReference.ShaderPath; }
+    void SetShaderPath(const FString& InPath)
+    {
+        ShaderReference.ShaderPath = InPath;
+        ShaderReference.GraphicsProgram = nullptr;
+    }
+    FGraphicsProgram* GetGraphicsProgram() const { return ShaderReference.GraphicsProgram; }
+    void SetGraphicsProgram(FGraphicsProgram* InProgram) { ShaderReference.GraphicsProgram = InProgram; }
     void Serialize(FArchive& Ar);
 
     FConstantBuffer* GetGPUBufferBySlot(uint32 InSlot) const

@@ -9,6 +9,7 @@
 #include "Platform/PlatformProcess.h"
 #include "Render/Resources/Shadows/ShadowFilterSettings.h"
 #include "Render/Resources/Shadows/ShadowMapSettings.h"
+#include "Render/Resources/Shaders/MeshPassOverrideSettings.h"
 
 #include <algorithm>
 #include <cctype>
@@ -631,6 +632,50 @@ void FEditorOutputLogPanel::Initialize(UEditorEngine* InEditorEngine, FLogBuffer
     },
     "shadow_mode <STANDARD|PSM|CASCADE>",
     "Changes the active shadow map method.");
+
+    RegisterCommand("opaque_legacy_override_bypass", [this](const TArray<FString>& Args)
+    {
+        if (Args.size() < 2)
+        {
+            UE_LOG(OutputLog, Warning, "Usage: opaque_legacy_override_bypass <on|off|toggle>");
+            UE_LOG(OutputLog, Info, "Current opaque legacy override bypass: %s", GetLegacyOpaqueViewModeOverrideBypassStateName(IsLegacyOpaqueViewModeOverrideBypassed()));
+            return;
+        }
+
+        FString Mode = Args[1];
+        std::transform(Mode.begin(), Mode.end(), Mode.begin(),
+                       [](unsigned char Ch) { return static_cast<char>(std::toupper(Ch)); });
+
+        bool bNewState = IsLegacyOpaqueViewModeOverrideBypassed();
+        if (Mode == "ON")
+        {
+            bNewState = true;
+        }
+        else if (Mode == "OFF")
+        {
+            bNewState = false;
+        }
+        else if (Mode == "TOGGLE")
+        {
+            bNewState = !bNewState;
+        }
+        else
+        {
+            UE_LOG(OutputLog, Error, "Unknown opaque legacy override bypass mode: '%s'", Args[1].c_str());
+            UE_LOG(OutputLog, Warning, "Usage: opaque_legacy_override_bypass <on|off|toggle>");
+            return;
+        }
+
+        SetLegacyOpaqueViewModeOverrideBypassed(bNewState);
+        UE_LOG(
+            OutputLog,
+            Info,
+            "Opaque legacy override bypass %s. Current state: %s",
+            bNewState ? "enabled" : "disabled",
+            GetLegacyOpaqueViewModeOverrideBypassStateName(IsLegacyOpaqueViewModeOverrideBypassed()));
+    },
+    "opaque_legacy_override_bypass <on|off|toggle>",
+    "Bypasses the legacy opaque view-mode shader override path.");
 
     UE_LOG(OutputLog, Info, "Output Log initialized.");
 }

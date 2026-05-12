@@ -1,5 +1,6 @@
 ﻿// 머티리얼 영역의 세부 동작을 구현합니다.
 #include "MaterialManager.h"
+#include "Core/Logging/LogMacros.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -9,12 +10,14 @@
 #include "Materials/MaterialSemantics.h"
 #include "Platform/Paths.h"
 #include "Render/RHI/D3D11/Buffers/Buffers.h"
+#include "Render/Resources/Shaders/ShaderManager.h"
 #include "Texture/Texture2D.h"
 #include "Render/Renderer.h"
 
 namespace MatKeys
 {
 static constexpr const char* PathFileName = "PathFileName";
+static constexpr const char* ShaderPath = "ShaderPath";
 static constexpr const char* Parameters = "Parameters";
 static constexpr const char* Textures = "Textures";
 } // namespace MatKeys
@@ -30,6 +33,42 @@ FString CanonicalizeTextureSlotName(const FString& SlotName)
 FString CanonicalizeParameterName(const FString& ParamName)
 {
     return MaterialSemantics::CanonicalizeParameterName(ParamName);
+}
+
+FString BuildReflectedTemplateCacheKey(const FString& ShaderPath)
+{
+    return "ReflectionMaterial:" + FPaths::FromPath(FPaths::ToPath(FPaths::ToWide(ShaderPath)).lexically_normal());
+}
+
+FGraphicsProgram* ResolveMaterialShaderProgram(const FString& ShaderPath, ID3D11Device* Device)
+{
+    if (ShaderPath.empty())
+    {
+        return nullptr;
+    }
+
+    if (FGraphicsProgram* CachedProgram = FShaderManager::Get().GetCustomShader(ShaderPath))
+    {
+        return CachedProgram;
+    }
+
+    return FShaderManager::Get().CreateCustomShader(Device, FPaths::ToWide(ShaderPath).c_str());
+}
+
+FString ReadOptionalStringField(const json::JSON& JsonData, const char* Key)
+{
+    if (!JsonData.hasKey(Key))
+    {
+        return FString();
+    }
+
+    const json::JSON& Value = JsonData.at(Key);
+    if (Value.JSONType() != json::JSON::Class::String)
+    {
+        return FString();
+    }
+
+    return Value.ToString().c_str();
 }
 
 uint64 HashString64(const std::string& Value)
@@ -128,6 +167,65 @@ uint64 BuildDependencyHash(const std::filesystem::path& FilePath)
     std::unordered_set<std::wstring> Visited;
     return BuildDependencyHashRecursive(FilePath, Visited);
 }
+
+uint32 CountUniqueMaterialBuffers(const TMap<FString, FMaterialParameterInfo*>& Layout)
+{
+    std::vector<FString> BufferNames;
+    BufferNames.reserve(Layout.size());
+
+    for (const auto& Pair : Layout)
+    {
+        if (Pair.second == nullptr)
+        {
+            continue;
+        }
+
+        if (std::find(BufferNames.begin(), BufferNames.end(), Pair.second->BufferName) == BufferNames.end())
+        {
+            BufferNames.push_back(Pair.second->BufferName);
+        }
+    }
+
+    return static_cast<uint32>(BufferNames.size());
+}
+
+void LogShaderTextureBindings(const FGraphicsProgram* GraphicsProgram, const FString& ShaderPath)
+{
+    if (GraphicsProgram == nullptr)
+    {
+        return;
+    }
+
+    const TArray<FShaderTextureBindingInfo>& Bindings = GraphicsProgram->GetTextureBindings();
+    if (Bindings.empty())
+    {
+        return;
+    }
+
+    FString Summary;
+    for (size_t i = 0; i < Bindings.size(); ++i)
+    {
+        const FShaderTextureBindingInfo& Binding = Bindings[i];
+        if (!Summary.empty())
+        {
+            Summary += ", ";
+        }
+
+        Summary += Binding.ResourceName;
+        Summary += "@t";
+        Summary += std::to_string(Binding.SlotIndex);
+
+        if (Binding.CanonicalSlotName != Binding.ResourceName)
+        {
+            Summary += "->";
+            Summary += Binding.CanonicalSlotName;
+        }
+    }
+
+    UE_LOG(Render, Info, "Reflected shader texture bindings: Shader=%s Bindings=[%s]",
+        ShaderPath.c_str(),
+        Summary.c_str());
+}
 } // namespace
 
 void FMaterialManager::ScanMaterialAssets()
@@ -204,7 +302,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
     if (JsonData.IsNull())
     {
         UMaterial* DefaultMaterial = UObjectManager::Get().CreateObject<UMaterial>();
-        FMaterialTemplate* Template = GetOrCreateTemplate();
+        FMaterialTemplate* Template = GetOrCreateSurfaceTemplate();
         if (!Template)
         {
             UObjectManager::Get().DestroyObject(DefaultMaterial);
@@ -214,6 +312,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
         TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> Buffers = CreateConstantBuffers(Template);
         DefaultMaterial->Create(CacheKey, Template, std::move(Buffers));
         DefaultMaterial->SetVector4Parameter("SectionColor", FVector4(1.0f, 0.0f, 1.0f, 1.0f));
+        DefaultMaterial->SetGraphicsProgram(nullptr);
 
         FMaterialCacheEntry NewEntry;
         NewEntry.Material = DefaultMaterial;
@@ -226,7 +325,9 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
                                ? JsonData[MatKeys::PathFileName].ToString().c_str()
                                : CacheKey;
 
-    FMaterialTemplate* Template = GetOrCreateTemplate();
+    const FString ShaderPath = ReadOptionalStringField(JsonData, MatKeys::ShaderPath);
+    FGraphicsProgram* GraphicsProgram = ResolveMaterialShaderProgram(ShaderPath, Device);
+    FMaterialTemplate* Template = GetOrCreateTemplate(ShaderPath, GraphicsProgram);
     if (!Template)
         return nullptr;
 
@@ -234,6 +335,9 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 
     UMaterial* Material = UObjectManager::Get().CreateObject<UMaterial>();
     Material->Create(PathFileName, Template, std::move(InjectedBuffers));
+    Material->SetShaderPath(ShaderPath);
+    Material->SetGraphicsProgram(GraphicsProgram);
+    LogShaderTextureBindings(GraphicsProgram, ShaderPath);
 
     ApplyParameters(Material, JsonData);
     ApplyTextures(Material, JsonData, CacheKey);
@@ -341,7 +445,7 @@ void FMaterialManager::ApplyTextures(UMaterial* Material, json::JSON& JsonData, 
     }
 }
 
-FMaterialTemplate* FMaterialManager::GetOrCreateTemplate()
+FMaterialTemplate* FMaterialManager::GetOrCreateSurfaceTemplate()
 {
     const FString CacheKey = "SurfaceMaterial";
     auto It = TemplateCache.find(CacheKey);
@@ -357,6 +461,50 @@ FMaterialTemplate* FMaterialManager::GetOrCreateTemplate()
     Entry.Template = NewTemplate;
     TemplateCache.emplace(CacheKey, Entry);
     return NewTemplate;
+}
+
+FMaterialTemplate* FMaterialManager::GetOrCreateReflectedTemplate(const FString& ShaderPath, FGraphicsProgram* GraphicsProgram)
+{
+    if (ShaderPath.empty() || GraphicsProgram == nullptr)
+    {
+        return nullptr;
+    }
+
+    const auto& ParameterLayout = GraphicsProgram->GetParameterLayout();
+    if (ParameterLayout.empty())
+    {
+        return nullptr;
+    }
+
+    const FString CacheKey = BuildReflectedTemplateCacheKey(ShaderPath);
+    auto It = TemplateCache.find(CacheKey);
+    if (It != TemplateCache.end())
+    {
+        return It->second.Template;
+    }
+
+    FMaterialTemplate* NewTemplate = new FMaterialTemplate();
+    NewTemplate->CreateReflectedMaterialLayout(ParameterLayout);
+
+    FTemplateCacheEntry Entry;
+    Entry.Template = NewTemplate;
+    TemplateCache.emplace(CacheKey, Entry);
+
+    UE_LOG(Render, Debug, "Created reflected material template: Shader=%s Parameters=%u Buffers=%u",
+        ShaderPath.c_str(),
+        static_cast<uint32>(ParameterLayout.size()),
+        CountUniqueMaterialBuffers(ParameterLayout));
+    return NewTemplate;
+}
+
+FMaterialTemplate* FMaterialManager::GetOrCreateTemplate(const FString& ShaderPath, FGraphicsProgram* GraphicsProgram)
+{
+    if (FMaterialTemplate* ReflectedTemplate = GetOrCreateReflectedTemplate(ShaderPath, GraphicsProgram))
+    {
+        return ReflectedTemplate;
+    }
+
+    return GetOrCreateSurfaceTemplate();
 }
 
 std::filesystem::path FMaterialManager::ResolveFullPath(const FString& FilePath) const

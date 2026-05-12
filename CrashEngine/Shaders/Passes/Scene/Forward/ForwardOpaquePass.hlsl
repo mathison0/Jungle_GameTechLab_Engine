@@ -37,9 +37,9 @@
 #include "../../../Render/Scene/Decal/DecalTypes.hlsli"
 #include "../../../Render/Scene/Decal/DecalSampling.hlsli"
 #include "../../../Render/Scene/Decal/DecalApply.hlsli"
-#include "../../../Render/Scene/Material/MaterialSampling.hlsli"
+#include "../../../Render/Scene/Material/SurfaceEvaluation.hlsli"
 #include "../../../Surface/SurfaceTypes.hlsli"
-#include "../../../Render/Scene/Lighting/DirectLighting.hlsli"
+#include "../../../Render/Scene/Lighting/LightingEvaluation.hlsli"
 
 #ifndef FORWARD_ENABLE_DECAL
 #define FORWARD_ENABLE_DECAL 0
@@ -81,39 +81,6 @@ FForward_Opaque_VSOutput VS_ForwardOpaque(VS_Input_PNCT_T Input)
     Output.texcoord         = Input.texcoord;
     Output.gouraud          = float4(ComputeGouraudLightingColor(Output.worldNormal, Output.worldPos, Output.position), 1.0f);
     return Output;
-}
-
-float3 ResolveForwardOpaqueNormal(FForward_Opaque_VSOutput Input, Texture2D NormalMap)
-{
-    float3 N = normalize(Input.worldNormal);
-
-#if defined(USE_NORMAL_MAP)
-    if (StaticMeshHasNormalTexture())
-    {
-        float3 T = normalize(Input.worldTangent.xyz);
-        T = normalize(T - dot(T, N) * N);
-        float3 B = cross(N, T) * Input.worldTangent.w;
-        float3x3 TBN = float3x3(T, B, N);
-        float3 NormalSample = NormalMap.Sample(LinearWrapSampler, Input.texcoord).rgb;
-        float3 TangentNormal = NormalSample * 2.0f - 1.0f;
-        return normalize(mul(TangentNormal, TBN));
-    }
-#endif
-
-    return N;
-}
-
-float4 ResolveForwardOpaqueMaterialParam(FForward_Opaque_VSOutput Input)
-{
-    float Shininess        = MaterialParam.x > 0.0f ? MaterialParam.x : 32.0f;
-    float SpecularStrength = MaterialParam.y > 0.0f ? MaterialParam.y : 0.3f;
-
-    if (StaticMeshHasSpecularTexture())
-    {
-        SpecularStrength *= g_SpecularMap.Sample(LinearWrapSampler, Input.texcoord).r;
-    }
-
-    return float4(Shininess, SpecularStrength, 0.0f, 1.0f);
 }
 
 float4 SampleForwardDecalTexture(uint TextureIndex, float2 UV)
@@ -179,17 +146,7 @@ void ApplyForwardDecal(inout FSurfaceData Surface, float3 WorldPosition)
 
 FSurfaceData BuildForwardSurfaceData(FForward_Opaque_VSOutput Input)
 {
-    FSurfaceData Surface = (FSurfaceData)0;
-    float4 BaseColor = SampleStaticMeshBaseColor(g_txColor, Input.texcoord) * GetStaticMeshSectionColorOrWhite();
-    float4 MaterialInfo = ResolveForwardOpaqueMaterialParam(Input);
-    Surface.BaseColor        = BaseColor.rgb;
-    Surface.Opacity          = BaseColor.a;
-    Surface.WorldNormal      = ResolveForwardOpaqueNormal(Input, FORWARD_NORMAL_TEXTURE);
-    Surface.Roughness        = MaterialInfo.x;
-    Surface.Specular         = MaterialInfo.y;
-    Surface.Metallic         = 0.0f;
-    Surface.AmbientOcclusion = 1.0f;
-    Surface.Gouraud          = Input.gouraud;
+    FSurfaceData Surface = BuildStaticMeshSurfaceData(Input, g_txColor, FORWARD_NORMAL_TEXTURE, g_SpecularMap);
     ApplyForwardDecal(Surface, Input.worldPos);
     return Surface;
 }
@@ -223,7 +180,7 @@ FSceneColorOutput PS_Forward_Lambert(FForward_Opaque_VSOutput Input)
     float4 BaseColor = float4(Surface.BaseColor, Surface.Opacity);
 
 #if FORWARD_ENABLE_LIGHTING
-    Output.SceneColor = ComputeLambertLighting(BaseColor, Surface.WorldNormal, Input.worldPos, Input.position);
+    Output.SceneColor = ComputeForwardLambertLighting(BaseColor, Surface.WorldNormal, Input.worldPos, Input.position);
 #else
     Output.SceneColor = BaseColor;
 #endif
@@ -241,7 +198,7 @@ FSceneColorOutput PS_Forward_BlinnPhong(FForward_Opaque_VSOutput Input)
 
 #if FORWARD_ENABLE_LIGHTING
     float3 ViewDir = normalize(CameraWorldPos - Input.worldPos);
-    Output.SceneColor = ComputeBlinnPhongLighting(
+    Output.SceneColor = ComputeForwardBlinnPhongLighting(
         BaseColor,
         Surface.WorldNormal,
         float4(Surface.Roughness, Surface.Specular, 0.0f, 1.0f),

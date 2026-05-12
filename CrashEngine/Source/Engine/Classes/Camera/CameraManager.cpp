@@ -141,6 +141,10 @@ sol::table MakeLuaRotator(sol::state_view Lua, const FRotator& Value)
 APlayerCameraManager::APlayerCameraManager()
 {
     PrimaryActorTick.SetTickGroup(TG_PostUpdateWork);
+
+    FPostProcessSettings DefaultPostProcess = PostProcessController.GetBaseSettings();
+    DefaultPostProcess.Vignetting.bEnabled = true;
+    PostProcessController.SetSettings(DefaultPostProcess);
 }
 
 float FViewTargetTransitionParams::GetBlendAlpha(float TimePct) const

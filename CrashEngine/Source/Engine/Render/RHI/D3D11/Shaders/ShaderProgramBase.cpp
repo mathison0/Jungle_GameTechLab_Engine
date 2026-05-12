@@ -2,7 +2,8 @@
 #include "Render/RHI/D3D11/Shaders/ShaderProgramBase.h"
 
 #include "Core/Logging/LogMacros.h"
-#include "Materials/Material.h"
+#include "Materials/MaterialCore.h"
+#include "Materials/MaterialSemantics.h"
 #include "Platform/Paths.h"
 #include "Render/Resources/Shaders/ShaderIncludeLoader.h"
 #include "Render/Resources/Shaders/ShaderDependencyUtils.h"
@@ -286,6 +287,18 @@ void StoreShaderBlobInCache(
     WriteShaderCacheHeader(MetaPath, Header);
     UE_LOG(Render, Verbose, "Stored shader cache blob: %s [%s::%s]", InDesc.FilePath.c_str(), InDesc.EntryPoint.c_str(), InTarget);
 }
+
+bool HasTextureBinding(const TArray<FShaderTextureBindingInfo>& Bindings, const FString& ResourceName, uint32 SlotIndex)
+{
+    for (const FShaderTextureBindingInfo& Binding : Bindings)
+    {
+        if (Binding.ResourceName == ResourceName && Binding.SlotIndex == SlotIndex)
+        {
+            return true;
+        }
+    }
+    return false;
+}
 } // namespace
 
 /*
@@ -293,9 +306,10 @@ void StoreShaderBlobInCache(
     파생 클래스의 stage 객체 이동은 각 파생 클래스가 따로 처리합니다.
 */
 FShaderProgramBase::FShaderProgramBase(FShaderProgramBase&& Other) noexcept
-    : ShaderParameterLayout(std::move(Other.ShaderParameterLayout))
+    : DebugName(std::move(Other.DebugName)), ShaderParameterLayout(std::move(Other.ShaderParameterLayout)), TextureBindings(std::move(Other.TextureBindings))
 {
     Other.ShaderParameterLayout.clear();
+    Other.TextureBindings.clear();
 }
 
 /*
@@ -307,8 +321,11 @@ FShaderProgramBase& FShaderProgramBase::operator=(FShaderProgramBase&& Other) no
     if (this != &Other)
     {
         ReleaseBase();
+        DebugName = std::move(Other.DebugName);
         ShaderParameterLayout = std::move(Other.ShaderParameterLayout);
+        TextureBindings = std::move(Other.TextureBindings);
         Other.ShaderParameterLayout.clear();
+        Other.TextureBindings.clear();
     }
     return *this;
 }
@@ -459,6 +476,52 @@ void FShaderProgramBase::ExtractCBufferInfo(ID3DBlob* InShaderBlob, TMap<FString
     Reflector->Release();
 }
 
+void FShaderProgramBase::ExtractTextureBindingInfo(ID3DBlob* InShaderBlob, TArray<FShaderTextureBindingInfo>& OutBindings) const
+{
+    if (!InShaderBlob)
+    {
+        return;
+    }
+
+    ID3D11ShaderReflection* Reflector = nullptr;
+    const HRESULT Hr = D3DReflect(InShaderBlob->GetBufferPointer(), InShaderBlob->GetBufferSize(), IID_ID3D11ShaderReflection, reinterpret_cast<void**>(&Reflector));
+    if (FAILED(Hr) || Reflector == nullptr)
+    {
+        return;
+    }
+
+    D3D11_SHADER_DESC ShaderDesc = {};
+    Reflector->GetDesc(&ShaderDesc);
+
+    for (UINT i = 0; i < ShaderDesc.BoundResources; ++i)
+    {
+        D3D11_SHADER_INPUT_BIND_DESC BindDesc = {};
+        if (FAILED(Reflector->GetResourceBindingDesc(i, &BindDesc)))
+        {
+            continue;
+        }
+
+        if (BindDesc.Type != D3D_SIT_TEXTURE)
+        {
+            continue;
+        }
+
+        const FString ResourceName = BindDesc.Name ? BindDesc.Name : "";
+        if (ResourceName.empty() || HasTextureBinding(OutBindings, ResourceName, BindDesc.BindPoint))
+        {
+            continue;
+        }
+
+        FShaderTextureBindingInfo Binding;
+        Binding.ResourceName = ResourceName;
+        Binding.CanonicalSlotName = MaterialSemantics::CanonicalizeTextureSlot(ResourceName);
+        Binding.SlotIndex = BindDesc.BindPoint;
+        OutBindings.push_back(std::move(Binding));
+    }
+
+    Reflector->Release();
+}
+
 /*
     리플렉션으로 만든 material parameter 레이아웃 객체들을 해제합니다.
 */
@@ -477,4 +540,6 @@ void FShaderProgramBase::ReleaseParameterLayout()
 void FShaderProgramBase::ReleaseBase()
 {
     ReleaseParameterLayout();
+    TextureBindings.clear();
+    DebugName.clear();
 }

@@ -128,6 +128,8 @@ bool FGraphicsProgram::Create(ID3D11Device* InDevice, const FGraphicsProgramDesc
     ID3D11PixelShader*                     PS              = nullptr;
     ID3D11InputLayout*                     NewInputLayout  = nullptr;
     TMap<FString, FMaterialParameterInfo*> NewShaderParameterLayout;
+    TArray<FShaderTextureBindingInfo>      NewTextureBindings;
+    TArray<FVertexInputElement>            NewVertexInputs;
     std::unordered_set<std::wstring>       Dependencies;
 
     auto CleanupTemps = [&]()
@@ -162,6 +164,7 @@ bool FGraphicsProgram::Create(ID3D11Device* InDevice, const FGraphicsProgramDesc
             delete Pair.second;
         }
         NewShaderParameterLayout.clear();
+        NewTextureBindings.clear();
     };
 
     if (!CompileVertexShader(InDevice, InDesc.VS, &VertexShaderCSO, &VS, Dependencies))
@@ -182,22 +185,57 @@ bool FGraphicsProgram::Create(ID3D11Device* InDevice, const FGraphicsProgramDesc
         return false;
     }
 
+    {
+        ID3D11ShaderReflection* Reflector = nullptr;
+        HRESULT Hr = D3DReflect(VertexShaderCSO->GetBufferPointer(), VertexShaderCSO->GetBufferSize(), IID_ID3D11ShaderReflection, reinterpret_cast<void**>(&Reflector));
+        if (SUCCEEDED(Hr) && Reflector)
+        {
+            D3D11_SHADER_DESC ShaderDesc = {};
+            Reflector->GetDesc(&ShaderDesc);
+            NewVertexInputs.reserve(ShaderDesc.InputParameters);
+
+            for (UINT i = 0; i < ShaderDesc.InputParameters; ++i)
+            {
+                D3D11_SIGNATURE_PARAMETER_DESC ParamDesc = {};
+                Reflector->GetInputParameterDesc(i, &ParamDesc);
+                if (ParamDesc.SystemValueType != D3D_NAME_UNDEFINED)
+                {
+                    continue;
+                }
+
+                FVertexInputElement InputElement;
+                InputElement.SemanticName  = ParamDesc.SemanticName ? ParamDesc.SemanticName : "";
+                InputElement.SemanticIndex = ParamDesc.SemanticIndex;
+                InputElement.Format        = MaskToFormat(ParamDesc.ComponentType, ParamDesc.Mask);
+                NewVertexInputs.push_back(std::move(InputElement));
+            }
+
+            Reflector->Release();
+        }
+    }
+
     ExtractCBufferInfo(VertexShaderCSO, NewShaderParameterLayout);
+    ExtractTextureBindingInfo(VertexShaderCSO, NewTextureBindings);
     if (PixelShaderCSO)
     {
         ExtractCBufferInfo(PixelShaderCSO, NewShaderParameterLayout);
+        ExtractTextureBindingInfo(PixelShaderCSO, NewTextureBindings);
     }
 
     Release();
+    DebugName            = InDesc.DebugName;
     VertexShader.Set(VS, VertexShaderCSO->GetBufferSize());
     PixelShader.Set(PS, PixelShaderCSO ? PixelShaderCSO->GetBufferSize() : 0);
     InputLayout           = NewInputLayout;
+    VertexInputs          = std::move(NewVertexInputs);
     ShaderParameterLayout = std::move(NewShaderParameterLayout);
+    TextureBindings       = std::move(NewTextureBindings);
 
     VS             = nullptr;
     PS             = nullptr;
     NewInputLayout = nullptr;
     NewShaderParameterLayout.clear();
+    NewTextureBindings.clear();
 
     CleanupTemps();
     return true;
@@ -332,9 +370,11 @@ void FGraphicsProgram::Release()
         InputLayout->Release();
         InputLayout = nullptr;
     }
+    DebugName.clear();
     ReleaseBase();
     PixelShader.Release();
     VertexShader.Release();
+    VertexInputs.clear();
 }
 
 /*

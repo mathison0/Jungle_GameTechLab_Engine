@@ -40,6 +40,7 @@ protected:
 
 	static bool SectionMaterialLess(const FMeshSectionRenderData& A, const FMeshSectionRenderData& B);
     static bool TryGetTextureSRV(UMaterial* Material, std::initializer_list<const char*> SlotNames, ID3D11ShaderResourceView*& OutSRV);
+    static TArray<FShaderResourceBinding> BuildReflectedTextureBindings(const UMaterial* Material, const FGraphicsProgram* GraphicsProgram);
 	static float GetScalarOrDefault(const UMaterial* Material, const char* ParamName, float DefaultValue);
     static FVector4 GetVector4OrDefault(const UMaterial* Material, const char* ParamName, const FVector4& DefaultValue);
     static std::unique_ptr<FMaterialConstantBuffer> BuildMeshMaterialCB(const UMaterial* Material, ID3D11Device* Device, ID3D11DeviceContext* Context,

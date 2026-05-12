@@ -13,6 +13,7 @@
 #include <vector>
 
 class FMaterialTemplate;
+class FGraphicsProgram;
 class UMaterial;
 struct FMaterialConstantBuffer;
 
@@ -85,7 +86,9 @@ public:
     void Release();
 
 private:
-    FMaterialTemplate* GetOrCreateTemplate();
+    FMaterialTemplate* GetOrCreateSurfaceTemplate();
+    FMaterialTemplate* GetOrCreateReflectedTemplate(const FString& ShaderPath, FGraphicsProgram* GraphicsProgram);
+    FMaterialTemplate* GetOrCreateTemplate(const FString& ShaderPath, FGraphicsProgram* GraphicsProgram);
 
     json::JSON ReadJsonFile(const FString& FilePath) const;
     TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> CreateConstantBuffers(FMaterialTemplate* Template);

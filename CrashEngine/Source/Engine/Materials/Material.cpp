@@ -34,6 +34,7 @@ void UMaterial::Create(const FString& InPathFileName, FMaterialTemplate* InTempl
                        TMap<FString, std::unique_ptr<FMaterialConstantBuffer>>&& InBuffers)
 {
     PathFileName = InPathFileName;
+    ShaderReference.Reset();
     Template = InTemplate;
 
     ConstantBufferMap = std::move(InBuffers);

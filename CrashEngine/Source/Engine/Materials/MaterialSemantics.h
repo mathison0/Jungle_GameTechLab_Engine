@@ -31,17 +31,17 @@ inline bool MatchesAny(const FString& Name, std::initializer_list<const char*> C
 
 inline FString CanonicalizeTextureSlot(const FString& SlotName)
 {
-    if (MatchesAny(SlotName, { DiffuseTextureSlot, "BaseColorTexture", "AlbedoTexture", "BaseTexture", "DiffuseMap", "AlbedoMap" }))
+    if (MatchesAny(SlotName, { DiffuseTextureSlot, "BaseColorTexture", "AlbedoTexture", "BaseTexture", "DiffuseMap", "AlbedoMap", "g_txColor" }))
     {
         return DiffuseTextureSlot;
     }
 
-    if (MatchesAny(SlotName, { NormalTextureSlot, "NormalMap", "NormalMapTexture", "BumpTexture", "BumpMap" }))
+    if (MatchesAny(SlotName, { NormalTextureSlot, "NormalMap", "NormalMapTexture", "BumpTexture", "BumpMap", "g_NormalMap" }))
     {
         return NormalTextureSlot;
     }
 
-    if (MatchesAny(SlotName, { SpecularTextureSlot, "SpecularMap", "SpecularMapTexture", "SpecularMask", "SpecularMaskTexture", "GlossMap" }))
+    if (MatchesAny(SlotName, { SpecularTextureSlot, "SpecularMap", "SpecularMapTexture", "SpecularMask", "SpecularMaskTexture", "GlossMap", "g_SpecularMap" }))
     {
         return SpecularTextureSlot;
     }

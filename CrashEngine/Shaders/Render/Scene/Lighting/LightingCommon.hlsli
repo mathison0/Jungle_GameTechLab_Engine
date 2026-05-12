@@ -19,6 +19,6 @@
 
 #include "LightTypes.hlsli"
 #include "BRDF.hlsli"
-#include "DirectLighting.hlsli"
+#include "LightingEvaluation.hlsli"
 
 #endif
