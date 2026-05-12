@@ -162,22 +162,47 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
         }
     }
 
-	if (RenderToggleButton("Spawn in Scene"))
-    {
-        TArray<FWorldContext>& WorldList = EditorEngine->GetWorldList();
-		for (FWorldContext& WorldContext : WorldList)
-        {
+	USkeletalMesh* ActiveMesh = State.ActiveMesh;
+	const bool bCanSpawn = ActiveMesh != nullptr && EditorEngine && !EditorEngine->IsPlayingInEditor();
+
+	ImGui::BeginDisabled(!bCanSpawn);
+	if (ImGui::Button("Spawn in Scene"))
+	{
+		UWorld* EditorWorld = nullptr;
+		for (FWorldContext& WorldContext : EditorEngine->GetWorldList())
+		{
 			if (WorldContext.WorldType == EWorldType::Editor)
-            {
-				UWorld* EditorWorld = WorldContext.World;
-                ASkeletalMeshActor* Actor = EditorWorld->SpawnActor<ASkeletalMeshActor>();
-                Actor->InitDefaultComponents();
-                Actor->GetSkeletalMeshComponent()->SetSkeletalMesh(ViewerState.ActiveMesh);
-                Actor->SetActorLocation(/* editor camera focal point or origin */);
-                EditorWorld->InsertActorToOctree(Actor);
+			{
+				EditorWorld = WorldContext.World;
+				break;
 			}
 		}
+
+		if (EditorWorld)
+		{
+			ASkeletalMeshActor* Actor = EditorWorld->SpawnActor<ASkeletalMeshActor>();
+			Actor->InitDefaultComponents();
+
+			USkeletalMeshComponent* NewComp = Actor->GetSkeletalMeshComponent();
+			NewComp->SetSkeletalMesh(ActiveMesh);
+
+			USkeletalMeshComponent* PreviewComp = GetPreviewMeshComponent();
+			if (PreviewComp)
+			{
+				const int32 NumBones = PreviewComp->GetNumBones();
+				for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+				{
+					NewComp->SetBoneLocalMatrix(BoneIndex, PreviewComp->GetBoneLocalMatrix(BoneIndex));
+				}
+				NewComp->RefreshEditedDisplayPose();
+			}
+
+			Actor->SetActorLocation(FVector::ZeroVector);
+			EditorWorld->InsertActorToOctree(Actor);
+		}
 	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
 
 	if (RenderToggleButton("FBX Local Bones", State.bUseFbxLocalSkeleton))
 	{

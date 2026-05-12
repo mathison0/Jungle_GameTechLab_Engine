@@ -1,8 +1,7 @@
 ﻿#include "SkeletalMeshActor.h"
 #include "Component/SkeletalMeshComponent.h"
 #include "Mesh/SkeletalMesh.h"
-#include "Object/ObjectFactory.h"
-#include "Engine/Runtime/Engine.h"
+#include "Mesh/SkeletalMeshManager.h"
 
 IMPLEMENT_CLASS(ASkeletalMeshActor, AActor)
 
@@ -12,13 +11,10 @@ void ASkeletalMeshActor::InitDefaultComponents()
     SetRootComponent(SkeletalMeshComponent);
 }
 
-void ASkeletalMeshActor::InitDefaultComponents(const FString& UStaticMeshFileName)
+void ASkeletalMeshActor::InitDefaultComponents(const FString& SkeletalMeshPath)
 {
-    SkeletalMeshComponent = AddComponent<USkeletalMeshComponent>();
-    SetRootComponent(SkeletalMeshComponent);
+    InitDefaultComponents();
 
-    ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-    USkeletalMesh* Asset = FObjManager::Get().Load(UStaticMeshFileName);
-
+    USkeletalMesh* Asset = FSkeletalMeshManager::Get().Load(SkeletalMeshPath);
     SkeletalMeshComponent->SetSkeletalMesh(Asset);
 }
