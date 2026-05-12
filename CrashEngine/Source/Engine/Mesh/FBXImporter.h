@@ -1,16 +1,20 @@
 #pragma once
 
 #include "Core/CoreTypes.h"
-#include "Mesh/MeshImporterCommon.h"
 #include "Math/Transform.h"
-#include "ThirdParty/FBX_SDK/include/fbxsdk.h"
-#include "Object/FName.h"
+#include "Mesh/MeshImporterCommon.h"
 #include "Mesh/StaticMeshAsset.h"
+#include "Object/FName.h"
+#include "ThirdParty/FBX_SDK/include/fbxsdk.h"
+
+#include <filesystem>
 #include <memory>
+#include <unordered_map>
 
 struct FSkeletalSubMesh;
-class USkeleton;
 class UAnimationSequence;
+class UMaterial;
+class USkeleton;
 
 struct FFBXImporter
 {
@@ -45,18 +49,18 @@ struct FFBXImporter
         FImportedFBXAssets& operator=(FImportedFBXAssets&& Other) noexcept;
     };
 
-    // FBX 파일을 분석하여 발견된 모든 리소스를 각각의 .bin 파일로 캐시 폴더에 저장합니다.
     static bool ImportAndCacheAll(const FString& FBXFilePath, const FImportOptions& Options);
-
-    // FBX 파일로부터 모든 메시와 스켈레톤 데이터를 추출합니다.
     static bool ImportAll(const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& OutAssets);
 
 private:
     static void Initialize();
+
     static void ExtractBoneNodeRecursive(FbxNode* Node, int ParentIndex, USkeleton* OutSkeleton);
-    static void ExtractMeshAndSkinning(FbxNode* Node, const FImportOptions& Options, FImportedFBXAssets& InAsset);
-    static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);  // PlaceHolder, 아직 미구현
+    static void ExtractMeshAndSkinning(FbxNode* Node, const FString& FBXFilePath, const FImportOptions& Options, FImportedFBXAssets& InAsset);
+    static void ExtractAnimations(FbxScene* Scene, FImportedFBXAssets& OutAssets);
     static std::unique_ptr<FSkeletalSubMesh> ParseGeometry(FbxNode* InNode, FbxMesh* InFbxMesh, const FImportOptions& Options, TArray<FStaticMaterial>& OutMaterials);
+    static int32 GetFbxPolygonMaterialIndex(FbxNode* Node, FbxMesh* Mesh, int32 PolygonIndex);
+    static FVector GetSafeInverseScale(const FVector& Scale);
     static FTransform GetTransformFromNode(FbxNode* Node);
     static FTransform GetTransformFromMatrix(const FMatrix& Matrix);
     static FMatrix ConvertFbxMatrix(const FbxMatrix& Matrix);
@@ -69,12 +73,28 @@ private:
     static bool ApplyRigidParentWeightFallback(FbxNode* MeshNode, USkeleton* Skeleton, int32 BoneIndex, FbxNode* BoneNode, FSkeletalSubMesh* Mesh);
     static void ExtractWeights(FbxCluster* InCluster, int InBoneIndex);
     static void ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh);
-    
+
+    // Material related
+    static FString BuildValidMaterialSlotName(const FString& InName, int32 FallbackIndex);
+    static FString MakeUniqueGeneratedMaterialName(const FString& BaseName);
+    static void AppendFileTexturesFromProperty(const FbxProperty& Property, TArray<FbxFileTexture*>& OutTextures);
+    static FbxFileTexture* GetFirstDiffuseTexture(FbxSurfaceMaterial* Material);
+    static std::filesystem::path ResolveTexturePathFromFbx(FbxFileTexture* Texture, const FString& FBXFilePath);
+    static FVector4 GetMaterialSectionColor(FbxSurfaceMaterial* Material, bool bHasDiffuseTexture);
+    static float GetMaterialSpecularPower(FbxSurfaceMaterial* Material);
+    static float GetMaterialSpecularStrength(FbxSurfaceMaterial* Material);
+    static FString CreateOrLoadMaterialAsset(FbxSurfaceMaterial* Material, const FString& FBXFilePath);
+    static UMaterial* ResolveNodeMaterialInterface(FbxNode* Node, int32 FbxMaterialIndex, const FString& FBXFilePath);
+    static void AssignImportedMaterialsToSlots(FbxNode* Node, const FString& FBXFilePath, TArray<FStaticMaterial>& Materials);
+
     static bool bInitialized;
     static FbxManager* SdkManager;
-    
-    // FBX 추출 과정에서 사용하는 임시 컨테이너들
-    static TArray<TArray<int>> CtrlPointToVertexIndex;      // FBX의 mesh vertex가 FSkeletalMesh의 몇번 vertex들에 해당하는지 보관
-    using FBoneWeighting = std::pair<uint16, float>;        // id, weight 순
-    static TArray<TArray<FBoneWeighting>> BoneWeighting;    // index = FSkeletalMesh의 vertex index
+
+    static TArray<TArray<int>> CtrlPointToVertexIndex;
+    using FBoneWeighting = std::pair<uint16, float>;
+    static TArray<TArray<FBoneWeighting>> BoneWeighting;
+
+    static std::unordered_map<const FbxSurfaceMaterial*, UMaterial*> ImportedMaterialCache;
+    static std::unordered_map<const FbxSurfaceMaterial*, FString> ImportedMaterialJsonPaths;
+    static std::unordered_map<FString, int32> GeneratedMaterialNameCounts;
 };
