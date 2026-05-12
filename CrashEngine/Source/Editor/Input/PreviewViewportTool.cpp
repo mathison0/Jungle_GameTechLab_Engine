@@ -247,7 +247,7 @@ bool FSkeletalMeshViewerBoneSelectTool::HandleBonePicking(const FRay& Ray)
     return true;
 }
 
-bool FSkeletalMeshViewerCommandTool::HandleInput(float DeltaTime)
+bool FSkeletalMeshNavigationTool::HandleInput(float DeltaTime)
 {
     if (!Owner || !Controller || !Owner->GetCamera())
     {
@@ -260,7 +260,7 @@ bool FSkeletalMeshViewerCommandTool::HandleInput(float DeltaTime)
     return bHandled;
 }
 
-bool FSkeletalMeshViewerCommandTool::HandleKeyboardAndMouseNavigation(float DeltaTime)
+bool FSkeletalMeshNavigationTool::HandleKeyboardAndMouseNavigation(float DeltaTime)
 {
     UCameraComponent* Camera = Owner->GetCamera();
     if (!Camera)
@@ -370,7 +370,7 @@ bool FSkeletalMeshViewerCommandTool::HandleKeyboardAndMouseNavigation(float Delt
     return bHandled;
 }
 
-bool FSkeletalMeshViewerCommandTool::HandleWheelZoom(float DeltaTime)
+bool FSkeletalMeshNavigationTool::HandleWheelZoom(float DeltaTime)
 {
     UCameraComponent* Camera = Owner ? Owner->GetCamera() : nullptr;
     if (!Camera)

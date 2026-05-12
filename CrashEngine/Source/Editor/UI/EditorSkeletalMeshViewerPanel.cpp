@@ -92,7 +92,7 @@ void FEditorSkeletalMeshViewerPanel::Render(float DeltaTime)
 
     ImGui::SameLine();
 
-    ImGui::BeginChild("RightPanel", ImVec2(RightPanelWidth, Available.y), true);
+    ImGui::BeginChild("RightPanel", ImVec2(RightPanelWidth, Available.y), true, ImGuiWindowFlags_HorizontalScrollbar);
     RenderBoneHierarchyTree();
     ImGui::Separator();
     RenderInspector();
