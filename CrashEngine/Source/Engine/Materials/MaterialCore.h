@@ -28,6 +28,7 @@ private:
 public:
     const TMap<FString, FMaterialParameterInfo*>& GetParameterInfo() const { return ParameterLayout; }
     void CreateSurfaceMaterialLayout();
+    void CreateReflectedMaterialLayout(const TMap<FString, FMaterialParameterInfo*>& InLayout);
 
     bool GetParameterInfo(const FString& Name, FMaterialParameterInfo& OutInfo) const;
 };

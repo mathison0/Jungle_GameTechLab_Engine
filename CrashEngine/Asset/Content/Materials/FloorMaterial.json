@@ -15,5 +15,6 @@
     "RasterizerState": "SolidBackCull",
     "Textures": {
         "DiffuseTexture": "Asset/Content/Textures/floor.jpg"
-    }
+    },
+    "ShaderPath": "Shaders/CustomTest.hlsl"
 }

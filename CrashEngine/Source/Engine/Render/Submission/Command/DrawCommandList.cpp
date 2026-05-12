@@ -8,7 +8,6 @@
 #include "Render/Resources/Bindings/RenderBindingSlots.h"
 #include "Render/Resources/Shadows/ShadowFilterSettings.h"
 #include "Render/RHI/D3D11/Shaders/GraphicsProgram.h"
-
 /*
     드로우 제출 중 중복 상태 바인딩을 피하기 위한 캐시를 초기 상태로 되돌립니다.
 */
@@ -33,6 +32,11 @@ void FDrawBindStateCache::Reset()
     DiffuseSRV     = nullptr;
     NormalSRV      = nullptr;
     SpecularSRV    = nullptr;
+    for (uint32 SlotIndex = 0; SlotIndex < GMaxTrackedShaderResourceSlots; ++SlotIndex)
+    {
+        ShaderResourceSRVs[SlotIndex] = nullptr;
+        bShaderResourceSlotBound[SlotIndex] = false;
+    }
     LocalLightSRV  = nullptr;
 
     RTV = nullptr;
@@ -46,6 +50,19 @@ void FDrawBindStateCache::Cleanup(ID3D11DeviceContext* Ctx)
     DiffuseSRV  = nullptr;
     NormalSRV   = nullptr;
     SpecularSRV = nullptr;
+
+    for (uint32 SlotIndex = 0; SlotIndex < GMaxTrackedShaderResourceSlots; ++SlotIndex)
+    {
+        if (!bShaderResourceSlotBound[SlotIndex])
+        {
+            continue;
+        }
+
+        ID3D11ShaderResourceView* NullSRV = nullptr;
+        Ctx->PSSetShaderResources(SlotIndex, 1, &NullSRV);
+        ShaderResourceSRVs[SlotIndex] = nullptr;
+        bShaderResourceSlotBound[SlotIndex] = false;
+    }
 
     ID3D11ShaderResourceView* NullLocalLightSRV = nullptr;
     Ctx->PSSetShaderResources(ESystemTexSlot::LocalLights, 1, &NullLocalLightSRV);
@@ -161,6 +178,29 @@ uint32 FDrawCommandList::GetCommandCount(ERenderPass Pass) const
 void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd, FD3DDevice& Device,
                                      ID3D11DeviceContext* Ctx, FDrawBindStateCache& Cache)
 {
+    ID3D11ShaderResourceView* DesiredGenericSRVs[GMaxTrackedShaderResourceSlots] = {};
+    bool                      bDesiredGenericSlotBound[GMaxTrackedShaderResourceSlots] = {};
+    for (const FShaderResourceBinding& Binding : Cmd.ShaderResourceBindings)
+    {
+        if (Binding.SlotIndex >= GMaxTrackedShaderResourceSlots)
+        {
+            continue;
+        }
+
+        DesiredGenericSRVs[Binding.SlotIndex] = Binding.SRV;
+        bDesiredGenericSlotBound[Binding.SlotIndex] = true;
+    }
+
+    bool bHasCachedGenericBindings = false;
+    for (uint32 SlotIndex = 0; SlotIndex < GMaxTrackedShaderResourceSlots; ++SlotIndex)
+    {
+        if (Cache.bShaderResourceSlotBound[SlotIndex])
+        {
+            bHasCachedGenericBindings = true;
+            break;
+        }
+    }
+
     const bool bForce = Cache.bForceAll;
 
     if (bForce || Cmd.DepthStencil != Cache.DepthStencil)
@@ -297,6 +337,21 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd, FD3DDevice& Device
     const bool bUsesPreBoundLightingInputs = (Cmd.Pass == ERenderPass::DeferredLighting);
     const bool bUsesPreBoundDecalInputs    = (Cmd.Pass == ERenderPass::Decal && Cmd.MeshBuffer == nullptr);
 
+    // Keep generic-slot tracking coherent with the legacy t0~t2 material SRV path.
+    // Without this, a prior custom draw that uses reflected bindings on t0~t2 can
+    // leave the generic cache thinking those slots are still owned, and a later
+    // legacy draw will bind its fixed SRVs first and then have them nulled out by
+    // the generic cleanup loop below.
+    if (!bUsesPreBoundLightingInputs)
+    {
+        DesiredGenericSRVs[0] = Cmd.DiffuseSRV;
+        DesiredGenericSRVs[1] = Cmd.NormalSRV;
+        DesiredGenericSRVs[2] = Cmd.SpecularSRV;
+        bDesiredGenericSlotBound[0] = true;
+        bDesiredGenericSlotBound[1] = true;
+        bDesiredGenericSlotBound[2] = true;
+    }
+
     if (bUsesPreBoundDecalInputs)
     {
         if (bForce || Cmd.bForceSRVBind || Cmd.DiffuseSRV != Cache.DiffuseSRV)
@@ -320,6 +375,28 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd, FD3DDevice& Device
         Cache.DiffuseSRV  = Cmd.DiffuseSRV;
         Cache.NormalSRV   = Cmd.NormalSRV;
         Cache.SpecularSRV = Cmd.SpecularSRV;
+    }
+
+    if (!Cmd.ShaderResourceBindings.empty() || Cmd.bForceSRVBind || bHasCachedGenericBindings)
+    {
+        for (uint32 SlotIndex = 0; SlotIndex < GMaxTrackedShaderResourceSlots; ++SlotIndex)
+        {
+            if (!Cache.bShaderResourceSlotBound[SlotIndex] && !bDesiredGenericSlotBound[SlotIndex])
+            {
+                continue;
+            }
+
+            if (bForce ||
+                Cmd.bForceSRVBind ||
+                Cache.bShaderResourceSlotBound[SlotIndex] != bDesiredGenericSlotBound[SlotIndex] ||
+                Cache.ShaderResourceSRVs[SlotIndex] != DesiredGenericSRVs[SlotIndex])
+            {
+                ID3D11ShaderResourceView* SRV = DesiredGenericSRVs[SlotIndex];
+                Ctx->PSSetShaderResources(SlotIndex, 1, &SRV);
+                Cache.ShaderResourceSRVs[SlotIndex] = SRV;
+                Cache.bShaderResourceSlotBound[SlotIndex] = bDesiredGenericSlotBound[SlotIndex];
+            }
+        }
     }
 
     Cache.bForceAll = false;

@@ -9,6 +9,13 @@
 
 struct FMaterialParameterInfo;
 
+struct FShaderTextureBindingInfo
+{
+    FString ResourceName;
+    FString CanonicalSlotName;
+    uint32  SlotIndex = 0;
+};
+
 // FShaderProgramBase는 셰이더 컴파일 결과와 GPU 바인딩을 관리합니다.
 class FShaderProgramBase
 {
@@ -25,7 +32,9 @@ public:
     virtual void Bind(ID3D11DeviceContext* InDeviceContext) const = 0;
     virtual bool IsValid() const                                  = 0;
 
+    const FString& GetDebugName() const { return DebugName; }
     const TMap<FString, FMaterialParameterInfo*>& GetParameterLayout() const { return ShaderParameterLayout; }
+    const TArray<FShaderTextureBindingInfo>& GetTextureBindings() const { return TextureBindings; }
 
     static bool CompileShaderBlobStandalone(
         ID3DBlob**                        OutShaderBlob,
@@ -45,10 +54,15 @@ protected:
     void ExtractCBufferInfo(
         ID3DBlob*                               InShaderBlob,
         TMap<FString, FMaterialParameterInfo*>& OutLayout) const;
+    void ExtractTextureBindingInfo(
+        ID3DBlob*                         InShaderBlob,
+        TArray<FShaderTextureBindingInfo>& OutBindings) const;
 
     void ReleaseParameterLayout();
     void ReleaseBase();
 
 protected:
+    FString DebugName;
     TMap<FString, FMaterialParameterInfo*> ShaderParameterLayout;
+    TArray<FShaderTextureBindingInfo>      TextureBindings;
 };

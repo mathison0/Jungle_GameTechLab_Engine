@@ -26,6 +26,8 @@ struct FDrawBindStateCache
     ID3D11ShaderResourceView* DiffuseSRV     = nullptr;
     ID3D11ShaderResourceView* NormalSRV      = nullptr;
     ID3D11ShaderResourceView* SpecularSRV    = nullptr;
+    ID3D11ShaderResourceView* ShaderResourceSRVs[GMaxTrackedShaderResourceSlots] = {};
+    bool                      bShaderResourceSlotBound[GMaxTrackedShaderResourceSlots] = {};
     ID3D11ShaderResourceView* LocalLightSRV  = nullptr;
 
     ID3D11RenderTargetView* RTV = nullptr;

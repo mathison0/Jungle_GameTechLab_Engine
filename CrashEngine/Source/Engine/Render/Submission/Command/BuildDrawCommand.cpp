@@ -2,6 +2,7 @@
 #include "Render/Submission/Command/BuildDrawCommand.h"
 
 #include "Component/TextRenderComponent.h"
+#include "Core/Logging/LogMacros.h"
 #include "Render/Execute/Context/RenderPipelineContext.h"
 #include "Render/Execute/Context/Scene/SceneView.h"
 #include "Render/Execute/Context/ViewMode/ShadingModel.h"
@@ -15,6 +16,7 @@
 #include "Render/Resources/Buffers/ConstantBufferData.h"
 #include "Render/Resources/FrameResources.h"
 #include "Render/Resources/Shadows/ShadowFilterSettings.h"
+#include "Render/Resources/Shaders/MeshPassOverrideSettings.h"
 #include "Render/Resources/Shaders/ShaderManager.h"
 #include "Render/Scene/Proxies/Primitive/PrimitiveProxy.h"
 #include "Render/Scene/Proxies/Primitive/TextRenderSceneProxy.h"
@@ -26,11 +28,363 @@
 #include "Mesh/ObjManager.h"
 #include "Mesh/StaticMesh.h"
 #include "Render/RHI/D3D11/Buffers/StaticMeshBuffer.h"
+#include "Render/RHI/D3D11/Buffers/VertexTypes.h"
 #include "Engine/Platform/Paths.h"
 #include "Resource/FontManager.h"
 
 #include <algorithm>
+#include <unordered_set>
 #include <vector>
+
+namespace
+{
+enum class EShaderOverridePolicy : uint8
+{
+    None = 0,
+    Required,
+    Legacy,
+};
+
+struct FMeshPassShaderSelection
+{
+    FGraphicsProgram*     Shader       = nullptr;
+    EShaderOverridePolicy Policy       = EShaderOverridePolicy::None;
+    const char*           ShaderSource = "ProxyShader";
+    const char*           OverrideTag  = "Override::None";
+};
+
+struct FExpectedVertexSemantic
+{
+    const char* SemanticName = nullptr;
+    uint32      SemanticIndex = 0;
+};
+
+const char* GetShaderDebugName(const FGraphicsProgram* Shader)
+{
+    if (!Shader)
+    {
+        return "<null>";
+    }
+
+    const FString& DebugName = Shader->GetDebugName();
+    return DebugName.empty() ? "<unnamed>" : DebugName.c_str();
+}
+
+const char* GetShaderOverridePolicyName(EShaderOverridePolicy Policy)
+{
+    switch (Policy)
+    {
+    case EShaderOverridePolicy::Required:
+        return "RequiredOverride";
+    case EShaderOverridePolicy::Legacy:
+        return "LegacyOverride";
+    case EShaderOverridePolicy::None:
+    default:
+        return "NoOverride";
+    }
+}
+
+const TArray<FExpectedVertexSemantic>* GetSpecialPassVertexSemantics(ERenderPass Pass)
+{
+    static const TArray<FExpectedVertexSemantic> PositionOnly = {
+        { "POSITION", 0 },
+    };
+
+    /*
+        DepthOnly / ShadowEncode currently share VS_Input_PNCT_T in HLSL, but the
+        compiled vertex path only consumes POSITION. Keep that minimum contract
+        fixed here so validation does not drift with shared input struct names.
+    */
+    if (Pass == ERenderPass::DepthPre || Pass == ERenderPass::SelectionMask || Pass == ERenderPass::ShadowMap)
+    {
+        return &PositionOnly;
+    }
+
+    return nullptr;
+}
+
+/*
+    Mesh pass shader selection policy
+
+    1. Required override
+       - DepthPre / SelectionMask: depth-only input/output contract is fixed.
+       - ShadowMap: shadow filter mode decides the encoding shader.
+
+    2. Legacy override
+       - Opaque: editor view mode registry may still replace the proxy/material shader.
+
+    Any future cleanup should preserve the required overrides first, then decide
+    whether the legacy opaque override can be reduced or removed.
+*/
+FMeshPassShaderSelection ResolveMeshPassShader(const FPrimitiveProxy& Proxy,
+                                               const FGraphicsProgram* PreferredShader,
+                                               ERenderPass Pass,
+                                               const FRenderPipelineContext& Context)
+{
+    FMeshPassShaderSelection Selection;
+    Selection.Shader = const_cast<FGraphicsProgram*>(PreferredShader ? PreferredShader : Proxy.Shader);
+    Selection.ShaderSource = PreferredShader ? "MaterialShader" : "ProxyShader";
+
+    const bool bIsMaskLikePass = (Pass == ERenderPass::DepthPre || Pass == ERenderPass::SelectionMask || Pass == ERenderPass::ShadowMap);
+
+    // Required override: shadow pass output format depends on the active shadow filter.
+    if (Pass == ERenderPass::ShadowMap)
+    {
+        const EShadowFilterMethod ShadowFilterMethod = GetShadowFilterMethod();
+        if (ShadowFilterMethod == EShadowFilterMethod::ESM)
+        {
+            Selection.Shader       = FShaderManager::Get().GetShader(EShaderType::ShadowEncodeESM);
+            Selection.Policy       = EShaderOverridePolicy::Required;
+            Selection.ShaderSource = "BuiltIn::ShadowEncodeESM";
+            Selection.OverrideTag  = "Required::ShadowMapESM";
+        }
+        else if (ShadowFilterMethod == EShadowFilterMethod::VSM)
+        {
+            Selection.Shader       = FShaderManager::Get().GetShader(EShaderType::ShadowEncodeVSM);
+            Selection.Policy       = EShaderOverridePolicy::Required;
+            Selection.ShaderSource = "BuiltIn::ShadowEncodeVSM";
+            Selection.OverrideTag  = "Required::ShadowMapVSM";
+        }
+        else
+        {
+            Selection.Shader       = FShaderManager::Get().GetShader(EShaderType::DepthOnly);
+            Selection.Policy       = EShaderOverridePolicy::Required;
+            Selection.ShaderSource = "BuiltIn::DepthOnly";
+            Selection.OverrideTag  = "Required::ShadowMapDepthOnly";
+        }
+    }
+    // Required override: mask-like passes share the fixed depth-only contract.
+    else if (bIsMaskLikePass)
+    {
+        Selection.Shader       = FShaderManager::Get().GetShader(EShaderType::DepthOnly);
+        Selection.Policy       = EShaderOverridePolicy::Required;
+        Selection.ShaderSource = "BuiltIn::DepthOnly";
+        Selection.OverrideTag  = "Required::MaskLikeDepthOnly";
+    }
+    // Legacy override: editor/view-mode path can still replace the proxy shader for opaque.
+    else if (Pass == ERenderPass::Opaque &&
+             PreferredShader == nullptr &&
+             !IsLegacyOpaqueViewModeOverrideBypassed() &&
+             Context.SceneView &&
+             Proxy.bAllowViewModeShaderOverride &&
+             Context.ViewMode.Registry &&
+             Context.ViewMode.Registry->HasConfig(Context.ViewMode.ActiveViewMode))
+    {
+        const FViewModePassDesc* Desc =
+            Context.ViewMode.Registry->FindPassDesc(Context.ViewMode.ActiveViewMode, ERenderPass::Opaque, Context.SceneView->RenderPath);
+        if (Desc && Desc->CompiledShader)
+        {
+            Selection.Shader       = Desc->CompiledShader;
+            Selection.Policy       = EShaderOverridePolicy::Legacy;
+            Selection.ShaderSource = "ViewModeRegistry::Opaque";
+            Selection.OverrideTag  = "Legacy::ViewModeOpaque";
+        }
+    }
+
+    return Selection;
+}
+
+void LogMeshShaderSelectionOnce(ERenderPass Pass,
+                                const FPrimitiveProxy& Proxy,
+                                const FMeshPassShaderSelection& Selection,
+                                const FString& MaterialPath,
+                                uint32 FirstIndex,
+                                uint32 IndexCount)
+{
+    static std::unordered_set<std::string> LoggedKeys;
+
+    const char* MaterialLabel = MaterialPath.empty() ? "<none>" : MaterialPath.c_str();
+    const char* ShaderLabel   = GetShaderDebugName(Selection.Shader);
+    const char* PolicyLabel   = GetShaderOverridePolicyName(Selection.Policy);
+    const char* SourceLabel   = Selection.ShaderSource ? Selection.ShaderSource : "Unknown";
+    const char* OverrideLabel = Selection.OverrideTag ? Selection.OverrideTag : "None";
+
+    std::string Key = std::string(GetRenderPassName(Pass)) + "|" +
+                      PolicyLabel + "|" +
+                      SourceLabel + "|" +
+                      OverrideLabel + "|" +
+                      ShaderLabel + "|" +
+                      MaterialLabel + "|" +
+                      std::to_string(reinterpret_cast<uintptr_t>(Proxy.MeshBuffer)) + "|" +
+                      std::to_string(FirstIndex) + "|" +
+                      std::to_string(IndexCount);
+
+    if (!LoggedKeys.insert(Key).second)
+    {
+        return;
+    }
+
+    UE_LOG(
+        Render,
+        Debug,
+        "MeshDrawCommand ShaderTrace Pass=%s Policy=%s Shader=%s Source=%s Override=%s Material=%s ProxyShader=%s SectionFirstIndex=%u SectionIndexCount=%u",
+        GetRenderPassName(Pass),
+        PolicyLabel,
+        ShaderLabel,
+        SourceLabel,
+        OverrideLabel,
+        MaterialLabel,
+        GetShaderDebugName(Proxy.Shader),
+        FirstIndex,
+        IndexCount);
+}
+
+const TArray<FExpectedVertexSemantic>* GetExpectedVertexSemanticsForStride(uint32 VertexStride)
+{
+    static const TArray<FExpectedVertexSemantic> VertexPC = {
+        { "POSITION", 0 },
+        { "COLOR", 0 },
+    };
+    static const TArray<FExpectedVertexSemantic> VertexPT = {
+        { "POSITION", 0 },
+        { "TEXCOORD", 0 },
+    };
+    static const TArray<FExpectedVertexSemantic> VertexUI = {
+        { "POSITION", 0 },
+        { "TEXCOORD", 0 },
+        { "COLOR", 0 },
+    };
+    static const TArray<FExpectedVertexSemantic> VertexPNCT = {
+        { "POSITION", 0 },
+        { "NORMAL", 0 },
+        { "COLOR", 0 },
+        { "TEXCOORD", 0 },
+    };
+    static const TArray<FExpectedVertexSemantic> VertexPNCTT = {
+        { "POSITION", 0 },
+        { "NORMAL", 0 },
+        { "COLOR", 0 },
+        { "TEXCOORD", 0 },
+        { "TANGENT", 0 },
+    };
+
+    if (VertexStride == sizeof(FVertex))
+    {
+        return &VertexPC;
+    }
+    if (VertexStride == sizeof(FTextureVertex))
+    {
+        return &VertexPT;
+    }
+    if (VertexStride == sizeof(FUIVertex))
+    {
+        return &VertexUI;
+    }
+    if (VertexStride == sizeof(FVertexPNCT))
+    {
+        return &VertexPNCT;
+    }
+    if (VertexStride == sizeof(FVertexPNCT_T) || VertexStride == sizeof(FVertexSkinned))
+    {
+        return &VertexPNCTT;
+    }
+
+    return nullptr;
+}
+
+bool HasExpectedVertexSemantic(const TArray<FExpectedVertexSemantic>& ExpectedSemantics, const FGraphicsProgram::FVertexInputElement& InputElement)
+{
+    for (const FExpectedVertexSemantic& Expected : ExpectedSemantics)
+    {
+        if (_stricmp(Expected.SemanticName, InputElement.SemanticName.c_str()) == 0 &&
+            Expected.SemanticIndex == InputElement.SemanticIndex)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void ValidateMeshShaderInputCompatibilityOnce(ERenderPass Pass,
+                                              const FGraphicsProgram* Shader,
+                                              const FMeshBuffer* MeshBuffer,
+                                              const FString& MaterialPath)
+{
+    if (!Shader || !MeshBuffer)
+    {
+        return;
+    }
+
+    static std::unordered_set<std::string> LoggedCompatibilityKeys;
+
+    const uint32 VertexStride = MeshBuffer->GetVertexStride();
+    const char* MaterialLabel = MaterialPath.empty() ? "<none>" : MaterialPath.c_str();
+    const char* ShaderLabel   = GetShaderDebugName(Shader);
+    const std::string Key = std::string(GetRenderPassName(Pass)) + "|" +
+                            ShaderLabel + "|" +
+                            MaterialLabel + "|" +
+                            std::to_string(VertexStride);
+
+    if (!LoggedCompatibilityKeys.insert(Key).second)
+    {
+        return;
+    }
+
+    const TArray<FExpectedVertexSemantic>* ExpectedSemantics = GetSpecialPassVertexSemantics(Pass);
+    if (!ExpectedSemantics)
+    {
+        ExpectedSemantics = GetExpectedVertexSemanticsForStride(VertexStride);
+    }
+
+    if (!ExpectedSemantics)
+    {
+        UE_LOG(
+            Render,
+            Warning,
+            "Mesh/Shader input contract uses unknown vertex stride. Pass=%s Shader=%s Material=%s VertexStride=%u",
+            GetRenderPassName(Pass),
+            ShaderLabel,
+            MaterialLabel,
+            VertexStride);
+        return;
+    }
+
+    const TArray<FGraphicsProgram::FVertexInputElement>& ShaderInputs = Shader->GetVertexInputs();
+    FString                                             MissingSemantics;
+
+    for (const FExpectedVertexSemantic& Expected : *ExpectedSemantics)
+    {
+        bool bFound = false;
+        for (const FGraphicsProgram::FVertexInputElement& InputElement : ShaderInputs)
+        {
+            if (_stricmp(Expected.SemanticName, InputElement.SemanticName.c_str()) == 0 &&
+                Expected.SemanticIndex == InputElement.SemanticIndex)
+            {
+                bFound = true;
+                break;
+            }
+        }
+
+        if (!bFound)
+        {
+            if (!MissingSemantics.empty())
+            {
+                MissingSemantics += ",";
+            }
+
+            MissingSemantics += Expected.SemanticName;
+            if (Expected.SemanticIndex > 0)
+            {
+                MissingSemantics += std::to_string(Expected.SemanticIndex);
+            }
+        }
+    }
+
+    if (!MissingSemantics.empty())
+    {
+        UE_LOG(
+            Render,
+            Warning,
+            "Mesh/Shader input mismatch detected. Pass=%s Shader=%s Material=%s VertexStride=%u MissingSemantics=%s",
+            GetRenderPassName(Pass),
+            ShaderLabel,
+            MaterialLabel,
+            VertexStride,
+            MissingSemantics.c_str());
+    }
+}
+} // namespace
 
 void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERenderPass Pass, FRenderPipelineContext& Context, FDrawCommandList& OutList, uint16 UserBits)
 {
@@ -49,47 +403,7 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
     }
 
     ID3D11DeviceContext* Ctx             = Context.Context;
-    FGraphicsProgram*    Shader          = Proxy.Shader;
-    const bool           bIsMaskLikePass = (Pass == ERenderPass::DepthPre || Pass == ERenderPass::SelectionMask || Pass == ERenderPass::ShadowMap);
-
-    if (Pass == ERenderPass::ShadowMap)
-    {
-        const EShadowFilterMethod ShadowFilterMethod = GetShadowFilterMethod();
-        if (ShadowFilterMethod == EShadowFilterMethod::ESM)
-        {
-            Shader = FShaderManager::Get().GetShader(EShaderType::ShadowEncodeESM);
-        }
-        else if (ShadowFilterMethod == EShadowFilterMethod::VSM)
-        {
-            Shader = FShaderManager::Get().GetShader(EShaderType::ShadowEncodeVSM);
-        }
-        else
-        {
-            Shader = FShaderManager::Get().GetShader(EShaderType::DepthOnly);
-        }
-    }
-    else if (bIsMaskLikePass)
-    {
-        Shader = FShaderManager::Get().GetShader(EShaderType::DepthOnly);
-    }
-    else if (Pass == ERenderPass::Opaque &&
-             Context.SceneView &&
-             Proxy.bAllowViewModeShaderOverride &&
-             Context.ViewMode.Registry &&
-             Context.ViewMode.Registry->HasConfig(Context.ViewMode.ActiveViewMode))
-    {
-        const FViewModePassDesc* Desc =
-            Context.ViewMode.Registry->FindPassDesc(Context.ViewMode.ActiveViewMode, ERenderPass::Opaque, Context.SceneView->RenderPath);
-        if (Desc && Desc->CompiledShader)
-        {
-            Shader = Desc->CompiledShader;
-        }
-    }
-
-    if (!Shader)
-    {
-        return;
-    }
+    const bool                     bIsMaskLikePass = (Pass == ERenderPass::DepthPre || Pass == ERenderPass::SelectionMask || Pass == ERenderPass::ShadowMap);
 
     const FRenderPassDrawPreset& PassPreset = Context.GetRenderPassDrawPreset(Pass);
 
@@ -124,12 +438,37 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
     auto AddSection = [&](uint32 FirstIndex, uint32 IndexCount, ID3D11ShaderResourceView* BaseSRV, ID3D11ShaderResourceView* InNormalSRV,
                           ID3D11ShaderResourceView* InSpecularSRV,
                           FConstantBuffer* CB0, FConstantBuffer* CB1,
-                          EBlendState SectionBlend, EDepthStencilState SectionDepthStencil, ERasterizerState SectionRasterizer, FMeshBuffer* MeshBuffer = nullptr)
+                          EBlendState SectionBlend, EDepthStencilState SectionDepthStencil, ERasterizerState SectionRasterizer,
+                          FMeshBuffer* MeshBuffer = nullptr,
+                          FGraphicsProgram* SectionShader = nullptr,
+                          const TArray<FShaderResourceBinding>* ShaderResourceBindings = nullptr,
+                          const FString* MaterialPath = nullptr)
     {
         if (IndexCount == 0)
         {
             return;
         }
+
+        const FMeshPassShaderSelection ShaderSelection = ResolveMeshPassShader(Proxy, SectionShader, Pass, Context);
+        FGraphicsProgram*              Shader          = ShaderSelection.Shader;
+        if (!Shader)
+        {
+            return;
+        }
+
+        LogMeshShaderSelectionOnce(
+            Pass,
+            Proxy,
+            ShaderSelection,
+            MaterialPath ? *MaterialPath : FString(),
+            FirstIndex,
+            IndexCount);
+
+        ValidateMeshShaderInputCompatibilityOnce(
+            Pass,
+            Shader,
+            MeshBuffer ? MeshBuffer : Proxy.MeshBuffer,
+            MaterialPath ? *MaterialPath : FString());
 
         FDrawCommand& Cmd = OutList.AddCommand();
         Cmd.Shader        = Shader;
@@ -145,19 +484,24 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
         }
         else
         {
+            const bool bUsesDepthPreForViewMode =
+                (Pass == ERenderPass::Opaque) &&
+                Context.ViewMode.Registry != nullptr &&
+                Context.ViewMode.Registry->HasConfig(Context.ViewMode.ActiveViewMode) &&
+                Context.ViewMode.Registry->UsesDepthPrePass(Context.ViewMode.ActiveViewMode);
+
             const bool bUsesViewModeOpaque =
                 (Pass == ERenderPass::Opaque) &&
-                Context.ViewMode.Registry &&
-                Context.ViewMode.Registry->HasConfig(Context.ViewMode.ActiveViewMode);
+                ShaderSelection.Policy == EShaderOverridePolicy::Legacy;
 
             // Reversed-Z depth pre-pass writes the same geometry depth first.
-            // Opaque must then use GREATER_EQUAL-style read-only depth or every
-            // opaque pixel at the exact same depth fails the comparison.
+            // Any opaque color pass that follows depth pre must keep GREATER_EQUAL
+            // style read-only depth so exact-depth fragments survive the second pass.
             if (SectionDepthStencil != EDepthStencilState::Default)
             {
                 Cmd.DepthStencil = SectionDepthStencil;
             }
-            else if (bUsesViewModeOpaque)
+            else if (bUsesDepthPreForViewMode || bUsesViewModeOpaque)
             {
                 Cmd.DepthStencil = EDepthStencilState::DepthReadOnly;
             }
@@ -204,16 +548,27 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
         Cmd.DiffuseSRV     = bIsMaskLikePass ? nullptr : BaseSRV;
         Cmd.NormalSRV      = bIsMaskLikePass ? nullptr : InNormalSRV;
         Cmd.SpecularSRV    = bIsMaskLikePass ? nullptr : InSpecularSRV;
+        if (!bIsMaskLikePass && ShaderResourceBindings)
+        {
+            Cmd.ShaderResourceBindings = *ShaderResourceBindings;
+        }
         Cmd.Pass           = Pass;
+        Cmd.DebugName      = MaterialPath && !MaterialPath->empty() ? MaterialPath->c_str() : nullptr;
         const uintptr_t MaterialHash =
             (reinterpret_cast<uintptr_t>(Cmd.PerShaderCB[0]) >> 4) ^
             (reinterpret_cast<uintptr_t>(Cmd.PerShaderCB[1]) >> 9) ^
             (reinterpret_cast<uintptr_t>(Cmd.DiffuseSRV) >> 14) ^
             (reinterpret_cast<uintptr_t>(Cmd.NormalSRV) >> 19) ^
             (reinterpret_cast<uintptr_t>(Cmd.SpecularSRV) >> 24);
+        uint32 GeneralBindingHash = 0;
+        for (const FShaderResourceBinding& Binding : Cmd.ShaderResourceBindings)
+        {
+            GeneralBindingHash ^= (Binding.SlotIndex * 131u);
+            GeneralBindingHash ^= static_cast<uint32>((reinterpret_cast<uintptr_t>(Binding.SRV) >> (Binding.SlotIndex & 15u)) & 0xFFFFu);
+        }
         
         const uint8 FinalUserBits = static_cast<uint8>(UserBits & 0xFFu);
-        const uint32 FinalMaterialHash = static_cast<uint32>(MaterialHash & 0xFFFFu);
+        const uint32 FinalMaterialHash = static_cast<uint32>((MaterialHash ^ GeneralBindingHash) & 0xFFFFu);
 
         Cmd.SortKey = FDrawCommand::BuildSortKey(
             Pass,
@@ -238,7 +593,10 @@ void DrawCommandBuild::BuildMeshDrawCommand(const FPrimitiveProxy& Proxy, ERende
                 S.Blend,
                 S.DepthStencil,
                 S.Rasterizer,
-				S.MeshBuffer);
+				S.MeshBuffer,
+                S.Shader,
+                &S.ShaderResourceBindings,
+                &S.MaterialPath);
         }
     }
     else

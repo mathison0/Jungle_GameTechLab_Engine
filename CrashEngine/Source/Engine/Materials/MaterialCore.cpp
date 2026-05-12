@@ -4,10 +4,27 @@
 #include "Materials/MaterialSemantics.h"
 #include "Render/Resources/Bindings/RenderBindingSlots.h"
 
-void FMaterialTemplate::CreateSurfaceMaterialLayout()
+namespace
+{
+void ResetTemplateLayout(TMap<FString, FMaterialParameterInfo*>& ParameterLayout, TArray<std::unique_ptr<FMaterialParameterInfo>>& OwnedParameterLayout)
 {
     ParameterLayout.clear();
     OwnedParameterLayout.clear();
+}
+
+void AddTemplateParameter(TMap<FString, FMaterialParameterInfo*>& ParameterLayout, TArray<std::unique_ptr<FMaterialParameterInfo>>& OwnedParameterLayout,
+                          const FString& Name, const FMaterialParameterInfo& SourceInfo)
+{
+    auto Info = std::make_unique<FMaterialParameterInfo>();
+    *Info = SourceInfo;
+    ParameterLayout[Name] = Info.get();
+    OwnedParameterLayout.push_back(std::move(Info));
+}
+} // namespace
+
+void FMaterialTemplate::CreateSurfaceMaterialLayout()
+{
+    ResetTemplateLayout(ParameterLayout, OwnedParameterLayout);
 
     constexpr uint32 BufferSize = 48;
     constexpr uint32 SlotIndex = ECBSlot::PerShader0;
@@ -15,14 +32,13 @@ void FMaterialTemplate::CreateSurfaceMaterialLayout()
 
     auto AddParameter = [&](const FString& Name, uint32 Offset, uint32 Size)
     {
-        auto Info = std::make_unique<FMaterialParameterInfo>();
-        Info->BufferName = BufferName;
-        Info->SlotIndex = SlotIndex;
-        Info->Offset = Offset;
-        Info->Size = Size;
-        Info->BufferSize = BufferSize;
-        ParameterLayout[Name] = Info.get();
-        OwnedParameterLayout.push_back(std::move(Info));
+        FMaterialParameterInfo Info;
+        Info.BufferName = BufferName;
+        Info.SlotIndex = SlotIndex;
+        Info.Offset = Offset;
+        Info.Size = Size;
+        Info.BufferSize = BufferSize;
+        AddTemplateParameter(ParameterLayout, OwnedParameterLayout, Name, Info);
     };
 
     AddParameter(MaterialSemantics::SectionColorParameter, 0, sizeof(float) * 4);
@@ -33,6 +49,21 @@ void FMaterialTemplate::CreateSurfaceMaterialLayout()
     AddParameter("HasNormalTexture", 36, sizeof(uint32));
     AddParameter("HasSpecularTexture", 40, sizeof(uint32));
     AddParameter("StaticMeshMaterialPadding", 44, sizeof(float));
+}
+
+void FMaterialTemplate::CreateReflectedMaterialLayout(const TMap<FString, FMaterialParameterInfo*>& InLayout)
+{
+    ResetTemplateLayout(ParameterLayout, OwnedParameterLayout);
+
+    for (const auto& Pair : InLayout)
+    {
+        if (Pair.second == nullptr)
+        {
+            continue;
+        }
+
+        AddTemplateParameter(ParameterLayout, OwnedParameterLayout, Pair.first, *Pair.second);
+    }
 }
 
 bool FMaterialTemplate::GetParameterInfo(const FString& Name, FMaterialParameterInfo& OutInfo) const

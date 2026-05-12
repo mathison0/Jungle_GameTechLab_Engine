@@ -8,6 +8,13 @@
 class FGraphicsProgram : public FShaderProgramBase
 {
 public:
+    struct FVertexInputElement
+    {
+        FString SemanticName;
+        uint32  SemanticIndex = 0;
+        DXGI_FORMAT Format    = DXGI_FORMAT_UNKNOWN;
+    };
+
     FGraphicsProgram() = default;
     ~FGraphicsProgram() override { Release(); }
 
@@ -25,6 +32,7 @@ public:
     ID3D11VertexShader* GetVertexShader() const { return VertexShader.Get(); }
     ID3D11PixelShader*  GetPixelShader() const { return PixelShader.Get(); }
     ID3D11InputLayout*  GetInputLayout() const { return InputLayout; }
+    const TArray<FVertexInputElement>& GetVertexInputs() const { return VertexInputs; }
 
 private:
     bool CompileVertexShader(
@@ -50,4 +58,5 @@ private:
     FVertexShaderStage VertexShader;
     FPixelShaderStage  PixelShader;
     ID3D11InputLayout* InputLayout = nullptr;
+    TArray<FVertexInputElement> VertexInputs;
 };

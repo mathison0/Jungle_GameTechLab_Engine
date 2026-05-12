@@ -2,6 +2,7 @@
 
 #include "Render/Execute/Registry/RenderPassTypes.h"
 #include "Render/RHI/D3D11/Common/D3D11API.h"
+#include "Render/Resources/Bindings/ShaderResourceBinding.h"
 #include "Render/Resources/State/RenderStateTypes.h"
 #include "Math/Vector.h"
 #include "Core/CoreTypes.h"
@@ -41,6 +42,7 @@ struct FDrawCommand
     ID3D11ShaderResourceView* DiffuseSRV     = nullptr;
     ID3D11ShaderResourceView* NormalSRV      = nullptr;
     ID3D11ShaderResourceView* SpecularSRV    = nullptr;
+    TArray<FShaderResourceBinding> ShaderResourceBindings;
     ID3D11ShaderResourceView* LocalLightSRV  = nullptr; // t6: LocalLights StructuredBuffer
     bool                      bForceSRVBind  = false;
 

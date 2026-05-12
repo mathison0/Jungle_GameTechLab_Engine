@@ -10,10 +10,27 @@
 #include "Texture/Texture2D.h"
 #include "Engine/Runtime/Engine.h"
 #include "Render/Renderer.h"
+#include "Platform/Paths.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <initializer_list>
 #include <memory>
+
+namespace
+{
+bool IsReflectionBindingTestPair(const UMaterial* Material, const FGraphicsProgram* GraphicsProgram)
+{
+    if (Material == nullptr || GraphicsProgram == nullptr)
+    {
+        return false;
+    }
+
+    const std::filesystem::path MaterialPath = FPaths::ToPath(FPaths::ToWide(Material->GetAssetPathFileName()));
+    const std::filesystem::path ShaderPath = FPaths::ToPath(FPaths::ToWide(Material->GetShaderPath()));
+    return MaterialPath.filename() == L"FloorMaterial.json" && ShaderPath.filename() == L"CustomTest.hlsl";
+}
+} // namespace
 
 FMeshSceneProxy::FMeshSceneProxy(UMeshComponent* InComponent)
     : FPrimitiveProxy(InComponent) 
@@ -99,6 +116,35 @@ bool FMeshSceneProxy::TryGetTextureSRV(UMaterial* Material, std::initializer_lis
     }
 
     return false;
+}
+
+TArray<FShaderResourceBinding> FMeshSceneProxy::BuildReflectedTextureBindings(const UMaterial* Material, const FGraphicsProgram* GraphicsProgram)
+{
+    TArray<FShaderResourceBinding> Bindings;
+    if (!IsReflectionBindingTestPair(Material, GraphicsProgram))
+    {
+        return Bindings;
+    }
+
+    const TArray<FShaderTextureBindingInfo>& ReflectedBindings = GraphicsProgram->GetTextureBindings();
+    Bindings.reserve(ReflectedBindings.size());
+
+    for (const FShaderTextureBindingInfo& ReflectedBinding : ReflectedBindings)
+    {
+        UTexture2D* Texture = nullptr;
+        const FString& SlotName = ReflectedBinding.CanonicalSlotName.empty() ? ReflectedBinding.ResourceName : ReflectedBinding.CanonicalSlotName;
+        if (!Material->GetTextureParameter(SlotName, Texture) || Texture == nullptr || Texture->GetSRV() == nullptr)
+        {
+            continue;
+        }
+
+        FShaderResourceBinding Binding;
+        Binding.SlotIndex = ReflectedBinding.SlotIndex;
+        Binding.SRV = Texture->GetSRV();
+        Bindings.push_back(Binding);
+    }
+
+    return Bindings;
 }
 
 float FMeshSceneProxy::GetScalarOrDefault(const UMaterial* Material, const char* ParamName, float DefaultValue)
