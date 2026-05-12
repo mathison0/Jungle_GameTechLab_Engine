@@ -821,11 +821,11 @@ bool FFBXImporter::ImportAll(const FString& FBXFilePath, const FImportOptions& O
         // 그대로 쓰면 bone은 변환됐는데 mesh bind만 원래 축에 남는 문제가 생깁니다.
         FbxAxisSystem UEAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
         UEAxisSystem.DeepConvertScene(Scene);
-        // 단위계도 엔진 기준(미터)으로 정규화. cm 기반 FBX(블렌더/MMD 등)와 m 기반 FBX 모두 동일한 스케일에서 처리하기 위함.
-        if (Scene->GetGlobalSettings().GetSystemUnit() != FbxSystemUnit::m)
-        {
-            FbxSystemUnit::m.ConvertScene(Scene);
-        }
+        //// 단위계도 엔진 기준(미터)으로 정규화. cm 기반 FBX(블렌더/MMD 등)와 m 기반 FBX 모두 동일한 스케일에서 처리하기 위함.
+        //if (Scene->GetGlobalSettings().GetSystemUnit() != FbxSystemUnit::m)
+        //{
+        //    FbxSystemUnit::m.ConvertScene(Scene);
+        //}
         
         // 1. 스켈레톤 구조 추출
         for (int i = 0; i < RootNode->GetChildCount(); i++) {
