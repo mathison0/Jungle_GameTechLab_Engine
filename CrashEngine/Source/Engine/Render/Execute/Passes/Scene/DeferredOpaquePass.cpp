@@ -11,7 +11,6 @@
 #include "Render/Submission/Command/BuildDrawCommand.h"
 #include "Render/Submission/Command/DrawCommandList.h"
 #include "Render/Visibility/LightCulling/TileBasedLightCulling.h"
-
 void FDeferredOpaquePass::PrepareInputs(FRenderPipelineContext& Context)
 {
     ID3D11ShaderResourceView* NullSRVs[6] = {};

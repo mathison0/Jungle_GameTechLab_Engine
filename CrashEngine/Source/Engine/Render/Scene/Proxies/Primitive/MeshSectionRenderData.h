@@ -1,8 +1,11 @@
 ﻿#pragma once
 
+#include "Core/CoreTypes.h"
+#include "Render/Resources/Bindings/ShaderResourceBinding.h"
 #include "Render/Resources/State/RenderStateTypes.h"
 
 class FConstantBuffer;
+class FGraphicsProgram;
 class FMeshBuffer;
 struct ID3D11ShaderResourceView;
 
@@ -10,9 +13,12 @@ struct ID3D11ShaderResourceView;
 struct FMeshSectionRenderData
 {
 	FMeshBuffer*			  MeshBuffer  = nullptr;
+    FGraphicsProgram*         Shader      = nullptr;
     ID3D11ShaderResourceView* DiffuseSRV  = nullptr;
     ID3D11ShaderResourceView* NormalSRV   = nullptr;
     ID3D11ShaderResourceView* SpecularSRV = nullptr;
+    TArray<FShaderResourceBinding> ShaderResourceBindings;
+    FString                   MaterialPath;
     uint32                    FirstIndex  = 0;
     uint32                    IndexCount  = 0;
 

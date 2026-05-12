@@ -115,9 +115,12 @@ void FStaticMeshSceneProxy::RebuildSectionRenderData()
 
             if (Mat)
             {
+                Draw.MaterialPath = Mat->GetAssetPathFileName();
+                Draw.Shader = Mat->GetGraphicsProgram();
                 TryGetTextureSRV(Mat, { MaterialSemantics::DiffuseTextureSlot, "BaseColorTexture", "AlbedoTexture", "BaseTexture", "DiffuseMap" }, Draw.DiffuseSRV);
                 TryGetTextureSRV(Mat, { MaterialSemantics::NormalTextureSlot, "NormalMap", "NormalMapTexture", "BumpTexture", "BumpMap" }, Draw.NormalSRV);
                 TryGetTextureSRV(Mat, { MaterialSemantics::SpecularTextureSlot, "SpecularMap", "SpecularMapTexture", "SpecularMask", "SpecularMaskTexture", "GlossMap" }, Draw.SpecularSRV);
+                Draw.ShaderResourceBindings = BuildReflectedTextureBindings(Mat, Draw.Shader);
             }
 
             auto MaterialCB = BuildMeshMaterialCB(Mat, Device, Context, Draw.DiffuseSRV, Draw.NormalSRV, Draw.SpecularSRV);
