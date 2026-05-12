@@ -103,18 +103,16 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
     {
         CurrentBoneLocalMatrices = DisplayPoseBoneLocalMatrices;
         RefreshBoneTransforms();
+        UpdateSkinningMatrices();
+        UpdateSkinnedVertices();
+        CacheLocalBounds();
+        MarkRenderStateDirty();
+        MarkWorldBoundsDirty();
     }
     else
     {
         ResetToReferencePose();
     }
-
-    UpdateSkinningMatrices();
-    UpdateSkinnedVertices();
-
-    CacheLocalBounds();
-    MarkRenderStateDirty();
-    MarkWorldBoundsDirty();
 }
 
 void USkinnedMeshComponent::CacheLocalBounds()
@@ -395,6 +393,12 @@ void USkinnedMeshComponent::ResetToReferencePose()
     }
 
     RefreshEditedDisplayPose();
+    UpdateSkinningMatrices();
+    UpdateSkinnedVertices();
+    CacheLocalBounds();
+
+    MarkRenderStateDirty();
+    MarkWorldBoundsDirty();
 }
 
 bool USkinnedMeshComponent::SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& LocalMatrix)
@@ -688,6 +692,7 @@ void USkinnedMeshComponent::SetSkeletalDebugPoseMode(ESkeletalDebugPoseMode InMo
     else
     {
         ResetToReferencePose();
+        return;
     }
 
     UpdateSkinningMatrices();
