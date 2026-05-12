@@ -399,3 +399,23 @@ bool FSkeletalMeshNavigationTool::HandleWheelZoom(float DeltaTime)
 
     return true;
 }
+
+bool FSkeletalMeshCommandTool::HandleInput(float DeltaTime)
+{
+    if (!Owner || !Controller)
+    {
+        return false;
+    }
+
+    const FViewportFrameInput& Input = Controller->GetCurrentInput();
+
+    if (Input.KeyReleased[VK_SPACE])
+    {
+        if (UGizmoComponent* Gizmo = Owner->GetGizmo())
+        {
+            Gizmo->SetNextMode();
+            return true;
+        }
+    }
+    return false;
+}

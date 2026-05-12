@@ -8,6 +8,7 @@ FSkelViewerViewportInputController::FSkelViewerViewportInputController(FSkeletal
     Owner = InOwner;
     OwnViewer = InViewer;
 
+    Tools.emplace_back(std::make_unique<FSkeletalMeshCommandTool>(Owner, OwnViewer, this));
     Tools.emplace_back(std::make_unique<FSkeletalMeshGizmoTool>(Owner, OwnViewer, this));
     Tools.emplace_back(std::make_unique<FSkeletalMeshViewerBoneSelectTool>(Owner, OwnViewer, this));
     Tools.emplace_back(std::make_unique<FSkeletalMeshNavigationTool>(Owner, OwnViewer, this));
