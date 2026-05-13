@@ -469,8 +469,8 @@ CMakeLists.txt
 *.cso
 
 # Runtime generated engine data
-CrashEngine/Saved/
+PacificEngine/Saved/
 
 # Include Third-party library
-!CrashEngine/ThirdParty/**/lib/[Dd]ebug/
-!CrashEngine/ThirdParty/**/lib/[Rr]elease/
+!PacificEngine/ThirdParty/**/lib/[Dd]ebug/
+!PacificEngine/ThirdParty/**/lib/[Rr]elease/
