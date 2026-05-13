@@ -1,0 +1,56 @@
+{
+  "Actors" : [{
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_0",
+      "NonSceneComponents" : [],
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_4",
+        "Properties" : {
+          "Cast Shadow" : true,
+          "CollisionChannel" : 1,
+          "Element 0" : {
+            "Path" : "C:/Users/jungle/Documents/GitHub/W10_2/PacificEngine/None"
+          },
+          "Element 1" : {
+            "Path" : "C:/Users/jungle/Documents/GitHub/W10_2/PacificEngine/None"
+          },
+          "Element 2" : {
+            "Path" : "C:/Users/jungle/Documents/GitHub/W10_2/PacificEngine/None"
+          },
+          "Element 3" : {
+            "Path" : "C:/Users/jungle/Documents/GitHub/W10_2/PacificEngine/None"
+          },
+          "Generate Hit Events" : false,
+          "Generate Overlap Events" : false,
+          "Is Editor Helper" : false,
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Mobility" : 1,
+          "Receives Decals" : true,
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Skeletal Mesh" : "Asset/Content/Models/Man/Man.fbx_Mesh_metarig",
+          "Visible" : true,
+          "Visible In Editor" : true,
+          "Visible In Game" : true,
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
+    }],
+  "ClassName" : "UWorld",
+  "ContextHandle" : "Default",
+  "ContextName" : "Default",
+  "Name" : "test",
+  "PerspectiveCamera" : {
+    "FOV" : 1.047198,
+    "FarClip" : 1000.000000,
+    "Location" : [7.377869, 47.456165, 27.697639],
+    "NearClip" : 0.100000,
+    "Rotation" : [-0.000000, 4.220365, -94.130981]
+  },
+  "Version" : 3,
+  "WorldType" : "Editor"
+}
