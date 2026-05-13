@@ -507,6 +507,25 @@ bool USkinnedMeshComponent::SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& L
     return true;
 }
 
+bool USkinnedMeshComponent::SetBoneLocalMatrices(const TArray<FMatrix>& LocalMatrices)
+{
+    if (LocalMatrices.size() != CurrentBoneLocalMatrices.size())
+    {
+        return false;
+    }
+
+    CurrentBoneLocalMatrices = LocalMatrices;
+    RefreshBoneTransforms();
+    RefreshEditedDisplayPose();
+    UpdateSkinningMatrices();
+    UpdateSkinnedVertices();
+    CacheLocalBounds();
+
+    MarkRenderStateDirty();
+    MarkWorldBoundsDirty();
+    return true;
+}
+
 void USkinnedMeshComponent::UpdateSkinningMatrices()
 {
     SkinningMatrices.clear();

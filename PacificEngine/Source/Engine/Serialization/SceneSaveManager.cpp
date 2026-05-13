@@ -13,6 +13,7 @@
 #include "Component/ActorComponent.h"
 #include "Component/LightComponentBase.h"
 #include "Component/StaticMeshComponent.h"
+#include "Component/SkeletalMeshComponent.h"
 #include "Component/CameraComponent.h"
 #include "GameFramework/StaticMeshActor.h"
 #include "Object/Object.h"
@@ -49,6 +50,33 @@ static FVector ReadVec3(json::JSON& Arr)
     return out;
 }
 
+// May have to remove this block
+static json::JSON WriteMatrix(const FMatrix& Matrix)
+{
+    json::JSON arr = json::Array();
+    for (float Value : Matrix.Data)
+    {
+        arr.append(static_cast<double>(Value));
+    }
+    return arr;
+}
+
+static bool ReadMatrix(json::JSON& Arr, FMatrix& OutMatrix)
+{
+    if (Arr.JSONType() != json::JSON::Class::Array || Arr.size() != 16)
+    {
+        return false;
+    }
+
+    int32 i = 0;
+    for (auto& e : Arr.ArrayRange())
+    {
+        OutMatrix.Data[i++] = static_cast<float>(e.ToFloat());
+    }
+    return true;
+}
+// May have to remove this block
+
 // ---------------------------------------------------------------------------
 
 namespace SceneKeys
@@ -68,6 +96,7 @@ static constexpr const char* NonSceneComponents = "NonSceneComponents";
 static constexpr const char* Properties = "Properties";
 static constexpr const char* Children = "Children";
 static constexpr const char* ShadowResolution = "Shadow Resolution";
+static constexpr const char* BoneLocalMatrices = "Bone Local Matrices"; // May have to remove this block
 } // namespace SceneKeys
 
 static const char* WorldTypeToString(EWorldType Type)
@@ -287,6 +316,19 @@ json::JSON FSceneSaveManager::SerializeProperties(UActorComponent* Comp)
     {
         props[SceneKeys::ShadowResolution] = JSON(static_cast<int32>(LightComponent->GetShadowResolution()));
     }
+
+	// May have to remove this block
+    if (USkeletalMeshComponent* SkeletalComponent = Cast<USkeletalMeshComponent>(Comp))
+    {
+        JSON BoneMatrices = json::Array();
+        const int32 BoneCount = SkeletalComponent->GetNumBones();
+        for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+        {
+            BoneMatrices.append(WriteMatrix(SkeletalComponent->GetBoneLocalMatrix(BoneIndex)));
+        }
+        props[SceneKeys::BoneLocalMatrices] = BoneMatrices;
+    }
+    // May have to remove this block
 
     return props;
 }
@@ -683,6 +725,38 @@ void FSceneSaveManager::DeserializeProperties(UActorComponent* Comp, json::JSON&
         DeserializePropertyValue(Prop, Value);
         Comp->PostEditProperty(Prop.Name.c_str());
     }
+
+	// May have to remove this block
+    if (USkeletalMeshComponent* SkeletalComponent = Cast<USkeletalMeshComponent>(Comp))
+    {
+        if (PropsJSON.hasKey(SceneKeys::BoneLocalMatrices))
+        {
+            json::JSON& BoneMatricesJSON = PropsJSON[SceneKeys::BoneLocalMatrices];
+            if (BoneMatricesJSON.JSONType() == json::JSON::Class::Array)
+            {
+                TArray<FMatrix> BoneLocalMatrices;
+                BoneLocalMatrices.reserve(BoneMatricesJSON.size());
+
+                bool bAllMatricesValid = true;
+                for (auto& MatrixJSON : BoneMatricesJSON.ArrayRange())
+                {
+                    FMatrix Matrix = FMatrix::Identity;
+                    if (!ReadMatrix(MatrixJSON, Matrix))
+                    {
+                        bAllMatricesValid = false;
+                        break;
+                    }
+                    BoneLocalMatrices.push_back(Matrix);
+                }
+
+                if (bAllMatricesValid)
+                {
+                    SkeletalComponent->SetBoneLocalMatrices(BoneLocalMatrices);
+                }
+            }
+        }
+    }
+    // May have to remove this block
 }
 
 void FSceneSaveManager::DeserializePropertyValue(FPropertyDescriptor& Prop, json::JSON& Value)

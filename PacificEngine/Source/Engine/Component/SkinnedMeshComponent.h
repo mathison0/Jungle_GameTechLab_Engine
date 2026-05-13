@@ -48,6 +48,7 @@ public:
 	void ResetToReferencePose();
 
 	bool SetBoneLocalMatrix(int32 BoneIndex, const FMatrix& LocalMatrix);
+    bool SetBoneLocalMatrices(const TArray<FMatrix>& LocalMatrices);
 	const FMatrix& GetBoneLocalMatrix(int32 BoneIndex) const;
 	const FMatrix& GetBoneComponentMatrix(int32 BoneIndex) const;
     FMatrix GetBoneDebugWorldMatrix(int32 BoneIndex) const;
