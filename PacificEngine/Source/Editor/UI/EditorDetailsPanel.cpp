@@ -50,6 +50,105 @@ namespace
 {
 constexpr const char* ContentAssetPayloadType = "CRASH_CONTENT_ASSET_PATH";
 constexpr const char* LuaScriptPayloadType = "CRASH_LUA_SCRIPT_PATH";
+
+static bool IsWorldTransformSpace(const UGizmoComponent* Gizmo)
+{
+    return Gizmo && Gizmo->IsWorldSpace();
+}
+
+static FVector GetDisplayedLocation(USceneComponent* SceneComp, bool bWorldSpace)
+{
+    if (!SceneComp)
+    {
+        return FVector();
+    }
+
+    return bWorldSpace ? SceneComp->GetWorldLocation() : SceneComp->GetRelativeLocation();
+}
+
+static FRotator GetDisplayedRotation(USceneComponent* SceneComp, bool bWorldSpace)
+{
+    if (!SceneComp)
+    {
+        return FRotator();
+    }
+
+    return bWorldSpace ? SceneComp->GetWorldRotation().ToRotator() : SceneComp->GetCachedEditRotator();
+}
+
+static void SetDisplayedLocation(USceneComponent* SceneComp, const FVector& NewLocation, bool bWorldSpace)
+{
+    if (!SceneComp)
+    {
+        return;
+    }
+
+    if (bWorldSpace)
+    {
+        SceneComp->SetWorldLocation(NewLocation);
+    }
+    else
+    {
+        SceneComp->SetRelativeLocation(NewLocation);
+    }
+}
+
+static void SetDisplayedRotation(USceneComponent* SceneComp, const FRotator& NewRotation, bool bWorldSpace)
+{
+    if (!SceneComp)
+    {
+        return;
+    }
+
+    if (bWorldSpace)
+    {
+        SceneComp->SetWorldRotationWithEulerHint(NewRotation.ToQuaternion(), NewRotation.GetClamped());
+    }
+    else
+    {
+        SceneComp->SetRelativeRotationWithEulerHint(NewRotation.ToQuaternion(), NewRotation.GetClamped());
+    }
+}
+
+static void ApplyRotationDeltaToActor(AActor* Actor, const FQuat& DeltaDisplayRotation, bool bWorldSpace)
+{
+    if (!Actor || !Actor->GetRootComponent())
+    {
+        return;
+    }
+
+    USceneComponent* Root = Actor->GetRootComponent();
+    if (bWorldSpace)
+    {
+        FQuat NewWorldRotation = DeltaDisplayRotation * Root->GetWorldRotation();
+        NewWorldRotation.Normalize();
+        Root->SetWorldRotationWithEulerHint(NewWorldRotation, NewWorldRotation.ToRotator());
+    }
+    else
+    {
+        FQuat NewLocalRotation = Root->GetRelativeQuat() * DeltaDisplayRotation;
+        NewLocalRotation.Normalize();
+        Root->SetRelativeRotationWithEulerHint(NewLocalRotation, NewLocalRotation.ToRotator());
+    }
+}
+
+static void ApplyLocationDeltaToActor(AActor* Actor, const FVector& Delta, bool bWorldSpace)
+{
+    if (!Actor || !Actor->GetRootComponent())
+    {
+        return;
+    }
+
+    USceneComponent* Root = Actor->GetRootComponent();
+    if (bWorldSpace)
+    {
+        Root->SetWorldLocation(Root->GetWorldLocation() + Delta);
+    }
+    else
+    {
+        Root->SetRelativeLocation(Root->GetRelativeLocation() + Delta);
+    }
+}
 }
 
 #define SEPARATOR()     \
@@ -750,53 +849,77 @@ void FEditorDetailsPanel::RenderActorProperties(AActor* PrimaryActor, const TArr
         ImGui::Text("Transform");
         ImGui::Spacing();
 
-        FVector Pos = PrimaryActor->GetActorLocation();
-        float PosArray[3] = { Pos.X, Pos.Y, Pos.Z };
+        UGizmoComponent* Gizmo = EditorEngine ? EditorEngine->GetGizmo() : nullptr;
+        const bool bWorldSpace = IsWorldTransformSpace(Gizmo);
+        ImGui::Text("Space: %s", bWorldSpace ? "World" : "Local");
+        ImGui::SameLine();
+        ImGui::TextDisabled("(Scale stays Local)");
 
         USceneComponent* RootComp = PrimaryActor->GetRootComponent();
+
+        FVector Pos = GetDisplayedLocation(RootComp, bWorldSpace);
+        float PosArray[3] = { Pos.X, Pos.Y, Pos.Z };
 
         FVector Scale = PrimaryActor->GetActorScale();
         float ScaleArray[3] = { Scale.X, Scale.Y, Scale.Z };
 
         if (ImGui::DragFloat3("Location", PosArray, 0.1f))
         {
-            FVector Delta = FVector(PosArray[0], PosArray[1], PosArray[2]) - Pos;
+            const FVector NewLocation(PosArray[0], PosArray[1], PosArray[2]);
+            const FVector Delta = NewLocation - Pos;
             for (AActor* Actor : SelectedActors)
             {
                 if (Actor)
-                    Actor->AddActorWorldOffset(Delta);
+                {
+                    ApplyLocationDeltaToActor(Actor, Delta, bWorldSpace);
+                }
             }
-            EditorEngine->GetGizmo()->UpdateGizmoTransform();
+            if (Gizmo)
+            {
+                Gizmo->UpdateGizmoTransform();
+            }
         }
         {
-            // Rotation: CachedEditRotator를 X=Roll(X축), Y=Pitch(Y축), Z=Yaw(Z축)로 노출
-            FRotator& CachedRot = RootComp->GetCachedEditRotator();
-            FRotator PrevRot = CachedRot;
-            float RotXYZ[3] = { CachedRot.Roll, CachedRot.Pitch, CachedRot.Yaw };
+            FRotator DisplayRot = GetDisplayedRotation(RootComp, bWorldSpace);
+            FRotator PrevRot = DisplayRot;
+            float RotXYZ[3] = { DisplayRot.Roll, DisplayRot.Pitch, DisplayRot.Yaw };
 
             if (ImGui::DragFloat3("Rotation", RotXYZ, 0.1f))
             {
-                CachedRot.Roll = RotXYZ[0];
-                CachedRot.Pitch = RotXYZ[1];
-                CachedRot.Yaw = RotXYZ[2];
+                FRotator NewDisplayRot(RotXYZ[1], RotXYZ[2], RotXYZ[0]);
+                FQuat DisplayDelta = bWorldSpace
+                                         ? (NewDisplayRot.ToQuaternion() * PrevRot.ToQuaternion().Inverse())
+                                         : (PrevRot.ToQuaternion().Inverse() * NewDisplayRot.ToQuaternion());
+                DisplayDelta.Normalize();
 
-                if (SelectedActors.size() > 1)
+                for (AActor* Actor : SelectedActors)
                 {
-                    FRotator Delta = CachedRot - PrevRot;
-                    for (AActor* Actor : SelectedActors)
+                    if (!Actor || !Actor->GetRootComponent())
                     {
-                        if (!Actor || Actor == PrimaryActor)
-                            continue;
+                        continue;
+                    }
+
+                    if (Actor == PrimaryActor)
+                    {
                         USceneComponent* Root = Actor->GetRootComponent();
-                        if (Root)
+                        if (bWorldSpace)
                         {
-                            FRotator Other = Root->GetCachedEditRotator();
-                            Root->SetRelativeRotation(Other + Delta);
+                            Root->SetWorldRotationWithEulerHint(NewDisplayRot.ToQuaternion(), NewDisplayRot.GetClamped());
+                        }
+                        else
+                        {
+                            Root->SetRelativeRotationWithEulerHint(NewDisplayRot.ToQuaternion(), NewDisplayRot.GetClamped());
                         }
                     }
+                    else
+                    {
+                        ApplyRotationDeltaToActor(Actor, DisplayDelta, bWorldSpace);
+                    }
                 }
-                RootComp->ApplyCachedEditRotator();
-                EditorEngine->GetGizmo()->UpdateGizmoTransform();
+                if (Gizmo)
+                {
+                    Gizmo->UpdateGizmoTransform();
+                }
             }
         }
         if (ImGui::DragFloat3("Scale", ScaleArray, 0.1f))
@@ -805,7 +928,9 @@ void FEditorDetailsPanel::RenderActorProperties(AActor* PrimaryActor, const TArr
             for (AActor* Actor : SelectedActors)
             {
                 if (Actor)
+                {
                     Actor->SetActorScale(Actor->GetActorScale() + Delta);
+                }
             }
         }
     }
@@ -1234,12 +1359,43 @@ void FEditorDetailsPanel::RenderComponentProperties(AActor* Actor)
     const bool bTransformOpen = SelectedComponent->IsA<USceneComponent>() && BeginEditorSection("Transform");
     if (bTransformOpen)
     {
-        for (int32 i = 0; i < (int32)Props.size(); ++i)
+        USceneComponent* SceneComp = static_cast<USceneComponent*>(SelectedComponent);
+        UGizmoComponent* Gizmo = EditorEngine ? EditorEngine->GetGizmo() : nullptr;
+        const bool bWorldSpace = IsWorldTransformSpace(Gizmo);
+        ImGui::Text("Space: %s", bWorldSpace ? "World" : "Local");
+        ImGui::SameLine();
+        ImGui::TextDisabled("(Scale stays Local)");
+
+        FVector Pos = GetDisplayedLocation(SceneComp, bWorldSpace);
+        float PosArray[3] = { Pos.X, Pos.Y, Pos.Z };
+
+        if (ImGui::DragFloat3("Location", PosArray, 0.1f))
         {
-            if (IsTransformProp(Props[i].Name))
+            const FVector NewLocation(PosArray[0], PosArray[1], PosArray[2]);
+            SetDisplayedLocation(SceneComp, NewLocation, bWorldSpace);
+            if (Gizmo)
             {
-                RenderDetailsPanel(Props, i);
+                Gizmo->UpdateGizmoTransform();
             }
+        }
+
+        FRotator DisplayRot = GetDisplayedRotation(SceneComp, bWorldSpace);
+        float RotXYZ[3] = { DisplayRot.Roll, DisplayRot.Pitch, DisplayRot.Yaw };
+        if (ImGui::DragFloat3("Rotation", RotXYZ, 0.1f))
+        {
+            const FRotator NewRotation(RotXYZ[1], RotXYZ[2], RotXYZ[0]);
+            SetDisplayedRotation(SceneComp, NewRotation, bWorldSpace);
+            if (Gizmo)
+            {
+                Gizmo->UpdateGizmoTransform();
+            }
+        }
+
+        FVector Scale = SceneComp->GetRelativeScale();
+        float ScaleArray[3] = { Scale.X, Scale.Y, Scale.Z };
+        if (ImGui::DragFloat3("Scale", ScaleArray, 0.1f))
+        {
+            SceneComp->SetRelativeScale(FVector(ScaleArray[0], ScaleArray[1], ScaleArray[2]));
         }
     }
     EndEditorSection(bTransformOpen);

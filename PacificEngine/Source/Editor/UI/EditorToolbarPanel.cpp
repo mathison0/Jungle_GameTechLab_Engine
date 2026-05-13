@@ -1013,6 +1013,21 @@ void FEditorToolbarPanel::RenderPaneToolbar(FLevelViewportLayout* Layout,
             {
                 Gizmo->SetScaleMode();
             } });
+
+        OpenToolbarPopup("Space", "GizmoSpacePopup", [&]()
+                         {
+            int32 CurrentSpace = Gizmo->IsWorldSpace() ? 1 : 0;
+            if (ImGui::RadioButton("World", &CurrentSpace, 1))
+            {
+                Gizmo->SetWorldSpace(true);
+            }
+            if (ImGui::RadioButton("Local", &CurrentSpace, 0))
+            {
+                Gizmo->SetWorldSpace(false);
+            }
+            ImGui::Separator();
+            ImGui::TextDisabled("Scale stays Local");
+        });
     }
 
     OpenToolbarPopup("ViewMode", "ViewModePopup", [&]()

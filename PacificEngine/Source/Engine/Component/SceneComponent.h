@@ -53,6 +53,9 @@ public:
     const FMatrix& GetWorldMatrix() const;
     const FMatrix& GetWorldInverseMatrix() const;
     void SetWorldLocation(FVector NewWorldLocation);
+    void SetWorldRotation(const FRotator& NewRotation);
+    void SetWorldRotation(const FQuat& NewRotation);
+    void SetWorldRotationWithEulerHint(const FQuat& NewQuat, const FRotator& EulerHint);
     FVector GetWorldLocation() const;
     FQuat GetWorldRotation() const;
     FVector GetWorldScale() const;

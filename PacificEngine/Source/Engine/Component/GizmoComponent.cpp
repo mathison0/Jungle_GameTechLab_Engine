@@ -245,52 +245,45 @@ void UGizmoComponent::RotateTarget(float DragAmount)
         return;
 
     FVector RotationAxis = GetVectorForAxis(SelectedAxis);
-    FQuat DeltaQuat = FQuat::FromAxisAngle(RotationAxis, DragAmount);
+    if (!bIsWorldSpace)
+    {
+        switch (SelectedAxis)
+        {
+        case 0:
+            RotationAxis = FVector(1.0f, 0.0f, 0.0f);
+            break;
+        case 1:
+            RotationAxis = FVector(0.0f, 1.0f, 0.0f);
+            break;
+        case 2:
+            RotationAxis = FVector(0.0f, 0.0f, 1.0f);
+            break;
+        default:
+            RotationAxis = FVector(0.0f, 0.0f, 0.0f);
+            break;
+        }
+    }
 
-    const float DeltaDeg = DragAmount * RAD_TO_DEG;
+    FQuat DeltaQuat = FQuat::FromAxisAngle(RotationAxis, DragAmount);
 
     auto ApplyRotation = [&](AActor* Actor)
     {
         if (!Actor || !Actor->GetRootComponent())
             return;
         USceneComponent* Root = Actor->GetRootComponent();
-        const FQuat& CurQuat = Root->GetRelativeQuat();
-        // World space applies Delta * Current; local space applies Current * Delta.
-        FQuat NewQuat = bIsWorldSpace ? (DeltaQuat * CurQuat) : (CurQuat * DeltaQuat);
-
-        // Update the cached Euler hint directly on the edited gizmo axis.
-        FRotator EulerHint = Root->GetCachedEditRotator();
         if (bIsWorldSpace)
         {
-            switch (SelectedAxis)
-            {
-            case 0:
-                EulerHint.Roll += DeltaDeg;
-                break; // World X = Roll
-            case 1:
-                EulerHint.Pitch += DeltaDeg;
-                break; // World Y = Pitch
-            case 2:
-                EulerHint.Yaw += DeltaDeg;
-                break; // World Z = Yaw
-            }
+            const FQuat CurrentWorldQuat = Root->GetWorldRotation();
+            FQuat NewWorldQuat = DeltaQuat * CurrentWorldQuat;
+            NewWorldQuat.Normalize();
+            Root->SetWorldRotationWithEulerHint(NewWorldQuat, NewWorldQuat.ToRotator());
         }
         else
         {
-            switch (SelectedAxis)
-            {
-            case 0:
-                EulerHint.Roll += DeltaDeg;
-                break; // Local X = Roll
-            case 1:
-                EulerHint.Pitch += DeltaDeg;
-                break; // Local Y = Pitch
-            case 2:
-                EulerHint.Yaw += DeltaDeg;
-                break; // Local Z = Yaw
-            }
+            FQuat NewLocalQuat = Root->GetRelativeQuat() * DeltaQuat;
+            NewLocalQuat.Normalize();
+            Root->SetRelativeRotationWithEulerHint(NewLocalQuat, NewLocalQuat.ToRotator());
         }
-        Root->SetRelativeRotationWithEulerHint(NewQuat, EulerHint);
     };
 
     if (AllSelectedActors)
@@ -612,8 +605,9 @@ void UGizmoComponent::UpdateGizmoTransform()
         return;
 
     const FVector DesiredLocation = TargetActor->GetActorLocation();
-    const FRotator ActorRot = TargetActor->GetActorRotation();
-    const FRotator DesiredRotation = (CurMode == EGizmoMode::Scale || !bIsWorldSpace) ? ActorRot : FRotator();
+    const USceneComponent* RootComp = TargetActor->GetRootComponent();
+    const FRotator ActorWorldRot = RootComp ? RootComp->GetWorldRotation().ToRotator() : FRotator();
+    const FRotator DesiredRotation = (CurMode == EGizmoMode::Scale || !bIsWorldSpace) ? ActorWorldRot : FRotator();
     const FMeshData* DesiredMeshData = nullptr;
 
     switch (CurMode)
