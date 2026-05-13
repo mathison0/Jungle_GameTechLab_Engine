@@ -572,16 +572,15 @@ void FEditorSkeletalMeshViewerPanel::RenderInspector()
 
     ImGui::Text("Index: %d", SelectedBoneIndex);
     ImGui::Text("Name: %s", Bone->Name.ToString().c_str());
-    ImGui::Text("Parent: %d", Bone->ParentIndex);
 
     if (Bone->ParentIndex >= 0 && Bone->ParentIndex < BoneCount)
     {
-        const char* ParentName =
-            Bone->ParentIndex < static_cast<int32>(MeshComp->GetNumBones())
-                ? Bone->Name.ToString().c_str()
-                : "InvalidBone";
-
-        ImGui::Text("Parent Name: %s", ParentName);
+        if (Bone->ParentIndex < static_cast<int32>(MeshComp->GetNumBones()))
+        {
+            const FBoneInfo* ParentBone = MeshComp->GetBoneInfo(Bone->ParentIndex);
+            ImGui::Text("Parent: %d", Bone->ParentIndex);
+            ImGui::Text("Parent Name: %s", ParentBone->Name.ToString().c_str());
+		}
     }
 
     ImGui::SeparatorText("Local Transform");

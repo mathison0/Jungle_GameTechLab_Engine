@@ -422,6 +422,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp" />
     <ClCompile Include="Source\Editor\Viewport\IAssetViewer.cpp" />
     <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\SkeletalPreviewViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimationSequence.cpp" />
     <ClCompile Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.cpp" />
@@ -758,6 +759,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Editor\Viewport\IAssetViewer.h" />
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\PreviewViewportClient.h" />
+    <ClInclude Include="Source\Editor\Viewport\SkeletalPreviewViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationSequence.h" />
     <ClInclude Include="Source\Engine\Camera\Shakes\CameraShakeAssetManager.h" />

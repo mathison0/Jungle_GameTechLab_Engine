@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Core/CoreGlobals.h"
+#include "Input/InputTypes.h"
 
 class FViewportClient;
 struct FRect;
@@ -29,4 +30,11 @@ public:
 
     virtual FViewportClient* GetViewportClient() = 0;
     virtual bool GetViewportRect(FRect& OutRect) const = 0;
+
+	virtual void BeginInputFrame() {}
+    virtual bool InputKey(const FViewportKeyEvent& Event) { return false; }
+    virtual bool InputAxis(const FViewportAxisEvent& Event) { return false; }
+    virtual bool InputPointer(const FViewportPointerEvent& Event) { return false; }
+    virtual void ResetInputState() {}
+    virtual void ResetKeyboardInputState() {}
 };

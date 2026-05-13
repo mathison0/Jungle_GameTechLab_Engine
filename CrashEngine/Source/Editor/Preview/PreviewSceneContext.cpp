@@ -1,4 +1,4 @@
-#include "PreviewSceneContext.h"
+﻿#include "PreviewSceneContext.h"
 #include "Component/GizmoComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/SkeletalMeshComponent.h"
@@ -90,7 +90,7 @@ UStaticMeshComponent* FPreviewSceneContext::CreateStaticMeshPreview()
     return MeshComponent;
 }
 
-UGizmoComponent* FPreviewSceneContext::CreateBoneGizmo(AActor*& OutTargetActor)
+UGizmoComponent* FPreviewSceneContext::CreateGizmo(AActor*& OutTargetActor)
 {
     OutTargetActor = CreatePreviewActor(FName("Bone Gizmo Target"));
     if (!OutTargetActor)

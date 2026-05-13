@@ -608,6 +608,9 @@
     <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\SkeletalPreviewViewportClient.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
@@ -1608,6 +1611,9 @@
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\PreviewViewportClient.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\SkeletalPreviewViewportClient.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewer.h">
