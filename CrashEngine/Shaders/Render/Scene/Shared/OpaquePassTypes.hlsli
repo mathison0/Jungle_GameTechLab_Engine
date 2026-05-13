@@ -17,15 +17,6 @@
 #ifndef OPAQUE_PASS_TYPES_HLSLI
 #define OPAQUE_PASS_TYPES_HLSLI
 
-struct FDeferred_Opaque_VSOutput
-{
-    float4 position     : SV_POSITION;
-    float3 worldNormal  : TEXCOORD0;
-    float4 worldTangent : TEXCOORD1;
-    float4 color        : COLOR0;
-    float2 texcoord     : TEXCOORD2;
-};
-
 struct FForward_Opaque_VSOutput
 {
     float4 position     : SV_POSITION;
@@ -47,19 +38,6 @@ struct FGBufferOutput3
     float4 BaseColor : SV_TARGET0;
     float4 Surface1  : SV_TARGET1;
     float4 Surface2  : SV_TARGET2;
-};
-
-struct FDeferred_Decal_Output_ModifiedBaseColor_ModifiedSurface1
-{
-    float4 ModifiedBaseColor : SV_TARGET0;
-    float4 ModifiedSurface1  : SV_TARGET1;
-};
-
-struct FDeferred_Decal_Output_ModifiedBaseColor_ModifiedSurface1_ModifiedSurface2
-{
-    float4 ModifiedBaseColor : SV_TARGET0;
-    float4 ModifiedSurface1  : SV_TARGET1;
-    float4 ModifiedSurface2  : SV_TARGET2;
 };
 
 struct FSceneColorOutput

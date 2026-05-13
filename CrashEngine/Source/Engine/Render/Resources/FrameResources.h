@@ -30,15 +30,6 @@ struct FFrameResources
     uint32                    LocalLightCapacity = 0;
     uint32                    LocalLightCount    = 0;
 
-    ID3D11Buffer*             ForwardDecalDataBuffer       = nullptr;
-    ID3D11ShaderResourceView* ForwardDecalDataSRV          = nullptr;
-    uint32                    ForwardDecalDataCapacity     = 0;
-    uint32                    ForwardDecalDataCount        = 0;
-    ID3D11Buffer*             ForwardDecalIndexBuffer      = nullptr;
-    ID3D11ShaderResourceView* ForwardDecalIndexSRV         = nullptr;
-    uint32                    ForwardDecalIndexCapacity    = 0;
-    uint32                    ForwardDecalIndexCount       = 0;
-
 	uint32                  BoneDebugCBCursor = 0;
     TArray<FConstantBuffer> PerObjectCBPool;
 	TArray<FConstantBuffer> PerBoneDebugCBPool;
@@ -50,11 +41,6 @@ struct FFrameResources
 	void BeginFrame();
     void BindSystemSamplers(ID3D11DeviceContext* Ctx);
     void UpdateLocalLights(ID3D11Device* Device, ID3D11DeviceContext* Context, const TArray<FLocalLightCBData>& Lights);
-    void UpdateForwardDecals(
-        ID3D11Device* Device,
-        ID3D11DeviceContext* Context,
-        const TArray<FForwardDecalGPUData>& Decals,
-        const TArray<uint32>& DecalIndices);
 
     void             EnsurePerObjectCBPoolCapacity(ID3D11Device* Device, uint32 RequiredCount);
     FConstantBuffer* GetPerObjectCBForProxy(ID3D11Device* Device, const FPrimitiveProxy& Proxy);

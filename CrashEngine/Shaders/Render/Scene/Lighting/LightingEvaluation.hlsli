@@ -45,17 +45,17 @@ FLocalBlinnPhongTerm AccumulateForwardBlinnPhongLocalLight(
 }
 
 #ifdef USE_LIGHT_CULLING
-uint GetDeferredLightTileIndex(uint2 PixelCoord)
+uint GetLightTileIndex(uint2 PixelCoord)
 {
     uint2 TileCoord = PixelCoord / TileSize;
     uint TilesX = (ScreenSize.x + TileSize.x - 1) / TileSize.x;
     return TileCoord.x + TileCoord.y * TilesX;
 }
 
-float3 AccumulateDeferredLambertLocalLight(float3 Normal, float3 WorldPosition, float4 PixelPos)
+float3 AccumulateTiledLambertLocalLight(float3 Normal, float3 WorldPosition, float4 PixelPos)
 {
     float3 TotalLocalLight = 0.0f;
-    uint FlatTileIndex = GetDeferredLightTileIndex(uint2(PixelPos.xy));
+    uint FlatTileIndex = GetLightTileIndex(uint2(PixelPos.xy));
     int StartIndex = FlatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
     [loop]
@@ -88,7 +88,7 @@ float3 AccumulateDeferredLambertLocalLight(float3 Normal, float3 WorldPosition, 
     return TotalLocalLight;
 }
 
-FLocalBlinnPhongTerm AccumulateDeferredBlinnPhongLocalLight(
+FLocalBlinnPhongTerm AccumulateTiledBlinnPhongLocalLight(
     float3 Normal,
     float3 WorldPosition,
     float3 ViewDirection,
@@ -97,7 +97,7 @@ FLocalBlinnPhongTerm AccumulateDeferredBlinnPhongLocalLight(
     float4 PixelPos)
 {
     FLocalBlinnPhongTerm TotalLocalLight = (FLocalBlinnPhongTerm)0;
-    uint FlatTileIndex = GetDeferredLightTileIndex(uint2(PixelPos.xy));
+    uint FlatTileIndex = GetLightTileIndex(uint2(PixelPos.xy));
     int StartIndex = FlatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
     [loop]
@@ -185,15 +185,15 @@ float4 ComputeForwardBlinnPhongLighting(
 }
 
 #ifdef USE_LIGHT_CULLING
-float4 ComputeDeferredLambertLighting(float4 BaseColor, float3 Normal, float3 WorldPosition, float4 PixelPos)
+float4 ComputeForwardTiledLambertLighting(float4 BaseColor, float3 Normal, float3 WorldPosition, float4 PixelPos)
 {
     return EvaluateLambertLighting(
         BaseColor,
         ComputeLambertGlobalLight(Normal, WorldPosition, PixelPos),
-        AccumulateDeferredLambertLocalLight(Normal, WorldPosition, PixelPos));
+        AccumulateTiledLambertLocalLight(Normal, WorldPosition, PixelPos));
 }
 
-float4 ComputeDeferredBlinnPhongLighting(
+float4 ComputeForwardTiledBlinnPhongLighting(
     float4 BaseColor,
     float3 Normal,
     float4 MaterialParam,
@@ -207,7 +207,7 @@ float4 ComputeDeferredBlinnPhongLighting(
     return EvaluateBlinnPhongLighting(
         BaseColor,
         ComputeBlinnPhongGlobalLight(Normal, MaterialParam, ViewDirection, WorldPosition, PixelPos),
-        AccumulateDeferredBlinnPhongLocalLight(
+        AccumulateTiledBlinnPhongLocalLight(
             Normal,
             WorldPosition,
             ViewDirection,

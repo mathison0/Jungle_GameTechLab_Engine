@@ -1,6 +1,6 @@
 /*
     UberLit.hlsl는 legacy view-mode lighting entry입니다.
-    실제 deferred lighting path와 동일한 helper 계층을 사용하도록 유지합니다.
+    tiled light culling이 필요한 lit view mode에서 공유 helper를 사용합니다.
 */
 
 #ifndef ENABLE_LIGHT_EVAL_COUNTER
@@ -51,14 +51,14 @@ float4 PS_UberLit(PS_Input_UV Input) : SV_TARGET0
 #if defined(LIGHTING_MODEL_LAMBERT)
     float3 Normal = normalize(DecodeNormal(ResolveSurface1(UV)));
     float3 WorldPos = ReconstructWorldPositionFromSceneDepth(UV);
-    FinalColor = ComputeDeferredLambertLighting(BaseColor, Normal, WorldPos, Input.position);
+    FinalColor = ComputeForwardTiledLambertLighting(BaseColor, Normal, WorldPos, Input.position);
 
 #elif defined(LIGHTING_MODEL_BLINNPHONG)
     float3 Normal = normalize(DecodeNormal(ResolveSurface1(UV)));
     float4 MaterialParam = DecodeMaterialParam(ResolveSurface2(UV));
     float3 WorldPos = ReconstructWorldPositionFromSceneDepth(UV);
     float3 ViewDir = normalize(CameraWorldPos - WorldPos);
-    FinalColor = ComputeDeferredBlinnPhongLighting(BaseColor, Normal, MaterialParam, WorldPos, ViewDir, Input.position);
+    FinalColor = ComputeForwardTiledBlinnPhongLighting(BaseColor, Normal, MaterialParam, WorldPos, ViewDir, Input.position);
 
 #elif defined(LIGHTING_MODEL_WORLDNORMAL)
     float3 Normal = DecodeNormal(ResolveSurface1(UV));

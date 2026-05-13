@@ -26,12 +26,9 @@ constexpr uint32 LightTileMask = 7;  // t7: per-tile light culling mask
 constexpr uint32 DebugHitMap   = 8;  // t8: debug light-hit visualization
 constexpr uint32 SceneDepth    = 10; // t10: scene depth copy
 constexpr uint32 SceneColor    = 11; // t11: scene color copy
-constexpr uint32 ForwardDecalData      = 12; // t12: forward decal metadata buffer
 constexpr uint32 Stencil       = 13; // t13: stencil copy
-constexpr uint32 ForwardDecalIndexList = 14; // t14: per-object decal index buffer
 constexpr uint32 ShadowAtlasBase = 20;          // t20~t23: shadow atlas texture2DArray pages
 constexpr uint32 ShadowMomentAtlasBase = 48;    // t48~t51: shadow moment atlas texture2DArray pages
-constexpr uint32 ForwardDecalTextureBase = 32; // t32+: forward decal texture array
 
 constexpr uint32 MaxShadowAtlasPages = 4;
 } // namespace ESystemTexSlot

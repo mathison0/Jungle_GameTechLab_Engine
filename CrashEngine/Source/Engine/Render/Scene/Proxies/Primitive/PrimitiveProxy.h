@@ -59,7 +59,6 @@ public:
     FPerObjectCBData  PerObjectConstants = {};
     FBoundingBox      CachedBounds;
     mutable bool      bPerObjectCBDirty = true;
-    TArray<uint32>    RelevantForwardDecalIndices;
 
     TArray<FMeshSectionRenderData> SectionRenderData;
 

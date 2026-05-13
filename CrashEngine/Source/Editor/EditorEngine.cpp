@@ -62,7 +62,7 @@ void WarmUpEditorViewModeShaders(FRenderer& Renderer)
     for (EViewMode ViewMode : ViewModesToWarmUp)
     {
         // Startup prewarm only targets the default forward path.
-        // Deferred variants are compiled on demand.
+        // Render shaders are compiled on demand.
         Renderer.WarmUpViewModeShaders(ViewMode);
     }
 }

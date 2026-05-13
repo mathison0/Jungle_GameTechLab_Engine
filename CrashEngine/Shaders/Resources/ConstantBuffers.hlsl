@@ -42,10 +42,8 @@ cbuffer PerObjectParams : register(b1)
     float4x4 Model;                    // 64B
     float4x4 NormalMatrix;             // 64B
     float4 PrimitiveColor;             // 16B
-    uint PrimitiveDecalIndexOffset;    // 4B
-    uint PrimitiveDecalCount;          // 4B
     float2 PrimitivePerObjectPadding;  // 8B
-}; // Total: 160B
+}; // Total: 152B
 
 struct FAmbientLight
 {

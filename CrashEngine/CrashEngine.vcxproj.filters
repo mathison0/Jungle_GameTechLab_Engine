@@ -429,15 +429,6 @@
     <FxCompile Include="Shaders\Render\Editor\SkeletalDebug.hlsl">
       <Filter>Shaders\Render\Editor</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Render\Scene\Decal\DecalApply.hlsli">
-      <Filter>Shaders\Render\Scene\Decal</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\Render\Scene\Decal\DecalSampling.hlsli">
-      <Filter>Shaders\Render\Scene\Decal</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\Render\Scene\Decal\DecalTypes.hlsli">
-      <Filter>Shaders\Render\Scene\Decal</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\Lighting\BRDF.hlsli">
       <Filter>Shaders\Render\Scene\Lighting</Filter>
     </FxCompile>

@@ -75,19 +75,4 @@ FSurfaceData BuildStaticMeshSurfaceData(
         SpecularMap);
 }
 
-FSurfaceData BuildStaticMeshSurfaceData(
-    FDeferred_Opaque_VSOutput Input,
-    Texture2D BaseColorTexture,
-    Texture2D NormalMap,
-    Texture2D SpecularMap)
-{
-    return BuildStaticMeshSurfaceData(
-        Input.texcoord,
-        Input.worldNormal,
-        Input.worldTangent,
-        BaseColorTexture,
-        NormalMap,
-        SpecularMap);
-}
-
 #endif

@@ -27,25 +27,14 @@
       - LIGHTING_MODEL_UNLIT
       - USE_NORMAL_MAP
       - FORWARD_ENABLE_LIGHTING
-      - FORWARD_ENABLE_DECAL
 */
 
 #include "../../../Utils/Functions.hlsl"
 #include "../../../Resources/BindingSlots.hlsli"
 #include "../../../Render/Scene/Shared/OpaquePassTypes.hlsli"
-#include "../../../Render/Scene/Decal/DecalTypes.hlsli"
-#include "../../../Render/Scene/Decal/DecalSampling.hlsli"
-#include "../../../Render/Scene/Decal/DecalApply.hlsli"
 #include "../../../Render/Scene/Material/SurfaceEvaluation.hlsli"
 #include "../../../Surface/SurfaceTypes.hlsli"
 #include "../../../Render/Scene/Lighting/LightingEvaluation.hlsli"
-
-#ifndef FORWARD_ENABLE_DECAL
-#define FORWARD_ENABLE_DECAL 0
-#endif
-
-// Forward decals are intended to be folded into this opaque pass.
-// The renderer currently binds the first visible decal as a shared forward input.
 
 #ifndef FORWARD_ENABLE_LIGHTING
 #define FORWARD_ENABLE_LIGHTING 1
@@ -62,12 +51,6 @@ Texture2D g_NormalMap : register(t1);
 
 Texture2D g_SpecularMap : register(t2);
 
-#define MAX_FORWARD_DECAL_TEXTURES 8
-
-StructuredBuffer<FForwardDecalData> g_ForwardDecalData : register(t12);
-StructuredBuffer<uint> g_ForwardDecalIndices : register(t14);
-Texture2D g_ForwardDecalTextures[MAX_FORWARD_DECAL_TEXTURES] : register(t32);
-
 FForward_Opaque_VSOutput VS_ForwardOpaque(VS_Input_PNCT_T Input)
 {
     FForward_Opaque_VSOutput Output;
@@ -81,71 +64,9 @@ FForward_Opaque_VSOutput VS_ForwardOpaque(VS_Input_PNCT_T Input)
     return Output;
 }
 
-float4 SampleForwardDecalTexture(uint TextureIndex, float2 UV)
-{
-    switch (TextureIndex)
-    {
-    case 0: return g_ForwardDecalTextures[0].Sample(LinearWrapSampler, UV);
-    case 1: return g_ForwardDecalTextures[1].Sample(LinearWrapSampler, UV);
-    case 2: return g_ForwardDecalTextures[2].Sample(LinearWrapSampler, UV);
-    case 3: return g_ForwardDecalTextures[3].Sample(LinearWrapSampler, UV);
-    case 4: return g_ForwardDecalTextures[4].Sample(LinearWrapSampler, UV);
-    case 5: return g_ForwardDecalTextures[5].Sample(LinearWrapSampler, UV);
-    case 6: return g_ForwardDecalTextures[6].Sample(LinearWrapSampler, UV);
-    case 7: return g_ForwardDecalTextures[7].Sample(LinearWrapSampler, UV);
-    default: return float4(0.0f, 0.0f, 0.0f, 0.0f);
-    }
-}
-
-void ApplySingleForwardDecal(inout FSurfaceData Surface, float3 WorldPosition, FForwardDecalData DecalData)
-{
-#if FORWARD_ENABLE_DECAL
-    float4 LocalPos = mul(float4(WorldPosition, 1.0f), DecalData.WorldToDecal);
-    if (any(abs(LocalPos.xyz) > 0.5f))
-    {
-        return;
-    }
-
-    float2 DecalUV = ProjectDecalUV(LocalPos.xyz);
-    float4 DecalSample = SampleForwardDecalTexture(DecalData.TextureIndex, DecalUV) * DecalData.Color;
-    if (DecalSample.a <= 0.0f)
-    {
-        return;
-    }
-
-    float Alpha = DecalSample.a;
-    float4 BaseColor = ApplyDecalBaseColor(float4(Surface.BaseColor, Surface.Opacity), DecalSample, Alpha);
-    Surface.BaseColor = BaseColor.rgb;
-    Surface.Opacity   = BaseColor.a;
-
-// #if defined(LIGHTING_MODEL_LAMBERT) || defined(LIGHTING_MODEL_BLINNPHONG) || defined(LIGHTING_MODEL_WORLDNORMAL)
-//     Surface.WorldNormal = ApplyDecalNormal(Surface.WorldNormal, DecalSample, Alpha);
-// #endif
-
-// #if defined(LIGHTING_MODEL_BLINNPHONG)
-//     float4 MaterialParam = ApplyDecalMaterialParam(float4(Surface.Roughness, Surface.Specular, 0.0f, 1.0f), DecalSample, Alpha);
-//     Surface.Roughness = MaterialParam.x;
-//     Surface.Specular  = MaterialParam.y;
-// #endif
-#endif
-}
-
-void ApplyForwardDecal(inout FSurfaceData Surface, float3 WorldPosition)
-{
-#if FORWARD_ENABLE_DECAL
-    [loop]
-    for (uint DecalListIndex = 0; DecalListIndex < PrimitiveDecalCount; ++DecalListIndex)
-    {
-        uint DecalIndex = g_ForwardDecalIndices[PrimitiveDecalIndexOffset + DecalListIndex];
-        ApplySingleForwardDecal(Surface, WorldPosition, g_ForwardDecalData[DecalIndex]);
-    }
-#endif
-}
-
 FSurfaceData BuildForwardSurfaceData(FForward_Opaque_VSOutput Input)
 {
     FSurfaceData Surface = BuildStaticMeshSurfaceData(Input, g_txColor, FORWARD_NORMAL_TEXTURE, g_SpecularMap);
-    ApplyForwardDecal(Surface, Input.worldPos);
     return Surface;
 }
 
