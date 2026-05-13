@@ -1,4 +1,4 @@
-#include "Viewport/PreviewViewportClient.h"
+﻿#include "Viewport/PreviewViewportClient.h"
 
 #include "EditorEngine.h"
 #include "Preview/PreviewSceneContext.h"
@@ -53,6 +53,39 @@ void FPreviewViewportClient::ResetCamera()
     OrbitDistance = 8.0f;
     OrbitYaw = -135.0f;
     OrbitPitch = 23.0f;
+
+    ApplyOrbitToCamera();
+}
+
+void FPreviewViewportClient::FocusOnBounds(const FBoundingBox& Bounds, float MaxDistance)
+{
+    if (!Bounds.IsValid())
+    {
+        ResetCamera();
+        return;
+    }
+
+    OrbitPivot = Bounds.GetCenter();
+
+    // 완전 정면이 아니라 약간 위 + 측면에서 보는 기본 각도
+    OrbitYaw = 0.0f;
+    OrbitPitch = 180.0f;
+
+    const FVector Extent = Bounds.GetExtent();
+    const float Radius = (std::max)(Extent.Length(), 0.5f);
+
+    float DesiredDistance = Radius * 1.35f;
+
+    if (UCameraComponent* Camera = GetCamera())
+    {
+        const float HalfFov = (std::max)(Camera->GetFOV() * 0.5f, 0.01f);
+
+        DesiredDistance = Radius / (std::max)(std::tan(HalfFov), 0.01f);
+        DesiredDistance *= 1.35f;
+    }
+
+    const float ClampedMaxDistance = MaxDistance > 0.0f ? MaxDistance : DesiredDistance;
+    OrbitDistance = std::clamp(DesiredDistance, 1.0f, ClampedMaxDistance);
 
     ApplyOrbitToCamera();
 }

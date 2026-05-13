@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "Viewport/ViewportClient.h"
 #include "Core/CoreGlobals.h"
+#include "Core/EngineTypes.h"
 #include "Math/Rotator.h"
 #include "Math/Vector.h"
 #include "Render/Execute/Context/Scene/ViewTypes.h"
@@ -32,6 +33,7 @@ public:
     void Tick(float DeltaTime) override;
 
     void ResetCamera();
+    void FocusOnBounds(const FBoundingBox& Bounds, float MaxDistance = 25.0f);
 
 	void SetViewportRect(float X, float Y, float Width, float Height);
     bool GetViewportRect(FRect& OutRect) const;

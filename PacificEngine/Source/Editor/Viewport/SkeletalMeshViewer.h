@@ -63,6 +63,7 @@ public:
 
 	USkeletalMesh* GetSkeletalMesh();
     void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
+    void FocusCameraOnPreviewMesh();
     void BuildBoneHierarchy();
     void ClearBoneSelection();
     void SelectBone(int32 BoneIndex);
