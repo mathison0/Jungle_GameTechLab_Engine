@@ -388,7 +388,6 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Editor\Viewport\IAssetViewer.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorGizmoTool.cpp" />
     <ClCompile Include="Source\Editor\Input\EditorNavigationTool.cpp" />
@@ -421,6 +420,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="Source\Editor\Viewport\AssetViewerManager.cpp" />
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\IAssetViewer.cpp" />
     <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\SkeletalPreviewViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewer.cpp" />
@@ -728,7 +728,6 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Editor\Viewport\IAssetViewer.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Input\EditorGizmoTool.h" />
     <ClInclude Include="Source\Editor\Input\EditorNavigationTool.h" />
@@ -762,6 +761,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Editor\Viewport\AssetViewerManager.h" />
     <ClInclude Include="Source\Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\FLevelViewportLayout.h" />
+    <ClInclude Include="Source\Editor\Viewport\IAssetViewer.h" />
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\PreviewViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\SkeletalPreviewViewportClient.h" />
@@ -1011,6 +1011,7 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\IndexBuffer.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\MeshBuffer.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\RuntimeVertexPacker.h" />
+    <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\RuntimeVertexWideningPolicy.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\StaticMeshBuffer.h" />
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\VertexBuffer.h" />
@@ -1172,7 +1173,23 @@ if exist "$(ProjectDir)ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" copy /Y "$(
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="Shaders\ReflectedTextureBindingDebug.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="Shaders\SkeletalUV1Debug.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameRelease|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\StaticUV0Float4Debug.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameDebug|x64'">true</ExcludedFromBuild>

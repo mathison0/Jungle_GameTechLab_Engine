@@ -357,7 +357,13 @@
     <FxCompile Include="Shaders\CustomTest.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ReflectedTextureBindingDebug.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\SkeletalUV1Debug.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\StaticUV0Float4Debug.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">
@@ -636,6 +642,9 @@
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\IAssetViewer.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp">
@@ -1551,10 +1560,6 @@
       <Filter>ThirdParty\Lua\src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\SkeletalMeshActor.cpp">
-      <Filter>Source\Engine\GameFramework</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Viewport\IAssetViewer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1654,6 +1659,9 @@
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\FLevelViewportLayout.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\IAssetViewer.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h">
@@ -2403,6 +2411,9 @@
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\RuntimeVertexPacker.h">
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\RuntimeVertexWideningPolicy.h">
+      <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.h">
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClInclude>
@@ -2856,10 +2867,6 @@
     <ClInclude Include="ThirdParty\Sol\sol.hpp">
       <Filter>ThirdParty\Sol</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\GameFramework\SkeletalMeshActor.h">
-      <Filter>Source\Engine\GameFramework</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Viewport\IAssetViewer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />
