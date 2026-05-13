@@ -11,7 +11,7 @@ class FD3DDevice;
 class FConstantBuffer;
 using FFrameContext = FSceneView;
 
-// FTileBasedLightCulling는 조명 계산이나 조명 제출에 필요한 데이터를 다룹니다.
+// FTileBasedLightCulling는 forward lit view mode의 tile-based light culling 데이터를 다룹니다.
 class FTileBasedLightCulling
 {
 public:

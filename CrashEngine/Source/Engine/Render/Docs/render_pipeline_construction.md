@@ -214,13 +214,10 @@ AddPipeline(ERenderPipelineType::EditorRootPipeline, {
     PipelineNode(ERenderPipelineType::OverlayPipeline),
 });
 
-AddPipeline(ERenderPipelineType::DeferredLitPipeline, {
+AddPipeline(ERenderPipelineType::ForwardLitPipeline, {
     PassNode(ERenderPassNodeType::DepthPrePass),
     PassNode(ERenderPassNodeType::ShadowMapPass),
-    PassNode(ERenderPassNodeType::LightCullingPass),
-    PassNode(ERenderPassNodeType::DeferredOpaquePass),
-    PassNode(ERenderPassNodeType::DeferredDecalPass),
-    PassNode(ERenderPassNodeType::DeferredLightingPass),
+    PassNode(ERenderPassNodeType::ForwardOpaquePass),
     PassNode(ERenderPassNodeType::AlphaBlendPass),
     PassNode(ERenderPassNodeType::SubUVPass),
 });
@@ -253,7 +250,7 @@ for (const FRenderNodeRef& Child : Desc->Children) {
 
 Two gates are applied per child:
 
-- `ShouldExecutePipeline` — keyed off `SceneView->RenderPath` (Forward/Deferred) and the active view mode. Example: `DeferredLitPipeline` runs only when `RenderPath == Deferred && ViewModeRegistry->UsesLightingPass(ActiveViewMode)`.
+- `ShouldExecutePipeline` — keyed off the active view mode and pipeline availability. Example: `ForwardLitPipeline` runs only when `ViewModeRegistry->UsesLightingPass(ActiveViewMode)` is true.
 - `ShouldExecutePass` — keyed off `FViewModePassRegistry` flags. `DepthPrePass` only runs if the view mode says it needs depth pre; `FinalPostProcessCompositePass` only runs if any post-process toggle is on.
 
 This is the runtime equivalent of "compile-out" branching. The tree is statically described, but the runner skips entire subtrees when their gate is false. That keeps "what runs in mode X" derivable from data, not buried in `if` chains inside passes.
@@ -289,7 +286,7 @@ The `Execute` body intentionally calls only the three runtime-stage methods. By 
 
 ## 4. Resource Management
 
-D3D11 resources fall into a few buckets in this engine, each with its own ownership model. The split is deliberate: long-lived state objects live in singletons or in the device wrapper; per-frame uploads live in `FFrameResources`; per-pass intermediate textures live in `FViewModeSurfaces`.
+D3D11 resources fall into a few buckets in this engine, each with its own ownership model. The split is deliberate: long-lived state objects live in singletons or in the device wrapper; per-frame uploads live in `FFrameResources`; viewport-local copies live in `FViewportRenderTargets`.
 
 ### 4.1 Constant Buffers
 
@@ -318,10 +315,9 @@ There is no central SRV pool. SRVs are created and owned by whoever produces the
 |---|---|---|---|
 | Material Diffuse/Normal/Specular | texture loader (`UTexture2D`) | t-slots in mesh draw command | with the texture asset |
 | `LocalLightSRV` | `FFrameResources::UpdateLocalLights` | `t6` | grow-on-demand structured buffer; rebuilt only when capacity increases |
-| `ForwardDecalDataSRV` / `ForwardDecalIndexSRV` | `FFrameResources::UpdateForwardDecals` | `t12` / `t14` | same grow-on-demand structured-buffer pattern |
 | `ShadowAtlasBase` array (t20–t23) | shadow atlas builder | bound by lighting/opaque passes | atlas lifetime |
 | Scene depth/color copies | `FViewportRenderTargets` | `t10` / `t11` | viewport lifetime |
-| View-mode GBuffer SRVs | `FViewModeSurfaces` | bound by `DeferredLightingPass` and `NonLitViewModePass` | viewport lifetime, recreated on resize |
+| Tile light mask / debug hit map | `FTileBasedLightCulling` | `t7` / `t8` | viewport lifetime, recreated on resize |
 
 `FFrameResources::UpdateLocalLights` is a representative example of a structured-buffer SRV pool. When the count exceeds capacity it releases both `LocalLightBuffer` and `LocalLightSRV`, allocates a `D3D11_USAGE_DYNAMIC` structured buffer rounded up (min 8), and creates a fresh SRV against it. Subsequent frames just `Map`/`memcpy` into the existing buffer.
 
@@ -340,7 +336,6 @@ D3D11 silently unbinds SRVs that conflict with a new RTV, but it produces debug-
 Render targets are owned in two places:
 
 - **Viewport targets** — [`FViewportRenderTargets`](../Execute/Context/Viewport/ViewportRenderTargets.h) holds the per-viewport color RTV/DSV, the depth copy texture+SRV, and the scene color copy texture+SRV. Sized to the viewport, recreated on resize.
-- **View-mode surfaces** — `FViewModeSurfaces` holds GBuffer-style intermediate `FSurfaceTexture` objects (each is `Texture + RTV + SRV + Format`, see [SurfaceTexture.h](../RHI/D3D11/Textures/SurfaceTexture.h)). Acquired per viewport when the active view mode needs them.
 
 The `FSurfaceTexture` struct deserves attention because it embodies the engine's RTV ↔ SRV duality: every offscreen color texture exists with both views from the moment it's created, so a pass can write through `RTV` and a later pass can read through `SRV` without re-creating views. The cost of carrying both views is paid once at allocation.
 
@@ -389,13 +384,13 @@ The default state per logical `ERenderPass` is set up by `InitializeDefaultRende
 
 ## 5. How a Frame Pulls It All Together
 
-For a single mesh in `DeferredLitPipeline`:
+For a single mesh in `ForwardLitPipeline`:
 
-1. **At engine init.** `FShaderProgramRegistry::Initialize` registers `EShaderType::StaticMesh → "Shaders/Render/Editor/Primitive.hlsl"`. `FRenderPipelineRegistry` registers the deferred-lit subtree. `FRenderPassRegistry` `new`s `FDeferredOpaquePass` and friends. `FFrameResources::Create` allocates samplers, the four built-in CBs, and the empty per-object pool.
+1. **At engine init.** `FShaderProgramRegistry::Initialize` registers `EShaderType::StaticMesh → "Shaders/Render/Editor/Primitive.hlsl"`. `FRenderPipelineRegistry` registers the forward-lit subtree. `FRenderPassRegistry` `new`s the forward pass set. `FFrameResources::Create` allocates samplers, the four built-in CBs, and the empty per-object pool.
 2. **First time the mesh is visible.** `FShaderManager::GetShader(StaticMesh)` triggers `FGraphicsProgram::Create`: compile (or load cached) `Primitive.hlsl` for VS+PS, reflect input layout, reflect b2/b3 to populate `ShaderParameterLayout`. Result is cached for the rest of the run.
 3. **Each frame, build phase.** `BuildMeshDrawCommand` allocates the proxy's per-object CB from `FFrameResources::PerObjectCBPool[ProxyId]`, picks the right shader (here `StaticMesh`, but `DepthOnly` for the depth pre-pass entry), fills `FDrawCommand` with material SRVs and CBs, and pushes it into `FDrawCommandList` with a sort key whose top byte is the logical `ERenderPass` value.
 4. **Each frame, sort phase.** `FDrawCommandList::Sort` orders commands by `SortKey` and computes `PassOffsets`, so each pass can ask for `(start, end)` without scanning.
-5. **Each frame, execute phase.** `FRenderPipelineRunner::ExecutePipelineRecursive(EditorRootPipeline)` walks the tree. For deferred lit it descends into `ScenePipeline → DeferredPipeline → DeferredLitPipeline`. At `DeferredOpaquePass`, `Execute` calls `PrepareInputs` (binds shadow atlases, light CBs, …), `PrepareTargets` (binds GBuffer surfaces or viewport color depending on view mode), and `SubmitDrawCommands` (walks the `Opaque` range, letting `FDrawSubmitStateCache` filter out redundant binds).
+5. **Each frame, execute phase.** `FRenderPipelineRunner::ExecutePipelineRecursive(EditorRootPipeline)` walks the tree. For forward lit it descends into `ScenePipeline → ForwardPipeline → ForwardLitPipeline`. At `ForwardOpaquePass`, `Execute` calls `PrepareInputs` (binds shadow atlases, light CBs, tile light culling resources, …), `PrepareTargets` (binds the viewport color target), and `SubmitDrawCommands` (walks the `Opaque` range, letting `FDrawSubmitStateCache` filter out redundant binds).
 6. **Hot reload.** Editing `Primitive.hlsl` → `TickHotReload` notices the dependency hash changed → `FGraphicsProgram::Create` runs again → input layout, parameter layout, and disk cache all update. The next frame's `BuildMeshDrawCommand` picks up the new program automatically because `GetShader` returns the same `FGraphicsProgram*` slot.
 
 Each of those bullets corresponds to one of the three build systems from §1. The clean separation is the reason changes to one rarely cascade into the others — adding a shader doesn't require pipeline-tree edits, adding a pass doesn't require shader-registry edits, and adding a structured-buffer SRV to `FFrameResources` doesn't require either.

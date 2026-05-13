@@ -59,11 +59,6 @@
 ```text
 DefaultRootPipeline
 └─ ScenePipeline
-   ├─ DeferredPipeline
-   │  ├─ DeferredLitPipeline
-   │  ├─ DeferredUnlitPipeline
-   │  ├─ DeferredWorldNormalPipeline
-   │  └─ DeferredSceneDepthPipeline
    ├─ ForwardPipeline
    │  ├─ ForwardLitPipeline
    │  ├─ ForwardUnlitPipeline
@@ -77,11 +72,6 @@ DefaultRootPipeline
 ```text
 EditorRootPipeline
 ├─ ScenePipeline
-│  ├─ DeferredPipeline
-│  │  ├─ DeferredLitPipeline
-│  │  ├─ DeferredUnlitPipeline
-│  │  ├─ DeferredWorldNormalPipeline
-│  │  └─ DeferredSceneDepthPipeline
 │  ├─ ForwardPipeline
 │  │  ├─ ForwardLitPipeline
 │  │  ├─ ForwardUnlitPipeline
@@ -101,39 +91,31 @@ EditorRootPipeline
 
 ### 5.1 Render Path 선택
 
-에디터 설정의 `RenderShadingPath`에 따라 `ScenePipeline` 내부에서 아래 둘 중 하나만 활성화된다.
-- `DeferredPipeline`
-- `ForwardPipeline`
+현재 `SceneView.RenderPath`는 `Forward`로 고정되어 있다.  
+`ScenePipeline` 내부에서는 `ForwardPipeline`만 활성화된다.
 
 ### 5.2 ViewMode 선택
 
 선택된 렌더 경로 내부에서는 현재 `ViewMode`에 맞는 하위 파이프라인 하나만 활성화된다.  
-활성화 규칙은 아래와 같다. 접두어 `*_`는 Forward 혹은 Deferred를 의미한다.
+활성화 규칙은 아래와 같다. 접두어 `*_`는 현재 forward 계열만 의미한다.
 
-- `*_LitPipeline`: `Lit_Lambert`, `Lit_Phong`
-- `*_UnlitPipeline`: `Unlit`, `Wireframe`
-- `*_WorldNormalPipeline`: `WorldNormal`
-- `*_SceneDepthPipeline`: `SceneDepth`
+- `ForwardLitPipeline`: `Lit_Lambert`, `Lit_Phong`
+- `ForwardUnlitPipeline`: `Unlit`, `Wireframe`
+- `ForwardWorldNormalPipeline`: `WorldNormal`
+- `ForwardSceneDepthPipeline`: `SceneDepth`
 
 **ViewMode별 실행 흐름**
 
 현재 ViewMdoe 선택 별 실행 흐름은 다음과 같다.
 
 ```text
-1. DeferredLitPipeline        : DepthPre -> ShadowMap -> LightCulling -> Opaque -> Decal -> Lighting
-
-2. ForwardLitPipeline         : DepthPre -> ShadowMap -> Opaque
-
-3. *_UnlitPipeline            : DepthPre -> Opaque -> Decal
-
-4. DeferredWorldNormalPipeline: DepthPre -> Opaque -> Decal -> NonLitView
-
-5. ForwardWorldNormalPipeline : DepthPre -> Opaque
-
-6. *_SceneDepthPipeline       : DepthPre -> NonLitView
+1. ForwardLitPipeline         : DepthPre -> ShadowMap -> Opaque
+2. ForwardUnlitPipeline       : DepthPre -> Opaque
+3. ForwardWorldNormalPipeline : DepthPre -> Opaque
+4. ForwardSceneDepthPipeline  : DepthPre -> NonLitView
 ```
 
-`ShadowMapPass`는 현재 코드 기준으로 lit pipeline 공통 pass이며, shadow casting light를 순회하면서 shadow depth map을 먼저 만든다. deferred 경로에서는 이후 `DeferredLightingPass`가 이를 참조하고, forward lit 경로에서는 `ForwardOpaquePass` 입력으로 바인딩된다.
+`ShadowMapPass`는 lit pipeline 공통 pass이며, shadow casting light를 순회하면서 shadow depth map을 먼저 만든다. 이후 `ForwardOpaquePass`가 이를 참조한다.
 
 
 ## 6. 디렉토리 구조
@@ -223,14 +205,11 @@ Submission 단계에서 준비한 scene 데이터와 overlay 데이터를 실행
 | `Desc` | 어떤 대상의 구조나 정체성을 설명하는 정의 값 |
 | `Config` | 조건에 따라 무엇을 활성화할지 결정하는 설정 값 |
 | `Preset` | 실행 시 바로 적용할 수 있는 고정 사용값 |
-## 8. Deferred / Forward Pass Split
+## 8. Forward-Only Split
 
-- deferred scene mesh pass는 `DeferredOpaquePass`를 사용한다.
-- deferred decal scene pass는 `DeferredDecalPass`를 사용한다.
-- `DeferredOpaquePass`는 `FViewModeSurfaces`에 intermediate surface를 기록한다.
-- `DeferredDecalPass`는 base surface를 복사한 modified surface를 갱신한다.
-- `DeferredLightingPass`는 위 intermediate surface 결과를 읽어 최종 viewport color를 합성한다.
-- forward 경로는 별도 `ForwardDecalPass`를 두지 않고, 향후 `ForwardOpaquePass` 안에서 decal + lighting을 함께 처리한다.
-- 현재 `ForwardPipeline` 계열은 `ForwardLitPipeline`, `ForwardUnlitPipeline`, `ForwardWorldNormalPipeline`, `ForwardSceneDepthPipeline`으로 구성된다.
-- `ForwardWorldNormalPipeline`은 `ForwardOpaquePass`의 world normal shader variant가 viewport color에 직접 결과를 쓰는 direct output 경로를 사용한다.
-- 이 경로는 world normal을 intermediate texture에 한 번 쓰고 다시 fullscreen pass에서 읽는 과정을 생략해, 추가 render target write/read bandwidth 비용을 피한다.
+- 현재 mainline renderer는 forward-only다.
+- `ForwardLitPipeline`은 depth pre-pass, shadow map, opaque submission 순으로 실행된다.
+- `ForwardUnlitPipeline`은 depth pre-pass와 opaque submission만 실행된다.
+- `ForwardWorldNormalPipeline`은 world normal 결과를 viewport color에 직접 쓴다.
+- `ForwardSceneDepthPipeline`은 depth pre-pass 뒤 scene depth visualization pass만 실행한다.
+- `Deferred` pipeline subtree와 `FViewModeSurfaces`는 mainline에서 제거되었다.

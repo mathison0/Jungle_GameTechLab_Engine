@@ -184,13 +184,12 @@ Important fields:
 | `DrawCommandList` | Sorted list of draw commands. |
 | `RenderPassPresets` | Default state/topology presets per logical `ERenderPass`. |
 | `ViewMode.Registry` | View-mode to shader/pass config mapping. |
-| `ViewMode.Surfaces` | Deferred/view-mode intermediate render targets. |
 | `Submission.SceneData` | Collected primitives/lights. |
 | `Submission.OverlayData` | Collected debug/editor overlay data. |
-| `LightCulling` | Tile-based light culling resources and outputs. |
+| `LightCulling` | Tile-based light culling resources and outputs used by lit forward view modes. |
 | `LODContext` | Current LOD update context. |
 
-`CreatePipelineContext` also acquires `FViewModeSurfaces` per viewport when a view-mode config exists. Deferred passes use these surfaces for GBuffer-like intermediate data and visualization buffers.
+`CreatePipelineContext` acquires light-culling resources and view-mode config data per viewport. The mainline renderer no longer allocates deferred intermediate surfaces.
 
 ## 7. Draw Command Construction
 
@@ -201,13 +200,13 @@ It performs these steps:
 1. Ensure `Submission.SceneData` and `Submission.OverlayData` are populated.
 2. Update the local light structured buffer before commands capture `LocalLightSRV`.
 3. Build batched world text commands.
-4. Query the `FViewModePassRegistry` to know whether the active view mode uses depth pre-pass, opaque, decals, additive decals, alpha blend, lighting, non-lit visualization, height fog, and FXAA.
+4. Query the `FViewModePassRegistry` to know whether the active view mode uses depth pre-pass, opaque, additive decals, alpha blend, lighting, non-lit visualization, height fog, and FXAA.
 5. Iterate visible primitive proxies.
 6. For opaque proxies, emit a depth pre-pass command when the view mode requires it.
 7. Skip proxy passes disabled by the current view mode.
 8. Ask the concrete render pass to build commands for that proxy.
 9. Add selection-mask commands for selected outline-capable proxies.
-10. Add pass-level commands for shadow maps, deferred lighting, non-lit view modes, fog, FXAA, final post-process, UI, outline, skeletal debug, editor lines, billboards, text, and light-hit-map overlay.
+10. Add pass-level commands for shadow maps, forward lit shading, non-lit view modes, fog, FXAA, final post-process, UI, outline, skeletal debug, editor lines, billboards, text, and light-hit-map overlay.
 
 The proxy's `ERenderPass` maps to an execute pass by `MapPassToNodeType`:
 
@@ -215,9 +214,7 @@ The proxy's `ERenderPass` maps to an execute pass by `MapPassToNodeType`:
 |---|---|
 | `DepthPre` | `DepthPrePass` |
 | `ShadowMap` | `ShadowMapPass` |
-| `Opaque` in forward path | `ForwardOpaquePass` |
-| `Opaque` in deferred path | `DeferredOpaquePass` |
-| `Decal` | `DeferredDecalPass` |
+| `Opaque` | `ForwardOpaquePass` |
 | `AlphaBlend` | `AlphaBlendPass` |
 | `SubUV` | `SubUVPass` |
 | `SelectionMask` | `SelectionMaskPass` |
@@ -292,12 +289,9 @@ Pipeline node
   pass
 ```
 
-`FRenderPipelineRunner` gates child execution through:
+`FRenderPipelineRunner` gates child execution through `ShouldExecutePipeline` and `ShouldExecutePass`.
 
-- `ShouldExecutePipeline`
-- `ShouldExecutePass`
-
-Those functions inspect `SceneView->RenderPath`, `ViewMode.ActiveViewMode`, and `FViewModePassRegistry`.
+Those functions inspect `ViewMode.ActiveViewMode` and `FViewModePassRegistry`.
 
 ## 9. Registered Pipeline Tree
 
@@ -316,42 +310,9 @@ EditorRootPipeline
 
 ```text
 ScenePipeline
-  DeferredPipeline
   ForwardPipeline
   PostProcessPipeline
   UIPass
-```
-
-Deferred:
-
-```text
-DeferredPipeline
-  DeferredLitPipeline
-    DepthPrePass
-    ShadowMapPass
-    LightCullingPass
-    DeferredOpaquePass
-    DeferredDecalPass
-    DeferredLightingPass
-    AlphaBlendPass
-    SubUVPass
-
-  DeferredUnlitPipeline
-    DepthPrePass
-    DeferredOpaquePass
-    DeferredDecalPass
-    AlphaBlendPass
-    SubUVPass
-
-  DeferredWorldNormalPipeline
-    DepthPrePass
-    DeferredOpaquePass
-    DeferredDecalPass
-    NonLitViewModePass
-
-  DeferredSceneDepthPipeline
-    DepthPrePass
-    NonLitViewModePass
 ```
 
 Forward:
@@ -422,9 +383,7 @@ This means passes have two responsibilities at different times:
 - Build time: append commands for proxies or fullscreen work.
 - Execute time: bind inputs/targets and submit the prebuilt command range.
 
-## 11. Deferred Path
-
-The deferred path uses `FViewModeSurfaces` as GBuffer-like intermediate surfaces.
+## 11. Forward Path
 
 ### 11.1 Depth Pre-pass
 
@@ -436,7 +395,7 @@ The project uses reversed-Z behavior in places. After depth pre-pass, opaque dra
 
 ### 11.2 Shadow Map
 
-`ShadowMapPass` runs for lit forward/deferred paths.
+`ShadowMapPass` runs for lit forward paths.
 
 It renders visible shadow casters from the light's point of view into shadow atlas resources:
 
@@ -448,7 +407,7 @@ The pass exposes shadow atlas SRVs and moment atlas SRVs. Opaque and lighting pa
 
 ### 11.3 Light Culling
 
-`LightCullingPass` runs in deferred lit mode.
+`TileBasedLightCulling` runs in lit forward modes.
 
 It consumes:
 
@@ -461,78 +420,33 @@ It produces:
 - per-tile light mask SRV;
 - debug hit map SRV.
 
-Deferred opaque and deferred lighting can bind the tile mask. The light-hit-map overlay can visualize the debug output.
+Forward opaque can bind the tile mask. The light-hit-map overlay can visualize the debug output.
+### 11.4 Forward Opaque
 
-### 11.4 Deferred Opaque
+`ForwardOpaquePass` writes directly to the viewport color target.
 
-`DeferredOpaquePass` clears and binds view-mode surfaces when they are available and the active view mode is not wireframe.
-
-Depending on the shading model, the base targets store material data such as:
-
-- base color;
-- normal;
-- material parameters.
-
-If view-mode surfaces are not used, it binds the viewport RTV directly.
-
-### 11.5 Deferred Decal
-
-`DeferredDecalPass` applies decals to deferred intermediate surfaces. Decal commands are fullscreen-style or volume-derived commands using decal constants and decal texture SRVs.
-
-In deferred, decals are a separate pass after opaque. In forward, decals are handled differently inside `ForwardOpaquePass`.
-
-### 11.6 Deferred Lighting
-
-`DeferredLightingPass` is a fullscreen pass. It:
-
-1. Unbinds render targets when depth must be copied.
-2. Copies depth into a readable texture if needed.
-3. Binds the relevant view-mode surface SRVs.
-4. Binds depth copy SRV.
-5. Binds global light CB and local light SRV.
-6. Binds tile mask/debug hit map from light culling.
-7. Binds shadow atlas and moment atlas SRVs.
-8. Renders a fullscreen triangle into the viewport color target.
-
-After lighting, it may copy viewport color into `SceneColorCopyTexture` so later fullscreen post-process passes can read the current scene color.
-
-## 12. Forward Path
-
-Forward rendering skips the deferred intermediate surface lighting model. `ForwardOpaquePass` writes directly to the viewport color target.
-
-For lit forward view modes, it binds:
+It binds:
 
 - global light CB;
 - local light SRV;
 - shadow atlas SRVs;
-- shadow moment atlas SRVs.
+- shadow moment atlas SRVs;
+- tile mask/debug hit map from light culling when enabled.
 
-Forward decals are collected and packed before opaque submission:
-
-1. Clear each visible proxy's forward decal indices and per-object decal counters.
-2. Gather visible decal proxies and assign up to `MaxForwardDecalTextures` texture slots.
-3. Build a `FDecalVolumeBVH`.
-4. Query each opaque receiver's bounds against the decal BVH.
-5. Write decal index offset/count into the proxy's per-object constants.
-6. Upload forward decal data/index buffers to `FFrameResources`.
-7. Bind forward decal data SRV, index-list SRV, and decal texture array slots.
-
-This allows forward opaque shaders to evaluate relevant decals per object without a separate deferred decal buffer.
-
-## 13. View Modes
+## 12. View Modes
 
 `FViewModePassRegistry` owns shader variants and pass usage rules for each view mode.
 
 Current high-level routing:
 
-| View mode | Deferred route | Forward route |
-|---|---|---|
-| `Lit_Lambert` | `DeferredLitPipeline` | `ForwardLitPipeline` |
-| `Lit_Phong` | `DeferredLitPipeline` | `ForwardLitPipeline` |
-| `Unlit` | `DeferredUnlitPipeline` | `ForwardUnlitPipeline` |
-| `Wireframe` | `DeferredUnlitPipeline` | `ForwardUnlitPipeline` |
-| `WorldNormal` | `DeferredWorldNormalPipeline` | `ForwardWorldNormalPipeline` |
-| `SceneDepth` | `DeferredSceneDepthPipeline` | `ForwardSceneDepthPipeline` |
+| View mode | Pipeline |
+|---|---|
+| `Lit_Lambert` | `ForwardLitPipeline` |
+| `Lit_Phong` | `ForwardLitPipeline` |
+| `Unlit` | `ForwardUnlitPipeline` |
+| `Wireframe` | `ForwardUnlitPipeline` |
+| `WorldNormal` | `ForwardWorldNormalPipeline` |
+| `SceneDepth` | `ForwardSceneDepthPipeline` |
 
 Non-lit visualization modes use `NonLitViewModePass` when a fullscreen visualization is required. Forward world-normal is special: `ForwardOpaquePass` can output the world-normal view directly, avoiding an intermediate normal texture and fullscreen readback.
 
@@ -649,13 +563,10 @@ Common SRV slots:
 | `ESystemTexSlot::SceneDepth` | Depth copy SRV. |
 | `ESystemTexSlot::SceneColor` | Scene color copy SRV. |
 | `ESystemTexSlot::LocalLights` | Local light structured buffer. |
-| `ESystemTexSlot::LightTileMask` | Deferred tile light mask. |
+| `ESystemTexSlot::LightTileMask` | Tile light mask for lit forward view modes. |
 | `ESystemTexSlot::DebugHitMap` | Light culling debug hit map. |
 | `ESystemTexSlot::ShadowAtlasBase` | Shadow atlas pages. |
 | `ESystemTexSlot::ShadowMomentAtlasBase` | Moment shadow atlas pages. |
-| `ESystemTexSlot::ForwardDecalData` | Forward decal records. |
-| `ESystemTexSlot::ForwardDecalIndexList` | Per-object forward decal index list. |
-| `ESystemTexSlot::ForwardDecalTextureBase` | Forward decal texture array slots. |
 
 Passes deliberately null SRVs around render-target writes to avoid D3D11 read/write hazards.
 
@@ -670,7 +581,6 @@ Examples:
 | `DepthPre` | `Default` | `NoColor` | `SolidBackCull` | triangle list |
 | `ShadowMap` | `Default` | `Opaque` | `SolidFrontCull` | triangle list |
 | `Opaque` | `Default` | `Opaque` | `SolidBackCull` | triangle list |
-| `Decal` | `NoDepth` | `Opaque` | `SolidNoCull` | triangle list |
 | `AlphaBlend` | `Default` | `AlphaBlend` | `SolidBackCull` | triangle list |
 | `SubUV` | `DepthReadOnly` | `AlphaBlend` | `SolidNoCull` | triangle list |
 | `SelectionMask` | `StencilWrite` | `NoColor` | `SolidNoCull` | triangle list |
@@ -694,8 +604,7 @@ Typical target transitions:
 
 - `BeginFrame` clears viewport color/depth and binds viewport RTV/DSV.
 - `DepthPrePass` writes depth.
-- deferred opaque writes view-mode surfaces or viewport color depending on mode.
-- deferred lighting writes viewport color.
+- forward opaque writes viewport color directly.
 - post-process passes copy current viewport color into scene color copy when they need readable input.
 - `PresentPass` copies viewport output to the final present target when rendering to a viewport render target.
 

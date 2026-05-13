@@ -13,23 +13,20 @@
 - 이름은 역할을 바로 드러내게 짓는다.
 - 문서와 코드 모두 현재 코드 기준 타입명을 사용한다.
 - `Pass`, `Pipeline`, `Context`, `Resources`를 접미사로 써서 역할을 구분한다.
-- `Deferred`, `Forward` 전용 요소는 각각 `Deferred`, `Forward` 접두사를 붙인다.
+- 현재 mainline은 `Forward` 접두사를 사용한다.
+- `Deferred` 접두사는 복원 노트나 레거시 참조에만 남긴다.
 - 여러 렌더 경로에서 공유하는 요소는 기존 이름을 유지한다.
 
 ## 2. Pass Naming
 
 - 실제 GPU 작업 단위는 `Pass` 접미사를 사용한다.
-- `Deferred`, `Forward` 전용 pass는 각각 `Deferred`, `Forward` 접두사를 붙인다.
+- forward 전용 pass는 `Forward` 접두사를 붙인다.
 - 여러 렌더 경로에서 공유하는 pass는 기존 이름을 유지한다.
 - 이름은 수행 작업을 바로 드러내게 짓는다.
 
 예
 - `DepthPrePass`
-- `DeferredOpaquePass`
-- `DeferredDecalPass`
-- `DeferredLightingPass`
 - `ForwardOpaquePass`
-- `ForwardLightingPass`
 - `FXAAPass`
 - `PresentPass`
 - `OverlayTextPass`
@@ -38,16 +35,13 @@
 ## 3. Pipeline Naming
 
 - 실행 경로를 묶는 단위는 `Pipeline` 접미사를 사용한다.
-- 렌더 경로 분기가 생기면 상위에 `DeferredPipeline`, `ForwardPipeline`을 둔다.
-- 경로 전용 하위 pipeline은 `DeferredLitPipeline`, `ForwardLitPipeline`처럼 접두사를 붙인다.
+- 렌더 경로 분기가 생기면 현재 mainline 기준으로 `ForwardPipeline`을 둔다.
+- 경로 전용 하위 pipeline은 `ForwardLitPipeline`, `ForwardSceneDepthPipeline`처럼 접두사를 붙인다.
 - 여러 렌더 경로에서 공유하는 pipeline은 기존 이름을 유지한다.
 - 최상위 진입점일 때만 `RootPipeline`을 사용한다.
 
 예
 - `ScenePipeline`
-- `DeferredPipeline`
-- `DeferredLitPipeline`
-- `DeferredSceneDepthPipeline`
 - `ForwardPipeline`
 - `ForwardLitPipeline`
 - `ForwardSceneDepthPipeline`
@@ -72,14 +66,14 @@
 ## 5. Resource Naming
 
 - 프레임 공용 리소스 묶음은 `Resources`를 사용한다.
-- intermediate target 묶음은 `Surfaces`를 사용한다.
 - viewport 출력 묶음은 `RenderTargets`를 사용한다.
+- tile light culling 묶음은 `LightCulling`을 사용한다.
 - C++ constant buffer payload 타입은 `CBData`를 사용한다.
 
 예
 - `FFrameResources`
-- `FViewModeSurfaces`
 - `FViewportRenderTargets`
+- `FTileBasedLightCulling`
 - `FFrameCBData`
 - `FPerObjectCBData`
 - `FFogCBData`
