@@ -43,7 +43,6 @@
 // ==================== Submission / Visibility ====================
 
 #include "Render/Submission/Command/BuildDrawCommand.h"
-#include "Render/Visibility/LightCulling/TileBasedLightCulling.h"
 
 #include <Collision/SpatialPartition.h>
 
@@ -86,6 +85,8 @@ void WarmUpBuiltInViewModeShaders(const FViewModePassRegistry& Registry, EViewMo
 
 ERenderPassNodeType MapPassToNodeType(ERenderPass Pass, const FRenderPipelineContext& Context)
 {
+    (void)Context;
+
     switch (Pass)
     {
     case ERenderPass::DepthPre:
@@ -94,10 +95,6 @@ ERenderPassNodeType MapPassToNodeType(ERenderPass Pass, const FRenderPipelineCon
         return ERenderPassNodeType::ShadowMapPass;
     case ERenderPass::Opaque:
         return ERenderPassNodeType::ForwardOpaquePass;
-    case ERenderPass::Decal:
-        return ERenderPassNodeType::DeferredDecalPass;
-    case ERenderPass::DeferredLighting:
-        return ERenderPassNodeType::DeferredLightingPass;
     case ERenderPass::AdditiveDecal:
         return ERenderPassNodeType::AdditiveDecalPass;
     case ERenderPass::AlphaBlend:
@@ -123,7 +120,7 @@ ERenderPassNodeType MapPassToNodeType(ERenderPass Pass, const FRenderPipelineCon
     case ERenderPass::PostProcess:
         return ERenderPassNodeType::HeightFogPass;
     default:
-        return ERenderPassNodeType::DeferredOpaquePass;
+        return ERenderPassNodeType::ForwardOpaquePass;
     }
 }
 } // namespace
@@ -159,23 +156,12 @@ void FRenderer::Create(HWND hWindow)
     OverlayBatches.DebugLines.Create(Device.GetDevice());
 	OverlayBatches.SkeletonLines.Create(Device.GetDevice());
 
-    // 타일 기반 로컬 라이트 컬링 초기화
-    LightCulling = std::make_unique<FTileBasedLightCulling>();
-    LightCulling->Initialize(&Device);
-
     // GPU 프로파일러 초기화
     FGPUProfiler::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext());
 }
 
 void FRenderer::Release()
 {
-    // 라이트 컬링 리소스 해제
-    if (LightCulling)
-    {
-        LightCulling->Release();
-        LightCulling.reset();
-    }
-
     // 뷰모드 패스 레지스트리 해제
     if (ViewModePassRegistry)
     {
@@ -183,9 +169,6 @@ void FRenderer::Release()
         delete ViewModePassRegistry;
         ViewModePassRegistry = nullptr;
     }
-
-    // 뷰포트별 뷰모드 렌더 타겟 해제
-    ReleaseViewModeSurfaces(nullptr);
 
     // 전역 렌더 시스템 해제
     FGPUProfiler::Get().Shutdown();
@@ -205,57 +188,6 @@ void FRenderer::Release()
 
     // D3D 디바이스 해제
     Device.Release();
-}
-
-// ==================== View Mode Surface Management ====================
-
-FViewModeSurfaces* FRenderer::AcquireViewModeSurfaces(FViewport* Viewport, uint32 Width, uint32 Height)
-{
-    if (!Viewport || !Device.GetDevice() || Width == 0 || Height == 0)
-    {
-        return nullptr;
-    }
-
-    std::unique_ptr<FViewModeSurfaces>& Entry = ViewModeSurfacesMap[Viewport];
-    if (!Entry)
-    {
-        Entry = std::make_unique<FViewModeSurfaces>();
-    }
-
-    Entry->Resize(Device.GetDevice(), Width, Height);
-    return Entry.get();
-}
-
-void FRenderer::ReleaseViewModeSurfaces(FViewport* Viewport)
-{
-    // Viewport이 없으면 전체 뷰모드 Surface를 해제합니다.
-    if (!Viewport)
-    {
-        for (auto& Pair : ViewModeSurfacesMap)
-        {
-            if (Pair.second)
-            {
-                Pair.second->Release();
-            }
-        }
-
-        ViewModeSurfacesMap.clear();
-        return;
-    }
-
-    // 특정 Viewport에 연결된 Surface만 해제합니다.
-    auto It = ViewModeSurfacesMap.find(Viewport);
-    if (It == ViewModeSurfacesMap.end())
-    {
-        return;
-    }
-
-    if (It->second)
-    {
-        It->second->Release();
-    }
-
-    ViewModeSurfacesMap.erase(It);
 }
 
 void FRenderer::WarmUpViewModeShaders(EViewMode ViewMode)
@@ -379,12 +311,10 @@ FRenderPipelineContext FRenderer::CreatePipelineContext(
     PipelineContext.DrawCommandList         = &DrawCommandList;
     PipelineContext.RenderPassPresets       = PassRegistry.GetRenderPassPresets();
     PipelineContext.ViewMode.Registry       = ViewModePassRegistry;
-    PipelineContext.ViewMode.Surfaces       = nullptr;
     PipelineContext.ViewMode.ActiveViewMode = SceneView.ViewMode;
     PipelineContext.Submission.SceneData    = &DrawCollector.GetCollectedSceneData();
     PipelineContext.Submission.OverlayData  = &DrawCollector.GetCollectedOverlayData();
     PipelineContext.Occlusion               = SceneView.OcclusionCulling;
-    PipelineContext.LightCulling            = LightCulling.get();
     PipelineContext.LODContext              = &SceneView.LODContext;
 
     return PipelineContext;
@@ -442,7 +372,6 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
     const bool                   bHasViewModeConfig = ViewModeRegistry && ViewModeRegistry->HasConfig(PipelineContext.ViewMode.ActiveViewMode);
     const bool                   bUsesDepthPre      = bHasViewModeConfig && ViewModeRegistry->UsesDepthPrePass(PipelineContext.ViewMode.ActiveViewMode);
     const bool                   bUsesOpaque        = bHasViewModeConfig && ViewModeRegistry->UsesOpaque(PipelineContext.ViewMode.ActiveViewMode);
-    const bool                   bUsesDecal         = bHasViewModeConfig && ViewModeRegistry->UsesDecal(PipelineContext.ViewMode.ActiveViewMode);
     const bool                   bUsesAdditiveDecal = bHasViewModeConfig && ViewModeRegistry->UsesAdditiveDecal(PipelineContext.ViewMode.ActiveViewMode);
     const bool                   bUsesAlphaBlend    = bHasViewModeConfig && ViewModeRegistry->UsesAlphaBlend(PipelineContext.ViewMode.ActiveViewMode);
 
@@ -462,14 +391,7 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
         // 데칼 프록시 처리
         else if (Cast<UDecalComponent>(Proxy->Owner))
         {
-            FDecalSceneProxy* DecalProxy = static_cast<FDecalSceneProxy*>(Proxy);
-            if (bHasViewModeConfig && bUsesDecal && PipelineContext.ViewMode.Surfaces)
-            {
-                if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::DeferredDecalPass))
-                {
-                    Pass->BuildDrawCommands(PipelineContext, *DecalProxy);
-                }
-            }
+            continue;
         }
         // 일반 메시 프록시 처리
         else
@@ -484,10 +406,6 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
             if (bHasViewModeConfig)
             {
                 if (Proxy->Pass == ERenderPass::Opaque && !bUsesOpaque)
-                {
-                    continue;
-                }
-                if (Proxy->Pass == ERenderPass::Decal && !bUsesDecal)
                 {
                     continue;
                 }
@@ -523,14 +441,6 @@ void FRenderer::BuildDrawCommands(FRenderPipelineContext& PipelineContext)
         if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::ShadowMapPass))
         {
             Pass->BuildDrawCommands(PipelineContext);
-        }
-
-        if (ViewModeRegistry->UsesLightingPass(PipelineContext.ViewMode.ActiveViewMode))
-        {
-            if (FRenderPass* Pass = PassRegistry.FindPass(ERenderPassNodeType::DeferredLightingPass))
-            {
-                Pass->BuildDrawCommands(PipelineContext);
-            }
         }
 
         if (ViewModeRegistry->UsesNonLitViewMode(PipelineContext.ViewMode.ActiveViewMode))
@@ -674,7 +584,6 @@ void FRenderer::RunRootPipeline(ERenderPipelineType RootType, FRenderPipelineCon
     PipelineContext.DrawCommandList   = &DrawCommandList;
     PipelineContext.RenderPassPresets = PassRegistry.GetRenderPassPresets();
     PipelineContext.ViewMode.Registry = ViewModePassRegistry;
-    PipelineContext.LightCulling      = LightCulling.get();
 
     PipelineRunner.ExecutePipeline(RootType, PipelineContext, *PipelineContext.SceneView, PipelineRegistry, PassRegistry);
 
@@ -692,7 +601,6 @@ void FRenderer::ExecutePipeline(ERenderPipelineType Type, FRenderPipelineContext
     PipelineContext.DrawCommandList   = &DrawCommandList;
     PipelineContext.RenderPassPresets = PassRegistry.GetRenderPassPresets();
     PipelineContext.ViewMode.Registry = ViewModePassRegistry;
-    PipelineContext.LightCulling      = LightCulling.get();
 
     PipelineRunner.ExecutePipeline(Type, PipelineContext, *PipelineContext.SceneView, PipelineRegistry, PassRegistry);
 }

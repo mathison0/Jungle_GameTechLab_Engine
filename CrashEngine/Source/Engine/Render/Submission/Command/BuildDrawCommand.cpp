@@ -6,7 +6,6 @@
 #include "Render/Execute/Context/RenderPipelineContext.h"
 #include "Render/Execute/Context/Scene/SceneView.h"
 #include "Render/Execute/Context/ViewMode/ShadingModel.h"
-#include "Render/Execute/Context/ViewMode/ViewModeSurfaces.h"
 #include "Render/Execute/Context/Viewport/ViewportRenderTargets.h"
 #include "Render/Execute/Registry/RenderPassPresets.h"
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
@@ -738,23 +737,7 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
     const FViewportRenderTargets* Targets = Context.Targets;
     FGraphicsProgram*             Shader  = nullptr;
 
-    if (Pass == ERenderPass::DeferredLighting)
-    {
-        if (!Context.ViewMode.Registry || !Context.ViewMode.Registry->HasConfig(Context.ViewMode.ActiveViewMode))
-        {
-            return;
-        }
-
-        const FViewModePassDesc* Desc =
-            Context.ViewMode.Registry->FindPassDesc(Context.ViewMode.ActiveViewMode, ERenderPass::DeferredLighting, ERenderShadingPath::Deferred);
-        if (!Desc || !Desc->CompiledShader)
-        {
-            return;
-        }
-
-        Shader = Desc->CompiledShader;
-    }
-    else if (Pass == ERenderPass::FXAA)
+    if (Pass == ERenderPass::FXAA)
     {
         Shader = FShaderManager::Get().GetShader(EShaderType::FXAA);
     }
@@ -797,12 +780,7 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
     Cmd.VertexCount                  = 3;
     Cmd.Pass                         = Pass;
 
-    if (Pass == ERenderPass::DeferredLighting && Context.ViewMode.Surfaces)
-    {
-        // Lighting fullscreen shaders read the base color buffer from t0.
-        Cmd.DiffuseSRV = Context.ViewMode.Surfaces->GetSRV(EViewModeSurfaceslot::BaseColor);
-    }
-    else if (Pass == ERenderPass::FXAA && Context.SceneView)
+    if (Pass == ERenderPass::FXAA && Context.SceneView)
     {
         // FXAA prepares SceneColor on t0 before submission; keep the command in sync
         // so SubmitCommand does not overwrite it with nullptr on a forced bind.
@@ -824,8 +802,8 @@ void DrawCommandBuild::BuildFullscreenDrawCommand(ERenderPass Pass, FRenderPipel
         return static_cast<uint32>((Val >> 4) ^ (Val >> 20));
     };
 
-    Cmd.LightCB       = (Pass == ERenderPass::DeferredLighting && Context.Resources) ? &Context.Resources->GlobalLightBuffer : nullptr;
-    Cmd.LocalLightSRV = (Pass == ERenderPass::DeferredLighting && Context.Resources) ? Context.Resources->LocalLightSRV : nullptr;
+    Cmd.LightCB       = nullptr;
+    Cmd.LocalLightSRV = nullptr;
     Cmd.SortKey       = FDrawCommand::BuildSortKey(Pass, static_cast<uint8>(ToPostProcessUserBits(PostProcessVariant)), Shader, nullptr, GetPtrHash(Cmd.DiffuseSRV));
 }
 
@@ -1598,51 +1576,4 @@ void DrawCommandBuild::BuildUIDrawCommands(FRenderPipelineContext& Context, FDra
         Cmd.SortKey   = BuildUIOrderSortKey(Order++);
     }
 }
-
-void DrawCommandBuild::BuildDecalDrawCommand(const FPrimitiveProxy& Proxy, FRenderPipelineContext& Context, FDrawCommandList& OutList)
-{
-    if (!Proxy.DiffuseSRV || !Context.ViewMode.Registry || !Context.ViewMode.Registry->HasConfig(Context.ViewMode.ActiveViewMode))
-    {
-        return;
-    }
-
-    const FViewModePassDesc* Desc = Context.ViewMode.Registry->FindPassDesc(Context.ViewMode.ActiveViewMode, ERenderPass::Decal, ERenderShadingPath::Deferred);
-    if (!Desc || !Desc->CompiledShader)
-    {
-        return;
-    }
-
-    FDrawCommand& Cmd = OutList.AddCommand();
-    Cmd.Shader        = Desc->CompiledShader;
-    Cmd.DepthStencil  = EDepthStencilState::NoDepth;
-    Cmd.Blend         = EBlendState::Opaque;
-    Cmd.Rasterizer    = ERasterizerState::SolidNoCull;
-    Cmd.Topology      = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-    Cmd.VertexCount   = 3;
-    Cmd.DiffuseSRV    = Proxy.DiffuseSRV;
-    Cmd.Pass          = ERenderPass::Decal;
-
-    if (Proxy.ExtraCB.Buffer && Proxy.ExtraCB.Size > 0 && Context.Context)
-    {
-        Proxy.ExtraCB.Buffer->Update(Context.Context, Proxy.ExtraCB.Data, Proxy.ExtraCB.Size);
-
-        if (Proxy.ExtraCB.Slot == ECBSlot::PerShader0)
-        {
-            Cmd.PerShaderCB[0] = Proxy.ExtraCB.Buffer;
-        }
-        else if (Proxy.ExtraCB.Slot == ECBSlot::PerShader1)
-        {
-            Cmd.PerShaderCB[1] = Proxy.ExtraCB.Buffer;
-        }
-    }
-
-    auto GetPtrHash = [](const void* Ptr) -> uint32
-    {
-        uintptr_t Val = reinterpret_cast<uintptr_t>(Ptr);
-        return static_cast<uint32>((Val >> 4) ^ (Val >> 20));
-    };
-
-    Cmd.SortKey = FDrawCommand::BuildSortKey(ERenderPass::Decal, 0, Cmd.Shader, nullptr, GetPtrHash(Cmd.DiffuseSRV));
-}
-
 

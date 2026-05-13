@@ -13,8 +13,6 @@ void InitializeDefaultRenderPassPresets(FRenderPassPreset (&OutPresets)[(uint32)
     P[(uint32)E::DepthPre].Draw      = { EDepthStencilState::Default, EBlendState::NoColor, ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::ShadowMap].Draw     = { EDepthStencilState::Default, EBlendState::Opaque, ERasterizerState::SolidFrontCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::Opaque].Draw        = { EDepthStencilState::Default, EBlendState::Opaque, ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
-    P[(uint32)E::Decal].Draw         = { EDepthStencilState::NoDepth, EBlendState::Opaque, ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
-    P[(uint32)E::DeferredLighting].Draw = { EDepthStencilState::NoDepth, EBlendState::Opaque, ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::AdditiveDecal].Draw = { EDepthStencilState::DepthReadOnly, EBlendState::Additive, ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::AlphaBlend].Draw    = { EDepthStencilState::Default, EBlendState::AlphaBlend, ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
     P[(uint32)E::SubUV].Draw         = { EDepthStencilState::DepthReadOnly, EBlendState::AlphaBlend, ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };

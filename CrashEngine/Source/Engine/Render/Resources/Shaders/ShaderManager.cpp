@@ -20,8 +20,6 @@ const char* GetShaderTypeName(EShaderType InType)
         return "Editor";
     case EShaderType::StaticMesh:
         return "StaticMesh";
-    case EShaderType::Decal:
-        return "Decal";
     case EShaderType::OutlinePostProcess:
         return "OutlinePostProcess";
     case EShaderType::Font:

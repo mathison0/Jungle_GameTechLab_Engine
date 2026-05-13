@@ -21,7 +21,6 @@
 #include "Render/Execute/Passes/Scene/ShadowMapPass.h"
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
 #include "Render/Execute/Context/RenderCollectContext.h"
-#include "Render/Execute/Context/ViewMode/ViewModeSurfaces.h"
 #include "Sound/SoundManager.h"
 
 #include <algorithm>
@@ -720,13 +719,9 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
     SceneView.OcclusionCulling = &GPUOcclusion;
     SceneView.LODContext = World->PrepareLODContext();
 
-    FViewModeSurfaces* ViewModeSurfaces = nullptr;
-    Renderer.ReleaseViewModeSurfaces(VP);
-
     Renderer.BeginCollect(SceneView, Scene.GetPrimitiveProxyCount());
     auto PipelineContext = Renderer.CreatePipelineContext(SceneView, &RenderTargets, &Scene);
     PipelineContext.ViewMode.ActiveViewMode = ViewMode;
-    PipelineContext.ViewMode.Surfaces = ViewModeSurfaces;
 
     FRenderCollectContext CollectContext = {};
     CollectContext.SceneView = &SceneView;

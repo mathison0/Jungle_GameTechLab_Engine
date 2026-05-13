@@ -8,7 +8,6 @@
 #include "Render/Execute/Context/Scene/SceneView.h"
 #include "Render/Execute/Registry/ViewModePassRegistry.h"
 #include "Render/Execute/Context/RenderPipelineContext.h"
-#include "Render/Execute/Context/ViewMode/ViewModeSurfaces.h"
 #include "Render/Resources/Bindings/RenderCBKeys.h"
 #include "Render/Resources/Buffers/ConstantBufferCache.h"
 #include "Render/Resources/Buffers/ConstantBufferData.h"
@@ -47,7 +46,6 @@ void FNonLitViewModePass::PrepareInputs(FRenderPipelineContext& Context)
         }
         break;
 
-    case EViewModePostProcessVariant::WorldNormal:
     case EViewModePostProcessVariant::Outline:
     case EViewModePostProcessVariant::None:
     default:
@@ -59,11 +57,6 @@ void FNonLitViewModePass::BuildDrawCommands(FRenderPipelineContext& Context)
 {
     const EViewModePostProcessVariant Variant = GetViewModePostProcessVariant(Context);
     if (Variant == EViewModePostProcessVariant::None)
-    {
-        return;
-    }
-
-    if (Variant == EViewModePostProcessVariant::WorldNormal && !Context.ViewMode.Surfaces)
     {
         return;
     }
@@ -95,18 +88,6 @@ void FNonLitViewModePass::BuildDrawCommands(FRenderPipelineContext& Context)
         }
 
         Command.Blend = EBlendState::Opaque;
-        break;
-    }
-    case EViewModePostProcessVariant::WorldNormal:
-    {
-        ID3D11ShaderResourceView* NormalSRV = Context.ViewMode.Surfaces->GetSRV(EViewModeSurfaceslot::ModifiedSurface1);
-        if (!NormalSRV)
-        {
-            NormalSRV = Context.ViewMode.Surfaces->GetSRV(EViewModeSurfaceslot::Surface1);
-        }
-
-        Command.DiffuseSRV = NormalSRV;
-        Command.Blend      = EBlendState::Opaque;
         break;
     }
     case EViewModePostProcessVariant::Outline:

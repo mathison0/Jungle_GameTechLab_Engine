@@ -2,14 +2,11 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
-
 // ==================== Render Context ====================
 
 #include "Render/Execute/Context/RenderCollectContext.h"
 #include "Render/Execute/Context/RenderPipelineContext.h"
 #include "Render/Execute/Context/Scene/SceneView.h"
-#include "Render/Execute/Context/ViewMode/ViewModeSurfaces.h"
 #include "Render/Execute/Context/Viewport/ViewportRenderTargets.h"
 
 // ==================== Render Pipeline / Pass Registry ====================
@@ -35,10 +32,6 @@
 #include "Render/Submission/Collect/DrawCollector.h"
 #include "Render/Submission/Command/DrawCommandList.h"
 
-// ==================== Visibility / Culling ====================
-
-#include "Render/Visibility/LightCulling/TileBasedLightCulling.h"
-
 // ==================== Forward Declarations ====================
 
 class FScene;
@@ -61,11 +54,9 @@ public:
     void Create(HWND hWindow);
     void Release();
 
-    // ==================== View Mode Surface Management ====================
+    // ==================== View Mode Shader Warmup ====================
 
-    FViewModeSurfaces* AcquireViewModeSurfaces(FViewport* Viewport, uint32 Width, uint32 Height);
-    void               ReleaseViewModeSurfaces(FViewport* Viewport = nullptr);
-    void               WarmUpViewModeShaders(EViewMode ViewMode);
+    void WarmUpViewModeShaders(EViewMode ViewMode);
 
     const FViewModePassRegistry* GetViewModePassRegistry() const { return ViewModePassRegistry; }
     const FRenderPassRegistry&   GetPassRegistry() const { return PassRegistry; }
@@ -169,13 +160,11 @@ private:
 
     // ==================== View Mode Resources ====================
 
-    std::unordered_map<FViewport*, std::unique_ptr<FViewModeSurfaces>> ViewModeSurfacesMap;
-    FViewModePassRegistry*                                             ViewModePassRegistry = nullptr;
+    FViewModePassRegistry* ViewModePassRegistry = nullptr;
 
-    // ==================== Overlay / Lighting Helpers ====================
+    // ==================== Overlay Helpers ====================
 
-    FOverlayBatchSet                        OverlayBatches;
-    std::unique_ptr<FTileBasedLightCulling> LightCulling;
+    FOverlayBatchSet OverlayBatches;
 
     // ==================== Active Pipeline State ====================
 

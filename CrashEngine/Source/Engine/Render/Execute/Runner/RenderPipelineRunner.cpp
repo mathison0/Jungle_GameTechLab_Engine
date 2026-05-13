@@ -19,16 +19,8 @@ const wchar_t* GetRenderPassMarkerName(ERenderPassNodeType PassType)
         return L"DepthPrePass";
     case ERenderPassNodeType::ShadowMapPass:
         return L"ShadowMapPass";
-    case ERenderPassNodeType::LightCullingPass:
-        return L"LightCullingPass";
-    case ERenderPassNodeType::DeferredOpaquePass:
-        return L"DeferredOpaquePass";
     case ERenderPassNodeType::ForwardOpaquePass:
         return L"ForwardOpaquePass";
-    case ERenderPassNodeType::DeferredDecalPass:
-        return L"DeferredDecalPass";
-    case ERenderPassNodeType::DeferredLightingPass:
-        return L"DeferredLightingPass";
     case ERenderPassNodeType::AdditiveDecalPass:
         return L"AdditiveDecalPass";
     case ERenderPassNodeType::AlphaBlendPass:
@@ -76,13 +68,8 @@ bool ShouldExecutePass(const FRenderPipelineContext& Context, ERenderPassNodeTyp
     {
     case ERenderPassNodeType::DepthPrePass:
         return Registry->UsesDepthPrePass(Context.ViewMode.ActiveViewMode);
-    case ERenderPassNodeType::DeferredOpaquePass:
     case ERenderPassNodeType::ForwardOpaquePass:
         return Registry->UsesOpaque(Context.ViewMode.ActiveViewMode);
-    case ERenderPassNodeType::DeferredDecalPass:
-        return Registry->UsesDecal(Context.ViewMode.ActiveViewMode);
-    case ERenderPassNodeType::DeferredLightingPass:
-        return Registry->UsesLightingPass(Context.ViewMode.ActiveViewMode);
     case ERenderPassNodeType::AdditiveDecalPass:
         return Registry->UsesAdditiveDecal(Context.ViewMode.ActiveViewMode);
     case ERenderPassNodeType::AlphaBlendPass:
@@ -116,18 +103,8 @@ bool ShouldExecutePipeline(const FRenderPipelineContext& Context, ERenderPipelin
 
     switch (PipelineType)
     {
-    case ERenderPipelineType::DeferredPipeline:
-        return false;
     case ERenderPipelineType::ForwardPipeline:
         return true;
-    case ERenderPipelineType::DeferredLitPipeline:
-        return false;
-    case ERenderPipelineType::DeferredUnlitPipeline:
-        return false;
-    case ERenderPipelineType::DeferredWorldNormalPipeline:
-        return false;
-    case ERenderPipelineType::DeferredSceneDepthPipeline:
-        return false;
     case ERenderPipelineType::ForwardLitPipeline:
         return bUsesLighting;
     case ERenderPipelineType::ForwardUnlitPipeline:

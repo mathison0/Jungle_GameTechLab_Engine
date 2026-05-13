@@ -59,54 +59,6 @@ void FRenderPipelineRegistry::Initialize()
         });
 
     AddPipeline(
-        ERenderPipelineType::DeferredPipeline,
-        {
-            PipelineNode(ERenderPipelineType::DeferredLitPipeline),
-            PipelineNode(ERenderPipelineType::DeferredUnlitPipeline),
-            PipelineNode(ERenderPipelineType::DeferredWorldNormalPipeline),
-            PipelineNode(ERenderPipelineType::DeferredSceneDepthPipeline),
-        });
-
-    AddPipeline(
-        ERenderPipelineType::DeferredLitPipeline,
-        {
-            PassNode(ERenderPassNodeType::DepthPrePass),
-            PassNode(ERenderPassNodeType::ShadowMapPass),
-            PassNode(ERenderPassNodeType::LightCullingPass),
-            PassNode(ERenderPassNodeType::DeferredOpaquePass),
-            PassNode(ERenderPassNodeType::DeferredDecalPass),
-            PassNode(ERenderPassNodeType::DeferredLightingPass),
-            PassNode(ERenderPassNodeType::AlphaBlendPass),
-            PassNode(ERenderPassNodeType::SubUVPass),
-        });
-
-    AddPipeline(
-        ERenderPipelineType::DeferredUnlitPipeline,
-        {
-            PassNode(ERenderPassNodeType::DepthPrePass),
-            PassNode(ERenderPassNodeType::DeferredOpaquePass),
-            PassNode(ERenderPassNodeType::DeferredDecalPass),
-            PassNode(ERenderPassNodeType::AlphaBlendPass),
-            PassNode(ERenderPassNodeType::SubUVPass),
-        });
-
-    AddPipeline(
-        ERenderPipelineType::DeferredWorldNormalPipeline,
-        {
-            PassNode(ERenderPassNodeType::DepthPrePass),
-            PassNode(ERenderPassNodeType::DeferredOpaquePass),
-            PassNode(ERenderPassNodeType::DeferredDecalPass),
-            PassNode(ERenderPassNodeType::NonLitViewModePass),
-        });
-
-    AddPipeline(
-        ERenderPipelineType::DeferredSceneDepthPipeline,
-        {
-            PassNode(ERenderPassNodeType::DepthPrePass),
-            PassNode(ERenderPassNodeType::NonLitViewModePass),
-        });
-
-    AddPipeline(
         ERenderPipelineType::ForwardPipeline,
         {
             PipelineNode(ERenderPipelineType::ForwardLitPipeline),

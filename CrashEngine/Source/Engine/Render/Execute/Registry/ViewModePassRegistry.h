@@ -43,7 +43,6 @@ struct FViewModePassConfig
 
     bool bEnableDepthPre;
     bool bEnableOpaque;
-    bool bEnableDecal;
     bool bEnableLighting;
 
     bool bEnableAdditiveDecal;
@@ -60,7 +59,6 @@ struct FViewModePassConfig
 EShadingModel               GetViewModeShadingModel(const FViewModePassConfig* Config);
 bool                        UsesViewModeDepthPre(const FViewModePassConfig* Config);
 bool                        UsesViewModeOpaque(const FViewModePassConfig* Config);
-bool                        UsesViewModeDecal(const FViewModePassConfig* Config);
 bool                        UsesViewModeLighting(const FViewModePassConfig* Config);
 bool                        UsesViewModeAdditiveDecal(const FViewModePassConfig* Config);
 bool                        UsesViewModeAlphaBlend(const FViewModePassConfig* Config);
@@ -68,13 +66,6 @@ bool                        UsesNonLitViewMode(const FViewModePassConfig* Config
 bool                        UsesViewModeHeightFog(const FViewModePassConfig* Config);
 bool                        UsesViewModeFXAA(const FViewModePassConfig* Config);
 EViewModePostProcessVariant GetViewModePostProcessVariant(const FViewModePassConfig* Config);
-
-FViewModePassDesc BuildViewModeDeferredOpaquePassDesc(EShadingModel ShadingModel);
-FViewModePassDesc BuildViewModeForwardOpaquePassDesc(EShadingModel ShadingModel);
-FViewModePassDesc BuildViewModeDeferredDecalPassDesc(EShadingModel ShadingModel);
-FViewModePassDesc BuildViewModeDeferredLightingPassDesc(EShadingModel ShadingModel);
-void              BuildViewModePasses(FViewModePassConfig& Config);
-void              InitializeViewModePassConfig(FViewModePassConfig& Config, EViewMode InViewMode, FShaderVariantCache& VariantCache);
 
 // FViewModePassRegistry는 실행 시 필요한 타입과 규칙의 매핑을 보관합니다.
 class FViewModePassRegistry
@@ -90,7 +81,6 @@ public:
     EShadingModel               GetShadingModel(EViewMode ViewMode) const;
     bool                        UsesDepthPrePass(EViewMode ViewMode) const;
     bool                        UsesOpaque(EViewMode ViewMode) const;
-    bool                        UsesDecal(EViewMode ViewMode) const;
     bool                        UsesLightingPass(EViewMode ViewMode) const;
     bool                        UsesAdditiveDecal(EViewMode ViewMode) const;
     bool                        UsesAlphaBlend(EViewMode ViewMode) const;

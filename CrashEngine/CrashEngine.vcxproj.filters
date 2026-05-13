@@ -16,9 +16,6 @@
     <Filter Include="Shaders\Passes\Scene">
       <UniqueIdentifier>{817ab8a5-ff0e-aea0-f723-a2cd429c04cd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\Passes\Scene\Deferred">
-      <UniqueIdentifier>{8f419316-ab69-ee6d-bd3e-c1b5115ce489}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\Passes\Scene\Forward">
       <UniqueIdentifier>{ed52536f-dcf6-3b23-4ee5-ead0d1f5db16}</UniqueIdentifier>
     </Filter>
@@ -354,12 +351,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shaders\CustomTest.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\SkeletalUV1Debug.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">
       <Filter>Shaders\Common</Filter>
     </FxCompile>
@@ -377,15 +368,6 @@
     </FxCompile>
     <FxCompile Include="Shaders\Passes\PostProcess\OutlinePostProcessPass.hlsl">
       <Filter>Shaders\Passes\PostProcess</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\Passes\Scene\Deferred\DeferredDecalPS.hlsl">
-      <Filter>Shaders\Passes\Scene\Deferred</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\Passes\Scene\Deferred\DeferredLightingPS.hlsl">
-      <Filter>Shaders\Passes\Scene\Deferred</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\Passes\Scene\Deferred\DeferredOpaquePass.hlsl">
-      <Filter>Shaders\Passes\Scene\Deferred</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\Scene\Forward\ForwardOpaquePass.hlsl">
       <Filter>Shaders\Passes\Scene\Forward</Filter>
@@ -636,6 +618,9 @@
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\FLevelViewportLayout.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\IAssetViewer.cpp">
       <Filter>Source\Editor\Viewport</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\PreviewViewportClient.cpp">
@@ -1049,9 +1034,6 @@
     <ClCompile Include="Source\Engine\Render\Execute\Context\Scene\SceneView.cpp">
       <Filter>Source\Engine\Render\Execute\Context\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Execute\Context\ViewMode\ViewModeSurfaces.cpp">
-      <Filter>Source\Engine\Render\Execute\Context\ViewMode</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Context\Viewport\ViewportRenderTargets.cpp">
       <Filter>Source\Engine\Render\Execute\Context\Viewport</Filter>
     </ClCompile>
@@ -1088,15 +1070,6 @@
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\AlphaBlendPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DeferredDecalPass.cpp">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DeferredLightingPass.cpp">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DeferredOpaquePass.cpp">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
@@ -1110,9 +1083,6 @@
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.cpp">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.cpp">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.cpp">
@@ -1548,10 +1518,6 @@
       <Filter>ThirdParty\Lua\src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Engine\GameFramework\SkeletalMeshActor.cpp">
-      <Filter>Source\Engine\GameFramework</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Viewport\IAssetViewer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1651,6 +1617,9 @@
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\FLevelViewportLayout.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\IAssetViewer.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\LevelEditorViewportClient.h">
@@ -2190,9 +2159,6 @@
     <ClInclude Include="Source\Engine\Render\Execute\Context\ViewMode\ShadingModel.h">
       <Filter>Source\Engine\Render\Execute\Context\ViewMode</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Execute\Context\ViewMode\ViewModeSurfaces.h">
-      <Filter>Source\Engine\Render\Execute\Context\ViewMode</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Context\Viewport\ViewportRenderTargets.h">
       <Filter>Source\Engine\Render\Execute\Context\Viewport</Filter>
     </ClInclude>
@@ -2241,15 +2207,6 @@
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\AlphaBlendPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DeferredDecalPass.h">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DeferredLightingPass.h">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DeferredOpaquePass.h">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\DepthPrePass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
@@ -2263,9 +2220,6 @@
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\HeightFogPass.h">
-      <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\LightCullingPass.h">
       <Filter>Source\Engine\Render\Execute\Passes\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Execute\Passes\Scene\NonLitViewModePass.h">
@@ -2395,6 +2349,9 @@
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\RuntimeVertexPacker.h">
+      <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\RuntimeVertexWideningPolicy.h">
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.h">
@@ -2850,10 +2807,6 @@
     <ClInclude Include="ThirdParty\Sol\sol.hpp">
       <Filter>ThirdParty\Sol</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\GameFramework\SkeletalMeshActor.h">
-      <Filter>Source\Engine\GameFramework</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Viewport\IAssetViewer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

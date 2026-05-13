@@ -7,9 +7,6 @@
 
 class FDepthPrePass;
 class FForwardOpaquePass;
-class FDeferredOpaquePass;
-class FDeferredDecalPass;
-class FDeferredLightingPass;
 class FAdditiveDecalPass;
 class FAlphaBlendPass;
 class FSubUVPass;
@@ -33,11 +30,7 @@ enum class ERenderPassNodeType
     GridPass,
     DepthPrePass,
     ShadowMapPass,
-    LightCullingPass,
-    DeferredOpaquePass,
     ForwardOpaquePass,
-    DeferredDecalPass,
-    DeferredLightingPass,
     AdditiveDecalPass,
     AlphaBlendPass,
     SubUVPass,

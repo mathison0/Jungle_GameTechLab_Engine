@@ -334,44 +334,22 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd, FD3DDevice& Device
         Cache.LocalLightSRV = Cmd.LocalLightSRV;
     }
 
-    const bool bUsesPreBoundLightingInputs = (Cmd.Pass == ERenderPass::DeferredLighting);
-    const bool bUsesPreBoundDecalInputs    = (Cmd.Pass == ERenderPass::Decal && Cmd.MeshBuffer == nullptr);
-
     // Keep generic-slot tracking coherent with the legacy t0~t2 material SRV path.
     // Without this, a prior custom draw that uses reflected bindings on t0~t2 can
     // leave the generic cache thinking those slots are still owned, and a later
     // legacy draw will bind its fixed SRVs first and then have them nulled out by
     // the generic cleanup loop below.
-    if (!bUsesPreBoundLightingInputs)
-    {
-        DesiredGenericSRVs[0] = Cmd.DiffuseSRV;
-        DesiredGenericSRVs[1] = Cmd.NormalSRV;
-        DesiredGenericSRVs[2] = Cmd.SpecularSRV;
-        bDesiredGenericSlotBound[0] = true;
-        bDesiredGenericSlotBound[1] = true;
-        bDesiredGenericSlotBound[2] = true;
-    }
+    DesiredGenericSRVs[0] = Cmd.DiffuseSRV;
+    DesiredGenericSRVs[1] = Cmd.NormalSRV;
+    DesiredGenericSRVs[2] = Cmd.SpecularSRV;
+    bDesiredGenericSlotBound[0] = true;
+    bDesiredGenericSlotBound[1] = true;
+    bDesiredGenericSlotBound[2] = true;
 
-    if (bUsesPreBoundDecalInputs)
-    {
-        if (bForce || Cmd.bForceSRVBind || Cmd.DiffuseSRV != Cache.DiffuseSRV)
-        {
-            ID3D11ShaderResourceView* DecalSRV = Cmd.DiffuseSRV;
-            Ctx->PSSetShaderResources(0, 1, &DecalSRV);
-            Cache.DiffuseSRV = Cmd.DiffuseSRV;
-        }
-    }
-    else if (!bUsesPreBoundLightingInputs &&
-             (bForce || Cmd.bForceSRVBind || Cmd.DiffuseSRV != Cache.DiffuseSRV || Cmd.NormalSRV != Cache.NormalSRV || Cmd.SpecularSRV != Cache.SpecularSRV))
+    if (bForce || Cmd.bForceSRVBind || Cmd.DiffuseSRV != Cache.DiffuseSRV || Cmd.NormalSRV != Cache.NormalSRV || Cmd.SpecularSRV != Cache.SpecularSRV)
     {
         ID3D11ShaderResourceView* SRVs[3] = { Cmd.DiffuseSRV, Cmd.NormalSRV, Cmd.SpecularSRV };
         Ctx->PSSetShaderResources(0, 3, SRVs);
-        Cache.DiffuseSRV  = Cmd.DiffuseSRV;
-        Cache.NormalSRV   = Cmd.NormalSRV;
-        Cache.SpecularSRV = Cmd.SpecularSRV;
-    }
-    else if (bUsesPreBoundLightingInputs)
-    {
         Cache.DiffuseSRV  = Cmd.DiffuseSRV;
         Cache.NormalSRV   = Cmd.NormalSRV;
         Cache.SpecularSRV = Cmd.SpecularSRV;

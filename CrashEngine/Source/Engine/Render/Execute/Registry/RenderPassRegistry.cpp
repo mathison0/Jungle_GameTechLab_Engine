@@ -12,17 +12,13 @@
 #include "Render/Execute/Passes/Scene/AdditiveDecalPass.h"
 #include "Render/Execute/Passes/Scene/AlphaBlendPass.h"
 #include "Render/Execute/Passes/Scene/SubUVPass.h"
-#include "Render/Execute/Passes/Scene/DeferredOpaquePass.h"
 #include "Render/Execute/Passes/Scene/ForwardOpaquePass.h"
-#include "Render/Execute/Passes/Scene/DeferredDecalPass.h"
 #include "Render/Execute/Passes/Scene/DepthPrePass.h"
 #include "Render/Execute/Passes/Scene/ShadowMapPass.h"
 #include "Render/Execute/Passes/Scene/UIPass.h"
 #include "Render/Execute/Passes/Scene/FXAAPass.h"
 #include "Render/Execute/Passes/Scene/FinalPostProcessCompositePass.h"
 #include "Render/Execute/Passes/Scene/HeightFogPass.h"
-#include "Render/Execute/Passes/Scene/LightCullingPass.h"
-#include "Render/Execute/Passes/Scene/DeferredLightingPass.h"
 #include "Render/Execute/Passes/Scene/PresentPass.h"
 #include "Render/Execute/Passes/Scene/NonLitViewModePass.h"
 
@@ -42,11 +38,7 @@ void FRenderPassRegistry::Initialize()
     // ---------- Scene Passes ----------
     Passes.emplace((int32)ERenderPassNodeType::DepthPrePass, new FDepthPrePass());
     Passes.emplace((int32)ERenderPassNodeType::ShadowMapPass, new FShadowMapPass());
-    Passes.emplace((int32)ERenderPassNodeType::LightCullingPass, new FLightCullingPass());
     Passes.emplace((int32)ERenderPassNodeType::ForwardOpaquePass, new FForwardOpaquePass());
-    Passes.emplace((int32)ERenderPassNodeType::DeferredOpaquePass, new FDeferredOpaquePass());
-    Passes.emplace((int32)ERenderPassNodeType::DeferredDecalPass, new FDeferredDecalPass());
-    Passes.emplace((int32)ERenderPassNodeType::DeferredLightingPass, new FDeferredLightingPass());
     Passes.emplace((int32)ERenderPassNodeType::AdditiveDecalPass, new FAdditiveDecalPass());
     Passes.emplace((int32)ERenderPassNodeType::AlphaBlendPass, new FAlphaBlendPass());
     Passes.emplace((int32)ERenderPassNodeType::SubUVPass, new FSubUVPass());

@@ -102,7 +102,7 @@ void FDecalSceneProxy::UpdateMesh()
     SectionRenderData.clear();
 
     Shader           = nullptr;
-    Pass             = ERenderPass::Decal;
+    Pass             = ERenderPass::Opaque;
     Blend            = EBlendState::Opaque;
     DepthStencil     = EDepthStencilState::NoDepth;
     Rasterizer       = ERasterizerState::SolidNoCull;

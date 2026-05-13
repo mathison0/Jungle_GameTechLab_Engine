@@ -476,7 +476,6 @@ void UEngine::Render(float DeltaTime)
     }
     else
     {
-        Renderer.ReleaseViewModeSurfaces();
         Renderer.BeginCollect(SceneView);
     }
 

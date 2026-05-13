@@ -16,7 +16,6 @@ class FScene;
 class FD3DDevice;
 struct FFrameResources;
 class FViewModePassRegistry;
-class FViewModeSurfaces;
 class FGPUOcclusionCulling;
 class FRenderer;
 struct FLODUpdateContext;
@@ -30,7 +29,6 @@ struct FDrawBindStateCache;
 struct FViewModeExecutionContext
 {
     const FViewModePassRegistry* Registry       = nullptr;
-    FViewModeSurfaces*           Surfaces       = nullptr;
     EViewMode                    ActiveViewMode = {};
 };
 
