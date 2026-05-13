@@ -240,33 +240,6 @@ void FEditorMainPanel::Render(float DeltaTime)
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Edit"))
-        {
-            FEditorSettings& Settings = FEditorSettings::Get();
-            int32 CurrentPath = static_cast<int32>(Settings.RenderShadingPath);
-            bool bChanged = false;
-
-            if (ImGui::MenuItem("Deferred Shading", nullptr, CurrentPath == static_cast<int32>(ERenderShadingPath::Deferred)))
-            {
-                Settings.RenderShadingPath = ERenderShadingPath::Deferred;
-                bChanged = true;
-            }
-
-            if (ImGui::MenuItem("Forward Shading", nullptr, CurrentPath == static_cast<int32>(ERenderShadingPath::Forward)))
-            {
-                Settings.RenderShadingPath = ERenderShadingPath::Forward;
-                bChanged = true;
-            }
-
-            if (bChanged)
-            {
-                EditorEngine->WarmUpRenderPathShaders(Settings.RenderShadingPath);
-                SaveEditorSettings();
-            }
-
-            ImGui::EndMenu();
-        }
-
         if (ImGui::BeginMenu("Windows"))
         {
             FEditorSettings& S = FEditorSettings::Get();

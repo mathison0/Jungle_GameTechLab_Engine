@@ -68,29 +68,6 @@ void WarmUpEditorViewModeShaders(FRenderer& Renderer)
     }
 }
 
-void WarmUpMinimalViewModesForRenderPath(UEditorEngine& Editor, ERenderShadingPath RenderPath)
-{
-    FRenderer& Renderer = Editor.GetRenderer();
-
-    TArray<EViewMode> ViewModesToWarmUp = {
-        EViewMode::Lit_Phong,
-        EViewMode::Unlit,
-    };
-
-    if (FLevelEditorViewportClient* ActiveViewport = Editor.GetActiveViewport())
-    {
-        const EViewMode ActiveViewMode = ActiveViewport->GetRenderOptions().ViewMode;
-        if (std::find(ViewModesToWarmUp.begin(), ViewModesToWarmUp.end(), ActiveViewMode) == ViewModesToWarmUp.end())
-        {
-            ViewModesToWarmUp.push_back(ActiveViewMode);
-        }
-    }
-
-    for (EViewMode ViewMode : ViewModesToWarmUp)
-    {
-        Renderer.WarmUpViewModeShaders(ViewMode, RenderPath);
-    }
-}
 } // namespace
 
 void UEditorEngine::Init(FWindowsWindow* InWindow)
@@ -306,12 +283,6 @@ void UEditorEngine::ResetViewportInputRouting()
     {
         ViewportInputRouter.SetKeyTargetViewport(ActiveVC->GetViewport());
     }
-}
-
-void UEditorEngine::WarmUpRenderPathShaders(ERenderShadingPath RenderPath)
-{
-    UE_LOG(EditorEngine, Debug, "Warming up render path shaders. Path=%d", static_cast<int32>(RenderPath));
-    WarmUpMinimalViewModesForRenderPath(*this, RenderPath);
 }
 
 void UEditorEngine::RenderUI(float DeltaTime)
@@ -743,7 +714,7 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
     }
     SceneView.SetRenderSettings(ViewMode, EffectiveShowFlags);
     SceneView.SetRenderOptions(Opts);
-    SceneView.RenderPath = FEditorSettings::Get().RenderShadingPath;
+    SceneView.RenderPath = ERenderShadingPath::Forward;
     SceneView.SetViewportInfo(VP);
     SceneView.ViewportType = Opts.ViewportType;
     SceneView.OcclusionCulling = &GPUOcclusion;
@@ -751,7 +722,9 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
 
     FViewModeSurfaces* ViewModeSurfaces = nullptr;
     if (const auto* ViewModePassRegistry = Renderer.GetViewModePassRegistry();
-        ViewModePassRegistry && ViewModePassRegistry->HasConfig(ViewMode))
+        ViewModePassRegistry &&
+        ViewModePassRegistry->HasConfig(ViewMode) &&
+        SceneView.RenderPath == ERenderShadingPath::Deferred)
     {
         ViewModeSurfaces = Renderer.AcquireViewModeSurfaces(VP, VP->GetWidth(), VP->GetHeight());
     }

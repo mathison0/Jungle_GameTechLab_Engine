@@ -33,8 +33,6 @@ public:
     float PerspCamNearClip = 0.1f;
     float PerspCamFarClip = 1000.0f;
 
-    ERenderShadingPath RenderShadingPath = ERenderShadingPath::Forward;
-
     // File paths
     FString DefaultSavePath = FPaths::ToUtf8(FPaths::SceneDir());
 

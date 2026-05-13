@@ -93,11 +93,7 @@ ERenderPassNodeType MapPassToNodeType(ERenderPass Pass, const FRenderPipelineCon
     case ERenderPass::ShadowMap:
         return ERenderPassNodeType::ShadowMapPass;
     case ERenderPass::Opaque:
-        if (Context.SceneView && Context.SceneView->RenderPath == ERenderShadingPath::Forward)
-        {
-            return ERenderPassNodeType::ForwardOpaquePass;
-        }
-        return ERenderPassNodeType::DeferredOpaquePass;
+        return ERenderPassNodeType::ForwardOpaquePass;
     case ERenderPass::Decal:
         return ERenderPassNodeType::DeferredDecalPass;
     case ERenderPass::DeferredLighting:
@@ -391,7 +387,8 @@ FRenderPipelineContext FRenderer::CreatePipelineContext(
     PipelineContext.LightCulling            = LightCulling.get();
     PipelineContext.LODContext              = &SceneView.LODContext;
 
-    if (Targets && Targets->SourceViewport && ViewModePassRegistry &&
+    if (SceneView.RenderPath == ERenderShadingPath::Deferred &&
+        Targets && Targets->SourceViewport && ViewModePassRegistry &&
         ViewModePassRegistry->HasConfig(SceneView.ViewMode))
     {
         FViewport* Viewport = const_cast<FViewport*>(Targets->SourceViewport);

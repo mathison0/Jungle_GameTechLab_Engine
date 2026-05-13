@@ -442,6 +442,7 @@ void UEngine::Render(float DeltaTime)
         EViewMode ViewMode = EViewMode::Lit_Phong;
 
         SceneView.SetRenderSettings(ViewMode, ShowFlags);
+        SceneView.RenderPath = ERenderShadingPath::Forward;
 
         if (Viewport && DeviceContext)
         {
@@ -483,7 +484,9 @@ void UEngine::Render(float DeltaTime)
         FRenderPipelineContext PipelineContext = Renderer.CreatePipelineContext(SceneView, &RenderTargets, Scene);
         
         // 지연된 Surface 확보
-        if (Renderer.GetViewModePassRegistry() && Renderer.GetViewModePassRegistry()->HasConfig(SceneView.ViewMode))
+        if (SceneView.RenderPath == ERenderShadingPath::Deferred &&
+            Renderer.GetViewModePassRegistry() &&
+            Renderer.GetViewModePassRegistry()->HasConfig(SceneView.ViewMode))
         {
             PipelineContext.ViewMode.Surfaces =
                 Renderer.AcquireViewModeSurfaces(Viewport, (uint32)SceneView.ViewportWidth, (uint32)SceneView.ViewportHeight);

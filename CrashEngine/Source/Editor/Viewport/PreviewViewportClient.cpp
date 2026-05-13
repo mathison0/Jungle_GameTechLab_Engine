@@ -468,7 +468,7 @@ void FPreviewViewportClient::Draw(FViewport* Viewport, float DeltaTime)
     FSceneView PreviewSceneView = {};
     PreviewSceneView.SetCameraInfo(Camera);
     PreviewSceneView.SetRenderSettings(ViewMode, ShowFlags);
-    PreviewSceneView.RenderPath = FEditorSettings::Get().RenderShadingPath;
+    PreviewSceneView.RenderPath = ERenderShadingPath::Forward;
     PreviewSceneView.SetViewportInfo(Viewport);
     PreviewSceneView.ViewportType = ELevelViewportType::Perspective;
     PreviewSceneView.LODContext = World->PrepareLODContext();
