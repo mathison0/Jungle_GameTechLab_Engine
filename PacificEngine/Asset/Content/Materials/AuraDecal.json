@@ -1,0 +1,9 @@
+{
+  "PathFileName": "Asset/Content/Materials/AuraDecal.json",
+  "Textures": {
+    "DiffuseTexture": "Asset/Content/Textures/P_AuraEffect.png"
+  },
+  "BlendState": "AlphaBlend",
+  "DepthStencilState": "NoDepth",
+  "RasterizerState": "SolidNoCull"
+}
