@@ -281,6 +281,11 @@ void FEditorSkeletalMeshViewerPanel::SetSkelMesh()
     BoneLocalTransforms.clear();
 }
 
+USkeletalMeshComponent* FEditorSkeletalMeshViewerPanel::GetPreviewMeshComponent()
+{
+    return Owner ? Owner->GetPreviewScene().GetPreviewMeshComponent() : nullptr;
+}
+
 bool FEditorSkeletalMeshViewerPanel::GetCachedBoneLocalTransform(int32 BoneIndex, FTransform& OutTransform)
 {
     USkeletalMeshComponent* MeshComp = GetPreviewMeshComponent();
@@ -316,6 +321,13 @@ bool FEditorSkeletalMeshViewerPanel::SetCachedBoneLocalTransform(
     }
 
     return true;
+}
+
+FQuat FEditorSkeletalMeshViewerPanel::GetCachedBoneComponentRotation(int32 BoneIndex)
+{
+    USkeletalMeshComponent* MeshComp = GetPreviewMeshComponent();
+    EnsureBoneLocalTransformCache(MeshComp);
+    return GetCachedGlobalRotation(MeshComp, BoneIndex);
 }
 
 FVector FEditorSkeletalMeshViewerPanel::GetCachedBoneComponentScale(int32 BoneIndex)
@@ -654,63 +666,4 @@ void FEditorSkeletalMeshViewerPanel::RenderInspector()
                 GlobalScale.X,
                 GlobalScale.Y,
                 GlobalScale.Z);
-}
-
-void FEditorSkeletalMeshViewerPanel::RenderBoneDebugLine(int32 BoneIndex, bool bInSelectedSubtree)
-{
-    USkeletalMeshComponent* MeshComp = GetPreviewMeshComponent();
-    if (!MeshComp || MeshComp->GetNumBones() <= 0)
-        return;
-
-    if (BoneIndex < 0 || BoneIndex >= MeshComp->GetNumBones())
-        return;
-
-    const TArray<TArray<uint32>>& BoneHierarchy = Owner->GetState().BoneHierarchy;
-    if (BoneIndex >= static_cast<int32>(BoneHierarchy.size()))
-        return;
-
-    FScene* ScenePtr = Owner->GetPreviewScene().GetScene();
-    if (!ScenePtr)
-        return;
-
-    FScene& Scene = *ScenePtr;
-
-    int32& SelectedBoneIndex = Owner->GetState().SelectedBoneIndex;
-    const bool bThisIsSelected = (BoneIndex == SelectedBoneIndex);
-    const bool bSelectedSubtree = bInSelectedSubtree || bThisIsSelected;
-
-    for (int32 ChildIndex : BoneHierarchy[BoneIndex])
-    {
-        if (ChildIndex < 0 || ChildIndex >= MeshComp->GetNumBones())
-            continue;
-
-        const FVector ParentJoint = MeshComp->GetBoneDebugWorldMatrix(BoneIndex).GetLocation();
-        const FVector ChildJoint = MeshComp->GetBoneDebugWorldMatrix(ChildIndex).GetLocation();
-
-        FColor LineColor = BoneColor;
-        if (BoneIndex == SelectedBoneIndex)
-        {
-            LineColor = SelectedColor;
-        }
-        else if (bSelectedSubtree)
-        {
-            // 선택된 bone 아래 모든 child/descendant line
-            LineColor = SelectedChildColor; // White
-        }
-        else if (ChildIndex == SelectedBoneIndex)
-        {
-            // 선택된 bone으로 들어오는 부모 line
-            LineColor = SelectedParentColor;
-        }
-
-        RenderDebugLine(Scene, ParentJoint, ChildJoint, LineColor, 0.0f);
-
-        RenderBoneDebugLine(ChildIndex, bSelectedSubtree);
-    }
-}
-
-USkeletalMeshComponent* FEditorSkeletalMeshViewerPanel::GetPreviewMeshComponent()
-{
-    return Owner ? Owner->GetPreviewScene().GetPreviewMeshComponent()
-				 : nullptr;
 }

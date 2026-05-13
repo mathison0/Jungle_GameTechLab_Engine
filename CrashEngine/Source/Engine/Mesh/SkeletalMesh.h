@@ -25,8 +25,8 @@ struct FSkeletalMeshSection
 {
     int32 MaterialIndex = -1;
     FString MaterialSlotName;
-    uint32 FirstIndex;
-    uint32 NumTriangles;
+    uint32 FirstIndex = 0;
+    uint32 NumTriangles = 0;
 
     friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshSection& Section)
     {

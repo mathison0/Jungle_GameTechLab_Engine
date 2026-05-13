@@ -41,23 +41,23 @@ struct FMaterialSlot
 
 struct FEnumPropertyOption
 {
-    const char* Label;
-    int32_t Value;
+    const char* Label = nullptr;
+    int32_t Value = 0;
 };
 
 struct FEnumPropertyMeta
 {
-    const char* Name;
-    const FEnumPropertyOption* Options;
-    int32_t NumOptions;
+    const char* Name = nullptr;
+    const FEnumPropertyOption* Options = nullptr;
+    int32_t NumOptions = 0;
 };
 
 // 컴포넌트가 노출하는 편집 가능한 프로퍼티 디스크립터
 struct FPropertyDescriptor
 {
     std::string Name;
-    EPropertyType Type;
-    void* ValuePtr;
+    EPropertyType Type = EPropertyType::Bool;
+    void* ValuePtr = nullptr;
 
     // float 범위 힌트 (DragFloat 등에서 사용)
     float Min = 0.0f;

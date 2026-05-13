@@ -86,25 +86,6 @@ void FSkeletalMeshViewer::Render(float DeltaTime)
     ViewerPanel.Render(DeltaTime);
 }
 
-void FSkeletalMeshViewer::RenderBoneDebugLines()
-{
-    USkeletalMeshComponent* MeshComp = ViewerScene.GetPreviewMeshComponent();
-    const int32 BoneCount = MeshComp ? MeshComp->GetNumBones() : 0;
-    if (BoneCount <= 0)
-    {
-        return;
-    }
-
-    for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
-    {
-        const FBoneInfo* Bone = MeshComp->GetBoneInfo(BoneIndex);
-        if (Bone && Bone->ParentIndex < 0)
-        {
-            ViewerPanel.RenderBoneDebugLine(BoneIndex, false);
-        }
-    }
-}
-
 USkeletalMesh* FSkeletalMeshViewer::GetSkeletalMesh()
 {
     return ViewerState.ActiveMesh ? ViewerState.ActiveMesh : nullptr;
@@ -163,6 +144,11 @@ bool FSkeletalMeshViewer::SetCachedBoneLocalTransform(
     bool bApplyToComponent)
 {
     return ViewerPanel.SetCachedBoneLocalTransform(BoneIndex, NewTransform, bApplyToComponent);
+}
+
+FQuat FSkeletalMeshViewer::GetCachedBoneComponentRotation(int32 BoneIndex)
+{
+    return ViewerPanel.GetCachedBoneComponentRotation(BoneIndex);
 }
 
 FVector FSkeletalMeshViewer::GetCachedBoneComponentScale(int32 BoneIndex)

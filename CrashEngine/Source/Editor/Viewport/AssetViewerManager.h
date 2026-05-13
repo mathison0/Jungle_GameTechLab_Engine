@@ -26,6 +26,7 @@ public:
 
     FSkeletalMeshViewer* OpenSkeletalMeshEditor(USkeletalMesh* Mesh);
     FSkeletalMeshViewer* FindSkeletalMeshEditor(USkeletalMesh* Mesh);
+	//외부에서 viewer에게 전달
     void ForEachOpenViewer(const std::function<void(FSkeletalMeshViewer&)>& Visitor);
     bool IsMouseOverViewport() const;
 

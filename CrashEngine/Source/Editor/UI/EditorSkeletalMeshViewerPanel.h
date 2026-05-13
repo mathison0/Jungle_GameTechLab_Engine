@@ -26,12 +26,12 @@ public:
 	void RenderBoneHierarchyTree();
     void RenderBoneNode(uint32 RootBone);
 	void RenderInspector();
-    void RenderBoneDebugLine(int32 index, bool bInSelectedSubtree);
 	USkeletalMeshComponent* GetPreviewMeshComponent();
 
 	void SetSkelMesh();
     bool GetCachedBoneLocalTransform(int32 BoneIndex, FTransform& OutTransform);
     bool SetCachedBoneLocalTransform(int32 BoneIndex, const FTransform& NewTransform, bool bApplyToComponent = true);
+    FQuat GetCachedBoneComponentRotation(int32 BoneIndex);
     FVector GetCachedBoneComponentScale(int32 BoneIndex);
 
 private:
