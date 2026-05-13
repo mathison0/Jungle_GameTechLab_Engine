@@ -105,9 +105,10 @@ void FSkeletalMeshViewer::RenderBoneDebugLines()
     }
 }
 
-//void FSkeletalMeshViewer::RequestFocus()
-//{
-//}
+USkeletalMesh* FSkeletalMeshViewer::GetSkeletalMesh()
+{
+    return ViewerState.ActiveMesh ? ViewerState.ActiveMesh : nullptr;
+}
 
 void FSkeletalMeshViewer::SetSkeletalMesh(USkeletalMesh* InSkeletalMesh)
 {

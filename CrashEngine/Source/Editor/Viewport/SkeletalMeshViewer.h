@@ -47,6 +47,7 @@ public:
     void Render(float DeltaTime);
     void RenderBoneDebugLines();
 
+	USkeletalMesh* GetSkeletalMesh();
     void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
     void BuildBoneHierarchy();
     void ClearBoneSelection();
@@ -72,7 +73,6 @@ private:
 	//외부 Manager에서 확인하기위한 index
     uint32 ViewerID = 0;
     bool bOpen = false;
-
     FSkeletalMeshViewerState ViewerState;
     FEditorSkeletalMeshViewerPanel ViewerPanel;
 
