@@ -30,11 +30,6 @@ AGENTS.md
 mono_crash.*
 
 # Build results
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-ObjView*Debug/
 **/Build/
 
 [Dd]ebug/x64/
