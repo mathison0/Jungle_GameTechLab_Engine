@@ -643,7 +643,7 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
             UMaterial* MaterialObject = FMaterialManager::Get().GetOrCreateStaticMeshMaterial(JsonPath);
 
             FStaticMaterial NewStaticMaterial;
-            NewStaticMaterial.MaterialInterface = MaterialObject;
+            NewStaticMaterial.SetMaterialInterface(MaterialObject);
             NewStaticMaterial.MaterialSlotName = TargetSlotName;
             OutMaterials.push_back(NewStaticMaterial);
         }
@@ -652,7 +652,7 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
             UMaterial* DefaultMaterial = FMaterialManager::Get().GetOrCreateMaterial("None");
 
             FStaticMaterial NewEmptyStaticMaterial;
-            NewEmptyStaticMaterial.MaterialInterface = DefaultMaterial;
+            NewEmptyStaticMaterial.SetMaterialInterface(DefaultMaterial);
             NewEmptyStaticMaterial.MaterialSlotName = TargetSlotName;
             OutMaterials.push_back(NewEmptyStaticMaterial);
         }
@@ -663,7 +663,7 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
         UMaterial* DefaultMaterial = FMaterialManager::Get().GetOrCreateMaterial("None");
 
         FStaticMaterial NewDefaultStaticMaterial;
-        NewDefaultStaticMaterial.MaterialInterface = DefaultMaterial;
+        NewDefaultStaticMaterial.SetMaterialInterface(DefaultMaterial);
         NewDefaultStaticMaterial.MaterialSlotName = "None";
 
         OutMaterials.push_back(NewDefaultStaticMaterial);

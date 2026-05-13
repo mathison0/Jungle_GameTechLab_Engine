@@ -314,6 +314,17 @@ FStaticMesh* UStaticMesh::GetStaticMeshAsset() const
 void UStaticMesh::SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials)
 {
     StaticMaterials = InMaterials;
+    for (FStaticMaterial& Material : StaticMaterials)
+    {
+        if (Material.MaterialInterface && Material.MaterialAssetPath.empty())
+        {
+            Material.MaterialAssetPath = Material.MaterialInterface->GetAssetPathFileName();
+        }
+        else if (!Material.MaterialInterface && !Material.MaterialAssetPath.empty())
+        {
+            Material.MaterialInterface = FMaterialManager::Get().GetOrCreateStaticMeshMaterial(Material.MaterialAssetPath);
+        }
+    }
 }
 
 const TArray<FStaticMaterial>& UStaticMesh::GetStaticMaterials() const

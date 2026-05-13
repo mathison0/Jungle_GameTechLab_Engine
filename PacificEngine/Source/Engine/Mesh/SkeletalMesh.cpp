@@ -188,6 +188,17 @@ void USkeletalSubMesh::SetSkeletalSubMeshAsset(FSkeletalSubMesh* InMesh)
 void USkeletalSubMesh::SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials)
 {
     StaticMaterials = std::move(InMaterials);
+    for (FStaticMaterial& Material : StaticMaterials)
+    {
+        if (Material.MaterialInterface && Material.MaterialAssetPath.empty())
+        {
+            Material.MaterialAssetPath = Material.MaterialInterface->GetAssetPathFileName();
+        }
+        else if (!Material.MaterialInterface && !Material.MaterialAssetPath.empty())
+        {
+            Material.MaterialInterface = FMaterialManager::Get().GetOrCreateStaticMeshMaterial(Material.MaterialAssetPath);
+        }
+    }
     RebuildSectionMaterialIndices(SkeletalSubMeshAsset, StaticMaterials);
 }
 

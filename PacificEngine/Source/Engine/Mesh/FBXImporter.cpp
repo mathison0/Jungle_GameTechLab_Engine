@@ -417,13 +417,13 @@ UMaterial* FFBXImporter::ResolveNodeMaterialInterface(FbxNode* Node, int32 FbxMa
 {
     if (!Node || FbxMaterialIndex < 0 || FbxMaterialIndex >= Node->GetMaterialCount())
     {
-        return FMaterialManager::Get().GetOrCreateMaterial("None");
+        return nullptr;
     }
 
     FbxSurfaceMaterial* Material = Node->GetMaterial(FbxMaterialIndex);
     if (!Material)
     {
-        return FMaterialManager::Get().GetOrCreateMaterial("None");
+        return nullptr;
     }
 
     auto CachedMaterial = ImportedMaterialCache.find(Material);
@@ -507,10 +507,10 @@ void FFBXImporter::AssignImportedMaterialsToSlots(FbxNode* Node, const FString& 
 
     if (!Node || Node->GetMaterialCount() <= 0)
     {
-        UMaterial* DefaultMaterial = FMaterialManager::Get().GetOrCreateMaterial("None");
         for (FStaticMaterial& MaterialSlot : Materials)
         {
-            MaterialSlot.MaterialInterface = DefaultMaterial;
+            MaterialSlot.MaterialInterface = nullptr;
+            MaterialSlot.MaterialAssetPath.clear();
         }
         return;
     }
@@ -536,14 +536,15 @@ void FFBXImporter::AssignImportedMaterialsToSlots(FbxNode* Node, const FString& 
                 continue;
             }
 
-            MaterialSlot.MaterialInterface = ResolveNodeMaterialInterface(Node, MaterialIndex, FBXFilePath);
+            MaterialSlot.SetMaterialInterface(ResolveNodeMaterialInterface(Node, MaterialIndex, FBXFilePath));
             AssignedMaterialIndices.insert(MaterialIndex);
             break;
         }
 
         if (!MaterialSlot.MaterialInterface)
         {
-            MaterialSlot.MaterialInterface = FMaterialManager::Get().GetOrCreateMaterial("None");
+            MaterialSlot.MaterialInterface = nullptr;
+            MaterialSlot.MaterialAssetPath.clear();
         }
     }
 }
