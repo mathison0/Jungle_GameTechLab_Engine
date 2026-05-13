@@ -4,13 +4,15 @@
 #include "Preview/PreviewSceneContext.h"
 #include "UI/EditorSkeletalMeshViewerPanel.h"
 #include "Math/Transform.h"
-#include "Viewport/PreviewViewportClient.h"
+#include "Viewport/SkeletalPreviewViewportClient.h"
 #include "Render/Execute/Context/Scene/ViewTypes.h"
 #include <d3d11.h>
+#include <memory>
 
 class AActor;
 class UGizmoComponent;
 class USkeletalMeshComponent;
+class FSkelViewerViewportInputController;
 
 struct FSkeletalMeshViewerState
 {
@@ -37,6 +39,9 @@ struct FSkeletalMeshViewerState
 class FSkeletalMeshViewer : public IAssetViewer
 {
 public:
+    FSkeletalMeshViewer();
+    ~FSkeletalMeshViewer() override;
+
     void Initialize(
         uint32 InEditorId,
         UEditorEngine* InEditorEngine,
@@ -46,6 +51,7 @@ public:
     void Release() override;
     void Tick(float DeltaTime) override;
     void Render(float DeltaTime) override;
+    bool HandleInput(float DeltaTime);
 
     bool IsOpen() const override { return bOpen; }
     void SetOpen(bool bInOpen) override { bOpen = bInOpen; }
@@ -71,10 +77,18 @@ public:
 
     FSkeletalMeshViewerState& GetState() { return ViewerState; }
     FPreviewSceneContext& GetPreviewScene() { return ViewerScene; };
-    FPreviewViewportClient& GetPreviewViewportClient() { return ViewportClient; }
+    FSkeletalPreviewViewportClient& GetPreviewViewportClient() { return ViewportClient; }
     USkeletalMeshComponent* GetPreviewMeshComponent() const { return PreviewMeshComponent; }
     AActor* GetBoneGizmoTargetActor() const { return BoneGizmoTargetActor; }
     UGizmoComponent* GetBoneGizmo() const { return BoneGizmo; }
+
+	void BeginInputFrame() override;
+    bool InputKey(const FViewportKeyEvent& Event) override;
+    bool InputAxis(const FViewportAxisEvent& Event) override;
+    bool InputPointer(const FViewportPointerEvent& Event) override;
+    void ResetInputState() override;
+    void ResetKeyboardInputState() override;
+
 private:
 	//외부 Manager에서 확인하기위한 index
     uint32 ViewerID = 0;
@@ -82,11 +96,11 @@ private:
     FSkeletalMeshViewerState ViewerState;
     FEditorSkeletalMeshViewerPanel ViewerPanel;
 
-	FPreviewViewportClient ViewportClient;
+	FSkeletalPreviewViewportClient ViewportClient;
     FPreviewSceneContext ViewerScene;
+
+    std::unique_ptr<FSkelViewerViewportInputController> InputController;
     USkeletalMeshComponent* PreviewMeshComponent = nullptr;
     AActor* BoneGizmoTargetActor = nullptr;
     UGizmoComponent* BoneGizmo = nullptr;
-
-    // IAssetViewer을(를) 통해 상속됨
 };

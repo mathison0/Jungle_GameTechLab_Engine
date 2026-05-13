@@ -2,6 +2,8 @@
 
 #include "Component/GizmoComponent.h"
 #include "Component/SkeletalMeshComponent.h"
+#include "Input/SkelViewerViewportInputController.h"
+
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/Skeleton.h"
 
@@ -56,6 +58,10 @@ float DistanceRaySegmentSq(
 }
 }
 
+FSkeletalMeshViewer::FSkeletalMeshViewer() = default;
+
+FSkeletalMeshViewer::~FSkeletalMeshViewer() = default;
+
 void FSkeletalMeshViewer::Initialize(uint32 InEditorId, UEditorEngine* InEditorEngine, ID3D11Device* InDevice, USkeletalMesh* InSkeletalMesh)
 {
     bOpen = true;
@@ -66,20 +72,26 @@ void FSkeletalMeshViewer::Initialize(uint32 InEditorId, UEditorEngine* InEditorE
         InEditorEngine,
         FName("SkeletalMeshPreview_" + std::to_string(InEditorId)));
     PreviewMeshComponent = ViewerScene.CreateSkeletalMeshPreview();
-    BoneGizmo = ViewerScene.CreateBoneGizmo(BoneGizmoTargetActor);
+    BoneGizmo = ViewerScene.CreateGizmo(BoneGizmoTargetActor);
 
     ViewerPanel.Initialize(InEditorEngine, this);
     SetSkeletalMesh(InSkeletalMesh);
 	
     ViewportClient.Initialize(InEditorEngine, InDevice, &ViewerScene, this);
+
+    InputController = std::make_unique<FSkelViewerViewportInputController>(
+        this,
+        &ViewportClient);
 }
 
 void FSkeletalMeshViewer::Release() 
 {
     bOpen = false;
+    InputController.reset();
     ViewerPanel.Release();
 	ViewportClient.Release();
 	ViewerScene.Release();
+
     PreviewMeshComponent = nullptr;
     BoneGizmoTargetActor = nullptr;
     BoneGizmo = nullptr;
@@ -92,6 +104,11 @@ void FSkeletalMeshViewer::Tick(float DeltaTime)
 void FSkeletalMeshViewer::Render(float DeltaTime)
 {
     ViewerPanel.Render(DeltaTime);
+}
+
+bool FSkeletalMeshViewer::HandleInput(float DeltaTime)
+{
+    return InputController ? InputController->HandleInput(DeltaTime) : false;
 }
 
 USkeletalMesh* FSkeletalMeshViewer::GetSkeletalMesh()
@@ -250,4 +267,43 @@ bool FSkeletalMeshViewer::RaycastBonePicking(const FRay& Ray, int32& BestBoneInd
     }
 
     return bHit;
+}
+
+void FSkeletalMeshViewer::BeginInputFrame()
+{
+    if (InputController)
+    {
+        InputController->BeginInputFrame();
+    }
+}
+
+bool FSkeletalMeshViewer::InputKey(const FViewportKeyEvent& Event)
+{
+    return InputController ? InputController->InputKey(Event) : false;
+}
+
+bool FSkeletalMeshViewer::InputAxis(const FViewportAxisEvent& Event)
+{
+    return InputController ? InputController->InputAxis(Event) : false;
+}
+
+bool FSkeletalMeshViewer::InputPointer(const FViewportPointerEvent& Event)
+{
+    return InputController ? InputController->InputPointer(Event) : false;
+}
+
+void FSkeletalMeshViewer::ResetInputState()
+{
+    if (InputController)
+    {
+        InputController->ResetInputState();
+    }
+}
+
+void FSkeletalMeshViewer::ResetKeyboardInputState()
+{
+    if (InputController)
+    {
+        InputController->ResetKeyboardInputState();
+    }
 }

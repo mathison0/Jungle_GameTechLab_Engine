@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Component/CameraComponent.h"
 #include "GameFramework/World.h"
@@ -25,7 +25,7 @@ public:
     AActor* CreatePreviewActor(const FName& Name);
     USkeletalMeshComponent* CreateSkeletalMeshPreview();
     UStaticMeshComponent* CreateStaticMeshPreview();
-    UGizmoComponent* CreateBoneGizmo(AActor*& OutTargetActor);
+    UGizmoComponent* CreateGizmo(AActor*& OutTargetActor);
 
 private:
     void CreateDefaultLights();
