@@ -608,6 +608,10 @@ void FFBXImporter::Initialize()
 bool FFBXImporter::ImportStaticAndCacheAll(const FString& FBXFilePath, const FImportOptions& Options, UStaticMesh* OutMesh)
 {
     Initialize();
+    GSkeletonMeshBindInverseScales.clear();
+    ImportedMaterialCache.clear();
+    ImportedMaterialJsonPaths.clear();
+    GeneratedMaterialNameCounts.clear();
 
     FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
     if (!Importer->Initialize(FBXFilePath.c_str(), -1, SdkManager->GetIOSettings()))
