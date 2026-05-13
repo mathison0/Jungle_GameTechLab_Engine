@@ -435,6 +435,66 @@ UMaterial* FFBXImporter::ResolveNodeMaterialInterface(FbxNode* Node, int32 FbxMa
     return LoadedMaterial;
 }
 
+namespace
+{
+    TArray<FString> CollectUVSetNames(FbxMesh* Mesh)
+    {
+        TArray<FString> Names;
+        if (!Mesh)
+        {
+            return Names;
+        }
+
+        FbxStringList UvSetNameList;
+        Mesh->GetUVSetNames(UvSetNameList);
+        Names.reserve(UvSetNameList.GetCount());
+        for (int32 Index = 0; Index < UvSetNameList.GetCount(); ++Index)
+        {
+            Names.push_back(UvSetNameList.GetStringAt(Index) ? UvSetNameList.GetStringAt(Index) : "");
+        }
+        return Names;
+    }
+
+    FString JoinUVSetNames(const TArray<FString>& UVSetNames)
+    {
+        if (UVSetNames.empty())
+        {
+            return "<none>";
+        }
+
+        FString Joined;
+        for (size_t Index = 0; Index < UVSetNames.size(); ++Index)
+        {
+            if (!Joined.empty())
+            {
+                Joined += ",";
+            }
+
+            Joined += UVSetNames[Index];
+        }
+
+        return Joined;
+    }
+
+    void LogMeshUVSets(FbxNode* Node, FbxMesh* Mesh, const TArray<FString>& UVSetNames, const char* TangentSourceUVSet)
+    {
+        const char* NodeName = (Node && Node->GetName()) ? Node->GetName() : "<unnamed>";
+        const char* MeshName = (Mesh && Mesh->GetName()) ? Mesh->GetName() : "<unnamed>";
+        const FString JoinedNames = JoinUVSetNames(UVSetNames);
+        const char* TangentSetLabel = TangentSourceUVSet ? TangentSourceUVSet : "<none>";
+
+        UE_LOG(
+            FBXImporter,
+            Info,
+            "FBX mesh UV sets detected. Node=%s Mesh=%s UVSetCount=%d UVSets=%s TangentSourceUVSet=%s",
+            NodeName,
+            MeshName,
+            static_cast<int32>(UVSetNames.size()),
+            JoinedNames.c_str(),
+            TangentSetLabel);
+    }
+}
+
 void FFBXImporter::AssignImportedMaterialsToSlots(FbxNode* Node, const FString& FBXFilePath, TArray<FStaticMaterial>& Materials)
 {
     if (Materials.empty())
@@ -632,6 +692,25 @@ bool FFBXImporter::ImportStaticAndCacheAll(const FString& FBXFilePath, const FIm
 
                     const uint32 VertexOffset = static_cast<uint32>(MergedAsset->Vertices.size());
                     const uint32 IndexOffset = static_cast<uint32>(MergedAsset->Indices.size());
+                    const bool bLocalHasUV1Data = !Local->UV1s.empty() && Local->UV1s.size() == Local->Vertices.size();
+                    const bool bMergedHasUV1Data = !MergedAsset->UV1s.empty();
+
+                    if (bLocalHasUV1Data || bMergedHasUV1Data)
+                    {
+                        if (!bMergedHasUV1Data)
+                        {
+                            MergedAsset->UV1s.assign(MergedAsset->Vertices.size(), FVector2(0.0f, 0.0f));
+                        }
+
+                        if (bLocalHasUV1Data)
+                        {
+                            MergedAsset->UV1s.insert(MergedAsset->UV1s.end(), Local->UV1s.begin(), Local->UV1s.end());
+                        }
+                        else
+                        {
+                            MergedAsset->UV1s.insert(MergedAsset->UV1s.end(), Local->Vertices.size(), FVector2(0.0f, 0.0f));
+                        }
+                    }
 
                     MergedAsset->Vertices.insert(MergedAsset->Vertices.end(), Local->Vertices.begin(), Local->Vertices.end());
 
@@ -656,7 +735,7 @@ bool FFBXImporter::ImportStaticAndCacheAll(const FString& FBXFilePath, const FIm
                         NewSection.MaterialSlotName = LocalSection.MaterialSlotName;
                         NewSection.FirstIndex = LocalSection.FirstIndex + IndexOffset;
                         NewSection.NumTriangles = LocalSection.NumTriangles;
-                        NewSection.MaterialIndex = -1; 
+                        NewSection.MaterialIndex = -1;
                         MergedAsset->Sections.push_back(NewSection);
                     }
                 }
@@ -986,16 +1065,24 @@ std::unique_ptr<FStaticMesh> FFBXImporter::ParseStaticGeometry(FbxNode* InNode, 
     int PolygonCount = InFbxMesh->GetPolygonCount();
     int VertexCount = 0;
 
+    const TArray<FString> UVSetNames = CollectUVSetNames(InFbxMesh);
+    const char* TangentSourceUVSet = nullptr;
+
 	int TangentCount = InFbxMesh->GetElementTangentCount();
 	if (TangentCount < PolygonCount)
     {
-		FbxStringList UVSetNameList;
-		InFbxMesh->GetUVSetNames(UVSetNameList);
-		if (UVSetNameList.GetCount() > 0)
+		if (!UVSetNames.empty())
         {
-			InFbxMesh->GenerateTangentsData(UVSetNameList.GetStringAt(0));
+            TangentSourceUVSet = UVSetNames[0].c_str();
+			InFbxMesh->GenerateTangentsData(TangentSourceUVSet);
 		}
 	}
+    else if (!UVSetNames.empty())
+    {
+        TangentSourceUVSet = UVSetNames[0].c_str();
+    }
+
+    LogMeshUVSets(InNode, InFbxMesh, UVSetNames, TangentSourceUVSet);
 
 	FbxLayerElementArrayTemplate<FbxVector4>* TangentList = nullptr;
 	InFbxMesh->GetTangents(&TangentList, 0);
@@ -1014,12 +1101,16 @@ std::unique_ptr<FStaticMesh> FFBXImporter::ParseStaticGeometry(FbxNode* InNode, 
 		FbxMaterialIndexToSectionIndex.assign(NodeMaterialCount, -1);
 	}
 
+    Result->UV1s.clear();
+    Result->UV1s.reserve(static_cast<size_t>(PolygonCount) * 3);
+    const bool bHasUV1Set = UVSetNames.size() > 1;
+
 	for (int i = 0; i < PolygonCount; i++)
     {
 		uint32 TriangleIndices[3];
 		for (int j = 0; j < 3; j++)
         {
-            int ctrlPointIndex = InFbxMesh->GetPolygonVertex(i, j); 
+            int ctrlPointIndex = InFbxMesh->GetPolygonVertex(i, j);
             FVertexPNCT_T vertex;
             FbxVector4 pos = controlPoints[ctrlPointIndex];
             vertex.Position = FVector((float)pos[0], (float)pos[1], (float)pos[2]);
@@ -1034,16 +1125,26 @@ std::unique_ptr<FStaticMesh> FFBXImporter::ParseStaticGeometry(FbxNode* InNode, 
                 vertex.Tangent = FVector((float)tangent[0], (float)tangent[1], (float)tangent[2]);
             }
 
-            FbxStringList uvSetNameList;
-            InFbxMesh->GetUVSetNames(uvSetNameList);
-            if (uvSetNameList.GetCount() > 0)
+            if (!UVSetNames.empty())
             {
                 FbxVector2 uv;
                 bool unmapped;
-                if (InFbxMesh->GetPolygonVertexUV(i, j, uvSetNameList.GetStringAt(0), uv, unmapped))
+                if (InFbxMesh->GetPolygonVertexUV(i, j, UVSetNames[0].c_str(), uv, unmapped))
                 {
                     vertex.UV = FVector2((float)uv[0], 1.0f - (float)uv[1]); // UV V flip
                 }
+            }
+
+            if (bHasUV1Set)
+            {
+                FVector2 UV1(0.0f, 0.0f);
+                FbxVector2 uv1;
+                bool unmappedUV1 = false;
+                if (InFbxMesh->GetPolygonVertexUV(i, j, UVSetNames[1].c_str(), uv1, unmappedUV1))
+                {
+                    UV1 = FVector2((float)uv1[0], 1.0f - (float)uv1[1]);
+                }
+                Result->UV1s.push_back(UV1);
             }
 
             Result->Vertices.push_back(vertex);
@@ -1129,14 +1230,24 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseSkeletalGeometry(FbxNode* I
     int PolygonCount = InFbxMesh->GetPolygonCount();
     int VertexCount = 0;
     
+    const TArray<FString> UVSetNames = CollectUVSetNames(InFbxMesh);
+    const char* TangentSourceUVSet = nullptr;
+
     int TangentCount = InFbxMesh->GetElementTangentCount();
     if (TangentCount < PolygonCount)
     {
-        FbxStringList UvSetNameList;
-        InFbxMesh->GetUVSetNames(UvSetNameList);
-        if (UvSetNameList.GetCount() > 0)
-            InFbxMesh->GenerateTangentsData(UvSetNameList.GetStringAt(0));
+        if (!UVSetNames.empty())
+        {
+            TangentSourceUVSet = UVSetNames[0].c_str();
+            InFbxMesh->GenerateTangentsData(TangentSourceUVSet);
+        }
     }
+    else if (!UVSetNames.empty())
+    {
+        TangentSourceUVSet = UVSetNames[0].c_str();
+    }
+
+    LogMeshUVSets(InNode, InFbxMesh, UVSetNames, TangentSourceUVSet);
     
     FbxLayerElementArrayTemplate<FbxVector4>* TangentList = nullptr;
     InFbxMesh->GetTangents(&TangentList, 0);
@@ -1154,6 +1265,10 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseSkeletalGeometry(FbxNode* I
     {
         FbxMaterialIndexToSectionIndex.assign(NodeMaterialCount, -1);
     }
+
+    Result->UV1s.clear();
+    Result->UV1s.reserve(static_cast<size_t>(PolygonCount) * 3);
+    const bool bHasUV1Set = UVSetNames.size() > 1;
 
     CtrlPointToVertexIndex.assign(InFbxMesh->GetControlPointsCount(), TArray<int>());
     for (int i = 0; i < PolygonCount; ++i) {
@@ -1179,17 +1294,27 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseSkeletalGeometry(FbxNode* I
                 vertex.Tangent = TangentVector;
             }
 
-            FbxStringList uvSetNameList;
-            InFbxMesh->GetUVSetNames(uvSetNameList);
-            if (uvSetNameList.GetCount() > 0) {
+            if (!UVSetNames.empty()) {
                 FbxVector2 uv; bool unmapped;
-                if (InFbxMesh->GetPolygonVertexUV(i, j, uvSetNameList.GetStringAt(0), uv, unmapped))
+                if (InFbxMesh->GetPolygonVertexUV(i, j, UVSetNames[0].c_str(), uv, unmapped))
                 {
                     vertex.UV = FVector2((float)uv[0], 1.0f - (float)uv[1]); // UV V flip
                 }
             }
 
+            FVector2 UV1(0.0f, 0.0f);
+            if (bHasUV1Set)
+            {
+                FbxVector2 uv1;
+                bool bUV1Unmapped = false;
+                if (InFbxMesh->GetPolygonVertexUV(i, j, UVSetNames[1].c_str(), uv1, bUV1Unmapped))
+                {
+                    UV1 = FVector2((float)uv1[0], 1.0f - (float)uv1[1]);
+                }
+            }
+
             Result->Vertices.push_back(vertex);
+            Result->UV1s.push_back(UV1);
             TriangleIndices[j] = VertexCount;
             CtrlPointToVertexIndex[ctrlPointIndex].push_back(VertexCount);
             VertexCount++;

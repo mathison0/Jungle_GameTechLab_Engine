@@ -1,7 +1,10 @@
 ﻿#pragma once
 
+#include "Core/CoreTypes.h"
 #include "Math/Vector.h"
 #include <cassert>
+#include <cstring>
+#include <string>
 
 /*
     렌더러가 사용하는 기본 정점 형식과 CPU 메시 데이터 뷰를 정의합니다.
@@ -60,6 +63,16 @@ struct FVertexPNCT_T
     FVector4 Tangent;
 };
 
+struct FVertexPNCT_T_UV1
+{
+    FVector  Position;
+    FVector  Normal;
+    FVector4 Color;
+    FVector2 UV;
+    FVector4 Tangent;
+    FVector2 UV1;
+};
+
 // Position + Normal + Color + UV + Tangent + BoneIndices + BoneWeights (Skeletal Mesh GPU용 정점 형식)
 struct FVertexSkinned
 {
@@ -72,6 +85,195 @@ struct FVertexSkinned
     float    BoneWeights[8] = {0,0,0,0,0,0,0,0};
 };
 
+struct FVertexSemantic
+{
+    FString SemanticName;
+    uint32  SemanticIndex = 0;
+};
+
+struct FVertexSemanticDescriptor
+{
+    TArray<FVertexSemantic> Elements;
+
+    bool IsEmpty() const
+    {
+        return Elements.empty();
+    }
+};
+
+enum class ERuntimeVertexSemanticSource : uint8
+{
+    Position = 0,
+    Normal,
+    Color,
+    UV0,
+    UV1,
+    Tangent,
+    BoneIndices,
+    BoneWeights,
+};
+
+enum class ERuntimeVertexScalarType : uint8
+{
+    Unknown = 0,
+    Float32,
+    UInt32,
+    SInt32,
+    UInt16,
+};
+
+inline const char* GetRuntimeVertexSemanticSourceName(ERuntimeVertexSemanticSource Source)
+{
+    switch (Source)
+    {
+    case ERuntimeVertexSemanticSource::Position:
+        return "Position";
+    case ERuntimeVertexSemanticSource::Normal:
+        return "Normal";
+    case ERuntimeVertexSemanticSource::Color:
+        return "Color";
+    case ERuntimeVertexSemanticSource::UV0:
+        return "UV0";
+    case ERuntimeVertexSemanticSource::UV1:
+        return "UV1";
+    case ERuntimeVertexSemanticSource::Tangent:
+        return "Tangent";
+    case ERuntimeVertexSemanticSource::BoneIndices:
+        return "BoneIndices";
+    case ERuntimeVertexSemanticSource::BoneWeights:
+        return "BoneWeights";
+    default:
+        return "Unknown";
+    }
+}
+
+struct FRuntimeVertexSemanticSourceDesc
+{
+    ERuntimeVertexSemanticSource Source = ERuntimeVertexSemanticSource::Position;
+    FString                     SemanticName;
+    uint32                      SemanticIndex = 0;
+    uint32                      ComponentCount = 0;
+    ERuntimeVertexScalarType    ScalarType = ERuntimeVertexScalarType::Float32;
+};
+
+struct FRuntimeVertexSemanticSourceModel
+{
+    TArray<FRuntimeVertexSemanticSourceDesc> Sources;
+
+    void AddSource(
+        ERuntimeVertexSemanticSource Source,
+        const char* SemanticName,
+        uint32 SemanticIndex,
+        uint32 ComponentCount,
+        ERuntimeVertexScalarType ScalarType = ERuntimeVertexScalarType::Float32)
+    {
+        FRuntimeVertexSemanticSourceDesc Entry;
+        Entry.Source = Source;
+        Entry.SemanticName = SemanticName;
+        Entry.SemanticIndex = SemanticIndex;
+        Entry.ComponentCount = ComponentCount;
+        Entry.ScalarType = ScalarType;
+        Sources.push_back(Entry);
+    }
+
+    bool HasSource(ERuntimeVertexSemanticSource Source) const
+    {
+        return FindSource(Source) != nullptr;
+    }
+
+    const FRuntimeVertexSemanticSourceDesc* FindSource(ERuntimeVertexSemanticSource Source) const
+    {
+        for (const FRuntimeVertexSemanticSourceDesc& Entry : Sources)
+        {
+            if (Entry.Source == Source)
+            {
+                return &Entry;
+            }
+        }
+
+        return nullptr;
+    }
+
+    FString ToDebugString() const
+    {
+        FString Result;
+        for (const FRuntimeVertexSemanticSourceDesc& Entry : Sources)
+        {
+            if (!Result.empty())
+            {
+                Result += ",";
+            }
+
+            Result += GetRuntimeVertexSemanticSourceName(Entry.Source);
+            Result += "->";
+            Result += Entry.SemanticName;
+            if (Entry.SemanticIndex > 0)
+            {
+                Result += std::to_string(Entry.SemanticIndex);
+            }
+        }
+
+        return Result.empty() ? "<none>" : Result;
+    }
+};
+
+struct FRuntimeVertexElementRequest
+{
+    FString                  SemanticName;
+    uint32                   SemanticIndex = 0;
+    uint32                   ComponentCount = 0;
+    ERuntimeVertexScalarType ScalarType = ERuntimeVertexScalarType::Unknown;
+};
+
+struct FRuntimeVertexElementRequestList
+{
+    TArray<FRuntimeVertexElementRequest> Elements;
+
+    bool IsEmpty() const
+    {
+        return Elements.empty();
+    }
+};
+
+struct FRuntimePackedVertexData
+{
+    TArray<uint8>              VertexBlob;
+    uint32                     VertexStride = 0;
+    uint32                     VertexCount = 0;
+    FVertexSemanticDescriptor  VertexSemanticDescriptor;
+
+    bool IsValid() const
+    {
+        return VertexStride > 0 &&
+               VertexCount > 0 &&
+               VertexBlob.size() == static_cast<size_t>(VertexStride) * VertexCount;
+    }
+
+    uint32 GetVertexBufferByteWidth() const
+    {
+        return VertexStride * VertexCount;
+    }
+
+    const void* GetVertexData() const
+    {
+        return VertexBlob.empty() ? nullptr : VertexBlob.data();
+    }
+};
+
+struct FRuntimePackedMeshData
+{
+    FRuntimePackedVertexData Vertices;
+    TArray<uint32>           Indices;
+
+    bool HasIndices() const
+    {
+        return !Indices.empty();
+    }
+};
+
+template <typename VertexType>
+struct TMeshData;
+
 template <typename VertexType>
 // TMeshData는 메시 데이터와 렌더 제출 정보를 다룹니다.
 struct TMeshData
@@ -81,6 +283,103 @@ struct TMeshData
 };
 
 using FMeshData = TMeshData<FVertex>;
+
+struct FVertexSemanticDescriptorPreset
+{
+    inline static const FVertexSemanticDescriptor PC = {
+        {
+            { "POSITION", 0 },
+            { "COLOR", 0 },
+        }
+    };
+
+    inline static const FVertexSemanticDescriptor PT = {
+        {
+            { "POSITION", 0 },
+            { "TEXCOORD", 0 },
+        }
+    };
+
+    inline static const FVertexSemanticDescriptor PUVC = {
+        {
+            { "POSITION", 0 },
+            { "TEXCOORD", 0 },
+            { "COLOR", 0 },
+        }
+    };
+
+    inline static const FVertexSemanticDescriptor PNCT = {
+        {
+            { "POSITION", 0 },
+            { "NORMAL", 0 },
+            { "COLOR", 0 },
+            { "TEXCOORD", 0 },
+        }
+    };
+
+    inline static const FVertexSemanticDescriptor PNCTT = {
+        {
+            { "POSITION", 0 },
+            { "NORMAL", 0 },
+            { "COLOR", 0 },
+            { "TEXCOORD", 0 },
+            { "TANGENT", 0 },
+        }
+    };
+
+    inline static const FVertexSemanticDescriptor PNCTTUV1 = {
+        {
+            { "POSITION", 0 },
+            { "NORMAL", 0 },
+            { "COLOR", 0 },
+            { "TEXCOORD", 0 },
+            { "TANGENT", 0 },
+            { "TEXCOORD", 1 },
+        }
+    };
+
+    inline static const FVertexSemanticDescriptor Skinned = {
+        {
+            { "POSITION", 0 },
+            { "NORMAL", 0 },
+            { "COLOR", 0 },
+            { "TEXCOORD", 0 },
+            { "TANGENT", 0 },
+            { "BLENDINDICES", 0 },
+            { "BLENDWEIGHT", 0 },
+        }
+    };
+};
+
+template <typename VertexType>
+FRuntimePackedVertexData BuildRuntimePackedVertexData(
+    const TArray<VertexType>& InVertices,
+    const FVertexSemanticDescriptor& InVertexSemanticDescriptor)
+{
+    FRuntimePackedVertexData PackedData;
+    PackedData.VertexStride = sizeof(VertexType);
+    PackedData.VertexCount = static_cast<uint32>(InVertices.size());
+    PackedData.VertexSemanticDescriptor = InVertexSemanticDescriptor;
+    if (!InVertices.empty())
+    {
+        const uint32 ByteWidth = PackedData.GetVertexBufferByteWidth();
+        PackedData.VertexBlob.resize(ByteWidth);
+        std::memcpy(PackedData.VertexBlob.data(), InVertices.data(), ByteWidth);
+    }
+
+    return PackedData;
+}
+
+template <typename VertexType>
+FRuntimePackedMeshData BuildRuntimePackedMeshData(
+    const TMeshData<VertexType>& InMeshData,
+    const FVertexSemanticDescriptor& InVertexSemanticDescriptor)
+{
+    FRuntimePackedMeshData PackedMeshData;
+    PackedMeshData.Vertices = BuildRuntimePackedVertexData(InMeshData.Vertices, InVertexSemanticDescriptor);
+    PackedMeshData.Indices = InMeshData.Indices;
+    return PackedMeshData;
+}
 
 // 정점 타입에 무관하게 메시 데이터를 참조하는 뷰.
 struct FMeshDataView

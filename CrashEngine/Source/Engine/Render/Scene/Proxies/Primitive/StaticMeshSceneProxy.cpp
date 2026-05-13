@@ -121,6 +121,12 @@ void FStaticMeshSceneProxy::RebuildSectionRenderData()
                 TryGetTextureSRV(Mat, { MaterialSemantics::NormalTextureSlot, "NormalMap", "NormalMapTexture", "BumpTexture", "BumpMap" }, Draw.NormalSRV);
                 TryGetTextureSRV(Mat, { MaterialSemantics::SpecularTextureSlot, "SpecularMap", "SpecularMapTexture", "SpecularMask", "SpecularMaskTexture", "GlossMap" }, Draw.SpecularSRV);
                 Draw.ShaderResourceBindings = BuildReflectedTextureBindings(Mat, Draw.Shader);
+                if (lod == 0 && Device && Draw.Shader)
+                {
+                    Draw.MeshBuffer = Mesh->GetOrCreateRenderBufferForShader(
+                        Device,
+                        Draw.Shader);
+                }
             }
 
             auto MaterialCB = BuildMeshMaterialCB(Mat, Device, Context, Draw.DiffuseSRV, Draw.NormalSRV, Draw.SpecularSRV);
@@ -128,6 +134,11 @@ void FStaticMeshSceneProxy::RebuildSectionRenderData()
             {
                 Draw.MaterialCB[0] = MaterialCB->GetConstantBuffer();
                 LODData[lod].OwnedMaterialCBs.push_back(std::move(MaterialCB));
+            }
+
+            if (!Draw.MeshBuffer)
+            {
+                Draw.MeshBuffer = LODData[lod].MeshBuffer;
             }
 
             LODData[lod].SectionRenderData.push_back(Draw);

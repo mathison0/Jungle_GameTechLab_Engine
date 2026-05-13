@@ -29,6 +29,7 @@
 #include "Mesh/StaticMesh.h"
 #include "Render/RHI/D3D11/Buffers/StaticMeshBuffer.h"
 #include "Render/RHI/D3D11/Buffers/VertexTypes.h"
+#include "Render/RHI/D3D11/Buffers/RuntimeVertexWideningPolicy.h"
 #include "Engine/Platform/Paths.h"
 #include "Resource/FontManager.h"
 
@@ -58,6 +59,26 @@ struct FExpectedVertexSemantic
     const char* SemanticName = nullptr;
     uint32      SemanticIndex = 0;
 };
+
+FString JoinVertexSemanticDescriptor(const FVertexSemanticDescriptor& Descriptor)
+{
+    FString Result;
+    for (const FVertexSemantic& Semantic : Descriptor.Elements)
+    {
+        if (!Result.empty())
+        {
+            Result += ",";
+        }
+
+        Result += Semantic.SemanticName;
+        if (Semantic.SemanticIndex > 0)
+        {
+            Result += std::to_string(Semantic.SemanticIndex);
+        }
+    }
+
+    return Result.empty() ? "<none>" : Result;
+}
 
 const char* GetShaderDebugName(const FGraphicsProgram* Shader)
 {
@@ -229,64 +250,22 @@ void LogMeshShaderSelectionOnce(ERenderPass Pass,
         IndexCount);
 }
 
-const TArray<FExpectedVertexSemantic>* GetExpectedVertexSemanticsForStride(uint32 VertexStride)
+FVertexSemanticDescriptor BuildVertexSemanticDescriptor(const TArray<FExpectedVertexSemantic>& ExpectedSemantics)
 {
-    static const TArray<FExpectedVertexSemantic> VertexPC = {
-        { "POSITION", 0 },
-        { "COLOR", 0 },
-    };
-    static const TArray<FExpectedVertexSemantic> VertexPT = {
-        { "POSITION", 0 },
-        { "TEXCOORD", 0 },
-    };
-    static const TArray<FExpectedVertexSemantic> VertexUI = {
-        { "POSITION", 0 },
-        { "TEXCOORD", 0 },
-        { "COLOR", 0 },
-    };
-    static const TArray<FExpectedVertexSemantic> VertexPNCT = {
-        { "POSITION", 0 },
-        { "NORMAL", 0 },
-        { "COLOR", 0 },
-        { "TEXCOORD", 0 },
-    };
-    static const TArray<FExpectedVertexSemantic> VertexPNCTT = {
-        { "POSITION", 0 },
-        { "NORMAL", 0 },
-        { "COLOR", 0 },
-        { "TEXCOORD", 0 },
-        { "TANGENT", 0 },
-    };
-
-    if (VertexStride == sizeof(FVertex))
+    FVertexSemanticDescriptor Descriptor;
+    Descriptor.Elements.reserve(ExpectedSemantics.size());
+    for (const FExpectedVertexSemantic& Semantic : ExpectedSemantics)
     {
-        return &VertexPC;
+        Descriptor.Elements.push_back({ Semantic.SemanticName, Semantic.SemanticIndex });
     }
-    if (VertexStride == sizeof(FTextureVertex))
-    {
-        return &VertexPT;
-    }
-    if (VertexStride == sizeof(FUIVertex))
-    {
-        return &VertexUI;
-    }
-    if (VertexStride == sizeof(FVertexPNCT))
-    {
-        return &VertexPNCT;
-    }
-    if (VertexStride == sizeof(FVertexPNCT_T) || VertexStride == sizeof(FVertexSkinned))
-    {
-        return &VertexPNCTT;
-    }
-
-    return nullptr;
+    return Descriptor;
 }
 
-bool HasExpectedVertexSemantic(const TArray<FExpectedVertexSemantic>& ExpectedSemantics, const FGraphicsProgram::FVertexInputElement& InputElement)
+bool HasExpectedVertexSemantic(const FVertexSemanticDescriptor& ExpectedSemantics, const FVertexSemantic& InputElement)
 {
-    for (const FExpectedVertexSemantic& Expected : ExpectedSemantics)
+    for (const FVertexSemantic& Expected : ExpectedSemantics.Elements)
     {
-        if (_stricmp(Expected.SemanticName, InputElement.SemanticName.c_str()) == 0 &&
+        if (_stricmp(Expected.SemanticName.c_str(), InputElement.SemanticName.c_str()) == 0 &&
             Expected.SemanticIndex == InputElement.SemanticIndex)
         {
             return true;
@@ -294,6 +273,86 @@ bool HasExpectedVertexSemantic(const TArray<FExpectedVertexSemantic>& ExpectedSe
     }
 
     return false;
+}
+
+bool BuildCompatibilityRequestList(
+    ERenderPass Pass,
+    const FGraphicsProgram* Shader,
+    FRuntimeVertexElementRequestList& OutRequestList,
+    bool& bOutUsesSpecialPassSemantics,
+    FString* OutUnsupportedInputs = nullptr)
+{
+    OutRequestList.Elements.clear();
+    bOutUsesSpecialPassSemantics = false;
+    if (OutUnsupportedInputs)
+    {
+        OutUnsupportedInputs->clear();
+    }
+
+    if (!Shader)
+    {
+        return false;
+    }
+
+    if (const TArray<FExpectedVertexSemantic>* SpecialPassSemantics = GetSpecialPassVertexSemantics(Pass))
+    {
+        bOutUsesSpecialPassSemantics = true;
+        OutRequestList.Elements.reserve(SpecialPassSemantics->size());
+        for (const FExpectedVertexSemantic& Semantic : *SpecialPassSemantics)
+        {
+            FRuntimeVertexSemanticSourceDesc CanonicalSourceDesc;
+            if (!BuildCanonicalRuntimeVertexSourceDesc(Semantic.SemanticName, Semantic.SemanticIndex, CanonicalSourceDesc))
+            {
+                if (OutUnsupportedInputs)
+                {
+                    if (!OutUnsupportedInputs->empty())
+                    {
+                        *OutUnsupportedInputs += ",";
+                    }
+                    *OutUnsupportedInputs += Semantic.SemanticName;
+                    if (Semantic.SemanticIndex > 0)
+                    {
+                        *OutUnsupportedInputs += std::to_string(Semantic.SemanticIndex);
+                    }
+                }
+                return false;
+            }
+
+            FRuntimeVertexElementRequest Request;
+            Request.SemanticName = Semantic.SemanticName;
+            Request.SemanticIndex = Semantic.SemanticIndex;
+            Request.ComponentCount = CanonicalSourceDesc.ComponentCount;
+            Request.ScalarType = CanonicalSourceDesc.ScalarType;
+            OutRequestList.Elements.push_back(Request);
+        }
+        return true;
+    }
+
+    const TArray<FGraphicsProgram::FVertexInputElement>& ShaderInputs = Shader->GetVertexInputs();
+    OutRequestList.Elements.reserve(ShaderInputs.size());
+    for (const FGraphicsProgram::FVertexInputElement& Input : ShaderInputs)
+    {
+        FRuntimeVertexElementRequest Request;
+        if (!BuildRuntimeVertexElementRequest(Input.SemanticName, Input.SemanticIndex, Input.Format, Request))
+        {
+            if (OutUnsupportedInputs)
+            {
+                if (!OutUnsupportedInputs->empty())
+                {
+                    *OutUnsupportedInputs += ",";
+                }
+                *OutUnsupportedInputs += Input.SemanticName;
+                if (Input.SemanticIndex > 0)
+                {
+                    *OutUnsupportedInputs += std::to_string(Input.SemanticIndex);
+                }
+            }
+            return false;
+        }
+        OutRequestList.Elements.push_back(Request);
+    }
+
+    return !OutRequestList.IsEmpty();
 }
 
 void ValidateMeshShaderInputCompatibilityOnce(ERenderPass Pass,
@@ -309,79 +368,137 @@ void ValidateMeshShaderInputCompatibilityOnce(ERenderPass Pass,
     static std::unordered_set<std::string> LoggedCompatibilityKeys;
 
     const uint32 VertexStride = MeshBuffer->GetVertexStride();
+    const FVertexSemanticDescriptor& MeshSemantics = MeshBuffer->GetVertexSemanticDescriptor();
     const char* MaterialLabel = MaterialPath.empty() ? "<none>" : MaterialPath.c_str();
     const char* ShaderLabel   = GetShaderDebugName(Shader);
     const std::string Key = std::string(GetRenderPassName(Pass)) + "|" +
                             ShaderLabel + "|" +
                             MaterialLabel + "|" +
-                            std::to_string(VertexStride);
+                            std::to_string(VertexStride) + "|" +
+                            JoinVertexSemanticDescriptor(MeshSemantics).c_str();
 
     if (!LoggedCompatibilityKeys.insert(Key).second)
     {
         return;
     }
 
-    const TArray<FExpectedVertexSemantic>* ExpectedSemantics = GetSpecialPassVertexSemantics(Pass);
-    if (!ExpectedSemantics)
-    {
-        ExpectedSemantics = GetExpectedVertexSemanticsForStride(VertexStride);
-    }
-
-    if (!ExpectedSemantics)
+    FRuntimeVertexElementRequestList RequiredElements;
+    bool bUsesSpecialPassSemantics = false;
+    FString UnsupportedInputs;
+    if (!BuildCompatibilityRequestList(Pass, Shader, RequiredElements, bUsesSpecialPassSemantics, &UnsupportedInputs))
     {
         UE_LOG(
             Render,
             Warning,
-            "Mesh/Shader input contract uses unknown vertex stride. Pass=%s Shader=%s Material=%s VertexStride=%u",
+            "Mesh/Shader input contract has no compatibility request list. Pass=%s Shader=%s Material=%s VertexStride=%u ReflectedShaderInputs=%s UnsupportedInputs=%s",
             GetRenderPassName(Pass),
             ShaderLabel,
             MaterialLabel,
-            VertexStride);
+            VertexStride,
+            JoinVertexSemanticDescriptor(Shader->GetVertexInputDescriptor()).c_str(),
+            UnsupportedInputs.empty() ? "<none>" : UnsupportedInputs.c_str());
         return;
     }
 
-    const TArray<FGraphicsProgram::FVertexInputElement>& ShaderInputs = Shader->GetVertexInputs();
-    FString                                             MissingSemantics;
-
-    for (const FExpectedVertexSemantic& Expected : *ExpectedSemantics)
+    const FVertexSemanticDescriptor& ShaderInputs = Shader->GetVertexInputDescriptor();
+    const FVertexSemanticDescriptor& AvailableSemantics = MeshSemantics;
+    FVertexSemanticDescriptor RequiredSemantics;
+    RequiredSemantics.Elements.reserve(RequiredElements.Elements.size());
+    for (const FRuntimeVertexElementRequest& RequiredElement : RequiredElements.Elements)
     {
-        bool bFound = false;
-        for (const FGraphicsProgram::FVertexInputElement& InputElement : ShaderInputs)
+        RequiredSemantics.Elements.push_back({ RequiredElement.SemanticName, RequiredElement.SemanticIndex });
+    }
+
+    FString MissingSemantics;
+    FString IncompatibleSemantics;
+    FString UnsupportedMeshSemantics;
+
+    for (const FRuntimeVertexElementRequest& RequiredElement : RequiredElements.Elements)
+    {
+        const FVertexSemantic RequiredSemantic = { RequiredElement.SemanticName, RequiredElement.SemanticIndex };
+        const FVertexSemantic* AvailableSemanticMatch = nullptr;
+
+        for (const FVertexSemantic& AvailableSemantic : AvailableSemantics.Elements)
         {
-            if (_stricmp(Expected.SemanticName, InputElement.SemanticName.c_str()) == 0 &&
-                Expected.SemanticIndex == InputElement.SemanticIndex)
+            if (_stricmp(RequiredSemantic.SemanticName.c_str(), AvailableSemantic.SemanticName.c_str()) == 0 &&
+                RequiredSemantic.SemanticIndex == AvailableSemantic.SemanticIndex)
             {
-                bFound = true;
+                AvailableSemanticMatch = &AvailableSemantic;
                 break;
             }
         }
 
-        if (!bFound)
+        if (!AvailableSemanticMatch)
         {
+            if (CanDefaultFillRuntimeVertexElement(RequiredElement))
+            {
+                continue;
+            }
+
             if (!MissingSemantics.empty())
             {
                 MissingSemantics += ",";
             }
 
-            MissingSemantics += Expected.SemanticName;
-            if (Expected.SemanticIndex > 0)
+            MissingSemantics += RequiredSemantic.SemanticName;
+            if (RequiredSemantic.SemanticIndex > 0)
             {
-                MissingSemantics += std::to_string(Expected.SemanticIndex);
+                MissingSemantics += std::to_string(RequiredSemantic.SemanticIndex);
+            }
+            continue;
+        }
+
+        FRuntimeVertexSemanticSourceDesc AvailableSourceDesc;
+        if (!BuildCanonicalRuntimeVertexSourceDesc(*AvailableSemanticMatch, AvailableSourceDesc))
+        {
+            if (!UnsupportedMeshSemantics.empty())
+            {
+                UnsupportedMeshSemantics += ",";
+            }
+
+            UnsupportedMeshSemantics += RequiredSemantic.SemanticName;
+            if (RequiredSemantic.SemanticIndex > 0)
+            {
+                UnsupportedMeshSemantics += std::to_string(RequiredSemantic.SemanticIndex);
+            }
+            continue;
+        }
+
+        const bool bCompatible =
+            IsRuntimeVertexElementExactMatch(AvailableSourceDesc, RequiredElement) ||
+            IsRuntimeVertexWideningCompatible(AvailableSourceDesc, RequiredElement);
+        if (!bCompatible)
+        {
+            if (!IncompatibleSemantics.empty())
+            {
+                IncompatibleSemantics += ",";
+            }
+
+            IncompatibleSemantics += RequiredSemantic.SemanticName;
+            if (RequiredSemantic.SemanticIndex > 0)
+            {
+                IncompatibleSemantics += std::to_string(RequiredSemantic.SemanticIndex);
             }
         }
     }
 
-    if (!MissingSemantics.empty())
+    if (!MissingSemantics.empty() || !IncompatibleSemantics.empty() || !UnsupportedMeshSemantics.empty())
     {
         UE_LOG(
             Render,
             Warning,
-            "Mesh/Shader input mismatch detected. Pass=%s Shader=%s Material=%s VertexStride=%u MissingSemantics=%s",
+            "Mesh/Shader input mismatch detected. Pass=%s Shader=%s Material=%s VertexStride=%u MeshSemantics=%s RequiredSemantics=%s ReflectedShaderInputs=%s MissingSemantics=%s IncompatibleSemantics=%s UnsupportedMeshSemantics=%s ValidationPolicy=%s",
             GetRenderPassName(Pass),
             ShaderLabel,
             MaterialLabel,
             VertexStride,
-            MissingSemantics.c_str());
+            JoinVertexSemanticDescriptor(MeshSemantics).c_str(),
+            JoinVertexSemanticDescriptor(RequiredSemantics).c_str(),
+            JoinVertexSemanticDescriptor(ShaderInputs).c_str(),
+            MissingSemantics.empty() ? "<none>" : MissingSemantics.c_str(),
+            IncompatibleSemantics.empty() ? "<none>" : IncompatibleSemantics.c_str(),
+            UnsupportedMeshSemantics.empty() ? "<none>" : UnsupportedMeshSemantics.c_str(),
+            bUsesSpecialPassSemantics ? "SpecialPassSemanticPolicy" : "ReflectedCompatibilityPolicy");
     }
 }
 } // namespace
@@ -843,7 +960,7 @@ FStaticMeshBuffer* GetBonePyramidMeshBuffer(ID3D11Device* Device)
         3, 0, 4,
     };
 
-    PyramidBuffer.Create(Device, MeshData);
+    PyramidBuffer.Create(Device, BuildRuntimePackedMeshData(MeshData, FVertexSemanticDescriptorPreset::PNCTT));
     return PyramidBuffer.IsValid() ? &PyramidBuffer : nullptr;
 }
 

@@ -1,18 +1,12 @@
 /*
-    Custom deferred opaque wrapper for Phase 4 validation.
-    It preserves a reflected material cbuffer at b3 while delegating the
-    actual surface generation to the engine's built-in deferred opaque path.
+    Skeletal UV1 validation shader.
+    It visualizes TEXCOORD1 directly so multi-UV routing can be confirmed
+    without depending on any mesh-specific texture content.
 */
 
 #include "Passes/Scene/Deferred/DeferredOpaquePass.hlsl"
 
-cbuffer CustomTestMaterialParams : register(b3)
-{
-    float4 CustomTint;
-    float4 CustomWeights;
-}
-
-struct FCustomTestVSOutput
+struct FSkeletalUV1DebugVSOutput
 {
     float4 position     : SV_POSITION;
     float3 worldNormal  : TEXCOORD0;
@@ -23,7 +17,7 @@ struct FCustomTestVSOutput
     float2 texcoord1    : TEXCOORD4;
 };
 
-FCustomTestVSOutput VS(VS_Input_PNCT_T_UV1 Input)
+FSkeletalUV1DebugVSOutput VS(VS_Input_PNCT_T_UV1 Input)
 {
     VS_Input_PNCT_T BaseInput;
     BaseInput.position = Input.position;
@@ -34,7 +28,7 @@ FCustomTestVSOutput VS(VS_Input_PNCT_T_UV1 Input)
 
     FDeferred_Opaque_VSOutput BaseOutput = VS_DeferredOpaque(BaseInput);
 
-    FCustomTestVSOutput Output;
+    FSkeletalUV1DebugVSOutput Output;
     Output.position = BaseOutput.position;
     Output.worldNormal = BaseOutput.worldNormal;
     Output.worldTangent = BaseOutput.worldTangent;
@@ -45,7 +39,7 @@ FCustomTestVSOutput VS(VS_Input_PNCT_T_UV1 Input)
     return Output;
 }
 
-FGBufferOutput3 PS(FCustomTestVSOutput Input)
+FGBufferOutput3 PS(FSkeletalUV1DebugVSOutput Input)
 {
     FDeferred_Opaque_VSOutput BaseInput;
     BaseInput.position = Input.position;
@@ -57,9 +51,12 @@ FGBufferOutput3 PS(FCustomTestVSOutput Input)
 
     FGBufferOutput3 Output = PS_Opaque_BlinnPhong(BaseInput);
 
-    // Keep the reflected b3 layout alive and TEXCOORD1 wired without changing visible output.
-    const float Epsilon = 1.0e-8f;
-    Output.BaseColor.rgb += CustomTint.rgb * saturate(CustomWeights.x + Input.texcoord1.x * 0.0f) * Epsilon;
-    Output.Surface2.a += CustomWeights.y * Epsilon;
+    const float2 UV1 = Input.texcoord1;
+    const float2 GridUV = frac(UV1 * 8.0f);
+    const float Checker = step(1.0f, GridUV.x + GridUV.y);
+    const float3 UV1Color = float3(frac(UV1.x), frac(UV1.y), Checker);
+
+    Output.BaseColor.rgb = UV1Color;
+    Output.Surface2.a = 1.0f;
     return Output;
 }

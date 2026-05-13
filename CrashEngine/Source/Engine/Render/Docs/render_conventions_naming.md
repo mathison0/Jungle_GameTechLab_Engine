@@ -109,3 +109,22 @@
 - `FViewModePassDesc`
 - `FRenderPassPreset`
 - `FRenderPassDrawPreset`
+
+## 8. Vertex Contract Naming
+
+- vertex semantic 집합의 canonical preset은 `*Preset` 정적 집합으로 둔다.
+- 현재 vertex semantic descriptor preset은 `FVertexSemanticDescriptorPreset`에 모은다.
+- preset 이름은 shader contract 읽기에 필요한 semantic 묶음을 짧게 드러내되, 과도한 helper 함수명은 피한다.
+
+예
+- `FVertexSemanticDescriptorPreset::PC`
+- `FVertexSemanticDescriptorPreset::PT`
+- `FVertexSemanticDescriptorPreset::PUVC`
+- `FVertexSemanticDescriptorPreset::PNCT`
+- `FVertexSemanticDescriptorPreset::PNCTT`
+- `FVertexSemanticDescriptorPreset::PNCTTUV1`
+
+규칙:
+
+- runtime upload 계약은 vertex struct type 추론보다 descriptor preset 또는 reflected request list를 우선 source of truth로 둔다.
+- 새 preset이 필요하면 helper 함수 추가보다 preset 집합에 정적 항목을 추가한다.

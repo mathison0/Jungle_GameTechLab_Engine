@@ -9,6 +9,7 @@ class FSkeletalMeshSceneProxy : public FMeshSceneProxy
 {
 public:
     FSkeletalMeshSceneProxy(USkeletalMeshComponent* InComponent);
+    void UpdateMaterial() override;
     void UpdateMesh() override;
     void UpdateShadow() override;
     void UpdateLOD(uint32 LODLevel) override { /* SkeletalMesh does not support LOD for now */ };

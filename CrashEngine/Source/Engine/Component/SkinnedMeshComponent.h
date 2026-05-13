@@ -7,6 +7,7 @@
 
 class USkeletalMesh;
 struct FBoneInfo;
+class FGraphicsProgram;
 
 enum class ESkeletalDebugPoseMode
 {
@@ -17,6 +18,12 @@ enum class ESkeletalDebugPoseMode
 class USkinnedMeshComponent : public UMeshComponent
 {
 public:
+    struct FRuntimeSkinnedRenderBufferEntry
+    {
+        FRuntimeVertexElementRequestList RequestedElements;
+        std::unique_ptr<FSkeletalMeshBuffer> RenderBuffer;
+    };
+
     DECLARE_CLASS(USkinnedMeshComponent, UMeshComponent)
     USkinnedMeshComponent() = default;
     ~USkinnedMeshComponent() override = default;
@@ -36,6 +43,7 @@ public:
     void UpdateSkinningMatrices();
     void UpdateSkinningMatricesFrom(int32 BoneIndex);
     void UpdateSkinnedVertices();
+    void PruneUnusedSkinnedRuntimeRenderBuffers();  // Material 변경 등으로 사용되는 vertex layout 달라졌을 때 기존 버퍼 할당 해제
 
 	void ResetToReferencePose();
 
@@ -47,9 +55,10 @@ public:
     ESkeletalDebugPoseMode GetSkeletalDebugPoseMode() const { return DebugPoseMode; }
 
 
-	const TArray<FVertexPNCT_T>& GetSkinnedVertices() const;
+    const TArray<FVertexPNCT_T>& GetSkinnedVertices() const;
     const TArray<uint32>& GetIndices() const;
     FSkeletalMeshBuffer* GetSkinnedRenderBuffer(int32 SubMeshIndex) const;
+    FSkeletalMeshBuffer* GetSkinnedRenderBufferForShader(int32 SubMeshIndex, const FGraphicsProgram* InShader) const;
 
     int32 GetNumBones() const;
     const FBoneInfo* GetBoneInfo(int32 BoneIndex) const;
@@ -74,6 +83,8 @@ protected:
     TArray<FVertexPNCT_T> SkinnedVertices;
     TArray<uint32> SkinnedIndices;
     TArray<std::unique_ptr<FSkeletalMeshBuffer>> SkinnedRenderBuffers;
+    TArray<TArray<FRuntimeSkinnedRenderBufferEntry>> SkinnedRuntimeRenderBufferCaches;
+    TArray<TArray<FRuntimeVertexElementRequestList>> DesiredSkinnedRuntimeBufferLayouts;
 
     FString SkeletalMeshPath = "None";
     ESkeletalDebugPoseMode DebugPoseMode = ESkeletalDebugPoseMode::SkinBindPose;

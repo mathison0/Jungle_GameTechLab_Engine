@@ -766,16 +766,16 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
                 {
                     FVertexPNCT_T NewVertex;
 
-                    NewVertex.Position = FMeshImporterUtils::RemapPosition(ObjInfo.Positions[Key.p], Options.ForwardAxis) * Options.Scale;
+                    NewVertex.Position = FMeshImporterUtils::RemapPosition(ObjInfo.Positions[Key.p], Options.ForwardAxis, Options.UpAxis) * Options.Scale;
 
                     FVector FinalNormal;
                     if (Key.n == -1)
                     {
-                        FinalNormal = FMeshImporterUtils::RemapPosition(FaceNormal, Options.ForwardAxis).Normalized();
+                        FinalNormal = FMeshImporterUtils::RemapPosition(FaceNormal, Options.ForwardAxis, Options.UpAxis).Normalized();
                     }
                     else
                     {
-                        FinalNormal = FMeshImporterUtils::RemapPosition(ObjInfo.Normals[Key.n], Options.ForwardAxis).Normalized();
+                        FinalNormal = FMeshImporterUtils::RemapPosition(ObjInfo.Normals[Key.n], Options.ForwardAxis, Options.UpAxis).Normalized();
                     }
                     NewVertex.Normal = FinalNormal;
 
@@ -791,8 +791,8 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
 
                     NewVertex.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-                    FVector WorldT = FMeshImporterUtils::RemapPosition(T, Options.ForwardAxis).Normalized();
-                    FVector WorldB = FMeshImporterUtils::RemapPosition(B, Options.ForwardAxis).Normalized();
+                    FVector WorldT = FMeshImporterUtils::RemapPosition(T, Options.ForwardAxis, Options.UpAxis).Normalized();
+                    FVector WorldB = FMeshImporterUtils::RemapPosition(B, Options.ForwardAxis, Options.UpAxis).Normalized();
                     float w = (FinalNormal.Cross(WorldT).Dot(WorldB) < 0.0f) ? -1.0f : 1.0f;
                     NewVertex.Tangent = FVector4(WorldT.X, WorldT.Y, WorldT.Z, w);
 
@@ -825,7 +825,11 @@ bool FObjImporter::Convert(const FObjInfo& ObjInfo, const TArray<FObjMaterialInf
 
 bool FObjImporter::Import(const FString& ObjFilePath, FStaticMesh& OutMesh, TArray<FStaticMaterial>& OutMaterials)
 {
-    return Import(ObjFilePath, FImportOptions::Default(), OutMesh, OutMaterials);
+    FImportOptions Options;
+    Options.ForwardAxis = EForwardAxis::NegY;
+    Options.UpAxis = EUpAxis::Z;
+    Options.WindingOrder = EWindingOrder::Keep;
+    return Import(ObjFilePath, Options, OutMesh, OutMaterials);
 }
 
 bool FObjImporter::Import(const FString& ObjFilePath, const FImportOptions& Options, FStaticMesh& OutMesh, TArray<FStaticMaterial>& OutMaterials)

@@ -61,6 +61,13 @@ C++ 기준 슬롯 정의는 `Render/Resources/Bindings/RenderBindingSlots.h`에 
 | `t20~t24` | shadow map 2D for Directional / Spot light. (OR ShadowMap Atlas) |
 | `t25~t30` | shadow cubemap for Point light |
 
+추가 규칙:
+
+- material/custom shader의 texture SRV는 reflection으로 추출한 shader resource slot을 그대로 따른다.
+- `t0~t5`는 pass-fixed 의미가 아니라 material/custom shader가 reflected binding으로 사용할 수 있는 일반 영역으로 본다.
+- material texture parameter 이름은 canonical alias 규칙으로 정규화한 뒤 reflected resource name과 매칭한다.
+- alias 밖의 resource name은 동일한 material texture parameter 이름이 필요하다.
+
 ## 5. Sampler Slot 규약
 
 | Slot | 이름 |
@@ -103,6 +110,7 @@ C++ 기준 슬롯 정의는 `Render/Resources/Bindings/RenderBindingSlots.h`에 
 | `Render/Resources/FrameResources.h` | frame 공용 CB, sampler, light buffer 정의 |
 | `Render/Resources/Buffers/ConstantBufferData.h` | CB payload 구조 정의 |
 | `Submission/Command/BuildDrawCommand.cpp` | draw command 수준 실제 바인딩 구성 |
+| `Scene/Proxies/Primitive/MeshSceneProxy.cpp` | reflected texture binding과 material texture 매칭 구성 |
 | 각 pass 구현 파일 | pass-local SRV/CB 바인딩 및 unbind 처리 |
 
 ## 9. Pass 추가 시 체크 항목

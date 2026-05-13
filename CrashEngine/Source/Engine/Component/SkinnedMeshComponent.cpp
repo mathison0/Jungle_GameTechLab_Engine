@@ -3,16 +3,77 @@
 #include "Engine/Runtime/Engine.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/Skeleton.h"
+#include "Materials/Material.h"
 #include "Object/ObjectFactory.h"
+#include "Render/RHI/D3D11/Buffers/RuntimeVertexPacker.h"
+#include "Render/RHI/D3D11/Buffers/RuntimeVertexWideningPolicy.h"
+#include "Render/RHI/D3D11/Shaders/GraphicsProgram.h"
 #include "Render/Scene/Proxies/Primitive/SkeletalMeshSceneProxy.h"
 #include "Collision/RayUtils.h"
 
 #include <algorithm>
+#include <string.h>
+#include <Profiling/Stats.h>
 
 IMPLEMENT_CLASS(USkinnedMeshComponent, UMeshComponent)
 
 namespace
 {
+    bool AreRuntimeVertexRequestListsEqual(
+        const FRuntimeVertexElementRequestList& A,
+        const FRuntimeVertexElementRequestList& B)
+    {
+        if (A.Elements.size() != B.Elements.size())
+        {
+            return false;
+        }
+
+        for (size_t Index = 0; Index < A.Elements.size(); ++Index)
+        {
+            const FRuntimeVertexElementRequest& Left = A.Elements[Index];
+            const FRuntimeVertexElementRequest& Right = B.Elements[Index];
+            if (_stricmp(Left.SemanticName.c_str(), Right.SemanticName.c_str()) != 0 ||
+                Left.SemanticIndex != Right.SemanticIndex ||
+                Left.ComponentCount != Right.ComponentCount ||
+                Left.ScalarType != Right.ScalarType)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool BuildRuntimeVertexRequestListFromShader(
+        const FGraphicsProgram* InShader,
+        FRuntimeVertexElementRequestList& OutRequestList)
+    {
+        OutRequestList.Elements.clear();
+        if (!InShader)
+        {
+            return false;
+        }
+
+        const TArray<FGraphicsProgram::FVertexInputElement>& VertexInputs = InShader->GetVertexInputs();
+        OutRequestList.Elements.reserve(VertexInputs.size());
+        for (const FGraphicsProgram::FVertexInputElement& VertexInput : VertexInputs)
+        {
+            FRuntimeVertexElementRequest Request;
+            if (!BuildRuntimeVertexElementRequest(
+                    VertexInput.SemanticName,
+                    VertexInput.SemanticIndex,
+                    VertexInput.Format,
+                    Request))
+            {
+                return false;
+            }
+
+            OutRequestList.Elements.push_back(Request);
+        }
+
+        return !OutRequestList.IsEmpty();
+    }
+
     FMatrix GetMeshBindInverseScaleMatrix(const FSkeletalSubMesh* Asset)
     {
         if (!Asset)
@@ -22,6 +83,7 @@ namespace
 
         return FMatrix::MakeScaleMatrix(Asset->MeshBindInverseScale);
     }
+
 }
 
 bool USkinnedMeshComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutHit)
@@ -66,6 +128,8 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
     OverrideMaterials.clear();
     MaterialSlots.clear();
     SkinnedRenderBuffers.clear();
+    SkinnedRuntimeRenderBufferCaches.clear();
+    DesiredSkinnedRuntimeBufferLayouts.clear();
 
     if (SkeletalMesh)
     {
@@ -478,17 +542,93 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
         SkinnedRenderBuffers.clear();
         SkinnedRenderBuffers.resize(SubMeshes.size());
     }
+    if (SkinnedRuntimeRenderBufferCaches.size() != SubMeshes.size())
+    {
+        SkinnedRuntimeRenderBufferCaches.clear();
+        SkinnedRuntimeRenderBufferCaches.resize(SubMeshes.size());
+    }
+    if (DesiredSkinnedRuntimeBufferLayouts.size() != SubMeshes.size())
+    {
+        DesiredSkinnedRuntimeBufferLayouts.clear();
+        DesiredSkinnedRuntimeBufferLayouts.resize(SubMeshes.size());
+    }
 
     uint32 VertexBase = 0;
+    int32 GlobalMaterialBase = 0;
 
     for (uint32 i = 0; i < SubMeshes.size(); ++i)
     {
         USkeletalSubMesh* SubMesh = SubMeshes[i];
         if (!SubMesh || !SubMesh->GetSkeletalSubMeshAsset())
+        {
+            if (i < DesiredSkinnedRuntimeBufferLayouts.size())
+            {
+                DesiredSkinnedRuntimeBufferLayouts[i].clear();
+            }
+            if (SubMesh)
+            {
+                GlobalMaterialBase += static_cast<int32>(SubMesh->GetStaticMaterials().size());
+            }
             continue;
+        }
 
         FSkeletalSubMesh* Asset = SubMesh->GetSkeletalSubMeshAsset();
         const uint32 VertexCount = static_cast<uint32>(Asset->Vertices.size());
+        const bool bHasUV1Data = Asset->HasValidUV1Data();
+        const FRuntimeVertexElementRequestList BaseRequestedElements = Asset->BuildRuntimeUploadRequestList();
+        TArray<FRuntimeVertexElementRequestList> RequestedBufferLayouts;
+        RequestedBufferLayouts.push_back(BaseRequestedElements);
+
+        auto AppendRequestedLayout = [&RequestedBufferLayouts](const FRuntimeVertexElementRequestList& RequestedElements)
+        {
+            for (const FRuntimeVertexElementRequestList& ExistingLayout : RequestedBufferLayouts)
+            {
+                if (AreRuntimeVertexRequestListsEqual(ExistingLayout, RequestedElements))
+                {
+                    return;
+                }
+            }
+
+            RequestedBufferLayouts.push_back(RequestedElements);
+        };
+
+        const TArray<FStaticMaterial>& Slots = SubMesh->GetStaticMaterials();
+        for (const FSkeletalMeshSection& Section : Asset->Sections)
+        {
+            UMaterial* Mat = nullptr;
+            const int32 MaterialIndex = Section.MaterialIndex;
+            if (MaterialIndex >= 0 && MaterialIndex < static_cast<int32>(Slots.size()))
+            {
+                const int32 GlobalIndex = GlobalMaterialBase + MaterialIndex;
+                if (GlobalIndex < static_cast<int32>(OverrideMaterials.size()) && OverrideMaterials[GlobalIndex])
+                {
+                    Mat = OverrideMaterials[GlobalIndex];
+                }
+                else if (Slots[MaterialIndex].MaterialInterface)
+                {
+                    Mat = Slots[MaterialIndex].MaterialInterface;
+                }
+            }
+
+            FRuntimeVertexElementRequestList RequestedElements;
+            if (Mat &&
+                Mat->GetGraphicsProgram() &&
+                BuildRuntimeVertexRequestListFromShader(Mat->GetGraphicsProgram(), RequestedElements))
+            {
+                AppendRequestedLayout(RequestedElements);
+            }
+        }
+
+        TArray<FRuntimeVertexElementRequestList>& DesiredRuntimeLayouts = DesiredSkinnedRuntimeBufferLayouts[i];
+        DesiredRuntimeLayouts.clear();
+        if (RequestedBufferLayouts.size() > 1)
+        {
+            DesiredRuntimeLayouts.reserve(RequestedBufferLayouts.size() - 1);
+            for (size_t RequestedLayoutIndex = 1; RequestedLayoutIndex < RequestedBufferLayouts.size(); ++RequestedLayoutIndex)
+            {
+                DesiredRuntimeLayouts.push_back(RequestedBufferLayouts[RequestedLayoutIndex]);
+            }
+        }
 
         const bool bHasFbxSkinningBindData =
             Asset->InverseBindPoseMatrices.size() == CurrentBoneGlobalMatrices.size() &&
@@ -524,9 +664,13 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
 
         SkinnedVertices.reserve(SkinnedVertices.size() + VertexCount);
         SkinnedIndices.reserve(SkinnedIndices.size() + Asset->Indices.size());
-
-        TArray<FVertexSkinned> SkinnedRenderVertices;
-        SkinnedRenderVertices.resize(VertexCount); // push_back 대신 인덱스 직접 접근
+        TArray<FVertexPNCT_T> SkinnedRenderVertices;
+        SkinnedRenderVertices.resize(VertexCount);
+        TArray<FVertexPNCT_T_UV1> SkinnedRenderVerticesUV1;
+        if (bHasUV1Data)
+        {
+            SkinnedRenderVerticesUV1.resize(VertexCount);
+        }
 
         for (uint32 VertIdx = 0; VertIdx < VertexCount; ++VertIdx)
         {
@@ -578,12 +722,18 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
             }
 
             SkinnedVertices.push_back(Out);
+            SkinnedRenderVertices[VertIdx] = Out;
 
-            FVertexSkinned& RenderVert = SkinnedRenderVertices[VertIdx];
-            RenderVert = Src;
-            RenderVert.Position = Out.Position;
-            RenderVert.Normal = Out.Normal;
-            RenderVert.Tangent = Out.Tangent;
+            if (bHasUV1Data)
+            {
+                FVertexPNCT_T_UV1& RenderVert = SkinnedRenderVerticesUV1[VertIdx];
+                RenderVert.Position = Out.Position;
+                RenderVert.Normal = Out.Normal;
+                RenderVert.Color = Out.Color;
+                RenderVert.UV = Out.UV;
+                RenderVert.Tangent = Out.Tangent;
+                RenderVert.UV1 = Asset->UV1s[VertIdx];
+            }
         }
 
         for (uint32 Index : Asset->Indices)
@@ -593,32 +743,179 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
 
         if (Device && Context && !SkinnedRenderVertices.empty())
         {
-            std::unique_ptr<FSkeletalMeshBuffer>& OwnedBuffer = SkinnedRenderBuffers[i];
-            FSkeletalMeshBuffer* RenderBuffer = OwnedBuffer.get();
-            const bool bNeedsCreate =
-                !RenderBuffer || !RenderBuffer->IsValid() ||
-                RenderBuffer->GetVertexStride() != sizeof(FVertexSkinned) ||
-                RenderBuffer->GetVertexCount() != VertexCount;
-
-            if (bNeedsCreate)
+            auto CreateOrUpdateLegacyBaseBuffer = [&](FSkeletalMeshBuffer* RenderBuffer, std::unique_ptr<FSkeletalMeshBuffer>& OwnedBuffer)
             {
-                TMeshData<FVertexSkinned> RenderMeshData;
-                RenderMeshData.Vertices = SkinnedRenderVertices;
-                RenderMeshData.Indices = Asset->Indices;
+                if (bHasUV1Data)
+                {
+                    const uint32 ExpectedStride = sizeof(FVertexPNCT_T_UV1);
+                    const bool bNeedsCreate =
+                        !RenderBuffer || !RenderBuffer->IsValid() ||
+                        RenderBuffer->GetVertexStride() != ExpectedStride ||
+                        RenderBuffer->GetVertexCount() != VertexCount;
+                    if (bNeedsCreate)
+                    {
+                        OwnedBuffer = std::make_unique<FSkeletalMeshBuffer>();
+                        TMeshData<FVertexPNCT_T_UV1> RenderMeshData;
+                        RenderMeshData.Vertices = SkinnedRenderVerticesUV1;
+                        RenderMeshData.Indices = Asset->Indices;
+                        OwnedBuffer->Create(Device, BuildRuntimePackedMeshData(RenderMeshData, FVertexSemanticDescriptorPreset::PNCTTUV1));
+                    }
+                    else
+                    {
+                        RenderBuffer->UpdateVertex(Context, BuildRuntimePackedVertexData(SkinnedRenderVerticesUV1, FVertexSemanticDescriptorPreset::PNCTTUV1));
+                    }
+                }
+                else
+                {
+                    const uint32 ExpectedStride = sizeof(FVertexPNCT_T);
+                    const bool bNeedsCreate =
+                        !RenderBuffer || !RenderBuffer->IsValid() ||
+                        RenderBuffer->GetVertexStride() != ExpectedStride ||
+                        RenderBuffer->GetVertexCount() != VertexCount;
+                    if (bNeedsCreate)
+                    {
+                        OwnedBuffer = std::make_unique<FSkeletalMeshBuffer>();
+                        TMeshData<FVertexPNCT_T> RenderMeshData;
+                        RenderMeshData.Vertices = SkinnedRenderVertices;
+                        RenderMeshData.Indices = Asset->Indices;
+                        OwnedBuffer->Create(Device, BuildRuntimePackedMeshData(RenderMeshData, FVertexSemanticDescriptorPreset::PNCTT));
+                    }
+                    else
+                    {
+                        RenderBuffer->UpdateVertex(Context, BuildRuntimePackedVertexData(SkinnedRenderVertices, FVertexSemanticDescriptorPreset::PNCTT));
+                    }
+                }
+            };
 
-                OwnedBuffer = std::make_unique<FSkeletalMeshBuffer>();
-                RenderBuffer = OwnedBuffer.get();
-                RenderBuffer->Create(Device, RenderMeshData);
-            }
-            else
+            auto CreateOrUpdateRuntimeBuffer =
+                [&](const FRuntimeVertexElementRequestList& RequestedElements,
+                    std::unique_ptr<FSkeletalMeshBuffer>& OwnedBuffer,
+                    bool bAllowLegacyFallback)
             {
-                RenderBuffer->UpdateVertex(Context, SkinnedRenderVertices.data(), VertexCount);
+                FRuntimePackedVertexData PackedVertices;
+                if (!TryPackSkinnedRuntimeVertices(
+                        SkinnedRenderVertices,
+                        bHasUV1Data ? &Asset->UV1s : nullptr,
+                        RequestedElements,
+                        PackedVertices))
+                {
+                    if (bAllowLegacyFallback)
+                    {
+                        CreateOrUpdateLegacyBaseBuffer(OwnedBuffer.get(), OwnedBuffer);
+                    }
+                    else
+                    {
+                        OwnedBuffer.reset();
+                    }
+                    return;
+                }
+
+                const bool bNeedsCreate =
+                    !OwnedBuffer || !OwnedBuffer->IsValid() ||
+                    OwnedBuffer->GetVertexStride() != PackedVertices.VertexStride ||
+                    OwnedBuffer->GetVertexCount() != VertexCount;
+
+                if (bNeedsCreate)
+                {
+                    OwnedBuffer = std::make_unique<FSkeletalMeshBuffer>();
+                    FRuntimePackedMeshData PackedMeshData;
+                    PackedMeshData.Vertices = std::move(PackedVertices);
+                    PackedMeshData.Indices = Asset->Indices;
+                    OwnedBuffer->Create(Device, PackedMeshData);
+                }
+                else
+                {
+                    OwnedBuffer->UpdateVertex(Context, PackedVertices);
+                }
+            };
+
+            CreateOrUpdateRuntimeBuffer(
+                BaseRequestedElements,
+                SkinnedRenderBuffers[i],
+                true);
+
+            TArray<FRuntimeSkinnedRenderBufferEntry>& RuntimeBufferCache = SkinnedRuntimeRenderBufferCaches[i];
+            for (size_t RequestedLayoutIndex = 1; RequestedLayoutIndex < RequestedBufferLayouts.size(); ++RequestedLayoutIndex)
+            {
+                const FRuntimeVertexElementRequestList& RequestedElements = RequestedBufferLayouts[RequestedLayoutIndex];
+                FRuntimeSkinnedRenderBufferEntry* CacheEntry = nullptr;
+                for (FRuntimeSkinnedRenderBufferEntry& ExistingEntry : RuntimeBufferCache)
+                {
+                    if (AreRuntimeVertexRequestListsEqual(ExistingEntry.RequestedElements, RequestedElements))
+                    {
+                        CacheEntry = &ExistingEntry;
+                        break;
+                    }
+                }
+
+                if (!CacheEntry)
+                {
+                    FRuntimeSkinnedRenderBufferEntry NewEntry;
+                    NewEntry.RequestedElements = RequestedElements;
+                    RuntimeBufferCache.push_back(std::move(NewEntry));
+                    CacheEntry = &RuntimeBufferCache.back();
+                }
+
+                CreateOrUpdateRuntimeBuffer(RequestedElements, CacheEntry->RenderBuffer, false);
             }
         }
 
         VertexBase += VertexCount;
+        GlobalMaterialBase += static_cast<int32>(Slots.size());
     }
 }
+
+void USkinnedMeshComponent::PruneUnusedSkinnedRuntimeRenderBuffers()
+{
+    if (SkinnedRuntimeRenderBufferCaches.empty())
+    {
+        return;
+    }
+
+    for (size_t SubMeshIndex = 0; SubMeshIndex < SkinnedRuntimeRenderBufferCaches.size(); ++SubMeshIndex)
+    {
+        TArray<FRuntimeSkinnedRenderBufferEntry>& RuntimeBufferCache = SkinnedRuntimeRenderBufferCaches[SubMeshIndex];
+        if (RuntimeBufferCache.empty())
+        {
+            continue;
+        }
+
+        const TArray<FRuntimeVertexElementRequestList>* DesiredRuntimeLayouts = nullptr;
+        if (SubMeshIndex < DesiredSkinnedRuntimeBufferLayouts.size())
+        {
+            DesiredRuntimeLayouts = &DesiredSkinnedRuntimeBufferLayouts[SubMeshIndex];
+        }
+
+        RuntimeBufferCache.erase(
+            std::remove_if(
+                RuntimeBufferCache.begin(),
+                RuntimeBufferCache.end(),
+                [DesiredRuntimeLayouts](const FRuntimeSkinnedRenderBufferEntry& Entry)
+                {
+                    if (!Entry.RenderBuffer || !Entry.RenderBuffer->IsValid())
+                    {
+                        return true;
+                    }
+
+                    if (!DesiredRuntimeLayouts)
+                    {
+                        return true;
+                    }
+
+                    for (const FRuntimeVertexElementRequestList& RequestedElements : *DesiredRuntimeLayouts)
+                    {
+                        if (AreRuntimeVertexRequestListsEqual(Entry.RequestedElements, RequestedElements))
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }),
+            RuntimeBufferCache.end());
+    }
+}
+
 const TArray<FVertexPNCT_T>& USkinnedMeshComponent::GetSkinnedVertices() const
 {
     return SkinnedVertices;
@@ -637,6 +934,55 @@ FSkeletalMeshBuffer* USkinnedMeshComponent::GetSkinnedRenderBuffer(int32 SubMesh
     }
 
     return SkinnedRenderBuffers[SubMeshIndex].get();
+}
+
+FSkeletalMeshBuffer* USkinnedMeshComponent::GetSkinnedRenderBufferForShader(int32 SubMeshIndex, const FGraphicsProgram* InShader) const
+{
+    FSkeletalMeshBuffer* BaseBuffer = GetSkinnedRenderBuffer(SubMeshIndex);
+    if (!InShader ||
+        SubMeshIndex < 0 ||
+        SubMeshIndex >= static_cast<int32>(SkinnedRuntimeRenderBufferCaches.size()))
+    {
+        return BaseBuffer;
+    }
+
+    FRuntimeVertexElementRequestList RequestedElements;
+    if (!BuildRuntimeVertexRequestListFromShader(InShader, RequestedElements))
+    {
+        return BaseBuffer;
+    }
+
+    if (!SkeletalMesh)
+    {
+        return BaseBuffer;
+    }
+
+    const TArray<USkeletalSubMesh*>& SubMeshes = SkeletalMesh->GetSubMeshes();
+    if (SubMeshIndex >= static_cast<int32>(SubMeshes.size()) ||
+        !SubMeshes[SubMeshIndex] ||
+        !SubMeshes[SubMeshIndex]->GetSkeletalSubMeshAsset())
+    {
+        return BaseBuffer;
+    }
+
+    if (AreRuntimeVertexRequestListsEqual(
+            SubMeshes[SubMeshIndex]->GetSkeletalSubMeshAsset()->BuildRuntimeUploadRequestList(),
+            RequestedElements))
+    {
+        return BaseBuffer;
+    }
+
+    for (const FRuntimeSkinnedRenderBufferEntry& Entry : SkinnedRuntimeRenderBufferCaches[SubMeshIndex])
+    {
+        if (Entry.RenderBuffer &&
+            Entry.RenderBuffer->IsValid() &&
+            AreRuntimeVertexRequestListsEqual(Entry.RequestedElements, RequestedElements))
+        {
+            return Entry.RenderBuffer.get();
+        }
+    }
+
+    return BaseBuffer;
 }
 
 int32 USkinnedMeshComponent::GetNumBones() const

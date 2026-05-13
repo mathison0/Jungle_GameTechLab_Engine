@@ -46,6 +46,16 @@ struct VS_Input_PNCT_T
     float4 tangent  : TANGENT;
 };
 
+struct VS_Input_PNCT_T_UV1
+{
+    float3 position  : POSITION;
+    float3 normal    : NORMAL;
+    float4 color     : COLOR;
+    float2 texcoord  : TEXCOORD0;
+    float4 tangent   : TANGENT;
+    float2 texcoord1 : TEXCOORD1;
+};
+
 // FTextureVertex (Position + TexCoord)
 struct VS_Input_PT
 {

@@ -39,6 +39,7 @@ struct FSkeletalSubMesh
 {
     FString PathFileName;
     TArray<FVertexSkinned> Vertices;
+    TArray<FVector2> UV1s;
     TArray<uint32> Indices;
     TArray<FSkeletalMeshSection> Sections;
     FVector MeshBindInverseScale = FVector(1.0f);
@@ -47,15 +48,76 @@ struct FSkeletalSubMesh
 
     std::unique_ptr<FSkeletalMeshBuffer> RenderBuffer;
 
+    bool HasValidUV1Data() const
+    {
+        return !UV1s.empty() && UV1s.size() == Vertices.size();
+    }
+
+    FRuntimeVertexSemanticSourceModel BuildRuntimeSemanticSourceModel() const
+    {
+        FRuntimeVertexSemanticSourceModel SourceModel;
+        SourceModel.Sources.reserve(HasValidUV1Data() ? 8 : 7);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::Position, "POSITION", 0, 3);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::Normal, "NORMAL", 0, 3);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::Color, "COLOR", 0, 4);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::UV0, "TEXCOORD", 0, 2);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::Tangent, "TANGENT", 0, 4);
+        if (HasValidUV1Data())
+        {
+            SourceModel.AddSource(ERuntimeVertexSemanticSource::UV1, "TEXCOORD", 1, 2);
+        }
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::BoneIndices, "BLENDINDICES", 0, 8, ERuntimeVertexScalarType::UInt16);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::BoneWeights, "BLENDWEIGHT", 0, 8, ERuntimeVertexScalarType::Float32);
+        return SourceModel;
+    }
+
+    FRuntimeVertexElementRequestList BuildRuntimeUploadRequestList() const
+    {
+        FRuntimeVertexElementRequestList RequestList;
+        RequestList.Elements.reserve(HasValidUV1Data() ? 6 : 5);
+
+        auto AddRequest = [&RequestList](
+                              const char* SemanticName,
+                              uint32 SemanticIndex,
+                              uint32 ComponentCount,
+                              ERuntimeVertexScalarType ScalarType = ERuntimeVertexScalarType::Float32)
+        {
+            FRuntimeVertexElementRequest Request;
+            Request.SemanticName = SemanticName;
+            Request.SemanticIndex = SemanticIndex;
+            Request.ComponentCount = ComponentCount;
+            Request.ScalarType = ScalarType;
+            RequestList.Elements.push_back(Request);
+        };
+
+        AddRequest("POSITION", 0, 3);
+        AddRequest("NORMAL", 0, 3);
+        AddRequest("COLOR", 0, 4);
+        AddRequest("TEXCOORD", 0, 2);
+        AddRequest("TANGENT", 0, 4);
+        if (HasValidUV1Data())
+        {
+            AddRequest("TEXCOORD", 1, 2);
+        }
+
+        return RequestList;
+    }
+
     void Serialize(FArchive& Ar)
     {
         Ar << PathFileName;
         Ar << Vertices;
+        Ar << UV1s;
         Ar << Indices;
         Ar << Sections;
         Ar << MeshBindInverseScale;
         Ar << InverseBindPoseMatrices;
         Ar << BoneBindGlobalMatrices;
+
+        if (Ar.IsLoading() && UV1s.size() != Vertices.size())
+        {
+            UV1s.clear();
+        }
     }
 };
 

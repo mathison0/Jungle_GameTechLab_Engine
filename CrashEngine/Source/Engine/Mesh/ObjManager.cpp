@@ -218,6 +218,10 @@ void FObjManager::Unload(const FString& Key)
                 Asset->RenderBuffer->Release();
                 Asset->RenderBuffer.reset();
             }
+            if (Asset)
+            {
+                Asset->RuntimeRenderBufferCache.clear();
+            }
             // LOD buffers release if any
             for (uint32 LOD = 1; LOD < UStaticMesh::MAX_LOD_COUNT; ++LOD)
             {
@@ -372,6 +376,10 @@ void FObjManager::ReleaseAllGPU()
         {
             Asset->RenderBuffer->Release();
             Asset->RenderBuffer.reset();
+        }
+        if (Asset)
+        {
+            Asset->RuntimeRenderBufferCache.clear();
         }
 
         for (uint32 LOD = 1; LOD < UStaticMesh::MAX_LOD_COUNT; ++LOD)

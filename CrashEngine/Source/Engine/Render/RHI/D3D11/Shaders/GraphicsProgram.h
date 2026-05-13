@@ -3,6 +3,7 @@
 #include "Render/RHI/D3D11/Shaders/ShaderProgramBase.h"
 #include "Render/RHI/D3D11/Shaders/VertexShaderStage.h"
 #include "Render/RHI/D3D11/Shaders/PixelShaderStage.h"
+#include "Render/RHI/D3D11/Buffers/VertexTypes.h"
 
 // FGraphicsProgram는 셰이더 컴파일 결과와 GPU 바인딩을 관리합니다.
 class FGraphicsProgram : public FShaderProgramBase
@@ -33,6 +34,7 @@ public:
     ID3D11PixelShader*  GetPixelShader() const { return PixelShader.Get(); }
     ID3D11InputLayout*  GetInputLayout() const { return InputLayout; }
     const TArray<FVertexInputElement>& GetVertexInputs() const { return VertexInputs; }
+    const FVertexSemanticDescriptor& GetVertexInputDescriptor() const { return VertexInputDescriptor; }
 
 private:
     bool CompileVertexShader(
@@ -59,4 +61,5 @@ private:
     FPixelShaderStage  PixelShader;
     ID3D11InputLayout* InputLayout = nullptr;
     TArray<FVertexInputElement> VertexInputs;
+    FVertexSemanticDescriptor   VertexInputDescriptor;
 };

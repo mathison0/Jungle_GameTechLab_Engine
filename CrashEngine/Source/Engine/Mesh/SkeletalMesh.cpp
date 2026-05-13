@@ -5,12 +5,53 @@
 #include "Mesh/SkeletonManager.h"
 #include "Engine/Profiling/MemoryStats.h"
 #include "Platform/Paths.h"
+#include "Render/RHI/D3D11/Buffers/RuntimeVertexPacker.h"
 
 IMPLEMENT_CLASS(USkeletalSubMesh, UObject)
 IMPLEMENT_CLASS(USkeletalMesh, UObject)
 
 namespace
 {
+    void BuildLegacySkeletalMeshRenderData(const FSkeletalSubMesh& InMesh, FRuntimePackedMeshData& OutPackedMeshData)
+    {
+        if (InMesh.HasValidUV1Data())
+        {
+            TMeshData<FVertexPNCT_T_UV1> RenderMeshData;
+            RenderMeshData.Vertices.reserve(InMesh.Vertices.size());
+            for (size_t VertexIndex = 0; VertexIndex < InMesh.Vertices.size(); ++VertexIndex)
+            {
+                const FVertexSkinned& Src = InMesh.Vertices[VertexIndex];
+
+                FVertexPNCT_T_UV1 RenderVert;
+                RenderVert.Position = Src.Position;
+                RenderVert.Normal = Src.Normal;
+                RenderVert.Color = Src.Color;
+                RenderVert.UV = Src.UV;
+                RenderVert.Tangent = Src.Tangent;
+                RenderVert.UV1 = InMesh.UV1s[VertexIndex];
+                RenderMeshData.Vertices.push_back(RenderVert);
+            }
+            RenderMeshData.Indices = InMesh.Indices;
+            OutPackedMeshData = BuildRuntimePackedMeshData(RenderMeshData, FVertexSemanticDescriptorPreset::PNCTTUV1);
+            return;
+        }
+
+        TMeshData<FVertexPNCT_T> RenderMeshData;
+        RenderMeshData.Vertices.reserve(InMesh.Vertices.size());
+        for (const FVertexSkinned& Src : InMesh.Vertices)
+        {
+            FVertexPNCT_T RenderVert;
+            RenderVert.Position = Src.Position;
+            RenderVert.Normal = Src.Normal;
+            RenderVert.Color = Src.Color;
+            RenderVert.UV = Src.UV;
+            RenderVert.Tangent = Src.Tangent;
+            RenderMeshData.Vertices.push_back(RenderVert);
+        }
+        RenderMeshData.Indices = InMesh.Indices;
+        OutPackedMeshData = BuildRuntimePackedMeshData(RenderMeshData, FVertexSemanticDescriptorPreset::PNCTT);
+    }
+
     void RebuildSectionMaterialIndices(FSkeletalSubMesh* SkeletalSubMeshAsset, const TArray<FStaticMaterial>& StaticMaterials)
     {
         if (!SkeletalSubMeshAsset)
@@ -92,6 +133,7 @@ USkeletalSubMesh::~USkeletalSubMesh()
     {
         const uint32 CPUSize =
             static_cast<uint32>(SkeletalSubMeshAsset->Vertices.size() * sizeof(FVertexSkinned)) +
+            static_cast<uint32>(SkeletalSubMeshAsset->UV1s.size() * sizeof(FVector2)) +
             static_cast<uint32>(SkeletalSubMeshAsset->Indices.size() * sizeof(uint32));
 
         MemoryStats::SubStaticMeshCPUMemory(CPUSize);
@@ -156,16 +198,22 @@ void USkeletalSubMesh::InitResources(ID3D11Device* InDevice)
 
     const uint32 CPUSize =
         static_cast<uint32>(SkeletalSubMeshAsset->Vertices.size() * sizeof(FVertexSkinned)) +
+        static_cast<uint32>(SkeletalSubMeshAsset->UV1s.size() * sizeof(FVector2)) +
         static_cast<uint32>(SkeletalSubMeshAsset->Indices.size() * sizeof(uint32));
     MemoryStats::AddStaticMeshCPUMemory(CPUSize);
 
-    TMeshData<FVertexSkinned> RenderMeshData;
-    RenderMeshData.Vertices = SkeletalSubMeshAsset->Vertices;
-    RenderMeshData.Indices = SkeletalSubMeshAsset->Indices;
+    SkeletalSubMeshAsset->RenderBuffer = std::make_unique<FSkeletalMeshBuffer>();
 
-    // TODO: Buffer 생성하는 코드 여기에 작성
-     SkeletalSubMeshAsset->RenderBuffer = std::make_unique<FSkeletalMeshBuffer>();
-     SkeletalSubMeshAsset->RenderBuffer->Create(InDevice, RenderMeshData);
-     //NOTE: AI가 작성한 초안이 있었지만 FMeshBuffer 리팩토링과 관련한 Merge Conflict 때문에 
-     //      주석 처리했습니다. 재구현 필요
+    FRuntimePackedMeshData PackedMeshData;
+    if (TryPackSkeletalMeshVertices(
+            *SkeletalSubMeshAsset,
+            SkeletalSubMeshAsset->BuildRuntimeUploadRequestList(),
+            PackedMeshData))
+    {
+        SkeletalSubMeshAsset->RenderBuffer->Create(InDevice, PackedMeshData);
+        return;
+    }
+
+    BuildLegacySkeletalMeshRenderData(*SkeletalSubMeshAsset, PackedMeshData);
+    SkeletalSubMeshAsset->RenderBuffer->Create(InDevice, PackedMeshData);
 }

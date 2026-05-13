@@ -3,6 +3,8 @@
 
 #include "Materials/MaterialCore.h"
 
+#include <algorithm>
+#include <cctype>
 #include <comdef.h>
 #include <iostream>
 
@@ -13,6 +15,20 @@ namespace
 {
 constexpr const char* GVertexShaderTarget = "vs_5_0";
 constexpr const char* GPixelShaderTarget  = "ps_5_0";
+
+FString NormalizeVertexSemanticName(const char* SemanticName)
+{
+    FString Normalized = SemanticName ? SemanticName : "";
+    std::transform(
+        Normalized.begin(),
+        Normalized.end(),
+        Normalized.begin(),
+        [](unsigned char Ch)
+        {
+            return static_cast<char>(std::toupper(Ch));
+        });
+    return Normalized;
+}
 
 FShaderStageDesc MakeStageDescWithDefine(const FShaderStageDesc& InDesc, const char* DefineName)
 {
@@ -130,6 +146,7 @@ bool FGraphicsProgram::Create(ID3D11Device* InDevice, const FGraphicsProgramDesc
     TMap<FString, FMaterialParameterInfo*> NewShaderParameterLayout;
     TArray<FShaderTextureBindingInfo>      NewTextureBindings;
     TArray<FVertexInputElement>            NewVertexInputs;
+    FVertexSemanticDescriptor              NewVertexInputDescriptor;
     std::unordered_set<std::wstring>       Dependencies;
 
     auto CleanupTemps = [&]()
@@ -193,6 +210,7 @@ bool FGraphicsProgram::Create(ID3D11Device* InDevice, const FGraphicsProgramDesc
             D3D11_SHADER_DESC ShaderDesc = {};
             Reflector->GetDesc(&ShaderDesc);
             NewVertexInputs.reserve(ShaderDesc.InputParameters);
+            NewVertexInputDescriptor.Elements.reserve(ShaderDesc.InputParameters);
 
             for (UINT i = 0; i < ShaderDesc.InputParameters; ++i)
             {
@@ -204,10 +222,11 @@ bool FGraphicsProgram::Create(ID3D11Device* InDevice, const FGraphicsProgramDesc
                 }
 
                 FVertexInputElement InputElement;
-                InputElement.SemanticName  = ParamDesc.SemanticName ? ParamDesc.SemanticName : "";
+                InputElement.SemanticName  = NormalizeVertexSemanticName(ParamDesc.SemanticName);
                 InputElement.SemanticIndex = ParamDesc.SemanticIndex;
                 InputElement.Format        = MaskToFormat(ParamDesc.ComponentType, ParamDesc.Mask);
                 NewVertexInputs.push_back(std::move(InputElement));
+                NewVertexInputDescriptor.Elements.push_back({ NormalizeVertexSemanticName(ParamDesc.SemanticName), ParamDesc.SemanticIndex });
             }
 
             Reflector->Release();
@@ -228,6 +247,7 @@ bool FGraphicsProgram::Create(ID3D11Device* InDevice, const FGraphicsProgramDesc
     PixelShader.Set(PS, PixelShaderCSO ? PixelShaderCSO->GetBufferSize() : 0);
     InputLayout           = NewInputLayout;
     VertexInputs          = std::move(NewVertexInputs);
+    VertexInputDescriptor = std::move(NewVertexInputDescriptor);
     ShaderParameterLayout = std::move(NewShaderParameterLayout);
     TextureBindings       = std::move(NewTextureBindings);
 
@@ -375,6 +395,7 @@ void FGraphicsProgram::Release()
     PixelShader.Release();
     VertexShader.Release();
     VertexInputs.clear();
+    VertexInputDescriptor.Elements.clear();
 }
 
 /*

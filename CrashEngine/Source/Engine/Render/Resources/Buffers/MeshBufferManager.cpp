@@ -12,11 +12,11 @@ void FMeshBufferManager::Initialize(ID3D11Device* InDevice)
     // CPU 메시 데이터 → GPU 버퍼 업로드
     for (auto& [Type, Data] : MeshDataMap)
     {
-        MeshBufferMap[Type].Create(InDevice, Data);
+        MeshBufferMap[Type].Create(InDevice, BuildRuntimePackedMeshData(Data, FVertexSemanticDescriptorPreset::PC));
     }
     for (auto& [Type, Data] : PNCTMeshDataMap)
     {
-        MeshBufferMap[Type].Create(InDevice, Data);
+        MeshBufferMap[Type].Create(InDevice, BuildRuntimePackedMeshData(Data, FVertexSemanticDescriptorPreset::PNCT));
     }
 
     bIsInitialized = true;

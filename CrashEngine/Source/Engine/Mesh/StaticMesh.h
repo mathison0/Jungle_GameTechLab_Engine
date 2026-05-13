@@ -9,6 +9,7 @@
 #include <memory>
 
 struct ID3D11Device;
+class FGraphicsProgram;
 
 // LOD 단계별 GPU 리소스
 struct FLODMeshData
@@ -37,6 +38,7 @@ public:
     const TArray<FStaticMaterial>& GetStaticMaterials() const;
 
     void InitResources(ID3D11Device* InDevice);
+    FStaticMeshBuffer* GetOrCreateRenderBufferForShader(ID3D11Device* InDevice, const FGraphicsProgram* InShader);
 
     // 스태틱 메시 picking / Mesh Decal 최적화를 위한 BVH 트리 빌드 및 판정 호출 함수
     void EnsureMeshTrianglePickingBVHBuilt() const;

@@ -17,27 +17,8 @@ public:
     FStaticMeshBuffer(FStaticMeshBuffer&&)                 = default;
     FStaticMeshBuffer& operator=(FStaticMeshBuffer&&)      = default;
 
-    template <typename VertexType>
-    void Create(ID3D11Device* InDevice, const TMeshData<VertexType>& InMeshData)
-    {
-        Release();
-        if (InMeshData.Vertices.empty())
-        {
-            return;
-        }
-
-        uint32 VertexCount     = static_cast<uint32>(InMeshData.Vertices.size());
-        uint32 VertexByteWidth = VertexCount * sizeof(VertexType);
-        VertexBuffer.Create(InDevice, InMeshData.Vertices.data(), VertexCount, VertexByteWidth, sizeof(VertexType));
-
-        if (!InMeshData.Indices.empty())
-        {
-            uint32 IndexCount     = static_cast<uint32>(InMeshData.Indices.size());
-            uint32 IndexByteWidth = IndexCount * sizeof(uint32);
-            IndexBuffer.Create(InDevice, InMeshData.Indices.data(), IndexCount, IndexByteWidth);
-        }
-    }
-
+    void                 Create(ID3D11Device* InDevice, const FRuntimePackedMeshData& InPackedMeshData) override;
+    bool                 UpdateVertex(ID3D11DeviceContext* Context, const FRuntimePackedVertexData& InPackedVertexData) override { return false; }
     void                 Release() override;
     FVertexBuffer&       GetVertexBuffer() { return VertexBuffer; }
     FIndexBuffer&        GetIndexBuffer() { return IndexBuffer; }
@@ -45,12 +26,10 @@ public:
     const FIndexBuffer&  GetIndexBuffer() const { return IndexBuffer; }
     bool                 IsValid() const override { return VertexBuffer.GetBuffer() != nullptr && VertexBuffer.GetVertexCount() > 0; }
     ID3D11Buffer*        GetVertexBufferRaw() const override { return VertexBuffer.GetBuffer(); }
-    uint32               GetVertexStride() const override { return VertexBuffer.GetStride(); }
-    uint32               GetVertexCount() const override { return VertexBuffer.GetVertexCount(); }
     ID3D11Buffer*        GetIndexBufferRaw() const override { return IndexBuffer.GetBuffer(); }
     uint32               GetIndexCount() const override { return IndexBuffer.GetIndexCount(); }
 
 private:
-    FVertexBuffer VertexBuffer;
-    FIndexBuffer  IndexBuffer;
+    FVertexBuffer             VertexBuffer;
+    FIndexBuffer              IndexBuffer;
 };

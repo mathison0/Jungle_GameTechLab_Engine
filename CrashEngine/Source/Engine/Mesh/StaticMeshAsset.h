@@ -69,18 +69,79 @@ struct FStaticMaterial
 // FStaticMeshLODResources in UE5
 struct FStaticMesh
 {
+    struct FRuntimeRenderBufferEntry
+    {
+        FRuntimeVertexElementRequestList RequestedElements;
+        std::unique_ptr<FStaticMeshBuffer> RenderBuffer;
+    };
+
     FString PathFileName;
     TArray<FVertexPNCT_T> Vertices;
+    TArray<FVector2> UV1s;
     TArray<uint32> Indices;
 
     TArray<FStaticMeshSection> Sections;
 
     std::unique_ptr<FStaticMeshBuffer> RenderBuffer;
+    TArray<FRuntimeRenderBufferEntry> RuntimeRenderBufferCache;
 
     // 메시 로컬 바운드 캐시 (정점 순회 1회로 계산)
     FVector BoundsCenter = FVector(0, 0, 0);
     FVector BoundsExtent = FVector(0, 0, 0);
     bool bBoundsValid = false;
+
+    bool HasValidUV1Data() const
+    {
+        return !UV1s.empty() && UV1s.size() == Vertices.size();
+    }
+
+    FRuntimeVertexSemanticSourceModel BuildRuntimeSemanticSourceModel() const
+    {
+        FRuntimeVertexSemanticSourceModel SourceModel;
+        SourceModel.Sources.reserve(HasValidUV1Data() ? 6 : 5);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::Position, "POSITION", 0, 3);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::Normal, "NORMAL", 0, 3);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::Color, "COLOR", 0, 4);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::UV0, "TEXCOORD", 0, 2);
+        SourceModel.AddSource(ERuntimeVertexSemanticSource::Tangent, "TANGENT", 0, 4);
+        if (HasValidUV1Data())
+        {
+            SourceModel.AddSource(ERuntimeVertexSemanticSource::UV1, "TEXCOORD", 1, 2);
+        }
+
+        return SourceModel;
+    }
+
+    FVertexSemanticDescriptor BuildRuntimeUploadSemanticDescriptor() const
+    {
+        FVertexSemanticDescriptor Descriptor;
+        const FRuntimeVertexSemanticSourceModel SourceModel = BuildRuntimeSemanticSourceModel();
+        Descriptor.Elements.reserve(SourceModel.Sources.size());
+        for (const FRuntimeVertexSemanticSourceDesc& SourceDesc : SourceModel.Sources)
+        {
+            Descriptor.Elements.push_back({ SourceDesc.SemanticName, SourceDesc.SemanticIndex });
+        }
+
+        return Descriptor;
+    }
+
+    FRuntimeVertexElementRequestList BuildRuntimeUploadRequestList() const
+    {
+        FRuntimeVertexElementRequestList RequestList;
+        const FRuntimeVertexSemanticSourceModel SourceModel = BuildRuntimeSemanticSourceModel();
+        RequestList.Elements.reserve(SourceModel.Sources.size());
+        for (const FRuntimeVertexSemanticSourceDesc& SourceDesc : SourceModel.Sources)
+        {
+            FRuntimeVertexElementRequest Request;
+            Request.SemanticName = SourceDesc.SemanticName;
+            Request.SemanticIndex = SourceDesc.SemanticIndex;
+            Request.ComponentCount = SourceDesc.ComponentCount;
+            Request.ScalarType = SourceDesc.ScalarType;
+            RequestList.Elements.push_back(Request);
+        }
+
+        return RequestList;
+    }
 
     void CacheBounds()
     {
@@ -109,7 +170,13 @@ struct FStaticMesh
     {
         Ar << PathFileName;
         Ar << Vertices;
+        Ar << UV1s;
         Ar << Indices;
         Ar << Sections;
+
+        if (Ar.IsLoading() && UV1s.size() != Vertices.size())
+        {
+            UV1s.clear();
+        }
     }
 };

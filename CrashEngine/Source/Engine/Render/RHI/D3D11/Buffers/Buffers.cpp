@@ -25,6 +25,30 @@ void FStaticMeshBuffer::Release()
 {
     VertexBuffer.Release();
     IndexBuffer.Release();
+    ClearRuntimeLayout();
+}
+
+void FStaticMeshBuffer::Create(ID3D11Device* InDevice, const FRuntimePackedMeshData& InPackedMeshData)
+{
+    Release();
+    if (!InPackedMeshData.Vertices.IsValid())
+    {
+        return;
+    }
+
+    SetRuntimeLayout(InPackedMeshData.Vertices);
+    VertexBuffer.Create(
+        InDevice,
+        InPackedMeshData.Vertices.GetVertexData(),
+        InPackedMeshData.Vertices.VertexCount,
+        InPackedMeshData.Vertices.GetVertexBufferByteWidth(),
+        InPackedMeshData.Vertices.VertexStride);
+
+    if (InPackedMeshData.HasIndices())
+    {
+        const uint32 IndexCount = static_cast<uint32>(InPackedMeshData.Indices.size());
+        IndexBuffer.Create(InDevice, InPackedMeshData.Indices.data(), IndexCount, IndexCount * sizeof(uint32));
+    }
 }
 
 bool FSkeletalMeshBuffer::UpdateVertex(ID3D11DeviceContext* Context, const void* Data, uint32 Count)
@@ -32,10 +56,50 @@ bool FSkeletalMeshBuffer::UpdateVertex(ID3D11DeviceContext* Context, const void*
     return VertexBuffer.Update(Context, Data, Count);
 }
 
+bool FSkeletalMeshBuffer::UpdateVertex(ID3D11DeviceContext* Context, const FRuntimePackedVertexData& InPackedVertexData)
+{
+    if (!InPackedVertexData.IsValid())
+    {
+        return false;
+    }
+
+    if (VertexBuffer.GetStride() != InPackedVertexData.VertexStride)
+    {
+        return false;
+    }
+
+    SetRuntimeLayout(InPackedVertexData);
+    return UpdateVertex(Context, InPackedVertexData.GetVertexData(), InPackedVertexData.VertexCount);
+}
+
+void FSkeletalMeshBuffer::Create(ID3D11Device* InDevice, const FRuntimePackedMeshData& InPackedMeshData)
+{
+    Release();
+    if (!InPackedMeshData.Vertices.IsValid())
+    {
+        return;
+    }
+
+    SetRuntimeLayout(InPackedMeshData.Vertices);
+    VertexBuffer.Create(
+        InDevice,
+        InPackedMeshData.Vertices.GetVertexData(),
+        InPackedMeshData.Vertices.VertexCount,
+        InPackedMeshData.Vertices.GetVertexBufferByteWidth(),
+        InPackedMeshData.Vertices.VertexStride);
+
+    if (InPackedMeshData.HasIndices())
+    {
+        const uint32 IndexCount = static_cast<uint32>(InPackedMeshData.Indices.size());
+        IndexBuffer.Create(InDevice, InPackedMeshData.Indices.data(), IndexCount, IndexCount * sizeof(uint32));
+    }
+}
+
 void FSkeletalMeshBuffer::Release()
 {
 	VertexBuffer.Release();
 	IndexBuffer.Release();
+    ClearRuntimeLayout();
 }
 
 FVertexBuffer::FVertexBuffer(FVertexBuffer&& Other) noexcept

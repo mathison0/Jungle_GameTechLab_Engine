@@ -10,27 +10,10 @@
 #include "Texture/Texture2D.h"
 #include "Engine/Runtime/Engine.h"
 #include "Render/Renderer.h"
-#include "Platform/Paths.h"
 
 #include <algorithm>
-#include <filesystem>
 #include <initializer_list>
 #include <memory>
-
-namespace
-{
-bool IsReflectionBindingTestPair(const UMaterial* Material, const FGraphicsProgram* GraphicsProgram)
-{
-    if (Material == nullptr || GraphicsProgram == nullptr)
-    {
-        return false;
-    }
-
-    const std::filesystem::path MaterialPath = FPaths::ToPath(FPaths::ToWide(Material->GetAssetPathFileName()));
-    const std::filesystem::path ShaderPath = FPaths::ToPath(FPaths::ToWide(Material->GetShaderPath()));
-    return MaterialPath.filename() == L"FloorMaterial.json" && ShaderPath.filename() == L"CustomTest.hlsl";
-}
-} // namespace
 
 FMeshSceneProxy::FMeshSceneProxy(UMeshComponent* InComponent)
     : FPrimitiveProxy(InComponent) 
@@ -121,7 +104,7 @@ bool FMeshSceneProxy::TryGetTextureSRV(UMaterial* Material, std::initializer_lis
 TArray<FShaderResourceBinding> FMeshSceneProxy::BuildReflectedTextureBindings(const UMaterial* Material, const FGraphicsProgram* GraphicsProgram)
 {
     TArray<FShaderResourceBinding> Bindings;
-    if (!IsReflectionBindingTestPair(Material, GraphicsProgram))
+    if (Material == nullptr || GraphicsProgram == nullptr)
     {
         return Bindings;
     }

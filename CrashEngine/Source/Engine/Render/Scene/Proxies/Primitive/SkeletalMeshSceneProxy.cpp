@@ -17,11 +17,27 @@ FSkeletalMeshSceneProxy::FSkeletalMeshSceneProxy(USkeletalMeshComponent* InCompo
     UpdateShadow();
 }
 
+void FSkeletalMeshSceneProxy::UpdateMaterial()
+{
+    if (USkinnedMeshComponent* SMC = static_cast<USkinnedMeshComponent*>(GetMeshComponent()))
+    {
+        SMC->UpdateSkinnedVertices();
+        FMeshSceneProxy::UpdateMaterial();
+        SMC->PruneUnusedSkinnedRuntimeRenderBuffers();
+        return;
+    }
+
+    FMeshSceneProxy::UpdateMaterial();
+}
+
 void FSkeletalMeshSceneProxy::UpdateMesh()
 {
     if (USkinnedMeshComponent* SMC = static_cast<USkinnedMeshComponent*>(GetMeshComponent()))
     {
         SMC->UpdateSkinnedVertices();
+        FMeshSceneProxy::UpdateMesh();
+        SMC->PruneUnusedSkinnedRuntimeRenderBuffers();
+        return;
     }
 
     FMeshSceneProxy::UpdateMesh();
@@ -142,9 +158,17 @@ void FSkeletalMeshSceneProxy::RebuildSectionRenderData()
             if (Mat)
             {
                 Draw.MaterialPath = Mat->GetAssetPathFileName();
+                Draw.Shader = Mat->GetGraphicsProgram();
                 TryGetTextureSRV(Mat, { MaterialSemantics::DiffuseTextureSlot, "BaseColorTexture", "AlbedoTexture", "BaseTexture", "DiffuseMap" }, Draw.DiffuseSRV);
                 TryGetTextureSRV(Mat, { MaterialSemantics::NormalTextureSlot, "NormalMap", "NormalMapTexture", "BumpTexture", "BumpMap" }, Draw.NormalSRV);
                 TryGetTextureSRV(Mat, { MaterialSemantics::SpecularTextureSlot, "SpecularMap", "SpecularMapTexture", "SpecularMask", "SpecularMaskTexture", "GlossMap" }, Draw.SpecularSRV);
+                Draw.ShaderResourceBindings = BuildReflectedTextureBindings(Mat, Draw.Shader);
+                if (Draw.Shader)
+                {
+                    Draw.MeshBuffer = SMC->GetSkinnedRenderBufferForShader(
+                        static_cast<int32>(SubMeshIndex),
+                        Draw.Shader);
+                }
             }
 
             auto MaterialCB = BuildMeshMaterialCB(Mat, Device, Context, Draw.DiffuseSRV, Draw.NormalSRV, Draw.SpecularSRV);

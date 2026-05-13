@@ -357,6 +357,9 @@
     <FxCompile Include="Shaders\CustomTest.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\SkeletalUV1Debug.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">
       <Filter>Shaders\Common</Filter>
     </FxCompile>
@@ -1164,6 +1167,9 @@
       <Filter>Source\Engine\Render\Resources\Shaders</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\Buffers\Buffers.cpp">
+      <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RHI\D3D11\Buffers\RuntimeVertexPacker.cpp">
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.cpp">
@@ -2386,6 +2392,9 @@
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\MeshBuffer.h">
+      <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\RuntimeVertexPacker.h">
       <Filter>Source\Engine\Render\RHI\D3D11\Buffers</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RHI\D3D11\Buffers\SkeletalMeshBuffer.h">
