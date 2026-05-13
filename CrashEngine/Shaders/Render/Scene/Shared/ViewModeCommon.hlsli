@@ -18,7 +18,7 @@
 #define VIEW_MODE_COMMON_HLSLI
 
 #include "FullscreenPassTypes.hlsli"
-#include "../../../Surface/GBufferPacking.hlsli"
+#include "../../../Surface/SurfacePacking.hlsli"
 #include "../Lighting/LightingEvaluation.hlsli"
 
 float4 ResolveViewModeSurfaceValue(Texture2D BaseTexture, Texture2D ModifiedTexture, float2 UV)

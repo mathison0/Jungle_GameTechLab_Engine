@@ -50,7 +50,7 @@
 - 에디터 UI에서 직접 선택 가능하다.
 - deferred / forward pass desc 생성 분기에 모두 들어간다.
 - deferred opaque / deferred lighting / deferred decal / forward opaque shader permutation에 모두 들어간다.
-- surface packing / decode 경로에서 별도 GBuffer 규약을 가진다.
+  - surface packing / decode 경로를 forward surface contract 기준으로 단순화했다.
 - warm-up 목록과 overlay stat 표시에도 남아 있다.
 
 특히 forward 경로에서 Gouraud는 VS 단계에서 조명을 계산한다. 이는 이후 `Phase 5`의 forward light culling 이식과 구조적으로 잘 맞지 않는다. 따라서 `Gouraud` 제거는 단순한 기능 축소가 아니라 후속 phase 리스크를 줄이는 선행 정리다.
@@ -87,8 +87,8 @@
   - [ViewModePassRegistry.cpp](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Source/Engine/Render/Execute/Registry/ViewModePassRegistry.cpp:272)
   - [ViewModePassRegistry.cpp](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Source/Engine/Render/Execute/Registry/ViewModePassRegistry.cpp:379)
 - forward shader
-  - [ForwardOpaquePass.hlsl](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Passes/Scene/Forward/ForwardOpaquePass.hlsl:82)
-  - [ForwardOpaquePass.hlsl](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Passes/Scene/Forward/ForwardOpaquePass.hlsl:154)
+  - [OpaquePass.hlsl](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Passes/Scene/Opaque/OpaquePass.hlsl:82)
+  - [OpaquePass.hlsl](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Passes/Scene/Opaque/OpaquePass.hlsl:154)
 - deferred shader
   - [DeferredOpaquePass.hlsl](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Passes/Scene/Deferred/DeferredOpaquePass.hlsl:63)
   - [DeferredOpaquePass.hlsl](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Passes/Scene/Deferred/DeferredOpaquePass.hlsl:74)
@@ -98,9 +98,9 @@
   - [DirectLighting.hlsli](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Render/Scene/Lighting/DirectLighting.hlsli:278)
   - [BRDF.hlsli](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Render/Scene/Lighting/BRDF.hlsli:26)
 - surface packing / types
-  - [SurfaceTypes.hlsli](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Surface/SurfaceTypes.hlsli:17)
-  - [GBufferPacking.hlsli](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Surface/GBufferPacking.hlsli:8)
-  - [VertexLayouts.hlsl](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Common/VertexLayouts.hlsl:147)
+  - `FSurfaceData` / surface helper inline refactor
+  - [SurfacePacking.hlsli](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Surface/SurfacePacking.hlsli:8)
+  - [VertexLayouts.hlsl](/abs/path/C:/Projects/Jungle_Week10_Team6/CrashEngine/Shaders/Resources/VertexLayouts.hlsl:147)
 
 ## 5. 작업 묶음
 
@@ -185,14 +185,14 @@ pass desc 생성과 warm-up에서 Gouraud permutation을 제거한다.
 
 #### 작업 항목
 
-- `ForwardOpaquePass.hlsl`의 `PS_Forward_Gouraud` 제거
+- `OpaquePass.hlsl`의 `PS_Forward_Gouraud` 제거
 - `DeferredOpaquePass.hlsl`의 `PS_Opaque_Gouraud` 제거
 - `DeferredLightingPS.hlsl`의 Gouraud branch 제거
 - `DeferredDecalPS.hlsl`의 `PS_Decal_Gouraud` 제거
 - `UberLit.hlsl`의 Gouraud branch 제거
 - `DirectLighting.hlsli` / `BRDF.hlsli`의 Gouraud helper 제거
-- `GBufferPacking.hlsli`의 `EncodeGBuffer_Gouraud` 제거
-- `SurfaceTypes.hlsli`의 `Surface.Gouraud` 유지 여부 결정
+- `SurfacePacking.hlsli`의 forward-only helper만 유지
+- `FSurfaceData`를 삭제하고 필요한 surface 값을 지역 변수로 직접 계산
 - `VertexLayouts.hlsl`의 Gouraud target/comment 정리
 
 #### 유의사항
@@ -314,4 +314,3 @@ pass desc 생성과 warm-up에서 Gouraud permutation을 제거한다.
 - `Phase 5`에서 forward light culling 이식 시 VS Gouraud 특수 케이스를 더 이상 다루지 않아도 된다.
 
 즉, `Phase 1`은 기능 삭제 자체보다도 후속 renderer simplification의 난이도를 낮추는 준비 단계로 보는 것이 맞다.
-

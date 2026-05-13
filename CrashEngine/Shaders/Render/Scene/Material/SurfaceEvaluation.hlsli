@@ -1,8 +1,7 @@
 #ifndef SURFACE_EVALUATION_HLSLI
 #define SURFACE_EVALUATION_HLSLI
 
-#include "../../../Surface/SurfaceTypes.hlsli"
-#include "../Shared/OpaquePassTypes.hlsli"
+#include "../Opaque/OpaquePassTypes.hlsli"
 #include "MaterialSampling.hlsli"
 
 float3 ResolveStaticMeshSurfaceNormal(float3 WorldNormal, float4 WorldTangent, float2 UV, Texture2D NormalMap)
@@ -25,7 +24,7 @@ float3 ResolveStaticMeshSurfaceNormal(float3 WorldNormal, float4 WorldTangent, f
     return N;
 }
 
-float4 ResolveStaticMeshMaterialParam(float2 UV, Texture2D SpecularMap)
+float2 ResolveStaticMeshMaterialParam(float2 UV, Texture2D SpecularMap)
 {
     float Shininess = MaterialParam.x > 0.0f ? MaterialParam.x : 32.0f;
     float SpecularStrength = MaterialParam.y > 0.0f ? MaterialParam.y : 0.3f;
@@ -35,44 +34,7 @@ float4 ResolveStaticMeshMaterialParam(float2 UV, Texture2D SpecularMap)
         SpecularStrength *= SpecularMap.Sample(LinearWrapSampler, UV).r;
     }
 
-    return float4(Shininess, SpecularStrength, 0.0f, 1.0f);
-}
-
-FSurfaceData BuildStaticMeshSurfaceData(
-    float2 UV,
-    float3 WorldNormal,
-    float4 WorldTangent,
-    Texture2D BaseColorTexture,
-    Texture2D NormalMap,
-    Texture2D SpecularMap)
-{
-    FSurfaceData Surface = (FSurfaceData)0;
-    float4 BaseColor = SampleStaticMeshBaseColor(BaseColorTexture, UV) * GetStaticMeshSectionColorOrWhite();
-    float4 MaterialInfo = ResolveStaticMeshMaterialParam(UV, SpecularMap);
-
-    Surface.BaseColor = BaseColor.rgb;
-    Surface.Opacity = BaseColor.a;
-    Surface.WorldNormal = ResolveStaticMeshSurfaceNormal(WorldNormal, WorldTangent, UV, NormalMap);
-    Surface.Roughness = MaterialInfo.x;
-    Surface.Specular = MaterialInfo.y;
-    Surface.Metallic = 0.0f;
-    Surface.AmbientOcclusion = 1.0f;
-    return Surface;
-}
-
-FSurfaceData BuildStaticMeshSurfaceData(
-    FForward_Opaque_VSOutput Input,
-    Texture2D BaseColorTexture,
-    Texture2D NormalMap,
-    Texture2D SpecularMap)
-{
-    return BuildStaticMeshSurfaceData(
-        Input.texcoord,
-        Input.worldNormal,
-        Input.worldTangent,
-        BaseColorTexture,
-        NormalMap,
-        SpecularMap);
+    return float2(Shininess, SpecularStrength);
 }
 
 #endif

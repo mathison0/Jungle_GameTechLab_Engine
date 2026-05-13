@@ -4,9 +4,6 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{11bbbcda-0b58-05b2-d670-a2130abbdfa8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\Common">
-      <UniqueIdentifier>{fb601d03-c831-c1dc-eee7-bcc14f522781}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\Passes">
       <UniqueIdentifier>{6d13e0a4-267a-510e-d86f-0831dcda684a}</UniqueIdentifier>
     </Filter>
@@ -16,8 +13,8 @@
     <Filter Include="Shaders\Passes\Scene">
       <UniqueIdentifier>{817ab8a5-ff0e-aea0-f723-a2cd429c04cd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\Passes\Scene\Forward">
-      <UniqueIdentifier>{ed52536f-dcf6-3b23-4ee5-ead0d1f5db16}</UniqueIdentifier>
+    <Filter Include="Shaders\Passes\Scene\Opaque">
+      <UniqueIdentifier>{a2a1ecf7-109f-f8bb-261e-bbee86c89955}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Passes\Scene\Shared">
       <UniqueIdentifier>{25c055b6-b053-bb0d-086e-a6171be60811}</UniqueIdentifier>
@@ -34,14 +31,14 @@
     <Filter Include="Shaders\Render\Scene">
       <UniqueIdentifier>{b3941d3d-7535-6fe0-f7e0-2d7e985e641a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\Render\Scene\Decal">
-      <UniqueIdentifier>{15a25320-584c-9760-4790-605918df0fb0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\Render\Scene\Lighting">
       <UniqueIdentifier>{bd2e4190-1e07-8541-c134-d7f7b4d9fca1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Render\Scene\Material">
       <UniqueIdentifier>{a89c3acd-f598-5d53-d968-4edacada4a32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Render\Scene\Opaque">
+      <UniqueIdentifier>{12902f11-985c-2eea-ad35-ca7a951b4423}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Render\Scene\Shared">
       <UniqueIdentifier>{9cd70964-eec0-4c9e-ea3a-b6c084723796}</UniqueIdentifier>
@@ -351,9 +348,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shaders\Common\VertexLayouts.hlsl">
-      <Filter>Shaders\Common</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\Passes\PostProcess\FXAAPass.hlsl">
       <Filter>Shaders\Passes\PostProcess</Filter>
     </FxCompile>
@@ -369,8 +363,8 @@
     <FxCompile Include="Shaders\Passes\PostProcess\OutlinePostProcessPass.hlsl">
       <Filter>Shaders\Passes\PostProcess</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Passes\Scene\Forward\ForwardOpaquePass.hlsl">
-      <Filter>Shaders\Passes\Scene\Forward</Filter>
+    <FxCompile Include="Shaders\Passes\Scene\Opaque\OpaquePass.hlsl">
+      <Filter>Shaders\Passes\Scene\Opaque</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Passes\Scene\Shared\DepthOnlyPass.hlsl">
       <Filter>Shaders\Passes\Scene\Shared</Filter>
@@ -465,10 +459,10 @@
     <FxCompile Include="Shaders\Render\Scene\Material\SurfaceEvaluation.hlsli">
       <Filter>Shaders\Render\Scene\Material</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Render\Scene\Shared\FullscreenPassTypes.hlsli">
-      <Filter>Shaders\Render\Scene\Shared</Filter>
+    <FxCompile Include="Shaders\Render\Scene\Opaque\OpaquePassTypes.hlsli">
+      <Filter>Shaders\Render\Scene\Opaque</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Render\Scene\Shared\OpaquePassTypes.hlsli">
+    <FxCompile Include="Shaders\Render\Scene\Shared\FullscreenPassTypes.hlsli">
       <Filter>Shaders\Render\Scene\Shared</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Render\Scene\Shared\ViewModeCommon.hlsli">
@@ -495,13 +489,10 @@
     <FxCompile Include="Shaders\Resources\SystemSamplers.hlsl">
       <Filter>Shaders\Resources</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Surface\GBufferPacking.hlsli">
-      <Filter>Shaders\Surface</Filter>
+    <FxCompile Include="Shaders\Resources\VertexLayouts.hlsl">
+      <Filter>Shaders\Resources</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Surface\SurfacePacking.hlsli">
-      <Filter>Shaders\Surface</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\Surface\SurfaceTypes.hlsli">
       <Filter>Shaders\Surface</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Utils\Color.hlsli">

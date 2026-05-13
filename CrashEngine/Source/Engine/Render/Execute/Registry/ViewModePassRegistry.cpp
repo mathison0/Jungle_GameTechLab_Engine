@@ -62,31 +62,28 @@ FViewModePassDesc BuildViewModeForwardOpaquePassDesc(EShadingModel ShadingModel)
     Pass.RenderPass             = ERenderPass::Opaque;
     Pass.ShadingPath            = ERenderShadingPath::Forward;
     Pass.bFullscreenPass        = false;
-    Pass.ShaderVariant.FilePath = "Shaders/Passes/Scene/Forward/ForwardOpaquePass.hlsl";
-    Pass.ShaderVariant.VSEntry  = "VS_ForwardOpaque";
+    Pass.ShaderVariant.FilePath = "Shaders/Passes/Scene/Opaque/OpaquePass.hlsl";
+    Pass.ShaderVariant.VSEntry  = "VSmain";
+    Pass.ShaderVariant.PSEntry  = "PSmain";
 
     switch (ShadingModel)
     {
     case EShadingModel::Lambert:
-        Pass.ShaderVariant.PSEntry = "PS_Forward_Lambert";
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_LAMBERT");
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "FORWARD_ENABLE_LIGHTING");
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "USE_NORMAL_MAP");
         break;
     case EShadingModel::BlinnPhong:
-        Pass.ShaderVariant.PSEntry = "PS_Forward_BlinnPhong";
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_BLINNPHONG");
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "FORWARD_ENABLE_LIGHTING");
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "USE_NORMAL_MAP");
         break;
     case EShadingModel::WorldNormal:
-        Pass.ShaderVariant.PSEntry = "PS_Forward_WorldNormal";
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_WORLDNORMAL");
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "USE_NORMAL_MAP");
         break;
     case EShadingModel::Unlit:
     default:
-        Pass.ShaderVariant.PSEntry = "PS_Forward_Unlit";
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_UNLIT");
         break;
     }

@@ -18,7 +18,7 @@
 #define FUNCTIONS_HLSL
 
 #include "../Resources/ConstantBuffers.hlsl"
-#include "../Common/VertexLayouts.hlsl"
+#include "../Resources/VertexLayouts.hlsl"
 
 float4 ApplyMVP(float3 pos)
 {

@@ -16,7 +16,7 @@
 */
 
 #include "../../Utils/Functions.hlsl"
-#include "../../Common/VertexLayouts.hlsl"
+#include "../../Resources/VertexLayouts.hlsl"
 #include "../../Resources/SystemSamplers.hlsl"
 
 Texture2D FontAtlas : register(t0);

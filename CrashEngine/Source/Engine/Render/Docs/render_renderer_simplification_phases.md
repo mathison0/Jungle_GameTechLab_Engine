@@ -79,7 +79,7 @@
 
 - `EViewMode::Lit_Gouraud`
 - `BuildViewModeDeferredOpaquePassDesc` / `BuildViewModeForwardOpaquePassDesc` 내 Gouraud 분기
-- `ForwardOpaquePass.hlsl` / deferred shader의 Gouraud entry
+- `OpaquePass.hlsl` / deferred shader의 Gouraud entry
 - shader warm-up 목록
 
 #### 기대 효과
@@ -299,4 +299,3 @@ deferred rendering 관련 자산을 기본 코드 경로에서 격리한다. 유
 - `Gouraud` 및 과제성 저우선순위 permutation은 제거된다.
 - deferred 관련 자산은 실험/보관 영역으로 분리되거나 문서만 남는다.
 - local light culling은 필요 시 forward lit 경로에서 사용된다.
-

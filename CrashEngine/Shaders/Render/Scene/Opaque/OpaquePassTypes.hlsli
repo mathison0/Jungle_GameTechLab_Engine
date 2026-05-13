@@ -1,5 +1,5 @@
 /*
-    OpaquePassTypes.hlsli는 scene opaque/decal 경로에서 공유하는 입출력 타입을 제공합니다.
+    OpaquePassTypes.hlsli는 scene opaque geometry 경로에서 공유하는 입출력 타입을 제공합니다.
 
     바인딩 컨벤션
     - b0: Frame 상수 버퍼
@@ -17,7 +17,7 @@
 #ifndef OPAQUE_PASS_TYPES_HLSLI
 #define OPAQUE_PASS_TYPES_HLSLI
 
-struct FForward_Opaque_VSOutput
+struct FVSOutput
 {
     float4 position     : SV_POSITION;
     float3 worldNormal  : TEXCOORD0;
@@ -25,24 +25,6 @@ struct FForward_Opaque_VSOutput
     float3 worldPos     : TEXCOORD2;
     float4 color        : COLOR0;
     float2 texcoord     : TEXCOORD3;
-};
-
-struct FGBufferOutput2
-{
-    float4 BaseColor : SV_TARGET0;
-    float4 Surface1  : SV_TARGET1;
-};
-
-struct FGBufferOutput3
-{
-    float4 BaseColor : SV_TARGET0;
-    float4 Surface1  : SV_TARGET1;
-    float4 Surface2  : SV_TARGET2;
-};
-
-struct FSceneColorOutput
-{
-    float4 SceneColor : SV_TARGET0;
 };
 
 #endif

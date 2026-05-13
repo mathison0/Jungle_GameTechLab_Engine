@@ -15,7 +15,7 @@
     - 이 파일에서 직접 선언한 슬롯: t0
 */
 
-#include "../../Common/VertexLayouts.hlsl"
+#include "../../Resources/VertexLayouts.hlsl"
 #include "../../Resources/SystemSamplers.hlsl"
 
 Texture2D FontAtlas : register(t0);

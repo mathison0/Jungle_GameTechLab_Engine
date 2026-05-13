@@ -46,30 +46,25 @@ float4 PS_UberLit(PS_Input_UV Input) : SV_TARGET0
 {
     float2 UV = Input.uv;
     float4 BaseColor = ResolveBaseColor(UV);
-    float4 FinalColor = BaseColor;
-
-#if defined(LIGHTING_MODEL_LAMBERT)
     float3 Normal = normalize(DecodeNormal(ResolveSurface1(UV)));
-    float3 WorldPos = ReconstructWorldPositionFromSceneDepth(UV);
-    FinalColor = ComputeForwardTiledLambertLighting(BaseColor, Normal, WorldPos, Input.position);
 
-#elif defined(LIGHTING_MODEL_BLINNPHONG)
-    float3 Normal = normalize(DecodeNormal(ResolveSurface1(UV)));
-    float4 MaterialParam = DecodeMaterialParam(ResolveSurface2(UV));
-    float3 WorldPos = ReconstructWorldPositionFromSceneDepth(UV);
-    float3 ViewDir = normalize(CameraWorldPos - WorldPos);
-    FinalColor = ComputeForwardTiledBlinnPhongLighting(BaseColor, Normal, MaterialParam, WorldPos, ViewDir, Input.position);
-
-#elif defined(LIGHTING_MODEL_WORLDNORMAL)
-    float3 Normal = DecodeNormal(ResolveSurface1(UV));
-    FinalColor = float4(Normal * 0.5f + 0.5f, 1.0f);
-
-#elif defined(LIGHTING_MODEL_UNLIT)
-    FinalColor = BaseColor;
-
-#else
-    FinalColor = BaseColor;
+#if defined(LIGHTING_MODEL_UNLIT)
+    return BaseColor;
 #endif
 
-    return FinalColor;
+#if defined(LIGHTING_MODEL_WORLDNORMAL)
+    return float4(Normal * 0.5f + 0.5f, 1.0f);
+#endif
+
+    float3 WorldPos = ReconstructWorldPositionFromSceneDepth(UV);
+
+#if defined(LIGHTING_MODEL_BLINNPHONG)
+    float4 MaterialParam = DecodeMaterialParam(ResolveSurface2(UV));
+    float3 ViewDir = normalize(CameraWorldPos - WorldPos);
+    return ComputeForwardTiledBlinnPhongLighting(BaseColor, Normal, MaterialParam, WorldPos, ViewDir, Input.position);
+#elif defined(LIGHTING_MODEL_LAMBERT)
+    return ComputeForwardTiledLambertLighting(BaseColor, Normal, WorldPos, Input.position);
+#else
+    return BaseColor;
+#endif
 }

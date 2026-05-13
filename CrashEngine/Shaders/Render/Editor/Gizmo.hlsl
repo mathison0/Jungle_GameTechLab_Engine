@@ -16,7 +16,7 @@
 */
 
 #include "../../Utils/Functions.hlsl"
-#include "../../Common/VertexLayouts.hlsl"
+#include "../../Resources/VertexLayouts.hlsl"
 
 cbuffer GizmoParams : register(b2)
 {

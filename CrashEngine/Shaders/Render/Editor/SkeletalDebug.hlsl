@@ -8,7 +8,7 @@
 */
 
 #include "../../Utils/Functions.hlsl"
-#include "../../Common/VertexLayouts.hlsl"
+#include "../../Resources/VertexLayouts.hlsl"
 
 // Cone meshes loaded through FObjManager use the FVertexPNCT_T layout, so the
 // VS input must declare the full PNCT_T signature for the reflected input

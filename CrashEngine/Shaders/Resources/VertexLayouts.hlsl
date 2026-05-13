@@ -136,16 +136,5 @@ struct PS_Input_ColorWorld
     float3 worldPos : TEXCOORD0;
 };
 
-// ============================================================
-// ============================================================
-
-// G-Buffer Output (Opaque Pass)
-struct PS_Output_GBuffer
-{
-    float4 BaseColor : SV_Target0;
-    float4 Normal    : SV_Target1;
-    float4 Surface2  : SV_Target2;
-};
-
 #endif // VERTEX_LAYOUTS_HLSL
 
