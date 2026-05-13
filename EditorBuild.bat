@@ -2,7 +2,7 @@
 setlocal
 
 set SOLUTION_DIR=%~dp0
-set PROJECT_DIR=%SOLUTION_DIR%CrashEngine
+set PROJECT_DIR=%SOLUTION_DIR%PacificEngine
 set BUILD_OUTPUT=%PROJECT_DIR%\Bin\Release
 set RELEASE_DIR=%SOLUTION_DIR%ReleaseBuild
 
@@ -23,7 +23,7 @@ echo ============================================
 :: 1. MSBuild로 Release x64 빌드
 echo.
 echo [1/3] Building Release x64...
-msbuild "%SOLUTION_DIR%CrashEngine.sln" /p:Configuration=Release /p:Platform=x64 /m /v:minimal
+msbuild "%SOLUTION_DIR%PacificEngine.sln" /p:Configuration=Release /p:Platform=x64 /m /v:minimal
 if %ERRORLEVEL% neq 0 (
     echo BUILD FAILED
     pause
@@ -41,7 +41,11 @@ echo.
 echo [3/3] Copying files...
 
 :: 실행 파일 (루트에)
-copy "%BUILD_OUTPUT%\CrashEngine.exe" "%RELEASE_DIR%\" >nul
+copy "%BUILD_OUTPUT%\PacificEngine.exe" "%RELEASE_DIR%\" >nul
+
+:: DLL 파일
+copy "%PROJECT_DIR%\ThirdParty\FMod\fmod.dll" "%RELEASE_DIR%\" >nul
+copy "%PROJECT_DIR%\ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" "%RELEASE_DIR%\" >nul
 
 :: ImGui 레이아웃 (도킹 설정 포함)
 if exist "%PROJECT_DIR%\imgui.ini" copy "%PROJECT_DIR%\imgui.ini" "%RELEASE_DIR%\" >nul
@@ -55,9 +59,6 @@ xcopy "%PROJECT_DIR%\Asset" "%RELEASE_DIR%\Asset\" /e /i /q >nul
 :: Settings
 xcopy "%PROJECT_DIR%\Settings" "%RELEASE_DIR%\Settings\" /e /i /q >nul
 
-:: Data (OBJ, MTL, 텍스처 원본 — .bin 재빌드 및 머티리얼 로드에 필요)
-xcopy "%PROJECT_DIR%\Data" "%RELEASE_DIR%\Data\" /e /i /q >nul
-
 :: Saves (있으면 복사)
 if exist "%PROJECT_DIR%\Saves" (
     xcopy "%PROJECT_DIR%\Saves" "%RELEASE_DIR%\Saves\" /e /i /q >nul
@@ -69,7 +70,7 @@ echo  Build complete: %RELEASE_DIR%
 echo ============================================
 echo.
 echo  ReleaseBuild/
-echo    CrashEngine.exe
+echo    PacificEngine.exe
 echo    imgui.ini
 echo    Shaders/
 echo    Asset/

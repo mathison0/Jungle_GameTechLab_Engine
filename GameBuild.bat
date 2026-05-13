@@ -2,7 +2,7 @@
 setlocal
 
 set SOLUTION_DIR=%~dp0
-set PROJECT_DIR=%SOLUTION_DIR%CrashEngine
+set PROJECT_DIR=%SOLUTION_DIR%PacificEngine
 set CONFIGURATION=GameRelease
 set BUILD_OUTPUT=%PROJECT_DIR%\Bin\%CONFIGURATION%
 set GAME_RELEASE_DIR=%SOLUTION_DIR%GameBuild
@@ -25,7 +25,7 @@ echo ============================================
 :: 1. MSBuild로 GameRelease x64 빌드
 echo.
 echo [1/4] Building Game %CONFIGURATION% x64...
-msbuild "%SOLUTION_DIR%CrashEngine.sln" /p:Configuration=%CONFIGURATION% /p:Platform=x64 /m /v:minimal
+msbuild "%SOLUTION_DIR%PacificEngine.sln" /p:Configuration=%CONFIGURATION% /p:Platform=x64 /m /v:minimal
 if %ERRORLEVEL% neq 0 (
     echo BUILD FAILED
     pause
@@ -52,10 +52,11 @@ echo.
 echo [4/4] Copying files...
 
 :: 실행 파일
-copy "%BUILD_OUTPUT%\CrashEngine.exe" "%GAME_RELEASE_DIR%\" >nul
+copy "%BUILD_OUTPUT%\PacificEngine.exe" "%GAME_RELEASE_DIR%\" >nul
 
-:: DLL 및 라이브러리 (FMod 등)
+:: DLL 파일
 copy "%PROJECT_DIR%\ThirdParty\FMod\fmod.dll" "%GAME_RELEASE_DIR%\" >nul
+copy "%PROJECT_DIR%\ThirdParty\FBX_SDK\lib\release\libfbxsdk.dll" "%GAME_RELEASE_DIR%\" >nul
 
 :: Asset (Content만 포함, Editor 제외 시도 - 여기서는 단순화)
 mkdir "%GAME_RELEASE_DIR%\Asset"
@@ -81,7 +82,7 @@ echo  Game Build complete: %GAME_RELEASE_DIR%
 echo ============================================
 echo.
 echo  GameBuild/
-echo    CrashEngine.exe
+echo    PacificEngine.exe
 echo    Asset/
 echo      Content/ (Scenes, Models, Textures)
 echo      Scripts/ (Lua)
