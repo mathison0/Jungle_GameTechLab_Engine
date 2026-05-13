@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <optional>
+#include <functional>
 
 using int8 = __int8;
 using int16 = __int16;
@@ -37,11 +38,11 @@ template <typename T, size_t N>
 using TStaticArray = std::array<T, N>;
 
 
-template <typename T>
-using TSet = std::unordered_set<T>;
+template <typename T, typename Hash = std::hash<T>>
+using TSet = std::unordered_set<T, Hash>;
 
-template <typename KeyType, typename ValueType>
-using TMap = std::unordered_map<KeyType, ValueType>;
+template <typename KeyType, typename ValueType, typename Hash = std::hash<KeyType>>
+using TMap = std::unordered_map<KeyType, ValueType, Hash>;
 
 template <typename T1, typename T2>
 using TPair = std::pair<T1, T2>;

@@ -2,6 +2,8 @@
 
 #include "Core/CoreTypes.h"
 #include "Math/Vector.h"
+#include "Render/RHI/D3D11/Buffers/VertexTypes.h"
+#include <functional>
 
 // Blender 스타일 Forward 축 선택
 enum class EForwardAxis : uint8
@@ -49,6 +51,150 @@ struct FImportOptions
         return Options;
     }
 };
+
+namespace MeshImporterUtils
+{
+    // Helper to combine hashes (Boost-style)
+    template <class T>
+    inline void hash_combine(std::size_t& seed, const T& v)
+    {
+        std::hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+
+    struct FVectorHasher
+    {
+        size_t operator()(const FVector& v) const
+        {
+            size_t seed = 0;
+            hash_combine(seed, v.X);
+            hash_combine(seed, v.Y);
+            hash_combine(seed, v.Z);
+            return seed;
+        }
+    };
+
+    struct FVector2Hasher
+    {
+        size_t operator()(const FVector2& v) const
+        {
+            size_t seed = 0;
+            hash_combine(seed, v.X);
+            hash_combine(seed, v.Y);
+            return seed;
+        }
+    };
+
+    struct FVector4Hasher
+    {
+        size_t operator()(const FVector4& v) const
+        {
+            size_t seed = 0;
+            hash_combine(seed, v.X);
+            hash_combine(seed, v.Y);
+            hash_combine(seed, v.Z);
+            hash_combine(seed, v.W);
+            return seed;
+        }
+    };
+
+    struct FStaticVertexKey
+    {
+        FVertexPNCT_T Vertex;
+        FVector2 UV1;
+        bool bHasUV1;
+
+        bool operator==(const FStaticVertexKey& Other) const
+        {
+            auto IsVecEqual = [](const FVector& a, const FVector& b) { return a.X == b.X && a.Y == b.Y && a.Z == b.Z; };
+            auto IsVec2Equal = [](const FVector2& a, const FVector2& b) { return a.X == b.X && a.Y == b.Y; };
+            auto IsVec4Equal = [](const FVector4& a, const FVector4& b) { return a.X == b.X && a.Y == b.Y && a.Z == b.Z && a.W == b.W; };
+
+            if (!IsVecEqual(Vertex.Position, Other.Vertex.Position)) return false;
+            if (!IsVecEqual(Vertex.Normal, Other.Vertex.Normal)) return false;
+            if (!IsVec2Equal(Vertex.UV, Other.Vertex.UV)) return false;
+            if (!IsVec4Equal(Vertex.Tangent, Other.Vertex.Tangent)) return false;
+            if (!IsVec4Equal(Vertex.Color, Other.Vertex.Color)) return false;
+            
+            if (bHasUV1 != Other.bHasUV1) return false;
+            if (bHasUV1 && !IsVec2Equal(UV1, Other.UV1)) return false;
+
+            return true;
+        }
+    };
+
+    struct FStaticVertexHasher
+    {
+        size_t operator()(const FStaticVertexKey& Key) const
+        {
+            size_t seed = 0;
+            FVectorHasher vecHasher;
+            FVector2Hasher vec2Hasher;
+            FVector4Hasher vec4Hasher;
+
+            hash_combine(seed, vecHasher(Key.Vertex.Position));
+            hash_combine(seed, vecHasher(Key.Vertex.Normal));
+            hash_combine(seed, vec2Hasher(Key.Vertex.UV));
+            hash_combine(seed, vec4Hasher(Key.Vertex.Tangent));
+            hash_combine(seed, vec4Hasher(Key.Vertex.Color));
+            if (Key.bHasUV1)
+            {
+                hash_combine(seed, vec2Hasher(Key.UV1));
+            }
+            return seed;
+        }
+    };
+
+    struct FSkinnedVertexKey
+    {
+        FVertexSkinned Vertex;
+        FVector2 UV1;
+        bool bHasUV1;
+        int CtrlPointIndex;
+
+        bool operator==(const FSkinnedVertexKey& Other) const
+        {
+            auto IsVecEqual = [](const FVector& a, const FVector& b) { return a.X == b.X && a.Y == b.Y && a.Z == b.Z; };
+            auto IsVec2Equal = [](const FVector2& a, const FVector2& b) { return a.X == b.X && a.Y == b.Y; };
+            auto IsVec4Equal = [](const FVector4& a, const FVector4& b) { return a.X == b.X && a.Y == b.Y && a.Z == b.Z && a.W == b.W; };
+
+            if (CtrlPointIndex != Other.CtrlPointIndex) return false;
+            if (!IsVecEqual(Vertex.Position, Other.Vertex.Position)) return false;
+            if (!IsVecEqual(Vertex.Normal, Other.Vertex.Normal)) return false;
+            if (!IsVec2Equal(Vertex.UV, Other.Vertex.UV)) return false;
+            if (!IsVec4Equal(Vertex.Tangent, Other.Vertex.Tangent)) return false;
+            if (!IsVec4Equal(Vertex.Color, Other.Vertex.Color)) return false;
+            
+            if (bHasUV1 != Other.bHasUV1) return false;
+            if (bHasUV1 && !IsVec2Equal(UV1, Other.UV1)) return false;
+
+            return true;
+        }
+    };
+
+    struct FSkinnedVertexHasher
+    {
+        size_t operator()(const FSkinnedVertexKey& Key) const
+        {
+            size_t seed = 0;
+            FVectorHasher vecHasher;
+            FVector2Hasher vec2Hasher;
+            FVector4Hasher vec4Hasher;
+
+            hash_combine(seed, Key.CtrlPointIndex);
+            hash_combine(seed, vecHasher(Key.Vertex.Position));
+            hash_combine(seed, vecHasher(Key.Vertex.Normal));
+            hash_combine(seed, vec2Hasher(Key.Vertex.UV));
+            hash_combine(seed, vec4Hasher(Key.Vertex.Tangent));
+            hash_combine(seed, vec4Hasher(Key.Vertex.Color));
+            if (Key.bHasUV1)
+            {
+                hash_combine(seed, vec2Hasher(Key.UV1));
+            }
+            return seed;
+        }
+    };
+}
 
 class FMeshImporterUtils
 {

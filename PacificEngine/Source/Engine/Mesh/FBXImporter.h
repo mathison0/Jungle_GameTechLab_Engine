@@ -99,7 +99,7 @@ private:
     using FBoneWeighting = std::pair<uint16, float>;
     static TArray<TArray<FBoneWeighting>> BoneWeighting;
 
-    static std::unordered_map<const FbxSurfaceMaterial*, UMaterial*> ImportedMaterialCache;
-    static std::unordered_map<const FbxSurfaceMaterial*, FString> ImportedMaterialJsonPaths;
-    static std::unordered_map<FString, int32> GeneratedMaterialNameCounts;
+    static TMap<const FbxSurfaceMaterial*, UMaterial*> ImportedMaterialCache;
+    static TMap<const FbxSurfaceMaterial*, FString> ImportedMaterialJsonPaths;
+    static TMap<FString, int32> GeneratedMaterialNameCounts;
 };

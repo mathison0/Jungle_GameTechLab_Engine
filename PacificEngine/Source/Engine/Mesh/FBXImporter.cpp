@@ -18,6 +18,9 @@
 #include <ranges>
 #include <fstream>
 #include <unordered_map>
+
+using namespace MeshImporterUtils;
+
 #include <unordered_set>
 
 namespace
@@ -108,13 +111,13 @@ bool FFBXImporter::bInitialized = false;
 FbxManager* FFBXImporter::SdkManager = nullptr;
 TArray<TArray<int>> FFBXImporter::CtrlPointToVertexIndex;
 TArray<TArray<FFBXImporter::FBoneWeighting>> FFBXImporter::BoneWeighting;
-std::unordered_map<const FbxSurfaceMaterial*, UMaterial*> FFBXImporter::ImportedMaterialCache;
-std::unordered_map<const FbxSurfaceMaterial*, FString> FFBXImporter::ImportedMaterialJsonPaths;
-std::unordered_map<FString, int32> FFBXImporter::GeneratedMaterialNameCounts;
+TMap<const FbxSurfaceMaterial*, UMaterial*> FFBXImporter::ImportedMaterialCache;
+TMap<const FbxSurfaceMaterial*, FString> FFBXImporter::ImportedMaterialJsonPaths;
+TMap<FString, int32> FFBXImporter::GeneratedMaterialNameCounts;
 
 namespace
 {
-    std::unordered_map<const USkeleton*, FVector> GSkeletonMeshBindInverseScales;
+    TMap<const USkeleton*, FVector> GSkeletonMeshBindInverseScales;
 }
 
 int32 FFBXImporter::GetFbxPolygonMaterialIndex(FbxNode* Node, FbxMesh* Mesh, int32 PolygonIndex)
@@ -512,7 +515,7 @@ void FFBXImporter::AssignImportedMaterialsToSlots(FbxNode* Node, const FString& 
         return;
     }
 
-    std::unordered_set<int32> AssignedMaterialIndices;
+    TSet<int32> AssignedMaterialIndices;
     for (FStaticMaterial& MaterialSlot : Materials)
     {
         MaterialSlot.MaterialInterface = nullptr;
@@ -619,7 +622,7 @@ bool FFBXImporter::ImportStaticAndCacheAll(const FString& FBXFilePath, const FIm
 
     std::unique_ptr<FStaticMesh> MergedAsset = std::make_unique<FStaticMesh>();
     TArray<FStaticMaterial> MergedMaterials;
-    std::unordered_map<FString, int32> SlotNameToMergedIndex;
+    TMap<FString, int32> SlotNameToMergedIndex;
 
     FbxNode* RootNode = Scene->GetRootNode();
     if (RootNode)
@@ -1102,8 +1105,9 @@ std::unique_ptr<FStaticMesh> FFBXImporter::ParseStaticGeometry(FbxNode* InNode, 
 	}
 
     Result->UV1s.clear();
-    Result->UV1s.reserve(static_cast<size_t>(PolygonCount) * 3);
     const bool bHasUV1Set = UVSetNames.size() > 1;
+
+    TMap<FStaticVertexKey, uint32, FStaticVertexHasher> VertexMap;
 
 	for (int i = 0; i < PolygonCount; i++)
     {
@@ -1135,21 +1139,34 @@ std::unique_ptr<FStaticMesh> FFBXImporter::ParseStaticGeometry(FbxNode* InNode, 
                 }
             }
 
+            FVector2 UV1(0.0f, 0.0f);
             if (bHasUV1Set)
             {
-                FVector2 UV1(0.0f, 0.0f);
                 FbxVector2 uv1;
                 bool unmappedUV1 = false;
                 if (InFbxMesh->GetPolygonVertexUV(i, j, UVSetNames[1].c_str(), uv1, unmappedUV1))
                 {
                     UV1 = FVector2((float)uv1[0], 1.0f - (float)uv1[1]);
                 }
-                Result->UV1s.push_back(UV1);
             }
 
-            Result->Vertices.push_back(vertex);
-            TriangleIndices[j] = VertexCount;
-            VertexCount++;
+            FStaticVertexKey Key = { vertex, UV1, bHasUV1Set };
+            auto It = VertexMap.find(Key);
+            if (It != VertexMap.end())
+            {
+                TriangleIndices[j] = It->second;
+            }
+            else
+            {
+                uint32 NewIndex = static_cast<uint32>(Result->Vertices.size());
+                Result->Vertices.push_back(vertex);
+                if (bHasUV1Set)
+                {
+                    Result->UV1s.push_back(UV1);
+                }
+                VertexMap.emplace(Key, NewIndex);
+                TriangleIndices[j] = NewIndex;
+            }
 		}
 
 		if (Options.WindingOrder == EWindingOrder::CCW_to_CW)
@@ -1267,8 +1284,9 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseSkeletalGeometry(FbxNode* I
     }
 
     Result->UV1s.clear();
-    Result->UV1s.reserve(static_cast<size_t>(PolygonCount) * 3);
     const bool bHasUV1Set = UVSetNames.size() > 1;
+
+    std::unordered_map<FSkinnedVertexKey, uint32, FSkinnedVertexHasher> VertexMap;
 
     CtrlPointToVertexIndex.assign(InFbxMesh->GetControlPointsCount(), TArray<int>());
     for (int i = 0; i < PolygonCount; ++i) {
@@ -1313,11 +1331,21 @@ std::unique_ptr<FSkeletalSubMesh> FFBXImporter::ParseSkeletalGeometry(FbxNode* I
                 }
             }
 
-            Result->Vertices.push_back(vertex);
-            Result->UV1s.push_back(UV1);
-            TriangleIndices[j] = VertexCount;
-            CtrlPointToVertexIndex[ctrlPointIndex].push_back(VertexCount);
-            VertexCount++;
+            FSkinnedVertexKey Key = { vertex, UV1, bHasUV1Set, ctrlPointIndex };
+            auto It = VertexMap.find(Key);
+            if (It != VertexMap.end())
+            {
+                TriangleIndices[j] = It->second;
+            }
+            else
+            {
+                uint32 NewIndex = static_cast<uint32>(Result->Vertices.size());
+                Result->Vertices.push_back(vertex);
+                Result->UV1s.push_back(UV1);
+                VertexMap.emplace(Key, NewIndex);
+                TriangleIndices[j] = NewIndex;
+                CtrlPointToVertexIndex[ctrlPointIndex].push_back(NewIndex);
+            }
         }
 
         if (Options.WindingOrder == EWindingOrder::CCW_to_CW)
@@ -1487,7 +1515,7 @@ void FFBXImporter::ApplyBindPoseToSkeleton(FbxMesh* InFbxMesh, USkeleton* InSkel
         return;
     }
 
-    std::unordered_map<FbxNode*, FMatrix> GlobalBindMatrices;
+    TMap<FbxNode*, FMatrix> GlobalBindMatrices;
     const TArray<FBoneInfo>& Bones = InSkeleton->GetBones();
     for (const FBoneInfo& Bone : Bones)
     {
