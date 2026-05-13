@@ -43,6 +43,7 @@ public:
     inline bool IsPressedOnHandle() const { return bPressedOnHandle; }
 
     EGizmoMode GetMode() const { return CurMode; }
+    bool IsWorldSpace() const { return bIsWorldSpace; }
     void SetAxisMask(uint32 InMask) { AxisMask = InMask; }
     uint32 GetAxisMask() const { return AxisMask; }
 

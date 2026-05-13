@@ -371,6 +371,27 @@ void AActor::SetActorRotation(const FVector& EulerRotation)
     }
 }
 
+FRotator AActor::GetActorWorldRotation() const
+{
+    return RootComponent ? RootComponent->GetWorldRotation().ToRotator() : FRotator();
+}
+
+void AActor::SetActorWorldRotation(const FRotator& NewRotation)
+{
+    if (RootComponent)
+    {
+        RootComponent->SetWorldRotation(NewRotation);
+    }
+}
+
+void AActor::SetActorWorldRotation(const FVector& EulerRotation)
+{
+    if (RootComponent)
+    {
+        RootComponent->SetWorldRotation(FRotator(EulerRotation));
+    }
+}
+
 FVector AActor::GetActorScale() const
 {
     return RootComponent ? RootComponent->GetRelativeScale() : FVector(1, 1, 1);

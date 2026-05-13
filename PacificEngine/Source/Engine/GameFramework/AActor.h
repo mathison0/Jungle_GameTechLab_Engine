@@ -105,6 +105,9 @@ public:
     FRotator GetActorRotation() const;
     void SetActorRotation(const FRotator& NewRotation);
     void SetActorRotation(const FVector& EulerRotation);
+    FRotator GetActorWorldRotation() const;
+    void SetActorWorldRotation(const FRotator& NewRotation);
+    void SetActorWorldRotation(const FVector& EulerRotation);
 
     // Transform — Scale
     FVector GetActorScale() const;

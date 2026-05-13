@@ -192,6 +192,20 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
         {
             Gizmo->SetScaleMode();
         }
+
+        ImGui::SameLine();
+        ImGui::TextUnformatted("Space");
+        ImGui::SameLine();
+        int32 CurrentSpace = Gizmo->IsWorldSpace() ? 1 : 0;
+        if (ImGui::Button(CurrentSpace == 1 ? "[World]" : "World"))
+        {
+            Gizmo->SetWorldSpace(true);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(CurrentSpace == 0 ? "[Local]" : "Local"))
+        {
+            Gizmo->SetWorldSpace(false);
+        }
     }
 
 	USkeletalMesh* ActiveMesh = State.ActiveMesh;

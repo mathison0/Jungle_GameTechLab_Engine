@@ -442,6 +442,33 @@ void USceneComponent::SetWorldLocation(FVector NewWorldLocation)
     }
 }
 
+void USceneComponent::SetWorldRotation(const FRotator& NewRotation)
+{
+    SetWorldRotationWithEulerHint(NewRotation.ToQuaternion(), NewRotation.GetClamped());
+}
+
+void USceneComponent::SetWorldRotation(const FQuat& NewRotation)
+{
+    SetWorldRotationWithEulerHint(NewRotation, NewRotation.ToRotator());
+}
+
+void USceneComponent::SetWorldRotationWithEulerHint(const FQuat& NewQuat, const FRotator& EulerHint)
+{
+    FQuat RelativeQuat = NewQuat;
+    if (ParentComponent)
+    {
+        RelativeQuat = ParentComponent->GetWorldRotation().Inverse() * NewQuat;
+    }
+
+    RelativeQuat.Normalize();
+    (void)EulerHint;
+    CachedEditRotator = RelativeQuat.ToRotator().GetClamped();
+    bCachedEulerDirty = false;
+    RelativeTransform.SetRotation(RelativeQuat);
+    MarkTransformDirty();
+    NotifyOctreeTransformChanged(this);
+}
+
 FVector USceneComponent::GetWorldLocation() const
 {
     const FMatrix& WorldMatrix = GetWorldMatrix();

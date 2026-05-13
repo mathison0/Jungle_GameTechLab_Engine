@@ -206,15 +206,25 @@ void FSkeletalPreviewViewportClient::SyncBoneGizmoToSelection()
     }
 
     const FMatrix BoneWorldMatrix = MeshComp->GetBoneDebugWorldMatrix(BoneIndex);
+    const bool bWorldSpace = Gizmo->IsWorldSpace();
     if (USceneComponent* Root = TargetActor->GetRootComponent())
     {
         Root->SetRelativeLocation(BoneWorldMatrix.GetLocation());
-        Root->SetRelativeRotationWithEulerHint(FQuat::Identity, FRotator());
+        if (bWorldSpace)
+        {
+            Root->SetRelativeRotationWithEulerHint(FQuat::Identity, FRotator());
+        }
+        else
+        {
+            const FQuat BoneWorldRotation = ExtractRotationNoScale(BoneWorldMatrix);
+            Root->SetRelativeRotationWithEulerHint(BoneWorldRotation, BoneWorldRotation.ToRotator());
+        }
         Root->SetRelativeScale(OwnerViewer
                                    ? OwnerViewer->GetCachedBoneComponentScale(BoneIndex)
                                    : BoneWorldMatrix.GetScale());
 
-        LastGizmoComponentRotation = FQuat();
+        LastGizmoComponentRotation = Root->GetRelativeRotation().ToQuaternion();
+        LastGizmoComponentRotation.Normalize();
         bHasLastGizmoComponentRotation = true;
     }
 
