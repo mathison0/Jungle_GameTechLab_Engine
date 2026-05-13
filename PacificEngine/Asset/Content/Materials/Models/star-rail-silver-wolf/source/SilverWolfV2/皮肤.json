@@ -1,0 +1,14 @@
+{
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "Parameters" : {
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "SpecularPower" : 100.000000,
+    "SpecularStrength" : 1.000000
+  },
+  "PathFileName" : "Asset/Content/Materials/Models/star-rail-silver-wolf/source/SilverWolfV2/皮肤.json",
+  "RasterizerState" : "SolidBackCull",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Content/Models/star-rail-silver-wolf/source/texture/衣服.png"
+  }
+}

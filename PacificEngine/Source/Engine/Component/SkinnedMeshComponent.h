@@ -28,6 +28,8 @@ public:
     USkinnedMeshComponent() = default;
     ~USkinnedMeshComponent() override = default;
 
+	void Serialize(FArchive& Ar) override;
+	void PostDuplicate() override;
 	bool LineTraceComponent(const FRay& Ray, FHitResult& OutHit) override;
 
     FMeshDataView GetMeshDataView() const override;

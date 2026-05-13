@@ -683,30 +683,7 @@
       "Name" : "ASkeletalMeshActor_61",
       "NonSceneComponents" : [],
       "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UTextRenderComponent",
-            "Name" : "UTextRenderComponent_32",
-            "Properties" : {
-              "Billboard" : true,
-              "CollisionChannel" : 1,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Generate Hit Events" : false,
-              "Generate Overlap Events" : false,
-              "Is Editor Helper" : false,
-              "Location" : [0.500000, 0.000000, 1.500000],
-              "Mobility" : 1,
-              "Receives Decals" : true,
-              "Rotation" : [30.899994, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "미끄덩 ",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : true,
-              "bTickEnable" : true
-            }
-          }],
+        "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
         "Name" : "USkeletalMeshComponent_88",
         "Properties" : {
@@ -734,10 +711,10 @@
           "Generate Hit Events" : false,
           "Generate Overlap Events" : false,
           "Is Editor Helper" : false,
-          "Location" : [0.000000, -25.417950, 0.695314],
+          "Location" : [0.000000, -22.338516, 0.113906],
           "Mobility" : 1,
           "Receives Decals" : true,
-          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 56.500000, 28.520004],
           "Scale" : [2.000000, 2.000000, 2.000000],
           "Skeletal Mesh" : "Asset/Content/Models/star-rail-silver-wolf/source/SilverWolfV2.fbx_Mesh_Armature",
           "Visible" : true,
@@ -748,17 +725,57 @@
       },
       "Tag" : "Default",
       "bVisible" : true
+    }, {
+      "ClassName" : "AActor",
+      "Name" : "AActor_3",
+      "NonSceneComponents" : [],
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UTextRenderComponent",
+            "Name" : "UTextRenderComponent_22",
+            "Properties" : {
+              "Billboard" : true,
+              "CollisionChannel" : 1,
+              "Font" : "Default",
+              "Font Size" : 1.000000,
+              "Generate Hit Events" : false,
+              "Generate Overlap Events" : false,
+              "Is Editor Helper" : false,
+              "Location" : [0.000000, 0.000000, 0.000000],
+              "Mobility" : 1,
+              "Receives Decals" : true,
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
+              "Scale" : [1.000000, 1.000000, 1.000000],
+              "Text" : "미끄덩ㅁ",
+              "Visible" : true,
+              "Visible In Editor" : true,
+              "Visible In Game" : true,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_3",
+        "Properties" : {
+          "Location" : [0.090231, -22.912548, 3.154696],
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "bTickEnable" : true
+        }
+      },
+      "Tag" : "Default",
+      "bVisible" : true
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
   "ContextName" : "Default",
-  "Name" : "test",
+  "Name" : "w10_demo",
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [7.982470, -26.420849, 2.096952],
+    "Location" : [29.909132, 0.532545, 2.091115],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, -8.378709, 175.499283]
+    "Rotation" : [-0.000000, 2.540113, -171.001938]
   },
   "Version" : 3,
   "WorldType" : "Editor"

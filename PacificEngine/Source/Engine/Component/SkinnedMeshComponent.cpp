@@ -2,13 +2,16 @@
 
 #include "Engine/Runtime/Engine.h"
 #include "Mesh/SkeletalMesh.h"
+#include "Mesh/SkeletalMeshManager.h"
 #include "Mesh/Skeleton.h"
 #include "Materials/Material.h"
+#include "Materials/MaterialManager.h"
 #include "Object/ObjectFactory.h"
 #include "Render/RHI/D3D11/Buffers/RuntimeVertexPacker.h"
 #include "Render/RHI/D3D11/Buffers/RuntimeVertexWideningPolicy.h"
 #include "Render/RHI/D3D11/Shaders/GraphicsProgram.h"
 #include "Render/Scene/Proxies/Primitive/SkeletalMeshSceneProxy.h"
+#include "Serialization/Archive.h"
 #include "Collision/RayUtils.h"
 
 #include <algorithm>
@@ -84,6 +87,54 @@ namespace
         return FMatrix::MakeScaleMatrix(Asset->MeshBindInverseScale);
     }
 
+}
+
+void USkinnedMeshComponent::Serialize(FArchive& Ar)
+{
+    Super::Serialize(Ar);
+    Ar << SkeletalMeshPath;
+    Ar << MaterialSlots;
+    Ar << CurrentBoneLocalMatrices;
+    Ar << DebugPoseMode;
+}
+
+void USkinnedMeshComponent::PostDuplicate()
+{
+    Super::PostDuplicate();
+
+    if (SkeletalMeshPath.empty() || SkeletalMeshPath == "None")
+    {
+        return;
+    }
+
+    USkeletalMesh* Loaded = FSkeletalMeshManager::Get().Load(SkeletalMeshPath);
+    if (!Loaded)
+    {
+        return;
+    }
+
+    // SetSkeletalMesh wipes MaterialSlots and pose state, so capture the
+    // deserialized values first and re-apply them once the asset is bound.
+    TArray<FMaterialSlot> SavedSlots = MaterialSlots;
+    TArray<FMatrix> SavedPose = CurrentBoneLocalMatrices;
+
+    SetSkeletalMesh(Loaded);
+
+    for (int32 i = 0; i < (int32)MaterialSlots.size() && i < (int32)SavedSlots.size(); ++i)
+    {
+        MaterialSlots[i] = SavedSlots[i];
+        const FString& MatPath = MaterialSlots[i].Path;
+        if (MatPath.empty() || MatPath == "None")
+        {
+            OverrideMaterials[i] = nullptr;
+        }
+        else
+        {
+            OverrideMaterials[i] = FMaterialManager::Get().GetOrCreateStaticMeshMaterial(MatPath);
+        }
+    }
+
+    SetBoneLocalMatrices(SavedPose);
 }
 
 bool USkinnedMeshComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutHit)

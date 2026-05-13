@@ -16,9 +16,6 @@ public:
     FPrimitiveProxy* CreateSceneProxy() override;
     void SetSkeletalMesh(USkeletalMesh* InMesh);
 
-    void Serialize(FArchive& Ar) override;
-    void PostDuplicate() override;
-    
     // Property Editor 지원
     void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
     void PostEditProperty(const char* PropertyName) override;

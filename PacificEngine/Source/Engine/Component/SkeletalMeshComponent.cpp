@@ -17,50 +17,6 @@ void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
     USkinnedMeshComponent::SetSkeletalMesh(InMesh);
 }
 
-void USkeletalMeshComponent::Serialize(FArchive& Ar)
-{
-    USkinnedMeshComponent::Serialize(Ar);
-    Ar << SkeletalMeshPath;
-    Ar << MaterialSlots;
-}
-
-void USkeletalMeshComponent::PostDuplicate()
-{
-    USkinnedMeshComponent::PostDuplicate();
-
-    // Load the referenced mesh asset after duplication.
-    if (!SkeletalMeshPath.empty() && SkeletalMeshPath != "None")
-    {
-        USkeletalMesh* Loaded = FSkeletalMeshManager::Get().Load(SkeletalMeshPath);
-        if (Loaded)
-        {
-            // Preserve serialized material slot data across SetSkeletalMesh.
-            TArray<FMaterialSlot> SavedSlots = MaterialSlots;
-            SetSkeletalMesh(Loaded);
-
-            // Reload override materials from serialized slot paths.
-            for (int32 i = 0; i < (int32)MaterialSlots.size() && i < (int32)SavedSlots.size(); ++i)
-            {
-                MaterialSlots[i] = SavedSlots[i];
-                const FString& MatPath = MaterialSlots[i].Path;
-                if (MatPath.empty() || MatPath == "None")
-                {
-                    OverrideMaterials[i] = nullptr;
-                }
-                else
-                {
-                    UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateStaticMeshMaterial(MatPath);
-                    OverrideMaterials[i] = LoadedMat;
-                }
-            }
-        }
-    }
-
-    CacheLocalBounds();
-    MarkRenderStateDirty();
-    MarkWorldBoundsDirty();
-}
-
 void USkeletalMeshComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
 {
     USkinnedMeshComponent::GetEditableProperties(OutProps);
