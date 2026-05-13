@@ -658,6 +658,8 @@ bool FFBXImporter::ImportStaticAndCacheAll(const FString& FBXFilePath, const FIm
                 std::unique_ptr<FStaticMesh> Local = ParseStaticGeometry(Node, Mesh, Options, LocalMaterials);
                 if (Local && !Local->Vertices.empty())
                 {
+                    AssignImportedMaterialsToSlots(Node, FBXFilePath, LocalMaterials);
+
                     FbxAMatrix Global = Node->EvaluateGlobalTransform();
                     FbxAMatrix Geo;
                     Geo.SetT(Node->GetGeometricTranslation(FbxNode::eSourcePivot));
