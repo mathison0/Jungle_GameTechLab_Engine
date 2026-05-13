@@ -280,20 +280,7 @@ void BuildViewModePasses(FViewModePassConfig& Config)
 
     if (Config.bEnableOpaque)
     {
-        Config.Passes.push_back(BuildViewModeDeferredOpaquePassDesc(Config.ShadingModel));
         Config.Passes.push_back(BuildViewModeForwardOpaquePassDesc(Config.ShadingModel));
-    }
-
-
-    if (Config.bEnableDecal)
-    {
-        Config.Passes.push_back(BuildViewModeDeferredDecalPassDesc(Config.ShadingModel));
-    }
-
-
-    if (Config.bEnableLighting)
-    {
-        Config.Passes.push_back(BuildViewModeDeferredLightingPassDesc(Config.ShadingModel));
     }
 }
 
@@ -438,6 +425,11 @@ const FViewModePassConfig* FViewModePassRegistry::GetConfig(EViewMode ViewMode) 
     return FindConfig(ViewMode);
 }
 
+const FViewModePassDesc* FViewModePassRegistry::FindOpaquePassDesc(EViewMode ViewMode) const
+{
+    return FindPassDesc(ViewMode, ERenderPass::Opaque, ERenderShadingPath::Forward);
+}
+
 EShadingModel FViewModePassRegistry::GetShadingModel(EViewMode ViewMode) const
 {
     return GetViewModeShadingModel(GetConfig(ViewMode));
@@ -542,7 +534,7 @@ const FViewModePassDesc* FViewModePassRegistry::FindPassDesc(EViewMode ViewMode,
     return Pass;
 }
 
-void FViewModePassRegistry::WarmUpViewMode(EViewMode ViewMode, ERenderShadingPath RenderPath) const
+void FViewModePassRegistry::WarmUpViewMode(EViewMode ViewMode) const
 {
     const FViewModePassConfig* Config = FindConfig(ViewMode);
     if (!Config)
@@ -552,25 +544,9 @@ void FViewModePassRegistry::WarmUpViewMode(EViewMode ViewMode, ERenderShadingPat
 
     if (Config->bEnableOpaque)
     {
-        if (FViewModePassDesc* OpaquePass = FindPassDescMutable(ViewMode, ERenderPass::Opaque, RenderPath))
+        if (FViewModePassDesc* OpaquePass = FindPassDescMutable(ViewMode, ERenderPass::Opaque, ERenderShadingPath::Forward))
         {
             CompilePassVariant(*OpaquePass);
-        }
-    }
-
-    if (RenderPath == ERenderShadingPath::Deferred && Config->bEnableDecal)
-    {
-        if (FViewModePassDesc* DecalPass = FindPassDescMutable(ViewMode, ERenderPass::Decal, ERenderShadingPath::Deferred))
-        {
-            CompilePassVariant(*DecalPass);
-        }
-    }
-
-    if (RenderPath == ERenderShadingPath::Deferred && Config->bEnableLighting)
-    {
-        if (FViewModePassDesc* LightingPass = FindPassDescMutable(ViewMode, ERenderPass::DeferredLighting, ERenderShadingPath::Deferred))
-        {
-            CompilePassVariant(*LightingPass);
         }
     }
 }

@@ -64,7 +64,7 @@ void WarmUpEditorViewModeShaders(FRenderer& Renderer)
     {
         // Startup prewarm only targets the default forward path.
         // Deferred variants are compiled on demand.
-        Renderer.WarmUpViewModeShaders(ViewMode, ERenderShadingPath::Forward);
+        Renderer.WarmUpViewModeShaders(ViewMode);
     }
 }
 
@@ -721,17 +721,7 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
     SceneView.LODContext = World->PrepareLODContext();
 
     FViewModeSurfaces* ViewModeSurfaces = nullptr;
-    if (const auto* ViewModePassRegistry = Renderer.GetViewModePassRegistry();
-        ViewModePassRegistry &&
-        ViewModePassRegistry->HasConfig(ViewMode) &&
-        SceneView.RenderPath == ERenderShadingPath::Deferred)
-    {
-        ViewModeSurfaces = Renderer.AcquireViewModeSurfaces(VP, VP->GetWidth(), VP->GetHeight());
-    }
-    else
-    {
-        Renderer.ReleaseViewModeSurfaces(VP);
-    }
+    Renderer.ReleaseViewModeSurfaces(VP);
 
     Renderer.BeginCollect(SceneView, Scene.GetPrimitiveProxyCount());
     auto PipelineContext = Renderer.CreatePipelineContext(SceneView, &RenderTargets, &Scene);

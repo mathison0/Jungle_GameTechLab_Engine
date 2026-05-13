@@ -192,7 +192,7 @@ FMeshPassShaderSelection ResolveMeshPassShader(const FPrimitiveProxy& Proxy,
              Context.ViewMode.Registry->HasConfig(Context.ViewMode.ActiveViewMode))
     {
         const FViewModePassDesc* Desc =
-            Context.ViewMode.Registry->FindPassDesc(Context.ViewMode.ActiveViewMode, ERenderPass::Opaque, Context.SceneView->RenderPath);
+            Context.ViewMode.Registry->FindOpaquePassDesc(Context.ViewMode.ActiveViewMode);
         if (Desc && Desc->CompiledShader)
         {
             Selection.Shader       = Desc->CompiledShader;

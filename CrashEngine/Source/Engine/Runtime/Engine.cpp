@@ -482,15 +482,6 @@ void UEngine::Render(float DeltaTime)
 
     {
         FRenderPipelineContext PipelineContext = Renderer.CreatePipelineContext(SceneView, &RenderTargets, Scene);
-        
-        // 지연된 Surface 확보
-        if (SceneView.RenderPath == ERenderShadingPath::Deferred &&
-            Renderer.GetViewModePassRegistry() &&
-            Renderer.GetViewModePassRegistry()->HasConfig(SceneView.ViewMode))
-        {
-            PipelineContext.ViewMode.Surfaces =
-                Renderer.AcquireViewModeSurfaces(Viewport, (uint32)SceneView.ViewportWidth, (uint32)SceneView.ViewportHeight);
-        }
 
         Renderer.BuildDrawCommands(PipelineContext);
         

@@ -29,7 +29,7 @@ uint16 ToPostProcessUserBits(EViewModePostProcessVariant Variant);
 struct FViewModePassDesc
 {
     ERenderPass        RenderPass;
-    ERenderShadingPath ShadingPath = ERenderShadingPath::Deferred;
+    ERenderShadingPath ShadingPath = ERenderShadingPath::Forward;
     FShaderVariantDesc ShaderVariant;
     FGraphicsProgram*  CompiledShader  = nullptr;
     bool               bFullscreenPass = false;
@@ -98,8 +98,9 @@ public:
     bool                        UsesHeightFog(EViewMode ViewMode) const;
     bool                        UsesFXAA(EViewMode ViewMode) const;
     EViewModePostProcessVariant GetPostProcessVariant(EViewMode ViewMode) const;
-    const FViewModePassDesc*    FindPassDesc(EViewMode ViewMode, ERenderPass RenderPass, ERenderShadingPath ShadingPath = ERenderShadingPath::Deferred) const;
-    void                        WarmUpViewMode(EViewMode ViewMode, ERenderShadingPath RenderPath) const;
+    const FViewModePassDesc*    FindOpaquePassDesc(EViewMode ViewMode) const;
+    const FViewModePassDesc*    FindPassDesc(EViewMode ViewMode, ERenderPass RenderPass, ERenderShadingPath ShadingPath = ERenderShadingPath::Forward) const;
+    void                        WarmUpViewMode(EViewMode ViewMode) const;
 
 private:
     const FViewModePassConfig* FindConfig(EViewMode ViewMode) const;
