@@ -29,6 +29,35 @@ IMPLEMENT_CLASS(UEditorEngine, UEngine)
 
 namespace
 {
+void ApplyViewportPostProcessOverrides(FPostProcessSettings& Settings,
+                                      const FShowFlags& ShowFlags,
+                                      const FViewportRenderOptions& Opts)
+{
+    Settings.Vignetting.bEnabled = ShowFlags.bVignetting;
+    if (ShowFlags.bVignetting)
+    {
+        Settings.Vignetting.Intensity = Opts.Vignetting.Intensity;
+        Settings.Vignetting.Radius    = Opts.Vignetting.Radius;
+        Settings.Vignetting.Softness  = Opts.Vignetting.Softness;
+        Settings.Vignetting.Color     = Opts.Vignetting.Color;
+    }
+    else
+    {
+        Settings.Vignetting = FVignettingSettings{};
+    }
+
+    Settings.GammaCorrection.bEnabled = ShowFlags.bGammaCorrection;
+    if (ShowFlags.bGammaCorrection)
+    {
+        Settings.GammaCorrection.DisplayGamma = Opts.GammaCorrection.DisplayGamma;
+    }
+    else
+    {
+        Settings.GammaCorrection.bEnabled = false;
+        Settings.GammaCorrection.DisplayGamma = 2.2f;
+    }
+}
+
 void PreloadDefaultObjAssets(ID3D11Device* Device)
 {
     if (!Device)
@@ -712,6 +741,7 @@ void UEditorEngine::RenderViewport(FLevelEditorViewportClient* VC)
         }
     }
     SceneView.SetRenderSettings(ViewMode, EffectiveShowFlags);
+    ApplyViewportPostProcessOverrides(SceneView.PostProcessSettings, EffectiveShowFlags, Opts);
     SceneView.SetRenderOptions(Opts);
     SceneView.RenderPath = ERenderShadingPath::Forward;
     SceneView.SetViewportInfo(VP);

@@ -82,8 +82,8 @@ bool ShouldExecutePass(const FRenderPipelineContext& Context, ERenderPassNodeTyp
         return Registry->UsesFXAA(Context.ViewMode.ActiveViewMode);
     case ERenderPassNodeType::FinalPostProcessCompositePass:
         return Context.SceneView &&
-               (Context.SceneView->PostProcessSettings.Vignetting.bEnabled ||
-                Context.SceneView->PostProcessSettings.GammaCorrection.bEnabled ||
+               ((Context.SceneView->ShowFlags.bVignetting && Context.SceneView->PostProcessSettings.Vignetting.bEnabled) ||
+                (Context.SceneView->ShowFlags.bGammaCorrection && Context.SceneView->PostProcessSettings.GammaCorrection.bEnabled) ||
                 Context.SceneView->PostProcessSettings.Fade.bEnabled ||
                 Context.SceneView->PostProcessSettings.Letterbox.bEnabled);
     default:

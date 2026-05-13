@@ -1108,6 +1108,25 @@ void FEditorToolbarPanel::RenderPaneToolbar(FLevelViewportLayout* Layout,
                 ImGui::SliderFloat("Edge Threshold Min", &Opts.EdgeThresholdMin, 0.0312f, 0.0833f, "%.4f");
                 ImGui::Unindent();
             });
+
+            ImGui::Checkbox("Vignette", &Opts.ShowFlags.bVignetting);
+            BeginDisabledUnless(Opts.ShowFlags.bVignetting, [&]()
+            {
+                ImGui::Indent();
+                ImGui::SliderFloat("Vignette Intensity", &Opts.Vignetting.Intensity, 0.0f, 10.0f, "%.2f");
+                ImGui::SliderFloat("Vignette Radius", &Opts.Vignetting.Radius, 0.0f, 1.0f, "%.2f");
+                ImGui::SliderFloat("Vignette Softness", &Opts.Vignetting.Softness, 0.001f, 1.0f, "%.3f");
+                ImGui::ColorEdit3("Vignette Color", &Opts.Vignetting.Color.X);
+                ImGui::Unindent();
+            });
+
+            ImGui::Checkbox("Gamma Correction", &Opts.ShowFlags.bGammaCorrection);
+            BeginDisabledUnless(Opts.ShowFlags.bGammaCorrection, [&]()
+            {
+                ImGui::Indent();
+                ImGui::DragFloat("Display Gamma", &Opts.GammaCorrection.DisplayGamma, 0.01f, 0.1f, 5.0f, "%.2f");
+                ImGui::Unindent();
+            });
         }
 		if (ImGui::CollapsingHeader("Light Culling Options", ImGuiTreeNodeFlags_DefaultOpen))
         {

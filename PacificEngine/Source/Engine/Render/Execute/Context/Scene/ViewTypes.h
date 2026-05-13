@@ -46,9 +46,11 @@ struct FShowFlags
     float PointLightDebugScale       = 1.0f;
     float SpotLightDebugScale        = 1.0f;
 
-	//Post Process Setting으로 떼는 것이..?
+	// Viewport용 post-process 토글.
     bool  bFog                       = true;
     bool  bFXAA                      = true;
+    bool  bVignetting                = true;
+    bool  bGammaCorrection           = true;
     bool  bLightHitMap               = false;
     bool  b25DCulling                = true; // false는 tile_based_culling
 };
@@ -109,6 +111,8 @@ struct FViewportRenderOptions
 {
     EViewMode  ViewMode = EViewMode::Lit_Phong;
     FShowFlags ShowFlags;
+    FVignettingSettings      Vignetting;
+    FGammaCorrectionSettings GammaCorrection;
 
     float GridSpacing       = 1.0f;
     int32 GridHalfLineCount = 100;

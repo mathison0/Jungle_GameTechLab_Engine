@@ -8,20 +8,13 @@
 #include "Render/Resources/Buffers/ConstantBufferData.h"
 #include "Render/Resources/Bindings/RenderCBKeys.h"
 
-namespace
-{
-bool ShouldRunFinalComposite(const FPostProcessSettings& Settings)
-{
-    return Settings.Vignetting.bEnabled ||
-           Settings.GammaCorrection.bEnabled ||
-           Settings.Fade.bEnabled ||
-           Settings.Letterbox.bEnabled;
-}
-} // namespace
-
 bool FFinalPostProcessCompositePass::IsEnabled(const FRenderPipelineContext& Context) const
 {
-    return Context.SceneView && ShouldRunFinalComposite(Context.SceneView->PostProcessSettings);
+    return Context.SceneView &&
+           ((Context.SceneView->ShowFlags.bVignetting && Context.SceneView->PostProcessSettings.Vignetting.bEnabled) ||
+            (Context.SceneView->ShowFlags.bGammaCorrection && Context.SceneView->PostProcessSettings.GammaCorrection.bEnabled) ||
+            Context.SceneView->PostProcessSettings.Fade.bEnabled ||
+            Context.SceneView->PostProcessSettings.Letterbox.bEnabled);
 }
 
 void FFinalPostProcessCompositePass::PrepareInputs(FRenderPipelineContext& Context)

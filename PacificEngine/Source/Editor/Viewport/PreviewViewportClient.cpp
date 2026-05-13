@@ -237,6 +237,8 @@ void FPreviewViewportClient::Draw(FViewport* InViewport, float DeltaTime)
     ShowFlags.bWorldBound = false;
     ShowFlags.bLightDebugLines = false;
     ShowFlags.bFog = false;
+    ShowFlags.bVignetting = false;
+    ShowFlags.bGammaCorrection = false;
     ShowFlags.bFXAA = true;
 
     const EViewMode ViewMode = GetViewMode();

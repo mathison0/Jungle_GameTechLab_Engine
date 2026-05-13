@@ -37,6 +37,13 @@ constexpr const char* DirectionalLightDebugScale = "DirectionalLightDebugScale";
 constexpr const char* PointLightDebugScale = "PointLightDebugScale";
 constexpr const char* SpotLightDebugScale = "SpotLightDebugScale";
 constexpr const char* bFog = "bFog";
+constexpr const char* bVignetting = "bVignetting";
+constexpr const char* VignetteIntensity = "VignetteIntensity";
+constexpr const char* VignetteRadius = "VignetteRadius";
+constexpr const char* VignetteSoftness = "VignetteSoftness";
+constexpr const char* VignetteColor = "VignetteColor";
+constexpr const char* bGammaCorrection = "bGammaCorrection";
+constexpr const char* DisplayGamma = "DisplayGamma";
 constexpr const char* GridSpacing = "GridSpacing";
 constexpr const char* GridHalfLineCount = "GridHalfLineCount";
 constexpr const char* CameraMoveSensitivity = "CameraMoveSensitivity";
@@ -121,6 +128,16 @@ void FEditorSettings::SaveToFile(const FString& Path) const
         SlotObj[Key::PointLightDebugScale] = Opts.ShowFlags.PointLightDebugScale;
         SlotObj[Key::SpotLightDebugScale] = Opts.ShowFlags.SpotLightDebugScale;
         SlotObj[Key::bFog] = Opts.ShowFlags.bFog;
+        SlotObj[Key::bVignetting] = Opts.ShowFlags.bVignetting;
+        SlotObj[Key::VignetteIntensity] = Opts.Vignetting.Intensity;
+        SlotObj[Key::VignetteRadius] = Opts.Vignetting.Radius;
+        SlotObj[Key::VignetteSoftness] = Opts.Vignetting.Softness;
+        SlotObj[Key::VignetteColor] = Array(
+            Opts.Vignetting.Color.X,
+            Opts.Vignetting.Color.Y,
+            Opts.Vignetting.Color.Z);
+        SlotObj[Key::bGammaCorrection] = Opts.ShowFlags.bGammaCorrection;
+        SlotObj[Key::DisplayGamma] = Opts.GammaCorrection.DisplayGamma;
         SlotObj[Key::GridSpacing] = Opts.GridSpacing;
         SlotObj[Key::GridHalfLineCount] = Opts.GridHalfLineCount;
         SlotObj[Key::CameraMoveSensitivity] = Opts.CameraMoveSensitivity;
@@ -300,6 +317,29 @@ void FEditorSettings::LoadFromFile(const FString& Path)
                 }
                 if (S.hasKey(Key::bFog))
                     Opts.ShowFlags.bFog = S[Key::bFog].ToBool();
+                if (S.hasKey(Key::bVignetting))
+                    Opts.ShowFlags.bVignetting = S[Key::bVignetting].ToBool();
+                if (S.hasKey(Key::VignetteIntensity))
+                    Opts.Vignetting.Intensity = static_cast<float>(S[Key::VignetteIntensity].ToFloat());
+                if (S.hasKey(Key::VignetteRadius))
+                    Opts.Vignetting.Radius = static_cast<float>(S[Key::VignetteRadius].ToFloat());
+                if (S.hasKey(Key::VignetteSoftness))
+                    Opts.Vignetting.Softness = static_cast<float>(S[Key::VignetteSoftness].ToFloat());
+                if (S.hasKey(Key::VignetteColor))
+                {
+                    JSON Color = S[Key::VignetteColor];
+                    if (Color.length() >= 3)
+                    {
+                        Opts.Vignetting.Color = FVector(
+                            static_cast<float>(Color[0].ToFloat()),
+                            static_cast<float>(Color[1].ToFloat()),
+                            static_cast<float>(Color[2].ToFloat()));
+                    }
+                }
+                if (S.hasKey(Key::bGammaCorrection))
+                    Opts.ShowFlags.bGammaCorrection = S[Key::bGammaCorrection].ToBool();
+                if (S.hasKey(Key::DisplayGamma))
+                    Opts.GammaCorrection.DisplayGamma = static_cast<float>(S[Key::DisplayGamma].ToFloat());
                 if (S.hasKey(Key::GridSpacing))
                     Opts.GridSpacing = static_cast<float>(S[Key::GridSpacing].ToFloat());
                 if (S.hasKey(Key::GridHalfLineCount))
