@@ -144,7 +144,7 @@ struct PS_Output_GBuffer
 {
     float4 BaseColor : SV_Target0;
     float4 Normal    : SV_Target1;
-    float4 GouraudL  : SV_Target2; // Per-vertex light for Gouraud shading
+    float4 Surface2  : SV_Target2;
 };
 
 #endif // VERTEX_LAYOUTS_HLSL

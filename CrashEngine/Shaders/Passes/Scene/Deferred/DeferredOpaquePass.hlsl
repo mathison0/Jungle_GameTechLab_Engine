@@ -16,11 +16,9 @@
 
 /*
     Available preprocessor defines:
-    - LIGHTING_MODEL_GOURAUD
     - LIGHTING_MODEL_LAMBERT
     - LIGHTING_MODEL_BLINNPHONG
     - LIGHTING_MODEL_UNLIT
-    - OUTPUT_GOURAUD_L
     - OUTPUT_NORMAL
     - OUTPUT_MATERIAL_PARAM
     - USE_NORMAL_MAP
@@ -58,10 +56,6 @@ FDeferred_Opaque_VSOutput VS_DeferredOpaque(VS_Input_PNCT_T Input)
     Output.worldTangent.w   = Input.tangent.w;
     Output.color            = Input.color;
     Output.texcoord         = Input.texcoord;
-
-    float3 WorldPos        = mul(float4(Input.position, 1.0f), Model).xyz;
-    float3 GouraudLighting = ComputeGouraudLightingColor(Output.worldNormal, WorldPos, Output.position);
-    Output.gouraud         = float4(GouraudLighting, 1.0f);
     return Output;
 }
 
@@ -69,11 +63,6 @@ float4 PS_Opaque_Unlit(FDeferred_Opaque_VSOutput Input) : SV_TARGET0
 {
     FSurfaceData Surface = BuildDeferredSurfaceData(Input);
     return EncodeBaseColor(float4(Surface.BaseColor, Surface.Opacity));
-}
-
-FGBufferOutput2 PS_Opaque_Gouraud(FDeferred_Opaque_VSOutput Input)
-{
-    return EncodeGBuffer_Gouraud(BuildDeferredSurfaceData(Input));
 }
 
 FGBufferOutput2 PS_Opaque_Lambert(FDeferred_Opaque_VSOutput Input)

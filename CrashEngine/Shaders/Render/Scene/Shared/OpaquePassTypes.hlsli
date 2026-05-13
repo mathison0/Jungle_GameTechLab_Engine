@@ -24,7 +24,6 @@ struct FDeferred_Opaque_VSOutput
     float4 worldTangent : TEXCOORD1;
     float4 color        : COLOR0;
     float2 texcoord     : TEXCOORD2;
-    float4 gouraud      : TEXCOORD3;
 };
 
 struct FForward_Opaque_VSOutput
@@ -35,7 +34,6 @@ struct FForward_Opaque_VSOutput
     float3 worldPos     : TEXCOORD2;
     float4 color        : COLOR0;
     float2 texcoord     : TEXCOORD3;
-    float4 gouraud      : TEXCOORD4;
 };
 
 struct FGBufferOutput2

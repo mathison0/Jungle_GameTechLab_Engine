@@ -48,11 +48,7 @@ float4 PS_UberLit(PS_Input_UV Input) : SV_TARGET0
     float4 BaseColor = ResolveBaseColor(UV);
     float4 FinalColor = BaseColor;
 
-#if defined(LIGHTING_MODEL_GOURAUD)
-    float4 GouraudLighting = ResolveSurface1(UV);
-    FinalColor = ComputeGouraudLighting(BaseColor, GouraudLighting);
-
-#elif defined(LIGHTING_MODEL_LAMBERT)
+#if defined(LIGHTING_MODEL_LAMBERT)
     float3 Normal = normalize(DecodeNormal(ResolveSurface1(UV)));
     float3 WorldPos = ReconstructWorldPositionFromSceneDepth(UV);
     FinalColor = ComputeDeferredLambertLighting(BaseColor, Normal, WorldPos, Input.position);

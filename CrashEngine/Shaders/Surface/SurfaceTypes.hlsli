@@ -13,8 +13,6 @@ struct FSurfaceData
     float  Specular;
     float  AmbientOcclusion;
     float  Padding;
-
-    float4 Gouraud;
 };
 
 #endif

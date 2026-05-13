@@ -13,8 +13,7 @@ struct FSkeletalUV1DebugVSOutput
     float4 worldTangent : TEXCOORD1;
     float4 color        : COLOR0;
     float2 texcoord     : TEXCOORD2;
-    float4 gouraud      : TEXCOORD3;
-    float2 texcoord1    : TEXCOORD4;
+    float2 texcoord1    : TEXCOORD3;
 };
 
 FSkeletalUV1DebugVSOutput VS(VS_Input_PNCT_T_UV1 Input)
@@ -34,7 +33,6 @@ FSkeletalUV1DebugVSOutput VS(VS_Input_PNCT_T_UV1 Input)
     Output.worldTangent = BaseOutput.worldTangent;
     Output.color = BaseOutput.color;
     Output.texcoord = BaseOutput.texcoord;
-    Output.gouraud = BaseOutput.gouraud;
     Output.texcoord1 = Input.texcoord1;
     return Output;
 }
@@ -47,7 +45,6 @@ FGBufferOutput3 PS(FSkeletalUV1DebugVSOutput Input)
     BaseInput.worldTangent = Input.worldTangent;
     BaseInput.color = Input.color;
     BaseInput.texcoord = Input.texcoord;
-    BaseInput.gouraud = Input.gouraud;
 
     FGBufferOutput3 Output = PS_Opaque_BlinnPhong(BaseInput);
 

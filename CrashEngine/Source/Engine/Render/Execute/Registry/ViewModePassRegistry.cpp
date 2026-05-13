@@ -135,11 +135,6 @@ FViewModePassDesc BuildViewModeDeferredOpaquePassDesc(EShadingModel ShadingModel
     // ---------- Shading Permutation ----------
     switch (ShadingModel)
     {
-    case EShadingModel::Gouraud:
-        Pass.ShaderVariant.PSEntry = "PS_Opaque_Gouraud";
-        ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_GOURAUD");
-        ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "OUTPUT_GOURAUD_L");
-        break;
     case EShadingModel::Lambert:
         Pass.ShaderVariant.PSEntry = "PS_Opaque_Lambert";
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_LAMBERT");
@@ -182,11 +177,6 @@ FViewModePassDesc BuildViewModeForwardOpaquePassDesc(EShadingModel ShadingModel)
 
     switch (ShadingModel)
     {
-    case EShadingModel::Gouraud:
-        Pass.ShaderVariant.PSEntry = "PS_Forward_Gouraud";
-        ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_GOURAUD");
-        ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "FORWARD_ENABLE_LIGHTING");
-        break;
     case EShadingModel::Lambert:
         Pass.ShaderVariant.PSEntry = "PS_Forward_Lambert";
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_LAMBERT");
@@ -227,10 +217,6 @@ FViewModePassDesc BuildViewModeDeferredDecalPassDesc(EShadingModel ShadingModel)
     // ---------- Decal Surface Writes ----------
     switch (ShadingModel)
     {
-    case EShadingModel::Gouraud:
-        Pass.ShaderVariant.PSEntry = "PS_Decal_Gouraud";
-        ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "DECAL_MODIFY_BASECOLOR");
-        break;
     case EShadingModel::Lambert:
     case EShadingModel::WorldNormal:
         Pass.ShaderVariant.PSEntry = "PS_Decal_Lambert";
@@ -269,9 +255,6 @@ FViewModePassDesc BuildViewModeDeferredLightingPassDesc(EShadingModel ShadingMod
     // ---------- Lighting Permutation ----------
     switch (ShadingModel)
     {
-    case EShadingModel::Gouraud:
-        ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_GOURAUD");
-        break;
     case EShadingModel::Lambert:
     case EShadingModel::WorldNormal:
         ViewModePassConfigUtils::AddDefine(Pass.ShaderVariant.Defines, "LIGHTING_MODEL_LAMBERT");
@@ -376,7 +359,6 @@ void InitializeViewModePassConfig(FViewModePassConfig& Config, EViewMode InViewM
         Config.PostProcessVariant    = EViewModePostProcessVariant::None;
         break;
 
-    case EViewMode::Lit_Gouraud:
     case EViewMode::Lit_Lambert:
     case EViewMode::Lit_Phong:
     default:
@@ -411,7 +393,6 @@ void FViewModePassRegistry::Initialize(ID3D11Device* Device)
     Configs.clear();
 
     const EViewMode Modes[] = {
-        EViewMode::Lit_Gouraud,
         EViewMode::Lit_Lambert,
         EViewMode::Lit_Phong,
         EViewMode::Unlit,

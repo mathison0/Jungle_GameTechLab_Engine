@@ -35,10 +35,6 @@ void BuildSurfaceSRVTable(const FRenderPipelineContext& Context, EShadingModel S
 
     switch (ShadingModel)
     {
-    case EShadingModel::Gouraud:
-        OutSurfaceSRVs[1] = Context.ViewMode.Surfaces->GetSRV(EViewModeSurfaceslot::Surface1);
-        break;
-
     case EShadingModel::Lambert:
         OutSurfaceSRVs[1] = Context.ViewMode.Surfaces->GetSRV(EViewModeSurfaceslot::Surface1);
         OutSurfaceSRVs[4] = Context.ViewMode.Surfaces->GetSRV(EViewModeSurfaceslot::ModifiedSurface1);
@@ -84,7 +80,6 @@ static bool SupportsLightCullStats(EViewMode ViewMode)
 {
     switch (ViewMode)
     {
-    case EViewMode::Lit_Gouraud:
     case EViewMode::Unlit:
     case EViewMode::WorldNormal:
     case EViewMode::Wireframe:

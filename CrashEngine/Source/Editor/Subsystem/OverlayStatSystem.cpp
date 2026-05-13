@@ -31,7 +31,6 @@ static bool UsesLightingPass(EViewMode ViewMode)
 {
     switch (ViewMode)
     {
-    case EViewMode::Lit_Gouraud:
     case EViewMode::Unlit:
     case EViewMode::WorldNormal:
     case EViewMode::Wireframe:

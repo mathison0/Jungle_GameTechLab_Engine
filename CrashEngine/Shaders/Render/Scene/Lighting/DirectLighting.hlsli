@@ -275,35 +275,6 @@ FLocalBlinnPhongTerm LocalLightBlinnPhongTerm(
     return Out;
 }
 
-float4 ComputeGouraudLighting(float4 BaseColor, float4 GouraudL)
-{
-    return ComputeGouraudLitColor(BaseColor, GouraudL);
-}
-
-float3 ComputeGouraudLightingColor(float3 Normal, float3 WorldPosition, float4 PixelPos)
-{
-    float3 N = normalize(Normal);
-    float3 TotalLight = GetAmbientLightColor();
-
-    for (int i = 0; i < NumDirectionalLights; ++i)
-    {
-        float3 L = normalize(Directional[i].Direction);
-        float Diffuse = saturate(dot(N, -L));
-        float Shadow = GetDirectionalShadow(i, WorldPosition, N, PixelPos);
-        TotalLight += Diffuse * Directional[i].Color * Directional[i].Intensity * Shadow;
-#if DEBUG_VISUALIZE_CSM
-        if (i == 0) return GetCascadeDebugColor(SelectCascadeIndex(WorldPosition, Directional[i].CascadeSplits, Directional[i].CascadeCount)).rgb;
-#endif
-    }
-
-    for (int j = 0; j < NumLocalLights; ++j)
-    {
-        TotalLight += LocalLightLambertTerm(g_LightBuffer[j], N, WorldPosition, PixelPos);
-    }
-
-    return saturate(TotalLight);
-}
-
 float4 ComputeLambertLighting(float4 BaseColor, float3 Normal, float3 WorldPosition, float4 PixelPos)
 {
     float3 N = normalize(Normal);

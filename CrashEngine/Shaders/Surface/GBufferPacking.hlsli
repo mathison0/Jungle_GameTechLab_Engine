@@ -5,14 +5,6 @@
 #include "SurfacePacking.hlsli"
 #include "../Render/Scene/Shared/OpaquePassTypes.hlsli"
 
-FGBufferOutput2 EncodeGBuffer_Gouraud(FSurfaceData Surface)
-{
-    FGBufferOutput2 Output;
-    Output.BaseColor = EncodeBaseColor(float4(Surface.BaseColor, Surface.Opacity));
-    Output.Surface1  = Surface.Gouraud;
-    return Output;
-}
-
 FGBufferOutput2 EncodeGBuffer_Lambert(FSurfaceData Surface)
 {
     FGBufferOutput2 Output;
@@ -41,7 +33,6 @@ FSurfaceData DecodeGBuffer(float4 BaseColor, float4 Surface1, float4 Surface2)
     Surface.Specular         = MaterialParam.y;
     Surface.Metallic         = MaterialParam.z;
     Surface.AmbientOcclusion = MaterialParam.w;
-    Surface.Gouraud          = Surface1;
     return Surface;
 }
 

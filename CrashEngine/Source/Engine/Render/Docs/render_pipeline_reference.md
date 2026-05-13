@@ -161,7 +161,6 @@
 
 | ViewMode | Deferred | Forward |
 |---|---|---|
-| `Lit_Gouraud` | `DeferredLitPipeline` | `ForwardLitPipeline` |
 | `Lit_Lambert` | `DeferredLitPipeline` | `ForwardLitPipeline` |
 | `Lit_Phong` | `DeferredLitPipeline` | `ForwardLitPipeline` |
 | `Unlit` | `DeferredUnlitPipeline` | `ForwardUnlitPipeline` |

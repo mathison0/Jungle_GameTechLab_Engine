@@ -527,7 +527,6 @@ Current high-level routing:
 
 | View mode | Deferred route | Forward route |
 |---|---|---|
-| `Lit_Gouraud` | `DeferredLitPipeline` | `ForwardLitPipeline` |
 | `Lit_Lambert` | `DeferredLitPipeline` | `ForwardLitPipeline` |
 | `Lit_Phong` | `DeferredLitPipeline` | `ForwardLitPipeline` |
 | `Unlit` | `DeferredUnlitPipeline` | `ForwardUnlitPipeline` |

@@ -175,6 +175,21 @@ void FEditorSettings::SaveToFile(const FString& Path) const
     }
 }
 
+namespace
+{
+EViewMode SanitizeLoadedViewMode(int32 RawViewMode)
+{
+    const int32 MinValue = static_cast<int32>(EViewMode::Unlit);
+    const int32 MaxValue = static_cast<int32>(EViewMode::WorldNormal);
+    if (RawViewMode >= MinValue && RawViewMode <= MaxValue)
+    {
+        return static_cast<EViewMode>(RawViewMode);
+    }
+
+    return EViewMode::Lit_Phong;
+}
+} // namespace
+
 void FEditorSettings::LoadFromFile(const FString& Path)
 {
     using namespace json;
@@ -253,7 +268,7 @@ void FEditorSettings::LoadFromFile(const FString& Path)
                 JSON S = SlotsArr[i];
                 FViewportRenderOptions& Opts = SlotOptions[i];
                 if (S.hasKey(Key::ViewMode))
-                    Opts.ViewMode = static_cast<EViewMode>(S[Key::ViewMode].ToInt());
+                    Opts.ViewMode = SanitizeLoadedViewMode(S[Key::ViewMode].ToInt());
                 if (S.hasKey(Key::ViewportType))
                     Opts.ViewportType = static_cast<ELevelViewportType>(S[Key::ViewportType].ToInt());
                 if (S.hasKey(Key::bPrimitives))

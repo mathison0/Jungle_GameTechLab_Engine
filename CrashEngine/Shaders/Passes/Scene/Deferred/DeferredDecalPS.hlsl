@@ -92,20 +92,6 @@ float4 PS(PS_Input_UV Input) : SV_TARGET0
     return PS_Decal_Unlit(Input);
 }
 
-float4 PS_Decal_Gouraud(PS_Input_UV Input) : SV_TARGET0
-{
-    float4 DecalSample;
-    float4 BaseColor;
-    float4 Surface1;
-    float4 Surface2;
-    if (!SampleDeferredDecalData(Input.uv, DecalSample, BaseColor, Surface1, Surface2))
-    {
-        discard;
-    }
-
-    return ApplyDecalBaseColor(BaseColor, DecalSample, DecalSample.a);
-}
-
 FDeferred_Decal_Output_ModifiedBaseColor_ModifiedSurface1 PS_Decal_Lambert(PS_Input_UV Input)
 {
     FDeferred_Decal_Output_ModifiedBaseColor_ModifiedSurface1 Output = (FDeferred_Decal_Output_ModifiedBaseColor_ModifiedSurface1)0;

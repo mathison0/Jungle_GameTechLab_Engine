@@ -8,8 +8,7 @@
 */
 enum class EShadingModel : uint8
 {
-    Gouraud = 0,
-    Lambert,
+    Lambert = 0,
     BlinnPhong,
     Unlit,
     WorldNormal,
@@ -35,7 +34,7 @@ inline EShadingModel GetShadingModelFromViewMode(EViewMode ViewMode)
     case EViewMode::WorldNormal:
         return EShadingModel::WorldNormal;
     default:
-        return EShadingModel::Gouraud;
+        return EShadingModel::BlinnPhong;
     }
 }
 
@@ -44,7 +43,7 @@ inline EShadingModel GetShadingModelFromViewMode(EViewMode ViewMode)
 */
 inline bool IsLitShadingModel(EShadingModel Model)
 {
-    return Model == EShadingModel::Gouraud || Model == EShadingModel::Lambert || Model == EShadingModel::BlinnPhong;
+    return Model == EShadingModel::Lambert || Model == EShadingModel::BlinnPhong;
 }
 
 /*
@@ -54,8 +53,6 @@ inline const char* GetShadingModelName(EShadingModel Model)
 {
     switch (Model)
     {
-    case EShadingModel::Gouraud:
-        return "Gouraud";
     case EShadingModel::Lambert:
         return "Lambert";
     case EShadingModel::BlinnPhong:

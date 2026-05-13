@@ -10,13 +10,12 @@
 
 enum class EViewMode : int32
 {
-    Lit_Gouraud = 0,
-    Unlit       = 1,
-    Wireframe   = 2,
-    SceneDepth  = 3,
-    Lit_Lambert = 4,
-    Lit_Phong   = 5,
-    WorldNormal = 6,
+    Unlit       = 0,
+    Wireframe   = 1,
+    SceneDepth  = 2,
+    Lit_Lambert = 3,
+    Lit_Phong   = 4,
+    WorldNormal = 5,
     Lit         = Lit_Phong,
     Count
 };

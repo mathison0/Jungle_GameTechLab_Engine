@@ -15,7 +15,6 @@ struct FReflectedTextureBindingDebugVSOutput
     float4 worldTangent : TEXCOORD1;
     float4 color        : COLOR0;
     float2 texcoord     : TEXCOORD2;
-    float4 gouraud      : TEXCOORD3;
 };
 
 FReflectedTextureBindingDebugVSOutput VS(VS_Input_PNCT_T Input)
@@ -28,7 +27,6 @@ FReflectedTextureBindingDebugVSOutput VS(VS_Input_PNCT_T Input)
     Output.worldTangent = BaseOutput.worldTangent;
     Output.color = BaseOutput.color;
     Output.texcoord = BaseOutput.texcoord;
-    Output.gouraud = BaseOutput.gouraud;
     return Output;
 }
 
@@ -40,7 +38,6 @@ FGBufferOutput3 PS(FReflectedTextureBindingDebugVSOutput Input)
     BaseInput.worldTangent = Input.worldTangent;
     BaseInput.color = Input.color;
     BaseInput.texcoord = Input.texcoord;
-    BaseInput.gouraud = Input.gouraud;
 
     FGBufferOutput3 Output = PS_Opaque_BlinnPhong(BaseInput);
 

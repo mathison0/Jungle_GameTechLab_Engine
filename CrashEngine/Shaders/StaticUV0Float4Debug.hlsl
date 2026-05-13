@@ -22,8 +22,7 @@ struct FStaticUV0Float4DebugVSOutput
     float4 worldTangent : TEXCOORD1;
     float4 color        : COLOR0;
     float2 texcoord     : TEXCOORD2;
-    float4 gouraud      : TEXCOORD3;
-    float4 texcoord4    : TEXCOORD4;
+    float4 texcoord4    : TEXCOORD3;
 };
 
 FStaticUV0Float4DebugVSOutput VS(FStaticUV0Float4DebugVSInput Input)
@@ -43,7 +42,6 @@ FStaticUV0Float4DebugVSOutput VS(FStaticUV0Float4DebugVSInput Input)
     Output.worldTangent = BaseOutput.worldTangent;
     Output.color = BaseOutput.color;
     Output.texcoord = BaseOutput.texcoord;
-    Output.gouraud = BaseOutput.gouraud;
     Output.texcoord4 = Input.texcoord;
     return Output;
 }
@@ -56,7 +54,6 @@ FGBufferOutput3 PS(FStaticUV0Float4DebugVSOutput Input)
     BaseInput.worldTangent = Input.worldTangent;
     BaseInput.color = Input.color;
     BaseInput.texcoord = Input.texcoord;
-    BaseInput.gouraud = Input.gouraud;
 
     FGBufferOutput3 Output = PS_Opaque_BlinnPhong(BaseInput);
 

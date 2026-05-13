@@ -42,7 +42,6 @@ FSurfaceData BuildStaticMeshSurfaceData(
     float2 UV,
     float3 WorldNormal,
     float4 WorldTangent,
-    float4 Gouraud,
     Texture2D BaseColorTexture,
     Texture2D NormalMap,
     Texture2D SpecularMap)
@@ -58,7 +57,6 @@ FSurfaceData BuildStaticMeshSurfaceData(
     Surface.Specular = MaterialInfo.y;
     Surface.Metallic = 0.0f;
     Surface.AmbientOcclusion = 1.0f;
-    Surface.Gouraud = Gouraud;
     return Surface;
 }
 
@@ -72,7 +70,6 @@ FSurfaceData BuildStaticMeshSurfaceData(
         Input.texcoord,
         Input.worldNormal,
         Input.worldTangent,
-        Input.gouraud,
         BaseColorTexture,
         NormalMap,
         SpecularMap);
@@ -88,7 +85,6 @@ FSurfaceData BuildStaticMeshSurfaceData(
         Input.texcoord,
         Input.worldNormal,
         Input.worldTangent,
-        Input.gouraud,
         BaseColorTexture,
         NormalMap,
         SpecularMap);

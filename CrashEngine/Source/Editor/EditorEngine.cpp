@@ -52,7 +52,6 @@ void PreloadDefaultObjAssets(ID3D11Device* Device)
 void WarmUpEditorViewModeShaders(FRenderer& Renderer)
 {
     const EViewMode ViewModesToWarmUp[] = {
-        EViewMode::Lit_Gouraud,
         EViewMode::Lit_Lambert,
         EViewMode::Lit_Phong,
         EViewMode::Unlit,

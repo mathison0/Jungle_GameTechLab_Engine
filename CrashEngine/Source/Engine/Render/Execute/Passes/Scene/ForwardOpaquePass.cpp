@@ -26,13 +26,10 @@ void FForwardOpaquePass::PrepareInputs(FRenderPipelineContext& Context)
 
     if (bUsesLighting && Context.Resources)
     {
-        // Bind Light Resources to both VS and PS (Forward VS uses them for Gouraud)
         ID3D11Buffer* GlobalLightBuffer = Context.Resources->GlobalLightBuffer.GetBuffer();
-        Context.Context->VSSetConstantBuffers(ECBSlot::Light, 1, &GlobalLightBuffer);
         Context.Context->PSSetConstantBuffers(ECBSlot::Light, 1, &GlobalLightBuffer);
 
         ID3D11ShaderResourceView* LocalLightsSRV = Context.Resources->LocalLightSRV;
-        Context.Context->VSSetShaderResources(ESystemTexSlot::LocalLights, 1, &LocalLightsSRV);
         Context.Context->PSSetShaderResources(ESystemTexSlot::LocalLights, 1, &LocalLightsSRV);
     }
 
@@ -44,10 +41,8 @@ void FForwardOpaquePass::PrepareInputs(FRenderPipelineContext& Context)
             for (uint32 i = 0; i < ESystemTexSlot::MaxShadowAtlasPages; ++i)
             {
                 ID3D11ShaderResourceView* ShadowSRV = ShadowPass->GetShadowAtlasSRV(i);
-                Context.Context->VSSetShaderResources(ESystemTexSlot::ShadowAtlasBase + i, 1, &ShadowSRV);
                 Context.Context->PSSetShaderResources(ESystemTexSlot::ShadowAtlasBase + i, 1, &ShadowSRV);
                 ID3D11ShaderResourceView* ShadowMomentSRV = ShadowPass->GetShadowMomentSRV(i);
-                Context.Context->VSSetShaderResources(ESystemTexSlot::ShadowMomentAtlasBase + i, 1, &ShadowMomentSRV);
                 Context.Context->PSSetShaderResources(ESystemTexSlot::ShadowMomentAtlasBase + i, 1, &ShadowMomentSRV);
             }
         }

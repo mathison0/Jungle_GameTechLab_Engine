@@ -21,7 +21,6 @@
     - Main bindings: b0 Frame, b1 PerObject, b2 StaticMeshMaterial, b4 GlobalLight,
       t0 BaseColor, t1 Normal, t2 Specular, t6 LocalLights
     - Available preprocessor defines:
-      - LIGHTING_MODEL_GOURAUD
       - LIGHTING_MODEL_LAMBERT
       - LIGHTING_MODEL_BLINNPHONG
       - LIGHTING_MODEL_WORLDNORMAL
@@ -79,7 +78,6 @@ FForward_Opaque_VSOutput VS_ForwardOpaque(VS_Input_PNCT_T Input)
     Output.worldTangent.w   = Input.tangent.w;
     Output.color            = Input.color;
     Output.texcoord         = Input.texcoord;
-    Output.gouraud          = float4(ComputeGouraudLightingColor(Output.worldNormal, Output.worldPos, Output.position), 1.0f);
     return Output;
 }
 
@@ -150,17 +148,6 @@ FSurfaceData BuildForwardSurfaceData(FForward_Opaque_VSOutput Input)
     ApplyForwardDecal(Surface, Input.worldPos);
     return Surface;
 }
-
-#if defined(LIGHTING_MODEL_GOURAUD)
-FSceneColorOutput PS_Forward_Gouraud(FForward_Opaque_VSOutput Input)
-{
-    FSurfaceData Surface = BuildForwardSurfaceData(Input);
-    FSceneColorOutput Output;
-    float4 BaseColor = float4(Surface.BaseColor, Surface.Opacity);
-    Output.SceneColor = ComputeGouraudLighting(BaseColor, Surface.Gouraud);
-    return Output;
-}
-#endif
 
 #if defined(LIGHTING_MODEL_UNLIT)
 FSceneColorOutput PS_Forward_Unlit(FForward_Opaque_VSOutput Input)

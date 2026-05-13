@@ -110,7 +110,7 @@ EditorRootPipeline
 선택된 렌더 경로 내부에서는 현재 `ViewMode`에 맞는 하위 파이프라인 하나만 활성화된다.  
 활성화 규칙은 아래와 같다. 접두어 `*_`는 Forward 혹은 Deferred를 의미한다.
 
-- `*_LitPipeline`: `Lit_Gouraud`, `Lit_Lambert`, `Lit_Phong`
+- `*_LitPipeline`: `Lit_Lambert`, `Lit_Phong`
 - `*_UnlitPipeline`: `Unlit`, `Wireframe`
 - `*_WorldNormalPipeline`: `WorldNormal`
 - `*_SceneDepthPipeline`: `SceneDepth`

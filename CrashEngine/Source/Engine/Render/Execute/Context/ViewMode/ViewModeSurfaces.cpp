@@ -78,7 +78,7 @@ void FViewModeSurfaces::BindOpaqueTargets(ID3D11DeviceContext* Ctx, EShadingMode
     };
     uint32 TargetCount = 1;
 
-    if (Model == EShadingModel::Gouraud || Model == EShadingModel::Lambert || Model == EShadingModel::BlinnPhong || Model == EShadingModel::WorldNormal)
+    if (Model == EShadingModel::Lambert || Model == EShadingModel::BlinnPhong || Model == EShadingModel::WorldNormal)
     {
         Targets[1]  = GetRTV(EViewModeSurfaceslot::Surface1);
         TargetCount = 2;

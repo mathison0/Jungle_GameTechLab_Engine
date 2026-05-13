@@ -23,9 +23,4 @@ float4 ComputeUnlitLighting(float4 BaseColor)
     return BaseColor;
 }
 
-float4 ComputeGouraudLitColor(float4 BaseColor, float4 GouraudLighting)
-{
-    return float4(BaseColor.rgb * GouraudLighting.rgb, BaseColor.a);
-}
-
 #endif
