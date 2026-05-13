@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Viewport/IAssetViewer.h"
 #include "Core/RayTypes.h"
 #include "Preview/PreviewSceneContext.h"
 #include "UI/EditorSkeletalMeshViewerPanel.h"
@@ -6,6 +7,10 @@
 #include "Viewport/PreviewViewportClient.h"
 #include "Render/Execute/Context/Scene/ViewTypes.h"
 #include <d3d11.h>
+
+class AActor;
+class UGizmoComponent;
+class USkeletalMeshComponent;
 
 struct FSkeletalMeshViewerState
 {
@@ -29,7 +34,7 @@ struct FSkeletalMeshViewerState
 	}
 };
 
-class FSkeletalMeshViewer 
+class FSkeletalMeshViewer : public IAssetViewer
 {
 public:
     void Initialize(
@@ -38,10 +43,17 @@ public:
         ID3D11Device* InDevice,
         USkeletalMesh* InSkeletalMesh);
 
-    void Release();
-    void Tick(float DeltaTime);
-    void Render(float DeltaTime);
-    void RenderBoneDebugLines();
+    void Release() override;
+    void Tick(float DeltaTime) override;
+    void Render(float DeltaTime) override;
+
+    bool IsOpen() const override { return bOpen; }
+    void SetOpen(bool bInOpen) override { bOpen = bInOpen; }
+
+    uint32 GetViewerId() const override { return ViewerID; }
+    EAssetViewerType GetViewerType() const override { return EAssetViewerType::SkeletalMesh; }
+    bool GetViewportRect(FRect& OutRect) const override { return ViewportClient.GetViewportRect(OutRect); }
+    FViewportClient* GetViewportClient() override { return &ViewportClient; }
 
 	USkeletalMesh* GetSkeletalMesh();
     void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
@@ -59,12 +71,10 @@ public:
 
     FSkeletalMeshViewerState& GetState() { return ViewerState; }
     FPreviewSceneContext& GetPreviewScene() { return ViewerScene; };
-    FPreviewViewportClient& GetViewportClient() { return ViewportClient; };
-
-    uint32 GetEditorId() const { return ViewerID; }
-    bool IsOpen() const { return bOpen; }
-    void SetOpen(bool bInOpen) { bOpen = bInOpen; }
-
+    FPreviewViewportClient& GetPreviewViewportClient() { return ViewportClient; }
+    USkeletalMeshComponent* GetPreviewMeshComponent() const { return PreviewMeshComponent; }
+    AActor* GetBoneGizmoTargetActor() const { return BoneGizmoTargetActor; }
+    UGizmoComponent* GetBoneGizmo() const { return BoneGizmo; }
 private:
 	//외부 Manager에서 확인하기위한 index
     uint32 ViewerID = 0;
@@ -74,4 +84,9 @@ private:
 
 	FPreviewViewportClient ViewportClient;
     FPreviewSceneContext ViewerScene;
+    USkeletalMeshComponent* PreviewMeshComponent = nullptr;
+    AActor* BoneGizmoTargetActor = nullptr;
+    UGizmoComponent* BoneGizmo = nullptr;
+
+    // IAssetViewer을(를) 통해 상속됨
 };

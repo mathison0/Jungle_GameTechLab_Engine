@@ -6,6 +6,7 @@
 #include "Editor/EditorEngine.h"
 #include "Editor/UI/EditorCameraShakePanel.h"
 #include "Editor/Viewport/LevelEditorViewportClient.h"
+#include "Mesh/SkeletalMeshManager.h"
 #include "Platform/PlatformProcess.h"
 #include "Platform/Paths.h"
 #include "Serialization/SceneSaveManager.h"

@@ -127,9 +127,9 @@ void FPreviewViewportClient::SyncBoneGizmoToSelection()
         return;
     }
 
-    UGizmoComponent* Gizmo = PreviewContext->GetBoneGizmo();
-    AActor* TargetActor = PreviewContext->GetBoneGizmoTargetActor();
-    USkeletalMeshComponent* MeshComp = PreviewContext->GetPreviewMeshComponent();
+    UGizmoComponent* Gizmo = OwnerViewer ? OwnerViewer->GetBoneGizmo() : nullptr;
+    AActor* TargetActor = OwnerViewer ? OwnerViewer->GetBoneGizmoTargetActor() : nullptr;
+    USkeletalMeshComponent* MeshComp = OwnerViewer ? OwnerViewer->GetPreviewMeshComponent() : nullptr;
     if (!Gizmo || !TargetActor || !MeshComp)
     {
         return;
@@ -178,8 +178,8 @@ void FPreviewViewportClient::ApplyBoneGizmoToSelection()
         return;
     }
 
-    AActor* TargetActor = PreviewContext->GetBoneGizmoTargetActor();
-    USkeletalMeshComponent* MeshComp = PreviewContext->GetPreviewMeshComponent();
+    AActor* TargetActor = OwnerViewer->GetBoneGizmoTargetActor();
+    USkeletalMeshComponent* MeshComp = OwnerViewer->GetPreviewMeshComponent();
     if (!TargetActor || !MeshComp)
     {
         return;
@@ -206,7 +206,7 @@ void FPreviewViewportClient::ApplyBoneGizmoToSelection()
     const FBoneInfo* BoneInfo = MeshComp->GetBoneInfo(BoneIndex);
     const int32 ParentIndex = BoneInfo ? BoneInfo->ParentIndex : -1;
 
-    UGizmoComponent* Gizmo = PreviewContext->GetBoneGizmo();
+    UGizmoComponent* Gizmo = OwnerViewer->GetBoneGizmo();
     const EGizmoMode GizmoMode = Gizmo ? Gizmo->GetMode() : EGizmoMode::Translate;
 
     if (GizmoMode == EGizmoMode::Translate)
@@ -377,7 +377,7 @@ UCameraComponent* FPreviewViewportClient::GetCamera() const
 
 UGizmoComponent* FPreviewViewportClient::GetGizmo()
 {
-    return PreviewContext ? PreviewContext->GetBoneGizmo() : nullptr;
+    return OwnerViewer ? OwnerViewer->GetBoneGizmo() : nullptr;
 }
 
 UWorld* FPreviewViewportClient::GetWorld() const

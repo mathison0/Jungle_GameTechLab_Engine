@@ -12,7 +12,7 @@ void FAssetViewerManager::Initialize(UEditorEngine* InEditorEngine, ID3D11Device
 
 void FAssetViewerManager::Release()
 {
-    for (std::unique_ptr<FSkeletalMeshViewer>& Viewer : Viewers)
+    for (std::unique_ptr<IAssetViewer>& Viewer : Viewers)
     {
         if (Viewer)
         {
@@ -28,7 +28,7 @@ void FAssetViewerManager::Release()
 void FAssetViewerManager::Tick(float DeltaTime)
 {
     if (Viewers.empty()) return;
-    for (std::unique_ptr<FSkeletalMeshViewer>& Viewer : Viewers)
+    for (std::unique_ptr<IAssetViewer>& Viewer : Viewers)
     {
         if (Viewer && Viewer->IsOpen())
         {
@@ -41,7 +41,7 @@ void FAssetViewerManager::Render(float DeltaTime)
 {
     for (auto It = Viewers.begin(); It != Viewers.end();)
     {
-        FSkeletalMeshViewer* Viewer = It->get();
+        IAssetViewer* Viewer = It->get();
         if (!Viewer)
         {
             It = Viewers.erase(It);
@@ -63,7 +63,7 @@ void FAssetViewerManager::Render(float DeltaTime)
 FSkeletalMeshViewer* FAssetViewerManager::OpenSkeletalMeshEditor(USkeletalMesh* Mesh)
 {
 	//이미 존재하는지 확인
-    if (FSkeletalMeshViewer* Existing = FindSkeletalMeshEditor(Mesh))
+    if (FSkeletalMeshViewer* Existing = FindSkeletalMeshEditor())
     {
         Existing->SetSkeletalMesh(Mesh);
         return Existing;
@@ -78,26 +78,29 @@ FSkeletalMeshViewer* FAssetViewerManager::OpenSkeletalMeshEditor(USkeletalMesh* 
     return RawEditor;
 }
 
-FSkeletalMeshViewer* FAssetViewerManager::FindSkeletalMeshEditor(USkeletalMesh* Mesh)
+FSkeletalMeshViewer* FAssetViewerManager::FindSkeletalMeshEditor()
 {
-    if (Viewers.empty()) return nullptr;
-
-    for (auto It = Viewers.begin(); It != Viewers.end(); It++)
+    for (const std::unique_ptr<IAssetViewer>& Viewer : Viewers)
     {
-        FSkeletalMeshViewer* Viewer = It->get(); 
-		return Viewer;
+        if (!Viewer || Viewer->GetViewerType() != EAssetViewerType::SkeletalMesh)
+        {
+            continue;
+        }
+
+        FSkeletalMeshViewer* SkeletalViewer = static_cast<FSkeletalMeshViewer*>(Viewer.get());
+        return SkeletalViewer;
     }
 	return nullptr;
 }
 
-void FAssetViewerManager::ForEachOpenViewer(const std::function<void(FSkeletalMeshViewer&)>& Visitor)
+void FAssetViewerManager::ForEachOpenViewer(const std::function<void(IAssetViewer&)>& Visitor)
 {
     if (!Visitor)
     {
         return;
     }
 
-    for (std::unique_ptr<FSkeletalMeshViewer>& Viewer : Viewers)
+    for (std::unique_ptr<IAssetViewer>& Viewer : Viewers)
     {
         if (Viewer && Viewer->IsOpen())
         {
@@ -110,7 +113,7 @@ bool FAssetViewerManager::IsMouseOverViewport() const
 {
     const ImVec2 MousePos = ImGui::GetIO().MousePos;
 
-    for (const std::unique_ptr<FSkeletalMeshViewer>& Viewer : Viewers)
+    for (const std::unique_ptr<IAssetViewer>& Viewer : Viewers)
     {
         if (!Viewer || !Viewer->IsOpen())
         {
@@ -118,12 +121,7 @@ bool FAssetViewerManager::IsMouseOverViewport() const
         }
 
         FRect Rect{};
-        if (!Viewer->GetViewportClient().GetViewportRect(Rect))
-        {
-            continue;
-        }
-
-        if (Rect.Width <= 0.0f || Rect.Height <= 0.0f)
+        if (!Viewer->GetViewportRect(Rect))
         {
             continue;
         }

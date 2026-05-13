@@ -219,9 +219,12 @@ void UEditorEngine::Tick(float DeltaTime)
         AllViewportClients.push_back(GameViewportClient);
     }
     AssetViewerManager.ForEachOpenViewer(
-        [&AllViewportClients](FSkeletalMeshViewer& Viewer)
+        [&AllViewportClients](IAssetViewer& Viewer)
         {
-            AllViewportClients.push_back(&Viewer.GetViewportClient());
+            if (FViewportClient* Client = Viewer.GetViewportClient())
+            {
+                AllViewportClients.push_back(Client);
+            }
         });
 
     for (FViewportClient* VC : AllViewportClients)
@@ -861,20 +864,21 @@ void UEditorEngine::RegisterViewportInputTargets()
     }
 
     AssetViewerManager.ForEachOpenViewer(
-        [this](FSkeletalMeshViewer& Viewer)
+        [this](IAssetViewer& Viewer)
         {
-            FPreviewViewportClient& PreviewClient = Viewer.GetViewportClient();
-            if (!PreviewClient.GetViewport())
+            FViewportClient* Client = Viewer.GetViewportClient();
+            if (!Client || !Client->GetViewport())
             {
                 return;
             }
 
+            IAssetViewer* ViewerPtr = &Viewer;
             ViewportInputRouter.RegisterTarget(
-                PreviewClient.GetViewport(),
-                &PreviewClient,
-                [&PreviewClient](FRect& OutRect)
+                Client->GetViewport(),
+                Client,
+                [ViewerPtr](FRect& OutRect)
                 {
-                    return PreviewClient.GetViewportRect(OutRect);
+                    return ViewerPtr->GetViewportRect(OutRect);
                 },
                 true);
         });

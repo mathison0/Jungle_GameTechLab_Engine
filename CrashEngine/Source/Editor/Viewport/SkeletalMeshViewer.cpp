@@ -62,7 +62,12 @@ void FSkeletalMeshViewer::Initialize(uint32 InEditorId, UEditorEngine* InEditorE
 	ViewerID = InEditorId;
     ViewerState.reset();
 
-    ViewerScene.Initialize(InEditorEngine);
+    ViewerScene.Initialize(
+        InEditorEngine,
+        FName("SkeletalMeshPreview_" + std::to_string(InEditorId)));
+    PreviewMeshComponent = ViewerScene.CreateSkeletalMeshPreview();
+    BoneGizmo = ViewerScene.CreateBoneGizmo(BoneGizmoTargetActor);
+
     ViewerPanel.Initialize(InEditorEngine, this);
     SetSkeletalMesh(InSkeletalMesh);
 	
@@ -75,6 +80,9 @@ void FSkeletalMeshViewer::Release()
     ViewerPanel.Release();
 	ViewportClient.Release();
 	ViewerScene.Release();
+    PreviewMeshComponent = nullptr;
+    BoneGizmoTargetActor = nullptr;
+    BoneGizmo = nullptr;
 }
 void FSkeletalMeshViewer::Tick(float DeltaTime) 
 {
@@ -96,10 +104,10 @@ void FSkeletalMeshViewer::SetSkeletalMesh(USkeletalMesh* InSkeletalMesh)
     ViewerState.ActiveMesh = InSkeletalMesh;
     ViewerState.SelectedBoneIndex = -1;
 
-    ViewerScene.SetSkeletalMesh(InSkeletalMesh);
-    if (USkeletalMeshComponent* MeshComp = ViewerScene.GetPreviewMeshComponent())
+    if (PreviewMeshComponent)
     {
-        MeshComp->ResetToReferencePose();
+        PreviewMeshComponent->SetSkeletalMesh(InSkeletalMesh);
+        PreviewMeshComponent->ResetToReferencePose();
     }
 
     BuildBoneHierarchy();
@@ -181,7 +189,7 @@ bool FSkeletalMeshViewer::RaycastBonePicking(const FRay& Ray, int32& BestBoneInd
 {
     BestBoneIndex = -1;
 
-    USkeletalMeshComponent* MeshComp = ViewerScene.GetPreviewMeshComponent();
+    USkeletalMeshComponent* MeshComp = PreviewMeshComponent;
     if (!MeshComp)
         return false;
 

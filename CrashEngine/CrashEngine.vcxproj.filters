@@ -1545,6 +1545,7 @@
     <ClCompile Include="Source\Engine\GameFramework\SkeletalMeshActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Viewport\IAssetViewer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2843,6 +2844,7 @@
     <ClInclude Include="Source\Engine\GameFramework\SkeletalMeshActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\IAssetViewer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CrashEngine.rc" />

@@ -72,7 +72,7 @@ void FEditorSkeletalMeshViewerPanel::Render(float DeltaTime)
     if (!Owner) return;
 
     bool bOpen = Owner->IsOpen();
-    const std::string WindowName = "SkeletalMesh Viewer##" + std::to_string(Owner->GetEditorId());
+    const std::string WindowName = "SkeletalMesh Viewer##" + std::to_string(Owner->GetViewerId());
     if (!ImGui::Begin(WindowName.c_str(), &bOpen))
     {
         Owner->SetOpen(bOpen);
@@ -176,7 +176,7 @@ void FEditorSkeletalMeshViewerPanel::RenderToolbar()
 
 	ImGui::TextUnformatted("Gizmo");
     ImGui::SameLine();
-    if (UGizmoComponent* Gizmo = Owner->GetPreviewScene().GetBoneGizmo())
+    if (UGizmoComponent* Gizmo = Owner->GetBoneGizmo())
     {
         const EGizmoMode Mode = Gizmo->GetMode();
         if (ImGui::Button(Mode == EGizmoMode::Translate ? "[Move]" : "Move"))
@@ -283,7 +283,7 @@ void FEditorSkeletalMeshViewerPanel::SetSkelMesh()
 
 USkeletalMeshComponent* FEditorSkeletalMeshViewerPanel::GetPreviewMeshComponent()
 {
-    return Owner ? Owner->GetPreviewScene().GetPreviewMeshComponent() : nullptr;
+    return Owner ? Owner->GetPreviewMeshComponent() : nullptr;
 }
 
 bool FEditorSkeletalMeshViewerPanel::GetCachedBoneLocalTransform(int32 BoneIndex, FTransform& OutTransform)
@@ -450,7 +450,7 @@ void FEditorSkeletalMeshViewerPanel::RenderPreviewViewport(float DeltaTime)
         return;
     }
 
-    auto& VC = Owner->GetViewportClient();
+    auto& VC = Owner->GetPreviewViewportClient();
 
     ImVec2 Pos = ImGui::GetCursorScreenPos();
     ImVec2 Size = ImGui::GetContentRegionAvail();

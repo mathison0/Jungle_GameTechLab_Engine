@@ -25,9 +25,12 @@ public:
     void Render(float DeltaTime);
 
     FSkeletalMeshViewer* OpenSkeletalMeshEditor(USkeletalMesh* Mesh);
-    FSkeletalMeshViewer* FindSkeletalMeshEditor(USkeletalMesh* Mesh);
-	//외부에서 viewer에게 전달
-    void ForEachOpenViewer(const std::function<void(FSkeletalMeshViewer&)>& Visitor);
+    FSkeletalMeshViewer* FindSkeletalMeshEditor();
+    //FMaterialViewer* OpenMaterialViewer(UMaterial* Material);
+    //FAnimationViewer* OpenAnimationViewer(USkeletalMesh* Mesh, UAnimationSequence* Animation);
+
+    void ForEachOpenViewer(const std::function<void(IAssetViewer&)>& Visitor);
+
     bool IsMouseOverViewport() const;
 
 private:
@@ -35,5 +38,5 @@ private:
     ID3D11Device* Device = nullptr;
     uint32 NextViewerId = 1;
 
-    TArray<std::unique_ptr<FSkeletalMeshViewer>> Viewers;
+    TArray<std::unique_ptr<IAssetViewer>> Viewers;
 };
