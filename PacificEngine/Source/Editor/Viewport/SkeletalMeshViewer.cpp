@@ -142,7 +142,7 @@ void FSkeletalMeshViewer::FocusCameraOnPreviewMesh()
 
     // Preview 공간에서는 asset 원본 vertex offset보다 화면 기준 중심 정렬이 더 중요하다.
     // 먼저 원점 배치로 bounds를 구한 뒤, bounds center가 원점에 오도록 preview mesh만 보정한다.
-    PreviewMeshComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+    //PreviewMeshComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
     PreviewMeshComponent->UpdateWorldMatrix();
 
     const FBoundingBox InitialBounds = PreviewMeshComponent->GetWorldBoundingBox();
