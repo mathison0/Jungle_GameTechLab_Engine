@@ -66,8 +66,18 @@ struct FSkeletalSubMesh
         {
             SourceModel.AddSource(ERuntimeVertexSemanticSource::UV1, "TEXCOORD", 1, 2);
         }
-        SourceModel.AddSource(ERuntimeVertexSemanticSource::BoneIndices, "BLENDINDICES", 0, 8, ERuntimeVertexScalarType::UInt16);
-        SourceModel.AddSource(ERuntimeVertexSemanticSource::BoneWeights, "BLENDWEIGHT", 0, 8, ERuntimeVertexScalarType::Float32);
+        SourceModel.AddSource(
+            ERuntimeVertexSemanticSource::BoneIndices,
+            "BLENDINDICES",
+            0,
+            SkeletalMeshLimits::MaxBone,
+            ERuntimeVertexScalarType::UInt16);
+        SourceModel.AddSource(
+            ERuntimeVertexSemanticSource::BoneWeights,
+            "BLENDWEIGHT",
+            0,
+            SkeletalMeshLimits::MaxBone,
+            ERuntimeVertexScalarType::Float32);
         return SourceModel;
     }
 

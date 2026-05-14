@@ -751,7 +751,7 @@ void USkinnedMeshComponent::UpdateSkinnedVertices()
             FVector SkinnedTangent(0, 0, 0);
             float TotalWeight = 0.0f;
 
-            for (int32 Inf = 0; Inf < 8; ++Inf)
+            for (int32 Inf = 0; Inf < SkeletalMeshLimits::MaxBone; ++Inf)
             {
                 const float Weight = Src.BoneWeights[Inf];
                 if (Weight <= 0.0f)

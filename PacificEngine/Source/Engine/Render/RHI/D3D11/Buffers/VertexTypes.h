@@ -14,6 +14,11 @@
 #include "Math/Vector.h"
 #include <cassert>
 
+namespace SkeletalMeshLimits
+{
+inline constexpr int32 MaxBone = 8;
+}
+
 // FVertex는 렌더 처리에 필요한 데이터를 묶는 구조체입니다.
 struct FVertex
 {
@@ -81,8 +86,8 @@ struct FVertexSkinned
     FVector4 Color;
     FVector2 UV;
     FVector4 Tangent;
-    uint16   BoneIndices[8] = {0,0,0,0,0,0,0,0};
-    float    BoneWeights[8] = {0,0,0,0,0,0,0,0};
+    uint16   BoneIndices[SkeletalMeshLimits::MaxBone] = {};
+    float    BoneWeights[SkeletalMeshLimits::MaxBone] = {};
 };
 
 struct FVertexSemantic

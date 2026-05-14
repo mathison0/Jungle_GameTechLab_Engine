@@ -1717,10 +1717,22 @@ void FFBXImporter::ApplyWeightsToSkeleton(FSkeletalSubMesh* InMesh)
     {
         auto& Weighting = BoneWeighting[i];
         std::ranges::sort(Weighting, [](const FBoneWeighting& A, const FBoneWeighting& B){ return A.second > B.second; });
-        for (int b = 0; b < std::min(8, (int)Weighting.size()); b++)
+
+        std::fill_n(InMesh->Vertices[i].BoneIndices, SkeletalMeshLimits::MaxBone, static_cast<uint16>(0));
+        std::fill_n(InMesh->Vertices[i].BoneWeights, SkeletalMeshLimits::MaxBone, 0.0f);
+
+        float TotalWeight = 0.0f;
+        const int32 InfluenceCount = std::min(SkeletalMeshLimits::MaxBone, static_cast<int32>(Weighting.size()));
+        for (int32 b = 0; b < InfluenceCount; ++b)
+        {
+            TotalWeight += Weighting[b].second;
+        }
+
+        const float InvTotalWeight = TotalWeight > 0.0f ? (1.0f / TotalWeight) : 0.0f;
+        for (int32 b = 0; b < InfluenceCount; ++b)
         {
             InMesh->Vertices[i].BoneIndices[b] = Weighting[b].first;
-            InMesh->Vertices[i].BoneWeights[b] = Weighting[b].second;
+            InMesh->Vertices[i].BoneWeights[b] = Weighting[b].second * InvTotalWeight;  // Normalize weights
         }
     }
 }

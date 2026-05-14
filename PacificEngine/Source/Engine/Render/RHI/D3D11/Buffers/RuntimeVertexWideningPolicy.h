@@ -146,7 +146,7 @@ inline bool BuildCanonicalRuntimeVertexSourceDesc(
     if (SemanticName == "BLENDINDICES" && SemanticIndex == 0)
     {
         OutSourceDesc.Source = ERuntimeVertexSemanticSource::BoneIndices;
-        OutSourceDesc.ComponentCount = 8;
+        OutSourceDesc.ComponentCount = SkeletalMeshLimits::MaxBone;
         OutSourceDesc.ScalarType = ERuntimeVertexScalarType::UInt16;
         return true;
     }
@@ -154,7 +154,7 @@ inline bool BuildCanonicalRuntimeVertexSourceDesc(
     if (SemanticName == "BLENDWEIGHT" && SemanticIndex == 0)
     {
         OutSourceDesc.Source = ERuntimeVertexSemanticSource::BoneWeights;
-        OutSourceDesc.ComponentCount = 8;
+        OutSourceDesc.ComponentCount = SkeletalMeshLimits::MaxBone;
         return true;
     }
 
