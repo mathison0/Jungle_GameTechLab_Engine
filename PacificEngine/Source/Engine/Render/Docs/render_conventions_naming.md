@@ -1,11 +1,11 @@
-﻿# Render Conventions: Naming
+# Render Conventions: Naming
 
 | 구분 | 내용 |
 |---|---|
 | 최초 작성자 | 김연하 |
 | 최초 작성일 | 2026-04-24 |
-| 최근 수정자 | 김연하 |
-| 최근 수정일 | 2026-04-24 |
+| 최근 수정자 | 김태현 |
+| 최근 수정일 | 2026-05-14 |
 | 버전 | 1.1 |
 
 ## 1. 기본 원칙
@@ -60,7 +60,7 @@
 - `FRenderPipelineContext`
 - `FViewModeExecutionContext`
 - `FRenderSubmissionContext`
-- `FCollectRenderContext`
+- `FRenderCollectContext`
 - `FSceneView`
 
 ## 5. Resource Naming
@@ -122,3 +122,4 @@
 
 - runtime upload 계약은 vertex struct type 추론보다 descriptor preset 또는 reflected request list를 우선 source of truth로 둔다.
 - 새 preset이 필요하면 helper 함수 추가보다 preset 집합에 정적 항목을 추가한다.
+

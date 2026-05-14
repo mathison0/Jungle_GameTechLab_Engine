@@ -1,11 +1,11 @@
 # Rendering Pipeline Anatomy
 
-> Scope: current CrashEngine renderer, centered on `Source/Engine/Render`.
+> Scope: current PacificEngine renderer, centered on `Source/Engine/Render`.  `render_overview.md` is the canonical quick-start reference for the current tree.
 > This document explains how a frame moves from world/component data to GPU work.
 
 ## 1. Mental Model
 
-CrashEngine's renderer is split into four layers:
+PacificEngine's renderer is split into four layers:
 
 | Layer | Main files | Responsibility |
 |---|---|---|
@@ -646,4 +646,5 @@ When something does not render:
 11. Are SRVs unbound before a texture is used as a render target?
 12. Does the command have a valid shader, mesh buffer/raw buffers, index count, and texture/CB inputs?
 13. Is the shader expecting the same vertex layout and binding slots the command supplies?
+
 
