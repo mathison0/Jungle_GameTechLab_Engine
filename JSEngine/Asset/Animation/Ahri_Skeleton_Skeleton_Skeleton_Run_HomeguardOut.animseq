@@ -1,0 +1,13 @@
+{
+        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Run_HomeguardOut.animseq",
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "NumberOfFrames" : 20,
+        "NumberOfKeys" : 21,
+        "PlayLength" : 0.666667,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Run_HomeguardOut",
+        "Version" : 1
+      }

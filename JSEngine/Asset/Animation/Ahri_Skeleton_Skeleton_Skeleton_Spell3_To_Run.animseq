@@ -1,0 +1,13 @@
+{
+        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Spell3_To_Run.animseq",
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "NumberOfFrames" : 59,
+        "NumberOfKeys" : 60,
+        "PlayLength" : 1.958333,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Spell3_To_Run",
+        "Version" : 1
+      }

@@ -1,0 +1,13 @@
+{
+        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Laugh.animseq",
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "NumberOfFrames" : 140,
+        "NumberOfKeys" : 141,
+        "PlayLength" : 4.666667,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Laugh",
+        "Version" : 1
+      }
