@@ -1,0 +1,40 @@
+{
+        "AssetPath" : "Asset/Animation/Hip_Hop_Dancing_mixamo.com.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Hip_Hop_Dancing_mixamo.com.animseq.bin",
+          "CacheVersion" : 1,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Hip_Hop_Dancing/Hip_Hop_Dancing.fbx",
+          "SampleRate" : 30
+        },
+        "NumberOfFrames" : 313,
+        "NumberOfKeys" : 314,
+        "PlayLength" : 10.433333,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Hip_Hop_Dancing/Hip_Hop_Dancing.fbx",
+        "Sequence" : {
+          "NumberOfFrames" : 313,
+          "NumberOfKeys" : 314,
+          "PlayLength" : 10.433333,
+          "TrackCount" : 57
+        },
+        "Source" : {
+          "ContentHash" : "fnv1a64:4ab38bb0e0a2a3c4",
+          "FilePath" : "Asset/SkeletalMesh/Hip_Hop_Dancing/Hip_Hop_Dancing.fbx",
+          "FileSizeBytes" : "1481280",
+          "FileWriteTimeTicks" : "13423330328",
+          "ImportedStackName" : "mixamo.com"
+        },
+        "SourceFilePath" : "Asset/SkeletalMesh/Hip_Hop_Dancing/Hip_Hop_Dancing.fbx",
+        "SourceStackName" : "mixamo.com",
+        "Version" : 2
+      }

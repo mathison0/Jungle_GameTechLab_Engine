@@ -1,13 +1,40 @@
 {
         "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Laugh.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Laugh.animseq.bin",
+          "CacheVersion" : 1,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
         "Format" : "JSE.AnimSequence",
         "FrameRateDenominator" : 1,
         "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "SampleRate" : 30
+        },
         "NumberOfFrames" : 140,
         "NumberOfKeys" : 141,
         "PlayLength" : 4.666667,
         "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "Sequence" : {
+          "NumberOfFrames" : 140,
+          "NumberOfKeys" : 141,
+          "PlayLength" : 4.666667,
+          "TrackCount" : 375
+        },
+        "Source" : {
+          "ContentHash" : "fnv1a64:1376ff56ad8262cd",
+          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "FileSizeBytes" : "83868876",
+          "FileWriteTimeTicks" : "13423445366",
+          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Laugh"
+        },
         "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
         "SourceStackName" : "Skeleton|Skeleton|Skeleton|Laugh",
-        "Version" : 1
+        "Version" : 2
       }

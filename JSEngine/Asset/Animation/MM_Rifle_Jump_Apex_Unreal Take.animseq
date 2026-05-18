@@ -1,8 +1,8 @@
 {
-        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Spell4_To_Run.animseq",
+        "AssetPath" : "Asset/Animation/MM_Rifle_Jump_Apex_Unreal Take.animseq",
         "DerivedData" : {
           "CacheFormat" : "ASEQ",
-          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Spell4_To_Run.animseq.bin",
+          "CachePath" : "Asset/Animation/Bin/MM_Rifle_Jump_Apex_Unreal Take.animseq.bin",
           "CacheVersion" : 1,
           "Type" : "SampledTrackBinaryCache",
           "bCacheStoresRawTracks" : true,
@@ -14,27 +14,27 @@
         "ImportSettings" : {
           "FrameRateDenominator" : 1,
           "FrameRateNumerator" : 30,
-          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "PreviewMeshPath" : "Asset/SkeletalMesh/MM_Unreal/MM_Rifle_Jump_Apex.fbx",
           "SampleRate" : 30
         },
         "NumberOfFrames" : 20,
         "NumberOfKeys" : 21,
         "PlayLength" : 0.666667,
-        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "PreviewMeshPath" : "Asset/SkeletalMesh/MM_Unreal/MM_Rifle_Jump_Apex.fbx",
         "Sequence" : {
           "NumberOfFrames" : 20,
           "NumberOfKeys" : 21,
           "PlayLength" : 0.666667,
-          "TrackCount" : 375
+          "TrackCount" : 89
         },
         "Source" : {
-          "ContentHash" : "fnv1a64:1376ff56ad8262cd",
-          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
-          "FileSizeBytes" : "83868876",
+          "ContentHash" : "fnv1a64:b6d76b8a829c4c45",
+          "FilePath" : "Asset/SkeletalMesh/MM_Unreal/MM_Rifle_Jump_Apex.fbx",
+          "FileSizeBytes" : "3400752",
           "FileWriteTimeTicks" : "13423445366",
-          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Spell4_To_Run"
+          "ImportedStackName" : "Unreal Take"
         },
-        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
-        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Spell4_To_Run",
+        "SourceFilePath" : "Asset/SkeletalMesh/MM_Unreal/MM_Rifle_Jump_Apex.fbx",
+        "SourceStackName" : "Unreal Take",
         "Version" : 2
       }
