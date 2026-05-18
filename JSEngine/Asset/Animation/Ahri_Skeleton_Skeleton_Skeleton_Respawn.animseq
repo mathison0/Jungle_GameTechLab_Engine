@@ -1,13 +1,40 @@
 {
         "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Respawn.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Respawn.animseq.bin",
+          "CacheVersion" : 1,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
         "Format" : "JSE.AnimSequence",
         "FrameRateDenominator" : 1,
         "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "SampleRate" : 30
+        },
         "NumberOfFrames" : 114,
         "NumberOfKeys" : 115,
         "PlayLength" : 3.791667,
         "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "Sequence" : {
+          "NumberOfFrames" : 114,
+          "NumberOfKeys" : 115,
+          "PlayLength" : 3.791667,
+          "TrackCount" : 375
+        },
+        "Source" : {
+          "ContentHash" : "fnv1a64:1376ff56ad8262cd",
+          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "FileSizeBytes" : "83868876",
+          "FileWriteTimeTicks" : "13423475346",
+          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Respawn"
+        },
         "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
         "SourceStackName" : "Skeleton|Skeleton|Skeleton|Respawn",
-        "Version" : 1
+        "Version" : 2
       }
