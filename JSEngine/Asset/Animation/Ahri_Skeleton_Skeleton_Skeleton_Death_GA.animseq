@@ -1,13 +1,40 @@
 {
         "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Death_GA.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Death_GA.animseq.bin",
+          "CacheVersion" : 1,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
         "Format" : "JSE.AnimSequence",
         "FrameRateDenominator" : 1,
         "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "SampleRate" : 30
+        },
         "NumberOfFrames" : 180,
         "NumberOfKeys" : 181,
         "PlayLength" : 6.000000,
         "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "Sequence" : {
+          "NumberOfFrames" : 180,
+          "NumberOfKeys" : 181,
+          "PlayLength" : 6.000000,
+          "TrackCount" : 375
+        },
+        "Source" : {
+          "ContentHash" : "fnv1a64:1376ff56ad8262cd",
+          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "FileSizeBytes" : "83868876",
+          "FileWriteTimeTicks" : "13423445366",
+          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Death_GA"
+        },
         "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
         "SourceStackName" : "Skeleton|Skeleton|Skeleton|Death_GA",
-        "Version" : 1
+        "Version" : 2
       }

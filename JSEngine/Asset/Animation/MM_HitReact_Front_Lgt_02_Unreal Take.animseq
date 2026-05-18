@@ -1,0 +1,40 @@
+{
+        "AssetPath" : "Asset/Animation/MM_HitReact_Front_Lgt_02_Unreal Take.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/MM_HitReact_Front_Lgt_02_Unreal Take.animseq.bin",
+          "CacheVersion" : 1,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/MM_Unreal/MM_HitReact_Front_Lgt_02.fbx",
+          "SampleRate" : 30
+        },
+        "NumberOfFrames" : 24,
+        "NumberOfKeys" : 25,
+        "PlayLength" : 0.800000,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/MM_Unreal/MM_HitReact_Front_Lgt_02.fbx",
+        "Sequence" : {
+          "NumberOfFrames" : 24,
+          "NumberOfKeys" : 25,
+          "PlayLength" : 0.800000,
+          "TrackCount" : 89
+        },
+        "Source" : {
+          "ContentHash" : "fnv1a64:bc03ac8b7feef57b",
+          "FilePath" : "Asset/SkeletalMesh/MM_Unreal/MM_HitReact_Front_Lgt_02.fbx",
+          "FileSizeBytes" : "3444592",
+          "FileWriteTimeTicks" : "13423445366",
+          "ImportedStackName" : "Unreal Take"
+        },
+        "SourceFilePath" : "Asset/SkeletalMesh/MM_Unreal/MM_HitReact_Front_Lgt_02.fbx",
+        "SourceStackName" : "Unreal Take",
+        "Version" : 2
+      }
