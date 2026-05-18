@@ -31,7 +31,7 @@
           "ContentHash" : "fnv1a64:1376ff56ad8262cd",
           "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
           "FileSizeBytes" : "83868876",
-          "FileWriteTimeTicks" : "13423475346",
+          "FileWriteTimeTicks" : "13423553782",
           "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Spell2_To_Run"
         },
         "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
