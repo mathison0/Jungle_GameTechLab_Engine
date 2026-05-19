@@ -1,0 +1,39 @@
+{
+        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Idle2_Base.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Idle2_Base.animseq.bin",
+          "CacheVersion" : 2,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "SampleRate" : 30
+        },
+        "Notifies" : [],
+        "NumberOfFrames" : 269,
+        "NumberOfKeys" : 270,
+        "PlayLength" : 8.958333,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "Sequence" : {
+          "NotifyCount" : 0,
+          "NumberOfFrames" : 269,
+          "NumberOfKeys" : 270,
+          "PlayLength" : 8.958333,
+          "TrackCount" : 375
+        },
+        "Source" : {
+          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Idle2_Base"
+        },
+        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Idle2_Base",
+        "Version" : 2
+      }
