@@ -1,0 +1,39 @@
+{
+        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Turn_L180.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Turn_L180.animseq.bin",
+          "CacheVersion" : 2,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "SampleRate" : 30
+        },
+        "Notifies" : [],
+        "NumberOfFrames" : 29,
+        "NumberOfKeys" : 30,
+        "PlayLength" : 0.958333,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "Sequence" : {
+          "NotifyCount" : 0,
+          "NumberOfFrames" : 29,
+          "NumberOfKeys" : 30,
+          "PlayLength" : 0.958333,
+          "TrackCount" : 375
+        },
+        "Source" : {
+          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Turn_L180"
+        },
+        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Turn_L180",
+        "Version" : 2
+      }

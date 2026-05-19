@@ -1,0 +1,39 @@
+{
+        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Spell2.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Spell2.animseq.bin",
+          "CacheVersion" : 2,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "SampleRate" : 30
+        },
+        "Notifies" : [],
+        "NumberOfFrames" : 20,
+        "NumberOfKeys" : 21,
+        "PlayLength" : 0.666667,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "Sequence" : {
+          "NotifyCount" : 0,
+          "NumberOfFrames" : 20,
+          "NumberOfKeys" : 21,
+          "PlayLength" : 0.666667,
+          "TrackCount" : 375
+        },
+        "Source" : {
+          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Spell2"
+        },
+        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Spell2",
+        "Version" : 2
+      }

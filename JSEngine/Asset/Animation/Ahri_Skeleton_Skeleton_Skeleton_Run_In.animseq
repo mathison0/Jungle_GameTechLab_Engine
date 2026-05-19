@@ -1,0 +1,39 @@
+{
+        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Run_In.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Run_In.animseq.bin",
+          "CacheVersion" : 2,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "SampleRate" : 30
+        },
+        "Notifies" : [],
+        "NumberOfFrames" : 10,
+        "NumberOfKeys" : 11,
+        "PlayLength" : 0.333333,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "Sequence" : {
+          "NotifyCount" : 0,
+          "NumberOfFrames" : 10,
+          "NumberOfKeys" : 11,
+          "PlayLength" : 0.333333,
+          "TrackCount" : 375
+        },
+        "Source" : {
+          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Run_In"
+        },
+        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Run_In",
+        "Version" : 2
+      }
