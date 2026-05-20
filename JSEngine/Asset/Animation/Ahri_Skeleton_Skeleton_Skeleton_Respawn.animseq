@@ -3,7 +3,7 @@
         "DerivedData" : {
           "CacheFormat" : "ASEQ",
           "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Respawn.animseq.bin",
-          "CacheVersion" : 2,
+          "CacheVersion" : 3,
           "Type" : "SampledTrackBinaryCache",
           "bCacheStoresRawTracks" : true,
           "bJsonEmbedsRawTracks" : false
