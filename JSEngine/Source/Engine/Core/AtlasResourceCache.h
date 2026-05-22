@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Asset/FontAtlasLoader.h"
-#include "Asset/ParticleAtlasLoader.h"
+#include "Asset/SubUVAtlasLoader.h"
 #include "Core/CoreTypes.h"
 #include "Core/ResourceTypes.h"
 
@@ -25,7 +25,7 @@ public:
 
 private:
 	FFontAtlasLoader FontLoader;
-	FParticleAtlasLoader SubUVLoader;
+	FSubUVAtlasLoader SubUVLoader;
 
 	TMap<FString, FFontResource> FontResources;
 	TMap<FString, FTextureAtlasResource> SubUVResources;

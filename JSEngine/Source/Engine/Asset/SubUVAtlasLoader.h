@@ -5,10 +5,10 @@
 
 struct ID3D11Device;
 
-class FParticleAtlasLoader : public IAssetLoader
+class FSubUVAtlasLoader : public IAssetLoader
 {
 public:
-	bool Load(const FName& ParticleName, const FString& Path, uint32 Columns, uint32 Rows,
+	bool Load(const FName& SubUVName, const FString& Path, uint32 Columns, uint32 Rows,
 		ID3D11Device* Device, FTextureAtlasResource& OutResource) const;
 
 	bool SupportsExtension(const FString& Extension) const override;

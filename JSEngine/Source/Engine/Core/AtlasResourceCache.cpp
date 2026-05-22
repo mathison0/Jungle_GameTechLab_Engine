@@ -35,7 +35,7 @@ bool FAtlasResourceCache::LoadGPUResources(ID3D11Device* Device)
 
 		if (!SubUVLoader.Load(Resource.Name, Resource.Path, Resource.Columns, Resource.Rows, Device, Resource))
 		{
-			UE_LOG_WARNING("Failed to load Particle atlas: %s", Resource.Path.c_str());
+			UE_LOG_WARNING("Failed to load SubUV atlas: %s", Resource.Path.c_str());
 			return false;
 		}
 	}
