@@ -4,13 +4,13 @@
 #include "Core/ResourceTypes.h"
 #include "Object/FName.h"
 
-// SubUV 파티클 스프라이트를 월드 공간에 빌보드로 렌더링하는 컴포넌트.
+// SubUV 스프라이트를 월드 공간에 빌보드로 렌더링하는 컴포넌트.
 // PrimitiveComponent를 상속받아 RenderCollector에 자동으로 감지됩니다.
 // MeshBuffer를 사용하지 않으며, SubUVBatcher가 드로우콜을 처리합니다.
 //
 // 사용 예:
 //   USubUVComponent* Comp = Actor->AddComponent<USubUVComponent>();
-//   Comp->SetParticle(FName("Explosion"));
+//   Comp->SetSubUV(FName("Explosion"));
 //   Comp->SetFrameIndex(CurrentFrame);
 //   Comp->SetSpriteSize(2.0f, 2.0f);
 UCLASS(SpawnableComponent, DisplayName = "SubUV Component", Category = "Basic")
@@ -26,11 +26,11 @@ public:
 
 	virtual void Serialize(FArchive& Ar) override;
 
-	// --- Particle Resource ---
+	// --- SubUV Resource ---
 	// FName 키로 ResourceManager에서 FTextureAtlasResource*를 찾아 캐싱
-	void SetParticle(const FName& InParticleName);
-	const FTextureAtlasResource* GetParticle() const;
-	const FName& GetParticleName() const { return ParticleName; }
+	void SetSubUV(const FName& InSubUVName);
+	const FTextureAtlasResource* GetSubUV() const;
+	const FName& GetSubUVName() const { return SubUVName; }
 
 	// --- SubUV Frame ---
 	void SetFrameIndex(uint32 InIndex) { FrameIndex = InIndex; }
@@ -62,10 +62,10 @@ protected:
 	void TickComponent(float DeltaTime) override;
 
 private:
-	UPROPERTY(DisplayName = "Particle")
-	FName ParticleName;
+	UPROPERTY(DisplayName = "SubUV")
+	FName SubUVName;
 
-	FTextureAtlasResource* CachedParticle = nullptr; // ResourceManager 소유, 여기선 참조만
+	FTextureAtlasResource* CachedSubUV = nullptr; // ResourceManager 소유, 여기선 참조만
 
 	bool bIsExecute = false;
 };

@@ -16,14 +16,14 @@ USubUVComponent::USubUVComponent()
 }
 
 // 재생 상태 등 reflection에 노출되지 않은 필드를 직접 복사합니다.
-// CachedParticle 은 CopyPropertiesFrom 내부에서 Particle(Name) 처리 시
-// PostEditProperty("Particle") → SetParticle() 를 통해 자동으로 갱신됩니다.
+// CachedSubUV 은 CopyPropertiesFrom 내부에서 SubUV(Name) 처리 시
+// PostEditProperty("SubUV") → SetSubUV() 를 통해 자동으로 갱신됩니다.
 void USubUVComponent::PostDuplicate(UObject* Original)
 {
 	UBillboardComponent::PostDuplicate(Original);
 
 	const USubUVComponent* Orig = Cast<USubUVComponent>(Original);
-	// 현재 프레임/누적 시간을 유지해 PIE 진입 시 에디터에서 보던 파티클 상태를 이어 재생합니다.
+	// 현재 프레임/누적 시간을 유지해 PIE 진입 시 에디터에서 보던 SubUV 상태를 이어 재생합니다.
 	bIsExecute = Orig->bIsExecute;
 }
 
@@ -33,28 +33,28 @@ void USubUVComponent::Serialize(FArchive& Ar)
 
 	if (Ar.IsLoading())
 	{
-		SetParticle(ParticleName);
+		SetSubUV(SubUVName);
 	}
 }
 
-void USubUVComponent::SetParticle(const FName& InParticleName)
+void USubUVComponent::SetSubUV(const FName& InSubUVName)
 {
-	ParticleName = InParticleName;
-	CachedParticle = FResourceManager::Get().FindSubUV(InParticleName);
+	SubUVName = InSubUVName;
+	CachedSubUV = FResourceManager::Get().FindSubUV(InSubUVName);
 }
 
-const FTextureAtlasResource* USubUVComponent::GetParticle() const
+const FTextureAtlasResource* USubUVComponent::GetSubUV() const
 {
-	return FResourceManager::Get().FindSubUV(ParticleName);
+	return FResourceManager::Get().FindSubUV(SubUVName);
 }
 
 void USubUVComponent::PostEditProperty(const char* PropertyName)
 {
 	UBillboardComponent::PostEditProperty(PropertyName);
 
-	if (PropertyName && strcmp(PropertyName, "ParticleName") == 0)
+	if (PropertyName && strcmp(PropertyName, "SubUVName") == 0)
 	{
-		SetParticle(ParticleName);
+		SetSubUV(SubUVName);
 	}
 }
 
@@ -165,11 +165,11 @@ void USubUVComponent::TickComponent(float DeltaTime)
 {
 	UBillboardComponent::TickComponent(DeltaTime);
 
-	const FTextureAtlasResource* Particle = GetParticle();
-	if (!Particle) return;
+	const FTextureAtlasResource* SubUV = GetSubUV();
+	if (!SubUV) return;
 	if (!bLoop && bIsExecute) return; // 단발 재생 완료 후 정지
 
-	const uint32 TotalFrames = Particle->Columns * Particle->Rows;
+	const uint32 TotalFrames = SubUV->Columns * SubUV->Rows;
 	if (TotalFrames == 0) return;
 
 	TimeAccumulator += DeltaTime;

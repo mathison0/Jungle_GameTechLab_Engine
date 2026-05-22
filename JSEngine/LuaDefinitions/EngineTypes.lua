@@ -591,8 +591,8 @@ local HeightFogComponent = {}
 ---@field Loop boolean
 local SubUVComponent = {}
 
----@param particleName string
-function SubUVComponent:SetParticle(particleName) end
+---@param subUVName string
+function SubUVComponent:SetSubUV(subUVName) end
 ---@param fps number
 function SubUVComponent:SetFrameRate(fps) end
 function SubUVComponent:Play() end

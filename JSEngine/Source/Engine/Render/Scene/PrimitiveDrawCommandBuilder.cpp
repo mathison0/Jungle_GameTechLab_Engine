@@ -405,7 +405,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
     case EPrimitiveType::EPT_SubUV:
     {
         USubUVComponent* SubUVComp = static_cast<USubUVComponent*>(Primitive);
-        const FTextureAtlasResource* Particle = SubUVComp->GetParticle();
+        const FTextureAtlasResource* Particle = SubUVComp->GetSubUV();
         if (!Particle || !Particle->IsLoaded()) return true;
 
         FRenderCommand Cmd = {};
