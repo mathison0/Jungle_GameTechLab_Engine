@@ -149,7 +149,7 @@ void FEditorAssetService::RefreshAssetDatabase()
 	{
 		FEditorAssetService::AddUniquePath(FontNames, Name);
 	}
-	for (const FString& Name : FResourceManager::Get().GetParticleNames())
+	for (const FString& Name : FResourceManager::Get().GetSubUVNames())
 	{
 		FEditorAssetService::AddUniquePath(ParticleNames, Name);
 	}

@@ -16,17 +16,17 @@ public:
 	const FFontResource* FindFont(const FName& FontName) const;
 	void RegisterFont(const FName& FontName, const FString& InPath, uint32 Columns, uint32 Rows);
 
-	FTextureAtlasResource* FindParticle(const FName& ParticleName);
-	const FTextureAtlasResource* FindParticle(const FName& ParticleName) const;
-	void RegisterParticle(const FName& ParticleName, const FString& InPath, uint32 Columns, uint32 Rows);
+	FTextureAtlasResource* FindSubUV(const FName& SubUVName);
+	const FTextureAtlasResource* FindSubUV(const FName& SubUVName) const;
+	void RegisterSubUV(const FName& SubUVName, const FString& InPath, uint32 Columns, uint32 Rows);
 
 	void Clear();
 	void Release();
 
 private:
 	FFontAtlasLoader FontLoader;
-	FParticleAtlasLoader ParticleLoader;
+	FParticleAtlasLoader SubUVLoader;
 
 	TMap<FString, FFontResource> FontResources;
-	TMap<FString, FTextureAtlasResource> ParticleResources;
+	TMap<FString, FTextureAtlasResource> SubUVResources;
 };

@@ -40,12 +40,12 @@ void USubUVComponent::Serialize(FArchive& Ar)
 void USubUVComponent::SetParticle(const FName& InParticleName)
 {
 	ParticleName = InParticleName;
-	CachedParticle = FResourceManager::Get().FindParticle(InParticleName);
+	CachedParticle = FResourceManager::Get().FindSubUV(InParticleName);
 }
 
 const FTextureAtlasResource* USubUVComponent::GetParticle() const
 {
-	return FResourceManager::Get().FindParticle(ParticleName);
+	return FResourceManager::Get().FindSubUV(ParticleName);
 }
 
 void USubUVComponent::PostEditProperty(const char* PropertyName)
