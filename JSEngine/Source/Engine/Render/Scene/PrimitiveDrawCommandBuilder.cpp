@@ -405,8 +405,8 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
     case EPrimitiveType::EPT_SubUV:
     {
         USubUVComponent* SubUVComp = static_cast<USubUVComponent*>(Primitive);
-        const FTextureAtlasResource* Particle = SubUVComp->GetSubUV();
-        if (!Particle || !Particle->IsLoaded()) return true;
+        const FTextureAtlasResource* Atlas = SubUVComp->GetSubUV();
+        if (!Atlas || !Atlas->IsLoaded()) return true;
 
         FRenderCommand Cmd = {};
         Cmd.PerObjectConstants = FPerObjectConstants{
@@ -418,7 +418,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
         Cmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(EPrimitiveType::EPT_SubUV);
         Cmd.SectionIndexStart = 0;
         Cmd.SectionIndexCount = Cmd.MeshBuffer->GetIndexBuffer().GetIndexCount();
-        Cmd.Constants.SubUV.Particle = Particle;
+        Cmd.Constants.SubUV.Atlas = Atlas;
         Cmd.Constants.SubUV.FrameIndex = SubUVComp->GetFrameIndex();
         Cmd.Constants.SubUV.Width = SubUVComp->GetWidth();
         Cmd.Constants.SubUV.Height = SubUVComp->GetHeight();

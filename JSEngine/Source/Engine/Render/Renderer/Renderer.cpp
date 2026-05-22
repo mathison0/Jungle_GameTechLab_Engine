@@ -482,14 +482,14 @@ void FRenderer::PrepareBatchers(const FRenderBus& InRenderBus)
 
 const TArray<FRenderCommand>& FRenderer::GetAlignedCommands(ERenderPass Pass, const TArray<FRenderCommand>& Commands)
 {
-	// SubUV 패스: Particle(SRV) 포인터 기준 정렬 → 같은 텍스쳐끼리 연속 배치
+	// SubUV 패스: Atlas(SRV) 포인터 기준 정렬 → 같은 텍스쳐끼리 연속 배치
 	if (Pass == ERenderPass::SubUV && Commands.size() > 1)
 	{
 		SortedCommandBuffer.assign(Commands.begin(), Commands.end());
 
 		std::sort(SortedCommandBuffer.begin(), SortedCommandBuffer.end(),
 			[](const FRenderCommand& A, const FRenderCommand& B) {
-				return A.Constants.SubUV.Particle < B.Constants.SubUV.Particle;
+				return A.Constants.SubUV.Atlas < B.Constants.SubUV.Atlas;
 			});
 
 		return SortedCommandBuffer;
@@ -717,15 +717,15 @@ void FRenderer::RenderEditorIdPickBuffer(const FRenderBus& InRenderBus, FViewpor
 			else if (Command.Type == ERenderCommandType::SubUV)
 			{
 				ShaderKey = 2;
-				const FTextureAtlasResource* Particle = Command.Constants.SubUV.Particle;
-				TextureSRV = Particle && Particle->Texture && Particle->Texture->GetSRV()
-					? Particle->Texture->GetSRV()
+				const FTextureAtlasResource* Atlas = Command.Constants.SubUV.Atlas;
+				TextureSRV = Atlas && Atlas->Texture && Atlas->Texture->GetSRV()
+					? Atlas->Texture->GetSRV()
 					: DefaultSRV;
 				PickingConstants.bUseAlphaTest = TextureSRV ? 1u : 0u;
-				if (Particle && Particle->Columns > 0 && Particle->Rows > 0)
+				if (Atlas && Atlas->Columns > 0 && Atlas->Rows > 0)
 				{
-					const uint32 Columns = Particle->Columns;
-					const uint32 Rows = Particle->Rows;
+					const uint32 Columns = Atlas->Columns;
+					const uint32 Rows = Atlas->Rows;
 					const uint32 FrameIndex = Command.Constants.SubUV.FrameIndex;
 					const uint32 Col = FrameIndex % Columns;
 					const uint32 Row = FrameIndex / Columns;
@@ -1350,23 +1350,23 @@ void FRenderer::InitializePassBatchers()
 			SubUVCachedTexture = nullptr;
 		},
 		/*.Collect =*/ [this](const FRenderCommand& Cmd, const FRenderBus& Bus) {
-			if (Cmd.Type == ERenderCommandType::SubUV && Cmd.Constants.SubUV.Particle)
+			if (Cmd.Type == ERenderCommandType::SubUV && Cmd.Constants.SubUV.Atlas)
 			{
 				const auto& SubUV = Cmd.Constants.SubUV;
-				if (!SubUVCachedTexture && SubUV.Particle->IsLoaded())
+				if (!SubUVCachedTexture && SubUV.Atlas->IsLoaded())
 				{
-					SubUVCachedTexture = SubUV.Particle->Texture;
+					SubUVCachedTexture = SubUV.Atlas->Texture;
 				}
 
 				SubUVBatcher.AddSprite(
-					SubUV.Particle->Texture,
+					SubUV.Atlas->Texture,
 					Cmd.PerObjectConstants.Model.GetOrigin(),
 					Bus.GetCameraRight(),
 					Bus.GetCameraUp(),
 					Cmd.PerObjectConstants.Model.GetScaleVector(),
 					SubUV.FrameIndex,
-					SubUV.Particle->Columns,
-					SubUV.Particle->Rows,
+					SubUV.Atlas->Columns,
+					SubUV.Atlas->Rows,
 					SubUV.Width,
 					SubUV.Height
 				);

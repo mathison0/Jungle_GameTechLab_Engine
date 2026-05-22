@@ -145,17 +145,17 @@ static void BuildSelectionMaskConstants(
     }
     else if (PrimitiveType == EPrimitiveType::EPT_SubUV)
     {
-        const FTextureAtlasResource* Particle = Cmd.Constants.SubUV.Particle;
-        if (Particle && Particle->Texture && Particle->Texture->GetSRV())
+        const FTextureAtlasResource* Atlas = Cmd.Constants.SubUV.Atlas;
+        if (Atlas && Atlas->Texture && Atlas->Texture->GetSRV())
         {
-            OutTextureSRV = Particle->Texture->GetSRV();
+            OutTextureSRV = Atlas->Texture->GetSRV();
             OutConstants.bUseAlphaTest = 1u;
         }
 
-        if (Particle && Particle->Columns > 0 && Particle->Rows > 0)
+        if (Atlas && Atlas->Columns > 0 && Atlas->Rows > 0)
         {
-            const uint32 Columns = Particle->Columns;
-            const uint32 Rows = Particle->Rows;
+            const uint32 Columns = Atlas->Columns;
+            const uint32 Rows = Atlas->Rows;
             const uint32 FrameIndex = Cmd.Constants.SubUV.FrameIndex;
             const uint32 Col = FrameIndex % Columns;
             const uint32 Row = FrameIndex / Columns;

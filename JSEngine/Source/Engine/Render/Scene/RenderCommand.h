@@ -324,7 +324,7 @@ struct FFontConstants
 
 struct FSubUVConstants
 {
-	const FTextureAtlasResource* Particle = nullptr;
+	const FTextureAtlasResource* Atlas = nullptr;
 	uint32 FrameIndex = 0;
 	float Width  = 1.0f;
 	float Height = 1.0f;
