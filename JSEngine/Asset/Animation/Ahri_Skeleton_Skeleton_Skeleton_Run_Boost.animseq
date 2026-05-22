@@ -1,0 +1,63 @@
+{
+        "AssetPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Run_Boost.animseq",
+        "DerivedData" : {
+          "CacheFormat" : "ASEQ",
+          "CachePath" : "Asset/Animation/Bin/Ahri_Skeleton_Skeleton_Skeleton_Run_Boost.animseq.bin",
+          "CacheVersion" : 3,
+          "Type" : "SampledTrackBinaryCache",
+          "bCacheStoresRawTracks" : true,
+          "bJsonEmbedsRawTracks" : false
+        },
+        "Format" : "JSE.AnimSequence",
+        "FrameRateDenominator" : 1,
+        "FrameRateNumerator" : 30,
+        "ImportSettings" : {
+          "FrameRateDenominator" : 1,
+          "FrameRateNumerator" : 30,
+          "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "SampleRate" : 30
+        },
+        "Notifies" : [{
+            "Duration" : 0.000000,
+            "EndTime" : 0.000000,
+            "NotifyClassName" : "UAnimNotify_FootstepSound",
+            "NotifyName" : "Footstep Sound Notify",
+            "TriggerTime" : 0.000000
+          }, {
+            "Duration" : 0.000000,
+            "EndTime" : 0.358455,
+            "NotifyClassName" : "UAnimNotify_FootstepSound",
+            "NotifyName" : "Footstep Sound Notify",
+            "TriggerTime" : 0.358455
+          }, {
+            "Duration" : 0.000000,
+            "EndTime" : 0.791777,
+            "NotifyClassName" : "UAnimNotify_FootstepSound",
+            "NotifyName" : "Footstep Sound Notify",
+            "TriggerTime" : 0.791777
+          }, {
+            "Duration" : 0.000000,
+            "EndTime" : 1.240981,
+            "NotifyClassName" : "UAnimNotify_FootstepSound",
+            "NotifyName" : "Footstep Sound Notify",
+            "TriggerTime" : 1.240981
+          }],
+        "NumberOfFrames" : 51,
+        "NumberOfKeys" : 52,
+        "PlayLength" : 1.708333,
+        "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "Sequence" : {
+          "NotifyCount" : 4,
+          "NumberOfFrames" : 51,
+          "NumberOfKeys" : 52,
+          "PlayLength" : 1.708333,
+          "TrackCount" : 375
+        },
+        "Source" : {
+          "FilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+          "ImportedStackName" : "Skeleton|Skeleton|Skeleton|Run_Boost"
+        },
+        "SourceFilePath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
+        "SourceStackName" : "Skeleton|Skeleton|Skeleton|Run_Boost",
+        "Version" : 2
+      }

@@ -1,0 +1,25 @@
+﻿#pragma once
+#include "ShapeComponent.h"
+
+UCLASS(SpawnableComponent, DisplayName = "Sphere Component", Category = "Collision")
+class USphereComponent : public UShapeComponent
+{
+public:
+	GENERATED_BODY(USphereComponent, UShapeComponent)
+	float GetSphereRadius() const { return SphereRadius; }
+	float GetScaledSphereRadius() const
+	{
+		return SphereRadius;
+	}
+
+	void PostDuplicate(UObject* Original) override;
+
+private:
+	UPROPERTY(DisplayName = "Sphere Radius", LuaReadOnly, LuaName = SphereRadius)
+	float SphereRadius = 0.5f;
+
+	// UShapeComponent을(를) 통해 상속됨
+	void UpdateWorldAABB() const override;
+	bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) override;
+	EPrimitiveType GetPrimitiveType() const override;
+};
