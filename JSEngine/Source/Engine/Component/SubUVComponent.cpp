@@ -43,7 +43,7 @@ void USubUVComponent::SetParticle(const FName& InParticleName)
 	CachedParticle = FResourceManager::Get().FindParticle(InParticleName);
 }
 
-const FParticleResource* USubUVComponent::GetParticle() const
+const FTextureAtlasResource* USubUVComponent::GetParticle() const
 {
 	return FResourceManager::Get().FindParticle(ParticleName);
 }
@@ -165,7 +165,7 @@ void USubUVComponent::TickComponent(float DeltaTime)
 {
 	UBillboardComponent::TickComponent(DeltaTime);
 
-	const FParticleResource* Particle = GetParticle();
+	const FTextureAtlasResource* Particle = GetParticle();
 	if (!Particle) return;
 	if (!bLoop && bIsExecute) return; // 단발 재생 완료 후 정지
 

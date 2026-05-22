@@ -105,8 +105,8 @@ public:
 	void RegisterFont(const FName& FontName, const FString& InPath, uint32 Columns = 16, uint32 Rows = 16);
 	TArray<FString> GetFontNames() const;
 
-	FParticleResource* FindParticle(const FName& ParticleName);
-	const FParticleResource* FindParticle(const FName& ParticleName) const;
+	FTextureAtlasResource* FindParticle(const FName& ParticleName);
+	const FTextureAtlasResource* FindParticle(const FName& ParticleName) const;
 	void RegisterParticle(const FName& ParticleName, const FString& InPath, uint32 Columns = 1, uint32 Rows = 1);
 	TArray<FString> GetParticleNames() const;
 

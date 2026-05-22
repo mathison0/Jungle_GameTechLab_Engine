@@ -76,7 +76,7 @@ void FAtlasResourceCache::RegisterFont(const FName& FontName, const FString& InP
 	FontResources[FontName.ToString()] = Resource;
 }
 
-FParticleResource* FAtlasResourceCache::FindParticle(const FName& ParticleName)
+FTextureAtlasResource* FAtlasResourceCache::FindParticle(const FName& ParticleName)
 {
 	if (ParticleResources.empty())
 	{
@@ -87,7 +87,7 @@ FParticleResource* FAtlasResourceCache::FindParticle(const FName& ParticleName)
 	return (It != ParticleResources.end()) ? &It->second : &ParticleResources.begin()->second;
 }
 
-const FParticleResource* FAtlasResourceCache::FindParticle(const FName& ParticleName) const
+const FTextureAtlasResource* FAtlasResourceCache::FindParticle(const FName& ParticleName) const
 {
 	if (ParticleResources.empty())
 	{
@@ -100,7 +100,7 @@ const FParticleResource* FAtlasResourceCache::FindParticle(const FName& Particle
 
 void FAtlasResourceCache::RegisterParticle(const FName& ParticleName, const FString& InPath, uint32 Columns, uint32 Rows)
 {
-	FParticleResource Resource;
+	FTextureAtlasResource Resource;
 	Resource.Name = ParticleName;
 	Resource.Path = FPaths::Normalize(InPath);
 	Resource.Columns = Columns;

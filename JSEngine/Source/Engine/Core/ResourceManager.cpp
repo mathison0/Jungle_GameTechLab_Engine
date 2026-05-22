@@ -895,12 +895,12 @@ void FResourceManager::RegisterFont(const FName& FontName, const FString& InPath
 }
 
 // --- Particle ---
-FParticleResource* FResourceManager::FindParticle(const FName& ParticleName)
+FTextureAtlasResource* FResourceManager::FindParticle(const FName& ParticleName)
 {
 	return AtlasCache.FindParticle(ParticleName);
 }
 
-const FParticleResource* FResourceManager::FindParticle(const FName& ParticleName) const
+const FTextureAtlasResource* FResourceManager::FindParticle(const FName& ParticleName) const
 {
 	return AtlasCache.FindParticle(ParticleName);
 }

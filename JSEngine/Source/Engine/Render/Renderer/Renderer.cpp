@@ -717,7 +717,7 @@ void FRenderer::RenderEditorIdPickBuffer(const FRenderBus& InRenderBus, FViewpor
 			else if (Command.Type == ERenderCommandType::SubUV)
 			{
 				ShaderKey = 2;
-				const FParticleResource* Particle = Command.Constants.SubUV.Particle;
+				const FTextureAtlasResource* Particle = Command.Constants.SubUV.Particle;
 				TextureSRV = Particle && Particle->Texture && Particle->Texture->GetSRV()
 					? Particle->Texture->GetSRV()
 					: DefaultSRV;

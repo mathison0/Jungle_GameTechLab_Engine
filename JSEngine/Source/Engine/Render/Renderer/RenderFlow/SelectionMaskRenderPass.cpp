@@ -145,7 +145,7 @@ static void BuildSelectionMaskConstants(
     }
     else if (PrimitiveType == EPrimitiveType::EPT_SubUV)
     {
-        const FParticleResource* Particle = Cmd.Constants.SubUV.Particle;
+        const FTextureAtlasResource* Particle = Cmd.Constants.SubUV.Particle;
         if (Particle && Particle->Texture && Particle->Texture->GetSRV())
         {
             OutTextureSRV = Particle->Texture->GetSRV();

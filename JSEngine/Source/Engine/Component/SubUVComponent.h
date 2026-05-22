@@ -27,9 +27,9 @@ public:
 	virtual void Serialize(FArchive& Ar) override;
 
 	// --- Particle Resource ---
-	// FName 키로 ResourceManager에서 FParticleResource*를 찾아 캐싱
+	// FName 키로 ResourceManager에서 FTextureAtlasResource*를 찾아 캐싱
 	void SetParticle(const FName& InParticleName);
-	const FParticleResource* GetParticle() const;
+	const FTextureAtlasResource* GetParticle() const;
 	const FName& GetParticleName() const { return ParticleName; }
 
 	// --- SubUV Frame ---
@@ -65,7 +65,7 @@ private:
 	UPROPERTY(DisplayName = "Particle")
 	FName ParticleName;
 
-	FParticleResource* CachedParticle = nullptr; // ResourceManager 소유, 여기선 참조만
+	FTextureAtlasResource* CachedParticle = nullptr; // ResourceManager 소유, 여기선 참조만
 
 	bool bIsExecute = false;
 };
