@@ -137,7 +137,7 @@ void ASubUVActor::InitDefaultComponents()
 
 	auto* SubUV = AddComponent<USubUVComponent>();
 	SetRootComponent(SubUV);
-	SubUV->SetSubUV(FName("Explosion"));
+	SubUV->SetSubUV(FName("Asset/Texture/subuvtest.png"));
 	SubUV->SetSpriteSize(2.0f, 2.0f);
 	SubUV->SetFrameRate(30.f);
 }
