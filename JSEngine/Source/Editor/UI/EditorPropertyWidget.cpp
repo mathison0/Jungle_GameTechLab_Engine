@@ -2327,9 +2327,9 @@ bool FEditorPropertyWidget::RenderPropertyValueWidget(const FProperty& Property,
 		{
 			Names = EditorEngine ? EditorEngine->GetAssetService().GetFontNames() : EmptyAssetNames();
 		}
-		else if (Property.Name && strcmp(Property.Name, "Particle") == 0)
+		else if (Property.Name && strcmp(Property.Name, "SubUV") == 0)
 		{
-			Names = EditorEngine ? EditorEngine->GetAssetService().GetParticleNames() : EmptyAssetNames();
+			Names = EditorEngine ? EditorEngine->GetAssetService().GetSubUVNames() : EmptyAssetNames();
 		}
 
 		if (!Names.empty())

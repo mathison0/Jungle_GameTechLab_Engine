@@ -353,7 +353,7 @@ void FResourceManager::RegisterDiscoveredAssetFile(const std::filesystem::path& 
 			FontFilePaths.push_back(RelativePath);
 			RegisterFont(FName(RelativePath.c_str()), RelativePath, Meta.Columns, Meta.Rows);
 		}
-		else if (Meta.Type == EAssetMetaType::Particle)
+		else if (Meta.Type == EAssetMetaType::SubUV)
 		{
 			SubUVFilePaths.push_back(RelativePath);
 			RegisterSubUV(FName(RelativePath.c_str()), RelativePath, Meta.Columns, Meta.Rows);
