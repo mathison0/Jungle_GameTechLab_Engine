@@ -29,13 +29,19 @@
             "NotifyClassName" : "UAnimNotify_LogEvent",
             "NotifyName" : "Log Notify",
             "TriggerTime" : 1.126162
+          }, {
+            "Duration" : 0.000000,
+            "EndTime" : 1.272244,
+            "NotifyClassName" : "",
+            "NotifyName" : "test1",
+            "TriggerTime" : 1.272244
           }],
         "NumberOfFrames" : 60,
         "NumberOfKeys" : 61,
         "PlayLength" : 2.000000,
         "PreviewMeshPath" : "Asset/SkeletalMesh/Ahri/Ahri.fbx",
         "Sequence" : {
-          "NotifyCount" : 2,
+          "NotifyCount" : 3,
           "NumberOfFrames" : 60,
           "NumberOfKeys" : 61,
           "PlayLength" : 2.000000,
