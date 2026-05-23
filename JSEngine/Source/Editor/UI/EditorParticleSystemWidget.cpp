@@ -1,4 +1,4 @@
-#include "Editor/UI/EditorParticleSystemWidget.h"
+﻿#include "Editor/UI/EditorParticleSystemWidget.h"
 
 #include "Editor/EditorEngine.h"
 #include "Editor/UI/EditorMainPanelViewportToolbarHelpers.h"
@@ -10,6 +10,7 @@
 #include "ImGui/imgui_internal.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace
@@ -131,6 +132,113 @@ namespace
 		{
 			State.ViewMode = Mode;
 		}
+	}
+
+	float SmoothStep(float Edge0, float Edge1, float Value)
+	{
+		const float T = std::clamp((Value - Edge0) / (Edge1 - Edge0), 0.0f, 1.0f);
+		return T * T * (3.0f - 2.0f * T);
+	}
+
+	void DrawAxisLabel(
+		ImDrawList* DrawList,
+		const ImVec2& AxisEnd,
+		const ImVec2& AxisDirection,
+		const char* Label,
+		const ImVec4& BaseColor,
+		float Alpha)
+	{
+		const ImVec2 TextSize = ImGui::CalcTextSize(Label);
+		const ImVec2 LabelCenter(
+			AxisEnd.x + AxisDirection.x * 7.0f,
+			AxisEnd.y + AxisDirection.y * 7.0f);
+		const ImVec2 TextPosition(
+			LabelCenter.x - TextSize.x * 0.5f,
+			LabelCenter.y - TextSize.y * 0.5f);
+
+		const ImU32 ShadowColor = ImGui::GetColorU32(ImVec4(0.02f, 0.02f, 0.02f, 0.95f * Alpha));
+		const ImU32 TextColor = ImGui::GetColorU32(ImVec4(BaseColor.x, BaseColor.y, BaseColor.z, BaseColor.w * Alpha));
+		DrawList->AddText(ImVec2(TextPosition.x + 1.0f, TextPosition.y + 1.0f), ShadowColor, Label);
+		DrawList->AddText(TextPosition, TextColor, Label);
+	}
+
+	void DrawViewportOrientationAxis(
+		ImDrawList* DrawList,
+		const ImVec2& CanvasMin,
+		const ImVec2& CanvasMax,
+		const FViewportCamera* Camera)
+	{
+		if (!DrawList || !Camera)
+		{
+			return;
+		}
+
+		const FVector CameraForward = Camera->GetForwardVector().GetSafeNormal();
+		const FVector CameraRight = Camera->GetRightVector().GetSafeNormal();
+		const FVector CameraUp = Camera->GetUpVector().GetSafeNormal();
+
+		struct FAxisDrawItem
+		{
+			const char* Label;
+			FVector Axis;
+			ImVec4 Color;
+			ImVec2 End;
+			ImVec2 Direction;
+			float Alpha;
+			float Depth;
+		};
+
+		const ImVec2 Origin(CanvasMin.x + 46.0f, CanvasMax.y - 46.0f);
+		constexpr float AxisLength = 28.0f;
+		constexpr float MinProjectedLength = 0.35f;
+		constexpr float LabelFadeStart = 0.10f;
+		constexpr float LabelFadeEnd = 0.28f;
+
+		std::array<FAxisDrawItem, 3> Axes =
+		{ {
+			{ "X", FVector::XAxisVector, ImVec4(0.95f, 0.12f, 0.04f, 1.0f), Origin, ImVec2(1.0f, 0.0f), 1.0f, 0.0f },
+			{ "Y", FVector::YAxisVector, ImVec4(0.42f, 0.86f, 0.12f, 1.0f), Origin, ImVec2(0.0f, 1.0f), 1.0f, 0.0f },
+			{ "Z", FVector::ZAxisVector, ImVec4(0.10f, 0.45f, 1.0f, 1.0f), Origin, ImVec2(0.0f, -1.0f), 1.0f, 0.0f }
+		} };
+
+		for (FAxisDrawItem& Item : Axes)
+		{
+			const float ScreenX = FVector::DotProduct(Item.Axis, CameraRight);
+			const float ScreenY = -FVector::DotProduct(Item.Axis, CameraUp);
+			const float ProjectedLength = std::sqrt(ScreenX * ScreenX + ScreenY * ScreenY);
+			Item.Alpha = SmoothStep(LabelFadeStart, LabelFadeEnd, ProjectedLength);
+			if (ProjectedLength > 1.0e-4f)
+			{
+				Item.Direction = ImVec2(ScreenX / ProjectedLength, ScreenY / ProjectedLength);
+				const float VisualLength = AxisLength * std::clamp(ProjectedLength, MinProjectedLength, 1.0f);
+				Item.End = ImVec2(
+					Origin.x + Item.Direction.x * VisualLength,
+					Origin.y + Item.Direction.y * VisualLength);
+			}
+			Item.Depth = FVector::DotProduct(Item.Axis, CameraForward);
+		}
+
+		std::sort(Axes.begin(), Axes.end(), [](const FAxisDrawItem& A, const FAxisDrawItem& B)
+		{
+			return A.Depth > B.Depth;
+		});
+
+		const ImU32 ShadowColor = ImGui::GetColorU32(ImVec4(0.02f, 0.02f, 0.02f, 0.95f));
+		for (const FAxisDrawItem& Item : Axes)
+		{
+			if (Item.Alpha <= 0.01f)
+			{
+				continue;
+			}
+
+			const ImU32 AxisColor = ImGui::GetColorU32(ImVec4(Item.Color.x, Item.Color.y, Item.Color.z, Item.Color.w * Item.Alpha));
+			DrawList->AddLine(Origin, Item.End, ShadowColor, 3.0f);
+			DrawList->AddLine(Origin, Item.End, AxisColor, 1.6f);
+			DrawAxisLabel(DrawList, Item.End, Item.Direction, Item.Label, Item.Color, Item.Alpha);
+		}
+
+		DrawList->AddCircleFilled(Origin, 2.4f, ShadowColor, 12);
+		DrawList->AddCircleFilled(Origin, 1.6f, ImGui::GetColorU32(ImVec4(0.84f, 0.84f, 0.84f, 1.0f)), 12);
 	}
 }
 
@@ -452,12 +560,18 @@ void FEditorParticleSystemWidget::DrawViewportPanel(const ImVec2& Size)
 
 	DrawViewportMenuBar(CanvasMin);
 
-	DrawList->AddText(
+	/*DrawList->AddText(
 		ImVec2(CanvasMin.x + 8.0f, CanvasMax.y - 72.0f),
 		ImGui::GetColorU32(ImVec4(0.90f, 0.90f, 0.90f, 1.0f)),
-		"WARNING: This particle system has no fixed bounding box and contains a GPU emitter.");
-	DrawList->AddLine(ImVec2(CanvasMin.x + 24.0f, CanvasMax.y - 24.0f), ImVec2(CanvasMin.x + 48.0f, CanvasMax.y - 24.0f), ImGui::GetColorU32(ImVec4(1.0f, 0.1f, 0.0f, 1.0f)), 1.5f);
-	DrawList->AddLine(ImVec2(CanvasMin.x + 24.0f, CanvasMax.y - 24.0f), ImVec2(CanvasMin.x + 24.0f, CanvasMax.y - 48.0f), ImGui::GetColorU32(ImVec4(0.0f, 0.45f, 1.0f, 1.0f)), 1.5f);
+		"WARNING: This particle system has no fixed bounding box and contains a GPU emitter.");*/
+
+	const bool bDrawOrientationAxis = bPreviewViewportInitialized
+		? PreviewClient.GetParticleShowFlags().bAxis
+		: bShowOriginAxis;
+	if (bDrawOrientationAxis)
+	{
+		DrawViewportOrientationAxis(DrawList, CanvasMin, CanvasMax, PreviewClient.GetRenderCamera());
+	}
 }
 
 void FEditorParticleSystemWidget::DrawViewportMenuBar(const ImVec2& CanvasMin)
