@@ -63,9 +63,7 @@ void FEditorMainPanel::RenderActiveDocumentToolbar()
 		}
 		else if (ActiveTab && ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor)
 		{
-			ImGui::TextDisabled("Particle Editor");
-			ImGui::SameLine();
-			ImGui::TextUnformatted(Widgets.ParticleSystemWidget.GetDocumentPath().c_str());
+			Widgets.ParticleSystemWidget.RenderDocumentToolbarControls();
 		}
 		else
 		{
