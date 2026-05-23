@@ -28,7 +28,7 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 		SpriteTemplate->CacheEmitterModuleInfo();
 		ParticleSize = SpriteTemplate->GetParticleSize();
 		ParticleStride = ParticleSize;
-		MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticles(), 1);
+		MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
 		CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(0.0f);
 		CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
 	}
@@ -246,7 +246,36 @@ const FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex) co
 	return reinterpret_cast<const FBaseParticle*>(ParticleData + ParticleIndices[ActiveIndex] * ParticleStride);
 }
 
-void FParticleEmitterInstance::SetSpawnFraction(float InSpawnFraction)
+
+FVector FParticleEmitterInstance::GetComponentWorldLocation() const
 {
-    SpawnFraction = std::clamp(InSpawnFraction, 0.0f, 1.0f);
+    if (Component)
+        return Component->GetWorldLocation();
+
+    return FVector::ZeroVector;
+}
+
+void FParticleEmitterInstance::QueueCollisionEvent(const FParticleEventCollideData& EventData)
+{
+    if (Component)
+        Component->QueueCollisionEvent(EventData);
+}
+
+void FParticleEmitterInstance::DispatchQueuedParticleEvents()
+{
+    if (Component)
+        Component->DispatchQueuedParticleEvents();
+}
+
+int32 FParticleEmitterInstance::ConsumeSpawnCount(float Rate, float DeltaTime)
+{
+    if (Rate <= 0.0f || DeltaTime <= 0.0f)
+    {
+        return 0;
+    }
+
+    const float SpawnAmount = Rate * DeltaTime + SpawnFraction;
+    const int32 SpawnCount = static_cast<int32>(std::floor(SpawnAmount));
+    SpawnFraction = SpawnAmount - static_cast<float>(SpawnCount);
+    return SpawnCount;
 }

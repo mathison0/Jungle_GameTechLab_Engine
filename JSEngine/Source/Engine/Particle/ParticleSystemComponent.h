@@ -16,7 +16,6 @@ public:
 
 	void SetTemplate(UParticleSystem* InTemplate);
 	UParticleSystem* GetTemplate() const { return Template; }
-	const TArray<FParticleEmitterInstance*>& GetEmitterInstances() const { return EmitterInstances; }
 	TArray<FParticleEventCollideData>& GetPendingCollisionEvents() { return PendingCollisionEvents; }
 	const TArray<FParticleEventCollideData>& GetPendingCollisionEvents() const { return PendingCollisionEvents; }
 
@@ -34,6 +33,7 @@ public:
 	FOnParticleCollide OnParticleCollide;
 
 	int32 GetTotalActiveParticleCount() const;
+
 	int32 GetEmitterInstanceCount() const;
 	FParticleEmitterInstance* GetEmitterInstance(int32 Index);
 	const FParticleEmitterInstance* GetEmitterInstance(int32 Index) const;

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Object/Object.h"
 #include "Particle/ParticleModules.h"
@@ -57,7 +57,7 @@ public:
 
 	const TArray<UParticleLODLevel*>& GetLODLevels() const { return LODLevels; }
 	int32 GetParticleSize() const { return ParticleSize; }
-	int32 GetMaxActiveParticles() const { return MaxActiveParticles; }
+	int32 GetMaxActiveParticleCount() const { return MaxActiveParticles; }
 
 	UPROPERTY(DisplayName = "LOD Levels")
 	TArray<UParticleLODLevel*> LODLevels;

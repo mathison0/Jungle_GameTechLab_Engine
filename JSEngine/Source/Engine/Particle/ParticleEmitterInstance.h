@@ -19,7 +19,7 @@ struct FParticleEmitterInstance
 	
 	// Getter
     int32 GetActiveParticleCount() const { return ActiveParticles; }
-    int32 GetMaxActiveParticles() const { return MaxActiveParticles; }
+    int32 GetMaxActiveParticleCount() const { return MaxActiveParticles; }
     int32 GetParticleStride() const { return ParticleStride; }
     int32 GetParticleSize() const { return ParticleSize; }
 
@@ -27,8 +27,8 @@ struct FParticleEmitterInstance
     const uint16* GetParticleIndices() const { return ParticleIndices; }
 
 	UParticleEmitter* GetTemplate() const { return SpriteTemplate; }
-    UParticleLODLevel* GetCurrLODLevel() const { return CurrentLODLevel; }
-    int32 GetCurrLODLevelIndex() const { return CurrentLODLevelIndex; }
+    UParticleLODLevel* GetCurrentLODLevel() const { return CurrentLODLevel; }
+    int32 GetCurrentLODLevelIndex() const { return CurrentLODLevelIndex; }
     int32 GetEmitterIndex() const { return EmitterIndex; }
     uint32 GetParticleCounter() const { return ParticleCounter; }
     FParticleEmitterRuntimeView GetRuntimeView() const;
@@ -37,9 +37,13 @@ struct FParticleEmitterInstance
     const FBaseParticle* GetParticle(int32 ActiveIndex) const;
 
 	UParticleSystemComponent* GetComponent() const { return Component; }
-    float GetSpawnFraction() const { return SpawnFraction; }
-	// Setter
-    void SetSpawnFraction(float InSpawnFraction);
+    FVector GetComponentWorldLocation() const;
+	UParticleSystemComponent* GetOwningComponent() const { return Component; }
+
+
+    void QueueCollisionEvent(const FParticleEventCollideData& EventData);
+    void DispatchQueuedParticleEvents();
+    int32 ConsumeSpawnCount(float Rate, float DeltaTime);
 
 private:
 	UParticleEmitter* SpriteTemplate = nullptr;

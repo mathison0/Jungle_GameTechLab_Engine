@@ -69,10 +69,7 @@ int32 UParticleModuleSpawn::ComputeSpawnCount(FParticleEmitterInstance* Owner, f
         return 0;
     }
 
-    const float SpawnAmount = Rate * DeltaTime + Owner->GetSpawnFraction();
-    const int32 SpawnCount = static_cast<int32>(std::floor(SpawnAmount));
-    Owner->SetSpawnFraction( SpawnAmount - static_cast<float>(SpawnCount));
-    return SpawnCount;
+	return Owner->ConsumeSpawnCount(Rate, DeltaTime);
 }
 
 UParticleModuleLifetime::UParticleModuleLifetime()
@@ -108,7 +105,7 @@ void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, FBasePartic
 {
     (void)SpawnTime;
     const FVector LocalOffset = RandomRangeVector(StartLocationMin, StartLocationMax);
-    const FVector BaseLocation = Owner && Owner->GetComponent() ? Owner->GetComponent()->GetWorldLocation() : FVector::ZeroVector;
+    const FVector BaseLocation = Owner ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
     Particle.Location = BaseLocation + LocalOffset;
     Particle.OldLocation = Particle.Location;
 }
@@ -213,7 +210,7 @@ UParticleModuleCollision::UParticleModuleCollision()
 void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    if (!Owner || !Owner->GetComponent())
+    if (!Owner)
     {
         return;
     }
@@ -235,7 +232,7 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
         if (bGenerateCollisionEvents)
         {
             FParticleEventCollideData Event;
-            Event.Component = Owner->GetComponent();
+            Event.Component = Owner->GetOwningComponent();
             Event.EmitterInstance = Owner;
             Event.EmitterIndex = Owner->GetEmitterIndex();
             Event.ParticleId = Particle.ParticleId;
@@ -247,7 +244,7 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
             Event.Hit.bHit = true;
             Event.Hit.Location = Particle.Location;
             Event.Hit.Normal = FVector::UpVector;
-            Owner->GetComponent()->QueueCollisionEvent(Event);
+            Owner->QueueCollisionEvent(Event);
         }
 
         if (bKillOnCollision)
@@ -273,8 +270,8 @@ UParticleModuleEventGenerator::UParticleModuleEventGenerator()
 void UParticleModuleEventGenerator::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    if (Owner && Owner->GetComponent())
+    if (Owner)
     {
-        Owner->GetComponent()->DispatchQueuedParticleEvents();
+        Owner->DispatchQueuedParticleEvents();
     }
 }
