@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Particle/ParticleSystem.h"
 
@@ -6,6 +6,27 @@ class UParticleSystemComponent;
 
 struct FParticleEmitterInstance
 {
+
+	
+	// Getter
+    int32 GetActiveParticleCount() const { return ActiveParticles; }
+    int32 GetMaxActiveParticles() const { return MaxActiveParticles; }
+    int32 GetParticleStride() const { return ParticleStride; }
+    int32 GetParticleSize() const { return ParticleSize; }
+
+	const uint8* GetParticleData() const { return ParticleData; }
+    const uint16* GetParticleIndices() const { return ParticleIndices; }
+
+	UParticleEmitter* GetTemplate() const { return SpriteTemplate; }
+    UParticleLODLevel* GetCurrLODLelvel() const { return CurrentLODLevel; }
+    int32 GetCurrLODLevelIndex() const { return CurrentLODLevelIndex; }
+    int32 GetEmitterIndex() const { return EmitterIndex; }
+    uint32 GetParticleCounter() const { return ParticleCounter; }
+
+	FBaseParticle* GetParticle(int32 ActiveIndex);
+    const FBaseParticle* GetParticle(int32 ActiveIndex) const;
+
+private:
 	UParticleEmitter* SpriteTemplate = nullptr;
 	UParticleSystemComponent* Component = nullptr;
 	int32 EmitterIndex = -1;
@@ -36,6 +57,5 @@ struct FParticleEmitterInstance
 	                    const FVector& InitialVelocity, struct FParticleEventInstancePayload* EventPayload = nullptr);
 	void KillParticle(int32 Index);
 
-	FBaseParticle* GetParticle(int32 ActiveIndex);
-	const FBaseParticle* GetParticle(int32 ActiveIndex) const;
+
 };
