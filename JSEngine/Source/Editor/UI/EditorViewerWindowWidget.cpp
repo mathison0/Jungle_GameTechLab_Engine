@@ -401,6 +401,10 @@ void FEditorViewerWindowWidget::Render(float DeltaTime)
         ImGuiWindowFlags_NoCollapse;
 	if (ImGui::Begin(WindowName.c_str(), &bOpen, WindowFlags))
 	{
+        if (FEditorDetachedWindowChrome::WasCurrentWindowDraggedToMainTabStrip(LastDetachedWindowPos, bDraggingDetachedWindow))
+        {
+            bDockRequested = true;
+        }
         RenderDetachedDocumentChrome(bDockRequested, bCloseRequested);
         RenderDetachedDocumentToolbar(bDockRequested);
 		RenderContent(DeltaTime);

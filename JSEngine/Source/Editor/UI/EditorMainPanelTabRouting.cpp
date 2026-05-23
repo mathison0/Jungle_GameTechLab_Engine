@@ -315,7 +315,13 @@ void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTim
 
 	if (ImGui::Begin(ParticleDetachedWindowName, &bOpen, WindowFlags))
 	{
+		static ImVec2 LastDetachedParticleWindowPos(0.0f, 0.0f);
+		static bool bDraggingDetachedParticleWindow = false;
 		bool bCloseRequested = false;
+		const bool bDockByDraggingToTabStrip =
+			FEditorDetachedWindowChrome::WasCurrentWindowDraggedToMainTabStrip(
+				LastDetachedParticleWindowPos,
+				bDraggingDetachedParticleWindow);
 		Widgets.ParticleSystemWidget.RenderDetachedDocumentChrome(bCloseRequested);
 
 		ImGui::BeginChild("##DetachedParticleToolbar", ImVec2(0.0f, 40.0f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
@@ -326,7 +332,11 @@ void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTim
 		EditorTabs.SetTabDirty(ParticleTab->Id, Widgets.ParticleSystemWidget.IsDirty());
 		Widgets.ParticleSystemWidget.RenderEmbedded(DeltaTime);
 
-		if (bCloseRequested)
+		if (bDockByDraggingToTabStrip)
+		{
+			RequestDetachEditorTab(ParticleTab->Id, false);
+		}
+		else if (bCloseRequested)
 		{
 			RequestCloseEditorTab(ParticleTab->Id);
 		}

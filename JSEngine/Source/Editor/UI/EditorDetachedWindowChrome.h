@@ -6,6 +6,7 @@
 #include "ImGui/imgui_impl_win32.h"
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 
 #ifndef NOMINMAX
@@ -66,6 +67,69 @@ namespace FEditorDetachedWindowChrome
 	inline bool IsViewportMaximized(HWND Hwnd)
 	{
 		return Hwnd && ::IsZoomed(Hwnd) != FALSE;
+	}
+
+	inline bool IsLeftMouseButtonDown()
+	{
+		return ImGui::IsMouseDown(ImGuiMouseButton_Left) || (::GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+	}
+
+	inline bool DoRectsOverlap(const ImVec2& AMin, const ImVec2& AMax, const ImVec2& BMin, const ImVec2& BMax)
+	{
+		return AMin.x < BMax.x && AMax.x > BMin.x && AMin.y < BMax.y && AMax.y > BMin.y;
+	}
+
+	inline bool IsCurrentWindowTopBarOverMainTabStrip(float Padding = 8.0f)
+	{
+		const ImGuiViewport* MainViewport = ImGui::GetMainViewport();
+		if (!MainViewport)
+		{
+			return false;
+		}
+
+		const ImVec2 WindowPos = ImGui::GetWindowPos();
+		const ImVec2 WindowSize = ImGui::GetWindowSize();
+		const ImVec2 TopBarMin(WindowPos.x, WindowPos.y);
+		const ImVec2 TopBarMax(WindowPos.x + WindowSize.x, WindowPos.y + FEditorChromeMetrics::ApplicationTitleBarHeight);
+
+		const ImVec2 TabStripMin(
+			MainViewport->WorkPos.x - Padding,
+			MainViewport->WorkPos.y + FEditorChromeMetrics::ApplicationTitleBarHeight - Padding);
+		const ImVec2 TabStripMax(
+			MainViewport->WorkPos.x + MainViewport->WorkSize.x + Padding,
+			TabStripMin.y + FEditorChromeMetrics::TabStripHeight + Padding * 2.0f);
+
+		return DoRectsOverlap(TopBarMin, TopBarMax, TabStripMin, TabStripMax);
+	}
+
+	inline bool WasCurrentWindowDraggedToMainTabStrip(ImVec2& LastWindowPos, bool& bDraggingWindow)
+	{
+		const ImVec2 WindowPos = ImGui::GetWindowPos();
+		const bool bHasLastWindowPos = LastWindowPos.x != 0.0f || LastWindowPos.y != 0.0f;
+		if (!bHasLastWindowPos)
+		{
+			LastWindowPos = WindowPos;
+			return false;
+		}
+
+		const ImVec2 Delta(WindowPos.x - LastWindowPos.x, WindowPos.y - LastWindowPos.y);
+		const bool bWindowMoved = std::abs(Delta.x) > 0.5f || std::abs(Delta.y) > 0.5f;
+		const bool bMouseDown = IsLeftMouseButtonDown();
+		if (bMouseDown && bWindowMoved && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+		{
+			bDraggingWindow = true;
+		}
+
+		bool bDroppedOnTabStrip = false;
+		if (!bMouseDown)
+		{
+			const bool bNativeMoveCompleted = bWindowMoved && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+			bDroppedOnTabStrip = (bDraggingWindow || bNativeMoveCompleted) && IsCurrentWindowTopBarOverMainTabStrip();
+			bDraggingWindow = false;
+		}
+
+		LastWindowPos = WindowPos;
+		return bDroppedOnTabStrip;
 	}
 
 	inline void ToggleViewportMaximize(HWND Hwnd)

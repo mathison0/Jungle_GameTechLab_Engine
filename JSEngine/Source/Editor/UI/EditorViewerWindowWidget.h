@@ -2,6 +2,7 @@
 #include "Editor/UI/EditorWidget.h"
 #include "Asset/SkeletalMeshTypes.h"
 #include "Render/Common/ComPtr.h"
+#include "ImGui/imgui.h"
 
 class USkeletalMeshComponent;
 class FSceneViewport;
@@ -9,7 +10,6 @@ class FEditorViewer;
 class UAnimSequence;
 class USkeletalMesh;
 struct ID3D11ShaderResourceView;
-struct ImVec2;
 
 class FEditorViewerWindowWidget : public FEditorWidget
 {
@@ -128,6 +128,8 @@ private:
 
 	FEditorViewer* Viewer = nullptr;
     bool bOpen = false;
+    ImVec2 LastDetachedWindowPos = ImVec2(0.0f, 0.0f);
+    bool bDraggingDetachedWindow = false;
 
     float LeftPanelWidth = 250.0f;
     float RightPanelWidth = 250.0f;
