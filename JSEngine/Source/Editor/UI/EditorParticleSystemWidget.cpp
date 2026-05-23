@@ -1406,7 +1406,7 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 	DrawList->AddRectFilled(ImVec2(HeaderMin.x + 50.0f, ControlsY), ImVec2(HeaderMin.x + 63.0f, ControlsY + 13.0f), ImGui::GetColorU32(ImVec4(0.47f, 0.59f, 0.66f, 1.0f)));
 	DrawList->AddText(ImVec2(HeaderMin.x + 53.0f, ControlsY - 1.0f), ImGui::GetColorU32(ImVec4(0.03f, 0.04f, 0.05f, 1.0f)), "U");
 
-	const int32 MaxParticles = Emitter ? Emitter->GetMaxActiveParticles() : 0;
+	const int32 MaxParticles = Emitter ? Emitter->GetMaxActiveParticleCount() : 0;
 	char CountBuffer[32] = {};
 	std::snprintf(CountBuffer, sizeof(CountBuffer), "%d", MaxParticles);
 	const ImVec2 CountSize = ImGui::CalcTextSize(CountBuffer);
