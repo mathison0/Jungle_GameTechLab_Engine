@@ -11,6 +11,7 @@
 #include "Core/Logging/SkinningStats.h"
 #include "Core/Logging/Log.h"
 #include "Runtime/SceneView.h"
+#include "Editor/Viewport/ParticleSystemViewportClient.h"
 #include "Engine/Component/GizmoComponent.h"
 #include "Engine/Component/SkeletalMeshComponent.h"
 #include "GameFramework/PrimitiveActors.h"
@@ -197,6 +198,7 @@ void FEditorRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
         }
 
 		RenderViewerViewport(Renderer);
+		RenderParticlePreviewViewport(Renderer);
         ViewportsEnd = std::chrono::steady_clock::now();
 
         BackBufferStart = std::chrono::steady_clock::now();
@@ -604,6 +606,109 @@ void FEditorRenderPipeline::RenderViewerViewport(FRenderer& Renderer)
         }
 #endif
 	}
+}
+
+void FEditorRenderPipeline::RenderParticlePreviewViewport(FRenderer& Renderer)
+{
+    if (!Editor->GetMainPanel().IsParticlePreviewViewportVisible())
+    {
+        return;
+    }
+
+    FSceneViewport* SceneViewport = Editor->GetMainPanel().GetParticlePreviewViewport();
+    FParticleSystemViewportClient* VC = SceneViewport
+        ? static_cast<FParticleSystemViewportClient*>(SceneViewport->GetClient())
+        : nullptr;
+    if (!SceneViewport || !VC)
+    {
+        return;
+    }
+
+    FSceneView SceneView;
+    VC->BuildSceneView(SceneView);
+
+    const FViewportRect& Rect = SceneViewport->GetRect();
+    if (Rect.Width <= 0 || Rect.Height <= 0)
+    {
+        return;
+    }
+
+    const uint32 ResourceIndex = static_cast<uint32>(Editor->GetViewers().size());
+    FViewportRenderResource& ViewportResource =
+        Editor->GetRenderer().AcquireViewerViewportResource(ResourceIndex, Rect.Width, Rect.Height);
+    SceneViewport->SetRenderTargetSet(&ViewportResource.GetView());
+
+    Renderer.BeginViewportFrame(SceneViewport->GetViewportRenderTargets());
+    Bus.Clear();
+
+    UWorld* World = VC->GetFocusedWorld();
+    const FViewportCamera* Camera = VC->GetRenderCamera();
+    if (!World || !Camera)
+    {
+        return;
+    }
+
+    const FEditorSettings& Settings = Editor->GetSettings();
+    const FParticleSystemViewportShowFlags& PreviewFlags = VC->GetParticleShowFlags();
+
+    FShowFlags ShowFlags = {};
+    ShowFlags.bPrimitives = true;
+    ShowFlags.bSkeletalMesh = false;
+    ShowFlags.bGrid = PreviewFlags.bGrid;
+    ShowFlags.bAxis = PreviewFlags.bAxis;
+    ShowFlags.bGizmo = false;
+    ShowFlags.bBillboardText = false;
+    ShowFlags.bBoundingVolume = PreviewFlags.bBounds;
+    ShowFlags.bBVHBoundingVolume = false;
+    ShowFlags.bEnableLOD = false;
+    ShowFlags.bDecals = false;
+    ShowFlags.bFog = false;
+    ShowFlags.bShadow = false;
+    ShowFlags.bGammaCorrection = false;
+    ShowFlags.GammaValue = Settings.ShowFlags.GammaValue;
+
+    const FEditorViewportState* ViewportState = VC->GetViewportState();
+    const EViewMode ViewMode = ViewportState ? ViewportState->ViewMode : EViewMode::Lit_BlinnPhong;
+
+    Bus.SetViewProjection(
+        SceneView.ViewMatrix,
+        SceneView.ProjectionMatrix,
+        Camera->GetNearPlane(),
+        Camera->GetFarPlane());
+    Bus.SetRenderSettings(ViewMode, ShowFlags);
+    Bus.SetLightCullMode(ViewportState ? ViewportState->LightCullMode : ELightCullMode::None);
+    Bus.SetShadowFilterMode(Settings.ShadowFilterMode);
+    Bus.SetViewportSize(FVector2(static_cast<float>(Rect.Width), static_cast<float>(Rect.Height)));
+    Bus.SetViewportOrigin(FVector2(0.0f, 0.0f));
+    Bus.SetFXAAEnabled(Settings.bEnableFXAA && !SceneView.bOrthographic);
+    Bus.SetCascadeVis(ViewportState ? ViewportState->bShowCascadeVis : false);
+    Bus.bSandevistanEnabled = false;
+    Bus.SandevistanIntensity = 0.0f;
+
+    Collector.CollectWorld(
+        World,
+        ShowFlags,
+        ViewMode,
+        Bus,
+        &SceneView.CameraFrustum,
+        true);
+
+    if (ShowFlags.bGrid || ShowFlags.bAxis)
+    {
+        Collector.CollectGrid(
+            Settings.GridSpacing,
+            Settings.GridHalfLineCount,
+            Bus,
+            SceneView.bOrthographic);
+    }
+
+    Renderer.PrepareBatchers(Bus);
+    Renderer.Render(Bus);
+    Renderer.RenderScreenOverlays(Bus, false);
+
+    TArray<AActor*> IdPickActors;
+    Renderer.RenderEditorIdPickBuffer(Bus, ViewportResource, IdPickActors);
+    SceneViewport->SetEditorIdPickActors(std::move(IdPickActors));
 }
 
 const FRenderCollector::FCullingStats& FEditorRenderPipeline::GetViewportCullingStats(int32 ViewportIndex) const

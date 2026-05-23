@@ -1840,6 +1840,9 @@
     <ClInclude Include="Source\Editor\Viewport\FSceneViewport.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\ParticleSystemViewportClient.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\SEditorViewport.h">
       <Filter>Source\Editor\Viewport</Filter>
     </ClInclude>

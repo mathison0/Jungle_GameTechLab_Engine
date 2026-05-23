@@ -274,6 +274,22 @@ void UEditorEngine::Tick(float DeltaTime)
 			}
 		}
 	}
+	if (FSceneViewport* ParticleViewport = MainPanel.GetParticlePreviewViewport())
+	{
+		if (FEditorViewportClient* ParticleClient = ParticleViewport->GetClient())
+		{
+			if (FEditorViewportState* State = ParticleClient->GetViewportState())
+			{
+				const bool bRoutedToParticle = RoutedInputContext.TargetClient == ParticleClient;
+				State->bHovered =
+					bRoutedToParticle &&
+					(RoutedInputContext.bHovered ||
+					 RoutedInputContext.bCaptured ||
+					 RoutedInputContext.bRelativeMouseMode ||
+					 RoutedInputContext.bFocused);
+			}
+		}
+	}
 
 #if STATS
 	const auto PanelStart = std::chrono::steady_clock::now();
@@ -282,6 +298,16 @@ void UEditorEngine::Tick(float DeltaTime)
 	for (auto& ViewerPtr : Viewers)
 	{
 		ViewerPtr->Tick(DeltaTime);
+	}
+	if (MainPanel.IsParticlePreviewViewportVisible())
+	{
+		if (FSceneViewport* ParticleViewport = MainPanel.GetParticlePreviewViewport())
+		{
+			if (FEditorViewportClient* ParticleClient = ParticleViewport->GetClient())
+			{
+				ParticleClient->Tick(DeltaTime);
+			}
+		}
 	}
 	MainPanel.Update();
 #if STATS
@@ -559,6 +585,50 @@ void UEditorEngine::RegisterViewportInputTargets()
 
 					FEditorViewer* ViewerRawPtr = Viewers[Index].get();
 					return MainPanel.GetViewerViewportZOrder(ViewerRawPtr);
+				});
+		}
+	}
+
+	if (MainPanel.ShouldRouteParticlePreviewViewportInput())
+	{
+		FSceneViewport* ParticleViewport = MainPanel.GetParticlePreviewViewport();
+		FEditorViewportClient* ParticleClient = ParticleViewport ? ParticleViewport->GetClient() : nullptr;
+		if (ParticleViewport && ParticleClient)
+		{
+			EditorInputRouter.RegisterTarget(
+				ParticleViewport,
+				ParticleClient,
+				EInteractionDomain::Editor,
+				[this](FRect& OutRect)
+				{
+					const FSceneViewport* Viewport = MainPanel.GetParticlePreviewViewport();
+					if (!Viewport)
+					{
+						return false;
+					}
+
+					const FViewportRect& ViewportRect = Viewport->GetRect();
+					if (ViewportRect.Width <= 0 || ViewportRect.Height <= 0)
+					{
+						return false;
+					}
+
+					OutRect = FRect(
+						static_cast<float>(ViewportRect.X),
+						static_cast<float>(ViewportRect.Y),
+						static_cast<float>(ViewportRect.Width),
+						static_cast<float>(ViewportRect.Height));
+					return true;
+				},
+				[this]() -> UWorld*
+				{
+					const FSceneViewport* Viewport = MainPanel.GetParticlePreviewViewport();
+					const FEditorViewportClient* Client = Viewport ? Viewport->GetClient() : nullptr;
+					return Client ? Client->GetFocusedWorld() : nullptr;
+				},
+				[this]() -> int32
+				{
+					return MainPanel.GetParticlePreviewViewportZOrder();
 				});
 		}
 	}

@@ -16,6 +16,7 @@ class UActorSequenceComponent;
 class UCurveFloatAsset;
 class FWindowsWindow;
 class FEditorViewer;
+class FSceneViewport;
 struct ID3D11Device;
 
 class FEditorMainPanel
@@ -75,6 +76,9 @@ public:
 	void RestoreLastSceneFromProjectSettings();
 	bool IsLevelEditorViewportVisible() const;
 	bool IsViewerViewportVisible(FEditorViewer* Viewer) const;
+	bool IsParticlePreviewViewportVisible() const;
+	FSceneViewport* GetParticlePreviewViewport();
+	const FSceneViewport* GetParticlePreviewViewport() const;
 
 	// Viewport input routing rule:
 	// 1. Level viewport input is owned only by the active Level tab.
@@ -82,7 +86,9 @@ public:
 	// 3. UI widgets never talk to viewport clients directly for input ownership; they only expose visibility/focus state here.
 	bool ShouldRouteLevelViewportInput() const;
 	bool ShouldRouteViewerViewportInput(FEditorViewer* Viewer) const;
+	bool ShouldRouteParticlePreviewViewportInput() const;
 	int32 GetViewerViewportZOrder(FEditorViewer* Viewer) const;
+	int32 GetParticlePreviewViewportZOrder() const;
 
 	void ResetWidgetSelections();
 
@@ -112,6 +118,7 @@ private:
 	void RenderRuntimeUIPreviewDocument(float DeltaTime);
 	void RenderAnimGraphEditorDocument(float DeltaTime);
 	void RenderParticleSystemEditorDocument(float DeltaTime);
+	void RenderDetachedParticleSystemEditorDocument(float DeltaTime);
 	void UpdateConsoleDrawerAnimation(float EffectiveDeltaTime);
 	void RenderLateFrameOverlays(float DeltaTime, float EffectiveDeltaTime, bool bDrawEditorPanels);
 	void EndImGuiFrame();
@@ -189,5 +196,6 @@ private:
 	FEditorMainPanelRuntimeUIDrawCallbackState RuntimeUIDrawState;
 	FEditorFooterLogSystem FooterLogSystem;
 	FEditorMainPanelViewportIconResources IconResources;
+	bool bDetachedParticleSystemEditorOpen = false;
 
 };

@@ -173,6 +173,8 @@ void FEditorMainPanel::RenderEditorPanelWindows(float DeltaTime, bool bDrawEdito
 		}
 	}
 
+	RenderDetachedParticleSystemEditorDocument(DeltaTime);
+
 	FlushClosedViewerWidgets();
 }
 

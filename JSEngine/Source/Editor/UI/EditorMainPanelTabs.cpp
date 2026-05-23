@@ -4,6 +4,7 @@
 #include "Editor/UI/EditorChromeConstants.h"
 #include "Editor/Viewer/EditorViewer.h"
 #include "Editor/Viewport/EditorViewportClient.h"
+#include "Editor/Viewport/FSceneViewport.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_internal.h"
@@ -332,7 +333,9 @@ void FEditorMainPanel::RenderEditorTabStrip()
 
 			if (Tab.bCanClose && ImGui::BeginPopupContextItem("##TabContext"))
 			{
-				const bool bCanDetach = FindViewerWidgetForTab(Tab.Id) != nullptr;
+				const bool bCanDetach =
+					FindViewerWidgetForTab(Tab.Id) != nullptr ||
+					Tab.Id.Kind == EEditorTabKind::ParticleSystemEditor;
 				if (bCanDetach && ImGui::MenuItem(Tab.bDetached ? "Dock Tab" : "Detach Tab"))
 				{
 					PendingDetachTabId = Tab.Id;
@@ -423,6 +426,13 @@ void FEditorMainPanel::ActivateEditorTab(const FEditorTabId& TabId)
 				EditorEngine->FocusViewportInput(&Viewer->GetViewport());
 			}
 		}
+		else if (TabId.Kind == EEditorTabKind::ParticleSystemEditor)
+		{
+			if (FSceneViewport* ParticleViewport = GetParticlePreviewViewport())
+			{
+				EditorEngine->FocusViewportInput(ParticleViewport);
+			}
+		}
 	}
 
 	ImGui::SetWindowFocus("Viewport");
@@ -448,6 +458,11 @@ bool FEditorMainPanel::RequestCloseEditorTab(const FEditorTabId& TabId)
 		}
 	}
 
+	if (TabId.Kind == EEditorTabKind::ParticleSystemEditor)
+	{
+		bDetachedParticleSystemEditorOpen = false;
+	}
+
 	return EditorTabs.CloseTab(TabId);
 }
 
@@ -457,13 +472,35 @@ void FEditorMainPanel::RequestDetachEditorTab(const FEditorTabId& TabId, bool bD
 	const bool bWasActive = ActiveBefore && ActiveBefore->Id.Matches(TabId);
 
 	FEditorViewerWindowWidget* ViewerWidget = FindViewerWidgetForTab(TabId);
-	if (!ViewerWidget)
+	if (!ViewerWidget && TabId.Kind != EEditorTabKind::ParticleSystemEditor)
 	{
 		return;
 	}
 
 	if (!EditorTabs.SetTabDetached(TabId, bDetached))
 	{
+		return;
+	}
+
+	if (TabId.Kind == EEditorTabKind::ParticleSystemEditor)
+	{
+		bDetachedParticleSystemEditorOpen = bDetached;
+		if (bDetached)
+		{
+			ImGui::SetWindowFocus("Particle System Editor###ParticleSystemEditorDetached");
+			if (bWasActive)
+			{
+				const TArray<FEditorTabEntry>& Tabs = EditorTabs.GetTabs();
+				if (!Tabs.empty())
+				{
+					ActivateEditorTab(Tabs[0].Id);
+				}
+			}
+		}
+		else
+		{
+			ActivateEditorTab(TabId);
+		}
 		return;
 	}
 

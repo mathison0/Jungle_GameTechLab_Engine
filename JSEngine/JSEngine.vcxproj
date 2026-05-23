@@ -1112,6 +1112,7 @@
     <ClInclude Include="Source\Editor\Viewport\EditorViewportNavigationController.h" />
     <ClInclude Include="Source\Editor\Viewport\EditorViewportPIEController.h" />
     <ClInclude Include="Source\Editor\Viewport\FSceneViewport.h" />
+    <ClInclude Include="Source\Editor\Viewport\ParticleSystemViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\SEditorViewport.h" />
     <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\ViewportLayout.h" />
