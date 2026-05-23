@@ -94,6 +94,9 @@
     <Filter Include="Shaders\UI">
       <UniqueIdentifier>{e798a64b-b801-a905-d8c6-b3dfffd27f4f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\Particle">
+      <UniqueIdentifier>{4f1b8a5e-2c7d-4f3b-9a6e-8c1d2f4b7a90}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source">
       <UniqueIdentifier>{68b9826e-a6c9-e4e4-9aa1-ada62dab4606}</UniqueIdentifier>
     </Filter>
@@ -1377,6 +1380,9 @@
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\TranslucentRenderPass.cpp">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\ParticleRenderPass.cpp">
+      <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\VSMConversionRenderPass.cpp">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClCompile>
@@ -1402,6 +1408,9 @@
       <Filter>Source\Engine\Render\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Resource\Buffer.cpp">
+      <Filter>Source\Engine\Render\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Resource\InstanceBuffer.cpp">
       <Filter>Source\Engine\Render\Resource</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Resource\ComputeShader.cpp">
@@ -2476,6 +2485,9 @@
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\TranslucentRenderPass.h">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\ParticleRenderPass.h">
+      <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\VSMConversionRenderPass.h">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClInclude>
@@ -2501,6 +2513,9 @@
       <Filter>Source\Engine\Render\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resource\Buffer.h">
+      <Filter>Source\Engine\Render\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Resource\InstanceBuffer.h">
       <Filter>Source\Engine\Render\Resource</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Resource\ComputeShader.h">
@@ -2771,6 +2786,9 @@
       <Filter>ThirdParty\luajit\src</Filter>
     </ClInclude>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynaicEmitterDataBase.h" />
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicEmitterReplayDataBase.h" />
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicSpriteEmitterDataBase.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Atmosphere\HeightFogPixelShader.hlsl">

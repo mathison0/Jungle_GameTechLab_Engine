@@ -28,6 +28,7 @@ enum class EVertexFactoryType : uint8
     Text,
     Gizmo,
     Decal,
+    SpriteParticle,
 };
 
 // VertexFactory별 Shader Entry 정책입니다.
@@ -103,6 +104,20 @@ public:
                 { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0 },
             },
             0
+        };
+        // Slot 0: per-vertex quad (FSpriteParticleVertex, 20B)
+        // Slot 1: per-instance (FSpriteParticleInstanceData, 44B)
+        static const FVertexLayoutDesc SpriteParticleLayout = {
+            {
+                { "POSITION",          0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FSpriteParticleVertex, Position)),     D3D11_INPUT_PER_VERTEX_DATA,   0 },
+                { "TEXCOORD",          0, DXGI_FORMAT_R32G32_FLOAT,       0, static_cast<uint32>(offsetof(FSpriteParticleVertex, TexCoord)),     D3D11_INPUT_PER_VERTEX_DATA,   0 },
+                { "INSTANCE_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    1, static_cast<uint32>(offsetof(FSpriteParticleInstanceData, Position)),   D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+                { "INSTANCE_SIZE",     0, DXGI_FORMAT_R32G32_FLOAT,       1, static_cast<uint32>(offsetof(FSpriteParticleInstanceData, Size)),       D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+                { "INSTANCE_COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, static_cast<uint32>(offsetof(FSpriteParticleInstanceData, Color)),      D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+                { "INSTANCE_ROTATION", 0, DXGI_FORMAT_R32_FLOAT,          1, static_cast<uint32>(offsetof(FSpriteParticleInstanceData, Rotation)),   D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+                { "INSTANCE_SUBUV_INDEX", 0, DXGI_FORMAT_R32_UINT,        1, static_cast<uint32>(offsetof(FSpriteParticleInstanceData, SubUVIndex)), D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+            },
+            sizeof(FSpriteParticleInstanceData)
         };
 
         static const FVertexFactoryDesc StaticMeshDesc = {
@@ -196,6 +211,21 @@ public:
             PositionOnlyLayout,
             PrimitiveVertexLayout
         };
+        // SpriteParticle은 DepthPrepass/Shadow/Selection 패스에 들어가지 않습니다.
+        // 해당 entry들은 cascade 포팅의 후속 사이클에서 필요해지면 채웁니다.
+        static const FVertexFactoryDesc SpriteParticleDesc = {
+            FShaderPaths::ParticleSprite,
+            FShaderPaths::ParticleSprite,
+            FShaderPaths::ParticleSprite,
+            FShaderPaths::ParticleSprite,
+            "SpriteParticleVS",
+            "SpriteParticleVS",
+            "SpriteParticleVS",
+            "SpriteParticleVS",
+            SpriteParticleLayout,
+            SpriteParticleLayout,
+            SpriteParticleLayout
+        };
 
         switch (Type)
         {
@@ -213,6 +243,10 @@ public:
             return TexturedQuadDesc;
         case EVertexFactoryType::Text:
             return TextDesc;
+        // SpriteParticle은 default fallback(StaticMesh)으로 떨어지면 silent bug가 됩니다.
+        // 신규 EVertexFactoryType 추가 시 여기에 명시 case 추가 필수.
+        case EVertexFactoryType::SpriteParticle:
+            return SpriteParticleDesc;
         case EVertexFactoryType::StaticMesh:
         case EVertexFactoryType::ProceduralMesh:
         default:

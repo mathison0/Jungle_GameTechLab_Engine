@@ -19,6 +19,8 @@
 
 struct ID3D11ShaderResourceView;
 class UPrimitiveComponent;
+struct FSpriteParticleInstanceData;
+class UTexture;
 
 enum class ERenderCommandType
 {
@@ -476,4 +478,12 @@ struct FRenderCommand
 	} Constants;
 
 	ERenderCommandType Type = ERenderCommandType::Primitive;
+
+	// Sprite Particle 경로 (ERenderPass::Particle 전용). InstanceData는 Component 소유,
+	// FRenderCommand는 포인터만 들고 다닙니다. 한 emitter당 1개의 RenderCommand가 발행됩니다.
+	const FSpriteParticleInstanceData* ParticleInstances = nullptr;
+	uint32 ParticleInstanceCount = 0;
+	UTexture* ParticleTexture = nullptr;
+	uint32 ParticleSubUVColumns = 1;
+	uint32 ParticleSubUVRows = 1;
 };

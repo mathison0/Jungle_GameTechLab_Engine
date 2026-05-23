@@ -55,3 +55,23 @@ struct FMeshData
 	TArray<FVertex> Vertices;
 	TArray<uint32> Indices;
 };
+
+// Sprite Particle Quad의 Per-Vertex입니다. Slot 0 stream.
+struct FSpriteParticleVertex
+{
+	FVector  Position;   // 12
+	FVector2 TexCoord;   //  8
+};                       // 20 bytes
+
+// Sprite Particle의 Per-Instance입니다. Slot 1 stream.
+// 한 emitter의 모든 활성 파티클을 이 struct 배열로 채워 FInstanceBuffer에 올립니다.
+struct FSpriteParticleInstanceData
+{
+	FVector  Position;     // 12 (offset 0)
+	FVector2 Size;         //  8 (offset 12)
+	FColor   Color;        // 16 (offset 20) — RGBA float
+	float    Rotation;     //  4 (offset 36) — radians
+	uint32   SubUVIndex;   //  4 (offset 40)
+};                         // 44 bytes
+static_assert(sizeof(FSpriteParticleInstanceData) == 44,
+	"SpriteParticleLayout slot 1 offsets depend on this struct being tightly packed at 44 bytes");

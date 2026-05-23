@@ -1,4 +1,4 @@
-#include "Particle/ParticleEvent.h"
+﻿#include "Particle/ParticleEvent.h"
 
 // Function : Add particle collision event to manager queue
 // input : EventData
@@ -20,3 +20,4 @@ void AParticleEventManager::DispatchEvents()
 	}
 	CollisionEvents.clear();
 }
+	 

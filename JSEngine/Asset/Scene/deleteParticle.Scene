@@ -308,65 +308,16 @@
       "Tags" : [],
       "UUID" : 152,
       "Visible" : true
-    }, {
-      "Active" : true,
-      "ClassName" : "ASubUVActor",
-      "Components" : [{
-          "AttachSocketName" : "Name_None",
-          "ClassName" : "USubUVComponent",
-          "Height" : 2.000000,
-          "ObjectName" : "USubUVComponent_1",
-          "PersistentGuid" : "7485C021-DFAF405B-B55A0827-D8DEBA6C",
-          "PlayRate" : 30.000000,
-          "RelativeLocation" : {
-            "X" : -0.833004,
-            "Y" : -4.584751,
-            "Z" : 1.091528
-          },
-          "RelativeRotation" : {
-            "X" : 0.000000,
-            "Y" : 0.000000,
-            "Z" : 0.000000
-          },
-          "RelativeScale3D" : {
-            "X" : 1.000000,
-            "Y" : 1.000000,
-            "Z" : 1.000000
-          },
-          "SubUVName" : "Explosion",
-          "Tags" : [],
-          "TextureName" : "Name_None",
-          "Type" : "USubUVComponent",
-          "UUID" : 156,
-          "Width" : 2.000000,
-          "bAutoActivate" : true,
-          "bCanEverTick" : true,
-          "bCastDecal" : true,
-          "bEnableCull" : true,
-          "bGenerateOverlapEvents" : false,
-          "bInheritOwnerScale" : true,
-          "bIsActive" : true,
-          "bIsEditorOnly" : false,
-          "bIsVisible" : true,
-          "bLoop" : true,
-          "bTransient" : false
-        }],
-      "EditorOnly" : true,
-      "Name" : "ASubUVActor_0",
-      "RootComponent" : 156,
-      "Tags" : [],
-      "UUID" : 155,
-      "Visible" : true
     }],
   "ClassName" : "UWorld",
   "Name" : "deleteParticle",
-  "NextUUID" : 171,
+  "NextUUID" : 186,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
     "Location" : [2.674903, -2.351694, 3.867864],
     "NearClip" : 0.100000,
-    "Rotation" : [19.724398, -27.931274, -142.568817]
+    "Rotation" : [19.724455, -27.931335, -142.568726]
   },
   "Version" : 6,
   "WorldSettings" : {

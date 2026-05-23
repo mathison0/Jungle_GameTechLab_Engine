@@ -8,6 +8,9 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
+#include "Particle/ParticleSystemComponent.h" // particle 옮겨야함.
+
+
 #include "Core/Logging/SkinningStats.h"
 #include "Core/ResourceManager.h"
 #include "Engine/Asset/StaticMesh.h"
@@ -525,6 +528,46 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             Cmd.WorldAABB = ProcMeshComp->GetWorldAABB();
 
             RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+        }
+        return true;
+    }
+
+	case EPrimitiveType::EPT_ParticleSystem:
+    {
+        if (!ShowFlags.bPrimitives)
+            return true;
+
+        UParticleSystemComponent* ParticleSystemComponent = Cast<UParticleSystemComponent>(Primitive);
+        if (ParticleSystemComponent == nullptr)
+        {
+            UE_LOG("ParticleSystem_Cast_reference_Wrong");
+            return false;
+        }
+
+        ParticleSystemComponent->BuildSpriteInstanceData();
+
+        const TArray<FParticleEmitterInstance*>& EmitterInstances = ParticleSystemComponent->GetEmitterInstances();
+        for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmitterInstances.size()); ++EmitterIdx)
+        {
+            const TArray<FSpriteParticleInstanceData>& InstanceData = ParticleSystemComponent->GetEmitterInstanceData(EmitterIdx);
+            if (InstanceData.empty())
+            {
+                continue;
+            }
+
+            FRenderCommand Cmd = {};
+            Cmd.SourcePrimitive = Primitive;
+            Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+            Cmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
+            Cmd.Type = ERenderCommandType::Primitive;
+            Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
+            Cmd.ParticleInstances = InstanceData.data();
+            Cmd.ParticleInstanceCount = static_cast<uint32>(InstanceData.size());
+            Cmd.ParticleTexture = nullptr; // TODO: SubUV atlas 텍스처 — 모듈 포팅 후 연결
+            Cmd.ParticleSubUVColumns = 1;
+            Cmd.ParticleSubUVRows = 1;
+
+            RenderBus.AddCommand(ERenderPass::Particle, Cmd);
         }
         return true;
     }

@@ -69,6 +69,8 @@ struct FVertexElementDesc
     DXGI_FORMAT Format = DXGI_FORMAT_UNKNOWN;
     uint32 InputSlot = 0;
     uint32 AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+    D3D11_INPUT_CLASSIFICATION InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    uint32 InstanceDataStepRate = 0;
 };
 
 struct FVertexLayoutDesc

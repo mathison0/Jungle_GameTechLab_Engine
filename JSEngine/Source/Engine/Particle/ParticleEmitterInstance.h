@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Particle/ParticleSystem.h"
 
@@ -13,6 +13,7 @@ struct FParticleEmitterInstance
 	int32 CurrentLODLevelIndex = 0;
 	UParticleLODLevel* CurrentLODLevel = nullptr;
 
+	// 실제 데이터들, memory pool and live data
 	uint8* ParticleData = nullptr;
 	uint16* ParticleIndices = nullptr;
 	uint8* InstanceData = nullptr;

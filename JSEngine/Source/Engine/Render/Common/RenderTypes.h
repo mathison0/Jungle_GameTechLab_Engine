@@ -56,6 +56,7 @@ enum class ERenderPass : uint32
 	Font, // TextRenderComponent → FontBatcher 경유
 	SubUV, // SubUVComponent     → SubUVBatcher 경유
 	Translucent,
+	Particle,        // Cascade Sprite Particle. Translucent와 별도 — PickPasses[]에 안 들어가 ID pick 부작용 회피
 	SelectionMask,
 	Grid,
 	Editor,

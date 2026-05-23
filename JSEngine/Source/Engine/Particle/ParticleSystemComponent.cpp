@@ -149,3 +149,52 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 	}
 	NotifySpatialIndexDirty();
 }
+
+void UParticleSystemComponent::BuildSpriteInstanceData()
+{
+	const int32 EmitterCount = static_cast<int32>(EmitterInstances.size());
+	if (static_cast<int32>(EmitterInstanceData.size()) != EmitterCount)
+	{
+		EmitterInstanceData.resize(EmitterCount);
+	}
+
+	for (int32 EmitterIdx = 0; EmitterIdx < EmitterCount; ++EmitterIdx)
+	{
+		FParticleEmitterInstance* Instance = EmitterInstances[EmitterIdx];
+		TArray<FSpriteParticleInstanceData>& Out = EmitterInstanceData[EmitterIdx];
+		Out.clear();
+
+		if (!Instance || Instance->ActiveParticles == 0)
+		{
+			continue;
+		}
+
+		Out.reserve(Instance->ActiveParticles);
+		for (int32 i = 0; i < Instance->ActiveParticles; ++i)
+		{
+			const FBaseParticle* Particle = Instance->GetParticle(i);
+			if (!Particle)
+			{
+				continue;
+			}
+
+			FSpriteParticleInstanceData Data;
+			Data.Position   = Particle->Location;
+			Data.Size       = FVector2(Particle->Size.X, Particle->Size.Y);
+			Data.Color      = Particle->Color;
+			Data.Rotation   = Particle->Rotation;
+			Data.SubUVIndex = 0; // TODO: USubUVModule 포팅 후 페이로드에서 추출
+			Out.push_back(Data);
+		}
+	}
+}
+
+const TArray<FSpriteParticleInstanceData>& UParticleSystemComponent::GetEmitterInstanceData(int32 EmitterIndex) const
+{
+	static const TArray<FSpriteParticleInstanceData> Empty;
+	if (EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EmitterInstanceData.size()))
+	{
+		return Empty;
+	}
+	return EmitterInstanceData[EmitterIndex];
+}

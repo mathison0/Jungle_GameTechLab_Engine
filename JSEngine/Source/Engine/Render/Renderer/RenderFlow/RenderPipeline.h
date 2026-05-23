@@ -9,6 +9,7 @@ class FDecalRenderPass;
 class FFontRenderPass;
 class FSubUVRenderPass;
 class FTranslucentRenderPass;
+class FParticleRenderPass;
 class FSelectionMaskRenderPass;
 class FGridRenderPass;
 class FEditorRenderPass;
@@ -46,6 +47,7 @@ private:
     std::shared_ptr<FFontRenderPass> FontRenderPass;
     std::shared_ptr<FSubUVRenderPass> SubUVRenderPass;
     std::shared_ptr<FTranslucentRenderPass> TranslucentRenderPass;
+    std::shared_ptr<FParticleRenderPass> ParticleRenderPass;
     std::shared_ptr<FSelectionMaskRenderPass> SelectionMaskRenderPass;
     std::shared_ptr<FGridRenderPass> GridRenderPass;
     std::shared_ptr<FEditorRenderPass> EditorRenderPass;
