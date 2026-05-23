@@ -34,6 +34,7 @@ private:
 
 	// 기존 Viewport Render 동작 유지, Viewer 에 대한 로직만 추가
 	void RenderViewerViewport(FRenderer& Renderer);
+	void RenderParticlePreviewViewport(FRenderer& Renderer);
 
 	UEditorEngine* Editor = nullptr;
 	FRenderCollector Collector;

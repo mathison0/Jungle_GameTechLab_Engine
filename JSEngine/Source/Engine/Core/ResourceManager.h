@@ -35,6 +35,7 @@ class FStaticMeshLoadService;
 class FSkeletalMeshLoadService;
 class FFbxMaterialLoadService;
 class UAnimSequence;
+class UParticleSystem;
 
 // 리소스를 관리하는 싱글턴.
 class FResourceManager : public TSingleton<FResourceManager>
@@ -138,6 +139,9 @@ public:
 
 	UAnimGraphAsset* LoadAnimGraph(const FString& Path);
 	bool SaveAnimGraph(UAnimGraphAsset* Asset, const FString& Path);
+
+	UParticleSystem* LoadParticleSystem(const FString& Path);
+	bool SaveParticleSystem(UParticleSystem* Asset, const FString& Path);
 
 	ID3D11SamplerState* GetOrCreateSamplerState(ESamplerType Type, ID3D11Device* Device = nullptr);
 	ID3D11DepthStencilState* GetOrCreateDepthStencilState(EDepthStencilType Type, ID3D11Device* Device = nullptr);

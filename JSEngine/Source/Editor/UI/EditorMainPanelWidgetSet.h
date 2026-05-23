@@ -7,6 +7,7 @@
 #include "Editor/UI/EditorControlWidget.h"
 #include "Editor/UI/EditorCurveEditorWidget.h"
 #include "Editor/UI/EditorMaterialWidget.h"
+#include "Editor/UI/EditorParticleSystemWidget.h"
 #include "Editor/UI/EditorPlayStreamWidget.h"
 #include "Editor/UI/EditorPropertyWidget.h"
 #include "Editor/UI/EditorRuntimeUIPreviewWidget.h"
@@ -27,6 +28,7 @@ struct FEditorMainPanelWidgetSet
 	FEditorPropertyWidget PropertyWidget;
 	FEditorSceneWidget SceneWidget;
 	FEditorMaterialWidget MaterialWidget;
+	FEditorParticleSystemWidget ParticleSystemWidget;
 	FEditorViewportOverlayWidget ViewportOverlayWidget;
 	FEditorStatWidget StatWidget;
 	FEditorToolbarWidget ToolbarWidget;
