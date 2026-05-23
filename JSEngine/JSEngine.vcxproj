@@ -413,7 +413,10 @@
     <ClCompile Include="Intermediate\Reflection\Component\USubUVComponent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Component\UTextRenderComponent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Core\FGuid.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Editor\UEditorEngine.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Editor\UEditorEngine.gen.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\GameFramework\AActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\AAmbientLightActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\ABillboardActor.gen.cpp" />
@@ -441,7 +444,10 @@
     <ClCompile Include="Intermediate\Reflection\Math\FVector.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Math\FVector2.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Math\FVector4.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Misc\ObjViewer\UObjViewerEngine.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Misc\ObjViewer\UObjViewerEngine.gen.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\AParticleEventManager.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleEmitter.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleLODLevel.gen.cpp" />

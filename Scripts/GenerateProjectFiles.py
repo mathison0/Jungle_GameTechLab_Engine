@@ -320,6 +320,10 @@ def link_dependencies(config, platform):
 
 
 def should_exclude_from_game_client(rel_path):
+	if rel_path.startswith("Intermediate\\Reflection\\Misc\\ObjViewer\\"):
+		return True
+	if rel_path.startswith("Intermediate\\Reflection\\Editor\\"):
+		return True
 	if rel_path.startswith("Source\\Misc\\ObjViewer\\"):
 		return True
 	if rel_path.startswith("Source\\Editor\\") and rel_path != EDITOR_SELECTION_CPP:
