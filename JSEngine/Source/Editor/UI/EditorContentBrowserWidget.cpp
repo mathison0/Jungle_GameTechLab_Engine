@@ -13,6 +13,7 @@
 #include "Core/ResourceManager.h"
 #include "Runtime/Script/ScriptManager.h"
 #include "Object/Object.h"
+#include "Particle/ParticleSystem.h"
 #include "Render/Resource/Material.h"
 #include "Render/Renderer/Renderer.h"
 #include "ImGui/imgui.h"
@@ -21,6 +22,7 @@
 #include <algorithm>
 #include <cctype>
 #include <d3d11.h>
+#include <cmath>
 #include <fstream>
 #include <Windows.h>
 #include <shellapi.h>
@@ -897,6 +899,28 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 			DrawList->AddText(ImVec2((IconMin.x + IconMax.x - TextSize.x) * 0.5f, IconMax.y - 22.0f),
 				ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f)), Kind);
 		}
+		else if (IsParticleSystemAsset(Item.Extension))
+		{
+			const ImVec2 Center((IconMin.x + IconMax.x) * 0.5f, (IconMin.y + IconMax.y) * 0.5f - 6.0f);
+			const ImU32 CoreColor = ImGui::GetColorU32(ImVec4(1.0f, 0.74f, 0.36f, 1.0f));
+			const ImU32 RingColor = ImGui::GetColorU32(ImVec4(0.96f, 0.42f, 0.72f, 0.92f));
+			constexpr int32 ParticleCount = 10;
+			for (int32 Index = 0; Index < ParticleCount; ++Index)
+			{
+				const float Angle = static_cast<float>(Index) * 6.2831853f / static_cast<float>(ParticleCount);
+				const float Radius = (Index % 2 == 0) ? 24.0f : 31.0f;
+				DrawList->AddCircleFilled(
+					ImVec2(Center.x + std::cos(Angle) * Radius, Center.y + std::sin(Angle) * Radius),
+					3.2f,
+					RingColor,
+					12);
+			}
+			DrawList->AddCircleFilled(Center, 10.0f, CoreColor, 20);
+			const char* Kind = "FX";
+			const ImVec2 TextSize = ImGui::CalcTextSize(Kind);
+			DrawList->AddText(ImVec2((IconMin.x + IconMax.x - TextSize.x) * 0.5f, IconMax.y - 22.0f),
+				ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f)), Kind);
+		}
 	}
 
 	FString Label = Item.Name;
@@ -951,6 +975,10 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 		else if (IsAnimGraphAsset(Item.Extension))
 		{
 			EditorEngine->GetMainPanel().OpenAnimGraphAsset(MakeRelativeProjectPath(Item.Path));
+		}
+		else if (IsParticleSystemAsset(Item.Extension))
+		{
+			EditorEngine->GetMainPanel().OpenParticleEditorLayoutTest(MakeRelativeProjectPath(Item.Path));
 		}
 		else if (Item.Extension == ".scene")
 		{
@@ -1032,6 +1060,11 @@ void FEditorContentBrowserWidget::DrawContentContextMenu(bool bHasSelectedItem)
 		if (ImGui::MenuItem("Anim Graph"))
 		{
 			CreateAnimGraphAsset();
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::MenuItem("Particle System"))
+		{
+			CreateParticleSystemAsset();
 			ImGui::CloseCurrentPopup();
 		}
 		if (ImGui::MenuItem("Scene"))
@@ -1237,6 +1270,28 @@ bool FEditorContentBrowserWidget::CreateAnimGraphAsset()
 	Asset->RootNodeId = OutputNode.NodeId;
 
 	if (!FResourceManager::Get().SaveAnimGraph(Asset, RelativePath))
+	{
+		return false;
+	}
+
+	SelectedPath = NewPath;
+	RefreshContent();
+	return true;
+}
+
+bool FEditorContentBrowserWidget::CreateParticleSystemAsset()
+{
+	const std::filesystem::path NewPath = MakeUniquePath(CurrentPath / L"New Particle System.particlesystem");
+	const FString RelativePath = MakeRelativeProjectPath(NewPath);
+
+	UParticleSystem* ParticleSystem = UObjectManager::Get().CreateObject<UParticleSystem>();
+	if (!ParticleSystem)
+	{
+		return false;
+	}
+
+	ParticleSystem->SetFName(FName(FPaths::ToUtf8(NewPath.stem().wstring())));
+	if (!FResourceManager::Get().SaveParticleSystem(ParticleSystem, RelativePath))
 	{
 		return false;
 	}
@@ -1881,6 +1936,10 @@ FString FEditorContentBrowserWidget::GetPayloadType(const FContentItem& Item) co
 	{
 		return "AnimGraphContentItem";
 	}
+	if (IsParticleSystemAsset(Item.Extension))
+	{
+		return "ParticleSystemContentItem";
+	}
 	if (Item.Extension == ".prefab")
 	{
 		return "PrefabContentItem";
@@ -1933,6 +1992,10 @@ ImU32 FEditorContentBrowserWidget::GetItemColor(const FContentItem& Item) const
 	if (IsAnimGraphAsset(Item.Extension))
 	{
 		return ImGui::GetColorU32(ImVec4(0.38f, 0.58f, 0.86f, 1.0f));
+	}
+	if (IsParticleSystemAsset(Item.Extension))
+	{
+		return ImGui::GetColorU32(ImVec4(0.76f, 0.30f, 0.48f, 1.0f));
 	}
 	if (Item.Extension == ".prefab")
 	{
@@ -2000,6 +2063,11 @@ bool FEditorContentBrowserWidget::IsSequenceAsset(const FString& Extension) cons
 bool FEditorContentBrowserWidget::IsAnimGraphAsset(const FString& Extension) const
 {
 	return Extension == ".animgraph";
+}
+
+bool FEditorContentBrowserWidget::IsParticleSystemAsset(const FString& Extension) const
+{
+	return Extension == ".particlesystem";
 }
 
 bool FEditorContentBrowserWidget::IsPrefabAsset(const FString& Extension) const
