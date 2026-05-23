@@ -1,4 +1,4 @@
-#include "Particle/ParticleEmitterInstance.h"
+﻿#include "Particle/ParticleEmitterInstance.h"
 
 #include <algorithm>
 
@@ -199,6 +199,25 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	const int32 LastActiveIndex = ActiveParticles - 1;
 	std::swap(ParticleIndices[Index], ParticleIndices[LastActiveIndex]);
 	--ActiveParticles;
+}
+
+FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
+{
+    FParticleEmitterRuntimeView RuntimeView;
+    RuntimeView.ParticleData = ParticleData;
+    RuntimeView.ParticleIndices = ParticleIndices;
+    RuntimeView.ActiveParticles = ActiveParticles;
+    RuntimeView.MaxActiveParticles = MaxActiveParticles;
+    RuntimeView.ParticleStride = ParticleStride;
+    RuntimeView.ParticleSize = ParticleSize;
+    RuntimeView.CurrentLODLevelIndex = CurrentLODLevelIndex;
+
+	if (CurrentLODLevel && CurrentLODLevel->GetRequiredModule())
+    {
+        RuntimeView.RenderMode = CurrentLODLevel->GetRequiredModule()->GetRenderMode();
+    }
+
+    return RuntimeView;
 }
 
 // Function : Get mutable particle data by active index

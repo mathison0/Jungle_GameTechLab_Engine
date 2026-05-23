@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreMinimal.h"
 #include "Core/CollisionTypes.h"
@@ -69,4 +69,16 @@ struct FParticleEventCollideData
 	AActor* HitActor = nullptr;
 	float Time = 0.0f;
 	FHitResult Hit;
+};
+
+struct FParticleEmitterRuntimeView
+{
+    const uint8* ParticleData = nullptr;
+    const uint16* ParticleIndices = nullptr;
+    int32 ActiveParticles = 0;
+    int32 MaxActiveParticles = 0;
+    int32 ParticleStride = 0;
+    int32 ParticleSize = 0;
+    int32 CurrentLODLevelIndex = 0;
+    EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
 };

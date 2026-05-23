@@ -18,10 +18,11 @@ struct FParticleEmitterInstance
     const uint16* GetParticleIndices() const { return ParticleIndices; }
 
 	UParticleEmitter* GetTemplate() const { return SpriteTemplate; }
-    UParticleLODLevel* GetCurrLODLelvel() const { return CurrentLODLevel; }
+    UParticleLODLevel* GetCurrLODLevel() const { return CurrentLODLevel; }
     int32 GetCurrLODLevelIndex() const { return CurrentLODLevelIndex; }
     int32 GetEmitterIndex() const { return EmitterIndex; }
     uint32 GetParticleCounter() const { return ParticleCounter; }
+    FParticleEmitterRuntimeView GetRuntimeView() const;
 
 	FBaseParticle* GetParticle(int32 ActiveIndex);
     const FBaseParticle* GetParticle(int32 ActiveIndex) const;
