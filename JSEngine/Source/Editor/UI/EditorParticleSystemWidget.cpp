@@ -1,6 +1,7 @@
 ﻿#include "Editor/UI/EditorParticleSystemWidget.h"
 
 #include "Editor/EditorEngine.h"
+#include "Editor/UI/EditorDetachedWindowChrome.h"
 #include "Editor/UI/EditorMainPanelViewportToolbarHelpers.h"
 #include "Engine/Runtime/WindowsWindow.h"
 #include "GameFramework/PrimitiveActors.h"
@@ -432,6 +433,85 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 
 	SameLineGap(14.0f);
 	ToolbarButton("Menu", "Particle editor menu");
+}
+
+void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseRequested)
+{
+	FEditorDetachedWindowChrome::RenderMenuBar(
+		"Particle System Editor",
+		"ParticleSystemEditor",
+		[this]()
+		{
+			if (ImGui::BeginMenu("File"))
+			{
+				if (ImGui::MenuItem(bDirty ? "Save *" : "Save", "Ctrl+S"))
+				{
+					bDirty = false;
+				}
+				ImGui::MenuItem("Save As...", nullptr, false, false);
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Edit"))
+			{
+				ImGui::MenuItem("Undo", "Ctrl+Z", false, false);
+				ImGui::MenuItem("Redo", "Ctrl+Shift+Z", false, false);
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("View"))
+			{
+				if (ImGui::MenuItem("Thumbnail", nullptr, bShowThumbnail))
+				{
+					bShowThumbnail = !bShowThumbnail;
+				}
+				if (ImGui::MenuItem("Bounds", nullptr, bShowBounds))
+				{
+					bShowBounds = !bShowBounds;
+					if (bPreviewViewportInitialized)
+					{
+						PreviewClient.GetParticleShowFlags().bBounds = bShowBounds;
+					}
+				}
+				if (ImGui::MenuItem("Origin Axis", nullptr, bShowOriginAxis))
+				{
+					bShowOriginAxis = !bShowOriginAxis;
+					if (bPreviewViewportInitialized)
+					{
+						PreviewClient.GetParticleShowFlags().bAxis = bShowOriginAxis;
+					}
+				}
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Particle"))
+			{
+				ImGui::MenuItem("Restart Simulation", nullptr, false, false);
+				ImGui::MenuItem("Restart Level", nullptr, false, false);
+				ImGui::Separator();
+				ImGui::MenuItem("Regenerate LOD", nullptr, false, false);
+				ImGui::MenuItem("Add LOD", nullptr, false, false);
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Window"))
+			{
+				if (ImGui::MenuItem("Reset Layout"))
+				{
+					TopAreaHeight = 0.0f;
+					TopLeftWidth = 0.0f;
+					BottomLeftWidth = 0.0f;
+				}
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Help"))
+			{
+				ImGui::TextDisabled("Particle System Editor");
+				if (!DocumentPath.empty())
+				{
+					ImGui::Separator();
+					ImGui::TextDisabled("%s", DocumentPath.c_str());
+				}
+				ImGui::EndMenu();
+			}
+		},
+		bCloseRequested);
 }
 
 void FEditorParticleSystemWidget::DrawMainLayout()

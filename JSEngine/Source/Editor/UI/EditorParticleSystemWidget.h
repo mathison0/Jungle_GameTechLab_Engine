@@ -13,6 +13,7 @@ public:
 	void Initialize(UEditorEngine* InEditorEngine) override;
 	void Render(float DeltaTime) override;
 	void RenderEmbedded(float DeltaTime);
+	void RenderDetachedDocumentChrome(bool& bCloseRequested);
 	void RenderDocumentToolbarControls();
 	void Shutdown();
 

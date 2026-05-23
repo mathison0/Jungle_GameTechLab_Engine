@@ -1,5 +1,6 @@
 #include "Editor/UI/EditorMainPanel.h"
 
+#include "Editor/UI/EditorDetachedWindowChrome.h"
 #include "Editor/Viewer/EditorViewer.h"
 
 #include "ImGui/imgui.h"
@@ -285,6 +286,19 @@ void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTim
 		Widgets.ParticleSystemWidget.OpenLayoutTest(ParticleTab->Id.PayloadId);
 	}
 
+	const float TitleBarFramePaddingY = FEditorDetachedWindowChrome::GetTitleBarFramePaddingY();
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(13.0f, TitleBarFramePaddingY));
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(9.0f, 4.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.18f, 0.20f, 0.25f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.15f, 0.17f, 0.22f, 1.0f));
+
+	FEditorDetachedWindowChrome::ApplyWindowClass(0x4A535045u); // "JSPE" - detached particle editor window class
 	ImGui::SetNextWindowSize(ImVec2(1200.0f, 720.0f), ImGuiCond_FirstUseEver);
 	if (const ImGuiViewport* MainViewport = ImGui::GetMainViewport())
 	{
@@ -296,42 +310,31 @@ void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTim
 	bool bOpen = bDetachedParticleSystemEditorOpen;
 	constexpr ImGuiWindowFlags WindowFlags =
 		ImGuiWindowFlags_MenuBar |
+		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoCollapse;
 
 	if (ImGui::Begin(ParticleDetachedWindowName, &bOpen, WindowFlags))
 	{
-		bool bDockRequested = false;
 		bool bCloseRequested = false;
-		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::MenuItem("Dock Back"))
-			{
-				bDockRequested = true;
-			}
-			if (ImGui::MenuItem("Close"))
-			{
-				bCloseRequested = true;
-			}
-			ImGui::EndMenuBar();
-		}
+		Widgets.ParticleSystemWidget.RenderDetachedDocumentChrome(bCloseRequested);
 
-		ImGui::BeginChild("##DetachedParticleToolbar", ImVec2(0.0f, 36.0f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGui::BeginChild("##DetachedParticleToolbar", ImVec2(0.0f, 40.0f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGui::SetCursorPos(ImVec2(8.0f, 6.0f));
 		Widgets.ParticleSystemWidget.RenderDocumentToolbarControls();
 		ImGui::EndChild();
 
 		EditorTabs.SetTabDirty(ParticleTab->Id, Widgets.ParticleSystemWidget.IsDirty());
 		Widgets.ParticleSystemWidget.RenderEmbedded(DeltaTime);
 
-		if (bDockRequested)
-		{
-			RequestDetachEditorTab(ParticleTab->Id, false);
-		}
-		else if (bCloseRequested)
+		if (bCloseRequested)
 		{
 			RequestCloseEditorTab(ParticleTab->Id);
 		}
 	}
 	ImGui::End();
+
+	ImGui::PopStyleColor(4);
+	ImGui::PopStyleVar(5);
 
 	if (!bOpen)
 	{

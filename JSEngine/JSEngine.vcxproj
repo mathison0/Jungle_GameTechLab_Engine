@@ -1078,6 +1078,7 @@
     <ClInclude Include="Source\Editor\UI\EditorActorSequencerWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorAnimGraphWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorChromeConstants.h" />
+    <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h" />
     <ClInclude Include="Source\Editor\UI\EditorCommandContext.h" />
     <ClInclude Include="Source\Editor\UI\EditorConsoleWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorContentBrowserWidget.h" />

@@ -1738,6 +1738,9 @@
     <ClInclude Include="Source\Editor\UI\EditorChromeConstants.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorCommandContext.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
