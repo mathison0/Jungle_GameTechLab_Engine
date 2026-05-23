@@ -62,6 +62,7 @@ public:
 	UPROPERTY(DisplayName = "LOD Levels")
 	TArray<UParticleLODLevel*> LODLevels;
 
+
 private:
 	int32 ParticleSize = sizeof(FBaseParticle);
 	int32 MaxActiveParticles = 128;
@@ -74,7 +75,12 @@ public:
 	GENERATED_BODY(UParticleSystem, UObject)
 
 	const TArray<UParticleEmitter*>& GetEmitters() const { return Emitters; }
-
+    UParticleEmitter* AddEmitter();
+    void RemoveEmitter(int32 Index);
+    void ClearEmitters();
+    void CacheEmitterModuleInfo();
+    bool Validate(TArray<FString>* OutErrors = nullptr) const;
+    static UParticleSystem* CreateDefaultSpriteSystem();
 	UPROPERTY(DisplayName = "Emitters")
-	TArray<UParticleEmitter*> Emitters;
+    TArray<UParticleEmitter*> Emitters;
 };
