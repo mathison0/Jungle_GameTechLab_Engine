@@ -819,6 +819,9 @@
     <ClCompile Include="Source\Editor\UI\EditorMaterialWidget.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorPlayStreamWidget.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -1772,6 +1775,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorMaterialWidget.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidget.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorPlayStreamWidget.h">

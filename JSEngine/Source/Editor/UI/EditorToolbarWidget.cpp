@@ -127,6 +127,11 @@ void FEditorToolbarWidget::SetRuntimeUIPreviewOpenCallback(std::function<void()>
 	RuntimeUIPreviewOpenCallback = std::move(InCallback);
 }
 
+void FEditorToolbarWidget::SetParticleEditorOpenCallback(std::function<void()> InCallback)
+{
+	ParticleEditorOpenCallback = std::move(InCallback);
+}
+
 void FEditorToolbarWidget::SetActiveCommandHandlers(
 	std::function<bool(const FEditorShortcut&)> InShortcutHandler,
 	std::function<bool(EEditorCommandId)> InCommandHandler)
@@ -394,6 +399,13 @@ void FEditorToolbarWidget::RenderWindowMenu()
 		if (ImGui::MenuItem("Runtime UI Preview"))
 		{
 			RuntimeUIPreviewOpenCallback();
+		}
+	}
+	if (ParticleEditorOpenCallback)
+	{
+		if (ImGui::MenuItem("Particle Editor Layout Test"))
+		{
+			ParticleEditorOpenCallback();
 		}
 	}
 	else if (bShowRuntimeUIPreview)

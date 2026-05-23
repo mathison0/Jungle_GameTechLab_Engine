@@ -52,6 +52,7 @@ public:
 	void OpenCurveAsset(const FString& CurvePath);
 	void OpenAnimGraphAsset(const FString& AnimGraphPath);
 	void OpenRuntimeUIPreviewAsset(const FString& RmlPath = "");
+	void OpenParticleEditorLayoutTest(const FString& ParticleSystemPath = "");
 	void OpenViewer(FEditorViewer* Viewer);
 	bool ChangeViewerTarget(FEditorViewer* Viewer, const FString& NewFileName);
 	void RequestDockViewer(FEditorViewer* Viewer);
@@ -110,6 +111,7 @@ private:
 	void RenderActiveViewerDocument(float DeltaTime);
 	void RenderRuntimeUIPreviewDocument(float DeltaTime);
 	void RenderAnimGraphEditorDocument(float DeltaTime);
+	void RenderParticleSystemEditorDocument(float DeltaTime);
 	void UpdateConsoleDrawerAnimation(float EffectiveDeltaTime);
 	void RenderLateFrameOverlays(float DeltaTime, float EffectiveDeltaTime, bool bDrawEditorPanels);
 	void EndImGuiFrame();

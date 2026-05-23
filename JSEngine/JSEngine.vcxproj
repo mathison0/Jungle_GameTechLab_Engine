@@ -677,6 +677,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorPlayStreamWidget.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -1087,6 +1091,7 @@
     <ClInclude Include="Source\Editor\UI\EditorMainPanelViewportToolbarHelpers.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanelWidgetSet.h" />
     <ClInclude Include="Source\Editor\UI\EditorMaterialWidget.h" />
+    <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorPlayStreamWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorPropertyWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorRuntimeUIPreviewWidget.h" />

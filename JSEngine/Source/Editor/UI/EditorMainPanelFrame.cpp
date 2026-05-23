@@ -90,6 +90,12 @@ void FEditorMainPanel::RenderMainViewport(float DeltaTime)
         return;
     }
 
+    if (EditorTabs.GetActiveTabKind() == EEditorTabKind::ParticleSystemEditor)
+    {
+        RenderParticleSystemEditorDocument(DeltaTime);
+        return;
+    }
+
     RenderActiveViewerDocument(DeltaTime);
 }
 

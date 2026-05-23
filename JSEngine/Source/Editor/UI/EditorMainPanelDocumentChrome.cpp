@@ -61,6 +61,12 @@ void FEditorMainPanel::RenderActiveDocumentToolbar()
 			ImGui::SameLine();
 			ImGui::TextUnformatted(Widgets.AnimGraphWidget.GetEditingPath().c_str());
 		}
+		else if (ActiveTab && ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor)
+		{
+			ImGui::TextDisabled("Particle Editor");
+			ImGui::SameLine();
+			ImGui::TextUnformatted(Widgets.ParticleSystemWidget.GetDocumentPath().c_str());
+		}
 		else
 		{
 			ImGui::TextDisabled("No active document");
@@ -426,6 +432,14 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 			{
 				ImGui::Separator();
 				ImGui::TextDisabled("%s", Widgets.AnimGraphWidget.GetEditingPath().c_str());
+			}
+			break;
+		case EEditorTabKind::ParticleSystemEditor:
+			ImGui::TextDisabled("Particle System Editor");
+			if (!Widgets.ParticleSystemWidget.GetDocumentPath().empty())
+			{
+				ImGui::Separator();
+				ImGui::TextDisabled("%s", Widgets.ParticleSystemWidget.GetDocumentPath().c_str());
 			}
 			break;
 		default:

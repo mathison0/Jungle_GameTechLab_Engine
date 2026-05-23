@@ -36,6 +36,7 @@ void FEditorMainPanel::InitializeEditorWidgets(UEditorEngine* InEditorEngine)
     Widgets.ControlWidget.Initialize(InEditorEngine);
     Widgets.CurveEditorWidget.Initialize(InEditorEngine);
     Widgets.MaterialWidget.Initialize(InEditorEngine);
+    Widgets.ParticleSystemWidget.Initialize(InEditorEngine);
     Widgets.PropertyWidget.Initialize(InEditorEngine);
     Widgets.SceneWidget.Initialize(InEditorEngine);
     Widgets.ViewportOverlayWidget.Initialize(InEditorEngine);
@@ -61,6 +62,17 @@ void FEditorMainPanel::OpenAnimGraphAsset(const FString& AnimGraphPath)
     const FString TabLabel = MakeAnimGraphEditorTabLabel(AnimGraphPath);
     EditorTabs.OpenOrFocusTab(TabId, TabLabel);
     EditorTabs.SetTabLabel(TabId, TabLabel);
+    ActivateEditorTab(TabId);
+}
+
+void FEditorMainPanel::OpenParticleEditorLayoutTest(const FString& ParticleSystemPath)
+{
+    Widgets.ParticleSystemWidget.OpenLayoutTest(ParticleSystemPath);
+
+    const FEditorTabId TabId = MakeParticleSystemEditorTabId(ParticleSystemPath);
+    const FString TabLabel = MakeParticleSystemEditorTabLabel(ParticleSystemPath);
+    EditorTabs.OpenOrFocusTab(TabId, TabLabel);
+    EditorTabs.SetTabDirty(TabId, Widgets.ParticleSystemWidget.IsDirty());
     ActivateEditorTab(TabId);
 }
 
@@ -202,6 +214,7 @@ void FEditorMainPanel::BindEditorWidgetCallbacks()
     Widgets.ToolbarWidget.SetPIEViewportFullscreenCallback([this](bool bEnabled) { SetPIEViewportFullscreenEnabled(bEnabled); });
     Widgets.ToolbarWidget.SetBuildGameCallback([this]() { RequestBuildGame(); });
     Widgets.ToolbarWidget.SetRuntimeUIPreviewOpenCallback([this]() { OpenRuntimeUIPreviewAsset(); });
+    Widgets.ToolbarWidget.SetParticleEditorOpenCallback([this]() { OpenParticleEditorLayoutTest(); });
     Widgets.ToolbarWidget.SetActiveCommandHandlers(
         [this](const FEditorShortcut& Shortcut)
         {

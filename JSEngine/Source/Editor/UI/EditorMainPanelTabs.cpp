@@ -44,6 +44,8 @@ namespace
 			return { ImVec4(0.36f, 0.52f, 0.94f, 1.0f), "Actor Sequencer" };
 		case EEditorTabKind::RuntimeUIPreview:
 			return { ImVec4(0.86f, 0.58f, 0.22f, 1.0f), "Runtime UI Preview" };
+		case EEditorTabKind::ParticleSystemEditor:
+			return { ImVec4(0.82f, 0.28f, 0.58f, 1.0f), "Particle System Editor" };
 		default:
 			return { ImVec4(0.58f, 0.62f, 0.70f, 1.0f), "Editor Tab" };
 		}
@@ -69,6 +71,8 @@ namespace
 			return "Sequencer";
 		case EEditorTabKind::RuntimeUIPreview:
 			return "RuntimeUI";
+		case EEditorTabKind::ParticleSystemEditor:
+			return "Particle";
 		default:
 			return "Tab";
 		}
