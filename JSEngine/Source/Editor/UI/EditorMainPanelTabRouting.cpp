@@ -1,5 +1,6 @@
 #include "Editor/UI/EditorMainPanel.h"
 
+#include "Editor/UI/EditorDetachedWindowChrome.h"
 #include "Editor/Viewer/EditorViewer.h"
 
 #include "ImGui/imgui.h"
@@ -9,6 +10,8 @@
 
 namespace
 {
+	constexpr const char* ParticleDetachedWindowName = "Particle System Editor###ParticleSystemEditorDetached";
+
 	int32 FindImGuiWindowZOrder(const char* WindowName)
 	{
 		if (!WindowName)
@@ -82,6 +85,38 @@ bool FEditorMainPanel::IsLevelEditorTabActive() const
 bool FEditorMainPanel::IsLevelEditorViewportVisible() const
 {
 	return IsLevelEditorTabActive();
+}
+
+bool FEditorMainPanel::IsParticlePreviewViewportVisible() const
+{
+	const FEditorTabEntry* ActiveTab = EditorTabs.GetActiveTab();
+	const bool bDockedActive = ActiveTab &&
+		ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor &&
+		!ActiveTab->bDetached;
+
+	bool bDetachedOpen = false;
+	for (const FEditorTabEntry& Tab : EditorTabs.GetTabs())
+	{
+		if (Tab.Id.Kind == EEditorTabKind::ParticleSystemEditor && Tab.bDetached && bDetachedParticleSystemEditorOpen)
+		{
+			bDetachedOpen = true;
+			break;
+		}
+	}
+
+	return (bDockedActive || bDetachedOpen) &&
+		Widgets.ParticleSystemWidget.IsPreviewViewportVisible() &&
+		Widgets.ParticleSystemWidget.HasValidPreviewViewportRect();
+}
+
+FSceneViewport* FEditorMainPanel::GetParticlePreviewViewport()
+{
+	return Widgets.ParticleSystemWidget.GetPreviewViewport();
+}
+
+const FSceneViewport* FEditorMainPanel::GetParticlePreviewViewport() const
+{
+	return Widgets.ParticleSystemWidget.GetPreviewViewport();
 }
 
 FEditorViewerWindowWidget* FEditorMainPanel::FindViewerWidgetForTab(const FEditorTabId& TabId) const
@@ -186,6 +221,127 @@ void FEditorMainPanel::RenderAnimGraphEditorDocument(float DeltaTime)
 	ImGui::End();
 }
 
+void FEditorMainPanel::RenderParticleSystemEditorDocument(float DeltaTime)
+{
+	const FEditorTabEntry* ActiveTab = EditorTabs.GetActiveTab();
+	if (!ActiveTab || ActiveTab->Id.Kind != EEditorTabKind::ParticleSystemEditor)
+	{
+		return;
+	}
+
+	constexpr ImGuiWindowFlags WindowFlags = 0;
+	if (!ImGui::Begin("Viewport", nullptr, WindowFlags))
+	{
+		ImGui::End();
+		return;
+	}
+
+	if (ActiveTab->bDetached)
+	{
+		ImGui::TextDisabled("This particle editor tab is detached.");
+		if (ImGui::Button("Dock Back"))
+		{
+			RequestDetachEditorTab(ActiveTab->Id, false);
+		}
+		ImGui::End();
+		return;
+	}
+
+	if (!ActiveTab->Id.PayloadId.empty() &&
+		Widgets.ParticleSystemWidget.GetDocumentPath() != ActiveTab->Id.PayloadId)
+	{
+		Widgets.ParticleSystemWidget.OpenLayoutTest(ActiveTab->Id.PayloadId);
+	}
+
+	EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.ParticleSystemWidget.IsDirty());
+	Widgets.ParticleSystemWidget.RenderEmbedded(DeltaTime);
+	ImGui::End();
+}
+
+void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTime)
+{
+	if (!bDetachedParticleSystemEditorOpen)
+	{
+		return;
+	}
+
+	const FEditorTabEntry* ParticleTab = nullptr;
+	for (const FEditorTabEntry& Tab : EditorTabs.GetTabs())
+	{
+		if (Tab.Id.Kind == EEditorTabKind::ParticleSystemEditor && Tab.bDetached)
+		{
+			ParticleTab = &Tab;
+			break;
+		}
+	}
+	if (!ParticleTab)
+	{
+		bDetachedParticleSystemEditorOpen = false;
+		return;
+	}
+
+	if (!ParticleTab->Id.PayloadId.empty() &&
+		Widgets.ParticleSystemWidget.GetDocumentPath() != ParticleTab->Id.PayloadId)
+	{
+		Widgets.ParticleSystemWidget.OpenLayoutTest(ParticleTab->Id.PayloadId);
+	}
+
+	const float TitleBarFramePaddingY = FEditorDetachedWindowChrome::GetTitleBarFramePaddingY();
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(13.0f, TitleBarFramePaddingY));
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(9.0f, 4.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.18f, 0.20f, 0.25f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.15f, 0.17f, 0.22f, 1.0f));
+
+	FEditorDetachedWindowChrome::ApplyWindowClass(0x4A535045u); // "JSPE" - detached particle editor window class
+	ImGui::SetNextWindowSize(ImVec2(1200.0f, 720.0f), ImGuiCond_FirstUseEver);
+	if (const ImGuiViewport* MainViewport = ImGui::GetMainViewport())
+	{
+		ImGui::SetNextWindowPos(
+			ImVec2(MainViewport->Pos.x + 120.0f, MainViewport->Pos.y + 90.0f),
+			ImGuiCond_FirstUseEver);
+	}
+
+	bool bOpen = bDetachedParticleSystemEditorOpen;
+	constexpr ImGuiWindowFlags WindowFlags =
+		ImGuiWindowFlags_MenuBar |
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse;
+
+	if (ImGui::Begin(ParticleDetachedWindowName, &bOpen, WindowFlags))
+	{
+		bool bCloseRequested = false;
+		Widgets.ParticleSystemWidget.RenderDetachedDocumentChrome(bCloseRequested);
+
+		ImGui::BeginChild("##DetachedParticleToolbar", ImVec2(0.0f, 40.0f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGui::SetCursorPos(ImVec2(8.0f, 6.0f));
+		Widgets.ParticleSystemWidget.RenderDocumentToolbarControls();
+		ImGui::EndChild();
+
+		EditorTabs.SetTabDirty(ParticleTab->Id, Widgets.ParticleSystemWidget.IsDirty());
+		Widgets.ParticleSystemWidget.RenderEmbedded(DeltaTime);
+
+		if (bCloseRequested)
+		{
+			RequestCloseEditorTab(ParticleTab->Id);
+		}
+	}
+	ImGui::End();
+
+	ImGui::PopStyleColor(4);
+	ImGui::PopStyleVar(5);
+
+	if (!bOpen)
+	{
+		RequestCloseEditorTab(ParticleTab->Id);
+	}
+}
+
 void FEditorMainPanel::RequestDockViewer(FEditorViewer* Viewer)
 {
 	if (!Viewer)
@@ -218,6 +374,19 @@ FEditorTabId FEditorMainPanel::GetInputRoutingTabId() const
 			if (IsNamedWindowFocusedOrHovered(Widget->GetWindowName().c_str(), bFocusedOnly))
 			{
 				return ViewerTabId;
+			}
+		}
+
+		for (const FEditorTabEntry& Tab : EditorTabs.GetTabs())
+		{
+			if (Tab.Id.Kind != EEditorTabKind::ParticleSystemEditor || !Tab.bDetached || !bDetachedParticleSystemEditorOpen)
+			{
+				continue;
+			}
+
+			if (IsNamedWindowFocusedOrHovered(ParticleDetachedWindowName, bFocusedOnly))
+			{
+				return Tab.Id;
 			}
 		}
 	}
@@ -279,6 +448,11 @@ bool FEditorMainPanel::ShouldRouteViewerViewportInput(FEditorViewer* Viewer) con
 	return true;
 }
 
+bool FEditorMainPanel::ShouldRouteParticlePreviewViewportInput() const
+{
+	return IsParticlePreviewViewportVisible();
+}
+
 int32 FEditorMainPanel::GetViewerViewportZOrder(FEditorViewer* Viewer) const
 {
 	if (!Viewer)
@@ -301,4 +475,17 @@ int32 FEditorMainPanel::GetViewerViewportZOrder(FEditorViewer* Viewer) const
 		}
 	}
 	return 0;
+}
+
+int32 FEditorMainPanel::GetParticlePreviewViewportZOrder() const
+{
+	const FEditorTabEntry* ActiveTab = EditorTabs.GetActiveTab();
+	if (ActiveTab &&
+		ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor &&
+		!ActiveTab->bDetached)
+	{
+		return FindImGuiWindowZOrder("Viewport");
+	}
+
+	return FindImGuiWindowZOrder(ParticleDetachedWindowName);
 }

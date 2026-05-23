@@ -1,4 +1,4 @@
-#include "Editor/UI/EditorTabManager.h"
+﻿#include "Editor/UI/EditorTabManager.h"
 
 #include <algorithm>
 #include <cctype>
@@ -101,6 +101,26 @@ FString MakeAnimGraphEditorTabLabel(const FString& AnimGraphPath)
 	const size_t SlashIndex = AnimGraphPath.find_last_of("/\\");
 	const FString FileName = SlashIndex == FString::npos ? AnimGraphPath : AnimGraphPath.substr(SlashIndex + 1);
 	return FileName.empty() ? "Anim Graph" : FileName;
+}
+
+FEditorTabId MakeParticleSystemEditorTabId(const FString& ParticleSystemPath)
+{
+	FEditorTabId TabId;
+	TabId.Kind = EEditorTabKind::ParticleSystemEditor;
+	TabId.PayloadId = ParticleSystemPath.empty() ? "Asset_Nmae" : ParticleSystemPath;
+	return TabId;
+}
+
+FString MakeParticleSystemEditorTabLabel(const FString& ParticleSystemPath)
+{
+	if (ParticleSystemPath.empty())
+	{
+		return "Asset_Nmae";
+	}
+
+	const size_t SlashIndex = ParticleSystemPath.find_last_of("/\\");
+	const FString FileName = SlashIndex == FString::npos ? ParticleSystemPath : ParticleSystemPath.substr(SlashIndex + 1);
+	return FileName.empty() ? "Asset_Nmae" : FileName;
 }
 
 void FEditorTabManager::ResetToLevelEditor()

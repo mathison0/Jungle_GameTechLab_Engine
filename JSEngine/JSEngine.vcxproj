@@ -677,6 +677,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorPlayStreamWidget.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -1074,6 +1078,7 @@
     <ClInclude Include="Source\Editor\UI\EditorActorSequencerWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorAnimGraphWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorChromeConstants.h" />
+    <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h" />
     <ClInclude Include="Source\Editor\UI\EditorCommandContext.h" />
     <ClInclude Include="Source\Editor\UI\EditorConsoleWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorContentBrowserWidget.h" />
@@ -1087,6 +1092,7 @@
     <ClInclude Include="Source\Editor\UI\EditorMainPanelViewportToolbarHelpers.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanelWidgetSet.h" />
     <ClInclude Include="Source\Editor\UI\EditorMaterialWidget.h" />
+    <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorPlayStreamWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorPropertyWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorRuntimeUIPreviewWidget.h" />
@@ -1107,6 +1113,7 @@
     <ClInclude Include="Source\Editor\Viewport\EditorViewportNavigationController.h" />
     <ClInclude Include="Source\Editor\Viewport\EditorViewportPIEController.h" />
     <ClInclude Include="Source\Editor\Viewport\FSceneViewport.h" />
+    <ClInclude Include="Source\Editor\Viewport\ParticleSystemViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\SEditorViewport.h" />
     <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\ViewportLayout.h" />
