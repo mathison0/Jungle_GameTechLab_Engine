@@ -282,7 +282,7 @@ void FEditorParticleSystemWidget::RenderEmbedded(float DeltaTime)
 void FEditorParticleSystemWidget::OpenLayoutTest(const FString& InDocumentPath)
 {
 	DocumentPath = InDocumentPath.empty() ? "P_Explosion_Big_B" : InDocumentPath;
-	bDirty = true;
+	bDirty = InDocumentPath.empty();
 	EnsurePreviewViewport();
 }
 

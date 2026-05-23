@@ -107,7 +107,7 @@ FEditorTabId MakeParticleSystemEditorTabId(const FString& ParticleSystemPath)
 {
 	FEditorTabId TabId;
 	TabId.Kind = EEditorTabKind::ParticleSystemEditor;
-	TabId.PayloadId = ParticleSystemPath.empty() ? "Asset_Nmae" : ParticleSystemPath;
+	TabId.PayloadId = ParticleSystemPath.empty() ? "__ParticleSystemLayoutTest" : ParticleSystemPath;
 	return TabId;
 }
 
@@ -115,12 +115,12 @@ FString MakeParticleSystemEditorTabLabel(const FString& ParticleSystemPath)
 {
 	if (ParticleSystemPath.empty())
 	{
-		return "Asset_Nmae";
+		return "Particle System";
 	}
 
 	const size_t SlashIndex = ParticleSystemPath.find_last_of("/\\");
 	const FString FileName = SlashIndex == FString::npos ? ParticleSystemPath : ParticleSystemPath.substr(SlashIndex + 1);
-	return FileName.empty() ? "Asset_Nmae" : FileName;
+	return FileName.empty() ? "Particle System" : FileName;
 }
 
 void FEditorTabManager::ResetToLevelEditor()
