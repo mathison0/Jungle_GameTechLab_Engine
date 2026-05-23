@@ -245,3 +245,8 @@ const FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex) co
 	}
 	return reinterpret_cast<const FBaseParticle*>(ParticleData + ParticleIndices[ActiveIndex] * ParticleStride);
 }
+
+void FParticleEmitterInstance::SetSpawnFraction(float InSpawnFraction)
+{
+    SpawnFraction = std::clamp(InSpawnFraction, 0.0f, 1.0f);
+}

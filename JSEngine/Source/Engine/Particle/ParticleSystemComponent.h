@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
 #include "Particle/ParticleEmitterInstance.h"
@@ -32,6 +32,11 @@ public:
 	bool SupportsOutline() const override { return false; }
 
 	FOnParticleCollide OnParticleCollide;
+
+	int32 GetTotalActiveParticleCount() const;
+	int32 GetEmitterInstanceCount() const;
+	FParticleEmitterInstance* GetEmitterInstance(int32 Index);
+	const FParticleEmitterInstance* GetEmitterInstance(int32 Index) const;
 
 protected:
 	void TickComponent(float DeltaTime) override;

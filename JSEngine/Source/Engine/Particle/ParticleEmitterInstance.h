@@ -6,7 +6,16 @@ class UParticleSystemComponent;
 
 struct FParticleEmitterInstance
 {
+    FParticleEmitterInstance() = default;
+    ~FParticleEmitterInstance();
 
+    void Init(UParticleEmitter* InTemplate, UParticleSystemComponent* InComponent, int32 InEmitterIndex);
+    void Reset();
+    void Tick(float DeltaTime);
+    void SelectLODLevel(float Distance);
+    void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
+                        const FVector& InitialVelocity, struct FParticleEventInstancePayload* EventPayload = nullptr);
+    void KillParticle(int32 Index);
 	
 	// Getter
     int32 GetActiveParticleCount() const { return ActiveParticles; }
@@ -26,6 +35,11 @@ struct FParticleEmitterInstance
 
 	FBaseParticle* GetParticle(int32 ActiveIndex);
     const FBaseParticle* GetParticle(int32 ActiveIndex) const;
+
+	UParticleSystemComponent* GetComponent() const { return Component; }
+    float GetSpawnFraction() const { return SpawnFraction; }
+	// Setter
+    void SetSpawnFraction(float InSpawnFraction);
 
 private:
 	UParticleEmitter* SpriteTemplate = nullptr;
@@ -47,16 +61,7 @@ private:
 	int32 MaxActiveParticles = 0;
 	float SpawnFraction = 0.0f;
 
-	FParticleEmitterInstance() = default;
-	~FParticleEmitterInstance();
 
-	void Init(UParticleEmitter* InTemplate, UParticleSystemComponent* InComponent, int32 InEmitterIndex);
-	void Reset();
-	void Tick(float DeltaTime);
-	void SelectLODLevel(float Distance);
-	void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
-	                    const FVector& InitialVelocity, struct FParticleEventInstancePayload* EventPayload = nullptr);
-	void KillParticle(int32 Index);
 
 
 };

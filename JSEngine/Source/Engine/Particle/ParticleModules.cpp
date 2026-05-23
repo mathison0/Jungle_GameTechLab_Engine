@@ -69,9 +69,9 @@ int32 UParticleModuleSpawn::ComputeSpawnCount(FParticleEmitterInstance* Owner, f
         return 0;
     }
 
-    const float SpawnAmount = Rate * DeltaTime + Owner->SpawnFraction;
+    const float SpawnAmount = Rate * DeltaTime + Owner->GetSpawnFraction();
     const int32 SpawnCount = static_cast<int32>(std::floor(SpawnAmount));
-    Owner->SpawnFraction = SpawnAmount - static_cast<float>(SpawnCount);
+    Owner->SetSpawnFraction( SpawnAmount - static_cast<float>(SpawnCount));
     return SpawnCount;
 }
 
@@ -108,7 +108,7 @@ void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, FBasePartic
 {
     (void)SpawnTime;
     const FVector LocalOffset = RandomRangeVector(StartLocationMin, StartLocationMax);
-    const FVector BaseLocation = Owner && Owner->Component ? Owner->Component->GetWorldLocation() : FVector::ZeroVector;
+    const FVector BaseLocation = Owner && Owner->GetComponent() ? Owner->GetComponent()->GetWorldLocation() : FVector::ZeroVector;
     Particle.Location = BaseLocation + LocalOffset;
     Particle.OldLocation = Particle.Location;
 }
@@ -159,7 +159,7 @@ void UParticleModuleColor::Spawn(FParticleEmitterInstance* Owner, FBaseParticle&
 void UParticleModuleColor::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    for (int32 ParticleIndex = 0; ParticleIndex < Owner->ActiveParticles; ++ParticleIndex)
+    for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
         Particle.Color = FColor::Lerp(StartColor, EndColor, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
@@ -193,7 +193,7 @@ void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& 
 void UParticleModuleSize::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    for (int32 ParticleIndex = 0; ParticleIndex < Owner->ActiveParticles; ++ParticleIndex)
+    for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
         Particle.Size = FVector::Lerp(StartSize, EndSize, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
@@ -213,12 +213,12 @@ UParticleModuleCollision::UParticleModuleCollision()
 void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    if (!Owner || !Owner->Component)
+    if (!Owner || !Owner->GetComponent())
     {
         return;
     }
 
-    for (int32 ParticleIndex = 0; ParticleIndex < Owner->ActiveParticles;)
+    for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount();)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
         const bool bCrossedPlane = Particle.OldLocation.Z > CollisionPlaneZ && Particle.Location.Z <= CollisionPlaneZ;
@@ -235,9 +235,9 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
         if (bGenerateCollisionEvents)
         {
             FParticleEventCollideData Event;
-            Event.Component = Owner->Component;
+            Event.Component = Owner->GetComponent();
             Event.EmitterInstance = Owner;
-            Event.EmitterIndex = Owner->EmitterIndex;
+            Event.EmitterIndex = Owner->GetEmitterIndex();
             Event.ParticleId = Particle.ParticleId;
             Event.Location = Particle.Location;
             Event.OldLocation = Particle.OldLocation;
@@ -247,7 +247,7 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
             Event.Hit.bHit = true;
             Event.Hit.Location = Particle.Location;
             Event.Hit.Normal = FVector::UpVector;
-            Owner->Component->QueueCollisionEvent(Event);
+            Owner->GetComponent()->QueueCollisionEvent(Event);
         }
 
         if (bKillOnCollision)
@@ -273,8 +273,8 @@ UParticleModuleEventGenerator::UParticleModuleEventGenerator()
 void UParticleModuleEventGenerator::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    if (Owner && Owner->Component)
+    if (Owner && Owner->GetComponent())
     {
-        Owner->Component->DispatchQueuedParticleEvents();
+        Owner->GetComponent()->DispatchQueuedParticleEvents();
     }
 }
