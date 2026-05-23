@@ -41,6 +41,9 @@ struct FParticleDataContainer
 	uint8* ParticleData = nullptr;
 	uint16* ParticleIndices = nullptr;
 
+	// Function : Release owned particle data memory and clear container metadata
+	// input : None
+	// output : ParticleData is released and size/index fields are reset
 	void Reset()
 	{
 		delete[] ParticleData;

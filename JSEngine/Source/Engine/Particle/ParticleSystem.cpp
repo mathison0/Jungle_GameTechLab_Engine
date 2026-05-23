@@ -2,6 +2,9 @@
 
 #include <algorithm>
 
+// Function : Build cached spawn and update module lists for this LOD level
+// input : None
+// output : SpawnModule, SpawnModules, and UpdateModules are refreshed from enabled modules
 void UParticleLODLevel::CacheModuleLists()
 {
 	SpawnModule = nullptr;
@@ -37,6 +40,9 @@ void UParticleLODLevel::CacheModuleLists()
 	}
 }
 
+// Function : Cache emitter particle layout and module information
+// input : None
+// output : LOD module caches are refreshed and MaxActiveParticles is updated from required modules
 void UParticleEmitter::CacheEmitterModuleInfo()
 {
 	ParticleSize = sizeof(FBaseParticle);
@@ -57,6 +63,10 @@ void UParticleEmitter::CacheEmitterModuleInfo()
 	}
 }
 
+// Function : Get LOD level by index
+// input : Index
+// Index : requested LOD level index
+// output : LOD level pointer, or nullptr when the index is out of range
 UParticleLODLevel* UParticleEmitter::GetLODLevel(int32 Index) const
 {
 	if (Index < 0 || Index >= static_cast<int32>(LODLevels.size()))
@@ -66,6 +76,10 @@ UParticleLODLevel* UParticleEmitter::GetLODLevel(int32 Index) const
 	return LODLevels[Index];
 }
 
+// Function : Select enabled LOD level for the given distance
+// input : Distance
+// Distance : distance from emitter component to active camera
+// output : Matching LOD index, first enabled fallback index, or 0 when no enabled LOD exists
 int32 UParticleEmitter::SelectLODLevel(float Distance) const
 {
 	int32 FallbackIndex = -1;

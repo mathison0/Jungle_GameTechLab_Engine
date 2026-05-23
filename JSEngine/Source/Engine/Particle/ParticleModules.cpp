@@ -7,11 +7,21 @@
 #include "Particle/ParticleSystemComponent.h"
 
 
+// Function : Generate random float inside range
+// input : Min, Max
+// Min : minimum random value
+// Max : maximum random value
+// output : Random float between Min and Max
 static float RandomRange(float Min, float Max)
 {
     return FEngineRandom::Get().RandomFloat(Min, Max);
 }
 
+// Function : Generate random vector inside per-axis range
+// input : Min, Max
+// Min : minimum vector value per axis
+// Max : maximum vector value per axis
+// output : Random vector with each axis sampled between Min and Max
 static FVector RandomRangeVector(const FVector& Min, const FVector& Max)
 {
     return FVector(
@@ -26,6 +36,12 @@ UParticleModuleRequired::UParticleModuleRequired()
     bSpawnModule = true;
 }
 
+// Function : Apply required default particle values at spawn time
+// input : Owner, Particle, SpawnTime
+// Owner : emitter instance that owns the particle
+// Particle : particle being initialized
+// SpawnTime : relative spawn time within this tick
+// output : Particle time, lifetime, size, and color receive required defaults
 void UParticleModuleRequired::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
@@ -41,6 +57,11 @@ UParticleModuleSpawn::UParticleModuleSpawn()
     bSpawnModule = false;
 }
 
+// Function : Compute number of particles to spawn for this tick
+// input : Owner, DeltaTime
+// Owner : emitter instance that stores fractional spawn remainder
+// DeltaTime : elapsed time for this simulation step
+// output : Integer spawn count and updated Owner SpawnFraction remainder
 int32 UParticleModuleSpawn::ComputeSpawnCount(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     if (!Owner || Rate <= 0.0f || DeltaTime <= 0.0f)
@@ -59,6 +80,12 @@ UParticleModuleLifetime::UParticleModuleLifetime()
     bSpawnModule = true;
 }
 
+// Function : Assign randomized lifetime to spawned particle
+// input : Owner, Particle, SpawnTime
+// Owner : emitter instance that owns the particle
+// Particle : particle receiving lifetime value
+// SpawnTime : relative spawn time within this tick
+// output : Particle lifetime is set between LifetimeMin and LifetimeMax
 void UParticleModuleLifetime::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
@@ -71,6 +98,12 @@ UParticleModuleLocation::UParticleModuleLocation()
     bSpawnModule = true;
 }
 
+// Function : Assign initial world location to spawned particle
+// input : Owner, Particle, SpawnTime
+// Owner : emitter instance used to read component world location
+// Particle : particle receiving initial location
+// SpawnTime : relative spawn time within this tick
+// output : Particle Location and OldLocation are set from component location plus random local offset
 void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)SpawnTime;
@@ -85,6 +118,12 @@ UParticleModuleVelocity::UParticleModuleVelocity()
     bSpawnModule = true;
 }
 
+// Function : Assign randomized initial velocity to spawned particle
+// input : Owner, Particle, SpawnTime
+// Owner : emitter instance that owns the particle
+// Particle : particle receiving initial velocity
+// SpawnTime : relative spawn time within this tick
+// output : Particle Velocity and BaseVelocity are set between StartVelocityMin and StartVelocityMax
 void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
@@ -99,6 +138,12 @@ UParticleModuleColor::UParticleModuleColor()
     bUpdateModule = true;
 }
 
+// Function : Assign initial color to spawned particle
+// input : Owner, Particle, SpawnTime
+// Owner : emitter instance that owns the particle
+// Particle : particle receiving initial color
+// SpawnTime : relative spawn time within this tick
+// output : Particle Color is set to StartColor
 void UParticleModuleColor::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
@@ -106,6 +151,11 @@ void UParticleModuleColor::Spawn(FParticleEmitterInstance* Owner, FBaseParticle&
     Particle.Color = StartColor;
 }
 
+// Function : Interpolate active particle color over normalized lifetime
+// input : Owner, DeltaTime
+// Owner : emitter instance that owns active particles
+// DeltaTime : elapsed time for this simulation step
+// output : Each active particle Color is lerped from StartColor to EndColor
 void UParticleModuleColor::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
@@ -122,6 +172,12 @@ UParticleModuleSize::UParticleModuleSize()
     bUpdateModule = true;
 }
 
+// Function : Assign initial size to spawned particle
+// input : Owner, Particle, SpawnTime
+// Owner : emitter instance that owns the particle
+// Particle : particle receiving initial size
+// SpawnTime : relative spawn time within this tick
+// output : Particle Size is set to StartSize
 void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
@@ -129,6 +185,11 @@ void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& 
     Particle.Size = StartSize;
 }
 
+// Function : Interpolate active particle size over normalized lifetime
+// input : Owner, DeltaTime
+// Owner : emitter instance that owns active particles
+// DeltaTime : elapsed time for this simulation step
+// output : Each active particle Size is lerped from StartSize to EndSize
 void UParticleModuleSize::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
@@ -144,6 +205,11 @@ UParticleModuleCollision::UParticleModuleCollision()
     bUpdateModule = true;
 }
 
+// Function : Resolve simple plane collision for active particles
+// input : Owner, DeltaTime
+// Owner : emitter instance that owns active particles and component event queue
+// DeltaTime : elapsed time for this simulation step
+// output : Colliding particles bounce or die, collision count updates, and optional collision events are queued
 void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
@@ -199,6 +265,11 @@ UParticleModuleEventGenerator::UParticleModuleEventGenerator()
     bUpdateModule = true;
 }
 
+// Function : Dispatch particle events queued on owning component
+// input : Owner, DeltaTime
+// Owner : emitter instance used to access the owning component
+// DeltaTime : elapsed time for this simulation step
+// output : Queued particle events on the component are broadcast and cleared
 void UParticleModuleEventGenerator::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;

@@ -9,6 +9,12 @@ FParticleEmitterInstance::~FParticleEmitterInstance()
 	Reset();
 }
 
+// Function : Initialize emitter instance from emitter template and owning component
+// input : InTemplate, InComponent, InEmitterIndex
+// InTemplate : emitter asset that owns LOD levels and particle modules
+// InComponent : particle system component that owns this emitter instance
+// InEmitterIndex : index of this emitter inside the particle system
+// output : Particle buffers, particle indices, and current LOD state are initialized
 void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSystemComponent* InComponent, int32 InEmitterIndex)
 {
 	Reset();
@@ -42,6 +48,9 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	}
 }
 
+// Function : Release particle instance memory and reset runtime state
+// input : None
+// output : Particle buffers are released and instance counters return to the default state
 void FParticleEmitterInstance::Reset()
 {
 	delete[] ParticleData;
@@ -60,6 +69,10 @@ void FParticleEmitterInstance::Reset()
 	CurrentLODLevel = nullptr;
 }
 
+// Function : Advance emitter simulation by delta time
+// input : DeltaTime
+// DeltaTime : elapsed time for this simulation step
+// output : New particles are spawned, active particles are updated, and expired particles are removed
 void FParticleEmitterInstance::Tick(float DeltaTime)
 {
 	if (!SpriteTemplate || !Component || !ParticleData || !ParticleIndices || DeltaTime <= 0.0f)
@@ -106,6 +119,10 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
 	}
 }
 
+// Function : Select LOD level from current emitter distance
+// input : Distance
+// Distance : distance from the emitter component to the active camera
+// output : CurrentLODLevelIndex and CurrentLODLevel are updated when the selected LOD changes
 void FParticleEmitterInstance::SelectLODLevel(float Distance)
 {
 	if (!SpriteTemplate)
@@ -123,6 +140,15 @@ void FParticleEmitterInstance::SelectLODLevel(float Distance)
 	CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
 }
 
+// Function : Spawn particles into available active slots
+// input : Count, StartTime, Increment, InitialLocation, InitialVelocity, EventPayload
+// Count : number of particles requested for spawn
+// StartTime : spawn time assigned to the first particle
+// Increment : time offset added between spawned particles
+// InitialLocation : base world location before spawn modules modify the particle
+// InitialVelocity : base velocity before spawn modules modify the particle
+// EventPayload : optional event payload passed from event-driven spawning
+// output : Active particle slots are initialized and spawn modules are applied
 void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment,
                                               const FVector& InitialLocation, const FVector& InitialVelocity,
                                               FParticleEventInstancePayload* EventPayload)
@@ -159,6 +185,10 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 	}
 }
 
+// Function : Remove active particle by swapping it with the last active particle
+// input : Index
+// Index : active particle index to remove
+// output : ActiveParticles is decreased and particle index storage remains compact
 void FParticleEmitterInstance::KillParticle(int32 Index)
 {
 	if (Index < 0 || Index >= ActiveParticles)
@@ -171,6 +201,10 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	--ActiveParticles;
 }
 
+// Function : Get mutable particle data by active index
+// input : ActiveIndex
+// ActiveIndex : active particle index in the compact active list
+// output : Pointer to particle data, or nullptr when the index is invalid
 FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex)
 {
 	if (!ParticleData || !ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
@@ -180,6 +214,10 @@ FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex)
 	return reinterpret_cast<FBaseParticle*>(ParticleData + ParticleIndices[ActiveIndex] * ParticleStride);
 }
 
+// Function : Get read-only particle data by active index
+// input : ActiveIndex
+// ActiveIndex : active particle index in the compact active list
+// output : Const pointer to particle data, or nullptr when the index is invalid
 const FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex) const
 {
 	if (!ParticleData || !ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
