@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
-Local JSEngine symbol server helper.
-
-This file is ignored by git so the current host can tweak paths and defaults.
+Local JSEngine symbol and source server helper.
 """
 
 from __future__ import annotations
@@ -21,6 +19,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import webbrowser
 from pathlib import Path
@@ -168,32 +167,72 @@ def repo_relative(path: Path) -> str | None:
         return None
 
 
-def write_srcsrv_stream(srctool: Path, pdb: Path, stream_path: Path, commit: str, remote: str) -> int:
-    entries: list[str] = []
+def url_path(relative_path: str) -> str:
+    return "/".join(urllib.parse.quote(part) for part in relative_path.split("/"))
+
+
+def source_base_url(port: int) -> str:
+    addresses = local_ipv4_addresses()
+    host = addresses[0] if addresses else "127.0.0.1"
+    return f"http://{host}:{port}"
+
+
+def publish_source_snapshot(symbol_store: Path, sources: Iterable[tuple[Path, str]], commit: str) -> int:
+    copied = 0
+    source_root = symbol_store / "src" / commit
+    for source, relative in sources:
+        destination = source_root / Path(*relative.split("/"))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if not destination.exists() or source.stat().st_mtime_ns != destination.stat().st_mtime_ns or source.stat().st_size != destination.stat().st_size:
+            shutil.copy2(source, destination)
+        copied += 1
+    return copied
+
+
+def collect_indexable_sources(srctool: Path, pdb: Path) -> list[tuple[Path, str]]:
+    sources: list[tuple[Path, str]] = []
     seen: set[str] = set()
     for source in get_pdb_sources(srctool, pdb):
         relative = repo_relative(source)
-        if relative is None:
+        if relative is None or not source.is_file():
             continue
         key = relative.lower()
         if key in seen:
             continue
         seen.add(key)
-        entries.append(f"{source}*{relative}*{commit}*{remote}")
+        sources.append((source, relative))
+    return sources
+
+
+def write_srcsrv_stream(
+    srctool: Path,
+    pdb: Path,
+    stream_path: Path,
+    commit: str,
+    source_url: str,
+    symbol_store: Path,
+) -> tuple[int, int]:
+    entries: list[str] = []
+    sources = collect_indexable_sources(srctool, pdb)
+    for source, relative in sources:
+        entries.append(f"{source}*{relative}*{commit}*{source_url}*{url_path(relative)}")
 
     if not entries:
         raise RuntimeError(f"No repository source paths found in {pdb}.")
 
+    copied = publish_source_snapshot(symbol_store, sources, commit)
     srcsrv_command = (
-        r'cmd /c if not exist "%targ%\JSEngineSrc\%var3%\.git" '
-        r'git clone --no-checkout "%var4%" "%targ%\JSEngineSrc\%var3%" '
-        r'& git -C "%targ%\JSEngineSrc\%var3%" checkout %var3% -- "%var2%"'
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command "
+        "\"$dst='%targ%\\JSEngineSrc\\%var3%\\%var2%'; "
+        "$dir=Split-Path -Parent $dst; "
+        "New-Item -ItemType Directory -Force -Path $dir | Out-Null; "
+        "Invoke-WebRequest -Uri '%var4%/src/%var3%/%var5%' -OutFile $dst -UseBasicParsing\""
     )
     lines = [
         "SRCSRV: ini ------------------------------------------------",
         "VERSION=2",
         "INDEXVERSION=2",
-        "VERCTRL=Git",
+        "VERCTRL=HTTP",
         "SRCSRV: variables ------------------------------------------",
         r"SRCSRVTRG=%targ%\JSEngineSrc\%var3%\%var2%",
         f"SRCSRVCMD={srcsrv_command}",
@@ -202,21 +241,21 @@ def write_srcsrv_stream(srctool: Path, pdb: Path, stream_path: Path, commit: str
         "SRCSRV: end ------------------------------------------------",
     ]
     stream_path.write_text("\n".join(lines) + "\n", encoding="ascii")
-    return len(entries)
+    return len(entries), copied
 
 
-def publish(symbol_store: Path, configs: Iterable[str], *, skip_source_index: bool) -> None:
+def publish(symbol_store: Path, configs: Iterable[str], *, skip_source_index: bool, port: int) -> None:
     symbol_store.mkdir(parents=True, exist_ok=True)
 
     symstore = find_debug_tool("symstore.exe")
     srctool = find_debug_tool("srctool.exe")
     pdbstr = find_debug_tool("pdbstr.exe")
     commit = git_text("rev-parse", "HEAD")
-    remote = to_https_git_remote(git_text("remote", "get-url", "origin"))
+    source_url = source_base_url(port)
 
     print(f"Symbol store: {symbol_store}")
     print(f"Commit      : {commit}")
-    print(f"Remote      : {remote}")
+    print(f"Source URL  : {source_url}/src/{commit}/")
 
     published = 0
     for config in configs:
@@ -232,8 +271,9 @@ def publish(symbol_store: Path, configs: Iterable[str], *, skip_source_index: bo
 
         if not skip_source_index:
             stream_path = Path(tempfile.gettempdir()) / f"{name}-{config}-srcsrv.stream"
-            count = write_srcsrv_stream(srctool, pdb, stream_path, commit, remote)
+            count, copied = write_srcsrv_stream(srctool, pdb, stream_path, commit, source_url, symbol_store)
             print(f"  Source indexed files: {count}")
+            print(f"  Source snapshot files: {copied}")
             run([pdbstr, "-w", f"-p:{pdb}", f"-i:{stream_path}", "-s:srcsrv"])
 
         comment = f"{PRODUCT_NAME} {config} {commit}"
@@ -930,7 +970,7 @@ def main() -> int:
         if args.command in ("build", "all") and not args.skip_build:
             build(configs)
         if args.command in ("publish", "all"):
-            publish(symbol_store, configs, skip_source_index=args.skip_source_index)
+            publish(symbol_store, configs, skip_source_index=args.skip_source_index, port=args.port)
         if args.command == "serve":
             serve_foreground(symbol_store, args.port, args.bind)
         elif args.command == "start-server":

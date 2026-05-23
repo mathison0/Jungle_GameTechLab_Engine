@@ -13,7 +13,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepoRoot = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
+$RepoRoot = (Resolve-Path (Join-Path $ScriptRoot "..\..")).Path
 
 function Resolve-Python {
     if ($PythonPath) {

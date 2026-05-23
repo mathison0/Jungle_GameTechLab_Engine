@@ -18,7 +18,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepoRoot = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
+$RepoRoot = (Resolve-Path (Join-Path $ScriptRoot "..\..")).Path
 $EngineRoot = Join-Path $RepoRoot "JSEngine"
 
 function Resolve-DebugTool {
@@ -71,22 +71,6 @@ function Invoke-GitText {
     return (($Output -join "`n").Trim())
 }
 
-function ConvertTo-HttpsGitRemote {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$RemoteUrl
-    )
-
-    $Value = $RemoteUrl.Trim()
-    if ($Value -match '^git@github\.com:(.+)$') {
-        return "https://github.com/$($Matches[1])"
-    }
-    if ($Value -match '^ssh://git@github\.com/(.+)$') {
-        return "https://github.com/$($Matches[1])"
-    }
-    return $Value
-}
-
 function Get-RelativeGitPath {
     param(
         [Parameter(Mandatory = $true)]
@@ -100,6 +84,54 @@ function Get-RelativeGitPath {
     }
 
     return $FileFull.Substring($RepoFull.Length).Replace("\", "/")
+}
+
+function Get-LocalSourceBaseUrl {
+    param(
+        [int]$Port = 8080
+    )
+
+    $Address = Get-NetIPAddress -AddressFamily IPv4 |
+        Where-Object { $_.IPAddress -ne "127.0.0.1" -and $_.PrefixOrigin -ne "WellKnown" } |
+        Select-Object -First 1 -ExpandProperty IPAddress
+    if (!$Address) {
+        $Address = "127.0.0.1"
+    }
+    return "http://$Address`:$Port"
+}
+
+function ConvertTo-UrlPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RelativePath
+    )
+
+    return (($RelativePath -split "/") | ForEach-Object { [System.Uri]::EscapeDataString($_) }) -join "/"
+}
+
+function Publish-SourceSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Sources,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Commit,
+
+        [Parameter(Mandatory = $true)]
+        [string]$StorePath
+    )
+
+    $Copied = 0
+    foreach ($Pair in $Sources) {
+        $Source = $Pair.Source
+        $RelativePath = $Pair.RelativePath
+        $Destination = Join-Path (Join-Path (Join-Path $StorePath "src") $Commit) ($RelativePath -replace "/", "\")
+        $DestinationDir = Split-Path -Parent $Destination
+        New-Item -ItemType Directory -Force -Path $DestinationDir | Out-Null
+        Copy-Item -LiteralPath $Source -Destination $Destination -Force
+        $Copied += 1
+    }
+    return $Copied
 }
 
 function Get-PdbSourceFiles {
@@ -144,7 +176,10 @@ function Write-SourceServerStream {
         [string]$Commit,
 
         [Parameter(Mandatory = $true)]
-        [string]$RemoteUrl,
+        [string]$SourceBaseUrl,
+
+        [Parameter(Mandatory = $true)]
+        [string]$StorePath,
 
         [Parameter(Mandatory = $true)]
         [string]$SrcToolPath
@@ -152,11 +187,12 @@ function Write-SourceServerStream {
 
     $Sources = Get-PdbSourceFiles -PdbPath $PdbPath -SrcToolPath $SrcToolPath
     $Entries = New-Object System.Collections.Generic.List[string]
+    $SourcesForSnapshot = @()
     $Seen = @{}
 
     foreach ($Source in $Sources) {
         $RelativePath = Get-RelativeGitPath -Path $Source
-        if (!$RelativePath) {
+        if (!$RelativePath -or !(Test-Path -LiteralPath $Source -PathType Leaf)) {
             continue
         }
 
@@ -166,19 +202,21 @@ function Write-SourceServerStream {
         }
 
         $Seen[$Key] = $true
-        $Entries.Add("$Source*$RelativePath*$Commit*$RemoteUrl")
+        $SourcesForSnapshot += [PSCustomObject]@{ Source = $Source; RelativePath = $RelativePath }
+        $Entries.Add("$Source*$RelativePath*$Commit*$SourceBaseUrl*$(ConvertTo-UrlPath -RelativePath $RelativePath)")
     }
 
     if ($Entries.Count -eq 0) {
         throw "No source files from this repository were found in $PdbPath."
     }
 
-    $SourceCommand = 'cmd /c if not exist "%targ%\JSEngineSrc\%var3%\.git" git clone --no-checkout "%var4%" "%targ%\JSEngineSrc\%var3%" & git -C "%targ%\JSEngineSrc\%var3%" checkout %var3% -- "%var2%"'
+    $Copied = Publish-SourceSnapshot -Sources $SourcesForSnapshot -Commit $Commit -StorePath $StorePath
+    $SourceCommand = 'powershell -NoProfile -ExecutionPolicy Bypass -Command "$dst=''%targ%\JSEngineSrc\%var3%\%var2%''; $dir=Split-Path -Parent $dst; New-Item -ItemType Directory -Force -Path $dir | Out-Null; Invoke-WebRequest -Uri ''%var4%/src/%var3%/%var5%'' -OutFile $dst -UseBasicParsing"'
     $Lines = New-Object System.Collections.Generic.List[string]
     $Lines.Add("SRCSRV: ini ------------------------------------------------")
     $Lines.Add("VERSION=2")
     $Lines.Add("INDEXVERSION=2")
-    $Lines.Add("VERCTRL=Git")
+    $Lines.Add("VERCTRL=HTTP")
     $Lines.Add("DATETIME=$(Get-Date -Format s)")
     $Lines.Add("SRCSRV: variables ------------------------------------------")
     $Lines.Add("SRCSRVTRG=%targ%\JSEngineSrc\%var3%\%var2%")
@@ -191,6 +229,7 @@ function Write-SourceServerStream {
 
     Set-Content -LiteralPath $StreamPath -Value $Lines -Encoding ASCII
     Write-Host "  Source indexed files: $($Entries.Count)"
+    Write-Host "  Source snapshot files: $Copied"
 }
 
 function Add-SymbolFile {
@@ -229,7 +268,7 @@ $SrcTool = Resolve-DebugTool -Name "srctool.exe"
 $PdbStr = Resolve-DebugTool -Name "pdbstr.exe"
 
 $CommitHash = Invoke-GitText -Arguments @("rev-parse", "HEAD")
-$Remote = ConvertTo-HttpsGitRemote -RemoteUrl (Invoke-GitText -Arguments @("remote", "get-url", "origin"))
+$SourceBaseUrl = Get-LocalSourceBaseUrl -Port 8080
 if (!$Version) {
     $Version = $CommitHash
 }
@@ -239,7 +278,7 @@ Write-Host "symstore     : $SymStore"
 Write-Host "srctool      : $SrcTool"
 Write-Host "pdbstr       : $PdbStr"
 Write-Host "git commit   : $CommitHash"
-Write-Host "git remote   : $Remote"
+Write-Host "source url   : $SourceBaseUrl/src/$CommitHash/"
 Write-Host ""
 
 $Configurations = @("Release", "GameClientRelease")
@@ -262,7 +301,7 @@ foreach ($Configuration in $Configurations) {
 
     if (!$SkipSourceIndex) {
         $StreamPath = Join-Path ([System.IO.Path]::GetTempPath()) "$TargetName-$Configuration-srcsrv.stream"
-        Write-SourceServerStream -PdbPath $PdbPath -StreamPath $StreamPath -Commit $CommitHash -RemoteUrl $Remote -SrcToolPath $SrcTool
+        Write-SourceServerStream -PdbPath $PdbPath -StreamPath $StreamPath -Commit $CommitHash -SourceBaseUrl $SourceBaseUrl -StorePath $SymbolStore -SrcToolPath $SrcTool
 
         & $PdbStr -w "-p:$PdbPath" "-i:$StreamPath" "-s:srcsrv" | Write-Host
         if ($LASTEXITCODE -ne 0) {

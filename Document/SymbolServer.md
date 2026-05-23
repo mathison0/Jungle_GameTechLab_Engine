@@ -2,7 +2,7 @@
 
 ## Overview
 
-Symbols are published into a local `symstore` directory, then exposed to the team through a simple HTTP static server.
+Symbols are published into a local `symstore` directory, then exposed to the team through a simple HTTP static server. Source files are also snapshotted into the same HTTP root so source loading does not require GitHub access on debugger PCs.
 
 Default symbol store:
 
@@ -55,6 +55,14 @@ SymbolServer\Tools\Publish.cmd
 ```
 
 Or run manually.
+
+Publishing also copies indexed source files to:
+
+```text
+C:\symbols\src\<commit>\
+```
+
+The PDB source-server stream downloads source files from `http://<host-ip>:8080/src/<commit>/...`.
 
 Release symbols only:
 
@@ -121,10 +129,4 @@ Enable:
 Enable source server support
 ```
 
-Source server support requires Git access to:
-
-```text
-https://github.com/mathison0/Jungle_Week12_Team3.git
-```
-
-For private repositories, sign in through Git Credential Manager when Git asks for GitHub authentication.
+Source server support does not require Git or GitHub authentication. Visual Studio downloads matching source files from the same HTTP server that serves PDB files.
