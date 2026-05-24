@@ -219,7 +219,7 @@ void UParticleSystemComponent::BuildSpriteInstanceData()
 			Data.Size       = FVector2(Particle->Size.X, Particle->Size.Y);
 			Data.Color      = Particle->Color;
 			Data.Rotation   = Particle->Rotation;
-			Data.SubUVIndex = 0; // TODO: USubUVModule 포팅 후 페이로드에서 추출
+			Data.SubUVIndex = Particle->SubUVIndex;
 			Out.push_back(Data);
 		}
 	}

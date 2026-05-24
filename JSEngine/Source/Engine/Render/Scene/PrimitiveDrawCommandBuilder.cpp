@@ -555,6 +555,22 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 continue;
             }
 
+            FParticleEmitterInstance* Instance = EmitterInstances[EmitterIdx];
+            UParticleLODLevel* LOD = Instance ? Instance->GetCurrentLODLevel() : nullptr;
+            const USubUVModule* SubUV = nullptr;
+            if (LOD)
+            {
+                for (UParticleModule* Module : LOD->GetModules())
+                {
+                    if (USubUVModule* Found = Cast<USubUVModule>(Module))
+                    {
+                        SubUV = Found;
+                        break;
+                    }
+                }
+            }
+            const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;
+
             FRenderCommand Cmd = {};
             Cmd.SourcePrimitive = Primitive;
             Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -563,9 +579,9 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
             Cmd.ParticleInstances = InstanceData.data();
             Cmd.ParticleInstanceCount = static_cast<uint32>(InstanceData.size());
-            Cmd.ParticleTexture = nullptr; // TODO: SubUV atlas 텍스처 — 모듈 포팅 후 연결
-            Cmd.ParticleSubUVColumns = 1;
-            Cmd.ParticleSubUVRows = 1;
+            Cmd.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : nullptr;
+            Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : 1;
+            Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : 1;
 
             RenderBus.AddCommand(ERenderPass::Particle, Cmd);
         }
