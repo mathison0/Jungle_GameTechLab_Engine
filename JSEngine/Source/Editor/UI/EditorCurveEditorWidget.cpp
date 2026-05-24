@@ -84,10 +84,28 @@ void FEditorCurveEditorWidget::OpenCurveFromActorSequence(
     bOpenedFromActorSequence = true;
 }
 
+void FEditorCurveEditorWidget::Clear()
+{
+    StopReferencePreview();
+    CurrentPath.clear();
+    SourceLabel.clear();
+    CurrentCurve = nullptr;
+    SourceSequenceComponent = nullptr;
+    SelectedKeyIndex = -1;
+    ActiveKeyDragIndex = -1;
+    ActiveTangentKeyIndex = -1;
+    ActiveTangentHandle = -1;
+    ContextKeyIndex = -1;
+    ContextTime = 0.0f;
+    ContextValue = 0.0f;
+    bCurveViewInitialized = false;
+    bVisible = false;
+    bDirty = false;
+    bOpenedFromActorSequence = false;
+}
+
 void FEditorCurveEditorWidget::Render(float DeltaTime)
 {
-    (void)DeltaTime;
-
     if (!bVisible)
     {
         return;
@@ -113,6 +131,32 @@ void FEditorCurveEditorWidget::Render(float DeltaTime)
     }
     bVisible = bOpen;
 
+    DrawEditorContents(DeltaTime, false);
+
+    ImGui::End();
+}
+
+void FEditorCurveEditorWidget::RenderEmbedded(float DeltaTime, const ImVec2& Size)
+{
+    const bool bUseChild = Size.x > 0.0f || Size.y > 0.0f;
+    if (bUseChild)
+    {
+        ImGui::BeginChild(
+            "##EmbeddedCurveEditor",
+            Size,
+            false);
+    }
+
+    DrawEditorContents(DeltaTime, true);
+
+    if (bUseChild)
+    {
+        ImGui::EndChild();
+    }
+}
+
+void FEditorCurveEditorWidget::DrawEditorContents(float DeltaTime, bool bEmbedded)
+{
     TickReferencePreview(DeltaTime);
 
     DrawToolbar();
@@ -120,16 +164,13 @@ void FEditorCurveEditorWidget::Render(float DeltaTime)
 
     if (!CurrentCurve)
     {
-        ImGui::TextWrapped("Curve asset is not loaded.");
-        ImGui::End();
+        ImGui::TextWrapped(bEmbedded ? "Select a curve asset to edit it here." : "Curve asset is not loaded.");
         return;
     }
 
     DrawCurveCanvas();
     ImGui::Separator();
     DrawKeyList();
-
-    ImGui::End();
 }
 
 void FEditorCurveEditorWidget::DrawToolbar()

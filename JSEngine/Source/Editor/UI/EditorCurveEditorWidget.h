@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Editor/UI/EditorWidget.h"
+#include "ImGui/imgui.h"
 
 class UCurveFloatAsset;
 class UActorSequenceComponent;
@@ -10,6 +11,7 @@ class FEditorCurveEditorWidget : public FEditorWidget
 {
 public:
     void Render(float DeltaTime) override;
+    void RenderEmbedded(float DeltaTime, const ImVec2& Size = ImVec2(0.0f, 0.0f));
 
     void OpenCurveAsset(const FString& CurvePath);
     void OpenCurveFromActorSequence(
@@ -18,9 +20,11 @@ public:
         const FString& SourceLabel,
         const FString& SourcePath = "",
         int32 InitialSelectedKeyIndex = -1);
+    void Clear();
     bool IsVisible() const { return bVisible; }
 
 private:
+    void DrawEditorContents(float DeltaTime, bool bEmbedded);
     void DrawToolbar();
     void DrawCurveCanvas();
     void DrawKeyList();
