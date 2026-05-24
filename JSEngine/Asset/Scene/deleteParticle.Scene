@@ -301,6 +301,40 @@
           "bIsVisible" : true,
           "bLoop" : true,
           "bTransient" : false
+        }, {
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UParticleSystemComponent",
+          "ObjectName" : "UParticleSystemComponent_1",
+          "ParentUUID" : 153,
+          "PersistentGuid" : "D038586F-A5884217-BAF7AF9B-4261254E",
+          "RelativeLocation" : {
+            "X" : 0.000000,
+            "Y" : 0.000000,
+            "Z" : 0.000000
+          },
+          "RelativeRotation" : {
+            "X" : 0.000000,
+            "Y" : 0.000000,
+            "Z" : 0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 1.000000,
+            "Y" : 1.000000,
+            "Z" : 1.000000
+          },
+          "Tags" : [],
+          "Template" : 0,
+          "Type" : "UParticleSystemComponent",
+          "UUID" : 199,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : true,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
         }],
       "EditorOnly" : false,
       "Name" : "ABillboardActor_0",
@@ -311,13 +345,13 @@
     }],
   "ClassName" : "UWorld",
   "Name" : "deleteParticle",
-  "NextUUID" : 186,
+  "NextUUID" : 200,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
     "Location" : [2.674903, -2.351694, 3.867864],
     "NearClip" : 0.100000,
-    "Rotation" : [19.724455, -27.931335, -142.568726]
+    "Rotation" : [19.724474, -27.931366, -142.568710]
   },
   "Version" : 6,
   "WorldSettings" : {

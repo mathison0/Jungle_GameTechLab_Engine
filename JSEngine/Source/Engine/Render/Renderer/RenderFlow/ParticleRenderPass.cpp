@@ -1,4 +1,4 @@
-#include "ParticleRenderPass.h"
+﻿#include "ParticleRenderPass.h"
 
 #include "Core/ResourceManager.h"
 #include "Render/Resource/RenderResources.h"
@@ -180,7 +180,10 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
         DeviceContext->DrawIndexedInstanced(6, InstanceBuffer.GetInstanceCount(), 0, 0, 0);
     }
 
-    // Slot 1을 다른 패스가 자동으로 미사용한다고 가정해도 위험. instance VB는 binding 해제.
+
+	//TODO
+	//Slot 해제는 End logic에서 담당하도록 수정하는게 가독성에 유리함. 추후 진행
+	// Slot 1을 다른 패스가 자동으로 미사용한다고 가정해도 위험. instance VB는 binding 해제.
     ID3D11Buffer* NullBuffer = nullptr;
     UINT NullStride = 0;
     UINT NullOffset = 0;
@@ -191,5 +194,6 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
 
 bool FParticleRenderPass::End(const FRenderPassContext* Context)
 {
+
     return true;
 }
