@@ -18,7 +18,6 @@ public:
 	float GetEmitterDuration() const { return EmitterDuration; }
 	bool IsLooping() const { return bLooping; }
 	bool UseLocalSpace() const { return bUseLocalSpace; }
-	const FName& GetSubUVName() const { return SubUVName; }
 	EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
 
 private:
@@ -33,9 +32,6 @@ private:
 
 	UPROPERTY(DisplayName = "Use Local Space")
 	bool bUseLocalSpace = false;
-
-	UPROPERTY(DisplayName = "SubUV")
-	FName SubUVName;
 
 	EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
 };
