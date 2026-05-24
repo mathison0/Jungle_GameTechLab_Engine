@@ -275,3 +275,36 @@ void UParticleModuleEventGenerator::Update(FParticleEmitterInstance* Owner, floa
         Owner->DispatchQueuedParticleEvents();
     }
 }
+
+// USubUVModule stubs — full bodies added in subsequent commit.
+USubUVModule::USubUVModule()
+{
+}
+
+void USubUVModule::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
+{
+    (void)Owner;
+    (void)Particle;
+    (void)SpawnTime;
+}
+
+void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
+{
+    (void)Owner;
+    (void)DeltaTime;
+}
+
+void USubUVModule::Serialize(FArchive& Ar)
+{
+    UParticleModule::Serialize(Ar);
+}
+
+void USubUVModule::PostEditProperty(const char* PropertyName)
+{
+    UParticleModule::PostEditProperty(PropertyName);
+}
+
+void USubUVModule::SetSubUVName(const FName& InName)
+{
+    SubUVName = InName;
+}

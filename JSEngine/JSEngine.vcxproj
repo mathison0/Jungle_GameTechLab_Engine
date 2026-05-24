@@ -463,6 +463,7 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystem.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystemComponent.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\USubUVModule.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Render\Resource\UMaterial.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Render\Resource\UMaterialInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Render\Resource\UMaterialInterface.gen.cpp" />
@@ -926,6 +927,7 @@
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\LightCullingPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\LightRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\OpaqueRenderPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\ParticleRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\PostProcessOutlineRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\PostProcessRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\RenderPass.cpp" />
@@ -936,7 +938,6 @@
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\ShadowPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\SubUVRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\TranslucentRenderPass.cpp" />
-    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\ParticleRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\VSMConversionRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderTarget\DepthStencilBuilder.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderTarget\DepthStencilFactory.cpp" />
@@ -946,9 +947,9 @@
     <ClCompile Include="Source\Engine\Render\Renderer\RenderTarget\RenderTargetFactory.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\Buffer.cpp" />
-    <ClCompile Include="Source\Engine\Render\Resource\InstanceBuffer.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\ComputeShader.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\FbxMaterialLoader.cpp" />
+    <ClCompile Include="Source\Engine\Render\Resource\InstanceBuffer.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\Material.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\MeshBufferManager.cpp" />
     <ClCompile Include="Source\Engine\Render\Resource\ObjMtlLoader.cpp" />
@@ -1086,12 +1087,12 @@
     <ClInclude Include="Source\Editor\UI\EditorActorSequencerWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorAnimGraphWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorChromeConstants.h" />
-    <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h" />
     <ClInclude Include="Source\Editor\UI\EditorCommandContext.h" />
     <ClInclude Include="Source\Editor\UI\EditorConsoleWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorContentBrowserWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorControlWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorCurveEditorWidget.h" />
+    <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h" />
     <ClInclude Include="Source\Editor\UI\EditorFooterLogSystem.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanelPackagingHelpers.h" />
@@ -1329,6 +1330,7 @@
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\LightCullingPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\LightRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\OpaqueRenderPass.h" />
+    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\ParticleRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\PostProcessOutlineRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\PostProcessRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\RenderPass.h" />
@@ -1339,7 +1341,6 @@
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\ShadowPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\SubUVRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\TranslucentRenderPass.h" />
-    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\ParticleRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\VSMConversionRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderTarget\DepthStencilBuilder.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderTarget\DepthStencilFactory.h" />
@@ -1349,9 +1350,9 @@
     <ClInclude Include="Source\Engine\Render\Renderer\RenderTarget\RenderTargetFactory.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\Renderer.h" />
     <ClInclude Include="Source\Engine\Render\Resource\Buffer.h" />
-    <ClInclude Include="Source\Engine\Render\Resource\InstanceBuffer.h" />
     <ClInclude Include="Source\Engine\Render\Resource\ComputeShader.h" />
     <ClInclude Include="Source\Engine\Render\Resource\FbxMaterialLoader.h" />
+    <ClInclude Include="Source\Engine\Render\Resource\InstanceBuffer.h" />
     <ClInclude Include="Source\Engine\Render\Resource\Material.h" />
     <ClInclude Include="Source\Engine\Render\Resource\MaterialShaderTypes.h" />
     <ClInclude Include="Source\Engine\Render\Resource\MeshBufferManager.h" />
@@ -1459,6 +1460,7 @@
     <None Include="Shaders\EditorDebug\SelectionMask.hlsl" />
     <None Include="Shaders\Material\Decal.hlsl" />
     <None Include="Shaders\Material\UberLit.hlsl" />
+    <None Include="Shaders\Particle\SpriteParticle.hlsl" />
     <None Include="Shaders\PostProcess\FXAAPass.hlsl" />
     <None Include="Shaders\PostProcess\FogPass.hlsl" />
     <None Include="Shaders\PostProcess\LightPass.hlsl" />

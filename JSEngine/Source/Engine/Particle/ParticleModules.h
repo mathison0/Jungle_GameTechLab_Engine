@@ -3,6 +3,8 @@
 #include "Object/FName.h"
 #include "Particle/ParticleModule.h"
 
+struct FTextureAtlasResource;
+
 UCLASS()
 class UParticleModuleRequired : public UParticleModule
 {
@@ -170,4 +172,29 @@ public:
 
 	UParticleModuleEventGenerator();
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+};
+
+// SubUV 재생 속도는 particle Lifetime에 종속. 별도 재생 속도/루프 제어는
+// 후속 cycle (InterpolationMethod) 에서 도입.
+UCLASS()
+class USubUVModule : public UParticleModule
+{
+public:
+	GENERATED_BODY(USubUVModule, UParticleModule)
+
+	USubUVModule();
+	void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
+	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+	void Serialize(FArchive& Ar) override;
+	void PostEditProperty(const char* PropertyName) override;
+
+	void SetSubUVName(const FName& InName);
+	const FName& GetSubUVName() const { return SubUVName; }
+	const FTextureAtlasResource* GetCachedSubUV() const { return CachedSubUV; }
+
+private:
+	UPROPERTY(DisplayName = "SubUV")
+	FName SubUVName;
+
+	FTextureAtlasResource* CachedSubUV = nullptr; // ResourceManager 소유, 참조만
 };

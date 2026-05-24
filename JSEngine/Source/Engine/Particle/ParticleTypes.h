@@ -31,6 +31,7 @@ struct FBaseParticle
 	uint32 ParticleId = 0;
 	uint32 Flags = 0;
 	int32 CollisionCount = 0;
+	uint32 SubUVIndex = 0;
 };
 
 struct FParticleDataContainer
