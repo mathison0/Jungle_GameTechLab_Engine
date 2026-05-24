@@ -1,8 +1,11 @@
 ﻿#include "Particle/ParticleModules.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "Core/Random/EngineRandom.h"
+#include "Core/ResourceManager.h"
+#include "Core/ResourceTypes.h"
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleSystemComponent.h"
 
@@ -276,35 +279,60 @@ void UParticleModuleEventGenerator::Update(FParticleEmitterInstance* Owner, floa
     }
 }
 
-// USubUVModule stubs — full bodies added in subsequent commit.
 USubUVModule::USubUVModule()
 {
+    bSpawnModule = true;
+    bUpdateModule = true;
 }
 
 void USubUVModule::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
-    (void)Particle;
     (void)SpawnTime;
+    Particle.SubUVIndex = 0;
 }
 
 void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
-    (void)Owner;
     (void)DeltaTime;
+    if (!CachedSubUV)
+    {
+        return;
+    }
+    const uint32 TotalFrames = CachedSubUV->Columns * CachedSubUV->Rows;
+    if (TotalFrames == 0)
+    {
+        return;
+    }
+
+    for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
+    {
+        FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
+        const float Clamped = std::clamp(Particle.RelativeTime, 0.0f, 0.9999f);
+        Particle.SubUVIndex = static_cast<uint32>(Clamped * static_cast<float>(TotalFrames)) % TotalFrames;
+    }
 }
 
 void USubUVModule::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
+    if (Ar.IsLoading())
+    {
+        SetSubUVName(SubUVName);
+    }
 }
 
 void USubUVModule::PostEditProperty(const char* PropertyName)
 {
     UParticleModule::PostEditProperty(PropertyName);
+    if (PropertyName && strcmp(PropertyName, "SubUVName") == 0)
+    {
+        SetSubUVName(SubUVName);
+    }
 }
 
 void USubUVModule::SetSubUVName(const FName& InName)
 {
     SubUVName = InName;
+    CachedSubUV = FResourceManager::Get().FindSubUV(InName);
 }
