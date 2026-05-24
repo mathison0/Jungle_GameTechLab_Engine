@@ -1,0 +1,15 @@
+{
+        "AssetPath" : "Asset/Particle System/New Particle System.particlesystem",
+        "Format" : "ParticleSystemAsset",
+        "Objects" : [{
+            "Class" : "UParticleSystem",
+            "Data" : {
+              "Emitters" : [],
+              "ObjectName" : "New Particle System",
+              "Type" : "UParticleSystem"
+            },
+            "Id" : 1
+          }],
+        "RootObjectId" : 1,
+        "Version" : 1
+      }

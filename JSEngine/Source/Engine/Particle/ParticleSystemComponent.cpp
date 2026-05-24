@@ -1,4 +1,4 @@
-#include "Particle/ParticleSystemComponent.h"
+﻿#include "Particle/ParticleSystemComponent.h"
 
 #include "Camera/ViewportCamera.h"
 #include "GameFramework/AActor.h"
@@ -111,7 +111,7 @@ void UParticleSystemComponent::UpdateWorldAABB() const
 			continue;
 		}
 
-		for (int32 ParticleIndex = 0; ParticleIndex < Instance->ActiveParticles; ++ParticleIndex)
+		for (int32 ParticleIndex = 0; ParticleIndex < Instance->GetActiveParticleCount(); ++ParticleIndex)
 		{
 			const FBaseParticle* Particle = Instance->GetParticle(ParticleIndex);
 			if (Particle)
@@ -132,6 +132,42 @@ bool UParticleSystemComponent::RaycastMesh(const FRay& Ray, FHitResult& OutHitRe
 	(void)Ray;
 	OutHitResult.Reset();
 	return false;
+}
+
+int32 UParticleSystemComponent::GetTotalActiveParticleCount() const
+{
+	int32 TotalCount = 0;
+	for (const FParticleEmitterInstance* Instance : EmitterInstances)
+	{
+		if (Instance)
+		{
+			TotalCount += Instance->GetActiveParticleCount();
+		}
+	}
+	return TotalCount;
+}
+
+int32 UParticleSystemComponent::GetEmitterInstanceCount() const
+{
+	return static_cast<int32>(EmitterInstances.size());
+}
+
+FParticleEmitterInstance* UParticleSystemComponent::GetEmitterInstance(int32 Index)
+{
+	if (Index >= 0 && Index < GetEmitterInstanceCount())
+	{
+		return EmitterInstances[Index];
+	}
+	return nullptr;
+}
+
+const FParticleEmitterInstance* UParticleSystemComponent::GetEmitterInstance(int32 Index) const
+{
+	if (Index >= 0 && Index < GetEmitterInstanceCount())
+	{
+		return EmitterInstances[Index];
+	}
+	return nullptr;
 }
 
 // Function : Tick every emitter instance and mark spatial bounds dirty
@@ -164,13 +200,13 @@ void UParticleSystemComponent::BuildSpriteInstanceData()
 		TArray<FSpriteParticleInstanceData>& Out = EmitterInstanceData[EmitterIdx];
 		Out.clear();
 
-		if (!Instance || Instance->ActiveParticles == 0)
+		if (!Instance || Instance->GetActiveParticleCount() == 0)
 		{
 			continue;
 		}
 
-		Out.reserve(Instance->ActiveParticles);
-		for (int32 i = 0; i < Instance->ActiveParticles; ++i)
+		Out.reserve(Instance->GetActiveParticleCount());
+        for (int32 i = 0; i < Instance->GetActiveParticleCount(); ++i)
 		{
 			const FBaseParticle* Particle = Instance->GetParticle(i);
 			if (!Particle)

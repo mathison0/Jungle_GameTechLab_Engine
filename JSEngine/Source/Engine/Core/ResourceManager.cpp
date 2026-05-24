@@ -5,10 +5,13 @@
 #include "Core/ImportedMaterialPolicy.h"
 #include "Core/MaterialLoadService.h"
 #include "Core/MaterialSerializationService.h"
+#include "Core/Reflection/ReflectionRegistry.h"
 #include "Core/ResourceMemoryReporter.h"
 #include "Core/SkeletalMeshLoadService.h"
 #include "Core/StaticMeshLoadService.h"
 #include "Object/Object.h"
+#include "Object/Property.h"
+#include "Particle/ParticleSystem.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -51,6 +54,152 @@ namespace
 		std::wstring Extension = FsPath.extension().wstring();
 		std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
 		return Extension == L".fbx";
+	}
+
+	bool IsParticleSystemAssetPath(const FString& Path)
+	{
+		std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
+		std::wstring Extension = FsPath.extension().wstring();
+		std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
+		return Extension == L".particlesystem";
+	}
+
+	bool IsParticleSystemGraphObject(UObject* Object)
+	{
+		return Object &&
+			(Object->IsA(UParticleSystem::StaticClass()) ||
+			 Object->IsA(UParticleEmitter::StaticClass()) ||
+			 Object->IsA(UParticleLODLevel::StaticClass()) ||
+			 Object->IsA(UParticleModule::StaticClass()));
+	}
+
+	bool IsParticleSystemGraphClass(UClass* Class)
+	{
+		return Class &&
+			(Class->IsChildOf(UParticleSystem::StaticClass()) ||
+			 Class->IsChildOf(UParticleEmitter::StaticClass()) ||
+			 Class->IsChildOf(UParticleLODLevel::StaticClass()) ||
+			 Class->IsChildOf(UParticleModule::StaticClass()));
+	}
+
+	class FParticleSystemObjectGraphResolver final : public IObjectReferenceResolver
+	{
+	public:
+		uint32 AddObject(UObject* Object)
+		{
+			if (!Object)
+			{
+				return 0;
+			}
+
+			auto It = ObjectToId.find(Object);
+			if (It != ObjectToId.end())
+			{
+				return It->second;
+			}
+
+			Objects.push_back(Object);
+			const uint32 Id = static_cast<uint32>(Objects.size());
+			ObjectToId[Object] = Id;
+			return Id;
+		}
+
+		void SetObject(uint32 Id, UObject* Object)
+		{
+			if (Id == 0 || !Object)
+			{
+				return;
+			}
+
+			if (Objects.size() < Id)
+			{
+				Objects.resize(Id, nullptr);
+			}
+
+			Objects[Id - 1] = Object;
+			ObjectToId[Object] = Id;
+		}
+
+		uint32 GetObjectId(UObject* Object) const override
+		{
+			auto It = ObjectToId.find(Object);
+			return It != ObjectToId.end() ? It->second : 0;
+		}
+
+		UObject* ResolveObjectId(uint32 Id, UClass* ExpectedClass) const override
+		{
+			if (Id == 0 || Id > Objects.size())
+			{
+				return nullptr;
+			}
+
+			UObject* Object = Objects[Id - 1];
+			if (!Object || (ExpectedClass && !Object->IsA(ExpectedClass)))
+			{
+				return nullptr;
+			}
+			return Object;
+		}
+
+		const TArray<UObject*>& GetObjects() const { return Objects; }
+
+	private:
+		TArray<UObject*> Objects;
+		TMap<UObject*, uint32> ObjectToId;
+	};
+
+	void CollectParticleSystemObjectGraph(UObject* RootObject, FParticleSystemObjectGraphResolver& Resolver)
+	{
+		if (!IsParticleSystemGraphObject(RootObject))
+		{
+			return;
+		}
+
+		Resolver.AddObject(RootObject);
+		for (int32 ObjectIndex = 0; ObjectIndex < static_cast<int32>(Resolver.GetObjects().size()); ++ObjectIndex)
+		{
+			UObject* Object = Resolver.GetObjects()[ObjectIndex];
+			if (!IsParticleSystemGraphObject(Object) || !Object->GetClass())
+			{
+				continue;
+			}
+
+			TArray<const FProperty*> Properties;
+			Object->GetClass()->GetAllProperties(Properties);
+			for (const FProperty* Property : Properties)
+			{
+				if (!Property || Property->IsTransient())
+				{
+					continue;
+				}
+
+				FReferenceCollector Collector;
+				Property->VisitReferences(Collector, Property->GetValuePtr(Object));
+				for (UObject* ReferencedObject : Collector.GetReferencedObjects())
+				{
+					if (IsParticleSystemGraphObject(ReferencedObject))
+					{
+						Resolver.AddObject(ReferencedObject);
+					}
+				}
+			}
+		}
+	}
+
+	void RebuildParticleSystemCaches(UParticleSystem* Asset)
+	{
+		if (!Asset)
+		{
+			return;
+		}
+
+		for (UParticleEmitter* Emitter : Asset->Emitters)
+		{
+			if (Emitter)
+			{
+				Emitter->CacheEmitterModuleInfo();
+			}
+		}
 	}
 
 	FString MakeProjectRelativePath(const FString& Path)
@@ -1586,6 +1735,189 @@ bool FResourceManager::SaveAnimGraph(UAnimGraphAsset* Asset, const FString& Path
 	{
 		UE_LOG_ERROR(
 			"[AnimGraphAsset] Failed to open for writing: %s",
+			NormalizedPath.c_str()
+		);
+		return false;
+	}
+
+	Out << JsonData.dump(4);
+	return true;
+}
+
+UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)
+{
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	if (NormalizedPath.empty() || !IsParticleSystemAssetPath(NormalizedPath))
+	{
+		return nullptr;
+	}
+
+	const std::filesystem::path FilePath =
+		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
+
+	std::ifstream In(FilePath);
+	if (!In.is_open())
+	{
+		UE_LOG_ERROR("[ParticleSystemAsset] Failed to open: %s", NormalizedPath.c_str());
+		return nullptr;
+	}
+
+	const std::string JsonStr(
+		(std::istreambuf_iterator<char>(In)),
+		std::istreambuf_iterator<char>()
+	);
+
+	json::JSON JsonData = json::JSON::Load(JsonStr);
+	if (JsonData.JSONType() != json::JSON::Class::Object)
+	{
+		UE_LOG_ERROR("[ParticleSystemAsset] Invalid json: %s", NormalizedPath.c_str());
+		return nullptr;
+	}
+
+	if (JsonData.hasKey("Objects") && JsonData["Objects"].JSONType() == json::JSON::Class::Array)
+	{
+		FParticleSystemObjectGraphResolver Resolver;
+		json::JSON& ObjectsJson = JsonData["Objects"];
+
+		for (int32 Index = 0; Index < static_cast<int32>(ObjectsJson.length()); ++Index)
+		{
+			json::JSON& ObjectNode = ObjectsJson.at(Index);
+			if (ObjectNode.JSONType() != json::JSON::Class::Object)
+			{
+				continue;
+			}
+
+			const uint32 Id = ObjectNode.hasKey("Id") ? static_cast<uint32>(ObjectNode["Id"].ToInt()) : static_cast<uint32>(Index + 1);
+			const FString ClassName = ObjectNode.hasKey("Class")
+				? ObjectNode["Class"].ToString()
+				: (ObjectNode.hasKey("Data") && ObjectNode["Data"].hasKey("Type") ? ObjectNode["Data"]["Type"].ToString() : FString());
+			UClass* Class = FReflectionRegistry::Get().FindClass(ClassName);
+			if (!IsParticleSystemGraphClass(Class))
+			{
+				UE_LOG_ERROR("[ParticleSystemAsset] Invalid object class '%s': %s", ClassName.c_str(), NormalizedPath.c_str());
+				return nullptr;
+			}
+
+			UObject* Object = NewObject(Class);
+			if (!Object)
+			{
+				UE_LOG_ERROR("[ParticleSystemAsset] Failed to create object '%s': %s", ClassName.c_str(), NormalizedPath.c_str());
+				return nullptr;
+			}
+
+			Resolver.SetObject(Id, Object);
+		}
+
+		for (int32 Index = 0; Index < static_cast<int32>(ObjectsJson.length()); ++Index)
+		{
+			json::JSON& ObjectNode = ObjectsJson.at(Index);
+			if (ObjectNode.JSONType() != json::JSON::Class::Object)
+			{
+				continue;
+			}
+
+			const uint32 Id = ObjectNode.hasKey("Id") ? static_cast<uint32>(ObjectNode["Id"].ToInt()) : static_cast<uint32>(Index + 1);
+			UObject* Object = Resolver.ResolveObjectId(Id, nullptr);
+			if (!Object)
+			{
+				continue;
+			}
+
+			json::JSON& ObjectData = ObjectNode.hasKey("Data") ? ObjectNode["Data"] : ObjectNode;
+			FJsonReader Reader(ObjectData);
+			Reader.SetObjectResolver(&Resolver);
+			Object->Serialize(Reader);
+		}
+
+		const uint32 RootObjectId = JsonData.hasKey("RootObjectId") ? static_cast<uint32>(JsonData["RootObjectId"].ToInt()) : 1;
+		UParticleSystem* Asset = Cast<UParticleSystem>(Resolver.ResolveObjectId(RootObjectId, UParticleSystem::StaticClass()));
+		if (!Asset)
+		{
+			UE_LOG_ERROR("[ParticleSystemAsset] Missing root particle system: %s", NormalizedPath.c_str());
+			return nullptr;
+		}
+
+		RebuildParticleSystemCaches(Asset);
+		return Asset;
+	}
+
+	UParticleSystem* Asset = UObjectManager::Get().CreateObject<UParticleSystem>();
+	if (!Asset)
+	{
+		UE_LOG_ERROR("[ParticleSystemAsset] Failed to create asset object: %s", NormalizedPath.c_str());
+		return nullptr;
+	}
+
+	FJsonReader Reader(JsonData);
+	Asset->Serialize(Reader);
+	RebuildParticleSystemCaches(Asset);
+	return Asset;
+}
+
+bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString& Path)
+{
+	if (!Asset)
+	{
+		return false;
+	}
+
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	if (NormalizedPath.empty() || !IsParticleSystemAssetPath(NormalizedPath))
+	{
+		return false;
+	}
+
+	const std::filesystem::path FilePath =
+		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
+
+	json::JSON JsonData = json::JSON::Make(json::JSON::Class::Object);
+	FParticleSystemObjectGraphResolver Resolver;
+	CollectParticleSystemObjectGraph(Asset, Resolver);
+
+	JsonData["Format"] = "ParticleSystemAsset";
+	JsonData["Version"] = 1;
+	JsonData["AssetPath"] = NormalizedPath;
+	JsonData["RootObjectId"] = static_cast<int32>(Resolver.GetObjectId(Asset));
+
+	json::JSON ObjectsJson = json::JSON::Make(json::JSON::Class::Array);
+	const TArray<UObject*>& Objects = Resolver.GetObjects();
+	for (int32 Index = 0; Index < static_cast<int32>(Objects.size()); ++Index)
+	{
+		UObject* Object = Objects[Index];
+		if (!IsParticleSystemGraphObject(Object))
+		{
+			continue;
+		}
+
+		json::JSON ObjectNode = json::JSON::Make(json::JSON::Class::Object);
+		ObjectNode["Id"] = Index + 1;
+		ObjectNode["Class"] = Object->GetClassName();
+
+		json::JSON ObjectData = json::JSON::Make(json::JSON::Class::Object);
+		FJsonWriter Writer(ObjectData);
+		Writer.SetObjectResolver(&Resolver);
+		Object->Serialize(Writer);
+		ObjectNode["Data"] = ObjectData;
+		ObjectsJson.append(ObjectNode);
+	}
+	JsonData["Objects"] = ObjectsJson;
+
+	std::error_code ErrorCode;
+	std::filesystem::create_directories(FilePath.parent_path(), ErrorCode);
+	if (ErrorCode)
+	{
+		UE_LOG_ERROR(
+			"[ParticleSystemAsset] Failed to create directory: %s",
+			NormalizedPath.c_str()
+		);
+		return false;
+	}
+
+	std::ofstream Out(FilePath);
+	if (!Out.is_open())
+	{
+		UE_LOG_ERROR(
+			"[ParticleSystemAsset] Failed to open for writing: %s",
 			NormalizedPath.c_str()
 		);
 		return false;

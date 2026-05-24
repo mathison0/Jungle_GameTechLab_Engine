@@ -90,6 +90,12 @@ void FEditorMainPanel::RenderMainViewport(float DeltaTime)
         return;
     }
 
+    if (EditorTabs.GetActiveTabKind() == EEditorTabKind::ParticleSystemEditor)
+    {
+        RenderParticleSystemEditorDocument(DeltaTime);
+        return;
+    }
+
     RenderActiveViewerDocument(DeltaTime);
 }
 
@@ -166,6 +172,8 @@ void FEditorMainPanel::RenderEditorPanelWindows(float DeltaTime, bool bDrawEdito
 			Widget->Render(DeltaTime);
 		}
 	}
+
+	RenderDetachedParticleSystemEditorDocument(DeltaTime);
 
 	FlushClosedViewerWidgets();
 }

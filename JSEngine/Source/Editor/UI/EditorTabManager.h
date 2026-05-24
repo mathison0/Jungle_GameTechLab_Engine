@@ -13,6 +13,7 @@ enum class EEditorTabKind : uint8
 	ActorSequencer,
 	RuntimeUIPreview,
 	AnimGraphEditor,
+	ParticleSystemEditor,
 };
 
 struct FEditorTabId
@@ -38,6 +39,8 @@ FEditorTabId MakeRuntimeUIPreviewTabId();
 FString MakeRuntimeUIPreviewTabLabel(const FString& DocumentPath);
 FEditorTabId MakeAnimGraphEditorTabId(const FString& AnimGraphPath);
 FString MakeAnimGraphEditorTabLabel(const FString& AnimGraphPath);
+FEditorTabId MakeParticleSystemEditorTabId(const FString& ParticleSystemPath);
+FString MakeParticleSystemEditorTabLabel(const FString& ParticleSystemPath);
 
 class FEditorTabManager
 {

@@ -245,6 +245,18 @@ void FEditorMainPanel::Update()
                 break;
             }
 		}
+
+		if (!bMouseOverViewportRect && ShouldRouteParticlePreviewViewportInput())
+		{
+			if (const FSceneViewport* ParticleViewport = GetParticlePreviewViewport())
+			{
+				const FViewportRect& ViewportRect = ParticleViewport->GetRect();
+				if (ViewportRect.Width > 0 && ViewportRect.Height > 0 && ViewportRect.Contains(MouseClientPos.x, MouseClientPos.y))
+				{
+					bMouseOverViewportRect = true;
+				}
+			}
+		}
     }
 
     bool bHoveredViewportContentWindow = false;
