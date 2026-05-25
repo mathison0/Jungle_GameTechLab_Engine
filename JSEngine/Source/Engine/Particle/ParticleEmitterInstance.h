@@ -22,9 +22,10 @@ struct FParticleEmitterInstance
     int32 GetMaxActiveParticleCount() const { return MaxActiveParticles; }
     int32 GetParticleStride() const { return ParticleStride; }
     int32 GetParticleSize() const { return ParticleSize; }
+    int32 GetParticleMemoryBytes() const { return ParticleStorage.GetMemoryBytes(); }
 
-	const uint8* GetParticleData() const { return ParticleData; }
-    const uint16* GetParticleIndices() const { return ParticleIndices; }
+	const uint8* GetParticleData() const { return ParticleStorage.ParticleData; }
+    const uint16* GetParticleIndices() const { return ParticleStorage.ParticleIndices; }
 
 	UParticleEmitter* GetTemplate() const { return SpriteTemplate; }
     UParticleLODLevel* GetCurrentLODLevel() const { return CurrentLODLevel; }
@@ -54,8 +55,7 @@ private:
 	UParticleLODLevel* CurrentLODLevel = nullptr;
 
 	// 실제 데이터들, memory pool and live data
-	uint8* ParticleData = nullptr;
-	uint16* ParticleIndices = nullptr;
+	FParticleDataContainer ParticleStorage;
 	uint8* InstanceData = nullptr;
 	int32 InstancePayloadSize = 0;
 	int32 PayloadOffset = 0;
