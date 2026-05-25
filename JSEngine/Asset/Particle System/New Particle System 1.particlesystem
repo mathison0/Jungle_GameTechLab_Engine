@@ -1,5 +1,5 @@
 {
-        "AssetPath" : "Asset/Particle System/New Particle System.particlesystem",
+        "AssetPath" : "Asset/Particle System/New Particle System 1.particlesystem",
         "Format" : "ParticleSystemAsset",
         "Objects" : [{
             "Class" : "UParticleSystem",
@@ -9,7 +9,7 @@
               "LODDistances" : [0.000000, 1000.000000],
               "LODMethod" : 0,
               "LODSettings" : [0, 1],
-              "ObjectName" : "New Particle System",
+              "ObjectName" : "New Particle System 1",
               "SecondsBeforeInactive" : 0.000000,
               "SystemUpdateMode" : 0,
               "ThumbnailWarmup" : 1.000000,
@@ -25,7 +25,7 @@
             "Class" : "UParticleEmitter",
             "Data" : {
               "LODLevels" : [3],
-              "ObjectName" : "UParticleEmitter_1",
+              "ObjectName" : "UParticleEmitter_6",
               "Type" : "UParticleEmitter"
             },
             "Id" : 2
@@ -35,7 +35,7 @@
               "DistanceThreshold" : 100000.000000,
               "Level" : 0,
               "Modules" : [5, 6, 7, 8, 9, 10],
-              "ObjectName" : "UParticleLODLevel_1",
+              "ObjectName" : "UParticleLODLevel_6",
               "RequiredModule" : 4,
               "Type" : "UParticleLODLevel",
               "bEnabled" : true
@@ -47,10 +47,10 @@
               "EmitterDuration" : 1.000000,
               "Material" : "",
               "MaxParticles" : 128,
-              "ObjectName" : "UParticleModuleRequired_1",
+              "ObjectName" : "UParticleModuleRequired_6",
               "RenderMode" : 0,
-              "SubImagesHorizontal" : 6,
-              "SubImagesVertical" : 6,
+              "SubImagesHorizontal" : 1,
+              "SubImagesVertical" : 1,
               "SubUVName" : "Name_None",
               "Type" : "UParticleModuleRequired",
               "bEnabled" : true,
@@ -63,7 +63,7 @@
           }, {
             "Class" : "UParticleModuleSpawn",
             "Data" : {
-              "ObjectName" : "UParticleModuleSpawn_1",
+              "ObjectName" : "UParticleModuleSpawn_6",
               "Rate" : 10.000000,
               "Type" : "UParticleModuleSpawn",
               "bEnabled" : true,
@@ -76,7 +76,7 @@
             "Data" : {
               "LifetimeMax" : 1.000000,
               "LifetimeMin" : 1.000000,
-              "ObjectName" : "UParticleModuleLifetime_1",
+              "ObjectName" : "UParticleModuleLifetime_6",
               "Type" : "UParticleModuleLifetime",
               "bEnabled" : true,
               "bSpawnModule" : true,
@@ -86,7 +86,7 @@
           }, {
             "Class" : "UParticleModuleLocation",
             "Data" : {
-              "ObjectName" : "UParticleModuleLocation_1",
+              "ObjectName" : "UParticleModuleLocation_5",
               "StartLocationMax" : {
                 "X" : 0.000000,
                 "Y" : 0.000000,
@@ -106,16 +106,16 @@
           }, {
             "Class" : "UParticleModuleVelocity",
             "Data" : {
-              "ObjectName" : "UParticleModuleVelocity_1",
+              "ObjectName" : "UParticleModuleVelocity_5",
               "StartVelocityMax" : {
-                "X" : 10.000000,
-                "Y" : 10.000000,
-                "Z" : 10.000000
+                "X" : 0.000000,
+                "Y" : 0.000000,
+                "Z" : 100.000000
               },
               "StartVelocityMin" : {
-                "X" : -10.000000,
-                "Y" : -10.000000,
-                "Z" : -10.000000
+                "X" : 0.000000,
+                "Y" : 0.000000,
+                "Z" : 50.000000
               },
               "Type" : "UParticleModuleVelocity",
               "bEnabled" : true,
@@ -132,7 +132,7 @@
                 "G" : 1.000000,
                 "R" : 1.000000
               },
-              "ObjectName" : "UParticleModuleColor_1",
+              "ObjectName" : "UParticleModuleColor_6",
               "StartColor" : {
                 "A" : 1.000000,
                 "B" : 1.000000,
@@ -153,7 +153,7 @@
                 "Y" : 1.000000,
                 "Z" : 1.000000
               },
-              "ObjectName" : "UParticleModuleSize_1",
+              "ObjectName" : "UParticleModuleSize_6",
               "StartSize" : {
                 "X" : 1.000000,
                 "Y" : 1.000000,

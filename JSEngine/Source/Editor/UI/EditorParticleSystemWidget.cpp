@@ -692,47 +692,6 @@ namespace
 		}
 	}
 
-	UParticleEmitter* CreateLayoutPreviewEmitter(const char* Name, int32 Variant)
-	{
-		UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
-		UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
-		if (!Emitter || !LODLevel)
-		{
-			return Emitter;
-		}
-
-		const FString LODName = FString(Name) + "_LOD0";
-		Emitter->SetFName(FName(Name));
-		LODLevel->SetFName(FName(LODName));
-		LODLevel->Level = 0;
-		LODLevel->RequiredModule = CreateParticleModule<UParticleModuleRequired>("Required");
-		AddModule(LODLevel, CreateParticleModule<UParticleModuleSpawn>("Spawn"));
-		AddModule(LODLevel, CreateParticleModule<UParticleModuleLifetime>("Lifetime"));
-
-		if (Variant != 1)
-		{
-			AddModule(LODLevel, CreateParticleModule<UParticleModuleLocation>("Initial Location"));
-		}
-		if (Variant != 2)
-		{
-			AddModule(LODLevel, CreateParticleModule<UParticleModuleVelocity>("Initial Velocity"));
-		}
-		AddModule(LODLevel, CreateParticleModule<UParticleModuleColor>("Color"));
-		AddModule(LODLevel, CreateParticleModule<UParticleModuleSize>("Size"));
-		if (Variant == 0 || Variant == 3)
-		{
-			AddModule(LODLevel, CreateParticleModule<UParticleModuleCollision>("Collision"));
-		}
-		if (Variant == 0)
-		{
-			AddModule(LODLevel, CreateParticleModule<UParticleModuleEventGenerator>("Event Generator"));
-		}
-
-		Emitter->LODLevels.push_back(LODLevel);
-		Emitter->CacheEmitterModuleInfo();
-		return Emitter;
-	}
-
 	UParticleEmitter* CreateDefaultParticleEmitter(const FString& Name)
 	{
 		UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
@@ -786,22 +745,6 @@ namespace
 			}
 			++CandidateIndex;
 		}
-	}
-
-	UParticleSystem* CreateLayoutPreviewParticleSystem()
-	{
-		UParticleSystem* System = UObjectManager::Get().CreateObject<UParticleSystem>();
-		if (!System)
-		{
-			return nullptr;
-		}
-
-		System->SetFName(FName("P_Emitter_Column_Preview"));
-		System->Emitters.push_back(CreateLayoutPreviewEmitter("smoke", 0));
-		System->Emitters.push_back(CreateLayoutPreviewEmitter("blood_b", 1));
-		System->Emitters.push_back(CreateLayoutPreviewEmitter("dirt", 2));
-		System->Emitters.push_back(CreateLayoutPreviewEmitter("drops", 3));
-		return System;
 	}
 
 	void DrawAxisLabel(
@@ -1041,6 +984,15 @@ bool FEditorParticleSystemWidget::Redo()
 	return bRestored;
 }
 
+void FEditorParticleSystemWidget::CloseDocument(const FString& InDocumentPath)
+{
+	PreviewBackgroundColorByDocument.erase(InDocumentPath);
+	if (DocumentPath == InDocumentPath)
+	{
+		PreviewClient.ResetBackgroundColor();
+	}
+}
+
 void FEditorParticleSystemWidget::Render(float DeltaTime)
 {
 	RenderEmbedded(DeltaTime);
@@ -1073,10 +1025,15 @@ void FEditorParticleSystemWidget::RenderEmbedded(float DeltaTime)
 	ImGui::PopStyleVar(2);
 }
 
-void FEditorParticleSystemWidget::OpenLayoutTest(const FString& InDocumentPath)
+void FEditorParticleSystemWidget::OpenParticleSystem(const FString& InDocumentPath)
 {
-	DocumentPath = InDocumentPath.empty() ? "P_Explosion_Big_B" : InDocumentPath;
-	bDirty = InDocumentPath.empty();
+	if (InDocumentPath.empty())
+	{
+		return;
+	}
+
+	DocumentPath = InDocumentPath;
+	bDirty = false;
 	ParticleSystemAsset = nullptr;
 	SelectEmitter(0);
 	ClearEmitterContext();
@@ -1084,14 +1041,17 @@ void FEditorParticleSystemWidget::OpenLayoutTest(const FString& InDocumentPath)
 	bPropertyEditUndoCaptured = false;
 	bEmitterNameEditUndoCaptured = false;
 
-	if (!InDocumentPath.empty())
+	if (auto BackgroundIt = PreviewBackgroundColorByDocument.find(DocumentPath);
+		BackgroundIt != PreviewBackgroundColorByDocument.end())
 	{
-		ParticleSystemAsset = FResourceManager::Get().LoadParticleSystem(InDocumentPath);
+		PreviewClient.SetBackgroundColor(BackgroundIt->second);
 	}
 	else
 	{
-		ParticleSystemAsset = CreateLayoutPreviewParticleSystem();
+		PreviewClient.ResetBackgroundColor();
 	}
+
+	ParticleSystemAsset = FResourceManager::Get().LoadParticleSystem(InDocumentPath);
 
 	EnsurePreviewViewport();
 	RefreshPreviewComponent(true);
@@ -1382,7 +1342,11 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 		}
 	}
 	SameLineGap();
-	ToolbarButton("BackgroundColor", "Background Color", GetCascadeToolbarIcon(ECascadeToolbarIcon::BackgroundColor), "Change preview background color");
+	if (ToolbarButton("BackgroundColor", "Background Color", GetCascadeToolbarIcon(ECascadeToolbarIcon::BackgroundColor), "Change preview background color"))
+	{
+		ImGui::OpenPopup("##ParticlePreviewBackgroundColorPopup");
+	}
+	DrawBackgroundColorPopup();
 
 	SameLineGap(14.0f);
 	ToolbarButton("RegenLOD", "Regen LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::RegenLOD), "Regenerate LOD");
@@ -1402,6 +1366,65 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 
 	SameLineGap(14.0f);
 	ToolbarButton("ParticleEditorMenu", "Menu", GetCascadeToolbarIcon(ECascadeToolbarIcon::Menu), "Particle editor menu");
+}
+
+void FEditorParticleSystemWidget::DrawBackgroundColorPopup()
+{
+	if (!BeginParticlePopup("##ParticlePreviewBackgroundColorPopup"))
+	{
+		return;
+	}
+
+	FColor BackgroundColor = PreviewClient.GetBackgroundColor();
+	float ColorValues[3] =
+	{
+		std::clamp(BackgroundColor.R, 0.0f, 1.0f),
+		std::clamp(BackgroundColor.G, 0.0f, 1.0f),
+		std::clamp(BackgroundColor.B, 0.0f, 1.0f)
+	};
+
+	const ImGuiColorEditFlags ColorFlags =
+		ImGuiColorEditFlags_NoAlpha |
+		ImGuiColorEditFlags_DisplayRGB |
+		ImGuiColorEditFlags_InputRGB |
+		ImGuiColorEditFlags_Uint8 |
+		ImGuiColorEditFlags_PickerHueBar;
+
+	bool bChanged = false;
+	ImGui::SetNextItemWidth(260.0f);
+	bChanged |= ImGui::ColorPicker3("##ParticlePreviewBackgroundPicker", ColorValues, ColorFlags);
+
+	ImGui::Separator();
+	ImGui::SetNextItemWidth(260.0f);
+	bChanged |= ImGui::ColorEdit3(
+		"RGB",
+		ColorValues,
+		ColorFlags | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoSmallPreview);
+
+	if (ImGui::Button("Reset"))
+	{
+		const FColor DefaultColor = FParticleSystemViewportClient::GetDefaultBackgroundColor();
+		ColorValues[0] = DefaultColor.R;
+		ColorValues[1] = DefaultColor.G;
+		ColorValues[2] = DefaultColor.B;
+		bChanged = true;
+	}
+
+	if (bChanged)
+	{
+		BackgroundColor = FColor(
+			std::clamp(ColorValues[0], 0.0f, 1.0f),
+			std::clamp(ColorValues[1], 0.0f, 1.0f),
+			std::clamp(ColorValues[2], 0.0f, 1.0f),
+			1.0f);
+		PreviewClient.SetBackgroundColor(BackgroundColor);
+		if (!DocumentPath.empty())
+		{
+			PreviewBackgroundColorByDocument[DocumentPath] = BackgroundColor;
+		}
+	}
+
+	EndParticlePopup();
 }
 
 void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseRequested)
@@ -1595,7 +1618,11 @@ void FEditorParticleSystemWidget::DrawViewportPanel(const ImVec2& Size)
 	}
 
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
-	DrawList->AddRectFilled(CanvasMin, CanvasMax, ImGui::GetColorU32(ImVec4(0.34f, 0.35f, 0.34f, 1.0f)));
+	const FColor& BackgroundColor = PreviewClient.GetBackgroundColor();
+	DrawList->AddRectFilled(
+		CanvasMin,
+		CanvasMax,
+		ImGui::GetColorU32(ImVec4(BackgroundColor.R, BackgroundColor.G, BackgroundColor.B, 1.0f)));
 
 	ID3D11ShaderResourceView* SRV = bPreviewViewportInitialized ? PreviewViewport.GetOutSRV() : nullptr;
 	if (SRV && EditorEngine)
