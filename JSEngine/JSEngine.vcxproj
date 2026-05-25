@@ -1297,9 +1297,6 @@
     <ClInclude Include="Source\Engine\Object\ObjectIterator.h" />
     <ClInclude Include="Source\Engine\Object\ObjectPtr.h" />
     <ClInclude Include="Source\Engine\Object\Property.h" />
-    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynaicEmitterDataBase.h" />
-    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicEmitterReplayDataBase.h" />
-    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicSpriteEmitterDataBase.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
@@ -1460,7 +1457,6 @@
     <None Include="Shaders\EditorDebug\SelectionMask.hlsl" />
     <None Include="Shaders\Material\Decal.hlsl" />
     <None Include="Shaders\Material\UberLit.hlsl" />
-    <None Include="Shaders\Particle\SpriteParticle.hlsl" />
     <None Include="Shaders\PostProcess\FXAAPass.hlsl" />
     <None Include="Shaders\PostProcess\FogPass.hlsl" />
     <None Include="Shaders\PostProcess\LightPass.hlsl" />

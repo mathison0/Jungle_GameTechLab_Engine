@@ -16,7 +16,7 @@
             "R" : 1.000000
           },
           "ObjectName" : "UDirectionalLightComponent_1",
-          "PersistentGuid" : "1245CDCD-DFAB426D-95B8EC57-6496AE9E",
+          "PersistentGuid" : "63214B57-8EB04C9D-8FFF9CBA-C96BDAF4",
           "RelativeLocation" : {
             "X" : 0.000000,
             "Y" : 0.000000,
@@ -38,7 +38,7 @@
           "SlopeScaledBias" : 0.120000,
           "Tags" : [],
           "Type" : "UDirectionalLightComponent",
-          "UUID" : 144,
+          "UUID" : 464,
           "bAutoActivate" : true,
           "bCanEverTick" : true,
           "bCastShadows" : true,
@@ -51,8 +51,8 @@
           "ClassName" : "UBillboardComponent",
           "Height" : 1.000000,
           "ObjectName" : "UBillboardComponent_1",
-          "ParentUUID" : 144,
-          "PersistentGuid" : "01E6D165-C7C04FD9-BF1475C9-42207FD9",
+          "ParentUUID" : 464,
+          "PersistentGuid" : "56C2EFEB-B55D4EB1-B9ECC04B-3C056AF3",
           "PlayRate" : 30.000000,
           "RelativeLocation" : {
             "X" : 0.000000,
@@ -72,7 +72,7 @@
           "Tags" : [],
           "TextureName" : "Resources/Editor/Icons/DirectionalLight_64x.png",
           "Type" : "UBillboardComponent",
-          "UUID" : 145,
+          "UUID" : 465,
           "Width" : 1.000000,
           "bAutoActivate" : true,
           "bCanEverTick" : true,
@@ -88,9 +88,9 @@
         }],
       "EditorOnly" : true,
       "Name" : "Directional Light",
-      "RootComponent" : 144,
+      "RootComponent" : 464,
       "Tags" : [],
-      "UUID" : 143,
+      "UUID" : 463,
       "Visible" : true
     }, {
       "Active" : true,
@@ -107,7 +107,7 @@
             "R" : 1.000000
           },
           "ObjectName" : "UAmbientLightComponent_1",
-          "PersistentGuid" : "6451D2A5-7B034C00-9D65A0EF-74FDADA9",
+          "PersistentGuid" : "91291C0A-A40A4467-A25E80F5-7C178D5A",
           "RelativeLocation" : {
             "X" : 0.000000,
             "Y" : 0.000000,
@@ -129,7 +129,7 @@
           "SlopeScaledBias" : 0.120000,
           "Tags" : [],
           "Type" : "UAmbientLightComponent",
-          "UUID" : 147,
+          "UUID" : 467,
           "bAutoActivate" : true,
           "bCanEverTick" : true,
           "bCastShadows" : true,
@@ -142,8 +142,8 @@
           "ClassName" : "UBillboardComponent",
           "Height" : 1.000000,
           "ObjectName" : "UBillboardComponent_1",
-          "ParentUUID" : 147,
-          "PersistentGuid" : "FB74AE3A-83ED4C6F-9F9D27BA-D130B1F1",
+          "ParentUUID" : 467,
+          "PersistentGuid" : "2DBB9619-EC3D4CF9-A2AD7749-9FA81525",
           "PlayRate" : 30.000000,
           "RelativeLocation" : {
             "X" : 0.000000,
@@ -163,7 +163,7 @@
           "Tags" : [],
           "TextureName" : "Resources/Editor/Icons/SkyLight_64x.png",
           "Type" : "UBillboardComponent",
-          "UUID" : 148,
+          "UUID" : 468,
           "Width" : 1.000000,
           "bAutoActivate" : true,
           "bCanEverTick" : true,
@@ -179,9 +179,9 @@
         }],
       "EditorOnly" : false,
       "Name" : "Ambient Light",
-      "RootComponent" : 147,
+      "RootComponent" : 467,
       "Tags" : [],
-      "UUID" : 146,
+      "UUID" : 466,
       "Visible" : true
     }, {
       "Active" : true,
@@ -190,7 +190,7 @@
           "AttachSocketName" : "Name_None",
           "ClassName" : "USceneComponent",
           "ObjectName" : "USceneComponent_1",
-          "PersistentGuid" : "6D544DA6-BEB145F8-B0C286F0-8FDA4B52",
+          "PersistentGuid" : "CA891C1C-E1DC422A-8C70F4D4-DFA8587B",
           "RelativeLocation" : {
             "X" : 0.000000,
             "Y" : 0.000000,
@@ -208,7 +208,7 @@
           },
           "Tags" : [],
           "Type" : "USceneComponent",
-          "UUID" : 150,
+          "UUID" : 470,
           "bAutoActivate" : true,
           "bCanEverTick" : true,
           "bIsActive" : true,
@@ -219,8 +219,8 @@
           "ClassName" : "UBillboardComponent",
           "Height" : 1.000000,
           "ObjectName" : "UBillboardComponent_1",
-          "ParentUUID" : 150,
-          "PersistentGuid" : "43B6397C-A0244D80-8A7EFAEE-B866D438",
+          "ParentUUID" : 470,
+          "PersistentGuid" : "16DD1912-145643B2-AFC8E5ED-5A6EBAFC",
           "PlayRate" : 30.000000,
           "RelativeLocation" : {
             "X" : 0.000000,
@@ -240,7 +240,7 @@
           "Tags" : [],
           "TextureName" : "Resources/Editor/Icons/PlayerStart_64x.PNG",
           "Type" : "UBillboardComponent",
-          "UUID" : 151,
+          "UUID" : 471,
           "Width" : 1.000000,
           "bAutoActivate" : true,
           "bCanEverTick" : true,
@@ -256,66 +256,27 @@
         }],
       "EditorOnly" : false,
       "Name" : "Player Start",
-      "RootComponent" : 150,
+      "RootComponent" : 470,
       "Tags" : [],
-      "UUID" : 149,
+      "UUID" : 469,
       "Visible" : true
     }, {
       "Active" : true,
-      "ClassName" : "ABillboardActor",
+      "ClassName" : "AParticleEventManager",
       "Components" : [{
-          "AttachSocketName" : "Name_None",
-          "ClassName" : "UBillboardComponent",
-          "Height" : 1.000000,
-          "ObjectName" : "UBillboardComponent_1",
-          "PersistentGuid" : "5845ECF2-0BBE4DEC-B008C3B5-3E9BD133",
-          "PlayRate" : 30.000000,
-          "RelativeLocation" : {
-            "X" : -1.094038,
-            "Y" : -3.204501,
-            "Z" : -0.024990
-          },
-          "RelativeRotation" : {
-            "X" : 0.000000,
-            "Y" : 0.000000,
-            "Z" : 0.000000
-          },
-          "RelativeScale3D" : {
-            "X" : 1.000000,
-            "Y" : 1.000000,
-            "Z" : 1.000000
-          },
-          "Tags" : [],
-          "TextureName" : "Resources/Editor/Icons/Pawn_64x.png",
-          "Type" : "UBillboardComponent",
-          "UUID" : 153,
-          "Width" : 1.000000,
-          "bAutoActivate" : true,
-          "bCanEverTick" : true,
-          "bCastDecal" : true,
-          "bEnableCull" : true,
-          "bGenerateOverlapEvents" : false,
-          "bInheritOwnerScale" : false,
-          "bIsActive" : true,
-          "bIsEditorOnly" : false,
-          "bIsVisible" : true,
-          "bLoop" : true,
-          "bTransient" : false
-        }, {
           "AttachSocketName" : "Name_None",
           "ClassName" : "UParticleSystemComponent",
           "ObjectName" : "UParticleSystemComponent_1",
-          "ParentUUID" : 153,
-          "PersistentGuid" : "D038586F-A5884217-BAF7AF9B-4261254E",
+          "PersistentGuid" : "1E35CCAC-1CDA4488-AF1BD2BD-E026462B",
           "RelativeLocation" : {
-            "X" : 0.000000,
-            "Y" : 0.000000,
-            "Z" : 0.000000
+            "X" : -7.517566,
+            "Y" : 3.576113,
+            "Z" : 3.552489
           },
           "RelativeRotation" : {
-            "X" : 0.000000,
+            "X" : -0.000000,
             "Y" : 0.000000,
-            "Z" : 0.000000
+            "Z" : -0.000000
           },
           "RelativeScale3D" : {
             "X" : 1.000000,
@@ -325,7 +286,53 @@
           "Tags" : [],
           "Template" : 0,
           "Type" : "UParticleSystemComponent",
-          "UUID" : 199,
+          "UUID" : 473,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : true,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }],
+      "EditorOnly" : true,
+      "Name" : "AParticleEventManager_1",
+      "RootComponent" : 473,
+      "Tags" : [],
+      "UUID" : 472,
+      "Visible" : true
+    }, {
+      "Active" : true,
+      "ClassName" : "AStaticMeshActor",
+      "Components" : [{
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UStaticMeshComponent",
+          "Materials" : ["DefaultWhite"],
+          "ObjectName" : "UStaticMeshComponent_1",
+          "PersistentGuid" : "AC01CA8E-DB0D401F-9DB4EF1E-23FC2339",
+          "RelativeLocation" : {
+            "X" : -14.330110,
+            "Y" : 3.865058,
+            "Z" : 1.891727
+          },
+          "RelativeRotation" : {
+            "X" : -0.000000,
+            "Y" : 0.000000,
+            "Z" : -0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 1.000000,
+            "Y" : 9.131217,
+            "Z" : 18.330946
+          },
+          "ScrollU" : 0.000000,
+          "ScrollV" : 0.000000,
+          "StaticMeshAssetPath" : "Asset/Mesh/Dice/Dice.obj",
+          "Tags" : [],
+          "Type" : "UStaticMeshComponent",
+          "UUID" : 509,
           "bAutoActivate" : true,
           "bCanEverTick" : true,
           "bCastDecal" : true,
@@ -337,21 +344,21 @@
           "bTransient" : false
         }],
       "EditorOnly" : false,
-      "Name" : "ABillboardActor_0",
-      "RootComponent" : 153,
+      "Name" : "AStaticMeshActor_0",
+      "RootComponent" : 509,
       "Tags" : [],
-      "UUID" : 152,
+      "UUID" : 508,
       "Visible" : true
     }],
   "ClassName" : "UWorld",
-  "Name" : "deleteParticle",
-  "NextUUID" : 273,
+  "Name" : "Untitled",
+  "NextUUID" : 511,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-3.372119, -3.574261, 3.486931],
+    "Location" : [-2.065248, 3.772883, 6.784153],
     "NearClip" : 0.100000,
-    "Rotation" : [19.724623, -27.931366, -142.568527]
+    "Rotation" : [0.059120, -8.780151, -179.612885]
   },
   "Version" : 6,
   "WorldSettings" : {

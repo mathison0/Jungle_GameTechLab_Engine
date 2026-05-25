@@ -152,6 +152,15 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
             continue;
         }
 
+        // b0(FrameBuffer)를 명시적으로 VS에 바인딩 — 빌보드 정렬에 View 행렬 필수.
+        // Renderer::UpdateFrameBuffer가 frame 시작 시 전역 바인딩하지만, 직전 패스가
+        // VS slot 0을 다른 cbuffer로 덮어쓸 위험이 있어 이 패스에서 한 번 더 못박는다.
+        ID3D11Buffer* FrameBuf = Context->RenderResources->FrameBuffer.GetBuffer();
+        if (FrameBuf)
+        {
+            DeviceContext->VSSetConstantBuffers(0, 1, &FrameBuf);
+        }
+
         FSpriteParticleCB CBData = {};
         CBData.SubUVColumns = (Cmd.ParticleSubUVColumns > 0) ? Cmd.ParticleSubUVColumns : 1;
         CBData.SubUVRows    = (Cmd.ParticleSubUVRows    > 0) ? Cmd.ParticleSubUVRows    : 1;

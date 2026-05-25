@@ -1,5 +1,6 @@
 ﻿#include "Particle/ParticleEvent.h"
 #include "Particle/ParticleSystemComponent.h"
+#include "Particle/ParticleSystem.h"
 
 // Function : Add particle collision event to manager queue
 // input : EventData
@@ -26,5 +27,13 @@ void AParticleEventManager::InitDefaultComponents()
 {
     UParticleSystemComponent* ParticleSystemComponent = AddComponent<UParticleSystemComponent>();
     SetRootComponent(ParticleSystemComponent);
+
+    UParticleSystem* PS = UParticleSystem::CreateDefaultSpriteSystem();
+    USubUVModule* SubUV = UObjectManager::Get().CreateObject<USubUVModule>();
+    SubUV->SetSubUVName(FName("Asset/plasma.png"));
+    PS->Emitters[0]->LODLevels[0]->Modules.push_back(SubUV);
+    PS->CacheEmitterModuleInfo();
+    ParticleSystemComponent->SetTemplate(PS);
+    SetTickInEditor(true);
 }
 	 

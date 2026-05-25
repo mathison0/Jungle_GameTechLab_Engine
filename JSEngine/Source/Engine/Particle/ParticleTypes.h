@@ -16,6 +16,14 @@ enum class EParticleEmitterRenderMode : uint8
 	Ribbon,
 };
 
+
+enum class EParticleSortMode : uint8
+{
+    None,
+    ViewDepth,
+    DistanceToView
+};
+
 struct FBaseParticle
 {
 	FVector Location = FVector::ZeroVector;
