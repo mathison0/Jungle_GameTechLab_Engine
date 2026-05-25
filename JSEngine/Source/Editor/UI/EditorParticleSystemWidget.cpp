@@ -694,18 +694,20 @@ namespace
 
 	UParticleEmitter* CreateDefaultParticleEmitter(const FString& Name)
 	{
-		UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
-		UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
-		if (!Emitter || !LODLevel)
-		{
-			return Emitter;
-		}
+        UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
+        if (!Emitter)
+            return nullptr;
+
+        UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100000.0f);
+        if (!LODLevel)
+            return Emitter;
 
 		const FString LODName = Name + "_LOD0";
 		Emitter->SetFName(FName(Name));
 		LODLevel->SetFName(FName(LODName));
 		LODLevel->Level = 0;
 		LODLevel->RequiredModule = CreateParticleModule<UParticleModuleRequired>("Required");
+		AddModule(LODLevel, CreateParticleModule<USpriteTypeData>("Sprite TypeData"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleSpawn>("Spawn"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleLifetime>("Lifetime"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleLocation>("Initial Location"));
@@ -713,7 +715,6 @@ namespace
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleColor>("Color"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleSize>("Size"));
 
-		Emitter->LODLevels.push_back(LODLevel);
 		Emitter->CacheEmitterModuleInfo();
 		return Emitter;
 	}
@@ -892,6 +893,18 @@ bool FEditorParticleSystemWidget::Save()
 	}
 
 	ParticleSystemAsset->CacheEmitterModuleInfo();
+
+	TArray<FString> Errors;
+	if (!ParticleSystemAsset->Validate(&Errors))
+	{
+		if (EditorEngine)
+		{
+			const FString Message = Errors.empty() ? FString("Particle system validation failed.") : Errors.front();
+			EditorEngine->GetNotificationService().Warning(Message);
+		}
+		return false;
+	}
+
 	if (!FResourceManager::Get().SaveParticleSystem(ParticleSystemAsset, DocumentPath))
 	{
 		if (EditorEngine)

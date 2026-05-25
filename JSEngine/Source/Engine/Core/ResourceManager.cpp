@@ -1953,6 +1953,124 @@ bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString&
 	return true;
 }
 
+bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Path)
+{
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	if (NormalizedPath.empty() || !IsParticleSystemAssetPath(NormalizedPath))
+	{
+		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Invalid path: %s", NormalizedPath.c_str());
+		return false;
+	}
+
+	UParticleSystem* Original = UParticleSystem::CreateDefaultSpriteSystem();
+	if (!Original)
+	{
+		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Failed to create default sprite system.");
+		return false;
+	}
+
+	TArray<FString> OriginalErrors;
+	if (!Original->Validate(&OriginalErrors))
+	{
+		for (const FString& Error : OriginalErrors)
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Source validation error: %s", Error.c_str());
+		}
+
+		UObjectManager::Get().DestroyObject(Original);
+		return false;
+	}
+
+	const bool bSaved = SaveParticleSystem(Original, NormalizedPath);
+	UObjectManager::Get().DestroyObject(Original);
+	Original = nullptr;
+
+	if (!bSaved)
+	{
+		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Save failed: %s", NormalizedPath.c_str());
+		return false;
+	}
+
+	UParticleSystem* Loaded = LoadParticleSystem(NormalizedPath);
+	if (!Loaded)
+	{
+		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Load failed: %s", NormalizedPath.c_str());
+		return false;
+	}
+
+	Loaded->CacheEmitterModuleInfo();
+
+	bool bPassed = true;
+	TArray<FString> LoadedErrors;
+	if (!Loaded->Validate(&LoadedErrors))
+	{
+		bPassed = false;
+		for (const FString& Error : LoadedErrors)
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Loaded validation error: %s", Error.c_str());
+		}
+	}
+
+	const TArray<UParticleEmitter*>& Emitters = Loaded->GetEmitters();
+	if (Emitters.size() != 1)
+	{
+		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Expected one emitter, got %d.", static_cast<int32>(Emitters.size()));
+		bPassed = false;
+	}
+
+	const UParticleEmitter* Emitter = Emitters.empty() ? nullptr : Emitters[0];
+	const UParticleLODLevel* LODLevel = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+	if (!LODLevel)
+	{
+		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing LOD0 after load.");
+		bPassed = false;
+	}
+	else
+	{
+		if (!LODLevel->GetRequiredModule())
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing required module after load.");
+			bPassed = false;
+		}
+
+		if (!LODLevel->GetSpawnModule())
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing cached spawn module after load.");
+			bPassed = false;
+		}
+
+		if (LODLevel->GetModules().size() < 6)
+		{
+			UE_LOG_ERROR(
+				"[ParticleSystemAssetSmoke] Expected at least six regular modules, got %d.",
+				static_cast<int32>(LODLevel->GetModules().size())
+			);
+			bPassed = false;
+		}
+
+		if (LODLevel->GetSpawnModules().empty())
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Spawn module cache is empty after load.");
+			bPassed = false;
+		}
+
+		if (LODLevel->GetUpdateModules().empty())
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Update module cache is empty after load.");
+			bPassed = false;
+		}
+	}
+
+	UObjectManager::Get().DestroyObject(Loaded);
+
+	if (bPassed)
+	{
+		UE_LOG("[ParticleSystemAssetSmoke] Passed: %s", NormalizedPath.c_str());
+	}
+
+	return bPassed;
+}
+
 FString FResourceManager::SerializeParticleSystemToString(UParticleSystem* Asset)
 {
 	if (!Asset)
