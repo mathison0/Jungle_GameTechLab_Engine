@@ -241,6 +241,22 @@ void FEditorToolbarWidget::ProcessShortcuts()
 				EditorEngine->GetCommandSystem().Execute(EEditorCommand::SaveScene);
 			}
 		}
+		if (ImGui::IsKeyPressed(ImGuiKey_Z, false))
+		{
+			const FEditorShortcut Shortcut
+			{
+				static_cast<int32>(ImGuiKey_Z),
+				true,
+				IO.KeyShift,
+				IO.KeyAlt
+			};
+
+			const bool bHandledByActiveContext = ActiveShortcutHandler && ActiveShortcutHandler(Shortcut);
+			if (!bHandledByActiveContext)
+			{
+				EditorEngine->GetCommandSystem().Execute(IO.KeyShift ? EEditorCommand::Redo : EEditorCommand::Undo);
+			}
+		}
 	}
 }
 

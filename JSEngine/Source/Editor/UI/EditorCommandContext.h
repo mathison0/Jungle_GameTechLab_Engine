@@ -11,6 +11,8 @@ enum class EEditorCommandId : uint8
 	Save,
 	SaveAs,
 	CloseTab,
+	Undo,
+	Redo,
 
 	PlayPIE,
 	StopPIE,

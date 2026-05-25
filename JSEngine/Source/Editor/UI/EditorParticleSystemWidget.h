@@ -24,6 +24,10 @@ public:
 	void RenderDetachedDocumentChrome(bool& bCloseRequested);
 	void RenderDocumentToolbarControls();
 	void Shutdown();
+	bool CanUndo() const;
+	bool CanRedo() const;
+	bool Undo();
+	bool Redo();
 
 	void OpenLayoutTest(const FString& InDocumentPath = "");
 	const FString& GetDocumentPath() const { return DocumentPath; }
@@ -36,6 +40,15 @@ public:
 	const FParticleSystemViewportClient* GetPreviewClient() const { return bPreviewViewportInitialized ? &PreviewClient : nullptr; }
 
 private:
+	struct FParticleEditorUndoEntry
+	{
+		FString Label;
+		FString Snapshot;
+		int32 CurrentLOD = 0;
+		int32 SelectedEmitterIndex = 0;
+		int32 SelectedModuleIndex = -1;
+	};
+
 	void EnsurePreviewViewport();
 	void ShutdownPreviewViewport();
 	void DrawMainLayout();
@@ -44,8 +57,22 @@ private:
 	void DrawEmittersPanel(const ImVec2& Size);
 	void DrawEmitterContextMenu();
 	void AddDefaultEmitter();
+	void AddDefaultEmitterAt(int32 InsertIndex);
 	void DeleteSelectedEmitter();
 	void DeleteEmitter(int32 EmitterIndex);
+	void AddModuleToEmitter(int32 EmitterIndex, UParticleModule* Module);
+	void DeleteModule(int32 EmitterIndex, int32 ModuleIndex);
+	void BeginRenameEmitter(int32 EmitterIndex);
+	void RenameEmitter(int32 EmitterIndex, const FString& NewName);
+	void DrawEmitterRenamePopup();
+	void ShowCenterToast(const FString& Message);
+	void DrawCenterToast(const ImVec2& AreaMin, const ImVec2& AreaSize);
+	void CaptureUndoSnapshot(const char* Label);
+	FString CaptureParticleSnapshot() const;
+	bool RestoreParticleSnapshot(const FString& Snapshot, int32 InCurrentLOD, int32 InSelectedEmitterIndex, int32 InSelectedModuleIndex);
+	void ClearUndoHistory();
+	void PushUndoEntry(TArray<FParticleEditorUndoEntry>& Stack, const FParticleEditorUndoEntry& Entry, bool bSkipDuplicate);
+	void ClampSelectionToParticleSystem();
 	void ApplyPendingReorders();
 	void ReorderEmitter(int32 SourceIndex, int32 InsertIndex);
 	void ReorderModule(int32 SourceEmitterIndex, int32 SourceModuleIndex, int32 TargetEmitterIndex, int32 InsertIndex);
@@ -80,14 +107,25 @@ private:
 	int32 SelectedEmitterIndex = 0;
 	int32 SelectedModuleIndex = -1;
 	int32 ContextEmitterIndex = -1;
+	int32 ContextModuleIndex = -1;
+	int32 RenameEmitterIndex = -1;
 	int32 PendingEmitterMoveSource = -1;
 	int32 PendingEmitterMoveInsertIndex = -1;
 	int32 PendingModuleMoveEmitterIndex = -1;
 	int32 PendingModuleMoveTargetEmitterIndex = -1;
 	int32 PendingModuleMoveSource = -1;
 	int32 PendingModuleMoveInsertIndex = -1;
+	char RenameEmitterBuffer[128] = {};
+	FString CenterToastMessage;
+	TArray<FParticleEditorUndoEntry> UndoHistory;
+	TArray<FParticleEditorUndoEntry> RedoHistory;
+	bool bOpenEmitterContextMenu = false;
+	bool bOpenRenameEmitterPopup = false;
+	bool bRestoringParticleSnapshot = false;
+	bool bPropertyEditUndoCaptured = false;
 	float TopAreaHeight = 0.0f;
 	float TopLeftWidth = 0.0f;
 	float BottomLeftWidth = 0.0f;
 	float LastDeltaTime = 0.0f;
+	float CenterToastRemainingTime = 0.0f;
 };
