@@ -3,6 +3,7 @@
 #include "Camera/ViewportCamera.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "Particle/ParticleModuleTypeData.h"
 
 UParticleSystemComponent::~UParticleSystemComponent()
 {
@@ -39,8 +40,21 @@ void UParticleSystemComponent::RecreateEmitterInstances()
 	EmitterInstances.reserve(Emitters.size());
 	for (int32 Index = 0; Index < static_cast<int32>(Emitters.size()); ++Index)
 	{
-		FParticleEmitterInstance* Instance = new FParticleEmitterInstance();
-		Instance->Init(Emitters[Index], this, Index);
+		UParticleEmitter* EmitterAsset = Emitters[Index];
+		// TypeDataModule이 캐싱되어 있도록 보장. Init 내부에서도 다시 호출되지만 idempotent.
+		// 명시 호출 이유: LOD0 조회를 Instance 생성 전에 해야 하므로, asset 측 캐시가 stale이면 silent fallback 위험.
+		if (EmitterAsset)
+		{
+			EmitterAsset->CacheEmitterModuleInfo();
+		}
+		UParticleLODLevel* LOD0 = EmitterAsset ? EmitterAsset->GetLODLevel(0) : nullptr;
+		UParticleModuleTypeDataBase* TypeData = LOD0 ? LOD0->GetTypeDataModule() : nullptr;
+		// TypeData가 있으면 type별 derived instance 생성 hook 사용. 없으면 base FParticleEmitterInstance.
+		// USpriteTypeData::CreateInstance() = new FParticleEmitterInstance() 이므로 Sprite path 회귀 0.
+		FParticleEmitterInstance* Instance = TypeData
+			? TypeData->CreateInstance(this, Index)
+			: new FParticleEmitterInstance();
+		Instance->Init(EmitterAsset, this, Index);
 		EmitterInstances.push_back(Instance);
 	}
 }
@@ -186,51 +200,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 	NotifySpatialIndexDirty();
 }
 
-void UParticleSystemComponent::BuildSpriteInstanceData()
-{
-	const int32 EmitterCount = static_cast<int32>(EmitterInstances.size());
-	if (static_cast<int32>(EmitterInstanceData.size()) != EmitterCount)
-	{
-		EmitterInstanceData.resize(EmitterCount);
-	}
-
-	for (int32 EmitterIdx = 0; EmitterIdx < EmitterCount; ++EmitterIdx)
-	{
-		FParticleEmitterInstance* Instance = EmitterInstances[EmitterIdx];
-		TArray<FSpriteParticleInstanceData>& Out = EmitterInstanceData[EmitterIdx];
-		Out.clear();
-
-		if (!Instance || Instance->GetActiveParticleCount() == 0)
-		{
-			continue;
-		}
-
-		Out.reserve(Instance->GetActiveParticleCount());
-        for (int32 i = 0; i < Instance->GetActiveParticleCount(); ++i)
-		{
-			const FBaseParticle* Particle = Instance->GetParticle(i);
-			if (!Particle)
-			{
-				continue;
-			}
-
-			FSpriteParticleInstanceData Data;
-			Data.Position   = Particle->Location;
-			Data.Size       = FVector2(Particle->Size.X, Particle->Size.Y);
-			Data.Color      = Particle->Color;
-			Data.Rotation   = Particle->Rotation;
-			Data.SubUVIndex = Particle->SubUVIndex;
-			Out.push_back(Data);
-		}
-	}
-}
-
-const TArray<FSpriteParticleInstanceData>& UParticleSystemComponent::GetEmitterInstanceData(int32 EmitterIndex) const
-{
-	static const TArray<FSpriteParticleInstanceData> Empty;
-	if (EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EmitterInstanceData.size()))
-	{
-		return Empty;
-	}
-	return EmitterInstanceData[EmitterIndex];
-}
+// Cycle 10b (사용자 결정 C+X): BuildSpriteInstanceData / GetEmitterInstanceData / BuildInstanceData / EmitterInstanceData 모두 제거.
+// instance data buffer ownership이 Component에서 FParticleEmitterInstance::SpriteInstanceDataBuffer로 이전됨.
+// PrimitiveDrawCommandBuilder가 emitter 루프 안에서 Instance->BuildInstanceData(Cmd) 직접 호출.
+// RenderMode 분기는 instance polymorphism (virtual BuildInstanceData) 으로 일원화.

@@ -460,9 +460,11 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRequired.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSize.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystem.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystemComponent.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\USpriteTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\USubUVModule.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Render\Resource\UMaterial.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Render\Resource\UMaterialInstance.gen.cpp" />
@@ -907,6 +909,7 @@
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstance.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEvent.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystemComponent.cpp" />
@@ -1301,6 +1304,7 @@
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModules.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystemComponent.h" />
@@ -1457,6 +1461,7 @@
     <None Include="Shaders\EditorDebug\SelectionMask.hlsl" />
     <None Include="Shaders\Material\Decal.hlsl" />
     <None Include="Shaders\Material\UberLit.hlsl" />
+    <None Include="Shaders\Particle\SpriteParticle.hlsl" />
     <None Include="Shaders\PostProcess\FXAAPass.hlsl" />
     <None Include="Shaders\PostProcess\FogPass.hlsl" />
     <None Include="Shaders\PostProcess\LightPass.hlsl" />

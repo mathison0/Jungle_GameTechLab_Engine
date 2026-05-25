@@ -2,7 +2,14 @@
 
 #include <algorithm>
 
+#include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleSystemComponent.h"
+#include "Render/Scene/RenderCommand.h"
+
+// Cycle 10b baseline: SpriteInstanceDataBuffer (TArray<FSpriteParticleInstanceData>) 멤버 추가.
+// Cycle 9 baseline 96 → Cycle 10b 128 (+32 bytes: TArray 멤버 + 정렬 padding).
+// TArray가 std::vector 기반(포인터 3개=24) + 8-byte alignment padding으로 +32 측정.
+static_assert(sizeof(FParticleEmitterInstance) == 128, "Cycle 10b baseline: FParticleEmitterInstance expected 128 bytes after SpriteInstanceDataBuffer addition (Cycle 9 baseline 96 + TArray 32)");
 
 FParticleEmitterInstance::~FParticleEmitterInstance()
 {
@@ -27,7 +34,6 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	{
 		SpriteTemplate->CacheEmitterModuleInfo();
 		ParticleSize = SpriteTemplate->GetParticleSize();
-		ParticleStride = ParticleSize;
 		MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
 		CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(0.0f);
 		CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
@@ -35,9 +41,17 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	else
 	{
 		ParticleSize = sizeof(FBaseParticle);
-		ParticleStride = sizeof(FBaseParticle);
 		MaxActiveParticles = 1;
 	}
+
+	// payload-aware stride: TypeData가 요구하는 추가 byte 만큼 가산.
+	// USpriteTypeData::RequiredPayloadBytes() = 0 → Sprite는 회귀 0.
+	const int32 PayloadBytes = (CurrentLODLevel && CurrentLODLevel->GetTypeDataModule())
+		? CurrentLODLevel->GetTypeDataModule()->RequiredPayloadBytes()
+		: 0;
+	ParticleStride = ParticleSize + PayloadBytes;
+	InstancePayloadSize = PayloadBytes;
+	PayloadOffset = ParticleSize;
 
 	ParticleData = new uint8[ParticleStride * MaxActiveParticles];
 	ParticleIndices = new uint16[MaxActiveParticles];
@@ -212,9 +226,10 @@ FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
     RuntimeView.ParticleSize = ParticleSize;
     RuntimeView.CurrentLODLevelIndex = CurrentLODLevelIndex;
 
-	if (CurrentLODLevel && CurrentLODLevel->GetRequiredModule())
+	if (CurrentLODLevel)
     {
-        RuntimeView.RenderMode = CurrentLODLevel->GetRequiredModule()->GetRenderMode();
+        // TypeDataModule을 single source로, 없을 때 RequiredModule.RenderMode로 fallback.
+        RuntimeView.RenderMode = CurrentLODLevel->GetEffectiveRenderMode();
     }
 
     return RuntimeView;
@@ -278,4 +293,60 @@ int32 FParticleEmitterInstance::ConsumeSpawnCount(float Rate, float DeltaTime)
     const int32 SpawnCount = static_cast<int32>(std::floor(SpawnAmount));
     SpawnFraction = SpawnAmount - static_cast<float>(SpawnCount);
     return SpawnCount;
+}
+
+// Function : Query payload byte requirement from current LOD's TypeDataModule
+// input : None
+// output : Bytes required by TypeData beyond FBaseParticle, or 0 when absent
+int32 FParticleEmitterInstance::GetRequiredPayloadBytes() const
+{
+    if (CurrentLODLevel)
+    {
+        if (const UParticleModuleTypeDataBase* TypeData = CurrentLODLevel->GetTypeDataModule())
+        {
+            return TypeData->RequiredPayloadBytes();
+        }
+    }
+    return 0;
+}
+
+// Function : Build Sprite instance data into OutCmd (base/Sprite path — Cycle 10b)
+// input : OutCmd
+// OutCmd : render command whose type-specific slots get filled
+// output : SpriteInstanceDataBuffer 새로 채우고 OutCmd.VertexFactoryType=SpriteParticle + ParticleInstances/Count 설정
+// 이전 cycle 위치: UParticleSystemComponent::BuildSpriteInstanceData의 emitter 1개 처리 루프 — 본 메서드로 이전.
+// Mesh/Ribbon/Beam derived instance가 override해 자기 type의 슬롯을 채움 (Cycle 11+).
+void FParticleEmitterInstance::BuildInstanceData(FRenderCommand& OutCmd)
+{
+    SpriteInstanceDataBuffer.clear();
+    if (ActiveParticles <= 0)
+    {
+        // 빈 결과라도 type/slot은 셋업 — RenderPass가 nullptr/count==0 가드로 자연 skip.
+        OutCmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
+        OutCmd.ParticleInstances = nullptr;
+        OutCmd.ParticleInstanceCount = 0;
+        return;
+    }
+
+    SpriteInstanceDataBuffer.reserve(ActiveParticles);
+    for (int32 i = 0; i < ActiveParticles; ++i)
+    {
+        const FBaseParticle* Particle = GetParticle(i);
+        if (!Particle)
+        {
+            continue;
+        }
+
+        FSpriteParticleInstanceData Data;
+        Data.Position   = Particle->Location;
+        Data.Size       = FVector2(Particle->Size.X, Particle->Size.Y);
+        Data.Color      = Particle->Color;
+        Data.Rotation   = Particle->Rotation;
+        Data.SubUVIndex = Particle->SubUVIndex;
+        SpriteInstanceDataBuffer.push_back(Data);
+    }
+
+    OutCmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
+    OutCmd.ParticleInstances = SpriteInstanceDataBuffer.data();
+    OutCmd.ParticleInstanceCount = static_cast<uint32>(SpriteInstanceDataBuffer.size());
 }

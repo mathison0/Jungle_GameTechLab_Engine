@@ -2,8 +2,7 @@
 
 #include "Object/Object.h"
 #include "Particle/ParticleModules.h"
-
-class UParticleModuleTypeDataBase;
+#include "Particle/ParticleModuleTypeData.h"
 
 UCLASS()
 class UParticleLODLevel : public UObject
@@ -21,6 +20,11 @@ public:
 	const TArray<UParticleModule*>& GetModules() const { return Modules; }
 	const TArray<UParticleModule*>& GetSpawnModules() const { return SpawnModules; }
 	const TArray<UParticleModule*>& GetUpdateModules() const { return UpdateModules; }
+	UParticleModuleTypeDataBase* GetTypeDataModule() const { return TypeDataModule; }
+
+	// Resolve effective render mode: TypeDataModule is single source of truth.
+	// Falls back to RequiredModule.RenderMode when TypeData is absent, then Sprite.
+	EParticleEmitterRenderMode GetEffectiveRenderMode() const;
 
 	UPROPERTY(DisplayName = "Level")
 	int32 Level = 0;
@@ -37,6 +41,9 @@ public:
 	UPROPERTY(DisplayName = "Modules")
 	TArray<UParticleModule*> Modules;
 
+	// silent bug ι 회피: UPROPERTY로 마크하지 않으면 .particlesystem 저장-로드 후 nullptr이 되어
+	// 모든 emitter가 Sprite로 fallback되는 silent regression이 발생한다.
+	UPROPERTY(DisplayName = "TypeData Module")
 	UParticleModuleTypeDataBase* TypeDataModule = nullptr;
 
 private:

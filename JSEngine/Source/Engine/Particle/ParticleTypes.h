@@ -8,6 +8,7 @@ class UParticleSystemComponent;
 class UPrimitiveComponent;
 struct FParticleEmitterInstance;
 
+UENUM()
 enum class EParticleEmitterRenderMode : uint8
 {
 	Sprite,

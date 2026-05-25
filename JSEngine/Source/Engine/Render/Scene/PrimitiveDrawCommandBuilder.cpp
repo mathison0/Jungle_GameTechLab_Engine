@@ -544,19 +544,33 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             return false;
         }
 
-        ParticleSystemComponent->BuildSpriteInstanceData();
-
+        // Cycle 10b (옵션 C): Builder가 Instance::BuildInstanceData(Cmd) 직접 호출.
+        // - generic 필드(SourcePrimitive/PerObjectConstants/WorldAABB/atlas)는 Builder가 채움
+        // - type-specific 슬롯(VertexFactoryType + ParticleInstances/Mesh/Ribbon/Beam)은 Instance가 채움 (polymorphism)
+        // RenderMode 분기는 instance virtual로 일원화 — Builder는 type 모름.
         const TArray<FParticleEmitterInstance*>& EmitterInstances = ParticleSystemComponent->GetEmitterInstances();
         for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmitterInstances.size()); ++EmitterIdx)
         {
-            const TArray<FSpriteParticleInstanceData>& InstanceData = ParticleSystemComponent->GetEmitterInstanceData(EmitterIdx);
-            if (InstanceData.empty())
+            FParticleEmitterInstance* Instance = EmitterInstances[EmitterIdx];
+            if (!Instance || Instance->GetActiveParticleCount() == 0)
             {
                 continue;
             }
 
-            FParticleEmitterInstance* Instance = EmitterInstances[EmitterIdx];
-            UParticleLODLevel* LOD = Instance ? Instance->GetCurrentLODLevel() : nullptr;
+            // Cmd 기본 필드 (generic) 먼저 채움.
+            FRenderCommand Cmd = {};
+            Cmd.SourcePrimitive = Primitive;
+            Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+            Cmd.Type = ERenderCommandType::Primitive;
+            Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
+
+            // Instance에 위임: VertexFactoryType + type-specific 슬롯 채움.
+            // base/Sprite: ParticleInstances/Count + VertexFactoryType=SpriteParticle.
+            // Mesh/Ribbon/Beam derived (Cycle 11+): MeshParticleInstances/RibbonVertices/BeamVertices + VertexFactoryType=Mesh/Ribbon/Beam.
+            Instance->BuildInstanceData(Cmd);
+
+            // SubUV atlas 정보 — Sprite type에서만 의미. Mesh/Ribbon/Beam도 atlas 쓰면 활용 가능.
+            UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
             const USubUVModule* SubUV = nullptr;
             if (LOD)
             {
@@ -570,15 +584,6 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 }
             }
             const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;
-
-            FRenderCommand Cmd = {};
-            Cmd.SourcePrimitive = Primitive;
-            Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
-            Cmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
-            Cmd.Type = ERenderCommandType::Primitive;
-            Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
-            Cmd.ParticleInstances = InstanceData.data();
-            Cmd.ParticleInstanceCount = static_cast<uint32>(InstanceData.size());
             Cmd.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : nullptr;
             Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : 1;
             Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : 1;

@@ -33,6 +33,9 @@ private:
 	UPROPERTY(DisplayName = "Use Local Space")
 	bool bUseLocalSpace = false;
 
+	// silent bug κ 정책: TypeDataModule이 single source of truth.
+	// 이 필드는 TypeData가 없을 때만 LODLevel::GetEffectiveRenderMode()의 fallback으로 참조된다.
+	UPROPERTY(DisplayName = "Render Mode")
 	EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
 };
 

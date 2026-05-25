@@ -217,9 +217,6 @@
     <Filter Include="Source\Engine\Particle">
       <UniqueIdentifier>{cd0a162f-d645-2eb1-7656-2f1f7a5af818}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\Particle\EmitterDataBase">
-      <UniqueIdentifier>{271aa6a2-9278-928e-bf90-79d66e13a7ef}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Engine\Render">
       <UniqueIdentifier>{52cb0a69-bb16-204e-50c6-8cc0246c07f8}</UniqueIdentifier>
     </Filter>
@@ -633,6 +630,9 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
@@ -640,6 +640,9 @@
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystemComponent.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\USpriteTypeData.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\USubUVModule.gen.cpp">
@@ -1297,6 +1300,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp">
@@ -2395,6 +2401,9 @@
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModules.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
@@ -2856,6 +2865,9 @@
     </None>
     <None Include="Shaders\Material\UberLit.hlsl">
       <Filter>Shaders\Material</Filter>
+    </None>
+    <None Include="Shaders\Particle\SpriteParticle.hlsl">
+      <Filter>Shaders\Particle</Filter>
     </None>
     <None Include="Shaders\PostProcess\FXAAPass.hlsl">
       <Filter>Shaders\PostProcess</Filter>
