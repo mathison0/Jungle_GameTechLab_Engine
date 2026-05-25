@@ -16,6 +16,7 @@ public:
 
 	UParticleModuleRequired();
 	void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
+	void PostEditProperty(const char* PropertyName) override;
 
 	int32 GetMaxParticles() const { return MaxParticles; }
 	float GetEmitterDuration() const { return EmitterDuration; }
@@ -26,6 +27,7 @@ public:
 	int32 GetSubImagesHorizontal() const { return std::max(SubImagesHorizontal, 1); }
 	int32 GetSubImagesVertical() const { return std::max(SubImagesVertical, 1); }
 	EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
+	void SetSubUVName(const FName& InName);
 	void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 private:

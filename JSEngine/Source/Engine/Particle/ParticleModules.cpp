@@ -9,6 +9,10 @@
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleSystemComponent.h"
 
+namespace
+{
+    constexpr const char* DefaultRequiredSubUVName = "Asset/plasma.png";
+}
 
 // Function : Generate random float inside range
 // input : Min, Max
@@ -37,6 +41,7 @@ static FVector RandomRangeVector(const FVector& Min, const FVector& Max)
 UParticleModuleRequired::UParticleModuleRequired()
 {
     bSpawnModule = true;
+    SetSubUVName(FName(DefaultRequiredSubUVName));
 }
 
 // Function : Apply required default particle values at spawn time
@@ -53,6 +58,25 @@ void UParticleModuleRequired::Spawn(FParticleEmitterInstance* Owner, FBasePartic
     Particle.Lifetime = std::max(Particle.Lifetime, 0.01f);
     Particle.Size = FVector(1.0f, 1.0f, 1.0f);
     Particle.Color = FColor::White();
+}
+
+void UParticleModuleRequired::PostEditProperty(const char* PropertyName)
+{
+    UParticleModule::PostEditProperty(PropertyName);
+    if (PropertyName && strcmp(PropertyName, "SubUVName") == 0)
+    {
+        SetSubUVName(SubUVName);
+    }
+}
+
+void UParticleModuleRequired::SetSubUVName(const FName& InName)
+{
+    SubUVName = InName;
+    if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUVExact(InName))
+    {
+        SubImagesHorizontal = static_cast<int32>(std::max(SubUV->Columns, 1u));
+        SubImagesVertical = static_cast<int32>(std::max(SubUV->Rows, 1u));
+    }
 }
 
 UParticleModuleSpawn::UParticleModuleSpawn()
@@ -334,5 +358,5 @@ void USubUVModule::PostEditProperty(const char* PropertyName)
 void USubUVModule::SetSubUVName(const FName& InName)
 {
     SubUVName = InName;
-    CachedSubUV = FResourceManager::Get().FindSubUV(InName);
+    CachedSubUV = FResourceManager::Get().FindSubUVExact(InName);
 }

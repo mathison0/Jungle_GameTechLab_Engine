@@ -87,6 +87,12 @@ FTextureAtlasResource* FAtlasResourceCache::FindSubUV(const FName& SubUVName)
 	return (It != SubUVResources.end()) ? &It->second : &SubUVResources.begin()->second;
 }
 
+FTextureAtlasResource* FAtlasResourceCache::FindSubUVExact(const FName& SubUVName)
+{
+	auto It = SubUVResources.find(SubUVName.ToString());
+	return (It != SubUVResources.end()) ? &It->second : nullptr;
+}
+
 const FTextureAtlasResource* FAtlasResourceCache::FindSubUV(const FName& SubUVName) const
 {
 	if (SubUVResources.empty())
@@ -96,6 +102,12 @@ const FTextureAtlasResource* FAtlasResourceCache::FindSubUV(const FName& SubUVNa
 
 	auto It = SubUVResources.find(SubUVName.ToString());
 	return (It != SubUVResources.end()) ? &It->second : &SubUVResources.begin()->second;
+}
+
+const FTextureAtlasResource* FAtlasResourceCache::FindSubUVExact(const FName& SubUVName) const
+{
+	auto It = SubUVResources.find(SubUVName.ToString());
+	return (It != SubUVResources.end()) ? &It->second : nullptr;
 }
 
 void FAtlasResourceCache::RegisterSubUV(const FName& SubUVName, const FString& InPath, uint32 Columns, uint32 Rows)

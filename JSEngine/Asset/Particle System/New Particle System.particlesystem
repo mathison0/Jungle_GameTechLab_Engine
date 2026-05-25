@@ -51,7 +51,7 @@
               "RenderMode" : 0,
               "SubImagesHorizontal" : 6,
               "SubImagesVertical" : 6,
-              "SubUVName" : "Name_None",
+              "SubUVName" : "Asset/plasma.png",
               "Type" : "UParticleModuleRequired",
               "bEnabled" : true,
               "bLooping" : true,
