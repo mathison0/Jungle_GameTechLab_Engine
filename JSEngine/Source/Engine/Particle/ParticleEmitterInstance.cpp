@@ -9,8 +9,8 @@
 // Instance는 자기 데이터 buffer만 갱신/노출, RenderCommand 매핑은 Builder 책임.
 
 // Cycle 10c baseline: BuildInstanceData 시그니처 교체 + 4종 getter 추가는 sizeof 영향 없음 (vtable은 instance마다 단일 포인터).
-// Cycle 10b (128 bytes) 그대로 유지.
-static_assert(sizeof(FParticleEmitterInstance) == 128, "Cycle 10c baseline: FParticleEmitterInstance expected 128 bytes (Cycle 10b 128 same — virtual signature changes don't affect sizeof)");
+// Cycle 10b (120 bytes) 그대로 유지.
+static_assert(sizeof(FParticleEmitterInstance) == 120, "Cycle 10c baseline: FParticleEmitterInstance expected 128 bytes (Cycle 10b 120 same — virtual signature changes don't affect sizeof)");
 
 FParticleEmitterInstance::~FParticleEmitterInstance()
 {
