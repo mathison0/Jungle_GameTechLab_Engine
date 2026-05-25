@@ -32,6 +32,7 @@ public:
 	const FParticleSystemViewportClient* GetPreviewClient() const { return bPreviewViewportInitialized ? &PreviewClient : nullptr; }
 
 private:
+	bool SaveDocument();
 	void EnsurePreviewViewport();
 	void ShutdownPreviewViewport();
 	void DrawMainLayout();

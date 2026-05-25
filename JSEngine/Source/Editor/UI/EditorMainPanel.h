@@ -152,6 +152,7 @@ private:
 	bool SpawnStaticMeshFromContentPath(const FString& PayloadPath, int32 ViewportIndex, float LocalX, float LocalY);
 	bool SpawnSkeletalMeshFromContentPath(const FString& PayloadPath, int32 ViewportIndex, float LocalX, float LocalY);
 	bool SpawnPrefabFromContentPath(const FString& PayloadPath, int32 ViewportIndex, float LocalX, float LocalY);
+    bool SpawnParticleSystemFromContentPath(const FString& PayloadPath, int32 ViewportIndex, float LocalX, float LocalY);
 	void HandleContentBrowserViewportDrop();
 	bool DrawViewportTextButton(const char* Id, const char* Label, bool bPairFirst = false, bool bPairSecond = false);
 	bool DrawViewportIconButton(const char* Id, EEditorMainPanelViewportToolIcon Icon, const char* FallbackLabel, const char* Tooltip, bool bSelected = false, bool bEnabled = true, bool bPairFirst = false, bool bPairSecond = false);

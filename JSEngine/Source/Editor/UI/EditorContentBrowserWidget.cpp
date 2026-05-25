@@ -1284,7 +1284,7 @@ bool FEditorContentBrowserWidget::CreateParticleSystemAsset()
 	const std::filesystem::path NewPath = MakeUniquePath(CurrentPath / L"New Particle System.particlesystem");
 	const FString RelativePath = MakeRelativeProjectPath(NewPath);
 
-	UParticleSystem* ParticleSystem = UObjectManager::Get().CreateObject<UParticleSystem>();
+	UParticleSystem* ParticleSystem = UParticleSystem::CreateDefaultSpriteSystem();
 	if (!ParticleSystem)
 	{
 		return false;

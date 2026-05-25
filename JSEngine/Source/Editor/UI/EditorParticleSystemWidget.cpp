@@ -651,6 +651,56 @@ void FEditorParticleSystemWidget::OpenLayoutTest(const FString& InDocumentPath)
 	EnsurePreviewViewport();
 }
 
+bool FEditorParticleSystemWidget::SaveDocument()
+{
+	if (!ParticleSystemAsset)
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetNotificationService().Warning("No particle system asset to save.");
+		}
+		return false;
+	}
+
+	if (DocumentPath.empty())
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetNotificationService().Warning("Particle system has no save path.");
+		}
+		return false;
+	}
+
+	ParticleSystemAsset->CacheEmitterModuleInfo();
+
+	TArray<FString> Errors;
+	if (!ParticleSystemAsset->Validate(&Errors))
+	{
+		if (EditorEngine)
+		{
+			const FString Message = Errors.empty() ? FString("Particle system validation failed.") : Errors.front();
+			EditorEngine->GetNotificationService().Warning(Message);
+		}
+		return false;
+	}
+
+	if (!FResourceManager::Get().SaveParticleSystem(ParticleSystemAsset, DocumentPath))
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetNotificationService().Error("Particle system save failed.");
+		}
+		return false;
+	}
+
+	bDirty = false;
+	if (EditorEngine)
+	{
+		EditorEngine->GetNotificationService().Info("Particle system saved.");
+	}
+	return true;
+}
+
 void FEditorParticleSystemWidget::EnsurePreviewViewport()
 {
 	if (bPreviewViewportInitialized || !EditorEngine)
@@ -739,7 +789,7 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 {
 	if (ToolbarButton("[S]", "Save particle system"))
 	{
-		bDirty = false;
+		SaveDocument();
 	}
 	SameLineGap();
 	ToolbarButton("[F]", "Find in Content Browser");
@@ -811,7 +861,7 @@ void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseReque
 			{
 				if (ImGui::MenuItem(bDirty ? "Save *" : "Save", "Ctrl+S"))
 				{
-					bDirty = false;
+					SaveDocument();
 				}
 				ImGui::MenuItem("Save As...", nullptr, false, false);
 				ImGui::EndMenu();

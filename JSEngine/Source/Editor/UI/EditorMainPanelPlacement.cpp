@@ -14,6 +14,8 @@
 #include "GameFramework/PrimitiveActors.h"
 #include "GameFramework/World.h"
 #include "Serialization/PrefabManager.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemComponent.h"
 
 #include <algorithm>
 #include <cwctype>
@@ -84,7 +86,22 @@ FString ResolveStaticMeshDropLoadPath(const FString& PayloadPath)
     }
     return {};
 }
+FString ResolveParticleSystemDropLoadPath(const FString& PayloadPath)
+{
+    std::filesystem::path Path;
+    std::filesystem::path RelativePath;
+    if (!ResolveProjectDropPath(PayloadPath, Path, RelativePath))
+    {
+        return {};
+    }
 
+    if (GetLowerExtension(Path) != L".particlesystem")
+    {
+        return {};
+    }
+
+    return FPaths::Normalize(FPaths::ToUtf8(RelativePath.generic_wstring()));
+}
 FString ResolveSkeletalMeshDropLoadPath(const FString& PayloadPath)
 {
     std::filesystem::path Path;
@@ -314,6 +331,84 @@ bool FEditorMainPanel::SpawnPrefabFromContentPath(
     Ctx->SelectionManager->Select(Actor);
     EditorEngine->GetSceneService().MarkDirty();
     PushFooterLog("Prefab actor placed from Content Browser");
+    return true;
+}
+
+bool FEditorMainPanel::SpawnParticleSystemFromContentPath(const FString& PayloadPath, int32 ViewportIndex, float LocalX, float LocalY)
+{
+    if (!EditorEngine)
+    {
+        return false;
+    }
+
+    FEditorViewportLayout& Layout = EditorEngine->GetViewportLayout();
+    FEditorViewportClient* Client = Layout.GetViewportClient(ViewportIndex);
+    if (!Client || !Client->AllowsEditorWorldControl())
+    {
+        return false;
+    }
+
+    const FString ParticleSystemPath = ResolveParticleSystemDropLoadPath(PayloadPath);
+    if (ParticleSystemPath.empty())
+    {
+        PushFooterLog("Unsupported particle system drop");
+        return false;
+    }
+
+    UParticleSystem* ParticleSystem = FResourceManager::Get().LoadParticleSystem(ParticleSystemPath);
+    if (!ParticleSystem)
+    {
+        PushFooterLog("Failed to load dropped particle system");
+        return false;
+    }
+
+    TArray<FString> Errors;
+    if (!ParticleSystem->Validate(&Errors))
+    {
+        PushFooterLog("Dropped particle system is invalid");
+        return false;
+    }
+
+    UWorld* World = EditorEngine->GetFocusedWorld();
+    if (!World)
+    {
+        return false;
+    }
+
+    EditorEngine->GetUndoSystem().CaptureSnapshot("Place Particle System");
+
+    AActor* Actor = World->SpawnActor<AActor>();
+    if (!Actor)
+    {
+        return false;
+    }
+
+    Actor->SetFName(FName("ParticleSystemActor"));
+
+    UParticleSystemComponent* ParticleComp = Actor->AddComponent<UParticleSystemComponent>();
+    if (!ParticleComp)
+    {
+        PushFooterLog("Failed to create particle system component");
+        return false;
+    }
+
+    Actor->SetRootComponent(ParticleComp);
+    ParticleComp->SetTemplate(ParticleSystem);
+
+    Actor->SetActorLocation(
+        FEditorMainPanelPlacementHelpers::ComputePlacementLocation(Client, LocalX, LocalY));
+
+    World->SyncSpatialIndex();
+    Layout.SetLastFocusedViewportIndex(ViewportIndex);
+
+    const FWorldContext* Ctx = EditorEngine->GetWorldContextFromWorld(Client->GetFocusedWorld());
+    if (Ctx && Ctx->SelectionManager)
+    {
+        Ctx->SelectionManager->Select(Actor);
+    }
+
+    EditorEngine->GetSceneService().MarkDirty();
+    PushFooterLog("Particle system actor placed from Content Browser");
     return true;
 }
 

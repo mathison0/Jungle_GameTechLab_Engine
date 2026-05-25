@@ -142,6 +142,7 @@ public:
 
 	UParticleSystem* LoadParticleSystem(const FString& Path);
 	bool SaveParticleSystem(UParticleSystem* Asset, const FString& Path);
+	bool RunParticleSystemSerializationSmokeTest(const FString& Path);
 
 	ID3D11SamplerState* GetOrCreateSamplerState(ESamplerType Type, ID3D11Device* Device = nullptr);
 	ID3D11DepthStencilState* GetOrCreateDepthStencilState(EDepthStencilType Type, ID3D11Device* Device = nullptr);
