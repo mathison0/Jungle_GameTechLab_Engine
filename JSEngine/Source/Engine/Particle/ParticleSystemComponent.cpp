@@ -190,11 +190,16 @@ const FParticleEmitterInstance* UParticleSystemComponent::GetEmitterInstance(int
 // output : Emitter simulations advance and the spatial index is notified for bounds refresh
 void UParticleSystemComponent::TickComponent(float DeltaTime)
 {
+	TickPreview(DeltaTime, true);
+}
+
+void UParticleSystemComponent::TickPreview(float DeltaTime, bool bAllowSpawning)
+{
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
 		if (Instance)
 		{
-			Instance->Tick(DeltaTime);
+			Instance->Tick(DeltaTime, bAllowSpawning);
 		}
 	}
 	NotifySpatialIndexDirty();

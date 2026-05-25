@@ -84,7 +84,7 @@ void FParticleEmitterInstance::Reset()
 // input : DeltaTime
 // DeltaTime : elapsed time for this simulation step
 // output : New particles are spawned, active particles are updated, and expired particles are removed
-void FParticleEmitterInstance::Tick(float DeltaTime)
+void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 {
 	if (!SpriteTemplate || !Component || !ParticleStorage.ParticleData || !ParticleStorage.ParticleIndices || DeltaTime <= 0.0f)
 	{
@@ -98,9 +98,12 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
 	}
 
 	int32 SpawnCount = 0;
-	if (UParticleModuleSpawn* SpawnModule = CurrentLODLevel->GetSpawnModule())
+	if (bAllowSpawning)
 	{
-		SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
+		if (UParticleModuleSpawn* SpawnModule = CurrentLODLevel->GetSpawnModule())
+		{
+			SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
+		}
 	}
 
 	SpawnParticles(SpawnCount, 0.0f, SpawnCount > 0 ? DeltaTime / static_cast<float>(SpawnCount) : 0.0f,

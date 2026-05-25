@@ -23,7 +23,7 @@ public:
 
     void Init(UParticleEmitter* InTemplate, UParticleSystemComponent* InComponent, int32 InEmitterIndex);
     void Reset();
-    virtual void Tick(float DeltaTime);
+    void Tick(float DeltaTime, bool bAllowSpawning = true);
     void SelectLODLevel(float Distance);
     virtual void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
                                 const FVector& InitialVelocity, struct FParticleEventInstancePayload* EventPayload = nullptr);
