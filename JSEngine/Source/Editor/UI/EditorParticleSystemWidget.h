@@ -79,9 +79,36 @@ private:
 		int32 SelectedModuleIndex = -1;
 	};
 
+	struct FParticleSystemDocumentState
+	{
+		UParticleSystem* Asset = nullptr;
+		bool bDirty = false;
+		int32 CurrentLOD = 0;
+		int32 SelectedEmitterIndex = 0;
+		int32 SelectedModuleIndex = -1;
+		TArray<FParticleEditorUndoEntry> UndoHistory;
+		TArray<FParticleEditorUndoEntry> RedoHistory;
+		EViewMode PreviewViewMode = EViewMode::Lit_BlinnPhong;
+		FParticleSystemViewportShowFlags PreviewShowFlags;
+		FColor PreviewBackgroundColor = FParticleSystemViewportClient::GetDefaultBackgroundColor();
+		bool bShowThumbnail = false;
+		bool bShowBounds = true;
+		bool bShowOriginAxis = true;
+		bool bPreviewPaused = false;
+		bool bPreviewRealtime = true;
+		bool bPreviewLoop = true;
+		bool bPreviewPlaybackComplete = false;
+		int32 PreviewAnimSpeedIndex = 0;
+		float PreviewPlaybackElapsed = 0.0f;
+	};
+
 	void EnsurePreviewViewport();
 	void EnsurePreviewActor();
 	void RefreshPreviewComponent(bool bRestartSimulation);
+	float GetPreviewAnimSpeed() const;
+	float GetPreviewMaxEmitterDuration() const;
+	void RestartPreviewPlayback();
+	void DrivePreviewPlayback(float DeltaTime);
 	void ShutdownPreviewViewport();
 	void LoadCascadeToolbarIcons();
 	ID3D11ShaderResourceView* GetCascadeToolbarIcon(ECascadeToolbarIcon Icon) const;
@@ -109,6 +136,9 @@ private:
 	void ClearEmitterContext();
 	void ShowCenterToast(const FString& Message);
 	void DrawCenterToast(const ImVec2& AreaMin, const ImVec2& AreaSize);
+	void StoreCurrentDocumentState();
+	bool RestoreDocumentState(const FString& InDocumentPath);
+	void ClearActiveDocumentState();
 	void CaptureUndoSnapshot(const char* Label);
 	FString CaptureParticleSnapshot() const;
 	bool RestoreParticleSnapshot(const FString& Snapshot, int32 InCurrentLOD, int32 InSelectedEmitterIndex, int32 InSelectedModuleIndex);
@@ -144,14 +174,16 @@ private:
 	FName PreviewWorldHandle = FName::None;
 	FString SelectedCurveAssetPath;
 	FString DocumentPath;
+	TMap<FString, FParticleSystemDocumentState> ParticleDocumentStates;
 	TMap<FString, FColor> PreviewBackgroundColorByDocument;
 	bool bDirty = true;
 	bool bShowThumbnail = false;
 	bool bShowBounds = true;
 	bool bShowOriginAxis = true;
-	bool bPreviewPaused = true;
+	bool bPreviewPaused = false;
 	bool bPreviewRealtime = true;
 	bool bPreviewLoop = true;
+	bool bPreviewPlaybackComplete = false;
 	bool bPreviewViewportInitialized = false;
 	bool bPreviewViewportVisible = false;
 	bool bPreviewViewportRectValid = false;
@@ -185,5 +217,6 @@ private:
 	float TopLeftWidth = 0.0f;
 	float BottomLeftWidth = 0.0f;
 	float LastDeltaTime = 0.0f;
+	float PreviewPlaybackElapsed = 0.0f;
 	float CenterToastRemainingTime = 0.0f;
 };

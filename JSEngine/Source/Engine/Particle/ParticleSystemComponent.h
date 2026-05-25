@@ -23,6 +23,7 @@ public:
 
 	void RecreateEmitterInstances();
 	void ClearEmitterInstances();
+	void TickPreview(float DeltaTime, bool bAllowSpawning);
 	float ComputeEmitterLODDistance() const;
 	void QueueCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchQueuedParticleEvents();
