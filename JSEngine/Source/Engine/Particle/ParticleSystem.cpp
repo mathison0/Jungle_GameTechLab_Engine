@@ -7,6 +7,42 @@ UParticleLODLevel::~UParticleLODLevel()
     ClearModules();
 }
 
+void UParticleLODLevel::PostDuplicate(UObject* Original)
+{
+    UObject::PostDuplicate(Original);
+
+    UParticleLODLevel* SourceLOD = Cast<UParticleLODLevel>(Original);
+
+    RequiredModule = nullptr;
+    Modules.clear();
+    SpawnModule = nullptr;
+    SpawnModules.clear();
+    UpdateModules.clear();
+
+    if (!SourceLOD)
+    {
+        return;
+    }
+
+    if (SourceLOD->RequiredModule)
+    {
+        RequiredModule = Cast<UParticleModuleRequired>(SourceLOD->RequiredModule->Duplicate());
+    }
+
+    for (UParticleModule* SourceModule : SourceLOD->Modules)
+    {
+        UParticleModule* DuplicatedModule = SourceModule ?
+			Cast<UParticleModule>(SourceModule->Duplicate()) : nullptr;
+
+        if (DuplicatedModule)
+        {
+            Modules.push_back(DuplicatedModule);
+        }
+    }
+
+    CacheModuleLists();
+}
+
 UParticleModuleRequired* UParticleLODLevel::EnsureRequiredModule()
 {
     if (!RequiredModule)
@@ -139,6 +175,32 @@ void UParticleLODLevel::CacheModuleLists()
 UParticleEmitter::~UParticleEmitter()
 {
     ClearLODLevels();
+}
+
+void UParticleEmitter::PostDuplicate(UObject* Original)
+{
+    UObject::PostDuplicate(Original);
+
+	UParticleEmitter* SourceEmitter = Cast<UParticleEmitter>(Original);
+    LODLevels.clear();
+
+	ParticleSize = sizeof(FBaseParticle);
+    MaxActiveParticles = 128;
+
+	if (!SourceEmitter)
+        return;
+
+	    for (UParticleLODLevel* SourceLOD : SourceEmitter->LODLevels)
+    {
+        UParticleLODLevel* DuplicatedLOD = SourceLOD?
+			Cast<UParticleLODLevel>(SourceLOD->Duplicate()): nullptr;
+
+        if (DuplicatedLOD)
+            LODLevels.push_back(DuplicatedLOD);
+    }
+
+    CacheEmitterModuleInfo();
+
 }
 
 UParticleLODLevel* UParticleEmitter::AddLODLevel(int32 Level, float DistanceThreshold)
@@ -293,6 +355,31 @@ int32 UParticleEmitter::SelectLODLevel(float Distance) const
 	}
 
 	return FallbackIndex >= 0 ? FallbackIndex : 0;
+}
+
+UParticleSystem::~UParticleSystem()
+{
+    ClearEmitters();
+}
+
+void UParticleSystem::PostDuplicate(UObject* Original)
+{
+    UObject::PostDuplicate(Original);
+
+	UParticleSystem* SourceSystem = Cast<UParticleSystem>(Original);
+    Emitters.clear();
+
+	if (!SourceSystem)
+        return;
+
+	for (UParticleEmitter* SourceEmitter : SourceSystem->Emitters)
+    {
+        UParticleEmitter* DuplicatedEmitter = SourceEmitter ? 
+			Cast<UParticleEmitter>(SourceEmitter->Duplicate()) : nullptr;
+        if (DuplicatedEmitter)
+            Emitters.push_back(DuplicatedEmitter);
+    }
+    CacheEmitterModuleInfo();
 }
 
 UParticleEmitter* UParticleSystem::AddEmitter()

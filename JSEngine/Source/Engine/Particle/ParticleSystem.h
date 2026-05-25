@@ -11,7 +11,7 @@ class UParticleLODLevel : public UObject
 public:
 	GENERATED_BODY(UParticleLODLevel, UObject)
     ~UParticleLODLevel() override;
-
+    void PostDuplicate(UObject* Original) override;
 	UParticleModuleRequired* EnsureRequiredModule();
     UParticleModuleSpawn* EnsureSpawnModule();
 
@@ -73,7 +73,7 @@ public:
 	GENERATED_BODY(UParticleEmitter, UObject)
 
 	~UParticleEmitter() override;
-
+    void PostDuplicate(UObject* Original) override;
 	UParticleLODLevel* AddLODLevel(int32 Level, float DistanceThreshold);
     void RemoveLODLevel(int32 Index);
     void ClearLODLevels();
@@ -102,6 +102,8 @@ class UParticleSystem : public UObject
 {
 public:
 	GENERATED_BODY(UParticleSystem, UObject)
+    ~UParticleSystem() override;
+    void PostDuplicate(UObject* Original) override;
 
 	const TArray<UParticleEmitter*>& GetEmitters() const { return Emitters; }
     UParticleEmitter* AddEmitter();
