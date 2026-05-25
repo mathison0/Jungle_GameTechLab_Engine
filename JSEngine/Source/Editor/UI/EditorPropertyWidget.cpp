@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorPropertyWidget.h"
+#include "Editor/UI/EditorPropertyWidget.h"
 
 #include "Editor/UI/ComponentMenuRegistry.h"
 #include "Editor/EditorEngine.h"
@@ -9,6 +9,7 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/SkeletalMeshComponent.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
 #include "Component/BillboardComponent.h"
@@ -1554,6 +1555,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				ParticleComp->SetTemplate(Demo);
 			}
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Apply Ribbon Demo Template"))
+		{
+			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultRibbonSystem())
+			{
+				ParticleComp->SetTemplate(Demo);
+			}
+		}
 
 		// Cycle 11: 각 mesh emitter의 material override를 직접 picker로 변경.
 		// 현재 Template 안의 모든 UMeshTypeData를 emitter 순서대로 노출 — 사용자가 emitter별로 다른 material 선택 가능.
@@ -1624,6 +1633,93 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					ImGui::EndCombo();
 				}
 
+				ImGui::PopID();
+			}
+		}
+		// Cycle 12: 각 Ribbon emitter 의 Material + TypeData 파라미터를 detail panel 에 노출.
+		// Mesh picker 블록과 평행 구조 — emitter 순서대로 URibbonTypeData 찾아 UI 렌더.
+		if (UParticleSystem* MutableTemplateRibbon = const_cast<UParticleSystem*>(CurrentTemplate))
+		{
+			FEditorAssetService& AssetServiceRibbon = EditorEngine->GetAssetService();
+			const TArray<FString>& MaterialNamesRibbon = AssetServiceRibbon.GetMaterialInterfaceNames();
+			const TArray<UParticleEmitter*>& EmittersRibbon = MutableTemplateRibbon->GetEmitters();
+			for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmittersRibbon.size()); ++EmitterIdx)
+			{
+				UParticleEmitter* Emitter = EmittersRibbon[EmitterIdx];
+				if (!Emitter) continue;
+				URibbonTypeData* RibbonTD = nullptr;
+				for (UParticleLODLevel* LOD : Emitter->LODLevels)
+				{
+					if (LOD)
+					{
+						if (URibbonTypeData* Found = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+						{
+							RibbonTD = Found;
+							break;
+						}
+					}
+				}
+				if (!RibbonTD) continue;
+				ImGui::Spacing();
+				ImGui::PushID(EmitterIdx + 0x10000); // Mesh PushID 와 충돌 회피
+				char SectionLabel[128];
+				snprintf(SectionLabel, sizeof(SectionLabel), "Emitter %d - Ribbon Settings", EmitterIdx);
+				ImGui::TextUnformatted(SectionLabel);
+				UMaterialInterface* Current = RibbonTD->GetMaterial();
+				const FString CurrentLabel = Current
+					? (Current->GetFilePath().empty() ? Current->GetName() : FPaths::Normalize(Current->GetFilePath()))
+					: FString("None");
+				ImGui::TextUnformatted("Material");
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::BeginCombo("##RibbonMaterialPicker", CurrentLabel.c_str()))
+				{
+					if (ImGui::Selectable("None", Current == nullptr))
+					{
+						RibbonTD->SetMaterial(nullptr);
+					}
+					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNamesRibbon.size()); ++MatIdx)
+					{
+						ImGui::PushID(MatIdx);
+						const FString& MatLabel = MaterialNamesRibbon[MatIdx].empty()
+							? FString("<Unnamed Material>")
+							: MaterialNamesRibbon[MatIdx];
+						const bool bSelected = Current && CurrentLabel == MatLabel;
+						if (ImGui::Selectable(MatLabel.c_str(), bSelected))
+						{
+							if (UMaterialInterface* Picked = AssetServiceRibbon.ResolveMaterialInterfaceByIndex(MatIdx))
+							{
+								RibbonTD->SetMaterial(Picked);
+							}
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+						ImGui::PopID();
+					}
+					ImGui::EndCombo();
+				}
+				// DragInt / DragFloat 는 label 이 입력칸 오른쪽에 inline 표시 — width 를 절반으로 제한해 label 공간 확보.
+				const float DragItemWidth = ImGui::GetContentRegionAvail().x * 0.5f;
+
+				int32 MaxTrails = RibbonTD->GetMaxTrailCount();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragInt("Max Trail Count", &MaxTrails, 1.0f, 1, 64))
+				{
+					RibbonTD->SetMaxTrailCount(MaxTrails);
+				}
+				int32 MaxInTrail = RibbonTD->GetMaxParticleInTrailCount();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragInt("Max Particle In Trail", &MaxInTrail, 1.0f, 1, 1024))
+				{
+					RibbonTD->SetMaxParticleInTrailCount(MaxInTrail);
+				}
+				float TangentScalar = RibbonTD->GetTangentSpawningScalar();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragFloat("Tangent Spawning Scalar", &TangentScalar, 0.01f, 0.0f, 10.0f))
+				{
+					RibbonTD->SetTangentSpawningScalar(TangentScalar);
+				}
 				ImGui::PopID();
 			}
 		}

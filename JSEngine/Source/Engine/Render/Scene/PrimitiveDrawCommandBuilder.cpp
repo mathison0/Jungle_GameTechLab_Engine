@@ -9,6 +9,7 @@
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleSystemComponent.h" // particle 옮겨야함.
 
 
@@ -642,6 +643,10 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.RibbonVertices = Instance->GetRibbonVertexData(Count);
                 Cmd.RibbonVertexCount = Count;
                 Cmd.VertexFactoryType = EVertexFactoryType::RibbonParticle;
+                if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+                {
+                    Cmd.Material = RibbonTD->GetMaterial();
+                }
                 bHasData = (Cmd.RibbonVertices != nullptr && Count > 0);
                 break;
             case EParticleEmitterRenderMode::Beam:
@@ -688,7 +693,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
                 Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
             }
-            else if (RenderMode == EParticleEmitterRenderMode::Mesh)
+            else if (RenderMode == EParticleEmitterRenderMode::Mesh || RenderMode == EParticleEmitterRenderMode::Ribbon)
             {
                 // Material의 DiffuseMap에서 ParticleTexture 추출. 없으면 RenderPass가 default white SRV로 fallback.
                 if (Cmd.Material)

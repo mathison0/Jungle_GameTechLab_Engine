@@ -5,6 +5,7 @@
 #include "Core/ResourceManager.h"
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
 
 // Function : Build cached spawn and update module lists for this LOD level
 // input : None
@@ -294,6 +295,53 @@ UParticleSystem* UParticleSystem::CreateDefaultMeshSystem()
         MeshTypeData->SetOverrideMaterial(true, DemoMaterial);
     }
     LODLevel->Modules.push_back(MeshTypeData);
+
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLocation>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleVelocity>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleColor>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSize>());
+
+    Emitter->LODLevels.push_back(LODLevel);
+    System->CacheEmitterModuleInfo();
+
+    return System;
+}
+
+// Function : Create default Ribbon emitter particle system for detail-panel verification
+// input : None
+// output : New UParticleSystem with single emitter + URibbonTypeData (MaxTrailCount=1)
+//
+// Cycle 12: CreateDefaultMeshSystem과 동일 구조 + UMeshTypeData → URibbonTypeData.
+// MaxTrailCount=1 + MaxParticleInTrail=64 (TypeData 기본값). Material 은 nullptr 시작 — 사용자가
+// emitter detail panel 의 picker 로 선택. RenderRibbonEmitter 가 Material/Texture nullptr 시 default white SRV fallback.
+UParticleSystem* UParticleSystem::CreateDefaultRibbonSystem()
+{
+    UParticleSystem* System = UObjectManager::Get().CreateObject<UParticleSystem>();
+    if (!System)
+    {
+        return nullptr;
+    }
+
+    UParticleEmitter* Emitter = System->AddEmitter();
+    if (!Emitter)
+    {
+        UObjectManager::Get().DestroyObject(System);
+        return nullptr;
+    }
+
+    UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
+    LODLevel->Level = 0;
+    LODLevel->bEnabled = true;
+    LODLevel->DistanceThreshold = 100000.0f;
+
+    LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
+
+    // URibbonTypeData — TypeData 기본값 그대로 (MaxTrailCount=1, MaxParticleInTrail=64).
+    // Material 은 사용자가 detail panel 에서 선택 — 본 시점은 nullptr.
+    URibbonTypeData* RibbonTypeData = UObjectManager::Get().CreateObject<URibbonTypeData>();
+    LODLevel->Modules.push_back(RibbonTypeData);
 
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());

@@ -91,6 +91,9 @@ public:
     // Cycle 11: detail panel 검증용 기본 mesh emitter system.
     // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 UMeshTypeData (디폴트 Dice mesh).
     static UParticleSystem* CreateDefaultMeshSystem();
+    // Cycle 12: detail panel 검증용 기본 ribbon emitter system.
+    // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 URibbonTypeData (MaxTrailCount=1).
+    static UParticleSystem* CreateDefaultRibbonSystem();
 
 	UPROPERTY(DisplayName = "Update Time FPS", Min = 0.0f)
 	float UpdateTimeFPS = 60.0f;

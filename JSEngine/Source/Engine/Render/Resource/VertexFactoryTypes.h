@@ -2,6 +2,7 @@
 
 #include "Core/CoreTypes.h"
 #include "Core/Containers/String.h"
+#include "Particle/ParticleRibbonTypes.h"
 #include "Render/Resource/ShaderPaths.h"
 #include "Render/Resource/ShaderTypes.h"
 #include "Render/Resource/VertexTypes.h"
@@ -128,6 +129,18 @@ public:
             },
             sizeof(FMeshParticleInstanceData)
         };
+        // Ribbon Particle (Cycle 12). Slot 0: per-vertex (FRibbonParticleVertex, 48B), no instancing.
+        // topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP (RenderRibbonEmitter 에서 IASetPrimitiveTopology).
+        static const FVertexLayoutDesc RibbonParticleLayout = {
+            {
+                { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FRibbonParticleVertex, Position)),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "TANGENT",   0, DXGI_FORMAT_R32G32B32_FLOAT,    0, static_cast<uint32>(offsetof(FRibbonParticleVertex, Tangent)),   D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "COLOR",     0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, static_cast<uint32>(offsetof(FRibbonParticleVertex, Color)),     D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "TEXCOORD",  0, DXGI_FORMAT_R32_FLOAT,          0, static_cast<uint32>(offsetof(FRibbonParticleVertex, TexCoordU)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "TEXCOORD",  1, DXGI_FORMAT_R32_FLOAT,          0, static_cast<uint32>(offsetof(FRibbonParticleVertex, Size)),      D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            },
+            sizeof(FRibbonParticleVertex)
+        };
         // Slot 0: per-vertex quad (FSpriteParticleVertex, 20B)
         // Slot 1: per-instance (FSpriteParticleInstanceData, 44B)
         static const FVertexLayoutDesc SpriteParticleLayout = {
@@ -249,6 +262,20 @@ public:
             MeshParticleLayout,
             MeshParticleLayout
         };
+        // RibbonParticle (Cycle 12). DepthPrepass/Shadow/Selection 패스에 들어가지 않습니다 — Particle pass 전용.
+        static const FVertexFactoryDesc RibbonParticleDesc = {
+            FShaderPaths::ParticleRibbon,
+            FShaderPaths::ParticleRibbon,
+            FShaderPaths::ParticleRibbon,
+            FShaderPaths::ParticleRibbon,
+            "RibbonParticleVS",
+            "RibbonParticleVS",
+            "RibbonParticleVS",
+            "RibbonParticleVS",
+            RibbonParticleLayout,
+            RibbonParticleLayout,
+            RibbonParticleLayout
+        };
         // SpriteParticle은 DepthPrepass/Shadow/Selection 패스에 들어가지 않습니다.
         // 해당 entry들은 cascade 포팅의 후속 사이클에서 필요해지면 채웁니다.
         static const FVertexFactoryDesc SpriteParticleDesc = {
@@ -290,10 +317,11 @@ public:
         // 신규 EVertexFactoryType 추가 시 여기에 명시 case 추가 필수.
         case EVertexFactoryType::SpriteParticle:
             return SpriteParticleDesc;
-        // Cycle 11: MeshParticle 본문 채움. Ribbon/Beam은 Cycle 12b/13b에서 교체.
+        // Cycle 11: MeshParticle 본문 채움. Cycle 12: RibbonParticle 본문 채움. Beam은 Cycle 13에서 교체.
         case EVertexFactoryType::MeshParticle:
             return MeshParticleDesc;
         case EVertexFactoryType::RibbonParticle:
+            return RibbonParticleDesc;
         case EVertexFactoryType::BeamParticle:
             return EmptyParticleDesc;
         case EVertexFactoryType::StaticMesh:
