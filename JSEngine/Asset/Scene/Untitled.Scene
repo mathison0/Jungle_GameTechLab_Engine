@@ -284,7 +284,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "Template" : 0,
+          "Template" : 538,
           "Type" : "UParticleSystemComponent",
           "UUID" : 473,
           "bAutoActivate" : true,
@@ -352,13 +352,13 @@
     }],
   "ClassName" : "UWorld",
   "Name" : "Untitled",
-  "NextUUID" : 511,
+  "NextUUID" : 552,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-2.065248, 3.772883, 6.784153],
+    "Location" : [-3.312515, 3.737788, 6.604019],
     "NearClip" : 0.100000,
-    "Rotation" : [0.059120, -8.780151, -179.612885]
+    "Rotation" : [-1.111969, -13.687164, 175.310532]
   },
   "Version" : 6,
   "WorldSettings" : {

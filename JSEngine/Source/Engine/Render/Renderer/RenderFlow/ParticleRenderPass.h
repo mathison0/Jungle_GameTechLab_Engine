@@ -30,5 +30,14 @@ private:
     FIndexBuffer    QuadIndexBuffer;
     FInstanceBuffer InstanceBuffer;
     FConstantBuffer SpriteParticleCB;   // b8: SubUV grid
+
+    // Cycle 11: Mesh emitter용 per-instance VB (Sprite의 InstanceBuffer와 별도).
+    // EnsureGPUResources에서 sizeof(FMeshParticleInstanceData) stride로 Create.
+    FInstanceBuffer MeshInstanceBuffer;
+
+    // Cycle 12: Ribbon emitter용 slot 0 dynamic VB. instancing 없이 strip 정점만 담는다.
+    // FInstanceBuffer 클래스 재사용 — slot/instancing 비종속 일반 dynamic VB (진단 §1.2).
+    FInstanceBuffer RibbonVertexBuffer;
+
     bool bGPUResourcesReady = false;
 };

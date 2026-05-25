@@ -5,6 +5,10 @@
 
 #include <algorithm>
 
+#include "Core/ResourceManager.h"
+#include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
 UParticleLODLevel::~UParticleLODLevel()
 {
     ClearModules();
@@ -528,6 +532,115 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
     LODLevel->AddModule<UParticleModuleSize>();
 
     Emitter->CacheEmitterModuleInfo();
+
+    return System;
+}
+
+// Function : Create default Mesh emitter particle system for detail-panel verification
+// input : None
+// output : New UParticleSystem with single emitter + UMeshTypeData using Dice mesh asset
+//
+// Cycle 11: CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData → UMeshTypeData 교체.
+// Mesh asset은 기존 StaticMeshComponent 디폴트와 동일 (Asset/Mesh/Dice/Dice.obj) — 코드베이스에 존재 보장.
+UParticleSystem* UParticleSystem::CreateDefaultMeshSystem()
+{
+    UParticleSystem* System = UObjectManager::Get().CreateObject<UParticleSystem>();
+    if (!System)
+    {
+        return nullptr;
+    }
+
+    UParticleEmitter* Emitter = System->AddEmitter();
+    if (!Emitter)
+    {
+        UObjectManager::Get().DestroyObject(System);
+        return nullptr;
+    }
+
+    UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
+    LODLevel->Level = 0;
+    LODLevel->bEnabled = true;
+    LODLevel->DistanceThreshold = 100000.0f;
+
+    LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
+
+    // UMeshTypeData에 디폴트 mesh + override material.
+    // apple_mid.obj 사용 이유:
+    //   1. Dice.obj는 vt 4개 (cube corner)만 보유 — 6면 모두 동일 UV (0~1) → 텍스처 전체가 각 면에 반복 표시,
+    //      UV mapping이 작동하는지 시각 검증 불가능.
+    //   2. apple_mid.obj는 vt 1432개 — 제대로 펼친 UV. apple_mid_Mat_0.mat에 BaseColor 텍스처 보유.
+    // GetOrCreateMaterial은 빈 material 생성만 함 — DiffuseMap 등 params 채우려면 DeserializeMaterial 필수.
+    UMeshTypeData* MeshTypeData = UObjectManager::Get().CreateObject<UMeshTypeData>();
+    MeshTypeData->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
+    const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.mat";
+    FResourceManager::Get().DeserializeMaterial(DemoMatPath);
+    UMaterial* DemoMaterial = FResourceManager::Get().GetMaterial(DemoMatPath);
+    if (!DemoMaterial)
+    {
+        DemoMaterial = FResourceManager::Get().GetMaterial("apple_mid_Mat_0");
+    }
+    if (DemoMaterial)
+    {
+        MeshTypeData->SetOverrideMaterial(true, DemoMaterial);
+    }
+    LODLevel->Modules.push_back(MeshTypeData);
+
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLocation>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleVelocity>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleColor>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSize>());
+
+    Emitter->LODLevels.push_back(LODLevel);
+    System->CacheEmitterModuleInfo();
+
+    return System;
+}
+
+// Function : Create default Ribbon emitter particle system for detail-panel verification
+// input : None
+// output : New UParticleSystem with single emitter + URibbonTypeData (MaxTrailCount=1)
+//
+// Cycle 12: CreateDefaultMeshSystem과 동일 구조 + UMeshTypeData → URibbonTypeData.
+// MaxTrailCount=1 + MaxParticleInTrail=64 (TypeData 기본값). Material 은 nullptr 시작 — 사용자가
+// emitter detail panel 의 picker 로 선택. RenderRibbonEmitter 가 Material/Texture nullptr 시 default white SRV fallback.
+UParticleSystem* UParticleSystem::CreateDefaultRibbonSystem()
+{
+    UParticleSystem* System = UObjectManager::Get().CreateObject<UParticleSystem>();
+    if (!System)
+    {
+        return nullptr;
+    }
+
+    UParticleEmitter* Emitter = System->AddEmitter();
+    if (!Emitter)
+    {
+        UObjectManager::Get().DestroyObject(System);
+        return nullptr;
+    }
+
+    UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
+    LODLevel->Level = 0;
+    LODLevel->bEnabled = true;
+    LODLevel->DistanceThreshold = 100000.0f;
+
+    LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
+
+    // URibbonTypeData — TypeData 기본값 그대로 (MaxTrailCount=1, MaxParticleInTrail=64).
+    // Material 은 사용자가 detail panel 에서 선택 — 본 시점은 nullptr.
+    URibbonTypeData* RibbonTypeData = UObjectManager::Get().CreateObject<URibbonTypeData>();
+    LODLevel->Modules.push_back(RibbonTypeData);
+
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLocation>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleVelocity>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleColor>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSize>());
+
+    Emitter->LODLevels.push_back(LODLevel);
+    System->CacheEmitterModuleInfo();
 
     return System;
 }

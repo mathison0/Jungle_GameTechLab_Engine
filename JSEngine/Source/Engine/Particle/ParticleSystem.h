@@ -121,6 +121,12 @@ public:
 	void SetAssetPath(const FString& InAssetPath);
 	const FString& GetAssetPath() const { return AssetPath; }
     static UParticleSystem* CreateDefaultSpriteSystem();
+    // Cycle 11: detail panel 검증용 기본 mesh emitter system.
+    // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 UMeshTypeData (디폴트 Dice mesh).
+    static UParticleSystem* CreateDefaultMeshSystem();
+    // Cycle 12: detail panel 검증용 기본 ribbon emitter system.
+    // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 URibbonTypeData (MaxTrailCount=1).
+    static UParticleSystem* CreateDefaultRibbonSystem();
 
 	UPROPERTY(DisplayName = "Asset Path")
 	FString AssetPath;
