@@ -4,12 +4,13 @@
 
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleSystemComponent.h"
-#include "Render/Scene/RenderCommand.h"
 
-// Cycle 10b baseline: SpriteInstanceDataBuffer (TArray<FSpriteParticleInstanceData>) 멤버 추가.
-// Cycle 9 baseline 96 → Cycle 10b 128 (+32 bytes: TArray 멤버 + 정렬 padding).
-// TArray가 std::vector 기반(포인터 3개=24) + 8-byte alignment padding으로 +32 측정.
-static_assert(sizeof(FParticleEmitterInstance) == 128, "Cycle 10b baseline: FParticleEmitterInstance expected 128 bytes after SpriteInstanceDataBuffer addition (Cycle 9 baseline 96 + TArray 32)");
+// Cycle 10c 계층 분리: 본 cpp에서 RenderCommand 참조 0건.
+// Instance는 자기 데이터 buffer만 갱신/노출, RenderCommand 매핑은 Builder 책임.
+
+// Cycle 10c baseline: BuildInstanceData 시그니처 교체 + 4종 getter 추가는 sizeof 영향 없음 (vtable은 instance마다 단일 포인터).
+// Cycle 10b (128 bytes) 그대로 유지.
+static_assert(sizeof(FParticleEmitterInstance) == 128, "Cycle 10c baseline: FParticleEmitterInstance expected 128 bytes (Cycle 10b 128 same — virtual signature changes don't affect sizeof)");
 
 FParticleEmitterInstance::~FParticleEmitterInstance()
 {
@@ -310,21 +311,15 @@ int32 FParticleEmitterInstance::GetRequiredPayloadBytes() const
     return 0;
 }
 
-// Function : Build Sprite instance data into OutCmd (base/Sprite path — Cycle 10b)
-// input : OutCmd
-// OutCmd : render command whose type-specific slots get filled
-// output : SpriteInstanceDataBuffer 새로 채우고 OutCmd.VertexFactoryType=SpriteParticle + ParticleInstances/Count 설정
-// 이전 cycle 위치: UParticleSystemComponent::BuildSpriteInstanceData의 emitter 1개 처리 루프 — 본 메서드로 이전.
-// Mesh/Ribbon/Beam derived instance가 override해 자기 type의 슬롯을 채움 (Cycle 11+).
-void FParticleEmitterInstance::BuildInstanceData(FRenderCommand& OutCmd)
+// Function : Build Sprite instance data into internal buffer (base/Sprite path — Cycle 10c)
+// input : None
+// output : SpriteInstanceDataBuffer 새로 채움 — RenderCommand 매핑은 Builder가 별도 수행 (계층 분리)
+// Mesh/Ribbon/Beam derived instance가 override해 자기 type의 buffer를 채움 (Cycle 11+).
+void FParticleEmitterInstance::BuildInstanceData()
 {
     SpriteInstanceDataBuffer.clear();
     if (ActiveParticles <= 0)
     {
-        // 빈 결과라도 type/slot은 셋업 — RenderPass가 nullptr/count==0 가드로 자연 skip.
-        OutCmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
-        OutCmd.ParticleInstances = nullptr;
-        OutCmd.ParticleInstanceCount = 0;
         return;
     }
 
@@ -345,8 +340,41 @@ void FParticleEmitterInstance::BuildInstanceData(FRenderCommand& OutCmd)
         Data.SubUVIndex = Particle->SubUVIndex;
         SpriteInstanceDataBuffer.push_back(Data);
     }
+}
 
-    OutCmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
-    OutCmd.ParticleInstances = SpriteInstanceDataBuffer.data();
-    OutCmd.ParticleInstanceCount = static_cast<uint32>(SpriteInstanceDataBuffer.size());
+// Function : Expose Sprite instance buffer to Builder (base/Sprite path)
+// input : OutCount (out-param)
+// output : Pointer to first element + count, or nullptr/0 when empty
+// USpriteTypeData가 base instance 사용 (Cycle 8/9 결정) — base가 직접 Sprite buffer 노출.
+const FSpriteParticleInstanceData* FParticleEmitterInstance::GetSpriteInstanceData(uint32& OutCount) const
+{
+    OutCount = static_cast<uint32>(SpriteInstanceDataBuffer.size());
+    return SpriteInstanceDataBuffer.empty() ? nullptr : SpriteInstanceDataBuffer.data();
+}
+
+// Function : Mesh instance data getter — base default returns nullptr
+// input : OutCount (out-param, always set to 0)
+// output : Always nullptr — Mesh derived instance가 Cycle 11에서 override해 자기 buffer 노출
+const FMeshParticleInstanceData* FParticleEmitterInstance::GetMeshInstanceData(uint32& OutCount) const
+{
+    OutCount = 0;
+    return nullptr;
+}
+
+// Function : Ribbon vertex data getter — base default returns nullptr
+// input : OutCount (out-param, always set to 0)
+// output : Always nullptr — Ribbon derived instance가 Cycle 12+에서 override
+const FRibbonParticleVertex* FParticleEmitterInstance::GetRibbonVertexData(uint32& OutCount) const
+{
+    OutCount = 0;
+    return nullptr;
+}
+
+// Function : Beam vertex data getter — base default returns nullptr
+// input : OutCount (out-param, always set to 0)
+// output : Always nullptr — Beam derived instance가 Cycle 13+에서 override
+const FBeamParticleVertex* FParticleEmitterInstance::GetBeamVertexData(uint32& OutCount) const
+{
+    OutCount = 0;
+    return nullptr;
 }

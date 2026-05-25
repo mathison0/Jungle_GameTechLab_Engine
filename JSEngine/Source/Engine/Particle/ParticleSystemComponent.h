@@ -26,9 +26,10 @@ public:
 	void QueueCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchQueuedParticleEvents();
 
-	// Cycle 10b (사용자 결정 C+X): 모든 instance data build/getter는 instance owns + Builder가 직접 호출.
-	// 기존 BuildSpriteInstanceData / GetEmitterInstanceData / BuildInstanceData / EmitterInstanceData 모두 제거.
-	// PrimitiveDrawCommandBuilder가 emitter 루프 안에서 Instance->BuildInstanceData(Cmd) 직접 호출.
+	// Cycle 10c 계층 분리: type-agnostic dispatch hook.
+	// 모든 emitter instance에 대해 Instance->BuildInstanceData()를 호출만 함 (내부 buffer 갱신).
+	// RenderCommand 매핑은 Builder가 별도 수행 — Component는 FRenderCommand 모름.
+	void BuildInstanceData();
 
 	EPrimitiveType GetPrimitiveType() const override { return EPrimitiveType::EPT_ParticleSystem; }
 	void UpdateWorldAABB() const override;

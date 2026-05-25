@@ -544,10 +544,14 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             return false;
         }
 
-        // Cycle 10b (옵션 C): Builder가 Instance::BuildInstanceData(Cmd) 직접 호출.
-        // - generic 필드(SourcePrimitive/PerObjectConstants/WorldAABB/atlas)는 Builder가 채움
-        // - type-specific 슬롯(VertexFactoryType + ParticleInstances/Mesh/Ribbon/Beam)은 Instance가 채움 (polymorphism)
-        // RenderMode 분기는 instance virtual로 일원화 — Builder는 type 모름.
+        // Cycle 10c 계층 분리: Component는 instance 순회 hook만 (RenderCommand 모름).
+        // Instance는 자기 buffer만 갱신, RenderCommand 매핑은 Builder가 책임.
+        ParticleSystemComponent->BuildInstanceData();
+
+        // Cycle 10c: Builder가 instance와 RenderCommand 사이의 매핑 책임.
+        // - Instance::Get*Data() getter로 type별 데이터를 const 포인터+count로 회수 (제로 복사)
+        // - RenderMode switch로 Cmd의 type별 슬롯 + VertexFactoryType 직접 채움
+        // - Instance는 RenderCommand를 모름 (단방향 dependency)
         const TArray<FParticleEmitterInstance*>& EmitterInstances = ParticleSystemComponent->GetEmitterInstances();
         for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmitterInstances.size()); ++EmitterIdx)
         {
@@ -557,30 +561,71 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 continue;
             }
 
-            // Cmd 기본 필드 (generic) 먼저 채움.
+            // RenderMode 결정 — TypeDataModule single source (Cycle 8 결정 κ).
+            UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
+            if (!LOD)
+            {
+                continue;
+            }
+            const EParticleEmitterRenderMode RenderMode = LOD->GetEffectiveRenderMode();
+
+            // Cmd 기본 필드 (generic, type 무관) 먼저 채움.
             FRenderCommand Cmd = {};
             Cmd.SourcePrimitive = Primitive;
             Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
             Cmd.Type = ERenderCommandType::Primitive;
             Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
 
-            // Instance에 위임: VertexFactoryType + type-specific 슬롯 채움.
-            // base/Sprite: ParticleInstances/Count + VertexFactoryType=SpriteParticle.
-            // Mesh/Ribbon/Beam derived (Cycle 11+): MeshParticleInstances/RibbonVertices/BeamVertices + VertexFactoryType=Mesh/Ribbon/Beam.
-            Instance->BuildInstanceData(Cmd);
+            // RenderMode별로 적절한 getter 호출 + 해당 type 슬롯만 채움.
+            // 다른 type 슬롯은 zero-init된 nullptr/0 유지 (silent bug 위험 3 회피).
+            // Mesh/Ribbon/Beam은 base default가 nullptr 반환 → Cycle 11+에서 derived가 override해야 데이터 채워짐.
+            uint32 Count = 0;
+            bool bHasData = false;
+            switch (RenderMode)
+            {
+            case EParticleEmitterRenderMode::Sprite:
+                Cmd.ParticleInstances = Instance->GetSpriteInstanceData(Count);
+                Cmd.ParticleInstanceCount = Count;
+                Cmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
+                bHasData = (Cmd.ParticleInstances != nullptr && Count > 0);
+                break;
+            case EParticleEmitterRenderMode::Mesh:
+                Cmd.MeshParticleInstances = Instance->GetMeshInstanceData(Count);
+                Cmd.MeshParticleInstanceCount = Count;
+                Cmd.VertexFactoryType = EVertexFactoryType::MeshParticle;
+                bHasData = (Cmd.MeshParticleInstances != nullptr && Count > 0);
+                break;
+            case EParticleEmitterRenderMode::Ribbon:
+                Cmd.RibbonVertices = Instance->GetRibbonVertexData(Count);
+                Cmd.RibbonVertexCount = Count;
+                Cmd.VertexFactoryType = EVertexFactoryType::RibbonParticle;
+                bHasData = (Cmd.RibbonVertices != nullptr && Count > 0);
+                break;
+            case EParticleEmitterRenderMode::Beam:
+                Cmd.BeamVertices = Instance->GetBeamVertexData(Count);
+                Cmd.BeamVertexCount = Count;
+                Cmd.VertexFactoryType = EVertexFactoryType::BeamParticle;
+                bHasData = (Cmd.BeamVertices != nullptr && Count > 0);
+                break;
+            default:
+                break;
+            }
+
+            // active particle 0개거나 base nullptr fallback(Mesh/Ribbon/Beam 본 cycle 미구현) — Cmd 발행 skip.
+            // 빈 슬롯으로 그리려 하면 D3D 에러 — silent bug 위험 2 회피.
+            if (!bHasData)
+            {
+                continue;
+            }
 
             // SubUV atlas 정보 — Sprite type에서만 의미. Mesh/Ribbon/Beam도 atlas 쓰면 활용 가능.
-            UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
             const USubUVModule* SubUV = nullptr;
-            if (LOD)
+            for (UParticleModule* Module : LOD->GetModules())
             {
-                for (UParticleModule* Module : LOD->GetModules())
+                if (USubUVModule* Found = Cast<USubUVModule>(Module))
                 {
-                    if (USubUVModule* Found = Cast<USubUVModule>(Module))
-                    {
-                        SubUV = Found;
-                        break;
-                    }
+                    SubUV = Found;
+                    break;
                 }
             }
             const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;

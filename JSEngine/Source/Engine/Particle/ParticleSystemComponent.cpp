@@ -200,7 +200,17 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 	NotifySpatialIndexDirty();
 }
 
-// Cycle 10b (사용자 결정 C+X): BuildSpriteInstanceData / GetEmitterInstanceData / BuildInstanceData / EmitterInstanceData 모두 제거.
-// instance data buffer ownership이 Component에서 FParticleEmitterInstance::SpriteInstanceDataBuffer로 이전됨.
-// PrimitiveDrawCommandBuilder가 emitter 루프 안에서 Instance->BuildInstanceData(Cmd) 직접 호출.
-// RenderMode 분기는 instance polymorphism (virtual BuildInstanceData) 으로 일원화.
+// Cycle 10c 계층 분리: type-agnostic dispatch hook.
+// 모든 emitter instance에 대해 BuildInstanceData() 호출 — instance 내부 buffer만 갱신.
+// RenderCommand 매핑은 Builder가 별도로 수행 (Instance/Component는 FRenderCommand 모름).
+// 본 함수 본문에 FRenderCommand 참조 0건 — 계층 분리 원칙 (사용자 결정).
+void UParticleSystemComponent::BuildInstanceData()
+{
+	for (FParticleEmitterInstance* Instance : EmitterInstances)
+	{
+		if (Instance)
+		{
+			Instance->BuildInstanceData();
+		}
+	}
+}

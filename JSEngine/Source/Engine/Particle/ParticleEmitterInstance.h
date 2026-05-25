@@ -4,7 +4,14 @@
 #include "Render/Resource/VertexTypes.h"
 
 class UParticleSystemComponent;
-struct FRenderCommand;
+
+// Cycle 10c 계층 분리: Instance는 RenderCommand를 모름.
+// 4종 type별 getter의 반환 타입에 필요한 forward declaration.
+// 실제 struct 정의는 각 emitter cycle에서 (Mesh: Cycle 11, Ribbon: Cycle 12b, Beam: Cycle 13b).
+// 본 cycle은 Sprite buffer만 실제 노출, 나머지 3개는 base default nullptr.
+struct FMeshParticleInstanceData;
+struct FRibbonParticleVertex;
+struct FBeamParticleVertex;
 
 struct FParticleEmitterInstance
 {
@@ -26,12 +33,19 @@ public:
     // Init에서 ParticleStride 계산에 사용. 향후 Ribbon/Beam이 override 가능성 있으나 본 cycle은 default.
     virtual int32 GetRequiredPayloadBytes() const;
 
-    // Cycle 10b: type-specific instance data를 빌드해 OutCmd의 type별 슬롯에 채움.
-    // base 구현 = Sprite path (SpriteInstanceDataBuffer 채우고 OutCmd.ParticleInstances + VertexFactoryType=SpriteParticle).
-    // Mesh/Ribbon/Beam derived instance가 override해 자기 type의 슬롯을 채움.
-    // Builder는 generic 필드(SourcePrimitive, PerObjectConstants, WorldAABB, atlas)만 채우고 이 메서드에 위임.
-    // 비대칭 인지: 데이터 생성은 polymorphism(여기), 렌더 분기는 procedural switch(RenderPass) — 의도된 비대칭(사용자 결정 4).
-    virtual void BuildInstanceData(FRenderCommand& OutCmd);
+    // Cycle 10c 계층 분리: 인자 없는 build. 내부 buffer 갱신만 — FRenderCommand를 인자로 받지 않음.
+    // base 구현 = Sprite path (SpriteInstanceDataBuffer 채움). Mesh/Ribbon/Beam derived는 자기 buffer override.
+    // RenderCommand 매핑은 Builder 책임 (instance는 데이터 노출만, 매핑은 모름).
+    virtual void BuildInstanceData();
+
+    // Cycle 10c 계층 분리: type별 명시 getter 4종 — Builder가 RenderMode로 switch해 적절한 getter 호출.
+    // base 구현 = Sprite만 실제 buffer 노출 (USpriteTypeData가 base instance 사용 — Cycle 8/9 결정).
+    // 다른 3개는 nullptr 반환. Mesh/Ribbon/Beam derived가 Cycle 11+에서 자기 메서드 override.
+    // 사용자 결정 2: void* 사용 금지 (type-safe), Visitor 금지.
+    virtual const FSpriteParticleInstanceData* GetSpriteInstanceData(uint32& OutCount) const;
+    virtual const FMeshParticleInstanceData* GetMeshInstanceData(uint32& OutCount) const;
+    virtual const FRibbonParticleVertex* GetRibbonVertexData(uint32& OutCount) const;
+    virtual const FBeamParticleVertex* GetBeamVertexData(uint32& OutCount) const;
 
 	// Getter
     int32 GetActiveParticleCount() const { return ActiveParticles; }
