@@ -28,7 +28,6 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	{
 		SpriteTemplate->CacheEmitterModuleInfo();
 		ParticleSize = SpriteTemplate->GetParticleSize();
-		ParticleStride = FParticleDataContainer::AlignSize(ParticleSize, FParticleDataContainer::DefaultParticleAlignment);
 		MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
 		CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(0.0f);
 		CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
@@ -36,26 +35,29 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	else
 	{
 		ParticleSize = sizeof(FBaseParticle);
-		ParticleStride = FParticleDataContainer::AlignSize(sizeof(FBaseParticle), FParticleDataContainer::DefaultParticleAlignment);
 		MaxActiveParticles = 1;
 	}
 
-	if (!ParticleStorage.Allocate(MaxActiveParticles, ParticleSize))
-	{
-		MaxActiveParticles = 0;
-		return;
-	}
-	// payload-aware stride: TypeData가 요구하는 추가 byte 만큼 가산.
-	// USpriteTypeData::RequiredPayloadBytes() = 0 → Sprite는 회귀 0.
+	// Cycle 10d: payload-aware stride가 container 내부에서 일관 적용되도록
+	// PayloadBytes 계산을 Allocate 호출 앞으로 이동. silent bug ξ 해소.
+	// USpriteTypeData::RequiredPayloadBytes() = 0 → Sprite 회귀 0.
 	const int32 PayloadBytes = (CurrentLODLevel && CurrentLODLevel->GetTypeDataModule())
 		? CurrentLODLevel->GetTypeDataModule()->RequiredPayloadBytes()
 		: 0;
 	InstancePayloadSize = PayloadBytes;
 	PayloadOffset = ParticleSize;
 
-	ParticleStorage.ParticleData = new uint8[ParticleStride * MaxActiveParticles];
-    ParticleStorage.ParticleIndices = new uint16[MaxActiveParticles];
+	// Cycle 10d: stride source-of-truth = container. Allocate가 (ParticleSize + PayloadBytes)를
+	// 받아 align 후 멤버 ParticleStride에 저장하고 단일 블록을 할당한다.
+	// 이전 cycle의 redundant `new uint8/uint16` 라인은 silent bug ν 원인이므로 제거됨.
+	if (!ParticleStorage.Allocate(MaxActiveParticles, ParticleSize + PayloadBytes))
+	{
+		MaxActiveParticles = 0;
+		return;
+	}
 
+	// Allocate는 메모리 placement만 수행 — ParticleIndices 값 초기화 루프 유지 필수
+	// (제거 시 첫 Spawn에서 garbage 슬롯 참조 → 즉시 crash).
 	for (int32 Index = 0; Index < MaxActiveParticles; ++Index)
 	{
 		ParticleStorage.ParticleIndices[Index] = static_cast<uint16>(Index);
@@ -174,7 +176,7 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 	{
 		const int32 ActiveIndex = ActiveParticles;
 		const uint16 SlotIndex = ParticleStorage.ParticleIndices[ActiveIndex];
-		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(ParticleStorage.ParticleData + SlotIndex * ParticleStride);
+		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(ParticleStorage.ParticleData + SlotIndex * ParticleStorage.GetStride());
 		*Particle = FBaseParticle();
 
 		Particle->ParticleId = ++ParticleCounter;
@@ -219,7 +221,7 @@ FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
     RuntimeView.ParticleIndices = ParticleStorage.ParticleIndices;
     RuntimeView.ActiveParticles = ActiveParticles;
     RuntimeView.MaxActiveParticles = MaxActiveParticles;
-    RuntimeView.ParticleStride = ParticleStride;
+    RuntimeView.ParticleStride = ParticleStorage.GetStride();  // Cycle 10d: container 위임
     RuntimeView.ParticleSize = ParticleSize;
     RuntimeView.CurrentLODLevelIndex = CurrentLODLevelIndex;
 
@@ -242,7 +244,7 @@ FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex)
 	{
 		return nullptr;
 	}
-	return reinterpret_cast<FBaseParticle*>(ParticleStorage.ParticleData + ParticleStorage.ParticleIndices[ActiveIndex] * ParticleStride);
+	return reinterpret_cast<FBaseParticle*>(ParticleStorage.ParticleData + ParticleStorage.ParticleIndices[ActiveIndex] * ParticleStorage.GetStride());
 }
 
 // Function : Get read-only particle data by active index
@@ -255,7 +257,7 @@ const FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex) co
 	{
 		return nullptr;
 	}
-	return reinterpret_cast<const FBaseParticle*>(ParticleStorage.ParticleData + ParticleStorage.ParticleIndices[ActiveIndex] * ParticleStride);
+	return reinterpret_cast<const FBaseParticle*>(ParticleStorage.ParticleData + ParticleStorage.ParticleIndices[ActiveIndex] * ParticleStorage.GetStride());
 }
 
 

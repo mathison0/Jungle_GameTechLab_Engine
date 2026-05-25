@@ -50,7 +50,7 @@ public:
 	// Getter
     int32 GetActiveParticleCount() const { return ActiveParticles; }
     int32 GetMaxActiveParticleCount() const { return MaxActiveParticles; }
-    int32 GetParticleStride() const { return ParticleStride; }
+    int32 GetParticleStride() const { return ParticleStorage.GetStride(); }  // Cycle 10d: container로 위임
     int32 GetParticleSize() const { return ParticleSize; }
     int32 GetParticleMemoryBytes() const { return ParticleStorage.GetMemoryBytes(); }
 
@@ -90,7 +90,8 @@ private:
 	int32 InstancePayloadSize = 0;
 	int32 PayloadOffset = 0;
 	int32 ParticleSize = sizeof(FBaseParticle);
-	int32 ParticleStride = sizeof(FBaseParticle);
+	// Cycle 10d: ParticleStride 멤버 삭제 — source-of-truth가 FParticleDataContainer로 이전.
+	// 외부 read는 GetParticleStride() (container.GetStride() 위임) 또는 ParticleStorage.GetStride() 직접.
 	int32 ActiveParticles = 0;
 	uint32 ParticleCounter = 0;
 	int32 MaxActiveParticles = 0;
