@@ -1,11 +1,18 @@
 ﻿#include "Particle/ParticleModules.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "Core/Random/EngineRandom.h"
+#include "Core/ResourceManager.h"
+#include "Core/ResourceTypes.h"
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleSystemComponent.h"
 
+namespace
+{
+    constexpr const char* DefaultRequiredSubUVName = "Asset/plasma.png";
+}
 
 // Function : Generate random float inside range
 // input : Min, Max
@@ -34,6 +41,7 @@ static FVector RandomRangeVector(const FVector& Min, const FVector& Max)
 UParticleModuleRequired::UParticleModuleRequired()
 {
     bSpawnModule = true;
+    SetSubUVName(FName(DefaultRequiredSubUVName));
 }
 
 // Function : Apply required default particle values at spawn time
@@ -50,6 +58,25 @@ void UParticleModuleRequired::Spawn(FParticleEmitterInstance* Owner, FBasePartic
     Particle.Lifetime = std::max(Particle.Lifetime, 0.01f);
     Particle.Size = FVector(1.0f, 1.0f, 1.0f);
     Particle.Color = FColor::White();
+}
+
+void UParticleModuleRequired::PostEditProperty(const char* PropertyName)
+{
+    UParticleModule::PostEditProperty(PropertyName);
+    if (PropertyName && strcmp(PropertyName, "SubUVName") == 0)
+    {
+        SetSubUVName(SubUVName);
+    }
+}
+
+void UParticleModuleRequired::SetSubUVName(const FName& InName)
+{
+    SubUVName = InName;
+    if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUVExact(InName))
+    {
+        SubImagesHorizontal = static_cast<int32>(std::max(SubUV->Columns, 1u));
+        SubImagesVertical = static_cast<int32>(std::max(SubUV->Rows, 1u));
+    }
 }
 
 UParticleModuleSpawn::UParticleModuleSpawn()
@@ -274,4 +301,62 @@ void UParticleModuleEventGenerator::Update(FParticleEmitterInstance* Owner, floa
     {
         Owner->DispatchQueuedParticleEvents();
     }
+}
+
+USubUVModule::USubUVModule()
+{
+    bSpawnModule = true;
+    bUpdateModule = true;
+}
+
+void USubUVModule::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
+{
+    (void)Owner;
+    (void)SpawnTime;
+    Particle.SubUVIndex = 0;
+}
+
+void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
+{
+    (void)DeltaTime;
+    if (!CachedSubUV)
+    {
+        return;
+    }
+    const uint32 TotalFrames = CachedSubUV->Columns * CachedSubUV->Rows;
+    if (TotalFrames == 0)
+    {
+        return;
+    }
+
+    for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
+    {
+        FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
+        const float Clamped = std::clamp(Particle.RelativeTime, 0.0f, 0.9999f);
+        Particle.SubUVIndex = static_cast<uint32>(Clamped * static_cast<float>(TotalFrames)) % TotalFrames;
+    }
+}
+
+void USubUVModule::Serialize(FArchive& Ar)
+{
+    UParticleModule::Serialize(Ar);
+    if (Ar.IsLoading())
+    {
+        SetSubUVName(SubUVName);
+    }
+}
+
+void USubUVModule::PostEditProperty(const char* PropertyName)
+{
+    UParticleModule::PostEditProperty(PropertyName);
+    if (PropertyName && strcmp(PropertyName, "SubUVName") == 0)
+    {
+        SetSubUVName(SubUVName);
+    }
+}
+
+void USubUVModule::SetSubUVName(const FName& InName)
+{
+    SubUVName = InName;
+    CachedSubUV = FResourceManager::Get().FindSubUVExact(InName);
 }

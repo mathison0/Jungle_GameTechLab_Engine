@@ -459,7 +459,9 @@ void FEditorMainPanel::HandleContentBrowserViewportDrop()
     {
         return;
     }
-    if ((PayloadType != "ObjectContentItem" && PayloadType != "PrefabContentItem") ||
+    if ((PayloadType != "ObjectContentItem" &&
+         PayloadType != "PrefabContentItem" &&
+         PayloadType != "ParticleSystemContentItem") ||
         Widgets.ContentBrowserWidget.IsMouseOverBrowser())
     {
         return;
@@ -514,6 +516,10 @@ void FEditorMainPanel::HandleContentBrowserViewportDrop()
         if (PayloadType == "PrefabContentItem")
         {
             return SpawnPrefabFromContentPath(PayloadPath, ViewportIndex, LocalX, LocalY);
+        }
+        if (PayloadType == "ParticleSystemContentItem")
+        {
+            return SpawnParticleSystemFromContentPath(PayloadPath, ViewportIndex, LocalX, LocalY);
         }
         if (SpawnSkeletalMeshFromContentPath(PayloadPath, ViewportIndex, LocalX, LocalY))
         {

@@ -1,7 +1,12 @@
-#pragma once
+﻿#pragma once
 
 #include "Object/FName.h"
 #include "Particle/ParticleModule.h"
+#include "Render/Resource/Material.h"
+
+#include <algorithm>
+
+struct FTextureAtlasResource;
 
 UCLASS()
 class UParticleModuleRequired : public UParticleModule
@@ -11,15 +16,24 @@ public:
 
 	UParticleModuleRequired();
 	void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
+	void PostEditProperty(const char* PropertyName) override;
 
 	int32 GetMaxParticles() const { return MaxParticles; }
 	float GetEmitterDuration() const { return EmitterDuration; }
 	bool IsLooping() const { return bLooping; }
 	bool UseLocalSpace() const { return bUseLocalSpace; }
+	UMaterialInterface* GetMaterial() const { return Material; }
 	const FName& GetSubUVName() const { return SubUVName; }
+	int32 GetSubImagesHorizontal() const { return std::max(SubImagesHorizontal, 1); }
+	int32 GetSubImagesVertical() const { return std::max(SubImagesVertical, 1); }
 	EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
+	void SetSubUVName(const FName& InName);
+	void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 private:
+	UPROPERTY(DisplayName = "Material", Category = "Emitter", ReferenceKind = Asset)
+	UMaterialInterface* Material = nullptr;
+
 	UPROPERTY(DisplayName = "Max Particles", Min = 1)
 	int32 MaxParticles = 128;
 
@@ -32,9 +46,16 @@ private:
 	UPROPERTY(DisplayName = "Use Local Space")
 	bool bUseLocalSpace = false;
 
-	UPROPERTY(DisplayName = "SubUV")
+	UPROPERTY(DisplayName = "SubUV", Category = "SubUV")
 	FName SubUVName;
 
+	UPROPERTY(DisplayName = "Sub Images Horizontal", Category = "SubUV", Min = 1)
+	int32 SubImagesHorizontal = 1;
+
+	UPROPERTY(DisplayName = "Sub Images Vertical", Category = "SubUV", Min = 1)
+	int32 SubImagesVertical = 1;
+
+	UPROPERTY(DisplayName = "Emitter Type", Category = "TypeData", NoEdit)
 	EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
 };
 
@@ -170,4 +191,29 @@ public:
 
 	UParticleModuleEventGenerator();
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+};
+
+// SubUV 재생 속도는 particle Lifetime에 종속. 별도 재생 속도/루프 제어는
+// 후속 cycle (InterpolationMethod) 에서 도입.
+UCLASS()
+class USubUVModule : public UParticleModule
+{
+public:
+	GENERATED_BODY(USubUVModule, UParticleModule)
+
+	USubUVModule();
+	void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
+	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+	void Serialize(FArchive& Ar) override;
+	void PostEditProperty(const char* PropertyName) override;
+
+	void SetSubUVName(const FName& InName);
+	const FName& GetSubUVName() const { return SubUVName; }
+	const FTextureAtlasResource* GetCachedSubUV() const { return CachedSubUV; }
+
+private:
+	UPROPERTY(DisplayName = "SubUV")
+	FName SubUVName;
+
+	FTextureAtlasResource* CachedSubUV = nullptr; // ResourceManager 소유, 참조만
 };

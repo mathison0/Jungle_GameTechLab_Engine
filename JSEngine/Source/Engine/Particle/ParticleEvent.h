@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "GameFramework/AActor.h"
 #include "Particle/ParticleTypes.h"
@@ -15,6 +15,8 @@ public:
 	void DispatchEvents();
 	const TArray<FParticleEventCollideData>& GetCollisionEvents() const { return CollisionEvents; }
 	void ClearEvents() { CollisionEvents.clear(); }
+
+	void InitDefaultComponents() override;
 
 	FOnParticleEventCollide OnParticleCollide;
 

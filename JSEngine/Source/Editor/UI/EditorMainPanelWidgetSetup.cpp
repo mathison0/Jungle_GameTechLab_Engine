@@ -65,9 +65,14 @@ void FEditorMainPanel::OpenAnimGraphAsset(const FString& AnimGraphPath)
     ActivateEditorTab(TabId);
 }
 
-void FEditorMainPanel::OpenParticleEditorLayoutTest(const FString& ParticleSystemPath)
+void FEditorMainPanel::OpenParticleSystemAsset(const FString& ParticleSystemPath)
 {
-    Widgets.ParticleSystemWidget.OpenLayoutTest(ParticleSystemPath);
+    if (ParticleSystemPath.empty())
+    {
+        return;
+    }
+
+    Widgets.ParticleSystemWidget.OpenParticleSystem(ParticleSystemPath);
 
     const FEditorTabId TabId = MakeParticleSystemEditorTabId(ParticleSystemPath);
     const FString TabLabel = MakeParticleSystemEditorTabLabel(ParticleSystemPath);
@@ -214,7 +219,6 @@ void FEditorMainPanel::BindEditorWidgetCallbacks()
     Widgets.ToolbarWidget.SetPIEViewportFullscreenCallback([this](bool bEnabled) { SetPIEViewportFullscreenEnabled(bEnabled); });
     Widgets.ToolbarWidget.SetBuildGameCallback([this]() { RequestBuildGame(); });
     Widgets.ToolbarWidget.SetRuntimeUIPreviewOpenCallback([this]() { OpenRuntimeUIPreviewAsset(); });
-    Widgets.ToolbarWidget.SetParticleEditorOpenCallback([this]() { OpenParticleEditorLayoutTest(); });
     Widgets.ToolbarWidget.SetActiveCommandHandlers(
         [this](const FEditorShortcut& Shortcut)
         {

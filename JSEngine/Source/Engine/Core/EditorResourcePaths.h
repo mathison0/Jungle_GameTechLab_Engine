@@ -9,6 +9,7 @@ namespace FEditorResourcePaths
     inline constexpr const char* Root = "Resources/Editor/";
     inline constexpr const char* Icons = "Resources/Editor/Icons/";
     inline constexpr const char* ToolIcons = "Resources/Editor/ToolIcons/";
+    inline constexpr const char* Cascade = "Resources/Editor/Cascade/";
     inline constexpr const char* Branding = "Resources/Editor/Branding/";
 
     inline FString Icon(const char* FileName)
@@ -19,6 +20,11 @@ namespace FEditorResourcePaths
     inline FString ToolIcon(const char* FileName)
     {
         return FString(ToolIcons) + FileName;
+    }
+
+    inline FString CascadeIcon(const char* FileName)
+    {
+        return FString(Cascade) + FileName;
     }
 
     inline FString BrandingFile(const char* FileName)
@@ -34,6 +40,11 @@ namespace FEditorResourcePaths
     inline std::wstring ToolIconsAbsoluteDir()
     {
         return FPaths::Combine(FPaths::RootDir(), FPaths::ToWide(ToolIcons));
+    }
+
+    inline std::wstring CascadeAbsoluteDir()
+    {
+        return FPaths::Combine(FPaths::RootDir(), FPaths::ToWide(Cascade));
     }
 
     inline std::wstring BrandingAbsoluteFile(const char* FileName)

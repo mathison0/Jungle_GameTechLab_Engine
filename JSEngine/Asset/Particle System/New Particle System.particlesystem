@@ -4,11 +4,167 @@
         "Objects" : [{
             "Class" : "UParticleSystem",
             "Data" : {
-              "Emitters" : [],
+              "Emitters" : [2],
+              "LODDistanceCheckTime" : 0.250000,
+              "LODDistances" : [0.000000, 1000.000000],
+              "LODMethod" : 0,
+              "LODSettings" : [0, 1],
               "ObjectName" : "New Particle System",
-              "Type" : "UParticleSystem"
+              "SecondsBeforeInactive" : 0.000000,
+              "SystemUpdateMode" : 0,
+              "ThumbnailWarmup" : 1.000000,
+              "Type" : "UParticleSystem",
+              "UpdateTimeFPS" : 60.000000,
+              "WarmupTickRate" : 0.000000,
+              "WarmupTime" : 0.000000,
+              "bOrientZAxisTowardCamera" : false,
+              "bUseRealtimeThumbnail" : false
             },
             "Id" : 1
+          }, {
+            "Class" : "UParticleEmitter",
+            "Data" : {
+              "LODLevels" : [3],
+              "ObjectName" : "UParticleEmitter_1",
+              "Type" : "UParticleEmitter"
+            },
+            "Id" : 2
+          }, {
+            "Class" : "UParticleLODLevel",
+            "Data" : {
+              "DistanceThreshold" : 100000.000000,
+              "Level" : 0,
+              "Modules" : [5, 6, 7, 8, 9, 10],
+              "ObjectName" : "UParticleLODLevel_1",
+              "RequiredModule" : 4,
+              "Type" : "UParticleLODLevel",
+              "bEnabled" : true
+            },
+            "Id" : 3
+          }, {
+            "Class" : "UParticleModuleRequired",
+            "Data" : {
+              "EmitterDuration" : 1.000000,
+              "Material" : "",
+              "MaxParticles" : 128,
+              "ObjectName" : "UParticleModuleRequired_1",
+              "RenderMode" : 0,
+              "SubImagesHorizontal" : 6,
+              "SubImagesVertical" : 6,
+              "SubUVName" : "Asset/plasma.png",
+              "Type" : "UParticleModuleRequired",
+              "bEnabled" : true,
+              "bLooping" : true,
+              "bSpawnModule" : true,
+              "bUpdateModule" : false,
+              "bUseLocalSpace" : false
+            },
+            "Id" : 4
+          }, {
+            "Class" : "UParticleModuleSpawn",
+            "Data" : {
+              "ObjectName" : "UParticleModuleSpawn_1",
+              "Rate" : 10.000000,
+              "Type" : "UParticleModuleSpawn",
+              "bEnabled" : true,
+              "bSpawnModule" : false,
+              "bUpdateModule" : false
+            },
+            "Id" : 5
+          }, {
+            "Class" : "UParticleModuleLifetime",
+            "Data" : {
+              "LifetimeMax" : 1.000000,
+              "LifetimeMin" : 1.000000,
+              "ObjectName" : "UParticleModuleLifetime_1",
+              "Type" : "UParticleModuleLifetime",
+              "bEnabled" : true,
+              "bSpawnModule" : true,
+              "bUpdateModule" : false
+            },
+            "Id" : 6
+          }, {
+            "Class" : "UParticleModuleLocation",
+            "Data" : {
+              "ObjectName" : "UParticleModuleLocation_1",
+              "StartLocationMax" : {
+                "X" : 0.000000,
+                "Y" : 0.000000,
+                "Z" : 0.000000
+              },
+              "StartLocationMin" : {
+                "X" : 0.000000,
+                "Y" : 0.000000,
+                "Z" : 0.000000
+              },
+              "Type" : "UParticleModuleLocation",
+              "bEnabled" : true,
+              "bSpawnModule" : true,
+              "bUpdateModule" : false
+            },
+            "Id" : 7
+          }, {
+            "Class" : "UParticleModuleVelocity",
+            "Data" : {
+              "ObjectName" : "UParticleModuleVelocity_1",
+              "StartVelocityMax" : {
+                "X" : 10.000000,
+                "Y" : 10.000000,
+                "Z" : 10.000000
+              },
+              "StartVelocityMin" : {
+                "X" : -10.000000,
+                "Y" : -10.000000,
+                "Z" : -10.000000
+              },
+              "Type" : "UParticleModuleVelocity",
+              "bEnabled" : true,
+              "bSpawnModule" : true,
+              "bUpdateModule" : false
+            },
+            "Id" : 8
+          }, {
+            "Class" : "UParticleModuleColor",
+            "Data" : {
+              "EndColor" : {
+                "A" : 0.000000,
+                "B" : 1.000000,
+                "G" : 1.000000,
+                "R" : 1.000000
+              },
+              "ObjectName" : "UParticleModuleColor_1",
+              "StartColor" : {
+                "A" : 1.000000,
+                "B" : 1.000000,
+                "G" : 1.000000,
+                "R" : 1.000000
+              },
+              "Type" : "UParticleModuleColor",
+              "bEnabled" : true,
+              "bSpawnModule" : true,
+              "bUpdateModule" : true
+            },
+            "Id" : 9
+          }, {
+            "Class" : "UParticleModuleSize",
+            "Data" : {
+              "EndSize" : {
+                "X" : 1.000000,
+                "Y" : 1.000000,
+                "Z" : 1.000000
+              },
+              "ObjectName" : "UParticleModuleSize_1",
+              "StartSize" : {
+                "X" : 1.000000,
+                "Y" : 1.000000,
+                "Z" : 1.000000
+              },
+              "Type" : "UParticleModuleSize",
+              "bEnabled" : true,
+              "bSpawnModule" : true,
+              "bUpdateModule" : true
+            },
+            "Id" : 10
           }],
         "RootObjectId" : 1,
         "Version" : 1

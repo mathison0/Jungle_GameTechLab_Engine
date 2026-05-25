@@ -22,6 +22,13 @@ class UPrimitiveComponent;
 struct FSpriteParticleInstanceData;
 class UTexture;
 
+// Cycle 10a: type-agnostic 슬롯용 forward declaration.
+// 실제 struct 정의는 Cycle 11+ 각 emitter cycle에서 (Mesh: Cycle 11, Ribbon: Cycle 12b, Beam: Cycle 13b).
+// 본 cycle 슬롯은 모두 nullptr 유지.
+struct FMeshParticleInstanceData;
+struct FRibbonParticleVertex;
+struct FBeamParticleVertex;
+
 enum class ERenderCommandType
 {
 	Primitive,
@@ -486,4 +493,14 @@ struct FRenderCommand
 	UTexture* ParticleTexture = nullptr;
 	uint32 ParticleSubUVColumns = 1;
 	uint32 ParticleSubUVRows = 1;
+
+	// Cycle 10a: Mesh/Ribbon/Beam Particle 슬롯 (옵션 i 별도 슬롯).
+	// 본 cycle은 wire-up만 — 모두 nullptr/0 유지. 실제 채우기는 Cycle 11+ 각 emitter cycle에서.
+	// generic void* 슬롯 도입 금지 정책 (사용자 결정 2).
+	const FMeshParticleInstanceData* MeshParticleInstances = nullptr;
+	uint32 MeshParticleInstanceCount = 0;
+	const FRibbonParticleVertex* RibbonVertices = nullptr;
+	uint32 RibbonVertexCount = 0;
+	const FBeamParticleVertex* BeamVertices = nullptr;
+	uint32 BeamVertexCount = 0;
 };

@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <variant>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -90,6 +91,35 @@ namespace
     UMaterialInterface* ResolveDrawMaterial(UMaterialInterface* Material)
     {
         return Material ? Material : FResourceManager::Get().GetMaterial("DefaultWhite");
+    }
+
+    UTexture* ResolveParticleTexture(const UParticleModuleRequired* RequiredModule)
+    {
+        if (!RequiredModule)
+        {
+            return nullptr;
+        }
+
+        if (UMaterialInterface* Material = RequiredModule->GetMaterial())
+        {
+            FMaterialParamValue DiffuseMap;
+            if (Material->GetParam("DiffuseMap", DiffuseMap) &&
+                DiffuseMap.Type == EMaterialParamType::Texture &&
+                std::holds_alternative<UTexture*>(DiffuseMap.Value))
+            {
+                if (UTexture* Texture = std::get<UTexture*>(DiffuseMap.Value))
+                {
+                    return Texture;
+                }
+            }
+        }
+
+        if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUVExact(RequiredModule->GetSubUVName()))
+        {
+            return SubUV->Texture;
+        }
+
+        return nullptr;
     }
 
     double CalculateAverageBoneInfluence(const TArray<FSkeletalMeshVertex>& Vertices)
@@ -544,28 +574,101 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             return false;
         }
 
-        ParticleSystemComponent->BuildSpriteInstanceData();
+        // Cycle 10c 계층 분리: Component는 instance 순회 hook만 (RenderCommand 모름).
+        // Instance는 자기 buffer만 갱신, RenderCommand 매핑은 Builder가 책임.
+        ParticleSystemComponent->BuildInstanceData();
 
+        // Cycle 10c: Builder가 instance와 RenderCommand 사이의 매핑 책임.
+        // - Instance::Get*Data() getter로 type별 데이터를 const 포인터+count로 회수 (제로 복사)
+        // - RenderMode switch로 Cmd의 type별 슬롯 + VertexFactoryType 직접 채움
+        // - Instance는 RenderCommand를 모름 (단방향 dependency)
         const TArray<FParticleEmitterInstance*>& EmitterInstances = ParticleSystemComponent->GetEmitterInstances();
         for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmitterInstances.size()); ++EmitterIdx)
         {
-            const TArray<FSpriteParticleInstanceData>& InstanceData = ParticleSystemComponent->GetEmitterInstanceData(EmitterIdx);
-            if (InstanceData.empty())
+            FParticleEmitterInstance* Instance = EmitterInstances[EmitterIdx];
+            if (!Instance || Instance->GetActiveParticleCount() == 0)
             {
                 continue;
             }
 
+            // RenderMode 결정 — TypeDataModule single source (Cycle 8 결정 κ).
+            UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
+            if (!LOD)
+            {
+                continue;
+            }
+            const EParticleEmitterRenderMode RenderMode = LOD->GetEffectiveRenderMode();
+
+            // Cmd 기본 필드 (generic, type 무관) 먼저 채움.
             FRenderCommand Cmd = {};
             Cmd.SourcePrimitive = Primitive;
             Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
-            Cmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
             Cmd.Type = ERenderCommandType::Primitive;
             Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
-            Cmd.ParticleInstances = InstanceData.data();
-            Cmd.ParticleInstanceCount = static_cast<uint32>(InstanceData.size());
-            Cmd.ParticleTexture = nullptr; // TODO: SubUV atlas 텍스처 — 모듈 포팅 후 연결
-            Cmd.ParticleSubUVColumns = 1;
-            Cmd.ParticleSubUVRows = 1;
+
+            // RenderMode별로 적절한 getter 호출 + 해당 type 슬롯만 채움.
+            // 다른 type 슬롯은 zero-init된 nullptr/0 유지 (silent bug 위험 3 회피).
+            // Mesh/Ribbon/Beam은 base default가 nullptr 반환 → Cycle 11+에서 derived가 override해야 데이터 채워짐.
+            uint32 Count = 0;
+            bool bHasData = false;
+            switch (RenderMode)
+            {
+            case EParticleEmitterRenderMode::Sprite:
+                Cmd.ParticleInstances = Instance->GetSpriteInstanceData(Count);
+                Cmd.ParticleInstanceCount = Count;
+                Cmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
+                bHasData = (Cmd.ParticleInstances != nullptr && Count > 0);
+                break;
+            case EParticleEmitterRenderMode::Mesh:
+                Cmd.MeshParticleInstances = Instance->GetMeshInstanceData(Count);
+                Cmd.MeshParticleInstanceCount = Count;
+                Cmd.VertexFactoryType = EVertexFactoryType::MeshParticle;
+                bHasData = (Cmd.MeshParticleInstances != nullptr && Count > 0);
+                break;
+            case EParticleEmitterRenderMode::Ribbon:
+                Cmd.RibbonVertices = Instance->GetRibbonVertexData(Count);
+                Cmd.RibbonVertexCount = Count;
+                Cmd.VertexFactoryType = EVertexFactoryType::RibbonParticle;
+                bHasData = (Cmd.RibbonVertices != nullptr && Count > 0);
+                break;
+            case EParticleEmitterRenderMode::Beam:
+                Cmd.BeamVertices = Instance->GetBeamVertexData(Count);
+                Cmd.BeamVertexCount = Count;
+                Cmd.VertexFactoryType = EVertexFactoryType::BeamParticle;
+                bHasData = (Cmd.BeamVertices != nullptr && Count > 0);
+                break;
+            default:
+                break;
+            }
+
+            // active particle 0개거나 base nullptr fallback(Mesh/Ribbon/Beam 본 cycle 미구현) — Cmd 발행 skip.
+            // 빈 슬롯으로 그리려 하면 D3D 에러 — silent bug 위험 2 회피.
+            if (!bHasData)
+            {
+                continue;
+            }
+
+            const UParticleLODLevel* LODLevel = EmitterInstances[EmitterIdx]
+                ? EmitterInstances[EmitterIdx]->GetCurrentLODLevel()
+                : nullptr;
+            const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+            const USubUVModule* SubUV = nullptr;
+            if (LODLevel)
+            {
+                for (UParticleModule* Module : LODLevel->GetModules())
+                {
+                    if (USubUVModule* Found = Cast<USubUVModule>(Module))
+                    {
+                        SubUV = Found;
+                        break;
+                    }
+                }
+            }
+            const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;
+            Cmd.Material = RequiredModule ? RequiredModule->GetMaterial() : nullptr;
+            Cmd.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : ResolveParticleTexture(RequiredModule);
+            Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
+            Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
 
             RenderBus.AddCommand(ERenderPass::Particle, Cmd);
         }

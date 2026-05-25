@@ -250,7 +250,7 @@ void FEditorMainPanel::RenderParticleSystemEditorDocument(float DeltaTime)
 	if (!ActiveTab->Id.PayloadId.empty() &&
 		Widgets.ParticleSystemWidget.GetDocumentPath() != ActiveTab->Id.PayloadId)
 	{
-		Widgets.ParticleSystemWidget.OpenLayoutTest(ActiveTab->Id.PayloadId);
+		Widgets.ParticleSystemWidget.OpenParticleSystem(ActiveTab->Id.PayloadId);
 	}
 
 	EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.ParticleSystemWidget.IsDirty());
@@ -283,7 +283,7 @@ void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTim
 	if (!ParticleTab->Id.PayloadId.empty() &&
 		Widgets.ParticleSystemWidget.GetDocumentPath() != ParticleTab->Id.PayloadId)
 	{
-		Widgets.ParticleSystemWidget.OpenLayoutTest(ParticleTab->Id.PayloadId);
+		Widgets.ParticleSystemWidget.OpenParticleSystem(ParticleTab->Id.PayloadId);
 	}
 
 	const float TitleBarFramePaddingY = FEditorDetachedWindowChrome::GetTitleBarFramePaddingY();

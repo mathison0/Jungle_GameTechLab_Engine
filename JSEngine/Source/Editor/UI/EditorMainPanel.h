@@ -53,7 +53,7 @@ public:
 	void OpenCurveAsset(const FString& CurvePath);
 	void OpenAnimGraphAsset(const FString& AnimGraphPath);
 	void OpenRuntimeUIPreviewAsset(const FString& RmlPath = "");
-	void OpenParticleEditorLayoutTest(const FString& ParticleSystemPath = "");
+	void OpenParticleSystemAsset(const FString& ParticleSystemPath);
 	void OpenViewer(FEditorViewer* Viewer);
 	bool ChangeViewerTarget(FEditorViewer* Viewer, const FString& NewFileName);
 	void RequestDockViewer(FEditorViewer* Viewer);

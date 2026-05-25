@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleSystemComponent.h"
 
 FParticleEmitterInstance::~FParticleEmitterInstance()
@@ -27,7 +28,6 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	{
 		SpriteTemplate->CacheEmitterModuleInfo();
 		ParticleSize = SpriteTemplate->GetParticleSize();
-		ParticleStride = ParticleSize;
 		MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
 		CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(0.0f);
 		CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
@@ -35,16 +35,32 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	else
 	{
 		ParticleSize = sizeof(FBaseParticle);
-		ParticleStride = sizeof(FBaseParticle);
 		MaxActiveParticles = 1;
 	}
 
-	ParticleData = new uint8[ParticleStride * MaxActiveParticles];
-	ParticleIndices = new uint16[MaxActiveParticles];
+	// Cycle 10d: payload-aware stride가 container 내부에서 일관 적용되도록
+	// PayloadBytes 계산을 Allocate 호출 앞으로 이동. silent bug ξ 해소.
+	// USpriteTypeData::RequiredPayloadBytes() = 0 → Sprite 회귀 0.
+	const int32 PayloadBytes = (CurrentLODLevel && CurrentLODLevel->GetTypeDataModule())
+		? CurrentLODLevel->GetTypeDataModule()->RequiredPayloadBytes()
+		: 0;
+	InstancePayloadSize = PayloadBytes;
+	PayloadOffset = ParticleSize;
 
+	// Cycle 10d: stride source-of-truth = container. Allocate가 (ParticleSize + PayloadBytes)를
+	// 받아 align 후 멤버 ParticleStride에 저장하고 단일 블록을 할당한다.
+	// 이전 cycle의 redundant `new uint8/uint16` 라인은 silent bug ν 원인이므로 제거됨.
+	if (!ParticleStorage.Allocate(MaxActiveParticles, ParticleSize + PayloadBytes))
+	{
+		MaxActiveParticles = 0;
+		return;
+	}
+
+	// Allocate는 메모리 placement만 수행 — ParticleIndices 값 초기화 루프 유지 필수
+	// (제거 시 첫 Spawn에서 garbage 슬롯 참조 → 즉시 crash).
 	for (int32 Index = 0; Index < MaxActiveParticles; ++Index)
 	{
-		ParticleIndices[Index] = static_cast<uint16>(Index);
+		ParticleStorage.ParticleIndices[Index] = static_cast<uint16>(Index);
 	}
 }
 
@@ -53,11 +69,8 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 // output : Particle buffers are released and instance counters return to the default state
 void FParticleEmitterInstance::Reset()
 {
-	delete[] ParticleData;
-	delete[] ParticleIndices;
+	ParticleStorage.Reset();
 	delete[] InstanceData;
-	ParticleData = nullptr;
-	ParticleIndices = nullptr;
 	InstanceData = nullptr;
 	InstancePayloadSize = 0;
 	PayloadOffset = 0;
@@ -73,9 +86,9 @@ void FParticleEmitterInstance::Reset()
 // input : DeltaTime
 // DeltaTime : elapsed time for this simulation step
 // output : New particles are spawned, active particles are updated, and expired particles are removed
-void FParticleEmitterInstance::Tick(float DeltaTime)
+void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 {
-	if (!SpriteTemplate || !Component || !ParticleData || !ParticleIndices || DeltaTime <= 0.0f)
+	if (!SpriteTemplate || !Component || !ParticleStorage.ParticleData || !ParticleStorage.ParticleIndices || DeltaTime <= 0.0f)
 	{
 		return;
 	}
@@ -87,9 +100,12 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
 	}
 
 	int32 SpawnCount = 0;
-	if (UParticleModuleSpawn* SpawnModule = CurrentLODLevel->GetSpawnModule())
+	if (bAllowSpawning)
 	{
-		SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
+		if (UParticleModuleSpawn* SpawnModule = CurrentLODLevel->GetSpawnModule())
+		{
+			SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
+		}
 	}
 
 	SpawnParticles(SpawnCount, 0.0f, SpawnCount > 0 ? DeltaTime / static_cast<float>(SpawnCount) : 0.0f,
@@ -162,8 +178,8 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 	for (int32 SpawnIndex = 0; SpawnIndex < Count && ActiveParticles < MaxActiveParticles; ++SpawnIndex)
 	{
 		const int32 ActiveIndex = ActiveParticles;
-		const uint16 SlotIndex = ParticleIndices[ActiveIndex];
-		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(ParticleData + SlotIndex * ParticleStride);
+		const uint16 SlotIndex = ParticleStorage.ParticleIndices[ActiveIndex];
+		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(ParticleStorage.ParticleData + SlotIndex * ParticleStorage.GetStride());
 		*Particle = FBaseParticle();
 
 		Particle->ParticleId = ++ParticleCounter;
@@ -197,24 +213,25 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	}
 
 	const int32 LastActiveIndex = ActiveParticles - 1;
-	std::swap(ParticleIndices[Index], ParticleIndices[LastActiveIndex]);
+	std::swap(ParticleStorage.ParticleIndices[Index], ParticleStorage.ParticleIndices[LastActiveIndex]);
 	--ActiveParticles;
 }
 
 FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
 {
     FParticleEmitterRuntimeView RuntimeView;
-    RuntimeView.ParticleData = ParticleData;
-    RuntimeView.ParticleIndices = ParticleIndices;
+    RuntimeView.ParticleData = ParticleStorage.ParticleData;
+    RuntimeView.ParticleIndices = ParticleStorage.ParticleIndices;
     RuntimeView.ActiveParticles = ActiveParticles;
     RuntimeView.MaxActiveParticles = MaxActiveParticles;
-    RuntimeView.ParticleStride = ParticleStride;
+    RuntimeView.ParticleStride = ParticleStorage.GetStride();  // Cycle 10d: container 위임
     RuntimeView.ParticleSize = ParticleSize;
     RuntimeView.CurrentLODLevelIndex = CurrentLODLevelIndex;
 
-	if (CurrentLODLevel && CurrentLODLevel->GetRequiredModule())
+	if (CurrentLODLevel)
     {
-        RuntimeView.RenderMode = CurrentLODLevel->GetRequiredModule()->GetRenderMode();
+        // TypeDataModule을 single source로, 없을 때 RequiredModule.RenderMode로 fallback.
+        RuntimeView.RenderMode = CurrentLODLevel->GetEffectiveRenderMode();
     }
 
     return RuntimeView;
@@ -226,11 +243,11 @@ FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
 // output : Pointer to particle data, or nullptr when the index is invalid
 FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex)
 {
-	if (!ParticleData || !ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
+	if (!ParticleStorage.ParticleData || !ParticleStorage.ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
 	{
 		return nullptr;
 	}
-	return reinterpret_cast<FBaseParticle*>(ParticleData + ParticleIndices[ActiveIndex] * ParticleStride);
+	return reinterpret_cast<FBaseParticle*>(ParticleStorage.ParticleData + ParticleStorage.ParticleIndices[ActiveIndex] * ParticleStorage.GetStride());
 }
 
 // Function : Get read-only particle data by active index
@@ -239,11 +256,11 @@ FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex)
 // output : Const pointer to particle data, or nullptr when the index is invalid
 const FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex) const
 {
-	if (!ParticleData || !ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
+	if (!ParticleStorage.ParticleData || !ParticleStorage.ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
 	{
 		return nullptr;
 	}
-	return reinterpret_cast<const FBaseParticle*>(ParticleData + ParticleIndices[ActiveIndex] * ParticleStride);
+	return reinterpret_cast<const FBaseParticle*>(ParticleStorage.ParticleData + ParticleStorage.ParticleIndices[ActiveIndex] * ParticleStorage.GetStride());
 }
 
 
@@ -278,4 +295,87 @@ int32 FParticleEmitterInstance::ConsumeSpawnCount(float Rate, float DeltaTime)
     const int32 SpawnCount = static_cast<int32>(std::floor(SpawnAmount));
     SpawnFraction = SpawnAmount - static_cast<float>(SpawnCount);
     return SpawnCount;
+}
+
+// Function : Query payload byte requirement from current LOD's TypeDataModule
+// input : None
+// output : Bytes required by TypeData beyond FBaseParticle, or 0 when absent
+int32 FParticleEmitterInstance::GetRequiredPayloadBytes() const
+{
+    if (CurrentLODLevel)
+    {
+        if (const UParticleModuleTypeDataBase* TypeData = CurrentLODLevel->GetTypeDataModule())
+        {
+            return TypeData->RequiredPayloadBytes();
+        }
+    }
+    return 0;
+}
+
+// Function : Build Sprite instance data into internal buffer (base/Sprite path — Cycle 10c)
+// input : None
+// output : SpriteInstanceDataBuffer 새로 채움 — RenderCommand 매핑은 Builder가 별도 수행 (계층 분리)
+// Mesh/Ribbon/Beam derived instance가 override해 자기 type의 buffer를 채움 (Cycle 11+).
+void FParticleEmitterInstance::BuildInstanceData()
+{
+    SpriteInstanceDataBuffer.clear();
+    if (ActiveParticles <= 0)
+    {
+        return;
+    }
+
+    SpriteInstanceDataBuffer.reserve(ActiveParticles);
+    for (int32 i = 0; i < ActiveParticles; ++i)
+    {
+        const FBaseParticle* Particle = GetParticle(i);
+        if (!Particle)
+        {
+            continue;
+        }
+
+        FSpriteParticleInstanceData Data;
+        Data.Position   = Particle->Location;
+        Data.Size       = FVector2(Particle->Size.X, Particle->Size.Y);
+        Data.Color      = Particle->Color;
+        Data.Rotation   = Particle->Rotation;
+        Data.SubUVIndex = Particle->SubUVIndex;
+        SpriteInstanceDataBuffer.push_back(Data);
+    }
+}
+
+// Function : Expose Sprite instance buffer to Builder (base/Sprite path)
+// input : OutCount (out-param)
+// output : Pointer to first element + count, or nullptr/0 when empty
+// USpriteTypeData가 base instance 사용 (Cycle 8/9 결정) — base가 직접 Sprite buffer 노출.
+const FSpriteParticleInstanceData* FParticleEmitterInstance::GetSpriteInstanceData(uint32& OutCount) const
+{
+    OutCount = static_cast<uint32>(SpriteInstanceDataBuffer.size());
+    return SpriteInstanceDataBuffer.empty() ? nullptr : SpriteInstanceDataBuffer.data();
+}
+
+// Function : Mesh instance data getter — base default returns nullptr
+// input : OutCount (out-param, always set to 0)
+// output : Always nullptr — Mesh derived instance가 Cycle 11에서 override해 자기 buffer 노출
+const FMeshParticleInstanceData* FParticleEmitterInstance::GetMeshInstanceData(uint32& OutCount) const
+{
+    OutCount = 0;
+    return nullptr;
+}
+
+// Function : Ribbon vertex data getter — base default returns nullptr
+// input : OutCount (out-param, always set to 0)
+// output : Always nullptr — Ribbon derived instance가 Cycle 12+에서 override
+const FRibbonParticleVertex* FParticleEmitterInstance::GetRibbonVertexData(uint32& OutCount) const
+{
+    OutCount = 0;
+    return nullptr;
+}
+
+// Function : Beam vertex data getter — base default returns nullptr
+// input : OutCount (out-param, always set to 0)
+// output : Always nullptr — Beam derived instance가 Cycle 13+에서 override
+const FBeamParticleVertex* FParticleEmitterInstance::GetBeamVertexData(uint32& OutCount) const
+{
+    OutCount = 0;
+    return nullptr;
 }

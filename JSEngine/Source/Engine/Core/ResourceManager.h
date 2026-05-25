@@ -108,6 +108,8 @@ public:
 
 	FTextureAtlasResource* FindSubUV(const FName& SubUVName);
 	const FTextureAtlasResource* FindSubUV(const FName& SubUVName) const;
+	FTextureAtlasResource* FindSubUVExact(const FName& SubUVName);
+	const FTextureAtlasResource* FindSubUVExact(const FName& SubUVName) const;
 	void RegisterSubUV(const FName& SubUVName, const FString& InPath, uint32 Columns = 1, uint32 Rows = 1);
 	TArray<FString> GetSubUVNames() const;
 
@@ -143,6 +145,8 @@ public:
 	UParticleSystem* LoadParticleSystem(const FString& Path);
 	bool SaveParticleSystem(UParticleSystem* Asset, const FString& Path);
 	bool RunParticleSystemSerializationSmokeTest(const FString& Path);
+	FString SerializeParticleSystemToString(UParticleSystem* Asset);
+	UParticleSystem* LoadParticleSystemFromString(const FString& Snapshot);
 
 	ID3D11SamplerState* GetOrCreateSamplerState(ESamplerType Type, ID3D11Device* Device = nullptr);
 	ID3D11DepthStencilState* GetOrCreateDepthStencilState(EDepthStencilType Type, ID3D11Device* Device = nullptr);

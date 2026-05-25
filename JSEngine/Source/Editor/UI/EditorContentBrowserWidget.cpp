@@ -978,7 +978,7 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 		}
 		else if (IsParticleSystemAsset(Item.Extension))
 		{
-			EditorEngine->GetMainPanel().OpenParticleEditorLayoutTest(MakeRelativeProjectPath(Item.Path));
+			EditorEngine->GetMainPanel().OpenParticleSystemAsset(MakeRelativeProjectPath(Item.Path));
 		}
 		else if (Item.Extension == ".scene")
 		{

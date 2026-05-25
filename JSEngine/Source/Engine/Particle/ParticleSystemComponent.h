@@ -2,7 +2,6 @@
 
 #include "Component/PrimitiveComponent.h"
 #include "Particle/ParticleEmitterInstance.h"
-#include "Render/Resource/VertexTypes.h"
 
 DECLARE_DELEGATE(FOnParticleCollide, const FParticleEventCollideData&);
 
@@ -23,14 +22,15 @@ public:
 
 	void RecreateEmitterInstances();
 	void ClearEmitterInstances();
+	void TickPreview(float DeltaTime, bool bAllowSpawning);
 	float ComputeEmitterLODDistance() const;
 	void QueueCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchQueuedParticleEvents();
 
-	// 활성 파티클을 emitter별 FSpriteParticleInstanceData 배열로 변환합니다.
-	// PrimitiveDrawCommandBuilder가 FRenderCommand 발행 직전에 호출합니다.
-	void BuildSpriteInstanceData();
-	const TArray<FSpriteParticleInstanceData>& GetEmitterInstanceData(int32 EmitterIndex) const;
+	// Cycle 10c 계층 분리: type-agnostic dispatch hook.
+	// 모든 emitter instance에 대해 Instance->BuildInstanceData()를 호출만 함 (내부 buffer 갱신).
+	// RenderCommand 매핑은 Builder가 별도 수행 — Component는 FRenderCommand 모름.
+	void BuildInstanceData();
 
 	EPrimitiveType GetPrimitiveType() const override { return EPrimitiveType::EPT_ParticleSystem; }
 	void UpdateWorldAABB() const override;
@@ -60,7 +60,4 @@ private:
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	TArray<FParticleEventCollideData> PendingCollisionEvents;
-
-	// Per-emitter Sprite instance data 캐시. 매 프레임 BuildSpriteInstanceData에서 갱신.
-	TArray<TArray<FSpriteParticleInstanceData>> EmitterInstanceData;
 };

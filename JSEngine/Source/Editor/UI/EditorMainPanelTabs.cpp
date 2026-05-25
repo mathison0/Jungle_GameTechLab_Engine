@@ -461,6 +461,7 @@ bool FEditorMainPanel::RequestCloseEditorTab(const FEditorTabId& TabId)
 	if (TabId.Kind == EEditorTabKind::ParticleSystemEditor)
 	{
 		bDetachedParticleSystemEditorOpen = false;
+		Widgets.ParticleSystemWidget.CloseDocument(TabId.PayloadId);
 	}
 
 	return EditorTabs.CloseTab(TabId);

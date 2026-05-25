@@ -134,6 +134,42 @@ void FEditorMainPanel::BuildActiveEditorCommandList(FEditorCommandList& OutComma
 			[ViewerWidget]()
 			{
 				return ViewerWidget->CanSaveMesh();
+		});
+		return;
+	}
+
+	if (RoutingTabId.Kind == EEditorTabKind::ParticleSystemEditor)
+	{
+		OutCommands.MapAction(
+			EEditorCommandId::Save,
+			{ static_cast<int32>(ImGuiKey_S), true, false, false },
+			[this]()
+			{
+				Widgets.ParticleSystemWidget.Save();
+			});
+
+		OutCommands.MapAction(
+			EEditorCommandId::Undo,
+			{ static_cast<int32>(ImGuiKey_Z), true, false, false },
+			[this]()
+			{
+				Widgets.ParticleSystemWidget.Undo();
+			},
+			[this]()
+			{
+				return Widgets.ParticleSystemWidget.CanUndo();
+			});
+
+		OutCommands.MapAction(
+			EEditorCommandId::Redo,
+			{ static_cast<int32>(ImGuiKey_Z), true, true, false },
+			[this]()
+			{
+				Widgets.ParticleSystemWidget.Redo();
+			},
+			[this]()
+			{
+				return Widgets.ParticleSystemWidget.CanRedo();
 			});
 		return;
 	}

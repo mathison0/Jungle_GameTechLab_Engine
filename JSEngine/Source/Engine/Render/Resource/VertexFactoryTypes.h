@@ -29,6 +29,12 @@ enum class EVertexFactoryType : uint8
     Gizmo,
     Decal,
     SpriteParticle,
+    // 본 enum entry 추가는 silent bug §7-1 회피의 필수 절반.
+    // 나머지 절반은 Registry::Get switch에 명시 case 추가 (아래 참조).
+    // Layout/Desc 본문은 Cycle 11+ 각 emitter cycle에서 채움.
+    MeshParticle,
+    RibbonParticle,
+    BeamParticle,
 };
 
 // VertexFactory별 Shader Entry 정책입니다.
@@ -227,6 +233,11 @@ public:
             SpriteParticleLayout
         };
 
+        // Mesh/Ribbon/Beam Particle는 본 cycle (10a)에서 enum + case만 wire-up.
+        // Layout/Desc 본문은 Cycle 11+ 각 emitter cycle에서 채움.
+        // 명시 case가 없으면 default(StaticMeshDesc) fallback → silent bug §7-1 직접 충돌.
+        static const FVertexFactoryDesc EmptyParticleDesc = {};
+
         switch (Type)
         {
         case EVertexFactoryType::SkeletalMesh:
@@ -247,6 +258,11 @@ public:
         // 신규 EVertexFactoryType 추가 시 여기에 명시 case 추가 필수.
         case EVertexFactoryType::SpriteParticle:
             return SpriteParticleDesc;
+        // Cycle 10a NOP: 명시 case로 default 분기 차단. Cycle 11/12b/13b에서 본문 교체.
+        case EVertexFactoryType::MeshParticle:
+        case EVertexFactoryType::RibbonParticle:
+        case EVertexFactoryType::BeamParticle:
+            return EmptyParticleDesc;
         case EVertexFactoryType::StaticMesh:
         case EVertexFactoryType::ProceduralMesh:
         default:

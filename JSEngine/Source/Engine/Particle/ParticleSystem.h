@@ -2,8 +2,7 @@
 
 #include "Object/Object.h"
 #include "Particle/ParticleModules.h"
-
-class UParticleModuleTypeDataBase;
+#include "Particle/ParticleModuleTypeData.h"
 
 UCLASS()
 class UParticleLODLevel : public UObject
@@ -42,6 +41,11 @@ public:
 	const TArray<UParticleModule*>& GetModules() const { return Modules; }
 	const TArray<UParticleModule*>& GetSpawnModules() const { return SpawnModules; }
 	const TArray<UParticleModule*>& GetUpdateModules() const { return UpdateModules; }
+	UParticleModuleTypeDataBase* GetTypeDataModule() const { return TypeDataModule; }
+
+	// Resolve effective render mode: TypeDataModule is single source of truth.
+	// Falls back to RequiredModule.RenderMode when TypeData is absent, then Sprite.
+	EParticleEmitterRenderMode GetEffectiveRenderMode() const;
 
 	UPROPERTY(DisplayName = "Level")
 	int32 Level = 0;
@@ -58,6 +62,9 @@ public:
 	UPROPERTY(DisplayName = "Modules")
 	TArray<UParticleModule*> Modules;
 
+	// silent bug ι 회피: UPROPERTY로 마크하지 않으면 .particlesystem 저장-로드 후 nullptr이 되어
+	// 모든 emitter가 Sprite로 fallback되는 silent regression이 발생한다.
+	UPROPERTY(DisplayName = "TypeData Module")
 	UParticleModuleTypeDataBase* TypeDataModule = nullptr;
 
 private:
@@ -109,9 +116,46 @@ public:
     UParticleEmitter* AddEmitter();
     void RemoveEmitter(int32 Index);
     void ClearEmitters();
-    void CacheEmitterModuleInfo();
+	void CacheEmitterModuleInfo();
     bool Validate(TArray<FString>* OutErrors = nullptr) const;
     static UParticleSystem* CreateDefaultSpriteSystem();
+
+	UPROPERTY(DisplayName = "Update Time FPS", Min = 0.0f)
+	float UpdateTimeFPS = 60.0f;
+
+	UPROPERTY(DisplayName = "Warmup Time - beware hitches!", Min = 0.0f)
+	float WarmupTime = 0.0f;
+
+	UPROPERTY(DisplayName = "Warmup Tick Rate", Min = 0.0f)
+	float WarmupTickRate = 0.0f;
+
+	UPROPERTY(DisplayName = "Seconds Before Inactive", Min = 0.0f)
+	float SecondsBeforeInactive = 0.0f;
+
+	UPROPERTY(DisplayName = "Orient ZAxis Toward Camera")
+	bool bOrientZAxisTowardCamera = false;
+
+	UPROPERTY(DisplayName = "System Update Mode")
+	int32 SystemUpdateMode = 0;
+
+	UPROPERTY(DisplayName = "Thumbnail Warmup", Min = 0.0f)
+	float ThumbnailWarmup = 1.0f;
+
+	UPROPERTY(DisplayName = "Use Realtime Thumbnail")
+	bool bUseRealtimeThumbnail = false;
+
+	UPROPERTY(DisplayName = "LODDistance Check Time", Min = 0.0f)
+	float LODDistanceCheckTime = 0.25f;
+
+	UPROPERTY(DisplayName = "LODDistances")
+	TArray<float> LODDistances = { 0.0f, 1000.0f };
+
+	UPROPERTY(DisplayName = "LODSettings")
+	TArray<int32> LODSettings = { 0, 1 };
+
+	UPROPERTY(DisplayName = "LODMethod")
+	int32 LODMethod = 0;
+
 	UPROPERTY(DisplayName = "Emitters")
     TArray<UParticleEmitter*> Emitters;
 };

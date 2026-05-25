@@ -107,7 +107,7 @@ FEditorTabId MakeParticleSystemEditorTabId(const FString& ParticleSystemPath)
 {
 	FEditorTabId TabId;
 	TabId.Kind = EEditorTabKind::ParticleSystemEditor;
-	TabId.PayloadId = ParticleSystemPath.empty() ? "__ParticleSystemLayoutTest" : ParticleSystemPath;
+	TabId.PayloadId = ParticleSystemPath;
 	return TabId;
 }
 

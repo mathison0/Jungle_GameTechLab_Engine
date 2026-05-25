@@ -345,13 +345,13 @@
     }],
   "ClassName" : "UWorld",
   "Name" : "deleteParticle",
-  "NextUUID" : 200,
+  "NextUUID" : 273,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [2.674903, -2.351694, 3.867864],
+    "Location" : [-3.372119, -3.574261, 3.486931],
     "NearClip" : 0.100000,
-    "Rotation" : [19.724474, -27.931366, -142.568710]
+    "Rotation" : [19.724623, -27.931366, -142.568527]
   },
   "Version" : 6,
   "WorldSettings" : {

@@ -202,6 +202,135 @@ namespace
 		}
 	}
 
+	json::JSON BuildParticleSystemAssetJson(UParticleSystem* Asset, const FString& AssetPath)
+	{
+		json::JSON JsonData = json::JSON::Make(json::JSON::Class::Object);
+		if (!Asset)
+		{
+			return JsonData;
+		}
+
+		FParticleSystemObjectGraphResolver Resolver;
+		CollectParticleSystemObjectGraph(Asset, Resolver);
+
+		JsonData["Format"] = "ParticleSystemAsset";
+		JsonData["Version"] = 1;
+		JsonData["AssetPath"] = AssetPath;
+		JsonData["RootObjectId"] = static_cast<int32>(Resolver.GetObjectId(Asset));
+
+		json::JSON ObjectsJson = json::JSON::Make(json::JSON::Class::Array);
+		const TArray<UObject*>& Objects = Resolver.GetObjects();
+		for (int32 Index = 0; Index < static_cast<int32>(Objects.size()); ++Index)
+		{
+			UObject* Object = Objects[Index];
+			if (!IsParticleSystemGraphObject(Object))
+			{
+				continue;
+			}
+
+			json::JSON ObjectNode = json::JSON::Make(json::JSON::Class::Object);
+			ObjectNode["Id"] = Index + 1;
+			ObjectNode["Class"] = Object->GetClassName();
+
+			json::JSON ObjectData = json::JSON::Make(json::JSON::Class::Object);
+			FJsonWriter Writer(ObjectData);
+			Writer.SetObjectResolver(&Resolver);
+			Object->Serialize(Writer);
+			ObjectNode["Data"] = ObjectData;
+			ObjectsJson.append(ObjectNode);
+		}
+		JsonData["Objects"] = ObjectsJson;
+		return JsonData;
+	}
+
+	UParticleSystem* LoadParticleSystemFromJson(json::JSON& JsonData, const FString& SourceLabel)
+	{
+		if (JsonData.JSONType() != json::JSON::Class::Object)
+		{
+			UE_LOG_ERROR("[ParticleSystemAsset] Invalid json: %s", SourceLabel.c_str());
+			return nullptr;
+		}
+
+		if (JsonData.hasKey("Objects") && JsonData["Objects"].JSONType() == json::JSON::Class::Array)
+		{
+			FParticleSystemObjectGraphResolver Resolver;
+			json::JSON& ObjectsJson = JsonData["Objects"];
+
+			for (int32 Index = 0; Index < static_cast<int32>(ObjectsJson.length()); ++Index)
+			{
+				json::JSON& ObjectNode = ObjectsJson.at(Index);
+				if (ObjectNode.JSONType() != json::JSON::Class::Object)
+				{
+					continue;
+				}
+
+				const uint32 Id = ObjectNode.hasKey("Id") ? static_cast<uint32>(ObjectNode["Id"].ToInt()) : static_cast<uint32>(Index + 1);
+				const FString ClassName = ObjectNode.hasKey("Class")
+					? ObjectNode["Class"].ToString()
+					: (ObjectNode.hasKey("Data") && ObjectNode["Data"].hasKey("Type") ? ObjectNode["Data"]["Type"].ToString() : FString());
+				UClass* Class = FReflectionRegistry::Get().FindClass(ClassName);
+				if (!IsParticleSystemGraphClass(Class))
+				{
+					UE_LOG_ERROR("[ParticleSystemAsset] Invalid object class '%s': %s", ClassName.c_str(), SourceLabel.c_str());
+					return nullptr;
+				}
+
+				UObject* Object = NewObject(Class);
+				if (!Object)
+				{
+					UE_LOG_ERROR("[ParticleSystemAsset] Failed to create object '%s': %s", ClassName.c_str(), SourceLabel.c_str());
+					return nullptr;
+				}
+
+				Resolver.SetObject(Id, Object);
+			}
+
+			for (int32 Index = 0; Index < static_cast<int32>(ObjectsJson.length()); ++Index)
+			{
+				json::JSON& ObjectNode = ObjectsJson.at(Index);
+				if (ObjectNode.JSONType() != json::JSON::Class::Object)
+				{
+					continue;
+				}
+
+				const uint32 Id = ObjectNode.hasKey("Id") ? static_cast<uint32>(ObjectNode["Id"].ToInt()) : static_cast<uint32>(Index + 1);
+				UObject* Object = Resolver.ResolveObjectId(Id, nullptr);
+				if (!Object)
+				{
+					continue;
+				}
+
+				json::JSON& ObjectData = ObjectNode.hasKey("Data") ? ObjectNode["Data"] : ObjectNode;
+				FJsonReader Reader(ObjectData);
+				Reader.SetObjectResolver(&Resolver);
+				Object->Serialize(Reader);
+			}
+
+			const uint32 RootObjectId = JsonData.hasKey("RootObjectId") ? static_cast<uint32>(JsonData["RootObjectId"].ToInt()) : 1;
+			UParticleSystem* Asset = Cast<UParticleSystem>(Resolver.ResolveObjectId(RootObjectId, UParticleSystem::StaticClass()));
+			if (!Asset)
+			{
+				UE_LOG_ERROR("[ParticleSystemAsset] Missing root particle system: %s", SourceLabel.c_str());
+				return nullptr;
+			}
+
+			RebuildParticleSystemCaches(Asset);
+			return Asset;
+		}
+
+		UParticleSystem* Asset = UObjectManager::Get().CreateObject<UParticleSystem>();
+		if (!Asset)
+		{
+			UE_LOG_ERROR("[ParticleSystemAsset] Failed to create asset object: %s", SourceLabel.c_str());
+			return nullptr;
+		}
+
+		FJsonReader Reader(JsonData);
+		Asset->Serialize(Reader);
+		RebuildParticleSystemCaches(Asset);
+		return Asset;
+	}
+
 	FString MakeProjectRelativePath(const FString& Path)
 	{
 		const FString NormalizedPath = FPaths::Normalize(Path);
@@ -1054,6 +1183,16 @@ const FTextureAtlasResource* FResourceManager::FindSubUV(const FName& SubUVName)
 	return AtlasCache.FindSubUV(SubUVName);
 }
 
+FTextureAtlasResource* FResourceManager::FindSubUVExact(const FName& SubUVName)
+{
+	return AtlasCache.FindSubUVExact(SubUVName);
+}
+
+const FTextureAtlasResource* FResourceManager::FindSubUVExact(const FName& SubUVName) const
+{
+	return AtlasCache.FindSubUVExact(SubUVName);
+}
+
 void FResourceManager::RegisterSubUV(const FName& SubUVName, const FString& InPath, uint32 Columns, uint32 Rows)
 {
 	AtlasCache.RegisterSubUV(SubUVName, InPath, Columns, Rows);
@@ -1768,90 +1907,7 @@ UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)
 	);
 
 	json::JSON JsonData = json::JSON::Load(JsonStr);
-	if (JsonData.JSONType() != json::JSON::Class::Object)
-	{
-		UE_LOG_ERROR("[ParticleSystemAsset] Invalid json: %s", NormalizedPath.c_str());
-		return nullptr;
-	}
-
-	if (JsonData.hasKey("Objects") && JsonData["Objects"].JSONType() == json::JSON::Class::Array)
-	{
-		FParticleSystemObjectGraphResolver Resolver;
-		json::JSON& ObjectsJson = JsonData["Objects"];
-
-		for (int32 Index = 0; Index < static_cast<int32>(ObjectsJson.length()); ++Index)
-		{
-			json::JSON& ObjectNode = ObjectsJson.at(Index);
-			if (ObjectNode.JSONType() != json::JSON::Class::Object)
-			{
-				continue;
-			}
-
-			const uint32 Id = ObjectNode.hasKey("Id") ? static_cast<uint32>(ObjectNode["Id"].ToInt()) : static_cast<uint32>(Index + 1);
-			const FString ClassName = ObjectNode.hasKey("Class")
-				? ObjectNode["Class"].ToString()
-				: (ObjectNode.hasKey("Data") && ObjectNode["Data"].hasKey("Type") ? ObjectNode["Data"]["Type"].ToString() : FString());
-			UClass* Class = FReflectionRegistry::Get().FindClass(ClassName);
-			if (!IsParticleSystemGraphClass(Class))
-			{
-				UE_LOG_ERROR("[ParticleSystemAsset] Invalid object class '%s': %s", ClassName.c_str(), NormalizedPath.c_str());
-				return nullptr;
-			}
-
-			UObject* Object = NewObject(Class);
-			if (!Object)
-			{
-				UE_LOG_ERROR("[ParticleSystemAsset] Failed to create object '%s': %s", ClassName.c_str(), NormalizedPath.c_str());
-				return nullptr;
-			}
-
-			Resolver.SetObject(Id, Object);
-		}
-
-		for (int32 Index = 0; Index < static_cast<int32>(ObjectsJson.length()); ++Index)
-		{
-			json::JSON& ObjectNode = ObjectsJson.at(Index);
-			if (ObjectNode.JSONType() != json::JSON::Class::Object)
-			{
-				continue;
-			}
-
-			const uint32 Id = ObjectNode.hasKey("Id") ? static_cast<uint32>(ObjectNode["Id"].ToInt()) : static_cast<uint32>(Index + 1);
-			UObject* Object = Resolver.ResolveObjectId(Id, nullptr);
-			if (!Object)
-			{
-				continue;
-			}
-
-			json::JSON& ObjectData = ObjectNode.hasKey("Data") ? ObjectNode["Data"] : ObjectNode;
-			FJsonReader Reader(ObjectData);
-			Reader.SetObjectResolver(&Resolver);
-			Object->Serialize(Reader);
-		}
-
-		const uint32 RootObjectId = JsonData.hasKey("RootObjectId") ? static_cast<uint32>(JsonData["RootObjectId"].ToInt()) : 1;
-		UParticleSystem* Asset = Cast<UParticleSystem>(Resolver.ResolveObjectId(RootObjectId, UParticleSystem::StaticClass()));
-		if (!Asset)
-		{
-			UE_LOG_ERROR("[ParticleSystemAsset] Missing root particle system: %s", NormalizedPath.c_str());
-			return nullptr;
-		}
-
-		RebuildParticleSystemCaches(Asset);
-		return Asset;
-	}
-
-	UParticleSystem* Asset = UObjectManager::Get().CreateObject<UParticleSystem>();
-	if (!Asset)
-	{
-		UE_LOG_ERROR("[ParticleSystemAsset] Failed to create asset object: %s", NormalizedPath.c_str());
-		return nullptr;
-	}
-
-	FJsonReader Reader(JsonData);
-	Asset->Serialize(Reader);
-	RebuildParticleSystemCaches(Asset);
-	return Asset;
+	return LoadParticleSystemFromJson(JsonData, NormalizedPath);
 }
 
 bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString& Path)
@@ -1870,37 +1926,7 @@ bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString&
 	const std::filesystem::path FilePath =
 		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
 
-	json::JSON JsonData = json::JSON::Make(json::JSON::Class::Object);
-	FParticleSystemObjectGraphResolver Resolver;
-	CollectParticleSystemObjectGraph(Asset, Resolver);
-
-	JsonData["Format"] = "ParticleSystemAsset";
-	JsonData["Version"] = 1;
-	JsonData["AssetPath"] = NormalizedPath;
-	JsonData["RootObjectId"] = static_cast<int32>(Resolver.GetObjectId(Asset));
-
-	json::JSON ObjectsJson = json::JSON::Make(json::JSON::Class::Array);
-	const TArray<UObject*>& Objects = Resolver.GetObjects();
-	for (int32 Index = 0; Index < static_cast<int32>(Objects.size()); ++Index)
-	{
-		UObject* Object = Objects[Index];
-		if (!IsParticleSystemGraphObject(Object))
-		{
-			continue;
-		}
-
-		json::JSON ObjectNode = json::JSON::Make(json::JSON::Class::Object);
-		ObjectNode["Id"] = Index + 1;
-		ObjectNode["Class"] = Object->GetClassName();
-
-		json::JSON ObjectData = json::JSON::Make(json::JSON::Class::Object);
-		FJsonWriter Writer(ObjectData);
-		Writer.SetObjectResolver(&Resolver);
-		Object->Serialize(Writer);
-		ObjectNode["Data"] = ObjectData;
-		ObjectsJson.append(ObjectNode);
-	}
-	JsonData["Objects"] = ObjectsJson;
+	json::JSON JsonData = BuildParticleSystemAssetJson(Asset, NormalizedPath);
 
 	std::error_code ErrorCode;
 	std::filesystem::create_directories(FilePath.parent_path(), ErrorCode);
@@ -2043,6 +2069,28 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 	}
 
 	return bPassed;
+}
+
+FString FResourceManager::SerializeParticleSystemToString(UParticleSystem* Asset)
+{
+	if (!Asset)
+	{
+		return "";
+	}
+
+	json::JSON JsonData = BuildParticleSystemAssetJson(Asset, "");
+	return JsonData.dump();
+}
+
+UParticleSystem* FResourceManager::LoadParticleSystemFromString(const FString& Snapshot)
+{
+	if (Snapshot.empty())
+	{
+		return nullptr;
+	}
+
+	json::JSON JsonData = json::JSON::Load(Snapshot);
+	return LoadParticleSystemFromJson(JsonData, "ParticleSystemSnapshot");
 }
 
 const TArray<FString>& FResourceManager::GetTextureFilePath() const

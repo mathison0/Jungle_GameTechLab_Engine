@@ -1,5 +1,7 @@
 ﻿#include "Particle/ParticleSystem.h"
 
+#include "Particle/ParticleModuleTypeData.h"
+
 #include <algorithm>
 
 UParticleLODLevel::~UParticleLODLevel()
@@ -18,6 +20,7 @@ void UParticleLODLevel::PostDuplicate(UObject* Original)
     SpawnModule = nullptr;
     SpawnModules.clear();
     UpdateModules.clear();
+    TypeDataModule = nullptr;
 
     if (!SourceLOD)
     {
@@ -136,12 +139,13 @@ bool UParticleLODLevel::Validate(TArray<FString>* OutErrors) const
 
 // Function : Build cached spawn and update module lists for this LOD level
 // input : None
-// output : SpawnModule, SpawnModules, and UpdateModules are refreshed from enabled modules
+// output : SpawnModule, SpawnModules, UpdateModules, and TypeDataModule are refreshed from enabled modules
 void UParticleLODLevel::CacheModuleLists()
 {
 	SpawnModule = nullptr;
 	SpawnModules.clear();
 	UpdateModules.clear();
+	TypeDataModule = nullptr;
 
 	if (RequiredModule && RequiredModule->IsEnabled())
 	{
@@ -152,6 +156,14 @@ void UParticleLODLevel::CacheModuleLists()
 	{
 		if (!Module || !Module->IsEnabled())
 		{
+			continue;
+		}
+
+		// TypeData는 별도 슬롯에 캐싱하고 SpawnModules/UpdateModules에는 넣지 않음 (UE Cascade 패턴).
+		// USpriteTypeData도 여기로 잡혀 LODLevel.TypeDataModule에 들어간다 → 회귀 안전 핵심.
+		if (UParticleModuleTypeDataBase* CandidateTypeData = Cast<UParticleModuleTypeDataBase>(Module))
+		{
+			TypeDataModule = CandidateTypeData;
 			continue;
 		}
 
@@ -170,6 +182,22 @@ void UParticleLODLevel::CacheModuleLists()
 			UpdateModules.push_back(Module);
 		}
 	}
+}
+
+// Function : Resolve effective render mode with TypeData precedence and Required fallback
+// input : None
+// output : TypeDataModule->GetRenderMode() when present, RequiredModule->GetRenderMode() fallback, Sprite default
+EParticleEmitterRenderMode UParticleLODLevel::GetEffectiveRenderMode() const
+{
+	if (TypeDataModule)
+	{
+		return TypeDataModule->GetRenderMode();
+	}
+	if (RequiredModule)
+	{
+		return RequiredModule->GetRenderMode();
+	}
+	return EParticleEmitterRenderMode::Sprite;
 }
 
 UParticleEmitter::~UParticleEmitter()
@@ -485,6 +513,7 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
     }
 
 	LODLevel->EnsureRequiredModule();
+    LODLevel->AddModule<USpriteTypeData>();
     LODLevel->EnsureSpawnModule();
     LODLevel->AddModule<UParticleModuleLifetime>();
     LODLevel->AddModule<UParticleModuleLocation>();

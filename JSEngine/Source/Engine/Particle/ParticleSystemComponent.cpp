@@ -3,6 +3,7 @@
 #include "Camera/ViewportCamera.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "Particle/ParticleModuleTypeData.h"
 
 UParticleSystemComponent::~UParticleSystemComponent()
 {
@@ -39,8 +40,21 @@ void UParticleSystemComponent::RecreateEmitterInstances()
 	EmitterInstances.reserve(Emitters.size());
 	for (int32 Index = 0; Index < static_cast<int32>(Emitters.size()); ++Index)
 	{
-		FParticleEmitterInstance* Instance = new FParticleEmitterInstance();
-		Instance->Init(Emitters[Index], this, Index);
+		UParticleEmitter* EmitterAsset = Emitters[Index];
+		// TypeDataModule이 캐싱되어 있도록 보장. Init 내부에서도 다시 호출되지만 idempotent.
+		// 명시 호출 이유: LOD0 조회를 Instance 생성 전에 해야 하므로, asset 측 캐시가 stale이면 silent fallback 위험.
+		if (EmitterAsset)
+		{
+			EmitterAsset->CacheEmitterModuleInfo();
+		}
+		UParticleLODLevel* LOD0 = EmitterAsset ? EmitterAsset->GetLODLevel(0) : nullptr;
+		UParticleModuleTypeDataBase* TypeData = LOD0 ? LOD0->GetTypeDataModule() : nullptr;
+		// TypeData가 있으면 type별 derived instance 생성 hook 사용. 없으면 base FParticleEmitterInstance.
+		// USpriteTypeData::CreateInstance() = new FParticleEmitterInstance() 이므로 Sprite path 회귀 0.
+		FParticleEmitterInstance* Instance = TypeData
+			? TypeData->CreateInstance(this, Index)
+			: new FParticleEmitterInstance();
+		Instance->Init(EmitterAsset, this, Index);
 		EmitterInstances.push_back(Instance);
 	}
 }
@@ -176,61 +190,32 @@ const FParticleEmitterInstance* UParticleSystemComponent::GetEmitterInstance(int
 // output : Emitter simulations advance and the spatial index is notified for bounds refresh
 void UParticleSystemComponent::TickComponent(float DeltaTime)
 {
+	TickPreview(DeltaTime, true);
+}
+
+void UParticleSystemComponent::TickPreview(float DeltaTime, bool bAllowSpawning)
+{
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
 		if (Instance)
 		{
-			Instance->Tick(DeltaTime);
+			Instance->Tick(DeltaTime, bAllowSpawning);
 		}
 	}
 	NotifySpatialIndexDirty();
 }
 
-void UParticleSystemComponent::BuildSpriteInstanceData()
+// Cycle 10c 계층 분리: type-agnostic dispatch hook.
+// 모든 emitter instance에 대해 BuildInstanceData() 호출 — instance 내부 buffer만 갱신.
+// RenderCommand 매핑은 Builder가 별도로 수행 (Instance/Component는 FRenderCommand 모름).
+// 본 함수 본문에 FRenderCommand 참조 0건 — 계층 분리 원칙 (사용자 결정).
+void UParticleSystemComponent::BuildInstanceData()
 {
-	const int32 EmitterCount = static_cast<int32>(EmitterInstances.size());
-	if (static_cast<int32>(EmitterInstanceData.size()) != EmitterCount)
+	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
-		EmitterInstanceData.resize(EmitterCount);
-	}
-
-	for (int32 EmitterIdx = 0; EmitterIdx < EmitterCount; ++EmitterIdx)
-	{
-		FParticleEmitterInstance* Instance = EmitterInstances[EmitterIdx];
-		TArray<FSpriteParticleInstanceData>& Out = EmitterInstanceData[EmitterIdx];
-		Out.clear();
-
-		if (!Instance || Instance->GetActiveParticleCount() == 0)
+		if (Instance)
 		{
-			continue;
-		}
-
-		Out.reserve(Instance->GetActiveParticleCount());
-        for (int32 i = 0; i < Instance->GetActiveParticleCount(); ++i)
-		{
-			const FBaseParticle* Particle = Instance->GetParticle(i);
-			if (!Particle)
-			{
-				continue;
-			}
-
-			FSpriteParticleInstanceData Data;
-			Data.Position   = Particle->Location;
-			Data.Size       = FVector2(Particle->Size.X, Particle->Size.Y);
-			Data.Color      = Particle->Color;
-			Data.Rotation   = Particle->Rotation;
-			Data.SubUVIndex = 0; // TODO: USubUVModule 포팅 후 페이로드에서 추출
-			Out.push_back(Data);
+			Instance->BuildInstanceData();
 		}
 	}
-}
-
-const TArray<FSpriteParticleInstanceData>& UParticleSystemComponent::GetEmitterInstanceData(int32 EmitterIndex) const
-{
-	static const TArray<FSpriteParticleInstanceData> Empty;
-	if (EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EmitterInstanceData.size()))
-	{
-		return Empty;
-	}
-	return EmitterInstanceData[EmitterIndex];
 }

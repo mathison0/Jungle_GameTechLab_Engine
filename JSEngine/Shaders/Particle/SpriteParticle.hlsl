@@ -45,9 +45,41 @@ PSInput SpriteParticleVS(VSInput input)
     float2 RotatedXY = float2(LocalXY.x * c - LocalXY.y * s,
                               LocalXY.x * s + LocalXY.y * c);
 
-    // ViewMatrix의 right/up 축으로 billboard 구성
-    float3 CameraRight = float3(View._11, View._21, View._31);
-    float3 CameraUp    = float3(View._12, View._22, View._32);
+    // BillboardComponent::MakeBillboardWorldMatrix와 동일한 spherical billboard
+    // View columns: col0=Forward, col1=Right, col2=Up (Unreal-style engine basis)
+    float3 CameraForward = float3(View._11, View._21, View._31);
+    float3 CameraRight = -float3(View._12, View._22, View._32); // BillboardComponent 와 동일하게 부호 반전
+    float3 CameraUp = float3(View._13, View._23, View._33);
+
+    
+    
+    // Forward 퇴화 처리
+    if (dot(CameraForward, CameraForward) < 1e-8f)
+    {
+        CameraForward = float3(-1.0f, 0.0f, 0.0f);
+    }
+    else
+    {
+        CameraForward = normalize(CameraForward);
+    }
+
+    // Right/Up 퇴화 처리 (cross product로 재구성)
+    if (dot(CameraRight, CameraRight) < 1e-8f || dot(CameraUp, CameraUp) < 1e-8f)
+    {
+        float3 FallbackUp = float3(0.0f, 0.0f, 1.0f); // FVector::UpVector (Z-up)
+        if (abs(dot(CameraForward, FallbackUp)) > 0.99f)
+        {
+            FallbackUp = float3(0.0f, 1.0f, 0.0f);    // FVector::RightVector
+        }
+        CameraRight = normalize(cross(FallbackUp, CameraForward));
+        CameraUp    = normalize(cross(CameraForward, CameraRight));
+    }
+    else
+    {
+        CameraRight = normalize(CameraRight);
+        CameraUp    = normalize(CameraUp);
+    }
+
     float3 WorldPos = input.InstancePosition
                     + CameraRight * RotatedXY.x
                     + CameraUp    * RotatedXY.y;

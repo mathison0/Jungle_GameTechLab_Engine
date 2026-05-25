@@ -12,22 +12,16 @@
 
 #include <cmath>
 
-bool FEditorViewportNavigationController::FocusPrimarySelection(
-	FSelectionManager* SelectionManager,
+bool FEditorViewportNavigationController::FocusActor(
+	AActor* Actor,
 	FViewportCamera* Camera)
 {
-	if (!SelectionManager || !Camera)
+	if (!Actor || !Camera)
 	{
 		return false;
 	}
 
-	AActor* Primary = SelectionManager->GetPrimarySelection();
-	if (!Primary)
-	{
-		return false;
-	}
-
-	const FVector Target = Primary->GetActorLocation();
+	const FVector Target = Actor->GetActorLocation();
 
 	if (Camera->IsOrthographic())
 	{
@@ -47,6 +41,18 @@ bool FEditorViewportNavigationController::FocusPrimarySelection(
 	}
 
 	return true;
+}
+
+bool FEditorViewportNavigationController::FocusPrimarySelection(
+	FSelectionManager* SelectionManager,
+	FViewportCamera* Camera)
+{
+	if (!SelectionManager)
+	{
+		return false;
+	}
+
+	return FocusActor(SelectionManager->GetPrimarySelection(), Camera);
 }
 
 bool FEditorViewportNavigationController::ResetCamera(
