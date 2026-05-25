@@ -32,4 +32,5 @@ namespace FShaderPaths
 	inline constexpr const char* ComputeLightCulling = "Shaders/Compute/LightCullingCS.hlsl";
 
 	inline constexpr const char* ParticleSprite = "Shaders/Particle/SpriteParticle.hlsl";
+	inline constexpr const char* ParticleMesh   = "Shaders/Particle/MeshParticle.hlsl";
 }

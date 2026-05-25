@@ -630,6 +630,9 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
@@ -1299,10 +1302,16 @@
     <ClCompile Include="Source\Engine\Particle\ParticleEvent.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleMeshEmitterInstance.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp">
@@ -2410,7 +2419,16 @@
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleMeshEmitterInstance.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleMeshTypes.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModules.h">
@@ -2874,6 +2892,9 @@
     </None>
     <None Include="Shaders\Material\UberLit.hlsl">
       <Filter>Shaders\Material</Filter>
+    </None>
+    <None Include="Shaders\Particle\MeshParticle.hlsl">
+      <Filter>Shaders\Particle</Filter>
     </None>
     <None Include="Shaders\Particle\SpriteParticle.hlsl">
       <Filter>Shaders\Particle</Filter>

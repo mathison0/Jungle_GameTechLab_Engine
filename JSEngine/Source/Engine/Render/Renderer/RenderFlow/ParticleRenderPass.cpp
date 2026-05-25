@@ -40,6 +40,26 @@ namespace
         return FResourceManager::Get().GetOrCreateShaderProgram(
             VSKey, PSKey, nullptr, nullptr, &Desc.VertexLayout);
     }
+
+    // Cycle 11: Mesh particle 전용 shader program.
+    // SpriteParticle 패턴과 동일 — Registry의 Desc로 VS/Layout 받고 PS는 직접 지정.
+    FShaderProgram* GetMeshParticleProgram()
+    {
+        const FVertexFactoryDesc& Desc = FVertexFactoryRegistry::Get(EVertexFactoryType::MeshParticle);
+
+        FShaderStageKey VSKey;
+        VSKey.FilePath = Desc.VertexShaderPath;
+        VSKey.EntryPoint = Desc.BasePassVSEntry;
+        VSKey.Target = "vs_5_0";
+
+        FShaderStageKey PSKey;
+        PSKey.FilePath = FShaderPaths::ParticleMesh;
+        PSKey.EntryPoint = "MeshParticlePS";
+        PSKey.Target = "ps_5_0";
+
+        return FResourceManager::Get().GetOrCreateShaderProgram(
+            VSKey, PSKey, nullptr, nullptr, &Desc.VertexLayout);
+    }
 }
 
 bool FParticleRenderPass::Initialize()
@@ -53,6 +73,7 @@ bool FParticleRenderPass::Release()
     QuadIndexBuffer.Release();
     InstanceBuffer.Release();
     SpriteParticleCB.Release();
+    MeshInstanceBuffer.Release();
     bGPUResourcesReady = false;
     return true;
 }
@@ -80,10 +101,14 @@ bool FParticleRenderPass::EnsureGPUResources(ID3D11Device* Device)
     InstanceBuffer.Create(Device, sizeof(FSpriteParticleInstanceData), 256);
     SpriteParticleCB.Create(Device, sizeof(FSpriteParticleCB));
 
+    // Cycle 11: Mesh emitter용 per-instance VB. Sprite와 동일 grow-by-2x 패턴.
+    MeshInstanceBuffer.Create(Device, sizeof(FMeshParticleInstanceData), 256);
+
     bGPUResourcesReady = QuadVertexBuffer.GetBuffer() != nullptr
         && QuadIndexBuffer.GetBuffer() != nullptr
         && InstanceBuffer.IsValid()
-        && SpriteParticleCB.GetBuffer() != nullptr;
+        && SpriteParticleCB.GetBuffer() != nullptr
+        && MeshInstanceBuffer.IsValid();
     return bGPUResourcesReady;
 }
 
@@ -118,9 +143,10 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
     }
 
     // Cycle 10a: type-agnostic dispatch. Cmd.VertexFactoryType으로 4-way switch → 각 helper.
-    // 본 cycle은 Sprite만 본문 보유, Mesh/Ribbon/Beam은 NOP. Cycle 11+에서 본문 채움.
+    // Cycle 11: Mesh helper도 본문 보유. Ribbon/Beam은 Cycle 12b/13b에서 본문 채움.
     // 단일 Pass + procedural switch 구조 (사용자 결정 3).
     bool bAnySpriteRendered = false;
+    bool bAnyMeshRendered = false;
     for (const FRenderCommand& Cmd : Commands)
     {
         switch (Cmd.VertexFactoryType)
@@ -131,6 +157,7 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
             break;
         case EVertexFactoryType::MeshParticle:
             RenderMeshEmitter(Cmd, *Context);
+            bAnyMeshRendered = true;
             break;
         case EVertexFactoryType::RibbonParticle:
             RenderRibbonEmitter(Cmd, *Context);
@@ -147,8 +174,8 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
     //TODO
     //Slot 해제는 End logic에서 담당하도록 수정하는게 가독성에 유리함. 추후 진행
     // Slot 1을 다른 패스가 자동으로 미사용한다고 가정해도 위험. instance VB는 binding 해제.
-    // Sprite Cmd가 한 번이라도 처리됐을 때만 unbind 필요 (다른 type은 slot 1 사용 안 함).
-    if (bAnySpriteRendered)
+    // Sprite/Mesh Cmd가 한 번이라도 처리됐을 때만 unbind 필요 (Ribbon/Beam은 slot 1 사용 안 함).
+    if (bAnySpriteRendered || bAnyMeshRendered)
     {
         ID3D11Buffer* NullBuffer = nullptr;
         UINT NullStride = 0;
@@ -247,14 +274,103 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
     DeviceContext->DrawIndexedInstanced(6, InstanceBuffer.GetInstanceCount(), 0, 0, 0);
 }
 
-// Function : Render single Mesh particle emitter command (Cycle 10a NOP)
-// input : Cmd, Context (unused in NOP)
-// output : None — Cycle 11에서 본문 채움
+// Function : Render single Mesh particle emitter command (Cycle 11 옵션 B)
+// input : Cmd, Context
+// Cmd : render command produced by Builder Mesh case (MeshParticleInstances + MeshBuffer 세팅됨)
+// Context : render pass context (Device, DeviceContext, RenderResources, ...)
+// output : One DrawIndexedInstanced call issued when MeshBuffer + instance data valid
+//
+// D3D state: BlendOpaque + Default(DepthTestWrite) + SolidBackCull (사용자 결정 lock-in).
+// PerObject CB: Builder가 Identity Model로 세팅 — instance VB가 World 합성 담당.
+// Slot 0: Cmd.MeshBuffer의 VertexBuffer (FNormalVertex), Slot 1: MeshInstanceBuffer (FMeshParticleInstanceData).
 void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRenderPassContext& Context)
 {
-    (void)Cmd;
-    (void)Context;
-    // Cycle 11 (Mesh emitter)에서 본문 채움.
+    if (Cmd.MeshParticleInstances == nullptr || Cmd.MeshParticleInstanceCount == 0 || Cmd.MeshBuffer == nullptr)
+    {
+        return;
+    }
+    if (!Cmd.MeshBuffer->IsValid())
+    {
+        return;
+    }
+
+    FShaderProgram* Program = GetMeshParticleProgram();
+    if (!Program || !Program->VS || !Program->PS)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext* DeviceContext = Context.DeviceContext;
+
+    Program->Bind(DeviceContext);
+
+    // 사용자 결정 lock-in: BlendOpaque + Default(DepthTestWrite) + SolidBackCull.
+    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::Opaque);
+    DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
+    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::Default);
+    DeviceContext->OMSetDepthStencilState(DepthState, 0);
+    ID3D11RasterizerState* RasterState = FResourceManager::Get().GetOrCreateRasterizerState(ERasterizerType::SolidBackCull);
+    DeviceContext->RSSetState(RasterState);
+    ID3D11SamplerState* Sampler = FResourceManager::Get().GetOrCreateSamplerState(ESamplerType::EST_Linear);
+    DeviceContext->PSSetSamplers(0, 1, &Sampler);
+
+    // Frame CB (View/Projection) — Sprite와 동일 안전 장치.
+    ID3D11Buffer* FrameBuf = Context.RenderResources->FrameBuffer.GetBuffer();
+    if (FrameBuf)
+    {
+        DeviceContext->VSSetConstantBuffers(0, 1, &FrameBuf);
+    }
+
+    // PerObject CB — Builder가 Identity Model로 세팅함 (instance VB가 World 합성 담당).
+    Context.RenderResources->PerObjectConstantBuffer.Update(
+        DeviceContext, &Cmd.PerObjectConstants, sizeof(FPerObjectConstants));
+    ID3D11Buffer* PerObjBuf = Context.RenderResources->PerObjectConstantBuffer.GetBuffer();
+    DeviceContext->VSSetConstantBuffers(1, 1, &PerObjBuf);
+    DeviceContext->PSSetConstantBuffers(1, 1, &PerObjBuf);
+
+    // Albedo texture: Cmd.ParticleTexture (Builder가 Material.DiffuseMap에서 추출) 또는 default white.
+    ID3D11ShaderResourceView* TextureSRV = nullptr;
+    if (Cmd.ParticleTexture)
+    {
+        TextureSRV = Cmd.ParticleTexture->GetSRV();
+    }
+    if (!TextureSRV)
+    {
+        TextureSRV = FResourceManager::Get().GetDefaultWhiteSRV();
+    }
+    DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
+
+    // Instance VB 업데이트 (grow-by-2x 자동).
+    MeshInstanceBuffer.Update(
+        Context.Device,
+        DeviceContext,
+        Cmd.MeshParticleInstances,
+        Cmd.MeshParticleInstanceCount);
+    if (!MeshInstanceBuffer.IsValid() || MeshInstanceBuffer.GetInstanceCount() == 0)
+    {
+        return;
+    }
+
+    // VB 바인딩: Slot 0 mesh per-vertex, Slot 1 per-instance.
+    ID3D11Buffer* VBs[2] = {
+        Cmd.MeshBuffer->GetVertexBuffer().GetBuffer(),
+        MeshInstanceBuffer.GetBuffer()
+    };
+    UINT Strides[2] = {
+        Cmd.MeshBuffer->GetVertexBuffer().GetStride(),
+        MeshInstanceBuffer.GetStride()
+    };
+    UINT Offsets[2] = { 0, 0 };
+    DeviceContext->IASetVertexBuffers(0, 2, VBs, Strides, Offsets);
+
+    // IB 바인딩.
+    ID3D11Buffer* IndexBuffer = Cmd.MeshBuffer->GetIndexBuffer().GetBuffer();
+    DeviceContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+    // DrawIndexedInstanced: Builder가 SectionIndexCount + SectionIndexStart 세팅.
+    // Cycle 11은 mesh 전체를 1 section처럼 (Start=0, Count=전체 index 수) 그리지만,
+    // 추후 section 분할 draw가 필요해지면 Builder에서 Cmd 여러 개로 split 가능.
+    DeviceContext->DrawIndexedInstanced(Cmd.SectionIndexCount, Cmd.MeshParticleInstanceCount, Cmd.SectionIndexStart, 0, 0);
 }
 
 // Function : Render single Ribbon particle emitter command (Cycle 10a NOP)

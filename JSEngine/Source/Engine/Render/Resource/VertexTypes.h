@@ -75,3 +75,17 @@ struct FSpriteParticleInstanceData
 };                         // 44 bytes
 static_assert(sizeof(FSpriteParticleInstanceData) == 44,
 	"SpriteParticleLayout slot 1 offsets depend on this struct being tightly packed at 44 bytes");
+
+// Mesh Particle의 Per-Instance입니다. Slot 1 stream (Cycle 11, 옵션 B).
+// per-vertex는 Slot 0의 FNormalVertex (mesh asset 그대로 사용).
+// InstanceRotation은 FVector Euler 3축 (옵션 B) — VS에서 RotationZYX 행렬로 합성.
+struct FMeshParticleInstanceData
+{
+	FVector  InstancePosition;   // 12 (offset 0)
+	FVector  InstanceRotation;   // 12 (offset 12) — Euler radians (옵션 B 3축)
+	FVector  InstanceScale;      // 12 (offset 24)
+	uint32   _Padding0;          //  4 (offset 36)
+	FColor   InstanceColor;      // 16 (offset 40) — RGBA float
+};                               // 56 bytes
+static_assert(sizeof(FMeshParticleInstanceData) == 56,
+	"MeshParticleLayout slot 1 offsets depend on this struct being tightly packed at 56 bytes");
