@@ -24,6 +24,7 @@ public:
 	int32 GetSubImagesHorizontal() const { return std::max(SubImagesHorizontal, 1); }
 	int32 GetSubImagesVertical() const { return std::max(SubImagesVertical, 1); }
 	EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
+	void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 private:
 	UPROPERTY(DisplayName = "Material", Category = "Emitter", ReferenceKind = Asset)
@@ -50,6 +51,7 @@ private:
 	UPROPERTY(DisplayName = "Sub Images Vertical", Category = "Sub UV", Min = 1)
 	int32 SubImagesVertical = 1;
 
+	UPROPERTY(DisplayName = "Emitter Type", Category = "TypeData", NoEdit)
 	EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
 };
 

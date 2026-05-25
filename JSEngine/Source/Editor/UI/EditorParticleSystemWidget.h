@@ -4,6 +4,7 @@
 #include "Editor/UI/EditorWidget.h"
 #include "Editor/Viewport/FSceneViewport.h"
 #include "Editor/Viewport/ParticleSystemViewportClient.h"
+#include "Particle/ParticleTypes.h"
 #include "Render/Common/ComPtr.h"
 #include "ImGui/imgui.h"
 
@@ -89,6 +90,7 @@ private:
 	void DeleteEmitter(int32 EmitterIndex);
 	void AddModuleToEmitter(int32 EmitterIndex, UParticleModule* Module);
 	void DeleteModule(int32 EmitterIndex, int32 ModuleIndex);
+	void ChangeEmitterRenderMode(int32 EmitterIndex, EParticleEmitterRenderMode RenderMode);
 	void BeginRenameEmitter(int32 EmitterIndex);
 	void RenameEmitter(int32 EmitterIndex, const FString& NewName);
 	bool ApplyEmitterName(int32 EmitterIndex, const FString& NewName, bool bCaptureUndo, bool bWarnOnEmpty);

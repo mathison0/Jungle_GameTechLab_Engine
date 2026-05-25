@@ -33,6 +33,7 @@ namespace
 	constexpr const char* ParticleModuleDragPayloadType = "PS_MODULE";
 	constexpr int32 NoParticleModuleSelection = -1;
 	constexpr int32 RequiredParticleModuleSelection = -2;
+	constexpr int32 TypeDataParticleModuleSelection = -3;
 	constexpr ImGuiDragDropFlags ParticleDragDropTargetFlags =
 		ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect;
 
@@ -519,15 +520,9 @@ namespace
 			 std::strcmp(Property.Name, "bUpdateModule") == 0);
 	}
 
-	const char* GetRenderModeLabel(const UParticleLODLevel* LODLevel)
+	const char* GetRenderModeLabel(EParticleEmitterRenderMode RenderMode)
 	{
-		const UParticleModuleRequired* Required = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
-		if (!Required)
-		{
-			return "Emitter";
-		}
-
-		switch (Required->GetRenderMode())
+		switch (RenderMode)
 		{
 		case EParticleEmitterRenderMode::Sprite:
 			return "CPU Sprites";
@@ -540,6 +535,12 @@ namespace
 		default:
 			return "Emitter";
 		}
+	}
+
+	const char* GetRenderModeLabel(const UParticleLODLevel* LODLevel)
+	{
+		const UParticleModuleRequired* Required = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+		return Required ? GetRenderModeLabel(Required->GetRenderMode()) : "Emitter";
 	}
 
 	bool IsCurveDrivenModule(const UParticleModule* Module)
@@ -651,6 +652,23 @@ namespace
 				AddModule(CreateParticleModule<ModuleType>(ItemLabel));
 			}
 			EndParticleMenu();
+		}
+	}
+
+	const char* GetTypeDataMenuItemLabel(EParticleEmitterRenderMode RenderMode)
+	{
+		switch (RenderMode)
+		{
+		case EParticleEmitterRenderMode::Sprite:
+			return "New Sprite Data";
+		case EParticleEmitterRenderMode::Mesh:
+			return "New Mesh Data";
+		case EParticleEmitterRenderMode::Beam:
+			return "New Beam Data";
+		case EParticleEmitterRenderMode::Ribbon:
+			return "New Ribbon Data";
+		default:
+			return "New Type Data";
 		}
 	}
 
@@ -1681,6 +1699,38 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 	UParticleEmitter* TargetEmitter = bHasTargetEmitter ? ParticleSystemAsset->Emitters[TargetEmitterIndex] : nullptr;
 	UParticleLODLevel* TargetLODLevel = GetEmitterLODLevel(TargetEmitter);
 	const bool bHasSpawnModule = TargetLODLevel && TargetLODLevel->GetSpawnModule();
+	const UParticleModuleRequired* TargetRequired = TargetLODLevel ? TargetLODLevel->GetRequiredModule() : nullptr;
+	const EParticleEmitterRenderMode CurrentRenderMode = TargetRequired
+		? TargetRequired->GetRenderMode()
+		: EParticleEmitterRenderMode::Sprite;
+
+	auto DrawTypeDataItems = [&](bool bUseCreateLabels)
+	{
+		constexpr EParticleEmitterRenderMode RenderModes[] =
+		{
+			EParticleEmitterRenderMode::Sprite,
+			EParticleEmitterRenderMode::Mesh,
+			EParticleEmitterRenderMode::Beam,
+			EParticleEmitterRenderMode::Ribbon,
+		};
+		for (EParticleEmitterRenderMode RenderMode : RenderModes)
+		{
+			const char* Label = bUseCreateLabels ? GetTypeDataMenuItemLabel(RenderMode) : GetRenderModeLabel(RenderMode);
+			if (ImGui::MenuItem(Label, nullptr, CurrentRenderMode == RenderMode, bHasTargetEmitter))
+			{
+				ChangeEmitterRenderMode(TargetEmitterIndex, RenderMode);
+			}
+		}
+	};
+
+	if (ContextModuleIndex == TypeDataParticleModuleSelection)
+	{
+		ImGui::TextDisabled("EMITTER TYPE");
+		ImGui::Separator();
+		DrawTypeDataItems(false);
+		EndParticlePopup();
+		return;
+	}
 
 	if (ContextEmitterIndex < 0 && ContextModuleIndex == NoParticleModuleSelection)
 	{
@@ -1750,7 +1800,13 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 		AddModuleToEmitter(TargetEmitterIndex, Module);
 	};
 
-	DrawDisabledParticleModuleMenu("TypeData");
+	if (BeginParticleMenu("TypeData", bHasTargetEmitter))
+	{
+		ImGui::TextDisabled("TYPEDATA");
+		ImGui::Separator();
+		DrawTypeDataItems(true);
+		EndParticleMenu();
+	}
 	DrawDisabledParticleModuleMenu("Acceleration");
 	DrawDisabledParticleModuleMenu("Attraction");
 	DrawDisabledParticleModuleMenu("Camera");
@@ -1918,6 +1974,32 @@ void FEditorParticleSystemWidget::DeleteModule(int32 EmitterIndex, int32 ModuleI
 	{
 		SelectModule(EmitterIndex, std::clamp(ModuleIndex, 0, static_cast<int32>(LODLevel->Modules.size()) - 1));
 	}
+	ClearEmitterContext();
+	bDirty = true;
+}
+
+void FEditorParticleSystemWidget::ChangeEmitterRenderMode(int32 EmitterIndex, EParticleEmitterRenderMode RenderMode)
+{
+	if (!ParticleSystemAsset ||
+		EmitterIndex < 0 ||
+		EmitterIndex >= static_cast<int32>(ParticleSystemAsset->Emitters.size()))
+	{
+		return;
+	}
+
+	UParticleEmitter* Emitter = ParticleSystemAsset->Emitters[EmitterIndex];
+	UParticleLODLevel* LODLevel = GetEmitterLODLevel(Emitter);
+	UParticleModuleRequired* Required = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+	if (!Emitter || !Required || Required->GetRenderMode() == RenderMode)
+	{
+		return;
+	}
+
+	CaptureUndoSnapshot("Change Emitter Type");
+	Required->SetRenderMode(RenderMode);
+	Emitter->CacheEmitterModuleInfo();
+	ParticleSystemAsset->CacheEmitterModuleInfo();
+	SelectEmitter(EmitterIndex);
 	ClearEmitterContext();
 	bDirty = true;
 }
@@ -2482,7 +2564,7 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 	if (bTypeRowHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 	{
 		SelectEmitter(EmitterIndex);
-		OpenEmitterContextMenu(EmitterIndex, NoParticleModuleSelection);
+		OpenEmitterContextMenu(EmitterIndex, TypeDataParticleModuleSelection);
 	}
 	const ImVec2 TypeMin = ImGui::GetItemRectMin();
 	const ImVec2 TypeMax = ImGui::GetItemRectMax();
