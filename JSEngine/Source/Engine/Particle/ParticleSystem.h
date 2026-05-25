@@ -10,7 +10,28 @@ class UParticleLODLevel : public UObject
 {
 public:
 	GENERATED_BODY(UParticleLODLevel, UObject)
+    ~UParticleLODLevel() override;
 
+	UParticleModuleRequired* EnsureRequiredModule();
+    UParticleModuleSpawn* EnsureSpawnModule();
+
+	template <typename T>
+    T* AddModule()
+    {
+        static_assert(std::is_base_of_v<UParticleModule, T>, "T must derive from UParticleModule");
+
+        T* NewModule = UObjectManager::Get().CreateObject<T>();
+        if (!NewModule)
+            return nullptr;
+
+        Modules.push_back(NewModule);
+        CacheModuleLists();
+        return NewModule;
+    }
+
+    void RemoveModule(UParticleModule* Module);
+    void ClearModules();
+    bool Validate(TArray<FString>* OutErrors = nullptr) const;
 	void CacheModuleLists();
 
 	int32 GetLevel() const { return Level; }

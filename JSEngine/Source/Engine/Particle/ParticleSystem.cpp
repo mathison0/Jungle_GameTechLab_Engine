@@ -2,6 +2,102 @@
 
 #include <algorithm>
 
+UParticleLODLevel::~UParticleLODLevel()
+{
+    ClearModules();
+}
+
+UParticleModuleRequired* UParticleLODLevel::EnsureRequiredModule()
+{
+    if (!RequiredModule)
+        RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
+
+	CacheModuleLists();
+    return RequiredModule;
+}
+
+UParticleModuleSpawn* UParticleLODLevel::EnsureSpawnModule()
+{
+    for (UParticleModule* Module : Modules)
+    {
+        if (UParticleModuleSpawn* SpawnModule = Cast<UParticleModuleSpawn>(Module))
+            return SpawnModule;
+    }        
+    return AddModule<UParticleModuleSpawn>();
+}
+
+void UParticleLODLevel::RemoveModule(UParticleModule* Module)
+{
+    if (!Module)
+        return;
+    for (auto It = Modules.begin(); It != Modules.end(); It++)
+    {
+        if (*It == Module)
+        {
+            Modules.erase(It);
+            UObjectManager::Get().DestroyObject(Module);
+            CacheModuleLists();
+            return;
+        }
+    }
+
+	  if (RequiredModule == Module)
+    {
+        UObjectManager::Get().DestroyObject(RequiredModule);
+        RequiredModule = nullptr;
+        CacheModuleLists();
+    }
+}
+
+void UParticleLODLevel::ClearModules()
+{
+    if (RequiredModule)
+    {
+        UObjectManager::Get().DestroyObject(RequiredModule);
+        RequiredModule = nullptr;
+    }
+
+	for (UParticleModule* Module : Modules)
+    {
+        if (Module)
+            UObjectManager::Get().DestroyObject(Module);
+    }
+    Modules.clear();
+    CacheModuleLists();
+}
+
+bool UParticleLODLevel::Validate(TArray<FString>* OutErrors) const
+{
+    bool bIsValid = true;
+    if (!RequiredModule)
+    {
+        bIsValid = false;
+        if (OutErrors)
+            OutErrors->push_back("Particle LOD level must have a required module");
+    }
+
+	bool bHasSpawnModule = false;
+    for (UParticleModule* Module : Modules)
+    {
+        if (!Module)
+        {
+            bIsValid = false;
+            if (OutErrors)
+                OutErrors->push_back("Particle LOD level must have a spawn modules");
+            continue;
+		}
+        if (Cast<UParticleModuleSpawn>(Module))
+            bHasSpawnModule = true;
+    }
+    if (!bHasSpawnModule)
+    {
+        bIsValid = false;
+        if (OutErrors)
+            OutErrors->push_back("Particle LOD level must have a spawn module.");
+    }
+    return bIsValid;
+}
+
 // Function : Build cached spawn and update module lists for this LOD level
 // input : None
 // output : SpawnModule, SpawnModules, and UpdateModules are refreshed from enabled modules
@@ -126,11 +222,9 @@ bool UParticleEmitter::Validate(TArray<FString>* OutErrors) const
                 OutErrors->push_back("Particle emitter has a null LOD level.");
             continue;
         }
-        if (!LODLevel->GetRequiredModule())
+        if (!LODLevel->Validate(OutErrors))
         {
             bIsValid = false;
-            if (OutErrors)
-                OutErrors->push_back("Particle LOD level has no required module.");
         }
     }
     return bIsValid;
@@ -252,6 +346,7 @@ bool UParticleSystem::Validate(TArray<FString>* OutErrors) const
             OutErrors->push_back("Particle system must have at least one emitter.");
         }
     }
+
     for (int32 EmitterIndex = 0; EmitterIndex < static_cast<int32>(Emitters.size()); ++EmitterIndex)
     {
         const UParticleEmitter* Emitter = Emitters[EmitterIndex];
@@ -263,6 +358,10 @@ bool UParticleSystem::Validate(TArray<FString>* OutErrors) const
                 OutErrors->push_back("Particle system has a null emitter.");
             }
             continue;
+        }
+        if (!Emitter->Validate(OutErrors))
+        {
+            bIsValid = false;
         }
         if (Emitter->GetLODLevels().empty())
         {
@@ -298,13 +397,13 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
         return nullptr;
     }
 
-    LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLocation>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleVelocity>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleColor>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSize>());
+	LODLevel->EnsureRequiredModule();
+    LODLevel->EnsureSpawnModule();
+    LODLevel->AddModule<UParticleModuleLifetime>();
+    LODLevel->AddModule<UParticleModuleLocation>();
+    LODLevel->AddModule<UParticleModuleVelocity>();
+    LODLevel->AddModule<UParticleModuleColor>();
+    LODLevel->AddModule<UParticleModuleSize>();
 
     Emitter->CacheEmitterModuleInfo();
 
