@@ -439,6 +439,23 @@ namespace
 		return Value.substr(First, Last - First);
 	}
 
+	bool IsParticleSystemAssetDocumentPath(const FString& Path)
+	{
+		FString NormalizedPath = FPaths::Normalize(Path);
+		std::transform(
+			NormalizedPath.begin(),
+			NormalizedPath.end(),
+			NormalizedPath.begin(),
+			[](unsigned char Ch)
+			{
+				return static_cast<char>(std::tolower(Ch));
+			});
+
+		const FString Extension = ".particlesystem";
+		return NormalizedPath.size() >= Extension.size() &&
+			NormalizedPath.compare(NormalizedPath.size() - Extension.size(), Extension.size(), Extension) == 0;
+	}
+
 	FString GetEmitterDisplayName(const UParticleEmitter* Emitter, int32 EmitterIndex)
 	{
 		if (Emitter)
@@ -910,6 +927,44 @@ void FEditorParticleSystemWidget::Shutdown()
 	bCascadeToolbarIconsLoadAttempted = false;
 }
 
+bool FEditorParticleSystemWidget::Save()
+{
+	if (!ParticleSystemAsset)
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetNotificationService().Warning("No particle system to save.");
+		}
+		return false;
+	}
+
+	if (DocumentPath.empty() || !IsParticleSystemAssetDocumentPath(DocumentPath))
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetNotificationService().Warning("Particle system has no asset path to save.");
+		}
+		return false;
+	}
+
+	ParticleSystemAsset->CacheEmitterModuleInfo();
+	if (!FResourceManager::Get().SaveParticleSystem(ParticleSystemAsset, DocumentPath))
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetNotificationService().Error("Failed to save particle system.");
+		}
+		return false;
+	}
+
+	bDirty = false;
+	if (EditorEngine)
+	{
+		EditorEngine->GetNotificationService().Info("Particle system saved.");
+	}
+	return true;
+}
+
 bool FEditorParticleSystemWidget::CanUndo() const
 {
 	return !UndoHistory.empty();
@@ -1278,7 +1333,7 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 
 	if (ToolbarButton("Save", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Save), "Save particle system"))
 	{
-		bDirty = false;
+		Save();
 	}
 	SameLineGap();
 	ToolbarButton("FindInContentBrowser", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Find), "Find in Content Browser");
@@ -1360,7 +1415,7 @@ void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseReque
 			{
 				if (ImGui::MenuItem(bDirty ? "Save *" : "Save", "Ctrl+S"))
 				{
-					bDirty = false;
+					Save();
 				}
 				ImGui::MenuItem("Save As...", nullptr, false, false);
 				EndParticleMenu();

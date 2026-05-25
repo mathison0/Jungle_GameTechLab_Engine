@@ -29,6 +29,7 @@ public:
 	void RenderDetachedDocumentChrome(bool& bCloseRequested);
 	void RenderDocumentToolbarControls();
 	void Shutdown();
+	bool Save();
 	bool CanUndo() const;
 	bool CanRedo() const;
 	bool Undo();

@@ -387,11 +387,23 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 	if (ImGui::BeginMenu("File"))
 	{
 		const bool bAnimGraph = ActiveTab->Id.Kind == EEditorTabKind::AnimGraphEditor;
-		const char* SaveLabel = bAnimGraph && Widgets.AnimGraphWidget.IsDirty() ? "Save Asset *" : "Save Asset";
-		if (ImGui::MenuItem(SaveLabel, "Ctrl+S", false, bAnimGraph))
+		const bool bParticleSystem = ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor;
+		const bool bAssetDirty =
+			(bAnimGraph && Widgets.AnimGraphWidget.IsDirty()) ||
+			(bParticleSystem && Widgets.ParticleSystemWidget.IsDirty());
+		const char* SaveLabel = bAssetDirty ? "Save Asset *" : "Save Asset";
+		if (ImGui::MenuItem(SaveLabel, "Ctrl+S", false, bAnimGraph || bParticleSystem))
 		{
-			Widgets.AnimGraphWidget.Save();
-			EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.AnimGraphWidget.IsDirty());
+			if (bAnimGraph)
+			{
+				Widgets.AnimGraphWidget.Save();
+				EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.AnimGraphWidget.IsDirty());
+			}
+			else if (bParticleSystem)
+			{
+				Widgets.ParticleSystemWidget.Save();
+				EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.ParticleSystemWidget.IsDirty());
+			}
 		}
 		ImGui::Separator();
 		if (ActiveTab->bCanClose && ImGui::MenuItem("Close Tab"))
