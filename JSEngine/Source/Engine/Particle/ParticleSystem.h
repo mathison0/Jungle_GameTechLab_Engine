@@ -9,7 +9,28 @@ class UParticleLODLevel : public UObject
 {
 public:
 	GENERATED_BODY(UParticleLODLevel, UObject)
+    ~UParticleLODLevel() override;
+    void PostDuplicate(UObject* Original) override;
+	UParticleModuleRequired* EnsureRequiredModule();
+    UParticleModuleSpawn* EnsureSpawnModule();
 
+	template <typename T>
+    T* AddModule()
+    {
+        static_assert(std::is_base_of_v<UParticleModule, T>, "T must derive from UParticleModule");
+
+        T* NewModule = UObjectManager::Get().CreateObject<T>();
+        if (!NewModule)
+            return nullptr;
+
+        Modules.push_back(NewModule);
+        CacheModuleLists();
+        return NewModule;
+    }
+
+    void RemoveModule(UParticleModule* Module);
+    void ClearModules();
+    bool Validate(TArray<FString>* OutErrors = nullptr) const;
 	void CacheModuleLists();
 
 	int32 GetLevel() const { return Level; }
@@ -58,6 +79,14 @@ class UParticleEmitter : public UObject
 public:
 	GENERATED_BODY(UParticleEmitter, UObject)
 
+	~UParticleEmitter() override;
+    void PostDuplicate(UObject* Original) override;
+	UParticleLODLevel* AddLODLevel(int32 Level, float DistanceThreshold);
+    void RemoveLODLevel(int32 Index);
+    void ClearLODLevels();
+    void SortLODLevelsByDistance();
+    bool Validate(TArray<FString>* OutErrors = nullptr) const;
+
 	void CacheEmitterModuleInfo();
 	UParticleLODLevel* GetLODLevel(int32 Index) const;
 	int32 SelectLODLevel(float Distance) const;
@@ -80,6 +109,8 @@ class UParticleSystem : public UObject
 {
 public:
 	GENERATED_BODY(UParticleSystem, UObject)
+    ~UParticleSystem() override;
+    void PostDuplicate(UObject* Original) override;
 
 	const TArray<UParticleEmitter*>& GetEmitters() const { return Emitters; }
     UParticleEmitter* AddEmitter();

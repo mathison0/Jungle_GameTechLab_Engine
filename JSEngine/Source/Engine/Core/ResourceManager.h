@@ -144,6 +144,7 @@ public:
 
 	UParticleSystem* LoadParticleSystem(const FString& Path);
 	bool SaveParticleSystem(UParticleSystem* Asset, const FString& Path);
+	bool RunParticleSystemSerializationSmokeTest(const FString& Path);
 	FString SerializeParticleSystemToString(UParticleSystem* Asset);
 	UParticleSystem* LoadParticleSystemFromString(const FString& Snapshot);
 

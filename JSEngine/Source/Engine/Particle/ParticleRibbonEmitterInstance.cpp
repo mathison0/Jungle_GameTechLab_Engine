@@ -1,4 +1,4 @@
-#include "Particle/ParticleRibbonEmitterInstance.h"
+﻿#include "Particle/ParticleRibbonEmitterInstance.h"
 
 #include <algorithm>
 
@@ -199,9 +199,9 @@ void FParticleRibbonEmitterInstance::KillParticle(int32 Index)
 //
 // 위험 3 방어 (진단 §5.3): chain 순회 중 payload nullptr 만나면 break (invalid SlotIndex 참조 회피).
 // 결정 7 옵션 B (variable dt): tangent 는 위치 변화 (Delta / Step) 기반 — frame rate 비종속.
-void FParticleRibbonEmitterInstance::Tick(float DeltaTime)
+void FParticleRibbonEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 {
-    FParticleEmitterInstance::Tick(DeltaTime);
+    FParticleEmitterInstance::Tick(DeltaTime, bAllowSpawning);
 
     EnsureTrailState();
 

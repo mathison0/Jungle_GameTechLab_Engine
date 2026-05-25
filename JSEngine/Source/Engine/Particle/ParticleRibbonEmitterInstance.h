@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleRibbonTypes.h"
@@ -16,7 +16,7 @@ public:
     FParticleRibbonEmitterInstance() = default;
     ~FParticleRibbonEmitterInstance() override = default;
 
-    void Tick(float DeltaTime) override;
+    void Tick(float DeltaTime, bool bAllowSpawning) override;
     void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
                         const FVector& InitialVelocity, struct FParticleEventInstancePayload* EventPayload = nullptr) override;
     void KillParticle(int32 Index) override;

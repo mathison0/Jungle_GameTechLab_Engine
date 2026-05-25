@@ -545,7 +545,7 @@ namespace
 		switch (RenderMode)
 		{
 		case EParticleEmitterRenderMode::Sprite:
-			return "CPU Sprites";
+			return "Sprite";
 		case EParticleEmitterRenderMode::Mesh:
 			return "Mesh Particles";
 		case EParticleEmitterRenderMode::Beam:
@@ -694,18 +694,20 @@ namespace
 
 	UParticleEmitter* CreateDefaultParticleEmitter(const FString& Name)
 	{
-		UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
-		UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
-		if (!Emitter || !LODLevel)
-		{
-			return Emitter;
-		}
+        UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
+        if (!Emitter)
+            return nullptr;
+
+        UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100000.0f);
+        if (!LODLevel)
+            return Emitter;
 
 		const FString LODName = Name + "_LOD0";
 		Emitter->SetFName(FName(Name));
 		LODLevel->SetFName(FName(LODName));
 		LODLevel->Level = 0;
 		LODLevel->RequiredModule = CreateParticleModule<UParticleModuleRequired>("Required");
+		AddModule(LODLevel, CreateParticleModule<USpriteTypeData>("Sprite TypeData"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleSpawn>("Spawn"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleLifetime>("Lifetime"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleLocation>("Initial Location"));
@@ -713,7 +715,6 @@ namespace
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleColor>("Color"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleSize>("Size"));
 
-		Emitter->LODLevels.push_back(LODLevel);
 		Emitter->CacheEmitterModuleInfo();
 		return Emitter;
 	}
@@ -863,6 +864,7 @@ void FEditorParticleSystemWidget::Initialize(UEditorEngine* InEditorEngine)
 void FEditorParticleSystemWidget::Shutdown()
 {
 	ShutdownPreviewViewport();
+	ParticleDocumentStates.clear();
 	for (TComPtr<ID3D11ShaderResourceView>& Icon : CascadeToolbarIcons)
 	{
 		Icon.Reset();
@@ -891,6 +893,18 @@ bool FEditorParticleSystemWidget::Save()
 	}
 
 	ParticleSystemAsset->CacheEmitterModuleInfo();
+
+	TArray<FString> Errors;
+	if (!ParticleSystemAsset->Validate(&Errors))
+	{
+		if (EditorEngine)
+		{
+			const FString Message = Errors.empty() ? FString("Particle system validation failed.") : Errors.front();
+			EditorEngine->GetNotificationService().Warning(Message);
+		}
+		return false;
+	}
+
 	if (!FResourceManager::Get().SaveParticleSystem(ParticleSystemAsset, DocumentPath))
 	{
 		if (EditorEngine)
@@ -901,6 +915,7 @@ bool FEditorParticleSystemWidget::Save()
 	}
 
 	bDirty = false;
+	StoreCurrentDocumentState();
 	if (EditorEngine)
 	{
 		EditorEngine->GetNotificationService().Info("Particle system saved.");
@@ -986,9 +1001,12 @@ bool FEditorParticleSystemWidget::Redo()
 
 void FEditorParticleSystemWidget::CloseDocument(const FString& InDocumentPath)
 {
+	ParticleDocumentStates.erase(InDocumentPath);
 	PreviewBackgroundColorByDocument.erase(InDocumentPath);
 	if (DocumentPath == InDocumentPath)
 	{
+		ClearActiveDocumentState();
+		DocumentPath.clear();
 		PreviewClient.ResetBackgroundColor();
 	}
 }
@@ -1011,6 +1029,7 @@ void FEditorParticleSystemWidget::RenderEmbedded(float DeltaTime)
 	}
 
 	EnsurePreviewViewport();
+	DrivePreviewPlayback(DeltaTime);
 	bPreviewViewportVisible = false;
 	bPreviewViewportRectValid = false;
 
@@ -1031,13 +1050,14 @@ void FEditorParticleSystemWidget::OpenParticleSystem(const FString& InDocumentPa
 	{
 		return;
 	}
+	if (DocumentPath == InDocumentPath && ParticleSystemAsset)
+	{
+		return;
+	}
 
+	StoreCurrentDocumentState();
 	DocumentPath = InDocumentPath;
-	bDirty = false;
-	ParticleSystemAsset = nullptr;
-	SelectEmitter(0);
-	ClearEmitterContext();
-	ClearUndoHistory();
+	ClearActiveDocumentState();
 	bPropertyEditUndoCaptured = false;
 	bEmitterNameEditUndoCaptured = false;
 
@@ -1051,7 +1071,14 @@ void FEditorParticleSystemWidget::OpenParticleSystem(const FString& InDocumentPa
 		PreviewClient.ResetBackgroundColor();
 	}
 
-	ParticleSystemAsset = FResourceManager::Get().LoadParticleSystem(InDocumentPath);
+	if (!RestoreDocumentState(InDocumentPath))
+	{
+		ParticleSystemAsset = FResourceManager::Get().LoadParticleSystem(InDocumentPath);
+		bDirty = false;
+		SelectEmitter(0);
+		ClearEmitterContext();
+		ClearUndoHistory();
+	}
 
 	EnsurePreviewViewport();
 	RefreshPreviewComponent(true);
@@ -1144,7 +1171,9 @@ void FEditorParticleSystemWidget::EnsurePreviewActor()
 	}
 
 	PreviewActor->SetFName(FName("Particle Preview Actor"));
-	PreviewActor->SetTickInEditor(true);
+	// ViewerPreview worlds tick through the game path, so TickInEditor does not gate this actor.
+	// Keep the preview actor inactive and drive its particle component explicitly from the editor UI.
+	PreviewActor->SetActive(false);
 	PreviewActor->SetActorLocation(FVector::ZeroVector);
 
 	PreviewComponent = PreviewActor->AddComponent<UParticleSystemComponent>();
@@ -1180,17 +1209,114 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 	if (PreviewComponent->GetTemplate() != ParticleSystemAsset)
 	{
 		PreviewComponent->SetTemplate(ParticleSystemAsset);
+		RestartPreviewPlayback();
 	}
 	else if (bRestartSimulation)
 	{
 		PreviewComponent->RecreateEmitterInstances();
+		RestartPreviewPlayback();
 	}
 
-	if (PreviewActor && PreviewComponent->GetTotalActiveParticleCount() == 0)
+	if (PreviewComponent->GetTotalActiveParticleCount() == 0 && !bPreviewPaused)
 	{
-		PreviewActor->Tick(0.1f);
+		PreviewComponent->TickPreview(0.1f * GetPreviewAnimSpeed(), true);
 	}
 
+	if (EditorEngine && PreviewWorldHandle != FName::None)
+	{
+		if (FWorldContext* PreviewContext = EditorEngine->GetWorldContextFromHandle(PreviewWorldHandle))
+		{
+			if (PreviewContext->World)
+			{
+				PreviewContext->World->SyncSpatialIndex();
+			}
+		}
+	}
+}
+
+float FEditorParticleSystemWidget::GetPreviewAnimSpeed() const
+{
+	static constexpr float SpeedValues[] = { 1.0f, 0.5f, 0.25f, 0.1f, 0.01f };
+	const int32 ClampedIndex = std::clamp(PreviewAnimSpeedIndex, 0, static_cast<int32>(IM_ARRAYSIZE(SpeedValues)) - 1);
+	return SpeedValues[ClampedIndex];
+}
+
+float FEditorParticleSystemWidget::GetPreviewMaxEmitterDuration() const
+{
+	float MaxDuration = 0.0f;
+	if (!ParticleSystemAsset)
+	{
+		return MaxDuration;
+	}
+
+	for (const UParticleEmitter* Emitter : ParticleSystemAsset->GetEmitters())
+	{
+		const UParticleLODLevel* LODLevel = Emitter ? Emitter->GetLODLevel(CurrentLOD) : nullptr;
+		const UParticleModuleRequired* Required = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+		if (Required)
+		{
+			MaxDuration = std::max(MaxDuration, Required->GetEmitterDuration());
+		}
+	}
+	return MaxDuration;
+}
+
+void FEditorParticleSystemWidget::RestartPreviewPlayback()
+{
+	PreviewPlaybackElapsed = 0.0f;
+	bPreviewPlaybackComplete = false;
+}
+
+void FEditorParticleSystemWidget::DrivePreviewPlayback(float DeltaTime)
+{
+	if (!PreviewComponent || bPreviewPaused || bPreviewPlaybackComplete || DeltaTime <= 0.0f)
+	{
+		return;
+	}
+
+	const float BaseDeltaTime = bPreviewRealtime
+		? DeltaTime
+		: 1.0f / std::max(ParticleSystemAsset ? ParticleSystemAsset->UpdateTimeFPS : 60.0f, 1.0f);
+	const float PreviewDeltaTime = BaseDeltaTime * GetPreviewAnimSpeed();
+	if (bPreviewLoop)
+	{
+		PreviewComponent->TickPreview(PreviewDeltaTime, true);
+		PreviewPlaybackElapsed += PreviewDeltaTime;
+		if (EditorEngine && PreviewWorldHandle != FName::None)
+		{
+			if (FWorldContext* PreviewContext = EditorEngine->GetWorldContextFromHandle(PreviewWorldHandle))
+			{
+				if (PreviewContext->World)
+				{
+					PreviewContext->World->SyncSpatialIndex();
+				}
+			}
+		}
+		return;
+	}
+
+	const float EmitterDuration = GetPreviewMaxEmitterDuration();
+	const bool bCanSpawnAtStart = PreviewPlaybackElapsed < EmitterDuration;
+	const float SpawnTimeRemaining = std::max(0.0f, EmitterDuration - PreviewPlaybackElapsed);
+	const float SpawnDeltaTime = bCanSpawnAtStart ? std::min(PreviewDeltaTime, SpawnTimeRemaining) : 0.0f;
+	const float UpdateOnlyDeltaTime = PreviewDeltaTime - SpawnDeltaTime;
+
+	if (SpawnDeltaTime > 0.0f)
+	{
+		PreviewComponent->TickPreview(SpawnDeltaTime, true);
+		PreviewPlaybackElapsed += SpawnDeltaTime;
+	}
+	if (UpdateOnlyDeltaTime > 0.0f)
+	{
+		PreviewComponent->TickPreview(UpdateOnlyDeltaTime, false);
+		PreviewPlaybackElapsed += UpdateOnlyDeltaTime;
+	}
+
+	if (PreviewPlaybackElapsed >= EmitterDuration && PreviewComponent->GetTotalActiveParticleCount() == 0)
+	{
+		bPreviewPlaybackComplete = true;
+		bPreviewPaused = true;
+	}
 	if (EditorEngine && PreviewWorldHandle != FName::None)
 	{
 		if (FWorldContext* PreviewContext = EditorEngine->GetWorldContextFromHandle(PreviewWorldHandle))
@@ -1710,12 +1836,24 @@ void FEditorParticleSystemWidget::DrawViewportMenuBar(const ImVec2& CanvasMin)
 
 	if (BeginParticlePopup("##ParticlePreviewTimePopup"))
 	{
-		if (ImGui::MenuItem("Play/Pause", nullptr, bPreviewPaused))
+		if (ImGui::MenuItem(bPreviewPaused ? "Play" : "Pause"))
 		{
+			if (bPreviewPlaybackComplete && PreviewComponent)
+			{
+				PreviewComponent->RecreateEmitterInstances();
+				RestartPreviewPlayback();
+			}
 			bPreviewPaused = !bPreviewPaused;
 		}
 		ImGui::MenuItem("Realtime", nullptr, &bPreviewRealtime);
-		ImGui::MenuItem("Loop", nullptr, &bPreviewLoop);
+		if (ImGui::MenuItem("Loop", nullptr, &bPreviewLoop))
+		{
+			if (bPreviewLoop && bPreviewPlaybackComplete)
+			{
+				RestartPreviewPlayback();
+				bPreviewPaused = false;
+			}
+		}
 
 		if (BeginParticleMenu("AnimSpeed"))
 		{
@@ -2232,6 +2370,110 @@ void FEditorParticleSystemWidget::DrawCenterToast(const ImVec2& AreaMin, const I
 	ImGui::End();
 	ImGui::PopStyleColor(3);
 	ImGui::PopStyleVar(3);
+}
+
+void FEditorParticleSystemWidget::StoreCurrentDocumentState()
+{
+	if (DocumentPath.empty() || !ParticleSystemAsset)
+	{
+		return;
+	}
+
+	FParticleSystemDocumentState& State = ParticleDocumentStates[DocumentPath];
+	State.Asset = ParticleSystemAsset;
+	State.bDirty = bDirty;
+	State.CurrentLOD = CurrentLOD;
+	State.SelectedEmitterIndex = SelectedEmitterIndex;
+	State.SelectedModuleIndex = SelectedModuleIndex;
+	State.UndoHistory = UndoHistory;
+	State.RedoHistory = RedoHistory;
+	State.PreviewViewMode = bPreviewViewportInitialized
+		? PreviewViewport.GetState().ViewMode
+		: EViewMode::Lit_BlinnPhong;
+	State.PreviewShowFlags = bPreviewViewportInitialized
+		? PreviewClient.GetParticleShowFlags()
+		: FParticleSystemViewportShowFlags{};
+	State.PreviewShowFlags.bBounds = bShowBounds;
+	State.PreviewShowFlags.bAxis = bShowOriginAxis;
+	State.PreviewBackgroundColor = bPreviewViewportInitialized
+		? PreviewClient.GetBackgroundColor()
+		: FParticleSystemViewportClient::GetDefaultBackgroundColor();
+	State.bShowThumbnail = bShowThumbnail;
+	State.bShowBounds = bShowBounds;
+	State.bShowOriginAxis = bShowOriginAxis;
+	State.bPreviewPaused = bPreviewPaused;
+	State.bPreviewRealtime = bPreviewRealtime;
+	State.bPreviewLoop = bPreviewLoop;
+	State.bPreviewPlaybackComplete = bPreviewPlaybackComplete;
+	State.PreviewAnimSpeedIndex = PreviewAnimSpeedIndex;
+	State.PreviewPlaybackElapsed = PreviewPlaybackElapsed;
+}
+
+bool FEditorParticleSystemWidget::RestoreDocumentState(const FString& InDocumentPath)
+{
+	auto It = ParticleDocumentStates.find(InDocumentPath);
+	if (It == ParticleDocumentStates.end() || !It->second.Asset)
+	{
+		return false;
+	}
+
+	const FParticleSystemDocumentState& State = It->second;
+	ParticleSystemAsset = State.Asset;
+	bDirty = State.bDirty;
+	CurrentLOD = State.CurrentLOD;
+	SelectedEmitterIndex = State.SelectedEmitterIndex;
+	SelectedModuleIndex = State.SelectedModuleIndex;
+	UndoHistory = State.UndoHistory;
+	RedoHistory = State.RedoHistory;
+	bShowThumbnail = State.bShowThumbnail;
+	bShowBounds = State.bShowBounds;
+	bShowOriginAxis = State.bShowOriginAxis;
+	bPreviewPaused = State.bPreviewPaused;
+	bPreviewRealtime = State.bPreviewRealtime;
+	bPreviewLoop = State.bPreviewLoop;
+	bPreviewPlaybackComplete = State.bPreviewPlaybackComplete;
+	PreviewAnimSpeedIndex = State.PreviewAnimSpeedIndex;
+	PreviewPlaybackElapsed = State.PreviewPlaybackElapsed;
+	PreviewBackgroundColorByDocument[InDocumentPath] = State.PreviewBackgroundColor;
+	if (bPreviewViewportInitialized)
+	{
+		PreviewViewport.GetState().ViewMode = State.PreviewViewMode;
+		PreviewClient.GetParticleShowFlags() = State.PreviewShowFlags;
+		PreviewClient.SetBackgroundColor(State.PreviewBackgroundColor);
+	}
+	ClearEmitterContext();
+	ResetPendingReorders();
+	ClampSelectionToParticleSystem();
+	return true;
+}
+
+void FEditorParticleSystemWidget::ClearActiveDocumentState()
+{
+	ParticleSystemAsset = nullptr;
+	bDirty = false;
+	CurrentLOD = 0;
+	SelectedEmitterIndex = 0;
+	SelectedModuleIndex = NoParticleModuleSelection;
+	SelectedCurveAssetPath.clear();
+	ClearEmitterContext();
+	ClearUndoHistory();
+	ResetPendingReorders();
+	RestartPreviewPlayback();
+	bShowThumbnail = false;
+	bShowBounds = true;
+	bShowOriginAxis = true;
+	bPreviewPaused = false;
+	bPreviewRealtime = true;
+	bPreviewLoop = true;
+	PreviewAnimSpeedIndex = 0;
+	if (bPreviewViewportInitialized)
+	{
+		PreviewViewport.GetState().ViewMode = EViewMode::Lit_BlinnPhong;
+		PreviewClient.GetParticleShowFlags() = FParticleSystemViewportShowFlags{};
+		PreviewClient.ResetBackgroundColor();
+	}
+	bPropertyEditUndoCaptured = false;
+	bEmitterNameEditUndoCaptured = false;
 }
 
 void FEditorParticleSystemWidget::CaptureUndoSnapshot(const char* Label)

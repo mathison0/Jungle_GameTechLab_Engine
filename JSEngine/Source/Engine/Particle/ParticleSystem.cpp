@@ -1,11 +1,145 @@
 ﻿#include "Particle/ParticleSystem.h"
 
+#include "Particle/ParticleModuleTypeData.h"
+
 #include <algorithm>
 
 #include "Core/ResourceManager.h"
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
+UParticleLODLevel::~UParticleLODLevel()
+{
+    ClearModules();
+}
+
+void UParticleLODLevel::PostDuplicate(UObject* Original)
+{
+    UObject::PostDuplicate(Original);
+
+    UParticleLODLevel* SourceLOD = Cast<UParticleLODLevel>(Original);
+
+    RequiredModule = nullptr;
+    Modules.clear();
+    SpawnModule = nullptr;
+    SpawnModules.clear();
+    UpdateModules.clear();
+    TypeDataModule = nullptr;
+
+    if (!SourceLOD)
+    {
+        return;
+    }
+
+    if (SourceLOD->RequiredModule)
+    {
+        RequiredModule = Cast<UParticleModuleRequired>(SourceLOD->RequiredModule->Duplicate());
+    }
+
+    for (UParticleModule* SourceModule : SourceLOD->Modules)
+    {
+        UParticleModule* DuplicatedModule = SourceModule ?
+			Cast<UParticleModule>(SourceModule->Duplicate()) : nullptr;
+
+        if (DuplicatedModule)
+        {
+            Modules.push_back(DuplicatedModule);
+        }
+    }
+
+    CacheModuleLists();
+}
+
+UParticleModuleRequired* UParticleLODLevel::EnsureRequiredModule()
+{
+    if (!RequiredModule)
+        RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
+
+	CacheModuleLists();
+    return RequiredModule;
+}
+
+UParticleModuleSpawn* UParticleLODLevel::EnsureSpawnModule()
+{
+    for (UParticleModule* Module : Modules)
+    {
+        if (UParticleModuleSpawn* SpawnModule = Cast<UParticleModuleSpawn>(Module))
+            return SpawnModule;
+    }        
+    return AddModule<UParticleModuleSpawn>();
+}
+
+void UParticleLODLevel::RemoveModule(UParticleModule* Module)
+{
+    if (!Module)
+        return;
+    for (auto It = Modules.begin(); It != Modules.end(); It++)
+    {
+        if (*It == Module)
+        {
+            Modules.erase(It);
+            UObjectManager::Get().DestroyObject(Module);
+            CacheModuleLists();
+            return;
+        }
+    }
+
+	  if (RequiredModule == Module)
+    {
+        UObjectManager::Get().DestroyObject(RequiredModule);
+        RequiredModule = nullptr;
+        CacheModuleLists();
+    }
+}
+
+void UParticleLODLevel::ClearModules()
+{
+    if (RequiredModule)
+    {
+        UObjectManager::Get().DestroyObject(RequiredModule);
+        RequiredModule = nullptr;
+    }
+
+	for (UParticleModule* Module : Modules)
+    {
+        if (Module)
+            UObjectManager::Get().DestroyObject(Module);
+    }
+    Modules.clear();
+    CacheModuleLists();
+}
+
+bool UParticleLODLevel::Validate(TArray<FString>* OutErrors) const
+{
+    bool bIsValid = true;
+    if (!RequiredModule)
+    {
+        bIsValid = false;
+        if (OutErrors)
+            OutErrors->push_back("Particle LOD level must have a required module");
+    }
+
+	bool bHasSpawnModule = false;
+    for (UParticleModule* Module : Modules)
+    {
+        if (!Module)
+        {
+            bIsValid = false;
+            if (OutErrors)
+                OutErrors->push_back("Particle LOD level must have a spawn modules");
+            continue;
+		}
+        if (Cast<UParticleModuleSpawn>(Module))
+            bHasSpawnModule = true;
+    }
+    if (!bHasSpawnModule)
+    {
+        bIsValid = false;
+        if (OutErrors)
+            OutErrors->push_back("Particle LOD level must have a spawn module.");
+    }
+    return bIsValid;
+}
 
 // Function : Build cached spawn and update module lists for this LOD level
 // input : None
@@ -68,6 +202,126 @@ EParticleEmitterRenderMode UParticleLODLevel::GetEffectiveRenderMode() const
 		return RequiredModule->GetRenderMode();
 	}
 	return EParticleEmitterRenderMode::Sprite;
+}
+
+UParticleEmitter::~UParticleEmitter()
+{
+    ClearLODLevels();
+}
+
+void UParticleEmitter::PostDuplicate(UObject* Original)
+{
+    UObject::PostDuplicate(Original);
+
+	UParticleEmitter* SourceEmitter = Cast<UParticleEmitter>(Original);
+    LODLevels.clear();
+
+	ParticleSize = sizeof(FBaseParticle);
+    MaxActiveParticles = 128;
+
+	if (!SourceEmitter)
+        return;
+
+	    for (UParticleLODLevel* SourceLOD : SourceEmitter->LODLevels)
+    {
+        UParticleLODLevel* DuplicatedLOD = SourceLOD?
+			Cast<UParticleLODLevel>(SourceLOD->Duplicate()): nullptr;
+
+        if (DuplicatedLOD)
+            LODLevels.push_back(DuplicatedLOD);
+    }
+
+    CacheEmitterModuleInfo();
+
+}
+
+UParticleLODLevel* UParticleEmitter::AddLODLevel(int32 Level, float DistanceThreshold)
+{
+    UParticleLODLevel* NewLOD = UObjectManager::Get().CreateObject<UParticleLODLevel>();
+    if (!NewLOD)
+    {
+        return nullptr;
+    }
+    NewLOD->Level = Level;
+    NewLOD->bEnabled = true;
+    NewLOD->DistanceThreshold = DistanceThreshold;
+
+    LODLevels.push_back(NewLOD);
+    SortLODLevelsByDistance();
+    CacheEmitterModuleInfo();
+
+    return NewLOD;
+}
+
+void UParticleEmitter::RemoveLODLevel(int32 Index)
+{
+    if (Index < 0 || Index >= static_cast<int32>(LODLevels.size()))
+        return;
+	UParticleLODLevel* RemovedLOD = LODLevels[Index];
+    LODLevels.erase(LODLevels.begin()+ Index);
+
+	if (RemovedLOD)
+        UObjectManager::Get().DestroyObject(RemovedLOD);
+
+	CacheEmitterModuleInfo();
+}
+
+void UParticleEmitter::ClearLODLevels()
+{
+    for (UParticleLODLevel* LODLevel : LODLevels)
+    {
+        if (LODLevel)
+            UObjectManager::Get().DestroyObject(LODLevel);
+    }
+    LODLevels.clear();
+    CacheEmitterModuleInfo();
+}
+
+void UParticleEmitter::SortLODLevelsByDistance()
+{
+    std::sort(LODLevels.begin(), LODLevels.end(),
+        [](const UParticleLODLevel* A, const UParticleLODLevel* B)
+        {
+            if (!A)
+            {
+                return false;
+            }
+            if (!B)
+            {
+                return true;
+            }
+            return A->GetDistanceThreshold() < B->GetDistanceThreshold();
+        });
+}
+
+bool UParticleEmitter::Validate(TArray<FString>* OutErrors) const
+{
+    bool bIsValid = true;
+
+	if (LODLevels.empty())
+    {
+        bIsValid = false;
+        if (OutErrors)
+        {
+            OutErrors->push_back("Particle emitter must have at least one LOD level.");
+        }
+    }
+    for (int32 LODIndex = 0; LODIndex < static_cast<int32>(LODLevels.size()); LODIndex++)
+    {
+        const UParticleLODLevel* LODLevel = LODLevels[LODIndex];
+        if (!LODLevel)
+        {
+            bIsValid = false;
+            if (OutErrors)
+                OutErrors->push_back("Particle emitter has a null LOD level.");
+            continue;
+        }
+        if (!LODLevel->Validate(OutErrors))
+        {
+            bIsValid = false;
+        }
+    }
+    return bIsValid;
 }
 
 // Function : Cache emitter particle layout and module information
@@ -135,6 +389,31 @@ int32 UParticleEmitter::SelectLODLevel(float Distance) const
 	return FallbackIndex >= 0 ? FallbackIndex : 0;
 }
 
+UParticleSystem::~UParticleSystem()
+{
+    ClearEmitters();
+}
+
+void UParticleSystem::PostDuplicate(UObject* Original)
+{
+    UObject::PostDuplicate(Original);
+
+	UParticleSystem* SourceSystem = Cast<UParticleSystem>(Original);
+    Emitters.clear();
+
+	if (!SourceSystem)
+        return;
+
+	for (UParticleEmitter* SourceEmitter : SourceSystem->Emitters)
+    {
+        UParticleEmitter* DuplicatedEmitter = SourceEmitter ? 
+			Cast<UParticleEmitter>(SourceEmitter->Duplicate()) : nullptr;
+        if (DuplicatedEmitter)
+            Emitters.push_back(DuplicatedEmitter);
+    }
+    CacheEmitterModuleInfo();
+}
+
 UParticleEmitter* UParticleSystem::AddEmitter()
 {
     UParticleEmitter* NewEmitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
@@ -186,6 +465,7 @@ bool UParticleSystem::Validate(TArray<FString>* OutErrors) const
             OutErrors->push_back("Particle system must have at least one emitter.");
         }
     }
+
     for (int32 EmitterIndex = 0; EmitterIndex < static_cast<int32>(Emitters.size()); ++EmitterIndex)
     {
         const UParticleEmitter* Emitter = Emitters[EmitterIndex];
@@ -197,6 +477,10 @@ bool UParticleSystem::Validate(TArray<FString>* OutErrors) const
                 OutErrors->push_back("Particle system has a null emitter.");
             }
             continue;
+        }
+        if (!Emitter->Validate(OutErrors))
+        {
+            bIsValid = false;
         }
         if (Emitter->GetLODLevels().empty())
         {
@@ -225,24 +509,23 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
         return nullptr;
     }
 
-    UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
-    LODLevel->Level = 0;
-    LODLevel->bEnabled = true;
-    LODLevel->DistanceThreshold = 100000.0f;
+    UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100000.0f);
+    if (!LODLevel)
+    {
+        UObjectManager::Get().DestroyObject(System);
+        return nullptr;
+    }
 
-    LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
-    // USpriteTypeData를 명시 등록하여 기본 Sprite asset도 TypeData 시스템 안으로 편입.
-    // CacheModuleLists()가 Cast<UParticleModuleTypeDataBase>로 자동 캐싱한다.
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<USpriteTypeData>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLocation>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleVelocity>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleColor>());
-    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSize>());
+	LODLevel->EnsureRequiredModule();
+    LODLevel->AddModule<USpriteTypeData>();
+    LODLevel->EnsureSpawnModule();
+    LODLevel->AddModule<UParticleModuleLifetime>();
+    LODLevel->AddModule<UParticleModuleLocation>();
+    LODLevel->AddModule<UParticleModuleVelocity>();
+    LODLevel->AddModule<UParticleModuleColor>();
+    LODLevel->AddModule<UParticleModuleSize>();
 
-    Emitter->LODLevels.push_back(LODLevel);
-    System->CacheEmitterModuleInfo();
+    Emitter->CacheEmitterModuleInfo();
 
     return System;
 }

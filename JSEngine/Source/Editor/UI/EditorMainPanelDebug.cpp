@@ -4,6 +4,7 @@
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/Viewport/EditorViewportClient.h"
+#include "Core/ResourceManager.h"
 #include "GameFramework/World.h"
 #include "Math/Utils.h"
 
@@ -246,6 +247,19 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
             ImGui::Unindent();
         }
         ImGui::Checkbox("FXAA", &Settings.bEnableFXAA);
+    }
+
+    if (ImGui::CollapsingHeader("Particle", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        if (ImGui::Button("Run Particle Serialization Smoke Test"))
+        {
+            const FString SmokeTestPath = "Asset/Particle/SmokeTest.particlesystem";
+            const bool bPassed = FResourceManager::Get().RunParticleSystemSerializationSmokeTest(SmokeTestPath);
+            FEditorConsoleWidget::AddLog(
+                "Particle serialization smoke test %s: %s\n",
+                bPassed ? "passed" : "failed",
+                SmokeTestPath.c_str());
+        }
     }
 
     if (ImGui::CollapsingHeader("Place Actors (Grid)", ImGuiTreeNodeFlags_DefaultOpen))
