@@ -210,6 +210,11 @@ namespace
 			return JsonData;
 		}
 
+		if (!AssetPath.empty())
+		{
+			Asset->SetAssetPath(AssetPath);
+		}
+
 		FParticleSystemObjectGraphResolver Resolver;
 		CollectParticleSystemObjectGraph(Asset, Resolver);
 
@@ -250,6 +255,10 @@ namespace
 			UE_LOG_ERROR("[ParticleSystemAsset] Invalid json: %s", SourceLabel.c_str());
 			return nullptr;
 		}
+
+		const FString EmbeddedAssetPath = JsonData.hasKey("AssetPath")
+			? FPaths::Normalize(JsonData["AssetPath"].ToString())
+			: FString();
 
 		if (JsonData.hasKey("Objects") && JsonData["Objects"].JSONType() == json::JSON::Class::Array)
 		{
@@ -315,6 +324,10 @@ namespace
 			}
 
 			RebuildParticleSystemCaches(Asset);
+			if (!EmbeddedAssetPath.empty() && IsParticleSystemAssetPath(EmbeddedAssetPath))
+			{
+				Asset->SetAssetPath(EmbeddedAssetPath);
+			}
 			return Asset;
 		}
 
@@ -328,6 +341,10 @@ namespace
 		FJsonReader Reader(JsonData);
 		Asset->Serialize(Reader);
 		RebuildParticleSystemCaches(Asset);
+		if (!EmbeddedAssetPath.empty() && IsParticleSystemAssetPath(EmbeddedAssetPath))
+		{
+			Asset->SetAssetPath(EmbeddedAssetPath);
+		}
 		return Asset;
 	}
 
@@ -1907,7 +1924,12 @@ UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)
 	);
 
 	json::JSON JsonData = json::JSON::Load(JsonStr);
-	return LoadParticleSystemFromJson(JsonData, NormalizedPath);
+	UParticleSystem* Asset = LoadParticleSystemFromJson(JsonData, NormalizedPath);
+	if (Asset)
+	{
+		Asset->SetAssetPath(NormalizedPath);
+	}
+	return Asset;
 }
 
 bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString& Path)
@@ -1926,6 +1948,7 @@ bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString&
 	const std::filesystem::path FilePath =
 		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
 
+	Asset->SetAssetPath(NormalizedPath);
 	json::JSON JsonData = BuildParticleSystemAssetJson(Asset, NormalizedPath);
 
 	std::error_code ErrorCode;
@@ -2001,6 +2024,16 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 	Loaded->CacheEmitterModuleInfo();
 
 	bool bPassed = true;
+	if (Loaded->GetAssetPath() != NormalizedPath)
+	{
+		UE_LOG_ERROR(
+			"[ParticleSystemAssetSmoke] Asset path mismatch. Expected '%s', got '%s'.",
+			NormalizedPath.c_str(),
+			Loaded->GetAssetPath().c_str()
+		);
+		bPassed = false;
+	}
+
 	TArray<FString> LoadedErrors;
 	if (!Loaded->Validate(&LoadedErrors))
 	{

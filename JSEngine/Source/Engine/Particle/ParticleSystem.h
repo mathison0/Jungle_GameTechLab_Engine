@@ -118,7 +118,12 @@ public:
     void ClearEmitters();
 	void CacheEmitterModuleInfo();
     bool Validate(TArray<FString>* OutErrors = nullptr) const;
+	void SetAssetPath(const FString& InAssetPath);
+	const FString& GetAssetPath() const { return AssetPath; }
     static UParticleSystem* CreateDefaultSpriteSystem();
+
+	UPROPERTY(DisplayName = "Asset Path")
+	FString AssetPath;
 
 	UPROPERTY(DisplayName = "Update Time FPS", Min = 0.0f)
 	float UpdateTimeFPS = 60.0f;

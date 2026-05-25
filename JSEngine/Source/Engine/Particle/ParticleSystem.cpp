@@ -1,5 +1,6 @@
 ﻿#include "Particle/ParticleSystem.h"
 
+#include "Core/Paths.h"
 #include "Particle/ParticleModuleTypeData.h"
 
 #include <algorithm>
@@ -448,6 +449,11 @@ void UParticleSystem::CacheEmitterModuleInfo()
     for (UParticleEmitter* Emitter : Emitters)
         if (Emitter)
             Emitter->CacheEmitterModuleInfo();
+}
+
+void UParticleSystem::SetAssetPath(const FString& InAssetPath)
+{
+	AssetPath = FPaths::Normalize(InAssetPath);
 }
 
 bool UParticleSystem::Validate(TArray<FString>* OutErrors) const

@@ -5,6 +5,8 @@
 #include "GameFramework/World.h"
 #include "Particle/ParticleModuleTypeData.h"
 
+#include <cstring>
+
 UParticleSystemComponent::~UParticleSystemComponent()
 {
 	ClearEmitterInstances();
@@ -16,13 +18,25 @@ UParticleSystemComponent::~UParticleSystemComponent()
 // output : Template is updated and emitter instances match the new template
 void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 {
-	if (Template == InTemplate)
+	if (Template == InTemplate && !EmitterInstances.empty())
 	{
 		return;
 	}
 
 	Template = InTemplate;
 	RecreateEmitterInstances();
+}
+
+void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
+{
+	UPrimitiveComponent::PostEditProperty(PropertyName);
+
+	const bool bTemplateChanged = PropertyName && std::strcmp(PropertyName, "Template") == 0;
+	const bool bNeedsRuntimeRebuild = Template && EmitterInstances.empty();
+	if (bTemplateChanged || bNeedsRuntimeRebuild)
+	{
+		RecreateEmitterInstances();
+	}
 }
 
 // Function : Rebuild emitter instances from current particle system template
