@@ -51,6 +51,42 @@ struct FParticleDataContainer
 	uint8* ParticleData = nullptr;
 	uint16* ParticleIndices = nullptr;
 
+	static constexpr int32 DefaultParticleAlignment = 16;
+
+	// Align particle stride so each particle starts at a predictable boundary.
+	static int32 AlignSize(int32 Size, int32 Alignment)
+	{
+		if (Alignment <= 0)
+		{
+			return Size;
+		}
+		return ((Size + Alignment - 1) / Alignment) * Alignment;
+	}
+
+	bool Allocate(int32 MaxParticles, int32 ParticleStride, int32 Alignment = DefaultParticleAlignment)
+	{
+		Reset();
+		if (MaxParticles <= 0 || ParticleStride <= 0)
+		{
+			return false;
+		}
+
+		const int32 AlignedParticleStride = AlignSize(ParticleStride, Alignment);
+		ParticleDataNumBytes = AlignedParticleStride * MaxParticles;
+		ParticleIndicesNumShorts = MaxParticles;
+		const int32 ParticleIndicesNumBytes = static_cast<int32>(sizeof(uint16)) * ParticleIndicesNumShorts;
+		MemBlockSize = ParticleDataNumBytes + ParticleIndicesNumBytes;
+
+		ParticleData = new uint8[MemBlockSize];
+		ParticleIndices = reinterpret_cast<uint16*>(ParticleData + ParticleDataNumBytes);
+		return ParticleData != nullptr && ParticleIndices != nullptr;
+	}
+
+	int32 GetMemoryBytes() const
+	{
+		return MemBlockSize;
+	}
+
 	// Function : Release owned particle data memory and clear container metadata
 	// input : None
 	// output : ParticleData is released and size/index fields are reset

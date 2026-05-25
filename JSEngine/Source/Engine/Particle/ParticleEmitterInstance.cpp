@@ -5,13 +5,6 @@
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleSystemComponent.h"
 
-// Cycle 10c 계층 분리: 본 cpp에서 RenderCommand 참조 0건.
-// Instance는 자기 데이터 buffer만 갱신/노출, RenderCommand 매핑은 Builder 책임.
-
-// Cycle 10c baseline: BuildInstanceData 시그니처 교체 + 4종 getter 추가는 sizeof 영향 없음 (vtable은 instance마다 단일 포인터).
-// Cycle 10b (120 bytes) 그대로 유지.
-static_assert(sizeof(FParticleEmitterInstance) == 120, "Cycle 10c baseline: FParticleEmitterInstance expected 128 bytes (Cycle 10b 120 same — virtual signature changes don't affect sizeof)");
-
 FParticleEmitterInstance::~FParticleEmitterInstance()
 {
 	Reset();
@@ -35,6 +28,7 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	{
 		SpriteTemplate->CacheEmitterModuleInfo();
 		ParticleSize = SpriteTemplate->GetParticleSize();
+		ParticleStride = FParticleDataContainer::AlignSize(ParticleSize, FParticleDataContainer::DefaultParticleAlignment);
 		MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
 		CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(0.0f);
 		CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
@@ -42,24 +36,29 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	else
 	{
 		ParticleSize = sizeof(FBaseParticle);
+		ParticleStride = FParticleDataContainer::AlignSize(sizeof(FBaseParticle), FParticleDataContainer::DefaultParticleAlignment);
 		MaxActiveParticles = 1;
 	}
 
+	if (!ParticleStorage.Allocate(MaxActiveParticles, ParticleSize))
+	{
+		MaxActiveParticles = 0;
+		return;
+	}
 	// payload-aware stride: TypeData가 요구하는 추가 byte 만큼 가산.
 	// USpriteTypeData::RequiredPayloadBytes() = 0 → Sprite는 회귀 0.
 	const int32 PayloadBytes = (CurrentLODLevel && CurrentLODLevel->GetTypeDataModule())
 		? CurrentLODLevel->GetTypeDataModule()->RequiredPayloadBytes()
 		: 0;
-	ParticleStride = ParticleSize + PayloadBytes;
 	InstancePayloadSize = PayloadBytes;
 	PayloadOffset = ParticleSize;
 
-	ParticleData = new uint8[ParticleStride * MaxActiveParticles];
-	ParticleIndices = new uint16[MaxActiveParticles];
+	ParticleStorage.ParticleData = new uint8[ParticleStride * MaxActiveParticles];
+    ParticleStorage.ParticleIndices = new uint16[MaxActiveParticles];
 
 	for (int32 Index = 0; Index < MaxActiveParticles; ++Index)
 	{
-		ParticleIndices[Index] = static_cast<uint16>(Index);
+		ParticleStorage.ParticleIndices[Index] = static_cast<uint16>(Index);
 	}
 }
 
@@ -68,11 +67,8 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 // output : Particle buffers are released and instance counters return to the default state
 void FParticleEmitterInstance::Reset()
 {
-	delete[] ParticleData;
-	delete[] ParticleIndices;
+	ParticleStorage.Reset();
 	delete[] InstanceData;
-	ParticleData = nullptr;
-	ParticleIndices = nullptr;
 	InstanceData = nullptr;
 	InstancePayloadSize = 0;
 	PayloadOffset = 0;
@@ -90,7 +86,7 @@ void FParticleEmitterInstance::Reset()
 // output : New particles are spawned, active particles are updated, and expired particles are removed
 void FParticleEmitterInstance::Tick(float DeltaTime)
 {
-	if (!SpriteTemplate || !Component || !ParticleData || !ParticleIndices || DeltaTime <= 0.0f)
+	if (!SpriteTemplate || !Component || !ParticleStorage.ParticleData || !ParticleStorage.ParticleIndices || DeltaTime <= 0.0f)
 	{
 		return;
 	}
@@ -177,8 +173,8 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 	for (int32 SpawnIndex = 0; SpawnIndex < Count && ActiveParticles < MaxActiveParticles; ++SpawnIndex)
 	{
 		const int32 ActiveIndex = ActiveParticles;
-		const uint16 SlotIndex = ParticleIndices[ActiveIndex];
-		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(ParticleData + SlotIndex * ParticleStride);
+		const uint16 SlotIndex = ParticleStorage.ParticleIndices[ActiveIndex];
+		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(ParticleStorage.ParticleData + SlotIndex * ParticleStride);
 		*Particle = FBaseParticle();
 
 		Particle->ParticleId = ++ParticleCounter;
@@ -212,15 +208,15 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	}
 
 	const int32 LastActiveIndex = ActiveParticles - 1;
-	std::swap(ParticleIndices[Index], ParticleIndices[LastActiveIndex]);
+	std::swap(ParticleStorage.ParticleIndices[Index], ParticleStorage.ParticleIndices[LastActiveIndex]);
 	--ActiveParticles;
 }
 
 FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
 {
     FParticleEmitterRuntimeView RuntimeView;
-    RuntimeView.ParticleData = ParticleData;
-    RuntimeView.ParticleIndices = ParticleIndices;
+    RuntimeView.ParticleData = ParticleStorage.ParticleData;
+    RuntimeView.ParticleIndices = ParticleStorage.ParticleIndices;
     RuntimeView.ActiveParticles = ActiveParticles;
     RuntimeView.MaxActiveParticles = MaxActiveParticles;
     RuntimeView.ParticleStride = ParticleStride;
@@ -242,11 +238,11 @@ FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
 // output : Pointer to particle data, or nullptr when the index is invalid
 FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex)
 {
-	if (!ParticleData || !ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
+	if (!ParticleStorage.ParticleData || !ParticleStorage.ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
 	{
 		return nullptr;
 	}
-	return reinterpret_cast<FBaseParticle*>(ParticleData + ParticleIndices[ActiveIndex] * ParticleStride);
+	return reinterpret_cast<FBaseParticle*>(ParticleStorage.ParticleData + ParticleStorage.ParticleIndices[ActiveIndex] * ParticleStride);
 }
 
 // Function : Get read-only particle data by active index
@@ -255,11 +251,11 @@ FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex)
 // output : Const pointer to particle data, or nullptr when the index is invalid
 const FBaseParticle* FParticleEmitterInstance::GetParticle(int32 ActiveIndex) const
 {
-	if (!ParticleData || !ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
+	if (!ParticleStorage.ParticleData || !ParticleStorage.ParticleIndices || ActiveIndex < 0 || ActiveIndex >= ActiveParticles)
 	{
 		return nullptr;
 	}
-	return reinterpret_cast<const FBaseParticle*>(ParticleData + ParticleIndices[ActiveIndex] * ParticleStride);
+	return reinterpret_cast<const FBaseParticle*>(ParticleStorage.ParticleData + ParticleStorage.ParticleIndices[ActiveIndex] * ParticleStride);
 }
 
 

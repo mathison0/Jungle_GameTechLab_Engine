@@ -403,8 +403,22 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 
 	if (ImGui::BeginMenu("Edit"))
 	{
-		ImGui::MenuItem("Undo", "Ctrl+Z", false, false);
-		ImGui::MenuItem("Redo", "Ctrl+Shift+Z", false, false);
+		if (ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor)
+		{
+			if (ImGui::MenuItem("Undo", "Ctrl+Z", false, Widgets.ParticleSystemWidget.CanUndo()))
+			{
+				Widgets.ParticleSystemWidget.Undo();
+			}
+			if (ImGui::MenuItem("Redo", "Ctrl+Shift+Z", false, Widgets.ParticleSystemWidget.CanRedo()))
+			{
+				Widgets.ParticleSystemWidget.Redo();
+			}
+		}
+		else
+		{
+			ImGui::MenuItem("Undo", "Ctrl+Z", false, false);
+			ImGui::MenuItem("Redo", "Ctrl+Shift+Z", false, false);
+		}
 		ImGui::EndMenu();
 	}
 

@@ -41,6 +41,7 @@ class FWindowsWindow;
 class FSelectionManager;
 class FSceneViewport;
 class FViewportCamera;
+class AActor;
 class APlayerController;
 struct FEditorViewportState;
 
@@ -99,6 +100,7 @@ public:
 	float GetMoveSpeed() { return InputRouter.GetEditorWorldController().GetMoveSpeed(); }
 	void  SetMoveSpeed(float InSpeed) { InputRouter.GetEditorWorldController().SetMoveSpeed(InSpeed); }
 	void  FocusSelection() { FocusPrimarySelection(); }
+	bool  FocusActor(AActor* Actor);
 	void  RequestDeleteSelection() { DeleteSelectedActors(); }
 	void  RequestSelectAllActors() { SelectAllActors(); }
 	void  RequestDuplicateSelection() { DuplicateSelection(); }

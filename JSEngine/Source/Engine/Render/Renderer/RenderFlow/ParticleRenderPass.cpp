@@ -228,12 +228,16 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
     DeviceContext->VSSetConstantBuffers(1, 1, &PerObjBuf);
     DeviceContext->PSSetConstantBuffers(1, 1, &PerObjBuf);
 
-    ID3D11ShaderResourceView* TextureSRV = nullptr;
-    if (Cmd.ParticleTexture)
-    {
-        TextureSRV = Cmd.ParticleTexture->GetSRV();
-    }
-    DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
+        ID3D11ShaderResourceView* TextureSRV = nullptr;
+        if (Cmd.ParticleTexture)
+        {
+            TextureSRV = Cmd.ParticleTexture->GetSRV();
+        }
+        if (!TextureSRV)
+        {
+            TextureSRV = FResourceManager::Get().GetDefaultWhiteSRV();
+        }
+        DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
 
     ID3D11Buffer* VBs[2] = { QuadVertexBuffer.GetBuffer(), InstanceBuffer.GetBuffer() };
     UINT Strides[2] = { QuadVertexBuffer.GetStride(), InstanceBuffer.GetStride() };

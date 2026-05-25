@@ -2389,6 +2389,15 @@
     <ClInclude Include="Source\Engine\Object\Property.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynaicEmitterDataBase.h">
+      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicEmitterReplayDataBase.h">
+      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicSpriteEmitterDataBase.h">
+      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>

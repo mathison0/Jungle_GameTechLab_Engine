@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <variant>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -90,6 +91,35 @@ namespace
     UMaterialInterface* ResolveDrawMaterial(UMaterialInterface* Material)
     {
         return Material ? Material : FResourceManager::Get().GetMaterial("DefaultWhite");
+    }
+
+    UTexture* ResolveParticleTexture(const UParticleModuleRequired* RequiredModule)
+    {
+        if (!RequiredModule)
+        {
+            return nullptr;
+        }
+
+        if (UMaterialInterface* Material = RequiredModule->GetMaterial())
+        {
+            FMaterialParamValue DiffuseMap;
+            if (Material->GetParam("DiffuseMap", DiffuseMap) &&
+                DiffuseMap.Type == EMaterialParamType::Texture &&
+                std::holds_alternative<UTexture*>(DiffuseMap.Value))
+            {
+                if (UTexture* Texture = std::get<UTexture*>(DiffuseMap.Value))
+                {
+                    return Texture;
+                }
+            }
+        }
+
+        if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUV(RequiredModule->GetSubUVName()))
+        {
+            return SubUV->Texture;
+        }
+
+        return nullptr;
     }
 
     double CalculateAverageBoneInfluence(const TArray<FSkeletalMeshVertex>& Vertices)
@@ -618,20 +648,27 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 continue;
             }
 
-            // SubUV atlas 정보 — Sprite type에서만 의미. Mesh/Ribbon/Beam도 atlas 쓰면 활용 가능.
+            const UParticleLODLevel* LODLevel = EmitterInstances[EmitterIdx]
+                ? EmitterInstances[EmitterIdx]->GetCurrentLODLevel()
+                : nullptr;
+            const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
             const USubUVModule* SubUV = nullptr;
-            for (UParticleModule* Module : LOD->GetModules())
+            if (LODLevel)
             {
-                if (USubUVModule* Found = Cast<USubUVModule>(Module))
+                for (UParticleModule* Module : LODLevel->GetModules())
                 {
-                    SubUV = Found;
-                    break;
+                    if (USubUVModule* Found = Cast<USubUVModule>(Module))
+                    {
+                        SubUV = Found;
+                        break;
+                    }
                 }
             }
             const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;
-            Cmd.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : nullptr;
-            Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : 1;
-            Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : 1;
+            Cmd.Material = RequiredModule ? RequiredModule->GetMaterial() : nullptr;
+            Cmd.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : ResolveParticleTexture(RequiredModule);
+            Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
+            Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
 
             RenderBus.AddCommand(ERenderPass::Particle, Cmd);
         }

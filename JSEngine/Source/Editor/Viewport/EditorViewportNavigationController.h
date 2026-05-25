@@ -8,10 +8,12 @@ class FEditorInputRouter;
 struct FViewportInputContext;
 class FViewportCamera;
 class UGizmoComponent;
+class AActor;
 
 class FEditorViewportNavigationController
 {
 public:
+	static bool FocusActor(AActor* Actor, FViewportCamera* Camera);
 	static bool FocusPrimarySelection(FSelectionManager* SelectionManager, FViewportCamera* Camera);
 	static bool ResetCamera(FViewportCamera* Camera, const FVector& InitViewPos, const FVector& InitLookAt);
 	static void ApplyCameraMode(FViewportCamera& Camera, int32 ViewportType);
