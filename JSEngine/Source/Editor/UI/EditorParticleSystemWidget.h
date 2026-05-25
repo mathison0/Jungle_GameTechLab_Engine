@@ -66,6 +66,11 @@ private:
 	void RenameEmitter(int32 EmitterIndex, const FString& NewName);
 	bool ApplyEmitterName(int32 EmitterIndex, const FString& NewName, bool bCaptureUndo, bool bWarnOnEmpty);
 	void DrawEmitterRenamePopup();
+	void SelectParticleSystem();
+	void SelectEmitter(int32 EmitterIndex);
+	void SelectModule(int32 EmitterIndex, int32 ModuleIndex);
+	void OpenEmitterContextMenu(int32 EmitterIndex, int32 ModuleIndex);
+	void ClearEmitterContext();
 	void ShowCenterToast(const FString& Message);
 	void DrawCenterToast(const ImVec2& AreaMin, const ImVec2& AreaSize);
 	void CaptureUndoSnapshot(const char* Label);
@@ -74,12 +79,14 @@ private:
 	void ClearUndoHistory();
 	void PushUndoEntry(TArray<FParticleEditorUndoEntry>& Stack, const FParticleEditorUndoEntry& Entry, bool bSkipDuplicate);
 	void ClampSelectionToParticleSystem();
+	void ResetPendingReorders();
 	void ApplyPendingReorders();
 	void ReorderEmitter(int32 SourceIndex, int32 InsertIndex);
 	void ReorderModule(int32 SourceEmitterIndex, int32 SourceModuleIndex, int32 TargetEmitterIndex, int32 InsertIndex);
 	void DrawEmitterColumn(UParticleEmitter* Emitter, int32 EmitterIndex, float ColumnHeight);
 	void DrawEmitterModuleRow(UParticleModule* Module, int32 EmitterIndex, int32 ModuleIndex, bool bRequired, float RowHeight);
 	void DrawDetailsPanel(const ImVec2& Size);
+	UParticleLODLevel* GetEmitterLODLevel(UParticleEmitter* Emitter) const;
 	UParticleLODLevel* GetSelectedLODLevel() const;
 	UParticleModule* GetSelectedModule() const;
 	UParticleEmitter* GetSelectedEmitter() const;
