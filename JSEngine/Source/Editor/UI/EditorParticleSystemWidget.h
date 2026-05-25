@@ -64,6 +64,7 @@ private:
 	void DeleteModule(int32 EmitterIndex, int32 ModuleIndex);
 	void BeginRenameEmitter(int32 EmitterIndex);
 	void RenameEmitter(int32 EmitterIndex, const FString& NewName);
+	bool ApplyEmitterName(int32 EmitterIndex, const FString& NewName, bool bCaptureUndo, bool bWarnOnEmpty);
 	void DrawEmitterRenamePopup();
 	void ShowCenterToast(const FString& Message);
 	void DrawCenterToast(const ImVec2& AreaMin, const ImVec2& AreaSize);
@@ -82,6 +83,7 @@ private:
 	UParticleLODLevel* GetSelectedLODLevel() const;
 	UParticleModule* GetSelectedModule() const;
 	UParticleEmitter* GetSelectedEmitter() const;
+	void DrawEmitterDetails(UParticleEmitter* Emitter, int32 EmitterIndex);
 	void DrawParticleSystemDetails(UParticleSystem* ParticleSystem);
 	void DrawParticleModuleDetails(UParticleModule* Module, UParticleEmitter* OwnerEmitter);
 	bool DrawParticleModuleProperty(UParticleModule* Module, const FProperty& Property);
@@ -110,6 +112,7 @@ private:
 	int32 ContextEmitterIndex = -1;
 	int32 ContextModuleIndex = -1;
 	int32 RenameEmitterIndex = -1;
+	int32 DetailEmitterNameEditIndex = -1;
 	int32 PendingEmitterMoveSource = -1;
 	int32 PendingEmitterMoveInsertIndex = -1;
 	int32 PendingModuleMoveEmitterIndex = -1;
@@ -117,6 +120,7 @@ private:
 	int32 PendingModuleMoveSource = -1;
 	int32 PendingModuleMoveInsertIndex = -1;
 	char RenameEmitterBuffer[128] = {};
+	char DetailEmitterNameEditBuffer[128] = {};
 	FString CenterToastMessage;
 	TArray<FParticleEditorUndoEntry> UndoHistory;
 	TArray<FParticleEditorUndoEntry> RedoHistory;
@@ -124,6 +128,7 @@ private:
 	bool bOpenRenameEmitterPopup = false;
 	bool bRestoringParticleSnapshot = false;
 	bool bPropertyEditUndoCaptured = false;
+	bool bEmitterNameEditUndoCaptured = false;
 	float TopAreaHeight = 0.0f;
 	float TopLeftWidth = 0.0f;
 	float BottomLeftWidth = 0.0f;

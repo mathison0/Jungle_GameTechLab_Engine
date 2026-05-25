@@ -779,6 +779,7 @@ void FEditorParticleSystemWidget::OpenLayoutTest(const FString& InDocumentPath)
 	SelectedModuleIndex = NoParticleModuleSelection;
 	ClearUndoHistory();
 	bPropertyEditUndoCaptured = false;
+	bEmitterNameEditUndoCaptured = false;
 
 	if (!InDocumentPath.empty())
 	{
@@ -1254,6 +1255,7 @@ void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 	}
 
 	const TArray<UParticleEmitter*>* Emitters = ParticleSystemAsset ? &ParticleSystemAsset->GetEmitters() : nullptr;
+	bool bMouseInsideEmitterColumnArea = false;
 	if (!Emitters || Emitters->empty())
 	{
 		const ImVec2 Cursor = ImGui::GetCursorScreenPos();
@@ -1283,6 +1285,9 @@ void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
 		const float ColumnHeight = std::max(1.0f, BodySize.y - ImGui::GetStyle().ScrollbarSize);
+		bool bHasEmitterColumnBounds = false;
+		ImVec2 EmitterColumnAreaMin(0.0f, 0.0f);
+		ImVec2 EmitterColumnAreaMax(0.0f, 0.0f);
 		for (int32 EmitterIndex = 0; EmitterIndex < static_cast<int32>(Emitters->size()); ++EmitterIndex)
 		{
 			if (EmitterIndex > 0)
@@ -1292,6 +1297,29 @@ void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 			ImGui::BeginGroup();
 			DrawEmitterColumn((*Emitters)[EmitterIndex], EmitterIndex, ColumnHeight);
 			ImGui::EndGroup();
+
+			const ImVec2 ColumnItemMin = ImGui::GetItemRectMin();
+			const ImVec2 ColumnItemMax = ImGui::GetItemRectMax();
+			if (!bHasEmitterColumnBounds)
+			{
+				EmitterColumnAreaMin = ColumnItemMin;
+				EmitterColumnAreaMax = ColumnItemMax;
+				bHasEmitterColumnBounds = true;
+			}
+			else
+			{
+				EmitterColumnAreaMin.x = std::min(EmitterColumnAreaMin.x, ColumnItemMin.x);
+				EmitterColumnAreaMin.y = std::min(EmitterColumnAreaMin.y, ColumnItemMin.y);
+				EmitterColumnAreaMax.x = std::max(EmitterColumnAreaMax.x, ColumnItemMax.x);
+				EmitterColumnAreaMax.y = std::max(EmitterColumnAreaMax.y, ColumnItemMax.y);
+			}
+		}
+		if (bHasEmitterColumnBounds)
+		{
+			const ImVec2 MousePos = ImGui::GetIO().MousePos;
+			bMouseInsideEmitterColumnArea =
+				MousePos.x >= EmitterColumnAreaMin.x && MousePos.x <= EmitterColumnAreaMax.x &&
+				MousePos.y >= EmitterColumnAreaMin.y && MousePos.y <= EmitterColumnAreaMax.y;
 		}
 		ImGui::PopStyleVar();
 	}
@@ -1300,6 +1328,7 @@ void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 
 	if (ImGui::IsWindowHovered() &&
 		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+		!bMouseInsideEmitterColumnArea &&
 		!ImGui::IsAnyItemHovered())
 	{
 		SelectedEmitterIndex = -1;
@@ -1309,6 +1338,7 @@ void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 	if (ImGui::IsWindowHovered() &&
 		ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
 		!bOpenEmitterContextMenu &&
+		!bMouseInsideEmitterColumnArea &&
 		!ImGui::IsAnyItemHovered())
 	{
 		SelectedEmitterIndex = -1;
@@ -1793,6 +1823,7 @@ bool FEditorParticleSystemWidget::RestoreParticleSnapshot(
 	bOpenEmitterContextMenu = false;
 	bOpenRenameEmitterPopup = false;
 	bPropertyEditUndoCaptured = false;
+	bEmitterNameEditUndoCaptured = false;
 
 	if (ParticleSystemAsset)
 	{
@@ -1895,41 +1926,50 @@ void FEditorParticleSystemWidget::BeginRenameEmitter(int32 EmitterIndex)
 	bOpenRenameEmitterPopup = true;
 }
 
-void FEditorParticleSystemWidget::RenameEmitter(int32 EmitterIndex, const FString& NewName)
+bool FEditorParticleSystemWidget::ApplyEmitterName(int32 EmitterIndex, const FString& NewName, bool bCaptureUndo, bool bWarnOnEmpty)
 {
 	if (!ParticleSystemAsset ||
 		EmitterIndex < 0 ||
 		EmitterIndex >= static_cast<int32>(ParticleSystemAsset->Emitters.size()))
 	{
-		return;
+		return false;
 	}
 
 	const FString TrimmedName = TrimCopy(NewName);
 	if (TrimmedName.empty())
 	{
-		if (EditorEngine)
+		if (bWarnOnEmpty && EditorEngine)
 		{
 			EditorEngine->GetNotificationService().Warning("Emitter name cannot be empty.");
 		}
-		return;
+		return false;
 	}
 
 	UParticleEmitter* Emitter = ParticleSystemAsset->Emitters[EmitterIndex];
 	if (!Emitter)
 	{
-		return;
+		return false;
 	}
 
 	if (Emitter->GetFName().ToString() == TrimmedName)
 	{
-		return;
+		return false;
 	}
 
-	CaptureUndoSnapshot("Rename Emitter");
+	if (bCaptureUndo)
+	{
+		CaptureUndoSnapshot("Rename Emitter");
+	}
 	Emitter->SetFName(FName(TrimmedName));
 	SelectedEmitterIndex = EmitterIndex;
 	SelectedModuleIndex = NoParticleModuleSelection;
 	bDirty = true;
+	return true;
+}
+
+void FEditorParticleSystemWidget::RenameEmitter(int32 EmitterIndex, const FString& NewName)
+{
+	ApplyEmitterName(EmitterIndex, NewName, true, true);
 }
 
 void FEditorParticleSystemWidget::DrawEmitterRenamePopup()
@@ -2216,6 +2256,11 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 
 	ImGui::InvisibleButton("##EmitterType", ImVec2(ColumnWidth, TypeRowHeight));
 	const bool bTypeRowHovered = ImGui::IsItemHovered();
+	if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+	{
+		SelectedEmitterIndex = EmitterIndex;
+		SelectedModuleIndex = NoParticleModuleSelection;
+	}
 	if (bTypeRowHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 	{
 		SelectedEmitterIndex = EmitterIndex;
@@ -2249,6 +2294,11 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 		ImGui::IsWindowHovered() &&
 		ColumnMousePos.x >= ColumnMin.x && ColumnMousePos.x <= ColumnMax.x &&
 		ColumnMousePos.y >= ColumnMin.y + DrawnHeight && ColumnMousePos.y <= ColumnMax.y;
+	if (bColumnEmptySpaceHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	{
+		SelectedEmitterIndex = EmitterIndex;
+		SelectedModuleIndex = NoParticleModuleSelection;
+	}
 	if (bColumnEmptySpaceHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 	{
 		SelectedEmitterIndex = EmitterIndex;
@@ -2260,6 +2310,11 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 	if (DrawnHeight < ColumnHeight)
 	{
 		ImGui::Dummy(ImVec2(ColumnWidth, ColumnHeight - DrawnHeight));
+		if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+		{
+			SelectedEmitterIndex = EmitterIndex;
+			SelectedModuleIndex = NoParticleModuleSelection;
+		}
 		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 		{
 			SelectedEmitterIndex = EmitterIndex;
@@ -2426,9 +2481,7 @@ void FEditorParticleSystemWidget::DrawDetailsPanel(const ImVec2& Size)
 	}
 	else if (!SelectedModule)
 	{
-		ImGui::TextUnformatted(GetEmitterDisplayName(SelectedEmitter, SelectedEmitterIndex).c_str());
-		ImGui::Spacing();
-		ImGui::TextDisabled("Select a module to edit its properties.");
+		DrawEmitterDetails(SelectedEmitter, SelectedEmitterIndex);
 	}
 	else
 	{
@@ -2484,6 +2537,116 @@ UParticleModule* FEditorParticleSystemWidget::GetSelectedModule() const
 		return LODLevel->Modules[SelectedModuleIndex];
 	}
 	return nullptr;
+}
+
+void FEditorParticleSystemWidget::DrawEmitterDetails(UParticleEmitter* Emitter, int32 EmitterIndex)
+{
+	if (!Emitter)
+	{
+		return;
+	}
+
+	ImGui::PushID(Emitter);
+
+	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
+	const float LabelWidth = std::clamp(AvailableWidth * 0.38f, 180.0f, 300.0f);
+
+	auto SyncEmitterNameBuffer = [&]()
+	{
+		const FString EmitterName = GetEmitterDisplayName(Emitter, EmitterIndex);
+		std::snprintf(DetailEmitterNameEditBuffer, sizeof(DetailEmitterNameEditBuffer), "%s", EmitterName.c_str());
+		DetailEmitterNameEditIndex = EmitterIndex;
+	};
+
+	auto WarnAndSyncEmptyEmitterName = [&]()
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetNotificationService().Warning("Emitter name cannot be empty.");
+		}
+		SyncEmitterNameBuffer();
+	};
+
+	auto ApplyLiveEmitterNameBuffer = [&](bool bWarnOnEmpty)
+	{
+		const FString TrimmedName = TrimCopy(DetailEmitterNameEditBuffer);
+		if (TrimmedName.empty())
+		{
+			if (bWarnOnEmpty)
+			{
+				WarnAndSyncEmptyEmitterName();
+			}
+			return;
+		}
+
+		if (Emitter->GetFName().ToString() == TrimmedName)
+		{
+			return;
+		}
+
+		if (!bEmitterNameEditUndoCaptured)
+		{
+			CaptureUndoSnapshot("Rename Emitter");
+			bEmitterNameEditUndoCaptured = true;
+		}
+		ApplyEmitterName(EmitterIndex, TrimmedName, false, false);
+	};
+
+	if (DetailEmitterNameEditIndex != EmitterIndex)
+	{
+		SyncEmitterNameBuffer();
+		bEmitterNameEditUndoCaptured = false;
+	}
+
+	if (ImGui::CollapsingHeader("Particle", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8.0f, 4.0f));
+		if (ImGui::BeginTable(
+			"##ParticleEmitterDetailsTable",
+			2,
+			ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg))
+		{
+			ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed, LabelWidth);
+			ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 30.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted("Emitter Name");
+			ImGui::TableSetColumnIndex(1);
+
+			ImGui::SetNextItemWidth(std::min(220.0f, ImGui::GetContentRegionAvail().x));
+			const bool bNameChanged = ImGui::InputText(
+				"##EmitterName",
+				DetailEmitterNameEditBuffer,
+				sizeof(DetailEmitterNameEditBuffer));
+			const bool bNameActive = ImGui::IsItemActive();
+			const bool bNameDeactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
+			if (bNameChanged)
+			{
+				ApplyLiveEmitterNameBuffer(false);
+			}
+			if (bNameDeactivatedAfterEdit)
+			{
+				ApplyLiveEmitterNameBuffer(true);
+				SyncEmitterNameBuffer();
+				bEmitterNameEditUndoCaptured = false;
+			}
+			else if (!bNameActive)
+			{
+				const FString CurrentName = GetEmitterDisplayName(Emitter, EmitterIndex);
+				if (CurrentName != DetailEmitterNameEditBuffer)
+				{
+					SyncEmitterNameBuffer();
+				}
+			}
+
+			ImGui::EndTable();
+		}
+		ImGui::PopStyleVar();
+	}
+
+	ImGui::PopID();
 }
 
 void FEditorParticleSystemWidget::DrawParticleSystemDetails(UParticleSystem* ParticleSystem)
