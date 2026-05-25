@@ -40,6 +40,102 @@ void UParticleLODLevel::CacheModuleLists()
 	}
 }
 
+UParticleEmitter::~UParticleEmitter()
+{
+    ClearLODLevels();
+}
+
+UParticleLODLevel* UParticleEmitter::AddLODLevel(int32 Level, float DistanceThreshold)
+{
+    UParticleLODLevel* NewLOD = UObjectManager::Get().CreateObject<UParticleLODLevel>();
+    if (!NewLOD)
+    {
+        return nullptr;
+    }
+    NewLOD->Level = Level;
+    NewLOD->bEnabled = true;
+    NewLOD->DistanceThreshold = DistanceThreshold;
+
+    LODLevels.push_back(NewLOD);
+    SortLODLevelsByDistance();
+    CacheEmitterModuleInfo();
+
+    return NewLOD;
+}
+
+void UParticleEmitter::RemoveLODLevel(int32 Index)
+{
+    if (Index < 0 || Index >= static_cast<int32>(LODLevels.size()))
+        return;
+	UParticleLODLevel* RemovedLOD = LODLevels[Index];
+    LODLevels.erase(LODLevels.begin()+ Index);
+
+	if (RemovedLOD)
+        UObjectManager::Get().DestroyObject(RemovedLOD);
+
+	CacheEmitterModuleInfo();
+}
+
+void UParticleEmitter::ClearLODLevels()
+{
+    for (UParticleLODLevel* LODLevel : LODLevels)
+    {
+        if (LODLevel)
+            UObjectManager::Get().DestroyObject(LODLevel);
+    }
+    LODLevels.clear();
+    CacheEmitterModuleInfo();
+}
+
+void UParticleEmitter::SortLODLevelsByDistance()
+{
+    std::sort(LODLevels.begin(), LODLevels.end(),
+        [](const UParticleLODLevel* A, const UParticleLODLevel* B)
+        {
+            if (!A)
+            {
+                return false;
+            }
+            if (!B)
+            {
+                return true;
+            }
+            return A->GetDistanceThreshold() < B->GetDistanceThreshold();
+        });
+}
+
+bool UParticleEmitter::Validate(TArray<FString>* OutErrors) const
+{
+    bool bIsValid = true;
+
+	if (LODLevels.empty())
+    {
+        bIsValid = false;
+        if (OutErrors)
+        {
+            OutErrors->push_back("Particle emitter must have at least one LOD level.");
+        }
+    }
+    for (int32 LODIndex = 0; LODIndex < static_cast<int32>(LODLevels.size()); LODIndex++)
+    {
+        const UParticleLODLevel* LODLevel = LODLevels[LODIndex];
+        if (!LODLevel)
+        {
+            bIsValid = false;
+            if (OutErrors)
+                OutErrors->push_back("Particle emitter has a null LOD level.");
+            continue;
+        }
+        if (!LODLevel->GetRequiredModule())
+        {
+            bIsValid = false;
+            if (OutErrors)
+                OutErrors->push_back("Particle LOD level has no required module.");
+        }
+    }
+    return bIsValid;
+}
+
 // Function : Cache emitter particle layout and module information
 // input : None
 // output : LOD module caches are refreshed and MaxActiveParticles is updated from required modules
@@ -195,10 +291,12 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
         return nullptr;
     }
 
-    UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
-    LODLevel->Level = 0;
-    LODLevel->bEnabled = true;
-    LODLevel->DistanceThreshold = 100000.0f;
+    UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100000.0f);
+    if (!LODLevel)
+    {
+        UObjectManager::Get().DestroyObject(System);
+        return nullptr;
+    }
 
     LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
@@ -208,8 +306,7 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleColor>());
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSize>());
 
-    Emitter->LODLevels.push_back(LODLevel);
-    System->CacheEmitterModuleInfo();
+    Emitter->CacheEmitterModuleInfo();
 
     return System;
 }

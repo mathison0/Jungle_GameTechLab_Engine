@@ -51,6 +51,14 @@ class UParticleEmitter : public UObject
 public:
 	GENERATED_BODY(UParticleEmitter, UObject)
 
+	~UParticleEmitter() override;
+
+	UParticleLODLevel* AddLODLevel(int32 Level, float DistanceThreshold);
+    void RemoveLODLevel(int32 Index);
+    void ClearLODLevels();
+    void SortLODLevelsByDistance();
+    bool Validate(TArray<FString>* OutErrors = nullptr) const;
+
 	void CacheEmitterModuleInfo();
 	UParticleLODLevel* GetLODLevel(int32 Index) const;
 	int32 SelectLODLevel(float Distance) const;

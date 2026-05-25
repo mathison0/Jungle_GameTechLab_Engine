@@ -384,11 +384,12 @@ namespace
 	UParticleEmitter* CreateLayoutPreviewEmitter(const char* Name, int32 Variant)
 	{
 		UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
-		UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
-		if (!Emitter || !LODLevel)
-		{
-			return Emitter;
-		}
+        if (!Emitter)
+            return nullptr;
+        UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100000.0f);
+        if (!LODLevel)
+            return Emitter;
+
 
 		const FString LODName = FString(Name) + "_LOD0";
 		Emitter->SetFName(FName(Name));
@@ -417,19 +418,19 @@ namespace
 			AddModule(LODLevel, CreateParticleModule<UParticleModuleEventGenerator>("Event Generator"));
 		}
 
-		Emitter->LODLevels.push_back(LODLevel);
 		Emitter->CacheEmitterModuleInfo();
 		return Emitter;
 	}
 
 	UParticleEmitter* CreateDefaultParticleEmitter(const FString& Name)
 	{
-		UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
-		UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
-		if (!Emitter || !LODLevel)
-		{
-			return Emitter;
-		}
+        UParticleEmitter* Emitter = UObjectManager::Get().CreateObject<UParticleEmitter>();
+        if (!Emitter)
+            return nullptr;
+
+        UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100000.0f);
+        if (!LODLevel)
+            return Emitter;
 
 		const FString LODName = Name + "_LOD0";
 		Emitter->SetFName(FName(Name));
@@ -443,7 +444,6 @@ namespace
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleColor>("Color"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleSize>("Size"));
 
-		Emitter->LODLevels.push_back(LODLevel);
 		Emitter->CacheEmitterModuleInfo();
 		return Emitter;
 	}
