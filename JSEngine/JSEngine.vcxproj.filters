@@ -2383,6 +2383,15 @@
     <ClInclude Include="Source\Engine\Object\Property.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynaicEmitterDataBase.h">
+      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicEmitterReplayDataBase.h">
+      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicSpriteEmitterDataBase.h">
+      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
@@ -2856,6 +2865,9 @@
     </None>
     <None Include="Shaders\Material\UberLit.hlsl">
       <Filter>Shaders\Material</Filter>
+    </None>
+    <None Include="Shaders\Particle\SpriteParticle.hlsl">
+      <Filter>Shaders\Particle</Filter>
     </None>
     <None Include="Shaders\PostProcess\FXAAPass.hlsl">
       <Filter>Shaders\PostProcess</Filter>

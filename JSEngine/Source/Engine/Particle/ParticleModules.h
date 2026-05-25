@@ -1,7 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include "Object/FName.h"
 #include "Particle/ParticleModule.h"
+#include "Render/Resource/Material.h"
+
+#include <algorithm>
 
 struct FTextureAtlasResource;
 
@@ -18,9 +21,17 @@ public:
 	float GetEmitterDuration() const { return EmitterDuration; }
 	bool IsLooping() const { return bLooping; }
 	bool UseLocalSpace() const { return bUseLocalSpace; }
+	UMaterialInterface* GetMaterial() const { return Material; }
+	const FName& GetSubUVName() const { return SubUVName; }
+	int32 GetSubImagesHorizontal() const { return std::max(SubImagesHorizontal, 1); }
+	int32 GetSubImagesVertical() const { return std::max(SubImagesVertical, 1); }
 	EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
+	void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 private:
+	UPROPERTY(DisplayName = "Material", Category = "Emitter", ReferenceKind = Asset)
+	UMaterialInterface* Material = nullptr;
+
 	UPROPERTY(DisplayName = "Max Particles", Min = 1)
 	int32 MaxParticles = 128;
 
@@ -33,6 +44,16 @@ private:
 	UPROPERTY(DisplayName = "Use Local Space")
 	bool bUseLocalSpace = false;
 
+	UPROPERTY(DisplayName = "SubUV", Category = "Sub UV")
+	FName SubUVName;
+
+	UPROPERTY(DisplayName = "Sub Images Horizontal", Category = "Sub UV", Min = 1)
+	int32 SubImagesHorizontal = 1;
+
+	UPROPERTY(DisplayName = "Sub Images Vertical", Category = "Sub UV", Min = 1)
+	int32 SubImagesVertical = 1;
+
+	UPROPERTY(DisplayName = "Emitter Type", Category = "TypeData", NoEdit)
 	EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
 };
 

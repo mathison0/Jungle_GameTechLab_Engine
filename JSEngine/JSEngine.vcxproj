@@ -1457,6 +1457,7 @@
     <None Include="Shaders\EditorDebug\SelectionMask.hlsl" />
     <None Include="Shaders\Material\Decal.hlsl" />
     <None Include="Shaders\Material\UberLit.hlsl" />
+    <None Include="Shaders\Particle\SpriteParticle.hlsl" />
     <None Include="Shaders\PostProcess\FXAAPass.hlsl" />
     <None Include="Shaders\PostProcess\FogPass.hlsl" />
     <None Include="Shaders\PostProcess\LightPass.hlsl" />
