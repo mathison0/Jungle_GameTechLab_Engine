@@ -1144,6 +1144,7 @@ void FEditorParticleSystemWidget::EnsurePreviewActor()
 	PreviewComponent->SetEditorOnly(true);
 	PreviewActor->SetRootComponent(PreviewComponent);
 	PreviewComponent->SetTemplate(ParticleSystemAsset);
+	PreviewClient.SetFocusTargetActor(PreviewActor);
 	PreviewWorld->SyncSpatialIndex();
 }
 
@@ -1192,6 +1193,7 @@ void FEditorParticleSystemWidget::ShutdownPreviewViewport()
 	bPreviewViewportVisible = false;
 	bPreviewViewportRectValid = false;
 	PreviewComponent = nullptr;
+	PreviewClient.SetFocusTargetActor(nullptr);
 	PreviewActor = nullptr;
 
 	PreviewClient.DestroyCamera();

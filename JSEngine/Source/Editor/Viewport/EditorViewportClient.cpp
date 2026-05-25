@@ -1500,6 +1500,17 @@ void FEditorViewportClient::HandleBoxSelection()
 		FrustumQueryScratch);
 }
 
+bool FEditorViewportClient::FocusActor(AActor* Actor)
+{
+	if (FEditorViewportNavigationController::FocusActor(Actor, GetCamera()))
+	{
+		InputRouter.GetEditorWorldController().ResetTargetFromCamera();
+		return true;
+	}
+
+	return false;
+}
+
 void FEditorViewportClient::FocusPrimarySelection()
 {
 	if (FEditorViewportNavigationController::FocusPrimarySelection(SelectionManager, GetCamera()))
