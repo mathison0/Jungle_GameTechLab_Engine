@@ -1263,6 +1263,19 @@ void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 			ImGui::GetColorU32(ImVec4(0.58f, 0.61f, 0.66f, 1.0f)),
 			"No emitters");
 		ImGui::Dummy(BodySize);
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+		{
+			SelectedEmitterIndex = -1;
+			SelectedModuleIndex = NoParticleModuleSelection;
+		}
+		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+		{
+			SelectedEmitterIndex = -1;
+			SelectedModuleIndex = NoParticleModuleSelection;
+			ContextEmitterIndex = -1;
+			ContextModuleIndex = NoParticleModuleSelection;
+			bOpenEmitterContextMenu = true;
+		}
 	}
 	else
 	{
@@ -1284,10 +1297,20 @@ void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 	ApplyPendingReorders();
 
 	if (ImGui::IsWindowHovered() &&
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+		!ImGui::IsAnyItemHovered())
+	{
+		SelectedEmitterIndex = -1;
+		SelectedModuleIndex = NoParticleModuleSelection;
+	}
+
+	if (ImGui::IsWindowHovered() &&
 		ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
 		!bOpenEmitterContextMenu &&
 		!ImGui::IsAnyItemHovered())
 	{
+		SelectedEmitterIndex = -1;
+		SelectedModuleIndex = NoParticleModuleSelection;
 		ContextEmitterIndex = -1;
 		ContextModuleIndex = NoParticleModuleSelection;
 		bOpenEmitterContextMenu = true;
@@ -1367,7 +1390,11 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 	{
 		ImGui::TextDisabled("PARTICLE SYSTEM");
 		ImGui::Separator();
-		ImGui::MenuItem("Select Particle System", nullptr, false, false);
+		if (ImGui::MenuItem("Select Particle System"))
+		{
+			SelectedEmitterIndex = -1;
+			SelectedModuleIndex = NoParticleModuleSelection;
+		}
 		if (ImGui::MenuItem("Add New Emitter Before", nullptr, false, bHasTargetEmitter))
 		{
 			AddDefaultEmitterAt(TargetEmitterIndex);
@@ -1560,7 +1587,7 @@ void FEditorParticleSystemWidget::DeleteEmitter(int32 EmitterIndex)
 	SelectedModuleIndex = NoParticleModuleSelection;
 	if (ParticleSystemAsset->Emitters.empty())
 	{
-		SelectedEmitterIndex = 0;
+		SelectedEmitterIndex = -1;
 	}
 	else
 	{
@@ -1802,7 +1829,14 @@ void FEditorParticleSystemWidget::ClampSelectionToParticleSystem()
 {
 	if (!ParticleSystemAsset || ParticleSystemAsset->Emitters.empty())
 	{
-		SelectedEmitterIndex = 0;
+		SelectedEmitterIndex = -1;
+		SelectedModuleIndex = NoParticleModuleSelection;
+		CurrentLOD = std::max(0, CurrentLOD);
+		return;
+	}
+
+	if (SelectedEmitterIndex < 0)
+	{
 		SelectedModuleIndex = NoParticleModuleSelection;
 		CurrentLOD = std::max(0, CurrentLOD);
 		return;
@@ -2384,9 +2418,9 @@ void FEditorParticleSystemWidget::DrawDetailsPanel(const ImVec2& Size)
 	{
 		ImGui::TextDisabled("No particle system.");
 	}
-	else if (!SelectedEmitter)
+	else if (SelectedEmitterIndex < 0 || !SelectedEmitter)
 	{
-		ImGui::TextDisabled("No emitter selected.");
+		DrawParticleSystemDetails(ParticleSystemAsset);
 	}
 	else if (!SelectedModule)
 	{
@@ -2448,6 +2482,162 @@ UParticleModule* FEditorParticleSystemWidget::GetSelectedModule() const
 		return LODLevel->Modules[SelectedModuleIndex];
 	}
 	return nullptr;
+}
+
+void FEditorParticleSystemWidget::DrawParticleSystemDetails(UParticleSystem* ParticleSystem)
+{
+	if (!ParticleSystem)
+	{
+		return;
+	}
+
+	ImGui::PushID(ParticleSystem);
+
+	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
+	const float LabelWidth = std::clamp(AvailableWidth * 0.38f, 180.0f, 300.0f);
+
+	auto CaptureSystemEditUndo = [this]()
+	{
+		if (!bPropertyEditUndoCaptured)
+		{
+			CaptureUndoSnapshot("Edit Particle System");
+			bPropertyEditUndoCaptured = true;
+		}
+	};
+
+	auto BeginDetailsTable = [LabelWidth](const char* TableId) -> bool
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8.0f, 4.0f));
+		if (ImGui::BeginTable(
+			TableId,
+			2,
+			ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg))
+		{
+			ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed, LabelWidth);
+			ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+			return true;
+		}
+
+		ImGui::PopStyleVar();
+		return false;
+	};
+
+	auto EndDetailsTable = []()
+	{
+		ImGui::EndTable();
+		ImGui::PopStyleVar();
+	};
+
+	auto BeginRow = [](const char* Label)
+	{
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
+		ImGui::TableSetColumnIndex(0);
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(Label);
+		ImGui::TableSetColumnIndex(1);
+	};
+
+	auto DrawFloatRow = [&](const char* Label, const char* Id, float& Value, float Speed, float MinValue, const char* Format)
+	{
+		BeginRow(Label);
+		float EditedValue = Value;
+		ImGui::SetNextItemWidth(-1.0f);
+		if (ImGui::DragFloat(Id, &EditedValue, Speed, MinValue, 0.0f, Format))
+		{
+			CaptureSystemEditUndo();
+			Value = std::max(MinValue, EditedValue);
+			bDirty = true;
+		}
+		if (ImGui::IsItemDeactivatedAfterEdit())
+		{
+			bPropertyEditUndoCaptured = false;
+		}
+	};
+
+	auto DrawBoolRow = [&](const char* Label, const char* Id, bool& Value)
+	{
+		BeginRow(Label);
+		bool EditedValue = Value;
+		if (ImGui::Checkbox(Id, &EditedValue))
+		{
+			CaptureSystemEditUndo();
+			Value = EditedValue;
+			bDirty = true;
+		}
+	};
+
+	auto DrawComboRow = [&](const char* Label, const char* Id, int32& Value, const char* const* Items, int32 ItemCount)
+	{
+		BeginRow(Label);
+		int32 EditedValue = std::clamp(Value, 0, std::max(0, ItemCount - 1));
+		ImGui::SetNextItemWidth(-1.0f);
+		if (ImGui::Combo(Id, &EditedValue, Items, ItemCount))
+		{
+			CaptureSystemEditUndo();
+			Value = EditedValue;
+			bDirty = true;
+		}
+	};
+
+	auto DrawArraySummaryRow = [&](const char* Label, const char* Id, int32 ElementCount, bool bShowControls)
+	{
+		BeginRow(Label);
+		ImGui::Text("%d Array elements", ElementCount);
+		if (bShowControls)
+		{
+			ImGui::SameLine(0.0f, 12.0f);
+			ImGui::BeginDisabled();
+			ImGui::SmallButton((FString("+##") + Id).c_str());
+			ImGui::SameLine(0.0f, 6.0f);
+			ImGui::SmallButton((FString("Delete##") + Id).c_str());
+			ImGui::EndDisabled();
+		}
+	};
+
+	if (ImGui::CollapsingHeader("Particle System", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (BeginDetailsTable("##ParticleSystemDetailsTable"))
+		{
+			const char* UpdateModeItems[] = { "Real-Time", "Fixed Time" };
+			DrawFloatRow("Update Time FPS", "##UpdateTimeFPS", ParticleSystem->UpdateTimeFPS, 0.1f, 0.0f, "%.1f");
+			DrawFloatRow("Warmup Time - beware hitches!", "##WarmupTime", ParticleSystem->WarmupTime, 0.1f, 0.0f, "%.1f");
+			DrawFloatRow("Warmup Tick Rate", "##WarmupTickRate", ParticleSystem->WarmupTickRate, 0.1f, 0.0f, "%.1f");
+			DrawFloatRow("Seconds Before Inactive", "##SecondsBeforeInactive", ParticleSystem->SecondsBeforeInactive, 0.1f, 0.0f, "%.1f");
+			DrawBoolRow("Orient ZAxis Toward Camera", "##OrientZAxisTowardCamera", ParticleSystem->bOrientZAxisTowardCamera);
+			DrawComboRow("System Update Mode", "##SystemUpdateMode", ParticleSystem->SystemUpdateMode, UpdateModeItems, IM_ARRAYSIZE(UpdateModeItems));
+			EndDetailsTable();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Thumbnail", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (BeginDetailsTable("##ParticleSystemThumbnailTable"))
+		{
+			DrawFloatRow("Thumbnail Warmup", "##ThumbnailWarmup", ParticleSystem->ThumbnailWarmup, 0.1f, 0.0f, "%.1f");
+			DrawBoolRow("Use Realtime Thumbnail", "##UseRealtimeThumbnail", ParticleSystem->bUseRealtimeThumbnail);
+			EndDetailsTable();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (BeginDetailsTable("##ParticleSystemLODTable"))
+		{
+			const char* LODMethodItems[] = { "Automatic", "Direct Set" };
+			DrawFloatRow("LODDistance Check Time", "##LODDistanceCheckTime", ParticleSystem->LODDistanceCheckTime, 0.01f, 0.0f, "%.2f");
+			DrawArraySummaryRow("LODDistances", "LODDistances", static_cast<int32>(ParticleSystem->LODDistances.size()), false);
+			DrawArraySummaryRow("LODSettings", "LODSettings", static_cast<int32>(ParticleSystem->LODSettings.size()), true);
+			DrawComboRow("LODMethod", "##LODMethod", ParticleSystem->LODMethod, LODMethodItems, IM_ARRAYSIZE(LODMethodItems));
+			EndDetailsTable();
+		}
+	}
+
+	if (!ImGui::IsAnyItemActive())
+	{
+		bPropertyEditUndoCaptured = false;
+	}
+
+	ImGui::PopID();
 }
 
 void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Module, UParticleEmitter* OwnerEmitter)

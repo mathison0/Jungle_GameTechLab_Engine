@@ -82,6 +82,7 @@ private:
 	UParticleLODLevel* GetSelectedLODLevel() const;
 	UParticleModule* GetSelectedModule() const;
 	UParticleEmitter* GetSelectedEmitter() const;
+	void DrawParticleSystemDetails(UParticleSystem* ParticleSystem);
 	void DrawParticleModuleDetails(UParticleModule* Module, UParticleEmitter* OwnerEmitter);
 	bool DrawParticleModuleProperty(UParticleModule* Module, const FProperty& Property);
 	bool DrawParticlePropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
