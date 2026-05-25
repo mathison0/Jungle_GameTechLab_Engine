@@ -3,6 +3,7 @@
 #include "Editor/EditorEngine.h"
 #include "Editor/UI/EditorDetachedWindowChrome.h"
 #include "Editor/UI/EditorMainPanelViewportToolbarHelpers.h"
+#include "Engine/Core/EditorResourcePaths.h"
 #include "Core/ResourceManager.h"
 #include "Core/Paths.h"
 #include "Engine/Runtime/WindowsWindow.h"
@@ -15,6 +16,7 @@
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_internal.h"
+#include "WICTextureLoader.h"
 
 #include <algorithm>
 #include <array>
@@ -103,20 +105,78 @@ namespace
 		return Result;
 	}
 
-	bool ToolbarButton(const char* Label, const char* Tooltip = nullptr, bool bSelected = false)
+	bool ToolbarButton(
+		const char* Id,
+		const char* Label,
+		ID3D11ShaderResourceView* Icon,
+		const char* Tooltip = nullptr,
+		bool bSelected = false)
 	{
-		ImGui::PushStyleColor(
-			ImGuiCol_Button,
-			bSelected ? ImVec4(0.18f, 0.24f, 0.32f, 1.0f) : ImVec4(0.14f, 0.15f, 0.17f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.23f, 0.25f, 0.30f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.31f, 0.38f, 1.0f));
-		const bool bClicked = ImGui::Button(Label, ImVec2(0.0f, 28.0f));
-		ImGui::PopStyleColor(3);
+		constexpr float ButtonHeight = 28.0f;
+		constexpr float IconSize = 18.0f;
+		constexpr float PaddingX = 8.0f;
+		constexpr float IconTextGap = 6.0f;
+
+		const char* DisplayLabel = Label ? Label : "";
+		const ImVec2 TextSize = ImGui::CalcTextSize(DisplayLabel);
+		const bool bHasText = DisplayLabel[0] != '\0';
+		const float ButtonWidth =
+			PaddingX * 2.0f +
+			(Icon ? IconSize : 0.0f) +
+			(Icon && bHasText ? IconTextGap : 0.0f) +
+			(bHasText ? TextSize.x : 0.0f);
+		const ImVec2 ButtonSize(std::max(ButtonHeight, ButtonWidth), ButtonHeight);
+
+		ImGui::PushID(Id);
+		const bool bClicked = ImGui::InvisibleButton("##CascadeToolbarButton", ButtonSize);
+		const ImVec2 Min = ImGui::GetItemRectMin();
+		const ImVec2 Max = ImGui::GetItemRectMax();
+		const bool bHovered = ImGui::IsItemHovered();
+		const bool bActive = ImGui::IsItemActive();
+		const float Alpha = ImGui::GetStyle().Alpha;
+		ImDrawList* DrawList = ImGui::GetWindowDrawList();
+
+		const ImVec4 BgColor =
+			bSelected
+				? (bHovered ? ImVec4(0.22f, 0.29f, 0.38f, 1.0f) : ImVec4(0.18f, 0.24f, 0.32f, 1.0f))
+				: (bActive ? ImVec4(0.28f, 0.31f, 0.38f, 1.0f)
+						   : bHovered ? ImVec4(0.23f, 0.25f, 0.30f, 1.0f)
+									  : ImVec4(0.14f, 0.15f, 0.17f, 1.0f));
+		const ImU32 Bg = ImGui::GetColorU32(ImVec4(BgColor.x, BgColor.y, BgColor.z, BgColor.w * Alpha));
+		const ImU32 Border = ImGui::GetColorU32(
+			bSelected
+				? ImVec4(0.42f, 0.55f, 0.75f, Alpha)
+				: bHovered ? ImVec4(0.33f, 0.36f, 0.42f, Alpha)
+						   : ImVec4(0.18f, 0.19f, 0.22f, Alpha));
+		DrawList->AddRectFilled(Min, Max, Bg, 3.0f);
+		DrawList->AddRect(Min, Max, Border, 3.0f);
+
+		float CursorX = Min.x + (ButtonSize.x - ButtonWidth) * 0.5f + PaddingX;
+		if (Icon)
+		{
+			const float IconY = Min.y + (ButtonHeight - IconSize) * 0.5f;
+			DrawList->AddImage(
+				reinterpret_cast<ImTextureID>(Icon),
+				ImVec2(CursorX, IconY),
+				ImVec2(CursorX + IconSize, IconY + IconSize),
+				ImVec2(0.0f, 0.0f),
+				ImVec2(1.0f, 1.0f),
+				ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, Alpha)));
+			CursorX += IconSize + (bHasText ? IconTextGap : 0.0f);
+		}
+		if (bHasText)
+		{
+			DrawList->AddText(
+				ImVec2(CursorX, Min.y + (ButtonHeight - TextSize.y) * 0.5f),
+				ImGui::GetColorU32(ImVec4(0.86f, 0.88f, 0.92f, Alpha)),
+				DisplayLabel);
+		}
 
 		if (Tooltip && ImGui::IsItemHovered())
 		{
 			ImGui::SetTooltip("%s", Tooltip);
 		}
+		ImGui::PopID();
 		return bClicked;
 	}
 
@@ -223,6 +283,106 @@ namespace
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(Label);
 		ImGui::TableSetColumnIndex(1);
+	}
+
+	void PushParticlePopupStyle()
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 8.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 5.0f));
+	}
+
+	void PopParticlePopupStyle()
+	{
+		ImGui::PopStyleVar(2);
+	}
+
+	bool BeginParticlePopup(const char* Id)
+	{
+		PushParticlePopupStyle();
+		if (ImGui::BeginPopup(Id))
+		{
+			return true;
+		}
+		PopParticlePopupStyle();
+		return false;
+	}
+
+	void EndParticlePopup()
+	{
+		ImGui::EndPopup();
+		PopParticlePopupStyle();
+	}
+
+	bool BeginParticlePopupModal(const char* Id, bool* Open, ImGuiWindowFlags Flags)
+	{
+		PushParticlePopupStyle();
+		if (ImGui::BeginPopupModal(Id, Open, Flags))
+		{
+			return true;
+		}
+		PopParticlePopupStyle();
+		return false;
+	}
+
+	void EndParticlePopupModal()
+	{
+		ImGui::EndPopup();
+		PopParticlePopupStyle();
+	}
+
+	bool BeginParticleMenu(const char* Label, bool bEnabled = true)
+	{
+		PushParticlePopupStyle();
+		if (ImGui::BeginMenu(Label, bEnabled))
+		{
+			return true;
+		}
+		PopParticlePopupStyle();
+		return false;
+	}
+
+	void EndParticleMenu()
+	{
+		ImGui::EndMenu();
+		PopParticlePopupStyle();
+	}
+
+	bool BeginParticleCombo(const char* Label, const char* PreviewValue, ImGuiComboFlags Flags = ImGuiComboFlags_None)
+	{
+		PushParticlePopupStyle();
+		if (ImGui::BeginCombo(Label, PreviewValue, Flags))
+		{
+			return true;
+		}
+		PopParticlePopupStyle();
+		return false;
+	}
+
+	void EndParticleCombo()
+	{
+		ImGui::EndCombo();
+		PopParticlePopupStyle();
+	}
+
+	bool ParticleCombo(const char* Label, int* CurrentItem, const char* const Items[], int ItemsCount)
+	{
+		PushParticlePopupStyle();
+		const bool bChanged = ImGui::Combo(Label, CurrentItem, Items, ItemsCount);
+		PopParticlePopupStyle();
+		return bChanged;
+	}
+
+	bool ParticleCombo(
+		const char* Label,
+		int* CurrentItem,
+		const char* (*Getter)(void*, int),
+		void* UserData,
+		int ItemsCount)
+	{
+		PushParticlePopupStyle();
+		const bool bChanged = ImGui::Combo(Label, CurrentItem, Getter, UserData, ItemsCount);
+		PopParticlePopupStyle();
+		return bChanged;
 	}
 
 	float SmoothStep(float Edge0, float Edge1, float Value)
@@ -471,9 +631,9 @@ namespace
 
 	void DrawDisabledParticleModuleMenu(const char* MenuLabel)
 	{
-		if (ImGui::BeginMenu(MenuLabel, false))
+		if (BeginParticleMenu(MenuLabel, false))
 		{
-			ImGui::EndMenu();
+			EndParticleMenu();
 		}
 	}
 
@@ -484,13 +644,13 @@ namespace
 		bool bEnabled,
 		AddModuleFunc AddModule)
 	{
-		if (ImGui::BeginMenu(MenuLabel, bEnabled))
+		if (BeginParticleMenu(MenuLabel, bEnabled))
 		{
 			if (ImGui::MenuItem(ItemLabel))
 			{
 				AddModule(CreateParticleModule<ModuleType>(ItemLabel));
 			}
-			ImGui::EndMenu();
+			EndParticleMenu();
 		}
 	}
 
@@ -722,6 +882,11 @@ void FEditorParticleSystemWidget::Initialize(UEditorEngine* InEditorEngine)
 void FEditorParticleSystemWidget::Shutdown()
 {
 	ShutdownPreviewViewport();
+	for (TComPtr<ID3D11ShaderResourceView>& Icon : CascadeToolbarIcons)
+	{
+		Icon.Reset();
+	}
+	bCascadeToolbarIconsLoadAttempted = false;
 }
 
 bool FEditorParticleSystemWidget::CanUndo() const
@@ -939,42 +1104,106 @@ void FEditorParticleSystemWidget::ShutdownPreviewViewport()
 	bPreviewViewportInitialized = false;
 }
 
+void FEditorParticleSystemWidget::LoadCascadeToolbarIcons()
+{
+	if (bCascadeToolbarIconsLoadAttempted)
+	{
+		return;
+	}
+	bCascadeToolbarIconsLoadAttempted = true;
+
+	if (!EditorEngine)
+	{
+		return;
+	}
+
+	ID3D11Device* Device = EditorEngine->GetRenderer().GetFD3DDevice().GetDevice();
+	if (!Device)
+	{
+		return;
+	}
+
+	static constexpr const wchar_t* IconFiles[CascadeToolbarIconCount] =
+	{
+		L"icon_file_save_40x.png",
+		L"icon_toolbar_genericfinder_40px.png",
+		L"icon_Cascade_RestartSim_40x.png",
+		L"icon_Cascade_RestartInLevel_40x.png",
+		L"icon_Generic_Undo_40x.png",
+		L"icon_Generic_Redo_40x.png",
+		L"icon_Cascade_Thumbnail_40x.png",
+		L"icon_Cascade_Bounds_40x.png",
+		L"icon_Cascade_Axis_40x.png",
+		L"icon_Cascade_Color_40x.png",
+		L"icon_Cascade_RegenLOD1_40x.png",
+		L"icon_Cascade_LowestLOD_40x.png",
+		L"icon_Cascade_LowerLOD_40x.png",
+		L"icon_Cascade_AddLOD1_40x.png",
+		L"icon_Cascade_HigherLOD_40x.png",
+		L"icon_tab_Modules_40x.png"
+	};
+
+	const std::wstring IconDir = FEditorResourcePaths::CascadeAbsoluteDir();
+	for (int32 IconIndex = 0; IconIndex < CascadeToolbarIconCount; ++IconIndex)
+	{
+		if (CascadeToolbarIcons[IconIndex])
+		{
+			continue;
+		}
+
+		const std::wstring IconPath = IconDir + IconFiles[IconIndex];
+		DirectX::CreateWICTextureFromFile(Device, IconPath.c_str(), nullptr, CascadeToolbarIcons[IconIndex].GetAddressOf());
+	}
+}
+
+ID3D11ShaderResourceView* FEditorParticleSystemWidget::GetCascadeToolbarIcon(ECascadeToolbarIcon Icon) const
+{
+	const int32 IconIndex = static_cast<int32>(Icon);
+	if (IconIndex < 0 || IconIndex >= CascadeToolbarIconCount)
+	{
+		return nullptr;
+	}
+	return CascadeToolbarIcons[IconIndex].Get();
+}
+
 void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 {
-	if (ToolbarButton("[S]", "Save particle system"))
+	LoadCascadeToolbarIcons();
+
+	if (ToolbarButton("Save", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Save), "Save particle system"))
 	{
 		bDirty = false;
 	}
 	SameLineGap();
-	ToolbarButton("[F]", "Find in Content Browser");
+	ToolbarButton("FindInContentBrowser", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Find), "Find in Content Browser");
 
 	SameLineGap(14.0f);
-	ToolbarButton("Restart Sim", "Restart simulation");
+	ToolbarButton("RestartSim", "Restart Sim", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartSim), "Restart simulation");
 	SameLineGap();
-	ToolbarButton("Restart Level", "Restart preview level");
+	ToolbarButton("RestartLevel", "Restart Level", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartLevel), "Restart preview level");
 
 	SameLineGap(14.0f);
 	ImGui::BeginDisabled(!CanUndo());
-	if (ToolbarButton("Undo", "Undo"))
+	if (ToolbarButton("Undo", "Undo", GetCascadeToolbarIcon(ECascadeToolbarIcon::Undo), "Undo"))
 	{
 		Undo();
 	}
 	ImGui::EndDisabled();
 	SameLineGap();
 	ImGui::BeginDisabled(!CanRedo());
-	if (ToolbarButton("Redo", "Redo"))
+	if (ToolbarButton("Redo", "Redo", GetCascadeToolbarIcon(ECascadeToolbarIcon::Redo), "Redo"))
 	{
 		Redo();
 	}
 	ImGui::EndDisabled();
 
 	SameLineGap(14.0f);
-	if (ToolbarButton("Thumbnail", "Toggle thumbnail preview", bShowThumbnail))
+	if (ToolbarButton("Thumbnail", "Thumbnail", GetCascadeToolbarIcon(ECascadeToolbarIcon::Thumbnail), "Toggle thumbnail preview", bShowThumbnail))
 	{
 		bShowThumbnail = !bShowThumbnail;
 	}
 	SameLineGap();
-	if (ToolbarButton("Bounds", "Toggle bounds", bShowBounds))
+	if (ToolbarButton("Bounds", "Bounds", GetCascadeToolbarIcon(ECascadeToolbarIcon::Bounds), "Toggle bounds", bShowBounds))
 	{
 		bShowBounds = !bShowBounds;
 		if (bPreviewViewportInitialized)
@@ -983,7 +1212,7 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 		}
 	}
 	SameLineGap();
-	if (ToolbarButton("Origin Axis", "Toggle origin axis", bShowOriginAxis))
+	if (ToolbarButton("OriginAxis", "Origin Axis", GetCascadeToolbarIcon(ECascadeToolbarIcon::OriginAxis), "Toggle origin axis", bShowOriginAxis))
 	{
 		bShowOriginAxis = !bShowOriginAxis;
 		if (bPreviewViewportInitialized)
@@ -992,26 +1221,26 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 		}
 	}
 	SameLineGap();
-	ToolbarButton("Background Color", "Change preview background color");
+	ToolbarButton("BackgroundColor", "Background Color", GetCascadeToolbarIcon(ECascadeToolbarIcon::BackgroundColor), "Change preview background color");
 
 	SameLineGap(14.0f);
-	ToolbarButton("Regen LOD", "Regenerate LOD");
+	ToolbarButton("RegenLOD", "Regen LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::RegenLOD), "Regenerate LOD");
 	SameLineGap();
-	ToolbarButton("Lowest LOD", "Switch to lowest LOD");
+	ToolbarButton("LowestLOD", "Lowest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to lowest LOD");
 	SameLineGap();
-	ToolbarButton("Lower LOD", "Switch to lower LOD");
+	ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD");
 	SameLineGap();
-	ToolbarButton("Add LOD", "Add LOD");
+	ToolbarButton("AddLOD", "Add LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLOD), "Add LOD");
 
 	SameLineGap(8.0f);
 	ImGui::SetNextItemWidth(54.0f);
 	ImGui::InputInt("LOD", &CurrentLOD, 0, 0);
 	CurrentLOD = std::max(0, CurrentLOD);
 	SameLineGap();
-	ToolbarButton("Higher LOD", "Switch to higher LOD");
+	ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD");
 
 	SameLineGap(14.0f);
-	ToolbarButton("Menu", "Particle editor menu");
+	ToolbarButton("ParticleEditorMenu", "Menu", GetCascadeToolbarIcon(ECascadeToolbarIcon::Menu), "Particle editor menu");
 }
 
 void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseRequested)
@@ -1021,16 +1250,16 @@ void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseReque
 		"ParticleSystemEditor",
 		[this]()
 		{
-			if (ImGui::BeginMenu("File"))
+			if (BeginParticleMenu("File"))
 			{
 				if (ImGui::MenuItem(bDirty ? "Save *" : "Save", "Ctrl+S"))
 				{
 					bDirty = false;
 				}
 				ImGui::MenuItem("Save As...", nullptr, false, false);
-				ImGui::EndMenu();
+				EndParticleMenu();
 			}
-			if (ImGui::BeginMenu("Edit"))
+			if (BeginParticleMenu("Edit"))
 			{
 				if (ImGui::MenuItem("Undo", "Ctrl+Z", false, CanUndo()))
 				{
@@ -1040,9 +1269,9 @@ void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseReque
 				{
 					Redo();
 				}
-				ImGui::EndMenu();
+				EndParticleMenu();
 			}
-			if (ImGui::BeginMenu("View"))
+			if (BeginParticleMenu("View"))
 			{
 				if (ImGui::MenuItem("Thumbnail", nullptr, bShowThumbnail))
 				{
@@ -1064,18 +1293,18 @@ void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseReque
 						PreviewClient.GetParticleShowFlags().bAxis = bShowOriginAxis;
 					}
 				}
-				ImGui::EndMenu();
+				EndParticleMenu();
 			}
-			if (ImGui::BeginMenu("Particle"))
+			if (BeginParticleMenu("Particle"))
 			{
 				ImGui::MenuItem("Restart Simulation", nullptr, false, false);
 				ImGui::MenuItem("Restart Level", nullptr, false, false);
 				ImGui::Separator();
 				ImGui::MenuItem("Regenerate LOD", nullptr, false, false);
 				ImGui::MenuItem("Add LOD", nullptr, false, false);
-				ImGui::EndMenu();
+				EndParticleMenu();
 			}
-			if (ImGui::BeginMenu("Window"))
+			if (BeginParticleMenu("Window"))
 			{
 				if (ImGui::MenuItem("Reset Layout"))
 				{
@@ -1083,9 +1312,9 @@ void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseReque
 					TopLeftWidth = 0.0f;
 					BottomLeftWidth = 0.0f;
 				}
-				ImGui::EndMenu();
+				EndParticleMenu();
 			}
-			if (ImGui::BeginMenu("Help"))
+			if (BeginParticleMenu("Help"))
 			{
 				ImGui::TextDisabled("Particle System Editor");
 				if (!DocumentPath.empty())
@@ -1093,7 +1322,7 @@ void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseReque
 					ImGui::Separator();
 					ImGui::TextDisabled("%s", DocumentPath.c_str());
 				}
-				ImGui::EndMenu();
+				EndParticleMenu();
 			}
 		},
 		bCloseRequested);
@@ -1253,7 +1482,7 @@ void FEditorParticleSystemWidget::DrawViewportMenuBar(const ImVec2& CanvasMin)
 		ImGui::OpenPopup("##ParticlePreviewViewPopup");
 	}
 
-	if (ImGui::BeginPopup("##ParticlePreviewViewPopup"))
+	if (BeginParticlePopup("##ParticlePreviewViewPopup"))
 	{
 		ImGui::BeginDisabled();
 		char SearchBuffer[1] = {};
@@ -1262,13 +1491,13 @@ void FEditorParticleSystemWidget::DrawViewportMenuBar(const ImVec2& CanvasMin)
 		ImGui::EndDisabled();
 		ImGui::Separator();
 
-		if (bPreviewViewportInitialized && ImGui::BeginMenu("View Modes"))
+		if (bPreviewViewportInitialized && BeginParticleMenu("View Modes"))
 		{
 			DrawViewportModeItem("Wireframe", EViewMode::Wireframe, PreviewViewport);
 			DrawViewportModeItem("Unlit", EViewMode::Unlit, PreviewViewport);
 			DrawViewportModeItem("Lit", EViewMode::Lit_BlinnPhong, PreviewViewport);
 			DrawViewportModeItem("Shader Complexity", EViewMode::Heatmap, PreviewViewport);
-			ImGui::EndMenu();
+			EndParticleMenu();
 		}
 
 		if (bPreviewViewportInitialized)
@@ -1282,13 +1511,44 @@ void FEditorParticleSystemWidget::DrawViewportMenuBar(const ImVec2& CanvasMin)
 			}
 		}
 
-		ImGui::EndPopup();
+		EndParticlePopup();
 	}
 
 	ImGui::SameLine(0.0f, 4.0f);
-	ImGui::BeginDisabled();
-	ImGui::Button("Time##ParticlePreviewTimeButton");
-	ImGui::EndDisabled();
+	if (ImGui::Button("Time##ParticlePreviewTimeButton"))
+	{
+		ImGui::OpenPopup("##ParticlePreviewTimePopup");
+	}
+
+	if (BeginParticlePopup("##ParticlePreviewTimePopup"))
+	{
+		if (ImGui::MenuItem("Play/Pause", nullptr, bPreviewPaused))
+		{
+			bPreviewPaused = !bPreviewPaused;
+		}
+		ImGui::MenuItem("Realtime", nullptr, &bPreviewRealtime);
+		ImGui::MenuItem("Loop", nullptr, &bPreviewLoop);
+
+		if (BeginParticleMenu("AnimSpeed"))
+		{
+			ImGui::TextDisabled("ANIMSPEED");
+			ImGui::Separator();
+
+			const char* SpeedLabels[] = { "100%", "50%", "25%", "10%", "1%" };
+			for (int32 SpeedIndex = 0; SpeedIndex < static_cast<int32>(IM_ARRAYSIZE(SpeedLabels)); ++SpeedIndex)
+			{
+				ImGui::PushID(SpeedIndex);
+				if (ImGui::RadioButton(SpeedLabels[SpeedIndex], PreviewAnimSpeedIndex == SpeedIndex))
+				{
+					PreviewAnimSpeedIndex = SpeedIndex;
+				}
+				ImGui::PopID();
+			}
+			EndParticleMenu();
+		}
+
+		EndParticlePopup();
+	}
 
 	ImGui::PopStyleColor(3);
 	ImGui::PopStyleVar(2);
@@ -1408,7 +1668,7 @@ void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 
 void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 {
-	if (!ImGui::BeginPopup("##ParticleEmitterContextMenu"))
+	if (!BeginParticlePopup("##ParticleEmitterContextMenu"))
 	{
 		return;
 	}
@@ -1428,7 +1688,7 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 		{
 			AddDefaultEmitter();
 		}
-		ImGui::EndPopup();
+		EndParticlePopup();
 		return;
 	}
 
@@ -1438,11 +1698,11 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 		{
 			DeleteModule(TargetEmitterIndex, ContextModuleIndex);
 		}
-		ImGui::EndPopup();
+		EndParticlePopup();
 		return;
 	}
 
-	if (ImGui::BeginMenu("Emitter", bHasTargetEmitter))
+	if (BeginParticleMenu("Emitter", bHasTargetEmitter))
 	{
 		ImGui::TextDisabled("EMITTER");
 		ImGui::Separator();
@@ -1458,10 +1718,10 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 		}
 		ImGui::MenuItem("Export Emitter", nullptr, false, false);
 		ImGui::MenuItem("Export All", nullptr, false, false);
-		ImGui::EndMenu();
+		EndParticleMenu();
 	}
 
-	if (ImGui::BeginMenu("Particle System"))
+	if (BeginParticleMenu("Particle System"))
 	{
 		ImGui::TextDisabled("PARTICLE SYSTEM");
 		ImGui::Separator();
@@ -1482,7 +1742,7 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 			AddDefaultEmitter();
 		}
 		ImGui::MenuItem("Remove Duplicate Modules", nullptr, false, false);
-		ImGui::EndMenu();
+		EndParticleMenu();
 	}
 
 	auto AddModuleToTargetEmitter = [&](UParticleModule* Module)
@@ -1511,7 +1771,7 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 	DrawDisabledParticleModuleMenu("SubUV");
 	DrawParticleModuleAddMenu<UParticleModuleVelocity>("Velocity", "Initial Velocity", bHasTargetEmitter, AddModuleToTargetEmitter);
 
-	ImGui::EndPopup();
+	EndParticlePopup();
 }
 
 void FEditorParticleSystemWidget::AddDefaultEmitter()
@@ -1922,7 +2182,7 @@ void FEditorParticleSystemWidget::DrawEmitterRenamePopup()
 		bOpenRenameEmitterPopup = false;
 	}
 
-	if (!ImGui::BeginPopupModal("Rename Emitter##ParticleEmitterRenamePopup", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	if (!BeginParticlePopupModal("Rename Emitter##ParticleEmitterRenamePopup", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		return;
 	}
@@ -1943,7 +2203,7 @@ void FEditorParticleSystemWidget::DrawEmitterRenamePopup()
 		ImGui::CloseCurrentPopup();
 	}
 
-	ImGui::EndPopup();
+	EndParticlePopupModal();
 }
 
 void FEditorParticleSystemWidget::SelectParticleSystem()
@@ -2625,7 +2885,7 @@ void FEditorParticleSystemWidget::DrawParticleSystemDetails(UParticleSystem* Par
 		BeginParticleDetailsRow(Label);
 		int32 EditedValue = std::clamp(Value, 0, std::max(0, ItemCount - 1));
 		ImGui::SetNextItemWidth(-1.0f);
-		if (ImGui::Combo(Id, &EditedValue, Items, ItemCount))
+		if (ParticleCombo(Id, &EditedValue, Items, ItemCount))
 		{
 			CaptureSystemEditUndo();
 			Value = EditedValue;
@@ -2897,7 +3157,7 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 		{
 			bool bChanged = false;
 			const char* Preview = Current.empty() || Current == FName::None.ToString() ? "<None>" : Current.c_str();
-			if (ImGui::BeginCombo(Label, Preview))
+			if (BeginParticleCombo(Label, Preview))
 			{
 				const bool bNoneSelected = Current.empty() || Current == FName::None.ToString();
 				if (ImGui::Selectable("<None>", bNoneSelected))
@@ -2918,7 +3178,7 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 						ImGui::SetItemDefaultFocus();
 					}
 				}
-				ImGui::EndCombo();
+				EndParticleCombo();
 			}
 			return bChanged;
 		}
@@ -2970,7 +3230,7 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 			return (ValueMeta.DisplayName && ValueMeta.DisplayName[0] != '\0') ? ValueMeta.DisplayName : ValueMeta.Name;
 		};
 
-		if (ImGui::Combo(Label, &CurrentIndex, ComboGetter, const_cast<UEnum*>(Property.EnumMeta), static_cast<int>(Property.EnumMeta->Count)))
+		if (ParticleCombo(Label, &CurrentIndex, ComboGetter, const_cast<UEnum*>(Property.EnumMeta), static_cast<int>(Property.EnumMeta->Count)))
 		{
 			const int64 NewValue = Property.EnumMeta->Values[CurrentIndex].Value;
 			switch (Property.EnumMeta->Size)
@@ -3008,7 +3268,7 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 			const FString CurrentLabel = CurrentIdentifier.empty() ? FString("None") : CurrentIdentifier;
 			bool bChanged = false;
 
-			if (ImGui::BeginCombo(Label, CurrentLabel.c_str()))
+			if (BeginParticleCombo(Label, CurrentLabel.c_str()))
 			{
 				if (ImGui::Selectable("None", CurrentMaterial == nullptr))
 				{
@@ -3037,7 +3297,7 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 					}
 					ImGui::PopID();
 				}
-				ImGui::EndCombo();
+				EndParticleCombo();
 			}
 			return bChanged;
 		}
@@ -3154,7 +3414,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 
 	ImGui::SetNextItemWidth(-1.0f);
 	const char* CurrentCurveLabel = SelectedCurveAssetPath.empty() ? "<None>" : SelectedCurveAssetPath.c_str();
-	if (ImGui::BeginCombo("##ParticleCurveAsset", CurrentCurveLabel))
+	if (BeginParticleCombo("##ParticleCurveAsset", CurrentCurveLabel))
 	{
 		const bool bNoneSelected = SelectedCurveAssetPath.empty();
 		if (ImGui::Selectable("<None>", bNoneSelected))
@@ -3180,7 +3440,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 				ImGui::SetItemDefaultFocus();
 			}
 		}
-		ImGui::EndCombo();
+		EndParticleCombo();
 	}
 
 	if (CurvePaths.empty())

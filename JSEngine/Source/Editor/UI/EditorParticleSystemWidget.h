@@ -1,9 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include "Editor/UI/EditorCurveEditorWidget.h"
 #include "Editor/UI/EditorWidget.h"
 #include "Editor/Viewport/FSceneViewport.h"
 #include "Editor/Viewport/ParticleSystemViewportClient.h"
+#include "Render/Common/ComPtr.h"
 #include "ImGui/imgui.h"
 
 class UParticleEmitter;
@@ -12,6 +13,7 @@ class UParticleLODLevel;
 class UParticleSystem;
 class UObject;
 struct FProperty;
+struct ID3D11ShaderResourceView;
 
 class FEditorParticleSystemWidget : public FEditorWidget
 {
@@ -40,6 +42,29 @@ public:
 	const FParticleSystemViewportClient* GetPreviewClient() const { return bPreviewViewportInitialized ? &PreviewClient : nullptr; }
 
 private:
+	enum class ECascadeToolbarIcon : int32
+	{
+		Save,
+		Find,
+		RestartSim,
+		RestartLevel,
+		Undo,
+		Redo,
+		Thumbnail,
+		Bounds,
+		OriginAxis,
+		BackgroundColor,
+		RegenLOD,
+		LowestLOD,
+		LowerLOD,
+		AddLOD,
+		HigherLOD,
+		Menu,
+		Count
+	};
+
+	static constexpr int32 CascadeToolbarIconCount = static_cast<int32>(ECascadeToolbarIcon::Count);
+
 	struct FParticleEditorUndoEntry
 	{
 		FString Label;
@@ -51,6 +76,8 @@ private:
 
 	void EnsurePreviewViewport();
 	void ShutdownPreviewViewport();
+	void LoadCascadeToolbarIcons();
+	ID3D11ShaderResourceView* GetCascadeToolbarIcon(ECascadeToolbarIcon Icon) const;
 	void DrawMainLayout();
 	void DrawViewportPanel(const ImVec2& Size);
 	void DrawViewportMenuBar(const ImVec2& CanvasMin);
@@ -110,10 +137,14 @@ private:
 	bool bShowThumbnail = false;
 	bool bShowBounds = true;
 	bool bShowOriginAxis = true;
+	bool bPreviewPaused = true;
+	bool bPreviewRealtime = true;
+	bool bPreviewLoop = true;
 	bool bPreviewViewportInitialized = false;
 	bool bPreviewViewportVisible = false;
 	bool bPreviewViewportRectValid = false;
 	int32 CurrentLOD = 0;
+	int32 PreviewAnimSpeedIndex = 0;
 	int32 SelectedEmitterIndex = 0;
 	int32 SelectedModuleIndex = -1;
 	int32 ContextEmitterIndex = -1;
@@ -131,11 +162,13 @@ private:
 	FString CenterToastMessage;
 	TArray<FParticleEditorUndoEntry> UndoHistory;
 	TArray<FParticleEditorUndoEntry> RedoHistory;
+	TComPtr<ID3D11ShaderResourceView> CascadeToolbarIcons[CascadeToolbarIconCount];
 	bool bOpenEmitterContextMenu = false;
 	bool bOpenRenameEmitterPopup = false;
 	bool bRestoringParticleSnapshot = false;
 	bool bPropertyEditUndoCaptured = false;
 	bool bEmitterNameEditUndoCaptured = false;
+	bool bCascadeToolbarIconsLoadAttempted = false;
 	float TopAreaHeight = 0.0f;
 	float TopLeftWidth = 0.0f;
 	float BottomLeftWidth = 0.0f;
