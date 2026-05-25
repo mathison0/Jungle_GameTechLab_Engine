@@ -1183,6 +1183,16 @@ const FTextureAtlasResource* FResourceManager::FindSubUV(const FName& SubUVName)
 	return AtlasCache.FindSubUV(SubUVName);
 }
 
+FTextureAtlasResource* FResourceManager::FindSubUVExact(const FName& SubUVName)
+{
+	return AtlasCache.FindSubUVExact(SubUVName);
+}
+
+const FTextureAtlasResource* FResourceManager::FindSubUVExact(const FName& SubUVName) const
+{
+	return AtlasCache.FindSubUVExact(SubUVName);
+}
+
 void FResourceManager::RegisterSubUV(const FName& SubUVName, const FString& InPath, uint32 Columns, uint32 Rows)
 {
 	AtlasCache.RegisterSubUV(SubUVName, InPath, Columns, Rows);

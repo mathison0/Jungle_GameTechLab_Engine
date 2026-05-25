@@ -29,12 +29,14 @@ public:
 	void RenderDetachedDocumentChrome(bool& bCloseRequested);
 	void RenderDocumentToolbarControls();
 	void Shutdown();
+	bool Save();
 	bool CanUndo() const;
 	bool CanRedo() const;
 	bool Undo();
 	bool Redo();
+	void CloseDocument(const FString& InDocumentPath);
 
-	void OpenLayoutTest(const FString& InDocumentPath = "");
+	void OpenParticleSystem(const FString& InDocumentPath);
 	const FString& GetDocumentPath() const { return DocumentPath; }
 	bool IsDirty() const { return bDirty; }
 	bool IsPreviewViewportVisible() const { return bPreviewViewportVisible; }
@@ -86,6 +88,7 @@ private:
 	void DrawMainLayout();
 	void DrawViewportPanel(const ImVec2& Size);
 	void DrawViewportMenuBar(const ImVec2& CanvasMin);
+	void DrawBackgroundColorPopup();
 	void DrawEmittersPanel(const ImVec2& Size);
 	void DrawEmitterContextMenu();
 	void AddDefaultEmitter();
@@ -141,6 +144,7 @@ private:
 	FName PreviewWorldHandle = FName::None;
 	FString SelectedCurveAssetPath;
 	FString DocumentPath;
+	TMap<FString, FColor> PreviewBackgroundColorByDocument;
 	bool bDirty = true;
 	bool bShowThumbnail = false;
 	bool bShowBounds = true;

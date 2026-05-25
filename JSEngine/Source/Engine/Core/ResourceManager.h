@@ -108,6 +108,8 @@ public:
 
 	FTextureAtlasResource* FindSubUV(const FName& SubUVName);
 	const FTextureAtlasResource* FindSubUV(const FName& SubUVName) const;
+	FTextureAtlasResource* FindSubUVExact(const FName& SubUVName);
+	const FTextureAtlasResource* FindSubUVExact(const FName& SubUVName) const;
 	void RegisterSubUV(const FName& SubUVName, const FString& InPath, uint32 Columns = 1, uint32 Rows = 1);
 	TArray<FString> GetSubUVNames() const;
 

@@ -141,6 +141,14 @@ void FEditorMainPanel::BuildActiveEditorCommandList(FEditorCommandList& OutComma
 	if (RoutingTabId.Kind == EEditorTabKind::ParticleSystemEditor)
 	{
 		OutCommands.MapAction(
+			EEditorCommandId::Save,
+			{ static_cast<int32>(ImGuiKey_S), true, false, false },
+			[this]()
+			{
+				Widgets.ParticleSystemWidget.Save();
+			});
+
+		OutCommands.MapAction(
 			EEditorCommandId::Undo,
 			{ static_cast<int32>(ImGuiKey_Z), true, false, false },
 			[this]()

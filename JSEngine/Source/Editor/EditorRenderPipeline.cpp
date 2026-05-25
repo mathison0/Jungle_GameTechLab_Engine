@@ -638,7 +638,20 @@ void FEditorRenderPipeline::RenderParticlePreviewViewport(FRenderer& Renderer)
         Editor->GetRenderer().AcquireViewerViewportResource(ResourceIndex, Rect.Width, Rect.Height);
     SceneViewport->SetRenderTargetSet(&ViewportResource.GetView());
 
-    Renderer.BeginViewportFrame(SceneViewport->GetViewportRenderTargets());
+    FRenderTargetSet RenderTargets = SceneViewport->GetViewportRenderTargets();
+    Renderer.BeginViewportFrame(RenderTargets);
+    if (RenderTargets.SceneColorRTV)
+    {
+        const FColor& BackgroundColor = VC->GetBackgroundColor();
+        const float ClearColor[4] =
+        {
+            BackgroundColor.R,
+            BackgroundColor.G,
+            BackgroundColor.B,
+            1.0f
+        };
+        Renderer.GetFD3DDevice().GetDeviceContext()->ClearRenderTargetView(RenderTargets.SceneColorRTV, ClearColor);
+    }
     Bus.Clear();
 
     UWorld* World = VC->GetFocusedWorld();
