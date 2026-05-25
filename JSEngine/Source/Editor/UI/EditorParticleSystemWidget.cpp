@@ -4,11 +4,13 @@
 #include "Editor/UI/EditorDetachedWindowChrome.h"
 #include "Editor/UI/EditorMainPanelViewportToolbarHelpers.h"
 #include "Core/ResourceManager.h"
+#include "Core/Paths.h"
 #include "Engine/Runtime/WindowsWindow.h"
 #include "GameFramework/PrimitiveActors.h"
 #include "Object/Class.h"
 #include "Object/Property.h"
 #include "Particle/ParticleSystem.h"
+#include "Render/Resource/Material.h"
 #include "Component/PostProcess/Light/AmbientLightComponent.h"
 
 #include "ImGui/imgui.h"
@@ -2664,35 +2666,69 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 		Module->GetClass()->GetAllProperties(Properties);
 	}
 
-	int32 RenderedPropertyCount = 0;
 	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
 	const float LabelWidth = std::clamp(AvailableWidth * 0.38f, 128.0f, 190.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(4.0f, 3.0f));
-	if (ImGui::BeginTable("##ParticleModuleDetailsTable", 2, ImGuiTableFlags_SizingStretchProp))
-	{
-		ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed, LabelWidth);
-		ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-		for (const FProperty* Property : Properties)
-		{
-			if (!Property || !Property->Name || !Property->IsEditable() || IsInternalParticleModuleProperty(*Property))
-			{
-				continue;
-			}
 
-			ImGui::PushID(Property->Name);
-			ImGui::TableNextRow(ImGuiTableRowFlags_None, 30.0f);
-			ImGui::TableSetColumnIndex(0);
-			ImGui::AlignTextToFramePadding();
-			ImGui::TextUnformatted(GetPropertyDisplayName(*Property));
-			ImGui::TableSetColumnIndex(1);
-			ImGui::SetNextItemWidth(-1.0f);
-			DrawParticleModuleProperty(Module, *Property);
-			ImGui::PopID();
-			++RenderedPropertyCount;
+	auto DrawPropertyTable = [&](const char* TableId, const char* CategoryFilter, bool bIncludeUncategorized) -> int32
+	{
+		int32 RenderedPropertyCount = 0;
+		ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(4.0f, 3.0f));
+		if (ImGui::BeginTable(TableId, 2, ImGuiTableFlags_SizingStretchProp))
+		{
+			ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed, LabelWidth);
+			ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+			for (const FProperty* Property : Properties)
+			{
+				if (!Property || !Property->Name || !Property->IsEditable() || IsInternalParticleModuleProperty(*Property))
+				{
+					continue;
+				}
+
+				const bool bHasCategory = Property->Category && Property->Category[0] != '\0';
+				const bool bCategoryMatch = CategoryFilter && bHasCategory && std::strcmp(Property->Category, CategoryFilter) == 0;
+				const bool bUncategorizedMatch = bIncludeUncategorized && !bHasCategory;
+				if (!bCategoryMatch && !bUncategorizedMatch)
+				{
+					continue;
+				}
+
+				ImGui::PushID(Property->Name);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, 30.0f);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted(GetPropertyDisplayName(*Property));
+				ImGui::TableSetColumnIndex(1);
+				ImGui::SetNextItemWidth(-1.0f);
+				DrawParticleModuleProperty(Module, *Property);
+				ImGui::PopID();
+				++RenderedPropertyCount;
+			}
+			ImGui::EndTable();
 		}
-		ImGui::EndTable();
+		ImGui::PopStyleVar();
+		return RenderedPropertyCount;
+	};
+
+	int32 RenderedPropertyCount = 0;
+	if (Cast<UParticleModuleRequired>(Module))
+	{
+		if (ImGui::CollapsingHeader("Emitter", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredEmitterTable", "Emitter", false);
+		}
+		if (ImGui::CollapsingHeader("Sub UV", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredSubUVTable", "Sub UV", false);
+		}
+		if (ImGui::CollapsingHeader("Required", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredGeneralTable", nullptr, true);
+		}
 	}
-	ImGui::PopStyleVar();
+	else
+	{
+		RenderedPropertyCount = DrawPropertyTable("##ParticleModuleDetailsTable", nullptr, true);
+	}
 
 	if (RenderedPropertyCount == 0)
 	{
@@ -2895,6 +2931,66 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 			}
 			return true;
 		}
+		return false;
+	}
+	case EPropertyType::ObjectPtr:
+	{
+		if (!Property.ObjectPtrOps)
+		{
+			return false;
+		}
+
+		UObject* CurrentObject = Property.ObjectPtrOps->GetObject(ValuePtr);
+		const bool bMaterialAsset =
+			Property.ReferenceKind == EObjectReferenceKind::Asset &&
+			Property.ObjectClass &&
+			Property.ObjectClass->IsChildOf(UMaterialInterface::StaticClass());
+		if (bMaterialAsset && EditorEngine)
+		{
+			FEditorAssetService& AssetService = EditorEngine->GetAssetService();
+			const TArray<FString>& MaterialNames = AssetService.GetMaterialInterfaceNames();
+			UMaterialInterface* CurrentMaterial = Cast<UMaterialInterface>(CurrentObject);
+			const FString CurrentIdentifier = CurrentMaterial
+				? (CurrentMaterial->GetFilePath().empty() ? CurrentMaterial->GetName() : FPaths::Normalize(CurrentMaterial->GetFilePath()))
+				: FString();
+			const FString CurrentLabel = CurrentIdentifier.empty() ? FString("None") : CurrentIdentifier;
+			bool bChanged = false;
+
+			if (ImGui::BeginCombo(Label, CurrentLabel.c_str()))
+			{
+				if (ImGui::Selectable("None", CurrentMaterial == nullptr))
+				{
+					Property.ObjectPtrOps->SetObject(ValuePtr, nullptr);
+					bChanged = true;
+				}
+
+				for (int32 MaterialIndex = 0; MaterialIndex < static_cast<int32>(MaterialNames.size()); ++MaterialIndex)
+				{
+					ImGui::PushID(MaterialIndex);
+					const FString& MaterialLabel = MaterialNames[MaterialIndex].empty()
+						? FString("<Unnamed Material>")
+						: MaterialNames[MaterialIndex];
+					const bool bSelected = CurrentIdentifier == MaterialLabel;
+					if (ImGui::Selectable(MaterialLabel.c_str(), bSelected))
+					{
+						if (UMaterialInterface* Candidate = AssetService.ResolveMaterialInterfaceByIndex(MaterialIndex))
+						{
+							Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+							bChanged = true;
+						}
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+					ImGui::PopID();
+				}
+				ImGui::EndCombo();
+			}
+			return bChanged;
+		}
+
+		ImGui::TextDisabled("%s <unsupported object>", Label);
 		return false;
 	}
 	default:

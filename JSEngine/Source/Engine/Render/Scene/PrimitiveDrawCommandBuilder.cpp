@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <variant>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -90,6 +91,35 @@ namespace
     UMaterialInterface* ResolveDrawMaterial(UMaterialInterface* Material)
     {
         return Material ? Material : FResourceManager::Get().GetMaterial("DefaultWhite");
+    }
+
+    UTexture* ResolveParticleTexture(const UParticleModuleRequired* RequiredModule)
+    {
+        if (!RequiredModule)
+        {
+            return nullptr;
+        }
+
+        if (UMaterialInterface* Material = RequiredModule->GetMaterial())
+        {
+            FMaterialParamValue DiffuseMap;
+            if (Material->GetParam("DiffuseMap", DiffuseMap) &&
+                DiffuseMap.Type == EMaterialParamType::Texture &&
+                std::holds_alternative<UTexture*>(DiffuseMap.Value))
+            {
+                if (UTexture* Texture = std::get<UTexture*>(DiffuseMap.Value))
+                {
+                    return Texture;
+                }
+            }
+        }
+
+        if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUV(RequiredModule->GetSubUVName()))
+        {
+            return SubUV->Texture;
+        }
+
+        return nullptr;
     }
 
     double CalculateAverageBoneInfluence(const TArray<FSkeletalMeshVertex>& Vertices)
@@ -555,17 +585,23 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 continue;
             }
 
+            const UParticleLODLevel* LODLevel = EmitterInstances[EmitterIdx]
+                ? EmitterInstances[EmitterIdx]->GetCurrentLODLevel()
+                : nullptr;
+            const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+
             FRenderCommand Cmd = {};
             Cmd.SourcePrimitive = Primitive;
             Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
             Cmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
             Cmd.Type = ERenderCommandType::Primitive;
             Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
+            Cmd.Material = RequiredModule ? RequiredModule->GetMaterial() : nullptr;
             Cmd.ParticleInstances = InstanceData.data();
             Cmd.ParticleInstanceCount = static_cast<uint32>(InstanceData.size());
-            Cmd.ParticleTexture = nullptr; // TODO: SubUV atlas 텍스처 — 모듈 포팅 후 연결
-            Cmd.ParticleSubUVColumns = 1;
-            Cmd.ParticleSubUVRows = 1;
+            Cmd.ParticleTexture = ResolveParticleTexture(RequiredModule);
+            Cmd.ParticleSubUVColumns = RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1;
+            Cmd.ParticleSubUVRows = RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1;
 
             RenderBus.AddCommand(ERenderPass::Particle, Cmd);
         }

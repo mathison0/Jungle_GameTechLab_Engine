@@ -170,6 +170,10 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
         {
             TextureSRV = Cmd.ParticleTexture->GetSRV();
         }
+        if (!TextureSRV)
+        {
+            TextureSRV = FResourceManager::Get().GetDefaultWhiteSRV();
+        }
         DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
 
         ID3D11Buffer* VBs[2] = { QuadVertexBuffer.GetBuffer(), InstanceBuffer.GetBuffer() };
