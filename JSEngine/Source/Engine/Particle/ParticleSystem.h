@@ -88,6 +88,9 @@ public:
 	void CacheEmitterModuleInfo();
     bool Validate(TArray<FString>* OutErrors = nullptr) const;
     static UParticleSystem* CreateDefaultSpriteSystem();
+    // Cycle 11: detail panel 검증용 기본 mesh emitter system.
+    // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 UMeshTypeData (디폴트 Dice mesh).
+    static UParticleSystem* CreateDefaultMeshSystem();
 
 	UPROPERTY(DisplayName = "Update Time FPS", Min = 0.0f)
 	float UpdateTimeFPS = 60.0f;

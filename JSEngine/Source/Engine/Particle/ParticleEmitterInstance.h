@@ -76,6 +76,15 @@ public:
     void DispatchQueuedParticleEvents();
     int32 ConsumeSpawnCount(float Rate, float DeltaTime);
 
+protected:
+	// Cycle 11: derived (Mesh/Ribbon/Beam) instance가 payload 영역에 접근하기 위해 protected로 노출.
+	// ParticleStorage는 container 자체가 public 멤버 (ParticleData/Indices/Stride)를 제공.
+	// PayloadOffset/ActiveParticles는 derived의 Spawn override + BuildInstanceData에 필요.
+	// 외부(component/builder)는 여전히 public getter만 사용.
+	FParticleDataContainer ParticleStorage;
+	int32 PayloadOffset = 0;
+	int32 ActiveParticles = 0;
+
 private:
 	UParticleEmitter* SpriteTemplate = nullptr;
 	UParticleSystemComponent* Component = nullptr;
@@ -84,15 +93,12 @@ private:
 	int32 CurrentLODLevelIndex = 0;
 	UParticleLODLevel* CurrentLODLevel = nullptr;
 
-	// 실제 데이터들, memory pool and live data
-	FParticleDataContainer ParticleStorage;
+	// 실제 데이터들, memory pool and live data — ParticleStorage/PayloadOffset/ActiveParticles는 위 protected로 이동.
 	uint8* InstanceData = nullptr;
 	int32 InstancePayloadSize = 0;
-	int32 PayloadOffset = 0;
 	int32 ParticleSize = sizeof(FBaseParticle);
 	// Cycle 10d: ParticleStride 멤버 삭제 — source-of-truth가 FParticleDataContainer로 이전.
 	// 외부 read는 GetParticleStride() (container.GetStride() 위임) 또는 ParticleStorage.GetStride() 직접.
-	int32 ActiveParticles = 0;
 	uint32 ParticleCounter = 0;
 	int32 MaxActiveParticles = 0;
 	float SpawnFraction = 0.0f;
