@@ -11,8 +11,10 @@
 class UParticleEmitter;
 class UParticleModule;
 class UParticleLODLevel;
+class UParticleSystemComponent;
 class UParticleSystem;
 class UObject;
+class AActor;
 struct FProperty;
 struct ID3D11ShaderResourceView;
 
@@ -76,6 +78,8 @@ private:
 	};
 
 	void EnsurePreviewViewport();
+	void EnsurePreviewActor();
+	void RefreshPreviewComponent(bool bRestartSimulation);
 	void ShutdownPreviewViewport();
 	void LoadCascadeToolbarIcons();
 	ID3D11ShaderResourceView* GetCascadeToolbarIcon(ECascadeToolbarIcon Icon) const;
@@ -132,6 +136,8 @@ private:
 	FSceneViewport PreviewViewport;
 	FParticleSystemViewportClient PreviewClient;
 	UParticleSystem* ParticleSystemAsset = nullptr;
+	AActor* PreviewActor = nullptr;
+	UParticleSystemComponent* PreviewComponent = nullptr;
 	FName PreviewWorldHandle = FName::None;
 	FString SelectedCurveAssetPath;
 	FString DocumentPath;

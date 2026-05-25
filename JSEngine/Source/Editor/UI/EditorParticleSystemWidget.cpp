@@ -7,9 +7,12 @@
 #include "Core/ResourceManager.h"
 #include "Core/Paths.h"
 #include "Engine/Runtime/WindowsWindow.h"
+#include "GameFramework/AActor.h"
 #include "GameFramework/PrimitiveActors.h"
+#include "GameFramework/World.h"
 #include "Object/Class.h"
 #include "Object/Property.h"
+#include "Particle/ParticleSystemComponent.h"
 #include "Particle/ParticleSystem.h"
 #include "Render/Resource/Material.h"
 #include "Component/PostProcess/Light/AmbientLightComponent.h"
@@ -1036,6 +1039,7 @@ void FEditorParticleSystemWidget::OpenLayoutTest(const FString& InDocumentPath)
 	}
 
 	EnsurePreviewViewport();
+	RefreshPreviewComponent(true);
 }
 
 void FEditorParticleSystemWidget::EnsurePreviewViewport()
@@ -1101,12 +1105,94 @@ void FEditorParticleSystemWidget::EnsurePreviewViewport()
 	}
 
 	bPreviewViewportInitialized = true;
+	EnsurePreviewActor();
+}
+
+void FEditorParticleSystemWidget::EnsurePreviewActor()
+{
+	if (PreviewComponent || !EditorEngine || PreviewWorldHandle == FName::None)
+	{
+		return;
+	}
+
+	FWorldContext* PreviewContext = EditorEngine->GetWorldContextFromHandle(PreviewWorldHandle);
+	UWorld* PreviewWorld = PreviewContext ? PreviewContext->World : nullptr;
+	if (!PreviewWorld)
+	{
+		return;
+	}
+
+	PreviewActor = PreviewWorld->SpawnActor<AActor>();
+	if (!PreviewActor)
+	{
+		return;
+	}
+
+	PreviewActor->SetFName(FName("Particle Preview Actor"));
+	PreviewActor->SetTickInEditor(true);
+	PreviewActor->SetActorLocation(FVector::ZeroVector);
+
+	PreviewComponent = PreviewActor->AddComponent<UParticleSystemComponent>();
+	if (!PreviewComponent)
+	{
+		PreviewWorld->DestroyActor(PreviewActor);
+		PreviewActor = nullptr;
+		return;
+	}
+
+	PreviewComponent->SetTransient(true);
+	PreviewComponent->SetEditorOnly(true);
+	PreviewActor->SetRootComponent(PreviewComponent);
+	PreviewComponent->SetTemplate(ParticleSystemAsset);
+	PreviewWorld->SyncSpatialIndex();
+}
+
+void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulation)
+{
+	EnsurePreviewViewport();
+	EnsurePreviewActor();
+	if (!PreviewComponent)
+	{
+		return;
+	}
+
+	if (ParticleSystemAsset)
+	{
+		ParticleSystemAsset->CacheEmitterModuleInfo();
+	}
+
+	if (PreviewComponent->GetTemplate() != ParticleSystemAsset)
+	{
+		PreviewComponent->SetTemplate(ParticleSystemAsset);
+	}
+	else if (bRestartSimulation)
+	{
+		PreviewComponent->RecreateEmitterInstances();
+	}
+
+	if (PreviewActor && PreviewComponent->GetTotalActiveParticleCount() == 0)
+	{
+		PreviewActor->Tick(0.1f);
+	}
+
+	if (EditorEngine && PreviewWorldHandle != FName::None)
+	{
+		if (FWorldContext* PreviewContext = EditorEngine->GetWorldContextFromHandle(PreviewWorldHandle))
+		{
+			if (PreviewContext->World)
+			{
+				PreviewContext->World->SyncSpatialIndex();
+			}
+		}
+	}
 }
 
 void FEditorParticleSystemWidget::ShutdownPreviewViewport()
 {
 	bPreviewViewportVisible = false;
 	bPreviewViewportRectValid = false;
+	PreviewComponent = nullptr;
+	PreviewActor = nullptr;
 
 	PreviewClient.DestroyCamera();
 	PreviewClient.SetWorld(nullptr);
@@ -1862,6 +1948,7 @@ void FEditorParticleSystemWidget::AddDefaultEmitterAt(int32 InsertIndex)
 	SelectEmitter(InsertIndex);
 	ClearEmitterContext();
 	bDirty = true;
+	RefreshPreviewComponent(true);
 }
 
 void FEditorParticleSystemWidget::DeleteSelectedEmitter()
@@ -1893,6 +1980,7 @@ void FEditorParticleSystemWidget::DeleteEmitter(int32 EmitterIndex)
 		SelectEmitter(std::clamp(EmitterIndex, 0, static_cast<int32>(ParticleSystemAsset->Emitters.size()) - 1));
 	}
 	bDirty = true;
+	RefreshPreviewComponent(true);
 }
 
 void FEditorParticleSystemWidget::AddModuleToEmitter(int32 EmitterIndex, UParticleModule* Module)
@@ -1923,6 +2011,7 @@ void FEditorParticleSystemWidget::AddModuleToEmitter(int32 EmitterIndex, UPartic
 	SelectModule(EmitterIndex, static_cast<int32>(LODLevel->Modules.size()) - 1);
 	ClearEmitterContext();
 	bDirty = true;
+	RefreshPreviewComponent(true);
 }
 
 void FEditorParticleSystemWidget::DeleteModule(int32 EmitterIndex, int32 ModuleIndex)
@@ -1976,6 +2065,7 @@ void FEditorParticleSystemWidget::DeleteModule(int32 EmitterIndex, int32 ModuleI
 	}
 	ClearEmitterContext();
 	bDirty = true;
+	RefreshPreviewComponent(true);
 }
 
 void FEditorParticleSystemWidget::ChangeEmitterRenderMode(int32 EmitterIndex, EParticleEmitterRenderMode RenderMode)
@@ -2002,6 +2092,7 @@ void FEditorParticleSystemWidget::ChangeEmitterRenderMode(int32 EmitterIndex, EP
 	SelectEmitter(EmitterIndex);
 	ClearEmitterContext();
 	bDirty = true;
+	RefreshPreviewComponent(true);
 }
 
 void FEditorParticleSystemWidget::ShowCenterToast(const FString& Message)
@@ -2116,6 +2207,7 @@ bool FEditorParticleSystemWidget::RestoreParticleSnapshot(
 	}
 	ClampSelectionToParticleSystem();
 	bDirty = true;
+	RefreshPreviewComponent(true);
 	return true;
 }
 
@@ -2376,6 +2468,7 @@ void FEditorParticleSystemWidget::ReorderEmitter(int32 SourceIndex, int32 Insert
 	SelectEmitter(NewEmitterIndex);
 	ClearEmitterContext();
 	bDirty = true;
+	RefreshPreviewComponent(true);
 }
 
 void FEditorParticleSystemWidget::ReorderModule(int32 SourceEmitterIndex, int32 SourceModuleIndex, int32 TargetEmitterIndex, int32 InsertIndex)
@@ -2428,6 +2521,7 @@ void FEditorParticleSystemWidget::ReorderModule(int32 SourceEmitterIndex, int32 
 		SelectModule(SourceEmitterIndex, NewModuleIndex);
 		ClearEmitterContext();
 		bDirty = true;
+		RefreshPreviewComponent(true);
 		return;
 	}
 
@@ -2447,6 +2541,7 @@ void FEditorParticleSystemWidget::ReorderModule(int32 SourceEmitterIndex, int32 
 	SelectModule(TargetEmitterIndex, NewModuleIndex);
 	ClearEmitterContext();
 	bDirty = true;
+	RefreshPreviewComponent(true);
 }
 
 void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, int32 EmitterIndex, float ColumnHeight)
@@ -3110,9 +3205,9 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 		{
 			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredEmitterTable", "Emitter", false);
 		}
-		if (ImGui::CollapsingHeader("Sub UV", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::CollapsingHeader("SubUV", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredSubUVTable", "Sub UV", false);
+			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredSubUVTable", "SubUV", false);
 		}
 		if (ImGui::CollapsingHeader("Required", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -3156,6 +3251,7 @@ bool FEditorParticleSystemWidget::DrawParticleModuleProperty(UParticleModule* Mo
 			bPropertyEditUndoCaptured = true;
 		}
 		NotifyParticleModulePropertyChanged(Module, GetSelectedEmitter(), Property);
+		RefreshPreviewComponent(false);
 	}
 	if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
 	{

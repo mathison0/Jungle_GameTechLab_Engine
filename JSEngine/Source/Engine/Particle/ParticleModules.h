@@ -44,13 +44,13 @@ private:
 	UPROPERTY(DisplayName = "Use Local Space")
 	bool bUseLocalSpace = false;
 
-	UPROPERTY(DisplayName = "SubUV", Category = "Sub UV")
+	UPROPERTY(DisplayName = "SubUV", Category = "SubUV")
 	FName SubUVName;
 
-	UPROPERTY(DisplayName = "Sub Images Horizontal", Category = "Sub UV", Min = 1)
+	UPROPERTY(DisplayName = "Sub Images Horizontal", Category = "SubUV", Min = 1)
 	int32 SubImagesHorizontal = 1;
 
-	UPROPERTY(DisplayName = "Sub Images Vertical", Category = "Sub UV", Min = 1)
+	UPROPERTY(DisplayName = "Sub Images Vertical", Category = "SubUV", Min = 1)
 	int32 SubImagesVertical = 1;
 
 	UPROPERTY(DisplayName = "Emitter Type", Category = "TypeData", NoEdit)
