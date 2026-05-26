@@ -843,7 +843,6 @@
     <ClCompile Include="Source\Engine\Camera\ViewportCamera.cpp" />
     <ClCompile Include="Source\Engine\Collision\Collision.cpp" />
     <ClCompile Include="Source\Engine\Collision\CollisionQueryUtils.cpp" />
-    <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorSequenceComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\BillboardComponent.cpp" />
@@ -1213,7 +1212,6 @@
     <ClInclude Include="Source\Engine\Camera\ViewportCamera.h" />
     <ClInclude Include="Source\Engine\Collision\Collision.h" />
     <ClInclude Include="Source\Engine\Collision\CollisionQueryUtils.h" />
-    <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h" />
     <ClInclude Include="Source\Engine\Component\ActorComponent.h" />
     <ClInclude Include="Source\Engine\Component\ActorSequenceComponent.h" />
     <ClInclude Include="Source\Engine\Component\BillboardComponent.h" />

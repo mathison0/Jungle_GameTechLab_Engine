@@ -2,15 +2,11 @@
 
 #include "Core/CoreMinimal.h"
 #include "Core/CollisionTypes.h"
-#include "Geometry/AABB.h"
 #include "Geometry/OBB.h"
 #include "Geometry/Ray.h"
 
 struct FCollisionQueryUtils
 {
-	static bool RaycastInflatedAABB(const FAABB& Bounds, const FRay& Ray, float Inflation,
-		bool bInitialOverlapAsHit, FHitResult& OutHitResult);
-
 	static bool RaycastOBB(const FOBB& Box, const FRay& Ray, bool bInitialOverlapAsHit,
 		FHitResult& OutHitResult);
 
