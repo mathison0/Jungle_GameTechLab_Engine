@@ -1459,6 +1459,10 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 			Property.ReferenceKind == EObjectReferenceKind::Asset &&
 			Property.ObjectClass &&
 			Property.ObjectClass->IsChildOf(UMaterialInterface::StaticClass());
+		const bool bStaticMeshAsset =
+			Property.ReferenceKind == EObjectReferenceKind::Asset &&
+			Property.ObjectClass &&
+			Property.ObjectClass->IsChildOf(UStaticMesh::StaticClass());
 		if (bMaterialAsset && EditorEngine)
 		{
 			FEditorAssetService& AssetService = EditorEngine->GetAssetService();
@@ -1490,6 +1494,87 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 						if (UMaterialInterface* Candidate = AssetService.ResolveMaterialInterfaceByIndex(MaterialIndex))
 						{
 							Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+							bChanged = true;
+						}
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+					ImGui::PopID();
+				}
+				EndParticleCombo();
+			}
+			return bChanged;
+		}
+
+		if (bStaticMeshAsset && EditorEngine)
+		{
+			FEditorAssetService& AssetService = EditorEngine->GetAssetService();
+			const TArray<FString>& StaticMeshPaths = AssetService.GetStaticMeshAssetPaths();
+			UStaticMesh* CurrentMesh = Cast<UStaticMesh>(CurrentObject);
+			UMeshTypeData* MeshTypeData = Cast<UMeshTypeData>(NotifyTarget);
+			const FString CurrentIdentifier = CurrentMesh
+				? FPaths::Normalize(CurrentMesh->GetAssetPathFileName())
+				: FString();
+			const FString CurrentLabel = CurrentIdentifier.empty() ? FString("None") : CurrentIdentifier;
+			bool bChanged = false;
+			auto ResolveDefaultMeshMaterial = [](UStaticMesh* Mesh) -> UMaterialInterface*
+			{
+				if (!Mesh)
+				{
+					return nullptr;
+				}
+
+				const TArray<FStaticMeshSection>& Sections = Mesh->GetSections();
+				const TArray<FStaticMeshMaterialSlot>& Slots = Mesh->GetMaterialSlots();
+				if (!Sections.empty() && !Slots.empty())
+				{
+					const int32 SlotIndex = Sections[0].MaterialSlotIndex;
+					if (SlotIndex >= 0 && SlotIndex < static_cast<int32>(Slots.size()) && Slots[SlotIndex].Material)
+					{
+						return Slots[SlotIndex].Material;
+					}
+				}
+
+				for (const FStaticMeshMaterialSlot& Slot : Slots)
+				{
+					if (Slot.Material)
+					{
+						return Slot.Material;
+					}
+				}
+				return nullptr;
+			};
+
+			if (BeginParticleCombo(Label, CurrentLabel.c_str()))
+			{
+				if (ImGui::Selectable("None", CurrentMesh == nullptr))
+				{
+					Property.ObjectPtrOps->SetObject(ValuePtr, nullptr);
+					if (MeshTypeData && Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
+					{
+						MeshTypeData->SetOverrideMaterial(false, nullptr);
+					}
+					bChanged = true;
+				}
+
+				for (int32 MeshIndex = 0; MeshIndex < static_cast<int32>(StaticMeshPaths.size()); ++MeshIndex)
+				{
+					ImGui::PushID(MeshIndex);
+					const FString& MeshPath = StaticMeshPaths[MeshIndex];
+					const FString NormalizedPath = FPaths::Normalize(MeshPath);
+					const bool bSelected = CurrentIdentifier == NormalizedPath;
+					if (ImGui::Selectable(MeshPath.c_str(), bSelected))
+					{
+						if (UStaticMesh* Candidate = AssetService.LoadStaticMesh(MeshPath))
+						{
+							Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+							if (MeshTypeData && Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
+							{
+								UMaterialInterface* DefaultMaterial = ResolveDefaultMeshMaterial(Candidate);
+								MeshTypeData->SetOverrideMaterial(DefaultMaterial != nullptr, DefaultMaterial);
+							}
 							bChanged = true;
 						}
 					}
