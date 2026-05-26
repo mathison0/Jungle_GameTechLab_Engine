@@ -263,7 +263,9 @@ void FEditorOverlayCollector::CollectGizmo(UGizmoComponent* Gizmo, const FShowFl
     FMatrix WorldMatrix = Gizmo->GetWorldMatrix();
     bool bHolding = Gizmo->IsHolding();
     int32 SelectedAxis = Gizmo->GetSelectedAxis();
-	(void)bIsActiveOperation;
+    const bool bAxisActive =
+        SelectedAxis >= 0 &&
+        (bIsActiveOperation || bHolding || Gizmo->IsPressedOnHandle());
 
     auto CreateGizmoCmd = [&](bool bInner) {
         FRenderCommand Cmd = {};
@@ -276,7 +278,13 @@ void FEditorOverlayCollector::CollectGizmo(UGizmoComponent* Gizmo, const FShowFl
 
         Cmd.PerObjectConstants = FPerObjectConstants{ WorldMatrix };
 
-        UMaterial* Material = Cast<UMaterial>(Gizmo->GetMaterial());
+        UMaterial* Material = bInner
+            ? FResourceManager::Get().GetOrCreateMaterial("GizmoMaterialInner", EMaterialShaderType::EditorGizmo)
+            : FResourceManager::Get().GetOrCreateMaterial("GizmoMaterialOuter", EMaterialShaderType::EditorGizmo);
+        if (!Material)
+        {
+            Material = Cast<UMaterial>(Gizmo->GetMaterial());
+        }
         Cmd.Material = Material;
 
         if (bInner)
@@ -293,18 +301,14 @@ void FEditorOverlayCollector::CollectGizmo(UGizmoComponent* Gizmo, const FShowFl
         Material->SetVector4("GizmoColorTint", FVector4(1.0f, 1.0f, 1.0f, 1.0f));
         Material->SetBool("bIsInnerGizmo", bInner);
         Material->SetBool("bClicking", bHolding);
-		Material->SetUInt("SelectedAxis", (SelectedAxis >= 0) ? (uint32)SelectedAxis : 0xffffffffu);
+        Material->SetUInt("SelectedAxis", bAxisActive ? (uint32)SelectedAxis : 0xffffffffu);
         Material->SetFloat("HoveredAxisOpacity", 0.3f);
 
         return Cmd;
         };
 
     RenderBus.AddCommand(ERenderPass::DepthLess, CreateGizmoCmd(false));
-
-    if (!bHolding)
-    {
-        RenderBus.AddCommand(ERenderPass::DepthLess, CreateGizmoCmd(true));
-    }
+    RenderBus.AddCommand(ERenderPass::DepthLess, CreateGizmoCmd(true));
 }
 
 bool FEditorOverlayCollector::CollectFromSelectedActor(AActor* Actor, const FShowFlags& ShowFlags, EViewMode ViewMode,
