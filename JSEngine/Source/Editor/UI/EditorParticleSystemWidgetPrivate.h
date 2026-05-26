@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // Shared private includes and helper utilities for the particle system editor files.
 
@@ -508,7 +508,7 @@ namespace
 			case EParticleEmitterRenderMode::Sprite:
 				return "Sprite";
 			case EParticleEmitterRenderMode::Mesh:
-				return "Mesh Particles";
+				return "Mesh";
 			case EParticleEmitterRenderMode::Beam:
 				return "Beam";
 			case EParticleEmitterRenderMode::Ribbon:
@@ -589,7 +589,7 @@ namespace
 		case EParticleEmitterRenderMode::Sprite:
 			return "Sprite";
 		case EParticleEmitterRenderMode::Mesh:
-			return "Mesh Particles";
+			return "Mesh";
 		case EParticleEmitterRenderMode::Beam:
 			return "Beam";
 		case EParticleEmitterRenderMode::Ribbon:
