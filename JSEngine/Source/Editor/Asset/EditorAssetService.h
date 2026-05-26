@@ -6,6 +6,7 @@ class UEditorEngine;
 class UMaterial;
 class UMaterialInstance;
 class UMaterialInterface;
+class UParticleSystem;
 class UStaticMesh;
 class USkeletalMesh;
 class UTexture;
@@ -17,6 +18,7 @@ enum class EEditorAssetType : uint8
 	Texture,
 	Material,
 	AnimGraph,
+	ParticleSystem,
 	Font,
 	SubUV,
 	Scene,
@@ -43,12 +45,14 @@ public:
 	const TArray<FString>& GetTextureAssetPaths() const { return TexturePaths; }
 	const TArray<FString>& GetMaterialInterfaceNames() const { return MaterialInterfaceNames; }
 	const TArray<FString>& GetAnimGraphAssetPaths() const { return AnimGraphPaths; }
+	const TArray<FString>& GetParticleSystemAssetPaths() const { return ParticleSystemPaths; }
 	const TArray<FString>& GetFontNames() const { return FontNames; }
 	const TArray<FString>& GetSubUVNames() const { return SubUVNames; }
 
 	UStaticMesh* LoadStaticMesh(const FString& Path) const;
 	USkeletalMesh* LoadSkeletalMesh(const FString& Path) const;
 	UTexture* LoadTexture(const FString& Path) const;
+	UParticleSystem* LoadParticleSystem(const FString& Path) const;
 	UMaterialInterface* GetMaterialInterface(const FString& NameOrPath) const;
 	UMaterialInterface* ResolveMaterialInterface(const FString& NameOrPath);
 	UMaterialInterface* ResolveMaterialInterfaceByIndex(int32 MaterialIndex);
@@ -68,6 +72,7 @@ private:
 	TArray<FString> TexturePaths;
 	TArray<FString> MaterialInterfaceNames;
 	TArray<FString> AnimGraphPaths;
+	TArray<FString> ParticleSystemPaths;
 	TArray<FString> FontNames;
 	TArray<FString> SubUVNames;
 	TArray<UMaterialInterface*> CachedMaterialInterfaces;
@@ -78,6 +83,7 @@ private:
 	TArray<FEditorAssetItem> TextureItems;
 	TArray<FEditorAssetItem> MaterialItems;
 	TArray<FEditorAssetItem> AnimGraphItems;
+	TArray<FEditorAssetItem> ParticleSystemItems;
 	TArray<FEditorAssetItem> FontItems;
 	TArray<FEditorAssetItem> SubUVItems;
 	TArray<FEditorAssetItem> EmptyItems;

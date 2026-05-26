@@ -1,6 +1,9 @@
 ﻿#pragma once
 #include "ShapeComponent.h"
 
+#include <algorithm>
+#include <cmath>
+
 UCLASS(SpawnableComponent, DisplayName = "Sphere Component", Category = "Collision")
 class USphereComponent : public UShapeComponent
 {
@@ -9,7 +12,8 @@ public:
 	float GetSphereRadius() const { return SphereRadius; }
 	float GetScaledSphereRadius() const
 	{
-		return SphereRadius;
+		const FVector Scale = GetWorldTransform().GetScale3D();
+		return SphereRadius * std::max({ std::fabs(Scale.X), std::fabs(Scale.Y), std::fabs(Scale.Z) });
 	}
 
 	void PostDuplicate(UObject* Original) override;

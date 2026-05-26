@@ -3,6 +3,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Core/Reflection/ReflectionRegistry.h"
 #include "Core/Logging/Log.h"
+#include "Engine/Geometry/Ray.h"
 #include "GameFramework/PlayerController.h"
 
 #include <algorithm>
@@ -137,6 +138,69 @@ void UWorld::RebuildSpatialIndex()
 void UWorld::SyncSpatialIndex()
 {
 	SpatialIndex.FlushDirtyBounds();
+}
+
+bool UWorld::LineTraceSingle(
+	const FVector& Start,
+	const FVector& End,
+	FHitResult& OutHit,
+	const FCollisionQueryParams& Params)
+{
+	OutHit.Reset();
+
+	const FVector Delta = End - Start;
+	const float SegmentLength = Delta.Size();
+	if (SegmentLength <= 1.0e-6f)
+	{
+		return false;
+	}
+
+	const FRay Ray(Start, Delta / SegmentLength);
+
+	TArray<UPrimitiveComponent*> Candidates;
+	TArray<float> CandidateTs;
+	FWorldSpatialIndex::FPrimitiveRayQueryScratch Scratch;
+	SpatialIndex.RayQueryPrimitives(Ray, Candidates, CandidateTs, Scratch);
+
+	bool bFoundHit = false;
+	float BestDistance = SegmentLength;
+
+	for (UPrimitiveComponent* Candidate : Candidates)
+	{
+		if (!Candidate)
+		{
+			continue;
+		}
+		if (Params.IgnoredComponent && Candidate == Params.IgnoredComponent)
+		{
+			continue;
+		}
+		if (Params.IgnoredActor && Candidate->GetOwner() == Params.IgnoredActor)
+		{
+			continue;
+		}
+		if (Params.bTraceVisibleOnly && !Candidate->IsVisible())
+		{
+			continue;
+		}
+
+		FHitResult CandidateHit;
+		if (Candidate->Raycast(Ray, CandidateHit)
+			&& CandidateHit.bHit
+			&& CandidateHit.Distance <= SegmentLength
+			&& CandidateHit.Distance < BestDistance)
+		{
+			if (!CandidateHit.HitComponent)
+			{
+				CandidateHit.HitComponent = Candidate;
+			}
+			OutHit = CandidateHit;
+			BestDistance = CandidateHit.Distance;
+			bFoundHit = true;
+		}
+	}
+
+	return bFoundHit;
 }
 
 int32 UWorld::AddActorDestroyedListener(FActorDestroyedListener Listener)

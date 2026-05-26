@@ -1,9 +1,19 @@
 ﻿#pragma once
 #include "Math/Vector.h" // 필요한 최소한의 수학 라이브러리만
 
+class AActor;
+class UPrimitiveComponent;
+
+struct FCollisionQueryParams
+{
+    AActor* IgnoredActor = nullptr;
+    UPrimitiveComponent* IgnoredComponent = nullptr;
+    bool bTraceVisibleOnly = true;
+};
+
 struct FHitResult 
 {
-    class UPrimitiveComponent* HitComponent = nullptr;
+    UPrimitiveComponent* HitComponent = nullptr;
 
     float Distance = FLT_MAX;
 	

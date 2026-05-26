@@ -284,7 +284,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "Template" : 579,
+          "Template" : "",
           "Type" : "UParticleSystemComponent",
           "UUID" : 473,
           "bAutoActivate" : true,
@@ -386,16 +386,105 @@
       "Tags" : [],
       "UUID" : 508,
       "Visible" : true
+    }, {
+      "Active" : true,
+      "ClassName" : "AParticleSystemActor",
+      "Components" : [{
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UParticleSystemComponent",
+          "ObjectName" : "UParticleSystemComponent_1",
+          "PersistentGuid" : "530A9A12-7F8346CB-8D5841DE-A5129965",
+          "RelativeLocation" : {
+            "X" : -19.043837,
+            "Y" : 28.851168,
+            "Z" : 5.729328
+          },
+          "RelativeRotation" : {
+            "X" : -0.000000,
+            "Y" : 0.000000,
+            "Z" : -0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 1.000000,
+            "Y" : 1.000000,
+            "Z" : 1.000000
+          },
+          "Tags" : [],
+          "Template" : "Asset/Particle System/YG.particlesystem",
+          "Type" : "UParticleSystemComponent",
+          "UUID" : 622,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : false,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }],
+      "EditorOnly" : true,
+      "Name" : "AParticleSystemActor_0",
+      "RootComponent" : 622,
+      "Tags" : [],
+      "UUID" : 621,
+      "Visible" : true
+    }, {
+      "Active" : true,
+      "ClassName" : "AStaticMeshActor",
+      "Components" : [{
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UStaticMeshComponent",
+          "Materials" : ["DefaultWhite"],
+          "ObjectName" : "UStaticMeshComponent_1",
+          "PersistentGuid" : "8B06923A-38284B73-8AE7067E-DEEFED57",
+          "RelativeLocation" : {
+            "X" : -18.412342,
+            "Y" : 29.591045,
+            "Z" : 2.515684
+          },
+          "RelativeRotation" : {
+            "X" : -0.000000,
+            "Y" : 0.000000,
+            "Z" : -0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 5.000000,
+            "Y" : 5.000000,
+            "Z" : 1.000000
+          },
+          "ScrollU" : 0.000000,
+          "ScrollV" : 0.000000,
+          "StaticMeshAssetPath" : "Asset/Mesh/Dice/Dice.obj",
+          "Tags" : [],
+          "Type" : "UStaticMeshComponent",
+          "UUID" : 711,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : true,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }],
+      "EditorOnly" : false,
+      "Name" : "AStaticMeshActor_1",
+      "RootComponent" : 711,
+      "Tags" : [],
+      "UUID" : 710,
+      "Visible" : true
     }],
   "ClassName" : "UWorld",
   "Name" : "Untitled",
-  "NextUUID" : 593,
+  "NextUUID" : 724,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-8.923306, 16.575806, 10.594291],
+    "Location" : [-23.837645, 29.158607, 6.100819],
     "NearClip" : 0.100000,
-    "Rotation" : [30.509651, 8.617846, -75.733368]
+    "Rotation" : [-1.550842, 16.981804, 5.154438]
   },
   "Version" : 6,
   "WorldSettings" : {

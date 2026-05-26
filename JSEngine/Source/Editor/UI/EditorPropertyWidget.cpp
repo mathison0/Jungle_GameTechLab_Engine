@@ -157,6 +157,21 @@ namespace
 				|| std::strcmp(Property->Name, "AnimationMode") == 0);
 	}
 
+	static bool TryNormalizeDroppedAssetPath(const ImGuiPayload* Payload, FString& OutPath)
+	{
+		if (!Payload || !Payload->Data || Payload->DataSize <= 0)
+		{
+			return false;
+		}
+
+		const FString PayloadPath = static_cast<const char*>(Payload->Data);
+		const std::filesystem::path DroppedPath = FPaths::ToWide(PayloadPath);
+		OutPath = DroppedPath.is_absolute()
+			? FPaths::Normalize(FPaths::ToRelativeString(DroppedPath.wstring()))
+			: FPaths::Normalize(PayloadPath);
+		return !OutPath.empty();
+	}
+
 	static bool RenderAnimGraphAssetPathWidget(FString& Value, const char* Label, const TArray<FString>& Options)
 	{
 		bool bChanged = false;
@@ -2309,6 +2324,9 @@ bool FEditorPropertyWidget::RenderObjectPtrWidget(const FProperty& Property, voi
 	const bool bStaticMeshAsset = Property.ReferenceKind == EObjectReferenceKind::Asset
 		&& Property.ObjectClass
 		&& Property.ObjectClass->IsChildOf(UStaticMesh::StaticClass());
+	const bool bParticleSystemAsset = Property.ReferenceKind == EObjectReferenceKind::Asset
+		&& Property.ObjectClass
+		&& Property.ObjectClass->IsChildOf(UParticleSystem::StaticClass());
 
 	if (bMaterialAsset && EditorEngine)
 	{
@@ -2422,6 +2440,65 @@ bool FEditorPropertyWidget::RenderObjectPtrWidget(const FProperty& Property, voi
 				ImGui::PopID();
 			}
 			ImGui::EndCombo();
+		}
+
+		return bChanged;
+	}
+
+	if (bParticleSystemAsset && EditorEngine)
+	{
+		FEditorAssetService& AssetService = EditorEngine->GetAssetService();
+		const TArray<FString>& ParticleSystemPaths = AssetService.GetParticleSystemAssetPaths();
+		UParticleSystem* CurrentParticleSystem = Cast<UParticleSystem>(CurrentObject);
+		const FString CurrentIdentifier = CurrentParticleSystem
+			? FPaths::Normalize(CurrentParticleSystem->GetAssetPath())
+			: FString();
+		const FString CurrentLabel = CurrentIdentifier.empty() ? FString("None") : CurrentIdentifier;
+		bool bChanged = false;
+
+		if (ImGui::BeginCombo(Label, CurrentLabel.c_str()))
+		{
+			if (ImGui::Selectable("None", CurrentParticleSystem == nullptr))
+			{
+				Property.ObjectPtrOps->SetObject(ValuePtr, nullptr);
+				bChanged = true;
+			}
+
+			for (int32 AssetIndex = 0; AssetIndex < static_cast<int32>(ParticleSystemPaths.size()); ++AssetIndex)
+			{
+				ImGui::PushID(AssetIndex);
+				const FString& AssetPath = ParticleSystemPaths[AssetIndex];
+				const FString NormalizedPath = FPaths::Normalize(AssetPath);
+				const bool bSelected = CurrentIdentifier == NormalizedPath;
+				if (ImGui::Selectable(AssetPath.c_str(), bSelected))
+				{
+					if (UParticleSystem* Candidate = AssetService.LoadParticleSystem(AssetPath))
+					{
+						Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+						bChanged = true;
+					}
+				}
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+				ImGui::PopID();
+			}
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			FString DroppedPath;
+			if (TryNormalizeDroppedAssetPath(ImGui::AcceptDragDropPayload("ParticleSystemContentItem"), DroppedPath))
+			{
+				if (UParticleSystem* Candidate = AssetService.LoadParticleSystem(DroppedPath))
+				{
+					Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+					bChanged = true;
+				}
+			}
+			ImGui::EndDragDropTarget();
 		}
 
 		return bChanged;

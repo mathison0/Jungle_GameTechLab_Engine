@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "Core/CollisionTypes.h"
 #include "Object/Object.h"
 #include "GameFramework/AActor.h"
 #include "Level.h"
@@ -78,6 +79,12 @@ public:
 
 	/** @brief Flush pending bounds and visibility dirties into the world BVH. */
 	void SyncSpatialIndex();
+
+	bool LineTraceSingle(
+		const FVector& Start,
+		const FVector& End,
+		FHitResult& OutHit,
+		const FCollisionQueryParams& Params = FCollisionQueryParams());
 
 	bool HasBegunPlay() const { return bHasBegunPlay; }
 
