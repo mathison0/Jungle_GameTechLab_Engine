@@ -1,12 +1,19 @@
 ﻿#include "Editor/UI/EditorMainPanel.h"
 
 #include "Editor/EditorEngine.h"
+#include "Editor/Selection/SelectionManager.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Core/ResourceManager.h"
+#include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Math/Utils.h"
+#include "Particle/ParticleSystemComponent.h"
+#include "Render/Renderer/Renderer.h"
+#include "Render/Resource/MeshBufferManager.h"
+#include "Render/Scene/PrimitiveDrawCommandBuilder.h"
+#include "Render/Scene/RenderBus.h"
 
 #include "ImGui/imgui.h"
 
@@ -61,6 +68,262 @@ void SetDebugCameraSpeedMultiplier(FEditorViewportClient* Client, float Multipli
         GetDebugCameraBaseSpeed() * Multiplier,
         0.1f,
         GetDebugCameraBaseSpeed() * MaxDebugCameraSpeedMultiplier));
+}
+
+UParticleSystemComponent* FindSelectedParticleSystemComponent(UEditorEngine* InEditorEngine)
+{
+    if (!InEditorEngine)
+    {
+        return nullptr;
+    }
+
+    FWorldContext* Context = InEditorEngine->GetFocusedWorldContext();
+    if (!Context || !Context->SelectionManager)
+    {
+        return nullptr;
+    }
+
+    if (UParticleSystemComponent* SelectedComponent = Cast<UParticleSystemComponent>(
+        Context->SelectionManager->GetSelectedComponent()))
+    {
+        return SelectedComponent;
+    }
+
+    AActor* SelectedActor = Context->SelectionManager->GetPrimarySelection();
+    return SelectedActor ? SelectedActor->FindComponent<UParticleSystemComponent>() : nullptr;
+}
+
+UParticleSystemComponent* FindFirstParticleSystemComponentInWorld(UEditorEngine* InEditorEngine)
+{
+    UWorld* World = InEditorEngine ? InEditorEngine->GetFocusedWorld() : nullptr;
+    if (!World)
+    {
+        return nullptr;
+    }
+
+    for (AActor* Actor : World->GetActors())
+    {
+        if (!Actor)
+        {
+            continue;
+        }
+
+        if (UParticleSystemComponent* ParticleComponent = Actor->FindComponent<UParticleSystemComponent>())
+        {
+            return ParticleComponent;
+        }
+    }
+
+    return nullptr;
+}
+
+bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& OutSummary)
+{
+    UParticleSystemComponent* ParticleComponent = FindSelectedParticleSystemComponent(InEditorEngine);
+    bool bUsedSelection = true;
+    if (!ParticleComponent)
+    {
+        ParticleComponent = FindFirstParticleSystemComponentInWorld(InEditorEngine);
+        bUsedSelection = false;
+    }
+
+    if (!ParticleComponent)
+    {
+        OutSummary = "no particle system component in selection or focused world";
+        return false;
+    }
+
+    if (!ParticleComponent->GetTemplate())
+    {
+        OutSummary = "selected particle component has no template";
+        return false;
+    }
+
+    const int32 EmitterInstanceCount = ParticleComponent->GetEmitterInstanceCount();
+    if (EmitterInstanceCount <= 0)
+    {
+        OutSummary = "template did not create emitter instances";
+        return false;
+    }
+
+    constexpr int32 WarmupFrameCount = 10;
+    constexpr float FixedDeltaTime = 1.0f / 60.0f;
+    for (int32 FrameIndex = 0; FrameIndex < WarmupFrameCount; ++FrameIndex)
+    {
+        ParticleComponent->TickPreview(FixedDeltaTime, true);
+    }
+
+    const int32 ActiveParticleCount = ParticleComponent->GetTotalActiveParticleCount();
+    if (ActiveParticleCount <= 0)
+    {
+        char Buffer[160];
+        snprintf(
+            Buffer,
+            sizeof(Buffer),
+            "no active particles after %d warmup frames, emitters=%d",
+            WarmupFrameCount,
+            EmitterInstanceCount);
+        OutSummary = Buffer;
+        return false;
+    }
+
+    ParticleComponent->BuildInstanceData();
+
+    uint32 SpriteInstanceCount = 0;
+    for (int32 EmitterIndex = 0; EmitterIndex < EmitterInstanceCount; ++EmitterIndex)
+    {
+        const FParticleEmitterInstance* Instance = ParticleComponent->GetEmitterInstance(EmitterIndex);
+        if (!Instance)
+        {
+            continue;
+        }
+
+        uint32 InstanceCount = 0;
+        const FSpriteParticleInstanceData* InstanceData = Instance->GetSpriteInstanceData(InstanceCount);
+        if (InstanceData && InstanceCount > 0)
+        {
+            SpriteInstanceCount += InstanceCount;
+        }
+    }
+
+    if (SpriteInstanceCount == 0)
+    {
+        char Buffer[192];
+        snprintf(
+            Buffer,
+            sizeof(Buffer),
+            "active particles exist but no sprite instance data was built, active=%d, emitters=%d",
+            ActiveParticleCount,
+            EmitterInstanceCount);
+        OutSummary = Buffer;
+        return false;
+    }
+
+    char Buffer[192];
+    snprintf(
+        Buffer,
+        sizeof(Buffer),
+        "%s, emitters=%d, active=%d, spriteInstances=%u",
+        bUsedSelection ? "selected" : "firstInWorld",
+        EmitterInstanceCount,
+        ActiveParticleCount,
+        SpriteInstanceCount);
+    OutSummary = Buffer;
+    return true;
+}
+
+bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSummary)
+{
+    UParticleSystemComponent* ParticleComponent = FindSelectedParticleSystemComponent(InEditorEngine);
+    bool bUsedSelection = true;
+    if (!ParticleComponent)
+    {
+        ParticleComponent = FindFirstParticleSystemComponentInWorld(InEditorEngine);
+        bUsedSelection = false;
+    }
+
+    if (!ParticleComponent)
+    {
+        OutSummary = "no particle system component in selection or focused world";
+        return false;
+    }
+
+    if (!ParticleComponent->GetTemplate())
+    {
+        OutSummary = "particle component has no template";
+        return false;
+    }
+
+    constexpr int32 WarmupFrameCount = 10;
+    constexpr float FixedDeltaTime = 1.0f / 60.0f;
+    for (int32 FrameIndex = 0; FrameIndex < WarmupFrameCount; ++FrameIndex)
+    {
+        ParticleComponent->TickPreview(FixedDeltaTime, true);
+    }
+
+    if (ParticleComponent->GetTotalActiveParticleCount() <= 0)
+    {
+        OutSummary = "no active particles available for render command collection";
+        return false;
+    }
+
+    ID3D11Device* Device = InEditorEngine
+        ? InEditorEngine->GetRenderer().GetFD3DDevice().GetDevice()
+        : nullptr;
+    if (!Device)
+    {
+        OutSummary = "renderer D3D device is not available";
+        return false;
+    }
+
+    FRenderBus RenderBus;
+    FMeshBufferManager MeshBufferManager;
+    MeshBufferManager.Create(Device);
+
+    FShowFlags ShowFlags;
+    ShowFlags.bPrimitives = true;
+
+    FPrimitiveDrawCommandBuilder Builder;
+    const bool bCollected = Builder.CollectPrimitive(
+        ParticleComponent,
+        ShowFlags,
+        EViewMode::Lit_BlinnPhong,
+        RenderBus,
+        MeshBufferManager);
+
+    const TArray<FRenderCommand>& ParticleCommands = RenderBus.GetCommands(ERenderPass::Particle);
+    uint32 SpriteInstanceCount = 0;
+    bool bFoundSpriteCommand = false;
+    for (const FRenderCommand& Command : ParticleCommands)
+    {
+        if (Command.SourcePrimitive != ParticleComponent)
+        {
+            continue;
+        }
+
+        if (Command.VertexFactoryType != EVertexFactoryType::SpriteParticle)
+        {
+            continue;
+        }
+
+        if (Command.ParticleInstances && Command.ParticleInstanceCount > 0)
+        {
+            bFoundSpriteCommand = true;
+            SpriteInstanceCount += Command.ParticleInstanceCount;
+        }
+    }
+
+    const int32 ParticleCommandCount = static_cast<int32>(ParticleCommands.size());
+    MeshBufferManager.Release();
+
+    if (!bCollected)
+    {
+        OutSummary = "primitive draw command builder rejected the particle component";
+        return false;
+    }
+
+    if (!bFoundSpriteCommand)
+    {
+        char Buffer[192];
+        snprintf(
+            Buffer,
+            sizeof(Buffer),
+            "no sprite particle render command, particleCommands=%d",
+            ParticleCommandCount);
+        OutSummary = Buffer;
+        return false;
+    }
+
+    char Buffer[192];
+    snprintf(
+        Buffer,
+        sizeof(Buffer),
+        "%s, commands=%d, spriteInstances=%u",
+        bUsedSelection ? "selected" : "firstInWorld",
+        ParticleCommandCount,
+        SpriteInstanceCount);
+    OutSummary = Buffer;
+    return true;
 }
 
 } // namespace
@@ -251,6 +514,51 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
 
     if (ImGui::CollapsingHeader("Particle", ImGuiTreeNodeFlags_DefaultOpen))
     {
+        ImGui::TextDisabled("Uses selected particle component, or first particle component in the focused world.");
+        if (ImGui::Button("Runtime Smoke"))
+        {
+            FString Summary;
+            const bool bPassed = RunSelectedParticleRuntimeSmoke(EditorEngine, Summary);
+            FEditorConsoleWidget::AddLog(
+                "Selected particle runtime smoke test %s: %s\n",
+                bPassed ? "passed" : "failed",
+                Summary.c_str());
+
+            if (EditorEngine)
+            {
+                if (bPassed)
+                {
+                    EditorEngine->GetNotificationService().Info("Selected particle runtime smoke test passed");
+                }
+                else
+                {
+                    EditorEngine->GetNotificationService().Warning("Selected particle runtime smoke test failed");
+                }
+            }
+        }
+
+        if (ImGui::Button("Render Command Smoke"))
+        {
+            FString Summary;
+            const bool bPassed = RunParticleRenderCommandSmoke(EditorEngine, Summary);
+            FEditorConsoleWidget::AddLog(
+                "Particle render command smoke test %s: %s\n",
+                bPassed ? "passed" : "failed",
+                Summary.c_str());
+
+            if (EditorEngine)
+            {
+                if (bPassed)
+                {
+                    EditorEngine->GetNotificationService().Info("Particle render command smoke test passed");
+                }
+                else
+                {
+                    EditorEngine->GetNotificationService().Warning("Particle render command smoke test failed");
+                }
+            }
+        }
+
         if (ImGui::Button("Run Particle Serialization Smoke Test"))
         {
             const FString SmokeTestPath = "Asset/Particle/SmokeTest.particlesystem";

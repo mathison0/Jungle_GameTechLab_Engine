@@ -210,6 +210,11 @@ namespace
 			return JsonData;
 		}
 
+		if (!AssetPath.empty())
+		{
+			Asset->SetAssetPath(AssetPath);
+		}
+
 		FParticleSystemObjectGraphResolver Resolver;
 		CollectParticleSystemObjectGraph(Asset, Resolver);
 
@@ -250,6 +255,10 @@ namespace
 			UE_LOG_ERROR("[ParticleSystemAsset] Invalid json: %s", SourceLabel.c_str());
 			return nullptr;
 		}
+
+		const FString EmbeddedAssetPath = JsonData.hasKey("AssetPath")
+			? FPaths::Normalize(JsonData["AssetPath"].ToString())
+			: FString();
 
 		if (JsonData.hasKey("Objects") && JsonData["Objects"].JSONType() == json::JSON::Class::Array)
 		{
@@ -315,6 +324,10 @@ namespace
 			}
 
 			RebuildParticleSystemCaches(Asset);
+			if (!EmbeddedAssetPath.empty() && IsParticleSystemAssetPath(EmbeddedAssetPath))
+			{
+				Asset->SetAssetPath(EmbeddedAssetPath);
+			}
 			return Asset;
 		}
 
@@ -328,6 +341,10 @@ namespace
 		FJsonReader Reader(JsonData);
 		Asset->Serialize(Reader);
 		RebuildParticleSystemCaches(Asset);
+		if (!EmbeddedAssetPath.empty() && IsParticleSystemAssetPath(EmbeddedAssetPath))
+		{
+			Asset->SetAssetPath(EmbeddedAssetPath);
+		}
 		return Asset;
 	}
 
@@ -889,6 +906,12 @@ void FResourceManager::ReleaseGPUResources()
 		UObjectManager::Get().DestroyObject(Mesh);
 	}
 	SkeletalMeshMap.clear();
+
+	for (auto& [Path, ParticleSystem] : ParticleSystemMap)
+	{
+		UObjectManager::Get().DestroyObject(ParticleSystem);
+	}
+	ParticleSystemMap.clear();
 
 	DefaultWhiteTexture.Reset();
 	CachedDevice.Reset();
@@ -1891,6 +1914,11 @@ UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)
 		return nullptr;
 	}
 
+	if (UParticleSystem* CachedAsset = FindParticleSystem(NormalizedPath))
+	{
+		return CachedAsset;
+	}
+
 	const std::filesystem::path FilePath =
 		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
 
@@ -1907,7 +1935,20 @@ UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)
 	);
 
 	json::JSON JsonData = json::JSON::Load(JsonStr);
-	return LoadParticleSystemFromJson(JsonData, NormalizedPath);
+	UParticleSystem* Asset = LoadParticleSystemFromJson(JsonData, NormalizedPath);
+	if (Asset)
+	{
+		Asset->SetAssetPath(NormalizedPath);
+		ParticleSystemMap[NormalizedPath] = Asset;
+	}
+	return Asset;
+}
+
+UParticleSystem* FResourceManager::FindParticleSystem(const FString& Path) const
+{
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	auto It = ParticleSystemMap.find(NormalizedPath);
+	return It != ParticleSystemMap.end() ? It->second : nullptr;
 }
 
 bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString& Path)
@@ -1926,6 +1967,7 @@ bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString&
 	const std::filesystem::path FilePath =
 		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
 
+	Asset->SetAssetPath(NormalizedPath);
 	json::JSON JsonData = BuildParticleSystemAssetJson(Asset, NormalizedPath);
 
 	std::error_code ErrorCode;
@@ -1991,16 +2033,43 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		return false;
 	}
 
-	UParticleSystem* Loaded = LoadParticleSystem(NormalizedPath);
+	const std::filesystem::path LoadFilePath =
+		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
+
+	std::ifstream In(LoadFilePath);
+	if (!In.is_open())
+	{
+		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Failed to open saved asset: %s", NormalizedPath.c_str());
+		return false;
+	}
+
+	const std::string JsonStr(
+		(std::istreambuf_iterator<char>(In)),
+		std::istreambuf_iterator<char>()
+	);
+
+	json::JSON JsonData = json::JSON::Load(JsonStr);
+	UParticleSystem* Loaded = LoadParticleSystemFromJson(JsonData, NormalizedPath);
 	if (!Loaded)
 	{
 		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Load failed: %s", NormalizedPath.c_str());
 		return false;
 	}
+	Loaded->SetAssetPath(NormalizedPath);
 
 	Loaded->CacheEmitterModuleInfo();
 
 	bool bPassed = true;
+	if (Loaded->GetAssetPath() != NormalizedPath)
+	{
+		UE_LOG_ERROR(
+			"[ParticleSystemAssetSmoke] Asset path mismatch. Expected '%s', got '%s'.",
+			NormalizedPath.c_str(),
+			Loaded->GetAssetPath().c_str()
+		);
+		bPassed = false;
+	}
+
 	TArray<FString> LoadedErrors;
 	if (!Loaded->Validate(&LoadedErrors))
 	{

@@ -11,10 +11,11 @@ class UParticleSystemComponent : public UPrimitiveComponent
 public:
 	GENERATED_BODY(UParticleSystemComponent, UPrimitiveComponent)
 
-	UParticleSystemComponent() = default;
+	UParticleSystemComponent();
 	~UParticleSystemComponent() override;
 
 	void SetTemplate(UParticleSystem* InTemplate);
+	void PostEditProperty(const char* PropertyName) override;
 	UParticleSystem* GetTemplate() const { return Template; }
 	const TArray<FParticleEmitterInstance*>& GetEmitterInstances() const { return EmitterInstances; } // component가 사용하는 emitter instance들
 	TArray<FParticleEventCollideData>& GetPendingCollisionEvents() { return PendingCollisionEvents; }
@@ -55,7 +56,7 @@ private:
 	“런타임 인스턴스들이 언제든 원본 설계를 참조하여 스스로를 재구성(Reload)할 수 있게 만드는 기준점”입니다. 
 	포인터 자체는 단순한 주소값이지만, 이를 통해 컴포넌트는 복잡한 인스턴스 시뮬레이션을 통제할 수 있게 됩니다.
 	*/
-	UPROPERTY(DisplayName = "Template")
+	UPROPERTY(DisplayName = "Template", ReferenceKind = Asset)
 	UParticleSystem* Template = nullptr;
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;

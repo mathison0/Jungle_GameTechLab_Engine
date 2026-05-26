@@ -25,6 +25,8 @@
 #include "Component/ProceduralMeshComponent.h"
 #include "Component/Movement/ProjectileMovementComponent.h"
 #include "GameFramework/World.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemComponent.h"
 #include "Runtime/Script/ScriptManager.h"
 
 #include <algorithm>
@@ -140,6 +142,48 @@ void ASubUVActor::InitDefaultComponents()
 	SubUV->SetSubUV(FName("Asset/Texture/subuvtest.png"));
 	SubUV->SetSpriteSize(2.0f, 2.0f);
 	SubUV->SetFrameRate(30.f);
+}
+
+void AParticleSystemActor::InitDefaultComponents()
+{
+	if (GetParticleSystemComponent())
+	{
+		return;
+	}
+
+	ParticleSystemComponent = AddComponent<UParticleSystemComponent>();
+	SetRootComponent(ParticleSystemComponent);
+	SetTickInEditor(true);
+}
+
+void AParticleSystemActor::SetTemplate(UParticleSystem* InTemplate)
+{
+	UParticleSystemComponent* PSC = GetParticleSystemComponent();
+	if (!PSC)
+	{
+		InitDefaultComponents();
+		PSC = GetParticleSystemComponent();
+	}
+
+	if (PSC)
+	{
+		PSC->SetTemplate(InTemplate);
+	}
+}
+
+UParticleSystemComponent* AParticleSystemActor::GetParticleSystemComponent()
+{
+	if (!ParticleSystemComponent)
+	{
+		ParticleSystemComponent = FindComponent<UParticleSystemComponent>();
+	}
+
+	return ParticleSystemComponent;
+}
+
+const UParticleSystemComponent* AParticleSystemActor::GetParticleSystemComponent() const
+{
+	return const_cast<AParticleSystemActor*>(this)->GetParticleSystemComponent();
 }
 
 void ATextRenderActor::InitDefaultComponents()

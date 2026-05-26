@@ -62,9 +62,11 @@ private:
 		RegenLOD,
 		LowestLOD,
 		LowerLOD,
-		AddLOD,
+		AddLODBeforeCurrent,
+		AddLODAfterCurrent,
 		HigherLOD,
-		Menu,
+		HighestLOD,
+		DeleteLOD,
 		Count
 	};
 
@@ -92,10 +94,9 @@ private:
 		FParticleSystemViewportShowFlags PreviewShowFlags;
 		FColor PreviewBackgroundColor = FParticleSystemViewportClient::GetDefaultBackgroundColor();
 		bool bShowThumbnail = false;
-		bool bShowBounds = true;
+		bool bShowBounds = false;
 		bool bShowOriginAxis = true;
 		bool bPreviewPaused = false;
-		bool bPreviewRealtime = true;
 		bool bPreviewLoop = true;
 		bool bPreviewPlaybackComplete = false;
 		int32 PreviewAnimSpeedIndex = 0;
@@ -105,6 +106,9 @@ private:
 	void EnsurePreviewViewport();
 	void EnsurePreviewActor();
 	void RefreshPreviewComponent(bool bRestartSimulation);
+	void SyncPreviewWorld();
+	void SetPreviewBoundsVisible(bool bVisible);
+	void SetPreviewOriginAxisVisible(bool bVisible);
 	float GetPreviewAnimSpeed() const;
 	float GetPreviewMaxEmitterDuration() const;
 	void RestartPreviewPlayback();
@@ -139,6 +143,7 @@ private:
 	void StoreCurrentDocumentState();
 	bool RestoreDocumentState(const FString& InDocumentPath);
 	void ClearActiveDocumentState();
+	void DestroyUncachedParticleSystem(UParticleSystem*& Asset);
 	void CaptureUndoSnapshot(const char* Label);
 	FString CaptureParticleSnapshot() const;
 	bool RestoreParticleSnapshot(const FString& Snapshot, int32 InCurrentLOD, int32 InSelectedEmitterIndex, int32 InSelectedModuleIndex);
@@ -159,6 +164,7 @@ private:
 	void DrawEmitterDetails(UParticleEmitter* Emitter, int32 EmitterIndex);
 	void DrawParticleSystemDetails(UParticleSystem* ParticleSystem);
 	void DrawParticleModuleDetails(UParticleModule* Module, UParticleEmitter* OwnerEmitter);
+	bool DrawParticleObjectProperty(UObject* Object, const FProperty& Property);
 	bool DrawParticleModuleProperty(UParticleModule* Module, const FProperty& Property);
 	bool DrawParticlePropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
 	bool DrawParticleStructPropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
@@ -175,13 +181,11 @@ private:
 	FString SelectedCurveAssetPath;
 	FString DocumentPath;
 	TMap<FString, FParticleSystemDocumentState> ParticleDocumentStates;
-	TMap<FString, FColor> PreviewBackgroundColorByDocument;
 	bool bDirty = true;
 	bool bShowThumbnail = false;
-	bool bShowBounds = true;
+	bool bShowBounds = false;
 	bool bShowOriginAxis = true;
 	bool bPreviewPaused = false;
-	bool bPreviewRealtime = true;
 	bool bPreviewLoop = true;
 	bool bPreviewPlaybackComplete = false;
 	bool bPreviewViewportInitialized = false;

@@ -1,5 +1,6 @@
 ﻿#include "Particle/ParticleSystem.h"
 
+#include "Core/Paths.h"
 #include "Particle/ParticleModuleTypeData.h"
 
 #include <algorithm>
@@ -167,7 +168,7 @@ void UParticleLODLevel::CacheModuleLists()
 			continue;
 		}
 
-		// TypeData는 별도 슬롯에 캐싱하고 SpawnModules/UpdateModules에는 넣지 않음 (UE Cascade 패턴).
+		// TypeData는 실행 모듈이 아니라 emitter runtime/render policy 슬롯으로만 캐싱한다.
 		// USpriteTypeData도 여기로 잡혀 LODLevel.TypeDataModule에 들어간다 → 회귀 안전 핵심.
 		if (UParticleModuleTypeDataBase* CandidateTypeData = Cast<UParticleModuleTypeDataBase>(Module))
 		{
@@ -456,6 +457,11 @@ void UParticleSystem::CacheEmitterModuleInfo()
     for (UParticleEmitter* Emitter : Emitters)
         if (Emitter)
             Emitter->CacheEmitterModuleInfo();
+}
+
+void UParticleSystem::SetAssetPath(const FString& InAssetPath)
+{
+	AssetPath = FPaths::Normalize(InAssetPath);
 }
 
 bool UParticleSystem::Validate(TArray<FString>* OutErrors) const

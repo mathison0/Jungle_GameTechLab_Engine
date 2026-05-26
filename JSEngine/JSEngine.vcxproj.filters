@@ -546,6 +546,9 @@
     <ClCompile Include="Intermediate\Reflection\GameFramework\APlayerStart.gen.cpp">
       <Filter>Intermediate\Reflection\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\GameFramework\AParticleSystemActor.gen.cpp">
+      <Filter>Intermediate\Reflection\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\GameFramework\APointLightActor.gen.cpp">
       <Filter>Intermediate\Reflection\GameFramework</Filter>
     </ClCompile>
@@ -850,6 +853,21 @@
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Details.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Document.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Emitters.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Preview.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_ViewportUI.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorPlayStreamWidget.cpp">
@@ -1847,6 +1865,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidget.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidgetPrivate.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorPlayStreamWidget.h">

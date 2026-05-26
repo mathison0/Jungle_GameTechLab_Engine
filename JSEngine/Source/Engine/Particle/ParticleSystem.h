@@ -118,6 +118,8 @@ public:
     void ClearEmitters();
 	void CacheEmitterModuleInfo();
     bool Validate(TArray<FString>* OutErrors = nullptr) const;
+	void SetAssetPath(const FString& InAssetPath);
+	const FString& GetAssetPath() const { return AssetPath; }
     static UParticleSystem* CreateDefaultSpriteSystem();
     // Cycle 11: detail panel 검증용 기본 mesh emitter system.
     // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 UMeshTypeData (디폴트 Dice mesh).
@@ -129,29 +131,14 @@ public:
     // Sprite/Mesh/Ribbon 패턴 답습 + UBeamTypeData + Source/Target/Noise 모듈 (Source/Target 은 nullptr — fallback 사용).
     static UParticleSystem* CreateDefaultBeamSystem();
 
+	UPROPERTY(DisplayName = "Asset Path")
+	FString AssetPath;
+
 	UPROPERTY(DisplayName = "Update Time FPS", Min = 0.0f)
 	float UpdateTimeFPS = 60.0f;
 
-	UPROPERTY(DisplayName = "Warmup Time - beware hitches!", Min = 0.0f)
-	float WarmupTime = 0.0f;
-
-	UPROPERTY(DisplayName = "Warmup Tick Rate", Min = 0.0f)
-	float WarmupTickRate = 0.0f;
-
-	UPROPERTY(DisplayName = "Seconds Before Inactive", Min = 0.0f)
-	float SecondsBeforeInactive = 0.0f;
-
-	UPROPERTY(DisplayName = "Orient ZAxis Toward Camera")
-	bool bOrientZAxisTowardCamera = false;
-
-	UPROPERTY(DisplayName = "System Update Mode")
-	int32 SystemUpdateMode = 0;
-
 	UPROPERTY(DisplayName = "Thumbnail Warmup", Min = 0.0f)
 	float ThumbnailWarmup = 1.0f;
-
-	UPROPERTY(DisplayName = "Use Realtime Thumbnail")
-	bool bUseRealtimeThumbnail = false;
 
 	UPROPERTY(DisplayName = "LODDistance Check Time", Min = 0.0f)
 	float LODDistanceCheckTime = 0.25f;
