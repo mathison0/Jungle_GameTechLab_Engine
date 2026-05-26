@@ -39,5 +39,8 @@ private:
     // FInstanceBuffer 클래스 재사용 — slot/instancing 비종속 일반 dynamic VB (진단 §1.2).
     FInstanceBuffer RibbonVertexBuffer;
 
+    // Cycle 13a: Beam emitter용 slot 0 dynamic VB. Ribbon 와 동일 카테고리 — instancing 없음, strip 정점만.
+    FInstanceBuffer BeamVertexBuffer;
+
     bool bGPUResourcesReady = false;
 };

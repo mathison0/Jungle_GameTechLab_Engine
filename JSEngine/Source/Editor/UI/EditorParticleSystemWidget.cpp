@@ -12,6 +12,9 @@
 #include "GameFramework/World.h"
 #include "Object/Class.h"
 #include "Object/Property.h"
+#include "Particle/ParticleModuleBeamNoise.h"
+#include "Particle/ParticleModuleBeamSource.h"
+#include "Particle/ParticleModuleBeamTarget.h"
 #include "Particle/ParticleSystemComponent.h"
 #include "Particle/ParticleSystem.h"
 #include "Render/Resource/Material.h"
@@ -2117,6 +2120,24 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 	}
 	DrawDisabledParticleModuleMenu("Acceleration");
 	DrawDisabledParticleModuleMenu("Attraction");
+	// Cycle 13a/13b: Beam emitter 의 Source / Target / Noise 모듈 — Beam 카테고리로 그룹화.
+	// "Beam" 메뉴 안에 3 항목 (Source / Target / Noise). 다른 카테고리 (Color / Lifetime 등) 와 동일 패턴.
+	if (BeginParticleMenu("Beam", bHasTargetEmitter))
+	{
+		if (ImGui::MenuItem("Source"))
+		{
+			AddModuleToTargetEmitter(CreateParticleModule<UParticleModuleBeamSource>("Source"));
+		}
+		if (ImGui::MenuItem("Target"))
+		{
+			AddModuleToTargetEmitter(CreateParticleModule<UParticleModuleBeamTarget>("Target"));
+		}
+		if (ImGui::MenuItem("Noise"))
+		{
+			AddModuleToTargetEmitter(CreateParticleModule<UParticleModuleBeamNoise>("Noise"));
+		}
+		EndParticleMenu();
+	}
 	DrawDisabledParticleModuleMenu("Camera");
 	DrawParticleModuleAddMenu<UParticleModuleCollision>("Collision", "Collision", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawParticleModuleAddMenu<UParticleModuleColor>("Color", "Color Over Life", bHasTargetEmitter, AddModuleToTargetEmitter);

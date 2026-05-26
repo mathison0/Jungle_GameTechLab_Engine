@@ -8,6 +8,7 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
+#include "Particle/ParticleModuleTypeDataBeam.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleSystemComponent.h" // particle 옮겨야함.
@@ -653,6 +654,11 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.BeamVertices = Instance->GetBeamVertexData(Count);
                 Cmd.BeamVertexCount = Count;
                 Cmd.VertexFactoryType = EVertexFactoryType::BeamParticle;
+                // Cycle 13a: UBeamTypeData 의 Material 추출 (Ribbon 와 동일 패턴).
+                if (const UBeamTypeData* BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()))
+                {
+                    Cmd.Material = BeamTD->GetMaterial();
+                }
                 bHasData = (Cmd.BeamVertices != nullptr && Count > 0);
                 break;
             default:
@@ -693,9 +699,12 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
                 Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
             }
-            else if (RenderMode == EParticleEmitterRenderMode::Mesh || RenderMode == EParticleEmitterRenderMode::Ribbon)
+            else if (RenderMode == EParticleEmitterRenderMode::Mesh ||
+                     RenderMode == EParticleEmitterRenderMode::Ribbon ||
+                     RenderMode == EParticleEmitterRenderMode::Beam)
             {
                 // Material의 DiffuseMap에서 ParticleTexture 추출. 없으면 RenderPass가 default white SRV로 fallback.
+                // Cycle 13a: Beam 도 Ribbon 와 동일 분기에 포함 (Material 측 추출 패턴 공유).
                 if (Cmd.Material)
                 {
                     FMaterialParamValue DiffuseMap;

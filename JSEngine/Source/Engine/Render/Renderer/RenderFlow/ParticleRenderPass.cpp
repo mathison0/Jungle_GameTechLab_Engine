@@ -79,6 +79,25 @@ namespace
         return FResourceManager::Get().GetOrCreateShaderProgram(
             VSKey, PSKey, nullptr, nullptr, &Desc.VertexLayout);
     }
+
+    // Cycle 13a: Beam particle 전용 shader program. Ribbon 와 동일 카테고리 — slot 0 per-vertex only, no instancing.
+    FShaderProgram* GetBeamParticleProgram()
+    {
+        const FVertexFactoryDesc& Desc = FVertexFactoryRegistry::Get(EVertexFactoryType::BeamParticle);
+
+        FShaderStageKey VSKey;
+        VSKey.FilePath = Desc.VertexShaderPath;
+        VSKey.EntryPoint = Desc.BasePassVSEntry;
+        VSKey.Target = "vs_5_0";
+
+        FShaderStageKey PSKey;
+        PSKey.FilePath = FShaderPaths::ParticleBeam;
+        PSKey.EntryPoint = "BeamParticlePS";
+        PSKey.Target = "ps_5_0";
+
+        return FResourceManager::Get().GetOrCreateShaderProgram(
+            VSKey, PSKey, nullptr, nullptr, &Desc.VertexLayout);
+    }
 }
 
 bool FParticleRenderPass::Initialize()
@@ -94,6 +113,7 @@ bool FParticleRenderPass::Release()
     SpriteParticleCB.Release();
     MeshInstanceBuffer.Release();
     RibbonVertexBuffer.Release();
+    BeamVertexBuffer.Release();
     bGPUResourcesReady = false;
     return true;
 }
@@ -127,12 +147,16 @@ bool FParticleRenderPass::EnsureGPUResources(ID3D11Device* Device)
     // Cycle 12: Ribbon emitter용 slot 0 dynamic VB. instancing 없음 — sizeof(FRibbonParticleVertex) stride.
     RibbonVertexBuffer.Create(Device, sizeof(FRibbonParticleVertex), 256);
 
+    // Cycle 13a: Beam emitter용 slot 0 dynamic VB. Ribbon 와 동일 패턴 — sizeof(FBeamParticleVertex) stride.
+    BeamVertexBuffer.Create(Device, sizeof(FBeamParticleVertex), 256);
+
     bGPUResourcesReady = QuadVertexBuffer.GetBuffer() != nullptr
         && QuadIndexBuffer.GetBuffer() != nullptr
         && InstanceBuffer.IsValid()
         && SpriteParticleCB.GetBuffer() != nullptr
         && MeshInstanceBuffer.IsValid()
-        && RibbonVertexBuffer.IsValid();
+        && RibbonVertexBuffer.IsValid()
+        && BeamVertexBuffer.IsValid();
     return bGPUResourcesReady;
 }
 
@@ -487,14 +511,96 @@ void FParticleRenderPass::RenderRibbonEmitter(const FRenderCommand& Cmd, const F
     DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
-// Function : Render single Beam particle emitter command (Cycle 10a NOP)
-// input : Cmd, Context (unused in NOP)
-// output : None — Cycle 13b에서 본문 채움
+// Function : Render single Beam particle emitter command (Cycle 13a)
+// input : Cmd, Context
+// Cmd : render command produced by Builder Beam case (BeamVertices + Material 세팅됨)
+// Context : render pass context (Device, DeviceContext, RenderResources, ...)
+// output : One Draw call issued when BeamVertexBuffer valid (indexless — strip 은 index 불필요)
+//
+// D3D state: BlendAlpha + DepthReadOnly + SolidNoCull (Ribbon 와 동일 — Additive 본 cycle 외).
+// PerObject CB: Model 은 Identity (vertex 가 이미 world space — instance 도 없음).
+// Slot 0: BeamVertexBuffer (FBeamParticleVertex), Slot 1: binding 없음.
+// topology: TRIANGLESTRIP. helper 끝에서 TRIANGLELIST 복원 (다음 Sprite/Mesh helper 보호).
 void FParticleRenderPass::RenderBeamEmitter(const FRenderCommand& Cmd, const FRenderPassContext& Context)
 {
-    (void)Cmd;
-    (void)Context;
-    // Cycle 13b (Beam render)에서 본문 채움.
+    if (Cmd.BeamVertices == nullptr || Cmd.BeamVertexCount == 0)
+    {
+        return;
+    }
+
+    FShaderProgram* Program = GetBeamParticleProgram();
+    if (!Program || !Program->VS || !Program->PS)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext* DeviceContext = Context.DeviceContext;
+
+    Program->Bind(DeviceContext);
+
+    // Ribbon 와 동일 lock-in state: BlendAlpha + DepthReadOnly + SolidNoCull.
+    // EBlendType 에 Additive 값 없음 — RenderResources.h:66-71 (Opaque/AlphaBlend/NoColor 만).
+    // Additive 도입은 Material 측 BlendType 시스템 별도 cycle.
+    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::AlphaBlend);
+    DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
+    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::DepthReadOnly);
+    DeviceContext->OMSetDepthStencilState(DepthState, 0);
+    ID3D11RasterizerState* RasterState = FResourceManager::Get().GetOrCreateRasterizerState(ERasterizerType::SolidNoCull);
+    DeviceContext->RSSetState(RasterState);
+    ID3D11SamplerState* Sampler = FResourceManager::Get().GetOrCreateSamplerState(ESamplerType::EST_Linear);
+    DeviceContext->PSSetSamplers(0, 1, &Sampler);
+
+    // Frame CB (View/Projection).
+    ID3D11Buffer* FrameBuf = Context.RenderResources->FrameBuffer.GetBuffer();
+    if (FrameBuf)
+    {
+        DeviceContext->VSSetConstantBuffers(0, 1, &FrameBuf);
+    }
+
+    // PerObject CB — Builder가 Identity Model로 세팅 (vertex 가 이미 world space).
+    Context.RenderResources->PerObjectConstantBuffer.Update(
+        DeviceContext, &Cmd.PerObjectConstants, sizeof(FPerObjectConstants));
+    ID3D11Buffer* PerObjBuf = Context.RenderResources->PerObjectConstantBuffer.GetBuffer();
+    DeviceContext->VSSetConstantBuffers(1, 1, &PerObjBuf);
+    DeviceContext->PSSetConstantBuffers(1, 1, &PerObjBuf);
+
+    // Albedo texture: Cmd.ParticleTexture (Builder가 Material.DiffuseMap에서 추출) 또는 default white.
+    ID3D11ShaderResourceView* TextureSRV = nullptr;
+    if (Cmd.ParticleTexture)
+    {
+        TextureSRV = Cmd.ParticleTexture->GetSRV();
+    }
+    if (!TextureSRV)
+    {
+        TextureSRV = FResourceManager::Get().GetDefaultWhiteSRV();
+    }
+    DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
+
+    // Dynamic VB 업데이트 (grow-by-2x 자동).
+    BeamVertexBuffer.Update(
+        Context.Device,
+        DeviceContext,
+        Cmd.BeamVertices,
+        Cmd.BeamVertexCount);
+    if (!BeamVertexBuffer.IsValid() || BeamVertexBuffer.GetInstanceCount() == 0)
+    {
+        return;
+    }
+
+    // VB 바인딩: Slot 0 only.
+    ID3D11Buffer* VBs[1] = { BeamVertexBuffer.GetBuffer() };
+    UINT Strides[1] = { BeamVertexBuffer.GetStride() };
+    UINT Offsets[1] = { 0 };
+    DeviceContext->IASetVertexBuffers(0, 1, VBs, Strides, Offsets);
+
+    // topology = TRIANGLESTRIP. Begin 에서 TRIANGLELIST 로 세팅됐으므로 본 helper 에서 명시 override.
+    DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+    // Draw (indexless) — degenerate seam 으로 beam 사이 strip 연결 끊김.
+    DeviceContext->Draw(BeamVertexBuffer.GetInstanceCount(), 0);
+
+    // TRIANGLELIST 로 복원 — 다음 helper (Sprite/Mesh) 가 TRIANGLELIST 가정.
+    DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 bool FParticleRenderPass::End(const FRenderPassContext* Context)

@@ -125,6 +125,9 @@ public:
     // Cycle 12: detail panel 검증용 기본 ribbon emitter system.
     // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 URibbonTypeData (MaxTrailCount=1).
     static UParticleSystem* CreateDefaultRibbonSystem();
+    // Cycle 13a/13b: detail panel 검증용 기본 beam emitter system.
+    // Sprite/Mesh/Ribbon 패턴 답습 + UBeamTypeData + Source/Target/Noise 모듈 (Source/Target 은 nullptr — fallback 사용).
+    static UParticleSystem* CreateDefaultBeamSystem();
 
 	UPROPERTY(DisplayName = "Update Time FPS", Min = 0.0f)
 	float UpdateTimeFPS = 60.0f;

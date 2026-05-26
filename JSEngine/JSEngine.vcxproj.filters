@@ -630,10 +630,22 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamNoise.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamSource.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamTarget.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp">
@@ -1312,6 +1324,21 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamNoise.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamSource.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamTarget.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.cpp">
@@ -2437,6 +2464,24 @@
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamNoise.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamSource.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamTarget.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
@@ -2910,6 +2955,9 @@
     </None>
     <None Include="Shaders\Material\UberLit.hlsl">
       <Filter>Shaders\Material</Filter>
+    </None>
+    <None Include="Shaders\Particle\BeamParticle.hlsl">
+      <Filter>Shaders\Particle</Filter>
     </None>
     <None Include="Shaders\Particle\MeshParticle.hlsl">
       <Filter>Shaders\Particle</Filter>

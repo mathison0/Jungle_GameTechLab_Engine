@@ -8,6 +8,10 @@
 #include "Core/AssetPathPolicy.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SkeletalMeshComponent.h"
+#include "Particle/ParticleModuleBeamNoise.h"
+#include "Particle/ParticleModuleBeamSource.h"
+#include "Particle/ParticleModuleBeamTarget.h"
+#include "Particle/ParticleModuleTypeDataBeam.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleSystem.h"
@@ -1563,6 +1567,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				ParticleComp->SetTemplate(Demo);
 			}
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Apply Beam Demo Template"))
+		{
+			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultBeamSystem())
+			{
+				ParticleComp->SetTemplate(Demo);
+			}
+		}
 
 		// Cycle 11: 각 mesh emitter의 material override를 직접 picker로 변경.
 		// 현재 Template 안의 모든 UMeshTypeData를 emitter 순서대로 노출 — 사용자가 emitter별로 다른 material 선택 가능.
@@ -1720,6 +1732,214 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				{
 					RibbonTD->SetTangentSpawningScalar(TangentScalar);
 				}
+				ImGui::PopID();
+			}
+		}
+		// Cycle 13a/13b: 각 Beam emitter 의 TypeData + Source/Target/Noise 파라미터를 detail panel 에 노출.
+		// Mesh/Ribbon 블록과 평행 구조 — emitter 순서대로 UBeamTypeData 찾아 UI 렌더.
+		// Source/Target Component picker 는 owner actor 의 USceneComponent 들을 enumerate (RenderObjectPtrWidget 의 default 패턴 답습).
+		if (UParticleSystem* MutableTemplateBeam = const_cast<UParticleSystem*>(CurrentTemplate))
+		{
+			FEditorAssetService& AssetServiceBeam = EditorEngine->GetAssetService();
+			const TArray<FString>& MaterialNamesBeam = AssetServiceBeam.GetMaterialInterfaceNames();
+			const TArray<UParticleEmitter*>& EmittersBeam = MutableTemplateBeam->GetEmitters();
+
+			// Source/Target Component picker 공용 helper — owner actor 의 USceneComponent 들 enumerate.
+			AActor* BeamOwnerActor = ParticleComp->GetOwner();
+			auto RenderSceneComponentPicker = [&](const char* PickerId, USceneComponent* Current) -> USceneComponent*
+			{
+				const FString CurrentLabel = Current ? Current->GetFName().ToString() : FString("None");
+				USceneComponent* NewSelection = Current;
+				if (ImGui::BeginCombo(PickerId, CurrentLabel.c_str()))
+				{
+					if (ImGui::Selectable("None", Current == nullptr))
+					{
+						NewSelection = nullptr;
+					}
+					if (BeamOwnerActor)
+					{
+						for (UActorComponent* Comp : BeamOwnerActor->GetComponents())
+						{
+							if (USceneComponent* SceneComp = Cast<USceneComponent>(Comp))
+							{
+								const FString CompLabel = SceneComp->GetFName().ToString();
+								const bool bSelected = (SceneComp == Current);
+								char SelectableId[160];
+								snprintf(SelectableId, sizeof(SelectableId), "%s##%p", CompLabel.c_str(), static_cast<void*>(SceneComp));
+								if (ImGui::Selectable(SelectableId, bSelected))
+								{
+									NewSelection = SceneComp;
+								}
+								if (bSelected)
+								{
+									ImGui::SetItemDefaultFocus();
+								}
+							}
+						}
+					}
+					ImGui::EndCombo();
+				}
+				return NewSelection;
+			};
+
+			for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmittersBeam.size()); ++EmitterIdx)
+			{
+				UParticleEmitter* Emitter = EmittersBeam[EmitterIdx];
+				if (!Emitter) continue;
+
+				UBeamTypeData* BeamTD = nullptr;
+				UParticleModuleBeamSource* BeamSource = nullptr;
+				UParticleModuleBeamTarget* BeamTarget = nullptr;
+				UParticleModuleBeamNoise* BeamNoise = nullptr;
+				for (UParticleLODLevel* LOD : Emitter->LODLevels)
+				{
+					if (!LOD) continue;
+					if (!BeamTD) { BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()); }
+					for (UParticleModule* Module : LOD->GetModules())
+					{
+						if (!BeamSource) { BeamSource = Cast<UParticleModuleBeamSource>(Module); }
+						if (!BeamTarget) { BeamTarget = Cast<UParticleModuleBeamTarget>(Module); }
+						if (!BeamNoise)  { BeamNoise  = Cast<UParticleModuleBeamNoise>(Module); }
+					}
+					if (BeamTD) { break; }
+				}
+				if (!BeamTD) continue;
+
+				ImGui::Spacing();
+				ImGui::PushID(EmitterIdx + 0x20000); // Mesh / Ribbon PushID 와 충돌 회피
+
+				char SectionLabel[128];
+				snprintf(SectionLabel, sizeof(SectionLabel), "Emitter %d - Beam Settings", EmitterIdx);
+				ImGui::TextUnformatted(SectionLabel);
+
+				// Material picker (Mesh / Ribbon 와 동일 패턴).
+				UMaterialInterface* CurrentMat = BeamTD->GetMaterial();
+				const FString CurrentMatLabel = CurrentMat
+					? (CurrentMat->GetFilePath().empty() ? CurrentMat->GetName() : FPaths::Normalize(CurrentMat->GetFilePath()))
+					: FString("None");
+				ImGui::TextUnformatted("Material");
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::BeginCombo("##BeamMaterialPicker", CurrentMatLabel.c_str()))
+				{
+					if (ImGui::Selectable("None", CurrentMat == nullptr))
+					{
+						BeamTD->SetMaterial(nullptr);
+					}
+					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNamesBeam.size()); ++MatIdx)
+					{
+						ImGui::PushID(MatIdx);
+						const FString& MatLabel = MaterialNamesBeam[MatIdx].empty()
+							? FString("<Unnamed Material>")
+							: MaterialNamesBeam[MatIdx];
+						const bool bSelected = CurrentMat && CurrentMatLabel == MatLabel;
+						if (ImGui::Selectable(MatLabel.c_str(), bSelected))
+						{
+							if (UMaterialInterface* Picked = AssetServiceBeam.ResolveMaterialInterfaceByIndex(MatIdx))
+							{
+								BeamTD->SetMaterial(Picked);
+							}
+						}
+						if (bSelected) { ImGui::SetItemDefaultFocus(); }
+						ImGui::PopID();
+					}
+					ImGui::EndCombo();
+				}
+
+				// UBeamTypeData 의 수치 멤버들 — Mesh/Ribbon 패턴과 동일 (DragInt / DragFloat).
+				const float DragItemWidth = ImGui::GetContentRegionAvail().x * 0.5f;
+
+				int32 MaxBeams = BeamTD->GetMaxBeamCount();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragInt("Max Beam Count", &MaxBeams, 1.0f, 1, 64))
+				{
+					BeamTD->SetMaxBeamCount(MaxBeams);
+				}
+
+				int32 InterpPoints = BeamTD->GetInterpolationPoints();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragInt("Interpolation Points", &InterpPoints, 1.0f, 0, 64))
+				{
+					BeamTD->SetInterpolationPoints(InterpPoints);
+				}
+
+				float FallbackDist = BeamTD->GetFallbackDistance();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragFloat("Fallback Distance", &FallbackDist, 1.0f, 0.0f, 100000.0f))
+				{
+					BeamTD->SetFallbackDistance(FallbackDist);
+				}
+
+				float TexTile = BeamTD->GetTextureTile();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragFloat("Texture Tile", &TexTile, 0.1f, 0.0f, 100.0f))
+				{
+					BeamTD->SetTextureTile(TexTile);
+				}
+
+				float TexTileDist = BeamTD->GetTextureTileDistance();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragFloat("Texture Tile Distance", &TexTileDist, 1.0f, 0.0f, 100000.0f))
+				{
+					BeamTD->SetTextureTileDistance(TexTileDist);
+				}
+
+				// Source / Target Component picker — 모듈이 존재할 때만 노출 (모듈 없는 경우 fallback 사용).
+				if (BeamSource)
+				{
+					ImGui::Spacing();
+					ImGui::TextUnformatted("Source Component");
+					ImGui::SetNextItemWidth(-1.0f);
+					USceneComponent* NewSource = RenderSceneComponentPicker("##BeamSourceCompPicker", BeamSource->GetSourceComponent());
+					if (NewSource != BeamSource->GetSourceComponent())
+					{
+						BeamSource->SetSourceComponent(NewSource);
+					}
+				}
+				if (BeamTarget)
+				{
+					ImGui::Spacing();
+					ImGui::TextUnformatted("Target Component");
+					ImGui::SetNextItemWidth(-1.0f);
+					USceneComponent* NewTarget = RenderSceneComponentPicker("##BeamTargetCompPicker", BeamTarget->GetTargetComponent());
+					if (NewTarget != BeamTarget->GetTargetComponent())
+					{
+						BeamTarget->SetTargetComponent(NewTarget);
+					}
+				}
+
+				// Cycle 13b: Noise 모듈 노출 — 모듈이 존재할 때만 (없으면 perturbation skip).
+				if (BeamNoise)
+				{
+					ImGui::Spacing();
+					ImGui::TextUnformatted("Noise");
+
+					int32 Freq = BeamNoise->GetFrequency();
+					ImGui::SetNextItemWidth(DragItemWidth);
+					if (ImGui::DragInt("Frequency", &Freq, 1.0f, 1, 8))
+					{
+						BeamNoise->SetFrequency(Freq);
+					}
+
+					FVector Range = BeamNoise->GetNoiseRange();
+					ImGui::SetNextItemWidth(DragItemWidth);
+					if (ImGui::DragFloat3("Noise Range", &Range.X, 1.0f, 0.0f, 10000.0f))
+					{
+						BeamNoise->SetNoiseRange(Range);
+					}
+
+					bool bTargetNoise = BeamNoise->IsTargetNoise();
+					if (ImGui::Checkbox("Target Noise", &bTargetNoise))
+					{
+						BeamNoise->SetTargetNoise(bTargetNoise);
+					}
+
+					bool bSmooth = BeamNoise->IsSmooth();
+					if (ImGui::Checkbox("Smooth", &bSmooth))
+					{
+						BeamNoise->SetSmooth(bSmooth);
+					}
+				}
+
 				ImGui::PopID();
 			}
 		}

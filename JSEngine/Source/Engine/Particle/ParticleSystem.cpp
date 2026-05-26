@@ -5,7 +5,11 @@
 #include <algorithm>
 
 #include "Core/ResourceManager.h"
+#include "Particle/ParticleModuleBeamNoise.h"
+#include "Particle/ParticleModuleBeamSource.h"
+#include "Particle/ParticleModuleBeamTarget.h"
 #include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleModuleTypeDataBeam.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
 UParticleLODLevel::~UParticleLODLevel()
@@ -630,6 +634,66 @@ UParticleSystem* UParticleSystem::CreateDefaultRibbonSystem()
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLocation>());
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleVelocity>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleColor>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSize>());
+
+    Emitter->LODLevels.push_back(LODLevel);
+    System->CacheEmitterModuleInfo();
+
+    return System;
+}
+
+// Function : Create default Beam emitter particle system for detail-panel verification
+// input : None
+// output : New UParticleSystem with single emitter + UBeamTypeData + Source/Target/Noise modules
+//
+// Cycle 13a/13b: CreateDefaultRibbonSystem 과 동일 구조 + URibbonTypeData → UBeamTypeData.
+// Source/Target Component 은 nullptr 시작 (detail panel 의 picker 로 사용자가 선택). nullptr 시 fallback:
+//   - SourceComponent nullptr → emitter 위치 (GetComponentWorldLocation)
+//   - TargetComponent nullptr → Source + EmitterForward * FallbackDistance (UBeamTypeData::FallbackDistance)
+// Noise 모듈은 기본값 (Frequency=4, NoiseRange=(0,30,30)) 으로 추가 — 즉시 lightning bolt 효과 가시화.
+UParticleSystem* UParticleSystem::CreateDefaultBeamSystem()
+{
+    UParticleSystem* System = UObjectManager::Get().CreateObject<UParticleSystem>();
+    if (!System)
+    {
+        return nullptr;
+    }
+
+    UParticleEmitter* Emitter = System->AddEmitter();
+    if (!Emitter)
+    {
+        UObjectManager::Get().DestroyObject(System);
+        return nullptr;
+    }
+
+    UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
+    LODLevel->Level = 0;
+    LODLevel->bEnabled = true;
+    LODLevel->DistanceThreshold = 100000.0f;
+
+    LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
+
+    // UBeamTypeData — 기본값 그대로 (MaxBeamCount=1, InterpolationPoints=0, FallbackDistance=100).
+    // Material 은 사용자가 detail panel 에서 picker 로 선택 — 본 시점은 nullptr (RenderBeamEmitter 가 default white SRV fallback).
+    UBeamTypeData* BeamTypeData = UObjectManager::Get().CreateObject<UBeamTypeData>();
+    LODLevel->Modules.push_back(BeamTypeData);
+
+    // Beam 의 Source / Target Component picker — detail panel 에서 사용자가 선택.
+    // nullptr 인 동안은 fallback 으로 emitter 위치 + forward 방향 100 단위 strip 표시.
+    UParticleModuleBeamSource* BeamSource = UObjectManager::Get().CreateObject<UParticleModuleBeamSource>();
+    LODLevel->Modules.push_back(BeamSource);
+
+    UParticleModuleBeamTarget* BeamTarget = UObjectManager::Get().CreateObject<UParticleModuleBeamTarget>();
+    LODLevel->Modules.push_back(BeamTarget);
+
+    // Cycle 13b: Noise 모듈 — 즉시 lightning bolt 가시화 (Frequency=4 default, NoiseRange=(0,30,30) default).
+    UParticleModuleBeamNoise* BeamNoise = UObjectManager::Get().CreateObject<UParticleModuleBeamNoise>();
+    LODLevel->Modules.push_back(BeamNoise);
+
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());
+    LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLocation>());
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleColor>());
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSize>());
 
