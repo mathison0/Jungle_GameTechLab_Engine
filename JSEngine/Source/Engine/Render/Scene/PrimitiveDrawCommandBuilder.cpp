@@ -8,6 +8,8 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
+#include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleSystemComponent.h" // particle 옮겨야함.
 
 
@@ -623,12 +625,28 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.MeshParticleInstances = Instance->GetMeshInstanceData(Count);
                 Cmd.MeshParticleInstanceCount = Count;
                 Cmd.VertexFactoryType = EVertexFactoryType::MeshParticle;
-                bHasData = (Cmd.MeshParticleInstances != nullptr && Count > 0);
+                // Cycle 11 옵션 B: UMeshTypeData의 Mesh asset 조회 + MeshBuffer 세팅 + Material 세팅.
+                // PerObject CB는 Identity Model (instance VB가 World 합성 담당 — Sprite와 동일 원칙).
+                if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
+                {
+                    if (UStaticMesh* MeshAsset = MeshTD->GetMesh())
+                    {
+                        Cmd.MeshBuffer = MeshBufferManager.GetStaticMeshBuffer(MeshAsset, 0);
+                        Cmd.SectionIndexStart = 0;
+                        Cmd.SectionIndexCount = Cmd.MeshBuffer ? Cmd.MeshBuffer->GetIndexBuffer().GetIndexCount() : 0;
+                        Cmd.Material = MeshTD->GetEffectiveMaterial();
+                    }
+                }
+                bHasData = (Cmd.MeshParticleInstances != nullptr && Count > 0 && Cmd.MeshBuffer != nullptr);
                 break;
             case EParticleEmitterRenderMode::Ribbon:
                 Cmd.RibbonVertices = Instance->GetRibbonVertexData(Count);
                 Cmd.RibbonVertexCount = Count;
                 Cmd.VertexFactoryType = EVertexFactoryType::RibbonParticle;
+                if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+                {
+                    Cmd.Material = RibbonTD->GetMaterial();
+                }
                 bHasData = (Cmd.RibbonVertices != nullptr && Count > 0);
                 break;
             case EParticleEmitterRenderMode::Beam:
@@ -648,27 +666,47 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 continue;
             }
 
-            const UParticleLODLevel* LODLevel = EmitterInstances[EmitterIdx]
-                ? EmitterInstances[EmitterIdx]->GetCurrentLODLevel()
-                : nullptr;
-            const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
-            const USubUVModule* SubUV = nullptr;
-            if (LODLevel)
+            // Sprite는 RequiredModule + SubUV/Atlas로 Material/Texture/SubUVGrid 결정.
+            // Mesh는 switch case에서 MeshTD->GetEffectiveMaterial()로 이미 Material 세팅됨 → Sprite 분기에 안 들어감.
+            // Mesh의 ParticleTexture는 Material의 DiffuseMap에서 추출 (Sprite의 ResolveParticleTexture 패턴 일부 재사용).
+            if (RenderMode == EParticleEmitterRenderMode::Sprite)
             {
-                for (UParticleModule* Module : LODLevel->GetModules())
+                const UParticleLODLevel* LODLevel = EmitterInstances[EmitterIdx]
+                    ? EmitterInstances[EmitterIdx]->GetCurrentLODLevel()
+                    : nullptr;
+                const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+                const USubUVModule* SubUV = nullptr;
+                if (LODLevel)
                 {
-                    if (USubUVModule* Found = Cast<USubUVModule>(Module))
+                    for (UParticleModule* Module : LODLevel->GetModules())
                     {
-                        SubUV = Found;
-                        break;
+                        if (USubUVModule* Found = Cast<USubUVModule>(Module))
+                        {
+                            SubUV = Found;
+                            break;
+                        }
+                    }
+                }
+                const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;
+                Cmd.Material = RequiredModule ? RequiredModule->GetMaterial() : nullptr;
+                Cmd.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : ResolveParticleTexture(RequiredModule);
+                Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
+                Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
+            }
+            else if (RenderMode == EParticleEmitterRenderMode::Mesh || RenderMode == EParticleEmitterRenderMode::Ribbon)
+            {
+                // Material의 DiffuseMap에서 ParticleTexture 추출. 없으면 RenderPass가 default white SRV로 fallback.
+                if (Cmd.Material)
+                {
+                    FMaterialParamValue DiffuseMap;
+                    if (Cmd.Material->GetParam("DiffuseMap", DiffuseMap) &&
+                        DiffuseMap.Type == EMaterialParamType::Texture &&
+                        std::holds_alternative<UTexture*>(DiffuseMap.Value))
+                    {
+                        Cmd.ParticleTexture = std::get<UTexture*>(DiffuseMap.Value);
                     }
                 }
             }
-            const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;
-            Cmd.Material = RequiredModule ? RequiredModule->GetMaterial() : nullptr;
-            Cmd.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : ResolveParticleTexture(RequiredModule);
-            Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
-            Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
 
             RenderBus.AddCommand(ERenderPass::Particle, Cmd);
         }

@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorPropertyWidget.h"
+#include "Editor/UI/EditorPropertyWidget.h"
 
 #include "Editor/UI/ComponentMenuRegistry.h"
 #include "Editor/EditorEngine.h"
@@ -8,6 +8,10 @@
 #include "Core/AssetPathPolicy.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SkeletalMeshComponent.h"
+#include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Component/SubUVComponent.h"
@@ -1523,6 +1527,206 @@ void FEditorPropertyWidget::RenderComponentProperties()
 	{
 		DrawDetailsSeparator();
 	}
+
+	// Cycle 11: UParticleSystemComponent 단독 검증 섹션.
+	// cascade editor를 거치지 않고 main editor detail panel만으로 Sprite/Mesh emitter 렌더링 확인 가능.
+	// 디스크에 사전 구성된 .particlesystem asset이 없어도 runtime 팩토리 (CreateDefaultSpriteSystem / CreateDefaultMeshSystem)로 즉시 적용.
+	if (UParticleSystemComponent* ParticleComp = Cast<UParticleSystemComponent>(SelectedComponent))
+	{
+		DrawDetailsSectionLabel("Particle System");
+		ImGui::Spacing();
+
+		const UParticleSystem* CurrentTemplate = ParticleComp->GetTemplate();
+		ImGui::Text("Template: %s", CurrentTemplate ? CurrentTemplate->GetFName().ToString().c_str() : "<None>");
+		ImGui::Spacing();
+
+		if (ImGui::Button("Apply Sprite Demo Template"))
+		{
+			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultSpriteSystem())
+			{
+				ParticleComp->SetTemplate(Demo);
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Apply Mesh Demo Template"))
+		{
+			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultMeshSystem())
+			{
+				ParticleComp->SetTemplate(Demo);
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Apply Ribbon Demo Template"))
+		{
+			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultRibbonSystem())
+			{
+				ParticleComp->SetTemplate(Demo);
+			}
+		}
+
+		// Cycle 11: 각 mesh emitter의 material override를 직접 picker로 변경.
+		// 현재 Template 안의 모든 UMeshTypeData를 emitter 순서대로 노출 — 사용자가 emitter별로 다른 material 선택 가능.
+		// bOverrideMaterial=true로 강제 + OverrideMaterial 세팅. 다음 frame부터 Builder가 자동 반영.
+		if (UParticleSystem* MutableTemplate = const_cast<UParticleSystem*>(CurrentTemplate))
+		{
+			FEditorAssetService& AssetService = EditorEngine->GetAssetService();
+			const TArray<FString>& MaterialNames = AssetService.GetMaterialInterfaceNames();
+
+			const TArray<UParticleEmitter*>& Emitters = MutableTemplate->GetEmitters();
+			for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(Emitters.size()); ++EmitterIdx)
+			{
+				UParticleEmitter* Emitter = Emitters[EmitterIdx];
+				if (!Emitter) continue;
+
+				UMeshTypeData* MeshTD = nullptr;
+				for (UParticleLODLevel* LOD : Emitter->LODLevels)
+				{
+					if (LOD)
+					{
+						if (UMeshTypeData* Found = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
+						{
+							MeshTD = Found;
+							break;
+						}
+					}
+				}
+				if (!MeshTD) continue;
+
+				ImGui::Spacing();
+				ImGui::PushID(EmitterIdx);
+
+				UMaterialInterface* Current = MeshTD->GetEffectiveMaterial();
+				const FString CurrentLabel = Current
+					? (Current->GetFilePath().empty() ? Current->GetName() : FPaths::Normalize(Current->GetFilePath()))
+					: FString("None");
+
+				char SectionLabel[128];
+				snprintf(SectionLabel, sizeof(SectionLabel), "Emitter %d - Mesh Material", EmitterIdx);
+				ImGui::TextUnformatted(SectionLabel);
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::BeginCombo("##MeshMaterialPicker", CurrentLabel.c_str()))
+				{
+					if (ImGui::Selectable("None", Current == nullptr))
+					{
+						MeshTD->SetOverrideMaterial(false, nullptr);
+					}
+					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNames.size()); ++MatIdx)
+					{
+						ImGui::PushID(MatIdx);
+						const FString& MatLabel = MaterialNames[MatIdx].empty()
+							? FString("<Unnamed Material>")
+							: MaterialNames[MatIdx];
+						const bool bSelected = Current && CurrentLabel == MatLabel;
+						if (ImGui::Selectable(MatLabel.c_str(), bSelected))
+						{
+							if (UMaterialInterface* Picked = AssetService.ResolveMaterialInterfaceByIndex(MatIdx))
+							{
+								MeshTD->SetOverrideMaterial(true, Picked);
+							}
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+						ImGui::PopID();
+					}
+					ImGui::EndCombo();
+				}
+
+				ImGui::PopID();
+			}
+		}
+		// Cycle 12: 각 Ribbon emitter 의 Material + TypeData 파라미터를 detail panel 에 노출.
+		// Mesh picker 블록과 평행 구조 — emitter 순서대로 URibbonTypeData 찾아 UI 렌더.
+		if (UParticleSystem* MutableTemplateRibbon = const_cast<UParticleSystem*>(CurrentTemplate))
+		{
+			FEditorAssetService& AssetServiceRibbon = EditorEngine->GetAssetService();
+			const TArray<FString>& MaterialNamesRibbon = AssetServiceRibbon.GetMaterialInterfaceNames();
+			const TArray<UParticleEmitter*>& EmittersRibbon = MutableTemplateRibbon->GetEmitters();
+			for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmittersRibbon.size()); ++EmitterIdx)
+			{
+				UParticleEmitter* Emitter = EmittersRibbon[EmitterIdx];
+				if (!Emitter) continue;
+				URibbonTypeData* RibbonTD = nullptr;
+				for (UParticleLODLevel* LOD : Emitter->LODLevels)
+				{
+					if (LOD)
+					{
+						if (URibbonTypeData* Found = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+						{
+							RibbonTD = Found;
+							break;
+						}
+					}
+				}
+				if (!RibbonTD) continue;
+				ImGui::Spacing();
+				ImGui::PushID(EmitterIdx + 0x10000); // Mesh PushID 와 충돌 회피
+				char SectionLabel[128];
+				snprintf(SectionLabel, sizeof(SectionLabel), "Emitter %d - Ribbon Settings", EmitterIdx);
+				ImGui::TextUnformatted(SectionLabel);
+				UMaterialInterface* Current = RibbonTD->GetMaterial();
+				const FString CurrentLabel = Current
+					? (Current->GetFilePath().empty() ? Current->GetName() : FPaths::Normalize(Current->GetFilePath()))
+					: FString("None");
+				ImGui::TextUnformatted("Material");
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::BeginCombo("##RibbonMaterialPicker", CurrentLabel.c_str()))
+				{
+					if (ImGui::Selectable("None", Current == nullptr))
+					{
+						RibbonTD->SetMaterial(nullptr);
+					}
+					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNamesRibbon.size()); ++MatIdx)
+					{
+						ImGui::PushID(MatIdx);
+						const FString& MatLabel = MaterialNamesRibbon[MatIdx].empty()
+							? FString("<Unnamed Material>")
+							: MaterialNamesRibbon[MatIdx];
+						const bool bSelected = Current && CurrentLabel == MatLabel;
+						if (ImGui::Selectable(MatLabel.c_str(), bSelected))
+						{
+							if (UMaterialInterface* Picked = AssetServiceRibbon.ResolveMaterialInterfaceByIndex(MatIdx))
+							{
+								RibbonTD->SetMaterial(Picked);
+							}
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+						ImGui::PopID();
+					}
+					ImGui::EndCombo();
+				}
+				// DragInt / DragFloat 는 label 이 입력칸 오른쪽에 inline 표시 — width 를 절반으로 제한해 label 공간 확보.
+				const float DragItemWidth = ImGui::GetContentRegionAvail().x * 0.5f;
+
+				int32 MaxTrails = RibbonTD->GetMaxTrailCount();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragInt("Max Trail Count", &MaxTrails, 1.0f, 1, 64))
+				{
+					RibbonTD->SetMaxTrailCount(MaxTrails);
+				}
+				int32 MaxInTrail = RibbonTD->GetMaxParticleInTrailCount();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragInt("Max Particle In Trail", &MaxInTrail, 1.0f, 1, 1024))
+				{
+					RibbonTD->SetMaxParticleInTrailCount(MaxInTrail);
+				}
+				float TangentScalar = RibbonTD->GetTangentSpawningScalar();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragFloat("Tangent Spawning Scalar", &TangentScalar, 0.01f, 0.0f, 10.0f))
+				{
+					RibbonTD->SetTangentSpawningScalar(TangentScalar);
+				}
+				ImGui::PopID();
+			}
+		}
+
+		DrawDetailsSeparator();
+	}
+
 	DrawDetailsSectionLabel("Component Tags");
 	ImGui::Spacing();
 	RenderComponentTags(SelectedComponent);
@@ -1879,6 +2083,12 @@ bool FEditorPropertyWidget::RenderObjectPtrWidget(const FProperty& Property, voi
 	const bool bMaterialAsset = Property.ReferenceKind == EObjectReferenceKind::Asset
 		&& Property.ObjectClass
 		&& Property.ObjectClass->IsChildOf(UMaterialInterface::StaticClass());
+	// Cycle 11: raw UStaticMesh* with ReferenceKind=Asset도 asset picker로 처리.
+	// 기존엔 UMaterialInterface만 special-case였고 다른 asset 타입은 component 순회로 잘못 빠졌음.
+	// 패턴은 bMaterialAsset 블록과 동일 (Combo + EditorAssetService 경유).
+	const bool bStaticMeshAsset = Property.ReferenceKind == EObjectReferenceKind::Asset
+		&& Property.ObjectClass
+		&& Property.ObjectClass->IsChildOf(UStaticMesh::StaticClass());
 
 	if (bMaterialAsset && EditorEngine)
 	{
@@ -1944,6 +2154,54 @@ bool FEditorPropertyWidget::RenderObjectPtrWidget(const FProperty& Property, voi
 					EditorEngine->GetMainPanel().OpenMaterialSlot(PrimitiveComp, ArrayIndex);
 				}
 			}
+		}
+
+		return bChanged;
+	}
+
+	// Cycle 11: UStaticMesh asset picker — bMaterialAsset 블록과 평행 구조.
+	// UMeshTypeData::Mesh 등 raw UStaticMesh* with ReferenceKind=Asset에 사용.
+	// path 식별자는 UStaticMesh::GetAssetPathFileName() — UStaticMeshComponent와 동일 기준.
+	if (bStaticMeshAsset && EditorEngine)
+	{
+		FEditorAssetService& AssetService = EditorEngine->GetAssetService();
+		const TArray<FString>& StaticMeshPaths = AssetService.GetStaticMeshAssetPaths();
+		UStaticMesh* CurrentMesh = Cast<UStaticMesh>(CurrentObject);
+		const FString CurrentIdentifier = CurrentMesh
+			? FPaths::Normalize(CurrentMesh->GetAssetPathFileName())
+			: FString();
+		const FString CurrentLabel = CurrentIdentifier.empty() ? FString("None") : CurrentIdentifier;
+		bool bChanged = false;
+
+		if (ImGui::BeginCombo(Label, CurrentLabel.c_str()))
+		{
+			if (ImGui::Selectable("None", CurrentMesh == nullptr))
+			{
+				Property.ObjectPtrOps->SetObject(ValuePtr, nullptr);
+				bChanged = true;
+			}
+
+			for (int32 MeshIndex = 0; MeshIndex < static_cast<int32>(StaticMeshPaths.size()); ++MeshIndex)
+			{
+				ImGui::PushID(MeshIndex);
+				const FString& MeshPath = StaticMeshPaths[MeshIndex];
+				const FString NormalizedPath = FPaths::Normalize(MeshPath);
+				const bool bSelected = CurrentIdentifier == NormalizedPath;
+				if (ImGui::Selectable(MeshPath.c_str(), bSelected))
+				{
+					if (UStaticMesh* Candidate = AssetService.LoadStaticMesh(MeshPath))
+					{
+						Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+						bChanged = true;
+					}
+				}
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+				ImGui::PopID();
+			}
+			ImGui::EndCombo();
 		}
 
 		return bChanged;
