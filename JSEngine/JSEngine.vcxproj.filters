@@ -615,10 +615,19 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleEventGenerator.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBurst.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLifetime.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLight.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocation.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocationShape.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRequired.gen.cpp">
@@ -628,6 +637,15 @@
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleAcceleration.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleDrag.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRotationRate.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp">

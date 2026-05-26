@@ -522,17 +522,41 @@ namespace
 		{
 			return "Lifetime";
 		}
+		if (Cast<UParticleModuleBurst>(Module))
+		{
+			return "Burst";
+		}
 		if (Cast<UParticleModuleLocation>(Module))
 		{
 			return "Initial Location";
+		}
+		if (Cast<UParticleModuleLocationShape>(Module))
+		{
+			return "Shape Location";
 		}
 		if (Cast<UParticleModuleVelocity>(Module))
 		{
 			return "Initial Velocity";
 		}
+		if (Cast<UParticleModuleAcceleration>(Module))
+		{
+			return "Acceleration";
+		}
+		if (Cast<UParticleModuleDrag>(Module))
+		{
+			return "Drag";
+		}
+		if (Cast<UParticleModuleRotationRate>(Module))
+		{
+			return "Initial Rotation Rate";
+		}
 		if (Cast<UParticleModuleColor>(Module))
 		{
 			return "Color Over Life";
+		}
+		if (Cast<UParticleModuleLight>(Module))
+		{
+			return "Light";
 		}
 		if (Cast<UParticleModuleSize>(Module))
 		{

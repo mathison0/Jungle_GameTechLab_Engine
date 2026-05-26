@@ -456,11 +456,17 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleCollision.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleColor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleEventGenerator.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBurst.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLifetime.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLight.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocation.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocationShape.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRequired.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSize.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleAcceleration.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleDrag.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRotationRate.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp" />

@@ -9,6 +9,7 @@
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Particle/ParticleDynamicData.h"
+#include "Particle/ParticleModules.h"
 #include "Particle/ParticleModuleTypeDataBeam.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
@@ -220,6 +221,72 @@ namespace
 
         auto Result = Cache.insert_or_assign(MeshData, Entry);
         return Result.first->second;
+    }
+}
+
+const UParticleModuleLight* FPrimitiveDrawCommandBuilder::FindParticleLightModule(const UParticleLODLevel* LODLevel)
+{
+    if (!LODLevel)
+    {
+        return nullptr;
+    }
+
+    for (const UParticleModule* Module : LODLevel->GetModules())
+    {
+        if (const UParticleModuleLight* LightModule = Cast<UParticleModuleLight>(Module))
+        {
+            return LightModule->IsEnabled() ? LightModule : nullptr;
+        }
+    }
+
+    return nullptr;
+}
+
+void FPrimitiveDrawCommandBuilder::CollectParticleLights(UParticleSystemComponent* ParticleSystemComponent, FRenderBus& RenderBus)
+{
+    if (!ParticleSystemComponent)
+    {
+        return;
+    }
+
+    const TArray<FParticleEmitterInstance*>& EmitterInstances = ParticleSystemComponent->GetEmitterInstances();
+    for (FParticleEmitterInstance* Instance : EmitterInstances)
+    {
+        if (!Instance || Instance->GetActiveParticleCount() <= 0)
+        {
+            continue;
+        }
+
+        const UParticleModuleLight* LightModule = FindParticleLightModule(Instance->GetCurrentLODLevel());
+        if (!LightModule)
+        {
+            continue;
+        }
+
+        int32 CreatedLights = 0;
+        for (int32 ParticleIndex = 0; ParticleIndex < Instance->GetActiveParticleCount(); ++ParticleIndex)
+        {
+            if (RenderBus.LightInfos.size() >= static_cast<size_t>(MaxRenderBusLightCount))
+            {
+                break;
+            }
+
+            const FBaseParticle* Particle = Instance->GetParticle(ParticleIndex);
+            if (!Particle || !LightModule->ShouldCreateLight(*Particle, CreatedLights))
+            {
+                continue;
+            }
+
+            FLightInfo LightInfo = {};
+            LightModule->BuildLightInfo(*Particle, LightInfo);
+            if (LightInfo.Intensity <= 0.0f || LightInfo.Radius <= 0.0f)
+            {
+                continue;
+            }
+
+            RenderBus.LightInfos.push_back(LightInfo);
+            ++CreatedLights;
+        }
     }
 }
 
@@ -577,6 +644,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
         // derived BuildInstanceData/CreateDynamicData 안에서 GetOwningComponent()->GetCachedCameraXxx() 로 RenderBus camera 를 read.
         // bCachedCameraValid=false → PSA_Velocity fallback (위험 12 방어).
         ParticleSystemComponent->CacheCameraFromRenderBus(RenderBus);
+        CollectParticleLights(ParticleSystemComponent, RenderBus);
 
         // Cycle 15a (D4 단일 슬롯 통합 + D5 BuildInstanceData 삭제 + D2 매 frame new):
         //   Component->CollectDynamicData() 로 모든 emitter 의 DynamicData* array 회수 (ownership 이전).

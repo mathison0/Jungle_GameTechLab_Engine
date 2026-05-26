@@ -78,6 +78,8 @@ void FParticleEmitterInstance::Reset()
 	ParticleCounter = 0;
 	MaxActiveParticles = 0;
 	SpawnFraction = 0.0f;
+	EmitterTime = 0.0f;
+	PreviousEmitterTime = 0.0f;
 	CurrentLODLevelIndex = 0;
 	CurrentLODLevel = nullptr;
 }
@@ -92,6 +94,9 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 	{
 		return;
 	}
+
+	PreviousEmitterTime = EmitterTime;
+	EmitterTime += DeltaTime;
 
 	SelectLODLevel(Component->ComputeEmitterLODDistance());
 	if (!CurrentLODLevel || !CurrentLODLevel->IsEnabled())

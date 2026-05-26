@@ -60,6 +60,8 @@ public:
     int32 GetCurrentLODLevelIndex() const { return CurrentLODLevelIndex; }
     int32 GetEmitterIndex() const { return EmitterIndex; }
     uint32 GetParticleCounter() const { return ParticleCounter; }
+    float GetEmitterTime() const { return EmitterTime; }
+    float GetPreviousEmitterTime() const { return PreviousEmitterTime; }
 
     FBaseParticle* GetParticle(int32 ActiveIndex);
     const FBaseParticle* GetParticle(int32 ActiveIndex) const;
@@ -98,6 +100,8 @@ private:
     uint32 ParticleCounter = 0;
     int32 MaxActiveParticles = 0;
     float SpawnFraction = 0.0f;
+    float EmitterTime = 0.0f;
+    float PreviousEmitterTime = 0.0f;
 
     // Cycle 15a Phase 5 (D7): SpriteInstanceDataBuffer 멤버 삭제 — FDynamicSpriteEmitterData 가 소유.
 };

@@ -4,6 +4,8 @@
 #include "Particle/ParticleRibbonTypes.h"
 #include "Render/Resource/Material.h"
 
+#include <algorithm>
+
 // Ribbon emitter용 TypeData (Cycle 12, 결정 6 옵션 A + 결정 8 옵션 A).
 // RequiredPayloadBytes()가 sizeof(FRibbonParticlePayload)를 반환 — container Stride에 자동 가산.
 // CreateInstance()가 FParticleRibbonEmitterInstance를 반환해 SpawnParticles/KillParticle/Tick override가 작동한다.
@@ -19,30 +21,30 @@ public:
     EParticleEmitterRenderMode GetRenderMode() const override { return EParticleEmitterRenderMode::Ribbon; }
     FParticleEmitterInstance* CreateInstance(UParticleSystemComponent* Component, int32 EmitterIndex) const override;
 
-    int32 GetMaxTrailCount() const { return MaxTrailCount; }
-    int32 GetMaxParticleInTrailCount() const { return MaxParticleInTrailCount; }
-    float GetSheetsPerTrail() const { return SheetsPerTrail; }
-    float GetTangentSpawningScalar() const { return TangentSpawningScalar; }
+    int32 GetMaxTrailCount() const { return std::max(MaxTrailCount, 1); }
+    int32 GetMaxParticleInTrailCount() const { return std::max(MaxParticleInTrailCount, 1); }
+    float GetSheetsPerTrail() const { return std::max(SheetsPerTrail, 1.0f); }
+    float GetTangentSpawningScalar() const { return std::max(TangentSpawningScalar, 0.0f); }
     UMaterialInterface* GetMaterial() const { return Material; }
 
     // Detail panel 의 picker 가 호출 — Material 만 변경. 다른 멤버는 reflection 으로 자동 노출됨.
     void SetMaterial(UMaterialInterface* InMaterial) { Material = InMaterial; }
-    void SetMaxTrailCount(int32 InCount) { MaxTrailCount = InCount; }
-    void SetMaxParticleInTrailCount(int32 InCount) { MaxParticleInTrailCount = InCount; }
-    void SetSheetsPerTrail(float InValue) { SheetsPerTrail = InValue; }
-    void SetTangentSpawningScalar(float InValue) { TangentSpawningScalar = InValue; }
+    void SetMaxTrailCount(int32 InCount) { MaxTrailCount = std::max(InCount, 1); }
+    void SetMaxParticleInTrailCount(int32 InCount) { MaxParticleInTrailCount = std::max(InCount, 1); }
+    void SetSheetsPerTrail(float InValue) { SheetsPerTrail = std::max(InValue, 1.0f); }
+    void SetTangentSpawningScalar(float InValue) { TangentSpawningScalar = std::max(InValue, 0.0f); }
 
 private:
-    UPROPERTY(DisplayName = "Max Trail Count", Category = "Ribbon")
+    UPROPERTY(DisplayName = "Max Trail Count", Category = "Ribbon", Min = 1)
     int32 MaxTrailCount = 1;
 
-    UPROPERTY(DisplayName = "Max Particle In Trail", Category = "Ribbon")
+    UPROPERTY(DisplayName = "Max Particle In Trail", Category = "Ribbon", Min = 1)
     int32 MaxParticleInTrailCount = 64;
 
-    UPROPERTY(DisplayName = "Sheets Per Trail", Category = "Ribbon")
+    UPROPERTY(DisplayName = "Sheets Per Trail", Category = "Ribbon", Min = 1.0f)
     float SheetsPerTrail = 1.0f;
 
-    UPROPERTY(DisplayName = "Tangent Spawning Scalar", Category = "Ribbon")
+    UPROPERTY(DisplayName = "Tangent Spawning Scalar", Category = "Ribbon", Min = 0.0f)
     float TangentSpawningScalar = 0.0f;
 
     UPROPERTY(DisplayName = "Material", Category = "Ribbon", ReferenceKind = Asset)

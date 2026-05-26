@@ -11,46 +11,131 @@
 #include "Math/Quat.h"
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleSystemComponent.h"
+#include "Render/Scene/RenderCommand.h"
+
+namespace ParticleModuleUtils
+{
+    constexpr const char* DefaultRequiredSubUVName = "Asset/plasma.png";
 
 // Function : Generate random float inside range
 // input : Min, Max
 // Min : minimum random value
 // Max : maximum random value
 // output : Random float between Min and Max
-static float RandomRange(float Min, float Max)
-{
-    return FEngineRandom::Get().RandomFloat(Min, Max);
-}
+    float RandomRange(float Min, float Max)
+    {
+        return FEngineRandom::Get().RandomFloat(Min, Max);
+    }
 
 // Function : Generate random vector inside per-axis range
 // input : Min, Max
 // Min : minimum vector value per axis
 // Max : maximum vector value per axis
 // output : Random vector with each axis sampled between Min and Max
-static FVector RandomRangeVector(const FVector& Min, const FVector& Max)
-{
-    return FVector(
-        RandomRange(Min.X, Max.X),
-        RandomRange(Min.Y, Max.Y),
-        RandomRange(Min.Z, Max.Z));
-}
+    FVector RandomRangeVector(const FVector& Min, const FVector& Max)
+    {
+        return FVector(
+            RandomRange(Min.X, Max.X),
+            RandomRange(Min.Y, Max.Y),
+            RandomRange(Min.Z, Max.Z));
+    }
 
-static float RandomUnitFromSeed(uint32 Seed)
-{
-    Seed ^= Seed >> 16;
-    Seed *= 0x7feb352du;
-    Seed ^= Seed >> 15;
-    Seed *= 0x846ca68bu;
-    Seed ^= Seed >> 16;
-    return static_cast<float>(Seed & 0x00ffffffu) / static_cast<float>(0x00ffffffu);
-}
+    FVector RandomUnitVector()
+    {
+        FVector Direction;
+        do
+        {
+            Direction = FVector(
+                RandomRange(-1.0f, 1.0f),
+                RandomRange(-1.0f, 1.0f),
+                RandomRange(-1.0f, 1.0f));
+        }
+        while (Direction.SizeSquared() <= 1.0e-6f || Direction.SizeSquared() > 1.0f);
 
-static FVector RandomRangeVectorSeeded(const FVector& Min, const FVector& Max, uint32 Seed)
-{
-    return FVector(
-        Min.X + (Max.X - Min.X) * RandomUnitFromSeed(Seed ^ 0x9e3779b9u),
-        Min.Y + (Max.Y - Min.Y) * RandomUnitFromSeed(Seed ^ 0x85ebca6bu),
-        Min.Z + (Max.Z - Min.Z) * RandomUnitFromSeed(Seed ^ 0xc2b2ae35u));
+        return Direction.GetSafeNormal();
+    }
+
+    FVector RandomPointInSphere(float Radius, bool bSurfaceOnly)
+    {
+        const float SafeRadius = std::max(Radius, 0.0f);
+        if (SafeRadius <= 0.0f)
+        {
+            return FVector::ZeroVector;
+        }
+
+        const float DistanceScale = bSurfaceOnly ? 1.0f : std::cbrt(RandomRange(0.0f, 1.0f));
+        return RandomUnitVector() * (SafeRadius * DistanceScale);
+    }
+
+    FVector RandomPointInBox(const FVector& Extents, bool bSurfaceOnly)
+    {
+        const FVector SafeExtents(
+            std::max(Extents.X, 0.0f),
+            std::max(Extents.Y, 0.0f),
+            std::max(Extents.Z, 0.0f));
+
+        FVector Result(
+            RandomRange(-SafeExtents.X, SafeExtents.X),
+            RandomRange(-SafeExtents.Y, SafeExtents.Y),
+            RandomRange(-SafeExtents.Z, SafeExtents.Z));
+
+        if (bSurfaceOnly)
+        {
+            const int32 FaceIndex = std::clamp(static_cast<int32>(RandomRange(0.0f, 6.0f)), 0, 5);
+            const int32 Axis = FaceIndex / 2;
+            const float Sign = (FaceIndex % 2) == 0 ? -1.0f : 1.0f;
+            Result[Axis] = SafeExtents[Axis] * Sign;
+        }
+
+        return Result;
+    }
+
+    FVector RandomPointInCone(float Height, float HalfAngleDegrees, bool bSurfaceOnly)
+    {
+        const float SafeHeight = std::max(Height, 0.0f);
+        if (SafeHeight <= 0.0f)
+        {
+            return FVector::ZeroVector;
+        }
+
+        constexpr float DegreesToRadians = 3.14159265358979323846f / 180.0f;
+        const float SafeHalfAngle = std::clamp(HalfAngleDegrees, 0.0f, 89.0f) * DegreesToRadians;
+        const float ConeRadiusAtEnd = SafeHeight * std::tan(SafeHalfAngle);
+        const float HeightScale = bSurfaceOnly ? std::sqrt(RandomRange(0.0f, 1.0f)) : std::cbrt(RandomRange(0.0f, 1.0f));
+        const float X = SafeHeight * HeightScale;
+        const float RadiusAtX = ConeRadiusAtEnd * HeightScale;
+        const float RadialDistance = bSurfaceOnly ? RadiusAtX : RadiusAtX * std::sqrt(RandomRange(0.0f, 1.0f));
+        const float Angle = RandomRange(0.0f, 2.0f * 3.14159265358979323846f);
+
+        return FVector(
+            X,
+            std::cos(Angle) * RadialDistance,
+            std::sin(Angle) * RadialDistance);
+    }
+
+    FVector RandomPointInShape(EProceduralParticleShape Shape, float SphereRadius, const FVector& BoxExtents, float ConeHeight, float ConeHalfAngle, bool bSurfaceOnly)
+    {
+        switch (Shape)
+        {
+        case EProceduralParticleShape::Box:
+            return RandomPointInBox(BoxExtents, bSurfaceOnly);
+        case EProceduralParticleShape::Cone:
+            return RandomPointInCone(ConeHeight, ConeHalfAngle, bSurfaceOnly);
+        case EProceduralParticleShape::Sphere:
+        default:
+            return RandomPointInSphere(SphereRadius, bSurfaceOnly);
+        }
+    }
+
+    uint32 HashParticleIdToFrameOffset(uint32 ParticleId, uint32 FrameCount)
+    {
+        if (FrameCount == 0)
+        {
+            return 0;
+        }
+
+        return (ParticleId * 2654435761u) % FrameCount;
+    }
 }
 
 
@@ -132,7 +217,28 @@ UParticleModuleLocation::UParticleModuleLocation()
 // output : Particle Location and OldLocation are set from component location plus random local offset
 void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
+    (void)SpawnTime;
     const FVector LocalOffset = EvaluateVectorDistribution("StartLocationMin", StartLocationMin, StartLocationMax, std::clamp(SpawnTime, 0.0f, 1.0f));
+    const FVector BaseLocation = Owner ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
+    Particle.Location = BaseLocation + LocalOffset;
+    Particle.OldLocation = Particle.Location;
+}
+
+UParticleModuleLocationShape::UParticleModuleLocationShape()
+{
+    bSpawnModule = true;
+}
+
+void UParticleModuleLocationShape::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
+{
+    (void)SpawnTime;
+    const FVector LocalOffset = ParticleModuleUtils::RandomPointInShape(
+        Shape,
+        SphereRadius,
+        BoxExtents,
+        ConeHeight,
+        ConeHalfAngle,
+        bSurfaceOnly);
     const FVector BaseLocation = Owner ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
     Particle.Location = BaseLocation + LocalOffset;
     Particle.OldLocation = Particle.Location;
@@ -154,6 +260,129 @@ void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBasePartic
     (void)Owner;
     Particle.Velocity = EvaluateVectorDistribution("StartVelocityMin", StartVelocityMin, StartVelocityMax, std::clamp(SpawnTime, 0.0f, 1.0f));
     Particle.BaseVelocity = Particle.Velocity;
+}
+
+UParticleModuleBurst::UParticleModuleBurst()
+{
+    bUpdateModule = true;
+}
+
+void UParticleModuleBurst::Update(FParticleEmitterInstance* Owner, float DeltaTime)
+{
+    (void)DeltaTime;
+    if (!Owner || BurstCount <= 0)
+    {
+        return;
+    }
+
+    const float PreviousTime = Owner->GetPreviousEmitterTime();
+    const float CurrentTime = Owner->GetEmitterTime();
+    if (CurrentTime < BurstTime)
+    {
+        return;
+    }
+
+    int32 TriggerCount = 0;
+    if (bRepeat && RepeatInterval > 0.0f)
+    {
+        const float ClampedPrevious = std::max(PreviousTime, BurstTime);
+        const int32 PreviousTriggerIndex = PreviousTime < BurstTime
+            ? -1
+            : static_cast<int32>(std::floor((ClampedPrevious - BurstTime) / RepeatInterval));
+        const int32 CurrentTriggerIndex = static_cast<int32>(std::floor((CurrentTime - BurstTime) / RepeatInterval));
+        TriggerCount = std::max(CurrentTriggerIndex - PreviousTriggerIndex, 0);
+    }
+    else if (PreviousTime < BurstTime && CurrentTime >= BurstTime)
+    {
+        TriggerCount = 1;
+    }
+
+    if (TriggerCount <= 0)
+    {
+        return;
+    }
+
+    Owner->SpawnParticles(
+        BurstCount * TriggerCount,
+        0.0f,
+        0.0f,
+        Owner->GetComponentWorldLocation(),
+        FVector::ZeroVector);
+}
+
+UParticleModuleAcceleration::UParticleModuleAcceleration()
+{
+    bUpdateModule = true;
+}
+
+void UParticleModuleAcceleration::Update(FParticleEmitterInstance* Owner, float DeltaTime)
+{
+    if (!Owner || DeltaTime <= 0.0f)
+    {
+        return;
+    }
+
+    for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
+    {
+        FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
+        if (Particle)
+        {
+            Particle->Velocity += Acceleration * DeltaTime;
+        }
+    }
+}
+
+UParticleModuleDrag::UParticleModuleDrag()
+{
+    bUpdateModule = true;
+}
+
+void UParticleModuleDrag::Update(FParticleEmitterInstance* Owner, float DeltaTime)
+{
+    if (!Owner || DeltaTime <= 0.0f || DragCoefficient <= 0.0f)
+    {
+        return;
+    }
+
+    const float Damping = std::exp(-DragCoefficient * DeltaTime);
+    for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
+    {
+        FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
+        if (Particle)
+        {
+            Particle->Velocity *= Damping;
+        }
+    }
+}
+
+UParticleModuleRotationRate::UParticleModuleRotationRate()
+{
+    bSpawnModule = true;
+    bUpdateModule = true;
+}
+
+void UParticleModuleRotationRate::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
+{
+    (void)Owner;
+    (void)SpawnTime;
+    Particle.RotationRate = ParticleModuleUtils::RandomRange(StartRotationRateMin, StartRotationRateMax);
+}
+
+void UParticleModuleRotationRate::Update(FParticleEmitterInstance* Owner, float DeltaTime)
+{
+    if (!Owner || DeltaTime <= 0.0f)
+    {
+        return;
+    }
+
+    for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
+    {
+        FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
+        if (Particle)
+        {
+            Particle->Rotation += Particle->RotationRate * DeltaTime;
+        }
+    }
 }
 
 UParticleModuleColor::UParticleModuleColor()
@@ -188,6 +417,53 @@ void UParticleModuleColor::Update(FParticleEmitterInstance* Owner, float DeltaTi
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
         Particle.Color = FColor::Lerp(StartColor, EndColor, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
     }
+}
+
+UParticleModuleLight::UParticleModuleLight()
+{
+}
+
+bool UParticleModuleLight::ShouldCreateLight(const FBaseParticle& Particle, int32 CurrentLightCount) const
+{
+    if (!bLightEnabled || MaxLightsPerEmitter <= 0 || CurrentLightCount >= MaxLightsPerEmitter)
+    {
+        return false;
+    }
+
+    const float ClampedFraction = std::clamp(SpawnFraction, 0.0f, 1.0f);
+    if (ClampedFraction >= 1.0f)
+    {
+        return true;
+    }
+    if (ClampedFraction <= 0.0f)
+    {
+        return false;
+    }
+
+    const uint32 Hash = Particle.ParticleId * 2654435761u;
+    const float Unit = static_cast<float>(Hash & 0x00FFFFFFu) / static_cast<float>(0x01000000u);
+    return Unit < ClampedFraction;
+}
+
+void UParticleModuleLight::BuildLightInfo(const FBaseParticle& Particle, FLightInfo& OutLightInfo) const
+{
+    OutLightInfo = {};
+    const FColor SourceColor = bUseParticleColor ? Particle.Color : LightColor;
+    const float AlphaScale = bUseParticleAlpha ? std::clamp(Particle.Color.A, 0.0f, 1.0f) : 1.0f;
+    const float ParticleRadiusScale = std::max(
+        std::max(std::abs(Particle.Size.X), std::abs(Particle.Size.Y)),
+        std::abs(Particle.Size.Z));
+
+    OutLightInfo.Color = FVector(SourceColor.R, SourceColor.G, SourceColor.B);
+    OutLightInfo.Intensity = std::max(Brightness * AlphaScale, 0.0f);
+    OutLightInfo.Type = 1;
+    OutLightInfo.Radius = std::max(Radius + RadiusScale * ParticleRadiusScale, 0.0f);
+    OutLightInfo.InnerAngle = 0.0f;
+    OutLightInfo.OuterAngle = 0.0f;
+    OutLightInfo.Direction = FVector::ZeroVector;
+    OutLightInfo.Falloff = std::max(Falloff, 0.0f);
+    OutLightInfo.Position = Particle.Location;
+    OutLightInfo.ShadowTextureIndex = InvalidShadowIndex;
 }
 
 UParticleModuleSize::UParticleModuleSize()
@@ -415,10 +691,31 @@ UParticleModuleEventGenerator::UParticleModuleEventGenerator()
 void UParticleModuleEventGenerator::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    if (Owner && bDispatchCollisionEvents)
+    if (!Owner || !bDispatchCollisionEvents)
     {
-        Owner->DispatchQueuedParticleEvents();
+        return;
     }
+
+    UParticleSystemComponent* Component = Owner->GetOwningComponent();
+    if (!Component)
+    {
+        return;
+    }
+
+    TArray<FParticleEventCollideData>& PendingEvents = Component->GetPendingCollisionEvents();
+    if (MaxCollisionEventsPerFrame > 0 && static_cast<int32>(PendingEvents.size()) > MaxCollisionEventsPerFrame)
+    {
+        if (bKeepNewestCollisionEvents)
+        {
+            PendingEvents.erase(PendingEvents.begin(), PendingEvents.end() - MaxCollisionEventsPerFrame);
+        }
+        else
+        {
+            PendingEvents.resize(static_cast<size_t>(MaxCollisionEventsPerFrame));
+        }
+    }
+
+    Owner->DispatchQueuedParticleEvents();
 }
 
 USubUVModule::USubUVModule()
@@ -432,7 +729,15 @@ void USubUVModule::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particl
 {
     (void)Owner;
     (void)SpawnTime;
-    Particle.SubUVIndex = static_cast<uint32>(GetStartFrameIndex());
+    const uint32 StartFrame = static_cast<uint32>(GetStartFrameIndex());
+    const uint32 EndFrame = static_cast<uint32>(GetEndFrameIndex());
+    const uint32 RangeStart = std::min(StartFrame, EndFrame);
+    const uint32 RangeEnd = std::max(StartFrame, EndFrame);
+    const uint32 RangeFrameCount = RangeEnd - RangeStart + 1;
+    const uint32 RandomOffset = bRandomStartFrame
+        ? ParticleModuleUtils::HashParticleIdToFrameOffset(Particle.ParticleId, RangeFrameCount)
+        : 0;
+    Particle.SubUVIndex = RangeStart + RandomOffset;
 }
 
 void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
@@ -476,8 +781,32 @@ void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
     for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
-        const float Clamped = std::clamp(Particle.RelativeTime, 0.0f, 0.9999f);
-        const uint32 RangeFrameOffset = static_cast<uint32>(Clamped * static_cast<float>(RangeFrameCount)) % RangeFrameCount;
+        const uint32 RandomOffset = bRandomStartFrame
+            ? ParticleModuleUtils::HashParticleIdToFrameOffset(Particle.ParticleId, RangeFrameCount)
+            : 0;
+
+        uint32 RangeFrameOffset = 0;
+        if (PlaybackMode == EParticleSubUVPlaybackMode::FramesPerSecond)
+        {
+            const float ParticleAge = std::max(Particle.RelativeTime, 0.0f) * std::max(Particle.Lifetime, 0.0f);
+            const uint32 AdvancedFrames = static_cast<uint32>(std::max(FrameRate, 0.0f) * ParticleAge);
+            const uint32 FrameWithOffset = AdvancedFrames + RandomOffset;
+            RangeFrameOffset = bLoop
+                ? (FrameWithOffset % RangeFrameCount)
+                : std::min(FrameWithOffset, RangeFrameCount - 1);
+        }
+        else
+        {
+            const float Clamped = bLoop
+                ? std::fmod(std::max(Particle.RelativeTime, 0.0f), 1.0f)
+                : std::clamp(Particle.RelativeTime, 0.0f, 0.9999f);
+            const uint32 AdvancedFrames = static_cast<uint32>(Clamped * static_cast<float>(RangeFrameCount));
+            const uint32 FrameWithOffset = AdvancedFrames + RandomOffset;
+            RangeFrameOffset = bLoop
+                ? (FrameWithOffset % RangeFrameCount)
+                : std::min(FrameWithOffset, RangeFrameCount - 1);
+        }
+
         Particle.SubUVIndex = RangeStart + RangeFrameOffset;
     }
 }

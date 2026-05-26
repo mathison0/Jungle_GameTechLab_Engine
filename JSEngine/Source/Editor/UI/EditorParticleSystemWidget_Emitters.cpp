@@ -243,20 +243,23 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 		DrawTypeDataItems(true);
 		EndParticleMenu();
 	}
-	DrawDisabledParticleModuleMenu("Acceleration");
+	DrawParticleModuleAddMenu<UParticleModuleAcceleration>("Acceleration", "Acceleration", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawDisabledParticleModuleMenu("Attraction");
+	DrawParticleModuleAddMenu<UParticleModuleBurst>("Burst", "Burst", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawDisabledParticleModuleMenu("Camera");
 	DrawParticleModuleAddMenu<UParticleModuleCollision>("Collision", "Collision", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawParticleModuleAddMenu<UParticleModuleColor>("Color", "Color Over Life", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawParticleModuleAddMenu<UParticleModuleEventGenerator>("Event", "Event Generator", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawDisabledParticleModuleMenu("Kill");
 	DrawParticleModuleAddMenu<UParticleModuleLifetime>("Lifetime", "Lifetime", bHasTargetEmitter, AddModuleToTargetEmitter);
-	DrawDisabledParticleModuleMenu("Light");
+	DrawParticleModuleAddMenu<UParticleModuleLight>("Light", "Light", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawParticleModuleAddMenu<UParticleModuleLocation>("Location", "Initial Location", bHasTargetEmitter, AddModuleToTargetEmitter);
-	DrawDisabledParticleModuleMenu("Rotation");
+	DrawParticleModuleAddMenu<UParticleModuleLocationShape>("Location", "Shape Location", bHasTargetEmitter, AddModuleToTargetEmitter);
+	DrawParticleModuleAddMenu<UParticleModuleRotationRate>("Rotation", "Initial Rotation Rate", bHasTargetEmitter, AddModuleToTargetEmitter);
 	// Cycle 14 (M2): disabled placeholder → enabled menu 교체.
 	// UParticleModuleMeshRotationRate 는 Mesh emitter 전용 — Mesh 가 아닌 emitter 에 추가하면 runtime 에 Cast nullptr → no-op (위험 13 방어).
 	DrawParticleModuleAddMenu<UParticleModuleMeshRotationRate>("Rotation Rate", "Mesh Rotation Rate", bHasTargetEmitter, AddModuleToTargetEmitter);
+	DrawParticleModuleAddMenu<UParticleModuleDrag>("Drag", "Drag", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawDisabledParticleModuleMenu("Orbit");
 	DrawDisabledParticleModuleMenu("Orientation");
 	DrawDisabledParticleModuleMenu("Parameter");
