@@ -1569,18 +1569,31 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	SameLineGap(14.0f);
 	ToolbarButton("RegenLOD", "Regen LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::RegenLOD), "Regenerate LOD");
 	SameLineGap();
-	ToolbarButton("LowestLOD", "Lowest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to lowest LOD");
+	if (ToolbarButton("LowestLOD", "Lowest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to lowest LOD"))
+	{
+		SelectLowestLOD();
+	}
 	SameLineGap();
-	ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD");
+	if (ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD"))
+	{
+		SelectLowerLOD();
+	}
 	SameLineGap();
-	ToolbarButton("AddLOD", "Add LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLOD), "Add LOD");
+	if (ToolbarButton("AddLOD", "Add LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLOD), "Add LOD"))
+	{
+		AddLODToSelectedEmitter();
+	}
 
 	SameLineGap(8.0f);
 	ImGui::SetNextItemWidth(54.0f);
 	ImGui::InputInt("LOD", &CurrentLOD, 0, 0);
 	CurrentLOD = std::max(0, CurrentLOD);
+	ClampSelectionToParticleSystem();
 	SameLineGap();
-	ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD");
+	if (ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD"))
+	{
+		SelectHigherLOD();
+	}
 
 	SameLineGap(14.0f);
 	ToolbarButton("ParticleEditorMenu", "Menu", GetCascadeToolbarIcon(ECascadeToolbarIcon::Menu), "Particle editor menu");
@@ -2259,6 +2272,157 @@ void FEditorParticleSystemWidget::AddDefaultEmitterAt(int32 InsertIndex)
 	InsertIndex = std::clamp(InsertIndex, 0, static_cast<int32>(ParticleSystemAsset->Emitters.size()));
 	ParticleSystemAsset->Emitters.insert(ParticleSystemAsset->Emitters.begin() + InsertIndex, NewEmitter);
 	SelectEmitter(InsertIndex);
+	ClearEmitterContext();
+	bDirty = true;
+	RefreshPreviewComponent(true);
+}
+
+void FEditorParticleSystemWidget::AddLODToSelectedEmitter()
+{
+	UParticleEmitter* Emitter = GetSelectedEmitter();
+	if (!Emitter)
+	{
+		return;
+	}
+
+	const TArray<UParticleLODLevel*>& LODLevels = Emitter->GetLODLevels();
+	const int32 NewLevel = static_cast<int32>(LODLevels.size());
+	float NewThreshold = 100000.0f;
+	if (!LODLevels.empty())
+	{
+		float MaxThreshold = 0.0f;
+		for (const UParticleLODLevel* LODLevel : LODLevels)
+		{
+			if (LODLevel)
+			{
+				MaxThreshold = std::max(MaxThreshold, LODLevel->GetDistanceThreshold());
+			}
+		}
+		NewThreshold = MaxThreshold + 1000.0f;
+	}
+
+	CaptureUndoSnapshot("Add Particle LOD");
+
+	UParticleLODLevel* NewLOD = nullptr;
+	UParticleLODLevel* SourceLOD = Emitter->GetLODLevel(std::clamp(CurrentLOD, 0, std::max(0, NewLevel - 1)));
+	if (SourceLOD)
+	{
+		NewLOD = Cast<UParticleLODLevel>(SourceLOD->Duplicate());
+		if (NewLOD)
+		{
+			NewLOD->Level = NewLevel;
+			NewLOD->bEnabled = true;
+			NewLOD->DistanceThreshold = NewThreshold;
+			NewLOD->SetFName(FName("LOD" + std::to_string(NewLevel)));
+			Emitter->LODLevels.push_back(NewLOD);
+		}
+	}
+
+	if (!NewLOD)
+	{
+		NewLOD = Emitter->AddLODLevel(NewLevel, NewThreshold);
+		if (NewLOD)
+		{
+			NewLOD->SetFName(FName("LOD" + std::to_string(NewLevel)));
+			NewLOD->EnsureRequiredModule();
+			NewLOD->EnsureRendererProperties(EParticleEmitterRenderMode::Sprite);
+			NewLOD->EnsureSpawnModule();
+			NewLOD->AddModule<UParticleModuleLifetime>();
+			NewLOD->AddModule<UParticleModuleLocation>();
+			NewLOD->AddModule<UParticleModuleVelocity>();
+			NewLOD->AddModule<UParticleModuleColor>();
+			NewLOD->AddModule<UParticleModuleSize>();
+		}
+	}
+
+	if (!NewLOD)
+	{
+		return;
+	}
+
+	Emitter->CacheEmitterModuleInfo();
+	auto It = std::find(Emitter->LODLevels.begin(), Emitter->LODLevels.end(), NewLOD);
+	CurrentLOD = It != Emitter->LODLevels.end()
+		? static_cast<int32>(std::distance(Emitter->LODLevels.begin(), It))
+		: NewLevel;
+
+	SelectEmitter(SelectedEmitterIndex);
+	ClearEmitterContext();
+	bDirty = true;
+	RefreshPreviewComponent(true);
+}
+
+void FEditorParticleSystemWidget::SelectLowerLOD()
+{
+	UParticleEmitter* Emitter = GetSelectedEmitter();
+	if (!Emitter)
+	{
+		return;
+	}
+
+	const int32 LODCount = static_cast<int32>(Emitter->GetLODLevels().size());
+	if (LODCount <= 0)
+	{
+		CurrentLOD = 0;
+		return;
+	}
+
+	CurrentLOD = std::clamp(CurrentLOD + 1, 0, LODCount - 1);
+	ClampSelectionToParticleSystem();
+}
+
+void FEditorParticleSystemWidget::SelectHigherLOD()
+{
+	UParticleEmitter* Emitter = GetSelectedEmitter();
+	if (!Emitter)
+	{
+		return;
+	}
+
+	const int32 LODCount = static_cast<int32>(Emitter->GetLODLevels().size());
+	if (LODCount <= 0)
+	{
+		CurrentLOD = 0;
+		return;
+	}
+
+	CurrentLOD = std::clamp(CurrentLOD - 1, 0, LODCount - 1);
+	ClampSelectionToParticleSystem();
+}
+
+void FEditorParticleSystemWidget::SelectLowestLOD()
+{
+	UParticleEmitter* Emitter = GetSelectedEmitter();
+	if (!Emitter)
+	{
+		return;
+	}
+
+	const int32 LODCount = static_cast<int32>(Emitter->GetLODLevels().size());
+	CurrentLOD = LODCount > 0 ? LODCount - 1 : 0;
+	ClampSelectionToParticleSystem();
+}
+
+void FEditorParticleSystemWidget::DeleteCurrentLOD()
+{
+	UParticleEmitter* Emitter = GetSelectedEmitter();
+	if (!Emitter)
+	{
+		return;
+	}
+
+	const int32 LODCount = static_cast<int32>(Emitter->GetLODLevels().size());
+	if (LODCount <= 1)
+	{
+		ShowCenterToast("Emitter must keep at least one LOD.");
+		return;
+	}
+
+	CaptureUndoSnapshot("Delete Particle LOD");
+	const int32 DeleteIndex = std::clamp(CurrentLOD, 0, LODCount - 1);
+	Emitter->RemoveLODLevel(DeleteIndex);
+	CurrentLOD = std::clamp(DeleteIndex, 0, static_cast<int32>(Emitter->GetLODLevels().size()) - 1);
+	SelectEmitter(SelectedEmitterIndex);
 	ClearEmitterContext();
 	bDirty = true;
 	RefreshPreviewComponent(true);
@@ -3441,6 +3605,71 @@ void FEditorParticleSystemWidget::DrawEmitterDetails(UParticleEmitter* Emitter, 
 		}
 	}
 
+	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		UParticleLODLevel* LODLevel = GetEmitterLODLevel(Emitter);
+		if (LODLevel && BeginParticleDetailsTable("##ParticleEmitterLODDetailsTable", LabelWidth))
+		{
+			auto CaptureLODEditUndo = [this]()
+			{
+				if (!bPropertyEditUndoCaptured)
+				{
+					CaptureUndoSnapshot("Edit Particle LOD");
+					bPropertyEditUndoCaptured = true;
+				}
+			};
+
+			auto CommitLODEdit = [&]()
+			{
+				Emitter->CacheEmitterModuleInfo();
+				bDirty = true;
+				RefreshPreviewComponent(false);
+			};
+
+			BeginParticleDetailsRow("Level");
+			int32 EditedLevel = LODLevel->Level;
+			ImGui::SetNextItemWidth(-1.0f);
+			if (ImGui::DragInt("##LODLevel", &EditedLevel, 1.0f, 0, 1024))
+			{
+				CaptureLODEditUndo();
+				LODLevel->Level = std::max(0, EditedLevel);
+				CommitLODEdit();
+			}
+
+			BeginParticleDetailsRow("Enabled");
+			bool bEditedEnabled = LODLevel->bEnabled;
+			if (ImGui::Checkbox("##LODEnabled", &bEditedEnabled))
+			{
+				CaptureLODEditUndo();
+				LODLevel->bEnabled = bEditedEnabled;
+				CommitLODEdit();
+			}
+
+			BeginParticleDetailsRow("Distance Threshold");
+			float EditedThreshold = LODLevel->DistanceThreshold;
+			ImGui::SetNextItemWidth(-1.0f);
+			if (ImGui::DragFloat("##LODDistanceThreshold", &EditedThreshold, 1.0f, 0.0f, 0.0f, "%.1f"))
+			{
+				CaptureLODEditUndo();
+				LODLevel->DistanceThreshold = std::max(0.0f, EditedThreshold);
+				CommitLODEdit();
+			}
+
+			BeginParticleDetailsRow("Actions");
+			if (ImGui::SmallButton("Delete Current LOD"))
+			{
+				DeleteCurrentLOD();
+			}
+
+			if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+			{
+				bPropertyEditUndoCaptured = false;
+			}
+
+			EndParticleDetailsTable();
+		}
+	}
+
 	ImGui::PopID();
 }
 
@@ -3986,15 +4215,10 @@ bool FEditorParticleSystemWidget::DrawParticleStructPropertyValue(const FPropert
 
 void FEditorParticleSystemWidget::NotifyParticleModulePropertyChanged(UParticleModule* Module, UParticleEmitter* OwnerEmitter, const FProperty& Property)
 {
+	(void)OwnerEmitter;
 	if (Module && Property.Name)
 	{
 		Module->PostEditProperty(Property.Name);
-	}
-	if (OwnerEmitter)
-	{
-	}
-	if (ParticleSystemAsset)
-	{
 	}
 	bDirty = true;
 }

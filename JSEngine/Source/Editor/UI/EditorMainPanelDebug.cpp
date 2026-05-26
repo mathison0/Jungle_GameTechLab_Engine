@@ -440,6 +440,112 @@ bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSu
     return true;
 }
 
+bool RunParticleLODSmoke(FString& OutSummary)
+{
+    UParticleSystem* ParticleSystem = UParticleSystem::CreateDefaultSpriteSystem();
+    auto Fail = [&](const char* Message) -> bool
+    {
+        OutSummary = Message;
+        if (ParticleSystem)
+        {
+            UObjectManager::Get().DestroyObject(ParticleSystem);
+            ParticleSystem = nullptr;
+        }
+        return false;
+    };
+
+    if (!ParticleSystem || ParticleSystem->GetEmitters().empty())
+    {
+        return Fail("failed to create default particle system");
+    }
+
+    UParticleEmitter* Emitter = ParticleSystem->GetEmitters()[0];
+    UParticleLODLevel* LOD0 = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+    if (!Emitter || !LOD0)
+    {
+        return Fail("default particle system has no emitter or LOD0");
+    }
+
+    LOD0->Level = 0;
+    LOD0->bEnabled = true;
+    LOD0->DistanceThreshold = 100.0f;
+
+    UParticleLODLevel* LOD1 = Cast<UParticleLODLevel>(LOD0->Duplicate());
+    if (!LOD1)
+    {
+        return Fail("failed to duplicate LOD0");
+    }
+
+    LOD1->Level = 1;
+    LOD1->bEnabled = true;
+    LOD1->DistanceThreshold = 1000.0f;
+    Emitter->LODLevels.push_back(LOD1);
+    Emitter->CacheEmitterModuleInfo();
+
+    FParticleEmitterInstance Instance;
+    Instance.Init(Emitter, nullptr, 0);
+    Instance.SelectLODLevel(50.0f);
+    if (Instance.GetCurrentLODLevelIndex() != 0)
+    {
+        return Fail("near distance did not select LOD0");
+    }
+
+    Instance.SpawnParticles(1, 0.0f, 0.0f, FVector::ZeroVector, FVector::ZeroVector);
+    const int32 ActiveBeforeSwitch = Instance.GetActiveParticleCount();
+    if (ActiveBeforeSwitch <= 0)
+    {
+        return Fail("failed to spawn baseline particle before LOD switch");
+    }
+
+    Instance.SelectLODLevel(500.0f);
+    if (Instance.GetCurrentLODLevelIndex() != 1)
+    {
+        return Fail("far distance did not select LOD1");
+    }
+    if (Instance.GetActiveParticleCount() != ActiveBeforeSwitch)
+    {
+        return Fail("LOD switch did not preserve existing particles");
+    }
+
+    LOD0->bEnabled = false;
+    Emitter->CacheEmitterModuleInfo();
+    Instance.RebindCompiledLOD(50.0f);
+    if (Instance.GetCurrentLODLevelIndex() != 1)
+    {
+        return Fail("disabled LOD0 was not skipped");
+    }
+
+    const FCompiledParticleLODData* CompiledLOD = Instance.GetCurrentCompiledLODData();
+    if (!CompiledLOD || CompiledLOD->SourceLODLevel != LOD1)
+    {
+        return Fail("compiled LOD did not rebind to LOD1");
+    }
+    if (CompiledLOD->SpawnModule != LOD1->GetSpawnModule())
+    {
+        return Fail("rebound compiled LOD does not use LOD1 spawn module");
+    }
+
+    Instance.SpawnParticles(1, 0.0f, 0.0f, FVector::ZeroVector, FVector::ZeroVector);
+    if (Instance.GetActiveParticleCount() <= ActiveBeforeSwitch)
+    {
+        return Fail("new spawn after LOD switch did not use active compiled LOD");
+    }
+
+    char Buffer[192];
+    snprintf(
+        Buffer,
+        sizeof(Buffer),
+        "nearLOD=0, farLOD=1, disabledSkipLOD=%d, activeBefore=%d, activeAfter=%d",
+        Instance.GetCurrentLODLevelIndex(),
+        ActiveBeforeSwitch,
+        Instance.GetActiveParticleCount());
+    OutSummary = Buffer;
+
+    UObjectManager::Get().DestroyObject(ParticleSystem);
+    ParticleSystem = nullptr;
+    return true;
+}
+
 } // namespace
 
 void FEditorMainPanel::RenderUndoHistoryPanel(float DeltaTime)
@@ -681,6 +787,28 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
                 "Particle serialization smoke test %s: %s\n",
                 bPassed ? "passed" : "failed",
                 SmokeTestPath.c_str());
+        }
+
+        if (ImGui::Button("Run Particle LOD Smoke Test"))
+        {
+            FString Summary;
+            const bool bPassed = RunParticleLODSmoke(Summary);
+            FEditorConsoleWidget::AddLog(
+                "Particle LOD smoke test %s: %s\n",
+                bPassed ? "passed" : "failed",
+                Summary.c_str());
+
+            if (EditorEngine)
+            {
+                if (bPassed)
+                {
+                    EditorEngine->GetNotificationService().Info("Particle LOD smoke test passed");
+                }
+                else
+                {
+                    EditorEngine->GetNotificationService().Warning("Particle LOD smoke test failed");
+                }
+            }
         }
     }
 

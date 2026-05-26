@@ -121,6 +121,11 @@ private:
 	void DrawEmitterContextMenu();
 	void AddDefaultEmitter();
 	void AddDefaultEmitterAt(int32 InsertIndex);
+	void AddLODToSelectedEmitter();
+	void SelectLowerLOD();
+	void SelectHigherLOD();
+	void SelectLowestLOD();
+	void DeleteCurrentLOD();
 	void DeleteSelectedEmitter();
 	void DeleteEmitter(int32 EmitterIndex);
 	void AddModuleToEmitter(int32 EmitterIndex, UParticleModule* Module);
