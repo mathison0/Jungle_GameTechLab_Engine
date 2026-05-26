@@ -1,15 +1,4 @@
-﻿#include "Particle/ParticleEvent.h"
-#include "Particle/ParticleSystemComponent.h"
-#include "Particle/ParticleSystem.h"
-
-AParticleEventManager::~AParticleEventManager()
-{
-	if (PreviewParticleSystem)
-	{
-		UObjectManager::Get().DestroyObject(PreviewParticleSystem);
-		PreviewParticleSystem = nullptr;
-	}
-}
+#include "Particle/ParticleEvent.h"
 
 // Function : Add particle collision event to manager queue
 // input : EventData
@@ -18,6 +7,19 @@ AParticleEventManager::~AParticleEventManager()
 void AParticleEventManager::PushCollisionEvent(const FParticleEventCollideData& EventData)
 {
 	CollisionEvents.push_back(EventData);
+}
+
+// Function : Queue a batch of particle collision events and broadcast them
+// input : EventDataList
+// EventDataList : collision events drained from a particle system component
+// output : OnParticleCollide is broadcast for each event and the manager queue becomes empty
+void AParticleEventManager::DispatchCollisionEvents(const TArray<FParticleEventCollideData>& EventDataList)
+{
+	for (const FParticleEventCollideData& EventData : EventDataList)
+	{
+		PushCollisionEvent(EventData);
+	}
+	DispatchEvents();
 }
 
 // Function : Broadcast queued particle collision events and clear the queue
@@ -34,25 +36,5 @@ void AParticleEventManager::DispatchEvents()
 
 void AParticleEventManager::InitDefaultComponents()
 {
-    if (PreviewParticleSystem)
-    {
-        return;
-    }
-
-    UParticleSystemComponent* ParticleSystemComponent = AddComponent<UParticleSystemComponent>();
-    SetRootComponent(ParticleSystemComponent);
-
-    PreviewParticleSystem = UParticleSystem::CreateDefaultSpriteSystem();
-    if (!PreviewParticleSystem)
-    {
-        return;
-    }
-
-    USubUVModule* SubUV = UObjectManager::Get().CreateObject<USubUVModule>();
-    SubUV->SetSubUVName(FName("Asset/plasma.png"));
-    PreviewParticleSystem->Emitters[0]->LODLevels[0]->Modules.push_back(SubUV);
-    PreviewParticleSystem->CacheEmitterModuleInfo();
-    ParticleSystemComponent->SetTemplate(PreviewParticleSystem);
-    SetTickInEditor(true);
+	// Dispatcher only. Particle simulation remains owned by UParticleSystemComponent.
 }
-	 

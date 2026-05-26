@@ -4,6 +4,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleEvent.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Render/Scene/RenderBus.h"
 
@@ -165,6 +166,16 @@ void UParticleSystemComponent::QueueCollisionEvent(const FParticleEventCollideDa
 // output : OnParticleCollide is broadcast for each queued event and the queue becomes empty
 void UParticleSystemComponent::DispatchQueuedParticleEvents()
 {
+	if (PendingCollisionEvents.empty())
+	{
+		return;
+	}
+
+	if (EventDispatcher)
+	{
+		EventDispatcher->DispatchCollisionEvents(PendingCollisionEvents);
+	}
+
 	for (const FParticleEventCollideData& EventData : PendingCollisionEvents)
 	{
 		OnParticleCollide.Broadcast(EventData);
@@ -265,6 +276,10 @@ void UParticleSystemComponent::TickPreview(float DeltaTime, bool bAllowSpawning)
 		{
 			Instance->Tick(DeltaTime, bAllowSpawning);
 		}
+	}
+	if (EventDispatcher && HasPendingCollisionEvents())
+	{
+		DispatchQueuedParticleEvents();
 	}
 	NotifySpatialIndexDirty();
 }

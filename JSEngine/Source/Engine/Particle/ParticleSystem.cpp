@@ -325,7 +325,9 @@ void UParticleLODLevel::CacheModuleLists()
 	SpawnModules.clear();
 	UpdateModules.clear();
 	TArray<UParticleModule*> RuntimeModules;
+	TArray<UParticleModule*> DeferredEventModules;
 	RuntimeModules.reserve(Modules.size());
+	DeferredEventModules.reserve(Modules.size());
 
 	if (RequiredModule && RequiredModule->IsEnabled())
 	{
@@ -372,8 +374,20 @@ void UParticleLODLevel::CacheModuleLists()
 		}
 		if (Module->IsUpdateModule())
 		{
-			UpdateModules.push_back(Module);
+			if (Cast<UParticleModuleEventGenerator>(Module))
+			{
+				DeferredEventModules.push_back(Module);
+			}
+			else
+			{
+				UpdateModules.push_back(Module);
+			}
 		}
+	}
+
+	for (UParticleModule* EventModule : DeferredEventModules)
+	{
+		UpdateModules.push_back(EventModule);
 	}
 
 	if (RuntimeModules.size() != Modules.size())
@@ -534,6 +548,15 @@ void UParticleEmitter::SortLODLevelsByDistance()
             }
             return A->GetDistanceThreshold() < B->GetDistanceThreshold();
         });
+
+    for (int32 LODIndex = 0; LODIndex < static_cast<int32>(LODLevels.size()); ++LODIndex)
+    {
+        if (UParticleLODLevel* LODLevel = LODLevels[LODIndex])
+        {
+            LODLevel->Level = LODIndex;
+            LODLevel->SetFName(FName("LOD" + std::to_string(LODIndex)));
+        }
+    }
 }
 
 bool UParticleEmitter::Validate(TArray<FString>* OutErrors) const

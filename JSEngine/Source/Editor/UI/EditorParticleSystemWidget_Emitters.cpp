@@ -328,7 +328,7 @@ void FEditorParticleSystemWidget::AddLODToSelectedEmitterAt(int32 InsertIndex)
 		if (InsertIndex <= 0)
 		{
 			const float FirstThreshold = LODLevels[0] ? LODLevels[0]->GetDistanceThreshold() : 1000.0f;
-			NewThreshold = FirstThreshold > 1.0f ? FirstThreshold * 0.5f : 0.0f;
+			NewThreshold = FirstThreshold > 1000.0f ? FirstThreshold - 1000.0f : FirstThreshold * 0.5f;
 		}
 		else if (InsertIndex >= OldLODCount)
 		{
@@ -512,7 +512,12 @@ void FEditorParticleSystemWidget::DeleteEmitter(int32 EmitterIndex)
 	}
 
 	CaptureUndoSnapshot("Delete Emitter");
+	UParticleEmitter* RemovedEmitter = ParticleSystemAsset->Emitters[EmitterIndex];
 	ParticleSystemAsset->Emitters.erase(ParticleSystemAsset->Emitters.begin() + EmitterIndex);
+	if (RemovedEmitter)
+	{
+		UObjectManager::Get().DestroyObject(RemovedEmitter);
+	}
 	ClearEmitterContext();
 	if (ParticleSystemAsset->Emitters.empty())
 	{
@@ -601,8 +606,7 @@ void FEditorParticleSystemWidget::DeleteModule(int32 EmitterIndex, int32 ModuleI
 	}
 
 	CaptureUndoSnapshot("Delete Particle Module");
-	LODLevel->Modules.erase(LODLevel->Modules.begin() + ModuleIndex);
-	Emitter->CacheEmitterModuleInfo();
+	LODLevel->RemoveModule(Module);
 	if (LODLevel->Modules.empty())
 	{
 		SelectEmitter(EmitterIndex);

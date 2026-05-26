@@ -10,6 +10,7 @@
 #include "GameFramework/World.h"
 #include "Math/Utils.h"
 #include "Particle/ParticleSystemComponent.h"
+#include "Particle/ParticleEvent.h"
 #include "Render/Renderer/Renderer.h"
 #include "Render/Resource/MeshBufferManager.h"
 #include "Render/Scene/PrimitiveDrawCommandBuilder.h"
@@ -546,6 +547,104 @@ bool RunParticleLODSmoke(FString& OutSummary)
     return true;
 }
 
+bool RunParticleEventDispatchSmoke(FString& OutSummary)
+{
+    UParticleSystemComponent* Component = UObjectManager::Get().CreateObject<UParticleSystemComponent>();
+    AParticleEventManager* Dispatcher = UObjectManager::Get().CreateObject<AParticleEventManager>();
+
+    auto Cleanup = [&]()
+    {
+        if (Component)
+        {
+            UObjectManager::Get().DestroyObject(Component);
+            Component = nullptr;
+        }
+        if (Dispatcher)
+        {
+            UObjectManager::Get().DestroyObject(Dispatcher);
+            Dispatcher = nullptr;
+        }
+    };
+
+    auto Fail = [&](const char* Message) -> bool
+    {
+        OutSummary = Message;
+        Cleanup();
+        return false;
+    };
+
+    if (!Component || !Dispatcher)
+    {
+        return Fail("failed to create particle event test objects");
+    }
+
+    int32 ComponentBroadcastCount = 0;
+    int32 DispatcherBroadcastCount = 0;
+    uint32 ComponentParticleId = 0;
+    uint32 DispatcherParticleId = 0;
+
+    Component->SetEventDispatcher(Dispatcher);
+    Component->OnParticleCollide.Add(
+        [&](const FParticleEventCollideData& EventData)
+        {
+            ++ComponentBroadcastCount;
+            ComponentParticleId = EventData.ParticleId;
+        });
+    Dispatcher->OnParticleCollide.Add(
+        [&](const FParticleEventCollideData& EventData)
+        {
+            ++DispatcherBroadcastCount;
+            DispatcherParticleId = EventData.ParticleId;
+        });
+
+    FParticleEventCollideData EventData;
+    EventData.Component = Component;
+    EventData.EmitterIndex = 3;
+    EventData.ParticleId = 77;
+    EventData.Location = FVector(1.0f, 2.0f, 3.0f);
+    EventData.Normal = FVector::UpVector;
+
+    Component->QueueCollisionEvent(EventData);
+    if (!Component->HasPendingCollisionEvents() || Component->GetPendingCollisionEvents().size() != 1)
+    {
+        return Fail("collision event was not queued on the component");
+    }
+    if (ComponentBroadcastCount != 0 || DispatcherBroadcastCount != 0)
+    {
+        return Fail("collision event was broadcast before dispatch");
+    }
+
+    Component->DispatchQueuedParticleEvents();
+    if (Component->HasPendingCollisionEvents())
+    {
+        return Fail("component collision queue was not cleared after dispatch");
+    }
+    if (!Dispatcher->GetCollisionEvents().empty())
+    {
+        return Fail("dispatcher queue was not cleared after broadcast");
+    }
+    if (ComponentBroadcastCount != 1 || ComponentParticleId != 77)
+    {
+        return Fail("component collision delegate did not receive the queued event");
+    }
+    if (DispatcherBroadcastCount != 1 || DispatcherParticleId != 77)
+    {
+        return Fail("event dispatcher delegate did not receive the queued event");
+    }
+
+    char Buffer[160];
+    snprintf(
+        Buffer,
+        sizeof(Buffer),
+        "queued=1, componentBroadcasts=%d, dispatcherBroadcasts=%d, particleId=%u",
+        ComponentBroadcastCount,
+        DispatcherBroadcastCount,
+        ComponentParticleId);
+    OutSummary = Buffer;
+    Cleanup();
+    return true;
+}
+
 } // namespace
 
 void FEditorMainPanel::RenderUndoHistoryPanel(float DeltaTime)
@@ -807,6 +906,28 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
                 else
                 {
                     EditorEngine->GetNotificationService().Warning("Particle LOD smoke test failed");
+                }
+            }
+        }
+
+        if (ImGui::Button("Run Particle Event Dispatch Smoke Test"))
+        {
+            FString Summary;
+            const bool bPassed = RunParticleEventDispatchSmoke(Summary);
+            FEditorConsoleWidget::AddLog(
+                "Particle event dispatch smoke test %s: %s\n",
+                bPassed ? "passed" : "failed",
+                Summary.c_str());
+
+            if (EditorEngine)
+            {
+                if (bPassed)
+                {
+                    EditorEngine->GetNotificationService().Info("Particle event dispatch smoke test passed");
+                }
+                else
+                {
+                    EditorEngine->GetNotificationService().Warning("Particle event dispatch smoke test failed");
                 }
             }
         }

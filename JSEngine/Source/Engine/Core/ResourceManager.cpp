@@ -84,6 +84,64 @@ namespace
 			 Class->IsChildOf(UParticleRendererProperties::StaticClass()));
 	}
 
+	bool ContainsParticleRuntimeSerializationToken(const std::string& SerializedText, FString& OutToken)
+	{
+		static constexpr const char* RuntimeTokens[] =
+		{
+			"FCompiledParticleLODData",
+			"FParticleEmitterInstance",
+			"FBaseParticle",
+			"FParticleDataContainer",
+			"FParticleEmitterRuntimeView",
+			"UParticleSystemComponent",
+			"ParticleData",
+			"ParticleIndices",
+			"ActiveParticles",
+			"EmitterInstances",
+			"PendingCollisionEvents",
+			"CurrentCompiledLOD"
+		};
+
+		for (const char* Token : RuntimeTokens)
+		{
+			if (Token && SerializedText.find(Token) != std::string::npos)
+			{
+				OutToken = Token;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool ValidateParticleSystemSerializedClasses(json::JSON& JsonData, FString& OutClassName)
+	{
+		if (!JsonData.hasKey("Objects") || JsonData["Objects"].JSONType() != json::JSON::Class::Array)
+		{
+			return true;
+		}
+
+		json::JSON& ObjectsJson = JsonData["Objects"];
+		for (int32 Index = 0; Index < static_cast<int32>(ObjectsJson.length()); ++Index)
+		{
+			json::JSON& ObjectNode = ObjectsJson.at(Index);
+			if (ObjectNode.JSONType() != json::JSON::Class::Object)
+			{
+				continue;
+			}
+
+			const FString ClassName = ObjectNode.hasKey("Class")
+				? ObjectNode["Class"].ToString()
+				: (ObjectNode.hasKey("Data") && ObjectNode["Data"].hasKey("Type") ? ObjectNode["Data"]["Type"].ToString() : FString());
+			UClass* Class = FReflectionRegistry::Get().FindClass(ClassName);
+			if (!IsParticleSystemGraphClass(Class))
+			{
+				OutClassName = ClassName;
+				return false;
+			}
+		}
+		return true;
+	}
+
 	class FParticleSystemObjectGraphResolver final : public IObjectReferenceResolver
 	{
 	public:
@@ -2050,7 +2108,27 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		std::istreambuf_iterator<char>()
 	);
 
+	FString RuntimeToken;
+	if (ContainsParticleRuntimeSerializationToken(JsonStr, RuntimeToken))
+	{
+		UE_LOG_ERROR(
+			"[ParticleSystemAssetSmoke] Runtime particle state was serialized: %s.",
+			RuntimeToken.c_str()
+		);
+		return false;
+	}
+
 	json::JSON JsonData = json::JSON::Load(JsonStr);
+	FString InvalidSerializedClass;
+	if (!ValidateParticleSystemSerializedClasses(JsonData, InvalidSerializedClass))
+	{
+		UE_LOG_ERROR(
+			"[ParticleSystemAssetSmoke] Non-asset particle class was serialized: %s.",
+			InvalidSerializedClass.c_str()
+		);
+		return false;
+	}
+
 	UParticleSystem* Loaded = LoadParticleSystemFromJson(JsonData, NormalizedPath);
 	if (!Loaded)
 	{

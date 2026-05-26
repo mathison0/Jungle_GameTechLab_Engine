@@ -200,20 +200,20 @@ void FEditorParticleSystemWidget::DrawEmitterDetails(UParticleEmitter* Emitter, 
 
 			auto CommitLODEdit = [&]()
 			{
+				UParticleLODLevel* EditedLODLevel = LODLevel;
 				Emitter->CacheEmitterModuleInfo();
+				auto It = std::find(Emitter->LODLevels.begin(), Emitter->LODLevels.end(), EditedLODLevel);
+				if (It != Emitter->LODLevels.end())
+				{
+					CurrentLOD = static_cast<int32>(std::distance(Emitter->LODLevels.begin(), It));
+				}
+				ClampSelectionToParticleSystem();
 				bDirty = true;
 				RefreshPreviewComponent(false);
 			};
 
-			BeginParticleDetailsRow("Level");
-			int32 EditedLevel = LODLevel->Level;
-			ImGui::SetNextItemWidth(-1.0f);
-			if (ImGui::DragInt("##LODLevel", &EditedLevel, 1.0f, 0, 1024))
-			{
-				CaptureLODEditUndo();
-				LODLevel->Level = std::max(0, EditedLevel);
-				CommitLODEdit();
-			}
+			BeginParticleDetailsRow("LOD Index");
+			ImGui::Text("%d", LODLevel->GetLevel());
 
 			BeginParticleDetailsRow("Enabled");
 			bool bEditedEnabled = LODLevel->bEnabled;

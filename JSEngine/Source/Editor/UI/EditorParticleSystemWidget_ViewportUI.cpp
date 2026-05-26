@@ -148,12 +148,12 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	DrawBackgroundColorPopup();
 
 	SameLineGap(7.0f);
-	if (ToolbarButton("LowestLOD", "Lowest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to lowest LOD"))
+	if (ToolbarButton("LowestLOD", "Farthest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to farthest / lowest quality LOD"))
 	{
 		SelectLowestLOD();
 	}
 	SameLineGap();
-	if (ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD"))
+	if (ToolbarButton("LowerLOD", "Farther LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to next farther / lower quality LOD"))
 	{
 		SelectLowerLOD();
 	}
@@ -162,7 +162,7 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 		"AddLODBeforeCurrent",
 		"Add LOD Before",
 		GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLODBeforeCurrent),
-		"Add LOD before current"))
+		"Add an LOD before the current distance slot"))
 	{
 		AddLODToSelectedEmitterAt(CurrentLOD);
 	}
@@ -171,7 +171,7 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 		"AddLODAfterCurrent",
 		"Add LOD After",
 		GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLODAfterCurrent),
-		"Add LOD after current"))
+		"Add an LOD after the current distance slot"))
 	{
 		AddLODToSelectedEmitterAt(CurrentLOD + 1);
 	}
@@ -190,12 +190,12 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	CurrentLOD = std::max(0, CurrentLOD);
 
 	SameLineGap();
-	if (ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD"))
+	if (ToolbarButton("HigherLOD", "Nearer LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to next nearer / higher quality LOD"))
 	{
 		SelectHigherLOD();
 	}
 	SameLineGap();
-	if (ToolbarButton("HighestLOD", "Highest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HighestLOD), "Switch to highest LOD"))
+	if (ToolbarButton("HighestLOD", "Nearest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HighestLOD), "Switch to nearest / highest quality LOD"))
 	{
 		CurrentLOD = 0;
 		ClampSelectionToParticleSystem();
