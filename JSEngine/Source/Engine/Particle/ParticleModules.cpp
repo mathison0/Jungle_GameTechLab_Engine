@@ -348,6 +348,8 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
             ? FVector::UpVector
             : Hit.Normal.GetSafeNormal();
 
+        constexpr float ParticleCollisionSkin = 0.01f;
+
         switch (AppliedResponse)
         {
         case EParticleCollisionResponse::Bounce:
@@ -361,11 +363,11 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
             {
                 Particle.Velocity = TangentVelocity * (1.0f - ClampedFriction) - NormalVelocity * ClampedRestitution;
             }
-            Particle.Location = Hit.Location + HitNormal * 0.1f;
+            Particle.Location = Hit.Location + HitNormal * ParticleCollisionSkin;
             break;
         }
         case EParticleCollisionResponse::Stop:
-            Particle.Location = Hit.Location + HitNormal * 0.1f;
+            Particle.Location = Hit.Location + HitNormal * ParticleCollisionSkin;
             Particle.Velocity = FVector::ZeroVector;
             break;
         case EParticleCollisionResponse::Ignore:

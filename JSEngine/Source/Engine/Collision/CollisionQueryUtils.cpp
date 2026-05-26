@@ -414,7 +414,8 @@ bool FCollisionQueryUtils::RaySphereSweep(const FVector& Start, const FVector& D
 	const FVector M = Start - Center;
 	const float B = FVector::DotProduct(M, Direction);
 	const float C = FVector::DotProduct(M, M) - Radius * Radius;
-	if (C <= 0.0f)
+	constexpr float InitialOverlapToleranceSq = 1.0e-6f;
+	if (C < -InitialOverlapToleranceSq)
 	{
 		OutDistance = 0.0f;
 		OutNormal = M.GetSafeNormal();
@@ -467,7 +468,8 @@ bool FCollisionQueryUtils::RayCapsuleEdgeSweep(const FVector& Start, const FVect
 	const float ACoef = FVector::DotProduct(N, N);
 	const float BCoef = 2.0f * FVector::DotProduct(Q, N);
 	const float CCoef = FVector::DotProduct(Q, Q) - Radius * Radius;
-	if (CCoef <= 0.0f && MEdge >= -1.0e-4f && MEdge <= 1.0001f)
+	constexpr float InitialOverlapToleranceSq = 1.0e-6f;
+	if (CCoef < -InitialOverlapToleranceSq && MEdge >= -1.0e-4f && MEdge <= 1.0001f)
 	{
 		OutDistance = 0.0f;
 		OutClosestPoint = A + Edge * std::clamp(MEdge, 0.0f, 1.0f);

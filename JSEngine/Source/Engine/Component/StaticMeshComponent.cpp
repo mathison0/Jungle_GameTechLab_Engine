@@ -358,7 +358,8 @@ bool UStaticMeshComponent::SweepMesh(const FVector& Start, const FVector& End, c
 
 		const FVector ClosestStartPoint = FCollisionQueryUtils::ClosestPointOnTriangle(Start, V0, V1, V2);
 		const FVector StartToTriangle = Start - ClosestStartPoint;
-		if (StartToTriangle.SizeSquared() <= Shape.Radius * Shape.Radius)
+		const float InitialOverlapRadius = std::max(0.0f, Shape.Radius - 1.0e-4f);
+		if (StartToTriangle.SizeSquared() < InitialOverlapRadius * InitialOverlapRadius)
 		{
 			FVector HitNormal = StartToTriangle.GetSafeNormal();
 			if (HitNormal.IsNearlyZero())
