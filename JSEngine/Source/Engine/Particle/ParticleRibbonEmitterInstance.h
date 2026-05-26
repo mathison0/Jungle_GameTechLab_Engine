@@ -29,7 +29,7 @@ private:
     FBaseParticle* GetParticleBySlot(int32 SlotIndex);
 
     // HeadIndices 재구성 — MaxTrailCount 변경 또는 첫 Tick 진입 시 호출.
-    // class URibbonTypeData* 를 forward declaration으로만 사용하고 .cpp에서 Cast 수행.
+    // Ribbon renderer properties를 .cpp에서 Cast 수행.
     void EnsureTrailState();
 
     // strip 정점 매 frame rebuild — silent bug λ 패턴 유지 (Mesh 와 동일).

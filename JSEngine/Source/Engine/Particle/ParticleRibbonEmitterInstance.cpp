@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "Particle/ParticleModuleTypeDataRibbon.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 
 namespace
@@ -57,15 +57,15 @@ FBaseParticle* FParticleRibbonEmitterInstance::GetParticleBySlot(int32 SlotIndex
 // input : None
 // output : HeadIndices.size() == MaxTrailCount, all entries -1, NextTrailIndex = 0
 //
-// 첫 Tick 진입 시 또는 HeadIndices 가 비어있을 때 호출. TypeData의 MaxTrailCount 가 frame 중 변하지 않는다고 가정.
+// 첫 Tick 진입 시 또는 HeadIndices 가 비어있을 때 호출. RendererProperties의 MaxTrailCount 가 frame 중 변하지 않는다고 가정.
 void FParticleRibbonEmitterInstance::EnsureTrailState()
 {
     int32 MaxTrails = 1;
     if (UParticleLODLevel* LOD = GetCurrentLODLevel())
     {
-        if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+        if (const UParticleRibbonRendererProperties* RibbonRenderer = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties()))
         {
-            MaxTrails = std::max(RibbonTD->GetMaxTrailCount(), 1);
+            MaxTrails = std::max(RibbonRenderer->GetMaxTrailCount(), 1);
         }
     }
 
@@ -92,13 +92,13 @@ void FParticleRibbonEmitterInstance::SpawnParticles(int32 Count, float StartTime
     const int32 OldActiveCount = ActiveParticles;
     FParticleEmitterInstance::SpawnParticles(Count, StartTime, Increment, InitialLocation, InitialVelocity, EventPayload);
 
-    // TypeData 재조회 (TangentSpawningScalar 사용).
-    const URibbonTypeData* RibbonTD = nullptr;
+    // RendererProperties 재조회 (TangentSpawningScalar 사용).
+    const UParticleRibbonRendererProperties* RibbonRenderer = nullptr;
     if (UParticleLODLevel* LOD = GetCurrentLODLevel())
     {
-        RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule());
+        RibbonRenderer = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties());
     }
-    const float TangentScalar = RibbonTD ? RibbonTD->GetTangentSpawningScalar() : 0.0f;
+    const float TangentScalar = RibbonRenderer ? RibbonRenderer->GetTangentSpawningScalar() : 0.0f;
     const int32 MaxTrails = std::max(static_cast<int32>(HeadIndices.size()), 1);
 
     // base 가 spawn 한 신규 particle range [OldActiveCount, ActiveParticles) — payload 초기화 + chain prepend.

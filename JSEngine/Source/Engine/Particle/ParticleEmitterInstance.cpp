@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystemComponent.h"
 
 FParticleEmitterInstance::~FParticleEmitterInstance()
@@ -38,11 +38,9 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 		MaxActiveParticles = 1;
 	}
 
-	// Cycle 10d: payload-aware stride가 container 내부에서 일관 적용되도록
-	// PayloadBytes 계산을 Allocate 호출 앞으로 이동. silent bug ξ 해소.
-	// USpriteTypeData::RequiredPayloadBytes() = 0 → Sprite 회귀 0.
-	const int32 PayloadBytes = (CurrentLODLevel && CurrentLODLevel->GetTypeDataModule())
-		? CurrentLODLevel->GetTypeDataModule()->RequiredPayloadBytes()
+	// RendererProperties owns type-specific payload requirements.
+	const int32 PayloadBytes = (CurrentLODLevel && CurrentLODLevel->GetEffectiveRendererProperties())
+		? CurrentLODLevel->GetEffectiveRendererProperties()->RequiredPayloadBytes()
 		: 0;
 	InstancePayloadSize = PayloadBytes;
 	PayloadOffset = ParticleSize;
@@ -230,7 +228,7 @@ FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
 
 	if (CurrentLODLevel)
     {
-        // TypeDataModule을 single source로, 없을 때 RequiredModule.RenderMode로 fallback.
+        // RendererProperties를 single source로, 없을 때 legacy TypeData/RequiredModule.RenderMode로 fallback.
         RuntimeView.RenderMode = CurrentLODLevel->GetEffectiveRenderMode();
     }
 
@@ -297,16 +295,16 @@ int32 FParticleEmitterInstance::ConsumeSpawnCount(float Rate, float DeltaTime)
     return SpawnCount;
 }
 
-// Function : Query payload byte requirement from current LOD's TypeDataModule
+// Function : Query payload byte requirement from current LOD's renderer properties
 // input : None
-// output : Bytes required by TypeData beyond FBaseParticle, or 0 when absent
+// output : Bytes required by renderer properties beyond FBaseParticle, or 0 when absent
 int32 FParticleEmitterInstance::GetRequiredPayloadBytes() const
 {
     if (CurrentLODLevel)
     {
-        if (const UParticleModuleTypeDataBase* TypeData = CurrentLODLevel->GetTypeDataModule())
+        if (const UParticleRendererProperties* RendererProperties = CurrentLODLevel->GetEffectiveRendererProperties())
         {
-            return TypeData->RequiredPayloadBytes();
+            return RendererProperties->RequiredPayloadBytes();
         }
     }
     return 0;
@@ -346,7 +344,7 @@ void FParticleEmitterInstance::BuildInstanceData()
 // Function : Expose Sprite instance buffer to Builder (base/Sprite path)
 // input : OutCount (out-param)
 // output : Pointer to first element + count, or nullptr/0 when empty
-// USpriteTypeData가 base instance 사용 (Cycle 8/9 결정) — base가 직접 Sprite buffer 노출.
+// Sprite renderer가 base instance 사용 — base가 직접 Sprite buffer 노출.
 const FSpriteParticleInstanceData* FParticleEmitterInstance::GetSpriteInstanceData(uint32& OutCount) const
 {
     OutCount = static_cast<uint32>(SpriteInstanceDataBuffer.size());

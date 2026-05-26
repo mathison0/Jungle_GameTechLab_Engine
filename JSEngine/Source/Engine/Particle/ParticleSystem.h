@@ -3,6 +3,7 @@
 #include "Object/Object.h"
 #include "Particle/ParticleModules.h"
 #include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleRendererProperties.h"
 
 UCLASS()
 class UParticleLODLevel : public UObject
@@ -13,6 +14,8 @@ public:
     void PostDuplicate(UObject* Original) override;
 	UParticleModuleRequired* EnsureRequiredModule();
     UParticleModuleSpawn* EnsureSpawnModule();
+	UParticleModuleTypeDataBase* EnsureTypeDataModule(EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite);
+	void SetTypeDataModule(UParticleModuleTypeDataBase* InTypeDataModule);
 
 	template <typename T>
     T* AddModule()
@@ -43,10 +46,14 @@ public:
 	const TArray<UParticleModule*>& GetUpdateModules() const { return UpdateModules; }
 	UParticleModuleTypeDataBase* GetTypeDataModule() const { return TypeDataModule; }
 
-	// Resolve effective render mode: TypeDataModule is single source of truth.
-	// Falls back to RequiredModule.RenderMode when TypeData is absent, then Sprite.
-	EParticleEmitterRenderMode GetEffectiveRenderMode() const;
+	UParticleRendererProperties* EnsureRendererProperties(EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite);
+    void SetRendererProperties(UParticleRendererProperties* InRendererProperties);
+    UParticleRendererProperties* GetRendererProperties() const { return RendererProperties; }
 
+	// Resolve effective render mode: RendererProperties is the current renderer/runtime policy.
+	// Falls back to legacy TypeDataModule, RequiredModule.RenderMode, then Sprite.
+    EParticleEmitterRenderMode GetEffectiveRenderMode() const;
+    UParticleRendererProperties* GetEffectiveRendererProperties() const;
 	UPROPERTY(DisplayName = "Level")
 	int32 Level = 0;
 
@@ -62,10 +69,13 @@ public:
 	UPROPERTY(DisplayName = "Modules")
 	TArray<UParticleModule*> Modules;
 
-	// silent bug ι 회피: UPROPERTY로 마크하지 않으면 .particlesystem 저장-로드 후 nullptr이 되어
-	// 모든 emitter가 Sprite로 fallback되는 silent regression이 발생한다.
+	// Legacy Cascade-style TypeData slot. Kept only so old .particlesystem files can load
+	// and migrate to RendererProperties.
 	UPROPERTY(DisplayName = "TypeData Module")
 	UParticleModuleTypeDataBase* TypeDataModule = nullptr;
+
+	UPROPERTY(DisplayName = "Renderer Properties")
+    UParticleRendererProperties* RendererProperties = nullptr;
 
 private:
 	UParticleModuleSpawn* SpawnModule = nullptr;
@@ -121,11 +131,11 @@ public:
 	void SetAssetPath(const FString& InAssetPath);
 	const FString& GetAssetPath() const { return AssetPath; }
     static UParticleSystem* CreateDefaultSpriteSystem();
-    // Cycle 11: detail panel 검증용 기본 mesh emitter system.
-    // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 UMeshTypeData (디폴트 Dice mesh).
+    // Detail panel 검증용 기본 mesh emitter system.
+    // CreateDefaultSpriteSystem과 동일 구조 + sprite renderer 대신 mesh renderer.
     static UParticleSystem* CreateDefaultMeshSystem();
-    // Cycle 12: detail panel 검증용 기본 ribbon emitter system.
-    // CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData 대신 URibbonTypeData (MaxTrailCount=1).
+    // Detail panel 검증용 기본 ribbon emitter system.
+    // CreateDefaultSpriteSystem과 동일 구조 + sprite renderer 대신 ribbon renderer.
     static UParticleSystem* CreateDefaultRibbonSystem();
 
 	UPROPERTY(DisplayName = "Asset Path")

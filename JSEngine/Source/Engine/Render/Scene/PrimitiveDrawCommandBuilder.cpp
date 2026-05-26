@@ -8,8 +8,7 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
-#include "Particle/ParticleModuleTypeDataMesh.h"
-#include "Particle/ParticleModuleTypeDataRibbon.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystemComponent.h" // particle 옮겨야함.
 
 
@@ -593,12 +592,13 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 continue;
             }
 
-            // RenderMode 결정 — TypeDataModule single source (Cycle 8 결정 κ).
+            // RenderMode 결정 — RendererProperties single source.
             UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
             if (!LOD)
             {
                 continue;
             }
+            UParticleRendererProperties* RendererProperties = LOD->GetEffectiveRendererProperties();
             const EParticleEmitterRenderMode RenderMode = LOD->GetEffectiveRenderMode();
 
             // Cmd 기본 필드 (generic, type 무관) 먼저 채움.
@@ -625,16 +625,16 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.MeshParticleInstances = Instance->GetMeshInstanceData(Count);
                 Cmd.MeshParticleInstanceCount = Count;
                 Cmd.VertexFactoryType = EVertexFactoryType::MeshParticle;
-                // Cycle 11 옵션 B: UMeshTypeData의 Mesh asset 조회 + MeshBuffer 세팅 + Material 세팅.
+                // Mesh renderer properties의 Mesh asset 조회 + MeshBuffer 세팅 + Material 세팅.
                 // PerObject CB는 Identity Model (instance VB가 World 합성 담당 — Sprite와 동일 원칙).
-                if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
+                if (const UParticleMeshRendererProperties* MeshRenderer = Cast<UParticleMeshRendererProperties>(RendererProperties))
                 {
-                    if (UStaticMesh* MeshAsset = MeshTD->GetMesh())
+                    if (UStaticMesh* MeshAsset = MeshRenderer->GetMesh())
                     {
                         Cmd.MeshBuffer = MeshBufferManager.GetStaticMeshBuffer(MeshAsset, 0);
                         Cmd.SectionIndexStart = 0;
                         Cmd.SectionIndexCount = Cmd.MeshBuffer ? Cmd.MeshBuffer->GetIndexBuffer().GetIndexCount() : 0;
-                        Cmd.Material = MeshTD->GetEffectiveMaterial();
+                        Cmd.Material = MeshRenderer->GetEffectiveMaterial();
                     }
                 }
                 bHasData = (Cmd.MeshParticleInstances != nullptr && Count > 0 && Cmd.MeshBuffer != nullptr);
@@ -643,9 +643,9 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.RibbonVertices = Instance->GetRibbonVertexData(Count);
                 Cmd.RibbonVertexCount = Count;
                 Cmd.VertexFactoryType = EVertexFactoryType::RibbonParticle;
-                if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+                if (const UParticleRibbonRendererProperties* RibbonRenderer = Cast<UParticleRibbonRendererProperties>(RendererProperties))
                 {
-                    Cmd.Material = RibbonTD->GetMaterial();
+                    Cmd.Material = RibbonRenderer->GetMaterial();
                 }
                 bHasData = (Cmd.RibbonVertices != nullptr && Count > 0);
                 break;

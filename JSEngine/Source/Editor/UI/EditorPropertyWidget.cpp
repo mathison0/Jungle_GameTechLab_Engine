@@ -8,8 +8,7 @@
 #include "Core/AssetPathPolicy.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SkeletalMeshComponent.h"
-#include "Particle/ParticleModuleTypeDataMesh.h"
-#include "Particle/ParticleModuleTypeDataRibbon.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
 #include "Component/BillboardComponent.h"
@@ -1564,8 +1563,8 @@ void FEditorPropertyWidget::RenderComponentProperties()
 			}
 		}
 
-		// Cycle 11: 각 mesh emitter의 material override를 직접 picker로 변경.
-		// 현재 Template 안의 모든 UMeshTypeData를 emitter 순서대로 노출 — 사용자가 emitter별로 다른 material 선택 가능.
+		// 각 mesh emitter의 material override를 직접 picker로 변경.
+		// 현재 Template 안의 모든 mesh renderer properties를 emitter 순서대로 노출 — 사용자가 emitter별로 다른 material 선택 가능.
 		// bOverrideMaterial=true로 강제 + OverrideMaterial 세팅. 다음 frame부터 Builder가 자동 반영.
 		if (UParticleSystem* MutableTemplate = const_cast<UParticleSystem*>(CurrentTemplate))
 		{
@@ -1578,24 +1577,24 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				UParticleEmitter* Emitter = Emitters[EmitterIdx];
 				if (!Emitter) continue;
 
-				UMeshTypeData* MeshTD = nullptr;
+				UParticleMeshRendererProperties* MeshRenderer = nullptr;
 				for (UParticleLODLevel* LOD : Emitter->LODLevels)
 				{
 					if (LOD)
 					{
-						if (UMeshTypeData* Found = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
+						if (UParticleMeshRendererProperties* Found = Cast<UParticleMeshRendererProperties>(LOD->GetEffectiveRendererProperties()))
 						{
-							MeshTD = Found;
+							MeshRenderer = Found;
 							break;
 						}
 					}
 				}
-				if (!MeshTD) continue;
+				if (!MeshRenderer) continue;
 
 				ImGui::Spacing();
 				ImGui::PushID(EmitterIdx);
 
-				UMaterialInterface* Current = MeshTD->GetEffectiveMaterial();
+				UMaterialInterface* Current = MeshRenderer->GetEffectiveMaterial();
 				const FString CurrentLabel = Current
 					? (Current->GetFilePath().empty() ? Current->GetName() : FPaths::Normalize(Current->GetFilePath()))
 					: FString("None");
@@ -1608,7 +1607,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				{
 					if (ImGui::Selectable("None", Current == nullptr))
 					{
-						MeshTD->SetOverrideMaterial(false, nullptr);
+						MeshRenderer->SetOverrideMaterial(false, nullptr);
 					}
 					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNames.size()); ++MatIdx)
 					{
@@ -1621,7 +1620,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 						{
 							if (UMaterialInterface* Picked = AssetService.ResolveMaterialInterfaceByIndex(MatIdx))
 							{
-								MeshTD->SetOverrideMaterial(true, Picked);
+								MeshRenderer->SetOverrideMaterial(true, Picked);
 							}
 						}
 						if (bSelected)
@@ -1636,8 +1635,8 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				ImGui::PopID();
 			}
 		}
-		// Cycle 12: 각 Ribbon emitter 의 Material + TypeData 파라미터를 detail panel 에 노출.
-		// Mesh picker 블록과 평행 구조 — emitter 순서대로 URibbonTypeData 찾아 UI 렌더.
+		// 각 Ribbon emitter 의 Material + renderer 파라미터를 detail panel 에 노출.
+		// Mesh picker 블록과 평행 구조 — emitter 순서대로 ribbon renderer properties 찾아 UI 렌더.
 		if (UParticleSystem* MutableTemplateRibbon = const_cast<UParticleSystem*>(CurrentTemplate))
 		{
 			FEditorAssetService& AssetServiceRibbon = EditorEngine->GetAssetService();
@@ -1647,25 +1646,25 @@ void FEditorPropertyWidget::RenderComponentProperties()
 			{
 				UParticleEmitter* Emitter = EmittersRibbon[EmitterIdx];
 				if (!Emitter) continue;
-				URibbonTypeData* RibbonTD = nullptr;
+				UParticleRibbonRendererProperties* RibbonRenderer = nullptr;
 				for (UParticleLODLevel* LOD : Emitter->LODLevels)
 				{
 					if (LOD)
 					{
-						if (URibbonTypeData* Found = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+						if (UParticleRibbonRendererProperties* Found = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties()))
 						{
-							RibbonTD = Found;
+							RibbonRenderer = Found;
 							break;
 						}
 					}
 				}
-				if (!RibbonTD) continue;
+				if (!RibbonRenderer) continue;
 				ImGui::Spacing();
 				ImGui::PushID(EmitterIdx + 0x10000); // Mesh PushID 와 충돌 회피
 				char SectionLabel[128];
 				snprintf(SectionLabel, sizeof(SectionLabel), "Emitter %d - Ribbon Settings", EmitterIdx);
 				ImGui::TextUnformatted(SectionLabel);
-				UMaterialInterface* Current = RibbonTD->GetMaterial();
+				UMaterialInterface* Current = RibbonRenderer->GetMaterial();
 				const FString CurrentLabel = Current
 					? (Current->GetFilePath().empty() ? Current->GetName() : FPaths::Normalize(Current->GetFilePath()))
 					: FString("None");
@@ -1675,7 +1674,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				{
 					if (ImGui::Selectable("None", Current == nullptr))
 					{
-						RibbonTD->SetMaterial(nullptr);
+						RibbonRenderer->SetMaterial(nullptr);
 					}
 					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNamesRibbon.size()); ++MatIdx)
 					{
@@ -1688,7 +1687,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 						{
 							if (UMaterialInterface* Picked = AssetServiceRibbon.ResolveMaterialInterfaceByIndex(MatIdx))
 							{
-								RibbonTD->SetMaterial(Picked);
+								RibbonRenderer->SetMaterial(Picked);
 							}
 						}
 						if (bSelected)
@@ -1702,23 +1701,23 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				// DragInt / DragFloat 는 label 이 입력칸 오른쪽에 inline 표시 — width 를 절반으로 제한해 label 공간 확보.
 				const float DragItemWidth = ImGui::GetContentRegionAvail().x * 0.5f;
 
-				int32 MaxTrails = RibbonTD->GetMaxTrailCount();
+				int32 MaxTrails = RibbonRenderer->GetMaxTrailCount();
 				ImGui::SetNextItemWidth(DragItemWidth);
 				if (ImGui::DragInt("Max Trail Count", &MaxTrails, 1.0f, 1, 64))
 				{
-					RibbonTD->SetMaxTrailCount(MaxTrails);
+					RibbonRenderer->SetMaxTrailCount(MaxTrails);
 				}
-				int32 MaxInTrail = RibbonTD->GetMaxParticleInTrailCount();
+				int32 MaxInTrail = RibbonRenderer->GetMaxParticleInTrailCount();
 				ImGui::SetNextItemWidth(DragItemWidth);
 				if (ImGui::DragInt("Max Particle In Trail", &MaxInTrail, 1.0f, 1, 1024))
 				{
-					RibbonTD->SetMaxParticleInTrailCount(MaxInTrail);
+					RibbonRenderer->SetMaxParticleInTrailCount(MaxInTrail);
 				}
-				float TangentScalar = RibbonTD->GetTangentSpawningScalar();
+				float TangentScalar = RibbonRenderer->GetTangentSpawningScalar();
 				ImGui::SetNextItemWidth(DragItemWidth);
 				if (ImGui::DragFloat("Tangent Spawning Scalar", &TangentScalar, 0.01f, 0.0f, 10.0f))
 				{
-					RibbonTD->SetTangentSpawningScalar(TangentScalar);
+					RibbonRenderer->SetTangentSpawningScalar(TangentScalar);
 				}
 				ImGui::PopID();
 			}
@@ -2160,7 +2159,7 @@ bool FEditorPropertyWidget::RenderObjectPtrWidget(const FProperty& Property, voi
 	}
 
 	// Cycle 11: UStaticMesh asset picker — bMaterialAsset 블록과 평행 구조.
-	// UMeshTypeData::Mesh 등 raw UStaticMesh* with ReferenceKind=Asset에 사용.
+	// UParticleMeshRendererProperties::Mesh 등 raw UStaticMesh* with ReferenceKind=Asset에 사용.
 	// path 식별자는 UStaticMesh::GetAssetPathFileName() — UStaticMeshComponent와 동일 기준.
 	if (bStaticMeshAsset && EditorEngine)
 	{

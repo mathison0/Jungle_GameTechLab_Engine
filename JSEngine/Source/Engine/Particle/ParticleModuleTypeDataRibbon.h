@@ -1,10 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleRibbonTypes.h"
 #include "Render/Resource/Material.h"
 
-// Ribbon emitter용 TypeData (Cycle 12, 결정 6 옵션 A + 결정 8 옵션 A).
+// Legacy ribbon TypeData. New assets should use UParticleRibbonRendererProperties.
 // RequiredPayloadBytes()가 sizeof(FRibbonParticlePayload)를 반환 — container Stride에 자동 가산.
 // CreateInstance()가 FParticleRibbonEmitterInstance를 반환해 SpawnParticles/KillParticle/Tick override가 작동한다.
 //

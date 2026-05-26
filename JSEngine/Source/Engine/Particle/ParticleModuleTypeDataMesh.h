@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "Engine/Asset/StaticMesh.h"
 #include "Particle/ParticleMeshTypes.h"
 #include "Particle/ParticleModuleTypeData.h"
 #include "Render/Resource/Material.h"
 
-// Mesh emitter용 TypeData (Cycle 11, 옵션 B).
+// Legacy mesh TypeData. New assets should use UParticleMeshRendererProperties.
 // RequiredPayloadBytes()가 sizeof(FMeshRotationPayload)를 반환 — container Stride에 자동 가산 (Cycle 10d 의 ξ 해소 실측).
 // CreateInstance()가 FParticleMeshEmitterInstance를 반환해 BuildInstanceData/SpawnParticles override가 작동한다.
 UCLASS()

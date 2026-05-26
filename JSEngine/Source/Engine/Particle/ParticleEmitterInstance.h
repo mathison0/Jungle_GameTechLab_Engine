@@ -29,7 +29,7 @@ public:
                                 const FVector& InitialVelocity, struct FParticleEventInstancePayload* EventPayload = nullptr);
     virtual void KillParticle(int32 Index);
 
-    // TypeData payload byte 수 조회 helper. TypeDataModule 부재 시 0.
+    // RendererProperties payload byte 수 조회 helper. RendererProperties 부재 시 0.
     // Init에서 ParticleStride 계산에 사용. 향후 Ribbon/Beam이 override 가능성 있으나 본 cycle은 default.
     virtual int32 GetRequiredPayloadBytes() const;
 
@@ -39,7 +39,7 @@ public:
     virtual void BuildInstanceData();
 
     // Cycle 10c 계층 분리: type별 명시 getter 4종 — Builder가 RenderMode로 switch해 적절한 getter 호출.
-    // base 구현 = Sprite만 실제 buffer 노출 (USpriteTypeData가 base instance 사용 — Cycle 8/9 결정).
+    // base 구현 = Sprite만 실제 buffer 노출 (sprite renderer가 base instance 사용).
     // 다른 3개는 nullptr 반환. Mesh/Ribbon/Beam derived가 Cycle 11+에서 자기 메서드 override.
     // 사용자 결정 2: void* 사용 금지 (type-safe), Visitor 금지.
     virtual const FSpriteParticleInstanceData* GetSpriteInstanceData(uint32& OutCount) const;

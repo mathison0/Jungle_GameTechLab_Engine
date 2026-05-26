@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Particle/ParticleModule.h"
 #include "Particle/ParticleTypes.h"
@@ -6,9 +6,8 @@
 struct FParticleEmitterInstance;
 class UParticleSystemComponent;
 
-// TypeData base — emitter type (Sprite/Mesh/Beam/Ribbon) 분기의 single source.
-// UParticleLODLevel::TypeDataModule 슬롯에 캐싱되며, LODLevel::CacheModuleLists() 에서
-// Modules 배열을 순회하면서 Cast<UParticleModuleTypeDataBase>로 자동 추출된다.
+// Legacy Cascade-style TypeData. New runtime/render policy lives in UParticleRendererProperties.
+// Kept for old .particlesystem load compatibility and migration.
 UCLASS()
 class UParticleModuleTypeDataBase : public UParticleModule
 {
@@ -19,16 +18,19 @@ public:
 	// 기본 0 (Sprite는 추가 payload 없음). Mesh/Ribbon/Beam이 override.
 	virtual int32 RequiredPayloadBytes() const { return 0; }
 
-	// 이 TypeData가 표현하는 emitter render mode.
-	virtual EParticleEmitterRenderMode GetRenderMode() const { return EParticleEmitterRenderMode::Sprite; }
+	virtual EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
+	void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 	// emitter runtime instance 생성 hook. 기본은 base FParticleEmitterInstance 반환.
 	// Mesh/Ribbon/Beam은 파생 instance를 반환하도록 override.
 	virtual FParticleEmitterInstance* CreateInstance(UParticleSystemComponent* Component, int32 EmitterIndex) const;
+
+private:
+	UPROPERTY(DisplayName = "Render Mode", NoEdit)
+	EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
 };
 
-// Sprite emitter용 TypeData. RequiredPayloadBytes() = 0 보장이 회귀 안전의 핵심.
-// 기본 Sprite asset도 이 TypeData를 LODLevel.Modules에 포함시켜 TypeData 시스템 안으로 편입한다.
+// Legacy sprite TypeData. New assets should use UParticleSpriteRendererProperties.
 UCLASS()
 class USpriteTypeData : public UParticleModuleTypeDataBase
 {

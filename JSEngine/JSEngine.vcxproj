@@ -464,6 +464,10 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleMeshRendererProperties.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleRendererProperties.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleRibbonRendererProperties.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleSpriteRendererProperties.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystem.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystemComponent.gen.cpp" />
@@ -917,6 +921,7 @@
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataRibbon.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleRendererProperties.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleRibbonEmitterInstance.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystemComponent.cpp" />
@@ -1317,6 +1322,7 @@
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataRibbon.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModules.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleRendererProperties.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleRibbonEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleRibbonTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />

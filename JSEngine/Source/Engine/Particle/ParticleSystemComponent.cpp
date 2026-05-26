@@ -3,7 +3,7 @@
 #include "Camera/ViewportCamera.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
-#include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleRendererProperties.h"
 
 #include <cstring>
 
@@ -60,18 +60,17 @@ void UParticleSystemComponent::RecreateEmitterInstances()
 	for (int32 Index = 0; Index < static_cast<int32>(Emitters.size()); ++Index)
 	{
 		UParticleEmitter* EmitterAsset = Emitters[Index];
-		// TypeDataModule이 캐싱되어 있도록 보장. Init 내부에서도 다시 호출되지만 idempotent.
+		// RendererProperties가 캐싱/마이그레이션되어 있도록 보장. Init 내부에서도 다시 호출되지만 idempotent.
 		// 명시 호출 이유: LOD0 조회를 Instance 생성 전에 해야 하므로, asset 측 캐시가 stale이면 silent fallback 위험.
 		if (EmitterAsset)
 		{
 			EmitterAsset->CacheEmitterModuleInfo();
 		}
 		UParticleLODLevel* LOD0 = EmitterAsset ? EmitterAsset->GetLODLevel(0) : nullptr;
-		UParticleModuleTypeDataBase* TypeData = LOD0 ? LOD0->GetTypeDataModule() : nullptr;
-		// TypeData가 있으면 type별 derived instance 생성 hook 사용. 없으면 base FParticleEmitterInstance.
-		// USpriteTypeData::CreateInstance() = new FParticleEmitterInstance() 이므로 Sprite path 회귀 0.
-		FParticleEmitterInstance* Instance = TypeData
-			? TypeData->CreateInstance(this, Index)
+		UParticleRendererProperties* RendererProperties = LOD0 ? LOD0->GetEffectiveRendererProperties() : nullptr;
+		// RendererProperties가 있으면 render type별 derived instance 생성 hook 사용. 없으면 sprite-style base instance.
+		FParticleEmitterInstance* Instance = RendererProperties
+			? RendererProperties->CreateInstance(this, Index)
 			: new FParticleEmitterInstance();
 		Instance->Init(EmitterAsset, this, Index);
 		EmitterInstances.push_back(Instance);

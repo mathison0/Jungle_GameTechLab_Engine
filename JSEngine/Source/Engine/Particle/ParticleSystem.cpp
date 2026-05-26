@@ -1,14 +1,77 @@
 ﻿#include "Particle/ParticleSystem.h"
 
 #include "Core/Paths.h"
-#include "Particle/ParticleModuleTypeData.h"
-
 #include <algorithm>
 
 #include "Core/ResourceManager.h"
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
+
+namespace
+{
+	UParticleRendererProperties* CreateRendererPropertiesForMode(EParticleEmitterRenderMode RenderMode)
+	{
+		switch (RenderMode)
+		{
+		case EParticleEmitterRenderMode::Sprite:
+			return UObjectManager::Get().CreateObject<UParticleSpriteRendererProperties>();
+		case EParticleEmitterRenderMode::Mesh:
+			return UObjectManager::Get().CreateObject<UParticleMeshRendererProperties>();
+		case EParticleEmitterRenderMode::Ribbon:
+			return UObjectManager::Get().CreateObject<UParticleRibbonRendererProperties>();
+		case EParticleEmitterRenderMode::Beam:
+		default:
+		{
+			UParticleRendererProperties* Renderer = UObjectManager::Get().CreateObject<UParticleRendererProperties>();
+			if (Renderer)
+			{
+				Renderer->SetRenderMode(RenderMode);
+			}
+			return Renderer;
+		}
+		}
+	}
+
+	UParticleRendererProperties* CreateRendererPropertiesFromLegacyTypeData(UParticleModuleTypeDataBase* LegacyTypeData)
+	{
+		if (!LegacyTypeData)
+		{
+			return nullptr;
+		}
+
+		if (UMeshTypeData* MeshTypeData = Cast<UMeshTypeData>(LegacyTypeData))
+		{
+			UParticleMeshRendererProperties* MeshRenderer = UObjectManager::Get().CreateObject<UParticleMeshRendererProperties>();
+			if (MeshRenderer)
+			{
+				MeshRenderer->SetMesh(MeshTypeData->GetMesh());
+				if (UMaterialInterface* Material = MeshTypeData->GetEffectiveMaterial())
+				{
+					MeshRenderer->SetOverrideMaterial(true, Material);
+				}
+			}
+			return MeshRenderer;
+		}
+
+		if (URibbonTypeData* RibbonTypeData = Cast<URibbonTypeData>(LegacyTypeData))
+		{
+			UParticleRibbonRendererProperties* RibbonRenderer = UObjectManager::Get().CreateObject<UParticleRibbonRendererProperties>();
+			if (RibbonRenderer)
+			{
+				RibbonRenderer->SetMaxTrailCount(RibbonTypeData->GetMaxTrailCount());
+				RibbonRenderer->SetMaxParticleInTrailCount(RibbonTypeData->GetMaxParticleInTrailCount());
+				RibbonRenderer->SetSheetsPerTrail(RibbonTypeData->GetSheetsPerTrail());
+				RibbonRenderer->SetTangentSpawningScalar(RibbonTypeData->GetTangentSpawningScalar());
+				RibbonRenderer->SetMaterial(RibbonTypeData->GetMaterial());
+			}
+			return RibbonRenderer;
+		}
+
+		return CreateRendererPropertiesForMode(LegacyTypeData->GetRenderMode());
+	}
+}
+
 UParticleLODLevel::~UParticleLODLevel()
 {
     ClearModules();
@@ -26,6 +89,7 @@ void UParticleLODLevel::PostDuplicate(UObject* Original)
     SpawnModules.clear();
     UpdateModules.clear();
     TypeDataModule = nullptr;
+	RendererProperties = nullptr;
 
     if (!SourceLOD)
     {
@@ -37,6 +101,14 @@ void UParticleLODLevel::PostDuplicate(UObject* Original)
         RequiredModule = Cast<UParticleModuleRequired>(SourceLOD->RequiredModule->Duplicate());
     }
 
+	if (SourceLOD->TypeDataModule)
+	{
+		TypeDataModule = Cast<UParticleModuleTypeDataBase>(SourceLOD->TypeDataModule->Duplicate());
+	}
+    if (SourceLOD->RendererProperties)
+    {
+        RendererProperties = Cast<UParticleRendererProperties>(SourceLOD->RendererProperties->Duplicate());
+    }
     for (UParticleModule* SourceModule : SourceLOD->Modules)
     {
         UParticleModule* DuplicatedModule = SourceModule ?
@@ -70,10 +142,90 @@ UParticleModuleSpawn* UParticleLODLevel::EnsureSpawnModule()
     return AddModule<UParticleModuleSpawn>();
 }
 
+UParticleModuleTypeDataBase* UParticleLODLevel::EnsureTypeDataModule(EParticleEmitterRenderMode RenderMode)
+{
+	const bool bNeedsSpriteTypeData = RenderMode == EParticleEmitterRenderMode::Sprite && !Cast<USpriteTypeData>(TypeDataModule);
+	const bool bNeedsGenericTypeData = RenderMode != EParticleEmitterRenderMode::Sprite && Cast<USpriteTypeData>(TypeDataModule);
+	if (TypeDataModule && (bNeedsSpriteTypeData || bNeedsGenericTypeData))
+	{
+		auto It = std::find(Modules.begin(), Modules.end(), TypeDataModule);
+		if (It != Modules.end())
+		{
+			Modules.erase(It);
+		}
+		UObjectManager::Get().DestroyObject(TypeDataModule);
+		TypeDataModule = nullptr;
+	}
+
+	if (!TypeDataModule)
+	{
+		TypeDataModule = (RenderMode == EParticleEmitterRenderMode::Sprite)
+			? UObjectManager::Get().CreateObject<USpriteTypeData>()
+			: UObjectManager::Get().CreateObject<UParticleModuleTypeDataBase>();
+	}
+
+	if (TypeDataModule)
+	{
+		TypeDataModule->SetRenderMode(RenderMode);
+	}
+	CacheModuleLists();
+	return TypeDataModule;
+}
+
+void UParticleLODLevel::SetTypeDataModule(UParticleModuleTypeDataBase* InTypeDataModule)
+{
+	if (TypeDataModule == InTypeDataModule)
+	{
+		auto It = std::find(Modules.begin(), Modules.end(), InTypeDataModule);
+		if (It != Modules.end())
+		{
+			Modules.erase(It);
+		}
+		CacheModuleLists();
+		return;
+	}
+
+	if (TypeDataModule)
+	{
+		auto It = std::find(Modules.begin(), Modules.end(), TypeDataModule);
+		if (It != Modules.end())
+		{
+			Modules.erase(It);
+		}
+		UObjectManager::Get().DestroyObject(TypeDataModule);
+	}
+
+	TypeDataModule = InTypeDataModule;
+	auto It = std::find(Modules.begin(), Modules.end(), TypeDataModule);
+	if (It != Modules.end())
+	{
+		Modules.erase(It);
+	}
+	if (!RendererProperties && TypeDataModule)
+	{
+		RendererProperties = CreateRendererPropertiesFromLegacyTypeData(TypeDataModule);
+	}
+	CacheModuleLists();
+}
+
 void UParticleLODLevel::RemoveModule(UParticleModule* Module)
 {
     if (!Module)
         return;
+	if (TypeDataModule == Module)
+	{
+		auto It = std::find(Modules.begin(), Modules.end(), Module);
+		if (It != Modules.end())
+		{
+			Modules.erase(It);
+		}
+
+		UObjectManager::Get().DestroyObject(TypeDataModule);
+		TypeDataModule = nullptr;
+		CacheModuleLists();
+		return;
+	}
+
     for (auto It = Modules.begin(); It != Modules.end(); It++)
     {
         if (*It == Module)
@@ -95,15 +247,26 @@ void UParticleLODLevel::RemoveModule(UParticleModule* Module)
 
 void UParticleLODLevel::ClearModules()
 {
+	UParticleModuleTypeDataBase* DestroyedTypeData = TypeDataModule;
     if (RequiredModule)
     {
         UObjectManager::Get().DestroyObject(RequiredModule);
         RequiredModule = nullptr;
     }
 
+	if (TypeDataModule)
+	{
+		UObjectManager::Get().DestroyObject(TypeDataModule);
+		TypeDataModule = nullptr;
+	}
+    if (RendererProperties)
+    {
+        UObjectManager::Get().DestroyObject(RendererProperties);
+        RendererProperties = nullptr;
+    }
 	for (UParticleModule* Module : Modules)
     {
-        if (Module)
+        if (Module && Module != DestroyedTypeData)
             UObjectManager::Get().DestroyObject(Module);
     }
     Modules.clear();
@@ -144,13 +307,14 @@ bool UParticleLODLevel::Validate(TArray<FString>* OutErrors) const
 
 // Function : Build cached spawn and update module lists for this LOD level
 // input : None
-// output : SpawnModule, SpawnModules, UpdateModules, and TypeDataModule are refreshed from enabled modules
+// output : SpawnModule, SpawnModules, and UpdateModules are refreshed; legacy TypeData entries are migrated out of Modules
 void UParticleLODLevel::CacheModuleLists()
 {
 	SpawnModule = nullptr;
 	SpawnModules.clear();
 	UpdateModules.clear();
-	TypeDataModule = nullptr;
+	TArray<UParticleModule*> RuntimeModules;
+	RuntimeModules.reserve(Modules.size());
 
 	if (RequiredModule && RequiredModule->IsEnabled())
 	{
@@ -159,18 +323,31 @@ void UParticleLODLevel::CacheModuleLists()
 
 	for (UParticleModule* Module : Modules)
 	{
-		if (!Module || !Module->IsEnabled())
+		if (!Module)
 		{
 			continue;
 		}
 
-		// TypeData는 실행 모듈이 아니라 emitter runtime/render policy 슬롯으로만 캐싱한다.
-		// USpriteTypeData도 여기로 잡혀 LODLevel.TypeDataModule에 들어간다 → 회귀 안전 핵심.
 		if (UParticleModuleTypeDataBase* CandidateTypeData = Cast<UParticleModuleTypeDataBase>(Module))
 		{
-			TypeDataModule = CandidateTypeData;
+			if (!TypeDataModule)
+			{
+				TypeDataModule = CandidateTypeData;
+			}
+			else if (TypeDataModule != CandidateTypeData)
+			{
+				UObjectManager::Get().DestroyObject(CandidateTypeData);
+			}
 			continue;
 		}
+
+		if (!Module->IsEnabled())
+		{
+			RuntimeModules.push_back(Module);
+			continue;
+		}
+
+		RuntimeModules.push_back(Module);
 
 		if (UParticleModuleSpawn* CandidateSpawn = Cast<UParticleModuleSpawn>(Module))
 		{
@@ -187,22 +364,75 @@ void UParticleLODLevel::CacheModuleLists()
 			UpdateModules.push_back(Module);
 		}
 	}
+
+	if (RuntimeModules.size() != Modules.size())
+	{
+		Modules = RuntimeModules;
+	}
+	if (!RendererProperties && TypeDataModule)
+	{
+		RendererProperties = CreateRendererPropertiesFromLegacyTypeData(TypeDataModule);
+	}
 }
 
-// Function : Resolve effective render mode with TypeData precedence and Required fallback
+// Function : Resolve effective render mode from the renderer/runtime policy slot
 // input : None
-// output : TypeDataModule->GetRenderMode() when present, RequiredModule->GetRenderMode() fallback, Sprite default
+// output : RendererProperties->GetRenderMode() when present, legacy TypeDataModule/RequiredModule fallback, Sprite default
 EParticleEmitterRenderMode UParticleLODLevel::GetEffectiveRenderMode() const
 {
-	if (TypeDataModule)
-	{
-		return TypeDataModule->GetRenderMode();
-	}
-	if (RequiredModule)
-	{
-		return RequiredModule->GetRenderMode();
-	}
-	return EParticleEmitterRenderMode::Sprite;
+    if (RendererProperties)
+    {
+        return RendererProperties->GetRenderMode();
+    }
+    if (TypeDataModule)
+    {
+        return TypeDataModule->GetRenderMode();
+    }
+    if (RequiredModule)
+    {
+        return RequiredModule->GetRenderMode();
+    }
+    return EParticleEmitterRenderMode::Sprite;
+}
+
+UParticleRendererProperties* UParticleLODLevel::GetEffectiveRendererProperties() const
+{
+    if (!RendererProperties && TypeDataModule)
+    {
+        UParticleLODLevel* MutableThis = const_cast<UParticleLODLevel*>(this);
+        MutableThis->RendererProperties = CreateRendererPropertiesFromLegacyTypeData(TypeDataModule);
+    }
+    return RendererProperties;
+}
+
+UParticleRendererProperties* UParticleLODLevel::EnsureRendererProperties(EParticleEmitterRenderMode RenderMode)
+{
+    if (RendererProperties && RendererProperties->GetRenderMode() == RenderMode)
+    {
+        return RendererProperties;
+    }
+
+    if (RendererProperties)
+    {
+        UObjectManager::Get().DestroyObject(RendererProperties);
+        RendererProperties = nullptr;
+    }
+
+	RendererProperties = CreateRendererPropertiesForMode(RenderMode);
+    return RendererProperties;
+}
+
+void UParticleLODLevel::SetRendererProperties(UParticleRendererProperties* InRendererProperties)
+{
+    if (RendererProperties == InRendererProperties)
+    {
+        return;
+    }
+    if (RendererProperties)
+    {
+        UObjectManager::Get().DestroyObject(RendererProperties);
+    }
+    RendererProperties = InRendererProperties;
 }
 
 UParticleEmitter::~UParticleEmitter()
@@ -520,10 +750,10 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
     {
         UObjectManager::Get().DestroyObject(System);
         return nullptr;
-    }
+	}
 
 	LODLevel->EnsureRequiredModule();
-    LODLevel->AddModule<USpriteTypeData>();
+	LODLevel->EnsureRendererProperties(EParticleEmitterRenderMode::Sprite);
     LODLevel->EnsureSpawnModule();
     LODLevel->AddModule<UParticleModuleLifetime>();
     LODLevel->AddModule<UParticleModuleLocation>();
@@ -538,9 +768,9 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
 
 // Function : Create default Mesh emitter particle system for detail-panel verification
 // input : None
-// output : New UParticleSystem with single emitter + UMeshTypeData using Dice mesh asset
+// output : New UParticleSystem with single emitter + mesh renderer properties using demo mesh asset
 //
-// Cycle 11: CreateDefaultSpriteSystem과 동일 구조 + USpriteTypeData → UMeshTypeData 교체.
+// CreateDefaultSpriteSystem과 동일 구조 + sprite renderer → mesh renderer 교체.
 // Mesh asset은 기존 StaticMeshComponent 디폴트와 동일 (Asset/Mesh/Dice/Dice.obj) — 코드베이스에 존재 보장.
 UParticleSystem* UParticleSystem::CreateDefaultMeshSystem()
 {
@@ -564,14 +794,14 @@ UParticleSystem* UParticleSystem::CreateDefaultMeshSystem()
 
     LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
 
-    // UMeshTypeData에 디폴트 mesh + override material.
+    // Mesh renderer properties에 디폴트 mesh + override material.
     // apple_mid.obj 사용 이유:
     //   1. Dice.obj는 vt 4개 (cube corner)만 보유 — 6면 모두 동일 UV (0~1) → 텍스처 전체가 각 면에 반복 표시,
     //      UV mapping이 작동하는지 시각 검증 불가능.
     //   2. apple_mid.obj는 vt 1432개 — 제대로 펼친 UV. apple_mid_Mat_0.mat에 BaseColor 텍스처 보유.
     // GetOrCreateMaterial은 빈 material 생성만 함 — DiffuseMap 등 params 채우려면 DeserializeMaterial 필수.
-    UMeshTypeData* MeshTypeData = UObjectManager::Get().CreateObject<UMeshTypeData>();
-    MeshTypeData->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
+    UParticleMeshRendererProperties* MeshRenderer = UObjectManager::Get().CreateObject<UParticleMeshRendererProperties>();
+    MeshRenderer->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
     const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.mat";
     FResourceManager::Get().DeserializeMaterial(DemoMatPath);
     UMaterial* DemoMaterial = FResourceManager::Get().GetMaterial(DemoMatPath);
@@ -581,9 +811,9 @@ UParticleSystem* UParticleSystem::CreateDefaultMeshSystem()
     }
     if (DemoMaterial)
     {
-        MeshTypeData->SetOverrideMaterial(true, DemoMaterial);
+        MeshRenderer->SetOverrideMaterial(true, DemoMaterial);
     }
-    LODLevel->Modules.push_back(MeshTypeData);
+    LODLevel->SetRendererProperties(MeshRenderer);
 
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());
@@ -600,10 +830,10 @@ UParticleSystem* UParticleSystem::CreateDefaultMeshSystem()
 
 // Function : Create default Ribbon emitter particle system for detail-panel verification
 // input : None
-// output : New UParticleSystem with single emitter + URibbonTypeData (MaxTrailCount=1)
+// output : New UParticleSystem with single emitter + ribbon renderer properties (MaxTrailCount=1)
 //
-// Cycle 12: CreateDefaultMeshSystem과 동일 구조 + UMeshTypeData → URibbonTypeData.
-// MaxTrailCount=1 + MaxParticleInTrail=64 (TypeData 기본값). Material 은 nullptr 시작 — 사용자가
+// CreateDefaultMeshSystem과 동일 구조 + mesh renderer → ribbon renderer.
+// MaxTrailCount=1 + MaxParticleInTrail=64. Material 은 nullptr 시작 — 사용자가
 // emitter detail panel 의 picker 로 선택. RenderRibbonEmitter 가 Material/Texture nullptr 시 default white SRV fallback.
 UParticleSystem* UParticleSystem::CreateDefaultRibbonSystem()
 {
@@ -627,10 +857,9 @@ UParticleSystem* UParticleSystem::CreateDefaultRibbonSystem()
 
     LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
 
-    // URibbonTypeData — TypeData 기본값 그대로 (MaxTrailCount=1, MaxParticleInTrail=64).
+    // Ribbon renderer properties — 기본값 그대로 (MaxTrailCount=1, MaxParticleInTrail=64).
     // Material 은 사용자가 detail panel 에서 선택 — 본 시점은 nullptr.
-    URibbonTypeData* RibbonTypeData = UObjectManager::Get().CreateObject<URibbonTypeData>();
-    LODLevel->Modules.push_back(RibbonTypeData);
+    LODLevel->SetRendererProperties(UObjectManager::Get().CreateObject<UParticleRibbonRendererProperties>());
 
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleSpawn>());
     LODLevel->Modules.push_back(UObjectManager::Get().CreateObject<UParticleModuleLifetime>());

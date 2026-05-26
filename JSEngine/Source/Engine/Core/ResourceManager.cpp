@@ -70,7 +70,8 @@ namespace
 			(Object->IsA(UParticleSystem::StaticClass()) ||
 			 Object->IsA(UParticleEmitter::StaticClass()) ||
 			 Object->IsA(UParticleLODLevel::StaticClass()) ||
-			 Object->IsA(UParticleModule::StaticClass()));
+			 Object->IsA(UParticleModule::StaticClass()) ||
+			 Object->IsA(UParticleRendererProperties::StaticClass()));
 	}
 
 	bool IsParticleSystemGraphClass(UClass* Class)
@@ -79,7 +80,8 @@ namespace
 			(Class->IsChildOf(UParticleSystem::StaticClass()) ||
 			 Class->IsChildOf(UParticleEmitter::StaticClass()) ||
 			 Class->IsChildOf(UParticleLODLevel::StaticClass()) ||
-			 Class->IsChildOf(UParticleModule::StaticClass()));
+			 Class->IsChildOf(UParticleModule::StaticClass()) ||
+			 Class->IsChildOf(UParticleRendererProperties::StaticClass()));
 	}
 
 	class FParticleSystemObjectGraphResolver final : public IObjectReferenceResolver
@@ -2126,6 +2128,17 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		if (LODLevel->GetUpdateModules().empty())
 		{
 			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Update module cache is empty after load.");
+			bPassed = false;
+		}
+
+		if (!LODLevel->GetEffectiveRendererProperties())
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing renderer properties after load.");
+			bPassed = false;
+		}
+		else if (LODLevel->GetEffectiveRenderMode() != EParticleEmitterRenderMode::Sprite)
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Expected sprite renderer after load.");
 			bPassed = false;
 		}
 	}
