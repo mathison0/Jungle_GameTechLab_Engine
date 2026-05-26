@@ -11,7 +11,25 @@ void FEditorParticleSystemWidget::Initialize(UEditorEngine* InEditorEngine)
 
 void FEditorParticleSystemWidget::Shutdown()
 {
+	TArray<UParticleSystem*> AssetsToRelease;
+	if (ParticleSystemAsset)
+	{
+		AssetsToRelease.push_back(ParticleSystemAsset);
+	}
+	for (const auto& [Path, State] : ParticleDocumentStates)
+	{
+		if (State.Asset && std::find(AssetsToRelease.begin(), AssetsToRelease.end(), State.Asset) == AssetsToRelease.end())
+		{
+			AssetsToRelease.push_back(State.Asset);
+		}
+	}
+
 	ShutdownPreviewViewport();
+	for (UParticleSystem* Asset : AssetsToRelease)
+	{
+		DestroyUncachedParticleSystem(Asset);
+	}
+	ParticleSystemAsset = nullptr;
 	ParticleDocumentStates.clear();
 	for (TComPtr<ID3D11ShaderResourceView>& Icon : CascadeToolbarIcons)
 	{
@@ -41,6 +59,18 @@ bool FEditorParticleSystemWidget::Save()
 	}
 
 	ParticleSystemAsset->CacheEmitterModuleInfo();
+
+	TArray<FString> Errors;
+	if (!ParticleSystemAsset->Validate(&Errors))
+	{
+		if (EditorEngine)
+		{
+			const FString Message = Errors.empty() ? FString("Particle system validation failed.") : Errors.front();
+			EditorEngine->GetNotificationService().Warning(Message);
+		}
+		return false;
+	}
+
 	if (!FResourceManager::Get().SaveParticleSystem(ParticleSystemAsset, DocumentPath))
 	{
 		if (EditorEngine)
@@ -137,12 +167,24 @@ bool FEditorParticleSystemWidget::Redo()
 
 void FEditorParticleSystemWidget::CloseDocument(const FString& InDocumentPath)
 {
-	ParticleDocumentStates.erase(InDocumentPath);
+	UParticleSystem* AssetToRelease = nullptr;
+	auto StateIt = ParticleDocumentStates.find(InDocumentPath);
+	if (StateIt != ParticleDocumentStates.end())
+	{
+		AssetToRelease = StateIt->second.Asset;
+		ParticleDocumentStates.erase(StateIt);
+	}
+
 	if (DocumentPath == InDocumentPath)
 	{
+		if (!AssetToRelease)
+		{
+			AssetToRelease = ParticleSystemAsset;
+		}
 		ClearActiveDocumentState();
 		DocumentPath.clear();
 	}
+	DestroyUncachedParticleSystem(AssetToRelease);
 }
 
 void FEditorParticleSystemWidget::OpenParticleSystem(const FString& InDocumentPath)
@@ -278,6 +320,24 @@ void FEditorParticleSystemWidget::ClearActiveDocumentState()
 	bEmitterNameEditUndoCaptured = false;
 }
 
+void FEditorParticleSystemWidget::DestroyUncachedParticleSystem(UParticleSystem*& Asset)
+{
+	if (!Asset)
+	{
+		return;
+	}
+
+	const FString AssetPath = Asset->GetAssetPath();
+	if (!AssetPath.empty() && FResourceManager::Get().FindParticleSystem(AssetPath) == Asset)
+	{
+		Asset = nullptr;
+		return;
+	}
+
+	UObjectManager::Get().DestroyObject(Asset);
+	Asset = nullptr;
+}
+
 void FEditorParticleSystemWidget::CaptureUndoSnapshot(const char* Label)
 {
 	if (bRestoringParticleSnapshot)
@@ -308,6 +368,7 @@ bool FEditorParticleSystemWidget::RestoreParticleSnapshot(
 	int32 InSelectedEmitterIndex,
 	int32 InSelectedModuleIndex)
 {
+	UParticleSystem* PreviousAsset = ParticleSystemAsset;
 	UParticleSystem* RestoredAsset = nullptr;
 	if (!Snapshot.empty())
 	{
@@ -319,6 +380,7 @@ bool FEditorParticleSystemWidget::RestoreParticleSnapshot(
 	}
 
 	ParticleSystemAsset = RestoredAsset;
+	DestroyUncachedParticleSystem(PreviousAsset);
 	CurrentLOD = std::max(0, InCurrentLOD);
 	SelectedEmitterIndex = InSelectedEmitterIndex;
 	SelectedModuleIndex = InSelectedModuleIndex;

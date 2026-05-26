@@ -546,6 +546,9 @@
     <ClCompile Include="Intermediate\Reflection\GameFramework\APlayerStart.gen.cpp">
       <Filter>Intermediate\Reflection\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\GameFramework\AParticleSystemActor.gen.cpp">
+      <Filter>Intermediate\Reflection\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\GameFramework\APointLightActor.gen.cpp">
       <Filter>Intermediate\Reflection\GameFramework</Filter>
     </ClCompile>

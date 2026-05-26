@@ -429,6 +429,7 @@
     <ClCompile Include="Intermediate\Reflection\GameFramework\APawn.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\APlayerController.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\APlayerStart.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\GameFramework\AParticleSystemActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\APointLightActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\ASceneActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\ASkeletalMeshActor.gen.cpp" />

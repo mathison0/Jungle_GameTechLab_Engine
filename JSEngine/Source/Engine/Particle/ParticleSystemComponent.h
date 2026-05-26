@@ -11,7 +11,7 @@ class UParticleSystemComponent : public UPrimitiveComponent
 public:
 	GENERATED_BODY(UParticleSystemComponent, UPrimitiveComponent)
 
-	UParticleSystemComponent() = default;
+	UParticleSystemComponent();
 	~UParticleSystemComponent() override;
 
 	void SetTemplate(UParticleSystem* InTemplate);

@@ -907,6 +907,12 @@ void FResourceManager::ReleaseGPUResources()
 	}
 	SkeletalMeshMap.clear();
 
+	for (auto& [Path, ParticleSystem] : ParticleSystemMap)
+	{
+		UObjectManager::Get().DestroyObject(ParticleSystem);
+	}
+	ParticleSystemMap.clear();
+
 	DefaultWhiteTexture.Reset();
 	CachedDevice.Reset();
 }
@@ -1908,6 +1914,11 @@ UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)
 		return nullptr;
 	}
 
+	if (UParticleSystem* CachedAsset = FindParticleSystem(NormalizedPath))
+	{
+		return CachedAsset;
+	}
+
 	const std::filesystem::path FilePath =
 		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
 
@@ -1928,8 +1939,16 @@ UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)
 	if (Asset)
 	{
 		Asset->SetAssetPath(NormalizedPath);
+		ParticleSystemMap[NormalizedPath] = Asset;
 	}
 	return Asset;
+}
+
+UParticleSystem* FResourceManager::FindParticleSystem(const FString& Path) const
+{
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	auto It = ParticleSystemMap.find(NormalizedPath);
+	return It != ParticleSystemMap.end() ? It->second : nullptr;
 }
 
 bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString& Path)
@@ -2014,12 +2033,29 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		return false;
 	}
 
-	UParticleSystem* Loaded = LoadParticleSystem(NormalizedPath);
+	const std::filesystem::path LoadFilePath =
+		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
+
+	std::ifstream In(LoadFilePath);
+	if (!In.is_open())
+	{
+		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Failed to open saved asset: %s", NormalizedPath.c_str());
+		return false;
+	}
+
+	const std::string JsonStr(
+		(std::istreambuf_iterator<char>(In)),
+		std::istreambuf_iterator<char>()
+	);
+
+	json::JSON JsonData = json::JSON::Load(JsonStr);
+	UParticleSystem* Loaded = LoadParticleSystemFromJson(JsonData, NormalizedPath);
 	if (!Loaded)
 	{
 		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Load failed: %s", NormalizedPath.c_str());
 		return false;
 	}
+	Loaded->SetAssetPath(NormalizedPath);
 
 	Loaded->CacheEmitterModuleInfo();
 
