@@ -634,6 +634,23 @@ namespace
 		}
 	}
 
+	void DrawMiniEmitterRenderToggle(ImDrawList* DrawList, const ImVec2& Min, bool bEnabled)
+	{
+		const ImVec2 Max(Min.x + 13.0f, Min.y + 13.0f);
+		DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(bEnabled ? ImVec4(0.52f, 0.57f, 0.60f, 1.0f) : ImVec4(0.42f, 0.18f, 0.18f, 1.0f)));
+		DrawList->AddRect(Min, Max, ImGui::GetColorU32(ImVec4(0.02f, 0.02f, 0.02f, 1.0f)));
+		if (bEnabled)
+		{
+			DrawList->AddLine(ImVec2(Min.x + 3.0f, Min.y + 7.0f), ImVec2(Min.x + 6.0f, Min.y + 10.0f), ImGui::GetColorU32(ImVec4(0.01f, 0.01f, 0.01f, 1.0f)), 1.4f);
+			DrawList->AddLine(ImVec2(Min.x + 6.0f, Min.y + 10.0f), ImVec2(Min.x + 11.0f, Min.y + 3.0f), ImGui::GetColorU32(ImVec4(0.01f, 0.01f, 0.01f, 1.0f)), 1.4f);
+		}
+		else
+		{
+			DrawList->AddLine(ImVec2(Min.x + 3.0f, Min.y + 3.0f), ImVec2(Min.x + 10.0f, Min.y + 10.0f), ImGui::GetColorU32(ImVec4(0.98f, 0.95f, 0.95f, 1.0f)), 1.5f);
+			DrawList->AddLine(ImVec2(Min.x + 10.0f, Min.y + 3.0f), ImVec2(Min.x + 3.0f, Min.y + 10.0f), ImGui::GetColorU32(ImVec4(0.98f, 0.95f, 0.95f, 1.0f)), 1.5f);
+		}
+	}
+
 	void DrawMiniCurveIcon(ImDrawList* DrawList, const ImVec2& Min, bool bEnabled)
 	{
 		const ImVec2 Max(Min.x + 13.0f, Min.y + 13.0f);

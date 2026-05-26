@@ -808,10 +808,7 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 
 	ImGui::InvisibleButton("##EmitterHeader", ImVec2(ColumnWidth, HeaderHeight));
 	const bool bHeaderHovered = ImGui::IsItemHovered();
-	if (ImGui::IsItemClicked())
-	{
-		SelectEmitter(EmitterIndex);
-	}
+	const bool bHeaderClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
 	if (bHeaderHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 	{
 		SelectEmitter(EmitterIndex);
@@ -820,8 +817,36 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 
 	const ImVec2 HeaderMin = ImGui::GetItemRectMin();
 	const ImVec2 HeaderMax = ImGui::GetItemRectMax();
-	const bool bHeaderSelected = SelectedEmitterIndex == EmitterIndex && SelectedModuleIndex == NoParticleModuleSelection;
 	const FString EmitterName = GetEmitterDisplayName(Emitter, EmitterIndex);
+	const float ControlsY = HeaderMin.y + 31.0f;
+	const ImVec2 ToggleMin(HeaderMin.x + 10.0f, ControlsY);
+	const ImVec2 ToggleMax(ToggleMin.x + 13.0f, ToggleMin.y + 13.0f);
+	const bool bToggleClicked =
+		bHeaderClicked &&
+		ImGui::GetIO().MousePos.x >= ToggleMin.x &&
+		ImGui::GetIO().MousePos.x <= ToggleMax.x &&
+		ImGui::GetIO().MousePos.y >= ToggleMin.y &&
+		ImGui::GetIO().MousePos.y <= ToggleMax.y;
+	if (bToggleClicked && LODLevel)
+	{
+		CaptureUndoSnapshot(LODLevel->IsEnabled() ? "Disable Emitter" : "Enable Emitter");
+		LODLevel->bEnabled = !LODLevel->bEnabled;
+		if (Emitter)
+		{
+			Emitter->CacheEmitterModuleInfo();
+		}
+		if (ParticleSystemAsset)
+		{
+			ParticleSystemAsset->CacheEmitterModuleInfo();
+		}
+		bDirty = true;
+		RefreshPreviewComponent(true);
+	}
+	else if (bHeaderClicked)
+	{
+		SelectEmitter(EmitterIndex);
+	}
+	const bool bHeaderSelected = SelectedEmitterIndex == EmitterIndex && SelectedModuleIndex == NoParticleModuleSelection;
 	bool bShowEmitterInsertMarker = false;
 	float EmitterInsertMarkerX = HeaderMin.x;
 	if (bHeaderSelected && ImGui::BeginDragDropSource())
@@ -880,20 +905,7 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 
 	DrawList->AddText(ImVec2(HeaderMin.x + 10.0f, HeaderMin.y + 8.0f), ImGui::GetColorU32(ImVec4(0.88f, 0.90f, 0.94f, 1.0f)), EmitterName.c_str());
 
-	const float ControlsY = HeaderMin.y + 31.0f;
-	DrawMiniCheck(DrawList, ImVec2(HeaderMin.x + 10.0f, ControlsY), LODLevel ? LODLevel->IsEnabled() : true);
-	DrawList->AddRectFilled(ImVec2(HeaderMin.x + 30.0f, ControlsY), ImVec2(HeaderMin.x + 43.0f, ControlsY + 13.0f), ImGui::GetColorU32(ImVec4(0.72f, 0.78f, 0.24f, 1.0f)));
-	DrawList->AddText(ImVec2(HeaderMin.x + 33.0f, ControlsY - 1.0f), ImGui::GetColorU32(ImVec4(0.03f, 0.04f, 0.03f, 1.0f)), "S");
-	DrawList->AddRectFilled(ImVec2(HeaderMin.x + 50.0f, ControlsY), ImVec2(HeaderMin.x + 63.0f, ControlsY + 13.0f), ImGui::GetColorU32(ImVec4(0.47f, 0.59f, 0.66f, 1.0f)));
-	DrawList->AddText(ImVec2(HeaderMin.x + 53.0f, ControlsY - 1.0f), ImGui::GetColorU32(ImVec4(0.03f, 0.04f, 0.05f, 1.0f)), "U");
-
-	const int32 MaxParticles = Emitter ? Emitter->GetMaxActiveParticleCount() : 0;
-	char CountBuffer[32] = {};
-	std::snprintf(CountBuffer, sizeof(CountBuffer), "%d", MaxParticles);
-	const ImVec2 CountSize = ImGui::CalcTextSize(CountBuffer);
-	DrawList->AddText(ImVec2(HeaderMin.x + 102.0f - CountSize.x, ControlsY - 1.0f), ImGui::GetColorU32(ImVec4(0.88f, 0.90f, 0.94f, 1.0f)), CountBuffer);
-
-	DrawEmitterThumbnail(DrawList, ImVec2(HeaderMax.x - 58.0f, HeaderMin.y + 7.0f), ImVec2(HeaderMax.x - 7.0f, HeaderMax.y - 7.0f), EmitterIndex);
+	DrawMiniEmitterRenderToggle(DrawList, ToggleMin, LODLevel ? LODLevel->IsEnabled() : true);
 
 	if (LODLevel)
 	{
@@ -981,21 +993,59 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	ImGui::PushID(bRequired ? -1000 : ModuleIndex);
 	ImGui::InvisibleButton("##ModuleRow", ImVec2(ColumnWidth, RowHeight));
 	const bool bHovered = ImGui::IsItemHovered();
-	if (ImGui::IsItemClicked())
-	{
-		SelectModule(EmitterIndex, ModuleIndex);
-	}
+	const bool bLeftClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
 	if (bHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 	{
 		SelectModule(EmitterIndex, ModuleIndex);
 		OpenEmitterContextMenu(EmitterIndex, ModuleIndex);
 	}
 
-	const bool bSelected = SelectedEmitterIndex == EmitterIndex && SelectedModuleIndex == ModuleIndex;
 	const ImVec2 Min = ImGui::GetItemRectMin();
 	const ImVec2 Max = ImGui::GetItemRectMax();
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 	const FString ModuleName = GetModuleDisplayName(Module, bRequired);
+	const bool bHasModuleToggle = Module && !Cast<UParticleModuleTypeDataBase>(Module);
+	const ImVec2 ToggleMin(Max.x - 38.0f, Min.y + 5.0f);
+	const ImVec2 ToggleMax(ToggleMin.x + 13.0f, ToggleMin.y + 13.0f);
+	const ImVec2 MousePos = ImGui::GetIO().MousePos;
+	const bool bToggleClicked =
+		bLeftClicked &&
+		bHasModuleToggle &&
+		MousePos.x >= ToggleMin.x && MousePos.x <= ToggleMax.x &&
+		MousePos.y >= ToggleMin.y && MousePos.y <= ToggleMax.y;
+
+	if (bToggleClicked)
+	{
+		CaptureUndoSnapshot(Module->IsEnabled() ? "Disable Particle Module" : "Enable Particle Module");
+		Module->SetEnabled(!Module->IsEnabled());
+
+		UParticleEmitter* OwnerEmitter = nullptr;
+		if (ParticleSystemAsset && EmitterIndex >= 0 && EmitterIndex < static_cast<int32>(ParticleSystemAsset->Emitters.size()))
+		{
+			OwnerEmitter = ParticleSystemAsset->Emitters[EmitterIndex];
+		}
+		if (UParticleLODLevel* LODLevel = GetEmitterLODLevel(OwnerEmitter))
+		{
+			LODLevel->CacheModuleLists();
+		}
+		if (OwnerEmitter)
+		{
+			OwnerEmitter->CacheEmitterModuleInfo();
+		}
+		if (ParticleSystemAsset)
+		{
+			ParticleSystemAsset->CacheEmitterModuleInfo();
+		}
+
+		bDirty = true;
+		RefreshPreviewComponent(true);
+	}
+	else if (bLeftClicked)
+	{
+		SelectModule(EmitterIndex, ModuleIndex);
+	}
+
+	const bool bSelected = SelectedEmitterIndex == EmitterIndex && SelectedModuleIndex == ModuleIndex;
 	bool bShowModuleInsertMarker = false;
 	float ModuleInsertMarkerY = Min.y;
 	if (!bRequired && bSelected && ImGui::BeginDragDropSource())
@@ -1060,9 +1110,9 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	}
 
 	DrawList->AddText(ImVec2(Min.x + 10.0f, Min.y + 4.0f), ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), ModuleName.c_str());
-	if (!Cast<UParticleModuleTypeDataBase>(Module))
+	if (bHasModuleToggle)
 	{
-		DrawMiniCheck(DrawList, ImVec2(Max.x - 38.0f, Min.y + 5.0f), Module ? Module->IsEnabled() : true);
+		DrawMiniCheck(DrawList, ToggleMin, Module ? Module->IsEnabled() : true);
 		DrawMiniCurveIcon(DrawList, ImVec2(Max.x - 19.0f, Min.y + 5.0f), IsCurveDrivenModule(Module));
 	}
 

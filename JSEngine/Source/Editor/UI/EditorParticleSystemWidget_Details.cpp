@@ -295,7 +295,7 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
 	const float LabelWidth = std::clamp(AvailableWidth * 0.38f, 128.0f, 190.0f);
 
-	auto DrawPropertyTable = [&](const char* TableId, const char* CategoryFilter, bool bIncludeUncategorized) -> int32
+	auto DrawPropertyTable = [&](const char* TableId, const char* CategoryFilter, bool bIncludeUncategorized, bool bIncludeAllCategories = false) -> int32
 	{
 		int32 RenderedPropertyCount = 0;
 		ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(4.0f, 3.0f));
@@ -313,7 +313,8 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 				const bool bHasCategory = Property->Category && Property->Category[0] != '\0';
 				const bool bCategoryMatch = CategoryFilter && bHasCategory && std::strcmp(Property->Category, CategoryFilter) == 0;
 				const bool bUncategorizedMatch = bIncludeUncategorized && !bHasCategory;
-				if (!bCategoryMatch && !bUncategorizedMatch)
+				const bool bAllCategoryMatch = bIncludeAllCategories && !CategoryFilter;
+				if (!bAllCategoryMatch && !bCategoryMatch && !bUncategorizedMatch)
 				{
 					continue;
 				}
@@ -353,7 +354,7 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	}
 	else
 	{
-		RenderedPropertyCount = DrawPropertyTable("##ParticleModuleDetailsTable", nullptr, true);
+		RenderedPropertyCount = DrawPropertyTable("##ParticleModuleDetailsTable", nullptr, true, true);
 	}
 
 	if (RenderedPropertyCount == 0)

@@ -114,8 +114,6 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 
 	SameLineGap(21.0f);
 	ToolbarButton("RestartSim", "Restart Sim", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartSim), "Restart simulation");
-	SameLineGap();
-	ToolbarButton("RestartLevel", "Restart Level", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartLevel), "Restart preview level");
 
 	SameLineGap(7.0f);
 	ImGui::BeginDisabled(!CanUndo());
@@ -133,11 +131,6 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	ImGui::EndDisabled();
 
 	SameLineGap(7.0f);
-	if (ToolbarButton("Thumbnail", "Thumbnail", GetCascadeToolbarIcon(ECascadeToolbarIcon::Thumbnail), "Toggle thumbnail preview", bShowThumbnail))
-	{
-		bShowThumbnail = !bShowThumbnail;
-	}
-	SameLineGap();
 	if (ToolbarButton("Bounds", "Bounds", GetCascadeToolbarIcon(ECascadeToolbarIcon::Bounds), "Toggle bounds", bShowBounds))
 	{
 		SetPreviewBoundsVisible(!bShowBounds);
@@ -155,10 +148,6 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	DrawBackgroundColorPopup();
 
 	SameLineGap(7.0f);
-	ToolbarButton("RegenLOD", "Regen LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::RegenLOD), "Regenerate LOD");
-	SameLineGap();
-	ToolbarButton("LowestLOD", "Lowest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to lowest LOD");
-	SameLineGap();
 	ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD");
 	SameLineGap();
 	ToolbarButton(
@@ -182,25 +171,10 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	ImGui::PopStyleVar(2);
 	CurrentLOD = std::max(0, CurrentLOD);
 
-	ID3D11ShaderResourceView* HigherLODIcon = GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD);
-	ID3D11ShaderResourceView* HighestLODIcon = GetCascadeToolbarIcon(ECascadeToolbarIcon::HighestLOD);
-	ID3D11ShaderResourceView* DeleteLODIcon = GetCascadeToolbarIcon(ECascadeToolbarIcon::DeleteLOD);
-	const float LODButtonGroupWidth =
-		CalcToolbarButtonSize("Higher LOD", HigherLODIcon).x +
-		4.0f +
-		CalcToolbarButtonSize("Highest LOD", HighestLODIcon).x +
-		4.0f +
-		CalcToolbarButtonSize("Delete LOD", DeleteLODIcon).x;
-	const float ContentMaxX = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
-	const float GapToLODButtonGroup = ContentMaxX - ToolbarSidePadding - LODButtonGroupWidth - ImGui::GetItemRectMax().x;
-	SameLineGap(std::max(4.0f, GapToLODButtonGroup));
-	ToolbarButton("HigherLOD", "Higher LOD", HigherLODIcon, "Switch to higher LOD");
 	SameLineGap();
-	ToolbarButton("HighestLOD", "Highest LOD", HighestLODIcon, "Switch to highest LOD");
+	ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD");
 	SameLineGap();
-	ToolbarButton("DeleteLOD", "Delete LOD", DeleteLODIcon, "Delete current LOD");
-	SameLineGap(0.0f);
-	ImGui::Dummy(ImVec2(ToolbarSidePadding, ToolbarControlHeight));
+	ToolbarButton("DeleteLOD", "Delete LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::DeleteLOD), "Delete current LOD");
 }
 
 void FEditorParticleSystemWidget::DrawBackgroundColorPopup()
@@ -495,13 +469,6 @@ void FEditorParticleSystemWidget::DrawViewportMenuBar(const ImVec2& CanvasMin)
 
 	if (BeginParticlePopup("##ParticlePreviewViewPopup"))
 	{
-		ImGui::BeginDisabled();
-		char SearchBuffer[1] = {};
-		ImGui::SetNextItemWidth(170.0f);
-		ImGui::InputText("##ParticlePreviewViewSearch", SearchBuffer, sizeof(SearchBuffer), ImGuiInputTextFlags_ReadOnly);
-		ImGui::EndDisabled();
-		ImGui::Separator();
-
 		if (bPreviewViewportInitialized && BeginParticleMenu("View Modes"))
 		{
 			DrawViewportModeItem("Wireframe", EViewMode::Wireframe, PreviewViewport);

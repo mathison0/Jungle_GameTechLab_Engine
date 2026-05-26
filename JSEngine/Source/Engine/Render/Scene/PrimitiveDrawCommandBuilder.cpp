@@ -596,7 +596,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
             // RenderMode 결정 — TypeDataModule single source (Cycle 8 결정 κ).
             UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
-            if (!LOD)
+            if (!LOD || !LOD->IsEnabled())
             {
                 continue;
             }
