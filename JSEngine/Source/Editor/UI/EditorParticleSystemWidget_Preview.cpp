@@ -120,6 +120,7 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 
 	if (ParticleSystemAsset)
 	{
+		SyncParticleDistributionRuntimeDataToAsset();
 		ParticleSystemAsset->CacheEmitterModuleInfo();
 	}
 

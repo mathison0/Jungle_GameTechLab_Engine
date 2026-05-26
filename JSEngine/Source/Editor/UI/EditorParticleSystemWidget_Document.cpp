@@ -131,6 +131,7 @@ bool FEditorParticleSystemWidget::Save()
 		return false;
 	}
 
+	SyncParticleDistributionRuntimeDataToAsset();
 	ParticleSystemAsset->CacheEmitterModuleInfo();
 
 	TArray<FString> Errors;

@@ -1010,6 +1010,20 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 	const FString ModuleName = GetModuleDisplayName(Module, bRequired);
 	const bool bHasModuleToggle = Module && !bRequired && !Cast<UParticleModuleTypeDataBase>(Module);
+	bool bHasModuleCurves = false;
+	if (Module && !bRequired && Module->GetClass())
+	{
+		TArray<const FProperty*> Properties;
+		Module->GetClass()->GetAllProperties(Properties);
+		for (const FProperty* Property : Properties)
+		{
+			if (Property && IsParticleDistributionProperty(Module, *Property))
+			{
+				bHasModuleCurves = true;
+				break;
+			}
+		}
+	}
 	const ImVec2 ToggleMin(Max.x - 38.0f, Min.y + 5.0f);
 	const ImVec2 ToggleMax(ToggleMin.x + 13.0f, ToggleMin.y + 13.0f);
 	const ImVec2 CurveMin(Max.x - 19.0f, Min.y + 5.0f);
@@ -1022,7 +1036,7 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 		MousePos.y >= ToggleMin.y && MousePos.y <= ToggleMax.y;
 	const bool bCurveClicked =
 		bLeftClicked &&
-		bHasModuleToggle &&
+		bHasModuleCurves &&
 		MousePos.x >= CurveMin.x && MousePos.x <= CurveMax.x &&
 		MousePos.y >= CurveMin.y && MousePos.y <= CurveMax.y;
 
@@ -1130,7 +1144,10 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	if (bHasModuleToggle)
 	{
 		DrawMiniCheck(DrawList, ToggleMin, Module ? Module->IsEnabled() : true);
-		DrawMiniCurveIcon(DrawList, CurveMin, true);
+		if (bHasModuleCurves)
+		{
+			DrawMiniCurveIcon(DrawList, CurveMin, true);
+		}
 	}
 
 	ImGui::PopID();

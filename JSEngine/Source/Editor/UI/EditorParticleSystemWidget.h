@@ -182,6 +182,7 @@ private:
 	FString MakeParticleDistributionCurveKey(UParticleModule* Module, const FProperty& Property, const char* ChannelName) const;
 	FString MakeParticleModuleCurveKey(UParticleModule* Module) const;
 	FFloatCurve& GetOrCreateParticleDistributionCurve(UParticleModule* Module, const FProperty& Property, const char* ChannelName, float InitialValue);
+	void SyncParticleDistributionRuntimeDataToAsset();
 	void OpenParticleModuleCurves(int32 EmitterIndex, int32 ModuleIndex);
 	void NotifyParticleModulePropertyChanged(UParticleModule* Module, UParticleEmitter* OwnerEmitter, const FProperty& Property);
 	void DrawCurveEditorPanel(const ImVec2& Size);
