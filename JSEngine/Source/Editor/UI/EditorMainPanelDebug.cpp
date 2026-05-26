@@ -9,6 +9,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Math/Utils.h"
+#include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleSystemComponent.h"
 #include "Render/Renderer/Renderer.h"
 #include "Render/Resource/MeshBufferManager.h"
@@ -167,23 +168,25 @@ bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& Out
         return false;
     }
 
-    ParticleComponent->BuildInstanceData();
-
+    // Cycle 15a Phase 5: BuildInstanceData() 삭제됨 — CreateDynamicData() 가 대체.
+    // 디버그 통계 의도: sprite instance build 결과 검증. 새 path 는 emitter active count 로 대체.
     uint32 SpriteInstanceCount = 0;
     for (int32 EmitterIndex = 0; EmitterIndex < EmitterInstanceCount; ++EmitterIndex)
     {
-        const FParticleEmitterInstance* Instance = ParticleComponent->GetEmitterInstance(EmitterIndex);
+        FParticleEmitterInstance* Instance = ParticleComponent->GetEmitterInstance(EmitterIndex);
         if (!Instance)
         {
             continue;
         }
 
-        uint32 InstanceCount = 0;
-        const FSpriteParticleInstanceData* InstanceData = Instance->GetSpriteInstanceData(InstanceCount);
-        if (InstanceData && InstanceCount > 0)
+        // Sprite emitter 한정 통계 — DynamicData 생성 후 SpriteInstanceDataBuffer.size 측정 (한 frame 내 use-after-free 회피 위해 즉시 delete).
+        FDynamicEmitterDataBase* DynData = Instance->CreateDynamicData();
+        if (DynData && DynData->GetVertexFactoryType() == EVertexFactoryType::SpriteParticle)
         {
-            SpriteInstanceCount += InstanceCount;
+            FDynamicSpriteEmitterData* SpriteDyn = static_cast<FDynamicSpriteEmitterData*>(DynData);
+            SpriteInstanceCount += static_cast<uint32>(SpriteDyn->SpriteInstanceDataBuffer.size());
         }
+        delete DynData;
     }
 
     if (SpriteInstanceCount == 0)
@@ -286,10 +289,16 @@ bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSu
             continue;
         }
 
-        if (Command.ParticleInstances && Command.ParticleInstanceCount > 0)
+        // Cycle 15a (D4): Particle 데이터는 단일 DynamicData* 슬롯으로 통합됨.
+        // Sprite path 는 FDynamicSpriteEmitterData. ActiveParticleCount 가 sprite instance count 와 동일.
+        if (Command.DynamicData)
         {
-            bFoundSpriteCommand = true;
-            SpriteInstanceCount += Command.ParticleInstanceCount;
+            const int32 ActiveCount = Command.DynamicData->GetSource().ActiveParticleCount;
+            if (ActiveCount > 0)
+            {
+                bFoundSpriteCommand = true;
+                SpriteInstanceCount += static_cast<uint32>(ActiveCount);
+            }
         }
     }
 

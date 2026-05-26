@@ -19,15 +19,12 @@
 
 struct ID3D11ShaderResourceView;
 class UPrimitiveComponent;
-struct FSpriteParticleInstanceData;
 class UTexture;
 
-// Cycle 10a: type-agnostic 슬롯용 forward declaration.
-// 실제 struct 정의는 Cycle 11+ 각 emitter cycle에서 (Mesh: Cycle 11, Ribbon: Cycle 12b, Beam: Cycle 13b).
-// 본 cycle 슬롯은 모두 nullptr 유지.
-struct FMeshParticleInstanceData;
-struct FRibbonParticleVertex;
-struct FBeamParticleVertex;
+// Cycle 15a (D4): Particle 4종 슬롯 → 단일 DynamicData* 통합.
+// FDynamicEmitterDataBase 는 ReplayData (raw 메타 + 얕은 복사) + 정점 버퍼 (CPU) + virtual hooks 보유.
+// 헤더 include 회피 위해 forward declaration. 실제 정의는 Particle/ParticleDynamicData.h.
+struct FDynamicEmitterDataBase;
 
 enum class ERenderCommandType
 {
@@ -486,21 +483,11 @@ struct FRenderCommand
 
 	ERenderCommandType Type = ERenderCommandType::Primitive;
 
-	// Sprite Particle 경로 (ERenderPass::Particle 전용). InstanceData는 Component 소유,
-	// FRenderCommand는 포인터만 들고 다닙니다. 한 emitter당 1개의 RenderCommand가 발행됩니다.
-	const FSpriteParticleInstanceData* ParticleInstances = nullptr;
-	uint32 ParticleInstanceCount = 0;
-	UTexture* ParticleTexture = nullptr;
-	uint32 ParticleSubUVColumns = 1;
-	uint32 ParticleSubUVRows = 1;
-
-	// Cycle 10a: Mesh/Ribbon/Beam Particle 슬롯 (옵션 i 별도 슬롯).
-	// 본 cycle은 wire-up만 — 모두 nullptr/0 유지. 실제 채우기는 Cycle 11+ 각 emitter cycle에서.
-	// generic void* 슬롯 도입 금지 정책 (사용자 결정 2).
-	const FMeshParticleInstanceData* MeshParticleInstances = nullptr;
-	uint32 MeshParticleInstanceCount = 0;
-	const FRibbonParticleVertex* RibbonVertices = nullptr;
-	uint32 RibbonVertexCount = 0;
-	const FBeamParticleVertex* BeamVertices = nullptr;
-	uint32 BeamVertexCount = 0;
+	// Cycle 15a (D4): Particle 전용 4종 슬롯 (Sprite/Mesh/Ribbon/Beam) + 5 보조 필드 → 단일 DynamicData* 슬롯으로 통합.
+	// 매 frame new (D2) — RenderPass 가 frame 끝에 delete (frame-scope life-cycle, 단일 스레드 안전).
+	// DynamicData 는 ReplayData (raw 메타 + 얕은 복사) + 정점 버퍼 (CPU side) + virtual hooks 보유.
+	// Builder 가 set, RenderPass 가 read + delete.
+	// SubUV grid 등 type-specific 메타는 ReplayData derived (FDynamicSpriteEmitterReplayData::SubUVColumns/Rows 등) 가 보유.
+	// Material/Texture 는 ReplayData base 의 Material/ParticleTexture 멤버로 일원화.
+	FDynamicEmitterDataBase* DynamicData = nullptr;
 };

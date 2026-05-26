@@ -1,6 +1,7 @@
 ﻿#include "ParticleRenderPass.h"
 
 #include "Core/ResourceManager.h"
+#include "Particle/ParticleDynamicData.h"
 #include "Render/Resource/RenderResources.h"
 #include "Render/Resource/ShaderPaths.h"
 #include "Render/Resource/VertexFactoryTypes.h"
@@ -12,10 +13,10 @@
 
 #include <algorithm>
 
-// Cycle 10a baseline: Mesh/Ribbon/Beam 슬롯 6개 추가 후 FRenderCommand sizeof.
-// 추가 멤버 추정: 3 포인터(8×3=24) + 3 uint32(4×3=12) + 정렬 padding ≈ +48 bytes.
-// 이전 cycle 빌드에서 측정 안 했으므로 이 값이 첫 baseline. 추후 슬롯 추가 시 본 assert로 회귀 감지.
-static_assert(sizeof(FRenderCommand) == 464, "Cycle 10a baseline: FRenderCommand expected 464 bytes on x64 MSVC after particle slot extension");
+// Cycle 15a (D4): Particle 4종 슬롯 + 5 보조 (UTexture*/SubUV grid/count) → 단일 DynamicData* 슬롯 통합.
+// 측정 결과: 464 (Cycle 10a baseline) → 384 (Cycle 15a, -80 bytes).
+// (제거 멤버 합 ~64B + 정렬 padding 영향 -16B 추가 감소 = -80B.)
+static_assert(sizeof(FRenderCommand) == 384, "Cycle 15a baseline: FRenderCommand expected 384 bytes on x64 MSVC after particle slot consolidation (D4)");
 
 namespace
 {
@@ -222,6 +223,18 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
         }
     }
 
+    // Cycle 15a (D2 매 frame new): frame-scope life-cycle. RenderPass 가 frame 끝에 delete.
+    // Bus.GetCommands 는 const ref — Cmd.DynamicData 포인터 값만 변경 (소유권 해제) 위해 const_cast.
+    // 단일 스레드 + Bus 가 frame 마다 Clear 되므로 안전.
+    for (const FRenderCommand& Cmd : Commands)
+    {
+        if (Cmd.DynamicData)
+        {
+            delete Cmd.DynamicData;
+            const_cast<FRenderCommand&>(Cmd).DynamicData = nullptr;
+        }
+    }
+
     //TODO
     //Slot 해제는 End logic에서 담당하도록 수정하는게 가독성에 유리함. 추후 진행
     // Slot 1을 다른 패스가 자동으로 미사용한다고 가정해도 위험. instance VB는 binding 해제.
@@ -237,31 +250,30 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
     return true;
 }
 
-// Function : Render single Sprite emitter command — extracted from previous DrawCommand body
-// input : Cmd, Context
-// Cmd : render command produced by PrimitiveDrawCommandBuilder/Instance::BuildInstanceData
-// Context : render pass context (Device, DeviceContext, RenderResources, ...)
-// output : One DrawIndexedInstanced call issued when InstanceBuffer is valid
+// Function : Render single Sprite emitter command — Cycle 15a (DynamicData path)
+// input : Cmd, Context. Cmd.DynamicData : FDynamicSpriteEmitterData* (Builder 가 set).
+// output : One DrawIndexedInstanced (또는 SubUVBatcher path) when valid.
 void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const FRenderPassContext& Context)
 {
-    if (Cmd.ParticleInstances == nullptr || Cmd.ParticleInstanceCount == 0)
+    FDynamicSpriteEmitterData* SpriteData = static_cast<FDynamicSpriteEmitterData*>(Cmd.DynamicData);
+    if (!SpriteData || SpriteData->SpriteInstanceDataBuffer.empty())
     {
         return;
     }
+    const FDynamicSpriteEmitterReplayData& Replay = SpriteData->Source;
 
     if (Context.SubUVBatcher && Context.RenderBus)
     {
         Context.SubUVBatcher->Clear();
 
-        UTexture* Texture = Cmd.ParticleTexture ? Cmd.ParticleTexture : FResourceManager::Get().GetTexture("DefaultWhite");
-        const uint32 Columns = (Cmd.ParticleSubUVColumns > 0) ? Cmd.ParticleSubUVColumns : 1;
-        const uint32 Rows = (Cmd.ParticleSubUVRows > 0) ? Cmd.ParticleSubUVRows : 1;
+        UTexture* Texture = Replay.ParticleTexture ? Replay.ParticleTexture : FResourceManager::Get().GetTexture("DefaultWhite");
+        const uint32 Columns = (Replay.SubUVColumns > 0) ? Replay.SubUVColumns : 1;
+        const uint32 Rows = (Replay.SubUVRows > 0) ? Replay.SubUVRows : 1;
         const uint32 FrameCount = std::max(Columns * Rows, 1u);
         const FVector UnitScale(1.0f, 1.0f, 1.0f);
 
-        for (uint32 Index = 0; Index < Cmd.ParticleInstanceCount; ++Index)
+        for (const FSpriteParticleInstanceData& Particle : SpriteData->SpriteInstanceDataBuffer)
         {
-            const FSpriteParticleInstanceData& Particle = Cmd.ParticleInstances[Index];
             Context.SubUVBatcher->AddSprite(
                 Texture,
                 Particle.Position,
@@ -290,8 +302,6 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
 
     ID3D11DeviceContext* DeviceContext = Context.DeviceContext;
 
-    // Cycle 10a 비효율 인지: helper가 self-contained라 setup이 Cmd마다 반복.
-    // d3d state cache가 diff 처리하므로 정확성에는 영향 없음. 추후 grouping/state-mgmt cycle에서 최적화 가능.
     Program->Bind(DeviceContext);
 
     ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::AlphaBlend);
@@ -306,20 +316,14 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
     ID3D11Buffer* IndexBuffer = QuadIndexBuffer.GetBuffer();
     DeviceContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
-    InstanceBuffer.Update(
-        Context.Device,
-        DeviceContext,
-        Cmd.ParticleInstances,
-        Cmd.ParticleInstanceCount);
+    // Cycle 15a: DynamicData->FillVertexBuffer 가 InstanceBuffer.Update 수행 (helper 는 fetch 안 함).
+    SpriteData->FillVertexBuffer(Context.Device, DeviceContext, InstanceBuffer);
 
     if (!InstanceBuffer.IsValid() || InstanceBuffer.GetInstanceCount() == 0)
     {
         return;
     }
 
-    // b0(FrameBuffer)를 명시적으로 VS에 바인딩 — 빌보드 정렬에 View 행렬 필수.
-    // Renderer::UpdateFrameBuffer가 frame 시작 시 전역 바인딩하지만, 직전 패스가
-    // VS slot 0을 다른 cbuffer로 덮어쓸 위험이 있어 이 패스에서 한 번 더 못박는다.
     ID3D11Buffer* FrameBuf = Context.RenderResources->FrameBuffer.GetBuffer();
     if (FrameBuf)
     {
@@ -327,8 +331,8 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
     }
 
     FSpriteParticleCB CBData = {};
-    CBData.SubUVColumns = (Cmd.ParticleSubUVColumns > 0) ? Cmd.ParticleSubUVColumns : 1;
-    CBData.SubUVRows    = (Cmd.ParticleSubUVRows    > 0) ? Cmd.ParticleSubUVRows    : 1;
+    CBData.SubUVColumns = (Replay.SubUVColumns > 0) ? Replay.SubUVColumns : 1;
+    CBData.SubUVRows    = (Replay.SubUVRows    > 0) ? Replay.SubUVRows    : 1;
     SpriteParticleCB.Update(DeviceContext, &CBData, sizeof(FSpriteParticleCB));
     ID3D11Buffer* CBBuf = SpriteParticleCB.GetBuffer();
     DeviceContext->VSSetConstantBuffers(8, 1, &CBBuf);
@@ -339,16 +343,16 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
     DeviceContext->VSSetConstantBuffers(1, 1, &PerObjBuf);
     DeviceContext->PSSetConstantBuffers(1, 1, &PerObjBuf);
 
-        ID3D11ShaderResourceView* TextureSRV = nullptr;
-        if (Cmd.ParticleTexture)
-        {
-            TextureSRV = Cmd.ParticleTexture->GetSRV();
-        }
-        if (!TextureSRV)
-        {
-            TextureSRV = FResourceManager::Get().GetDefaultWhiteSRV();
-        }
-        DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
+    ID3D11ShaderResourceView* TextureSRV = nullptr;
+    if (Replay.ParticleTexture)
+    {
+        TextureSRV = Replay.ParticleTexture->GetSRV();
+    }
+    if (!TextureSRV)
+    {
+        TextureSRV = FResourceManager::Get().GetDefaultWhiteSRV();
+    }
+    DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
 
     ID3D11Buffer* VBs[2] = { QuadVertexBuffer.GetBuffer(), InstanceBuffer.GetBuffer() };
     UINT Strides[2] = { QuadVertexBuffer.GetStride(), InstanceBuffer.GetStride() };
@@ -358,18 +362,13 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
     DeviceContext->DrawIndexedInstanced(6, InstanceBuffer.GetInstanceCount(), 0, 0, 0);
 }
 
-// Function : Render single Mesh particle emitter command (Cycle 11 옵션 B)
-// input : Cmd, Context
-// Cmd : render command produced by Builder Mesh case (MeshParticleInstances + MeshBuffer 세팅됨)
-// Context : render pass context (Device, DeviceContext, RenderResources, ...)
-// output : One DrawIndexedInstanced call issued when MeshBuffer + instance data valid
-//
-// D3D state: BlendOpaque + Default(DepthTestWrite) + SolidBackCull (사용자 결정 lock-in).
-// PerObject CB: Builder가 Identity Model로 세팅 — instance VB가 World 합성 담당.
-// Slot 0: Cmd.MeshBuffer의 VertexBuffer (FNormalVertex), Slot 1: MeshInstanceBuffer (FMeshParticleInstanceData).
+// Function : Render single Mesh particle emitter command — Cycle 15a (DynamicData path)
+// input : Cmd, Context. Cmd.DynamicData : FDynamicMeshEmitterData*. Cmd.MeshBuffer : Builder 가 set.
+// output : One DrawIndexedInstanced call issued when MeshBuffer + instance data valid.
 void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRenderPassContext& Context)
 {
-    if (Cmd.MeshParticleInstances == nullptr || Cmd.MeshParticleInstanceCount == 0 || Cmd.MeshBuffer == nullptr)
+    FDynamicMeshEmitterData* MeshData = static_cast<FDynamicMeshEmitterData*>(Cmd.DynamicData);
+    if (!MeshData || MeshData->MeshInstanceDataBuffer.empty() || Cmd.MeshBuffer == nullptr)
     {
         return;
     }
@@ -377,6 +376,7 @@ void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRe
     {
         return;
     }
+    const FDynamicMeshEmitterReplayData& Replay = MeshData->Source;
 
     FShaderProgram* Program = GetMeshParticleProgram();
     if (!Program || !Program->VS || !Program->PS)
@@ -385,10 +385,8 @@ void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRe
     }
 
     ID3D11DeviceContext* DeviceContext = Context.DeviceContext;
-
     Program->Bind(DeviceContext);
 
-    // 사용자 결정 lock-in: BlendOpaque + Default(DepthTestWrite) + SolidBackCull.
     ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::Opaque);
     DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
     ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::Default);
@@ -398,25 +396,22 @@ void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRe
     ID3D11SamplerState* Sampler = FResourceManager::Get().GetOrCreateSamplerState(ESamplerType::EST_Linear);
     DeviceContext->PSSetSamplers(0, 1, &Sampler);
 
-    // Frame CB (View/Projection) — Sprite와 동일 안전 장치.
     ID3D11Buffer* FrameBuf = Context.RenderResources->FrameBuffer.GetBuffer();
     if (FrameBuf)
     {
         DeviceContext->VSSetConstantBuffers(0, 1, &FrameBuf);
     }
 
-    // PerObject CB — Builder가 Identity Model로 세팅함 (instance VB가 World 합성 담당).
     Context.RenderResources->PerObjectConstantBuffer.Update(
         DeviceContext, &Cmd.PerObjectConstants, sizeof(FPerObjectConstants));
     ID3D11Buffer* PerObjBuf = Context.RenderResources->PerObjectConstantBuffer.GetBuffer();
     DeviceContext->VSSetConstantBuffers(1, 1, &PerObjBuf);
     DeviceContext->PSSetConstantBuffers(1, 1, &PerObjBuf);
 
-    // Albedo texture: Cmd.ParticleTexture (Builder가 Material.DiffuseMap에서 추출) 또는 default white.
     ID3D11ShaderResourceView* TextureSRV = nullptr;
-    if (Cmd.ParticleTexture)
+    if (Replay.ParticleTexture)
     {
-        TextureSRV = Cmd.ParticleTexture->GetSRV();
+        TextureSRV = Replay.ParticleTexture->GetSRV();
     }
     if (!TextureSRV)
     {
@@ -424,12 +419,8 @@ void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRe
     }
     DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
 
-    // Instance VB 업데이트 (grow-by-2x 자동).
-    MeshInstanceBuffer.Update(
-        Context.Device,
-        DeviceContext,
-        Cmd.MeshParticleInstances,
-        Cmd.MeshParticleInstanceCount);
+    // Cycle 15a: DynamicData->FillVertexBuffer 가 MeshInstanceBuffer.Update 수행.
+    MeshData->FillVertexBuffer(Context.Device, DeviceContext, MeshInstanceBuffer);
     if (!MeshInstanceBuffer.IsValid() || MeshInstanceBuffer.GetInstanceCount() == 0)
     {
         return;
@@ -447,14 +438,10 @@ void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRe
     UINT Offsets[2] = { 0, 0 };
     DeviceContext->IASetVertexBuffers(0, 2, VBs, Strides, Offsets);
 
-    // IB 바인딩.
     ID3D11Buffer* IndexBuffer = Cmd.MeshBuffer->GetIndexBuffer().GetBuffer();
     DeviceContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
-    // DrawIndexedInstanced: Builder가 SectionIndexCount + SectionIndexStart 세팅.
-    // Cycle 11은 mesh 전체를 1 section처럼 (Start=0, Count=전체 index 수) 그리지만,
-    // 추후 section 분할 draw가 필요해지면 Builder에서 Cmd 여러 개로 split 가능.
-    DeviceContext->DrawIndexedInstanced(Cmd.SectionIndexCount, Cmd.MeshParticleInstanceCount, Cmd.SectionIndexStart, 0, 0);
+    DeviceContext->DrawIndexedInstanced(Cmd.SectionIndexCount, MeshInstanceBuffer.GetInstanceCount(), Cmd.SectionIndexStart, 0, 0);
 }
 
 // Function : Render single Ribbon particle emitter command (Cycle 12)
@@ -469,10 +456,12 @@ void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRe
 // topology: TRIANGLESTRIP.
 void FParticleRenderPass::RenderRibbonEmitter(const FRenderCommand& Cmd, const FRenderPassContext& Context)
 {
-    if (Cmd.RibbonVertices == nullptr || Cmd.RibbonVertexCount == 0)
+    FDynamicRibbonEmitterData* RibbonData = static_cast<FDynamicRibbonEmitterData*>(Cmd.DynamicData);
+    if (!RibbonData || RibbonData->RibbonVertexBuffer.empty())
     {
         return;
     }
+    const FDynamicRibbonEmitterReplayData& Replay = RibbonData->Source;
 
     FShaderProgram* Program = GetRibbonParticleProgram();
     if (!Program || !Program->VS || !Program->PS)
@@ -481,10 +470,8 @@ void FParticleRenderPass::RenderRibbonEmitter(const FRenderCommand& Cmd, const F
     }
 
     ID3D11DeviceContext* DeviceContext = Context.DeviceContext;
-
     Program->Bind(DeviceContext);
 
-    // 사용자 결정 lock-in: BlendAlpha + DepthReadOnly + SolidNoCull.
     ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::AlphaBlend);
     DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
     ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::DepthReadOnly);
@@ -494,25 +481,22 @@ void FParticleRenderPass::RenderRibbonEmitter(const FRenderCommand& Cmd, const F
     ID3D11SamplerState* Sampler = FResourceManager::Get().GetOrCreateSamplerState(ESamplerType::EST_Linear);
     DeviceContext->PSSetSamplers(0, 1, &Sampler);
 
-    // Frame CB (View/Projection).
     ID3D11Buffer* FrameBuf = Context.RenderResources->FrameBuffer.GetBuffer();
     if (FrameBuf)
     {
         DeviceContext->VSSetConstantBuffers(0, 1, &FrameBuf);
     }
 
-    // PerObject CB — Builder가 Identity Model로 세팅 (vertex 가 이미 world space).
     Context.RenderResources->PerObjectConstantBuffer.Update(
         DeviceContext, &Cmd.PerObjectConstants, sizeof(FPerObjectConstants));
     ID3D11Buffer* PerObjBuf = Context.RenderResources->PerObjectConstantBuffer.GetBuffer();
     DeviceContext->VSSetConstantBuffers(1, 1, &PerObjBuf);
     DeviceContext->PSSetConstantBuffers(1, 1, &PerObjBuf);
 
-    // Albedo texture: Cmd.ParticleTexture (Builder가 Material.DiffuseMap에서 추출) 또는 default white.
     ID3D11ShaderResourceView* TextureSRV = nullptr;
-    if (Cmd.ParticleTexture)
+    if (Replay.ParticleTexture)
     {
-        TextureSRV = Cmd.ParticleTexture->GetSRV();
+        TextureSRV = Replay.ParticleTexture->GetSRV();
     }
     if (!TextureSRV)
     {
@@ -520,30 +504,20 @@ void FParticleRenderPass::RenderRibbonEmitter(const FRenderCommand& Cmd, const F
     }
     DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
 
-    // Dynamic VB 업데이트 (grow-by-2x 자동).
-    RibbonVertexBuffer.Update(
-        Context.Device,
-        DeviceContext,
-        Cmd.RibbonVertices,
-        Cmd.RibbonVertexCount);
+    // Cycle 15a: DynamicData->FillVertexBuffer 가 RibbonVertexBuffer.Update 수행.
+    RibbonData->FillVertexBuffer(Context.Device, DeviceContext, RibbonVertexBuffer);
     if (!RibbonVertexBuffer.IsValid() || RibbonVertexBuffer.GetInstanceCount() == 0)
     {
         return;
     }
 
-    // VB 바인딩: Slot 0 only.
     ID3D11Buffer* VBs[1] = { RibbonVertexBuffer.GetBuffer() };
     UINT Strides[1] = { RibbonVertexBuffer.GetStride() };
     UINT Offsets[1] = { 0 };
     DeviceContext->IASetVertexBuffers(0, 1, VBs, Strides, Offsets);
 
-    // topology = TRIANGLESTRIP. Begin 에서 TRIANGLELIST 로 세팅됐으므로 본 helper 에서 명시 override.
     DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-    // Draw (indexless) — degenerate seam 으로 trail 사이 strip 연결 끊김.
     DeviceContext->Draw(RibbonVertexBuffer.GetInstanceCount(), 0);
-
-    // TRIANGLELIST 로 복원 — 다음 helper (Sprite/Mesh) 가 TRIANGLELIST 가정.
     DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
@@ -559,10 +533,12 @@ void FParticleRenderPass::RenderRibbonEmitter(const FRenderCommand& Cmd, const F
 // topology: TRIANGLESTRIP. helper 끝에서 TRIANGLELIST 복원 (다음 Sprite/Mesh helper 보호).
 void FParticleRenderPass::RenderBeamEmitter(const FRenderCommand& Cmd, const FRenderPassContext& Context)
 {
-    if (Cmd.BeamVertices == nullptr || Cmd.BeamVertexCount == 0)
+    FDynamicBeamEmitterData* BeamData = static_cast<FDynamicBeamEmitterData*>(Cmd.DynamicData);
+    if (!BeamData || BeamData->BeamVertexBuffer.empty())
     {
         return;
     }
+    const FDynamicBeamEmitterReplayData& Replay = BeamData->Source;
 
     FShaderProgram* Program = GetBeamParticleProgram();
     if (!Program || !Program->VS || !Program->PS)
@@ -571,12 +547,8 @@ void FParticleRenderPass::RenderBeamEmitter(const FRenderCommand& Cmd, const FRe
     }
 
     ID3D11DeviceContext* DeviceContext = Context.DeviceContext;
-
     Program->Bind(DeviceContext);
 
-    // Ribbon 와 동일 lock-in state: BlendAlpha + DepthReadOnly + SolidNoCull.
-    // EBlendType 에 Additive 값 없음 — RenderResources.h:66-71 (Opaque/AlphaBlend/NoColor 만).
-    // Additive 도입은 Material 측 BlendType 시스템 별도 cycle.
     ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::AlphaBlend);
     DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
     ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::DepthReadOnly);
@@ -586,25 +558,22 @@ void FParticleRenderPass::RenderBeamEmitter(const FRenderCommand& Cmd, const FRe
     ID3D11SamplerState* Sampler = FResourceManager::Get().GetOrCreateSamplerState(ESamplerType::EST_Linear);
     DeviceContext->PSSetSamplers(0, 1, &Sampler);
 
-    // Frame CB (View/Projection).
     ID3D11Buffer* FrameBuf = Context.RenderResources->FrameBuffer.GetBuffer();
     if (FrameBuf)
     {
         DeviceContext->VSSetConstantBuffers(0, 1, &FrameBuf);
     }
 
-    // PerObject CB — Builder가 Identity Model로 세팅 (vertex 가 이미 world space).
     Context.RenderResources->PerObjectConstantBuffer.Update(
         DeviceContext, &Cmd.PerObjectConstants, sizeof(FPerObjectConstants));
     ID3D11Buffer* PerObjBuf = Context.RenderResources->PerObjectConstantBuffer.GetBuffer();
     DeviceContext->VSSetConstantBuffers(1, 1, &PerObjBuf);
     DeviceContext->PSSetConstantBuffers(1, 1, &PerObjBuf);
 
-    // Albedo texture: Cmd.ParticleTexture (Builder가 Material.DiffuseMap에서 추출) 또는 default white.
     ID3D11ShaderResourceView* TextureSRV = nullptr;
-    if (Cmd.ParticleTexture)
+    if (Replay.ParticleTexture)
     {
-        TextureSRV = Cmd.ParticleTexture->GetSRV();
+        TextureSRV = Replay.ParticleTexture->GetSRV();
     }
     if (!TextureSRV)
     {
@@ -612,30 +581,20 @@ void FParticleRenderPass::RenderBeamEmitter(const FRenderCommand& Cmd, const FRe
     }
     DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
 
-    // Dynamic VB 업데이트 (grow-by-2x 자동).
-    BeamVertexBuffer.Update(
-        Context.Device,
-        DeviceContext,
-        Cmd.BeamVertices,
-        Cmd.BeamVertexCount);
+    // Cycle 15a: DynamicData->FillVertexBuffer 가 BeamVertexBuffer.Update 수행.
+    BeamData->FillVertexBuffer(Context.Device, DeviceContext, BeamVertexBuffer);
     if (!BeamVertexBuffer.IsValid() || BeamVertexBuffer.GetInstanceCount() == 0)
     {
         return;
     }
 
-    // VB 바인딩: Slot 0 only.
     ID3D11Buffer* VBs[1] = { BeamVertexBuffer.GetBuffer() };
     UINT Strides[1] = { BeamVertexBuffer.GetStride() };
     UINT Offsets[1] = { 0 };
     DeviceContext->IASetVertexBuffers(0, 1, VBs, Strides, Offsets);
 
-    // topology = TRIANGLESTRIP. Begin 에서 TRIANGLELIST 로 세팅됐으므로 본 helper 에서 명시 override.
     DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-    // Draw (indexless) — degenerate seam 으로 beam 사이 strip 연결 끊김.
     DeviceContext->Draw(BeamVertexBuffer.GetInstanceCount(), 0);
-
-    // TRIANGLELIST 로 복원 — 다음 helper (Sprite/Mesh) 가 TRIANGLELIST 가정.
     DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 

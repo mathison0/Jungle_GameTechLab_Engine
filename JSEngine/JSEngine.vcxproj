@@ -938,6 +938,7 @@
     <ClCompile Include="Source\Engine\Object\Object.cpp" />
     <ClCompile Include="Source\Engine\Object\Property.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleDynamicData.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstance.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEvent.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleMeshEmitterInstance.cpp" />
@@ -1345,6 +1346,7 @@
     <ClInclude Include="Source\Engine\Object\Property.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleDynamicData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />

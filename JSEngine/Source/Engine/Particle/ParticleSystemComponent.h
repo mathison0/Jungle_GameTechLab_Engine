@@ -4,6 +4,7 @@
 #include "Particle/ParticleEmitterInstance.h"
 
 class FRenderBus;
+struct FDynamicEmitterDataBase;
 
 DECLARE_DELEGATE(FOnParticleCollide, const FParticleEventCollideData&);
 
@@ -30,10 +31,12 @@ public:
 	void QueueCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchQueuedParticleEvents();
 
-	// Cycle 10c 계층 분리: type-agnostic dispatch hook.
-	// 모든 emitter instance에 대해 Instance->BuildInstanceData()를 호출만 함 (내부 buffer 갱신).
-	// RenderCommand 매핑은 Builder가 별도 수행 — Component는 FRenderCommand 모름.
-	void BuildInstanceData();
+	// Cycle 15a Phase 4 (ReplayData/DynamicData, D2 매 frame new): Component 가 모든 emitter 의 DynamicData 를 모아 array 반환.
+	// 호출자(Builder)가 ownership 가져감 — RenderCommand 에 매핑 후 RenderPass 가 frame 끝에 delete.
+	// RenderCommand 모름 원칙 유지 — Component 는 단지 instance->CreateDynamicData() dispatch hub.
+	//
+	// Cycle 15a Phase 5 (D5): 기존 BuildInstanceData() 삭제 — CollectDynamicData() 가 대체.
+	TArray<FDynamicEmitterDataBase*> CollectDynamicData();
 
 	// Cycle 14 (M1, 결정 18 옵션 β): Builder 가 BuildInstanceData() 호출 직전에 호출.
 	// RenderBus 의 camera 4 vector + position 을 Component 멤버에 캐싱 →

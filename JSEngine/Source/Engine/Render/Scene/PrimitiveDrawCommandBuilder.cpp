@@ -8,6 +8,7 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
+#include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleModuleTypeDataBeam.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
@@ -577,120 +578,49 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             return false;
         }
 
-        // Cycle 10c 계층 분리: Component는 instance 순회 hook만 (RenderCommand 모름).
-        // Instance는 자기 buffer만 갱신, RenderCommand 매핑은 Builder가 책임.
-        //
         // Cycle 14 (M1, 결정 18 β): Mesh emitter 의 PSA_FacingCameraPosition 등 camera-aware alignment 가
-        // derived BuildInstanceData() 안에서 GetOwningComponent()->GetCachedCameraXxx() 로 RenderBus camera 를 read.
-        // BuildInstanceData() signature 변경 0건 보장 — 옵션 α (signature 확장) 회피.
-        // 외부 호출자 (EditorMainPanelDebug.cpp:170) 는 본 hook 미호출 → bCachedCameraValid=false → derived 가 PSA_Velocity fallback (위험 12 방어).
+        // derived BuildInstanceData/CreateDynamicData 안에서 GetOwningComponent()->GetCachedCameraXxx() 로 RenderBus camera 를 read.
+        // bCachedCameraValid=false → PSA_Velocity fallback (위험 12 방어).
         ParticleSystemComponent->CacheCameraFromRenderBus(RenderBus);
-        ParticleSystemComponent->BuildInstanceData();
 
-        // Cycle 10c: Builder가 instance와 RenderCommand 사이의 매핑 책임.
-        // - Instance::Get*Data() getter로 type별 데이터를 const 포인터+count로 회수 (제로 복사)
-        // - RenderMode switch로 Cmd의 type별 슬롯 + VertexFactoryType 직접 채움
-        // - Instance는 RenderCommand를 모름 (단방향 dependency)
+        // Cycle 15a (D4 단일 슬롯 통합 + D5 BuildInstanceData 삭제 + D2 매 frame new):
+        //   Component->CollectDynamicData() 로 모든 emitter 의 DynamicData* array 회수 (ownership 이전).
+        //   Builder 는 type-specific 분기 거의 없음 — DynamicData 의 virtual hook 으로 dispatch.
+        //   Material/Texture 등 module-기반 메타는 Builder 가 추출해 DynamicData->Source 에 set.
+        TArray<FDynamicEmitterDataBase*> AllDynData = ParticleSystemComponent->CollectDynamicData();
         const TArray<FParticleEmitterInstance*>& EmitterInstances = ParticleSystemComponent->GetEmitterInstances();
-        for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmitterInstances.size()); ++EmitterIdx)
+
+        for (FDynamicEmitterDataBase* DynData : AllDynData)
         {
-            FParticleEmitterInstance* Instance = EmitterInstances[EmitterIdx];
-            if (!Instance || Instance->GetActiveParticleCount() == 0)
+            if (!DynData)
             {
                 continue;
             }
 
-            // RenderMode 결정 — TypeDataModule single source (Cycle 8 결정 κ).
-            UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
-            if (!LOD)
-            {
-                continue;
-            }
-            const EParticleEmitterRenderMode RenderMode = LOD->GetEffectiveRenderMode();
+            const int32 EmitterIdx = DynData->EmitterIndex;
+            FParticleEmitterInstance* Instance = (EmitterIdx >= 0 && EmitterIdx < static_cast<int32>(EmitterInstances.size()))
+                ? EmitterInstances[EmitterIdx]
+                : nullptr;
 
-            // Cmd 기본 필드 (generic, type 무관) 먼저 채움.
-            FRenderCommand Cmd = {};
-            Cmd.SourcePrimitive = Primitive;
-            Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
-            Cmd.Type = ERenderCommandType::Primitive;
-            Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
+            // Source ReplayData 에 Material/Texture/메타 채움 (Sprite path 의 RequiredModule + SubUV/Atlas, Mesh/Ribbon/Beam 의 Material.DiffuseMap).
+            // Mesh/Beam 은 derived CreateDynamicData 에서 Material 이미 set — Sprite/Ribbon 만 본 분기에서 보충.
+            FDynamicEmitterReplayDataBase& ReplayBase = const_cast<FDynamicEmitterReplayDataBase&>(DynData->GetSource());
+            UParticleLODLevel* LOD = Instance ? Instance->GetCurrentLODLevel() : nullptr;
 
-            // RenderMode별로 적절한 getter 호출 + 해당 type 슬롯만 채움.
-            // 다른 type 슬롯은 zero-init된 nullptr/0 유지 (silent bug 위험 3 회피).
-            // Mesh/Ribbon/Beam은 base default가 nullptr 반환 → Cycle 11+에서 derived가 override해야 데이터 채워짐.
-            uint32 Count = 0;
-            bool bHasData = false;
-            switch (RenderMode)
-            {
-            case EParticleEmitterRenderMode::Sprite:
-                Cmd.ParticleInstances = Instance->GetSpriteInstanceData(Count);
-                Cmd.ParticleInstanceCount = Count;
-                Cmd.VertexFactoryType = EVertexFactoryType::SpriteParticle;
-                bHasData = (Cmd.ParticleInstances != nullptr && Count > 0);
-                break;
-            case EParticleEmitterRenderMode::Mesh:
-                Cmd.MeshParticleInstances = Instance->GetMeshInstanceData(Count);
-                Cmd.MeshParticleInstanceCount = Count;
-                Cmd.VertexFactoryType = EVertexFactoryType::MeshParticle;
-                // Cycle 11 옵션 B: UMeshTypeData의 Mesh asset 조회 + MeshBuffer 세팅 + Material 세팅.
-                // PerObject CB는 Identity Model (instance VB가 World 합성 담당 — Sprite와 동일 원칙).
-                if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
-                {
-                    if (UStaticMesh* MeshAsset = MeshTD->GetMesh())
-                    {
-                        Cmd.MeshBuffer = MeshBufferManager.GetStaticMeshBuffer(MeshAsset, 0);
-                        Cmd.SectionIndexStart = 0;
-                        Cmd.SectionIndexCount = Cmd.MeshBuffer ? Cmd.MeshBuffer->GetIndexBuffer().GetIndexCount() : 0;
-                        Cmd.Material = MeshTD->GetEffectiveMaterial();
-                    }
-                }
-                bHasData = (Cmd.MeshParticleInstances != nullptr && Count > 0 && Cmd.MeshBuffer != nullptr);
-                break;
-            case EParticleEmitterRenderMode::Ribbon:
-                Cmd.RibbonVertices = Instance->GetRibbonVertexData(Count);
-                Cmd.RibbonVertexCount = Count;
-                Cmd.VertexFactoryType = EVertexFactoryType::RibbonParticle;
-                if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
-                {
-                    Cmd.Material = RibbonTD->GetMaterial();
-                }
-                bHasData = (Cmd.RibbonVertices != nullptr && Count > 0);
-                break;
-            case EParticleEmitterRenderMode::Beam:
-                Cmd.BeamVertices = Instance->GetBeamVertexData(Count);
-                Cmd.BeamVertexCount = Count;
-                Cmd.VertexFactoryType = EVertexFactoryType::BeamParticle;
-                // Cycle 13a: UBeamTypeData 의 Material 추출 (Ribbon 와 동일 패턴).
-                if (const UBeamTypeData* BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()))
-                {
-                    Cmd.Material = BeamTD->GetMaterial();
-                }
-                bHasData = (Cmd.BeamVertices != nullptr && Count > 0);
-                break;
-            default:
-                break;
-            }
+            FMeshBuffer* MeshBufferLocal = nullptr; // Mesh only
+            uint32 MeshSectionIndexCount = 0;       // Mesh only
+            UMaterialInterface* MaterialOverride = nullptr; // (Mesh 에서 이미 Material 세팅된 경우 우선)
 
-            // active particle 0개거나 base nullptr fallback(Mesh/Ribbon/Beam 본 cycle 미구현) — Cmd 발행 skip.
-            // 빈 슬롯으로 그리려 하면 D3D 에러 — silent bug 위험 2 회피.
-            if (!bHasData)
+            if (LOD)
             {
-                continue;
-            }
-
-            // Sprite는 RequiredModule + SubUV/Atlas로 Material/Texture/SubUVGrid 결정.
-            // Mesh는 switch case에서 MeshTD->GetEffectiveMaterial()로 이미 Material 세팅됨 → Sprite 분기에 안 들어감.
-            // Mesh의 ParticleTexture는 Material의 DiffuseMap에서 추출 (Sprite의 ResolveParticleTexture 패턴 일부 재사용).
-            if (RenderMode == EParticleEmitterRenderMode::Sprite)
-            {
-                const UParticleLODLevel* LODLevel = EmitterInstances[EmitterIdx]
-                    ? EmitterInstances[EmitterIdx]->GetCurrentLODLevel()
-                    : nullptr;
-                const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
-                const USubUVModule* SubUV = nullptr;
-                if (LODLevel)
+                switch (ReplayBase.eEmitterType)
                 {
-                    for (UParticleModule* Module : LODLevel->GetModules())
+                case EDynamicEmitterType::Sprite:
+                {
+                    // Sprite Texture/SubUV grid: RequiredModule + SubUV 모듈 + Atlas 패턴.
+                    const UParticleModuleRequired* RequiredModule = LOD->GetRequiredModule();
+                    const USubUVModule* SubUV = nullptr;
+                    for (UParticleModule* Module : LOD->GetModules())
                     {
                         if (USubUVModule* Found = Cast<USubUVModule>(Module))
                         {
@@ -698,30 +628,104 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                             break;
                         }
                     }
+                    const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;
+
+                    ReplayBase.Material = RequiredModule ? RequiredModule->GetMaterial() : nullptr;
+                    ReplayBase.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : ResolveParticleTexture(RequiredModule);
+
+                    // Sprite-specific SubUV grid 메타: derived ReplayData 로 cast 후 채움.
+                    FDynamicSpriteEmitterReplayData* SpriteReplay = static_cast<FDynamicSpriteEmitterReplayData*>(&ReplayBase);
+                    SpriteReplay->SubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
+                    SpriteReplay->SubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
+                    break;
                 }
-                const FTextureAtlasResource* Atlas = SubUV ? SubUV->GetCachedSubUV() : nullptr;
-                Cmd.Material = RequiredModule ? RequiredModule->GetMaterial() : nullptr;
-                Cmd.ParticleTexture = (Atlas && Atlas->IsLoaded()) ? Atlas->Texture : ResolveParticleTexture(RequiredModule);
-                Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
-                Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
-            }
-            else if (RenderMode == EParticleEmitterRenderMode::Mesh ||
-                     RenderMode == EParticleEmitterRenderMode::Ribbon ||
-                     RenderMode == EParticleEmitterRenderMode::Beam)
-            {
-                // Material의 DiffuseMap에서 ParticleTexture 추출. 없으면 RenderPass가 default white SRV로 fallback.
-                // Cycle 13a: Beam 도 Ribbon 와 동일 분기에 포함 (Material 측 추출 패턴 공유).
-                if (Cmd.Material)
+                case EDynamicEmitterType::Mesh:
                 {
-                    FMaterialParamValue DiffuseMap;
-                    if (Cmd.Material->GetParam("DiffuseMap", DiffuseMap) &&
-                        DiffuseMap.Type == EMaterialParamType::Texture &&
-                        std::holds_alternative<UTexture*>(DiffuseMap.Value))
+                    // Mesh: MeshBuffer 조회 + Material.DiffuseMap → ParticleTexture (CreateDynamicData 가 이미 Material set).
+                    if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
                     {
-                        Cmd.ParticleTexture = std::get<UTexture*>(DiffuseMap.Value);
+                        if (UStaticMesh* MeshAsset = MeshTD->GetMesh())
+                        {
+                            MeshBufferLocal = MeshBufferManager.GetStaticMeshBuffer(MeshAsset, 0);
+                            MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
+                            MaterialOverride = MeshTD->GetEffectiveMaterial();
+                        }
                     }
+                    if (ReplayBase.Material)
+                    {
+                        FMaterialParamValue DiffuseMap;
+                        if (ReplayBase.Material->GetParam("DiffuseMap", DiffuseMap) &&
+                            DiffuseMap.Type == EMaterialParamType::Texture &&
+                            std::holds_alternative<UTexture*>(DiffuseMap.Value))
+                        {
+                            ReplayBase.ParticleTexture = std::get<UTexture*>(DiffuseMap.Value);
+                        }
+                    }
+                    break;
+                }
+                case EDynamicEmitterType::Ribbon:
+                {
+                    if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+                    {
+                        ReplayBase.Material = RibbonTD->GetMaterial();
+                    }
+                    if (ReplayBase.Material)
+                    {
+                        FMaterialParamValue DiffuseMap;
+                        if (ReplayBase.Material->GetParam("DiffuseMap", DiffuseMap) &&
+                            DiffuseMap.Type == EMaterialParamType::Texture &&
+                            std::holds_alternative<UTexture*>(DiffuseMap.Value))
+                        {
+                            ReplayBase.ParticleTexture = std::get<UTexture*>(DiffuseMap.Value);
+                        }
+                    }
+                    break;
+                }
+                case EDynamicEmitterType::Beam:
+                {
+                    // Beam: CreateDynamicData 가 이미 Material set. ParticleTexture 만 추출.
+                    if (ReplayBase.Material)
+                    {
+                        FMaterialParamValue DiffuseMap;
+                        if (ReplayBase.Material->GetParam("DiffuseMap", DiffuseMap) &&
+                            DiffuseMap.Type == EMaterialParamType::Texture &&
+                            std::holds_alternative<UTexture*>(DiffuseMap.Value))
+                        {
+                            ReplayBase.ParticleTexture = std::get<UTexture*>(DiffuseMap.Value);
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
                 }
             }
+
+            // ActiveCount 0 또는 vertex 0 인 emitter — Cmd 발행 skip (RenderPass D3D 에러 회피).
+            // Mesh path 는 MeshBuffer 추가로 필요.
+            const bool bIsMesh = (ReplayBase.eEmitterType == EDynamicEmitterType::Mesh);
+            const bool bHasData = (ReplayBase.ActiveParticleCount > 0)
+                && (!bIsMesh || (MeshBufferLocal != nullptr && MeshSectionIndexCount > 0));
+            if (!bHasData)
+            {
+                delete DynData; // ownership 정리 — RenderPass 까지 안 갈 데이터.
+                continue;
+            }
+
+            // Sort hook (D8) — DynamicData 의 virtual Sort 가 type 별 알고리즘 수행 (Sprite/Mesh: ViewProjDepth, Beam: 빈).
+            DynData->Sort(RenderBus.GetCameraPosition());
+
+            FRenderCommand Cmd = {};
+            Cmd.SourcePrimitive = Primitive;
+            Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+            Cmd.Type = ERenderCommandType::Primitive;
+            Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
+            Cmd.VertexFactoryType = DynData->GetVertexFactoryType();
+            Cmd.Material = MaterialOverride ? MaterialOverride : ReplayBase.Material;
+            Cmd.MeshBuffer = MeshBufferLocal;
+            Cmd.SectionIndexStart = 0;
+            Cmd.SectionIndexCount = MeshSectionIndexCount;
+            Cmd.DynamicData = DynData; // ownership transfer — RenderPass 가 frame 끝에 delete.
 
             RenderBus.AddCommand(ERenderPass::Particle, Cmd);
         }

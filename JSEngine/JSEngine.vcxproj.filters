@@ -1347,6 +1347,9 @@
     <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleDynamicData.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamNoise.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
@@ -2492,6 +2495,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleDynamicData.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h">
