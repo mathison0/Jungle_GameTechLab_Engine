@@ -508,7 +508,6 @@ void FEditorParticleSystemWidget::DrawViewportMenuBar(const ImVec2& CanvasMin)
 			}
 			bPreviewPaused = !bPreviewPaused;
 		}
-		ImGui::MenuItem("Realtime", nullptr, &bPreviewRealtime);
 		if (ImGui::MenuItem("Loop", nullptr, &bPreviewLoop))
 		{
 			if (bPreviewLoop && bPreviewPlaybackComplete)

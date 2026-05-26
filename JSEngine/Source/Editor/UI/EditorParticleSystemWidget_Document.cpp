@@ -247,7 +247,6 @@ void FEditorParticleSystemWidget::StoreCurrentDocumentState()
 	State.bShowBounds = bShowBounds;
 	State.bShowOriginAxis = bShowOriginAxis;
 	State.bPreviewPaused = bPreviewPaused;
-	State.bPreviewRealtime = bPreviewRealtime;
 	State.bPreviewLoop = bPreviewLoop;
 	State.bPreviewPlaybackComplete = bPreviewPlaybackComplete;
 	State.PreviewAnimSpeedIndex = PreviewAnimSpeedIndex;
@@ -274,7 +273,6 @@ bool FEditorParticleSystemWidget::RestoreDocumentState(const FString& InDocument
 	bShowBounds = State.bShowBounds;
 	bShowOriginAxis = State.bShowOriginAxis;
 	bPreviewPaused = State.bPreviewPaused;
-	bPreviewRealtime = State.bPreviewRealtime;
 	bPreviewLoop = State.bPreviewLoop;
 	bPreviewPlaybackComplete = State.bPreviewPlaybackComplete;
 	PreviewAnimSpeedIndex = State.PreviewAnimSpeedIndex;
@@ -307,7 +305,6 @@ void FEditorParticleSystemWidget::ClearActiveDocumentState()
 	bShowBounds = true;
 	bShowOriginAxis = true;
 	bPreviewPaused = false;
-	bPreviewRealtime = true;
 	bPreviewLoop = true;
 	PreviewAnimSpeedIndex = 0;
 	if (bPreviewViewportInitialized)

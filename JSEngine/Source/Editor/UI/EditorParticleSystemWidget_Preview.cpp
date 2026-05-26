@@ -214,10 +214,7 @@ void FEditorParticleSystemWidget::DrivePreviewPlayback(float DeltaTime)
 		return;
 	}
 
-	const float BaseDeltaTime = bPreviewRealtime
-		? DeltaTime
-		: 1.0f / std::max(ParticleSystemAsset ? ParticleSystemAsset->UpdateTimeFPS : 60.0f, 1.0f);
-	const float PreviewDeltaTime = BaseDeltaTime * GetPreviewAnimSpeed();
+	const float PreviewDeltaTime = DeltaTime * GetPreviewAnimSpeed();
 	if (bPreviewLoop)
 	{
 		PreviewComponent->TickPreview(PreviewDeltaTime, true);

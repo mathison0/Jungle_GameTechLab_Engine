@@ -10,15 +10,9 @@
               "LODMethod" : 0,
               "LODSettings" : [0, 1],
               "ObjectName" : "New Particle System 2",
-              "SecondsBeforeInactive" : 0.000000,
-              "SystemUpdateMode" : 0,
               "ThumbnailWarmup" : 1.000000,
               "Type" : "UParticleSystem",
-              "UpdateTimeFPS" : 60.000000,
-              "WarmupTickRate" : 0.000000,
-              "WarmupTime" : 0.000000,
-              "bOrientZAxisTowardCamera" : false,
-              "bUseRealtimeThumbnail" : false
+              "UpdateTimeFPS" : 60.000000
             },
             "Id" : 1
           }, {

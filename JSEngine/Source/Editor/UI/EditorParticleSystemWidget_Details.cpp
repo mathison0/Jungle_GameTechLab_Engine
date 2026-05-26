@@ -247,12 +247,12 @@ void FEditorParticleSystemWidget::DrawParticleSystemDetails(UParticleSystem* Par
 	{
 		DrawPropertyGroup(
 			"##ParticleSystemDetailsTable",
-			{ "UpdateTimeFPS", "WarmupTime", "WarmupTickRate", "SecondsBeforeInactive", "bOrientZAxisTowardCamera", "SystemUpdateMode" });
+			{ "UpdateTimeFPS" });
 	}
 
 	if (ImGui::CollapsingHeader("Thumbnail", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		DrawPropertyGroup("##ParticleSystemThumbnailTable", { "ThumbnailWarmup", "bUseRealtimeThumbnail" });
+		DrawPropertyGroup("##ParticleSystemThumbnailTable", { "ThumbnailWarmup" });
 	}
 
 	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
@@ -448,17 +448,6 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 	case EPropertyType::Int:
 	{
 		int32* Value = static_cast<int32*>(ValuePtr);
-		if (Property.Name && std::strcmp(Property.Name, "SystemUpdateMode") == 0)
-		{
-			const char* Items[] = { "Real-Time", "Fixed Time" };
-			int32 EditedValue = std::clamp(*Value, 0, static_cast<int32>(IM_ARRAYSIZE(Items)) - 1);
-			if (ParticleCombo(Label, &EditedValue, Items, IM_ARRAYSIZE(Items)))
-			{
-				*Value = EditedValue;
-				return true;
-			}
-			return false;
-		}
 		if (Property.Name && std::strcmp(Property.Name, "LODMethod") == 0)
 		{
 			const char* Items[] = { "Automatic", "Direct Set" };

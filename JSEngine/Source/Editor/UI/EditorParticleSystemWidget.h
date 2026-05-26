@@ -95,7 +95,6 @@ private:
 		bool bShowBounds = true;
 		bool bShowOriginAxis = true;
 		bool bPreviewPaused = false;
-		bool bPreviewRealtime = true;
 		bool bPreviewLoop = true;
 		bool bPreviewPlaybackComplete = false;
 		int32 PreviewAnimSpeedIndex = 0;
@@ -185,7 +184,6 @@ private:
 	bool bShowBounds = true;
 	bool bShowOriginAxis = true;
 	bool bPreviewPaused = false;
-	bool bPreviewRealtime = true;
 	bool bPreviewLoop = true;
 	bool bPreviewPlaybackComplete = false;
 	bool bPreviewViewportInitialized = false;
