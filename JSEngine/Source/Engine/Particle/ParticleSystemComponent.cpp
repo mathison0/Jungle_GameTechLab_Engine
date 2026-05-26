@@ -7,6 +7,11 @@
 
 #include <cstring>
 
+UParticleSystemComponent::UParticleSystemComponent()
+{
+	SetEnableCull(false);
+}
+
 UParticleSystemComponent::~UParticleSystemComponent()
 {
 	ClearEmitterInstances();

@@ -5,6 +5,7 @@
 #include "Core/ResourceManager.h"
 
 #include <cstddef>
+#include <cmath>
 
 namespace
 {
@@ -103,7 +104,8 @@ void FSubUVBatcher::AddSprite(UTexture* Texture,
                               uint32 Rows,
                               float Width,
                               float Height,
-							  FColor Color)
+							  FColor Color,
+                              float Rotation)
 {
 	// Batch?? ??????? SRV??
 	if (Batches.empty() || Batches.back().Texture != Texture)
@@ -120,11 +122,20 @@ void FSubUVBatcher::AddSprite(UTexture* Texture,
 
     const float HalfW = Width  * WorldScale.Y * 0.25f;
     const float HalfH = Height * WorldScale.Z * 0.25f;
+    FVector SpriteRight = CamRight;
+    FVector SpriteUp = CamUp;
+    if (std::abs(Rotation) > 0.0001f)
+    {
+        const float S = std::sin(Rotation);
+        const float C = std::cos(Rotation);
+        SpriteRight = CamRight * C + CamUp * S;
+        SpriteUp = CamUp * C - CamRight * S;
+    }
 
-    FVector v0 = WorldPos + CamRight * (-HalfW) + CamUp * ( HalfH); // ?≫?
-    FVector v1 = WorldPos + CamRight * ( HalfW) + CamUp * ( HalfH); // ???
-    FVector v2 = WorldPos + CamRight * (-HalfW) + CamUp * (-HalfH); // ????
-    FVector v3 = WorldPos + CamRight * ( HalfW) + CamUp * (-HalfH); // ????
+    FVector v0 = WorldPos + SpriteRight * (-HalfW) + SpriteUp * ( HalfH); // ?≫?
+    FVector v1 = WorldPos + SpriteRight * ( HalfW) + SpriteUp * ( HalfH); // ???
+    FVector v2 = WorldPos + SpriteRight * (-HalfW) + SpriteUp * (-HalfH); // ????
+    FVector v3 = WorldPos + SpriteRight * ( HalfW) + SpriteUp * (-HalfH); // ????
 
 	uint32 LocalBase = static_cast<uint32>(Vertices.size())
 		- static_cast<uint32>(Batches.back().BaseVertex);
@@ -187,9 +198,10 @@ void FSubUVBatcher::Flush(ID3D11DeviceContext* Context, bool bWireframe)
     // Context->PSSetShaderResources(0, 1, &SRV);
 	for (const FSRVBatch& Batch : Batches)
 	{
-		if (!Batch.Texture || Batch.IndexCount == 0) continue;
+		UTexture* Texture = Batch.Texture ? Batch.Texture : FResourceManager::Get().GetTexture("DefaultWhite");
+		if (!Texture || Batch.IndexCount == 0) continue;
 
-		Mat->SetTexture("SubUVAtlas", Batch.Texture);
+		Mat->SetTexture("SubUVAtlas", Texture);
 		Material->BindParameters(Context, Program->PS);
         if (bWireframe)
         {

@@ -6,8 +6,11 @@
 #include "Render/Resource/VertexFactoryTypes.h"
 #include "Render/Resource/VertexTypes.h"
 #include "Render/Resource/Texture.h"
+#include "Render/SubUVBatcher.h"
 #include "Render/Scene/RenderBus.h"
 #include "Render/Scene/RenderCommand.h"
+
+#include <algorithm>
 
 // Cycle 10a baseline: Mesh/Ribbon/Beam 슬롯 6개 추가 후 FRenderCommand sizeof.
 // 추가 멤버 추정: 3 포인터(8×3=24) + 3 uint32(4×3=12) + 정렬 padding ≈ +48 bytes.
@@ -168,6 +171,39 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
 {
     if (Cmd.ParticleInstances == nullptr || Cmd.ParticleInstanceCount == 0)
     {
+        return;
+    }
+
+    if (Context.SubUVBatcher && Context.RenderBus)
+    {
+        Context.SubUVBatcher->Clear();
+
+        UTexture* Texture = Cmd.ParticleTexture ? Cmd.ParticleTexture : FResourceManager::Get().GetTexture("DefaultWhite");
+        const uint32 Columns = (Cmd.ParticleSubUVColumns > 0) ? Cmd.ParticleSubUVColumns : 1;
+        const uint32 Rows = (Cmd.ParticleSubUVRows > 0) ? Cmd.ParticleSubUVRows : 1;
+        const uint32 FrameCount = std::max(Columns * Rows, 1u);
+        const FVector UnitScale(1.0f, 1.0f, 1.0f);
+
+        for (uint32 Index = 0; Index < Cmd.ParticleInstanceCount; ++Index)
+        {
+            const FSpriteParticleInstanceData& Particle = Cmd.ParticleInstances[Index];
+            Context.SubUVBatcher->AddSprite(
+                Texture,
+                Particle.Position,
+                Context.RenderBus->GetCameraRight(),
+                Context.RenderBus->GetCameraUp(),
+                UnitScale,
+                Particle.SubUVIndex % FrameCount,
+                Columns,
+                Rows,
+                Particle.Size.X * 2.0f,
+                Particle.Size.Y * 2.0f,
+                Particle.Color,
+                Particle.Rotation);
+        }
+
+        const bool bWireframe = Context.RenderBus->GetViewMode() == EViewMode::Wireframe;
+        Context.SubUVBatcher->Flush(Context.DeviceContext, bWireframe);
         return;
     }
 

@@ -64,7 +64,8 @@ public:
                    uint32 Rows,
                    float Width = 1.0f,
                    float Height = 1.0f,
-				   FColor Color = FColor::White());
+				   FColor Color = FColor::White(),
+                   float Rotation = 0.0f);
 
     // 이번 프레임에 누적된 스프라이트 전체 제거
     void Clear();

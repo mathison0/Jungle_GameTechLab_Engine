@@ -24,6 +24,7 @@ namespace
 		case EPrimitiveType::EPT_Billboard:
 		case EPrimitiveType::EPT_Text:
 		case EPrimitiveType::EPT_SubUV:
+		case EPrimitiveType::EPT_ParticleSystem:
 			return true;
 		default:
 			return false;

@@ -377,23 +377,15 @@ bool FEditorMainPanel::SpawnParticleSystemFromContentPath(const FString& Payload
 
     EditorEngine->GetUndoSystem().CaptureSnapshot("Place Particle System");
 
-    AActor* Actor = World->SpawnActor<AActor>();
+    AParticleSystemActor* Actor = World->SpawnActor<AParticleSystemActor>();
     if (!Actor)
     {
         return false;
     }
 
+    Actor->InitDefaultComponents();
     Actor->SetFName(FName("ParticleSystemActor"));
-
-    UParticleSystemComponent* ParticleComp = Actor->AddComponent<UParticleSystemComponent>();
-    if (!ParticleComp)
-    {
-        PushFooterLog("Failed to create particle system component");
-        return false;
-    }
-
-    Actor->SetRootComponent(ParticleComp);
-    ParticleComp->SetTemplate(ParticleSystem);
+    Actor->SetTemplate(ParticleSystem);
 
     Actor->SetActorLocation(
         FEditorMainPanelPlacementHelpers::ComputePlacementLocation(Client, LocalX, LocalY));
