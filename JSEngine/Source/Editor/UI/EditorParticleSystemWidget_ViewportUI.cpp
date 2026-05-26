@@ -110,10 +110,19 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 		Save();
 	}
 	SameLineGap();
-	ToolbarButton("FindInContentBrowser", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Find), "Find in Content Browser");
+	if (ToolbarButton("FindInContentBrowser", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Find), "Find in Content Browser"))
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetMainPanel().RequestToggleContentBrowser();
+		}
+	}
 
 	SameLineGap(21.0f);
-	ToolbarButton("RestartSim", "Restart Sim", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartSim), "Restart simulation");
+	if (ToolbarButton("RestartSim", "Restart Sim", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartSim), "Restart simulation"))
+	{
+		RefreshPreviewComponent(true);
+	}
 
 	SameLineGap(7.0f);
 	ImGui::BeginDisabled(!CanUndo());
@@ -134,11 +143,6 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	if (ToolbarButton("Bounds", "Bounds", GetCascadeToolbarIcon(ECascadeToolbarIcon::Bounds), "Toggle bounds", bShowBounds))
 	{
 		SetPreviewBoundsVisible(!bShowBounds);
-	}
-	SameLineGap();
-	if (ToolbarButton("OriginAxis", "Origin Axis", GetCascadeToolbarIcon(ECascadeToolbarIcon::OriginAxis), "Toggle origin axis", bShowOriginAxis))
-	{
-		SetPreviewOriginAxisVisible(!bShowOriginAxis);
 	}
 	SameLineGap();
 	if (ToolbarButton("BackgroundColor", "Background Color", GetCascadeToolbarIcon(ECascadeToolbarIcon::BackgroundColor), "Change preview background color"))
