@@ -23,11 +23,9 @@ public:
 	bool IsLooping() const { return bLooping; }
 	bool UseLocalSpace() const { return bUseLocalSpace; }
 	UMaterialInterface* GetMaterial() const { return Material; }
-	const FName& GetSubUVName() const { return SubUVName; }
 	int32 GetSubImagesHorizontal() const { return std::max(SubImagesHorizontal, 1); }
 	int32 GetSubImagesVertical() const { return std::max(SubImagesVertical, 1); }
 	EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
-	void SetSubUVName(const FName& InName);
 	void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 private:
@@ -45,9 +43,6 @@ private:
 
 	UPROPERTY(DisplayName = "Use Local Space")
 	bool bUseLocalSpace = false;
-
-	UPROPERTY(DisplayName = "SubUV", Category = "SubUV")
-	FName SubUVName;
 
 	UPROPERTY(DisplayName = "Sub Images Horizontal", Category = "SubUV", Min = 1)
 	int32 SubImagesHorizontal = 1;

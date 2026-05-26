@@ -12,11 +12,6 @@
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleSystemComponent.h"
 
-namespace
-{
-    constexpr const char* DefaultRequiredSubUVName = "Asset/plasma.png";
-}
-
 // Function : Generate random float inside range
 // input : Min, Max
 // Min : minimum random value
@@ -62,7 +57,6 @@ static FVector RandomRangeVectorSeeded(const FVector& Min, const FVector& Max, u
 UParticleModuleRequired::UParticleModuleRequired()
 {
     bSpawnModule = true;
-    SetSubUVName(FName(DefaultRequiredSubUVName));
 }
 
 // Function : Apply required default particle values at spawn time
@@ -84,20 +78,7 @@ void UParticleModuleRequired::Spawn(FParticleEmitterInstance* Owner, FBasePartic
 void UParticleModuleRequired::PostEditProperty(const char* PropertyName)
 {
     UParticleModule::PostEditProperty(PropertyName);
-    if (PropertyName && strcmp(PropertyName, "SubUVName") == 0)
-    {
-        SetSubUVName(SubUVName);
-    }
-}
-
-void UParticleModuleRequired::SetSubUVName(const FName& InName)
-{
-    SubUVName = InName;
-    if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUVExact(InName))
-    {
-        SubImagesHorizontal = static_cast<int32>(std::max(SubUV->Columns, 1u));
-        SubImagesVertical = static_cast<int32>(std::max(SubUV->Rows, 1u));
-    }
+    (void)PropertyName;
 }
 
 UParticleModuleSpawn::UParticleModuleSpawn()
@@ -444,7 +425,7 @@ USubUVModule::USubUVModule()
 {
     bSpawnModule = true;
     bUpdateModule = true;
-    SetSubUVName(FName(DefaultRequiredSubUVName));
+    SetSubUVName(FName::None);
 }
 
 void USubUVModule::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
@@ -485,7 +466,9 @@ void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 
     const uint32 LastFrame = TotalFrames - 1;
     const uint32 StartFrame = std::min(static_cast<uint32>(GetStartFrameIndex()), LastFrame);
-    const uint32 EndFrame = std::min(static_cast<uint32>(GetEndFrameIndex()), LastFrame);
+    const uint32 EndFrame = (EndFrameIndex <= 0)
+        ? LastFrame
+        : std::min(static_cast<uint32>(GetEndFrameIndex()), LastFrame);
     const uint32 RangeStart = std::min(StartFrame, EndFrame);
     const uint32 RangeEnd = std::max(StartFrame, EndFrame);
     const uint32 RangeFrameCount = RangeEnd - RangeStart + 1;

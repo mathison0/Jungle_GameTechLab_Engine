@@ -117,11 +117,6 @@ namespace
             }
         }
 
-        if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUVExact(RequiredModule->GetSubUVName()))
-        {
-            return SubUV->Texture;
-        }
-
         return nullptr;
     }
 
@@ -678,7 +673,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 continue;
             }
 
-            // Sprite는 RequiredModule + SubUV/Atlas로 Material/Texture/SubUVGrid 결정.
+            // Sprite는 Required Material/Grid를 기본으로 쓰고, SubUVModule atlas가 있으면 그 atlas가 source가 된다.
             // Mesh는 switch case에서 MeshTD->GetEffectiveMaterial()로 이미 Material 세팅됨 → Sprite 분기에 안 들어감.
             // Mesh의 ParticleTexture는 Material의 DiffuseMap에서 추출 (Sprite의 ResolveParticleTexture 패턴 일부 재사용).
             if (RenderMode == EParticleEmitterRenderMode::Sprite)
