@@ -1007,14 +1007,26 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	const bool bHasModuleToggle = Module && !bRequired && !Cast<UParticleModuleTypeDataBase>(Module);
 	const ImVec2 ToggleMin(Max.x - 38.0f, Min.y + 5.0f);
 	const ImVec2 ToggleMax(ToggleMin.x + 13.0f, ToggleMin.y + 13.0f);
+	const ImVec2 CurveMin(Max.x - 19.0f, Min.y + 5.0f);
+	const ImVec2 CurveMax(CurveMin.x + 13.0f, CurveMin.y + 13.0f);
 	const ImVec2 MousePos = ImGui::GetIO().MousePos;
 	const bool bToggleClicked =
 		bLeftClicked &&
 		bHasModuleToggle &&
 		MousePos.x >= ToggleMin.x && MousePos.x <= ToggleMax.x &&
 		MousePos.y >= ToggleMin.y && MousePos.y <= ToggleMax.y;
+	const bool bCurveClicked =
+		bLeftClicked &&
+		bHasModuleToggle &&
+		MousePos.x >= CurveMin.x && MousePos.x <= CurveMax.x &&
+		MousePos.y >= CurveMin.y && MousePos.y <= CurveMax.y;
 
-	if (bToggleClicked)
+	if (bCurveClicked)
+	{
+		SelectModule(EmitterIndex, ModuleIndex);
+		OpenParticleModuleCurves(EmitterIndex, ModuleIndex);
+	}
+	else if (bToggleClicked)
 	{
 		CaptureUndoSnapshot(Module->IsEnabled() ? "Disable Particle Module" : "Enable Particle Module");
 		Module->SetEnabled(!Module->IsEnabled());
@@ -1113,7 +1125,7 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	if (bHasModuleToggle)
 	{
 		DrawMiniCheck(DrawList, ToggleMin, Module ? Module->IsEnabled() : true);
-		DrawMiniCurveIcon(DrawList, ImVec2(Max.x - 19.0f, Min.y + 5.0f), IsCurveDrivenModule(Module));
+		DrawMiniCurveIcon(DrawList, CurveMin, true);
 	}
 
 	ImGui::PopID();

@@ -658,12 +658,9 @@ namespace
 		const ImU32 BorderColor = ImGui::GetColorU32(bEnabled ? ImVec4(0.58f, 0.86f, 0.40f, 1.0f) : ImVec4(0.25f, 0.28f, 0.25f, 1.0f));
 		DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(ImVec4(0.07f, 0.09f, 0.07f, 1.0f)));
 		DrawList->AddRect(Min, Max, BorderColor);
-		if (bEnabled)
-		{
-			DrawList->AddLine(ImVec2(Min.x + 2.0f, Min.y + 10.0f), ImVec2(Min.x + 5.0f, Min.y + 5.0f), BorderColor, 1.2f);
-			DrawList->AddLine(ImVec2(Min.x + 5.0f, Min.y + 5.0f), ImVec2(Min.x + 8.0f, Min.y + 8.0f), BorderColor, 1.2f);
-			DrawList->AddLine(ImVec2(Min.x + 8.0f, Min.y + 8.0f), ImVec2(Min.x + 11.0f, Min.y + 3.0f), BorderColor, 1.2f);
-		}
+		DrawList->AddLine(ImVec2(Min.x + 2.0f, Min.y + 10.0f), ImVec2(Min.x + 5.0f, Min.y + 5.0f), BorderColor, 1.2f);
+		DrawList->AddLine(ImVec2(Min.x + 5.0f, Min.y + 5.0f), ImVec2(Min.x + 8.0f, Min.y + 8.0f), BorderColor, 1.2f);
+		DrawList->AddLine(ImVec2(Min.x + 8.0f, Min.y + 8.0f), ImVec2(Min.x + 11.0f, Min.y + 3.0f), BorderColor, 1.2f);
 	}
 
 	void DrawEmitterThumbnail(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, int32 EmitterIndex)

@@ -1,6 +1,79 @@
 // Handles particle system document lifecycle, saving, dirty state, undo, and redo.
 #include "Editor/UI/EditorParticleSystemWidgetPrivate.h"
 
+namespace
+{
+	bool AreNearlyEqual(float A, float B)
+	{
+		return std::fabs(A - B) < 0.0001f;
+	}
+
+	bool AreCurveKeysEqual(const FCurveKey& A, const FCurveKey& B)
+	{
+		return
+			AreNearlyEqual(A.Time, B.Time) &&
+			AreNearlyEqual(A.Value, B.Value) &&
+			A.InterpMode == B.InterpMode &&
+			A.TangentMode == B.TangentMode &&
+			AreNearlyEqual(A.ArriveTangent, B.ArriveTangent) &&
+			AreNearlyEqual(A.LeaveTangent, B.LeaveTangent);
+	}
+
+	bool AreFloatCurvesEqual(const FFloatCurve& A, const FFloatCurve& B)
+	{
+		if (A.Keys.size() != B.Keys.size())
+		{
+			return false;
+		}
+		for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(A.Keys.size()); ++KeyIndex)
+		{
+			if (!AreCurveKeysEqual(A.Keys[KeyIndex], B.Keys[KeyIndex]))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool AreCurveMapsEqual(const TMap<FString, FFloatCurve>& A, const TMap<FString, FFloatCurve>& B)
+	{
+		if (A.size() != B.size())
+		{
+			return false;
+		}
+		for (const auto& [Key, Curve] : A)
+		{
+			auto It = B.find(Key);
+			if (It == B.end() || !AreFloatCurvesEqual(Curve, It->second))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool AreVectorMapsEqual(const TMap<FString, FVector>& A, const TMap<FString, FVector>& B)
+	{
+		if (A.size() != B.size())
+		{
+			return false;
+		}
+		for (const auto& [Key, Value] : A)
+		{
+			auto It = B.find(Key);
+			if (It == B.end() ||
+				!AreNearlyEqual(Value.X, It->second.X) ||
+				!AreNearlyEqual(Value.Y, It->second.Y) ||
+				!AreNearlyEqual(Value.Z, It->second.Z))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+}
+
 FEditorParticleSystemWidget::~FEditorParticleSystemWidget() = default;
 
 void FEditorParticleSystemWidget::Initialize(UEditorEngine* InEditorEngine)
@@ -109,6 +182,10 @@ bool FEditorParticleSystemWidget::Undo()
 	FParticleEditorUndoEntry CurrentEntry;
 	CurrentEntry.Label = "Current";
 	CurrentEntry.Snapshot = CaptureParticleSnapshot();
+	CurrentEntry.ParticleDistributionKinds = ParticleDistributionKinds;
+	CurrentEntry.ParticleDistributionFloatMaxValues = ParticleDistributionFloatMaxValues;
+	CurrentEntry.ParticleDistributionVectorMaxValues = ParticleDistributionVectorMaxValues;
+	CurrentEntry.ParticleDistributionCurves = ParticleDistributionCurves;
 	CurrentEntry.CurrentLOD = CurrentLOD;
 	CurrentEntry.SelectedEmitterIndex = SelectedEmitterIndex;
 	CurrentEntry.SelectedModuleIndex = SelectedModuleIndex;
@@ -123,6 +200,19 @@ bool FEditorParticleSystemWidget::Undo()
 		PreviousEntry.CurrentLOD,
 		PreviousEntry.SelectedEmitterIndex,
 		PreviousEntry.SelectedModuleIndex);
+	if (bRestored)
+	{
+		ParticleDistributionKinds = PreviousEntry.ParticleDistributionKinds;
+		ParticleDistributionFloatMaxValues = PreviousEntry.ParticleDistributionFloatMaxValues;
+		ParticleDistributionVectorMaxValues = PreviousEntry.ParticleDistributionVectorMaxValues;
+		ParticleDistributionCurves = PreviousEntry.ParticleDistributionCurves;
+		bParticleCurveViewInitialized = false;
+		ActiveParticleCurveChannelKey.clear();
+		ActiveParticleCurveKeyIndex = -1;
+		DragParticleCurveChannelKey.clear();
+		DragParticleCurveKeyIndex = -1;
+		bParticleCurveEditUndoCaptured = false;
+	}
 	bRestoringParticleSnapshot = false;
 
 	if (bRestored && EditorEngine)
@@ -142,6 +232,10 @@ bool FEditorParticleSystemWidget::Redo()
 	FParticleEditorUndoEntry CurrentEntry;
 	CurrentEntry.Label = "Current";
 	CurrentEntry.Snapshot = CaptureParticleSnapshot();
+	CurrentEntry.ParticleDistributionKinds = ParticleDistributionKinds;
+	CurrentEntry.ParticleDistributionFloatMaxValues = ParticleDistributionFloatMaxValues;
+	CurrentEntry.ParticleDistributionVectorMaxValues = ParticleDistributionVectorMaxValues;
+	CurrentEntry.ParticleDistributionCurves = ParticleDistributionCurves;
 	CurrentEntry.CurrentLOD = CurrentLOD;
 	CurrentEntry.SelectedEmitterIndex = SelectedEmitterIndex;
 	CurrentEntry.SelectedModuleIndex = SelectedModuleIndex;
@@ -156,6 +250,19 @@ bool FEditorParticleSystemWidget::Redo()
 		NextEntry.CurrentLOD,
 		NextEntry.SelectedEmitterIndex,
 		NextEntry.SelectedModuleIndex);
+	if (bRestored)
+	{
+		ParticleDistributionKinds = NextEntry.ParticleDistributionKinds;
+		ParticleDistributionFloatMaxValues = NextEntry.ParticleDistributionFloatMaxValues;
+		ParticleDistributionVectorMaxValues = NextEntry.ParticleDistributionVectorMaxValues;
+		ParticleDistributionCurves = NextEntry.ParticleDistributionCurves;
+		bParticleCurveViewInitialized = false;
+		ActiveParticleCurveChannelKey.clear();
+		ActiveParticleCurveKeyIndex = -1;
+		DragParticleCurveChannelKey.clear();
+		DragParticleCurveKeyIndex = -1;
+		bParticleCurveEditUndoCaptured = false;
+	}
 	bRestoringParticleSnapshot = false;
 
 	if (bRestored && EditorEngine)
@@ -203,6 +310,7 @@ void FEditorParticleSystemWidget::OpenParticleSystem(const FString& InDocumentPa
 	ClearActiveDocumentState();
 	bPropertyEditUndoCaptured = false;
 	bEmitterNameEditUndoCaptured = false;
+	bParticleCurveEditUndoCaptured = false;
 
 	if (!RestoreDocumentState(InDocumentPath))
 	{
@@ -232,6 +340,10 @@ void FEditorParticleSystemWidget::StoreCurrentDocumentState()
 	State.SelectedModuleIndex = SelectedModuleIndex;
 	State.UndoHistory = UndoHistory;
 	State.RedoHistory = RedoHistory;
+	State.ParticleDistributionKinds = ParticleDistributionKinds;
+	State.ParticleDistributionFloatMaxValues = ParticleDistributionFloatMaxValues;
+	State.ParticleDistributionVectorMaxValues = ParticleDistributionVectorMaxValues;
+	State.ParticleDistributionCurves = ParticleDistributionCurves;
 	State.PreviewViewMode = bPreviewViewportInitialized
 		? PreviewViewport.GetState().ViewMode
 		: EViewMode::Lit_BlinnPhong;
@@ -269,6 +381,10 @@ bool FEditorParticleSystemWidget::RestoreDocumentState(const FString& InDocument
 	SelectedModuleIndex = State.SelectedModuleIndex;
 	UndoHistory = State.UndoHistory;
 	RedoHistory = State.RedoHistory;
+	ParticleDistributionKinds = State.ParticleDistributionKinds;
+	ParticleDistributionFloatMaxValues = State.ParticleDistributionFloatMaxValues;
+	ParticleDistributionVectorMaxValues = State.ParticleDistributionVectorMaxValues;
+	ParticleDistributionCurves = State.ParticleDistributionCurves;
 	bShowThumbnail = State.bShowThumbnail;
 	bShowBounds = State.bShowBounds;
 	bShowOriginAxis = State.bShowOriginAxis;
@@ -297,6 +413,22 @@ void FEditorParticleSystemWidget::ClearActiveDocumentState()
 	SelectedEmitterIndex = 0;
 	SelectedModuleIndex = NoParticleModuleSelection;
 	SelectedCurveAssetPath.clear();
+	ParticleDistributionKinds.clear();
+	ParticleDistributionFloatMaxValues.clear();
+	ParticleDistributionVectorMaxValues.clear();
+	ParticleDistributionCurves.clear();
+	ActiveParticleCurveModuleKey.clear();
+	ActiveParticleCurveChannelKey.clear();
+	ParticleCurveViewModuleKey.clear();
+	ParticleCurveViewMinTime = 0.0f;
+	ParticleCurveViewMaxTime = 1.0f;
+	bParticleCurveViewInitialized = false;
+	bParticleCurveViewUserAdjusted = false;
+	ActiveParticleCurveEmitterIndex = -1;
+	ActiveParticleCurveModuleIndex = -1;
+	ActiveParticleCurveKeyIndex = -1;
+	DragParticleCurveKeyIndex = -1;
+	DragParticleCurveChannelKey.clear();
 	ClearEmitterContext();
 	ClearUndoHistory();
 	ResetPendingReorders();
@@ -315,6 +447,7 @@ void FEditorParticleSystemWidget::ClearActiveDocumentState()
 	}
 	bPropertyEditUndoCaptured = false;
 	bEmitterNameEditUndoCaptured = false;
+	bParticleCurveEditUndoCaptured = false;
 }
 
 void FEditorParticleSystemWidget::DestroyUncachedParticleSystem(UParticleSystem*& Asset)
@@ -345,6 +478,10 @@ void FEditorParticleSystemWidget::CaptureUndoSnapshot(const char* Label)
 	FParticleEditorUndoEntry Entry;
 	Entry.Label = (Label && Label[0] != '\0') ? Label : "Edit Particle System";
 	Entry.Snapshot = CaptureParticleSnapshot();
+	Entry.ParticleDistributionKinds = ParticleDistributionKinds;
+	Entry.ParticleDistributionFloatMaxValues = ParticleDistributionFloatMaxValues;
+	Entry.ParticleDistributionVectorMaxValues = ParticleDistributionVectorMaxValues;
+	Entry.ParticleDistributionCurves = ParticleDistributionCurves;
 	Entry.CurrentLOD = CurrentLOD;
 	Entry.SelectedEmitterIndex = SelectedEmitterIndex;
 	Entry.SelectedModuleIndex = SelectedModuleIndex;
@@ -387,6 +524,7 @@ bool FEditorParticleSystemWidget::RestoreParticleSnapshot(
 	bOpenRenameEmitterPopup = false;
 	bPropertyEditUndoCaptured = false;
 	bEmitterNameEditUndoCaptured = false;
+	bParticleCurveEditUndoCaptured = false;
 
 	if (ParticleSystemAsset)
 	{
@@ -409,7 +547,13 @@ void FEditorParticleSystemWidget::PushUndoEntry(
 	const FParticleEditorUndoEntry& Entry,
 	bool bSkipDuplicate)
 {
-	if (bSkipDuplicate && !Stack.empty() && Stack.back().Snapshot == Entry.Snapshot)
+	if (bSkipDuplicate &&
+		!Stack.empty() &&
+		Stack.back().Snapshot == Entry.Snapshot &&
+		Stack.back().ParticleDistributionKinds == Entry.ParticleDistributionKinds &&
+		Stack.back().ParticleDistributionFloatMaxValues == Entry.ParticleDistributionFloatMaxValues &&
+		AreVectorMapsEqual(Stack.back().ParticleDistributionVectorMaxValues, Entry.ParticleDistributionVectorMaxValues) &&
+		AreCurveMapsEqual(Stack.back().ParticleDistributionCurves, Entry.ParticleDistributionCurves))
 	{
 		return;
 	}
