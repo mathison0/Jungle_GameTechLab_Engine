@@ -105,6 +105,9 @@ private:
 	void EnsurePreviewViewport();
 	void EnsurePreviewActor();
 	void RefreshPreviewComponent(bool bRestartSimulation);
+	void SyncPreviewWorld();
+	void SetPreviewBoundsVisible(bool bVisible);
+	void SetPreviewOriginAxisVisible(bool bVisible);
 	float GetPreviewAnimSpeed() const;
 	float GetPreviewMaxEmitterDuration() const;
 	void RestartPreviewPlayback();
@@ -159,6 +162,7 @@ private:
 	void DrawEmitterDetails(UParticleEmitter* Emitter, int32 EmitterIndex);
 	void DrawParticleSystemDetails(UParticleSystem* ParticleSystem);
 	void DrawParticleModuleDetails(UParticleModule* Module, UParticleEmitter* OwnerEmitter);
+	bool DrawParticleObjectProperty(UObject* Object, const FProperty& Property);
 	bool DrawParticleModuleProperty(UParticleModule* Module, const FProperty& Property);
 	bool DrawParticlePropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
 	bool DrawParticleStructPropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
@@ -175,7 +179,6 @@ private:
 	FString SelectedCurveAssetPath;
 	FString DocumentPath;
 	TMap<FString, FParticleSystemDocumentState> ParticleDocumentStates;
-	TMap<FString, FColor> PreviewBackgroundColorByDocument;
 	bool bDirty = true;
 	bool bShowThumbnail = false;
 	bool bShowBounds = true;
