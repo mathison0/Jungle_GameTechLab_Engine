@@ -307,33 +307,58 @@ USubUVModule::USubUVModule()
 {
     bSpawnModule = true;
     bUpdateModule = true;
+    SetSubUVName(FName(DefaultRequiredSubUVName));
 }
 
 void USubUVModule::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
     (void)SpawnTime;
-    Particle.SubUVIndex = 0;
+    Particle.SubUVIndex = static_cast<uint32>(GetStartFrameIndex());
 }
 
 void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    if (!CachedSubUV)
+    if (!Owner)
     {
         return;
     }
-    const uint32 TotalFrames = CachedSubUV->Columns * CachedSubUV->Rows;
+
+    uint32 TotalFrames = 0;
+    if (CachedSubUV)
+    {
+        TotalFrames = CachedSubUV->Columns * CachedSubUV->Rows;
+    }
+    if (TotalFrames == 0)
+    {
+        const UParticleLODLevel* LODLevel = Owner->GetCurrentLODLevel();
+        const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+        if (RequiredModule)
+        {
+            TotalFrames = static_cast<uint32>(
+                std::max(RequiredModule->GetSubImagesHorizontal(), 1) *
+                std::max(RequiredModule->GetSubImagesVertical(), 1));
+        }
+    }
     if (TotalFrames == 0)
     {
         return;
     }
 
+    const uint32 LastFrame = TotalFrames - 1;
+    const uint32 StartFrame = std::min(static_cast<uint32>(GetStartFrameIndex()), LastFrame);
+    const uint32 EndFrame = std::min(static_cast<uint32>(GetEndFrameIndex()), LastFrame);
+    const uint32 RangeStart = std::min(StartFrame, EndFrame);
+    const uint32 RangeEnd = std::max(StartFrame, EndFrame);
+    const uint32 RangeFrameCount = RangeEnd - RangeStart + 1;
+
     for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
         const float Clamped = std::clamp(Particle.RelativeTime, 0.0f, 0.9999f);
-        Particle.SubUVIndex = static_cast<uint32>(Clamped * static_cast<float>(TotalFrames)) % TotalFrames;
+        const uint32 RangeFrameOffset = static_cast<uint32>(Clamped * static_cast<float>(RangeFrameCount)) % RangeFrameCount;
+        Particle.SubUVIndex = RangeStart + RangeFrameOffset;
     }
 }
 
@@ -359,4 +384,12 @@ void USubUVModule::SetSubUVName(const FName& InName)
 {
     SubUVName = InName;
     CachedSubUV = FResourceManager::Get().FindSubUVExact(InName);
+    if (CachedSubUV && EndFrameIndex <= 0)
+    {
+        const uint32 TotalFrames = CachedSubUV->Columns * CachedSubUV->Rows;
+        if (TotalFrames > 0)
+        {
+            EndFrameIndex = static_cast<int32>(TotalFrames - 1);
+        }
+    }
 }

@@ -253,7 +253,7 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 	DrawDisabledParticleModuleMenu("Parameter");
 	DrawParticleModuleAddMenu<UParticleModuleSize>("Size", "Size By Life", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawParticleModuleAddMenu<UParticleModuleSpawn>("Spawn", "Spawn", bHasTargetEmitter && !bHasSpawnModule, AddModuleToTargetEmitter);
-	DrawDisabledParticleModuleMenu("SubUV");
+	DrawParticleModuleAddMenu<USubUVModule>("SubUV", "SubUV", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawParticleModuleAddMenu<UParticleModuleVelocity>("Velocity", "Initial Velocity", bHasTargetEmitter, AddModuleToTargetEmitter);
 
 	EndParticlePopup();

@@ -210,10 +210,18 @@ public:
 	void SetSubUVName(const FName& InName);
 	const FName& GetSubUVName() const { return SubUVName; }
 	const FTextureAtlasResource* GetCachedSubUV() const { return CachedSubUV; }
+	int32 GetStartFrameIndex() const { return std::max(StartFrameIndex, 0); }
+	int32 GetEndFrameIndex() const { return std::max(EndFrameIndex, 0); }
 
 private:
 	UPROPERTY(DisplayName = "SubUV")
 	FName SubUVName;
+
+	UPROPERTY(DisplayName = "Start Index", Min = 0)
+	int32 StartFrameIndex = 0;
+
+	UPROPERTY(DisplayName = "End Index", Min = 0)
+	int32 EndFrameIndex = 0;
 
 	FTextureAtlasResource* CachedSubUV = nullptr; // ResourceManager 소유, 참조만
 };

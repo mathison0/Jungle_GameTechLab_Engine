@@ -507,6 +507,10 @@ namespace
 		{
 			return "Collision";
 		}
+		if (Cast<USubUVModule>(Module))
+		{
+			return "SubUV";
+		}
 		if (Cast<UParticleModuleEventGenerator>(Module))
 		{
 			return "Event Generator";
@@ -581,6 +585,10 @@ namespace
 		if (Cast<UParticleModuleSpawn>(Module))
 		{
 			return ImVec4(0.72f, 0.32f, 0.32f, 1.0f);
+		}
+		if (Cast<USubUVModule>(Module))
+		{
+			return ImVec4(0.25f, 0.34f, 0.58f, 1.0f);
 		}
 		if (Module && Module->IsUpdateModule() && !Module->IsSpawnModule())
 		{
