@@ -313,7 +313,7 @@
           "ObjectName" : "UStaticMeshComponent_1",
           "PersistentGuid" : "AC01CA8E-DB0D401F-9DB4EF1E-23FC2339",
           "RelativeLocation" : {
-            "X" : -14.330110,
+            "X" : -1.794738,
             "Y" : 3.865058,
             "Z" : 1.891727
           },
@@ -352,13 +352,13 @@
     }],
   "ClassName" : "UWorld",
   "Name" : "Untitled",
-  "NextUUID" : 638,
+  "NextUUID" : 813,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-2.459711, 10.002502, 9.339938],
+    "Location" : [2.122883, -4.543060, 10.136924],
     "NearClip" : 0.100000,
-    "Rotation" : [29.074305, -19.361938, -120.806808]
+    "Rotation" : [-32.165710, -5.010040, 97.906296]
   },
   "Version" : 6,
   "WorldSettings" : {

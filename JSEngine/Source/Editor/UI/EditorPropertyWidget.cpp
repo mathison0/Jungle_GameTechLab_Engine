@@ -8,9 +8,12 @@
 #include "Core/AssetPathPolicy.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SkeletalMeshComponent.h"
+#include "Particle/ParticleMeshEmitterInstance.h"
+#include "Particle/ParticleMeshTypes.h"
 #include "Particle/ParticleModuleBeamNoise.h"
 #include "Particle/ParticleModuleBeamSource.h"
 #include "Particle/ParticleModuleBeamTarget.h"
+#include "Particle/ParticleModuleMeshRotationRate.h"
 #include "Particle/ParticleModuleTypeDataBeam.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
@@ -1645,6 +1648,90 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					ImGui::EndCombo();
 				}
 
+				// Cycle 14 (M1): Alignment 모드 selector — PSA_Velocity / PSA_FacingCameraPosition 2값.
+				// 결정 17 옵션 B 채택 결과: 후속 cycle 에서 enum 값 추가만으로 확장 가능.
+				ImGui::Spacing();
+				ImGui::TextUnformatted("Alignment");
+				const char* AlignmentItems[] = { "Velocity", "Facing Camera Position" };
+				int32 AlignmentIdx = static_cast<int32>(MeshTD->GetAlignment());
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::Combo("##MeshAlignmentPicker", &AlignmentIdx, AlignmentItems, IM_ARRAYSIZE(AlignmentItems)))
+				{
+					MeshTD->SetAlignment(static_cast<EMeshAlignment>(AlignmentIdx));
+				}
+
+				// Cycle 14 (M2): RotationRate module 편집 — emitter LOD 에서 lookup.
+				// 모듈이 attach 되어 있으면 RotRateMin / RotRateMax 인라인 편집.
+				// 없으면 "Add Mesh RotationRate Module" 버튼으로 즉시 추가 (detail panel 만으로 Cycle 14 셋업 가능).
+				UParticleModuleMeshRotationRate* RotRateMod = nullptr;
+				UParticleLODLevel* MeshLOD0 = Emitter->GetLODLevel(0);
+				if (MeshLOD0)
+				{
+					for (UParticleModule* Module : MeshLOD0->GetModules())
+					{
+						if (UParticleModuleMeshRotationRate* Found = Cast<UParticleModuleMeshRotationRate>(Module))
+						{
+							RotRateMod = Found;
+							break;
+						}
+					}
+				}
+				ImGui::Spacing();
+				if (RotRateMod)
+				{
+					ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f),
+						"Mesh RotationRate Module: attached (Rotation accumulating)");
+
+					// Inline edit (Beam Noise 의 DragFloat3 패턴 답습 [line 1959]).
+					// 단위: 라디안/sec — `MeshParticle.hlsl:39` 의 sin/cos 입력 기준 일관.
+					const float RotRateDragWidth = ImGui::GetContentRegionAvail().x * 0.5f;
+					FVector RotMin = RotRateMod->GetRotRateMin();
+					ImGui::SetNextItemWidth(RotRateDragWidth);
+					if (ImGui::DragFloat3("RotRate Min (rad/s)", &RotMin.X, 0.05f, -20.0f, 20.0f))
+					{
+						RotRateMod->SetRotRateMin(RotMin);
+					}
+					FVector RotMax = RotRateMod->GetRotRateMax();
+					ImGui::SetNextItemWidth(RotRateDragWidth);
+					if (ImGui::DragFloat3("RotRate Max (rad/s)", &RotMax.X, 0.05f, -20.0f, 20.0f))
+					{
+						RotRateMod->SetRotRateMax(RotMax);
+					}
+
+					// Quick preset: 0 / Z 축 spin 1 rad/s / 모든 축 spin 1 rad/s.
+					if (ImGui::SmallButton("Preset: 0"))
+					{
+						RotRateMod->SetRotRateMin(FVector::ZeroVector);
+						RotRateMod->SetRotRateMax(FVector::ZeroVector);
+					}
+					ImGui::SameLine();
+					if (ImGui::SmallButton("Preset: Z spin"))
+					{
+						RotRateMod->SetRotRateMin(FVector(0.0f, 0.0f, 1.0f));
+						RotRateMod->SetRotRateMax(FVector(0.0f, 0.0f, 1.0f));
+					}
+					ImGui::SameLine();
+					if (ImGui::SmallButton("Preset: XYZ random"))
+					{
+						RotRateMod->SetRotRateMin(FVector(-2.0f, -2.0f, -2.0f));
+						RotRateMod->SetRotRateMax(FVector(2.0f, 2.0f, 2.0f));
+					}
+					ImGui::TextDisabled("  Preset 변경 후 spawn 되는 새 particle 부터 반영 (기존 particle 의 RotRate 는 spawn 시점 값 유지).");
+				}
+				else if (MeshLOD0)
+				{
+					ImGui::TextDisabled("Mesh RotationRate Module: not attached");
+					if (ImGui::Button("Add Mesh RotationRate Module"))
+					{
+						if (UParticleModuleMeshRotationRate* NewMod = MeshLOD0->AddModule<UParticleModuleMeshRotationRate>())
+						{
+							// Cycle 14 inspection 편의: spin 이 immediately 시각화되도록 default Z 축 1 rad/s.
+							NewMod->SetRotRateMin(FVector(0.0f, 0.0f, 1.0f));
+							NewMod->SetRotRateMax(FVector(0.0f, 0.0f, 1.0f));
+						}
+					}
+				}
+
 				ImGui::PopID();
 			}
 		}
@@ -1976,6 +2063,124 @@ void FEditorPropertyWidget::RenderComponentProperties()
 
 				ImGui::PopID();
 			}
+		}
+
+		// Cycle 14 (M1+M2) Runtime Status inspection 섹션.
+		// 사용자가 cascade editor 를 거치지 않고 main panel detail 만으로 다음을 점검할 수 있도록:
+		//   (A) Component-cached camera 상태 (결정 18 옵션 β 검증) — bCachedCameraValid + 4 vector 값
+		//   (B) 모든 emitter instance 의 runtime 상태 — type, active count, stride
+		//   (C) Mesh emitter 한정: alignment 모드, RotationRate module 부착 여부, 첫 particle 의 payload 값
+		// 위험 12 (camera fallback) 가시화: bCachedCameraValid=false 시 warning 색.
+		DrawDetailsSeparator();
+		DrawDetailsSectionLabel("Particle Runtime Status (Cycle 14)");
+		ImGui::Spacing();
+
+		// (A) Component cached camera 상태.
+		ImGui::TextUnformatted("Component Cached Camera (결정 18 옵션 β):");
+		const bool bCamValid = ParticleComp->IsCachedCameraValid();
+		if (bCamValid)
+		{
+			const FVector& CamPos = ParticleComp->GetCachedCameraPosition();
+			const FVector& CamFwd = ParticleComp->GetCachedCameraForward();
+			const FVector& CamUp = ParticleComp->GetCachedCameraUp();
+			const FVector& CamRight = ParticleComp->GetCachedCameraRight();
+			ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "  Cache Valid: Yes");
+			ImGui::Text("  Position : (%.2f, %.2f, %.2f)", CamPos.X, CamPos.Y, CamPos.Z);
+			ImGui::Text("  Forward  : (%.2f, %.2f, %.2f)", CamFwd.X, CamFwd.Y, CamFwd.Z);
+			ImGui::Text("  Up       : (%.2f, %.2f, %.2f)", CamUp.X, CamUp.Y, CamUp.Z);
+			ImGui::Text("  Right    : (%.2f, %.2f, %.2f)", CamRight.X, CamRight.Y, CamRight.Z);
+		}
+		else
+		{
+			// 첫 frame / 외부 호출 (EditorMainPanelDebug 등) 경로에서는 cache 미갱신 → PSA_FacingCameraPosition 이 PSA_Velocity 로 fallback.
+			ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.3f, 1.0f),
+				"  Cache Valid: No  (PSA_FacingCameraPosition will fallback to PSA_Velocity — 위험 12 방어)");
+		}
+
+		// (B) 모든 emitter instance 의 runtime 상태.
+		ImGui::Spacing();
+		ImGui::TextUnformatted("Emitter Instances:");
+		const int32 NumEmittersStatus = ParticleComp->GetEmitterInstanceCount();
+		if (NumEmittersStatus == 0)
+		{
+			ImGui::TextDisabled("  (no runtime emitter instances — set Template first)");
+		}
+		for (int32 StatusEmitterIdx = 0; StatusEmitterIdx < NumEmittersStatus; ++StatusEmitterIdx)
+		{
+			FParticleEmitterInstance* Instance = ParticleComp->GetEmitterInstance(StatusEmitterIdx);
+			if (!Instance) continue;
+
+			ImGui::PushID(StatusEmitterIdx + 0x40000); // Cycle 14 namespace ID
+
+			UParticleLODLevel* StatusLOD = Instance->GetCurrentLODLevel();
+			const EParticleEmitterRenderMode StatusRenderMode =
+				StatusLOD ? StatusLOD->GetEffectiveRenderMode() : EParticleEmitterRenderMode::Sprite;
+			const char* StatusRenderModeStr =
+				StatusRenderMode == EParticleEmitterRenderMode::Sprite ? "Sprite" :
+				StatusRenderMode == EParticleEmitterRenderMode::Mesh   ? "Mesh"   :
+				StatusRenderMode == EParticleEmitterRenderMode::Ribbon ? "Ribbon" :
+				StatusRenderMode == EParticleEmitterRenderMode::Beam   ? "Beam"   : "?";
+
+			ImGui::Text("  [%d] Type=%s  Active=%d/%d  Stride=%dB",
+				StatusEmitterIdx,
+				StatusRenderModeStr,
+				Instance->GetActiveParticleCount(),
+				Instance->GetMaxActiveParticleCount(),
+				Instance->GetParticleStride());
+
+			// (C) Mesh emitter 한정 — alignment / RotationRate module / 첫 particle payload sample.
+			if (StatusRenderMode == EParticleEmitterRenderMode::Mesh && StatusLOD)
+			{
+				if (const UMeshTypeData* StatusMeshTD = Cast<UMeshTypeData>(StatusLOD->GetTypeDataModule()))
+				{
+					const EMeshAlignment StatusAlign = StatusMeshTD->GetAlignment();
+					const char* AlignStr =
+						StatusAlign == EMeshAlignment::PSA_Velocity ? "PSA_Velocity" :
+						StatusAlign == EMeshAlignment::PSA_FacingCameraPosition ? "PSA_FacingCameraPosition" : "?";
+					ImGui::Text("        Alignment: %s", AlignStr);
+
+					// camera invalid + PSA_FacingCameraPosition → effective fallback 안내.
+					if (StatusAlign == EMeshAlignment::PSA_FacingCameraPosition && !bCamValid)
+					{
+						ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.3f, 1.0f),
+							"        (camera invalid → effective alignment = PSA_Velocity)");
+					}
+				}
+
+				// RotationRate module 부착 여부.
+				bool bHasRotRate = false;
+				for (UParticleModule* Module : StatusLOD->GetModules())
+				{
+					if (Cast<UParticleModuleMeshRotationRate>(Module))
+					{
+						bHasRotRate = true;
+						break;
+					}
+				}
+				if (bHasRotRate)
+				{
+					ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "        RotationRate Module: attached");
+				}
+				else
+				{
+					ImGui::TextDisabled("        RotationRate Module: not attached (Rotation = 0)");
+				}
+
+				// 첫 active particle 의 payload sample — Spawn 시 셋팅된 RotRate + Update 누적된 Rotation 확인.
+				FParticleMeshEmitterInstance* MeshInst = dynamic_cast<FParticleMeshEmitterInstance*>(Instance);
+				if (MeshInst && MeshInst->GetActiveParticleCount() > 0)
+				{
+					if (FMeshRotationPayload* Payload = MeshInst->GetMeshPayloadAt(0))
+					{
+						ImGui::Text("        Sample[0] Rotation = (%.3f, %.3f, %.3f) rad",
+							Payload->Rotation.X, Payload->Rotation.Y, Payload->Rotation.Z);
+						ImGui::Text("        Sample[0] RotRate  = (%.3f, %.3f, %.3f) rad/s",
+							Payload->RotRate.X, Payload->RotRate.Y, Payload->RotRate.Z);
+					}
+				}
+			}
+
+			ImGui::PopID();
 		}
 
 		DrawDetailsSeparator();
