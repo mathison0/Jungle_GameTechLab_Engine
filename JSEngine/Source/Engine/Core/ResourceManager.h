@@ -143,6 +143,7 @@ public:
 	bool SaveAnimGraph(UAnimGraphAsset* Asset, const FString& Path);
 
 	UParticleSystem* LoadParticleSystem(const FString& Path);
+	UParticleSystem* FindParticleSystem(const FString& Path) const;
 	bool SaveParticleSystem(UParticleSystem* Asset, const FString& Path);
 	bool RunParticleSystemSerializationSmokeTest(const FString& Path);
 	FString SerializeParticleSystemToString(UParticleSystem* Asset);
@@ -204,6 +205,7 @@ private:
 
 	TMap<FString, USkeletalMesh*> SkeletalMeshMap;
     TMap<FString, UAnimSequence*> AnimSequenceMap;
+	TMap<FString, UParticleSystem*> ParticleSystemMap;
 	TMap<FString, FString> FileContentHashCache;
 
 	/* Paths */

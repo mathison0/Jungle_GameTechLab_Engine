@@ -139,6 +139,7 @@ private:
 	void StoreCurrentDocumentState();
 	bool RestoreDocumentState(const FString& InDocumentPath);
 	void ClearActiveDocumentState();
+	void DestroyUncachedParticleSystem(UParticleSystem*& Asset);
 	void CaptureUndoSnapshot(const char* Label);
 	FString CaptureParticleSnapshot() const;
 	bool RestoreParticleSnapshot(const FString& Snapshot, int32 InCurrentLOD, int32 InSelectedEmitterIndex, int32 InSelectedModuleIndex);

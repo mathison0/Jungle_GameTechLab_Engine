@@ -1291,7 +1291,11 @@ bool FEditorContentBrowserWidget::CreateParticleSystemAsset()
 	}
 
 	ParticleSystem->SetFName(FName(FPaths::ToUtf8(NewPath.stem().wstring())));
-	if (!FResourceManager::Get().SaveParticleSystem(ParticleSystem, RelativePath))
+	const bool bSaved = FResourceManager::Get().SaveParticleSystem(ParticleSystem, RelativePath);
+	UObjectManager::Get().DestroyObject(ParticleSystem);
+	ParticleSystem = nullptr;
+
+	if (!bSaved)
 	{
 		return false;
 	}
