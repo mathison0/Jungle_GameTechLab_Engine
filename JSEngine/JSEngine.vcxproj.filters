@@ -2497,7 +2497,7 @@
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleHelper.h">
+    <ClInclude Include="Source\Engine\Particle\ParticleUpdateUtils.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h">

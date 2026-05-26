@@ -279,7 +279,14 @@ flowchart TD
 - [ ] kill 가능 module이면 swap-pop loop 안정성 확인
 - [ ] render data가 필요하면 instance buffer 또는 RenderBus 계약을 명확히 정리
 
-## 13. Helper 작성 규칙
+## 13. Utils / Helpers 작성 규칙
+
+Particle 런타임 코드는 `Utils`를 기본 명명으로 사용한다.
+
+- 순수 계산/샘플링/변환 함수: `Particle*Utils`
+- 에디터 워크플로우 보조 클래스: `FEditor*Helpers`
+- 신규 `Util` 단수형 명명은 사용하지 않는다.
+- 기존 공용 API인 `MathUtil`은 예외로 유지한다.
 
 요청 사항:
 

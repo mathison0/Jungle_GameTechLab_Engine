@@ -1355,7 +1355,7 @@
     <ClInclude Include="Source\Engine\Particle\ParticleDynamicData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h" />
-    <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleUpdateUtils.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleMeshEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleMeshTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />

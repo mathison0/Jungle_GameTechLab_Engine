@@ -15,7 +15,7 @@
 | 파일 | 정의된 타입 | 종류 |
 |------|------------|------|
 | [ParticleTypes.h](JSEngine/Source/Engine/Particle/ParticleTypes.h) | `EParticleEmitterRenderMode`, `FBaseParticle`, `FParticleDataContainer`, `FParticleEventCollideData` | enum / POD struct |
-| [ParticleHelper.h](JSEngine/Source/Engine/Particle/ParticleHelper.h) | `PARTICLE_PTR` 매크로, `GetParticleDirect()` | 인라인 헬퍼 (현재 외부 참조 없음) |
+| [ParticleUpdateUtils.h](JSEngine/Source/Engine/Particle/ParticleUpdateUtils.h) | `PARTICLE_PTR` 매크로, `GetParticleDirect()` | 인라인 업데이트 유틸리티 (현재 외부 참조 없음) |
 | [ParticleModule.h/.cpp](JSEngine/Source/Engine/Particle/ParticleModule.h) | `UParticleModule` | UObject (모듈 베이스) |
 | [ParticleModules.h/.cpp](JSEngine/Source/Engine/Particle/ParticleModules.h) | `UParticleModuleRequired`, `UParticleModuleSpawn`, `UParticleModuleLifetime`, `UParticleModuleLocation`, `UParticleModuleVelocity`, `UParticleModuleColor`, `UParticleModuleSize`, `UParticleModuleCollision`, `UParticleModuleEventGenerator` | UObject (구체 모듈) |
 | [ParticleSystem.h/.cpp](JSEngine/Source/Engine/Particle/ParticleSystem.h) | `UParticleLODLevel`, `UParticleEmitter`, `UParticleSystem` | UObject (에셋 트리) |
@@ -268,7 +268,7 @@ UEngine Tick
 ## 7. 주의/관찰 사항
 
 1. **이중 이벤트 허브** — `UParticleSystemComponent::OnParticleCollide`(컴포넌트 단위)와 `AParticleEventManager::OnParticleCollide`(레벨 단위)가 별개로 존재하지만, 현재 코드에선 후자에 push 하는 경로가 디렉토리 내에 **없다**. `AParticleEventManager`는 placeable 액터로 선언만 되어 있는 상태.
-2. **`ParticleHelper.h` 미사용** — `PARTICLE_PTR` 매크로/`GetParticleDirect` 인라인은 디렉토리 내·외 어디서도 include 되지 않는다 (현재 `FParticleEmitterInstance::GetParticle`이 동일 계산을 직접 수행).
+2. **`ParticleUpdateUtils.h` 미사용** — `PARTICLE_PTR` 매크로/`GetParticleDirect` 인라인은 디렉토리 내·외 어디서도 include 되지 않는다 (현재 `FParticleEmitterInstance::GetParticle`이 동일 계산을 직접 수행).
 3. **Forward-only 타입** — `UParticleModuleTypeDataBase`, `FParticleEventInstancePayload`는 정의가 어디에도 없고 슬롯만 존재 (Mesh/Beam/Ribbon 등 비-Sprite 렌더 모드 + 이벤트 기반 스폰을 위한 placeholder).
 4. **`FParticleEmitterInstance`는 UObject가 아니다** — `UParticleSystemComponent`가 `new`/`delete`로 직접 lifetime 관리. UObject GC 경로 밖.
 5. **`UParticleLODLevel`의 캐시 멤버** — `SpawnModule`, `SpawnModules`, `UpdateModules`는 `Modules` (+`RequiredModule`)의 부분 뷰. `CacheModuleLists()` 호출 전에는 비어 있다. `UParticleEmitter::CacheEmitterModuleInfo`가 모든 LOD에 대해 일괄 호출 (FParticleEmitterInstance::Init 시점).

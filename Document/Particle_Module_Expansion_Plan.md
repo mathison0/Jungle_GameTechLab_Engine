@@ -482,7 +482,7 @@ flowchart TD
 
 > 원칙: 한 배치마다 "동작하는 기능"과 "팀원이 이해할 수 있는 설명"을 같이 남긴다.
 > 구현 배치와 문서 배치를 분리하지 않고, 각 구현 배치 끝에 작은 구조 정리를 포함한다.
-> 코드 규칙: helper는 anonymous namespace 사용을 지양한다. 파일 내부 helper가 필요하면 `private static` 멤버 함수, 명명된 `namespace ParticleModuleUtils`, 또는 작은 `struct` helper처럼 의도가 드러나는 방식으로 둔다.
+> 코드 규칙: Particle 런타임의 순수 함수 묶음은 `Utils`로 통일한다. `Helper`는 에디터 워크플로우 보조 클래스에만 쓰고, `Util` 단수형 신규 명명은 피한다. 파일 내부 유틸리티가 필요하면 anonymous namespace 대신 `private static` 멤버 함수, 명명된 `namespace ParticleModuleUtils`, 또는 작은 `struct`처럼 의도가 드러나는 방식으로 둔다.
 
 ### Batch 0: 현재 구조 정리와 팀 공유 기준선
 
