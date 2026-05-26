@@ -1047,6 +1047,9 @@
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Collision\CollisionQueryUtils.cpp">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp">
       <Filter>Source\Engine\Collision\RayCollision</Filter>
     </ClCompile>
@@ -1689,6 +1692,9 @@
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiSystem.cpp">
       <Filter>Source\Engine\UI\RmlUi</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutAsset.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Launch\LaunchModeFactory.cpp">
       <Filter>Source\Launch</Filter>
     </ClCompile>
@@ -2063,6 +2069,9 @@
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\Collision.h">
+      <Filter>Source\Engine\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Collision\CollisionQueryUtils.h">
       <Filter>Source\Engine\Collision</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h">
@@ -2743,6 +2752,9 @@
     <ClInclude Include="Source\Engine\Runtime\SceneView.h">
       <Filter>Source\Engine\Runtime</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h">
+      <Filter>Source\Engine\Runtime</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Runtime\Script\API\LuaEngineAPIBindings.h">
       <Filter>Source\Engine\Runtime\Script\API</Filter>
     </ClInclude>
@@ -2861,6 +2873,9 @@
       <Filter>Source\Engine\UI\RmlUi</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\UI\RuntimeUITypes.h">
+      <Filter>Source\Engine\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h">
       <Filter>Source\Engine\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Launch\LaunchModeFactory.h">

@@ -1,22 +1,54 @@
 #include "Editor/UI/EditorMainPanel.h"
 
 #include "Editor/EditorEngine.h"
+#include "Core/Paths.h"
 
 #include "ImGui/imgui.h"
 
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+
+namespace
+{
+    bool HasRuntimeUILayoutExtension(const FString& Path)
+    {
+        std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
+        FString Extension = FPaths::ToUtf8(FsPath.extension().wstring());
+        std::transform(Extension.begin(), Extension.end(), Extension.begin(),
+            [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
+        return Extension == ".uasset" || Extension == ".layout";
+    }
+}
+
 void FEditorMainPanel::OpenRuntimeUIPreviewAsset(const FString& RmlPath)
 {
+    bool bOpenedLayout = false;
     if (!RmlPath.empty())
     {
-        Widgets.RuntimeUIPreviewWidget.OpenPreviewDocument(RmlPath);
+        if (HasRuntimeUILayoutExtension(RmlPath))
+        {
+            bOpenedLayout = Widgets.RuntimeUIPreviewWidget.OpenLayoutAsset(RmlPath);
+        }
+        else
+        {
+            Widgets.RuntimeUIPreviewWidget.OpenPreviewDocument(RmlPath);
+        }
     }
 
-    const FString DocumentPath = Widgets.RuntimeUIPreviewWidget.GetPreviewDocumentPath();
+    const FString DocumentPath = bOpenedLayout
+        ? Widgets.RuntimeUIPreviewWidget.GetLayoutAssetPath()
+        : Widgets.RuntimeUIPreviewWidget.GetPreviewDocumentPath();
     const FEditorTabId TabId = MakeRuntimeUIPreviewTabId();
     const FString TabLabel = MakeRuntimeUIPreviewTabLabel(DocumentPath);
     EditorTabs.OpenOrFocusTab(TabId, TabLabel);
     EditorTabs.SetTabLabel(TabId, TabLabel);
     ActivateEditorTab(TabId);
+}
+
+void FEditorMainPanel::RefreshContentBrowser()
+{
+    Widgets.ContentBrowserWidget.Refresh();
 }
 
 void FEditorMainPanel::QueueRuntimeUIDrawCallback(

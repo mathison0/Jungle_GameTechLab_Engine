@@ -7,6 +7,8 @@
 #include "Core/Delegates/Delegate.h"
 #include "Collision/Collision.h"
 
+struct FQuat;
+
 /*
 	아직 미사용
 */
@@ -59,9 +61,13 @@ public:
 	/* For Collision(Ray-casting) */
 	virtual void UpdateWorldAABB() const = 0;
 	bool Raycast(const FRay& Ray, FHitResult& OutHitResult);
+	bool Sweep(const FVector& Start, const FVector& End, const FQuat& ShapeWorldRotation,
+		const FCollisionShape& Shape, FHitResult& OutHitResult);
 	bool IntersectTriangle(const FVector& RayOrigin, const FVector& RayDir, const FVector& V0, const FVector& V1,
 						   const FVector& V2, float& OutT);
 	virtual bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) = 0;
+	virtual bool SweepMesh(const FVector& Start, const FVector& End, const FQuat& ShapeWorldRotation,
+		const FCollisionShape& Shape, FHitResult& OutHitResult);
 
 	/* For Transform */
 	void UpdateWorldMatrix() const override;

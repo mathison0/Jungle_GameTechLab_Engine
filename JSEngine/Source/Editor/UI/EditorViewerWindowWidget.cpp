@@ -214,6 +214,8 @@ void FEditorViewerWindowWidget::Shutdown()
     bMeshDirty = false; 
     CleanMeshEditSignature = 0;
     bHasCleanMeshEditSignature = false;
+    bSocketTransformEditUndoCaptured = false;
+    SocketTransformBeforeState = FEditorSkeletalMeshSocketState();
     PreviewMeshPathBufferSource.clear();
     PreviewMeshPathBuffer[0] = '\0';
     SelectedAnimTrackIndex = -1;
@@ -2128,6 +2130,9 @@ void FEditorViewerWindowWidget::AddSocketOnBone(int32 BoneIdx)
     if (!CachedMesh) return;
     if (BoneIdx < 0 || BoneIdx >= static_cast<int32>(CachedMesh->Bones.size())) return;
 
+    const FEditorSkeletalMeshSocketState BeforeState =
+        CaptureSocketUndoState("Add Skeletal Mesh Socket");
+
     FSkeletalMeshSocket NewSocket;
     NewSocket.Name = FName(GenerateUniqueSocketName());
     NewSocket.BoneIndex = BoneIdx;
@@ -2149,6 +2154,8 @@ void FEditorViewerWindowWidget::AddSocketOnBone(int32 BoneIdx)
     {
         CachedSkComp->MarkSkinningDirty();
     }
+
+    RecordSocketUndoState(BeforeState, "Add Skeletal Mesh Socket");
 }
 
 FString FEditorViewerWindowWidget::GenerateUniqueSocketName(const char* Base) const
@@ -2180,6 +2187,9 @@ void FEditorViewerWindowWidget::DeleteSocket(int32 SocketIdx)
     if (!CachedMesh) return;
     if (SocketIdx < 0 || SocketIdx >= static_cast<int32>(CachedMesh->Sockets.size())) return;
 
+    const FEditorSkeletalMeshSocketState BeforeState =
+        CaptureSocketUndoState("Delete Skeletal Mesh Socket");
+
     // (1) 해당 socket에 매달린 preview mesh 먼저 정리
     const FName SocketName = CachedMesh->Sockets[SocketIdx].Name;
     if (EditorEngine && Viewer)
@@ -2205,6 +2215,35 @@ void FEditorViewerWindowWidget::DeleteSocket(int32 SocketIdx)
     {
         CachedSkComp->MarkSkinningDirty();
     }
+
+    RecordSocketUndoState(BeforeState, "Delete Skeletal Mesh Socket");
+}
+
+FEditorSkeletalMeshSocketState FEditorViewerWindowWidget::CaptureSocketUndoState(const FString& Label) const
+{
+    if (!EditorEngine || !CachedSkComp || !CachedSkComp->GetSkeletalMesh())
+    {
+        return FEditorSkeletalMeshSocketState();
+    }
+
+    return EditorEngine->GetUndoSystem().CaptureSkeletalMeshSocketState(
+        CachedSkComp->GetSkeletalMesh(),
+        Label);
+}
+
+void FEditorViewerWindowWidget::RecordSocketUndoState(
+    const FEditorSkeletalMeshSocketState& BeforeState,
+    const FString& Label)
+{
+    if (!EditorEngine || !CachedSkComp || !CachedSkComp->GetSkeletalMesh())
+    {
+        return;
+    }
+
+    EditorEngine->GetUndoSystem().RecordSkeletalMeshSocketState(
+        BeforeState,
+        EditorEngine->GetUndoSystem().CaptureSkeletalMeshSocketState(CachedSkComp->GetSkeletalMesh(), Label),
+        Label);
 }
 
 bool FEditorViewerWindowWidget::HasPreview(const FName& SocketName) const
@@ -2255,10 +2294,13 @@ void FEditorViewerWindowWidget::DrawSocketInspector()
             {
                 if (Socket.BoneIndex != i)
                 {
+                    const FEditorSkeletalMeshSocketState BeforeState =
+                        CaptureSocketUndoState("Edit Skeletal Mesh Socket");
                     Socket.BoneIndex = i;
                     RebuildBoneToSocketIndices(CachedMesh);   // 트리에서 새 본 밑으로 이동
                     bMeshDirty = true;
                     if (CachedSkComp) CachedSkComp->MarkSkinningDirty();
+                    RecordSocketUndoState(BeforeState, "Edit Skeletal Mesh Socket");
                 }
             }
             if (bSelected) ImGui::SetItemDefaultFocus();
@@ -2269,14 +2311,49 @@ void FEditorViewerWindowWidget::DrawSocketInspector()
     // Location / Rotation / Scale
     // FVector / FRotator 모두 contiguous 3 float — &X / &Pitch로 DragFloat3에 전달.
     bool bChanged = false;
-    bChanged |= ImGui::DragFloat3("Location", &Socket.RelativeLocation.X, 0.5f);
-    bChanged |= ImGui::DragFloat3("Rotation (P/Y/R)", &Socket.RelativeRotation.Pitch, 0.5f);
-    bChanged |= ImGui::DragFloat3("Scale", &Socket.RelativeScale.X, 0.01f, 0.001f, 100.0f);
+    bool bSocketEditDeactivatedAfterEdit = false;
+    bool bSocketEditDeactivated = false;
+    auto DrawSocketFloat3 = [&](const char* Label, float* Values, float Speed, float Min = 0.0f, float Max = 0.0f) -> bool
+    {
+        const bool bEdited = ImGui::DragFloat3(Label, Values, Speed, Min, Max);
+        if (ImGui::IsItemActivated() && !bSocketTransformEditUndoCaptured)
+        {
+            SocketTransformBeforeState = CaptureSocketUndoState("Edit Skeletal Mesh Socket");
+            bSocketTransformEditUndoCaptured = SocketTransformBeforeState.IsValid();
+        }
+        if (bSocketTransformEditUndoCaptured && ImGui::IsItemDeactivatedAfterEdit())
+        {
+            bSocketEditDeactivatedAfterEdit = true;
+        }
+        else if (bSocketTransformEditUndoCaptured && ImGui::IsItemDeactivated())
+        {
+            bSocketEditDeactivated = true;
+        }
+        return bEdited;
+    };
+
+    bChanged |= DrawSocketFloat3("Location", &Socket.RelativeLocation.X, 0.5f);
+    bChanged |= DrawSocketFloat3("Rotation (P/Y/R)", &Socket.RelativeRotation.Pitch, 0.5f);
+    bChanged |= DrawSocketFloat3("Scale", &Socket.RelativeScale.X, 0.01f, 0.001f, 100.0f);
 
     if (bChanged)
     {
         bMeshDirty = true;
         if (CachedSkComp) CachedSkComp->MarkSkinningDirty();
+    }
+
+    if (bSocketTransformEditUndoCaptured)
+    {
+        if (bSocketEditDeactivatedAfterEdit)
+        {
+            RecordSocketUndoState(SocketTransformBeforeState, "Edit Skeletal Mesh Socket");
+        }
+
+        if (bSocketEditDeactivatedAfterEdit || bSocketEditDeactivated)
+        {
+            bSocketTransformEditUndoCaptured = false;
+            SocketTransformBeforeState = FEditorSkeletalMeshSocketState();
+        }
     }
 
     ImGui::Separator();
@@ -2337,6 +2414,8 @@ void FEditorViewerWindowWidget::DrawRenameModal()
     if (!bValid) ImGui::BeginDisabled();
     if (ImGui::Button("OK"))
     {
+        const FEditorSkeletalMeshSocketState BeforeState =
+            CaptureSocketUndoState("Rename Skeletal Mesh Socket");
         // Preview mesh가 이 socket에 attach되어 있다면 key가 socket name이므로,
         // 이름 변경 시 preview를 깔끔히 재attach해야 함.
         const FName OldName = CachedMesh->Sockets[RenameSocketIdx].Name;
@@ -2367,6 +2446,7 @@ void FEditorViewerWindowWidget::DrawRenameModal()
 
         bMeshDirty = true;
         if (CachedSkComp) CachedSkComp->MarkSkinningDirty();
+        RecordSocketUndoState(BeforeState, "Rename Skeletal Mesh Socket");
         RenameSocketIdx = -1;
         ImGui::CloseCurrentPopup();
     }

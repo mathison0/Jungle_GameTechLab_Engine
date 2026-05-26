@@ -58,7 +58,8 @@ public:
 	UMaterialInterface* ResolveMaterialInterfaceByIndex(int32 MaterialIndex);
 	UTexture* GetMaterialPreviewTexture(UMaterialInterface* Material) const;
 	UMaterialInstance* CreateMaterialInstance(const FString& InstancePath, UMaterial* Parent) const;
-	bool SaveMaterialInstance(const FString& InstancePath, UMaterialInstance* Instance) const;
+	bool SaveMaterial(const FString& MaterialPath, UMaterial* Material);
+	bool SaveMaterialInstance(const FString& InstancePath, UMaterialInstance* Instance);
 
 private:
 	static void AddUniquePath(TArray<FString>& Paths, const FString& Path);

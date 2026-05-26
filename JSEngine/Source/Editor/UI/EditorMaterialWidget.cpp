@@ -2,6 +2,8 @@
 
 #include "Editor/EditorEngine.h"
 #include "Editor/EditorRenderPipeline.h"
+#include "Editor/UI/EditorMainPanel.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
@@ -13,6 +15,10 @@
 #include <filesystem>
 
 #include "ImGui/imgui.h"
+
+#include <cmath>
+#include <cstring>
+#include <utility>
 
 namespace
 {
@@ -36,6 +42,102 @@ const UMaterial* ResolveBaseMaterial(UMaterialInterface* Material)
 		return Instance->Parent;
 	}
 	return nullptr;
+}
+
+void SyncEditableMaterialData(UMaterialInterface* Material, const FString& ParamName, const FMaterialParamValue& ParamValue)
+{
+	UMaterial* BaseMaterial = Cast<UMaterial>(Material);
+	if (!BaseMaterial)
+	{
+		return;
+	}
+
+	if (ParamValue.Type == EMaterialParamType::Vector3 && std::holds_alternative<FVector>(ParamValue.Value))
+	{
+		const FVector Color = std::get<FVector>(ParamValue.Value);
+		if (ParamName == "DiffuseColor")
+		{
+			BaseMaterial->MaterialData.DiffuseColor = Color;
+		}
+		else if (ParamName == "AmbientColor")
+		{
+			BaseMaterial->MaterialData.AmbientColor = Color;
+		}
+		else if (ParamName == "SpecularColor")
+		{
+			BaseMaterial->MaterialData.SpecularColor = Color;
+		}
+		else if (ParamName == "EmissiveColor")
+		{
+			BaseMaterial->MaterialData.EmissiveColor = Color;
+		}
+	}
+	else if (ParamValue.Type == EMaterialParamType::Float && std::holds_alternative<float>(ParamValue.Value))
+	{
+		const float Value = std::get<float>(ParamValue.Value);
+		if (ParamName == "Opacity")
+		{
+			BaseMaterial->MaterialData.Opacity = Value;
+		}
+		else if (ParamName == "Shininess")
+		{
+			BaseMaterial->MaterialData.Shininess = Value;
+		}
+	}
+	else if (ParamValue.Type == EMaterialParamType::Bool && std::holds_alternative<bool>(ParamValue.Value))
+	{
+		const bool bValue = std::get<bool>(ParamValue.Value);
+		if (ParamName == "bHasDiffuseMap")
+		{
+			BaseMaterial->MaterialData.bHasDiffuseTexture = bValue;
+		}
+		else if (ParamName == "bHasAmbientMap")
+		{
+			BaseMaterial->MaterialData.bHasAmbientTexture = bValue;
+		}
+		else if (ParamName == "bHasSpecularMap")
+		{
+			BaseMaterial->MaterialData.bHasSpecularTexture = bValue;
+		}
+		else if (ParamName == "bHasEmissiveMap")
+		{
+			BaseMaterial->MaterialData.bHasEmissiveTexture = bValue;
+		}
+		else if (ParamName == "bHasBumpMap")
+		{
+			BaseMaterial->MaterialData.bHasBumpTexture = bValue;
+		}
+	}
+	else if (ParamValue.Type == EMaterialParamType::Texture && std::holds_alternative<UTexture*>(ParamValue.Value))
+	{
+		const UTexture* Texture = std::get<UTexture*>(ParamValue.Value);
+		const FString TexturePath = Texture ? FPaths::Normalize(Texture->GetFilePath()) : FString();
+		if (ParamName == "DiffuseMap")
+		{
+			BaseMaterial->MaterialData.DiffuseTexPath = TexturePath;
+			BaseMaterial->MaterialData.bHasDiffuseTexture = !TexturePath.empty();
+		}
+		else if (ParamName == "AmbientMap")
+		{
+			BaseMaterial->MaterialData.AmbientTexPath = TexturePath;
+			BaseMaterial->MaterialData.bHasAmbientTexture = !TexturePath.empty();
+		}
+		else if (ParamName == "SpecularMap")
+		{
+			BaseMaterial->MaterialData.SpecularTexPath = TexturePath;
+			BaseMaterial->MaterialData.bHasSpecularTexture = !TexturePath.empty();
+		}
+		else if (ParamName == "EmissiveMap")
+		{
+			BaseMaterial->MaterialData.EmissiveTexPath = TexturePath;
+			BaseMaterial->MaterialData.bHasEmissiveTexture = !TexturePath.empty();
+		}
+		else if (ParamName == "BumpMap")
+		{
+			BaseMaterial->MaterialData.BumpTexPath = TexturePath;
+			BaseMaterial->MaterialData.bHasBumpTexture = !TexturePath.empty();
+		}
+	}
 }
 
 const char* GetMaterialParamTypeName(EMaterialParamType Type)
@@ -129,6 +231,197 @@ TArray<FString> BuildMaterialTexturePickerPaths(UEditorEngine* EditorEngine)
 	std::sort(Paths.begin(), Paths.end());
 	return Paths;
 }
+
+bool AreMaterialParamValuesEqual(const FMaterialParamValue& A, const FMaterialParamValue& B)
+{
+	if (A.Type != B.Type || A.Value.index() != B.Value.index())
+	{
+		return false;
+	}
+
+	switch (A.Type)
+	{
+	case EMaterialParamType::Bool:
+		return std::get<bool>(A.Value) == std::get<bool>(B.Value);
+	case EMaterialParamType::Int:
+		return std::get<int32>(A.Value) == std::get<int32>(B.Value);
+	case EMaterialParamType::UInt:
+		return std::get<uint32>(A.Value) == std::get<uint32>(B.Value);
+	case EMaterialParamType::Float:
+		return std::fabs(std::get<float>(A.Value) - std::get<float>(B.Value)) <= 1.e-6f;
+	case EMaterialParamType::Vector2:
+	{
+		const FVector2& AV = std::get<FVector2>(A.Value);
+		const FVector2& BV = std::get<FVector2>(B.Value);
+		return std::fabs(AV.X - BV.X) <= 1.e-6f && std::fabs(AV.Y - BV.Y) <= 1.e-6f;
+	}
+	case EMaterialParamType::Vector3:
+		return std::get<FVector>(A.Value).Equals(std::get<FVector>(B.Value), 1.e-6f);
+	case EMaterialParamType::Vector4:
+	{
+		const FVector4& AV = std::get<FVector4>(A.Value);
+		const FVector4& BV = std::get<FVector4>(B.Value);
+		return std::fabs(AV.X - BV.X) <= 1.e-6f
+			&& std::fabs(AV.Y - BV.Y) <= 1.e-6f
+			&& std::fabs(AV.Z - BV.Z) <= 1.e-6f
+			&& std::fabs(AV.W - BV.W) <= 1.e-6f;
+	}
+	case EMaterialParamType::Matrix4:
+		return std::memcmp(&std::get<FMatrix>(A.Value), &std::get<FMatrix>(B.Value), sizeof(FMatrix)) == 0;
+	case EMaterialParamType::Texture:
+		return std::get<UTexture*>(A.Value) == std::get<UTexture*>(B.Value);
+	default:
+		return false;
+	}
+}
+
+bool AreMaterialParamMapsEqual(
+	const TMap<FString, FMaterialParamValue>& A,
+	const TMap<FString, FMaterialParamValue>& B)
+{
+	if (A.size() != B.size())
+	{
+		return false;
+	}
+
+	for (const auto& [Name, Value] : A)
+	{
+		auto It = B.find(Name);
+		if (It == B.end() || !AreMaterialParamValuesEqual(Value, It->second))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+size_t EstimateMaterialParamMapMemory(const TMap<FString, FMaterialParamValue>& Params)
+{
+	size_t Total = Params.size() * (sizeof(FString) + sizeof(FMaterialParamValue) + sizeof(void*) * 3);
+	for (const auto& [Name, Value] : Params)
+	{
+		Total += Name.capacity() + sizeof(Value);
+	}
+	return Total;
+}
+
+struct FMaterialInstanceParamState
+{
+	FString MaterialPath;
+	UMaterialInstance* Instance = nullptr;
+	TMap<FString, FMaterialParamValue> Overrides;
+
+	bool IsValid() const { return Instance != nullptr || !MaterialPath.empty(); }
+};
+
+FMaterialInstanceParamState CaptureMaterialInstanceParamState(UMaterialInstance* Instance)
+{
+	FMaterialInstanceParamState State;
+	if (!Instance)
+	{
+		return State;
+	}
+
+	State.MaterialPath = FPaths::Normalize(Instance->GetFilePath());
+	State.Instance = Instance;
+	State.Overrides = Instance->OverridedParams;
+	return State;
+}
+
+UMaterialInstance* ResolveMaterialInstance(const FMaterialInstanceParamState& State)
+{
+	if (State.Instance)
+	{
+		return State.Instance;
+	}
+	return State.MaterialPath.empty() ? nullptr : FResourceManager::Get().GetMaterialInstance(State.MaterialPath);
+}
+
+class FSetMaterialInstanceParamsCommand final : public IEditorUndoCommand
+{
+public:
+	FSetMaterialInstanceParamsCommand(
+		FMaterialInstanceParamState InBeforeState,
+		FMaterialInstanceParamState InAfterState,
+		FString InLabel)
+		: BeforeState(std::move(InBeforeState))
+		, AfterState(std::move(InAfterState))
+		, Label(std::move(InLabel))
+	{
+	}
+
+	FString GetLabel() const override { return Label.empty() ? "Edit Material Instance" : Label; }
+
+	bool Undo(FEditorUndoContext& Context) override
+	{
+		return ApplyState(Context, BeforeState);
+	}
+
+	bool Redo(FEditorUndoContext& Context) override
+	{
+		return ApplyState(Context, AfterState);
+	}
+
+	size_t GetMemoryUsage() const override
+	{
+		return sizeof(*this)
+			+ BeforeState.MaterialPath.capacity()
+			+ AfterState.MaterialPath.capacity()
+			+ Label.capacity()
+			+ EstimateMaterialParamMapMemory(BeforeState.Overrides)
+			+ EstimateMaterialParamMapMemory(AfterState.Overrides);
+	}
+
+private:
+	bool ApplyState(FEditorUndoContext& Context, const FMaterialInstanceParamState& State)
+	{
+		UMaterialInstance* Instance = ResolveMaterialInstance(State);
+		if (!Instance)
+		{
+			return false;
+		}
+
+		Instance->OverridedParams = State.Overrides;
+		const FString SavePath = State.MaterialPath.empty() ? Instance->GetFilePath() : State.MaterialPath;
+		if (Context.Editor)
+		{
+			Context.Editor->GetAssetService().SaveMaterialInstance(SavePath, Instance);
+		}
+		else
+		{
+			FResourceManager::Get().SerializeMaterialInstance(SavePath, Instance);
+		}
+		return true;
+	}
+
+	FMaterialInstanceParamState BeforeState;
+	FMaterialInstanceParamState AfterState;
+	FString Label;
+};
+
+bool RecordMaterialInstanceParamChange(
+	FEditorUndoSystem& UndoSystem,
+	const FMaterialInstanceParamState& BeforeState,
+	const FMaterialInstanceParamState& AfterState,
+	const FString& Label)
+{
+	if (!BeforeState.IsValid()
+		|| !AfterState.IsValid()
+		|| FPaths::Normalize(BeforeState.MaterialPath) != FPaths::Normalize(AfterState.MaterialPath)
+		|| AreMaterialParamMapsEqual(BeforeState.Overrides, AfterState.Overrides))
+	{
+		return false;
+	}
+
+	auto Command = std::make_unique<FSetMaterialInstanceParamsCommand>(
+		BeforeState,
+		AfterState,
+		Label.empty() ? "Edit Material Instance" : Label);
+	UndoSystem.BeginTransaction(Command->GetLabel());
+	UndoSystem.AddCommand(std::move(Command));
+	return UndoSystem.EndTransaction();
+}
 }
 
 #define MAT_SEPARATOR() ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -139,6 +432,11 @@ void FEditorMaterialWidget::ResetSelection()
 	EditingSlotOwner = nullptr;
 	EditingSlotIndex = -1;
 	AssetEditingMaterialPtr = nullptr;
+	bMaterialParamEditCaptured = false;
+	MaterialParamEditInstance = nullptr;
+	MaterialParamEditPath.clear();
+	MaterialParamEditName.clear();
+	MaterialParamEditBeforeOverrides.clear();
 }
 
 void FEditorMaterialWidget::OpenMaterialAsset(UMaterialInterface* Material)
@@ -314,11 +612,31 @@ bool FEditorMaterialWidget::CreateInstanceForCurrentMaterial()
 	{
 		return false;
 	}
+	FEditorFileSystemState CreatedInstanceState =
+		EditorEngine->GetUndoSystem().CaptureFileSystemState(InstancePath, "Create Material Instance");
+	EditorEngine->GetUndoSystem().RecordCreateFileSystemPath(CreatedInstanceState, "Create Material Instance");
 
 	SelectedMaterialPtr = NewInstance;
 	if (EditingSlotOwner && EditingSlotIndex >= 0 && EditingSlotIndex < EditingSlotOwner->GetNumMaterials())
 	{
+		TArray<FEditorSerializedActorState> BeforeActorStates;
+		if (AActor* OwnerActor = EditingSlotOwner->GetOwner())
+		{
+			TArray<AActor*> Actors;
+			Actors.push_back(OwnerActor);
+			BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
+		}
+
 		EditingSlotOwner->SetMaterial(EditingSlotIndex, NewInstance);
+		if (AActor* OwnerActor = EditingSlotOwner->GetOwner())
+		{
+			TArray<AActor*> Actors;
+			Actors.push_back(OwnerActor);
+			EditorEngine->GetUndoSystem().RecordActorStateChange(
+				BeforeActorStates,
+				EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+				"Assign Material");
+		}
 		EditorEngine->GetSceneService().MarkDirty();
 	}
 	else
@@ -327,6 +645,8 @@ bool FEditorMaterialWidget::CreateInstanceForCurrentMaterial()
 	}
 
 	EditorEngine->GetNotificationService().Info("Material instance created");
+	EditorEngine->GetAssetService().RefreshAssetDatabase();
+	EditorEngine->GetMainPanel().RefreshContentBrowser();
 	return true;
 }
 
@@ -356,7 +676,7 @@ void FEditorMaterialWidget::RenderMaterialPreviewSummary()
 	}
 
 	const bool bInstance = SelectedMaterialPtr->IsA<UMaterialInstance>();
-	ImGui::TextDisabled(bInstance ? "Editable Material Instance" : "Read-only Material");
+	ImGui::TextDisabled(bInstance ? "Editable Material Instance" : "Editable Material");
 	if (!SelectedMaterialPtr->GetFilePath().empty())
 	{
 		ImGui::TextWrapped("%s", FPaths::Normalize(SelectedMaterialPtr->GetFilePath()).c_str());
@@ -390,7 +710,7 @@ void FEditorMaterialWidget::RenderMaterialPreview(UPrimitiveComponent* Primitive
 	}
 
 	const bool bInstance = SelectedMaterialPtr->IsA<UMaterialInstance>();
-	ImGui::TextDisabled(bInstance ? "Editable Material Instance" : "Read-only Material");
+	ImGui::TextDisabled(bInstance ? "Editable Material Instance" : "Editable Material");
 	const UMaterial* BaseMaterial = ResolveBaseMaterial(SelectedMaterialPtr);
 
 	const float PreviewWidth = std::max(180.0f, ImGui::GetContentRegionAvail().x);
@@ -467,131 +787,119 @@ void FEditorMaterialWidget::RenderMaterialPreview(UPrimitiveComponent* Primitive
 void FEditorMaterialWidget::RenderMaterialProperties()
 {
 	TMap<FString, FMaterialParamValue> DisplayParams;
-
 	SelectedMaterialPtr->GatherAllParams(DisplayParams);
-	bool bIsInstanced = SelectedMaterialPtr->IsA<UMaterialInstance>();
 
-	if (!bIsInstanced)
+	auto SaveSelectedMaterial = [this]()
 	{
-		ImGui::TextDisabled("Create Instance to edit material parameters.");
-		ImGui::BeginDisabled();
-	}
-
-	auto SaveSelectedMaterialInstance = [this]()
-	{
-		UMaterialInstance* Instance = Cast<UMaterialInstance>(SelectedMaterialPtr);
-		if (EditorEngine && Instance)
+		if (!EditorEngine || !SelectedMaterialPtr)
 		{
-			EditorEngine->GetAssetService().SaveMaterialInstance(SelectedMaterialPtr->GetFilePath(), Instance);
+			return false;
 		}
+		if (UMaterialInstance* Instance = Cast<UMaterialInstance>(SelectedMaterialPtr))
+		{
+			return EditorEngine->GetAssetService().SaveMaterialInstance(SelectedMaterialPtr->GetFilePath(), Instance);
+		}
+		if (UMaterial* Material = Cast<UMaterial>(SelectedMaterialPtr))
+		{
+			return EditorEngine->GetAssetService().SaveMaterial(SelectedMaterialPtr->GetFilePath(), Material);
+		}
+		return false;
 	};
 
 	for (auto& [ParamName, ParamValue] : DisplayParams)
 	{
-		switch (ParamValue.Type)
+		FEditorMaterialState BeforeState = EditorEngine
+			? EditorEngine->GetUndoSystem().CaptureMaterialState(SelectedMaterialPtr, SelectedMaterialPtr->GetFilePath(), "Edit Material")
+			: FEditorMaterialState();
+		if (!RenderMaterialParamValue(ParamName, ParamValue))
 		{
-		case EMaterialParamType::Bool:
-			if (ImGui::Checkbox(ParamName.c_str(), &std::get<bool>(ParamValue.Value)))
-			{
-				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				SaveSelectedMaterialInstance();
-			}
-			break;
-		case EMaterialParamType::Int:
-			if (ImGui::DragInt(ParamName.c_str(), &std::get<int32>(ParamValue.Value)))
-			{
-				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				SaveSelectedMaterialInstance();
-			}
-			break;
-		case EMaterialParamType::UInt:
-			if (ImGui::DragInt(ParamName.c_str(), reinterpret_cast<int32*>(&std::get<uint32>(ParamValue.Value))))
-			{
-				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				SaveSelectedMaterialInstance();
-			}
-			break;
-		case EMaterialParamType::Float:
-			if (ImGui::DragFloat(ParamName.c_str(), &std::get<float>(ParamValue.Value), 0.01f))
-			{
-				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				SaveSelectedMaterialInstance();
-			}
-			break;
-		case EMaterialParamType::Vector2:
-			if (ImGui::DragFloat2(ParamName.c_str(), &std::get<FVector2>(ParamValue.Value).X, 0.01f))
-			{
-				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				SaveSelectedMaterialInstance();
-			}
-			break;
-		case EMaterialParamType::Vector3:
-			if (ImGui::DragFloat3(ParamName.c_str(), &std::get<FVector>(ParamValue.Value).X, 0.01f))
-			{
-				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				SaveSelectedMaterialInstance();
-			}
-			break;
-		case EMaterialParamType::Vector4:
-			if (ImGui::DragFloat4(ParamName.c_str(), &std::get<FVector4>(ParamValue.Value).X, 0.01f))
-			{
-				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				SaveSelectedMaterialInstance();
-			}
-			break;
-		case EMaterialParamType::Texture:
-		{
-			UTexture* CurrentTex = std::get<UTexture*>(ParamValue.Value);
-			ID3D11ShaderResourceView* SRV = CurrentTex ? CurrentTex->GetSRV() : nullptr;
-
-			if (ImGui::ImageButton(ParamName.c_str(), (void*)SRV, ImVec2(64, 64)))
-			{
-			}
-			ImGui::SameLine();
-			
-			ImGui::BeginGroup();
-			ImGui::Text("%s", ParamName.c_str());
-			
-			const FString CurrentPath = CurrentTex ? FPaths::Normalize(CurrentTex->GetFilePath()) : FString();
-			const FString CurrentLabel = CurrentPath.empty() ? FString("None") : CurrentPath;
-
-			ImGui::SetNextItemWidth(200.0f);
-			FString ComboId = "##Combo_" + ParamName;
-			if (ImGui::BeginCombo(ComboId.c_str(), CurrentLabel.c_str()))
-			{
-				const TArray<FString> TexturePaths = BuildMaterialTexturePickerPaths(EditorEngine);
-				if (TexturePaths.empty())
-				{
-					ImGui::TextDisabled("No texture assets");
-				}
-				for (const FString& TexPath : TexturePaths)
-				{
-					const bool bSelected = (TexPath == CurrentPath);
-					if (ImGui::Selectable(TexPath.c_str(), bSelected))
-					{
-						if (UTexture* Texture = FResourceManager::Get().LoadTexture(TexPath))
-						{
-							ParamValue.Value = Texture;
-							SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-							SaveSelectedMaterialInstance();
-						}
-					}
-					if (bSelected)
-					{
-						ImGui::SetItemDefaultFocus();
-					}
-				}
-				ImGui::EndCombo();
-			}
-			ImGui::EndGroup();
-
-			break;
+			continue;
 		}
+
+		SelectedMaterialPtr->SetParam(ParamName, ParamValue);
+		SyncEditableMaterialData(SelectedMaterialPtr, ParamName, ParamValue);
+		SaveSelectedMaterial();
+
+		if (EditorEngine)
+		{
+			EditorEngine->GetUndoSystem().RecordMaterialState(
+				BeforeState,
+				EditorEngine->GetUndoSystem().CaptureMaterialState(SelectedMaterialPtr, SelectedMaterialPtr->GetFilePath(), "Edit Material"),
+				"Edit Material");
+			EditorEngine->GetMainPanel().RefreshContentBrowser();
 		}
 	}
+}
 
-	if (!bIsInstanced)
+bool FEditorMaterialWidget::RenderMaterialParamValue(const FString& ParamName, FMaterialParamValue& ParamValue)
+{
+	switch (ParamValue.Type)
 	{
-		ImGui::EndDisabled();
+	case EMaterialParamType::Bool:
+		return ImGui::Checkbox(ParamName.c_str(), &std::get<bool>(ParamValue.Value));
+	case EMaterialParamType::Int:
+		return ImGui::DragInt(ParamName.c_str(), &std::get<int32>(ParamValue.Value));
+	case EMaterialParamType::UInt:
+		return ImGui::DragInt(ParamName.c_str(), reinterpret_cast<int32*>(&std::get<uint32>(ParamValue.Value)));
+	case EMaterialParamType::Float:
+		return ImGui::DragFloat(ParamName.c_str(), &std::get<float>(ParamValue.Value), 0.01f);
+	case EMaterialParamType::Vector2:
+		return ImGui::DragFloat2(ParamName.c_str(), &std::get<FVector2>(ParamValue.Value).X, 0.01f);
+	case EMaterialParamType::Vector3:
+		return ImGui::DragFloat3(ParamName.c_str(), &std::get<FVector>(ParamValue.Value).X, 0.01f);
+	case EMaterialParamType::Vector4:
+		return ImGui::DragFloat4(ParamName.c_str(), &std::get<FVector4>(ParamValue.Value).X, 0.01f);
+	case EMaterialParamType::Texture:
+	{
+		UTexture* CurrentTex = std::get<UTexture*>(ParamValue.Value);
+		ID3D11ShaderResourceView* SRV = CurrentTex ? CurrentTex->GetSRV() : nullptr;
+		if (SRV)
+		{
+			ImGui::ImageButton(ParamName.c_str(), reinterpret_cast<void*>(SRV), ImVec2(64, 64));
+		}
+		else
+		{
+			ImGui::Button(("None##TextureButton_" + ParamName).c_str(), ImVec2(64, 64));
+		}
+		ImGui::SameLine();
+
+		ImGui::BeginGroup();
+		ImGui::Text("%s", ParamName.c_str());
+		const FString CurrentPath = CurrentTex ? FPaths::Normalize(CurrentTex->GetFilePath()) : FString();
+		const FString CurrentLabel = CurrentPath.empty() ? FString("None") : CurrentPath;
+
+		bool bChanged = false;
+		ImGui::SetNextItemWidth(200.0f);
+		FString ComboId = "##Combo_" + ParamName;
+		if (ImGui::BeginCombo(ComboId.c_str(), CurrentLabel.c_str()))
+		{
+			const TArray<FString> TexturePaths = BuildMaterialTexturePickerPaths(EditorEngine);
+			if (TexturePaths.empty())
+			{
+				ImGui::TextDisabled("No texture assets");
+			}
+			for (const FString& TexPath : TexturePaths)
+			{
+				const bool bSelected = (TexPath == CurrentPath);
+				if (ImGui::Selectable(TexPath.c_str(), bSelected))
+				{
+					if (UTexture* Texture = FResourceManager::Get().LoadTexture(TexPath))
+					{
+						ParamValue.Value = Texture;
+						bChanged = true;
+					}
+				}
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::EndGroup();
+		return bChanged;
+	}
+	default:
+		return false;
 	}
 }

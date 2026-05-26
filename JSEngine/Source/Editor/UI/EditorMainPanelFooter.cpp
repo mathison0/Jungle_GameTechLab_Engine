@@ -138,6 +138,12 @@ void FEditorMainPanel::ToggleContentBrowser()
 
 void FEditorMainPanel::PushFooterLog(const FString& Message)
 {
+    if (EditorEngine)
+    {
+        EditorEngine->GetNotificationService().Info(Message);
+        return;
+    }
+
     FooterLogSystem.Push(Message, 5.0f);
 }
 
@@ -325,21 +331,21 @@ void FEditorMainPanel::UpdateFooterEventLogs()
 
     if (!FooterEventState.bPrevPIEPlaying && bPIEPlaying)
     {
-        FooterLogSystem.Push("PIE started");
+        PushFooterLog("PIE started");
     }
     else if (FooterEventState.bPrevPIEPlaying && !bPIEPlaying)
     {
-        FooterLogSystem.Push("PIE ended");
+        PushFooterLog("PIE ended");
     }
     else if (FooterEventState.PrevEditorState != CurrentState)
     {
         switch (CurrentState)
         {
         case EViewportPlayState::Paused:
-            FooterLogSystem.Push("PIE paused");
+            PushFooterLog("PIE paused");
             break;
         case EViewportPlayState::Playing:
-            FooterLogSystem.Push("PIE resumed");
+            PushFooterLog("PIE resumed");
             break;
         default:
             break;

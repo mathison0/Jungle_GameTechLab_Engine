@@ -14,6 +14,7 @@ class AActor;
 class UPrimitiveComponent;
 class UGizmoComponent;
 class ULightComponentBase;
+class USkeletalMesh;
 class USkeletalMeshComponent;
 struct FFrustum;
 
@@ -55,6 +56,10 @@ public:
 	FMeshBuffer* GetStaticMeshBuffer(const UStaticMesh* StaticMeshAsset, int32 LODLevel = 0)
 	{
 		return MeshBufferManager.GetStaticMeshBuffer(StaticMeshAsset, LODLevel);
+	}
+	FMeshBuffer* GetSkeletalMeshBufferGPU(const USkeletalMesh* SkeletalMeshAsset)
+	{
+		return MeshBufferManager.GetGPUSkeletalMeshBuffer(SkeletalMeshAsset);
 	}
 	const FCullingStats& GetLastCullingStats() const { return LastCullingStats; }
 	const FDecalStats& GetLastDecalStats() const { return DecalCommandBuilder.GetLastStats(); }

@@ -300,9 +300,24 @@ UMaterialInstance* FEditorAssetService::CreateMaterialInstance(const FString& In
 	return FResourceManager::Get().CreateMaterialInstance(InstancePath, Parent);
 }
 
-bool FEditorAssetService::SaveMaterialInstance(const FString& InstancePath, UMaterialInstance* Instance) const
+bool FEditorAssetService::SaveMaterial(const FString& MaterialPath, UMaterial* Material)
 {
-	return FResourceManager::Get().SerializeMaterialInstance(InstancePath, Instance);
+	const bool bSaved = FResourceManager::Get().SerializeMaterial(MaterialPath, Material);
+	if (bSaved)
+	{
+		RefreshAssetDatabase();
+	}
+	return bSaved;
+}
+
+bool FEditorAssetService::SaveMaterialInstance(const FString& InstancePath, UMaterialInstance* Instance)
+{
+	const bool bSaved = FResourceManager::Get().SerializeMaterialInstance(InstancePath, Instance);
+	if (bSaved)
+	{
+		RefreshAssetDatabase();
+	}
+	return bSaved;
 }
 
 void FEditorAssetService::AddUniquePath(TArray<FString>& Paths, const FString& Path)

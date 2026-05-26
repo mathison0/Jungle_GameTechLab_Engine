@@ -64,6 +64,7 @@ FEditorSceneOperationResult FEditorSceneService::OpenScene(const FString& FilePa
 	FSceneSaveManager::Load(FilePath, LoadCtx, &LoadedCam);
 	if (LoadCtx.World)
 	{
+		EditorEngine->InitializeWorldContext(LoadCtx);
 		EditorEngine->GetWorldList().push_back(LoadCtx);
 		EditorEngine->SetActiveWorld(LoadCtx.ContextHandle);
 		EditorEngine->ApplySpatialIndexMaintenanceSettings(LoadCtx.World);

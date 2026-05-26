@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Editor/UI/EditorWidget.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Asset/SkeletalMeshTypes.h"
 #include "Render/Common/ComPtr.h"
 #include "ImGui/imgui.h"
@@ -50,6 +51,10 @@ private:
     void DeleteSocket(int32 SocketIdx);
     bool HasPreview(const FName& SocketName) const;
     FString GenerateUniqueSocketName(const char* Base = "Socket") const;
+    FEditorSkeletalMeshSocketState CaptureSocketUndoState(const FString& Label) const;
+    void RecordSocketUndoState(
+        const FEditorSkeletalMeshSocketState& BeforeState,
+        const FString& Label);
 
     // 모달 picker — Render() 끝에서 호출하여 그림.
     void DrawPreviewPickerModal();
@@ -101,6 +106,8 @@ private:
     bool  bMeshDirty = false;         // socket 등 mesh asset 데이터 변경 후 Save 트리거용
 	uint64 CleanMeshEditSignature = 0;
 	bool bHasCleanMeshEditSignature = false;
+    bool bSocketTransformEditUndoCaptured = false;
+    FEditorSkeletalMeshSocketState SocketTransformBeforeState;
     FString PreviewMeshPathBufferSource;
     char PreviewMeshPathBuffer[1024] = {};
     int32 SelectedAnimTrackIndex = -1;

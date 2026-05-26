@@ -70,7 +70,7 @@
             "Class" : "UParticleModuleSpawn",
             "Data" : {
               "ObjectName" : "UParticleModuleSpawn_1",
-              "Rate" : 10.000000,
+              "Rate" : 1.000000,
               "Type" : "UParticleModuleSpawn",
               "bEnabled" : true,
               "bSpawnModule" : false,
@@ -114,14 +114,14 @@
             "Data" : {
               "ObjectName" : "UParticleModuleVelocity_1",
               "StartVelocityMax" : {
-                "X" : 0.000000,
-                "Y" : 0.000000,
-                "Z" : -1.000000
+                "X" : 0.500000,
+                "Y" : 0.500000,
+                "Z" : -0.500000
               },
               "StartVelocityMin" : {
-                "X" : 0.000000,
-                "Y" : 0.000000,
-                "Z" : -3.000000
+                "X" : 0.500000,
+                "Y" : 0.500000,
+                "Z" : -0.500000
               },
               "Type" : "UParticleModuleVelocity",
               "bEnabled" : true,
@@ -175,12 +175,14 @@
             "Class" : "UParticleModuleCollision",
             "Data" : {
               "CollisionCheckFraction" : 1.000000,
+              "CollisionRadius" : 5.000000,
               "Friction" : 0.000000,
               "MaxCollisionDistance" : 0.000000,
               "MaxCollisions" : 1,
               "ObjectName" : "Collision",
               "Response" : 0,
               "Restitution" : 0.250000,
+              "TraceMode" : 1,
               "Type" : "UParticleModuleCollision",
               "bCollisionEnabled" : true,
               "bEnabled" : true,
@@ -188,7 +190,8 @@
               "bIgnoreOwner" : true,
               "bKillWhenMaxCollisionsReached" : false,
               "bSpawnModule" : false,
-              "bUpdateModule" : true
+              "bUpdateModule" : true,
+              "bUseParticleSizeAsRadius" : true
             },
             "Id" : 12
           }],

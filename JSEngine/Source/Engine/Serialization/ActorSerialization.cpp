@@ -24,6 +24,7 @@ namespace ActorJsonKeys
 	static constexpr const char* Components = "Components";
 	static constexpr const char* Visible = "Visible";
 	static constexpr const char* Active = "Active";
+	static constexpr const char* PersistentGuid = "PersistentGuid";
 	static constexpr const char* RootComponent = "RootComponent";
 	static constexpr const char* Type = "Type";
 	static constexpr const char* ParentUUID = "ParentUUID";
@@ -284,6 +285,8 @@ namespace FActorSerialization
 		}
 
 		ActorJson[ActorJsonKeys::UUID] = static_cast<int32>(Actor->GetUUID());
+		Actor->EnsurePersistentGuid();
+		ActorJson[ActorJsonKeys::PersistentGuid] = Actor->GetPersistentGuid().ToString();
 		ActorJson[ActorJsonKeys::ClassName] = Actor->GetClassName();
 		ActorJson[ActorJsonKeys::Name] = Actor->GetName();
 		ActorJson[ActorJsonKeys::Visible] = Actor->IsVisible();
@@ -346,6 +349,14 @@ namespace FActorSerialization
 		if (Options.bPreserveUUIDs)
 		{
 			NewActor->SetUUID(GetJsonUInt(ActorData, ActorJsonKeys::UUID, NewActor->GetUUID()));
+		}
+		if (ActorData.hasKey(ActorJsonKeys::PersistentGuid))
+		{
+			NewActor->SetPersistentGuid(FGuid::FromString(GetJsonString(ActorData, ActorJsonKeys::PersistentGuid)));
+		}
+		else
+		{
+			NewActor->EnsurePersistentGuid();
 		}
 
 		const FString ActorName = GetJsonString(ActorData, ActorJsonKeys::Name);

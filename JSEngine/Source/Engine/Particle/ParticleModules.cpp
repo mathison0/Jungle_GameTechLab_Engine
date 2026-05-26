@@ -1,12 +1,14 @@
 ﻿#include "Particle/ParticleModules.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "Core/Random/EngineRandom.h"
 #include "Core/ResourceManager.h"
 #include "Core/ResourceTypes.h"
 #include "GameFramework/World.h"
+#include "Math/Quat.h"
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleSystemComponent.h"
 
@@ -296,7 +298,39 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
         QueryParams.IgnoredActor = bIgnoreOwner ? OwnerActor : nullptr;
         QueryParams.IgnoredComponent = Component;
 
-        if (!World->LineTraceSingle(Particle.OldLocation, Particle.Location, Hit, QueryParams))
+        bool bHit = false;
+        if (TraceMode == EParticleCollisionTraceMode::Sphere)
+        {
+            float SweepRadius = std::max(0.0f, CollisionRadius);
+            if (bUseParticleSizeAsRadius)
+            {
+                SweepRadius = std::max({
+                    std::fabs(Particle.Size.X),
+                    std::fabs(Particle.Size.Y),
+                    std::fabs(Particle.Size.Z) }) * 0.5f;
+            }
+
+            if (SweepRadius > 0.0f)
+            {
+                bHit = World->SweepSingle(
+                    Hit,
+                    Particle.OldLocation,
+                    Particle.Location,
+                    FQuat::Identity,
+                    FCollisionShape::MakeSphere(SweepRadius),
+                    QueryParams);
+            }
+            else
+            {
+                bHit = World->LineTraceSingle(Particle.OldLocation, Particle.Location, Hit, QueryParams);
+            }
+        }
+        else
+        {
+            bHit = World->LineTraceSingle(Particle.OldLocation, Particle.Location, Hit, QueryParams);
+        }
+
+        if (!bHit)
         {
             ++ParticleIndex;
             continue;
@@ -310,7 +344,7 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
             AppliedResponse = EParticleCollisionResponse::Kill;
         }
 
-        const FVector HitNormal = Hit.Normal.GetSafeNormal().IsNearlyZero()
+        FVector HitNormal = Hit.Normal.GetSafeNormal().IsNearlyZero()
             ? FVector::UpVector
             : Hit.Normal.GetSafeNormal();
 

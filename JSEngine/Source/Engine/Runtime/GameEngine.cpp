@@ -4,6 +4,7 @@
 #include "Core/Paths.h"
 #include "Engine/Input/GameplayInputTypes.h"
 #include "Engine/Input/InputSystem.h"
+#include "Engine/Runtime/StartupProgress.h"
 #include "Engine/Runtime/WindowsWindow.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/PlayerController.h"
@@ -96,15 +97,23 @@ namespace
 
 void UGameEngine::Init(FWindowsWindow* InWindow)
 {
+	IStartupProgressReporter& Progress = GetStartupProgress();
+	Progress.Report("Starting game runtime...", 0.04f);
+
 	const std::filesystem::path LogPath = std::filesystem::path(FPaths::RootDir()) / L"Saves" / L"Logs" / L"Game.log";
 	FLog::SetFileOutputPath(LogPath.wstring());
 	UE_LOG("[GameEngine] GameClient boot started.");
 
 	UEngine::Init(InWindow);
+	Progress.Report("Initializing scripting...", 0.72f);
 	FScriptManager::Get().initializeLuaState();
+	Progress.Report("Initializing game UI...", 0.80f);
 	GetRmlUiSystem().Initialize(GetRenderer(), "GameClient", RuntimeUILayoutWidth, RuntimeUILayoutHeight);
+	Progress.Report("Loading game settings...", 0.86f);
 	LoadGameSettings();
+	Progress.Report("Loading startup world...", 0.92f);
 	LoadStartupWorld();
+	Progress.Report("Game ready.", 1.0f);
 }
 
 void UGameEngine::Shutdown()

@@ -1,6 +1,7 @@
 ﻿#include "Editor/EditorEngine.h"
 
 #include "Engine/Runtime/WindowsWindow.h"
+#include "Engine/Runtime/StartupProgress.h"
 #include "Engine/Serialization/SceneSaveManager.h"
 #include "Engine/Slate/SlateApplication.h"
 #include "Engine/Input/InputSystem.h"
@@ -25,6 +26,7 @@
 #include <chrono>
 #endif
 #include <filesystem>
+#include <iterator>
 #include <unordered_set>
 #include <utility>
 #include "ImGui/imgui.h"
@@ -117,22 +119,28 @@ namespace
 //  Init
 void UEditorEngine::Init(FWindowsWindow* InWindow)
 {
+	IStartupProgressReporter& Progress = GetStartupProgress();
+	Progress.Report("Starting editor...", 0.04f);
+
 	const std::filesystem::path LogDir = std::filesystem::path(FPaths::RootDir()) / L"Saves" / L"Logs";
 	FLog::SetFileOutputPath((LogDir / L"Editor.log").wstring());
 	FLog::SetPerfFileOutputPath((LogDir / L"EditorPerf.log").wstring());
 	UE_LOG("[EditorEngine] Editor boot started.");
 
 	UEngine::Init(InWindow);
+	Progress.Report("Initializing editor services...", 0.72f);
 	UndoSystem.SetOwner(this);
 	CommandSystem.Initialize(this);
 	AssetService.Initialize(this);
 	NotificationService.Initialize(this);
 	SceneService.Initialize(this);
+	Progress.Report("Initializing editor UI systems...", 0.78f);
 	GetRmlUiSystem().Initialize(GetRenderer(), "EditorPIE", 1, 1);
 	InputSystem::Get().SetOwnerWindow(Window ? Window->GetHWND() : nullptr);
 	EditorInputRouter.SetOwnerWindow(Window ? Window->GetHWND() : nullptr);
 	FEditorSettings::Get().LoadFromFile(FEditorSettings::GetDefaultSettingsPath());
 
+	Progress.Report("Creating editor workspace...", 0.82f);
 	MainPanel.Create(Window, Renderer, this);
 	bool bCreatedStartupWorld = false;
 	if (WorldList.empty())
@@ -148,17 +156,22 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 	}
 
 	// Selection & Gizmo
+	Progress.Report("Preparing editor viewports...", 0.88f);
 	const FWorldContext* Context = GetWorldContextFromHandle(ActiveWorldHandle);
 	ViewportLayout.Init(InWindow, Context->World, Context->SelectionManager, this);
 	GetFocusedWorld()->SetActiveCamera(GetCamera());
 	ViewportLayout.BuildViewportLayout(static_cast<int32>(Window->GetWidth()), static_cast<int32>(Window->GetHeight()));
 
 	// Editor용 렌더 파이프라인 세팅
+	Progress.Report("Preparing editor render pipeline...", 0.92f);
 	SetRenderPipeline(std::make_unique<FEditorRenderPipeline>(this, Renderer));
 
+	Progress.Report("Restoring editor scene...", 0.95f);
 	MainPanel.RestoreLastSceneFromProjectSettings();
 
+	Progress.Report("Initializing scripting...", 0.98f);
 	FScriptManager::Get().initializeLuaState();
+	Progress.Report("Editor ready.", 1.0f);
 }
 
 void UEditorEngine::Shutdown()
@@ -472,6 +485,26 @@ void UEditorEngine::OnSceneWorldLoaded(UWorld* NewWorld)
 	ResetViewport();
 }
 
+void UEditorEngine::InitializeWorldContext(FWorldContext& Context)
+{
+	if (!Context.SelectionManager)
+	{
+		Context.SelectionManager = new FSelectionManager;
+		Context.SelectionManager->Init();
+	}
+}
+
+void UEditorEngine::ShutdownWorldContext(FWorldContext& Context)
+{
+	if (Context.SelectionManager)
+	{
+		Context.SelectionManager->ClearSelection();
+		Context.SelectionManager->Shutdown();
+		delete Context.SelectionManager;
+		Context.SelectionManager = nullptr;
+	}
+}
+
 void UEditorEngine::RegisterViewportInputTargets()
 {
 	EditorInputRouter.ClearTargets();
@@ -757,8 +790,16 @@ int32 UEditorEngine::DeleteActors(const TArray<AActor*>& Actors)
 	if (ActorsByWorld.empty())
 		return 0;
 
-	// 2. Undo는 전체 snapshot
-	UndoSystem.CaptureSnapshot("Delete Actors");
+	TArray<FEditorSerializedActorState> DeletedActorStates;
+	for (auto& [World, ActorList] : ActorsByWorld)
+	{
+		(void)World;
+		TArray<FEditorSerializedActorState> WorldStates = UndoSystem.CaptureActorStates(ActorList);
+		DeletedActorStates.insert(
+			DeletedActorStates.end(),
+			std::make_move_iterator(WorldStates.begin()),
+			std::make_move_iterator(WorldStates.end()));
+	}
 
 	int32 DeletedCount = 0;
 
@@ -788,6 +829,9 @@ int32 UEditorEngine::DeleteActors(const TArray<AActor*>& Actors)
 	// 4. UI 업데이트
 	if (DeletedCount > 0)
 	{
+		UndoSystem.RecordActorDeletion(
+			DeletedActorStates,
+			DeletedCount > 1 ? "Delete Actors" : "Delete Actor");
 		SceneService.MarkDirty();
 		NotificationService.Info(DeletedCount > 1 ? "Actors deleted" : "Actor deleted");
 	}
@@ -849,6 +893,7 @@ bool UEditorEngine::RestoreSceneSnapshot(const FString& Snapshot, const FName& R
 	LoadCtx.WorldType = EWorldType::Editor;
 	LoadCtx.ContextHandle = TargetWorldHandle != FName::None ? TargetWorldHandle : FName("UndoRedoScene");
 	LoadCtx.ContextName = "Undo/Redo Scene";
+	InitializeWorldContext(LoadCtx);
 	WorldList.push_back(LoadCtx);
 	SetActiveWorld(LoadCtx.ContextHandle);
 	ApplySpatialIndexMaintenanceSettings(LoadCtx.World);
@@ -1067,7 +1112,10 @@ void UEditorEngine::StartPlaySessionNow()
 
 	for (auto& Ctx : WorldList)
 	{
-		Ctx.SelectionManager->ClearSelection();
+		if (Ctx.SelectionManager)
+		{
+			Ctx.SelectionManager->ClearSelection();
+		}
 	}
 
 	SpawnPIEPlayerController(PIEWorld, FocusedClient);
@@ -1195,7 +1243,10 @@ void UEditorEngine::StopPlaySessionNow()
 
 	for (auto& Ctx : WorldList)
 	{
-		Ctx.SelectionManager->ClearSelection();
+		if (Ctx.SelectionManager)
+		{
+			Ctx.SelectionManager->ClearSelection();
+		}
 	}
 
 #if STATS
@@ -1290,11 +1341,8 @@ void UEditorEngine::CloseScene()
 
 	for (FWorldContext& Ctx : WorldList)
 	{
+		ShutdownWorldContext(Ctx);
 		Ctx.World->EndPlay(EEndPlayReason::Type::EndPlayInEditor);
-		Ctx.SelectionManager->ClearSelection();
-		Ctx.SelectionManager->Shutdown();
-		delete Ctx.SelectionManager;
-		Ctx.SelectionManager = nullptr;
 		UObjectManager::Get().DestroyObject(Ctx.World);
 	}
 	WorldList.clear();
@@ -1476,13 +1524,7 @@ void UEditorEngine::ClearScene()
 			UObjectManager::Get().DestroyObject(Ctx.World);
 		}
 
-		if (Ctx.SelectionManager)
-		{
-			Ctx.SelectionManager->ClearSelection();
-			Ctx.SelectionManager->Shutdown();
-			delete Ctx.SelectionManager;
-			Ctx.SelectionManager = nullptr;
-		}
+		ShutdownWorldContext(Ctx);
 
 		It = WorldList.erase(It);
 	}
@@ -1508,8 +1550,7 @@ FWorldContext& UEditorEngine::RegisterWorld(UWorld* InWorld, EWorldType Type, co
 	Context.World = InWorld;
 	Context.ContextName = Name;
 	Context.ContextHandle = Handle;
-	Context.SelectionManager = new FSelectionManager;
-	Context.SelectionManager->Init();
+	InitializeWorldContext(Context);
 	
 	WorldList.push_back(Context);
 	return WorldList.back();
@@ -1536,12 +1577,7 @@ void UEditorEngine::UnregisterWorld(const FName& Handle)
 				UObjectManager::Get().DestroyObject(it->World);
 			}
 
-			if (it->SelectionManager)
-			{
-				it->SelectionManager->Shutdown();
-				delete it->SelectionManager;
-				it->SelectionManager = nullptr;
-			}
+			ShutdownWorldContext(*it);
 			WorldList.erase(it);
 			return; // 찾아서 지웠으므로 즉시 종료
 		}

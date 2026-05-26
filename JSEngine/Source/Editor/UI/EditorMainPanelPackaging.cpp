@@ -589,12 +589,24 @@ void FEditorMainPanel::RenderBuildGameModal()
 		);
 
 		FProjectSettings& ProjectSettings = FProjectSettings::Get();
+		const FEditorProjectSettingsState BeforeState = EditorEngine
+			? EditorEngine->GetUndoSystem().CaptureProjectSettings("Edit Packaging Settings")
+			: FEditorProjectSettingsState{};
 		ProjectSettings.BuildSettings = BuildGameState.PendingSettings;
 		if (bValidScene)
 		{
 			ProjectSettings.SetLastScenePath(StartupScene);
 		}
 		ProjectSettings.SaveToFile(FProjectSettings::GetDefaultSettingsPath());
+		if (EditorEngine)
+		{
+			const FEditorProjectSettingsState AfterState =
+				EditorEngine->GetUndoSystem().CaptureProjectSettings("Edit Packaging Settings");
+			EditorEngine->GetUndoSystem().RecordProjectSettings(
+				BeforeState,
+				AfterState,
+				"Edit Packaging Settings");
+		}
 
 		PushFooterLog("Packaging game...");
 		BuildGameState.bInProgress = true;

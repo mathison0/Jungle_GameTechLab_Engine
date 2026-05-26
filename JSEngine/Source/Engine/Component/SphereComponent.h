@@ -25,5 +25,7 @@ private:
 	// UShapeComponent을(를) 통해 상속됨
 	void UpdateWorldAABB() const override;
 	bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) override;
+	bool SweepMesh(const FVector& Start, const FVector& End, const FQuat& ShapeWorldRotation,
+		const FCollisionShape& Shape, FHitResult& OutHitResult) override;
 	EPrimitiveType GetPrimitiveType() const override;
 };

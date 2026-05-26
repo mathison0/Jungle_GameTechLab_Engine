@@ -43,6 +43,19 @@ public:
         DeltaQuat.Normalize();
 
         FVector DeltaS = NewS - OldS;
+        FVector ScaleRatio = FVector(1.0f, 1.0f, 1.0f);
+        if (std::abs(OldS.X) > 1.e-6f)
+        {
+            ScaleRatio.X = NewS.X / OldS.X;
+        }
+        if (std::abs(OldS.Y) > 1.e-6f)
+        {
+            ScaleRatio.Y = NewS.Y / OldS.Y;
+        }
+        if (std::abs(OldS.Z) > 1.e-6f)
+        {
+            ScaleRatio.Z = NewS.Z / OldS.Z;
+        }
 
         Actors[0]->SetActorLocation(NewT);
         Actors[0]->SetActorRotationQuat(NewQuat);
@@ -55,6 +68,15 @@ public:
                 continue;
 
             FVector Offset = Actor->GetActorLocation() - OldT;
+            if (!DeltaS.IsNearlyZero())
+            {
+                const FVector LocalOffset = OldQuat.Inverse().RotateVector(Offset);
+                const FVector ScaledLocalOffset(
+                    LocalOffset.X * ScaleRatio.X,
+                    LocalOffset.Y * ScaleRatio.Y,
+                    LocalOffset.Z * ScaleRatio.Z);
+                Offset = OldQuat.RotateVector(ScaledLocalOffset);
+            }
             Actor->SetActorLocation(NewT + DeltaQuat.RotateVector(Offset));
 
             if (!DeltaQuat.IsIdentity(1e-6f))
@@ -100,24 +122,24 @@ public:
         if (!Component)
             return;
 
-        FTransform NewWorldTransform(M);
-        NewWorldTransform.NormalizeRotation();
-
-        USceneComponent* Parent = Component->GetParent();
-        if (!Parent)
+        FMatrix TargetRelativeMatrix = M;
+        if (USceneComponent* Parent = Component->GetParent())
         {
-            Component->SetRelativeLocation(NewWorldTransform.GetLocation());
-            Component->SetRelativeRotationQuat(NewWorldTransform.GetRotation());
-            Component->SetRelativeScale(NewWorldTransform.GetScale3D());
+            const FName& AttachSocketName = Component->GetAttachSocketName();
+            const FTransform ParentWorldTransform =
+                (AttachSocketName != FName::None && Parent->HasSocket(AttachSocketName))
+                    ? Parent->GetSocketTransform(AttachSocketName)
+                    : Parent->GetWorldTransform();
+            TargetRelativeMatrix = M * ParentWorldTransform.ToInverseMatrixWithScale();
         }
-        else
-        {
-            FTransform ParentWorldTransform = Parent->GetWorldTransform();
-            FTransform RelativeTransform = NewWorldTransform * ParentWorldTransform.Inverse();
 
-            Component->SetRelativeLocation(RelativeTransform.GetLocation());
-            Component->SetRelativeRotationQuat(RelativeTransform.GetRotation());
-            Component->SetRelativeScale(RelativeTransform.GetScale3D());
+        FVector Translation, Scale;
+        FMatrix Rotation;
+        if (TargetRelativeMatrix.Decompose(Translation, Rotation, Scale))
+        {
+            Component->SetRelativeLocation(Translation);
+            Component->SetRelativeRotationQuat(FQuat(Rotation));
+            Component->SetRelativeScale(Scale);
         }
     }
 };

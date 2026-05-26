@@ -29,9 +29,8 @@ bool FEngineLoop::Init(HINSTANCE hInstance, int nShowCmd)
 		return false;
 	}
 
-#if !WITH_EDITOR && !IS_OBJ_VIEWER
 	GameSplashScreen.ShowOverWindow(hInstance, Application.GetWindow().GetHWND());
-#endif
+	GameSplashScreen.Report("Preparing application...", 0.02f);
 
 	Application.SetOnSizingCallback([this]()
 		{
@@ -48,10 +47,12 @@ bool FEngineLoop::Init(HINSTANCE hInstance, int nShowCmd)
 		});
 
 #if WITH_EDITOR || IS_OBJ_VIEWER
+	GameSplashScreen.Report("Watching shader directory...", 0.03f);
 	ShaderDirectoryWatcher.Initialize(FPaths::ShaderDir());
 #endif
 
 	CreateEngine();
+	GEngine->SetStartupProgressReporter(&GameSplashScreen);
 	GEngine->Init(&Application.GetWindow());
 	GEngine->SetTimer(&Timer);
 	Application.SetOnCloseRequestedCallback([]()
@@ -60,9 +61,8 @@ bool FEngineLoop::Init(HINSTANCE hInstance, int nShowCmd)
 		});
 	GEngine->BeginPlay();
 
-#if !WITH_EDITOR && !IS_OBJ_VIEWER
+	GameSplashScreen.Report("Ready.", 1.0f);
 	GameSplashScreen.Close();
-#endif
 
 	Timer.Initialize();
 

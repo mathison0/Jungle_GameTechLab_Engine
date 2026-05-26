@@ -6,10 +6,12 @@
 #include "Object/Object.h"
 #include "GameFramework/AActor.h"
 #include "Level.h"
+#include "Math/Quat.h"
 #include "Spatial/WorldSpatialIndex.h"
 
 class UCameraComponent;
 class FViewportCamera;
+struct FOBB;
 
 struct FWorldGameModeSettings
 {
@@ -80,10 +82,20 @@ public:
 	/** @brief Flush pending bounds and visibility dirties into the world BVH. */
 	void SyncSpatialIndex();
 
+    
+    /* Query World */
 	bool LineTraceSingle(
 		const FVector& Start,
 		const FVector& End,
 		FHitResult& OutHit,
+		const FCollisionQueryParams& Params = FCollisionQueryParams());
+
+	bool SweepSingle(
+		FHitResult& OutHit,
+		const FVector& Start,
+		const FVector& End,
+		const FQuat& ShapeWorldRotation,
+		const FCollisionShape& CollisionShape,
 		const FCollisionQueryParams& Params = FCollisionQueryParams());
 
 	bool HasBegunPlay() const { return bHasBegunPlay; }
@@ -126,6 +138,9 @@ public:
 	bool IsSandervistanActivated() const { return bActivateSandervistan; }
 
 private:
+	static bool ShouldSkipTraceCandidate(UPrimitiveComponent* Candidate, const FCollisionQueryParams& Params);
+	static FOBB MakeSweptAABBQueryOBB(const FVector& Start, const FVector& End, const FCollisionShape& Shape);
+
 	EWorldType WorldType = EWorldType::Editor;
 	FWorldGameModeSettings GameModeSettings;
 	ULevel* PersistentLevel = nullptr;

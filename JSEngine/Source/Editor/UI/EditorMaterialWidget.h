@@ -27,6 +27,7 @@ private:
 	void RenderMaterialPreviewSummary();
 	void RenderMaterialPreview(UPrimitiveComponent* PrimitiveComp);
 	void RenderMaterialProperties();
+	bool RenderMaterialParamValue(const FString& ParamName, FMaterialParamValue& ParamValue);
 	UStaticMesh* ResolvePreviewMesh(UPrimitiveComponent* PrimitiveComp);
 	void RefreshEditingMaterialFromSlot();
 	bool CreateInstanceForCurrentMaterial();
@@ -41,4 +42,9 @@ private:
 	float PreviewPitchRad = 0.25f;
 	float PreviewDistance = 4.0f;
 	bool bFocusWindowNextFrame = false;
+	bool bMaterialParamEditCaptured = false;
+	UMaterialInstance* MaterialParamEditInstance = nullptr;
+	FString MaterialParamEditPath;
+	FString MaterialParamEditName;
+	TMap<FString, FMaterialParamValue> MaterialParamEditBeforeOverrides;
 };

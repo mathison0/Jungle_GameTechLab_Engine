@@ -169,6 +169,13 @@ enum class EParticleCollisionResponse : uint8
 	Ignore,
 };
 
+UENUM()
+enum class EParticleCollisionTraceMode : uint8
+{
+	Point,
+	Sphere,
+};
+
 UCLASS()
 class UParticleModuleCollision : public UParticleModule
 {
@@ -177,10 +184,21 @@ public:
 
 	UParticleModuleCollision();
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+	EParticleCollisionTraceMode GetTraceMode() const { return TraceMode; }
+	bool IsUsingParticleSizeAsRadius() const { return bUseParticleSizeAsRadius; }
 
 private:
 	UPROPERTY(DisplayName = "Collision Enabled")
 	bool bCollisionEnabled = true;
+
+	UPROPERTY(DisplayName = "Trace Mode")
+	EParticleCollisionTraceMode TraceMode = EParticleCollisionTraceMode::Point;
+
+	UPROPERTY(DisplayName = "Use Particle Size As Radius")
+	bool bUseParticleSizeAsRadius = true;
+
+	UPROPERTY(DisplayName = "Collision Radius", Min = 0.0f)
+	float CollisionRadius = 1.0f;
 
 	UPROPERTY(DisplayName = "Response")
 	EParticleCollisionResponse Response = EParticleCollisionResponse::Bounce;

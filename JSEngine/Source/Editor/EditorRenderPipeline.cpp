@@ -15,7 +15,9 @@
 #include "Engine/Component/GizmoComponent.h"
 #include "Engine/Component/SkeletalMeshComponent.h"
 #include "GameFramework/PrimitiveActors.h"
+#include "Asset/SkeletalMesh.h"
 #include "Asset/StaticMesh.h"
+#include "Core/ResourceManager.h"
 #include "Render/Resource/Buffer.h"
 #include "Render/Resource/Material.h"
 #include "Render/Scene/RenderCommand.h"
@@ -854,6 +856,133 @@ ID3D11ShaderResourceView* FEditorRenderPipeline::RenderMaterialPreview(
 		Cmd.SectionIndexCount = static_cast<uint32>(MeshData->Indices.size());
 		Cmd.PerObjectConstants = FPerObjectConstants(World, FColor::White().ToVector4());
 		Cmd.WorldAABB = FAABB::TransformAABB(Bounds, World);
+		Bus.AddCommand(ERenderPass::Opaque, Cmd);
+	}
+
+	Renderer.PrepareBatchers(Bus);
+	Renderer.Render(Bus);
+
+	ID3D11ShaderResourceView* PreviewSRV =
+		const_cast<ID3D11ShaderResourceView*>(Renderer.GetCurrentSceneSRV());
+	Renderer.UseBackBufferRenderTargets();
+	return PreviewSRV;
+}
+
+ID3D11ShaderResourceView* FEditorRenderPipeline::RenderSkeletalMeshPreview(
+	FRenderer& Renderer,
+	USkeletalMesh* Mesh,
+	uint32 Width,
+	uint32 Height,
+	float YawRad,
+	float PitchRad,
+	float Distance)
+{
+	if (Mesh == nullptr || !Mesh->HasValidMeshData() || Width == 0 || Height == 0)
+	{
+		return nullptr;
+	}
+
+	FMeshBuffer* MeshBuffer = Collector.GetSkeletalMeshBufferGPU(Mesh);
+	const TArray<uint32>& Indices = Mesh->GetIndices();
+	if (MeshBuffer == nullptr || Indices.empty())
+	{
+		return nullptr;
+	}
+
+	FViewportRenderResource& PreviewTarget = Renderer.AcquirePreviewResource(Width, Height);
+	if (!PreviewTarget.GetView().IsValid())
+	{
+		return nullptr;
+	}
+
+	Renderer.BeginViewportFrame(PreviewTarget.GetView());
+
+	Bus.Clear();
+	Bus.SetRenderSettings(EViewMode::Lit_BlinnPhong, FShowFlags{});
+	Bus.SetLightCullMode(ELightCullMode::None);
+	Bus.SetViewportSize(FVector2(static_cast<float>(Width), static_cast<float>(Height)));
+	Bus.SetViewportOrigin(FVector2(0.0f, 0.0f));
+	Bus.SetFXAAEnabled(true);
+
+	const float ClampedPitch = MathUtil::Clamp(PitchRad, -1.35f, 1.35f);
+	const float SafeDistance = std::max(Distance, 0.8f);
+	const FVector Eye(SafeDistance, -SafeDistance, SafeDistance * 0.45f);
+	const FVector Target = FVector::ZeroVector;
+	const FMatrix View = FMatrix::MakeViewLookAtLH(Eye, Target, FVector::UpVector);
+	const FMatrix Proj = FMatrix::MakePerspectiveFovLH(
+		MathUtil::DegreesToRadians(45.0f),
+		static_cast<float>(Width) / static_cast<float>(Height),
+		0.05f,
+		100.0f);
+	Bus.SetViewProjection(View, Proj, 0.05f, 100.0f);
+
+	Bus.AmbientLightInfo.Color = FVector(1.0f, 1.0f, 1.0f);
+	Bus.AmbientLightInfo.Intensity = 0.25f;
+	Bus.DirectionalLightInfo.Color = FVector(1.0f, 0.96f, 0.90f);
+	Bus.DirectionalLightInfo.Intensity = 1.5f;
+	Bus.DirectionalLightInfo.Direction = FVector(-0.55f, -0.35f, -0.75f).GetSafeNormal();
+
+	const FAABB& Bounds = Mesh->GetLocalBounds();
+	const FVector Center = Bounds.GetCenter();
+	const FVector Extent = Bounds.GetExtent();
+	const float MaxExtent = std::max(0.01f, std::max(Extent.X, std::max(Extent.Y, Extent.Z)));
+	const float Scale = 1.35f / MaxExtent;
+	const FMatrix CenterToOrigin = FMatrix::MakeTranslationMatrix(FVector(-Center.X, -Center.Y, -Center.Z));
+	const FMatrix ScaleMatrix = FMatrix::MakeScaleMatrix(FVector(Scale, Scale, Scale));
+	const FMatrix Rotation = FMatrix::MakeRotationY(ClampedPitch) * FMatrix::MakeRotationZ(YawRad);
+	const FMatrix World = CenterToOrigin * ScaleMatrix * Rotation;
+	const FAABB WorldBounds = FAABB::TransformAABB(Bounds, World);
+
+	auto ResolveSectionMaterial = [Mesh](int32 SectionIndex) -> UMaterialInterface*
+	{
+		const TArray<FStaticMeshSection>& Sections = Mesh->GetSections();
+		const TArray<FStaticMeshMaterialSlot>& Slots = Mesh->GetMaterialSlots();
+		int32 SlotIndex = SectionIndex;
+		if (SectionIndex >= 0 && SectionIndex < static_cast<int32>(Sections.size()) && Sections[SectionIndex].MaterialSlotIndex >= 0)
+		{
+			SlotIndex = Sections[SectionIndex].MaterialSlotIndex;
+		}
+		if (SlotIndex >= 0 && SlotIndex < static_cast<int32>(Slots.size()) && Slots[SlotIndex].Material)
+		{
+			return Slots[SlotIndex].Material;
+		}
+		return FResourceManager::Get().GetMaterial("DefaultWhite");
+	};
+
+	const TArray<FStaticMeshSection>& Sections = Mesh->GetSections();
+	if (!Sections.empty())
+	{
+		for (int32 SectionIdx = 0; SectionIdx < static_cast<int32>(Sections.size()); ++SectionIdx)
+		{
+			const FStaticMeshSection& Section = Sections[SectionIdx];
+			if (Section.IndexCount == 0)
+			{
+				continue;
+			}
+
+			FRenderCommand Cmd = {};
+			Cmd.Type = ERenderCommandType::SkeletalMesh;
+			Cmd.VertexFactoryType = EVertexFactoryType::SkeletalMesh;
+			Cmd.MeshBuffer = MeshBuffer;
+			Cmd.Material = ResolveSectionMaterial(SectionIdx);
+			Cmd.SectionIndexStart = Section.StartIndex;
+			Cmd.SectionIndexCount = Section.IndexCount;
+			Cmd.PerObjectConstants = FPerObjectConstants(World, FColor::White().ToVector4());
+			Cmd.WorldAABB = WorldBounds;
+			Bus.AddCommand(ERenderPass::Opaque, Cmd);
+		}
+	}
+	else
+	{
+		FRenderCommand Cmd = {};
+		Cmd.Type = ERenderCommandType::SkeletalMesh;
+		Cmd.VertexFactoryType = EVertexFactoryType::SkeletalMesh;
+		Cmd.MeshBuffer = MeshBuffer;
+		Cmd.Material = ResolveSectionMaterial(0);
+		Cmd.SectionIndexStart = 0;
+		Cmd.SectionIndexCount = MeshBuffer->GetIndexBuffer().GetIndexCount();
+		Cmd.PerObjectConstants = FPerObjectConstants(World, FColor::White().ToVector4());
+		Cmd.WorldAABB = WorldBounds;
 		Bus.AddCommand(ERenderPass::Opaque, Cmd);
 	}
 
