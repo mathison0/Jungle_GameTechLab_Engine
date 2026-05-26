@@ -1744,11 +1744,25 @@ void FEditorPropertyWidget::RenderComponentProperties()
 			const TArray<FString>& MaterialNamesBeam = AssetServiceBeam.GetMaterialInterfaceNames();
 			const TArray<UParticleEmitter*>& EmittersBeam = MutableTemplateBeam->GetEmitters();
 
-			// Source/Target Component picker 공용 helper — owner actor 의 USceneComponent 들 enumerate.
+			// Source/Target Component picker 공용 helper — **world 전체** 의 모든 actor 의 USceneComponent enumerate.
+			// Beam Target 은 보통 다른 actor 를 가리키는 use case (예: particle 에서 enemy actor mesh 로 lightning).
+			// 따라서 같은-actor 한정 (RenderObjectPtrWidget 의 default 패턴) 으로는 부족 — world 전체 순회.
+			// label 형식: "ActorName::ComponentName" — cross-actor 식별 명확.
 			AActor* BeamOwnerActor = ParticleComp->GetOwner();
+			auto FormatComponentLabel = [](USceneComponent* Comp) -> FString
+			{
+				if (!Comp) { return FString("None"); }
+				AActor* OwnerActor = Comp->GetOwner();
+				const FString CompName = Comp->GetFName().ToString();
+				if (OwnerActor)
+				{
+					return OwnerActor->GetFName().ToString() + "::" + CompName;
+				}
+				return CompName;
+			};
 			auto RenderSceneComponentPicker = [&](const char* PickerId, USceneComponent* Current) -> USceneComponent*
 			{
-				const FString CurrentLabel = Current ? Current->GetFName().ToString() : FString("None");
+				const FString CurrentLabel = FormatComponentLabel(Current);
 				USceneComponent* NewSelection = Current;
 				if (ImGui::BeginCombo(PickerId, CurrentLabel.c_str()))
 				{
@@ -1756,16 +1770,21 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					{
 						NewSelection = nullptr;
 					}
-					if (BeamOwnerActor)
+					// World 전체 순회 — BeamOwnerActor->GetFocusedWorld() 로 owner actor 가 속한 world 진입.
+					UWorld* World = BeamOwnerActor ? BeamOwnerActor->GetFocusedWorld() : nullptr;
+					if (World)
 					{
-						for (UActorComponent* Comp : BeamOwnerActor->GetComponents())
+						for (AActor* Actor : World->GetActors())
 						{
-							if (USceneComponent* SceneComp = Cast<USceneComponent>(Comp))
+							if (!Actor) { continue; }
+							for (UActorComponent* Comp : Actor->GetComponents())
 							{
-								const FString CompLabel = SceneComp->GetFName().ToString();
+								USceneComponent* SceneComp = Cast<USceneComponent>(Comp);
+								if (!SceneComp) { continue; }
+								const FString FullLabel = FormatComponentLabel(SceneComp);
 								const bool bSelected = (SceneComp == Current);
-								char SelectableId[160];
-								snprintf(SelectableId, sizeof(SelectableId), "%s##%p", CompLabel.c_str(), static_cast<void*>(SceneComp));
+								char SelectableId[256];
+								snprintf(SelectableId, sizeof(SelectableId), "%s##%p", FullLabel.c_str(), static_cast<void*>(SceneComp));
 								if (ImGui::Selectable(SelectableId, bSelected))
 								{
 									NewSelection = SceneComp;
@@ -1904,6 +1923,21 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					if (NewTarget != BeamTarget->GetTargetComponent())
 					{
 						BeamTarget->SetTargetComponent(NewTarget);
+					}
+
+					// Local target 옵션 (BuildVertexBuffer Target lookup priority 1).
+					// true 면 TargetComponent 무시 + TargetLocalVector 사용 (emitter local space → world).
+					bool bUseLocal = BeamTarget->IsUseLocalTarget();
+					if (ImGui::Checkbox("Use Local Target", &bUseLocal))
+					{
+						BeamTarget->SetUseLocalTarget(bUseLocal);
+					}
+
+					FVector LocalVec = BeamTarget->GetTargetLocalVector();
+					ImGui::SetNextItemWidth(DragItemWidth);
+					if (ImGui::DragFloat3("Target Local Vector", &LocalVec.X, 1.0f, -10000.0f, 10000.0f))
+					{
+						BeamTarget->SetTargetLocalVector(LocalVec);
 					}
 				}
 

@@ -249,14 +249,24 @@ void FParticleBeamEmitterInstance::BuildVertexBuffer()
     const bool bSmooth = NoiseModule ? NoiseModule->IsSmooth() : false;
     const bool bApplyNoise = (NoiseModule != nullptr) && (NoiseFrequency > 0);
 
-    // 위험 5 방어: Source/Target Component nullptr 시 fallback 위치 계산용 emitter 위치 + forward.
+    // 위험 5 방어: Source/Target Component nullptr 시 fallback 위치 계산용 emitter 위치 + axes.
     // emitter 위치는 base instance 의 GetComponentWorldLocation() 사용 (Sprite/Ribbon 와 동일 출처).
     USceneComponent* SourceComp = SourceModule ? SourceModule->GetSourceComponent() : nullptr;
     USceneComponent* TargetComp = TargetModule ? TargetModule->GetTargetComponent() : nullptr;
 
+    // TargetModule 의 local-target 옵션 cache (frame 단위 1회).
+    // bUseLocalTarget=true 면 TargetComponent 무시 + TargetLocalVector 를 emitter local space 좌표로 해석.
+    const bool bUseLocalTarget = TargetModule ? TargetModule->IsUseLocalTarget() : false;
+    const FVector TargetLocalVec = TargetModule ? TargetModule->GetTargetLocalVector() : FVector::ZeroVector;
+
     const FVector EmitterLocation = GetComponentWorldLocation();
     const UParticleSystemComponent* OwningComp = GetOwningComponent();
+    // emitter 의 world axes (Forward = X, Right = Y, Up = Z 관례).
+    // local→world 변환에 사용: WorldOffset = Forward*X + Right*Y + Up*Z.
+    // OwningComp nullptr fallback (정상 경로에서는 거의 없음 — defensive): world axes default.
     const FVector EmitterForward = OwningComp ? OwningComp->GetForwardVector() : FVector(1.0f, 0.0f, 0.0f);
+    const FVector EmitterRight   = OwningComp ? OwningComp->GetRightVector()   : FVector(0.0f, 1.0f, 0.0f);
+    const FVector EmitterUp      = OwningComp ? OwningComp->GetUpVector()      : FVector(0.0f, 0.0f, 1.0f);
 
     const FVector SourceLocation = SourceComp ? SourceComp->GetWorldLocation() : EmitterLocation;
 
@@ -278,9 +288,21 @@ void FParticleBeamEmitterInstance::BuildVertexBuffer()
             continue;
         }
 
-        // Target 결정: TargetComp 있으면 그 위치, 없으면 Source + EmitterForward * FallbackDistance (결정 15 B fallback).
+        // Target 결정 우선순위 (UParticleModuleBeamTarget 의 priority 문서 참조):
+        //   (1) bUseLocalTarget=true  → TargetLocalVec 를 emitter local space 좌표로 해석 → world 변환.
+        //                                local 축 관례: X=Forward, Y=Right, Z=Up.
+        //                                기준점은 EmitterLocation (Source 가 아님 — 직관적 의미: emitter 가 target 의 root).
+        //   (2) TargetComp != nullptr → TargetComp->GetWorldLocation()
+        //   (3) 둘 다 부재             → Source + EmitterForward * FallbackDistance (결정 15 B fallback)
         FVector TargetLocation;
-        if (TargetComp)
+        if (bUseLocalTarget)
+        {
+            TargetLocation = EmitterLocation
+                + EmitterForward * TargetLocalVec.X
+                + EmitterRight   * TargetLocalVec.Y
+                + EmitterUp      * TargetLocalVec.Z;
+        }
+        else if (TargetComp)
         {
             TargetLocation = TargetComp->GetWorldLocation();
         }
