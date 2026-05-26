@@ -23,11 +23,9 @@ public:
 	bool IsLooping() const { return bLooping; }
 	bool UseLocalSpace() const { return bUseLocalSpace; }
 	UMaterialInterface* GetMaterial() const { return Material; }
-	const FName& GetSubUVName() const { return SubUVName; }
 	int32 GetSubImagesHorizontal() const { return std::max(SubImagesHorizontal, 1); }
 	int32 GetSubImagesVertical() const { return std::max(SubImagesVertical, 1); }
 	EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
-	void SetSubUVName(const FName& InName);
 	void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 private:
@@ -45,9 +43,6 @@ private:
 
 	UPROPERTY(DisplayName = "Use Local Space")
 	bool bUseLocalSpace = false;
-
-	UPROPERTY(DisplayName = "SubUV", Category = "SubUV")
-	FName SubUVName;
 
 	UPROPERTY(DisplayName = "Sub Images Horizontal", Category = "SubUV", Min = 1)
 	int32 SubImagesHorizontal = 1;
@@ -153,11 +148,17 @@ public:
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
 
 private:
-	UPROPERTY(DisplayName = "Start Size")
-	FVector StartSize = FVector(1.0f, 1.0f, 1.0f);
+	UPROPERTY(DisplayName = "Start Size Min")
+	FVector StartSizeMin = FVector(1.0f, 1.0f, 1.0f);
 
-	UPROPERTY(DisplayName = "End Size")
-	FVector EndSize = FVector(1.0f, 1.0f, 1.0f);
+	UPROPERTY(DisplayName = "Start Size Max")
+	FVector StartSizeMax = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(DisplayName = "End Size Min")
+	FVector EndSizeMin = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(DisplayName = "End Size Max")
+	FVector EndSizeMax = FVector(1.0f, 1.0f, 1.0f);
 };
 
 UENUM()

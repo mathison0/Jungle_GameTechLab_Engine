@@ -55,6 +55,8 @@ public:
 	void OpenRuntimeUIPreviewAsset(const FString& RmlPath = "");
 	void RefreshContentBrowser();
 	void OpenParticleSystemAsset(const FString& ParticleSystemPath);
+	void RequestOpenContentBrowser();
+	void RequestToggleContentBrowser();
 	void OpenViewer(FEditorViewer* Viewer);
 	bool ChangeViewerTarget(FEditorViewer* Viewer, const FString& NewFileName);
 	void RequestDockViewer(FEditorViewer* Viewer);

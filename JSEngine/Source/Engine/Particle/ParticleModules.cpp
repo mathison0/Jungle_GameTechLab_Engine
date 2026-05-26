@@ -12,11 +12,6 @@
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleSystemComponent.h"
 
-namespace
-{
-    constexpr const char* DefaultRequiredSubUVName = "Asset/plasma.png";
-}
-
 // Function : Generate random float inside range
 // input : Min, Max
 // Min : minimum random value
@@ -40,11 +35,28 @@ static FVector RandomRangeVector(const FVector& Min, const FVector& Max)
         RandomRange(Min.Z, Max.Z));
 }
 
+static float RandomUnitFromSeed(uint32 Seed)
+{
+    Seed ^= Seed >> 16;
+    Seed *= 0x7feb352du;
+    Seed ^= Seed >> 15;
+    Seed *= 0x846ca68bu;
+    Seed ^= Seed >> 16;
+    return static_cast<float>(Seed & 0x00ffffffu) / static_cast<float>(0x00ffffffu);
+}
+
+static FVector RandomRangeVectorSeeded(const FVector& Min, const FVector& Max, uint32 Seed)
+{
+    return FVector(
+        Min.X + (Max.X - Min.X) * RandomUnitFromSeed(Seed ^ 0x9e3779b9u),
+        Min.Y + (Max.Y - Min.Y) * RandomUnitFromSeed(Seed ^ 0x85ebca6bu),
+        Min.Z + (Max.Z - Min.Z) * RandomUnitFromSeed(Seed ^ 0xc2b2ae35u));
+}
+
 
 UParticleModuleRequired::UParticleModuleRequired()
 {
     bSpawnModule = true;
-    SetSubUVName(FName(DefaultRequiredSubUVName));
 }
 
 // Function : Apply required default particle values at spawn time
@@ -66,20 +78,7 @@ void UParticleModuleRequired::Spawn(FParticleEmitterInstance* Owner, FBasePartic
 void UParticleModuleRequired::PostEditProperty(const char* PropertyName)
 {
     UParticleModule::PostEditProperty(PropertyName);
-    if (PropertyName && strcmp(PropertyName, "SubUVName") == 0)
-    {
-        SetSubUVName(SubUVName);
-    }
-}
-
-void UParticleModuleRequired::SetSubUVName(const FName& InName)
-{
-    SubUVName = InName;
-    if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUVExact(InName))
-    {
-        SubImagesHorizontal = static_cast<int32>(std::max(SubUV->Columns, 1u));
-        SubImagesVertical = static_cast<int32>(std::max(SubUV->Rows, 1u));
-    }
+    (void)PropertyName;
 }
 
 UParticleModuleSpawn::UParticleModuleSpawn()
@@ -94,12 +93,13 @@ UParticleModuleSpawn::UParticleModuleSpawn()
 // output : Integer spawn count and updated Owner SpawnFraction remainder
 int32 UParticleModuleSpawn::ComputeSpawnCount(FParticleEmitterInstance* Owner, float DeltaTime)
 {
-    if (!Owner || Rate <= 0.0f || DeltaTime <= 0.0f)
+    const float EvaluatedRate = EvaluateFloatDistribution("Rate", Rate, Rate, 0.0f);
+    if (!Owner || EvaluatedRate <= 0.0f || DeltaTime <= 0.0f)
     {
         return 0;
     }
 
-	return Owner->ConsumeSpawnCount(Rate, DeltaTime);
+	return Owner->ConsumeSpawnCount(EvaluatedRate, DeltaTime);
 }
 
 UParticleModuleLifetime::UParticleModuleLifetime()
@@ -116,8 +116,7 @@ UParticleModuleLifetime::UParticleModuleLifetime()
 void UParticleModuleLifetime::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
-    (void)SpawnTime;
-    Particle.Lifetime = std::max(RandomRange(LifetimeMin, LifetimeMax), 0.01f);
+    Particle.Lifetime = std::max(EvaluateFloatDistribution("LifetimeMin", LifetimeMin, LifetimeMax, std::clamp(SpawnTime, 0.0f, 1.0f)), 0.01f);
 }
 
 UParticleModuleLocation::UParticleModuleLocation()
@@ -133,8 +132,7 @@ UParticleModuleLocation::UParticleModuleLocation()
 // output : Particle Location and OldLocation are set from component location plus random local offset
 void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
-    (void)SpawnTime;
-    const FVector LocalOffset = RandomRangeVector(StartLocationMin, StartLocationMax);
+    const FVector LocalOffset = EvaluateVectorDistribution("StartLocationMin", StartLocationMin, StartLocationMax, std::clamp(SpawnTime, 0.0f, 1.0f));
     const FVector BaseLocation = Owner ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
     Particle.Location = BaseLocation + LocalOffset;
     Particle.OldLocation = Particle.Location;
@@ -154,8 +152,7 @@ UParticleModuleVelocity::UParticleModuleVelocity()
 void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
-    (void)SpawnTime;
-    Particle.Velocity = RandomRangeVector(StartVelocityMin, StartVelocityMax);
+    Particle.Velocity = EvaluateVectorDistribution("StartVelocityMin", StartVelocityMin, StartVelocityMax, std::clamp(SpawnTime, 0.0f, 1.0f));
     Particle.BaseVelocity = Particle.Velocity;
 }
 
@@ -204,26 +201,26 @@ UParticleModuleSize::UParticleModuleSize()
 // Owner : emitter instance that owns the particle
 // Particle : particle receiving initial size
 // SpawnTime : relative spawn time within this tick
-// output : Particle Size is set to StartSize
+// output : Particle Size is randomized between StartSizeMin and StartSizeMax
 void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
-    (void)SpawnTime;
-    Particle.Size = StartSize;
+    Particle.Size = EvaluateVectorDistribution("StartSizeMin", StartSizeMin, StartSizeMax, std::clamp(SpawnTime, 0.0f, 1.0f));
 }
 
 // Function : Interpolate active particle size over normalized lifetime
 // input : Owner, DeltaTime
 // Owner : emitter instance that owns active particles
 // DeltaTime : elapsed time for this simulation step
-// output : Each active particle Size is lerped from StartSize to EndSize
+// output : Each active particle Size moves toward a randomized end size range
 void UParticleModuleSize::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
     for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
-        Particle.Size = FVector::Lerp(StartSize, EndSize, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
+        const FVector EndSize = EvaluateVectorDistribution("EndSizeMin", EndSizeMin, EndSizeMax, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
+        Particle.Size = FVector::Lerp(Particle.Size, EndSize, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
     }
 }
 
@@ -428,7 +425,7 @@ USubUVModule::USubUVModule()
 {
     bSpawnModule = true;
     bUpdateModule = true;
-    SetSubUVName(FName(DefaultRequiredSubUVName));
+    SetSubUVName(FName::None);
 }
 
 void USubUVModule::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
@@ -469,7 +466,9 @@ void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 
     const uint32 LastFrame = TotalFrames - 1;
     const uint32 StartFrame = std::min(static_cast<uint32>(GetStartFrameIndex()), LastFrame);
-    const uint32 EndFrame = std::min(static_cast<uint32>(GetEndFrameIndex()), LastFrame);
+    const uint32 EndFrame = (EndFrameIndex <= 0)
+        ? LastFrame
+        : std::min(static_cast<uint32>(GetEndFrameIndex()), LastFrame);
     const uint32 RangeStart = std::min(StartFrame, EndFrame);
     const uint32 RangeEnd = std::max(StartFrame, EndFrame);
     const uint32 RangeFrameCount = RangeEnd - RangeStart + 1;

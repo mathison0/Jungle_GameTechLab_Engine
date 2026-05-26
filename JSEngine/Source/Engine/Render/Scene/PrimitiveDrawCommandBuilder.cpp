@@ -118,11 +118,6 @@ namespace
             }
         }
 
-        if (const FTextureAtlasResource* SubUV = FResourceManager::Get().FindSubUVExact(RequiredModule->GetSubUVName()))
-        {
-            return SubUV->Texture;
-        }
-
         return nullptr;
     }
 

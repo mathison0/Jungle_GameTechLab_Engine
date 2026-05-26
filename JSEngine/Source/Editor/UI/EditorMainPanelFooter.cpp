@@ -118,6 +118,16 @@ void FEditorMainPanel::OpenContentBrowser()
     CloseConsoleDrawer();
 }
 
+void FEditorMainPanel::RequestOpenContentBrowser()
+{
+    OpenContentBrowser();
+}
+
+void FEditorMainPanel::RequestToggleContentBrowser()
+{
+    ToggleContentBrowser();
+}
+
 void FEditorMainPanel::CloseContentBrowser()
 {
     PanelVisibility.bShowContentBrowser = false;
