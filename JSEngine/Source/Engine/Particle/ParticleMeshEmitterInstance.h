@@ -22,9 +22,17 @@ public:
     void BuildInstanceData() override;
     const FMeshParticleInstanceData* GetMeshInstanceData(uint32& OutCount) const override;
 
-private:
-    // SlotIndex(physical) 기반 payload 포인터. swap-pop이 ParticleIndices만 swap하므로 SlotIndex 불변 → 안전.
+    // Cycle 14 (M2, 결정 20 옵션 A): payload access path public 화.
+    // UParticleModuleMeshRotationRate::Spawn / Update 에서 Cast<FParticleMeshEmitterInstance>(Owner) 후 호출.
+    // base class 변경 0건 — Mesh derived 만 노출, 다른 emitter (Sprite/Ribbon/Beam) 와 무관.
+    // SlotIndex(physical) 기반 — swap-pop 안전.
     FMeshRotationPayload* GetMeshPayload(int32 SlotIndex);
+
+    // Cycle 14 (M2): ActiveIdx (compact list) → SlotIndex 변환 + payload 회수 편의 helper.
+    // Update 루프에서 `for (int32 i = 0; i < ActiveCount; ++i)` 형태일 때 사용.
+    FMeshRotationPayload* GetMeshPayloadAt(int32 ActiveIdx);
+
+private:
 
     // base의 SpriteInstanceDataBuffer 대응. 매 frame BuildInstanceData에서 clear → reserve → push_back.
     // silent bug λ 패턴 유지 (본 cycle 작업 범위 외 — 결정 8 별도 cycle).

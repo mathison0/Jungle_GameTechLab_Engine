@@ -1,6 +1,9 @@
 // Manages emitter/module list UI, context menus, add/delete, rename, and reorder operations.
 #include "Editor/UI/EditorParticleSystemWidgetPrivate.h"
 
+// Cycle 14 (M2): Mesh emitter 전용 RotationRate module — add-module 메뉴에서 사용자 노출.
+#include "Particle/ParticleModuleMeshRotationRate.h"
+
 void FEditorParticleSystemWidget::DrawEmittersPanel(const ImVec2& Size)
 {
 	DrawPanelHeader("Emitters");
@@ -251,7 +254,9 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 	DrawDisabledParticleModuleMenu("Light");
 	DrawParticleModuleAddMenu<UParticleModuleLocation>("Location", "Initial Location", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawDisabledParticleModuleMenu("Rotation");
-	DrawDisabledParticleModuleMenu("Rotation Rate");
+	// Cycle 14 (M2): disabled placeholder → enabled menu 교체.
+	// UParticleModuleMeshRotationRate 는 Mesh emitter 전용 — Mesh 가 아닌 emitter 에 추가하면 runtime 에 Cast nullptr → no-op (위험 13 방어).
+	DrawParticleModuleAddMenu<UParticleModuleMeshRotationRate>("Rotation Rate", "Mesh Rotation Rate", bHasTargetEmitter, AddModuleToTargetEmitter);
 	DrawDisabledParticleModuleMenu("Orbit");
 	DrawDisabledParticleModuleMenu("Orientation");
 	DrawDisabledParticleModuleMenu("Parameter");

@@ -467,6 +467,7 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamNoise.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamSource.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamTarget.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleMeshRotationRate.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystem.gen.cpp" />
@@ -941,6 +942,7 @@
     <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamNoise.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamSource.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamTarget.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleMeshRotationRate.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.cpp" />
@@ -1348,6 +1350,7 @@
     <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamNoise.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamSource.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamTarget.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleMeshRotationRate.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.h" />

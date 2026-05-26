@@ -579,6 +579,12 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
         // Cycle 10c 계층 분리: Component는 instance 순회 hook만 (RenderCommand 모름).
         // Instance는 자기 buffer만 갱신, RenderCommand 매핑은 Builder가 책임.
+        //
+        // Cycle 14 (M1, 결정 18 β): Mesh emitter 의 PSA_FacingCameraPosition 등 camera-aware alignment 가
+        // derived BuildInstanceData() 안에서 GetOwningComponent()->GetCachedCameraXxx() 로 RenderBus camera 를 read.
+        // BuildInstanceData() signature 변경 0건 보장 — 옵션 α (signature 확장) 회피.
+        // 외부 호출자 (EditorMainPanelDebug.cpp:170) 는 본 hook 미호출 → bCachedCameraValid=false → derived 가 PSA_Velocity fallback (위험 12 방어).
+        ParticleSystemComponent->CacheCameraFromRenderBus(RenderBus);
         ParticleSystemComponent->BuildInstanceData();
 
         // Cycle 10c: Builder가 instance와 RenderCommand 사이의 매핑 책임.
