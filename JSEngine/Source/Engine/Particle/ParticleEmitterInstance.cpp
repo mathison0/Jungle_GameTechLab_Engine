@@ -34,6 +34,11 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
         {
             ParticleSize = CurrentCompiledLOD->ParticleSize;
             MaxActiveParticles = std::max(CurrentCompiledLOD->MaxActiveParticles, 1);
+
+			ObservedCompiledRevision = SpriteTemplate->GetCompiledRevision();
+            ObservedPayloadSize = CurrentCompiledLOD->PayloadSize;
+            ObservedParticleStride = CurrentCompiledLOD->ParticleStride;
+            ObservedRenderMode = CurrentCompiledLOD->RenderMode;
         }
         else
         {
@@ -86,6 +91,10 @@ void FParticleEmitterInstance::Reset()
 	CurrentLODLevelIndex = 0;
 	CurrentLODLevel = nullptr;
     CurrentCompiledLOD = nullptr;
+    ObservedCompiledRevision = 0;
+    ObservedPayloadSize = 0;
+    ObservedParticleStride = 0;
+    ObservedRenderMode = EParticleEmitterRenderMode::Sprite;
 }
 
 // Function : Advance emitter simulation by delta time
@@ -309,6 +318,39 @@ int32 FParticleEmitterInstance::ConsumeSpawnCount(float Rate, float DeltaTime)
     const int32 SpawnCount = static_cast<int32>(std::floor(SpawnAmount));
     SpawnFraction = SpawnAmount - static_cast<float>(SpawnCount);
     return SpawnCount;
+}
+
+bool FParticleEmitterInstance::CanRebindCompiledLOD(const FCompiledParticleLODData* NewLOD) const
+{
+    if (!SpriteTemplate || !NewLOD || !CurrentCompiledLOD)
+		return false;
+    if (ObservedRenderMode != NewLOD->RenderMode)
+        return false;
+    if (ObservedPayloadSize != NewLOD->PayloadSize)
+        return false;
+    if (ObservedParticleStride != NewLOD->ParticleStride)
+        return false;
+    if (MaxActiveParticles > NewLOD->MaxActiveParticles)
+        return false;
+
+	return true;
+}
+
+void FParticleEmitterInstance::RebindCompiledLOD(float Distance)
+{
+    if (!SpriteTemplate)
+        return;
+    CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(Distance);
+    CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
+    CurrentCompiledLOD = SpriteTemplate->GetCompiledLODData(CurrentLODLevelIndex);
+
+	if (CurrentCompiledLOD)
+    {
+        ObservedCompiledRevision = SpriteTemplate->GetCompiledRevision();
+        ObservedPayloadSize = CurrentCompiledLOD->PayloadSize;
+        ObservedParticleStride = CurrentCompiledLOD->ParticleStride;
+        ObservedRenderMode = CurrentCompiledLOD->RenderMode;
+    }
 }
 
 // Function : Query payload byte requirement from current LOD's renderer properties

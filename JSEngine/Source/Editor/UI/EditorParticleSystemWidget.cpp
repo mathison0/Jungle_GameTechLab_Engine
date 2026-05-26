@@ -1249,31 +1249,30 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 {
 	EnsurePreviewViewport();
 	EnsurePreviewActor();
-	if (!PreviewComponent)
-	{
-		return;
-	}
 
-	if (ParticleSystemAsset)
-	{
-		ParticleSystemAsset->CacheEmitterModuleInfo();
-	}
+	if (PreviewComponent)
+    {
+        if (PreviewComponent->GetTemplate() != ParticleSystemAsset)
+        {
+            PreviewComponent->SetTemplate(ParticleSystemAsset);
+            RestartPreviewPlayback();
+        }
+        else
+        {
+            PreviewComponent->RefreshTemplateRuntime(bRestartSimulation);
+            if (bRestartSimulation)
+            {
+                RestartPreviewPlayback();
+            }
+        }
 
-	if (PreviewComponent->GetTemplate() != ParticleSystemAsset)
-	{
-		PreviewComponent->SetTemplate(ParticleSystemAsset);
-		RestartPreviewPlayback();
-	}
-	else if (bRestartSimulation)
-	{
-		PreviewComponent->RecreateEmitterInstances();
-		RestartPreviewPlayback();
-	}
+        if (PreviewComponent->GetTotalActiveParticleCount() == 0 && !bPreviewPaused)
+        {
+            PreviewComponent->TickPreview(0.1f * GetPreviewAnimSpeed(), true);
+        }
+    }
 
-	if (PreviewComponent->GetTotalActiveParticleCount() == 0 && !bPreviewPaused)
-	{
-		PreviewComponent->TickPreview(0.1f * GetPreviewAnimSpeed(), true);
-	}
+	RefreshPlacedParticleSystemComponents(bRestartSimulation);
 
 	if (EditorEngine && PreviewWorldHandle != FName::None)
 	{
@@ -1283,6 +1282,46 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 			{
 				PreviewContext->World->SyncSpatialIndex();
 			}
+		}
+	}
+}
+
+void FEditorParticleSystemWidget::RefreshPlacedParticleSystemComponents(bool bRestartSimulation)
+{
+	if (!EditorEngine || !ParticleSystemAsset)
+	{
+		return;
+	}
+
+	for (FWorldContext& Context : EditorEngine->GetWorldList())
+	{
+		UWorld* World = Context.World;
+		if (!World || Context.ContextHandle == PreviewWorldHandle)
+		{
+			continue;
+		}
+
+		bool bRefreshedAnyComponent = false;
+		for (AActor* Actor : World->GetActors())
+		{
+			if (!Actor)
+			{
+				continue;
+			}
+
+			UParticleSystemComponent* ParticleComponent = Actor->FindComponent<UParticleSystemComponent>();
+			if (!ParticleComponent || ParticleComponent == PreviewComponent || ParticleComponent->GetTemplate() != ParticleSystemAsset)
+			{
+				continue;
+			}
+
+			ParticleComponent->RefreshTemplateRuntime(bRestartSimulation);
+			bRefreshedAnyComponent = true;
+		}
+
+		if (bRefreshedAnyComponent)
+		{
+			World->SyncSpatialIndex();
 		}
 	}
 }
@@ -2281,7 +2320,6 @@ void FEditorParticleSystemWidget::AddModuleToEmitter(int32 EmitterIndex, UPartic
 
 	CaptureUndoSnapshot("Add Particle Module");
 	LODLevel->Modules.push_back(Module);
-	Emitter->CacheEmitterModuleInfo();
 	SelectModule(EmitterIndex, static_cast<int32>(LODLevel->Modules.size()) - 1);
 	ClearEmitterContext();
 	bDirty = true;
@@ -2328,7 +2366,6 @@ void FEditorParticleSystemWidget::DeleteModule(int32 EmitterIndex, int32 ModuleI
 
 	CaptureUndoSnapshot("Delete Particle Module");
 	LODLevel->Modules.erase(LODLevel->Modules.begin() + ModuleIndex);
-	Emitter->CacheEmitterModuleInfo();
 	if (LODLevel->Modules.empty())
 	{
 		SelectEmitter(EmitterIndex);
@@ -2372,8 +2409,6 @@ void FEditorParticleSystemWidget::ChangeEmitterRenderMode(int32 EmitterIndex, EP
 	{
 		Required->SetRenderMode(RenderMode);
 	}
-	Emitter->CacheEmitterModuleInfo();
-	ParticleSystemAsset->CacheEmitterModuleInfo();
 	SelectEmitter(EmitterIndex);
 	ClearEmitterContext();
 	bDirty = true;
@@ -2610,10 +2645,6 @@ bool FEditorParticleSystemWidget::RestoreParticleSnapshot(
 	bPropertyEditUndoCaptured = false;
 	bEmitterNameEditUndoCaptured = false;
 
-	if (ParticleSystemAsset)
-	{
-		ParticleSystemAsset->CacheEmitterModuleInfo();
-	}
 	ClampSelectionToParticleSystem();
 	bDirty = true;
 	RefreshPreviewComponent(true);
@@ -2926,7 +2957,6 @@ void FEditorParticleSystemWidget::ReorderModule(int32 SourceEmitterIndex, int32 
 			return;
 		}
 
-		SourceEmitter->CacheEmitterModuleInfo();
 		SelectModule(SourceEmitterIndex, NewModuleIndex);
 		ClearEmitterContext();
 		bDirty = true;
@@ -2945,8 +2975,6 @@ void FEditorParticleSystemWidget::ReorderModule(int32 SourceEmitterIndex, int32 
 	const int32 NewModuleIndex = std::clamp(InsertIndex, 0, static_cast<int32>(TargetLODLevel->Modules.size()));
 	TargetLODLevel->Modules.insert(TargetLODLevel->Modules.begin() + NewModuleIndex, Module);
 
-	SourceEmitter->CacheEmitterModuleInfo();
-	TargetEmitter->CacheEmitterModuleInfo();
 	SelectModule(TargetEmitterIndex, NewModuleIndex);
 	ClearEmitterContext();
 	bDirty = true;
@@ -3964,11 +3992,9 @@ void FEditorParticleSystemWidget::NotifyParticleModulePropertyChanged(UParticleM
 	}
 	if (OwnerEmitter)
 	{
-		OwnerEmitter->CacheEmitterModuleInfo();
 	}
 	if (ParticleSystemAsset)
 	{
-		ParticleSystemAsset->CacheEmitterModuleInfo();
 	}
 	bDirty = true;
 }

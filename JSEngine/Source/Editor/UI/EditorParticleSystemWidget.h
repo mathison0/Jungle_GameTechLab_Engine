@@ -105,6 +105,7 @@ private:
 	void EnsurePreviewViewport();
 	void EnsurePreviewActor();
 	void RefreshPreviewComponent(bool bRestartSimulation);
+	void RefreshPlacedParticleSystemComponents(bool bRestartSimulation);
 	float GetPreviewAnimSpeed() const;
 	float GetPreviewMaxEmitterDuration() const;
 	void RestartPreviewPlayback();

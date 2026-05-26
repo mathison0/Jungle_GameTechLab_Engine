@@ -44,6 +44,47 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 	}
 }
 
+void UParticleSystemComponent::RefreshTemplateRuntime(bool bRestartSimulation)
+{
+    if (!Template)
+    {
+        ClearEmitterInstances();
+        return;
+    }
+    Template->CacheEmitterModuleInfo();
+
+	const TArray<UParticleEmitter*>& Emitters = Template->GetEmitters();
+    if (bRestartSimulation || EmitterInstances.size() != Emitters.size())
+    {
+        RecreateEmitterInstances();
+        return;
+    }
+    const float Distance = ComputeEmitterLODDistance();
+
+	for (int32 Index = 0; Index < static_cast<int32>(Emitters.size()); Index++)
+    {
+        UParticleEmitter* Emitter = Emitters[Index];
+        FParticleEmitterInstance* Instance = GetEmitterInstance(Index);
+		const FCompiledParticleLODData* NewLOD = Emitter ?
+			Emitter->SelectCompiledLODData(Distance) : nullptr;
+
+		if (!Emitter || !Instance || Instance->GetTemplate() != Emitter ||
+            !Instance->CanRebindCompiledLOD(NewLOD))
+        {
+            RecreateEmitterInstances();
+            return;
+        }
+    }
+
+    for (FParticleEmitterInstance* Instance : EmitterInstances)
+    {
+        if (Instance)
+        {
+            Instance->RebindCompiledLOD(Distance);
+        }
+    }
+}
+
 // Function : Rebuild emitter instances from current particle system template
 // input : None
 // output : Existing instances are cleared and one runtime instance is created per template emitter

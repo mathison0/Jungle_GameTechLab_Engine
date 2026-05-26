@@ -72,10 +72,12 @@ public:
     FVector GetComponentWorldLocation() const;
     UParticleSystemComponent* GetOwningComponent() const { return Component; }
 
-
     void QueueCollisionEvent(const FParticleEventCollideData& EventData);
     void DispatchQueuedParticleEvents();
     int32 ConsumeSpawnCount(float Rate, float DeltaTime);
+
+	bool CanRebindCompiledLOD(const FCompiledParticleLODData* NewLOD) const;
+    void RebindCompiledLOD(float Distance);
 
 protected:
     // Cycle 11: derived (Mesh/Ribbon/Beam) instance가 payload 영역에 접근하기 위해 protected로 노출.
@@ -103,6 +105,11 @@ private:
     uint32 ParticleCounter = 0;
     int32 MaxActiveParticles = 0;
     float SpawnFraction = 0.0f;
+
+	uint32 ObservedCompiledRevision = 0; // Cycle 10e: CompiledRevision 관찰용 (LOD 변경 감지) — Init에서 초기화, Tick에서 비교 후 필요 시 LOD 재선택.
+    int32 ObservedPayloadSize = 0;
+    int32 ObservedParticleStride = 0;
+    EParticleEmitterRenderMode ObservedRenderMode = EParticleEmitterRenderMode::Sprite;
 
     // Cycle 10b: per-instance Sprite instance data 버퍼 (buffer ownership을 Component → Instance로 이전, 사용자 결정 X).
     // base/Sprite 전용. Mesh/Ribbon/Beam derived instance는 자기 type 버퍼를 별도 멤버로 보유 (Cycle 11+에서 추가).

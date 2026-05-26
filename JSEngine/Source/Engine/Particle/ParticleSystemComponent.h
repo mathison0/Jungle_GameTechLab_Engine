@@ -21,6 +21,7 @@ public:
 	TArray<FParticleEventCollideData>& GetPendingCollisionEvents() { return PendingCollisionEvents; }
 	const TArray<FParticleEventCollideData>& GetPendingCollisionEvents() const { return PendingCollisionEvents; }
 
+	void RefreshTemplateRuntime(bool bRestartSimulation);
 	void RecreateEmitterInstances();
 	void ClearEmitterInstances();
 	void TickPreview(float DeltaTime, bool bAllowSpawning);

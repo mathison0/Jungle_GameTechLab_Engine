@@ -592,23 +592,13 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 continue;
             }
 
-            // RenderMode 결정 — RendererProperties single source.
             const FCompiledParticleLODData* CompiledLOD = Instance->GetCurrentCompiledLODData();
-            UParticleRendererProperties* RendererProperties =
-                CompiledLOD ? CompiledLOD->RendererProperties : nullptr;
-            EParticleEmitterRenderMode RenderMode =
-                CompiledLOD ? CompiledLOD->RenderMode : EParticleEmitterRenderMode::Sprite;
-            if (!RendererProperties)
+            if (!CompiledLOD || !CompiledLOD->RendererProperties)
             {
-                UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
-                if (!LOD)
-                {
-                    continue;
-                }
-
-                RendererProperties = LOD->GetEffectiveRendererProperties();
-                RenderMode = LOD->GetEffectiveRenderMode();
+                continue;
             }
+            UParticleRendererProperties* RendererProperties = CompiledLOD->RendererProperties;
+            EParticleEmitterRenderMode RenderMode = CompiledLOD->RenderMode;
 
             // Cmd 기본 필드 (generic, type 무관) 먼저 채움
             FRenderCommand Cmd = {};
@@ -680,10 +670,8 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             // Mesh의 ParticleTexture는 Material의 DiffuseMap에서 추출 (Sprite의 ResolveParticleTexture 패턴 일부 재사용).
             if (RenderMode == EParticleEmitterRenderMode::Sprite)
             {
-                const UParticleLODLevel* LODLevel = EmitterInstances[EmitterIdx]
-                    ? EmitterInstances[EmitterIdx]->GetCurrentLODLevel()
-                    : nullptr;
-                const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+                const UParticleLODLevel* LODLevel = CompiledLOD->SourceLODLevel;
+                const UParticleModuleRequired* RequiredModule = CompiledLOD->RequiredModule;
                 const USubUVModule* SubUV = nullptr;
                 if (LODLevel)
                 {

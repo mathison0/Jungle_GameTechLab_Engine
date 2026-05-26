@@ -601,6 +601,8 @@ void UParticleEmitter::CacheEmitterModuleInfo()
 		MaxActiveParticles = std::max(MaxActiveParticles, CompiledLOD.MaxActiveParticles);
 		CompiledLODData.push_back(CompiledLOD);
 	}
+
+	++CompiledRevision;
 }
 
 // Function : Get LOD level by index

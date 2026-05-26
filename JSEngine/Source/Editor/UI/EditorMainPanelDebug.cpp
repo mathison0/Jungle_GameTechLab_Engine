@@ -153,7 +153,7 @@ bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& Out
         ParticleComponent->TickPreview(FixedDeltaTime, true);
     }
 
-    const int32 ActiveParticleCount = ParticleComponent->GetTotalActiveParticleCount();
+    int32 ActiveParticleCount = ParticleComponent->GetTotalActiveParticleCount();
     if (ActiveParticleCount <= 0)
     {
         char Buffer[160];
@@ -164,6 +164,14 @@ bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& Out
             WarmupFrameCount,
             EmitterInstanceCount);
         OutSummary = Buffer;
+        return false;
+    }
+
+    ParticleComponent->RefreshTemplateRuntime(false);
+    ActiveParticleCount = ParticleComponent->GetTotalActiveParticleCount();
+    if (ActiveParticleCount <= 0)
+    {
+        OutSummary = "runtime refresh dropped active particles";
         return false;
     }
 
@@ -186,6 +194,7 @@ bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& Out
         }
 
         const FCompiledParticleLODData* CompiledLOD = Instance->GetCurrentCompiledLODData();
+
         if (!CompiledLOD)
         {
             char Buffer[160];
@@ -307,6 +316,8 @@ bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSu
         OutSummary = "particle component has no template";
         return false;
     }
+
+    ParticleComponent->RefreshTemplateRuntime(false);
 
     constexpr int32 WarmupFrameCount = 10;
     constexpr float FixedDeltaTime = 1.0f / 60.0f;
