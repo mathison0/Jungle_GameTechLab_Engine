@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Asset/StaticMesh.h"
+#include "Particle/ParticleBeamTypes.h"
 #include "Object/Object.h"
 #include "Particle/ParticleMeshTypes.h"
 #include "Particle/ParticleRibbonTypes.h"
@@ -59,6 +60,9 @@ public:
 
     UMaterialInterface* GetEffectiveMaterial() const;
 
+    EMeshAlignment GetAlignment() const { return Alignment; }
+    void SetAlignment(EMeshAlignment InAlignment) { Alignment = InAlignment; }
+
 private:
     UPROPERTY(DisplayName = "Static Mesh", Category = "Mesh", ReferenceKind = Asset)
     UStaticMesh* Mesh = nullptr;
@@ -68,6 +72,9 @@ private:
 
     UPROPERTY(DisplayName = "Material Override", Category = "Mesh", ReferenceKind = Asset)
     UMaterialInterface* OverrideMaterial = nullptr;
+
+    UPROPERTY(DisplayName = "Alignment", Category = "Mesh")
+    EMeshAlignment Alignment = EMeshAlignment::PSA_Velocity;
 };
 
 UCLASS()
@@ -107,4 +114,15 @@ private:
 
     UPROPERTY(DisplayName = "Material", Category = "Ribbon", ReferenceKind = Asset)
     UMaterialInterface* Material = nullptr;
+};
+
+UCLASS()
+class UParticleBeamRendererProperties : public UParticleRendererProperties
+{
+public:
+    GENERATED_BODY(UParticleBeamRendererProperties, UParticleRendererProperties)
+
+    EParticleEmitterRenderMode GetRenderMode() const override { return EParticleEmitterRenderMode::Beam; }
+    int32 RequiredPayloadBytes() const override { return sizeof(FParticleBeamPayload); }
+    FParticleEmitterInstance* CreateInstance(UParticleSystemComponent* Component, int32 EmitterIndex) const override;
 };

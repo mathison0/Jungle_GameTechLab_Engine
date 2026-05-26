@@ -176,6 +176,25 @@ AActor::~AActor()
 	RootComponent = nullptr;
 }
 
+void AActor::EnsurePersistentGuid()
+{
+	if (!PersistentGuid.IsValid())
+	{
+		PersistentGuid = FGuid::NewGuid();
+	}
+}
+
+void AActor::SetPersistentGuid(const FGuid& InGuid)
+{
+	PersistentGuid = InGuid;
+	EnsurePersistentGuid();
+}
+
+void AActor::RegeneratePersistentGuid()
+{
+	PersistentGuid = FGuid::NewGuid();
+}
+
 FString AActor::MakeUniqueComponentName(const UActorComponent* TargetComponent, const FString& RequestedName, bool bAlwaysAppendNumber) const
 {
 	FString BaseName = StripGeneratedObjectNameSuffixes(RequestedName);
@@ -297,6 +316,7 @@ void AActor::PostEditProperty(const char* PropertyName)
 void AActor::PostDuplicate(UObject* Original)
 {
 	UObject::PostDuplicate(Original);
+	RegeneratePersistentGuid();
 
 	AActor* OrigActor = static_cast<AActor*>(Original);
 
@@ -351,6 +371,14 @@ void AActor::Serialize(FArchive& Ar)
 {
 	Ar.BeginObject(std::to_string(GetUUID()));
 	UObject::Serialize(Ar);
+	EnsurePersistentGuid();
+	FString PersistentGuidText = PersistentGuid.ToString();
+	Ar << "PersistentGuid" << PersistentGuidText;
+	if (Ar.IsLoading())
+	{
+		PersistentGuid = FGuid::FromString(PersistentGuidText);
+		EnsurePersistentGuid();
+	}
 	Ar << "Visible" << bVisible;
 	Ar << "Editor Only" << bTickInEditor;
 	Ar << "Tags" << Tags;

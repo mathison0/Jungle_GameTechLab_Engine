@@ -8,6 +8,9 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
+#include "Particle/ParticleModuleTypeDataBeam.h"
+#include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystemComponent.h"
 
@@ -577,6 +580,12 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
         // Cycle 10c 계층 분리: Component는 instance 순회 hook만 (RenderCommand 모름).
         // Instance는 자기 buffer만 갱신, RenderCommand 매핑은 Builder가 책임.
+        //
+        // Cycle 14 (M1, 결정 18 β): Mesh emitter 의 PSA_FacingCameraPosition 등 camera-aware alignment 가
+        // derived BuildInstanceData() 안에서 GetOwningComponent()->GetCachedCameraXxx() 로 RenderBus camera 를 read.
+        // BuildInstanceData() signature 변경 0건 보장 — 옵션 α (signature 확장) 회피.
+        // 외부 호출자 (EditorMainPanelDebug.cpp:170) 는 본 hook 미호출 → bCachedCameraValid=false → derived 가 PSA_Velocity fallback (위험 12 방어).
+        ParticleSystemComponent->CacheCameraFromRenderBus(RenderBus);
         ParticleSystemComponent->BuildInstanceData();
 
         // Cycle 10c: Builder가 instance와 RenderCommand 사이의 매핑 책임.
@@ -593,10 +602,11 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             }
 
             const FCompiledParticleLODData* CompiledLOD = Instance->GetCurrentCompiledLODData();
-            if (!CompiledLOD || !CompiledLOD->RendererProperties)
+            if (!CompiledLOD || !CompiledLOD->bEnabled || !CompiledLOD->RendererProperties)
             {
                 continue;
             }
+            const UParticleLODLevel* SourceLODLevel = CompiledLOD->SourceLODLevel;
             UParticleRendererProperties* RendererProperties = CompiledLOD->RendererProperties;
             EParticleEmitterRenderMode RenderMode = CompiledLOD->RenderMode;
 
@@ -652,6 +662,11 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.BeamVertices = Instance->GetBeamVertexData(Count);
                 Cmd.BeamVertexCount = Count;
                 Cmd.VertexFactoryType = EVertexFactoryType::BeamParticle;
+                // Cycle 13a: UBeamTypeData 의 Material 추출 (Ribbon 와 동일 패턴).
+                if (const UBeamTypeData* BeamTD = SourceLODLevel ? Cast<UBeamTypeData>(SourceLODLevel->GetTypeDataModule()) : nullptr)
+                {
+                    Cmd.Material = BeamTD->GetMaterial();
+                }
                 bHasData = (Cmd.BeamVertices != nullptr && Count > 0);
                 break;
             default:
@@ -690,9 +705,12 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 Cmd.ParticleSubUVColumns = Atlas ? Atlas->Columns : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesHorizontal()) : 1);
                 Cmd.ParticleSubUVRows = Atlas ? Atlas->Rows : (RequiredModule ? static_cast<uint32>(RequiredModule->GetSubImagesVertical()) : 1);
             }
-            else if (RenderMode == EParticleEmitterRenderMode::Mesh || RenderMode == EParticleEmitterRenderMode::Ribbon)
+            else if (RenderMode == EParticleEmitterRenderMode::Mesh ||
+                     RenderMode == EParticleEmitterRenderMode::Ribbon ||
+                     RenderMode == EParticleEmitterRenderMode::Beam)
             {
                 // Material의 DiffuseMap에서 ParticleTexture 추출. 없으면 RenderPass가 default white SRV로 fallback.
+                // Cycle 13a: Beam 도 Ribbon 와 동일 분기에 포함 (Material 측 추출 패턴 공유).
                 if (Cmd.Material)
                 {
                     FMaterialParamValue DiffuseMap;

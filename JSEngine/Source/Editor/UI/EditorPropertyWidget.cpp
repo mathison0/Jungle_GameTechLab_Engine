@@ -1,13 +1,24 @@
-#include "Editor/UI/EditorPropertyWidget.h"
+﻿#include "Editor/UI/EditorPropertyWidget.h"
 
 #include "Editor/UI/ComponentMenuRegistry.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/EditorRenderPipeline.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "ImGui/imgui.h"
 #include "GameFramework/World.h"
 #include "Core/AssetPathPolicy.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SkeletalMeshComponent.h"
+#include "Particle/ParticleMeshEmitterInstance.h"
+#include "Particle/ParticleMeshTypes.h"
+#include "Particle/ParticleModuleBeamNoise.h"
+#include "Particle/ParticleModuleBeamSource.h"
+#include "Particle/ParticleModuleBeamTarget.h"
+#include "Particle/ParticleModuleMeshRotationRate.h"
+#include "Particle/ParticleModuleTypeDataBeam.h"
+#include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
+#include "Particle/ParticleModules.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
@@ -136,9 +147,40 @@ namespace
 		ImGui::TextUnformatted(Label);
 	}
 
+	static bool DrawDetailsCategoryHeader(const char* Label, bool bDefaultOpen = true)
+	{
+		if (!Label || Label[0] == '\0')
+		{
+			Label = "Default";
+		}
+
+		ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_SpanAvailWidth;
+		if (bDefaultOpen)
+		{
+			Flags |= ImGuiTreeNodeFlags_DefaultOpen;
+		}
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(7.0f, 3.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
+		ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.19f, 0.23f, 0.29f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.23f, 0.27f, 0.34f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.25f, 0.31f, 0.39f, 1.0f));
+		const bool bOpen = ImGui::CollapsingHeader(Label, Flags);
+		ImGui::PopStyleColor(3);
+		ImGui::PopStyleVar(2);
+		return bOpen;
+	}
+
 	static const char* GetPropertyDisplayName(const FProperty& Prop)
 	{
 		return (Prop.DisplayName && Prop.DisplayName[0] != '\0') ? Prop.DisplayName : Prop.Name;
+	}
+
+	static FString GetPropertyCategoryLabel(const FProperty* Property)
+	{
+		return (Property && Property->Category && Property->Category[0] != '\0')
+			? FString(Property->Category)
+			: FString("Default");
 	}
 
 	static bool IsSkeletalMeshSectionProperty(const FProperty* Property)
@@ -150,6 +192,44 @@ namespace
 				|| std::strcmp(Property->Name, "AnimationAssetPath") == 0
 				|| std::strcmp(Property->Name, "AnimGraphAssetPath") == 0
 				|| std::strcmp(Property->Name, "AnimationMode") == 0);
+	}
+
+	static bool ShouldRenderReflectedProperty(UObject* Object, const FProperty* Property)
+	{
+		if (!Object || !Property || !Property->Name)
+		{
+			return false;
+		}
+
+		if (const UParticleModuleCollision* CollisionModule = Cast<UParticleModuleCollision>(Object))
+		{
+			if (std::strcmp(Property->Name, "bUseParticleSizeAsRadius") == 0)
+			{
+				return CollisionModule->GetTraceMode() == EParticleCollisionTraceMode::Sphere;
+			}
+			if (std::strcmp(Property->Name, "CollisionRadius") == 0)
+			{
+				return CollisionModule->GetTraceMode() == EParticleCollisionTraceMode::Sphere
+					&& !CollisionModule->IsUsingParticleSizeAsRadius();
+			}
+		}
+
+		return true;
+	}
+
+	static bool TryNormalizeDroppedAssetPath(const ImGuiPayload* Payload, FString& OutPath)
+	{
+		if (!Payload || !Payload->Data || Payload->DataSize <= 0)
+		{
+			return false;
+		}
+
+		const FString PayloadPath = static_cast<const char*>(Payload->Data);
+		const std::filesystem::path DroppedPath = FPaths::ToWide(PayloadPath);
+		OutPath = DroppedPath.is_absolute()
+			? FPaths::Normalize(FPaths::ToRelativeString(DroppedPath.wstring()))
+			: FPaths::Normalize(PayloadPath);
+		return !OutPath.empty();
 	}
 
 	static bool RenderAnimGraphAssetPathWidget(FString& Value, const char* Label, const TArray<FString>& Options)
@@ -551,6 +631,12 @@ void FEditorPropertyWidget::ResetSelection()
 	SelectedComponent = nullptr;
 	LastSelectedActor = nullptr;
 	LockedDetailsActor = nullptr;
+	bTransformFieldEditUndoCaptured = false;
+	TransformFieldBeforeActorStates.clear();
+	bSkeletalBonePoseEditUndoCaptured = false;
+	SkeletalBonePoseEditComponent = nullptr;
+	SkeletalBonePoseEditBoneIndex = -1;
+	SkeletalBonePoseBeforeState = FEditorSkeletalBonePoseState();
 	bDetailsLocked = false;
 	bActorSelected = true;
 }
@@ -804,6 +890,129 @@ void FEditorPropertyWidget::SelectComponentForDetails(UActorComponent* Component
 	}
 }
 
+AActor* FEditorPropertyWidget::ResolveActorStateUndoOwner(UObject* Object) const
+{
+	if (AActor* Actor = Cast<AActor>(Object))
+	{
+		return Actor;
+	}
+
+	if (UActorComponent* Component = Cast<UActorComponent>(Object))
+	{
+		return Component->GetOwner();
+	}
+
+	return nullptr;
+}
+
+void FEditorPropertyWidget::BeginActorStatePropertyEdit(UObject* Object, const char* Label)
+{
+	if (bPropertyEditUndoCaptured || !EditorEngine)
+	{
+		return;
+	}
+
+	if (AActor* OwnerActor = ResolveActorStateUndoOwner(Object))
+	{
+		TArray<AActor*> Actors;
+		Actors.push_back(OwnerActor);
+		PropertyEditBeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
+		if (!PropertyEditBeforeActorStates.empty())
+		{
+			bPropertyEditUndoCaptured = true;
+			bPropertyEditUsesActorState = true;
+			PropertyEditTargetObject = Object;
+			return;
+		}
+	}
+
+	EditorEngine->GetUndoSystem().CaptureSnapshot(Label ? Label : "Edit Property");
+	bPropertyEditUndoCaptured = true;
+	bPropertyEditUsesActorState = false;
+	PropertyEditTargetObject = Object;
+}
+
+void FEditorPropertyWidget::EndActorStatePropertyEdit(UObject* Object, const char* Label)
+{
+	if (!bPropertyEditUndoCaptured || !EditorEngine)
+	{
+		ResetPropertyEditUndoState();
+		return;
+	}
+
+	if (bPropertyEditUsesActorState)
+	{
+		UObject* TargetObject = PropertyEditTargetObject ? PropertyEditTargetObject : Object;
+		if (AActor* OwnerActor = ResolveActorStateUndoOwner(TargetObject))
+		{
+			TArray<AActor*> Actors;
+			Actors.push_back(OwnerActor);
+			EditorEngine->GetUndoSystem().RecordActorStateChange(
+				PropertyEditBeforeActorStates,
+				EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+				Label ? Label : "Edit Property");
+		}
+	}
+
+	ResetPropertyEditUndoState();
+}
+
+void FEditorPropertyWidget::BeginReflectedPropertyEdit(UObject* Object, const FProperty& Property, const char* Label)
+{
+	if (bPropertyEditUndoCaptured || !EditorEngine)
+	{
+		return;
+	}
+
+	PropertyEditBeforeReflectedState = EditorEngine->GetUndoSystem().CaptureReflectedProperty(Object, Property);
+	if (PropertyEditBeforeReflectedState.IsValid())
+	{
+		bPropertyEditUndoCaptured = true;
+		bPropertyEditUsesReflectedProperty = true;
+		PropertyEditTargetObject = Object;
+		PropertyEditTargetProperty = &Property;
+		return;
+	}
+
+	EditorEngine->GetUndoSystem().CaptureSnapshot(Label ? Label : "Edit Property");
+	bPropertyEditUndoCaptured = true;
+	bPropertyEditUsesReflectedProperty = false;
+	PropertyEditTargetObject = Object;
+	PropertyEditTargetProperty = &Property;
+}
+
+void FEditorPropertyWidget::EndReflectedPropertyEdit(UObject* Object, const FProperty& Property, const char* Label)
+{
+	if (!bPropertyEditUndoCaptured || !EditorEngine)
+	{
+		ResetPropertyEditUndoState();
+		return;
+	}
+
+	if (bPropertyEditUsesReflectedProperty)
+	{
+		UObject* TargetObject = PropertyEditTargetObject ? PropertyEditTargetObject : Object;
+		const FProperty* TargetProperty = PropertyEditTargetProperty ? PropertyEditTargetProperty : &Property;
+		EditorEngine->GetUndoSystem().RecordReflectedProperty(
+			PropertyEditBeforeReflectedState,
+			EditorEngine->GetUndoSystem().CaptureReflectedProperty(TargetObject, *TargetProperty),
+			Label ? Label : "Edit Property");
+	}
+
+	ResetPropertyEditUndoState();
+}
+
+void FEditorPropertyWidget::ResetPropertyEditUndoState()
+{
+	bPropertyEditUndoCaptured = false;
+	bPropertyEditUsesActorState = false;
+	bPropertyEditUsesReflectedProperty = false;
+	PropertyEditTargetObject = nullptr;
+	PropertyEditTargetProperty = nullptr;
+	PropertyEditBeforeActorStates.clear();
+	PropertyEditBeforeReflectedState = FEditorReflectedPropertyState();
+}
+
 void FEditorPropertyWidget::RenderActorHeaderRegion(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors)
 {
 	const int32 SelectionCount = static_cast<int32>(SelectedActors.size());
@@ -881,9 +1090,12 @@ void FEditorPropertyWidget::RenderDetailsContextMenu(AActor* PrimaryActor, const
 	{
 		if (UClass* ComponentClass = FComponentMenuRegistry::DrawSpawnableComponentClassMenu())
 		{
+			TArray<FEditorSerializedActorState> BeforeActorStates;
 			if (EditorEngine)
 			{
-				EditorEngine->GetUndoSystem().CaptureSnapshot("Add Component");
+				TArray<AActor*> Actors;
+				Actors.push_back(PrimaryActor);
+				BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
 			}
 			if (UActorComponent* NewComp = PrimaryActor->AddComponentByClass(ComponentClass))
 			{
@@ -891,6 +1103,12 @@ void FEditorPropertyWidget::RenderDetailsContextMenu(AActor* PrimaryActor, const
 				AttachAndSelectNewComponent(PrimaryActor, NewComp, AddAttachTarget);
 				if (EditorEngine)
 				{
+					TArray<AActor*> Actors;
+					Actors.push_back(PrimaryActor);
+					EditorEngine->GetUndoSystem().RecordActorStateChange(
+						BeforeActorStates,
+						EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+						"Add Component");
 					EditorEngine->GetSceneService().MarkDirty();
 				}
 			}
@@ -1077,11 +1295,24 @@ void FEditorPropertyWidget::RenderSceneComponentNode(AActor* Actor, USceneCompon
 
 			if (DraggedComp && DraggedComp != Comp && !bIsAncestor)
 			{
+				TArray<FEditorSerializedActorState> BeforeActorStates;
 				if (EditorEngine)
 				{
-					EditorEngine->GetUndoSystem().CaptureSnapshot("Attach Component");
+					TArray<AActor*> Actors;
+					Actors.push_back(Actor);
+					BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
 				}
 				DraggedComp->AttachToComponent(Comp);
+				if (EditorEngine)
+				{
+					TArray<AActor*> Actors;
+					Actors.push_back(Actor);
+					EditorEngine->GetUndoSystem().RecordActorStateChange(
+						BeforeActorStates,
+						EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+						"Attach Component");
+					EditorEngine->GetSceneService().MarkDirty();
+				}
 			}
 		}
 		// 2. MovementComponent를 SceneComponent에 드롭 (UpdatedComponent 설정)
@@ -1090,11 +1321,24 @@ void FEditorPropertyWidget::RenderSceneComponentNode(AActor* Actor, USceneCompon
 			UMovementComponent* DraggedMoveComp = *(UMovementComponent**)Payload->Data;
 			if (DraggedMoveComp)
 			{
+				TArray<FEditorSerializedActorState> BeforeActorStates;
 				if (EditorEngine)
 				{
-					EditorEngine->GetUndoSystem().CaptureSnapshot("Set Updated Component");
+					TArray<AActor*> Actors;
+					Actors.push_back(Actor);
+					BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
 				}
 				DraggedMoveComp->SetUpdatedComponent(Comp);
+				if (EditorEngine)
+				{
+					TArray<AActor*> Actors;
+					Actors.push_back(Actor);
+					EditorEngine->GetUndoSystem().RecordActorStateChange(
+						BeforeActorStates,
+						EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+						"Set Updated Component");
+					EditorEngine->GetSceneService().MarkDirty();
+				}
 			}
 		}
 		ImGui::EndDragDropTarget();
@@ -1164,9 +1408,12 @@ void FEditorPropertyWidget::DeleteSelectedComponent(AActor* Owner)
 	const FWorldContext* Ctx = EditorEngine->GetWorldContextFromWorld(World);
 
 	UActorComponent* ComponentToDelete = SelectedComponent;
+	TArray<FEditorSerializedActorState> BeforeActorStates;
 	if (EditorEngine)
 	{
-		EditorEngine->GetUndoSystem().CaptureSnapshot("Delete Component");
+		TArray<AActor*> Actors;
+		Actors.push_back(Owner);
+		BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
 	}
 	SelectedComponent = nullptr;
 	bActorSelected = true;
@@ -1177,6 +1424,12 @@ void FEditorPropertyWidget::DeleteSelectedComponent(AActor* Owner)
 	Owner->RemoveComponent(ComponentToDelete);
 	if (EditorEngine)
 	{
+		TArray<AActor*> Actors;
+		Actors.push_back(Owner);
+		EditorEngine->GetUndoSystem().RecordActorStateChange(
+			BeforeActorStates,
+			EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+			"Delete Component");
 		EditorEngine->GetSceneService().MarkDirty();
 	}
 }
@@ -1205,17 +1458,19 @@ void FEditorPropertyWidget::RenderActorProperties(AActor* PrimaryActor, const TA
 	if (PrimaryActor->GetRootComponent())
 	{
 		DrawDetailsSeparator();
-		DrawDetailsSectionLabel("Transform");
-		ImGui::Spacing();
+		if (DrawDetailsCategoryHeader("Transform"))
+		{
+			ImGui::Spacing();
 
 		// FVector(위치, 회전, 크기)를 읽어서 Properties를 그려 주는 단순한 친구입니다.
 		auto DrawTransformField = [&](const char* Label, FVector CurrentValue, auto ApplyFunc)
 		{
 			float Arr[3] = { CurrentValue.X, CurrentValue.Y, CurrentValue.Z };
 			const bool bEdited = ImGui::DragFloat3(Label, Arr, 0.1f);
-			if (ImGui::IsItemActivated() && EditorEngine)
+			if (ImGui::IsItemActivated() && EditorEngine && !bTransformFieldEditUndoCaptured)
 			{
-				EditorEngine->GetUndoSystem().CaptureSnapshot("Transform Actors");
+				TransformFieldBeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorTransforms(SelectedActors);
+				bTransformFieldEditUndoCaptured = !TransformFieldBeforeActorStates.empty();
 			}
 			if (bEdited)
 			{
@@ -1229,23 +1484,33 @@ void FEditorPropertyWidget::RenderActorProperties(AActor* PrimaryActor, const TA
 				const FWorldContext* Ctx = EditorEngine->GetWorldContextFromWorld(World);
 				Ctx->SelectionManager->GetGizmo()->UpdateGizmoTransform();
 			}
+			if (bTransformFieldEditUndoCaptured && ImGui::IsItemDeactivatedAfterEdit() && EditorEngine)
+			{
+				EditorEngine->GetUndoSystem().RecordActorTransforms(
+					TransformFieldBeforeActorStates,
+					EditorEngine->GetUndoSystem().CaptureActorTransforms(SelectedActors));
+				TransformFieldBeforeActorStates.clear();
+				bTransformFieldEditUndoCaptured = false;
+			}
+			else if (bTransformFieldEditUndoCaptured && ImGui::IsItemDeactivated())
+			{
+				TransformFieldBeforeActorStates.clear();
+				bTransformFieldEditUndoCaptured = false;
+			}
 		};
 
 		// Location, Rotation, Scale을 한 번에 그려줍니다.
 		DrawTransformField("Location", PrimaryActor->GetActorLocation(), [](AActor* A, FVector D) { A->AddActorWorldOffset(D); });
 		DrawTransformField("Rotation", PrimaryActor->GetActorRotation(), [](AActor* A, FVector D) { A->SetActorRotation(A->GetActorRotation() + D); });
 		DrawTransformField("Scale",    PrimaryActor->GetActorScale(),    [](AActor* A, FVector D) { A->SetActorScale(A->GetActorScale() + D); });
+		}
 	}
-
-	DrawDetailsSeparator();
 
 	TArray<const FProperty*> ReflectedProperties;
 	CollectEditableReflectedProperties(PrimaryActor, ReflectedProperties);
 	if (!ReflectedProperties.empty())
 	{
-		DrawDetailsSectionLabel("Properties");
-		ImGui::Spacing();
-		RenderReflectionProperties(PrimaryActor);
+		RenderReflectionPropertiesByCategory(PrimaryActor, ReflectedProperties);
 	}
 
 	RenderDebugDetails(PrimaryActor, PrimaryActor, SelectedActors);
@@ -1259,7 +1524,10 @@ void FEditorPropertyWidget::RenderActorTags(AActor* PrimaryActor, const TArray<A
 	}
 
 	DrawDetailsSeparator();
-	DrawDetailsSectionLabel("Actor Tags");
+	if (!DrawDetailsCategoryHeader("Actor Tags"))
+	{
+		return;
+	}
 	if (SelectedActors.size() > 1)
 	{
 		ImGui::TextDisabled("Tag edits apply to selected actors.");
@@ -1283,21 +1551,26 @@ void FEditorPropertyWidget::RenderActorTags(AActor* PrimaryActor, const TArray<A
 			ImGui::SameLine();
 			if (ImGui::SmallButton("Remove"))
 			{
+				TArray<FEditorSerializedActorState> BeforeActorStates;
+				if (EditorEngine)
+				{
+					BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(SelectedActors);
+				}
 				bool bChanged = false;
 				for (AActor* Actor : SelectedActors)
 				{
 					if (Actor && Actor->HasTag(Tag))
 					{
-						if (!bChanged && EditorEngine)
-						{
-							EditorEngine->GetUndoSystem().CaptureSnapshot("Remove Actor Tag");
-						}
 						Actor->RemoveTag(Tag);
 						bChanged = true;
 					}
 				}
 				if (bChanged && EditorEngine)
 				{
+					EditorEngine->GetUndoSystem().RecordActorStateChange(
+						BeforeActorStates,
+						EditorEngine->GetUndoSystem().CaptureActorStates(SelectedActors),
+						"Remove Actor Tag");
 					EditorEngine->GetSceneService().MarkDirty();
 				}
 			}
@@ -1319,15 +1592,16 @@ void FEditorPropertyWidget::RenderActorTags(AActor* PrimaryActor, const TArray<A
 	if ((bAddByEnter || bAddByButton) && NewActorTagBuffer[0] != '\0')
 	{
 		const FString NewTag = NewActorTagBuffer;
+		TArray<FEditorSerializedActorState> BeforeActorStates;
+		if (EditorEngine)
+		{
+			BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(SelectedActors);
+		}
 		bool bChanged = false;
 		for (AActor* Actor : SelectedActors)
 		{
 			if (Actor && !Actor->HasTag(NewTag))
 			{
-				if (!bChanged && EditorEngine)
-				{
-					EditorEngine->GetUndoSystem().CaptureSnapshot("Add Actor Tag");
-				}
 				Actor->AddTag(NewTag);
 				bChanged = true;
 			}
@@ -1337,6 +1611,10 @@ void FEditorPropertyWidget::RenderActorTags(AActor* PrimaryActor, const TArray<A
 			NewActorTagBuffer[0] = '\0';
 			if (EditorEngine)
 			{
+				EditorEngine->GetUndoSystem().RecordActorStateChange(
+					BeforeActorStates,
+					EditorEngine->GetUndoSystem().CaptureActorStates(SelectedActors),
+					"Add Actor Tag");
 				EditorEngine->GetSceneService().MarkDirty();
 			}
 		}
@@ -1370,13 +1648,23 @@ void FEditorPropertyWidget::RenderComponentTags(UActorComponent* Component)
 			{
 				if (Component->HasTag(Tag))
 				{
+					AActor* Owner = Component->GetOwner();
+					TArray<FEditorSerializedActorState> BeforeActorStates;
 					if (EditorEngine)
 					{
-						EditorEngine->GetUndoSystem().CaptureSnapshot("Remove Component Tag");
+						TArray<AActor*> Actors;
+						Actors.push_back(Owner);
+						BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
 					}
 					Component->RemoveTag(Tag);
 					if (EditorEngine)
 					{
+						TArray<AActor*> Actors;
+						Actors.push_back(Owner);
+						EditorEngine->GetUndoSystem().RecordActorStateChange(
+							BeforeActorStates,
+							EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+							"Remove Component Tag");
 						EditorEngine->GetSceneService().MarkDirty();
 					}
 				}
@@ -1401,14 +1689,24 @@ void FEditorPropertyWidget::RenderComponentTags(UActorComponent* Component)
 		const FString NewTag = NewComponentTagBuffer;
 		if (!Component->HasTag(NewTag))
 		{
+			AActor* Owner = Component->GetOwner();
+			TArray<FEditorSerializedActorState> BeforeActorStates;
 			if (EditorEngine)
 			{
-				EditorEngine->GetUndoSystem().CaptureSnapshot("Add Component Tag");
+				TArray<AActor*> Actors;
+				Actors.push_back(Owner);
+				BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
 			}
 			Component->AddTag(NewTag);
 			NewComponentTagBuffer[0] = '\0';
 			if (EditorEngine)
 			{
+				TArray<AActor*> Actors;
+				Actors.push_back(Owner);
+				EditorEngine->GetUndoSystem().RecordActorStateChange(
+					BeforeActorStates,
+					EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+					"Add Component Tag");
 				EditorEngine->GetSceneService().MarkDirty();
 			}
 		}
@@ -1447,7 +1745,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 
 	auto RenderCountedProperty = [&](UObject* OwnerObject, const FProperty* Property)
 		{
-			if (!OwnerObject || !Property)
+			if (!OwnerObject || !ShouldRenderReflectedProperty(OwnerObject, Property))
 			{
 				return;
 			}
@@ -1465,59 +1763,61 @@ void FEditorPropertyWidget::RenderComponentProperties()
 
 	if (USkeletalMeshComponent* SkeletalComp = Cast<USkeletalMeshComponent>(SelectedComponent))
 	{
-		DrawDetailsSectionLabel("Skeletal Mesh");
-		ImGui::Spacing();
 		bRenderedSkeletalMeshSection = true;
-
-		if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "SkeletalMeshPath"))
+		if (DrawDetailsCategoryHeader("Skeletal Mesh"))
 		{
-			RenderCountedProperty(SelectedComponent, Prop);
-		}
+			ImGui::Spacing();
 
-		if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "SkinningMode"))
-		{
-			RenderCountedProperty(SelectedComponent, Prop);
-		}
-
-		if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "AnimationMode"))
-		{
-			RenderCountedProperty(SelectedComponent, Prop);
-		}
-
-		if (SkeletalComp->GetAnimationMode() == EAnimationMode::AnimationSingleNode)
-		{
-			if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "AnimationAssetPath"))
+			if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "SkeletalMeshPath"))
 			{
 				RenderCountedProperty(SelectedComponent, Prop);
 			}
 
-			if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(SkeletalComp->GetAnimInstance()))
-			{
-				TArray<const FProperty*> AnimProps;
-				CollectEditableReflectedProperties(SingleNode, AnimProps);
-
-				if (const FProperty* Prop = FindPropertyByName(AnimProps, "PlayRate"))
-				{
-					RenderCountedProperty(SingleNode, Prop);
-				}
-
-				if (const FProperty* Prop = FindPropertyByName(AnimProps, "bLooping"))
-				{
-					RenderCountedProperty(SingleNode, Prop);
-				}
-
-				if (const FProperty* Prop = FindPropertyByName(AnimProps, "bAutoPlay"))
-				{
-					RenderCountedProperty(SingleNode, Prop);
-				}
-			}
-		}
-
-		else if (SkeletalComp->GetAnimationMode() == EAnimationMode::AnimationGraph)
-		{
-			if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "AnimGraphAssetPath"))
+			if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "SkinningMode"))
 			{
 				RenderCountedProperty(SelectedComponent, Prop);
+			}
+
+			if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "AnimationMode"))
+			{
+				RenderCountedProperty(SelectedComponent, Prop);
+			}
+
+			if (SkeletalComp->GetAnimationMode() == EAnimationMode::AnimationSingleNode)
+			{
+				if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "AnimationAssetPath"))
+				{
+					RenderCountedProperty(SelectedComponent, Prop);
+				}
+
+				if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(SkeletalComp->GetAnimInstance()))
+				{
+					TArray<const FProperty*> AnimProps;
+					CollectEditableReflectedProperties(SingleNode, AnimProps);
+
+					if (const FProperty* Prop = FindPropertyByName(AnimProps, "PlayRate"))
+					{
+						RenderCountedProperty(SingleNode, Prop);
+					}
+
+					if (const FProperty* Prop = FindPropertyByName(AnimProps, "bLooping"))
+					{
+						RenderCountedProperty(SingleNode, Prop);
+					}
+
+					if (const FProperty* Prop = FindPropertyByName(AnimProps, "bAutoPlay"))
+					{
+						RenderCountedProperty(SingleNode, Prop);
+					}
+				}
+			}
+
+			else if (SkeletalComp->GetAnimationMode() == EAnimationMode::AnimationGraph)
+			{
+				if (const FProperty* Prop = FindPropertyByName(ReflectedProperties, "AnimGraphAssetPath"))
+				{
+					RenderCountedProperty(SelectedComponent, Prop);
+				}
 			}
 		}
 	}
@@ -1532,8 +1832,9 @@ void FEditorPropertyWidget::RenderComponentProperties()
 	// 디스크에 사전 구성된 .particlesystem asset이 없어도 runtime 팩토리 (CreateDefaultSpriteSystem / CreateDefaultMeshSystem)로 즉시 적용.
 	if (UParticleSystemComponent* ParticleComp = Cast<UParticleSystemComponent>(SelectedComponent))
 	{
-		DrawDetailsSectionLabel("Particle System");
-		ImGui::Spacing();
+		if (DrawDetailsCategoryHeader("Particle System"))
+		{
+			ImGui::Spacing();
 
 		const UParticleSystem* CurrentTemplate = ParticleComp->GetTemplate();
 		ImGui::Text("Template: %s", CurrentTemplate ? CurrentTemplate->GetFName().ToString().c_str() : "<None>");
@@ -1562,6 +1863,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				ParticleComp->SetTemplate(Demo);
 			}
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Apply Beam Demo Template"))
+		{
+			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultBeamSystem())
+			{
+				ParticleComp->SetTemplate(Demo);
+			}
+		}
 
 		// 각 mesh emitter의 material override를 직접 picker로 변경.
 		// 현재 Template 안의 모든 mesh renderer properties를 emitter 순서대로 노출 — 사용자가 emitter별로 다른 material 선택 가능.
@@ -1578,23 +1887,33 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				if (!Emitter) continue;
 
 				UParticleMeshRendererProperties* MeshRenderer = nullptr;
+				UMeshTypeData* MeshTD = nullptr;
 				for (UParticleLODLevel* LOD : Emitter->LODLevels)
 				{
 					if (LOD)
 					{
-						if (UParticleMeshRendererProperties* Found = Cast<UParticleMeshRendererProperties>(LOD->GetEffectiveRendererProperties()))
+						if (!MeshRenderer)
 						{
-							MeshRenderer = Found;
+							MeshRenderer = Cast<UParticleMeshRendererProperties>(LOD->GetEffectiveRendererProperties());
+						}
+						if (!MeshTD)
+						{
+							MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule());
+						}
+						if (MeshRenderer && MeshTD)
+						{
 							break;
 						}
 					}
 				}
-				if (!MeshRenderer) continue;
+				if (!MeshRenderer && !MeshTD) continue;
 
 				ImGui::Spacing();
 				ImGui::PushID(EmitterIdx);
 
-				UMaterialInterface* Current = MeshRenderer->GetEffectiveMaterial();
+				UMaterialInterface* Current = MeshRenderer
+					? MeshRenderer->GetEffectiveMaterial()
+					: MeshTD->GetEffectiveMaterial();
 				const FString CurrentLabel = Current
 					? (Current->GetFilePath().empty() ? Current->GetName() : FPaths::Normalize(Current->GetFilePath()))
 					: FString("None");
@@ -1607,7 +1926,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				{
 					if (ImGui::Selectable("None", Current == nullptr))
 					{
-						MeshRenderer->SetOverrideMaterial(false, nullptr);
+						if (MeshRenderer)
+						{
+							MeshRenderer->SetOverrideMaterial(false, nullptr);
+						}
+						else
+						{
+							MeshTD->SetOverrideMaterial(false, nullptr);
+						}
 					}
 					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNames.size()); ++MatIdx)
 					{
@@ -1620,7 +1946,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 						{
 							if (UMaterialInterface* Picked = AssetService.ResolveMaterialInterfaceByIndex(MatIdx))
 							{
-								MeshRenderer->SetOverrideMaterial(true, Picked);
+								if (MeshRenderer)
+								{
+									MeshRenderer->SetOverrideMaterial(true, Picked);
+								}
+								else
+								{
+									MeshTD->SetOverrideMaterial(true, Picked);
+								}
 							}
 						}
 						if (bSelected)
@@ -1630,6 +1963,104 @@ void FEditorPropertyWidget::RenderComponentProperties()
 						ImGui::PopID();
 					}
 					ImGui::EndCombo();
+				}
+
+				// Cycle 14 (M1): Alignment 모드 selector — PSA_Velocity / PSA_FacingCameraPosition 2값.
+				// 결정 17 옵션 B 채택 결과: 후속 cycle 에서 enum 값 추가만으로 확장 가능.
+				ImGui::Spacing();
+				if (MeshRenderer || MeshTD)
+				{
+					ImGui::TextUnformatted("Alignment");
+					const char* AlignmentItems[] = { "Velocity", "Facing Camera Position" };
+					const EMeshAlignment CurrentAlignment = MeshRenderer
+						? MeshRenderer->GetAlignment()
+						: MeshTD->GetAlignment();
+					int32 AlignmentIdx = static_cast<int32>(CurrentAlignment);
+					ImGui::SetNextItemWidth(-1.0f);
+					if (ImGui::Combo("##MeshAlignmentPicker", &AlignmentIdx, AlignmentItems, IM_ARRAYSIZE(AlignmentItems)))
+					{
+						const EMeshAlignment NewAlignment = static_cast<EMeshAlignment>(AlignmentIdx);
+						if (MeshRenderer)
+						{
+							MeshRenderer->SetAlignment(NewAlignment);
+						}
+						if (MeshTD)
+						{
+							MeshTD->SetAlignment(NewAlignment);
+						}
+					}
+				}
+
+				// Cycle 14 (M2): RotationRate module 편집 — emitter LOD 에서 lookup.
+				// 모듈이 attach 되어 있으면 RotRateMin / RotRateMax 인라인 편집.
+				// 없으면 "Add Mesh RotationRate Module" 버튼으로 즉시 추가 (detail panel 만으로 Cycle 14 셋업 가능).
+				UParticleModuleMeshRotationRate* RotRateMod = nullptr;
+				UParticleLODLevel* MeshLOD0 = Emitter->GetLODLevel(0);
+				if (MeshLOD0)
+				{
+					for (UParticleModule* Module : MeshLOD0->GetModules())
+					{
+						if (UParticleModuleMeshRotationRate* Found = Cast<UParticleModuleMeshRotationRate>(Module))
+						{
+							RotRateMod = Found;
+							break;
+						}
+					}
+				}
+				ImGui::Spacing();
+				if (RotRateMod)
+				{
+					ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f),
+						"Mesh RotationRate Module: attached (Rotation accumulating)");
+
+					// Inline edit (Beam Noise 의 DragFloat3 패턴 답습 [line 1959]).
+					// 단위: 라디안/sec — `MeshParticle.hlsl:39` 의 sin/cos 입력 기준 일관.
+					const float RotRateDragWidth = ImGui::GetContentRegionAvail().x * 0.5f;
+					FVector RotMin = RotRateMod->GetRotRateMin();
+					ImGui::SetNextItemWidth(RotRateDragWidth);
+					if (ImGui::DragFloat3("RotRate Min (rad/s)", &RotMin.X, 0.05f, -20.0f, 20.0f))
+					{
+						RotRateMod->SetRotRateMin(RotMin);
+					}
+					FVector RotMax = RotRateMod->GetRotRateMax();
+					ImGui::SetNextItemWidth(RotRateDragWidth);
+					if (ImGui::DragFloat3("RotRate Max (rad/s)", &RotMax.X, 0.05f, -20.0f, 20.0f))
+					{
+						RotRateMod->SetRotRateMax(RotMax);
+					}
+
+					// Quick preset: 0 / Z 축 spin 1 rad/s / 모든 축 spin 1 rad/s.
+					if (ImGui::SmallButton("Preset: 0"))
+					{
+						RotRateMod->SetRotRateMin(FVector::ZeroVector);
+						RotRateMod->SetRotRateMax(FVector::ZeroVector);
+					}
+					ImGui::SameLine();
+					if (ImGui::SmallButton("Preset: Z spin"))
+					{
+						RotRateMod->SetRotRateMin(FVector(0.0f, 0.0f, 1.0f));
+						RotRateMod->SetRotRateMax(FVector(0.0f, 0.0f, 1.0f));
+					}
+					ImGui::SameLine();
+					if (ImGui::SmallButton("Preset: XYZ random"))
+					{
+						RotRateMod->SetRotRateMin(FVector(-2.0f, -2.0f, -2.0f));
+						RotRateMod->SetRotRateMax(FVector(2.0f, 2.0f, 2.0f));
+					}
+					ImGui::TextDisabled("  Preset 변경 후 spawn 되는 새 particle 부터 반영 (기존 particle 의 RotRate 는 spawn 시점 값 유지).");
+				}
+				else if (MeshLOD0)
+				{
+					ImGui::TextDisabled("Mesh RotationRate Module: not attached");
+					if (ImGui::Button("Add Mesh RotationRate Module"))
+					{
+						if (UParticleModuleMeshRotationRate* NewMod = MeshLOD0->AddModule<UParticleModuleMeshRotationRate>())
+						{
+							// Cycle 14 inspection 편의: spin 이 immediately 시각화되도록 default Z 축 1 rad/s.
+							NewMod->SetRotRateMin(FVector(0.0f, 0.0f, 1.0f));
+							NewMod->SetRotRateMax(FVector(0.0f, 0.0f, 1.0f));
+						}
+					}
 				}
 
 				ImGui::PopID();
@@ -1722,18 +2153,391 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				ImGui::PopID();
 			}
 		}
+		// Cycle 13a/13b: 각 Beam emitter 의 TypeData + Source/Target/Noise 파라미터를 detail panel 에 노출.
+		// Mesh/Ribbon 블록과 평행 구조 — emitter 순서대로 UBeamTypeData 찾아 UI 렌더.
+		// Source/Target Component picker 는 owner actor 의 USceneComponent 들을 enumerate (RenderObjectPtrWidget 의 default 패턴 답습).
+		if (UParticleSystem* MutableTemplateBeam = const_cast<UParticleSystem*>(CurrentTemplate))
+		{
+			FEditorAssetService& AssetServiceBeam = EditorEngine->GetAssetService();
+			const TArray<FString>& MaterialNamesBeam = AssetServiceBeam.GetMaterialInterfaceNames();
+			const TArray<UParticleEmitter*>& EmittersBeam = MutableTemplateBeam->GetEmitters();
 
+			// Source/Target Component picker 공용 helper — **world 전체** 의 모든 actor 의 USceneComponent enumerate.
+			// Beam Target 은 보통 다른 actor 를 가리키는 use case (예: particle 에서 enemy actor mesh 로 lightning).
+			// 따라서 같은-actor 한정 (RenderObjectPtrWidget 의 default 패턴) 으로는 부족 — world 전체 순회.
+			// label 형식: "ActorName::ComponentName" — cross-actor 식별 명확.
+			AActor* BeamOwnerActor = ParticleComp->GetOwner();
+			auto FormatComponentLabel = [](USceneComponent* Comp) -> FString
+			{
+				if (!Comp) { return FString("None"); }
+				AActor* OwnerActor = Comp->GetOwner();
+				const FString CompName = Comp->GetFName().ToString();
+				if (OwnerActor)
+				{
+					return OwnerActor->GetFName().ToString() + "::" + CompName;
+				}
+				return CompName;
+			};
+			auto RenderSceneComponentPicker = [&](const char* PickerId, USceneComponent* Current) -> USceneComponent*
+			{
+				const FString CurrentLabel = FormatComponentLabel(Current);
+				USceneComponent* NewSelection = Current;
+				if (ImGui::BeginCombo(PickerId, CurrentLabel.c_str()))
+				{
+					if (ImGui::Selectable("None", Current == nullptr))
+					{
+						NewSelection = nullptr;
+					}
+					// World 전체 순회 — BeamOwnerActor->GetFocusedWorld() 로 owner actor 가 속한 world 진입.
+					UWorld* World = BeamOwnerActor ? BeamOwnerActor->GetFocusedWorld() : nullptr;
+					if (World)
+					{
+						for (AActor* Actor : World->GetActors())
+						{
+							if (!Actor) { continue; }
+							for (UActorComponent* Comp : Actor->GetComponents())
+							{
+								USceneComponent* SceneComp = Cast<USceneComponent>(Comp);
+								if (!SceneComp) { continue; }
+								const FString FullLabel = FormatComponentLabel(SceneComp);
+								const bool bSelected = (SceneComp == Current);
+								char SelectableId[256];
+								snprintf(SelectableId, sizeof(SelectableId), "%s##%p", FullLabel.c_str(), static_cast<void*>(SceneComp));
+								if (ImGui::Selectable(SelectableId, bSelected))
+								{
+									NewSelection = SceneComp;
+								}
+								if (bSelected)
+								{
+									ImGui::SetItemDefaultFocus();
+								}
+							}
+						}
+					}
+					ImGui::EndCombo();
+				}
+				return NewSelection;
+			};
+
+			for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmittersBeam.size()); ++EmitterIdx)
+			{
+				UParticleEmitter* Emitter = EmittersBeam[EmitterIdx];
+				if (!Emitter) continue;
+
+				UBeamTypeData* BeamTD = nullptr;
+				UParticleModuleBeamSource* BeamSource = nullptr;
+				UParticleModuleBeamTarget* BeamTarget = nullptr;
+				UParticleModuleBeamNoise* BeamNoise = nullptr;
+				for (UParticleLODLevel* LOD : Emitter->LODLevels)
+				{
+					if (!LOD) continue;
+					if (!BeamTD) { BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()); }
+					for (UParticleModule* Module : LOD->GetModules())
+					{
+						if (!BeamSource) { BeamSource = Cast<UParticleModuleBeamSource>(Module); }
+						if (!BeamTarget) { BeamTarget = Cast<UParticleModuleBeamTarget>(Module); }
+						if (!BeamNoise)  { BeamNoise  = Cast<UParticleModuleBeamNoise>(Module); }
+					}
+					if (BeamTD) { break; }
+				}
+				if (!BeamTD) continue;
+
+				ImGui::Spacing();
+				ImGui::PushID(EmitterIdx + 0x20000); // Mesh / Ribbon PushID 와 충돌 회피
+
+				char SectionLabel[128];
+				snprintf(SectionLabel, sizeof(SectionLabel), "Emitter %d - Beam Settings", EmitterIdx);
+				ImGui::TextUnformatted(SectionLabel);
+
+				// Material picker (Mesh / Ribbon 와 동일 패턴).
+				UMaterialInterface* CurrentMat = BeamTD->GetMaterial();
+				const FString CurrentMatLabel = CurrentMat
+					? (CurrentMat->GetFilePath().empty() ? CurrentMat->GetName() : FPaths::Normalize(CurrentMat->GetFilePath()))
+					: FString("None");
+				ImGui::TextUnformatted("Material");
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::BeginCombo("##BeamMaterialPicker", CurrentMatLabel.c_str()))
+				{
+					if (ImGui::Selectable("None", CurrentMat == nullptr))
+					{
+						BeamTD->SetMaterial(nullptr);
+					}
+					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNamesBeam.size()); ++MatIdx)
+					{
+						ImGui::PushID(MatIdx);
+						const FString& MatLabel = MaterialNamesBeam[MatIdx].empty()
+							? FString("<Unnamed Material>")
+							: MaterialNamesBeam[MatIdx];
+						const bool bSelected = CurrentMat && CurrentMatLabel == MatLabel;
+						if (ImGui::Selectable(MatLabel.c_str(), bSelected))
+						{
+							if (UMaterialInterface* Picked = AssetServiceBeam.ResolveMaterialInterfaceByIndex(MatIdx))
+							{
+								BeamTD->SetMaterial(Picked);
+							}
+						}
+						if (bSelected) { ImGui::SetItemDefaultFocus(); }
+						ImGui::PopID();
+					}
+					ImGui::EndCombo();
+				}
+
+				// UBeamTypeData 의 수치 멤버들 — Mesh/Ribbon 패턴과 동일 (DragInt / DragFloat).
+				const float DragItemWidth = ImGui::GetContentRegionAvail().x * 0.5f;
+
+				int32 MaxBeams = BeamTD->GetMaxBeamCount();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragInt("Max Beam Count", &MaxBeams, 1.0f, 1, 64))
+				{
+					BeamTD->SetMaxBeamCount(MaxBeams);
+				}
+
+				int32 InterpPoints = BeamTD->GetInterpolationPoints();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragInt("Interpolation Points", &InterpPoints, 1.0f, 0, 64))
+				{
+					BeamTD->SetInterpolationPoints(InterpPoints);
+				}
+
+				float FallbackDist = BeamTD->GetFallbackDistance();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragFloat("Fallback Distance", &FallbackDist, 1.0f, 0.0f, 100000.0f))
+				{
+					BeamTD->SetFallbackDistance(FallbackDist);
+				}
+
+				float TexTile = BeamTD->GetTextureTile();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragFloat("Texture Tile", &TexTile, 0.1f, 0.0f, 100.0f))
+				{
+					BeamTD->SetTextureTile(TexTile);
+				}
+
+				float TexTileDist = BeamTD->GetTextureTileDistance();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::DragFloat("Texture Tile Distance", &TexTileDist, 1.0f, 0.0f, 100000.0f))
+				{
+					BeamTD->SetTextureTileDistance(TexTileDist);
+				}
+
+				// Source / Target Component picker — 모듈이 존재할 때만 노출 (모듈 없는 경우 fallback 사용).
+				if (BeamSource)
+				{
+					ImGui::Spacing();
+					ImGui::TextUnformatted("Source Component");
+					ImGui::SetNextItemWidth(-1.0f);
+					USceneComponent* NewSource = RenderSceneComponentPicker("##BeamSourceCompPicker", BeamSource->GetSourceComponent());
+					if (NewSource != BeamSource->GetSourceComponent())
+					{
+						BeamSource->SetSourceComponent(NewSource);
+					}
+				}
+				if (BeamTarget)
+				{
+					ImGui::Spacing();
+					ImGui::TextUnformatted("Target Component");
+					ImGui::SetNextItemWidth(-1.0f);
+					USceneComponent* NewTarget = RenderSceneComponentPicker("##BeamTargetCompPicker", BeamTarget->GetTargetComponent());
+					if (NewTarget != BeamTarget->GetTargetComponent())
+					{
+						BeamTarget->SetTargetComponent(NewTarget);
+					}
+
+					// Local target 옵션 (BuildVertexBuffer Target lookup priority 1).
+					// true 면 TargetComponent 무시 + TargetLocalVector 사용 (emitter local space → world).
+					bool bUseLocal = BeamTarget->IsUseLocalTarget();
+					if (ImGui::Checkbox("Use Local Target", &bUseLocal))
+					{
+						BeamTarget->SetUseLocalTarget(bUseLocal);
+					}
+
+					FVector LocalVec = BeamTarget->GetTargetLocalVector();
+					ImGui::SetNextItemWidth(DragItemWidth);
+					if (ImGui::DragFloat3("Target Local Vector", &LocalVec.X, 1.0f, -10000.0f, 10000.0f))
+					{
+						BeamTarget->SetTargetLocalVector(LocalVec);
+					}
+				}
+
+				// Cycle 13b: Noise 모듈 노출 — 모듈이 존재할 때만 (없으면 perturbation skip).
+				if (BeamNoise)
+				{
+					ImGui::Spacing();
+					ImGui::TextUnformatted("Noise");
+
+					int32 Freq = BeamNoise->GetFrequency();
+					ImGui::SetNextItemWidth(DragItemWidth);
+					if (ImGui::DragInt("Frequency", &Freq, 1.0f, 1, 8))
+					{
+						BeamNoise->SetFrequency(Freq);
+					}
+
+					FVector Range = BeamNoise->GetNoiseRange();
+					ImGui::SetNextItemWidth(DragItemWidth);
+					if (ImGui::DragFloat3("Noise Range", &Range.X, 1.0f, 0.0f, 10000.0f))
+					{
+						BeamNoise->SetNoiseRange(Range);
+					}
+
+					bool bTargetNoise = BeamNoise->IsTargetNoise();
+					if (ImGui::Checkbox("Target Noise", &bTargetNoise))
+					{
+						BeamNoise->SetTargetNoise(bTargetNoise);
+					}
+
+					bool bSmooth = BeamNoise->IsSmooth();
+					if (ImGui::Checkbox("Smooth", &bSmooth))
+					{
+						BeamNoise->SetSmooth(bSmooth);
+					}
+				}
+
+				ImGui::PopID();
+			}
+		}
+
+		// Cycle 14 (M1+M2) Runtime Status inspection 섹션.
+		// 사용자가 cascade editor 를 거치지 않고 main panel detail 만으로 다음을 점검할 수 있도록:
+		//   (A) Component-cached camera 상태 (결정 18 옵션 β 검증) — bCachedCameraValid + 4 vector 값
+		//   (B) 모든 emitter instance 의 runtime 상태 — type, active count, stride
+		//   (C) Mesh emitter 한정: alignment 모드, RotationRate module 부착 여부, 첫 particle 의 payload 값
+		// 위험 12 (camera fallback) 가시화: bCachedCameraValid=false 시 warning 색.
+		DrawDetailsSeparator();
+		DrawDetailsSectionLabel("Particle Runtime Status (Cycle 14)");
+		ImGui::Spacing();
+
+		// (A) Component cached camera 상태.
+		ImGui::TextUnformatted("Component Cached Camera (결정 18 옵션 β):");
+		const bool bCamValid = ParticleComp->IsCachedCameraValid();
+		if (bCamValid)
+		{
+			const FVector& CamPos = ParticleComp->GetCachedCameraPosition();
+			const FVector& CamFwd = ParticleComp->GetCachedCameraForward();
+			const FVector& CamUp = ParticleComp->GetCachedCameraUp();
+			const FVector& CamRight = ParticleComp->GetCachedCameraRight();
+			ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "  Cache Valid: Yes");
+			ImGui::Text("  Position : (%.2f, %.2f, %.2f)", CamPos.X, CamPos.Y, CamPos.Z);
+			ImGui::Text("  Forward  : (%.2f, %.2f, %.2f)", CamFwd.X, CamFwd.Y, CamFwd.Z);
+			ImGui::Text("  Up       : (%.2f, %.2f, %.2f)", CamUp.X, CamUp.Y, CamUp.Z);
+			ImGui::Text("  Right    : (%.2f, %.2f, %.2f)", CamRight.X, CamRight.Y, CamRight.Z);
+		}
+		else
+		{
+			// 첫 frame / 외부 호출 (EditorMainPanelDebug 등) 경로에서는 cache 미갱신 → PSA_FacingCameraPosition 이 PSA_Velocity 로 fallback.
+			ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.3f, 1.0f),
+				"  Cache Valid: No  (PSA_FacingCameraPosition will fallback to PSA_Velocity — 위험 12 방어)");
+		}
+
+		// (B) 모든 emitter instance 의 runtime 상태.
+		ImGui::Spacing();
+		ImGui::TextUnformatted("Emitter Instances:");
+		const int32 NumEmittersStatus = ParticleComp->GetEmitterInstanceCount();
+		if (NumEmittersStatus == 0)
+		{
+			ImGui::TextDisabled("  (no runtime emitter instances — set Template first)");
+		}
+		for (int32 StatusEmitterIdx = 0; StatusEmitterIdx < NumEmittersStatus; ++StatusEmitterIdx)
+		{
+			FParticleEmitterInstance* Instance = ParticleComp->GetEmitterInstance(StatusEmitterIdx);
+			if (!Instance) continue;
+
+			ImGui::PushID(StatusEmitterIdx + 0x40000); // Cycle 14 namespace ID
+
+			UParticleLODLevel* StatusLOD = Instance->GetCurrentLODLevel();
+			const EParticleEmitterRenderMode StatusRenderMode =
+				StatusLOD ? StatusLOD->GetEffectiveRenderMode() : EParticleEmitterRenderMode::Sprite;
+			const char* StatusRenderModeStr =
+				StatusRenderMode == EParticleEmitterRenderMode::Sprite ? "Sprite" :
+				StatusRenderMode == EParticleEmitterRenderMode::Mesh   ? "Mesh"   :
+				StatusRenderMode == EParticleEmitterRenderMode::Ribbon ? "Ribbon" :
+				StatusRenderMode == EParticleEmitterRenderMode::Beam   ? "Beam"   : "?";
+
+			ImGui::Text("  [%d] Type=%s  Active=%d/%d  Stride=%dB",
+				StatusEmitterIdx,
+				StatusRenderModeStr,
+				Instance->GetActiveParticleCount(),
+				Instance->GetMaxActiveParticleCount(),
+				Instance->GetParticleStride());
+
+			// (C) Mesh emitter 한정 — alignment / RotationRate module / 첫 particle payload sample.
+			if (StatusRenderMode == EParticleEmitterRenderMode::Mesh && StatusLOD)
+			{
+				const UParticleMeshRendererProperties* StatusMeshRenderer =
+					Cast<UParticleMeshRendererProperties>(StatusLOD->GetEffectiveRendererProperties());
+				const UMeshTypeData* StatusMeshTD = Cast<UMeshTypeData>(StatusLOD->GetTypeDataModule());
+				if (StatusMeshRenderer || StatusMeshTD)
+				{
+					const EMeshAlignment StatusAlign = StatusMeshRenderer
+						? StatusMeshRenderer->GetAlignment()
+						: StatusMeshTD->GetAlignment();
+					const char* AlignStr =
+						StatusAlign == EMeshAlignment::PSA_Velocity ? "PSA_Velocity" :
+						StatusAlign == EMeshAlignment::PSA_FacingCameraPosition ? "PSA_FacingCameraPosition" : "?";
+					ImGui::Text("        Alignment: %s", AlignStr);
+
+					// camera invalid + PSA_FacingCameraPosition → effective fallback 안내.
+					if (StatusAlign == EMeshAlignment::PSA_FacingCameraPosition && !bCamValid)
+					{
+						ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.3f, 1.0f),
+							"        (camera invalid → effective alignment = PSA_Velocity)");
+					}
+				}
+
+				// RotationRate module 부착 여부.
+				bool bHasRotRate = false;
+				for (UParticleModule* Module : StatusLOD->GetModules())
+				{
+					if (Cast<UParticleModuleMeshRotationRate>(Module))
+					{
+						bHasRotRate = true;
+						break;
+					}
+				}
+				if (bHasRotRate)
+				{
+					ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "        RotationRate Module: attached");
+				}
+				else
+				{
+					ImGui::TextDisabled("        RotationRate Module: not attached (Rotation = 0)");
+				}
+
+				// 첫 active particle 의 payload sample — Spawn 시 셋팅된 RotRate + Update 누적된 Rotation 확인.
+				FParticleMeshEmitterInstance* MeshInst = dynamic_cast<FParticleMeshEmitterInstance*>(Instance);
+				if (MeshInst && MeshInst->GetActiveParticleCount() > 0)
+				{
+					if (FMeshRotationPayload* Payload = MeshInst->GetMeshPayloadAt(0))
+					{
+						ImGui::Text("        Sample[0] Rotation = (%.3f, %.3f, %.3f) rad",
+							Payload->Rotation.X, Payload->Rotation.Y, Payload->Rotation.Z);
+						ImGui::Text("        Sample[0] RotRate  = (%.3f, %.3f, %.3f) rad/s",
+							Payload->RotRate.X, Payload->RotRate.Y, Payload->RotRate.Z);
+					}
+				}
+			}
+
+			ImGui::PopID();
+		}
+
+		}
 		DrawDetailsSeparator();
 	}
 
-	DrawDetailsSectionLabel("Component Tags");
-	ImGui::Spacing();
-	RenderComponentTags(SelectedComponent);
+	if (DrawDetailsCategoryHeader("Component Tags"))
+	{
+		ImGui::Spacing();
+		RenderComponentTags(SelectedComponent);
+	}
 
-	bool bRenderedPropertiesSection = false;
+	TMap<FString, TArray<const FProperty*>> PropertiesByCategory;
+	TArray<FString> CategoryOrder;
 	for (const FProperty* Property : ReflectedProperties)
 	{
 		if (!Property || !Property->Name || strcmp(Property->Name, "Tags") == 0)
+		{
+			continue;
+		}
+		if (!ShouldRenderReflectedProperty(SelectedComponent, Property))
 		{
 			continue;
 		}
@@ -1743,21 +2547,37 @@ void FEditorPropertyWidget::RenderComponentProperties()
 			continue;
 		}
 
-		if (!bRenderedPropertiesSection)
+		const FString Category = GetPropertyCategoryLabel(Property);
+		if (PropertiesByCategory.find(Category) == PropertiesByCategory.end())
 		{
-			DrawDetailsSeparator();
-			DrawDetailsSectionLabel("Properties");
-			ImGui::Spacing();
-			bRenderedPropertiesSection = true;
+			PropertiesByCategory[Category] = {};
+			CategoryOrder.push_back(Category);
 		}
+		PropertiesByCategory[Category].push_back(Property);
+	}
 
-		const FDetailsPerfClock::time_point PropStart = bDetailsPerfTraceFrame ? FDetailsPerfClock::now() : FDetailsPerfClock::time_point{};
-		RenderReflectionProperty(FPropertyHandle{ SelectedComponent, Property });
-		++RenderedPropertyCount;
-		if (bDetailsPerfTraceFrame)
+	for (const FString& Category : CategoryOrder)
+	{
+		DrawDetailsSeparator();
+		ImGui::PushID(SelectedComponent);
+		ImGui::PushID(Category.c_str());
+		const FString HeaderLabel = Category + "##PropertyCategory";
+		if (DrawDetailsCategoryHeader(HeaderLabel.c_str()))
 		{
-			PropertyWidgetMs += DetailsPerfMs(PropStart, FDetailsPerfClock::now());
+			ImGui::Spacing();
+			for (const FProperty* Property : PropertiesByCategory[Category])
+			{
+				const FDetailsPerfClock::time_point PropStart = bDetailsPerfTraceFrame ? FDetailsPerfClock::now() : FDetailsPerfClock::time_point{};
+				RenderReflectionProperty(FPropertyHandle{ SelectedComponent, Property });
+				++RenderedPropertyCount;
+				if (bDetailsPerfTraceFrame)
+				{
+					PropertyWidgetMs += DetailsPerfMs(PropStart, FDetailsPerfClock::now());
+				}
+			}
 		}
+		ImGui::PopID();
+		ImGui::PopID();
 	}
 
 	double SkeletalDebugMs = 0.0;
@@ -1792,13 +2612,51 @@ void FEditorPropertyWidget::RenderReflectionProperties(UObject* Object)
 {
 	TArray<const FProperty*> Properties;
 	CollectEditableReflectedProperties(Object, Properties);
+	RenderReflectionPropertiesByCategory(Object, Properties);
+}
+
+void FEditorPropertyWidget::RenderReflectionPropertiesByCategory(UObject* Object, const TArray<const FProperty*>& Properties)
+{
+	if (!Object)
+	{
+		return;
+	}
+
+	TMap<FString, TArray<const FProperty*>> PropertiesByCategory;
+	TArray<FString> CategoryOrder;
+
 	for (const FProperty* Property : Properties)
 	{
-		if (!Property)
+		if (!ShouldRenderReflectedProperty(Object, Property))
 		{
 			continue;
 		}
-		RenderReflectionProperty(FPropertyHandle{ Object, Property });
+
+		const FString Category = GetPropertyCategoryLabel(Property);
+		if (PropertiesByCategory.find(Category) == PropertiesByCategory.end())
+		{
+			PropertiesByCategory[Category] = {};
+			CategoryOrder.push_back(Category);
+		}
+		PropertiesByCategory[Category].push_back(Property);
+	}
+
+	for (const FString& Category : CategoryOrder)
+	{
+		DrawDetailsSeparator();
+		ImGui::PushID(Object);
+		ImGui::PushID(Category.c_str());
+		const FString HeaderLabel = Category + "##PropertyCategory";
+		if (DrawDetailsCategoryHeader(HeaderLabel.c_str()))
+		{
+			ImGui::Spacing();
+			for (const FProperty* Property : PropertiesByCategory[Category])
+			{
+				RenderReflectionProperty(FPropertyHandle{ Object, Property });
+			}
+		}
+		ImGui::PopID();
+		ImGui::PopID();
 	}
 }
 
@@ -1851,9 +2709,10 @@ void FEditorPropertyWidget::RenderDebugDetails(UObject* Object, AActor* PrimaryA
 							const bool bSelected = TexPath == CurrentName;
 							if (ImGui::Selectable(TexPath.c_str(), bSelected))
 							{
+								TArray<FEditorSerializedActorState> BeforeActorStates;
 								if (EditorEngine)
 								{
-									EditorEngine->GetUndoSystem().CaptureSnapshot("Edit Billboard");
+									BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(SelectedActors);
 								}
 								for (AActor* SelectedActor : SelectedActors)
 								{
@@ -1863,6 +2722,14 @@ void FEditorPropertyWidget::RenderDebugDetails(UObject* Object, AActor* PrimaryA
 									{
 										Comp->SetTextureName(TexPath);
 									}
+								}
+								if (EditorEngine)
+								{
+									EditorEngine->GetUndoSystem().RecordActorStateChange(
+										BeforeActorStates,
+										EditorEngine->GetUndoSystem().CaptureActorStates(SelectedActors),
+										"Edit Billboard");
+									EditorEngine->GetSceneService().MarkDirty();
 								}
 							}
 							if (bSelected)
@@ -2088,6 +2955,9 @@ bool FEditorPropertyWidget::RenderObjectPtrWidget(const FProperty& Property, voi
 	const bool bStaticMeshAsset = Property.ReferenceKind == EObjectReferenceKind::Asset
 		&& Property.ObjectClass
 		&& Property.ObjectClass->IsChildOf(UStaticMesh::StaticClass());
+	const bool bParticleSystemAsset = Property.ReferenceKind == EObjectReferenceKind::Asset
+		&& Property.ObjectClass
+		&& Property.ObjectClass->IsChildOf(UParticleSystem::StaticClass());
 
 	if (bMaterialAsset && EditorEngine)
 	{
@@ -2201,6 +3071,65 @@ bool FEditorPropertyWidget::RenderObjectPtrWidget(const FProperty& Property, voi
 				ImGui::PopID();
 			}
 			ImGui::EndCombo();
+		}
+
+		return bChanged;
+	}
+
+	if (bParticleSystemAsset && EditorEngine)
+	{
+		FEditorAssetService& AssetService = EditorEngine->GetAssetService();
+		const TArray<FString>& ParticleSystemPaths = AssetService.GetParticleSystemAssetPaths();
+		UParticleSystem* CurrentParticleSystem = Cast<UParticleSystem>(CurrentObject);
+		const FString CurrentIdentifier = CurrentParticleSystem
+			? FPaths::Normalize(CurrentParticleSystem->GetAssetPath())
+			: FString();
+		const FString CurrentLabel = CurrentIdentifier.empty() ? FString("None") : CurrentIdentifier;
+		bool bChanged = false;
+
+		if (ImGui::BeginCombo(Label, CurrentLabel.c_str()))
+		{
+			if (ImGui::Selectable("None", CurrentParticleSystem == nullptr))
+			{
+				Property.ObjectPtrOps->SetObject(ValuePtr, nullptr);
+				bChanged = true;
+			}
+
+			for (int32 AssetIndex = 0; AssetIndex < static_cast<int32>(ParticleSystemPaths.size()); ++AssetIndex)
+			{
+				ImGui::PushID(AssetIndex);
+				const FString& AssetPath = ParticleSystemPaths[AssetIndex];
+				const FString NormalizedPath = FPaths::Normalize(AssetPath);
+				const bool bSelected = CurrentIdentifier == NormalizedPath;
+				if (ImGui::Selectable(AssetPath.c_str(), bSelected))
+				{
+					if (UParticleSystem* Candidate = AssetService.LoadParticleSystem(AssetPath))
+					{
+						Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+						bChanged = true;
+					}
+				}
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+				ImGui::PopID();
+			}
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			FString DroppedPath;
+			if (TryNormalizeDroppedAssetPath(ImGui::AcceptDragDropPayload("ParticleSystemContentItem"), DroppedPath))
+			{
+				if (UParticleSystem* Candidate = AssetService.LoadParticleSystem(DroppedPath))
+				{
+					Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+					bChanged = true;
+				}
+			}
+			ImGui::EndDragDropTarget();
 		}
 
 		return bChanged;
@@ -2701,16 +3630,14 @@ void FEditorPropertyWidget::RenderPropertyWidget(const FPropertyHandle& Handle)
 
 	if (ImGui::IsItemActivated() && !bPropertyEditUndoCaptured && EditorEngine)
 	{
-		EditorEngine->GetUndoSystem().CaptureSnapshot("Edit Property");
-		bPropertyEditUndoCaptured = true;
+		BeginReflectedPropertyEdit(NotifyTarget, Property, "Edit Property");
 	}
 
 	if (bChanged && NotifyTarget)
 	{
 		if (!bPropertyEditUndoCaptured && EditorEngine)
 		{
-			EditorEngine->GetUndoSystem().CaptureSnapshot("Edit Property");
-			bPropertyEditUndoCaptured = true;
+			BeginReflectedPropertyEdit(NotifyTarget, Property, "Edit Property");
 		}
 		NotifyTarget->PostEditProperty(Property.Name);
 		if (EditorEngine)
@@ -2719,9 +3646,9 @@ void FEditorPropertyWidget::RenderPropertyWidget(const FPropertyHandle& Handle)
 		}
 	}
 
-	if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+	if (bPropertyEditUndoCaptured && (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive()))
 	{
-		bPropertyEditUndoCaptured = false;
+		EndReflectedPropertyEdit(NotifyTarget, Property, "Edit Property");
 	}
 }
 
@@ -2978,19 +3905,46 @@ void FEditorPropertyWidget::RenderSkeletalBonePoseDebug(USkeletalMeshComponent* 
 	{
 		InitializeEditStateFromCurrentPose(EditState, SelectedBoneIndex);
 	}
+	else if (!bSkeletalBonePoseEditUndoCaptured && !ImGui::IsAnyItemActive())
+	{
+		InitializeEditStateFromCurrentPose(EditState, SelectedBoneIndex);
+	}
 
-	auto DrawVec3 = [this](const char* Label, FVector& Value, float Speed) -> bool
+	bool bBonePoseEditDeactivatedAfterEdit = false;
+	bool bBonePoseEditDeactivated = false;
+	auto DrawVec3 = [this, Comp, SelectedBoneIndex, &bBonePoseEditDeactivatedAfterEdit, &bBonePoseEditDeactivated](
+		const char* Label,
+		FVector& Value,
+		float Speed) -> bool
 	{
 		float Values[3] = { Value.X, Value.Y, Value.Z };
 		const bool bEdited = ImGui::DragFloat3(Label, Values, Speed);
-		if (ImGui::IsItemActivated() && EditorEngine)
+		if (ImGui::IsItemActivated() && EditorEngine && !bSkeletalBonePoseEditUndoCaptured)
 		{
-			EditorEngine->GetUndoSystem().CaptureSnapshot("Edit Bone Pose");
+			SkeletalBonePoseBeforeState = EditorEngine->GetUndoSystem().CaptureSkeletalBonePose(Comp, SelectedBoneIndex);
+			bSkeletalBonePoseEditUndoCaptured = SkeletalBonePoseBeforeState.IsValid();
+			SkeletalBonePoseEditComponent = bSkeletalBonePoseEditUndoCaptured ? Comp : nullptr;
+			SkeletalBonePoseEditBoneIndex = bSkeletalBonePoseEditUndoCaptured ? SelectedBoneIndex : -1;
 		}
 
 		if (bEdited)
 		{
 			Value = FVector(Values[0], Values[1], Values[2]);
+		}
+
+		if (bSkeletalBonePoseEditUndoCaptured
+			&& SkeletalBonePoseEditComponent == Comp
+			&& SkeletalBonePoseEditBoneIndex == SelectedBoneIndex
+			&& ImGui::IsItemDeactivatedAfterEdit())
+		{
+			bBonePoseEditDeactivatedAfterEdit = true;
+		}
+		else if (bSkeletalBonePoseEditUndoCaptured
+			&& SkeletalBonePoseEditComponent == Comp
+			&& SkeletalBonePoseEditBoneIndex == SelectedBoneIndex
+			&& ImGui::IsItemDeactivated())
+		{
+			bBonePoseEditDeactivated = true;
 		}
 
 		return bEdited;
@@ -3011,25 +3965,62 @@ void FEditorPropertyWidget::RenderSkeletalBonePoseDebug(USkeletalMeshComponent* 
 		Comp->SetBoneLocalTransform(SelectedBoneIndex, NewLocalTransform);
 	}
 
+	if (bSkeletalBonePoseEditUndoCaptured
+		&& SkeletalBonePoseEditComponent == Comp
+		&& SkeletalBonePoseEditBoneIndex == SelectedBoneIndex)
+	{
+		if (bBonePoseEditDeactivatedAfterEdit && EditorEngine)
+		{
+			const FEditorSkeletalBonePoseState AfterState =
+				EditorEngine->GetUndoSystem().CaptureSkeletalBonePose(Comp, SelectedBoneIndex);
+			EditorEngine->GetUndoSystem().RecordSkeletalBonePose(
+				SkeletalBonePoseBeforeState,
+				AfterState,
+				"Edit Bone Pose");
+		}
+
+		if (bBonePoseEditDeactivatedAfterEdit || bBonePoseEditDeactivated)
+		{
+			bSkeletalBonePoseEditUndoCaptured = false;
+			SkeletalBonePoseEditComponent = nullptr;
+			SkeletalBonePoseEditBoneIndex = -1;
+			SkeletalBonePoseBeforeState = FEditorSkeletalBonePoseState();
+		}
+	}
+
 	const float HalfWidth = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
 	if (ImGui::Button("Reset Bone", ImVec2(HalfWidth, 0.0f)))
 	{
+		FEditorSkeletalBonePoseState BeforeState;
 		if (EditorEngine)
 		{
-			EditorEngine->GetUndoSystem().CaptureSnapshot("Reset Bone Pose");
+			BeforeState = EditorEngine->GetUndoSystem().CaptureSkeletalBonePose(Comp, SelectedBoneIndex);
 		}
 		ResetEditStateToIdentityOffset(EditState, MeshId, SelectedBoneIndex);
 		Comp->SetBoneLocalTransform(SelectedBoneIndex, Mesh->GetLocalBindTransform(SelectedBoneIndex));
+		if (EditorEngine)
+		{
+			const FEditorSkeletalBonePoseState AfterState =
+				EditorEngine->GetUndoSystem().CaptureSkeletalBonePose(Comp, SelectedBoneIndex);
+			EditorEngine->GetUndoSystem().RecordSkeletalBonePose(BeforeState, AfterState, "Reset Bone Pose");
+		}
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Reset Pose", ImVec2(-1.0f, 0.0f)))
 	{
+		FEditorSkeletalBonePoseState BeforeState;
 		if (EditorEngine)
 		{
-			EditorEngine->GetUndoSystem().CaptureSnapshot("Reset Bone Pose");
+			BeforeState = EditorEngine->GetUndoSystem().CaptureSkeletalBonePose(Comp);
 		}
 		Comp->ResetToBindPose();
 		BonePoseEditStates.clear();
+		if (EditorEngine)
+		{
+			const FEditorSkeletalBonePoseState AfterState =
+				EditorEngine->GetUndoSystem().CaptureSkeletalBonePose(Comp);
+			EditorEngine->GetUndoSystem().RecordSkeletalBonePose(BeforeState, AfterState, "Reset Bone Pose");
+		}
 	}
 
 	ImGui::PopID();
@@ -3126,13 +4117,35 @@ void FEditorPropertyWidget::RenderEditableName(const char* Label, T* TargetObjec
 	// Enter 키를 누르거나 포커스를 잃었을 경우에 이름이 변경되도록 설정
 	if (ImGui::InputText(Label, NameBuf, sizeof(NameBuf), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
 	{
+		TArray<FEditorSerializedActorState> BeforeActorStates;
 		if (EditorEngine)
 		{
-			EditorEngine->GetUndoSystem().CaptureSnapshot("Rename");
+			if (AActor* OwnerActor = ResolveActorStateUndoOwner(TargetObject))
+			{
+				TArray<AActor*> Actors;
+				Actors.push_back(OwnerActor);
+				BeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
+			}
+			else
+			{
+				EditorEngine->GetUndoSystem().CaptureSnapshot("Rename");
+			}
 		}
 		TargetObject->SetFName(FName(NameBuf));
 		if (EditorEngine)
 		{
+			if (!BeforeActorStates.empty())
+			{
+				if (AActor* OwnerActor = ResolveActorStateUndoOwner(TargetObject))
+				{
+					TArray<AActor*> Actors;
+					Actors.push_back(OwnerActor);
+					EditorEngine->GetUndoSystem().RecordActorStateChange(
+						BeforeActorStates,
+						EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+						"Rename");
+				}
+			}
 			EditorEngine->GetSceneService().MarkDirty();
 		}
 	}

@@ -545,29 +545,13 @@ void FObjViewerViewportClient::HandleDragStart(const FRay& Ray)
 	FHitResult HitResult{};
 
 	AActor* BestActor = nullptr;
-	float ClosestDistance = FLT_MAX;
-	TArray<UPrimitiveComponent*> CandidatePrimitives;
-	TArray<float>                CandidateTs;
-	World->GetSpatialIndex().RayQueryPrimitives(Ray, CandidatePrimitives, CandidateTs, RayQueryScratch);
-
-	for (int32 CandidateIndex = 0; CandidateIndex < static_cast<int32>(CandidatePrimitives.size()); ++CandidateIndex)
+	static constexpr float SelectionTraceDistance = 1000000.0f;
+	if (World->LineTraceSingle(Ray.Origin, Ray.Origin + Ray.Direction * SelectionTraceDistance, HitResult))
 	{
-		if (CandidateTs[CandidateIndex] > ClosestDistance)
+		UPrimitiveComponent* PrimitiveComp = HitResult.HitComponent;
+		AActor* Actor = PrimitiveComp ? PrimitiveComp->GetOwner() : nullptr;
+		if (Actor && Actor->GetRootComponent())
 		{
-			break;
-		}
-
-		UPrimitiveComponent* PrimitiveComp = CandidatePrimitives[CandidateIndex];
-		AActor*              Actor = (PrimitiveComp != nullptr) ? PrimitiveComp->GetOwner() : nullptr;
-		if (Actor == nullptr || Actor->GetRootComponent() == nullptr)
-		{
-			continue;
-		}
-
-		HitResult = {};
-		if (PrimitiveComp->Raycast(Ray, HitResult) && HitResult.Distance < ClosestDistance)
-		{
-			ClosestDistance = HitResult.Distance;
 			BestActor = Actor;
 		}
 	}

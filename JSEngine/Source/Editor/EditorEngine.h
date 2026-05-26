@@ -124,6 +124,8 @@ private:
 	bool RestoreSceneSnapshot(const FString& Snapshot, const FName& RestoreWorldHandle = FName::None);
 	void OnSceneWorldWillUnload(UWorld* OldWorld) override;
 	void OnSceneWorldLoaded(UWorld* NewWorld) override;
+	void InitializeWorldContext(FWorldContext& Context) override;
+	void ShutdownWorldContext(FWorldContext& Context) override;
 
 	FEditorMainPanel MainPanel;
 	FEditorViewportLayout ViewportLayout;

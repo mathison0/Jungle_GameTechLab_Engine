@@ -23,6 +23,20 @@
 
 namespace
 {
+void RecordPlacedActor(UEditorEngine* EditorEngine, AActor* Actor, const FString& Label)
+{
+    if (!EditorEngine || !Actor)
+    {
+        return;
+    }
+
+    TArray<AActor*> Actors;
+    Actors.push_back(Actor);
+    EditorEngine->GetUndoSystem().RecordActorCreation(
+        EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+        Label);
+}
+
 bool HasParentDirectoryReference(const std::filesystem::path& Path)
 {
     for (const std::filesystem::path& Part : Path)
@@ -176,7 +190,6 @@ bool FEditorMainPanel::SpawnStaticMeshFromContentPath(
         return false;
     }
 
-    EditorEngine->GetUndoSystem().CaptureSnapshot("Place Static Mesh");
     AStaticMeshActor* Actor = World->SpawnActor<AStaticMeshActor>();
     if (!Actor)
     {
@@ -189,6 +202,7 @@ bool FEditorMainPanel::SpawnStaticMeshFromContentPath(
     {
         StaticMeshComp->SetStaticMesh(Mesh);
     }
+    RecordPlacedActor(EditorEngine, Actor, "Place Static Mesh");
 
 	const FWorldContext* Ctx = EditorEngine->GetWorldContextFromWorld(Client->GetFocusedWorld());
     Layout.SetLastFocusedViewportIndex(ViewportIndex);
@@ -257,7 +271,6 @@ bool FEditorMainPanel::SpawnSkeletalMeshFromContentPath(
         return false;
     }
 
-    EditorEngine->GetUndoSystem().CaptureSnapshot("Place Skeletal Mesh");
     ASkeletalMeshActor* Actor = World->SpawnActor<ASkeletalMeshActor>();
     if (!Actor)
     {
@@ -270,6 +283,7 @@ bool FEditorMainPanel::SpawnSkeletalMeshFromContentPath(
     {
         SkeletalMeshComp->SetSkeletalMesh(Mesh);
     }
+    RecordPlacedActor(EditorEngine, Actor, "Place Skeletal Mesh");
 
     const FWorldContext* Ctx = EditorEngine->GetWorldContextFromWorld(Client->GetFocusedWorld());
     Layout.SetLastFocusedViewportIndex(ViewportIndex);
@@ -316,7 +330,6 @@ bool FEditorMainPanel::SpawnPrefabFromContentPath(
         return false;
     }
 
-    EditorEngine->GetUndoSystem().CaptureSnapshot("Place Prefab");
     AActor* Actor = FPrefabManager::SpawnActorFromPrefab(World, PayloadPath);
     if (!Actor)
     {
@@ -326,6 +339,7 @@ bool FEditorMainPanel::SpawnPrefabFromContentPath(
 
     Actor->SetActorLocation(FEditorMainPanelPlacementHelpers::ComputePlacementLocation(Client, LocalX, LocalY));
     World->SyncSpatialIndex();
+    RecordPlacedActor(EditorEngine, Actor, "Place Prefab");
     Layout.SetLastFocusedViewportIndex(ViewportIndex);
     const FWorldContext* Ctx = EditorEngine->GetWorldContextFromWorld(Client->GetFocusedWorld());
     Ctx->SelectionManager->Select(Actor);
@@ -375,8 +389,6 @@ bool FEditorMainPanel::SpawnParticleSystemFromContentPath(const FString& Payload
         return false;
     }
 
-    EditorEngine->GetUndoSystem().CaptureSnapshot("Place Particle System");
-
     AParticleSystemActor* Actor = World->SpawnActor<AParticleSystemActor>();
     if (!Actor)
     {
@@ -391,6 +403,7 @@ bool FEditorMainPanel::SpawnParticleSystemFromContentPath(const FString& Payload
         FEditorMainPanelPlacementHelpers::ComputePlacementLocation(Client, LocalX, LocalY));
 
     World->SyncSpatialIndex();
+    RecordPlacedActor(EditorEngine, Actor, "Place Particle System");
     Layout.SetLastFocusedViewportIndex(ViewportIndex);
 
     const FWorldContext* Ctx = EditorEngine->GetWorldContextFromWorld(Client->GetFocusedWorld());
@@ -402,6 +415,67 @@ bool FEditorMainPanel::SpawnParticleSystemFromContentPath(const FString& Payload
     EditorEngine->GetSceneService().MarkDirty();
     PushFooterLog("Particle system actor placed from Content Browser");
     return true;
+}
+
+void FEditorMainPanel::StartPendingAssetDrop(const FString& PayloadPath, int32 ViewportIndex, float LocalX, float LocalY)
+{
+    if (!EditorEngine)
+    {
+        return;
+    }
+    if (PendingAssetDropState.bActive)
+    {
+        EditorEngine->GetNotificationService().Warning("Another asset import is already running.");
+        return;
+    }
+
+    PendingAssetDropState.Reset();
+    PendingAssetDropState.bActive = true;
+    PendingAssetDropState.PayloadPath = PayloadPath;
+    PendingAssetDropState.ViewportIndex = ViewportIndex;
+    PendingAssetDropState.LocalX = LocalX;
+    PendingAssetDropState.LocalY = LocalY;
+    PendingAssetDropState.ToastHandle = EditorEngine->GetNotificationService().BeginTask(
+        "Loading Asset",
+        "Queued asset import...",
+        0.05f);
+}
+
+void FEditorMainPanel::TickPendingAssetDrop()
+{
+    if (!EditorEngine || !PendingAssetDropState.bActive)
+    {
+        return;
+    }
+
+    auto& Notifications = EditorEngine->GetNotificationService();
+    if (!PendingAssetDropState.bStepPrepared)
+    {
+        Notifications.UpdateTask(
+            PendingAssetDropState.ToastHandle,
+            "Importing dropped asset... Editor may pause briefly.",
+            0.35f);
+        PendingAssetDropState.bStepPrepared = true;
+        return;
+    }
+
+    const FString PayloadPath = PendingAssetDropState.PayloadPath;
+    const int32 ViewportIndex = PendingAssetDropState.ViewportIndex;
+    const float LocalX = PendingAssetDropState.LocalX;
+    const float LocalY = PendingAssetDropState.LocalY;
+    const FEditorNotificationHandle ToastHandle = PendingAssetDropState.ToastHandle;
+    PendingAssetDropState.Reset();
+
+    bool bPlaced = SpawnSkeletalMeshFromContentPath(PayloadPath, ViewportIndex, LocalX, LocalY);
+    if (!bPlaced)
+    {
+        bPlaced = SpawnStaticMeshFromContentPath(PayloadPath, ViewportIndex, LocalX, LocalY);
+    }
+
+    Notifications.FinishTask(
+        ToastHandle,
+        bPlaced ? EEditorNotificationType::Info : EEditorNotificationType::Error,
+        bPlaced ? "Asset imported and placed." : "Failed to import dropped asset.");
 }
 
 bool FEditorMainPanel::SpawnPrefabAtOrigin(const FString& PayloadPath)
@@ -426,7 +500,6 @@ bool FEditorMainPanel::SpawnPrefabAtOrigin(const FString& PayloadPath)
         return false;
     }
 
-    EditorEngine->GetUndoSystem().CaptureSnapshot("Place Prefab");
     AActor* Actor = FPrefabManager::SpawnActorFromPrefab(World, PayloadPath);
     if (!Actor)
     {
@@ -436,6 +509,7 @@ bool FEditorMainPanel::SpawnPrefabAtOrigin(const FString& PayloadPath)
 
     Actor->SetActorLocation(FVector::ZeroVector);
     World->SyncSpatialIndex();
+    RecordPlacedActor(EditorEngine, Actor, "Place Prefab");
     const FWorldContext* Ctx = EditorEngine->GetWorldContextFromWorld(World);
     Ctx->SelectionManager->Select(Actor);
     EditorEngine->GetSceneService().MarkDirty();
@@ -513,11 +587,13 @@ void FEditorMainPanel::HandleContentBrowserViewportDrop()
         {
             return SpawnParticleSystemFromContentPath(PayloadPath, ViewportIndex, LocalX, LocalY);
         }
-        if (SpawnSkeletalMeshFromContentPath(PayloadPath, ViewportIndex, LocalX, LocalY))
+        if (PendingAssetDropState.bActive)
         {
-            return true;
+            EditorEngine->GetNotificationService().Warning("Another asset import is already running.");
+            return false;
         }
-        return SpawnStaticMeshFromContentPath(PayloadPath, ViewportIndex, LocalX, LocalY);
+        StartPendingAssetDrop(PayloadPath, ViewportIndex, LocalX, LocalY);
+        return true;
     };
 
     if (FocusedViewportIndex >= 0 &&

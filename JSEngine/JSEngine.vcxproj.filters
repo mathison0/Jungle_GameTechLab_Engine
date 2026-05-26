@@ -166,9 +166,6 @@
     <Filter Include="Source\Engine\Collision">
       <UniqueIdentifier>{28d7d1b5-1606-4212-e86a-55d760fafa21}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\Collision\RayCollision">
-      <UniqueIdentifier>{2ea192f5-26e5-f936-6535-a4b776d8a80e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Engine\Component">
       <UniqueIdentifier>{1cbddc73-455c-99bf-6ea2-0cb994a5c089}</UniqueIdentifier>
     </Filter>
@@ -633,13 +630,31 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamNoise.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamSource.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamTarget.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleMeshRotationRate.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleBeamRendererProperties.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleMeshRendererProperties.gen.cpp">
@@ -855,6 +870,21 @@
     <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Details.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Document.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Emitters.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Preview.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_ViewportUI.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorPlayStreamWidget.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -1032,8 +1062,8 @@
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp">
-      <Filter>Source\Engine\Collision\RayCollision</Filter>
+    <ClCompile Include="Source\Engine\Collision\CollisionQueryUtils.cpp">
+      <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
@@ -1327,6 +1357,24 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamNoise.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamSource.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamTarget.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleMeshRotationRate.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.cpp">
@@ -1662,6 +1710,9 @@
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiSystem.cpp">
       <Filter>Source\Engine\UI\RmlUi</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutAsset.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Launch\LaunchModeFactory.cpp">
       <Filter>Source\Launch</Filter>
     </ClCompile>
@@ -1838,6 +1889,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidget.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidgetPrivate.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorPlayStreamWidget.h">
@@ -2035,8 +2089,8 @@
     <ClInclude Include="Source\Engine\Collision\Collision.h">
       <Filter>Source\Engine\Collision</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h">
-      <Filter>Source\Engine\Collision\RayCollision</Filter>
+    <ClInclude Include="Source\Engine\Collision\CollisionQueryUtils.h">
+      <Filter>Source\Engine\Collision</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\ActorComponent.h">
       <Filter>Source\Engine\Component</Filter>
@@ -2455,6 +2509,27 @@
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamNoise.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamSource.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamTarget.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleMeshRotationRate.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
@@ -2698,6 +2773,9 @@
     <ClInclude Include="Source\Engine\Runtime\SceneView.h">
       <Filter>Source\Engine\Runtime</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h">
+      <Filter>Source\Engine\Runtime</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Runtime\Script\API\LuaEngineAPIBindings.h">
       <Filter>Source\Engine\Runtime\Script\API</Filter>
     </ClInclude>
@@ -2818,6 +2896,9 @@
     <ClInclude Include="Source\Engine\UI\RuntimeUITypes.h">
       <Filter>Source\Engine\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h">
+      <Filter>Source\Engine\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Launch\LaunchModeFactory.h">
       <Filter>Source\Launch</Filter>
     </ClInclude>
@@ -2931,6 +3012,9 @@
     </None>
     <None Include="Shaders\Material\UberLit.hlsl">
       <Filter>Shaders\Material</Filter>
+    </None>
+    <None Include="Shaders\Particle\BeamParticle.hlsl">
+      <Filter>Shaders\Particle</Filter>
     </None>
     <None Include="Shaders\Particle\MeshParticle.hlsl">
       <Filter>Shaders\Particle</Filter>

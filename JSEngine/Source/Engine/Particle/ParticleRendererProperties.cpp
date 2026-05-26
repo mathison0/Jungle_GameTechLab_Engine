@@ -1,5 +1,6 @@
 #include "Particle/ParticleRendererProperties.h"
 
+#include "Particle/ParticleBeamEmitterInstance.h"
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleMeshEmitterInstance.h"
 #include "Particle/ParticleRibbonEmitterInstance.h"
@@ -63,4 +64,11 @@ FParticleEmitterInstance* UParticleRibbonRendererProperties::CreateInstance(UPar
     (void)Component;
     (void)EmitterIndex;
     return new FParticleRibbonEmitterInstance();
+}
+
+FParticleEmitterInstance* UParticleBeamRendererProperties::CreateInstance(UParticleSystemComponent* Component, int32 EmitterIndex) const
+{
+    (void)Component;
+    (void)EmitterIndex;
+    return new FParticleBeamEmitterInstance();
 }

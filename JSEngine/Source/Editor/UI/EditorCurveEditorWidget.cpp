@@ -7,6 +7,7 @@
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
 #include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/UI/EditorMainPanel.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
@@ -47,6 +48,7 @@ void FEditorCurveEditorWidget::OpenCurveAsset(const FString& CurvePath)
     ActiveKeyDragIndex = -1;
     ActiveTangentKeyIndex = -1;
     ActiveTangentHandle = -1;
+    CancelCurveEditUndo();
     ContextKeyIndex = -1;
     ContextTime = 0.0f;
     ContextValue = 0.0f;
@@ -75,6 +77,7 @@ void FEditorCurveEditorWidget::OpenCurveFromActorSequence(
     ActiveKeyDragIndex = -1;
     ActiveTangentKeyIndex = -1;
     ActiveTangentHandle = -1;
+    CancelCurveEditUndo();
     ContextKeyIndex = -1;
     ContextTime = 0.0f;
     ContextValue = 0.0f;
@@ -95,6 +98,7 @@ void FEditorCurveEditorWidget::Clear()
     ActiveKeyDragIndex = -1;
     ActiveTangentKeyIndex = -1;
     ActiveTangentHandle = -1;
+    CancelCurveEditUndo();
     ContextKeyIndex = -1;
     ContextTime = 0.0f;
     ContextValue = 0.0f;
@@ -543,6 +547,10 @@ void FEditorCurveEditorWidget::DrawCurveCanvas()
     bool bTangentHandleClicked = false;
     if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
     {
+        if (bCurveEditUndoCaptured)
+        {
+            CommitCurveEditUndo("Edit Curve Key");
+        }
         ActiveKeyDragIndex = -1;
         ActiveTangentKeyIndex = -1;
         ActiveTangentHandle = -1;
@@ -554,6 +562,7 @@ void FEditorCurveEditorWidget::DrawCurveCanvas()
     {
         SelectedKeyIndex = HoveredKeyIndex;
         ActiveKeyDragIndex = HoveredKeyIndex;
+        BeginCurveEditUndo("Edit Curve Key");
     }
 
     if (bCanvasHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
@@ -591,6 +600,7 @@ void FEditorCurveEditorWidget::DrawCurveCanvas()
         && ActiveKeyDragIndex < static_cast<int32>(CurrentCurve->GetMutableCurve().Keys.size())
         && ImGui::IsMouseDown(ImGuiMouseButton_Left))
     {
+        BeginCurveEditUndo("Edit Curve Key");
         FFloatCurve& MutableCurve = CurrentCurve->GetMutableCurve();
         float DragTime = 0.0f;
         float DragValue = 0.0f;
@@ -676,12 +686,14 @@ void FEditorCurveEditorWidget::DrawCurveCanvas()
                     ActiveTangentKeyIndex = SelectedKeyIndex;
                     ActiveTangentHandle = HandleIndex;
                     bTangentHandleClicked = true;
+                    BeginCurveEditUndo("Edit Curve Tangent");
                 }
 
                 if (ActiveTangentKeyIndex == SelectedKeyIndex
                     && ActiveTangentHandle == HandleIndex
                     && ImGui::IsMouseDown(ImGuiMouseButton_Left))
                 {
+                    BeginCurveEditUndo("Edit Curve Tangent");
                     float DragTime = 0.0f;
                     float DragValue = 0.0f;
                     ToCurve(ClampToCanvas(ImGui::GetIO().MousePos), DragTime, DragValue);
@@ -779,6 +791,7 @@ void FEditorCurveEditorWidget::DrawKeyList()
                 SelectedKeyIndex = KeyIndex;
             }
 
+            const FEditorCurveAssetState BeforeKeyEditState = CaptureCurveUndoState("Edit Curve Key");
             bool bChanged = false;
             ImGui::TableSetColumnIndex(1);
             bChanged |= ImGui::DragFloat("##Time", &Key.Time, 0.01f);
@@ -808,6 +821,7 @@ void FEditorCurveEditorWidget::DrawKeyList()
                 Curve.SortKeys();
                 SelectedKeyIndex = std::clamp(SelectedKeyIndex, 0, static_cast<int32>(Curve.Keys.size()) - 1);
                 MarkDirty();
+                RecordCurveEditUndo(BeforeKeyEditState, "Edit Curve Key");
             }
 
             ImGui::PopID();
@@ -844,6 +858,7 @@ void FEditorCurveEditorWidget::AddKeyAt(float Time, float Value)
         return;
     }
 
+    const FEditorCurveAssetState BeforeState = CaptureCurveUndoState("Add Curve Key");
     FFloatCurve& Curve = CurrentCurve->GetMutableCurve();
     FCurveKey Key;
     Key.Time = SnapCurveEditorValue(Time, CurveEditorSnapUnit);
@@ -876,6 +891,7 @@ void FEditorCurveEditorWidget::AddKeyAt(float Time, float Value)
     ActiveTangentHandle = -1;
     bCurveViewInitialized = false;
     MarkDirty();
+    RecordCurveEditUndo(BeforeState, "Add Curve Key");
 }
 
 void FEditorCurveEditorWidget::RemoveSelectedKey()
@@ -896,6 +912,7 @@ void FEditorCurveEditorWidget::RemoveKeyAtIndex(int32 KeyIndex)
         return;
     }
 
+    const FEditorCurveAssetState BeforeState = CaptureCurveUndoState("Remove Curve Key");
     Curve.Keys.erase(Curve.Keys.begin() + KeyIndex);
     if (Curve.Keys.empty())
     {
@@ -911,6 +928,7 @@ void FEditorCurveEditorWidget::RemoveKeyAtIndex(int32 KeyIndex)
     ActiveTangentHandle = -1;
     bCurveViewInitialized = false;
     MarkDirty();
+    RecordCurveEditUndo(BeforeState, "Remove Curve Key");
 }
 
 void FEditorCurveEditorWidget::StartReferencePreview()
@@ -1017,6 +1035,59 @@ bool FEditorCurveEditorWidget::DoesSequenceReferenceCurrentCurve(UActorSequenceC
     }
 
     return false;
+}
+
+FEditorCurveAssetState FEditorCurveEditorWidget::CaptureCurveUndoState(const FString& Label) const
+{
+    if (!EditorEngine || !CurrentCurve || CurrentPath.empty() || bOpenedFromActorSequence)
+    {
+        return FEditorCurveAssetState();
+    }
+
+    return EditorEngine->GetUndoSystem().CaptureCurveAssetState(CurrentCurve, CurrentPath, Label);
+}
+
+void FEditorCurveEditorWidget::BeginCurveEditUndo(const FString& Label)
+{
+    if (bCurveEditUndoCaptured)
+    {
+        return;
+    }
+
+    CurveEditBeforeState = CaptureCurveUndoState(Label);
+    bCurveEditUndoCaptured = CurveEditBeforeState.IsValid();
+}
+
+void FEditorCurveEditorWidget::CommitCurveEditUndo(const FString& Label)
+{
+    if (!bCurveEditUndoCaptured)
+    {
+        return;
+    }
+
+    RecordCurveEditUndo(CurveEditBeforeState, Label);
+    CancelCurveEditUndo();
+}
+
+void FEditorCurveEditorWidget::CancelCurveEditUndo()
+{
+    CurveEditBeforeState = FEditorCurveAssetState();
+    bCurveEditUndoCaptured = false;
+}
+
+void FEditorCurveEditorWidget::RecordCurveEditUndo(
+    const FEditorCurveAssetState& BeforeState,
+    const FString& Label)
+{
+    if (!EditorEngine || !BeforeState.IsValid() || !CurrentCurve || CurrentPath.empty() || bOpenedFromActorSequence)
+    {
+        return;
+    }
+
+    EditorEngine->GetUndoSystem().RecordCurveAssetState(
+        BeforeState,
+        EditorEngine->GetUndoSystem().CaptureCurveAssetState(CurrentCurve, CurrentPath, Label),
+        Label);
 }
 
 void FEditorCurveEditorWidget::MarkDirty()

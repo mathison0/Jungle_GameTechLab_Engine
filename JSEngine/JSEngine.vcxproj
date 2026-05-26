@@ -461,9 +461,15 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRequired.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSize.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamNoise.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamSource.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamTarget.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleMeshRotationRate.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleBeamRendererProperties.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleMeshRendererProperties.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleRendererProperties.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleRibbonRendererProperties.gen.cpp" />
@@ -532,7 +538,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
+    <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -697,6 +706,26 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Details.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Document.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Emitters.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_Preview.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorParticleSystemWidget_ViewportUI.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorPlayStreamWidget.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -819,7 +848,7 @@
     <ClCompile Include="Source\Engine\Camera\ShakePattern\SinusoidalCameraShakePattern.cpp" />
     <ClCompile Include="Source\Engine\Camera\ViewportCamera.cpp" />
     <ClCompile Include="Source\Engine\Collision\Collision.cpp" />
-    <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp" />
+    <ClCompile Include="Source\Engine\Collision\CollisionQueryUtils.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorSequenceComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\BillboardComponent.cpp" />
@@ -913,11 +942,17 @@
     <ClCompile Include="Source\Engine\Object\Function.cpp" />
     <ClCompile Include="Source\Engine\Object\Object.cpp" />
     <ClCompile Include="Source\Engine\Object\Property.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstance.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEvent.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleMeshEmitterInstance.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamNoise.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamSource.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamTarget.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleMeshRotationRate.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataRibbon.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp" />
@@ -1029,6 +1064,7 @@
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiRenderInterfaceD3D11.cpp" />
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiRuntimeModule.cpp" />
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiSystem.cpp" />
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutAsset.cpp" />
     <ClCompile Include="Source\Launch\LaunchModeFactory.cpp" />
     <ClCompile Include="Source\Misc\ObjViewer\ObjViewerEngine.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
@@ -1117,6 +1153,7 @@
     <ClInclude Include="Source\Editor\UI\EditorMainPanelWidgetSet.h" />
     <ClInclude Include="Source\Editor\UI\EditorMaterialWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidget.h" />
+    <ClInclude Include="Source\Editor\UI\EditorParticleSystemWidgetPrivate.h" />
     <ClInclude Include="Source\Editor\UI\EditorPlayStreamWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorPropertyWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorRuntimeUIPreviewWidget.h" />
@@ -1182,7 +1219,7 @@
     <ClInclude Include="Source\Engine\Camera\ShakePattern\SinusoidalCameraShakePattern.h" />
     <ClInclude Include="Source\Engine\Camera\ViewportCamera.h" />
     <ClInclude Include="Source\Engine\Collision\Collision.h" />
-    <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h" />
+    <ClInclude Include="Source\Engine\Collision\CollisionQueryUtils.h" />
     <ClInclude Include="Source\Engine\Component\ActorComponent.h" />
     <ClInclude Include="Source\Engine\Component\ActorSequenceComponent.h" />
     <ClInclude Include="Source\Engine\Component\BillboardComponent.h" />
@@ -1312,6 +1349,8 @@
     <ClInclude Include="Source\Engine\Object\ObjectIterator.h" />
     <ClInclude Include="Source\Engine\Object\ObjectPtr.h" />
     <ClInclude Include="Source\Engine\Object\Property.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleCompiledData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h" />
@@ -1319,7 +1358,12 @@
     <ClInclude Include="Source\Engine\Particle\ParticleMeshEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleMeshTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamNoise.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamSource.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamTarget.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleMeshRotationRate.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataMesh.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataRibbon.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModules.h" />
@@ -1401,6 +1445,7 @@
     <ClInclude Include="Source\Engine\Runtime\GameSplashScreen.h" />
     <ClInclude Include="Source\Engine\Runtime\Launch.h" />
     <ClInclude Include="Source\Engine\Runtime\SceneView.h" />
+    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\API\LuaEngineAPIBindings.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\Coroutine.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\CoroutineScheduler.h" />
@@ -1440,6 +1485,7 @@
     <ClInclude Include="Source\Engine\UI\RmlUi\RmlUiRenderInterfaceD3D11.h" />
     <ClInclude Include="Source\Engine\UI\RmlUi\RmlUiRuntimeModule.h" />
     <ClInclude Include="Source\Engine\UI\RmlUi\RmlUiSystem.h" />
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h" />
     <ClInclude Include="Source\Engine\UI\RuntimeUITypes.h" />
     <ClInclude Include="Source\Launch\LaunchModeFactory.h" />
     <ClInclude Include="Source\Misc\ObjViewer\ObjViewerEngine.h" />
@@ -1481,6 +1527,7 @@
     <None Include="Shaders\EditorDebug\SelectionMask.hlsl" />
     <None Include="Shaders\Material\Decal.hlsl" />
     <None Include="Shaders\Material\UberLit.hlsl" />
+    <None Include="Shaders\Particle\BeamParticle.hlsl" />
     <None Include="Shaders\Particle\MeshParticle.hlsl" />
     <None Include="Shaders\Particle\RibbonParticle.hlsl" />
     <None Include="Shaders\Particle\SpriteParticle.hlsl" />

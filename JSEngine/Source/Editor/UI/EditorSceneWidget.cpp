@@ -1,6 +1,7 @@
 ﻿#include "Editor/UI/EditorSceneWidget.h"
 
 #include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/Viewport/ViewportLayout.h"
 #include "Engine/Core/Common.h"
@@ -607,8 +608,15 @@ void FEditorSceneWidget::Render(float DeltaTime)
 		if ((bCommitByEnter || bApplyClicked) && PendingRenameActor)
 		{
 			const FString UniqueName = MakeUniqueActorName(PendingRenameActor, RenameActorName);
-			EditorEngine->GetUndoSystem().CaptureSnapshot("Rename Actor");
+			TArray<AActor*> Actors;
+			Actors.push_back(PendingRenameActor);
+			const TArray<FEditorSerializedActorState> BeforeActorStates =
+				EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
 			PendingRenameActor->SetFName(FName(UniqueName));
+			EditorEngine->GetUndoSystem().RecordActorStateChange(
+				BeforeActorStates,
+				EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+				"Rename Actor");
 			EditorEngine->GetSceneService().MarkDirty();
 			EditorEngine->GetNotificationService().Info("Actor renamed");
 			PendingRenameActor = nullptr;

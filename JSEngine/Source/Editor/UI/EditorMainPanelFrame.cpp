@@ -1,6 +1,7 @@
 ﻿#include "Editor/UI/EditorMainPanel.h"
 
 #include "Editor/Viewer/EditorViewer.h"
+#include "Editor/EditorEngine.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_dx11.h"
@@ -219,10 +220,15 @@ void FEditorMainPanel::RenderLateFrameOverlays(float DeltaTime, float EffectiveD
     {
         Widgets.ContentBrowserWidget.Render(DeltaTime);
         PanelVisibility.bShowContentBrowser = Widgets.ContentBrowserWidget.IsVisible();
+        TickPendingAssetDrop();
         HandleContentBrowserViewportDrop();
     }
     RenderConsoleDrawer(DeltaTime);
     RenderFooterOverlay(DeltaTime);
+    if (EditorEngine)
+    {
+        EditorEngine->GetNotificationService().RenderToasts(EffectiveDeltaTime);
+    }
 }
 
 void FEditorMainPanel::EndImGuiFrame()

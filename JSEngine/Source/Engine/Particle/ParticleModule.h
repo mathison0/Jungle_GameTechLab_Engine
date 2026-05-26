@@ -27,6 +27,7 @@ public:
 	virtual void Update(FParticleEmitterInstance* Owner, float DeltaTime) {}
 
 	bool IsEnabled() const { return bEnabled; }
+	void SetEnabled(bool bInEnabled) { bEnabled = bInEnabled; }
 	bool IsSpawnModule() const { return bSpawnModule; }
 	bool IsUpdateModule() const { return bUpdateModule; }
 

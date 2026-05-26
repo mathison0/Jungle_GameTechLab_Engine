@@ -22,12 +22,12 @@ bool FEditorCommandSystem::CanExecute(EEditorCommand Command, const FEditorComma
 	case EEditorCommand::SaveSceneAs:
 		return !Args.ScenePath.empty();
 	case EEditorCommand::Undo:
-		return !EditorEngine->GetUndoSystem().GetUndoHistory().empty();
+		return EditorEngine->GetUndoSystem().CanUndo();
 	case EEditorCommand::Redo:
-		return !EditorEngine->GetUndoSystem().GetRedoHistory().empty();
+		return EditorEngine->GetUndoSystem().CanRedo();
 	case EEditorCommand::ClearUndoHistory:
-		return !EditorEngine->GetUndoSystem().GetUndoHistory().empty() ||
-			!EditorEngine->GetUndoSystem().GetRedoHistory().empty();
+		return EditorEngine->GetUndoSystem().CanUndo() ||
+			EditorEngine->GetUndoSystem().CanRedo();
 	case EEditorCommand::RestoreUndoHistoryIndex:
 		return Args.HistoryIndex >= 0 &&
 			Args.HistoryIndex < static_cast<int32>(EditorEngine->GetUndoSystem().GetUndoHistory().size());

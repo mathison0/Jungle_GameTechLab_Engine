@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Core/Guid.h"
 #include "Object/Class.h"
 #include "Object/Object.h"
 #include "Component/SceneComponent.h"
@@ -23,6 +24,11 @@ public:
 	virtual void PostDuplicate(UObject* Original) override;
 
 	virtual void Serialize(FArchive& Ar) override;
+
+	const FGuid& GetPersistentGuid() const { return PersistentGuid; }
+	void EnsurePersistentGuid();
+	void SetPersistentGuid(const FGuid& InGuid);
+	void RegeneratePersistentGuid();
 
 	virtual void InitDefaultComponents() {}
 
@@ -198,6 +204,7 @@ protected:
 
 	TArray<UActorComponent*> OwnedComponents;
 	TArray<FString> Tags;
+	FGuid PersistentGuid;
 
 	// 렌더링용 캐시
 	mutable TArray<UPrimitiveComponent*> PrimitiveCache;

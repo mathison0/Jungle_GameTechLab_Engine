@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Core/Containers/Array.h"
+#include "Core/Containers/String.h"
 #include "Editor/EditorUtils.h"
+#include "Editor/Notification/EditorNotificationService.h"
 #include "Editor/Packaging/GamePackager.h"
 #include "Editor/Viewport/ViewportLayout.h"
 #include "Math/Vector.h"
@@ -44,6 +46,19 @@ struct FEditorMainPanelViewportContextMenuState
 	int32 PendingSpawnViewportIndex = -1;
 	float PendingSpawnLocalX = 0.0f;
 	float PendingSpawnLocalY = 0.0f;
+};
+
+struct FEditorMainPanelPendingAssetDropState
+{
+	bool bActive = false;
+	bool bStepPrepared = false;
+	FEditorNotificationHandle ToastHandle;
+	FString PayloadPath;
+	int32 ViewportIndex = -1;
+	float LocalX = 0.0f;
+	float LocalY = 0.0f;
+
+	void Reset() { *this = FEditorMainPanelPendingAssetDropState(); }
 };
 
 struct FEditorMainPanelPIEPanelVisibilitySnapshot

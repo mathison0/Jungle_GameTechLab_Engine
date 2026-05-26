@@ -4,21 +4,16 @@
         "Objects" : [{
             "Class" : "UParticleSystem",
             "Data" : {
+              "AssetPath" : "Asset/Particle System/New Particle System 2.particlesystem",
               "Emitters" : [2],
               "LODDistanceCheckTime" : 0.250000,
               "LODDistances" : [0.000000, 1000.000000],
               "LODMethod" : 0,
               "LODSettings" : [0, 1],
               "ObjectName" : "New Particle System 2",
-              "SecondsBeforeInactive" : 0.000000,
-              "SystemUpdateMode" : 0,
               "ThumbnailWarmup" : 1.000000,
               "Type" : "UParticleSystem",
-              "UpdateTimeFPS" : 60.000000,
-              "WarmupTickRate" : 0.000000,
-              "WarmupTime" : 0.000000,
-              "bOrientZAxisTowardCamera" : false,
-              "bUseRealtimeThumbnail" : false
+              "UpdateTimeFPS" : 60.000000
             },
             "Id" : 1
           }, {
@@ -34,7 +29,7 @@
             "Data" : {
               "DistanceThreshold" : 100000.000000,
               "Level" : 0,
-              "Modules" : [5, 6, 7, 8, 9, 10, 11],
+              "Modules" : [5, 6, 7, 8, 9, 10, 11, 12],
               "ObjectName" : "UParticleLODLevel_16",
               "RequiredModule" : 4,
               "Type" : "UParticleLODLevel",
@@ -101,7 +96,7 @@
               "StartLocationMax" : {
                 "X" : 0.000000,
                 "Y" : 0.000000,
-                "Z" : 0.000000
+                "Z" : 10.000000
               },
               "StartLocationMin" : {
                 "X" : 0.000000,
@@ -121,12 +116,12 @@
               "StartVelocityMax" : {
                 "X" : 0.000000,
                 "Y" : 0.000000,
-                "Z" : 100.000000
+                "Z" : 0.000000
               },
               "StartVelocityMin" : {
                 "X" : 0.000000,
                 "Y" : 0.000000,
-                "Z" : 50.000000
+                "Z" : 0.000000
               },
               "Type" : "UParticleModuleVelocity",
               "bEnabled" : true,
@@ -176,6 +171,19 @@
               "bUpdateModule" : true
             },
             "Id" : 11
+          }, {
+            "Class" : "USubUVModule",
+            "Data" : {
+              "EndFrameIndex" : 35,
+              "ObjectName" : "SubUV",
+              "StartFrameIndex" : 0,
+              "SubUVName" : "Asset/plasma.png",
+              "Type" : "USubUVModule",
+              "bEnabled" : true,
+              "bSpawnModule" : true,
+              "bUpdateModule" : true
+            },
+            "Id" : 12
           }],
         "RootObjectId" : 1,
         "Version" : 1

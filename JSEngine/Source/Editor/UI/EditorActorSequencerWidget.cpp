@@ -435,7 +435,7 @@ void FEditorActorSequencerWidget::DrawAddPropertyPopup(UActorSequenceComponent* 
 			{
 				if (ImGui::MenuItem(Property->Name))
 				{
-					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Add Actor Sequence Track");
+					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Add Actor Sequence Track");
 					if (FEditorActorSequenceEditModel::AddTrackForProperty(
 						SequenceComp,
 						Object,
@@ -457,7 +457,7 @@ void FEditorActorSequencerWidget::DrawAddPropertyPopup(UActorSequenceComponent* 
 			{
 				if (ImGui::MenuItem("All Channels"))
 				{
-					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Add Actor Sequence Channels");
+					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Add Actor Sequence Channels");
 					bool bChanged = false;
 					for (const char* ChannelName : ChannelNames)
 					{
@@ -483,7 +483,7 @@ void FEditorActorSequencerWidget::DrawAddPropertyPopup(UActorSequenceComponent* 
 				{
 					if (ImGui::MenuItem(ChannelName))
 					{
-						FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Add Actor Sequence Track");
+						FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Add Actor Sequence Track");
 						if (FEditorActorSequenceEditModel::AddTrackForProperty(
 							SequenceComp,
 							Object,
@@ -554,7 +554,7 @@ void FEditorActorSequencerWidget::AddKeyToSelectedTrack(UActorSequenceComponent*
 		return;
 	}
 
-	FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Add Actor Sequence Key");
+	FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Add Actor Sequence Key");
 	if (FEditorActorSequenceEditModel::AddKeyAtCurrentValue(SequenceComp, Handle, PreviewPlayer->GetCurrentTime()))
 	{
 		FEditorActorSequenceEditModel::NotifySequenceEdited(
@@ -658,6 +658,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 		{
 			FEditorActorSequenceEditModel::CaptureSequenceUndo(
 				EditorEngine,
+				SequenceComp,
 				"Edit Actor Sequence Playback Range");
 			bDraggingPlaybackStart = true;
 			bDraggingPlaybackEnd = false;
@@ -666,6 +667,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 		{
 			FEditorActorSequenceEditModel::CaptureSequenceUndo(
 				EditorEngine,
+				SequenceComp,
 				"Edit Actor Sequence Playback Range");
 			bDraggingPlaybackEnd = true;
 			bDraggingPlaybackStart = false;
@@ -719,7 +721,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 		FActorSequenceChannelHandle Handle;
 		if (FEditorActorSequenceEditModel::ResolveChannelByDisplayIndex(SequenceComp, SelectedKeyTrackIndex, Handle))
 		{
-			FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Delete Actor Sequence Key");
+			FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Delete Actor Sequence Key");
 			if (FEditorActorSequenceEditModel::DeleteKeyByIndex(SequenceComp, Handle, SelectedKeyIndex))
 			{
 				SelectedKeyIndex = -1;
@@ -1035,7 +1037,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 			SelectedTrackIndex = DisplayTrackIndex;
 			if (HoveredKeyIndex >= 0 && Curve)
 			{
-				FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Edit Actor Sequence Key");
+				FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Edit Actor Sequence Key");
 				SelectedKeyTrackIndex = DisplayTrackIndex;
 				SelectedKeyIndex = HoveredKeyIndex;
 				bDraggingKey = true;
@@ -1048,7 +1050,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 			}
 			else if (bHitSectionStartHandle || bHitSectionEndHandle)
 			{
-				FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Edit Actor Sequence Section");
+				FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Edit Actor Sequence Section");
 				bDraggingSectionStart = bHitSectionStartHandle;
 				bDraggingSectionEnd = bHitSectionEndHandle;
 				DraggingSectionTrackIndex = DisplayTrackIndex;
@@ -1200,7 +1202,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 					const bool bSelected = Channel.Playback.ApplyMode == Mode;
 					if (ImGui::MenuItem(ToApplyModeMenuLabel(Mode), nullptr, bSelected))
 					{
-						FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Edit Actor Sequence Apply Mode");
+						FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Edit Actor Sequence Apply Mode");
 						if (FEditorActorSequenceEditModel::SetApplyModeByDisplayIndex(SequenceComp, DisplayTrackIndex, Mode))
 						{
 							FEditorActorSequenceEditModel::NotifySequenceEdited(
@@ -1225,7 +1227,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 					const bool bSelected = Channel.Playback.TimeMappingMode == Mode;
 					if (ImGui::MenuItem(ToTimeMappingLabel(Mode), nullptr, bSelected))
 					{
-						FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Edit Actor Sequence Time Mapping");
+						FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Edit Actor Sequence Time Mapping");
 						if (FEditorActorSequenceEditModel::SetTimeMappingModeByDisplayIndex(SequenceComp, DisplayTrackIndex, Mode))
 						{
 							FEditorActorSequenceEditModel::NotifySequenceEdited(
@@ -1244,7 +1246,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 				FActorSequenceChannelHandle Handle;
 				if (FEditorActorSequenceEditModel::ResolveChannelByDisplayIndex(SequenceComp, DisplayTrackIndex, Handle))
 				{
-					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Add Actor Sequence Key");
+					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Add Actor Sequence Key");
 					SequenceComp->SetPreviewTime(ContextSequenceTime);
 					if (FEditorActorSequenceEditModel::AddKeyAtCurrentValue(SequenceComp, Handle, ContextSequenceTime))
 					{
@@ -1261,7 +1263,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 				FActorSequenceChannelHandle Handle;
 				if (FEditorActorSequenceEditModel::ResolveChannelByDisplayIndex(SequenceComp, DisplayTrackIndex, Handle))
 				{
-					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Delete Actor Sequence Key");
+					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Delete Actor Sequence Key");
 					const float VisibleSecondsPerPixel = VisibleRange / std::max(1.0f, TimelineWidth);
 					if (FEditorActorSequenceEditModel::RemoveKeyNearTime(
 						SequenceComp,
@@ -1283,7 +1285,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 				FActorSequenceChannelHandle Handle;
 				if (FEditorActorSequenceEditModel::ResolveChannelByDisplayIndex(SequenceComp, DisplayTrackIndex, Handle))
 				{
-					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Delete Actor Sequence Key");
+					FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Delete Actor Sequence Key");
 					if (FEditorActorSequenceEditModel::DeleteKeyByIndex(SequenceComp, Handle, SelectedKeyIndex))
 					{
 						SelectedKeyTrackIndex = -1;
@@ -1300,7 +1302,7 @@ void FEditorActorSequencerWidget::DrawSequencer(UActorSequenceComponent* Sequenc
 			ImGui::Separator();
 			if (ImGui::MenuItem("Remove Track"))
 			{
-				FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, "Remove Actor Sequence Track");
+				FEditorActorSequenceEditModel::CaptureSequenceUndo(EditorEngine, SequenceComp, "Remove Actor Sequence Track");
 				if (FEditorActorSequenceEditModel::DeleteTrackByDisplayIndex(SequenceComp, DisplayTrackIndex))
 				{
 					if (SelectedTrackIndex == DisplayTrackIndex)

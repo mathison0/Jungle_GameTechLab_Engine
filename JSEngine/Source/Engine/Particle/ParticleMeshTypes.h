@@ -1,6 +1,22 @@
 #pragma once
 
+#include "Core/Reflection/ReflectionMacros.h"
 #include "Math/Vector.h"
+
+// Cycle 14 (M1): Mesh emitter의 alignment (forward axis 정렬) 모드.
+// UE Cascade EParticleScreenAlignment 와 의미 호환 — 본 cycle 은 결정 17 옵션 B 채택으로 2값만 도입.
+// 후속 cycle 에서 PSA_LockedAxis / PSA_Rectangle 등 추가 시 enum 값 추가만으로 확장 가능 (UPROPERTY 자동 노출).
+//
+//   PSA_Velocity                — particle 의 velocity 방향으로 mesh 의 local +X 축을 정렬.
+//                                  velocity 가 zero 면 alignment 적용 안 함 (identity).
+//   PSA_FacingCameraPosition    — camera position 방향으로 mesh 의 local +X 축을 정렬 (look-at).
+//                                  Component-cached camera 미설정 시 PSA_Velocity 로 fallback (위험 12 방어).
+UENUM()
+enum class EMeshAlignment : uint8
+{
+    PSA_Velocity              UMETA(DisplayName = "Velocity"),
+    PSA_FacingCameraPosition  UMETA(DisplayName = "Facing Camera Position"),
+};
 
 // Mesh emitter의 per-particle payload (Cycle 11, 옵션 B).
 // FBaseParticle 뒤에 PayloadOffset 위치에 인터리브 배치된다.

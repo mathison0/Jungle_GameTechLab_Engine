@@ -144,6 +144,9 @@ public:
     // Detail panel 검증용 기본 ribbon emitter system.
     // CreateDefaultSpriteSystem과 동일 구조 + sprite renderer 대신 ribbon renderer.
     static UParticleSystem* CreateDefaultRibbonSystem();
+    // Cycle 13a/13b: detail panel 검증용 기본 beam emitter system.
+    // Sprite/Mesh/Ribbon 패턴 답습 + UBeamTypeData + Source/Target/Noise 모듈 (Source/Target 은 nullptr — fallback 사용).
+    static UParticleSystem* CreateDefaultBeamSystem();
 
 	UPROPERTY(DisplayName = "Asset Path")
 	FString AssetPath;
@@ -151,26 +154,8 @@ public:
 	UPROPERTY(DisplayName = "Update Time FPS", Min = 0.0f)
 	float UpdateTimeFPS = 60.0f;
 
-	UPROPERTY(DisplayName = "Warmup Time - beware hitches!", Min = 0.0f)
-	float WarmupTime = 0.0f;
-
-	UPROPERTY(DisplayName = "Warmup Tick Rate", Min = 0.0f)
-	float WarmupTickRate = 0.0f;
-
-	UPROPERTY(DisplayName = "Seconds Before Inactive", Min = 0.0f)
-	float SecondsBeforeInactive = 0.0f;
-
-	UPROPERTY(DisplayName = "Orient ZAxis Toward Camera")
-	bool bOrientZAxisTowardCamera = false;
-
-	UPROPERTY(DisplayName = "System Update Mode")
-	int32 SystemUpdateMode = 0;
-
 	UPROPERTY(DisplayName = "Thumbnail Warmup", Min = 0.0f)
 	float ThumbnailWarmup = 1.0f;
-
-	UPROPERTY(DisplayName = "Use Realtime Thumbnail")
-	bool bUseRealtimeThumbnail = false;
 
 	UPROPERTY(DisplayName = "LODDistance Check Time", Min = 0.0f)
 	float LODDistanceCheckTime = 0.25f;

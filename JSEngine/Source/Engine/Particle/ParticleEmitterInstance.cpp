@@ -330,7 +330,7 @@ bool FParticleEmitterInstance::CanRebindCompiledLOD(const FCompiledParticleLODDa
         return false;
     if (ObservedParticleStride != NewLOD->ParticleStride)
         return false;
-    if (MaxActiveParticles > NewLOD->MaxActiveParticles)
+    if (MaxActiveParticles != NewLOD->MaxActiveParticles)
         return false;
 
 	return true;

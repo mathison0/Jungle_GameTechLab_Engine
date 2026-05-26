@@ -1,0 +1,2214 @@
+// Renders particle system details, module details, and reflection-backed property editors.
+#include "Editor/UI/EditorParticleSystemWidgetPrivate.h"
+
+void FEditorParticleSystemWidget::DrawDetailsPanel(const ImVec2& Size)
+{
+	DrawPanelHeader("Details");
+
+	const ImVec2 BodySize(Size.x, std::max(1.0f, Size.y - PanelHeaderHeight));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16.0f, 12.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 0.0f));
+	ImGui::BeginChild(
+		"##ParticleDetailsBody",
+		BodySize,
+		false,
+		ImGuiWindowFlags_AlwaysVerticalScrollbar);
+	ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 8.0f, ImGui::GetCursorPosY() + 8.0f));
+	ImGui::BeginGroup();
+
+	UParticleEmitter* SelectedEmitter = GetSelectedEmitter();
+	UParticleModule* SelectedModule = GetSelectedModule();
+	if (!ParticleSystemAsset)
+	{
+		ImGui::TextDisabled("No particle system.");
+	}
+	else if (SelectedEmitterIndex < 0 || !SelectedEmitter)
+	{
+		DrawParticleSystemDetails(ParticleSystemAsset);
+	}
+	else if (!SelectedModule)
+	{
+		DrawEmitterDetails(SelectedEmitter, SelectedEmitterIndex);
+	}
+	else
+	{
+		DrawParticleModuleDetails(SelectedModule, SelectedEmitter);
+	}
+
+	ImGui::EndGroup();
+	ImGui::EndChild();
+	ImGui::PopStyleVar(2);
+}
+UParticleEmitter* FEditorParticleSystemWidget::GetSelectedEmitter() const
+{
+	if (!ParticleSystemAsset ||
+		SelectedEmitterIndex < 0 ||
+		SelectedEmitterIndex >= static_cast<int32>(ParticleSystemAsset->Emitters.size()))
+	{
+		return nullptr;
+	}
+	return ParticleSystemAsset->Emitters[SelectedEmitterIndex];
+}
+
+UParticleLODLevel* FEditorParticleSystemWidget::GetEmitterLODLevel(UParticleEmitter* Emitter) const
+{
+	if (!Emitter)
+	{
+		return nullptr;
+	}
+
+	UParticleLODLevel* LODLevel = Emitter->GetLODLevel(CurrentLOD);
+	if (!LODLevel)
+	{
+		LODLevel = Emitter->GetLODLevel(0);
+	}
+	return LODLevel;
+}
+
+UParticleLODLevel* FEditorParticleSystemWidget::GetSelectedLODLevel() const
+{
+	return GetEmitterLODLevel(GetSelectedEmitter());
+}
+
+UParticleModule* FEditorParticleSystemWidget::GetSelectedModule() const
+{
+	UParticleLODLevel* LODLevel = GetSelectedLODLevel();
+	if (!LODLevel)
+	{
+		return nullptr;
+	}
+
+	if (SelectedModuleIndex == RequiredParticleModuleSelection)
+	{
+		return LODLevel->GetRequiredModule();
+	}
+	if (SelectedModuleIndex >= 0 && SelectedModuleIndex < static_cast<int32>(LODLevel->Modules.size()))
+	{
+		return LODLevel->Modules[SelectedModuleIndex];
+	}
+	return nullptr;
+}
+
+void FEditorParticleSystemWidget::DrawEmitterDetails(UParticleEmitter* Emitter, int32 EmitterIndex)
+{
+	if (!Emitter)
+	{
+		return;
+	}
+
+	ImGui::PushID(Emitter);
+
+	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
+	const float LabelWidth = std::clamp(AvailableWidth * 0.38f, 180.0f, 300.0f);
+
+	auto SyncEmitterNameBuffer = [&]()
+	{
+		const FString EmitterName = GetEmitterDisplayName(Emitter, EmitterIndex);
+		std::snprintf(DetailEmitterNameEditBuffer, sizeof(DetailEmitterNameEditBuffer), "%s", EmitterName.c_str());
+		DetailEmitterNameEditIndex = EmitterIndex;
+	};
+
+	auto WarnAndSyncEmptyEmitterName = [&]()
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetNotificationService().Warning("Emitter name cannot be empty.");
+		}
+		SyncEmitterNameBuffer();
+	};
+
+	auto ApplyLiveEmitterNameBuffer = [&](bool bWarnOnEmpty)
+	{
+		const FString TrimmedName = TrimCopy(DetailEmitterNameEditBuffer);
+		if (TrimmedName.empty())
+		{
+			if (bWarnOnEmpty)
+			{
+				WarnAndSyncEmptyEmitterName();
+			}
+			return;
+		}
+
+		if (Emitter->GetFName().ToString() == TrimmedName)
+		{
+			return;
+		}
+
+		if (!bEmitterNameEditUndoCaptured)
+		{
+			CaptureUndoSnapshot("Rename Emitter");
+			bEmitterNameEditUndoCaptured = true;
+		}
+		ApplyEmitterName(EmitterIndex, TrimmedName, false, false);
+	};
+
+	if (DetailEmitterNameEditIndex != EmitterIndex)
+	{
+		SyncEmitterNameBuffer();
+		bEmitterNameEditUndoCaptured = false;
+	}
+
+	if (ImGui::CollapsingHeader("Particle", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (BeginParticleDetailsTable("##ParticleEmitterDetailsTable", LabelWidth))
+		{
+			BeginParticleDetailsRow("Emitter Name", 30.0f);
+
+			ImGui::SetNextItemWidth(std::min(220.0f, ImGui::GetContentRegionAvail().x));
+			const bool bNameChanged = ImGui::InputText(
+				"##EmitterName",
+				DetailEmitterNameEditBuffer,
+				sizeof(DetailEmitterNameEditBuffer));
+			const bool bNameActive = ImGui::IsItemActive();
+			const bool bNameDeactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
+			if (bNameChanged)
+			{
+				ApplyLiveEmitterNameBuffer(false);
+			}
+			if (bNameDeactivatedAfterEdit)
+			{
+				ApplyLiveEmitterNameBuffer(true);
+				SyncEmitterNameBuffer();
+				bEmitterNameEditUndoCaptured = false;
+			}
+			else if (!bNameActive)
+			{
+				const FString CurrentName = GetEmitterDisplayName(Emitter, EmitterIndex);
+				if (CurrentName != DetailEmitterNameEditBuffer)
+				{
+					SyncEmitterNameBuffer();
+				}
+			}
+
+			EndParticleDetailsTable();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		UParticleLODLevel* LODLevel = GetEmitterLODLevel(Emitter);
+		if (LODLevel && BeginParticleDetailsTable("##ParticleEmitterLODDetailsTable", LabelWidth))
+		{
+			auto CaptureLODEditUndo = [this]()
+			{
+				if (!bPropertyEditUndoCaptured)
+				{
+					CaptureUndoSnapshot("Edit Particle LOD");
+					bPropertyEditUndoCaptured = true;
+				}
+			};
+
+			auto CommitLODEdit = [&]()
+			{
+				Emitter->CacheEmitterModuleInfo();
+				bDirty = true;
+				RefreshPreviewComponent(false);
+			};
+
+			BeginParticleDetailsRow("Level");
+			int32 EditedLevel = LODLevel->Level;
+			ImGui::SetNextItemWidth(-1.0f);
+			if (ImGui::DragInt("##LODLevel", &EditedLevel, 1.0f, 0, 1024))
+			{
+				CaptureLODEditUndo();
+				LODLevel->Level = std::max(0, EditedLevel);
+				CommitLODEdit();
+			}
+
+			BeginParticleDetailsRow("Enabled");
+			bool bEditedEnabled = LODLevel->bEnabled;
+			if (ImGui::Checkbox("##LODEnabled", &bEditedEnabled))
+			{
+				CaptureLODEditUndo();
+				LODLevel->bEnabled = bEditedEnabled;
+				CommitLODEdit();
+			}
+
+			BeginParticleDetailsRow("Distance Threshold");
+			float EditedThreshold = LODLevel->DistanceThreshold;
+			ImGui::SetNextItemWidth(-1.0f);
+			if (ImGui::DragFloat("##LODDistanceThreshold", &EditedThreshold, 1.0f, 0.0f, 0.0f, "%.1f"))
+			{
+				CaptureLODEditUndo();
+				LODLevel->DistanceThreshold = std::max(0.0f, EditedThreshold);
+				CommitLODEdit();
+			}
+
+			BeginParticleDetailsRow("Actions");
+			if (ImGui::SmallButton("Delete Current LOD"))
+			{
+				DeleteCurrentLOD();
+			}
+
+			if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+			{
+				bPropertyEditUndoCaptured = false;
+			}
+
+			EndParticleDetailsTable();
+		}
+	}
+
+	ImGui::PopID();
+}
+
+void FEditorParticleSystemWidget::DrawParticleSystemDetails(UParticleSystem* ParticleSystem)
+{
+	if (!ParticleSystem)
+	{
+		return;
+	}
+
+	ImGui::PushID(ParticleSystem);
+
+	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
+	const float LabelWidth = std::clamp(AvailableWidth * 0.38f, 180.0f, 300.0f);
+	TArray<const FProperty*> Properties;
+	if (ParticleSystem->GetClass())
+	{
+		ParticleSystem->GetClass()->GetAllProperties(Properties);
+	}
+
+	auto FindProperty = [&](const char* Name) -> const FProperty*
+	{
+		for (const FProperty* Property : Properties)
+		{
+			if (Property && Property->Name && std::strcmp(Property->Name, Name) == 0)
+			{
+				return Property;
+			}
+		}
+		return nullptr;
+	};
+
+	auto DrawPropertyByName = [&](const char* Name) -> bool
+	{
+		const FProperty* Property = FindProperty(Name);
+		if (!Property || !Property->IsEditable())
+		{
+			return false;
+		}
+
+		BeginParticleDetailsRow(GetPropertyDisplayName(*Property));
+		ImGui::SetNextItemWidth(-1.0f);
+		DrawParticleObjectProperty(ParticleSystem, *Property);
+		return true;
+	};
+
+	auto DrawPropertyGroup = [&](const char* TableId, std::initializer_list<const char*> Names)
+	{
+		if (BeginParticleDetailsTable(TableId, LabelWidth))
+		{
+			for (const char* Name : Names)
+			{
+				DrawPropertyByName(Name);
+			}
+			EndParticleDetailsTable();
+		}
+	};
+
+	if (ImGui::CollapsingHeader("Particle System", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		DrawPropertyGroup(
+			"##ParticleSystemDetailsTable",
+			{ "UpdateTimeFPS" });
+	}
+
+	if (ImGui::CollapsingHeader("Thumbnail", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		DrawPropertyGroup("##ParticleSystemThumbnailTable", { "ThumbnailWarmup" });
+	}
+
+	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		DrawPropertyGroup("##ParticleSystemLODTable", { "LODDistanceCheckTime", "LODDistances", "LODSettings", "LODMethod" });
+	}
+
+	if (!ImGui::IsAnyItemActive())
+	{
+		bPropertyEditUndoCaptured = false;
+	}
+
+	ImGui::PopID();
+}
+
+void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Module, UParticleEmitter* OwnerEmitter)
+{
+	if (!Module)
+	{
+		return;
+	}
+
+	const bool bRequired = SelectedModuleIndex == RequiredParticleModuleSelection;
+	ImGui::PushID(Module);
+	ImGui::TextUnformatted(GetModuleDisplayName(Module, bRequired).c_str());
+	if (Module->GetClass())
+	{
+		ImGui::TextDisabled("%s", Module->GetClass()->GetName());
+	}
+	ImGui::Dummy(ImVec2(0.0f, 4.0f));
+	ImGui::Separator();
+	ImGui::Dummy(ImVec2(0.0f, 8.0f));
+
+	TArray<const FProperty*> Properties;
+	if (Module->GetClass())
+	{
+		Module->GetClass()->GetAllProperties(Properties);
+	}
+
+	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
+	const float LabelWidth = std::clamp(AvailableWidth * 0.38f, 128.0f, 190.0f);
+
+	auto DrawPropertyTable = [&](const char* TableId, const char* CategoryFilter, bool bIncludeUncategorized, bool bIncludeAllCategories = false) -> int32
+	{
+		int32 RenderedPropertyCount = 0;
+		auto IsVisibleProperty = [&](const FProperty* Property) -> bool
+		{
+			if (!Property || !Property->Name || !Property->IsEditable() || IsInternalParticleModuleProperty(*Property))
+			{
+				return false;
+			}
+
+			const bool bHasCategory = Property->Category && Property->Category[0] != '\0';
+			const bool bCategoryMatch = CategoryFilter && bHasCategory && std::strcmp(Property->Category, CategoryFilter) == 0;
+			const bool bUncategorizedMatch = bIncludeUncategorized && !bHasCategory;
+			const bool bAllCategoryMatch = bIncludeAllCategories && !CategoryFilter;
+			return bAllCategoryMatch || bCategoryMatch || bUncategorizedMatch;
+		};
+
+		auto FindPropertyByName = [&](const FString& Name) -> const FProperty*
+		{
+			for (const FProperty* Candidate : Properties)
+			{
+				if (Candidate && Candidate->Name && Name == Candidate->Name && IsVisibleProperty(Candidate))
+				{
+					return Candidate;
+				}
+			}
+			return nullptr;
+		};
+
+		auto EndsWith = [](const FString& Value, const char* Suffix) -> bool
+		{
+			const size_t SuffixLength = std::strlen(Suffix);
+			return Value.size() >= SuffixLength && Value.compare(Value.size() - SuffixLength, SuffixLength, Suffix) == 0;
+		};
+
+		auto DrawDistributionValueRow = [&](const char* RowLabel, const FProperty& ValueProperty) -> bool
+		{
+			bool bChanged = false;
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 26.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Indent(40.0f);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(RowLabel);
+			ImGui::Unindent(40.0f);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::SetNextItemWidth(std::min(140.0f, ImGui::GetContentRegionAvail().x));
+			ImGui::PushID(ValueProperty.Name);
+			bChanged = DrawParticleModuleProperty(Module, ValueProperty);
+			ImGui::PopID();
+			return bChanged;
+		};
+
+		auto DrawDistributionStoredMaxRow = [&](const FProperty& ValueProperty, const FString& Key) -> bool
+		{
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 26.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Indent(40.0f);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted("Max");
+			ImGui::Unindent(40.0f);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::SetNextItemWidth(std::min(140.0f, ImGui::GetContentRegionAvail().x));
+
+			if (ValueProperty.Type == EPropertyType::Float)
+			{
+				float CurrentValue = ValueProperty.GetValuePtr(Module) ? *static_cast<float*>(ValueProperty.GetValuePtr(Module)) : 0.0f;
+				auto Iter = ParticleDistributionFloatMaxValues.find(Key);
+				if (Iter == ParticleDistributionFloatMaxValues.end())
+				{
+					Iter = ParticleDistributionFloatMaxValues.emplace(Key, CurrentValue).first;
+				}
+				return ImGui::DragFloat("##Max", &Iter->second, ValueProperty.Speed);
+			}
+
+			const char* Hint = ValueProperty.EditorHint;
+			if ((!Hint || Hint[0] == '\0') && ValueProperty.ScriptStruct)
+			{
+				Hint = ValueProperty.ScriptStruct->GetName();
+			}
+			if (Hint && std::strcmp(Hint, "FVector") == 0)
+			{
+				FVector CurrentValue = ValueProperty.GetValuePtr(Module) ? *static_cast<FVector*>(ValueProperty.GetValuePtr(Module)) : FVector::ZeroVector;
+				auto Iter = ParticleDistributionVectorMaxValues.find(Key);
+				if (Iter == ParticleDistributionVectorMaxValues.end())
+				{
+					Iter = ParticleDistributionVectorMaxValues.emplace(Key, CurrentValue).first;
+				}
+				return ImGui::DragFloat3("##Max", &Iter->second.X, ValueProperty.Speed);
+			}
+
+			ImGui::TextDisabled("<unsupported>");
+			return false;
+		};
+
+		auto GetVectorHint = [](const FProperty& ValueProperty) -> const char*
+		{
+			const char* Hint = ValueProperty.EditorHint;
+			if ((!Hint || Hint[0] == '\0') && ValueProperty.ScriptStruct)
+			{
+				Hint = ValueProperty.ScriptStruct->GetName();
+			}
+			return Hint;
+		};
+
+		auto IsVectorProperty = [&](const FProperty& ValueProperty) -> bool
+		{
+			const char* Hint = GetVectorHint(ValueProperty);
+			return ValueProperty.Type == EPropertyType::Struct && Hint && std::strcmp(Hint, "FVector") == 0;
+		};
+
+		auto GetInitialChannelValue = [&](const FProperty& ValueProperty, const char* ChannelName) -> float
+		{
+			void* ValuePtr = ValueProperty.GetValuePtr(Module);
+			if (!ValuePtr)
+			{
+				return 0.0f;
+			}
+			if (ValueProperty.Type == EPropertyType::Float)
+			{
+				return *static_cast<float*>(ValuePtr);
+			}
+			if (IsVectorProperty(ValueProperty))
+			{
+				const FVector* Vector = static_cast<FVector*>(ValuePtr);
+				if (std::strcmp(ChannelName, "Y") == 0) { return Vector->Y; }
+				if (std::strcmp(ChannelName, "Z") == 0) { return Vector->Z; }
+				return Vector->X;
+			}
+			return 0.0f;
+		};
+
+		auto DrawCurvePointRows = [&](const char* Label, const FProperty& ValueProperty) -> bool
+		{
+			bool bChanged = false;
+			ImGui::PushID(Label);
+			ImGui::PushID(ValueProperty.Name);
+			const bool bVector = IsVectorProperty(ValueProperty);
+			const char* Channels[] = { "X", "Y", "Z" };
+			const int32 ChannelCount = bVector ? 3 : 1;
+			FFloatCurve* PrimaryCurve = nullptr;
+			for (int32 ChannelIndex = 0; ChannelIndex < ChannelCount; ++ChannelIndex)
+			{
+				const char* ChannelName = bVector ? Channels[ChannelIndex] : "Value";
+				FFloatCurve& Curve = GetOrCreateParticleDistributionCurve(Module, ValueProperty, ChannelName, GetInitialChannelValue(ValueProperty, ChannelName));
+				if (!PrimaryCurve)
+				{
+					PrimaryCurve = &Curve;
+				}
+			}
+			if (!PrimaryCurve)
+			{
+				ImGui::PopID();
+				ImGui::PopID();
+				return false;
+			}
+
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 26.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Indent(40.0f);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TreeNodeEx(Label, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+			ImGui::Unindent(40.0f);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::Text("%d Array elements", static_cast<int32>(PrimaryCurve->Keys.size()));
+			ImGui::SameLine();
+			if (ImGui::SmallButton("+"))
+			{
+				CaptureUndoSnapshot("Add Particle Curve Key");
+				const float NewTime = PrimaryCurve->Keys.empty() ? 0.0f : std::min(1.0f, PrimaryCurve->Keys.back().Time + 0.1f);
+				for (int32 ChannelIndex = 0; ChannelIndex < ChannelCount; ++ChannelIndex)
+				{
+					const char* ChannelName = bVector ? Channels[ChannelIndex] : "Value";
+					FFloatCurve& Curve = GetOrCreateParticleDistributionCurve(Module, ValueProperty, ChannelName, GetInitialChannelValue(ValueProperty, ChannelName));
+					FCurveKey Key;
+					Key.Time = NewTime;
+					Key.Value = Curve.Keys.empty() ? GetInitialChannelValue(ValueProperty, ChannelName) : Curve.Keys.back().Value;
+					Key.InterpMode = ECurveInterpMode::Cubic;
+					Key.TangentMode = ECurveTangentMode::Auto;
+					Curve.Keys.push_back(Key);
+					Curve.SortKeys();
+				}
+				bChanged = true;
+			}
+
+			for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(PrimaryCurve->Keys.size()); ++KeyIndex)
+			{
+				ImGui::PushID(KeyIndex);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, 24.0f);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Indent(60.0f);
+				ImGui::AlignTextToFramePadding();
+				ImGui::Text("Index [%d]", KeyIndex);
+				ImGui::Unindent(60.0f);
+				ImGui::TableSetColumnIndex(1);
+				ImGui::SameLine();
+				if (PrimaryCurve->Keys.size() > 1 && ImGui::SmallButton("Delete"))
+				{
+					CaptureUndoSnapshot("Delete Particle Curve Key");
+					for (int32 ChannelIndex = 0; ChannelIndex < ChannelCount; ++ChannelIndex)
+					{
+						const char* ChannelName = bVector ? Channels[ChannelIndex] : "Value";
+						FFloatCurve& Curve = GetOrCreateParticleDistributionCurve(Module, ValueProperty, ChannelName, GetInitialChannelValue(ValueProperty, ChannelName));
+						if (KeyIndex < static_cast<int32>(Curve.Keys.size()))
+						{
+							Curve.Keys.erase(Curve.Keys.begin() + KeyIndex);
+						}
+					}
+					bChanged = true;
+					ImGui::PopID();
+					break;
+				}
+
+				float Time = PrimaryCurve->Keys[KeyIndex].Time;
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, 24.0f);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Indent(80.0f);
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted("In Val");
+				ImGui::Unindent(80.0f);
+				ImGui::TableSetColumnIndex(1);
+				ImGui::SetNextItemWidth(140.0f);
+				if (ImGui::DragFloat("##Time", &Time, 0.01f, 0.0f, 1.0f))
+				{
+					if (!bPropertyEditUndoCaptured)
+					{
+						CaptureUndoSnapshot("Edit Particle Curve Key");
+						bPropertyEditUndoCaptured = true;
+					}
+					for (int32 ChannelIndex = 0; ChannelIndex < ChannelCount; ++ChannelIndex)
+					{
+						const char* ChannelName = bVector ? Channels[ChannelIndex] : "Value";
+						FFloatCurve& Curve = GetOrCreateParticleDistributionCurve(Module, ValueProperty, ChannelName, GetInitialChannelValue(ValueProperty, ChannelName));
+						if (KeyIndex < static_cast<int32>(Curve.Keys.size()))
+						{
+							Curve.Keys[KeyIndex].Time = std::clamp(Time, 0.0f, 1.0f);
+							Curve.SortKeys();
+						}
+					}
+					bChanged = true;
+				}
+
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, 24.0f);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Indent(80.0f);
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted("Out Val");
+				ImGui::Unindent(80.0f);
+				ImGui::TableSetColumnIndex(1);
+				if (bVector)
+				{
+					float Values[3] = {};
+					for (int32 ChannelIndex = 0; ChannelIndex < 3; ++ChannelIndex)
+					{
+						FFloatCurve& Curve = GetOrCreateParticleDistributionCurve(Module, ValueProperty, Channels[ChannelIndex], GetInitialChannelValue(ValueProperty, Channels[ChannelIndex]));
+						Values[ChannelIndex] = KeyIndex < static_cast<int32>(Curve.Keys.size()) ? Curve.Keys[KeyIndex].Value : 0.0f;
+					}
+					ImGui::SetNextItemWidth(320.0f);
+					if (ImGui::DragFloat3("##Value", Values, 0.1f))
+					{
+						if (!bPropertyEditUndoCaptured)
+						{
+							CaptureUndoSnapshot("Edit Particle Curve Key");
+							bPropertyEditUndoCaptured = true;
+						}
+						for (int32 ChannelIndex = 0; ChannelIndex < 3; ++ChannelIndex)
+						{
+							FFloatCurve& Curve = GetOrCreateParticleDistributionCurve(Module, ValueProperty, Channels[ChannelIndex], GetInitialChannelValue(ValueProperty, Channels[ChannelIndex]));
+							if (KeyIndex < static_cast<int32>(Curve.Keys.size()))
+							{
+								Curve.Keys[KeyIndex].Value = Values[ChannelIndex];
+							}
+						}
+						bChanged = true;
+					}
+				}
+				else
+				{
+					float Value = PrimaryCurve->Keys[KeyIndex].Value;
+					ImGui::SetNextItemWidth(140.0f);
+					if (ImGui::DragFloat("##Value", &Value, 0.1f))
+					{
+						if (!bPropertyEditUndoCaptured)
+						{
+							CaptureUndoSnapshot("Edit Particle Curve Key");
+							bPropertyEditUndoCaptured = true;
+						}
+						PrimaryCurve->Keys[KeyIndex].Value = Value;
+						bChanged = true;
+					}
+				}
+
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, 24.0f);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Indent(80.0f);
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted("Interp Mode");
+				ImGui::Unindent(80.0f);
+				ImGui::TableSetColumnIndex(1);
+				const char* InterpItems[] = { "Constant", "Linear", "Cubic" };
+				int32 InterpIndex = 2;
+				if (PrimaryCurve->Keys[KeyIndex].InterpMode == ECurveInterpMode::Constant)
+				{
+					InterpIndex = 0;
+				}
+				else if (PrimaryCurve->Keys[KeyIndex].InterpMode == ECurveInterpMode::Linear)
+				{
+					InterpIndex = 1;
+				}
+				ImGui::SetNextItemWidth(140.0f);
+				if (ParticleCombo("##InterpMode", &InterpIndex, InterpItems, IM_ARRAYSIZE(InterpItems)))
+				{
+					CaptureUndoSnapshot("Edit Particle Curve Interp");
+					const ECurveInterpMode NewInterpMode =
+						InterpIndex == 0 ? ECurveInterpMode::Constant :
+						InterpIndex == 1 ? ECurveInterpMode::Linear :
+						ECurveInterpMode::Cubic;
+					for (int32 ChannelIndex = 0; ChannelIndex < ChannelCount; ++ChannelIndex)
+					{
+						const char* ChannelName = bVector ? Channels[ChannelIndex] : "Value";
+						FFloatCurve& Curve = GetOrCreateParticleDistributionCurve(Module, ValueProperty, ChannelName, GetInitialChannelValue(ValueProperty, ChannelName));
+						if (KeyIndex < static_cast<int32>(Curve.Keys.size()))
+						{
+							Curve.Keys[KeyIndex].InterpMode = NewInterpMode;
+						}
+					}
+					bChanged = true;
+				}
+				if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+				{
+					bPropertyEditUndoCaptured = false;
+				}
+				ImGui::PopID();
+			}
+			ImGui::PopID();
+			ImGui::PopID();
+			return bChanged;
+		};
+
+		auto DrawDistributionRows = [&](const FProperty& PrimaryProperty, const FProperty* SecondaryProperty) -> bool
+		{
+			static const char* DistributionItems[] =
+			{
+				"Distribution Float Constant",
+				"Distribution Float Constant Curve",
+				"Distribution Float Uniform",
+				"Distribution Float Uniform Curve"
+			};
+
+			bool bChanged = false;
+			ImGui::PushID(PrimaryProperty.Name);
+			const FString Key = MakeParticleDistributionKey(Module, PrimaryProperty);
+			auto DistributionIt = ParticleDistributionKinds.find(Key);
+			if (DistributionIt == ParticleDistributionKinds.end())
+			{
+				DistributionIt = ParticleDistributionKinds.emplace(Key, 3).first;
+			}
+			int32& DistributionKind = DistributionIt->second;
+			DistributionKind = std::clamp(DistributionKind, 0, static_cast<int32>(IM_ARRAYSIZE(DistributionItems)) - 1);
+
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::AlignTextToFramePadding();
+			const bool bPropertyOpen = ImGui::TreeNodeEx(GetPropertyDisplayName(PrimaryProperty), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::TextUnformatted("");
+
+			if (bPropertyOpen)
+			{
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Indent(20.0f);
+				ImGui::AlignTextToFramePadding();
+				ImGui::TreeNodeEx("Distribution", ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+				ImGui::Unindent(20.0f);
+				ImGui::TableSetColumnIndex(1);
+				ImGui::SetNextItemWidth(std::min(250.0f, ImGui::GetContentRegionAvail().x));
+				const int32 PreviousDistributionKind = DistributionKind;
+				if (ParticleCombo("##DistributionKind", &DistributionKind, DistributionItems, IM_ARRAYSIZE(DistributionItems)))
+				{
+					const int32 NewDistributionKind = DistributionKind;
+					DistributionKind = PreviousDistributionKind;
+					CaptureUndoSnapshot("Edit Particle Distribution");
+					DistributionKind = NewDistributionKind;
+					bChanged = true;
+				}
+
+				const bool bUniform = DistributionKind == 2 || DistributionKind == 3;
+				const bool bCurve = DistributionKind == 1 || DistributionKind == 3;
+				if (bCurve)
+				{
+					if (bUniform && SecondaryProperty)
+					{
+						bChanged |= DrawCurvePointRows("Min Curve", PrimaryProperty);
+						bChanged |= DrawCurvePointRows("Max Curve", *SecondaryProperty);
+					}
+					else
+					{
+						bChanged |= DrawCurvePointRows(bUniform ? "Uniform Curve" : "Constant Curve", PrimaryProperty);
+					}
+				}
+				else if (bUniform)
+				{
+					bChanged |= DrawDistributionValueRow("Min", PrimaryProperty);
+					if (SecondaryProperty)
+					{
+						bChanged |= DrawDistributionValueRow("Max", *SecondaryProperty);
+					}
+					else
+					{
+						bChanged |= DrawDistributionStoredMaxRow(PrimaryProperty, Key);
+					}
+				}
+				else
+				{
+					bChanged |= DrawDistributionValueRow("Constant", PrimaryProperty);
+				}
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
+			return bChanged;
+		};
+
+		ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(4.0f, 3.0f));
+		if (ImGui::BeginTable(TableId, 2, ImGuiTableFlags_SizingStretchProp))
+		{
+			ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed, LabelWidth);
+			ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+			for (const FProperty* Property : Properties)
+			{
+				if (!IsVisibleProperty(Property))
+				{
+					continue;
+				}
+
+				if (IsParticleDistributionProperty(Module, *Property))
+				{
+					const FString PropertyName = Property->Name;
+					if (EndsWith(PropertyName, "Max"))
+					{
+						const FString MinName = PropertyName.substr(0, PropertyName.size() - 3) + "Min";
+						if (const FProperty* MinProperty = FindPropertyByName(MinName))
+						{
+							if (IsParticleDistributionProperty(Module, *MinProperty) && MinProperty->Type == Property->Type)
+							{
+								continue;
+							}
+						}
+					}
+
+					const FProperty* SecondaryProperty = nullptr;
+					if (EndsWith(PropertyName, "Min"))
+					{
+						const FString MaxName = PropertyName.substr(0, PropertyName.size() - 3) + "Max";
+						SecondaryProperty = FindPropertyByName(MaxName);
+						if (SecondaryProperty && (!IsParticleDistributionProperty(Module, *SecondaryProperty) || SecondaryProperty->Type != Property->Type))
+						{
+							SecondaryProperty = nullptr;
+						}
+					}
+
+					DrawDistributionRows(*Property, SecondaryProperty);
+					RenderedPropertyCount += SecondaryProperty ? 2 : 1;
+					continue;
+				}
+
+				ImGui::PushID(Property->Name);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, 30.0f);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted(GetPropertyDisplayName(*Property));
+				ImGui::TableSetColumnIndex(1);
+				ImGui::SetNextItemWidth(-1.0f);
+				DrawParticleModuleProperty(Module, *Property);
+				ImGui::PopID();
+				++RenderedPropertyCount;
+			}
+			ImGui::EndTable();
+		}
+		ImGui::PopStyleVar();
+		return RenderedPropertyCount;
+	};
+
+	int32 RenderedPropertyCount = 0;
+	if (Cast<UParticleModuleRequired>(Module))
+	{
+		if (ImGui::CollapsingHeader("Emitter", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredEmitterTable", "Emitter", false);
+		}
+		if (ImGui::CollapsingHeader("SubUV", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredSubUVTable", "SubUV", false);
+		}
+		if (ImGui::CollapsingHeader("Required", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			RenderedPropertyCount += DrawPropertyTable("##ParticleRequiredGeneralTable", nullptr, true);
+		}
+	}
+	else
+	{
+		RenderedPropertyCount = DrawPropertyTable("##ParticleModuleDetailsTable", nullptr, true, true);
+	}
+
+	if (RenderedPropertyCount == 0)
+	{
+		ImGui::TextDisabled("No editable properties.");
+	}
+
+	(void)OwnerEmitter;
+	ImGui::PopID();
+}
+
+bool FEditorParticleSystemWidget::DrawParticleObjectProperty(UObject* Object, const FProperty& Property)
+{
+	if (!Object || !Property.Name)
+	{
+		return false;
+	}
+
+	void* ValuePtr = Property.GetValuePtr(Object);
+	const FString Label = FString("##") + Property.Name;
+	const bool bChanged = DrawParticlePropertyValue(Property, ValuePtr, Object, Label.c_str());
+	if (ImGui::IsItemActivated() && !bPropertyEditUndoCaptured)
+	{
+		CaptureUndoSnapshot("Edit Particle System");
+		bPropertyEditUndoCaptured = true;
+	}
+	if (bChanged)
+	{
+		if (!bPropertyEditUndoCaptured)
+		{
+			CaptureUndoSnapshot("Edit Particle System");
+			bPropertyEditUndoCaptured = true;
+		}
+		Object->PostEditProperty(Property.Name);
+		if (ParticleSystemAsset)
+		{
+			ParticleSystemAsset->CacheEmitterModuleInfo();
+		}
+		bDirty = true;
+		RefreshPreviewComponent(false);
+	}
+	if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+	{
+		bPropertyEditUndoCaptured = false;
+	}
+	return bChanged;
+}
+
+bool FEditorParticleSystemWidget::DrawParticleModuleProperty(UParticleModule* Module, const FProperty& Property)
+{
+	if (!Module || !Property.Name)
+	{
+		return false;
+	}
+
+	void* ValuePtr = Property.GetValuePtr(Module);
+	const FString Label = FString("##") + Property.Name;
+	const bool bChanged = DrawParticlePropertyValue(Property, ValuePtr, Module, Label.c_str());
+	if (ImGui::IsItemActivated() && !bPropertyEditUndoCaptured)
+	{
+		CaptureUndoSnapshot("Edit Particle Module");
+		bPropertyEditUndoCaptured = true;
+	}
+	if (bChanged)
+	{
+		if (!bPropertyEditUndoCaptured)
+		{
+			CaptureUndoSnapshot("Edit Particle Module");
+			bPropertyEditUndoCaptured = true;
+		}
+		NotifyParticleModulePropertyChanged(Module, GetSelectedEmitter(), Property);
+		RefreshPreviewComponent(false);
+	}
+	if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+	{
+		bPropertyEditUndoCaptured = false;
+	}
+	return bChanged;
+}
+
+bool FEditorParticleSystemWidget::IsParticleDistributionProperty(UParticleModule* Module, const FProperty& Property) const
+{
+	if (!Module || !Property.IsEditable() || IsInternalParticleModuleProperty(Property))
+	{
+		return false;
+	}
+
+	if (Cast<UParticleModuleRequired>(Module))
+	{
+		return false;
+	}
+
+	if (Property.Type == EPropertyType::Float)
+	{
+		return true;
+	}
+
+	if (Property.Type != EPropertyType::Struct)
+	{
+		return false;
+	}
+
+	const char* Hint = Property.EditorHint;
+	if ((!Hint || Hint[0] == '\0') && Property.ScriptStruct)
+	{
+		Hint = Property.ScriptStruct->GetName();
+	}
+	return Hint && std::strcmp(Hint, "FVector") == 0;
+}
+
+FString FEditorParticleSystemWidget::MakeParticleDistributionKey(UParticleModule* Module, const FProperty& Property) const
+{
+	return MakeParticleModuleCurveKey(Module) + "::" + (Property.Name ? Property.Name : "");
+}
+
+FString FEditorParticleSystemWidget::MakeParticleDistributionCurveKey(UParticleModule* Module, const FProperty& Property, const char* ChannelName) const
+{
+	return MakeParticleDistributionKey(Module, Property) + "::Curve::" + (ChannelName ? ChannelName : "");
+}
+
+FString FEditorParticleSystemWidget::MakeParticleModuleCurveKey(UParticleModule* Module) const
+{
+	if (ParticleSystemAsset && Module)
+	{
+		for (int32 EmitterIndex = 0; EmitterIndex < static_cast<int32>(ParticleSystemAsset->Emitters.size()); ++EmitterIndex)
+		{
+			UParticleEmitter* Emitter = ParticleSystemAsset->Emitters[EmitterIndex];
+			UParticleLODLevel* LODLevel = GetEmitterLODLevel(Emitter);
+			if (!LODLevel)
+			{
+				continue;
+			}
+
+			if (LODLevel->GetRequiredModule() == Module)
+			{
+				return "Emitter:" + std::to_string(EmitterIndex) + "::Required";
+			}
+
+			const TArray<UParticleModule*>& Modules = LODLevel->GetModules();
+			for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(Modules.size()); ++ModuleIndex)
+			{
+				if (Modules[ModuleIndex] == Module)
+				{
+					return "Emitter:" + std::to_string(EmitterIndex) + "::Module:" + std::to_string(ModuleIndex);
+				}
+			}
+		}
+	}
+
+	const std::uintptr_t ModuleKey = reinterpret_cast<std::uintptr_t>(Module);
+	return "ModulePtr:" + std::to_string(ModuleKey);
+}
+
+FFloatCurve& FEditorParticleSystemWidget::GetOrCreateParticleDistributionCurve(UParticleModule* Module, const FProperty& Property, const char* ChannelName, float InitialValue)
+{
+	const FString Key = MakeParticleDistributionCurveKey(Module, Property, ChannelName);
+	FFloatCurve& Curve = ParticleDistributionCurves[Key];
+	if (Curve.Keys.empty())
+	{
+		FCurveKey StartKey;
+		StartKey.Time = 0.0f;
+		StartKey.Value = InitialValue;
+		StartKey.InterpMode = ECurveInterpMode::Cubic;
+		StartKey.TangentMode = ECurveTangentMode::Auto;
+		Curve.Keys.push_back(StartKey);
+
+		FCurveKey EndKey = StartKey;
+		EndKey.Time = 1.0f;
+		Curve.Keys.push_back(EndKey);
+	}
+	return Curve;
+}
+
+void FEditorParticleSystemWidget::OpenParticleModuleCurves(int32 EmitterIndex, int32 ModuleIndex)
+{
+	ActiveParticleCurveEmitterIndex = EmitterIndex;
+	ActiveParticleCurveModuleIndex = ModuleIndex;
+	ActiveParticleCurveModuleKey = MakeParticleModuleCurveKey(GetSelectedModule());
+	ActiveParticleCurveChannelKey.clear();
+	ActiveParticleCurveKeyIndex = -1;
+	DragParticleCurveChannelKey.clear();
+	DragParticleCurveKeyIndex = -1;
+	ParticleCurveViewModuleKey = ActiveParticleCurveModuleKey;
+	ParticleCurveViewMinTime = 0.0f;
+	ParticleCurveViewMaxTime = 1.0f;
+	bParticleCurveViewInitialized = false;
+	bParticleCurveViewUserAdjusted = false;
+}
+
+bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label)
+{
+	if (!ValuePtr)
+	{
+		return false;
+	}
+
+	switch (Property.Type)
+	{
+	case EPropertyType::Bool:
+		return ImGui::Checkbox(Label, static_cast<bool*>(ValuePtr));
+	case EPropertyType::Int:
+	{
+		int32* Value = static_cast<int32*>(ValuePtr);
+		if (Property.Name && std::strcmp(Property.Name, "LODMethod") == 0)
+		{
+			const char* Items[] = { "Automatic", "Direct Set" };
+			int32 EditedValue = std::clamp(*Value, 0, static_cast<int32>(IM_ARRAYSIZE(Items)) - 1);
+			if (ParticleCombo(Label, &EditedValue, Items, IM_ARRAYSIZE(Items)))
+			{
+				*Value = EditedValue;
+				return true;
+			}
+			return false;
+		}
+
+		const bool bChanged = ImGui::DragInt(Label, Value, Property.Speed);
+		if (bChanged)
+		{
+			if (Property.Min != 0.0f)
+			{
+				*Value = std::max(*Value, static_cast<int32>(Property.Min));
+			}
+			if (Property.Max != 0.0f)
+			{
+				*Value = std::min(*Value, static_cast<int32>(Property.Max));
+			}
+		}
+		return bChanged;
+	}
+	case EPropertyType::Float:
+	{
+		float* Value = static_cast<float*>(ValuePtr);
+		const bool bChanged = ImGui::DragFloat(Label, Value, Property.Speed);
+		if (bChanged)
+		{
+			if (Property.Min != 0.0f)
+			{
+				*Value = std::max(*Value, Property.Min);
+			}
+			if (Property.Max != 0.0f)
+			{
+				*Value = std::min(*Value, Property.Max);
+			}
+		}
+		return bChanged;
+	}
+	case EPropertyType::Struct:
+		return DrawParticleStructPropertyValue(Property, ValuePtr, NotifyTarget, Label);
+	case EPropertyType::String:
+	{
+		FString* Value = static_cast<FString*>(ValuePtr);
+		char Buffer[512];
+		strncpy_s(Buffer, sizeof(Buffer), Value->c_str(), _TRUNCATE);
+		if (ImGui::InputText(Label, Buffer, sizeof(Buffer)))
+		{
+			*Value = Buffer;
+			return true;
+		}
+		return false;
+	}
+	case EPropertyType::Name:
+	{
+		FName* Value = static_cast<FName*>(ValuePtr);
+		FString Current = Value->ToString();
+		const char* DisplayName = GetPropertyDisplayName(Property);
+		const bool bSubUVProperty =
+			(Property.Name && std::strcmp(Property.Name, "SubUVName") == 0) ||
+			(DisplayName && std::strcmp(DisplayName, "SubUV") == 0);
+		const TArray<FString>* Names = (bSubUVProperty && EditorEngine)
+			? &EditorEngine->GetAssetService().GetSubUVNames()
+			: nullptr;
+
+		if (Names && !Names->empty())
+		{
+			bool bChanged = false;
+			const char* Preview = Current.empty() || Current == FName::None.ToString() ? "<None>" : Current.c_str();
+			if (BeginParticleCombo(Label, Preview))
+			{
+				const bool bNoneSelected = Current.empty() || Current == FName::None.ToString();
+				if (ImGui::Selectable("<None>", bNoneSelected))
+				{
+					*Value = FName::None;
+					bChanged = true;
+				}
+				for (const FString& Name : *Names)
+				{
+					const bool bSelected = Current == Name;
+					if (ImGui::Selectable(Name.c_str(), bSelected))
+					{
+						*Value = FName(Name);
+						bChanged = true;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				EndParticleCombo();
+			}
+			return bChanged;
+		}
+
+		char Buffer[256];
+		strncpy_s(Buffer, sizeof(Buffer), Current.c_str(), _TRUNCATE);
+		if (ImGui::InputText(Label, Buffer, sizeof(Buffer)))
+		{
+			*Value = FName(Buffer);
+			return true;
+		}
+		return false;
+	}
+	case EPropertyType::Enum:
+	{
+		if (!Property.EnumMeta || !Property.EnumMeta->Values || Property.EnumMeta->Count == 0)
+		{
+			return false;
+		}
+
+		int64 CurrentValue = 0;
+		switch (Property.EnumMeta->Size)
+		{
+		case 1: CurrentValue = static_cast<int64>(*static_cast<uint8*>(ValuePtr)); break;
+		case 2: CurrentValue = static_cast<int64>(*static_cast<uint16*>(ValuePtr)); break;
+		case 4: CurrentValue = static_cast<int64>(*static_cast<int32*>(ValuePtr)); break;
+		case 8: CurrentValue = static_cast<int64>(*static_cast<int64*>(ValuePtr)); break;
+		default: break;
+		}
+
+		int32 CurrentIndex = 0;
+		for (uint32 Index = 0; Index < Property.EnumMeta->Count; ++Index)
+		{
+			if (Property.EnumMeta->Values[Index].Value == CurrentValue)
+			{
+				CurrentIndex = static_cast<int32>(Index);
+				break;
+			}
+		}
+
+		const auto ComboGetter = [](void* Data, int Index) -> const char*
+		{
+			const UEnum* EnumMeta = static_cast<const UEnum*>(Data);
+			if (!EnumMeta || Index < 0 || static_cast<uint32>(Index) >= EnumMeta->Count)
+			{
+				return "";
+			}
+			const FEnumValue& ValueMeta = EnumMeta->Values[Index];
+			return (ValueMeta.DisplayName && ValueMeta.DisplayName[0] != '\0') ? ValueMeta.DisplayName : ValueMeta.Name;
+		};
+
+		if (ParticleCombo(Label, &CurrentIndex, ComboGetter, const_cast<UEnum*>(Property.EnumMeta), static_cast<int>(Property.EnumMeta->Count)))
+		{
+			const int64 NewValue = Property.EnumMeta->Values[CurrentIndex].Value;
+			switch (Property.EnumMeta->Size)
+			{
+			case 1: *static_cast<uint8*>(ValuePtr) = static_cast<uint8>(NewValue); break;
+			case 2: *static_cast<uint16*>(ValuePtr) = static_cast<uint16>(NewValue); break;
+			case 4: *static_cast<int32*>(ValuePtr) = static_cast<int32>(NewValue); break;
+			case 8: *static_cast<int64*>(ValuePtr) = static_cast<int64>(NewValue); break;
+			default: break;
+			}
+			return true;
+		}
+		return false;
+	}
+	case EPropertyType::ObjectPtr:
+	{
+		if (!Property.ObjectPtrOps)
+		{
+			return false;
+		}
+
+		UObject* CurrentObject = Property.ObjectPtrOps->GetObject(ValuePtr);
+		const bool bMaterialAsset =
+			Property.ReferenceKind == EObjectReferenceKind::Asset &&
+			Property.ObjectClass &&
+			Property.ObjectClass->IsChildOf(UMaterialInterface::StaticClass());
+		if (bMaterialAsset && EditorEngine)
+		{
+			FEditorAssetService& AssetService = EditorEngine->GetAssetService();
+			const TArray<FString>& MaterialNames = AssetService.GetMaterialInterfaceNames();
+			UMaterialInterface* CurrentMaterial = Cast<UMaterialInterface>(CurrentObject);
+			const FString CurrentIdentifier = CurrentMaterial
+				? (CurrentMaterial->GetFilePath().empty() ? CurrentMaterial->GetName() : FPaths::Normalize(CurrentMaterial->GetFilePath()))
+				: FString();
+			const FString CurrentLabel = CurrentIdentifier.empty() ? FString("None") : CurrentIdentifier;
+			bool bChanged = false;
+
+			if (BeginParticleCombo(Label, CurrentLabel.c_str()))
+			{
+				if (ImGui::Selectable("None", CurrentMaterial == nullptr))
+				{
+					Property.ObjectPtrOps->SetObject(ValuePtr, nullptr);
+					bChanged = true;
+				}
+
+				for (int32 MaterialIndex = 0; MaterialIndex < static_cast<int32>(MaterialNames.size()); ++MaterialIndex)
+				{
+					ImGui::PushID(MaterialIndex);
+					const FString& MaterialLabel = MaterialNames[MaterialIndex].empty()
+						? FString("<Unnamed Material>")
+						: MaterialNames[MaterialIndex];
+					const bool bSelected = CurrentIdentifier == MaterialLabel;
+					if (ImGui::Selectable(MaterialLabel.c_str(), bSelected))
+					{
+						if (UMaterialInterface* Candidate = AssetService.ResolveMaterialInterfaceByIndex(MaterialIndex))
+						{
+							Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+							bChanged = true;
+						}
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+					ImGui::PopID();
+				}
+				EndParticleCombo();
+			}
+			return bChanged;
+		}
+
+		ImGui::TextDisabled("%s <unsupported object>", Label);
+		return false;
+	}
+	case EPropertyType::Array:
+	{
+		const int32 ElementCount = Property.ArrayOps ? Property.ArrayOps->Num(ValuePtr) : 0;
+		ImGui::Text("%d Array elements", ElementCount);
+		return false;
+	}
+	default:
+		ImGui::TextDisabled("%s <unsupported>", Label);
+		break;
+	}
+
+	return false;
+}
+
+bool FEditorParticleSystemWidget::DrawParticleStructPropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label)
+{
+	if (!ValuePtr)
+	{
+		return false;
+	}
+
+	const char* Hint = Property.EditorHint;
+	if ((!Hint || Hint[0] == '\0') && Property.ScriptStruct)
+	{
+		Hint = Property.ScriptStruct->GetName();
+	}
+
+	if (Hint && std::strcmp(Hint, "FVector") == 0)
+	{
+		return ImGui::DragFloat3(Label, static_cast<float*>(ValuePtr), Property.Speed);
+	}
+	if (Hint && std::strcmp(Hint, "FVector4") == 0)
+	{
+		return ImGui::DragFloat4(Label, static_cast<float*>(ValuePtr), Property.Speed);
+	}
+	if (Hint && std::strcmp(Hint, "FColor") == 0)
+	{
+		return ImGui::ColorEdit4(Label, &static_cast<FColor*>(ValuePtr)->R);
+	}
+
+	if (!Property.ScriptStruct)
+	{
+		ImGui::TextDisabled("%s <unregistered struct>", Label);
+		return false;
+	}
+
+	bool bChanged = false;
+	if (ImGui::TreeNodeEx(Label, ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		TArray<const FProperty*> ChildProperties;
+		Property.ScriptStruct->GetAllProperties(ChildProperties);
+		for (const FProperty* Child : ChildProperties)
+		{
+			if (!Child || !Child->Name)
+			{
+				continue;
+			}
+
+			void* ChildPtr = reinterpret_cast<uint8*>(ValuePtr) + Child->Offset;
+			const FString ChildLabel = MakeParticlePropertyLabel(*Child);
+			if (DrawParticlePropertyValue(*Child, ChildPtr, NotifyTarget, ChildLabel.c_str()))
+			{
+				bChanged = true;
+			}
+		}
+		ImGui::TreePop();
+	}
+	return bChanged;
+}
+
+void FEditorParticleSystemWidget::NotifyParticleModulePropertyChanged(UParticleModule* Module, UParticleEmitter* OwnerEmitter, const FProperty& Property)
+{
+	if (Module && Property.Name)
+	{
+		Module->PostEditProperty(Property.Name);
+	}
+	if (OwnerEmitter)
+	{
+		OwnerEmitter->CacheEmitterModuleInfo();
+	}
+	if (ParticleSystemAsset)
+	{
+		ParticleSystemAsset->CacheEmitterModuleInfo();
+	}
+	bDirty = true;
+}
+
+void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
+{
+	DrawPanelHeader("Curve Editor");
+
+	const ImVec2 BodySize(Size.x, std::max(1.0f, Size.y - PanelHeaderHeight));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 10.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 7.0f));
+	ImGui::BeginChild(
+		"##ParticleCurveEditorBody",
+		BodySize,
+		false,
+		ImGuiWindowFlags_AlwaysVerticalScrollbar);
+	ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 8.0f, ImGui::GetCursorPosY() + 8.0f));
+	ImGui::BeginGroup();
+
+	UParticleEmitter* ActiveEmitter = nullptr;
+	UParticleModule* ActiveModule = nullptr;
+	if (ParticleSystemAsset &&
+		ActiveParticleCurveEmitterIndex >= 0 &&
+		ActiveParticleCurveEmitterIndex < static_cast<int32>(ParticleSystemAsset->Emitters.size()))
+	{
+		ActiveEmitter = ParticleSystemAsset->Emitters[ActiveParticleCurveEmitterIndex];
+		if (UParticleLODLevel* LODLevel = GetEmitterLODLevel(ActiveEmitter))
+		{
+			const TArray<UParticleModule*>& Modules = LODLevel->GetModules();
+			if (ActiveParticleCurveModuleIndex >= 0 && ActiveParticleCurveModuleIndex < static_cast<int32>(Modules.size()))
+			{
+				ActiveModule = Modules[ActiveParticleCurveModuleIndex];
+			}
+		}
+	}
+
+	struct FParticleCurveChannelView
+	{
+		FString Label;
+		FString Key;
+		FFloatCurve* Curve = nullptr;
+		UParticleModule* Module = nullptr;
+		const FProperty* Property = nullptr;
+		FString DistributionKey;
+		FString ChannelName;
+		int32 ComponentIndex = 0;
+		bool bCurveDistribution = false;
+		bool bStoredMaxValue = false;
+		float ConstantValue = 0.0f;
+		ImU32 Color = 0;
+	};
+
+	TArray<FParticleCurveChannelView> Channels;
+	if (ActiveModule && ActiveParticleCurveModuleKey == MakeParticleModuleCurveKey(ActiveModule))
+	{
+		TArray<const FProperty*> Properties;
+		if (ActiveModule->GetClass())
+		{
+			ActiveModule->GetClass()->GetAllProperties(Properties);
+		}
+
+		const ImU32 MinChannelColors[] =
+		{
+			ImGui::GetColorU32(ImVec4(1.00f, 0.18f, 0.58f, 1.0f)),
+			ImGui::GetColorU32(ImVec4(0.35f, 1.00f, 0.25f, 1.0f)),
+			ImGui::GetColorU32(ImVec4(0.25f, 0.78f, 1.00f, 1.0f))
+		};
+		const ImU32 MaxChannelColors[] =
+		{
+			ImGui::GetColorU32(ImVec4(1.00f, 0.05f, 0.08f, 1.0f)),
+			ImGui::GetColorU32(ImVec4(0.00f, 0.78f, 0.18f, 1.0f)),
+			ImGui::GetColorU32(ImVec4(0.10f, 0.28f, 1.00f, 1.0f))
+		};
+
+		auto EndsWithLocal = [](const FString& Text, const char* Suffix) -> bool
+		{
+			const size_t SuffixLength = std::strlen(Suffix);
+			return Text.size() >= SuffixLength && Text.compare(Text.size() - SuffixLength, SuffixLength, Suffix) == 0;
+		};
+		auto FindPropertyByName = [&](const FString& PropertyName) -> const FProperty*
+		{
+			for (const FProperty* Candidate : Properties)
+			{
+				if (Candidate && Candidate->Name && PropertyName == Candidate->Name)
+				{
+					return Candidate;
+				}
+			}
+			return nullptr;
+		};
+		auto IsVectorProperty = [](const FProperty& Property) -> bool
+		{
+			const char* Hint = Property.EditorHint;
+			if ((!Hint || Hint[0] == '\0') && Property.ScriptStruct)
+			{
+				Hint = Property.ScriptStruct->GetName();
+			}
+			return Property.Type == EPropertyType::Struct && Hint && std::strcmp(Hint, "FVector") == 0;
+		};
+		auto GetPropertyChannelValue = [&](const FProperty& Property, const char* ChannelName) -> float
+		{
+			void* ValuePtr = Property.GetValuePtr(ActiveModule);
+			if (!ValuePtr)
+			{
+				return 0.0f;
+			}
+			if (Property.Type == EPropertyType::Float)
+			{
+				return *static_cast<float*>(ValuePtr);
+			}
+			if (IsVectorProperty(Property))
+			{
+				const FVector* Value = static_cast<FVector*>(ValuePtr);
+				if (std::strcmp(ChannelName, "Y") == 0) { return Value->Y; }
+				if (std::strcmp(ChannelName, "Z") == 0) { return Value->Z; }
+				return Value->X;
+			}
+			return 0.0f;
+		};
+		auto GetStoredMaxChannelValue = [&](const FProperty& Property, const FString& DistributionKey, const char* ChannelName) -> float
+		{
+			if (Property.Type == EPropertyType::Float)
+			{
+				auto It = ParticleDistributionFloatMaxValues.find(DistributionKey);
+				if (It == ParticleDistributionFloatMaxValues.end())
+				{
+					It = ParticleDistributionFloatMaxValues.emplace(DistributionKey, GetPropertyChannelValue(Property, ChannelName)).first;
+				}
+				return It->second;
+			}
+			if (IsVectorProperty(Property))
+			{
+				auto It = ParticleDistributionVectorMaxValues.find(DistributionKey);
+				if (It == ParticleDistributionVectorMaxValues.end())
+				{
+					FVector InitialValue = FVector::ZeroVector;
+					if (void* ValuePtr = Property.GetValuePtr(ActiveModule))
+					{
+						InitialValue = *static_cast<FVector*>(ValuePtr);
+					}
+					It = ParticleDistributionVectorMaxValues.emplace(DistributionKey, InitialValue).first;
+				}
+				if (std::strcmp(ChannelName, "Y") == 0) { return It->second.Y; }
+				if (std::strcmp(ChannelName, "Z") == 0) { return It->second.Z; }
+				return It->second.X;
+			}
+			return 0.0f;
+		};
+		auto AddChannels = [&](const FProperty& Property, const FString& LabelSuffix, bool bCurveDistribution, bool bStoredMaxValue, const FString& StorageKey)
+		{
+			const bool bVector = IsVectorProperty(Property);
+			const char* ChannelNames[] = { "X", "Y", "Z" };
+			const int32 ChannelCount = bVector ? 3 : 1;
+			for (int32 ChannelIndex = 0; ChannelIndex < ChannelCount; ++ChannelIndex)
+			{
+				const char* ChannelName = bVector ? ChannelNames[ChannelIndex] : "Value";
+				const float InitialValue = bStoredMaxValue
+					? GetStoredMaxChannelValue(Property, StorageKey, ChannelName)
+					: GetPropertyChannelValue(Property, ChannelName);
+				FParticleCurveChannelView View;
+				View.Label = FString(GetPropertyDisplayName(Property));
+				if (!LabelSuffix.empty())
+				{
+					View.Label += " " + LabelSuffix;
+				}
+				if (bVector)
+				{
+					View.Label += " ";
+					View.Label += ChannelName;
+				}
+				View.Module = ActiveModule;
+				View.Property = &Property;
+				View.DistributionKey = StorageKey;
+				View.ChannelName = ChannelName;
+				View.ComponentIndex = ChannelIndex;
+				View.bCurveDistribution = bCurveDistribution;
+				View.bStoredMaxValue = bStoredMaxValue;
+				View.ConstantValue = InitialValue;
+				const bool bMaxChannel = bStoredMaxValue || LabelSuffix == "Max";
+				View.Color = bMaxChannel
+					? MaxChannelColors[std::clamp(ChannelIndex, 0, static_cast<int32>(IM_ARRAYSIZE(MaxChannelColors)) - 1)]
+					: MinChannelColors[std::clamp(ChannelIndex, 0, static_cast<int32>(IM_ARRAYSIZE(MinChannelColors)) - 1)];
+				if (bCurveDistribution)
+				{
+					View.Key = MakeParticleDistributionCurveKey(ActiveModule, Property, ChannelName);
+					View.Curve = &GetOrCreateParticleDistributionCurve(ActiveModule, Property, ChannelName, InitialValue);
+				}
+				else
+				{
+					View.Key = StorageKey + "::Constant::" + (bStoredMaxValue ? "Max::" : "Value::") + ChannelName;
+				}
+				Channels.push_back(View);
+			}
+		};
+
+		for (const FProperty* Property : Properties)
+		{
+			if (!Property || !Property->Name || !IsParticleDistributionProperty(ActiveModule, *Property))
+			{
+				continue;
+			}
+
+			const FString PropertyName = Property->Name;
+			if (EndsWithLocal(PropertyName, "Max"))
+			{
+				const FString MinName = PropertyName.substr(0, PropertyName.size() - 3) + "Min";
+				if (const FProperty* MinProperty = FindPropertyByName(MinName))
+				{
+					if (IsParticleDistributionProperty(ActiveModule, *MinProperty) && MinProperty->Type == Property->Type)
+					{
+						continue;
+					}
+				}
+			}
+
+			const FProperty* SecondaryProperty = nullptr;
+			if (EndsWithLocal(PropertyName, "Min"))
+			{
+				const FString MaxName = PropertyName.substr(0, PropertyName.size() - 3) + "Max";
+				SecondaryProperty = FindPropertyByName(MaxName);
+				if (SecondaryProperty && (!IsParticleDistributionProperty(ActiveModule, *SecondaryProperty) || SecondaryProperty->Type != Property->Type))
+				{
+					SecondaryProperty = nullptr;
+				}
+			}
+
+			const FString DistributionKey = MakeParticleDistributionKey(ActiveModule, *Property);
+			auto DistributionIt = ParticleDistributionKinds.find(DistributionKey);
+			if (DistributionIt == ParticleDistributionKinds.end())
+			{
+				DistributionIt = ParticleDistributionKinds.emplace(DistributionKey, 3).first;
+			}
+			DistributionIt->second = std::clamp(DistributionIt->second, 0, 3);
+			const int32 DistributionKind = DistributionIt->second;
+			if (DistributionKind == 0)
+			{
+				AddChannels(*Property, "", false, false, DistributionKey);
+			}
+			else if (DistributionKind == 1)
+			{
+				AddChannels(*Property, "", true, false, DistributionKey);
+			}
+			else if (DistributionKind == 2)
+			{
+				AddChannels(*Property, SecondaryProperty ? "Min" : "Min", false, false, DistributionKey);
+				if (SecondaryProperty)
+				{
+					AddChannels(*SecondaryProperty, "Max", false, false, DistributionKey);
+				}
+				else
+				{
+					AddChannels(*Property, "Max", false, true, DistributionKey);
+				}
+			}
+			else
+			{
+				AddChannels(*Property, SecondaryProperty ? "Min" : "", true, false, DistributionKey);
+				if (SecondaryProperty)
+				{
+					AddChannels(*SecondaryProperty, "Max", true, false, DistributionKey);
+				}
+			}
+		}
+	}
+
+	const FString ActiveModuleLabel = ActiveModule ? GetModuleDisplayName(ActiveModule, false) : FString("No Module Selected");
+	ImGui::TextUnformatted(ActiveModuleLabel.c_str());
+	ImGui::Separator();
+
+	const float ListWidth = std::clamp(BodySize.x * 0.24f, 150.0f, 220.0f);
+	const ImVec2 CanvasSize(std::max(1.0f, BodySize.x - ListWidth - 24.0f), std::max(180.0f, BodySize.y - 68.0f));
+	ImDrawList* DrawList = ImGui::GetWindowDrawList();
+
+	ImGui::BeginChild("##ParticleCurveChannelList", ImVec2(ListWidth, CanvasSize.y), true);
+	if (!ActiveModule)
+	{
+		ImGui::TextDisabled("Click a module curve icon.");
+	}
+	else if (Channels.empty())
+	{
+		ImGui::TextDisabled("No distribution values.");
+	}
+	for (FParticleCurveChannelView& Channel : Channels)
+	{
+		ImGui::PushID(Channel.Key.c_str());
+		const bool bSelected = ActiveParticleCurveChannelKey == Channel.Key;
+		if (ImGui::Selectable(Channel.Label.c_str(), bSelected, 0, ImVec2(0.0f, 22.0f)))
+		{
+			ActiveParticleCurveChannelKey = Channel.Key;
+			ActiveParticleCurveKeyIndex = -1;
+		}
+		ImGui::SameLine(ListWidth - 18.0f);
+		ImGui::ColorButton("##Color", ImGui::ColorConvertU32ToFloat4(Channel.Color), ImGuiColorEditFlags_NoTooltip, ImVec2(10.0f, 10.0f));
+		ImGui::PopID();
+	}
+	if (ActiveParticleCurveChannelKey.empty() && !Channels.empty())
+	{
+		ActiveParticleCurveChannelKey = Channels.front().Key;
+		ActiveParticleCurveKeyIndex = -1;
+	}
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+	ImGui::BeginChild("##ParticleCurveCanvas", CanvasSize, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	const ImVec2 CanvasMin = ImGui::GetCursorScreenPos();
+	const ImVec2 CanvasMax(CanvasMin.x + CanvasSize.x, CanvasMin.y + CanvasSize.y);
+	ImGui::InvisibleButton("##ParticleCurveCanvasHit", CanvasSize, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+	const bool bCanvasHovered = ImGui::IsItemHovered();
+
+	float DesiredMinValue = 0.0f;
+	float DesiredMaxValue = 1.0f;
+	bool bHasValue = false;
+	for (const FParticleCurveChannelView& Channel : Channels)
+	{
+		if (!Channel.bCurveDistribution)
+		{
+			DesiredMinValue = bHasValue ? std::min(DesiredMinValue, Channel.ConstantValue) : Channel.ConstantValue;
+			DesiredMaxValue = bHasValue ? std::max(DesiredMaxValue, Channel.ConstantValue) : Channel.ConstantValue;
+			bHasValue = true;
+			continue;
+		}
+		if (!Channel.Curve)
+		{
+			continue;
+		}
+		for (const FCurveKey& Key : Channel.Curve->Keys)
+		{
+			DesiredMinValue = bHasValue ? std::min(DesiredMinValue, Key.Value) : Key.Value;
+			DesiredMaxValue = bHasValue ? std::max(DesiredMaxValue, Key.Value) : Key.Value;
+			bHasValue = true;
+		}
+	}
+	if (std::fabs(DesiredMaxValue - DesiredMinValue) < 0.001f)
+	{
+		DesiredMinValue -= 1.0f;
+		DesiredMaxValue += 1.0f;
+	}
+	const float ValuePadding = (DesiredMaxValue - DesiredMinValue) * 0.12f;
+	DesiredMinValue -= ValuePadding;
+	DesiredMaxValue += ValuePadding;
+
+	if (!bParticleCurveViewInitialized || ParticleCurveViewModuleKey != ActiveParticleCurveModuleKey)
+	{
+		ParticleCurveViewModuleKey = ActiveParticleCurveModuleKey;
+		ParticleCurveViewMinValue = DesiredMinValue;
+		ParticleCurveViewMaxValue = DesiredMaxValue;
+		ParticleCurveViewMinTime = 0.0f;
+		ParticleCurveViewMaxTime = 1.0f;
+		bParticleCurveViewInitialized = true;
+	}
+	else if (!bParticleCurveViewUserAdjusted)
+	{
+		ParticleCurveViewMinValue = std::min(ParticleCurveViewMinValue, DesiredMinValue);
+		ParticleCurveViewMaxValue = std::max(ParticleCurveViewMaxValue, DesiredMaxValue);
+	}
+	if (std::fabs(ParticleCurveViewMaxValue - ParticleCurveViewMinValue) < 0.001f)
+	{
+		ParticleCurveViewMinValue -= 1.0f;
+		ParticleCurveViewMaxValue += 1.0f;
+	}
+	if (std::fabs(ParticleCurveViewMaxTime - ParticleCurveViewMinTime) < 0.001f)
+	{
+		ParticleCurveViewMinTime = 0.0f;
+		ParticleCurveViewMaxTime = 1.0f;
+	}
+	ParticleCurveViewMinTime = std::clamp(ParticleCurveViewMinTime, 0.0f, 1.0f);
+	ParticleCurveViewMaxTime = std::clamp(ParticleCurveViewMaxTime, 0.0f, 1.0f);
+	if (ParticleCurveViewMaxTime <= ParticleCurveViewMinTime)
+	{
+		ParticleCurveViewMinTime = 0.0f;
+		ParticleCurveViewMaxTime = 1.0f;
+	}
+
+	const float MinTime = ParticleCurveViewMinTime;
+	const float MaxTime = ParticleCurveViewMaxTime;
+	const float MinValue = ParticleCurveViewMinValue;
+	const float MaxValue = ParticleCurveViewMaxValue;
+
+	auto ToScreen = [&](float Time, float Value) -> ImVec2
+	{
+		const float X = CanvasMin.x + ((Time - MinTime) / (MaxTime - MinTime)) * CanvasSize.x;
+		const float Alpha = (Value - MinValue) / (MaxValue - MinValue);
+		const float Y = CanvasMax.y - Alpha * CanvasSize.y;
+		return ImVec2(X, Y);
+	};
+	auto FromScreen = [&](const ImVec2& Screen) -> FCurveKey
+	{
+		FCurveKey Key;
+		const float TimeAlpha = (Screen.x - CanvasMin.x) / CanvasSize.x;
+		Key.Time = std::clamp(MinTime + TimeAlpha * (MaxTime - MinTime), 0.0f, 1.0f);
+		const float Alpha = std::clamp((CanvasMax.y - Screen.y) / CanvasSize.y, 0.0f, 1.0f);
+		Key.Value = MinValue + Alpha * (MaxValue - MinValue);
+		Key.InterpMode = ECurveInterpMode::Cubic;
+		Key.TangentMode = ECurveTangentMode::Auto;
+		return Key;
+	};
+	auto EvaluateParticleCurve = [](const FFloatCurve& Curve, float Time) -> float
+	{
+		if (Curve.Keys.empty())
+		{
+			return 0.0f;
+		}
+
+		TArray<FCurveKey> SortedKeys = Curve.Keys;
+		std::sort(
+			SortedKeys.begin(),
+			SortedKeys.end(),
+			[](const FCurveKey& A, const FCurveKey& B)
+			{
+				return A.Time < B.Time;
+			});
+
+		if (Time <= SortedKeys.front().Time)
+		{
+			return SortedKeys.front().Value;
+		}
+		if (Time >= SortedKeys.back().Time)
+		{
+			return SortedKeys.back().Value;
+		}
+
+		for (int32 KeyIndex = 0; KeyIndex + 1 < static_cast<int32>(SortedKeys.size()); ++KeyIndex)
+		{
+			const FCurveKey& StartKey = SortedKeys[KeyIndex];
+			const FCurveKey& EndKey = SortedKeys[KeyIndex + 1];
+			if (Time < StartKey.Time || Time >= EndKey.Time)
+			{
+				continue;
+			}
+
+			const float SegmentLength = EndKey.Time - StartKey.Time;
+			if (std::fabs(SegmentLength) < 0.0001f)
+			{
+				return StartKey.Value;
+			}
+
+			const float Alpha = std::clamp((Time - StartKey.Time) / SegmentLength, 0.0f, 1.0f);
+			if (StartKey.InterpMode == ECurveInterpMode::Constant)
+			{
+				return StartKey.Value;
+			}
+			if (StartKey.InterpMode == ECurveInterpMode::Linear)
+			{
+				return StartKey.Value + (EndKey.Value - StartKey.Value) * Alpha;
+			}
+
+			const float SmoothAlpha = Alpha * Alpha * (3.0f - 2.0f * Alpha);
+			return StartKey.Value + (EndKey.Value - StartKey.Value) * SmoothAlpha;
+		}
+
+		return SortedKeys.back().Value;
+	};
+	auto FindCurveChannelByKey = [&](const FString& Key) -> FParticleCurveChannelView*
+	{
+		for (FParticleCurveChannelView& Channel : Channels)
+		{
+			if (Channel.Key == Key)
+			{
+				return &Channel;
+			}
+		}
+		return nullptr;
+	};
+	auto ForEachSiblingCurveChannel = [&](const FParticleCurveChannelView& SourceChannel, auto&& Callback)
+	{
+		for (FParticleCurveChannelView& Channel : Channels)
+		{
+			if (!Channel.bCurveDistribution || !Channel.Curve || Channel.Module != SourceChannel.Module || Channel.Property != SourceChannel.Property)
+			{
+				continue;
+			}
+			Callback(Channel);
+		}
+	};
+	auto ClampParticleCurveTimeView = [&]()
+	{
+		constexpr float TimeViewMin = 0.0f;
+		constexpr float TimeViewMax = 1.0f;
+		float TimeRange = ParticleCurveViewMaxTime - ParticleCurveViewMinTime;
+		TimeRange = std::clamp(TimeRange, 0.02f, TimeViewMax - TimeViewMin);
+
+		if (ParticleCurveViewMinTime < TimeViewMin)
+		{
+			ParticleCurveViewMinTime = TimeViewMin;
+			ParticleCurveViewMaxTime = ParticleCurveViewMinTime + TimeRange;
+		}
+		if (ParticleCurveViewMaxTime > TimeViewMax)
+		{
+			ParticleCurveViewMaxTime = TimeViewMax;
+			ParticleCurveViewMinTime = ParticleCurveViewMaxTime - TimeRange;
+		}
+		ParticleCurveViewMinTime = std::clamp(ParticleCurveViewMinTime, TimeViewMin, TimeViewMax - TimeRange);
+		ParticleCurveViewMaxTime = ParticleCurveViewMinTime + TimeRange;
+	};
+
+	const ImVec2 MousePos = ImGui::GetIO().MousePos;
+	const bool bMouseInCanvas =
+		MousePos.x >= CanvasMin.x && MousePos.x <= CanvasMax.x &&
+		MousePos.y >= CanvasMin.y && MousePos.y <= CanvasMax.y;
+	if (bCanvasHovered)
+	{
+		const float Wheel = ImGui::GetIO().MouseWheel;
+		if (std::fabs(Wheel) > 0.001f)
+		{
+			const float TimeAlpha = std::clamp((MousePos.x - CanvasMin.x) / CanvasSize.x, 0.0f, 1.0f);
+			const float ValueAlpha = std::clamp((CanvasMax.y - MousePos.y) / CanvasSize.y, 0.0f, 1.0f);
+			const float TimeCenter = MinTime + TimeAlpha * (MaxTime - MinTime);
+			const float ValueCenter = MinValue + ValueAlpha * (MaxValue - MinValue);
+			const float ZoomScale = std::pow(0.88f, Wheel);
+			const float NewTimeRange = std::clamp((MaxTime - MinTime) * ZoomScale, 0.02f, 1.0f);
+			const float NewValueRange = std::max(0.02f, (MaxValue - MinValue) * ZoomScale);
+			ParticleCurveViewMinTime = TimeCenter - TimeAlpha * NewTimeRange;
+			ParticleCurveViewMaxTime = ParticleCurveViewMinTime + NewTimeRange;
+			ClampParticleCurveTimeView();
+			ParticleCurveViewMinValue = ValueCenter - ValueAlpha * NewValueRange;
+			ParticleCurveViewMaxValue = ParticleCurveViewMinValue + NewValueRange;
+			bParticleCurveViewUserAdjusted = true;
+		}
+	}
+	if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Right))
+	{
+		const ImVec2 Delta = ImGui::GetIO().MouseDelta;
+		const float TimeDelta = -Delta.x / CanvasSize.x * (MaxTime - MinTime);
+		const float ValueDelta = Delta.y / CanvasSize.y * (MaxValue - MinValue);
+		ParticleCurveViewMinTime += TimeDelta;
+		ParticleCurveViewMaxTime += TimeDelta;
+		ClampParticleCurveTimeView();
+		ParticleCurveViewMinValue += ValueDelta;
+		ParticleCurveViewMaxValue += ValueDelta;
+		bParticleCurveViewUserAdjusted = true;
+	}
+
+	DrawList->AddRectFilled(CanvasMin, CanvasMax, ImGui::GetColorU32(ImVec4(0.20f, 0.20f, 0.20f, 1.0f)));
+	DrawList->AddRect(CanvasMin, CanvasMax, ImGui::GetColorU32(ImVec4(0.48f, 0.48f, 0.48f, 1.0f)));
+	for (int32 GridIndex = 0; GridIndex <= 10; ++GridIndex)
+	{
+		const float T = static_cast<float>(GridIndex) / 10.0f;
+		const float TimeValue = MinTime + T * (MaxTime - MinTime);
+		const float X = CanvasMin.x + T * CanvasSize.x;
+		DrawList->AddLine(ImVec2(X, CanvasMin.y), ImVec2(X, CanvasMax.y), ImGui::GetColorU32(ImVec4(0.55f, 0.55f, 0.55f, 0.75f)));
+		char Label[32];
+		std::snprintf(Label, sizeof(Label), "%.2f", TimeValue);
+		DrawList->AddText(ImVec2(X + 3.0f, CanvasMax.y - 16.0f), ImGui::GetColorU32(ImVec4(0.85f, 0.85f, 0.85f, 1.0f)), Label);
+	}
+	for (int32 GridIndex = 0; GridIndex <= 4; ++GridIndex)
+	{
+		const float T = static_cast<float>(GridIndex) / 4.0f;
+		const float Y = CanvasMin.y + T * CanvasSize.y;
+		DrawList->AddLine(ImVec2(CanvasMin.x, Y), ImVec2(CanvasMax.x, Y), ImGui::GetColorU32(ImVec4(0.55f, 0.55f, 0.55f, 0.75f)));
+		const float Value = MaxValue - T * (MaxValue - MinValue);
+		char Label[32];
+		std::snprintf(Label, sizeof(Label), "%.2f", Value);
+		DrawList->AddText(ImVec2(CanvasMin.x + 4.0f, Y + 2.0f), ImGui::GetColorU32(ImVec4(0.85f, 0.85f, 0.85f, 1.0f)), Label);
+	}
+
+	FString HitChannelKey;
+	int32 HitKeyIndex = -1;
+	FString HitConstantChannelKey;
+	float BestHitDistanceSq = 64.0f;
+	float BestConstantDistance = 8.0f;
+	for (const FParticleCurveChannelView& Channel : Channels)
+	{
+		if (!Channel.bCurveDistribution)
+		{
+			const float Y = ToScreen(0.0f, Channel.ConstantValue).y;
+			const float Distance = std::fabs(MousePos.y - Y);
+			if (Distance < BestConstantDistance && MousePos.x >= CanvasMin.x && MousePos.x <= CanvasMax.x)
+			{
+				BestConstantDistance = Distance;
+				HitConstantChannelKey = Channel.Key;
+			}
+			continue;
+		}
+		if (!Channel.Curve)
+		{
+			continue;
+		}
+		for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(Channel.Curve->Keys.size()); ++KeyIndex)
+		{
+			const ImVec2 P = ToScreen(Channel.Curve->Keys[KeyIndex].Time, Channel.Curve->Keys[KeyIndex].Value);
+			const float Dx = MousePos.x - P.x;
+			const float Dy = MousePos.y - P.y;
+			const float DistSq = Dx * Dx + Dy * Dy;
+			if (DistSq < BestHitDistanceSq)
+			{
+				BestHitDistanceSq = DistSq;
+				HitChannelKey = Channel.Key;
+				HitKeyIndex = KeyIndex;
+			}
+		}
+	}
+
+	if (bCanvasHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && HitKeyIndex >= 0)
+	{
+		ActiveParticleCurveChannelKey = HitChannelKey;
+		ActiveParticleCurveKeyIndex = HitKeyIndex;
+		DragParticleCurveChannelKey = HitChannelKey;
+		DragParticleCurveKeyIndex = HitKeyIndex;
+	}
+	else if (bCanvasHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !HitConstantChannelKey.empty())
+	{
+		ActiveParticleCurveChannelKey = HitConstantChannelKey;
+		ActiveParticleCurveKeyIndex = -1;
+		DragParticleCurveChannelKey = HitConstantChannelKey;
+		DragParticleCurveKeyIndex = -2;
+	}
+
+	if (bCanvasHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && HitKeyIndex < 0)
+	{
+		if (ActiveParticleCurveChannelKey.empty() && !Channels.empty())
+		{
+			ActiveParticleCurveChannelKey = Channels.front().Key;
+		}
+		FParticleCurveChannelView* ActiveChannel = FindCurveChannelByKey(ActiveParticleCurveChannelKey);
+		if (ActiveChannel && ActiveChannel->bCurveDistribution && ActiveChannel->Curve)
+		{
+			CaptureUndoSnapshot("Add Particle Curve Key");
+			FCurveKey Key = FromScreen(ImGui::GetIO().MousePos);
+			ForEachSiblingCurveChannel(
+				*ActiveChannel,
+				[&](FParticleCurveChannelView& SiblingChannel)
+				{
+					FCurveKey SiblingKey = Key;
+					if (SiblingChannel.Key != ActiveChannel->Key)
+					{
+						SiblingKey.Value = SiblingChannel.Curve ? EvaluateParticleCurve(*SiblingChannel.Curve, Key.Time) : 0.0f;
+					}
+					SiblingChannel.Curve->Keys.push_back(SiblingKey);
+					SiblingChannel.Curve->SortKeys();
+				});
+			ActiveParticleCurveKeyIndex = -1;
+			for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(ActiveChannel->Curve->Keys.size()); ++KeyIndex)
+			{
+				const FCurveKey& SortedKey = ActiveChannel->Curve->Keys[KeyIndex];
+				if (std::fabs(SortedKey.Time - Key.Time) < 0.0001f && std::fabs(SortedKey.Value - Key.Value) < 0.0001f)
+				{
+					ActiveParticleCurveKeyIndex = KeyIndex;
+					break;
+				}
+			}
+			DragParticleCurveChannelKey = ActiveParticleCurveChannelKey;
+			DragParticleCurveKeyIndex = ActiveParticleCurveKeyIndex;
+			bParticleCurveEditUndoCaptured = true;
+			bDirty = true;
+		}
+	}
+
+	if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && bMouseInCanvas && !DragParticleCurveChannelKey.empty() && DragParticleCurveKeyIndex >= 0)
+	{
+		FParticleCurveChannelView* DragChannel = FindCurveChannelByKey(DragParticleCurveChannelKey);
+		if (DragChannel && DragChannel->bCurveDistribution && DragChannel->Curve && DragParticleCurveKeyIndex < static_cast<int32>(DragChannel->Curve->Keys.size()))
+		{
+			if (!bParticleCurveEditUndoCaptured)
+			{
+				CaptureUndoSnapshot("Edit Particle Curve Key");
+				bParticleCurveEditUndoCaptured = true;
+			}
+			FCurveKey DragKey = FromScreen(MousePos);
+			ForEachSiblingCurveChannel(
+				*DragChannel,
+				[&](FParticleCurveChannelView& SiblingChannel)
+				{
+					if (DragParticleCurveKeyIndex >= static_cast<int32>(SiblingChannel.Curve->Keys.size()))
+					{
+						return;
+					}
+					SiblingChannel.Curve->Keys[DragParticleCurveKeyIndex].Time = DragKey.Time;
+					if (SiblingChannel.Key == DragChannel->Key)
+					{
+						SiblingChannel.Curve->Keys[DragParticleCurveKeyIndex].Value = DragKey.Value;
+					}
+				});
+			ActiveParticleCurveChannelKey = DragParticleCurveChannelKey;
+			ActiveParticleCurveKeyIndex = DragParticleCurveKeyIndex;
+			bDirty = true;
+		}
+	}
+	else if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && bMouseInCanvas && !DragParticleCurveChannelKey.empty() && DragParticleCurveKeyIndex == -2)
+	{
+		for (FParticleCurveChannelView& Channel : Channels)
+		{
+			if (Channel.Key != DragParticleCurveChannelKey || Channel.bCurveDistribution || !Channel.Property)
+			{
+				continue;
+			}
+
+			if (!bParticleCurveEditUndoCaptured)
+			{
+				CaptureUndoSnapshot("Edit Particle Constant Curve");
+				bParticleCurveEditUndoCaptured = true;
+			}
+
+			const FCurveKey DragValue = FromScreen(MousePos);
+			Channel.ConstantValue = DragValue.Value;
+			if (Channel.bStoredMaxValue)
+			{
+				if (Channel.Property->Type == EPropertyType::Float)
+				{
+					ParticleDistributionFloatMaxValues[Channel.DistributionKey] = DragValue.Value;
+				}
+				else
+				{
+					FVector& Value = ParticleDistributionVectorMaxValues[Channel.DistributionKey];
+					if (Channel.ComponentIndex == 1) { Value.Y = DragValue.Value; }
+					else if (Channel.ComponentIndex == 2) { Value.Z = DragValue.Value; }
+					else { Value.X = DragValue.Value; }
+				}
+			}
+			else if (void* ValuePtr = Channel.Property->GetValuePtr(Channel.Module))
+			{
+				if (Channel.Property->Type == EPropertyType::Float)
+				{
+					*static_cast<float*>(ValuePtr) = DragValue.Value;
+				}
+				else
+				{
+					FVector* Value = static_cast<FVector*>(ValuePtr);
+					if (Channel.ComponentIndex == 1) { Value->Y = DragValue.Value; }
+					else if (Channel.ComponentIndex == 2) { Value->Z = DragValue.Value; }
+					else { Value->X = DragValue.Value; }
+				}
+				NotifyParticleModulePropertyChanged(Channel.Module, ActiveEmitter, *Channel.Property);
+			}
+
+			ActiveParticleCurveChannelKey = DragParticleCurveChannelKey;
+			ActiveParticleCurveKeyIndex = -1;
+			bDirty = true;
+			RefreshPreviewComponent(false);
+			break;
+		}
+	}
+	else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+	{
+		for (FParticleCurveChannelView& Channel : Channels)
+		{
+			if (Channel.Curve)
+			{
+				Channel.Curve->SortKeys();
+			}
+		}
+		DragParticleCurveChannelKey.clear();
+		DragParticleCurveKeyIndex = -1;
+		bParticleCurveEditUndoCaptured = false;
+	}
+
+	DrawList->PushClipRect(CanvasMin, CanvasMax, true);
+	for (FParticleCurveChannelView& Channel : Channels)
+	{
+		if (!Channel.bCurveDistribution)
+		{
+			const ImVec2 A = ToScreen(MinTime, Channel.ConstantValue);
+			const ImVec2 B = ToScreen(MaxTime, Channel.ConstantValue);
+			DrawList->AddLine(A, B, Channel.Color, 2.0f);
+			if (ActiveParticleCurveChannelKey == Channel.Key)
+			{
+				const float Y = A.y;
+				DrawList->AddRectFilled(ImVec2(CanvasMin.x + 4.0f, Y - 3.0f), ImVec2(CanvasMin.x + 10.0f, Y + 3.0f), ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f)));
+			}
+			continue;
+		}
+		if (!Channel.Curve)
+		{
+			continue;
+		}
+		if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
+		{
+			Channel.Curve->SortKeys();
+		}
+		TArray<FCurveKey> SortedKeys = Channel.Curve->Keys;
+		std::sort(
+			SortedKeys.begin(),
+			SortedKeys.end(),
+			[](const FCurveKey& A, const FCurveKey& B)
+			{
+				return A.Time < B.Time;
+			});
+		if (!SortedKeys.empty())
+		{
+			if (MinTime < SortedKeys.front().Time)
+			{
+				DrawList->AddLine(
+					ToScreen(MinTime, SortedKeys.front().Value),
+					ToScreen(std::min(MaxTime, SortedKeys.front().Time), SortedKeys.front().Value),
+					Channel.Color,
+					2.0f);
+			}
+
+			for (int32 KeyIndex = 0; KeyIndex + 1 < static_cast<int32>(SortedKeys.size()); ++KeyIndex)
+			{
+				const FCurveKey& StartKey = SortedKeys[KeyIndex];
+				const FCurveKey& EndKey = SortedKeys[KeyIndex + 1];
+				const float SegmentStart = std::max(MinTime, StartKey.Time);
+				const float SegmentEnd = std::min(MaxTime, EndKey.Time);
+				if (SegmentEnd < SegmentStart)
+				{
+					continue;
+				}
+
+				if (StartKey.InterpMode == ECurveInterpMode::Constant)
+				{
+					const ImVec2 StepStart = ToScreen(SegmentStart, StartKey.Value);
+					const ImVec2 StepEnd = ToScreen(SegmentEnd, StartKey.Value);
+					DrawList->AddLine(StepStart, StepEnd, Channel.Color, 2.0f);
+					if (SegmentEnd >= EndKey.Time)
+					{
+						DrawList->AddLine(StepEnd, ToScreen(EndKey.Time, EndKey.Value), Channel.Color, 2.0f);
+					}
+					continue;
+				}
+
+				const int32 SegmentSamples = std::max(2, static_cast<int32>((SegmentEnd - SegmentStart) / std::max(MaxTime - MinTime, 0.0001f) * CanvasSize.x / 8.0f));
+				ImVec2 PrevPoint = ToScreen(SegmentStart, EvaluateParticleCurve(*Channel.Curve, SegmentStart));
+				for (int32 SampleIndex = 1; SampleIndex <= SegmentSamples; ++SampleIndex)
+				{
+					const float Time = SegmentStart + (SegmentEnd - SegmentStart) * static_cast<float>(SampleIndex) / static_cast<float>(SegmentSamples);
+					const ImVec2 NextPoint = ToScreen(Time, EvaluateParticleCurve(*Channel.Curve, Time));
+					DrawList->AddLine(PrevPoint, NextPoint, Channel.Color, 2.0f);
+					PrevPoint = NextPoint;
+				}
+			}
+
+			if (MaxTime > SortedKeys.back().Time)
+			{
+				DrawList->AddLine(
+					ToScreen(std::max(MinTime, SortedKeys.back().Time), SortedKeys.back().Value),
+					ToScreen(MaxTime, SortedKeys.back().Value),
+					Channel.Color,
+					2.0f);
+			}
+		}
+		for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(Channel.Curve->Keys.size()); ++KeyIndex)
+		{
+			const ImVec2 P = ToScreen(Channel.Curve->Keys[KeyIndex].Time, Channel.Curve->Keys[KeyIndex].Value);
+			const bool bSelected = ActiveParticleCurveChannelKey == Channel.Key && ActiveParticleCurveKeyIndex == KeyIndex;
+			DrawList->AddRectFilled(ImVec2(P.x - 3.0f, P.y - 3.0f), ImVec2(P.x + 3.0f, P.y + 3.0f), bSelected ? ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f)) : Channel.Color);
+		}
+	}
+	DrawList->PopClipRect();
+
+	ImGui::EndChild();
+
+	ImGui::EndGroup();
+	ImGui::EndChild();
+	ImGui::PopStyleVar(2);
+}

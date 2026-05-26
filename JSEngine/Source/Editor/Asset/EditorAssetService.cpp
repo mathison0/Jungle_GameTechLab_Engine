@@ -107,6 +107,7 @@ void FEditorAssetService::RefreshAssetDatabase()
 	TexturePaths.clear();
 	MaterialInterfaceNames.clear();
 	AnimGraphPaths.clear();
+	ParticleSystemPaths.clear();
 	FontNames.clear();
 	SubUVNames.clear();
 	CachedMaterialInterfaces.clear();
@@ -145,6 +146,11 @@ void FEditorAssetService::RefreshAssetDatabase()
 
 	ListAssetFiles(L"", { ".animgraph" }, AnimGraphPaths);
 
+	for (const FString& Path : FAssetQueryService::GetParticleSystemPaths())
+	{
+		FEditorAssetService::AddUniquePath(ParticleSystemPaths, Path);
+	}
+
 	for (const FString& Name : FResourceManager::Get().GetFontNames())
 	{
 		FEditorAssetService::AddUniquePath(FontNames, Name);
@@ -159,6 +165,7 @@ void FEditorAssetService::RefreshAssetDatabase()
 	BuildItems(TexturePaths, EEditorAssetType::Texture, TextureItems);
 	BuildItems(MaterialInterfaceNames, EEditorAssetType::Material, MaterialItems);
 	BuildItems(AnimGraphPaths, EEditorAssetType::AnimGraph, AnimGraphItems);
+	BuildItems(ParticleSystemPaths, EEditorAssetType::ParticleSystem, ParticleSystemItems);
 	BuildItems(FontNames, EEditorAssetType::Font, FontItems);
 	BuildItems(SubUVNames, EEditorAssetType::SubUV, SubUVItems);
 }
@@ -177,6 +184,8 @@ const TArray<FEditorAssetItem>& FEditorAssetService::GetAssets(EEditorAssetType 
 		return MaterialItems;
 	case EEditorAssetType::AnimGraph:
 		return AnimGraphItems;
+	case EEditorAssetType::ParticleSystem:
+		return ParticleSystemItems;
 	case EEditorAssetType::Font:
 		return FontItems;
 	case EEditorAssetType::SubUV:
@@ -201,6 +210,11 @@ USkeletalMesh* FEditorAssetService::LoadSkeletalMesh(const FString& Path) const
 UTexture* FEditorAssetService::LoadTexture(const FString& Path) const
 {
 	return FResourceManager::Get().LoadTexture(Path);
+}
+
+UParticleSystem* FEditorAssetService::LoadParticleSystem(const FString& Path) const
+{
+	return FResourceManager::Get().LoadParticleSystem(Path);
 }
 
 UMaterialInterface* FEditorAssetService::GetMaterialInterface(const FString& NameOrPath) const
@@ -286,9 +300,24 @@ UMaterialInstance* FEditorAssetService::CreateMaterialInstance(const FString& In
 	return FResourceManager::Get().CreateMaterialInstance(InstancePath, Parent);
 }
 
-bool FEditorAssetService::SaveMaterialInstance(const FString& InstancePath, UMaterialInstance* Instance) const
+bool FEditorAssetService::SaveMaterial(const FString& MaterialPath, UMaterial* Material)
 {
-	return FResourceManager::Get().SerializeMaterialInstance(InstancePath, Instance);
+	const bool bSaved = FResourceManager::Get().SerializeMaterial(MaterialPath, Material);
+	if (bSaved)
+	{
+		RefreshAssetDatabase();
+	}
+	return bSaved;
+}
+
+bool FEditorAssetService::SaveMaterialInstance(const FString& InstancePath, UMaterialInstance* Instance)
+{
+	const bool bSaved = FResourceManager::Get().SerializeMaterialInstance(InstancePath, Instance);
+	if (bSaved)
+	{
+		RefreshAssetDatabase();
+	}
+	return bSaved;
 }
 
 void FEditorAssetService::AddUniquePath(TArray<FString>& Paths, const FString& Path)

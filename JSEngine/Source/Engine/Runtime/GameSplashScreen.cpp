@@ -1,10 +1,12 @@
 #include "Engine/Runtime/GameSplashScreen.h"
 
 #include "Core/Logging/Log.h"
+#include "Engine/Core/EditorResourcePaths.h"
 #include "Core/Paths.h"
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 
@@ -12,8 +14,13 @@
 
 namespace
 {
+#if WITH_EDITOR || IS_OBJ_VIEWER
+    constexpr float MinSplashSeconds = 0.35f;
+#else
     constexpr float MinSplashSeconds = 3.0f;
+#endif
     constexpr float MaxFadeSeconds = 0.65f;
+    constexpr int ProgressBarHeight = 8;
 
     FString Trim(FString Value)
     {
@@ -49,6 +56,25 @@ namespace
     {
         return std::min(MaxFadeSeconds, Duration * 0.25f);
     }
+
+    std::wstring ToWideText(const FString& Text)
+    {
+        return FPaths::ToWide(Text);
+    }
+
+    void DrawCenteredText(
+        Gdiplus::Graphics& Graphics,
+        const std::wstring& Text,
+        const Gdiplus::Font& Font,
+        const Gdiplus::Brush& Brush,
+        const Gdiplus::RectF& Bounds)
+    {
+        Gdiplus::StringFormat Format;
+        Format.SetAlignment(Gdiplus::StringAlignmentCenter);
+        Format.SetLineAlignment(Gdiplus::StringAlignmentCenter);
+        Format.SetTrimming(Gdiplus::StringTrimmingEllipsisCharacter);
+        Graphics.DrawString(Text.c_str(), -1, &Font, Bounds, &Format, &Brush);
+    }
 }
 
 bool FGameSplashScreen::ShowOverWindow(HINSTANCE InInstance, HWND OwnerWindow)
@@ -56,17 +82,6 @@ bool FGameSplashScreen::ShowOverWindow(HINSTANCE InInstance, HWND OwnerWindow)
     Instance = InInstance;
     Owner = OwnerWindow;
     const FBrandingSettings Settings = LoadBrandingSettings();
-    if (Settings.SplashImagePath.empty())
-    {
-        return false;
-    }
-
-    const std::wstring SplashPath = ResolveRuntimePath(Settings.SplashImagePath);
-    if (SplashPath.empty() || !std::filesystem::exists(SplashPath))
-    {
-        UE_LOG_WARNING("[Splash] Splash image not found: %s", Settings.SplashImagePath.c_str());
-        return false;
-    }
 
     Gdiplus::GdiplusStartupInput StartupInput;
     if (Gdiplus::GdiplusStartup(&GdiToken, &StartupInput, nullptr) != Gdiplus::Ok)
@@ -75,14 +90,20 @@ bool FGameSplashScreen::ShowOverWindow(HINSTANCE InInstance, HWND OwnerWindow)
         return false;
     }
 
-    SplashImage = std::make_unique<Gdiplus::Image>(SplashPath.c_str());
-    if (!SplashImage || SplashImage->GetLastStatus() != Gdiplus::Ok)
+    std::wstring SplashPath = ResolveRuntimePath(Settings.SplashImagePath);
+    if (SplashPath.empty() || !std::filesystem::exists(SplashPath))
     {
-        UE_LOG_WARNING("[Splash] Failed to load splash image.");
-        SplashImage.reset();
-        Gdiplus::GdiplusShutdown(GdiToken);
-        GdiToken = 0;
-        return false;
+        SplashPath = FEditorResourcePaths::BrandingAbsoluteFile("JS-Engine-Logo.png");
+    }
+
+    if (!SplashPath.empty() && std::filesystem::exists(SplashPath))
+    {
+        SplashImage = std::make_unique<Gdiplus::Image>(SplashPath.c_str());
+        if (!SplashImage || SplashImage->GetLastStatus() != Gdiplus::Ok)
+        {
+            UE_LOG_WARNING("[Splash] Failed to load splash image.");
+            SplashImage.reset();
+        }
     }
 
     WNDCLASSW WindowClass = {};
@@ -139,6 +160,23 @@ bool FGameSplashScreen::ShowOverWindow(HINSTANCE InInstance, HWND OwnerWindow)
     RenderLayeredSplash(0.0f);
     StartRenderThread();
     return true;
+}
+
+void FGameSplashScreen::Report(const FString& Message, float Progress)
+{
+    {
+        std::lock_guard<std::mutex> Lock(ProgressMutex);
+        if (!Message.empty())
+        {
+            ProgressMessage = Message;
+        }
+        ProgressValue = std::clamp(Progress, 0.0f, 1.0f);
+    }
+
+    if (Window)
+    {
+        PumpMessages();
+    }
 }
 
 void FGameSplashScreen::Close()
@@ -328,7 +366,7 @@ float FGameSplashScreen::CalculateFadeInOpacity() const
 
 void FGameSplashScreen::RenderLayeredSplash(float LogoOpacity)
 {
-    if (!Window || !SplashImage)
+    if (!Window)
     {
         return;
     }
@@ -384,39 +422,95 @@ void FGameSplashScreen::RenderLayeredSplash(float LogoOpacity)
     Gdiplus::Graphics Graphics(MemoryDC);
     Graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
     Graphics.SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
-    Graphics.Clear(Gdiplus::Color(255, 0, 0, 0));
-
-    const float ImageWidth = static_cast<float>(SplashImage->GetWidth());
-    const float ImageHeight = static_cast<float>(SplashImage->GetHeight());
-    const float MaxLogoWidth = std::min(720.0f, Width * 0.45f);
-    const float MaxLogoHeight = std::min(360.0f, Height * 0.35f);
-    const float Scale = std::min(MaxLogoWidth / std::max(1.0f, ImageWidth), MaxLogoHeight / std::max(1.0f, ImageHeight));
-    const float DrawWidth = ImageWidth * Scale;
-    const float DrawHeight = ImageHeight * Scale;
-    const float DrawX = (Width - DrawWidth) * 0.5f;
-    const float DrawY = (Height - DrawHeight) * 0.5f;
+    Graphics.Clear(Gdiplus::Color(248, 10, 12, 16));
 
     const float Opacity = std::clamp(LogoOpacity, 0.0f, 1.0f);
-    Gdiplus::ImageAttributes Attributes;
-    Gdiplus::ColorMatrix ColorMatrix =
+    if (SplashImage)
     {
-        1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, Opacity, 0.0f,
-        0.0f, 0.0f, 0.0f, 0.0f, 1.0f
-    };
-    Attributes.SetColorMatrix(&ColorMatrix, Gdiplus::ColorMatrixFlagsDefault, Gdiplus::ColorAdjustTypeBitmap);
+        const float ImageWidth = static_cast<float>(SplashImage->GetWidth());
+        const float ImageHeight = static_cast<float>(SplashImage->GetHeight());
+        const float MaxLogoWidth = std::min(680.0f, Width * 0.42f);
+        const float MaxLogoHeight = std::min(300.0f, Height * 0.28f);
+        const float Scale = std::min(MaxLogoWidth / std::max(1.0f, ImageWidth), MaxLogoHeight / std::max(1.0f, ImageHeight));
+        const float DrawWidth = ImageWidth * Scale;
+        const float DrawHeight = ImageHeight * Scale;
+        const float DrawX = (Width - DrawWidth) * 0.5f;
+        const float DrawY = (Height * 0.40f) - (DrawHeight * 0.5f);
 
-    Graphics.DrawImage(
-        SplashImage.get(),
-        Gdiplus::RectF(DrawX, DrawY, DrawWidth, DrawHeight),
-        0.0f,
-        0.0f,
-        ImageWidth,
-        ImageHeight,
-        Gdiplus::UnitPixel,
-        &Attributes);
+        Gdiplus::ImageAttributes Attributes;
+        Gdiplus::ColorMatrix ColorMatrix =
+        {
+            1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, Opacity, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 1.0f
+        };
+        Attributes.SetColorMatrix(&ColorMatrix, Gdiplus::ColorMatrixFlagsDefault, Gdiplus::ColorAdjustTypeBitmap);
+
+        Graphics.DrawImage(
+            SplashImage.get(),
+            Gdiplus::RectF(DrawX, DrawY, DrawWidth, DrawHeight),
+            0.0f,
+            0.0f,
+            ImageWidth,
+            ImageHeight,
+            Gdiplus::UnitPixel,
+            &Attributes);
+    }
+    else
+    {
+        Gdiplus::FontFamily LogoFamily(L"Segoe UI Semibold");
+        Gdiplus::Font LogoFont(&LogoFamily, std::max(30.0f, Width * 0.045f), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+        Gdiplus::SolidBrush LogoBrush(Gdiplus::Color(static_cast<BYTE>(230.0f * Opacity), 238, 242, 248));
+        DrawCenteredText(
+            Graphics,
+            L"JSEngine",
+            LogoFont,
+            LogoBrush,
+            Gdiplus::RectF(0.0f, Height * 0.30f, static_cast<float>(Width), Height * 0.16f));
+    }
+
+    FString Message;
+    float Progress = 0.0f;
+    {
+        std::lock_guard<std::mutex> Lock(ProgressMutex);
+        Message = ProgressMessage;
+        Progress = ProgressValue;
+    }
+
+    const float BarWidth = std::min(520.0f, Width * 0.48f);
+    const float BarX = (Width - BarWidth) * 0.5f;
+    const float BarY = Height * 0.68f;
+    const float FillWidth = std::clamp(Progress, 0.0f, 1.0f) * BarWidth;
+
+    Gdiplus::FontFamily TextFamily(L"Segoe UI");
+    Gdiplus::Font TextFont(&TextFamily, 15.0f, Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+    Gdiplus::Font PercentFont(&TextFamily, 12.0f, Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+    Gdiplus::SolidBrush TextBrush(Gdiplus::Color(235, 228, 233, 240));
+    Gdiplus::SolidBrush PercentBrush(Gdiplus::Color(190, 164, 174, 190));
+    Gdiplus::SolidBrush BarBackBrush(Gdiplus::Color(120, 42, 48, 58));
+    Gdiplus::SolidBrush BarFillBrush(Gdiplus::Color(235, 88, 166, 255));
+
+    DrawCenteredText(
+        Graphics,
+        ToWideText(Message),
+        TextFont,
+        TextBrush,
+        Gdiplus::RectF(BarX - 80.0f, BarY - 34.0f, BarWidth + 160.0f, 22.0f));
+    Graphics.FillRectangle(&BarBackBrush, Gdiplus::RectF(BarX, BarY, BarWidth, static_cast<float>(ProgressBarHeight)));
+    if (FillWidth > 0.5f)
+    {
+        Graphics.FillRectangle(&BarFillBrush, Gdiplus::RectF(BarX, BarY, FillWidth, static_cast<float>(ProgressBarHeight)));
+    }
+
+    const int Percent = static_cast<int>(std::round(std::clamp(Progress, 0.0f, 1.0f) * 100.0f));
+    DrawCenteredText(
+        Graphics,
+        std::to_wstring(Percent) + L"%",
+        PercentFont,
+        PercentBrush,
+        Gdiplus::RectF(BarX, BarY + 15.0f, BarWidth, 18.0f));
 
     POINT ScreenPosition = { WindowRect.left, WindowRect.top };
     SIZE WindowSize = { Width, Height };

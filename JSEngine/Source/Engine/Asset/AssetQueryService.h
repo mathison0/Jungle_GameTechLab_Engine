@@ -12,6 +12,7 @@ public:
     static TArray<FString> GetStaticMeshPaths();
     static TArray<FString> GetMaterialPaths();
     static TArray<FString> GetCurvePaths();
+    static TArray<FString> GetParticleSystemPaths();
     static TArray<FString> GetScenePaths();
     static TArray<FString> GetSoundPaths();
 };

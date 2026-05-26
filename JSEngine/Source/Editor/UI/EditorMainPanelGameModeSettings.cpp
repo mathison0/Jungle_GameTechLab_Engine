@@ -2,6 +2,7 @@
 
 #include "Editor/EditorEngine.h"
 #include "Editor/Settings/ProjectSettings.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Engine/Core/Paths.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/Pawn.h"
@@ -234,6 +235,9 @@ void FEditorMainPanel::SaveWorldGameModeSettingsPanelBuffers()
 {
 	if (UWorld* World = EditorEngine ? EditorEngine->GetFocusedWorld() : nullptr)
 	{
+		const FEditorWorldGameModeSettingsState BeforeState =
+			EditorEngine->GetUndoSystem().CaptureWorldGameModeSettings(World, "Edit World GameMode Settings");
+
 		FWorldGameModeSettings SceneSettings;
 		SceneSettings.bOverrideGameMode = GameModeSettingsState.bSceneOverrideGameMode;
 		SceneSettings.GameModeClass = GameModeSettingsState.SceneGameModeClassBuffer[0] != '\0'
@@ -248,6 +252,10 @@ void FEditorMainPanel::SaveWorldGameModeSettingsPanelBuffers()
 		SceneSettings.DefaultPawnPrefabPath = GameModeSettingsState.SceneDefaultPawnPrefabPathBuffer;
 		World->SetGameModeSettings(SceneSettings);
 		EditorEngine->GetSceneService().MarkDirty();
+		EditorEngine->GetUndoSystem().RecordWorldGameModeSettings(
+			BeforeState,
+			EditorEngine->GetUndoSystem().CaptureWorldGameModeSettings(World, "Edit World GameMode Settings"),
+			"Edit World GameMode Settings");
 	}
 }
 

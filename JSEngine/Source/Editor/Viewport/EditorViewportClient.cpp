@@ -18,6 +18,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Component/GizmoComponent.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/SceneComponent.h"
 #include "Object/Object.h"
 #include "Object/ActorIterator.h"
 #include "Editor/Selection/SelectionManager.h"
@@ -1034,6 +1035,62 @@ bool FEditorViewportClient::HandleGizmoInput(const FViewportInputContext& Contex
 		const float ViewportHeight = Rect.Height > 0 ? static_cast<float>(Rect.Height) : WindowHeight;
 		return Camera.DeprojectScreenToWorld(LocalX, LocalY, ViewportWidth, ViewportHeight);
 	};
+	const auto ClearGizmoDragUndoCapture = [&]()
+	{
+		GizmoDragStartActorTransforms.clear();
+		GizmoDragStartComponentTransform = FEditorSceneComponentTransformState();
+		bGizmoDragUndoCaptured = false;
+	};
+	const auto CaptureGizmoDragUndo = [&]()
+	{
+		if (bGizmoDragUndoCaptured || !Editor || !SelectionManager || !bSceneEditingShortcutsEnabled)
+		{
+			return;
+		}
+
+		GizmoDragStartActorTransforms.clear();
+		GizmoDragStartComponentTransform = FEditorSceneComponentTransformState();
+		if (USceneComponent* SelectedSceneComponent = Cast<USceneComponent>(SelectionManager->GetSelectedComponent()))
+		{
+			GizmoDragStartComponentTransform =
+				Editor->GetUndoSystem().CaptureSceneComponentTransform(SelectedSceneComponent);
+			bGizmoDragUndoCaptured = GizmoDragStartComponentTransform.IsValid();
+			return;
+		}
+
+		GizmoDragStartActorTransforms =
+			Editor->GetUndoSystem().CaptureActorTransforms(SelectionManager->GetSelectedActors());
+		bGizmoDragUndoCaptured = !GizmoDragStartActorTransforms.empty();
+	};
+	const auto RecordGizmoDragUndo = [&]()
+	{
+		if (!bGizmoDragUndoCaptured || !Editor || !SelectionManager || !bSceneEditingShortcutsEnabled)
+		{
+			ClearGizmoDragUndoCapture();
+			return;
+		}
+
+		if (GizmoDragStartComponentTransform.IsValid())
+		{
+			if (USceneComponent* SelectedSceneComponent = Cast<USceneComponent>(SelectionManager->GetSelectedComponent()))
+			{
+				const FEditorSceneComponentTransformState EndTransform =
+					Editor->GetUndoSystem().CaptureSceneComponentTransform(SelectedSceneComponent);
+				Editor->GetUndoSystem().RecordSceneComponentTransform(
+					GizmoDragStartComponentTransform,
+					EndTransform,
+					"Transform Component");
+			}
+		}
+		else
+		{
+			const TArray<FEditorActorTransformState> EndTransforms =
+				Editor->GetUndoSystem().CaptureActorTransforms(SelectionManager->GetSelectedActors());
+			Editor->GetUndoSystem().RecordActorTransforms(GizmoDragStartActorTransforms, EndTransforms);
+		}
+
+		ClearGizmoDragUndoCapture();
+	};
 
 	bool bMutableGizmoDragArmed = bGizmoDragArmed;
 	const bool bLeftPressOrDragStart =
@@ -1057,11 +1114,7 @@ bool FEditorViewportClient::HandleGizmoInput(const FViewportInputContext& Contex
 
 	if (Context.Frame.bLeftDragging && bMutableGizmoDragArmed)
 	{
-		if (!bGizmoDragUndoCaptured && Editor && bSceneEditingShortcutsEnabled)
-		{
-			Editor->GetUndoSystem().CaptureSnapshot("Transform Actors");
-			bGizmoDragUndoCaptured = true;
-		}
+		CaptureGizmoDragUndo();
 		InputRouter.RouteMouseInput(EMouseInputType::E_LeftMouseDragged, LocalX, LocalY);
 		return true;
 	}
@@ -1069,7 +1122,7 @@ bool FEditorViewportClient::HandleGizmoInput(const FViewportInputContext& Contex
 	if (Context.WasPointerDragEnded(EPointerButton::Left) && Gizmo->IsHolding())
 	{
 		InputRouter.RouteMouseInput(EMouseInputType::E_LeftMouseDragEnded, LocalX, LocalY);
-		bGizmoDragUndoCaptured = false;
+		RecordGizmoDragUndo();
 		return true;
 	}
 
@@ -1078,10 +1131,10 @@ bool FEditorViewportClient::HandleGizmoInput(const FViewportInputContext& Contex
 		if (Gizmo->IsPressedOnHandle() || Gizmo->IsHolding())
 		{
 			InputRouter.RouteMouseInput(EMouseInputType::E_LeftMouseButtonUp, LocalX, LocalY);
-			bGizmoDragUndoCaptured = false;
+			RecordGizmoDragUndo();
 			return true;
 		}
-		bGizmoDragUndoCaptured = false;
+		ClearGizmoDragUndoCapture();
 	}
 
 	if (bMutableGizmoDragArmed)
@@ -1556,11 +1609,6 @@ void FEditorViewportClient::DuplicateSelection()
 	if (SelectedActors.empty())
 		return;
 
-	if (Editor)
-	{
-		Editor->GetUndoSystem().CaptureSnapshot("Duplicate Actors");
-	}
-
 	TArray<AActor*> NewSelection;
 	for (AActor* SourceActor : SelectedActors)
 	{
@@ -1594,6 +1642,13 @@ void FEditorViewportClient::DuplicateSelection()
 	}
 
 	World->RebuildSpatialIndex();
+	if (Editor)
+	{
+		Editor->GetUndoSystem().RecordActorCreation(
+			Editor->GetUndoSystem().CaptureActorStates(NewSelection),
+			NewSelection.size() > 1 ? "Duplicate Actors" : "Duplicate Actor");
+		Editor->GetSceneService().MarkDirty();
+	}
 }
 
 void FEditorViewportClient::RequestEndPIE()

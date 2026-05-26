@@ -3,7 +3,9 @@
 #include "Camera/ViewportCamera.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleRendererProperties.h"
+#include "Render/Scene/RenderBus.h"
 
 #include <cstring>
 
@@ -280,4 +282,21 @@ void UParticleSystemComponent::BuildInstanceData()
 			Instance->BuildInstanceData();
 		}
 	}
+}
+
+// Function : Cache RenderBus camera state for derived BuildInstanceData consumption (Cycle 14, 결정 18 β)
+// input : InRenderBus
+// InRenderBus : RenderBus belonging to the current render frame
+// output : CachedCamera* members are populated and bCachedCameraValid is set true
+//
+// Builder 가 ParticleSystemComponent->BuildInstanceData() 호출 직전에 호출.
+// derived Mesh instance::BuildInstanceData 가 GetOwningComponent() 통해 cache 를 read.
+// signature 변경 0건 보장 (옵션 α 회피) — 본 메서드는 BuildInstanceData 와 별도 진입점.
+void UParticleSystemComponent::CacheCameraFromRenderBus(const FRenderBus& InRenderBus)
+{
+	CachedCameraPosition = InRenderBus.GetCameraPosition();
+	CachedCameraForward = InRenderBus.GetCameraForward();
+	CachedCameraUp = InRenderBus.GetCameraUp();
+	CachedCameraRight = InRenderBus.GetCameraRight();
+	bCachedCameraValid = true;
 }

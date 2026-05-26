@@ -269,8 +269,8 @@
           "ObjectName" : "UParticleSystemComponent_1",
           "PersistentGuid" : "1E35CCAC-1CDA4488-AF1BD2BD-E026462B",
           "RelativeLocation" : {
-            "X" : -7.517566,
-            "Y" : 3.576113,
+            "X" : 0.401726,
+            "Y" : 0.497379,
             "Z" : 3.552489
           },
           "RelativeRotation" : {
@@ -284,7 +284,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "Template" : 538,
+          "Template" : "",
           "Type" : "UParticleSystemComponent",
           "UUID" : 473,
           "bAutoActivate" : true,
@@ -313,7 +313,7 @@
           "ObjectName" : "UStaticMeshComponent_1",
           "PersistentGuid" : "AC01CA8E-DB0D401F-9DB4EF1E-23FC2339",
           "RelativeLocation" : {
-            "X" : -14.330110,
+            "X" : -1.794738,
             "Y" : 3.865058,
             "Z" : 1.891727
           },
@@ -352,13 +352,13 @@
     }],
   "ClassName" : "UWorld",
   "Name" : "Untitled",
-  "NextUUID" : 552,
+  "NextUUID" : 813,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-3.312515, 3.737788, 6.604019],
+    "Location" : [2.122883, -4.543060, 10.136924],
     "NearClip" : 0.100000,
-    "Rotation" : [-1.111969, -13.687164, 175.310532]
+    "Rotation" : [-32.165710, -5.010040, 97.906296]
   },
   "Version" : 6,
   "WorldSettings" : {

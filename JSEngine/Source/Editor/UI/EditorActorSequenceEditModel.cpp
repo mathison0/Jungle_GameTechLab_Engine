@@ -5,6 +5,7 @@
 #include "Component/ActorSequenceComponent.h"
 #include "Core/ResourceManager.h"
 #include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/UI/EditorActorSequenceTimeUtils.h"
 #include "GameFramework/AActor.h"
 #include "Object/Object.h"
@@ -19,6 +20,9 @@
 namespace
 {
 	constexpr float MinSequenceDuration = 0.001f;
+	TArray<FEditorSerializedActorState> GActorSequenceUndoBeforeStates;
+	UActorSequenceComponent* GActorSequenceUndoComponent = nullptr;
+	FString GActorSequenceUndoLabel;
 
 	bool IsValueChannel(const FString& ChannelName)
 	{
@@ -836,6 +840,7 @@ UCurveFloatAsset* FEditorActorSequenceEditModel::GetOrCreateChannelCurve(FActorS
 
 bool FEditorActorSequenceEditModel::CaptureSequenceUndo(
 	UEditorEngine* EditorEngine,
+	UActorSequenceComponent* SequenceComp,
 	const char* UndoLabel)
 {
 	if (!EditorEngine)
@@ -843,7 +848,23 @@ bool FEditorActorSequenceEditModel::CaptureSequenceUndo(
 		return false;
 	}
 
-	return EditorEngine->GetUndoSystem().CaptureSnapshot(UndoLabel ? UndoLabel : "Edit Actor Sequence");
+	GActorSequenceUndoBeforeStates.clear();
+	GActorSequenceUndoComponent = nullptr;
+	GActorSequenceUndoLabel = UndoLabel ? UndoLabel : "Edit Actor Sequence";
+
+	if (AActor* Owner = GetLiveOwner(SequenceComp))
+	{
+		TArray<AActor*> Actors;
+		Actors.push_back(Owner);
+		GActorSequenceUndoBeforeStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
+		if (!GActorSequenceUndoBeforeStates.empty())
+		{
+			GActorSequenceUndoComponent = SequenceComp;
+			return true;
+		}
+	}
+
+	return EditorEngine->GetUndoSystem().CaptureSnapshot(GActorSequenceUndoLabel.c_str());
 }
 
 void FEditorActorSequenceEditModel::NotifySequenceEdited(
@@ -859,7 +880,7 @@ void FEditorActorSequenceEditModel::NotifySequenceEdited(
 
 	if (bCaptureUndo)
 	{
-		CaptureSequenceUndo(EditorEngine, UndoLabel);
+		CaptureSequenceUndo(EditorEngine, SequenceComp, UndoLabel);
 	}
 
 	SequenceComp->MarkSequenceDirty();
@@ -867,6 +888,21 @@ void FEditorActorSequenceEditModel::NotifySequenceEdited(
 
 	if (EditorEngine)
 	{
+		if (GActorSequenceUndoComponent == SequenceComp && !GActorSequenceUndoBeforeStates.empty())
+		{
+			if (AActor* Owner = GetLiveOwner(SequenceComp))
+			{
+				TArray<AActor*> Actors;
+				Actors.push_back(Owner);
+				EditorEngine->GetUndoSystem().RecordActorStateChange(
+					GActorSequenceUndoBeforeStates,
+					EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+					GActorSequenceUndoLabel.empty() ? FString("Edit Actor Sequence") : GActorSequenceUndoLabel);
+			}
+			GActorSequenceUndoBeforeStates.clear();
+			GActorSequenceUndoComponent = nullptr;
+			GActorSequenceUndoLabel.clear();
+		}
 		EditorEngine->GetSceneService().MarkDirty();
 	}
 }

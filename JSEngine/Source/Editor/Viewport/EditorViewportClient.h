@@ -9,6 +9,7 @@
 #include "Editor/EditorUtils.h"
 #include "Editor/PIE/PIESession.h"
 #include "Editor/Input/EditorViewportTools.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Camera/ViewportCamera.h"
 
 #include <memory>
@@ -237,6 +238,8 @@ private:
 	bool  bControlLocked = false;
 	bool  bRoutedInputProcessedThisFrame = false;
 	bool  bGizmoDragUndoCaptured = false;
+	TArray<FEditorActorTransformState> GizmoDragStartActorTransforms;
+	FEditorSceneComponentTransformState GizmoDragStartComponentTransform;
 	bool  bSceneEditingShortcutsEnabled = true;
 	ETransformMode TransformMode = ETransformMode::Translate;
 	float ViewportInputDeadZoneTop = 0.0f;

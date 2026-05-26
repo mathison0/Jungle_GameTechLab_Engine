@@ -4,6 +4,7 @@
 #include "Editor/UI/EditorWidget.h"
 #include "Editor/Viewport/FSceneViewport.h"
 #include "Editor/Viewport/ParticleSystemViewportClient.h"
+#include "Asset/CurveFloatAsset.h"
 #include "Particle/ParticleTypes.h"
 #include "Render/Common/ComPtr.h"
 #include "ImGui/imgui.h"
@@ -62,9 +63,11 @@ private:
 		RegenLOD,
 		LowestLOD,
 		LowerLOD,
-		AddLOD,
+		AddLODBeforeCurrent,
+		AddLODAfterCurrent,
 		HigherLOD,
-		Menu,
+		HighestLOD,
+		DeleteLOD,
 		Count
 	};
 
@@ -74,6 +77,10 @@ private:
 	{
 		FString Label;
 		FString Snapshot;
+		TMap<FString, int32> ParticleDistributionKinds;
+		TMap<FString, float> ParticleDistributionFloatMaxValues;
+		TMap<FString, FVector> ParticleDistributionVectorMaxValues;
+		TMap<FString, FFloatCurve> ParticleDistributionCurves;
 		int32 CurrentLOD = 0;
 		int32 SelectedEmitterIndex = 0;
 		int32 SelectedModuleIndex = -1;
@@ -88,14 +95,17 @@ private:
 		int32 SelectedModuleIndex = -1;
 		TArray<FParticleEditorUndoEntry> UndoHistory;
 		TArray<FParticleEditorUndoEntry> RedoHistory;
+		TMap<FString, int32> ParticleDistributionKinds;
+		TMap<FString, float> ParticleDistributionFloatMaxValues;
+		TMap<FString, FVector> ParticleDistributionVectorMaxValues;
+		TMap<FString, FFloatCurve> ParticleDistributionCurves;
 		EViewMode PreviewViewMode = EViewMode::Lit_BlinnPhong;
 		FParticleSystemViewportShowFlags PreviewShowFlags;
 		FColor PreviewBackgroundColor = FParticleSystemViewportClient::GetDefaultBackgroundColor();
 		bool bShowThumbnail = false;
-		bool bShowBounds = true;
+		bool bShowBounds = false;
 		bool bShowOriginAxis = true;
 		bool bPreviewPaused = false;
-		bool bPreviewRealtime = true;
 		bool bPreviewLoop = true;
 		bool bPreviewPlaybackComplete = false;
 		int32 PreviewAnimSpeedIndex = 0;
@@ -106,6 +116,9 @@ private:
 	void EnsurePreviewActor();
 	void RefreshPreviewComponent(bool bRestartSimulation);
 	void RefreshPlacedParticleSystemComponents(bool bRestartSimulation);
+	void SyncPreviewWorld();
+	void SetPreviewBoundsVisible(bool bVisible);
+	void SetPreviewOriginAxisVisible(bool bVisible);
 	float GetPreviewAnimSpeed() const;
 	float GetPreviewMaxEmitterDuration() const;
 	void RestartPreviewPlayback();
@@ -122,6 +135,7 @@ private:
 	void AddDefaultEmitter();
 	void AddDefaultEmitterAt(int32 InsertIndex);
 	void AddLODToSelectedEmitter();
+	void AddLODToSelectedEmitterAt(int32 InsertIndex);
 	void SelectLowerLOD();
 	void SelectHigherLOD();
 	void SelectLowestLOD();
@@ -166,9 +180,16 @@ private:
 	void DrawEmitterDetails(UParticleEmitter* Emitter, int32 EmitterIndex);
 	void DrawParticleSystemDetails(UParticleSystem* ParticleSystem);
 	void DrawParticleModuleDetails(UParticleModule* Module, UParticleEmitter* OwnerEmitter);
+	bool DrawParticleObjectProperty(UObject* Object, const FProperty& Property);
 	bool DrawParticleModuleProperty(UParticleModule* Module, const FProperty& Property);
 	bool DrawParticlePropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
 	bool DrawParticleStructPropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
+	bool IsParticleDistributionProperty(UParticleModule* Module, const FProperty& Property) const;
+	FString MakeParticleDistributionKey(UParticleModule* Module, const FProperty& Property) const;
+	FString MakeParticleDistributionCurveKey(UParticleModule* Module, const FProperty& Property, const char* ChannelName) const;
+	FString MakeParticleModuleCurveKey(UParticleModule* Module) const;
+	FFloatCurve& GetOrCreateParticleDistributionCurve(UParticleModule* Module, const FProperty& Property, const char* ChannelName, float InitialValue);
+	void OpenParticleModuleCurves(int32 EmitterIndex, int32 ModuleIndex);
 	void NotifyParticleModulePropertyChanged(UParticleModule* Module, UParticleEmitter* OwnerEmitter, const FProperty& Property);
 	void DrawCurveEditorPanel(const ImVec2& Size);
 
@@ -182,13 +203,24 @@ private:
 	FString SelectedCurveAssetPath;
 	FString DocumentPath;
 	TMap<FString, FParticleSystemDocumentState> ParticleDocumentStates;
-	TMap<FString, FColor> PreviewBackgroundColorByDocument;
+	TMap<FString, int32> ParticleDistributionKinds;
+	TMap<FString, float> ParticleDistributionFloatMaxValues;
+	TMap<FString, FVector> ParticleDistributionVectorMaxValues;
+	TMap<FString, FFloatCurve> ParticleDistributionCurves;
+	FString ActiveParticleCurveModuleKey;
+	FString ActiveParticleCurveChannelKey;
+	FString ParticleCurveViewModuleKey;
+	float ParticleCurveViewMinTime = 0.0f;
+	float ParticleCurveViewMaxTime = 1.0f;
+	float ParticleCurveViewMinValue = -1.0f;
+	float ParticleCurveViewMaxValue = 1.0f;
+	bool bParticleCurveViewInitialized = false;
+	bool bParticleCurveViewUserAdjusted = false;
 	bool bDirty = true;
 	bool bShowThumbnail = false;
-	bool bShowBounds = true;
+	bool bShowBounds = false;
 	bool bShowOriginAxis = true;
 	bool bPreviewPaused = false;
-	bool bPreviewRealtime = true;
 	bool bPreviewLoop = true;
 	bool bPreviewPlaybackComplete = false;
 	bool bPreviewViewportInitialized = false;
@@ -198,6 +230,11 @@ private:
 	int32 PreviewAnimSpeedIndex = 0;
 	int32 SelectedEmitterIndex = 0;
 	int32 SelectedModuleIndex = -1;
+	int32 ActiveParticleCurveEmitterIndex = -1;
+	int32 ActiveParticleCurveModuleIndex = -1;
+	int32 ActiveParticleCurveKeyIndex = -1;
+	int32 DragParticleCurveKeyIndex = -1;
+	FString DragParticleCurveChannelKey;
 	int32 ContextEmitterIndex = -1;
 	int32 ContextModuleIndex = -1;
 	int32 RenameEmitterIndex = -1;
@@ -219,6 +256,7 @@ private:
 	bool bRestoringParticleSnapshot = false;
 	bool bPropertyEditUndoCaptured = false;
 	bool bEmitterNameEditUndoCaptured = false;
+	bool bParticleCurveEditUndoCaptured = false;
 	bool bCascadeToolbarIconsLoadAttempted = false;
 	float TopAreaHeight = 0.0f;
 	float TopLeftWidth = 0.0f;

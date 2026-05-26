@@ -5,6 +5,7 @@
 
 class UEditorEngine;
 class UMaterialInterface;
+class USkeletalMesh;
 class UStaticMesh;
 struct ID3D11ShaderResourceView;
 
@@ -23,6 +24,9 @@ public:
 	ID3D11ShaderResourceView* RenderMaterialPreview(FRenderer& Renderer, UStaticMesh* Mesh, UMaterialInterface* Material,
 	                                                uint32 Width, uint32 Height, float YawRad, float PitchRad,
 	                                                float Distance);
+	ID3D11ShaderResourceView* RenderSkeletalMeshPreview(FRenderer& Renderer, USkeletalMesh* Mesh,
+	                                                    uint32 Width, uint32 Height, float YawRad, float PitchRad,
+	                                                    float Distance);
 
 private:
 	/*
