@@ -62,9 +62,11 @@ private:
 		RegenLOD,
 		LowestLOD,
 		LowerLOD,
-		AddLOD,
+		AddLODBeforeCurrent,
+		AddLODAfterCurrent,
 		HigherLOD,
-		Menu,
+		HighestLOD,
+		DeleteLOD,
 		Count
 	};
 
@@ -92,7 +94,7 @@ private:
 		FParticleSystemViewportShowFlags PreviewShowFlags;
 		FColor PreviewBackgroundColor = FParticleSystemViewportClient::GetDefaultBackgroundColor();
 		bool bShowThumbnail = false;
-		bool bShowBounds = true;
+		bool bShowBounds = false;
 		bool bShowOriginAxis = true;
 		bool bPreviewPaused = false;
 		bool bPreviewLoop = true;
@@ -181,7 +183,7 @@ private:
 	TMap<FString, FParticleSystemDocumentState> ParticleDocumentStates;
 	bool bDirty = true;
 	bool bShowThumbnail = false;
-	bool bShowBounds = true;
+	bool bShowBounds = false;
 	bool bShowOriginAxis = true;
 	bool bPreviewPaused = false;
 	bool bPreviewLoop = true;

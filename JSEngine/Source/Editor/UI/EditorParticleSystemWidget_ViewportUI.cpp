@@ -1,4 +1,4 @@
-// Renders the particle system editor chrome, viewport panel, toolbar, and preview UI menus.
+﻿// Renders the particle system editor chrome, viewport panel, toolbar, and preview UI menus.
 #include "Editor/UI/EditorParticleSystemWidgetPrivate.h"
 
 void FEditorParticleSystemWidget::Render(float DeltaTime)
@@ -69,8 +69,10 @@ void FEditorParticleSystemWidget::LoadCascadeToolbarIcons()
 		L"icon_Cascade_LowestLOD_40x.png",
 		L"icon_Cascade_LowerLOD_40x.png",
 		L"icon_Cascade_AddLOD1_40x.png",
+		L"icon_Cascade_AddLOD2_40x.png",
 		L"icon_Cascade_HigherLOD_40x.png",
-		L"icon_tab_Modules_40x.png"
+		L"icon_Cascade_HighestLOD_40x.png",
+		L"icon_Cascade_DeleteLOD_40x.png"
 	};
 
 	const std::wstring IconDir = FEditorResourcePaths::CascadeAbsoluteDir();
@@ -100,6 +102,9 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 {
 	LoadCascadeToolbarIcons();
 
+	constexpr float ToolbarSidePadding = 4.0f;
+	constexpr float ToolbarControlHeight = 28.0f;
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ToolbarSidePadding);
 	if (ToolbarButton("Save", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Save), "Save particle system"))
 	{
 		Save();
@@ -107,12 +112,12 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	SameLineGap();
 	ToolbarButton("FindInContentBrowser", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Find), "Find in Content Browser");
 
-	SameLineGap(14.0f);
+	SameLineGap(21.0f);
 	ToolbarButton("RestartSim", "Restart Sim", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartSim), "Restart simulation");
 	SameLineGap();
 	ToolbarButton("RestartLevel", "Restart Level", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartLevel), "Restart preview level");
 
-	SameLineGap(14.0f);
+	SameLineGap(7.0f);
 	ImGui::BeginDisabled(!CanUndo());
 	if (ToolbarButton("Undo", "Undo", GetCascadeToolbarIcon(ECascadeToolbarIcon::Undo), "Undo"))
 	{
@@ -127,7 +132,7 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	}
 	ImGui::EndDisabled();
 
-	SameLineGap(14.0f);
+	SameLineGap(7.0f);
 	if (ToolbarButton("Thumbnail", "Thumbnail", GetCascadeToolbarIcon(ECascadeToolbarIcon::Thumbnail), "Toggle thumbnail preview", bShowThumbnail))
 	{
 		bShowThumbnail = !bShowThumbnail;
@@ -149,24 +154,53 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	}
 	DrawBackgroundColorPopup();
 
-	SameLineGap(14.0f);
+	SameLineGap(7.0f);
 	ToolbarButton("RegenLOD", "Regen LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::RegenLOD), "Regenerate LOD");
 	SameLineGap();
 	ToolbarButton("LowestLOD", "Lowest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to lowest LOD");
 	SameLineGap();
 	ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD");
 	SameLineGap();
-	ToolbarButton("AddLOD", "Add LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLOD), "Add LOD");
+	ToolbarButton(
+		"AddLODBeforeCurrent",
+		"Add LOD Before",
+		GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLODBeforeCurrent),
+		"Add LOD before current");
+	SameLineGap();
+	ToolbarButton(
+		"AddLODAfterCurrent",
+		"Add LOD After",
+		GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLODAfterCurrent),
+		"Add LOD after current");
 
 	SameLineGap(8.0f);
-	ImGui::SetNextItemWidth(54.0f);
+	const float LODFramePaddingY = std::max(0.0f, (ToolbarControlHeight - ImGui::GetFontSize()) * 0.5f);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, LODFramePaddingY));
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
+	ImGui::SetNextItemWidth(38.0f);
 	ImGui::InputInt("LOD", &CurrentLOD, 0, 0);
+	ImGui::PopStyleVar(2);
 	CurrentLOD = std::max(0, CurrentLOD);
-	SameLineGap();
-	ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD");
 
-	SameLineGap(14.0f);
-	ToolbarButton("ParticleEditorMenu", "Menu", GetCascadeToolbarIcon(ECascadeToolbarIcon::Menu), "Particle editor menu");
+	ID3D11ShaderResourceView* HigherLODIcon = GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD);
+	ID3D11ShaderResourceView* HighestLODIcon = GetCascadeToolbarIcon(ECascadeToolbarIcon::HighestLOD);
+	ID3D11ShaderResourceView* DeleteLODIcon = GetCascadeToolbarIcon(ECascadeToolbarIcon::DeleteLOD);
+	const float LODButtonGroupWidth =
+		CalcToolbarButtonSize("Higher LOD", HigherLODIcon).x +
+		4.0f +
+		CalcToolbarButtonSize("Highest LOD", HighestLODIcon).x +
+		4.0f +
+		CalcToolbarButtonSize("Delete LOD", DeleteLODIcon).x;
+	const float ContentMaxX = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
+	const float GapToLODButtonGroup = ContentMaxX - ToolbarSidePadding - LODButtonGroupWidth - ImGui::GetItemRectMax().x;
+	SameLineGap(std::max(4.0f, GapToLODButtonGroup));
+	ToolbarButton("HigherLOD", "Higher LOD", HigherLODIcon, "Switch to higher LOD");
+	SameLineGap();
+	ToolbarButton("HighestLOD", "Highest LOD", HighestLODIcon, "Switch to highest LOD");
+	SameLineGap();
+	ToolbarButton("DeleteLOD", "Delete LOD", DeleteLODIcon, "Delete current LOD");
+	SameLineGap(0.0f);
+	ImGui::Dummy(ImVec2(ToolbarSidePadding, ToolbarControlHeight));
 }
 
 void FEditorParticleSystemWidget::DrawBackgroundColorPopup()

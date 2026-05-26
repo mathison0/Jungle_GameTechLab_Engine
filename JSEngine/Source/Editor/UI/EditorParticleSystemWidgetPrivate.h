@@ -113,6 +113,24 @@ namespace
 		return Result;
 	}
 
+	constexpr float ToolbarButtonHeight = 28.0f;
+	constexpr float ToolbarIconSize = 18.0f;
+	constexpr float ToolbarButtonPaddingX = 8.0f;
+	constexpr float ToolbarIconTextGap = 6.0f;
+
+	ImVec2 CalcToolbarButtonSize(const char* Label, ID3D11ShaderResourceView* Icon)
+	{
+		const char* DisplayLabel = Label ? Label : "";
+		const ImVec2 TextSize = ImGui::CalcTextSize(DisplayLabel);
+		const bool bHasText = DisplayLabel[0] != '\0';
+		const float ButtonContentWidth =
+			ToolbarButtonPaddingX * 2.0f +
+			(Icon ? ToolbarIconSize : 0.0f) +
+			(Icon && bHasText ? ToolbarIconTextGap : 0.0f) +
+			(bHasText ? TextSize.x : 0.0f);
+		return ImVec2(std::max(ToolbarButtonHeight, ButtonContentWidth), ToolbarButtonHeight);
+	}
+
 	bool ToolbarButton(
 		const char* Id,
 		const char* Label,
@@ -120,20 +138,15 @@ namespace
 		const char* Tooltip = nullptr,
 		bool bSelected = false)
 	{
-		constexpr float ButtonHeight = 28.0f;
-		constexpr float IconSize = 18.0f;
-		constexpr float PaddingX = 8.0f;
-		constexpr float IconTextGap = 6.0f;
-
 		const char* DisplayLabel = Label ? Label : "";
 		const ImVec2 TextSize = ImGui::CalcTextSize(DisplayLabel);
 		const bool bHasText = DisplayLabel[0] != '\0';
-		const float ButtonWidth =
-			PaddingX * 2.0f +
-			(Icon ? IconSize : 0.0f) +
-			(Icon && bHasText ? IconTextGap : 0.0f) +
+		const ImVec2 ButtonSize = CalcToolbarButtonSize(DisplayLabel, Icon);
+		const float ButtonContentWidth =
+			ToolbarButtonPaddingX * 2.0f +
+			(Icon ? ToolbarIconSize : 0.0f) +
+			(Icon && bHasText ? ToolbarIconTextGap : 0.0f) +
 			(bHasText ? TextSize.x : 0.0f);
-		const ImVec2 ButtonSize(std::max(ButtonHeight, ButtonWidth), ButtonHeight);
 
 		ImGui::PushID(Id);
 		const bool bClicked = ImGui::InvisibleButton("##CascadeToolbarButton", ButtonSize);
@@ -159,23 +172,23 @@ namespace
 		DrawList->AddRectFilled(Min, Max, Bg, 3.0f);
 		DrawList->AddRect(Min, Max, Border, 3.0f);
 
-		float CursorX = Min.x + (ButtonSize.x - ButtonWidth) * 0.5f + PaddingX;
+		float CursorX = Min.x + (ButtonSize.x - ButtonContentWidth) * 0.5f + ToolbarButtonPaddingX;
 		if (Icon)
 		{
-			const float IconY = Min.y + (ButtonHeight - IconSize) * 0.5f;
+			const float IconY = Min.y + (ToolbarButtonHeight - ToolbarIconSize) * 0.5f;
 			DrawList->AddImage(
 				reinterpret_cast<ImTextureID>(Icon),
 				ImVec2(CursorX, IconY),
-				ImVec2(CursorX + IconSize, IconY + IconSize),
+				ImVec2(CursorX + ToolbarIconSize, IconY + ToolbarIconSize),
 				ImVec2(0.0f, 0.0f),
 				ImVec2(1.0f, 1.0f),
 				ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, Alpha)));
-			CursorX += IconSize + (bHasText ? IconTextGap : 0.0f);
+			CursorX += ToolbarIconSize + (bHasText ? ToolbarIconTextGap : 0.0f);
 		}
 		if (bHasText)
 		{
 			DrawList->AddText(
-				ImVec2(CursorX, Min.y + (ButtonHeight - TextSize.y) * 0.5f),
+				ImVec2(CursorX, Min.y + (ToolbarButtonHeight - TextSize.y) * 0.5f),
 				ImGui::GetColorU32(ImVec4(0.86f, 0.88f, 0.92f, Alpha)),
 				DisplayLabel);
 		}
@@ -585,14 +598,6 @@ namespace
 		if (Cast<UParticleModuleSpawn>(Module))
 		{
 			return ImVec4(0.72f, 0.32f, 0.32f, 1.0f);
-		}
-		if (Cast<USubUVModule>(Module))
-		{
-			return ImVec4(0.25f, 0.34f, 0.58f, 1.0f);
-		}
-		if (Module && Module->IsUpdateModule() && !Module->IsSpawnModule())
-		{
-			return ImVec4(0.24f, 0.43f, 0.27f, 1.0f);
 		}
 		return ImVec4(0.15f, 0.15f, 0.19f, 1.0f);
 	}

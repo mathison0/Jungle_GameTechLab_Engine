@@ -302,7 +302,7 @@ void FEditorParticleSystemWidget::ClearActiveDocumentState()
 	ResetPendingReorders();
 	RestartPreviewPlayback();
 	bShowThumbnail = false;
-	bShowBounds = true;
+	bShowBounds = false;
 	bShowOriginAxis = true;
 	bPreviewPaused = false;
 	bPreviewLoop = true;
