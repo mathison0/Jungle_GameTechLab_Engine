@@ -1312,6 +1312,7 @@
     <ClInclude Include="Source\Engine\Object\ObjectIterator.h" />
     <ClInclude Include="Source\Engine\Object\ObjectPtr.h" />
     <ClInclude Include="Source\Engine\Object\Property.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleCompiledData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />

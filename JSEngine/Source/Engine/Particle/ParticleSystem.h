@@ -4,6 +4,7 @@
 #include "Particle/ParticleModules.h"
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleRendererProperties.h"
+#include "ParticleCompiledData.h"
 
 UCLASS()
 class UParticleLODLevel : public UObject
@@ -104,12 +105,18 @@ public:
 	const TArray<UParticleLODLevel*>& GetLODLevels() const { return LODLevels; }
 	int32 GetParticleSize() const { return ParticleSize; }
 	int32 GetMaxActiveParticleCount() const { return MaxActiveParticles; }
+    uint32 GetCompiledRevision() const { return CompiledRevision; }
 
 	UPROPERTY(DisplayName = "LOD Levels")
 	TArray<UParticleLODLevel*> LODLevels;
 
+	const FCompiledParticleLODData* GetCompiledLODData(int32 Index) const;
+    const FCompiledParticleLODData* SelectCompiledLODData(float Distance) const;
 
 private:
+    TArray<FCompiledParticleLODData> CompiledLODData;
+    uint32 CompiledRevision = 0;
+
 	int32 ParticleSize = sizeof(FBaseParticle);
 	int32 MaxActiveParticles = 128;
 };

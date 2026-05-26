@@ -2091,6 +2091,7 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 
 	const UParticleEmitter* Emitter = Emitters.empty() ? nullptr : Emitters[0];
 	const UParticleLODLevel* LODLevel = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+	const FCompiledParticleLODData* CompiledLOD = Emitter ? Emitter->GetCompiledLODData(0) : nullptr;
 	if (!LODLevel)
 	{
 		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing LOD0 after load.");
@@ -2140,6 +2141,68 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		{
 			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Expected sprite renderer after load.");
 			bPassed = false;
+		}
+
+		if (!CompiledLOD)
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing compiled LOD data after load.");
+			bPassed = false;
+		}
+		else
+		{
+			if (CompiledLOD->SourceLODLevel != LODLevel)
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled LOD source does not match LOD0.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->RequiredModule != LODLevel->GetRequiredModule())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled required module mismatch.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->SpawnModule != LODLevel->GetSpawnModule())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled spawn module mismatch.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->RendererProperties != LODLevel->GetEffectiveRendererProperties())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled renderer properties mismatch.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->RenderMode != EParticleEmitterRenderMode::Sprite)
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Expected compiled sprite render mode.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->ParticleSize != sizeof(FBaseParticle))
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled particle size mismatch.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->MaxActiveParticles <= 0)
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled max active particles is invalid.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->SpawnModules.empty())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled spawn module list is empty.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->UpdateModules.empty())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled update module list is empty.");
+				bPassed = false;
+			}
 		}
 	}
 

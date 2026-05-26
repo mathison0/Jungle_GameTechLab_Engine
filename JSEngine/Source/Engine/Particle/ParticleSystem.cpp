@@ -555,26 +555,51 @@ bool UParticleEmitter::Validate(TArray<FString>* OutErrors) const
     return bIsValid;
 }
 
-// Function : Cache emitter particle layout and module information
+// Function : Compile emitter LOD settings into runtime-ready data
 // input : None
-// output : LOD module caches are refreshed and MaxActiveParticles is updated from required modules
+// output : LOD module caches, renderer payload requirements, and max particle counts are cached
 void UParticleEmitter::CacheEmitterModuleInfo()
 {
 	ParticleSize = sizeof(FBaseParticle);
 	MaxActiveParticles = 128;
+	CompiledLODData.clear();
+
+	SortLODLevelsByDistance();
 
 	for (UParticleLODLevel* LODLevel : LODLevels)
 	{
 		if (!LODLevel)
-		{
 			continue;
-		}
 
 		LODLevel->CacheModuleLists();
-		if (LODLevel->GetRequiredModule())
-		{
-			MaxActiveParticles = std::max(MaxActiveParticles, LODLevel->GetRequiredModule()->GetMaxParticles());
-		}
+
+		FCompiledParticleLODData CompiledLOD;
+		CompiledLOD.LODLevelIndex = LODLevel->GetLevel();
+		CompiledLOD.DistanceThreshold = LODLevel->GetDistanceThreshold();
+		CompiledLOD.bEnabled = LODLevel->IsEnabled();
+		CompiledLOD.SourceLODLevel = LODLevel;
+
+		CompiledLOD.RequiredModule = LODLevel->GetRequiredModule();
+		CompiledLOD.SpawnModule = LODLevel->GetSpawnModule();
+		CompiledLOD.SpawnModules = LODLevel->GetSpawnModules();
+		CompiledLOD.UpdateModules = LODLevel->GetUpdateModules();
+
+		CompiledLOD.RendererProperties = LODLevel->GetEffectiveRendererProperties();
+		CompiledLOD.RenderMode = LODLevel->GetEffectiveRenderMode();
+
+		CompiledLOD.PayloadSize = CompiledLOD.RendererProperties
+			? CompiledLOD.RendererProperties->RequiredPayloadBytes()
+			: 0;
+		CompiledLOD.ParticleSize = ParticleSize;
+		CompiledLOD.ParticleStride = FParticleDataContainer::AlignSize(
+			CompiledLOD.ParticleSize + CompiledLOD.PayloadSize,
+			FParticleDataContainer::DefaultParticleAlignment);
+		CompiledLOD.MaxActiveParticles = CompiledLOD.RequiredModule
+			? CompiledLOD.RequiredModule->GetMaxParticles()
+			: 128;
+
+		MaxActiveParticles = std::max(MaxActiveParticles, CompiledLOD.MaxActiveParticles);
+		CompiledLODData.push_back(CompiledLOD);
 	}
 }
 
@@ -618,6 +643,20 @@ int32 UParticleEmitter::SelectLODLevel(float Distance) const
 	}
 
 	return FallbackIndex >= 0 ? FallbackIndex : 0;
+}
+
+const FCompiledParticleLODData* UParticleEmitter::GetCompiledLODData(int32 Index) const
+{
+	if (Index < 0 || Index >= static_cast<int32>(CompiledLODData.size()))
+	{
+		return nullptr;
+	}
+	return &CompiledLODData[Index];
+}
+
+const FCompiledParticleLODData* UParticleEmitter::SelectCompiledLODData(float Distance) const
+{
+	return GetCompiledLODData(SelectLODLevel(Distance));
 }
 
 UParticleSystem::~UParticleSystem()

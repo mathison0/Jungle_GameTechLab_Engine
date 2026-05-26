@@ -170,44 +170,118 @@ bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& Out
     ParticleComponent->BuildInstanceData();
 
     uint32 SpriteInstanceCount = 0;
+    uint32 MeshInstanceCount = 0;
+    uint32 RibbonVertexCount = 0;
+    int32 CompiledLODCount = 0;
+    bool bFoundRenderableData = false;
     for (int32 EmitterIndex = 0; EmitterIndex < EmitterInstanceCount; ++EmitterIndex)
     {
         const FParticleEmitterInstance* Instance = ParticleComponent->GetEmitterInstance(EmitterIndex);
         if (!Instance)
         {
+            char Buffer[128];
+            snprintf(Buffer, sizeof(Buffer), "emitter instance %d is null", EmitterIndex);
+            OutSummary = Buffer;
+            return false;
+        }
+
+        const FCompiledParticleLODData* CompiledLOD = Instance->GetCurrentCompiledLODData();
+        if (!CompiledLOD)
+        {
+            char Buffer[160];
+            snprintf(Buffer, sizeof(Buffer), "emitter instance %d has no compiled LOD data", EmitterIndex);
+            OutSummary = Buffer;
+            return false;
+        }
+        ++CompiledLODCount;
+
+        const FParticleEmitterRuntimeView RuntimeView = Instance->GetRuntimeView();
+        if (RuntimeView.RenderMode != CompiledLOD->RenderMode)
+        {
+            char Buffer[192];
+            snprintf(
+                Buffer,
+                sizeof(Buffer),
+                "runtime view render mode mismatch on emitter %d",
+                EmitterIndex);
+            OutSummary = Buffer;
+            return false;
+        }
+
+        if (RuntimeView.ActiveParticles != Instance->GetActiveParticleCount())
+        {
+            char Buffer[192];
+            snprintf(
+                Buffer,
+                sizeof(Buffer),
+                "runtime view active count mismatch on emitter %d",
+                EmitterIndex);
+            OutSummary = Buffer;
+            return false;
+        }
+
+        if (Instance->GetActiveParticleCount() <= 0)
+        {
             continue;
         }
 
         uint32 InstanceCount = 0;
-        const FSpriteParticleInstanceData* InstanceData = Instance->GetSpriteInstanceData(InstanceCount);
-        if (InstanceData && InstanceCount > 0)
+        switch (CompiledLOD->RenderMode)
         {
-            SpriteInstanceCount += InstanceCount;
+        case EParticleEmitterRenderMode::Sprite:
+            if (Instance->GetSpriteInstanceData(InstanceCount) && InstanceCount > 0)
+            {
+                SpriteInstanceCount += InstanceCount;
+                bFoundRenderableData = true;
+            }
+            break;
+        case EParticleEmitterRenderMode::Mesh:
+            if (Instance->GetMeshInstanceData(InstanceCount) && InstanceCount > 0)
+            {
+                MeshInstanceCount += InstanceCount;
+                bFoundRenderableData = true;
+            }
+            break;
+        case EParticleEmitterRenderMode::Ribbon:
+            if (Instance->GetRibbonVertexData(InstanceCount) && InstanceCount > 0)
+            {
+                RibbonVertexCount += InstanceCount;
+                bFoundRenderableData = true;
+            }
+            break;
+        case EParticleEmitterRenderMode::Beam:
+            OutSummary = "beam particle runtime smoke is not implemented";
+            return false;
+        default:
+            break;
         }
     }
 
-    if (SpriteInstanceCount == 0)
+    if (!bFoundRenderableData)
     {
         char Buffer[192];
         snprintf(
             Buffer,
             sizeof(Buffer),
-            "active particles exist but no sprite instance data was built, active=%d, emitters=%d",
+            "active particles exist but no render data was built, active=%d, emitters=%d",
             ActiveParticleCount,
             EmitterInstanceCount);
         OutSummary = Buffer;
         return false;
     }
 
-    char Buffer[192];
+    char Buffer[256];
     snprintf(
         Buffer,
         sizeof(Buffer),
-        "%s, emitters=%d, active=%d, spriteInstances=%u",
+        "%s, emitters=%d, compiledLODs=%d, active=%d, spriteInstances=%u, meshInstances=%u, ribbonVertices=%u",
         bUsedSelection ? "selected" : "firstInWorld",
         EmitterInstanceCount,
+        CompiledLODCount,
         ActiveParticleCount,
-        SpriteInstanceCount);
+        SpriteInstanceCount,
+        MeshInstanceCount,
+        RibbonVertexCount);
     OutSummary = Buffer;
     return true;
 }
@@ -273,7 +347,10 @@ bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSu
 
     const TArray<FRenderCommand>& ParticleCommands = RenderBus.GetCommands(ERenderPass::Particle);
     uint32 SpriteInstanceCount = 0;
-    bool bFoundSpriteCommand = false;
+    uint32 MeshInstanceCount = 0;
+    uint32 RibbonVertexCount = 0;
+    uint32 BeamVertexCount = 0;
+    bool bFoundParticleDrawData = false;
     for (const FRenderCommand& Command : ParticleCommands)
     {
         if (Command.SourcePrimitive != ParticleComponent)
@@ -281,15 +358,38 @@ bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSu
             continue;
         }
 
-        if (Command.VertexFactoryType != EVertexFactoryType::SpriteParticle)
+        switch (Command.VertexFactoryType)
         {
-            continue;
-        }
-
-        if (Command.ParticleInstances && Command.ParticleInstanceCount > 0)
-        {
-            bFoundSpriteCommand = true;
-            SpriteInstanceCount += Command.ParticleInstanceCount;
+        case EVertexFactoryType::SpriteParticle:
+            if (Command.ParticleInstances && Command.ParticleInstanceCount > 0)
+            {
+                bFoundParticleDrawData = true;
+                SpriteInstanceCount += Command.ParticleInstanceCount;
+            }
+            break;
+        case EVertexFactoryType::MeshParticle:
+            if (Command.MeshParticleInstances && Command.MeshParticleInstanceCount > 0)
+            {
+                bFoundParticleDrawData = true;
+                MeshInstanceCount += Command.MeshParticleInstanceCount;
+            }
+            break;
+        case EVertexFactoryType::RibbonParticle:
+            if (Command.RibbonVertices && Command.RibbonVertexCount > 0)
+            {
+                bFoundParticleDrawData = true;
+                RibbonVertexCount += Command.RibbonVertexCount;
+            }
+            break;
+        case EVertexFactoryType::BeamParticle:
+            if (Command.BeamVertices && Command.BeamVertexCount > 0)
+            {
+                bFoundParticleDrawData = true;
+                BeamVertexCount += Command.BeamVertexCount;
+            }
+            break;
+        default:
+            break;
         }
     }
 
@@ -302,26 +402,29 @@ bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSu
         return false;
     }
 
-    if (!bFoundSpriteCommand)
+    if (!bFoundParticleDrawData)
     {
         char Buffer[192];
         snprintf(
             Buffer,
             sizeof(Buffer),
-            "no sprite particle render command, particleCommands=%d",
+            "no particle render data, particleCommands=%d",
             ParticleCommandCount);
         OutSummary = Buffer;
         return false;
     }
 
-    char Buffer[192];
+    char Buffer[256];
     snprintf(
         Buffer,
         sizeof(Buffer),
-        "%s, commands=%d, spriteInstances=%u",
+        "%s, commands=%d, spriteInstances=%u, meshInstances=%u, ribbonVertices=%u, beamVertices=%u",
         bUsedSelection ? "selected" : "firstInWorld",
         ParticleCommandCount,
-        SpriteInstanceCount);
+        SpriteInstanceCount,
+        MeshInstanceCount,
+        RibbonVertexCount,
+        BeamVertexCount);
     OutSummary = Buffer;
     return true;
 }

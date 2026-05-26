@@ -9,7 +9,7 @@
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Particle/ParticleRendererProperties.h"
-#include "Particle/ParticleSystemComponent.h" // particle 옮겨야함.
+#include "Particle/ParticleSystemComponent.h"
 
 
 #include "Core/Logging/SkinningStats.h"
@@ -593,15 +593,24 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             }
 
             // RenderMode 결정 — RendererProperties single source.
-            UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
-            if (!LOD)
+            const FCompiledParticleLODData* CompiledLOD = Instance->GetCurrentCompiledLODData();
+            UParticleRendererProperties* RendererProperties =
+                CompiledLOD ? CompiledLOD->RendererProperties : nullptr;
+            EParticleEmitterRenderMode RenderMode =
+                CompiledLOD ? CompiledLOD->RenderMode : EParticleEmitterRenderMode::Sprite;
+            if (!RendererProperties)
             {
-                continue;
-            }
-            UParticleRendererProperties* RendererProperties = LOD->GetEffectiveRendererProperties();
-            const EParticleEmitterRenderMode RenderMode = LOD->GetEffectiveRenderMode();
+                UParticleLODLevel* LOD = Instance->GetCurrentLODLevel();
+                if (!LOD)
+                {
+                    continue;
+                }
 
-            // Cmd 기본 필드 (generic, type 무관) 먼저 채움.
+                RendererProperties = LOD->GetEffectiveRendererProperties();
+                RenderMode = LOD->GetEffectiveRenderMode();
+            }
+
+            // Cmd 기본 필드 (generic, type 무관) 먼저 채움
             FRenderCommand Cmd = {};
             Cmd.SourcePrimitive = Primitive;
             Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));

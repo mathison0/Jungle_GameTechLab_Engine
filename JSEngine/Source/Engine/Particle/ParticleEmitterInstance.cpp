@@ -27,10 +27,19 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	if (SpriteTemplate)
 	{
 		SpriteTemplate->CacheEmitterModuleInfo();
-		ParticleSize = SpriteTemplate->GetParticleSize();
-		MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
 		CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(0.0f);
 		CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
+        CurrentCompiledLOD = SpriteTemplate->GetCompiledLODData(CurrentLODLevelIndex);
+        if (CurrentCompiledLOD)
+        {
+            ParticleSize = CurrentCompiledLOD->ParticleSize;
+            MaxActiveParticles = std::max(CurrentCompiledLOD->MaxActiveParticles, 1);
+        }
+        else
+        {
+            ParticleSize = SpriteTemplate->GetParticleSize();
+            MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
+        }
 	}
 	else
 	{
@@ -39,9 +48,7 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	}
 
 	// RendererProperties owns type-specific payload requirements.
-	const int32 PayloadBytes = (CurrentLODLevel && CurrentLODLevel->GetEffectiveRendererProperties())
-		? CurrentLODLevel->GetEffectiveRendererProperties()->RequiredPayloadBytes()
-		: 0;
+    const int32 PayloadBytes = CurrentCompiledLOD ? CurrentCompiledLOD->PayloadSize : GetRequiredPayloadBytes();
 	InstancePayloadSize = PayloadBytes;
 	PayloadOffset = ParticleSize;
 
@@ -78,6 +85,7 @@ void FParticleEmitterInstance::Reset()
 	SpawnFraction = 0.0f;
 	CurrentLODLevelIndex = 0;
 	CurrentLODLevel = nullptr;
+    CurrentCompiledLOD = nullptr;
 }
 
 // Function : Advance emitter simulation by delta time
@@ -98,14 +106,14 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 	}
 
 	int32 SpawnCount = 0;
-	if (bAllowSpawning)
-	{
-		if (UParticleModuleSpawn* SpawnModule = CurrentLODLevel->GetSpawnModule())
-		{
-			SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
-		}
-	}
+    if (bAllowSpawning)
+    {
+        UParticleModuleSpawn* SpawnModule = CurrentCompiledLOD
+			? CurrentCompiledLOD->SpawnModule : CurrentLODLevel->GetSpawnModule();
 
+        if (SpawnModule)
+            SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
+    }
 	SpawnParticles(SpawnCount, 0.0f, SpawnCount > 0 ? DeltaTime / static_cast<float>(SpawnCount) : 0.0f,
 	               Component->GetWorldLocation(), FVector::ZeroVector);
 
@@ -123,8 +131,9 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 		Particle->Location += Particle->Velocity * DeltaTime;
 		++ParticleIndex;
 	}
-
-	for (UParticleModule* Module : CurrentLODLevel->GetUpdateModules())
+    const TArray<UParticleModule*>& UpdateModules = CurrentCompiledLOD
+		? CurrentCompiledLOD->UpdateModules : CurrentLODLevel->GetUpdateModules();
+    for (UParticleModule* Module : UpdateModules)
 	{
 		if (Module && Module->IsEnabled())
 		{
@@ -152,6 +161,7 @@ void FParticleEmitterInstance::SelectLODLevel(float Distance)
 
 	CurrentLODLevelIndex = NewLODIndex;
 	CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
+    CurrentCompiledLOD = SpriteTemplate->GetCompiledLODData(CurrentLODLevelIndex);
 }
 
 // Function : Spawn particles into available active slots
@@ -187,7 +197,10 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 		Particle->BaseVelocity = InitialVelocity;
 
 		const float SpawnTime = StartTime + Increment * static_cast<float>(SpawnIndex);
-		for (UParticleModule* Module : CurrentLODLevel->GetSpawnModules())
+
+		const TArray<UParticleModule*>& SpawnModules = CurrentCompiledLOD ? 
+			CurrentCompiledLOD->SpawnModules : CurrentLODLevel->GetSpawnModules();
+		for (UParticleModule* Module : SpawnModules)
 		{
 			if (Module && Module->IsEnabled())
 			{
@@ -226,9 +239,12 @@ FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
     RuntimeView.ParticleSize = ParticleSize;
     RuntimeView.CurrentLODLevelIndex = CurrentLODLevelIndex;
 
-	if (CurrentLODLevel)
+	if (CurrentCompiledLOD)
     {
-        // RendererProperties를 single source로, 없을 때 legacy TypeData/RequiredModule.RenderMode로 fallback.
+        RuntimeView.RenderMode = CurrentCompiledLOD->RenderMode;
+    }
+    else if (CurrentLODLevel)
+    {
         RuntimeView.RenderMode = CurrentLODLevel->GetEffectiveRenderMode();
     }
 
@@ -300,12 +316,12 @@ int32 FParticleEmitterInstance::ConsumeSpawnCount(float Rate, float DeltaTime)
 // output : Bytes required by renderer properties beyond FBaseParticle, or 0 when absent
 int32 FParticleEmitterInstance::GetRequiredPayloadBytes() const
 {
+    if (CurrentCompiledLOD)
+        return CurrentCompiledLOD->PayloadSize;
     if (CurrentLODLevel)
     {
         if (const UParticleRendererProperties* RendererProperties = CurrentLODLevel->GetEffectiveRendererProperties())
-        {
             return RendererProperties->RequiredPayloadBytes();
-        }
     }
     return 0;
 }

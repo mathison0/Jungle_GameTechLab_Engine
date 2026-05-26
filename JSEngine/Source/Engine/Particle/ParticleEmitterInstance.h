@@ -59,6 +59,7 @@ public:
 
     UParticleEmitter* GetTemplate() const { return SpriteTemplate; }
     UParticleLODLevel* GetCurrentLODLevel() const { return CurrentLODLevel; }
+    const FCompiledParticleLODData* GetCurrentCompiledLODData() const { return CurrentCompiledLOD; }
     int32 GetCurrentLODLevelIndex() const { return CurrentLODLevelIndex; }
     int32 GetEmitterIndex() const { return EmitterIndex; }
     uint32 GetParticleCounter() const { return ParticleCounter; }
@@ -92,7 +93,7 @@ private:
 
     int32 CurrentLODLevelIndex = 0;
     UParticleLODLevel* CurrentLODLevel = nullptr;
-
+    const FCompiledParticleLODData* CurrentCompiledLOD = nullptr;
     // 실제 데이터들, memory pool and live data — ParticleStorage/PayloadOffset/ActiveParticles는 위 protected로 이동.
     uint8* InstanceData = nullptr;
     int32 InstancePayloadSize = 0;

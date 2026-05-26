@@ -61,13 +61,18 @@ FBaseParticle* FParticleRibbonEmitterInstance::GetParticleBySlot(int32 SlotIndex
 void FParticleRibbonEmitterInstance::EnsureTrailState()
 {
     int32 MaxTrails = 1;
-    if (UParticleLODLevel* LOD = GetCurrentLODLevel())
+    const FCompiledParticleLODData* CompiledLOD = GetCurrentCompiledLODData();
+    const UParticleRibbonRendererProperties* RibbonRenderer =
+        CompiledLOD ? Cast<UParticleRibbonRendererProperties>(CompiledLOD->RendererProperties) : nullptr;
+
+    if (!RibbonRenderer)
     {
-        if (const UParticleRibbonRendererProperties* RibbonRenderer = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties()))
-        {
-            MaxTrails = std::max(RibbonRenderer->GetMaxTrailCount(), 1);
-        }
+        if (UParticleLODLevel* LOD = GetCurrentLODLevel())
+            RibbonRenderer = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties());
     }
+
+    if (RibbonRenderer)
+        MaxTrails = std::max(RibbonRenderer->GetMaxTrailCount(), 1);
 
     if (static_cast<int32>(HeadIndices.size()) != MaxTrails)
     {
@@ -92,11 +97,14 @@ void FParticleRibbonEmitterInstance::SpawnParticles(int32 Count, float StartTime
     const int32 OldActiveCount = ActiveParticles;
     FParticleEmitterInstance::SpawnParticles(Count, StartTime, Increment, InitialLocation, InitialVelocity, EventPayload);
 
-    // RendererProperties 재조회 (TangentSpawningScalar 사용).
-    const UParticleRibbonRendererProperties* RibbonRenderer = nullptr;
-    if (UParticleLODLevel* LOD = GetCurrentLODLevel())
+    // RendererProperties 재조회 (TangentSpawningScalar 사용)
+    const FCompiledParticleLODData* CompiledLOD = GetCurrentCompiledLODData();
+    const UParticleRibbonRendererProperties* RibbonRenderer =
+        CompiledLOD ? Cast<UParticleRibbonRendererProperties>(CompiledLOD->RendererProperties) : nullptr;
+    if (!RibbonRenderer)
     {
-        RibbonRenderer = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties());
+        if (UParticleLODLevel* LOD = GetCurrentLODLevel())
+            RibbonRenderer = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties());
     }
     const float TangentScalar = RibbonRenderer ? RibbonRenderer->GetTangentSpawningScalar() : 0.0f;
     const int32 MaxTrails = std::max(static_cast<int32>(HeadIndices.size()), 1);

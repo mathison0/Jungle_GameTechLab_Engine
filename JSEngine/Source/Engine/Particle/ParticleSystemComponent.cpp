@@ -66,8 +66,11 @@ void UParticleSystemComponent::RecreateEmitterInstances()
 		{
 			EmitterAsset->CacheEmitterModuleInfo();
 		}
-		UParticleLODLevel* LOD0 = EmitterAsset ? EmitterAsset->GetLODLevel(0) : nullptr;
-		UParticleRendererProperties* RendererProperties = LOD0 ? LOD0->GetEffectiveRendererProperties() : nullptr;
+        const FCompiledParticleLODData* CompiledLOD = EmitterAsset ?
+			EmitterAsset->SelectCompiledLODData(0.0f) : nullptr;
+
+        UParticleRendererProperties* RendererProperties = CompiledLOD ?
+			CompiledLOD->RendererProperties : nullptr;
 		// RendererProperties가 있으면 render type별 derived instance 생성 hook 사용. 없으면 sprite-style base instance.
 		FParticleEmitterInstance* Instance = RendererProperties
 			? RendererProperties->CreateInstance(this, Index)
