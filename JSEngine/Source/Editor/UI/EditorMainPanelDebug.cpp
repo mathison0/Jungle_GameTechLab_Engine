@@ -583,7 +583,7 @@ bool RunParticleEventDispatchSmoke(FString& OutSummary)
     uint32 ComponentParticleId = 0;
     uint32 DispatcherParticleId = 0;
 
-    Component->SetEventDispatcher(Dispatcher);
+    Dispatcher->BindToParticleSystemComponent(Component);
     Component->OnParticleCollide.Add(
         [&](const FParticleEventCollideData& EventData)
         {
@@ -621,7 +621,7 @@ bool RunParticleEventDispatchSmoke(FString& OutSummary)
     }
     if (!Dispatcher->GetCollisionEvents().empty())
     {
-        return Fail("dispatcher queue was not cleared after broadcast");
+        return Fail("dispatcher listener queue was not cleared after broadcast");
     }
     if (ComponentBroadcastCount != 1 || ComponentParticleId != 77)
     {

@@ -1,4 +1,46 @@
 #include "Particle/ParticleEvent.h"
+#include "Particle/ParticleSystemComponent.h"
+
+AParticleEventManager::~AParticleEventManager()
+{
+	UnbindParticleSystemComponent();
+}
+
+// Function : Bind this manager as a runtime listener for a particle system component
+// input : InComponent
+// InComponent : component whose OnParticleCollide delegate should be forwarded by this manager
+// output : Existing binding is replaced; no asset reference is serialized
+void AParticleEventManager::BindToParticleSystemComponent(UParticleSystemComponent* InComponent)
+{
+	if (BoundComponent == InComponent)
+	{
+		return;
+	}
+
+	UnbindParticleSystemComponent();
+	BoundComponent = InComponent;
+	if (BoundComponent)
+	{
+		BoundCollisionDelegateId = BoundComponent->OnParticleCollide.Add(
+			[this](const FParticleEventCollideData& EventData)
+			{
+				HandleParticleCollide(EventData);
+			});
+	}
+}
+
+// Function : Remove the runtime particle component listener
+// input : None
+// output : This manager no longer receives PSC collision delegate broadcasts
+void AParticleEventManager::UnbindParticleSystemComponent()
+{
+	if (BoundComponent && BoundCollisionDelegateId != 0)
+	{
+		BoundComponent->OnParticleCollide.Remove(BoundCollisionDelegateId);
+	}
+	BoundComponent = nullptr;
+	BoundCollisionDelegateId = 0;
+}
 
 // Function : Add particle collision event to manager queue
 // input : EventData
@@ -7,6 +49,16 @@
 void AParticleEventManager::PushCollisionEvent(const FParticleEventCollideData& EventData)
 {
 	CollisionEvents.push_back(EventData);
+}
+
+// Function : Forward one PSC collision delegate event through this manager
+// input : EventData
+// EventData : collision event broadcast by UParticleSystemComponent
+// output : EventData is queued, broadcast through OnParticleCollide, then cleared
+void AParticleEventManager::HandleParticleCollide(const FParticleEventCollideData& EventData)
+{
+	PushCollisionEvent(EventData);
+	DispatchEvents();
 }
 
 // Function : Queue a batch of particle collision events and broadcast them

@@ -4,7 +4,6 @@
 #include "Particle/ParticleEmitterInstance.h"
 
 class FRenderBus;
-class AParticleEventManager;
 
 DECLARE_DELEGATE(FOnParticleCollide, const FParticleEventCollideData&);
 
@@ -31,8 +30,6 @@ public:
 	float ComputeEmitterLODDistance() const;
 	void QueueCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchQueuedParticleEvents();
-	void SetEventDispatcher(AParticleEventManager* InEventDispatcher) { EventDispatcher = InEventDispatcher; }
-	AParticleEventManager* GetEventDispatcher() const { return EventDispatcher; }
 	bool HasPendingCollisionEvents() const { return !PendingCollisionEvents.empty(); }
 	void ClearPendingCollisionEvents() { PendingCollisionEvents.clear(); }
 
@@ -84,7 +81,6 @@ private:
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	TArray<FParticleEventCollideData> PendingCollisionEvents;
-	AParticleEventManager* EventDispatcher = nullptr;
 
 	// Cycle 14 (M1, 결정 18 옵션 β): RenderBus → Component → derived instance 캐싱 경로.
 	// 첫 frame 또는 외부 호출자 (예: EditorMainPanelDebug) 가 CacheCameraFromRenderBus 미호출 시 bCachedCameraValid=false 유지 →
