@@ -18,6 +18,12 @@
 #include "Object/Property.h"
 #include "Particle/ParticleSystemComponent.h"
 #include "Particle/ParticleSystem.h"
+#include "Particle/ParticleModuleBeamNoise.h"
+#include "Particle/ParticleModuleBeamSource.h"
+#include "Particle/ParticleModuleBeamTarget.h"
+#include "Particle/ParticleModuleTypeDataBeam.h"
+#include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Render/Resource/Material.h"
 #include "Component/PostProcess/Light/AmbientLightComponent.h"
 
@@ -40,7 +46,6 @@ namespace
 	constexpr const char* ParticleModuleDragPayloadType = "PS_MODULE";
 	constexpr int32 NoParticleModuleSelection = -1;
 	constexpr int32 RequiredParticleModuleSelection = -2;
-	constexpr int32 TypeDataParticleModuleSelection = -3;
 	constexpr ImGuiDragDropFlags ParticleDragDropTargetFlags =
 		ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect;
 
@@ -496,6 +501,22 @@ namespace
 		{
 			return "Spawn";
 		}
+		if (const UParticleModuleTypeDataBase* TypeData = Cast<UParticleModuleTypeDataBase>(Module))
+		{
+			switch (TypeData->GetRenderMode())
+			{
+			case EParticleEmitterRenderMode::Sprite:
+				return "Sprite";
+			case EParticleEmitterRenderMode::Mesh:
+				return "Mesh Particles";
+			case EParticleEmitterRenderMode::Beam:
+				return "Beam";
+			case EParticleEmitterRenderMode::Ribbon:
+				return "Ribbon";
+			default:
+				return "Type Data";
+			}
+		}
 		if (Cast<UParticleModuleLifetime>(Module))
 		{
 			return "Lifetime";
@@ -580,8 +601,7 @@ namespace
 
 	const char* GetRenderModeLabel(const UParticleLODLevel* LODLevel)
 	{
-		const UParticleModuleRequired* Required = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
-		return Required ? GetRenderModeLabel(Required->GetRenderMode()) : "Emitter";
+		return LODLevel ? GetRenderModeLabel(LODLevel->GetEffectiveRenderMode()) : "Emitter";
 	}
 
 	bool IsCurveDrivenModule(const UParticleModule* Module)
@@ -665,6 +685,100 @@ namespace
 			Module->SetFName(FName(Name));
 		}
 		return Module;
+	}
+
+	template <typename ModuleType>
+	bool HasParticleModule(const UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+		{
+			return false;
+		}
+		for (UParticleModule* Module : LODLevel->Modules)
+		{
+			if (Cast<ModuleType>(Module))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	template <typename ModuleType>
+	void RemoveParticleModules(UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+		{
+			return;
+		}
+		for (auto It = LODLevel->Modules.begin(); It != LODLevel->Modules.end();)
+		{
+			if (ModuleType* Module = Cast<ModuleType>(*It))
+			{
+				It = LODLevel->Modules.erase(It);
+				UObjectManager::Get().DestroyObject(Module);
+				continue;
+			}
+			++It;
+		}
+	}
+
+	template <typename ModuleType>
+	void AddModuleIfMissing(UParticleLODLevel* LODLevel, const char* Name)
+	{
+		if (LODLevel && !HasParticleModule<ModuleType>(LODLevel))
+		{
+			AddModule(LODLevel, CreateParticleModule<ModuleType>(Name));
+		}
+	}
+
+	void EnsureBeamSupportModules(UParticleLODLevel* LODLevel)
+	{
+		AddModuleIfMissing<UParticleModuleBeamSource>(LODLevel, "Beam Source");
+		AddModuleIfMissing<UParticleModuleBeamTarget>(LODLevel, "Beam Target");
+		AddModuleIfMissing<UParticleModuleBeamNoise>(LODLevel, "Beam Noise");
+	}
+
+	void RemoveBeamSupportModules(UParticleLODLevel* LODLevel)
+	{
+		RemoveParticleModules<UParticleModuleBeamSource>(LODLevel);
+		RemoveParticleModules<UParticleModuleBeamTarget>(LODLevel);
+		RemoveParticleModules<UParticleModuleBeamNoise>(LODLevel);
+	}
+
+	UParticleModuleTypeDataBase* CreateTypeDataModule(EParticleEmitterRenderMode RenderMode)
+	{
+		switch (RenderMode)
+		{
+		case EParticleEmitterRenderMode::Sprite:
+			return CreateParticleModule<USpriteTypeData>("Sprite TypeData");
+		case EParticleEmitterRenderMode::Mesh:
+		{
+			UMeshTypeData* MeshTypeData = CreateParticleModule<UMeshTypeData>("Mesh TypeData");
+			if (MeshTypeData)
+			{
+				MeshTypeData->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
+				const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.mat";
+				FResourceManager::Get().DeserializeMaterial(DemoMatPath);
+				UMaterial* DemoMaterial = FResourceManager::Get().GetMaterial(DemoMatPath);
+				if (!DemoMaterial)
+				{
+					DemoMaterial = FResourceManager::Get().GetMaterial("apple_mid_Mat_0");
+				}
+				if (DemoMaterial)
+				{
+					MeshTypeData->SetOverrideMaterial(true, DemoMaterial);
+				}
+			}
+			return MeshTypeData;
+		}
+		case EParticleEmitterRenderMode::Beam:
+			return CreateParticleModule<UBeamTypeData>("Beam TypeData");
+		case EParticleEmitterRenderMode::Ribbon:
+			return CreateParticleModule<URibbonTypeData>("Ribbon TypeData");
+		default:
+			return nullptr;
+		}
 	}
 
 	void DrawDisabledParticleModuleMenu(const char* MenuLabel)
