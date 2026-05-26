@@ -3,6 +3,8 @@
 #include "Component/PrimitiveComponent.h"
 #include "Core/Reflection/ReflectionRegistry.h"
 #include "Core/Logging/Log.h"
+#include "Engine/Geometry/Ray.h"
+#include "Geometry/OBB.h"
 #include "GameFramework/PlayerController.h"
 
 #include <algorithm>
@@ -137,6 +139,156 @@ void UWorld::RebuildSpatialIndex()
 void UWorld::SyncSpatialIndex()
 {
 	SpatialIndex.FlushDirtyBounds();
+}
+
+bool UWorld::ShouldSkipTraceCandidate(UPrimitiveComponent* Candidate, const FCollisionQueryParams& Params)
+{
+	if (!Candidate)
+	{
+		return true;
+	}
+	if (Params.IgnoredComponent && Candidate == Params.IgnoredComponent)
+	{
+		return true;
+	}
+	if (Params.IgnoredActor && Candidate->GetOwner() == Params.IgnoredActor)
+	{
+		return true;
+	}
+	if (Params.bTraceVisibleOnly && !Candidate->IsVisible())
+	{
+		return true;
+	}
+	return false;
+}
+
+FOBB UWorld::MakeSweptAABBQueryOBB(const FVector& Start, const FVector& End, const FCollisionShape& Shape)
+{
+	FVector Inflation = FVector::ZeroVector;
+	if (Shape.IsSphere())
+	{
+		Inflation = FVector(Shape.Radius, Shape.Radius, Shape.Radius);
+	}
+	else if (Shape.IsBox())
+	{
+		Inflation = Shape.HalfExtent;
+	}
+
+	const FVector QueryMin = FVector::Min(Start, End) - Inflation;
+	const FVector QueryMax = FVector::Max(Start, End) + Inflation;
+	const FAABB SweptBounds(QueryMin, QueryMax);
+	return FOBB(SweptBounds.GetCenter(), SweptBounds.GetExtent(), FQuat::Identity);
+}
+
+bool UWorld::LineTraceSingle(
+	const FVector& Start,
+	const FVector& End,
+	FHitResult& OutHit,
+	const FCollisionQueryParams& Params)
+{
+	OutHit.Reset();
+
+	const FVector Delta = End - Start;
+	const float SegmentLength = Delta.Size();
+	if (SegmentLength <= 1.0e-6f)
+	{
+		return false;
+	}
+
+	const FRay Ray(Start, Delta / SegmentLength);
+
+	TArray<UPrimitiveComponent*> Candidates;
+	TArray<float> CandidateTs;
+	FWorldSpatialIndex::FPrimitiveRayQueryScratch Scratch;
+	SpatialIndex.RayQueryPrimitives(Ray, Candidates, CandidateTs, Scratch);
+
+	bool bFoundHit = false;
+	float BestDistance = SegmentLength;
+
+	for (UPrimitiveComponent* Candidate : Candidates)
+	{
+		if (ShouldSkipTraceCandidate(Candidate, Params))
+		{
+			continue;
+		}
+
+		FHitResult CandidateHit;
+		if (Candidate->Raycast(Ray, CandidateHit)
+			&& CandidateHit.bHit
+			&& CandidateHit.Distance <= SegmentLength
+			&& CandidateHit.Distance < BestDistance)
+		{
+			if (!CandidateHit.HitComponent)
+			{
+				CandidateHit.HitComponent = Candidate;
+			}
+			OutHit = CandidateHit;
+			BestDistance = CandidateHit.Distance;
+			bFoundHit = true;
+		}
+	}
+
+	return bFoundHit;
+}
+
+bool UWorld::SweepSingle(
+	FHitResult& OutHit,
+	const FVector& Start,
+	const FVector& End,
+	const FQuat& ShapeWorldRotation,
+	const FCollisionShape& CollisionShape,
+	const FCollisionQueryParams& Params)
+{
+	OutHit.Reset();
+
+	if (CollisionShape.IsLine())
+	{
+		return LineTraceSingle(Start, End, OutHit, Params);
+	}
+
+	const FVector Delta = End - Start;
+	const float SegmentLength = Delta.Size();
+	if (SegmentLength <= 1.0e-6f)
+	{
+		return false;
+	}
+
+	if (CollisionShape.IsSphere() && CollisionShape.Radius < 0.0f)
+	{
+		return false;
+	}
+
+	TArray<UPrimitiveComponent*> Candidates;
+	FWorldSpatialIndex::FPrimitiveOBBQueryScratch Scratch;
+	SpatialIndex.OBBQueryPrimitives(MakeSweptAABBQueryOBB(Start, End, CollisionShape), Candidates, Scratch);
+
+	bool bFoundHit = false;
+	float BestDistance = SegmentLength;
+
+	for (UPrimitiveComponent* Candidate : Candidates)
+	{
+		if (ShouldSkipTraceCandidate(Candidate, Params))
+		{
+			continue;
+		}
+
+		FHitResult CandidateHit;
+		if (Candidate->Sweep(Start, End, ShapeWorldRotation, CollisionShape, CandidateHit)
+			&& CandidateHit.bHit
+			&& CandidateHit.Distance <= SegmentLength
+			&& CandidateHit.Distance < BestDistance)
+		{
+			if (!CandidateHit.HitComponent)
+			{
+				CandidateHit.HitComponent = Candidate;
+			}
+			OutHit = CandidateHit;
+			BestDistance = CandidateHit.Distance;
+			bFoundHit = true;
+		}
+	}
+
+	return bFoundHit;
 }
 
 int32 UWorld::AddActorDestroyedListener(FActorDestroyedListener Listener)

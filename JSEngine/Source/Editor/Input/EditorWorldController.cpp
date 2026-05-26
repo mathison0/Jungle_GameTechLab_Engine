@@ -7,7 +7,6 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/Level.h"
 #include "Engine/Input/InputSystem.h"
-#include "Engine/Collision/RayCollision/RayCollision.h"
 #include "Math/Utils.h"
 
 #include <algorithm>
@@ -132,33 +131,15 @@ void FEditorWorldController::SelectActorAt(float X, float Y)
 	}
 	else
 	{
-		FRay       Ray = Camera->DeprojectScreenToWorld(X, Y, ViewportWidth, ViewportHeight);
+		static constexpr float SelectionTraceDistance = 1000000.0f;
+		const FRay Ray = Camera->DeprojectScreenToWorld(X, Y, ViewportWidth, ViewportHeight);
 		FHitResult HitResult{};
-		float   ClosestDist = FLT_MAX;
-
-		FWorldSpatialIndex::FPrimitiveRayQueryScratch RayQueryScratch;
-		TArray<UPrimitiveComponent*> CandidatePrimitives;
-		TArray<float>                CandidateTs;
-		World->GetSpatialIndex().RayQueryPrimitives(Ray, CandidatePrimitives, CandidateTs, RayQueryScratch);
-
-		for (int32 CandidateIndex = 0; CandidateIndex < static_cast<int32>(CandidatePrimitives.size()); ++CandidateIndex)
+		if (World->LineTraceSingle(Ray.Origin, Ray.Origin + Ray.Direction * SelectionTraceDistance, HitResult))
 		{
-			if (CandidateTs[CandidateIndex] > ClosestDist)
+			UPrimitiveComponent* PrimitiveComp = HitResult.HitComponent;
+			AActor* Actor = PrimitiveComp ? PrimitiveComp->GetOwner() : nullptr;
+			if (Actor && Actor->GetRootComponent())
 			{
-				break;
-			}
-
-			UPrimitiveComponent* PrimitiveComp = CandidatePrimitives[CandidateIndex];
-			AActor*              Actor = (PrimitiveComp != nullptr) ? PrimitiveComp->GetOwner() : nullptr;
-			if (Actor == nullptr || Actor->GetRootComponent() == nullptr)
-			{
-				continue;
-			}
-
-			HitResult = {};
-			if (PrimitiveComp->Raycast(Ray, HitResult) && HitResult.Distance < ClosestDist)
-			{
-				ClosestDist = HitResult.Distance;
 				BestActor = Actor;
 			}
 		}

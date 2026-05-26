@@ -160,6 +160,22 @@ private:
 	FVector EndSize = FVector(1.0f, 1.0f, 1.0f);
 };
 
+UENUM()
+enum class EParticleCollisionResponse : uint8
+{
+	Bounce,
+	Kill,
+	Stop,
+	Ignore,
+};
+
+UENUM()
+enum class EParticleCollisionTraceMode : uint8
+{
+	Point,
+	Sphere,
+};
+
 UCLASS()
 class UParticleModuleCollision : public UParticleModule
 {
@@ -168,16 +184,45 @@ public:
 
 	UParticleModuleCollision();
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+	EParticleCollisionTraceMode GetTraceMode() const { return TraceMode; }
+	bool IsUsingParticleSizeAsRadius() const { return bUseParticleSizeAsRadius; }
 
 private:
-	UPROPERTY(DisplayName = "Plane Z")
-	float CollisionPlaneZ = 0.0f;
+	UPROPERTY(DisplayName = "Collision Enabled")
+	bool bCollisionEnabled = true;
+
+	UPROPERTY(DisplayName = "Trace Mode")
+	EParticleCollisionTraceMode TraceMode = EParticleCollisionTraceMode::Point;
+
+	UPROPERTY(DisplayName = "Use Particle Size As Radius")
+	bool bUseParticleSizeAsRadius = true;
+
+	UPROPERTY(DisplayName = "Collision Radius", Min = 0.0f)
+	float CollisionRadius = 1.0f;
+
+	UPROPERTY(DisplayName = "Response")
+	EParticleCollisionResponse Response = EParticleCollisionResponse::Bounce;
 
 	UPROPERTY(DisplayName = "Restitution", Min = 0.0f, Max = 1.0f)
 	float Restitution = 0.25f;
 
-	UPROPERTY(DisplayName = "Kill On Collision")
-	bool bKillOnCollision = false;
+	UPROPERTY(DisplayName = "Friction", Min = 0.0f, Max = 1.0f)
+	float Friction = 0.0f;
+
+	UPROPERTY(DisplayName = "Max Collisions", Min = 0)
+	int32 MaxCollisions = 0;
+
+	UPROPERTY(DisplayName = "Kill On Max Collisions")
+	bool bKillWhenMaxCollisionsReached = false;
+
+	UPROPERTY(DisplayName = "Max Collision Distance", Min = 0.0f)
+	float MaxCollisionDistance = 0.0f;
+
+	UPROPERTY(DisplayName = "Collision Check Fraction", Min = 0.0f, Max = 1.0f)
+	float CollisionCheckFraction = 1.0f;
+
+	UPROPERTY(DisplayName = "Ignore Owner")
+	bool bIgnoreOwner = true;
 
 	UPROPERTY(DisplayName = "Generate Events")
 	bool bGenerateCollisionEvents = true;
@@ -191,6 +236,10 @@ public:
 
 	UParticleModuleEventGenerator();
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+
+private:
+	UPROPERTY(DisplayName = "Dispatch Collision Events")
+	bool bDispatchCollisionEvents = true;
 };
 
 // SubUV 재생 속도는 particle Lifetime에 종속. 별도 재생 속도/루프 제어는

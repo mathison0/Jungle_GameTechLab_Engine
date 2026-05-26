@@ -1,25 +1,30 @@
 #pragma once
 
 #include "Core/Containers/String.h"
+#include "Engine/Runtime/StartupProgress.h"
 
 #include <Windows.h>
+#include <objidl.h>
+#include <propidl.h>
 #include <atomic>
 #include <chrono>
 #include <gdiplus.h>
 #include <memory>
+#include <mutex>
 #include <thread>
 
-class FGameSplashScreen
+class FGameSplashScreen : public IStartupProgressReporter
 {
 public:
     bool ShowOverWindow(HINSTANCE InInstance, HWND OwnerWindow);
+    void Report(const FString& Message, float Progress) override;
     void Close();
 
 private:
     struct FBrandingSettings
     {
         FString SplashImagePath;
-        float SplashMinSeconds = 1.0f;
+        float SplashMinSeconds = 0.35f;
     };
 
     static LRESULT CALLBACK StaticWndProc(HWND HWnd, UINT Message, WPARAM WParam, LPARAM LParam);
@@ -40,6 +45,9 @@ private:
     HWND Owner = nullptr;
     ULONG_PTR GdiToken = 0;
     std::unique_ptr<Gdiplus::Image> SplashImage;
+    mutable std::mutex ProgressMutex;
+    FString ProgressMessage = "Starting JSEngine...";
+    float ProgressValue = 0.0f;
     std::chrono::steady_clock::time_point ShowTime;
     std::thread RenderThread;
     std::atomic_bool bStopRenderThread = false;

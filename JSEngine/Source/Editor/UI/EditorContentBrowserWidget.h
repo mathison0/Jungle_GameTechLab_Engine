@@ -1,12 +1,14 @@
 #pragma once
 
 #include "Editor/UI/EditorWidget.h"
+#include "Core/Containers/Set.h"
 #include "Render/Common/ComPtr.h"
 #include "ImGui/imgui.h"
 
 #include <filesystem>
 
 class UMaterialInterface;
+class USkeletalMesh;
 class UStaticMesh;
 struct ID3D11ShaderResourceView;
 struct ID3D11Texture2D;
@@ -78,6 +80,7 @@ private:
 	bool CreateCurveAsset();
 	bool CreateAnimGraphAsset();
 	bool CreateParticleSystemAsset();
+	bool CreateRuntimeUILayoutAsset();
 	bool CreateSceneAsset();
 	bool DeleteSelectedItem();
 	void RequestRenameSelectedItem();
@@ -96,17 +99,22 @@ private:
 	ID3D11ShaderResourceView* GetImagePreviewSRV(const FContentItem& Item);
 	ID3D11ShaderResourceView* GetAnimSequenceIconSRV();
 	ID3D11ShaderResourceView* GetMaterialPreviewSRV(const FContentItem& Item, uint32 Width, uint32 Height, bool bHighPriority = false);
+	ID3D11ShaderResourceView* GetStaticMeshPreviewSRV(const FContentItem& Item, bool bHighPriority = false);
+	ID3D11ShaderResourceView* GetSkeletalMeshPreviewSRV(const FContentItem& Item, bool bHighPriority = false);
 	bool CapturePreviewSnapshot(ID3D11ShaderResourceView* SourceSRV, FMaterialPreviewSnapshot& OutSnapshot, uint32 Width, uint32 Height);
 	UMaterialInterface* ResolveMaterialAsset(const std::filesystem::path& Path);
 	bool IsPathAllowed(const std::filesystem::path& Path) const;
 	bool IsProjectRootPath(const std::filesystem::path& Path) const;
 	bool IsPreviewableImage(const FString& Extension) const;
 	bool IsMaterialAsset(const FString& Extension) const;
+	bool IsStaticMeshAsset(const FContentItem& Item) const;
+	bool IsSkeletalMeshAsset(const FContentItem& Item) const;
 	bool IsCurveAsset(const std::filesystem::path& Path) const;
 	bool IsSequenceAsset(const FString& Extension) const;
 	bool IsAnimGraphAsset(const FString& Extension) const;
 	bool IsParticleSystemAsset(const FString& Extension) const;
 	bool IsPrefabAsset(const FString& Extension) const;
+	bool IsRuntimeUILayoutAsset(const FContentItem& Item) const;
 	std::filesystem::path ResolveLuaScriptCreateDirectory() const;
 	FString MakeRelativeProjectPath(const std::filesystem::path& Path) const;
 
@@ -120,6 +128,9 @@ private:
 	std::filesystem::path SelectedPath;
 	TArray<std::filesystem::path> BackHistory;
 	TMap<FString, FMaterialPreviewSnapshot> MaterialPreviewCache;
+	TMap<FString, FMaterialPreviewSnapshot> StaticMeshPreviewCache;
+	TMap<FString, FMaterialPreviewSnapshot> SkeletalMeshPreviewCache;
+	TSet<FString> FailedPreviewCacheKeys;
 	TComPtr<ID3D11ShaderResourceView> AnimSequenceIconSRV;
 	FString SearchFilter;
 	char RenameBuffer[260] = {};

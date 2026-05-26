@@ -182,8 +182,8 @@ bool FEditorControlWidget::SpawnPrimitive(int32 PrimitiveType, const FVector& Sp
 		}
 	}
 
-	EditorEngine->GetUndoSystem().CaptureSnapshot("Place Actor");
 	bool bSpawnedAny = false;
+	TArray<AActor*> CreatedActors;
 	for (int32 i = 0; i < Count; i++)
 	{
 		AActor* Actor = World->SpawnActorByTypeName(ActorClass->GetName());
@@ -197,7 +197,15 @@ bool FEditorControlWidget::SpawnPrimitive(int32 PrimitiveType, const FVector& Sp
 			Actor->SetFName(FName("Player Start"));
 		}
 		Actor->SetActorLocation(SpawnPoint);
+		CreatedActors.push_back(Actor);
 		bSpawnedAny = true;
+	}
+
+	if (bSpawnedAny)
+	{
+		EditorEngine->GetUndoSystem().RecordActorCreation(
+			EditorEngine->GetUndoSystem().CaptureActorStates(CreatedActors),
+			CreatedActors.size() > 1 ? "Place Actors" : "Place Actor");
 	}
 
 	return bSpawnedAny;

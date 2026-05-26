@@ -4,6 +4,7 @@
 #include "GameFramework/World.h"
 #include "Math/Utils.h"
 
+#include <cmath>
 
 UPrimitiveComponent::~UPrimitiveComponent()
 {
@@ -70,6 +71,50 @@ bool UPrimitiveComponent::Raycast(const FRay& Ray, FHitResult& OutHitResult)
 	}
 	
 	return RaycastMesh(Ray, OutHitResult);
+}
+
+bool UPrimitiveComponent::Sweep(const FVector& Start, const FVector& End, const FQuat& ShapeWorldRotation,
+	const FCollisionShape& Shape, FHitResult& OutHitResult)
+{
+	if (!bIsVisible)
+	{
+		return false;
+	}
+
+	const FVector Delta = End - Start;
+	const float SegmentLength = Delta.Size();
+	if (SegmentLength <= 1.0e-6f)
+	{
+		return false;
+	}
+
+	if (Shape.IsLine())
+	{
+		return Raycast(FRay(Start, Delta / SegmentLength), OutHitResult);
+	}
+
+	UpdateWorldAABB();
+	if (!SweepMesh(Start, End, ShapeWorldRotation, Shape, OutHitResult))
+	{
+		return false;
+	}
+
+	if (!OutHitResult.HitComponent)
+	{
+		OutHitResult.HitComponent = this;
+	}
+	return true;
+}
+
+bool UPrimitiveComponent::SweepMesh(const FVector& Start, const FVector& End, const FQuat& ShapeWorldRotation,
+	const FCollisionShape& Shape, FHitResult& OutHitResult)
+{
+	(void)Start;
+	(void)End;
+	(void)ShapeWorldRotation;
+	(void)Shape;
+	OutHitResult.Reset();
+	return false;
 }
 
 bool UPrimitiveComponent::IntersectTriangle(const FVector& RayOrigin, const FVector& RayDir, const FVector& V0,

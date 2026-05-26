@@ -5,9 +5,11 @@
 #include "Editor/UI/EditorDetachedWindowChrome.h"
 #include "Editor/UI/EditorMainPanel.h"
 #include "Editor/Settings/EditorSettings.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Animation/AnimGraphAsset.h"
 #include "Animation/AnimSequence.h"
 #include "Asset/CurveFloatAsset.h"
+#include "Asset/SkeletalMesh.h"
 #include "Asset/StaticMesh.h"
 #include "Engine/Core/EditorResourcePaths.h"
 #include "Core/ResourceManager.h"
@@ -16,6 +18,7 @@
 #include "Particle/ParticleSystem.h"
 #include "Render/Resource/Material.h"
 #include "Render/Renderer/Renderer.h"
+#include "UI/RuntimeUILayoutAsset.h"
 #include "ImGui/imgui.h"
 #include "WICTextureLoader.h"
 
@@ -29,6 +32,8 @@
 
 namespace
 {
+constexpr uint32 ContentBrowserThumbnailSnapshotSize = 128;
+
 bool IsParentDirectoryReference(const std::filesystem::path& Path)
 {
 	for (const std::filesystem::path& Part : Path)
@@ -77,11 +82,54 @@ FString MakeSavedBrowserPath(const std::filesystem::path& Path)
 	return FPaths::ToUtf8(Normalized.wstring());
 }
 
+void RecordCreatedContentPath(UEditorEngine* EditorEngine, const std::filesystem::path& Path, const FString& Label)
+{
+	if (!EditorEngine || Path.empty())
+	{
+		return;
+	}
+
+	const FString PathText = FPaths::ToUtf8(Path.lexically_normal().generic_wstring());
+	FEditorFileSystemState CreatedState = EditorEngine->GetUndoSystem().CaptureFileSystemState(PathText, Label);
+	EditorEngine->GetUndoSystem().RecordCreateFileSystemPath(CreatedState, Label);
+}
+
+FEditorFileSystemState CaptureContentPathForUndo(
+	UEditorEngine* EditorEngine,
+	const std::filesystem::path& Path,
+	const FString& Label)
+{
+	if (!EditorEngine || Path.empty())
+	{
+		return FEditorFileSystemState();
+	}
+
+	const FString PathText = FPaths::ToUtf8(Path.lexically_normal().generic_wstring());
+	return EditorEngine->GetUndoSystem().CaptureFileSystemState(PathText, Label);
+}
+
 FString ToLower(FString Value)
 {
 	std::transform(Value.begin(), Value.end(), Value.begin(),
 		[](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
 	return Value;
+}
+
+bool HasRuntimeUILayoutBinaryMagic(const std::filesystem::path& Path)
+{
+	std::ifstream Input(Path, std::ios::binary);
+	if (!Input.is_open())
+	{
+		return false;
+	}
+
+	char Magic[4] = {};
+	Input.read(Magic, sizeof(Magic));
+	return Input.gcount() == sizeof(Magic)
+		&& Magic[0] == 'R'
+		&& Magic[1] == 'U'
+		&& Magic[2] == 'I'
+		&& Magic[3] == 'L';
 }
 
 bool DrawContentBrowserArrowButton(
@@ -207,6 +255,9 @@ void FEditorContentBrowserWidget::Render(float DeltaTime)
 	if (bPendingMaterialPreviewCacheClear)
 	{
 		MaterialPreviewCache.clear();
+		StaticMeshPreviewCache.clear();
+		SkeletalMeshPreviewCache.clear();
+		FailedPreviewCacheKeys.clear();
 		bPendingMaterialPreviewCacheClear = false;
 	}
 
@@ -756,18 +807,33 @@ void FEditorContentBrowserWidget::DrawContentGrid()
 		const ImVec2 Tile(TileSize, TileSize + 44.0f);
 		constexpr float TileGap = 14.0f;
 		const int32 Columns = std::max(1, static_cast<int32>((ContentWidth + TileGap) / (Tile.x + TileGap)));
+		const int32 ItemCount = static_cast<int32>(VisibleItems.size());
+		const int32 RowCount = Columns > 0
+			? (ItemCount + Columns - 1) / Columns
+			: 0;
+		const float RowHeight = Tile.y + TileGap;
 
 		MaterialPreviewBuildsThisFrame = 0;
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(TileGap, TileGap));
 		bool bAnyTileHovered = false;
-		for (int32 Index = 0; Index < static_cast<int32>(VisibleItems.size()); ++Index)
+		ImGuiListClipper Clipper;
+		Clipper.Begin(RowCount, RowHeight);
+		while (Clipper.Step())
 		{
-			if (Index > 0 && Index % Columns != 0)
+			for (int32 Row = Clipper.DisplayStart; Row < Clipper.DisplayEnd; ++Row)
 			{
-				ImGui::SameLine(0.0f, TileGap);
+				const int32 StartIndex = Row * Columns;
+				const int32 EndIndex = std::min(StartIndex + Columns, ItemCount);
+				for (int32 Index = StartIndex; Index < EndIndex; ++Index)
+				{
+					if (Index > StartIndex)
+					{
+						ImGui::SameLine(0.0f, TileGap);
+					}
+					DrawContentTile(VisibleItems[Index], Tile);
+					bAnyTileHovered |= ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+				}
 			}
-			DrawContentTile(VisibleItems[Index], Tile);
-			bAnyTileHovered |= ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
 		}
 		ImGui::PopStyleVar();
 
@@ -809,8 +875,9 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 	{
 		SelectedPath = Item.Path;
 	}
+	const bool bTileHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
 
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+	if (bTileHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 	{
 		SelectedPath = Item.Path;
 		bOpenContentContextMenu = true;
@@ -833,6 +900,26 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 		if (IsPreviewableImage(Item.Extension))
 		{
 			PreviewSRV = GetImagePreviewSRV(Item);
+		}
+		else if (IsMaterialAsset(Item.Extension))
+		{
+			PreviewSRV = GetMaterialPreviewSRV(
+				Item,
+				ContentBrowserThumbnailSnapshotSize,
+				ContentBrowserThumbnailSnapshotSize,
+				bSelected || bTileHovered);
+		}
+		else if (IsSkeletalMeshAsset(Item))
+		{
+			PreviewSRV = GetSkeletalMeshPreviewSRV(Item, bSelected || bTileHovered);
+			if (!PreviewSRV && IsStaticMeshAsset(Item))
+			{
+				PreviewSRV = GetStaticMeshPreviewSRV(Item, bSelected || bTileHovered);
+			}
+		}
+		else if (IsStaticMeshAsset(Item))
+		{
+			PreviewSRV = GetStaticMeshPreviewSRV(Item, bSelected || bTileHovered);
 		}
 		else if (IsSequenceAsset(Item.Extension))
 		{
@@ -1006,6 +1093,10 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 		{
 			EditorEngine->GetMainPanel().OpenRuntimeUIPreviewAsset(MakeRelativeProjectPath(Item.Path));
 		}
+		else if (IsRuntimeUILayoutAsset(Item))
+		{
+			EditorEngine->GetMainPanel().OpenRuntimeUIPreviewAsset(MakeRelativeProjectPath(Item.Path));
+		}
 		else
 		{
 			ShellExecuteW(nullptr, L"open", Item.Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
@@ -1067,6 +1158,11 @@ void FEditorContentBrowserWidget::DrawContentContextMenu(bool bHasSelectedItem)
 			CreateParticleSystemAsset();
 			ImGui::CloseCurrentPopup();
 		}
+		if (ImGui::MenuItem("Runtime UI Layout"))
+		{
+			CreateRuntimeUILayoutAsset();
+			ImGui::CloseCurrentPopup();
+		}
 		if (ImGui::MenuItem("Scene"))
 		{
 			CreateSceneAsset();
@@ -1108,6 +1204,7 @@ bool FEditorContentBrowserWidget::CreateFolder()
 	}
 	SelectedPath = NewPath;
 	Refresh();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Folder");
 	return true;
 }
 
@@ -1122,6 +1219,7 @@ bool FEditorContentBrowserWidget::CreateTextFile()
 	OutFile.close();
 	SelectedPath = NewPath;
 	RefreshContent();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Text File");
 	return true;
 }
 
@@ -1151,6 +1249,7 @@ bool FEditorContentBrowserWidget::CreateLuaScriptFile()
 	{
 		RefreshContent();
 	}
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Lua Script");
 	return true;
 }
 
@@ -1199,6 +1298,7 @@ bool FEditorContentBrowserWidget::CreateMaterialAsset()
 
 	SelectedPath = NewPath;
 	RefreshContent();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Material");
 	return true;
 }
 
@@ -1238,6 +1338,7 @@ bool FEditorContentBrowserWidget::CreateCurveAsset()
 
 	SelectedPath = NewPath;
 	RefreshContent();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Curve");
 	return true;
 }
 
@@ -1276,6 +1377,7 @@ bool FEditorContentBrowserWidget::CreateAnimGraphAsset()
 
 	SelectedPath = NewPath;
 	RefreshContent();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Anim Graph");
 	return true;
 }
 
@@ -1302,6 +1404,35 @@ bool FEditorContentBrowserWidget::CreateParticleSystemAsset()
 
 	SelectedPath = NewPath;
 	RefreshContent();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Particle System");
+	return true;
+}
+
+bool FEditorContentBrowserWidget::CreateRuntimeUILayoutAsset()
+{
+	const std::filesystem::path NewPath = MakeUniquePath(CurrentPath / L"New Runtime UI.uasset");
+	const FString RelativePath = MakeRelativeProjectPath(NewPath);
+
+	URuntimeUILayoutAsset LayoutAsset;
+	LayoutAsset.ResetToDefault();
+	LayoutAsset.SetAssetPath(RelativePath);
+	if (!LayoutAsset.SaveToFile(RelativePath))
+	{
+		return false;
+	}
+	LayoutAsset.SaveToTextLayout(URuntimeUILayoutAsset::GetTextLayoutPathForAssetPath(RelativePath));
+
+	SelectedPath = NewPath;
+	if (EditorEngine)
+	{
+		EditorEngine->GetAssetService().RefreshAssetDatabase();
+	}
+	RefreshContent();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Runtime UI Layout");
+	RecordCreatedContentPath(
+		EditorEngine,
+		std::filesystem::path(FPaths::ToWide(URuntimeUILayoutAsset::GetTextLayoutPathForAssetPath(RelativePath))),
+		"Create Runtime UI Layout Text");
 	return true;
 }
 
@@ -1320,6 +1451,7 @@ bool FEditorContentBrowserWidget::CreateSceneAsset()
 
 	SelectedPath = NewPath;
 	RefreshContent();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Scene");
 	return true;
 }
 
@@ -1348,6 +1480,8 @@ bool FEditorContentBrowserWidget::DeleteSelectedItem()
 		return false;
 	}
 
+	FEditorFileSystemState BeforeDeleteState = CaptureContentPathForUndo(EditorEngine, SelectedPath, "Delete Content");
+
 	std::error_code Ec;
 	if (std::filesystem::is_directory(SelectedPath, Ec))
 	{
@@ -1364,6 +1498,10 @@ bool FEditorContentBrowserWidget::DeleteSelectedItem()
 
 	SelectedPath.clear();
 	Refresh();
+	if (EditorEngine)
+	{
+		EditorEngine->GetUndoSystem().RecordDeleteFileSystemPath(BeforeDeleteState, "Delete Content");
+	}
 	return true;
 }
 
@@ -1422,15 +1560,22 @@ bool FEditorContentBrowserWidget::CommitRename()
 		return false;
 	}
 
+	FEditorFileSystemState BeforeRenameState = CaptureContentPathForUndo(EditorEngine, RenameSourcePath, "Rename Content");
+
 	std::filesystem::rename(RenameSourcePath, TargetPath, Ec);
 	if (Ec)
 	{
 		return false;
 	}
 
+	FEditorFileSystemState AfterRenameState = CaptureContentPathForUndo(EditorEngine, TargetPath, "Rename Content");
 	SelectedPath = TargetPath;
 	RenameSourcePath.clear();
 	Refresh();
+	if (EditorEngine)
+	{
+		EditorEngine->GetUndoSystem().RecordRenameFileSystemPath(BeforeRenameState, AfterRenameState, "Rename Content");
+	}
 	return true;
 }
 
@@ -1721,21 +1866,29 @@ ID3D11ShaderResourceView* FEditorContentBrowserWidget::GetMaterialPreviewSRV(con
 	}
 
 	const FString RelativePath = MakeRelativeProjectPath(Item.Path);
-	const FString CacheKey = RelativePath + "#" + std::to_string(Width) + "x" + std::to_string(Height);
+	Width = ContentBrowserThumbnailSnapshotSize;
+	Height = ContentBrowserThumbnailSnapshotSize;
+	const FString CacheKey = RelativePath + "#thumbnail";
 	auto Found = MaterialPreviewCache.find(CacheKey);
 	if (Found != MaterialPreviewCache.end())
 	{
 		return Found->second.SRV.Get();
+	}
+	if (FailedPreviewCacheKeys.find(CacheKey) != FailedPreviewCacheKeys.end())
+	{
+		return nullptr;
 	}
 
 	if (!bHighPriority && MaterialPreviewBuildsThisFrame >= 1)
 	{
 		return nullptr;
 	}
+	++MaterialPreviewBuildsThisFrame;
 
 	UMaterialInterface* Material = ResolveMaterialAsset(Item.Path);
 	if (!Material)
 	{
+		FailedPreviewCacheKeys.insert(CacheKey);
 		return nullptr;
 	}
 
@@ -1745,16 +1898,17 @@ ID3D11ShaderResourceView* FEditorContentBrowserWidget::GetMaterialPreviewSRV(con
 	}
 	if (!MaterialPreviewMesh || !MaterialPreviewMesh->HasValidMeshData())
 	{
+		FailedPreviewCacheKeys.insert(CacheKey);
 		return nullptr;
 	}
 
 	FEditorRenderPipeline* RenderPipeline = EditorEngine->GetEditorRenderPipeline();
 	if (!RenderPipeline)
 	{
+		FailedPreviewCacheKeys.insert(CacheKey);
 		return nullptr;
 	}
 
-	++MaterialPreviewBuildsThisFrame;
 	ID3D11ShaderResourceView* PreviewSRV = RenderPipeline->RenderMaterialPreview(
 		EditorEngine->GetRenderer(),
 		MaterialPreviewMesh,
@@ -1768,10 +1922,145 @@ ID3D11ShaderResourceView* FEditorContentBrowserWidget::GetMaterialPreviewSRV(con
 	FMaterialPreviewSnapshot Snapshot;
 	if (!CapturePreviewSnapshot(PreviewSRV, Snapshot, Width, Height))
 	{
+		FailedPreviewCacheKeys.insert(CacheKey);
 		return nullptr;
 	}
 
 	FMaterialPreviewSnapshot& CachedSnapshot = MaterialPreviewCache[CacheKey];
+	CachedSnapshot = Snapshot;
+	return CachedSnapshot.SRV.Get();
+}
+
+ID3D11ShaderResourceView* FEditorContentBrowserWidget::GetStaticMeshPreviewSRV(const FContentItem& Item, bool bHighPriority)
+{
+	if (!EditorEngine || !IsStaticMeshAsset(Item))
+	{
+		return nullptr;
+	}
+
+	const FString RelativePath = MakeRelativeProjectPath(Item.Path);
+	const FString CacheKey = RelativePath + "#static-thumbnail";
+	auto Found = StaticMeshPreviewCache.find(CacheKey);
+	if (Found != StaticMeshPreviewCache.end())
+	{
+		return Found->second.SRV.Get();
+	}
+	if (FailedPreviewCacheKeys.find(CacheKey) != FailedPreviewCacheKeys.end())
+	{
+		return nullptr;
+	}
+	if (!bHighPriority && MaterialPreviewBuildsThisFrame >= 1)
+	{
+		return nullptr;
+	}
+	++MaterialPreviewBuildsThisFrame;
+
+	UStaticMesh* Mesh = FResourceManager::Get().LoadStaticMesh(RelativePath);
+	if (!Mesh || !Mesh->HasValidMeshData())
+	{
+		FailedPreviewCacheKeys.insert(CacheKey);
+		return nullptr;
+	}
+
+	UMaterialInterface* PreviewMaterial = nullptr;
+	const TArray<FStaticMeshMaterialSlot>& Slots = Mesh->GetMaterialSlots();
+	for (const FStaticMeshMaterialSlot& Slot : Slots)
+	{
+		if (Slot.Material)
+		{
+			PreviewMaterial = Slot.Material;
+			break;
+		}
+	}
+	if (!PreviewMaterial)
+	{
+		PreviewMaterial = FResourceManager::Get().GetMaterial("DefaultWhite");
+	}
+
+	FEditorRenderPipeline* RenderPipeline = EditorEngine->GetEditorRenderPipeline();
+	if (!RenderPipeline || !PreviewMaterial)
+	{
+		FailedPreviewCacheKeys.insert(CacheKey);
+		return nullptr;
+	}
+
+	ID3D11ShaderResourceView* PreviewSRV = RenderPipeline->RenderMaterialPreview(
+		EditorEngine->GetRenderer(),
+		Mesh,
+		PreviewMaterial,
+		ContentBrowserThumbnailSnapshotSize,
+		ContentBrowserThumbnailSnapshotSize,
+		0.8f,
+		0.25f,
+		4.0f);
+
+	FMaterialPreviewSnapshot Snapshot;
+	if (!CapturePreviewSnapshot(PreviewSRV, Snapshot, ContentBrowserThumbnailSnapshotSize, ContentBrowserThumbnailSnapshotSize))
+	{
+		FailedPreviewCacheKeys.insert(CacheKey);
+		return nullptr;
+	}
+
+	FMaterialPreviewSnapshot& CachedSnapshot = StaticMeshPreviewCache[CacheKey];
+	CachedSnapshot = Snapshot;
+	return CachedSnapshot.SRV.Get();
+}
+
+ID3D11ShaderResourceView* FEditorContentBrowserWidget::GetSkeletalMeshPreviewSRV(const FContentItem& Item, bool bHighPriority)
+{
+	if (!EditorEngine || !IsSkeletalMeshAsset(Item))
+	{
+		return nullptr;
+	}
+
+	const FString RelativePath = MakeRelativeProjectPath(Item.Path);
+	const FString CacheKey = RelativePath + "#skeletal-thumbnail";
+	auto Found = SkeletalMeshPreviewCache.find(CacheKey);
+	if (Found != SkeletalMeshPreviewCache.end())
+	{
+		return Found->second.SRV.Get();
+	}
+	if (FailedPreviewCacheKeys.find(CacheKey) != FailedPreviewCacheKeys.end())
+	{
+		return nullptr;
+	}
+	if (!bHighPriority && MaterialPreviewBuildsThisFrame >= 1)
+	{
+		return nullptr;
+	}
+	++MaterialPreviewBuildsThisFrame;
+
+	USkeletalMesh* Mesh = FResourceManager::Get().LoadSkeletalMesh(RelativePath);
+	if (!Mesh || !Mesh->HasValidMeshData())
+	{
+		FailedPreviewCacheKeys.insert(CacheKey);
+		return nullptr;
+	}
+
+	FEditorRenderPipeline* RenderPipeline = EditorEngine->GetEditorRenderPipeline();
+	if (!RenderPipeline)
+	{
+		FailedPreviewCacheKeys.insert(CacheKey);
+		return nullptr;
+	}
+
+	ID3D11ShaderResourceView* PreviewSRV = RenderPipeline->RenderSkeletalMeshPreview(
+		EditorEngine->GetRenderer(),
+		Mesh,
+		ContentBrowserThumbnailSnapshotSize,
+		ContentBrowserThumbnailSnapshotSize,
+		0.8f,
+		0.25f,
+		4.0f);
+
+	FMaterialPreviewSnapshot Snapshot;
+	if (!CapturePreviewSnapshot(PreviewSRV, Snapshot, ContentBrowserThumbnailSnapshotSize, ContentBrowserThumbnailSnapshotSize))
+	{
+		FailedPreviewCacheKeys.insert(CacheKey);
+		return nullptr;
+	}
+
+	FMaterialPreviewSnapshot& CachedSnapshot = SkeletalMeshPreviewCache[CacheKey];
 	CachedSnapshot = Snapshot;
 	return CachedSnapshot.SRV.Get();
 }
@@ -1956,6 +2245,10 @@ FString FEditorContentBrowserWidget::GetPayloadType(const FContentItem& Item) co
 	{
 		return "RMLContentItem";
 	}
+	if (IsRuntimeUILayoutAsset(Item))
+	{
+		return "RuntimeUILayoutContentItem";
+	}
 	if (Item.Extension == ".png")
 	{
 		return "PNGElement";
@@ -1977,7 +2270,7 @@ ImU32 FEditorContentBrowserWidget::GetItemColor(const FContentItem& Item) const
 	{
 		return ImGui::GetColorU32(ImVec4(0.26f, 0.52f, 0.78f, 1.0f));
 	}
-	if (Item.Extension == ".obj" || Item.Extension == ".bin")
+	if (Item.Extension == ".obj" || Item.Extension == ".bin" || Item.Extension == ".fbx")
 	{
 		return ImGui::GetColorU32(ImVec4(0.40f, 0.65f, 0.54f, 1.0f));
 	}
@@ -2012,6 +2305,10 @@ ImU32 FEditorContentBrowserWidget::GetItemColor(const FContentItem& Item) const
 	if (Item.Extension == ".rml" || Item.Extension == ".rcss")
 	{
 		return ImGui::GetColorU32(ImVec4(0.72f, 0.60f, 0.38f, 1.0f));
+	}
+	if (IsRuntimeUILayoutAsset(Item))
+	{
+		return ImGui::GetColorU32(ImVec4(0.48f, 0.64f, 0.86f, 1.0f));
 	}
 	if (Item.Extension == ".png")
 	{
@@ -2053,6 +2350,16 @@ bool FEditorContentBrowserWidget::IsMaterialAsset(const FString& Extension) cons
 	return Extension == ".mat" || Extension == ".matinst";
 }
 
+bool FEditorContentBrowserWidget::IsStaticMeshAsset(const FContentItem& Item) const
+{
+	return !Item.bIsDirectory && (Item.Extension == ".obj" || Item.Extension == ".bin" || Item.Extension == ".fbx");
+}
+
+bool FEditorContentBrowserWidget::IsSkeletalMeshAsset(const FContentItem& Item) const
+{
+	return !Item.bIsDirectory && Item.Extension == ".fbx";
+}
+
 bool FEditorContentBrowserWidget::IsCurveAsset(const std::filesystem::path& Path) const
 {
 	const FString Extension = ToLower(FPaths::ToUtf8(Path.extension().wstring()));
@@ -2077,6 +2384,30 @@ bool FEditorContentBrowserWidget::IsParticleSystemAsset(const FString& Extension
 bool FEditorContentBrowserWidget::IsPrefabAsset(const FString& Extension) const
 {
 	return Extension == ".prefab";
+}
+
+bool FEditorContentBrowserWidget::IsRuntimeUILayoutAsset(const FContentItem& Item) const
+{
+	if (Item.bIsDirectory)
+	{
+		return false;
+	}
+	if (Item.Extension == ".layout")
+	{
+		return true;
+	}
+	if (Item.Extension != ".uasset")
+	{
+		return false;
+	}
+	if (HasRuntimeUILayoutBinaryMagic(Item.Path))
+	{
+		return true;
+	}
+
+	const std::filesystem::path RelativePath = Item.Path.lexically_normal().lexically_relative(std::filesystem::path(FPaths::RootDir()).lexically_normal());
+	const FString Relative = ToLower(FPaths::Normalize(FPaths::ToUtf8(RelativePath.generic_wstring())));
+	return Relative.rfind("asset/ui/layouts/", 0) == 0;
 }
 
 std::filesystem::path FEditorContentBrowserWidget::ResolveLuaScriptCreateDirectory() const

@@ -533,7 +533,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
+    <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -840,7 +843,7 @@
     <ClCompile Include="Source\Engine\Camera\ShakePattern\SinusoidalCameraShakePattern.cpp" />
     <ClCompile Include="Source\Engine\Camera\ViewportCamera.cpp" />
     <ClCompile Include="Source\Engine\Collision\Collision.cpp" />
-    <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp" />
+    <ClCompile Include="Source\Engine\Collision\CollisionQueryUtils.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorSequenceComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\BillboardComponent.cpp" />
@@ -1055,6 +1058,7 @@
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiRenderInterfaceD3D11.cpp" />
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiRuntimeModule.cpp" />
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiSystem.cpp" />
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutAsset.cpp" />
     <ClCompile Include="Source\Launch\LaunchModeFactory.cpp" />
     <ClCompile Include="Source\Misc\ObjViewer\ObjViewerEngine.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
@@ -1209,7 +1213,7 @@
     <ClInclude Include="Source\Engine\Camera\ShakePattern\SinusoidalCameraShakePattern.h" />
     <ClInclude Include="Source\Engine\Camera\ViewportCamera.h" />
     <ClInclude Include="Source\Engine\Collision\Collision.h" />
-    <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h" />
+    <ClInclude Include="Source\Engine\Collision\CollisionQueryUtils.h" />
     <ClInclude Include="Source\Engine\Component\ActorComponent.h" />
     <ClInclude Include="Source\Engine\Component\ActorSequenceComponent.h" />
     <ClInclude Include="Source\Engine\Component\BillboardComponent.h" />
@@ -1433,6 +1437,7 @@
     <ClInclude Include="Source\Engine\Runtime\GameSplashScreen.h" />
     <ClInclude Include="Source\Engine\Runtime\Launch.h" />
     <ClInclude Include="Source\Engine\Runtime\SceneView.h" />
+    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\API\LuaEngineAPIBindings.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\Coroutine.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\CoroutineScheduler.h" />
@@ -1472,6 +1477,7 @@
     <ClInclude Include="Source\Engine\UI\RmlUi\RmlUiRenderInterfaceD3D11.h" />
     <ClInclude Include="Source\Engine\UI\RmlUi\RmlUiRuntimeModule.h" />
     <ClInclude Include="Source\Engine\UI\RmlUi\RmlUiSystem.h" />
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h" />
     <ClInclude Include="Source\Engine\UI\RuntimeUITypes.h" />
     <ClInclude Include="Source\Launch\LaunchModeFactory.h" />
     <ClInclude Include="Source\Misc\ObjViewer\ObjViewerEngine.h" />

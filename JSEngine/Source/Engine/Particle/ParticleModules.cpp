@@ -1,11 +1,14 @@
 ﻿#include "Particle/ParticleModules.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "Core/Random/EngineRandom.h"
 #include "Core/ResourceManager.h"
 #include "Core/ResourceTypes.h"
+#include "GameFramework/World.h"
+#include "Math/Quat.h"
 #include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleSystemComponent.h"
 
@@ -229,52 +232,170 @@ UParticleModuleCollision::UParticleModuleCollision()
     bUpdateModule = true;
 }
 
-// Function : Resolve simple plane collision for active particles
+// Function : Resolve world collision for active particles
 // input : Owner, DeltaTime
 // Owner : emitter instance that owns active particles and component event queue
 // DeltaTime : elapsed time for this simulation step
-// output : Colliding particles bounce or die, collision count updates, and optional collision events are queued
+// output : Colliding particles apply response, collision count updates, and optional collision events are queued
 void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    if (!Owner)
+    if (!bCollisionEnabled || !Owner)
     {
         return;
     }
 
+    UParticleSystemComponent* Component = Owner->GetOwningComponent();
+    AActor* OwnerActor = Component ? Component->GetOwner() : nullptr;
+    UWorld* World = OwnerActor ? OwnerActor->GetFocusedWorld() : nullptr;
+    if (!Component || !World)
+    {
+        return;
+    }
+
+    if (MaxCollisionDistance > 0.0f && Component->ComputeEmitterLODDistance() > MaxCollisionDistance)
+    {
+        return;
+    }
+
+    const float ClampedCheckFraction = std::clamp(CollisionCheckFraction, 0.0f, 1.0f);
+    const float ClampedRestitution = std::clamp(Restitution, 0.0f, 1.0f);
+    const float ClampedFriction = std::clamp(Friction, 0.0f, 1.0f);
+
     for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount();)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
-        const bool bCrossedPlane = Particle.OldLocation.Z > CollisionPlaneZ && Particle.Location.Z <= CollisionPlaneZ;
-        if (!bCrossedPlane)
+
+        if (ClampedCheckFraction <= 0.0f)
+        {
+            ++ParticleIndex;
+            continue;
+        }
+        if (ClampedCheckFraction < 1.0f)
+        {
+            constexpr uint32 BucketCount = 100;
+            const uint32 Threshold = static_cast<uint32>(ClampedCheckFraction * static_cast<float>(BucketCount));
+            if ((Particle.ParticleId % BucketCount) >= Threshold)
+            {
+                ++ParticleIndex;
+                continue;
+            }
+        }
+
+        if (MaxCollisions > 0 && Particle.CollisionCount >= MaxCollisions)
+        {
+            if (bKillWhenMaxCollisionsReached)
+            {
+                Owner->KillParticle(ParticleIndex);
+                continue;
+            }
+            ++ParticleIndex;
+            continue;
+        }
+
+        FHitResult Hit;
+        FCollisionQueryParams QueryParams;
+        QueryParams.IgnoredActor = bIgnoreOwner ? OwnerActor : nullptr;
+        QueryParams.IgnoredComponent = Component;
+
+        bool bHit = false;
+        if (TraceMode == EParticleCollisionTraceMode::Sphere)
+        {
+            float SweepRadius = std::max(0.0f, CollisionRadius);
+            if (bUseParticleSizeAsRadius)
+            {
+                SweepRadius = std::max({
+                    std::fabs(Particle.Size.X),
+                    std::fabs(Particle.Size.Y),
+                    std::fabs(Particle.Size.Z) }) * 0.5f;
+            }
+
+            if (SweepRadius > 0.0f)
+            {
+                bHit = World->SweepSingle(
+                    Hit,
+                    Particle.OldLocation,
+                    Particle.Location,
+                    FQuat::Identity,
+                    FCollisionShape::MakeSphere(SweepRadius),
+                    QueryParams);
+            }
+            else
+            {
+                bHit = World->LineTraceSingle(Particle.OldLocation, Particle.Location, Hit, QueryParams);
+            }
+        }
+        else
+        {
+            bHit = World->LineTraceSingle(Particle.OldLocation, Particle.Location, Hit, QueryParams);
+        }
+
+        if (!bHit)
         {
             ++ParticleIndex;
             continue;
         }
 
-        Particle.Location.Z = CollisionPlaneZ;
-        Particle.Velocity.Z = std::abs(Particle.Velocity.Z) * Restitution;
         ++Particle.CollisionCount;
+
+        EParticleCollisionResponse AppliedResponse = Response;
+        if (MaxCollisions > 0 && Particle.CollisionCount >= MaxCollisions && bKillWhenMaxCollisionsReached)
+        {
+            AppliedResponse = EParticleCollisionResponse::Kill;
+        }
+
+        FVector HitNormal = Hit.Normal.GetSafeNormal().IsNearlyZero()
+            ? FVector::UpVector
+            : Hit.Normal.GetSafeNormal();
+
+        constexpr float ParticleCollisionSkin = 0.01f;
+
+        switch (AppliedResponse)
+        {
+        case EParticleCollisionResponse::Bounce:
+        {
+            const FVector Velocity = Particle.Velocity;
+            const float NormalSpeed = FVector::DotProduct(Velocity, HitNormal);
+            const FVector NormalVelocity = HitNormal * NormalSpeed;
+            const FVector TangentVelocity = Velocity - NormalVelocity;
+
+            if (NormalSpeed < 0.0f)
+            {
+                Particle.Velocity = TangentVelocity * (1.0f - ClampedFriction) - NormalVelocity * ClampedRestitution;
+            }
+            Particle.Location = Hit.Location + HitNormal * ParticleCollisionSkin;
+            break;
+        }
+        case EParticleCollisionResponse::Stop:
+            Particle.Location = Hit.Location + HitNormal * ParticleCollisionSkin;
+            Particle.Velocity = FVector::ZeroVector;
+            break;
+        case EParticleCollisionResponse::Ignore:
+            break;
+        case EParticleCollisionResponse::Kill:
+            Particle.Location = Hit.Location;
+            break;
+        }
 
         if (bGenerateCollisionEvents)
         {
             FParticleEventCollideData Event;
-            Event.Component = Owner->GetOwningComponent();
+            Event.Component = Component;
             Event.EmitterInstance = Owner;
             Event.EmitterIndex = Owner->GetEmitterIndex();
             Event.ParticleId = Particle.ParticleId;
             Event.Location = Particle.Location;
             Event.OldLocation = Particle.OldLocation;
             Event.Velocity = Particle.Velocity;
-            Event.Normal = FVector::UpVector;
+            Event.Normal = HitNormal;
+            Event.HitComponent = Hit.HitComponent;
+            Event.HitActor = Hit.HitComponent ? Hit.HitComponent->GetOwner() : nullptr;
             Event.Time = Particle.RelativeTime;
-            Event.Hit.bHit = true;
-            Event.Hit.Location = Particle.Location;
-            Event.Hit.Normal = FVector::UpVector;
+            Event.Hit = Hit;
             Owner->QueueCollisionEvent(Event);
         }
 
-        if (bKillOnCollision)
+        if (AppliedResponse == EParticleCollisionResponse::Kill)
         {
             Owner->KillParticle(ParticleIndex);
             continue;
@@ -297,7 +418,7 @@ UParticleModuleEventGenerator::UParticleModuleEventGenerator()
 void UParticleModuleEventGenerator::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
-    if (Owner)
+    if (Owner && bDispatchCollisionEvents)
     {
         Owner->DispatchQueuedParticleEvents();
     }

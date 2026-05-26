@@ -209,6 +209,11 @@ TArray<FString> FAssetQueryService::GetCurvePaths()
     return ListCurveAssetFiles();
 }
 
+TArray<FString> FAssetQueryService::GetParticleSystemPaths()
+{
+    return ListAssetFiles(L"", { ".particlesystem" });
+}
+
 TArray<FString> FAssetQueryService::GetScenePaths()
 {
     return ListAssetFiles(L"Scene", { ".scene" });

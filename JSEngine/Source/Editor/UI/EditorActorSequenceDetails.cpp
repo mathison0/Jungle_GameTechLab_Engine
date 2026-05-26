@@ -4,6 +4,7 @@
 #include "Component/ActorSequenceComponent.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/UI/EditorMainPanel.h"
+#include "GameFramework/AActor.h"
 #include "ImGui/imgui.h"
 #include <algorithm>
 
@@ -46,12 +47,6 @@ void FEditorActorSequenceDetails::MarkEdited(
 		return;
 	}
 
-	if (EditorEngine && UndoCaptureFlag && !*UndoCaptureFlag)
-	{
-		EditorEngine->GetUndoSystem().CaptureSnapshot(UndoLabel ? UndoLabel : "Edit Actor Sequence");
-		*UndoCaptureFlag = true;
-	}
-
 	SequenceComp->MarkSequenceDirty();
 	SequenceComp->PostEditProperty("Sequence");
 
@@ -59,6 +54,65 @@ void FEditorActorSequenceDetails::MarkEdited(
 	{
 		EditorEngine->GetSceneService().MarkDirty();
 	}
+}
+
+void FEditorActorSequenceDetails::BeginEditUndo(
+	UActorSequenceComponent* SequenceComp,
+	const char* InUndoLabel)
+{
+	if (!EditorEngine || !UndoCaptureFlag || *UndoCaptureFlag || !SequenceComp)
+	{
+		return;
+	}
+
+	AActor* Owner = SequenceComp->GetOwner();
+	if (!Owner)
+	{
+		EditorEngine->GetUndoSystem().CaptureSnapshot(InUndoLabel ? InUndoLabel : "Edit Actor Sequence");
+		*UndoCaptureFlag = true;
+		UndoSequenceComponent = nullptr;
+		UndoBeforeActorStates.clear();
+		UndoLabel = InUndoLabel ? InUndoLabel : "Edit Actor Sequence";
+		return;
+	}
+
+	TArray<AActor*> Actors;
+	Actors.push_back(Owner);
+	UndoBeforeActorStates = EditorEngine->GetUndoSystem().CaptureActorStates(Actors);
+	if (!UndoBeforeActorStates.empty())
+	{
+		*UndoCaptureFlag = true;
+		UndoSequenceComponent = SequenceComp;
+		UndoLabel = InUndoLabel ? InUndoLabel : "Edit Actor Sequence";
+	}
+}
+
+void FEditorActorSequenceDetails::CommitEditUndo(
+	UActorSequenceComponent* SequenceComp,
+	const char* InUndoLabel)
+{
+	if (!EditorEngine || !UndoCaptureFlag || !*UndoCaptureFlag)
+	{
+		return;
+	}
+
+	if (UndoSequenceComponent == SequenceComp && !UndoBeforeActorStates.empty())
+	{
+		if (AActor* Owner = SequenceComp ? SequenceComp->GetOwner() : nullptr)
+		{
+			TArray<AActor*> Actors;
+			Actors.push_back(Owner);
+			EditorEngine->GetUndoSystem().RecordActorStateChange(
+				UndoBeforeActorStates,
+				EditorEngine->GetUndoSystem().CaptureActorStates(Actors),
+				UndoLabel.empty() ? FString(InUndoLabel ? InUndoLabel : "Edit Actor Sequence") : UndoLabel);
+		}
+	}
+
+	*UndoCaptureFlag = false;
+	UndoSequenceComponent = nullptr;
+	UndoBeforeActorStates.clear();
+	UndoLabel.clear();
 }
 
 void FEditorActorSequenceDetails::Render(UActorSequenceComponent* SequenceComp, float DeltaTime)
@@ -84,6 +138,7 @@ void FEditorActorSequenceDetails::Render(UActorSequenceComponent* SequenceComp, 
 	bool bAutoPlay = SequenceComp->IsAutoPlay();
 	if (ImGui::Checkbox("Auto Play", &bAutoPlay))
 	{
+		BeginEditUndo(SequenceComp, "Edit Actor Sequence");
 		SequenceComp->SetAutoPlay(bAutoPlay);
 		MarkEdited(SequenceComp, "Edit Actor Sequence");
 	}
@@ -91,6 +146,7 @@ void FEditorActorSequenceDetails::Render(UActorSequenceComponent* SequenceComp, 
 	bool bLooping = SequenceComp->IsLooping();
 	if (ImGui::Checkbox("Looping", &bLooping))
 	{
+		BeginEditUndo(SequenceComp, "Edit Actor Sequence");
 		SequenceComp->SetLooping(bLooping);
 		MarkEdited(SequenceComp, "Edit Actor Sequence");
 	}
@@ -98,6 +154,7 @@ void FEditorActorSequenceDetails::Render(UActorSequenceComponent* SequenceComp, 
 	float PlayRate = SequenceComp->GetPlayRate();
 	if (ImGui::DragFloat("Play Rate", &PlayRate, 0.01f, 0.001f, 100.0f))
 	{
+		BeginEditUndo(SequenceComp, "Edit Actor Sequence");
 		SequenceComp->SetPlayRate(std::max(0.001f, PlayRate));
 		MarkEdited(SequenceComp, "Edit Actor Sequence");
 	}
@@ -105,6 +162,7 @@ void FEditorActorSequenceDetails::Render(UActorSequenceComponent* SequenceComp, 
 	bool bPauseAtEnd = SequenceComp->ShouldPauseAtEnd();
 	if (ImGui::Checkbox("Pause at End", &bPauseAtEnd))
 	{
+		BeginEditUndo(SequenceComp, "Edit Actor Sequence");
 		SequenceComp->SetPauseAtEnd(bPauseAtEnd);
 		MarkEdited(SequenceComp, "Edit Actor Sequence");
 	}
@@ -112,13 +170,14 @@ void FEditorActorSequenceDetails::Render(UActorSequenceComponent* SequenceComp, 
 	float StartOffsetSeconds = SequenceComp->GetStartOffsetSeconds();
 	if (ImGui::DragFloat("Start Offset (seconds)", &StartOffsetSeconds, 0.01f, 0.0f, 100000.0f))
 	{
+		BeginEditUndo(SequenceComp, "Edit Actor Sequence");
 		SequenceComp->SetStartOffsetSeconds(std::max(0.0f, StartOffsetSeconds));
 		MarkEdited(SequenceComp, "Edit Actor Sequence");
 	}
 
 	if ((ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive()) && UndoCaptureFlag)
 	{
-		*UndoCaptureFlag = false;
+		CommitEditUndo(SequenceComp, "Edit Actor Sequence");
 	}
 }
 

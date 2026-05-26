@@ -2,6 +2,7 @@
 #pragma once
 #include "Editor/UI/EditorWidget.h"
 #include "Editor/UI/EditorActorSequenceDetails.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Object/Object.h"
 
 class FSelectionManager;
@@ -51,6 +52,7 @@ private:
 	void RenderComponentTags(UActorComponent* Component);
 	void RenderComponentProperties();
 	void RenderReflectionProperties(UObject* Object);
+	void RenderReflectionPropertiesByCategory(UObject* Object, const TArray<const FProperty*>& Properties);
 	void RenderReflectionProperty(const FPropertyHandle& Handle);
 	void RenderDebugDetails(UObject* Object, AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
 	void RenderDebugDetailsItem(const FDebugDetailsItem& Item);
@@ -64,6 +66,12 @@ private:
 	void RenderSkeletalBonePoseDebug(class USkeletalMeshComponent* Comp);
 	void RenderInterpControlPoints(class UInterpToMovementComponent* Comp);
 	void RenderMaterialPreviewTooltip(UMaterialInterface* Material);
+	AActor* ResolveActorStateUndoOwner(UObject* Object) const;
+	void BeginActorStatePropertyEdit(UObject* Object, const char* Label);
+	void EndActorStatePropertyEdit(UObject* Object, const char* Label);
+	void BeginReflectedPropertyEdit(UObject* Object, const FProperty& Property, const char* Label);
+	void EndReflectedPropertyEdit(UObject* Object, const FProperty& Property, const char* Label);
+	void ResetPropertyEditUndoState();
 
 	// 유틸리티
 	void AttachAndSelectNewComponent(AActor* PrimaryActor, UActorComponent* NewComp, class USceneComponent* AttachTargetOverride = nullptr);
@@ -87,11 +95,23 @@ private:
 	bool bDetailsPerfTraceFrame = false;
 	bool bOpenDetailsContextMenu = false;
 	bool bPropertyEditUndoCaptured = false;
+	bool bPropertyEditUsesActorState = false;
+	bool bPropertyEditUsesReflectedProperty = false;
+	bool bTransformFieldEditUndoCaptured = false;
 	bool bFocusActorNameNextFrame = false;
 	bool bFocusComponentNameNextFrame = false;
 	float LastDeltaTime = 0.0f;
 	char NewActorTagBuffer[128] = "";
 	char NewComponentTagBuffer[128] = "";
+	UObject* PropertyEditTargetObject = nullptr;
+	const FProperty* PropertyEditTargetProperty = nullptr;
+	TArray<FEditorSerializedActorState> PropertyEditBeforeActorStates;
+	FEditorReflectedPropertyState PropertyEditBeforeReflectedState;
+	TArray<FEditorActorTransformState> TransformFieldBeforeActorStates;
+	bool bSkeletalBonePoseEditUndoCaptured = false;
+	USkeletalMeshComponent* SkeletalBonePoseEditComponent = nullptr;
+	int32 SkeletalBonePoseEditBoneIndex = -1;
+	FEditorSkeletalBonePoseState SkeletalBonePoseBeforeState;
 
 	// for skeletal mesh bone pose debug
 	/**

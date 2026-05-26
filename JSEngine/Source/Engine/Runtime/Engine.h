@@ -15,6 +15,7 @@ class FWindowsWindow;
 class FTimer;
 class UCameraComponent;
 class APlayerController;
+class IStartupProgressReporter;
 struct FGuiInputState;
 
 enum class ERuntimeInputMode : uint8
@@ -46,6 +47,7 @@ public:
 	virtual void Shutdown();
 	virtual void BeginPlay();
 	virtual void Tick(float DeltaTime);
+	void SetStartupProgressReporter(IStartupProgressReporter* InReporter) { StartupProgressReporter = InReporter; }
 
 	virtual void OnWindowResized(uint32 Width, uint32 Height);
 	virtual bool CanCloseApplication() { return true; }
@@ -100,11 +102,14 @@ public:
 protected:
 	void Render(float DeltaTime);
 	void SetRenderPipeline(std::unique_ptr<IRenderPipeline> InPipeline);
+	IStartupProgressReporter& GetStartupProgress();
 	virtual void WorldTick(float DeltaTime);
 	void ProcessPendingSceneOpen();
 	virtual bool OpenSceneNow(const FString& ScenePath);
 	virtual void OnSceneWorldWillUnload(UWorld* OldWorld) {}
 	virtual void OnSceneWorldLoaded(UWorld* NewWorld) {}
+	virtual void InitializeWorldContext(FWorldContext& Context) {}
+	virtual void ShutdownWorldContext(FWorldContext& Context) {}
 	FString ResolveScenePath(const FString& ScenePath) const;
 
 protected:
@@ -128,6 +133,7 @@ protected:
 
 private:
 	std::unique_ptr<IRenderPipeline> RenderPipeline;
+	IStartupProgressReporter* StartupProgressReporter = nullptr;
 };
 
 extern UEngine* GEngine;

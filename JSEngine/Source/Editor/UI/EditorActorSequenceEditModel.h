@@ -97,6 +97,7 @@ public:
 
 	static bool CaptureSequenceUndo(
 		UEditorEngine* EditorEngine,
+		UActorSequenceComponent* SequenceComp,
 		const char* UndoLabel);
 
 	static void NotifySequenceEdited(

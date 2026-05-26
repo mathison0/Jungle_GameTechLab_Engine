@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Editor/UI/EditorWidget.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "ImGui/imgui.h"
 
 class UCurveFloatAsset;
@@ -37,6 +38,11 @@ private:
     void StopReferencePreview();
     void TickReferencePreview(float DeltaTime);
     bool DoesSequenceReferenceCurrentCurve(UActorSequenceComponent* SequenceComp) const;
+    FEditorCurveAssetState CaptureCurveUndoState(const FString& Label) const;
+    void BeginCurveEditUndo(const FString& Label);
+    void CommitCurveEditUndo(const FString& Label);
+    void CancelCurveEditUndo();
+    void RecordCurveEditUndo(const FEditorCurveAssetState& BeforeState, const FString& Label);
     void MarkDirty();
     bool SaveCurve();
     bool ReloadCurve();
@@ -53,6 +59,7 @@ private:
     float ContextTime = 0.0f;
     float ContextValue = 0.0f;
     TArray<UActorSequenceComponent*> ReferencePreviewTargets;
+    FEditorCurveAssetState CurveEditBeforeState;
     float CanvasHeight = 320.0f;
     float CanvasPixelsPerUnit = 120.0f;
     float ViewMinTime = 0.0f;
@@ -64,4 +71,5 @@ private:
     bool bDirty = false;
     bool bReferencePreviewActive = false;
     bool bOpenedFromActorSequence = false;
+    bool bCurveEditUndoCaptured = false;
 };

@@ -1,10 +1,10 @@
 ﻿#include "StaticMeshComponent.h"
 
-#include <cfloat>
+#include <cmath>
 #include <cstring>
 
+#include "Collision/CollisionQueryUtils.h"
 #include "Core/ResourceManager.h"
-
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
@@ -264,6 +264,198 @@ bool UStaticMeshComponent::RaycastMesh(const FRay& Ray, FHitResult& OutHitResult
 	OutHitResult.Normal = WorldNormal;
 	OutHitResult.FaceIndex = BestFaceIndex;
 
+	return true;
+}
+
+bool UStaticMeshComponent::SweepMesh(const FVector& Start, const FVector& End, const FQuat& ShapeWorldRotation,
+	const FCollisionShape& Shape, FHitResult& OutHitResult)
+{
+	(void)ShapeWorldRotation;
+
+	if (!HasValidMesh() || !Shape.IsSphere() || Shape.Radius < 0.0f)
+	{
+		return false;
+	}
+
+	EnsureBoundsUpdated();
+
+	const FVector Delta = End - Start;
+	const float SegmentLength = Delta.Size();
+	if (SegmentLength <= 1.0e-6f)
+	{
+		return false;
+	}
+
+	const FVector Direction = Delta / SegmentLength;
+	const TArray<FNormalVertex>& Vertices = StaticMeshAsset->GetVertices();
+	const TArray<uint32>& Indices = StaticMeshAsset->GetIndices();
+	if (Vertices.empty() || Indices.empty())
+	{
+		return false;
+	}
+
+	const FMatrix& WorldMatrix = GetWorldMatrix();
+	bool bHit = false;
+	FHitResult BestHit;
+
+	auto SubmitHit = [&](float Distance, const FVector& Center, const FVector& ImpactPoint,
+		const FVector& Normal, int32 FaceIndex)
+	{
+		FVector HitNormal = Normal.GetSafeNormal();
+		if (HitNormal.IsNearlyZero())
+		{
+			return;
+		}
+
+		FHitResult Candidate;
+		Candidate.bHit = true;
+		Candidate.HitComponent = this;
+		Candidate.Distance = Distance;
+		Candidate.Location = Center;
+		Candidate.ImpactPoint = ImpactPoint;
+		Candidate.Normal = HitNormal;
+		Candidate.FaceIndex = FaceIndex;
+
+		bool bBetterHit = false;
+		if (bHit
+			&& std::fabs(Candidate.Distance) <= 1.0e-4f
+			&& std::fabs(BestHit.Distance) <= 1.0e-4f)
+		{
+			const float CandidatePushOut = (Candidate.Location - Start).SizeSquared();
+			const float BestPushOut = (BestHit.Location - Start).SizeSquared();
+			bBetterHit = CandidatePushOut < BestPushOut - 1.0e-4f;
+		}
+		else
+		{
+			bBetterHit = FCollisionQueryUtils::IsBetterSweepHit(Candidate, BestHit, bHit, Direction);
+		}
+
+		if (bBetterHit)
+		{
+			BestHit = Candidate;
+			bHit = true;
+		}
+	};
+
+	for (uint32 i = 0; i + 2 < static_cast<uint32>(Indices.size()); i += 3)
+	{
+		const uint32 I0 = Indices[i];
+		const uint32 I1 = Indices[i + 1];
+		const uint32 I2 = Indices[i + 2];
+		if (I0 >= Vertices.size() || I1 >= Vertices.size() || I2 >= Vertices.size())
+		{
+			continue;
+		}
+
+		const FVector V0 = WorldMatrix.TransformPosition(Vertices[I0].Position);
+		const FVector V1 = WorldMatrix.TransformPosition(Vertices[I1].Position);
+		const FVector V2 = WorldMatrix.TransformPosition(Vertices[I2].Position);
+		const FVector TriangleNormal = FVector::CrossProduct(V1 - V0, V2 - V0).GetSafeNormal();
+		if (TriangleNormal.IsNearlyZero())
+		{
+			continue;
+		}
+
+		const FVector ClosestStartPoint = FCollisionQueryUtils::ClosestPointOnTriangle(Start, V0, V1, V2);
+		const FVector StartToTriangle = Start - ClosestStartPoint;
+		const float InitialOverlapRadius = std::max(0.0f, Shape.Radius - 1.0e-4f);
+		if (StartToTriangle.SizeSquared() < InitialOverlapRadius * InitialOverlapRadius)
+		{
+			FVector HitNormal = StartToTriangle.GetSafeNormal();
+			if (HitNormal.IsNearlyZero())
+			{
+				HitNormal = FCollisionQueryUtils::ChooseNormalOpposingDirection(TriangleNormal, Direction);
+			}
+
+			SubmitHit(
+				0.0f,
+				ClosestStartPoint + HitNormal * Shape.Radius,
+				ClosestStartPoint,
+				HitNormal,
+				static_cast<int32>(i / 3));
+			continue;
+		}
+
+		FVector SweepNormal = TriangleNormal;
+		float SignedDistance = FVector::DotProduct(Start - V0, SweepNormal);
+		if (SignedDistance < 0.0f)
+		{
+			SweepNormal = -SweepNormal;
+			SignedDistance = -SignedDistance;
+		}
+
+		const float ApproachSpeed = FVector::DotProduct(Direction, SweepNormal);
+		if (ApproachSpeed < -1.0e-6f)
+		{
+			const float HitDistance = (Shape.Radius - SignedDistance) / ApproachSpeed;
+			if (HitDistance >= 0.0f && HitDistance <= SegmentLength)
+			{
+				const FVector HitCenter = Start + Direction * HitDistance;
+				const FVector ImpactPoint = HitCenter - SweepNormal * Shape.Radius;
+				if (FCollisionQueryUtils::IsPointInTriangle(ImpactPoint, V0, V1, V2))
+				{
+					SubmitHit(HitDistance, HitCenter, ImpactPoint, SweepNormal, static_cast<int32>(i / 3));
+				}
+			}
+		}
+
+		const FVector EdgeStarts[3] = { V0, V1, V2 };
+		const FVector EdgeEnds[3] = { V1, V2, V0 };
+		for (int32 EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
+		{
+			float EdgeDistance = 0.0f;
+			FVector EdgeNormal = FVector::ZeroVector;
+			FVector EdgeClosestPoint = FVector::ZeroVector;
+			if (FCollisionQueryUtils::RayCapsuleEdgeSweep(
+				Start,
+				Direction,
+				SegmentLength,
+				EdgeStarts[EdgeIndex],
+				EdgeEnds[EdgeIndex],
+				Shape.Radius,
+				EdgeDistance,
+				EdgeNormal,
+				EdgeClosestPoint))
+			{
+				const FVector HitCenter = EdgeDistance <= 1.0e-4f
+					? EdgeClosestPoint + EdgeNormal.GetSafeNormal() * Shape.Radius
+					: Start + Direction * EdgeDistance;
+				SubmitHit(
+					EdgeDistance,
+					HitCenter,
+					EdgeClosestPoint,
+					EdgeNormal,
+					static_cast<int32>(i / 3));
+			}
+		}
+
+		const FVector VerticesToTest[3] = { V0, V1, V2 };
+		for (const FVector& Vertex : VerticesToTest)
+		{
+			float VertexDistance = 0.0f;
+			FVector VertexNormal = FVector::ZeroVector;
+			if (FCollisionQueryUtils::RaySphereSweep(
+				Start, Direction, SegmentLength, Vertex, Shape.Radius, VertexDistance, VertexNormal))
+			{
+				const FVector HitCenter = VertexDistance <= 1.0e-4f
+					? Vertex + VertexNormal.GetSafeNormal() * Shape.Radius
+					: Start + Direction * VertexDistance;
+				SubmitHit(
+					VertexDistance,
+					HitCenter,
+					Vertex,
+					VertexNormal,
+					static_cast<int32>(i / 3));
+			}
+		}
+	}
+
+	if (!bHit)
+	{
+		return false;
+	}
+
+	OutHitResult = BestHit;
 	return true;
 }
 

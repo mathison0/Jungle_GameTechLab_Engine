@@ -18,6 +18,8 @@ class UWorld;
  */
 class FWorldSpatialIndex
 {
+    friend class UWorld;
+
   public:
     /** @brief Tunable policy values that decide when batched maintenance paths should run. */
     struct FMaintenancePolicy
@@ -97,32 +99,6 @@ class FWorldSpatialIndex
     void FlushDirtyBounds();
 
     /**
-     * @brief Return the closest primitive whose BVH leaf AABB is hit by the ray.
-     * @param Ray Query ray.
-     * @param OutPrimitive Closest intersected primitive, or `nullptr` on miss.
-     * @param OutT Ray distance to the closest leaf AABB hit.
-     * @param Scratch Caller-owned BVH ray-query scratch.
-     * @return `true` if any tracked primitive leaf AABB is hit.
-     * @note Pending dirty bounds are flushed before the query executes.
-     */
-    bool RayQueryClosestPrimitive(const FRay& Ray, UPrimitiveComponent*& OutPrimitive, float& OutT,
-                                  FBVH::FRayQueryScratch& Scratch);
-
-    /**
-     * @brief Collect primitives whose BVH leaf AABBs are intersected by the ray.
-     * @param Ray Query ray.
-     * @param OutPrimitives Output primitives sorted by leaf-AABB hit distance.
-     * @param OutTs Output hit distances aligned with `OutPrimitives`.
-     * @param Scratch Caller-owned wrapper scratch.
-     * @note Pending dirty bounds are flushed before the query executes.
-     * @note This is still a broad-phase query over leaf AABBs. Callers that need
-     * exact mesh picking should perform a narrow-phase primitive raycast on the
-     * returned candidates.
-     */
-    void RayQueryPrimitives(const FRay& Ray, TArray<UPrimitiveComponent*>& OutPrimitives, TArray<float>& OutTs,
-                            FPrimitiveRayQueryScratch& Scratch);
-
-    /**
      * @brief Collect tracked primitives whose leaf AABBs overlap the input frustum.
      * @param Frustum Query frustum.
      * @param OutPrimitives Output primitive list.
@@ -162,6 +138,20 @@ class FWorldSpatialIndex
     FMaintenancePolicy& GetMaintenancePolicy() { return MaintenancePolicy; }
 
   private:
+    /**
+     * @brief Return the closest primitive whose BVH leaf AABB is hit by the ray.
+     * @note World line traces own public ray query access. Other systems should call UWorld::LineTraceSingle().
+     */
+    bool RayQueryClosestPrimitive(const FRay& Ray, UPrimitiveComponent*& OutPrimitive, float& OutT,
+                                  FBVH::FRayQueryScratch& Scratch);
+
+    /**
+     * @brief Collect primitives whose BVH leaf AABBs are intersected by the ray.
+     * @note This is a broad-phase helper for UWorld::LineTraceSingle().
+     */
+    void RayQueryPrimitives(const FRay& Ray, TArray<UPrimitiveComponent*>& OutPrimitives, TArray<float>& OutTs,
+                            FPrimitiveRayQueryScratch& Scratch);
+
     int32 AllocateObjectIndex();
     void ReleaseObjectIndex(int32 ObjectIndex);
     void SetInBVHState(int32 ObjectIndex, bool bInBVH);

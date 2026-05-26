@@ -1,11 +1,11 @@
 ﻿#include "Engine/Runtime/Engine.h"
-#include "Engine/Runtime/Engine.h"
 
 #include "Core/Paths.h"
 #include "Core/Logging/Stats.h"
 #include "Core/Logging/GPUProfiler.h"
 #include "Core/Logging/Log.h"
 #include "Engine/Input/InputSystem.h"
+#include "Engine/Runtime/StartupProgress.h"
 #include "Engine/Runtime/WindowsWindow.h"
 #include "Core/ResourceManager.h"
 #include "Render/Renderer/DefaultRenderPipeline.h"
@@ -14,7 +14,6 @@
 #include "GameFramework/World.h"
 #include "Runtime/Script/ScriptManager.h"
 #include "Serialization/SceneSaveManager.h"
-#include "Editor/Selection/SelectionManager.h"
 
 #include <filesystem>
 
@@ -23,20 +22,34 @@ UEngine* GEngine = nullptr;
 
 void UEngine::Init(FWindowsWindow* InWindow)
 {
+	IStartupProgressReporter& Progress = GetStartupProgress();
+	Progress.Report("Initializing engine core...", 0.08f);
+
 	Window = InWindow;
 
 	// 싱글턴 초기화 순서 보장
 	FNamePool::Get();
 
 	InputSystem::Get().SetOwnerWindow(Window->GetHWND());
+	Progress.Report("Creating renderer...", 0.18f);
 	Renderer.Create(Window->GetHWND());
+	Progress.Report("Starting audio system...", 0.30f);
 	AudioSystem.Initialize();
 
+	Progress.Report("Loading assets...", 0.42f);
 	FResourceManager::Get().LoadFromAssetDirectory(FPaths::ToUtf8(FPaths::AssetDirectoryPath()));
 
+	Progress.Report("Creating render resources...", 0.58f);
 	Renderer.CreateResources();
 
+	Progress.Report("Preparing render pipeline...", 0.68f);
 	SetRenderPipeline(std::make_unique<FDefaultRenderPipeline>(this, Renderer));
+}
+
+IStartupProgressReporter& UEngine::GetStartupProgress()
+{
+	static FNullStartupProgressReporter NullReporter;
+	return StartupProgressReporter ? *StartupProgressReporter : NullReporter;
 }
 
 void UEngine::Shutdown()
@@ -282,12 +295,11 @@ FWorldContext& UEngine::CreateWorldContext(EWorldType Type, const FName& Handle,
 	Context.ContextHandle = Handle;
 	Context.ContextName = Name.empty() ? Handle.ToString() : Name;
 	Context.World = UObjectManager::Get().CreateObject<UWorld>();
-	Context.SelectionManager = new FSelectionManager;
-	Context.SelectionManager->Init();
 	if (Context.World)
 	{
 		Context.World->SetWorldType(Type);
 	}
+	InitializeWorldContext(Context);
 	WorldList.push_back(Context);
 	return WorldList.back();
 }
@@ -298,11 +310,12 @@ void UEngine::DestroyWorldContext(const FName& Handle)
 	{
 		if (it->ContextHandle == Handle)
 		{
-			it->SelectionManager->Shutdown();
-			delete it->SelectionManager;
-			it->SelectionManager = nullptr;
-			it->World->EndPlay(EEndPlayReason::Type::Destroyed);
-			UObjectManager::Get().DestroyObject(it->World);
+			ShutdownWorldContext(*it);
+			if (it->World)
+			{
+				it->World->EndPlay(EEndPlayReason::Type::Destroyed);
+				UObjectManager::Get().DestroyObject(it->World);
+			}
 			WorldList.erase(it);
 			return;
 		}

@@ -166,9 +166,6 @@
     <Filter Include="Source\Engine\Collision">
       <UniqueIdentifier>{28d7d1b5-1606-4212-e86a-55d760fafa21}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\Collision\RayCollision">
-      <UniqueIdentifier>{2ea192f5-26e5-f936-6535-a4b776d8a80e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Engine\Component">
       <UniqueIdentifier>{1cbddc73-455c-99bf-6ea2-0cb994a5c089}</UniqueIdentifier>
     </Filter>
@@ -1050,8 +1047,8 @@
     <ClCompile Include="Source\Engine\Collision\Collision.cpp">
       <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Collision\RayCollision\RayCollision.cpp">
-      <Filter>Source\Engine\Collision\RayCollision</Filter>
+    <ClCompile Include="Source\Engine\Collision\CollisionQueryUtils.cpp">
+      <Filter>Source\Engine\Collision</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
@@ -1695,6 +1692,9 @@
     <ClCompile Include="Source\Engine\UI\RmlUi\RmlUiSystem.cpp">
       <Filter>Source\Engine\UI\RmlUi</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutAsset.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Launch\LaunchModeFactory.cpp">
       <Filter>Source\Launch</Filter>
     </ClCompile>
@@ -2071,8 +2071,8 @@
     <ClInclude Include="Source\Engine\Collision\Collision.h">
       <Filter>Source\Engine\Collision</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Collision\RayCollision\RayCollision.h">
-      <Filter>Source\Engine\Collision\RayCollision</Filter>
+    <ClInclude Include="Source\Engine\Collision\CollisionQueryUtils.h">
+      <Filter>Source\Engine\Collision</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\ActorComponent.h">
       <Filter>Source\Engine\Component</Filter>
@@ -2752,6 +2752,9 @@
     <ClInclude Include="Source\Engine\Runtime\SceneView.h">
       <Filter>Source\Engine\Runtime</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h">
+      <Filter>Source\Engine\Runtime</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Runtime\Script\API\LuaEngineAPIBindings.h">
       <Filter>Source\Engine\Runtime\Script\API</Filter>
     </ClInclude>
@@ -2870,6 +2873,9 @@
       <Filter>Source\Engine\UI\RmlUi</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\UI\RuntimeUITypes.h">
+      <Filter>Source\Engine\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h">
       <Filter>Source\Engine\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Launch\LaunchModeFactory.h">
