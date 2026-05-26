@@ -36,6 +36,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <cstdint>
 #include <cstring>
 
 namespace

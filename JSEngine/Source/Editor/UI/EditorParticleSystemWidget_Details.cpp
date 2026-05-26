@@ -298,6 +298,155 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	auto DrawPropertyTable = [&](const char* TableId, const char* CategoryFilter, bool bIncludeUncategorized, bool bIncludeAllCategories = false) -> int32
 	{
 		int32 RenderedPropertyCount = 0;
+		auto IsVisibleProperty = [&](const FProperty* Property) -> bool
+		{
+			if (!Property || !Property->Name || !Property->IsEditable() || IsInternalParticleModuleProperty(*Property))
+			{
+				return false;
+			}
+
+			const bool bHasCategory = Property->Category && Property->Category[0] != '\0';
+			const bool bCategoryMatch = CategoryFilter && bHasCategory && std::strcmp(Property->Category, CategoryFilter) == 0;
+			const bool bUncategorizedMatch = bIncludeUncategorized && !bHasCategory;
+			const bool bAllCategoryMatch = bIncludeAllCategories && !CategoryFilter;
+			return bAllCategoryMatch || bCategoryMatch || bUncategorizedMatch;
+		};
+
+		auto FindPropertyByName = [&](const FString& Name) -> const FProperty*
+		{
+			for (const FProperty* Candidate : Properties)
+			{
+				if (Candidate && Candidate->Name && Name == Candidate->Name && IsVisibleProperty(Candidate))
+				{
+					return Candidate;
+				}
+			}
+			return nullptr;
+		};
+
+		auto EndsWith = [](const FString& Value, const char* Suffix) -> bool
+		{
+			const size_t SuffixLength = std::strlen(Suffix);
+			return Value.size() >= SuffixLength && Value.compare(Value.size() - SuffixLength, SuffixLength, Suffix) == 0;
+		};
+
+		auto DrawDistributionValueRow = [&](const char* RowLabel, const FProperty& ValueProperty) -> bool
+		{
+			bool bChanged = false;
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 26.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Indent(40.0f);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(RowLabel);
+			ImGui::Unindent(40.0f);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::SetNextItemWidth(std::min(140.0f, ImGui::GetContentRegionAvail().x));
+			ImGui::PushID(ValueProperty.Name);
+			bChanged = DrawParticleModuleProperty(Module, ValueProperty);
+			ImGui::PopID();
+			return bChanged;
+		};
+
+		auto DrawDistributionStoredMaxRow = [&](const FProperty& ValueProperty, const FString& Key) -> bool
+		{
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 26.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Indent(40.0f);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted("Max");
+			ImGui::Unindent(40.0f);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::SetNextItemWidth(std::min(140.0f, ImGui::GetContentRegionAvail().x));
+
+			if (ValueProperty.Type == EPropertyType::Float)
+			{
+				float CurrentValue = ValueProperty.GetValuePtr(Module) ? *static_cast<float*>(ValueProperty.GetValuePtr(Module)) : 0.0f;
+				auto Iter = ParticleDistributionFloatMaxValues.find(Key);
+				if (Iter == ParticleDistributionFloatMaxValues.end())
+				{
+					Iter = ParticleDistributionFloatMaxValues.emplace(Key, CurrentValue).first;
+				}
+				return ImGui::DragFloat("##Max", &Iter->second, ValueProperty.Speed);
+			}
+
+			const char* Hint = ValueProperty.EditorHint;
+			if ((!Hint || Hint[0] == '\0') && ValueProperty.ScriptStruct)
+			{
+				Hint = ValueProperty.ScriptStruct->GetName();
+			}
+			if (Hint && std::strcmp(Hint, "FVector") == 0)
+			{
+				FVector CurrentValue = ValueProperty.GetValuePtr(Module) ? *static_cast<FVector*>(ValueProperty.GetValuePtr(Module)) : FVector::ZeroVector;
+				auto Iter = ParticleDistributionVectorMaxValues.find(Key);
+				if (Iter == ParticleDistributionVectorMaxValues.end())
+				{
+					Iter = ParticleDistributionVectorMaxValues.emplace(Key, CurrentValue).first;
+				}
+				return ImGui::DragFloat3("##Max", &Iter->second.X, ValueProperty.Speed);
+			}
+
+			ImGui::TextDisabled("<unsupported>");
+			return false;
+		};
+
+		auto DrawDistributionRows = [&](const FProperty& PrimaryProperty, const FProperty* SecondaryProperty) -> bool
+		{
+			static const char* DistributionItems[] =
+			{
+				"Distribution Float Constant",
+				"Distribution Float Constant Curve",
+				"Distribution Float Uniform",
+				"Distribution Float Uniform Curve"
+			};
+
+			bool bChanged = false;
+			ImGui::PushID(PrimaryProperty.Name);
+			const FString Key = MakeParticleDistributionKey(Module, PrimaryProperty);
+			int32& DistributionKind = ParticleDistributionKinds[Key];
+			DistributionKind = std::clamp(DistributionKind, 0, static_cast<int32>(IM_ARRAYSIZE(DistributionItems)) - 1);
+
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::AlignTextToFramePadding();
+			const bool bPropertyOpen = ImGui::TreeNodeEx(GetPropertyDisplayName(PrimaryProperty), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::TextUnformatted("");
+
+			if (bPropertyOpen)
+			{
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Indent(20.0f);
+				ImGui::AlignTextToFramePadding();
+				ImGui::TreeNodeEx("Distribution", ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+				ImGui::Unindent(20.0f);
+				ImGui::TableSetColumnIndex(1);
+				ImGui::SetNextItemWidth(std::min(250.0f, ImGui::GetContentRegionAvail().x));
+				ParticleCombo("##DistributionKind", &DistributionKind, DistributionItems, IM_ARRAYSIZE(DistributionItems));
+
+				const bool bUniform = DistributionKind == 2 || DistributionKind == 3;
+				if (bUniform)
+				{
+					bChanged |= DrawDistributionValueRow("Min", PrimaryProperty);
+					if (SecondaryProperty)
+					{
+						bChanged |= DrawDistributionValueRow("Max", *SecondaryProperty);
+					}
+					else
+					{
+						bChanged |= DrawDistributionStoredMaxRow(PrimaryProperty, Key);
+					}
+				}
+				else
+				{
+					bChanged |= DrawDistributionValueRow("Constant", PrimaryProperty);
+				}
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
+			return bChanged;
+		};
+
 		ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(4.0f, 3.0f));
 		if (ImGui::BeginTable(TableId, 2, ImGuiTableFlags_SizingStretchProp))
 		{
@@ -305,17 +454,39 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 			ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 			for (const FProperty* Property : Properties)
 			{
-				if (!Property || !Property->Name || !Property->IsEditable() || IsInternalParticleModuleProperty(*Property))
+				if (!IsVisibleProperty(Property))
 				{
 					continue;
 				}
 
-				const bool bHasCategory = Property->Category && Property->Category[0] != '\0';
-				const bool bCategoryMatch = CategoryFilter && bHasCategory && std::strcmp(Property->Category, CategoryFilter) == 0;
-				const bool bUncategorizedMatch = bIncludeUncategorized && !bHasCategory;
-				const bool bAllCategoryMatch = bIncludeAllCategories && !CategoryFilter;
-				if (!bAllCategoryMatch && !bCategoryMatch && !bUncategorizedMatch)
+				if (IsParticleDistributionProperty(Module, *Property))
 				{
+					const FString PropertyName = Property->Name;
+					if (EndsWith(PropertyName, "Max"))
+					{
+						const FString MinName = PropertyName.substr(0, PropertyName.size() - 3) + "Min";
+						if (const FProperty* MinProperty = FindPropertyByName(MinName))
+						{
+							if (IsParticleDistributionProperty(Module, *MinProperty) && MinProperty->Type == Property->Type)
+							{
+								continue;
+							}
+						}
+					}
+
+					const FProperty* SecondaryProperty = nullptr;
+					if (EndsWith(PropertyName, "Min"))
+					{
+						const FString MaxName = PropertyName.substr(0, PropertyName.size() - 3) + "Max";
+						SecondaryProperty = FindPropertyByName(MaxName);
+						if (SecondaryProperty && (!IsParticleDistributionProperty(Module, *SecondaryProperty) || SecondaryProperty->Type != Property->Type))
+						{
+							SecondaryProperty = nullptr;
+						}
+					}
+
+					DrawDistributionRows(*Property, SecondaryProperty);
+					RenderedPropertyCount += SecondaryProperty ? 2 : 1;
 					continue;
 				}
 
@@ -433,6 +604,42 @@ bool FEditorParticleSystemWidget::DrawParticleModuleProperty(UParticleModule* Mo
 		bPropertyEditUndoCaptured = false;
 	}
 	return bChanged;
+}
+
+bool FEditorParticleSystemWidget::IsParticleDistributionProperty(UParticleModule* Module, const FProperty& Property) const
+{
+	if (!Module || !Property.IsEditable() || IsInternalParticleModuleProperty(Property))
+	{
+		return false;
+	}
+
+	if (Cast<UParticleModuleRequired>(Module))
+	{
+		return false;
+	}
+
+	if (Property.Type == EPropertyType::Float)
+	{
+		return true;
+	}
+
+	if (Property.Type != EPropertyType::Struct)
+	{
+		return false;
+	}
+
+	const char* Hint = Property.EditorHint;
+	if ((!Hint || Hint[0] == '\0') && Property.ScriptStruct)
+	{
+		Hint = Property.ScriptStruct->GetName();
+	}
+	return Hint && std::strcmp(Hint, "FVector") == 0;
+}
+
+FString FEditorParticleSystemWidget::MakeParticleDistributionKey(UParticleModule* Module, const FProperty& Property) const
+{
+	const std::uintptr_t ModuleKey = reinterpret_cast<std::uintptr_t>(Module);
+	return std::to_string(ModuleKey) + "::" + (Property.Name ? Property.Name : "");
 }
 
 bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label)

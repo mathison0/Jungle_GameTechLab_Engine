@@ -1004,7 +1004,7 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	const ImVec2 Max = ImGui::GetItemRectMax();
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 	const FString ModuleName = GetModuleDisplayName(Module, bRequired);
-	const bool bHasModuleToggle = Module && !Cast<UParticleModuleTypeDataBase>(Module);
+	const bool bHasModuleToggle = Module && !bRequired && !Cast<UParticleModuleTypeDataBase>(Module);
 	const ImVec2 ToggleMin(Max.x - 38.0f, Min.y + 5.0f);
 	const ImVec2 ToggleMax(ToggleMin.x + 13.0f, ToggleMin.y + 13.0f);
 	const ImVec2 MousePos = ImGui::GetIO().MousePos;

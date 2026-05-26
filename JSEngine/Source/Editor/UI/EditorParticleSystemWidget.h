@@ -168,6 +168,8 @@ private:
 	bool DrawParticleModuleProperty(UParticleModule* Module, const FProperty& Property);
 	bool DrawParticlePropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
 	bool DrawParticleStructPropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
+	bool IsParticleDistributionProperty(UParticleModule* Module, const FProperty& Property) const;
+	FString MakeParticleDistributionKey(UParticleModule* Module, const FProperty& Property) const;
 	void NotifyParticleModulePropertyChanged(UParticleModule* Module, UParticleEmitter* OwnerEmitter, const FProperty& Property);
 	void DrawCurveEditorPanel(const ImVec2& Size);
 
@@ -181,6 +183,9 @@ private:
 	FString SelectedCurveAssetPath;
 	FString DocumentPath;
 	TMap<FString, FParticleSystemDocumentState> ParticleDocumentStates;
+	TMap<FString, int32> ParticleDistributionKinds;
+	TMap<FString, float> ParticleDistributionFloatMaxValues;
+	TMap<FString, FVector> ParticleDistributionVectorMaxValues;
 	bool bDirty = true;
 	bool bShowThumbnail = false;
 	bool bShowBounds = false;
