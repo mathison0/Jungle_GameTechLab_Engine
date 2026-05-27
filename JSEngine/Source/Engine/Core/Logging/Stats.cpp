@@ -2,6 +2,25 @@
 
 #include <algorithm>
 
+namespace
+{
+	FParticleTypeStats& SelectParticleTypeStats(FParticleStatsFrame& Frame, EParticleEmitterRenderMode RenderMode)
+	{
+		switch (RenderMode)
+		{
+		case EParticleEmitterRenderMode::Mesh:
+			return Frame.Mesh;
+		case EParticleEmitterRenderMode::Ribbon:
+			return Frame.Ribbon;
+		case EParticleEmitterRenderMode::Beam:
+			return Frame.Beam;
+		case EParticleEmitterRenderMode::Sprite:
+		default:
+			return Frame.Sprite;
+		}
+	}
+}
+
 FStatManager::FStatManager()
 {
 	QueryPerformanceFrequency(&Frequency);
@@ -47,4 +66,28 @@ void FStatManager::TakeSnapshot()
 		Entry.MinTime = DBL_MAX;
 		Entry.LastTime = 0.0;
 	}
+}
+
+void FParticleStats::ResetCurrent()
+{
+	Current = FParticleStatsFrame();
+}
+
+void FParticleStats::TakeSnapshot()
+{
+	Snapshot = Current;
+}
+
+void FParticleStats::AddComponent()
+{
+	Current.ComponentCount++;
+}
+
+void FParticleStats::AddEmitter(EParticleEmitterRenderMode RenderMode, uint32 ActiveParticles, uint32 MaxParticles, uint64 MemoryBytes)
+{
+	FParticleTypeStats& TypeStats = SelectParticleTypeStats(Current, RenderMode);
+	TypeStats.EmitterCount++;
+	TypeStats.ActiveParticleCount += ActiveParticles;
+	TypeStats.MaxParticleCount += MaxParticles;
+	TypeStats.MemoryBytes += MemoryBytes;
 }

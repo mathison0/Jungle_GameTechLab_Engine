@@ -219,13 +219,10 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 		{
 			DuplicateEmitter(TargetEmitterIndex);
 		}
-		ImGui::MenuItem("Duplicate and Share Emitter", nullptr, false, false);
 		if (ImGui::MenuItem("Delete Emitter"))
 		{
 			DeleteEmitter(TargetEmitterIndex);
 		}
-		ImGui::MenuItem("Export Emitter", nullptr, false, false);
-		ImGui::MenuItem("Export All", nullptr, false, false);
 		EndParticleMenu();
 	}
 

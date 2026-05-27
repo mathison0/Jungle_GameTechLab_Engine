@@ -2,6 +2,7 @@
 
 #include "Core/ResourceManager.h"
 #include "Core/Logging/GPUProfiler.h"
+#include "Core/Logging/Stats.h"
 #include "Core/Logging/SkinningStats.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/EditorRenderPipeline.h"
@@ -67,6 +68,23 @@ namespace
 	ImU32 ToU32(const ImVec4& Color)
 	{
 		return ImGui::ColorConvertFloat4ToU32(Color);
+	}
+
+	float BytesToKB(uint64 Bytes)
+	{
+		return static_cast<float>(Bytes) / 1024.0f;
+	}
+
+	void DrawParticleTypeStatLine(const char* Label, const FParticleTypeStats& Stats, const ImVec4& Color)
+	{
+		ImGui::TextColored(
+			Color,
+			"- %-6s Emitters:%u Particles:%u/%u Mem:%.2f KB",
+			Label,
+			Stats.EmitterCount,
+			Stats.ActiveParticleCount,
+			Stats.MaxParticleCount,
+			BytesToKB(Stats.MemoryBytes));
 	}
 
 	ImVec2 AtlasPixelToPreview(const ImVec2& ImagePos, const ImVec2& ImageSize, int32 X, int32 Y)
@@ -553,7 +571,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 		const FEditorViewportState& VS = Layout.GetViewportState(i);
         FViewportRect ViewportRect = Layout.GetSceneViewport(i).GetRect();
 
-		if (!VS.bShowStatFPS && !VS.bShowStatMemory && !VS.bShowStatNameTable && !VS.bShowLight&& !VS.bShowShadow) continue;
+		if (!VS.bShowStatFPS && !VS.bShowStatMemory && !VS.bShowStatNameTable && !VS.bShowStatParticle && !VS.bShowLight&& !VS.bShowShadow) continue;
         if (ViewportRect.Width <= 0 || ViewportRect.Height <= 0)
             continue; // 비활성 뷰포트 스킵
 
@@ -571,6 +589,13 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
 		if (ImGui::Begin(WinId, nullptr, kFlags))
 		{
+			const bool bOnlyParticleStat =
+				VS.bShowStatParticle &&
+				!VS.bShowStatFPS &&
+				!VS.bShowStatMemory &&
+				!VS.bShowStatNameTable &&
+				!VS.bShowLight &&
+				!VS.bShowShadow;
 			const FRenderCollector::FCullingStats* CullingStats =
 				(RenderPipeline != nullptr) ? &RenderPipeline->GetViewportCullingStats(i) : nullptr;
 
@@ -581,7 +606,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 				ImGui::TextColored(ImVec4(0.f, 1.f, 0.f, 1.f), "FPS: %.1f (%.2f ms)", FPS, DeltaTime * 1000.f);
 			}
 
-			if (CullingStats != nullptr)
+			if (CullingStats != nullptr && !bOnlyParticleStat)
 			{
 				const int32 CulledPrimitiveCount = std::max(
 					0,
@@ -607,7 +632,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 			const FRenderCollector::FDecalStats* DecalStats =
 				(RenderPipeline != nullptr) ? &RenderPipeline->GetViewportDecalStats(i) : nullptr;
 
-			if (DecalStats != nullptr)
+			if (DecalStats != nullptr && !bOnlyParticleStat)
 			{
 				if (CullingStats != nullptr || VS.bShowStatFPS)
 				{
@@ -639,7 +664,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
             if (VS.bShowShadow)
             {
-                if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatMemory)
+                if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatMemory || VS.bShowStatParticle)
                 {
                     ImGui::Separator();
                 }
@@ -687,10 +712,34 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
                                    MaxCubeBytes / (1024.0f * 1024.0f));
             }
 
+			if (VS.bShowStatParticle)
+			{
+				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowLight || VS.bShowShadow)
+				{
+					ImGui::Separator();
+				}
+
+				const FParticleStatsFrame* ParticleStats =
+					RenderPipeline != nullptr ? &RenderPipeline->GetViewportParticleStats(i) : nullptr;
+				static const FParticleStatsFrame EmptyParticleStats{};
+				const FParticleStatsFrame& Stats = ParticleStats ? *ParticleStats : EmptyParticleStats;
+				const ImVec4 ParticleColor(0.45f, 0.95f, 0.65f, 1.0f);
+
+				ImGui::TextColored(ParticleColor, "Particle Stat");
+				ImGui::TextColored(ParticleColor, "- Components: %u", Stats.ComponentCount);
+				ImGui::TextColored(ParticleColor, "- Emitters: %u", Stats.GetTotalEmitterCount());
+				ImGui::TextColored(ParticleColor, "- Particles: %u", Stats.GetTotalActiveParticleCount());
+				ImGui::TextColored(ParticleColor, "- Memory: %.2f KB", BytesToKB(Stats.GetTotalMemoryBytes()));
+				DrawParticleTypeStatLine("Sprite", Stats.Sprite, ParticleColor);
+				DrawParticleTypeStatLine("Mesh", Stats.Mesh, ParticleColor);
+				DrawParticleTypeStatLine("Ribbon", Stats.Ribbon, ParticleColor);
+				DrawParticleTypeStatLine("Beam", Stats.Beam, ParticleColor);
+			}
+
 			// Memory 출력 (노란색 텍스트)
 			if (VS.bShowStatMemory)
 			{
-				if (CullingStats != nullptr || VS.bShowStatFPS)
+				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatParticle)
 				{
 					ImGui::Separator();
 				}

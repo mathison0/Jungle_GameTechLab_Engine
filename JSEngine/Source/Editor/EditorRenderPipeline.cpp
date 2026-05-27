@@ -66,6 +66,7 @@ FEditorRenderPipeline::FEditorRenderPipeline(UEditorEngine* InEditor, FRenderer&
     ViewportCullingStats.resize(FEditorViewportLayout::MaxViewports);
 	ViewportDecalStats.resize(FEditorViewportLayout::MaxViewports);
 	ViewportLightStats.resize(FEditorViewportLayout::MaxViewports);
+	ViewportParticleStats.resize(FEditorViewportLayout::MaxViewports);
 }
 
 FEditorRenderPipeline::~FEditorRenderPipeline() { Collector.Release(); }
@@ -165,6 +166,10 @@ void FEditorRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
     {
         Stats = {};
     }
+	for (FParticleStatsFrame& Stats : ViewportParticleStats)
+	{
+		Stats = {};
+	}
     const auto ResetStatsEnd = std::chrono::steady_clock::now();
 
     if (!Editor->GetFocusedWorld())
@@ -334,10 +339,13 @@ void FEditorRenderPipeline::RenderViewport(FRenderer& Renderer, int32 ViewportIn
 	
 	const FFrustum& ViewFrustum = SceneView.CameraFrustum;
 	const bool bDrawEditorViewportHelpers = VC->AllowsEditorWorldControl();
+	FParticleStats::Get().ResetCurrent();
 	Collector.CollectWorld(World, ShowFlags, ViewMode, Bus, &ViewFrustum, bDrawEditorViewportHelpers);
+	FParticleStats::Get().TakeSnapshot();
     ViewportCullingStats[ViewportIndex] = Collector.GetLastCullingStats();
     ViewportDecalStats[ViewportIndex] = Collector.GetLastDecalStats();
     ViewportLightStats[ViewportIndex] = Collector.GetLastLightStats();
+	ViewportParticleStats[ViewportIndex] = FParticleStats::Get().GetSnapshot();
 
 	// 순수 편집 뷰포트와 PIE Eject는 모두 Editor viewport setting을 따릅니다.
 	if (bDrawEditorViewportHelpers)
@@ -760,6 +768,18 @@ const FRenderCollector::FLightStats& FEditorRenderPipeline::GetViewportLightStat
 	}
 
 	return ViewportLightStats[ViewportIndex];
+}
+
+const FParticleStatsFrame& FEditorRenderPipeline::GetViewportParticleStats(int32 ViewportIndex) const
+{
+	static const FParticleStatsFrame EmptyStats{};
+
+	if (ViewportIndex < 0 || ViewportIndex >= static_cast<int32>(ViewportParticleStats.size()))
+	{
+		return EmptyStats;
+	}
+
+	return ViewportParticleStats[ViewportIndex];
 }
 
 ID3D11ShaderResourceView* FEditorRenderPipeline::RenderMaterialPreview(

@@ -917,10 +917,7 @@ namespace
 
 	void DrawDisabledParticleModuleMenu(const char* MenuLabel)
 	{
-		if (BeginParticleMenu(MenuLabel, false))
-		{
-			EndParticleMenu();
-		}
+		(void)MenuLabel;
 	}
 
 	template <typename ModuleType, typename AddModuleFunc>

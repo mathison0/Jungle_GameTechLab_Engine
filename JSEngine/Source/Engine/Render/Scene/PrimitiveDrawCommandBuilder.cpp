@@ -15,6 +15,7 @@
 
 
 #include "Core/Logging/SkinningStats.h"
+#include "Core/Logging/Stats.h"
 #include "Core/ResourceManager.h"
 #include "Engine/Asset/StaticMesh.h"
 #include "Render/Resource/MeshBufferManager.h"
@@ -643,6 +644,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
         // bCachedCameraValid=false → PSA_Velocity fallback (위험 12 방어).
         ParticleSystemComponent->CacheCameraFromRenderBus(RenderBus);
         CollectParticleLights(ParticleSystemComponent, RenderBus);
+		FParticleStats::Get().AddComponent();
 
         // Cycle 15a (D4 단일 슬롯 통합 + D5 BuildInstanceData 삭제 + D2 매 frame new):
         //   Component->CollectDynamicData() 로 모든 emitter 의 DynamicData* array 회수 (ownership 이전).
@@ -650,6 +652,29 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
         //   Material/Texture 등 module-기반 메타는 Builder 가 추출해 DynamicData->Source 에 set.
         TArray<FDynamicEmitterDataBase*> AllDynData = ParticleSystemComponent->CollectDynamicData();
         const TArray<FParticleEmitterInstance*>& EmitterInstances = ParticleSystemComponent->GetEmitterInstances();
+
+		for (FParticleEmitterInstance* Instance : EmitterInstances)
+		{
+			if (!Instance)
+			{
+				continue;
+			}
+
+			EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
+			if (UParticleLODLevel* LOD = Instance->GetCurrentLODLevel())
+			{
+				if (const UParticleModuleTypeDataBase* TypeData = LOD->GetTypeDataModule())
+				{
+					RenderMode = TypeData->GetRenderMode();
+				}
+			}
+
+			FParticleStats::Get().AddEmitter(
+				RenderMode,
+				static_cast<uint32>(std::max(Instance->GetActiveParticleCount(), 0)),
+				static_cast<uint32>(std::max(Instance->GetMaxActiveParticleCount(), 0)),
+				static_cast<uint64>(std::max(Instance->GetParticleMemoryBytes(), 0)));
+		}
 
         for (FDynamicEmitterDataBase* DynData : AllDynData)
         {

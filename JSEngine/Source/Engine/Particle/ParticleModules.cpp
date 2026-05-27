@@ -534,6 +534,20 @@ UParticleModuleSize::UParticleModuleSize()
 {
     bSpawnModule = true;
     bUpdateModule = true;
+
+    FParticleDistributionRuntimeData SizeDistribution;
+    SizeDistribution.Kind = static_cast<int32>(EParticleDistributionRuntimeKind::FloatConstantCurve);
+    SizeDistribution.bVector = true;
+    FFloatCurve& XCurve = SizeDistribution.Curves["X"];
+    XCurve.Keys.push_back({ 0.0f, 1.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    XCurve.Keys.push_back({ 1.0f, 1.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    FFloatCurve& YCurve = SizeDistribution.Curves["Y"];
+    YCurve.Keys.push_back({ 0.0f, 1.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    YCurve.Keys.push_back({ 1.0f, 1.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    FFloatCurve& ZCurve = SizeDistribution.Curves["Z"];
+    ZCurve.Keys.push_back({ 0.0f, 1.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    ZCurve.Keys.push_back({ 1.0f, 1.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    SetDistributionRuntimeData("SizeOverLife", SizeDistribution);
 }
 
 // Function : Assign initial size to spawned particle
@@ -541,26 +555,26 @@ UParticleModuleSize::UParticleModuleSize()
 // Owner : emitter instance that owns the particle
 // Particle : particle receiving initial size
 // SpawnTime : relative spawn time within this tick
-// output : Particle Size is randomized between StartSizeMin and StartSizeMax
+// output : Particle Size is initialized from SizeOverLife at lifetime start
 void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
-    Particle.Size = EvaluateVectorDistribution("StartSizeMin", StartSizeMin, StartSizeMax, std::clamp(SpawnTime, 0.0f, 1.0f));
+    (void)SpawnTime;
+    Particle.Size = EvaluateVectorDistribution("SizeOverLife", SizeOverLife, SizeOverLife, 0.0f);
 }
 
 // Function : Interpolate active particle size over normalized lifetime
 // input : Owner, DeltaTime
 // Owner : emitter instance that owns active particles
 // DeltaTime : elapsed time for this simulation step
-// output : Each active particle Size moves toward a randomized end size range
+// output : Each active particle Size is evaluated from SizeOverLife over normalized lifetime
 void UParticleModuleSize::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
     (void)DeltaTime;
     for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
-        const FVector EndSize = EvaluateVectorDistribution("EndSizeMin", EndSizeMin, EndSizeMax, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
-        Particle.Size = FVector::Lerp(Particle.Size, EndSize, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
+        Particle.Size = EvaluateVectorDistribution("SizeOverLife", SizeOverLife, SizeOverLife, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
     }
 }
 

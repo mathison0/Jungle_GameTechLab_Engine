@@ -297,17 +297,8 @@ public:
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
 
 private:
-	UPROPERTY(DisplayName = "Start Size Min")
-	FVector StartSizeMin = FVector(1.0f, 1.0f, 1.0f);
-
-	UPROPERTY(DisplayName = "Start Size Max")
-	FVector StartSizeMax = FVector(1.0f, 1.0f, 1.0f);
-
-	UPROPERTY(DisplayName = "End Size Min")
-	FVector EndSizeMin = FVector(1.0f, 1.0f, 1.0f);
-
-	UPROPERTY(DisplayName = "End Size Max")
-	FVector EndSizeMax = FVector(1.0f, 1.0f, 1.0f);
+	UPROPERTY(DisplayName = "Size Over Life")
+	FVector SizeOverLife = FVector(1.0f, 1.0f, 1.0f);
 };
 
 UENUM()
