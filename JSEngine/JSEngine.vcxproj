@@ -1011,6 +1011,7 @@
     <ClCompile Include="Source\Engine\Render\LineBatcher.cpp" />
     <ClCompile Include="Source\Engine\Render\Mesh\MeshManager.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\DefaultRenderPipeline.cpp" />
+    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\BloomRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\DecalRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\DepthLessRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\DepthPrePass.cpp" />
@@ -1442,6 +1443,7 @@
     <ClInclude Include="Source\Engine\Render\Mesh\MeshManager.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\DefaultRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\IRenderPipeline.h" />
+    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\BloomRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\DecalRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\DepthLessRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\DepthPrePass.h" />
@@ -1592,6 +1594,9 @@
     <None Include="Shaders\Particle\MeshParticle.hlsl" />
     <None Include="Shaders\Particle\RibbonParticle.hlsl" />
     <None Include="Shaders\Particle\SpriteParticle.hlsl" />
+    <None Include="Shaders\PostProcess\BloomBlurCS.hlsl" />
+    <None Include="Shaders\PostProcess\BloomCompositeCS.hlsl" />
+    <None Include="Shaders\PostProcess\BloomThresholdCS.hlsl" />
     <None Include="Shaders\PostProcess\FXAAPass.hlsl" />
     <None Include="Shaders\PostProcess\FogPass.hlsl" />
     <None Include="Shaders\PostProcess\LightPass.hlsl" />

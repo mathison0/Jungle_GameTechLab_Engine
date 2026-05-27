@@ -18,6 +18,12 @@ namespace ParticleModuleUtils
 {
     constexpr const char* DefaultRequiredSubUVName = "Asset/plasma.png";
 
+    float GetEmitterSpawnDistributionTime(FParticleEmitterInstance* Owner, float SpawnTime)
+    {
+        const float ClampedSpawnOffset = std::max(SpawnTime, 0.0f);
+        return Owner ? std::max(Owner->GetPreviousEmitterTime() + ClampedSpawnOffset, 0.0f) : ClampedSpawnOffset;
+    }
+
 // Function : Generate random float inside range
 // input : Min, Max
 // Min : minimum random value
@@ -179,8 +185,13 @@ UParticleModuleSpawn::UParticleModuleSpawn()
 // output : Integer spawn count and updated Owner SpawnFraction remainder
 int32 UParticleModuleSpawn::ComputeSpawnCount(FParticleEmitterInstance* Owner, float DeltaTime)
 {
-    const float EvaluatedRate = EvaluateFloatDistribution("Rate", Rate, Rate, 0.0f);
-    if (!Owner || EvaluatedRate <= 0.0f || DeltaTime <= 0.0f)
+    if (!Owner || DeltaTime <= 0.0f)
+    {
+        return 0;
+    }
+
+    const float EvaluatedRate = EvaluateFloatDistribution("Rate", Rate, Rate, Owner->GetEmitterTime());
+    if (EvaluatedRate <= 0.0f)
     {
         return 0;
     }
@@ -201,8 +212,8 @@ UParticleModuleLifetime::UParticleModuleLifetime()
 // output : Particle lifetime is set between LifetimeMin and LifetimeMax
 void UParticleModuleLifetime::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
-    (void)Owner;
-    Particle.Lifetime = std::max(EvaluateFloatDistribution("LifetimeMin", LifetimeMin, LifetimeMax, std::clamp(SpawnTime, 0.0f, 1.0f)), 0.01f);
+    const float DistributionTime = ParticleModuleUtils::GetEmitterSpawnDistributionTime(Owner, SpawnTime);
+    Particle.Lifetime = std::max(EvaluateFloatDistribution("LifetimeMin", LifetimeMin, LifetimeMax, DistributionTime), 0.01f);
 }
 
 UParticleModuleLocation::UParticleModuleLocation()
@@ -218,8 +229,8 @@ UParticleModuleLocation::UParticleModuleLocation()
 // output : Particle Location and OldLocation are set from component location plus random local offset
 void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
-    (void)SpawnTime;
-    const FVector LocalOffset = EvaluateVectorDistribution("StartLocationMin", StartLocationMin, StartLocationMax, std::clamp(SpawnTime, 0.0f, 1.0f));
+    const float DistributionTime = ParticleModuleUtils::GetEmitterSpawnDistributionTime(Owner, SpawnTime);
+    const FVector LocalOffset = EvaluateVectorDistribution("StartLocationMin", StartLocationMin, StartLocationMax, DistributionTime);
     const FVector BaseLocation = Owner ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
     Particle.Location = BaseLocation + LocalOffset;
     Particle.OldLocation = Particle.Location;
@@ -232,7 +243,7 @@ UParticleModuleLocationShape::UParticleModuleLocationShape()
 
 void UParticleModuleLocationShape::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
-    const float DistributionTime = std::clamp(SpawnTime, 0.0f, 1.0f);
+    const float DistributionTime = ParticleModuleUtils::GetEmitterSpawnDistributionTime(Owner, SpawnTime);
     const float EvaluatedSphereRadius = EvaluateFloatDistribution("SphereRadius", SphereRadius, SphereRadius, DistributionTime);
     const FVector EvaluatedBoxExtents = EvaluateVectorDistribution("BoxExtents", BoxExtents, BoxExtents, DistributionTime);
     const float EvaluatedConeHeight = EvaluateFloatDistribution("ConeHeight", ConeHeight, ConeHeight, DistributionTime);
@@ -262,8 +273,8 @@ UParticleModuleVelocity::UParticleModuleVelocity()
 // output : Particle Velocity and BaseVelocity are set between StartVelocityMin and StartVelocityMax
 void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
-    (void)Owner;
-    Particle.Velocity = EvaluateVectorDistribution("StartVelocityMin", StartVelocityMin, StartVelocityMax, std::clamp(SpawnTime, 0.0f, 1.0f));
+    const float DistributionTime = ParticleModuleUtils::GetEmitterSpawnDistributionTime(Owner, SpawnTime);
+    Particle.Velocity = EvaluateVectorDistribution("StartVelocityMin", StartVelocityMin, StartVelocityMax, DistributionTime);
     Particle.BaseVelocity = Particle.Velocity;
 }
 
@@ -379,12 +390,12 @@ UParticleModuleRotationRate::UParticleModuleRotationRate()
 
 void UParticleModuleRotationRate::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
-    (void)Owner;
+    const float DistributionTime = ParticleModuleUtils::GetEmitterSpawnDistributionTime(Owner, SpawnTime);
     Particle.RotationRate = EvaluateFloatDistribution(
         "StartRotationRateMin",
         StartRotationRateMin,
         StartRotationRateMax,
-        std::clamp(SpawnTime, 0.0f, 1.0f));
+        DistributionTime);
 }
 
 void UParticleModuleRotationRate::Update(FParticleEmitterInstance* Owner, float DeltaTime)

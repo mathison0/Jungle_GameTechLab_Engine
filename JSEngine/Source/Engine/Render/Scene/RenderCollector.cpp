@@ -407,6 +407,8 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
 	if (!Primitive->IsVisible()) return;
 	if (!bIncludeEditorOnlyPrimitives && Primitive->IsEditorOnly() && WorldType != EWorldType::Editor) return;
 
+	EditorOverlayCollector.CollectCollisionShape(Primitive, ShowFlags, RenderBus);
+
 	EPrimitiveType PrimType = Primitive->GetPrimitiveType();
 
 	if (PrimType != EPrimitiveType::EPT_Decal)

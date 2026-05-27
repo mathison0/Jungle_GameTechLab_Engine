@@ -30,10 +30,12 @@ bool FPostProcessRenderPass::Release()
 
 bool FPostProcessRenderPass::Begin(const FRenderPassContext* Context)
 {
+    const FShowFlags& ShowFlags = Context->RenderBus->GetShowFlags();
+    const bool bToneMapping = ShowFlags.bToneMapping;
     const bool bGammaCorrection = Context->RenderBus->GetShowFlags().bGammaCorrection;
     const bool bVignetteEnabled = Context->RenderBus->GetVignetteIntensity() > 0.001f;
 
-	if (!bGammaCorrection && !bVignetteEnabled)
+	if (!bToneMapping && !bGammaCorrection && !bVignetteEnabled)
 	{
         OutSRV = PrevPassSRV;
         OutRTV = PrevPassRTV;
@@ -57,7 +59,11 @@ bool FPostProcessRenderPass::Begin(const FRenderPassContext* Context)
     cb.VignetteRadius = Context->RenderBus->GetVignetteRadius();
     cb.VignetteSmoothness = Context->RenderBus->GetVignetteSmoothness();
     cb.GammaCorrectionEnabled = bGammaCorrection ? 1u : 0u;
-    cb.GammaValue = Context->RenderBus->GetShowFlags().GammaValue;
+    cb.GammaValue = ShowFlags.GammaValue;
+    cb.ToneMappingEnabled = bToneMapping ? 1u : 0u;
+    cb.ToneMappingMode = static_cast<uint32>(ShowFlags.ToneMappingMode);
+    cb.Exposure = ShowFlags.Exposure;
+    cb.HableWhitePoint = ShowFlags.HableWhitePoint;
     const FColor& VignetteColor = Context->RenderBus->GetVignetteColor();
     cb.VignetteColor[0] = VignetteColor.R;
     cb.VignetteColor[1] = VignetteColor.G;
@@ -91,7 +97,8 @@ bool FPostProcessRenderPass::Begin(const FRenderPassContext* Context)
 
 bool FPostProcessRenderPass::DrawCommand(const FRenderPassContext* Context)
 {
-    if (!Context->RenderBus->GetShowFlags().bGammaCorrection &&
+    if (!Context->RenderBus->GetShowFlags().bToneMapping &&
+        !Context->RenderBus->GetShowFlags().bGammaCorrection &&
         Context->RenderBus->GetVignetteIntensity() <= 0.001f)
         return true;
     Context->DeviceContext->Draw(3, 0);
@@ -100,7 +107,8 @@ bool FPostProcessRenderPass::DrawCommand(const FRenderPassContext* Context)
 
 bool FPostProcessRenderPass::End(const FRenderPassContext* Context)
 {
-    if (!Context->RenderBus->GetShowFlags().bGammaCorrection &&
+    if (!Context->RenderBus->GetShowFlags().bToneMapping &&
+        !Context->RenderBus->GetShowFlags().bGammaCorrection &&
         Context->RenderBus->GetVignetteIntensity() <= 0.001f)
         return true;
     ID3D11ShaderResourceView* nullSRVs[] = { nullptr };

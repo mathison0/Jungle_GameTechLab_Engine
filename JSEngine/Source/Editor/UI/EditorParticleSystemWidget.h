@@ -204,6 +204,7 @@ private:
 	bool DrawParticlePropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
 	bool DrawParticleStructPropertyValue(const FProperty& Property, void* ValuePtr, UObject* NotifyTarget, const char* Label);
 	bool IsParticleDistributionProperty(UParticleModule* Module, const FProperty& Property) const;
+	bool IsEmitterTimeDistributionProperty(UParticleModule* Module, const FProperty& Property) const;
 	FString MakeParticleDistributionKey(UParticleModule* Module, const FProperty& Property) const;
 	FString MakeParticleDistributionCurveKey(UParticleModule* Module, const FProperty& Property, const char* ChannelName) const;
 	FString MakeParticleModuleCurveKey(UParticleModule* Module) const;

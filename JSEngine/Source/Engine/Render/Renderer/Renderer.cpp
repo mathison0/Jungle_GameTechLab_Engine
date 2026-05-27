@@ -316,6 +316,13 @@ void FRenderer::Create(HWND hWindow)
 			"Shaders/Shadow/VSMBlurComputeShader.hlsl", "main", Macros.data(), "VSMBlur_V");
 	}
 
+	FResourceManager::Get().LoadComputeShader(
+		FShaderPaths::BloomThresholdCompute, "main", nullptr, "BloomThresholdCS");
+	FResourceManager::Get().LoadComputeShader(
+		FShaderPaths::BloomBlurCompute, "main", nullptr, "BloomBlurCS");
+	FResourceManager::Get().LoadComputeShader(
+		FShaderPaths::BloomCompositeCompute, "main", nullptr, "BloomCompositeCS");
+
 	// Uber ShadowMap
 	for (uint32 ShadowMapIdx = 0; ShadowMapIdx < static_cast<uint32>(EShadowMap::MAX); ++ShadowMapIdx)
 	{
@@ -1248,6 +1255,16 @@ void FRenderer::InitializePassBatchers()
 			else if (Cmd.Type == ERenderCommandType::DebugOBB)
 			{
 				EditorLineBatcher.AddOBB(FOBB{ Cmd.Constants.OBB.Center, Cmd.Constants.OBB.Extents, Cmd.Constants.OBB.Rotation }, Cmd.Constants.OBB.Color);
+			}
+			else if (Cmd.Type == ERenderCommandType::DebugSphere)
+			{
+				const auto& S = Cmd.Constants.Sphere;
+				EditorLineBatcher.AddWireSphere(S.Center, S.Radius, S.Color.ToVector4(), 24);
+			}
+			else if (Cmd.Type == ERenderCommandType::DebugCapsule)
+			{
+				const auto& C = Cmd.Constants.Capsule;
+				EditorLineBatcher.AddWireCapsule(C.Start, C.End, C.Radius, C.Color.ToVector4(), 24);
 			}
 			else if (Cmd.Type == ERenderCommandType::DebugDirectionalLight)
 			{

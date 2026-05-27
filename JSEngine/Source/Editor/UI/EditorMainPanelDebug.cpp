@@ -1184,6 +1184,7 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
         ImGui::Checkbox("Grid", &Settings.ShowFlags.bGrid);
         ImGui::Checkbox("Gizmo", &Settings.ShowFlags.bGizmo);
         ImGui::Checkbox("Bounding Volume", &Settings.ShowFlags.bBoundingVolume);
+        ImGui::Checkbox("Collision", &Settings.ShowFlags.bCollision);
         if (Settings.ShowFlags.bBoundingVolume)
         {
             ImGui::Indent();
@@ -1194,6 +1195,34 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
         ImGui::Checkbox("Decals", &Settings.ShowFlags.bDecals);
         ImGui::Checkbox("Fog", &Settings.ShowFlags.bFog);
         ImGui::Checkbox("Shadow", &Settings.ShowFlags.bShadow);
+        ImGui::Checkbox("Bloom", &Settings.ShowFlags.bBloom);
+        if (Settings.ShowFlags.bBloom)
+        {
+            ImGui::Indent();
+            ImGui::DragFloat("Bloom Threshold", &Settings.ShowFlags.BloomThreshold, 0.01f, 0.0f, 10.0f, "%.2f");
+            ImGui::DragFloat("Bloom Knee", &Settings.ShowFlags.BloomKnee, 0.01f, 0.0f, 2.0f, "%.2f");
+            ImGui::DragFloat("Bloom Intensity", &Settings.ShowFlags.BloomIntensity, 0.01f, 0.0f, 5.0f, "%.2f");
+            ImGui::DragInt("Bloom Blur Iterations", &Settings.ShowFlags.BloomBlurIterations, 0.05f, 0, 8);
+            ImGui::Unindent();
+        }
+        ImGui::Checkbox("Tone Mapping", &Settings.ShowFlags.bToneMapping);
+        if (Settings.ShowFlags.bToneMapping)
+        {
+            static const char* ToneMappingNames[] = { "Linear", "Reinhard", "ACES", "Hable" };
+            int32 ToneMappingIndex = static_cast<int32>(Settings.ShowFlags.ToneMappingMode);
+            ToneMappingIndex = std::clamp<int32>(ToneMappingIndex, 0, static_cast<int32>(EToneMappingMode::Count) - 1);
+            ImGui::Indent();
+            if (ImGui::Combo("Tone Mapping Mode", &ToneMappingIndex, ToneMappingNames, IM_ARRAYSIZE(ToneMappingNames)))
+            {
+                Settings.ShowFlags.ToneMappingMode = static_cast<EToneMappingMode>(ToneMappingIndex);
+            }
+            ImGui::DragFloat("Exposure", &Settings.ShowFlags.Exposure, 0.01f, 0.0f, 5.0f, "%.2f");
+            if (Settings.ShowFlags.ToneMappingMode == EToneMappingMode::Hable)
+            {
+                ImGui::DragFloat("Hable White Point", &Settings.ShowFlags.HableWhitePoint, 0.05f, 1.0f, 20.0f, "%.2f");
+            }
+            ImGui::Unindent();
+        }
         ImGui::Checkbox("Gamma Correction", &Settings.ShowFlags.bGammaCorrection);
         if (Settings.ShowFlags.bGammaCorrection)
         {

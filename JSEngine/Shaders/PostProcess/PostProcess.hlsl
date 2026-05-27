@@ -9,6 +9,10 @@ cbuffer PostProcessCB : register(b11)
     float VignetteSmoothness;
     uint GammaCorrectionEnabled;
     float Gamma;
+    uint ToneMappingEnabled;
+    uint ToneMappingMode;
+    float Exposure;
+    float HableWhitePoint;
     float Padding;
     float4 VignetteColor;
 }
@@ -33,6 +37,60 @@ VSOutput mainVS(uint id : SV_VertexID)
     return o;
 }
 
+float3 LinearToSRGB(float3 Color)
+{
+    return pow(saturate(Color), 1.0 / 2.2);
+}
+
+float3 ToneMapReinhard(float3 Color)
+{
+    return Color / (Color + 1.0);
+}
+
+float3 ToneMapACES(float3 Color)
+{
+    return saturate((Color * (2.51 * Color + 0.03)) / (Color * (2.43 * Color + 0.59) + 0.14));
+}
+
+float3 Uncharted2Tonemap(float3 Color)
+{
+    const float A = 0.15;
+    const float B = 0.50;
+    const float C = 0.10;
+    const float D = 0.20;
+    const float E = 0.02;
+    const float F = 0.30;
+    return ((Color * (A * Color + C * B) + D * E) / (Color * (A * Color + B) + D * F)) - E / F;
+}
+
+float3 ToneMapHable(float3 Color, float WhitePoint)
+{
+    float SafeWhite = max(WhitePoint, 0.001);
+    float3 Mapped = Uncharted2Tonemap(Color);
+    float3 WhiteScale = 1.0 / Uncharted2Tonemap(SafeWhite.xxx);
+    return saturate(Mapped * WhiteScale);
+}
+
+float3 ApplyToneMapping(float3 Color)
+{
+    float3 Exposed = max(Color * max(Exposure, 0.0), 0.0);
+
+    if (ToneMappingMode == 1)
+    {
+        return ToneMapReinhard(Exposed);
+    }
+    if (ToneMappingMode == 2)
+    {
+        return ToneMapACES(Exposed);
+    }
+    if (ToneMappingMode == 3)
+    {
+        return ToneMapHable(Exposed, HableWhitePoint);
+    }
+
+    return saturate(Exposed);
+}
+
 float4 mainPS(VSOutput input) : SV_TARGET
 {
     float2 uv = input.Pos.xy * InvResolution;
@@ -50,7 +108,11 @@ float4 mainPS(VSOutput input) : SV_TARGET
         color = lerp(color, VignetteColor.rgb, vignette * saturate(VignetteIntensity));
     }
 
-    if (GammaCorrectionEnabled != 0)
+    if (ToneMappingEnabled != 0)
+    {
+        color = LinearToSRGB(ApplyToneMapping(color));
+    }
+    else if (GammaCorrectionEnabled != 0)
     {
         color = pow(color, 1.0 / Gamma);
     }

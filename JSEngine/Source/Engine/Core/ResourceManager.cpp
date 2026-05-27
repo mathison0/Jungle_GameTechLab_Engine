@@ -2368,6 +2368,23 @@ UParticleSystem* FResourceManager::FindParticleSystem(const FString& Path) const
 	return It != ParticleSystemMap.end() ? It->second : nullptr;
 }
 
+void FResourceManager::RegisterParticleSystem(UParticleSystem* Asset, const FString& Path)
+{
+	if (!Asset)
+	{
+		return;
+	}
+
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	if (NormalizedPath.empty() || !IsParticleSystemAssetPath(NormalizedPath))
+	{
+		return;
+	}
+
+	Asset->SetAssetPath(NormalizedPath);
+	ParticleSystemMap[NormalizedPath] = Asset;
+}
+
 bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString& Path)
 {
 	if (!Asset)

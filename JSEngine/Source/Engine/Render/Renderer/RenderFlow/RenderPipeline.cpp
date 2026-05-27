@@ -19,6 +19,7 @@
 #include "PostProcessOutlineRenderPass.h"
 #include "VSMConversionRenderPass.h"
 #include "SandervistanRenderPass.h"
+#include "BloomRenderPass.h"
 #include "PostProcessRenderPass.h"
 #include "Core/Logging/GPUProfiler.h"
 
@@ -38,14 +39,15 @@ namespace
             "RenderPass.Light",
             "RenderPass.Fog",
             "RenderPass.Sandervistan",
+            "RenderPass.Translucent",
+            "RenderPass.Particle",
+            "RenderPass.Bloom",
             "RenderPass.PostProcess",
             "RenderPass.FXAA",
             "RenderPass.Font",
             "RenderPass.SubUV",
-            "RenderPass.Translucent",
-            "RenderPass.Particle",
-            "RenderPass.SelectionMask",
             "RenderPass.Grid",
+            "RenderPass.SelectionMask",
             "RenderPass.Editor",
             "RenderPass.EditorOverlay",
             "RenderPass.DepthLess",
@@ -120,6 +122,9 @@ bool FRenderPipeline::Initialize()
 	PostProcessRenderPass = std::make_shared<FPostProcessRenderPass>();
     PostProcessRenderPass->Initialize();
 
+	BloomRenderPass = std::make_shared<FBloomRenderPass>();
+    BloomRenderPass->Initialize();
+
 	LightRenderPass->SetSkipWireframe(true);
     FogRenderPass->SetSkipWireframe(true);
     FXAARenderPass->SetSkipWireframe(true);
@@ -139,13 +144,14 @@ bool FRenderPipeline::Initialize()
 
     RenderPasses.push_back(FogRenderPass);
     RenderPasses.push_back(SandevistanRenderPass);
+    RenderPasses.push_back(TranslucentRenderPass);
+    RenderPasses.push_back(ParticleRenderPass);
+    RenderPasses.push_back(BloomRenderPass);
     RenderPasses.push_back(PostProcessRenderPass);
     RenderPasses.push_back(FXAARenderPass);
 	RenderPasses.push_back(FontRenderPass);
     RenderPasses.push_back(SubUVRenderPass);
     RenderPasses.push_back(GridRenderPass);
-    RenderPasses.push_back(TranslucentRenderPass);
-    RenderPasses.push_back(ParticleRenderPass);
     RenderPasses.push_back(SelectionMaskRenderPass);
     RenderPasses.push_back(EditorRenderPass);
     RenderPasses.push_back(EditorOverlayRenderPass);
@@ -289,5 +295,11 @@ void FRenderPipeline::Release()
 	{
         PostProcessRenderPass->Release();
         PostProcessRenderPass.reset();
+	}
+
+	if (BloomRenderPass)
+	{
+        BloomRenderPass->Release();
+        BloomRenderPass.reset();
 	}
 }

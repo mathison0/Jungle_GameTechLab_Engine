@@ -145,6 +145,7 @@ public:
 
 	UParticleSystem* LoadParticleSystem(const FString& Path);
 	UParticleSystem* FindParticleSystem(const FString& Path) const;
+	void RegisterParticleSystem(UParticleSystem* Asset, const FString& Path);
 	bool SaveParticleSystem(UParticleSystem* Asset, const FString& Path);
 	bool RunParticleSystemSerializationSmokeTest(const FString& Path);
 	FString SerializeParticleSystemToString(UParticleSystem* Asset);

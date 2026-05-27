@@ -427,6 +427,7 @@ void FEditorMainPanel::RenderEditorSettingsPanel()
 		ImGui::Checkbox("Grid", &Settings.ShowFlags.bGrid);
 		ImGui::Checkbox("Gizmo", &Settings.ShowFlags.bGizmo);
 		ImGui::Checkbox("Bounding Volume", &Settings.ShowFlags.bBoundingVolume);
+		ImGui::Checkbox("Collision", &Settings.ShowFlags.bCollision);
 		ImGui::Checkbox("BVH Bounding Volume", &Settings.ShowFlags.bBVHBoundingVolume);
 		ImGui::Checkbox("LOD", &Settings.ShowFlags.bEnableLOD);
 		ImGui::Checkbox("Decals", &Settings.ShowFlags.bDecals);

@@ -517,6 +517,69 @@ void FLineBatcher::AddWireSphere(const FVector& Center, float Radius, const FVec
 	AddCircle(FVector(0, 1, 0), FVector(0, 0, 1));   // YZ
 }
 
+void FLineBatcher::AddWireCapsule(const FVector& Start, const FVector& End, float Radius, const FVector4& Color, int32 Segments)
+{
+	if (Radius <= MathUtil::Epsilon || Segments < 4)
+	{
+		return;
+	}
+
+	const FVector AxisDelta = End - Start;
+	const float Length = AxisDelta.Size();
+	if (Length <= MathUtil::Epsilon)
+	{
+		AddWireSphere(Start, Radius, Color, Segments);
+		return;
+	}
+
+	const FVector Axis = AxisDelta / Length;
+	FVector Up;
+	FVector Right;
+	Axis.FindBestAxisVectors(Up, Right);
+
+	auto AddRing = [&](const FVector& Center)
+	{
+		const uint32 BaseV = static_cast<uint32>(IndexedVertices.size());
+		for (int32 i = 0; i < Segments; ++i)
+		{
+			const float Angle = MathUtil::TwoPi * static_cast<float>(i) / static_cast<float>(Segments);
+			const FVector P = Center + Up * (std::cos(Angle) * Radius) + Right * (std::sin(Angle) * Radius);
+			IndexedVertices.emplace_back(P, Color);
+			Indices.push_back(BaseV + static_cast<uint32>(i));
+			Indices.push_back(BaseV + static_cast<uint32>((i + 1) % Segments));
+		}
+	};
+
+	auto AddHemisphereArc = [&](const FVector& Center, const FVector& Side, const FVector& CapAxis)
+	{
+		const uint32 BaseV = static_cast<uint32>(IndexedVertices.size());
+		for (int32 i = 0; i <= Segments / 2; ++i)
+		{
+			const float Angle = MathUtil::PI * static_cast<float>(i) / static_cast<float>(Segments / 2);
+			const FVector P = Center + Side * (std::cos(Angle) * Radius) + CapAxis * (std::sin(Angle) * Radius);
+			IndexedVertices.emplace_back(P, Color);
+			if (i > 0)
+			{
+				Indices.push_back(BaseV + static_cast<uint32>(i - 1));
+				Indices.push_back(BaseV + static_cast<uint32>(i));
+			}
+		}
+	};
+
+	AddRing(Start);
+	AddRing(End);
+
+	AddLine(Start + Up * Radius, End + Up * Radius, Color);
+	AddLine(Start - Up * Radius, End - Up * Radius, Color);
+	AddLine(Start + Right * Radius, End + Right * Radius, Color);
+	AddLine(Start - Right * Radius, End - Right * Radius, Color);
+
+	AddHemisphereArc(Start, Up, -Axis);
+	AddHemisphereArc(Start, Right, -Axis);
+	AddHemisphereArc(End, Up, Axis);
+	AddHemisphereArc(End, Right, Axis);
+}
+
 void FLineBatcher::AddWorldHelpers(const FShowFlags& ShowFlags, float GridSpacing, int32 GridHalfLineCount,
 	const FVector& CameraPosition, const FVector& CameraForward, bool bOrthographic)
 {
