@@ -538,7 +538,7 @@ UParticleLODLevel* UParticleEmitter::AddLODLevel(int32 Level, float DistanceThre
     NewLOD->DistanceThreshold = DistanceThreshold;
 
     LODLevels.push_back(NewLOD);
-    SortLODLevelsByDistance();
+    RefreshLODLevelIndices();
     CacheEmitterModuleInfo();
 
     return NewLOD;
@@ -568,22 +568,8 @@ void UParticleEmitter::ClearLODLevels()
     CacheEmitterModuleInfo();
 }
 
-void UParticleEmitter::SortLODLevelsByDistance()
+void UParticleEmitter::RefreshLODLevelIndices()
 {
-    std::sort(LODLevels.begin(), LODLevels.end(),
-        [](const UParticleLODLevel* A, const UParticleLODLevel* B)
-        {
-            if (!A)
-            {
-                return false;
-            }
-            if (!B)
-            {
-                return true;
-            }
-            return A->GetDistanceThreshold() < B->GetDistanceThreshold();
-        });
-
     for (int32 LODIndex = 0; LODIndex < static_cast<int32>(LODLevels.size()); ++LODIndex)
     {
         if (UParticleLODLevel* LODLevel = LODLevels[LODIndex])
@@ -633,7 +619,7 @@ void UParticleEmitter::CacheEmitterModuleInfo()
 	MaxActiveParticles = 128;
 	CompiledLODData.clear();
 
-	SortLODLevelsByDistance();
+	RefreshLODLevelIndices();
 
 	for (UParticleLODLevel* LODLevel : LODLevels)
 	{

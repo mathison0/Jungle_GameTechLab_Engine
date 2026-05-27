@@ -93,7 +93,7 @@ public:
 	UParticleLODLevel* AddLODLevel(int32 Level, float DistanceThreshold);
     void RemoveLODLevel(int32 Index);
     void ClearLODLevels();
-    void SortLODLevelsByDistance();
+    void RefreshLODLevelIndices();
     bool Validate(TArray<FString>* OutErrors = nullptr) const;
 
 	void CacheEmitterModuleInfo();
@@ -151,9 +151,6 @@ public:
 
 	UPROPERTY(DisplayName = "Update Time FPS", Min = 0.0f)
 	float UpdateTimeFPS = 60.0f;
-
-	UPROPERTY(DisplayName = "Thumbnail Warmup", Min = 0.0f)
-	float ThumbnailWarmup = 1.0f;
 
 	UPROPERTY(DisplayName = "LODDistances")
 	TArray<float> LODDistances = { 100.0f };
