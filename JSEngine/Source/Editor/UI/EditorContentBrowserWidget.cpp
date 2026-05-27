@@ -988,22 +988,33 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 		}
 		else if (IsParticleSystemAsset(Item.Extension))
 		{
-			const ImVec2 Center((IconMin.x + IconMax.x) * 0.5f, (IconMin.y + IconMax.y) * 0.5f - 6.0f);
+			const float Width = IconMax.x - IconMin.x;
+			const float Height = IconMax.y - IconMin.y;
+			const ImVec2 Center((IconMin.x + IconMax.x) * 0.5f, IconMin.y + Height * 0.40f);
 			const ImU32 CoreColor = ImGui::GetColorU32(ImVec4(1.0f, 0.74f, 0.36f, 1.0f));
 			const ImU32 RingColor = ImGui::GetColorU32(ImVec4(0.96f, 0.42f, 0.72f, 0.92f));
+			const float RingRadius = std::max(12.0f, std::min(Width, Height) * 0.24f);
+			const float OuterRadius = RingRadius + 3.2f;
+			const float SafeRadius = std::max(6.0f, std::min({
+				Center.x - IconMin.x - 4.0f,
+				IconMax.x - Center.x - 4.0f,
+				Center.y - IconMin.y - 4.0f,
+				IconMax.y - Center.y - 24.0f
+			}));
+			const float ParticleRadius = std::min(RingRadius, SafeRadius - 3.2f);
 			constexpr int32 ParticleCount = 10;
 			for (int32 Index = 0; Index < ParticleCount; ++Index)
 			{
 				const float Angle = static_cast<float>(Index) * 6.2831853f / static_cast<float>(ParticleCount);
-				const float Radius = (Index % 2 == 0) ? 24.0f : 31.0f;
+				const float Radius = (Index % 2 == 0) ? ParticleRadius * 0.78f : ParticleRadius;
 				DrawList->AddCircleFilled(
 					ImVec2(Center.x + std::cos(Angle) * Radius, Center.y + std::sin(Angle) * Radius),
 					3.2f,
 					RingColor,
 					12);
 			}
-			DrawList->AddCircleFilled(Center, 10.0f, CoreColor, 20);
-			const char* Kind = "FX";
+			DrawList->AddCircleFilled(Center, std::min(10.0f, OuterRadius * 0.36f), CoreColor, 20);
+			const char* Kind = "Particle";
 			const ImVec2 TextSize = ImGui::CalcTextSize(Kind);
 			DrawList->AddText(ImVec2((IconMin.x + IconMax.x - TextSize.x) * 0.5f, IconMax.y - 22.0f),
 				ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f)), Kind);

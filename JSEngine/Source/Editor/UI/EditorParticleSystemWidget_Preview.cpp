@@ -105,6 +105,7 @@ void FEditorParticleSystemWidget::EnsurePreviewActor()
 	PreviewComponent->SetEditorOnly(true);
 	PreviewActor->SetRootComponent(PreviewComponent);
 	PreviewComponent->SetTemplate(ParticleSystemAsset);
+	ApplyPreviewSoloEmitters();
 	PreviewClient.SetFocusTargetActor(PreviewActor);
 	PreviewWorld->SyncSpatialIndex();
 }
@@ -127,12 +128,18 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 	if (PreviewComponent->GetTemplate() != ParticleSystemAsset)
 	{
 		PreviewComponent->SetTemplate(ParticleSystemAsset);
+		ApplyPreviewSoloEmitters();
 		RestartPreviewPlayback();
 	}
 	else if (bRestartSimulation)
 	{
 		PreviewComponent->RecreateEmitterInstances();
+		ApplyPreviewSoloEmitters();
 		RestartPreviewPlayback();
+	}
+	else
+	{
+		ApplyPreviewSoloEmitters();
 	}
 
 	if (PreviewComponent->GetTotalActiveParticleCount() == 0 && !bPreviewPaused)

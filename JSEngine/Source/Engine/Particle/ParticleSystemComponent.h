@@ -30,6 +30,8 @@ public:
 	void RecreateEmitterInstances();
 	void ClearEmitterInstances();
 	void TickPreview(float DeltaTime, bool bAllowSpawning);
+	void SetEditorPreviewSoloEmitters(const TArray<int32>& InSoloEmitterIndices);
+	void ClearEditorPreviewSoloEmitters();
 	float ComputeEmitterLODDistance() const;
 	void QueueCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchQueuedParticleEvents();
@@ -85,6 +87,7 @@ private:
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	TArray<FParticleEventCollideData> PendingCollisionEvents;
+	TArray<int32> EditorPreviewSoloEmitterIndices;
 
 	// Cycle 14 (M1, 결정 18 옵션 β): RenderBus → Component → derived instance 캐싱 경로.
 	// 첫 frame 또는 외부 호출자 (예: EditorMainPanelDebug) 가 CacheCameraFromRenderBus 미호출 시 bCachedCameraValid=false 유지 →

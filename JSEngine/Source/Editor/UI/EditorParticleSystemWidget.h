@@ -99,6 +99,7 @@ private:
 		TMap<FString, float> ParticleDistributionFloatMaxValues;
 		TMap<FString, FVector> ParticleDistributionVectorMaxValues;
 		TMap<FString, FFloatCurve> ParticleDistributionCurves;
+		TArray<int32> SoloEmitterIndices;
 		EViewMode PreviewViewMode = EViewMode::Lit_BlinnPhong;
 		FParticleSystemViewportShowFlags PreviewShowFlags;
 		FColor PreviewBackgroundColor = FParticleSystemViewportClient::GetDefaultBackgroundColor();
@@ -135,8 +136,15 @@ private:
 	void AddDefaultEmitterAt(int32 InsertIndex);
 	void DeleteSelectedEmitter();
 	void DeleteEmitter(int32 EmitterIndex);
+	void DuplicateEmitter(int32 EmitterIndex);
 	void AddModuleToEmitter(int32 EmitterIndex, UParticleModule* Module);
 	void DeleteModule(int32 EmitterIndex, int32 ModuleIndex);
+	void AddLODRelativeToCurrent(int32 Offset);
+	void DeleteCurrentLOD();
+	void SetCurrentLOD(int32 NewLOD);
+	int32 GetMaxLODCount() const;
+	void DuplicateModuleFromHigherLOD(int32 EmitterIndex, int32 ModuleIndex, bool bHighest);
+	void SyncInheritedModuleFromHigherLOD(UParticleEmitter* OwnerEmitter, UParticleModule* SourceModule);
 	void ChangeEmitterRenderMode(int32 EmitterIndex, EParticleEmitterRenderMode RenderMode);
 	void BeginRenameEmitter(int32 EmitterIndex);
 	void RenameEmitter(int32 EmitterIndex, const FString& NewName);
@@ -145,6 +153,11 @@ private:
 	void SelectParticleSystem();
 	void SelectEmitter(int32 EmitterIndex);
 	void SelectModule(int32 EmitterIndex, int32 ModuleIndex);
+	bool IsEmitterSolo(int32 EmitterIndex) const;
+	bool HasSoloEmitters() const;
+	void ToggleEmitterSolo(int32 EmitterIndex);
+	void ClearInvalidSoloEmitters();
+	void ApplyPreviewSoloEmitters();
 	void OpenEmitterContextMenu(int32 EmitterIndex, int32 ModuleIndex);
 	void ClearEmitterContext();
 	void ShowCenterToast(const FString& Message);
@@ -239,6 +252,7 @@ private:
 	int32 PendingModuleMoveTargetEmitterIndex = -1;
 	int32 PendingModuleMoveSource = -1;
 	int32 PendingModuleMoveInsertIndex = -1;
+	TArray<int32> SoloEmitterIndices;
 	char RenameEmitterBuffer[128] = {};
 	char DetailEmitterNameEditBuffer[128] = {};
 	FString CenterToastMessage;

@@ -276,11 +276,16 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	}
 
 	const bool bRequired = SelectedModuleIndex == RequiredParticleModuleSelection;
+	const bool bInheritedModule = CurrentLOD > 0 && IsInheritedLODModule(Module);
 	ImGui::PushID(Module);
 	ImGui::TextUnformatted(GetModuleDisplayName(Module, bRequired).c_str());
 	if (Module->GetClass())
 	{
 		ImGui::TextDisabled("%s", Module->GetClass()->GetName());
+	}
+	if (bInheritedModule)
+	{
+		ImGui::TextDisabled("Inherited from a higher LOD. Use Duplicate From Higher to edit.");
 	}
 	ImGui::Dummy(ImVec2(0.0f, 4.0f));
 	ImGui::Separator();
@@ -290,6 +295,10 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	if (Module->GetClass())
 	{
 		Module->GetClass()->GetAllProperties(Properties);
+	}
+	if (bInheritedModule)
+	{
+		ImGui::BeginDisabled();
 	}
 
 	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
@@ -931,6 +940,10 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	}
 
 	(void)OwnerEmitter;
+	if (bInheritedModule)
+	{
+		ImGui::EndDisabled();
+	}
 	ImGui::PopID();
 }
 
@@ -1670,6 +1683,7 @@ void FEditorParticleSystemWidget::NotifyParticleModulePropertyChanged(UParticleM
 	}
 	if (OwnerEmitter)
 	{
+		SyncInheritedModuleFromHigherLOD(OwnerEmitter, Module);
 		OwnerEmitter->CacheEmitterModuleInfo();
 	}
 	if (ParticleSystemAsset)

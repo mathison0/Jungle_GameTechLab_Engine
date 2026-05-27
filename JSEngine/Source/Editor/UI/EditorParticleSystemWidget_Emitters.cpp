@@ -140,6 +140,7 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 	const EParticleEmitterRenderMode CurrentRenderMode = TargetLODLevel
 		? TargetLODLevel->GetEffectiveRenderMode()
 		: EParticleEmitterRenderMode::Sprite;
+	const bool bTargetModuleInherited = CurrentLOD > 0 && IsInheritedLODModule(TargetModule);
 
 	auto DrawTypeDataItems = [&](bool bUseCreateLabels)
 	{
@@ -153,7 +154,7 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 		for (EParticleEmitterRenderMode RenderMode : RenderModes)
 		{
 			const char* Label = bUseCreateLabels ? GetTypeDataMenuItemLabel(RenderMode) : GetRenderModeLabel(RenderMode);
-			if (ImGui::MenuItem(Label, nullptr, CurrentRenderMode == RenderMode, bHasTargetEmitter))
+			if (ImGui::MenuItem(Label, nullptr, CurrentRenderMode == RenderMode, bHasTargetEmitter && !bTargetModuleInherited))
 			{
 				ChangeEmitterRenderMode(TargetEmitterIndex, RenderMode);
 			}
@@ -172,17 +173,35 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 
 	if (ContextModuleIndex != NoParticleModuleSelection)
 	{
+		const bool bCanDuplicateFromHigher = bHasTargetEmitter && CurrentLOD > 0;
 		if (Cast<UParticleModuleTypeDataBase>(TargetModule))
 		{
 			ImGui::TextDisabled("EMITTER TYPE");
 			ImGui::Separator();
 			DrawTypeDataItems(false);
+			ImGui::Separator();
+			if (ImGui::MenuItem("Duplicate From Higher", nullptr, false, bCanDuplicateFromHigher))
+			{
+				DuplicateModuleFromHigherLOD(TargetEmitterIndex, ContextModuleIndex, false);
+			}
+			if (ImGui::MenuItem("Duplicate From Highest", nullptr, false, bCanDuplicateFromHigher))
+			{
+				DuplicateModuleFromHigherLOD(TargetEmitterIndex, ContextModuleIndex, true);
+			}
 			EndParticlePopup();
 			return;
 		}
 		if (ImGui::MenuItem("Delete Module"))
 		{
 			DeleteModule(TargetEmitterIndex, ContextModuleIndex);
+		}
+		if (ImGui::MenuItem("Duplicate From Higher", nullptr, false, bCanDuplicateFromHigher))
+		{
+			DuplicateModuleFromHigherLOD(TargetEmitterIndex, ContextModuleIndex, false);
+		}
+		if (ImGui::MenuItem("Duplicate From Highest", nullptr, false, bCanDuplicateFromHigher))
+		{
+			DuplicateModuleFromHigherLOD(TargetEmitterIndex, ContextModuleIndex, true);
 		}
 		EndParticlePopup();
 		return;
@@ -196,7 +215,10 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 		{
 			BeginRenameEmitter(TargetEmitterIndex);
 		}
-		ImGui::MenuItem("Duplicate Emitter", nullptr, false, false);
+		if (ImGui::MenuItem("Duplicate Emitter", nullptr, false, bHasTargetEmitter))
+		{
+			DuplicateEmitter(TargetEmitterIndex);
+		}
 		ImGui::MenuItem("Duplicate and Share Emitter", nullptr, false, false);
 		if (ImGui::MenuItem("Delete Emitter"))
 		{
@@ -296,6 +318,23 @@ void FEditorParticleSystemWidget::AddDefaultEmitterAt(int32 InsertIndex)
 	{
 		return;
 	}
+	if (CurrentLOD > 0)
+	{
+		UParticleLODLevel* SourceLOD = NewEmitter->GetLODLevel(0);
+		for (int32 LODIndex = 1; LODIndex <= CurrentLOD && SourceLOD; ++LODIndex)
+		{
+			UParticleLODLevel* NewLOD = Cast<UParticleLODLevel>(SourceLOD->Duplicate());
+			if (!NewLOD)
+			{
+				continue;
+			}
+			NewLOD->Level = LODIndex;
+			NewLOD->DistanceThreshold = SourceLOD->GetDistanceThreshold() + static_cast<float>(LODIndex) * 1000.0f;
+			MarkLODModulesInheritedFromHigherLODExceptSpawn(NewLOD);
+			NewEmitter->LODLevels.push_back(NewLOD);
+		}
+		NewEmitter->CacheEmitterModuleInfo();
+	}
 
 	CaptureUndoSnapshot("Add Emitter");
 	InsertIndex = std::clamp(InsertIndex, 0, static_cast<int32>(ParticleSystemAsset->Emitters.size()));
@@ -325,6 +364,19 @@ void FEditorParticleSystemWidget::DeleteEmitter(int32 EmitterIndex)
 
 	CaptureUndoSnapshot("Delete Emitter");
 	ParticleSystemAsset->Emitters.erase(ParticleSystemAsset->Emitters.begin() + EmitterIndex);
+	for (auto It = SoloEmitterIndices.begin(); It != SoloEmitterIndices.end();)
+	{
+		if (*It == EmitterIndex)
+		{
+			It = SoloEmitterIndices.erase(It);
+			continue;
+		}
+		if (*It > EmitterIndex)
+		{
+			--(*It);
+		}
+		++It;
+	}
 	ClearEmitterContext();
 	if (ParticleSystemAsset->Emitters.empty())
 	{
@@ -334,6 +386,51 @@ void FEditorParticleSystemWidget::DeleteEmitter(int32 EmitterIndex)
 	{
 		SelectEmitter(std::clamp(EmitterIndex, 0, static_cast<int32>(ParticleSystemAsset->Emitters.size()) - 1));
 	}
+	bDirty = true;
+	RefreshPreviewComponent(true);
+}
+
+void FEditorParticleSystemWidget::DuplicateEmitter(int32 EmitterIndex)
+{
+	if (!ParticleSystemAsset ||
+		EmitterIndex < 0 ||
+		EmitterIndex >= static_cast<int32>(ParticleSystemAsset->Emitters.size()))
+	{
+		return;
+	}
+
+	UParticleEmitter* SourceEmitter = ParticleSystemAsset->Emitters[EmitterIndex];
+	UParticleEmitter* NewEmitter = SourceEmitter
+		? Cast<UParticleEmitter>(SourceEmitter->Duplicate())
+		: nullptr;
+	if (!NewEmitter)
+	{
+		return;
+	}
+
+	CaptureUndoSnapshot("Duplicate Emitter");
+	const FString NewName = MakeUniqueEmitterName(ParticleSystemAsset);
+	NewEmitter->SetFName(FName(NewName));
+	for (int32 LODIndex = 0; LODIndex < static_cast<int32>(NewEmitter->LODLevels.size()); ++LODIndex)
+	{
+		if (NewEmitter->LODLevels[LODIndex])
+		{
+			NewEmitter->LODLevels[LODIndex]->Level = LODIndex;
+		}
+	}
+	NewEmitter->CacheEmitterModuleInfo();
+
+	const int32 InsertIndex = std::clamp(EmitterIndex + 1, 0, static_cast<int32>(ParticleSystemAsset->Emitters.size()));
+	ParticleSystemAsset->Emitters.insert(ParticleSystemAsset->Emitters.begin() + InsertIndex, NewEmitter);
+	for (int32& SoloEmitterIndex : SoloEmitterIndices)
+	{
+		if (SoloEmitterIndex >= InsertIndex)
+		{
+			++SoloEmitterIndex;
+		}
+	}
+	SelectEmitter(InsertIndex);
+	ClearEmitterContext();
 	bDirty = true;
 	RefreshPreviewComponent(true);
 }
@@ -428,6 +525,304 @@ void FEditorParticleSystemWidget::DeleteModule(int32 EmitterIndex, int32 ModuleI
 	RefreshPreviewComponent(true);
 }
 
+int32 FEditorParticleSystemWidget::GetMaxLODCount() const
+{
+	int32 MaxLODCount = 0;
+	if (!ParticleSystemAsset)
+	{
+		return MaxLODCount;
+	}
+	for (const UParticleEmitter* Emitter : ParticleSystemAsset->Emitters)
+	{
+		if (Emitter)
+		{
+			MaxLODCount = std::max(MaxLODCount, static_cast<int32>(Emitter->GetLODLevels().size()));
+		}
+	}
+	return MaxLODCount;
+}
+
+void FEditorParticleSystemWidget::SetCurrentLOD(int32 NewLOD)
+{
+	const int32 MaxLODCount = GetMaxLODCount();
+	CurrentLOD = MaxLODCount > 0
+		? std::clamp(NewLOD, 0, MaxLODCount - 1)
+		: std::max(0, NewLOD);
+	ClampSelectionToParticleSystem();
+	RefreshPreviewComponent(true);
+}
+
+void FEditorParticleSystemWidget::AddLODRelativeToCurrent(int32 Offset)
+{
+	if (!ParticleSystemAsset || ParticleSystemAsset->Emitters.empty())
+	{
+		ShowCenterToast("Add an emitter before adding LOD.");
+		return;
+	}
+
+	const bool bAddBeforeCurrent = Offset == 0;
+	const int32 InsertIndex = bAddBeforeCurrent
+		? CurrentLOD + 1
+		: std::max(0, CurrentLOD + Offset);
+	CaptureUndoSnapshot(Offset >= 0 ? "Add LOD After" : "Add LOD Before");
+
+	for (UParticleEmitter* Emitter : ParticleSystemAsset->Emitters)
+	{
+		if (!Emitter)
+		{
+			continue;
+		}
+
+		const int32 LODCount = static_cast<int32>(Emitter->LODLevels.size());
+		const int32 SourceIndex = LODCount > 0 ? std::clamp(CurrentLOD, 0, LODCount - 1) : 0;
+		UParticleLODLevel* SourceLOD = Emitter->GetLODLevel(SourceIndex);
+		UParticleLODLevel* NewLOD = SourceLOD
+			? Cast<UParticleLODLevel>(SourceLOD->Duplicate())
+			: UObjectManager::Get().CreateObject<UParticleLODLevel>();
+		if (!NewLOD)
+		{
+			continue;
+		}
+
+		MarkLODModulesInheritedFromHigherLOD(NewLOD);
+		const int32 ClampedInsertIndex = std::clamp(InsertIndex, 0, static_cast<int32>(Emitter->LODLevels.size()));
+		NewLOD->Level = ClampedInsertIndex;
+		NewLOD->DistanceThreshold = SourceLOD
+			? SourceLOD->GetDistanceThreshold() + 1000.0f
+			: 100000.0f;
+		Emitter->LODLevels.insert(Emitter->LODLevels.begin() + ClampedInsertIndex, NewLOD);
+		for (int32 LODIndex = 0; LODIndex < static_cast<int32>(Emitter->LODLevels.size()); ++LODIndex)
+		{
+			if (Emitter->LODLevels[LODIndex])
+			{
+				Emitter->LODLevels[LODIndex]->Level = LODIndex;
+			}
+		}
+		Emitter->CacheEmitterModuleInfo();
+	}
+
+	ParticleSystemAsset->CacheEmitterModuleInfo();
+	if (bAddBeforeCurrent)
+	{
+		ClampSelectionToParticleSystem();
+		RefreshPreviewComponent(true);
+	}
+	else
+	{
+		SetCurrentLOD(InsertIndex);
+	}
+	ClearEmitterContext();
+	bDirty = true;
+}
+
+void FEditorParticleSystemWidget::DeleteCurrentLOD()
+{
+	if (!ParticleSystemAsset || CurrentLOD <= 0)
+	{
+		ShowCenterToast("LOD 0 cannot be deleted.");
+		return;
+	}
+
+	bool bRemovedAny = false;
+	CaptureUndoSnapshot("Delete LOD");
+	for (UParticleEmitter* Emitter : ParticleSystemAsset->Emitters)
+	{
+		if (!Emitter || CurrentLOD >= static_cast<int32>(Emitter->LODLevels.size()))
+		{
+			continue;
+		}
+		Emitter->RemoveLODLevel(CurrentLOD);
+		for (int32 LODIndex = 0; LODIndex < static_cast<int32>(Emitter->LODLevels.size()); ++LODIndex)
+		{
+			if (Emitter->LODLevels[LODIndex])
+			{
+				Emitter->LODLevels[LODIndex]->Level = LODIndex;
+			}
+		}
+		bRemovedAny = true;
+	}
+
+	if (!bRemovedAny)
+	{
+		return;
+	}
+
+	ParticleSystemAsset->CacheEmitterModuleInfo();
+	SetCurrentLOD(CurrentLOD - 1);
+	ClearEmitterContext();
+	bDirty = true;
+}
+
+void FEditorParticleSystemWidget::DuplicateModuleFromHigherLOD(int32 EmitterIndex, int32 ModuleIndex, bool bHighest)
+{
+	if (!ParticleSystemAsset ||
+		CurrentLOD <= 0 ||
+		EmitterIndex < 0 ||
+		EmitterIndex >= static_cast<int32>(ParticleSystemAsset->Emitters.size()))
+	{
+		return;
+	}
+
+	UParticleEmitter* Emitter = ParticleSystemAsset->Emitters[EmitterIndex];
+	if (!Emitter ||
+		CurrentLOD >= static_cast<int32>(Emitter->LODLevels.size()))
+	{
+		return;
+	}
+
+	const int32 SourceLODIndex = bHighest ? 0 : CurrentLOD - 1;
+	UParticleLODLevel* SourceLOD = Emitter->GetLODLevel(SourceLODIndex);
+	UParticleLODLevel* TargetLOD = Emitter->GetLODLevel(CurrentLOD);
+	if (!SourceLOD || !TargetLOD)
+	{
+		return;
+	}
+
+	CaptureUndoSnapshot(bHighest ? "Duplicate Module From Highest LOD" : "Duplicate Module From Higher LOD");
+	if (ModuleIndex == RequiredParticleModuleSelection)
+	{
+		UParticleModuleRequired* NewRequired = DuplicateRequiredModuleForLOD(SourceLOD->GetRequiredModule(), false);
+		if (!NewRequired)
+		{
+			return;
+		}
+		if (TargetLOD->RequiredModule)
+		{
+			UObjectManager::Get().DestroyObject(TargetLOD->RequiredModule);
+		}
+		TargetLOD->RequiredModule = NewRequired;
+	}
+	else
+	{
+		if (ModuleIndex < 0 || ModuleIndex >= static_cast<int32>(SourceLOD->Modules.size()))
+		{
+			return;
+		}
+		UParticleModule* NewModule = DuplicateParticleModuleForLOD(SourceLOD->Modules[ModuleIndex], false);
+		if (!NewModule)
+		{
+			return;
+		}
+		if (ModuleIndex < static_cast<int32>(TargetLOD->Modules.size()) && TargetLOD->Modules[ModuleIndex])
+		{
+			UObjectManager::Get().DestroyObject(TargetLOD->Modules[ModuleIndex]);
+			TargetLOD->Modules[ModuleIndex] = NewModule;
+		}
+		else
+		{
+			TargetLOD->Modules.push_back(NewModule);
+			ModuleIndex = static_cast<int32>(TargetLOD->Modules.size()) - 1;
+		}
+	}
+
+	TargetLOD->CacheModuleLists();
+	Emitter->CacheEmitterModuleInfo();
+	ParticleSystemAsset->CacheEmitterModuleInfo();
+	SelectModule(EmitterIndex, ModuleIndex);
+	ClearEmitterContext();
+	bDirty = true;
+	RefreshPreviewComponent(true);
+}
+
+void FEditorParticleSystemWidget::SyncInheritedModuleFromHigherLOD(UParticleEmitter* OwnerEmitter, UParticleModule* SourceModule)
+{
+	if (!OwnerEmitter || !SourceModule)
+	{
+		return;
+	}
+
+	int32 SourceLODIndex = -1;
+	int32 SourceModuleIndex = NoParticleModuleSelection;
+	for (int32 LODIndex = 0; LODIndex < static_cast<int32>(OwnerEmitter->LODLevels.size()); ++LODIndex)
+	{
+		UParticleLODLevel* LODLevel = OwnerEmitter->LODLevels[LODIndex];
+		if (!LODLevel)
+		{
+			continue;
+		}
+
+		if (LODLevel->GetRequiredModule() == SourceModule)
+		{
+			SourceLODIndex = LODIndex;
+			SourceModuleIndex = RequiredParticleModuleSelection;
+			break;
+		}
+
+		for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(LODLevel->Modules.size()); ++ModuleIndex)
+		{
+			if (LODLevel->Modules[ModuleIndex] == SourceModule)
+			{
+				SourceLODIndex = LODIndex;
+				SourceModuleIndex = ModuleIndex;
+				break;
+			}
+		}
+		if (SourceLODIndex >= 0)
+		{
+			break;
+		}
+	}
+
+	if (SourceLODIndex < 0)
+	{
+		return;
+	}
+
+	for (int32 LODIndex = SourceLODIndex + 1; LODIndex < static_cast<int32>(OwnerEmitter->LODLevels.size()); ++LODIndex)
+	{
+		UParticleLODLevel* TargetLOD = OwnerEmitter->LODLevels[LODIndex];
+		if (!TargetLOD)
+		{
+			continue;
+		}
+
+		if (SourceModuleIndex == RequiredParticleModuleSelection)
+		{
+			UParticleModuleRequired* TargetRequired = TargetLOD->GetRequiredModule();
+			if (!IsInheritedLODModule(TargetRequired))
+			{
+				continue;
+			}
+
+			UParticleModuleRequired* NewRequired = DuplicateRequiredModuleForLOD(Cast<UParticleModuleRequired>(SourceModule), true);
+			if (!NewRequired)
+			{
+				continue;
+			}
+			UObjectManager::Get().DestroyObject(TargetLOD->RequiredModule);
+			TargetLOD->RequiredModule = NewRequired;
+			TargetLOD->CacheModuleLists();
+			continue;
+		}
+
+		if (SourceModuleIndex < 0 || SourceModuleIndex >= static_cast<int32>(TargetLOD->Modules.size()))
+		{
+			continue;
+		}
+
+		UParticleModule* TargetModule = TargetLOD->Modules[SourceModuleIndex];
+		if (!IsInheritedLODModule(TargetModule))
+		{
+			continue;
+		}
+
+		UParticleModule* NewModule = DuplicateParticleModuleForLOD(SourceModule, true);
+		if (!NewModule)
+		{
+			continue;
+		}
+		UObjectManager::Get().DestroyObject(TargetModule);
+		TargetLOD->Modules[SourceModuleIndex] = NewModule;
+		TargetLOD->CacheModuleLists();
+	}
+
+	OwnerEmitter->CacheEmitterModuleInfo();
+	if (ParticleSystemAsset)
+	{
+		ParticleSystemAsset->CacheEmitterModuleInfo();
+	}
+}
+
 void FEditorParticleSystemWidget::ChangeEmitterRenderMode(int32 EmitterIndex, EParticleEmitterRenderMode RenderMode)
 {
 	if (!ParticleSystemAsset ||
@@ -483,6 +878,8 @@ void FEditorParticleSystemWidget::ChangeEmitterRenderMode(int32 EmitterIndex, EP
 	Required->SetRenderMode(RenderMode);
 	Emitter->CacheEmitterModuleInfo();
 	ParticleSystemAsset->CacheEmitterModuleInfo();
+	SyncInheritedModuleFromHigherLOD(Emitter, Required);
+	SyncInheritedModuleFromHigherLOD(Emitter, NewTypeData);
 	SelectModule(EmitterIndex, 0);
 	ClearEmitterContext();
 	bDirty = true;
@@ -603,6 +1000,68 @@ void FEditorParticleSystemWidget::SelectModule(int32 EmitterIndex, int32 ModuleI
 	bEmitterNameEditUndoCaptured = false;
 }
 
+bool FEditorParticleSystemWidget::IsEmitterSolo(int32 EmitterIndex) const
+{
+	return std::find(SoloEmitterIndices.begin(), SoloEmitterIndices.end(), EmitterIndex) != SoloEmitterIndices.end();
+}
+
+bool FEditorParticleSystemWidget::HasSoloEmitters() const
+{
+	return !SoloEmitterIndices.empty();
+}
+
+void FEditorParticleSystemWidget::ToggleEmitterSolo(int32 EmitterIndex)
+{
+	if (!ParticleSystemAsset ||
+		EmitterIndex < 0 ||
+		EmitterIndex >= static_cast<int32>(ParticleSystemAsset->Emitters.size()))
+	{
+		return;
+	}
+
+	auto It = std::find(SoloEmitterIndices.begin(), SoloEmitterIndices.end(), EmitterIndex);
+	if (It != SoloEmitterIndices.end())
+	{
+		SoloEmitterIndices.erase(It);
+	}
+	else
+	{
+		SoloEmitterIndices.push_back(EmitterIndex);
+	}
+	ApplyPreviewSoloEmitters();
+	RefreshPreviewComponent(false);
+}
+
+void FEditorParticleSystemWidget::ClearInvalidSoloEmitters()
+{
+	const int32 EmitterCount = ParticleSystemAsset ? static_cast<int32>(ParticleSystemAsset->Emitters.size()) : 0;
+	for (auto It = SoloEmitterIndices.begin(); It != SoloEmitterIndices.end();)
+	{
+		if (*It < 0 || *It >= EmitterCount)
+		{
+			It = SoloEmitterIndices.erase(It);
+			continue;
+		}
+		++It;
+	}
+}
+
+void FEditorParticleSystemWidget::ApplyPreviewSoloEmitters()
+{
+	if (!PreviewComponent)
+	{
+		return;
+	}
+
+	ClearInvalidSoloEmitters();
+	if (SoloEmitterIndices.empty())
+	{
+		PreviewComponent->ClearEditorPreviewSoloEmitters();
+		return;
+	}
+	PreviewComponent->SetEditorPreviewSoloEmitters(SoloEmitterIndices);
+}
+
 void FEditorParticleSystemWidget::OpenEmitterContextMenu(int32 EmitterIndex, int32 ModuleIndex)
 {
 	ContextEmitterIndex = EmitterIndex;
@@ -718,6 +1177,21 @@ void FEditorParticleSystemWidget::ReorderEmitter(int32 SourceIndex, int32 Insert
 	{
 		return;
 	}
+	for (int32& SoloEmitterIndex : SoloEmitterIndices)
+	{
+		if (SoloEmitterIndex == SourceIndex)
+		{
+			SoloEmitterIndex = NewEmitterIndex;
+		}
+		else if (SourceIndex < NewEmitterIndex && SoloEmitterIndex > SourceIndex && SoloEmitterIndex <= NewEmitterIndex)
+		{
+			--SoloEmitterIndex;
+		}
+		else if (NewEmitterIndex < SourceIndex && SoloEmitterIndex >= NewEmitterIndex && SoloEmitterIndex < SourceIndex)
+		{
+			++SoloEmitterIndex;
+		}
+	}
 
 	SelectEmitter(NewEmitterIndex);
 	ClearEmitterContext();
@@ -829,12 +1303,20 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 	const float ControlsY = HeaderMin.y + 31.0f;
 	const ImVec2 ToggleMin(HeaderMin.x + 10.0f, ControlsY);
 	const ImVec2 ToggleMax(ToggleMin.x + 13.0f, ToggleMin.y + 13.0f);
+	const ImVec2 SoloMin(HeaderMin.x + 29.0f, ControlsY);
+	const ImVec2 SoloMax(SoloMin.x + 17.0f, SoloMin.y + 13.0f);
 	const bool bToggleClicked =
 		bHeaderClicked &&
 		ImGui::GetIO().MousePos.x >= ToggleMin.x &&
 		ImGui::GetIO().MousePos.x <= ToggleMax.x &&
 		ImGui::GetIO().MousePos.y >= ToggleMin.y &&
 		ImGui::GetIO().MousePos.y <= ToggleMax.y;
+	const bool bSoloClicked =
+		bHeaderClicked &&
+		ImGui::GetIO().MousePos.x >= SoloMin.x &&
+		ImGui::GetIO().MousePos.x <= SoloMax.x &&
+		ImGui::GetIO().MousePos.y >= SoloMin.y &&
+		ImGui::GetIO().MousePos.y <= SoloMax.y;
 	if (bToggleClicked && LODLevel)
 	{
 		CaptureUndoSnapshot(LODLevel->IsEnabled() ? "Disable Emitter" : "Enable Emitter");
@@ -849,6 +1331,10 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 		}
 		bDirty = true;
 		RefreshPreviewComponent(true);
+	}
+	else if (bSoloClicked)
+	{
+		ToggleEmitterSolo(EmitterIndex);
 	}
 	else if (bHeaderClicked)
 	{
@@ -914,6 +1400,7 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 	DrawList->AddText(ImVec2(HeaderMin.x + 10.0f, HeaderMin.y + 8.0f), ImGui::GetColorU32(ImVec4(0.88f, 0.90f, 0.94f, 1.0f)), EmitterName.c_str());
 
 	DrawMiniEmitterRenderToggle(DrawList, ToggleMin, LODLevel ? LODLevel->IsEnabled() : true);
+	DrawMiniSoloButton(DrawList, SoloMin, IsEmitterSolo(EmitterIndex));
 
 	if (LODLevel)
 	{
@@ -1012,7 +1499,8 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	const ImVec2 Max = ImGui::GetItemRectMax();
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 	const FString ModuleName = GetModuleDisplayName(Module, bRequired);
-	const bool bHasModuleToggle = Module && !bRequired && !Cast<UParticleModuleTypeDataBase>(Module);
+	const bool bInheritedModule = CurrentLOD > 0 && IsInheritedLODModule(Module);
+	const bool bHasModuleToggle = Module && !bInheritedModule && !bRequired && !Cast<UParticleModuleTypeDataBase>(Module);
 	bool bHasModuleCurves = false;
 	if (Module && !bRequired && Module->GetClass())
 	{
@@ -1043,12 +1531,12 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 		MousePos.x >= CurveMin.x && MousePos.x <= CurveMax.x &&
 		MousePos.y >= CurveMin.y && MousePos.y <= CurveMax.y;
 
-	if (bCurveClicked)
+	if (bCurveClicked && !bInheritedModule)
 	{
 		SelectModule(EmitterIndex, ModuleIndex);
 		OpenParticleModuleCurves(EmitterIndex, ModuleIndex);
 	}
-	else if (bToggleClicked)
+	else if (bToggleClicked && !bInheritedModule)
 	{
 		CaptureUndoSnapshot(Module->IsEnabled() ? "Disable Particle Module" : "Enable Particle Module");
 		Module->SetEnabled(!Module->IsEnabled());
@@ -1082,14 +1570,14 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	const bool bSelected = SelectedEmitterIndex == EmitterIndex && SelectedModuleIndex == ModuleIndex;
 	bool bShowModuleInsertMarker = false;
 	float ModuleInsertMarkerY = Min.y;
-	if (!bRequired && bSelected && ImGui::BeginDragDropSource())
+	if (!bInheritedModule && !bRequired && bSelected && ImGui::BeginDragDropSource())
 	{
 		const FModuleDragPayload Payload{ EmitterIndex, ModuleIndex };
 		ImGui::SetDragDropPayload(ParticleModuleDragPayloadType, &Payload, sizeof(Payload));
 		ImGui::TextUnformatted(ModuleName.c_str());
 		ImGui::EndDragDropSource();
 	}
-	if (ImGui::BeginDragDropTarget())
+	if (!bInheritedModule && ImGui::BeginDragDropTarget())
 	{
 		const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(ParticleModuleDragPayloadType, ParticleDragDropTargetFlags);
 		if (Payload && Payload->DataSize == sizeof(FModuleDragPayload))
@@ -1129,7 +1617,23 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 	}
 
 	DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(RowColor));
+	if (bInheritedModule)
+	{
+		DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(ImVec4(0.50f, 0.52f, 0.56f, 0.22f)));
+	}
 	DrawList->AddLine(ImVec2(Min.x, Max.y - 1.0f), ImVec2(Max.x, Max.y - 1.0f), ImGui::GetColorU32(ImVec4(0.03f, 0.03f, 0.035f, 1.0f)));
+	if (bInheritedModule)
+	{
+		const ImU32 HatchColor = ImGui::GetColorU32(ImVec4(0.78f, 0.80f, 0.84f, 0.46f));
+		for (float X = Max.x - 1.0f; X > Min.x - RowHeight; X -= 14.0f)
+		{
+			DrawList->AddLine(
+				ImVec2(X, Min.y + 3.0f),
+				ImVec2(X - RowHeight, Max.y - 3.0f),
+				HatchColor,
+				1.0f);
+		}
+	}
 	if (bSelected)
 	{
 		DrawList->AddRect(Min, Max, ImGui::GetColorU32(ImVec4(0.38f, 0.58f, 0.92f, 1.0f)), 0.0f, 0, 1.5f);
@@ -1143,7 +1647,10 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 			2.0f);
 	}
 
-	DrawList->AddText(ImVec2(Min.x + 10.0f, Min.y + 4.0f), ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), ModuleName.c_str());
+	DrawList->AddText(
+		ImVec2(Min.x + 10.0f, Min.y + 4.0f),
+		ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)),
+		ModuleName.c_str());
 	if (bHasModuleToggle)
 	{
 		DrawMiniCheck(DrawList, ToggleMin, Module ? Module->IsEnabled() : true);
