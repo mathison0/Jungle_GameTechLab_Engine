@@ -24,6 +24,15 @@ enum class ELightCullMode : int32
 	Tiled,		// Tiled light culling
 };
 
+enum class EToneMappingMode : int32
+{
+	Linear,
+	Reinhard,
+	ACES,
+	Hable,
+	Count
+};
+
 struct FShowFlags
 {
 	bool bPrimitives = true;
@@ -40,6 +49,15 @@ struct FShowFlags
 	bool bDecals = true;
 	bool bFog = true;
 	bool bShadow = true;
+	bool bBloom = false;
+	float BloomThreshold = 1.0f;
+	float BloomKnee = 0.2f;
+	float BloomIntensity = 0.6f;
+	int32 BloomBlurIterations = 2;
+	bool bToneMapping = true;
+	EToneMappingMode ToneMappingMode = EToneMappingMode::ACES;
+	float Exposure = 1.0f;
+	float HableWhitePoint = 11.2f;
 	bool bGammaCorrection = false;
 	float GammaValue = 2.2f;
 };

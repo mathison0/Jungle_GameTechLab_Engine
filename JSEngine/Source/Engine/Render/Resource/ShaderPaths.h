@@ -28,6 +28,9 @@ namespace FShaderPaths
 	inline constexpr const char* PostProcessFXAA = "Shaders/PostProcess/FXAAPass.hlsl";
 	inline constexpr const char* PostProcessMain = "Shaders/PostProcess/PostProcess.hlsl";
 	inline constexpr const char* PostProcessOutline = "Shaders/PostProcess/Outline.hlsl";
+	inline constexpr const char* BloomThresholdCompute = "Shaders/PostProcess/BloomThresholdCS.hlsl";
+	inline constexpr const char* BloomBlurCompute = "Shaders/PostProcess/BloomBlurCS.hlsl";
+	inline constexpr const char* BloomCompositeCompute = "Shaders/PostProcess/BloomCompositeCS.hlsl";
 
 	inline constexpr const char* ComputeLightCulling = "Shaders/Compute/LightCullingCS.hlsl";
 

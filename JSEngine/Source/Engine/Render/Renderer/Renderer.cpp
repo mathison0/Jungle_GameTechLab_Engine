@@ -316,6 +316,13 @@ void FRenderer::Create(HWND hWindow)
 			"Shaders/Shadow/VSMBlurComputeShader.hlsl", "main", Macros.data(), "VSMBlur_V");
 	}
 
+	FResourceManager::Get().LoadComputeShader(
+		FShaderPaths::BloomThresholdCompute, "main", nullptr, "BloomThresholdCS");
+	FResourceManager::Get().LoadComputeShader(
+		FShaderPaths::BloomBlurCompute, "main", nullptr, "BloomBlurCS");
+	FResourceManager::Get().LoadComputeShader(
+		FShaderPaths::BloomCompositeCompute, "main", nullptr, "BloomCompositeCS");
+
 	// Uber ShadowMap
 	for (uint32 ShadowMapIdx = 0; ShadowMapIdx < static_cast<uint32>(EShadowMap::MAX); ++ShadowMapIdx)
 	{

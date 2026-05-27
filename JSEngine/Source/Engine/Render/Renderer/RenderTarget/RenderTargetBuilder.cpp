@@ -25,6 +25,12 @@ FRenderTargetBuilder& FRenderTargetBuilder::WithRTV()
     return *this;
 }
 
+FRenderTargetBuilder& FRenderTargetBuilder::WithUAV()
+{
+    bCreateUAV = true;
+    return *this;
+}
+
 FRenderTarget FRenderTargetBuilder::Build(ID3D11Device* Device) 
 {
     FRenderTarget RT;
@@ -44,6 +50,8 @@ FRenderTarget FRenderTargetBuilder::Build(ID3D11Device* Device)
         Desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
     if (bCreateSRV)
         Desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+    if (bCreateUAV)
+        Desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
 
     Device->CreateTexture2D(&Desc, nullptr, &RT.Texture);
 
@@ -54,6 +62,9 @@ FRenderTarget FRenderTargetBuilder::Build(ID3D11Device* Device)
 
     if (bCreateSRV)
         Device->CreateShaderResourceView(RT.Texture.Get(), nullptr, &RT.SRV);
+
+    if (bCreateUAV)
+        Device->CreateUnorderedAccessView(RT.Texture.Get(), nullptr, &RT.UAV);
 
     RT.Width = Width;
     RT.Height = Height;

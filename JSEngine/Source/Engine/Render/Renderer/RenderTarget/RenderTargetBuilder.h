@@ -19,6 +19,7 @@ private:
     DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     bool        bCreateRTV = false;
     bool        bCreateSRV = false;
+    bool        bCreateUAV = false;
 
 public:
     FRenderTargetBuilder& SetSize(uint32 InWidth, uint32 InHeight);
@@ -28,6 +29,8 @@ public:
 	FRenderTargetBuilder& WithSRV();
 
 	FRenderTargetBuilder& WithRTV();
+
+    FRenderTargetBuilder& WithUAV();
 
 	FRenderTarget Build(ID3D11Device* Device);
 };

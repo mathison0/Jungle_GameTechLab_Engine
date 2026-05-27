@@ -52,6 +52,15 @@ namespace EditorKey
 	constexpr const char* bDecals = "bDecals";
 	constexpr const char* bFog = "bFog";
     constexpr const char* bShadow = "bShadow";
+	constexpr const char* bBloom = "bBloom";
+	constexpr const char* BloomThreshold = "BloomThreshold";
+	constexpr const char* BloomKnee = "BloomKnee";
+	constexpr const char* BloomIntensity = "BloomIntensity";
+	constexpr const char* BloomBlurIterations = "BloomBlurIterations";
+	constexpr const char* bToneMapping = "bToneMapping";
+	constexpr const char* ToneMappingMode = "ToneMappingMode";
+	constexpr const char* Exposure = "Exposure";
+	constexpr const char* HableWhitePoint = "HableWhitePoint";
 	constexpr const char* FXAAEnabled = "FXAAEnabled";
 	constexpr const char* FXAAThreshold = "FXAAThreshold"; // Backward compatibility
     constexpr const char* bGammaCorrection = "bGammaCorrection";
@@ -150,6 +159,15 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	ViewObj[EditorKey::bDecals] = ShowFlags.bDecals;
 	ViewObj[EditorKey::bFog] = ShowFlags.bFog;
     ViewObj[EditorKey::bShadow] = ShowFlags.bShadow;
+	ViewObj[EditorKey::bBloom] = ShowFlags.bBloom;
+	ViewObj[EditorKey::BloomThreshold] = ShowFlags.BloomThreshold;
+	ViewObj[EditorKey::BloomKnee] = ShowFlags.BloomKnee;
+	ViewObj[EditorKey::BloomIntensity] = ShowFlags.BloomIntensity;
+	ViewObj[EditorKey::BloomBlurIterations] = ShowFlags.BloomBlurIterations;
+	ViewObj[EditorKey::bToneMapping] = ShowFlags.bToneMapping;
+	ViewObj[EditorKey::ToneMappingMode] = static_cast<int32>(ShowFlags.ToneMappingMode);
+	ViewObj[EditorKey::Exposure] = ShowFlags.Exposure;
+	ViewObj[EditorKey::HableWhitePoint] = ShowFlags.HableWhitePoint;
 	ViewObj[EditorKey::FXAAEnabled] = bEnableFXAA;
     ViewObj[EditorKey::bGammaCorrection] = ShowFlags.bGammaCorrection;
     ViewObj[EditorKey::GammaValue] = ShowFlags.GammaValue;
@@ -346,6 +364,33 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			ShowFlags.bFog = ViewObj[EditorKey::bFog].ToBool();
         if (ViewObj.hasKey(EditorKey::bShadow))
             ShowFlags.bShadow = ViewObj[EditorKey::bShadow].ToBool(); 
+		if (ViewObj.hasKey(EditorKey::bBloom))
+			ShowFlags.bBloom = ViewObj[EditorKey::bBloom].ToBool();
+		if (ViewObj.hasKey(EditorKey::BloomThreshold))
+			ShowFlags.BloomThreshold = std::max(0.0f, static_cast<float>(ViewObj[EditorKey::BloomThreshold].ToFloat()));
+		if (ViewObj.hasKey(EditorKey::BloomKnee))
+			ShowFlags.BloomKnee = std::max(0.0f, static_cast<float>(ViewObj[EditorKey::BloomKnee].ToFloat()));
+		if (ViewObj.hasKey(EditorKey::BloomIntensity))
+			ShowFlags.BloomIntensity = std::max(0.0f, static_cast<float>(ViewObj[EditorKey::BloomIntensity].ToFloat()));
+		if (ViewObj.hasKey(EditorKey::BloomBlurIterations))
+			ShowFlags.BloomBlurIterations = std::clamp<int32>(
+				static_cast<int32>(ViewObj[EditorKey::BloomBlurIterations].ToInt()),
+				0,
+				8);
+		if (ViewObj.hasKey(EditorKey::bToneMapping))
+			ShowFlags.bToneMapping = ViewObj[EditorKey::bToneMapping].ToBool();
+		if (ViewObj.hasKey(EditorKey::ToneMappingMode))
+		{
+			const int32 Mode = std::clamp<int32>(
+				static_cast<int32>(ViewObj[EditorKey::ToneMappingMode].ToInt()),
+				0,
+				static_cast<int32>(EToneMappingMode::Count) - 1);
+			ShowFlags.ToneMappingMode = static_cast<EToneMappingMode>(Mode);
+		}
+		if (ViewObj.hasKey(EditorKey::Exposure))
+			ShowFlags.Exposure = std::max(0.0f, static_cast<float>(ViewObj[EditorKey::Exposure].ToFloat()));
+		if (ViewObj.hasKey(EditorKey::HableWhitePoint))
+			ShowFlags.HableWhitePoint = std::max(0.001f, static_cast<float>(ViewObj[EditorKey::HableWhitePoint].ToFloat()));
 		if (ViewObj.hasKey(EditorKey::bGammaCorrection))
             ShowFlags.bGammaCorrection = ViewObj[EditorKey::bGammaCorrection].ToBool();
 		if (ViewObj.hasKey(EditorKey::GammaValue))

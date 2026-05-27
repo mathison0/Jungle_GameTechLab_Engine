@@ -405,10 +405,17 @@ struct FPostProcessConstants
 	float InvResolution[2];
 	float VignetteIntensity;
 	float VignetteRadius;
+
 	float VignetteSmoothness;
 	uint32 GammaCorrectionEnabled;
 	float GammaValue;
+	uint32 ToneMappingEnabled;
+
+	uint32 ToneMappingMode;
+	float Exposure;
+	float HableWhitePoint;
 	float Pad;
+
 	float VignetteColor[4];
 };
 
