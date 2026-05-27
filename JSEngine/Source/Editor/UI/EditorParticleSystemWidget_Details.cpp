@@ -1,4 +1,4 @@
-// Renders particle system details, module details, and reflection-backed property editors.
+﻿// Renders particle system details, module details, and reflection-backed property editors.
 #include "Editor/UI/EditorParticleSystemWidgetPrivate.h"
 
 void FEditorParticleSystemWidget::DrawDetailsPanel(const ImVec2& Size)
@@ -2597,7 +2597,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	const ImVec2 CanvasChildSize(CanvasWidth, CanvasHeight);
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 
-	ImGui::BeginChild("##ParticleCurveChannelList", ImVec2(ListWidth, CanvasChildSize.y), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	ImGui::BeginChild("##ParticleCurveChannelList", ImVec2(ListWidth, CanvasChildSize.y), true);
 	if (!ActiveModule)
 	{
 		ImGui::TextDisabled("Click a module curve icon.");
@@ -2627,14 +2627,24 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	{
 		ImGui::PushID(Channel.Key.c_str());
 		const bool bSelected = ActiveParticleCurveChannelKey == Channel.Key;
-		if (ImGui::Selectable(Channel.Label.c_str(), bSelected, 0, ImVec2(0.0f, 22.0f)))
+		const float RowHeight = 22.0f;
+		const float ColorBoxWidth = 10.0f;
+		const float ColorBoxRightPadding = 2.0f;
+		const float ColorBoxLeftPadding = 14.0f;
+		const float RowContentWidth = ImGui::GetContentRegionAvail().x;
+		const ImVec2 RowStart = ImGui::GetCursorPos();
+		const float ColorBoxX = RowStart.x + std::max(0.0f, RowContentWidth - ColorBoxRightPadding - ColorBoxWidth);
+		const float LabelWidth = std::max(1.0f, ColorBoxX - RowStart.x - ColorBoxLeftPadding);
+		if (ImGui::Selectable(Channel.Label.c_str(), bSelected, 0, ImVec2(LabelWidth, RowHeight)))
 		{
 			ActiveParticleCurveChannelKey = Channel.Key;
 			ActiveParticleCurveKeyIndex = -1;
 		}
-		const float ColorBoxOffset = std::max(0.0f, ListWidth - 30.0f);
-		ImGui::SameLine(ColorBoxOffset);
-		ImGui::ColorButton("##Color", ImGui::ColorConvertU32ToFloat4(Channel.Color), ImGuiColorEditFlags_NoTooltip, ImVec2(10.0f, 10.0f));
+		ImGui::SameLine(0.0f, 0.0f);
+		ImGui::SetCursorPosX(ColorBoxX);
+		const float ColorBoxY = RowStart.y + std::max(0.0f, (RowHeight - ColorBoxWidth) * 0.5f);
+		ImGui::SetCursorPosY(ColorBoxY);
+		ImGui::ColorButton("##Color", ImGui::ColorConvertU32ToFloat4(Channel.Color), ImGuiColorEditFlags_NoTooltip, ImVec2(ColorBoxWidth, ColorBoxWidth));
 		ImGui::PopID();
 	}
 	if (ActiveParticleCurveChannelKey.empty() && !Channels.empty())
