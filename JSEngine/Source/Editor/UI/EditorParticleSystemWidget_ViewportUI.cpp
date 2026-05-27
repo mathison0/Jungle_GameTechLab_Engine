@@ -567,8 +567,6 @@ void FEditorParticleSystemWidget::DrawViewportMenuBar(const ImVec2& CanvasMin)
 		{
 			DrawViewportModeItem("Wireframe", EViewMode::Wireframe, PreviewViewport);
 			DrawViewportModeItem("Unlit", EViewMode::Unlit, PreviewViewport);
-			DrawViewportModeItem("Lit", EViewMode::Lit_BlinnPhong, PreviewViewport);
-			DrawViewportModeItem("Shader Complexity", EViewMode::Heatmap, PreviewViewport);
 			EndParticleMenu();
 		}
 

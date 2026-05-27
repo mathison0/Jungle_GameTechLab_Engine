@@ -708,8 +708,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 				!VS.bShowStatSkinning &&
 				!VS.bShowLight &&
 				!VS.bShowShadow;
-			const FRenderCollector::FCullingStats* CullingStats =
-				(RenderPipeline != nullptr) ? &RenderPipeline->GetViewportCullingStats(i) : nullptr;
+			(void)bOnlyParticleStat;
 
 			// FPS 출력 (초록색 텍스트)
 			if (VS.bShowStatFPS)
@@ -732,44 +731,6 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 					true);
 			}
 
-			if (CullingStats != nullptr && !bOnlyParticleStat)
-			{
-				const int32 CulledPrimitiveCount = std::max(
-					0,
-					CullingStats->TotalVisiblePrimitiveCount -
-						(CullingStats->BVHPassedPrimitiveCount + CullingStats->FallbackPassedPrimitiveCount));
-
-				if (VS.bShowStatFPS || VS.bShowStatSkinning)
-				{
-					ImGui::Separator();
-				}
-
-				ImGui::TextColored(ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "Culling");
-				ImGui::TextColored(
-					ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Total Visible: %d", CullingStats->TotalVisiblePrimitiveCount);
-				ImGui::TextColored(
-					ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- BVH Passed: %d", CullingStats->BVHPassedPrimitiveCount);
-				ImGui::TextColored(
-					ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Fallback Passed: %d",
-					CullingStats->FallbackPassedPrimitiveCount);
-				ImGui::TextColored(ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Culled: %d", CulledPrimitiveCount);
-			}
-
-			const FRenderCollector::FDecalStats* DecalStats =
-				(RenderPipeline != nullptr) ? &RenderPipeline->GetViewportDecalStats(i) : nullptr;
-
-			if (DecalStats != nullptr && !bOnlyParticleStat)
-			{
-				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatSkinning)
-				{
-					ImGui::Separator();
-				}
-
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "Decal");
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "- Total Decals: %d", DecalStats->TotalDecalCount);
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "- Decal Time: %.4f ms", DecalStats->CollectTimeMS / 1000.f);
-			}
-
             const FRenderCollector::FLightStats* LightStats =
                 (RenderPipeline != nullptr) ? &RenderPipeline->GetViewportLightStats(i) : nullptr;
 
@@ -790,7 +751,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
             if (VS.bShowShadow)
             {
-                if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatMemory || VS.bShowStatParticle || VS.bShowStatSkinning)
+                if (VS.bShowStatFPS || VS.bShowStatMemory || VS.bShowStatParticle || VS.bShowStatSkinning)
                 {
                     ImGui::Separator();
                 }
@@ -840,7 +801,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
 			if (VS.bShowStatParticle)
 			{
-				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatSkinning || VS.bShowLight || VS.bShowShadow)
+				if (VS.bShowStatFPS || VS.bShowStatSkinning || VS.bShowLight || VS.bShowShadow)
 				{
 					ImGui::Separator();
 				}
@@ -865,7 +826,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 			// Memory 출력 (노란색 텍스트)
 			if (VS.bShowStatMemory)
 			{
-				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatParticle || VS.bShowStatSkinning)
+				if (VS.bShowStatFPS || VS.bShowStatParticle || VS.bShowStatSkinning)
 				{
 					ImGui::Separator();
 				}
