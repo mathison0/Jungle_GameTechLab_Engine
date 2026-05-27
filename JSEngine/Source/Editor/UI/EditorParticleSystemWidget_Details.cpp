@@ -1590,6 +1590,26 @@ bool FEditorParticleSystemWidget::IsParticleDistributionProperty(UParticleModule
 	return Hint && std::strcmp(Hint, "FVector") == 0;
 }
 
+bool FEditorParticleSystemWidget::IsEmitterTimeDistributionProperty(UParticleModule* Module, const FProperty& Property) const
+{
+	if (!Module || !Property.Name)
+	{
+		return false;
+	}
+
+	const char* Name = Property.Name;
+	return std::strcmp(Name, "Rate") == 0 ||
+		std::strcmp(Name, "LifetimeMin") == 0 ||
+		std::strcmp(Name, "StartLocationMin") == 0 ||
+		std::strcmp(Name, "SphereRadius") == 0 ||
+		std::strcmp(Name, "BoxExtents") == 0 ||
+		std::strcmp(Name, "ConeHeight") == 0 ||
+		std::strcmp(Name, "ConeHalfAngle") == 0 ||
+		std::strcmp(Name, "StartVelocityMin") == 0 ||
+		std::strcmp(Name, "StartRotationRateMin") == 0 ||
+		std::strcmp(Name, "RotRateMin") == 0;
+}
+
 FString FEditorParticleSystemWidget::MakeParticleDistributionKey(UParticleModule* Module, const FProperty& Property) const
 {
 	return MakeParticleModuleCurveKey(Module) + "::" + (Property.Name ? Property.Name : "");
@@ -2646,6 +2666,15 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		ActiveParticleCurveChannelKey = Channels.front().Key;
 		ActiveParticleCurveKeyIndex = -1;
 	}
+	bool bEmitterTimeCurveView = false;
+	for (const FParticleCurveChannelView& Channel : Channels)
+	{
+		if (Channel.Property && IsEmitterTimeDistributionProperty(Channel.Module, *Channel.Property))
+		{
+			bEmitterTimeCurveView = true;
+			break;
+		}
+	}
 	ImGui::EndChild();
 
 	ImGui::SameLine();
@@ -2658,7 +2687,10 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 
 	float DesiredMinValue = 0.0f;
 	float DesiredMaxValue = 1.0f;
+	float DesiredMinTime = 0.0f;
+	float DesiredMaxTime = 1.0f;
 	bool bHasValue = false;
+	bool bHasTime = false;
 	for (const FParticleCurveChannelView& Channel : Channels)
 	{
 		if (!Channel.bCurveDistribution)
@@ -2674,6 +2706,9 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		}
 		for (const FCurveKey& Key : Channel.Curve->Keys)
 		{
+			DesiredMinTime = bHasTime ? std::min(DesiredMinTime, Key.Time) : Key.Time;
+			DesiredMaxTime = bHasTime ? std::max(DesiredMaxTime, Key.Time) : Key.Time;
+			bHasTime = true;
 			DesiredMinValue = bHasValue ? std::min(DesiredMinValue, Key.Value) : Key.Value;
 			DesiredMaxValue = bHasValue ? std::max(DesiredMaxValue, Key.Value) : Key.Value;
 			bHasValue = true;
@@ -2694,7 +2729,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		ParticleCurveViewMinValue = DesiredMinValue;
 		ParticleCurveViewMaxValue = DesiredMaxValue;
 		ParticleCurveViewMinTime = 0.0f;
-		ParticleCurveViewMaxTime = 1.0f;
+		ParticleCurveViewMaxTime = bEmitterTimeCurveView ? std::max(1.0f, DesiredMaxTime) : 1.0f;
 		bParticleCurveViewInitialized = true;
 	}
 	else if (!bParticleCurveViewUserAdjusted)
@@ -2727,8 +2762,16 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		ParticleCurveViewMinTime = 0.0f;
 		ParticleCurveViewMaxTime = 1.0f;
 	}
-	ParticleCurveViewMinTime = std::clamp(ParticleCurveViewMinTime, 0.0f, 1.0f);
-	ParticleCurveViewMaxTime = std::clamp(ParticleCurveViewMaxTime, 0.0f, 1.0f);
+	if (!bEmitterTimeCurveView)
+	{
+		ParticleCurveViewMinTime = std::clamp(ParticleCurveViewMinTime, 0.0f, 1.0f);
+		ParticleCurveViewMaxTime = std::clamp(ParticleCurveViewMaxTime, 0.0f, 1.0f);
+	}
+	else
+	{
+		ParticleCurveViewMinTime = std::max(ParticleCurveViewMinTime, 0.0f);
+		ParticleCurveViewMaxTime = std::max(ParticleCurveViewMaxTime, ParticleCurveViewMinTime + 0.001f);
+	}
 	if (ParticleCurveViewMaxTime <= ParticleCurveViewMinTime)
 	{
 		ParticleCurveViewMinTime = 0.0f;
@@ -2751,7 +2794,8 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	{
 		FCurveKey Key;
 		const float TimeAlpha = (Screen.x - CanvasMin.x) / CanvasSize.x;
-		Key.Time = std::clamp(MinTime + TimeAlpha * (MaxTime - MinTime), 0.0f, 1.0f);
+		const float RawTime = MinTime + TimeAlpha * (MaxTime - MinTime);
+		Key.Time = bEmitterTimeCurveView ? std::max(RawTime, 0.0f) : std::clamp(RawTime, 0.0f, 1.0f);
 		const float Alpha = std::clamp((CanvasMax.y - Screen.y) / CanvasSize.y, 0.0f, 1.0f);
 		Key.Value = MinValue + Alpha * (MaxValue - MinValue);
 		Key.InterpMode = ECurveInterpMode::Cubic;
@@ -2845,20 +2889,22 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	{
 		constexpr float TimeViewMin = 0.0f;
 		constexpr float TimeViewMax = 1.0f;
+		constexpr float EmitterTimeViewMax = 100000.0f;
 		float TimeRange = ParticleCurveViewMaxTime - ParticleCurveViewMinTime;
-		TimeRange = std::clamp(TimeRange, 0.02f, TimeViewMax - TimeViewMin);
+		const float EffectiveTimeViewMax = bEmitterTimeCurveView ? EmitterTimeViewMax : TimeViewMax;
+		TimeRange = std::clamp(TimeRange, 0.02f, EffectiveTimeViewMax - TimeViewMin);
 
 		if (ParticleCurveViewMinTime < TimeViewMin)
 		{
 			ParticleCurveViewMinTime = TimeViewMin;
 			ParticleCurveViewMaxTime = ParticleCurveViewMinTime + TimeRange;
 		}
-		if (ParticleCurveViewMaxTime > TimeViewMax)
+		if (ParticleCurveViewMaxTime > EffectiveTimeViewMax)
 		{
-			ParticleCurveViewMaxTime = TimeViewMax;
+			ParticleCurveViewMaxTime = EffectiveTimeViewMax;
 			ParticleCurveViewMinTime = ParticleCurveViewMaxTime - TimeRange;
 		}
-		ParticleCurveViewMinTime = std::clamp(ParticleCurveViewMinTime, TimeViewMin, TimeViewMax - TimeRange);
+		ParticleCurveViewMinTime = std::clamp(ParticleCurveViewMinTime, TimeViewMin, EffectiveTimeViewMax - TimeRange);
 		ParticleCurveViewMaxTime = ParticleCurveViewMinTime + TimeRange;
 	};
 
@@ -2876,7 +2922,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 			const float TimeCenter = MinTime + TimeAlpha * (MaxTime - MinTime);
 			const float ValueCenter = MinValue + ValueAlpha * (MaxValue - MinValue);
 			const float ZoomScale = std::pow(0.88f, Wheel);
-			const float NewTimeRange = std::clamp((MaxTime - MinTime) * ZoomScale, 0.02f, 1.0f);
+			const float NewTimeRange = std::clamp((MaxTime - MinTime) * ZoomScale, 0.02f, bEmitterTimeCurveView ? 100000.0f : 1.0f);
 			const float NewValueRange = std::max(0.02f, (MaxValue - MinValue) * ZoomScale);
 			ParticleCurveViewMinTime = TimeCenter - TimeAlpha * NewTimeRange;
 			ParticleCurveViewMaxTime = ParticleCurveViewMinTime + NewTimeRange;

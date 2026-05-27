@@ -2368,6 +2368,23 @@ UParticleSystem* FResourceManager::FindParticleSystem(const FString& Path) const
 	return It != ParticleSystemMap.end() ? It->second : nullptr;
 }
 
+void FResourceManager::RegisterParticleSystem(UParticleSystem* Asset, const FString& Path)
+{
+	if (!Asset)
+	{
+		return;
+	}
+
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	if (NormalizedPath.empty() || !IsParticleSystemAssetPath(NormalizedPath))
+	{
+		return;
+	}
+
+	Asset->SetAssetPath(NormalizedPath);
+	ParticleSystemMap[NormalizedPath] = Asset;
+}
+
 bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString& Path)
 {
 	if (!Asset)
@@ -2394,10 +2411,15 @@ bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString&
 		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring());
 		MetaData.PayloadVersion = 1;
 
-		return FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
+		const bool bSaved = FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
 		{
 			return SerializeParticleSystemObjectGraph(Ar, Asset, NormalizedPath);
 		});
+		if (bSaved)
+		{
+			ParticleSystemMap[NormalizedPath] = Asset;
+		}
+		return bSaved;
 	}
 
 	return false;

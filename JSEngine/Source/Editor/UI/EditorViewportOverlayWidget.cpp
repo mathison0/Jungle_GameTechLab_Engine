@@ -627,6 +627,7 @@ void FEditorViewportOverlayWidget::RenderShadowCubeArrayPreview()
 void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 {
 	if (!EditorEngine) return;
+	if (!EditorEngine->GetMainPanel().IsLevelEditorViewportVisible()) return;
 
 	constexpr ImGuiWindowFlags kFlags =
 		ImGuiWindowFlags_NoDecoration      |

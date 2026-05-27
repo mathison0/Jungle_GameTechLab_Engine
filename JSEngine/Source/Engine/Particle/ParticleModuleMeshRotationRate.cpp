@@ -5,6 +5,15 @@
 
 #include <algorithm>
 
+namespace
+{
+    float GetEmitterSpawnDistributionTime(FParticleEmitterInstance* Owner, float SpawnTime)
+    {
+        const float ClampedSpawnOffset = std::max(SpawnTime, 0.0f);
+        return Owner ? std::max(Owner->GetPreviousEmitterTime() + ClampedSpawnOffset, 0.0f) : ClampedSpawnOffset;
+    }
+}
+
 UParticleModuleMeshRotationRate::UParticleModuleMeshRotationRate()
 {
     // Color/Size 패턴 — Spawn 시 초기값 셋팅 + Update 시 누적.
@@ -36,11 +45,12 @@ void UParticleModuleMeshRotationRate::Spawn(FParticleEmitterInstance* Owner, FBa
     const int32 NewActiveIdx = MeshInstance->GetActiveParticleCount() - 1;
     if (FMeshRotationPayload* Payload = MeshInstance->GetMeshPayloadAt(NewActiveIdx))
     {
+        const float DistributionTime = GetEmitterSpawnDistributionTime(Owner, SpawnTime);
         Payload->RotRate = EvaluateVectorDistribution(
             "RotRateMin",
             RotRateMin,
             RotRateMax,
-            std::clamp(SpawnTime, 0.0f, 1.0f));
+            DistributionTime);
     }
 }
 

@@ -683,9 +683,18 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 			}
 
 			EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
-			if (UParticleLODLevel* LOD = Instance->GetCurrentLODLevel())
+			const FCompiledParticleLODData* CompiledLOD = Instance->GetCurrentCompiledLODData();
+			if (const UParticleRendererProperties* RendererProperties = CompiledLOD ? CompiledLOD->RendererProperties : nullptr)
 			{
-				if (const UParticleModuleTypeDataBase* TypeData = LOD->GetTypeDataModule())
+				RenderMode = RendererProperties->GetRenderMode();
+			}
+			else if (UParticleLODLevel* LOD = Instance->GetCurrentLODLevel())
+			{
+				if (const UParticleRendererProperties* RendererProperties = LOD->GetEffectiveRendererProperties())
+				{
+					RenderMode = RendererProperties->GetRenderMode();
+				}
+				else if (const UParticleModuleTypeDataBase* TypeData = LOD->GetTypeDataModule())
 				{
 					RenderMode = TypeData->GetRenderMode();
 				}

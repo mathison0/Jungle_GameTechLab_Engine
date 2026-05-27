@@ -123,6 +123,10 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 	if (ParticleSystemAsset)
 	{
 		SyncParticleDistributionRuntimeDataToAsset();
+		if (!DocumentPath.empty())
+		{
+			FResourceManager::Get().RegisterParticleSystem(ParticleSystemAsset, DocumentPath);
+		}
 		ParticleSystemAsset->CacheEmitterModuleInfo();
 	}
 
@@ -158,6 +162,9 @@ void FEditorParticleSystemWidget::RefreshPlacedParticleSystemComponents(bool bRe
 		return;
 	}
 
+	const FString EditedAssetPath = FPaths::Normalize(
+		!DocumentPath.empty() ? DocumentPath : ParticleSystemAsset->GetAssetPath());
+
 	for (FWorldContext& Context : EditorEngine->GetWorldList())
 	{
 		UWorld* World = Context.World;
@@ -175,11 +182,27 @@ void FEditorParticleSystemWidget::RefreshPlacedParticleSystemComponents(bool bRe
 			}
 
 			UParticleSystemComponent* ParticleComponent = Actor->FindComponent<UParticleSystemComponent>();
-			if (!ParticleComponent || ParticleComponent == PreviewComponent || ParticleComponent->GetTemplate() != ParticleSystemAsset)
+			if (!ParticleComponent || ParticleComponent == PreviewComponent)
 			{
 				continue;
 			}
 
+			UParticleSystem* ComponentTemplate = ParticleComponent->GetTemplate();
+			const FString ComponentTemplatePath = FPaths::Normalize(ComponentTemplate ? ComponentTemplate->GetAssetPath() : FString());
+			const FString ComponentSoftPath = FPaths::Normalize(ParticleComponent->GetTemplateAssetPath());
+			const bool bSameTemplate = ComponentTemplate == ParticleSystemAsset;
+			const bool bSameAssetPath =
+				!EditedAssetPath.empty() &&
+				(ComponentTemplatePath == EditedAssetPath || ComponentSoftPath == EditedAssetPath);
+			if (!bSameTemplate && !bSameAssetPath)
+			{
+				continue;
+			}
+
+			if (!bSameTemplate)
+			{
+				ParticleComponent->SetTemplate(ParticleSystemAsset);
+			}
 			ParticleComponent->RefreshTemplateRuntime(bRestartSimulation);
 			bRefreshedAnyComponent = true;
 		}
