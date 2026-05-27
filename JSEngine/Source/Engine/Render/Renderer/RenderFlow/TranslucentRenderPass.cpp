@@ -6,8 +6,48 @@
 #include "Render/Resource/VertexFactoryTypes.h"
 #include "Core/ResourceManager.h"
 
+#include <algorithm>
+
 namespace
 {
+    FVector GetTranslucentSortCenter(const FRenderCommand& Cmd)
+    {
+        if (Cmd.WorldAABB.IsValid())
+        {
+            return Cmd.WorldAABB.GetCenter();
+        }
+
+        return Cmd.PerObjectConstants.Model.GetOrigin();
+    }
+
+    TArray<FRenderCommand> BuildSortedTranslucentCommands(const FRenderPassContext* Context, const TArray<FRenderCommand>& Commands)
+    {
+        TArray<FRenderCommand> SortedCommands = Commands;
+        const FVector CameraPosition = Context->RenderBus->GetCameraPosition();
+
+        std::sort(
+            SortedCommands.begin(),
+            SortedCommands.end(),
+            [&CameraPosition](const FRenderCommand& A, const FRenderCommand& B)
+            {
+                const float ADistance = FVector::DistSquared(GetTranslucentSortCenter(A), CameraPosition);
+                const float BDistance = FVector::DistSquared(GetTranslucentSortCenter(B), CameraPosition);
+                return ADistance > BDistance;
+            });
+
+        return SortedCommands;
+    }
+
+    void ApplyTranslucentPassRenderState(ID3D11DeviceContext* DeviceContext)
+    {
+        ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::AlphaBlend);
+        DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
+
+        ID3D11DepthStencilState* DepthState =
+            FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::DepthReadOnly);
+        DeviceContext->OMSetDepthStencilState(DepthState, 0);
+    }
+
     uint32 BuildTranslucentPermutationKey(const FRenderPassContext* Context, const UMaterialInterface* Material)
     {
         uint32 PermutationKey = (uint32)ELightingModel::Unlit;
@@ -77,7 +117,9 @@ namespace
             return true;
         }
 
-        for (const FRenderCommand& Cmd : Commands)
+        const TArray<FRenderCommand> SortedCommands = BuildSortedTranslucentCommands(Context, Commands);
+
+        for (const FRenderCommand& Cmd : SortedCommands)
         {
             Context->RenderResources->PerObjectConstantBuffer.Update(
                 Context->DeviceContext,
@@ -117,6 +159,7 @@ namespace
 
                 Program->Bind(Context->DeviceContext);
                 Cmd.Material->BindRenderStates(Context->DeviceContext);
+                ApplyTranslucentPassRenderState(Context->DeviceContext);
                 Cmd.Material->BindParameters(Context->DeviceContext, Program->PS);
                 BindVertexFactoryResources(
                     Context->DeviceContext,
