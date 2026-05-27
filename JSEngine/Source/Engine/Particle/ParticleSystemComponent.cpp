@@ -1,10 +1,12 @@
 ﻿#include "Particle/ParticleSystemComponent.h"
 
 #include "Camera/ViewportCamera.h"
+#include "Core/ResourceManager.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleSystem.h"
 #include "Render/Scene/RenderBus.h"
 
 #include <cstring>
@@ -22,7 +24,7 @@ UParticleSystemComponent::~UParticleSystemComponent()
 // Function : Set particle system template and recreate emitter instances when it changes
 // input : InTemplate
 // InTemplate : particle system asset to simulate on this component
-// output : Template is updated and emitter instances match the new template
+// output : Template is updated, asset path mirrored, and emitter instances match the new template
 void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 {
 	if (Template == InTemplate && !EmitterInstances.empty())
@@ -31,6 +33,7 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 	}
 
 	Template = InTemplate;
+	TemplateAssetPath.SetPath(InTemplate ? InTemplate->GetAssetPath() : FString());
 	RecreateEmitterInstances();
 }
 
@@ -38,11 +41,34 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 {
 	UPrimitiveComponent::PostEditProperty(PropertyName);
 
-	const bool bTemplateChanged = PropertyName && std::strcmp(PropertyName, "Template") == 0;
-	const bool bNeedsRuntimeRebuild = Template && EmitterInstances.empty();
-	if (bTemplateChanged || bNeedsRuntimeRebuild)
+	const bool bTemplatePathChanged = PropertyName && std::strcmp(PropertyName, "TemplateAssetPath") == 0;
+	if (bTemplatePathChanged)
+	{
+		const FString RequestedPath = TemplateAssetPath.GetPath();
+		UParticleSystem* Resolved = RequestedPath.empty()
+			? nullptr
+			: FResourceManager::Get().LoadParticleSystem(RequestedPath);
+		SetTemplate(Resolved);
+		return;
+	}
+
+	if (Template && EmitterInstances.empty())
 	{
 		RecreateEmitterInstances();
+	}
+}
+
+void UParticleSystemComponent::Serialize(FArchive& Ar)
+{
+	UPrimitiveComponent::Serialize(Ar);
+
+	if (Ar.IsLoading())
+	{
+		const FString RequestedPath = TemplateAssetPath.GetPath();
+		UParticleSystem* Resolved = RequestedPath.empty()
+			? nullptr
+			: FResourceManager::Get().LoadParticleSystem(RequestedPath);
+		SetTemplate(Resolved);
 	}
 }
 

@@ -1,9 +1,11 @@
 ﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
+#include "Object/ObjectPtr.h"
 #include "Particle/ParticleEmitterInstance.h"
 
 class FRenderBus;
+class UParticleSystem;
 struct FDynamicEmitterDataBase;
 
 DECLARE_DELEGATE(FOnParticleCollide, const FParticleEventCollideData&);
@@ -19,6 +21,7 @@ public:
 
 	void SetTemplate(UParticleSystem* InTemplate);
 	void PostEditProperty(const char* PropertyName) override;
+	void Serialize(FArchive& Ar) override;
 	UParticleSystem* GetTemplate() const { return Template; }
 	const TArray<FParticleEmitterInstance*>& GetEmitterInstances() const { return EmitterInstances; } // component가 사용하는 emitter instance들
 	TArray<FParticleEventCollideData>& GetPendingCollisionEvents() { return PendingCollisionEvents; }
@@ -71,13 +74,14 @@ protected:
 
 private:
 
-    /*
-	Template 포인터는 “리플렉션을 통해 에셋을 할당받는 통로”이자, 
-	“런타임 인스턴스들이 언제든 원본 설계를 참조하여 스스로를 재구성(Reload)할 수 있게 만드는 기준점”입니다. 
-	포인터 자체는 단순한 주소값이지만, 이를 통해 컴포넌트는 복잡한 인스턴스 시뮬레이션을 통제할 수 있게 됩니다.
-	*/
-	UPROPERTY(DisplayName = "Template", ReferenceKind = Asset)
-	UParticleSystem* Template = nullptr;
+    // Serialized asset path. StaticMeshComponent 패턴 답습 — component 가 path 를 직접 보유하므로
+    // UParticleSystem::AssetPath 가 비어있어도 scene save/load 라운드트립이 깨지지 않음.
+    UPROPERTY(DisplayName = "Template")
+    TSoftObjectPtr<UParticleSystem> TemplateAssetPath;
+
+    // Runtime cache (non-UPROPERTY). TemplateAssetPath 의 path 가 ResourceManager 를 통해 resolve 된 결과.
+    // EmitterInstances 재생성/Detail panel 표시 등 모든 런타임 read 는 이 cache 를 사용.
+    UParticleSystem* Template = nullptr;
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	TArray<FParticleEventCollideData> PendingCollisionEvents;
