@@ -1838,6 +1838,18 @@ void FEditorPropertyWidget::RenderComponentProperties()
 		ImGui::Text("Template: %s", CurrentTemplate ? CurrentTemplate->GetFName().ToString().c_str() : "<None>");
 		ImGui::Spacing();
 
+		// Component-level opacity multiplier — runtime fade in/out. AlphaBlend emitter 에 한해 적용 (Builder 에서 분기).
+		{
+			float CompOpacity = ParticleComp->GetOpacityMultiplier();
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+			if (ImGui::SliderFloat("Opacity Multiplier", &CompOpacity, 0.0f, 1.0f, "%.3f"))
+			{
+				ParticleComp->SetOpacityMultiplier(CompOpacity);
+			}
+			ImGui::TextDisabled("  AlphaBlend 모드인 emitter 에만 적용 (Additive/Opaque 무시).");
+			ImGui::Spacing();
+		}
+
 		if (ImGui::Button("Apply Sprite Demo Template"))
 		{
 			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultSpriteSystem())
@@ -2131,6 +2143,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					RibbonRenderer->SetBlendType(static_cast<EBlendType>(BlendIdx));
 				}
 
+				// Emitter-level opacity (asset default) — Component OpacityMultiplier 와 곱연산.
+				float RibbonOpacity = RibbonRenderer->GetOpacity();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::SliderFloat("Opacity", &RibbonOpacity, 0.0f, 1.0f, "%.3f"))
+				{
+					RibbonRenderer->SetOpacity(RibbonOpacity);
+				}
+
 				ImGui::PopID();
 			}
 		}
@@ -2312,6 +2332,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					BeamRenderer->SetBlendType(static_cast<EBlendType>(BeamBlendIdx));
 				}
 
+				// Emitter-level opacity (asset default) — Component OpacityMultiplier 와 곱연산.
+				float BeamOpacity = BeamRenderer->GetOpacity();
+				ImGui::SetNextItemWidth(DragItemWidth);
+				if (ImGui::SliderFloat("Opacity", &BeamOpacity, 0.0f, 1.0f, "%.3f"))
+				{
+					BeamRenderer->SetOpacity(BeamOpacity);
+				}
+
 				// Source / Target Component picker — 모듈이 존재할 때만 노출 (모듈 없는 경우 fallback 사용).
 				if (BeamSource)
 				{
@@ -2440,6 +2468,14 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				if (ImGui::Combo("##SpriteBlendPicker", &SpriteBlendIdx, SpriteBlendItems, IM_ARRAYSIZE(SpriteBlendItems)))
 				{
 					SpriteRenderer->SetBlendType(static_cast<EBlendType>(SpriteBlendIdx));
+				}
+
+				// Emitter-level opacity (asset default) — Component OpacityMultiplier 와 곱연산.
+				float SpriteOpacity = SpriteRenderer->GetOpacity();
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+				if (ImGui::SliderFloat("Opacity", &SpriteOpacity, 0.0f, 1.0f, "%.3f"))
+				{
+					SpriteRenderer->SetOpacity(SpriteOpacity);
 				}
 
 				ImGui::PopID();

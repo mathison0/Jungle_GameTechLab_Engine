@@ -25,6 +25,10 @@ public:
     EBlendType GetBlendType() const { return BlendType; }
     void SetBlendType(EBlendType InBlendType) { BlendType = InBlendType; }
 
+    // Emitter-level opacity (asset default). AlphaBlend 모드일 때만 의미가 있으며 Component 의 OpacityMultiplier 와 곱해짐.
+    float GetOpacity() const { return Opacity; }
+    void SetOpacity(float InValue) { Opacity = InValue; }
+
     virtual int32 RequiredPayloadBytes() const { return 0; }
     virtual FParticleEmitterInstance* CreateInstance(UParticleSystemComponent* Component, int32 EmitterIndex) const;
 
@@ -34,6 +38,9 @@ private:
 
     UPROPERTY(DisplayName = "Blend Mode", Category = "Rendering")
     EBlendType BlendType = EBlendType::AlphaBlend;
+
+    UPROPERTY(DisplayName = "Opacity", Category = "Rendering", Min = 0.0f, Max = 1.0f)
+    float Opacity = 1.0f;
 };
 
 UCLASS()

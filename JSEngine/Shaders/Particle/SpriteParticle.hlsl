@@ -103,6 +103,8 @@ float4 SpriteParticlePS(PSInput input) : SV_TARGET
 {
     float4 Sample = SpriteAtlas.Sample(SpriteSampler, input.TexCoord);
     float4 Final = Sample * input.Color;
+    // Component/Emitter opacity multiplier — Builder 에서 AlphaBlend 일 때만 1.0 외 값 주입.
+    Final.a *= PrimitiveColor.w;
     if (Final.a < 0.01f)
     {
         discard;

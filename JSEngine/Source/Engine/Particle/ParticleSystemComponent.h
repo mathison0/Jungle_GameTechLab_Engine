@@ -75,6 +75,11 @@ public:
 	FParticleEmitterInstance* GetEmitterInstance(int32 Index);
 	const FParticleEmitterInstance* GetEmitterInstance(int32 Index) const;
 
+	// Component-level opacity multiplier — AlphaBlend 모드인 emitter 의 최종 alpha 에 곱해짐.
+	// runtime fade-in/out 용. Properties 의 emitter-level Opacity 와 곱연산.
+	float GetOpacityMultiplier() const { return OpacityMultiplier; }
+	void SetOpacityMultiplier(float InValue) { OpacityMultiplier = InValue; }
+
 protected:
 	void TickComponent(float DeltaTime) override;
 
@@ -106,4 +111,7 @@ private:
 	FVector CachedCameraUp = FVector::ZeroVector;
 	FVector CachedCameraRight = FVector::ZeroVector;
 	bool bCachedCameraValid = false;
+
+	UPROPERTY(DisplayName = "Opacity Multiplier", Category = "Rendering", Min = 0.0f, Max = 1.0f)
+	float OpacityMultiplier = 1.0f;
 };

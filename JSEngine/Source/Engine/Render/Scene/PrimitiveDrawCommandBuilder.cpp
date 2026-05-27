@@ -819,9 +819,38 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             // Sort hook (D8) — DynamicData 의 virtual Sort 가 type 별 알고리즘 수행 (Sprite/Mesh: ViewProjDepth, Beam: 빈).
             DynData->Sort(RenderBus.GetCameraPosition());
 
+            // Opacity multiplier: AlphaBlend 모드일 때만 Comp×Emitter opacity 를 PerObject.Color.W 로 전달.
+            // Mesh 는 BlendType 이 Material 에서 오므로 Material->BlendType 으로 판정. 그 외는 properties.BlendType.
+            // AlphaBlend 가 아니면 1.0 고정 — Additive/Opaque 에서 의도치 않은 강도 변화 방지.
+            float FinalOpacity = 1.0f;
+            {
+                EBlendType EffectiveBlendType = ReplayBase.BlendType;
+                if (ReplayBase.eEmitterType == EDynamicEmitterType::Mesh)
+                {
+                    UMaterialInterface* MeshMaterialIF = MaterialOverride ? MaterialOverride : ReplayBase.Material;
+                    if (const UMaterial* MeshMat = Cast<UMaterial>(MeshMaterialIF))
+                    {
+                        EffectiveBlendType = MeshMat->BlendType;
+                    }
+                    else if (const UMaterialInstance* MeshMatInst = Cast<UMaterialInstance>(MeshMaterialIF))
+                    {
+                        if (MeshMatInst->Parent)
+                        {
+                            EffectiveBlendType = MeshMatInst->Parent->BlendType;
+                        }
+                    }
+                }
+                if (EffectiveBlendType == EBlendType::AlphaBlend)
+                {
+                    const float CompOpacity = ParticleSystemComponent ? ParticleSystemComponent->GetOpacityMultiplier() : 1.0f;
+                    const float EmitterOpacity = RendererProperties ? RendererProperties->GetOpacity() : 1.0f;
+                    FinalOpacity = std::clamp(CompOpacity * EmitterOpacity, 0.0f, 1.0f);
+                }
+            }
+
             FRenderCommand Cmd = {};
             Cmd.SourcePrimitive = Primitive;
-            Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+            Cmd.PerObjectConstants = FPerObjectConstants(FMatrix::Identity, FVector4(1.0f, 1.0f, 1.0f, FinalOpacity));
             Cmd.Type = ERenderCommandType::Primitive;
             Cmd.WorldAABB = ParticleSystemComponent->GetWorldAABB();
             Cmd.VertexFactoryType = DynData->GetVertexFactoryType();

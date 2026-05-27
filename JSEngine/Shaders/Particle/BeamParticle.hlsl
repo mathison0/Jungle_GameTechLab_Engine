@@ -50,5 +50,8 @@ PSInput BeamParticleVS(VSInput input)
 float4 BeamParticlePS(PSInput input) : SV_TARGET
 {
     float4 Sample = BeamAlbedo.Sample(BeamSampler, input.TexCoord);
-    return Sample * input.Color;
+    float4 Final = Sample * input.Color;
+    // Component/Emitter opacity multiplier — Builder 에서 AlphaBlend 일 때만 1.0 외 값 주입.
+    Final.a *= PrimitiveColor.w;
+    return Final;
 }
