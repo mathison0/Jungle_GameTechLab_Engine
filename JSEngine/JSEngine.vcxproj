@@ -823,7 +823,9 @@
     <ClCompile Include="Source\Engine\Animation\CurvePlayback.cpp" />
     <ClCompile Include="Source\Engine\Animation\StateMachineAnimInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\TimelinePlayer.cpp" />
-    <ClCompile Include="Source\Engine\Asset\AnimSequenceAssetLoader.cpp" />
+    <ClCompile Include="Source\Engine\Asset\AssetFile.cpp" />
+    <ClCompile Include="Source\Engine\Asset\AssetHeader.cpp" />
+    <ClCompile Include="Source\Engine\Asset\AssetMetaData.cpp" />
     <ClCompile Include="Source\Engine\Asset\AssetQueryService.cpp" />
     <ClCompile Include="Source\Engine\Asset\BinarySerializer.cpp" />
     <ClCompile Include="Source\Engine\Asset\CurveAssetLoader.cpp" />
@@ -837,7 +839,9 @@
     <ClCompile Include="Source\Engine\Asset\FontAtlasLoader.cpp" />
     <ClCompile Include="Source\Engine\Asset\ObjLoader.cpp" />
     <ClCompile Include="Source\Engine\Asset\SkeletalMesh.cpp" />
+    <ClCompile Include="Source\Engine\Asset\SkeletalMeshTypes.cpp" />
     <ClCompile Include="Source\Engine\Asset\StaticMesh.cpp" />
+    <ClCompile Include="Source\Engine\Asset\StaticMeshTypes.cpp" />
     <ClCompile Include="Source\Engine\Asset\StaticMeshSimplifier.cpp" />
     <ClCompile Include="Source\Engine\Asset\SubUVAtlasLoader.cpp" />
     <ClCompile Include="Source\Engine\Audio\AudioSystem.cpp" />
@@ -1051,6 +1055,8 @@
     <ClCompile Include="Source\Engine\Serialization\JsonWriter.cpp" />
     <ClCompile Include="Source\Engine\Serialization\PrefabManager.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
+    <ClCompile Include="Source\Engine\Serialization\WindowsBinReader.cpp" />
+    <ClCompile Include="Source\Engine\Serialization\WindowsBinWriter.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitter.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitterCross.cpp" />
     <ClCompile Include="Source\Engine\Slate\SSplitterH.cpp" />
@@ -1193,7 +1199,9 @@
     <ClInclude Include="Source\Engine\Animation\CurvePlayback.h" />
     <ClInclude Include="Source\Engine\Animation\StateMachineAnimInstance.h" />
     <ClInclude Include="Source\Engine\Animation\TimelinePlayer.h" />
-    <ClInclude Include="Source\Engine\Asset\AnimSequenceAssetLoader.h" />
+    <ClInclude Include="Source\Engine\Asset\AssetFile.h" />
+    <ClInclude Include="Source\Engine\Asset\AssetHeader.h" />
+    <ClInclude Include="Source\Engine\Asset\AssetMetaData.h" />
     <ClInclude Include="Source\Engine\Asset\AssetQueryService.h" />
     <ClInclude Include="Source\Engine\Asset\BinarySerializer.h" />
     <ClInclude Include="Source\Engine\Asset\CurveAssetLoader.h" />
@@ -1469,6 +1477,8 @@
     <ClInclude Include="Source\Engine\Serialization\MemoryWriter.h" />
     <ClInclude Include="Source\Engine\Serialization\PrefabManager.h" />
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h" />
+    <ClInclude Include="Source\Engine\Serialization\WindowsBinReader.h" />
+    <ClInclude Include="Source\Engine\Serialization\WindowsBinWriter.h" />
     <ClInclude Include="Source\Engine\Slate\ISlateViewport.h" />
     <ClInclude Include="Source\Engine\Slate\SSplitter.h" />
     <ClInclude Include="Source\Engine\Slate\SSplitterCross.h" />

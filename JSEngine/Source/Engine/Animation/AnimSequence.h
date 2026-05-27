@@ -3,6 +3,8 @@
 #include "Core/CoreMinimal.h"
 #include "Object/Object.h"
 
+struct FArchive;
+
 using FVector3f = FVector;
 using FQuat4f = FQuat;
 
@@ -33,6 +35,11 @@ struct FBoneAnimationTrack
 struct FAnimationCurveData
 {
 };
+
+FArchive& operator<<(FArchive& Ar, FFrameRate& Value);
+FArchive& operator<<(FArchive& Ar, FRawAnimSequenceTrack& Value);
+FArchive& operator<<(FArchive& Ar, FBoneAnimationTrack& Value);
+FArchive& operator<<(FArchive& Ar, FAnimNotifyStateEvent& Value);
 
 UCLASS()
 class UAnimationAsset : public UObject
@@ -70,6 +77,7 @@ public:
 
 	const FAnimationCurveData& GetCurveData() const { return CurveData; }
 	FAnimationCurveData& GetMutableCurveData() { return CurveData; }
+	void Serialize(FArchive& Ar, int32 PayloadVersion);
 
 private:
 	TArray<FBoneAnimationTrack> BoneAnimationTracks;
@@ -78,6 +86,17 @@ private:
 	int32 NumberOfFrames = 0;
 	int32 NumberOfKeys = 0;
 	FAnimationCurveData CurveData;
+};
+
+struct FAnimSequenceAssetPayload
+{
+	FString TargetSkeletalMeshPath;
+	FString SourceStackName;
+	int32 SourceAnimStackIndex = 0;
+	UAnimDataModel* DataModel = nullptr;
+	TArray<FAnimNotifyStateEvent> Notifies;
+
+	void Serialize(FArchive& Ar, int32 PayloadVersion);
 };
 
 UCLASS()

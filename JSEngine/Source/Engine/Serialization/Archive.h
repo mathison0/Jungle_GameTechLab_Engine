@@ -3,6 +3,8 @@
 #include "Core/EngineTypes.h"
 #include "Core/Containers/String.h"
 #include "Core/Containers/Array.h"
+#include "Math/Quat.h"
+#include "Math/Rotator.h"
 #include "Object/FName.h"
 
 class UObject;
@@ -37,6 +39,7 @@ struct FArchive
 	virtual bool IsSaving() const { return false; }
 	virtual bool HasKey(const FString& Key) { (void)Key; return false; }
 	virtual IObjectReferenceResolver* GetObjectResolver() { return nullptr; }
+	virtual void SetObjectResolver(IObjectReferenceResolver* InResolver) { (void)InResolver; }
 
 	virtual FArchive& operator<<(bool& Value) = 0;
 	virtual FArchive& operator<<(int32& Value) = 0;
@@ -50,6 +53,21 @@ struct FArchive
 	virtual FArchive& operator<<(FVector4& Value) = 0;
 	virtual FArchive& operator<<(FColor& Value) = 0;
 	virtual FArchive& operator<<(FMatrix& Value) = 0;
+	virtual FArchive& operator<<(FRotator& Value)
+	{
+		*this << Value.Pitch;
+		*this << Value.Yaw;
+		*this << Value.Roll;
+		return *this;
+	}
+	virtual FArchive& operator<<(FQuat& Value)
+	{
+		*this << Value.X;
+		*this << Value.Y;
+		*this << Value.Z;
+		*this << Value.W;
+		return *this;
+	}
 };
 
 template <typename T>

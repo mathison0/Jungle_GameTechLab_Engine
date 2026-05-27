@@ -1,9 +1,12 @@
 #include "Core/SkeletalMeshLoadService.h"
 
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
 #include "Core/AssetPathPolicy.h"
 #include "Core/Logging/Log.h"
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
+#include "Object/Class.h"
 
 #include <algorithm>
 #include <chrono>
@@ -33,9 +36,51 @@ USkeletalMesh* FSkeletalMeshLoadService::Load(const FString& Path)
 		return FoundMesh;
 	}
 
+	if (FAssetFile::IsAssetPath(NormalizedPath))
+	{
+		return LoadAsset(NormalizedPath);
+	}
+
 	ResourceManager.LoadMaterial(NormalizedPath, EMaterialShaderType::SurfaceLit);
 
 	return LoadSourceOrCachedBinary(NormalizedPath);
+}
+
+USkeletalMesh* FSkeletalMeshLoadService::LoadAsset(const FString& NormalizedPath)
+{
+	FAssetMetaData MetaData;
+	FSkeletalMesh* MeshData = new FSkeletalMesh();
+
+	const bool bLoaded = FAssetFile::Load(NormalizedPath, MetaData, [&](FArchive& Ar)
+	{
+		MeshData->Serialize(Ar, MetaData.PayloadVersion);
+		return true;
+	});
+
+	if (!bLoaded)
+	{
+		delete MeshData;
+		UE_LOG_ERROR("[SkeletalMeshLoad] Failed to load skeletal mesh asset: %s", NormalizedPath.c_str());
+		return nullptr;
+	}
+
+	if (MetaData.ClassName != USkeletalMesh::StaticClass()->GetName())
+	{
+		delete MeshData;
+		UE_LOG_ERROR("[SkeletalMeshLoad] UAsset class mismatch | Path=%s | Class=%s",
+			NormalizedPath.c_str(),
+			MetaData.ClassName.c_str());
+		return nullptr;
+	}
+
+	const FString ResolvePath = MetaData.SourceFile.empty() ? NormalizedPath : MetaData.SourceFile;
+	if (!MetaData.SourceFile.empty())
+	{
+		ResourceManager.LoadMaterial(ResolvePath, EMaterialShaderType::SurfaceLit);
+	}
+
+	MeshData->PathFileName = NormalizedPath;
+	return FinalizeLoadedMesh(MeshData, ResolvePath, NormalizedPath);
 }
 
 USkeletalMesh* FSkeletalMeshLoadService::LoadSourceOrCachedBinary(const FString& NormalizedPath)

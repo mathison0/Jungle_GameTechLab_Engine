@@ -4,6 +4,7 @@
 #include "Geometry/Transform.h"
 #include "Object/Class.h"
 #include "Object/Object.h"
+#include "Serialization/Archive.h"
 
 #include <algorithm>
 #include <cmath>
@@ -35,6 +36,69 @@ const TArray<FBoneAnimationTrack>& UAnimDataModel::GetBoneAnimationTracks() cons
 TArray<FBoneAnimationTrack>& UAnimDataModel::GetMutableBoneAnimationTracks()
 {
 	return BoneAnimationTracks;
+}
+
+void UAnimDataModel::Serialize(FArchive& Ar, int32 PayloadVersion)
+{
+	(void)PayloadVersion;
+
+	Ar << "BoneAnimationTracks" << BoneAnimationTracks;
+	Ar << "PlayLength" << PlayLength;
+	Ar << "FrameRate" << FrameRate;
+	Ar << "NumberOfFrames" << NumberOfFrames;
+	Ar << "NumberOfKeys" << NumberOfKeys;
+}
+
+FArchive& operator<<(FArchive& Ar, FFrameRate& Value)
+{
+	Ar << "Numerator" << Value.Numerator;
+	Ar << "Denominator" << Value.Denominator;
+	return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FRawAnimSequenceTrack& Value)
+{
+	Ar << "PosKeys" << Value.PosKeys;
+	Ar << "RotKeys" << Value.RotKeys;
+	Ar << "ScaleKeys" << Value.ScaleKeys;
+	return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FBoneAnimationTrack& Value)
+{
+	Ar << "Name" << Value.Name;
+	Ar << "InternalTrack" << Value.InternalTrack;
+	return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FAnimNotifyStateEvent& Value)
+{
+	Ar << "TriggerTime" << Value.TriggerTime;
+	Ar << "Duration" << Value.Duration;
+	Ar << "NotifyName" << Value.NotifyName;
+	Ar << "NotifyClassName" << Value.NotifyClassName;
+	return Ar;
+}
+
+void FAnimSequenceAssetPayload::Serialize(FArchive& Ar, int32 PayloadVersion)
+{
+	Ar << "TargetSkeletalMeshPath" << TargetSkeletalMeshPath;
+	if (PayloadVersion >= 2)
+	{
+		Ar << "SourceStackName" << SourceStackName;
+	}
+	Ar << "SourceAnimStackIndex" << SourceAnimStackIndex;
+
+	if (Ar.IsLoading() && DataModel == nullptr)
+	{
+		DataModel = UObjectManager::Get().CreateObject<UAnimDataModel>();
+	}
+
+	UAnimDataModel EmptyDataModel;
+	UAnimDataModel* ModelToSerialize = DataModel ? DataModel : &EmptyDataModel;
+	ModelToSerialize->Serialize(Ar, PayloadVersion);
+
+	Ar << "Notifies" << Notifies;
 }
 
 const TArray<FBoneAnimationTrack>& UAnimSequenceBase::GetBoneAnimationTracks() const

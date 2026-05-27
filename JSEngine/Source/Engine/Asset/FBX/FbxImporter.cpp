@@ -2,6 +2,7 @@
 #include "FbxImporterInternal.h"
 
 #include "Core/Logging/Log.h"
+#include "Core/Paths.h"
 #include "Core/PlatformTime.h"
 
 #include <fbxsdk.h>
@@ -197,10 +198,11 @@ FFbxMeshContentInfo FFbxImporter::InspectMeshContent(const FString& Path)
 
 bool FFbxImporter::ImportScene(const FString& Path, FbxManager* Manager, FbxScene* Scene)
 {
+	const FString ImportPath = FPaths::ToAbsoluteString(FPaths::ToWide(FPaths::Normalize(Path)));
 	FbxImporter* Importer = FbxImporter::Create(Manager, "");
-	if (!Importer->Initialize(Path.c_str(), -1, Manager->GetIOSettings()))
+	if (!Importer->Initialize(ImportPath.c_str(), -1, Manager->GetIOSettings()))
 	{
-		UE_LOG_ERROR("[FbxImporter] Initialize failed: %s (%s)", Path.c_str(), Importer->GetStatus().GetErrorString());
+		UE_LOG_ERROR("[FbxImporter] Initialize failed: %s (%s)", ImportPath.c_str(), Importer->GetStatus().GetErrorString());
 		Importer->Destroy();
 		return false;
 	}
@@ -208,7 +210,7 @@ bool FFbxImporter::ImportScene(const FString& Path, FbxManager* Manager, FbxScen
 	const bool bResult = Importer->Import(Scene);
 	if (!bResult)
 	{
-		UE_LOG_ERROR("[FbxImporter] Import failed: %s (%s)", Path.c_str(), Importer->GetStatus().GetErrorString());
+		UE_LOG_ERROR("[FbxImporter] Import failed: %s (%s)", ImportPath.c_str(), Importer->GetStatus().GetErrorString());
 	}
 
 	Importer->Destroy();

@@ -10,6 +10,7 @@
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Component/StaticMeshComponent.h"
 #include "Engine/Core/EditorResourcePaths.h"
+#include "Asset/AssetQueryService.h"
 #include "Core/Paths.h"
 #include "Core/Reflection/ReflectionRegistry.h"
 #include "Core/ResourceManager.h"
@@ -1385,7 +1386,7 @@ void FEditorViewerWindowWidget::RenderAnimSequenceList(UAnimSequence* Sequence)
 	ImGui::TextDisabled("Other Anim Sequences");
 
 	const FString CurrentPath = Viewer ? FPaths::Normalize(Viewer->GetFileName()) : FString();
-	const TArray<FString> Paths = FResourceManager::Get().GetAnimSequencePaths();
+	const TArray<FString> Paths = FAssetQueryService::GetAnimSequencePaths();
 	int32 VisibleCount = 0;
 	const float ListHeight = std::max(72.0f, ImGui::GetContentRegionAvail().y);
 	if (ImGui::BeginChild("OtherAnimSequenceList", ImVec2(0.0f, ListHeight), false))
@@ -1411,7 +1412,7 @@ void FEditorViewerWindowWidget::RenderAnimSequenceList(UAnimSequence* Sequence)
 
 		if (VisibleCount == 0)
 		{
-			ImGui::TextDisabled("No other .animseq files.");
+			ImGui::TextDisabled("No other animation assets.");
 		}
 	}
 	ImGui::EndChild();
@@ -1668,7 +1669,7 @@ void FEditorViewerWindowWidget::RenderAnimSequenceLeftPanel(UAnimSequence* Seque
 	}
 	else
 	{
-		ImGui::TextWrapped("No preview mesh. Set a skeletal FBX path, or reimport the animseq with PreviewMeshPath.");
+		ImGui::TextWrapped("No preview mesh. Set a skeletal FBX path, or reimport the animation uasset with PreviewMeshPath.");
 	}
 	ImGui::SetNextItemWidth(-1.0f);
 	ImGui::InputText("##PreviewMeshPath", PreviewMeshPathBuffer, sizeof(PreviewMeshPathBuffer));
@@ -2474,7 +2475,7 @@ void FEditorViewerWindowWidget::DrawPreviewPickerModal()
     ImGui::InputText("Filter", Filter, sizeof(Filter));
     ImGui::Separator();
 
-    const TArray<FString>& Paths = FResourceManager::Get().GetStaticMeshPaths();
+    const TArray<FString> Paths = FAssetQueryService::GetStaticMeshPaths();
 
     ImGui::BeginChild("PickList", ImVec2(420.0f, 300.0f), true);
     for (const FString& Path : Paths)

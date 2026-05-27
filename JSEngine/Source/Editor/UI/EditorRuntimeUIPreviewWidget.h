@@ -65,8 +65,6 @@ private:
 	bool LoadPreviewDocument();
 	void RefreshPreviewDocument();
 	bool SaveLayoutAsset();
-	bool SaveLayoutText();
-	bool ReloadLayoutText();
 	bool ExportLayoutToPreview();
 	bool SaveAndExportLayout();
 	void SyncGeneratedPathsFromLayoutPath(bool bForce);

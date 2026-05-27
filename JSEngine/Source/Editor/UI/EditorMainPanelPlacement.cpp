@@ -109,7 +109,7 @@ FString ResolveParticleSystemDropLoadPath(const FString& PayloadPath)
         return {};
     }
 
-    if (GetLowerExtension(Path) != L".particlesystem")
+    if (GetLowerExtension(Path) != L".uasset")
     {
         return {};
     }

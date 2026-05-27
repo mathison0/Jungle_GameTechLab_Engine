@@ -276,7 +276,7 @@
           "AnimationMode" : 2,
           "AttachSocketName" : "Name_None",
           "ClassName" : "USkeletalMeshComponent",
-          "Materials" : ["Asset/Material/Auto/Ahri_Mat_0.mat", "Asset/Material/Auto/Ahri_Mat_1.mat", "Asset/Material/Auto/Ahri_Mat_2.mat"],
+          "Materials" : ["Asset/Material/Auto/Ahri_Mat_0.uasset", "Asset/Material/Auto/Ahri_Mat_1.uasset", "Asset/Material/Auto/Ahri_Mat_2.uasset"],
           "ObjectName" : "USkeletalMeshComponent_1",
           "PersistentGuid" : "184280B8-2CA942BD-9D6B0DBE-D004F8B0",
           "RelativeLocation" : {

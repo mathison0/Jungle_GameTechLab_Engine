@@ -378,8 +378,8 @@ void FRenderer::CreateResources()
 	EditorLineBatcher.Create(Device.GetDevice());
 	{
 		FLineBatcherDesc OverlayDesc;
-		OverlayDesc.MaterialName  = "LineMatOverlay";   // 별도 머티리얼 인스턴스 — 같은 .mat 자산 재활용
-		OverlayDesc.MaterialPath  = "Asset/Material/LineMat.mat";
+		OverlayDesc.MaterialName  = "LineMatOverlay";
+		OverlayDesc.MaterialPath  = "Asset/Material/LineMat.uasset";
 		OverlayDesc.DepthStencil  = EDepthStencilType::AlwaysOnTop;
 		EditorOverlayLineBatcher.Create(Device.GetDevice(), OverlayDesc);
 	}

@@ -37,7 +37,7 @@
               },
               "EntryStateId" : 1,
               "States" : [{
-                  "AnimationPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Idle1_Base.animseq",
+                  "AnimationPath" : "",
                   "Name" : "Idle",
                   "PlayRate" : 1.000000,
                   "Position" : {
@@ -48,7 +48,7 @@
                   "bAutoAdvanceOnEnd" : true,
                   "bLoop" : true
                 }, {
-                  "AnimationPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Run_Boost.animseq",
+                  "AnimationPath" : "",
                   "Name" : "Run",
                   "PlayRate" : 1.000000,
                   "Position" : {
@@ -59,7 +59,7 @@
                   "bAutoAdvanceOnEnd" : true,
                   "bLoop" : true
                 }, {
-                  "AnimationPath" : "Asset/Animation/Ahri_Skeleton_Skeleton_Skeleton_Spell1.animseq",
+                  "AnimationPath" : "",
                   "Name" : "AttackQ",
                   "PlayRate" : 1.000000,
                   "Position" : {

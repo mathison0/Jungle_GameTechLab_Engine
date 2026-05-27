@@ -570,7 +570,7 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
 
         if (ImGui::Button("Run Particle Serialization Smoke Test"))
         {
-            const FString SmokeTestPath = "Asset/Particle/SmokeTest.particlesystem";
+            const FString SmokeTestPath = "Asset/Particle/SmokeTest.uasset";
             const bool bPassed = FResourceManager::Get().RunParticleSystemSerializationSmokeTest(SmokeTestPath);
             FEditorConsoleWidget::AddLog(
                 "Particle serialization smoke test %s: %s\n",

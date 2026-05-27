@@ -62,7 +62,7 @@ public:
 	UPROPERTY(DisplayName = "Modules")
 	TArray<UParticleModule*> Modules;
 
-	// silent bug ι 회피: UPROPERTY로 마크하지 않으면 .particlesystem 저장-로드 후 nullptr이 되어
+	// Mark as UPROPERTY so asset save/load keeps the object reference alive.
 	// 모든 emitter가 Sprite로 fallback되는 silent regression이 발생한다.
 	UPROPERTY(DisplayName = "TypeData Module")
 	UParticleModuleTypeDataBase* TypeDataModule = nullptr;

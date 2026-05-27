@@ -10,6 +10,8 @@ public:
 
     static TArray<FString> GetTexturePaths();
     static TArray<FString> GetStaticMeshPaths();
+    static TArray<FString> GetSkeletalMeshPaths();
+    static TArray<FString> GetAnimSequencePaths();
     static TArray<FString> GetMaterialPaths();
     static TArray<FString> GetCurvePaths();
     static TArray<FString> GetParticleSystemPaths();

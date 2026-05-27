@@ -13,12 +13,11 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    // ?몃뜳??i?????.mat asset 寃쎈줈 ?앹꽦. ?깅줉 / ?붿뒪?????/ ?붿뒪??濡쒕뱶 紐⑤몢 ?숈씪 ???ъ슜.
     FString MakeFbxMaterialAssetPath(const FString& NormalizedFbxPath, int32 Index)
     {
         const fs::path AutoMaterialDir = fs::path(L"Asset") / L"Material" / L"Auto";
         const FString MatName = FImportedMaterialPolicy::MakeImportedMaterialAssetName(NormalizedFbxPath, Index);
-        const fs::path RelativeMatPath = AutoMaterialDir / FPaths::ToWide(MatName + ".mat");
+        const fs::path RelativeMatPath = AutoMaterialDir / FPaths::ToWide(MatName + ".uasset");
         return FPaths::Normalize(FPaths::ToUtf8(RelativeMatPath.generic_wstring()));
     }
 }
@@ -44,8 +43,7 @@ bool FFbxMaterialLoadService::Load(const FString& FbxFilePath, EMaterialShaderTy
         return true;
     }
 
-    // Disk cache fallback: ?댁쟾 import?먯꽌 .mat???붿뒪?ъ뿉 ??ν빐?먯뿀?쇰㈃ 洹멸쾬遺??濡쒕뱶.
-    // FBX scene ?뚯떛 鍮꾩슜(~4珥????뚰뵾?섍퀬 ?붿쭊 ?ъ떆???꾩뿉??material ?곹깭 ?좎?.
+    // Disk cache fallback: imported materials are stored as .uasset files.
     if (FAssetPathPolicy::FileExists(FirstMaterialKey))
     {
         int32 LoadedCount = 0;
@@ -61,8 +59,7 @@ bool FFbxMaterialLoadService::Load(const FString& FbxFilePath, EMaterialShaderTy
                 UE_LOG_WARNING("[FbxMaterialLoadService] Failed to deserialize cached material: %s", MatAssetPath.c_str());
                 continue;
             }
-            // Slot alias 蹂듭썝: ImportedName(=?먮낯 FBX material name) ??MaterialKey.
-            // ?붿뒪??.mat??ImportedName ?꾨뱶媛 ??λ뤌?덉뼱??媛??
+            // Restore slot aliases from ImportedName to the material asset key.
             if (UMaterial* Mat = ResourceManager.GetMaterial(MatAssetPath))
             {
                 if (!Mat->ImportedName.empty())
@@ -96,7 +93,7 @@ bool FFbxMaterialLoadService::Load(const FString& FbxFilePath, EMaterialShaderTy
         return true;
     }
 
-    // .mat ?붿뒪????μ쓣 ?꾪빐 Asset/Material/Auto/ ?붾젆?좊━ 蹂댁옣.
+    // Ensure the imported material cache directory exists.
     std::error_code Ec;
     fs::create_directories(fs::path(L"Asset") / L"Material" / L"Auto", Ec);
 

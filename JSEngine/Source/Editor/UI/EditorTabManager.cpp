@@ -1,31 +1,16 @@
 ﻿#include "Editor/UI/EditorTabManager.h"
 
-#include <algorithm>
-#include <cctype>
+#include "Core/AssetPathPolicy.h"
+
 #include <cstdio>
 #include <utility>
 
 namespace
 {
-    FString GetLowerExtension(const FString& Path)
-    {
-        const size_t DotIndex = Path.find_last_of('.');
-        if (DotIndex == FString::npos)
-        {
-            return FString();
-        }
-
-        FString Extension = Path.substr(DotIndex);
-        std::transform(Extension.begin(), Extension.end(), Extension.begin(),
-            [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
-        return Extension;
-    }
-
-    bool IsAnimSequenceViewerPath(const FString& Path)
-    {
-        const FString Extension = GetLowerExtension(Path);
-        return Extension == ".animseq" || Extension == ".sequence";
-    }
+	bool IsAnimSequenceViewerPath(const FString& Path)
+	{
+		return FAssetPathPolicy::IsAnimSequenceAssetPath(Path);
+	}
 }
 
 bool FEditorTabId::Matches(const FEditorTabId& Other) const

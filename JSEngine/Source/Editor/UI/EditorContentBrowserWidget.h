@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Editor/UI/EditorWidget.h"
+#include "Asset/AssetMetaData.h"
 #include "Core/Containers/Set.h"
 #include "Render/Common/ComPtr.h"
 #include "ImGui/imgui.h"
@@ -43,6 +44,8 @@ private:
 		FString Name;
 		FString Extension;
 		bool bIsDirectory = false;
+		bool bHasAssetMetadata = false;
+		FAssetMetaData AssetMetadata;
 	};
 
 	struct FDirNode
@@ -107,12 +110,13 @@ private:
 	bool IsProjectRootPath(const std::filesystem::path& Path) const;
 	bool IsPreviewableImage(const FString& Extension) const;
 	bool IsMaterialAsset(const FString& Extension) const;
+	bool IsMaterialAsset(const FContentItem& Item) const;
 	bool IsStaticMeshAsset(const FContentItem& Item) const;
 	bool IsSkeletalMeshAsset(const FContentItem& Item) const;
 	bool IsCurveAsset(const std::filesystem::path& Path) const;
 	bool IsSequenceAsset(const FString& Extension) const;
 	bool IsAnimGraphAsset(const FString& Extension) const;
-	bool IsParticleSystemAsset(const FString& Extension) const;
+	bool IsParticleSystemAsset(const FContentItem& Item) const;
 	bool IsPrefabAsset(const FString& Extension) const;
 	bool IsRuntimeUILayoutAsset(const FContentItem& Item) const;
 	std::filesystem::path ResolveLuaScriptCreateDirectory() const;

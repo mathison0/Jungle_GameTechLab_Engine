@@ -474,7 +474,7 @@ namespace
 				return static_cast<char>(std::tolower(Ch));
 			});
 
-		const FString Extension = ".particlesystem";
+		const FString Extension = ".uasset";
 		return NormalizedPath.size() >= Extension.size() &&
 			NormalizedPath.compare(NormalizedPath.size() - Extension.size(), Extension.size(), Extension) == 0;
 	}
@@ -930,7 +930,7 @@ namespace
 			if (MeshTypeData)
 			{
 				MeshTypeData->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
-				const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.mat";
+				const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.uasset";
 				FResourceManager::Get().DeserializeMaterial(DemoMatPath);
 				UMaterial* DemoMaterial = FResourceManager::Get().GetMaterial(DemoMatPath);
 				if (!DemoMaterial)

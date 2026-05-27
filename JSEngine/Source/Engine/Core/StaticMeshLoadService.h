@@ -14,6 +14,7 @@ public:
 	UStaticMesh* Load(const FString& Path);
 
 private:
+	UStaticMesh* LoadAsset(const FString& NormalizedPath);
 	UStaticMesh* LoadMissingObjBinaryFallback(const FString& RequestedPath, const FString& BinaryPath);
 	UStaticMesh* LoadBinaryDrop(const FString& NormalizedPath);
 

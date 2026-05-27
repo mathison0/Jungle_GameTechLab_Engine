@@ -15,6 +15,7 @@ public:
 
 private:
 	// FBX import 후 캐시 굽기 / binary 캐시 신선하면 직독, 둘 다 실패 시 nullptr.
+	USkeletalMesh* LoadAsset(const FString& NormalizedPath);
 	USkeletalMesh* LoadSourceOrCachedBinary(const FString& NormalizedPath);
 	FSkeletalMesh* TryLoadBinary(const FString& BinaryPath, double& OutBinaryLoadSec);
 

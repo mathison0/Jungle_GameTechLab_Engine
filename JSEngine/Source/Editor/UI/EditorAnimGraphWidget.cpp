@@ -1,5 +1,6 @@
 ﻿#include "Editor/UI/EditorAnimGraphWidget.h"
 
+#include "Asset/AssetQueryService.h"
 #include "Core/ResourceManager.h"
 #include "Core/Paths.h"
 #include "Editor/EditorEngine.h"
@@ -1803,7 +1804,7 @@ bool FEditorAnimGraphWidget::RenderOutputPoseSourceCombo(const char* Label, FAni
 bool FEditorAnimGraphWidget::RenderAnimationPathCombo(const char* Label, FString& Path, bool bShowPathInput)
 {
 	bool bChanged = false;
-	TArray<FString> AnimPaths = FResourceManager::Get().GetAnimSequencePaths();
+	TArray<FString> AnimPaths = FAssetQueryService::GetAnimSequencePaths();
 	const FString PreviewText = Path.empty() ? FString("<None>") : (bShowPathInput ? Path : GetFileName(Path));
 	FString SelectedPath = Path;
 	if (ImGui::BeginCombo(Label, PreviewText.c_str()))

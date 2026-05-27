@@ -1,17 +1,17 @@
 ﻿#include "Asset/CurveAssetLoader.h"
 
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
 #include "Asset/CurveFloatAsset.h"
+#include "Core/Guid.h"
 #include "Core/Logging/Log.h"
 #include "Core/Paths.h"
+#include "Object/Class.h"
 #include "Object/Object.h"
-#include "Serialization/JsonReader.h"
-#include "Serialization/JsonWriter.h"
-#include "SimpleJSON/json.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
-#include <fstream>
 
 namespace
 {
@@ -20,51 +20,39 @@ namespace
         return FPaths::Normalize(Path);
     }
 
-    bool IsCurveAssetPath(const FString& Path)
-    {
-        FString LowerPath = FPaths::Normalize(Path);
-        std::transform(
-            LowerPath.begin(),
-            LowerPath.end(),
-            LowerPath.begin(),
-            [](unsigned char Ch)
-            {
-                return static_cast<char>(std::tolower(Ch));
-            });
-
-        return std::filesystem::path(FPaths::ToWide(LowerPath)).extension() == L".curve";
-    }
 }
 
 UCurveFloatAsset* FCurveAssetLoader::Load(const FString& Path) const
 {
     const FString NormalizedPath = NormalizeCurvePath(Path);
-    if (NormalizedPath.empty() || !IsCurveAssetPath(NormalizedPath))
+    if (NormalizedPath.empty())
     {
         return nullptr;
     }
 
-    std::ifstream CurveFile(FPaths::ToWide(NormalizedPath));
-    if (!CurveFile.is_open())
+    if (FAssetFile::IsAssetPath(NormalizedPath))
     {
-        UE_LOG_ERROR("[CurveAssetLoader] Failed to open curve asset: %s", NormalizedPath.c_str());
-        return nullptr;
+        FAssetMetaData MetaData;
+        UCurveFloatAsset* Curve = UObjectManager::Get().CreateObject<UCurveFloatAsset>();
+        const bool bLoaded = FAssetFile::Load(NormalizedPath, MetaData, [&](FArchive& Ar)
+        {
+            Curve->Serialize(Ar);
+            return true;
+        });
+
+        if (!bLoaded || MetaData.ClassName != UCurveFloatAsset::StaticClass()->GetName())
+        {
+            UObjectManager::Get().DestroyObject(Curve);
+            UE_LOG_ERROR("[CurveAssetLoader] Failed to load curve uasset: %s", NormalizedPath.c_str());
+            return nullptr;
+        }
+
+        Curve->SetAssetPath(NormalizedPath);
+        Curve->GetMutableCurve().SortKeys();
+        return Curve;
     }
 
-    FString FileContent((std::istreambuf_iterator<char>(CurveFile)), std::istreambuf_iterator<char>());
-    json::JSON Root = json::JSON::Load(FileContent);
-    if (Root.JSONType() != json::JSON::Class::Object)
-    {
-        UE_LOG_ERROR("[CurveAssetLoader] Invalid curve asset json: %s", NormalizedPath.c_str());
-        return nullptr;
-    }
-
-    UCurveFloatAsset* Curve = UObjectManager::Get().CreateObject<UCurveFloatAsset>();
-    FJsonReader Reader(Root);
-    Curve->Serialize(Reader);
-    Curve->SetAssetPath(NormalizedPath);
-    Curve->GetMutableCurve().SortKeys();
-    return Curve;
+    return nullptr;
 }
 
 bool FCurveAssetLoader::Save(const FString& Path, const UCurveFloatAsset* Curve) const
@@ -75,31 +63,43 @@ bool FCurveAssetLoader::Save(const FString& Path, const UCurveFloatAsset* Curve)
     }
 
     const FString NormalizedPath = NormalizeCurvePath(Path);
-    if (NormalizedPath.empty() || !IsCurveAssetPath(NormalizedPath))
+    if (NormalizedPath.empty())
     {
         return false;
     }
 
-    json::JSON Root = json::JSON::Make(json::JSON::Class::Object);
-    FJsonWriter Writer(Root);
-    const_cast<UCurveFloatAsset*>(Curve)->Serialize(Writer);
-
-    std::error_code ErrorCode;
-    std::filesystem::path FilePath(FPaths::ToWide(NormalizedPath));
-    std::filesystem::create_directories(FilePath.parent_path(), ErrorCode);
-
-    std::ofstream OutFile(FilePath);
-    if (!OutFile.is_open())
+    if (FAssetFile::IsAssetPath(NormalizedPath))
     {
-        UE_LOG_ERROR("[CurveAssetLoader] Failed to open curve asset for writing: %s", NormalizedPath.c_str());
-        return false;
+        FAssetMetaData ExistingMetaData;
+        FAssetMetaData MetaData;
+        MetaData.Version = 1;
+        MetaData.PayloadVersion = 1;
+        MetaData.AssetGuid = FAssetFile::LoadMetadataOnly(NormalizedPath, ExistingMetaData) && !ExistingMetaData.AssetGuid.empty()
+            ? ExistingMetaData.AssetGuid
+            : FGuid::NewGuid().ToString();
+        MetaData.ClassName = UCurveFloatAsset::StaticClass()->GetName();
+        MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring());
+        MetaData.SourceFile = "";
+
+        UCurveFloatAsset* MutableCurve = const_cast<UCurveFloatAsset*>(Curve);
+        MutableCurve->SetAssetPath(NormalizedPath);
+        const bool bSaved = FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
+        {
+            MutableCurve->Serialize(Ar);
+            return true;
+        });
+
+        if (!bSaved)
+        {
+            UE_LOG_ERROR("[CurveAssetLoader] Failed to save curve uasset: %s", NormalizedPath.c_str());
+        }
+        return bSaved;
     }
 
-    OutFile << Root.dump(4);
-    return true;
+    return false;
 }
 
 bool FCurveAssetLoader::SupportsExtension(const FString& Extension) const
 {
-    return Extension == ".curve" || Extension == "curve";
+    return Extension == ".uasset" || Extension == "uasset";
 }

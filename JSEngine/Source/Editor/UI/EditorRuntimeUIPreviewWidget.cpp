@@ -509,46 +509,6 @@ namespace
 		return Extension == ".uasset";
 	}
 
-	bool IsLayoutTextPath(const FString& Path)
-	{
-		std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
-		const FString Extension = ToLower(FPaths::ToUtf8(FsPath.extension().wstring()));
-		return Extension == ".layout";
-	}
-
-	std::filesystem::path ToRuntimeUIAbsolutePath(const FString& Path)
-	{
-		std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
-		if (!FsPath.is_absolute())
-		{
-			FsPath = std::filesystem::path(FPaths::RootDir()) / FsPath;
-		}
-		return FsPath.lexically_normal();
-	}
-
-	bool IsTextLayoutNewerThanAsset(const FString& AssetPath)
-	{
-		const FString TextPath = URuntimeUILayoutAsset::GetTextLayoutPathForAssetPath(AssetPath);
-		const std::filesystem::path AbsoluteAssetPath = ToRuntimeUIAbsolutePath(AssetPath);
-		const std::filesystem::path AbsoluteTextPath = ToRuntimeUIAbsolutePath(TextPath);
-		std::error_code Ec;
-		if (!std::filesystem::exists(AbsoluteAssetPath, Ec) || !std::filesystem::exists(AbsoluteTextPath, Ec))
-		{
-			return false;
-		}
-		const auto AssetTime = std::filesystem::last_write_time(AbsoluteAssetPath, Ec);
-		if (Ec)
-		{
-			return false;
-		}
-		const auto TextTime = std::filesystem::last_write_time(AbsoluteTextPath, Ec);
-		if (Ec)
-		{
-			return false;
-		}
-		return TextTime > AssetTime;
-	}
-
 	bool IsRuntimeUIImagePath(const FString& Path)
 	{
 		std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
@@ -778,26 +738,7 @@ bool FEditorRuntimeUIPreviewWidget::OpenLayoutAsset(const FString& Path)
 
 	const FString NormalizedPath = FPaths::Normalize(Path);
 	FString AssetPath = NormalizedPath;
-	bool bLoaded = false;
-	bool bLoadedTextLayout = false;
-	if (IsLayoutTextPath(NormalizedPath))
-	{
-		bLoaded = LayoutAsset.LoadFromTextLayout(NormalizedPath);
-		bLoadedTextLayout = bLoaded;
-		std::filesystem::path AssetFsPath(FPaths::ToWide(NormalizedPath));
-		AssetFsPath.replace_extension(L".uasset");
-		AssetPath = FPaths::Normalize(FPaths::ToUtf8(AssetFsPath.wstring()));
-	}
-	else
-	{
-		bLoaded = LayoutAsset.LoadFromFile(NormalizedPath);
-		AssetPath = NormalizedPath;
-		const FString TextPath = URuntimeUILayoutAsset::GetTextLayoutPathForAssetPath(AssetPath);
-		if (bLoaded && IsTextLayoutNewerThanAsset(AssetPath) && LayoutAsset.LoadFromTextLayout(TextPath))
-		{
-			bLoadedTextLayout = true;
-		}
-	}
+	bool bLoaded = LayoutAsset.LoadFromFile(NormalizedPath);
 	if (!bLoaded)
 	{
 		return false;
@@ -811,10 +752,6 @@ bool FEditorRuntimeUIPreviewWidget::OpenLayoutAsset(const FString& Path)
 	ExportedLayoutFingerprint = 0;
 	ResetUndoHistory();
 	UpdateLayoutDirtyState();
-	if (bLoadedTextLayout && EditorEngine)
-	{
-		EditorEngine->GetNotificationService().Info("Runtime UI layout synced from .layout.");
-	}
 	return ExportLayoutToPreview();
 }
 
@@ -983,16 +920,6 @@ void FEditorRuntimeUIPreviewWidget::DrawToolbar()
 		if (ImGui::Button("Save##RuntimeUISaveLayout", ImVec2(58.0f, 0.0f)))
 		{
 			SaveLayoutAsset();
-		}
-		ImGui::SameLine();
-		if (ImGui::Button(".layout##RuntimeUISaveTextLayout", ImVec2(70.0f, 0.0f)))
-		{
-			SaveLayoutText();
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Pull##RuntimeUILoadTextLayout", ImVec2(52.0f, 0.0f)))
-		{
-			ReloadLayoutText();
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Export##RuntimeUIExportLayout", ImVec2(68.0f, 0.0f)))
@@ -3272,14 +3199,10 @@ bool FEditorRuntimeUIPreviewWidget::AcceptLayoutDragDropTarget()
 
 	bool bAccepted = false;
 	const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("RuntimeUILayoutContentItem");
-	if (!Payload)
-	{
-		Payload = ImGui::AcceptDragDropPayload("ContentBrowserPath");
-	}
 	if (Payload && Payload->Data && Payload->DataSize > 0)
 	{
 		const FString Path(static_cast<const char*>(Payload->Data));
-		if ((IsLayoutAssetPath(Path) || IsLayoutTextPath(Path)) && OpenLayoutAsset(Path))
+		if (IsLayoutAssetPath(Path) && OpenLayoutAsset(Path))
 		{
 			bAccepted = true;
 		}
@@ -4270,7 +4193,6 @@ bool FEditorRuntimeUIPreviewWidget::SaveLayoutAsset()
 		}
 		return false;
 	}
-	LayoutAsset.SaveToTextLayout(URuntimeUILayoutAsset::GetTextLayoutPathForAssetPath(Path));
 
 	strncpy_s(LayoutAssetPathBuffer, Path.c_str(), _TRUNCATE);
 	SavedLayoutFingerprint = ComputeLayoutFingerprint();
@@ -4280,73 +4202,6 @@ bool FEditorRuntimeUIPreviewWidget::SaveLayoutAsset()
 		EditorEngine->GetNotificationService().Info("Runtime UI layout saved.");
 		EditorEngine->GetAssetService().RefreshAssetDatabase();
 		EditorEngine->GetMainPanel().RefreshContentBrowser();
-	}
-	return true;
-}
-
-bool FEditorRuntimeUIPreviewWidget::SaveLayoutText()
-{
-	const FString Path = FPaths::Normalize(LayoutAssetPathBuffer);
-	if (!IsLayoutAssetPath(Path))
-	{
-		if (EditorEngine)
-		{
-			EditorEngine->GetNotificationService().Warning("Runtime UI .layout sync needs a .uasset path.");
-		}
-		return false;
-	}
-
-	SyncGeneratedPathsFromLayoutPath(false);
-	LayoutAsset.SetAssetPath(Path);
-	const FString TextPath = URuntimeUILayoutAsset::GetTextLayoutPathForAssetPath(Path);
-	if (!LayoutAsset.SaveToTextLayout(TextPath))
-	{
-		if (EditorEngine)
-		{
-			EditorEngine->GetNotificationService().Error("Failed to save Runtime UI .layout file.");
-		}
-		return false;
-	}
-	if (EditorEngine)
-	{
-		EditorEngine->GetNotificationService().Info("Runtime UI .layout saved.");
-		EditorEngine->GetMainPanel().RefreshContentBrowser();
-	}
-	return true;
-}
-
-bool FEditorRuntimeUIPreviewWidget::ReloadLayoutText()
-{
-	const FString AssetPath = FPaths::Normalize(LayoutAssetPathBuffer);
-	if (!IsLayoutAssetPath(AssetPath))
-	{
-		if (EditorEngine)
-		{
-			EditorEngine->GetNotificationService().Warning("Runtime UI .layout sync needs a .uasset path.");
-		}
-		return false;
-	}
-
-	const FString TextPath = URuntimeUILayoutAsset::GetTextLayoutPathForAssetPath(AssetPath);
-	if (!LayoutAsset.LoadFromTextLayout(TextPath))
-	{
-		if (EditorEngine)
-		{
-			EditorEngine->GetNotificationService().Error("Failed to reload Runtime UI .layout file.");
-		}
-		return false;
-	}
-
-	strncpy_s(LayoutAssetPathBuffer, AssetPath.c_str(), _TRUNCATE);
-	SyncGeneratedPathsFromLayoutPath(true);
-	SelectSingleWidget(0);
-	ResetUndoHistory();
-	SavedLayoutFingerprint = ComputeLayoutFingerprint();
-	UpdateLayoutDirtyState();
-	ExportLayoutToPreview();
-	if (EditorEngine)
-	{
-		EditorEngine->GetNotificationService().Info("Runtime UI layout pulled from .layout.");
 	}
 	return true;
 }

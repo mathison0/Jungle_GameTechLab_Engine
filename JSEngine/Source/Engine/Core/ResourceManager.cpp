@@ -9,6 +9,7 @@
 #include "Core/ResourceMemoryReporter.h"
 #include "Core/SkeletalMeshLoadService.h"
 #include "Core/StaticMeshLoadService.h"
+#include "Core/Guid.h"
 #include "Object/Object.h"
 #include "Object/Property.h"
 #include "Particle/ParticleSystem.h"
@@ -19,6 +20,7 @@
 #include <cwctype>
 #include <cstdio>
 #include <fstream>
+#include <unordered_set>
 #include "Asset/FileUtils.h"
 #include "Animation/AnimSequence.h"
 
@@ -31,6 +33,7 @@
 #endif
 
 #include "Asset/BinarySerializer.h"
+#include "Asset/AssetFile.h"
 #include "Asset/StaticMeshTypes.h"
 #include "Asset/StaticMeshSimplifier.h"
 #include "Render/Scene/RenderCommand.h"
@@ -61,7 +64,7 @@ namespace
 		std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
 		std::wstring Extension = FsPath.extension().wstring();
 		std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
-		return Extension == L".particlesystem";
+		return Extension == L".uasset";
 	}
 
 	bool IsParticleSystemGraphObject(UObject* Object)
@@ -248,6 +251,136 @@ namespace
 		return JsonData;
 	}
 
+	bool SerializeParticleSystemObjectGraph(FArchive& Ar, UParticleSystem* Asset, const FString& AssetPath)
+	{
+		if (!Asset)
+		{
+			return false;
+		}
+
+		if (!AssetPath.empty())
+		{
+			Asset->SetAssetPath(AssetPath);
+		}
+
+		FParticleSystemObjectGraphResolver Resolver;
+		CollectParticleSystemObjectGraph(Asset, Resolver);
+		Ar.SetObjectResolver(&Resolver);
+
+		int32 Version = 1;
+		int32 RootObjectId = static_cast<int32>(Resolver.GetObjectId(Asset));
+		TArray<int32> ObjectIds;
+		TArray<FString> ClassNames;
+
+		const TArray<UObject*>& Objects = Resolver.GetObjects();
+		ObjectIds.reserve(Objects.size());
+		ClassNames.reserve(Objects.size());
+		for (int32 Index = 0; Index < static_cast<int32>(Objects.size()); ++Index)
+		{
+			UObject* Object = Objects[Index];
+			if (!IsParticleSystemGraphObject(Object))
+			{
+				return false;
+			}
+
+			ObjectIds.push_back(Index + 1);
+			ClassNames.push_back(Object->GetClassName());
+		}
+
+		FString StoredAssetPath = AssetPath;
+		Ar << "Version" << Version;
+		Ar << "AssetPath" << StoredAssetPath;
+		Ar << "RootObjectId" << RootObjectId;
+		Ar << "ObjectIds" << ObjectIds;
+		Ar << "ClassNames" << ClassNames;
+
+		for (UObject* Object : Objects)
+		{
+			if (!IsParticleSystemGraphObject(Object))
+			{
+				return false;
+			}
+
+			Ar.BeginObject("ObjectData");
+			Object->Serialize(Ar);
+			Ar.EndObject();
+		}
+
+		Ar.SetObjectResolver(nullptr);
+		return true;
+	}
+
+	UParticleSystem* LoadParticleSystemObjectGraph(FArchive& Ar, const FString& SourceLabel)
+	{
+		FParticleSystemObjectGraphResolver Resolver;
+		int32 Version = 0;
+		FString EmbeddedAssetPath;
+		int32 RootObjectId = 1;
+		TArray<int32> ObjectIds;
+		TArray<FString> ClassNames;
+
+		Ar << "Version" << Version;
+		Ar << "AssetPath" << EmbeddedAssetPath;
+		Ar << "RootObjectId" << RootObjectId;
+		Ar << "ObjectIds" << ObjectIds;
+		Ar << "ClassNames" << ClassNames;
+
+		if (Version <= 0 || ObjectIds.size() != ClassNames.size() || ObjectIds.empty())
+		{
+			UE_LOG_ERROR("[ParticleSystemAsset] Invalid object graph header: %s", SourceLabel.c_str());
+			return nullptr;
+		}
+
+		for (int32 Index = 0; Index < static_cast<int32>(ObjectIds.size()); ++Index)
+		{
+			const uint32 Id = static_cast<uint32>(ObjectIds[Index]);
+			UClass* Class = FReflectionRegistry::Get().FindClass(ClassNames[Index]);
+			if (Id == 0 || !IsParticleSystemGraphClass(Class))
+			{
+				UE_LOG_ERROR("[ParticleSystemAsset] Invalid object class '%s': %s", ClassNames[Index].c_str(), SourceLabel.c_str());
+				return nullptr;
+			}
+
+			UObject* Object = NewObject(Class);
+			if (!Object)
+			{
+				UE_LOG_ERROR("[ParticleSystemAsset] Failed to create object '%s': %s", ClassNames[Index].c_str(), SourceLabel.c_str());
+				return nullptr;
+			}
+
+			Resolver.SetObject(Id, Object);
+		}
+
+		Ar.SetObjectResolver(&Resolver);
+		for (int32 Index = 0; Index < static_cast<int32>(ObjectIds.size()); ++Index)
+		{
+			UObject* Object = Resolver.ResolveObjectId(static_cast<uint32>(ObjectIds[Index]), nullptr);
+			if (!Object)
+			{
+				continue;
+			}
+
+			Ar.BeginObject("ObjectData");
+			Object->Serialize(Ar);
+			Ar.EndObject();
+		}
+		Ar.SetObjectResolver(nullptr);
+
+		UParticleSystem* Asset = Cast<UParticleSystem>(Resolver.ResolveObjectId(static_cast<uint32>(RootObjectId), UParticleSystem::StaticClass()));
+		if (!Asset)
+		{
+			UE_LOG_ERROR("[ParticleSystemAsset] Missing root particle system: %s", SourceLabel.c_str());
+			return nullptr;
+		}
+
+		RebuildParticleSystemCaches(Asset);
+		if (!EmbeddedAssetPath.empty() && IsParticleSystemAssetPath(EmbeddedAssetPath))
+		{
+			Asset->SetAssetPath(EmbeddedAssetPath);
+		}
+		return Asset;
+	}
+
 	UParticleSystem* LoadParticleSystemFromJson(json::JSON& JsonData, const FString& SourceLabel)
 	{
 		if (JsonData.JSONType() != json::JSON::Class::Object)
@@ -378,18 +511,44 @@ namespace
 		return FPaths::Normalize(FPaths::ToUtf8(RelativeText));
 	}
 
-	void CopyAnimSequenceNotifies(const UAnimSequence* Source, UAnimSequence* Destination)
+	bool LoadAnimSequenceUAssetPayload(const FString& Path, FAssetMetaData& OutMetaData, FAnimSequenceAssetPayload& OutPayload)
 	{
-		if (!Source || !Destination)
+		if (!FAssetFile::IsAssetPath(Path))
 		{
-			return;
+			return false;
 		}
 
-		Destination->ClearNotifies();
-		for (const FAnimNotifyStateEvent& Notify : Source->GetNotifies())
+		const bool bLoaded = FAssetFile::Load(Path, OutMetaData, [&](FArchive& Ar)
 		{
-			Destination->AddNotify(Notify.TriggerTime, Notify.NotifyName, Notify.Duration, Notify.NotifyClassName);
+			OutPayload.Serialize(Ar, OutMetaData.PayloadVersion);
+			return true;
+		});
+
+		return bLoaded && OutMetaData.ClassName == UAnimSequence::StaticClass()->GetName();
+	}
+
+	UAnimSequence* CreateAnimSequenceFromUAssetPayload(
+		const FString& Path,
+		const FAssetMetaData& MetaData,
+		FAnimSequenceAssetPayload& Payload)
+	{
+		UAnimSequence* Sequence = UObjectManager::Get().CreateObject<UAnimSequence>();
+		if (!Sequence)
+		{
+			return nullptr;
 		}
+
+		Sequence->SetAssetPath(Path);
+		Sequence->SetSourceFilePath(MetaData.SourceFile);
+		Sequence->SetSourceStackName(Payload.SourceStackName);
+		Sequence->SetPreviewMeshPath(Payload.TargetSkeletalMeshPath);
+		Sequence->SetDataModel(Payload.DataModel);
+		Sequence->ClearNotifies();
+		for (const FAnimNotifyStateEvent& Notify : Payload.Notifies)
+		{
+			Sequence->AddNotify(Notify.TriggerTime, Notify.NotifyName, Notify.Duration, Notify.NotifyClassName);
+		}
+		return Sequence;
 	}
 
 	
@@ -602,6 +761,42 @@ void FResourceManager::RegisterDiscoveredAssetFile(const std::filesystem::path& 
 
 	const FString RelativePath = FPaths::Normalize(FPaths::ToString(std::filesystem::relative(FilePath, ProjectRootPath)));
 
+	if (Extension == L".uasset")
+	{
+		FAssetMetaData MetaData;
+		if (FAssetFile::LoadMetadataOnly(RelativePath, MetaData))
+		{
+			if (MetaData.ClassName == UCurveFloatAsset::StaticClass()->GetName())
+			{
+				CurveFilePaths.push_back(RelativePath);
+			}
+			else if (MetaData.ClassName == UMaterial::StaticClass()->GetName() ||
+				MetaData.ClassName == UMaterialInstance::StaticClass()->GetName())
+			{
+				MaterialFilePaths.push_back(RelativePath);
+			}
+			else if (MetaData.ClassName == UStaticMesh::StaticClass()->GetName())
+			{
+				ObjFilePaths.push_back(RelativePath);
+
+				FStaticMeshResource Resource;
+				Resource.Name = RelativePath;
+				Resource.Path = RelativePath;
+				Resource.bPreload = false;
+				StaticMeshCache.RegisterResource(Resource);
+			}
+			else if (MetaData.ClassName == USkeletalMesh::StaticClass()->GetName())
+			{
+				SkeletalMeshFilePaths.push_back(RelativePath);
+			}
+			else if (MetaData.ClassName == UAnimSequence::StaticClass()->GetName())
+			{
+				AnimSequenceFilePaths.push_back(RelativePath);
+			}
+		}
+		return;
+	}
+
 	if (FAssetPathPolicy::IsCurveAssetPath(FPaths::ToUtf8(FilePath.generic_wstring())))
 	{
 		CurveFilePaths.push_back(RelativePath);
@@ -612,17 +807,13 @@ void FResourceManager::RegisterDiscoveredAssetFile(const std::filesystem::path& 
 	}
 	else if (Extension == L".obj" || Extension == L".fbx")
 	{
-		ObjFilePaths.push_back(RelativePath);
-
-		FStaticMeshResource Resource;
-		Resource.Name = RelativePath;
-		Resource.Path = RelativePath;
-		Resource.bPreload = false;
-		Resource.bNormalizeToUnitCube = false;
-		StaticMeshCache.RegisterResource(Resource);
-
 		if (Extension == L".fbx")
 		{
+			if (std::find(AnimationFbxSourceFilePaths.begin(), AnimationFbxSourceFilePaths.end(), RelativePath) == AnimationFbxSourceFilePaths.end())
+			{
+				AnimationFbxSourceFilePaths.push_back(RelativePath);
+			}
+
 			std::wstring RelativeGenericPath = std::filesystem::path(FPaths::ToWide(RelativePath)).generic_wstring();
 			std::transform(RelativeGenericPath.begin(), RelativeGenericPath.end(), RelativeGenericPath.begin(), ::towlower);
 
@@ -631,11 +822,14 @@ void FResourceManager::RegisterDiscoveredAssetFile(const std::filesystem::path& 
 			const bool bHasValidSkeletalBinary = IsSkeletalMeshBinaryValid(RelativePath, SkeletalBinaryPath);
 			if (bUnderSkeletalMeshRoot || bHasValidSkeletalBinary)
 			{
-				SkeletalMeshFilePaths.push_back(RelativePath);
+				if (std::find(AnimationFbxSourceFilePaths.begin(), AnimationFbxSourceFilePaths.end(), RelativePath) == AnimationFbxSourceFilePaths.end())
+				{
+					AnimationFbxSourceFilePaths.push_back(RelativePath);
+				}
 			}
 		}
 	}
-	else if (Extension == L".mtl" || Extension == L".mat" || Extension == L".matinst")
+	else if (Extension == L".mtl")
 	{
 		MaterialFilePaths.push_back(RelativePath);
 	}
@@ -901,9 +1095,13 @@ void FResourceManager::ReleaseGPUResources()
 
 	RenderStateCache.Release();
 
+	std::unordered_set<USkeletalMesh*> DestroyedSkeletalMeshes;
 	for (auto& [Path, Mesh] : SkeletalMeshMap)
 	{
-		UObjectManager::Get().DestroyObject(Mesh);
+		if (Mesh && DestroyedSkeletalMeshes.insert(Mesh).second)
+		{
+			UObjectManager::Get().DestroyObject(Mesh);
+		}
 	}
 	SkeletalMeshMap.clear();
 
@@ -1280,17 +1478,107 @@ FFbxMeshContentInfo FResourceManager::InspectFbxMeshContent(const FString& Path)
 	return FbxImporter.InspectMeshContent(Path);
 }
 
+FString FResourceManager::ImportSkeletalMeshFromSource(const FString& Path)
+{
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	if (!IsFbxSourcePath(NormalizedPath))
+	{
+		return {};
+	}
+
+	const FString ImportedAssetPath = FAssetPathPolicy::MakeImportedSkeletalMeshAssetPath(NormalizedPath);
+	if (FAssetPathPolicy::FileExists(ImportedAssetPath))
+	{
+		FAssetMetaData ExistingMetaData;
+		if (FAssetFile::LoadMetadataOnly(ImportedAssetPath, ExistingMetaData) &&
+			ExistingMetaData.ClassName == USkeletalMesh::StaticClass()->GetName())
+		{
+			if (std::find(SkeletalMeshFilePaths.begin(), SkeletalMeshFilePaths.end(), ImportedAssetPath) == SkeletalMeshFilePaths.end())
+			{
+				SkeletalMeshFilePaths.push_back(ImportedAssetPath);
+			}
+			return ImportedAssetPath;
+		}
+	}
+
+	USkeletalMesh* Mesh = LoadSkeletalMesh(NormalizedPath);
+	if (!Mesh || !Mesh->HasValidMeshData() || !Mesh->GetMeshData())
+	{
+		UE_LOG_WARNING("[SkeletalMeshImport] Failed to load source skeletal mesh: %s", NormalizedPath.c_str());
+		return {};
+	}
+
+	FSkeletalMesh* MeshData = Mesh->GetMeshData();
+	MeshData->PathFileName = ImportedAssetPath;
+
+	FAssetMetaData MetaData;
+	MetaData.Version = 1;
+	MetaData.PayloadVersion = 1;
+	MetaData.ClassName = USkeletalMesh::StaticClass()->GetName();
+	MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(ImportedAssetPath)).stem().wstring());
+	MetaData.SourceFile = MakeProjectRelativePath(NormalizedPath);
+
+	if (!FAssetFile::Save(ImportedAssetPath, MetaData, [&](FArchive& Ar)
+	{
+		MeshData->Serialize(Ar, MetaData.PayloadVersion);
+		return true;
+	}))
+	{
+		UE_LOG_WARNING("[SkeletalMeshImport] Failed to save skeletal mesh asset: %s", ImportedAssetPath.c_str());
+		return {};
+	}
+
+	SkeletalMeshMap[ImportedAssetPath] = Mesh;
+	if (std::find(SkeletalMeshFilePaths.begin(), SkeletalMeshFilePaths.end(), ImportedAssetPath) == SkeletalMeshFilePaths.end())
+	{
+		SkeletalMeshFilePaths.push_back(ImportedAssetPath);
+	}
+
+	UE_LOG("[SkeletalMeshImport] Imported source skeletal mesh: %s -> %s",
+		NormalizedPath.c_str(),
+		ImportedAssetPath.c_str());
+	return ImportedAssetPath;
+}
+
 bool FResourceManager::SaveSkeletalMesh(USkeletalMesh* Mesh)
 {
 	if (!Mesh) return false;
 	FSkeletalMesh* Data = Mesh->GetMeshData();
 	if (!Data) return false;
 
-	const FString FbxPath = Mesh->GetAssetPathFileName();
-	if (FbxPath.empty()) return false;
+	const FString AssetPath = FPaths::Normalize(Mesh->GetAssetPathFileName());
+	if (AssetPath.empty()) return false;
 
-	const FString BinPath = FAssetPathPolicy::MakeWritableSkeletalMeshCacheBinaryPath(FbxPath);
-	return BinarySerializer.SaveSkeletalMesh(BinPath, FbxPath, *Data);
+	if (!FAssetFile::IsAssetPath(AssetPath))
+	{
+		UE_LOG_WARNING("[SkeletalMeshSave] Only .uasset skeletal meshes can be saved: %s", AssetPath.c_str());
+		return false;
+	}
+
+	FAssetMetaData MetaData;
+	if (!FAssetFile::LoadMetadataOnly(AssetPath, MetaData))
+	{
+		MetaData.Version = 1;
+		MetaData.PayloadVersion = 1;
+		MetaData.ClassName = USkeletalMesh::StaticClass()->GetName();
+		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(AssetPath)).stem().wstring());
+		MetaData.SourceFile.clear();
+	}
+
+	if (MetaData.ClassName != USkeletalMesh::StaticClass()->GetName())
+	{
+		UE_LOG_WARNING("[SkeletalMeshSave] Asset is not SkeletalMesh | Path=%s | Class=%s",
+			AssetPath.c_str(),
+			MetaData.ClassName.c_str());
+		return false;
+	}
+
+	Data->PathFileName = AssetPath;
+	return FAssetFile::Save(AssetPath, MetaData, [&](FArchive& Ar)
+	{
+		Data->Serialize(Ar, MetaData.PayloadVersion);
+		return true;
+	});
 }
 
 UCurveFloatAsset* FResourceManager::LoadCurve(const FString& Path)
@@ -1343,17 +1631,25 @@ void FResourceManager::WarmUpAnimationPreviewMeshCaches(const TArray<FString>& A
 
 	for (const FString& AnimSequenceAssetPath : AnimSequenceAssetPaths)
 	{
-		FAnimSequenceAssetMetadata Metadata;
-		if (!AnimSequenceAssetLoader.LoadMetadata(AnimSequenceAssetPath, Metadata))
+		FString PreviewMeshPath;
+		if (!FAssetFile::IsAssetPath(AnimSequenceAssetPath))
 		{
 			continue;
 		}
 
-		FString PreviewMeshPath = FPaths::Normalize(Metadata.PreviewMeshPath);
+		FAssetMetaData AssetMetaData;
+		FAnimSequenceAssetPayload Payload;
+		if (!LoadAnimSequenceUAssetPayload(AnimSequenceAssetPath, AssetMetaData, Payload))
+		{
+			continue;
+		}
+
+		PreviewMeshPath = FPaths::Normalize(Payload.TargetSkeletalMeshPath);
 		if (PreviewMeshPath.empty())
 		{
-			PreviewMeshPath = FPaths::Normalize(Metadata.SourceFilePath);
+			PreviewMeshPath = FPaths::Normalize(AssetMetaData.SourceFile);
 		}
+
 		if (PreviewMeshPath.empty())
 		{
 			continue;
@@ -1424,33 +1720,33 @@ TArray<FString> FResourceManager::ImportAnimationStacksFromFbx(const FString& Pa
 		return ImportedAssetPaths;
 	}
 
-	// 1. 이미 임포트된 에셋이 있는지 확인 (메타데이터를 로드해 FBX 원본 경로 대조)
-	bool bAllExistingCachesFresh = true;
+	// 1. 이미 임포트된 uasset이 있는지 확인 (메타데이터를 로드해 FBX 원본 경로 대조)
 	for (const FString& AssetPath : AnimSequenceFilePaths)
 	{
-		FAnimSequenceAssetMetadata Metadata;
-		if (AnimSequenceAssetLoader.LoadMetadata(AssetPath, Metadata))
+		if (!FAssetFile::IsAssetPath(AssetPath))
 		{
-			if (MakeProjectRelativePath(Metadata.SourceFilePath) == StableSourcePath)
+			continue;
+		}
+
+		FAssetMetaData AssetMetaData;
+		FAnimSequenceAssetPayload Payload;
+		if (!LoadAnimSequenceUAssetPayload(AssetPath, AssetMetaData, Payload))
+		{
+			continue;
+		}
+
+		if (MakeProjectRelativePath(AssetMetaData.SourceFile) == StableSourcePath)
+		{
+			ImportedAssetPaths.push_back(AssetPath);
+			if (!Payload.SourceStackName.empty())
 			{
-				ImportedAssetPaths.push_back(AssetPath);
-				if (!Metadata.SourceStackName.empty())
-				{
-					ExistingAssetPathByStackName[Metadata.SourceStackName] = AssetPath;
-				}
-				if (!AnimSequenceAssetLoader.HasValidBinaryCache(AssetPath))
-				{
-					bAllExistingCachesFresh = false;
-				}
+				ExistingAssetPathByStackName[Payload.SourceStackName] = AssetPath;
 			}
 		}
 	}
 	
-	// 이미 에셋과 바이너리 캐시가 모두 존재한다면 즉시 반환한다.
-	// descriptor만 있고 Bin/*.bin이 삭제된 제출 상태라면 아래 batch import로 한 번에 재생성한다.
-	if (!ImportedAssetPaths.empty() && bAllExistingCachesFresh)
+	if (!ImportedAssetPaths.empty())
 	{
-		// 구 호환성: FBX 경로로 맵에 등록 (첫 번째 스택 기준)
 		if (UAnimSequence* FirstSequence = FindAnimSequence(ImportedAssetPaths.front()))
 		{
 			AnimSequenceMap[NormalizedPath] = FirstSequence;
@@ -1472,27 +1768,17 @@ TArray<FString> FResourceManager::ImportAnimationStacksFromFbx(const FString& Pa
 			continue;
 		}
 
-		bool bUsingExistingAssetPath = false;
 		FString ImportedAssetPath = FAssetPathPolicy::MakeImportedAnimSequenceAssetPath(NormalizedPath, Result.StackName);
 		auto ExistingPathIt = ExistingAssetPathByStackName.find(Result.StackName);
 		if (ExistingPathIt != ExistingAssetPathByStackName.end())
 		{
 			ImportedAssetPath = ExistingPathIt->second;
-			bUsingExistingAssetPath = true;
 		}
 		
 		Result.Sequence->SetAssetPath(ImportedAssetPath);
 		Result.Sequence->SetPreviewMeshPath(NormalizedPath);
 
-		if (bUsingExistingAssetPath)
-		{
-			if (UAnimSequence* ExistingDescriptor = AnimSequenceAssetLoader.Load(ImportedAssetPath))
-			{
-				CopyAnimSequenceNotifies(ExistingDescriptor, Result.Sequence);
-			}
-		}
-
-		if (AnimSequenceAssetLoader.Save(ImportedAssetPath, Result.Sequence))
+		if (SaveAnimSequence(ImportedAssetPath, Result.Sequence))
 		{
 			AnimSequenceMap[ImportedAssetPath] = Result.Sequence;
 			
@@ -1545,32 +1831,41 @@ UAnimSequence* FResourceManager::LoadAnimSequence(const FString& Path)
 	UAnimSequence* LoadedSequence = nullptr;
 
 	// 2. 바이너리 에셋 경로라면 즉시 로드해
-	if (FAssetPathPolicy::IsAnimSequenceAssetPath(NormalizedPath))
+	if (FAssetFile::IsAssetPath(NormalizedPath))
 	{
-		LoadedSequence = AnimSequenceAssetLoader.Load(NormalizedPath);
-		if (LoadedSequence &&
-			LoadedSequence->GetDataModel() &&
-			LoadedSequence->GetDataModel()->GetBoneAnimationTracks().empty() &&
-			!LoadedSequence->AreJsonTracksEmbedded())
+		FAssetMetaData MetaData;
+		FAnimSequenceAssetPayload Payload;
+		if (LoadAnimSequenceUAssetPayload(NormalizedPath, MetaData, Payload))
 		{
-			const FString SourceFilePath = MakeProjectRelativePath(LoadedSequence->GetSourceFilePath());
-			if (IsFbxSourcePath(SourceFilePath))
+			LoadedSequence = CreateAnimSequenceFromUAssetPayload(NormalizedPath, MetaData, Payload);
+		}
+		else if (!FAssetPathPolicy::FileExists(NormalizedPath))
+		{
+			for (const FString& SkeletalMeshPath : AnimationFbxSourceFilePaths)
 			{
-				const FString SourceStackName = LoadedSequence->GetSourceStackName();
-				const FString PreviewMeshPath = MakeProjectRelativePath(
-					LoadedSequence->GetPreviewMeshPath().empty()
-						? SourceFilePath
-						: LoadedSequence->GetPreviewMeshPath());
-				ImportAnimationStacksFromFbx(SourceFilePath);
-				EnsureSkeletalMeshCacheForAnimationPreview(PreviewMeshPath.empty() ? SourceFilePath : PreviewMeshPath);
-
-				if (UAnimSequence* RebuiltSequence = AnimSequenceAssetLoader.Load(NormalizedPath))
+				if (!IsFbxSourcePath(SkeletalMeshPath))
 				{
-					RebuiltSequence->SetAssetPath(NormalizedPath);
-					RebuiltSequence->SetSourceFilePath(SourceFilePath);
-					RebuiltSequence->SetSourceStackName(SourceStackName);
-					RebuiltSequence->SetPreviewMeshPath(PreviewMeshPath);
+					continue;
+				}
+
+				const TArray<FString> ImportedAssetPaths = ImportAnimationStacksFromFbx(SkeletalMeshPath);
+				if (std::find(ImportedAssetPaths.begin(), ImportedAssetPaths.end(), NormalizedPath) == ImportedAssetPaths.end())
+				{
+					continue;
+				}
+
+				if (UAnimSequence* RebuiltSequence = FindAnimSequence(NormalizedPath))
+				{
 					LoadedSequence = RebuiltSequence;
+					break;
+				}
+
+				FAssetMetaData RebuiltMetaData;
+				FAnimSequenceAssetPayload RebuiltPayload;
+				if (LoadAnimSequenceUAssetPayload(NormalizedPath, RebuiltMetaData, RebuiltPayload))
+				{
+					LoadedSequence = CreateAnimSequenceFromUAssetPayload(NormalizedPath, RebuiltMetaData, RebuiltPayload);
+					break;
 				}
 			}
 		}
@@ -1587,10 +1882,10 @@ UAnimSequence* FResourceManager::LoadAnimSequence(const FString& Path)
 			LoadedSequence = FindAnimSequence(FirstAssetPath);
 			if (!LoadedSequence)
 			{
-				LoadedSequence = AnimSequenceAssetLoader.Load(FirstAssetPath);
+				LoadedSequence = LoadAnimSequence(FirstAssetPath);
 				if (LoadedSequence)
 				{
-					// FBX 경로로 요청해서 이미 생성된 .animseq를 읽은 경우,
+					// FBX 경로로 요청해서 이미 생성된 animation asset을 읽은 경우,
 					// source FBX key와 asset key 둘 다 같은 객체를 가리키게 해서 다음 요청에서 재로드하지 않는다.
 					AnimSequenceMap[FirstAssetPath] = LoadedSequence;
 				}
@@ -1627,15 +1922,43 @@ UAnimSequence* FResourceManager::LoadAnimSequence(const FString& Path)
 bool FResourceManager::SaveAnimSequence(const FString& Path, const UAnimSequence* Sequence)
 {
 	const FString NormalizedPath = FPaths::Normalize(Path);
-	if (!AnimSequenceAssetLoader.Save(NormalizedPath, Sequence))
+	if (!Sequence)
 	{
 		return false;
 	}
 
-	if (Sequence)
+	if (FAssetFile::IsAssetPath(NormalizedPath))
 	{
-		AnimSequenceMap[NormalizedPath] = const_cast<UAnimSequence*>(Sequence);
+		FAssetMetaData MetaData;
+		MetaData.Version = 1;
+		MetaData.PayloadVersion = 2;
+		MetaData.ClassName = UAnimSequence::StaticClass()->GetName();
+		MetaData.SourceFile = MakeProjectRelativePath(Sequence->GetSourceFilePath());
+		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring());
+
+		FAnimSequenceAssetPayload Payload;
+		Payload.TargetSkeletalMeshPath = MakeProjectRelativePath(Sequence->GetPreviewMeshPath());
+		Payload.SourceStackName = Sequence->GetSourceStackName();
+		Payload.SourceAnimStackIndex = 0;
+		Payload.DataModel = const_cast<UAnimDataModel*>(Sequence->GetDataModel());
+		Payload.Notifies = Sequence->GetNotifies();
+
+		if (!FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
+		{
+			Payload.Serialize(Ar, MetaData.PayloadVersion);
+			return true;
+		}))
+		{
+			return false;
+		}
 	}
+	else
+	{
+		UE_LOG_ERROR("[AnimSequenceSave] AnimSequence must be saved as .uasset: %s", NormalizedPath.c_str());
+		return false;
+	}
+
+	AnimSequenceMap[NormalizedPath] = const_cast<UAnimSequence*>(Sequence);
 
 	if (std::find(AnimSequenceFilePaths.begin(), AnimSequenceFilePaths.end(), NormalizedPath) == AnimSequenceFilePaths.end())
 	{
@@ -1919,29 +2242,43 @@ UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)
 		return CachedAsset;
 	}
 
-	const std::filesystem::path FilePath =
-		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
-
-	std::ifstream In(FilePath);
-	if (!In.is_open())
+	if (FAssetFile::IsAssetPath(NormalizedPath))
 	{
-		UE_LOG_ERROR("[ParticleSystemAsset] Failed to open: %s", NormalizedPath.c_str());
-		return nullptr;
-	}
+		FAssetMetaData MetaData;
+		UParticleSystem* Asset = nullptr;
+		const bool bLoaded = FAssetFile::Load(NormalizedPath, MetaData, [&](FArchive& Ar)
+		{
+			if (!MetaData.ClassName.empty() && MetaData.ClassName != "ParticleSystem")
+			{
+				return false;
+			}
 
-	const std::string JsonStr(
-		(std::istreambuf_iterator<char>(In)),
-		std::istreambuf_iterator<char>()
-	);
+			if (MetaData.PayloadVersion == 2)
+			{
+				FString JsonText;
+				Ar << "JsonPayload" << JsonText;
+				json::JSON JsonData = json::JSON::Load(JsonText);
+				Asset = LoadParticleSystemFromJson(JsonData, NormalizedPath);
+			}
+			else
+			{
+				Asset = LoadParticleSystemObjectGraph(Ar, NormalizedPath);
+			}
+			return Asset != nullptr;
+		});
 
-	json::JSON JsonData = json::JSON::Load(JsonStr);
-	UParticleSystem* Asset = LoadParticleSystemFromJson(JsonData, NormalizedPath);
-	if (Asset)
-	{
+		if (!bLoaded || !Asset)
+		{
+			UE_LOG_ERROR("[ParticleSystemAsset] Failed to load .uasset: %s", NormalizedPath.c_str());
+			return nullptr;
+		}
+
 		Asset->SetAssetPath(NormalizedPath);
 		ParticleSystemMap[NormalizedPath] = Asset;
+		return Asset;
 	}
-	return Asset;
+
+	return nullptr;
 }
 
 UParticleSystem* FResourceManager::FindParticleSystem(const FString& Path) const
@@ -1964,35 +2301,26 @@ bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString&
 		return false;
 	}
 
-	const std::filesystem::path FilePath =
-		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
-
-	Asset->SetAssetPath(NormalizedPath);
-	json::JSON JsonData = BuildParticleSystemAssetJson(Asset, NormalizedPath);
-
-	std::error_code ErrorCode;
-	std::filesystem::create_directories(FilePath.parent_path(), ErrorCode);
-	if (ErrorCode)
+	if (FAssetFile::IsAssetPath(NormalizedPath))
 	{
-		UE_LOG_ERROR(
-			"[ParticleSystemAsset] Failed to create directory: %s",
-			NormalizedPath.c_str()
-		);
-		return false;
+		Asset->SetAssetPath(NormalizedPath);
+
+		FAssetMetaData MetaData;
+		FAssetMetaData ExistingMetaData;
+		MetaData.AssetGuid = FAssetFile::LoadMetadataOnly(NormalizedPath, ExistingMetaData) && !ExistingMetaData.AssetGuid.empty()
+			? ExistingMetaData.AssetGuid
+			: FGuid::NewGuid().ToString();
+		MetaData.ClassName = "ParticleSystem";
+		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring());
+		MetaData.PayloadVersion = 1;
+
+		return FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
+		{
+			return SerializeParticleSystemObjectGraph(Ar, Asset, NormalizedPath);
+		});
 	}
 
-	std::ofstream Out(FilePath);
-	if (!Out.is_open())
-	{
-		UE_LOG_ERROR(
-			"[ParticleSystemAsset] Failed to open for writing: %s",
-			NormalizedPath.c_str()
-		);
-		return false;
-	}
-
-	Out << JsonData.dump(4);
-	return true;
+	return false;
 }
 
 bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Path)
@@ -2033,23 +2361,7 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		return false;
 	}
 
-	const std::filesystem::path LoadFilePath =
-		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
-
-	std::ifstream In(LoadFilePath);
-	if (!In.is_open())
-	{
-		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Failed to open saved asset: %s", NormalizedPath.c_str());
-		return false;
-	}
-
-	const std::string JsonStr(
-		(std::istreambuf_iterator<char>(In)),
-		std::istreambuf_iterator<char>()
-	);
-
-	json::JSON JsonData = json::JSON::Load(JsonStr);
-	UParticleSystem* Loaded = LoadParticleSystemFromJson(JsonData, NormalizedPath);
+	UParticleSystem* Loaded = LoadParticleSystem(NormalizedPath);
 	if (!Loaded)
 	{
 		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Load failed: %s", NormalizedPath.c_str());
@@ -2130,6 +2442,7 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		}
 	}
 
+	ParticleSystemMap.erase(NormalizedPath);
 	UObjectManager::Get().DestroyObject(Loaded);
 
 	if (bPassed)

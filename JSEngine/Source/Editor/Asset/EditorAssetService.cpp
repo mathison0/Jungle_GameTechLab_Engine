@@ -1,5 +1,6 @@
 #include "Editor/Asset/EditorAssetService.h"
 
+#include "Animation/AnimSequence.h"
 #include "Asset/AssetQueryService.h"
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
@@ -104,6 +105,7 @@ void FEditorAssetService::RefreshAssetDatabase()
 {
 	StaticMeshPaths.clear();
 	SkeletalMeshPaths.clear();
+	AnimSequencePaths.clear();
 	TexturePaths.clear();
 	MaterialInterfaceNames.clear();
 	AnimGraphPaths.clear();
@@ -117,15 +119,15 @@ void FEditorAssetService::RefreshAssetDatabase()
 	{
 		FEditorAssetService::AddUniquePath(StaticMeshPaths, Path);
 	}
-	for (const FString& Path : FResourceManager::Get().GetStaticMeshPaths())
-	{
-		FEditorAssetService::AddUniquePath(StaticMeshPaths, Path);
-	}
 
-	ListAssetFiles(L"SkeletalMesh", { ".fbx" }, SkeletalMeshPaths);
-	for (const FString& Path : FResourceManager::Get().GetSkeletalMeshPaths())
+	for (const FString& Path : FAssetQueryService::GetSkeletalMeshPaths())
 	{
 		FEditorAssetService::AddUniquePath(SkeletalMeshPaths, Path);
+	}
+
+	for (const FString& Path : FAssetQueryService::GetAnimSequencePaths())
+	{
+		FEditorAssetService::AddUniquePath(AnimSequencePaths, Path);
 	}
 
 	for (const FString& Path : FAssetQueryService::GetTexturePaths())
@@ -162,6 +164,7 @@ void FEditorAssetService::RefreshAssetDatabase()
 
 	BuildItems(StaticMeshPaths, EEditorAssetType::StaticMesh, StaticMeshItems);
 	BuildItems(SkeletalMeshPaths, EEditorAssetType::SkeletalMesh, SkeletalMeshItems);
+	BuildItems(AnimSequencePaths, EEditorAssetType::AnimSequence, AnimSequenceItems);
 	BuildItems(TexturePaths, EEditorAssetType::Texture, TextureItems);
 	BuildItems(MaterialInterfaceNames, EEditorAssetType::Material, MaterialItems);
 	BuildItems(AnimGraphPaths, EEditorAssetType::AnimGraph, AnimGraphItems);
@@ -178,6 +181,8 @@ const TArray<FEditorAssetItem>& FEditorAssetService::GetAssets(EEditorAssetType 
 		return StaticMeshItems;
 	case EEditorAssetType::SkeletalMesh:
 		return SkeletalMeshItems;
+	case EEditorAssetType::AnimSequence:
+		return AnimSequenceItems;
 	case EEditorAssetType::Texture:
 		return TextureItems;
 	case EEditorAssetType::Material:
@@ -205,6 +210,11 @@ UStaticMesh* FEditorAssetService::LoadStaticMesh(const FString& Path) const
 USkeletalMesh* FEditorAssetService::LoadSkeletalMesh(const FString& Path) const
 {
 	return FResourceManager::Get().LoadSkeletalMesh(Path);
+}
+
+UAnimSequence* FEditorAssetService::LoadAnimSequence(const FString& Path) const
+{
+	return FResourceManager::Get().LoadAnimSequence(Path);
 }
 
 UTexture* FEditorAssetService::LoadTexture(const FString& Path) const

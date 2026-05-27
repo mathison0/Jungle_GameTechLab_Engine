@@ -4,7 +4,7 @@ AnimGraphStateMachineParamTest.__index = AnimGraphStateMachineParamTest
 AnimGraphStateMachineParamTest.Properties = {
     AnimGraphPath = {
         Type = "String",
-        Default = "Asset/Animation Graph/AnimGraph_StateMachine_LuaTest.animgraph",
+        Default = "Asset/Animation Graph/TopDownStateMachine.animgraph",
         Category = "AnimGraph Test"
     },
     CycleInterval = { Type = "Float", Default = 2.0, Min = 0.1, Category = "AnimGraph Test" },
@@ -63,7 +63,7 @@ function AnimGraphStateMachineParamTest:InitializeAnimGraph()
     end
 
     local graphPath = self.Properties.AnimGraphPath
-        or "Asset/Animation Graph/AnimGraph_StateMachine_LuaTest.animgraph"
+        or "Asset/Animation Graph/TopDownStateMachine.animgraph"
 
     mesh:SetAnimGraphAssetPath(graphPath)
     mesh:SetAnimGraphFloat("Speed", self.Properties.IdleSpeed or 0.0)

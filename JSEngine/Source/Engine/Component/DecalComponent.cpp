@@ -12,7 +12,7 @@ UDecalComponent::UDecalComponent()
 {
 	Materials.resize(1);
 
-	UMaterial* Mat = Cast<UMaterial>(FResourceManager::Get().GetMaterialInterface("Asset/Material/DecalMat.mat"));
+	UMaterial* Mat = Cast<UMaterial>(FResourceManager::Get().GetMaterialInterface("Asset/Material/DecalMat.uasset"));
 	if (Mat == nullptr)
 	{
 		Mat = FResourceManager::Get().GetMaterial("DefaultWhite");
@@ -57,7 +57,7 @@ void UDecalComponent::PostEditProperty(const char* PropertyName)
 		{
 			if (Materials[i] == nullptr)
 			{
-				SetMaterial(i, FResourceManager::Get().GetMaterialInterface("Asset/Material/DecalMat.mat"));
+				SetMaterial(i, FResourceManager::Get().GetMaterialInterface("Asset/Material/DecalMat.uasset"));
 				continue;
 			}
 			SetMaterial(i, Materials[i]);

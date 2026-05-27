@@ -142,11 +142,8 @@ public:
 
 	bool SaveToFile(const FString& Path);
 	bool LoadFromFile(const FString& Path);
-	bool SaveToTextLayout(const FString& Path) const;
-	bool LoadFromTextLayout(const FString& Path);
 	bool ValidateForExport(FString* OutError = nullptr) const;
 	bool ExportRmlAndRcss(const FString& RmlPath, const FString& RcssPath, FString* OutError = nullptr) const;
-	static FString GetTextLayoutPathForAssetPath(const FString& AssetPath);
 
 private:
 	FString MakeUniqueWidgetId(ERuntimeUIWidgetType Type) const;
