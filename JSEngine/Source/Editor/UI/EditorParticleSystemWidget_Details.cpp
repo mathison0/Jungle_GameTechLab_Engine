@@ -90,6 +90,83 @@ UParticleModule* FEditorParticleSystemWidget::GetSelectedModule() const
 	return nullptr;
 }
 
+void FEditorParticleSystemWidget::SyncParticleSystemLODPropertiesFromEmitters()
+{
+	if (!ParticleSystemAsset)
+	{
+		return;
+	}
+
+	const int32 LODCount = GetMaxLODCount();
+	if (LODCount <= 0)
+	{
+		ParticleSystemAsset->LODDistances.clear();
+		ParticleSystemAsset->LODSettings.clear();
+		return;
+	}
+
+	const int32 OldDistanceCount = static_cast<int32>(ParticleSystemAsset->LODDistances.size());
+	const int32 OldSettingCount = static_cast<int32>(ParticleSystemAsset->LODSettings.size());
+	ParticleSystemAsset->LODDistances.resize(LODCount);
+	ParticleSystemAsset->LODSettings.resize(LODCount);
+
+	for (int32 LODIndex = 0; LODIndex < LODCount; ++LODIndex)
+	{
+		bool bFoundDistance = false;
+		for (UParticleEmitter* Emitter : ParticleSystemAsset->Emitters)
+		{
+			UParticleLODLevel* LODLevel = Emitter ? Emitter->GetLODLevel(LODIndex) : nullptr;
+			if (LODLevel)
+			{
+				ParticleSystemAsset->LODDistances[LODIndex] = LODLevel->GetDistanceThreshold();
+				bFoundDistance = true;
+				break;
+			}
+		}
+
+		if (!bFoundDistance && LODIndex >= OldDistanceCount)
+		{
+			ParticleSystemAsset->LODDistances[LODIndex] = LODIndex == 0
+				? 100.0f
+				: ParticleSystemAsset->LODDistances[LODIndex - 1] + 1000.0f;
+		}
+		if (LODIndex >= OldSettingCount)
+		{
+			ParticleSystemAsset->LODSettings[LODIndex] = LODIndex;
+		}
+	}
+}
+
+void FEditorParticleSystemWidget::ApplyParticleSystemLODPropertiesToEmitters()
+{
+	if (!ParticleSystemAsset)
+	{
+		return;
+	}
+
+	const int32 DistanceCount = static_cast<int32>(ParticleSystemAsset->LODDistances.size());
+	for (UParticleEmitter* Emitter : ParticleSystemAsset->Emitters)
+	{
+		if (!Emitter)
+		{
+			continue;
+		}
+
+		for (int32 LODIndex = 0; LODIndex < DistanceCount; ++LODIndex)
+		{
+			if (UParticleLODLevel* LODLevel = Emitter->GetLODLevel(LODIndex))
+			{
+				LODLevel->DistanceThreshold = std::max(0.0f, ParticleSystemAsset->LODDistances[LODIndex]);
+			}
+		}
+		Emitter->CacheEmitterModuleInfo();
+	}
+
+	ParticleSystemAsset->CacheEmitterModuleInfo();
+	RefreshPreviewComponent(false);
+	bDirty = true;
+}
+
 void FEditorParticleSystemWidget::DrawEmitterDetails(UParticleEmitter* Emitter, int32 EmitterIndex)
 {
 	if (!Emitter)
@@ -250,14 +327,85 @@ void FEditorParticleSystemWidget::DrawParticleSystemDetails(UParticleSystem* Par
 			{ "UpdateTimeFPS" });
 	}
 
-	if (ImGui::CollapsingHeader("Thumbnail", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		DrawPropertyGroup("##ParticleSystemThumbnailTable", { "ThumbnailWarmup" });
-	}
-
 	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		DrawPropertyGroup("##ParticleSystemLODTable", { "LODDistanceCheckTime", "LODDistances", "LODSettings", "LODMethod" });
+		SyncParticleSystemLODPropertiesFromEmitters();
+		DrawPropertyGroup("##ParticleSystemLODTable", { "LODDistanceCheckTime", "LODMethod" });
+
+		if (BeginParticleDetailsTable("##ParticleSystemLODValuesTable", LabelWidth))
+		{
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::AlignTextToFramePadding();
+			const bool bDistanceOpen = ImGui::TreeNodeEx("Distance", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::TextUnformatted("");
+			if (bDistanceOpen)
+			{
+				for (int32 LODIndex = 0; LODIndex < static_cast<int32>(ParticleSystem->LODDistances.size()); ++LODIndex)
+				{
+					FString DistanceLabel = FString("[") + std::to_string(LODIndex) + "]";
+					BeginParticleDetailsRow(DistanceLabel.c_str());
+					ImGui::SetNextItemWidth(-1.0f);
+					ImGui::PushID(LODIndex);
+					float& Distance = ParticleSystem->LODDistances[LODIndex];
+					if (ImGui::DragFloat("##LODDistance", &Distance, 10.0f, 0.0f, 0.0f))
+					{
+						if (!bPropertyEditUndoCaptured)
+						{
+							CaptureUndoSnapshot("Edit Particle System LOD");
+							bPropertyEditUndoCaptured = true;
+						}
+						Distance = std::max(0.0f, Distance);
+						ApplyParticleSystemLODPropertiesToEmitters();
+						ParticleSystem->PostEditProperty("LODDistances");
+					}
+					if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+					{
+						bPropertyEditUndoCaptured = false;
+					}
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::AlignTextToFramePadding();
+			const bool bSettingsOpen = ImGui::TreeNodeEx("Settings", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::TextUnformatted("");
+			if (bSettingsOpen)
+			{
+				for (int32 LODIndex = 0; LODIndex < static_cast<int32>(ParticleSystem->LODSettings.size()); ++LODIndex)
+				{
+					FString SettingLabel = FString("[") + std::to_string(LODIndex) + "]";
+					BeginParticleDetailsRow(SettingLabel.c_str());
+					ImGui::SetNextItemWidth(-1.0f);
+					ImGui::PushID(LODIndex);
+					int32& Setting = ParticleSystem->LODSettings[LODIndex];
+					const int32 MaxLODIndex = std::max(0, GetMaxLODCount() - 1);
+					if (ImGui::DragInt("##LODSetting", &Setting, 1.0f, 0, MaxLODIndex))
+					{
+						if (!bPropertyEditUndoCaptured)
+						{
+							CaptureUndoSnapshot("Edit Particle System LOD");
+							bPropertyEditUndoCaptured = true;
+						}
+						Setting = std::clamp(Setting, 0, MaxLODIndex);
+						ParticleSystem->PostEditProperty("LODSettings");
+						bDirty = true;
+					}
+					if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+					{
+						bPropertyEditUndoCaptured = false;
+					}
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+			EndParticleDetailsTable();
+		}
 	}
 
 	if (!ImGui::IsAnyItemActive())
@@ -736,6 +884,19 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 			}
 			int32& DistributionKind = DistributionIt->second;
 			DistributionKind = std::clamp(DistributionKind, 0, static_cast<int32>(IM_ARRAYSIZE(DistributionItems)) - 1);
+			auto MakeDistributionGroupLabel = [&]() -> FString
+			{
+				FString Label = GetPropertyDisplayName(PrimaryProperty);
+				if (SecondaryProperty && EndsWith(Label, " Min"))
+				{
+					Label = Label.substr(0, Label.size() - 4);
+				}
+				else if (SecondaryProperty && EndsWith(Label, "Min"))
+				{
+					Label = Label.substr(0, Label.size() - 3);
+				}
+				return TrimCopy(Label);
+			};
 			auto CopyPropertyValue = [&](const FProperty& SourceProperty, const FProperty& TargetProperty)
 			{
 				void* SourcePtr = SourceProperty.GetValuePtr(Module);
@@ -780,7 +941,8 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 			ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
 			ImGui::TableSetColumnIndex(0);
 			ImGui::AlignTextToFramePadding();
-			const bool bPropertyOpen = ImGui::TreeNodeEx(GetPropertyDisplayName(PrimaryProperty), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+			const FString GroupLabel = MakeDistributionGroupLabel();
+			const bool bPropertyOpen = ImGui::TreeNodeEx(GroupLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
 			ImGui::TableSetColumnIndex(1);
 			ImGui::TextUnformatted("");
 
@@ -1586,7 +1748,7 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 							if (MeshTypeData && Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
 							{
 								UMaterialInterface* DefaultMaterial = ResolveDefaultMeshMaterial(Candidate);
-								MeshTypeData->SetOverrideMaterial(DefaultMaterial != nullptr, DefaultMaterial);
+								MeshTypeData->SetOverrideMaterial(false, DefaultMaterial);
 							}
 							bChanged = true;
 						}

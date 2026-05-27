@@ -1001,7 +1001,7 @@ namespace
         if (!Emitter)
             return nullptr;
 
-        UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100000.0f);
+        UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100.0f);
         if (!LODLevel)
             return Emitter;
 

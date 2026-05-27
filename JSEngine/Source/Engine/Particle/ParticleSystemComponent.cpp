@@ -79,6 +79,7 @@ void UParticleSystemComponent::Serialize(FArchive& Ar)
 void UParticleSystemComponent::RecreateEmitterInstances()
 {
 	ClearEmitterInstances();
+	UpdateTimeAccumulator = 0.0f;
 	if (!Template)
 	{
 		return;
@@ -243,14 +244,47 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 
 void UParticleSystemComponent::TickPreview(float DeltaTime, bool bAllowSpawning)
 {
-	for (FParticleEmitterInstance* Instance : EmitterInstances)
+	if (DeltaTime <= 0.0f)
 	{
-		if (Instance)
-		{
-			Instance->Tick(DeltaTime, bAllowSpawning);
-		}
+		return;
 	}
-	NotifySpatialIndexDirty();
+
+	auto TickEmitterInstances = [&](float StepDeltaTime)
+	{
+		for (FParticleEmitterInstance* Instance : EmitterInstances)
+		{
+			if (Instance)
+			{
+				Instance->Tick(StepDeltaTime, bAllowSpawning);
+			}
+		}
+	};
+
+	float UpdateFPS = Template ? Template->UpdateTimeFPS : 0.0f;
+	if (UpdateFPS <= 0.0f)
+	{
+		TickEmitterInstances(DeltaTime);
+		NotifySpatialIndexDirty();
+		return;
+	}
+
+	UpdateFPS = std::max(1.0f, UpdateFPS);
+	const float FixedStep = 1.0f / UpdateFPS;
+	constexpr int32 MaxStepsPerTick = 8;
+	UpdateTimeAccumulator = std::min(UpdateTimeAccumulator + DeltaTime, FixedStep * static_cast<float>(MaxStepsPerTick));
+
+	int32 StepCount = 0;
+	while (UpdateTimeAccumulator >= FixedStep && StepCount < MaxStepsPerTick)
+	{
+		TickEmitterInstances(FixedStep);
+		UpdateTimeAccumulator -= FixedStep;
+		++StepCount;
+	}
+
+	if (StepCount > 0)
+	{
+		NotifySpatialIndexDirty();
+	}
 }
 
 void UParticleSystemComponent::SetEditorPreviewSoloEmitters(const TArray<int32>& InSoloEmitterIndices)

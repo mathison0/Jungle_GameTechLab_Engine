@@ -14,6 +14,11 @@
 //   - 검증된 TObjectPtr<USceneComponent> 패턴 (MovementComponent::UpdatedComponent) 답습 → picker UI 자동.
 //   - actor 의 root scene component 를 picker 로 선택 → GetWorldLocation() 으로 actor 위치 추적 가능.
 //
+// Source 위치 결정 우선순위 (Beam DynamicData BuildFromInstance 에서 처리):
+//   (1) bUseLocalSource=true  → emitter local space SourceLocalVector 사용
+//   (2) bUseLocalSource=false && SourceComponent != nullptr → SourceComponent->GetWorldLocation()
+//   (3) 그 외 → owning particle component 위치 fallback
+//
 // Tangent 확장 (Hermite 곡선 control): SourceTangent + SourceTangentStrength.
 // emitter-local 단위 방향 * strength → world tangent. Strength=0 이면 linear fallback (BuildFromInstance 분기).
 UCLASS()
@@ -25,11 +30,17 @@ public:
     USceneComponent* GetSourceComponent() const { return SourceComponent.Get(); }
     void SetSourceComponent(USceneComponent* InComponent) { SourceComponent.Set(InComponent); }
 
-    FVector GetSourceTangent() const                  { return SourceTangent; }
-    void    SetSourceTangent(const FVector& In)       { SourceTangent = In; }
+    FVector GetSourceTangent() const { return SourceTangent; }
+    void SetSourceTangent(const FVector& In) { SourceTangent = In; }
 
-    float   GetSourceTangentStrength() const          { return SourceTangentStrength; }
-    void    SetSourceTangentStrength(float In)        { SourceTangentStrength = In; }
+    float GetSourceTangentStrength() const { return SourceTangentStrength; }
+    void SetSourceTangentStrength(float In) { SourceTangentStrength = In; }
+
+    bool IsUseLocalSource() const { return bUseLocalSource; }
+    void SetUseLocalSource(bool bIn) { bUseLocalSource = bIn; }
+
+    FVector GetSourceLocalVector() const { return SourceLocalVector; }
+    void SetSourceLocalVector(const FVector& In) { SourceLocalVector = In; }
 
 private:
     // TObjectPtr<USceneComponent> 는 reflection 생성기가 자동으로 EObjectReferenceKind::ActorComponent 로 등록.
@@ -38,11 +49,19 @@ private:
     TObjectPtr<USceneComponent> SourceComponent;
 
     // emitter-local 단위 방향 (Forward/Right/Up 기반). bUseLocalTarget 의 TargetLocalVector 패턴과 동일 좌표계.
-    // Default (1,0,0): emitter forward — strength=0 일 때 의미 없으므로 임의 default.
+    // Default (1,0,0): emitter forward. strength=0 일 때는 의미 없음.
     UPROPERTY(DisplayName = "Source Tangent", Category = "Beam Source")
     FVector SourceTangent = FVector(1.0f, 0.0f, 0.0f);
 
     // Hermite tangent 의 크기 (cm). 0 이면 linear fallback (TargetTangentStrength 도 0 일 때).
     UPROPERTY(DisplayName = "Source Tangent Strength", Category = "Beam Source", Min = 0.0f)
     float SourceTangentStrength = 0.0f;
+
+    // true 면 SourceComponent 를 무시하고 SourceLocalVector 를 emitter local space 좌표로 해석.
+    UPROPERTY(DisplayName = "Use Local Source", Category = "Beam Source")
+    bool bUseLocalSource = false;
+
+    // emitter (UParticleSystemComponent) 의 Forward(X) / Right(Y) / Up(Z) 축 기반 local 좌표.
+    UPROPERTY(DisplayName = "Source Local Vector", Category = "Beam Source")
+    FVector SourceLocalVector = FVector::ZeroVector;
 };

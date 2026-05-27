@@ -519,7 +519,7 @@ UParticleSystem* UParticleSystem::CreateDefaultSpriteSystem()
         return nullptr;
     }
 
-    UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100000.0f);
+    UParticleLODLevel* LODLevel = Emitter->AddLODLevel(0, 100.0f);
     if (!LODLevel)
     {
         UObjectManager::Get().DestroyObject(System);
@@ -564,7 +564,7 @@ UParticleSystem* UParticleSystem::CreateDefaultMeshSystem()
     UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
     LODLevel->Level = 0;
     LODLevel->bEnabled = true;
-    LODLevel->DistanceThreshold = 100000.0f;
+    LODLevel->DistanceThreshold = 100.0f;
 
     LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
 
@@ -627,7 +627,7 @@ UParticleSystem* UParticleSystem::CreateDefaultRibbonSystem()
     UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
     LODLevel->Level = 0;
     LODLevel->bEnabled = true;
-    LODLevel->DistanceThreshold = 100000.0f;
+    LODLevel->DistanceThreshold = 100.0f;
 
     LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
 
@@ -676,7 +676,7 @@ UParticleSystem* UParticleSystem::CreateDefaultBeamSystem()
     UParticleLODLevel* LODLevel = UObjectManager::Get().CreateObject<UParticleLODLevel>();
     LODLevel->Level = 0;
     LODLevel->bEnabled = true;
-    LODLevel->DistanceThreshold = 100000.0f;
+    LODLevel->DistanceThreshold = 100.0f;
 
     LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
 

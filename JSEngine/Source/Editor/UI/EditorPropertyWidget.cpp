@@ -2292,6 +2292,19 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					{
 						BeamSource->SetSourceComponent(NewSource);
 					}
+
+					bool bUseLocalSource = BeamSource->IsUseLocalSource();
+					if (ImGui::Checkbox("Use Local Source", &bUseLocalSource))
+					{
+						BeamSource->SetUseLocalSource(bUseLocalSource);
+					}
+
+					FVector SourceLocalVec = BeamSource->GetSourceLocalVector();
+					ImGui::SetNextItemWidth(DragItemWidth);
+					if (ImGui::DragFloat3("Source Local Vector", &SourceLocalVec.X, 1.0f, -10000.0f, 10000.0f))
+					{
+						BeamSource->SetSourceLocalVector(SourceLocalVec);
+					}
 				}
 				if (BeamTarget)
 				{

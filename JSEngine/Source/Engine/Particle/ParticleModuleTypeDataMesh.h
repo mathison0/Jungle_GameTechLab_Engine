@@ -19,7 +19,11 @@ public:
     FParticleEmitterInstance* CreateInstance(UParticleSystemComponent* Component, int32 EmitterIndex) const override;
 
     UStaticMesh* GetMesh() const { return Mesh; }
-    void SetMesh(UStaticMesh* InMesh) { Mesh = InMesh; }
+    void SetMesh(UStaticMesh* InMesh)
+    {
+        Mesh = InMesh;
+        SetOverrideMaterial(false, nullptr);
+    }
 
     void SetOverrideMaterial(bool bEnable, UMaterialInterface* InMaterial)
     {

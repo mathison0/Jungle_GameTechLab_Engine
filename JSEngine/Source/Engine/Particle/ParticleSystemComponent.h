@@ -88,6 +88,7 @@ private:
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	TArray<FParticleEventCollideData> PendingCollisionEvents;
 	TArray<int32> EditorPreviewSoloEmitterIndices;
+	float UpdateTimeAccumulator = 0.0f;
 
 	// Cycle 14 (M1, 결정 18 옵션 β): RenderBus → Component → derived instance 캐싱 경로.
 	// 첫 frame 또는 외부 호출자 (예: EditorMainPanelDebug) 가 CacheCameraFromRenderBus 미호출 시 bCachedCameraValid=false 유지 →

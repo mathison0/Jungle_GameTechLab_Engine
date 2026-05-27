@@ -54,7 +54,7 @@ public:
 	bool bEnabled = true;
 
 	UPROPERTY(DisplayName = "Distance Threshold", Min = 0.0f)
-	float DistanceThreshold = 100000.0f;
+	float DistanceThreshold = 100.0f;
 
 	UPROPERTY(DisplayName = "Required Module")
 	UParticleModuleRequired* RequiredModule = nullptr;
@@ -144,10 +144,10 @@ public:
 	float LODDistanceCheckTime = 0.25f;
 
 	UPROPERTY(DisplayName = "LODDistances")
-	TArray<float> LODDistances = { 0.0f, 1000.0f };
+	TArray<float> LODDistances = { 100.0f };
 
 	UPROPERTY(DisplayName = "LODSettings")
-	TArray<int32> LODSettings = { 0, 1 };
+	TArray<int32> LODSettings = { 0 };
 
 	UPROPERTY(DisplayName = "LODMethod")
 	int32 LODMethod = 0;

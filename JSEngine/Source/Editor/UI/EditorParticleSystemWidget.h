@@ -143,6 +143,8 @@ private:
 	void DeleteCurrentLOD();
 	void SetCurrentLOD(int32 NewLOD);
 	int32 GetMaxLODCount() const;
+	void SyncParticleSystemLODPropertiesFromEmitters();
+	void ApplyParticleSystemLODPropertiesToEmitters();
 	void DuplicateModuleFromHigherLOD(int32 EmitterIndex, int32 ModuleIndex, bool bHighest);
 	void SyncInheritedModuleFromHigherLOD(UParticleEmitter* OwnerEmitter, UParticleModule* SourceModule);
 	void ChangeEmitterRenderMode(int32 EmitterIndex, EParticleEmitterRenderMode RenderMode);

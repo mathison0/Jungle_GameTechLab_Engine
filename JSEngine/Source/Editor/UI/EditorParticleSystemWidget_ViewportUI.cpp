@@ -139,11 +139,6 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	}
 	ImGui::EndDisabled();
 
-	SameLineGap(7.0f);
-	if (ToolbarButton("Bounds", "Bounds", GetCascadeToolbarIcon(ECascadeToolbarIcon::Bounds), "Toggle bounds", bShowBounds))
-	{
-		SetPreviewBoundsVisible(!bShowBounds);
-	}
 	SameLineGap();
 	if (ToolbarButton("BackgroundColor", "Background Color", GetCascadeToolbarIcon(ECascadeToolbarIcon::BackgroundColor), "Change preview background color"))
 	{

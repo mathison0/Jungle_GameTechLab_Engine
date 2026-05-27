@@ -429,6 +429,8 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
 
     USceneComponent* SourceComp = SourceModule ? SourceModule->GetSourceComponent() : nullptr;
     USceneComponent* TargetComp = TargetModule ? TargetModule->GetTargetComponent() : nullptr;
+    const bool bUseLocalSource = SourceModule ? SourceModule->IsUseLocalSource() : false;
+    const FVector SourceLocalVec = SourceModule ? SourceModule->GetSourceLocalVector() : FVector::ZeroVector;
     const bool bUseLocalTarget = TargetModule ? TargetModule->IsUseLocalTarget() : false;
     const FVector TargetLocalVec = TargetModule ? TargetModule->GetTargetLocalVector() : FVector::ZeroVector;
 
@@ -443,7 +445,9 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
     const FVector EmitterForward = OwningComp ? OwningComp->GetForwardVector() : FVector(1.0f, 0.0f, 0.0f);
     const FVector EmitterRight   = OwningComp ? OwningComp->GetRightVector()   : FVector(0.0f, 1.0f, 0.0f);
     const FVector EmitterUp      = OwningComp ? OwningComp->GetUpVector()      : FVector(0.0f, 0.0f, 1.0f);
-    const FVector SourceLocation = SourceComp ? SourceComp->GetWorldLocation() : EmitterLocation;
+    const FVector SourceLocation = bUseLocalSource
+        ? EmitterLocation + EmitterForward * SourceLocalVec.X + EmitterRight * SourceLocalVec.Y + EmitterUp * SourceLocalVec.Z
+        : (SourceComp ? SourceComp->GetWorldLocation() : EmitterLocation);
 
     // emitter-local → world 변환 (bUseLocalTarget 의 TargetLocalVector 변환과 동일 패턴).
     // Strength=0 이면 ZeroVector — Hermite 식의 T 항이 사라져 자동 무력화.

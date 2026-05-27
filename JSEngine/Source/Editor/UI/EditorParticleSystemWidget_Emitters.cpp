@@ -602,6 +602,7 @@ void FEditorParticleSystemWidget::AddLODRelativeToCurrent(int32 Offset)
 	}
 
 	ParticleSystemAsset->CacheEmitterModuleInfo();
+	SyncParticleSystemLODPropertiesFromEmitters();
 	if (bAddBeforeCurrent)
 	{
 		ClampSelectionToParticleSystem();
@@ -648,6 +649,7 @@ void FEditorParticleSystemWidget::DeleteCurrentLOD()
 	}
 
 	ParticleSystemAsset->CacheEmitterModuleInfo();
+	SyncParticleSystemLODPropertiesFromEmitters();
 	SetCurrentLOD(CurrentLOD - 1);
 	ClearEmitterContext();
 	bDirty = true;
