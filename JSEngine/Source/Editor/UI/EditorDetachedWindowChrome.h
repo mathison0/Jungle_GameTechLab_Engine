@@ -115,7 +115,8 @@ namespace FEditorDetachedWindowChrome
 		const ImVec2 Delta(WindowPos.x - LastWindowPos.x, WindowPos.y - LastWindowPos.y);
 		const bool bWindowMoved = std::abs(Delta.x) > 0.5f || std::abs(Delta.y) > 0.5f;
 		const bool bMouseDown = IsLeftMouseButtonDown();
-		if (bMouseDown && bWindowMoved && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+		const bool bMouseDragging = ImGui::IsMouseDragging(ImGuiMouseButton_Left, ImGui::GetIO().MouseDragThreshold);
+		if (bMouseDown && bMouseDragging && bWindowMoved && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
 		{
 			bDraggingWindow = true;
 		}
@@ -123,8 +124,7 @@ namespace FEditorDetachedWindowChrome
 		bool bDroppedOnTabStrip = false;
 		if (!bMouseDown)
 		{
-			const bool bNativeMoveCompleted = bWindowMoved && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
-			bDroppedOnTabStrip = (bDraggingWindow || bNativeMoveCompleted) && IsCurrentWindowTopBarOverMainTabStrip();
+			bDroppedOnTabStrip = bDraggingWindow && IsCurrentWindowTopBarOverMainTabStrip();
 			bDraggingWindow = false;
 		}
 

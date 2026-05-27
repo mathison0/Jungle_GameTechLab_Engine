@@ -33,6 +33,7 @@ void FEditorMainPanel::InitializeEditorWidgets(UEditorEngine* InEditorEngine)
     Widgets.ContentBrowserWidget.Initialize(InEditorEngine);
     Widgets.ActorSequencerWidget.Initialize(InEditorEngine);
     Widgets.AnimGraphWidget.Initialize(InEditorEngine);
+    Widgets.LuaAnimGraphWidget.Initialize(InEditorEngine);
     Widgets.ControlWidget.Initialize(InEditorEngine);
     Widgets.CurveEditorWidget.Initialize(InEditorEngine);
     Widgets.MaterialWidget.Initialize(InEditorEngine);
@@ -62,6 +63,22 @@ void FEditorMainPanel::OpenAnimGraphAsset(const FString& AnimGraphPath)
     const FString TabLabel = MakeAnimGraphEditorTabLabel(AnimGraphPath);
     EditorTabs.OpenOrFocusTab(TabId, TabLabel);
     EditorTabs.SetTabLabel(TabId, TabLabel);
+    ActivateEditorTab(TabId);
+}
+
+void FEditorMainPanel::OpenLuaAnimGraphAsset(const FString& AssetPath)
+{
+    if (AssetPath.empty())
+    {
+        return;
+    }
+
+    Widgets.LuaAnimGraphWidget.OpenAsset(AssetPath);
+
+    const FEditorTabId TabId = MakeLuaAnimGraphEditorTabId(AssetPath);
+    const FString TabLabel = MakeLuaAnimGraphEditorTabLabel(AssetPath);
+    EditorTabs.OpenOrFocusTab(TabId, TabLabel);
+    EditorTabs.SetTabDirty(TabId, Widgets.LuaAnimGraphWidget.IsDirty());
     ActivateEditorTab(TabId);
 }
 

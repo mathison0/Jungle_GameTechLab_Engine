@@ -20,6 +20,7 @@ enum class EEditorAssetType : uint8
 	Texture,
 	Material,
 	AnimGraph,
+	LuaAnimGraph,
 	ParticleSystem,
 	Font,
 	SubUV,
@@ -48,6 +49,7 @@ public:
 	const TArray<FString>& GetTextureAssetPaths() const { return TexturePaths; }
 	const TArray<FString>& GetMaterialInterfaceNames() const { return MaterialInterfaceNames; }
 	const TArray<FString>& GetAnimGraphAssetPaths() const { return AnimGraphPaths; }
+	const TArray<FString>& GetLuaAnimGraphAssetPaths() const { return LuaAnimGraphPaths; }
 	const TArray<FString>& GetParticleSystemAssetPaths() const { return ParticleSystemPaths; }
 	const TArray<FString>& GetFontNames() const { return FontNames; }
 	const TArray<FString>& GetSubUVNames() const { return SubUVNames; }
@@ -78,6 +80,7 @@ private:
 	TArray<FString> TexturePaths;
 	TArray<FString> MaterialInterfaceNames;
 	TArray<FString> AnimGraphPaths;
+	TArray<FString> LuaAnimGraphPaths;
 	TArray<FString> ParticleSystemPaths;
 	TArray<FString> FontNames;
 	TArray<FString> SubUVNames;
@@ -90,6 +93,7 @@ private:
 	TArray<FEditorAssetItem> TextureItems;
 	TArray<FEditorAssetItem> MaterialItems;
 	TArray<FEditorAssetItem> AnimGraphItems;
+	TArray<FEditorAssetItem> LuaAnimGraphItems;
 	TArray<FEditorAssetItem> ParticleSystemItems;
 	TArray<FEditorAssetItem> FontItems;
 	TArray<FEditorAssetItem> SubUVItems;

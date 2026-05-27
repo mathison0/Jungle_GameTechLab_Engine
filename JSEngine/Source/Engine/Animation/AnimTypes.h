@@ -6,12 +6,22 @@
 
 class UAnimNotify;
 
+enum class EAnimNotifyLuaTargetPolicy : int32
+{
+    OwnerScript = 0,
+    NamedScript = 1,
+    AllOwnerScripts = 2,
+};
+
 struct FAnimNotifyStateEvent
 {
     float TriggerTime = 0.0f;
     float Duration = 0.0f;
     FName NotifyName;
     FString NotifyClassName;
+    FString LuaEventName;
+    FString LuaTargetScript;
+    int32 LuaTargetPolicy = static_cast<int32>(EAnimNotifyLuaTargetPolicy::OwnerScript);
     UAnimNotify* NotifyObject = nullptr;
 
     float GetEndTime() const

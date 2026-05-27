@@ -9,6 +9,7 @@ struct FCollisionQueryParams
     AActor* IgnoredActor = nullptr;
     UPrimitiveComponent* IgnoredComponent = nullptr;
     bool bTraceVisibleOnly = true;
+    bool bSimpleCollisionOnly = false;
 };
 
 enum class ECollisionShapeType : uint8
@@ -44,6 +45,15 @@ struct FCollisionShape
         FCollisionShape Shape;
         Shape.ShapeType = ECollisionShapeType::Box;
         Shape.HalfExtent = InHalfExtent;
+        return Shape;
+    }
+
+    static FCollisionShape MakeCapsule(float InRadius, float InHalfHeight)
+    {
+        FCollisionShape Shape;
+        Shape.ShapeType = ECollisionShapeType::Capsule;
+        Shape.Radius = InRadius;
+        Shape.HalfHeight = InHalfHeight;
         return Shape;
     }
 

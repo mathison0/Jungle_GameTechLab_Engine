@@ -27,7 +27,7 @@ TopDownCharacterAnimGraphController.Properties = {
 
     AnimGraphPath = {
         Type = "String",
-        Default = "Asset/Animation Graph/TopDownStateMachine.animgraph",
+        Default = "Asset/Animation Graph/TopDownStateMachine.uasset",
         Category = "Animation"
     },
 
@@ -135,7 +135,7 @@ function TopDownCharacterAnimGraphController:Initialize()
     end
 
     local graphPath = self.Properties.AnimGraphPath
-        or "Asset/Animation Graph/TopDownStateMachine.animgraph"
+        or "Asset/Animation Graph/TopDownStateMachine.uasset"
     local moveParamName = self.Properties.MoveParamName or "IsMoving"
 
     if self.Mesh.SetAnimGraphAssetPath then

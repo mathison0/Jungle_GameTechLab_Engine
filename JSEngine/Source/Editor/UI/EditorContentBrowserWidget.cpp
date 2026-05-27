@@ -7,6 +7,7 @@
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "Animation/AnimGraphAsset.h"
+#include "Animation/AnimLuaProgramAsset.h"
 #include "Animation/AnimSequence.h"
 #include "Asset/CurveFloatAsset.h"
 #include "Asset/AssetFile.h"
@@ -137,6 +138,8 @@ const char* GetAssetClassDisplayName(const FString& ClassName)
 	if (ClassName == UStaticMesh::StaticClass()->GetName()) return "Static Mesh";
 	if (ClassName == USkeletalMesh::StaticClass()->GetName()) return "Skeletal Mesh";
 	if (ClassName == "UAnimSequence") return "Animation Sequence";
+	if (ClassName == UAnimGraphAsset::StaticClass()->GetName()) return "C++ Anim Graph";
+	if (ClassName == UAnimLuaProgramAsset::StaticClass()->GetName()) return "Lua Anim Graph";
 	if (ClassName == "UAnimationStateMachine") return "Animation State Machine";
 	if (ClassName == "URuntimeUILayoutAsset") return "Runtime UI Layout";
 	if (ClassName == "RuntimeUILayout") return "Runtime UI Layout";
@@ -152,6 +155,8 @@ const char* GetAssetClassBadge(const FString& ClassName)
 	if (ClassName == UStaticMesh::StaticClass()->GetName()) return "MESH";
 	if (ClassName == USkeletalMesh::StaticClass()->GetName()) return "SKEL";
 	if (ClassName == "UAnimSequence") return "ANIM";
+	if (ClassName == UAnimGraphAsset::StaticClass()->GetName()) return "ANIM GRAPH";
+	if (ClassName == UAnimLuaProgramAsset::StaticClass()->GetName()) return "LUA ANIM";
 	if (ClassName == "UAnimationStateMachine") return "STATE";
 	if (ClassName == "URuntimeUILayoutAsset") return "UI";
 	if (ClassName == "RuntimeUILayout") return "UI";
@@ -319,6 +324,10 @@ void FEditorContentBrowserWidget::Render(float DeltaTime)
 			WorkPos.y + 58.0f + (1.0f - AnimAlpha) * 20.0f);
 		ImGui::SetNextWindowPos(WindowPos, ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(Width, Height), ImGuiCond_FirstUseEver);
+		if (bRequestFocusWindow)
+		{
+			ImGui::SetNextWindowFocus();
+		}
 	}
 	if (bDrawerMode && MainViewport)
 	{
@@ -349,6 +358,10 @@ void FEditorContentBrowserWidget::Render(float DeltaTime)
 			: (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar));
 	if (!ImGui::Begin(bDrawerMode ? "##EditorContentBrowserDrawer" : "Content Browser", &bOpen, Flags))
 	{
+		if (!bDrawerMode)
+		{
+			bRequestFocusWindow = false;
+		}
 		BrowserScreenMin = ImGui::GetWindowPos();
 		BrowserScreenMax = ImVec2(BrowserScreenMin.x + ImGui::GetWindowSize().x, BrowserScreenMin.y + ImGui::GetWindowSize().y);
 		bHasBrowserScreenRect = true;
@@ -357,6 +370,10 @@ void FEditorContentBrowserWidget::Render(float DeltaTime)
 		ImGui::PopStyleVar(PushedStyleVarCount);
 		bVisible = bOpen;
 		return;
+	}
+	if (!bDrawerMode)
+	{
+		bRequestFocusWindow = false;
 	}
 	bVisible = bOpen;
 	BrowserScreenMin = ImGui::GetWindowPos();
@@ -533,7 +550,7 @@ void FEditorContentBrowserWidget::DrawFloatingWindowChrome(bool& bOpen)
 			{
 				if (ImGui::MenuItem("Drawer Mode"))
 				{
-					PresentationMode = EPresentationMode::Drawer;
+					SetPresentationMode(EPresentationMode::Drawer);
 				}
 				if (ImGui::MenuItem("Close"))
 				{
@@ -572,7 +589,7 @@ void FEditorContentBrowserWidget::DrawToolbar()
 	ImGui::SameLine();
 	if (ImGui::Button(IsDrawerMode() ? "Window Mode" : "Drawer Mode", ModeButtonSize))
 	{
-		PresentationMode = IsDrawerMode() ? EPresentationMode::FloatingWindow : EPresentationMode::Drawer;
+		SetPresentationMode(IsDrawerMode() ? EPresentationMode::FloatingWindow : EPresentationMode::Drawer);
 	}
 	ImGui::SameLine();
 	if (DrawContentBrowserArrowButton("Back", "Back", ArrowButtonSize, false, !BackHistory.empty()))
@@ -616,7 +633,7 @@ void FEditorContentBrowserWidget::DrawToolbar()
 	ImGui::SameLine();
 	if (ImGui::SmallButton(IsDrawerMode() ? "Window Mode" : "Drawer Mode"))
 	{
-		PresentationMode = IsDrawerMode() ? EPresentationMode::FloatingWindow : EPresentationMode::Drawer;
+		SetPresentationMode(IsDrawerMode() ? EPresentationMode::FloatingWindow : EPresentationMode::Drawer);
 	}
 	ImGui::SameLine();
 	ImGui::BeginDisabled(BackHistory.empty());
@@ -1009,14 +1026,14 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 			DrawList->AddText(ImVec2((IconMin.x + IconMax.x - TextSize.x) * 0.5f, IconMax.y - 22.0f),
 				ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f)), Kind);
 		}
-		else if (IsAnimGraphAsset(Item.Extension))
+		else if (IsAnimGraphAsset(Item))
 		{
 			const ImVec2 Center((IconMin.x + IconMax.x) * 0.5f, (IconMin.y + IconMax.y) * 0.5f - 4.0f);
 			const ImU32 LineColor = ImGui::GetColorU32(ImVec4(0.74f, 0.86f, 1.0f, 1.0f));
 			DrawList->AddCircleFilled(ImVec2(Center.x - 28.0f, Center.y), 8.0f, LineColor, 16);
 			DrawList->AddCircleFilled(ImVec2(Center.x + 28.0f, Center.y), 8.0f, LineColor, 16);
 			DrawList->AddLine(ImVec2(Center.x - 20.0f, Center.y), ImVec2(Center.x + 20.0f, Center.y), LineColor, 3.0f);
-			const char* Kind = "GRAPH";
+			const char* Kind = IsAnimGraphAsset(Item.Extension) ? "GRAPH" : "ANIM GRAPH";
 			const ImVec2 TextSize = ImGui::CalcTextSize(Kind);
 			DrawList->AddText(ImVec2((IconMin.x + IconMax.x - TextSize.x) * 0.5f, IconMax.y - 22.0f),
 				ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f)), Kind);
@@ -1139,6 +1156,14 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 			{
 				EditorEngine->GetMainPanel().OpenRuntimeUIPreviewAsset(MakeRelativeProjectPath(Item.Path));
 			}
+			else if (IsAnimLuaProgramAsset(Item))
+			{
+				EditorEngine->GetMainPanel().OpenLuaAnimGraphAsset(MakeRelativeProjectPath(Item.Path));
+			}
+			else if (IsAnimGraphAsset(Item))
+			{
+				EditorEngine->GetMainPanel().OpenAnimGraphAsset(MakeRelativeProjectPath(Item.Path));
+			}
 			else if (IsStaticMeshAsset(Item) || IsSkeletalMeshAsset(Item) || Item.AssetMetadata.ClassName == "UAnimSequence")
 			{
 				EditorEngine->CreateViewer(MakeRelativeProjectPath(Item.Path));
@@ -1147,10 +1172,6 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 			{
 				EditorEngine->GetNotificationService().Info("No editor is registered for this .uasset class.");
 			}
-		}
-		else if (IsAnimGraphAsset(Item.Extension))
-		{
-			EditorEngine->GetMainPanel().OpenAnimGraphAsset(MakeRelativeProjectPath(Item.Path));
 		}
 		else if (Item.Extension == ".scene")
 		{
@@ -1218,9 +1239,14 @@ void FEditorContentBrowserWidget::DrawContentContextMenu(bool bHasSelectedItem)
 			CreateCurveAsset();
 			ImGui::CloseCurrentPopup();
 		}
-		if (ImGui::MenuItem("Anim Graph"))
+		if (ImGui::MenuItem("C++ Anim Graph"))
 		{
 			CreateAnimGraphAsset();
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::MenuItem("Lua Anim Graph"))
+		{
+			CreateLuaAnimGraphAsset();
 			ImGui::CloseCurrentPopup();
 		}
 		if (ImGui::MenuItem("Particle System"))
@@ -1414,7 +1440,7 @@ bool FEditorContentBrowserWidget::CreateCurveAsset()
 
 bool FEditorContentBrowserWidget::CreateAnimGraphAsset()
 {
-	const std::filesystem::path NewPath = MakeUniquePath(CurrentPath / L"New Anim Graph.animgraph");
+	const std::filesystem::path NewPath = MakeUniquePath(CurrentPath / L"New Anim Graph.uasset");
 	const FString RelativePath = MakeRelativeProjectPath(NewPath);
 
 	UAnimGraphAsset* Asset = UObjectManager::Get().CreateObject<UAnimGraphAsset>();
@@ -1448,6 +1474,37 @@ bool FEditorContentBrowserWidget::CreateAnimGraphAsset()
 	SelectedPath = NewPath;
 	RefreshContent();
 	RecordCreatedContentPath(EditorEngine, NewPath, "Create Anim Graph");
+	return true;
+}
+
+bool FEditorContentBrowserWidget::CreateLuaAnimGraphAsset()
+{
+	const std::filesystem::path NewPath = MakeUniquePath(CurrentPath / L"New Lua Anim Graph.uasset");
+	const FString RelativePath = MakeRelativeProjectPath(NewPath);
+
+	FAssetMetaData MetaData;
+	MetaData.PayloadVersion = 4;
+	MetaData.ClassName = UAnimLuaProgramAsset::StaticClass()->GetName();
+	MetaData.DisplayName = FPaths::ToUtf8(NewPath.filename().wstring());
+
+	FAnimLuaProgramAssetPayload Payload;
+	Payload.Graph = MakeDefaultLuaAnimGraph();
+	Payload.GeneratedLuaSource = FLuaAnimGraphCodeGenerator().Generate(Payload.Graph);
+
+	const bool bSaved = FAssetFile::Save(RelativePath, MetaData, [&](FArchive& Ar)
+	{
+		Payload.Serialize(Ar, MetaData.PayloadVersion);
+		return true;
+	});
+
+	if (!bSaved)
+	{
+		return false;
+	}
+
+	SelectedPath = NewPath;
+	RefreshContent();
+	RecordCreatedContentPath(EditorEngine, NewPath, "Create Lua Anim Graph");
 	return true;
 }
 
@@ -2295,6 +2352,14 @@ FString FEditorContentBrowserWidget::GetPayloadType(const FContentItem& Item) co
 		{
 			return "CurveContentItem";
 		}
+		if (IsAnimGraphAsset(Item))
+		{
+			return "AnimGraphContentItem";
+		}
+		if (IsAnimLuaProgramAsset(Item))
+		{
+			return "LuaAnimGraphContentItem";
+		}
 		if (Item.bHasAssetMetadata && Item.AssetMetadata.ClassName == "UAnimationStateMachine")
 		{
 			return "AnimationStateMachineContentItem";
@@ -2308,10 +2373,6 @@ FString FEditorContentBrowserWidget::GetPayloadType(const FContentItem& Item) co
 			return "RuntimeUILayoutContentItem";
 		}
 		return "ContentBrowserPath";
-	}
-	if (IsAnimGraphAsset(Item.Extension))
-	{
-		return "AnimGraphContentItem";
 	}
 	if (Item.Extension == ".prefab")
 	{
@@ -2359,7 +2420,7 @@ ImU32 FEditorContentBrowserWidget::GetItemColor(const FContentItem& Item) const
 	{
 		return ImGui::GetColorU32(ImVec4(0.78f, 0.55f, 0.34f, 1.0f));
 	}
-	if (IsAnimGraphAsset(Item.Extension))
+	if (IsAnimGraphAsset(Item))
 	{
 		return ImGui::GetColorU32(ImVec4(0.38f, 0.58f, 0.86f, 1.0f));
 	}
@@ -2473,7 +2534,29 @@ bool FEditorContentBrowserWidget::IsSequenceAsset(const FString& Extension) cons
 
 bool FEditorContentBrowserWidget::IsAnimGraphAsset(const FString& Extension) const
 {
-	return Extension == ".animgraph";
+	(void)Extension;
+	return false;
+}
+
+bool FEditorContentBrowserWidget::IsAnimGraphAsset(const FContentItem& Item) const
+{
+	if (Item.bIsDirectory)
+	{
+		return false;
+	}
+	return Item.Extension == ".uasset" &&
+		Item.bHasAssetMetadata &&
+		Item.AssetMetadata.ClassName == UAnimGraphAsset::StaticClass()->GetName();
+}
+
+bool FEditorContentBrowserWidget::IsAnimLuaProgramAsset(const FContentItem& Item) const
+{
+	if (Item.bIsDirectory || Item.Extension != ".uasset")
+	{
+		return false;
+	}
+	return Item.bHasAssetMetadata &&
+		Item.AssetMetadata.ClassName == UAnimLuaProgramAsset::StaticClass()->GetName();
 }
 
 bool FEditorContentBrowserWidget::IsParticleSystemAsset(const FContentItem& Item) const

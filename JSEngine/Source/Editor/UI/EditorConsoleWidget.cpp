@@ -6,6 +6,7 @@
 #include "Engine/Core/CrashTest.h"
 #include "Core/Logging/GPUProfiler.h"
 #include "Editor/EditorEngine.h"
+#include "Editor/UI/EditorDetachedWindowChrome.h"
 #include "Editor/Viewport/ViewportLayout.h"
 #include "Engine/Object/FName.h"
 
@@ -224,6 +225,12 @@ void FEditorConsoleWidget::ClearHistory()
 	History.clear();
 }
 
+void FEditorConsoleWidget::RequestWindowFocus(bool bFocusInput)
+{
+	bRequestFocusWindow = true;
+	bRequestFocusInput = bFocusInput;
+}
+
 void FEditorConsoleWidget::Render(float DeltaTime)
 {
 	(void)DeltaTime;
@@ -236,12 +243,67 @@ void FEditorConsoleWidget::Render(float DeltaTime)
 		ImGui::SetNextWindowFocus();
 	}
 
+	const float TitleBarFramePaddingY = FEditorDetachedWindowChrome::GetTitleBarFramePaddingY();
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(13.0f, TitleBarFramePaddingY));
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(9.0f, 4.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.18f, 0.20f, 0.25f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.15f, 0.17f, 0.22f, 1.0f));
+
+	FEditorDetachedWindowChrome::ApplyWindowClass(0x4A53434Eu); // "JSCN"
 	ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
-	if (!ImGui::Begin("Console"))
+	if (const ImGuiViewport* MainViewport = ImGui::GetMainViewport())
+	{
+		ImGui::SetNextWindowPos(ImVec2(MainViewport->Pos.x + 180.0f, MainViewport->Pos.y + 140.0f), ImGuiCond_FirstUseEver);
+	}
+	if (bRequestFocusWindow)
+	{
+		ImGui::SetNextWindowFocus();
+		bRequestFocusWindow = false;
+	}
+
+	bool bWindowOpen = true;
+	constexpr ImGuiWindowFlags WindowFlags =
+		ImGuiWindowFlags_MenuBar |
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoDocking |
+		ImGuiWindowFlags_NoCollapse;
+	if (!ImGui::Begin("Console", &bWindowOpen, WindowFlags))
 	{
 		ImGui::End();
+		ImGui::PopStyleColor(4);
+		ImGui::PopStyleVar(5);
 		return;
 	}
+
+	bool bDrawerRequested = false;
+	bool bCloseRequested = false;
+	FEditorDetachedWindowChrome::RenderMenuBar(
+		"Console",
+		"ConsoleDetached",
+		[this, &bDrawerRequested]()
+		{
+			if (ImGui::BeginMenu("Console"))
+			{
+				if (ImGui::MenuItem("Drawer Mode"))
+				{
+					bDrawerRequested = true;
+				}
+				if (ImGui::MenuItem("Clear"))
+				{
+					Clear();
+				}
+				ImGui::EndMenu();
+			}
+		},
+		bCloseRequested);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 8.0f));
+	ImGui::BeginChild("##ConsoleWindowBody", ImVec2(0.0f, 0.0f), false);
 
 	if (ImGui::SmallButton("Clear")) { Clear(); }
 	ImGui::SameLine();
@@ -314,7 +376,16 @@ void FEditorConsoleWidget::Render(float DeltaTime)
 
 	ImGui::SetItemDefaultFocus();
 
+	ImGui::EndChild();
+	ImGui::PopStyleVar();
 	ImGui::End();
+	ImGui::PopStyleColor(4);
+	ImGui::PopStyleVar(5);
+
+	if (bDrawerRequested || bCloseRequested || !bWindowOpen)
+	{
+		PresentationMode = EPresentationMode::Drawer;
+	}
 }
 
 void FEditorConsoleWidget::RenderDrawerToolbar()
@@ -343,6 +414,10 @@ void FEditorConsoleWidget::RenderDrawerToolbar()
 	if (ImGui::SmallButton(IsDrawerMode() ? "Window Mode" : "Drawer Mode"))
 	{
 		PresentationMode = IsDrawerMode() ? EPresentationMode::FloatingWindow : EPresentationMode::Drawer;
+		if (PresentationMode == EPresentationMode::FloatingWindow)
+		{
+			RequestWindowFocus(true);
+		}
 	}
 
 	ImGui::SameLine();

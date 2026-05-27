@@ -37,6 +37,8 @@ namespace
 			return { ImVec4(0.18f, 0.70f, 0.95f, 1.0f), "Skeletal Mesh Viewer" };
 		case EEditorTabKind::AnimSequenceViewer:
 			return { ImVec4(0.95f, 0.48f, 0.20f, 1.0f), "Animation Sequence Viewer" };
+		case EEditorTabKind::LuaAnimGraphEditor:
+			return { ImVec4(0.28f, 0.62f, 0.92f, 1.0f), "Lua Anim Graph" };
 		case EEditorTabKind::MaterialEditor:
 			return { ImVec4(0.19f, 0.72f, 0.24f, 1.0f), "Material Editor" };
 		case EEditorTabKind::CurveEditor:
@@ -64,6 +66,8 @@ namespace
 			return "SkeletalMesh";
 		case EEditorTabKind::AnimSequenceViewer:
 			return "AnimSequence";
+		case EEditorTabKind::LuaAnimGraphEditor:
+			return "LuaAnimGraph";
 		case EEditorTabKind::MaterialEditor:
 			return "Material";
 		case EEditorTabKind::CurveEditor:
@@ -335,6 +339,8 @@ void FEditorMainPanel::RenderEditorTabStrip()
 			{
 				const bool bCanDetach =
 					FindViewerWidgetForTab(Tab.Id) != nullptr ||
+					Tab.Id.Kind == EEditorTabKind::AnimGraphEditor ||
+					Tab.Id.Kind == EEditorTabKind::LuaAnimGraphEditor ||
 					Tab.Id.Kind == EEditorTabKind::ParticleSystemEditor;
 				if (bCanDetach && ImGui::MenuItem(Tab.bDetached ? "Dock Tab" : "Detach Tab"))
 				{
@@ -463,6 +469,14 @@ bool FEditorMainPanel::RequestCloseEditorTab(const FEditorTabId& TabId)
 		bDetachedParticleSystemEditorOpen = false;
 		Widgets.ParticleSystemWidget.CloseDocument(TabId.PayloadId);
 	}
+	if (TabId.Kind == EEditorTabKind::LuaAnimGraphEditor)
+	{
+		Widgets.LuaAnimGraphWidget.Close();
+	}
+	if (TabId.Kind == EEditorTabKind::AnimGraphEditor)
+	{
+		Widgets.AnimGraphWidget.Close();
+	}
 
 	return EditorTabs.CloseTab(TabId);
 }
@@ -473,7 +487,14 @@ void FEditorMainPanel::RequestDetachEditorTab(const FEditorTabId& TabId, bool bD
 	const bool bWasActive = ActiveBefore && ActiveBefore->Id.Matches(TabId);
 
 	FEditorViewerWindowWidget* ViewerWidget = FindViewerWidgetForTab(TabId);
-	if (!ViewerWidget && TabId.Kind != EEditorTabKind::ParticleSystemEditor)
+	const bool bAnimGraph = TabId.Kind == EEditorTabKind::AnimGraphEditor &&
+		Widgets.AnimGraphWidget.GetEditingPath() == TabId.PayloadId;
+	const bool bLuaAnimGraph = TabId.Kind == EEditorTabKind::LuaAnimGraphEditor &&
+		Widgets.LuaAnimGraphWidget.GetAssetPath() == TabId.PayloadId;
+	if (!ViewerWidget &&
+		TabId.Kind != EEditorTabKind::ParticleSystemEditor &&
+		!bAnimGraph &&
+		!bLuaAnimGraph)
 	{
 		return;
 	}
@@ -489,6 +510,29 @@ void FEditorMainPanel::RequestDetachEditorTab(const FEditorTabId& TabId, bool bD
 		if (bDetached)
 		{
 			ImGui::SetWindowFocus("Particle System Editor###ParticleSystemEditorDetached");
+			if (bWasActive)
+			{
+				const TArray<FEditorTabEntry>& Tabs = EditorTabs.GetTabs();
+				if (!Tabs.empty())
+				{
+					ActivateEditorTab(Tabs[0].Id);
+				}
+			}
+		}
+		else
+		{
+			ActivateEditorTab(TabId);
+		}
+		return;
+	}
+
+	if (bAnimGraph || bLuaAnimGraph)
+	{
+		if (bDetached)
+		{
+			ImGui::SetWindowFocus(bAnimGraph
+				? "Anim Graph###AnimGraphEditorDetached"
+				: "Lua Anim Graph###LuaAnimGraphEditorDetached");
 			if (bWasActive)
 			{
 				const TArray<FEditorTabEntry>& Tabs = EditorTabs.GetTabs();

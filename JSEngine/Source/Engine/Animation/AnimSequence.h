@@ -119,6 +119,9 @@ public:
 	bool RemoveNotifyAt(int32 NotifyIndex);
 	bool SetNotifyName(int32 NotifyIndex, const FName& InNotifyName);
 	bool SetNotifyClassName(int32 NotifyIndex, const FString& InNotifyClassName);
+	bool SetNotifyLuaEventName(int32 NotifyIndex, const FString& InLuaEventName);
+	bool SetNotifyLuaTargetScript(int32 NotifyIndex, const FString& InLuaTargetScript);
+	bool SetNotifyLuaTargetPolicy(int32 NotifyIndex, int32 InLuaTargetPolicy);
 	bool SetNotifyTriggerTime(int32 NotifyIndex, float InTriggerTime);
 	bool SetNotifyDuration(int32 NotifyIndex, float InDuration);
 	bool SetNotifyTimeRange(int32 NotifyIndex, float InTriggerTime, float InDuration);

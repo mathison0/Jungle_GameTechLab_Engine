@@ -52,6 +52,7 @@ public:
 	void OpenMaterialSlot(UPrimitiveComponent* PrimitiveComp, int32 SlotIndex);
 	void OpenCurveAsset(const FString& CurvePath);
 	void OpenAnimGraphAsset(const FString& AnimGraphPath);
+	void OpenLuaAnimGraphAsset(const FString& AssetPath);
 	void OpenRuntimeUIPreviewAsset(const FString& RmlPath = "");
 	void RefreshContentBrowser();
 	void OpenParticleSystemAsset(const FString& ParticleSystemPath);
@@ -120,7 +121,10 @@ private:
 	void RenderActiveViewerDocument(float DeltaTime);
 	void RenderRuntimeUIPreviewDocument(float DeltaTime);
 	void RenderAnimGraphEditorDocument(float DeltaTime);
+	void RenderLuaAnimGraphEditorDocument(float DeltaTime);
 	void RenderParticleSystemEditorDocument(float DeltaTime);
+	void RenderDetachedAnimGraphEditorDocument(float DeltaTime);
+	void RenderDetachedLuaAnimGraphEditorDocument(float DeltaTime);
 	void RenderDetachedParticleSystemEditorDocument(float DeltaTime);
 	void UpdateConsoleDrawerAnimation(float EffectiveDeltaTime);
 	void RenderLateFrameOverlays(float DeltaTime, float EffectiveDeltaTime, bool bDrawEditorPanels);

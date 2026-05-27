@@ -8,12 +8,15 @@
 #include "Asset/SkeletalMesh.h"
 #include "Asset/StaticMesh.h"
 #include "Asset/StaticMeshTypes.h"
+#include "Animation/AnimGraphAsset.h"
+#include "Animation/AnimLuaProgramAsset.h"
 #include "Animation/AnimSequence.h"
 #include "Core/Logging/Log.h"
 #include "Core/MaterialSerializationService.h"
 #include "Core/Paths.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "Object/Class.h"
+#include "Object/Object.h"
 #include "Render/Resource/Material.h"
 #include "SimpleJSON/json.hpp"
 
@@ -1120,6 +1123,8 @@ namespace
             || ClassName == UMaterialInstance::StaticClass()->GetName()
             || ClassName == UCurveFloatAsset::StaticClass()->GetName()
             || ClassName == UAnimSequence::StaticClass()->GetName()
+            || ClassName == UAnimGraphAsset::StaticClass()->GetName()
+            || ClassName == UAnimLuaProgramAsset::StaticClass()->GetName()
             || ClassName == USkeletalMesh::StaticClass()->GetName()
             || ClassName == UStaticMesh::StaticClass()->GetName();
     }
@@ -1344,6 +1349,84 @@ namespace
                 !AddFileDependency(Context, Payload.TargetSkeletalMeshPath, OutMessage))
             {
                 return false;
+            }
+        }
+        else if (MetaData.ClassName == UAnimGraphAsset::StaticClass()->GetName())
+        {
+            UAnimGraphAsset* Asset = UObjectManager::Get().CreateObject<UAnimGraphAsset>();
+            if (!Asset)
+            {
+                OutMessage = "Failed to create anim graph object for package scan: " + RelativeFile;
+                return false;
+            }
+
+            FAssetMetaData PayloadMetaData = MetaData;
+            const bool bLoaded = FAssetFile::Load(RelativeFile, PayloadMetaData, [&](FArchive& Ar)
+            {
+                Asset->Serialize(Ar);
+                Asset->ValidateAndRepairGraph();
+                return true;
+            });
+            if (!bLoaded)
+            {
+                UObjectManager::Get().DestroyObject(Asset);
+                OutMessage = "Failed to read anim graph uasset payload: " + RelativeFile;
+                return false;
+            }
+
+            for (const FAnimGraphNodeDesc& Node : Asset->Nodes)
+            {
+                if (Node.Type == EAnimGraphNodeType::SequencePlayer && !Node.AnimationPath.empty() &&
+                    !AddFileDependency(Context, Node.AnimationPath, OutMessage))
+                {
+                    UObjectManager::Get().DestroyObject(Asset);
+                    return false;
+                }
+
+                if (Node.Type == EAnimGraphNodeType::StateMachine)
+                {
+                    for (const FAnimStateDesc& State : Node.StateMachine.States)
+                    {
+                        if (!State.AnimationPath.empty() &&
+                            !AddFileDependency(Context, State.AnimationPath, OutMessage))
+                        {
+                            UObjectManager::Get().DestroyObject(Asset);
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            UObjectManager::Get().DestroyObject(Asset);
+        }
+        else if (MetaData.ClassName == UAnimLuaProgramAsset::StaticClass()->GetName())
+        {
+            FAnimLuaProgramAssetPayload Payload;
+            FAssetMetaData PayloadMetaData = MetaData;
+            if (!FAssetFile::Load(RelativeFile, PayloadMetaData, [&](FArchive& Ar)
+            {
+                Payload.Serialize(Ar, PayloadMetaData.PayloadVersion);
+                return true;
+            }))
+            {
+                OutMessage = "Failed to read lua anim graph uasset payload: " + RelativeFile;
+                return false;
+            }
+
+            if (!Payload.Graph.PreviewSkeletalMeshPath.empty() &&
+                !AddFileDependency(Context, Payload.Graph.PreviewSkeletalMeshPath, OutMessage))
+            {
+                return false;
+            }
+
+            for (const auto& Pair : Payload.Graph.States)
+            {
+                const FLuaAnimStateNode& State = Pair.second;
+                if (!State.AnimationPath.empty() &&
+                    !AddFileDependency(Context, State.AnimationPath, OutMessage))
+                {
+                    return false;
+                }
             }
         }
 

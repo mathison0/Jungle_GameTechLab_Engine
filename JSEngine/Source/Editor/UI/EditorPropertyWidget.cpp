@@ -48,6 +48,7 @@
 #include "Asset/StaticMesh.h"
 #include "Asset/SkeletalMesh.h"
 #include "Animation/AnimGraphAsset.h"
+#include "Animation/AnimLuaProgramAsset.h"
 #include "Animation/AnimSequence.h"
 #include "Object/FName.h"
 #include "Object/Class.h"
@@ -3197,6 +3198,10 @@ bool FEditorPropertyWidget::RenderSoftObjectPtrWidget(const FProperty& Property,
 		{
 			Options = &EditorEngine->GetAssetService().GetAnimGraphAssetPaths();
 		}
+		else if (Property.ObjectClass->IsChildOf(UAnimLuaProgramAsset::StaticClass()))
+		{
+			Options = &EditorEngine->GetAssetService().GetLuaAnimGraphAssetPaths();
+		}
 	}
 
 	if (Options && !Options->empty())
@@ -3240,6 +3245,26 @@ bool FEditorPropertyWidget::RenderSoftObjectPtrWidget(const FProperty& Property,
 		&& ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("AnimGraphContentItem"))
+		{
+			if (Payload->Data && Payload->DataSize > 0)
+			{
+				const FString PayloadPath = static_cast<const char*>(Payload->Data);
+				const std::filesystem::path DroppedPath = FPaths::ToWide(PayloadPath);
+				Property.SoftObjectOps->SetPath(
+					ValuePtr,
+					DroppedPath.is_absolute()
+						? FPaths::Normalize(FPaths::ToRelativeString(DroppedPath.wstring()))
+						: FPaths::Normalize(PayloadPath));
+				bChanged = true;
+			}
+		}
+		ImGui::EndDragDropTarget();
+	}
+	else if (Property.ObjectClass
+		&& Property.ObjectClass->IsChildOf(UAnimLuaProgramAsset::StaticClass())
+		&& ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("LuaAnimGraphContentItem"))
 		{
 			if (Payload->Data && Payload->DataSize > 0)
 			{

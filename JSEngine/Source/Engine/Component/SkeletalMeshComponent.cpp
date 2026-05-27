@@ -4,6 +4,7 @@
 #include "Animation/AnimNotify.h"
 #include "Animation/AnimGraphAsset.h"
 #include "Animation/AnimGraphInstance.h"
+#include "Animation/LuaAnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Animation/AnimationStateMachine.h"
@@ -92,6 +93,14 @@ void USkeletalMeshComponent::Serialize(FArchive& Ar)
 					AnimGraphAssetPath.SetPath(FPaths::Normalize(AnimGraphAssetPath.GetPath()));
 				}
 			}
+			else if (ULuaAnimInstance* LuaInstance = Cast<ULuaAnimInstance>(AnimInstance))
+			{
+				if (!LuaAnimProgramAssetPath.IsNull())
+				{
+					LuaAnimProgramAssetPath.SetPath(FPaths::Normalize(LuaAnimProgramAssetPath.GetPath()));
+					LuaInstance->SetLuaAnimProgramAssetPath(LuaAnimProgramAssetPath.GetPath());
+				}
+			}
 		}
 
 		Ar.EndObject();
@@ -109,6 +118,10 @@ void USkeletalMeshComponent::Serialize(FArchive& Ar)
 	{
 		ApplyAnimGraphFromAssetPath();
 	}
+	else if (AnimationMode == EAnimationMode::AnimationLua)
+	{
+		ApplyLuaAnimProgramFromAssetPath();
+	}
 }
 
 void USkeletalMeshComponent::PostDuplicate(UObject* Original)
@@ -124,6 +137,7 @@ void USkeletalMeshComponent::PostDuplicate(UObject* Original)
 	AnimInstance = nullptr;
 	AnimationAssetPath.SetPath(SourceComponent->AnimationAssetPath.GetPath());
 	AnimGraphAssetPath = SourceComponent->AnimGraphAssetPath;
+	LuaAnimProgramAssetPath = SourceComponent->LuaAnimProgramAssetPath;
 	AnimationToPlay = SourceComponent->AnimationToPlay;
 	AnimationMode = SourceComponent->AnimationMode;
 	UAnimSingleNodeInstance* SourceSingleNode = Cast<UAnimSingleNodeInstance>(SourceComponent->AnimInstance);
@@ -154,6 +168,10 @@ void USkeletalMeshComponent::PostDuplicate(UObject* Original)
 		{
 			GraphInstance->CopyRuntimeParametersFrom(Cast<UAnimGraphInstance>(SourceComponent->AnimInstance));
 		}
+	}
+	else if (AnimationMode == EAnimationMode::AnimationLua)
+	{
+		ApplyLuaAnimProgramFromAssetPath();
 	}
 	else if (AnimationMode == EAnimationMode::AnimationStateMachine)
 	{
@@ -201,6 +219,17 @@ void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
 		else
 		{
 			ApplyAnimGraphFromAssetPath();
+		}
+	}
+	else if (PropertyName && std::strcmp(PropertyName, "LuaAnimProgramAssetPath") == 0)
+	{
+		if (!LuaAnimProgramAssetPath.IsNull() && AnimationMode != EAnimationMode::AnimationLua)
+		{
+			SetAnimationMode(EAnimationMode::AnimationLua);
+		}
+		else
+		{
+			ApplyLuaAnimProgramFromAssetPath();
 		}
 	}
 }
@@ -349,6 +378,71 @@ void USkeletalMeshComponent::ApplyAnimGraphFromAssetPath()
 	}
 
 	SetAnimGraph(Graph);
+}
+
+void USkeletalMeshComponent::SetLuaAnimProgramAssetPath(const FString& Path)
+{
+	LuaAnimProgramAssetPath.SetPath(FPaths::Normalize(Path));
+	SetAnimationMode(EAnimationMode::AnimationLua);
+}
+
+void USkeletalMeshComponent::ApplyLuaAnimProgramFromAssetPath()
+{
+	if (LuaAnimProgramAssetPath.IsNull())
+	{
+		if (AnimationMode == EAnimationMode::AnimationLua)
+		{
+			UE_LOG_WARNING("[SkeletalMeshComponent] AnimationLua mode selected, but LuaAnimProgramAssetPath is empty.");
+			AnimInstance = nullptr;
+			ResetToBindPose();
+		}
+		return;
+	}
+
+	const FString ProgramPath = FPaths::Normalize(LuaAnimProgramAssetPath.GetPath());
+	LuaAnimProgramAssetPath.SetPath(ProgramPath);
+
+	ULuaAnimInstance* Instance = Cast<ULuaAnimInstance>(AnimInstance);
+	if (!Instance)
+	{
+		Instance = UObjectManager::Get().CreateObject<ULuaAnimInstance>();
+	}
+
+	if (!Instance)
+	{
+		AnimInstance = nullptr;
+		ResetToBindPose();
+		return;
+	}
+
+	Instance->Initialize(this);
+	Instance->SetLuaAnimProgramAssetPath(ProgramPath);
+	AnimInstance = Instance;
+	AnimationMode = EAnimationMode::AnimationLua;
+}
+
+void USkeletalMeshComponent::SetLuaAnimFloatParameter(const FString& Name, float Value)
+{
+	if (ULuaAnimInstance* LuaInstance = Cast<ULuaAnimInstance>(AnimInstance))
+	{
+		LuaInstance->SetFloat(Name, Value);
+	}
+}
+
+void USkeletalMeshComponent::SetLuaAnimBoolParameter(const FString& Name, bool Value)
+{
+	if (ULuaAnimInstance* LuaInstance = Cast<ULuaAnimInstance>(AnimInstance))
+	{
+		LuaInstance->SetBool(Name, Value);
+	}
+}
+
+void USkeletalMeshComponent::SetLuaAnimIntParameter(const FString& Name, int32 Value)
+{
+	if (ULuaAnimInstance* LuaInstance = Cast<ULuaAnimInstance>(AnimInstance))
+	{
+		LuaInstance->SetInt(Name, Value);
+	}
 }
 
 void USkeletalMeshComponent::SetAnimGraphFloatParameter(const FString& Name, float Value)
@@ -512,6 +606,10 @@ void USkeletalMeshComponent::SetAnimationMode(EAnimationMode InAnimationMode)
 	else if (AnimationMode == EAnimationMode::AnimationGraph)
 	{
 		ApplyAnimGraphFromAssetPath();
+	}
+	else if (AnimationMode == EAnimationMode::AnimationLua)
+	{
+		ApplyLuaAnimProgramFromAssetPath();
 	}
 	else if (AnimationMode == EAnimationMode::AnimationStateMachine)
 	{
@@ -745,11 +843,6 @@ void USkeletalMeshComponent::HandleAnimNotify(const FAnimNotifyStateEvent& Notif
 	{
 		OnAnimNotifyDelegate.Broadcast(this, Notify);
 	}
-
-	if (AActor* OwnerActor = GetOwner())
-	{
-		OwnerActor->OnAnimNotify(this, Notify);
-	}
 }
 
 void USkeletalMeshComponent::HandleAnimNotifyBegin(const FAnimNotifyStateEvent& Notify)
@@ -764,11 +857,6 @@ void USkeletalMeshComponent::HandleAnimNotifyBegin(const FAnimNotifyStateEvent& 
 	{
 		OnAnimNotifyBeginDelegate.Broadcast(this, Notify);
 	}
-
-	if (AActor* OwnerActor = GetOwner())
-	{
-		OwnerActor->OnAnimNotifyBegin(this, Notify);
-	}
 }
 
 void USkeletalMeshComponent::HandleAnimNotifyTick(const FAnimNotifyStateEvent& Notify, float DeltaTime)
@@ -781,11 +869,6 @@ void USkeletalMeshComponent::HandleAnimNotifyTick(const FAnimNotifyStateEvent& N
 	if (bDispatchLegacyAnimNotifyCallbacks)
 	{
 		OnAnimNotifyTickDelegate.Broadcast(this, Notify, DeltaTime);
-	}
-
-	if (AActor* OwnerActor = GetOwner())
-	{
-		OwnerActor->OnAnimNotifyTick(this, Notify, DeltaTime);
 	}
 }
 
@@ -800,11 +883,6 @@ void USkeletalMeshComponent::HandleAnimNotifyEnd(const FAnimNotifyStateEvent& No
 	if (bDispatchLegacyAnimNotifyCallbacks)
 	{
 		OnAnimNotifyEndDelegate.Broadcast(this, Notify);
-	}
-
-	if (AActor* OwnerActor = GetOwner())
-	{
-		OwnerActor->OnAnimNotifyEnd(this, Notify);
 	}
 }
 

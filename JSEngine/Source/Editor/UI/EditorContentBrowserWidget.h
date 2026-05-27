@@ -26,10 +26,31 @@ public:
 	void Initialize(UEditorEngine* InEditorEngine) override;
 	void Render(float DeltaTime) override;
 	void Refresh();
-	void SetVisible(bool bInVisible) { bVisible = bInVisible; }
+	void SetVisible(bool bInVisible)
+	{
+		bVisible = bInVisible;
+		if (bVisible && IsFloatingWindowMode())
+		{
+			bRequestFocusWindow = true;
+		}
+	}
 	bool IsVisible() const { return bVisible; }
-	void ToggleVisible() { bVisible = !bVisible; }
-	void SetPresentationMode(EPresentationMode InMode) { PresentationMode = InMode; }
+	void ToggleVisible()
+	{
+		bVisible = !bVisible;
+		if (bVisible && IsFloatingWindowMode())
+		{
+			bRequestFocusWindow = true;
+		}
+	}
+	void SetPresentationMode(EPresentationMode InMode)
+	{
+		PresentationMode = InMode;
+		if (IsFloatingWindowMode())
+		{
+			bRequestFocusWindow = true;
+		}
+	}
 	EPresentationMode GetPresentationMode() const { return PresentationMode; }
 	bool IsDrawerMode() const { return PresentationMode == EPresentationMode::Drawer; }
 	bool IsFloatingWindowMode() const { return PresentationMode == EPresentationMode::FloatingWindow; }
@@ -82,6 +103,7 @@ private:
 	bool CreateMaterialAsset();
 	bool CreateCurveAsset();
 	bool CreateAnimGraphAsset();
+	bool CreateLuaAnimGraphAsset();
 	bool CreateParticleSystemAsset();
 	bool CreateRuntimeUILayoutAsset();
 	bool CreateSceneAsset();
@@ -116,6 +138,8 @@ private:
 	bool IsCurveAsset(const std::filesystem::path& Path) const;
 	bool IsSequenceAsset(const FString& Extension) const;
 	bool IsAnimGraphAsset(const FString& Extension) const;
+	bool IsAnimGraphAsset(const FContentItem& Item) const;
+	bool IsAnimLuaProgramAsset(const FContentItem& Item) const;
 	bool IsParticleSystemAsset(const FContentItem& Item) const;
 	bool IsPrefabAsset(const FString& Extension) const;
 	bool IsRuntimeUILayoutAsset(const FContentItem& Item) const;
@@ -146,6 +170,7 @@ private:
 	bool bPendingMaterialPreviewCacheClear = false;
 	bool bAnimSequenceIconLoadAttempted = false;
 	bool bRenamePopupRequested = false;
+	bool bRequestFocusWindow = false;
 	bool bMouseOverBrowser = false;
 	bool bHasBrowserScreenRect = false;
 	bool bOpenContentContextMenu = false;

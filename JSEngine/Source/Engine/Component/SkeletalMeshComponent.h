@@ -2,6 +2,7 @@
 
 #include "Animation/AnimGraphAsset.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimLuaProgramAsset.h"
 #include "Animation/AnimSequence.h"
 #include "Component/SkinnedMeshComponent.h"
 #include "Core/Delegates/Delegate.h"
@@ -20,6 +21,7 @@ enum class EAnimationMode
 	AnimationBlueprint UMETA(DisplayName = "Animation Blueprint"),
 	AnimationSingleNode UMETA(DisplayName = "Animation Single Node"),
 	AnimationGraph UMETA(DisplayName = "Animation Graph"),
+	AnimationLua UMETA(DisplayName = "Lua Anim Graph"),
 	AnimationStateMachine UMETA(DisplayName = "Animation StateMachine")
 };
 
@@ -68,6 +70,12 @@ public:
 	void SetAnimGraphAssetPath(const FString& Path);
 	void ApplyAnimGraphFromAssetPath();
 	const FString& GetAnimGraphAssetPath() const { return AnimGraphAssetPath.GetPath(); }
+	void SetLuaAnimProgramAssetPath(const FString& Path);
+	void ApplyLuaAnimProgramFromAssetPath();
+	const FString& GetLuaAnimProgramAssetPath() const { return LuaAnimProgramAssetPath.GetPath(); }
+	void SetLuaAnimFloatParameter(const FString& Name, float Value);
+	void SetLuaAnimBoolParameter(const FString& Name, bool Value);
+	void SetLuaAnimIntParameter(const FString& Name, int32 Value);
 	void SetAnimGraphFloatParameter(const FString& Name, float Value);
 	void SetAnimGraphBoolParameter(const FString& Name, bool Value);
 	void SetAnimGraphIntParameter(const FString& Name, int32 Value);
@@ -132,6 +140,9 @@ private:
 
 	UPROPERTY(DisplayName = "Anim Graph")
 	TSoftObjectPtr<UAnimGraphAsset> AnimGraphAssetPath;
+
+	UPROPERTY(DisplayName = "Lua Anim Graph")
+	TSoftObjectPtr<UAnimLuaProgramAsset> LuaAnimProgramAssetPath;
 
 	UAnimationAsset* AnimationToPlay = nullptr;
 };

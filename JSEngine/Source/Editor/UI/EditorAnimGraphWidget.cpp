@@ -53,6 +53,21 @@ namespace
 		return ImVec2((Min.x + Max.x) * 0.5f, (Min.y + Max.y) * 0.5f);
 	}
 
+	ImVec2 MinVec(const ImVec2& A, const ImVec2& B)
+	{
+		return ImVec2(std::min(A.x, B.x), std::min(A.y, B.y));
+	}
+
+	ImVec2 MaxVec(const ImVec2& A, const ImVec2& B)
+	{
+		return ImVec2(std::max(A.x, B.x), std::max(A.y, B.y));
+	}
+
+	bool RectsOverlap(const ImVec2& AMin, const ImVec2& AMax, const ImVec2& BMin, const ImVec2& BMax)
+	{
+		return AMin.x <= BMax.x && AMax.x >= BMin.x && AMin.y <= BMax.y && AMax.y >= BMin.y;
+	}
+
 	ImVec2 GetRectEdgePoint(const ImVec2& Min, const ImVec2& Max, const ImVec2& Toward)
 	{
 		const ImVec2 Center = CenterOfRect(Min, Max);
@@ -349,6 +364,7 @@ void FEditorAnimGraphWidget::Open(const FString& InPath)
 	EditingPath = FPaths::Normalize(InPath);
 	EditingAsset = FResourceManager::Get().LoadAnimGraph(EditingPath);
 	SelectedNodeId = -1;
+	SelectedNodeIds.clear();
 	DraggingOutputNodeId = -1;
 	DraggingInputNodeId = -1;
 	DraggingTransitionFromStateId = -1;
@@ -356,9 +372,13 @@ void FEditorAnimGraphWidget::Open(const FString& InPath)
 	ViewMode = EViewMode::AnimGraph;
 	EditingStateMachineNodeId = -1;
 	SelectedStateId = -1;
+	SelectedStateIds.clear();
 	SelectedTransitionIndex = -1;
 	EditingStateNameKey = -1;
 	StateNameEditBuffers.clear();
+	UndoStack.clear();
+	RedoStack.clear();
+	bSuppressUndoCapture = false;
 	bDirty = false;
 	bOpen = EditingAsset != nullptr;
 	if (EditingAsset)
@@ -380,6 +400,7 @@ void FEditorAnimGraphWidget::Close()
 	EditingPath.clear();
 	EditingAsset = nullptr;
 	SelectedNodeId = -1;
+	SelectedNodeIds.clear();
 	DraggingOutputNodeId = -1;
 	DraggingInputNodeId = -1;
 	DraggingTransitionFromStateId = -1;
@@ -387,9 +408,13 @@ void FEditorAnimGraphWidget::Close()
 	ViewMode = EViewMode::AnimGraph;
 	EditingStateMachineNodeId = -1;
 	SelectedStateId = -1;
+	SelectedStateIds.clear();
 	SelectedTransitionIndex = -1;
 	EditingStateNameKey = -1;
 	StateNameEditBuffers.clear();
+	UndoStack.clear();
+	RedoStack.clear();
+	bSuppressUndoCapture = false;
 	bDirty = false;
 	bOpen = false;
 }
@@ -452,6 +477,30 @@ void FEditorAnimGraphWidget::RenderEmbedded(float DeltaTime)
 		return;
 	}
 
+	const ImGuiIO& IO = ImGui::GetIO();
+	const bool bInEditorContext =
+		ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) ||
+		ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
+	if (bInEditorContext && !IO.WantTextInput && IO.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S, false))
+	{
+		Save();
+	}
+	if (bInEditorContext && !IO.WantTextInput && IO.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Z, false))
+	{
+		if (IO.KeyShift)
+		{
+			Redo();
+		}
+		else
+		{
+			Undo();
+		}
+	}
+	if (bInEditorContext && !IO.WantTextInput && IO.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Y, false))
+	{
+		Redo();
+	}
+
 	RenderToolbar();
 	ImGui::Separator();
 
@@ -494,6 +543,20 @@ void FEditorAnimGraphWidget::RenderToolbar()
 	{
 		Save();
 	}
+	ImGui::SameLine();
+	ImGui::BeginDisabled(!CanUndo());
+	if (ImGui::Button("Undo"))
+	{
+		Undo();
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	ImGui::BeginDisabled(!CanRedo());
+	if (ImGui::Button("Redo"))
+	{
+		Redo();
+	}
+	ImGui::EndDisabled();
 	ImGui::SameLine();
 	if (ImGui::Button("Reload"))
 	{
@@ -604,7 +667,8 @@ void FEditorAnimGraphWidget::RenderAnimGraphCanvas()
 {
 	const ImVec2 CanvasOrigin = ImGui::GetCursorScreenPos();
 	const ImVec2 CanvasSize = ImGui::GetContentRegionAvail();
-	LastAnimGraphCanvasOrigin = CanvasOrigin;
+	const ImVec2 GraphOrigin = Add(CanvasOrigin, AnimGraphCanvasPanOffset);
+	LastAnimGraphCanvasOrigin = GraphOrigin;
 	LastAnimGraphCanvasSize = CanvasSize;
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 
@@ -614,23 +678,105 @@ void FEditorAnimGraphWidget::RenderAnimGraphCanvas()
 		ImGui::GetColorU32(ImVec4(0.10f, 0.11f, 0.13f, 1.0f)),
 		4.0f);
 
+	const ImVec2 MousePos = ImGui::GetIO().MousePos;
+	bool bMouseOverGraphNode = false;
+	for (const FAnimGraphNodeDesc& Node : EditingAsset->Nodes)
+	{
+		const ImVec2 NodeMin = Add(GraphOrigin, ToImVec2(Node.Position));
+		const ImVec2 NodeMax = Add(NodeMin, GetAnimGraphNodeSize(Node));
+		if (ImGui::IsMouseHoveringRect(NodeMin, NodeMax, true))
+		{
+			bMouseOverGraphNode = true;
+			break;
+		}
+	}
+
 	ImGui::SetNextItemAllowOverlap();
 	ImGui::InvisibleButton(
 		"##AnimGraphCanvas",
 		CanvasSize,
-		ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+		ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle);
 
-	if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+	const bool bCanvasHovered = ImGui::IsItemHovered();
+	const bool bCanvasBackgroundClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) && !bMouseOverGraphNode;
+	if (bCanvasBackgroundClicked)
 	{
-		SelectedNodeId = -1;
+		const ImGuiIO& IO = ImGui::GetIO();
+		bAnimGraphMarqueeSelecting = false;
+		bAnimGraphMarqueeAppend = IO.KeyCtrl || IO.KeyShift;
+		AnimGraphMarqueeStart = MousePos;
+		AnimGraphMarqueeEnd = MousePos;
+		if (!bAnimGraphMarqueeAppend)
+		{
+			ClearGraphMultiSelection();
+		}
+	}
+	if (bCanvasHovered && ImGui::IsItemActive() && !bMouseOverGraphNode && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 4.0f))
+	{
+		bAnimGraphMarqueeSelecting = true;
+		AnimGraphMarqueeEnd = MousePos;
+	}
+	if (bAnimGraphMarqueeSelecting && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+	{
+		AnimGraphMarqueeEnd = MousePos;
+	}
+	if (bAnimGraphMarqueeSelecting && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+	{
+		const ImVec2 RectMin = MinVec(AnimGraphMarqueeStart, AnimGraphMarqueeEnd);
+		const ImVec2 RectMax = MaxVec(AnimGraphMarqueeStart, AnimGraphMarqueeEnd);
+		if ((RectMax.x - RectMin.x) >= 4.0f || (RectMax.y - RectMin.y) >= 4.0f)
+		{
+			ApplyAnimGraphMarqueeSelection(RectMin, RectMax, bAnimGraphMarqueeAppend);
+		}
+		bAnimGraphMarqueeSelecting = false;
+	}
+	if (bCanvasHovered && ImGui::IsMouseDragging(ImGuiMouseButton_Middle))
+	{
+		AnimGraphCanvasPanOffset = Add(AnimGraphCanvasPanOffset, ImGui::GetIO().MouseDelta);
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+	}
+	if (bCanvasHovered && ImGui::IsMouseDragging(ImGuiMouseButton_Right) && !ImGui::IsPopupOpen("##AnimGraphCanvasContext"))
+	{
+		AnimGraphCanvasPanOffset = Add(AnimGraphCanvasPanOffset, ImGui::GetIO().MouseDelta);
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+	}
+	if (bCanvasHovered)
+	{
+		const ImGuiIO& IO = ImGui::GetIO();
+		constexpr float WheelPanSpeed = 48.0f;
+		if (std::fabs(IO.MouseWheel) > 0.0f)
+		{
+			if (IO.KeyShift)
+			{
+				AnimGraphCanvasPanOffset.x += IO.MouseWheel * WheelPanSpeed;
+			}
+			else
+			{
+				AnimGraphCanvasPanOffset.y += IO.MouseWheel * WheelPanSpeed;
+			}
+		}
+		if (std::fabs(IO.MouseWheelH) > 0.0f)
+		{
+			AnimGraphCanvasPanOffset.x += IO.MouseWheelH * WheelPanSpeed;
+		}
+	}
+	if (!ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Delete, false))
+	{
+		DeleteSelectedNode();
+	}
+	if (bCanvasHovered && !bMouseOverGraphNode && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+	{
+		AddSequencePlayerNode(FVector2(
+			ImGui::GetIO().MousePos.x - GraphOrigin.x,
+			ImGui::GetIO().MousePos.y - GraphOrigin.y));
 	}
 
 	if (ImGui::BeginPopupContextItem("##AnimGraphCanvasContext"))
 	{
 		const ImVec2 PopupMousePos = ImGui::GetMousePosOnOpeningCurrentPopup();
 		const FVector2 SpawnPosition(
-			PopupMousePos.x - CanvasOrigin.x,
-			PopupMousePos.y - CanvasOrigin.y);
+			PopupMousePos.x - GraphOrigin.x,
+			PopupMousePos.y - GraphOrigin.y);
 
 		if (ImGui::MenuItem("Add Sequence Player"))
 		{
@@ -644,17 +790,35 @@ void FEditorAnimGraphWidget::RenderAnimGraphCanvas()
 		{
 			AddOutputPoseNode(SpawnPosition);
 		}
+		ImGui::BeginDisabled(SelectedNodeId < 0);
+		if (ImGui::MenuItem("Delete Selected", "Delete"))
+		{
+			DeleteSelectedNode();
+		}
+		ImGui::EndDisabled();
+		if (ImGui::MenuItem("Reset View"))
+		{
+			AnimGraphCanvasPanOffset = ImVec2(0.0f, 0.0f);
+		}
 		ImGui::EndPopup();
 	}
 
-	RenderLinks(CanvasOrigin);
+	RenderLinks(GraphOrigin);
 
 	for (int32 NodeIndex = 0; NodeIndex < static_cast<int32>(EditingAsset->Nodes.size()); ++NodeIndex)
 	{
-		RenderNode(EditingAsset->Nodes[NodeIndex], CanvasOrigin, NodeIndex);
+		RenderNode(EditingAsset->Nodes[NodeIndex], GraphOrigin, NodeIndex);
 	}
 
-	RenderPendingLink(CanvasOrigin);
+	RenderPendingLink(GraphOrigin);
+
+	if (bAnimGraphMarqueeSelecting)
+	{
+		const ImVec2 RectMin = MinVec(AnimGraphMarqueeStart, AnimGraphMarqueeEnd);
+		const ImVec2 RectMax = MaxVec(AnimGraphMarqueeStart, AnimGraphMarqueeEnd);
+		DrawList->AddRectFilled(RectMin, RectMax, ImGui::GetColorU32(ImVec4(0.34f, 0.52f, 0.90f, 0.18f)));
+		DrawList->AddRect(RectMin, RectMax, ImGui::GetColorU32(ImVec4(0.52f, 0.68f, 1.0f, 0.85f)));
+	}
 }
 
 void FEditorAnimGraphWidget::RenderStateMachineCanvas()
@@ -669,7 +833,8 @@ void FEditorAnimGraphWidget::RenderStateMachineCanvas()
 
 	const ImVec2 CanvasOrigin = ImGui::GetCursorScreenPos();
 	const ImVec2 CanvasSize = ImGui::GetContentRegionAvail();
-	LastStateMachineCanvasOrigin = CanvasOrigin;
+	const ImVec2 GraphOrigin = Add(CanvasOrigin, StateMachineCanvasPanOffset);
+	LastStateMachineCanvasOrigin = GraphOrigin;
 	LastStateMachineCanvasSize = CanvasSize;
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 
@@ -686,18 +851,103 @@ void FEditorAnimGraphWidget::RenderStateMachineCanvas()
 	const ImVec2 SelectedEditorPanelMax = Add(SelectedEditorPanelMin, ImVec2(SelectedEditorPanelWidth, SelectedEditorPanelHeight));
 	const bool bMouseOverSelectedEditorPanel = bHasSelectedEditorPanel
 		&& ImGui::IsMouseHoveringRect(SelectedEditorPanelMin, SelectedEditorPanelMax, true);
+	const ImVec2 MousePos = ImGui::GetIO().MousePos;
+	const ImVec2 EntryNodeMin = GetStateMachineEntryNodePos(MachineNode->StateMachine, GraphOrigin);
+	const ImVec2 EntryNodeMax = Add(EntryNodeMin, ImVec2(StateMachineEntryNodeWidth, StateMachineEntryNodeHeight));
+	bool bMouseOverStateMachineNode = ImGui::IsMouseHoveringRect(EntryNodeMin, EntryNodeMax, true);
+	for (int32 StateIndex = 0; StateIndex < static_cast<int32>(MachineNode->StateMachine.States.size()); ++StateIndex)
+	{
+		const FAnimStateDesc& State = MachineNode->StateMachine.States[StateIndex];
+		const ImVec2 StateMin = GetStateMachineStateNodePos(State, GraphOrigin, StateIndex);
+		const ImVec2 StateMax = Add(StateMin, ImVec2(StateMachineStateNodeWidth, StateMachineStateNodeHeight));
+		if (ImGui::IsMouseHoveringRect(StateMin, StateMax, true))
+		{
+			bMouseOverStateMachineNode = true;
+			break;
+		}
+	}
 
 	ImGui::SetNextItemAllowOverlap();
 	ImGui::InvisibleButton(
 		"##StateMachineCanvas",
 		CanvasSize,
-		ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+		ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle);
 
-	if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !bMouseOverSelectedEditorPanel)
+	const bool bCanvasHovered = ImGui::IsItemHovered();
+	const bool bCanvasBackgroundClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left)
+		&& !bMouseOverSelectedEditorPanel
+		&& !bMouseOverStateMachineNode;
+	if (bCanvasBackgroundClicked)
 	{
-		SelectedStateId = -1;
+		const ImGuiIO& IO = ImGui::GetIO();
+		bStateMachineMarqueeSelecting = false;
+		bStateMachineMarqueeAppend = IO.KeyCtrl || IO.KeyShift;
+		StateMachineMarqueeStart = MousePos;
+		StateMachineMarqueeEnd = MousePos;
+		if (!bStateMachineMarqueeAppend)
+		{
+			ClearStateMultiSelection();
+		}
 		SelectedTransitionIndex = -1;
 		SelectedNodeId = MachineNode->NodeId;
+	}
+	if (bCanvasHovered
+		&& ImGui::IsItemActive()
+		&& !bMouseOverSelectedEditorPanel
+		&& !bMouseOverStateMachineNode
+		&& ImGui::IsMouseDragging(ImGuiMouseButton_Left, 4.0f))
+	{
+		bStateMachineMarqueeSelecting = true;
+		StateMachineMarqueeEnd = MousePos;
+	}
+	if (bStateMachineMarqueeSelecting && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+	{
+		StateMachineMarqueeEnd = MousePos;
+	}
+	if (bStateMachineMarqueeSelecting && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+	{
+		const ImVec2 RectMin = MinVec(StateMachineMarqueeStart, StateMachineMarqueeEnd);
+		const ImVec2 RectMax = MaxVec(StateMachineMarqueeStart, StateMachineMarqueeEnd);
+		if ((RectMax.x - RectMin.x) >= 4.0f || (RectMax.y - RectMin.y) >= 4.0f)
+		{
+			ApplyStateMachineMarqueeSelection(*MachineNode, RectMin, RectMax, bStateMachineMarqueeAppend);
+		}
+		bStateMachineMarqueeSelecting = false;
+	}
+	if (bCanvasHovered && ImGui::IsMouseDragging(ImGuiMouseButton_Middle))
+	{
+		StateMachineCanvasPanOffset = Add(StateMachineCanvasPanOffset, ImGui::GetIO().MouseDelta);
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+	}
+	if (bCanvasHovered && ImGui::IsMouseDragging(ImGuiMouseButton_Right) && !ImGui::IsPopupOpen("##StateMachineCanvasContext"))
+	{
+		StateMachineCanvasPanOffset = Add(StateMachineCanvasPanOffset, ImGui::GetIO().MouseDelta);
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+	}
+	if (bCanvasHovered)
+	{
+		const ImGuiIO& IO = ImGui::GetIO();
+		constexpr float WheelPanSpeed = 48.0f;
+		if (std::fabs(IO.MouseWheel) > 0.0f)
+		{
+			if (IO.KeyShift)
+			{
+				StateMachineCanvasPanOffset.x += IO.MouseWheel * WheelPanSpeed;
+			}
+			else
+			{
+				StateMachineCanvasPanOffset.y += IO.MouseWheel * WheelPanSpeed;
+			}
+		}
+		if (std::fabs(IO.MouseWheelH) > 0.0f)
+		{
+			StateMachineCanvasPanOffset.x += IO.MouseWheelH * WheelPanSpeed;
+		}
+	}
+	if (bCanvasHovered && !bMouseOverStateMachineNode && !bMouseOverSelectedEditorPanel && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+	{
+		AddStateToStateMachine(MachineNode->StateMachine);
+		bDirty = true;
 	}
 
 	if (ImGui::BeginPopupContextItem("##StateMachineCanvasContext"))
@@ -706,6 +956,34 @@ void FEditorAnimGraphWidget::RenderStateMachineCanvas()
 		{
 			AddStateToStateMachine(MachineNode->StateMachine);
 			bDirty = true;
+		}
+		ImGui::BeginDisabled(SelectedStateId < 0 && SelectedTransitionIndex < 0);
+		if (ImGui::MenuItem("Delete Selected", "Delete"))
+		{
+			if (SelectedTransitionIndex >= 0)
+			{
+				bDirty = DeleteTransitionFromStateMachine(MachineNode->StateMachine, SelectedTransitionIndex) || bDirty;
+			}
+			else if (SelectedStateId >= 0)
+			{
+				if (SelectedStateIds.size() > 1)
+				{
+					const std::vector<int32> StateIdsToDelete(SelectedStateIds.begin(), SelectedStateIds.end());
+					for (int32 StateIdToDelete : StateIdsToDelete)
+					{
+						bDirty = DeleteStateFromStateMachine(MachineNode->StateMachine, StateIdToDelete) || bDirty;
+					}
+				}
+				else
+				{
+					bDirty = DeleteStateFromStateMachine(MachineNode->StateMachine, SelectedStateId) || bDirty;
+				}
+			}
+		}
+		ImGui::EndDisabled();
+		if (ImGui::MenuItem("Reset View"))
+		{
+			StateMachineCanvasPanOffset = ImVec2(0.0f, 0.0f);
 		}
 		ImGui::EndPopup();
 	}
@@ -726,16 +1004,29 @@ void FEditorAnimGraphWidget::RenderStateMachineCanvas()
 		}
 		else if (SelectedStateId >= 0)
 		{
-			if (DeleteStateFromStateMachine(MachineNode->StateMachine, SelectedStateId))
+			bool bDeletedAnyState = false;
+			if (SelectedStateIds.size() > 1)
+			{
+				const std::vector<int32> StateIdsToDelete(SelectedStateIds.begin(), SelectedStateIds.end());
+				for (int32 StateIdToDelete : StateIdsToDelete)
+				{
+					bDeletedAnyState = DeleteStateFromStateMachine(MachineNode->StateMachine, StateIdToDelete) || bDeletedAnyState;
+				}
+			}
+			else
+			{
+				bDeletedAnyState = DeleteStateFromStateMachine(MachineNode->StateMachine, SelectedStateId);
+			}
+			if (bDeletedAnyState)
 			{
 				bDirty = true;
 			}
 		}
 	}
 
-	RenderStateMachineLinks(*MachineNode, CanvasOrigin);
+	RenderStateMachineLinks(*MachineNode, GraphOrigin);
 
-	const ImVec2 EntryPos = GetStateMachineEntryNodePos(MachineNode->StateMachine, CanvasOrigin);
+	const ImVec2 EntryPos = GetStateMachineEntryNodePos(MachineNode->StateMachine, GraphOrigin);
 	const ImVec2 EntryMax = Add(EntryPos, ImVec2(StateMachineEntryNodeWidth, StateMachineEntryNodeHeight));
 	DrawList->AddRectFilled(EntryPos, EntryMax, ImGui::GetColorU32(ImVec4(0.28f, 0.28f, 0.18f, 1.0f)), 6.0f);
 	DrawList->AddRect(EntryPos, EntryMax, ImGui::GetColorU32(ImVec4(0.70f, 0.64f, 0.32f, 1.0f)), 6.0f);
@@ -760,12 +1051,20 @@ void FEditorAnimGraphWidget::RenderStateMachineCanvas()
 
 	for (int32 StateIndex = 0; StateIndex < static_cast<int32>(MachineNode->StateMachine.States.size()); ++StateIndex)
 	{
-		RenderStateMachineStateNode(*MachineNode, MachineNode->StateMachine.States[StateIndex], CanvasOrigin, StateIndex);
+		RenderStateMachineStateNode(*MachineNode, MachineNode->StateMachine.States[StateIndex], GraphOrigin, StateIndex);
 	}
 
-	RenderPendingStateMachineTransitionLink(*MachineNode, CanvasOrigin);
+	RenderPendingStateMachineTransitionLink(*MachineNode, GraphOrigin);
 	RenderSelectedStateMachineStateEditor(*MachineNode, CanvasOrigin, CanvasSize);
 	RenderSelectedStateMachineTransitionEditor(*MachineNode, CanvasOrigin, CanvasSize);
+
+	if (bStateMachineMarqueeSelecting)
+	{
+		const ImVec2 RectMin = MinVec(StateMachineMarqueeStart, StateMachineMarqueeEnd);
+		const ImVec2 RectMax = MaxVec(StateMachineMarqueeStart, StateMachineMarqueeEnd);
+		DrawList->AddRectFilled(RectMin, RectMax, ImGui::GetColorU32(ImVec4(0.52f, 0.36f, 0.88f, 0.18f)));
+		DrawList->AddRect(RectMin, RectMax, ImGui::GetColorU32(ImVec4(0.74f, 0.58f, 1.0f, 0.85f)));
+	}
 }
 
 void FEditorAnimGraphWidget::RenderStateMachineLinks(FAnimGraphNodeDesc& MachineNode, const ImVec2& CanvasOrigin)
@@ -791,6 +1090,8 @@ void FEditorAnimGraphWidget::RenderStateMachineLinks(FAnimGraphNodeDesc& Machine
 
 	int32 ClickedTransitionIndex = -1;
 	const bool bCanSelectTransition = DraggingTransitionFromStateId < 0 && DraggingTransitionToStateId < 0 && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+	int32 ContextTransitionIndex = -1;
+	const bool bCanOpenTransitionContext = DraggingTransitionFromStateId < 0 && DraggingTransitionToStateId < 0 && ImGui::IsMouseClicked(ImGuiMouseButton_Right);
 	const ImVec2 MousePos = ImGui::GetIO().MousePos;
 
 	for (int32 TransitionIndex = 0; TransitionIndex < static_cast<int32>(Machine.Transitions.size()); ++TransitionIndex)
@@ -838,6 +1139,10 @@ void FEditorAnimGraphWidget::RenderStateMachineLinks(FAnimGraphNodeDesc& Machine
 		{
 			ClickedTransitionIndex = TransitionIndex;
 		}
+		if (bCanOpenTransitionContext && DistanceSquaredToSegment(MousePos, From, To) <= 18.0f * 18.0f)
+		{
+			ContextTransitionIndex = TransitionIndex;
+		}
 	}
 
 	if (ClickedTransitionIndex >= 0)
@@ -845,6 +1150,23 @@ void FEditorAnimGraphWidget::RenderStateMachineLinks(FAnimGraphNodeDesc& Machine
 		SelectedNodeId = MachineNode.NodeId;
 		SelectedStateId = -1;
 		SelectedTransitionIndex = ClickedTransitionIndex;
+	}
+	if (ContextTransitionIndex >= 0)
+	{
+		SelectedNodeId = MachineNode.NodeId;
+		SelectedStateId = -1;
+		SelectedTransitionIndex = ContextTransitionIndex;
+		ImGui::OpenPopup("##StateMachineTransitionContext");
+	}
+	if (ImGui::BeginPopup("##StateMachineTransitionContext"))
+	{
+		ImGui::TextDisabled("Transition #%d", SelectedTransitionIndex);
+		ImGui::Separator();
+		if (ImGui::MenuItem("Delete Transition", "Delete"))
+		{
+			bDirty = DeleteTransitionFromStateMachine(Machine, SelectedTransitionIndex) || bDirty;
+		}
+		ImGui::EndPopup();
 	}
 }
 
@@ -1204,7 +1526,7 @@ void FEditorAnimGraphWidget::RenderStateMachineStateNode(FAnimGraphNodeDesc& Mac
 	const ImVec2 NodeMax = Add(NodePos, NodeSize);
 	const ImVec2 InputPin = Add(NodePos, ImVec2(0.0f, StateMachineStateNodeHeight * 0.5f));
 	const ImVec2 OutputPin = Add(NodePos, ImVec2(StateMachineStateNodeWidth, StateMachineStateNodeHeight * 0.5f));
-	const bool bSelected = SelectedStateId == State.StateId;
+	const bool bSelected = IsStateNodeSelected(State.StateId);
 	const bool bEntry = MachineNode.StateMachine.EntryStateId == State.StateId;
 	const bool bStateBodyHovered = ImGui::IsMouseHoveringRect(NodePos, NodeMax, true);
 	const bool bInputPinHovered = IsMouseNear(InputPin, AnimGraphPinHitRadius);
@@ -1227,7 +1549,8 @@ void FEditorAnimGraphWidget::RenderStateMachineStateNode(FAnimGraphNodeDesc& Mac
 	if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !bInputPinHovered && !bOutputPinHovered)
 	{
 		SelectedNodeId = MachineNode.NodeId;
-		SelectedStateId = State.StateId;
+		const ImGuiIO& IO = ImGui::GetIO();
+		SelectStateNode(State.StateId, IO.KeyCtrl || IO.KeyShift);
 		SelectedTransitionIndex = -1;
 		if (State.Position.X == 0.0f && State.Position.Y == 0.0f)
 		{
@@ -1235,24 +1558,83 @@ void FEditorAnimGraphWidget::RenderStateMachineStateNode(FAnimGraphNodeDesc& Mac
 			State.Position.Y = NodePos.y - CanvasOrigin.y;
 		}
 	}
-
-	if (ImGui::IsItemActive() && !bInputPinHovered && !bOutputPinHovered && !bAnyTransitionDrag && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && bStateBodyHovered)
 	{
-		const ImVec2 Delta = ImGui::GetIO().MouseDelta;
-		if (State.Position.X == 0.0f && State.Position.Y == 0.0f)
+		SelectedNodeId = MachineNode.NodeId;
+		if (!IsStateNodeSelected(State.StateId))
 		{
-			State.Position.X = NodePos.x - CanvasOrigin.x;
-			State.Position.Y = NodePos.y - CanvasOrigin.y;
+			SelectStateNode(State.StateId, false);
 		}
-		State.Position.X += Delta.x;
-		State.Position.Y += Delta.y;
+		SelectedTransitionIndex = -1;
+		char PopupId[96];
+		std::snprintf(PopupId, sizeof(PopupId), "##StateMachineStateContext_%d_%d", MachineNode.NodeId, State.StateId);
+		ImGui::OpenPopup(PopupId);
+	}
+	char StateContextPopupId[96];
+	std::snprintf(StateContextPopupId, sizeof(StateContextPopupId), "##StateMachineStateContext_%d_%d", MachineNode.NodeId, State.StateId);
+	if (ImGui::BeginPopup(StateContextPopupId))
+	{
+		ImGui::TextDisabled("%s", GetStateDisplayName(MachineNode.StateMachine, State.StateId).c_str());
+		ImGui::Separator();
+		if (ImGui::MenuItem("Set Entry State"))
+		{
+			CaptureUndoSnapshot();
+			MachineNode.StateMachine.EntryStateId = State.StateId;
+			bDirty = true;
+		}
+		if (ImGui::MenuItem("Start Transition"))
+		{
+			DraggingTransitionFromStateId = State.StateId;
+			DraggingTransitionToStateId = -1;
+		}
+		if (ImGui::MenuItem("Delete State", "Delete"))
+		{
+			DeleteStateFromStateMachine(MachineNode.StateMachine, State.StateId);
+			bDirty = true;
+			ImGui::EndPopup();
+			return;
+		}
+		ImGui::EndPopup();
+	}
+
+	const bool bSelectedForDrag = IsStateNodeSelected(State.StateId);
+	if (bSelectedForDrag && ImGui::IsItemActive() && !bInputPinHovered && !bOutputPinHovered && !bAnyTransitionDrag && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+	{
+		CaptureUndoSnapshot();
+		const ImVec2 Delta = ImGui::GetIO().MouseDelta;
+		if (SelectedStateIds.size() > 1)
+		{
+			for (FAnimStateDesc& SelectedState : MachineNode.StateMachine.States)
+			{
+				if (SelectedStateIds.find(SelectedState.StateId) != SelectedStateIds.end())
+				{
+					if (SelectedState.Position.X == 0.0f && SelectedState.Position.Y == 0.0f && SelectedState.StateId == State.StateId)
+					{
+						SelectedState.Position.X = NodePos.x - CanvasOrigin.x;
+						SelectedState.Position.Y = NodePos.y - CanvasOrigin.y;
+					}
+					SelectedState.Position.X += Delta.x;
+					SelectedState.Position.Y += Delta.y;
+				}
+			}
+		}
+		else
+		{
+			if (State.Position.X == 0.0f && State.Position.Y == 0.0f)
+			{
+				State.Position.X = NodePos.x - CanvasOrigin.x;
+				State.Position.Y = NodePos.y - CanvasOrigin.y;
+			}
+			State.Position.X += Delta.x;
+			State.Position.Y += Delta.y;
+		}
 		bDirty = true;
 	}
 
 	if (bOutputPinHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
 		SelectedNodeId = MachineNode.NodeId;
-		SelectedStateId = State.StateId;
+		SelectStateNode(State.StateId, false);
 		SelectedTransitionIndex = -1;
 		DraggingTransitionFromStateId = State.StateId;
 		DraggingTransitionToStateId = -1;
@@ -1261,7 +1643,7 @@ void FEditorAnimGraphWidget::RenderStateMachineStateNode(FAnimGraphNodeDesc& Mac
 	if (bInputPinHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
 		SelectedNodeId = MachineNode.NodeId;
-		SelectedStateId = State.StateId;
+		SelectStateNode(State.StateId, false);
 		SelectedTransitionIndex = -1;
 		DraggingTransitionFromStateId = State.StateId;
 		DraggingTransitionToStateId = -1;
@@ -1319,7 +1701,7 @@ void FEditorAnimGraphWidget::RenderNode(FAnimGraphNodeDesc& Node, const ImVec2& 
 	const ImVec2 NodePos = Add(CanvasOrigin, ToImVec2(Node.Position));
 	const ImVec2 NodeSize = GetAnimGraphNodeSize(Node);
 	const ImVec2 NodeMax = Add(NodePos, NodeSize);
-	const bool bSelected = SelectedNodeId == Node.NodeId;
+	const bool bSelected = IsGraphNodeSelected(Node.NodeId);
 
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 	const ImU32 BodyColor = ImGui::GetColorU32(
@@ -1335,11 +1717,6 @@ void FEditorAnimGraphWidget::RenderNode(FAnimGraphNodeDesc& Node, const ImVec2& 
 	DrawList->AddRectFilled(NodePos, ImVec2(NodeMax.x, NodePos.y + AnimGraphNodeHeaderHeight), HeaderColor, 6.0f);
 	DrawList->AddRect(NodePos, NodeMax, ImGui::GetColorU32(ImVec4(0.48f, 0.55f, 0.68f, 1.0f)), 6.0f);
 
-	if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsMouseHoveringRect(NodePos, NodeMax, true))
-	{
-		SelectedNodeId = Node.NodeId;
-	}
-
 	ImGui::SetCursorScreenPos(NodePos);
 	char HeaderId[96];
 	std::snprintf(HeaderId, sizeof(HeaderId), "##AnimGraphNodeHeader_%d_%d", Node.NodeId, NodeIndex);
@@ -1347,7 +1724,36 @@ void FEditorAnimGraphWidget::RenderNode(FAnimGraphNodeDesc& Node, const ImVec2& 
 
 	if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 	{
-		SelectedNodeId = Node.NodeId;
+		const ImGuiIO& IO = ImGui::GetIO();
+		SelectGraphNode(Node.NodeId, IO.KeyCtrl || IO.KeyShift);
+	}
+	if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+	{
+		if (!IsGraphNodeSelected(Node.NodeId))
+		{
+			SelectGraphNode(Node.NodeId, false);
+		}
+		char PopupId[96];
+		std::snprintf(PopupId, sizeof(PopupId), "##AnimGraphNodeContext_%d", Node.NodeId);
+		ImGui::OpenPopup(PopupId);
+	}
+	char NodeContextPopupId[96];
+	std::snprintf(NodeContextPopupId, sizeof(NodeContextPopupId), "##AnimGraphNodeContext_%d", Node.NodeId);
+	if (ImGui::BeginPopup(NodeContextPopupId))
+	{
+		ImGui::TextDisabled("%s #%d", GetNodeDisplayName(Node).c_str(), Node.NodeId);
+		ImGui::Separator();
+		if (Node.Type == EAnimGraphNodeType::StateMachine && ImGui::MenuItem("Open State Machine"))
+		{
+			EnterStateMachineView(Node.NodeId);
+		}
+		if (ImGui::MenuItem("Delete Node", "Delete"))
+		{
+			DeleteSelectedNode();
+			ImGui::EndPopup();
+			return;
+		}
+		ImGui::EndPopup();
 	}
 
 	if (Node.Type == EAnimGraphNodeType::StateMachine
@@ -1357,11 +1763,27 @@ void FEditorAnimGraphWidget::RenderNode(FAnimGraphNodeDesc& Node, const ImVec2& 
 		EnterStateMachineView(Node.NodeId);
 	}
 
-	if (bSelected && ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+	const bool bSelectedForDrag = IsGraphNodeSelected(Node.NodeId);
+	if (bSelectedForDrag && ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
 	{
+		CaptureUndoSnapshot();
 		const ImVec2 Delta = ImGui::GetIO().MouseDelta;
-		Node.Position.X += Delta.x;
-		Node.Position.Y += Delta.y;
+		if (SelectedNodeIds.size() > 1)
+		{
+			for (FAnimGraphNodeDesc& SelectedNode : EditingAsset->Nodes)
+			{
+				if (SelectedNodeIds.find(SelectedNode.NodeId) != SelectedNodeIds.end())
+				{
+					SelectedNode.Position.X += Delta.x;
+					SelectedNode.Position.Y += Delta.y;
+				}
+			}
+		}
+		else
+		{
+			Node.Position.X += Delta.x;
+			Node.Position.Y += Delta.y;
+		}
 		bDirty = true;
 	}
 
@@ -2425,6 +2847,10 @@ bool FEditorAnimGraphWidget::SetOutputPoseInput(FAnimGraphNodeDesc& OutputNode, 
 		return false;
 	}
 
+	if (!bSuppressUndoCapture)
+	{
+		CaptureUndoSnapshot();
+	}
 	OutputNode.InputPoseNodeId = InputNodeId;
 	return true;
 }
@@ -2527,6 +2953,8 @@ FString FEditorAnimGraphWidget::GetStateDisplayName(const FAnimStateMachineDesc&
 
 void FEditorAnimGraphWidget::AddStateToStateMachine(FAnimStateMachineDesc& StateMachine)
 {
+	CaptureUndoSnapshot();
+
 	FAnimStateDesc State;
 	State.StateId = GenerateStateId(StateMachine);
 	State.Name = "State " + std::to_string(State.StateId);
@@ -2551,7 +2979,7 @@ void FEditorAnimGraphWidget::AddStateToStateMachine(FAnimStateMachineDesc& State
 	}
 
 	StateMachine.States.push_back(State);
-	SelectedStateId = State.StateId;
+	SelectStateNode(State.StateId, false);
 	SelectedTransitionIndex = -1;
 	if (StateMachine.EntryStateId < 0)
 	{
@@ -2577,6 +3005,8 @@ bool FEditorAnimGraphWidget::AddTransitionToStateMachine(FAnimStateMachineDesc& 
 		return false;
 	}
 
+	CaptureUndoSnapshot();
+
 	FAnimStateTransitionDesc Transition;
 	Transition.FromStateId = FromStateId;
 	Transition.ToStateId = ToStateId;
@@ -2592,6 +3022,8 @@ bool FEditorAnimGraphWidget::DeleteStateFromStateMachine(FAnimStateMachineDesc& 
 	{
 		return false;
 	}
+
+	CaptureUndoSnapshot();
 
 	StateMachine.States.erase(
 		std::remove_if(
@@ -2622,6 +3054,7 @@ bool FEditorAnimGraphWidget::DeleteStateFromStateMachine(FAnimStateMachineDesc& 
 	{
 		SelectedStateId = -1;
 	}
+	SelectedStateIds.erase(StateId);
 	SelectedTransitionIndex = -1;
 	DraggingTransitionFromStateId = -1;
 	return true;
@@ -2633,6 +3066,8 @@ bool FEditorAnimGraphWidget::DeleteTransitionFromStateMachine(FAnimStateMachineD
 	{
 		return false;
 	}
+
+	CaptureUndoSnapshot();
 
 	StateMachine.Transitions.erase(StateMachine.Transitions.begin() + TransitionIndex);
 	SelectedTransitionIndex = -1;
@@ -2735,14 +3170,19 @@ void FEditorAnimGraphWidget::AddSequencePlayerNode(const FVector2& SpawnPosition
 		return;
 	}
 
+	CaptureUndoSnapshot();
+
 	FAnimGraphNodeDesc Node;
 	Node.NodeId = GenerateNodeId();
 	Node.Type = EAnimGraphNodeType::SequencePlayer;
 	Node.Name = "Sequence Player";
 	Node.Position = SpawnPosition;
 	EditingAsset->Nodes.push_back(Node);
+	const bool bPreviousSuppressUndoCapture = bSuppressUndoCapture;
+	bSuppressUndoCapture = true;
 	AutoConnectRootOutputIfEmpty(Node.NodeId);
-	SelectedNodeId = Node.NodeId;
+	bSuppressUndoCapture = bPreviousSuppressUndoCapture;
+	SelectGraphNode(Node.NodeId, false);
 	bDirty = true;
 }
 
@@ -2752,6 +3192,8 @@ void FEditorAnimGraphWidget::AddOutputPoseNode(const FVector2& SpawnPosition)
 	{
 		return;
 	}
+
+	CaptureUndoSnapshot();
 
 	const int32 PreferredInputNodeId = SelectedNodeId;
 
@@ -2783,7 +3225,7 @@ void FEditorAnimGraphWidget::AddOutputPoseNode(const FVector2& SpawnPosition)
 
 	EditingAsset->Nodes.push_back(Node);
 	EditingAsset->RootNodeId = Node.NodeId;
-	SelectedNodeId = Node.NodeId;
+	SelectGraphNode(Node.NodeId, false);
 	bDirty = true;
 }
 
@@ -2793,6 +3235,8 @@ void FEditorAnimGraphWidget::AddStateMachineNode(const FVector2& SpawnPosition)
 	{
 		return;
 	}
+
+	CaptureUndoSnapshot();
 
 	FAnimGraphNodeDesc Node;
 	Node.NodeId = GenerateNodeId();
@@ -2808,44 +3252,303 @@ void FEditorAnimGraphWidget::AddStateMachineNode(const FVector2& SpawnPosition)
 	Node.StateMachine.EntryStateId = EntryState.StateId;
 
 	EditingAsset->Nodes.push_back(Node);
+	const bool bPreviousSuppressUndoCapture = bSuppressUndoCapture;
+	bSuppressUndoCapture = true;
 	AutoConnectRootOutputIfEmpty(Node.NodeId);
-	SelectedNodeId = Node.NodeId;
+	bSuppressUndoCapture = bPreviousSuppressUndoCapture;
+	SelectGraphNode(Node.NodeId, false);
 	bDirty = true;
 }
 
 void FEditorAnimGraphWidget::DeleteSelectedNode()
 {
-	if (!EditingAsset || SelectedNodeId < 0)
+	if (!EditingAsset || (SelectedNodeId < 0 && SelectedNodeIds.empty()))
 	{
 		return;
 	}
 
-	const int32 DeletedNodeId = SelectedNodeId;
+	CaptureUndoSnapshot();
+
+	std::unordered_set<int32> DeletedNodeIds = SelectedNodeIds;
+	if (DeletedNodeIds.empty() && SelectedNodeId >= 0)
+	{
+		DeletedNodeIds.insert(SelectedNodeId);
+	}
+
 	EditingAsset->Nodes.erase(
 		std::remove_if(
 			EditingAsset->Nodes.begin(),
 			EditingAsset->Nodes.end(),
-			[DeletedNodeId](const FAnimGraphNodeDesc& Node)
+			[&DeletedNodeIds](const FAnimGraphNodeDesc& Node)
 			{
-				return Node.NodeId == DeletedNodeId;
+				return DeletedNodeIds.find(Node.NodeId) != DeletedNodeIds.end();
 			}),
 		EditingAsset->Nodes.end());
 
 	for (FAnimGraphNodeDesc& Node : EditingAsset->Nodes)
 	{
-		if (Node.InputPoseNodeId == DeletedNodeId)
+		if (DeletedNodeIds.find(Node.InputPoseNodeId) != DeletedNodeIds.end())
 		{
 			Node.InputPoseNodeId = -1;
 		}
 	}
 
-	if (EditingAsset->RootNodeId == DeletedNodeId)
+	if (DeletedNodeIds.find(EditingAsset->RootNodeId) != DeletedNodeIds.end())
 	{
 		NormalizeRootNode();
 	}
 
-	SelectedNodeId = -1;
+	ClearGraphMultiSelection();
 	bDirty = true;
+}
+
+void FEditorAnimGraphWidget::ClearGraphMultiSelection()
+{
+	SelectedNodeId = -1;
+	SelectedNodeIds.clear();
+}
+
+void FEditorAnimGraphWidget::SelectGraphNode(int32 NodeId, bool bAppendOrToggle)
+{
+	if (NodeId < 0)
+	{
+		ClearGraphMultiSelection();
+		return;
+	}
+
+	if (!bAppendOrToggle)
+	{
+		SelectedNodeIds.clear();
+		SelectedNodeIds.insert(NodeId);
+		SelectedNodeId = NodeId;
+		return;
+	}
+
+	if (SelectedNodeIds.find(NodeId) != SelectedNodeIds.end())
+	{
+		SelectedNodeIds.erase(NodeId);
+		if (SelectedNodeId == NodeId)
+		{
+			SelectedNodeId = SelectedNodeIds.empty() ? -1 : *SelectedNodeIds.begin();
+		}
+	}
+	else
+	{
+		SelectedNodeIds.insert(NodeId);
+		SelectedNodeId = NodeId;
+	}
+}
+
+bool FEditorAnimGraphWidget::IsGraphNodeSelected(int32 NodeId) const
+{
+	return NodeId >= 0 &&
+		(SelectedNodeId == NodeId || SelectedNodeIds.find(NodeId) != SelectedNodeIds.end());
+}
+
+void FEditorAnimGraphWidget::ApplyAnimGraphMarqueeSelection(const ImVec2& RectMin, const ImVec2& RectMax, bool bAppend)
+{
+	if (!EditingAsset)
+	{
+		return;
+	}
+
+	if (!bAppend)
+	{
+		ClearGraphMultiSelection();
+	}
+
+	for (const FAnimGraphNodeDesc& Node : EditingAsset->Nodes)
+	{
+		const ImVec2 NodeMin = Add(LastAnimGraphCanvasOrigin, ToImVec2(Node.Position));
+		const ImVec2 NodeMax = Add(NodeMin, GetAnimGraphNodeSize(Node));
+		if (RectsOverlap(RectMin, RectMax, NodeMin, NodeMax))
+		{
+			SelectedNodeIds.insert(Node.NodeId);
+			SelectedNodeId = Node.NodeId;
+		}
+	}
+}
+
+void FEditorAnimGraphWidget::ClearStateMultiSelection()
+{
+	SelectedStateId = -1;
+	SelectedStateIds.clear();
+}
+
+void FEditorAnimGraphWidget::SelectStateNode(int32 StateId, bool bAppendOrToggle)
+{
+	if (StateId < 0)
+	{
+		ClearStateMultiSelection();
+		return;
+	}
+
+	if (!bAppendOrToggle)
+	{
+		SelectedStateIds.clear();
+		SelectedStateIds.insert(StateId);
+		SelectedStateId = StateId;
+		return;
+	}
+
+	if (SelectedStateIds.find(StateId) != SelectedStateIds.end())
+	{
+		SelectedStateIds.erase(StateId);
+		if (SelectedStateId == StateId)
+		{
+			SelectedStateId = SelectedStateIds.empty() ? -1 : *SelectedStateIds.begin();
+		}
+	}
+	else
+	{
+		SelectedStateIds.insert(StateId);
+		SelectedStateId = StateId;
+	}
+}
+
+bool FEditorAnimGraphWidget::IsStateNodeSelected(int32 StateId) const
+{
+	return StateId >= 0 &&
+		(SelectedStateId == StateId || SelectedStateIds.find(StateId) != SelectedStateIds.end());
+}
+
+void FEditorAnimGraphWidget::ApplyStateMachineMarqueeSelection(const FAnimGraphNodeDesc& MachineNode, const ImVec2& RectMin, const ImVec2& RectMax, bool bAppend)
+{
+	if (!bAppend)
+	{
+		ClearStateMultiSelection();
+	}
+
+	SelectedTransitionIndex = -1;
+	SelectedNodeId = MachineNode.NodeId;
+	for (int32 StateIndex = 0; StateIndex < static_cast<int32>(MachineNode.StateMachine.States.size()); ++StateIndex)
+	{
+		const FAnimStateDesc& State = MachineNode.StateMachine.States[StateIndex];
+		const ImVec2 NodeMin = GetStateMachineStateNodePos(State, LastStateMachineCanvasOrigin, StateIndex);
+		const ImVec2 NodeMax = Add(NodeMin, ImVec2(StateMachineStateNodeWidth, StateMachineStateNodeHeight));
+		if (RectsOverlap(RectMin, RectMax, NodeMin, NodeMax))
+		{
+			SelectedStateIds.insert(State.StateId);
+			SelectedStateId = State.StateId;
+		}
+	}
+}
+
+FEditorAnimGraphWidget::FAnimGraphSnapshot FEditorAnimGraphWidget::MakeSnapshot() const
+{
+	FAnimGraphSnapshot Snapshot;
+	if (EditingAsset)
+	{
+		Snapshot.Nodes = EditingAsset->Nodes;
+		Snapshot.RootNodeId = EditingAsset->RootNodeId;
+	}
+	return Snapshot;
+}
+
+void FEditorAnimGraphWidget::CaptureUndoSnapshot()
+{
+	if (!EditingAsset)
+	{
+		return;
+	}
+
+	constexpr size_t MaxUndoSnapshots = 80;
+	UndoStack.push_back(MakeSnapshot());
+	if (UndoStack.size() > MaxUndoSnapshots)
+	{
+		UndoStack.erase(UndoStack.begin());
+	}
+	RedoStack.clear();
+}
+
+void FEditorAnimGraphWidget::RestoreSnapshot(const FAnimGraphSnapshot& Snapshot)
+{
+	if (!EditingAsset)
+	{
+		return;
+	}
+
+	EditingAsset->Nodes = Snapshot.Nodes;
+	EditingAsset->RootNodeId = Snapshot.RootNodeId;
+	NormalizeRootNode();
+
+	if (SelectedNodeId >= 0 && !EditingAsset->FindNode(SelectedNodeId))
+	{
+		SelectedNodeId = -1;
+	}
+	for (auto It = SelectedNodeIds.begin(); It != SelectedNodeIds.end();)
+	{
+		if (!EditingAsset->FindNode(*It))
+		{
+			It = SelectedNodeIds.erase(It);
+		}
+		else
+		{
+			++It;
+		}
+	}
+	FAnimGraphNodeDesc* MachineNode = FindEditingStateMachineNode();
+	if (!MachineNode)
+	{
+		ViewMode = EViewMode::AnimGraph;
+		EditingStateMachineNodeId = -1;
+		SelectedStateId = -1;
+		SelectedTransitionIndex = -1;
+	}
+	else
+	{
+		if (SelectedStateId >= 0 && FindStateIndexById(MachineNode->StateMachine, SelectedStateId) < 0)
+		{
+			SelectedStateId = -1;
+		}
+		for (auto It = SelectedStateIds.begin(); It != SelectedStateIds.end();)
+		{
+			if (FindStateIndexById(MachineNode->StateMachine, *It) < 0)
+			{
+				It = SelectedStateIds.erase(It);
+			}
+			else
+			{
+				++It;
+			}
+		}
+		if (SelectedTransitionIndex >= static_cast<int32>(MachineNode->StateMachine.Transitions.size()))
+		{
+			SelectedTransitionIndex = -1;
+		}
+	}
+	DraggingOutputNodeId = -1;
+	DraggingInputNodeId = -1;
+	DraggingTransitionFromStateId = -1;
+	DraggingTransitionToStateId = -1;
+	bSuppressUndoCapture = false;
+	bDirty = true;
+}
+
+void FEditorAnimGraphWidget::Undo()
+{
+	if (!EditingAsset || UndoStack.empty())
+	{
+		return;
+	}
+
+	RedoStack.push_back(MakeSnapshot());
+	const FAnimGraphSnapshot Snapshot = UndoStack.back();
+	UndoStack.pop_back();
+	RestoreSnapshot(Snapshot);
+}
+
+void FEditorAnimGraphWidget::Redo()
+{
+	if (!EditingAsset || RedoStack.empty())
+	{
+		return;
+	}
+
+	UndoStack.push_back(MakeSnapshot());
+	const FAnimGraphSnapshot Snapshot = RedoStack.back();
+	RedoStack.pop_back();
+	RestoreSnapshot(Snapshot);
 }
 
 void FEditorAnimGraphWidget::EnterStateMachineView(int32 StateMachineNodeId)
@@ -2862,8 +3565,10 @@ void FEditorAnimGraphWidget::EnterStateMachineView(int32 StateMachineNodeId)
 	}
 
 	SelectedNodeId = StateMachineNodeId;
+	SelectedNodeIds.clear();
+	SelectedNodeIds.insert(StateMachineNodeId);
 	EditingStateMachineNodeId = StateMachineNodeId;
-	SelectedStateId = -1;
+	ClearStateMultiSelection();
 	SelectedTransitionIndex = -1;
 	DraggingOutputNodeId = -1;
 	DraggingInputNodeId = -1;
@@ -2876,7 +3581,7 @@ void FEditorAnimGraphWidget::LeaveStateMachineView()
 {
 	ViewMode = EViewMode::AnimGraph;
 	EditingStateMachineNodeId = -1;
-	SelectedStateId = -1;
+	ClearStateMultiSelection();
 	SelectedTransitionIndex = -1;
 	DraggingOutputNodeId = -1;
 	DraggingInputNodeId = -1;

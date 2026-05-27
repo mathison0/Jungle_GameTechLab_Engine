@@ -3,6 +3,7 @@
 #include "Animation/ActorSequence.h"
 #include "Animation/AnimationStateMachine.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/LuaAnimInstance.h"
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Animation/StateMachineAnimInstance.h"
 #include "Asset/CurveFloatAsset.h"
@@ -108,5 +109,16 @@ void FScriptManager::BindAnimationTypes()
 
 	LUA_BEGIN_TYPE_NO_CTOR_BASE(GLuaState, UStateMachineAnimInstance, "StateMachineAnimInstance", UAnimInstance, UObject)
 	LUA_METHOD(SetStateMachine, SetStateMachine);
+	LUA_END_TYPE();
+
+	LUA_BEGIN_TYPE_NO_CTOR_BASE(GLuaState, ULuaAnimInstance, "LuaAnimInstance", UAnimInstance, UObject)
+	LUA_METHOD(SetFloat, SetFloat);
+	LUA_METHOD(SetBool, SetBool);
+	LUA_METHOD(SetInt, SetInt);
+	LUA_METHOD(GetFloat, GetFloat);
+	LUA_METHOD(GetBool, GetBool);
+	LUA_METHOD(GetInt, GetInt);
+	LUA_METHOD(GetCurrentState, GetCurrentState);
+	LUA_METHOD(IsReady, IsReady);
 	LUA_END_TYPE();
 }

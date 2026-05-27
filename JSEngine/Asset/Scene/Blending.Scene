@@ -262,7 +262,7 @@
       "Active" : true,
       "ClassName" : "ASkeletalMeshActor",
       "Components" : [{
-          "AnimGraphAssetPath" : "Asset/Animation Graph/TopDownStateMachine.animgraph",
+          "AnimGraphAssetPath" : "Asset/Animation Graph/TopDownStateMachine.uasset",
           "AnimInstanceData" : {
             "BoolParameters" : [],
             "CurrentTime" : 0.000000,
@@ -509,7 +509,7 @@
       "Active" : true,
       "ClassName" : "ASkeletalMeshActor",
       "Components" : [{
-          "AnimGraphAssetPath" : "Asset/Animation Graph/TopDownBlending.animgraph",
+          "AnimGraphAssetPath" : "Asset/Animation Graph/TopDownBlending.uasset",
           "AnimInstanceData" : {
             "BoolParameters" : [],
             "CurrentTime" : 0.000000,

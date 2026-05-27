@@ -357,10 +357,14 @@
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimGraphAsset.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimGraphInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimInstance.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimLuaProgramAsset.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Animation\ULuaAnimInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotifyState.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_FootstepSound.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LuaEvent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LogEvent.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotifyState_LuaEvent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimSequence.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimSequenceBase.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimSingleNodeInstance.gen.cpp" />
@@ -551,6 +555,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Editor\AnimGraph\LuaAnimGraph.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\ComponentMenuRegistry.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -588,6 +596,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorCurveEditorWidget.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorLuaAnimGraphWidget.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -812,10 +824,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\ActorSequence.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimLuaProgramAsset.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimGraphAsset.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimGraphInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimGraphNode.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp" />
+    <ClCompile Include="Source\Engine\Animation\LuaAnimInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimNotify.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimSequence.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimSingleNodeInstance.cpp" />
@@ -1150,6 +1164,7 @@
     <ClInclude Include="Source\Editor\UI\EditorContentBrowserWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorControlWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorCurveEditorWidget.h" />
+    <ClInclude Include="Source\Editor\UI\EditorLuaAnimGraphWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h" />
     <ClInclude Include="Source\Editor\UI\EditorFooterLogSystem.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanel.h" />
@@ -1186,10 +1201,13 @@
     <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\ViewportLayout.h" />
     <ClInclude Include="Source\Engine\Animation\ActorSequence.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimLuaProgramAsset.h" />
     <ClInclude Include="Source\Engine\Animation\AnimGraphAsset.h" />
     <ClInclude Include="Source\Engine\Animation\AnimGraphInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimGraphNode.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h" />
+    <ClInclude Include="Source\Engine\Animation\LuaAnimGraph.h" />
+    <ClInclude Include="Source\Engine\Animation\LuaAnimInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimNotify.h" />
     <ClInclude Include="Source\Engine\Animation\AnimSequence.h" />
     <ClInclude Include="Source\Engine\Animation\AnimSingleNodeInstance.h" />

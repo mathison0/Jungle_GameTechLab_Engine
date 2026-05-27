@@ -1,5 +1,6 @@
 ﻿#include "Runtime/Script/ScriptManager.h"
 
+#include "Animation/LuaAnimInstance.h"
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Animation/AnimationStateMachine.h"
 #include "Asset/CurveFloatAsset.h"
@@ -399,6 +400,10 @@ void FScriptManager::BindSkeletalMeshTypes()
     LUA_BEGIN_TYPE_NO_CTOR_BASE(GLuaState, USkeletalMeshComponent, "SkeletalMeshComponent",
         USkinnedMeshComponent, UMeshComponent, UPrimitiveComponent, USceneComponent, UActorComponent, UObject)
     LUA_METHOD(GetAnimInstance, GetAnimInstance);
+    LUA_SET(GetLuaAnimInstance, [](USkeletalMeshComponent& Self) -> ULuaAnimInstance*
+    {
+        return Cast<ULuaAnimInstance>(Self.GetAnimInstance());
+    });
     LUA_METHOD(GetSingleNodeInstance, GetSingleNodeInstance);
     LUA_METHOD(GetOrCreateSingleNodeInstance, GetOrCreateSingleNodeInstance);
     LUA_METHOD(Play, Play);
@@ -420,6 +425,11 @@ void FScriptManager::BindSkeletalMeshTypes()
     LUA_METHOD(GetAnimGraphFloat, GetAnimGraphFloatParameter);
     LUA_METHOD(GetAnimGraphBool, GetAnimGraphBoolParameter);
     LUA_METHOD(GetAnimGraphInt, GetAnimGraphIntParameter);
+    LUA_METHOD(SetLuaAnimProgramAssetPath, SetLuaAnimProgramAssetPath);
+    LUA_METHOD(GetLuaAnimProgramAssetPath, GetLuaAnimProgramAssetPath);
+    LUA_METHOD(SetLuaAnimFloat, SetLuaAnimFloatParameter);
+    LUA_METHOD(SetLuaAnimBool, SetLuaAnimBoolParameter);
+    LUA_METHOD(SetLuaAnimInt, SetLuaAnimIntParameter);
     LUA_END_TYPE();
 }
 

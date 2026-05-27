@@ -159,6 +159,16 @@ bool UWorld::ShouldSkipTraceCandidate(UPrimitiveComponent* Candidate, const FCol
 	{
 		return true;
 	}
+	if (Params.bSimpleCollisionOnly)
+	{
+		const EPrimitiveType PrimitiveType = Candidate->GetPrimitiveType();
+		if (PrimitiveType != EPrimitiveType::EPT_Box
+			&& PrimitiveType != EPrimitiveType::EPT_Sphere
+			&& PrimitiveType != EPrimitiveType::EPT_Capsule)
+		{
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -172,6 +182,11 @@ FOBB UWorld::MakeSweptAABBQueryOBB(const FVector& Start, const FVector& End, con
 	else if (Shape.IsBox())
 	{
 		Inflation = Shape.HalfExtent;
+	}
+	else if (Shape.IsCapsule())
+	{
+		const float CapsuleExtent = Shape.HalfHeight + Shape.Radius;
+		Inflation = FVector(Shape.Radius, Shape.Radius, CapsuleExtent);
 	}
 
 	const FVector QueryMin = FVector::Min(Start, End) - Inflation;

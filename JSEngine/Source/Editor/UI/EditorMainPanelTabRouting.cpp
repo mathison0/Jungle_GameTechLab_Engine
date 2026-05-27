@@ -11,6 +11,14 @@
 namespace
 {
 	constexpr const char* ParticleDetachedWindowName = "Particle System Editor###ParticleSystemEditorDetached";
+	constexpr const char* AnimGraphDetachedWindowName = "Anim Graph###AnimGraphEditorDetached";
+	constexpr const char* LuaAnimGraphDetachedWindowName = "Lua Anim Graph###LuaAnimGraphEditorDetached";
+
+	FString GetFileNameFromPath(const FString& Path)
+	{
+		const size_t SlashIndex = Path.find_last_of("/\\");
+		return SlashIndex == FString::npos ? Path : Path.substr(SlashIndex + 1);
+	}
 
 	int32 FindImGuiWindowZOrder(const char* WindowName)
 	{
@@ -210,6 +218,17 @@ void FEditorMainPanel::RenderAnimGraphEditorDocument(float DeltaTime)
 		return;
 	}
 
+	if (ActiveTab->bDetached)
+	{
+		ImGui::TextDisabled("This Anim Graph tab is detached.");
+		if (ImGui::Button("Dock Back"))
+		{
+			RequestDetachEditorTab(ActiveTab->Id, false);
+		}
+		ImGui::End();
+		return;
+	}
+
 	if (!ActiveTab->Id.PayloadId.empty()
 		&& Widgets.AnimGraphWidget.GetEditingPath() != ActiveTab->Id.PayloadId)
 	{
@@ -218,6 +237,43 @@ void FEditorMainPanel::RenderAnimGraphEditorDocument(float DeltaTime)
 
 	EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.AnimGraphWidget.IsDirty());
 	Widgets.AnimGraphWidget.RenderEmbedded(DeltaTime);
+	ImGui::End();
+}
+
+void FEditorMainPanel::RenderLuaAnimGraphEditorDocument(float DeltaTime)
+{
+	const FEditorTabEntry* ActiveTab = EditorTabs.GetActiveTab();
+	if (!ActiveTab || ActiveTab->Id.Kind != EEditorTabKind::LuaAnimGraphEditor)
+	{
+		return;
+	}
+
+	constexpr ImGuiWindowFlags WindowFlags = 0;
+	if (!ImGui::Begin("Viewport", nullptr, WindowFlags))
+	{
+		ImGui::End();
+		return;
+	}
+
+	if (ActiveTab->bDetached)
+	{
+		ImGui::TextDisabled("This Lua Anim Graph tab is detached.");
+		if (ImGui::Button("Dock Back"))
+		{
+			RequestDetachEditorTab(ActiveTab->Id, false);
+		}
+		ImGui::End();
+		return;
+	}
+
+	if (!ActiveTab->Id.PayloadId.empty()
+		&& Widgets.LuaAnimGraphWidget.GetAssetPath() != ActiveTab->Id.PayloadId)
+	{
+		Widgets.LuaAnimGraphWidget.OpenAsset(ActiveTab->Id.PayloadId);
+	}
+
+	EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.LuaAnimGraphWidget.IsDirty());
+	Widgets.LuaAnimGraphWidget.RenderEmbedded(DeltaTime);
 	ImGui::End();
 }
 
@@ -256,6 +312,196 @@ void FEditorMainPanel::RenderParticleSystemEditorDocument(float DeltaTime)
 	EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.ParticleSystemWidget.IsDirty());
 	Widgets.ParticleSystemWidget.RenderEmbedded(DeltaTime);
 	ImGui::End();
+}
+
+void FEditorMainPanel::RenderDetachedAnimGraphEditorDocument(float DeltaTime)
+{
+	const FEditorTabEntry* DetachedTab = nullptr;
+	for (const FEditorTabEntry& Tab : EditorTabs.GetTabs())
+	{
+		if (Tab.Id.Kind == EEditorTabKind::AnimGraphEditor && Tab.bDetached)
+		{
+			DetachedTab = &Tab;
+			break;
+		}
+	}
+	if (!DetachedTab)
+	{
+		return;
+	}
+
+	if (!DetachedTab->Id.PayloadId.empty() &&
+		Widgets.AnimGraphWidget.GetEditingPath() != DetachedTab->Id.PayloadId)
+	{
+		Widgets.AnimGraphWidget.Open(DetachedTab->Id.PayloadId);
+	}
+
+	const float TitleBarFramePaddingY = FEditorDetachedWindowChrome::GetTitleBarFramePaddingY();
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(13.0f, TitleBarFramePaddingY));
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(9.0f, 4.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.18f, 0.20f, 0.25f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.15f, 0.17f, 0.22f, 1.0f));
+
+	FEditorDetachedWindowChrome::ApplyWindowClass(0x4A534147u); // "JSAG"
+	ImGui::SetNextWindowSize(ImVec2(1240.0f, 760.0f), ImGuiCond_FirstUseEver);
+	if (const ImGuiViewport* MainViewport = ImGui::GetMainViewport())
+	{
+		ImGui::SetNextWindowPos(ImVec2(MainViewport->Pos.x + 132.0f, MainViewport->Pos.y + 96.0f), ImGuiCond_FirstUseEver);
+	}
+
+	bool bOpen = true;
+	constexpr ImGuiWindowFlags WindowFlags =
+		ImGuiWindowFlags_MenuBar |
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse;
+
+	if (ImGui::Begin(AnimGraphDetachedWindowName, &bOpen, WindowFlags))
+	{
+		static ImVec2 LastWindowPos(0.0f, 0.0f);
+		static bool bDraggingWindow = false;
+		bool bDockRequested = false;
+		bool bCloseRequested = false;
+		const bool bDockByDraggingToTabStrip =
+			FEditorDetachedWindowChrome::WasCurrentWindowDraggedToMainTabStrip(LastWindowPos, bDraggingWindow);
+
+		const FString Title = FString("Anim Graph - ") + GetFileNameFromPath(DetachedTab->Id.PayloadId);
+		FEditorDetachedWindowChrome::RenderMenuBar(
+			Title.c_str(),
+			"AnimGraphDetached",
+			[&bDockRequested]()
+			{
+				if (ImGui::BeginMenu("Window"))
+				{
+					if (ImGui::MenuItem("Dock Back"))
+					{
+						bDockRequested = true;
+					}
+					ImGui::EndMenu();
+				}
+			},
+			bCloseRequested);
+
+		EditorTabs.SetTabDirty(DetachedTab->Id, Widgets.AnimGraphWidget.IsDirty());
+		Widgets.AnimGraphWidget.RenderEmbedded(DeltaTime);
+
+		if (bDockRequested || bDockByDraggingToTabStrip)
+		{
+			RequestDetachEditorTab(DetachedTab->Id, false);
+		}
+		else if (bCloseRequested)
+		{
+			RequestCloseEditorTab(DetachedTab->Id);
+		}
+	}
+	ImGui::End();
+
+	ImGui::PopStyleColor(4);
+	ImGui::PopStyleVar(5);
+
+	if (!bOpen)
+	{
+		RequestCloseEditorTab(DetachedTab->Id);
+	}
+}
+
+void FEditorMainPanel::RenderDetachedLuaAnimGraphEditorDocument(float DeltaTime)
+{
+	const FEditorTabEntry* DetachedTab = nullptr;
+	for (const FEditorTabEntry& Tab : EditorTabs.GetTabs())
+	{
+		if (Tab.Id.Kind == EEditorTabKind::LuaAnimGraphEditor && Tab.bDetached)
+		{
+			DetachedTab = &Tab;
+			break;
+		}
+	}
+	if (!DetachedTab)
+	{
+		return;
+	}
+
+	if (!DetachedTab->Id.PayloadId.empty() &&
+		Widgets.LuaAnimGraphWidget.GetAssetPath() != DetachedTab->Id.PayloadId)
+	{
+		Widgets.LuaAnimGraphWidget.OpenAsset(DetachedTab->Id.PayloadId);
+	}
+
+	const float TitleBarFramePaddingY = FEditorDetachedWindowChrome::GetTitleBarFramePaddingY();
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(13.0f, TitleBarFramePaddingY));
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(9.0f, 4.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.055f, 0.060f, 0.072f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.18f, 0.20f, 0.25f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.15f, 0.17f, 0.22f, 1.0f));
+
+	FEditorDetachedWindowChrome::ApplyWindowClass(0x4A534C41u); // "JSLA"
+	ImGui::SetNextWindowSize(ImVec2(1240.0f, 760.0f), ImGuiCond_FirstUseEver);
+	if (const ImGuiViewport* MainViewport = ImGui::GetMainViewport())
+	{
+		ImGui::SetNextWindowPos(ImVec2(MainViewport->Pos.x + 144.0f, MainViewport->Pos.y + 108.0f), ImGuiCond_FirstUseEver);
+	}
+
+	bool bOpen = true;
+	constexpr ImGuiWindowFlags WindowFlags =
+		ImGuiWindowFlags_MenuBar |
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse;
+
+	if (ImGui::Begin(LuaAnimGraphDetachedWindowName, &bOpen, WindowFlags))
+	{
+		static ImVec2 LastWindowPos(0.0f, 0.0f);
+		static bool bDraggingWindow = false;
+		bool bDockRequested = false;
+		bool bCloseRequested = false;
+		const bool bDockByDraggingToTabStrip =
+			FEditorDetachedWindowChrome::WasCurrentWindowDraggedToMainTabStrip(LastWindowPos, bDraggingWindow);
+
+		const FString Title = FString("Lua Anim Graph - ") + GetFileNameFromPath(DetachedTab->Id.PayloadId);
+		FEditorDetachedWindowChrome::RenderMenuBar(
+			Title.c_str(),
+			"LuaAnimGraphDetached",
+			[&bDockRequested]()
+			{
+				if (ImGui::BeginMenu("Window"))
+				{
+					if (ImGui::MenuItem("Dock Back"))
+					{
+						bDockRequested = true;
+					}
+					ImGui::EndMenu();
+				}
+			},
+			bCloseRequested);
+
+		EditorTabs.SetTabDirty(DetachedTab->Id, Widgets.LuaAnimGraphWidget.IsDirty());
+		Widgets.LuaAnimGraphWidget.RenderEmbedded(DeltaTime);
+
+		if (bDockRequested || bDockByDraggingToTabStrip)
+		{
+			RequestDetachEditorTab(DetachedTab->Id, false);
+		}
+		else if (bCloseRequested)
+		{
+			RequestCloseEditorTab(DetachedTab->Id);
+		}
+	}
+	ImGui::End();
+
+	ImGui::PopStyleColor(4);
+	ImGui::PopStyleVar(5);
+
+	if (!bOpen)
+	{
+		RequestCloseEditorTab(DetachedTab->Id);
+	}
 }
 
 void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTime)

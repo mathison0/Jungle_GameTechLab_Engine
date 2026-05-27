@@ -1,9 +1,14 @@
 #include "Editor/Asset/EditorAssetService.h"
 
+#include "Animation/AnimGraphAsset.h"
+#include "Animation/AnimLuaProgramAsset.h"
 #include "Animation/AnimSequence.h"
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
 #include "Asset/AssetQueryService.h"
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
+#include "Object/Class.h"
 #include "Render/Resource/Material.h"
 
 #include <algorithm>
@@ -93,6 +98,35 @@ namespace
 			}
 		}
 	}
+
+	void ListUAssetClassFiles(const FString& ClassName, TArray<FString>& OutPaths)
+	{
+		const std::filesystem::path Root = (std::filesystem::path(FPaths::RootDir()) / L"Asset").lexically_normal();
+		if (!std::filesystem::exists(Root))
+		{
+			return;
+		}
+
+		std::error_code Ec;
+		for (const std::filesystem::directory_entry& Entry : std::filesystem::recursive_directory_iterator(Root, Ec))
+		{
+			if (Ec)
+			{
+				break;
+			}
+			if (!Entry.is_regular_file() || LowerExtension(Entry.path()) != ".uasset")
+			{
+				continue;
+			}
+
+			const FString RelativePath = ToProjectRelativePath(Entry.path());
+			FAssetMetaData MetaData;
+			if (FAssetFile::LoadMetadataOnly(RelativePath, MetaData) && MetaData.ClassName == ClassName)
+			{
+				AddUniquePath(OutPaths, RelativePath);
+			}
+		}
+	}
 }
 
 void FEditorAssetService::Initialize(UEditorEngine* InEditorEngine)
@@ -109,6 +143,7 @@ void FEditorAssetService::RefreshAssetDatabase()
 	TexturePaths.clear();
 	MaterialInterfaceNames.clear();
 	AnimGraphPaths.clear();
+	LuaAnimGraphPaths.clear();
 	ParticleSystemPaths.clear();
 	FontNames.clear();
 	SubUVNames.clear();
@@ -146,7 +181,8 @@ void FEditorAssetService::RefreshAssetDatabase()
 	CachedMaterialInterfaces.resize(MaterialInterfaceNames.size(), nullptr);
 	CachedMaterialInterfaceResolved.resize(MaterialInterfaceNames.size(), false);
 
-	ListAssetFiles(L"", { ".animgraph" }, AnimGraphPaths);
+	ListUAssetClassFiles(UAnimGraphAsset::StaticClass()->GetName(), AnimGraphPaths);
+	ListUAssetClassFiles(UAnimLuaProgramAsset::StaticClass()->GetName(), LuaAnimGraphPaths);
 
 	for (const FString& Path : FAssetQueryService::GetParticleSystemPaths())
 	{
@@ -168,6 +204,7 @@ void FEditorAssetService::RefreshAssetDatabase()
 	BuildItems(TexturePaths, EEditorAssetType::Texture, TextureItems);
 	BuildItems(MaterialInterfaceNames, EEditorAssetType::Material, MaterialItems);
 	BuildItems(AnimGraphPaths, EEditorAssetType::AnimGraph, AnimGraphItems);
+	BuildItems(LuaAnimGraphPaths, EEditorAssetType::LuaAnimGraph, LuaAnimGraphItems);
 	BuildItems(ParticleSystemPaths, EEditorAssetType::ParticleSystem, ParticleSystemItems);
 	BuildItems(FontNames, EEditorAssetType::Font, FontItems);
 	BuildItems(SubUVNames, EEditorAssetType::SubUV, SubUVItems);
@@ -189,6 +226,8 @@ const TArray<FEditorAssetItem>& FEditorAssetService::GetAssets(EEditorAssetType 
 		return MaterialItems;
 	case EEditorAssetType::AnimGraph:
 		return AnimGraphItems;
+	case EEditorAssetType::LuaAnimGraph:
+		return LuaAnimGraphItems;
 	case EEditorAssetType::ParticleSystem:
 		return ParticleSystemItems;
 	case EEditorAssetType::Font:

@@ -88,6 +88,26 @@ FString MakeAnimGraphEditorTabLabel(const FString& AnimGraphPath)
 	return FileName.empty() ? "Anim Graph" : FileName;
 }
 
+FEditorTabId MakeLuaAnimGraphEditorTabId(const FString& AssetPath)
+{
+	FEditorTabId TabId;
+	TabId.Kind = EEditorTabKind::LuaAnimGraphEditor;
+	TabId.PayloadId = AssetPath;
+	return TabId;
+}
+
+FString MakeLuaAnimGraphEditorTabLabel(const FString& AssetPath)
+{
+	if (AssetPath.empty())
+	{
+		return "Lua Anim Graph";
+	}
+
+	const size_t SlashIndex = AssetPath.find_last_of("/\\");
+	const FString FileName = SlashIndex == FString::npos ? AssetPath : AssetPath.substr(SlashIndex + 1);
+	return FileName.empty() ? "Lua Anim Graph" : FileName;
+}
+
 FEditorTabId MakeParticleSystemEditorTabId(const FString& ParticleSystemPath)
 {
 	FEditorTabId TabId;

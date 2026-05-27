@@ -1931,7 +1931,7 @@ bool FResourceManager::SaveAnimSequence(const FString& Path, const UAnimSequence
 	{
 		FAssetMetaData MetaData;
 		MetaData.Version = 1;
-		MetaData.PayloadVersion = 2;
+		MetaData.PayloadVersion = 3;
 		MetaData.ClassName = UAnimSequence::StaticClass()->GetName();
 		MetaData.SourceFile = MakeProjectRelativePath(Sequence->GetSourceFilePath());
 		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring());
@@ -2099,93 +2099,45 @@ namespace
 		return Machine;
 	}
 
-	FAnimGraphNodeDesc ParseAnimGraphNode(json::JSON& Object)
-	{
-		FAnimGraphNodeDesc Node;
-		Node.NodeId = GetJsonInt(Object, "NodeId", -1);
-		Node.Type = static_cast<EAnimGraphNodeType>(
-			GetJsonInt(Object, "Type", static_cast<int32>(EAnimGraphNodeType::SequencePlayer)));
-		Node.Name = GetJsonString(Object, "Name");
-		Node.Position = GetJsonVector2(Object, "Position");
-		Node.AnimationPath = GetJsonString(Object, "AnimationPath");
-		Node.PlayRate = GetJsonFloat(Object, "PlayRate", 1.0f);
-		Node.bLoop = GetJsonBool(Object, "bLoop", true);
-		Node.InputPoseNodeId = GetJsonInt(Object, "InputPoseNodeId", -1);
-		if (Object.hasKey("StateMachine") && Object["StateMachine"].JSONType() == json::JSON::Class::Object)
-		{
-			Node.StateMachine = ParseAnimStateMachine(Object["StateMachine"]);
-		}
-		return Node;
-	}
-
-	void LoadAnimGraphNodesFromJson(UAnimGraphAsset* Asset, json::JSON& JsonData)
-	{
-		if (!Asset)
-		{
-			return;
-		}
-
-		if (JsonData.hasKey("RootNodeId"))
-		{
-			Asset->RootNodeId = GetJsonInt(JsonData, "RootNodeId", -1);
-		}
-
-		if (!JsonData.hasKey("Nodes") || JsonData["Nodes"].JSONType() != json::JSON::Class::Array)
-		{
-			return;
-		}
-
-		Asset->Nodes.clear();
-		json::JSON& Nodes = JsonData["Nodes"];
-		for (int32 Index = 0; Index < static_cast<int32>(Nodes.length()); ++Index)
-		{
-			if (Nodes[Index].JSONType() == json::JSON::Class::Object)
-			{
-				Asset->Nodes.push_back(ParseAnimGraphNode(Nodes[Index]));
-			}
-		}
-
-		Asset->ValidateAndRepairGraph();
-	}
 }
 
 UAnimGraphAsset* FResourceManager::LoadAnimGraph(const FString& Path)
 {
 	const FString NormalizedPath = FPaths::Normalize(Path);
-	const std::filesystem::path FilePath =
-		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
 
-	std::ifstream In(FilePath);
-	if (!In.is_open())
+	if (FAssetFile::IsAssetPath(NormalizedPath))
 	{
-		UE_LOG_ERROR("[AnimGraphAsset] Failed to open: %s", NormalizedPath.c_str());
-		return nullptr;
+		FAssetMetaData MetaData;
+		UAnimGraphAsset* Asset = nullptr;
+		const bool bLoaded = FAssetFile::Load(NormalizedPath, MetaData, [&](FArchive& Ar)
+		{
+			if (!MetaData.ClassName.empty() && MetaData.ClassName != UAnimGraphAsset::StaticClass()->GetName())
+			{
+				return false;
+			}
+
+			Asset = UObjectManager::Get().CreateObject<UAnimGraphAsset>();
+			if (!Asset)
+			{
+				return false;
+			}
+
+			Asset->Serialize(Ar);
+			Asset->ValidateAndRepairGraph();
+			return true;
+		});
+
+		if (!bLoaded || !Asset)
+		{
+			UE_LOG_ERROR("[AnimGraphAsset] Failed to load .uasset: %s", NormalizedPath.c_str());
+			return nullptr;
+		}
+
+		return Asset;
 	}
 
-	std::string JsonStr(
-		(std::istreambuf_iterator<char>(In)),
-		std::istreambuf_iterator<char>()
-	);
-
-	json::JSON JsonData = json::JSON::Load(JsonStr);
-	if (JsonData.JSONType() != json::JSON::Class::Object)
-	{
-		UE_LOG_ERROR("[AnimGraphAsset] Invalid json: %s", NormalizedPath.c_str());
-		return nullptr;
-	}
-
-	UAnimGraphAsset* Asset = UObjectManager::Get().CreateObject<UAnimGraphAsset>();
-	if (!Asset)
-	{
-		UE_LOG_ERROR("[AnimGraphAsset] Failed to create asset object: %s", NormalizedPath.c_str());
-		return nullptr;
-	}
-
-	FJsonReader Reader(JsonData);
-	Asset->Serialize(Reader);
-	LoadAnimGraphNodesFromJson(Asset, JsonData);
-
-	return Asset;
+	UE_LOG_ERROR("[AnimGraphAsset] Legacy AnimGraph path is no longer supported: %s", NormalizedPath.c_str());
+	return nullptr;
 }
 
 bool FResourceManager::SaveAnimGraph(UAnimGraphAsset* Asset, const FString& Path)
@@ -2196,37 +2148,27 @@ bool FResourceManager::SaveAnimGraph(UAnimGraphAsset* Asset, const FString& Path
 	}
 
 	const FString NormalizedPath = FPaths::Normalize(Path);
-	const std::filesystem::path FilePath =
-		std::filesystem::path(FPaths::ToAbsolute(FPaths::ToWide(NormalizedPath)));
-
-	json::JSON JsonData = json::JSON::Make(json::JSON::Class::Object);
-
-	FJsonWriter Writer(JsonData);
-	Asset->Serialize(Writer);
-
-	std::error_code ErrorCode;
-	std::filesystem::create_directories(FilePath.parent_path(), ErrorCode);
-	if (ErrorCode)
+	if (FAssetFile::IsAssetPath(NormalizedPath))
 	{
-		UE_LOG_ERROR(
-			"[AnimGraphAsset] Failed to create directory: %s",
-			NormalizedPath.c_str()
-		);
-		return false;
+		FAssetMetaData MetaData;
+		MetaData.PayloadVersion = 1;
+		MetaData.ClassName = UAnimGraphAsset::StaticClass()->GetName();
+		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).filename().wstring());
+
+		const bool bSaved = FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
+		{
+			Asset->Serialize(Ar);
+			return true;
+		});
+		if (!bSaved)
+		{
+			UE_LOG_ERROR("[AnimGraphAsset] Failed to save .uasset: %s", NormalizedPath.c_str());
+		}
+		return bSaved;
 	}
 
-	std::ofstream Out(FilePath);
-	if (!Out.is_open())
-	{
-		UE_LOG_ERROR(
-			"[AnimGraphAsset] Failed to open for writing: %s",
-			NormalizedPath.c_str()
-		);
-		return false;
-	}
-
-	Out << JsonData.dump(4);
-	return true;
+	UE_LOG_ERROR("[AnimGraphAsset] Legacy AnimGraph save path is no longer supported: %s", NormalizedPath.c_str());
+	return false;
 }
 
 UParticleSystem* FResourceManager::LoadParticleSystem(const FString& Path)

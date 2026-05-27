@@ -61,6 +61,7 @@ struct FAnimTransition
 	float BlendTime = 0.2f;
 	int32 Priority = 0;
 	bool bWaitForSourceStateEnd = false;
+	bool bResetTargetTime = true;
 	FAnimTransitionCondition Condition;
 };
 
@@ -87,7 +88,7 @@ public:
 	void CopyRuntimeStateFrom(const UAnimationStateMachine* SourceMachine);
 
 	void AddState(FName StateName, UAnimSequenceBase* Sequence, float PlayRate = 1.0f, bool bLoop = true, bool bAutoAdvanceOnEnd = true);
-	void AddTransition(FName FromState, FName ToState, float BlendTime, FAnimTransitionCondition Condition, int32 Priority = 0, bool bWaitForSourceStateEnd = false);
+	void AddTransition(FName FromState, FName ToState, float BlendTime, FAnimTransitionCondition Condition, int32 Priority = 0, bool bWaitForSourceStateEnd = false, bool bResetTargetTime = true);
 	void ClearTransitions();
 	void SetEntryState(FName StateName);
 

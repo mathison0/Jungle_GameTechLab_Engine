@@ -310,7 +310,7 @@ void UAnimationStateMachine::AddState(FName StateName, UAnimSequenceBase* Sequen
 	}
 }
 
-void UAnimationStateMachine::AddTransition(FName FromState, FName ToState, float BlendTime, FAnimTransitionCondition Condition, int32 Priority, bool bWaitForSourceStateEnd)
+void UAnimationStateMachine::AddTransition(FName FromState, FName ToState, float BlendTime, FAnimTransitionCondition Condition, int32 Priority, bool bWaitForSourceStateEnd, bool bResetTargetTime)
 {
 	if (!States.contains(FromState) || !States.contains(ToState))
 	{
@@ -322,6 +322,7 @@ void UAnimationStateMachine::AddTransition(FName FromState, FName ToState, float
 	Transition.BlendTime = std::max(0.0f, BlendTime);
 	Transition.Priority = Priority;
 	Transition.bWaitForSourceStateEnd = bWaitForSourceStateEnd;
+	Transition.bResetTargetTime = bResetTargetTime;
 	Transition.Condition = Condition;
 
 	States[FromState].Transitions.push_back(Transition);
@@ -411,7 +412,10 @@ bool UAnimationStateMachine::TryStartTransitionFromCurrentState()
 	BlendDuration = std::max(0.0f, BestTransition->BlendTime);
 	BlendElapsed = 0.0f;
 
-	States[NextState].PoseSource->ResetTime();
+	if (BestTransition->bResetTargetTime)
+	{
+		States[NextState].PoseSource->ResetTime();
+	}
 
 	if (BlendDuration > 0.0f)
 	{
