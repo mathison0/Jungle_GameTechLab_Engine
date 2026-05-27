@@ -7,6 +7,7 @@
 #include "Particle/ParticleModuleTypeData.h"
 #include "Render/Scene/RenderBus.h"
 
+#include <algorithm>
 #include <cstring>
 
 UParticleSystemComponent::UParticleSystemComponent()
@@ -226,6 +227,16 @@ void UParticleSystemComponent::TickPreview(float DeltaTime, bool bAllowSpawning)
 	NotifySpatialIndexDirty();
 }
 
+void UParticleSystemComponent::SetEditorPreviewSoloEmitters(const TArray<int32>& InSoloEmitterIndices)
+{
+	EditorPreviewSoloEmitterIndices = InSoloEmitterIndices;
+}
+
+void UParticleSystemComponent::ClearEditorPreviewSoloEmitters()
+{
+	EditorPreviewSoloEmitterIndices.clear();
+}
+
 // Cycle 15a Phase 5 (D5): BuildInstanceData() 삭제됨 — CollectDynamicData() 가 대체.
 
 // Function : Collect DynamicData for all emitters (Cycle 15a Phase 4)
@@ -241,6 +252,12 @@ TArray<FDynamicEmitterDataBase*> UParticleSystemComponent::CollectDynamicData()
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
 		if (!Instance)
+		{
+			continue;
+		}
+		const int32 EmitterIndex = Instance->GetEmitterIndex();
+		if (!EditorPreviewSoloEmitterIndices.empty() &&
+			std::find(EditorPreviewSoloEmitterIndices.begin(), EditorPreviewSoloEmitterIndices.end(), EmitterIndex) == EditorPreviewSoloEmitterIndices.end())
 		{
 			continue;
 		}

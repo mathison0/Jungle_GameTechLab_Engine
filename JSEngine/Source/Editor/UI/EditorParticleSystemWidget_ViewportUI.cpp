@@ -152,33 +152,64 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	DrawBackgroundColorPopup();
 
 	SameLineGap(7.0f);
-	ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD");
+	int32 MaxLODCount = GetMaxLODCount();
+	ImGui::BeginDisabled(MaxLODCount <= 0 || CurrentLOD >= MaxLODCount - 1);
+	if (ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD"))
+	{
+		SetCurrentLOD(CurrentLOD + 1);
+	}
+	ImGui::EndDisabled();
 	SameLineGap();
-	ToolbarButton(
+	if (ToolbarButton(
 		"AddLODBeforeCurrent",
 		"Add LOD Before",
 		GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLODBeforeCurrent),
-		"Add LOD before current");
+		"Add LOD before current"))
+	{
+		AddLODRelativeToCurrent(0);
+	}
 	SameLineGap();
-	ToolbarButton(
+	if (ToolbarButton(
 		"AddLODAfterCurrent",
 		"Add LOD After",
 		GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLODAfterCurrent),
-		"Add LOD after current");
+		"Add LOD after current"))
+	{
+		AddLODRelativeToCurrent(1);
+	}
+	MaxLODCount = GetMaxLODCount();
 
 	SameLineGap(8.0f);
 	const float LODFramePaddingY = std::max(0.0f, (ToolbarControlHeight - ImGui::GetFontSize()) * 0.5f);
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, LODFramePaddingY));
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
 	ImGui::SetNextItemWidth(38.0f);
+	const int32 PreviousLOD = CurrentLOD;
 	ImGui::InputInt("LOD", &CurrentLOD, 0, 0);
 	ImGui::PopStyleVar(2);
-	CurrentLOD = std::max(0, CurrentLOD);
+	if (CurrentLOD != PreviousLOD)
+	{
+		SetCurrentLOD(CurrentLOD);
+	}
+	else
+	{
+		CurrentLOD = MaxLODCount > 0 ? std::clamp(CurrentLOD, 0, MaxLODCount - 1) : std::max(0, CurrentLOD);
+	}
 
 	SameLineGap();
-	ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD");
+	ImGui::BeginDisabled(CurrentLOD <= 0);
+	if (ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD"))
+	{
+		SetCurrentLOD(CurrentLOD - 1);
+	}
+	ImGui::EndDisabled();
 	SameLineGap();
-	ToolbarButton("DeleteLOD", "Delete LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::DeleteLOD), "Delete current LOD");
+	ImGui::BeginDisabled(CurrentLOD <= 0);
+	if (ToolbarButton("DeleteLOD", "Delete LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::DeleteLOD), "Delete current LOD"))
+	{
+		DeleteCurrentLOD();
+	}
+	ImGui::EndDisabled();
 }
 
 void FEditorParticleSystemWidget::DrawBackgroundColorPopup()
