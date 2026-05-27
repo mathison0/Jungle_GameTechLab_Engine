@@ -32,6 +32,12 @@ public:
     FVector GetTargetLocalVector() const      { return TargetLocalVector; }
     void    SetTargetLocalVector(const FVector& In) { TargetLocalVector = In; }
 
+    FVector GetTargetTangent() const                  { return TargetTangent; }
+    void    SetTargetTangent(const FVector& In)       { TargetTangent = In; }
+
+    float   GetTargetTangentStrength() const          { return TargetTangentStrength; }
+    void    SetTargetTangentStrength(float In)        { TargetTangentStrength = In; }
+
 private:
     UPROPERTY(DisplayName = "Target Component", Category = "Beam Target")
     TObjectPtr<USceneComponent> TargetComponent;
@@ -45,4 +51,13 @@ private:
     // Default (100, 0, 0): emitter 의 forward 방향으로 100 단위 — FallbackDistance default 와 동일 의미.
     UPROPERTY(DisplayName = "Target Local Vector", Category = "Beam Target")
     FVector TargetLocalVector = FVector(100.0f, 0.0f, 0.0f);
+
+    // emitter-local 단위 방향 (Forward/Right/Up 기반). Source 측과 동일 좌표계.
+    // Default (-1,0,0): emitter forward 의 반대 — 자연스러운 "도착" 방향. strength=0 일 때 무의미.
+    UPROPERTY(DisplayName = "Target Tangent", Category = "Beam Target")
+    FVector TargetTangent = FVector(-1.0f, 0.0f, 0.0f);
+
+    // Hermite tangent 의 크기 (cm). SourceTangentStrength + TargetTangentStrength 양쪽 모두 0 이면 linear fallback.
+    UPROPERTY(DisplayName = "Target Tangent Strength", Category = "Beam Target", Min = 0.0f)
+    float TargetTangentStrength = 0.0f;
 };
