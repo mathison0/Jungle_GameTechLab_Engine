@@ -24,6 +24,7 @@ public:
 	void PostEditProperty(const char* PropertyName) override;
 	void Serialize(FArchive& Ar) override;
 	UParticleSystem* GetTemplate() const { return Template; }
+	FString GetTemplateAssetPath() const { return TemplateAssetPath.GetPath(); }
 	const TArray<FParticleEmitterInstance*>& GetEmitterInstances() const { return EmitterInstances; } // component가 사용하는 emitter instance들
 	TArray<FParticleEventCollideData>& GetPendingCollisionEvents() { return PendingCollisionEvents; }
 	const TArray<FParticleEventCollideData>& GetPendingCollisionEvents() const { return PendingCollisionEvents; }

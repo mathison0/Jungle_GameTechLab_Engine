@@ -321,6 +321,10 @@ void FEditorParticleSystemWidget::OpenParticleSystem(const FString& InDocumentPa
 		ClearEmitterContext();
 		ClearUndoHistory();
 	}
+	if (ParticleSystemAsset)
+	{
+		ParticleSystemAsset->SetAssetPath(InDocumentPath);
+	}
 
 	EnsurePreviewViewport();
 	RefreshPreviewComponent(true);
@@ -520,6 +524,10 @@ bool FEditorParticleSystemWidget::RestoreParticleSnapshot(
 	}
 
 	ParticleSystemAsset = RestoredAsset;
+	if (ParticleSystemAsset && !DocumentPath.empty())
+	{
+		ParticleSystemAsset->SetAssetPath(DocumentPath);
+	}
 	DestroyUncachedParticleSystem(PreviousAsset);
 	CurrentLOD = std::max(0, InCurrentLOD);
 	SelectedEmitterIndex = InSelectedEmitterIndex;
