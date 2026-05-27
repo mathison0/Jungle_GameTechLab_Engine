@@ -1,11 +1,23 @@
 ﻿#include "Editor/Packaging/GamePackager.h"
 
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
 #include "Asset/BinarySerializer.h"
+#include "Asset/CurveFloatAsset.h"
 #include "Asset/ObjLoader.h"
+#include "Asset/SkeletalMesh.h"
+#include "Asset/StaticMesh.h"
 #include "Asset/StaticMeshTypes.h"
+#include "Animation/AnimGraphAsset.h"
+#include "Animation/AnimLuaProgramAsset.h"
+#include "Animation/AnimSequence.h"
 #include "Core/Logging/Log.h"
+#include "Core/MaterialSerializationService.h"
 #include "Core/Paths.h"
 #include "Editor/Settings/EditorSettings.h"
+#include "Object/Class.h"
+#include "Object/Object.h"
+#include "Render/Resource/Material.h"
 #include "SimpleJSON/json.hpp"
 
 #include <Windows.h>
@@ -970,8 +982,7 @@ namespace
     bool IsRuntimeCopyExtension(const FString& Extension)
     {
         return Extension == ".bin"
-            || Extension == ".mat"
-            || Extension == ".matinst"
+            || Extension == ".uasset"
             || Extension == ".png"
             || Extension == ".jpg"
             || Extension == ".jpeg"
@@ -982,8 +993,6 @@ namespace
             || Extension == ".ogg"
             || Extension == ".lua"
             || Extension == ".prefab"
-            || Extension == ".curve"
-            || Extension == ".sequence"
             || Extension == ".rml"
             || Extension == ".rcss"
             || Extension == ".meta"
@@ -993,6 +1002,13 @@ namespace
             || Extension == ".hlsli"
             || Extension == ".cso"
             || Extension == ".fx";
+    }
+
+    bool IsManagedDependencyPath(const FString& Path)
+    {
+        return Path.rfind("Asset/", 0) == 0
+            || Path.rfind("LuaScript/", 0) == 0
+            || Path.rfind("Shaders/", 0) == 0;
     }
 
     FString MakeCookedMeshRelativePath(const FString& SourceRelativePath)
@@ -1099,6 +1115,26 @@ namespace
         EmitBuildLog(Line);
     }
 
+    bool IsRuntimeUAssetClassName(const FString& ClassName)
+    {
+        return ClassName == "RuntimeUILayout"
+            || ClassName == "ParticleSystem"
+            || ClassName == UMaterial::StaticClass()->GetName()
+            || ClassName == UMaterialInstance::StaticClass()->GetName()
+            || ClassName == UCurveFloatAsset::StaticClass()->GetName()
+            || ClassName == UAnimSequence::StaticClass()->GetName()
+            || ClassName == UAnimGraphAsset::StaticClass()->GetName()
+            || ClassName == UAnimLuaProgramAsset::StaticClass()->GetName()
+            || ClassName == USkeletalMesh::StaticClass()->GetName()
+            || ClassName == UStaticMesh::StaticClass()->GetName();
+    }
+
+    bool LoadRuntimeUAssetMetadata(const FString& RelativePath, FAssetMetaData& OutMetaData)
+    {
+        return FAssetFile::LoadMetadataOnly(NormalizeAssetPathForPackage(RelativePath), OutMetaData)
+            && IsRuntimeUAssetClassName(OutMetaData.ClassName);
+    }
+
     bool ResolveMaterialNameToFiles(const FString& MaterialName, TArray<FString>& OutMaterialFiles)
     {
         if (MaterialName.empty() || MaterialName.find('/') != FString::npos || MaterialName.find('\\') != FString::npos)
@@ -1121,7 +1157,15 @@ namespace
             }
 
             const FString Extension = ToLowerAscii(FPaths::ToUtf8(Entry.path().extension().generic_wstring()));
-            if (Extension != ".mat" && Extension != ".matinst")
+            if (Extension != ".uasset")
+            {
+                continue;
+            }
+            FAssetMetaData MetaData;
+            const FString RelativePath = FPaths::ToRelativeString(Entry.path().wstring());
+            if (!LoadRuntimeUAssetMetadata(RelativePath, MetaData) ||
+                (MetaData.ClassName != UMaterial::StaticClass()->GetName() &&
+                 MetaData.ClassName != UMaterialInstance::StaticClass()->GetName()))
             {
                 continue;
             }
@@ -1173,6 +1217,251 @@ namespace
             }
 
             const FString RelativeFile = FPaths::ToRelativeString(Entry.path().wstring());
+            if (!AddFileDependency(Context, RelativeFile, OutMessage))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool AddSerializedMaterialParamDependency(
+        FPackageCookContext& Context,
+        const FSerializedMaterialParam& Param,
+        FString& OutMessage)
+    {
+        if (Param.Type != EMaterialParamType::Texture || Param.TexturePath.empty())
+        {
+            return true;
+        }
+
+        return AddFileDependency(Context, Param.TexturePath, OutMessage);
+    }
+
+    bool AddRuntimeUAssetPayloadDependencies(
+        FPackageCookContext& Context,
+        const FString& RelativeFile,
+        const FAssetMetaData& MetaData,
+        FString& OutMessage)
+    {
+        if (MetaData.ClassName == UMaterial::StaticClass()->GetName())
+        {
+            FMaterialAssetPayload Payload;
+            FAssetMetaData PayloadMetaData = MetaData;
+            if (!FAssetFile::Load(RelativeFile, PayloadMetaData, [&](FArchive& Ar)
+            {
+                Payload.Serialize(Ar, PayloadMetaData.PayloadVersion);
+                return true;
+            }))
+            {
+                OutMessage = "Failed to read material uasset payload: " + RelativeFile;
+                return false;
+            }
+
+            for (const FSerializedMaterialParam& Param : Payload.Params)
+            {
+                if (!AddSerializedMaterialParamDependency(Context, Param, OutMessage))
+                {
+                    return false;
+                }
+            }
+        }
+        else if (MetaData.ClassName == UMaterialInstance::StaticClass()->GetName())
+        {
+            FMaterialInstanceAssetPayload Payload;
+            FAssetMetaData PayloadMetaData = MetaData;
+            if (!FAssetFile::Load(RelativeFile, PayloadMetaData, [&](FArchive& Ar)
+            {
+                Payload.Serialize(Ar, PayloadMetaData.PayloadVersion);
+                return true;
+            }))
+            {
+                OutMessage = "Failed to read material instance uasset payload: " + RelativeFile;
+                return false;
+            }
+
+            if (!Payload.Parent.empty() && !AddFileDependency(Context, Payload.Parent, OutMessage))
+            {
+                return false;
+            }
+            for (const FSerializedMaterialParam& Param : Payload.OverridedParams)
+            {
+                if (!AddSerializedMaterialParamDependency(Context, Param, OutMessage))
+                {
+                    return false;
+                }
+            }
+        }
+        else if (MetaData.ClassName == UStaticMesh::StaticClass()->GetName())
+        {
+            if (!MetaData.SourceFile.empty())
+            {
+                const FString SourceExtension = GetLowerExtension(MetaData.SourceFile);
+                if (SourceExtension == ".obj" || SourceExtension == ".bin")
+                {
+                    if (!FileExistsForPackage(MetaData.SourceFile))
+                    {
+                        OutMessage = "Missing uasset source dependency: " + RelativeFile + " -> " + MetaData.SourceFile;
+                        return false;
+                    }
+                    if (!AddFileDependency(Context, MetaData.SourceFile, OutMessage))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        else if (MetaData.ClassName == USkeletalMesh::StaticClass()->GetName())
+        {
+            if (!MetaData.SourceFile.empty())
+            {
+                const FString SourceExtension = GetLowerExtension(MetaData.SourceFile);
+                if (SourceExtension == ".fbx" || SourceExtension == ".bin")
+                {
+                    if (!FileExistsForPackage(MetaData.SourceFile))
+                    {
+                        OutMessage = "Missing uasset source dependency: " + RelativeFile + " -> " + MetaData.SourceFile;
+                        return false;
+                    }
+                    if (!AddFileDependency(Context, MetaData.SourceFile, OutMessage))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        else if (MetaData.ClassName == UAnimSequence::StaticClass()->GetName())
+        {
+            FAnimSequenceAssetPayload Payload;
+            FAssetMetaData PayloadMetaData = MetaData;
+            if (!FAssetFile::Load(RelativeFile, PayloadMetaData, [&](FArchive& Ar)
+            {
+                Payload.Serialize(Ar, PayloadMetaData.PayloadVersion);
+                return true;
+            }))
+            {
+                OutMessage = "Failed to read anim sequence uasset payload: " + RelativeFile;
+                return false;
+            }
+
+            if (!Payload.TargetSkeletalMeshPath.empty() &&
+                !AddFileDependency(Context, Payload.TargetSkeletalMeshPath, OutMessage))
+            {
+                return false;
+            }
+        }
+        else if (MetaData.ClassName == UAnimGraphAsset::StaticClass()->GetName())
+        {
+            UAnimGraphAsset* Asset = UObjectManager::Get().CreateObject<UAnimGraphAsset>();
+            if (!Asset)
+            {
+                OutMessage = "Failed to create anim graph object for package scan: " + RelativeFile;
+                return false;
+            }
+
+            FAssetMetaData PayloadMetaData = MetaData;
+            const bool bLoaded = FAssetFile::Load(RelativeFile, PayloadMetaData, [&](FArchive& Ar)
+            {
+                Asset->Serialize(Ar);
+                Asset->ValidateAndRepairGraph();
+                return true;
+            });
+            if (!bLoaded)
+            {
+                UObjectManager::Get().DestroyObject(Asset);
+                OutMessage = "Failed to read anim graph uasset payload: " + RelativeFile;
+                return false;
+            }
+
+            for (const FAnimGraphNodeDesc& Node : Asset->Nodes)
+            {
+                if (Node.Type == EAnimGraphNodeType::SequencePlayer && !Node.AnimationPath.empty() &&
+                    !AddFileDependency(Context, Node.AnimationPath, OutMessage))
+                {
+                    UObjectManager::Get().DestroyObject(Asset);
+                    return false;
+                }
+
+                if (Node.Type == EAnimGraphNodeType::StateMachine)
+                {
+                    for (const FAnimStateDesc& State : Node.StateMachine.States)
+                    {
+                        if (!State.AnimationPath.empty() &&
+                            !AddFileDependency(Context, State.AnimationPath, OutMessage))
+                        {
+                            UObjectManager::Get().DestroyObject(Asset);
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            UObjectManager::Get().DestroyObject(Asset);
+        }
+        else if (MetaData.ClassName == UAnimLuaProgramAsset::StaticClass()->GetName())
+        {
+            FAnimLuaProgramAssetPayload Payload;
+            FAssetMetaData PayloadMetaData = MetaData;
+            if (!FAssetFile::Load(RelativeFile, PayloadMetaData, [&](FArchive& Ar)
+            {
+                Payload.Serialize(Ar, PayloadMetaData.PayloadVersion);
+                return true;
+            }))
+            {
+                OutMessage = "Failed to read lua anim graph uasset payload: " + RelativeFile;
+                return false;
+            }
+
+            if (!Payload.Graph.PreviewSkeletalMeshPath.empty() &&
+                !AddFileDependency(Context, Payload.Graph.PreviewSkeletalMeshPath, OutMessage))
+            {
+                return false;
+            }
+
+            for (const auto& Pair : Payload.Graph.States)
+            {
+                const FLuaAnimStateNode& State = Pair.second;
+                if (!State.AnimationPath.empty() &&
+                    !AddFileDependency(Context, State.AnimationPath, OutMessage))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    bool AddRuntimeUAssetFilesByMetadata(FPackageCookContext& Context, const FString& RelativeDirectory, FString& OutMessage)
+    {
+        const std::filesystem::path Root = ResolveProjectFilePath(RelativeDirectory);
+        std::error_code Ec;
+        if (!std::filesystem::exists(Root, Ec))
+        {
+            return true;
+        }
+
+        for (const std::filesystem::directory_entry& Entry : std::filesystem::recursive_directory_iterator(Root, Ec))
+        {
+            if (Ec)
+            {
+                OutMessage = "Failed to scan uasset package directory: " + RelativeDirectory;
+                return false;
+            }
+
+            if (!Entry.is_regular_file() || ToLowerAscii(FPaths::ToUtf8(Entry.path().extension().generic_wstring())) != ".uasset")
+            {
+                continue;
+            }
+
+            const FString RelativeFile = FPaths::ToRelativeString(Entry.path().wstring());
+            FAssetMetaData MetaData;
+            if (!LoadRuntimeUAssetMetadata(RelativeFile, MetaData))
+            {
+                continue;
+            }
+
             if (!AddFileDependency(Context, RelativeFile, OutMessage))
             {
                 return false;
@@ -1388,14 +1677,32 @@ namespace
             return CookStaticMeshDependency(Context, NormalizedPath, IgnoredCookedPath, OutMessage);
         }
 
-        if (Extension.empty() || Extension == ".scene" || !IsRuntimeCopyExtension(Extension))
+        if (Extension.empty() || Extension == ".scene")
         {
+            return true;
+        }
+
+        if (!IsRuntimeCopyExtension(Extension))
+        {
+            if (IsManagedDependencyPath(NormalizedPath))
+            {
+                OutMessage = "Unsupported runtime dependency extension: " + NormalizedPath;
+                return false;
+            }
             return true;
         }
 
         if (!FileExistsForPackage(NormalizedPath))
         {
-            return true;
+            OutMessage = "Missing package dependency: " + NormalizedPath;
+            return false;
+        }
+
+        FAssetMetaData UAssetMetaData;
+        if (Extension == ".uasset" && !LoadRuntimeUAssetMetadata(NormalizedPath, UAssetMetaData))
+        {
+            OutMessage = "Invalid or unsupported uasset dependency: " + NormalizedPath;
+            return false;
         }
 
         const bool bInserted = Context.FilesToCopy.insert(NormalizedPath).second;
@@ -1405,7 +1712,14 @@ namespace
         }
 
         const std::filesystem::path SourceAbs = ResolveProjectFilePath(NormalizedPath);
-        if (Extension == ".mat" || Extension == ".matinst" || Extension == ".prefab")
+        if (Extension == ".uasset")
+        {
+            if (!AddRuntimeUAssetPayloadDependencies(Context, NormalizedPath, UAssetMetaData, OutMessage))
+            {
+                return false;
+            }
+        }
+        else if (Extension == ".prefab")
         {
             std::ifstream In(SourceAbs);
             if (In.is_open())
@@ -1431,21 +1745,8 @@ namespace
 
     bool AddKnownRuntimeDependencies(FPackageCookContext& Context, FString& OutMessage)
     {
-        constexpr const char* Dependencies[] =
-        {
-            "Asset/Material/DecalMat.mat",
-            "Asset/Mesh/Dice/Dice.obj"
-        };
-
-        for (const char* Dependency : Dependencies)
-        {
-            if (!AddFileDependency(Context, Dependency, OutMessage))
-            {
-                OutMessage = "Failed to include runtime dependency: " + FString(Dependency) + " | " + OutMessage;
-                return false;
-            }
-        }
-
+        (void)Context;
+        (void)OutMessage;
         return true;
     }
 
@@ -1581,19 +1882,7 @@ namespace
         {
             return false;
         }
-        if (!AddRuntimeFilesByExtension(Context, "Asset/Material", { ".mat", ".matinst" }, OutMessage))
-        {
-            return false;
-        }
-        if (!AddRuntimeFilesByExtension(Context, "Asset/Mesh", { ".matinst" }, OutMessage))
-        {
-            return false;
-        }
-        if (!AddRuntimeFilesByExtension(Context, "Asset/Curve", { ".curve" }, OutMessage))
-        {
-            return false;
-        }
-        if (!AddRuntimeFilesByExtension(Context, "Asset/Sequence", { ".sequence" }, OutMessage))
+        if (!AddRuntimeUAssetFilesByMetadata(Context, "Asset", OutMessage))
         {
             return false;
         }

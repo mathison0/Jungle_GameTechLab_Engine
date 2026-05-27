@@ -5,9 +5,77 @@
 #include <unordered_map>
 #include <unordered_set>
 
+FArchive& operator<<(FArchive& Ar, FAnimTransitionConditionDesc& Desc)
+{
+    int32 Type = static_cast<int32>(Desc.Type);
+    Ar << "Type" << Type;
+    if (Ar.IsLoading())
+    {
+        Desc.Type = static_cast<EAnimTransitionConditionType>(Type);
+    }
+    Ar << "ParameterName" << Desc.ParameterName;
+    Ar << "BoolValue" << Desc.BoolValue;
+    Ar << "Threshold" << Desc.Threshold;
+    Ar << "IntValue" << Desc.IntValue;
+    Ar << "LuaFunctionName" << Desc.LuaFunctionName;
+    return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FAnimStateTransitionDesc& Desc)
+{
+    Ar << "FromStateId" << Desc.FromStateId;
+    Ar << "ToStateId" << Desc.ToStateId;
+    Ar << "BlendTime" << Desc.BlendTime;
+    Ar << "Priority" << Desc.Priority;
+    Ar << "Condition" << Desc.Condition;
+    return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FAnimStateDesc& Desc)
+{
+    Ar << "StateId" << Desc.StateId;
+    Ar << "Name" << Desc.Name;
+    Ar << "AnimationPath" << Desc.AnimationPath;
+    Ar << "Position" << Desc.Position;
+    Ar << "PlayRate" << Desc.PlayRate;
+    Ar << "bLoop" << Desc.bLoop;
+    Ar << "bAutoAdvanceOnEnd" << Desc.bAutoAdvanceOnEnd;
+    return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FAnimStateMachineDesc& Desc)
+{
+    Ar << "EntryStateId" << Desc.EntryStateId;
+    Ar << "EntryPosition" << Desc.EntryPosition;
+    Ar << "States" << Desc.States;
+    Ar << "Transitions" << Desc.Transitions;
+    return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FAnimGraphNodeDesc& Desc)
+{
+    int32 Type = static_cast<int32>(Desc.Type);
+    Ar << "NodeId" << Desc.NodeId;
+    Ar << "Type" << Type;
+    if (Ar.IsLoading())
+    {
+        Desc.Type = static_cast<EAnimGraphNodeType>(Type);
+    }
+    Ar << "Name" << Desc.Name;
+    Ar << "Position" << Desc.Position;
+    Ar << "AnimationPath" << Desc.AnimationPath;
+    Ar << "PlayRate" << Desc.PlayRate;
+    Ar << "bLoop" << Desc.bLoop;
+    Ar << "InputPoseNodeId" << Desc.InputPoseNodeId;
+    Ar << "StateMachine" << Desc.StateMachine;
+    return Ar;
+}
+
 void UAnimGraphAsset::Serialize(FArchive& Ar)
 {
 	UObject::Serialize(Ar);
+    Ar << "Nodes" << Nodes;
+    Ar << "RootNodeId" << RootNodeId;
 }
 
 const FAnimGraphNodeDesc* UAnimGraphAsset::FindNode(int32 NodeId) const

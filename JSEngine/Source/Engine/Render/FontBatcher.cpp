@@ -49,7 +49,7 @@ void FFontBatcher::Create(ID3D11Device* InDevice)
 	UMaterial* Mat = FResourceManager::Get().GetMaterial("FontMat");
 	if (!Mat)
 	{
-		Mat = FResourceManager::Get().GetOrCreateMaterial("FontMat", "Asset/Material/FontMat.mat", EMaterialShaderType::UIFont);
+		Mat = FResourceManager::Get().GetOrCreateMaterial("FontMat", "Asset/Material/FontMat.uasset", EMaterialShaderType::UIFont);
 	}
 	if (!Mat)
 	{

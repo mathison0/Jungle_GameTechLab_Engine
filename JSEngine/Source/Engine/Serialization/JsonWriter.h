@@ -20,7 +20,7 @@ struct FJsonWriter : public FArchive
 
 	virtual const FString& GetCurrentKey() { return CurrentKey; }
 	virtual void SetCurrentKey(const FString& Key) { CurrentKey = Key; }
-	void SetObjectResolver(IObjectReferenceResolver* InResolver) { ObjectResolver = InResolver; }
+	void SetObjectResolver(IObjectReferenceResolver* InResolver) override { ObjectResolver = InResolver; }
 	IObjectReferenceResolver* GetObjectResolver() override { return ObjectResolver; }
 
 	virtual void Serialize(void* Value, uint32 Size) override

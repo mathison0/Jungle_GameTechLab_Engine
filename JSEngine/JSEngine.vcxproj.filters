@@ -130,6 +130,9 @@
     <Filter Include="Source\Editor\Settings">
       <UniqueIdentifier>{b1dfd584-4d36-815a-235b-55c990686b88}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\AnimGraph">
+      <UniqueIdentifier>{59bb0a49-36e6-40a7-a9ff-21cf1f7c56d6}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\UI">
       <UniqueIdentifier>{c46a2efe-64db-4a90-e9d0-dc20e9a91a49}</UniqueIdentifier>
     </Filter>
@@ -336,6 +339,12 @@
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimInstance.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimLuaProgramAsset.gen.cpp">
+      <Filter>Intermediate\Reflection\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Animation\ULuaAnimInstance.gen.cpp">
+      <Filter>Intermediate\Reflection\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
@@ -345,7 +354,13 @@
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_FootstepSound.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LuaEvent.gen.cpp">
+      <Filter>Intermediate\Reflection\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LogEvent.gen.cpp">
+      <Filter>Intermediate\Reflection\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotifyState_LuaEvent.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimSequence.gen.cpp">
@@ -771,6 +786,9 @@
     <ClCompile Include="Source\Editor\Settings\ProjectSettings.cpp">
       <Filter>Source\Editor\Settings</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\AnimGraph\LuaAnimGraph.cpp">
+      <Filter>Source\Editor\AnimGraph</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\ComponentMenuRegistry.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -799,6 +817,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorCurveEditorWidget.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorLuaAnimGraphWidget.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorMainPanelBootstrap.cpp">
@@ -969,6 +990,9 @@
     <ClCompile Include="Source\Engine\Animation\ActorSequence.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\AnimLuaProgramAsset.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimGraphAsset.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
@@ -979,6 +1003,9 @@
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\LuaAnimInstance.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimNotify.cpp">
@@ -1002,7 +1029,13 @@
     <ClCompile Include="Source\Engine\Animation\TimelinePlayer.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Asset\AnimSequenceAssetLoader.cpp">
+    <ClCompile Include="Source\Engine\Asset\AssetFile.cpp">
+      <Filter>Source\Engine\Asset</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Asset\AssetHeader.cpp">
+      <Filter>Source\Engine\Asset</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Asset\AssetMetaData.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Asset\AssetQueryService.cpp">
@@ -1044,7 +1077,13 @@
     <ClCompile Include="Source\Engine\Asset\SkeletalMesh.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Asset\SkeletalMeshTypes.cpp">
+      <Filter>Source\Engine\Asset</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Asset\StaticMesh.cpp">
+      <Filter>Source\Engine\Asset</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Asset\StaticMeshTypes.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Asset\StaticMeshSimplifier.cpp">
@@ -1689,6 +1728,12 @@
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp">
       <Filter>Source\Engine\Serialization</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\WindowsBinReader.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\WindowsBinWriter.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Slate\SSplitter.cpp">
       <Filter>Source\Engine\Slate</Filter>
     </ClCompile>
@@ -1882,6 +1927,9 @@
     <ClInclude Include="Source\Editor\UI\EditorCurveEditorWidget.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorLuaAnimGraphWidget.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
@@ -1990,6 +2038,9 @@
     <ClInclude Include="Source\Engine\Animation\ActorSequence.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\AnimLuaProgramAsset.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimGraphAsset.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
@@ -2000,6 +2051,12 @@
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\LuaAnimGraph.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\LuaAnimInstance.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimNotify.h">
@@ -2029,7 +2086,13 @@
     <ClInclude Include="Source\Engine\Animation\TimelinePlayer.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Asset\AnimSequenceAssetLoader.h">
+    <ClInclude Include="Source\Engine\Asset\AssetFile.h">
+      <Filter>Source\Engine\Asset</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Asset\AssetHeader.h">
+      <Filter>Source\Engine\Asset</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Asset\AssetMetaData.h">
       <Filter>Source\Engine\Asset</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Asset\AssetQueryService.h">
@@ -2867,6 +2930,12 @@
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\WindowsBinReader.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\WindowsBinWriter.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Slate\ISlateViewport.h">

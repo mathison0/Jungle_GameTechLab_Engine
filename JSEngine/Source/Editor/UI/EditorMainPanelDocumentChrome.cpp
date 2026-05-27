@@ -61,6 +61,12 @@ void FEditorMainPanel::RenderActiveDocumentToolbar()
 			ImGui::SameLine();
 			ImGui::TextUnformatted(Widgets.AnimGraphWidget.GetEditingPath().c_str());
 		}
+		else if (ActiveTab && ActiveTab->Id.Kind == EEditorTabKind::LuaAnimGraphEditor)
+		{
+			ImGui::TextDisabled("Lua Anim Graph");
+			ImGui::SameLine();
+			ImGui::TextUnformatted(Widgets.LuaAnimGraphWidget.GetAssetPath().c_str());
+		}
 		else if (ActiveTab && ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor)
 		{
 			Widgets.ParticleSystemWidget.RenderDocumentToolbarControls();
@@ -387,17 +393,24 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 	if (ImGui::BeginMenu("File"))
 	{
 		const bool bAnimGraph = ActiveTab->Id.Kind == EEditorTabKind::AnimGraphEditor;
+		const bool bLuaAnimGraph = ActiveTab->Id.Kind == EEditorTabKind::LuaAnimGraphEditor;
 		const bool bParticleSystem = ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor;
 		const bool bAssetDirty =
 			(bAnimGraph && Widgets.AnimGraphWidget.IsDirty()) ||
+			(bLuaAnimGraph && Widgets.LuaAnimGraphWidget.IsDirty()) ||
 			(bParticleSystem && Widgets.ParticleSystemWidget.IsDirty());
 		const char* SaveLabel = bAssetDirty ? "Save Asset *" : "Save Asset";
-		if (ImGui::MenuItem(SaveLabel, "Ctrl+S", false, bAnimGraph || bParticleSystem))
+		if (ImGui::MenuItem(SaveLabel, "Ctrl+S", false, bAnimGraph || bLuaAnimGraph || bParticleSystem))
 		{
 			if (bAnimGraph)
 			{
 				Widgets.AnimGraphWidget.Save();
 				EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.AnimGraphWidget.IsDirty());
+			}
+			else if (bLuaAnimGraph)
+			{
+				Widgets.LuaAnimGraphWidget.SaveAsset();
+				EditorTabs.SetTabDirty(ActiveTab->Id, Widgets.LuaAnimGraphWidget.IsDirty());
 			}
 			else if (bParticleSystem)
 			{

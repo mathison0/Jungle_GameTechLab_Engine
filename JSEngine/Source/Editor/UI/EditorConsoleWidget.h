@@ -40,6 +40,7 @@ public:
 	void RenderInputLine(const char* Id, float Width, bool bRequestFocus);
 	void Clear();
 	static void ClearHistory();
+	void RequestWindowFocus(bool bFocusInput = true);
 	void SetPresentationMode(EPresentationMode InMode) { PresentationMode = InMode; }
 	EPresentationMode GetPresentationMode() const { return PresentationMode; }
 	bool IsDrawerMode() const { return PresentationMode == EPresentationMode::Drawer; }
@@ -64,6 +65,7 @@ private:
 
 	// 백틱(`) 키로 포커스 요청 시 true — 다음 InputText 렌더링 직전에 SetKeyboardFocusHere 호출
 	bool bRequestFocusInput = false;
+	bool bRequestFocusWindow = false;
 
 	//Command Dispatch System
 	using CommandFn = std::function<void(const TArray<FString>& args)>;

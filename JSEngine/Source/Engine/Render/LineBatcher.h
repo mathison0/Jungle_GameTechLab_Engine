@@ -39,7 +39,7 @@ struct FLineVertex
 struct FLineBatcherDesc
 {
 	const char* MaterialName  = "LineMat";
-	const char* MaterialPath  = "Asset/Material/LineMat.mat";
+	const char* MaterialPath  = "Asset/Material/LineMat.uasset";
 	EDepthStencilType DepthStencil = EDepthStencilType::DepthReadOnly;
 };
 

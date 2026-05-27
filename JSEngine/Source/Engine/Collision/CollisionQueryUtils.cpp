@@ -191,6 +191,133 @@ bool FCollisionQueryUtils::RaycastSphere(const FVector& Center, float Radius, co
 	return true;
 }
 
+bool FCollisionQueryUtils::RaycastCapsule(const FVector& A, const FVector& B, float Radius, const FRay& Ray,
+	bool bInitialOverlapAsHit, FHitResult& OutHitResult)
+{
+	if (Radius <= 0.0f)
+	{
+		return false;
+	}
+
+	const FVector Segment = B - A;
+	const float SegmentLengthSq = FVector::DotProduct(Segment, Segment);
+	if (SegmentLengthSq <= 1.0e-6f)
+	{
+		return RaycastSphere(A, Radius, Ray, bInitialOverlapAsHit, OutHitResult);
+	}
+
+	auto SubmitHit = [](const FHitResult& Candidate, bool& bHasBest, FHitResult& BestHit)
+	{
+		if (!Candidate.bHit)
+		{
+			return;
+		}
+		if (!bHasBest || Candidate.Distance < BestHit.Distance)
+		{
+			BestHit = Candidate;
+			bHasBest = true;
+		}
+	};
+
+	const FVector OriginToA = Ray.Origin - A;
+	const float StartSegmentT = std::clamp(
+		FVector::DotProduct(OriginToA, Segment) / SegmentLengthSq,
+		0.0f,
+		1.0f);
+	const FVector ClosestAtStart = A + Segment * StartSegmentT;
+	const FVector StartToSegment = Ray.Origin - ClosestAtStart;
+	if (bInitialOverlapAsHit && StartToSegment.SizeSquared() <= Radius * Radius)
+	{
+		FVector HitNormal = StartToSegment.GetSafeNormal();
+		if (HitNormal.IsNearlyZero())
+		{
+			HitNormal = -Ray.Direction.GetSafeNormal();
+		}
+
+		OutHitResult.bHit = true;
+		OutHitResult.Distance = 0.0f;
+		OutHitResult.Location = ClosestAtStart + HitNormal * Radius;
+		OutHitResult.ImpactPoint = OutHitResult.Location;
+		OutHitResult.Normal = HitNormal;
+		OutHitResult.FaceIndex = -1;
+		return true;
+	}
+
+	bool bHasBest = false;
+	FHitResult BestHit;
+
+	const float DirectionSegment = FVector::DotProduct(Ray.Direction, Segment) / SegmentLengthSq;
+	const float OriginSegment = FVector::DotProduct(OriginToA, Segment) / SegmentLengthSq;
+	const FVector PerpDirection = Ray.Direction - Segment * DirectionSegment;
+	const FVector PerpOrigin = OriginToA - Segment * OriginSegment;
+
+	const float ACoef = FVector::DotProduct(PerpDirection, PerpDirection);
+	const float BCoef = 2.0f * FVector::DotProduct(PerpOrigin, PerpDirection);
+	const float CCoef = FVector::DotProduct(PerpOrigin, PerpOrigin) - Radius * Radius;
+	if (ACoef > 1.0e-6f)
+	{
+		const float Discriminant = BCoef * BCoef - 4.0f * ACoef * CCoef;
+		if (Discriminant >= 0.0f)
+		{
+			const float SqrtDiscriminant = std::sqrt(Discriminant);
+			const float InvDenominator = 1.0f / (2.0f * ACoef);
+			const float CandidateDistances[2] = {
+				(-BCoef - SqrtDiscriminant) * InvDenominator,
+				(-BCoef + SqrtDiscriminant) * InvDenominator
+			};
+
+			for (const float Distance : CandidateDistances)
+			{
+				if (Distance < 0.0f)
+				{
+					continue;
+				}
+
+				const float SegmentT = OriginSegment + DirectionSegment * Distance;
+				if (SegmentT < -1.0e-4f || SegmentT > 1.0001f)
+				{
+					continue;
+				}
+
+				const FVector HitLocation = Ray.Origin + Ray.Direction * Distance;
+				const FVector ClosestPoint = A + Segment * std::clamp(SegmentT, 0.0f, 1.0f);
+				FVector HitNormal = (HitLocation - ClosestPoint).GetSafeNormal();
+				if (HitNormal.IsNearlyZero())
+				{
+					HitNormal = -Ray.Direction.GetSafeNormal();
+				}
+
+				FHitResult CandidateHit;
+				CandidateHit.bHit = true;
+				CandidateHit.Distance = Distance;
+				CandidateHit.Location = HitLocation;
+				CandidateHit.ImpactPoint = HitLocation;
+				CandidateHit.Normal = HitNormal;
+				CandidateHit.FaceIndex = -1;
+				SubmitHit(CandidateHit, bHasBest, BestHit);
+			}
+		}
+	}
+
+	FHitResult CapHit;
+	if (RaycastSphere(A, Radius, Ray, bInitialOverlapAsHit, CapHit))
+	{
+		SubmitHit(CapHit, bHasBest, BestHit);
+	}
+	if (RaycastSphere(B, Radius, Ray, bInitialOverlapAsHit, CapHit))
+	{
+		SubmitHit(CapHit, bHasBest, BestHit);
+	}
+
+	if (!bHasBest)
+	{
+		return false;
+	}
+
+	OutHitResult = BestHit;
+	return true;
+}
+
 bool FCollisionQueryUtils::IsPointInTriangle(const FVector& Point, const FVector& A, const FVector& B, const FVector& C)
 {
 	const FVector V0 = C - A;

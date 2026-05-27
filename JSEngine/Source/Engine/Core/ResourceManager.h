@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Asset/AnimSequenceAssetLoader.h"
 #include "Asset/BinarySerializer.h"
 #include "Asset/CurveFloatAsset.h"
 #include "Asset/FBX/FbxImporter.h"
@@ -124,6 +123,7 @@ public:
 	USkeletalMesh* FindSkeletalMesh(const FString& Path) const;
 	TArray<FString> GetSkeletalMeshPaths() const;
 	FFbxMeshContentInfo InspectFbxMeshContent(const FString& Path);
+	FString ImportSkeletalMeshFromSource(const FString& Path);
 
 	// 에디터에서 socket 등 mesh data 변경 후 writable cache(.bin)에 저장.
 	bool SaveSkeletalMesh(USkeletalMesh* Mesh);
@@ -190,7 +190,6 @@ private:
 
 	FObjLoader ObjLoader;
 	FFbxImporter FbxImporter;
-	FAnimSequenceAssetLoader AnimSequenceAssetLoader;
 	FBinarySerializer BinarySerializer;
 
 	TComPtr<ID3D11Texture2D>          DefaultWhiteTexture;

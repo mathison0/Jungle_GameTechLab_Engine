@@ -50,7 +50,7 @@ void FSubUVBatcher::Create(ID3D11Device* InDevice)
 	UMaterial* SubUVMaterial = FResourceManager::Get().GetMaterial("SubUVMat");
 	if (!SubUVMaterial)
 	{
-		SubUVMaterial = FResourceManager::Get().GetOrCreateMaterial("SubUVMat", "Asset/Material/SubUVMat.mat", EMaterialShaderType::UISubUV);
+		SubUVMaterial = FResourceManager::Get().GetOrCreateMaterial("SubUVMat", "Asset/Material/SubUVMat.uasset", EMaterialShaderType::UISubUV);
 	}
 	if (!SubUVMaterial)
 	{

@@ -31,5 +31,7 @@ private:
 	float CapsuleRadius = 0.5f;
 
 	bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) override;
+	bool SweepMesh(const FVector& Start, const FVector& End, const FQuat& ShapeWorldRotation,
+		const FCollisionShape& Shape, FHitResult& OutHitResult) override;
 	EPrimitiveType GetPrimitiveType() const override;
 };

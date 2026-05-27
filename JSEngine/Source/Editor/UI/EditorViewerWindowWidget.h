@@ -120,6 +120,9 @@ private:
     float PendingAnimNotifyTimeToAdd = 0.0f;
     char SelectedAnimNotifyNameBuffer[128] = {};
     int32 SelectedAnimNotifyNameBufferIndex = -1;
+    char SelectedAnimNotifyLuaEventNameBuffer[128] = {};
+    char SelectedAnimNotifyLuaTargetScriptBuffer[256] = {};
+    int32 SelectedAnimNotifyLuaBufferIndex = -1;
     float AnimNotifyDurationToAdd = 0.0f;
 
     bool bAnimSequenceToolbarIconsLoadAttempted = false;

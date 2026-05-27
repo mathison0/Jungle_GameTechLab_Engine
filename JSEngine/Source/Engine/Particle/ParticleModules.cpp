@@ -649,6 +649,7 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
         FCollisionQueryParams QueryParams;
         QueryParams.IgnoredActor = bIgnoreOwner ? OwnerActor : nullptr;
         QueryParams.IgnoredComponent = Component;
+        QueryParams.bSimpleCollisionOnly = true;
 
         bool bHit = false;
         if (TraceMode == EParticleCollisionTraceMode::Sphere)

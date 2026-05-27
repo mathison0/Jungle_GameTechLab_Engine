@@ -102,20 +102,35 @@ namespace
 		return Result.empty() ? FString("AnimNotify") : Result;
 	}
 
-	sol::table MakeAnimNotifyInfoTable(const sol::table& ScriptInstance, const FAnimNotifyStateEvent& Notify)
+	sol::table MakeAnimNotifyInfoTable(
+		const sol::table& ScriptInstance,
+		USkeletalMeshComponent* MeshComponent,
+		const FAnimNotifyStateEvent& Notify,
+		const char* Phase,
+		float DeltaTime = 0.0f)
 	{
 		sol::state_view Lua(ScriptInstance.lua_state());
 		sol::table NotifyInfo = Lua.create_table();
-		const FString NotifyName = Notify.NotifyName.ToString();
+		const FString NotifyName = !Notify.LuaEventName.empty()
+			? Notify.LuaEventName
+			: Notify.NotifyName.ToString();
 
 		NotifyInfo["NotifyName"] = NotifyName;
 		NotifyInfo["Name"] = NotifyName;
+		NotifyInfo["RawNotifyName"] = Notify.NotifyName.ToString();
+		NotifyInfo["NotifyClassName"] = Notify.NotifyClassName;
+		NotifyInfo["Phase"] = Phase ? Phase : "";
+		NotifyInfo["TargetScript"] = Notify.LuaTargetScript;
+		NotifyInfo["TargetPolicy"] = Notify.LuaTargetPolicy;
 		NotifyInfo["TriggerTime"] = Notify.TriggerTime;
 		NotifyInfo["StartTime"] = Notify.TriggerTime;
 		NotifyInfo["Time"] = Notify.TriggerTime;
 		NotifyInfo["Duration"] = Notify.Duration;
 		NotifyInfo["EndTime"] = Notify.GetEndTime();
+		NotifyInfo["DeltaTime"] = DeltaTime;
 		NotifyInfo["IsState"] = Notify.IsState();
+		NotifyInfo["MeshComponent"] = MeshComponent;
+		NotifyInfo["Owner"] = MeshComponent ? MeshComponent->GetOwner() : nullptr;
 		return NotifyInfo;
 	}
 
@@ -1247,77 +1262,73 @@ void UScriptComponent::OnEndOverlap(
 		SweepResult);
 }
 
-void UScriptComponent::OnAnimNotify(
+void UScriptComponent::DispatchLuaAnimNotify(
 	USkeletalMeshComponent* MeshComponent,
 	const FAnimNotifyStateEvent& Notify)
 {
-	(void)MeshComponent;
 	if (!ScriptInstance.valid())
 	{
 		return;
 	}
 
-	const FString NotifyName = Notify.NotifyName.ToString();
-	sol::table NotifyInfo = MakeAnimNotifyInfoTable(ScriptInstance, Notify);
+	const FString NotifyName = !Notify.LuaEventName.empty() ? Notify.LuaEventName : Notify.NotifyName.ToString();
+	sol::table NotifyInfo = MakeAnimNotifyInfoTable(ScriptInstance, MeshComponent, Notify, "Notify");
 
-	CallScriptFunction("OnAnimNotify", NotifyName, Notify.TriggerTime, NotifyInfo);
-	CallScriptFunction(FString("AnimNotify_") + MakeAnimNotifyFunctionSuffix(Notify.NotifyName), Notify.TriggerTime, NotifyInfo);
+	CallScriptFunction("OnAnimNotify", NotifyInfo);
+	CallScriptFunction(FString("AnimNotify_") + MakeAnimNotifyFunctionSuffix(FName(NotifyName)), NotifyInfo);
 }
 
-void UScriptComponent::OnAnimNotifyBegin(
+void UScriptComponent::DispatchLuaAnimNotifyBegin(
 	USkeletalMeshComponent* MeshComponent,
 	const FAnimNotifyStateEvent& Notify)
 {
-	(void)MeshComponent;
 	if (!ScriptInstance.valid())
 	{
 		return;
 	}
 
-	const FString NotifyName = Notify.NotifyName.ToString();
-	sol::table NotifyInfo = MakeAnimNotifyInfoTable(ScriptInstance, Notify);
-	const FString Suffix = MakeAnimNotifyFunctionSuffix(Notify.NotifyName);
+	const FString NotifyName = !Notify.LuaEventName.empty() ? Notify.LuaEventName : Notify.NotifyName.ToString();
+	sol::table NotifyInfo = MakeAnimNotifyInfoTable(ScriptInstance, MeshComponent, Notify, "Begin");
+	const FString Suffix = MakeAnimNotifyFunctionSuffix(FName(NotifyName));
 
-	CallScriptFunction("OnAnimNotifyBegin", NotifyName, Notify.TriggerTime, NotifyInfo);
-	CallScriptFunction(FString("AnimNotifyBegin_") + Suffix, Notify.TriggerTime, NotifyInfo);
-	CallScriptFunction(FString("AnimNotify_") + Suffix + "_Begin", Notify.TriggerTime, NotifyInfo);
+	CallScriptFunction("OnAnimNotifyBegin", NotifyInfo);
+	CallScriptFunction(FString("AnimNotifyBegin_") + Suffix, NotifyInfo);
+	CallScriptFunction(FString("AnimNotify_") + Suffix + "_Begin", NotifyInfo);
 }
 
-void UScriptComponent::OnAnimNotifyTick(
+void UScriptComponent::DispatchLuaAnimNotifyTick(
 	USkeletalMeshComponent* MeshComponent,
 	const FAnimNotifyStateEvent& Notify,
 	float DeltaTime)
 {
-	(void)MeshComponent;
 	if (!ScriptInstance.valid())
 	{
 		return;
 	}
 
-	const FString NotifyName = Notify.NotifyName.ToString();
-	sol::table NotifyInfo = MakeAnimNotifyInfoTable(ScriptInstance, Notify);
-	const FString Suffix = MakeAnimNotifyFunctionSuffix(Notify.NotifyName);
+	const FString NotifyName = !Notify.LuaEventName.empty() ? Notify.LuaEventName : Notify.NotifyName.ToString();
+	sol::table NotifyInfo = MakeAnimNotifyInfoTable(ScriptInstance, MeshComponent, Notify, "Tick", DeltaTime);
+	const FString Suffix = MakeAnimNotifyFunctionSuffix(FName(NotifyName));
 
-	CallScriptFunction("OnAnimNotifyTick", NotifyName, DeltaTime, NotifyInfo);
-	CallScriptFunction(FString("AnimNotifyTick_") + Suffix, DeltaTime, NotifyInfo);
-	CallScriptFunction(FString("AnimNotify_") + Suffix + "_Tick", DeltaTime, NotifyInfo);
+	CallScriptFunction("OnAnimNotifyTick", NotifyInfo);
+	CallScriptFunction(FString("AnimNotifyTick_") + Suffix, NotifyInfo);
+	CallScriptFunction(FString("AnimNotify_") + Suffix + "_Tick", NotifyInfo);
 }
 
-void UScriptComponent::OnAnimNotifyEnd(
+void UScriptComponent::DispatchLuaAnimNotifyEnd(
 	USkeletalMeshComponent* MeshComponent,
 	const FAnimNotifyStateEvent& Notify)
 {
-	(void)MeshComponent;
 	if (!ScriptInstance.valid())
 	{
 		return;
 	}
 
-	const FString NotifyName = Notify.NotifyName.ToString();
-	sol::table NotifyInfo = MakeAnimNotifyInfoTable(ScriptInstance, Notify);
-	const FString Suffix = MakeAnimNotifyFunctionSuffix(Notify.NotifyName);
+	const FString NotifyName = !Notify.LuaEventName.empty() ? Notify.LuaEventName : Notify.NotifyName.ToString();
+	sol::table NotifyInfo = MakeAnimNotifyInfoTable(ScriptInstance, MeshComponent, Notify, "End");
+	const FString Suffix = MakeAnimNotifyFunctionSuffix(FName(NotifyName));
 
-	CallScriptFunction("OnAnimNotifyEnd", NotifyName, Notify.GetEndTime(), NotifyInfo);
-	CallScriptFunction(FString("AnimNotifyEnd_") + Suffix, Notify.GetEndTime(), NotifyInfo);
-	CallScriptFunction(FString("AnimNotify_") + Suffix + "_End", Notify.GetEndTime(), NotifyInfo);
+	CallScriptFunction("OnAnimNotifyEnd", NotifyInfo);
+	CallScriptFunction(FString("AnimNotifyEnd_") + Suffix, NotifyInfo);
+	CallScriptFunction(FString("AnimNotify_") + Suffix + "_End", NotifyInfo);
 }

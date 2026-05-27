@@ -4,6 +4,7 @@
 #include "Geometry/Transform.h"
 #include "Object/Class.h"
 #include "Object/Object.h"
+#include "Serialization/Archive.h"
 
 #include <algorithm>
 #include <cmath>
@@ -25,6 +26,40 @@ namespace
 
 		return Cast<UAnimNotify>(NewObject(Class));
 	}
+
+	void SerializeAnimNotifyEvent(FArchive& Ar, FAnimNotifyStateEvent& Value, int32 PayloadVersion)
+	{
+		Ar << "TriggerTime" << Value.TriggerTime;
+		Ar << "Duration" << Value.Duration;
+		Ar << "NotifyName" << Value.NotifyName;
+		Ar << "NotifyClassName" << Value.NotifyClassName;
+		if (PayloadVersion >= 3)
+		{
+			Ar << "LuaEventName" << Value.LuaEventName;
+			Ar << "LuaTargetScript" << Value.LuaTargetScript;
+			Ar << "LuaTargetPolicy" << Value.LuaTargetPolicy;
+		}
+		if (Ar.IsLoading())
+		{
+			Value.NotifyObject = CreateAnimNotifyObject(Value.NotifyClassName);
+		}
+	}
+
+	void SerializeAnimNotifyArray(FArchive& Ar, TArray<FAnimNotifyStateEvent>& Notifies, int32 PayloadVersion)
+	{
+		int32 Count = static_cast<int32>(Notifies.size());
+		Ar << "Notifies";
+		Ar.BeginArray(Ar.GetCurrentKey(), Count);
+		if (Ar.IsLoading())
+		{
+			Notifies.resize(Count);
+		}
+		for (FAnimNotifyStateEvent& Notify : Notifies)
+		{
+			SerializeAnimNotifyEvent(Ar, Notify, PayloadVersion);
+		}
+		Ar.EndArray();
+	}
 }
 
 const TArray<FBoneAnimationTrack>& UAnimDataModel::GetBoneAnimationTracks() const
@@ -35,6 +70,80 @@ const TArray<FBoneAnimationTrack>& UAnimDataModel::GetBoneAnimationTracks() cons
 TArray<FBoneAnimationTrack>& UAnimDataModel::GetMutableBoneAnimationTracks()
 {
 	return BoneAnimationTracks;
+}
+
+void UAnimDataModel::Serialize(FArchive& Ar, int32 PayloadVersion)
+{
+	(void)PayloadVersion;
+
+	Ar << "BoneAnimationTracks" << BoneAnimationTracks;
+	Ar << "PlayLength" << PlayLength;
+	Ar << "FrameRate" << FrameRate;
+	Ar << "NumberOfFrames" << NumberOfFrames;
+	Ar << "NumberOfKeys" << NumberOfKeys;
+}
+
+FArchive& operator<<(FArchive& Ar, FFrameRate& Value)
+{
+	Ar << "Numerator" << Value.Numerator;
+	Ar << "Denominator" << Value.Denominator;
+	return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FRawAnimSequenceTrack& Value)
+{
+	Ar << "PosKeys" << Value.PosKeys;
+	Ar << "RotKeys" << Value.RotKeys;
+	Ar << "ScaleKeys" << Value.ScaleKeys;
+	return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FBoneAnimationTrack& Value)
+{
+	Ar << "Name" << Value.Name;
+	Ar << "InternalTrack" << Value.InternalTrack;
+	return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FAnimNotifyStateEvent& Value)
+{
+	SerializeAnimNotifyEvent(Ar, Value, 2);
+	return Ar;
+}
+
+void FAnimSequenceAssetPayload::Serialize(FArchive& Ar, int32 PayloadVersion)
+{
+	Ar << "TargetSkeletalMeshPath" << TargetSkeletalMeshPath;
+	if (PayloadVersion >= 2)
+	{
+		Ar << "SourceStackName" << SourceStackName;
+	}
+	Ar << "SourceAnimStackIndex" << SourceAnimStackIndex;
+
+	if (Ar.IsLoading() && DataModel == nullptr)
+	{
+		DataModel = UObjectManager::Get().CreateObject<UAnimDataModel>();
+	}
+
+	UAnimDataModel EmptyDataModel;
+	UAnimDataModel* ModelToSerialize = DataModel ? DataModel : &EmptyDataModel;
+	ModelToSerialize->Serialize(Ar, PayloadVersion);
+
+	if (PayloadVersion >= 3)
+	{
+		SerializeAnimNotifyArray(Ar, Notifies, PayloadVersion);
+	}
+	else
+	{
+		Ar << "Notifies" << Notifies;
+		if (Ar.IsLoading())
+		{
+			for (FAnimNotifyStateEvent& Notify : Notifies)
+			{
+				Notify.NotifyObject = CreateAnimNotifyObject(Notify.NotifyClassName);
+			}
+		}
+	}
 }
 
 const TArray<FBoneAnimationTrack>& UAnimSequenceBase::GetBoneAnimationTracks() const
@@ -52,6 +161,7 @@ void UAnimSequenceBase::AddNotify(float InTriggerTime, const FName& InNotifyName
 	NewNotify.Duration = std::clamp(InDuration, 0.0f, std::max(0.0f, Length - NewNotify.TriggerTime));
 	NewNotify.NotifyName = InNotifyName;
 	NewNotify.NotifyClassName = InNotifyClassName;
+	NewNotify.LuaEventName = InNotifyName.ToString();
 	NewNotify.NotifyObject = CreateAnimNotifyObject(NewNotify.NotifyClassName);
 
 	Notifies.push_back(NewNotify);
@@ -101,6 +211,39 @@ bool UAnimSequenceBase::SetNotifyClassName(int32 NotifyIndex, const FString& InN
 
 	Notifies[NotifyIndex].NotifyClassName = InNotifyClassName;
 	Notifies[NotifyIndex].NotifyObject = CreateAnimNotifyObject(InNotifyClassName);
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyLuaEventName(int32 NotifyIndex, const FString& InLuaEventName)
+{
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	{
+		return false;
+	}
+
+	Notifies[NotifyIndex].LuaEventName = InLuaEventName;
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyLuaTargetScript(int32 NotifyIndex, const FString& InLuaTargetScript)
+{
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	{
+		return false;
+	}
+
+	Notifies[NotifyIndex].LuaTargetScript = InLuaTargetScript;
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyLuaTargetPolicy(int32 NotifyIndex, int32 InLuaTargetPolicy)
+{
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	{
+		return false;
+	}
+
+	Notifies[NotifyIndex].LuaTargetPolicy = std::clamp(InLuaTargetPolicy, 0, 2);
 	return true;
 }
 

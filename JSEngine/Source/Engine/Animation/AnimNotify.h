@@ -49,3 +49,26 @@ public:
 
 	void Notify(USkeletalMeshComponent* MeshComponent, const FAnimNotifyStateEvent& Event) override;
 };
+
+UCLASS(DisplayName = "Lua Event Notify", Category = "Animation")
+class UAnimNotify_LuaEvent : public UAnimNotify
+{
+public:
+	GENERATED_BODY(UAnimNotify_LuaEvent, UAnimNotify)
+	~UAnimNotify_LuaEvent() override = default;
+
+	void Notify(USkeletalMeshComponent* MeshComponent, const FAnimNotifyStateEvent& Event) override;
+};
+
+UCLASS(DisplayName = "Lua Event Notify State", Category = "Animation")
+class UAnimNotifyState_LuaEvent : public UAnimNotifyState
+{
+public:
+	GENERATED_BODY(UAnimNotifyState_LuaEvent, UAnimNotifyState)
+	~UAnimNotifyState_LuaEvent() override = default;
+
+	void Notify(USkeletalMeshComponent* MeshComponent, const FAnimNotifyStateEvent& Event) override;
+	void NotifyBegin(USkeletalMeshComponent* MeshComponent, const FAnimNotifyStateEvent& Event) override;
+	void NotifyTick(USkeletalMeshComponent* MeshComponent, const FAnimNotifyStateEvent& Event, float DeltaTime) override;
+	void NotifyEnd(USkeletalMeshComponent* MeshComponent, const FAnimNotifyStateEvent& Event) override;
+};

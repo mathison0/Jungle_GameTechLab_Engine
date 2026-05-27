@@ -4,6 +4,8 @@
 #include "Object/FName.h"
 #include "StaticMeshTypes.h"
 
+struct FArchive;
+
 struct FBoneInfo
 {
     FString Name;
@@ -49,4 +51,10 @@ struct FSkeletalMesh
 
     // Bounds
     FAABB LocalBounds;
+
+    void Serialize(FArchive& Ar, int32 PayloadVersion);
 };
+
+FArchive& operator<<(FArchive& Ar, FSkeletalMeshVertex& Vertex);
+FArchive& operator<<(FArchive& Ar, FBoneInfo& BoneInfo);
+FArchive& operator<<(FArchive& Ar, FSkeletalMeshSocket& Socket);

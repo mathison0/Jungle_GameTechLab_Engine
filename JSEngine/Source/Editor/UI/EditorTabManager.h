@@ -13,6 +13,7 @@ enum class EEditorTabKind : uint8
 	ActorSequencer,
 	RuntimeUIPreview,
 	AnimGraphEditor,
+	LuaAnimGraphEditor,
 	ParticleSystemEditor,
 };
 
@@ -39,6 +40,8 @@ FEditorTabId MakeRuntimeUIPreviewTabId();
 FString MakeRuntimeUIPreviewTabLabel(const FString& DocumentPath);
 FEditorTabId MakeAnimGraphEditorTabId(const FString& AnimGraphPath);
 FString MakeAnimGraphEditorTabLabel(const FString& AnimGraphPath);
+FEditorTabId MakeLuaAnimGraphEditorTabId(const FString& AssetPath);
+FString MakeLuaAnimGraphEditorTabLabel(const FString& AssetPath);
 FEditorTabId MakeParticleSystemEditorTabId(const FString& ParticleSystemPath);
 FString MakeParticleSystemEditorTabLabel(const FString& ParticleSystemPath);
 

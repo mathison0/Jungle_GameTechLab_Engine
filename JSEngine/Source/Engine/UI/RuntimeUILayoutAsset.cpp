@@ -1,6 +1,8 @@
 #include "UI/RuntimeUILayoutAsset.h"
 
+#include "Asset/AssetFile.h"
 #include "Core/Paths.h"
+#include "Core/Guid.h"
 #include "Math/Color.h"
 #include "Math/Matrix.h"
 #include "Serialization/Archive.h"
@@ -17,8 +19,6 @@
 namespace
 {
 int32 GRuntimeUILayoutSerializePayloadVersion = URuntimeUILayoutAsset::CurrentPayloadVersion;
-constexpr uint32 RuntimeUILayoutBinaryMagic = 0x4C495552; // RUIL
-constexpr int32 RuntimeUILayoutBinaryFileVersion = 1;
 
 bool IsRuntimeUILayoutAssetPath(const FString& Path)
 {
@@ -31,167 +31,11 @@ bool IsRuntimeUILayoutAssetPath(const FString& Path)
 	return Extension == ".uasset";
 }
 
-class FRuntimeUILayoutBinaryArchive : public FArchive
+FString GetRuntimeUILayoutDisplayName(const FString& Path)
 {
-public:
-	FRuntimeUILayoutBinaryArchive(std::istream* InInput, std::ostream* InOutput)
-		: Input(InInput)
-		, Output(InOutput)
-	{
-	}
-
-	bool HasError() const { return bHasError; }
-	bool IsLoading() const override { return Input != nullptr; }
-	bool IsSaving() const override { return Output != nullptr; }
-
-	void Serialize(void* Data, uint32 Size) override
-	{
-		if (Size == 0)
-		{
-			return;
-		}
-
-		if (Output)
-		{
-			Output->write(static_cast<const char*>(Data), Size);
-			bHasError = bHasError || !Output->good();
-			return;
-		}
-
-		if (Input)
-		{
-			Input->read(static_cast<char*>(Data), Size);
-			bHasError = bHasError || !Input->good();
-			return;
-		}
-
-		bHasError = true;
-	}
-
-	void BeginArray(const FString& Key, int32& OutCount) override
-	{
-		(void)Key;
-		*this << OutCount;
-		if (OutCount < 0)
-		{
-			bHasError = true;
-			OutCount = 0;
-		}
-	}
-
-	FArchive& operator<<(bool& Value) override
-	{
-		uint8 RawValue = Value ? 1 : 0;
-		if (IsSaving())
-		{
-			Serialize(&RawValue, sizeof(RawValue));
-		}
-		else
-		{
-			Serialize(&RawValue, sizeof(RawValue));
-			Value = RawValue != 0;
-		}
-		return *this;
-	}
-
-	FArchive& operator<<(int32& Value) override
-	{
-		Serialize(&Value, sizeof(Value));
-		return *this;
-	}
-
-	FArchive& operator<<(uint32& Value) override
-	{
-		Serialize(&Value, sizeof(Value));
-		return *this;
-	}
-
-	FArchive& operator<<(float& Value) override
-	{
-		Serialize(&Value, sizeof(Value));
-		return *this;
-	}
-
-	FArchive& operator<<(const char* Value) override
-	{
-		(void)Value;
-		return *this;
-	}
-
-	FArchive& operator<<(FString& Value) override
-	{
-		int32 Length = static_cast<int32>(Value.size());
-		*this << Length;
-		if (Length < 0)
-		{
-			bHasError = true;
-			return *this;
-		}
-
-		if (IsSaving())
-		{
-			if (Length > 0)
-			{
-				Serialize(Value.data(), static_cast<uint32>(Length));
-			}
-		}
-		else
-		{
-			Value.resize(static_cast<size_t>(Length));
-			if (Length > 0)
-			{
-				Serialize(Value.data(), static_cast<uint32>(Length));
-			}
-		}
-		return *this;
-	}
-
-	FArchive& operator<<(FName& Value) override
-	{
-		FString Text = Value.ToString();
-		*this << Text;
-		if (IsLoading())
-		{
-			Value = FName(Text);
-		}
-		return *this;
-	}
-
-	FArchive& operator<<(FVector2& Value) override
-	{
-		*this << Value.X << Value.Y;
-		return *this;
-	}
-
-	FArchive& operator<<(FVector& Value) override
-	{
-		*this << Value.X << Value.Y << Value.Z;
-		return *this;
-	}
-
-	FArchive& operator<<(FVector4& Value) override
-	{
-		*this << Value.X << Value.Y << Value.Z << Value.W;
-		return *this;
-	}
-
-	FArchive& operator<<(FColor& Value) override
-	{
-		*this << Value.R << Value.G << Value.B << Value.A;
-		return *this;
-	}
-
-	FArchive& operator<<(FMatrix& Value) override
-	{
-		Serialize(&Value, sizeof(Value));
-		return *this;
-	}
-
-private:
-	std::istream* Input = nullptr;
-	std::ostream* Output = nullptr;
-	bool bHasError = false;
-};
+	const std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
+	return FPaths::ToUtf8(FsPath.stem().wstring());
+}
 
 const char* GetWidgetTypeName(ERuntimeUIWidgetType Type)
 {
@@ -1464,36 +1308,25 @@ bool URuntimeUILayoutAsset::SaveToFile(const FString& Path)
 		return false;
 	}
 
-	const std::filesystem::path AbsolutePath = ToAbsoluteProjectPath(NormalizedPath);
-	std::error_code Ec;
-	std::filesystem::create_directories(AbsolutePath.parent_path(), Ec);
-	if (Ec)
-	{
-		return false;
-	}
-
 	AssetPath = NormalizedPath;
-	std::ofstream File(AbsolutePath, std::ios::binary | std::ios::trunc);
-	if (!File.is_open())
+
+	FAssetMetaData MetaData;
+	FAssetMetaData ExistingMetaData;
+	MetaData.AssetGuid = FAssetFile::LoadMetadataOnly(NormalizedPath, ExistingMetaData) && !ExistingMetaData.AssetGuid.empty()
+		? ExistingMetaData.AssetGuid
+		: FGuid::NewGuid().ToString();
+	MetaData.ClassName = "RuntimeUILayout";
+	MetaData.DisplayName = GetRuntimeUILayoutDisplayName(NormalizedPath);
+	MetaData.PayloadVersion = CurrentPayloadVersion;
+
+	return FAssetFile::Save(NormalizedPath, MetaData, [this](FArchive& Ar)
 	{
-		return false;
-	}
-
-	FRuntimeUILayoutBinaryArchive Ar(nullptr, &File);
-	uint32 Magic = RuntimeUILayoutBinaryMagic;
-	int32 FileVersion = RuntimeUILayoutBinaryFileVersion;
-	int32 PayloadVersion = CurrentPayloadVersion;
-	Ar << Magic;
-	Ar << FileVersion;
-	Ar << PayloadVersion;
-
-	const int32 PreviousPayloadVersion = GRuntimeUILayoutSerializePayloadVersion;
-	GRuntimeUILayoutSerializePayloadVersion = CurrentPayloadVersion;
-	Serialize(Ar);
-	GRuntimeUILayoutSerializePayloadVersion = PreviousPayloadVersion;
-
-	File.flush();
-	return !Ar.HasError() && File.good();
+		const int32 PreviousPayloadVersion = GRuntimeUILayoutSerializePayloadVersion;
+		GRuntimeUILayoutSerializePayloadVersion = CurrentPayloadVersion;
+		Serialize(Ar);
+		GRuntimeUILayoutSerializePayloadVersion = PreviousPayloadVersion;
+		return true;
+	});
 }
 
 bool URuntimeUILayoutAsset::LoadFromFile(const FString& Path)
@@ -1504,149 +1337,26 @@ bool URuntimeUILayoutAsset::LoadFromFile(const FString& Path)
 		return false;
 	}
 
-	const std::filesystem::path AbsolutePath = ToAbsoluteProjectPath(NormalizedPath);
-	std::ifstream File(AbsolutePath, std::ios::binary);
-	if (!File.is_open())
+	FAssetMetaData MetaData;
+	const bool bLoaded = FAssetFile::Load(NormalizedPath, MetaData, [this, &MetaData](FArchive& Ar)
 	{
-		return false;
-	}
-
-	FRuntimeUILayoutBinaryArchive Ar(&File, nullptr);
-	uint32 Magic = 0;
-	int32 FileVersion = 0;
-	int32 PayloadVersion = CurrentPayloadVersion;
-	Ar << Magic;
-	Ar << FileVersion;
-	Ar << PayloadVersion;
-	if (Ar.HasError() || Magic != RuntimeUILayoutBinaryMagic || FileVersion > RuntimeUILayoutBinaryFileVersion)
-	{
-		return false;
-	}
-
-	const int32 PreviousPayloadVersion = GRuntimeUILayoutSerializePayloadVersion;
-	GRuntimeUILayoutSerializePayloadVersion = PayloadVersion;
-	Serialize(Ar);
-	GRuntimeUILayoutSerializePayloadVersion = PreviousPayloadVersion;
-	if (Ar.HasError())
-	{
-		return false;
-	}
-
-	AssetPath = NormalizedPath;
-	return true;
-}
-
-FString URuntimeUILayoutAsset::GetTextLayoutPathForAssetPath(const FString& AssetPath)
-{
-	std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(AssetPath)));
-	FsPath.replace_extension(L".layout");
-	return FPaths::Normalize(FPaths::ToUtf8(FsPath.wstring()));
-}
-
-bool URuntimeUILayoutAsset::SaveToTextLayout(const FString& Path) const
-{
-	const FString NormalizedPath = FPaths::Normalize(Path);
-	const std::filesystem::path AbsolutePath = ToAbsoluteProjectPath(NormalizedPath);
-	std::error_code Ec;
-	std::filesystem::create_directories(AbsolutePath.parent_path(), Ec);
-	if (Ec)
-	{
-		return false;
-	}
-
-	json::JSON Root = json::Object();
-	Root["Format"] = "RuntimeUILayout";
-	Root["Version"] = CurrentPayloadVersion;
-	Root["AssetPath"] = AssetPath;
-	Root["GeneratedRmlPath"] = GeneratedRmlPath;
-	Root["GeneratedRcssPath"] = GeneratedRcssPath;
-	Root["CanvasSize"] = Vector2ToJson(CanvasSize);
-
-	json::JSON WidgetArray = json::Array();
-	for (const FRuntimeUIWidgetNode& Widget : Widgets)
-	{
-		WidgetArray.append(WidgetNodeToJson(Widget));
-	}
-	Root["Widgets"] = WidgetArray;
-
-	std::ofstream File(AbsolutePath, std::ios::binary | std::ios::trunc);
-	if (!File.is_open())
-	{
-		return false;
-	}
-	File << Root.dump();
-	return File.good();
-}
-
-bool URuntimeUILayoutAsset::LoadFromTextLayout(const FString& Path)
-{
-	const FString NormalizedPath = FPaths::Normalize(Path);
-	const std::filesystem::path AbsolutePath = ToAbsoluteProjectPath(NormalizedPath);
-	std::ifstream File(AbsolutePath, std::ios::binary);
-	if (!File.is_open())
-	{
-		return false;
-	}
-
-	std::stringstream Buffer;
-	Buffer << File.rdbuf();
-	json::JSON Root;
-	try
-	{
-		Root = json::JSON::Load(Buffer.str());
-	}
-	catch (...)
-	{
-		return false;
-	}
-
-	if (Root.JSONType() != json::JSON::Class::Object)
-	{
-		return false;
-	}
-	const FString Format = ReadJsonString(Root, "Format");
-	if (Format != "RuntimeUILayout")
-	{
-		return false;
-	}
-
-	AssetPath = ReadJsonString(Root, "AssetPath", AssetPath);
-	if (AssetPath.empty())
-	{
-		AssetPath = GetTextLayoutPathForAssetPath(NormalizedPath);
-		std::filesystem::path AssetFsPath(FPaths::ToWide(NormalizedPath));
-		AssetFsPath.replace_extension(L".uasset");
-		AssetPath = FPaths::Normalize(FPaths::ToUtf8(AssetFsPath.wstring()));
-	}
-	GeneratedRmlPath = ReadJsonString(Root, "GeneratedRmlPath", GeneratedRmlPath);
-	GeneratedRcssPath = ReadJsonString(Root, "GeneratedRcssPath", GeneratedRcssPath);
-	CanvasSize = ReadJsonVector2(Root, "CanvasSize", CanvasSize);
-
-	TArray<FRuntimeUIWidgetNode> LoadedWidgets;
-	if (const json::JSON* WidgetArray = FindJsonField(Root, "Widgets"))
-	{
-		if (WidgetArray->JSONType() == json::JSON::Class::Array)
+		if (!MetaData.ClassName.empty() && MetaData.ClassName != "RuntimeUILayout")
 		{
-			LoadedWidgets.reserve(WidgetArray->length());
-			for (int32 Index = 0; Index < WidgetArray->length(); ++Index)
-			{
-				LoadedWidgets.push_back(WidgetNodeFromJson(WidgetArray->at(Index)));
-			}
+			return false;
 		}
+		const int32 PreviousPayloadVersion = GRuntimeUILayoutSerializePayloadVersion;
+		GRuntimeUILayoutSerializePayloadVersion = MetaData.PayloadVersion > 0 ? MetaData.PayloadVersion : CurrentPayloadVersion;
+		Serialize(Ar);
+		GRuntimeUILayoutSerializePayloadVersion = PreviousPayloadVersion;
+		return true;
+	});
+	if (bLoaded)
+	{
+		AssetPath = NormalizedPath;
+		return true;
 	}
 
-	if (LoadedWidgets.empty())
-	{
-		return false;
-	}
-
-	Widgets = std::move(LoadedWidgets);
-	RebuildChildrenFromParents();
-	if (Widgets.empty())
-	{
-		ResetToDefault();
-	}
-	return true;
+	return false;
 }
 
 bool URuntimeUILayoutAsset::ValidateForExport(FString* OutError) const

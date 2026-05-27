@@ -1,10 +1,14 @@
 #include "Core/MaterialSerializationService.h"
 
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
+#include "Core/Guid.h"
 #include "Core/AssetPathPolicy.h"
 #include "Core/Logging/Log.h"
 #include "Core/MaterialResourceCache.h"
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
+#include "Object/Class.h"
 #include "Render/Resource/Material.h"
 #include "Render/Resource/Texture.h"
 #include "SimpleJSON/json.hpp"
@@ -92,6 +96,11 @@ namespace
 			Param["Value"] = Texture ? Texture->GetFilePath() : "";
 		}
 		return Param;
+	}
+
+	FString GetPathStemDisplayName(const FString& Path)
+	{
+		return FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(Path)).stem().wstring());
 	}
 
 	void ApplyTypedParam(UMaterialInstance* MaterialInstance, const FString& ParamName, const FString& Type, JSON& Param, FResourceManager& ResourceManager)
@@ -275,6 +284,94 @@ namespace
 			}
 		}
 	}
+
+	FSerializedMaterialParam MakeSerializedParam(const FString& Name, const FMaterialParamValue& Value)
+	{
+		FSerializedMaterialParam Out;
+		Out.Name = Name;
+		Out.Type = Value.Type;
+
+		switch (Value.Type)
+		{
+		case EMaterialParamType::Bool:
+			Out.BoolValue = std::get<bool>(Value.Value);
+			break;
+		case EMaterialParamType::Int:
+			Out.IntValue = std::get<int32>(Value.Value);
+			break;
+		case EMaterialParamType::UInt:
+			Out.UIntValue = std::get<uint32>(Value.Value);
+			break;
+		case EMaterialParamType::Float:
+			Out.FloatValue = std::get<float>(Value.Value);
+			break;
+		case EMaterialParamType::Vector2:
+			Out.Vector2Value = std::get<FVector2>(Value.Value);
+			break;
+		case EMaterialParamType::Vector3:
+			Out.Vector3Value = std::get<FVector>(Value.Value);
+			break;
+		case EMaterialParamType::Vector4:
+			Out.Vector4Value = std::get<FVector4>(Value.Value);
+			break;
+		case EMaterialParamType::Matrix4:
+			Out.Matrix4Value = std::get<FMatrix>(Value.Value);
+			break;
+		case EMaterialParamType::Texture:
+		{
+			UTexture* Texture = std::get<UTexture*>(Value.Value);
+			Out.TexturePath = Texture ? FPaths::Normalize(Texture->GetFilePath()) : "";
+			break;
+		}
+		}
+
+		return Out;
+	}
+
+	FMaterialParamValue MakeRuntimeParam(const FSerializedMaterialParam& SerializedParam, FResourceManager& ResourceManager)
+	{
+		switch (SerializedParam.Type)
+		{
+		case EMaterialParamType::Bool:
+			return FMaterialParamValue(SerializedParam.BoolValue);
+		case EMaterialParamType::Int:
+			return FMaterialParamValue(SerializedParam.IntValue);
+		case EMaterialParamType::UInt:
+			return FMaterialParamValue(SerializedParam.UIntValue);
+		case EMaterialParamType::Float:
+			return FMaterialParamValue(SerializedParam.FloatValue);
+		case EMaterialParamType::Vector2:
+			return FMaterialParamValue(SerializedParam.Vector2Value);
+		case EMaterialParamType::Vector3:
+			return FMaterialParamValue(SerializedParam.Vector3Value);
+		case EMaterialParamType::Vector4:
+			return FMaterialParamValue(SerializedParam.Vector4Value);
+		case EMaterialParamType::Matrix4:
+			return FMaterialParamValue(SerializedParam.Matrix4Value);
+		case EMaterialParamType::Texture:
+			return FMaterialParamValue(ResourceManager.LoadTexture(SerializedParam.TexturePath));
+		default:
+			return FMaterialParamValue();
+		}
+	}
+
+	void SerializeMaterialParamArray(FArchive& Ar, TArray<FSerializedMaterialParam>& Params, int32 PayloadVersion)
+	{
+		int32 Count = static_cast<int32>(Params.size());
+		Ar.BeginArray("Params", Count);
+
+		if (Ar.IsLoading())
+		{
+			Params.resize(Count);
+		}
+
+		for (FSerializedMaterialParam& Param : Params)
+		{
+			Param.Serialize(Ar, PayloadVersion);
+		}
+
+		Ar.EndArray();
+	}
 }
 
 FMaterialSerializationService::FMaterialSerializationService(FResourceManager& InResourceManager)
@@ -284,155 +381,273 @@ FMaterialSerializationService::FMaterialSerializationService(FResourceManager& I
 
 bool FMaterialSerializationService::SerializeMaterial(const FString& MatFilePath, const UMaterial* Material)
 {
-	using json::JSON;
-	const FString NormalizedMatFilePath = FPaths::Normalize(MatFilePath);
-	JSON Root = JSON::Make(JSON::Class::Object);
-	Root["Name"] = Material->Name;
-	if (!Material->ImportedName.empty())
+	if (!Material)
 	{
-		Root["ImportedName"] = Material->ImportedName;
-	}
-	Root["ShaderType"] = ToString(Material->GetShaderType());
-
-	JSON Params = JSON::Make(JSON::Class::Array);
-	for (const auto& [ParamName, ParamValue] : Material->MaterialParams)
-	{
-		Params.append(SerializeMaterialParam(ParamName, ParamValue));
-	}
-	Root["Params"] = Params;
-
-	std::ofstream OutFile(FPaths::ToWide(NormalizedMatFilePath));
-	if (!OutFile.is_open())
-	{
-		UE_LOG_ERROR("Failed to open material file for writing: %s", NormalizedMatFilePath.c_str());
 		return false;
 	}
-	OutFile << Root.dump(4);
-	return true;
+
+	const FString NormalizedMatFilePath = FPaths::Normalize(MatFilePath);
+	if (FAssetFile::IsAssetPath(NormalizedMatFilePath))
+	{
+		FMaterialAssetPayload Payload;
+		Payload.Name = Material->Name;
+		Payload.ImportedName = Material->ImportedName;
+		Payload.ShaderType = Material->GetShaderType();
+
+		for (const auto& [ParamName, ParamValue] : Material->MaterialParams)
+		{
+			Payload.Params.push_back(MakeSerializedParam(ParamName, ParamValue));
+		}
+
+		FAssetMetaData ExistingMetaData;
+		FAssetMetaData MetaData;
+		MetaData.Version = 1;
+		MetaData.PayloadVersion = 1;
+		MetaData.AssetGuid = FAssetFile::LoadMetadataOnly(NormalizedMatFilePath, ExistingMetaData) && !ExistingMetaData.AssetGuid.empty()
+			? ExistingMetaData.AssetGuid
+			: FGuid::NewGuid().ToString();
+		MetaData.ClassName = UMaterial::StaticClass()->GetName();
+		MetaData.DisplayName = Material->Name.empty() ? GetPathStemDisplayName(NormalizedMatFilePath) : Material->Name;
+		MetaData.SourceFile = "";
+
+		return FAssetFile::Save(NormalizedMatFilePath, MetaData, [&](FArchive& Ar)
+		{
+			Payload.Serialize(Ar, MetaData.PayloadVersion);
+			return true;
+		});
+	}
+
+	UE_LOG_ERROR("Material assets must be saved as .uasset: %s", NormalizedMatFilePath.c_str());
+	return false;
 }
 
 bool FMaterialSerializationService::SerializeMaterialInstance(const FString& MatInstFilePath, const UMaterialInstance* MaterialInstance)
 {
-	using json::JSON;
-	const FString NormalizedMatInstFilePath = FPaths::Normalize(MatInstFilePath);
-	JSON Root = JSON::Make(JSON::Class::Object);
-
-	// ?대쫫?먮뒗 ?댁젣 ?뚯씪 寃쎈줈瑜??ｋ뒗 寃껋쑝濡??듭씪. ?뚯씪 寃쎈줈媛 ?놁쑝硫?湲곗〈 諛⑹떇?濡??대쫫???ｌ쓬
-	Root["Name"] = MaterialInstance->GetFilePath().empty() ? NormalizedMatInstFilePath : FPaths::Normalize(MaterialInstance->GetFilePath());
-	Root["Parent"] = (MaterialInstance->Parent && !MaterialInstance->Parent->GetFilePath().empty())
-		? FPaths::Normalize(MaterialInstance->Parent->GetFilePath())
-		: (MaterialInstance->Parent ? MaterialInstance->Parent->Name : "");
-
-	JSON Params = JSON::Make(JSON::Class::Array);
-	for (const auto& [ParamName, ParamValue] : MaterialInstance->OverridedParams)
+	if (!MaterialInstance)
 	{
-		Params.append(SerializeMaterialParam(ParamName, ParamValue));
-	}
-	Root["OverridedParams"] = Params;
-
-	std::error_code Ec;
-	fs::create_directories(fs::path(FPaths::ToWide(NormalizedMatInstFilePath)).parent_path(), Ec);
-	std::ofstream OutFile(FPaths::ToWide(NormalizedMatInstFilePath));
-	if (!OutFile.is_open())
-	{
-		UE_LOG_ERROR("Failed to open material instance file for writing: %s", NormalizedMatInstFilePath.c_str());
 		return false;
 	}
-	OutFile << Root.dump(4);
-	return true;
+
+	const FString NormalizedMatInstFilePath = FPaths::Normalize(MatInstFilePath);
+	if (FAssetFile::IsAssetPath(NormalizedMatInstFilePath))
+	{
+		if (!MaterialInstance->Parent || MaterialInstance->Parent->GetFilePath().empty())
+		{
+			UE_LOG_WARNING("Cannot save material instance without parent: %s", NormalizedMatInstFilePath.c_str());
+			return false;
+		}
+
+		FMaterialInstanceAssetPayload Payload;
+		Payload.Name = MaterialInstance->Name;
+		Payload.Parent = FPaths::Normalize(MaterialInstance->Parent->GetFilePath());
+
+		for (const auto& [ParamName, ParamValue] : MaterialInstance->OverridedParams)
+		{
+			Payload.OverridedParams.push_back(MakeSerializedParam(ParamName, ParamValue));
+		}
+
+		FAssetMetaData ExistingMetaData;
+		FAssetMetaData MetaData;
+		MetaData.Version = 1;
+		MetaData.PayloadVersion = 1;
+		MetaData.AssetGuid = FAssetFile::LoadMetadataOnly(NormalizedMatInstFilePath, ExistingMetaData) && !ExistingMetaData.AssetGuid.empty()
+			? ExistingMetaData.AssetGuid
+			: FGuid::NewGuid().ToString();
+		MetaData.ClassName = UMaterialInstance::StaticClass()->GetName();
+		MetaData.DisplayName = MaterialInstance->Name.empty() ? GetPathStemDisplayName(NormalizedMatInstFilePath) : MaterialInstance->Name;
+		MetaData.SourceFile = "";
+
+		return FAssetFile::Save(NormalizedMatInstFilePath, MetaData, [&](FArchive& Ar)
+		{
+			Payload.Serialize(Ar, MetaData.PayloadVersion);
+			return true;
+		});
+	}
+
+	UE_LOG_ERROR("Material instance assets must be saved as .uasset: %s", NormalizedMatInstFilePath.c_str());
+	return false;
 }
 
 bool FMaterialSerializationService::DeserializeMaterial(const FString& MatFilePath)
 {
-	using json::JSON;
 	const FString NormalizedMatFilePath = FPaths::Normalize(MatFilePath);
 
-	std::ifstream MatFile(FPaths::ToWide(NormalizedMatFilePath));
-	if (!MatFile.is_open())
+	if (FAssetFile::IsAssetPath(NormalizedMatFilePath))
 	{
-		UE_LOG_ERROR("Failed to open material file: %s", NormalizedMatFilePath.c_str());
-		return false;
-	}
-
-	FString FileContent((std::istreambuf_iterator<char>(MatFile)), std::istreambuf_iterator<char>());
-	JSON Root = JSON::Load(FileContent);
-
-	if (Root.hasKey("Parent"))
-	{
-		const FString InstancePath = NormalizedMatFilePath;
-		const FString ParentIdentifier = Root["Parent"].ToString();
-		UMaterial* ParentMat = ResourceManager.GetMaterial(ParentIdentifier);
-
-		if (!ParentMat)
+		FAssetMetaData MetaData;
+		if (!FAssetFile::LoadMetadataOnly(NormalizedMatFilePath, MetaData))
 		{
-			ParentMat = ResourceManager.GetMaterial(FPaths::Normalize(ParentIdentifier));
-		}
-
-		const FString NormalizedParentIdentifier = FPaths::Normalize(ParentIdentifier);
-		if (!ParentMat && FAssetPathPolicy::IsSerializedMaterialAssetPath(NormalizedParentIdentifier) && FAssetPathPolicy::FileExists(NormalizedParentIdentifier))
-		{
-			DeserializeMaterial(NormalizedParentIdentifier);
-			ParentMat = ResourceManager.GetMaterial(NormalizedParentIdentifier);
-			if (!ParentMat)
-			{
-				ParentMat = ResourceManager.GetMaterial(ParentIdentifier);
-			}
-		}
-
-		if (!ParentMat)
-		{
-			UE_LOG_WARNING("Parent material not found: %s", ParentIdentifier.c_str());
 			return false;
 		}
 
-		UMaterialInstance* MatInstance = ResourceManager.CreateMaterialInstance(InstancePath, ParentMat);
-
-		for (auto& Param : Root["OverridedParams"].ArrayRange())
+		if (MetaData.ClassName == UMaterial::StaticClass()->GetName())
 		{
-			const FString ParamName = Param["Name"].ToString();
-			const FString Type = Param["Type"].ToString();
-			ApplyTypedParam(MatInstance, ParamName, Type, Param, ResourceManager);
+			FMaterialAssetPayload Payload;
+			if (!FAssetFile::Load(NormalizedMatFilePath, MetaData, [&](FArchive& Ar)
+			{
+				Payload.Serialize(Ar, MetaData.PayloadVersion);
+				return true;
+			}))
+			{
+				return false;
+			}
+
+			const FString MaterialName = Payload.Name.empty() ? MetaData.DisplayName : Payload.Name;
+			UMaterial* Material = ResourceManager.GetOrCreateMaterial(
+				MaterialName.empty() ? NormalizedMatFilePath : MaterialName,
+				NormalizedMatFilePath,
+				Payload.ShaderType);
+
+			Material->Name = MaterialName.empty() ? NormalizedMatFilePath : MaterialName;
+			Material->FilePath = NormalizedMatFilePath;
+			Material->ImportedName = Payload.ImportedName;
+			Material->SetShaderType(Payload.ShaderType);
+			Material->MaterialData = FMaterial();
+			Material->MaterialData.Name = Material->Name;
+			Material->MaterialParams.clear();
+
+			for (const FSerializedMaterialParam& Param : Payload.Params)
+			{
+				Material->SetParam(Param.Name, MakeRuntimeParam(Param, ResourceManager));
+
+				if (Param.Type == EMaterialParamType::Vector3)
+				{
+					ApplyMaterialDataVector(Material, Param.Name, Param.Vector3Value);
+				}
+				else if (Param.Type == EMaterialParamType::Texture)
+				{
+					ApplyMaterialDataTexture(Material, Param.Name, Param.TexturePath);
+				}
+			}
+
+			ResourceManager.MaterialCache.RegisterMaterial(NormalizedMatFilePath, Material);
+			ResourceManager.MaterialCache.RegisterMaterial(Material->Name, Material);
+			if (!Material->ImportedName.empty())
+			{
+				ResourceManager.MaterialCache.RegisterMaterial(Material->ImportedName, Material);
+			}
+			return true;
 		}
 
-		ResourceManager.MaterialCache.RegisterMaterialInstance(InstancePath, MatInstance);
-		return true;
-	}
+		if (MetaData.ClassName == UMaterialInstance::StaticClass()->GetName())
+		{
+			FMaterialInstanceAssetPayload Payload;
+			if (!FAssetFile::Load(NormalizedMatFilePath, MetaData, [&](FArchive& Ar)
+			{
+				Payload.Serialize(Ar, MetaData.PayloadVersion);
+				return true;
+			}))
+			{
+				return false;
+			}
 
-	const FString MatName = Root["Name"].ToString();
-	EMaterialShaderType ShaderType = EMaterialShaderType::SurfaceLit;
-	if (!TryParseMaterialShaderType(Root["ShaderType"].ToString(), ShaderType))
-	{
-		UE_LOG_ERROR("Invalid or missing material ShaderType: %s", NormalizedMatFilePath.c_str());
+			const FString ParentPath = FPaths::Normalize(Payload.Parent);
+			if (ParentPath.empty())
+			{
+				UE_LOG_WARNING("MaterialInstance parent is empty: %s", NormalizedMatFilePath.c_str());
+				return false;
+			}
+
+			UMaterial* ParentMat = ResourceManager.GetMaterial(ParentPath);
+			if (!ParentMat && FAssetPathPolicy::IsSerializedMaterialAssetPath(ParentPath) && FAssetPathPolicy::FileExists(ParentPath))
+			{
+				DeserializeMaterial(ParentPath);
+				ParentMat = ResourceManager.GetMaterial(ParentPath);
+			}
+			if (!ParentMat)
+			{
+				ParentMat = ResourceManager.GetMaterial(Payload.Parent);
+			}
+			if (!ParentMat)
+			{
+				UE_LOG_WARNING("Parent material not found: %s", ParentPath.c_str());
+				return false;
+			}
+
+			UMaterialInstance* MatInstance = ResourceManager.CreateMaterialInstance(NormalizedMatFilePath, ParentMat);
+			MatInstance->Name = Payload.Name.empty() ? NormalizedMatFilePath : Payload.Name;
+			MatInstance->FilePath = NormalizedMatFilePath;
+			MatInstance->Parent = ParentMat;
+			MatInstance->OverridedParams.clear();
+
+			for (const FSerializedMaterialParam& Param : Payload.OverridedParams)
+			{
+				MatInstance->SetParam(Param.Name, MakeRuntimeParam(Param, ResourceManager));
+			}
+
+			ResourceManager.MaterialCache.RegisterMaterialInstance(NormalizedMatFilePath, MatInstance);
+			return true;
+		}
+
+		UE_LOG_WARNING("Unsupported material asset class: %s", MetaData.ClassName.c_str());
 		return false;
 	}
 
-	UMaterial* Material = ResourceManager.GetOrCreateMaterial(MatName, NormalizedMatFilePath, ShaderType);
-	Material->SetShaderType(ShaderType);
-	if (Root.hasKey("ImportedName"))
-	{
-		Material->ImportedName = Root["ImportedName"].ToString();
-		if (!Material->ImportedName.empty() && !ResourceManager.MaterialCache.ContainsMaterialKey(Material->ImportedName))
-		{
-			ResourceManager.MaterialCache.RegisterMaterial(Material->ImportedName, Material);
-		}
-	}
-	ResourceManager.MaterialCache.RegisterMaterial(NormalizedMatFilePath, Material);
-	ResourceManager.MaterialCache.RegisterMaterial(MatName, Material);
-	Material->SetParam("AmbientColor", FMaterialParamValue(Material->MaterialData.AmbientColor));
-	Material->SetParam("DiffuseColor", FMaterialParamValue(Material->MaterialData.DiffuseColor));
-	Material->SetParam("SpecularColor", FMaterialParamValue(Material->MaterialData.SpecularColor));
-	Material->SetParam("EmissiveColor", FMaterialParamValue(Material->MaterialData.EmissiveColor));
-	Material->SetParam("Shininess", FMaterialParamValue(Material->MaterialData.Shininess));
-	Material->SetParam("Opacity", FMaterialParamValue(Material->MaterialData.Opacity));
-	Material->SetParam("ScrollUV", FMaterialParamValue(FVector2(0.0f, 0.0f)));
+	UE_LOG_ERROR("Material assets must be loaded from .uasset: %s", NormalizedMatFilePath.c_str());
+	return false;
+}
 
-	for (auto& Param : Root["Params"].ArrayRange())
+void FSerializedMaterialParam::Serialize(FArchive& Ar, int32 PayloadVersion)
+{
+	Ar << "Name" << Name;
+
+	int32 TypeValue = static_cast<int32>(Type);
+	Ar << "Type" << TypeValue;
+	if (Ar.IsLoading())
 	{
-		const FString ParamName = Param["Name"].ToString();
-		const FString Type = Param["Type"].ToString();
-		ApplyTypedParam(Material, ParamName, Type, Param, ResourceManager);
+		Type = static_cast<EMaterialParamType>(TypeValue);
 	}
 
-	ResourceManager.MaterialCache.RegisterMaterial(MatName, Material);
-	return true;
+	switch (Type)
+	{
+	case EMaterialParamType::Bool:
+		Ar << "BoolValue" << BoolValue;
+		break;
+	case EMaterialParamType::Int:
+		Ar << "IntValue" << IntValue;
+		break;
+	case EMaterialParamType::UInt:
+		Ar << "UIntValue" << UIntValue;
+		break;
+	case EMaterialParamType::Float:
+		Ar << "FloatValue" << FloatValue;
+		break;
+	case EMaterialParamType::Vector2:
+		Ar << "Vector2Value" << Vector2Value;
+		break;
+	case EMaterialParamType::Vector3:
+		Ar << "Vector3Value" << Vector3Value;
+		break;
+	case EMaterialParamType::Vector4:
+		Ar << "Vector4Value" << Vector4Value;
+		break;
+	case EMaterialParamType::Matrix4:
+		Ar << "Matrix4Value" << Matrix4Value;
+		break;
+	case EMaterialParamType::Texture:
+		Ar << "TexturePath" << TexturePath;
+		break;
+	}
+}
+
+void FMaterialAssetPayload::Serialize(FArchive& Ar, int32 PayloadVersion)
+{
+	Ar << "Name" << Name;
+	Ar << "ImportedName" << ImportedName;
+
+	int32 ShaderTypeValue = static_cast<int32>(ShaderType);
+	Ar << "ShaderType" << ShaderTypeValue;
+	if (Ar.IsLoading())
+	{
+		ShaderType = static_cast<EMaterialShaderType>(ShaderTypeValue);
+	}
+
+	SerializeMaterialParamArray(Ar, Params, PayloadVersion);
+}
+
+void FMaterialInstanceAssetPayload::Serialize(FArchive& Ar, int32 PayloadVersion)
+{
+	Ar << "Name" << Name;
+	Ar << "Parent" << Parent;
+	SerializeMaterialParamArray(Ar, OverridedParams, PayloadVersion);
 }

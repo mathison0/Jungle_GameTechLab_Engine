@@ -46,6 +46,7 @@
 #include "Asset/StaticMesh.h"
 #include "Asset/SkeletalMesh.h"
 #include "Animation/AnimGraphAsset.h"
+#include "Animation/AnimLuaProgramAsset.h"
 #include "Animation/AnimSequence.h"
 #include "Object/FName.h"
 #include "Object/Class.h"
@@ -1826,7 +1827,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 
 	// Cycle 11: UParticleSystemComponent 단독 검증 섹션.
 	// cascade editor를 거치지 않고 main editor detail panel만으로 Sprite/Mesh emitter 렌더링 확인 가능.
-	// 디스크에 사전 구성된 .particlesystem asset이 없어도 runtime 팩토리 (CreateDefaultSpriteSystem / CreateDefaultMeshSystem)로 즉시 적용.
+	// Runtime factory buttons work even when no particle asset is selected from disk.
 	if (UParticleSystemComponent* ParticleComp = Cast<UParticleSystemComponent>(SelectedComponent))
 	{
 		if (DrawDetailsCategoryHeader("Particle System"))
@@ -3212,17 +3213,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPtrWidget(const FProperty& Property,
 		}
 		else if (Property.ObjectClass->IsChildOf(UAnimationAsset::StaticClass()))
 		{
-			LocalOptions.clear();
-
-			for (const FString& Path : FResourceManager::Get().GetAnimSequencePaths())
-			{
-				if (FAssetPathPolicy::IsAnimSequenceAssetPath(Path))
-				{
-					LocalOptions.push_back(Path);
-				}
-			}
-
-			Options = &LocalOptions;
+			Options = &EditorEngine->GetAssetService().GetAnimSequenceAssetPaths();
 		}
 		else if (Property.ObjectClass->IsChildOf(UAnimGraphAsset::StaticClass()))
 		{
@@ -3231,6 +3222,10 @@ bool FEditorPropertyWidget::RenderSoftObjectPtrWidget(const FProperty& Property,
 		else if (Property.ObjectClass->IsChildOf(UParticleSystem::StaticClass()))
 		{
 			Options = &EditorEngine->GetAssetService().GetParticleSystemAssetPaths();
+		}
+		else if (Property.ObjectClass->IsChildOf(UAnimLuaProgramAsset::StaticClass()))
+		{
+			Options = &EditorEngine->GetAssetService().GetLuaAnimGraphAssetPaths();
 		}
 	}
 
@@ -3275,6 +3270,26 @@ bool FEditorPropertyWidget::RenderSoftObjectPtrWidget(const FProperty& Property,
 		&& ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("AnimGraphContentItem"))
+		{
+			if (Payload->Data && Payload->DataSize > 0)
+			{
+				const FString PayloadPath = static_cast<const char*>(Payload->Data);
+				const std::filesystem::path DroppedPath = FPaths::ToWide(PayloadPath);
+				Property.SoftObjectOps->SetPath(
+					ValuePtr,
+					DroppedPath.is_absolute()
+						? FPaths::Normalize(FPaths::ToRelativeString(DroppedPath.wstring()))
+						: FPaths::Normalize(PayloadPath));
+				bChanged = true;
+			}
+		}
+		ImGui::EndDragDropTarget();
+	}
+	else if (Property.ObjectClass
+		&& Property.ObjectClass->IsChildOf(UAnimLuaProgramAsset::StaticClass())
+		&& ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("LuaAnimGraphContentItem"))
 		{
 			if (Payload->Data && Payload->DataSize > 0)
 			{

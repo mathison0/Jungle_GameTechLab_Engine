@@ -17,7 +17,7 @@ namespace
         FString Extension = FPaths::ToUtf8(FsPath.extension().wstring());
         std::transform(Extension.begin(), Extension.end(), Extension.begin(),
             [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
-        return Extension == ".uasset" || Extension == ".layout";
+        return Extension == ".uasset";
     }
 }
 

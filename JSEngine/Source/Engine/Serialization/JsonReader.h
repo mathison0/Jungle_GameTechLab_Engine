@@ -27,7 +27,7 @@ struct FJsonReader : public FArchive
 
 	virtual const FString& GetCurrentKey() override { return CurrentKey; }
 	virtual void SetCurrentKey(const FString& Key) override { CurrentKey = Key; }
-	void SetObjectResolver(IObjectReferenceResolver* InResolver) { ObjectResolver = InResolver; }
+	void SetObjectResolver(IObjectReferenceResolver* InResolver) override { ObjectResolver = InResolver; }
 	IObjectReferenceResolver* GetObjectResolver() override { return ObjectResolver; }
 
 	virtual void Serialize(void* Value, uint32 Size) override

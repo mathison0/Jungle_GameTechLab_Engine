@@ -310,7 +310,10 @@ void UEditorEngine::Tick(float DeltaTime)
 	ViewportLayout.Tick(DeltaTime);
 	for (auto& ViewerPtr : Viewers)
 	{
-		ViewerPtr->Tick(DeltaTime);
+		if (MainPanel.IsViewerViewportVisible(ViewerPtr.get()))
+		{
+			ViewerPtr->Tick(DeltaTime);
+		}
 	}
 	if (MainPanel.IsParticlePreviewViewportVisible())
 	{
@@ -702,6 +705,28 @@ void UEditorEngine::WorldTick(float DeltaTime)
 	{
 		if (!Ctx.World || Ctx.bPaused)
 			continue;
+
+		if (Ctx.WorldType == EWorldType::ViewerPreview)
+		{
+			bool bVisibleViewerWorld = false;
+			for (const std::unique_ptr<FEditorViewer>& ViewerPtr : Viewers)
+			{
+				if (!ViewerPtr)
+				{
+					continue;
+				}
+				if (ViewerPtr->GetClient().GetFocusedWorld() == Ctx.World &&
+					MainPanel.IsViewerViewportVisible(ViewerPtr.get()))
+				{
+					bVisibleViewerWorld = true;
+					break;
+				}
+			}
+			if (!bVisibleViewerWorld)
+			{
+				continue;
+			}
+		}
 
 		Ctx.World->Tick(DeltaTime);
 	}

@@ -6,6 +6,8 @@
 
 #include <array>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 class FEditorAnimGraphWidget : public FEditorWidget
 {
@@ -25,6 +27,12 @@ public:
 	bool IsOpen() const { return bOpen; }
 
 private:
+	struct FAnimGraphSnapshot
+	{
+		TArray<FAnimGraphNodeDesc> Nodes;
+		int32 RootNodeId = -1;
+	};
+
 	enum class EViewMode
 	{
 		AnimGraph,
@@ -82,6 +90,21 @@ private:
 	void AddOutputPoseNode(const FVector2& SpawnPosition);
 	void AddStateMachineNode(const FVector2& SpawnPosition);
 	void DeleteSelectedNode();
+	void ClearGraphMultiSelection();
+	void SelectGraphNode(int32 NodeId, bool bAppendOrToggle);
+	bool IsGraphNodeSelected(int32 NodeId) const;
+	void ApplyAnimGraphMarqueeSelection(const ImVec2& RectMin, const ImVec2& RectMax, bool bAppend);
+	void ClearStateMultiSelection();
+	void SelectStateNode(int32 StateId, bool bAppendOrToggle);
+	bool IsStateNodeSelected(int32 StateId) const;
+	void ApplyStateMachineMarqueeSelection(const FAnimGraphNodeDesc& MachineNode, const ImVec2& RectMin, const ImVec2& RectMax, bool bAppend);
+	FAnimGraphSnapshot MakeSnapshot() const;
+	void CaptureUndoSnapshot();
+	void RestoreSnapshot(const FAnimGraphSnapshot& Snapshot);
+	void Undo();
+	void Redo();
+	bool CanUndo() const { return !UndoStack.empty(); }
+	bool CanRedo() const { return !RedoStack.empty(); }
 	void EnterStateMachineView(int32 StateMachineNodeId);
 	void LeaveStateMachineView();
 	FVector2 GetToolbarSpawnPosition() const;
@@ -89,6 +112,7 @@ private:
 	FString EditingPath;
 	UAnimGraphAsset* EditingAsset = nullptr;
 	int32 SelectedNodeId = -1;
+	std::unordered_set<int32> SelectedNodeIds;
 	int32 DraggingOutputNodeId = -1;
 	int32 DraggingInputNodeId = -1;
 	int32 DraggingTransitionFromStateId = -1;
@@ -97,13 +121,27 @@ private:
 	EViewMode ViewMode = EViewMode::AnimGraph;
 	int32 EditingStateMachineNodeId = -1;
 	int32 SelectedStateId = -1;
+	std::unordered_set<int32> SelectedStateIds;
 	int32 SelectedTransitionIndex = -1;
 	long long EditingStateNameKey = -1;
 	std::unordered_map<long long, std::array<char, 256>> StateNameEditBuffers;
+	std::vector<FAnimGraphSnapshot> UndoStack;
+	std::vector<FAnimGraphSnapshot> RedoStack;
 	bool bOpen = false;
+	bool bSuppressUndoCapture = false;
 	ImVec2 LastAnimGraphCanvasOrigin = ImVec2(0.0f, 0.0f);
 	ImVec2 LastAnimGraphCanvasSize = ImVec2(0.0f, 0.0f);
 	ImVec2 LastStateMachineCanvasOrigin = ImVec2(0.0f, 0.0f);
 	ImVec2 LastStateMachineCanvasSize = ImVec2(0.0f, 0.0f);
+	ImVec2 AnimGraphCanvasPanOffset = ImVec2(0.0f, 0.0f);
+	ImVec2 StateMachineCanvasPanOffset = ImVec2(0.0f, 0.0f);
+	ImVec2 AnimGraphMarqueeStart = ImVec2(0.0f, 0.0f);
+	ImVec2 AnimGraphMarqueeEnd = ImVec2(0.0f, 0.0f);
+	ImVec2 StateMachineMarqueeStart = ImVec2(0.0f, 0.0f);
+	ImVec2 StateMachineMarqueeEnd = ImVec2(0.0f, 0.0f);
+	bool bAnimGraphMarqueeSelecting = false;
+	bool bAnimGraphMarqueeAppend = false;
+	bool bStateMachineMarqueeSelecting = false;
+	bool bStateMachineMarqueeAppend = false;
 	bool bDirty = false;
 };

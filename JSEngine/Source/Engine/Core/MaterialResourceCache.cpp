@@ -1,6 +1,9 @@
 ﻿#include "Core/MaterialResourceCache.h"
 
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
 #include "Core/Paths.h"
+#include "Object/Class.h"
 
 #include <algorithm>
 #include <cwctype>
@@ -14,7 +17,15 @@ namespace
 		std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
 		std::wstring Extension = FsPath.extension().wstring();
 		std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
-		return Extension == L".mat" || Extension == L".matinst";
+		if (Extension != L".uasset")
+		{
+			return false;
+		}
+
+		FAssetMetaData MetaData;
+		return FAssetFile::LoadMetadataOnly(FPaths::Normalize(Path), MetaData) &&
+			(MetaData.ClassName == UMaterial::StaticClass()->GetName() ||
+			 MetaData.ClassName == UMaterialInstance::StaticClass()->GetName());
 	}
 }
 
@@ -83,8 +94,7 @@ TArray<FString> FMaterialResourceCache::GetMaterialInterfaceNames(const TArray<F
 	{
 		if (Mat && SeenMaterials.insert(Mat).second)
 		{
-			const std::filesystem::path FilePath(FPaths::ToWide(Mat->GetFilePath()));
-			const bool bFileBackedMaterial = FilePath.extension() == L".mat";
+			const bool bFileBackedMaterial = IsSerializedMaterialAssetPathForCache(Mat->GetFilePath());
 			const FString DisplayName = bFileBackedMaterial ? FPaths::Normalize(Mat->GetFilePath()) : Name;
 			if (SeenNames.insert(DisplayName).second)
 			{

@@ -6,6 +6,7 @@
 #include "Editor/UI/EditorAnimGraphWidget.h"
 #include "Editor/UI/EditorControlWidget.h"
 #include "Editor/UI/EditorCurveEditorWidget.h"
+#include "Editor/UI/EditorLuaAnimGraphWidget.h"
 #include "Editor/UI/EditorMaterialWidget.h"
 #include "Editor/UI/EditorParticleSystemWidget.h"
 #include "Editor/UI/EditorPlayStreamWidget.h"
@@ -23,6 +24,7 @@ struct FEditorMainPanelWidgetSet
 	FEditorContentBrowserWidget ContentBrowserWidget;
 	FEditorActorSequencerWidget ActorSequencerWidget;
 	FEditorAnimGraphWidget AnimGraphWidget;
+	FEditorLuaAnimGraphWidget LuaAnimGraphWidget;
 	FEditorControlWidget ControlWidget;
 	FEditorCurveEditorWidget CurveEditorWidget;
 	FEditorPropertyWidget PropertyWidget;

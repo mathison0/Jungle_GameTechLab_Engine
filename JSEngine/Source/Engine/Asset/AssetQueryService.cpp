@@ -1,6 +1,13 @@
 #include "Asset/AssetQueryService.h"
 
+#include "Asset/AssetFile.h"
+#include "Asset/CurveFloatAsset.h"
+#include "Asset/SkeletalMesh.h"
+#include "Asset/StaticMesh.h"
+#include "Animation/AnimSequence.h"
 #include "Core/Paths.h"
+#include "Object/Class.h"
+#include "Render/Resource/Material.h"
 
 #include <algorithm>
 #include <cctype>
@@ -90,27 +97,6 @@ namespace
         return false;
     }
 
-    bool EndsWith(const FString& Value, const FString& Suffix)
-    {
-        return Value.size() >= Suffix.size() &&
-            Value.compare(Value.size() - Suffix.size(), Suffix.size(), Suffix) == 0;
-    }
-
-    bool IsCurveAssetFile(const std::filesystem::path& Path)
-    {
-        FString FileName = FPaths::ToUtf8(Path.filename().wstring());
-        std::transform(
-            FileName.begin(),
-            FileName.end(),
-            FileName.begin(),
-            [](unsigned char Ch)
-            {
-                return static_cast<char>(std::tolower(Ch));
-            });
-
-        return EndsWith(FileName, ".curve");
-    }
-
     TArray<FString> ListAssetFiles(const std::filesystem::path& SubDirectory, std::initializer_list<const char*> Extensions)
     {
         TArray<FString> Result;
@@ -143,7 +129,15 @@ namespace
         return Result;
     }
 
-    TArray<FString> ListCurveAssetFiles()
+    void AppendUniquePath(TArray<FString>& Paths, const FString& Path)
+    {
+        if (std::find(Paths.begin(), Paths.end(), Path) == Paths.end())
+        {
+            Paths.push_back(Path);
+        }
+    }
+
+    TArray<FString> ListUAssetFilesByClassName(const FString& ClassName)
     {
         TArray<FString> Result;
 
@@ -160,9 +154,16 @@ namespace
             {
                 break;
             }
-            if (Entry.is_regular_file() && IsCurveAssetFile(Entry.path()))
+            if (!Entry.is_regular_file() || LowerExtension(Entry.path()) != ".uasset")
             {
-                Result.push_back(ToAssetRelativePath(Entry.path()));
+                continue;
+            }
+
+            const FString RelativePath = ToAssetRelativePath(Entry.path());
+            FAssetMetaData MetaData;
+            if (FAssetFile::LoadMetadataOnly(RelativePath, MetaData) && MetaData.ClassName == ClassName)
+            {
+                AppendUniquePath(Result, RelativePath);
             }
         }
 
@@ -196,22 +197,66 @@ TArray<FString> FAssetQueryService::GetTexturePaths()
 
 TArray<FString> FAssetQueryService::GetStaticMeshPaths()
 {
-    return ListAssetFiles(L"Mesh", { ".obj", ".bin" });
+    TArray<FString> Result;
+    for (const FString& Path : ListUAssetFilesByClassName(UStaticMesh::StaticClass()->GetName()))
+    {
+        AppendUniquePath(Result, Path);
+    }
+    return Result;
+}
+
+TArray<FString> FAssetQueryService::GetSkeletalMeshPaths()
+{
+    TArray<FString> Result;
+    for (const FString& Path : ListUAssetFilesByClassName(USkeletalMesh::StaticClass()->GetName()))
+    {
+        AppendUniquePath(Result, Path);
+    }
+    return Result;
+}
+
+TArray<FString> FAssetQueryService::GetAnimSequencePaths()
+{
+    TArray<FString> Result;
+    for (const FString& Path : ListUAssetFilesByClassName(UAnimSequence::StaticClass()->GetName()))
+    {
+        AppendUniquePath(Result, Path);
+    }
+    return Result;
 }
 
 TArray<FString> FAssetQueryService::GetMaterialPaths()
 {
-    return ListAssetFiles(L"Material", { ".mat", ".matinst" });
+    TArray<FString> Result;
+    for (const FString& Path : ListUAssetFilesByClassName(UMaterial::StaticClass()->GetName()))
+    {
+        AppendUniquePath(Result, Path);
+    }
+    for (const FString& Path : ListUAssetFilesByClassName(UMaterialInstance::StaticClass()->GetName()))
+    {
+        AppendUniquePath(Result, Path);
+    }
+    return Result;
 }
 
 TArray<FString> FAssetQueryService::GetCurvePaths()
 {
-    return ListCurveAssetFiles();
+    TArray<FString> Result;
+    for (const FString& Path : ListUAssetFilesByClassName(UCurveFloatAsset::StaticClass()->GetName()))
+    {
+        AppendUniquePath(Result, Path);
+    }
+    return Result;
 }
 
 TArray<FString> FAssetQueryService::GetParticleSystemPaths()
 {
-    return ListAssetFiles(L"", { ".particlesystem" });
+    TArray<FString> Result;
+    for (const FString& Path : ListUAssetFilesByClassName("ParticleSystem"))
+    {
+        AppendUniquePath(Result, Path);
+    }
+    return Result;
 }
 
 TArray<FString> FAssetQueryService::GetScenePaths()

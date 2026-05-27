@@ -91,6 +91,12 @@ void FEditorMainPanel::RenderMainViewport(float DeltaTime)
         return;
     }
 
+    if (EditorTabs.GetActiveTabKind() == EEditorTabKind::LuaAnimGraphEditor)
+    {
+        RenderLuaAnimGraphEditorDocument(DeltaTime);
+        return;
+    }
+
     if (EditorTabs.GetActiveTabKind() == EEditorTabKind::ParticleSystemEditor)
     {
         RenderParticleSystemEditorDocument(DeltaTime);
@@ -148,7 +154,7 @@ void FEditorMainPanel::RenderEditorPanelWindows(float DeltaTime, bool bDrawEdito
     {
         Widgets.ActorSequencerWidget.Render(DeltaTime);
     }
-    if (bDrawEditorPanels && PanelVisibility.bShowConsole && Widgets.ConsoleWidget.IsFloatingWindowMode())
+    if (PanelVisibility.bShowConsole && Widgets.ConsoleWidget.IsFloatingWindowMode())
     {
         Widgets.ConsoleWidget.Render(DeltaTime);
     }
@@ -174,6 +180,8 @@ void FEditorMainPanel::RenderEditorPanelWindows(float DeltaTime, bool bDrawEdito
 		}
 	}
 
+	RenderDetachedAnimGraphEditorDocument(DeltaTime);
+	RenderDetachedLuaAnimGraphEditorDocument(DeltaTime);
 	RenderDetachedParticleSystemEditorDocument(DeltaTime);
 
 	FlushClosedViewerWidgets();

@@ -76,7 +76,7 @@ struct FDynamicEmitterReplayDataBase
     ESortMode SortMode = ESortMode::None;
 
     // 머티리얼/텍스처 리소스 핸들 — Builder가 Cmd에 매핑할 때 사용.
-    // raw 포인터 (asset 소유 — ResourceManager 또는 .particlesystem asset).
+    // raw pointer owned by the asset/resource manager.
     UMaterialInterface* Material = nullptr;
     UTexture* ParticleTexture = nullptr;
 

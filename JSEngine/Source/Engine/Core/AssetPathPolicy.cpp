@@ -1,20 +1,17 @@
 #include "Core/AssetPathPolicy.h"
 
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
+#include "Asset/CurveFloatAsset.h"
+#include "Animation/AnimSequence.h"
 #include "Core/Paths.h"
+#include "Object/Class.h"
+#include "Render/Resource/Material.h"
 
 #include <algorithm>
 #include <cctype>
 #include <cwctype>
 #include <filesystem>
-
-namespace
-{
-	bool EndsWith(const FString& Value, const FString& Suffix)
-	{
-		return Value.size() >= Suffix.size() &&
-			Value.compare(Value.size() - Suffix.size(), Suffix.size(), Suffix) == 0;
-	}
-}
 
 bool FAssetPathPolicy::FileExists(const FString& Path)
 {
@@ -25,25 +22,16 @@ bool FAssetPathPolicy::FileExists(const FString& Path)
 bool FAssetPathPolicy::IsCurveAssetPath(const FString& Path)
 {
 	std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
-	FString FileName = FPaths::ToUtf8(FsPath.filename().wstring());
-	std::transform(
-		FileName.begin(),
-		FileName.end(),
-		FileName.begin(),
-		[](unsigned char Ch)
-		{
-			return static_cast<char>(std::tolower(Ch));
-		});
-
-	return EndsWith(FileName, ".curve");
-}
-
-bool FAssetPathPolicy::IsSequenceAssetPath(const FString& Path)
-{
-	std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
 	std::wstring Extension = FsPath.extension().wstring();
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
-	return Extension == L".sequence";
+	if (Extension == L".uasset")
+	{
+		FAssetMetaData MetaData;
+		return FAssetFile::LoadMetadataOnly(FPaths::Normalize(Path), MetaData)
+			&& MetaData.ClassName == UCurveFloatAsset::StaticClass()->GetName();
+	}
+
+	return false;
 }
 
 bool FAssetPathPolicy::IsAnimSequenceAssetPath(const FString& Path)
@@ -51,7 +39,14 @@ bool FAssetPathPolicy::IsAnimSequenceAssetPath(const FString& Path)
 	std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
 	std::wstring Extension = FsPath.extension().wstring();
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
-	return Extension == L".animseq" || Extension == L".sequence";
+	if (Extension == L".uasset")
+	{
+		FAssetMetaData MetaData;
+		return FAssetFile::LoadMetadataOnly(FPaths::Normalize(Path), MetaData)
+			&& MetaData.ClassName == UAnimSequence::StaticClass()->GetName();
+	}
+
+	return false;
 }
 
 FString FAssetPathPolicy::MakeImportedAnimSequenceAssetPath(const FString& SourcePath, const FString& StackName)
@@ -74,7 +69,7 @@ FString FAssetPathPolicy::MakeImportedAnimSequenceAssetPath(const FString& Sourc
 		FileName += SanitizedStackName;
 	}
 
-	FileName += L".animseq";
+	FileName += L".uasset";
 	return FPaths::ToUtf8((std::filesystem::path(L"Asset") / L"Animation" / FileName).generic_wstring());
 }
 
@@ -83,7 +78,22 @@ bool FAssetPathPolicy::IsSerializedMaterialAssetPath(const FString& Path)
 	std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
 	std::wstring Extension = FsPath.extension().wstring();
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
-	return Extension == L".mat" || Extension == L".matinst";
+	if (Extension != L".uasset")
+	{
+		return false;
+	}
+
+	FAssetMetaData MetaData;
+	return FAssetFile::LoadMetadataOnly(FPaths::Normalize(Path), MetaData)
+		&& (MetaData.ClassName == UMaterial::StaticClass()->GetName()
+			|| MetaData.ClassName == UMaterialInstance::StaticClass()->GetName());
+}
+
+FString FAssetPathPolicy::MakeImportedSkeletalMeshAssetPath(const FString& SourcePath)
+{
+	std::filesystem::path SourceFsPath(FPaths::ToWide(FPaths::Normalize(SourcePath)));
+	SourceFsPath.replace_extension(L".uasset");
+	return FPaths::ToUtf8(SourceFsPath.generic_wstring());
 }
 
 FString FAssetPathPolicy::MakeCookedStaticMeshBinaryPath(const FString& SourcePath)

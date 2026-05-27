@@ -472,7 +472,7 @@ namespace
 				return static_cast<char>(std::tolower(Ch));
 			});
 
-		const FString Extension = ".particlesystem";
+		const FString Extension = ".uasset";
 		return NormalizedPath.size() >= Extension.size() &&
 			NormalizedPath.compare(NormalizedPath.size() - Extension.size(), Extension.size(), Extension) == 0;
 	}

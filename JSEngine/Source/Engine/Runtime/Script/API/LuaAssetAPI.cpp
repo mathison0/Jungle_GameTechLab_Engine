@@ -52,6 +52,16 @@ namespace FLuaEngineAPI
             return StringsToLuaTable(State, FAssetQueryService::GetStaticMeshPaths());
         };
 
+        Asset["GetSkeletalMeshPaths"] = [](sol::this_state State)
+        {
+            return StringsToLuaTable(State, FAssetQueryService::GetSkeletalMeshPaths());
+        };
+
+        Asset["GetAnimSequencePaths"] = [](sol::this_state State)
+        {
+            return StringsToLuaTable(State, FAssetQueryService::GetAnimSequencePaths());
+        };
+
         Asset["GetMaterialPaths"] = [](sol::this_state State)
         {
             return StringsToLuaTable(State, FAssetQueryService::GetMaterialPaths());

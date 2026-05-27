@@ -378,7 +378,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "TemplateAssetPath" : "Asset/Particle System/New Particle System 2.particlesystem",
+          "TemplateAssetPath" : "Asset/Particle System/New Particle System 2.uasset",
           "Type" : "UParticleSystemComponent",
           "UUID" : 896,
           "bAutoActivate" : true,
@@ -422,7 +422,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "TemplateAssetPath" : "Asset/Particle/SmokeTest.particlesystem",
+          "TemplateAssetPath" : "Asset/Particle System/New Particle System 2.uasset",
           "Type" : "UParticleSystemComponent",
           "UUID" : 1302,
           "bAutoActivate" : true,
@@ -466,7 +466,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "TemplateAssetPath" : "Asset/Particle System/New Particle System 2.particlesystem",
+          "TemplateAssetPath" : "Asset/Particle System/New Particle System 2.uasset",
           "Type" : "UParticleSystemComponent",
           "UUID" : 991,
           "bAutoActivate" : true,
@@ -510,7 +510,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "TemplateAssetPath" : "Asset/Particle System/YG.particlesystem",
+          "TemplateAssetPath" : "Asset/Particle System/YG.uasset",
           "Type" : "UParticleSystemComponent",
           "UUID" : 1007,
           "bAutoActivate" : true,

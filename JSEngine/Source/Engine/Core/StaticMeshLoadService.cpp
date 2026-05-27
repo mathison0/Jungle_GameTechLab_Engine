@@ -1,9 +1,12 @@
 #include "Core/StaticMeshLoadService.h"
 
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
 #include "Core/AssetPathPolicy.h"
 #include "Core/Logging/Log.h"
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
+#include "Object/Class.h"
 
 #include <algorithm>
 #include <chrono>
@@ -27,6 +30,11 @@ UStaticMesh* FStaticMeshLoadService::Load(const FString& Path)
 	fs::path RequestedFsPath(FPaths::ToWide(NormalizedPath));
 	std::wstring RequestedExt = RequestedFsPath.extension().wstring();
 	std::transform(RequestedExt.begin(), RequestedExt.end(), RequestedExt.begin(), ::towlower);
+
+	if (FAssetFile::IsAssetPath(NormalizedPath))
+	{
+		return LoadAsset(NormalizedPath);
+	}
 
 	if (RequestedExt == L".obj" && !FAssetPathPolicy::FileExists(NormalizedPath))
 	{
@@ -64,6 +72,44 @@ UStaticMesh* FStaticMeshLoadService::Load(const FString& Path)
 
 	UE_LOG_WARNING("[StaticMeshLoad] Unsupported mesh extension | Path=%s", NormalizedPath.c_str());
 	return nullptr;
+}
+
+UStaticMesh* FStaticMeshLoadService::LoadAsset(const FString& NormalizedPath)
+{
+	FAssetMetaData MetaData;
+	FStaticMesh* MeshData = new FStaticMesh();
+
+	const bool bLoaded = FAssetFile::Load(NormalizedPath, MetaData, [&](FArchive& Ar)
+	{
+		MeshData->Serialize(Ar, MetaData.PayloadVersion);
+		return true;
+	});
+
+	if (!bLoaded)
+	{
+		delete MeshData;
+		UE_LOG_ERROR("[StaticMeshLoad] Failed to load static mesh asset: %s", NormalizedPath.c_str());
+		return nullptr;
+	}
+
+	if (MetaData.ClassName != UStaticMesh::StaticClass()->GetName())
+	{
+		delete MeshData;
+		UE_LOG_ERROR("[StaticMeshLoad] UAsset class mismatch | Path=%s | Class=%s",
+			NormalizedPath.c_str(),
+			MetaData.ClassName.c_str());
+		return nullptr;
+	}
+
+	MeshData->PathFileName = NormalizedPath;
+	const FString ResolvePath = MetaData.SourceFile.empty() ? NormalizedPath : MetaData.SourceFile;
+	return FinalizeLoadedMesh(
+		MeshData,
+		ResolvePath,
+		NormalizedPath,
+		{},
+		/*bLogLodTiming=*/ true,
+		/*bLogLodSkipped=*/ true);
 }
 
 UStaticMesh* FStaticMeshLoadService::LoadMissingObjBinaryFallback(const FString& RequestedPath, const FString& BinaryPath)

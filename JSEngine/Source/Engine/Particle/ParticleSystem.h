@@ -51,7 +51,7 @@ public:
     void SetRendererProperties(UParticleRendererProperties* InRendererProperties);
     UParticleRendererProperties* GetRendererProperties() const { return RendererProperties; }
 
-	// Resolve effective render mode through RendererProperties. Legacy TypeData is migrated before runtime use.
+	// Resolve effective render mode through RendererProperties. Deprecated TypeData is normalized before runtime use.
     EParticleEmitterRenderMode GetEffectiveRenderMode() const;
     UParticleRendererProperties* GetEffectiveRendererProperties() const;
 	UPROPERTY(DisplayName = "Level")
@@ -69,8 +69,7 @@ public:
 	UPROPERTY(DisplayName = "Modules")
 	TArray<UParticleModule*> Modules;
 
-	// Legacy Cascade-style TypeData slot. Kept only so old .particlesystem files can load
-	// and migrate to RendererProperties.
+	// Deprecated Cascade-style TypeData slot. RendererProperties is the canonical render policy.
 	UPROPERTY(DisplayName = "TypeData Module")
 	UParticleModuleTypeDataBase* TypeDataModule = nullptr;
 

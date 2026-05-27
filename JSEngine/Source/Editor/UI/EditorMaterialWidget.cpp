@@ -596,7 +596,7 @@ bool FEditorMaterialWidget::CreateInstanceForCurrentMaterial()
 	std::filesystem::path FinalPath;
 	do
 	{
-		const FString NewName = PureName + "_Inst_" + std::to_string(Index) + ".matinst";
+		const FString NewName = PureName + "_Inst_" + std::to_string(Index) + ".uasset";
 		FinalPath = InstanceDir / NewName;
 		Index++;
 	} while (std::filesystem::exists(FinalPath));
@@ -654,7 +654,7 @@ UStaticMesh* FEditorMaterialWidget::ResolvePreviewMesh(UPrimitiveComponent* Prim
 {
 	if (PreviewMesh == nullptr)
 	{
-		PreviewMesh = FResourceManager::Get().LoadStaticMesh("Asset\\Mesh\\PreviewSphere.obj");
+		PreviewMesh = FResourceManager::Get().LoadStaticMesh("Asset\\Mesh\\PreviewSphere.uasset");
 	}
 
 	if (PreviewMesh && PreviewMesh->HasValidMeshData())

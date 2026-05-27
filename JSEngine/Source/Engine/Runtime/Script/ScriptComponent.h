@@ -141,17 +141,17 @@ public:
 		bool bFromSweep,
 		const FHitResult& SweepResult);
 
-	void OnAnimNotify(
+	void DispatchLuaAnimNotify(
 		USkeletalMeshComponent* MeshComponent,
 		const FAnimNotifyStateEvent& Notify);
-	void OnAnimNotifyBegin(
+	void DispatchLuaAnimNotifyBegin(
 		USkeletalMeshComponent* MeshComponent,
 		const FAnimNotifyStateEvent& Notify);
-	void OnAnimNotifyTick(
+	void DispatchLuaAnimNotifyTick(
 		USkeletalMeshComponent* MeshComponent,
 		const FAnimNotifyStateEvent& Notify,
 		float DeltaTime);
-	void OnAnimNotifyEnd(
+	void DispatchLuaAnimNotifyEnd(
 		USkeletalMeshComponent* MeshComponent,
 		const FAnimNotifyStateEvent& Notify);
 

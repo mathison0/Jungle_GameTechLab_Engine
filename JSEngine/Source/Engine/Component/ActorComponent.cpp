@@ -173,12 +173,6 @@ void UActorComponent::PostEditProperty(const char* PropertyName)
 void UActorComponent::Serialize(FArchive& Ar)
 {
 	UObject::Serialize(Ar);
-	if (Ar.IsLoading() && Ar.HasKey("bSerialized") && !Ar.HasKey("bTransient"))
-	{
-		bool bLegacySerialized = true;
-		Ar << "bSerialized" << bLegacySerialized;
-		SetSerialized(bLegacySerialized);
-	}
 	
 	EnsurePersistentGuid();
 	FString PersistentGuidText = PersistentGuid.ToString();

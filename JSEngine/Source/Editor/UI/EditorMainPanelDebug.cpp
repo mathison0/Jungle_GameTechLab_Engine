@@ -1207,9 +1207,9 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
     if (ImGui::CollapsingHeader("Particle", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::TextDisabled("Uses selected particle component, or first particle component in the focused world.");
-        if (ImGui::Button("Place SmokeTest Particle System"))
+        if (ImGui::Button("Place Default Particle System"))
         {
-            const FString SmokeTestPath = "Asset/Particle/SmokeTest.particlesystem";
+            const FString DefaultParticlePath = "Asset/Particle System/New Particle System 2.uasset";
             bool bPlaced = false;
             FString Summary = "editor engine is not available";
 
@@ -1223,12 +1223,12 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
                 const float LocalX = Rect.Width > 0 ? static_cast<float>(Rect.Width) * 0.5f : 0.0f;
                 const float LocalY = Rect.Height > 0 ? static_cast<float>(Rect.Height) * 0.5f : 0.0f;
 
-                bPlaced = SpawnParticleSystemFromContentPath(SmokeTestPath, ViewportIndex, LocalX, LocalY);
-                Summary = bPlaced ? SmokeTestPath : "failed to place SmokeTest particle system";
+                bPlaced = SpawnParticleSystemFromContentPath(DefaultParticlePath, ViewportIndex, LocalX, LocalY);
+                Summary = bPlaced ? DefaultParticlePath : "failed to place default particle system";
             }
 
             FEditorConsoleWidget::AddLog(
-                "Particle SmokeTest placement %s: %s\n",
+                "Default particle placement %s: %s\n",
                 bPlaced ? "passed" : "failed",
                 Summary.c_str());
 
@@ -1236,11 +1236,11 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
             {
                 if (bPlaced)
                 {
-                    EditorEngine->GetNotificationService().Info("Particle SmokeTest placed in viewport");
+                    EditorEngine->GetNotificationService().Info("Default particle system placed in viewport");
                 }
                 else
                 {
-                    EditorEngine->GetNotificationService().Warning("Particle SmokeTest placement failed");
+                    EditorEngine->GetNotificationService().Warning("Default particle system placement failed");
                 }
             }
         }
@@ -1313,7 +1313,7 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
 
         if (ImGui::Button("Run Particle Serialization Smoke Test"))
         {
-            const FString SmokeTestPath = "Asset/Particle/SmokeTest.particlesystem";
+            const FString SmokeTestPath = "Asset/Particle/SmokeTest.uasset";
             const bool bPassed = FResourceManager::Get().RunParticleSystemSerializationSmokeTest(SmokeTestPath);
             FEditorConsoleWidget::AddLog(
                 "Particle serialization smoke test %s: %s\n",

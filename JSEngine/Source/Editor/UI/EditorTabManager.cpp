@@ -1,31 +1,16 @@
 ﻿#include "Editor/UI/EditorTabManager.h"
 
-#include <algorithm>
-#include <cctype>
+#include "Core/AssetPathPolicy.h"
+
 #include <cstdio>
 #include <utility>
 
 namespace
 {
-    FString GetLowerExtension(const FString& Path)
-    {
-        const size_t DotIndex = Path.find_last_of('.');
-        if (DotIndex == FString::npos)
-        {
-            return FString();
-        }
-
-        FString Extension = Path.substr(DotIndex);
-        std::transform(Extension.begin(), Extension.end(), Extension.begin(),
-            [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
-        return Extension;
-    }
-
-    bool IsAnimSequenceViewerPath(const FString& Path)
-    {
-        const FString Extension = GetLowerExtension(Path);
-        return Extension == ".animseq" || Extension == ".sequence";
-    }
+	bool IsAnimSequenceViewerPath(const FString& Path)
+	{
+		return FAssetPathPolicy::IsAnimSequenceAssetPath(Path);
+	}
 }
 
 bool FEditorTabId::Matches(const FEditorTabId& Other) const
@@ -101,6 +86,26 @@ FString MakeAnimGraphEditorTabLabel(const FString& AnimGraphPath)
 	const size_t SlashIndex = AnimGraphPath.find_last_of("/\\");
 	const FString FileName = SlashIndex == FString::npos ? AnimGraphPath : AnimGraphPath.substr(SlashIndex + 1);
 	return FileName.empty() ? "Anim Graph" : FileName;
+}
+
+FEditorTabId MakeLuaAnimGraphEditorTabId(const FString& AssetPath)
+{
+	FEditorTabId TabId;
+	TabId.Kind = EEditorTabKind::LuaAnimGraphEditor;
+	TabId.PayloadId = AssetPath;
+	return TabId;
+}
+
+FString MakeLuaAnimGraphEditorTabLabel(const FString& AssetPath)
+{
+	if (AssetPath.empty())
+	{
+		return "Lua Anim Graph";
+	}
+
+	const size_t SlashIndex = AssetPath.find_last_of("/\\");
+	const FString FileName = SlashIndex == FString::npos ? AssetPath : AssetPath.substr(SlashIndex + 1);
+	return FileName.empty() ? "Lua Anim Graph" : FileName;
 }
 
 FEditorTabId MakeParticleSystemEditorTabId(const FString& ParticleSystemPath)

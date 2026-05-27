@@ -1,8 +1,14 @@
 #include "Editor/Asset/EditorAssetService.h"
 
+#include "Animation/AnimGraphAsset.h"
+#include "Animation/AnimLuaProgramAsset.h"
+#include "Animation/AnimSequence.h"
+#include "Asset/AssetFile.h"
+#include "Asset/AssetMetaData.h"
 #include "Asset/AssetQueryService.h"
 #include "Core/Paths.h"
 #include "Core/ResourceManager.h"
+#include "Object/Class.h"
 #include "Render/Resource/Material.h"
 
 #include <algorithm>
@@ -92,6 +98,35 @@ namespace
 			}
 		}
 	}
+
+	void ListUAssetClassFiles(const FString& ClassName, TArray<FString>& OutPaths)
+	{
+		const std::filesystem::path Root = (std::filesystem::path(FPaths::RootDir()) / L"Asset").lexically_normal();
+		if (!std::filesystem::exists(Root))
+		{
+			return;
+		}
+
+		std::error_code Ec;
+		for (const std::filesystem::directory_entry& Entry : std::filesystem::recursive_directory_iterator(Root, Ec))
+		{
+			if (Ec)
+			{
+				break;
+			}
+			if (!Entry.is_regular_file() || LowerExtension(Entry.path()) != ".uasset")
+			{
+				continue;
+			}
+
+			const FString RelativePath = ToProjectRelativePath(Entry.path());
+			FAssetMetaData MetaData;
+			if (FAssetFile::LoadMetadataOnly(RelativePath, MetaData) && MetaData.ClassName == ClassName)
+			{
+				AddUniquePath(OutPaths, RelativePath);
+			}
+		}
+	}
 }
 
 void FEditorAssetService::Initialize(UEditorEngine* InEditorEngine)
@@ -104,9 +139,11 @@ void FEditorAssetService::RefreshAssetDatabase()
 {
 	StaticMeshPaths.clear();
 	SkeletalMeshPaths.clear();
+	AnimSequencePaths.clear();
 	TexturePaths.clear();
 	MaterialInterfaceNames.clear();
 	AnimGraphPaths.clear();
+	LuaAnimGraphPaths.clear();
 	ParticleSystemPaths.clear();
 	FontNames.clear();
 	SubUVNames.clear();
@@ -117,15 +154,15 @@ void FEditorAssetService::RefreshAssetDatabase()
 	{
 		FEditorAssetService::AddUniquePath(StaticMeshPaths, Path);
 	}
-	for (const FString& Path : FResourceManager::Get().GetStaticMeshPaths())
-	{
-		FEditorAssetService::AddUniquePath(StaticMeshPaths, Path);
-	}
 
-	ListAssetFiles(L"SkeletalMesh", { ".fbx" }, SkeletalMeshPaths);
-	for (const FString& Path : FResourceManager::Get().GetSkeletalMeshPaths())
+	for (const FString& Path : FAssetQueryService::GetSkeletalMeshPaths())
 	{
 		FEditorAssetService::AddUniquePath(SkeletalMeshPaths, Path);
+	}
+
+	for (const FString& Path : FAssetQueryService::GetAnimSequencePaths())
+	{
+		FEditorAssetService::AddUniquePath(AnimSequencePaths, Path);
 	}
 
 	for (const FString& Path : FAssetQueryService::GetTexturePaths())
@@ -144,7 +181,8 @@ void FEditorAssetService::RefreshAssetDatabase()
 	CachedMaterialInterfaces.resize(MaterialInterfaceNames.size(), nullptr);
 	CachedMaterialInterfaceResolved.resize(MaterialInterfaceNames.size(), false);
 
-	ListAssetFiles(L"", { ".animgraph" }, AnimGraphPaths);
+	ListUAssetClassFiles(UAnimGraphAsset::StaticClass()->GetName(), AnimGraphPaths);
+	ListUAssetClassFiles(UAnimLuaProgramAsset::StaticClass()->GetName(), LuaAnimGraphPaths);
 
 	for (const FString& Path : FAssetQueryService::GetParticleSystemPaths())
 	{
@@ -162,9 +200,11 @@ void FEditorAssetService::RefreshAssetDatabase()
 
 	BuildItems(StaticMeshPaths, EEditorAssetType::StaticMesh, StaticMeshItems);
 	BuildItems(SkeletalMeshPaths, EEditorAssetType::SkeletalMesh, SkeletalMeshItems);
+	BuildItems(AnimSequencePaths, EEditorAssetType::AnimSequence, AnimSequenceItems);
 	BuildItems(TexturePaths, EEditorAssetType::Texture, TextureItems);
 	BuildItems(MaterialInterfaceNames, EEditorAssetType::Material, MaterialItems);
 	BuildItems(AnimGraphPaths, EEditorAssetType::AnimGraph, AnimGraphItems);
+	BuildItems(LuaAnimGraphPaths, EEditorAssetType::LuaAnimGraph, LuaAnimGraphItems);
 	BuildItems(ParticleSystemPaths, EEditorAssetType::ParticleSystem, ParticleSystemItems);
 	BuildItems(FontNames, EEditorAssetType::Font, FontItems);
 	BuildItems(SubUVNames, EEditorAssetType::SubUV, SubUVItems);
@@ -178,12 +218,16 @@ const TArray<FEditorAssetItem>& FEditorAssetService::GetAssets(EEditorAssetType 
 		return StaticMeshItems;
 	case EEditorAssetType::SkeletalMesh:
 		return SkeletalMeshItems;
+	case EEditorAssetType::AnimSequence:
+		return AnimSequenceItems;
 	case EEditorAssetType::Texture:
 		return TextureItems;
 	case EEditorAssetType::Material:
 		return MaterialItems;
 	case EEditorAssetType::AnimGraph:
 		return AnimGraphItems;
+	case EEditorAssetType::LuaAnimGraph:
+		return LuaAnimGraphItems;
 	case EEditorAssetType::ParticleSystem:
 		return ParticleSystemItems;
 	case EEditorAssetType::Font:
@@ -205,6 +249,11 @@ UStaticMesh* FEditorAssetService::LoadStaticMesh(const FString& Path) const
 USkeletalMesh* FEditorAssetService::LoadSkeletalMesh(const FString& Path) const
 {
 	return FResourceManager::Get().LoadSkeletalMesh(Path);
+}
+
+UAnimSequence* FEditorAssetService::LoadAnimSequence(const FString& Path) const
+{
+	return FResourceManager::Get().LoadAnimSequence(Path);
 }
 
 UTexture* FEditorAssetService::LoadTexture(const FString& Path) const

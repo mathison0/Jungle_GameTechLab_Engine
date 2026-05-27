@@ -98,7 +98,7 @@ bool FMaterialLoadService::Load(const FString& MtlFilePath, EMaterialShaderType 
 		{
 			const FString MaterialName = FImportedMaterialPolicy::MakeImportedMaterialAssetName(NormalizedMtlFilePath, MaterialIndex);
 			const fs::path RelativeMatPath =
-				AutoMaterialDir / FPaths::ToWide(MaterialName + ".mat");
+				AutoMaterialDir / FPaths::ToWide(MaterialName + ".uasset");
 
 			MaterialAssetPath = FPaths::Normalize(FPaths::ToUtf8(RelativeMatPath.generic_wstring()));
 			Mat->Name = MaterialName;

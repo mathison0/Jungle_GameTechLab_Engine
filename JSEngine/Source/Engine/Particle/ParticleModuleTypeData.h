@@ -6,8 +6,8 @@
 struct FParticleEmitterInstance;
 class UParticleSystemComponent;
 
-// Legacy Cascade-style TypeData. New runtime/render policy lives in UParticleRendererProperties.
-// Kept for old .particlesystem load compatibility and migration.
+// Deprecated Cascade-style TypeData. New runtime/render policy lives in UParticleRendererProperties.
+// Kept as an internal bridge while editor/runtime call sites finish moving to RendererProperties.
 UCLASS()
 class UParticleModuleTypeDataBase : public UParticleModule
 {
@@ -30,7 +30,7 @@ private:
 	EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
 };
 
-// Legacy sprite TypeData. New assets should use UParticleSpriteRendererProperties.
+// Deprecated sprite TypeData. New assets should use UParticleSpriteRendererProperties.
 UCLASS()
 class USpriteTypeData : public UParticleModuleTypeDataBase
 {

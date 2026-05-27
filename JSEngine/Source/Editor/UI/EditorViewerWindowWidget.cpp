@@ -10,9 +10,11 @@
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Component/StaticMeshComponent.h"
 #include "Engine/Core/EditorResourcePaths.h"
+#include "Asset/AssetQueryService.h"
 #include "Core/Paths.h"
 #include "Core/Reflection/ReflectionRegistry.h"
 #include "Core/ResourceManager.h"
+#include "Engine/Runtime/Script/ScriptManager.h"
 #include "Component/GizmoComponent.h"
 #include "Component/TransformProxy.h"
 #include "Editor/Viewport/EditorViewportClient.h"
@@ -22,9 +24,13 @@
 #include "WICTextureLoader.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cfloat>
 #include <cstdio>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 
 namespace
 {
@@ -164,6 +170,373 @@ bool DrawAnimNotifyClassCombo(const char* Label, FString& InOutClassName)
     return bChanged;
 }
 
+bool IsLuaAnimNotifyClass(const FString& ClassName)
+{
+    return ClassName == UAnimNotify_LuaEvent::StaticClass()->GetName()
+        || ClassName == UAnimNotifyState_LuaEvent::StaticClass()->GetName();
+}
+
+const char* GetLuaAnimNotifyTargetPolicyLabel(int32 Policy)
+{
+    switch (static_cast<EAnimNotifyLuaTargetPolicy>(Policy))
+    {
+    case EAnimNotifyLuaTargetPolicy::NamedScript:
+        return "Named Script";
+    case EAnimNotifyLuaTargetPolicy::AllOwnerScripts:
+        return "All Owner Scripts";
+    case EAnimNotifyLuaTargetPolicy::OwnerScript:
+    default:
+        return "Owner Script";
+    }
+}
+
+FString MakeScriptReferenceFromPath(const FString& PathText)
+{
+    if (PathText.empty())
+    {
+        return {};
+    }
+
+    std::filesystem::path ScriptPath(FPaths::ToWide(PathText));
+    if (ScriptPath.is_absolute())
+    {
+        return FPaths::ToRelativeString(ScriptPath.lexically_normal().wstring());
+    }
+    return FPaths::Normalize(PathText);
+}
+
+FString GetLuaScriptDisplayName(const FString& ScriptReference)
+{
+    if (ScriptReference.empty())
+    {
+        return "<None>";
+    }
+
+    std::filesystem::path ScriptPath(FPaths::ToWide(ScriptReference));
+    if (ScriptPath.has_filename())
+    {
+        return FPaths::ToUtf8(ScriptPath.filename().generic_wstring());
+    }
+
+    return ScriptReference;
+}
+
+bool DrawLuaScriptCombo(const char* Label, FString& Value)
+{
+    bool bChanged = false;
+    const FString Preview = GetLuaScriptDisplayName(Value);
+    ImGui::SetNextItemWidth(220.0f);
+    if (ImGui::BeginCombo(Label, Preview.c_str()))
+    {
+        FScriptManager& ScriptManager = FScriptManager::Get();
+        ScriptManager.RefreshLuaScriptFiles();
+
+        TArray<FString> ScriptReferences;
+        for (const auto& Pair : ScriptManager.GetScriptArray())
+        {
+            const FLuaScriptInfo& Info = Pair.second;
+            if (!Info.ScriptPath.empty())
+            {
+                ScriptReferences.push_back(MakeScriptReferenceFromPath(FPaths::ToUtf8(Info.ScriptPath)));
+            }
+            else
+            {
+                ScriptReferences.push_back(Pair.first.ToString());
+            }
+        }
+
+        std::sort(ScriptReferences.begin(), ScriptReferences.end());
+        ScriptReferences.erase(
+            std::unique(ScriptReferences.begin(), ScriptReferences.end()),
+            ScriptReferences.end());
+
+        const bool bNoneSelected = Value.empty();
+        if (ImGui::Selectable("<None>", bNoneSelected))
+        {
+            Value.clear();
+            bChanged = true;
+        }
+        if (bNoneSelected)
+        {
+            ImGui::SetItemDefaultFocus();
+        }
+
+        for (const FString& ScriptReference : ScriptReferences)
+        {
+            const FString DisplayName = GetLuaScriptDisplayName(ScriptReference);
+            const bool bSelected = Value == ScriptReference
+                || GetLuaScriptDisplayName(Value) == DisplayName;
+
+            if (ImGui::Selectable(DisplayName.c_str(), bSelected))
+            {
+                Value = ScriptReference;
+                bChanged = true;
+            }
+
+            if (bSelected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    return bChanged;
+}
+
+FString MakeLuaFunctionSuffix(const FString& EventName)
+{
+    FString Suffix;
+    Suffix.reserve(EventName.size());
+    for (unsigned char Ch : EventName)
+    {
+        if (std::isalnum(Ch) || Ch == '_')
+        {
+            Suffix.push_back(static_cast<char>(Ch));
+        }
+        else
+        {
+            Suffix.push_back('_');
+        }
+    }
+    return Suffix.empty() ? FString("AnimNotify") : Suffix;
+}
+
+FString ResolveLuaScriptClassName(const FString& ScriptPathText, const FString& ScriptReference)
+{
+    std::filesystem::path ScriptPath(FPaths::ToWide(ScriptPathText.empty() ? ScriptReference : ScriptPathText));
+    FString ClassName = FPaths::ToUtf8(ScriptPath.stem().generic_wstring());
+    return ClassName.empty() ? FString("Script") : MakeLuaFunctionSuffix(ClassName);
+}
+
+FString ResolveLuaScriptClassName(
+    const FString& Source,
+    const FString& ScriptPathText,
+    const FString& ScriptReference)
+{
+    const FString ReturnKeyword = "return";
+    size_t Pos = Source.rfind(ReturnKeyword);
+    while (Pos != FString::npos)
+    {
+        const bool bAtTokenStart = Pos == 0
+            || std::isspace(static_cast<unsigned char>(Source[Pos - 1]));
+        size_t Cursor = Pos + ReturnKeyword.size();
+        const bool bAtTokenEnd = Cursor >= Source.size()
+            || std::isspace(static_cast<unsigned char>(Source[Cursor]));
+
+        if (bAtTokenStart && bAtTokenEnd)
+        {
+            while (Cursor < Source.size()
+                && std::isspace(static_cast<unsigned char>(Source[Cursor])))
+            {
+                ++Cursor;
+            }
+
+            FString ClassName;
+            while (Cursor < Source.size())
+            {
+                const unsigned char Ch = static_cast<unsigned char>(Source[Cursor]);
+                if (!std::isalnum(Ch) && Ch != '_')
+                {
+                    break;
+                }
+                ClassName.push_back(static_cast<char>(Ch));
+                ++Cursor;
+            }
+
+            if (!ClassName.empty())
+            {
+                return ClassName;
+            }
+        }
+
+        if (Pos == 0)
+        {
+            break;
+        }
+        Pos = Source.rfind(ReturnKeyword, Pos - 1);
+    }
+
+    return ResolveLuaScriptClassName(ScriptPathText, ScriptReference);
+}
+
+bool ReadTextFile(const FString& PathText, FString& OutText)
+{
+    std::ifstream File(std::filesystem::path(FPaths::ToWide(PathText)), std::ios::binary);
+    if (!File.is_open())
+    {
+        return false;
+    }
+
+    std::ostringstream Stream;
+    Stream << File.rdbuf();
+    OutText = Stream.str();
+    return true;
+}
+
+bool WriteTextFile(const FString& PathText, const FString& Text)
+{
+    std::ofstream File(std::filesystem::path(FPaths::ToWide(PathText)), std::ios::binary | std::ios::trunc);
+    if (!File.is_open())
+    {
+        return false;
+    }
+
+    File << Text;
+    return File.good();
+}
+
+size_t FindLuaReturnInsertionPoint(const FString& Source, const FString& ScriptClassName)
+{
+    const FString ExactReturn = "return " + ScriptClassName;
+    size_t Pos = Source.rfind(ExactReturn);
+    if (Pos != FString::npos)
+    {
+        return Pos;
+    }
+
+    Pos = Source.rfind("\nreturn ");
+    if (Pos != FString::npos)
+    {
+        return Pos + 1;
+    }
+
+    Pos = Source.rfind("\r\nreturn ");
+    if (Pos != FString::npos)
+    {
+        return Pos + 2;
+    }
+
+    return Source.size();
+}
+
+FString InsertLuaHandlerStubBeforeReturn(
+    const FString& Source,
+    const FString& Stub,
+    const FString& ScriptClassName)
+{
+    const size_t InsertPos = FindLuaReturnInsertionPoint(Source, ScriptClassName);
+    FString Result = Source.substr(0, InsertPos);
+    if (!Result.empty() && Result.back() != '\n' && Result.back() != '\r')
+    {
+        Result += "\n";
+    }
+    Result += Stub;
+    if (InsertPos < Source.size() && !Result.empty() && Result.back() != '\n')
+    {
+        Result += "\n";
+    }
+    Result += Source.substr(InsertPos);
+    return Result;
+}
+
+FString BuildLuaAnimNotifyHandlerStub(
+    const FString& ScriptClassName,
+    const FString& EventName,
+    bool bStateNotify)
+{
+    const FString Suffix = MakeLuaFunctionSuffix(EventName);
+    FString Stub = "\n";
+    Stub += "-- Anim notify handler generated by the editor.\n";
+
+    if (!bStateNotify)
+    {
+        Stub += "function " + ScriptClassName + ":AnimNotify_" + Suffix + "(context)\n";
+        Stub += "end\n";
+        return Stub;
+    }
+
+    Stub += "function " + ScriptClassName + ":AnimNotify_" + Suffix + "_Begin(context)\n";
+    Stub += "end\n\n";
+    Stub += "function " + ScriptClassName + ":AnimNotify_" + Suffix + "_Tick(context)\n";
+    Stub += "end\n\n";
+    Stub += "function " + ScriptClassName + ":AnimNotify_" + Suffix + "_End(context)\n";
+    Stub += "end\n";
+    return Stub;
+}
+
+bool LuaAnimNotifyHandlerExists(
+    const FString& Source,
+    const FString& ScriptClassName,
+    const FString& EventName,
+    bool bStateNotify)
+{
+    const FString Suffix = MakeLuaFunctionSuffix(EventName);
+    const FString BaseName = bStateNotify
+        ? ("AnimNotify_" + Suffix + "_Begin")
+        : ("AnimNotify_" + Suffix);
+    return Source.find("function " + ScriptClassName + ":" + BaseName) != FString::npos
+        || Source.find(BaseName) != FString::npos;
+}
+
+bool AddLuaAnimNotifyHandlerStub(
+    const FAnimNotifyStateEvent& Notify,
+    FString& InOutTargetScript,
+    FString& OutMessage,
+    bool* bOutAlreadyExists = nullptr)
+{
+    if (bOutAlreadyExists)
+    {
+        *bOutAlreadyExists = false;
+    }
+
+    const FString EventName = !Notify.LuaEventName.empty()
+        ? Notify.LuaEventName
+        : Notify.NotifyName.ToString();
+
+    if (EventName.empty())
+    {
+        OutMessage = "Lua event name is empty.";
+        return false;
+    }
+
+    if (InOutTargetScript.empty())
+    {
+        OutMessage = "Select a Lua script first.";
+        return false;
+    }
+
+    FString ScriptPath;
+    if (!FScriptManager::Get().ResolveScriptPath(InOutTargetScript, ScriptPath))
+    {
+        OutMessage = "Lua script file not found.";
+        return false;
+    }
+
+    FString Source;
+    if (!ReadTextFile(ScriptPath, Source))
+    {
+        OutMessage = "Failed to read Lua script.";
+        return false;
+    }
+
+    const FString ScriptClassName = ResolveLuaScriptClassName(Source, ScriptPath, InOutTargetScript);
+    const bool bStateNotify = Notify.NotifyClassName == UAnimNotifyState_LuaEvent::StaticClass()->GetName();
+    if (LuaAnimNotifyHandlerExists(Source, ScriptClassName, EventName, bStateNotify))
+    {
+        if (bOutAlreadyExists)
+        {
+            *bOutAlreadyExists = true;
+        }
+        OutMessage = "Lua notify handler already exists.";
+        return false;
+    }
+
+    const FString Stub = BuildLuaAnimNotifyHandlerStub(ScriptClassName, EventName, bStateNotify);
+    const FString UpdatedSource = InsertLuaHandlerStubBeforeReturn(Source, Stub, ScriptClassName);
+    if (!WriteTextFile(ScriptPath, UpdatedSource))
+    {
+        OutMessage = "Failed to write Lua notify handler.";
+        return false;
+    }
+
+    InOutTargetScript = MakeScriptReferenceFromPath(ScriptPath);
+    FScriptManager::Get().RefreshLuaScriptFiles();
+    OutMessage = "Lua notify handler added.";
+    return true;
+}
+
 constexpr uint64 MeshEditHashOffset = 14695981039346656037ull;
 constexpr uint64 MeshEditHashPrime = 1099511628211ull;
 
@@ -219,6 +592,12 @@ void FEditorViewerWindowWidget::Shutdown()
     PreviewMeshPathBufferSource.clear();
     PreviewMeshPathBuffer[0] = '\0';
     SelectedAnimTrackIndex = -1;
+    SelectedAnimNotifyIndex = -1;
+    SelectedAnimNotifyNameBufferIndex = -1;
+    SelectedAnimNotifyLuaBufferIndex = -1;
+    SelectedAnimNotifyNameBuffer[0] = '\0';
+    SelectedAnimNotifyLuaEventNameBuffer[0] = '\0';
+    SelectedAnimNotifyLuaTargetScriptBuffer[0] = '\0';
     PendingAnimNotifyTimeToAdd = 0.0f;
     CachedAnimSequence = nullptr;
 
@@ -1385,7 +1764,7 @@ void FEditorViewerWindowWidget::RenderAnimSequenceList(UAnimSequence* Sequence)
 	ImGui::TextDisabled("Other Anim Sequences");
 
 	const FString CurrentPath = Viewer ? FPaths::Normalize(Viewer->GetFileName()) : FString();
-	const TArray<FString> Paths = FResourceManager::Get().GetAnimSequencePaths();
+	const TArray<FString> Paths = FAssetQueryService::GetAnimSequencePaths();
 	int32 VisibleCount = 0;
 	const float ListHeight = std::max(72.0f, ImGui::GetContentRegionAvail().y);
 	if (ImGui::BeginChild("OtherAnimSequenceList", ImVec2(0.0f, ListHeight), false))
@@ -1411,7 +1790,7 @@ void FEditorViewerWindowWidget::RenderAnimSequenceList(UAnimSequence* Sequence)
 
 		if (VisibleCount == 0)
 		{
-			ImGui::TextDisabled("No other .animseq files.");
+			ImGui::TextDisabled("No other animation assets.");
 		}
 	}
 	ImGui::EndChild();
@@ -1554,6 +1933,175 @@ void FEditorViewerWindowWidget::RenderAnimSequenceDetails(UAnimSequence* Sequenc
 				}
 			}
 
+			if (IsLuaAnimNotifyClass(SelectedNotify.NotifyClassName))
+			{
+				if (SelectedAnimNotifyLuaBufferIndex != SelectedAnimNotifyIndex)
+				{
+					snprintf(
+						SelectedAnimNotifyLuaEventNameBuffer,
+						sizeof(SelectedAnimNotifyLuaEventNameBuffer),
+						"%s",
+						SelectedNotify.LuaEventName.empty()
+							? SelectedNotify.NotifyName.ToString().c_str()
+							: SelectedNotify.LuaEventName.c_str());
+					snprintf(
+						SelectedAnimNotifyLuaTargetScriptBuffer,
+						sizeof(SelectedAnimNotifyLuaTargetScriptBuffer),
+						"%s",
+						SelectedNotify.LuaTargetScript.c_str());
+					SelectedAnimNotifyLuaBufferIndex = SelectedAnimNotifyIndex;
+				}
+
+				ImGui::SetNextItemWidth(180.0f);
+				if (ImGui::InputText("Lua Event", SelectedAnimNotifyLuaEventNameBuffer, sizeof(SelectedAnimNotifyLuaEventNameBuffer)))
+				{
+					if (Sequence->SetNotifyLuaEventName(SelectedAnimNotifyIndex, FString(SelectedAnimNotifyLuaEventNameBuffer)))
+					{
+						SaveAnimSequenceAsset(Sequence);
+					}
+				}
+
+				int32 TargetPolicy = SelectedNotify.LuaTargetPolicy;
+				ImGui::SetNextItemWidth(180.0f);
+				if (ImGui::BeginCombo("Lua Target", GetLuaAnimNotifyTargetPolicyLabel(TargetPolicy)))
+				{
+					for (int32 Policy = 0; Policy <= 2; ++Policy)
+					{
+						const bool bSelected = TargetPolicy == Policy;
+						if (ImGui::Selectable(GetLuaAnimNotifyTargetPolicyLabel(Policy), bSelected))
+						{
+							TargetPolicy = Policy;
+							if (Sequence->SetNotifyLuaTargetPolicy(SelectedAnimNotifyIndex, TargetPolicy))
+							{
+								SaveAnimSequenceAsset(Sequence);
+							}
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
+
+				if (TargetPolicy == static_cast<int32>(EAnimNotifyLuaTargetPolicy::NamedScript))
+				{
+					FString TargetScriptValue = SelectedAnimNotifyLuaTargetScriptBuffer;
+					if (DrawLuaScriptCombo("Target Script", TargetScriptValue))
+					{
+						snprintf(
+							SelectedAnimNotifyLuaTargetScriptBuffer,
+							sizeof(SelectedAnimNotifyLuaTargetScriptBuffer),
+							"%s",
+							TargetScriptValue.c_str());
+						if (Sequence->SetNotifyLuaTargetScript(SelectedAnimNotifyIndex, TargetScriptValue))
+						{
+							SaveAnimSequenceAsset(Sequence);
+						}
+					}
+				}
+
+				FString SelectedScriptForAdd = SelectedAnimNotifyLuaTargetScriptBuffer;
+				if (DrawLuaScriptCombo("Handler Script", SelectedScriptForAdd))
+				{
+					snprintf(
+						SelectedAnimNotifyLuaTargetScriptBuffer,
+						sizeof(SelectedAnimNotifyLuaTargetScriptBuffer),
+						"%s",
+						SelectedScriptForAdd.c_str());
+
+					bool bChanged = false;
+					if (Sequence->SetNotifyLuaTargetScript(SelectedAnimNotifyIndex, SelectedScriptForAdd))
+					{
+						bChanged = true;
+					}
+					if (!SelectedScriptForAdd.empty()
+						&& Sequence->SetNotifyLuaTargetPolicy(SelectedAnimNotifyIndex, static_cast<int32>(EAnimNotifyLuaTargetPolicy::NamedScript)))
+					{
+						bChanged = true;
+					}
+					if (bChanged)
+					{
+						SaveAnimSequenceAsset(Sequence);
+					}
+				}
+
+				const bool bCanAddLuaHandler = SelectedAnimNotifyLuaTargetScriptBuffer[0] != '\0';
+				if (!bCanAddLuaHandler)
+				{
+					ImGui::BeginDisabled();
+				}
+				if (ImGui::Button("Add Handler"))
+				{
+					const TArray<FAnimNotifyStateEvent>& LatestNotifies = Sequence->GetNotifies();
+					if (SelectedAnimNotifyIndex >= 0 && SelectedAnimNotifyIndex < static_cast<int32>(LatestNotifies.size()))
+					{
+						FAnimNotifyStateEvent NotifyForAdd = LatestNotifies[SelectedAnimNotifyIndex];
+						NotifyForAdd.LuaEventName = SelectedAnimNotifyLuaEventNameBuffer;
+						NotifyForAdd.LuaTargetScript = SelectedAnimNotifyLuaTargetScriptBuffer;
+						NotifyForAdd.LuaTargetPolicy = static_cast<int32>(EAnimNotifyLuaTargetPolicy::NamedScript);
+
+						FString TargetScript = SelectedAnimNotifyLuaTargetScriptBuffer;
+						FString Message;
+						bool bAlreadyExists = false;
+						if (AddLuaAnimNotifyHandlerStub(NotifyForAdd, TargetScript, Message, &bAlreadyExists))
+						{
+							snprintf(
+								SelectedAnimNotifyLuaTargetScriptBuffer,
+								sizeof(SelectedAnimNotifyLuaTargetScriptBuffer),
+								"%s",
+								TargetScript.c_str());
+							bool bChanged = Sequence->SetNotifyLuaTargetScript(SelectedAnimNotifyIndex, TargetScript);
+							bChanged = Sequence->SetNotifyLuaTargetPolicy(
+								SelectedAnimNotifyIndex,
+								static_cast<int32>(EAnimNotifyLuaTargetPolicy::NamedScript)) || bChanged;
+							if (bChanged)
+							{
+								SaveAnimSequenceAsset(Sequence);
+							}
+							if (EditorEngine)
+							{
+								EditorEngine->GetNotificationService().Info(Message);
+							}
+						}
+						else if (EditorEngine)
+						{
+							if (bAlreadyExists)
+							{
+								EditorEngine->GetNotificationService().Info(Message);
+							}
+							else
+							{
+								EditorEngine->GetNotificationService().Warning(Message);
+							}
+						}
+					}
+				}
+				if (!bCanAddLuaHandler)
+				{
+					ImGui::EndDisabled();
+					if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+					{
+						ImGui::SetTooltip("Select a Handler Script first.");
+					}
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Open Script"))
+				{
+					if (SelectedAnimNotifyLuaTargetScriptBuffer[0] == '\0')
+					{
+						if (EditorEngine)
+						{
+							EditorEngine->GetNotificationService().Warning("No Lua script selected.");
+						}
+					}
+					else
+					{
+						FScriptManager::Get().EditScript(FName(FString(SelectedAnimNotifyLuaTargetScriptBuffer)));
+					}
+				}
+			}
+
 			if (SelectedAnimNotifyNameBufferIndex != SelectedAnimNotifyIndex)
 			{
 				snprintf(
@@ -1668,7 +2216,7 @@ void FEditorViewerWindowWidget::RenderAnimSequenceLeftPanel(UAnimSequence* Seque
 	}
 	else
 	{
-		ImGui::TextWrapped("No preview mesh. Set a skeletal FBX path, or reimport the animseq with PreviewMeshPath.");
+		ImGui::TextWrapped("No preview mesh. Set a skeletal FBX path, or reimport the animation uasset with PreviewMeshPath.");
 	}
 	ImGui::SetNextItemWidth(-1.0f);
 	ImGui::InputText("##PreviewMeshPath", PreviewMeshPathBuffer, sizeof(PreviewMeshPathBuffer));
@@ -2474,7 +3022,7 @@ void FEditorViewerWindowWidget::DrawPreviewPickerModal()
     ImGui::InputText("Filter", Filter, sizeof(Filter));
     ImGui::Separator();
 
-    const TArray<FString>& Paths = FResourceManager::Get().GetStaticMeshPaths();
+    const TArray<FString> Paths = FAssetQueryService::GetStaticMeshPaths();
 
     ImGui::BeginChild("PickList", ImVec2(420.0f, 300.0f), true);
     for (const FString& Path : Paths)
