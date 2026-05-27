@@ -21,9 +21,6 @@
 #include "Particle/ParticleModuleBeamNoise.h"
 #include "Particle/ParticleModuleBeamSource.h"
 #include "Particle/ParticleModuleBeamTarget.h"
-#include "Particle/ParticleModuleTypeDataBeam.h"
-#include "Particle/ParticleModuleTypeDataMesh.h"
-#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Render/Resource/Material.h"
 #include "Component/PostProcess/Light/AmbientLightComponent.h"
 
@@ -918,41 +915,6 @@ namespace
 		RemoveParticleModules<UParticleModuleBeamNoise>(LODLevel);
 	}
 
-	UParticleModuleTypeDataBase* CreateTypeDataModule(EParticleEmitterRenderMode RenderMode)
-	{
-		switch (RenderMode)
-		{
-		case EParticleEmitterRenderMode::Sprite:
-			return CreateParticleModule<USpriteTypeData>("Sprite TypeData");
-		case EParticleEmitterRenderMode::Mesh:
-		{
-			UMeshTypeData* MeshTypeData = CreateParticleModule<UMeshTypeData>("Mesh TypeData");
-			if (MeshTypeData)
-			{
-				MeshTypeData->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
-				const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.mat";
-				FResourceManager::Get().DeserializeMaterial(DemoMatPath);
-				UMaterial* DemoMaterial = FResourceManager::Get().GetMaterial(DemoMatPath);
-				if (!DemoMaterial)
-				{
-					DemoMaterial = FResourceManager::Get().GetMaterial("apple_mid_Mat_0");
-				}
-				if (DemoMaterial)
-				{
-					MeshTypeData->SetOverrideMaterial(true, DemoMaterial);
-				}
-			}
-			return MeshTypeData;
-		}
-		case EParticleEmitterRenderMode::Beam:
-			return CreateParticleModule<UBeamTypeData>("Beam TypeData");
-		case EParticleEmitterRenderMode::Ribbon:
-			return CreateParticleModule<URibbonTypeData>("Ribbon TypeData");
-		default:
-			return nullptr;
-		}
-	}
-
 	void DrawDisabledParticleModuleMenu(const char* MenuLabel)
 	{
 		if (BeginParticleMenu(MenuLabel, false))
@@ -1010,7 +972,7 @@ namespace
 		LODLevel->SetFName(FName(LODName));
 		LODLevel->Level = 0;
 		LODLevel->RequiredModule = CreateParticleModule<UParticleModuleRequired>("Required");
-		AddModule(LODLevel, CreateParticleModule<USpriteTypeData>("Sprite TypeData"));
+		LODLevel->EnsureRendererProperties(EParticleEmitterRenderMode::Sprite);
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleSpawn>("Spawn"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleLifetime>("Lifetime"));
 		AddModule(LODLevel, CreateParticleModule<UParticleModuleLocation>("Initial Location"));

@@ -4,7 +4,6 @@
 
 #include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleRendererProperties.h"
-#include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
 
@@ -402,7 +401,7 @@ FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicData()
         // TODO(multithread): switch to deep copy when render-thread separation lands
         Replay.ParticleIndices = ParticleStorage.ParticleIndices;
         Replay.SortMode = ESortMode::None;
-        Replay.Material = nullptr;        // Builder 에서 URibbonTypeData 로부터 추출 후 채움.
+        Replay.Material = nullptr;        // Builder 에서 renderer properties 로부터 추출 후 채움.
         Replay.ParticleTexture = nullptr; // Builder 에서 Material.DiffuseMap 추출 후 채움.
 
         DynData->BuildFromInstance(*this);

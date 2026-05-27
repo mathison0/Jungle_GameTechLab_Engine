@@ -3,7 +3,6 @@
 #include "Math/Vector.h"
 #include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleMeshTypes.h"
-#include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
@@ -86,14 +85,6 @@ FDynamicEmitterDataBase* FParticleMeshEmitterInstance::CreateDynamicData()
     {
         Replay.MeshAsset = MeshRenderer->GetMesh();
         Replay.Material = MeshRenderer->GetEffectiveMaterial();
-    }
-    else if (UParticleLODLevel* LOD = GetCurrentLODLevel())
-    {
-        if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
-        {
-            Replay.MeshAsset = MeshTD->GetMesh();
-            Replay.Material = MeshTD->GetEffectiveMaterial();
-        }
     }
     Replay.ParticleTexture = nullptr; // Builder 가 Material.DiffuseMap 추출 후 채움.
 

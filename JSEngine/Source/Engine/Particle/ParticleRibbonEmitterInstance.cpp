@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 
@@ -26,11 +25,6 @@ namespace ParticleRibbonUtils
         return Perp;
     }
 
-    int32 ResolveMaxParticleInTrailCount(const UParticleLODLevel* LODLevel)
-    {
-        const URibbonTypeData* RibbonTD = LODLevel ? Cast<URibbonTypeData>(LODLevel->GetTypeDataModule()) : nullptr;
-        return RibbonTD ? RibbonTD->GetMaxParticleInTrailCount() : 64;
-    }
 }
 
 // Function : Lookup ribbon payload by physical slot index
@@ -275,7 +269,12 @@ void FParticleRibbonEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 void FParticleRibbonEmitterInstance::BuildVertexBuffer()
 {
     VertexBuffer.clear();
-    const int32 MaxParticleInTrailCount = ParticleRibbonUtils::ResolveMaxParticleInTrailCount(GetCurrentLODLevel());
+    const FCompiledParticleLODData* CompiledLOD = GetCurrentCompiledLODData();
+    const UParticleRibbonRendererProperties* RibbonRenderer =
+        CompiledLOD ? Cast<UParticleRibbonRendererProperties>(CompiledLOD->RendererProperties) : nullptr;
+    const int32 MaxParticleInTrailCount = RibbonRenderer
+        ? RibbonRenderer->GetMaxParticleInTrailCount()
+        : 64;
 
     for (int32 TrailIdx = 0; TrailIdx < static_cast<int32>(HeadIndices.size()); ++TrailIdx)
     {

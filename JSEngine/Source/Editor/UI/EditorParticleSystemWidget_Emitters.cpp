@@ -997,44 +997,76 @@ void FEditorParticleSystemWidget::ChangeEmitterRenderMode(int32 EmitterIndex, EP
 	const bool bHasMatchingTypeData =
 		LODLevel->GetTypeDataModule() &&
 		LODLevel->GetTypeDataModule()->GetRenderMode() == RenderMode;
-	if (Required->GetRenderMode() == RenderMode && bHasMatchingTypeData)
+	bool bHasLegacyTypeDataModule = LODLevel->GetTypeDataModule() != nullptr;
+	for (UParticleModule* Module : LODLevel->GetModules())
 	{
-		return;
+		if (Cast<UParticleModuleTypeDataBase>(Module))
+		{
+			bHasLegacyTypeDataModule = true;
+			break;
+		}
 	}
-
-	UParticleModuleTypeDataBase* NewTypeData = CreateTypeDataModule(RenderMode);
-	if (!NewTypeData)
+	UParticleRendererProperties* CurrentRenderer = LODLevel->GetEffectiveRendererProperties();
+	if (CurrentRenderer && CurrentRenderer->GetRenderMode() == RenderMode && !bHasMatchingTypeData && !bHasLegacyTypeDataModule)
 	{
-		ShowCenterToast("Unsupported emitter type.");
 		return;
 	}
 
 	CaptureUndoSnapshot("Change Emitter Type");
-	for (auto It = LODLevel->Modules.begin(); It != LODLevel->Modules.end();)
+	for (UParticleLODLevel* TargetLOD : Emitter->LODLevels)
 	{
-		if (UParticleModuleTypeDataBase* ExistingTypeData = Cast<UParticleModuleTypeDataBase>(*It))
+		if (!TargetLOD)
 		{
-			It = LODLevel->Modules.erase(It);
-			UObjectManager::Get().DestroyObject(ExistingTypeData);
 			continue;
 		}
-		++It;
+
+		UParticleRendererProperties* NewRenderer = TargetLOD->EnsureRendererProperties(RenderMode);
+		if (!NewRenderer)
+		{
+			ShowCenterToast("Unsupported emitter type.");
+			continue;
+		}
+
+		if (UParticleMeshRendererProperties* MeshRenderer = Cast<UParticleMeshRendererProperties>(NewRenderer))
+		{
+			if (!MeshRenderer->GetMesh())
+			{
+				MeshRenderer->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
+				const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.mat";
+				FResourceManager::Get().DeserializeMaterial(DemoMatPath);
+				UMaterial* DemoMaterial = FResourceManager::Get().GetMaterial(DemoMatPath);
+				if (!DemoMaterial)
+				{
+					DemoMaterial = FResourceManager::Get().GetMaterial("apple_mid_Mat_0");
+				}
+				if (DemoMaterial)
+				{
+					MeshRenderer->SetOverrideMaterial(true, DemoMaterial);
+				}
+			}
+		}
+
+		if (UParticleModuleRequired* TargetRequired = TargetLOD->GetRequiredModule())
+		{
+			TargetRequired->SetRenderMode(RenderMode);
+		}
+
+		if (RenderMode == EParticleEmitterRenderMode::Beam)
+		{
+			EnsureBeamSupportModules(TargetLOD);
+		}
+		else
+		{
+			RemoveBeamSupportModules(TargetLOD);
+		}
+		TargetLOD->SetTypeDataModule(nullptr);
+		TargetLOD->CacheModuleLists();
 	}
-	LODLevel->Modules.insert(LODLevel->Modules.begin(), NewTypeData);
-	if (RenderMode == EParticleEmitterRenderMode::Beam)
-	{
-		EnsureBeamSupportModules(LODLevel);
-	}
-	else
-	{
-		RemoveBeamSupportModules(LODLevel);
-	}
-	Required->SetRenderMode(RenderMode);
+
 	Emitter->CacheEmitterModuleInfo();
 	ParticleSystemAsset->CacheEmitterModuleInfo();
 	SyncInheritedModuleFromHigherLOD(Emitter, Required);
-	SyncInheritedModuleFromHigherLOD(Emitter, NewTypeData);
-	SelectModule(EmitterIndex, 0);
+	SelectEmitter(EmitterIndex);
 	ClearEmitterContext();
 	bDirty = true;
 	RefreshPreviewComponent(true);

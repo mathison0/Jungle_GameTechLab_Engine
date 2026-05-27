@@ -8,6 +8,8 @@
 #include "Particle/ParticleTypes.h"
 #include "Render/Resource/Material.h"
 
+#include <algorithm>
+
 struct FParticleEmitterInstance;
 class UParticleSystemComponent;
 
@@ -94,10 +96,10 @@ public:
     UMaterialInterface* GetMaterial() const { return Material; }
 
     void SetMaterial(UMaterialInterface* InMaterial) { Material = InMaterial; }
-    void SetMaxTrailCount(int32 InCount) { MaxTrailCount = InCount; }
-    void SetMaxParticleInTrailCount(int32 InCount) { MaxParticleInTrailCount = InCount; }
-    void SetSheetsPerTrail(float InValue) { SheetsPerTrail = InValue; }
-    void SetTangentSpawningScalar(float InValue) { TangentSpawningScalar = InValue; }
+    void SetMaxTrailCount(int32 InCount) { MaxTrailCount = std::max(InCount, 1); }
+    void SetMaxParticleInTrailCount(int32 InCount) { MaxParticleInTrailCount = std::max(InCount, 1); }
+    void SetSheetsPerTrail(float InValue) { SheetsPerTrail = std::max(InValue, 1.0f); }
+    void SetTangentSpawningScalar(float InValue) { TangentSpawningScalar = std::max(InValue, 0.0f); }
 
 private:
     UPROPERTY(DisplayName = "Max Trail Count", Category = "Ribbon")
@@ -125,4 +127,37 @@ public:
     EParticleEmitterRenderMode GetRenderMode() const override { return EParticleEmitterRenderMode::Beam; }
     int32 RequiredPayloadBytes() const override { return sizeof(FParticleBeamPayload); }
     FParticleEmitterInstance* CreateInstance(UParticleSystemComponent* Component, int32 EmitterIndex) const override;
+
+    int32 GetMaxBeamCount() const { return std::max(MaxBeamCount, 1); }
+    int32 GetInterpolationPoints() const { return std::clamp(InterpolationPoints, 0, 64); }
+    float GetFallbackDistance() const { return std::max(FallbackDistance, 0.0f); }
+    float GetTextureTile() const { return std::max(TextureTile, 0.0f); }
+    float GetTextureTileDistance() const { return std::max(TextureTileDistance, 0.0f); }
+    UMaterialInterface* GetMaterial() const { return Material; }
+
+    void SetMaterial(UMaterialInterface* InMaterial) { Material = InMaterial; }
+    void SetMaxBeamCount(int32 InCount) { MaxBeamCount = std::max(InCount, 1); }
+    void SetInterpolationPoints(int32 InCount) { InterpolationPoints = std::clamp(InCount, 0, 64); }
+    void SetFallbackDistance(float InValue) { FallbackDistance = std::max(InValue, 0.0f); }
+    void SetTextureTile(float InValue) { TextureTile = std::max(InValue, 0.0f); }
+    void SetTextureTileDistance(float InValue) { TextureTileDistance = std::max(InValue, 0.0f); }
+
+private:
+    UPROPERTY(DisplayName = "Max Beam Count", Category = "Beam", Min = 1)
+    int32 MaxBeamCount = 1;
+
+    UPROPERTY(DisplayName = "Interpolation Points", Category = "Beam", Min = 0, Max = 64)
+    int32 InterpolationPoints = 0;
+
+    UPROPERTY(DisplayName = "Fallback Distance", Category = "Beam", Min = 0.0f)
+    float FallbackDistance = 100.0f;
+
+    UPROPERTY(DisplayName = "Texture Tile", Category = "Beam", Min = 0.0f)
+    float TextureTile = 1.0f;
+
+    UPROPERTY(DisplayName = "Texture Tile Distance", Category = "Beam", Min = 0.0f)
+    float TextureTileDistance = 0.0f;
+
+    UPROPERTY(DisplayName = "Material", Category = "Beam", ReferenceKind = Asset)
+    UMaterialInterface* Material = nullptr;
 };

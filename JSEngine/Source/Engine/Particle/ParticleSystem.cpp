@@ -74,9 +74,19 @@ namespace
 			return RibbonRenderer;
 		}
 
-		if (Cast<UBeamTypeData>(LegacyTypeData))
+		if (UBeamTypeData* BeamTypeData = Cast<UBeamTypeData>(LegacyTypeData))
 		{
-			return UObjectManager::Get().CreateObject<UParticleBeamRendererProperties>();
+			UParticleBeamRendererProperties* BeamRenderer = UObjectManager::Get().CreateObject<UParticleBeamRendererProperties>();
+			if (BeamRenderer)
+			{
+				BeamRenderer->SetMaxBeamCount(BeamTypeData->GetMaxBeamCount());
+				BeamRenderer->SetInterpolationPoints(BeamTypeData->GetInterpolationPoints());
+				BeamRenderer->SetFallbackDistance(BeamTypeData->GetFallbackDistance());
+				BeamRenderer->SetTextureTile(BeamTypeData->GetTextureTile());
+				BeamRenderer->SetTextureTileDistance(BeamTypeData->GetTextureTileDistance());
+				BeamRenderer->SetMaterial(BeamTypeData->GetMaterial());
+			}
+			return BeamRenderer;
 		}
 
 		return CreateRendererPropertiesForMode(LegacyTypeData->GetRenderMode());
@@ -155,67 +165,52 @@ UParticleModuleSpawn* UParticleLODLevel::EnsureSpawnModule()
 
 UParticleModuleTypeDataBase* UParticleLODLevel::EnsureTypeDataModule(EParticleEmitterRenderMode RenderMode)
 {
-	const bool bNeedsSpriteTypeData = RenderMode == EParticleEmitterRenderMode::Sprite && !Cast<USpriteTypeData>(TypeDataModule);
-	const bool bNeedsGenericTypeData = RenderMode != EParticleEmitterRenderMode::Sprite && Cast<USpriteTypeData>(TypeDataModule);
-	if (TypeDataModule && (bNeedsSpriteTypeData || bNeedsGenericTypeData))
-	{
-		auto It = std::find(Modules.begin(), Modules.end(), TypeDataModule);
-		if (It != Modules.end())
-		{
-			Modules.erase(It);
-		}
-		UObjectManager::Get().DestroyObject(TypeDataModule);
-		TypeDataModule = nullptr;
-	}
-
-	if (!TypeDataModule)
-	{
-		TypeDataModule = (RenderMode == EParticleEmitterRenderMode::Sprite)
-			? UObjectManager::Get().CreateObject<USpriteTypeData>()
-			: UObjectManager::Get().CreateObject<UParticleModuleTypeDataBase>();
-	}
-
-	if (TypeDataModule)
-	{
-		TypeDataModule->SetRenderMode(RenderMode);
-	}
-	CacheModuleLists();
+	EnsureRendererProperties(RenderMode);
 	return TypeDataModule;
 }
 
 void UParticleLODLevel::SetTypeDataModule(UParticleModuleTypeDataBase* InTypeDataModule)
 {
-	if (TypeDataModule == InTypeDataModule)
+	if (InTypeDataModule)
 	{
-		auto It = std::find(Modules.begin(), Modules.end(), InTypeDataModule);
-		if (It != Modules.end())
+		if (RendererProperties)
 		{
-			Modules.erase(It);
+			UObjectManager::Get().DestroyObject(RendererProperties);
+			RendererProperties = nullptr;
 		}
-		CacheModuleLists();
-		return;
+		RendererProperties = CreateRendererPropertiesFromLegacyTypeData(InTypeDataModule);
 	}
 
-	if (TypeDataModule)
+	bool bDestroyedInputTypeData = false;
+	bool bDestroyedCurrentTypeData = false;
+	for (auto It = Modules.begin(); It != Modules.end();)
 	{
-		auto It = std::find(Modules.begin(), Modules.end(), TypeDataModule);
-		if (It != Modules.end())
+		if (UParticleModuleTypeDataBase* ExistingTypeData = Cast<UParticleModuleTypeDataBase>(*It))
 		{
-			Modules.erase(It);
+			It = Modules.erase(It);
+			UObjectManager::Get().DestroyObject(ExistingTypeData);
+			if (ExistingTypeData == InTypeDataModule)
+			{
+				bDestroyedInputTypeData = true;
+			}
+			if (ExistingTypeData == TypeDataModule)
+			{
+				bDestroyedCurrentTypeData = true;
+			}
+			continue;
 		}
+		++It;
+	}
+
+	if (TypeDataModule && !bDestroyedCurrentTypeData && (TypeDataModule != InTypeDataModule || !bDestroyedInputTypeData))
+	{
 		UObjectManager::Get().DestroyObject(TypeDataModule);
 	}
-
-	TypeDataModule = InTypeDataModule;
-	auto It = std::find(Modules.begin(), Modules.end(), TypeDataModule);
-	if (It != Modules.end())
+	if (InTypeDataModule && TypeDataModule != InTypeDataModule && !bDestroyedInputTypeData)
 	{
-		Modules.erase(It);
+		UObjectManager::Get().DestroyObject(InTypeDataModule);
 	}
-	if (!RendererProperties && TypeDataModule)
-	{
-		RendererProperties = CreateRendererPropertiesFromLegacyTypeData(TypeDataModule);
-	}
+	TypeDataModule = nullptr;
 	CacheModuleLists();
 }
 
@@ -343,14 +338,15 @@ void UParticleLODLevel::CacheModuleLists()
 
 		if (UParticleModuleTypeDataBase* CandidateTypeData = Cast<UParticleModuleTypeDataBase>(Module))
 		{
-			if (!TypeDataModule)
+			if (!RendererProperties)
 			{
-				TypeDataModule = CandidateTypeData;
+				RendererProperties = CreateRendererPropertiesFromLegacyTypeData(CandidateTypeData);
 			}
-			else if (TypeDataModule != CandidateTypeData)
+			if (TypeDataModule == CandidateTypeData)
 			{
-				UObjectManager::Get().DestroyObject(CandidateTypeData);
+				TypeDataModule = nullptr;
 			}
+			UObjectManager::Get().DestroyObject(CandidateTypeData);
 			continue;
 		}
 
@@ -394,28 +390,26 @@ void UParticleLODLevel::CacheModuleLists()
 	{
 		Modules = RuntimeModules;
 	}
-	if (!RendererProperties && TypeDataModule)
+	if (TypeDataModule)
 	{
-		RendererProperties = CreateRendererPropertiesFromLegacyTypeData(TypeDataModule);
+		if (!RendererProperties)
+		{
+			RendererProperties = CreateRendererPropertiesFromLegacyTypeData(TypeDataModule);
+		}
+		UObjectManager::Get().DestroyObject(TypeDataModule);
+		TypeDataModule = nullptr;
 	}
 }
 
 // Function : Resolve effective render mode from the renderer/runtime policy slot
 // input : None
-// output : RendererProperties->GetRenderMode() when present, legacy TypeDataModule/RequiredModule fallback, Sprite default
+// output : RendererProperties->GetRenderMode() when present, Sprite default otherwise
 EParticleEmitterRenderMode UParticleLODLevel::GetEffectiveRenderMode() const
 {
-    if (RendererProperties)
+    UParticleRendererProperties* EffectiveRenderer = GetEffectiveRendererProperties();
+    if (EffectiveRenderer)
     {
-        return RendererProperties->GetRenderMode();
-    }
-    if (TypeDataModule)
-    {
-        return TypeDataModule->GetRenderMode();
-    }
-    if (RequiredModule)
-    {
-        return RequiredModule->GetRenderMode();
+        return EffectiveRenderer->GetRenderMode();
     }
     return EParticleEmitterRenderMode::Sprite;
 }
@@ -426,6 +420,18 @@ UParticleRendererProperties* UParticleLODLevel::GetEffectiveRendererProperties()
     {
         UParticleLODLevel* MutableThis = const_cast<UParticleLODLevel*>(this);
         MutableThis->RendererProperties = CreateRendererPropertiesFromLegacyTypeData(TypeDataModule);
+		auto It = std::find(MutableThis->Modules.begin(), MutableThis->Modules.end(), MutableThis->TypeDataModule);
+		if (It != MutableThis->Modules.end())
+		{
+			MutableThis->Modules.erase(It);
+		}
+		UObjectManager::Get().DestroyObject(MutableThis->TypeDataModule);
+		MutableThis->TypeDataModule = nullptr;
+    }
+    if (!RendererProperties && RequiredModule)
+    {
+        UParticleLODLevel* MutableThis = const_cast<UParticleLODLevel*>(this);
+        MutableThis->RendererProperties = CreateRendererPropertiesForMode(RequiredModule->GetRenderMode());
     }
     return RendererProperties;
 }
@@ -434,6 +440,7 @@ UParticleRendererProperties* UParticleLODLevel::EnsureRendererProperties(EPartic
 {
     if (RendererProperties && RendererProperties->GetRenderMode() == RenderMode)
     {
+		CacheModuleLists();
         return RendererProperties;
     }
 
@@ -444,6 +451,7 @@ UParticleRendererProperties* UParticleLODLevel::EnsureRendererProperties(EPartic
     }
 
 	RendererProperties = CreateRendererPropertiesForMode(RenderMode);
+	CacheModuleLists();
     return RendererProperties;
 }
 
@@ -451,6 +459,7 @@ void UParticleLODLevel::SetRendererProperties(UParticleRendererProperties* InRen
 {
     if (RendererProperties == InRendererProperties)
     {
+		CacheModuleLists();
         return;
     }
     if (RendererProperties)
@@ -458,6 +467,32 @@ void UParticleLODLevel::SetRendererProperties(UParticleRendererProperties* InRen
         UObjectManager::Get().DestroyObject(RendererProperties);
     }
     RendererProperties = InRendererProperties;
+
+	UParticleModuleTypeDataBase* DestroyedTypeData = TypeDataModule;
+	if (TypeDataModule)
+	{
+		auto TypeDataIt = std::find(Modules.begin(), Modules.end(), TypeDataModule);
+		if (TypeDataIt != Modules.end())
+		{
+			Modules.erase(TypeDataIt);
+		}
+		UObjectManager::Get().DestroyObject(TypeDataModule);
+		TypeDataModule = nullptr;
+	}
+	for (auto It = Modules.begin(); It != Modules.end();)
+	{
+		if (UParticleModuleTypeDataBase* LegacyTypeData = Cast<UParticleModuleTypeDataBase>(*It))
+		{
+			It = Modules.erase(It);
+			if (LegacyTypeData != DestroyedTypeData)
+			{
+				UObjectManager::Get().DestroyObject(LegacyTypeData);
+			}
+			continue;
+		}
+		++It;
+	}
+	CacheModuleLists();
 }
 
 UParticleEmitter::~UParticleEmitter()
@@ -951,12 +986,12 @@ UParticleSystem* UParticleSystem::CreateDefaultRibbonSystem()
 
 // Function : Create default Beam emitter particle system for detail-panel verification
 // input : None
-// output : New UParticleSystem with single emitter + UBeamTypeData + Source/Target/Noise modules
+// output : New UParticleSystem with single emitter + beam renderer properties + Source/Target/Noise modules
 //
-// Cycle 13a/13b: CreateDefaultRibbonSystem 과 동일 구조 + URibbonTypeData → UBeamTypeData.
+// Cycle 13a/13b: CreateDefaultRibbonSystem 과 동일 구조 + ribbon renderer → beam renderer.
 // Source/Target Component 은 nullptr 시작 (detail panel 의 picker 로 사용자가 선택). nullptr 시 fallback:
 //   - SourceComponent nullptr → emitter 위치 (GetComponentWorldLocation)
-//   - TargetComponent nullptr → Source + EmitterForward * FallbackDistance (UBeamTypeData::FallbackDistance)
+//   - TargetComponent nullptr → Source + EmitterForward * FallbackDistance
 // Noise 모듈은 기본값 (Frequency=4, NoiseRange=(0,30,30)) 으로 추가 — 즉시 lightning bolt 효과 가시화.
 UParticleSystem* UParticleSystem::CreateDefaultBeamSystem()
 {
@@ -980,10 +1015,9 @@ UParticleSystem* UParticleSystem::CreateDefaultBeamSystem()
 
     LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
 
-    // UBeamTypeData — 기본값 그대로 (MaxBeamCount=1, InterpolationPoints=0, FallbackDistance=100).
+    // Beam renderer properties — 기본값 그대로 (MaxBeamCount=1, InterpolationPoints=0, FallbackDistance=100).
     // Material 은 사용자가 detail panel 에서 picker 로 선택 — 본 시점은 nullptr (RenderBeamEmitter 가 default white SRV fallback).
-    UBeamTypeData* BeamTypeData = UObjectManager::Get().CreateObject<UBeamTypeData>();
-    LODLevel->Modules.push_back(BeamTypeData);
+    LODLevel->SetRendererProperties(UObjectManager::Get().CreateObject<UParticleBeamRendererProperties>());
 
     // Beam 의 Source / Target Component picker — detail panel 에서 사용자가 선택.
     // nullptr 인 동안은 fallback 으로 emitter 위치 + forward 방향 100 단위 strip 표시.

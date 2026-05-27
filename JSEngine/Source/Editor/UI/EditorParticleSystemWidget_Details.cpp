@@ -1752,7 +1752,7 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 			FEditorAssetService& AssetService = EditorEngine->GetAssetService();
 			const TArray<FString>& StaticMeshPaths = AssetService.GetStaticMeshAssetPaths();
 			UStaticMesh* CurrentMesh = Cast<UStaticMesh>(CurrentObject);
-			UMeshTypeData* MeshTypeData = Cast<UMeshTypeData>(NotifyTarget);
+			UParticleMeshRendererProperties* MeshRenderer = Cast<UParticleMeshRendererProperties>(NotifyTarget);
 			const FString CurrentIdentifier = CurrentMesh
 				? FPaths::Normalize(CurrentMesh->GetAssetPathFileName())
 				: FString();
@@ -1791,9 +1791,12 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 				if (ImGui::Selectable("None", CurrentMesh == nullptr))
 				{
 					Property.ObjectPtrOps->SetObject(ValuePtr, nullptr);
-					if (MeshTypeData && Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
+					if (Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
 					{
-						MeshTypeData->SetOverrideMaterial(false, nullptr);
+						if (MeshRenderer)
+						{
+							MeshRenderer->SetOverrideMaterial(false, nullptr);
+						}
 					}
 					bChanged = true;
 				}
@@ -1809,10 +1812,13 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 						if (UStaticMesh* Candidate = AssetService.LoadStaticMesh(MeshPath))
 						{
 							Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
-							if (MeshTypeData && Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
+							if (Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
 							{
 								UMaterialInterface* DefaultMaterial = ResolveDefaultMeshMaterial(Candidate);
-								MeshTypeData->SetOverrideMaterial(false, DefaultMaterial);
+								if (MeshRenderer)
+								{
+									MeshRenderer->SetOverrideMaterial(false, DefaultMaterial);
+								}
 							}
 							bChanged = true;
 						}

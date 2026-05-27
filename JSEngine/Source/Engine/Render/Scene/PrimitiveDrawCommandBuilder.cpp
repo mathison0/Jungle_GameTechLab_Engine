@@ -10,9 +10,6 @@
 #include "Component/TextRenderComponent.h"
 #include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleModules.h"
-#include "Particle/ParticleModuleTypeDataBeam.h"
-#include "Particle/ParticleModuleTypeDataMesh.h"
-#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystemComponent.h"
 
@@ -725,13 +722,6 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                         MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
                         ReplayBase.Material = MeshRenderer->GetEffectiveMaterial();
                     }
-                    else if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
-                    {
-                        MeshReplay->MeshAsset = MeshTD->GetMesh();
-                        MeshBufferLocal = MeshReplay->MeshAsset ? MeshBufferManager.GetStaticMeshBuffer(MeshReplay->MeshAsset, 0) : nullptr;
-                        MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
-                        ReplayBase.Material = MeshTD->GetEffectiveMaterial();
-                    }
                     MaterialOverride = ReplayBase.Material;
                     if (ReplayBase.Material)
                     {
@@ -750,10 +740,6 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                     if (const UParticleRibbonRendererProperties* RibbonRenderer = Cast<UParticleRibbonRendererProperties>(RendererProperties))
                     {
                         ReplayBase.Material = RibbonRenderer->GetMaterial();
-                    }
-                    else if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
-                    {
-                        ReplayBase.Material = RibbonTD->GetMaterial();
                     }
                     if (ReplayBase.Material)
                     {

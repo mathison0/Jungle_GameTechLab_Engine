@@ -16,8 +16,6 @@
 #include "Particle/ParticleModuleBeamNoise.h"
 #include "Particle/ParticleModuleBeamSource.h"
 #include "Particle/ParticleModuleBeamTarget.h"
-#include "Particle/ParticleModuleTypeDataBeam.h"
-#include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
@@ -287,15 +285,6 @@ void FDynamicMeshEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
     {
         AlignmentMode = MeshRenderer->GetAlignment();
     }
-    else if (UParticleLODLevel* LOD = CompiledLOD && CompiledLOD->SourceLODLevel
-        ? CompiledLOD->SourceLODLevel
-        : Instance.GetCurrentLODLevel())
-    {
-        if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
-        {
-            AlignmentMode = MeshTD->GetAlignment();
-        }
-    }
 
     // Component cached camera (Cycle 14 결정 18 β).
     const UParticleSystemComponent* OwningComp = Instance.GetOwningComponent();
@@ -424,8 +413,9 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
     UParticleLODLevel* LOD = CompiledLOD && CompiledLOD->SourceLODLevel
         ? CompiledLOD->SourceLODLevel
         : Instance.GetCurrentLODLevel();
-    const UBeamTypeData* BeamTD = LOD ? Cast<UBeamTypeData>(LOD->GetTypeDataModule()) : nullptr;
-    if (!BeamTD)
+    const UParticleBeamRendererProperties* BeamRenderer =
+        CompiledLOD ? Cast<UParticleBeamRendererProperties>(CompiledLOD->RendererProperties) : nullptr;
+    if (!LOD || !BeamRenderer)
     {
         return;
     }
@@ -470,10 +460,10 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
         ? (EmitterForward * TgtTangentLocal.X + EmitterRight * TgtTangentLocal.Y + EmitterUp * TgtTangentLocal.Z).GetSafeNormal() * TgtTangentStrength
         : FVector::ZeroVector;
 
-    const int32 InterpCount = std::clamp(BeamTD->GetInterpolationPoints(), 0, BeamInterpolationPointsMax);
+    const int32 InterpCount = std::clamp(BeamRenderer->GetInterpolationPoints(), 0, BeamInterpolationPointsMax);
     const int32 SegmentCount = InterpCount + 1;
-    const float TextureTile = std::max(BeamTD->GetTextureTile(), 0.0f);
-    const float TextureTileDistance = std::max(BeamTD->GetTextureTileDistance(), 0.0f);
+    const float TextureTile = std::max(BeamRenderer->GetTextureTile(), 0.0f);
+    const float TextureTileDistance = std::max(BeamRenderer->GetTextureTileDistance(), 0.0f);
 
     FParticleBeamEmitterInstance& NonConstInstance = const_cast<FParticleBeamEmitterInstance&>(
         static_cast<const FParticleBeamEmitterInstance&>(Instance));
@@ -505,7 +495,7 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
         }
         else
         {
-            TargetLocation = SourceLocation + EmitterForward * BeamTD->GetFallbackDistance();
+            TargetLocation = SourceLocation + EmitterForward * BeamRenderer->GetFallbackDistance();
         }
 
         const FVector BeamVector = TargetLocation - SourceLocation;

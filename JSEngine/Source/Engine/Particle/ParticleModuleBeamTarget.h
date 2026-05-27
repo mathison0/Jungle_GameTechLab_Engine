@@ -12,7 +12,7 @@
 //       (Source + Forward*X + Right*Y + Up*Z, 여기서 Forward/Right/Up = OwningComp 의 world axes)
 //       → TargetComponent 무시 (명시 override).
 //   (2) bUseLocalTarget=false && TargetComponent != nullptr → TargetComponent->GetWorldLocation()
-//   (3) 둘 다 부재 → Source + Forward * UBeamTypeData::FallbackDistance (PEB2M_Distance fallback)
+//   (3) 둘 다 부재 → Source + Forward * UParticleBeamRendererProperties::FallbackDistance (PEB2M_Distance fallback)
 //
 // (1) 의 use case: actor 가 회전하면서 beam 끝점도 회전 추적 (예: 무기 muzzle 에서 일정 offset, 또는
 //                  static lightning that follows actor pose without needing a separate target component).

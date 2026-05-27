@@ -27,7 +27,7 @@ struct FParticleBeamPayload
 };                                                  // 100B
 
 static_assert(sizeof(FParticleBeamPayload) == 100,
-    "FParticleBeamPayload must be 100 bytes (4B BeamIndex + 8*12B NoiseSamples) — UBeamTypeData::RequiredPayloadBytes() depends on this");
+    "FParticleBeamPayload must be 100 bytes (4B BeamIndex + 8*12B NoiseSamples) — UParticleBeamRendererProperties::RequiredPayloadBytes() depends on this");
 
 // Beam strip 정점 (slot 0 per-vertex, no instancing — Ribbon 와 동일 카테고리).
 // 각 interpolation point 마다 strip 양쪽 (perpendicular 방향) 으로 2 vertex 생성.

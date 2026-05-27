@@ -51,8 +51,7 @@ public:
     void SetRendererProperties(UParticleRendererProperties* InRendererProperties);
     UParticleRendererProperties* GetRendererProperties() const { return RendererProperties; }
 
-	// Resolve effective render mode: RendererProperties is the current renderer/runtime policy.
-	// Falls back to legacy TypeDataModule, RequiredModule.RenderMode, then Sprite.
+	// Resolve effective render mode through RendererProperties. Legacy TypeData is migrated before runtime use.
     EParticleEmitterRenderMode GetEffectiveRenderMode() const;
     UParticleRendererProperties* GetEffectiveRendererProperties() const;
 	UPROPERTY(DisplayName = "Level")
@@ -145,7 +144,7 @@ public:
     // CreateDefaultSpriteSystem과 동일 구조 + sprite renderer 대신 ribbon renderer.
     static UParticleSystem* CreateDefaultRibbonSystem();
     // Cycle 13a/13b: detail panel 검증용 기본 beam emitter system.
-    // Sprite/Mesh/Ribbon 패턴 답습 + UBeamTypeData + Source/Target/Noise 모듈 (Source/Target 은 nullptr — fallback 사용).
+    // Sprite/Mesh/Ribbon 패턴 답습 + beam renderer properties + Source/Target/Noise 모듈.
     static UParticleSystem* CreateDefaultBeamSystem();
 
 	UPROPERTY(DisplayName = "Asset Path")

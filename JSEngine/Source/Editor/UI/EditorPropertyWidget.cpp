@@ -15,9 +15,6 @@
 #include "Particle/ParticleModuleBeamSource.h"
 #include "Particle/ParticleModuleBeamTarget.h"
 #include "Particle/ParticleModuleMeshRotationRate.h"
-#include "Particle/ParticleModuleTypeDataBeam.h"
-#include "Particle/ParticleModuleTypeDataMesh.h"
-#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleModules.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
@@ -1887,7 +1884,6 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				if (!Emitter) continue;
 
 				UParticleMeshRendererProperties* MeshRenderer = nullptr;
-				UMeshTypeData* MeshTD = nullptr;
 				for (UParticleLODLevel* LOD : Emitter->LODLevels)
 				{
 					if (LOD)
@@ -1896,24 +1892,18 @@ void FEditorPropertyWidget::RenderComponentProperties()
 						{
 							MeshRenderer = Cast<UParticleMeshRendererProperties>(LOD->GetEffectiveRendererProperties());
 						}
-						if (!MeshTD)
-						{
-							MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule());
-						}
-						if (MeshRenderer && MeshTD)
+						if (MeshRenderer)
 						{
 							break;
 						}
 					}
 				}
-				if (!MeshRenderer && !MeshTD) continue;
+				if (!MeshRenderer) continue;
 
 				ImGui::Spacing();
 				ImGui::PushID(EmitterIdx);
 
-				UMaterialInterface* Current = MeshRenderer
-					? MeshRenderer->GetEffectiveMaterial()
-					: MeshTD->GetEffectiveMaterial();
+				UMaterialInterface* Current = MeshRenderer->GetEffectiveMaterial();
 				const FString CurrentLabel = Current
 					? (Current->GetFilePath().empty() ? Current->GetName() : FPaths::Normalize(Current->GetFilePath()))
 					: FString("None");
@@ -1926,14 +1916,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				{
 					if (ImGui::Selectable("None", Current == nullptr))
 					{
-						if (MeshRenderer)
-						{
-							MeshRenderer->SetOverrideMaterial(false, nullptr);
-						}
-						else
-						{
-							MeshTD->SetOverrideMaterial(false, nullptr);
-						}
+						MeshRenderer->SetOverrideMaterial(false, nullptr);
 					}
 					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNames.size()); ++MatIdx)
 					{
@@ -1946,14 +1929,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 						{
 							if (UMaterialInterface* Picked = AssetService.ResolveMaterialInterfaceByIndex(MatIdx))
 							{
-								if (MeshRenderer)
-								{
-									MeshRenderer->SetOverrideMaterial(true, Picked);
-								}
-								else
-								{
-									MeshTD->SetOverrideMaterial(true, Picked);
-								}
+								MeshRenderer->SetOverrideMaterial(true, Picked);
 							}
 						}
 						if (bSelected)
@@ -1968,26 +1944,17 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				// Cycle 14 (M1): Alignment 모드 selector — PSA_Velocity / PSA_FacingCameraPosition 2값.
 				// 결정 17 옵션 B 채택 결과: 후속 cycle 에서 enum 값 추가만으로 확장 가능.
 				ImGui::Spacing();
-				if (MeshRenderer || MeshTD)
+				if (MeshRenderer)
 				{
 					ImGui::TextUnformatted("Alignment");
 					const char* AlignmentItems[] = { "Velocity", "Facing Camera Position" };
-					const EMeshAlignment CurrentAlignment = MeshRenderer
-						? MeshRenderer->GetAlignment()
-						: MeshTD->GetAlignment();
+					const EMeshAlignment CurrentAlignment = MeshRenderer->GetAlignment();
 					int32 AlignmentIdx = static_cast<int32>(CurrentAlignment);
 					ImGui::SetNextItemWidth(-1.0f);
 					if (ImGui::Combo("##MeshAlignmentPicker", &AlignmentIdx, AlignmentItems, IM_ARRAYSIZE(AlignmentItems)))
 					{
 						const EMeshAlignment NewAlignment = static_cast<EMeshAlignment>(AlignmentIdx);
-						if (MeshRenderer)
-						{
-							MeshRenderer->SetAlignment(NewAlignment);
-						}
-						if (MeshTD)
-						{
-							MeshTD->SetAlignment(NewAlignment);
-						}
+						MeshRenderer->SetAlignment(NewAlignment);
 					}
 				}
 
@@ -2153,8 +2120,8 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				ImGui::PopID();
 			}
 		}
-		// Cycle 13a/13b: 각 Beam emitter 의 TypeData + Source/Target/Noise 파라미터를 detail panel 에 노출.
-		// Mesh/Ribbon 블록과 평행 구조 — emitter 순서대로 UBeamTypeData 찾아 UI 렌더.
+		// Cycle 13a/13b: 각 Beam emitter 의 renderer properties + Source/Target/Noise 파라미터를 detail panel 에 노출.
+		// Mesh/Ribbon 블록과 평행 구조 — emitter 순서대로 UParticleBeamRendererProperties 찾아 UI 렌더.
 		// Source/Target Component picker 는 owner actor 의 USceneComponent 들을 enumerate (RenderObjectPtrWidget 의 default 패턴 답습).
 		if (UParticleSystem* MutableTemplateBeam = const_cast<UParticleSystem*>(CurrentTemplate))
 		{
@@ -2224,23 +2191,23 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				UParticleEmitter* Emitter = EmittersBeam[EmitterIdx];
 				if (!Emitter) continue;
 
-				UBeamTypeData* BeamTD = nullptr;
+				UParticleBeamRendererProperties* BeamRenderer = nullptr;
 				UParticleModuleBeamSource* BeamSource = nullptr;
 				UParticleModuleBeamTarget* BeamTarget = nullptr;
 				UParticleModuleBeamNoise* BeamNoise = nullptr;
 				for (UParticleLODLevel* LOD : Emitter->LODLevels)
 				{
 					if (!LOD) continue;
-					if (!BeamTD) { BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()); }
+					if (!BeamRenderer) { BeamRenderer = Cast<UParticleBeamRendererProperties>(LOD->GetEffectiveRendererProperties()); }
 					for (UParticleModule* Module : LOD->GetModules())
 					{
 						if (!BeamSource) { BeamSource = Cast<UParticleModuleBeamSource>(Module); }
 						if (!BeamTarget) { BeamTarget = Cast<UParticleModuleBeamTarget>(Module); }
 						if (!BeamNoise)  { BeamNoise  = Cast<UParticleModuleBeamNoise>(Module); }
 					}
-					if (BeamTD) { break; }
+					if (BeamRenderer && BeamSource && BeamTarget && BeamNoise) { break; }
 				}
-				if (!BeamTD) continue;
+				if (!BeamRenderer) continue;
 
 				ImGui::Spacing();
 				ImGui::PushID(EmitterIdx + 0x20000); // Mesh / Ribbon PushID 와 충돌 회피
@@ -2250,7 +2217,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				ImGui::TextUnformatted(SectionLabel);
 
 				// Material picker (Mesh / Ribbon 와 동일 패턴).
-				UMaterialInterface* CurrentMat = BeamTD->GetMaterial();
+				UMaterialInterface* CurrentMat = BeamRenderer->GetMaterial();
 				const FString CurrentMatLabel = CurrentMat
 					? (CurrentMat->GetFilePath().empty() ? CurrentMat->GetName() : FPaths::Normalize(CurrentMat->GetFilePath()))
 					: FString("None");
@@ -2260,7 +2227,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				{
 					if (ImGui::Selectable("None", CurrentMat == nullptr))
 					{
-						BeamTD->SetMaterial(nullptr);
+						BeamRenderer->SetMaterial(nullptr);
 					}
 					for (int32 MatIdx = 0; MatIdx < static_cast<int32>(MaterialNamesBeam.size()); ++MatIdx)
 					{
@@ -2273,7 +2240,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 						{
 							if (UMaterialInterface* Picked = AssetServiceBeam.ResolveMaterialInterfaceByIndex(MatIdx))
 							{
-								BeamTD->SetMaterial(Picked);
+								BeamRenderer->SetMaterial(Picked);
 							}
 						}
 						if (bSelected) { ImGui::SetItemDefaultFocus(); }
@@ -2282,42 +2249,42 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					ImGui::EndCombo();
 				}
 
-				// UBeamTypeData 의 수치 멤버들 — Mesh/Ribbon 패턴과 동일 (DragInt / DragFloat).
+				// UParticleBeamRendererProperties 의 수치 멤버들 — Mesh/Ribbon 패턴과 동일 (DragInt / DragFloat).
 				const float DragItemWidth = ImGui::GetContentRegionAvail().x * 0.5f;
 
-				int32 MaxBeams = BeamTD->GetMaxBeamCount();
+				int32 MaxBeams = BeamRenderer->GetMaxBeamCount();
 				ImGui::SetNextItemWidth(DragItemWidth);
 				if (ImGui::DragInt("Max Beam Count", &MaxBeams, 1.0f, 1, 64))
 				{
-					BeamTD->SetMaxBeamCount(MaxBeams);
+					BeamRenderer->SetMaxBeamCount(MaxBeams);
 				}
 
-				int32 InterpPoints = BeamTD->GetInterpolationPoints();
+				int32 InterpPoints = BeamRenderer->GetInterpolationPoints();
 				ImGui::SetNextItemWidth(DragItemWidth);
 				if (ImGui::DragInt("Interpolation Points", &InterpPoints, 1.0f, 0, 64))
 				{
-					BeamTD->SetInterpolationPoints(InterpPoints);
+					BeamRenderer->SetInterpolationPoints(InterpPoints);
 				}
 
-				float FallbackDist = BeamTD->GetFallbackDistance();
+				float FallbackDist = BeamRenderer->GetFallbackDistance();
 				ImGui::SetNextItemWidth(DragItemWidth);
 				if (ImGui::DragFloat("Fallback Distance", &FallbackDist, 1.0f, 0.0f, 100000.0f))
 				{
-					BeamTD->SetFallbackDistance(FallbackDist);
+					BeamRenderer->SetFallbackDistance(FallbackDist);
 				}
 
-				float TexTile = BeamTD->GetTextureTile();
+				float TexTile = BeamRenderer->GetTextureTile();
 				ImGui::SetNextItemWidth(DragItemWidth);
 				if (ImGui::DragFloat("Texture Tile", &TexTile, 0.1f, 0.0f, 100.0f))
 				{
-					BeamTD->SetTextureTile(TexTile);
+					BeamRenderer->SetTextureTile(TexTile);
 				}
 
-				float TexTileDist = BeamTD->GetTextureTileDistance();
+				float TexTileDist = BeamRenderer->GetTextureTileDistance();
 				ImGui::SetNextItemWidth(DragItemWidth);
 				if (ImGui::DragFloat("Texture Tile Distance", &TexTileDist, 1.0f, 0.0f, 100000.0f))
 				{
-					BeamTD->SetTextureTileDistance(TexTileDist);
+					BeamRenderer->SetTextureTileDistance(TexTileDist);
 				}
 
 				// Source / Target Component picker — 모듈이 존재할 때만 노출 (모듈 없는 경우 fallback 사용).
@@ -2477,12 +2444,9 @@ void FEditorPropertyWidget::RenderComponentProperties()
 			{
 				const UParticleMeshRendererProperties* StatusMeshRenderer =
 					Cast<UParticleMeshRendererProperties>(StatusLOD->GetEffectiveRendererProperties());
-				const UMeshTypeData* StatusMeshTD = Cast<UMeshTypeData>(StatusLOD->GetTypeDataModule());
-				if (StatusMeshRenderer || StatusMeshTD)
+				if (StatusMeshRenderer)
 				{
-					const EMeshAlignment StatusAlign = StatusMeshRenderer
-						? StatusMeshRenderer->GetAlignment()
-						: StatusMeshTD->GetAlignment();
+					const EMeshAlignment StatusAlign = StatusMeshRenderer->GetAlignment();
 					const char* AlignStr =
 						StatusAlign == EMeshAlignment::PSA_Velocity ? "PSA_Velocity" :
 						StatusAlign == EMeshAlignment::PSA_FacingCameraPosition ? "PSA_FacingCameraPosition" : "?";

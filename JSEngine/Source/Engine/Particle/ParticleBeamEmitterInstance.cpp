@@ -11,7 +11,7 @@
 #include "Particle/ParticleModuleBeamNoise.h"
 #include "Particle/ParticleModuleBeamSource.h"
 #include "Particle/ParticleModuleBeamTarget.h"
-#include "Particle/ParticleModuleTypeDataBeam.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
 
@@ -101,12 +101,11 @@ FParticleBeamPayload* FParticleBeamEmitterInstance::GetBeamPayload(int32 SlotInd
 void FParticleBeamEmitterInstance::EnsureBeamState()
 {
     int32 MaxBeams = 1;
-    if (UParticleLODLevel* LOD = ResolveBeamSourceLOD(this))
+    const FCompiledParticleLODData* CompiledLOD = GetCurrentCompiledLODData();
+    if (const UParticleBeamRendererProperties* BeamRenderer =
+        CompiledLOD ? Cast<UParticleBeamRendererProperties>(CompiledLOD->RendererProperties) : nullptr)
     {
-        if (const UBeamTypeData* BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()))
-        {
-            MaxBeams = std::max(BeamTD->GetMaxBeamCount(), 1);
-        }
+        MaxBeams = std::max(BeamRenderer->GetMaxBeamCount(), 1);
     }
 
     if (static_cast<int32>(BeamStates.size()) != MaxBeams)
@@ -178,13 +177,12 @@ FDynamicEmitterDataBase* FParticleBeamEmitterInstance::CreateDynamicData()
     Replay.ParticleIndices = ParticleStorage.ParticleIndices;
     Replay.SortMode = ESortMode::None; // Beam Sort 는 D10 빈 구현 — SortMode 무관.
 
-    if (UParticleLODLevel* LOD = ResolveBeamSourceLOD(this))
+    const FCompiledParticleLODData* CompiledLOD = GetCurrentCompiledLODData();
+    if (const UParticleBeamRendererProperties* BeamRenderer =
+        CompiledLOD ? Cast<UParticleBeamRendererProperties>(CompiledLOD->RendererProperties) : nullptr)
     {
-        if (const UBeamTypeData* BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()))
-        {
-            Replay.InterpolationPoints = BeamTD->GetInterpolationPoints();
-            Replay.Material = BeamTD->GetMaterial();
-        }
+        Replay.InterpolationPoints = BeamRenderer->GetInterpolationPoints();
+        Replay.Material = BeamRenderer->GetMaterial();
     }
     Replay.bHasNoise = (FindFirstBeamModule<UParticleModuleBeamNoise>(ResolveBeamSourceLOD(this)) != nullptr);
     Replay.ParticleTexture = nullptr; // Builder 가 Material.DiffuseMap 추출 후 채움.

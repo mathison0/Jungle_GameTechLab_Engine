@@ -219,7 +219,7 @@ struct FDynamicBeamEmitterReplayData : public FDynamicEmitterReplayDataBase
         eEmitterType = EDynamicEmitterType::Beam;
     }
 
-    // Beam 고유 메타 — 디버그/툴 hint. Phase 4 에서 Builder 가 UBeamTypeData 에서 추출 후 set 권장.
+    // Beam 고유 메타 — 디버그/툴 hint. RendererProperties 에서 추출 후 set.
     int32 InterpolationPoints = 0;
     bool bHasNoise = false;
 };

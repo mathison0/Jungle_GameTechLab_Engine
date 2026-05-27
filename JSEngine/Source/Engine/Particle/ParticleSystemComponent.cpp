@@ -5,7 +5,6 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Particle/ParticleDynamicData.h"
-#include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Render/Scene/RenderBus.h"
