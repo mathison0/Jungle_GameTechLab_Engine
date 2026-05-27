@@ -1249,6 +1249,16 @@ void FRenderer::InitializePassBatchers()
 			{
 				EditorLineBatcher.AddOBB(FOBB{ Cmd.Constants.OBB.Center, Cmd.Constants.OBB.Extents, Cmd.Constants.OBB.Rotation }, Cmd.Constants.OBB.Color);
 			}
+			else if (Cmd.Type == ERenderCommandType::DebugSphere)
+			{
+				const auto& S = Cmd.Constants.Sphere;
+				EditorLineBatcher.AddWireSphere(S.Center, S.Radius, S.Color.ToVector4(), 24);
+			}
+			else if (Cmd.Type == ERenderCommandType::DebugCapsule)
+			{
+				const auto& C = Cmd.Constants.Capsule;
+				EditorLineBatcher.AddWireCapsule(C.Start, C.End, C.Radius, C.Color.ToVector4(), 24);
+			}
 			else if (Cmd.Type == ERenderCommandType::DebugDirectionalLight)
 			{
 				const auto& D = Cmd.Constants.DirectionalLight;

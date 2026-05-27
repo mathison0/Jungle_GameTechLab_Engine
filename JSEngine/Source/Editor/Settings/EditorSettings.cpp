@@ -46,6 +46,7 @@ namespace EditorKey
 	constexpr const char* bGizmo = "bGizmo";
 	constexpr const char* bBillboardText = "bBillboardText";
 	constexpr const char* bBoundingVolume = "bBoundingVolume";
+	constexpr const char* bCollision = "bCollision";
 	constexpr const char* bEnableLOD = "bEnableLOD";
 	constexpr const char* bBVHBoundingVolume = "bBVHBoundingVolume";
 	constexpr const char* bDecals = "bDecals";
@@ -143,6 +144,7 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	ViewObj[EditorKey::bGizmo] = ShowFlags.bGizmo;
 	ViewObj[EditorKey::bBillboardText] = ShowFlags.bBillboardText;
 	ViewObj[EditorKey::bBoundingVolume] = ShowFlags.bBoundingVolume;
+	ViewObj[EditorKey::bCollision] = ShowFlags.bCollision;
 	ViewObj[EditorKey::bEnableLOD] = ShowFlags.bEnableLOD;
 	ViewObj[EditorKey::bBVHBoundingVolume] = ShowFlags.bBVHBoundingVolume;
 	ViewObj[EditorKey::bDecals] = ShowFlags.bDecals;
@@ -332,6 +334,8 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			ShowFlags.bBillboardText = ViewObj[EditorKey::bBillboardText].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBoundingVolume))
 			ShowFlags.bBoundingVolume = ViewObj[EditorKey::bBoundingVolume].ToBool();
+		if (ViewObj.hasKey(EditorKey::bCollision))
+			ShowFlags.bCollision = ViewObj[EditorKey::bCollision].ToBool();
 		if (ViewObj.hasKey(EditorKey::bEnableLOD))
 			ShowFlags.bEnableLOD = ViewObj[EditorKey::bEnableLOD].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBVHBoundingVolume))

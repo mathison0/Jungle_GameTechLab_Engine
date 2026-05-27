@@ -35,6 +35,8 @@ enum class ERenderCommandType
 	Billboard,
 	DebugBox,
 	DebugOBB,
+	DebugSphere,
+	DebugCapsule,
 	DebugDirectionalLight,
 	DebugPointLight,
 	DebugSpotlight,
@@ -266,6 +268,22 @@ struct FOBBConstants
 	FColor Color;
 };
 
+struct FSphereConstants
+{
+	FVector Center;
+	float Radius;
+	FColor Color;
+};
+
+struct FCapsuleConstants
+{
+	FVector Start;
+	float Radius;
+	FVector End;
+	float Padding0;
+	FColor Color;
+};
+
 struct FDirectionalLightConstants
 {
 	FVector Position;
@@ -466,6 +484,8 @@ struct FRenderCommand
 	{
 		FAABBConstants AABB;
 		FOBBConstants OBB;
+		FSphereConstants Sphere;
+		FCapsuleConstants Capsule;
 		FDirectionalLightConstants DirectionalLight;
 		FPointLightConstants PointLight;
 		FSpotLightConstants SpotLight;

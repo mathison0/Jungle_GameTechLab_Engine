@@ -88,6 +88,7 @@ public:
 
 	// 와이어 sphere — xy/xz/yz 평면 원 3개. 본 끝점 시각화용.
 	void AddWireSphere(const FVector& Center, float Radius, const FVector4& Color, int32 Segments = 12);
+	void AddWireCapsule(const FVector& Start, const FVector& End, float Radius, const FVector4& Color, int32 Segments = 16);
 
 	/**
 	 * @brief 카메라 기준의 grid patch와 축 보조선을 생성합니다.

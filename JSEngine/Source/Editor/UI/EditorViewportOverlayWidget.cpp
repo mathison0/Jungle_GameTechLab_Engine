@@ -420,6 +420,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
     ImGui::Checkbox("Grid", &Settings.ShowFlags.bGrid);
     ImGui::Checkbox("Gizmo", &Settings.ShowFlags.bGizmo);
     ImGui::Checkbox("Bounding Volume", &Settings.ShowFlags.bBoundingVolume);
+    ImGui::Checkbox("Collision", &Settings.ShowFlags.bCollision);
     if (Settings.ShowFlags.bBoundingVolume)
     {
         ImGui::Indent();

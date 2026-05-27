@@ -1,6 +1,8 @@
 ﻿#include "EditorOverlayCollector.h"
 
 #include "Component/BillboardComponent.h"
+#include "Component/BoxComponent.h"
+#include "Component/CapsuleComponent.h"
 #include "Component/DecalComponent.h"
 #include "Component/GizmoComponent.h"
 #include "Component/PostProcess/Light/DirectionalLightComponent.h"
@@ -8,6 +10,7 @@
 #include "Component/PostProcess/Light/SpotlightComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SkeletalMeshComponent.h"
+#include "Component/SphereComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
@@ -251,6 +254,46 @@ void FEditorOverlayCollector::CollectSingleBone(USkeletalMeshComponent* SkComp, 
 
     EmitBoneCommand(SkComp, BoneIndex, Bones[BoneIndex].ParentIndex,
                     kBoneColor, kBoneWidthRatio, kBoneEndpointRatio, RenderBus);
+}
+
+void FEditorOverlayCollector::CollectCollisionShape(UPrimitiveComponent* PrimitiveComponent, const FShowFlags& ShowFlags, FRenderBus& RenderBus) const
+{
+    if (!ShowFlags.bCollision || PrimitiveComponent == nullptr || !PrimitiveComponent->IsVisible())
+    {
+        return;
+    }
+
+    static const FColor CollisionColor = FColor::Green();
+
+    if (const UBoxComponent* BoxComponent = Cast<UBoxComponent>(PrimitiveComponent))
+    {
+        CollectOBBCommand(BoxComponent->GetWorldOBB(), CollisionColor, RenderBus);
+        return;
+    }
+
+    if (const USphereComponent* SphereComponent = Cast<USphereComponent>(PrimitiveComponent))
+    {
+        CollectSphereCommand(
+            SphereComponent->GetWorldLocation(),
+            SphereComponent->GetScaledSphereRadius(),
+            CollisionColor,
+            RenderBus);
+        return;
+    }
+
+    if (const UCapsuleComponent* CapsuleComponent = Cast<UCapsuleComponent>(PrimitiveComponent))
+    {
+        const FVector Center = CapsuleComponent->GetWorldLocation();
+        const FVector Axis = CapsuleComponent->GetUpVector().GetSafeNormal();
+        const float HalfHeight = CapsuleComponent->GetScaledCapsuleHalfHeight();
+        const float Radius = CapsuleComponent->GetScaledCapsuleRadius();
+        CollectCapsuleCommand(
+            Center - Axis * HalfHeight,
+            Center + Axis * HalfHeight,
+            Radius,
+            CollisionColor,
+            RenderBus);
+    }
 }
 
 void FEditorOverlayCollector::CollectGizmo(UGizmoComponent* Gizmo, const FShowFlags& ShowFlags, FRenderBus& RenderBus,
@@ -698,6 +741,37 @@ void FEditorOverlayCollector::CollectOBBCommand(UPrimitiveComponent* PrimitiveCo
     const FAABB AABB = PrimitiveComponent->GetWorldAABB();
     const FOBB Box = FOBB::FromAABB(AABB, PrimitiveComponent->GetWorldMatrix());
     CollectOBBCommand(Box, FColor::Green(), RenderBus);
+}
+
+void FEditorOverlayCollector::CollectSphereCommand(const FVector& Center, float Radius, const FColor& Color, FRenderBus& RenderBus) const
+{
+    if (Radius <= 0.0f)
+    {
+        return;
+    }
+
+    FRenderCommand SphereCmd = {};
+    SphereCmd.Type = ERenderCommandType::DebugSphere;
+    SphereCmd.Constants.Sphere.Center = Center;
+    SphereCmd.Constants.Sphere.Radius = Radius;
+    SphereCmd.Constants.Sphere.Color = Color;
+    RenderBus.AddCommand(ERenderPass::Editor, SphereCmd);
+}
+
+void FEditorOverlayCollector::CollectCapsuleCommand(const FVector& Start, const FVector& End, float Radius, const FColor& Color, FRenderBus& RenderBus) const
+{
+    if (Radius <= 0.0f)
+    {
+        return;
+    }
+
+    FRenderCommand CapsuleCmd = {};
+    CapsuleCmd.Type = ERenderCommandType::DebugCapsule;
+    CapsuleCmd.Constants.Capsule.Start = Start;
+    CapsuleCmd.Constants.Capsule.End = End;
+    CapsuleCmd.Constants.Capsule.Radius = Radius;
+    CapsuleCmd.Constants.Capsule.Color = Color;
+    RenderBus.AddCommand(ERenderPass::Editor, CapsuleCmd);
 }
 
 void FEditorOverlayCollector::CollectDirectionalLightCommand(const UDirectionalLightComponent* DirLight, const FShowFlags& ShowFlags, FRenderBus& RenderBus) const
