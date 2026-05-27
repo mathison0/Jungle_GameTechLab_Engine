@@ -119,6 +119,31 @@ namespace
         OutPerp2 = Tangent.CrossProduct(OutPerp1).GetSafeNormal();
     }
 
+    // Hermite cubic 보간: P(t) = h00*P0 + h10*T0 + h01*P1 + h11*T1
+    //   h00 = 2t³-3t²+1, h10 = t³-2t²+t, h01 = -2t³+3t², h11 = t³-t²
+    FVector EvaluateHermite(const FVector& P0, const FVector& T0, const FVector& P1, const FVector& T1, float t)
+    {
+        const float t2 = t * t;
+        const float t3 = t2 * t;
+        const float h00 = 2.0f * t3 - 3.0f * t2 + 1.0f;
+        const float h10 = t3 - 2.0f * t2 + t;
+        const float h01 = -2.0f * t3 + 3.0f * t2;
+        const float h11 = t3 - t2;
+        return P0 * h00 + T0 * h10 + P1 * h01 + T1 * h11;
+    }
+
+    // Hermite derivative: dP/dt = h00'*P0 + h10'*T0 + h01'*P1 + h11'*T1
+    //   h00' = 6t²-6t, h10' = 3t²-4t+1, h01' = -6t²+6t, h11' = 3t²-2t
+    FVector EvaluateHermiteDerivative(const FVector& P0, const FVector& T0, const FVector& P1, const FVector& T1, float t)
+    {
+        const float t2 = t * t;
+        const float dh00 = 6.0f * t2 - 6.0f * t;
+        const float dh10 = 3.0f * t2 - 4.0f * t + 1.0f;
+        const float dh01 = -6.0f * t2 + 6.0f * t;
+        const float dh11 = 3.0f * t2 - 2.0f * t;
+        return P0 * dh00 + T0 * dh10 + P1 * dh01 + T1 * dh11;
+    }
+
     template <typename T>
     T* FindFirstModule(UParticleLODLevel* LOD)
     {
@@ -407,12 +432,27 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
     const bool bUseLocalTarget = TargetModule ? TargetModule->IsUseLocalTarget() : false;
     const FVector TargetLocalVec = TargetModule ? TargetModule->GetTargetLocalVector() : FVector::ZeroVector;
 
+    const FVector SrcTangentLocal = SourceModule ? SourceModule->GetSourceTangent() : FVector(1.0f, 0.0f, 0.0f);
+    const float   SrcTangentStrength = SourceModule ? SourceModule->GetSourceTangentStrength() : 0.0f;
+    const FVector TgtTangentLocal = TargetModule ? TargetModule->GetTargetTangent() : FVector(-1.0f, 0.0f, 0.0f);
+    const float   TgtTangentStrength = TargetModule ? TargetModule->GetTargetTangentStrength() : 0.0f;
+    const bool    bUseHermite = (SrcTangentStrength > BeamSmallNumber) || (TgtTangentStrength > BeamSmallNumber);
+
     const FVector EmitterLocation = Instance.GetComponentWorldLocation();
     const UParticleSystemComponent* OwningComp = Instance.GetOwningComponent();
     const FVector EmitterForward = OwningComp ? OwningComp->GetForwardVector() : FVector(1.0f, 0.0f, 0.0f);
     const FVector EmitterRight   = OwningComp ? OwningComp->GetRightVector()   : FVector(0.0f, 1.0f, 0.0f);
     const FVector EmitterUp      = OwningComp ? OwningComp->GetUpVector()      : FVector(0.0f, 0.0f, 1.0f);
     const FVector SourceLocation = SourceComp ? SourceComp->GetWorldLocation() : EmitterLocation;
+
+    // emitter-local → world 변환 (bUseLocalTarget 의 TargetLocalVector 변환과 동일 패턴).
+    // Strength=0 이면 ZeroVector — Hermite 식의 T 항이 사라져 자동 무력화.
+    const FVector SrcTangentWorld = bUseHermite
+        ? (EmitterForward * SrcTangentLocal.X + EmitterRight * SrcTangentLocal.Y + EmitterUp * SrcTangentLocal.Z).GetSafeNormal() * SrcTangentStrength
+        : FVector::ZeroVector;
+    const FVector TgtTangentWorld = bUseHermite
+        ? (EmitterForward * TgtTangentLocal.X + EmitterRight * TgtTangentLocal.Y + EmitterUp * TgtTangentLocal.Z).GetSafeNormal() * TgtTangentStrength
+        : FVector::ZeroVector;
 
     const int32 InterpCount = std::clamp(BeamTD->GetInterpolationPoints(), 0, BeamInterpolationPointsMax);
     const int32 SegmentCount = InterpCount + 1;
@@ -459,26 +499,60 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
             continue;
         }
 
-        const FVector Tangent = BeamVector / BeamLength;
-        const FVector Perp = ComputeBeamPerpendicular(Tangent);
+        const FVector LinearTangent = BeamVector / BeamLength;
+        const FVector LinearPerp = ComputeBeamPerpendicular(LinearTangent);
         const float HalfSize = Particle->Size.X * 0.5f;
 
-        FVector Perp1 = FVector::ZeroVector;
-        FVector Perp2 = FVector::ZeroVector;
+        // Linear 경로용 1회 계산 axes — Hermite 분기에서는 segment 별로 재계산.
+        FVector LinearPerp1 = FVector::ZeroVector;
+        FVector LinearPerp2 = FVector::ZeroVector;
         const FParticleBeamPayload* NoisePayload = nullptr;
         if (bApplyNoise)
         {
-            ComputeBeamLocalAxes(Tangent, Perp1, Perp2);
+            ComputeBeamLocalAxes(LinearTangent, LinearPerp1, LinearPerp2);
             const int32 SlotIndex = static_cast<int32>(Indices[ActiveIdx]);
             NoisePayload = NonConstInstance.GetBeamPayload(SlotIndex);
         }
 
         const size_t BeamStartCount = BeamVertexBuffer.size();
+        FVector PrevCenterPos = SourceLocation;
+        float AccumDist = 0.0f;
         for (int32 SegIdx = 0; SegIdx <= SegmentCount; ++SegIdx)
         {
             const float Alpha = static_cast<float>(SegIdx) / static_cast<float>(SegmentCount);
-            FVector CenterPos = SourceLocation + BeamVector * Alpha;
-            const float AccumDist = BeamLength * Alpha;
+
+            // Position / Tangent / Perp / NoiseAxes — Hermite 시 per-segment, linear 시 1회 계산값 재사용.
+            FVector CenterPos;
+            FVector SegTangent;
+            FVector SegPerp;
+            FVector SegPerp1;
+            FVector SegPerp2;
+            if (bUseHermite)
+            {
+                CenterPos = EvaluateHermite(SourceLocation, SrcTangentWorld, TargetLocation, TgtTangentWorld, Alpha);
+                FVector Deriv = EvaluateHermiteDerivative(SourceLocation, SrcTangentWorld, TargetLocation, TgtTangentWorld, Alpha);
+                if (Deriv.SizeSquared() < BeamSmallNumber)
+                {
+                    SegTangent = LinearTangent;
+                }
+                else
+                {
+                    SegTangent = Deriv.GetSafeNormal();
+                }
+                SegPerp = ComputeBeamPerpendicular(SegTangent);
+                if (bApplyNoise)
+                {
+                    ComputeBeamLocalAxes(SegTangent, SegPerp1, SegPerp2);
+                }
+            }
+            else
+            {
+                CenterPos = SourceLocation + BeamVector * Alpha;
+                SegTangent = LinearTangent;
+                SegPerp = LinearPerp;
+                SegPerp1 = LinearPerp1;
+                SegPerp2 = LinearPerp2;
+            }
 
             if (bApplyNoise && NoisePayload && NoiseFrequency > 0 &&
                 SegIdx > 0 && !(SegIdx == SegmentCount && !bTargetNoise))
@@ -498,26 +572,33 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
                     Sample = NoisePayload->NoiseSamples[Idx];
                 }
                 const FVector WorldOffset =
-                    Tangent * (Sample.X * NoiseRange.X) +
-                    Perp1   * (Sample.Y * NoiseRange.Y) +
-                    Perp2   * (Sample.Z * NoiseRange.Z);
+                    SegTangent * (Sample.X * NoiseRange.X) +
+                    SegPerp1   * (Sample.Y * NoiseRange.Y) +
+                    SegPerp2   * (Sample.Z * NoiseRange.Z);
                 CenterPos = CenterPos + WorldOffset;
             }
+
+            // AccumDist: linear 일 때는 직선 가정 (BeamLength*Alpha 와 동일 결과), Hermite 일 때는 segment 거리 누적.
+            if (SegIdx > 0)
+            {
+                AccumDist += (CenterPos - PrevCenterPos).Size();
+            }
+            PrevCenterPos = CenterPos;
 
             const float TexU = (TextureTileDistance > BeamSmallNumber)
                 ? (AccumDist / TextureTileDistance)
                 : (Alpha * TextureTile);
 
             FBeamParticleVertex V0;
-            V0.Position = CenterPos + Perp * HalfSize;
-            V0.Tangent = Tangent;
+            V0.Position = CenterPos + SegPerp * HalfSize;
+            V0.Tangent = SegTangent;
             V0.Color = Particle->Color;
             V0.TexCoordU = TexU;
             V0.Size = Particle->Size.X;
             BeamVertexBuffer.push_back(V0);
 
             FBeamParticleVertex V1 = V0;
-            V1.Position = CenterPos - Perp * HalfSize;
+            V1.Position = CenterPos - SegPerp * HalfSize;
             BeamVertexBuffer.push_back(V1);
         }
 
