@@ -76,6 +76,7 @@ public:
 	void InitDefaultComponents();
 
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const { return SkeletalMeshComp; }
+	void SetSkeletalMeshComponent(USkeletalMeshComponent* InComponent) { SkeletalMeshComp = InComponent; }
 
 private:
 	USkeletalMeshComponent* SkeletalMeshComp = nullptr;

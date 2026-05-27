@@ -391,9 +391,25 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             }
         }
         const TArray<uint32>& Indices = SkeletalMesh->GetIndices(); // 이건 immutable이라 걍 asset에서 들고와도 댐
+        const TArray<FStaticMeshSection>& Sections = SkeletalMesh->GetSections();
+        uint32 SubmittedDrawCommandCount = Sections.empty() ? 1u : 0u;
+        if (!Sections.empty())
+        {
+            for (const FStaticMeshSection& Section : Sections)
+            {
+                if (Section.IndexCount > 0)
+                {
+                    ++SubmittedDrawCommandCount;
+                }
+            }
+        }
+
         const FSkeletalMeshSkinningStatCache& SkinningStatCache = GetSkeletalMeshSkinningStatCache(SkeletalMesh);
         FSkinningStats::Get().AddVisibleSkinnedMesh(
             SkinningStatCache.VertexCount,
+            SkinningStatCache.IndexCount,
+            static_cast<uint32>(SkinningStatCache.SectionCount),
+            SubmittedDrawCommandCount,
             static_cast<uint32>(SkinningStatCache.BoneCount),
             SkinningStatCache.AvgBoneInfluence,
             bUseGPUSkinning);
@@ -408,7 +424,6 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 SkeletalMeshComp->ConsumeCPUSkinnedVertexBufferDirty());
         if (!MeshBuffer) return true;
 
-        const TArray<FStaticMeshSection>& Sections = SkeletalMesh->GetSections();
         if (Sections.empty()) // fallback
         {
             FRenderCommand Cmd = {};

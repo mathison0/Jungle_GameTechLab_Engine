@@ -358,18 +358,18 @@
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimGraphInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimLuaProgramAsset.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Animation\ULuaAnimInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotifyState.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_FootstepSound.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LuaEvent.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LogEvent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotifyState_LuaEvent.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_FootstepSound.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LogEvent.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LuaEvent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimSequence.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimSequenceBase.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimSingleNodeInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimationAsset.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimationStateMachine.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Animation\ULuaAnimInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Animation\UStateMachineAnimInstance.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Asset\UCurveFloatAsset.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Asset\USkeletalMesh.gen.cpp" />
@@ -417,6 +417,14 @@
     <ClCompile Include="Intermediate\Reflection\Component\USubUVComponent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Component\UTextRenderComponent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Core\FGuid.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Editor\Animation\UAnimPreviewInstance.gen.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Editor\Animation\UDebugSkelMeshComponent.gen.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Editor\UEditorEngine.gen.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -430,10 +438,10 @@
     <ClCompile Include="Intermediate\Reflection\GameFramework\AFogActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\AGameModeBase.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\ALightActor.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\GameFramework\AParticleSystemActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\APawn.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\APlayerController.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\APlayerStart.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\GameFramework\AParticleSystemActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\APointLightActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\ASceneActor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\GameFramework\ASkeletalMeshActor.gen.cpp" />
@@ -454,39 +462,39 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\AParticleEventManager.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleBeamRendererProperties.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleEmitter.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleLODLevel.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleMeshRendererProperties.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModule.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleAcceleration.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamNoise.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamSource.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamTarget.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBurst.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleCollision.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleColor.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleDrag.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleEventGenerator.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBurst.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLifetime.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLight.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocation.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocationShape.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleMeshRotationRate.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRequired.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRotationRate.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSize.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleAcceleration.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleDrag.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRotationRate.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamNoise.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamSource.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamTarget.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleMeshRotationRate.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleBeamRendererProperties.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleMeshRendererProperties.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleRendererProperties.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleRibbonRendererProperties.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSpriteRendererProperties.gen.cpp" />
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystem.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystemComponent.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\USpriteTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\USubUVModule.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Render\Resource\UMaterial.gen.cpp" />
@@ -496,6 +504,18 @@
     <ClCompile Include="Intermediate\Reflection\Runtime\Script\UScriptComponent.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Runtime\UEngine.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Runtime\UGameEngine.gen.cpp" />
+    <ClCompile Include="Source\Editor\AnimGraph\LuaAnimGraph.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Animation\AnimPreviewInstance.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Animation\DebugSkelMeshComponent.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Asset\EditorAssetService.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -548,10 +568,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
     <ClCompile Include="Source\Editor\Settings\EditorSettings.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
@@ -560,7 +577,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Source\Editor\AnimGraph\LuaAnimGraph.cpp">
+    <ClCompile Include="Source\Editor\UI\AnimSequenceViewerContextBuilder.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -581,6 +598,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorAnimGraphWidget.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorAnimationSequenceViewerWidget.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -829,17 +850,17 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GameClientRelease|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\ActorSequence.cpp" />
-    <ClCompile Include="Source\Engine\Animation\AnimLuaProgramAsset.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimGraphAsset.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimGraphInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimGraphNode.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp" />
-    <ClCompile Include="Source\Engine\Animation\LuaAnimInstance.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimLuaProgramAsset.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimNotify.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimSequence.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimSingleNodeInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimationStateMachine.cpp" />
     <ClCompile Include="Source\Engine\Animation\CurvePlayback.cpp" />
+    <ClCompile Include="Source\Engine\Animation\LuaAnimInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\StateMachineAnimInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\TimelinePlayer.cpp" />
     <ClCompile Include="Source\Engine\Asset\AssetFile.cpp" />
@@ -860,8 +881,8 @@
     <ClCompile Include="Source\Engine\Asset\SkeletalMesh.cpp" />
     <ClCompile Include="Source\Engine\Asset\SkeletalMeshTypes.cpp" />
     <ClCompile Include="Source\Engine\Asset\StaticMesh.cpp" />
-    <ClCompile Include="Source\Engine\Asset\StaticMeshTypes.cpp" />
     <ClCompile Include="Source\Engine\Asset\StaticMeshSimplifier.cpp" />
+    <ClCompile Include="Source\Engine\Asset\StaticMeshTypes.cpp" />
     <ClCompile Include="Source\Engine\Asset\SubUVAtlasLoader.cpp" />
     <ClCompile Include="Source\Engine\Audio\AudioSystem.cpp" />
     <ClCompile Include="Source\Engine\Camera\CameraModifier.cpp" />
@@ -1138,6 +1159,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\Animation\AnimPreviewInstance.h" />
+    <ClInclude Include="Source\Editor\Animation\DebugSkelMeshComponent.h" />
     <ClInclude Include="Source\Editor\Asset\EditorAssetService.h" />
     <ClInclude Include="Source\Editor\Command\EditorCommandSystem.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
@@ -1158,21 +1181,23 @@
     <ClInclude Include="Source\Editor\Selection\SelectionManager.h" />
     <ClInclude Include="Source\Editor\Settings\EditorSettings.h" />
     <ClInclude Include="Source\Editor\Settings\ProjectSettings.h" />
+    <ClInclude Include="Source\Editor\UI\AnimSequenceViewerContextBuilder.h" />
     <ClInclude Include="Source\Editor\UI\ComponentMenuRegistry.h" />
     <ClInclude Include="Source\Editor\UI\EditorActorSequenceDetails.h" />
     <ClInclude Include="Source\Editor\UI\EditorActorSequenceEditModel.h" />
     <ClInclude Include="Source\Editor\UI\EditorActorSequenceTimeUtils.h" />
     <ClInclude Include="Source\Editor\UI\EditorActorSequencerWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorAnimGraphWidget.h" />
+    <ClInclude Include="Source\Editor\UI\EditorAnimationSequenceViewerWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorChromeConstants.h" />
     <ClInclude Include="Source\Editor\UI\EditorCommandContext.h" />
     <ClInclude Include="Source\Editor\UI\EditorConsoleWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorContentBrowserWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorControlWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorCurveEditorWidget.h" />
-    <ClInclude Include="Source\Editor\UI\EditorLuaAnimGraphWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h" />
     <ClInclude Include="Source\Editor\UI\EditorFooterLogSystem.h" />
+    <ClInclude Include="Source\Editor\UI\EditorLuaAnimGraphWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanel.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanelPackagingHelpers.h" />
     <ClInclude Include="Source\Editor\UI\EditorMainPanelPlacementHelpers.h" />
@@ -1207,13 +1232,11 @@
     <ClInclude Include="Source\Editor\Viewport\SkeletalMeshViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\ViewportLayout.h" />
     <ClInclude Include="Source\Engine\Animation\ActorSequence.h" />
-    <ClInclude Include="Source\Engine\Animation\AnimLuaProgramAsset.h" />
     <ClInclude Include="Source\Engine\Animation\AnimGraphAsset.h" />
     <ClInclude Include="Source\Engine\Animation\AnimGraphInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimGraphNode.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h" />
-    <ClInclude Include="Source\Engine\Animation\LuaAnimGraph.h" />
-    <ClInclude Include="Source\Engine\Animation\LuaAnimInstance.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimLuaProgramAsset.h" />
     <ClInclude Include="Source\Engine\Animation\AnimNotify.h" />
     <ClInclude Include="Source\Engine\Animation\AnimSequence.h" />
     <ClInclude Include="Source\Engine\Animation\AnimSingleNodeInstance.h" />
@@ -1221,6 +1244,8 @@
     <ClInclude Include="Source\Engine\Animation\AnimationRuntime.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationStateMachine.h" />
     <ClInclude Include="Source\Engine\Animation\CurvePlayback.h" />
+    <ClInclude Include="Source\Engine\Animation\LuaAnimGraph.h" />
+    <ClInclude Include="Source\Engine\Animation\LuaAnimInstance.h" />
     <ClInclude Include="Source\Engine\Animation\StateMachineAnimInstance.h" />
     <ClInclude Include="Source\Engine\Animation\TimelinePlayer.h" />
     <ClInclude Include="Source\Engine\Asset\AssetFile.h" />
@@ -1388,7 +1413,6 @@
     <ClInclude Include="Source\Engine\Particle\ParticleDynamicData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h" />
-    <ClInclude Include="Source\Engine\Particle\ParticleUpdateUtils.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleMeshEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleMeshTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />
@@ -1407,6 +1431,7 @@
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystemComponent.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleTypes.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleUpdateUtils.h" />
     <ClInclude Include="Source\Engine\Render\Common\ComPtr.h" />
     <ClInclude Include="Source\Engine\Render\Common\RenderTypes.h" />
     <ClInclude Include="Source\Engine\Render\Common\ShadowTypes.h" />
@@ -1479,7 +1504,6 @@
     <ClInclude Include="Source\Engine\Runtime\GameSplashScreen.h" />
     <ClInclude Include="Source\Engine\Runtime\Launch.h" />
     <ClInclude Include="Source\Engine\Runtime\SceneView.h" />
-    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\API\LuaEngineAPIBindings.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\Coroutine.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\CoroutineScheduler.h" />
@@ -1487,6 +1511,7 @@
     <ClInclude Include="Source\Engine\Runtime\Script\ScriptComponent.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\ScriptManager.h" />
     <ClInclude Include="Source\Engine\Runtime\Script\ScriptUtils.h" />
+    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h" />
     <ClInclude Include="Source\Engine\Runtime\Stats\ScopeCycleCounter.h" />
     <ClInclude Include="Source\Engine\Runtime\Viewport.h" />
     <ClInclude Include="Source\Engine\Runtime\ViewportClient.h" />

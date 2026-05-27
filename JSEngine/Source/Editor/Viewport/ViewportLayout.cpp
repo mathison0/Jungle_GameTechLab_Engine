@@ -68,6 +68,8 @@ void FEditorViewportLayout::Init(FWindowsWindow* InWindow, UWorld* World, FSelec
 
 		// 뷰포트 타입 설정 후 카메라 생성
 		Client->SetViewportType(kViewportTypes[i]);
+		SceneViewport.GetState().ViewMode = S.ViewMode;
+		SceneViewport.GetState().LightCullMode = S.LightCullMode;
 		Client->CreateCamera();
 		Client->ApplyCameraMode();
 	}

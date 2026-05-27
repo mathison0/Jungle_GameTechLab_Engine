@@ -29,11 +29,14 @@ public:
 	void SetPlayRate(float InPlayRate) { PlayRate = InPlayRate; }
 	void SetLooping(bool bInLooping) { bLooping = bInLooping; }
 	void SetPosition(float InPosition);
+	void SetNotifyDispatchEnabled(bool bInEnabled) { bDispatchAnimNotifies = bInEnabled; }
+	bool IsNotifyDispatchEnabled() const { return bDispatchAnimNotifies; }
 	void CopyPlaybackSettingsFrom(const UAnimSingleNodeInstance* SourceInstance);
 
 	bool IsPlaying() const { return bPlaying; }
 	bool IsLooping() const { return bLooping; }
 	float GetPlayRate() const { return PlayRate; }
+	float GetCurrentAnimTime() const { return CurrentTime; }
 	float GetLength() const;
 	UAnimSequenceBase* GetAnimation() const { return CurrentAnimation; }
 
@@ -64,4 +67,6 @@ private:
 
 	UPROPERTY(DisplayName = "Auto Play")
 	bool bAutoPlay = true;
+
+	bool bDispatchAnimNotifies = true;
 };

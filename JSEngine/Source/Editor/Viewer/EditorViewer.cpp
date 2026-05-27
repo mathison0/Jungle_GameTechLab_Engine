@@ -1,6 +1,7 @@
 ﻿#include "EditorViewer.h"
 #include "EditorEngine.h"
 #include "Editor/EditorRenderPipeline.h"
+#include "Editor/Animation/DebugSkelMeshComponent.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSingleNodeInstance.h"
@@ -162,9 +163,12 @@ void FEditorViewer::Init(
     Viewport.SetRect(Rect);
 
     ViewTarget = InWorld->SpawnActor<ASkeletalMeshActor>();
-    ViewTarget->InitDefaultComponents();
     ViewTarget->SetFName(FName("ViewerActor"));
     ViewTarget->SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
+    DebugSkelMeshComponent = ViewTarget->AddComponent<UDebugSkelMeshComponent>();
+    ViewTarget->SetSkeletalMeshComponent(DebugSkelMeshComponent);
+    ViewTarget->SetRootComponent(DebugSkelMeshComponent);
+    DebugSkelMeshComponent->SetEnableCull(false);
 
     ADirectionalLightActor* DirectionalLight = InWorld->SpawnActor<ADirectionalLightActor>();
     if (DirectionalLight)
@@ -197,6 +201,7 @@ void FEditorViewer::Shutdown()
     // 우리는 단순히 map만 비우고 포인터를 null로 잡는다.
     SocketPreviewMeshes.clear();
     ViewTarget = nullptr;
+    DebugSkelMeshComponent = nullptr;
     Client.SetBonePickHandler(nullptr);
 
     Viewport.SetClient(nullptr);
@@ -550,6 +555,7 @@ bool FEditorViewer::ApplyAnimationSequenceToComponent(bool bAutoPlay)
     }
 
     SkelComp->SetSkeletalMesh(PreviewMesh);
+    SkelComp->SetEnableCull(false);
     SkelComp->PlayAnimation(AnimSequence, true);
     SkelComp->SetAnimationPosition(0.0f);
     if (!bAutoPlay)

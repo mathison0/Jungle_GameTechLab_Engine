@@ -2,6 +2,7 @@
 #include "Editor/UI/EditorMainPanelViewportToolbarHelpers.h"
 
 #include "Editor/EditorEngine.h"
+#include "Editor/Settings/EditorSettings.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Engine/Component/GizmoComponent.h"
 
@@ -325,6 +326,7 @@ void FEditorMainPanel::RenderViewportIconToolbarForIndex(int32 ViewportIndex)
 							Client->GetViewportState()->ViewMode == Mode))
 						{
 							Client->GetViewportState()->ViewMode = Mode;
+							FEditorSettings::Get().ViewMode = Mode;
 						}
 					});
 
@@ -344,6 +346,7 @@ void FEditorMainPanel::RenderViewportIconToolbarForIndex(int32 ViewportIndex)
 							Client->GetViewportState()->LightCullMode == CullMode))
 						{
 							Client->GetViewportState()->LightCullMode = CullMode;
+							FEditorSettings::Get().LightCullMode = CullMode;
 						}
 					}
 					ImGui::EndMenu();
@@ -475,6 +478,7 @@ void FEditorMainPanel::RenderViewportIconToolbarForIndex(int32 ViewportIndex)
 					Client->GetViewportState()->ViewMode == Mode))
 				{
 					Client->GetViewportState()->ViewMode = Mode;
+					FEditorSettings::Get().ViewMode = Mode;
 				}
 			});
 
@@ -494,6 +498,7 @@ void FEditorMainPanel::RenderViewportIconToolbarForIndex(int32 ViewportIndex)
 					Client->GetViewportState()->LightCullMode == CullMode))
 				{
 					Client->GetViewportState()->LightCullMode = CullMode;
+					FEditorSettings::Get().LightCullMode = CullMode;
 				}
 			}
 			ImGui::EndMenu();

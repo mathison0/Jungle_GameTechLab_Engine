@@ -604,9 +604,16 @@ namespace
 		Sequence->SetPreviewMeshPath(Payload.TargetSkeletalMeshPath);
 		Sequence->SetDataModel(Payload.DataModel);
 		Sequence->ClearNotifies();
-		for (const FAnimNotifyStateEvent& Notify : Payload.Notifies)
+		if (!Payload.NotifyTracks.empty())
 		{
-			Sequence->AddNotify(Notify.TriggerTime, Notify.NotifyName, Notify.Duration, Notify.NotifyClassName);
+			Sequence->SetNotifyTracks(Payload.NotifyTracks);
+		}
+		else
+		{
+			for (const FAnimNotifyStateEvent& Notify : Payload.Notifies)
+			{
+				Sequence->AddNotifyEvent(0, Notify);
+			}
 		}
 		return Sequence;
 	}
@@ -1991,7 +1998,7 @@ bool FResourceManager::SaveAnimSequence(const FString& Path, const UAnimSequence
 	{
 		FAssetMetaData MetaData;
 		MetaData.Version = 1;
-		MetaData.PayloadVersion = 3;
+		MetaData.PayloadVersion = 4;
 		MetaData.ClassName = UAnimSequence::StaticClass()->GetName();
 		MetaData.SourceFile = MakeProjectRelativePath(Sequence->GetSourceFilePath());
 		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring());
@@ -2002,6 +2009,7 @@ bool FResourceManager::SaveAnimSequence(const FString& Path, const UAnimSequence
 		Payload.SourceAnimStackIndex = 0;
 		Payload.DataModel = const_cast<UAnimDataModel*>(Sequence->GetDataModel());
 		Payload.Notifies = Sequence->GetNotifies();
+		Payload.NotifyTracks = Sequence->GetNotifyTracks();
 
 		if (!FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
 		{

@@ -14,6 +14,7 @@ class FWindowsWindow;
 struct ID3D11ShaderResourceView;
 class ASkeletalMeshActor;
 class UStaticMeshComponent;
+class UDebugSkelMeshComponent;
 class UAnimSequence;
 class UAnimSingleNodeInstance;
 
@@ -97,6 +98,7 @@ private:
     FSceneViewport Viewport;
     FSkeletalMeshViewportClient Client;
 	ASkeletalMeshActor* ViewTarget = nullptr;
+	UDebugSkelMeshComponent* DebugSkelMeshComponent = nullptr;
 
     UAnimSingleNodeInstance* GetSingleNodeInstance() const;
     bool ApplyAnimationSequenceToComponent(bool bAutoPlay);

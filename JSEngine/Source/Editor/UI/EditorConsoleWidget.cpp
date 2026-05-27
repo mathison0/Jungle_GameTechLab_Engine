@@ -7,6 +7,7 @@
 #include "Core/Logging/GPUProfiler.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/UI/EditorDetachedWindowChrome.h"
+#include "Editor/UI/EditorMainPanel.h"
 #include "Editor/Viewport/ViewportLayout.h"
 #include "Engine/Object/FName.h"
 
@@ -170,7 +171,7 @@ FEditorConsoleWidget::FEditorConsoleWidget()
 	RegisterCommand("suggest", "Show recommended commands. Usage: suggest [prefix]", [this](const TArray<FString>& Args) { CmdSuggest(Args); });
 	RegisterCommand("recommend", "Alias for suggest.", [this](const TArray<FString>& Args) { CmdSuggest(Args); });
 	RegisterCommand("recommendations", "Alias for suggest.", [this](const TArray<FString>& Args) { CmdSuggest(Args); });
-	RegisterCommand("stat", "Viewport and editor stats. Usage: stat <fps|memory|particle|gpu|history|nametable|cascadevis|none>", [this](const TArray<FString>& Args) { CmdStat(Args); });
+	RegisterCommand("stat", "Viewport and editor stats. Usage: stat <fps|memory|particle|skinning|gpu|history|nametable|cascadevis|none>", [this](const TArray<FString>& Args) { CmdStat(Args); });
 	RegisterCommand("skinning", "Set global skeletal mesh skinning override. Usage: skinning <cpu|gpu|component>", [this](const TArray<FString>& Args) { CmdSkinning(Args); });
 
 	RegisterCommand("shadow", "Set shadow options. Usage: shadow filter <pcf|vsm>", [this](const TArray<FString>& Args){ CmdShadow(Args); });
@@ -296,6 +297,26 @@ void FEditorConsoleWidget::Render(float DeltaTime)
 				if (ImGui::MenuItem("Clear"))
 				{
 					Clear();
+				}
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Settings"))
+			{
+				if (EditorEngine)
+				{
+					FEditorMainPanel& MainPanel = EditorEngine->GetMainPanel();
+					if (ImGui::MenuItem("Editor Settings"))
+					{
+						MainPanel.OpenEditorSettingsPanel();
+					}
+					if (ImGui::MenuItem("Project Settings"))
+					{
+						MainPanel.OpenProjectSettingsPanel();
+					}
+					if (ImGui::MenuItem("World Settings"))
+					{
+						MainPanel.OpenWorldSettingsPanel();
+					}
 				}
 				ImGui::EndMenu();
 			}
@@ -902,7 +923,7 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 {
 	if (Args.size() < 2)
 	{
-		AddLog("[WARN] Usage: stat <fps|memory|particle|gpu|history|nametable|cascadevis|none>\n");
+		AddLog("[WARN] Usage: stat <fps|memory|particle|skinning|gpu|history|nametable|cascadevis|none>\n");
 		AddLog("[WARN]        stat history         -- print Undo/Redo history memory use\n");
 		AddLog("[WARN]        stat nametable list  -- dump all entries\n");
 		return;
@@ -941,6 +962,12 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 		bool& bFlag = Layout.GetViewportState(FocusedIdx).bShowStatParticle;
 		bFlag = !bFlag;
 		AddLog("Stat Particle %s (viewport %d)\n", bFlag ? "Enabled" : "Disabled", FocusedIdx);
+	}
+	else if (Target == "skinning")
+	{
+		bool& bFlag = Layout.GetViewportState(FocusedIdx).bShowStatSkinning;
+		bFlag = !bFlag;
+		AddLog("Stat Skinning %s (viewport %d)\n", bFlag ? "Enabled" : "Disabled", FocusedIdx);
 	}
 	else if (Target == "history")
 	{
@@ -981,6 +1008,7 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 			Layout.GetViewportState(i).bShowStatMemory    = false;
 			Layout.GetViewportState(i).bShowStatNameTable = false;
 			Layout.GetViewportState(i).bShowStatParticle  = false;
+			Layout.GetViewportState(i).bShowStatSkinning  = false;
 			Layout.GetViewportState(i).bShowCascadeVis    = false;
 		}
 		AddLog("All Stats Disabled\n");

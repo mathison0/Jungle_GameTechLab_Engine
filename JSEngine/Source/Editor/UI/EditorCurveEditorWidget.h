@@ -4,6 +4,8 @@
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "ImGui/imgui.h"
 
+#include <functional>
+
 class UCurveFloatAsset;
 class UActorSequenceComponent;
 struct FCurveKey;
@@ -21,7 +23,13 @@ public:
         const FString& SourceLabel,
         const FString& SourcePath = "",
         int32 InitialSelectedKeyIndex = -1);
+    void OpenCurveFromAnimSequence(
+        UCurveFloatAsset* Curve,
+        const FString& SourceLabel,
+        const FString& SourcePath,
+        std::function<bool(UCurveFloatAsset*)> InSaveCallback);
     void Clear();
+    void Close() { Clear(); }
     bool IsVisible() const { return bVisible; }
 
 private:
@@ -60,6 +68,7 @@ private:
     float ContextValue = 0.0f;
     TArray<UActorSequenceComponent*> ReferencePreviewTargets;
     FEditorCurveAssetState CurveEditBeforeState;
+    std::function<bool(UCurveFloatAsset*)> EmbeddedCurveSaveCallback;
     float CanvasHeight = 320.0f;
     float CanvasPixelsPerUnit = 120.0f;
     float ViewMinTime = 0.0f;

@@ -558,6 +558,26 @@ void FEditorContentBrowserWidget::DrawFloatingWindowChrome(bool& bOpen)
 				}
 				ImGui::EndMenu();
 			}
+			if (ImGui::BeginMenu("Settings"))
+			{
+				if (EditorEngine)
+				{
+					FEditorMainPanel& MainPanel = EditorEngine->GetMainPanel();
+					if (ImGui::MenuItem("Editor Settings"))
+					{
+						MainPanel.OpenEditorSettingsPanel();
+					}
+					if (ImGui::MenuItem("Project Settings"))
+					{
+						MainPanel.OpenProjectSettingsPanel();
+					}
+					if (ImGui::MenuItem("World Settings"))
+					{
+						MainPanel.OpenWorldSettingsPanel();
+					}
+				}
+				ImGui::EndMenu();
+			}
 			if (ImGui::BeginMenu("Help"))
 			{
 				ImGui::TextDisabled("Content Browser");
