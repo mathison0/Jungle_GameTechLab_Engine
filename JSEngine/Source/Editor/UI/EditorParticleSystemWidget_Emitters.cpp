@@ -345,6 +345,137 @@ void FEditorParticleSystemWidget::AddDefaultEmitterAt(int32 InsertIndex)
 	RefreshPreviewComponent(true);
 }
 
+void FEditorParticleSystemWidget::AddLODToSelectedEmitter()
+{
+	UParticleEmitter* Emitter = GetSelectedEmitter();
+	const int32 InsertIndex = Emitter ? static_cast<int32>(Emitter->GetLODLevels().size()) : 0;
+	AddLODToSelectedEmitterAt(InsertIndex);
+}
+
+void FEditorParticleSystemWidget::AddLODToSelectedEmitterAt(int32 InsertIndex)
+{
+	UParticleEmitter* Emitter = GetSelectedEmitter();
+	if (!Emitter)
+	{
+		return;
+	}
+
+	const TArray<UParticleLODLevel*>& LODLevels = Emitter->GetLODLevels();
+	const int32 OldLODCount = static_cast<int32>(LODLevels.size());
+	InsertIndex = std::clamp(InsertIndex, 0, OldLODCount);
+
+	float NewThreshold = 100000.0f;
+	if (OldLODCount > 0)
+	{
+		if (InsertIndex <= 0)
+		{
+			const float FirstThreshold = LODLevels[0] ? LODLevels[0]->GetDistanceThreshold() : 1000.0f;
+			NewThreshold = FirstThreshold > 1000.0f ? FirstThreshold - 1000.0f : FirstThreshold * 0.5f;
+		}
+		else if (InsertIndex >= OldLODCount)
+		{
+			float MaxThreshold = 0.0f;
+			for (const UParticleLODLevel* LODLevel : LODLevels)
+			{
+				if (LODLevel)
+				{
+					MaxThreshold = std::max(MaxThreshold, LODLevel->GetDistanceThreshold());
+				}
+			}
+			NewThreshold = MaxThreshold + 1000.0f;
+		}
+		else
+		{
+			const float PrevThreshold = LODLevels[InsertIndex - 1] ? LODLevels[InsertIndex - 1]->GetDistanceThreshold() : 0.0f;
+			const float NextThreshold = LODLevels[InsertIndex] ? LODLevels[InsertIndex]->GetDistanceThreshold() : PrevThreshold + 1000.0f;
+			NewThreshold = (PrevThreshold + NextThreshold) * 0.5f;
+			if (std::abs(NewThreshold - PrevThreshold) < 0.01f || std::abs(NewThreshold - NextThreshold) < 0.01f)
+			{
+				NewThreshold = PrevThreshold + 1.0f;
+			}
+		}
+	}
+
+	CaptureUndoSnapshot("Add Particle LOD");
+
+	UParticleLODLevel* NewLOD = nullptr;
+	UParticleLODLevel* SourceLOD = Emitter->GetLODLevel(std::clamp(CurrentLOD, 0, std::max(0, OldLODCount - 1)));
+	if (SourceLOD)
+	{
+		NewLOD = Cast<UParticleLODLevel>(SourceLOD->Duplicate());
+		if (NewLOD)
+		{
+			NewLOD->Level = InsertIndex;
+			NewLOD->bEnabled = true;
+			NewLOD->DistanceThreshold = NewThreshold;
+			NewLOD->SetFName(FName("LOD" + std::to_string(InsertIndex)));
+			Emitter->LODLevels.insert(Emitter->LODLevels.begin() + InsertIndex, NewLOD);
+		}
+	}
+
+	if (!NewLOD)
+	{
+		NewLOD = UObjectManager::Get().CreateObject<UParticleLODLevel>();
+		if (NewLOD)
+		{
+			NewLOD->Level = InsertIndex;
+			NewLOD->bEnabled = true;
+			NewLOD->DistanceThreshold = NewThreshold;
+			NewLOD->SetFName(FName("LOD" + std::to_string(InsertIndex)));
+			NewLOD->EnsureRequiredModule();
+			NewLOD->EnsureRendererProperties(EParticleEmitterRenderMode::Sprite);
+			NewLOD->EnsureSpawnModule();
+			NewLOD->AddModule<UParticleModuleLifetime>();
+			NewLOD->AddModule<UParticleModuleLocation>();
+			NewLOD->AddModule<UParticleModuleVelocity>();
+			NewLOD->AddModule<UParticleModuleColor>();
+			NewLOD->AddModule<UParticleModuleSize>();
+			Emitter->LODLevels.insert(Emitter->LODLevels.begin() + InsertIndex, NewLOD);
+		}
+	}
+
+	if (!NewLOD)
+	{
+		return;
+	}
+
+	for (int32 LODIndex = 0; LODIndex < static_cast<int32>(Emitter->LODLevels.size()); ++LODIndex)
+	{
+		if (UParticleLODLevel* LODLevel = Emitter->LODLevels[LODIndex])
+		{
+			LODLevel->Level = LODIndex;
+			LODLevel->SetFName(FName("LOD" + std::to_string(LODIndex)));
+		}
+	}
+
+	Emitter->CacheEmitterModuleInfo();
+	auto It = std::find(Emitter->LODLevels.begin(), Emitter->LODLevels.end(), NewLOD);
+	CurrentLOD = It != Emitter->LODLevels.end()
+		? static_cast<int32>(std::distance(Emitter->LODLevels.begin(), It))
+		: InsertIndex;
+
+	SelectEmitter(SelectedEmitterIndex);
+	ClearEmitterContext();
+	bDirty = true;
+	RefreshPreviewComponent(true);
+}
+
+void FEditorParticleSystemWidget::SelectLowerLOD()
+{
+	SetCurrentLOD(CurrentLOD + 1);
+}
+
+void FEditorParticleSystemWidget::SelectHigherLOD()
+{
+	SetCurrentLOD(CurrentLOD - 1);
+}
+
+void FEditorParticleSystemWidget::SelectLowestLOD()
+{
+	const int32 MaxLODCount = GetMaxLODCount();
+	SetCurrentLOD(MaxLODCount > 0 ? MaxLODCount - 1 : 0);
+}
+
 void FEditorParticleSystemWidget::DeleteSelectedEmitter()
 {
 	if (SelectedModuleIndex != NoParticleModuleSelection)
@@ -363,7 +494,12 @@ void FEditorParticleSystemWidget::DeleteEmitter(int32 EmitterIndex)
 	}
 
 	CaptureUndoSnapshot("Delete Emitter");
+	UParticleEmitter* RemovedEmitter = ParticleSystemAsset->Emitters[EmitterIndex];
 	ParticleSystemAsset->Emitters.erase(ParticleSystemAsset->Emitters.begin() + EmitterIndex);
+	if (RemovedEmitter)
+	{
+		UObjectManager::Get().DestroyObject(RemovedEmitter);
+	}
 	for (auto It = SoloEmitterIndices.begin(); It != SoloEmitterIndices.end();)
 	{
 		if (*It == EmitterIndex)
@@ -510,8 +646,7 @@ void FEditorParticleSystemWidget::DeleteModule(int32 EmitterIndex, int32 ModuleI
 	}
 
 	CaptureUndoSnapshot("Delete Particle Module");
-	LODLevel->Modules.erase(LODLevel->Modules.begin() + ModuleIndex);
-	Emitter->CacheEmitterModuleInfo();
+	LODLevel->RemoveModule(Module);
 	if (LODLevel->Modules.empty())
 	{
 		SelectEmitter(EmitterIndex);
@@ -560,11 +695,9 @@ void FEditorParticleSystemWidget::AddLODRelativeToCurrent(int32 Offset)
 		return;
 	}
 
-	const bool bAddBeforeCurrent = Offset == 0;
-	const int32 InsertIndex = bAddBeforeCurrent
-		? CurrentLOD + 1
-		: std::max(0, CurrentLOD + Offset);
-	CaptureUndoSnapshot(Offset >= 0 ? "Add LOD After" : "Add LOD Before");
+	const bool bAddAfterCurrent = Offset > 0;
+	const int32 InsertIndex = std::max(0, CurrentLOD + (bAddAfterCurrent ? 1 : 0));
+	CaptureUndoSnapshot(bAddAfterCurrent ? "Add LOD After" : "Add LOD Before");
 
 	for (UParticleEmitter* Emitter : ParticleSystemAsset->Emitters)
 	{
@@ -576,6 +709,28 @@ void FEditorParticleSystemWidget::AddLODRelativeToCurrent(int32 Offset)
 		const int32 LODCount = static_cast<int32>(Emitter->LODLevels.size());
 		const int32 SourceIndex = LODCount > 0 ? std::clamp(CurrentLOD, 0, LODCount - 1) : 0;
 		UParticleLODLevel* SourceLOD = Emitter->GetLODLevel(SourceIndex);
+		const int32 ClampedInsertIndex = std::clamp(InsertIndex, 0, LODCount);
+
+		float NewThreshold = 100000.0f;
+		if (LODCount > 0)
+		{
+			const UParticleLODLevel* PrevLOD = ClampedInsertIndex > 0 ? Emitter->LODLevels[ClampedInsertIndex - 1] : nullptr;
+			const UParticleLODLevel* NextLOD = ClampedInsertIndex < LODCount ? Emitter->LODLevels[ClampedInsertIndex] : nullptr;
+			if (PrevLOD && NextLOD)
+			{
+				NewThreshold = (PrevLOD->GetDistanceThreshold() + NextLOD->GetDistanceThreshold()) * 0.5f;
+			}
+			else if (PrevLOD)
+			{
+				NewThreshold = PrevLOD->GetDistanceThreshold() + 1000.0f;
+			}
+			else if (NextLOD)
+			{
+				const float NextThreshold = NextLOD->GetDistanceThreshold();
+				NewThreshold = NextThreshold > 1000.0f ? NextThreshold - 1000.0f : NextThreshold * 0.5f;
+			}
+		}
+
 		UParticleLODLevel* NewLOD = SourceLOD
 			? Cast<UParticleLODLevel>(SourceLOD->Duplicate())
 			: UObjectManager::Get().CreateObject<UParticleLODLevel>();
@@ -585,17 +740,22 @@ void FEditorParticleSystemWidget::AddLODRelativeToCurrent(int32 Offset)
 		}
 
 		MarkLODModulesInheritedFromHigherLOD(NewLOD);
-		const int32 ClampedInsertIndex = std::clamp(InsertIndex, 0, static_cast<int32>(Emitter->LODLevels.size()));
 		NewLOD->Level = ClampedInsertIndex;
-		NewLOD->DistanceThreshold = SourceLOD
-			? SourceLOD->GetDistanceThreshold() + 1000.0f
-			: 100000.0f;
+		NewLOD->DistanceThreshold = NewThreshold;
+		NewLOD->SetFName(FName("LOD" + std::to_string(ClampedInsertIndex)));
+		if (!SourceLOD)
+		{
+			NewLOD->EnsureRequiredModule();
+			NewLOD->EnsureRendererProperties(EParticleEmitterRenderMode::Sprite);
+			NewLOD->EnsureSpawnModule();
+		}
 		Emitter->LODLevels.insert(Emitter->LODLevels.begin() + ClampedInsertIndex, NewLOD);
 		for (int32 LODIndex = 0; LODIndex < static_cast<int32>(Emitter->LODLevels.size()); ++LODIndex)
 		{
 			if (Emitter->LODLevels[LODIndex])
 			{
 				Emitter->LODLevels[LODIndex]->Level = LODIndex;
+				Emitter->LODLevels[LODIndex]->SetFName(FName("LOD" + std::to_string(LODIndex)));
 			}
 		}
 		Emitter->CacheEmitterModuleInfo();
@@ -603,15 +763,7 @@ void FEditorParticleSystemWidget::AddLODRelativeToCurrent(int32 Offset)
 
 	ParticleSystemAsset->CacheEmitterModuleInfo();
 	SyncParticleSystemLODPropertiesFromEmitters();
-	if (bAddBeforeCurrent)
-	{
-		ClampSelectionToParticleSystem();
-		RefreshPreviewComponent(true);
-	}
-	else
-	{
-		SetCurrentLOD(InsertIndex);
-	}
+	SetCurrentLOD(InsertIndex);
 	ClearEmitterContext();
 	bDirty = true;
 }
@@ -1482,7 +1634,6 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 
 	ImGui::PopID();
 }
-
 void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, int32 EmitterIndex, int32 ModuleIndex, bool bRequired, float RowHeight)
 {
 	constexpr float ColumnWidth = 180.0f;
@@ -1664,4 +1815,3 @@ void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, 
 
 	ImGui::PopID();
 }
-

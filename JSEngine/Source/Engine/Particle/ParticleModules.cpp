@@ -755,8 +755,13 @@ void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
     }
     if (TotalFrames == 0)
     {
-        const UParticleLODLevel* LODLevel = Owner->GetCurrentLODLevel();
-        const UParticleModuleRequired* RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+        const FCompiledParticleLODData* CompiledLOD = Owner->GetCurrentCompiledLODData();
+        const UParticleModuleRequired* RequiredModule = CompiledLOD ? CompiledLOD->RequiredModule : nullptr;
+        if (!RequiredModule)
+        {
+            const UParticleLODLevel* LODLevel = Owner->GetCurrentLODLevel();
+            RequiredModule = LODLevel ? LODLevel->GetRequiredModule() : nullptr;
+        }
         if (RequiredModule)
         {
             TotalFrames = static_cast<uint32>(

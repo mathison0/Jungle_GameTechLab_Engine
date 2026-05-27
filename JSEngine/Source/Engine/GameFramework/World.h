@@ -82,7 +82,6 @@ public:
 	/** @brief Flush pending bounds and visibility dirties into the world BVH. */
 	void SyncSpatialIndex();
 
-    
     /* Query World */
 	bool LineTraceSingle(
 		const FVector& Start,

@@ -13,7 +13,8 @@
 #include "Particle/ParticleModuleTypeDataBeam.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
 #include "Particle/ParticleModuleTypeDataRibbon.h"
-#include "Particle/ParticleSystemComponent.h" // particle 옮겨야함.
+#include "Particle/ParticleRendererProperties.h"
+#include "Particle/ParticleSystemComponent.h"
 
 
 #include "Core/Logging/SkinningStats.h"
@@ -668,7 +669,11 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             // Source ReplayData 에 Material/Texture/메타 채움 (Sprite path 의 RequiredModule + SubUV/Atlas, Mesh/Ribbon/Beam 의 Material.DiffuseMap).
             // Mesh/Beam 은 derived CreateDynamicData 에서 Material 이미 set — Sprite/Ribbon 만 본 분기에서 보충.
             FDynamicEmitterReplayDataBase& ReplayBase = const_cast<FDynamicEmitterReplayDataBase&>(DynData->GetSource());
-            UParticleLODLevel* LOD = Instance ? Instance->GetCurrentLODLevel() : nullptr;
+            const FCompiledParticleLODData* CompiledLOD = Instance ? Instance->GetCurrentCompiledLODData() : nullptr;
+            UParticleLODLevel* LOD = (CompiledLOD && CompiledLOD->SourceLODLevel)
+                ? CompiledLOD->SourceLODLevel
+                : (Instance ? Instance->GetCurrentLODLevel() : nullptr);
+            UParticleRendererProperties* RendererProperties = CompiledLOD ? CompiledLOD->RendererProperties : nullptr;
 
             FMeshBuffer* MeshBufferLocal = nullptr; // Mesh only
             uint32 MeshSectionIndexCount = 0;       // Mesh only
@@ -681,7 +686,9 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 case EDynamicEmitterType::Sprite:
                 {
                     // Sprite Texture/SubUV grid: RequiredModule + SubUV 모듈 + Atlas 패턴.
-                    const UParticleModuleRequired* RequiredModule = LOD->GetRequiredModule();
+                    const UParticleModuleRequired* RequiredModule = CompiledLOD && CompiledLOD->RequiredModule
+                        ? CompiledLOD->RequiredModule
+                        : LOD->GetRequiredModule();
                     const USubUVModule* SubUV = nullptr;
                     for (UParticleModule* Module : LOD->GetModules())
                     {
@@ -705,15 +712,27 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 case EDynamicEmitterType::Mesh:
                 {
                     // Mesh: MeshBuffer 조회 + Material.DiffuseMap → ParticleTexture (CreateDynamicData 가 이미 Material set).
-                    if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
+                    FDynamicMeshEmitterReplayData* MeshReplay = static_cast<FDynamicMeshEmitterReplayData*>(&ReplayBase);
+                    if (MeshReplay->MeshAsset)
                     {
-                        if (UStaticMesh* MeshAsset = MeshTD->GetMesh())
-                        {
-                            MeshBufferLocal = MeshBufferManager.GetStaticMeshBuffer(MeshAsset, 0);
-                            MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
-                            MaterialOverride = MeshTD->GetEffectiveMaterial();
-                        }
+                        MeshBufferLocal = MeshBufferManager.GetStaticMeshBuffer(MeshReplay->MeshAsset, 0);
+                        MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
                     }
+                    else if (const UParticleMeshRendererProperties* MeshRenderer = Cast<UParticleMeshRendererProperties>(RendererProperties))
+                    {
+                        MeshReplay->MeshAsset = MeshRenderer->GetMesh();
+                        MeshBufferLocal = MeshReplay->MeshAsset ? MeshBufferManager.GetStaticMeshBuffer(MeshReplay->MeshAsset, 0) : nullptr;
+                        MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
+                        ReplayBase.Material = MeshRenderer->GetEffectiveMaterial();
+                    }
+                    else if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
+                    {
+                        MeshReplay->MeshAsset = MeshTD->GetMesh();
+                        MeshBufferLocal = MeshReplay->MeshAsset ? MeshBufferManager.GetStaticMeshBuffer(MeshReplay->MeshAsset, 0) : nullptr;
+                        MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
+                        ReplayBase.Material = MeshTD->GetEffectiveMaterial();
+                    }
+                    MaterialOverride = ReplayBase.Material;
                     if (ReplayBase.Material)
                     {
                         FMaterialParamValue DiffuseMap;
@@ -728,7 +747,11 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 }
                 case EDynamicEmitterType::Ribbon:
                 {
-                    if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
+                    if (const UParticleRibbonRendererProperties* RibbonRenderer = Cast<UParticleRibbonRendererProperties>(RendererProperties))
+                    {
+                        ReplayBase.Material = RibbonRenderer->GetMaterial();
+                    }
+                    else if (const URibbonTypeData* RibbonTD = Cast<URibbonTypeData>(LOD->GetTypeDataModule()))
                     {
                         ReplayBase.Material = RibbonTD->GetMaterial();
                     }

@@ -116,6 +116,7 @@ private:
 	void EnsurePreviewViewport();
 	void EnsurePreviewActor();
 	void RefreshPreviewComponent(bool bRestartSimulation);
+	void RefreshPlacedParticleSystemComponents(bool bRestartSimulation);
 	void SyncPreviewWorld();
 	void SetPreviewBoundsVisible(bool bVisible);
 	void SetPreviewOriginAxisVisible(bool bVisible);
@@ -134,6 +135,11 @@ private:
 	void DrawEmitterContextMenu();
 	void AddDefaultEmitter();
 	void AddDefaultEmitterAt(int32 InsertIndex);
+	void AddLODToSelectedEmitter();
+	void AddLODToSelectedEmitterAt(int32 InsertIndex);
+	void SelectLowerLOD();
+	void SelectHigherLOD();
+	void SelectLowestLOD();
 	void DeleteSelectedEmitter();
 	void DeleteEmitter(int32 EmitterIndex);
 	void DuplicateEmitter(int32 EmitterIndex);

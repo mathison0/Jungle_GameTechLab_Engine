@@ -18,6 +18,7 @@
 #include "Particle/ParticleModuleBeamTarget.h"
 #include "Particle/ParticleModuleTypeDataBeam.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
 #include "Particle/ParticleTypes.h"
@@ -280,7 +281,15 @@ void FDynamicMeshEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
 
     // alignment 모드 lookup (frame 단위 1회).
     EMeshAlignment AlignmentMode = EMeshAlignment::PSA_Velocity;
-    if (UParticleLODLevel* LOD = Instance.GetCurrentLODLevel())
+    const FCompiledParticleLODData* CompiledLOD = Instance.GetCurrentCompiledLODData();
+    if (const UParticleMeshRendererProperties* MeshRenderer =
+        CompiledLOD ? Cast<UParticleMeshRendererProperties>(CompiledLOD->RendererProperties) : nullptr)
+    {
+        AlignmentMode = MeshRenderer->GetAlignment();
+    }
+    else if (UParticleLODLevel* LOD = CompiledLOD && CompiledLOD->SourceLODLevel
+        ? CompiledLOD->SourceLODLevel
+        : Instance.GetCurrentLODLevel())
     {
         if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
         {
@@ -411,7 +420,10 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
         return;
     }
 
-    UParticleLODLevel* LOD = Instance.GetCurrentLODLevel();
+    const FCompiledParticleLODData* CompiledLOD = Instance.GetCurrentCompiledLODData();
+    UParticleLODLevel* LOD = CompiledLOD && CompiledLOD->SourceLODLevel
+        ? CompiledLOD->SourceLODLevel
+        : Instance.GetCurrentLODLevel();
     const UBeamTypeData* BeamTD = LOD ? Cast<UBeamTypeData>(LOD->GetTypeDataModule()) : nullptr;
     if (!BeamTD)
     {
@@ -644,5 +656,3 @@ void FDynamicRibbonEmitterData::FillVertexBuffer(ID3D11Device* Device, ID3D11Dev
         RibbonVertexBuffer.empty() ? nullptr : RibbonVertexBuffer.data(),
         static_cast<uint32>(RibbonVertexBuffer.size()));
 }
-
-

@@ -571,4 +571,3 @@ void FEditorParticleSystemWidget::PushUndoEntry(
 		Stack.erase(Stack.begin());
 	}
 }
-

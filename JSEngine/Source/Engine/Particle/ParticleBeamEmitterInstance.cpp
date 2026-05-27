@@ -71,6 +71,18 @@ namespace
             OutSamples[i] = FVector(Dist(Rng), Dist(Rng), Dist(Rng));
         }
     }
+    UParticleLODLevel* ResolveBeamSourceLOD(FParticleBeamEmitterInstance* Instance)
+    {
+        if (!Instance)
+        {
+            return nullptr;
+        }
+
+        const FCompiledParticleLODData* CompiledLOD = Instance->GetCurrentCompiledLODData();
+        return CompiledLOD && CompiledLOD->SourceLODLevel
+            ? CompiledLOD->SourceLODLevel
+            : Instance->GetCurrentLODLevel();
+    }
 }
 
 // Function : Lookup beam payload by physical slot index
@@ -89,7 +101,7 @@ FParticleBeamPayload* FParticleBeamEmitterInstance::GetBeamPayload(int32 SlotInd
 void FParticleBeamEmitterInstance::EnsureBeamState()
 {
     int32 MaxBeams = 1;
-    if (UParticleLODLevel* LOD = GetCurrentLODLevel())
+    if (UParticleLODLevel* LOD = ResolveBeamSourceLOD(this))
     {
         if (const UBeamTypeData* BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()))
         {
@@ -116,7 +128,8 @@ void FParticleBeamEmitterInstance::SpawnParticles(int32 Count, float StartTime, 
 
     const int32 MaxBeams = std::max(static_cast<int32>(BeamStates.size()), 1);
 
-    UParticleLODLevel* LOD = GetCurrentLODLevel();
+    // Cycle 13b: NoiseModule lookup (1회). 없으면 NoiseSamples zero-init 만 (BuildVertexBuffer 가 perturb 안 함).
+    UParticleLODLevel* LOD = ResolveBeamSourceLOD(this);
     const UParticleModuleBeamNoise* NoiseModule = FindFirstBeamModule<UParticleModuleBeamNoise>(LOD);
     const int32 NoiseFrequency = NoiseModule ? NoiseModule->GetFrequency() : 0;
 
@@ -165,7 +178,7 @@ FDynamicEmitterDataBase* FParticleBeamEmitterInstance::CreateDynamicData()
     Replay.ParticleIndices = ParticleStorage.ParticleIndices;
     Replay.SortMode = ESortMode::None; // Beam Sort 는 D10 빈 구현 — SortMode 무관.
 
-    if (UParticleLODLevel* LOD = GetCurrentLODLevel())
+    if (UParticleLODLevel* LOD = ResolveBeamSourceLOD(this))
     {
         if (const UBeamTypeData* BeamTD = Cast<UBeamTypeData>(LOD->GetTypeDataModule()))
         {
@@ -173,7 +186,7 @@ FDynamicEmitterDataBase* FParticleBeamEmitterInstance::CreateDynamicData()
             Replay.Material = BeamTD->GetMaterial();
         }
     }
-    Replay.bHasNoise = (FindFirstBeamModule<UParticleModuleBeamNoise>(GetCurrentLODLevel()) != nullptr);
+    Replay.bHasNoise = (FindFirstBeamModule<UParticleModuleBeamNoise>(ResolveBeamSourceLOD(this)) != nullptr);
     Replay.ParticleTexture = nullptr; // Builder 가 Material.DiffuseMap 추출 후 채움.
 
     DynData->BuildFromInstance(*this);

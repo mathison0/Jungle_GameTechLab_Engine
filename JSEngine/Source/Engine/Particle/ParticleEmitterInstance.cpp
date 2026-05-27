@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "Particle/ParticleDynamicData.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
@@ -29,10 +30,24 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 	if (SpriteTemplate)
 	{
 		SpriteTemplate->CacheEmitterModuleInfo();
-		ParticleSize = SpriteTemplate->GetParticleSize();
-		MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
 		CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(0.0f);
 		CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
+        CurrentCompiledLOD = SpriteTemplate->GetCompiledLODData(CurrentLODLevelIndex);
+        if (CurrentCompiledLOD)
+        {
+            ParticleSize = CurrentCompiledLOD->ParticleSize;
+            MaxActiveParticles = std::max(CurrentCompiledLOD->MaxActiveParticles, 1);
+
+			ObservedCompiledRevision = SpriteTemplate->GetCompiledRevision();
+            ObservedPayloadSize = CurrentCompiledLOD->PayloadSize;
+            ObservedParticleStride = CurrentCompiledLOD->ParticleStride;
+            ObservedRenderMode = CurrentCompiledLOD->RenderMode;
+        }
+        else
+        {
+            ParticleSize = SpriteTemplate->GetParticleSize();
+            MaxActiveParticles = std::max(SpriteTemplate->GetMaxActiveParticleCount(), 1);
+        }
 	}
 	else
 	{
@@ -40,13 +55,8 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 		MaxActiveParticles = 1;
 	}
 
-	// Cycle 10d: payload-aware stride가 container 내부에서 일관 적용되도록
-	// PayloadBytes 계산을 Allocate 호출 앞으로 이동. silent bug ξ 해소.
-	// USpriteTypeData::RequiredPayloadBytes() = 0 → Sprite 회귀 0.
-	// Cycle 15a Phase 5: InstancePayloadSize 멤버 삭제됨 — local 변수만으로 충분.
-	const int32 PayloadBytes = (CurrentLODLevel && CurrentLODLevel->GetTypeDataModule())
-		? CurrentLODLevel->GetTypeDataModule()->RequiredPayloadBytes()
-		: 0;
+	// RendererProperties owns type-specific payload requirements.
+    const int32 PayloadBytes = CurrentCompiledLOD ? CurrentCompiledLOD->PayloadSize : GetRequiredPayloadBytes();
 	PayloadOffset = ParticleSize;
 
 	// Cycle 10d: stride source-of-truth = container. Allocate가 (ParticleSize + PayloadBytes)를
@@ -82,6 +92,11 @@ void FParticleEmitterInstance::Reset()
 	PreviousEmitterTime = 0.0f;
 	CurrentLODLevelIndex = 0;
 	CurrentLODLevel = nullptr;
+    CurrentCompiledLOD = nullptr;
+    ObservedCompiledRevision = 0;
+    ObservedPayloadSize = 0;
+    ObservedParticleStride = 0;
+    ObservedRenderMode = EParticleEmitterRenderMode::Sprite;
 }
 
 // Function : Advance emitter simulation by delta time
@@ -105,14 +120,14 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 	}
 
 	int32 SpawnCount = 0;
-	if (bAllowSpawning)
-	{
-		if (UParticleModuleSpawn* SpawnModule = CurrentLODLevel->GetSpawnModule())
-		{
-			SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
-		}
-	}
+    if (bAllowSpawning)
+    {
+        UParticleModuleSpawn* SpawnModule = CurrentCompiledLOD
+			? CurrentCompiledLOD->SpawnModule : CurrentLODLevel->GetSpawnModule();
 
+        if (SpawnModule)
+            SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
+    }
 	SpawnParticles(SpawnCount, 0.0f, SpawnCount > 0 ? DeltaTime / static_cast<float>(SpawnCount) : 0.0f,
 	               Component->GetWorldLocation(), FVector::ZeroVector);
 
@@ -130,8 +145,9 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 		Particle->Location += Particle->Velocity * DeltaTime;
 		++ParticleIndex;
 	}
-
-	for (UParticleModule* Module : CurrentLODLevel->GetUpdateModules())
+    const TArray<UParticleModule*>& UpdateModules = CurrentCompiledLOD
+		? CurrentCompiledLOD->UpdateModules : CurrentLODLevel->GetUpdateModules();
+    for (UParticleModule* Module : UpdateModules)
 	{
 		if (Module && Module->IsEnabled())
 		{
@@ -159,6 +175,7 @@ void FParticleEmitterInstance::SelectLODLevel(float Distance)
 
 	CurrentLODLevelIndex = NewLODIndex;
 	CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
+    CurrentCompiledLOD = SpriteTemplate->GetCompiledLODData(CurrentLODLevelIndex);
 }
 
 // Function : Spawn particles into available active slots
@@ -194,7 +211,10 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 		Particle->BaseVelocity = InitialVelocity;
 
 		const float SpawnTime = StartTime + Increment * static_cast<float>(SpawnIndex);
-		for (UParticleModule* Module : CurrentLODLevel->GetSpawnModules())
+
+		const TArray<UParticleModule*>& SpawnModules = CurrentCompiledLOD ?
+			CurrentCompiledLOD->SpawnModules : CurrentLODLevel->GetSpawnModules();
+		for (UParticleModule* Module : SpawnModules)
 		{
 			if (Module && Module->IsEnabled())
 			{
@@ -284,17 +304,50 @@ int32 FParticleEmitterInstance::ConsumeSpawnCount(float Rate, float DeltaTime)
     return SpawnCount;
 }
 
-// Function : Query payload byte requirement from current LOD's TypeDataModule
+bool FParticleEmitterInstance::CanRebindCompiledLOD(const FCompiledParticleLODData* NewLOD) const
+{
+    if (!SpriteTemplate || !NewLOD || !CurrentCompiledLOD)
+		return false;
+    if (ObservedRenderMode != NewLOD->RenderMode)
+        return false;
+    if (ObservedPayloadSize != NewLOD->PayloadSize)
+        return false;
+    if (ObservedParticleStride != NewLOD->ParticleStride)
+        return false;
+    if (MaxActiveParticles != NewLOD->MaxActiveParticles)
+        return false;
+
+	return true;
+}
+
+void FParticleEmitterInstance::RebindCompiledLOD(float Distance)
+{
+    if (!SpriteTemplate)
+        return;
+    CurrentLODLevelIndex = SpriteTemplate->SelectLODLevel(Distance);
+    CurrentLODLevel = SpriteTemplate->GetLODLevel(CurrentLODLevelIndex);
+    CurrentCompiledLOD = SpriteTemplate->GetCompiledLODData(CurrentLODLevelIndex);
+
+	if (CurrentCompiledLOD)
+    {
+        ObservedCompiledRevision = SpriteTemplate->GetCompiledRevision();
+        ObservedPayloadSize = CurrentCompiledLOD->PayloadSize;
+        ObservedParticleStride = CurrentCompiledLOD->ParticleStride;
+        ObservedRenderMode = CurrentCompiledLOD->RenderMode;
+    }
+}
+
+// Function : Query payload byte requirement from current LOD's renderer properties
 // input : None
-// output : Bytes required by TypeData beyond FBaseParticle, or 0 when absent
+// output : Bytes required by renderer properties beyond FBaseParticle, or 0 when absent
 int32 FParticleEmitterInstance::GetRequiredPayloadBytes() const
 {
+    if (CurrentCompiledLOD)
+        return CurrentCompiledLOD->PayloadSize;
     if (CurrentLODLevel)
     {
-        if (const UParticleModuleTypeDataBase* TypeData = CurrentLODLevel->GetTypeDataModule())
-        {
-            return TypeData->RequiredPayloadBytes();
-        }
+        if (const UParticleRendererProperties* RendererProperties = CurrentLODLevel->GetEffectiveRendererProperties())
+            return RendererProperties->RequiredPayloadBytes();
     }
     return 0;
 }
@@ -328,9 +381,9 @@ const FRibbonParticleVertex* FParticleEmitterInstance::GetRibbonVertexData(uint3
 //   Ribbon 시뮬레이션 코드 무수정 (D6) — instance 의 GetRibbonVertexData() snapshot 만.
 FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicData()
 {
-    const EParticleEmitterRenderMode RenderMode = CurrentLODLevel
-        ? CurrentLODLevel->GetEffectiveRenderMode()
-        : EParticleEmitterRenderMode::Sprite;
+    const EParticleEmitterRenderMode RenderMode = CurrentCompiledLOD
+        ? CurrentCompiledLOD->RenderMode
+        : (CurrentLODLevel ? CurrentLODLevel->GetEffectiveRenderMode() : EParticleEmitterRenderMode::Sprite);
 
     if (RenderMode == EParticleEmitterRenderMode::Ribbon)
     {

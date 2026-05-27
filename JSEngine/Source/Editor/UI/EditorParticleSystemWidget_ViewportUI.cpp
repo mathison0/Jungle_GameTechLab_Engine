@@ -149,12 +149,18 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	SameLineGap(7.0f);
 	int32 MaxLODCount = GetMaxLODCount();
 	ImGui::BeginDisabled(MaxLODCount <= 0 || CurrentLOD >= MaxLODCount - 1);
-	if (ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to lower LOD"))
+	if (ToolbarButton("LowestLOD", "Lowest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to the farthest LOD"))
 	{
-		SetCurrentLOD(CurrentLOD + 1);
+		SelectLowestLOD();
+	}
+	SameLineGap();
+	if (ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to the next lower LOD"))
+	{
+		SelectLowerLOD();
 	}
 	ImGui::EndDisabled();
 	SameLineGap();
+	ImGui::BeginDisabled(!ParticleSystemAsset || ParticleSystemAsset->Emitters.empty());
 	if (ToolbarButton(
 		"AddLODBeforeCurrent",
 		"Add LOD Before",
@@ -172,6 +178,7 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	{
 		AddLODRelativeToCurrent(1);
 	}
+	ImGui::EndDisabled();
 	MaxLODCount = GetMaxLODCount();
 
 	SameLineGap(8.0f);
@@ -193,13 +200,18 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 
 	SameLineGap();
 	ImGui::BeginDisabled(CurrentLOD <= 0);
-	if (ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to higher LOD"))
+	if (ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to the next higher LOD"))
 	{
-		SetCurrentLOD(CurrentLOD - 1);
+		SelectHigherLOD();
+	}
+	SameLineGap();
+	if (ToolbarButton("HighestLOD", "Highest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HighestLOD), "Switch to LOD 0"))
+	{
+		SetCurrentLOD(0);
 	}
 	ImGui::EndDisabled();
 	SameLineGap();
-	ImGui::BeginDisabled(CurrentLOD <= 0);
+	ImGui::BeginDisabled(CurrentLOD <= 0 || MaxLODCount <= 1);
 	if (ToolbarButton("DeleteLOD", "Delete LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::DeleteLOD), "Delete current LOD"))
 	{
 		DeleteCurrentLOD();
@@ -627,4 +639,3 @@ void FEditorParticleSystemWidget::DrawCenterToast(const ImVec2& AreaMin, const I
 	ImGui::PopStyleColor(3);
 	ImGui::PopStyleVar(3);
 }
-

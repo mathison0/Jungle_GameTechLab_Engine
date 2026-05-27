@@ -28,7 +28,7 @@ public:
                                 const FVector& InitialVelocity, struct FParticleEventInstancePayload* EventPayload = nullptr);
     virtual void KillParticle(int32 Index);
 
-    // TypeData payload byte 수 조회 helper. TypeDataModule 부재 시 0.
+    // RendererProperties payload byte 수 조회 helper. RendererProperties 부재 시 0.
     // Init에서 ParticleStride 계산에 사용. 향후 Ribbon/Beam이 override 가능성 있으나 본 cycle은 default.
     virtual int32 GetRequiredPayloadBytes() const;
 
@@ -57,6 +57,7 @@ public:
 
     UParticleEmitter* GetTemplate() const { return SpriteTemplate; }
     UParticleLODLevel* GetCurrentLODLevel() const { return CurrentLODLevel; }
+    const FCompiledParticleLODData* GetCurrentCompiledLODData() const { return CurrentCompiledLOD; }
     int32 GetCurrentLODLevelIndex() const { return CurrentLODLevelIndex; }
     int32 GetEmitterIndex() const { return EmitterIndex; }
     uint32 GetParticleCounter() const { return ParticleCounter; }
@@ -70,10 +71,12 @@ public:
     FVector GetComponentWorldLocation() const;
     UParticleSystemComponent* GetOwningComponent() const { return Component; }
 
-
     void QueueCollisionEvent(const FParticleEventCollideData& EventData);
     void DispatchQueuedParticleEvents();
     int32 ConsumeSpawnCount(float Rate, float DeltaTime);
+
+	bool CanRebindCompiledLOD(const FCompiledParticleLODData* NewLOD) const;
+    void RebindCompiledLOD(float Distance);
 
 protected:
     // Cycle 11: derived (Mesh/Ribbon/Beam) instance가 payload 영역에 접근하기 위해 protected로 노출.
@@ -91,7 +94,7 @@ private:
 
     int32 CurrentLODLevelIndex = 0;
     UParticleLODLevel* CurrentLODLevel = nullptr;
-
+    const FCompiledParticleLODData* CurrentCompiledLOD = nullptr;
     // 실제 데이터들, memory pool and live data — ParticleStorage/PayloadOffset/ActiveParticles는 위 protected로 이동.
     // Cycle 15a Phase 5: InstanceData / InstancePayloadSize 멤버 삭제됨 (dead state — 할당 path 부재 + read 0건).
     int32 ParticleSize = sizeof(FBaseParticle);
@@ -103,5 +106,9 @@ private:
     float EmitterTime = 0.0f;
     float PreviousEmitterTime = 0.0f;
 
+	uint32 ObservedCompiledRevision = 0; // Cycle 10e: CompiledRevision 관찰용 (LOD 변경 감지) — Init에서 초기화, Tick에서 비교 후 필요 시 LOD 재선택.
+    int32 ObservedPayloadSize = 0;
+    int32 ObservedParticleStride = 0;
+    EParticleEmitterRenderMode ObservedRenderMode = EParticleEmitterRenderMode::Sprite;
     // Cycle 15a Phase 5 (D7): SpriteInstanceDataBuffer 멤버 삭제 — FDynamicSpriteEmitterData 가 소유.
 };

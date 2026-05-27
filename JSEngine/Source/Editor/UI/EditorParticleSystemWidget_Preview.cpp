@@ -114,6 +114,7 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 {
 	EnsurePreviewViewport();
 	EnsurePreviewActor();
+
 	if (!PreviewComponent)
 	{
 		return;
@@ -131,15 +132,14 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 		ApplyPreviewSoloEmitters();
 		RestartPreviewPlayback();
 	}
-	else if (bRestartSimulation)
-	{
-		PreviewComponent->RecreateEmitterInstances();
-		ApplyPreviewSoloEmitters();
-		RestartPreviewPlayback();
-	}
 	else
 	{
+		PreviewComponent->RefreshTemplateRuntime(bRestartSimulation);
 		ApplyPreviewSoloEmitters();
+		if (bRestartSimulation)
+		{
+			RestartPreviewPlayback();
+		}
 	}
 
 	if (PreviewComponent->GetTotalActiveParticleCount() == 0 && !bPreviewPaused)
@@ -147,7 +147,48 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 		PreviewComponent->TickPreview(0.1f * GetPreviewAnimSpeed(), true);
 	}
 
+	RefreshPlacedParticleSystemComponents(bRestartSimulation);
 	SyncPreviewWorld();
+}
+
+void FEditorParticleSystemWidget::RefreshPlacedParticleSystemComponents(bool bRestartSimulation)
+{
+	if (!EditorEngine || !ParticleSystemAsset)
+	{
+		return;
+	}
+
+	for (FWorldContext& Context : EditorEngine->GetWorldList())
+	{
+		UWorld* World = Context.World;
+		if (!World || Context.ContextHandle == PreviewWorldHandle)
+		{
+			continue;
+		}
+
+		bool bRefreshedAnyComponent = false;
+		for (AActor* Actor : World->GetActors())
+		{
+			if (!Actor)
+			{
+				continue;
+			}
+
+			UParticleSystemComponent* ParticleComponent = Actor->FindComponent<UParticleSystemComponent>();
+			if (!ParticleComponent || ParticleComponent == PreviewComponent || ParticleComponent->GetTemplate() != ParticleSystemAsset)
+			{
+				continue;
+			}
+
+			ParticleComponent->RefreshTemplateRuntime(bRestartSimulation);
+			bRefreshedAnyComponent = true;
+		}
+
+		if (bRefreshedAnyComponent)
+		{
+			World->SyncSpatialIndex();
+		}
+	}
 }
 
 void FEditorParticleSystemWidget::SyncPreviewWorld()
@@ -277,4 +318,3 @@ void FEditorParticleSystemWidget::ShutdownPreviewViewport()
 	PreviewWorldHandle = FName::None;
 	bPreviewViewportInitialized = false;
 }
-

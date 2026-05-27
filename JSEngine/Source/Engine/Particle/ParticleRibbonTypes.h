@@ -22,7 +22,7 @@ struct FRibbonParticlePayload
 };                                    // 32B
 
 static_assert(sizeof(FRibbonParticlePayload) == 32,
-    "FRibbonParticlePayload must be tight-packed at 32 bytes — URibbonTypeData::RequiredPayloadBytes() depends on this");
+    "FRibbonParticlePayload must be tight-packed at 32 bytes — ribbon renderer RequiredPayloadBytes() depends on this");
 
 // Ribbon strip 정점 (slot 0 per-vertex, no instancing — Mesh 와의 핵심 차이).
 // 각 active particle 마다 strip 양쪽 (perpendicular 방향) 으로 2 vertex 생성.

@@ -70,7 +70,8 @@ namespace
 			(Object->IsA(UParticleSystem::StaticClass()) ||
 			 Object->IsA(UParticleEmitter::StaticClass()) ||
 			 Object->IsA(UParticleLODLevel::StaticClass()) ||
-			 Object->IsA(UParticleModule::StaticClass()));
+			 Object->IsA(UParticleModule::StaticClass()) ||
+			 Object->IsA(UParticleRendererProperties::StaticClass()));
 	}
 
 	bool IsParticleSystemGraphClass(UClass* Class)
@@ -79,7 +80,66 @@ namespace
 			(Class->IsChildOf(UParticleSystem::StaticClass()) ||
 			 Class->IsChildOf(UParticleEmitter::StaticClass()) ||
 			 Class->IsChildOf(UParticleLODLevel::StaticClass()) ||
-			 Class->IsChildOf(UParticleModule::StaticClass()));
+			 Class->IsChildOf(UParticleModule::StaticClass()) ||
+			 Class->IsChildOf(UParticleRendererProperties::StaticClass()));
+	}
+
+	bool ContainsParticleRuntimeSerializationToken(const std::string& SerializedText, FString& OutToken)
+	{
+		static constexpr const char* RuntimeTokens[] =
+		{
+			"FCompiledParticleLODData",
+			"FParticleEmitterInstance",
+			"FBaseParticle",
+			"FParticleDataContainer",
+			"FParticleEmitterRuntimeView",
+			"UParticleSystemComponent",
+			"ParticleData",
+			"ParticleIndices",
+			"ActiveParticles",
+			"EmitterInstances",
+			"PendingCollisionEvents",
+			"CurrentCompiledLOD"
+		};
+
+		for (const char* Token : RuntimeTokens)
+		{
+			if (Token && SerializedText.find(Token) != std::string::npos)
+			{
+				OutToken = Token;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool ValidateParticleSystemSerializedClasses(json::JSON& JsonData, FString& OutClassName)
+	{
+		if (!JsonData.hasKey("Objects") || JsonData["Objects"].JSONType() != json::JSON::Class::Array)
+		{
+			return true;
+		}
+
+		json::JSON& ObjectsJson = JsonData["Objects"];
+		for (int32 Index = 0; Index < static_cast<int32>(ObjectsJson.length()); ++Index)
+		{
+			json::JSON& ObjectNode = ObjectsJson.at(Index);
+			if (ObjectNode.JSONType() != json::JSON::Class::Object)
+			{
+				continue;
+			}
+
+			const FString ClassName = ObjectNode.hasKey("Class")
+				? ObjectNode["Class"].ToString()
+				: (ObjectNode.hasKey("Data") && ObjectNode["Data"].hasKey("Type") ? ObjectNode["Data"]["Type"].ToString() : FString());
+			UClass* Class = FReflectionRegistry::Get().FindClass(ClassName);
+			if (!IsParticleSystemGraphClass(Class))
+			{
+				OutClassName = ClassName;
+				return false;
+			}
+		}
+		return true;
 	}
 
 	class FParticleSystemObjectGraphResolver final : public IObjectReferenceResolver
@@ -2048,7 +2108,27 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		std::istreambuf_iterator<char>()
 	);
 
+	FString RuntimeToken;
+	if (ContainsParticleRuntimeSerializationToken(JsonStr, RuntimeToken))
+	{
+		UE_LOG_ERROR(
+			"[ParticleSystemAssetSmoke] Runtime particle state was serialized: %s.",
+			RuntimeToken.c_str()
+		);
+		return false;
+	}
+
 	json::JSON JsonData = json::JSON::Load(JsonStr);
+	FString InvalidSerializedClass;
+	if (!ValidateParticleSystemSerializedClasses(JsonData, InvalidSerializedClass))
+	{
+		UE_LOG_ERROR(
+			"[ParticleSystemAssetSmoke] Non-asset particle class was serialized: %s.",
+			InvalidSerializedClass.c_str()
+		);
+		return false;
+	}
+
 	UParticleSystem* Loaded = LoadParticleSystemFromJson(JsonData, NormalizedPath);
 	if (!Loaded)
 	{
@@ -2089,6 +2169,7 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 
 	const UParticleEmitter* Emitter = Emitters.empty() ? nullptr : Emitters[0];
 	const UParticleLODLevel* LODLevel = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+	const FCompiledParticleLODData* CompiledLOD = Emitter ? Emitter->GetCompiledLODData(0) : nullptr;
 	if (!LODLevel)
 	{
 		UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing LOD0 after load.");
@@ -2127,6 +2208,79 @@ bool FResourceManager::RunParticleSystemSerializationSmokeTest(const FString& Pa
 		{
 			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Update module cache is empty after load.");
 			bPassed = false;
+		}
+
+		if (!LODLevel->GetEffectiveRendererProperties())
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing renderer properties after load.");
+			bPassed = false;
+		}
+		else if (LODLevel->GetEffectiveRenderMode() != EParticleEmitterRenderMode::Sprite)
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Expected sprite renderer after load.");
+			bPassed = false;
+		}
+
+		if (!CompiledLOD)
+		{
+			UE_LOG_ERROR("[ParticleSystemAssetSmoke] Missing compiled LOD data after load.");
+			bPassed = false;
+		}
+		else
+		{
+			if (CompiledLOD->SourceLODLevel != LODLevel)
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled LOD source does not match LOD0.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->RequiredModule != LODLevel->GetRequiredModule())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled required module mismatch.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->SpawnModule != LODLevel->GetSpawnModule())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled spawn module mismatch.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->RendererProperties != LODLevel->GetEffectiveRendererProperties())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled renderer properties mismatch.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->RenderMode != EParticleEmitterRenderMode::Sprite)
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Expected compiled sprite render mode.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->ParticleSize != sizeof(FBaseParticle))
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled particle size mismatch.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->MaxActiveParticles <= 0)
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled max active particles is invalid.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->SpawnModules.empty())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled spawn module list is empty.");
+				bPassed = false;
+			}
+
+			if (CompiledLOD->UpdateModules.empty())
+			{
+				UE_LOG_ERROR("[ParticleSystemAssetSmoke] Compiled update module list is empty.");
+				bPassed = false;
+			}
 		}
 	}
 

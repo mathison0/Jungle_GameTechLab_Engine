@@ -672,6 +672,21 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleBeamRendererProperties.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleMeshRendererProperties.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleRendererProperties.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleRibbonRendererProperties.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleSpriteRendererProperties.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
@@ -1390,6 +1405,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleRendererProperties.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleRibbonEmitterInstance.cpp">
@@ -2543,6 +2561,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModules.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleRendererProperties.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleRibbonEmitterInstance.h">

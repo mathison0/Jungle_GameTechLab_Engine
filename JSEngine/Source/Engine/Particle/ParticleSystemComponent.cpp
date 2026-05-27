@@ -6,6 +6,7 @@
 #include "GameFramework/World.h"
 #include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Render/Scene/RenderBus.h"
 
@@ -20,6 +21,7 @@ UParticleSystemComponent::UParticleSystemComponent()
 UParticleSystemComponent::~UParticleSystemComponent()
 {
 	ClearEmitterInstances();
+	ReleaseOwnedTransientTemplate();
 }
 
 // Function : Set particle system template and recreate emitter instances when it changes
@@ -28,21 +30,58 @@ UParticleSystemComponent::~UParticleSystemComponent()
 // output : Template is updated, asset path mirrored, and emitter instances match the new template
 void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 {
+	SetTemplate(InTemplate, false);
+}
+
+void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate, bool bTakeTransientOwnership)
+{
 	if (Template == InTemplate && !EmitterInstances.empty())
+	{
+		TemplateAssetPath.SetPath((InTemplate && !bTakeTransientOwnership) ? InTemplate->GetAssetPath() : FString());
+		if (bTakeTransientOwnership)
+		{
+			OwnedTransientTemplate = InTemplate;
+		}
+		return;
+	}
+
+	UParticleSystem* PreviousOwnedTemplate = OwnedTransientTemplate;
+	const bool bDestroyPreviousOwnedTemplate = PreviousOwnedTemplate && PreviousOwnedTemplate != InTemplate;
+
+	Template = InTemplate;
+	OwnedTransientTemplate = bTakeTransientOwnership ? InTemplate : nullptr;
+	TemplateAssetPath.SetPath((InTemplate && !bTakeTransientOwnership) ? InTemplate->GetAssetPath() : FString());
+	RecreateEmitterInstances();
+
+	if (bDestroyPreviousOwnedTemplate)
+	{
+		UObjectManager::Get().DestroyObject(PreviousOwnedTemplate);
+	}
+}
+
+void UParticleSystemComponent::ReleaseOwnedTransientTemplate()
+{
+	if (!OwnedTransientTemplate)
 	{
 		return;
 	}
 
-	Template = InTemplate;
-	TemplateAssetPath.SetPath(InTemplate ? InTemplate->GetAssetPath() : FString());
-	RecreateEmitterInstances();
+	UParticleSystem* TemplateToDestroy = OwnedTransientTemplate;
+	if (Template == TemplateToDestroy)
+	{
+		Template = nullptr;
+		TemplateAssetPath.SetPath(FString());
+	}
+	OwnedTransientTemplate = nullptr;
+	UObjectManager::Get().DestroyObject(TemplateToDestroy);
 }
 
 void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 {
 	UPrimitiveComponent::PostEditProperty(PropertyName);
 
-	const bool bTemplatePathChanged = PropertyName && std::strcmp(PropertyName, "TemplateAssetPath") == 0;
+	const bool bTemplatePathChanged = PropertyName &&
+		(std::strcmp(PropertyName, "TemplateAssetPath") == 0 || std::strcmp(PropertyName, "Template") == 0);
 	if (bTemplatePathChanged)
 	{
 		const FString RequestedPath = TemplateAssetPath.GetPath();
@@ -57,6 +96,47 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 	{
 		RecreateEmitterInstances();
 	}
+}
+
+void UParticleSystemComponent::RefreshTemplateRuntime(bool bRestartSimulation)
+{
+    if (!Template)
+    {
+        ClearEmitterInstances();
+        return;
+    }
+    Template->CacheEmitterModuleInfo();
+
+	const TArray<UParticleEmitter*>& Emitters = Template->GetEmitters();
+    if (bRestartSimulation || EmitterInstances.size() != Emitters.size())
+    {
+        RecreateEmitterInstances();
+        return;
+    }
+    const float Distance = ComputeEmitterLODDistance();
+
+	for (int32 Index = 0; Index < static_cast<int32>(Emitters.size()); Index++)
+    {
+        UParticleEmitter* Emitter = Emitters[Index];
+        FParticleEmitterInstance* Instance = GetEmitterInstance(Index);
+		const FCompiledParticleLODData* NewLOD = Emitter ?
+			Emitter->SelectCompiledLODData(Distance) : nullptr;
+
+		if (!Emitter || !Instance || Instance->GetTemplate() != Emitter ||
+            !Instance->CanRebindCompiledLOD(NewLOD))
+        {
+            RecreateEmitterInstances();
+            return;
+        }
+    }
+
+    for (FParticleEmitterInstance* Instance : EmitterInstances)
+    {
+        if (Instance)
+        {
+            Instance->RebindCompiledLOD(Distance);
+        }
+    }
 }
 
 void UParticleSystemComponent::Serialize(FArchive& Ar)
@@ -90,18 +170,20 @@ void UParticleSystemComponent::RecreateEmitterInstances()
 	for (int32 Index = 0; Index < static_cast<int32>(Emitters.size()); ++Index)
 	{
 		UParticleEmitter* EmitterAsset = Emitters[Index];
-		// TypeDataModule이 캐싱되어 있도록 보장. Init 내부에서도 다시 호출되지만 idempotent.
+		// RendererProperties가 캐싱/마이그레이션되어 있도록 보장. Init 내부에서도 다시 호출되지만 idempotent.
 		// 명시 호출 이유: LOD0 조회를 Instance 생성 전에 해야 하므로, asset 측 캐시가 stale이면 silent fallback 위험.
 		if (EmitterAsset)
 		{
 			EmitterAsset->CacheEmitterModuleInfo();
 		}
-		UParticleLODLevel* LOD0 = EmitterAsset ? EmitterAsset->GetLODLevel(0) : nullptr;
-		UParticleModuleTypeDataBase* TypeData = LOD0 ? LOD0->GetTypeDataModule() : nullptr;
-		// TypeData가 있으면 type별 derived instance 생성 hook 사용. 없으면 base FParticleEmitterInstance.
-		// USpriteTypeData::CreateInstance() = new FParticleEmitterInstance() 이므로 Sprite path 회귀 0.
-		FParticleEmitterInstance* Instance = TypeData
-			? TypeData->CreateInstance(this, Index)
+        const FCompiledParticleLODData* CompiledLOD = EmitterAsset ?
+			EmitterAsset->SelectCompiledLODData(0.0f) : nullptr;
+
+        UParticleRendererProperties* RendererProperties = CompiledLOD ?
+			CompiledLOD->RendererProperties : nullptr;
+		// RendererProperties가 있으면 render type별 derived instance 생성 hook 사용. 없으면 sprite-style base instance.
+		FParticleEmitterInstance* Instance = RendererProperties
+			? RendererProperties->CreateInstance(this, Index)
 			: new FParticleEmitterInstance();
 		Instance->Init(EmitterAsset, this, Index);
 		EmitterInstances.push_back(Instance);
@@ -150,6 +232,11 @@ void UParticleSystemComponent::QueueCollisionEvent(const FParticleEventCollideDa
 // output : OnParticleCollide is broadcast for each queued event and the queue becomes empty
 void UParticleSystemComponent::DispatchQueuedParticleEvents()
 {
+	if (PendingCollisionEvents.empty())
+	{
+		return;
+	}
+
 	for (const FParticleEventCollideData& EventData : PendingCollisionEvents)
 	{
 		OnParticleCollide.Broadcast(EventData);

@@ -39,7 +39,6 @@ void FEditorParticleSystemWidget::DrawDetailsPanel(const ImVec2& Size)
 	ImGui::EndChild();
 	ImGui::PopStyleVar(2);
 }
-
 UParticleEmitter* FEditorParticleSystemWidget::GetSelectedEmitter() const
 {
 	if (!ParticleSystemAsset ||
@@ -256,6 +255,71 @@ void FEditorParticleSystemWidget::DrawEmitterDetails(UParticleEmitter* Emitter, 
 				{
 					SyncEmitterNameBuffer();
 				}
+			}
+
+			EndParticleDetailsTable();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		UParticleLODLevel* LODLevel = GetEmitterLODLevel(Emitter);
+		if (LODLevel && BeginParticleDetailsTable("##ParticleEmitterLODDetailsTable", LabelWidth))
+		{
+			auto CaptureLODEditUndo = [this]()
+			{
+				if (!bPropertyEditUndoCaptured)
+				{
+					CaptureUndoSnapshot("Edit Particle LOD");
+					bPropertyEditUndoCaptured = true;
+				}
+			};
+
+			auto CommitLODEdit = [&]()
+			{
+				UParticleLODLevel* EditedLODLevel = LODLevel;
+				Emitter->CacheEmitterModuleInfo();
+				auto It = std::find(Emitter->LODLevels.begin(), Emitter->LODLevels.end(), EditedLODLevel);
+				if (It != Emitter->LODLevels.end())
+				{
+					CurrentLOD = static_cast<int32>(std::distance(Emitter->LODLevels.begin(), It));
+				}
+				ClampSelectionToParticleSystem();
+				bDirty = true;
+				RefreshPreviewComponent(false);
+			};
+
+			BeginParticleDetailsRow("LOD Index");
+			ImGui::Text("%d", LODLevel->GetLevel());
+
+			BeginParticleDetailsRow("Enabled");
+			bool bEditedEnabled = LODLevel->bEnabled;
+			if (ImGui::Checkbox("##LODEnabled", &bEditedEnabled))
+			{
+				CaptureLODEditUndo();
+				LODLevel->bEnabled = bEditedEnabled;
+				CommitLODEdit();
+			}
+
+			BeginParticleDetailsRow("Distance Threshold");
+			float EditedThreshold = LODLevel->DistanceThreshold;
+			ImGui::SetNextItemWidth(-1.0f);
+			if (ImGui::DragFloat("##LODDistanceThreshold", &EditedThreshold, 1.0f, 0.0f, 0.0f, "%.1f"))
+			{
+				CaptureLODEditUndo();
+				LODLevel->DistanceThreshold = std::max(0.0f, EditedThreshold);
+				CommitLODEdit();
+			}
+
+			BeginParticleDetailsRow("Actions");
+			if (ImGui::SmallButton("Delete Current LOD"))
+			{
+				DeleteCurrentLOD();
+			}
+
+			if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
+			{
+				bPropertyEditUndoCaptured = false;
 			}
 
 			EndParticleDetailsTable();
@@ -2817,4 +2881,3 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	ImGui::EndChild();
 	ImGui::PopStyleVar(2);
 }
-

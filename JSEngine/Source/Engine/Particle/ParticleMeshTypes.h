@@ -36,4 +36,4 @@ struct FMeshRotationPayload
 };                               // 36B
 
 static_assert(sizeof(FMeshRotationPayload) == 36,
-    "FMeshRotationPayload must be tight-packed at 36 bytes — UMeshTypeData::RequiredPayloadBytes() depends on this");
+    "FMeshRotationPayload must be tight-packed at 36 bytes — mesh renderer RequiredPayloadBytes() depends on this");

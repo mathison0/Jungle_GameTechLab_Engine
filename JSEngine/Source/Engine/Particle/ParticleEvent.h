@@ -3,7 +3,7 @@
 #include "GameFramework/AActor.h"
 #include "Particle/ParticleTypes.h"
 
-class UParticleSystem;
+class UParticleSystemComponent;
 
 DECLARE_DELEGATE(FOnParticleEventCollide, const FParticleEventCollideData&);
 
@@ -15,7 +15,12 @@ public:
 
 	~AParticleEventManager() override;
 
+	void BindToParticleSystemComponent(UParticleSystemComponent* InComponent);
+	void UnbindParticleSystemComponent();
+	UParticleSystemComponent* GetBoundParticleSystemComponent() const { return BoundComponent; }
+
 	void PushCollisionEvent(const FParticleEventCollideData& EventData);
+	void DispatchCollisionEvents(const TArray<FParticleEventCollideData>& EventDataList);
 	void DispatchEvents();
 	const TArray<FParticleEventCollideData>& GetCollisionEvents() const { return CollisionEvents; }
 	void ClearEvents() { CollisionEvents.clear(); }
@@ -25,6 +30,9 @@ public:
 	FOnParticleEventCollide OnParticleCollide;
 
 private:
+	void HandleParticleCollide(const FParticleEventCollideData& EventData);
+
 	TArray<FParticleEventCollideData> CollisionEvents;
-	UParticleSystem* PreviewParticleSystem = nullptr;
+	UParticleSystemComponent* BoundComponent = nullptr;
+	uint64 BoundCollisionDelegateId = 0;
 };

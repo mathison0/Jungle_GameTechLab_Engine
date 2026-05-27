@@ -20,6 +20,7 @@ public:
 	~UParticleSystemComponent() override;
 
 	void SetTemplate(UParticleSystem* InTemplate);
+	void SetTemplate(UParticleSystem* InTemplate, bool bTakeTransientOwnership);
 	void PostEditProperty(const char* PropertyName) override;
 	void Serialize(FArchive& Ar) override;
 	UParticleSystem* GetTemplate() const { return Template; }
@@ -27,6 +28,7 @@ public:
 	TArray<FParticleEventCollideData>& GetPendingCollisionEvents() { return PendingCollisionEvents; }
 	const TArray<FParticleEventCollideData>& GetPendingCollisionEvents() const { return PendingCollisionEvents; }
 
+	void RefreshTemplateRuntime(bool bRestartSimulation);
 	void RecreateEmitterInstances();
 	void ClearEmitterInstances();
 	void TickPreview(float DeltaTime, bool bAllowSpawning);
@@ -35,6 +37,8 @@ public:
 	float ComputeEmitterLODDistance() const;
 	void QueueCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchQueuedParticleEvents();
+	bool HasPendingCollisionEvents() const { return !PendingCollisionEvents.empty(); }
+	void ClearPendingCollisionEvents() { PendingCollisionEvents.clear(); }
 
 	// Cycle 15a Phase 4 (ReplayData/DynamicData, D2 매 frame new): Component 가 모든 emitter 의 DynamicData 를 모아 array 반환.
 	// 호출자(Builder)가 ownership 가져감 — RenderCommand 에 매핑 후 RenderPass 가 frame 끝에 delete.
@@ -75,6 +79,7 @@ protected:
 	void TickComponent(float DeltaTime) override;
 
 private:
+	void ReleaseOwnedTransientTemplate();
 
     // Serialized asset path. StaticMeshComponent 패턴 답습 — component 가 path 를 직접 보유하므로
     // UParticleSystem::AssetPath 가 비어있어도 scene save/load 라운드트립이 깨지지 않음.
@@ -84,6 +89,8 @@ private:
     // Runtime cache (non-UPROPERTY). TemplateAssetPath 의 path 가 ResourceManager 를 통해 resolve 된 결과.
     // EmitterInstances 재생성/Detail panel 표시 등 모든 런타임 read 는 이 cache 를 사용.
     UParticleSystem* Template = nullptr;
+
+	UParticleSystem* OwnedTransientTemplate = nullptr;
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	TArray<FParticleEventCollideData> PendingCollisionEvents;

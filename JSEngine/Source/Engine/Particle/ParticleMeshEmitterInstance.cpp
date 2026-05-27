@@ -4,6 +4,7 @@
 #include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleMeshTypes.h"
 #include "Particle/ParticleModuleTypeDataMesh.h"
+#include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
 
@@ -79,7 +80,14 @@ FDynamicEmitterDataBase* FParticleMeshEmitterInstance::CreateDynamicData()
     Replay.ParticleIndices = ParticleStorage.ParticleIndices;
     Replay.SortMode = ESortMode::None;
 
-    if (UParticleLODLevel* LOD = GetCurrentLODLevel())
+    const FCompiledParticleLODData* CompiledLOD = GetCurrentCompiledLODData();
+    if (const UParticleMeshRendererProperties* MeshRenderer =
+        CompiledLOD ? Cast<UParticleMeshRendererProperties>(CompiledLOD->RendererProperties) : nullptr)
+    {
+        Replay.MeshAsset = MeshRenderer->GetMesh();
+        Replay.Material = MeshRenderer->GetEffectiveMaterial();
+    }
+    else if (UParticleLODLevel* LOD = GetCurrentLODLevel())
     {
         if (const UMeshTypeData* MeshTD = Cast<UMeshTypeData>(LOD->GetTypeDataModule()))
         {
