@@ -12,6 +12,7 @@
 class UParticleEmitter;
 class UParticleModule;
 class UParticleLODLevel;
+class UParticleRendererProperties;
 class UParticleSystemComponent;
 class UParticleSystem;
 class UObject;
@@ -185,6 +186,7 @@ private:
 	void ReorderEmitter(int32 SourceIndex, int32 InsertIndex);
 	void ReorderModule(int32 SourceEmitterIndex, int32 SourceModuleIndex, int32 TargetEmitterIndex, int32 InsertIndex);
 	void DrawEmitterColumn(UParticleEmitter* Emitter, int32 EmitterIndex, float ColumnHeight);
+	void DrawEmitterRendererRow(UParticleLODLevel* LODLevel, int32 EmitterIndex, float RowHeight);
 	void DrawEmitterModuleRow(UParticleModule* Module, int32 EmitterIndex, int32 ModuleIndex, bool bRequired, float RowHeight);
 	void DrawDetailsPanel(const ImVec2& Size);
 	UParticleLODLevel* GetEmitterLODLevel(UParticleEmitter* Emitter) const;
@@ -192,6 +194,7 @@ private:
 	UParticleModule* GetSelectedModule() const;
 	UParticleEmitter* GetSelectedEmitter() const;
 	void DrawEmitterDetails(UParticleEmitter* Emitter, int32 EmitterIndex);
+	void DrawRendererPropertiesDetails(UParticleRendererProperties* RendererProperties);
 	void DrawParticleSystemDetails(UParticleSystem* ParticleSystem);
 	void DrawParticleModuleDetails(UParticleModule* Module, UParticleEmitter* OwnerEmitter);
 	bool DrawParticleObjectProperty(UObject* Object, const FProperty& Property);

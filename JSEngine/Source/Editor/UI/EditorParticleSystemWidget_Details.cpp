@@ -26,6 +26,11 @@ void FEditorParticleSystemWidget::DrawDetailsPanel(const ImVec2& Size)
 	{
 		DrawParticleSystemDetails(ParticleSystemAsset);
 	}
+	else if (SelectedModuleIndex == RendererPropertiesSelection)
+	{
+		UParticleLODLevel* LODLevel = GetEmitterLODLevel(SelectedEmitter);
+		DrawRendererPropertiesDetails(LODLevel ? LODLevel->GetEffectiveRendererProperties() : nullptr);
+	}
 	else if (!SelectedModule)
 	{
 		DrawEmitterDetails(SelectedEmitter, SelectedEmitterIndex);
@@ -326,6 +331,70 @@ void FEditorParticleSystemWidget::DrawEmitterDetails(UParticleEmitter* Emitter, 
 		}
 	}
 
+	ImGui::PopID();
+}
+
+void FEditorParticleSystemWidget::DrawRendererPropertiesDetails(UParticleRendererProperties* RendererProperties)
+{
+	if (!RendererProperties)
+	{
+		ImGui::TextDisabled("No renderer properties.");
+		return;
+	}
+
+	ImGui::PushID(RendererProperties);
+	ImGui::TextUnformatted(GetRenderModeLabel(RendererProperties->GetRenderMode()));
+	if (RendererProperties->GetClass())
+	{
+		ImGui::TextDisabled("%s", RendererProperties->GetClass()->GetName());
+	}
+	ImGui::Dummy(ImVec2(0.0f, 4.0f));
+	ImGui::Separator();
+	ImGui::Dummy(ImVec2(0.0f, 8.0f));
+
+	TArray<const FProperty*> Properties;
+	if (RendererProperties->GetClass())
+	{
+		RendererProperties->GetClass()->GetAllProperties(Properties);
+	}
+
+	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
+	const float LabelWidth = std::clamp(AvailableWidth * 0.38f, 128.0f, 190.0f);
+	int32 RenderedPropertyCount = 0;
+	if (BeginParticleDetailsTable("##ParticleRendererPropertiesTable", LabelWidth))
+	{
+		for (const FProperty* Property : Properties)
+		{
+			if (!Property || !Property->Name || !Property->IsEditable())
+			{
+				continue;
+			}
+
+			ImGui::PushID(Property->Name);
+			ImGui::TableNextRow(ImGuiTableRowFlags_None, 30.0f);
+			ImGui::TableSetColumnIndex(0);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(GetPropertyDisplayName(*Property));
+			ImGui::TableSetColumnIndex(1);
+			ImGui::SetNextItemWidth(-1.0f);
+			if (DrawParticleObjectProperty(RendererProperties, *Property))
+			{
+				if (UParticleEmitter* Emitter = GetSelectedEmitter())
+				{
+					Emitter->CacheEmitterModuleInfo();
+				}
+				RefreshPreviewComponent(true);
+			}
+			ImGui::PopID();
+			++RenderedPropertyCount;
+		}
+		EndParticleDetailsTable();
+	}
+
+	if (RenderedPropertyCount == 0)
+	{
+		ImGui::TextDisabled("No editable properties.");
+	}
 	ImGui::PopID();
 }
 

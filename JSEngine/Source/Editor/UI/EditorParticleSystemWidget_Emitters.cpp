@@ -174,19 +174,23 @@ void FEditorParticleSystemWidget::DrawEmitterContextMenu()
 	if (ContextModuleIndex != NoParticleModuleSelection)
 	{
 		const bool bCanDuplicateFromHigher = bHasTargetEmitter && CurrentLOD > 0;
-		if (Cast<UParticleModuleTypeDataBase>(TargetModule))
+		const bool bRendererPropertiesTarget = ContextModuleIndex == RendererPropertiesSelection;
+		if (bRendererPropertiesTarget || Cast<UParticleModuleTypeDataBase>(TargetModule))
 		{
 			ImGui::TextDisabled("EMITTER TYPE");
 			ImGui::Separator();
 			DrawTypeDataItems(false);
-			ImGui::Separator();
-			if (ImGui::MenuItem("Duplicate From Higher", nullptr, false, bCanDuplicateFromHigher))
+			if (!bRendererPropertiesTarget)
 			{
-				DuplicateModuleFromHigherLOD(TargetEmitterIndex, ContextModuleIndex, false);
-			}
-			if (ImGui::MenuItem("Duplicate From Highest", nullptr, false, bCanDuplicateFromHigher))
-			{
-				DuplicateModuleFromHigherLOD(TargetEmitterIndex, ContextModuleIndex, true);
+				ImGui::Separator();
+				if (ImGui::MenuItem("Duplicate From Higher", nullptr, false, bCanDuplicateFromHigher))
+				{
+					DuplicateModuleFromHigherLOD(TargetEmitterIndex, ContextModuleIndex, false);
+				}
+				if (ImGui::MenuItem("Duplicate From Highest", nullptr, false, bCanDuplicateFromHigher))
+				{
+					DuplicateModuleFromHigherLOD(TargetEmitterIndex, ContextModuleIndex, true);
+				}
 			}
 			EndParticlePopup();
 			return;
@@ -1304,6 +1308,15 @@ void FEditorParticleSystemWidget::ClampSelectionToParticleSystem()
 		return;
 	}
 
+	if (SelectedModuleIndex == RendererPropertiesSelection)
+	{
+		if (!LODLevel->GetEffectiveRendererProperties())
+		{
+			SelectEmitter(SelectedEmitterIndex);
+		}
+		return;
+	}
+
 	if (SelectedModuleIndex < 0 || SelectedModuleIndex >= static_cast<int32>(LODLevel->Modules.size()))
 	{
 		SelectEmitter(SelectedEmitterIndex);
@@ -1588,13 +1601,19 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 	if (LODLevel)
 	{
 		const TArray<UParticleModule*>& Modules = LODLevel->GetModules();
+		bool bDrewLegacyTypeData = false;
 		for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(Modules.size()); ++ModuleIndex)
 		{
 			if (Cast<UParticleModuleTypeDataBase>(Modules[ModuleIndex]))
 			{
 				DrawEmitterModuleRow(Modules[ModuleIndex], EmitterIndex, ModuleIndex, false, ModuleRowHeight);
+				bDrewLegacyTypeData = true;
 				break;
 			}
+		}
+		if (!bDrewLegacyTypeData)
+		{
+			DrawEmitterRendererRow(LODLevel, EmitterIndex, ModuleRowHeight);
 		}
 	}
 
@@ -1663,6 +1682,52 @@ void FEditorParticleSystemWidget::DrawEmitterColumn(UParticleEmitter* Emitter, i
 
 	ImGui::PopID();
 }
+
+void FEditorParticleSystemWidget::DrawEmitterRendererRow(UParticleLODLevel* LODLevel, int32 EmitterIndex, float RowHeight)
+{
+	constexpr float ColumnWidth = 180.0f;
+
+	ImGui::PushID("RendererProperties");
+	ImGui::InvisibleButton("##RendererRow", ImVec2(ColumnWidth, RowHeight));
+	const bool bHovered = ImGui::IsItemHovered();
+	const bool bLeftClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
+	if (bHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+	{
+		SelectModule(EmitterIndex, RendererPropertiesSelection);
+		OpenEmitterContextMenu(EmitterIndex, RendererPropertiesSelection);
+	}
+	else if (bLeftClicked)
+	{
+		SelectModule(EmitterIndex, RendererPropertiesSelection);
+	}
+
+	const ImVec2 Min = ImGui::GetItemRectMin();
+	const ImVec2 Max = ImGui::GetItemRectMax();
+	ImDrawList* DrawList = ImGui::GetWindowDrawList();
+	ImVec4 RowColor = ImVec4(0.15f, 0.15f, 0.19f, 1.0f);
+	if (bHovered)
+	{
+		RowColor.x = std::min(RowColor.x + 0.07f, 1.0f);
+		RowColor.y = std::min(RowColor.y + 0.07f, 1.0f);
+		RowColor.z = std::min(RowColor.z + 0.07f, 1.0f);
+	}
+
+	const bool bSelected = SelectedEmitterIndex == EmitterIndex && SelectedModuleIndex == RendererPropertiesSelection;
+	DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(RowColor));
+	DrawList->AddLine(ImVec2(Min.x, Max.y - 1.0f), ImVec2(Max.x, Max.y - 1.0f), ImGui::GetColorU32(ImVec4(0.03f, 0.03f, 0.035f, 1.0f)));
+	if (bSelected)
+	{
+		DrawList->AddRect(Min, Max, ImGui::GetColorU32(ImVec4(0.38f, 0.58f, 0.92f, 1.0f)), 0.0f, 0, 1.5f);
+	}
+
+	const char* RendererName = LODLevel ? GetRenderModeLabel(LODLevel->GetEffectiveRenderMode()) : "Sprite";
+	DrawList->AddText(
+		ImVec2(Min.x + 10.0f, Min.y + 4.0f),
+		ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)),
+		RendererName);
+	ImGui::PopID();
+}
+
 void FEditorParticleSystemWidget::DrawEmitterModuleRow(UParticleModule* Module, int32 EmitterIndex, int32 ModuleIndex, bool bRequired, float RowHeight)
 {
 	constexpr float ColumnWidth = 180.0f;

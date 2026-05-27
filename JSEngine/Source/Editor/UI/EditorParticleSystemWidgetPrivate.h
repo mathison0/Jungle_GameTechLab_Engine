@@ -44,6 +44,7 @@ namespace
 	constexpr const char* ParticleModuleDragPayloadType = "PS_MODULE";
 	constexpr int32 NoParticleModuleSelection = -1;
 	constexpr int32 RequiredParticleModuleSelection = -2;
+	constexpr int32 RendererPropertiesSelection = -3;
 	constexpr ImGuiDragDropFlags ParticleDragDropTargetFlags =
 		ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect;
 
