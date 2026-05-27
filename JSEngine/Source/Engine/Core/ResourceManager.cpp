@@ -2411,15 +2411,10 @@ bool FResourceManager::SaveParticleSystem(UParticleSystem* Asset, const FString&
 		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring());
 		MetaData.PayloadVersion = 1;
 
-		const bool bSaved = FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
+		return FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
 		{
 			return SerializeParticleSystemObjectGraph(Ar, Asset, NormalizedPath);
 		});
-		if (bSaved)
-		{
-			ParticleSystemMap[NormalizedPath] = Asset;
-		}
-		return bSaved;
 	}
 
 	return false;
