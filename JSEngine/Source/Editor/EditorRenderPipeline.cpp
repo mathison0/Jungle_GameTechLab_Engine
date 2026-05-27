@@ -664,7 +664,6 @@ void FEditorRenderPipeline::RenderParticlePreviewViewport(FRenderer& Renderer)
 
     FRenderTargetSet RenderTargets = SceneViewport->GetViewportRenderTargets();
     Renderer.BeginViewportFrame(RenderTargets);
-    if (RenderTargets.SceneColorRTV)
     {
         const FColor& BackgroundColor = VC->GetBackgroundColor();
         const float ClearColor[4] =
@@ -674,7 +673,22 @@ void FEditorRenderPipeline::RenderParticlePreviewViewport(FRenderer& Renderer)
             BackgroundColor.B,
             1.0f
         };
-        Renderer.GetFD3DDevice().GetDeviceContext()->ClearRenderTargetView(RenderTargets.SceneColorRTV, ClearColor);
+
+        ID3D11DeviceContext* DeviceContext = Renderer.GetFD3DDevice().GetDeviceContext();
+        auto ClearPreviewTarget = [DeviceContext, ClearColor](ID3D11RenderTargetView* Target)
+        {
+            if (Target)
+            {
+                DeviceContext->ClearRenderTargetView(Target, ClearColor);
+            }
+        };
+
+        ClearPreviewTarget(RenderTargets.SceneColorRTV);
+        ClearPreviewTarget(RenderTargets.SceneLightRTV);
+        ClearPreviewTarget(RenderTargets.SceneFogRTV);
+        ClearPreviewTarget(RenderTargets.SceneSandervistanRTV);
+        ClearPreviewTarget(RenderTargets.ScenePostProcessRTV);
+        ClearPreviewTarget(RenderTargets.SceneFXAARTV);
     }
     Bus.Clear();
 
@@ -701,6 +715,9 @@ void FEditorRenderPipeline::RenderParticlePreviewViewport(FRenderer& Renderer)
     ShowFlags.bDecals = false;
     ShowFlags.bFog = false;
     ShowFlags.bShadow = false;
+    ShowFlags.bBloom = false;
+    ShowFlags.BloomIntensity = 0.0f;
+    ShowFlags.bToneMapping = false;
     ShowFlags.bGammaCorrection = false;
     ShowFlags.GammaValue = Settings.ShowFlags.GammaValue;
 
