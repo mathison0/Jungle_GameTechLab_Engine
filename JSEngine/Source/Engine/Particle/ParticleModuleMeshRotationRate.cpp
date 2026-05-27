@@ -1,25 +1,9 @@
 #include "Particle/ParticleModuleMeshRotationRate.h"
 
-#include "Core/Random/EngineRandom.h"
 #include "Particle/ParticleMeshEmitterInstance.h"
 #include "Particle/ParticleMeshTypes.h"
 
-namespace
-{
-    // ParticleModules.cpp 의 RandomRange 패턴 답습 (file scope static, 본 파일 한정).
-    float RandomRange(float Min, float Max)
-    {
-        return FEngineRandom::Get().RandomFloat(Min, Max);
-    }
-
-    FVector RandomRangeVector(const FVector& Min, const FVector& Max)
-    {
-        return FVector(
-            RandomRange(Min.X, Max.X),
-            RandomRange(Min.Y, Max.Y),
-            RandomRange(Min.Z, Max.Z));
-    }
-}
+#include <algorithm>
 
 UParticleModuleMeshRotationRate::UParticleModuleMeshRotationRate()
 {
@@ -40,7 +24,6 @@ UParticleModuleMeshRotationRate::UParticleModuleMeshRotationRate()
 void UParticleModuleMeshRotationRate::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Particle;
-    (void)SpawnTime;
     FParticleMeshEmitterInstance* MeshInstance = dynamic_cast<FParticleMeshEmitterInstance*>(Owner);
     if (!MeshInstance)
     {
@@ -53,7 +36,11 @@ void UParticleModuleMeshRotationRate::Spawn(FParticleEmitterInstance* Owner, FBa
     const int32 NewActiveIdx = MeshInstance->GetActiveParticleCount() - 1;
     if (FMeshRotationPayload* Payload = MeshInstance->GetMeshPayloadAt(NewActiveIdx))
     {
-        Payload->RotRate = RandomRangeVector(RotRateMin, RotRateMax);
+        Payload->RotRate = EvaluateVectorDistribution(
+            "RotRateMin",
+            RotRateMin,
+            RotRateMax,
+            std::clamp(SpawnTime, 0.0f, 1.0f));
     }
 }
 

@@ -231,13 +231,17 @@ UParticleModuleLocationShape::UParticleModuleLocationShape()
 
 void UParticleModuleLocationShape::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
-    (void)SpawnTime;
+    const float DistributionTime = std::clamp(SpawnTime, 0.0f, 1.0f);
+    const float EvaluatedSphereRadius = EvaluateFloatDistribution("SphereRadius", SphereRadius, SphereRadius, DistributionTime);
+    const FVector EvaluatedBoxExtents = EvaluateVectorDistribution("BoxExtents", BoxExtents, BoxExtents, DistributionTime);
+    const float EvaluatedConeHeight = EvaluateFloatDistribution("ConeHeight", ConeHeight, ConeHeight, DistributionTime);
+    const float EvaluatedConeHalfAngle = EvaluateFloatDistribution("ConeHalfAngle", ConeHalfAngle, ConeHalfAngle, DistributionTime);
     const FVector LocalOffset = ParticleModuleUtils::RandomPointInShape(
         Shape,
-        SphereRadius,
-        BoxExtents,
-        ConeHeight,
-        ConeHalfAngle,
+        EvaluatedSphereRadius,
+        EvaluatedBoxExtents,
+        EvaluatedConeHeight,
+        EvaluatedConeHalfAngle,
         bSurfaceOnly);
     const FVector BaseLocation = Owner ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
     Particle.Location = BaseLocation + LocalOffset;
@@ -275,24 +279,26 @@ void UParticleModuleBurst::Update(FParticleEmitterInstance* Owner, float DeltaTi
         return;
     }
 
+    const float EvaluatedBurstTime = std::max(EvaluateFloatDistribution("BurstTime", BurstTime, BurstTime, 0.0f), 0.0f);
+    const float EvaluatedRepeatInterval = std::max(EvaluateFloatDistribution("RepeatInterval", RepeatInterval, RepeatInterval, 0.0f), 0.001f);
     const float PreviousTime = Owner->GetPreviousEmitterTime();
     const float CurrentTime = Owner->GetEmitterTime();
-    if (CurrentTime < BurstTime)
+    if (CurrentTime < EvaluatedBurstTime)
     {
         return;
     }
 
     int32 TriggerCount = 0;
-    if (bRepeat && RepeatInterval > 0.0f)
+    if (bRepeat && EvaluatedRepeatInterval > 0.0f)
     {
-        const float ClampedPrevious = std::max(PreviousTime, BurstTime);
-        const int32 PreviousTriggerIndex = PreviousTime < BurstTime
+        const float ClampedPrevious = std::max(PreviousTime, EvaluatedBurstTime);
+        const int32 PreviousTriggerIndex = PreviousTime < EvaluatedBurstTime
             ? -1
-            : static_cast<int32>(std::floor((ClampedPrevious - BurstTime) / RepeatInterval));
-        const int32 CurrentTriggerIndex = static_cast<int32>(std::floor((CurrentTime - BurstTime) / RepeatInterval));
+            : static_cast<int32>(std::floor((ClampedPrevious - EvaluatedBurstTime) / EvaluatedRepeatInterval));
+        const int32 CurrentTriggerIndex = static_cast<int32>(std::floor((CurrentTime - EvaluatedBurstTime) / EvaluatedRepeatInterval));
         TriggerCount = std::max(CurrentTriggerIndex - PreviousTriggerIndex, 0);
     }
-    else if (PreviousTime < BurstTime && CurrentTime >= BurstTime)
+    else if (PreviousTime < EvaluatedBurstTime && CurrentTime >= EvaluatedBurstTime)
     {
         TriggerCount = 1;
     }
@@ -327,7 +333,12 @@ void UParticleModuleAcceleration::Update(FParticleEmitterInstance* Owner, float 
         FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
         if (Particle)
         {
-            Particle->Velocity += Acceleration * DeltaTime;
+            const FVector EvaluatedAcceleration = EvaluateVectorDistribution(
+                "Acceleration",
+                Acceleration,
+                Acceleration,
+                std::clamp(Particle->RelativeTime, 0.0f, 1.0f));
+            Particle->Velocity += EvaluatedAcceleration * DeltaTime;
         }
     }
 }
@@ -339,17 +350,26 @@ UParticleModuleDrag::UParticleModuleDrag()
 
 void UParticleModuleDrag::Update(FParticleEmitterInstance* Owner, float DeltaTime)
 {
-    if (!Owner || DeltaTime <= 0.0f || DragCoefficient <= 0.0f)
+    if (!Owner || DeltaTime <= 0.0f)
     {
         return;
     }
 
-    const float Damping = std::exp(-DragCoefficient * DeltaTime);
     for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
     {
         FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
         if (Particle)
         {
+            const float EvaluatedDrag = std::max(EvaluateFloatDistribution(
+                "DragCoefficient",
+                DragCoefficient,
+                DragCoefficient,
+                std::clamp(Particle->RelativeTime, 0.0f, 1.0f)), 0.0f);
+            if (EvaluatedDrag <= 0.0f)
+            {
+                continue;
+            }
+            const float Damping = std::exp(-EvaluatedDrag * DeltaTime);
             Particle->Velocity *= Damping;
         }
     }
@@ -364,8 +384,11 @@ UParticleModuleRotationRate::UParticleModuleRotationRate()
 void UParticleModuleRotationRate::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     (void)Owner;
-    (void)SpawnTime;
-    Particle.RotationRate = ParticleModuleUtils::RandomRange(StartRotationRateMin, StartRotationRateMax);
+    Particle.RotationRate = EvaluateFloatDistribution(
+        "StartRotationRateMin",
+        StartRotationRateMin,
+        StartRotationRateMax,
+        std::clamp(SpawnTime, 0.0f, 1.0f));
 }
 
 void UParticleModuleRotationRate::Update(FParticleEmitterInstance* Owner, float DeltaTime)
@@ -389,6 +412,28 @@ UParticleModuleColor::UParticleModuleColor()
 {
     bSpawnModule = true;
     bUpdateModule = true;
+
+    FParticleDistributionRuntimeData ColorDistribution;
+    ColorDistribution.Kind = static_cast<int32>(EParticleDistributionRuntimeKind::FloatConstantCurve);
+    ColorDistribution.bVector = true;
+    FFloatCurve& RedCurve = ColorDistribution.Curves["X"];
+    RedCurve.Keys.push_back({ 0.0f, 255.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    RedCurve.Keys.push_back({ 1.0f, 255.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    FFloatCurve& GreenCurve = ColorDistribution.Curves["Y"];
+    GreenCurve.Keys.push_back({ 0.0f, 255.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    GreenCurve.Keys.push_back({ 1.0f, 255.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    FFloatCurve& BlueCurve = ColorDistribution.Curves["Z"];
+    BlueCurve.Keys.push_back({ 0.0f, 255.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    BlueCurve.Keys.push_back({ 1.0f, 255.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    SetDistributionRuntimeData("ColorOverLife", ColorDistribution);
+
+    FParticleDistributionRuntimeData AlphaDistribution;
+    AlphaDistribution.Kind = static_cast<int32>(EParticleDistributionRuntimeKind::FloatConstantCurve);
+    AlphaDistribution.bVector = false;
+    FFloatCurve& AlphaCurve = AlphaDistribution.Curves["Value"];
+    AlphaCurve.Keys.push_back({ 0.0f, 255.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    AlphaCurve.Keys.push_back({ 1.0f, 0.0f, ECurveInterpMode::Cubic, ECurveTangentMode::Auto, 0.0f, 0.0f });
+    SetDistributionRuntimeData("AlphaOverLife", AlphaDistribution);
 }
 
 // Function : Assign initial color to spawned particle
@@ -401,7 +446,13 @@ void UParticleModuleColor::Spawn(FParticleEmitterInstance* Owner, FBaseParticle&
 {
     (void)Owner;
     (void)SpawnTime;
-    Particle.Color = StartColor;
+    const FVector InitialColor = EvaluateVectorDistribution("ColorOverLife", ColorOverLife, ColorOverLife, 0.0f);
+    const float InitialAlpha = EvaluateFloatDistribution("AlphaOverLife", AlphaOverLife, AlphaOverLife, 0.0f);
+    Particle.Color = FColor(
+        std::clamp(InitialColor.X, 0.0f, 255.0f) / 255.0f,
+        std::clamp(InitialColor.Y, 0.0f, 255.0f) / 255.0f,
+        std::clamp(InitialColor.Z, 0.0f, 255.0f) / 255.0f,
+        std::clamp(InitialAlpha, 0.0f, 255.0f) / 255.0f);
 }
 
 // Function : Interpolate active particle color over normalized lifetime
@@ -415,7 +466,14 @@ void UParticleModuleColor::Update(FParticleEmitterInstance* Owner, float DeltaTi
     for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount(); ++ParticleIndex)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
-        Particle.Color = FColor::Lerp(StartColor, EndColor, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
+        const float LifeTime = std::clamp(Particle.RelativeTime, 0.0f, 1.0f);
+        const FVector LifeColor = EvaluateVectorDistribution("ColorOverLife", ColorOverLife, ColorOverLife, LifeTime);
+        const float LifeAlpha = EvaluateFloatDistribution("AlphaOverLife", AlphaOverLife, AlphaOverLife, LifeTime);
+        Particle.Color = FColor(
+            std::clamp(LifeColor.X, 0.0f, 255.0f) / 255.0f,
+            std::clamp(LifeColor.Y, 0.0f, 255.0f) / 255.0f,
+            std::clamp(LifeColor.Z, 0.0f, 255.0f) / 255.0f,
+            std::clamp(LifeAlpha, 0.0f, 255.0f) / 255.0f);
     }
 }
 
@@ -430,7 +488,8 @@ bool UParticleModuleLight::ShouldCreateLight(const FBaseParticle& Particle, int3
         return false;
     }
 
-    const float ClampedFraction = std::clamp(SpawnFraction, 0.0f, 1.0f);
+    const float LifeTime = std::clamp(Particle.RelativeTime, 0.0f, 1.0f);
+    const float ClampedFraction = std::clamp(EvaluateFloatDistribution("SpawnFraction", SpawnFraction, SpawnFraction, LifeTime), 0.0f, 1.0f);
     if (ClampedFraction >= 1.0f)
     {
         return true;
@@ -450,18 +509,23 @@ void UParticleModuleLight::BuildLightInfo(const FBaseParticle& Particle, FLightI
     OutLightInfo = {};
     const FColor SourceColor = bUseParticleColor ? Particle.Color : LightColor;
     const float AlphaScale = bUseParticleAlpha ? std::clamp(Particle.Color.A, 0.0f, 1.0f) : 1.0f;
+    const float LifeTime = std::clamp(Particle.RelativeTime, 0.0f, 1.0f);
+    const float EvaluatedBrightness = EvaluateFloatDistribution("Brightness", Brightness, Brightness, LifeTime);
+    const float EvaluatedRadius = EvaluateFloatDistribution("Radius", Radius, Radius, LifeTime);
+    const float EvaluatedRadiusScale = EvaluateFloatDistribution("RadiusScale", RadiusScale, RadiusScale, LifeTime);
+    const float EvaluatedFalloff = EvaluateFloatDistribution("Falloff", Falloff, Falloff, LifeTime);
     const float ParticleRadiusScale = std::max(
         std::max(std::abs(Particle.Size.X), std::abs(Particle.Size.Y)),
         std::abs(Particle.Size.Z));
 
     OutLightInfo.Color = FVector(SourceColor.R, SourceColor.G, SourceColor.B);
-    OutLightInfo.Intensity = std::max(Brightness * AlphaScale, 0.0f);
+    OutLightInfo.Intensity = std::max(EvaluatedBrightness * AlphaScale, 0.0f);
     OutLightInfo.Type = 1;
-    OutLightInfo.Radius = std::max(Radius + RadiusScale * ParticleRadiusScale, 0.0f);
+    OutLightInfo.Radius = std::max(EvaluatedRadius + EvaluatedRadiusScale * ParticleRadiusScale, 0.0f);
     OutLightInfo.InnerAngle = 0.0f;
     OutLightInfo.OuterAngle = 0.0f;
     OutLightInfo.Direction = FVector::ZeroVector;
-    OutLightInfo.Falloff = std::max(Falloff, 0.0f);
+    OutLightInfo.Falloff = std::max(EvaluatedFalloff, 0.0f);
     OutLightInfo.Position = Particle.Location;
     OutLightInfo.ShadowTextureIndex = InvalidShadowIndex;
 }
@@ -526,18 +590,19 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
         return;
     }
 
-    if (MaxCollisionDistance > 0.0f && Component->ComputeEmitterLODDistance() > MaxCollisionDistance)
+    const float EvaluatedMaxCollisionDistance = std::max(EvaluateFloatDistribution("MaxCollisionDistance", MaxCollisionDistance, MaxCollisionDistance, 0.0f), 0.0f);
+    if (EvaluatedMaxCollisionDistance > 0.0f && Component->ComputeEmitterLODDistance() > EvaluatedMaxCollisionDistance)
     {
         return;
     }
 
-    const float ClampedCheckFraction = std::clamp(CollisionCheckFraction, 0.0f, 1.0f);
-    const float ClampedRestitution = std::clamp(Restitution, 0.0f, 1.0f);
-    const float ClampedFriction = std::clamp(Friction, 0.0f, 1.0f);
-
     for (int32 ParticleIndex = 0; ParticleIndex < Owner->GetActiveParticleCount();)
     {
         FBaseParticle& Particle = *Owner->GetParticle(ParticleIndex);
+        const float LifeTime = std::clamp(Particle.RelativeTime, 0.0f, 1.0f);
+        const float ClampedCheckFraction = std::clamp(EvaluateFloatDistribution("CollisionCheckFraction", CollisionCheckFraction, CollisionCheckFraction, LifeTime), 0.0f, 1.0f);
+        const float ClampedRestitution = std::clamp(EvaluateFloatDistribution("Restitution", Restitution, Restitution, LifeTime), 0.0f, 1.0f);
+        const float ClampedFriction = std::clamp(EvaluateFloatDistribution("Friction", Friction, Friction, LifeTime), 0.0f, 1.0f);
 
         if (ClampedCheckFraction <= 0.0f)
         {
@@ -574,7 +639,7 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
         bool bHit = false;
         if (TraceMode == EParticleCollisionTraceMode::Sphere)
         {
-            float SweepRadius = std::max(0.0f, CollisionRadius);
+            float SweepRadius = std::max(0.0f, EvaluateFloatDistribution("CollisionRadius", CollisionRadius, CollisionRadius, LifeTime));
             if (bUseParticleSizeAsRadius)
             {
                 SweepRadius = std::max({
@@ -794,7 +859,12 @@ void USubUVModule::Update(FParticleEmitterInstance* Owner, float DeltaTime)
         if (PlaybackMode == EParticleSubUVPlaybackMode::FramesPerSecond)
         {
             const float ParticleAge = std::max(Particle.RelativeTime, 0.0f) * std::max(Particle.Lifetime, 0.0f);
-            const uint32 AdvancedFrames = static_cast<uint32>(std::max(FrameRate, 0.0f) * ParticleAge);
+            const float EvaluatedFrameRate = std::max(EvaluateFloatDistribution(
+                "FrameRate",
+                FrameRate,
+                FrameRate,
+                std::clamp(Particle.RelativeTime, 0.0f, 1.0f)), 0.0f);
+            const uint32 AdvancedFrames = static_cast<uint32>(EvaluatedFrameRate * ParticleAge);
             const uint32 FrameWithOffset = AdvancedFrames + RandomOffset;
             RangeFrameOffset = bLoop
                 ? (FrameWithOffset % RangeFrameCount)

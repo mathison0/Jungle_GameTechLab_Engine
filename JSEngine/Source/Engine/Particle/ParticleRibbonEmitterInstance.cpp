@@ -5,6 +5,8 @@
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 
+#include <cmath>
+
 namespace ParticleRibbonUtils
 {
     // dt 보정용 (결정 7 옵션 B): 0-division 방어 + tangent 추정 시 임계값.
@@ -25,6 +27,15 @@ namespace ParticleRibbonUtils
         return Perp;
     }
 
+    FVector RotateAroundAxis(const FVector& Vector, const FVector& Axis, float Radians)
+    {
+        const FVector UnitAxis = Axis.GetSafeNormal();
+        const float CosAngle = std::cos(Radians);
+        const float SinAngle = std::sin(Radians);
+        return Vector * CosAngle
+            + FVector::CrossProduct(UnitAxis, Vector) * SinAngle
+            + UnitAxis * FVector::DotProduct(UnitAxis, Vector) * (1.0f - CosAngle);
+    }
 }
 
 // Function : Lookup ribbon payload by physical slot index
@@ -107,7 +118,6 @@ void FParticleRibbonEmitterInstance::SpawnParticles(int32 Count, float StartTime
         if (UParticleLODLevel* LOD = GetCurrentLODLevel())
             RibbonRenderer = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties());
     }
-    const float TangentScalar = RibbonRenderer ? RibbonRenderer->GetTangentSpawningScalar() : 0.0f;
     const int32 MaxTrails = std::max(static_cast<int32>(HeadIndices.size()), 1);
 
     // base 가 spawn 한 신규 particle range [OldActiveCount, ActiveParticles) — payload 초기화 + chain prepend.
@@ -143,8 +153,9 @@ void FParticleRibbonEmitterInstance::SpawnParticles(int32 Count, float StartTime
         FBaseParticle* Particle = GetParticleBySlot(SlotIndex);
         const FVector Velocity = Particle ? Particle->Velocity : FVector::ZeroVector;
         const float Speed = Velocity.Size();
+        const float TangentScalar = RibbonRenderer ? RibbonRenderer->GetTangentSpawningScalar() : 0.0f;
         Payload->Tangent = (Speed > ParticleRibbonUtils::RibbonSmallNumber) ? (Velocity / Speed) : FVector(0.0f, 0.0f, 1.0f);
-        Payload->SpawnedTangentStrength = TangentScalar * Speed;
+        Payload->SpawnedTangentStrength = std::max(TangentScalar, 0.0f) * Speed;
         Payload->Distance = 0.0f;
     }
 }
@@ -272,54 +283,72 @@ void FParticleRibbonEmitterInstance::BuildVertexBuffer()
     const FCompiledParticleLODData* CompiledLOD = GetCurrentCompiledLODData();
     const UParticleRibbonRendererProperties* RibbonRenderer =
         CompiledLOD ? Cast<UParticleRibbonRendererProperties>(CompiledLOD->RendererProperties) : nullptr;
+    if (!RibbonRenderer)
+    {
+        if (UParticleLODLevel* LOD = GetCurrentLODLevel())
+            RibbonRenderer = Cast<UParticleRibbonRendererProperties>(LOD->GetEffectiveRendererProperties());
+    }
     const int32 MaxParticleInTrailCount = RibbonRenderer
         ? RibbonRenderer->GetMaxParticleInTrailCount()
         : 64;
+    const int32 SheetsPerTrail = RibbonRenderer
+        ? std::max(static_cast<int32>(std::round(RibbonRenderer->GetSheetsPerTrail())), 1)
+        : 1;
 
     for (int32 TrailIdx = 0; TrailIdx < static_cast<int32>(HeadIndices.size()); ++TrailIdx)
     {
-        int32 SlotIndex = HeadIndices[TrailIdx];
-        const size_t TrailStartCount = VertexBuffer.size();
-        int32 TrailParticleCount = 0;
-
-        while (SlotIndex >= 0 && TrailParticleCount < MaxParticleInTrailCount)
+        for (int32 SheetIdx = 0; SheetIdx < SheetsPerTrail; ++SheetIdx)
         {
-            FRibbonParticlePayload* Payload = GetRibbonPayload(SlotIndex);
-            if (!Payload)
+            int32 SlotIndex = HeadIndices[TrailIdx];
+            const size_t TrailStartCount = VertexBuffer.size();
+            int32 TrailParticleCount = 0;
+            const float SheetAngle = (SheetsPerTrail > 1)
+                ? (static_cast<float>(SheetIdx) / static_cast<float>(SheetsPerTrail)) * 3.1415926535f
+                : 0.0f;
+
+            while (SlotIndex >= 0 && TrailParticleCount < MaxParticleInTrailCount)
             {
-                break;
+                FRibbonParticlePayload* Payload = GetRibbonPayload(SlotIndex);
+                if (!Payload)
+                {
+                    break;
+                }
+                FBaseParticle* P = GetParticleBySlot(SlotIndex);
+                if (!P)
+                {
+                    break;
+                }
+
+                FVector Perp = ParticleRibbonUtils::ComputePerpendicular(Payload->Tangent);
+                if (SheetsPerTrail > 1)
+                {
+                    Perp = ParticleRibbonUtils::RotateAroundAxis(Perp, Payload->Tangent, SheetAngle).GetSafeNormal();
+                }
+                const float HalfSize = P->Size.X * 0.5f;
+
+                FRibbonParticleVertex V0;
+                V0.Position = P->Location + Perp * HalfSize;
+                V0.Tangent = Payload->Tangent;
+                V0.Color = P->Color;
+                V0.TexCoordU = Payload->Distance;
+                V0.Size = P->Size.X;
+                VertexBuffer.push_back(V0);
+
+                FRibbonParticleVertex V1 = V0;
+                V1.Position = P->Location - Perp * HalfSize;
+                VertexBuffer.push_back(V1);
+
+                ++TrailParticleCount;
+                SlotIndex = Payload->NextIndex;
             }
-            FBaseParticle* P = GetParticleBySlot(SlotIndex);
-            if (!P)
+
+            // multi-trail/sheet seam — 다음 strip 이 존재하면 마지막 vertex 복제 (degenerate)
+            if (VertexBuffer.size() > TrailStartCount &&
+                (SheetIdx + 1 < SheetsPerTrail || TrailIdx + 1 < static_cast<int32>(HeadIndices.size())) &&
+                !VertexBuffer.empty())
             {
-                break;
+                VertexBuffer.push_back(VertexBuffer.back());
             }
-
-            const FVector Perp = ParticleRibbonUtils::ComputePerpendicular(Payload->Tangent);
-            const float HalfSize = P->Size.X * 0.5f;
-
-            FRibbonParticleVertex V0;
-            V0.Position = P->Location + Perp * HalfSize;
-            V0.Tangent = Payload->Tangent;
-            V0.Color = P->Color;
-            V0.TexCoordU = Payload->Distance;
-            V0.Size = P->Size.X;
-            VertexBuffer.push_back(V0);
-
-            FRibbonParticleVertex V1 = V0;
-            V1.Position = P->Location - Perp * HalfSize;
-            VertexBuffer.push_back(V1);
-
-            ++TrailParticleCount;
-            SlotIndex = Payload->NextIndex;
-        }
-
-        // multi-trail seam — 다음 trail 이 존재하고 현재 trail 이 vertex 를 생성했다면 마지막 vertex 복제 (degenerate)
-        if (VertexBuffer.size() > TrailStartCount &&
-            TrailIdx + 1 < static_cast<int32>(HeadIndices.size()) &&
-            !VertexBuffer.empty())
-        {
-            VertexBuffer.push_back(VertexBuffer.back());
         }
     }
 }

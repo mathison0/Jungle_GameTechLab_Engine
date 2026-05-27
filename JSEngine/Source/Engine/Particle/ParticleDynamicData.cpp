@@ -424,7 +424,6 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
     UParticleModuleBeamTarget* TargetModule = FindFirstModule<UParticleModuleBeamTarget>(LOD);
     const UParticleModuleBeamNoise* NoiseModule = FindFirstModule<UParticleModuleBeamNoise>(LOD);
     const int32 NoiseFrequency = NoiseModule ? MathUtil::Clamp(NoiseModule->GetFrequency(), 0, BeamNoiseMaxFrequency) : 0;
-    const FVector NoiseRange = NoiseModule ? NoiseModule->GetNoiseRange() : FVector::ZeroVector;
     const bool bTargetNoise = NoiseModule ? NoiseModule->IsTargetNoise() : false;
     const bool bSmooth = NoiseModule ? NoiseModule->IsSmooth() : false;
     const bool bApplyNoise = (NoiseModule != nullptr) && (NoiseFrequency > 0);
@@ -432,39 +431,16 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
     USceneComponent* SourceComp = SourceModule ? SourceModule->GetSourceComponent() : nullptr;
     USceneComponent* TargetComp = TargetModule ? TargetModule->GetTargetComponent() : nullptr;
     const bool bUseLocalSource = SourceModule ? SourceModule->IsUseLocalSource() : false;
-    const FVector SourceLocalVec = SourceModule ? SourceModule->GetSourceLocalVector() : FVector::ZeroVector;
     const bool bUseLocalTarget = TargetModule ? TargetModule->IsUseLocalTarget() : false;
-    const FVector TargetLocalVec = TargetModule ? TargetModule->GetTargetLocalVector() : FVector::ZeroVector;
 
-    const FVector SrcTangentLocal = SourceModule ? SourceModule->GetSourceTangent() : FVector(1.0f, 0.0f, 0.0f);
-    const float   SrcTangentStrength = SourceModule ? SourceModule->GetSourceTangentStrength() : 0.0f;
-    const FVector TgtTangentLocal = TargetModule ? TargetModule->GetTargetTangent() : FVector(-1.0f, 0.0f, 0.0f);
-    const float   TgtTangentStrength = TargetModule ? TargetModule->GetTargetTangentStrength() : 0.0f;
-    const bool    bUseHermite = (SrcTangentStrength > BeamSmallNumber) || (TgtTangentStrength > BeamSmallNumber);
 
     const FVector EmitterLocation = Instance.GetComponentWorldLocation();
     const UParticleSystemComponent* OwningComp = Instance.GetOwningComponent();
     const FVector EmitterForward = OwningComp ? OwningComp->GetForwardVector() : FVector(1.0f, 0.0f, 0.0f);
     const FVector EmitterRight   = OwningComp ? OwningComp->GetRightVector()   : FVector(0.0f, 1.0f, 0.0f);
     const FVector EmitterUp      = OwningComp ? OwningComp->GetUpVector()      : FVector(0.0f, 0.0f, 1.0f);
-    const FVector SourceLocation = bUseLocalSource
-        ? EmitterLocation + EmitterForward * SourceLocalVec.X + EmitterRight * SourceLocalVec.Y + EmitterUp * SourceLocalVec.Z
-        : (SourceComp ? SourceComp->GetWorldLocation() : EmitterLocation);
-
-    // emitter-local → world 변환 (bUseLocalTarget 의 TargetLocalVector 변환과 동일 패턴).
-    // Strength=0 이면 ZeroVector — Hermite 식의 T 항이 사라져 자동 무력화.
-    const FVector SrcTangentWorld = bUseHermite
-        ? (EmitterForward * SrcTangentLocal.X + EmitterRight * SrcTangentLocal.Y + EmitterUp * SrcTangentLocal.Z).GetSafeNormal() * SrcTangentStrength
-        : FVector::ZeroVector;
-    const FVector TgtTangentWorld = bUseHermite
-        ? (EmitterForward * TgtTangentLocal.X + EmitterRight * TgtTangentLocal.Y + EmitterUp * TgtTangentLocal.Z).GetSafeNormal() * TgtTangentStrength
-        : FVector::ZeroVector;
-
     const int32 InterpCount = std::clamp(BeamRenderer->GetInterpolationPoints(), 0, BeamInterpolationPointsMax);
     const int32 SegmentCount = InterpCount + 1;
-    const float TextureTile = std::max(BeamRenderer->GetTextureTile(), 0.0f);
-    const float TextureTileDistance = std::max(BeamRenderer->GetTextureTileDistance(), 0.0f);
-
     FParticleBeamEmitterInstance& NonConstInstance = const_cast<FParticleBeamEmitterInstance&>(
         static_cast<const FParticleBeamEmitterInstance&>(Instance));
     const uint16* Indices = Instance.GetParticleIndices();
@@ -480,14 +456,49 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
         {
             continue;
         }
+        const float ParticleLifeTime = std::clamp(Particle->RelativeTime, 0.0f, 1.0f);
+        const FVector NoiseRange = NoiseModule
+            ? NoiseModule->EvaluateVectorDistribution("NoiseRange", NoiseModule->GetNoiseRange(), NoiseModule->GetNoiseRange(), ParticleLifeTime)
+            : FVector::ZeroVector;
+        const FVector EvaluatedSourceLocalVec = SourceModule
+            ? SourceModule->EvaluateVectorDistribution("SourceLocalVector", SourceModule->GetSourceLocalVector(), SourceModule->GetSourceLocalVector(), ParticleLifeTime)
+            : FVector::ZeroVector;
+        const FVector EvaluatedTargetLocalVec = TargetModule
+            ? TargetModule->EvaluateVectorDistribution("TargetLocalVector", TargetModule->GetTargetLocalVector(), TargetModule->GetTargetLocalVector(), ParticleLifeTime)
+            : FVector::ZeroVector;
+        const FVector EvaluatedSrcTangentLocal = SourceModule
+            ? SourceModule->EvaluateVectorDistribution("SourceTangent", SourceModule->GetSourceTangent(), SourceModule->GetSourceTangent(), ParticleLifeTime)
+            : FVector(1.0f, 0.0f, 0.0f);
+        const float EvaluatedSrcTangentStrength = SourceModule
+            ? SourceModule->EvaluateFloatDistribution("SourceTangentStrength", SourceModule->GetSourceTangentStrength(), SourceModule->GetSourceTangentStrength(), ParticleLifeTime)
+            : 0.0f;
+        const FVector EvaluatedTgtTangentLocal = TargetModule
+            ? TargetModule->EvaluateVectorDistribution("TargetTangent", TargetModule->GetTargetTangent(), TargetModule->GetTargetTangent(), ParticleLifeTime)
+            : FVector(-1.0f, 0.0f, 0.0f);
+        const float EvaluatedTgtTangentStrength = TargetModule
+            ? TargetModule->EvaluateFloatDistribution("TargetTangentStrength", TargetModule->GetTargetTangentStrength(), TargetModule->GetTargetTangentStrength(), ParticleLifeTime)
+            : 0.0f;
+        const bool bUseHermite = (EvaluatedSrcTangentStrength > BeamSmallNumber) || (EvaluatedTgtTangentStrength > BeamSmallNumber);
+        const FVector SourceLocation = bUseLocalSource
+            ? EmitterLocation + EmitterForward * EvaluatedSourceLocalVec.X + EmitterRight * EvaluatedSourceLocalVec.Y + EmitterUp * EvaluatedSourceLocalVec.Z
+            : (SourceComp ? SourceComp->GetWorldLocation() : EmitterLocation);
+        const FVector SrcTangentWorld = bUseHermite
+            ? (EmitterForward * EvaluatedSrcTangentLocal.X + EmitterRight * EvaluatedSrcTangentLocal.Y + EmitterUp * EvaluatedSrcTangentLocal.Z).GetSafeNormal() * EvaluatedSrcTangentStrength
+            : FVector::ZeroVector;
+        const FVector TgtTangentWorld = bUseHermite
+            ? (EmitterForward * EvaluatedTgtTangentLocal.X + EmitterRight * EvaluatedTgtTangentLocal.Y + EmitterUp * EvaluatedTgtTangentLocal.Z).GetSafeNormal() * EvaluatedTgtTangentStrength
+            : FVector::ZeroVector;
+        const float EvaluatedFallbackDistance = BeamRenderer->GetFallbackDistance();
+        const float TextureTile = BeamRenderer->GetTextureTile();
+        const float TextureTileDistance = BeamRenderer->GetTextureTileDistance();
 
         FVector TargetLocation;
         if (bUseLocalTarget)
         {
             TargetLocation = EmitterLocation
-                + EmitterForward * TargetLocalVec.X
-                + EmitterRight   * TargetLocalVec.Y
-                + EmitterUp      * TargetLocalVec.Z;
+                + EmitterForward * EvaluatedTargetLocalVec.X
+                + EmitterRight   * EvaluatedTargetLocalVec.Y
+                + EmitterUp      * EvaluatedTargetLocalVec.Z;
         }
         else if (TargetComp)
         {
@@ -495,7 +506,7 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
         }
         else
         {
-            TargetLocation = SourceLocation + EmitterForward * BeamRenderer->GetFallbackDistance();
+            TargetLocation = SourceLocation + EmitterForward * EvaluatedFallbackDistance;
         }
 
         const FVector BeamVector = TargetLocation - SourceLocation;

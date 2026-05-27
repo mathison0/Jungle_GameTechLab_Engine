@@ -237,11 +237,11 @@ public:
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
 
 private:
-	UPROPERTY(DisplayName = "Start Color")
-	FColor StartColor = FColor::White();
+	UPROPERTY(DisplayName = "Color Over Life")
+	FVector ColorOverLife = FVector(255.0f, 255.0f, 255.0f);
 
-	UPROPERTY(DisplayName = "End Color")
-	FColor EndColor = FColor(1.0f, 1.0f, 1.0f, 0.0f);
+	UPROPERTY(DisplayName = "Alpha Over Life", Min = 0.0f, Max = 255.0f)
+	float AlphaOverLife = 255.0f;
 };
 
 UCLASS()
