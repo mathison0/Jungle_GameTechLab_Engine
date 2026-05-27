@@ -1,4 +1,4 @@
-#include "Particle/ParticleDynamicData.h"
+﻿#include "Particle/ParticleDynamicData.h"
 
 #include <algorithm>
 #include <cmath>
@@ -612,6 +612,11 @@ void FDynamicBeamEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
             V0.Color = Particle->Color;
             V0.TexCoordU = TexU;
             V0.Size = Particle->Size.X;
+            if (SegIdx == 0 && ActiveIdx > 0)
+            {
+                BeamVertexBuffer.push_back(V0);
+            }
+
             BeamVertexBuffer.push_back(V0);
 
             FBeamParticleVertex V1 = V0;
