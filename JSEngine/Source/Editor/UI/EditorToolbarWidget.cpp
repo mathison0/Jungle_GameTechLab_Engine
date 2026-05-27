@@ -147,6 +147,7 @@ void FEditorToolbarWidget::SetPanelVisibilityRefs(
 	bool* InShowUndoHistory,
 	bool* InShowProjectSettings,
 	bool* InShowWorldSettings,
+	bool* InShowEditorSettings,
 	bool* InPIEViewportFullscreenEnabled)
 {
 	bShowConsole = InShowConsole;
@@ -160,6 +161,7 @@ void FEditorToolbarWidget::SetPanelVisibilityRefs(
 	bShowUndoHistory = InShowUndoHistory;
 	bShowProjectSettings = InShowProjectSettings;
 	bShowWorldSettings = InShowWorldSettings;
+	bShowEditorSettings = InShowEditorSettings;
 	bPIEViewportFullscreenEnabled = InPIEViewportFullscreenEnabled;
 }
 
@@ -400,6 +402,7 @@ void FEditorToolbarWidget::RenderWindowMenu()
 	if (bShowContentBrowser) ImGui::MenuItem("Content Browser", "Ctrl+Space", bShowContentBrowser);
 	if (bShowProjectSettings) ImGui::MenuItem("Project Settings", nullptr, bShowProjectSettings);
 	if (bShowWorldSettings) ImGui::MenuItem("World Settings", nullptr, bShowWorldSettings);
+	if (bShowEditorSettings) ImGui::MenuItem("Editor Settings", nullptr, bShowEditorSettings);
 
 	ImGui::EndMenu();
 }

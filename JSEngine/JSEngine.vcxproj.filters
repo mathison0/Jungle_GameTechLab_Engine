@@ -37,6 +37,9 @@
     <Filter Include="Intermediate\Reflection\Editor">
       <UniqueIdentifier>{3d7aad18-b8cd-8c00-11f7-ca1b895f2553}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Intermediate\Reflection\Editor\Animation">
+      <UniqueIdentifier>{8ce2b87a-bafb-3802-91b8-b700a50f1e5b}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Intermediate\Reflection\GameFramework">
       <UniqueIdentifier>{36dc06eb-7c47-78be-cde8-06b5b11c1094}</UniqueIdentifier>
     </Filter>
@@ -103,6 +106,12 @@
     <Filter Include="Source\Editor">
       <UniqueIdentifier>{69ebb72a-9a1a-c05a-536f-950ac7a3b68d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\AnimGraph">
+      <UniqueIdentifier>{5801b9b4-8cb1-e069-b447-a4f1ba28b025}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Animation">
+      <UniqueIdentifier>{cfe09b91-2b02-092e-f89b-40b1745ef493}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\Asset">
       <UniqueIdentifier>{a2a1688d-3a34-7db4-a577-746b4d69b8b1}</UniqueIdentifier>
     </Filter>
@@ -129,9 +138,6 @@
     </Filter>
     <Filter Include="Source\Editor\Settings">
       <UniqueIdentifier>{b1dfd584-4d36-815a-235b-55c990686b88}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Editor\AnimGraph">
-      <UniqueIdentifier>{59bb0a49-36e6-40a7-a9ff-21cf1f7c56d6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Editor\UI">
       <UniqueIdentifier>{c46a2efe-64db-4a90-e9d0-dc20e9a91a49}</UniqueIdentifier>
@@ -342,25 +348,22 @@
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimLuaProgramAsset.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Animation\ULuaAnimInstance.gen.cpp">
-      <Filter>Intermediate\Reflection\Animation</Filter>
-    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotifyState.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_FootstepSound.gen.cpp">
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotifyState_LuaEvent.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LuaEvent.gen.cpp">
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_FootstepSound.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LogEvent.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotifyState_LuaEvent.gen.cpp">
+    <ClCompile Include="Intermediate\Reflection\Animation\UAnimNotify_LuaEvent.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimSequence.gen.cpp">
@@ -376,6 +379,9 @@
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UAnimationStateMachine.gen.cpp">
+      <Filter>Intermediate\Reflection\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Animation\ULuaAnimInstance.gen.cpp">
       <Filter>Intermediate\Reflection\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Animation\UStateMachineAnimInstance.gen.cpp">
@@ -519,6 +525,12 @@
     <ClCompile Include="Intermediate\Reflection\Core\FGuid.gen.cpp">
       <Filter>Intermediate\Reflection\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Editor\Animation\UAnimPreviewInstance.gen.cpp">
+      <Filter>Intermediate\Reflection\Editor\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Editor\Animation\UDebugSkelMeshComponent.gen.cpp">
+      <Filter>Intermediate\Reflection\Editor\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Editor\UEditorEngine.gen.cpp">
       <Filter>Intermediate\Reflection\Editor</Filter>
     </ClCompile>
@@ -549,6 +561,9 @@
     <ClCompile Include="Intermediate\Reflection\GameFramework\ALightActor.gen.cpp">
       <Filter>Intermediate\Reflection\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\GameFramework\AParticleSystemActor.gen.cpp">
+      <Filter>Intermediate\Reflection\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\GameFramework\APawn.gen.cpp">
       <Filter>Intermediate\Reflection\GameFramework</Filter>
     </ClCompile>
@@ -556,9 +571,6 @@
       <Filter>Intermediate\Reflection\GameFramework</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\GameFramework\APlayerStart.gen.cpp">
-      <Filter>Intermediate\Reflection\GameFramework</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\GameFramework\AParticleSystemActor.gen.cpp">
       <Filter>Intermediate\Reflection\GameFramework</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\GameFramework\APointLightActor.gen.cpp">
@@ -612,13 +624,40 @@
     <ClCompile Include="Intermediate\Reflection\Particle\AParticleEventManager.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleBeamRendererProperties.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleEmitter.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleLODLevel.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleMeshRendererProperties.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModule.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleAcceleration.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamNoise.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamSource.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamTarget.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBurst.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleCollision.gen.cpp">
@@ -627,10 +666,10 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleColor.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleEventGenerator.gen.cpp">
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleDrag.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBurst.gen.cpp">
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleEventGenerator.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLifetime.gen.cpp">
@@ -645,7 +684,13 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocationShape.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleMeshRotationRate.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRequired.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRotationRate.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSize.gen.cpp">
@@ -654,43 +699,10 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleAcceleration.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleDrag.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRotationRate.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamNoise.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamSource.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBeamTarget.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleMeshRotationRate.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleTypeDataBase.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleBeamRendererProperties.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleMeshRendererProperties.gen.cpp">
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleRendererProperties.gen.cpp">
@@ -702,13 +714,13 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSpriteRendererProperties.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
-    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleVelocity.gen.cpp">
-      <Filter>Intermediate\Reflection\Particle</Filter>
-    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystem.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleSystemComponent.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\USpriteTypeData.gen.cpp">
@@ -737,6 +749,15 @@
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Runtime\UGameEngine.gen.cpp">
       <Filter>Intermediate\Reflection\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\AnimGraph\LuaAnimGraph.cpp">
+      <Filter>Source\Editor\AnimGraph</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Animation\AnimPreviewInstance.cpp">
+      <Filter>Source\Editor\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Animation\DebugSkelMeshComponent.cpp">
+      <Filter>Source\Editor\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Asset\EditorAssetService.cpp">
       <Filter>Source\Editor\Asset</Filter>
@@ -786,8 +807,8 @@
     <ClCompile Include="Source\Editor\Settings\ProjectSettings.cpp">
       <Filter>Source\Editor\Settings</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\AnimGraph\LuaAnimGraph.cpp">
-      <Filter>Source\Editor\AnimGraph</Filter>
+    <ClCompile Include="Source\Editor\UI\AnimSequenceViewerContextBuilder.cpp">
+      <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\ComponentMenuRegistry.cpp">
       <Filter>Source\Editor\UI</Filter>
@@ -802,6 +823,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorAnimGraphWidget.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\EditorAnimationSequenceViewerWidget.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorCommandContext.cpp">
@@ -990,9 +1014,6 @@
     <ClCompile Include="Source\Engine\Animation\ActorSequence.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Animation\AnimLuaProgramAsset.cpp">
-      <Filter>Source\Engine\Animation</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimGraphAsset.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
@@ -1005,7 +1026,7 @@
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Animation\LuaAnimInstance.cpp">
+    <ClCompile Include="Source\Engine\Animation\AnimLuaProgramAsset.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimNotify.cpp">
@@ -1021,6 +1042,9 @@
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\CurvePlayback.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\LuaAnimInstance.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\StateMachineAnimInstance.cpp">
@@ -1083,10 +1107,10 @@
     <ClCompile Include="Source\Engine\Asset\StaticMesh.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Asset\StaticMeshTypes.cpp">
+    <ClCompile Include="Source\Engine\Asset\StaticMeshSimplifier.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Asset\StaticMeshSimplifier.cpp">
+    <ClCompile Include="Source\Engine\Asset\StaticMeshTypes.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Asset\SubUVAtlasLoader.cpp">
@@ -1401,6 +1425,12 @@
     <ClCompile Include="Source\Engine\Object\Property.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleDynamicData.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstance.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
@@ -1413,15 +1443,6 @@
     <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp">
-      <Filter>Source\Engine\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp">
-      <Filter>Source\Engine\Particle</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\ParticleDynamicData.cpp">
-      <Filter>Source\Engine\Particle</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamNoise.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
@@ -1432,6 +1453,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleMeshRotationRate.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeData.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.cpp">
@@ -1831,6 +1855,12 @@
     <ClCompile Include="pch.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\Animation\AnimPreviewInstance.h">
+      <Filter>Source\Editor\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Animation\DebugSkelMeshComponent.h">
+      <Filter>Source\Editor\Animation</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Asset\EditorAssetService.h">
       <Filter>Source\Editor\Asset</Filter>
     </ClInclude>
@@ -1891,6 +1921,9 @@
     <ClInclude Include="Source\Editor\Settings\ProjectSettings.h">
       <Filter>Source\Editor\Settings</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\AnimSequenceViewerContextBuilder.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\ComponentMenuRegistry.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
@@ -1907,6 +1940,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorAnimGraphWidget.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorAnimationSequenceViewerWidget.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorChromeConstants.h">
@@ -1927,13 +1963,13 @@
     <ClInclude Include="Source\Editor\UI\EditorCurveEditorWidget.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\UI\EditorLuaAnimGraphWidget.h">
-      <Filter>Source\Editor\UI</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorDetachedWindowChrome.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorFooterLogSystem.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\EditorLuaAnimGraphWidget.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorMainPanel.h">
@@ -2038,9 +2074,6 @@
     <ClInclude Include="Source\Engine\Animation\ActorSequence.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Animation\AnimLuaProgramAsset.h">
-      <Filter>Source\Engine\Animation</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimGraphAsset.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
@@ -2053,10 +2086,7 @@
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Animation\LuaAnimGraph.h">
-      <Filter>Source\Engine\Animation</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Animation\LuaAnimInstance.h">
+    <ClInclude Include="Source\Engine\Animation\AnimLuaProgramAsset.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimNotify.h">
@@ -2078,6 +2108,12 @@
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\CurvePlayback.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\LuaAnimGraph.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\LuaAnimInstance.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\StateMachineAnimInstance.h">
@@ -2563,25 +2599,22 @@
     <ClInclude Include="Source\Engine\Object\Property.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynaicEmitterDataBase.h">
-      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h">
+      <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicEmitterReplayDataBase.h">
-      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h">
+      <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\EmitterDataBase\DynamicSpriteEmitterDataBase.h">
-      <Filter>Source\Engine\Particle\EmitterDataBase</Filter>
+    <ClInclude Include="Source\Engine\Particle\ParticleCompiledData.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleDynamicData.h">
+      <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h">
-      <Filter>Source\Engine\Particle</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleUpdateUtils.h">
-      <Filter>Source\Engine\Particle</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleModule.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleMeshEmitterInstance.h">
@@ -2590,16 +2623,7 @@
     <ClInclude Include="Source\Engine\Particle\ParticleMeshTypes.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h">
-      <Filter>Source\Engine\Particle</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h">
-      <Filter>Source\Engine\Particle</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleDynamicData.h">
-      <Filter>Source\Engine\Particle</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h">
+    <ClInclude Include="Source\Engine\Particle\ParticleModule.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModuleBeamNoise.h">
@@ -2612,6 +2636,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModuleMeshRotationRate.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeData.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModuleTypeDataBeam.h">
@@ -2642,6 +2669,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleTypes.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleUpdateUtils.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Common\ComPtr.h">
@@ -2860,9 +2890,6 @@
     <ClInclude Include="Source\Engine\Runtime\SceneView.h">
       <Filter>Source\Engine\Runtime</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h">
-      <Filter>Source\Engine\Runtime</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Runtime\Script\API\LuaEngineAPIBindings.h">
       <Filter>Source\Engine\Runtime\Script\API</Filter>
     </ClInclude>
@@ -2883,6 +2910,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Runtime\Script\ScriptUtils.h">
       <Filter>Source\Engine\Runtime\Script</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Runtime\StartupProgress.h">
+      <Filter>Source\Engine\Runtime</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Runtime\Stats\ScopeCycleCounter.h">
       <Filter>Source\Engine\Runtime\Stats</Filter>
@@ -2986,10 +3016,10 @@
     <ClInclude Include="Source\Engine\UI\RmlUi\RmlUiSystem.h">
       <Filter>Source\Engine\UI\RmlUi</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\UI\RuntimeUITypes.h">
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h">
       <Filter>Source\Engine\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h">
+    <ClInclude Include="Source\Engine\UI\RuntimeUITypes.h">
       <Filter>Source\Engine\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Launch\LaunchModeFactory.h">

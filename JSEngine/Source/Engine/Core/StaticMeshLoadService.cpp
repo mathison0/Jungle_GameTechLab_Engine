@@ -103,6 +103,10 @@ UStaticMesh* FStaticMeshLoadService::LoadAsset(const FString& NormalizedPath)
 
 	MeshData->PathFileName = NormalizedPath;
 	const FString ResolvePath = MetaData.SourceFile.empty() ? NormalizedPath : MetaData.SourceFile;
+	if (!MetaData.SourceFile.empty())
+	{
+		ResourceManager.LoadMaterial(ResolvePath, EMaterialShaderType::SurfaceLit);
+	}
 	return FinalizeLoadedMesh(
 		MeshData,
 		ResolvePath,

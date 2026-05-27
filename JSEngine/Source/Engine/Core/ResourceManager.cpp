@@ -59,6 +59,14 @@ namespace
 		return Extension == L".fbx";
 	}
 
+	bool IsStaticMeshSourcePath(const FString& Path)
+	{
+		std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
+		std::wstring Extension = FsPath.extension().wstring();
+		std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
+		return Extension == L".obj" || Extension == L".fbx";
+	}
+
 	bool IsParticleSystemAssetPath(const FString& Path)
 	{
 		std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
@@ -604,9 +612,16 @@ namespace
 		Sequence->SetPreviewMeshPath(Payload.TargetSkeletalMeshPath);
 		Sequence->SetDataModel(Payload.DataModel);
 		Sequence->ClearNotifies();
-		for (const FAnimNotifyStateEvent& Notify : Payload.Notifies)
+		if (!Payload.NotifyTracks.empty())
 		{
-			Sequence->AddNotify(Notify.TriggerTime, Notify.NotifyName, Notify.Duration, Notify.NotifyClassName);
+			Sequence->SetNotifyTracks(Payload.NotifyTracks);
+		}
+		else
+		{
+			for (const FAnimNotifyStateEvent& Notify : Payload.Notifies)
+			{
+				Sequence->AddNotifyEvent(0, Notify);
+			}
 		}
 		return Sequence;
 	}
@@ -1505,6 +1520,68 @@ TArray<FString> FResourceManager::GetStaticMeshPaths() const
 	return ObjFilePaths;
 }
 
+FString FResourceManager::ImportStaticMeshFromSource(const FString& Path)
+{
+	const FString NormalizedPath = FPaths::Normalize(Path);
+	if (!IsStaticMeshSourcePath(NormalizedPath))
+	{
+		return {};
+	}
+
+	const FString ImportedAssetPath = FAssetPathPolicy::MakeImportedStaticMeshAssetPath(NormalizedPath);
+	if (FAssetPathPolicy::FileExists(ImportedAssetPath))
+	{
+		FAssetMetaData ExistingMetaData;
+		if (FAssetFile::LoadMetadataOnly(ImportedAssetPath, ExistingMetaData) &&
+			ExistingMetaData.ClassName == UStaticMesh::StaticClass()->GetName())
+		{
+			if (std::find(ObjFilePaths.begin(), ObjFilePaths.end(), ImportedAssetPath) == ObjFilePaths.end())
+			{
+				ObjFilePaths.push_back(ImportedAssetPath);
+			}
+			return ImportedAssetPath;
+		}
+	}
+
+	UStaticMesh* Mesh = LoadStaticMesh(NormalizedPath);
+	if (!Mesh || !Mesh->HasValidMeshData() || !Mesh->GetMeshData())
+	{
+		UE_LOG_WARNING("[StaticMeshImport] Failed to load source static mesh: %s", NormalizedPath.c_str());
+		return {};
+	}
+
+	FStaticMesh* MeshData = Mesh->GetMeshData();
+	MeshData->PathFileName = ImportedAssetPath;
+
+	FAssetMetaData MetaData;
+	MetaData.Version = 1;
+	MetaData.PayloadVersion = 1;
+	MetaData.ClassName = UStaticMesh::StaticClass()->GetName();
+	MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(ImportedAssetPath)).stem().wstring());
+	MetaData.SourceFile = MakeProjectRelativePath(NormalizedPath);
+
+	if (!FAssetFile::Save(ImportedAssetPath, MetaData, [&](FArchive& Ar)
+	{
+		MeshData->Serialize(Ar, MetaData.PayloadVersion);
+		return true;
+	}))
+	{
+		UE_LOG_WARNING("[StaticMeshImport] Failed to save static mesh asset: %s", ImportedAssetPath.c_str());
+		return {};
+	}
+
+	StaticMeshCache.RegisterLoaded(ImportedAssetPath, Mesh);
+	if (std::find(ObjFilePaths.begin(), ObjFilePaths.end(), ImportedAssetPath) == ObjFilePaths.end())
+	{
+		ObjFilePaths.push_back(ImportedAssetPath);
+	}
+
+	UE_LOG("[StaticMeshImport] Imported source static mesh: %s -> %s",
+		NormalizedPath.c_str(),
+		ImportedAssetPath.c_str());
+	return ImportedAssetPath;
+}
+
 USkeletalMesh* FResourceManager::LoadSkeletalMesh(const FString& Path)
 {
 	const FString NormalizedPath = FPaths::Normalize(Path);
@@ -1991,7 +2068,7 @@ bool FResourceManager::SaveAnimSequence(const FString& Path, const UAnimSequence
 	{
 		FAssetMetaData MetaData;
 		MetaData.Version = 1;
-		MetaData.PayloadVersion = 3;
+		MetaData.PayloadVersion = 4;
 		MetaData.ClassName = UAnimSequence::StaticClass()->GetName();
 		MetaData.SourceFile = MakeProjectRelativePath(Sequence->GetSourceFilePath());
 		MetaData.DisplayName = FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring());
@@ -2002,6 +2079,7 @@ bool FResourceManager::SaveAnimSequence(const FString& Path, const UAnimSequence
 		Payload.SourceAnimStackIndex = 0;
 		Payload.DataModel = const_cast<UAnimDataModel*>(Sequence->GetDataModel());
 		Payload.Notifies = Sequence->GetNotifies();
+		Payload.NotifyTracks = Sequence->GetNotifyTracks();
 
 		if (!FAssetFile::Save(NormalizedPath, MetaData, [&](FArchive& Ar)
 		{

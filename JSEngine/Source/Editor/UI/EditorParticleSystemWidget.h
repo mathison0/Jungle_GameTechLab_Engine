@@ -28,8 +28,10 @@ public:
 	void Initialize(UEditorEngine* InEditorEngine) override;
 	void Render(float DeltaTime) override;
 	void RenderEmbedded(float DeltaTime);
-	void RenderDetachedDocumentChrome(bool& bCloseRequested);
+	void RenderDetachedDocumentChrome(bool& bDockRequested, bool& bCloseRequested);
 	void RenderDocumentToolbarControls();
+	void RenderDocumentViewMenu();
+	void RenderDocumentParticleMenu();
 	void Shutdown();
 	bool Save();
 	bool CanUndo() const;

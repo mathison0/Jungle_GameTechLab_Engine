@@ -2,6 +2,7 @@
 #include "Editor/UI/EditorMainPanelViewportToolbarHelpers.h"
 
 #include "Editor/EditorEngine.h"
+#include "Editor/Settings/EditorSettings.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 
 #include "ImGui/imgui.h"
@@ -113,6 +114,7 @@ void FEditorMainPanel::RenderViewportMenuBarForIndex(int32 Index)
 				if (ImGui::MenuItem(FEditorMainPanelViewportToolbarHelpers::GetViewModeName(Mode), nullptr, bSelected))
 				{
 					State.ViewMode = Mode;
+					FEditorSettings::Get().ViewMode = Mode;
 				}
 			});
 
@@ -130,6 +132,7 @@ void FEditorMainPanel::RenderViewportMenuBarForIndex(int32 Index)
 				if (ImGui::MenuItem(FEditorMainPanelViewportToolbarHelpers::GetLightCullModeName(CullMode), nullptr, bSelected))
 				{
 					State.LightCullMode = CullMode;
+					FEditorSettings::Get().LightCullMode = CullMode;
 				}
 			}
 			ImGui::EndMenu();
@@ -143,6 +146,7 @@ void FEditorMainPanel::RenderViewportMenuBarForIndex(int32 Index)
 		ImGui::MenuItem("FPS", nullptr, &State.bShowStatFPS);
 		ImGui::MenuItem("Memory", nullptr, &State.bShowStatMemory);
 		ImGui::MenuItem("Particle", nullptr, &State.bShowStatParticle);
+		ImGui::MenuItem("Skinning", nullptr, &State.bShowStatSkinning);
 		ImGui::MenuItem("Cascade Vis", nullptr, &State.bShowCascadeVis);
 		ImGui::MenuItem("Light", nullptr, &State.bShowLight);
 		ImGui::MenuItem("Shadow", nullptr, &State.bShowShadow);

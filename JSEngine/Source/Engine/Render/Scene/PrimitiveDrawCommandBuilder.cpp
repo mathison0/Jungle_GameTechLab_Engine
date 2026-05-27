@@ -97,6 +97,13 @@ namespace
         return Material ? Material : FResourceManager::Get().GetMaterial("DefaultWhite");
     }
 
+    ERenderPass SelectBaseMeshPass(const UMaterialInterface* Material)
+    {
+        return Material && Material->GetBlendType() == EBlendType::AlphaBlend
+            ? ERenderPass::Translucent
+            : ERenderPass::Opaque;
+    }
+
     UTexture* ResolveParticleTexture(const UParticleModuleRequired* RequiredModule)
     {
         if (!RequiredModule)
@@ -343,7 +350,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
             Cmd.WorldAABB = StaticMeshComp->GetWorldAABB();
 
-            RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+            RenderBus.AddCommand(SelectBaseMeshPass(Material), Cmd);
         }
 
         return true;
@@ -391,9 +398,25 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             }
         }
         const TArray<uint32>& Indices = SkeletalMesh->GetIndices(); // 이건 immutable이라 걍 asset에서 들고와도 댐
+        const TArray<FStaticMeshSection>& Sections = SkeletalMesh->GetSections();
+        uint32 SubmittedDrawCommandCount = Sections.empty() ? 1u : 0u;
+        if (!Sections.empty())
+        {
+            for (const FStaticMeshSection& Section : Sections)
+            {
+                if (Section.IndexCount > 0)
+                {
+                    ++SubmittedDrawCommandCount;
+                }
+            }
+        }
+
         const FSkeletalMeshSkinningStatCache& SkinningStatCache = GetSkeletalMeshSkinningStatCache(SkeletalMesh);
         FSkinningStats::Get().AddVisibleSkinnedMesh(
             SkinningStatCache.VertexCount,
+            SkinningStatCache.IndexCount,
+            static_cast<uint32>(SkinningStatCache.SectionCount),
+            SubmittedDrawCommandCount,
             static_cast<uint32>(SkinningStatCache.BoneCount),
             SkinningStatCache.AvgBoneInfluence,
             bUseGPUSkinning);
@@ -408,7 +431,6 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 SkeletalMeshComp->ConsumeCPUSkinnedVertexBufferDirty());
         if (!MeshBuffer) return true;
 
-        const TArray<FStaticMeshSection>& Sections = SkeletalMesh->GetSections();
         if (Sections.empty()) // fallback
         {
             FRenderCommand Cmd = {};
@@ -431,7 +453,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             Cmd.Material = ResolveDrawMaterial(Cast<UMaterialInterface>(SkeletalMeshComp->GetMaterial(0)));
             Cmd.WorldAABB = SkeletalMeshComp->GetWorldAABB();
 
-            RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+            RenderBus.AddCommand(SelectBaseMeshPass(Cmd.Material), Cmd);
             return true;
         }
 
@@ -470,7 +492,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
             Cmd.WorldAABB = SkeletalMeshComp->GetWorldAABB();
 
-            RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+            RenderBus.AddCommand(SelectBaseMeshPass(Material), Cmd);
         }
 
         return true;
@@ -622,7 +644,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
             Cmd.WorldAABB = ProcMeshComp->GetWorldAABB();
 
-            RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+            RenderBus.AddCommand(SelectBaseMeshPass(Material), Cmd);
         }
         return true;
     }

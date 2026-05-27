@@ -1,4 +1,5 @@
 ﻿#include "Editor/Settings/EditorSettings.h"
+#include "Component/SkinnedMeshComponent.h"
 #include "SimpleJSON/json.hpp"
 
 #include <algorithm>
@@ -35,6 +36,7 @@ namespace EditorKey
 	// View
 	constexpr const char* View = "View";
 	constexpr const char* ViewMode = "ViewMode";
+	constexpr const char* LightCullMode = "LightCullMode";
 	constexpr const char* PickingMode = "PickingMode";
 	constexpr const char* bPrimitives = "bPrimitives";
 	constexpr const char* bSkeletalMesh = "bSkeletalMesh";
@@ -46,11 +48,15 @@ namespace EditorKey
 	constexpr const char* bBoundingVolume = "bBoundingVolume";
 	constexpr const char* bEnableLOD = "bEnableLOD";
 	constexpr const char* bBVHBoundingVolume = "bBVHBoundingVolume";
+	constexpr const char* bDecals = "bDecals";
+	constexpr const char* bFog = "bFog";
     constexpr const char* bShadow = "bShadow";
 	constexpr const char* FXAAEnabled = "FXAAEnabled";
 	constexpr const char* FXAAThreshold = "FXAAThreshold"; // Backward compatibility
     constexpr const char* bGammaCorrection = "bGammaCorrection";
-    constexpr const char* GammaValue = "GammaValue";
+	constexpr const char* GammaValue = "GammaValue";
+	constexpr const char* ShadowFilterMode = "ShadowFilterMode";
+	constexpr const char* SkinningModeOverride = "SkinningModeOverride";
 
 	// Grid
 	constexpr const char* Grid = "Grid";
@@ -68,6 +74,25 @@ namespace EditorKey
 	// Paths
 	constexpr const char* DefaultSavePath = "DefaultSavePath";
 	constexpr const char* ContentBrowserPath = "ContentBrowserPath";
+}
+
+namespace
+{
+void ApplySkinningModeOverride(int32 Mode)
+{
+	switch (Mode)
+	{
+	case 1:
+		USkinnedMeshComponent::SetGlobalSkinningModeOverride(ESkinningMode::CPU);
+		break;
+	case 2:
+		USkinnedMeshComponent::SetGlobalSkinningModeOverride(ESkinningMode::GPU);
+		break;
+	default:
+		USkinnedMeshComponent::ClearGlobalSkinningModeOverride();
+		break;
+	}
+}
 }
 
 void FEditorSettings::SaveToFile(const FString& Path) const
@@ -106,7 +131,10 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	// View
 	JSON ViewObj = Object();
 	ViewObj[EditorKey::ViewMode] = static_cast<int32>(ViewMode);
+	ViewObj[EditorKey::LightCullMode] = static_cast<int32>(LightCullMode);
 	ViewObj[EditorKey::PickingMode] = static_cast<int32>(PickingMode);
+	ViewObj[EditorKey::ShadowFilterMode] = static_cast<int32>(ShadowFilterMode);
+	ViewObj[EditorKey::SkinningModeOverride] = std::clamp(SkinningModeOverride, 0, 2);
 	ViewObj[EditorKey::bPrimitives] = ShowFlags.bPrimitives;
 	ViewObj[EditorKey::bSkeletalMesh] = ShowFlags.bSkeletalMesh;
 	ViewObj[EditorKey::bParticleSystem] = ShowFlags.bParticleSystem;
@@ -117,6 +145,8 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	ViewObj[EditorKey::bBoundingVolume] = ShowFlags.bBoundingVolume;
 	ViewObj[EditorKey::bEnableLOD] = ShowFlags.bEnableLOD;
 	ViewObj[EditorKey::bBVHBoundingVolume] = ShowFlags.bBVHBoundingVolume;
+	ViewObj[EditorKey::bDecals] = ShowFlags.bDecals;
+	ViewObj[EditorKey::bFog] = ShowFlags.bFog;
     ViewObj[EditorKey::bShadow] = ShowFlags.bShadow;
 	ViewObj[EditorKey::FXAAEnabled] = bEnableFXAA;
     ViewObj[EditorKey::bGammaCorrection] = ShowFlags.bGammaCorrection;
@@ -255,11 +285,36 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			if (Mode >= 0 && Mode < static_cast<int32>(EViewMode::Count))
 				ViewMode = static_cast<EViewMode>(Mode);
 		}
+		if (ViewObj.hasKey(EditorKey::LightCullMode))
+		{
+			const int32 Mode = ViewObj[EditorKey::LightCullMode].ToInt();
+			switch (static_cast<ELightCullMode>(Mode))
+			{
+			case ELightCullMode::None:
+			case ELightCullMode::Clustered:
+			case ELightCullMode::Tiled:
+				LightCullMode = static_cast<ELightCullMode>(Mode);
+				break;
+			default:
+				LightCullMode = ELightCullMode::Clustered;
+				break;
+			}
+		}
 		if (ViewObj.hasKey(EditorKey::PickingMode))
 		{
 			int32 Mode = ViewObj[EditorKey::PickingMode].ToInt();
 			if (Mode >= 0 && Mode < static_cast<int32>(EEditorPickingMode::Count))
 				PickingMode = static_cast<EEditorPickingMode>(Mode);
+		}
+		if (ViewObj.hasKey(EditorKey::ShadowFilterMode))
+		{
+			const int32 Mode = ViewObj[EditorKey::ShadowFilterMode].ToInt();
+			ShadowFilterMode = Mode == static_cast<int32>(EShadowFilter::VSM) ? EShadowFilter::VSM : EShadowFilter::PCF;
+		}
+		if (ViewObj.hasKey(EditorKey::SkinningModeOverride))
+		{
+			SkinningModeOverride = std::clamp(static_cast<int32>(ViewObj[EditorKey::SkinningModeOverride].ToInt()), 0, 2);
+			ApplySkinningModeOverride(SkinningModeOverride);
 		}
 		if (ViewObj.hasKey(EditorKey::bPrimitives))
 			ShowFlags.bPrimitives = ViewObj[EditorKey::bPrimitives].ToBool();
@@ -281,6 +336,10 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			ShowFlags.bEnableLOD = ViewObj[EditorKey::bEnableLOD].ToBool();
 		if (ViewObj.hasKey(EditorKey::bBVHBoundingVolume))
             ShowFlags.bBVHBoundingVolume = ViewObj[EditorKey::bBVHBoundingVolume].ToBool();
+		if (ViewObj.hasKey(EditorKey::bDecals))
+			ShowFlags.bDecals = ViewObj[EditorKey::bDecals].ToBool();
+		if (ViewObj.hasKey(EditorKey::bFog))
+			ShowFlags.bFog = ViewObj[EditorKey::bFog].ToBool();
         if (ViewObj.hasKey(EditorKey::bShadow))
             ShowFlags.bShadow = ViewObj[EditorKey::bShadow].ToBool(); 
 		if (ViewObj.hasKey(EditorKey::bGammaCorrection))

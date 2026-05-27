@@ -8,8 +8,10 @@ class FAssetPathPolicy
 public:
 	static bool FileExists(const FString& Path);
 	static bool IsCurveAssetPath(const FString& Path);
+	static bool IsStaticMeshAssetPath(const FString& Path);
 	static bool IsAnimSequenceAssetPath(const FString& Path);
 	static bool IsSerializedMaterialAssetPath(const FString& Path);
+	static FString MakeImportedStaticMeshAssetPath(const FString& SourcePath);
 	static FString MakeImportedSkeletalMeshAssetPath(const FString& SourcePath);
 	static FString MakeImportedAnimSequenceAssetPath(const FString& SourcePath, const FString& StackName);
 	static FString MakeCookedStaticMeshBinaryPath(const FString& SourcePath);

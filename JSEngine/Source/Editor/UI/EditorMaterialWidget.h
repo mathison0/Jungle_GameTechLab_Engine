@@ -32,6 +32,8 @@ private:
 	void RefreshEditingMaterialFromSlot();
 	bool CreateInstanceForCurrentMaterial();
 
+	void CollectMaterialParamsFromStorage(UMaterialInterface* Material, TMap<FString, FMaterialParamValue>& OutParams);
+
 private:
 	int32 EditingSlotIndex = -1;
 	UMaterialInterface* SelectedMaterialPtr = nullptr;
@@ -42,9 +44,4 @@ private:
 	float PreviewPitchRad = 0.25f;
 	float PreviewDistance = 4.0f;
 	bool bFocusWindowNextFrame = false;
-	bool bMaterialParamEditCaptured = false;
-	UMaterialInstance* MaterialParamEditInstance = nullptr;
-	FString MaterialParamEditPath;
-	FString MaterialParamEditName;
-	TMap<FString, FMaterialParamValue> MaterialParamEditBeforeOverrides;
 };

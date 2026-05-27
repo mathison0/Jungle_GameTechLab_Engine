@@ -373,13 +373,38 @@ void FEditorMainPanel::RenderDetachedAnimGraphEditorDocument(float DeltaTime)
 		FEditorDetachedWindowChrome::RenderMenuBar(
 			Title.c_str(),
 			"AnimGraphDetached",
-			[&bDockRequested]()
+			[this, &bDockRequested]()
 			{
+				if (ImGui::BeginMenu("File"))
+				{
+					const char* SaveLabel = Widgets.AnimGraphWidget.IsDirty() ? "Save Asset *" : "Save Asset";
+					if (ImGui::MenuItem(SaveLabel, "Ctrl+S"))
+					{
+						Widgets.AnimGraphWidget.Save();
+					}
+					ImGui::EndMenu();
+				}
 				if (ImGui::BeginMenu("Window"))
 				{
 					if (ImGui::MenuItem("Dock Back"))
 					{
 						bDockRequested = true;
+					}
+					ImGui::EndMenu();
+				}
+				if (ImGui::BeginMenu("Settings"))
+				{
+					if (ImGui::MenuItem("Editor Settings"))
+					{
+						OpenEditorSettingsPanel();
+					}
+					if (ImGui::MenuItem("Project Settings"))
+					{
+						OpenProjectSettingsPanel();
+					}
+					if (ImGui::MenuItem("World Settings"))
+					{
+						OpenWorldSettingsPanel();
 					}
 					ImGui::EndMenu();
 				}
@@ -468,13 +493,38 @@ void FEditorMainPanel::RenderDetachedLuaAnimGraphEditorDocument(float DeltaTime)
 		FEditorDetachedWindowChrome::RenderMenuBar(
 			Title.c_str(),
 			"LuaAnimGraphDetached",
-			[&bDockRequested]()
+			[this, &bDockRequested]()
 			{
+				if (ImGui::BeginMenu("File"))
+				{
+					const char* SaveLabel = Widgets.LuaAnimGraphWidget.IsDirty() ? "Save Asset *" : "Save Asset";
+					if (ImGui::MenuItem(SaveLabel, "Ctrl+S"))
+					{
+						Widgets.LuaAnimGraphWidget.SaveAsset();
+					}
+					ImGui::EndMenu();
+				}
 				if (ImGui::BeginMenu("Window"))
 				{
 					if (ImGui::MenuItem("Dock Back"))
 					{
 						bDockRequested = true;
+					}
+					ImGui::EndMenu();
+				}
+				if (ImGui::BeginMenu("Settings"))
+				{
+					if (ImGui::MenuItem("Editor Settings"))
+					{
+						OpenEditorSettingsPanel();
+					}
+					if (ImGui::MenuItem("Project Settings"))
+					{
+						OpenProjectSettingsPanel();
+					}
+					if (ImGui::MenuItem("World Settings"))
+					{
+						OpenWorldSettingsPanel();
 					}
 					ImGui::EndMenu();
 				}
@@ -563,12 +613,13 @@ void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTim
 	{
 		static ImVec2 LastDetachedParticleWindowPos(0.0f, 0.0f);
 		static bool bDraggingDetachedParticleWindow = false;
+		bool bDockRequested = false;
 		bool bCloseRequested = false;
 		const bool bDockByDraggingToTabStrip =
 			FEditorDetachedWindowChrome::WasCurrentWindowDraggedToMainTabStrip(
 				LastDetachedParticleWindowPos,
 				bDraggingDetachedParticleWindow);
-		Widgets.ParticleSystemWidget.RenderDetachedDocumentChrome(bCloseRequested);
+		Widgets.ParticleSystemWidget.RenderDetachedDocumentChrome(bDockRequested, bCloseRequested);
 
 		ImGui::BeginChild("##DetachedParticleToolbar", ImVec2(0.0f, 40.0f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 		ImGui::SetCursorPos(ImVec2(8.0f, 6.0f));
@@ -578,7 +629,7 @@ void FEditorMainPanel::RenderDetachedParticleSystemEditorDocument(float DeltaTim
 		EditorTabs.SetTabDirty(ParticleTab->Id, Widgets.ParticleSystemWidget.IsDirty());
 		Widgets.ParticleSystemWidget.RenderEmbedded(DeltaTime);
 
-		if (bDockByDraggingToTabStrip)
+		if (bDockRequested || bDockByDraggingToTabStrip)
 		{
 			RequestDetachEditorTab(ParticleTab->Id, false);
 		}

@@ -558,6 +558,26 @@ void FEditorContentBrowserWidget::DrawFloatingWindowChrome(bool& bOpen)
 				}
 				ImGui::EndMenu();
 			}
+			if (ImGui::BeginMenu("Settings"))
+			{
+				if (EditorEngine)
+				{
+					FEditorMainPanel& MainPanel = EditorEngine->GetMainPanel();
+					if (ImGui::MenuItem("Editor Settings"))
+					{
+						MainPanel.OpenEditorSettingsPanel();
+					}
+					if (ImGui::MenuItem("Project Settings"))
+					{
+						MainPanel.OpenProjectSettingsPanel();
+					}
+					if (ImGui::MenuItem("World Settings"))
+					{
+						MainPanel.OpenWorldSettingsPanel();
+					}
+				}
+				ImGui::EndMenu();
+			}
 			if (ImGui::BeginMenu("Help"))
 			{
 				ImGui::TextDisabled("Content Browser");
@@ -678,6 +698,10 @@ void FEditorContentBrowserWidget::DrawToolbar()
 
 void FEditorContentBrowserWidget::Refresh()
 {
+	if (EditorEngine)
+	{
+		EditorEngine->GetAssetService().RefreshAssetDatabase();
+	}
 	RebuildRootNode();
 	RefreshContent();
 	bPendingMaterialPreviewCacheClear = true;
@@ -1188,6 +1212,10 @@ void FEditorContentBrowserWidget::DrawContentTile(const FContentItem& Item, cons
 		{
 			EditorEngine->GetMainPanel().OpenRuntimeUIPreviewAsset(MakeRelativeProjectPath(Item.Path));
 		}
+		else if (IsRawMeshSource(Item))
+		{
+			ImportRawMeshSource(Item);
+		}
 		else
 		{
 			ShellExecuteW(nullptr, L"open", Item.Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
@@ -1274,6 +1302,16 @@ void FEditorContentBrowserWidget::DrawContentContextMenu(bool bHasSelectedItem)
 	if (ImGui::MenuItem("Spawn Prefab at Origin", nullptr, false, IsPrefabAsset(SelectedExtension)))
 	{
 		EditorEngine->GetMainPanel().SpawnPrefabAtOrigin(FPaths::ToUtf8(SelectedPath.wstring()));
+		ImGui::CloseCurrentPopup();
+	}
+	if (ImGui::MenuItem("Import Mesh Source", nullptr, false, SelectedExtension == ".obj" || SelectedExtension == ".fbx"))
+	{
+		FContentItem Item;
+		Item.Path = SelectedPath;
+		Item.Name = FPaths::ToUtf8(SelectedPath.filename().wstring());
+		Item.Extension = SelectedExtension;
+		Item.bIsDirectory = false;
+		ImportRawMeshSource(Item);
 		ImGui::CloseCurrentPopup();
 	}
 	if (ImGui::MenuItem("Rename", "F2"))
@@ -1393,7 +1431,7 @@ bool FEditorContentBrowserWidget::CreateMaterialAsset()
 	}
 
 	SelectedPath = NewPath;
-	RefreshContent();
+	Refresh();
 	RecordCreatedContentPath(EditorEngine, NewPath, "Create Material");
 	return true;
 }
@@ -1433,7 +1471,7 @@ bool FEditorContentBrowserWidget::CreateCurveAsset()
 	}
 
 	SelectedPath = NewPath;
-	RefreshContent();
+	Refresh();
 	RecordCreatedContentPath(EditorEngine, NewPath, "Create Curve");
 	return true;
 }
@@ -1472,7 +1510,7 @@ bool FEditorContentBrowserWidget::CreateAnimGraphAsset()
 	}
 
 	SelectedPath = NewPath;
-	RefreshContent();
+	Refresh();
 	RecordCreatedContentPath(EditorEngine, NewPath, "Create Anim Graph");
 	return true;
 }
@@ -1503,7 +1541,7 @@ bool FEditorContentBrowserWidget::CreateLuaAnimGraphAsset()
 	}
 
 	SelectedPath = NewPath;
-	RefreshContent();
+	Refresh();
 	RecordCreatedContentPath(EditorEngine, NewPath, "Create Lua Anim Graph");
 	return true;
 }
@@ -1530,7 +1568,7 @@ bool FEditorContentBrowserWidget::CreateParticleSystemAsset()
 	}
 
 	SelectedPath = NewPath;
-	RefreshContent();
+	Refresh();
 	RecordCreatedContentPath(EditorEngine, NewPath, "Create Particle System");
 	return true;
 }
@@ -1549,11 +1587,7 @@ bool FEditorContentBrowserWidget::CreateRuntimeUILayoutAsset()
 	}
 
 	SelectedPath = NewPath;
-	if (EditorEngine)
-	{
-		EditorEngine->GetAssetService().RefreshAssetDatabase();
-	}
-	RefreshContent();
+	Refresh();
 	RecordCreatedContentPath(EditorEngine, NewPath, "Create Runtime UI Layout");
 	return true;
 }
@@ -1572,7 +1606,7 @@ bool FEditorContentBrowserWidget::CreateSceneAsset()
 	}
 
 	SelectedPath = NewPath;
-	RefreshContent();
+	Refresh();
 	RecordCreatedContentPath(EditorEngine, NewPath, "Create Scene");
 	return true;
 }
@@ -2378,6 +2412,10 @@ FString FEditorContentBrowserWidget::GetPayloadType(const FContentItem& Item) co
 	{
 		return "PrefabContentItem";
 	}
+	if (IsRawMeshSource(Item))
+	{
+		return "ObjectContentItem";
+	}
 	if (Item.Extension == ".lua")
 	{
 		return "LuaScriptContentItem";
@@ -2519,6 +2557,50 @@ bool FEditorContentBrowserWidget::IsSkeletalMeshAsset(const FContentItem& Item) 
 		return Item.AssetMetadata.ClassName == USkeletalMesh::StaticClass()->GetName();
 	}
 	return false;
+}
+
+bool FEditorContentBrowserWidget::IsRawMeshSource(const FContentItem& Item) const
+{
+	return !Item.bIsDirectory && (Item.Extension == ".obj" || Item.Extension == ".fbx");
+}
+
+bool FEditorContentBrowserWidget::ImportRawMeshSource(const FContentItem& Item)
+{
+	if (!EditorEngine || !IsRawMeshSource(Item))
+	{
+		return false;
+	}
+
+	const FString RelativePath = MakeRelativeProjectPath(Item.Path);
+	const FString InspectPath = FPaths::Normalize(FPaths::ToUtf8(Item.Path.lexically_normal().generic_wstring()));
+	FResourceManager& ResourceManager = FResourceManager::Get();
+	FString ImportedAssetPath;
+
+	if (Item.Extension == ".fbx")
+	{
+		const FFbxMeshContentInfo ContentInfo = ResourceManager.InspectFbxMeshContent(InspectPath);
+		if (ContentInfo.bHasSkeletalMesh)
+		{
+			ImportedAssetPath = ResourceManager.ImportSkeletalMeshFromSource(RelativePath);
+			ResourceManager.ImportAnimationStacksFromFbx(InspectPath);
+		}
+	}
+
+	if (ImportedAssetPath.empty())
+	{
+		ImportedAssetPath = ResourceManager.ImportStaticMeshFromSource(RelativePath);
+	}
+
+	if (ImportedAssetPath.empty())
+	{
+		EditorEngine->GetNotificationService().Warning("Failed to import mesh source.");
+		return false;
+	}
+
+	Refresh();
+	EditorEngine->GetNotificationService().Info("Mesh source imported.");
+	EditorEngine->CreateViewer(ImportedAssetPath);
+	return true;
 }
 
 bool FEditorContentBrowserWidget::IsCurveAsset(const std::filesystem::path& Path) const

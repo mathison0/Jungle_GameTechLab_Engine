@@ -274,12 +274,63 @@ void FEditorParticleSystemWidget::DrawBackgroundColorPopup()
 	EndParticlePopup();
 }
 
-void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseRequested)
+void FEditorParticleSystemWidget::RenderDocumentViewMenu()
+{
+	if (BeginParticleMenu("View"))
+	{
+		if (ImGui::MenuItem("Thumbnail", nullptr, bShowThumbnail))
+		{
+			bShowThumbnail = !bShowThumbnail;
+		}
+		if (ImGui::MenuItem("Bounds", nullptr, bShowBounds))
+		{
+			SetPreviewBoundsVisible(!bShowBounds);
+		}
+		if (ImGui::MenuItem("Origin Axis", nullptr, bShowOriginAxis))
+		{
+			SetPreviewOriginAxisVisible(!bShowOriginAxis);
+		}
+		EndParticleMenu();
+	}
+}
+
+void FEditorParticleSystemWidget::RenderDocumentParticleMenu()
+{
+	if (BeginParticleMenu("Particle"))
+	{
+		if (ImGui::MenuItem("Restart Simulation"))
+		{
+			RefreshPreviewComponent(true);
+			RestartPreviewPlayback();
+		}
+		ImGui::MenuItem("Restart Level", nullptr, false, false);
+		ImGui::Separator();
+		ImGui::BeginDisabled(!ParticleSystemAsset || ParticleSystemAsset->Emitters.empty());
+		if (ImGui::MenuItem("Add LOD Before Current"))
+		{
+			AddLODRelativeToCurrent(0);
+		}
+		if (ImGui::MenuItem("Add LOD After Current"))
+		{
+			AddLODRelativeToCurrent(1);
+		}
+		ImGui::EndDisabled();
+		ImGui::BeginDisabled(CurrentLOD <= 0);
+		if (ImGui::MenuItem("Delete Current LOD"))
+		{
+			DeleteCurrentLOD();
+		}
+		ImGui::EndDisabled();
+		EndParticleMenu();
+	}
+}
+
+void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bDockRequested, bool& bCloseRequested)
 {
 	FEditorDetachedWindowChrome::RenderMenuBar(
 		"Particle System Editor",
 		"ParticleSystemEditor",
-		[this]()
+		[this, &bDockRequested]()
 		{
 			if (BeginParticleMenu("File"))
 			{
@@ -302,38 +353,39 @@ void FEditorParticleSystemWidget::RenderDetachedDocumentChrome(bool& bCloseReque
 				}
 				EndParticleMenu();
 			}
-			if (BeginParticleMenu("View"))
-			{
-				if (ImGui::MenuItem("Thumbnail", nullptr, bShowThumbnail))
-				{
-					bShowThumbnail = !bShowThumbnail;
-				}
-				if (ImGui::MenuItem("Bounds", nullptr, bShowBounds))
-				{
-					SetPreviewBoundsVisible(!bShowBounds);
-				}
-				if (ImGui::MenuItem("Origin Axis", nullptr, bShowOriginAxis))
-				{
-					SetPreviewOriginAxisVisible(!bShowOriginAxis);
-				}
-				EndParticleMenu();
-			}
-			if (BeginParticleMenu("Particle"))
-			{
-				ImGui::MenuItem("Restart Simulation", nullptr, false, false);
-				ImGui::MenuItem("Restart Level", nullptr, false, false);
-				ImGui::Separator();
-				ImGui::MenuItem("Regenerate LOD", nullptr, false, false);
-				ImGui::MenuItem("Add LOD", nullptr, false, false);
-				EndParticleMenu();
-			}
+			RenderDocumentViewMenu();
+			RenderDocumentParticleMenu();
 			if (BeginParticleMenu("Window"))
 			{
+				if (ImGui::MenuItem("Dock Back"))
+				{
+					bDockRequested = true;
+				}
 				if (ImGui::MenuItem("Reset Layout"))
 				{
 					TopAreaHeight = 0.0f;
 					TopLeftWidth = 0.0f;
 					BottomLeftWidth = 0.0f;
+				}
+				EndParticleMenu();
+			}
+			if (BeginParticleMenu("Settings"))
+			{
+				if (EditorEngine)
+				{
+					FEditorMainPanel& MainPanel = EditorEngine->GetMainPanel();
+					if (ImGui::MenuItem("Editor Settings"))
+					{
+						MainPanel.OpenEditorSettingsPanel();
+					}
+					if (ImGui::MenuItem("Project Settings"))
+					{
+						MainPanel.OpenProjectSettingsPanel();
+					}
+					if (ImGui::MenuItem("World Settings"))
+					{
+						MainPanel.OpenWorldSettingsPanel();
+					}
 				}
 				EndParticleMenu();
 			}

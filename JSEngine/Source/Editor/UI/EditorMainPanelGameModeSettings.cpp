@@ -1,6 +1,8 @@
 ﻿#include "Editor/UI/EditorMainPanel.h"
 
 #include "Editor/EditorEngine.h"
+#include "Editor/Settings/EditorSettings.h"
+#include "Component/SkinnedMeshComponent.h"
 #include "Editor/Settings/ProjectSettings.h"
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "Engine/Core/Paths.h"
@@ -172,6 +174,21 @@ bool DrawPrefabCombo(const char* Label, char* Buffer, size_t BufferSize)
 }
 } // namespace
 
+void FEditorMainPanel::OpenProjectSettingsPanel()
+{
+	PanelVisibility.bShowProjectSettings = true;
+}
+
+void FEditorMainPanel::OpenWorldSettingsPanel()
+{
+	PanelVisibility.bShowWorldSettings = true;
+}
+
+void FEditorMainPanel::OpenEditorSettingsPanel()
+{
+	PanelVisibility.bShowEditorSettings = true;
+}
+
 void FEditorMainPanel::LoadGameModeSettingsPanelBuffers()
 {
 	FProjectSettings& ProjectSettings = FProjectSettings::Get();
@@ -321,6 +338,113 @@ void FEditorMainPanel::RenderProjectSettingsPanel()
 		strncpy_s(GameModeSettingsState.PlayerControllerClassBuffer, "APlayerController", _TRUNCATE);
 		strncpy_s(GameModeSettingsState.DefaultPawnClassBuffer, "ADefaultPawn", _TRUNCATE);
 		strncpy_s(GameModeSettingsState.DefaultPawnPrefabPathBuffer, "", _TRUNCATE);
+	}
+
+	ImGui::End();
+}
+
+void FEditorMainPanel::RenderEditorSettingsPanel()
+{
+	FEditorSettings& Settings = FEditorSettings::Get();
+
+	ImGui::SetNextWindowSize(ImVec2(460.0f, 320.0f), ImGuiCond_FirstUseEver);
+	bool bOpen = PanelVisibility.bShowEditorSettings;
+	if (!ImGui::Begin("Editor Settings", &bOpen))
+	{
+		PanelVisibility.bShowEditorSettings = bOpen;
+		ImGui::End();
+		return;
+	}
+	PanelVisibility.bShowEditorSettings = bOpen;
+
+	if (ImGui::CollapsingHeader("Viewport", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::SetNextItemWidth(140.0f);
+		ImGui::DragFloat("Camera Speed", &Settings.CameraSpeed, 0.1f, 0.1f, 500.0f, "%.2f");
+		ImGui::SetNextItemWidth(140.0f);
+		ImGui::DragFloat("Rotation Speed", &Settings.CameraRotationSpeed, 0.1f, 1.0f, 720.0f, "%.2f");
+		ImGui::SetNextItemWidth(140.0f);
+		ImGui::DragFloat("Zoom Speed", &Settings.CameraZoomSpeed, 1.0f, 1.0f, 5000.0f, "%.1f");
+		ImGui::Checkbox("Camera Smoothing", &Settings.bEnableCameraSmoothing);
+	}
+
+	if (ImGui::CollapsingHeader("Rendering", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::Checkbox("FXAA", &Settings.bEnableFXAA);
+		int32 LightCullIndex = 0;
+		switch (Settings.LightCullMode)
+		{
+		case ELightCullMode::Tiled:
+			LightCullIndex = 1;
+			break;
+		case ELightCullMode::None:
+			LightCullIndex = 2;
+			break;
+		case ELightCullMode::Clustered:
+		default:
+			LightCullIndex = 0;
+			break;
+		}
+		const char* LightCullModes[] = { "Clustered", "Tiled", "None (All Lights)" };
+		ImGui::SetNextItemWidth(160.0f);
+		if (ImGui::Combo("Light Culling", &LightCullIndex, LightCullModes, IM_ARRAYSIZE(LightCullModes)))
+		{
+			Settings.LightCullMode = LightCullIndex == 1
+				? ELightCullMode::Tiled
+				: (LightCullIndex == 2 ? ELightCullMode::None : ELightCullMode::Clustered);
+		}
+		int32 ShadowFilterIndex = Settings.ShadowFilterMode == EShadowFilter::VSM ? 1 : 0;
+		const char* ShadowFilters[] = { "PCF", "VSM" };
+		ImGui::SetNextItemWidth(140.0f);
+		if (ImGui::Combo("Shadow Filter", &ShadowFilterIndex, ShadowFilters, IM_ARRAYSIZE(ShadowFilters)))
+		{
+			Settings.ShadowFilterMode = ShadowFilterIndex == 1 ? EShadowFilter::VSM : EShadowFilter::PCF;
+		}
+		const char* SkinningModes[] = { "Component Default", "CPU Skinning", "GPU Skinning" };
+		Settings.SkinningModeOverride = std::clamp(Settings.SkinningModeOverride, 0, 2);
+		ImGui::SetNextItemWidth(160.0f);
+		if (ImGui::Combo("Skinning Mode", &Settings.SkinningModeOverride, SkinningModes, IM_ARRAYSIZE(SkinningModes)))
+		{
+			switch (Settings.SkinningModeOverride)
+			{
+			case 1:
+				USkinnedMeshComponent::SetGlobalSkinningModeOverride(ESkinningMode::CPU);
+				break;
+			case 2:
+				USkinnedMeshComponent::SetGlobalSkinningModeOverride(ESkinningMode::GPU);
+				break;
+			default:
+				USkinnedMeshComponent::ClearGlobalSkinningModeOverride();
+				break;
+			}
+			PushFooterLog("Skinning mode updated.");
+		}
+		ImGui::Checkbox("Primitives", &Settings.ShowFlags.bPrimitives);
+		ImGui::Checkbox("Skeletal Mesh", &Settings.ShowFlags.bSkeletalMesh);
+		ImGui::Checkbox("Particle System", &Settings.ShowFlags.bParticleSystem);
+		ImGui::Checkbox("Billboard Text", &Settings.ShowFlags.bBillboardText);
+		ImGui::Checkbox("Axis", &Settings.ShowFlags.bAxis);
+		ImGui::Checkbox("Grid", &Settings.ShowFlags.bGrid);
+		ImGui::Checkbox("Gizmo", &Settings.ShowFlags.bGizmo);
+		ImGui::Checkbox("Bounding Volume", &Settings.ShowFlags.bBoundingVolume);
+		ImGui::Checkbox("BVH Bounding Volume", &Settings.ShowFlags.bBVHBoundingVolume);
+		ImGui::Checkbox("LOD", &Settings.ShowFlags.bEnableLOD);
+		ImGui::Checkbox("Decals", &Settings.ShowFlags.bDecals);
+		ImGui::Checkbox("Fog", &Settings.ShowFlags.bFog);
+		ImGui::Checkbox("Shadow", &Settings.ShowFlags.bShadow);
+	}
+
+	ImGui::Separator();
+	if (ImGui::Button("Save Editor Settings", ImVec2(170.0f, 0.0f)))
+	{
+		Settings.SaveToFile(FEditorSettings::GetDefaultSettingsPath());
+		PushFooterLog("Editor settings saved.");
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reload", ImVec2(88.0f, 0.0f)))
+	{
+		Settings.LoadFromFile(FEditorSettings::GetDefaultSettingsPath());
+		PushFooterLog("Editor settings reloaded.");
 	}
 
 	ImGui::End();

@@ -14,11 +14,14 @@ class FWindowsWindow;
 struct ID3D11ShaderResourceView;
 class ASkeletalMeshActor;
 class UStaticMeshComponent;
+class UStaticMesh;
+class UDebugSkelMeshComponent;
 class UAnimSequence;
 class UAnimSingleNodeInstance;
 
 enum class EEditorViewerAssetType : uint8
 {
+    StaticMesh,
     SkeletalMesh,
     AnimSequence
 };
@@ -53,6 +56,7 @@ public:
 	const FSkeletalMeshViewportClient& GetClient() const { return Client; }
 
 	ASkeletalMeshActor* GetViewTarget() const { return ViewTarget; }
+    UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
     void ClearViewTarget() { ViewTarget = nullptr; }
 
     // Socket Preview Mesh API (Phase 4) — 휘발성. transient + editorOnly로
@@ -65,6 +69,8 @@ public:
 	void ChangeTarget(const FString& InFileName);
 
     EEditorViewerAssetType GetAssetType() const { return AssetType; }
+    bool IsStaticMeshViewer() const { return AssetType == EEditorViewerAssetType::StaticMesh; }
+    bool IsSkeletalMeshViewer() const { return AssetType == EEditorViewerAssetType::SkeletalMesh; }
     bool IsAnimationSequenceViewer() const { return AssetType == EEditorViewerAssetType::AnimSequence; }
     UAnimSequence* GetAnimSequence() const { return AnimSequence; }
     const FString& GetPreviewMeshPath() const { return PreviewMeshPath; }
@@ -97,6 +103,8 @@ private:
     FSceneViewport Viewport;
     FSkeletalMeshViewportClient Client;
 	ASkeletalMeshActor* ViewTarget = nullptr;
+	UDebugSkelMeshComponent* DebugSkelMeshComponent = nullptr;
+    UStaticMeshComponent* StaticMeshComponent = nullptr;
 
     UAnimSingleNodeInstance* GetSingleNodeInstance() const;
     bool ApplyAnimationSequenceToComponent(bool bAutoPlay);

@@ -115,6 +115,7 @@ public:
 	UStaticMesh* LoadStaticMesh(const FString& Path);
 	UStaticMesh* FindStaticMesh(const FString& Path) const;
 	TArray<FString> GetStaticMeshPaths() const;
+	FString ImportStaticMeshFromSource(const FString& Path);
 
 	/*
 	 * note: 병합하면서 충돌이 발생하거나 동일한 로직의 함수가 있다면 날려버리셔도 됩니다

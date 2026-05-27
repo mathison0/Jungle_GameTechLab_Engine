@@ -261,6 +261,7 @@ void FEditorMainPanel::BindEditorWidgetCallbacks()
         &PanelVisibility.bShowUndoHistory,
         &PanelVisibility.bShowProjectSettings,
         &PanelVisibility.bShowWorldSettings,
+        &PanelVisibility.bShowEditorSettings,
         &PIEViewportState.bFullscreenEnabled);
 }
 

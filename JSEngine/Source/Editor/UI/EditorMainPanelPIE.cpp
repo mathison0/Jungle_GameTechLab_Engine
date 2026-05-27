@@ -28,6 +28,7 @@ void FEditorMainPanel::HideEditorWindowsForPIE()
         PIEViewportState.SavedPanelVisibility.bShowContentBrowser = PanelVisibility.bShowContentBrowser;
         PIEViewportState.SavedPanelVisibility.bShowProjectSettings = PanelVisibility.bShowProjectSettings;
         PIEViewportState.SavedPanelVisibility.bShowWorldSettings = PanelVisibility.bShowWorldSettings;
+        PIEViewportState.SavedPanelVisibility.bShowEditorSettings = PanelVisibility.bShowEditorSettings;
         PIEViewportState.SavedPanelVisibility.bConsoleDrawerVisible = ConsoleState.bDrawerVisible;
         PIEViewportState.SavedPanelVisibility.bViewportSettingsVisible =
             Widgets.ViewportOverlayWidget.IsViewportSettingsVisible();
@@ -50,6 +51,7 @@ void FEditorMainPanel::HideEditorWindowsForPIE()
         PanelVisibility.bShowContentBrowser = false;
         PanelVisibility.bShowProjectSettings = false;
         PanelVisibility.bShowWorldSettings = false;
+        PanelVisibility.bShowEditorSettings = false;
         Widgets.ContentBrowserWidget.SetVisible(false);
         ConsoleState.bDrawerVisible = false;
         Widgets.ViewportOverlayWidget.SetViewportSettingsVisible(false);
@@ -82,6 +84,7 @@ void FEditorMainPanel::RestoreEditorWindowsAfterPIE()
     PanelVisibility.bShowContentBrowser = PIEViewportState.SavedPanelVisibility.bShowContentBrowser;
     PanelVisibility.bShowProjectSettings = PIEViewportState.SavedPanelVisibility.bShowProjectSettings;
     PanelVisibility.bShowWorldSettings = PIEViewportState.SavedPanelVisibility.bShowWorldSettings;
+    PanelVisibility.bShowEditorSettings = PIEViewportState.SavedPanelVisibility.bShowEditorSettings;
     Widgets.ContentBrowserWidget.SetVisible(PanelVisibility.bShowContentBrowser);
     ConsoleState.bDrawerVisible = PIEViewportState.SavedPanelVisibility.bConsoleDrawerVisible;
     Widgets.ViewportOverlayWidget.SetViewportSettingsVisible(
@@ -127,6 +130,7 @@ void FEditorMainPanel::SetPIEViewportFullscreenEnabled(bool bEnabled)
             PIEViewportState.SavedPanelVisibility.bShowContentBrowser = PanelVisibility.bShowContentBrowser;
             PIEViewportState.SavedPanelVisibility.bShowProjectSettings = PanelVisibility.bShowProjectSettings;
             PIEViewportState.SavedPanelVisibility.bShowWorldSettings = PanelVisibility.bShowWorldSettings;
+            PIEViewportState.SavedPanelVisibility.bShowEditorSettings = PanelVisibility.bShowEditorSettings;
             PIEViewportState.SavedPanelVisibility.bConsoleDrawerVisible = ConsoleState.bDrawerVisible;
             PIEViewportState.SavedPanelVisibility.bViewportSettingsVisible =
                 Widgets.ViewportOverlayWidget.IsViewportSettingsVisible();
@@ -147,6 +151,7 @@ void FEditorMainPanel::SetPIEViewportFullscreenEnabled(bool bEnabled)
         PanelVisibility.bShowContentBrowser = false;
         PanelVisibility.bShowProjectSettings = false;
         PanelVisibility.bShowWorldSettings = false;
+        PanelVisibility.bShowEditorSettings = false;
         Widgets.ContentBrowserWidget.SetVisible(false);
         ConsoleState.bDrawerVisible = false;
         Widgets.ViewportOverlayWidget.SetViewportSettingsVisible(false);
@@ -169,6 +174,7 @@ void FEditorMainPanel::SetPIEViewportFullscreenEnabled(bool bEnabled)
             PanelVisibility.bShowContentBrowser = PIEViewportState.SavedPanelVisibility.bShowContentBrowser;
             PanelVisibility.bShowProjectSettings = PIEViewportState.SavedPanelVisibility.bShowProjectSettings;
             PanelVisibility.bShowWorldSettings = PIEViewportState.SavedPanelVisibility.bShowWorldSettings;
+            PanelVisibility.bShowEditorSettings = PIEViewportState.SavedPanelVisibility.bShowEditorSettings;
             Widgets.ContentBrowserWidget.SetVisible(PanelVisibility.bShowContentBrowser);
             ConsoleState.bDrawerVisible = PIEViewportState.SavedPanelVisibility.bConsoleDrawerVisible;
             Widgets.ViewportOverlayWidget.SetViewportSettingsVisible(

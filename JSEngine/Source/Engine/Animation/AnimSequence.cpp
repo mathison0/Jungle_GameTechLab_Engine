@@ -11,6 +11,12 @@
 
 namespace
 {
+	const FName& DefaultNotifyTrackName()
+	{
+		static const FName Name("Notifies");
+		return Name;
+	}
+
 	UAnimNotify* CreateAnimNotifyObject(const FString& NotifyClassName)
 	{
 		if (NotifyClassName.empty())
@@ -29,8 +35,16 @@ namespace
 
 	void SerializeAnimNotifyEvent(FArchive& Ar, FAnimNotifyStateEvent& Value, int32 PayloadVersion)
 	{
+		if (PayloadVersion >= 4)
+		{
+			Ar << "NotifyId" << Value.NotifyId;
+		}
 		Ar << "TriggerTime" << Value.TriggerTime;
 		Ar << "Duration" << Value.Duration;
+		if (PayloadVersion >= 4)
+		{
+			Ar << "TriggerWeightThreshold" << Value.TriggerWeightThreshold;
+		}
 		Ar << "NotifyName" << Value.NotifyName;
 		Ar << "NotifyClassName" << Value.NotifyClassName;
 		if (PayloadVersion >= 3)
@@ -60,6 +74,23 @@ namespace
 		}
 		Ar.EndArray();
 	}
+
+	void SerializeAnimNotifyTracks(FArchive& Ar, TArray<FAnimNotifyTrack>& NotifyTracks, int32 PayloadVersion)
+	{
+		int32 Count = static_cast<int32>(NotifyTracks.size());
+		Ar << "NotifyTracks";
+		Ar.BeginArray(Ar.GetCurrentKey(), Count);
+		if (Ar.IsLoading())
+		{
+			NotifyTracks.resize(Count);
+		}
+		for (FAnimNotifyTrack& Track : NotifyTracks)
+		{
+			Ar << "TrackName" << Track.TrackName;
+			SerializeAnimNotifyArray(Ar, Track.Notifies, PayloadVersion);
+		}
+		Ar.EndArray();
+	}
 }
 
 const TArray<FBoneAnimationTrack>& UAnimDataModel::GetBoneAnimationTracks() const
@@ -74,13 +105,15 @@ TArray<FBoneAnimationTrack>& UAnimDataModel::GetMutableBoneAnimationTracks()
 
 void UAnimDataModel::Serialize(FArchive& Ar, int32 PayloadVersion)
 {
-	(void)PayloadVersion;
-
 	Ar << "BoneAnimationTracks" << BoneAnimationTracks;
 	Ar << "PlayLength" << PlayLength;
 	Ar << "FrameRate" << FrameRate;
 	Ar << "NumberOfFrames" << NumberOfFrames;
 	Ar << "NumberOfKeys" << NumberOfKeys;
+	if (PayloadVersion >= 4)
+	{
+		Ar << "CurveData" << CurveData;
+	}
 }
 
 FArchive& operator<<(FArchive& Ar, FFrameRate& Value)
@@ -105,9 +138,83 @@ FArchive& operator<<(FArchive& Ar, FBoneAnimationTrack& Value)
 	return Ar;
 }
 
+FArchive& operator<<(FArchive& Ar, FAnimCurveTrack& Value)
+{
+	Ar << "CurveName" << Value.CurveName;
+	TArray<float> Times;
+	TArray<float> Values;
+	TArray<int32> InterpModes;
+	TArray<int32> TangentModes;
+	TArray<float> ArriveTangents;
+	TArray<float> LeaveTangents;
+
+	if (Ar.IsSaving())
+	{
+		Times.reserve(Value.Curve.Keys.size());
+		Values.reserve(Value.Curve.Keys.size());
+		InterpModes.reserve(Value.Curve.Keys.size());
+		TangentModes.reserve(Value.Curve.Keys.size());
+		ArriveTangents.reserve(Value.Curve.Keys.size());
+		LeaveTangents.reserve(Value.Curve.Keys.size());
+		for (const FCurveKey& Key : Value.Curve.Keys)
+		{
+			Times.push_back(Key.Time);
+			Values.push_back(Key.Value);
+			InterpModes.push_back(static_cast<int32>(Key.InterpMode));
+			TangentModes.push_back(static_cast<int32>(Key.TangentMode));
+			ArriveTangents.push_back(Key.ArriveTangent);
+			LeaveTangents.push_back(Key.LeaveTangent);
+		}
+	}
+
+	Ar << "Times" << Times;
+	Ar << "Values" << Values;
+	Ar << "InterpModes" << InterpModes;
+	Ar << "TangentModes" << TangentModes;
+	Ar << "ArriveTangents" << ArriveTangents;
+	Ar << "LeaveTangents" << LeaveTangents;
+
+	if (Ar.IsLoading())
+	{
+		Value.Curve.Keys.clear();
+		Value.Curve.Keys.reserve(Times.size());
+		for (size_t Index = 0; Index < Times.size(); ++Index)
+		{
+			FCurveKey Key;
+			Key.Time = Times[Index];
+			Key.Value = Index < Values.size() ? Values[Index] : 0.0f;
+			Key.InterpMode = Index < InterpModes.size()
+				? static_cast<ECurveInterpMode>(InterpModes[Index])
+				: ECurveInterpMode::Cubic;
+			Key.TangentMode = Index < TangentModes.size()
+				? static_cast<ECurveTangentMode>(TangentModes[Index])
+				: ECurveTangentMode::Auto;
+			Key.ArriveTangent = Index < ArriveTangents.size() ? ArriveTangents[Index] : 0.0f;
+			Key.LeaveTangent = Index < LeaveTangents.size() ? LeaveTangents[Index] : 0.0f;
+			Value.Curve.Keys.push_back(Key);
+		}
+		Value.Curve.SortKeys();
+	}
+
+	return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FAnimationCurveData& Value)
+{
+	Ar << "FloatCurves" << Value.FloatCurves;
+	return Ar;
+}
+
 FArchive& operator<<(FArchive& Ar, FAnimNotifyStateEvent& Value)
 {
-	SerializeAnimNotifyEvent(Ar, Value, 2);
+	SerializeAnimNotifyEvent(Ar, Value, 4);
+	return Ar;
+}
+
+FArchive& operator<<(FArchive& Ar, FAnimNotifyTrack& Value)
+{
+	Ar << "TrackName" << Value.TrackName;
+	Ar << "Notifies" << Value.Notifies;
 	return Ar;
 }
 
@@ -144,6 +251,11 @@ void FAnimSequenceAssetPayload::Serialize(FArchive& Ar, int32 PayloadVersion)
 			}
 		}
 	}
+
+	if (PayloadVersion >= 4)
+	{
+		SerializeAnimNotifyTracks(Ar, NotifyTracks, PayloadVersion);
+	}
 }
 
 const TArray<FBoneAnimationTrack>& UAnimSequenceBase::GetBoneAnimationTracks() const
@@ -152,11 +264,309 @@ const TArray<FBoneAnimationTrack>& UAnimSequenceBase::GetBoneAnimationTracks() c
 	return DataModel ? DataModel->GetBoneAnimationTracks() : EmptyTracks;
 }
 
+uint32 UAnimSequenceBase::GenerateNotifyId() const
+{
+	uint32 MaxId = 0;
+	for (const FAnimNotifyStateEvent& Notify : Notifies)
+	{
+		MaxId = std::max(MaxId, Notify.NotifyId);
+	}
+	for (const FAnimNotifyTrack& Track : NotifyTracks)
+	{
+		for (const FAnimNotifyStateEvent& Notify : Track.Notifies)
+		{
+			MaxId = std::max(MaxId, Notify.NotifyId);
+		}
+	}
+	return MaxId + 1;
+}
+
+void UAnimSequenceBase::EnsureDefaultNotifyTrack()
+{
+	if (!NotifyTracks.empty())
+	{
+		return;
+	}
+
+	FAnimNotifyTrack Track;
+	Track.TrackName = DefaultNotifyTrackName();
+	Track.Notifies = Notifies;
+	NotifyTracks.push_back(Track);
+}
+
+void UAnimSequenceBase::EnsureNotifyIds()
+{
+	for (FAnimNotifyTrack& Track : NotifyTracks)
+	{
+		for (FAnimNotifyStateEvent& Notify : Track.Notifies)
+		{
+			if (Notify.NotifyId == 0)
+			{
+				Notify.NotifyId = GenerateNotifyId();
+			}
+		}
+	}
+}
+
+void UAnimSequenceBase::RebuildFlatNotifiesFromTracks()
+{
+	Notifies.clear();
+	for (const FAnimNotifyTrack& Track : NotifyTracks)
+	{
+		Notifies.insert(Notifies.end(), Track.Notifies.begin(), Track.Notifies.end());
+	}
+
+	std::ranges::sort(Notifies,
+		[](const FAnimNotifyStateEvent& A, const FAnimNotifyStateEvent& B)
+		{
+			return A.TriggerTime < B.TriggerTime;
+		});
+}
+
+bool UAnimSequenceBase::FindNotifyByFlatIndex(int32 NotifyIndex, int32& OutTrackIndex, int32& OutNotifyIndex)
+{
+	OutTrackIndex = -1;
+	OutNotifyIndex = -1;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	{
+		return false;
+	}
+
+	const uint32 NotifyId = Notifies[NotifyIndex].NotifyId;
+	if (NotifyId != 0)
+	{
+		for (int32 TrackIndex = 0; TrackIndex < static_cast<int32>(NotifyTracks.size()); ++TrackIndex)
+		{
+			TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+			for (int32 TrackNotifyIndex = 0; TrackNotifyIndex < static_cast<int32>(TrackNotifies.size()); ++TrackNotifyIndex)
+			{
+				if (TrackNotifies[TrackNotifyIndex].NotifyId == NotifyId)
+				{
+					OutTrackIndex = TrackIndex;
+					OutNotifyIndex = TrackNotifyIndex;
+					return true;
+				}
+			}
+		}
+	}
+
+	int32 LinearIndex = 0;
+	for (int32 TrackIndex = 0; TrackIndex < static_cast<int32>(NotifyTracks.size()); ++TrackIndex)
+	{
+		TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+		for (int32 TrackNotifyIndex = 0; TrackNotifyIndex < static_cast<int32>(TrackNotifies.size()); ++TrackNotifyIndex)
+		{
+			if (LinearIndex == NotifyIndex)
+			{
+				OutTrackIndex = TrackIndex;
+				OutNotifyIndex = TrackNotifyIndex;
+				return true;
+			}
+			++LinearIndex;
+		}
+	}
+
+	return false;
+}
+
+void UAnimSequenceBase::SetNotifyTracks(const TArray<FAnimNotifyTrack>& InNotifyTracks)
+{
+	NotifyTracks = InNotifyTracks;
+	EnsureDefaultNotifyTrack();
+	EnsureNotifyIds();
+	RebuildFlatNotifiesFromTracks();
+}
+
+int32 UAnimSequenceBase::AddNotifyTrack(const FName& TrackName)
+{
+	FAnimNotifyTrack Track;
+	Track.TrackName = TrackName.IsValid() ? TrackName : DefaultNotifyTrackName();
+	NotifyTracks.push_back(Track);
+	return static_cast<int32>(NotifyTracks.size()) - 1;
+}
+
+bool UAnimSequenceBase::RemoveNotifyTrack(int32 TrackIndex)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+
+	NotifyTracks.erase(NotifyTracks.begin() + TrackIndex);
+	EnsureDefaultNotifyTrack();
+	RebuildFlatNotifiesFromTracks();
+	return true;
+}
+
+int32 UAnimSequenceBase::AddNotifyEvent(int32 TrackIndex, const FAnimNotifyStateEvent& Notify)
+{
+	EnsureDefaultNotifyTrack();
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		TrackIndex = 0;
+	}
+
+	FAnimNotifyStateEvent NotifyToAdd = Notify;
+	if (NotifyToAdd.NotifyId == 0)
+	{
+		NotifyToAdd.NotifyId = GenerateNotifyId();
+	}
+	NotifyToAdd.NotifyObject = CreateAnimNotifyObject(NotifyToAdd.NotifyClassName);
+
+	NotifyTracks[TrackIndex].Notifies.push_back(NotifyToAdd);
+	RebuildFlatNotifiesFromTracks();
+	return static_cast<int32>(NotifyTracks[TrackIndex].Notifies.size()) - 1;
+}
+
+bool UAnimSequenceBase::RemoveNotifyEvent(int32 TrackIndex, int32 NotifyIndex)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+	TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(TrackNotifies.size()))
+	{
+		return false;
+	}
+
+	TrackNotifies.erase(TrackNotifies.begin() + NotifyIndex);
+	RebuildFlatNotifiesFromTracks();
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyTriggerTime(int32 TrackIndex, int32 NotifyIndex, float TriggerTime)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+	const TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(TrackNotifies.size()))
+	{
+		return false;
+	}
+	return SetNotifyTiming(TrackIndex, NotifyIndex, TriggerTime, TrackNotifies[NotifyIndex].Duration);
+}
+
+bool UAnimSequenceBase::SetNotifyTiming(int32 TrackIndex, int32 NotifyIndex, float TriggerTime, float Duration)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+	TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(TrackNotifies.size()))
+	{
+		return false;
+	}
+
+	const float Length = std::max(0.0f, GetPlayLength());
+	FAnimNotifyStateEvent& Notify = TrackNotifies[NotifyIndex];
+	Notify.TriggerTime = std::clamp(TriggerTime, 0.0f, Length);
+	Notify.Duration = std::clamp(Duration, 0.0f, std::max(0.0f, Length - Notify.TriggerTime));
+	RebuildFlatNotifiesFromTracks();
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyName(int32 TrackIndex, int32 NotifyIndex, const FName& InNotifyName)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+
+	TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(TrackNotifies.size()) || !InNotifyName.IsValid())
+	{
+		return false;
+	}
+
+	TrackNotifies[NotifyIndex].NotifyName = InNotifyName;
+	RebuildFlatNotifiesFromTracks();
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyClassName(int32 TrackIndex, int32 NotifyIndex, const FString& InNotifyClassName)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+
+	TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(TrackNotifies.size()))
+	{
+		return false;
+	}
+
+	FAnimNotifyStateEvent& Notify = TrackNotifies[NotifyIndex];
+	Notify.NotifyClassName = InNotifyClassName;
+	Notify.NotifyObject = CreateAnimNotifyObject(InNotifyClassName);
+	RebuildFlatNotifiesFromTracks();
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyLuaEventName(int32 TrackIndex, int32 NotifyIndex, const FString& InLuaEventName)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+
+	TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(TrackNotifies.size()))
+	{
+		return false;
+	}
+
+	TrackNotifies[NotifyIndex].LuaEventName = InLuaEventName;
+	RebuildFlatNotifiesFromTracks();
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyLuaTargetScript(int32 TrackIndex, int32 NotifyIndex, const FString& InLuaTargetScript)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+
+	TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(TrackNotifies.size()))
+	{
+		return false;
+	}
+
+	TrackNotifies[NotifyIndex].LuaTargetScript = InLuaTargetScript;
+	RebuildFlatNotifiesFromTracks();
+	return true;
+}
+
+bool UAnimSequenceBase::SetNotifyLuaTargetPolicy(int32 TrackIndex, int32 NotifyIndex, int32 InLuaTargetPolicy)
+{
+	if (TrackIndex < 0 || TrackIndex >= static_cast<int32>(NotifyTracks.size()))
+	{
+		return false;
+	}
+
+	TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
+	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(TrackNotifies.size()))
+	{
+		return false;
+	}
+
+	TrackNotifies[NotifyIndex].LuaTargetPolicy = std::clamp(InLuaTargetPolicy, 0, 2);
+	RebuildFlatNotifiesFromTracks();
+	return true;
+}
+
 void UAnimSequenceBase::AddNotify(float InTriggerTime, const FName& InNotifyName, float InDuration, const FString& InNotifyClassName)
 {
 	FAnimNotifyStateEvent NewNotify;
 
 	const float Length = std::max(0.0f, GetPlayLength());
+	NewNotify.NotifyId = GenerateNotifyId();
 	NewNotify.TriggerTime = std::clamp(InTriggerTime, 0.0f, Length);
 	NewNotify.Duration = std::clamp(InDuration, 0.0f, std::max(0.0f, Length - NewNotify.TriggerTime));
 	NewNotify.NotifyName = InNotifyName;
@@ -164,31 +574,32 @@ void UAnimSequenceBase::AddNotify(float InTriggerTime, const FName& InNotifyName
 	NewNotify.LuaEventName = InNotifyName.ToString();
 	NewNotify.NotifyObject = CreateAnimNotifyObject(NewNotify.NotifyClassName);
 
-	Notifies.push_back(NewNotify);
-
-	std::ranges::sort(Notifies,
-			[](const FAnimNotifyStateEvent& A, const FAnimNotifyStateEvent& B) { return A.TriggerTime < B.TriggerTime; });
+	AddNotifyEvent(0, NewNotify);
 }
 
 void UAnimSequenceBase::ClearNotifies()
 {
 	Notifies.clear();
+	NotifyTracks.clear();
 }
 
 bool UAnimSequenceBase::RemoveNotifyAt(int32 NotifyIndex)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
-	Notifies.erase(Notifies.begin() + NotifyIndex);
-	return true;
+	return RemoveNotifyEvent(TrackIndex, TrackNotifyIndex);
 }
 
 bool UAnimSequenceBase::SetNotifyName(int32 NotifyIndex, const FName& InNotifyName)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
@@ -198,123 +609,142 @@ bool UAnimSequenceBase::SetNotifyName(int32 NotifyIndex, const FName& InNotifyNa
 		return false;
 	}
 
-	Notifies[NotifyIndex].NotifyName = InNotifyName;
+	NotifyTracks[TrackIndex].Notifies[TrackNotifyIndex].NotifyName = InNotifyName;
+	RebuildFlatNotifiesFromTracks();
 	return true;
 }
 
 bool UAnimSequenceBase::SetNotifyClassName(int32 NotifyIndex, const FString& InNotifyClassName)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
-	Notifies[NotifyIndex].NotifyClassName = InNotifyClassName;
-	Notifies[NotifyIndex].NotifyObject = CreateAnimNotifyObject(InNotifyClassName);
+	FAnimNotifyStateEvent& Notify = NotifyTracks[TrackIndex].Notifies[TrackNotifyIndex];
+	Notify.NotifyClassName = InNotifyClassName;
+	Notify.NotifyObject = CreateAnimNotifyObject(InNotifyClassName);
+	RebuildFlatNotifiesFromTracks();
 	return true;
 }
 
 bool UAnimSequenceBase::SetNotifyLuaEventName(int32 NotifyIndex, const FString& InLuaEventName)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
-	Notifies[NotifyIndex].LuaEventName = InLuaEventName;
+	NotifyTracks[TrackIndex].Notifies[TrackNotifyIndex].LuaEventName = InLuaEventName;
+	RebuildFlatNotifiesFromTracks();
 	return true;
 }
 
 bool UAnimSequenceBase::SetNotifyLuaTargetScript(int32 NotifyIndex, const FString& InLuaTargetScript)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
-	Notifies[NotifyIndex].LuaTargetScript = InLuaTargetScript;
+	NotifyTracks[TrackIndex].Notifies[TrackNotifyIndex].LuaTargetScript = InLuaTargetScript;
+	RebuildFlatNotifiesFromTracks();
 	return true;
 }
 
 bool UAnimSequenceBase::SetNotifyLuaTargetPolicy(int32 NotifyIndex, int32 InLuaTargetPolicy)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
-	Notifies[NotifyIndex].LuaTargetPolicy = std::clamp(InLuaTargetPolicy, 0, 2);
+	NotifyTracks[TrackIndex].Notifies[TrackNotifyIndex].LuaTargetPolicy = std::clamp(InLuaTargetPolicy, 0, 2);
+	RebuildFlatNotifiesFromTracks();
 	return true;
 }
 
 bool UAnimSequenceBase::SetNotifyTriggerTime(int32 NotifyIndex, float InTriggerTime)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
-	const float Length = std::max(0.0f, GetPlayLength());
-	FAnimNotifyStateEvent& Notify = Notifies[NotifyIndex];
-	Notify.TriggerTime = std::clamp(InTriggerTime, 0.0f, Length);
-	Notify.Duration = std::clamp(Notify.Duration, 0.0f, std::max(0.0f, Length - Notify.TriggerTime));
-	return true;
+	return SetNotifyTiming(TrackIndex, TrackNotifyIndex, InTriggerTime, NotifyTracks[TrackIndex].Notifies[TrackNotifyIndex].Duration);
 }
 
 bool UAnimSequenceBase::SetNotifyDuration(int32 NotifyIndex, float InDuration)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
-	const float Length = std::max(0.0f, GetPlayLength());
-	FAnimNotifyStateEvent& Notify = Notifies[NotifyIndex];
-	Notify.Duration = std::clamp(InDuration, 0.0f, std::max(0.0f, Length - Notify.TriggerTime));
-	return true;
+	return SetNotifyTiming(TrackIndex, TrackNotifyIndex, NotifyTracks[TrackIndex].Notifies[TrackNotifyIndex].TriggerTime, InDuration);
 }
 
 bool UAnimSequenceBase::SetNotifyTimeRange(int32 NotifyIndex, float InTriggerTime, float InDuration)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
-	const float Length = std::max(0.0f, GetPlayLength());
-	FAnimNotifyStateEvent& Notify = Notifies[NotifyIndex];
-	Notify.TriggerTime = std::clamp(InTriggerTime, 0.0f, Length);
-	Notify.Duration = std::clamp(InDuration, 0.0f, std::max(0.0f, Length - Notify.TriggerTime));
-	return true;
+	return SetNotifyTiming(TrackIndex, TrackNotifyIndex, InTriggerTime, InDuration);
 }
 
 bool UAnimSequenceBase::MoveNotifyAt(int32 NotifyIndex, float InTriggerTime, int32* OutNewIndex)
 {
-	if (NotifyIndex < 0 || NotifyIndex >= static_cast<int32>(Notifies.size()))
+	int32 TrackIndex = -1;
+	int32 TrackNotifyIndex = -1;
+	if (!FindNotifyByFlatIndex(NotifyIndex, TrackIndex, TrackNotifyIndex))
 	{
 		return false;
 	}
 
 	const float Length = std::max(0.0f, GetPlayLength());
-	FAnimNotifyStateEvent MovedNotify = Notifies[NotifyIndex];
+	FAnimNotifyStateEvent MovedNotify = NotifyTracks[TrackIndex].Notifies[TrackNotifyIndex];
 	MovedNotify.TriggerTime = std::clamp(InTriggerTime, 0.0f, Length);
 	MovedNotify.Duration = std::clamp(MovedNotify.Duration, 0.0f, std::max(0.0f, Length - MovedNotify.TriggerTime));
 
-	Notifies.erase(Notifies.begin() + NotifyIndex);
+	NotifyTracks[TrackIndex].Notifies.erase(NotifyTracks[TrackIndex].Notifies.begin() + TrackNotifyIndex);
+	TArray<FAnimNotifyStateEvent>& TrackNotifies = NotifyTracks[TrackIndex].Notifies;
 	const auto InsertIt = std::lower_bound(
-		Notifies.begin(),
-		Notifies.end(),
+		TrackNotifies.begin(),
+		TrackNotifies.end(),
 		MovedNotify.TriggerTime,
 		[](const FAnimNotifyStateEvent& Notify, float TriggerTime)
 		{
 			return Notify.TriggerTime < TriggerTime;
 		});
 
-	const int32 NewIndex = static_cast<int32>(InsertIt - Notifies.begin());
-	Notifies.insert(InsertIt, MovedNotify);
+	TrackNotifies.insert(InsertIt, MovedNotify);
+	RebuildFlatNotifiesFromTracks();
 	if (OutNewIndex)
 	{
-		*OutNewIndex = NewIndex;
+		for (int32 FlatIndex = 0; FlatIndex < static_cast<int32>(Notifies.size()); ++FlatIndex)
+		{
+			if (Notifies[FlatIndex].NotifyId == MovedNotify.NotifyId)
+			{
+				*OutNewIndex = FlatIndex;
+				break;
+			}
+		}
 	}
 
 	return true;
@@ -360,6 +790,26 @@ namespace
 float UAnimSequence::GetPlayLength() const
 {
 	return DataModel ? DataModel->GetPlayLength() : 0.0f;
+}
+
+bool UAnimSequence::EvaluateCurve(const FName& CurveName, float TimeSeconds, float& OutValue) const
+{
+	if (!DataModel)
+	{
+		return false;
+	}
+
+	const FAnimationCurveData& CurveData = DataModel->GetCurveData();
+	for (const FAnimCurveTrack& CurveTrack : CurveData.FloatCurves)
+	{
+		if (CurveTrack.CurveName == CurveName)
+		{
+			OutValue = CurveTrack.Curve.Evaluate(TimeSeconds);
+			return true;
+		}
+	}
+
+	return false;
 }
 
 //3-2. Evaluate Phase(Tick Component의 USkeletalMeshComponent::ApplyAnimationPose로 이어짐)

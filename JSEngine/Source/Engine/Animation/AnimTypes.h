@@ -15,8 +15,10 @@ enum class EAnimNotifyLuaTargetPolicy : int32
 
 struct FAnimNotifyStateEvent
 {
+    uint32 NotifyId = 0;
     float TriggerTime = 0.0f;
     float Duration = 0.0f;
+    float TriggerWeightThreshold = 0.1f;
     FName NotifyName;
     FString NotifyClassName;
     FString LuaEventName;

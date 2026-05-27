@@ -10,6 +10,7 @@ struct FSkeletalViewerShowFlags
 	bool bShowSkeletalMesh     = true;
 	bool bShowBones            = false;
 	bool bShowOnlySelectedBone = false;
+	bool bShowBoneWeightHeatmap = false;
 	bool bShowBoundingBox      = false;
 	bool bShowOutline          = false;
 };

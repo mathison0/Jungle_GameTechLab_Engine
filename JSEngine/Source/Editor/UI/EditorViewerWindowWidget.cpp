@@ -1,5 +1,7 @@
 ﻿#include "EditorViewerWindowWidget.h"
 #include "Editor/EditorEngine.h"
+#include "Editor/UI/AnimSequenceViewerContextBuilder.h"
+#include "Editor/UI/EditorAnimationSequenceViewerWidget.h"
 #include "Editor/UI/EditorDetachedWindowChrome.h"
 #include "Editor/Viewer/EditorViewer.h"
 #include "Viewport/ViewportLayout.h"
@@ -10,7 +12,6 @@
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Component/StaticMeshComponent.h"
 #include "Engine/Core/EditorResourcePaths.h"
-#include "Asset/AssetQueryService.h"
 #include "Core/Paths.h"
 #include "Core/Reflection/ReflectionRegistry.h"
 #include "Core/ResourceManager.h"
@@ -573,6 +574,48 @@ uint64 HashMatrix(uint64 Seed, const FMatrix& Matrix)
 void FEditorViewerWindowWidget::Initialize(UEditorEngine* InEditorEngine)
 {
     FEditorWidget::Initialize(InEditorEngine);
+    if (AnimSequenceViewerWidget)
+    {
+        AnimSequenceViewerWidget->Initialize(InEditorEngine);
+    }
+}
+
+void FEditorViewerWindowWidget::SetViewer(FEditorViewer* InViewer)
+{
+    Viewer = InViewer;
+
+    if (!Viewer || !Viewer->IsAnimationSequenceViewer())
+    {
+        if (AnimSequenceViewerWidget)
+        {
+            AnimSequenceViewerWidget->SetViewer(nullptr);
+        }
+        return;
+    }
+
+    if (!AnimSequenceViewerWidget)
+    {
+        AnimSequenceViewerWidget = std::make_unique<FEditorAnimationSequenceViewerWidget>();
+        AnimSequenceViewerWidget->Initialize(EditorEngine);
+    }
+
+    AnimSequenceViewerWidget->SetViewer(Viewer);
+
+    FAnimSequenceViewerContext Context;
+    if (!FAnimSequenceViewerContextBuilder::BuildFromUAsset(Viewer->GetFileName(), Context))
+    {
+        Context.AssetPath = Viewer->GetFileName();
+        Context.TargetSkeletalMeshPath = Viewer->GetPreviewMeshPath();
+        Context.AnimSequence = Viewer->GetAnimSequence();
+        if (ASkeletalMeshActor* ViewTarget = Viewer->GetViewTarget())
+        {
+            if (USkeletalMeshComponent* SkelComp = ViewTarget->GetSkeletalMeshComponent())
+            {
+                Context.PreviewMesh = SkelComp->GetSkeletalMesh();
+            }
+        }
+    }
+    AnimSequenceViewerWidget->SetContext(Context);
 }
 
 void FEditorViewerWindowWidget::Shutdown()
@@ -614,7 +657,7 @@ FString FEditorViewerWindowWidget::GetWindowName() const
 
 bool FEditorViewerWindowWidget::CanSaveMesh() const
 {
-	if (!Viewer || Viewer->IsAnimationSequenceViewer())
+	if (!Viewer || !Viewer->IsSkeletalMeshViewer())
 	{
 		return false;
 	}
@@ -626,12 +669,12 @@ bool FEditorViewerWindowWidget::CanSaveMesh() const
 
 bool FEditorViewerWindowWidget::IsMeshDirty() const
 {
-	return Viewer && !Viewer->IsAnimationSequenceViewer() && HasMeshAssetEdits();
+	return Viewer && Viewer->IsSkeletalMeshViewer() && HasMeshAssetEdits();
 }
 
 void FEditorViewerWindowWidget::RequestSaveMesh()
 {
-	if (!Viewer || Viewer->IsAnimationSequenceViewer())
+	if (!Viewer || !Viewer->IsSkeletalMeshViewer())
 	{
 		return;
 	}
@@ -825,14 +868,24 @@ void FEditorViewerWindowWidget::RenderDetachedDocumentChrome(bool& bDockRequeste
         "DetachedViewer",
         [this, &bDockRequested, &bCloseRequested]()
         {
-            const bool bCanSaveMesh = CanSaveMesh();
-            const char* SaveMeshLabel = IsMeshDirty() ? "Save Mesh *" : "Save Mesh";
+            const bool bIsAnimSequence = Viewer && Viewer->IsAnimationSequenceViewer();
+            const bool bCanSaveAsset = bIsAnimSequence ? CanSaveAnimSequence() : CanSaveMesh();
+            const char* SaveAssetLabel = bIsAnimSequence
+                ? "Save Animation"
+                : (IsMeshDirty() ? "Save Mesh *" : "Save Mesh");
 
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem(SaveMeshLabel, "Ctrl+S", false, bCanSaveMesh))
+                if (ImGui::MenuItem(SaveAssetLabel, "Ctrl+S", false, bCanSaveAsset))
                 {
-                    RequestSaveMesh();
+                    if (bIsAnimSequence)
+                    {
+                        RequestSaveAnimSequence();
+                    }
+                    else
+                    {
+                        RequestSaveMesh();
+                    }
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Close"))
@@ -849,11 +902,18 @@ void FEditorViewerWindowWidget::RenderDetachedDocumentChrome(bool& bDockRequeste
             }
             if (ImGui::BeginMenu("Asset"))
             {
-                if (ImGui::MenuItem(SaveMeshLabel, nullptr, false, bCanSaveMesh))
+                if (ImGui::MenuItem(SaveAssetLabel, nullptr, false, bCanSaveAsset))
                 {
-                    RequestSaveMesh();
+                    if (bIsAnimSequence)
+                    {
+                        RequestSaveAnimSequence();
+                    }
+                    else
+                    {
+                        RequestSaveMesh();
+                    }
                 }
-                ImGui::MenuItem("Reimport Mesh", nullptr, false, false);
+                ImGui::MenuItem(bIsAnimSequence ? "Reimport Animation" : "Reimport Mesh", nullptr, false, false);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Window"))
@@ -868,17 +928,47 @@ void FEditorViewerWindowWidget::RenderDetachedDocumentChrome(bool& bDockRequeste
                 }
                 ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Settings"))
+            {
+                if (EditorEngine)
+                {
+                    if (ImGui::MenuItem("Editor Settings"))
+                    {
+                        EditorEngine->GetMainPanel().OpenEditorSettingsPanel();
+                    }
+                    if (ImGui::MenuItem("Project Settings"))
+                    {
+                        EditorEngine->GetMainPanel().OpenProjectSettingsPanel();
+                    }
+                    if (ImGui::MenuItem("World Settings"))
+                    {
+                        EditorEngine->GetMainPanel().OpenWorldSettingsPanel();
+                    }
+                }
+                ImGui::EndMenu();
+            }
             if (ImGui::BeginMenu("Tools"))
             {
                 FSkeletalViewerShowFlags& ShowFlags = Viewer->GetClient().GetShowFlags();
-                ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
+                if (Viewer->IsStaticMeshViewer())
+                {
+                    ImGui::MenuItem("Static Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+                }
+                else
+                {
+                    ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+                    ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
+                }
                 ImGui::MenuItem("Bounding Box", nullptr, &ShowFlags.bShowBoundingBox);
                 ImGui::MenuItem("Outline", nullptr, &ShowFlags.bShowOutline);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help"))
             {
-                ImGui::TextDisabled(Viewer->IsAnimationSequenceViewer() ? "Animation Sequence Viewer" : "Skeletal Mesh Previewer");
+                ImGui::TextDisabled(
+                    Viewer->IsAnimationSequenceViewer()
+                        ? "Animation Sequence Viewer"
+                        : (Viewer->IsStaticMeshViewer() ? "Static Mesh Previewer" : "Skeletal Mesh Previewer"));
                 ImGui::EndMenu();
             }
         },
@@ -956,6 +1046,16 @@ void FEditorViewerWindowWidget::RenderContent(float DeltaTime)
 
 	if (Viewer->IsAnimationSequenceViewer())
 	{
+        if (!AnimSequenceViewerWidget)
+        {
+            SetViewer(Viewer);
+        }
+        if (AnimSequenceViewerWidget)
+        {
+            AnimSequenceViewerWidget->RenderEmbedded(DeltaTime);
+            return;
+        }
+
 		CachedMesh = MeshData;
 		UAnimSequence* Sequence = Viewer->GetAnimSequence();
 		if (CachedAnimSequence != Sequence)
@@ -969,39 +1069,91 @@ void FEditorViewerWindowWidget::RenderContent(float DeltaTime)
 			bAnimNotifyDragDirty = false;
 		}
 
-
-		const float TimelineHeight = 350.0f;
 		ImVec2 WorkSize = ImGui::GetContentRegionAvail();
-		const float ViewAreaHeight = std::max(180.0f, WorkSize.y - TimelineHeight - ImGui::GetStyle().ItemSpacing.y);
-		const float DetailsWidth = std::clamp(RightPanelWidth, 350.0f, std::max(350.0f, WorkSize.x * 0.4f));
-		const float ViewWidth = std::max(220.0f, WorkSize.x - DetailsWidth - ImGui::GetStyle().ItemSpacing.x);
+		const float TimelineHeight = std::clamp(WorkSize.y * 0.42f, 260.0f, 420.0f);
+		const float SpacingX = ImGui::GetStyle().ItemSpacing.x;
+		const float SpacingY = ImGui::GetStyle().ItemSpacing.y;
+		const float ViewAreaHeight = std::max(210.0f, WorkSize.y - TimelineHeight - SpacingY);
+		const float SkeletonWidth = std::clamp(LeftPanelWidth, 220.0f, std::max(220.0f, WorkSize.x * 0.28f));
+		const float DetailsWidth = std::clamp(RightPanelWidth, 300.0f, std::max(300.0f, WorkSize.x * 0.34f));
+		const float PreviewWidth = std::max(260.0f, WorkSize.x - SkeletonWidth - DetailsWidth - SpacingX * 2.0f);
 
-		RenderViewportPanel(SceneViewport, SRV, ImVec2(ViewWidth, ViewAreaHeight));
+		ImGui::BeginChild("AnimSequenceSkeletonPanel", ImVec2(SkeletonWidth, ViewAreaHeight), true);
+		ImGui::TextUnformatted("Skeleton");
+		ImGui::Separator();
+		if (!MeshData)
+		{
+			CachedMesh = nullptr;
+			Children.clear();
+			BoneToSocketIndices.clear();
+			ImGui::TextDisabled("No preview skeleton.");
+		}
+		else
+		{
+			if (CachedMesh != MeshData)
+			{
+				CachedMesh = MeshData;
+				RebuildBoneTreeCaches(MeshData);
+			}
+
+			ImGui::TextDisabled("Preview Mesh");
+			ImGui::TextWrapped("%s", SkeletalMesh ? SkeletalMesh->GetAssetPathFileName().c_str() : "None");
+			ImGui::Separator();
+
+			ApplyPendingBoneTreeOpenState(MeshData);
+			for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshData->Bones.size()); ++BoneIndex)
+			{
+				if (MeshData->Bones[BoneIndex].ParentIndex == -1)
+				{
+					DrawBoneNode(BoneIndex, MeshData->Bones, Children);
+				}
+			}
+		}
+		ImGui::EndChild();
+
+		ImGui::SameLine();
+		ImGui::BeginChild("AnimSequencePreviewPanel", ImVec2(PreviewWidth, ViewAreaHeight), true);
+		ImGui::TextUnformatted("Preview Window");
+		ImGui::Separator();
+		const ImVec2 PreviewSize = ImGui::GetContentRegionAvail();
+		RenderViewportPanel(SceneViewport, SRV, PreviewSize);
+		ImGui::EndChild();
 
 		ImGui::SameLine();
 		ImGui::BeginChild("AnimSequenceDetailsPanel", ImVec2(DetailsWidth, ViewAreaHeight), true);
 		RenderAnimSequenceDetails(Sequence, SkeletalMesh);
 		ImGui::EndChild();
 
-		const float TimelineListWidth = 350.0f;
-        const float SpacingX = ImGui::GetStyle().ItemSpacing.x;
-
-        const float TimelineWidth = std::max(
-            260.0f,
-            WorkSize.x - TimelineListWidth - SpacingX);
-
-        ImGui::BeginChild("AnimSequenceTimelinePanel", ImVec2(TimelineWidth, 0.0f), true);
+		ImGui::BeginChild("AnimSequenceTimelinePanel", ImVec2(0.0f, TimelineHeight), true);
+		ImGui::TextUnformatted("Timeline");
+		ImGui::Separator();
         RenderAnimSequenceToolbar(Sequence);
         RenderAnimSequenceTimeline(Sequence);
         ImGui::EndChild();
 
-        ImGui::SameLine();
+		return;
+	}
 
-        ImGui::BeginChild("AnimSequenceListPanel", ImVec2(TimelineListWidth, 0.0f), true);
-        RenderAnimSequenceList(Sequence);
-        ImGui::EndChild();
+	if (Viewer->IsStaticMeshViewer())
+	{
+		CachedMesh = nullptr;
+		CachedSkComp = nullptr;
+		Children.clear();
+		BoneToSocketIndices.clear();
 
-        return;
+		RenderStaticMeshLeftPanel(Viewer->GetStaticMeshComponent());
+
+		ImGui::SameLine();
+		ImGui::Button("##static_left_splitter", ImVec2(2.0f, -1.0f));
+		if (ImGui::IsItemActive())
+		{
+			LeftPanelWidth += ImGui::GetIO().MouseDelta.x;
+			LeftPanelWidth = std::clamp(LeftPanelWidth, 160.0f, FullSize.x * 0.45f);
+		}
+		ImGui::SameLine();
+
+		RenderViewportPanel(SceneViewport, SRV, ImVec2(std::max(180.0f, FullSize.x - LeftPanelWidth - ImGui::GetStyle().ItemSpacing.x), 0.0f));
+		return;
 	}
 
 	if (CachedAnimSequence)
@@ -1079,6 +1231,38 @@ void FEditorViewerWindowWidget::RenderViewportPanel(FSceneViewport& SceneViewpor
 	DrawList->AddCallback(SetOpaqueBlendStateCallback, DC);
 	DrawList->AddImage((ImTextureID)SRV, Min, Max);
 	DrawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+
+	ImGui::EndChild();
+}
+
+void FEditorViewerWindowWidget::RenderStaticMeshLeftPanel(UStaticMeshComponent* StaticMeshComp)
+{
+	ImGui::BeginChild("StaticMeshPanel", ImVec2(LeftPanelWidth, 0), true);
+	ImGui::TextUnformatted("Static Mesh");
+	ImGui::Separator();
+
+	UStaticMesh* StaticMesh = StaticMeshComp ? StaticMeshComp->GetStaticMesh() : nullptr;
+	if (!StaticMesh || !StaticMesh->HasValidMeshData())
+	{
+		ImGui::TextDisabled("No static mesh");
+		ImGui::EndChild();
+		return;
+	}
+
+	ImGui::TextDisabled("Asset");
+	ImGui::TextWrapped("%s", StaticMesh->GetAssetPathFileName().c_str());
+	ImGui::Separator();
+
+	ImGui::Text("Vertices: %d", static_cast<int32>(StaticMesh->GetVertices().size()));
+	ImGui::Text("Indices: %d", static_cast<int32>(StaticMesh->GetIndices().size()));
+	ImGui::Text("Sections: %d", static_cast<int32>(StaticMesh->GetSections().size()));
+	ImGui::Text("Materials: %d", StaticMeshComp ? StaticMeshComp->GetNumMaterials() : 0);
+
+	const FAABB& Bounds = StaticMesh->GetLocalBounds();
+	ImGui::Separator();
+	ImGui::TextUnformatted("Local Bounds");
+	ImGui::Text("Min: %.2f, %.2f, %.2f", Bounds.Min.X, Bounds.Min.Y, Bounds.Min.Z);
+	ImGui::Text("Max: %.2f, %.2f, %.2f", Bounds.Max.X, Bounds.Max.Y, Bounds.Max.Z);
 
 	ImGui::EndChild();
 }
@@ -1293,6 +1477,24 @@ bool FEditorViewerWindowWidget::SaveAnimSequenceAsset(UAnimSequence* Sequence)
 	return FResourceManager::Get().SaveAnimSequence(SavePath, Sequence);
 }
 
+bool FEditorViewerWindowWidget::CanSaveAnimSequence() const
+{
+	return Viewer && Viewer->IsAnimationSequenceViewer() && Viewer->GetAnimSequence();
+}
+
+void FEditorViewerWindowWidget::RequestSaveAnimSequence()
+{
+	if (!CanSaveAnimSequence())
+	{
+		return;
+	}
+
+	if (SaveAnimSequenceAsset(Viewer->GetAnimSequence()) && EditorEngine)
+	{
+		EditorEngine->GetNotificationService().Info("Animation sequence saved.");
+	}
+}
+
 void FEditorViewerWindowWidget::RenderAnimSequenceToolbar(UAnimSequence* Sequence)
 {
 	constexpr ImGuiWindowFlags ToolbarFlags =
@@ -1422,11 +1624,34 @@ void FEditorViewerWindowWidget::RenderAnimSequenceTimeline(UAnimSequence* Sequen
 	const float RulerY = Min.y + 28.0f;
 	const float TrackTop = Min.y + 54.0f;
 	const float TrackBottom = Max.y - 18.0f;
-	const float NotifyBarTop = TrackTop + 14.0f;
-	const float NotifyBarBottom = TrackBottom - 14.0f;
+	const float TrackLabelWidth = 152.0f;
+	const float NotifyTrackRowHeight = 30.0f;
+	const TArray<FAnimNotifyTrack>& NotifyTracks = Sequence->GetNotifyTracks();
+	const int32 NotifyTrackCount = std::max(1, static_cast<int32>(NotifyTracks.size()));
 	DrawList->AddRectFilled(ImVec2(Min.x + 8.0f, TrackTop), ImVec2(Max.x - 8.0f, TrackBottom), TrackColor, 4.0f);
+	DrawList->AddRectFilled(ImVec2(Min.x + 8.0f, TrackTop), ImVec2(Min.x + TrackLabelWidth - 4.0f, TrackBottom), ImGui::GetColorU32(ImVec4(0.085f, 0.095f, 0.115f, 1.0f)), 4.0f);
+	for (int32 TrackIndex = 0; TrackIndex < NotifyTrackCount; ++TrackIndex)
+	{
+		const float RowTop = TrackTop + TrackIndex * NotifyTrackRowHeight;
+		const float RowBottom = std::min(RowTop + NotifyTrackRowHeight, TrackBottom);
+		if (RowTop >= TrackBottom)
+		{
+			break;
+		}
+		const bool bOdd = (TrackIndex % 2) != 0;
+		DrawList->AddRectFilled(
+			ImVec2(Min.x + 8.0f, RowTop),
+			ImVec2(Max.x - 8.0f, RowBottom),
+			ImGui::GetColorU32(bOdd ? ImVec4(0.095f, 0.106f, 0.128f, 0.82f) : ImVec4(0.075f, 0.084f, 0.104f, 0.82f)));
+		const FString TrackName = TrackIndex < static_cast<int32>(NotifyTracks.size()) && NotifyTracks[TrackIndex].TrackName.IsValid()
+			? NotifyTracks[TrackIndex].TrackName.ToString()
+			: FString("Notifies");
+		DrawList->AddText(ImVec2(Min.x + 18.0f, RowTop + 7.0f), TextColor, TrackName.c_str());
+		DrawList->AddLine(ImVec2(Min.x + 8.0f, RowBottom), ImVec2(Max.x - 8.0f, RowBottom), LineColor, 1.0f);
+	}
+	DrawList->AddLine(ImVec2(Min.x + TrackLabelWidth, TrackTop), ImVec2(Min.x + TrackLabelWidth, TrackBottom), MajorLineColor, 1.0f);
 
-	const float TrackMinX = Min.x + 12.0f;
+	const float TrackMinX = Min.x + TrackLabelWidth + 8.0f;
 	const float TrackMaxX = Max.x - 12.0f;
 	const float TrackWidth = std::max(1.0f, TrackMaxX - TrackMinX);
 	auto TimeToX = [&](float Time)
@@ -1438,10 +1663,50 @@ void FEditorViewerWindowWidget::RenderAnimSequenceTimeline(UAnimSequence* Sequen
 		return Length > 0.0f ? std::clamp((X - TrackMinX) / TrackWidth, 0.0f, 1.0f) * Length : 0.0f;
 	};
 	const ImVec2 MousePos = ImGui::GetIO().MousePos;
+	auto ResolveTrackIndexFromMouseY = [&]()
+	{
+		if (MousePos.y < TrackTop)
+		{
+			return 0;
+		}
+		const int32 TrackIndex = static_cast<int32>((MousePos.y - TrackTop) / NotifyTrackRowHeight);
+		return std::clamp(TrackIndex, 0, std::max(0, NotifyTrackCount - 1));
+	};
+	auto ResolveFlatNotifyIndexById = [&](uint32 NotifyId)
+	{
+		const TArray<FAnimNotifyStateEvent>& FlatNotifies = Sequence->GetNotifies();
+		for (int32 FlatIndex = 0; FlatIndex < static_cast<int32>(FlatNotifies.size()); ++FlatIndex)
+		{
+			if (FlatNotifies[FlatIndex].NotifyId == NotifyId)
+			{
+				return FlatIndex;
+			}
+		}
+		return -1;
+	};
+	auto AddNotifyToContextTrack = [&](const FAnimNotifyStateEvent& Notify)
+	{
+		const int32 TrackIndex = PendingAnimNotifyTrackIndexToAdd >= 0
+			? PendingAnimNotifyTrackIndexToAdd
+			: 0;
+		const int32 TrackNotifyIndex = Sequence->AddNotifyEvent(TrackIndex, Notify);
+		SaveAnimSequenceAsset(Sequence);
+		const TArray<FAnimNotifyTrack>& TracksAfterAdd = Sequence->GetNotifyTracks();
+		if (TrackIndex >= 0 && TrackIndex < static_cast<int32>(TracksAfterAdd.size()) &&
+			TrackNotifyIndex >= 0 && TrackNotifyIndex < static_cast<int32>(TracksAfterAdd[TrackIndex].Notifies.size()))
+		{
+			SelectedAnimNotifyIndex = ResolveFlatNotifyIndexById(TracksAfterAdd[TrackIndex].Notifies[TrackNotifyIndex].NotifyId);
+		}
+		if (Viewer)
+		{
+			Viewer->SetAnimationTime(PendingAnimNotifyTimeToAdd);
+		}
+	};
 
 	if (bHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 	{
 		PendingAnimNotifyTimeToAdd = XToTime(MousePos.x);
+		PendingAnimNotifyTrackIndexToAdd = ResolveTrackIndexFromMouseY();
 		ImGui::OpenPopup("AnimTimelineContextMenu");
 	}
 
@@ -1450,26 +1715,20 @@ void FEditorViewerWindowWidget::RenderAnimSequenceTimeline(UAnimSequence* Sequen
 		ImGui::Text("Add Notify at %.3f sec", PendingAnimNotifyTimeToAdd);
 		ImGui::Separator();
 
+		if (ImGui::Selectable("Add Notify Track##AddAnimNotifyTrack"))
+		{
+			PendingAnimNotifyTrackIndexToAdd = Sequence->AddNotifyTrack(FName("Notify Track"));
+			SaveAnimSequenceAsset(Sequence);
+		}
+		ImGui::Separator();
+
 		if (ImGui::Selectable("Name Only Notify##AddAnimNotify_NameOnly"))
 		{
-			Sequence->AddNotify(PendingAnimNotifyTimeToAdd, FName("AnimNotify"), 0.0f, "");
-			SaveAnimSequenceAsset(Sequence);
-
-			const TArray<FAnimNotifyStateEvent>& AddedNotifies = Sequence->GetNotifies();
-			for (int32 NotifyIndex = 0; NotifyIndex < static_cast<int32>(AddedNotifies.size()); ++NotifyIndex)
-			{
-				const FAnimNotifyStateEvent& AddedNotify = AddedNotifies[NotifyIndex];
-				if (AddedNotify.NotifyClassName.empty() &&
-					std::abs(AddedNotify.TriggerTime - PendingAnimNotifyTimeToAdd) <= 0.001f)
-				{
-					SelectedAnimNotifyIndex = NotifyIndex;
-				}
-			}
-
-			if (Viewer)
-			{
-				Viewer->SetAnimationTime(PendingAnimNotifyTimeToAdd);
-			}
+			FAnimNotifyStateEvent Notify;
+			Notify.TriggerTime = PendingAnimNotifyTimeToAdd;
+			Notify.NotifyName = FName("AnimNotify");
+			Notify.LuaEventName = "AnimNotify";
+			AddNotifyToContextTrack(Notify);
 		}
 
 		if (ImGui::Selectable("Name Only Notify State##AddAnimNotifyState_NameOnly"))
@@ -1478,24 +1737,12 @@ void FEditorViewerWindowWidget::RenderAnimSequenceTimeline(UAnimSequence* Sequen
 				AnimNotifyDurationToAdd,
 				0.01f,
 				std::max(0.01f, Length - PendingAnimNotifyTimeToAdd));
-			Sequence->AddNotify(PendingAnimNotifyTimeToAdd, FName("AnimNotifyState"), Duration, "");
-			SaveAnimSequenceAsset(Sequence);
-
-			const TArray<FAnimNotifyStateEvent>& AddedNotifies = Sequence->GetNotifies();
-			for (int32 NotifyIndex = 0; NotifyIndex < static_cast<int32>(AddedNotifies.size()); ++NotifyIndex)
-			{
-				const FAnimNotifyStateEvent& AddedNotify = AddedNotifies[NotifyIndex];
-				if (AddedNotify.NotifyClassName.empty() &&
-					std::abs(AddedNotify.TriggerTime - PendingAnimNotifyTimeToAdd) <= 0.001f)
-				{
-					SelectedAnimNotifyIndex = NotifyIndex;
-				}
-			}
-
-			if (Viewer)
-			{
-				Viewer->SetAnimationTime(PendingAnimNotifyTimeToAdd);
-			}
+			FAnimNotifyStateEvent Notify;
+			Notify.TriggerTime = PendingAnimNotifyTimeToAdd;
+			Notify.Duration = Duration;
+			Notify.NotifyName = FName("AnimNotifyState");
+			Notify.LuaEventName = "AnimNotifyState";
+			AddNotifyToContextTrack(Notify);
 		}
 
 		TArray<UClass*> NotifyClasses;
@@ -1519,24 +1766,13 @@ void FEditorViewerWindowWidget::RenderAnimSequenceTimeline(UAnimSequence* Sequen
 					const float Duration = bIsStateNotify
 						? std::clamp(AnimNotifyDurationToAdd, 0.01f, std::max(0.01f, Length - PendingAnimNotifyTimeToAdd))
 						: 0.0f;
-					Sequence->AddNotify(PendingAnimNotifyTimeToAdd, FName(NotifyName), Duration, ClassName);
-					SaveAnimSequenceAsset(Sequence);
-
-					const TArray<FAnimNotifyStateEvent>& AddedNotifies = Sequence->GetNotifies();
-					for (int32 NotifyIndex = 0; NotifyIndex < static_cast<int32>(AddedNotifies.size()); ++NotifyIndex)
-					{
-						const FAnimNotifyStateEvent& AddedNotify = AddedNotifies[NotifyIndex];
-						if (AddedNotify.NotifyClassName == ClassName &&
-							std::abs(AddedNotify.TriggerTime - PendingAnimNotifyTimeToAdd) <= 0.001f)
-						{
-							SelectedAnimNotifyIndex = NotifyIndex;
-						}
-					}
-
-					if (Viewer)
-					{
-						Viewer->SetAnimationTime(PendingAnimNotifyTimeToAdd);
-					}
+					FAnimNotifyStateEvent Notify;
+					Notify.TriggerTime = PendingAnimNotifyTimeToAdd;
+					Notify.Duration = Duration;
+					Notify.NotifyName = FName(NotifyName);
+					Notify.NotifyClassName = ClassName;
+					Notify.LuaEventName = NotifyName;
+					AddNotifyToContextTrack(Notify);
 				}
 			}
 		}
@@ -1576,6 +1812,33 @@ void FEditorViewerWindowWidget::RenderAnimSequenceTimeline(UAnimSequence* Sequen
 	for (int32 NotifyIndex = 0; NotifyIndex < static_cast<int32>(Notifies.size()); ++NotifyIndex)
 	{
 		const FAnimNotifyStateEvent& Notify = Notifies[NotifyIndex];
+		int32 NotifyTrackIndex = 0;
+		bool bFoundNotifyTrack = false;
+		for (int32 TrackIndex = 0; TrackIndex < static_cast<int32>(NotifyTracks.size()); ++TrackIndex)
+		{
+			const FAnimNotifyTrack& Track = NotifyTracks[TrackIndex];
+			for (const FAnimNotifyStateEvent& TrackNotify : Track.Notifies)
+			{
+				if (TrackNotify.NotifyId != 0 && TrackNotify.NotifyId == Notify.NotifyId)
+				{
+					NotifyTrackIndex = TrackIndex;
+					bFoundNotifyTrack = true;
+					break;
+				}
+			}
+			if (bFoundNotifyTrack)
+			{
+				break;
+			}
+		}
+		const float RowTop = TrackTop + NotifyTrackIndex * NotifyTrackRowHeight;
+		const float RowBottom = std::min(RowTop + NotifyTrackRowHeight, TrackBottom);
+		if (RowTop >= TrackBottom)
+		{
+			continue;
+		}
+		const float NotifyBarTop = RowTop + 7.0f;
+		const float NotifyBarBottom = RowBottom - 7.0f;
 		const float NotifyStartTime = std::clamp(Notify.TriggerTime, 0.0f, Length);
 		const float NotifyDuration = std::clamp(Notify.Duration, 0.0f, std::max(0.0f, Length - NotifyStartTime));
 		const float NotifyEndTime = NotifyStartTime + NotifyDuration;
@@ -1598,8 +1861,8 @@ void FEditorViewerWindowWidget::RenderAnimSequenceTimeline(UAnimSequence* Sequen
 				3.0f,
 				0,
 				bSelected ? 2.0f : 1.2f);
-			DrawList->AddLine(ImVec2(NotifyStartX, TrackTop - 8.0f), ImVec2(NotifyStartX, TrackBottom), Color, bSelected ? 2.2f : 1.4f);
-			DrawList->AddLine(ImVec2(NotifyEndX, TrackTop), ImVec2(NotifyEndX, TrackBottom), Color, bSelected ? 2.2f : 1.4f);
+			DrawList->AddLine(ImVec2(NotifyStartX, RowTop), ImVec2(NotifyStartX, RowBottom), Color, bSelected ? 2.2f : 1.4f);
+			DrawList->AddLine(ImVec2(NotifyEndX, RowTop), ImVec2(NotifyEndX, RowBottom), Color, bSelected ? 2.2f : 1.4f);
 
 			const bool bYInBar = MousePos.y >= NotifyBarTop - 6.0f && MousePos.y <= NotifyBarBottom + 6.0f;
 			const float StartDistance = std::abs(MousePos.x - NotifyStartX);
@@ -1631,17 +1894,17 @@ void FEditorViewerWindowWidget::RenderAnimSequenceTimeline(UAnimSequence* Sequen
 			const float MarkerHeight = bSelected ? 14.0f : 12.0f;
 			const float LineThickness = bSelected ? 2.4f : 1.6f;
 
-			DrawList->AddLine(ImVec2(NotifyStartX, TrackTop - 8.0f), ImVec2(NotifyStartX, TrackBottom), Color, LineThickness);
+			DrawList->AddLine(ImVec2(NotifyStartX, RowTop), ImVec2(NotifyStartX, RowBottom), Color, LineThickness);
 			DrawList->AddTriangleFilled(
-				ImVec2(NotifyStartX, TrackTop - MarkerHeight),
-				ImVec2(NotifyStartX - MarkerHalfWidth, TrackTop - 2.0f),
-				ImVec2(NotifyStartX + MarkerHalfWidth, TrackTop - 2.0f),
+				ImVec2(NotifyStartX, RowTop + 3.0f),
+				ImVec2(NotifyStartX - MarkerHalfWidth, RowTop + MarkerHeight),
+				ImVec2(NotifyStartX + MarkerHalfWidth, RowTop + MarkerHeight),
 				Color);
 
 			const float DistanceToMouse = std::abs(MousePos.x - NotifyStartX);
 			if (bHovered &&
 				DistanceToMouse <= 8.0f &&
-				MousePos.y >= TrackTop - 18.0f && MousePos.y <= TrackBottom &&
+				MousePos.y >= RowTop && MousePos.y <= RowBottom &&
 				DistanceToMouse < HoveredPriority)
 			{
 				HoveredAnimNotifyIndex = NotifyIndex;
@@ -1764,7 +2027,10 @@ void FEditorViewerWindowWidget::RenderAnimSequenceList(UAnimSequence* Sequence)
 	ImGui::TextDisabled("Other Anim Sequences");
 
 	const FString CurrentPath = Viewer ? FPaths::Normalize(Viewer->GetFileName()) : FString();
-	const TArray<FString> Paths = FAssetQueryService::GetAnimSequencePaths();
+	static const TArray<FString> EmptyAnimPaths;
+	const TArray<FString>& Paths = EditorEngine
+		? EditorEngine->GetAssetService().GetAnimSequenceAssetPaths()
+		: EmptyAnimPaths;
 	int32 VisibleCount = 0;
 	const float ListHeight = std::max(72.0f, ImGui::GetContentRegionAvail().y);
 	if (ImGui::BeginChild("OtherAnimSequenceList", ImVec2(0.0f, ListHeight), false))
@@ -3022,7 +3288,10 @@ void FEditorViewerWindowWidget::DrawPreviewPickerModal()
     ImGui::InputText("Filter", Filter, sizeof(Filter));
     ImGui::Separator();
 
-    const TArray<FString> Paths = FAssetQueryService::GetStaticMeshPaths();
+    static const TArray<FString> EmptyStaticMeshPaths;
+    const TArray<FString>& Paths = EditorEngine
+        ? EditorEngine->GetAssetService().GetStaticMeshAssetPaths()
+        : EmptyStaticMeshPaths;
 
     ImGui::BeginChild("PickList", ImVec2(420.0f, 300.0f), true);
     for (const FString& Path : Paths)

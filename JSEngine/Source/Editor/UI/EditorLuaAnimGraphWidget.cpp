@@ -3,7 +3,6 @@
 #include "Animation/AnimLuaProgramAsset.h"
 #include "Asset/AssetFile.h"
 #include "Asset/AssetMetaData.h"
-#include "Asset/AssetQueryService.h"
 #include "Core/Paths.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Notification/EditorNotificationService.h"
@@ -1362,7 +1361,11 @@ bool FEditorLuaAnimGraphWidget::RenderAnimationPathField(const char* Label, FStr
 			Path.clear();
 			bChanged = true;
 		}
-		for (const FString& AnimPath : FAssetQueryService::GetAnimSequencePaths())
+		static const TArray<FString> EmptyAnimPaths;
+		const TArray<FString>& AnimPaths = EditorEngine
+			? EditorEngine->GetAssetService().GetAnimSequenceAssetPaths()
+			: EmptyAnimPaths;
+		for (const FString& AnimPath : AnimPaths)
 		{
 			const bool bSelected = Path == AnimPath;
 			if (ImGui::Selectable(AnimPath.c_str(), bSelected))
@@ -1403,7 +1406,11 @@ bool FEditorLuaAnimGraphWidget::RenderSkeletalMeshPathField(const char* Label, F
 			Path.clear();
 			bChanged = true;
 		}
-		for (const FString& MeshPath : FAssetQueryService::GetSkeletalMeshPaths())
+		static const TArray<FString> EmptyMeshPaths;
+		const TArray<FString>& MeshPaths = EditorEngine
+			? EditorEngine->GetAssetService().GetSkeletalMeshAssetPaths()
+			: EmptyMeshPaths;
+		for (const FString& MeshPath : MeshPaths)
 		{
 			const bool bSelected = Path == MeshPath;
 			if (ImGui::Selectable(MeshPath.c_str(), bSelected))
@@ -1424,7 +1431,10 @@ bool FEditorLuaAnimGraphWidget::RenderSkeletalMeshPathField(const char* Label, F
 		FString DroppedPath;
 		if (TryNormalizeDroppedPath(ImGui::AcceptDragDropPayload("ObjectContentItem"), DroppedPath))
 		{
-			const TArray<FString> MeshPaths = FAssetQueryService::GetSkeletalMeshPaths();
+			static const TArray<FString> EmptyMeshPaths;
+			const TArray<FString>& MeshPaths = EditorEngine
+				? EditorEngine->GetAssetService().GetSkeletalMeshAssetPaths()
+				: EmptyMeshPaths;
 			if (std::find(MeshPaths.begin(), MeshPaths.end(), DroppedPath) != MeshPaths.end())
 			{
 				Path = DroppedPath;

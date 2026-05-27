@@ -3,6 +3,7 @@
 #include "Asset/AssetFile.h"
 #include "Asset/AssetMetaData.h"
 #include "Asset/CurveFloatAsset.h"
+#include "Asset/StaticMesh.h"
 #include "Animation/AnimSequence.h"
 #include "Core/Paths.h"
 #include "Object/Class.h"
@@ -29,6 +30,21 @@ bool FAssetPathPolicy::IsCurveAssetPath(const FString& Path)
 		FAssetMetaData MetaData;
 		return FAssetFile::LoadMetadataOnly(FPaths::Normalize(Path), MetaData)
 			&& MetaData.ClassName == UCurveFloatAsset::StaticClass()->GetName();
+	}
+
+	return false;
+}
+
+bool FAssetPathPolicy::IsStaticMeshAssetPath(const FString& Path)
+{
+	std::filesystem::path FsPath(FPaths::ToWide(FPaths::Normalize(Path)));
+	std::wstring Extension = FsPath.extension().wstring();
+	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
+	if (Extension == L".uasset")
+	{
+		FAssetMetaData MetaData;
+		return FAssetFile::LoadMetadataOnly(FPaths::Normalize(Path), MetaData)
+			&& MetaData.ClassName == UStaticMesh::StaticClass()->GetName();
 	}
 
 	return false;
@@ -90,6 +106,13 @@ bool FAssetPathPolicy::IsSerializedMaterialAssetPath(const FString& Path)
 }
 
 FString FAssetPathPolicy::MakeImportedSkeletalMeshAssetPath(const FString& SourcePath)
+{
+	std::filesystem::path SourceFsPath(FPaths::ToWide(FPaths::Normalize(SourcePath)));
+	SourceFsPath.replace_extension(L".uasset");
+	return FPaths::ToUtf8(SourceFsPath.generic_wstring());
+}
+
+FString FAssetPathPolicy::MakeImportedStaticMeshAssetPath(const FString& SourcePath)
 {
 	std::filesystem::path SourceFsPath(FPaths::ToWide(FPaths::Normalize(SourcePath)));
 	SourceFsPath.replace_extension(L".uasset");

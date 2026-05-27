@@ -42,6 +42,8 @@ public:
 
 	// View
 	EViewMode ViewMode = EViewMode::Lit_BlinnPhong;
+	ELightCullMode LightCullMode = ELightCullMode::Clustered;
+	int32 SkinningModeOverride = 0; // 0: Component, 1: CPU, 2: GPU
 	FShowFlags ShowFlags;
 	bool bEnableFXAA = true;
 	EEditorPickingMode PickingMode = EEditorPickingMode::IdBuffer;
