@@ -197,6 +197,11 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
         return true;
     }
 
+    if (bExternalDispatch)
+    {
+        return true;
+    }
+
     const TArray<FRenderCommand>& Commands = Context->RenderBus->GetCommands(ERenderPass::Particle);
     if (Commands.empty())
     {
@@ -215,26 +220,9 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
     bool bAnyMeshRendered = false;
     for (const FRenderCommand& Cmd : Commands)
     {
-        switch (Cmd.VertexFactoryType)
-        {
-        case EVertexFactoryType::SpriteParticle:
-            RenderSpriteEmitter(Cmd, *Context);
-            bAnySpriteRendered = true;
-            break;
-        case EVertexFactoryType::MeshParticle:
-            RenderMeshEmitter(Cmd, *Context);
-            bAnyMeshRendered = true;
-            break;
-        case EVertexFactoryType::RibbonParticle:
-            RenderRibbonEmitter(Cmd, *Context);
-            break;
-        case EVertexFactoryType::BeamParticle:
-            RenderBeamEmitter(Cmd, *Context);
-            break;
-        default:
-            // 알 수 없는 VertexFactoryType는 Particle 패스의 dispatch 대상이 아님 — skip.
-            break;
-        }
+        RenderParticleCommand(Cmd, *Context);
+        bAnySpriteRendered = bAnySpriteRendered || Cmd.VertexFactoryType == EVertexFactoryType::SpriteParticle;
+        bAnyMeshRendered = bAnyMeshRendered || Cmd.VertexFactoryType == EVertexFactoryType::MeshParticle;
     }
 
     // Cycle 15a (D2 매 frame new): frame-scope life-cycle. RenderPass 가 frame 끝에 delete.
@@ -253,15 +241,43 @@ bool FParticleRenderPass::DrawCommand(const FRenderPassContext* Context)
     //Slot 해제는 End logic에서 담당하도록 수정하는게 가독성에 유리함. 추후 진행
     // Slot 1을 다른 패스가 자동으로 미사용한다고 가정해도 위험. instance VB는 binding 해제.
     // Sprite/Mesh Cmd가 한 번이라도 처리됐을 때만 unbind 필요 (Ribbon/Beam은 slot 1 사용 안 함).
-    if (bAnySpriteRendered || bAnyMeshRendered)
-    {
-        ID3D11Buffer* NullBuffer = nullptr;
-        UINT NullStride = 0;
-        UINT NullOffset = 0;
-        Context->DeviceContext->IASetVertexBuffers(1, 1, &NullBuffer, &NullStride, &NullOffset);
-    }
+    EndParticleCommandBatch(Context->DeviceContext, bAnySpriteRendered || bAnyMeshRendered);
 
     return true;
+}
+
+void FParticleRenderPass::RenderParticleCommand(const FRenderCommand& Cmd, const FRenderPassContext& Context)
+{
+    switch (Cmd.VertexFactoryType)
+    {
+    case EVertexFactoryType::SpriteParticle:
+        RenderSpriteEmitter(Cmd, Context);
+        break;
+    case EVertexFactoryType::MeshParticle:
+        RenderMeshEmitter(Cmd, Context);
+        break;
+    case EVertexFactoryType::RibbonParticle:
+        RenderRibbonEmitter(Cmd, Context);
+        break;
+    case EVertexFactoryType::BeamParticle:
+        RenderBeamEmitter(Cmd, Context);
+        break;
+    default:
+        break;
+    }
+}
+
+void FParticleRenderPass::EndParticleCommandBatch(ID3D11DeviceContext* DeviceContext, bool bUsedInstanceSlot)
+{
+    if (!DeviceContext || !bUsedInstanceSlot)
+    {
+        return;
+    }
+
+    ID3D11Buffer* NullBuffer = nullptr;
+    UINT NullStride = 0;
+    UINT NullOffset = 0;
+    DeviceContext->IASetVertexBuffers(1, 1, &NullBuffer, &NullStride, &NullOffset);
 }
 
 // Function : Render single Sprite emitter command — Cycle 15a (DynamicData path)

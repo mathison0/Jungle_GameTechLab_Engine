@@ -90,6 +90,8 @@ bool FRenderPipeline::Initialize()
 
     ParticleRenderPass = std::make_shared<FParticleRenderPass>();
     ParticleRenderPass->Initialize();
+    ParticleRenderPass->SetExternalDispatch(true);
+    TranslucentRenderPass->SetParticleRenderPass(ParticleRenderPass.get());
 
     SelectionMaskRenderPass = std::make_shared<FSelectionMaskRenderPass>();
     SelectionMaskRenderPass->Initialize();
