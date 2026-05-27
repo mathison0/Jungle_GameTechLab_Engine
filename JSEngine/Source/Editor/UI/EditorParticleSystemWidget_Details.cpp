@@ -2270,8 +2270,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		"##ParticleCurveEditorBody",
 		BodySize,
 		false,
-		ImGuiWindowFlags_AlwaysVerticalScrollbar);
-	ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 8.0f, ImGui::GetCursorPosY() + 8.0f));
+		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 	ImGui::BeginGroup();
 
 	UParticleEmitter* ActiveEmitter = nullptr;
@@ -2617,11 +2616,15 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	ImGui::TextUnformatted(ActiveModuleLabel.c_str());
 	ImGui::Separator();
 
-	const float ListWidth = std::clamp(BodySize.x * 0.24f, 150.0f, 220.0f);
-	const ImVec2 CanvasSize(std::max(1.0f, BodySize.x - ListWidth - 24.0f), std::max(180.0f, BodySize.y - 68.0f));
+	const ImGuiStyle& Style = ImGui::GetStyle();
+	const ImVec2 ContentAvail = ImGui::GetContentRegionAvail();
+	const float ListWidth = std::clamp(ContentAvail.x * 0.24f, 150.0f, std::min(220.0f, ContentAvail.x * 0.45f));
+	const float CanvasWidth = std::max(1.0f, ContentAvail.x - ListWidth - Style.ItemSpacing.x);
+	const float CanvasHeight = std::max(1.0f, ContentAvail.y);
+	const ImVec2 CanvasChildSize(CanvasWidth, CanvasHeight);
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
 
-	ImGui::BeginChild("##ParticleCurveChannelList", ImVec2(ListWidth, CanvasSize.y), true);
+	ImGui::BeginChild("##ParticleCurveChannelList", ImVec2(ListWidth, CanvasChildSize.y), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 	if (!ActiveModule)
 	{
 		ImGui::TextDisabled("Click a module curve icon.");
@@ -2656,7 +2659,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 			ActiveParticleCurveChannelKey = Channel.Key;
 			ActiveParticleCurveKeyIndex = -1;
 		}
-		const float ColorBoxOffset = std::max(0.0f, ListWidth - ImGui::GetStyle().ScrollbarSize - 30.0f);
+		const float ColorBoxOffset = std::max(0.0f, ListWidth - 30.0f);
 		ImGui::SameLine(ColorBoxOffset);
 		ImGui::ColorButton("##Color", ImGui::ColorConvertU32ToFloat4(Channel.Color), ImGuiColorEditFlags_NoTooltip, ImVec2(10.0f, 10.0f));
 		ImGui::PopID();
@@ -2678,10 +2681,16 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	ImGui::EndChild();
 
 	ImGui::SameLine();
-	ImGui::BeginChild("##ParticleCurveCanvas", CanvasSize, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-	const ImVec2 CanvasMin = ImGui::GetCursorScreenPos();
+	ImGui::BeginChild("##ParticleCurveCanvas", CanvasChildSize, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	const ImVec2 CanvasContentMin = ImGui::GetCursorScreenPos();
+	const ImVec2 CanvasContentSize = ImGui::GetContentRegionAvail();
+	constexpr float GraphInset = 2.0f;
+	const ImVec2 CanvasMin(CanvasContentMin.x + GraphInset, CanvasContentMin.y + GraphInset);
+	const ImVec2 CanvasSize(
+		std::max(1.0f, CanvasContentSize.x - GraphInset * 2.0f),
+		std::max(1.0f, CanvasContentSize.y - GraphInset * 2.0f));
 	const ImVec2 CanvasMax(CanvasMin.x + CanvasSize.x, CanvasMin.y + CanvasSize.y);
-	ImGui::InvisibleButton("##ParticleCurveCanvasHit", CanvasSize, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+	ImGui::InvisibleButton("##ParticleCurveCanvasHit", CanvasContentSize, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
 	const bool bCanvasHovered = ImGui::IsItemHovered();
 	const bool bDraggingParticleCurveValue = ImGui::IsMouseDown(ImGuiMouseButton_Left) && !DragParticleCurveChannelKey.empty();
 
@@ -2945,6 +2954,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		bParticleCurveViewUserAdjusted = true;
 	}
 
+	DrawList->PushClipRect(CanvasMin, CanvasMax, true);
 	DrawList->AddRectFilled(CanvasMin, CanvasMax, ImGui::GetColorU32(ImVec4(0.20f, 0.20f, 0.20f, 1.0f)));
 	DrawList->AddRect(CanvasMin, CanvasMax, ImGui::GetColorU32(ImVec4(0.48f, 0.48f, 0.48f, 1.0f)));
 	for (int32 GridIndex = 0; GridIndex <= 10; ++GridIndex)
@@ -3183,7 +3193,6 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		}
 	}
 
-	DrawList->PushClipRect(CanvasMin, CanvasMax, true);
 	for (FParticleCurveChannelView& Channel : Channels)
 	{
 		if (!Channel.bCurveDistribution)
