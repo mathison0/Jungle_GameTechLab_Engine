@@ -42,6 +42,13 @@ struct FMinimalViewInfo
 	FQuat Rotation = FQuat::Identity;
 };
 
+struct FCameraEditorVisualizationDesc
+{
+	const char* MeshAssetPath = nullptr;
+	FMatrix LocalToComponentMatrix = FMatrix::Identity;
+	FColor Tint = FColor::White();
+};
+
 UCLASS(SpawnableComponent, DisplayName = "Camera Component", Category = "System")
 class UCameraComponent : public USceneComponent
 {
@@ -65,6 +72,7 @@ public:
 
 	FMatrix GetViewMatrix() const;
 	FMatrix GetProjectionMatrix() const;
+	bool GetEditorVisualizationDesc(FCameraEditorVisualizationDesc& OutDesc) const;
 
 	float GetFOV() const { return FOV; }
 	float GetNearPlane() const { return NearZ; }

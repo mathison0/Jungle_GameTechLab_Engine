@@ -11,6 +11,7 @@ enum class EWorldType : uint32;
 
 class UWorld;
 class AActor;
+class UCameraComponent;
 class UPrimitiveComponent;
 class UGizmoComponent;
 class ULightComponentBase;
@@ -74,6 +75,9 @@ private:
 	                             FRenderBus& RenderBus, bool bIncludeEditorOnlyPrimitives);
 	void CollectFromActor(AActor* Actor, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus,
 	                      EWorldType WorldType, bool bIncludeEditorOnlyPrimitives);
+	void CollectEditorCameraComponents(AActor* Actor, const FShowFlags& ShowFlags, FRenderBus& RenderBus);
+	void CollectEditorCameraComponent(UCameraComponent* CameraComponent, const FShowFlags& ShowFlags,
+	                                  FRenderBus& RenderBus);
 	void CollectFromComponent(UPrimitiveComponent* Primitive, const FShowFlags& ShowFlags, EViewMode ViewMode,
 	                          FRenderBus& RenderBus, EWorldType WorldType, bool bIncludeEditorOnlyPrimitives);
 	void CollectLight(const ULightComponentBase* Light, FRenderBus& RenderBus);

@@ -4,11 +4,15 @@
 #include "GameFramework/AActor.h"
 #include "Object/ActorIterator.h"
 #include "Component/BillboardComponent.h"
+#include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/PostProcess/Light/LightComponentBase.h"
 #include "Engine/Geometry/Frustum.h"
+#include "Engine/Asset/StaticMesh.h"
+#include "Core/ResourceManager.h"
+#include "Render/Resource/Material.h"
 
 namespace
 {
@@ -102,6 +106,32 @@ namespace
 			return PrimitiveComponent->GetWorldAABB();
 		}
 	}
+
+	FMatrix MakeEditorCameraMeshWorldMatrix(
+		const UCameraComponent* CameraComponent,
+		const FCameraEditorVisualizationDesc& Visualization)
+	{
+		return Visualization.LocalToComponentMatrix * CameraComponent->GetWorldMatrix();
+	}
+
+	FRenderCommand MakeEditorCameraMeshCommand(
+		FMeshBuffer* MeshBuffer,
+		int32 SectionIndexStart,
+		int32 SectionIndexCount,
+		UMaterialInterface* Material,
+		const FMatrix& WorldMatrix,
+		const FColor& Tint)
+	{
+		FRenderCommand Cmd = {};
+		Cmd.PerObjectConstants = FPerObjectConstants{ WorldMatrix, Tint.ToVector4() };
+		Cmd.Type = ERenderCommandType::StaticMesh;
+		Cmd.VertexFactoryType = EVertexFactoryType::StaticMesh;
+		Cmd.MeshBuffer = MeshBuffer;
+		Cmd.SectionIndexStart = SectionIndexStart;
+		Cmd.SectionIndexCount = SectionIndexCount;
+		Cmd.Material = Material;
+		return Cmd;
+	}
 }
 
 void FRenderCollector::CollectWorld(UWorld* World, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus,
@@ -134,6 +164,11 @@ void FRenderCollector::CollectWorld(UWorld* World, const FShowFlags& ShowFlags, 
 		}
 
 		CollectFromActor(Actor, ShowFlags, ViewMode, RenderBus, World->GetWorldType(), bIncludeEditorOnlyPrimitives);
+
+		if (bIncludeEditorOnlyPrimitives)
+		{
+			CollectEditorCameraComponents(Actor, ShowFlags, RenderBus);
+		}
 	}
 
 }
@@ -187,6 +222,11 @@ void FRenderCollector::CollectWorldWithFrustum(UWorld* World, const FFrustum& Vi
 			{
 				CollectLight(Light, RenderBus);
 			}
+		}
+
+		if (bIncludeEditorOnlyPrimitives)
+		{
+			CollectEditorCameraComponents(Actor, ShowFlags, RenderBus);
 		}
 
 		for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
@@ -265,6 +305,100 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FShowFlags& ShowFla
 		CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus, WorldType, bIncludeEditorOnlyPrimitives);
 	}
 
+}
+
+void FRenderCollector::CollectEditorCameraComponents(AActor* Actor, const FShowFlags& ShowFlags, FRenderBus& RenderBus)
+{
+	if (!Actor)
+	{
+		return;
+	}
+
+	for (UActorComponent* Comp : Actor->GetComponents())
+	{
+		CollectEditorCameraComponent(Cast<UCameraComponent>(Comp), ShowFlags, RenderBus);
+	}
+}
+
+void FRenderCollector::CollectEditorCameraComponent(
+	UCameraComponent* CameraComponent,
+	const FShowFlags& ShowFlags,
+	FRenderBus& RenderBus)
+{
+	if (!CameraComponent || !ShowFlags.bPrimitives)
+	{
+		return;
+	}
+
+	AActor* Owner = CameraComponent->GetOwner();
+	if (!Owner || !Owner->IsVisible())
+	{
+		return;
+	}
+
+	FCameraEditorVisualizationDesc Visualization;
+	if (!CameraComponent->GetEditorVisualizationDesc(Visualization) || !Visualization.MeshAssetPath)
+	{
+		return;
+	}
+
+	UStaticMesh* CameraMesh = FResourceManager::Get().LoadStaticMesh(Visualization.MeshAssetPath);
+	if (!CameraMesh || !CameraMesh->HasValidMeshData())
+	{
+		return;
+	}
+
+	FMeshBuffer* MeshBuffer = MeshBufferManager.GetStaticMeshBuffer(CameraMesh);
+	if (!MeshBuffer)
+	{
+		return;
+	}
+
+	const FStaticMesh* MeshData = CameraMesh->GetMeshData();
+	const TArray<FStaticMeshSection>& Sections = MeshData ? MeshData->Sections : TArray<FStaticMeshSection>();
+	const TArray<FStaticMeshMaterialSlot>& MaterialSlots = CameraMesh->GetMaterialSlots();
+	UMaterialInterface* DefaultMaterial = FResourceManager::Get().GetMaterial("DefaultWhite");
+	const FMatrix WorldMatrix = MakeEditorCameraMeshWorldMatrix(CameraComponent, Visualization);
+
+	if (Sections.empty())
+	{
+		RenderBus.AddCommand(
+			ERenderPass::Opaque,
+			MakeEditorCameraMeshCommand(
+				MeshBuffer,
+				0,
+				MeshBuffer->GetIndexBuffer().GetIndexCount(),
+				DefaultMaterial,
+				WorldMatrix,
+				Visualization.Tint));
+		return;
+	}
+
+	for (int32 SectionIdx = 0; SectionIdx < static_cast<int32>(Sections.size()); ++SectionIdx)
+	{
+		const FStaticMeshSection& Section = Sections[SectionIdx];
+		if (Section.IndexCount == 0)
+		{
+			continue;
+		}
+
+		UMaterialInterface* Material =
+			SectionIdx < static_cast<int32>(MaterialSlots.size()) ? MaterialSlots[SectionIdx].Material : nullptr;
+		if (!Material)
+		{
+			Material = DefaultMaterial;
+		}
+
+		RenderBus.AddCommand(
+			ERenderPass::Opaque,
+			MakeEditorCameraMeshCommand(
+				MeshBuffer,
+				Section.StartIndex,
+				Section.IndexCount,
+				Material,
+				WorldMatrix,
+				Visualization.Tint));
+	}
 }
 
 void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, const FShowFlags& ShowFlags, EViewMode ViewMode,

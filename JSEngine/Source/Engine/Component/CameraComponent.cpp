@@ -43,6 +43,14 @@ FMatrix UCameraComponent::GetProjectionMatrix() const
 	}
 }
 
+bool UCameraComponent::GetEditorVisualizationDesc(FCameraEditorVisualizationDesc& OutDesc) const
+{
+	OutDesc.MeshAssetPath = "Asset/Mesh/EditorCamera/CameraMesh.uasset";
+	OutDesc.LocalToComponentMatrix = FMatrix::MakeRotationX(MathUtil::PI / 2.0f);
+	OutDesc.Tint = FColor::White();
+	return true;
+}
+
 void UCameraComponent::LookAt(const FVector& Target)
 {
 	const FVector Position = GetWorldLocation();
