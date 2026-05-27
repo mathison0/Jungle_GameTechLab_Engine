@@ -3228,6 +3228,10 @@ bool FEditorPropertyWidget::RenderSoftObjectPtrWidget(const FProperty& Property,
 		{
 			Options = &EditorEngine->GetAssetService().GetAnimGraphAssetPaths();
 		}
+		else if (Property.ObjectClass->IsChildOf(UParticleSystem::StaticClass()))
+		{
+			Options = &EditorEngine->GetAssetService().GetParticleSystemAssetPaths();
+		}
 	}
 
 	if (Options && !Options->empty())
@@ -3285,6 +3289,34 @@ bool FEditorPropertyWidget::RenderSoftObjectPtrWidget(const FProperty& Property,
 			}
 		}
 		ImGui::EndDragDropTarget();
+	}
+
+	if (Property.ObjectClass
+		&& Property.ObjectClass->IsChildOf(UParticleSystem::StaticClass()))
+	{
+		if (ImGui::BeginDragDropTarget())
+		{
+			FString DroppedPath;
+			if (TryNormalizeDroppedAssetPath(ImGui::AcceptDragDropPayload("ParticleSystemContentItem"), DroppedPath))
+			{
+				Property.SoftObjectOps->SetPath(ValuePtr, DroppedPath);
+				Current = DroppedPath;
+				bChanged = true;
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		ImGui::SameLine();
+		const bool bHasParticleSystemAsset = !Current.empty();
+		ImGui::PushID(Property.Name ? Property.Name : Label);
+		ImGui::BeginDisabled(!bHasParticleSystemAsset);
+		if (ImGui::Button("Edit") && bHasParticleSystemAsset && EditorEngine)
+		{
+			EditorEngine->GetMainPanel().OpenParticleSystemAsset(FPaths::Normalize(Current));
+		}
+		ImGui::EndDisabled();
+		ImGui::PopID();
+		ImGui::Dummy(ImVec2(0.0f, 0.0f));
 	}
 
 	return bChanged;
