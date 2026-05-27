@@ -155,17 +155,8 @@ public:
 	UPROPERTY(DisplayName = "Thumbnail Warmup", Min = 0.0f)
 	float ThumbnailWarmup = 1.0f;
 
-	UPROPERTY(DisplayName = "LODDistance Check Time", Min = 0.0f)
-	float LODDistanceCheckTime = 0.25f;
-
 	UPROPERTY(DisplayName = "LODDistances")
 	TArray<float> LODDistances = { 100.0f };
-
-	UPROPERTY(DisplayName = "LODSettings")
-	TArray<int32> LODSettings = { 0 };
-
-	UPROPERTY(DisplayName = "LODMethod")
-	int32 LODMethod = 0;
 
 	UPROPERTY(DisplayName = "Emitters")
     TArray<UParticleEmitter*> Emitters;
