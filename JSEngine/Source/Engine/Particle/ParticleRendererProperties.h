@@ -22,12 +22,18 @@ public:
     virtual EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
     void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
+    EBlendType GetBlendType() const { return BlendType; }
+    void SetBlendType(EBlendType InBlendType) { BlendType = InBlendType; }
+
     virtual int32 RequiredPayloadBytes() const { return 0; }
     virtual FParticleEmitterInstance* CreateInstance(UParticleSystemComponent* Component, int32 EmitterIndex) const;
 
 private:
     UPROPERTY(DisplayName = "Render Mode", NoEdit)
     EParticleEmitterRenderMode RenderMode = EParticleEmitterRenderMode::Sprite;
+
+    UPROPERTY(DisplayName = "Blend Mode", Category = "Rendering")
+    EBlendType BlendType = EBlendType::AlphaBlend;
 };
 
 UCLASS()

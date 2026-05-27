@@ -67,6 +67,7 @@ enum class EBlendType
 {
 	Opaque,
 	AlphaBlend,
+	Additive,
 	NoColor
 };
 

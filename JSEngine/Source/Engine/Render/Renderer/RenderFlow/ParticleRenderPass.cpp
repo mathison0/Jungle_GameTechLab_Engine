@@ -318,9 +318,13 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
 
     Program->Bind(DeviceContext);
 
-    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::AlphaBlend);
+    const EBlendType SpriteBlendType = Replay.BlendType;
+    const EDepthStencilType SpriteDepthType = (SpriteBlendType == EBlendType::Opaque)
+        ? EDepthStencilType::Default
+        : EDepthStencilType::DepthReadOnly;
+    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(SpriteBlendType);
     DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
-    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::DepthReadOnly);
+    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(SpriteDepthType);
     DeviceContext->OMSetDepthStencilState(DepthState, 0);
     ID3D11RasterizerState* RasterState = FResourceManager::Get().GetOrCreateRasterizerState(ERasterizerType::SolidNoCull);
     DeviceContext->RSSetState(RasterState);
@@ -495,9 +499,13 @@ void FParticleRenderPass::RenderRibbonEmitter(const FRenderCommand& Cmd, const F
     ID3D11DeviceContext* DeviceContext = Context.DeviceContext;
     Program->Bind(DeviceContext);
 
-    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::AlphaBlend);
+    const EBlendType RibbonBlendType = Replay.BlendType;
+    const EDepthStencilType RibbonDepthType = (RibbonBlendType == EBlendType::Opaque)
+        ? EDepthStencilType::Default
+        : EDepthStencilType::DepthReadOnly;
+    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(RibbonBlendType);
     DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
-    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::DepthReadOnly);
+    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(RibbonDepthType);
     DeviceContext->OMSetDepthStencilState(DepthState, 0);
     ID3D11RasterizerState* RasterState = FResourceManager::Get().GetOrCreateRasterizerState(ERasterizerType::SolidNoCull);
     DeviceContext->RSSetState(RasterState);
@@ -572,9 +580,13 @@ void FParticleRenderPass::RenderBeamEmitter(const FRenderCommand& Cmd, const FRe
     ID3D11DeviceContext* DeviceContext = Context.DeviceContext;
     Program->Bind(DeviceContext);
 
-    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::AlphaBlend);
+    const EBlendType BeamBlendType = Replay.BlendType;
+    const EDepthStencilType BeamDepthType = (BeamBlendType == EBlendType::Opaque)
+        ? EDepthStencilType::Default
+        : EDepthStencilType::DepthReadOnly;
+    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(BeamBlendType);
     DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
-    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::DepthReadOnly);
+    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(BeamDepthType);
     DeviceContext->OMSetDepthStencilState(DepthState, 0);
     ID3D11RasterizerState* RasterState = FResourceManager::Get().GetOrCreateRasterizerState(ERasterizerType::SolidNoCull);
     DeviceContext->RSSetState(RasterState);

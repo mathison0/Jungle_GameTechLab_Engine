@@ -2118,6 +2118,19 @@ void FEditorPropertyWidget::RenderComponentProperties()
 				{
 					RibbonRenderer->SetTangentSpawningScalar(TangentScalar);
 				}
+
+				// Blend Mode picker — Sprite/Ribbon/Beam 공통 (Mesh 는 Material 의 BlendType 따름).
+				// NoColor 는 특수용 — 사용자 선택에서 제외.
+				ImGui::TextUnformatted("Blend Mode");
+				const char* BlendItems[] = { "Opaque", "Alpha Blend", "Additive" };
+				int32 BlendIdx = static_cast<int32>(RibbonRenderer->GetBlendType());
+				if (BlendIdx < 0 || BlendIdx > 2) { BlendIdx = static_cast<int32>(EBlendType::AlphaBlend); }
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::Combo("##RibbonBlendPicker", &BlendIdx, BlendItems, IM_ARRAYSIZE(BlendItems)))
+				{
+					RibbonRenderer->SetBlendType(static_cast<EBlendType>(BlendIdx));
+				}
+
 				ImGui::PopID();
 			}
 		}
@@ -2288,6 +2301,17 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					BeamRenderer->SetTextureTileDistance(TexTileDist);
 				}
 
+				// Blend Mode picker — Sprite/Ribbon/Beam 공통 (Mesh 는 Material 의 BlendType 따름).
+				ImGui::TextUnformatted("Blend Mode");
+				const char* BeamBlendItems[] = { "Opaque", "Alpha Blend", "Additive" };
+				int32 BeamBlendIdx = static_cast<int32>(BeamRenderer->GetBlendType());
+				if (BeamBlendIdx < 0 || BeamBlendIdx > 2) { BeamBlendIdx = static_cast<int32>(EBlendType::AlphaBlend); }
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::Combo("##BeamBlendPicker", &BeamBlendIdx, BeamBlendItems, IM_ARRAYSIZE(BeamBlendItems)))
+				{
+					BeamRenderer->SetBlendType(static_cast<EBlendType>(BeamBlendIdx));
+				}
+
 				// Source / Target Component picker — 모듈이 존재할 때만 노출 (모듈 없는 경우 fallback 사용).
 				if (BeamSource)
 				{
@@ -2371,6 +2395,51 @@ void FEditorPropertyWidget::RenderComponentProperties()
 					{
 						BeamNoise->SetSmooth(bSmooth);
 					}
+				}
+
+				ImGui::PopID();
+			}
+		}
+
+		// Sprite emitter 의 BlendType 노출 — Ribbon/Beam 패턴과 동일 (emitter 순서대로 sprite renderer properties 찾아 UI 렌더).
+		// Sprite 는 Material 이 RequiredModule 에 묶여있어 본 섹션은 BlendType picker 만 제공.
+		if (UParticleSystem* MutableTemplateSprite = const_cast<UParticleSystem*>(CurrentTemplate))
+		{
+			const TArray<UParticleEmitter*>& EmittersSprite = MutableTemplateSprite->GetEmitters();
+			for (int32 EmitterIdx = 0; EmitterIdx < static_cast<int32>(EmittersSprite.size()); ++EmitterIdx)
+			{
+				UParticleEmitter* Emitter = EmittersSprite[EmitterIdx];
+				if (!Emitter) continue;
+
+				UParticleSpriteRendererProperties* SpriteRenderer = nullptr;
+				for (UParticleLODLevel* LOD : Emitter->LODLevels)
+				{
+					if (LOD)
+					{
+						if (UParticleSpriteRendererProperties* Found = Cast<UParticleSpriteRendererProperties>(LOD->GetEffectiveRendererProperties()))
+						{
+							SpriteRenderer = Found;
+							break;
+						}
+					}
+				}
+				if (!SpriteRenderer) continue;
+
+				ImGui::Spacing();
+				ImGui::PushID(EmitterIdx + 0x30000); // Mesh / Ribbon / Beam PushID 와 충돌 회피
+
+				char SectionLabel[128];
+				snprintf(SectionLabel, sizeof(SectionLabel), "Emitter %d - Sprite Settings", EmitterIdx);
+				ImGui::TextUnformatted(SectionLabel);
+
+				ImGui::TextUnformatted("Blend Mode");
+				const char* SpriteBlendItems[] = { "Opaque", "Alpha Blend", "Additive" };
+				int32 SpriteBlendIdx = static_cast<int32>(SpriteRenderer->GetBlendType());
+				if (SpriteBlendIdx < 0 || SpriteBlendIdx > 2) { SpriteBlendIdx = static_cast<int32>(EBlendType::AlphaBlend); }
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::Combo("##SpriteBlendPicker", &SpriteBlendIdx, SpriteBlendItems, IM_ARRAYSIZE(SpriteBlendItems)))
+				{
+					SpriteRenderer->SetBlendType(static_cast<EBlendType>(SpriteBlendIdx));
 				}
 
 				ImGui::PopID();

@@ -703,6 +703,13 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
             if (LOD)
             {
+                // Per-emitter blend mode 전파 (RendererProperties → Replay frame snapshot).
+                // Sprite/Ribbon/Beam render path 는 본 값을 읽어 D3D BlendState 결정.
+                if (RendererProperties)
+                {
+                    ReplayBase.BlendType = RendererProperties->GetBlendType();
+                }
+
                 switch (ReplayBase.eEmitterType)
                 {
                 case EDynamicEmitterType::Sprite:

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/CoreMinimal.h"
+#include "Render/Resource/RenderResources.h"
 #include "Render/Resource/VertexFactoryTypes.h"
 #include "Render/Resource/VertexTypes.h"
 #include "Particle/ParticleRibbonTypes.h"
@@ -79,6 +80,10 @@ struct FDynamicEmitterReplayDataBase
     // raw pointer owned by the asset/resource manager.
     UMaterialInterface* Material = nullptr;
     UTexture* ParticleTexture = nullptr;
+
+    // Per-emitter blend mode (RendererProperties->BlendType 의 frame snapshot).
+    // Sprite/Ribbon/Beam render path 에서 D3D BlendState 결정에 사용.
+    EBlendType BlendType = EBlendType::AlphaBlend;
 
     virtual ~FDynamicEmitterReplayDataBase() = default;
 };
