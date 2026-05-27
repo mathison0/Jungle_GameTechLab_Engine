@@ -17,6 +17,7 @@ UParticleSystemComponent::UParticleSystemComponent()
 UParticleSystemComponent::~UParticleSystemComponent()
 {
 	ClearEmitterInstances();
+	ReleaseOwnedTransientTemplate();
 }
 
 // Function : Set particle system template and recreate emitter instances when it changes
@@ -25,13 +26,47 @@ UParticleSystemComponent::~UParticleSystemComponent()
 // output : Template is updated and emitter instances match the new template
 void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 {
+	SetTemplate(InTemplate, false);
+}
+
+void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate, bool bTakeTransientOwnership)
+{
 	if (Template == InTemplate && !EmitterInstances.empty())
+	{
+		if (bTakeTransientOwnership)
+		{
+			OwnedTransientTemplate = InTemplate;
+		}
+		return;
+	}
+
+	UParticleSystem* PreviousOwnedTemplate = OwnedTransientTemplate;
+	const bool bDestroyPreviousOwnedTemplate = PreviousOwnedTemplate && PreviousOwnedTemplate != InTemplate;
+
+	Template = InTemplate;
+	OwnedTransientTemplate = bTakeTransientOwnership ? InTemplate : nullptr;
+	RecreateEmitterInstances();
+
+	if (bDestroyPreviousOwnedTemplate)
+	{
+		UObjectManager::Get().DestroyObject(PreviousOwnedTemplate);
+	}
+}
+
+void UParticleSystemComponent::ReleaseOwnedTransientTemplate()
+{
+	if (!OwnedTransientTemplate)
 	{
 		return;
 	}
 
-	Template = InTemplate;
-	RecreateEmitterInstances();
+	UParticleSystem* TemplateToDestroy = OwnedTransientTemplate;
+	if (Template == TemplateToDestroy)
+	{
+		Template = nullptr;
+	}
+	OwnedTransientTemplate = nullptr;
+	UObjectManager::Get().DestroyObject(TemplateToDestroy);
 }
 
 void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
@@ -42,6 +77,10 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 	const bool bNeedsRuntimeRebuild = Template && EmitterInstances.empty();
 	if (bTemplateChanged || bNeedsRuntimeRebuild)
 	{
+		if (bTemplateChanged && OwnedTransientTemplate && Template != OwnedTransientTemplate)
+		{
+			ReleaseOwnedTransientTemplate();
+		}
 		RecreateEmitterInstances();
 	}
 }

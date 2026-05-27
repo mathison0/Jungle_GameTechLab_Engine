@@ -17,6 +17,7 @@ public:
 	~UParticleSystemComponent() override;
 
 	void SetTemplate(UParticleSystem* InTemplate);
+	void SetTemplate(UParticleSystem* InTemplate, bool bTakeTransientOwnership);
 	void PostEditProperty(const char* PropertyName) override;
 	UParticleSystem* GetTemplate() const { return Template; }
 	const TArray<FParticleEmitterInstance*>& GetEmitterInstances() const { return EmitterInstances; } // component가 사용하는 emitter instance들
@@ -70,6 +71,7 @@ protected:
 	void TickComponent(float DeltaTime) override;
 
 private:
+	void ReleaseOwnedTransientTemplate();
 
     /*
 	Template 포인터는 “리플렉션을 통해 에셋을 할당받는 통로”이자, 
@@ -78,6 +80,8 @@ private:
 	*/
 	UPROPERTY(DisplayName = "Template", ReferenceKind = Asset)
 	UParticleSystem* Template = nullptr;
+
+	UParticleSystem* OwnedTransientTemplate = nullptr;
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	TArray<FParticleEventCollideData> PendingCollisionEvents;

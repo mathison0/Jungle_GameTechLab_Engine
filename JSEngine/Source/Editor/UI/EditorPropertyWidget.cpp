@@ -1844,7 +1844,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 		{
 			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultSpriteSystem())
 			{
-				ParticleComp->SetTemplate(Demo);
+				ParticleComp->SetTemplate(Demo, true);
 			}
 		}
 		ImGui::SameLine();
@@ -1852,7 +1852,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 		{
 			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultMeshSystem())
 			{
-				ParticleComp->SetTemplate(Demo);
+				ParticleComp->SetTemplate(Demo, true);
 			}
 		}
 		ImGui::SameLine();
@@ -1860,7 +1860,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 		{
 			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultRibbonSystem())
 			{
-				ParticleComp->SetTemplate(Demo);
+				ParticleComp->SetTemplate(Demo, true);
 			}
 		}
 		ImGui::SameLine();
@@ -1868,7 +1868,7 @@ void FEditorPropertyWidget::RenderComponentProperties()
 		{
 			if (UParticleSystem* Demo = UParticleSystem::CreateDefaultBeamSystem())
 			{
-				ParticleComp->SetTemplate(Demo);
+				ParticleComp->SetTemplate(Demo, true);
 			}
 		}
 

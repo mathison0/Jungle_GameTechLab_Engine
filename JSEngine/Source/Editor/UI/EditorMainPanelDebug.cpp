@@ -5,8 +5,10 @@
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/Viewport/EditorViewportClient.h"
+#include "Editor/Viewport/FSceneViewport.h"
 #include "Core/ResourceManager.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/PrimitiveActors.h"
 #include "GameFramework/World.h"
 #include "Math/Utils.h"
 #include "Particle/ParticleSystemComponent.h"
@@ -116,6 +118,149 @@ UParticleSystemComponent* FindFirstParticleSystemComponentInWorld(UEditorEngine*
     }
 
     return nullptr;
+}
+
+struct FParticleRenderSmokeCounts
+{
+    int32 ParticleCommandCount = 0;
+    uint32 SpriteInstanceCount = 0;
+    uint32 MeshInstanceCount = 0;
+    uint32 RibbonVertexCount = 0;
+    uint32 BeamVertexCount = 0;
+};
+
+void WarmupParticleComponent(UParticleSystemComponent* ParticleComponent, int32 FrameCount = 10)
+{
+    if (!ParticleComponent)
+    {
+        return;
+    }
+
+    constexpr float FixedDeltaTime = 1.0f / 60.0f;
+    for (int32 FrameIndex = 0; FrameIndex < FrameCount; ++FrameIndex)
+    {
+        ParticleComponent->TickPreview(FixedDeltaTime, true);
+    }
+}
+
+bool CollectParticleRenderCommandData(
+    UEditorEngine* InEditorEngine,
+    UParticleSystemComponent* ParticleComponent,
+    FParticleRenderSmokeCounts& OutCounts,
+    FString& OutError)
+{
+    OutCounts = FParticleRenderSmokeCounts();
+
+    if (!ParticleComponent)
+    {
+        OutError = "particle component is null";
+        return false;
+    }
+    if (!ParticleComponent->GetTemplate())
+    {
+        OutError = "particle component has no template";
+        return false;
+    }
+
+    ParticleComponent->RefreshTemplateRuntime(false);
+    WarmupParticleComponent(ParticleComponent, 12);
+
+    if (ParticleComponent->GetTotalActiveParticleCount() <= 0)
+    {
+        OutError = "no active particles available for render command collection";
+        return false;
+    }
+
+    ID3D11Device* Device = InEditorEngine
+        ? InEditorEngine->GetRenderer().GetFD3DDevice().GetDevice()
+        : nullptr;
+    if (!Device)
+    {
+        OutError = "renderer D3D device is not available";
+        return false;
+    }
+
+    FRenderBus RenderBus;
+    FMeshBufferManager MeshBufferManager;
+    MeshBufferManager.Create(Device);
+
+    FShowFlags ShowFlags;
+    ShowFlags.bPrimitives = true;
+
+    FPrimitiveDrawCommandBuilder Builder;
+    const bool bCollected = Builder.CollectPrimitive(
+        ParticleComponent,
+        ShowFlags,
+        EViewMode::Lit_BlinnPhong,
+        RenderBus,
+        MeshBufferManager);
+
+    const TArray<FRenderCommand>& ParticleCommands = RenderBus.GetCommands(ERenderPass::Particle);
+    bool bFoundParticleDrawData = false;
+    for (const FRenderCommand& Command : ParticleCommands)
+    {
+        if (Command.SourcePrimitive != ParticleComponent)
+        {
+            continue;
+        }
+
+        switch (Command.VertexFactoryType)
+        {
+        case EVertexFactoryType::SpriteParticle:
+            if (Command.ParticleInstances && Command.ParticleInstanceCount > 0)
+            {
+                bFoundParticleDrawData = true;
+                OutCounts.SpriteInstanceCount += Command.ParticleInstanceCount;
+            }
+            break;
+        case EVertexFactoryType::MeshParticle:
+            if (Command.MeshParticleInstances && Command.MeshParticleInstanceCount > 0)
+            {
+                bFoundParticleDrawData = true;
+                OutCounts.MeshInstanceCount += Command.MeshParticleInstanceCount;
+            }
+            break;
+        case EVertexFactoryType::RibbonParticle:
+            if (Command.RibbonVertices && Command.RibbonVertexCount > 0)
+            {
+                bFoundParticleDrawData = true;
+                OutCounts.RibbonVertexCount += Command.RibbonVertexCount;
+            }
+            break;
+        case EVertexFactoryType::BeamParticle:
+            if (Command.BeamVertices && Command.BeamVertexCount > 0)
+            {
+                bFoundParticleDrawData = true;
+                OutCounts.BeamVertexCount += Command.BeamVertexCount;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    OutCounts.ParticleCommandCount = static_cast<int32>(ParticleCommands.size());
+    MeshBufferManager.Release();
+
+    if (!bCollected)
+    {
+        OutError = "primitive draw command builder rejected the particle component";
+        return false;
+    }
+
+    if (!bFoundParticleDrawData)
+    {
+        char Buffer[192];
+        snprintf(
+            Buffer,
+            sizeof(Buffer),
+            "no particle render data, particleCommands=%d",
+            OutCounts.ParticleCommandCount);
+        OutError = Buffer;
+        return false;
+    }
+
+    return true;
 }
 
 bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& OutSummary)
@@ -318,111 +463,11 @@ bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSu
         return false;
     }
 
-    ParticleComponent->RefreshTemplateRuntime(false);
-
-    constexpr int32 WarmupFrameCount = 10;
-    constexpr float FixedDeltaTime = 1.0f / 60.0f;
-    for (int32 FrameIndex = 0; FrameIndex < WarmupFrameCount; ++FrameIndex)
+    FParticleRenderSmokeCounts Counts;
+    FString Error;
+    if (!CollectParticleRenderCommandData(InEditorEngine, ParticleComponent, Counts, Error))
     {
-        ParticleComponent->TickPreview(FixedDeltaTime, true);
-    }
-
-    if (ParticleComponent->GetTotalActiveParticleCount() <= 0)
-    {
-        OutSummary = "no active particles available for render command collection";
-        return false;
-    }
-
-    ID3D11Device* Device = InEditorEngine
-        ? InEditorEngine->GetRenderer().GetFD3DDevice().GetDevice()
-        : nullptr;
-    if (!Device)
-    {
-        OutSummary = "renderer D3D device is not available";
-        return false;
-    }
-
-    FRenderBus RenderBus;
-    FMeshBufferManager MeshBufferManager;
-    MeshBufferManager.Create(Device);
-
-    FShowFlags ShowFlags;
-    ShowFlags.bPrimitives = true;
-
-    FPrimitiveDrawCommandBuilder Builder;
-    const bool bCollected = Builder.CollectPrimitive(
-        ParticleComponent,
-        ShowFlags,
-        EViewMode::Lit_BlinnPhong,
-        RenderBus,
-        MeshBufferManager);
-
-    const TArray<FRenderCommand>& ParticleCommands = RenderBus.GetCommands(ERenderPass::Particle);
-    uint32 SpriteInstanceCount = 0;
-    uint32 MeshInstanceCount = 0;
-    uint32 RibbonVertexCount = 0;
-    uint32 BeamVertexCount = 0;
-    bool bFoundParticleDrawData = false;
-    for (const FRenderCommand& Command : ParticleCommands)
-    {
-        if (Command.SourcePrimitive != ParticleComponent)
-        {
-            continue;
-        }
-
-        switch (Command.VertexFactoryType)
-        {
-        case EVertexFactoryType::SpriteParticle:
-            if (Command.ParticleInstances && Command.ParticleInstanceCount > 0)
-            {
-                bFoundParticleDrawData = true;
-                SpriteInstanceCount += Command.ParticleInstanceCount;
-            }
-            break;
-        case EVertexFactoryType::MeshParticle:
-            if (Command.MeshParticleInstances && Command.MeshParticleInstanceCount > 0)
-            {
-                bFoundParticleDrawData = true;
-                MeshInstanceCount += Command.MeshParticleInstanceCount;
-            }
-            break;
-        case EVertexFactoryType::RibbonParticle:
-            if (Command.RibbonVertices && Command.RibbonVertexCount > 0)
-            {
-                bFoundParticleDrawData = true;
-                RibbonVertexCount += Command.RibbonVertexCount;
-            }
-            break;
-        case EVertexFactoryType::BeamParticle:
-            if (Command.BeamVertices && Command.BeamVertexCount > 0)
-            {
-                bFoundParticleDrawData = true;
-                BeamVertexCount += Command.BeamVertexCount;
-            }
-            break;
-        default:
-            break;
-        }
-    }
-
-    const int32 ParticleCommandCount = static_cast<int32>(ParticleCommands.size());
-    MeshBufferManager.Release();
-
-    if (!bCollected)
-    {
-        OutSummary = "primitive draw command builder rejected the particle component";
-        return false;
-    }
-
-    if (!bFoundParticleDrawData)
-    {
-        char Buffer[192];
-        snprintf(
-            Buffer,
-            sizeof(Buffer),
-            "no particle render data, particleCommands=%d",
-            ParticleCommandCount);
-        OutSummary = Buffer;
+        OutSummary = Error;
         return false;
     }
 
@@ -432,11 +477,144 @@ bool RunParticleRenderCommandSmoke(UEditorEngine* InEditorEngine, FString& OutSu
         sizeof(Buffer),
         "%s, commands=%d, spriteInstances=%u, meshInstances=%u, ribbonVertices=%u, beamVertices=%u",
         bUsedSelection ? "selected" : "firstInWorld",
-        ParticleCommandCount,
-        SpriteInstanceCount,
-        MeshInstanceCount,
-        RibbonVertexCount,
-        BeamVertexCount);
+        Counts.ParticleCommandCount,
+        Counts.SpriteInstanceCount,
+        Counts.MeshInstanceCount,
+        Counts.RibbonVertexCount,
+        Counts.BeamVertexCount);
+    OutSummary = Buffer;
+    return true;
+}
+
+bool RunParticleRenderCoverageSmoke(UEditorEngine* InEditorEngine, FString& OutSummary)
+{
+    struct FCaseResult
+    {
+        const char* Label = "";
+        FParticleRenderSmokeCounts Counts;
+    };
+
+    FCaseResult Results[4];
+    int32 ResultCount = 0;
+
+    auto RunCase = [&](const char* Label, EParticleEmitterRenderMode ExpectedMode, UParticleSystem* ParticleSystem) -> bool
+    {
+        UParticleSystemComponent* Component = UObjectManager::Get().CreateObject<UParticleSystemComponent>();
+        auto Cleanup = [&]()
+        {
+            if (Component)
+            {
+                UObjectManager::Get().DestroyObject(Component);
+                Component = nullptr;
+            }
+            if (ParticleSystem)
+            {
+                UObjectManager::Get().DestroyObject(ParticleSystem);
+                ParticleSystem = nullptr;
+            }
+        };
+
+        if (!ParticleSystem || !Component)
+        {
+            OutSummary = FString(Label) + " case failed to create test objects";
+            Cleanup();
+            return false;
+        }
+
+        Component->SetTemplate(ParticleSystem);
+
+        FParticleRenderSmokeCounts Counts;
+        FString Error;
+        if (!CollectParticleRenderCommandData(InEditorEngine, Component, Counts, Error))
+        {
+            OutSummary = FString(Label) + " render command collection failed: " + Error;
+            Cleanup();
+            return false;
+        }
+
+        bool bHasExpectedData = false;
+        switch (ExpectedMode)
+        {
+        case EParticleEmitterRenderMode::Sprite:
+            bHasExpectedData = Counts.SpriteInstanceCount > 0;
+            break;
+        case EParticleEmitterRenderMode::Mesh:
+            bHasExpectedData = Counts.MeshInstanceCount > 0;
+            break;
+        case EParticleEmitterRenderMode::Ribbon:
+            bHasExpectedData = Counts.RibbonVertexCount > 0;
+            break;
+        case EParticleEmitterRenderMode::Beam:
+            bHasExpectedData = Counts.BeamVertexCount > 0;
+            break;
+        default:
+            break;
+        }
+
+        if (!bHasExpectedData)
+        {
+            char Buffer[256];
+            snprintf(
+                Buffer,
+                sizeof(Buffer),
+                "%s expected render data missing, commands=%d, sprite=%u, mesh=%u, ribbon=%u, beam=%u",
+                Label,
+                Counts.ParticleCommandCount,
+                Counts.SpriteInstanceCount,
+                Counts.MeshInstanceCount,
+                Counts.RibbonVertexCount,
+                Counts.BeamVertexCount);
+            OutSummary = Buffer;
+            Cleanup();
+            return false;
+        }
+
+        Results[ResultCount++] = { Label, Counts };
+        Cleanup();
+        return true;
+    };
+
+    if (!RunCase("sprite", EParticleEmitterRenderMode::Sprite, UParticleSystem::CreateDefaultSpriteSystem()))
+    {
+        return false;
+    }
+    if (!RunCase("mesh", EParticleEmitterRenderMode::Mesh, UParticleSystem::CreateDefaultMeshSystem()))
+    {
+        return false;
+    }
+    if (!RunCase("ribbon", EParticleEmitterRenderMode::Ribbon, UParticleSystem::CreateDefaultRibbonSystem()))
+    {
+        return false;
+    }
+    if (!RunCase("beam", EParticleEmitterRenderMode::Beam, UParticleSystem::CreateDefaultBeamSystem()))
+    {
+        return false;
+    }
+
+    uint32 SpriteInstances = 0;
+    uint32 MeshInstances = 0;
+    uint32 RibbonVertices = 0;
+    uint32 BeamVertices = 0;
+    int32 Commands = 0;
+    for (int32 Index = 0; Index < ResultCount; ++Index)
+    {
+        Commands += Results[Index].Counts.ParticleCommandCount;
+        SpriteInstances += Results[Index].Counts.SpriteInstanceCount;
+        MeshInstances += Results[Index].Counts.MeshInstanceCount;
+        RibbonVertices += Results[Index].Counts.RibbonVertexCount;
+        BeamVertices += Results[Index].Counts.BeamVertexCount;
+    }
+
+    char Buffer[256];
+    snprintf(
+        Buffer,
+        sizeof(Buffer),
+        "sprite/mesh/ribbon/beam commands ok: commands=%d, sprite=%u, mesh=%u, ribbon=%u, beam=%u",
+        Commands,
+        SpriteInstances,
+        MeshInstances,
+        RibbonVertices,
+        BeamVertices);
     OutSummary = Buffer;
     return true;
 }
@@ -547,6 +725,188 @@ bool RunParticleLODSmoke(FString& OutSummary)
     return true;
 }
 
+bool RunParticleEditorRefreshRegressionSmoke(UEditorEngine* InEditorEngine, FString& OutSummary)
+{
+    UParticleSystem* ParticleSystem = UParticleSystem::CreateDefaultSpriteSystem();
+    UParticleSystemComponent* PreviewComponent = UObjectManager::Get().CreateObject<UParticleSystemComponent>();
+    UWorld* World = InEditorEngine ? InEditorEngine->GetFocusedWorld() : nullptr;
+    AParticleSystemActor* PlacedActor = World ? World->SpawnActor<AParticleSystemActor>() : nullptr;
+
+    auto Cleanup = [&]()
+    {
+        if (World && PlacedActor)
+        {
+            World->DestroyActor(PlacedActor);
+            PlacedActor = nullptr;
+            World->SyncSpatialIndex();
+        }
+        if (PreviewComponent)
+        {
+            UObjectManager::Get().DestroyObject(PreviewComponent);
+            PreviewComponent = nullptr;
+        }
+        if (ParticleSystem)
+        {
+            UObjectManager::Get().DestroyObject(ParticleSystem);
+            ParticleSystem = nullptr;
+        }
+    };
+
+    auto Fail = [&](const char* Message) -> bool
+    {
+        OutSummary = Message;
+        Cleanup();
+        return false;
+    };
+
+    if (!ParticleSystem || !PreviewComponent || !World || !PlacedActor)
+    {
+        return Fail("failed to create particle refresh regression objects");
+    }
+
+    PlacedActor->InitDefaultComponents();
+    PlacedActor->SetFName(FName("Particle Refresh Regression Actor"));
+    PlacedActor->SetTemplate(ParticleSystem);
+    PlacedActor->SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
+    World->SyncSpatialIndex();
+
+    UParticleSystemComponent* PlacedComponent = PlacedActor->GetParticleSystemComponent();
+    PreviewComponent->SetTemplate(ParticleSystem);
+    if (!PlacedComponent || !PreviewComponent->GetTemplate() || !PlacedComponent->GetTemplate())
+    {
+        return Fail("preview or placed particle component did not receive template");
+    }
+
+    WarmupParticleComponent(PreviewComponent, 12);
+    WarmupParticleComponent(PlacedComponent, 12);
+    const int32 PreviewActiveBefore = PreviewComponent->GetTotalActiveParticleCount();
+    const int32 PlacedActiveBefore = PlacedComponent->GetTotalActiveParticleCount();
+    if (PreviewActiveBefore <= 0 || PlacedActiveBefore <= 0)
+    {
+        return Fail("baseline preview or placed component did not spawn particles");
+    }
+
+    UParticleEmitter* Emitter = ParticleSystem->GetEmitters().empty() ? nullptr : ParticleSystem->GetEmitters()[0];
+    UParticleLODLevel* LOD0 = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+    if (!Emitter || !LOD0)
+    {
+        return Fail("default particle system has no emitter or LOD0");
+    }
+
+    auto ValidateRebound = [&](const char* Label, bool bRequireActivePreserved) -> bool
+    {
+        PreviewComponent->RefreshTemplateRuntime(false);
+        PlacedComponent->RefreshTemplateRuntime(false);
+
+        FParticleEmitterInstance* PreviewInstance = PreviewComponent->GetEmitterInstance(0);
+        FParticleEmitterInstance* PlacedInstance = PlacedComponent->GetEmitterInstance(0);
+        if (!PreviewInstance || !PlacedInstance)
+        {
+            OutSummary = FString(Label) + " refresh lost emitter instance";
+            return false;
+        }
+        if (!PreviewInstance->GetCurrentCompiledLODData() || !PlacedInstance->GetCurrentCompiledLODData())
+        {
+            OutSummary = FString(Label) + " refresh left a null compiled LOD";
+            return false;
+        }
+        if (bRequireActivePreserved &&
+            (PreviewComponent->GetTotalActiveParticleCount() <= 0 || PlacedComponent->GetTotalActiveParticleCount() <= 0))
+        {
+            OutSummary = FString(Label) + " refresh dropped live particles";
+            return false;
+        }
+        return true;
+    };
+
+    if (UParticleModule* Module = !LOD0->GetModules().empty() ? LOD0->GetModules()[0] : nullptr)
+    {
+        Module->SetEnabled(!Module->IsEnabled());
+        Emitter->CacheEmitterModuleInfo();
+        if (!ValidateRebound("module property edit", true))
+        {
+            Cleanup();
+            return false;
+        }
+        Module->SetEnabled(!Module->IsEnabled());
+    }
+
+    LOD0->DistanceThreshold += 500.0f;
+    Emitter->CacheEmitterModuleInfo();
+    if (!ValidateRebound("LOD threshold edit", true))
+    {
+        Cleanup();
+        return false;
+    }
+
+    UParticleLODLevel* AddedLOD = Cast<UParticleLODLevel>(LOD0->Duplicate());
+    if (!AddedLOD)
+    {
+        return Fail("failed to duplicate LOD for refresh regression");
+    }
+    AddedLOD->Level = static_cast<int32>(Emitter->GetLODLevels().size());
+    AddedLOD->bEnabled = true;
+    AddedLOD->DistanceThreshold = LOD0->GetDistanceThreshold() + 1000.0f;
+    Emitter->LODLevels.push_back(AddedLOD);
+    Emitter->CacheEmitterModuleInfo();
+    if (!ValidateRebound("LOD add edit", true))
+    {
+        Cleanup();
+        return false;
+    }
+
+    Emitter->RemoveLODLevel(static_cast<int32>(Emitter->GetLODLevels().size()) - 1);
+    if (!ValidateRebound("LOD delete edit", true))
+    {
+        Cleanup();
+        return false;
+    }
+
+    UParticleMeshRendererProperties* MeshRenderer = UObjectManager::Get().CreateObject<UParticleMeshRendererProperties>();
+    if (!MeshRenderer)
+    {
+        return Fail("failed to create mesh renderer properties");
+    }
+    MeshRenderer->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/Dice/Dice.obj"));
+    LOD0->SetRendererProperties(MeshRenderer);
+    Emitter->CacheEmitterModuleInfo();
+
+    PreviewComponent->RefreshTemplateRuntime(false);
+    PlacedComponent->RefreshTemplateRuntime(false);
+    FParticleEmitterInstance* PreviewInstanceAfterRenderer = PreviewComponent->GetEmitterInstance(0);
+    FParticleEmitterInstance* PlacedInstanceAfterRenderer = PlacedComponent->GetEmitterInstance(0);
+    const FCompiledParticleLODData* PreviewCompiledAfterRenderer =
+        PreviewInstanceAfterRenderer ? PreviewInstanceAfterRenderer->GetCurrentCompiledLODData() : nullptr;
+    const FCompiledParticleLODData* PlacedCompiledAfterRenderer =
+        PlacedInstanceAfterRenderer ? PlacedInstanceAfterRenderer->GetCurrentCompiledLODData() : nullptr;
+    if (!PreviewCompiledAfterRenderer || !PlacedCompiledAfterRenderer ||
+        PreviewCompiledAfterRenderer->RenderMode != EParticleEmitterRenderMode::Mesh ||
+        PlacedCompiledAfterRenderer->RenderMode != EParticleEmitterRenderMode::Mesh)
+    {
+        return Fail("renderer property edit did not recreate/rebind components to mesh compiled LOD");
+    }
+
+    WarmupParticleComponent(PreviewComponent, 12);
+    WarmupParticleComponent(PlacedComponent, 12);
+    if (PreviewComponent->GetTotalActiveParticleCount() <= 0 || PlacedComponent->GetTotalActiveParticleCount() <= 0)
+    {
+        return Fail("renderer property refresh did not restart live simulation");
+    }
+
+    char Buffer[256];
+    snprintf(
+        Buffer,
+        sizeof(Buffer),
+        "preview and placed PSC refreshed: activeBefore=%d/%d, finalMode=Mesh, finalActive=%d/%d",
+        PreviewActiveBefore,
+        PlacedActiveBefore,
+        PreviewComponent->GetTotalActiveParticleCount(),
+        PlacedComponent->GetTotalActiveParticleCount());
+    OutSummary = Buffer;
+    Cleanup();
+    return true;
+}
+
 bool RunParticleEventDispatchSmoke(FString& OutSummary)
 {
     UParticleSystemComponent* Component = UObjectManager::Get().CreateObject<UParticleSystemComponent>();
@@ -554,15 +914,15 @@ bool RunParticleEventDispatchSmoke(FString& OutSummary)
 
     auto Cleanup = [&]()
     {
-        if (Component)
-        {
-            UObjectManager::Get().DestroyObject(Component);
-            Component = nullptr;
-        }
         if (Dispatcher)
         {
             UObjectManager::Get().DestroyObject(Dispatcher);
             Dispatcher = nullptr;
+        }
+        if (Component)
+        {
+            UObjectManager::Get().DestroyObject(Component);
+            Component = nullptr;
         }
     };
 
@@ -834,6 +1194,44 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
     if (ImGui::CollapsingHeader("Particle", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::TextDisabled("Uses selected particle component, or first particle component in the focused world.");
+        if (ImGui::Button("Place SmokeTest Particle System"))
+        {
+            const FString SmokeTestPath = "Asset/Particle/SmokeTest.particlesystem";
+            bool bPlaced = false;
+            FString Summary = "editor engine is not available";
+
+            if (EditorEngine)
+            {
+                FEditorViewportLayout& Layout = EditorEngine->GetViewportLayout();
+                const int32 ViewportIndex = Layout.GetLastFocusedViewportIndex();
+                FEditorViewportClient* Client = Layout.GetViewportClient(ViewportIndex);
+                const FSceneViewport* Viewport = Client ? Client->GetViewport() : nullptr;
+                const FViewportRect Rect = Viewport ? Viewport->GetRect() : FViewportRect();
+                const float LocalX = Rect.Width > 0 ? static_cast<float>(Rect.Width) * 0.5f : 0.0f;
+                const float LocalY = Rect.Height > 0 ? static_cast<float>(Rect.Height) * 0.5f : 0.0f;
+
+                bPlaced = SpawnParticleSystemFromContentPath(SmokeTestPath, ViewportIndex, LocalX, LocalY);
+                Summary = bPlaced ? SmokeTestPath : "failed to place SmokeTest particle system";
+            }
+
+            FEditorConsoleWidget::AddLog(
+                "Particle SmokeTest placement %s: %s\n",
+                bPlaced ? "passed" : "failed",
+                Summary.c_str());
+
+            if (EditorEngine)
+            {
+                if (bPlaced)
+                {
+                    EditorEngine->GetNotificationService().Info("Particle SmokeTest placed in viewport");
+                }
+                else
+                {
+                    EditorEngine->GetNotificationService().Warning("Particle SmokeTest placement failed");
+                }
+            }
+        }
+
         if (ImGui::Button("Runtime Smoke"))
         {
             FString Summary;
@@ -878,6 +1276,28 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
             }
         }
 
+        if (ImGui::Button("Render Coverage Smoke"))
+        {
+            FString Summary;
+            const bool bPassed = RunParticleRenderCoverageSmoke(EditorEngine, Summary);
+            FEditorConsoleWidget::AddLog(
+                "Particle render coverage smoke test %s: %s\n",
+                bPassed ? "passed" : "failed",
+                Summary.c_str());
+
+            if (EditorEngine)
+            {
+                if (bPassed)
+                {
+                    EditorEngine->GetNotificationService().Info("Particle render coverage smoke test passed");
+                }
+                else
+                {
+                    EditorEngine->GetNotificationService().Warning("Particle render coverage smoke test failed");
+                }
+            }
+        }
+
         if (ImGui::Button("Run Particle Serialization Smoke Test"))
         {
             const FString SmokeTestPath = "Asset/Particle/SmokeTest.particlesystem";
@@ -906,6 +1326,28 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
                 else
                 {
                     EditorEngine->GetNotificationService().Warning("Particle LOD smoke test failed");
+                }
+            }
+        }
+
+        if (ImGui::Button("Run Particle Editor Refresh Regression Smoke Test"))
+        {
+            FString Summary;
+            const bool bPassed = RunParticleEditorRefreshRegressionSmoke(EditorEngine, Summary);
+            FEditorConsoleWidget::AddLog(
+                "Particle editor refresh regression smoke test %s: %s\n",
+                bPassed ? "passed" : "failed",
+                Summary.c_str());
+
+            if (EditorEngine)
+            {
+                if (bPassed)
+                {
+                    EditorEngine->GetNotificationService().Info("Particle editor refresh regression smoke test passed");
+                }
+                else
+                {
+                    EditorEngine->GetNotificationService().Warning("Particle editor refresh regression smoke test failed");
                 }
             }
         }

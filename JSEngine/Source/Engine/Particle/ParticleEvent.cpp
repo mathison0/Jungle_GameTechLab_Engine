@@ -36,7 +36,12 @@ void AParticleEventManager::UnbindParticleSystemComponent()
 {
 	if (BoundComponent && BoundCollisionDelegateId != 0)
 	{
-		BoundComponent->OnParticleCollide.Remove(BoundCollisionDelegateId);
+		UObject* BoundObject = BoundComponent;
+		if (UObjectManager::Get().ContainsObject(BoundObject) &&
+			Cast<UParticleSystemComponent>(BoundObject) == BoundComponent)
+		{
+			BoundComponent->OnParticleCollide.Remove(BoundCollisionDelegateId);
+		}
 	}
 	BoundComponent = nullptr;
 	BoundCollisionDelegateId = 0;

@@ -101,6 +101,20 @@ namespace
         return FResourceManager::Get().GetOrCreateShaderProgram(
             VSKey, PSKey, nullptr, nullptr, &Desc.VertexLayout);
     }
+
+    const UMaterial* ResolveBaseMaterial(const UMaterialInterface* MaterialInterface)
+    {
+        UMaterialInterface* MutableMaterial = const_cast<UMaterialInterface*>(MaterialInterface);
+        if (const UMaterial* Material = Cast<UMaterial>(MutableMaterial))
+        {
+            return Material;
+        }
+        if (const UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(MutableMaterial))
+        {
+            return MaterialInstance->Parent;
+        }
+        return nullptr;
+    }
 }
 
 bool FParticleRenderPass::Initialize()
@@ -364,7 +378,7 @@ void FParticleRenderPass::RenderSpriteEmitter(const FRenderCommand& Cmd, const F
 // Context : render pass context (Device, DeviceContext, RenderResources, ...)
 // output : One DrawIndexedInstanced call issued when MeshBuffer + instance data valid
 //
-// D3D state: BlendOpaque + Default(DepthTestWrite) + SolidBackCull (사용자 결정 lock-in).
+// D3D state: material blend + Default for opaque, DepthReadOnly for translucent + SolidBackCull.
 // PerObject CB: Builder가 Identity Model로 세팅 — instance VB가 World 합성 담당.
 // Slot 0: Cmd.MeshBuffer의 VertexBuffer (FNormalVertex), Slot 1: MeshInstanceBuffer (FMeshParticleInstanceData).
 void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRenderPassContext& Context)
@@ -388,10 +402,17 @@ void FParticleRenderPass::RenderMeshEmitter(const FRenderCommand& Cmd, const FRe
 
     Program->Bind(DeviceContext);
 
-    // 사용자 결정 lock-in: BlendOpaque + Default(DepthTestWrite) + SolidBackCull.
-    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(EBlendType::Opaque);
+    const UMaterial* MeshMaterial = ResolveBaseMaterial(Cmd.Material);
+    const EBlendType MeshBlendType = MeshMaterial ? MeshMaterial->BlendType : EBlendType::AlphaBlend;
+    const EDepthStencilType MeshDepthType = (MeshBlendType == EBlendType::Opaque)
+        ? EDepthStencilType::Default
+        : EDepthStencilType::DepthReadOnly;
+
+    // Mesh particles follow their material blend policy. Translucent materials depth-test but do not write depth,
+    // matching the sprite/ribbon/beam particle pass behavior.
+    ID3D11BlendState* BlendState = FResourceManager::Get().GetOrCreateBlendState(MeshBlendType);
     DeviceContext->OMSetBlendState(BlendState, nullptr, 0xFFFFFFFF);
-    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(EDepthStencilType::Default);
+    ID3D11DepthStencilState* DepthState = FResourceManager::Get().GetOrCreateDepthStencilState(MeshDepthType);
     DeviceContext->OMSetDepthStencilState(DepthState, 0);
     ID3D11RasterizerState* RasterState = FResourceManager::Get().GetOrCreateRasterizerState(ERasterizerType::SolidBackCull);
     DeviceContext->RSSetState(RasterState);

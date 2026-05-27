@@ -88,6 +88,7 @@
         }],
       "EditorOnly" : true,
       "Name" : "Directional Light",
+      "PersistentGuid" : "CF131531-94F645E9-A78ED0A0-BBD68A61",
       "RootComponent" : 464,
       "Tags" : [],
       "UUID" : 463,
@@ -179,6 +180,7 @@
         }],
       "EditorOnly" : false,
       "Name" : "Ambient Light",
+      "PersistentGuid" : "A1146D49-313347BA-A4793E2A-8A0819FF",
       "RootComponent" : 467,
       "Tags" : [],
       "UUID" : 466,
@@ -256,6 +258,7 @@
         }],
       "EditorOnly" : false,
       "Name" : "Player Start",
+      "PersistentGuid" : "FCDF0ED9-04B349D6-A65AC051-455878E5",
       "RootComponent" : 470,
       "Tags" : [],
       "UUID" : 469,
@@ -299,6 +302,7 @@
         }],
       "EditorOnly" : true,
       "Name" : "AParticleEventManager_1",
+      "PersistentGuid" : "82A5EE8F-99F245A4-ACF8C786-8234DC85",
       "RootComponent" : 473,
       "Tags" : [],
       "UUID" : 472,
@@ -345,20 +349,109 @@
         }],
       "EditorOnly" : false,
       "Name" : "AStaticMeshActor_0",
+      "PersistentGuid" : "66D7CAA1-36DE4391-9DD947D2-2B7AD129",
       "RootComponent" : 509,
       "Tags" : [],
       "UUID" : 508,
       "Visible" : true
+    }, {
+      "Active" : true,
+      "ClassName" : "AParticleSystemActor",
+      "Components" : [{
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UParticleSystemComponent",
+          "ObjectName" : "UParticleSystemComponent_1",
+          "PersistentGuid" : "5C0BE0F2-3F7C461B-92E14B0B-5741DBFC",
+          "RelativeLocation" : {
+            "X" : 6.253187,
+            "Y" : 6.134988,
+            "Z" : 7.009200
+          },
+          "RelativeRotation" : {
+            "X" : 0.000000,
+            "Y" : 0.000000,
+            "Z" : 0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 1.000000,
+            "Y" : 1.000000,
+            "Z" : 1.000000
+          },
+          "Tags" : [],
+          "Template" : "Asset/Particle System/New Particle System 2.particlesystem",
+          "Type" : "UParticleSystemComponent",
+          "UUID" : 896,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : false,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }],
+      "EditorOnly" : true,
+      "Name" : "ParticleSystemActor",
+      "PersistentGuid" : "360BF0A2-0C7B44FB-A6A302FB-0A494038",
+      "RootComponent" : 896,
+      "Tags" : [],
+      "UUID" : 895,
+      "Visible" : true
+    }, {
+      "Active" : true,
+      "ClassName" : "AParticleSystemActor",
+      "Components" : [{
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UParticleSystemComponent",
+          "ObjectName" : "UParticleSystemComponent_1",
+          "PersistentGuid" : "D11CF065-8343477C-BE7E4239-F4E4A6EE",
+          "RelativeLocation" : {
+            "X" : 3.665902,
+            "Y" : 4.222988,
+            "Z" : 5.578907
+          },
+          "RelativeRotation" : {
+            "X" : 0.000000,
+            "Y" : 0.000000,
+            "Z" : 0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 1.000000,
+            "Y" : 1.000000,
+            "Z" : 1.000000
+          },
+          "Tags" : [],
+          "Template" : "Asset/Particle/SmokeTest.particlesystem",
+          "Type" : "UParticleSystemComponent",
+          "UUID" : 1302,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : false,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }],
+      "EditorOnly" : true,
+      "Name" : "ParticleSystemActor",
+      "PersistentGuid" : "35AF93AF-37634F21-A066B8D0-4BC54E4A",
+      "RootComponent" : 1302,
+      "Tags" : [],
+      "UUID" : 1301,
+      "Visible" : true
     }],
   "ClassName" : "UWorld",
   "Name" : "Untitled",
-  "NextUUID" : 813,
+  "NextUUID" : 1537,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
     "Location" : [2.122883, -4.543060, 10.136924],
     "NearClip" : 0.100000,
-    "Rotation" : [-32.165710, -5.010040, 97.906296]
+    "Rotation" : [-26.763367, 4.531384, 81.095695]
   },
   "Version" : 6,
   "WorldSettings" : {
