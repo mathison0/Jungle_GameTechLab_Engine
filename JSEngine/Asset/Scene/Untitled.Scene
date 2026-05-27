@@ -272,9 +272,9 @@
           "ObjectName" : "UParticleSystemComponent_1",
           "PersistentGuid" : "1E35CCAC-1CDA4488-AF1BD2BD-E026462B",
           "RelativeLocation" : {
-            "X" : 0.401726,
-            "Y" : 0.497379,
-            "Z" : 3.552489
+            "X" : 2.983743,
+            "Y" : 2.174506,
+            "Z" : 4.497186
           },
           "RelativeRotation" : {
             "X" : -0.000000,
@@ -287,7 +287,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "Template" : "",
+          "TemplateAssetPath" : "",
           "Type" : "UParticleSystemComponent",
           "UUID" : 473,
           "bAutoActivate" : true,
@@ -317,7 +317,7 @@
           "ObjectName" : "UStaticMeshComponent_1",
           "PersistentGuid" : "AC01CA8E-DB0D401F-9DB4EF1E-23FC2339",
           "RelativeLocation" : {
-            "X" : -1.794738,
+            "X" : 6.156617,
             "Y" : 3.865058,
             "Z" : 1.891727
           },
@@ -378,7 +378,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "Template" : "Asset/Particle System/New Particle System 2.particlesystem",
+          "TemplateAssetPath" : "Asset/Particle System/New Particle System 2.particlesystem",
           "Type" : "UParticleSystemComponent",
           "UUID" : 896,
           "bAutoActivate" : true,
@@ -422,7 +422,7 @@
             "Z" : 1.000000
           },
           "Tags" : [],
-          "Template" : "Asset/Particle/SmokeTest.particlesystem",
+          "TemplateAssetPath" : "Asset/Particle/SmokeTest.particlesystem",
           "Type" : "UParticleSystemComponent",
           "UUID" : 1302,
           "bAutoActivate" : true,
@@ -449,7 +449,7 @@
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [2.122883, -4.543060, 10.136924],
+    "Location" : [-1.709945, -9.426347, 9.158304],
     "NearClip" : 0.100000,
     "Rotation" : [-26.763367, 4.531384, 81.095695]
   },

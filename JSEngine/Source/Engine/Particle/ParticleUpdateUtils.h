@@ -14,11 +14,7 @@
 #define END_UPDATE_LOOP \
 	++ParticleIndex
 
-// Function : Get particle data directly from emitter instance storage
-// input : Owner, ActiveIndex
-// Owner : emitter instance that owns particle data and index buffers
-// ActiveIndex : active particle index in compact active list
-// output : Pointer to particle data stored at the active index
+// Accesses particle data through the emitter instance's active index mapping.
 inline FBaseParticle* GetParticleDirect(FParticleEmitterInstance* Owner, int32 ActiveIndex)
 {
 	return Owner ? Owner->GetParticle(ActiveIndex) : nullptr;

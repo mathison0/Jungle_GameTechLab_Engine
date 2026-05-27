@@ -1,9 +1,28 @@
 #pragma once
 
+#include "Asset/CurveFloatAsset.h"
+#include "Core/Containers/Map.h"
 #include "Object/Object.h"
 #include "Particle/ParticleTypes.h"
 
 struct FParticleEmitterInstance;
+
+enum class EParticleDistributionRuntimeKind : int32
+{
+	FloatConstant = 0,
+	FloatConstantCurve = 1,
+	FloatUniform = 2,
+	FloatUniformCurve = 3,
+};
+
+struct FParticleDistributionRuntimeData
+{
+	int32 Kind = 0;
+	bool bVector = false;
+	float StoredMaxFloat = 0.0f;
+	FVector StoredMaxVector = FVector::ZeroVector;
+	TMap<FString, FFloatCurve> Curves;
+};
 
 UCLASS()
 class UParticleModule : public UObject
@@ -31,6 +50,13 @@ public:
 	bool IsSpawnModule() const { return bSpawnModule; }
 	bool IsUpdateModule() const { return bUpdateModule; }
 
+	void Serialize(FArchive& Ar) override;
+
+	void SetDistributionRuntimeData(const FString& PropertyName, const FParticleDistributionRuntimeData& Data);
+	const FParticleDistributionRuntimeData* FindDistributionRuntimeData(const FString& PropertyName) const;
+	float EvaluateFloatDistribution(const char* PropertyName, float ConstantValue, float UniformMaxValue, float Time) const;
+	FVector EvaluateVectorDistribution(const char* PropertyName, const FVector& ConstantValue, const FVector& UniformMaxValue, float Time) const;
+
 protected:
 	UPROPERTY(DisplayName = "Enabled")
 	bool bEnabled = true;
@@ -40,4 +66,7 @@ protected:
 
 	UPROPERTY(DisplayName = "Update Module")
 	bool bUpdateModule = false;
+
+private:
+	TMap<FString, FParticleDistributionRuntimeData> DistributionRuntimeData;
 };

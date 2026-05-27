@@ -456,11 +456,17 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleCollision.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleColor.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleEventGenerator.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBurst.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLifetime.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLight.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocation.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocationShape.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRequired.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSize.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleAcceleration.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleDrag.gen.cpp" />
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRotationRate.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\UMeshTypeData.gen.cpp" />
     <ClCompile Include="Intermediate\Reflection\Particle\URibbonTypeData.gen.cpp" />
@@ -943,6 +949,7 @@
     <ClCompile Include="Source\Engine\Object\Object.cpp" />
     <ClCompile Include="Source\Engine\Object\Property.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleDynamicData.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstance.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEvent.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleMeshEmitterInstance.cpp" />
@@ -1352,9 +1359,10 @@
     <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleCompiledData.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleDynamicData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h" />
-    <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleUpdateUtils.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleMeshEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleMeshTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />

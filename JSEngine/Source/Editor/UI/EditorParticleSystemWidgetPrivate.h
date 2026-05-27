@@ -522,17 +522,41 @@ namespace
 		{
 			return "Lifetime";
 		}
+		if (Cast<UParticleModuleBurst>(Module))
+		{
+			return "Burst";
+		}
 		if (Cast<UParticleModuleLocation>(Module))
 		{
 			return "Initial Location";
+		}
+		if (Cast<UParticleModuleLocationShape>(Module))
+		{
+			return "Shape Location";
 		}
 		if (Cast<UParticleModuleVelocity>(Module))
 		{
 			return "Initial Velocity";
 		}
+		if (Cast<UParticleModuleAcceleration>(Module))
+		{
+			return "Acceleration";
+		}
+		if (Cast<UParticleModuleDrag>(Module))
+		{
+			return "Drag";
+		}
+		if (Cast<UParticleModuleRotationRate>(Module))
+		{
+			return "Initial Rotation Rate";
+		}
 		if (Cast<UParticleModuleColor>(Module))
 		{
 			return "Color Over Life";
+		}
+		if (Cast<UParticleModuleLight>(Module))
+		{
+			return "Light";
 		}
 		if (Cast<UParticleModuleSize>(Module))
 		{
@@ -610,6 +634,125 @@ namespace
 		return Module && (Module->IsSpawnModule() || Module->IsUpdateModule());
 	}
 
+	constexpr const char* InheritedLODModuleMarker = "__LOD_INHERITED__";
+	constexpr const char* EditableLODModuleMarker = "__LOD_EDITABLE__";
+
+	FString StripLODModuleMarker(const FString& Name)
+	{
+		FString Result = Name;
+		const char* Markers[] = { InheritedLODModuleMarker, EditableLODModuleMarker };
+		for (const char* Marker : Markers)
+		{
+			const size_t Pos = Result.find(Marker);
+			if (Pos != FString::npos)
+			{
+				Result.erase(Pos);
+			}
+		}
+		return Result;
+	}
+
+	void MarkModuleInheritedFromHigherLOD(UParticleModule* Module)
+	{
+		if (!Module)
+		{
+			return;
+		}
+		const FString BaseName = StripLODModuleMarker(Module->GetName());
+		Module->SetFName(FName(BaseName + InheritedLODModuleMarker));
+	}
+
+	void MarkModuleEditableInLOD(UParticleModule* Module)
+	{
+		if (!Module)
+		{
+			return;
+		}
+		const FString BaseName = StripLODModuleMarker(Module->GetName());
+		Module->SetFName(FName(BaseName + EditableLODModuleMarker));
+	}
+
+	bool IsInheritedLODModule(const UParticleModule* Module)
+	{
+		return Module && Module->GetName().find(InheritedLODModuleMarker) != FString::npos;
+	}
+
+	UParticleModule* DuplicateParticleModuleForLOD(UParticleModule* SourceModule, bool bInherited)
+	{
+		UParticleModule* DuplicatedModule = SourceModule
+			? Cast<UParticleModule>(SourceModule->Duplicate())
+			: nullptr;
+		if (bInherited)
+		{
+			MarkModuleInheritedFromHigherLOD(DuplicatedModule);
+		}
+		else
+		{
+			MarkModuleEditableInLOD(DuplicatedModule);
+		}
+		return DuplicatedModule;
+	}
+
+	UParticleModuleRequired* DuplicateRequiredModuleForLOD(UParticleModuleRequired* SourceModule, bool bInherited)
+	{
+		UParticleModuleRequired* DuplicatedModule = SourceModule
+			? Cast<UParticleModuleRequired>(SourceModule->Duplicate())
+			: nullptr;
+		if (bInherited)
+		{
+			MarkModuleInheritedFromHigherLOD(DuplicatedModule);
+		}
+		else
+		{
+			MarkModuleEditableInLOD(DuplicatedModule);
+		}
+		return DuplicatedModule;
+	}
+
+	void MarkLODModulesInheritedFromHigherLOD(UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+		{
+			return;
+		}
+		MarkModuleInheritedFromHigherLOD(LODLevel->GetRequiredModule());
+		for (UParticleModule* Module : LODLevel->Modules)
+		{
+			MarkModuleInheritedFromHigherLOD(Module);
+		}
+	}
+
+	void MarkLODModulesInheritedFromHigherLODExceptSpawn(UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+		{
+			return;
+		}
+		MarkModuleInheritedFromHigherLOD(LODLevel->GetRequiredModule());
+		for (UParticleModule* Module : LODLevel->Modules)
+		{
+			if (Cast<UParticleModuleSpawn>(Module))
+			{
+				MarkModuleEditableInLOD(Module);
+				continue;
+			}
+			MarkModuleInheritedFromHigherLOD(Module);
+		}
+	}
+
+	void MarkLODModulesEditableInLOD(UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+		{
+			return;
+		}
+		MarkModuleEditableInLOD(LODLevel->GetRequiredModule());
+		for (UParticleModule* Module : LODLevel->Modules)
+		{
+			MarkModuleEditableInLOD(Module);
+		}
+	}
+
 	ImVec4 GetModuleRowColor(const UParticleModule* Module, bool bRequired)
 	{
 		if (bRequired)
@@ -650,6 +793,20 @@ namespace
 			DrawList->AddLine(ImVec2(Min.x + 3.0f, Min.y + 3.0f), ImVec2(Min.x + 10.0f, Min.y + 10.0f), ImGui::GetColorU32(ImVec4(0.98f, 0.95f, 0.95f, 1.0f)), 1.5f);
 			DrawList->AddLine(ImVec2(Min.x + 10.0f, Min.y + 3.0f), ImVec2(Min.x + 3.0f, Min.y + 10.0f), ImGui::GetColorU32(ImVec4(0.98f, 0.95f, 0.95f, 1.0f)), 1.5f);
 		}
+	}
+
+	void DrawMiniSoloButton(ImDrawList* DrawList, const ImVec2& Min, bool bSolo)
+	{
+		const ImVec2 Max(Min.x + 17.0f, Min.y + 13.0f);
+		const ImVec4 Fill = bSolo ? ImVec4(0.96f, 0.68f, 0.24f, 1.0f) : ImVec4(0.28f, 0.30f, 0.34f, 1.0f);
+		const ImVec4 Text = bSolo ? ImVec4(0.05f, 0.04f, 0.03f, 1.0f) : ImVec4(0.86f, 0.88f, 0.92f, 1.0f);
+		DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(Fill), 2.0f);
+		DrawList->AddRect(Min, Max, ImGui::GetColorU32(ImVec4(0.02f, 0.02f, 0.02f, 1.0f)), 2.0f);
+		const ImVec2 TextSize = ImGui::CalcTextSize("S");
+		DrawList->AddText(
+			ImVec2(Min.x + (17.0f - TextSize.x) * 0.5f, Min.y + (13.0f - TextSize.y) * 0.5f),
+			ImGui::GetColorU32(Text),
+			"S");
 	}
 
 	void DrawMiniCurveIcon(ImDrawList* DrawList, const ImVec2& Min, bool bEnabled)

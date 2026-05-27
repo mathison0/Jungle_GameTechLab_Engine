@@ -5,13 +5,12 @@
 
 class UParticleSystemComponent;
 
-// Cycle 10c 계층 분리: Instance는 RenderCommand를 모름.
-// 4종 type별 getter의 반환 타입에 필요한 forward declaration.
-// 실제 struct 정의는 각 emitter cycle에서 (Mesh: Cycle 11, Ribbon: Cycle 12b, Beam: Cycle 13b).
-// 본 cycle은 Sprite buffer만 실제 노출, 나머지 3개는 base default nullptr.
-struct FMeshParticleInstanceData;
+// Ribbon path 의 getter (D6: Ribbon 시뮬레이션 코드 무수정 — 본 virtual 유지).
 struct FRibbonParticleVertex;
-struct FBeamParticleVertex;
+
+// Cycle 15a (ReplayData/DynamicData 인프라): base가 자기 type의 DynamicData를 만들어 반환.
+// Sprite/Ribbon 은 base default 가 분기 처리, Mesh/Beam derived 가 override.
+struct FDynamicEmitterDataBase;
 
 struct FParticleEmitterInstance
 {
@@ -33,19 +32,18 @@ public:
     // Init에서 ParticleStride 계산에 사용. 향후 Ribbon/Beam이 override 가능성 있으나 본 cycle은 default.
     virtual int32 GetRequiredPayloadBytes() const;
 
-    // Cycle 10c 계층 분리: 인자 없는 build. 내부 buffer 갱신만 — FRenderCommand를 인자로 받지 않음.
-    // base 구현 = Sprite path (SpriteInstanceDataBuffer 채움). Mesh/Ribbon/Beam derived는 자기 buffer override.
-    // RenderCommand 매핑은 Builder 책임 (instance는 데이터 노출만, 매핑은 모름).
-    virtual void BuildInstanceData();
+    // Cycle 15a (ReplayData/DynamicData, D2): 매 frame new — 호출자가 ownership 가져감.
+    // 호출자(Component::CollectDynamicData)가 RenderCommand에 매핑 후
+    // frame 끝에 RenderPass가 delete (frame-scope life-cycle, 단일 스레드 안전).
+    //
+    // base 구현 = RenderMode 분기 (Sprite default + Ribbon placeholder).
+    // Mesh/Beam derived 가 override 해 자기 type DynamicData 반환.
+    virtual FDynamicEmitterDataBase* CreateDynamicData();
 
-    // Cycle 10c 계층 분리: type별 명시 getter 4종 — Builder가 RenderMode로 switch해 적절한 getter 호출.
-    // base 구현 = Sprite만 실제 buffer 노출 (sprite renderer가 base instance 사용).
-    // 다른 3개는 nullptr 반환. Mesh/Ribbon/Beam derived가 Cycle 11+에서 자기 메서드 override.
-    // 사용자 결정 2: void* 사용 금지 (type-safe), Visitor 금지.
-    virtual const FSpriteParticleInstanceData* GetSpriteInstanceData(uint32& OutCount) const;
-    virtual const FMeshParticleInstanceData* GetMeshInstanceData(uint32& OutCount) const;
+    // Ribbon getter — D6 (Ribbon 시뮬레이션 무수정) 보장 위해 유지.
+    // base default = nullptr 반환. Ribbon derived 가 override.
+    // 본 메서드는 FDynamicRibbonEmitterData::BuildFromInstance 가 snapshot 위해 호출.
     virtual const FRibbonParticleVertex* GetRibbonVertexData(uint32& OutCount) const;
-    virtual const FBeamParticleVertex* GetBeamVertexData(uint32& OutCount) const;
 
     // Getter
     int32 GetActiveParticleCount() const { return ActiveParticles; }
@@ -63,7 +61,8 @@ public:
     int32 GetCurrentLODLevelIndex() const { return CurrentLODLevelIndex; }
     int32 GetEmitterIndex() const { return EmitterIndex; }
     uint32 GetParticleCounter() const { return ParticleCounter; }
-    virtual FParticleEmitterRuntimeView GetRuntimeView() const;
+    float GetEmitterTime() const { return EmitterTime; }
+    float GetPreviousEmitterTime() const { return PreviousEmitterTime; }
 
     FBaseParticle* GetParticle(int32 ActiveIndex);
     const FBaseParticle* GetParticle(int32 ActiveIndex) const;
@@ -97,22 +96,19 @@ private:
     UParticleLODLevel* CurrentLODLevel = nullptr;
     const FCompiledParticleLODData* CurrentCompiledLOD = nullptr;
     // 실제 데이터들, memory pool and live data — ParticleStorage/PayloadOffset/ActiveParticles는 위 protected로 이동.
-    uint8* InstanceData = nullptr;
-    int32 InstancePayloadSize = 0;
+    // Cycle 15a Phase 5: InstanceData / InstancePayloadSize 멤버 삭제됨 (dead state — 할당 path 부재 + read 0건).
     int32 ParticleSize = sizeof(FBaseParticle);
     // Cycle 10d: ParticleStride 멤버 삭제 — source-of-truth가 FParticleDataContainer로 이전.
     // 외부 read는 GetParticleStride() (container.GetStride() 위임) 또는 ParticleStorage.GetStride() 직접.
     uint32 ParticleCounter = 0;
     int32 MaxActiveParticles = 0;
     float SpawnFraction = 0.0f;
+    float EmitterTime = 0.0f;
+    float PreviousEmitterTime = 0.0f;
 
 	uint32 ObservedCompiledRevision = 0; // Cycle 10e: CompiledRevision 관찰용 (LOD 변경 감지) — Init에서 초기화, Tick에서 비교 후 필요 시 LOD 재선택.
     int32 ObservedPayloadSize = 0;
     int32 ObservedParticleStride = 0;
     EParticleEmitterRenderMode ObservedRenderMode = EParticleEmitterRenderMode::Sprite;
-
-    // Cycle 10b: per-instance Sprite instance data 버퍼 (buffer ownership을 Component → Instance로 이전, 사용자 결정 X).
-    // base/Sprite 전용. Mesh/Ribbon/Beam derived instance는 자기 type 버퍼를 별도 멤버로 보유 (Cycle 11+에서 추가).
-    // 매 프레임 BuildInstanceData에서 clear → 활성 particle 순회 → push_back.
-    TArray<FSpriteParticleInstanceData> SpriteInstanceDataBuffer;
+    // Cycle 15a Phase 5 (D7): SpriteInstanceDataBuffer 멤버 삭제 — FDynamicSpriteEmitterData 가 소유.
 };

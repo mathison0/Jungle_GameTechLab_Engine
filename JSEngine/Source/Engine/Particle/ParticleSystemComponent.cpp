@@ -1,12 +1,16 @@
 ﻿#include "Particle/ParticleSystemComponent.h"
 
 #include "Camera/ViewportCamera.h"
+#include "Core/ResourceManager.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleModuleTypeData.h"
 #include "Particle/ParticleRendererProperties.h"
+#include "Particle/ParticleSystem.h"
 #include "Render/Scene/RenderBus.h"
 
+#include <algorithm>
 #include <cstring>
 
 UParticleSystemComponent::UParticleSystemComponent()
@@ -23,7 +27,7 @@ UParticleSystemComponent::~UParticleSystemComponent()
 // Function : Set particle system template and recreate emitter instances when it changes
 // input : InTemplate
 // InTemplate : particle system asset to simulate on this component
-// output : Template is updated and emitter instances match the new template
+// output : Template is updated, asset path mirrored, and emitter instances match the new template
 void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 {
 	SetTemplate(InTemplate, false);
@@ -33,6 +37,7 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate, bool bTa
 {
 	if (Template == InTemplate && !EmitterInstances.empty())
 	{
+		TemplateAssetPath.SetPath((InTemplate && !bTakeTransientOwnership) ? InTemplate->GetAssetPath() : FString());
 		if (bTakeTransientOwnership)
 		{
 			OwnedTransientTemplate = InTemplate;
@@ -45,6 +50,7 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate, bool bTa
 
 	Template = InTemplate;
 	OwnedTransientTemplate = bTakeTransientOwnership ? InTemplate : nullptr;
+	TemplateAssetPath.SetPath((InTemplate && !bTakeTransientOwnership) ? InTemplate->GetAssetPath() : FString());
 	RecreateEmitterInstances();
 
 	if (bDestroyPreviousOwnedTemplate)
@@ -64,6 +70,7 @@ void UParticleSystemComponent::ReleaseOwnedTransientTemplate()
 	if (Template == TemplateToDestroy)
 	{
 		Template = nullptr;
+		TemplateAssetPath.SetPath(FString());
 	}
 	OwnedTransientTemplate = nullptr;
 	UObjectManager::Get().DestroyObject(TemplateToDestroy);
@@ -73,14 +80,20 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 {
 	UPrimitiveComponent::PostEditProperty(PropertyName);
 
-	const bool bTemplateChanged = PropertyName && std::strcmp(PropertyName, "Template") == 0;
-	const bool bNeedsRuntimeRebuild = Template && EmitterInstances.empty();
-	if (bTemplateChanged || bNeedsRuntimeRebuild)
+	const bool bTemplatePathChanged = PropertyName &&
+		(std::strcmp(PropertyName, "TemplateAssetPath") == 0 || std::strcmp(PropertyName, "Template") == 0);
+	if (bTemplatePathChanged)
 	{
-		if (bTemplateChanged && OwnedTransientTemplate && Template != OwnedTransientTemplate)
-		{
-			ReleaseOwnedTransientTemplate();
-		}
+		const FString RequestedPath = TemplateAssetPath.GetPath();
+		UParticleSystem* Resolved = RequestedPath.empty()
+			? nullptr
+			: FResourceManager::Get().LoadParticleSystem(RequestedPath);
+		SetTemplate(Resolved);
+		return;
+	}
+
+	if (Template && EmitterInstances.empty())
+	{
 		RecreateEmitterInstances();
 	}
 }
@@ -124,6 +137,20 @@ void UParticleSystemComponent::RefreshTemplateRuntime(bool bRestartSimulation)
             Instance->RebindCompiledLOD(Distance);
         }
     }
+}
+
+void UParticleSystemComponent::Serialize(FArchive& Ar)
+{
+	UPrimitiveComponent::Serialize(Ar);
+
+	if (Ar.IsLoading())
+	{
+		const FString RequestedPath = TemplateAssetPath.GetPath();
+		UParticleSystem* Resolved = RequestedPath.empty()
+			? nullptr
+			: FResourceManager::Get().LoadParticleSystem(RequestedPath);
+		SetTemplate(Resolved);
+	}
 }
 
 // Function : Rebuild emitter instances from current particle system template
@@ -313,19 +340,47 @@ void UParticleSystemComponent::TickPreview(float DeltaTime, bool bAllowSpawning)
 	NotifySpatialIndexDirty();
 }
 
-// Cycle 10c 계층 분리: type-agnostic dispatch hook.
-// 모든 emitter instance에 대해 BuildInstanceData() 호출 — instance 내부 buffer만 갱신.
-// RenderCommand 매핑은 Builder가 별도로 수행 (Instance/Component는 FRenderCommand 모름).
-// 본 함수 본문에 FRenderCommand 참조 0건 — 계층 분리 원칙 (사용자 결정).
-void UParticleSystemComponent::BuildInstanceData()
+void UParticleSystemComponent::SetEditorPreviewSoloEmitters(const TArray<int32>& InSoloEmitterIndices)
 {
+	EditorPreviewSoloEmitterIndices = InSoloEmitterIndices;
+}
+
+void UParticleSystemComponent::ClearEditorPreviewSoloEmitters()
+{
+	EditorPreviewSoloEmitterIndices.clear();
+}
+
+// Cycle 15a Phase 5 (D5): BuildInstanceData() 삭제됨 — CollectDynamicData() 가 대체.
+
+// Function : Collect DynamicData for all emitters (Cycle 15a Phase 4)
+// input : None
+// output : array of FDynamicEmitterDataBase* — caller takes ownership (RenderPass deletes at frame end)
+//
+// 매 frame new (D2). 단일 스레드 + frame-scope life-cycle 안전.
+// Component 는 RenderCommand 모름 — instance->CreateDynamicData() dispatch 만.
+TArray<FDynamicEmitterDataBase*> UParticleSystemComponent::CollectDynamicData()
+{
+	TArray<FDynamicEmitterDataBase*> Result;
+	Result.reserve(EmitterInstances.size());
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
-		if (Instance)
+		if (!Instance)
 		{
-			Instance->BuildInstanceData();
+			continue;
+		}
+		const int32 EmitterIndex = Instance->GetEmitterIndex();
+		if (!EditorPreviewSoloEmitterIndices.empty() &&
+			std::find(EditorPreviewSoloEmitterIndices.begin(), EditorPreviewSoloEmitterIndices.end(), EmitterIndex) == EditorPreviewSoloEmitterIndices.end())
+		{
+			continue;
+		}
+		FDynamicEmitterDataBase* DynData = Instance->CreateDynamicData();
+		if (DynData)
+		{
+			Result.push_back(DynData);
 		}
 	}
+	return Result;
 }
 
 // Function : Cache RenderBus camera state for derived BuildInstanceData consumption (Cycle 14, 결정 18 β)

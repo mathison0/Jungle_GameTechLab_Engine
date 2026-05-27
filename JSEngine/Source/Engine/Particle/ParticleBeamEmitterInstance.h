@@ -5,12 +5,15 @@
 
 // Beam emitter용 instance (Cycle 13a, 결정 11 옵션 B + 결정 13 옵션 A + 결정 15 옵션 B).
 // base FParticleEmitterInstance 파생.
-// override 3종:
-//   SpawnParticles : base 호출 후 신규 SlotIndex 의 payload 에 BeamIndex round-robin 분배.
-//   Tick           : base Tick 호출 후 Source/Target Component 위치 추적 + BuildVertexBuffer.
-//   GetBeamVertexData : Builder가 RenderCommand 슬롯에 매핑하도록 VertexBuffer 노출.
+// Cycle 15a Phase 5 정리 후:
+//   override 2종:
+//     SpawnParticles : base 호출 후 신규 SlotIndex 의 payload 에 BeamIndex round-robin 분배 + Noise capture.
+//     Tick           : base Tick 호출 후 EnsureBeamState 만 (vertex build 는 DynamicData::BuildFromInstance 가 수행).
+//   payload public helper 1:
+//     GetBeamPayload : FDynamicBeamEmitterData::BuildFromInstance 가 NoiseSamples read 위해 호출.
 //
-// KillParticle 와 BuildInstanceData 는 override 하지 않음 — Beam 은 linked list 의존 없음, base swap-pop 안전.
+// 삭제됨 (D5/D7):
+//   GetBeamVertexData / BuildVertexBuffer / VertexBuffer 멤버.
 struct FParticleBeamEmitterInstance : public FParticleEmitterInstance
 {
 public:
@@ -20,28 +23,23 @@ public:
     void Tick(float DeltaTime, bool bAllowSpawning) override;
     void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
                         const FVector& InitialVelocity, struct FParticleEventInstancePayload* EventPayload = nullptr) override;
-    const FBeamParticleVertex* GetBeamVertexData(uint32& OutCount) const override;
 
-private:
-    // SlotIndex(physical) 기반 payload 포인터. swap-pop이 ParticleIndices 만 swap 하므로 SlotIndex 불변 → 안전.
+    // Cycle 15a Phase 3 (ReplayData/DynamicData, D7): Beam DynamicData 생성 override.
+    // Phase 5 본문 이관 결과: FDynamicBeamEmitterData::BuildFromInstance 가 strip vertex 직접 build.
+    FDynamicEmitterDataBase* CreateDynamicData() override;
+
+    // Cycle 15a Phase 5: payload access path private → public 승격 (Mesh 의 GetMeshPayload 패턴 답습).
+    // FDynamicBeamEmitterData::BuildFromInstance 가 payload 의 NoiseSamples read 위해 호출.
     FParticleBeamPayload* GetBeamPayload(int32 SlotIndex);
 
+private:
     // BeamStates 재구성 — MaxBeamCount 변경 또는 첫 Tick 진입 시 호출 (Ribbon 의 EnsureTrailState 패턴 답습).
-    // base Init 이 non-virtual 이므로 lazy init 패턴 채택 (Cycle 12 회귀 안전 §5 부합).
     void EnsureBeamState();
 
-    // strip 정점 매 frame rebuild — silent bug λ 패턴 유지 (Mesh/Ribbon 와 동일).
-    // 위험 5/7/8 방어 코드를 본 함수 내부에 포함.
-    void BuildVertexBuffer();
-
 private:
-    // 결정 13 옵션 A: BeamStates size = MaxBeamCount. 본 cycle (13a) 에서는 단순 marker — 향후 13b 에서
-    // per-beam noise 시드 또는 상태 보존 용도로 확장 예정. 현재는 sized only.
+    // 결정 13 옵션 A: BeamStates size = MaxBeamCount.
     TArray<int32> BeamStates;
 
-    // round-robin BeamIndex 분배 — SpawnParticles 에서 ++NextBeamIndex % MaxBeamCount (위험 9 방어).
+    // round-robin BeamIndex 분배.
     int32 NextBeamIndex = 0;
-
-    // 매 frame BuildVertexBuffer 가 채우는 strip 정점 버퍼 — slot 0 dynamic VB 의 source.
-    TArray<FBeamParticleVertex> VertexBuffer;
 };

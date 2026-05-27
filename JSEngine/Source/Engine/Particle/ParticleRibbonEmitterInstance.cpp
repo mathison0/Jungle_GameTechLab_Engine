@@ -2,10 +2,11 @@
 
 #include <algorithm>
 
+#include "Particle/ParticleModuleTypeDataRibbon.h"
 #include "Particle/ParticleRendererProperties.h"
 #include "Particle/ParticleSystem.h"
 
-namespace
+namespace ParticleRibbonUtils
 {
     // dt 보정용 (결정 7 옵션 B): 0-division 방어 + tangent 추정 시 임계값.
     constexpr float RibbonSmallNumber = 1.0e-6f;
@@ -23,6 +24,12 @@ namespace
         }
         Perp.Normalize();
         return Perp;
+    }
+
+    int32 ResolveMaxParticleInTrailCount(const UParticleLODLevel* LODLevel)
+    {
+        const URibbonTypeData* RibbonTD = LODLevel ? Cast<URibbonTypeData>(LODLevel->GetTypeDataModule()) : nullptr;
+        return RibbonTD ? RibbonTD->GetMaxParticleInTrailCount() : 64;
     }
 }
 
@@ -142,7 +149,7 @@ void FParticleRibbonEmitterInstance::SpawnParticles(int32 Count, float StartTime
         FBaseParticle* Particle = GetParticleBySlot(SlotIndex);
         const FVector Velocity = Particle ? Particle->Velocity : FVector::ZeroVector;
         const float Speed = Velocity.Size();
-        Payload->Tangent = (Speed > RibbonSmallNumber) ? (Velocity / Speed) : FVector(0.0f, 0.0f, 1.0f);
+        Payload->Tangent = (Speed > ParticleRibbonUtils::RibbonSmallNumber) ? (Velocity / Speed) : FVector(0.0f, 0.0f, 1.0f);
         Payload->SpawnedTangentStrength = TangentScalar * Speed;
         Payload->Distance = 0.0f;
     }
@@ -240,7 +247,7 @@ void FParticleRibbonEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
                 const float Step = Delta.Size();
                 AccumDist += Step;
                 Payload->Distance = AccumDist;
-                if (Step > RibbonSmallNumber)
+                if (Step > ParticleRibbonUtils::RibbonSmallNumber)
                 {
                     Payload->Tangent = Delta / Step;
                 }
@@ -268,13 +275,15 @@ void FParticleRibbonEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 void FParticleRibbonEmitterInstance::BuildVertexBuffer()
 {
     VertexBuffer.clear();
+    const int32 MaxParticleInTrailCount = ParticleRibbonUtils::ResolveMaxParticleInTrailCount(GetCurrentLODLevel());
 
     for (int32 TrailIdx = 0; TrailIdx < static_cast<int32>(HeadIndices.size()); ++TrailIdx)
     {
         int32 SlotIndex = HeadIndices[TrailIdx];
         const size_t TrailStartCount = VertexBuffer.size();
+        int32 TrailParticleCount = 0;
 
-        while (SlotIndex >= 0)
+        while (SlotIndex >= 0 && TrailParticleCount < MaxParticleInTrailCount)
         {
             FRibbonParticlePayload* Payload = GetRibbonPayload(SlotIndex);
             if (!Payload)
@@ -287,7 +296,7 @@ void FParticleRibbonEmitterInstance::BuildVertexBuffer()
                 break;
             }
 
-            const FVector Perp = ComputePerpendicular(Payload->Tangent);
+            const FVector Perp = ParticleRibbonUtils::ComputePerpendicular(Payload->Tangent);
             const float HalfSize = P->Size.X * 0.5f;
 
             FRibbonParticleVertex V0;
@@ -302,6 +311,7 @@ void FParticleRibbonEmitterInstance::BuildVertexBuffer()
             V1.Position = P->Location - Perp * HalfSize;
             VertexBuffer.push_back(V1);
 
+            ++TrailParticleCount;
             SlotIndex = Payload->NextIndex;
         }
 

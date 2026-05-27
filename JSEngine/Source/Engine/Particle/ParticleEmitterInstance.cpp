@@ -2,7 +2,10 @@
 
 #include <algorithm>
 
+#include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleRendererProperties.h"
+#include "Particle/ParticleModuleTypeData.h"
+#include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemComponent.h"
 
 FParticleEmitterInstance::~FParticleEmitterInstance()
@@ -54,7 +57,6 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 
 	// RendererProperties owns type-specific payload requirements.
     const int32 PayloadBytes = CurrentCompiledLOD ? CurrentCompiledLOD->PayloadSize : GetRequiredPayloadBytes();
-	InstancePayloadSize = PayloadBytes;
 	PayloadOffset = ParticleSize;
 
 	// Cycle 10d: stride source-of-truth = container. Allocate가 (ParticleSize + PayloadBytes)를
@@ -80,14 +82,14 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 void FParticleEmitterInstance::Reset()
 {
 	ParticleStorage.Reset();
-	delete[] InstanceData;
-	InstanceData = nullptr;
-	InstancePayloadSize = 0;
+	// Cycle 15a Phase 5: InstanceData / InstancePayloadSize 멤버 삭제됨.
 	PayloadOffset = 0;
 	ActiveParticles = 0;
 	ParticleCounter = 0;
 	MaxActiveParticles = 0;
 	SpawnFraction = 0.0f;
+	EmitterTime = 0.0f;
+	PreviousEmitterTime = 0.0f;
 	CurrentLODLevelIndex = 0;
 	CurrentLODLevel = nullptr;
     CurrentCompiledLOD = nullptr;
@@ -107,6 +109,9 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
 	{
 		return;
 	}
+
+	PreviousEmitterTime = EmitterTime;
+	EmitterTime += DeltaTime;
 
 	SelectLODLevel(Component->ComputeEmitterLODDistance());
 	if (!CurrentLODLevel || !CurrentLODLevel->IsEnabled())
@@ -237,28 +242,7 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	--ActiveParticles;
 }
 
-FParticleEmitterRuntimeView FParticleEmitterInstance::GetRuntimeView() const
-{
-    FParticleEmitterRuntimeView RuntimeView;
-    RuntimeView.ParticleData = ParticleStorage.ParticleData;
-    RuntimeView.ParticleIndices = ParticleStorage.ParticleIndices;
-    RuntimeView.ActiveParticles = ActiveParticles;
-    RuntimeView.MaxActiveParticles = MaxActiveParticles;
-    RuntimeView.ParticleStride = ParticleStorage.GetStride();  // Cycle 10d: container 위임
-    RuntimeView.ParticleSize = ParticleSize;
-    RuntimeView.CurrentLODLevelIndex = CurrentLODLevelIndex;
-
-	if (CurrentCompiledLOD)
-    {
-        RuntimeView.RenderMode = CurrentCompiledLOD->RenderMode;
-    }
-    else if (CurrentLODLevel)
-    {
-        RuntimeView.RenderMode = CurrentLODLevel->GetEffectiveRenderMode();
-    }
-
-    return RuntimeView;
-}
+// Cycle 15a Phase 5 (D11): GetRuntimeView() / FParticleEmitterRuntimeView 삭제됨 (호출처 0건 dead code).
 
 // Function : Get mutable particle data by active index
 // input : ActiveIndex
@@ -368,70 +352,83 @@ int32 FParticleEmitterInstance::GetRequiredPayloadBytes() const
     return 0;
 }
 
-// Function : Build Sprite instance data into internal buffer (base/Sprite path — Cycle 10c)
-// input : None
-// output : SpriteInstanceDataBuffer 새로 채움 — RenderCommand 매핑은 Builder가 별도 수행 (계층 분리)
-// Mesh/Ribbon/Beam derived instance가 override해 자기 type의 buffer를 채움 (Cycle 11+).
-void FParticleEmitterInstance::BuildInstanceData()
-{
-    SpriteInstanceDataBuffer.clear();
-    if (ActiveParticles <= 0)
-    {
-        return;
-    }
-
-    SpriteInstanceDataBuffer.reserve(ActiveParticles);
-    for (int32 i = 0; i < ActiveParticles; ++i)
-    {
-        const FBaseParticle* Particle = GetParticle(i);
-        if (!Particle)
-        {
-            continue;
-        }
-
-        FSpriteParticleInstanceData Data;
-        Data.Position   = Particle->Location;
-        Data.Size       = FVector2(Particle->Size.X, Particle->Size.Y);
-        Data.Color      = Particle->Color;
-        Data.Rotation   = Particle->Rotation;
-        Data.SubUVIndex = Particle->SubUVIndex;
-        SpriteInstanceDataBuffer.push_back(Data);
-    }
-}
-
-// Function : Expose Sprite instance buffer to Builder (base/Sprite path)
-// input : OutCount (out-param)
-// output : Pointer to first element + count, or nullptr/0 when empty
-// Sprite renderer가 base instance 사용 — base가 직접 Sprite buffer 노출.
-const FSpriteParticleInstanceData* FParticleEmitterInstance::GetSpriteInstanceData(uint32& OutCount) const
-{
-    OutCount = static_cast<uint32>(SpriteInstanceDataBuffer.size());
-    return SpriteInstanceDataBuffer.empty() ? nullptr : SpriteInstanceDataBuffer.data();
-}
-
-// Function : Mesh instance data getter — base default returns nullptr
-// input : OutCount (out-param, always set to 0)
-// output : Always nullptr — Mesh derived instance가 Cycle 11에서 override해 자기 buffer 노출
-const FMeshParticleInstanceData* FParticleEmitterInstance::GetMeshInstanceData(uint32& OutCount) const
-{
-    OutCount = 0;
-    return nullptr;
-}
+// Cycle 15a Phase 5 (D5): BuildInstanceData() + GetSpriteInstanceData/GetMeshInstanceData/GetBeamVertexData 삭제됨.
+// GetRibbonVertexData 만 유지 (D6 — Ribbon 시뮬레이션 무수정 보장 위해).
 
 // Function : Ribbon vertex data getter — base default returns nullptr
 // input : OutCount (out-param, always set to 0)
-// output : Always nullptr — Ribbon derived instance가 Cycle 12+에서 override
+// output : Always nullptr — Ribbon derived instance가 override
+//
+// Cycle 15a Phase 5: D6 (Ribbon 무수정) 보장 위해 본 virtual + override 유지.
+// FDynamicRibbonEmitterData::BuildFromInstance 가 본 메서드 통해 snapshot.
 const FRibbonParticleVertex* FParticleEmitterInstance::GetRibbonVertexData(uint32& OutCount) const
 {
     OutCount = 0;
     return nullptr;
 }
 
-// Function : Beam vertex data getter — base default returns nullptr
-// input : OutCount (out-param, always set to 0)
-// output : Always nullptr — Beam derived instance가 Cycle 13+에서 override
-const FBeamParticleVertex* FParticleEmitterInstance::GetBeamVertexData(uint32& OutCount) const
+// Function : Create DynamicData (base default — Sprite path + Ribbon placeholder)
+// input : None
+// output : new FDynamicSpriteEmitterData (Sprite) or FDynamicRibbonEmitterData (Ribbon placeholder)
+//
+// Cycle 15a (D2): 매 frame new — 호출자가 ownership 가져감 (Phase 4 에서 RenderPass 가 delete).
+// 얕은 복사 (D3): ReplayData 의 ParticleData/ParticleIndices 는 instance 소유 메모리를 raw pointer 로 참조만.
+//                 단일 스레드 + frame-scope 안전. 멀티스레드 도입 시 deep copy 전환 필요.
+//
+// Type dispatch:
+//   Mesh/Beam derived 가 override — 본 base 함수 호출 안 됨.
+//   Sprite/Ribbon 은 derived 없음 — 본 base 함수가 RenderMode 보고 분기 (옵션 C).
+//   Ribbon 시뮬레이션 코드 무수정 (D6) — instance 의 GetRibbonVertexData() snapshot 만.
+FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicData()
 {
-    OutCount = 0;
-    return nullptr;
+    const EParticleEmitterRenderMode RenderMode = CurrentCompiledLOD
+        ? CurrentCompiledLOD->RenderMode
+        : (CurrentLODLevel ? CurrentLODLevel->GetEffectiveRenderMode() : EParticleEmitterRenderMode::Sprite);
+
+    if (RenderMode == EParticleEmitterRenderMode::Ribbon)
+    {
+        // Ribbon placeholder path (옵션 C, D6 호환).
+        FDynamicRibbonEmitterData* DynData = new FDynamicRibbonEmitterData();
+        DynData->EmitterIndex = EmitterIndex;
+
+        FDynamicRibbonEmitterReplayData& Replay = DynData->Source;
+        Replay.ActiveParticleCount = ActiveParticles;
+        Replay.ParticleStride = ParticleStorage.GetStride();
+        Replay.ParticleSize = ParticleSize;
+        Replay.PayloadOffset = PayloadOffset;
+        Replay.MaxActiveParticles = MaxActiveParticles;
+        // TODO(multithread): switch to deep copy when render-thread separation lands
+        Replay.ParticleData = ParticleStorage.ParticleData;
+        // TODO(multithread): switch to deep copy when render-thread separation lands
+        Replay.ParticleIndices = ParticleStorage.ParticleIndices;
+        Replay.SortMode = ESortMode::None;
+        Replay.Material = nullptr;        // Builder 에서 URibbonTypeData 로부터 추출 후 채움.
+        Replay.ParticleTexture = nullptr; // Builder 에서 Material.DiffuseMap 추출 후 채움.
+
+        DynData->BuildFromInstance(*this);
+        return DynData;
+    }
+
+    // Default Sprite path.
+    FDynamicSpriteEmitterData* DynData = new FDynamicSpriteEmitterData();
+    DynData->EmitterIndex = EmitterIndex;
+
+    // ReplayData 메타데이터 set (D3: 5 필드 + 얕은 복사 raw 포인터).
+    FDynamicSpriteEmitterReplayData& Replay = DynData->Source;
+    Replay.ActiveParticleCount = ActiveParticles;
+    Replay.ParticleStride = ParticleStorage.GetStride();
+    Replay.ParticleSize = ParticleSize;
+    Replay.PayloadOffset = PayloadOffset;
+    Replay.MaxActiveParticles = MaxActiveParticles;
+    // TODO(multithread): switch to deep copy when render-thread separation lands
+    Replay.ParticleData = ParticleStorage.ParticleData;
+    // TODO(multithread): switch to deep copy when render-thread separation lands
+    Replay.ParticleIndices = ParticleStorage.ParticleIndices;
+    Replay.SortMode = ESortMode::None;
+    Replay.Material = nullptr;        // Builder 에서 RequiredModule->GetMaterial() 후 채움.
+    Replay.ParticleTexture = nullptr; // Builder 에서 SubUV/Atlas 추출 후 채움.
+
+    // Sprite instance buffer build (Sprite path 본문 이관).
+    DynData->BuildFromInstance(*this);
+    return DynData;
 }

@@ -110,10 +110,19 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 		Save();
 	}
 	SameLineGap();
-	ToolbarButton("FindInContentBrowser", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Find), "Find in Content Browser");
+	if (ToolbarButton("FindInContentBrowser", "", GetCascadeToolbarIcon(ECascadeToolbarIcon::Find), "Find in Content Browser"))
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->GetMainPanel().RequestToggleContentBrowser();
+		}
+	}
 
 	SameLineGap(21.0f);
-	ToolbarButton("RestartSim", "Restart Sim", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartSim), "Restart simulation");
+	if (ToolbarButton("RestartSim", "Restart Sim", GetCascadeToolbarIcon(ECascadeToolbarIcon::RestartSim), "Restart simulation"))
+	{
+		RefreshPreviewComponent(true);
+	}
 
 	SameLineGap(7.0f);
 	ImGui::BeginDisabled(!CanUndo());
@@ -136,11 +145,6 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 		SetPreviewBoundsVisible(!bShowBounds);
 	}
 	SameLineGap();
-	if (ToolbarButton("OriginAxis", "Origin Axis", GetCascadeToolbarIcon(ECascadeToolbarIcon::OriginAxis), "Toggle origin axis", bShowOriginAxis))
-	{
-		SetPreviewOriginAxisVisible(!bShowOriginAxis);
-	}
-	SameLineGap();
 	if (ToolbarButton("BackgroundColor", "Background Color", GetCascadeToolbarIcon(ECascadeToolbarIcon::BackgroundColor), "Change preview background color"))
 	{
 		ImGui::OpenPopup("##ParticlePreviewBackgroundColorPopup");
@@ -148,63 +152,76 @@ void FEditorParticleSystemWidget::RenderDocumentToolbarControls()
 	DrawBackgroundColorPopup();
 
 	SameLineGap(7.0f);
-	if (ToolbarButton("LowestLOD", "Farthest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to farthest / lowest quality LOD"))
+	int32 MaxLODCount = GetMaxLODCount();
+	ImGui::BeginDisabled(MaxLODCount <= 0 || CurrentLOD >= MaxLODCount - 1);
+	if (ToolbarButton("LowestLOD", "Lowest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowestLOD), "Switch to the farthest LOD"))
 	{
 		SelectLowestLOD();
 	}
 	SameLineGap();
-	if (ToolbarButton("LowerLOD", "Farther LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to next farther / lower quality LOD"))
+	if (ToolbarButton("LowerLOD", "Lower LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::LowerLOD), "Switch to the next lower LOD"))
 	{
 		SelectLowerLOD();
 	}
+	ImGui::EndDisabled();
 	SameLineGap();
+	ImGui::BeginDisabled(!ParticleSystemAsset || ParticleSystemAsset->Emitters.empty());
 	if (ToolbarButton(
 		"AddLODBeforeCurrent",
 		"Add LOD Before",
 		GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLODBeforeCurrent),
-		"Add an LOD before the current distance slot"))
+		"Add LOD before current"))
 	{
-		AddLODToSelectedEmitterAt(CurrentLOD);
+		AddLODRelativeToCurrent(0);
 	}
 	SameLineGap();
 	if (ToolbarButton(
 		"AddLODAfterCurrent",
 		"Add LOD After",
 		GetCascadeToolbarIcon(ECascadeToolbarIcon::AddLODAfterCurrent),
-		"Add an LOD after the current distance slot"))
+		"Add LOD after current"))
 	{
-		AddLODToSelectedEmitterAt(CurrentLOD + 1);
+		AddLODRelativeToCurrent(1);
 	}
+	ImGui::EndDisabled();
+	MaxLODCount = GetMaxLODCount();
 
 	SameLineGap(8.0f);
 	const float LODFramePaddingY = std::max(0.0f, (ToolbarControlHeight - ImGui::GetFontSize()) * 0.5f);
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, LODFramePaddingY));
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
 	ImGui::SetNextItemWidth(38.0f);
-	if (ImGui::InputInt("LOD", &CurrentLOD, 0, 0))
-	{
-		CurrentLOD = std::max(0, CurrentLOD);
-		ClampSelectionToParticleSystem();
-	}
+	const int32 PreviousLOD = CurrentLOD;
+	ImGui::InputInt("LOD", &CurrentLOD, 0, 0);
 	ImGui::PopStyleVar(2);
-	CurrentLOD = std::max(0, CurrentLOD);
+	if (CurrentLOD != PreviousLOD)
+	{
+		SetCurrentLOD(CurrentLOD);
+	}
+	else
+	{
+		CurrentLOD = MaxLODCount > 0 ? std::clamp(CurrentLOD, 0, MaxLODCount - 1) : std::max(0, CurrentLOD);
+	}
 
 	SameLineGap();
-	if (ToolbarButton("HigherLOD", "Nearer LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to next nearer / higher quality LOD"))
+	ImGui::BeginDisabled(CurrentLOD <= 0);
+	if (ToolbarButton("HigherLOD", "Higher LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HigherLOD), "Switch to the next higher LOD"))
 	{
 		SelectHigherLOD();
 	}
 	SameLineGap();
-	if (ToolbarButton("HighestLOD", "Nearest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HighestLOD), "Switch to nearest / highest quality LOD"))
+	if (ToolbarButton("HighestLOD", "Highest LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::HighestLOD), "Switch to LOD 0"))
 	{
-		CurrentLOD = 0;
-		ClampSelectionToParticleSystem();
+		SetCurrentLOD(0);
 	}
+	ImGui::EndDisabled();
 	SameLineGap();
+	ImGui::BeginDisabled(CurrentLOD <= 0 || MaxLODCount <= 1);
 	if (ToolbarButton("DeleteLOD", "Delete LOD", GetCascadeToolbarIcon(ECascadeToolbarIcon::DeleteLOD), "Delete current LOD"))
 	{
 		DeleteCurrentLOD();
 	}
+	ImGui::EndDisabled();
 }
 
 void FEditorParticleSystemWidget::DrawBackgroundColorPopup()

@@ -11,6 +11,7 @@
 #include "GameFramework/PrimitiveActors.h"
 #include "GameFramework/World.h"
 #include "Math/Utils.h"
+#include "Particle/ParticleDynamicData.h"
 #include "Particle/ParticleSystemComponent.h"
 #include "Particle/ParticleEvent.h"
 #include "Render/Renderer/Renderer.h"
@@ -204,39 +205,63 @@ bool CollectParticleRenderCommandData(
             continue;
         }
 
+        FDynamicEmitterDataBase* DynamicData = Command.DynamicData;
+        if (!DynamicData)
+        {
+            continue;
+        }
+
         switch (Command.VertexFactoryType)
         {
         case EVertexFactoryType::SpriteParticle:
-            if (Command.ParticleInstances && Command.ParticleInstanceCount > 0)
+            if (FDynamicSpriteEmitterData* SpriteData = static_cast<FDynamicSpriteEmitterData*>(DynamicData))
             {
-                bFoundParticleDrawData = true;
-                OutCounts.SpriteInstanceCount += Command.ParticleInstanceCount;
+                const uint32 Count = static_cast<uint32>(SpriteData->SpriteInstanceDataBuffer.size());
+                if (Count > 0)
+                {
+                    bFoundParticleDrawData = true;
+                    OutCounts.SpriteInstanceCount += Count;
+                }
             }
             break;
         case EVertexFactoryType::MeshParticle:
-            if (Command.MeshParticleInstances && Command.MeshParticleInstanceCount > 0)
+            if (FDynamicMeshEmitterData* MeshData = static_cast<FDynamicMeshEmitterData*>(DynamicData))
             {
-                bFoundParticleDrawData = true;
-                OutCounts.MeshInstanceCount += Command.MeshParticleInstanceCount;
+                const uint32 Count = static_cast<uint32>(MeshData->MeshInstanceDataBuffer.size());
+                if (Count > 0)
+                {
+                    bFoundParticleDrawData = true;
+                    OutCounts.MeshInstanceCount += Count;
+                }
             }
             break;
         case EVertexFactoryType::RibbonParticle:
-            if (Command.RibbonVertices && Command.RibbonVertexCount > 0)
+            if (FDynamicRibbonEmitterData* RibbonData = static_cast<FDynamicRibbonEmitterData*>(DynamicData))
             {
-                bFoundParticleDrawData = true;
-                OutCounts.RibbonVertexCount += Command.RibbonVertexCount;
+                const uint32 Count = static_cast<uint32>(RibbonData->RibbonVertexBuffer.size());
+                if (Count > 0)
+                {
+                    bFoundParticleDrawData = true;
+                    OutCounts.RibbonVertexCount += Count;
+                }
             }
             break;
         case EVertexFactoryType::BeamParticle:
-            if (Command.BeamVertices && Command.BeamVertexCount > 0)
+            if (FDynamicBeamEmitterData* BeamData = static_cast<FDynamicBeamEmitterData*>(DynamicData))
             {
-                bFoundParticleDrawData = true;
-                OutCounts.BeamVertexCount += Command.BeamVertexCount;
+                const uint32 Count = static_cast<uint32>(BeamData->BeamVertexBuffer.size());
+                if (Count > 0)
+                {
+                    bFoundParticleDrawData = true;
+                    OutCounts.BeamVertexCount += Count;
+                }
             }
             break;
         default:
             break;
         }
+
+        delete DynamicData;
     }
 
     OutCounts.ParticleCommandCount = static_cast<int32>(ParticleCommands.size());
@@ -320,9 +345,6 @@ bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& Out
         OutSummary = "runtime refresh dropped active particles";
         return false;
     }
-
-    ParticleComponent->BuildInstanceData();
-
     uint32 SpriteInstanceCount = 0;
     uint32 MeshInstanceCount = 0;
     uint32 RibbonVertexCount = 0;
@@ -330,7 +352,7 @@ bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& Out
     bool bFoundRenderableData = false;
     for (int32 EmitterIndex = 0; EmitterIndex < EmitterInstanceCount; ++EmitterIndex)
     {
-        const FParticleEmitterInstance* Instance = ParticleComponent->GetEmitterInstance(EmitterIndex);
+        FParticleEmitterInstance* Instance = ParticleComponent->GetEmitterInstance(EmitterIndex);
         if (!Instance)
         {
             char Buffer[128];
@@ -350,66 +372,56 @@ bool RunSelectedParticleRuntimeSmoke(UEditorEngine* InEditorEngine, FString& Out
         }
         ++CompiledLODCount;
 
-        const FParticleEmitterRuntimeView RuntimeView = Instance->GetRuntimeView();
-        if (RuntimeView.RenderMode != CompiledLOD->RenderMode)
-        {
-            char Buffer[192];
-            snprintf(
-                Buffer,
-                sizeof(Buffer),
-                "runtime view render mode mismatch on emitter %d",
-                EmitterIndex);
-            OutSummary = Buffer;
-            return false;
-        }
-
-        if (RuntimeView.ActiveParticles != Instance->GetActiveParticleCount())
-        {
-            char Buffer[192];
-            snprintf(
-                Buffer,
-                sizeof(Buffer),
-                "runtime view active count mismatch on emitter %d",
-                EmitterIndex);
-            OutSummary = Buffer;
-            return false;
-        }
-
         if (Instance->GetActiveParticleCount() <= 0)
         {
             continue;
         }
 
-        uint32 InstanceCount = 0;
-        switch (CompiledLOD->RenderMode)
+        FDynamicEmitterDataBase* DynData = Instance->CreateDynamicData();
+        if (!DynData)
         {
-        case EParticleEmitterRenderMode::Sprite:
-            if (Instance->GetSpriteInstanceData(InstanceCount) && InstanceCount > 0)
-            {
-                SpriteInstanceCount += InstanceCount;
-                bFoundRenderableData = true;
-            }
-            break;
-        case EParticleEmitterRenderMode::Mesh:
-            if (Instance->GetMeshInstanceData(InstanceCount) && InstanceCount > 0)
-            {
-                MeshInstanceCount += InstanceCount;
-                bFoundRenderableData = true;
-            }
-            break;
-        case EParticleEmitterRenderMode::Ribbon:
-            if (Instance->GetRibbonVertexData(InstanceCount) && InstanceCount > 0)
-            {
-                RibbonVertexCount += InstanceCount;
-                bFoundRenderableData = true;
-            }
-            break;
-        case EParticleEmitterRenderMode::Beam:
-            OutSummary = "beam particle runtime smoke is not implemented";
-            return false;
-        default:
-            break;
+            continue;
         }
+
+        if (DynData->GetSource().eEmitterType != EDynamicEmitterType::None)
+        {
+            switch (DynData->GetVertexFactoryType())
+            {
+            case EVertexFactoryType::SpriteParticle:
+            {
+                FDynamicSpriteEmitterData* SpriteDyn = static_cast<FDynamicSpriteEmitterData*>(DynData);
+                const uint32 Count = static_cast<uint32>(SpriteDyn->SpriteInstanceDataBuffer.size());
+                SpriteInstanceCount += Count;
+                bFoundRenderableData |= Count > 0;
+                break;
+            }
+            case EVertexFactoryType::MeshParticle:
+            {
+                FDynamicMeshEmitterData* MeshDyn = static_cast<FDynamicMeshEmitterData*>(DynData);
+                const uint32 Count = static_cast<uint32>(MeshDyn->MeshInstanceDataBuffer.size());
+                MeshInstanceCount += Count;
+                bFoundRenderableData |= Count > 0;
+                break;
+            }
+            case EVertexFactoryType::RibbonParticle:
+            {
+                FDynamicRibbonEmitterData* RibbonDyn = static_cast<FDynamicRibbonEmitterData*>(DynData);
+                const uint32 Count = static_cast<uint32>(RibbonDyn->RibbonVertexBuffer.size());
+                RibbonVertexCount += Count;
+                bFoundRenderableData |= Count > 0;
+                break;
+            }
+            case EVertexFactoryType::BeamParticle:
+            {
+                FDynamicBeamEmitterData* BeamDyn = static_cast<FDynamicBeamEmitterData*>(DynData);
+                bFoundRenderableData |= !BeamDyn->BeamVertexBuffer.empty();
+                break;
+            }
+            default:
+                break;
+            }
+        }
+        delete DynData;
     }
 
     if (!bFoundRenderableData)

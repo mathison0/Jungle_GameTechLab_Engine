@@ -131,6 +131,7 @@ bool FEditorParticleSystemWidget::Save()
 		return false;
 	}
 
+	SyncParticleDistributionRuntimeDataToAsset();
 	ParticleSystemAsset->CacheEmitterModuleInfo();
 
 	TArray<FString> Errors;
@@ -344,6 +345,7 @@ void FEditorParticleSystemWidget::StoreCurrentDocumentState()
 	State.ParticleDistributionFloatMaxValues = ParticleDistributionFloatMaxValues;
 	State.ParticleDistributionVectorMaxValues = ParticleDistributionVectorMaxValues;
 	State.ParticleDistributionCurves = ParticleDistributionCurves;
+	State.SoloEmitterIndices = SoloEmitterIndices;
 	State.PreviewViewMode = bPreviewViewportInitialized
 		? PreviewViewport.GetState().ViewMode
 		: EViewMode::Lit_BlinnPhong;
@@ -385,6 +387,7 @@ bool FEditorParticleSystemWidget::RestoreDocumentState(const FString& InDocument
 	ParticleDistributionFloatMaxValues = State.ParticleDistributionFloatMaxValues;
 	ParticleDistributionVectorMaxValues = State.ParticleDistributionVectorMaxValues;
 	ParticleDistributionCurves = State.ParticleDistributionCurves;
+	SoloEmitterIndices = State.SoloEmitterIndices;
 	bShowThumbnail = State.bShowThumbnail;
 	bShowBounds = State.bShowBounds;
 	bShowOriginAxis = State.bShowOriginAxis;
@@ -402,6 +405,8 @@ bool FEditorParticleSystemWidget::RestoreDocumentState(const FString& InDocument
 	ClearEmitterContext();
 	ResetPendingReorders();
 	ClampSelectionToParticleSystem();
+	ClearInvalidSoloEmitters();
+	ApplyPreviewSoloEmitters();
 	return true;
 }
 
@@ -417,6 +422,7 @@ void FEditorParticleSystemWidget::ClearActiveDocumentState()
 	ParticleDistributionFloatMaxValues.clear();
 	ParticleDistributionVectorMaxValues.clear();
 	ParticleDistributionCurves.clear();
+	SoloEmitterIndices.clear();
 	ActiveParticleCurveModuleKey.clear();
 	ActiveParticleCurveChannelKey.clear();
 	ParticleCurveViewModuleKey.clear();

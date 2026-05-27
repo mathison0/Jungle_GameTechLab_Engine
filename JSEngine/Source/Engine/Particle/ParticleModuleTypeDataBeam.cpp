@@ -1,5 +1,5 @@
 #include "Particle/ParticleModuleTypeDataBeam.h"
-
+#include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleBeamEmitterInstance.h"
 
 // Function : Create derived FParticleBeamEmitterInstance for Beam emitter

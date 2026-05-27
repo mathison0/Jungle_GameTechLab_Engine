@@ -105,6 +105,7 @@ void FEditorParticleSystemWidget::EnsurePreviewActor()
 	PreviewComponent->SetEditorOnly(true);
 	PreviewActor->SetRootComponent(PreviewComponent);
 	PreviewComponent->SetTemplate(ParticleSystemAsset);
+	ApplyPreviewSoloEmitters();
 	PreviewClient.SetFocusTargetActor(PreviewActor);
 	PreviewWorld->SyncSpatialIndex();
 }
@@ -114,26 +115,36 @@ void FEditorParticleSystemWidget::RefreshPreviewComponent(bool bRestartSimulatio
 	EnsurePreviewViewport();
 	EnsurePreviewActor();
 
-	if (PreviewComponent)
+	if (!PreviewComponent)
 	{
-		if (PreviewComponent->GetTemplate() != ParticleSystemAsset)
+		return;
+	}
+
+	if (ParticleSystemAsset)
+	{
+		SyncParticleDistributionRuntimeDataToAsset();
+		ParticleSystemAsset->CacheEmitterModuleInfo();
+	}
+
+	if (PreviewComponent->GetTemplate() != ParticleSystemAsset)
+	{
+		PreviewComponent->SetTemplate(ParticleSystemAsset);
+		ApplyPreviewSoloEmitters();
+		RestartPreviewPlayback();
+	}
+	else
+	{
+		PreviewComponent->RefreshTemplateRuntime(bRestartSimulation);
+		ApplyPreviewSoloEmitters();
+		if (bRestartSimulation)
 		{
-			PreviewComponent->SetTemplate(ParticleSystemAsset);
 			RestartPreviewPlayback();
 		}
-		else
-		{
-			PreviewComponent->RefreshTemplateRuntime(bRestartSimulation);
-			if (bRestartSimulation)
-			{
-				RestartPreviewPlayback();
-			}
-		}
+	}
 
-		if (PreviewComponent->GetTotalActiveParticleCount() == 0 && !bPreviewPaused)
-		{
-			PreviewComponent->TickPreview(0.1f * GetPreviewAnimSpeed(), true);
-		}
+	if (PreviewComponent->GetTotalActiveParticleCount() == 0 && !bPreviewPaused)
+	{
+		PreviewComponent->TickPreview(0.1f * GetPreviewAnimSpeed(), true);
 	}
 
 	RefreshPlacedParticleSystemComponents(bRestartSimulation);

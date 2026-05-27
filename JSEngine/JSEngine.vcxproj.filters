@@ -615,10 +615,19 @@
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleEventGenerator.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleBurst.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLifetime.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLight.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocation.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleLocationShape.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRequired.gen.cpp">
@@ -628,6 +637,15 @@
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleSpawn.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleAcceleration.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleDrag.gen.cpp">
+      <Filter>Intermediate\Reflection\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Intermediate\Reflection\Particle\UParticleModuleRotationRate.gen.cpp">
       <Filter>Intermediate\Reflection\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Intermediate\Reflection\Particle\UBeamTypeData.gen.cpp">
@@ -1360,6 +1378,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleBeamEmitterInstance.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleDynamicData.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModuleBeamNoise.cpp">
@@ -2494,7 +2515,7 @@
     <ClInclude Include="Source\Engine\Particle\ParticleEvent.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleHelper.h">
+    <ClInclude Include="Source\Engine\Particle\ParticleUpdateUtils.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h">
@@ -2510,6 +2531,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleBeamEmitterInstance.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleDynamicData.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleBeamTypes.h">

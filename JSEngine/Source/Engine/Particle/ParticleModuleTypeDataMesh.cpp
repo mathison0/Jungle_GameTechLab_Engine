@@ -2,6 +2,7 @@
 
 #include "Engine/Asset/StaticMesh.h"
 #include "Particle/ParticleMeshEmitterInstance.h"
+#include "Particle/ParticleEmitterInstance.h"
 #include "Render/Resource/Material.h"
 
 // Function : Create derived FParticleMeshEmitterInstance for Mesh emitter

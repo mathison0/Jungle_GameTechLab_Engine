@@ -141,10 +141,10 @@ bool FRenderPipeline::Initialize()
     RenderPasses.push_back(FXAARenderPass);
 	RenderPasses.push_back(FontRenderPass);
     RenderPasses.push_back(SubUVRenderPass);
+    RenderPasses.push_back(GridRenderPass);
     RenderPasses.push_back(TranslucentRenderPass);
     RenderPasses.push_back(ParticleRenderPass);
     RenderPasses.push_back(SelectionMaskRenderPass);
-    RenderPasses.push_back(GridRenderPass);
     RenderPasses.push_back(EditorRenderPass);
     RenderPasses.push_back(EditorOverlayRenderPass);
     RenderPasses.push_back(DepthLessRenderPass);

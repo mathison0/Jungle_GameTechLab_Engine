@@ -340,11 +340,16 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	}
 
 	const bool bRequired = SelectedModuleIndex == RequiredParticleModuleSelection;
+	const bool bInheritedModule = CurrentLOD > 0 && IsInheritedLODModule(Module);
 	ImGui::PushID(Module);
 	ImGui::TextUnformatted(GetModuleDisplayName(Module, bRequired).c_str());
 	if (Module->GetClass())
 	{
 		ImGui::TextDisabled("%s", Module->GetClass()->GetName());
+	}
+	if (bInheritedModule)
+	{
+		ImGui::TextDisabled("Inherited from a higher LOD. Use Duplicate From Higher to edit.");
 	}
 	ImGui::Dummy(ImVec2(0.0f, 4.0f));
 	ImGui::Separator();
@@ -354,6 +359,10 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	if (Module->GetClass())
 	{
 		Module->GetClass()->GetAllProperties(Properties);
+	}
+	if (bInheritedModule)
+	{
+		ImGui::BeginDisabled();
 	}
 
 	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
@@ -413,6 +422,7 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 
 		auto DrawDistributionStoredMaxRow = [&](const FProperty& ValueProperty, const FString& Key) -> bool
 		{
+			bool bChanged = false;
 			ImGui::TableNextRow(ImGuiTableRowFlags_None, 26.0f);
 			ImGui::TableSetColumnIndex(0);
 			ImGui::Indent(40.0f);
@@ -430,7 +440,13 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 				{
 					Iter = ParticleDistributionFloatMaxValues.emplace(Key, CurrentValue).first;
 				}
-				return ImGui::DragFloat("##Max", &Iter->second, ValueProperty.Speed);
+				bChanged = ImGui::DragFloat("##Max", &Iter->second, ValueProperty.Speed);
+				if (bChanged)
+				{
+					bDirty = true;
+					RefreshPreviewComponent(false);
+				}
+				return bChanged;
 			}
 
 			const char* Hint = ValueProperty.EditorHint;
@@ -446,7 +462,13 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 				{
 					Iter = ParticleDistributionVectorMaxValues.emplace(Key, CurrentValue).first;
 				}
-				return ImGui::DragFloat3("##Max", &Iter->second.X, ValueProperty.Speed);
+				bChanged = ImGui::DragFloat3("##Max", &Iter->second.X, ValueProperty.Speed);
+				if (bChanged)
+				{
+					bDirty = true;
+					RefreshPreviewComponent(false);
+				}
+				return bChanged;
 			}
 
 			ImGui::TextDisabled("<unsupported>");
@@ -519,7 +541,7 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 			ImGui::TableSetColumnIndex(0);
 			ImGui::Indent(40.0f);
 			ImGui::AlignTextToFramePadding();
-			ImGui::TreeNodeEx(Label, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+			const bool bCurveOpen = ImGui::TreeNodeEx(Label, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
 			ImGui::Unindent(40.0f);
 			ImGui::TableSetColumnIndex(1);
 			ImGui::Text("%d Array elements", static_cast<int32>(PrimaryCurve->Keys.size()));
@@ -542,6 +564,12 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 				}
 				bChanged = true;
 			}
+			if (!bCurveOpen)
+			{
+				ImGui::PopID();
+				ImGui::PopID();
+				return bChanged;
+			}
 
 			for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(PrimaryCurve->Keys.size()); ++KeyIndex)
 			{
@@ -550,7 +578,9 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 				ImGui::TableSetColumnIndex(0);
 				ImGui::Indent(60.0f);
 				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Index [%d]", KeyIndex);
+				char IndexLabel[32];
+				std::snprintf(IndexLabel, sizeof(IndexLabel), "Index [%d]", KeyIndex);
+				const bool bIndexOpen = ImGui::TreeNodeEx(IndexLabel, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
 				ImGui::Unindent(60.0f);
 				ImGui::TableSetColumnIndex(1);
 				ImGui::SameLine();
@@ -567,8 +597,17 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 						}
 					}
 					bChanged = true;
+					if (bIndexOpen)
+					{
+						ImGui::TreePop();
+					}
 					ImGui::PopID();
 					break;
+				}
+				if (!bIndexOpen)
+				{
+					ImGui::PopID();
+					continue;
 				}
 
 				float Time = PrimaryCurve->Keys[KeyIndex].Time;
@@ -652,10 +691,10 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 
 				ImGui::TableNextRow(ImGuiTableRowFlags_None, 24.0f);
 				ImGui::TableSetColumnIndex(0);
-				ImGui::Indent(80.0f);
+				ImGui::Indent(56.0f);
 				ImGui::AlignTextToFramePadding();
 				ImGui::TextUnformatted("Interp Mode");
-				ImGui::Unindent(80.0f);
+				ImGui::Unindent(56.0f);
 				ImGui::TableSetColumnIndex(1);
 				const char* InterpItems[] = { "Constant", "Linear", "Cubic" };
 				int32 InterpIndex = 2;
@@ -667,7 +706,7 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 				{
 					InterpIndex = 1;
 				}
-				ImGui::SetNextItemWidth(140.0f);
+				ImGui::SetNextItemWidth(std::min(140.0f, ImGui::GetContentRegionAvail().x));
 				if (ParticleCombo("##InterpMode", &InterpIndex, InterpItems, IM_ARRAYSIZE(InterpItems)))
 				{
 					CaptureUndoSnapshot("Edit Particle Curve Interp");
@@ -690,8 +729,10 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 				{
 					bPropertyEditUndoCaptured = false;
 				}
+				ImGui::TreePop();
 				ImGui::PopID();
 			}
+			ImGui::TreePop();
 			ImGui::PopID();
 			ImGui::PopID();
 			return bChanged;
@@ -713,10 +754,92 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 			auto DistributionIt = ParticleDistributionKinds.find(Key);
 			if (DistributionIt == ParticleDistributionKinds.end())
 			{
-				DistributionIt = ParticleDistributionKinds.emplace(Key, 3).first;
+				if (const FParticleDistributionRuntimeData* RuntimeData = Module->FindDistributionRuntimeData(PrimaryProperty.Name))
+				{
+					DistributionIt = ParticleDistributionKinds.emplace(Key, std::clamp(RuntimeData->Kind, 0, 3)).first;
+					if (PrimaryProperty.Type == EPropertyType::Float)
+					{
+						ParticleDistributionFloatMaxValues[Key] = RuntimeData->StoredMaxFloat;
+						if (auto CurveIt = RuntimeData->Curves.find("Value"); CurveIt != RuntimeData->Curves.end())
+						{
+							ParticleDistributionCurves[MakeParticleDistributionCurveKey(Module, PrimaryProperty, "Value")] = CurveIt->second;
+						}
+						if (SecondaryProperty)
+						{
+							if (auto CurveIt = RuntimeData->Curves.find("MaxValue"); CurveIt != RuntimeData->Curves.end())
+							{
+								ParticleDistributionCurves[MakeParticleDistributionCurveKey(Module, *SecondaryProperty, "Value")] = CurveIt->second;
+							}
+						}
+					}
+					else if (IsVectorProperty(PrimaryProperty))
+					{
+						ParticleDistributionVectorMaxValues[Key] = RuntimeData->StoredMaxVector;
+						const char* Channels[] = { "X", "Y", "Z" };
+						for (const char* ChannelName : Channels)
+						{
+							if (auto CurveIt = RuntimeData->Curves.find(ChannelName); CurveIt != RuntimeData->Curves.end())
+							{
+								ParticleDistributionCurves[MakeParticleDistributionCurveKey(Module, PrimaryProperty, ChannelName)] = CurveIt->second;
+							}
+							if (SecondaryProperty)
+							{
+								const FString MaxChannelName = FString("Max") + ChannelName;
+								if (auto CurveIt = RuntimeData->Curves.find(MaxChannelName); CurveIt != RuntimeData->Curves.end())
+								{
+									ParticleDistributionCurves[MakeParticleDistributionCurveKey(Module, *SecondaryProperty, ChannelName)] = CurveIt->second;
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					DistributionIt = ParticleDistributionKinds.emplace(Key, 3).first;
+				}
 			}
 			int32& DistributionKind = DistributionIt->second;
 			DistributionKind = std::clamp(DistributionKind, 0, static_cast<int32>(IM_ARRAYSIZE(DistributionItems)) - 1);
+			auto CopyPropertyValue = [&](const FProperty& SourceProperty, const FProperty& TargetProperty)
+			{
+				void* SourcePtr = SourceProperty.GetValuePtr(Module);
+				void* TargetPtr = TargetProperty.GetValuePtr(Module);
+				if (!SourcePtr || !TargetPtr || SourceProperty.Type != TargetProperty.Type)
+				{
+					return false;
+				}
+
+				switch (SourceProperty.Type)
+				{
+				case EPropertyType::Float:
+					*static_cast<float*>(TargetPtr) = *static_cast<float*>(SourcePtr);
+					return true;
+				case EPropertyType::Struct:
+					if (SourceProperty.ScriptStruct == TargetProperty.ScriptStruct)
+					{
+						const char* Hint = SourceProperty.EditorHint ? SourceProperty.EditorHint : "";
+						if ((Hint[0] == '\0' && SourceProperty.ScriptStruct && std::strcmp(SourceProperty.ScriptStruct->GetName(), "FVector") == 0) ||
+							std::strcmp(Hint, "FVector") == 0)
+						{
+							*static_cast<FVector*>(TargetPtr) = *static_cast<FVector*>(SourcePtr);
+							return true;
+						}
+					}
+					break;
+				default:
+					break;
+				}
+				return false;
+			};
+			auto SyncConstantMaxToMin = [&]()
+			{
+				if (SecondaryProperty && CopyPropertyValue(PrimaryProperty, *SecondaryProperty))
+				{
+					NotifyParticleModulePropertyChanged(Module, GetSelectedEmitter(), *SecondaryProperty);
+					RefreshPreviewComponent(false);
+					bDirty = true;
+				}
+			};
 
 			ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
 			ImGui::TableSetColumnIndex(0);
@@ -742,6 +865,10 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 					DistributionKind = PreviousDistributionKind;
 					CaptureUndoSnapshot("Edit Particle Distribution");
 					DistributionKind = NewDistributionKind;
+					if (DistributionKind == 0 || DistributionKind == 1)
+					{
+						SyncConstantMaxToMin();
+					}
 					bChanged = true;
 				}
 
@@ -774,6 +901,10 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 				else
 				{
 					bChanged |= DrawDistributionValueRow("Constant", PrimaryProperty);
+					if (bChanged)
+					{
+						SyncConstantMaxToMin();
+					}
 				}
 				ImGui::TreePop();
 			}
@@ -819,7 +950,12 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 						}
 					}
 
-					DrawDistributionRows(*Property, SecondaryProperty);
+					if (DrawDistributionRows(*Property, SecondaryProperty))
+					{
+						NotifyParticleModulePropertyChanged(Module, OwnerEmitter, *Property);
+						SyncParticleDistributionRuntimeDataToAsset();
+						RefreshPreviewComponent(true);
+					}
 					RenderedPropertyCount += SecondaryProperty ? 2 : 1;
 					continue;
 				}
@@ -868,6 +1004,10 @@ void FEditorParticleSystemWidget::DrawParticleModuleDetails(UParticleModule* Mod
 	}
 
 	(void)OwnerEmitter;
+	if (bInheritedModule)
+	{
+		ImGui::EndDisabled();
+	}
 	ImGui::PopID();
 }
 
@@ -1031,6 +1171,166 @@ FFloatCurve& FEditorParticleSystemWidget::GetOrCreateParticleDistributionCurve(U
 		Curve.Keys.push_back(EndKey);
 	}
 	return Curve;
+}
+
+void FEditorParticleSystemWidget::SyncParticleDistributionRuntimeDataToAsset()
+{
+	if (!ParticleSystemAsset)
+	{
+		return;
+	}
+
+	auto IsVectorProperty = [](const FProperty& Property) -> bool
+	{
+		const char* Hint = Property.EditorHint;
+		if ((!Hint || Hint[0] == '\0') && Property.ScriptStruct)
+		{
+			Hint = Property.ScriptStruct->GetName();
+		}
+		return Property.Type == EPropertyType::Struct && Hint && std::strcmp(Hint, "FVector") == 0;
+	};
+	auto EndsWithLocal = [](const FString& Text, const char* Suffix) -> bool
+	{
+		const size_t SuffixLength = std::strlen(Suffix);
+		return Text.size() >= SuffixLength && Text.compare(Text.size() - SuffixLength, SuffixLength, Suffix) == 0;
+	};
+	auto FindPropertyByName = [](const TArray<const FProperty*>& Properties, const FString& PropertyName) -> const FProperty*
+	{
+		for (const FProperty* Property : Properties)
+		{
+			if (Property && Property->Name && PropertyName == Property->Name)
+			{
+				return Property;
+			}
+		}
+		return nullptr;
+	};
+
+	for (UParticleEmitter* Emitter : ParticleSystemAsset->Emitters)
+	{
+		if (!Emitter)
+		{
+			continue;
+		}
+		for (UParticleLODLevel* LODLevel : Emitter->GetLODLevels())
+		{
+			if (!LODLevel)
+			{
+				continue;
+			}
+
+			TArray<UParticleModule*> Modules = LODLevel->GetModules();
+			if (LODLevel->GetRequiredModule())
+			{
+				Modules.push_back(LODLevel->GetRequiredModule());
+			}
+
+			for (UParticleModule* Module : Modules)
+			{
+				if (!Module || !Module->GetClass())
+				{
+					continue;
+				}
+
+				TArray<const FProperty*> Properties;
+				Module->GetClass()->GetAllProperties(Properties);
+				for (const FProperty* Property : Properties)
+				{
+					if (!Property || !Property->Name || !IsParticleDistributionProperty(Module, *Property))
+					{
+						continue;
+					}
+
+					const FString PropertyName = Property->Name;
+					if (EndsWithLocal(PropertyName, "Max"))
+					{
+						const FString MinName = PropertyName.substr(0, PropertyName.size() - 3) + "Min";
+						if (const FProperty* MinProperty = FindPropertyByName(Properties, MinName))
+						{
+							if (IsParticleDistributionProperty(Module, *MinProperty) && MinProperty->Type == Property->Type)
+							{
+								continue;
+							}
+						}
+					}
+
+					const FProperty* SecondaryProperty = nullptr;
+					if (EndsWithLocal(PropertyName, "Min"))
+					{
+						const FString MaxName = PropertyName.substr(0, PropertyName.size() - 3) + "Max";
+						SecondaryProperty = FindPropertyByName(Properties, MaxName);
+						if (SecondaryProperty && (!IsParticleDistributionProperty(Module, *SecondaryProperty) || SecondaryProperty->Type != Property->Type))
+						{
+							SecondaryProperty = nullptr;
+						}
+					}
+
+					const FString DistributionKey = MakeParticleDistributionKey(Module, *Property);
+					auto KindIt = ParticleDistributionKinds.find(DistributionKey);
+					if (KindIt == ParticleDistributionKinds.end())
+					{
+						continue;
+					}
+
+					FParticleDistributionRuntimeData Data;
+					Data.Kind = std::clamp(KindIt->second, 0, 3);
+					Data.bVector = IsVectorProperty(*Property);
+					if (Property->Type == EPropertyType::Float)
+					{
+						if (SecondaryProperty)
+						{
+							if (void* ValuePtr = SecondaryProperty->GetValuePtr(Module))
+							{
+								Data.StoredMaxFloat = *static_cast<float*>(ValuePtr);
+							}
+						}
+						else if (auto StoredIt = ParticleDistributionFloatMaxValues.find(DistributionKey); StoredIt != ParticleDistributionFloatMaxValues.end())
+						{
+							Data.StoredMaxFloat = StoredIt->second;
+						}
+					}
+					else if (Data.bVector)
+					{
+						if (SecondaryProperty)
+						{
+							if (void* ValuePtr = SecondaryProperty->GetValuePtr(Module))
+							{
+								Data.StoredMaxVector = *static_cast<FVector*>(ValuePtr);
+							}
+						}
+						else if (auto StoredIt = ParticleDistributionVectorMaxValues.find(DistributionKey); StoredIt != ParticleDistributionVectorMaxValues.end())
+						{
+							Data.StoredMaxVector = StoredIt->second;
+						}
+					}
+
+					if (Data.Kind == 1 || Data.Kind == 3)
+					{
+						const char* Channels[] = { "X", "Y", "Z" };
+						const int32 ChannelCount = Data.bVector ? 3 : 1;
+						for (int32 ChannelIndex = 0; ChannelIndex < ChannelCount; ++ChannelIndex)
+						{
+							const char* ChannelName = Data.bVector ? Channels[ChannelIndex] : "Value";
+							if (auto CurveIt = ParticleDistributionCurves.find(MakeParticleDistributionCurveKey(Module, *Property, ChannelName)); CurveIt != ParticleDistributionCurves.end())
+							{
+								Data.Curves[ChannelName] = CurveIt->second;
+							}
+							if (Data.Kind == 3 && SecondaryProperty)
+							{
+								const FString MaxChannelName = Data.bVector ? FString("Max") + ChannelName : FString("MaxValue");
+								if (auto CurveIt = ParticleDistributionCurves.find(MakeParticleDistributionCurveKey(Module, *SecondaryProperty, ChannelName)); CurveIt != ParticleDistributionCurves.end())
+								{
+									Data.Curves[MaxChannelName] = CurveIt->second;
+								}
+							}
+						}
+					}
+
+					Module->SetDistributionRuntimeData(PropertyName, Data);
+				}
+			}
+		}
+	}
 }
 
 void FEditorParticleSystemWidget::OpenParticleModuleCurves(int32 EmitterIndex, int32 ModuleIndex)
@@ -1236,6 +1536,10 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 			Property.ReferenceKind == EObjectReferenceKind::Asset &&
 			Property.ObjectClass &&
 			Property.ObjectClass->IsChildOf(UMaterialInterface::StaticClass());
+		const bool bStaticMeshAsset =
+			Property.ReferenceKind == EObjectReferenceKind::Asset &&
+			Property.ObjectClass &&
+			Property.ObjectClass->IsChildOf(UStaticMesh::StaticClass());
 		if (bMaterialAsset && EditorEngine)
 		{
 			FEditorAssetService& AssetService = EditorEngine->GetAssetService();
@@ -1267,6 +1571,87 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 						if (UMaterialInterface* Candidate = AssetService.ResolveMaterialInterfaceByIndex(MaterialIndex))
 						{
 							Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+							bChanged = true;
+						}
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+					ImGui::PopID();
+				}
+				EndParticleCombo();
+			}
+			return bChanged;
+		}
+
+		if (bStaticMeshAsset && EditorEngine)
+		{
+			FEditorAssetService& AssetService = EditorEngine->GetAssetService();
+			const TArray<FString>& StaticMeshPaths = AssetService.GetStaticMeshAssetPaths();
+			UStaticMesh* CurrentMesh = Cast<UStaticMesh>(CurrentObject);
+			UMeshTypeData* MeshTypeData = Cast<UMeshTypeData>(NotifyTarget);
+			const FString CurrentIdentifier = CurrentMesh
+				? FPaths::Normalize(CurrentMesh->GetAssetPathFileName())
+				: FString();
+			const FString CurrentLabel = CurrentIdentifier.empty() ? FString("None") : CurrentIdentifier;
+			bool bChanged = false;
+			auto ResolveDefaultMeshMaterial = [](UStaticMesh* Mesh) -> UMaterialInterface*
+			{
+				if (!Mesh)
+				{
+					return nullptr;
+				}
+
+				const TArray<FStaticMeshSection>& Sections = Mesh->GetSections();
+				const TArray<FStaticMeshMaterialSlot>& Slots = Mesh->GetMaterialSlots();
+				if (!Sections.empty() && !Slots.empty())
+				{
+					const int32 SlotIndex = Sections[0].MaterialSlotIndex;
+					if (SlotIndex >= 0 && SlotIndex < static_cast<int32>(Slots.size()) && Slots[SlotIndex].Material)
+					{
+						return Slots[SlotIndex].Material;
+					}
+				}
+
+				for (const FStaticMeshMaterialSlot& Slot : Slots)
+				{
+					if (Slot.Material)
+					{
+						return Slot.Material;
+					}
+				}
+				return nullptr;
+			};
+
+			if (BeginParticleCombo(Label, CurrentLabel.c_str()))
+			{
+				if (ImGui::Selectable("None", CurrentMesh == nullptr))
+				{
+					Property.ObjectPtrOps->SetObject(ValuePtr, nullptr);
+					if (MeshTypeData && Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
+					{
+						MeshTypeData->SetOverrideMaterial(false, nullptr);
+					}
+					bChanged = true;
+				}
+
+				for (int32 MeshIndex = 0; MeshIndex < static_cast<int32>(StaticMeshPaths.size()); ++MeshIndex)
+				{
+					ImGui::PushID(MeshIndex);
+					const FString& MeshPath = StaticMeshPaths[MeshIndex];
+					const FString NormalizedPath = FPaths::Normalize(MeshPath);
+					const bool bSelected = CurrentIdentifier == NormalizedPath;
+					if (ImGui::Selectable(MeshPath.c_str(), bSelected))
+					{
+						if (UStaticMesh* Candidate = AssetService.LoadStaticMesh(MeshPath))
+						{
+							Property.ObjectPtrOps->SetObject(ValuePtr, Candidate);
+							if (MeshTypeData && Property.Name && std::strcmp(Property.Name, "Mesh") == 0)
+							{
+								UMaterialInterface* DefaultMaterial = ResolveDefaultMeshMaterial(Candidate);
+								MeshTypeData->SetOverrideMaterial(DefaultMaterial != nullptr, DefaultMaterial);
+							}
 							bChanged = true;
 						}
 					}
@@ -1362,6 +1747,7 @@ void FEditorParticleSystemWidget::NotifyParticleModulePropertyChanged(UParticleM
 	}
 	if (OwnerEmitter)
 	{
+		SyncInheritedModuleFromHigherLOD(OwnerEmitter, Module);
 		OwnerEmitter->CacheEmitterModuleInfo();
 	}
 	if (ParticleSystemAsset)
@@ -1415,6 +1801,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		int32 ComponentIndex = 0;
 		bool bCurveDistribution = false;
 		bool bStoredMaxValue = false;
+		bool bMaxRangeChannel = false;
 		float ConstantValue = 0.0f;
 		ImU32 Color = 0;
 	};
@@ -1526,8 +1913,22 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 				const float InitialValue = bStoredMaxValue
 					? GetStoredMaxChannelValue(Property, StorageKey, ChannelName)
 					: GetPropertyChannelValue(Property, ChannelName);
+				auto StripRangeSuffix = [](FString Label) -> FString
+				{
+					const char* Suffixes[] = { " Min", " Max", "Min", "Max" };
+					for (const char* Suffix : Suffixes)
+					{
+						const size_t SuffixLength = std::strlen(Suffix);
+						if (Label.size() >= SuffixLength && Label.compare(Label.size() - SuffixLength, SuffixLength, Suffix) == 0)
+						{
+							Label.erase(Label.size() - SuffixLength);
+							break;
+						}
+					}
+					return Label;
+				};
 				FParticleCurveChannelView View;
-				View.Label = FString(GetPropertyDisplayName(Property));
+				View.Label = StripRangeSuffix(FString(GetPropertyDisplayName(Property)));
 				if (!LabelSuffix.empty())
 				{
 					View.Label += " " + LabelSuffix;
@@ -1546,17 +1947,18 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 				View.bStoredMaxValue = bStoredMaxValue;
 				View.ConstantValue = InitialValue;
 				const bool bMaxChannel = bStoredMaxValue || LabelSuffix == "Max";
+				View.bMaxRangeChannel = bMaxChannel;
 				View.Color = bMaxChannel
 					? MaxChannelColors[std::clamp(ChannelIndex, 0, static_cast<int32>(IM_ARRAYSIZE(MaxChannelColors)) - 1)]
 					: MinChannelColors[std::clamp(ChannelIndex, 0, static_cast<int32>(IM_ARRAYSIZE(MinChannelColors)) - 1)];
 				if (bCurveDistribution)
 				{
-					View.Key = MakeParticleDistributionCurveKey(ActiveModule, Property, ChannelName);
+					View.Key = MakeParticleDistributionCurveKey(ActiveModule, Property, ChannelName) + "::Range::" + (bMaxChannel ? "Max" : "Min");
 					View.Curve = &GetOrCreateParticleDistributionCurve(ActiveModule, Property, ChannelName, InitialValue);
 				}
 				else
 				{
-					View.Key = StorageKey + "::Constant::" + (bStoredMaxValue ? "Max::" : "Value::") + ChannelName;
+					View.Key = StorageKey + "::Constant::" + (bMaxChannel ? "Max::" : "Min::") + ChannelName;
 				}
 				Channels.push_back(View);
 			}
@@ -1597,7 +1999,49 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 			auto DistributionIt = ParticleDistributionKinds.find(DistributionKey);
 			if (DistributionIt == ParticleDistributionKinds.end())
 			{
-				DistributionIt = ParticleDistributionKinds.emplace(DistributionKey, 3).first;
+				if (const FParticleDistributionRuntimeData* RuntimeData = ActiveModule->FindDistributionRuntimeData(Property->Name))
+				{
+					DistributionIt = ParticleDistributionKinds.emplace(DistributionKey, std::clamp(RuntimeData->Kind, 0, 3)).first;
+					if (Property->Type == EPropertyType::Float)
+					{
+						ParticleDistributionFloatMaxValues[DistributionKey] = RuntimeData->StoredMaxFloat;
+						if (auto CurveIt = RuntimeData->Curves.find("Value"); CurveIt != RuntimeData->Curves.end())
+						{
+							ParticleDistributionCurves[MakeParticleDistributionCurveKey(ActiveModule, *Property, "Value")] = CurveIt->second;
+						}
+						if (SecondaryProperty)
+						{
+							if (auto CurveIt = RuntimeData->Curves.find("MaxValue"); CurveIt != RuntimeData->Curves.end())
+							{
+								ParticleDistributionCurves[MakeParticleDistributionCurveKey(ActiveModule, *SecondaryProperty, "Value")] = CurveIt->second;
+							}
+						}
+					}
+					else if (IsVectorProperty(*Property))
+					{
+						ParticleDistributionVectorMaxValues[DistributionKey] = RuntimeData->StoredMaxVector;
+						const char* Channels[] = { "X", "Y", "Z" };
+						for (const char* ChannelName : Channels)
+						{
+							if (auto CurveIt = RuntimeData->Curves.find(ChannelName); CurveIt != RuntimeData->Curves.end())
+							{
+								ParticleDistributionCurves[MakeParticleDistributionCurveKey(ActiveModule, *Property, ChannelName)] = CurveIt->second;
+							}
+							if (SecondaryProperty)
+							{
+								const FString MaxChannelName = FString("Max") + ChannelName;
+								if (auto CurveIt = RuntimeData->Curves.find(MaxChannelName); CurveIt != RuntimeData->Curves.end())
+								{
+									ParticleDistributionCurves[MakeParticleDistributionCurveKey(ActiveModule, *SecondaryProperty, ChannelName)] = CurveIt->second;
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					DistributionIt = ParticleDistributionKinds.emplace(DistributionKey, 3).first;
+				}
 			}
 			DistributionIt->second = std::clamp(DistributionIt->second, 0, 3);
 			const int32 DistributionKind = DistributionIt->second;
@@ -1649,6 +2093,23 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	{
 		ImGui::TextDisabled("No distribution values.");
 	}
+	if (!ActiveParticleCurveChannelKey.empty())
+	{
+		bool bActiveChannelStillExists = false;
+		for (const FParticleCurveChannelView& Channel : Channels)
+		{
+			if (Channel.Key == ActiveParticleCurveChannelKey)
+			{
+				bActiveChannelStillExists = true;
+				break;
+			}
+		}
+		if (!bActiveChannelStillExists)
+		{
+			ActiveParticleCurveChannelKey.clear();
+			ActiveParticleCurveKeyIndex = -1;
+		}
+	}
 	for (FParticleCurveChannelView& Channel : Channels)
 	{
 		ImGui::PushID(Channel.Key.c_str());
@@ -1675,6 +2136,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	const ImVec2 CanvasMax(CanvasMin.x + CanvasSize.x, CanvasMin.y + CanvasSize.y);
 	ImGui::InvisibleButton("##ParticleCurveCanvasHit", CanvasSize, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
 	const bool bCanvasHovered = ImGui::IsItemHovered();
+	const bool bDraggingParticleCurveValue = ImGui::IsMouseDown(ImGuiMouseButton_Left) && !DragParticleCurveChannelKey.empty();
 
 	float DesiredMinValue = 0.0f;
 	float DesiredMaxValue = 1.0f;
@@ -1719,8 +2181,23 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	}
 	else if (!bParticleCurveViewUserAdjusted)
 	{
-		ParticleCurveViewMinValue = std::min(ParticleCurveViewMinValue, DesiredMinValue);
-		ParticleCurveViewMaxValue = std::max(ParticleCurveViewMaxValue, DesiredMaxValue);
+		if (bDraggingParticleCurveValue)
+		{
+			constexpr float DragAutoExpandAlpha = 0.08f;
+			if (DesiredMinValue < ParticleCurveViewMinValue)
+			{
+				ParticleCurveViewMinValue += (DesiredMinValue - ParticleCurveViewMinValue) * DragAutoExpandAlpha;
+			}
+			if (DesiredMaxValue > ParticleCurveViewMaxValue)
+			{
+				ParticleCurveViewMaxValue += (DesiredMaxValue - ParticleCurveViewMaxValue) * DragAutoExpandAlpha;
+			}
+		}
+		else
+		{
+			ParticleCurveViewMinValue = std::min(ParticleCurveViewMinValue, DesiredMinValue);
+			ParticleCurveViewMaxValue = std::max(ParticleCurveViewMaxValue, DesiredMaxValue);
+		}
 	}
 	if (std::fabs(ParticleCurveViewMaxValue - ParticleCurveViewMinValue) < 0.001f)
 	{
@@ -1834,7 +2311,12 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	{
 		for (FParticleCurveChannelView& Channel : Channels)
 		{
-			if (!Channel.bCurveDistribution || !Channel.Curve || Channel.Module != SourceChannel.Module || Channel.Property != SourceChannel.Property)
+			if (!Channel.bCurveDistribution ||
+				!Channel.Curve ||
+				Channel.Module != SourceChannel.Module ||
+				Channel.Property != SourceChannel.Property ||
+				Channel.DistributionKey != SourceChannel.DistributionKey ||
+				Channel.bMaxRangeChannel != SourceChannel.bMaxRangeChannel)
 			{
 				continue;
 			}
@@ -1927,6 +2409,33 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	FString HitConstantChannelKey;
 	float BestHitDistanceSq = 64.0f;
 	float BestConstantDistance = 8.0f;
+	auto TestHitChannel = [&](const FParticleCurveChannelView& Channel, float& InOutBestDistanceSq, FString& OutChannelKey, int32& OutKeyIndex)
+	{
+		if (!Channel.bCurveDistribution || !Channel.Curve)
+		{
+			return;
+		}
+		for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(Channel.Curve->Keys.size()); ++KeyIndex)
+		{
+			const ImVec2 P = ToScreen(Channel.Curve->Keys[KeyIndex].Time, Channel.Curve->Keys[KeyIndex].Value);
+			const float Dx = MousePos.x - P.x;
+			const float Dy = MousePos.y - P.y;
+			const float DistSq = Dx * Dx + Dy * Dy;
+			if (DistSq < InOutBestDistanceSq)
+			{
+				InOutBestDistanceSq = DistSq;
+				OutChannelKey = Channel.Key;
+				OutKeyIndex = KeyIndex;
+			}
+		}
+	};
+	if (!ActiveParticleCurveChannelKey.empty())
+	{
+		if (FParticleCurveChannelView* ActiveHitChannel = FindCurveChannelByKey(ActiveParticleCurveChannelKey))
+		{
+			TestHitChannel(*ActiveHitChannel, BestHitDistanceSq, HitChannelKey, HitKeyIndex);
+		}
+	}
 	for (const FParticleCurveChannelView& Channel : Channels)
 	{
 		if (!Channel.bCurveDistribution)
@@ -1944,19 +2453,11 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		{
 			continue;
 		}
-		for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(Channel.Curve->Keys.size()); ++KeyIndex)
+		if (!HitChannelKey.empty() && Channel.Key != HitChannelKey)
 		{
-			const ImVec2 P = ToScreen(Channel.Curve->Keys[KeyIndex].Time, Channel.Curve->Keys[KeyIndex].Value);
-			const float Dx = MousePos.x - P.x;
-			const float Dy = MousePos.y - P.y;
-			const float DistSq = Dx * Dx + Dy * Dy;
-			if (DistSq < BestHitDistanceSq)
-			{
-				BestHitDistanceSq = DistSq;
-				HitChannelKey = Channel.Key;
-				HitKeyIndex = KeyIndex;
-			}
+			continue;
 		}
+		TestHitChannel(Channel, BestHitDistanceSq, HitChannelKey, HitKeyIndex);
 	}
 
 	if (bCanvasHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && HitKeyIndex >= 0)
@@ -2065,28 +2566,28 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 			{
 				if (Channel.Property->Type == EPropertyType::Float)
 				{
-					ParticleDistributionFloatMaxValues[Channel.DistributionKey] = DragValue.Value;
+					ParticleDistributionFloatMaxValues[Channel.DistributionKey] = Channel.ConstantValue;
 				}
 				else
 				{
 					FVector& Value = ParticleDistributionVectorMaxValues[Channel.DistributionKey];
-					if (Channel.ComponentIndex == 1) { Value.Y = DragValue.Value; }
-					else if (Channel.ComponentIndex == 2) { Value.Z = DragValue.Value; }
-					else { Value.X = DragValue.Value; }
+					if (Channel.ComponentIndex == 1) { Value.Y = Channel.ConstantValue; }
+					else if (Channel.ComponentIndex == 2) { Value.Z = Channel.ConstantValue; }
+					else { Value.X = Channel.ConstantValue; }
 				}
 			}
 			else if (void* ValuePtr = Channel.Property->GetValuePtr(Channel.Module))
 			{
 				if (Channel.Property->Type == EPropertyType::Float)
 				{
-					*static_cast<float*>(ValuePtr) = DragValue.Value;
+					*static_cast<float*>(ValuePtr) = Channel.ConstantValue;
 				}
 				else
 				{
 					FVector* Value = static_cast<FVector*>(ValuePtr);
-					if (Channel.ComponentIndex == 1) { Value->Y = DragValue.Value; }
-					else if (Channel.ComponentIndex == 2) { Value->Z = DragValue.Value; }
-					else { Value->X = DragValue.Value; }
+					if (Channel.ComponentIndex == 1) { Value->Y = Channel.ConstantValue; }
+					else if (Channel.ComponentIndex == 2) { Value->Z = Channel.ConstantValue; }
+					else { Value->X = Channel.ConstantValue; }
 				}
 				NotifyParticleModulePropertyChanged(Channel.Module, ActiveEmitter, *Channel.Property);
 			}
@@ -2100,6 +2601,7 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 	}
 	else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 	{
+		const bool bEditedParticleCurve = bParticleCurveEditUndoCaptured;
 		for (FParticleCurveChannelView& Channel : Channels)
 		{
 			if (Channel.Curve)
@@ -2110,6 +2612,11 @@ void FEditorParticleSystemWidget::DrawCurveEditorPanel(const ImVec2& Size)
 		DragParticleCurveChannelKey.clear();
 		DragParticleCurveKeyIndex = -1;
 		bParticleCurveEditUndoCaptured = false;
+		if (bEditedParticleCurve)
+		{
+			SyncParticleDistributionRuntimeDataToAsset();
+			RefreshPreviewComponent(true);
+		}
 	}
 
 	DrawList->PushClipRect(CanvasMin, CanvasMax, true);

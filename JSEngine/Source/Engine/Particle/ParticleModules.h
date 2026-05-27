@@ -7,6 +7,7 @@
 #include <algorithm>
 
 struct FTextureAtlasResource;
+struct FLightInfo;
 
 UCLASS()
 class UParticleModuleRequired : public UParticleModule
@@ -23,11 +24,9 @@ public:
 	bool IsLooping() const { return bLooping; }
 	bool UseLocalSpace() const { return bUseLocalSpace; }
 	UMaterialInterface* GetMaterial() const { return Material; }
-	const FName& GetSubUVName() const { return SubUVName; }
 	int32 GetSubImagesHorizontal() const { return std::max(SubImagesHorizontal, 1); }
 	int32 GetSubImagesVertical() const { return std::max(SubImagesVertical, 1); }
 	EParticleEmitterRenderMode GetRenderMode() const { return RenderMode; }
-	void SetSubUVName(const FName& InName);
 	void SetRenderMode(EParticleEmitterRenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 private:
@@ -45,9 +44,6 @@ private:
 
 	UPROPERTY(DisplayName = "Use Local Space")
 	bool bUseLocalSpace = false;
-
-	UPROPERTY(DisplayName = "SubUV", Category = "SubUV")
-	FName SubUVName;
 
 	UPROPERTY(DisplayName = "Sub Images Horizontal", Category = "SubUV", Min = 1)
 	int32 SubImagesHorizontal = 1;
@@ -71,6 +67,29 @@ public:
 private:
 	UPROPERTY(DisplayName = "Rate", Min = 0.0f)
 	float Rate = 10.0f;
+};
+
+UCLASS()
+class UParticleModuleBurst : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleBurst, UParticleModule)
+
+	UParticleModuleBurst();
+	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+
+private:
+	UPROPERTY(DisplayName = "Burst Count", Min = 0)
+	int32 BurstCount = 16;
+
+	UPROPERTY(DisplayName = "Burst Time", Min = 0.0f)
+	float BurstTime = 0.0f;
+
+	UPROPERTY(DisplayName = "Repeat")
+	bool bRepeat = false;
+
+	UPROPERTY(DisplayName = "Repeat Interval", Min = 0.001f)
+	float RepeatInterval = 1.0f;
 };
 
 UCLASS()
@@ -107,6 +126,43 @@ private:
 	FVector StartLocationMax = FVector::ZeroVector;
 };
 
+UENUM()
+enum class EProceduralParticleShape : uint8
+{
+	Sphere,
+	Box,
+	Cone,
+};
+
+UCLASS()
+class UParticleModuleLocationShape : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleLocationShape, UParticleModule)
+
+	UParticleModuleLocationShape();
+	void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
+
+private:
+	UPROPERTY(DisplayName = "Shape")
+	EProceduralParticleShape Shape = EProceduralParticleShape::Sphere;
+
+	UPROPERTY(DisplayName = "Surface Only")
+	bool bSurfaceOnly = false;
+
+	UPROPERTY(DisplayName = "Sphere Radius", Min = 0.0f)
+	float SphereRadius = 50.0f;
+
+	UPROPERTY(DisplayName = "Box Extents")
+	FVector BoxExtents = FVector(50.0f, 50.0f, 50.0f);
+
+	UPROPERTY(DisplayName = "Cone Height", Min = 0.0f)
+	float ConeHeight = 100.0f;
+
+	UPROPERTY(DisplayName = "Cone Half Angle", Min = 0.0f, Max = 89.0f)
+	float ConeHalfAngle = 30.0f;
+};
+
 UCLASS()
 class UParticleModuleVelocity : public UParticleModule
 {
@@ -122,6 +178,52 @@ private:
 
 	UPROPERTY(DisplayName = "Start Velocity Max")
 	FVector StartVelocityMax = FVector(0.0f, 0.0f, 100.0f);
+};
+
+UCLASS()
+class UParticleModuleAcceleration : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleAcceleration, UParticleModule)
+
+	UParticleModuleAcceleration();
+	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+
+private:
+	UPROPERTY(DisplayName = "Acceleration")
+	FVector Acceleration = FVector(0.0f, 0.0f, -98.0f);
+};
+
+UCLASS()
+class UParticleModuleDrag : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleDrag, UParticleModule)
+
+	UParticleModuleDrag();
+	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+
+private:
+	UPROPERTY(DisplayName = "Drag Coefficient", Min = 0.0f)
+	float DragCoefficient = 0.0f;
+};
+
+UCLASS()
+class UParticleModuleRotationRate : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleRotationRate, UParticleModule)
+
+	UParticleModuleRotationRate();
+	void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
+	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+
+private:
+	UPROPERTY(DisplayName = "Start Rotation Rate Min")
+	float StartRotationRateMin = -180.0f;
+
+	UPROPERTY(DisplayName = "Start Rotation Rate Max")
+	float StartRotationRateMax = 180.0f;
 };
 
 UCLASS()
@@ -143,6 +245,48 @@ private:
 };
 
 UCLASS()
+class UParticleModuleLight : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleLight, UParticleModule)
+
+	UParticleModuleLight();
+	bool ShouldCreateLight(const FBaseParticle& Particle, int32 CurrentLightCount) const;
+	void BuildLightInfo(const FBaseParticle& Particle, FLightInfo& OutLightInfo) const;
+
+private:
+	UPROPERTY(DisplayName = "Light Enabled")
+	bool bLightEnabled = true;
+
+	UPROPERTY(DisplayName = "Use Particle Color")
+	bool bUseParticleColor = true;
+
+	UPROPERTY(DisplayName = "Use Particle Alpha")
+	bool bUseParticleAlpha = true;
+
+	UPROPERTY(DisplayName = "Light Color")
+	FColor LightColor = FColor(1.0f, 0.55f, 0.18f, 1.0f);
+
+	UPROPERTY(DisplayName = "Brightness", Min = 0.0f)
+	float Brightness = 1.0f;
+
+	UPROPERTY(DisplayName = "Radius", Min = 0.0f)
+	float Radius = 250.0f;
+
+	UPROPERTY(DisplayName = "Radius Scale", Min = 0.0f)
+	float RadiusScale = 0.0f;
+
+	UPROPERTY(DisplayName = "Falloff", Min = 0.0f)
+	float Falloff = 2.0f;
+
+	UPROPERTY(DisplayName = "Spawn Fraction", Min = 0.0f, Max = 1.0f)
+	float SpawnFraction = 1.0f;
+
+	UPROPERTY(DisplayName = "Max Lights Per Emitter", Min = 0)
+	int32 MaxLightsPerEmitter = 16;
+};
+
+UCLASS()
 class UParticleModuleSize : public UParticleModule
 {
 public:
@@ -153,11 +297,17 @@ public:
 	void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
 
 private:
-	UPROPERTY(DisplayName = "Start Size")
-	FVector StartSize = FVector(1.0f, 1.0f, 1.0f);
+	UPROPERTY(DisplayName = "Start Size Min")
+	FVector StartSizeMin = FVector(1.0f, 1.0f, 1.0f);
 
-	UPROPERTY(DisplayName = "End Size")
-	FVector EndSize = FVector(1.0f, 1.0f, 1.0f);
+	UPROPERTY(DisplayName = "Start Size Max")
+	FVector StartSizeMax = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(DisplayName = "End Size Min")
+	FVector EndSizeMin = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(DisplayName = "End Size Max")
+	FVector EndSizeMax = FVector(1.0f, 1.0f, 1.0f);
 };
 
 UENUM()
@@ -240,10 +390,21 @@ public:
 private:
 	UPROPERTY(DisplayName = "Dispatch Collision Events")
 	bool bDispatchCollisionEvents = true;
+
+	UPROPERTY(DisplayName = "Max Collision Events Per Frame", Min = 0)
+	int32 MaxCollisionEventsPerFrame = 0;
+
+	UPROPERTY(DisplayName = "Keep Newest Collision Events")
+	bool bKeepNewestCollisionEvents = true;
 };
 
-// SubUV 재생 속도는 particle Lifetime에 종속. 별도 재생 속도/루프 제어는
-// 후속 cycle (InterpolationMethod) 에서 도입.
+UENUM()
+enum class EParticleSubUVPlaybackMode : uint8
+{
+	Life,
+	FramesPerSecond,
+};
+
 UCLASS()
 class USubUVModule : public UParticleModule
 {
@@ -271,6 +432,18 @@ private:
 
 	UPROPERTY(DisplayName = "End Index", Min = 0)
 	int32 EndFrameIndex = 0;
+
+	UPROPERTY(DisplayName = "Playback Mode")
+	EParticleSubUVPlaybackMode PlaybackMode = EParticleSubUVPlaybackMode::Life;
+
+	UPROPERTY(DisplayName = "Frame Rate", Min = 0.0f)
+	float FrameRate = 24.0f;
+
+	UPROPERTY(DisplayName = "Loop")
+	bool bLoop = false;
+
+	UPROPERTY(DisplayName = "Random Start Frame")
+	bool bRandomStartFrame = false;
 
 	FTextureAtlasResource* CachedSubUV = nullptr; // ResourceManager 소유, 참조만
 };
