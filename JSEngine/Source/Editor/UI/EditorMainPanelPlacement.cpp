@@ -10,6 +10,10 @@
 #include "Engine/Runtime/WindowsWindow.h"
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Core/Paths.h"
+#include "Engine/Asset/AssetFile.h"
+#include "Engine/Asset/AssetMetaData.h"
+#include "Engine/Asset/SkeletalMesh.h"
+#include "Engine/Asset/StaticMesh.h"
 #include "Core/ResourceManager.h"
 #include "GameFramework/PrimitiveActors.h"
 #include "GameFramework/World.h"
@@ -80,6 +84,19 @@ bool ResolveProjectDropPath(
     return true;
 }
 
+bool IsUAssetClass(const std::filesystem::path& Path, const FString& ExpectedClassName)
+{
+    if (GetLowerExtension(Path) != L".uasset")
+    {
+        return false;
+    }
+
+    FAssetMetaData MetaData;
+    const FString AssetPath = FPaths::Normalize(FPaths::ToUtf8(Path.generic_wstring()));
+    return FAssetFile::LoadMetadataOnly(AssetPath, MetaData) &&
+        MetaData.ClassName == ExpectedClassName;
+}
+
 FString ResolveStaticMeshDropLoadPath(const FString& PayloadPath)
 {
     std::filesystem::path Path;
@@ -97,6 +114,10 @@ FString ResolveStaticMeshDropLoadPath(const FString& PayloadPath)
     if (Extension == L".bin")
     {
         return FPaths::Normalize(FPaths::ToUtf8(Path.generic_wstring()));
+    }
+    if (IsUAssetClass(Path, UStaticMesh::StaticClass()->GetName()))
+    {
+        return FPaths::Normalize(FPaths::ToUtf8(RelativePath.generic_wstring()));
     }
     return {};
 }
@@ -125,12 +146,13 @@ FString ResolveSkeletalMeshDropLoadPath(const FString& PayloadPath)
         return {};
     }
 
-    if (GetLowerExtension(Path) != L".fbx")
+    const std::wstring Extension = GetLowerExtension(Path);
+    if (Extension == L".fbx" || IsUAssetClass(Path, USkeletalMesh::StaticClass()->GetName()))
     {
-        return {};
+        return FPaths::Normalize(FPaths::ToUtf8(RelativePath.generic_wstring()));
     }
 
-    return FPaths::Normalize(FPaths::ToUtf8(RelativePath.generic_wstring()));
+    return {};
 }
 
 FString ResolveFbxDropInspectPath(const FString& PayloadPath)
@@ -232,32 +254,39 @@ bool FEditorMainPanel::SpawnSkeletalMeshFromContentPath(
     }
 
     const FString MeshLoadPath = ResolveSkeletalMeshDropLoadPath(PayloadPath);
-    const FString InspectPath = ResolveFbxDropInspectPath(PayloadPath);
-    if (MeshLoadPath.empty() || InspectPath.empty())
+    if (MeshLoadPath.empty())
     {
         return false;
     }
 
     FResourceManager& ResourceManager = FResourceManager::Get();
-    const FFbxMeshContentInfo ContentInfo = ResourceManager.InspectFbxMeshContent(InspectPath);
     USkeletalMesh* Mesh = nullptr;
-	if (!ContentInfo.bHasSkeletalMesh)
+    const FString InspectPath = ResolveFbxDropInspectPath(PayloadPath);
+    if (InspectPath.empty())
     {
         Mesh = ResourceManager.LoadSkeletalMesh(MeshLoadPath);
-        if (!Mesh || !Mesh->HasValidMeshData())
-        {
-            return false;
-        }
     }
     else
     {
-        const TArray<FString> ImportedAnimSequencePaths = ResourceManager.ImportAnimationStacksFromFbx(InspectPath);
-        if (!ImportedAnimSequencePaths.empty())
+        const FFbxMeshContentInfo ContentInfo = ResourceManager.InspectFbxMeshContent(InspectPath);
+        if (!ContentInfo.bHasSkeletalMesh)
         {
-            Widgets.ContentBrowserWidget.Refresh();
+            Mesh = ResourceManager.LoadSkeletalMesh(MeshLoadPath);
+            if (!Mesh || !Mesh->HasValidMeshData())
+            {
+                return false;
+            }
         }
-        Mesh = ResourceManager.LoadSkeletalMesh(MeshLoadPath);
-	}
+        else
+        {
+            const TArray<FString> ImportedAnimSequencePaths = ResourceManager.ImportAnimationStacksFromFbx(InspectPath);
+            if (!ImportedAnimSequencePaths.empty())
+            {
+                Widgets.ContentBrowserWidget.Refresh();
+            }
+            Mesh = ResourceManager.LoadSkeletalMesh(MeshLoadPath);
+        }
+    }
 
 	if (!Mesh || !Mesh->HasValidMeshData())
     {
