@@ -50,6 +50,7 @@ public:
 	bool IsSpawnModule() const { return bSpawnModule; }
 	bool IsUpdateModule() const { return bUpdateModule; }
 
+	void PostDuplicate(UObject* Original) override;
 	void Serialize(FArchive& Ar) override;
 
 	void SetDistributionRuntimeData(const FString& PropertyName, const FParticleDistributionRuntimeData& Data);

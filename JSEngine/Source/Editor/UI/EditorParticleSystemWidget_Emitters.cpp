@@ -537,6 +537,8 @@ void FEditorParticleSystemWidget::DuplicateEmitter(int32 EmitterIndex)
 	}
 
 	UParticleEmitter* SourceEmitter = ParticleSystemAsset->Emitters[EmitterIndex];
+	SyncParticleDistributionRuntimeDataToAsset();
+	CaptureUndoSnapshot("Duplicate Emitter");
 	UParticleEmitter* NewEmitter = SourceEmitter
 		? Cast<UParticleEmitter>(SourceEmitter->Duplicate())
 		: nullptr;
@@ -545,7 +547,6 @@ void FEditorParticleSystemWidget::DuplicateEmitter(int32 EmitterIndex)
 		return;
 	}
 
-	CaptureUndoSnapshot("Duplicate Emitter");
 	const FString NewName = MakeUniqueEmitterName(ParticleSystemAsset);
 	NewEmitter->SetFName(FName(NewName));
 	for (int32 LODIndex = 0; LODIndex < static_cast<int32>(NewEmitter->LODLevels.size()); ++LODIndex)
@@ -1368,6 +1369,7 @@ void FEditorParticleSystemWidget::ReorderEmitter(int32 SourceIndex, int32 Insert
 	}
 
 	CaptureUndoSnapshot("Reorder Emitter");
+	SyncParticleDistributionRuntimeDataToAsset();
 	int32 NewEmitterIndex = SourceIndex;
 	if (!MoveArrayItemToInsertIndex(ParticleSystemAsset->Emitters, SourceIndex, ClampedInsertIndex, NewEmitterIndex))
 	{
@@ -1435,6 +1437,7 @@ void FEditorParticleSystemWidget::ReorderModule(int32 SourceEmitterIndex, int32 
 		}
 
 		CaptureUndoSnapshot("Reorder Particle Module");
+		SyncParticleDistributionRuntimeDataToAsset();
 		int32 NewModuleIndex = SourceModuleIndex;
 		if (!MoveArrayItemToInsertIndex(SourceLODLevel->Modules, SourceModuleIndex, ClampedInsertIndex, NewModuleIndex))
 		{
@@ -1455,6 +1458,7 @@ void FEditorParticleSystemWidget::ReorderModule(int32 SourceEmitterIndex, int32 
 	}
 
 	CaptureUndoSnapshot("Reorder Particle Module");
+	SyncParticleDistributionRuntimeDataToAsset();
 	UParticleModule* Module = SourceLODLevel->Modules[SourceModuleIndex];
 	SourceLODLevel->Modules.erase(SourceLODLevel->Modules.begin() + SourceModuleIndex);
 	const int32 NewModuleIndex = std::clamp(InsertIndex, 0, static_cast<int32>(TargetLODLevel->Modules.size()));

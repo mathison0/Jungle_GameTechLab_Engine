@@ -1622,33 +1622,6 @@ FString FEditorParticleSystemWidget::MakeParticleDistributionCurveKey(UParticleM
 
 FString FEditorParticleSystemWidget::MakeParticleModuleCurveKey(UParticleModule* Module) const
 {
-	if (ParticleSystemAsset && Module)
-	{
-		for (int32 EmitterIndex = 0; EmitterIndex < static_cast<int32>(ParticleSystemAsset->Emitters.size()); ++EmitterIndex)
-		{
-			UParticleEmitter* Emitter = ParticleSystemAsset->Emitters[EmitterIndex];
-			UParticleLODLevel* LODLevel = GetEmitterLODLevel(Emitter);
-			if (!LODLevel)
-			{
-				continue;
-			}
-
-			if (LODLevel->GetRequiredModule() == Module)
-			{
-				return "Emitter:" + std::to_string(EmitterIndex) + "::Required";
-			}
-
-			const TArray<UParticleModule*>& Modules = LODLevel->GetModules();
-			for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(Modules.size()); ++ModuleIndex)
-			{
-				if (Modules[ModuleIndex] == Module)
-				{
-					return "Emitter:" + std::to_string(EmitterIndex) + "::Module:" + std::to_string(ModuleIndex);
-				}
-			}
-		}
-	}
-
 	const std::uintptr_t ModuleKey = reinterpret_cast<std::uintptr_t>(Module);
 	return "ModulePtr:" + std::to_string(ModuleKey);
 }

@@ -87,6 +87,16 @@ namespace
 	}
 }
 
+void UParticleModule::PostDuplicate(UObject* Original)
+{
+	UObject::PostDuplicate(Original);
+
+	const UParticleModule* SourceModule = Cast<UParticleModule>(Original);
+	DistributionRuntimeData = SourceModule
+		? SourceModule->DistributionRuntimeData
+		: TMap<FString, FParticleDistributionRuntimeData>{};
+}
+
 void UParticleModule::Serialize(FArchive& Ar)
 {
 	UObject::Serialize(Ar);
