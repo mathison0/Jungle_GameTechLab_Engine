@@ -401,16 +401,104 @@
       "Tags" : [],
       "UUID" : 936,
       "Visible" : true
+    }, {
+      "Active" : true,
+      "ClassName" : "AParticleSystemActor",
+      "Components" : [{
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UParticleSystemComponent",
+          "ObjectName" : "UParticleSystemComponent_1",
+          "PersistentGuid" : "AF5CF46C-65D24AF6-9C1C557C-D644CF3C",
+          "RelativeLocation" : {
+            "X" : -4.324639,
+            "Y" : -2.446615,
+            "Z" : 6.281627
+          },
+          "RelativeRotation" : {
+            "X" : -0.000000,
+            "Y" : 0.000000,
+            "Z" : -0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 1.000000,
+            "Y" : 1.000000,
+            "Z" : 1.000000
+          },
+          "Tags" : [],
+          "TemplateAssetPath" : "Asset/Particle System/New Particle System 2.particlesystem",
+          "Type" : "UParticleSystemComponent",
+          "UUID" : 991,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : false,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }],
+      "EditorOnly" : true,
+      "Name" : "ParticleSystemActor",
+      "PersistentGuid" : "FB5F4C53-570B44C8-8ECBE65E-50A1AD48",
+      "RootComponent" : 991,
+      "Tags" : [],
+      "UUID" : 990,
+      "Visible" : true
+    }, {
+      "Active" : true,
+      "ClassName" : "AParticleSystemActor",
+      "Components" : [{
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UParticleSystemComponent",
+          "ObjectName" : "UParticleSystemComponent_1",
+          "PersistentGuid" : "BD6E30BB-D02E4CB0-9CC494C4-76C3FC3C",
+          "RelativeLocation" : {
+            "X" : -1.444379,
+            "Y" : -1.787581,
+            "Z" : 6.050701
+          },
+          "RelativeRotation" : {
+            "X" : -0.000000,
+            "Y" : 0.000000,
+            "Z" : -0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 1.000000,
+            "Y" : 1.000000,
+            "Z" : 1.000000
+          },
+          "Tags" : [],
+          "TemplateAssetPath" : "Asset/Particle System/YG.particlesystem",
+          "Type" : "UParticleSystemComponent",
+          "UUID" : 1007,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : false,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }],
+      "EditorOnly" : true,
+      "Name" : "ParticleSystemActor",
+      "PersistentGuid" : "89EEC463-23674D84-AE3AD7DE-EFE35161",
+      "RootComponent" : 1007,
+      "Tags" : [],
+      "UUID" : 1006,
+      "Visible" : true
     }],
   "ClassName" : "UWorld",
   "Name" : "Untitled",
-  "NextUUID" : 938,
+  "NextUUID" : 1009,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [-1.709945, -9.426347, 9.158304],
+    "Location" : [-13.299250, -7.916467, 11.965625],
     "NearClip" : 0.100000,
-    "Rotation" : [-13.170624, 2.255221, 80.454430]
+    "Rotation" : [-6.409943, 8.155955, 38.372334]
   },
   "Version" : 6,
   "WorldSettings" : {

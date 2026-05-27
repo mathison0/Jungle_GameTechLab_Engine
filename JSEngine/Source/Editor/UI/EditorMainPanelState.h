@@ -91,7 +91,6 @@ struct FEditorMainPanelVisibilityState
 	bool bShowEditorDebug = false;
 	bool bShowContentBrowser = false;
 	bool bShowUndoHistory = false;
-	bool bShowRuntimeUIPreview = false;
 	bool bShowProjectSettings = false;
 	bool bShowWorldSettings = false;
 };

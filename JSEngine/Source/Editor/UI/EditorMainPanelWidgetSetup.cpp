@@ -218,7 +218,6 @@ void FEditorMainPanel::BindEditorWidgetCallbacks()
     Widgets.ToolbarWidget.SetPlayStreamWidget(&Widgets.PlayStreamWidget);
     Widgets.ToolbarWidget.SetPIEViewportFullscreenCallback([this](bool bEnabled) { SetPIEViewportFullscreenEnabled(bEnabled); });
     Widgets.ToolbarWidget.SetBuildGameCallback([this]() { RequestBuildGame(); });
-    Widgets.ToolbarWidget.SetRuntimeUIPreviewOpenCallback([this]() { OpenRuntimeUIPreviewAsset(); });
     Widgets.ToolbarWidget.SetActiveCommandHandlers(
         [this](const FEditorShortcut& Shortcut)
         {
@@ -243,7 +242,6 @@ void FEditorMainPanel::BindEditorWidgetCallbacks()
         &PanelVisibility.bShowEditorDebug,
         &PanelVisibility.bShowContentBrowser,
         &PanelVisibility.bShowUndoHistory,
-        &PanelVisibility.bShowRuntimeUIPreview,
         &PanelVisibility.bShowProjectSettings,
         &PanelVisibility.bShowWorldSettings,
         &PIEViewportState.bFullscreenEnabled);

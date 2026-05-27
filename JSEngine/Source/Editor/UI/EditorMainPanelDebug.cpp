@@ -496,6 +496,7 @@ void FEditorMainPanel::RenderEditorDebugPanel(float DeltaTime)
     {
         ImGui::Checkbox("Primitives", &Settings.ShowFlags.bPrimitives);
         ImGui::Checkbox("Skeletal Mesh", &Settings.ShowFlags.bSkeletalMesh);
+        ImGui::Checkbox("Particle System", &Settings.ShowFlags.bParticleSystem);
         ImGui::Checkbox("BillboardText", &Settings.ShowFlags.bBillboardText);
         ImGui::Checkbox("Axis", &Settings.ShowFlags.bAxis);
         ImGui::Checkbox("Grid", &Settings.ShowFlags.bGrid);

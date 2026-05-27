@@ -630,7 +630,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
 	case EPrimitiveType::EPT_ParticleSystem:
     {
-        if (!ShowFlags.bPrimitives)
+        if (!ShowFlags.bPrimitives || !ShowFlags.bParticleSystem)
             return true;
 
         UParticleSystemComponent* ParticleSystemComponent = Cast<UParticleSystemComponent>(Primitive);

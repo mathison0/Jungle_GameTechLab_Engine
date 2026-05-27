@@ -17,7 +17,6 @@ public:
 	void SetPlayStreamWidget(FEditorPlayStreamWidget* InPlayStreamWidget);
 	void SetPIEViewportFullscreenCallback(std::function<void(bool)> InCallback);
 	void SetBuildGameCallback(std::function<void()> InCallback);
-	void SetRuntimeUIPreviewOpenCallback(std::function<void()> InCallback);
 	void SetActiveCommandHandlers(
 		std::function<bool(const FEditorShortcut&)> InShortcutHandler,
 		std::function<bool(EEditorCommandId)> InCommandHandler);
@@ -32,7 +31,6 @@ public:
 		bool* InShowEditorDebug,
 		bool* InShowContentBrowser,
 		bool* InShowUndoHistory,
-		bool* InShowRuntimeUIPreview,
 		bool* InShowProjectSettings,
 		bool* InShowWorldSettings,
 		bool* InPIEViewportFullscreenEnabled);
@@ -62,13 +60,11 @@ private:
 	bool* bShowEditorDebug = nullptr;
 	bool* bShowContentBrowser = nullptr;
 	bool* bShowUndoHistory = nullptr;
-	bool* bShowRuntimeUIPreview = nullptr;
 	bool* bShowProjectSettings = nullptr;
 	bool* bShowWorldSettings = nullptr;
 	bool* bPIEViewportFullscreenEnabled = nullptr;
 	std::function<void(bool)> PIEViewportFullscreenCallback;
 	std::function<void()> BuildGameCallback;
-	std::function<void()> RuntimeUIPreviewOpenCallback;
 	std::function<bool(const FEditorShortcut&)> ActiveShortcutHandler;
 	std::function<bool(EEditorCommandId)> ActiveCommandHandler;
 	std::function<bool()> ActiveMenuRenderer;

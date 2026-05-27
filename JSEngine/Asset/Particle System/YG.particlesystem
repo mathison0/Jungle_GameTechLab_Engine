@@ -29,7 +29,7 @@
             "Data" : {
               "DistanceThreshold" : 100000.000000,
               "Level" : 0,
-              "Modules" : [5, 6, 7, 8, 9, 10, 11, 12],
+              "Modules" : [5, 6, 7, 8, 9, 10, 11, 12, 13],
               "ObjectName" : "UParticleLODLevel_1",
               "RequiredModule" : 4,
               "Type" : "UParticleLODLevel",
@@ -40,6 +40,11 @@
           }, {
             "Class" : "UParticleModuleRequired",
             "Data" : {
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
               "EmitterDuration" : 1.000000,
               "Material" : "",
               "MaxParticles" : 128,
@@ -47,7 +52,6 @@
               "RenderMode" : 0,
               "SubImagesHorizontal" : 6,
               "SubImagesVertical" : 6,
-              "SubUVName" : "Asset/SubUV/subuvtest.png",
               "Type" : "UParticleModuleRequired",
               "bEnabled" : true,
               "bLooping" : true,
@@ -59,6 +63,11 @@
           }, {
             "Class" : "USpriteTypeData",
             "Data" : {
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
               "ObjectName" : "USpriteTypeData_1",
               "Type" : "USpriteTypeData",
               "bEnabled" : true,
@@ -69,6 +78,11 @@
           }, {
             "Class" : "UParticleModuleSpawn",
             "Data" : {
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
               "ObjectName" : "UParticleModuleSpawn_1",
               "Rate" : 1.000000,
               "Type" : "UParticleModuleSpawn",
@@ -80,6 +94,11 @@
           }, {
             "Class" : "UParticleModuleLifetime",
             "Data" : {
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
               "LifetimeMax" : 10.000000,
               "LifetimeMin" : 10.000000,
               "ObjectName" : "UParticleModuleLifetime_1",
@@ -92,6 +111,11 @@
           }, {
             "Class" : "UParticleModuleLocation",
             "Data" : {
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
               "ObjectName" : "UParticleModuleLocation_1",
               "StartLocationMax" : {
                 "X" : 0.000000,
@@ -112,6 +136,11 @@
           }, {
             "Class" : "UParticleModuleVelocity",
             "Data" : {
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
               "ObjectName" : "UParticleModuleVelocity_1",
               "StartVelocityMax" : {
                 "X" : 0.500000,
@@ -132,6 +161,11 @@
           }, {
             "Class" : "UParticleModuleColor",
             "Data" : {
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
               "EndColor" : {
                 "A" : 0.000000,
                 "B" : 1.000000,
@@ -154,13 +188,28 @@
           }, {
             "Class" : "UParticleModuleSize",
             "Data" : {
-              "EndSize" : {
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
+              "EndSizeMax" : {
+                "X" : 1.000000,
+                "Y" : 1.000000,
+                "Z" : 1.000000
+              },
+              "EndSizeMin" : {
                 "X" : 1.000000,
                 "Y" : 1.000000,
                 "Z" : 1.000000
               },
               "ObjectName" : "UParticleModuleSize_1",
-              "StartSize" : {
+              "StartSizeMax" : {
+                "X" : 1.000000,
+                "Y" : 1.000000,
+                "Z" : 1.000000
+              },
+              "StartSizeMin" : {
                 "X" : 1.000000,
                 "Y" : 1.000000,
                 "Z" : 1.000000
@@ -176,6 +225,11 @@
             "Data" : {
               "CollisionCheckFraction" : 1.000000,
               "CollisionRadius" : 5.000000,
+              "DistributionKinds" : [],
+              "DistributionProperties" : [],
+              "DistributionStoredMaxFloats" : [],
+              "DistributionStoredMaxVectors" : [],
+              "DistributionVectorFlags" : [],
               "Friction" : 0.000000,
               "MaxCollisionDistance" : 0.000000,
               "MaxCollisions" : 1,
@@ -194,6 +248,39 @@
               "bUseParticleSizeAsRadius" : true
             },
             "Id" : 12
+          }, {
+            "Class" : "USubUVModule",
+            "Data" : {
+              "DistributionCurve_FrameRate" : {
+                "Channels" : ["Value"],
+                "Value" : {
+                  "ArriveTangents" : [0.000000, 0.000000],
+                  "InterpModes" : [2, 2],
+                  "LeaveTangents" : [0.000000, 0.000000],
+                  "TangentModes" : [0, 0],
+                  "Times" : [0.000000, 1.000000],
+                  "Values" : [24.000000, 24.000000]
+                }
+              },
+              "DistributionKinds" : [3],
+              "DistributionProperties" : ["FrameRate"],
+              "DistributionStoredMaxFloats" : [0.000000],
+              "DistributionStoredMaxVectors" : [[0.000000, 0.000000, 0.000000]],
+              "DistributionVectorFlags" : [0],
+              "EndFrameIndex" : 35,
+              "FrameRate" : 24.000000,
+              "ObjectName" : "SubUV",
+              "PlaybackMode" : 0,
+              "StartFrameIndex" : 0,
+              "SubUVName" : "Asset/SubUV/subuvtest.png",
+              "Type" : "USubUVModule",
+              "bEnabled" : true,
+              "bLoop" : false,
+              "bRandomStartFrame" : false,
+              "bSpawnModule" : true,
+              "bUpdateModule" : true
+            },
+            "Id" : 13
           }],
         "RootObjectId" : 1,
         "Version" : 1

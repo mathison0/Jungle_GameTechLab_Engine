@@ -122,11 +122,6 @@ void FEditorToolbarWidget::SetBuildGameCallback(std::function<void()> InCallback
 	BuildGameCallback = std::move(InCallback);
 }
 
-void FEditorToolbarWidget::SetRuntimeUIPreviewOpenCallback(std::function<void()> InCallback)
-{
-	RuntimeUIPreviewOpenCallback = std::move(InCallback);
-}
-
 void FEditorToolbarWidget::SetActiveCommandHandlers(
 	std::function<bool(const FEditorShortcut&)> InShortcutHandler,
 	std::function<bool(EEditorCommandId)> InCommandHandler)
@@ -150,7 +145,6 @@ void FEditorToolbarWidget::SetPanelVisibilityRefs(
 	bool* InShowEditorDebug,
 	bool* InShowContentBrowser,
 	bool* InShowUndoHistory,
-	bool* InShowRuntimeUIPreview,
 	bool* InShowProjectSettings,
 	bool* InShowWorldSettings,
 	bool* InPIEViewportFullscreenEnabled)
@@ -164,7 +158,6 @@ void FEditorToolbarWidget::SetPanelVisibilityRefs(
 	bShowEditorDebug = InShowEditorDebug;
 	bShowContentBrowser = InShowContentBrowser;
 	bShowUndoHistory = InShowUndoHistory;
-	bShowRuntimeUIPreview = InShowRuntimeUIPreview;
 	bShowProjectSettings = InShowProjectSettings;
 	bShowWorldSettings = InShowWorldSettings;
 	bPIEViewportFullscreenEnabled = InPIEViewportFullscreenEnabled;
@@ -405,17 +398,6 @@ void FEditorToolbarWidget::RenderWindowMenu()
 	if (bShowMaterialEditor) ImGui::MenuItem("Material Editor", nullptr, bShowMaterialEditor);
 	if (bShowStatProfiler) ImGui::MenuItem("Stat Profiler", nullptr, bShowStatProfiler);
 	if (bShowContentBrowser) ImGui::MenuItem("Content Browser", "Ctrl+Space", bShowContentBrowser);
-	if (RuntimeUIPreviewOpenCallback)
-	{
-		if (ImGui::MenuItem("Runtime UI Preview"))
-		{
-			RuntimeUIPreviewOpenCallback();
-		}
-	}
-	if (bShowRuntimeUIPreview)
-	{
-		ImGui::MenuItem("Runtime UI Preview", nullptr, bShowRuntimeUIPreview);
-	}
 	if (bShowProjectSettings) ImGui::MenuItem("Project Settings", nullptr, bShowProjectSettings);
 	if (bShowWorldSettings) ImGui::MenuItem("World Settings", nullptr, bShowWorldSettings);
 
