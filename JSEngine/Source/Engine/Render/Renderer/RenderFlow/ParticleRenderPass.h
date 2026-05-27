@@ -11,12 +11,15 @@ public:
     bool Initialize() override;
     bool Release() override;
 
+    void SetExternalDispatch(bool bInExternalDispatch) { bExternalDispatch = bInExternalDispatch; }
+    bool EnsureGPUResources(ID3D11Device* Device);
+    void RenderParticleCommand(const FRenderCommand& Cmd, const FRenderPassContext& Context);
+    void EndParticleCommandBatch(ID3D11DeviceContext* DeviceContext, bool bUsedInstanceSlot);
+
 private:
     bool Begin(const FRenderPassContext* Context) override;
     bool DrawCommand(const FRenderPassContext* Context) override;
     bool End(const FRenderPassContext* Context) override;
-
-    bool EnsureGPUResources(ID3D11Device* Device);
 
     // Cycle 10a: type별 helper 분기 (단일 Pass + procedural switch — 사용자 결정 3).
     // 본 cycle에서 Sprite만 실제 본문 보유, Mesh/Ribbon/Beam은 NOP. Cycle 11+ 각 emitter cycle에서 본문 채움.
@@ -43,4 +46,5 @@ private:
     FInstanceBuffer BeamVertexBuffer;
 
     bool bGPUResourcesReady = false;
+    bool bExternalDispatch = false;
 };
