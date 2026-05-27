@@ -19,6 +19,9 @@ struct FSkinningStatsFrame
 	uint32 VisibleCPUSkinnedMeshCount = 0;
 	uint32 VisibleGPUSkinnedMeshCount = 0;
 	uint64 VisibleSkinnedVertexCount = 0;
+	uint64 VisibleSkinnedIndexCount = 0;
+	uint32 VisibleSkinnedSectionCount = 0;
+	uint32 VisibleSkinnedDrawCommandCount = 0;
 	uint64 TotalBoneCount = 0;
 	double TotalBoneInfluenceCount = 0.0;
 	uint64 BoneInfluenceVertexCount = 0;
@@ -55,6 +58,9 @@ public:
 	void AddCPUSkinnedVertexBufferUpload(double Ms, uint64 Bytes);
 	void AddVisibleSkinnedMesh(
 		uint64 VertexCount,
+		uint64 IndexCount,
+		uint32 SectionCount,
+		uint32 DrawCommandCount,
 		uint32 BoneCount,
 		double AvgInfluence,
 		bool bUsesGPUSkinning);

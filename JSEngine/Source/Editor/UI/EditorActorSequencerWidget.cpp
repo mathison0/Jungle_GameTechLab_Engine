@@ -6,12 +6,15 @@
 #include "Component/ActorComponent.h"
 #include "Component/ActorSequenceComponent.h"
 #include "Component/SceneComponent.h"
+#include "Core/EditorResourcePaths.h"
+#include "Core/ResourceManager.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/UI/EditorActorSequenceEditModel.h"
 #include "Editor/UI/EditorActorSequenceTimeUtils.h"
 #include "Editor/UI/EditorMainPanel.h"
 #include "GameFramework/AActor.h"
 #include "ImGui/imgui.h"
+#include "Render/Resource/Texture.h"
 
 #include <algorithm>
 #include <cmath>
@@ -30,10 +33,70 @@ namespace
 	constexpr float SequencerMinVisibleRange = 0.05f;
 	constexpr float SequencerMaxVisibleRange = 100000.0f;
 	constexpr float SequencerSnapUnit = 0.01f;
+	constexpr ImVec2 SequencerIconSize(16.0f, 16.0f);
 
 	float ClampSequencerRange(float Range)
 	{
 		return std::clamp(Range, SequencerMinVisibleRange, SequencerMaxVisibleRange);
+	}
+
+	bool DrawSequencerIconButton(
+		const char* Id,
+		const char* IconFileName,
+		const char* FallbackLabel,
+		const char* Tooltip,
+		bool bSelected = false)
+	{
+		UTexture* IconTexture = IconFileName
+			? FResourceManager::Get().LoadTexture(FEditorResourcePaths::ToolIcon(IconFileName))
+			: nullptr;
+		ID3D11ShaderResourceView* SRV = IconTexture ? IconTexture->GetSRV() : nullptr;
+
+		bool bPressed = false;
+		if (!SRV)
+		{
+			bPressed = ImGui::Button(FallbackLabel);
+		}
+		else
+		{
+			if (bSelected)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.27f, 0.40f, 0.58f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.34f, 0.49f, 0.68f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.33f, 0.48f, 1.0f));
+			}
+
+			const ImVec2 Padding = ImGui::GetStyle().FramePadding;
+			const ImVec2 ButtonSize(
+				SequencerIconSize.x + Padding.x * 2.0f,
+				ImGui::GetFrameHeight());
+			bPressed = ImGui::InvisibleButton(Id, ButtonSize);
+			const ImVec2 Min = ImGui::GetItemRectMin();
+			const ImVec2 Max = ImGui::GetItemRectMax();
+			const bool bHovered = ImGui::IsItemHovered();
+			const bool bHeld = ImGui::IsItemActive();
+			const ImU32 BgColor = ImGui::GetColorU32(
+				bHeld ? ImGuiCol_ButtonActive : (bHovered || bSelected ? ImGuiCol_ButtonHovered : ImGuiCol_Button));
+			ImGui::GetWindowDrawList()->AddRectFilled(Min, Max, BgColor, ImGui::GetStyle().FrameRounding);
+			ImGui::GetWindowDrawList()->AddImage(
+				reinterpret_cast<ImTextureID>(SRV),
+				ImVec2(Min.x + Padding.x, Min.y + (ButtonSize.y - SequencerIconSize.y) * 0.5f),
+				ImVec2(Min.x + Padding.x + SequencerIconSize.x, Min.y + (ButtonSize.y + SequencerIconSize.y) * 0.5f),
+				ImVec2(0.0f, 0.0f),
+				ImVec2(1.0f, 1.0f),
+				ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f)));
+
+			if (bSelected)
+			{
+				ImGui::PopStyleColor(3);
+			}
+		}
+
+		if (Tooltip && ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("%s", Tooltip);
+		}
+		return bPressed;
 	}
 
 	ImU32 WithAlpha(ImU32 Color, float Alpha)
@@ -267,7 +330,11 @@ void FEditorActorSequencerWidget::DrawToolbar(UActorSequenceComponent* SequenceC
 	{
 		ImGui::BeginDisabled();
 	}
-	if (ImGui::Button("Key"))
+	if (DrawSequencerIconButton(
+		"##ActorSequencerAddKey",
+		"PlayControlsRecord.png",
+		"Key",
+		"Add key at current time"))
 	{
 		AddKeyToSelectedTrack(SequenceComp);
 	}
@@ -279,17 +346,29 @@ void FEditorActorSequencerWidget::DrawToolbar(UActorSequenceComponent* SequenceC
 	ImGui::SameLine();
 	ImGui::TextDisabled("|");
 	ImGui::SameLine();
-	if (ImGui::Button("Play"))
+	if (DrawSequencerIconButton(
+		"##ActorSequencerPlay",
+		"PlayControlsPlayForward.png",
+		"Play",
+		"Play preview"))
 	{
 		SequenceComp->PlayPreview();
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Pause"))
+	if (DrawSequencerIconButton(
+		"##ActorSequencerPause",
+		"PlayControlsPause.png",
+		"Pause",
+		"Pause preview"))
 	{
 		SequenceComp->PausePreview();
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Stop"))
+	if (DrawSequencerIconButton(
+		"##ActorSequencerStop",
+		"PlayControlsStop.png",
+		"Stop",
+		"Stop preview"))
 	{
 		SequenceComp->StopPreview();
 	}

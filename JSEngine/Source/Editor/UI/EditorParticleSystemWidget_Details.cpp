@@ -105,14 +105,11 @@ void FEditorParticleSystemWidget::SyncParticleSystemLODPropertiesFromEmitters()
 	if (LODCount <= 0)
 	{
 		ParticleSystemAsset->LODDistances.clear();
-		ParticleSystemAsset->LODSettings.clear();
 		return;
 	}
 
 	const int32 OldDistanceCount = static_cast<int32>(ParticleSystemAsset->LODDistances.size());
-	const int32 OldSettingCount = static_cast<int32>(ParticleSystemAsset->LODSettings.size());
 	ParticleSystemAsset->LODDistances.resize(LODCount);
-	ParticleSystemAsset->LODSettings.resize(LODCount);
 
 	for (int32 LODIndex = 0; LODIndex < LODCount; ++LODIndex)
 	{
@@ -133,10 +130,6 @@ void FEditorParticleSystemWidget::SyncParticleSystemLODPropertiesFromEmitters()
 			ParticleSystemAsset->LODDistances[LODIndex] = LODIndex == 0
 				? 100.0f
 				: ParticleSystemAsset->LODDistances[LODIndex - 1] + 1000.0f;
-		}
-		if (LODIndex >= OldSettingCount)
-		{
-			ParticleSystemAsset->LODSettings[LODIndex] = LODIndex;
 		}
 	}
 }
@@ -398,7 +391,6 @@ void FEditorParticleSystemWidget::DrawParticleSystemDetails(UParticleSystem* Par
 	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		SyncParticleSystemLODPropertiesFromEmitters();
-		DrawPropertyGroup("##ParticleSystemLODTable", { "LODDistanceCheckTime", "LODMethod" });
 
 		if (BeginParticleDetailsTable("##ParticleSystemLODValuesTable", LabelWidth))
 		{
@@ -427,42 +419,6 @@ void FEditorParticleSystemWidget::DrawParticleSystemDetails(UParticleSystem* Par
 						Distance = std::max(0.0f, Distance);
 						ApplyParticleSystemLODPropertiesToEmitters();
 						ParticleSystem->PostEditProperty("LODDistances");
-					}
-					if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
-					{
-						bPropertyEditUndoCaptured = false;
-					}
-					ImGui::PopID();
-				}
-				ImGui::TreePop();
-			}
-
-			ImGui::TableNextRow(ImGuiTableRowFlags_None, 28.0f);
-			ImGui::TableSetColumnIndex(0);
-			ImGui::AlignTextToFramePadding();
-			const bool bSettingsOpen = ImGui::TreeNodeEx("Settings", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth);
-			ImGui::TableSetColumnIndex(1);
-			ImGui::TextUnformatted("");
-			if (bSettingsOpen)
-			{
-				for (int32 LODIndex = 0; LODIndex < static_cast<int32>(ParticleSystem->LODSettings.size()); ++LODIndex)
-				{
-					FString SettingLabel = FString("[") + std::to_string(LODIndex) + "]";
-					BeginParticleDetailsRow(SettingLabel.c_str());
-					ImGui::SetNextItemWidth(-1.0f);
-					ImGui::PushID(LODIndex);
-					int32& Setting = ParticleSystem->LODSettings[LODIndex];
-					const int32 MaxLODIndex = std::max(0, GetMaxLODCount() - 1);
-					if (ImGui::DragInt("##LODSetting", &Setting, 1.0f, 0, MaxLODIndex))
-					{
-						if (!bPropertyEditUndoCaptured)
-						{
-							CaptureUndoSnapshot("Edit Particle System LOD");
-							bPropertyEditUndoCaptured = true;
-						}
-						Setting = std::clamp(Setting, 0, MaxLODIndex);
-						ParticleSystem->PostEditProperty("LODSettings");
-						bDirty = true;
 					}
 					if (ImGui::IsItemDeactivatedAfterEdit() || !ImGui::IsAnyItemActive())
 					{
@@ -1895,18 +1851,6 @@ bool FEditorParticleSystemWidget::DrawParticlePropertyValue(const FProperty& Pro
 	case EPropertyType::Int:
 	{
 		int32* Value = static_cast<int32*>(ValuePtr);
-		if (Property.Name && std::strcmp(Property.Name, "LODMethod") == 0)
-		{
-			const char* Items[] = { "Automatic", "Direct Set" };
-			int32 EditedValue = std::clamp(*Value, 0, static_cast<int32>(IM_ARRAYSIZE(Items)) - 1);
-			if (ParticleCombo(Label, &EditedValue, Items, IM_ARRAYSIZE(Items)))
-			{
-				*Value = EditedValue;
-				return true;
-			}
-			return false;
-		}
-
 		const bool bChanged = ImGui::DragInt(Label, Value, Property.Speed);
 		if (bChanged)
 		{

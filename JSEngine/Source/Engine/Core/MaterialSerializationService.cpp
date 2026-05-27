@@ -393,6 +393,10 @@ bool FMaterialSerializationService::SerializeMaterial(const FString& MatFilePath
 		Payload.Name = Material->Name;
 		Payload.ImportedName = Material->ImportedName;
 		Payload.ShaderType = Material->GetShaderType();
+		Payload.SamplerType = Material->SamplerType;
+		Payload.DepthStencilType = Material->DepthStencilType;
+		Payload.BlendType = Material->BlendType;
+		Payload.RasterizerType = Material->RasterizerType;
 
 		for (const auto& [ParamName, ParamValue] : Material->MaterialParams)
 		{
@@ -402,7 +406,7 @@ bool FMaterialSerializationService::SerializeMaterial(const FString& MatFilePath
 		FAssetMetaData ExistingMetaData;
 		FAssetMetaData MetaData;
 		MetaData.Version = 1;
-		MetaData.PayloadVersion = 1;
+		MetaData.PayloadVersion = 2;
 		MetaData.AssetGuid = FAssetFile::LoadMetadataOnly(NormalizedMatFilePath, ExistingMetaData) && !ExistingMetaData.AssetGuid.empty()
 			? ExistingMetaData.AssetGuid
 			: FGuid::NewGuid().ToString();
@@ -502,6 +506,10 @@ bool FMaterialSerializationService::DeserializeMaterial(const FString& MatFilePa
 			Material->FilePath = NormalizedMatFilePath;
 			Material->ImportedName = Payload.ImportedName;
 			Material->SetShaderType(Payload.ShaderType);
+			Material->SamplerType = Payload.SamplerType;
+			Material->DepthStencilType = Payload.DepthStencilType;
+			Material->BlendType = Payload.BlendType;
+			Material->RasterizerType = Payload.RasterizerType;
 			Material->MaterialData = FMaterial();
 			Material->MaterialData.Name = Material->Name;
 			Material->MaterialParams.clear();
@@ -640,6 +648,37 @@ void FMaterialAssetPayload::Serialize(FArchive& Ar, int32 PayloadVersion)
 	if (Ar.IsLoading())
 	{
 		ShaderType = static_cast<EMaterialShaderType>(ShaderTypeValue);
+	}
+
+	if (!Ar.IsLoading() || PayloadVersion >= 2)
+	{
+		int32 SamplerTypeValue = static_cast<int32>(SamplerType);
+		Ar << "SamplerType" << SamplerTypeValue;
+		if (Ar.IsLoading())
+		{
+			SamplerType = static_cast<ESamplerType>(SamplerTypeValue);
+		}
+
+		int32 DepthStencilTypeValue = static_cast<int32>(DepthStencilType);
+		Ar << "DepthStencilType" << DepthStencilTypeValue;
+		if (Ar.IsLoading())
+		{
+			DepthStencilType = static_cast<EDepthStencilType>(DepthStencilTypeValue);
+		}
+
+		int32 BlendTypeValue = static_cast<int32>(BlendType);
+		Ar << "BlendType" << BlendTypeValue;
+		if (Ar.IsLoading())
+		{
+			BlendType = static_cast<EBlendType>(BlendTypeValue);
+		}
+
+		int32 RasterizerTypeValue = static_cast<int32>(RasterizerType);
+		Ar << "RasterizerType" << RasterizerTypeValue;
+		if (Ar.IsLoading())
+		{
+			RasterizerType = static_cast<ERasterizerType>(RasterizerTypeValue);
+		}
 	}
 
 	SerializeMaterialParamArray(Ar, Params, PayloadVersion);

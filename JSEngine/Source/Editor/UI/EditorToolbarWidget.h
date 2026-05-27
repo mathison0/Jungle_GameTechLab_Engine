@@ -33,6 +33,7 @@ public:
 		bool* InShowUndoHistory,
 		bool* InShowProjectSettings,
 		bool* InShowWorldSettings,
+		bool* InShowEditorSettings,
 		bool* InPIEViewportFullscreenEnabled);
 	virtual void Render(float DeltaTime) override;
 	void ProcessShortcuts();
@@ -62,6 +63,7 @@ private:
 	bool* bShowUndoHistory = nullptr;
 	bool* bShowProjectSettings = nullptr;
 	bool* bShowWorldSettings = nullptr;
+	bool* bShowEditorSettings = nullptr;
 	bool* bPIEViewportFullscreenEnabled = nullptr;
 	std::function<void(bool)> PIEViewportFullscreenCallback;
 	std::function<void()> BuildGameCallback;

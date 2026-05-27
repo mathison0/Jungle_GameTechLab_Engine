@@ -135,6 +135,8 @@ private:
 	bool IsMaterialAsset(const FContentItem& Item) const;
 	bool IsStaticMeshAsset(const FContentItem& Item) const;
 	bool IsSkeletalMeshAsset(const FContentItem& Item) const;
+	bool IsRawMeshSource(const FContentItem& Item) const;
+	bool ImportRawMeshSource(const FContentItem& Item);
 	bool IsCurveAsset(const std::filesystem::path& Path) const;
 	bool IsSequenceAsset(const FString& Extension) const;
 	bool IsAnimGraphAsset(const FString& Extension) const;

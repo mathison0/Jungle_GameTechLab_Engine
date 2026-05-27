@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "AnimTypes.h"
+#include "Asset/CurveFloatAsset.h"
 #include "Core/CoreMinimal.h"
 #include "Object/Object.h"
 
@@ -32,14 +33,30 @@ struct FBoneAnimationTrack
 	FRawAnimSequenceTrack InternalTrack;
 };
 
+struct FAnimCurveTrack
+{
+	FName CurveName;
+	FFloatCurve Curve;
+};
+
 struct FAnimationCurveData
 {
+	TArray<FAnimCurveTrack> FloatCurves;
+};
+
+struct FAnimNotifyTrack
+{
+	FName TrackName;
+	TArray<FAnimNotifyStateEvent> Notifies;
 };
 
 FArchive& operator<<(FArchive& Ar, FFrameRate& Value);
 FArchive& operator<<(FArchive& Ar, FRawAnimSequenceTrack& Value);
 FArchive& operator<<(FArchive& Ar, FBoneAnimationTrack& Value);
+FArchive& operator<<(FArchive& Ar, FAnimCurveTrack& Value);
+FArchive& operator<<(FArchive& Ar, FAnimationCurveData& Value);
 FArchive& operator<<(FArchive& Ar, FAnimNotifyStateEvent& Value);
+FArchive& operator<<(FArchive& Ar, FAnimNotifyTrack& Value);
 
 UCLASS()
 class UAnimationAsset : public UObject
@@ -95,6 +112,7 @@ struct FAnimSequenceAssetPayload
 	int32 SourceAnimStackIndex = 0;
 	UAnimDataModel* DataModel = nullptr;
 	TArray<FAnimNotifyStateEvent> Notifies;
+	TArray<FAnimNotifyTrack> NotifyTracks;
 
 	void Serialize(FArchive& Ar, int32 PayloadVersion);
 };
@@ -111,8 +129,22 @@ public:
 
 	virtual float GetPlayLength() const { return PlayLength; }
 	virtual const TArray<FAnimNotifyStateEvent>& GetNotifies() const { return Notifies; }
+	const TArray<FAnimNotifyTrack>& GetNotifyTracks() const { return NotifyTracks; }
+	TArray<FAnimNotifyTrack>& GetMutableNotifyTracks() { return NotifyTracks; }
 	virtual const TArray<FBoneAnimationTrack>& GetBoneAnimationTracks() const;
 	virtual bool GetAnimationPose(float Time, FPoseContext& OutPose) const { return false; }
+	void SetNotifyTracks(const TArray<FAnimNotifyTrack>& InNotifyTracks);
+	int32 AddNotifyTrack(const FName& TrackName);
+	bool RemoveNotifyTrack(int32 TrackIndex);
+	int32 AddNotifyEvent(int32 TrackIndex, const FAnimNotifyStateEvent& Notify);
+	bool RemoveNotifyEvent(int32 TrackIndex, int32 NotifyIndex);
+	bool SetNotifyTriggerTime(int32 TrackIndex, int32 NotifyIndex, float TriggerTime);
+	bool SetNotifyTiming(int32 TrackIndex, int32 NotifyIndex, float TriggerTime, float Duration);
+	bool SetNotifyName(int32 TrackIndex, int32 NotifyIndex, const FName& InNotifyName);
+	bool SetNotifyClassName(int32 TrackIndex, int32 NotifyIndex, const FString& InNotifyClassName);
+	bool SetNotifyLuaEventName(int32 TrackIndex, int32 NotifyIndex, const FString& InLuaEventName);
+	bool SetNotifyLuaTargetScript(int32 TrackIndex, int32 NotifyIndex, const FString& InLuaTargetScript);
+	bool SetNotifyLuaTargetPolicy(int32 TrackIndex, int32 NotifyIndex, int32 InLuaTargetPolicy);
 	void AddNotify(float InTriggerTime, const FName& InNotifyName, float InDuration = 0.0f, const FString& InNotifyClassName = "");
 	void AddNotifyState(float InTriggerTime, float InDuration, const FName& InNotifyName, const FString& InNotifyClassName = "") { AddNotify(InTriggerTime, InNotifyName, InDuration, InNotifyClassName); }
 	void ClearNotifies();
@@ -135,6 +167,14 @@ protected:
 	TArray<FAnimNotifyStateEvent> Notifies;
 	UAnimDataModel* DataModel = nullptr;
 	FString PreviewMeshPath;
+	TArray<FAnimNotifyTrack> NotifyTracks;
+
+private:
+	uint32 GenerateNotifyId() const;
+	void EnsureDefaultNotifyTrack();
+	void EnsureNotifyIds();
+	void RebuildFlatNotifiesFromTracks();
+	bool FindNotifyByFlatIndex(int32 NotifyIndex, int32& OutTrackIndex, int32& OutNotifyIndex);
 };
 
 UCLASS()
@@ -147,6 +187,7 @@ public:
 
 	float GetPlayLength() const override;
 	bool GetAnimationPose(float Time, FPoseContext& OutPose) const override;
+	bool EvaluateCurve(const FName& CurveName, float TimeSeconds, float& OutValue) const;
 
 	void SetAssetPath(const FString& InAssetPath) { AssetPath = InAssetPath; }
 	const FString& GetAssetPath() const { return AssetPath; }

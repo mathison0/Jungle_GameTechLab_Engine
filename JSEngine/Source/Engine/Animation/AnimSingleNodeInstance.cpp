@@ -273,7 +273,10 @@ void UAnimSingleNodeInstance::NativeUpdateAnimation(float DeltaTime)
 		CurrentTime = 0.0f;
 		bPlaying = false;
 		bPoseDirty = bPoseDirty || CurrentTime != OriginalTime;
-		TriggerAnimNotifies(CurrentAnimation, PreviousTime, CurrentTime, bLooped, bReverse, DeltaTime);
+		if (bDispatchAnimNotifies)
+		{
+			TriggerAnimNotifies(CurrentAnimation, PreviousTime, CurrentTime, bLooped, bReverse, DeltaTime);
+		}
 		return;
 	}
 
@@ -315,7 +318,10 @@ void UAnimSingleNodeInstance::NativeUpdateAnimation(float DeltaTime)
 	}
 
 	bPoseDirty = bPoseDirty || CurrentTime != OriginalTime;
-	TriggerAnimNotifies(CurrentAnimation, PreviousTime, CurrentTime, bLooped, bReverse, DeltaTime);
+	if (bDispatchAnimNotifies)
+	{
+		TriggerAnimNotifies(CurrentAnimation, PreviousTime, CurrentTime, bLooped, bReverse, DeltaTime);
+	}
 }
 
 bool UAnimSingleNodeInstance::EvaluatePose(FPoseContext& OutPoseContext)

@@ -2,6 +2,7 @@
 
 #include "Editor/UI/EditorChromeConstants.h"
 #include "Editor/UI/EditorMainPanelViewportToolbarHelpers.h"
+#include "Editor/Settings/EditorSettings.h"
 #include "Editor/Viewer/EditorViewer.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 
@@ -217,6 +218,7 @@ void FEditorMainPanel::RenderViewerToolbarControls(FEditorViewer* Viewer)
 					ViewportState->ViewMode == Mode))
 				{
 					ViewportState->ViewMode = Mode;
+					FEditorSettings::Get().ViewMode = Mode;
 				}
 			});
 		ImGui::Separator();
@@ -235,6 +237,7 @@ void FEditorMainPanel::RenderViewerToolbarControls(FEditorViewer* Viewer)
 					ViewportState->LightCullMode == CullMode))
 				{
 					ViewportState->LightCullMode = CullMode;
+					FEditorSettings::Get().LightCullMode = CullMode;
 				}
 			}
 			ImGui::EndMenu();
@@ -249,11 +252,18 @@ void FEditorMainPanel::RenderViewerToolbarControls(FEditorViewer* Viewer)
 	}
 	if (ImGui::BeginPopup("##ViewerShowFlagsPopupShared"))
 	{
-		ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
-		ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
-		ImGui::BeginDisabled(!ShowFlags.bShowBones);
-		ImGui::MenuItem("Selected Bone Only", nullptr, &ShowFlags.bShowOnlySelectedBone);
-		ImGui::EndDisabled();
+		if (Viewer->IsStaticMeshViewer())
+		{
+			ImGui::MenuItem("Static Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+		}
+		else
+		{
+			ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+			ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
+			ImGui::BeginDisabled(!ShowFlags.bShowBones);
+			ImGui::MenuItem("Selected Bone Only", nullptr, &ShowFlags.bShowOnlySelectedBone);
+			ImGui::EndDisabled();
+		}
 		ImGui::Separator();
 		ImGui::MenuItem("Bounding Box", nullptr, &ShowFlags.bShowBoundingBox);
 		ImGui::MenuItem("Outline", nullptr, &ShowFlags.bShowOutline);
@@ -285,6 +295,28 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 		ImGui::EndMenu();
 	};
 
+	auto RenderCommonDocumentSettingsMenu = [this]()
+	{
+		if (!ImGui::BeginMenu("Settings"))
+		{
+			return;
+		}
+
+		if (ImGui::MenuItem("Editor Settings"))
+		{
+			OpenEditorSettingsPanel();
+		}
+		if (ImGui::MenuItem("Project Settings"))
+		{
+			OpenProjectSettingsPanel();
+		}
+		if (ImGui::MenuItem("World Settings"))
+		{
+			OpenWorldSettingsPanel();
+		}
+		ImGui::EndMenu();
+	};
+
 	auto RenderDocumentHelpMenu = []()
 	{
 		if (!ImGui::BeginMenu("Help"))
@@ -301,14 +333,33 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 	{
 		FEditorViewerWindowWidget* ViewerWidget = FindViewerWidgetForTab(ActiveTab->Id);
 		FEditorViewer* Viewer = ViewerWidget ? ViewerWidget->GetViewer() : nullptr;
-		const bool bCanSaveMesh = ViewerWidget && ViewerWidget->CanSaveMesh();
-		const char* SaveLabel = ViewerWidget && ViewerWidget->IsMeshDirty() ? "Save Mesh *" : "Save Mesh";
+		const bool bIsAnimSequence = ActiveTab->Id.Kind == EEditorTabKind::AnimSequenceViewer;
+		const bool bIsStaticMesh = ActiveTab->Id.Kind == EEditorTabKind::StaticMeshViewer;
+		const bool bCanSaveAsset = ViewerWidget && (bIsAnimSequence ? ViewerWidget->CanSaveAnimSequence() : ViewerWidget->CanSaveMesh());
+		const char* SaveLabel = bIsAnimSequence
+			? "Save Animation"
+			: (bIsStaticMesh ? "Save Mesh" : (ViewerWidget && ViewerWidget->IsMeshDirty() ? "Save Mesh *" : "Save Mesh"));
+		auto SaveActiveViewerAsset = [&]()
+		{
+			if (!ViewerWidget)
+			{
+				return;
+			}
+			if (bIsAnimSequence)
+			{
+				ViewerWidget->RequestSaveAnimSequence();
+			}
+			else
+			{
+				ViewerWidget->RequestSaveMesh();
+			}
+		};
 
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem(SaveLabel, "Ctrl+S", false, bCanSaveMesh))
+			if (ImGui::MenuItem(SaveLabel, "Ctrl+S", false, bCanSaveAsset))
 			{
-				ViewerWidget->RequestSaveMesh();
+				SaveActiveViewerAsset();
 			}
 			ImGui::Separator();
 			if (ActiveTab->bCanClose && ImGui::MenuItem("Close Tab"))
@@ -327,11 +378,11 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 
 		if (ImGui::BeginMenu("Asset"))
 		{
-			if (ImGui::MenuItem(SaveLabel, nullptr, false, bCanSaveMesh))
+			if (ImGui::MenuItem(SaveLabel, nullptr, false, bCanSaveAsset))
 			{
-				ViewerWidget->RequestSaveMesh();
+				SaveActiveViewerAsset();
 			}
-			ImGui::MenuItem("Reimport Mesh", nullptr, false, false);
+			ImGui::MenuItem(bIsAnimSequence ? "Reimport Animation" : "Reimport Mesh", nullptr, false, false);
 			if (Viewer)
 			{
 				ImGui::Separator();
@@ -341,6 +392,7 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 		}
 
 		RenderCommonDocumentWindowMenu();
+		RenderCommonDocumentSettingsMenu();
 
 		if (ImGui::BeginMenu("Tools"))
 		{
@@ -371,11 +423,18 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 					Client.ApplyCameraMode();
 				}
 				ImGui::Separator();
-				ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
-				ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
-				ImGui::BeginDisabled(!ShowFlags.bShowBones);
-				ImGui::MenuItem("Selected Bone Only", nullptr, &ShowFlags.bShowOnlySelectedBone);
-				ImGui::EndDisabled();
+				if (Viewer->IsStaticMeshViewer())
+				{
+					ImGui::MenuItem("Static Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+				}
+				else
+				{
+					ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+					ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
+					ImGui::BeginDisabled(!ShowFlags.bShowBones);
+					ImGui::MenuItem("Selected Bone Only", nullptr, &ShowFlags.bShowOnlySelectedBone);
+					ImGui::EndDisabled();
+				}
 				ImGui::MenuItem("Bounding Box", nullptr, &ShowFlags.bShowBoundingBox);
 				ImGui::MenuItem("Outline", nullptr, &ShowFlags.bShowOutline);
 			}
@@ -486,7 +545,14 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 		ImGui::EndMenu();
 	}
 
+	if (ActiveTab->Id.Kind == EEditorTabKind::ParticleSystemEditor)
+	{
+		Widgets.ParticleSystemWidget.RenderDocumentViewMenu();
+		Widgets.ParticleSystemWidget.RenderDocumentParticleMenu();
+	}
+
 	RenderCommonDocumentWindowMenu();
+	RenderCommonDocumentSettingsMenu();
 	RenderDocumentHelpMenu();
 	return true;
 }

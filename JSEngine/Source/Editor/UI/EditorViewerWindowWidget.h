@@ -1,9 +1,12 @@
 ﻿#pragma once
 #include "Editor/UI/EditorWidget.h"
+#include "Editor/UI/EditorAnimationSequenceViewerWidget.h"
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "Asset/SkeletalMeshTypes.h"
 #include "Render/Common/ComPtr.h"
 #include "ImGui/imgui.h"
+
+#include <memory>
 
 class USkeletalMeshComponent;
 class FSceneViewport;
@@ -26,16 +29,18 @@ public:
     // Bone tree에 socket을 leaf 노드로 표시. SocketIdx는 CachedMesh->Sockets 배열 인덱스.
     void DrawSocketNode(int32 SocketIdx);
 
-	void SetViewer(FEditorViewer* InViewer) { Viewer = InViewer; }
+	void SetViewer(FEditorViewer* InViewer);
     FEditorViewer* GetViewer() const { return Viewer; }
 
 	bool IsOpen() const { return bOpen; }
     void SetOpen(bool NewOpen) { bOpen = NewOpen; }
 
-    FString GetWindowName() const;
+	FString GetWindowName() const;
 	void RequestSaveMesh();
 	bool CanSaveMesh() const;
 	bool IsMeshDirty() const;
+	void RequestSaveAnimSequence();
+	bool CanSaveAnimSequence() const;
 
 private:
     // bone tree 캐시들. CachedMesh가 바뀌면 둘 다 재빌드.
@@ -70,6 +75,7 @@ private:
 	void RenderBoneDetails(USkeletalMeshComponent* SkelComp);
     void RenderContent(float DeltaTime);
     void RenderViewportPanel(FSceneViewport& SceneViewport, ID3D11ShaderResourceView* SRV, const ImVec2& Size);
+    void RenderStaticMeshLeftPanel(class UStaticMeshComponent* StaticMeshComp);
     void RenderSkeletonLeftPanel(USkeletalMeshComponent* SkelMeshComp, FSkeletalMesh* MeshData);
     void RenderBoneRightPanel(USkeletalMeshComponent* SkelMeshComp);
     void RenderAnimSequenceLeftPanel(UAnimSequence* Sequence, USkeletalMeshComponent* SkelMeshComp);
@@ -116,6 +122,7 @@ private:
     int32 AnimNotifyDragMode = 0; // 0=None, 1=Move, 2=Start, 3=End
     float AnimNotifyDragGrabOffset = 0.0f;
     bool bAnimNotifyDragDirty = false;
+    int32 PendingAnimNotifyTrackIndexToAdd = 0;
     UAnimSequence* CachedAnimSequence = nullptr;
     float PendingAnimNotifyTimeToAdd = 0.0f;
     char SelectedAnimNotifyNameBuffer[128] = {};
@@ -137,6 +144,7 @@ private:
     TComPtr<ID3D11ShaderResourceView> AnimSequenceToPreviousingIcon;
 
 	FEditorViewer* Viewer = nullptr;
+	std::unique_ptr<FEditorAnimationSequenceViewerWidget> AnimSequenceViewerWidget;
     bool bOpen = false;
     ImVec2 LastDetachedWindowPos = ImVec2(0.0f, 0.0f);
     bool bDraggingDetachedWindow = false;

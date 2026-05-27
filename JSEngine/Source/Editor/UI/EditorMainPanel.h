@@ -75,6 +75,9 @@ public:
 	void OpenActorSequencer(UActorSequenceComponent* SequenceComp);
 	void PushFooterLog(const FString& Message);
 	void RequestPIEViewportInputFocus();
+	void OpenProjectSettingsPanel();
+	void OpenWorldSettingsPanel();
+	void OpenEditorSettingsPanel();
 	bool SpawnPrefabAtOrigin(const FString& PayloadPath);
 	bool CanCloseEditor();
 	void RestoreLastSceneFromProjectSettings();
@@ -145,6 +148,7 @@ private:
 	void SaveProjectGameModeSettingsPanelBuffers();
 	void SaveWorldGameModeSettingsPanelBuffers();
 	void RenderProjectSettingsPanel();
+	void RenderEditorSettingsPanel();
 	void RenderWorldSettingsPanel();
 	FViewportRect GetPIEFixedAspectViewportRect(const FViewportRect& SourceRect) const;
 	void ApplyPIEFixedAspectViewportRect();

@@ -74,6 +74,7 @@ struct FEditorMainPanelPIEPanelVisibilitySnapshot
 	bool bShowContentBrowser = false;
 	bool bShowProjectSettings = false;
 	bool bShowWorldSettings = false;
+	bool bShowEditorSettings = false;
 	bool bConsoleDrawerVisible = false;
 	bool bViewportSettingsVisible = false;
 	bool bGroupedStatOverlayVisible = false;
@@ -93,6 +94,7 @@ struct FEditorMainPanelVisibilityState
 	bool bShowUndoHistory = false;
 	bool bShowProjectSettings = false;
 	bool bShowWorldSettings = false;
+	bool bShowEditorSettings = false;
 };
 
 struct FEditorMainPanelPIEViewportLayoutSnapshot

@@ -14,6 +14,7 @@
 #include "Editor/Viewport/ParticleSystemViewportClient.h"
 #include "Engine/Component/GizmoComponent.h"
 #include "Engine/Component/SkeletalMeshComponent.h"
+#include "Engine/Component/StaticMeshComponent.h"
 #include "GameFramework/PrimitiveActors.h"
 #include "Asset/SkeletalMesh.h"
 #include "Asset/StaticMesh.h"
@@ -444,7 +445,7 @@ void FEditorRenderPipeline::RenderViewerViewport(FRenderer& Renderer)
         // ViewerPreview는 Level Editor의 전역 표시 상태를 상속하지 않는다.
         // Asset 검사 도구로서 필요한 표면/오버레이만 명시적으로 켠다.
         FShowFlags ShowFlags = {};
-        ShowFlags.bPrimitives = true;
+        ShowFlags.bPrimitives = Viewers[i]->IsStaticMeshViewer() ? VFlags.bShowSkeletalMesh : true;
         ShowFlags.bSkeletalMesh = VFlags.bShowSkeletalMesh;
         ShowFlags.bGrid = true;
         ShowFlags.bAxis = true;
@@ -549,7 +550,7 @@ void FEditorRenderPipeline::RenderViewerViewport(FRenderer& Renderer)
 
         // Viewer 전용: 본 와이어 드로우 (skeleton mesh viewer 토글)
         {
-            if (VFlags.bShowBones)
+            if (!Viewers[i]->IsStaticMeshViewer() && VFlags.bShowBones)
             {
                 if (ASkeletalMeshActor* ViewTarget = Viewers[i]->GetViewTarget())
                 {
@@ -575,7 +576,20 @@ void FEditorRenderPipeline::RenderViewerViewport(FRenderer& Renderer)
 
         if (VFlags.bShowBoundingBox)
         {
-            if (ASkeletalMeshActor* ViewTarget = Viewers[i]->GetViewTarget())
+            if (Viewers[i]->IsStaticMeshViewer())
+            {
+                if (UStaticMeshComponent* StaticComp = Viewers[i]->GetStaticMeshComponent())
+                {
+                    FRenderCommand BoundsCmd = {};
+                    const FAABB& Bounds = StaticComp->GetWorldAABB();
+                    BoundsCmd.Type = ERenderCommandType::DebugBox;
+                    BoundsCmd.Constants.AABB.Min = Bounds.Min;
+                    BoundsCmd.Constants.AABB.Max = Bounds.Max;
+                    BoundsCmd.Constants.AABB.Color = FColor::White();
+                    Bus.AddCommand(ERenderPass::Editor, BoundsCmd);
+                }
+            }
+            else if (ASkeletalMeshActor* ViewTarget = Viewers[i]->GetViewTarget())
             {
                 if (USkeletalMeshComponent* SkComp = ViewTarget->GetSkeletalMeshComponent())
                 {

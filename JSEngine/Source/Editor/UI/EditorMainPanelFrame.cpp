@@ -146,6 +146,10 @@ void FEditorMainPanel::RenderEditorPanelWindows(float DeltaTime, bool bDrawEdito
     {
         RenderWorldSettingsPanel();
     }
+    if (bDrawEditorPanels && PanelVisibility.bShowEditorSettings)
+    {
+        RenderEditorSettingsPanel();
+    }
     if (bDrawEditorPanels && bLevelEditorTabActive && Widgets.CurveEditorWidget.IsVisible())
     {
         Widgets.CurveEditorWidget.Render(DeltaTime);

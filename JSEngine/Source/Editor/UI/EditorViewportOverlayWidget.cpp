@@ -14,6 +14,7 @@
 #include "Engine/Asset/StaticMesh.h"
 #include "Engine/Asset/StaticMeshTypes.h"
 #include "Engine/Component/GizmoComponent.h"
+#include "Engine/Component/SkinnedMeshComponent.h"
 #include "Engine/Object/FName.h"
 #include "Render/Resource/ShadowAtlasManager.h"
 #include <cstdio>
@@ -85,6 +86,76 @@ namespace
 			Stats.ActiveParticleCount,
 			Stats.MaxParticleCount,
 			BytesToKB(Stats.MemoryBytes));
+	}
+
+	const char* GetSkinningModeLabel()
+	{
+		switch (USkinnedMeshComponent::GetGlobalSkinningModeOverride())
+		{
+		case ESkinningModeOverride::CPU:
+			return "CPU";
+		case ESkinningModeOverride::GPU:
+			return "GPU";
+		case ESkinningModeOverride::Component:
+		default:
+			return "Component";
+		}
+	}
+
+	void DrawSkinningStatOverlayLines(
+		const FSkinningStatsFrame& SkinningStats,
+		const ImVec4& Color,
+		bool bColored,
+		bool bShowTitle)
+	{
+		auto TextLine = [&](const char* Format, auto... Args)
+		{
+			if (bColored)
+			{
+				ImGui::TextColored(Color, Format, Args...);
+			}
+			else
+			{
+				ImGui::Text(Format, Args...);
+			}
+		};
+
+		if (bShowTitle)
+		{
+			TextLine("Skinning");
+		}
+		TextLine("- Mode: %s", GetSkinningModeLabel());
+		TextLine(
+			"- CPU Vertex: %.3f ms total",
+			SkinningStats.CPUSkinningMs);
+		TextLine(
+			"- Pose: %.3f ms anim / %.3f ms build",
+			SkinningStats.CPUAnimationUpdateMs,
+			SkinningStats.CPUPoseBuildMs);
+		TextLine(
+			"- GPU Matrix Upload: %.3f ms total / %llu calls",
+			SkinningStats.GPUBoneMatrixUploadMs,
+			static_cast<unsigned long long>(SkinningStats.GPUBoneMatrixUploadCallCount));
+		TextLine(
+			"- CPU VB Upload: %.3f ms total / %llu calls",
+			SkinningStats.CPUSkinnedVertexBufferUploadMs,
+			static_cast<unsigned long long>(SkinningStats.CPUSkinnedVertexBufferUploadCallCount));
+		TextLine(
+			"- Submitted: %u comps (%u CPU / %u GPU), %u sections, %u draws",
+			SkinningStats.VisibleSkinnedMeshCount,
+			SkinningStats.VisibleCPUSkinnedMeshCount,
+			SkinningStats.VisibleGPUSkinnedMeshCount,
+			SkinningStats.VisibleSkinnedSectionCount,
+			SkinningStats.VisibleSkinnedDrawCommandCount);
+		TextLine(
+			"- Workload: %llu verts, %llu indices, %llu bones",
+			static_cast<unsigned long long>(SkinningStats.VisibleSkinnedVertexCount),
+			static_cast<unsigned long long>(SkinningStats.VisibleSkinnedIndexCount),
+			static_cast<unsigned long long>(SkinningStats.TotalBoneCount));
+		TextLine(
+			"- GPU Skin Work: %.0f / %.2f avg influence",
+			SkinningStats.EstimatedGPUSkinningInfluenceWork,
+			SkinningStats.GetAvgBoneInfluencePerVertex());
 	}
 
 	ImVec2 AtlasPixelToPreview(const ImVec2& ImagePos, const ImVec2& ImageSize, int32 X, int32 Y)
@@ -284,6 +355,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
                 if (ImGui::Selectable(GetViewModeName(Mode), bSelected))
                 {
                     FocusedState->ViewMode = Mode;
+                    Settings.ViewMode = Mode;
                 }
                 if (bSelected)
                 {
@@ -307,6 +379,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
                 if (ImGui::Selectable(GetLightCullModeName(CullMode), bSelected))
                 {
                     FocusedState->LightCullMode = CullMode;
+                    Settings.LightCullMode = CullMode;
                 }
                 if (bSelected)
                 {
@@ -571,7 +644,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 		const FEditorViewportState& VS = Layout.GetViewportState(i);
         FViewportRect ViewportRect = Layout.GetSceneViewport(i).GetRect();
 
-		if (!VS.bShowStatFPS && !VS.bShowStatMemory && !VS.bShowStatNameTable && !VS.bShowStatParticle && !VS.bShowLight&& !VS.bShowShadow) continue;
+		if (!VS.bShowStatFPS && !VS.bShowStatMemory && !VS.bShowStatNameTable && !VS.bShowStatParticle && !VS.bShowStatSkinning && !VS.bShowLight&& !VS.bShowShadow) continue;
         if (ViewportRect.Width <= 0 || ViewportRect.Height <= 0)
             continue; // 비활성 뷰포트 스킵
 
@@ -594,6 +667,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 				!VS.bShowStatFPS &&
 				!VS.bShowStatMemory &&
 				!VS.bShowStatNameTable &&
+				!VS.bShowStatSkinning &&
 				!VS.bShowLight &&
 				!VS.bShowShadow;
 			const FRenderCollector::FCullingStats* CullingStats =
@@ -606,6 +680,20 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 				ImGui::TextColored(ImVec4(0.f, 1.f, 0.f, 1.f), "FPS: %.1f (%.2f ms)", FPS, DeltaTime * 1000.f);
 			}
 
+			if (VS.bShowStatSkinning)
+			{
+				if (VS.bShowStatFPS)
+				{
+					ImGui::Separator();
+				}
+
+				DrawSkinningStatOverlayLines(
+					FSkinningStats::Get().GetSnapshot(),
+					ImVec4(0.7f, 0.85f, 1.0f, 1.0f),
+					true,
+					true);
+			}
+
 			if (CullingStats != nullptr && !bOnlyParticleStat)
 			{
 				const int32 CulledPrimitiveCount = std::max(
@@ -613,7 +701,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 					CullingStats->TotalVisiblePrimitiveCount -
 						(CullingStats->BVHPassedPrimitiveCount + CullingStats->FallbackPassedPrimitiveCount));
 
-				if (VS.bShowStatFPS)
+				if (VS.bShowStatFPS || VS.bShowStatSkinning)
 				{
 					ImGui::Separator();
 				}
@@ -634,7 +722,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
 			if (DecalStats != nullptr && !bOnlyParticleStat)
 			{
-				if (CullingStats != nullptr || VS.bShowStatFPS)
+				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatSkinning)
 				{
 					ImGui::Separator();
 				}
@@ -664,7 +752,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
             if (VS.bShowShadow)
             {
-                if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatMemory || VS.bShowStatParticle)
+                if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatMemory || VS.bShowStatParticle || VS.bShowStatSkinning)
                 {
                     ImGui::Separator();
                 }
@@ -714,7 +802,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
 			if (VS.bShowStatParticle)
 			{
-				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowLight || VS.bShowShadow)
+				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatSkinning || VS.bShowLight || VS.bShowShadow)
 				{
 					ImGui::Separator();
 				}
@@ -739,7 +827,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 			// Memory 출력 (노란색 텍스트)
 			if (VS.bShowStatMemory)
 			{
-				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatParticle)
+				if (CullingStats != nullptr || VS.bShowStatFPS || VS.bShowStatParticle || VS.bShowStatSkinning)
 				{
 					ImGui::Separator();
 				}
@@ -838,6 +926,15 @@ void FEditorViewportOverlayWidget::RenderGroupedStatOverlay(float DeltaTime)
         const float FPS = DeltaTime > 0.0f ? 1.0f / DeltaTime : 0.0f;
         ImGui::Text("FPS : %.1f (%.2f ms)", FPS, DeltaTime * 1000.0f);
 
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::TextUnformatted("[ Skinning ]");
+        DrawSkinningStatOverlayLines(
+            FSkinningStats::Get().GetSnapshot(),
+            ImVec4(0.90f, 0.94f, 1.00f, 1.00f),
+            false,
+            false);
+
         if (CullingStats != nullptr)
         {
             const int32 CulledPrimitiveCount = std::max(
@@ -873,44 +970,6 @@ void FEditorViewportOverlayWidget::RenderGroupedStatOverlay(float DeltaTime)
             ImGui::Text("Point             : %d", LightStats->PointLightCount);
             ImGui::Text("Spot              : %d", LightStats->SpotlightCount);
             ImGui::Text("Shadow Cast       : %d", LightStats->ShadowCastingLightCount);
-        }
-
-        {
-            const FSkinningStatsFrame& SkinStats = FSkinningStats::Get().GetSnapshot();
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::TextUnformatted("[ Frame ]");
-            ImGui::Text("CPU             : %.3f ms", SkinStats.CPUFrameTimeMs);
-            if (FGPUProfiler::Get().IsCollectionEnabled())
-            {
-                ImGui::Text("GPU             : %.3f ms", SkinStats.GPUFrameTimeMs);
-            }
-            else
-            {
-                ImGui::TextUnformatted("GPU             : Disabled");
-            }
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::TextUnformatted("[ Skinning ]");
-            ImGui::Text("CPU Anim/Pose   : %.3f / %.3f ms", SkinStats.CPUAnimationUpdateMs, SkinStats.CPUPoseBuildMs);
-            ImGui::Text("CPU Skin        : %.3f ms", SkinStats.CPUSkinningMs);
-            ImGui::Text("CPU VB Upload   : %.3f ms / %.2f KB",
-                SkinStats.CPUSkinnedVertexBufferUploadMs,
-                SkinStats.CPUSkinnedVertexBufferUploadBytes / 1024.0f);
-            ImGui::Text("GPU Bone CB     : %.3f ms / %.2f KB",
-                SkinStats.GPUBoneMatrixUploadMs,
-                SkinStats.GPUBoneMatrixUploadBytes / 1024.0f);
-            ImGui::Text("Meshes CPU/GPU  : %u / %u",
-                SkinStats.VisibleCPUSkinnedMeshCount,
-                SkinStats.VisibleGPUSkinnedMeshCount);
-            ImGui::Text("Meshes/Verts    : %u / %llu",
-                SkinStats.VisibleSkinnedMeshCount,
-                static_cast<unsigned long long>(SkinStats.VisibleSkinnedVertexCount));
-            ImGui::Text("Bones/Influence : %llu / %.2f",
-                static_cast<unsigned long long>(SkinStats.TotalBoneCount),
-                SkinStats.GetAvgBoneInfluencePerVertex());
-            ImGui::Text("GPU Skin Work   : %.0f", SkinStats.EstimatedGPUSkinningInfluenceWork);
         }
 
         FShadowAtlasManager& ShadowAtlasManager = FShadowAtlasManager::Get();

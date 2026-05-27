@@ -11,6 +11,11 @@ namespace
 	{
 		return FAssetPathPolicy::IsAnimSequenceAssetPath(Path);
 	}
+
+	bool IsStaticMeshViewerPath(const FString& Path)
+	{
+		return FAssetPathPolicy::IsStaticMeshAssetPath(Path);
+	}
 }
 
 bool FEditorTabId::Matches(const FEditorTabId& Other) const
@@ -21,9 +26,18 @@ bool FEditorTabId::Matches(const FEditorTabId& Other) const
 FEditorTabId MakeEditorViewerTabId(const FString& ViewerFileName, const void* FallbackAddress)
 {
 	FEditorTabId TabId;
-	TabId.Kind = IsAnimSequenceViewerPath(ViewerFileName)
-		? EEditorTabKind::AnimSequenceViewer
-		: EEditorTabKind::SkeletalMeshViewer;
+	if (IsAnimSequenceViewerPath(ViewerFileName))
+	{
+		TabId.Kind = EEditorTabKind::AnimSequenceViewer;
+	}
+	else if (IsStaticMeshViewerPath(ViewerFileName))
+	{
+		TabId.Kind = EEditorTabKind::StaticMeshViewer;
+	}
+	else
+	{
+		TabId.Kind = EEditorTabKind::SkeletalMeshViewer;
+	}
 	TabId.PayloadId = ViewerFileName;
 	if (TabId.PayloadId.empty() && FallbackAddress)
 	{
@@ -42,10 +56,19 @@ FString MakeEditorViewerTabLabel(const FString& ViewerFileName)
 	}
 
 	const bool bAnimSequence = IsAnimSequenceViewerPath(ViewerFileName);
+	const bool bStaticMesh = IsStaticMeshViewerPath(ViewerFileName);
 
 	const size_t SlashIndex = ViewerFileName.find_last_of("/\\");
 	FString FileName = SlashIndex == FString::npos ? ViewerFileName : ViewerFileName.substr(SlashIndex + 1);
-	return bAnimSequence ? FString("Anim: ") + FileName : FileName;
+	if (bAnimSequence)
+	{
+		return FString("Anim: ") + FileName;
+	}
+	if (bStaticMesh)
+	{
+		return FString("Static: ") + FileName;
+	}
+	return FileName;
 }
 
 FEditorTabId MakeRuntimeUIPreviewTabId()

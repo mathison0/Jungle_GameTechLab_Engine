@@ -1,6 +1,7 @@
 ﻿#include "EditorViewer.h"
 #include "EditorEngine.h"
 #include "Editor/EditorRenderPipeline.h"
+#include "Editor/Animation/DebugSkelMeshComponent.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSingleNodeInstance.h"
@@ -162,9 +163,17 @@ void FEditorViewer::Init(
     Viewport.SetRect(Rect);
 
     ViewTarget = InWorld->SpawnActor<ASkeletalMeshActor>();
-    ViewTarget->InitDefaultComponents();
     ViewTarget->SetFName(FName("ViewerActor"));
     ViewTarget->SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
+    DebugSkelMeshComponent = ViewTarget->AddComponent<UDebugSkelMeshComponent>();
+    ViewTarget->SetSkeletalMeshComponent(DebugSkelMeshComponent);
+    ViewTarget->SetRootComponent(DebugSkelMeshComponent);
+    DebugSkelMeshComponent->SetEnableCull(false);
+
+    StaticMeshComponent = ViewTarget->AddComponent<UStaticMeshComponent>();
+    StaticMeshComponent->SetStaticMesh(nullptr);
+    StaticMeshComponent->SetVisibility(false);
+    StaticMeshComponent->SetEnableCull(false);
 
     ADirectionalLightActor* DirectionalLight = InWorld->SpawnActor<ADirectionalLightActor>();
     if (DirectionalLight)
@@ -197,6 +206,8 @@ void FEditorViewer::Shutdown()
     // 우리는 단순히 map만 비우고 포인터를 null로 잡는다.
     SocketPreviewMeshes.clear();
     ViewTarget = nullptr;
+    DebugSkelMeshComponent = nullptr;
+    StaticMeshComponent = nullptr;
     Client.SetBonePickHandler(nullptr);
 
     Viewport.SetClient(nullptr);
@@ -550,6 +561,7 @@ bool FEditorViewer::ApplyAnimationSequenceToComponent(bool bAutoPlay)
     }
 
     SkelComp->SetSkeletalMesh(PreviewMesh);
+    SkelComp->SetEnableCull(false);
     SkelComp->PlayAnimation(AnimSequence, true);
     SkelComp->SetAnimationPosition(0.0f);
     if (!bAutoPlay)
@@ -686,10 +698,17 @@ void FEditorViewer::ChangeTarget(const FString& InFileName)
     PreviewMeshPath.clear();
 
     USkeletalMeshComponent* SkelComp = ViewTarget ? ViewTarget->GetSkeletalMeshComponent() : nullptr;
-    if (!SkelComp)
+    if (!SkelComp || !StaticMeshComponent)
     {
         return;
     }
+
+    SkelComp->Stop();
+    SkelComp->SetAnimation(nullptr);
+    SkelComp->SetSkeletalMesh(nullptr);
+    SkelComp->SetVisibility(false);
+    StaticMeshComponent->SetStaticMesh(nullptr);
+    StaticMeshComponent->SetVisibility(false);
 
     if (FAssetPathPolicy::IsAnimSequenceAssetPath(NormalizedFileName))
     {
@@ -702,15 +721,26 @@ void FEditorViewer::ChangeTarget(const FString& InFileName)
             {
                 PreviewMeshPath = AnimSequence->GetSourceFilePath();
             }
+            SkelComp->SetVisibility(true);
             ApplyAnimationSequenceToComponent(true);
         }
         return;
     }
 
+    if (FAssetPathPolicy::IsStaticMeshAssetPath(NormalizedFileName))
+    {
+        if (UStaticMesh* StaticMesh = FResourceManager::Get().LoadStaticMesh(NormalizedFileName))
+        {
+            AssetType = EEditorViewerAssetType::StaticMesh;
+            StaticMeshComponent->SetStaticMesh(StaticMesh);
+            StaticMeshComponent->SetVisibility(true);
+            return;
+        }
+    }
+
     AssetType = EEditorViewerAssetType::SkeletalMesh;
-    SkelComp->Stop();
-    SkelComp->SetAnimation(nullptr);
 
     USkeletalMesh* SkelMesh = FResourceManager::Get().LoadSkeletalMesh(NormalizedFileName);
     SkelComp->SetSkeletalMesh(SkelMesh);
+    SkelComp->SetVisibility(SkelMesh != nullptr);
 }

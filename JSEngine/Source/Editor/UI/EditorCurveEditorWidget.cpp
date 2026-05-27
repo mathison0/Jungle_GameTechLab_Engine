@@ -43,6 +43,7 @@ void FEditorCurveEditorWidget::OpenCurveAsset(const FString& CurvePath)
     CurrentPath = CurvePath;
     SourceLabel.clear();
     SourceSequenceComponent = nullptr;
+    EmbeddedCurveSaveCallback = nullptr;
     CurrentCurve = FResourceManager::Get().LoadCurve(CurrentPath);
     SelectedKeyIndex = CurrentCurve && !CurrentCurve->GetCurve().Keys.empty() ? 0 : -1;
     ActiveKeyDragIndex = -1;
@@ -69,11 +70,39 @@ void FEditorCurveEditorWidget::OpenCurveFromActorSequence(
     CurrentPath = SourcePath;
     CurrentCurve = Curve;
     SourceSequenceComponent = SequenceComp;
+    EmbeddedCurveSaveCallback = nullptr;
     SourceLabel = SourceLabelText;
     const int32 KeyCount = CurrentCurve ? static_cast<int32>(CurrentCurve->GetCurve().Keys.size()) : 0;
     SelectedKeyIndex = KeyCount > 0
         ? std::clamp(InitialSelectedKeyIndex >= 0 ? InitialSelectedKeyIndex : 0, 0, KeyCount - 1)
         : -1;
+    ActiveKeyDragIndex = -1;
+    ActiveTangentKeyIndex = -1;
+    ActiveTangentHandle = -1;
+    CancelCurveEditUndo();
+    ContextKeyIndex = -1;
+    ContextTime = 0.0f;
+    ContextValue = 0.0f;
+    bCurveViewInitialized = false;
+    bDirty = false;
+    bVisible = CurrentCurve != nullptr;
+    bOpenedFromActorSequence = true;
+}
+
+void FEditorCurveEditorWidget::OpenCurveFromAnimSequence(
+    UCurveFloatAsset* Curve,
+    const FString& SourceLabelText,
+    const FString& SourcePath,
+    std::function<bool(UCurveFloatAsset*)> InSaveCallback)
+{
+    StopReferencePreview();
+    CurrentPath = SourcePath;
+    CurrentCurve = Curve;
+    SourceSequenceComponent = nullptr;
+    EmbeddedCurveSaveCallback = std::move(InSaveCallback);
+    SourceLabel = SourceLabelText;
+    const int32 KeyCount = CurrentCurve ? static_cast<int32>(CurrentCurve->GetCurve().Keys.size()) : 0;
+    SelectedKeyIndex = KeyCount > 0 ? 0 : -1;
     ActiveKeyDragIndex = -1;
     ActiveTangentKeyIndex = -1;
     ActiveTangentHandle = -1;
@@ -94,6 +123,7 @@ void FEditorCurveEditorWidget::Clear()
     SourceLabel.clear();
     CurrentCurve = nullptr;
     SourceSequenceComponent = nullptr;
+    EmbeddedCurveSaveCallback = nullptr;
     SelectedKeyIndex = -1;
     ActiveKeyDragIndex = -1;
     ActiveTangentKeyIndex = -1;
@@ -1093,6 +1123,10 @@ void FEditorCurveEditorWidget::RecordCurveEditUndo(
 void FEditorCurveEditorWidget::MarkDirty()
 {
     bDirty = true;
+    if (EmbeddedCurveSaveCallback && EmbeddedCurveSaveCallback(CurrentCurve))
+    {
+        bDirty = false;
+    }
     if (bOpenedFromActorSequence && SourceSequenceComponent)
     {
         SourceSequenceComponent->MarkSequenceDirty();

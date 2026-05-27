@@ -30,12 +30,18 @@ void FSkinningStats::AddCPUSkinnedVertexBufferUpload(double Ms, uint64 Bytes)
 
 void FSkinningStats::AddVisibleSkinnedMesh(
 	uint64 VertexCount,
+	uint64 IndexCount,
+	uint32 SectionCount,
+	uint32 DrawCommandCount,
 	uint32 BoneCount,
 	double AvgInfluence,
 	bool bUsesGPUSkinning)
 {
 	Current.VisibleSkinnedMeshCount++;
 	Current.VisibleSkinnedVertexCount += VertexCount;
+	Current.VisibleSkinnedIndexCount += IndexCount;
+	Current.VisibleSkinnedSectionCount += SectionCount;
+	Current.VisibleSkinnedDrawCommandCount += DrawCommandCount;
 	Current.TotalBoneCount += BoneCount;
 	Current.TotalBoneInfluenceCount += AvgInfluence * static_cast<double>(VertexCount);
 	Current.BoneInfluenceVertexCount += VertexCount;
