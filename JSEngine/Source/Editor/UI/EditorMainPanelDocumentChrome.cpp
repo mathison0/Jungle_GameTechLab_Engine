@@ -252,11 +252,18 @@ void FEditorMainPanel::RenderViewerToolbarControls(FEditorViewer* Viewer)
 	}
 	if (ImGui::BeginPopup("##ViewerShowFlagsPopupShared"))
 	{
-		ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
-		ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
-		ImGui::BeginDisabled(!ShowFlags.bShowBones);
-		ImGui::MenuItem("Selected Bone Only", nullptr, &ShowFlags.bShowOnlySelectedBone);
-		ImGui::EndDisabled();
+		if (Viewer->IsStaticMeshViewer())
+		{
+			ImGui::MenuItem("Static Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+		}
+		else
+		{
+			ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+			ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
+			ImGui::BeginDisabled(!ShowFlags.bShowBones);
+			ImGui::MenuItem("Selected Bone Only", nullptr, &ShowFlags.bShowOnlySelectedBone);
+			ImGui::EndDisabled();
+		}
 		ImGui::Separator();
 		ImGui::MenuItem("Bounding Box", nullptr, &ShowFlags.bShowBoundingBox);
 		ImGui::MenuItem("Outline", nullptr, &ShowFlags.bShowOutline);
@@ -327,10 +334,11 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 		FEditorViewerWindowWidget* ViewerWidget = FindViewerWidgetForTab(ActiveTab->Id);
 		FEditorViewer* Viewer = ViewerWidget ? ViewerWidget->GetViewer() : nullptr;
 		const bool bIsAnimSequence = ActiveTab->Id.Kind == EEditorTabKind::AnimSequenceViewer;
+		const bool bIsStaticMesh = ActiveTab->Id.Kind == EEditorTabKind::StaticMeshViewer;
 		const bool bCanSaveAsset = ViewerWidget && (bIsAnimSequence ? ViewerWidget->CanSaveAnimSequence() : ViewerWidget->CanSaveMesh());
 		const char* SaveLabel = bIsAnimSequence
 			? "Save Animation"
-			: (ViewerWidget && ViewerWidget->IsMeshDirty() ? "Save Mesh *" : "Save Mesh");
+			: (bIsStaticMesh ? "Save Mesh" : (ViewerWidget && ViewerWidget->IsMeshDirty() ? "Save Mesh *" : "Save Mesh"));
 		auto SaveActiveViewerAsset = [&]()
 		{
 			if (!ViewerWidget)
@@ -415,11 +423,18 @@ bool FEditorMainPanel::RenderActiveDocumentMainMenu()
 					Client.ApplyCameraMode();
 				}
 				ImGui::Separator();
-				ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
-				ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
-				ImGui::BeginDisabled(!ShowFlags.bShowBones);
-				ImGui::MenuItem("Selected Bone Only", nullptr, &ShowFlags.bShowOnlySelectedBone);
-				ImGui::EndDisabled();
+				if (Viewer->IsStaticMeshViewer())
+				{
+					ImGui::MenuItem("Static Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+				}
+				else
+				{
+					ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+					ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
+					ImGui::BeginDisabled(!ShowFlags.bShowBones);
+					ImGui::MenuItem("Selected Bone Only", nullptr, &ShowFlags.bShowOnlySelectedBone);
+					ImGui::EndDisabled();
+				}
 				ImGui::MenuItem("Bounding Box", nullptr, &ShowFlags.bShowBoundingBox);
 				ImGui::MenuItem("Outline", nullptr, &ShowFlags.bShowOutline);
 			}

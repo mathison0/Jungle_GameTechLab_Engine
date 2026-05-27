@@ -1032,8 +1032,8 @@ void FEditorParticleSystemWidget::ChangeEmitterRenderMode(int32 EmitterIndex, EP
 		{
 			if (!MeshRenderer->GetMesh())
 			{
-				MeshRenderer->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
-				const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.mat";
+				MeshRenderer->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.uasset"));
+				const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.uasset";
 				FResourceManager::Get().DeserializeMaterial(DemoMatPath);
 				UMaterial* DemoMaterial = FResourceManager::Get().GetMaterial(DemoMatPath);
 				if (!DemoMaterial)

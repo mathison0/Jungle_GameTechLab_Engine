@@ -94,6 +94,10 @@ public:
 	virtual EMaterialShaderType GetShaderType() const = 0;
 	virtual const FString& GetPixelShaderPath() const = 0;
 	virtual const FString& GetPixelShaderEntryPoint() const = 0;
+	virtual ESamplerType GetSamplerType() const = 0;
+	virtual EDepthStencilType GetDepthStencilType() const = 0;
+	virtual EBlendType GetBlendType() const = 0;
+	virtual ERasterizerType GetRasterizerType() const = 0;
 	
 	// RenderPass는 Program을 먼저 바인딩하고, Material은 상태와 파라미터만 바인딩합니다.
 	virtual void BindRenderStates(ID3D11DeviceContext* Context) const = 0;
@@ -205,6 +209,10 @@ public:
 	EMaterialShaderType GetShaderType() const override { return ShaderType; }
 	const FString& GetPixelShaderPath() const override { return GetMaterialPixelShaderPath(ShaderType); }
 	const FString& GetPixelShaderEntryPoint() const override { return GetMaterialPixelShaderEntryPoint(ShaderType); }
+	ESamplerType GetSamplerType() const override { return SamplerType; }
+	EDepthStencilType GetDepthStencilType() const override { return DepthStencilType; }
+	EBlendType GetBlendType() const override { return BlendType; }
+	ERasterizerType GetRasterizerType() const override { return RasterizerType; }
 
 	void SetShaderType(EMaterialShaderType InShaderType)
 	{
@@ -350,6 +358,22 @@ public:
 	const FString& GetPixelShaderEntryPoint() const override
 	{
 		return GetMaterialPixelShaderEntryPoint(GetShaderType());
+	}
+	ESamplerType GetSamplerType() const override
+	{
+		return Parent ? Parent->GetSamplerType() : ESamplerType::EST_Linear;
+	}
+	EDepthStencilType GetDepthStencilType() const override
+	{
+		return Parent ? Parent->GetDepthStencilType() : EDepthStencilType::Default;
+	}
+	EBlendType GetBlendType() const override
+	{
+		return Parent ? Parent->GetBlendType() : EBlendType::Opaque;
+	}
+	ERasterizerType GetRasterizerType() const override
+	{
+		return Parent ? Parent->GetRasterizerType() : ERasterizerType::SolidBackCull;
 	}
 
 	static UMaterialInstance* Create(UMaterial* Material)

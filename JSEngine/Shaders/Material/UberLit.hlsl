@@ -9,7 +9,7 @@ cbuffer StaticMeshBuffer : register(b2)
     float padding0;
     
     float3 DiffuseColor; // Kd
-    float padding1;
+    float Opacity;
     
     float3 SpecularColor; // Ks
     float Shininess; // Ns    
@@ -428,7 +428,8 @@ PSOutput mainPS(PSInput input) : SV_TARGET
     return output;
 #endif
     
-    float4 FinalColor = float4(DiffuseColor * DiffuseTex.rgb, 1);
+    const float MaterialAlpha = saturate(Opacity * DiffuseTex.a);
+    float4 FinalColor = float4(DiffuseColor * DiffuseTex.rgb, MaterialAlpha);
     float3 SpecularFactor = SpecularColor;
 #if HAS_SPECULAR_MAP
     SpecularFactor *= SpecularMap.Sample(SampleState, input.UV).rgb;
@@ -442,7 +443,7 @@ PSOutput mainPS(PSInput input) : SV_TARGET
     if (any(abs(Emissive) > 0.0001f))
     {
         // Emissive surface: keep base color visible, add glow color, and mark normal.a = 2.
-        output.Color = float4(FinalColor.rgb + Emissive * DiffuseTex.rgb, 1.f);
+        output.Color = float4(FinalColor.rgb + Emissive * DiffuseTex.rgb, FinalColor.a);
         output.Normal = float4(input.WorldNormal * 0.5f + 0.5f, 2.f);
         output.WorldPos = float4(input.WorldPos, 1.f);
         return output;
@@ -567,7 +568,7 @@ PSOutput mainPS(PSInput input) : SV_TARGET
         DecalColor = (decalTex.a > 0.001) ? decalTex * Decals[i].DecalColorTint : DecalColor;
     }
     FinalColor = (DecalColor.a > 0.001) ? DecalColor : FinalColor;
-    output.Color = float4(FinalColor.xyz * accumulatedLight, 1.0f);
+    output.Color = float4(FinalColor.xyz * accumulatedLight, FinalColor.a);
     output.WorldPos = float4(input.WorldPos, 1.f);
     output.Normal = float4(N * 0.5f + 0.5f, 1.f);
 

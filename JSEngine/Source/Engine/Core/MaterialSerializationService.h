@@ -30,6 +30,10 @@ struct FMaterialAssetPayload
 	FString Name;
 	FString ImportedName;
 	EMaterialShaderType ShaderType = EMaterialShaderType::SurfaceLit;
+	ESamplerType SamplerType = ESamplerType::EST_Linear;
+	EDepthStencilType DepthStencilType = EDepthStencilType::Default;
+	EBlendType BlendType = EBlendType::Opaque;
+	ERasterizerType RasterizerType = ERasterizerType::SolidBackCull;
 	TArray<FSerializedMaterialParam> Params;
 
 	void Serialize(FArchive& Ar, int32 PayloadVersion);

@@ -12,7 +12,6 @@
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Component/StaticMeshComponent.h"
 #include "Engine/Core/EditorResourcePaths.h"
-#include "Asset/AssetQueryService.h"
 #include "Core/Paths.h"
 #include "Core/Reflection/ReflectionRegistry.h"
 #include "Core/ResourceManager.h"
@@ -658,7 +657,7 @@ FString FEditorViewerWindowWidget::GetWindowName() const
 
 bool FEditorViewerWindowWidget::CanSaveMesh() const
 {
-	if (!Viewer || Viewer->IsAnimationSequenceViewer())
+	if (!Viewer || !Viewer->IsSkeletalMeshViewer())
 	{
 		return false;
 	}
@@ -670,12 +669,12 @@ bool FEditorViewerWindowWidget::CanSaveMesh() const
 
 bool FEditorViewerWindowWidget::IsMeshDirty() const
 {
-	return Viewer && !Viewer->IsAnimationSequenceViewer() && HasMeshAssetEdits();
+	return Viewer && Viewer->IsSkeletalMeshViewer() && HasMeshAssetEdits();
 }
 
 void FEditorViewerWindowWidget::RequestSaveMesh()
 {
-	if (!Viewer || Viewer->IsAnimationSequenceViewer())
+	if (!Viewer || !Viewer->IsSkeletalMeshViewer())
 	{
 		return;
 	}
@@ -951,14 +950,25 @@ void FEditorViewerWindowWidget::RenderDetachedDocumentChrome(bool& bDockRequeste
             if (ImGui::BeginMenu("Tools"))
             {
                 FSkeletalViewerShowFlags& ShowFlags = Viewer->GetClient().GetShowFlags();
-                ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
+                if (Viewer->IsStaticMeshViewer())
+                {
+                    ImGui::MenuItem("Static Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+                }
+                else
+                {
+                    ImGui::MenuItem("Skeletal Mesh", nullptr, &ShowFlags.bShowSkeletalMesh);
+                    ImGui::MenuItem("Bones", nullptr, &ShowFlags.bShowBones);
+                }
                 ImGui::MenuItem("Bounding Box", nullptr, &ShowFlags.bShowBoundingBox);
                 ImGui::MenuItem("Outline", nullptr, &ShowFlags.bShowOutline);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help"))
             {
-                ImGui::TextDisabled(Viewer->IsAnimationSequenceViewer() ? "Animation Sequence Viewer" : "Skeletal Mesh Previewer");
+                ImGui::TextDisabled(
+                    Viewer->IsAnimationSequenceViewer()
+                        ? "Animation Sequence Viewer"
+                        : (Viewer->IsStaticMeshViewer() ? "Static Mesh Previewer" : "Skeletal Mesh Previewer"));
                 ImGui::EndMenu();
             }
         },
@@ -1121,7 +1131,29 @@ void FEditorViewerWindowWidget::RenderContent(float DeltaTime)
         RenderAnimSequenceTimeline(Sequence);
         ImGui::EndChild();
 
-        return;
+		return;
+	}
+
+	if (Viewer->IsStaticMeshViewer())
+	{
+		CachedMesh = nullptr;
+		CachedSkComp = nullptr;
+		Children.clear();
+		BoneToSocketIndices.clear();
+
+		RenderStaticMeshLeftPanel(Viewer->GetStaticMeshComponent());
+
+		ImGui::SameLine();
+		ImGui::Button("##static_left_splitter", ImVec2(2.0f, -1.0f));
+		if (ImGui::IsItemActive())
+		{
+			LeftPanelWidth += ImGui::GetIO().MouseDelta.x;
+			LeftPanelWidth = std::clamp(LeftPanelWidth, 160.0f, FullSize.x * 0.45f);
+		}
+		ImGui::SameLine();
+
+		RenderViewportPanel(SceneViewport, SRV, ImVec2(std::max(180.0f, FullSize.x - LeftPanelWidth - ImGui::GetStyle().ItemSpacing.x), 0.0f));
+		return;
 	}
 
 	if (CachedAnimSequence)
@@ -1199,6 +1231,38 @@ void FEditorViewerWindowWidget::RenderViewportPanel(FSceneViewport& SceneViewpor
 	DrawList->AddCallback(SetOpaqueBlendStateCallback, DC);
 	DrawList->AddImage((ImTextureID)SRV, Min, Max);
 	DrawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+
+	ImGui::EndChild();
+}
+
+void FEditorViewerWindowWidget::RenderStaticMeshLeftPanel(UStaticMeshComponent* StaticMeshComp)
+{
+	ImGui::BeginChild("StaticMeshPanel", ImVec2(LeftPanelWidth, 0), true);
+	ImGui::TextUnformatted("Static Mesh");
+	ImGui::Separator();
+
+	UStaticMesh* StaticMesh = StaticMeshComp ? StaticMeshComp->GetStaticMesh() : nullptr;
+	if (!StaticMesh || !StaticMesh->HasValidMeshData())
+	{
+		ImGui::TextDisabled("No static mesh");
+		ImGui::EndChild();
+		return;
+	}
+
+	ImGui::TextDisabled("Asset");
+	ImGui::TextWrapped("%s", StaticMesh->GetAssetPathFileName().c_str());
+	ImGui::Separator();
+
+	ImGui::Text("Vertices: %d", static_cast<int32>(StaticMesh->GetVertices().size()));
+	ImGui::Text("Indices: %d", static_cast<int32>(StaticMesh->GetIndices().size()));
+	ImGui::Text("Sections: %d", static_cast<int32>(StaticMesh->GetSections().size()));
+	ImGui::Text("Materials: %d", StaticMeshComp ? StaticMeshComp->GetNumMaterials() : 0);
+
+	const FAABB& Bounds = StaticMesh->GetLocalBounds();
+	ImGui::Separator();
+	ImGui::TextUnformatted("Local Bounds");
+	ImGui::Text("Min: %.2f, %.2f, %.2f", Bounds.Min.X, Bounds.Min.Y, Bounds.Min.Z);
+	ImGui::Text("Max: %.2f, %.2f, %.2f", Bounds.Max.X, Bounds.Max.Y, Bounds.Max.Z);
 
 	ImGui::EndChild();
 }
@@ -1963,7 +2027,10 @@ void FEditorViewerWindowWidget::RenderAnimSequenceList(UAnimSequence* Sequence)
 	ImGui::TextDisabled("Other Anim Sequences");
 
 	const FString CurrentPath = Viewer ? FPaths::Normalize(Viewer->GetFileName()) : FString();
-	const TArray<FString> Paths = FAssetQueryService::GetAnimSequencePaths();
+	static const TArray<FString> EmptyAnimPaths;
+	const TArray<FString>& Paths = EditorEngine
+		? EditorEngine->GetAssetService().GetAnimSequenceAssetPaths()
+		: EmptyAnimPaths;
 	int32 VisibleCount = 0;
 	const float ListHeight = std::max(72.0f, ImGui::GetContentRegionAvail().y);
 	if (ImGui::BeginChild("OtherAnimSequenceList", ImVec2(0.0f, ListHeight), false))
@@ -3221,7 +3288,10 @@ void FEditorViewerWindowWidget::DrawPreviewPickerModal()
     ImGui::InputText("Filter", Filter, sizeof(Filter));
     ImGui::Separator();
 
-    const TArray<FString> Paths = FAssetQueryService::GetStaticMeshPaths();
+    static const TArray<FString> EmptyStaticMeshPaths;
+    const TArray<FString>& Paths = EditorEngine
+        ? EditorEngine->GetAssetService().GetStaticMeshAssetPaths()
+        : EmptyStaticMeshPaths;
 
     ImGui::BeginChild("PickList", ImVec2(420.0f, 300.0f), true);
     for (const FString& Path : Paths)

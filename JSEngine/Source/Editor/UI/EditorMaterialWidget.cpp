@@ -16,10 +16,6 @@
 
 #include "ImGui/imgui.h"
 
-#include <cmath>
-#include <cstring>
-#include <utility>
-
 namespace
 {
 ImU32 ToColorU32(const FVector& Color, float Alpha = 1.0f)
@@ -140,6 +136,180 @@ void SyncEditableMaterialData(UMaterialInterface* Material, const FString& Param
 	}
 }
 
+const char* ToSamplerTypeLabel(ESamplerType Type)
+{
+	switch (Type)
+	{
+	case ESamplerType::EST_Point: return "Point";
+	case ESamplerType::EST_Linear: return "Linear";
+	case ESamplerType::EST_Anisotropic: return "Anisotropic";
+	case ESamplerType::EST_Shadow: return "Shadow";
+	default: return "Unknown";
+	}
+}
+
+const char* ToDepthStencilTypeLabel(EDepthStencilType Type)
+{
+	switch (Type)
+	{
+	case EDepthStencilType::Default: return "Default";
+	case EDepthStencilType::DepthReadOnly: return "Depth Read Only";
+	case EDepthStencilType::StencilWrite: return "Stencil Write";
+	case EDepthStencilType::StencilWriteOnlyEqual: return "Stencil Write Only Equal";
+	case EDepthStencilType::GizmoInside: return "Gizmo Inside";
+	case EDepthStencilType::GizmoOutside: return "Gizmo Outside";
+	case EDepthStencilType::AlwaysOnTop: return "Always On Top";
+	default: return "Unknown";
+	}
+}
+
+const char* ToBlendTypeLabel(EBlendType Type)
+{
+	switch (Type)
+	{
+	case EBlendType::Opaque: return "Opaque";
+	case EBlendType::AlphaBlend: return "Alpha Blend";
+	case EBlendType::NoColor: return "No Color";
+	default: return "Unknown";
+	}
+}
+
+const char* ToRasterizerTypeLabel(ERasterizerType Type)
+{
+	switch (Type)
+	{
+	case ERasterizerType::SolidBackCull: return "Solid Back Cull";
+	case ERasterizerType::SolidFrontCull: return "Solid Front Cull";
+	case ERasterizerType::SolidNoCull: return "Solid No Cull";
+	case ERasterizerType::WireFrame: return "Wire Frame";
+	case ERasterizerType::DepthView: return "Depth View";
+	default: return "Unknown";
+	}
+}
+
+bool DrawSamplerTypeCombo(const char* Label, ESamplerType& Type)
+{
+	const ESamplerType Values[] = {
+		ESamplerType::EST_Point,
+		ESamplerType::EST_Linear,
+		ESamplerType::EST_Anisotropic,
+		ESamplerType::EST_Shadow
+	};
+
+	bool bChanged = false;
+	if (ImGui::BeginCombo(Label, ToSamplerTypeLabel(Type)))
+	{
+		for (ESamplerType Value : Values)
+		{
+			const bool bSelected = Type == Value;
+			if (ImGui::Selectable(ToSamplerTypeLabel(Value), bSelected))
+			{
+				Type = Value;
+				bChanged = true;
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	return bChanged;
+}
+
+bool DrawDepthStencilTypeCombo(const char* Label, EDepthStencilType& Type)
+{
+	const EDepthStencilType Values[] = {
+		EDepthStencilType::Default,
+		EDepthStencilType::DepthReadOnly,
+		EDepthStencilType::StencilWrite,
+		EDepthStencilType::StencilWriteOnlyEqual,
+		EDepthStencilType::GizmoInside,
+		EDepthStencilType::GizmoOutside,
+		EDepthStencilType::AlwaysOnTop
+	};
+
+	bool bChanged = false;
+	if (ImGui::BeginCombo(Label, ToDepthStencilTypeLabel(Type)))
+	{
+		for (EDepthStencilType Value : Values)
+		{
+			const bool bSelected = Type == Value;
+			if (ImGui::Selectable(ToDepthStencilTypeLabel(Value), bSelected))
+			{
+				Type = Value;
+				bChanged = true;
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	return bChanged;
+}
+
+bool DrawBlendTypeCombo(const char* Label, EBlendType& Type)
+{
+	const EBlendType Values[] = {
+		EBlendType::Opaque,
+		EBlendType::AlphaBlend,
+		EBlendType::NoColor
+	};
+
+	bool bChanged = false;
+	if (ImGui::BeginCombo(Label, ToBlendTypeLabel(Type)))
+	{
+		for (EBlendType Value : Values)
+		{
+			const bool bSelected = Type == Value;
+			if (ImGui::Selectable(ToBlendTypeLabel(Value), bSelected))
+			{
+				Type = Value;
+				bChanged = true;
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	return bChanged;
+}
+
+bool DrawRasterizerTypeCombo(const char* Label, ERasterizerType& Type)
+{
+	const ERasterizerType Values[] = {
+		ERasterizerType::SolidBackCull,
+		ERasterizerType::SolidFrontCull,
+		ERasterizerType::SolidNoCull,
+		ERasterizerType::WireFrame,
+		ERasterizerType::DepthView
+	};
+
+	bool bChanged = false;
+	if (ImGui::BeginCombo(Label, ToRasterizerTypeLabel(Type)))
+	{
+		for (ERasterizerType Value : Values)
+		{
+			const bool bSelected = Type == Value;
+			if (ImGui::Selectable(ToRasterizerTypeLabel(Value), bSelected))
+			{
+				Type = Value;
+				bChanged = true;
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	return bChanged;
+}
+
 const char* GetMaterialParamTypeName(EMaterialParamType Type)
 {
 	switch (Type)
@@ -232,196 +402,6 @@ TArray<FString> BuildMaterialTexturePickerPaths(UEditorEngine* EditorEngine)
 	return Paths;
 }
 
-bool AreMaterialParamValuesEqual(const FMaterialParamValue& A, const FMaterialParamValue& B)
-{
-	if (A.Type != B.Type || A.Value.index() != B.Value.index())
-	{
-		return false;
-	}
-
-	switch (A.Type)
-	{
-	case EMaterialParamType::Bool:
-		return std::get<bool>(A.Value) == std::get<bool>(B.Value);
-	case EMaterialParamType::Int:
-		return std::get<int32>(A.Value) == std::get<int32>(B.Value);
-	case EMaterialParamType::UInt:
-		return std::get<uint32>(A.Value) == std::get<uint32>(B.Value);
-	case EMaterialParamType::Float:
-		return std::fabs(std::get<float>(A.Value) - std::get<float>(B.Value)) <= 1.e-6f;
-	case EMaterialParamType::Vector2:
-	{
-		const FVector2& AV = std::get<FVector2>(A.Value);
-		const FVector2& BV = std::get<FVector2>(B.Value);
-		return std::fabs(AV.X - BV.X) <= 1.e-6f && std::fabs(AV.Y - BV.Y) <= 1.e-6f;
-	}
-	case EMaterialParamType::Vector3:
-		return std::get<FVector>(A.Value).Equals(std::get<FVector>(B.Value), 1.e-6f);
-	case EMaterialParamType::Vector4:
-	{
-		const FVector4& AV = std::get<FVector4>(A.Value);
-		const FVector4& BV = std::get<FVector4>(B.Value);
-		return std::fabs(AV.X - BV.X) <= 1.e-6f
-			&& std::fabs(AV.Y - BV.Y) <= 1.e-6f
-			&& std::fabs(AV.Z - BV.Z) <= 1.e-6f
-			&& std::fabs(AV.W - BV.W) <= 1.e-6f;
-	}
-	case EMaterialParamType::Matrix4:
-		return std::memcmp(&std::get<FMatrix>(A.Value), &std::get<FMatrix>(B.Value), sizeof(FMatrix)) == 0;
-	case EMaterialParamType::Texture:
-		return std::get<UTexture*>(A.Value) == std::get<UTexture*>(B.Value);
-	default:
-		return false;
-	}
-}
-
-bool AreMaterialParamMapsEqual(
-	const TMap<FString, FMaterialParamValue>& A,
-	const TMap<FString, FMaterialParamValue>& B)
-{
-	if (A.size() != B.size())
-	{
-		return false;
-	}
-
-	for (const auto& [Name, Value] : A)
-	{
-		auto It = B.find(Name);
-		if (It == B.end() || !AreMaterialParamValuesEqual(Value, It->second))
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
-size_t EstimateMaterialParamMapMemory(const TMap<FString, FMaterialParamValue>& Params)
-{
-	size_t Total = Params.size() * (sizeof(FString) + sizeof(FMaterialParamValue) + sizeof(void*) * 3);
-	for (const auto& [Name, Value] : Params)
-	{
-		Total += Name.capacity() + sizeof(Value);
-	}
-	return Total;
-}
-
-struct FMaterialInstanceParamState
-{
-	FString MaterialPath;
-	UMaterialInstance* Instance = nullptr;
-	TMap<FString, FMaterialParamValue> Overrides;
-
-	bool IsValid() const { return Instance != nullptr || !MaterialPath.empty(); }
-};
-
-FMaterialInstanceParamState CaptureMaterialInstanceParamState(UMaterialInstance* Instance)
-{
-	FMaterialInstanceParamState State;
-	if (!Instance)
-	{
-		return State;
-	}
-
-	State.MaterialPath = FPaths::Normalize(Instance->GetFilePath());
-	State.Instance = Instance;
-	State.Overrides = Instance->OverridedParams;
-	return State;
-}
-
-UMaterialInstance* ResolveMaterialInstance(const FMaterialInstanceParamState& State)
-{
-	if (State.Instance)
-	{
-		return State.Instance;
-	}
-	return State.MaterialPath.empty() ? nullptr : FResourceManager::Get().GetMaterialInstance(State.MaterialPath);
-}
-
-class FSetMaterialInstanceParamsCommand final : public IEditorUndoCommand
-{
-public:
-	FSetMaterialInstanceParamsCommand(
-		FMaterialInstanceParamState InBeforeState,
-		FMaterialInstanceParamState InAfterState,
-		FString InLabel)
-		: BeforeState(std::move(InBeforeState))
-		, AfterState(std::move(InAfterState))
-		, Label(std::move(InLabel))
-	{
-	}
-
-	FString GetLabel() const override { return Label.empty() ? "Edit Material Instance" : Label; }
-
-	bool Undo(FEditorUndoContext& Context) override
-	{
-		return ApplyState(Context, BeforeState);
-	}
-
-	bool Redo(FEditorUndoContext& Context) override
-	{
-		return ApplyState(Context, AfterState);
-	}
-
-	size_t GetMemoryUsage() const override
-	{
-		return sizeof(*this)
-			+ BeforeState.MaterialPath.capacity()
-			+ AfterState.MaterialPath.capacity()
-			+ Label.capacity()
-			+ EstimateMaterialParamMapMemory(BeforeState.Overrides)
-			+ EstimateMaterialParamMapMemory(AfterState.Overrides);
-	}
-
-private:
-	bool ApplyState(FEditorUndoContext& Context, const FMaterialInstanceParamState& State)
-	{
-		UMaterialInstance* Instance = ResolveMaterialInstance(State);
-		if (!Instance)
-		{
-			return false;
-		}
-
-		Instance->OverridedParams = State.Overrides;
-		const FString SavePath = State.MaterialPath.empty() ? Instance->GetFilePath() : State.MaterialPath;
-		if (Context.Editor)
-		{
-			Context.Editor->GetAssetService().SaveMaterialInstance(SavePath, Instance);
-		}
-		else
-		{
-			FResourceManager::Get().SerializeMaterialInstance(SavePath, Instance);
-		}
-		return true;
-	}
-
-	FMaterialInstanceParamState BeforeState;
-	FMaterialInstanceParamState AfterState;
-	FString Label;
-};
-
-bool RecordMaterialInstanceParamChange(
-	FEditorUndoSystem& UndoSystem,
-	const FMaterialInstanceParamState& BeforeState,
-	const FMaterialInstanceParamState& AfterState,
-	const FString& Label)
-{
-	if (!BeforeState.IsValid()
-		|| !AfterState.IsValid()
-		|| FPaths::Normalize(BeforeState.MaterialPath) != FPaths::Normalize(AfterState.MaterialPath)
-		|| AreMaterialParamMapsEqual(BeforeState.Overrides, AfterState.Overrides))
-	{
-		return false;
-	}
-
-	auto Command = std::make_unique<FSetMaterialInstanceParamsCommand>(
-		BeforeState,
-		AfterState,
-		Label.empty() ? "Edit Material Instance" : Label);
-	UndoSystem.BeginTransaction(Command->GetLabel());
-	UndoSystem.AddCommand(std::move(Command));
-	return UndoSystem.EndTransaction();
-}
 }
 
 #define MAT_SEPARATOR() ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -432,11 +412,6 @@ void FEditorMaterialWidget::ResetSelection()
 	EditingSlotOwner = nullptr;
 	EditingSlotIndex = -1;
 	AssetEditingMaterialPtr = nullptr;
-	bMaterialParamEditCaptured = false;
-	MaterialParamEditInstance = nullptr;
-	MaterialParamEditPath.clear();
-	MaterialParamEditName.clear();
-	MaterialParamEditBeforeOverrides.clear();
 }
 
 void FEditorMaterialWidget::OpenMaterialAsset(UMaterialInterface* Material)
@@ -650,6 +625,36 @@ bool FEditorMaterialWidget::CreateInstanceForCurrentMaterial()
 	return true;
 }
 
+void FEditorMaterialWidget::CollectMaterialParamsFromStorage(UMaterialInterface* Material, TMap<FString, FMaterialParamValue>& OutParams)
+{
+	if (!Material)
+	{
+		return;
+	}
+
+	if (UMaterialInstance* Instance = Cast<UMaterialInstance>(Material))
+	{
+		if (Instance->Parent)
+		{
+			CollectMaterialParamsFromStorage(Instance->Parent, OutParams);
+		}
+
+		for (const auto& [ParamName, ParamValue] : Instance->OverridedParams)
+		{
+			OutParams[ParamName] = ParamValue;
+		}
+		return;
+	}
+
+	if (UMaterial* BaseMaterial = Cast<UMaterial>(Material))
+	{
+		for (const auto& [ParamName, ParamValue] : BaseMaterial->MaterialParams)
+		{
+			OutParams[ParamName] = ParamValue;
+		}
+	}
+}
+
 UStaticMesh* FEditorMaterialWidget::ResolvePreviewMesh(UPrimitiveComponent* PrimitiveComp)
 {
 	if (PreviewMesh == nullptr)
@@ -787,7 +792,7 @@ void FEditorMaterialWidget::RenderMaterialPreview(UPrimitiveComponent* Primitive
 void FEditorMaterialWidget::RenderMaterialProperties()
 {
 	TMap<FString, FMaterialParamValue> DisplayParams;
-	SelectedMaterialPtr->GatherAllParams(DisplayParams);
+	CollectMaterialParamsFromStorage(SelectedMaterialPtr, DisplayParams);
 
 	auto SaveSelectedMaterial = [this]()
 	{
@@ -805,6 +810,35 @@ void FEditorMaterialWidget::RenderMaterialProperties()
 		}
 		return false;
 	};
+
+	ImGui::TextDisabled("Render Policy");
+	if (UMaterial* Material = Cast<UMaterial>(SelectedMaterialPtr))
+	{
+		bool bRenderPolicyChanged = false;
+		bRenderPolicyChanged = DrawBlendTypeCombo("Blend Mode", Material->BlendType) || bRenderPolicyChanged;
+		bRenderPolicyChanged = DrawDepthStencilTypeCombo("Depth State", Material->DepthStencilType) || bRenderPolicyChanged;
+		bRenderPolicyChanged = DrawRasterizerTypeCombo("Rasterizer", Material->RasterizerType) || bRenderPolicyChanged;
+		bRenderPolicyChanged = DrawSamplerTypeCombo("Sampler", Material->SamplerType) || bRenderPolicyChanged;
+
+		if (bRenderPolicyChanged)
+		{
+			SaveSelectedMaterial();
+			if (EditorEngine)
+			{
+				EditorEngine->GetMainPanel().RefreshContentBrowser();
+				EditorEngine->GetNotificationService().Info("Material render policy saved");
+			}
+		}
+	}
+	else if (const UMaterial* BaseMaterial = ResolveBaseMaterial(SelectedMaterialPtr))
+	{
+		ImGui::Text("Blend Mode: %s", ToBlendTypeLabel(BaseMaterial->GetBlendType()));
+		ImGui::Text("Depth State: %s", ToDepthStencilTypeLabel(BaseMaterial->GetDepthStencilType()));
+		ImGui::Text("Rasterizer: %s", ToRasterizerTypeLabel(BaseMaterial->GetRasterizerType()));
+		ImGui::Text("Sampler: %s", ToSamplerTypeLabel(BaseMaterial->GetSamplerType()));
+		ImGui::TextDisabled("Material instances inherit render policy from their parent material.");
+	}
+	MAT_SEPARATOR();
 
 	for (auto& [ParamName, ParamValue] : DisplayParams)
 	{

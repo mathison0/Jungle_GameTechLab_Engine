@@ -75,6 +75,7 @@ private:
 	void RenderBoneDetails(USkeletalMeshComponent* SkelComp);
     void RenderContent(float DeltaTime);
     void RenderViewportPanel(FSceneViewport& SceneViewport, ID3D11ShaderResourceView* SRV, const ImVec2& Size);
+    void RenderStaticMeshLeftPanel(class UStaticMeshComponent* StaticMeshComp);
     void RenderSkeletonLeftPanel(USkeletalMeshComponent* SkelMeshComp, FSkeletalMesh* MeshData);
     void RenderBoneRightPanel(USkeletalMeshComponent* SkelMeshComp);
     void RenderAnimSequenceLeftPanel(UAnimSequence* Sequence, USkeletalMeshComponent* SkelMeshComp);

@@ -170,6 +170,11 @@ void FEditorViewer::Init(
     ViewTarget->SetRootComponent(DebugSkelMeshComponent);
     DebugSkelMeshComponent->SetEnableCull(false);
 
+    StaticMeshComponent = ViewTarget->AddComponent<UStaticMeshComponent>();
+    StaticMeshComponent->SetStaticMesh(nullptr);
+    StaticMeshComponent->SetVisibility(false);
+    StaticMeshComponent->SetEnableCull(false);
+
     ADirectionalLightActor* DirectionalLight = InWorld->SpawnActor<ADirectionalLightActor>();
     if (DirectionalLight)
     {
@@ -202,6 +207,7 @@ void FEditorViewer::Shutdown()
     SocketPreviewMeshes.clear();
     ViewTarget = nullptr;
     DebugSkelMeshComponent = nullptr;
+    StaticMeshComponent = nullptr;
     Client.SetBonePickHandler(nullptr);
 
     Viewport.SetClient(nullptr);
@@ -692,10 +698,17 @@ void FEditorViewer::ChangeTarget(const FString& InFileName)
     PreviewMeshPath.clear();
 
     USkeletalMeshComponent* SkelComp = ViewTarget ? ViewTarget->GetSkeletalMeshComponent() : nullptr;
-    if (!SkelComp)
+    if (!SkelComp || !StaticMeshComponent)
     {
         return;
     }
+
+    SkelComp->Stop();
+    SkelComp->SetAnimation(nullptr);
+    SkelComp->SetSkeletalMesh(nullptr);
+    SkelComp->SetVisibility(false);
+    StaticMeshComponent->SetStaticMesh(nullptr);
+    StaticMeshComponent->SetVisibility(false);
 
     if (FAssetPathPolicy::IsAnimSequenceAssetPath(NormalizedFileName))
     {
@@ -708,15 +721,26 @@ void FEditorViewer::ChangeTarget(const FString& InFileName)
             {
                 PreviewMeshPath = AnimSequence->GetSourceFilePath();
             }
+            SkelComp->SetVisibility(true);
             ApplyAnimationSequenceToComponent(true);
         }
         return;
     }
 
+    if (FAssetPathPolicy::IsStaticMeshAssetPath(NormalizedFileName))
+    {
+        if (UStaticMesh* StaticMesh = FResourceManager::Get().LoadStaticMesh(NormalizedFileName))
+        {
+            AssetType = EEditorViewerAssetType::StaticMesh;
+            StaticMeshComponent->SetStaticMesh(StaticMesh);
+            StaticMeshComponent->SetVisibility(true);
+            return;
+        }
+    }
+
     AssetType = EEditorViewerAssetType::SkeletalMesh;
-    SkelComp->Stop();
-    SkelComp->SetAnimation(nullptr);
 
     USkeletalMesh* SkelMesh = FResourceManager::Get().LoadSkeletalMesh(NormalizedFileName);
     SkelComp->SetSkeletalMesh(SkelMesh);
+    SkelComp->SetVisibility(SkelMesh != nullptr);
 }

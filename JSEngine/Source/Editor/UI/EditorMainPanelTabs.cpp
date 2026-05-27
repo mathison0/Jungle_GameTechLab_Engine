@@ -451,7 +451,8 @@ bool FEditorMainPanel::RequestCloseEditorTab(const FEditorTabId& TabId)
 		return false;
 	}
 
-	if ((TabId.Kind == EEditorTabKind::SkeletalMeshViewer ||
+	if ((TabId.Kind == EEditorTabKind::StaticMeshViewer ||
+		TabId.Kind == EEditorTabKind::SkeletalMeshViewer ||
 		TabId.Kind == EEditorTabKind::AnimSequenceViewer) && EditorEngine)
 	{
 		for (auto& Viewer : EditorEngine->GetViewers())

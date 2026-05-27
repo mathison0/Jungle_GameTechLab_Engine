@@ -97,6 +97,13 @@ namespace
         return Material ? Material : FResourceManager::Get().GetMaterial("DefaultWhite");
     }
 
+    ERenderPass SelectBaseMeshPass(const UMaterialInterface* Material)
+    {
+        return Material && Material->GetBlendType() == EBlendType::AlphaBlend
+            ? ERenderPass::Translucent
+            : ERenderPass::Opaque;
+    }
+
     UTexture* ResolveParticleTexture(const UParticleModuleRequired* RequiredModule)
     {
         if (!RequiredModule)
@@ -343,7 +350,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
             Cmd.WorldAABB = StaticMeshComp->GetWorldAABB();
 
-            RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+            RenderBus.AddCommand(SelectBaseMeshPass(Material), Cmd);
         }
 
         return true;
@@ -446,7 +453,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
             Cmd.Material = ResolveDrawMaterial(Cast<UMaterialInterface>(SkeletalMeshComp->GetMaterial(0)));
             Cmd.WorldAABB = SkeletalMeshComp->GetWorldAABB();
 
-            RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+            RenderBus.AddCommand(SelectBaseMeshPass(Cmd.Material), Cmd);
             return true;
         }
 
@@ -485,7 +492,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
             Cmd.WorldAABB = SkeletalMeshComp->GetWorldAABB();
 
-            RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+            RenderBus.AddCommand(SelectBaseMeshPass(Material), Cmd);
         }
 
         return true;
@@ -637,7 +644,7 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
 
             Cmd.WorldAABB = ProcMeshComp->GetWorldAABB();
 
-            RenderBus.AddCommand(ERenderPass::Opaque, Cmd);
+            RenderBus.AddCommand(SelectBaseMeshPass(Material), Cmd);
         }
         return true;
     }

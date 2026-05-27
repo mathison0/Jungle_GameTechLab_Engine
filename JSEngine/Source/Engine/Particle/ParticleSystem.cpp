@@ -905,13 +905,13 @@ UParticleSystem* UParticleSystem::CreateDefaultMeshSystem()
     LODLevel->RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
 
     // Mesh renderer properties에 디폴트 mesh + override material.
-    // apple_mid.obj 사용 이유:
+    // apple_mid.uasset 사용 이유:
     //   1. Dice.obj는 vt 4개 (cube corner)만 보유 — 6면 모두 동일 UV (0~1) → 텍스처 전체가 각 면에 반복 표시,
     //      UV mapping이 작동하는지 시각 검증 불가능.
-    //   2. apple_mid.obj has expanded UVs; the imported material carries the BaseColor texture.
+    //   2. apple_mid.uasset has expanded UVs; the imported material carries the BaseColor texture.
     // GetOrCreateMaterial은 빈 material 생성만 함 — DiffuseMap 등 params 채우려면 DeserializeMaterial 필수.
     UParticleMeshRendererProperties* MeshRenderer = UObjectManager::Get().CreateObject<UParticleMeshRendererProperties>();
-    MeshRenderer->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.obj"));
+    MeshRenderer->SetMesh(FResourceManager::Get().LoadStaticMesh("Asset/Mesh/apple_mid/apple_mid.uasset"));
     const FString DemoMatPath = "Asset/Material/Auto/apple_mid_Mat_0.uasset";
     FResourceManager::Get().DeserializeMaterial(DemoMatPath);
     UMaterial* DemoMaterial = FResourceManager::Get().GetMaterial(DemoMatPath);
