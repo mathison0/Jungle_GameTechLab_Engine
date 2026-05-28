@@ -226,7 +226,6 @@ void AGameModeBase::ApplyPlayerStartTransform(APawn* Pawn, const FVector& SpawnL
 		else
 		{
 			Pawn->SetActorRotation(FVector(0.0f, 0.0f, SpawnRotation.Z));
-			Camera->SetRelativeRotation(FVector(0.0f, SpawnRotation.Y, 0.0f));
 		}
 		return;
 	}

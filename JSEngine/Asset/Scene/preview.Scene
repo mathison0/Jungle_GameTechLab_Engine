@@ -363,7 +363,7 @@
       "Components" : [{
           "AttachSocketName" : "Name_None",
           "ClassName" : "UStaticMeshComponent",
-          "Materials" : ["Asset/Material/New Material.uasset"],
+          "Materials" : [""],
           "ObjectName" : "UStaticMeshComponent_1",
           "PersistentGuid" : "E7C8E2DE-FE5F4079-8968010F-E78BE027",
           "RelativeLocation" : {
@@ -410,9 +410,9 @@
       "Components" : [{
           "AttachSocketName" : "Name_None",
           "ClassName" : "UStaticMeshComponent",
-          "Materials" : ["Asset/Material/New Material.uasset"],
+          "Materials" : [""],
           "ObjectName" : "UStaticMeshComponent_1",
-          "PersistentGuid" : "E7C8E2DE-FE5F4079-8968010F-E78BE027",
+          "PersistentGuid" : "3619DFD2-3E7840F5-BA16B479-E48E492E",
           "RelativeLocation" : {
             "X" : -10.795992,
             "Y" : 12.021747,
@@ -457,9 +457,9 @@
       "Components" : [{
           "AttachSocketName" : "Name_None",
           "ClassName" : "UStaticMeshComponent",
-          "Materials" : ["Asset/Material/New Material.uasset"],
+          "Materials" : [""],
           "ObjectName" : "UStaticMeshComponent_1",
-          "PersistentGuid" : "E7C8E2DE-FE5F4079-8968010F-E78BE027",
+          "PersistentGuid" : "00B99F8A-E0D24D9C-8514069E-EC583DC6",
           "RelativeLocation" : {
             "X" : -12.527844,
             "Y" : -2.588607,
@@ -504,9 +504,9 @@
       "Components" : [{
           "AttachSocketName" : "Name_None",
           "ClassName" : "UStaticMeshComponent",
-          "Materials" : ["Asset/Material/New Material.uasset"],
+          "Materials" : [""],
           "ObjectName" : "UStaticMeshComponent_1",
-          "PersistentGuid" : "E7C8E2DE-FE5F4079-8968010F-E78BE027",
+          "PersistentGuid" : "055537DB-8F324981-AAFC9886-F87C6DEE",
           "RelativeLocation" : {
             "X" : -11.025214,
             "Y" : -17.473642,
@@ -861,16 +861,108 @@
       "Tags" : [],
       "UUID" : 1287,
       "Visible" : true
+    }, {
+      "Active" : true,
+      "ClassName" : "AStaticMeshActor",
+      "Components" : [{
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UStaticMeshComponent",
+          "Materials" : ["Asset/Material/Auto/cube_Mat_0_Inst_3.uasset"],
+          "ObjectName" : "UStaticMeshComponent_1",
+          "PersistentGuid" : "A7A4415D-D8524627-A9A2B43E-EDF2F724",
+          "RelativeLocation" : {
+            "X" : -10.066559,
+            "Y" : 20.056814,
+            "Z" : -1.232414
+          },
+          "RelativeRotation" : {
+            "X" : -0.000000,
+            "Y" : 0.000000,
+            "Z" : -0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 15.000000,
+            "Y" : 15.000000,
+            "Z" : 0.500000
+          },
+          "ScrollU" : 0.000000,
+          "ScrollV" : 0.000000,
+          "StaticMeshAssetPath" : "Asset/Mesh/Dice/Dice.obj",
+          "Tags" : [],
+          "Type" : "UStaticMeshComponent",
+          "UUID" : 1387,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bEnableCull" : true,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }, {
+          "AttachSocketName" : "Name_None",
+          "ClassName" : "UBoxComponent",
+          "Extent" : {
+            "X" : 1.000000,
+            "Y" : 1.000000,
+            "Z" : 1.000000
+          },
+          "ObjectName" : "UBoxComponent_1",
+          "ParentUUID" : 1387,
+          "PersistentGuid" : "67418017-05D34027-B9A0213F-23F8BB2C",
+          "RelativeLocation" : {
+            "X" : 0.000000,
+            "Y" : 0.000000,
+            "Z" : 0.000000
+          },
+          "RelativeRotation" : {
+            "X" : 0.000000,
+            "Y" : 0.000000,
+            "Z" : 0.000000
+          },
+          "RelativeScale3D" : {
+            "X" : 1.000000,
+            "Y" : 1.000000,
+            "Z" : 1.000000
+          },
+          "ShapeColor" : {
+            "A" : 1.000000,
+            "B" : 0.000000,
+            "G" : 0.000000,
+            "R" : 0.000000
+          },
+          "Tags" : [],
+          "Type" : "UBoxComponent",
+          "UUID" : 1394,
+          "bAutoActivate" : true,
+          "bCanEverTick" : true,
+          "bCastDecal" : true,
+          "bDrawOnlyIfSelected" : false,
+          "bEnableCull" : true,
+          "bGenerateOverlapEvents" : false,
+          "bIsActive" : true,
+          "bIsEditorOnly" : false,
+          "bIsVisible" : true,
+          "bTransient" : false
+        }],
+      "EditorOnly" : false,
+      "Name" : "AStaticMeshActor_20",
+      "PersistentGuid" : "7305AF3D-485248A1-9A6BB8A9-D246DC08",
+      "RootComponent" : 1387,
+      "Tags" : [],
+      "UUID" : 1386,
+      "Visible" : true
     }],
   "ClassName" : "UWorld",
   "Name" : "preview",
-  "NextUUID" : 1289,
+  "NextUUID" : 1395,
   "PerspectiveCamera" : {
     "FOV" : 60.000000,
     "FarClip" : 2000.000000,
-    "Location" : [8.745440, -9.416442, 1.908541],
+    "Location" : [19.581385, 34.543362, 8.025581],
     "NearClip" : 0.100000,
-    "Rotation" : [-0.136780, -5.448090, 178.559708]
+    "Rotation" : [1.400977, -2.009827, -145.110291]
   },
   "Version" : 6,
   "WorldSettings" : {

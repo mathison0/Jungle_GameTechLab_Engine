@@ -231,9 +231,46 @@ void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, FBasePartic
 {
     const float DistributionTime = ParticleModuleUtils::GetEmitterSpawnDistributionTime(Owner, SpawnTime);
     const FVector LocalOffset = EvaluateVectorDistribution("StartLocationMin", StartLocationMin, StartLocationMax, DistributionTime);
-    const FVector BaseLocation = Owner ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
+    const FVector BaseLocation = (Owner && !Owner->UsesLocalSpace()) ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
     Particle.Location = BaseLocation + LocalOffset;
     Particle.OldLocation = Particle.Location;
+}
+
+namespace ParticleSizeModuleUtils
+{
+    float SmoothStep01(float Value)
+    {
+        const float T = std::clamp(Value, 0.0f, 1.0f);
+        return T * T * (3.0f - 2.0f * T);
+    }
+
+    float Lerp(float A, float B, float T)
+    {
+        return A + (B - A) * T;
+    }
+
+    bool IsStretchTarget(const FVector& TargetSize)
+    {
+        const float CrossSection = std::max(TargetSize.Y, TargetSize.Z);
+        return TargetSize.X > 1.0f && TargetSize.X > CrossSection * 8.0f;
+    }
+
+    FVector EvaluateFallbackStretchSize(const FVector& TargetSize, float RelativeTime, float EmitterTime, uint32 ParticleId)
+    {
+        if (!IsStretchTarget(TargetSize))
+        {
+            return TargetSize;
+        }
+
+        const float CrossSection = std::max(std::max(TargetSize.Y, TargetSize.Z), 0.01f);
+        const float StretchAlpha = SmoothStep01((RelativeTime - 0.30f) / 0.48f);
+        const float Pulse = 1.0f + std::sin(EmitterTime * 5.0f + static_cast<float>(ParticleId) * 0.37f) * 0.045f * StretchAlpha;
+
+        return FVector(
+            Lerp(CrossSection, TargetSize.X, StretchAlpha) * Pulse,
+            Lerp(CrossSection, TargetSize.Y, StretchAlpha),
+            Lerp(CrossSection, TargetSize.Z, StretchAlpha));
+    }
 }
 
 UParticleModuleLocationShape::UParticleModuleLocationShape()
@@ -255,7 +292,7 @@ void UParticleModuleLocationShape::Spawn(FParticleEmitterInstance* Owner, FBaseP
         EvaluatedConeHeight,
         EvaluatedConeHalfAngle,
         bSurfaceOnly);
-    const FVector BaseLocation = Owner ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
+    const FVector BaseLocation = (Owner && !Owner->UsesLocalSpace()) ? Owner->GetComponentWorldLocation() : FVector::ZeroVector;
     Particle.Location = BaseLocation + LocalOffset;
     Particle.OldLocation = Particle.Location;
 }
@@ -324,7 +361,7 @@ void UParticleModuleBurst::Update(FParticleEmitterInstance* Owner, float DeltaTi
         BurstCount * TriggerCount,
         0.0f,
         0.0f,
-        Owner->GetComponentWorldLocation(),
+        Owner->UsesLocalSpace() ? FVector::ZeroVector : Owner->GetComponentWorldLocation(),
         FVector::ZeroVector);
 }
 
@@ -571,7 +608,14 @@ void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& 
 {
     (void)Owner;
     (void)SpawnTime;
-    Particle.Size = EvaluateVectorDistribution("SizeOverLife", SizeOverLife, SizeOverLife, 0.0f);
+    if (FindDistributionRuntimeData("SizeOverLife"))
+    {
+        Particle.Size = EvaluateVectorDistribution("SizeOverLife", SizeOverLife, SizeOverLife, 0.0f);
+        return;
+    }
+
+    const float EmitterTime = Owner ? Owner->GetEmitterTime() : 0.0f;
+    Particle.Size = ParticleSizeModuleUtils::EvaluateFallbackStretchSize(SizeOverLife, 0.0f, EmitterTime, Particle.ParticleId);
 }
 
 // Function : Interpolate active particle size over normalized lifetime
@@ -590,7 +634,19 @@ void UParticleModuleSize::Update(FParticleEmitterInstance* Owner, float DeltaTim
     BEGIN_UPDATE_LOOP
     {
         DECLARE_PARTICLE_PTR;
-        Particle.Size = EvaluateVectorDistribution("SizeOverLife", SizeOverLife, SizeOverLife, std::clamp(Particle.RelativeTime, 0.0f, 1.0f));
+        const float RelativeTime = std::clamp(Particle.RelativeTime, 0.0f, 1.0f);
+        if (FindDistributionRuntimeData("SizeOverLife"))
+        {
+            Particle.Size = EvaluateVectorDistribution("SizeOverLife", SizeOverLife, SizeOverLife, RelativeTime);
+        }
+        else
+        {
+            Particle.Size = ParticleSizeModuleUtils::EvaluateFallbackStretchSize(
+                SizeOverLife,
+                RelativeTime,
+                Owner->GetEmitterTime(),
+                Particle.ParticleId);
+        }
         END_UPDATE_LOOP;
     }
 }
@@ -609,6 +665,11 @@ void UParticleModuleCollision::Update(FParticleEmitterInstance* Owner, float Del
 {
     (void)DeltaTime;
     if (!bCollisionEnabled || !Owner)
+    {
+        return;
+    }
+
+    if (Owner->UsesLocalSpace())
     {
         return;
     }

@@ -190,7 +190,7 @@ void FDynamicSpriteEmitterData::BuildFromInstance(const FParticleEmitterInstance
             continue;
         }
         FSpriteParticleInstanceData Data;
-        Data.Position   = Particle->Location;
+        Data.Position   = Instance.ResolveParticleLocationForRender(Particle->Location);
         Data.Size       = FVector2(Particle->Size.X, Particle->Size.Y);
         Data.Color      = Particle->Color;
         Data.Rotation   = Particle->Rotation;
@@ -288,6 +288,7 @@ void FDynamicMeshEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
 
     // Component cached camera (Cycle 14 결정 18 β).
     const UParticleSystemComponent* OwningComp = Instance.GetOwningComponent();
+    const FVector ComponentScale = OwningComp ? OwningComp->GetWorldScale() : FVector::OneVector;
     const bool bCameraValid = OwningComp && OwningComp->IsCachedCameraValid();
     const FVector CameraPos = bCameraValid ? OwningComp->GetCachedCameraPosition() : FVector::ZeroVector;
     const FVector WorldUp(0.0f, 0.0f, 1.0f);
@@ -322,15 +323,16 @@ void FDynamicMeshEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
         const FVector PayloadRotation = Payload ? Payload->Rotation : FVector::ZeroVector;
         const FMatrix SpinMatrix = MakeShaderEulerRotation(PayloadRotation);
 
+        const FVector ParticleWorldLocation = Instance.ResolveParticleLocationForRender(Particle->Location);
         FMatrix AlignmentMatrix = FMatrix::Identity;
         switch (EffectiveAlignment)
         {
         case EMeshAlignment::PSA_Velocity:
-            AlignmentMatrix = MakeAlignmentMatrix(Particle->Velocity, WorldUp);
+            AlignmentMatrix = MakeAlignmentMatrix(Instance.ResolveParticleVectorForRender(Particle->Velocity), WorldUp);
             break;
         case EMeshAlignment::PSA_FacingCameraPosition:
         {
-            const FVector ToCamera = CameraPos - Particle->Location;
+            const FVector ToCamera = CameraPos - ParticleWorldLocation;
             AlignmentMatrix = MakeAlignmentMatrix(ToCamera, WorldUp);
             break;
         }
@@ -341,9 +343,9 @@ void FDynamicMeshEmitterData::BuildFromInstance(const FParticleEmitterInstance& 
         const FMatrix Final = SpinMatrix * AlignmentMatrix;
 
         FMeshParticleInstanceData Data;
-        Data.InstancePosition = Particle->Location;
+        Data.InstancePosition = ParticleWorldLocation;
         Data.InstanceRotation = ExtractShaderEuler(Final);
-        Data.InstanceScale    = Particle->Size;
+        Data.InstanceScale    = Particle->Size * ComponentScale;
         Data.InstanceColor    = Particle->Color;
         MeshInstanceDataBuffer.push_back(Data);
     }

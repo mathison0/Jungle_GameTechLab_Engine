@@ -127,8 +127,9 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bAllowSpawning)
         if (SpawnModule)
             SpawnCount = SpawnModule->ComputeSpawnCount(this, DeltaTime);
     }
+	const FVector SpawnOrigin = UsesLocalSpace() ? FVector::ZeroVector : Component->GetWorldLocation();
 	SpawnParticles(SpawnCount, 0.0f, SpawnCount > 0 ? DeltaTime / static_cast<float>(SpawnCount) : 0.0f,
-	               Component->GetWorldLocation(), FVector::ZeroVector);
+	               SpawnOrigin, FVector::ZeroVector);
 
 	for (int32 ParticleIndex = 0; ParticleIndex < ActiveParticles; )
 	{
@@ -276,6 +277,34 @@ FVector FParticleEmitterInstance::GetComponentWorldLocation() const
         return Component->GetWorldLocation();
 
     return FVector::ZeroVector;
+}
+
+bool FParticleEmitterInstance::UsesLocalSpace() const
+{
+    const UParticleModuleRequired* RequiredModule = CurrentCompiledLOD
+        ? CurrentCompiledLOD->RequiredModule
+        : (CurrentLODLevel ? CurrentLODLevel->GetRequiredModule() : nullptr);
+    return RequiredModule && RequiredModule->UseLocalSpace();
+}
+
+FVector FParticleEmitterInstance::ResolveParticleLocationForRender(const FVector& ParticleLocation) const
+{
+    if (!UsesLocalSpace() || !Component)
+    {
+        return ParticleLocation;
+    }
+
+    return Component->GetWorldTransform().TransformPosition(ParticleLocation);
+}
+
+FVector FParticleEmitterInstance::ResolveParticleVectorForRender(const FVector& ParticleVector) const
+{
+    if (!UsesLocalSpace() || !Component)
+    {
+        return ParticleVector;
+    }
+
+    return Component->GetWorldTransform().TransformVectorNoScale(ParticleVector);
 }
 
 void FParticleEmitterInstance::QueueCollisionEvent(const FParticleEventCollideData& EventData)

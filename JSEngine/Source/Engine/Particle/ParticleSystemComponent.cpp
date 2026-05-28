@@ -265,7 +265,7 @@ void UParticleSystemComponent::UpdateWorldAABB() const
 			const FBaseParticle* Particle = Instance->GetParticle(ParticleIndex);
 			if (Particle)
 			{
-				WorldAABB.Expand(Particle->Location);
+				WorldAABB.Expand(Instance->ResolveParticleLocationForRender(Particle->Location));
 			}
 		}
 	}

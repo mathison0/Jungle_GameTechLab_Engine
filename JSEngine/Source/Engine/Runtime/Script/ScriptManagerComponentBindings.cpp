@@ -5,6 +5,7 @@
 #include "Animation/AnimationStateMachine.h"
 #include "Asset/CurveFloatAsset.h"
 #include "Asset/StaticMesh.h"
+#include "Core/ResourceManager.h"
 #include "Camera/CameraShakeBase.h"
 #include "Camera/ShakePattern/SequenceCameraShakePattern.h"
 #include "Camera/ShakePattern/SinusoidalCameraShakePattern.h"
@@ -39,6 +40,8 @@
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "GameFramework/AActor.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemComponent.h"
 #include "Runtime/Script/ScriptComponent.h"
 #include "Runtime/Script/ScriptUtils.h"
 
@@ -391,6 +394,10 @@ void FScriptManager::BindSkinnedMeshTypes()
     LUA_BEGIN_TYPE_NO_CTOR_BASE(GLuaState, USkinnedMeshComponent, "SkinnedMeshComponent",
         UMeshComponent, UPrimitiveComponent, USceneComponent, UActorComponent, UObject)
     LUA_METHOD(GetSkeletalMesh, GetSkeletalMesh);
+    LUA_SET(SetSkeletalMeshAssetPath, [](USkinnedMeshComponent& Self, const FString& Path)
+    {
+        Self.SetSkeletalMesh(Path.empty() ? nullptr : FResourceManager::Get().LoadSkeletalMesh(Path));
+    });
     LUA_METHOD(HasValidMesh, HasValidMesh);
     LUA_END_TYPE();
 }
@@ -409,6 +416,14 @@ void FScriptManager::BindSkeletalMeshTypes()
     LUA_METHOD(Play, Play);
     LUA_METHOD(Stop, Stop);
     LUA_METHOD(Pause, Pause);
+    LUA_SET(PlayAnimationAssetPath, [](USkeletalMeshComponent& Self, const FString& Path, sol::optional<bool> bLooping)
+    {
+        Self.PlayAnimation(Path.empty() ? nullptr : FResourceManager::Get().LoadAnimSequence(Path), bLooping.value_or(true));
+    });
+    LUA_SET(SetAnimationAssetPath, [](USkeletalMeshComponent& Self, const FString& Path)
+    {
+        Self.SetAnimation(Path.empty() ? nullptr : FResourceManager::Get().LoadAnimSequence(Path));
+    });
     LUA_METHOD(SetPlayRate, SetPlayRate);
     LUA_METHOD(SetAnimationPosition, SetAnimationPosition);
     LUA_METHOD(IsPlaying, IsPlaying);
@@ -524,6 +539,19 @@ void FScriptManager::BindPrimitiveTypes()
 								USceneComponent,
 								UActorComponent,
 								UObject)
+	LUA_END_TYPE();
+
+	LUA_BEGIN_TYPE_NO_CTOR_BASE(GLuaState, UParticleSystemComponent, "ParticleSystemComponent",
+								UPrimitiveComponent,
+								USceneComponent,
+								UActorComponent,
+								UObject)
+	LUA_SET(SetTemplateAssetPath, [](UParticleSystemComponent& Self, const FString& Path)
+			{ Self.SetTemplate(Path.empty() ? nullptr : FResourceManager::Get().LoadParticleSystem(Path)); });
+	LUA_METHOD(RefreshTemplateRuntime, RefreshTemplateRuntime);
+	LUA_METHOD(GetTemplateAssetPath, GetTemplateAssetPath);
+	LUA_METHOD(GetTotalActiveParticleCount, GetTotalActiveParticleCount);
+	LUA_RW_PROPERTY(OpacityMultiplier, GetOpacityMultiplier, SetOpacityMultiplier);
 	LUA_END_TYPE();
 
 	LUA_BEGIN_TYPE_NO_CTOR_BASE(GLuaState, UHeightFogComponent, "HeightFogComponent",
