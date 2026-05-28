@@ -144,6 +144,13 @@ def build(configs: Iterable[str]) -> None:
         run([msbuild, SOLUTION_PATH, f"/p:Configuration={config}", "/p:Platform=x64", "/m", "/v:minimal"])
 
 
+def build_release_package() -> None:
+    release_batch = REPO_ROOT / "ReleaseBuild.bat"
+    if not release_batch.exists():
+        raise RuntimeError(f"{release_batch} not found.")
+    run(["cmd.exe", "/d", "/c", release_batch, "--no-pause"], cwd=REPO_ROOT)
+
+
 def get_pdb_sources(srctool: Path, pdb: Path) -> list[Path]:
     text_args = [str(srctool), "-r", str(pdb)]
     print("+ " + " ".join(quote_arg(arg) for arg in text_args))
@@ -729,7 +736,7 @@ pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 12px; 
         <button id="restartBtn" onclick="act('restart')">Restart Server</button>
         <button id="stopBtn" class="danger" onclick="act('stop-server')">Stop Server</button>
         <button id="publishBtn" onclick="act('publish')">Publish Symbols</button>
-        <button id="allBtn" onclick="act('all')">Build + Publish</button>
+        <button id="allBtn" onclick="act('all')">ReleaseBuild + Publish</button>
         <button onclick="copyTeamUrl()">Copy URL</button>
         <button onclick="refresh(true)">Refresh</button>
       </div>
@@ -795,11 +802,11 @@ async function refresh() {
   document.getElementById('store').textContent = latest.symbolStore;
   const job = latest.job;
   const busy = !!job.running;
-  document.getElementById('startBtn').disabled = latest.running || busy;
-  document.getElementById('restartBtn').disabled = !latest.hasListener || busy;
-  document.getElementById('stopBtn').disabled = !latest.hasListener || busy;
-  document.getElementById('publishBtn').disabled = busy;
-  document.getElementById('allBtn').disabled = busy;
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('restartBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('publishBtn').disabled = false;
+  document.getElementById('allBtn').disabled = false;
   document.getElementById('jobState').textContent = job.running ? `${job.name} running` : (job.exitCode === null ? 'idle' : `${job.name} exited ${job.exitCode}`);
   document.getElementById('jobStarted').textContent = job.startedAt || '-';
   document.getElementById('jobLog').textContent = (job.lines || []).join('\n');
@@ -967,7 +974,10 @@ def main() -> int:
     configs = target_configs(args.include_debug)
 
     try:
-        if args.command in ("build", "all") and not args.skip_build:
+        if args.command == "all" and not args.skip_build:
+            build_release_package()
+            configs = ["Release"]
+        elif args.command == "build" and not args.skip_build:
             build(configs)
         if args.command in ("publish", "all"):
             publish(symbol_store, configs, skip_source_index=args.skip_source_index, port=args.port)

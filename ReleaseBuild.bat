@@ -1,5 +1,7 @@
 @echo off
 setlocal
+set NO_PAUSE=0
+if /i "%~1"=="--no-pause" set NO_PAUSE=1
 
 set SOLUTION_DIR=%~dp0
 set PROJECT_DIR=%SOLUTION_DIR%JSEngine
@@ -11,7 +13,7 @@ set VSWHERE="%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 for /f "usebackq delims=" %%i in (`%VSWHERE% -latest -property installationPath`) do set VS_PATH=%%i
 if not defined VS_PATH (
     echo Visual Studio를 찾을 수 없습니다.
-    pause
+    if not "%NO_PAUSE%"=="1" pause
     exit /b 1
 )
 call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -no_logo
@@ -26,7 +28,7 @@ echo [1/3] Building Release x64...
 msbuild "%SOLUTION_DIR%JSEngine.sln" /p:Configuration=Release /p:Platform=x64 /m /v:minimal
 if %ERRORLEVEL% neq 0 (
     echo BUILD FAILED
-    pause
+    if not "%NO_PAUSE%"=="1" pause
     exit /b 1
 )
 
@@ -42,6 +44,7 @@ echo [3/3] Copying files...
 
 :: 실행 파일 (루트에)
 copy "%BUILD_OUTPUT%\JSEngine.exe" "%RELEASE_DIR%\" >nul
+if exist "%BUILD_OUTPUT%\*.dll" copy "%BUILD_OUTPUT%\*.dll" "%RELEASE_DIR%\" >nul
 
 :: ImGui 레이아웃 (도킹 설정 포함)
 if exist "%PROJECT_DIR%\imgui.ini" copy "%PROJECT_DIR%\imgui.ini" "%RELEASE_DIR%\" >nul
@@ -56,6 +59,11 @@ if exist "%PROJECT_DIR%\DerivedData\ShaderCache" (
 
 :: Asset (Scene 등)
 xcopy "%PROJECT_DIR%\Asset" "%RELEASE_DIR%\Asset\" /e /i /q >nul
+
+:: Editor resources (icons, tool images, branding)
+if exist "%PROJECT_DIR%\Resources" (
+    xcopy "%PROJECT_DIR%\Resources" "%RELEASE_DIR%\Resources\" /e /i /q >nul
+)
 
 :: Settings
 xcopy "%PROJECT_DIR%\Settings" "%RELEASE_DIR%\Settings\" /e /i /q >nul
@@ -75,7 +83,8 @@ echo    JSEngine.exe
 echo    imgui.ini
 echo    Shaders/
 echo    Asset/Scene/
+echo    Resources/Editor/
 echo    Settings/
 echo    Saves/
 echo.
-pause
+if not "%NO_PAUSE%"=="1" pause
