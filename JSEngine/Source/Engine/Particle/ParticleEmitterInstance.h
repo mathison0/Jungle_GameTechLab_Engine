@@ -70,6 +70,9 @@ public:
     UParticleSystemComponent* GetComponent() const { return Component; }
     FVector GetComponentWorldLocation() const;
     UParticleSystemComponent* GetOwningComponent() const { return Component; }
+    bool UsesLocalSpace() const;
+    FVector ResolveParticleLocationForRender(const FVector& ParticleLocation) const;
+    FVector ResolveParticleVectorForRender(const FVector& ParticleVector) const;
 
     void QueueCollisionEvent(const FParticleEventCollideData& EventData);
     void DispatchQueuedParticleEvents();

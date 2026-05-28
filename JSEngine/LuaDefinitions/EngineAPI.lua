@@ -130,6 +130,18 @@ local PrimitiveComponent = {}
 function PrimitiveComponent:is_overlapping_actor(actor) end
 function PrimitiveComponent:clear_overlaps() end
 
+---@class ParticleSystemComponent: PrimitiveComponent
+---@field OpacityMultiplier number
+local ParticleSystemComponent = {}
+---@param path string
+function ParticleSystemComponent:SetTemplateAssetPath(path) end
+---@param restart boolean
+function ParticleSystemComponent:RefreshTemplateRuntime(restart) end
+---@return string
+function ParticleSystemComponent:GetTemplateAssetPath() end
+---@return integer
+function ParticleSystemComponent:GetTotalActiveParticleCount() end
+
 ---@class MovementComponent: ActorComponent
 ---@field Velocity Vector
 ---@field PendingInputVector Vector
@@ -276,6 +288,13 @@ function SkeletalMeshComponent:SetAnimStateByName(stateName, blendTime) end
 function SkeletalMeshComponent:Play(looping) end
 function SkeletalMeshComponent:Stop() end
 function SkeletalMeshComponent:Pause() end
+---@param path string
+function SkeletalMeshComponent:SetSkeletalMeshAssetPath(path) end
+---@param path string
+---@param looping? boolean
+function SkeletalMeshComponent:PlayAnimationAssetPath(path, looping) end
+---@param path string
+function SkeletalMeshComponent:SetAnimationAssetPath(path) end
 ---@param playRate number
 function SkeletalMeshComponent:SetPlayRate(playRate) end
 ---@param time number
@@ -363,12 +382,23 @@ function Actor:Duplicate() end
 function Actor:GetSkeletalMeshComponent() end
 ---@return SkeletalMeshComponent|nil
 function Actor:Get_Skeletal_Mesh_Component() end
+---@return ParticleSystemComponent|nil
+function Actor:GetParticleSystemComponent() end
+---@param path string
+function Actor:SetParticleTemplateAssetPath(path) end
 ---@return Vector
 function Actor:GetActorForwardVector() end
 ---@return Vector
 function Actor:GetActorRightVector() end
 ---@return Vector
 function Actor:GetActorUpVector() end
+
+---@class ParticleSystemActor: Actor
+local ParticleSystemActor = {}
+---@param path string
+function ParticleSystemActor:SetTemplateAssetPath(path) end
+---@return ParticleSystemComponent|nil
+function ParticleSystemActor:GetParticleSystemComponent() end
 ---@param delta Vector
 function Actor:Add_Actor_World_Offset(delta) end
 function Actor:MarkPendingKill() end

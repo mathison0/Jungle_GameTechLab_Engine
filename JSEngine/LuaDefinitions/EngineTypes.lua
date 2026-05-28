@@ -474,6 +474,13 @@ function SkeletalMeshComponent:SetAnimStateByName(stateName, blendTime) end
 function SkeletalMeshComponent:Play(looping) end
 function SkeletalMeshComponent:Stop() end
 function SkeletalMeshComponent:Pause() end
+---@param path string
+function SkeletalMeshComponent:SetSkeletalMeshAssetPath(path) end
+---@param path string
+---@param looping? boolean
+function SkeletalMeshComponent:PlayAnimationAssetPath(path, looping) end
+---@param path string
+function SkeletalMeshComponent:SetAnimationAssetPath(path) end
 ---@param playRate number
 function SkeletalMeshComponent:SetPlayRate(playRate) end
 ---@param time number
@@ -547,6 +554,19 @@ local PrimitiveComponent = {}
 function PrimitiveComponent:is_overlapping_actor(other) end
 
 function PrimitiveComponent:clear_overlaps() end
+
+---@class ParticleSystemComponent: PrimitiveComponent
+---@field OpacityMultiplier number
+local ParticleSystemComponent = {}
+
+---@param path string
+function ParticleSystemComponent:SetTemplateAssetPath(path) end
+---@param restart boolean
+function ParticleSystemComponent:RefreshTemplateRuntime(restart) end
+---@return string
+function ParticleSystemComponent:GetTemplateAssetPath() end
+---@return integer
+function ParticleSystemComponent:GetTotalActiveParticleCount() end
 
 ---@class ShapeComponent: PrimitiveComponent
 local ShapeComponent = {}
@@ -752,6 +772,17 @@ function AActor:Get_Static_Mesh_Component() end
 function AActor:GetSkeletalMeshComponent() end
 ---@return SkeletalMeshComponent|nil
 function AActor:Get_Skeletal_Mesh_Component() end
+---@return ParticleSystemComponent|nil
+function AActor:GetParticleSystemComponent() end
+---@param path string
+function AActor:SetParticleTemplateAssetPath(path) end
+
+---@class ParticleSystemActor: AActor
+local ParticleSystemActor = {}
+---@param path string
+function ParticleSystemActor:SetTemplateAssetPath(path) end
+---@return ParticleSystemComponent|nil
+function ParticleSystemActor:GetParticleSystemComponent() end
 
 ---@class PlayerController: AActor
 ---@field PossessedActor AActor|nil

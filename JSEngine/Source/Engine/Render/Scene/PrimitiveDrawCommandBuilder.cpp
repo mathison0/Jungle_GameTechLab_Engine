@@ -771,19 +771,22 @@ bool FPrimitiveDrawCommandBuilder::CollectPrimitive(UPrimitiveComponent* Primiti
                 }
                 case EDynamicEmitterType::Mesh:
                 {
-                    // Mesh: MeshBuffer 조회 + Material.DiffuseMap → ParticleTexture (CreateDynamicData 가 이미 Material set).
+                    // Mesh: MeshBuffer 조회 + Material.DiffuseMap → ParticleTexture.
+                    // CreateDynamicData also snapshots this, but resolve here too so editor/runtime template edits
+                    // cannot leave the draw command with stale mesh/material metadata.
                     FDynamicMeshEmitterReplayData* MeshReplay = static_cast<FDynamicMeshEmitterReplayData*>(&ReplayBase);
+                    if (const UParticleMeshRendererProperties* MeshRenderer = Cast<UParticleMeshRendererProperties>(RendererProperties))
+                    {
+                        if (!MeshReplay->MeshAsset)
+                        {
+                            MeshReplay->MeshAsset = MeshRenderer->GetMesh();
+                        }
+                        ReplayBase.Material = MeshRenderer->GetEffectiveMaterial();
+                    }
                     if (MeshReplay->MeshAsset)
                     {
                         MeshBufferLocal = MeshBufferManager.GetStaticMeshBuffer(MeshReplay->MeshAsset, 0);
                         MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
-                    }
-                    else if (const UParticleMeshRendererProperties* MeshRenderer = Cast<UParticleMeshRendererProperties>(RendererProperties))
-                    {
-                        MeshReplay->MeshAsset = MeshRenderer->GetMesh();
-                        MeshBufferLocal = MeshReplay->MeshAsset ? MeshBufferManager.GetStaticMeshBuffer(MeshReplay->MeshAsset, 0) : nullptr;
-                        MeshSectionIndexCount = MeshBufferLocal ? MeshBufferLocal->GetIndexBuffer().GetIndexCount() : 0;
-                        ReplayBase.Material = MeshRenderer->GetEffectiveMaterial();
                     }
                     MaterialOverride = ReplayBase.Material;
                     if (ReplayBase.Material)

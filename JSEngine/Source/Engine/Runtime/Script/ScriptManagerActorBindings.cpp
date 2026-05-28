@@ -33,9 +33,12 @@
 #include "Component/SubUVComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Core/ResourceManager.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PrimitiveActors.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemComponent.h"
 #include "Runtime/Script/ScriptComponent.h"
 #include "Runtime/Script/ScriptUtils.h"
 #include "ThirdParty/sol/sol.hpp"
@@ -353,6 +356,34 @@ void FScriptManager::BindActorTypes()
 			{ return Cast<USkeletalMeshComponent>(GetComponentByType(Actor, "SkeletalMeshComponent")); });
 	LUA_SET(GetActorSequenceComponent, [](AActor& Actor)
 			{ return Cast<UActorSequenceComponent>(GetComponentByType(Actor, "ActorSequenceComponent")); });
+	LUA_SET(GetParticleSystemComponent, [](AActor& Actor) -> UParticleSystemComponent*
+			{
+				if (AParticleSystemActor* ParticleActor = Cast<AParticleSystemActor>(&Actor))
+				{
+					return ParticleActor->GetParticleSystemComponent();
+				}
+				return Cast<UParticleSystemComponent>(GetComponentByType(Actor, "ParticleSystemComponent"));
+			});
+	LUA_SET(SetParticleTemplateAssetPath, [](AActor& Actor, const FString& Path)
+			{
+				UParticleSystem* Template = Path.empty() ? nullptr : FResourceManager::Get().LoadParticleSystem(Path);
+				if (AParticleSystemActor* ParticleActor = Cast<AParticleSystemActor>(&Actor))
+				{
+					ParticleActor->SetTemplate(Template);
+					return;
+				}
+				if (UParticleSystemComponent* Component = Cast<UParticleSystemComponent>(GetComponentByType(Actor, "ParticleSystemComponent")))
+				{
+					Component->SetTemplate(Template);
+				}
+			});
+	LUA_END_TYPE();
+
+	LUA_BEGIN_TYPE_NO_CTOR_BASE(GLuaState, AParticleSystemActor, "ParticleSystemActor", AActor, UObject)
+	LUA_SET(SetTemplateAssetPath, [](AParticleSystemActor& Self, const FString& Path)
+			{ Self.SetTemplate(Path.empty() ? nullptr : FResourceManager::Get().LoadParticleSystem(Path)); });
+	LUA_SET(GetParticleSystemComponent, [](AParticleSystemActor& Self) -> UParticleSystemComponent*
+			{ return Self.GetParticleSystemComponent(); });
 	LUA_END_TYPE();
 
 	LUA_BEGIN_TYPE_NO_CTOR_BASE(GLuaState, APlayerController, "PlayerController", AActor, UObject)

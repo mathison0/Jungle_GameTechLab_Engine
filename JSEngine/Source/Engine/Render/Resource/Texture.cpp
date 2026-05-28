@@ -23,7 +23,17 @@ bool UTexture::LoadFromFile(const FString& InFilePath, ID3D11Device* InDevice)
 	}
 	else
 	{
-		hr = DirectX::CreateWICTextureFromFile(InDevice, FullPath.c_str(), nullptr, &NewSRV);
+		hr = DirectX::CreateWICTextureFromFileEx(
+			InDevice,
+			FullPath.c_str(),
+			0,
+			D3D11_USAGE_DEFAULT,
+			D3D11_BIND_SHADER_RESOURCE,
+			0,
+			0,
+			DirectX::WIC_LOADER_FORCE_RGBA32,
+			nullptr,
+			&NewSRV);
 	}
 
 	if (FAILED(hr))
