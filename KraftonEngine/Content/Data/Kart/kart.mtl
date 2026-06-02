@@ -1,7 +1,7 @@
 # Blender 5.1.0 MTL File: 'None'
 # www.blender.org
 
-newmtl material.002
+newmtl material.001
 Ka 1.000000 1.000000 1.000000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
@@ -11,7 +11,7 @@ illum 2
 map_Kd material_diffuse.png
 map_Ns material_specularGlossiness.png
 
-newmtl material_1.001
+newmtl material_1.002
 Ka 1.000000 1.000000 1.000000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
@@ -21,67 +21,7 @@ illum 2
 map_Kd material_1_diffuse.png
 map_Ns material_1_specularGlossiness.png
 
-newmtl material_10.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_3_diffuse.png
-map_Ns material_3_specularGlossiness.png
-
-newmtl material_11.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_4_diffuse.png
-map_Ns material_4_specularGlossiness.png
-
-newmtl material_12.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_5_diffuse.png
-map_Ns material_5_specularGlossiness.png
-
-newmtl material_13.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_3_diffuse.png
-map_Ns material_3_specularGlossiness.png
-
-newmtl material_14.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_4_diffuse.png
-map_Ns material_4_specularGlossiness.png
-
-newmtl material_15.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_5_diffuse.png
-map_Ns material_5_specularGlossiness.png
-
-newmtl material_2.001
+newmtl material_2.002
 Ka 1.000000 1.000000 1.000000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
@@ -91,67 +31,7 @@ illum 2
 map_Kd material_2_diffuse.png
 map_Ns material_2_specularGlossiness.png
 
-newmtl material_3.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_3_diffuse.png
-map_Ns material_3_specularGlossiness.png
-
-newmtl material_4.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_4_diffuse.png
-map_Ns material_4_specularGlossiness.png
-
-newmtl material_5.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_5_diffuse.png
-map_Ns material_5_specularGlossiness.png
-
-newmtl material_6.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_3_diffuse.png
-map_Ns material_3_specularGlossiness.png
-
-newmtl material_7.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_4_diffuse.png
-map_Ns material_4_specularGlossiness.png
-
-newmtl material_8.001
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1000.000000
-d 1.000000
-illum 2
-map_Kd material_5_diffuse.png
-map_Ns material_5_specularGlossiness.png
-
-newmtl material_9.001
+newmtl material_9.002
 Ka 1.000000 1.000000 1.000000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
