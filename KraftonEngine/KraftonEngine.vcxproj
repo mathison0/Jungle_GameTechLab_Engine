@@ -496,6 +496,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Editor\Viewport\Asset\PhysicsAssetEditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\Asset\StaticMeshEditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\Level\FLevelViewportLayout.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimationTickLODManager.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimationManager.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimationRuntime.cpp" />
@@ -893,6 +894,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Editor\Viewport\Asset\StaticMeshEditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\Level\FLevelViewportLayout.h" />
     <ClInclude Include="Source\Editor\Viewport\Level\LevelEditorViewportClient.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimationTickLOD.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimationTickLODHelper.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimationTickLODManager.h" />
     <ClInclude Include="Source\Engine\Animation\AnimExtractContext.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationManager.h" />

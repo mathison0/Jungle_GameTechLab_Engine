@@ -18,6 +18,7 @@
 #include "Profiling/Time/Timer.h"
 #include "Runtime/Engine.h"
 #include "Physics/PhysicsScene.h"
+#include "Animation/AnimationTickLODManager.h"
 
 #include <algorithm>
 
@@ -356,6 +357,12 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 	}
 
 	Scene.GetDebugDrawQueue().Tick(DeltaTime);
+
+	FMinimalViewInfo ActivePOV;
+	if (GetActivePOV(ActivePOV))
+	{
+		FAnimationTickLODManager::Get().Tick(this, DeltaTime, ActivePOV.Location);
+	}
 
 	// bPaused 동안 PhysicsScene + TickManager skip — GameMode 타이머, Lua Tick, 차량
 	// 이동, PhysX 시뮬레이션 모두 정지. Render / UI / Input poll 은 호출자 (UEngine::Tick)

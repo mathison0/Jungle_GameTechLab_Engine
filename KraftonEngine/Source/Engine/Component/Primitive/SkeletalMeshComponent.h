@@ -1,9 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 
 #include "Component/Primitive/SkinnedMeshComponent.h"
 #include "Animation/AnimationMode.h"
+#include "Animation/AnimationTickLOD.h"
 #include "Object/Ptr/SubclassOf.h"
 
 #include "Source/Engine/Component/Primitive/SkeletalMeshComponent.generated.h"
@@ -60,6 +61,14 @@ public:
     void SetAnimationMode(EAnimationMode InMode);
     EAnimationMode GetAnimationMode() const { return AnimationMode; }
 
+	void SetAnimationTickLOD(EAnimationTickLOD InLOD);
+	EAnimationTickLOD GetAnimationTickLOD() const { return AnimationTickLOD; }
+
+	void SetEnableAnimationTickLOD(bool bEnable);
+	bool IsAnimationTickLODEnabled() const { return bEnableAnimationTickLOD; }
+
+	void SetAnimationTickInitialOffset(float OffsetSeconds);
+
     // SingleNode 모드용 헬퍼. Custom 모드에선 무시 (자체 인스턴스가 자체 시퀀스를 관리).
     void SetAnimation(UAnimSequenceBase* InAsset);
     bool CanUseAnimation(UAnimSequenceBase* InAsset) const;
@@ -99,6 +108,10 @@ protected:
 	void ApplyPoseToMesh(const FPoseContext& Pose);
     bool EvaluateAnimInstance(float DeltaTime);
 
+	bool ShouldEvaluateAnimationThisFrame(float DeltaTime, float& OutAnimationDeltaTime);
+	float GetAnimationTickInterval() const;
+	void ResetAnimationTickLODState();
+
 private:
     void LoadAnimationFromPath();
 	
@@ -125,6 +138,17 @@ protected:
     TSubclassOf<UAnimInstance> AnimInstanceClass;
     UPROPERTY(Save, Instanced, Category="Animation", DisplayName="Anim Instance", Type=ObjectRef, AllowedClass=UAnimInstance)
     UAnimInstance*             AnimInstance  = nullptr;
+
+
+	UPROPERTY(Edit, Save, Category = "Animation|LOD", DisplayName = "Enable Animation Tick LOD")
+	bool bEnableAnimationTickLOD = false;
+
+	UPROPERTY(Edit, Save, Category="Animation|LOD", DisplayName="Animation Tick LOD", Enum=EAnimationTickLOD)
+	EAnimationTickLOD AnimationTickLOD = EAnimationTickLOD::FullRate;
+
+	float AnimationTickAccumulator = 0.0f;
+
+	float AnimationTickPhaseOffset = 0.0f;
 
 	std::unique_ptr<FRagdollInstance> Ragdoll;
 	bool bSimulatingPhysics = false;

@@ -1,4 +1,4 @@
-#include "SkeletalMeshComponent.h"
+﻿#include "SkeletalMeshComponent.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
 
 #include "Animation/AnimationManager.h"
@@ -8,6 +8,8 @@
 #include "Animation/Sequence/AnimSequenceBase.h"
 #include "Animation/Instance/AnimSingleNodeInstance.h"
 #include "Animation/PoseContext.h"
+#include "Animation/AnimationTickLODManager.h"
+#include "Animation/AnimationTickLODHelper.h"
 #include "Asset/AssetRegistry.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
@@ -115,6 +117,8 @@ USkeletalMeshComponent::USkeletalMeshComponent() = default;
 
 USkeletalMeshComponent::~USkeletalMeshComponent()
 {
+	FAnimationTickLODManager::Get().UnregisterComponent(this);
+
     if (bSimulatingPhysics)
     {
         SetSimulatePhysics(false);
@@ -131,6 +135,18 @@ FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
     Super::SetSkeletalMesh(InMesh);
+
+	if (InMesh)
+	{
+		FAnimationTickLODManager::Get().RegisterComponent(this);
+	}
+	else
+	{
+		FAnimationTickLODManager::Get().UnregisterComponent(this);
+		SetEnableAnimationTickLOD(false);
+		SetAnimationTickLOD(EAnimationTickLOD::FullRate);
+	}
+
     // Mesh 가 바뀌면 이전 AnimInstance 가 가리키던 본 인덱스/카운트가 무의미해진다.
     // 새 SkeletalMesh 기준으로 AnimInstance 를 재인스턴스화한다.
     InitializeAnimation();
@@ -582,8 +598,13 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	UpdateComponentLinearVelocity(DeltaTime);
 
+	float AnimationDeltaTime = DeltaTime;
+	const bool bShouldEvaluateAnimation = ShouldEvaluateAnimationThisFrame(DeltaTime, AnimationDeltaTime);
+
 	FPoseContext AnimPose;
-	const bool bHasAnimPose = EvaluateAnimInstanceToPose(DeltaTime, AnimPose);
+	const bool bHasAnimPose = bShouldEvaluateAnimation
+		? EvaluateAnimInstanceToPose(AnimationDeltaTime, AnimPose)
+		: false;
 
 	if (bSimulatingPhysics && Ragdoll)
 	{
@@ -882,4 +903,89 @@ bool USkeletalMeshComponent::EvaluateAnimInstance(float DeltaTime)
 
 	ApplyPoseToMesh(AnimPose);
 	return true;
+}
+
+void USkeletalMeshComponent::SetAnimationTickLOD(EAnimationTickLOD InLOD)
+{
+	if (AnimationTickLOD == InLOD) return;
+
+	AnimationTickLOD = InLOD;
+	AnimationTickAccumulator = AnimationTickPhaseOffset;
+}
+
+void USkeletalMeshComponent::SetEnableAnimationTickLOD(bool bEnable)
+{
+	if (bEnableAnimationTickLOD == bEnable) return;
+
+	bEnableAnimationTickLOD = bEnable;
+	ResetAnimationTickLODState();
+}
+
+void USkeletalMeshComponent::ResetAnimationTickLODState()
+{
+	AnimationTickAccumulator = 0.0f;
+}
+
+float USkeletalMeshComponent::GetAnimationTickInterval() const
+{
+	return GetAnimationTickIntervalForLOD(AnimationTickLOD);
+}
+
+bool USkeletalMeshComponent::ShouldEvaluateAnimationThisFrame(float DeltaTime, float& OutAnimationDeltaTime)
+{
+	OutAnimationDeltaTime = DeltaTime;
+
+	if (!AnimInstance) return false;
+
+	if (!bEnableAnimationTickLOD)
+	{
+		FAnimationTickLODManager::Get().RecordAnimationEvaluated();
+		return true;
+	}
+
+	if (bSimulatingPhysics || bRecoveringFromRagdoll)
+	{
+		FAnimationTickLODManager::Get().RecordAnimationEvaluated();
+		return true;
+	}
+
+	if (AnimationTickLOD == EAnimationTickLOD::FullRate)
+	{
+		AnimationTickAccumulator = 0.0f;
+		FAnimationTickLODManager::Get().RecordAnimationEvaluated();
+		return true;
+	}
+
+	if (AnimationTickLOD == EAnimationTickLOD::Frozen)
+	{
+		FAnimationTickLODManager::Get().RecordAnimationSkipped();
+		return false;
+	}
+
+	const float Interval = GetAnimationTickInterval();
+	if (Interval <= 0.0f)
+	{
+		AnimationTickAccumulator = 0.0f;
+		FAnimationTickLODManager::Get().RecordAnimationEvaluated();
+		return true;
+	}
+
+	AnimationTickAccumulator += DeltaTime;
+
+	if (AnimationTickAccumulator >= Interval)
+	{
+		OutAnimationDeltaTime = AnimationTickAccumulator;
+		AnimationTickAccumulator = 0.0f;
+		FAnimationTickLODManager::Get().RecordAnimationEvaluated();
+		return true;
+	}
+
+	FAnimationTickLODManager::Get().RecordAnimationSkipped();
+	return false;
+}
+
+void USkeletalMeshComponent::SetAnimationTickInitialOffset(float OffsetSeconds)
+{
+	AnimationTickPhaseOffset = std::max(0.0f, OffsetSeconds);
+	AnimationTickAccumulator = AnimationTickPhaseOffset;
 }

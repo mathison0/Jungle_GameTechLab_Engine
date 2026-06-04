@@ -6,6 +6,7 @@
 #include "Engine/Profiling/Stats/PhysicsStats.h"
 #include "Engine/Profiling/Stats/ShadowStats.h"
 #include "Engine/Profiling/Stats/Stats.h"
+#include "Animation/AnimationTickLODManager.h"
 #include "Engine/Profiling/GPUProfiler.h"
 #include "Viewport/Level/LevelEditorViewportClient.h"
 #include "Slate/SWindow.h"
@@ -325,6 +326,34 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 	AppendSample("GPU Matrix Upload CPU", GPUMatrixUploadSample);
 	AppendSample("GPU Skeletal PreDepth (GPU Path)", SkeletalPreDepthGPUPathSample);
 	AppendModeTotal("GPU Mode Total (CPU+GPU approx)", GPUMatrixUploadSample, SkeletalPreDepthGPUPathSample);
+
+	const FAnimationTickLODStats& AnimLODStats = FAnimationTickLODManager::Get().GetStats();
+	OutLines.push_back(FString("--- Animation Tick LOD ---"));
+	if (AnimLODStats.bValid)
+	{
+		snprintf(Buffer, sizeof(Buffer), "Manager : %s  registered %u  managed %u",
+			AnimLODStats.bEnabled ? "enabled" : "disabled",
+			AnimLODStats.RegisteredCount,
+			AnimLODStats.ManagedCount);
+		OutLines.push_back(FString(Buffer));
+
+		snprintf(Buffer, sizeof(Buffer), "LOD : Full %u  Half %u  Quarter %u  Low %u  Frozen %u",
+			AnimLODStats.LODCounts[0],
+			AnimLODStats.LODCounts[1],
+			AnimLODStats.LODCounts[2],
+			AnimLODStats.LODCounts[3],
+			AnimLODStats.LODCounts[4]);
+		OutLines.push_back(FString(Buffer));
+
+		snprintf(Buffer, sizeof(Buffer), "Anim Eval : evaluated %u  skipped %u",
+			AnimLODStats.EvaluatedCount,
+			AnimLODStats.SkippedCount);
+		OutLines.push_back(FString(Buffer));
+	}
+	else
+	{
+		OutLines.push_back(FString("No Animation Tick LOD sample"));
+	}
 
 	if (OutLines.empty())
 	{
