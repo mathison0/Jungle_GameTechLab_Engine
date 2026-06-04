@@ -160,6 +160,7 @@ namespace EUberLitDefines
 		inline constexpr const char* StaticMeshVS = "VS_StaticMesh";
 		inline constexpr const char* SkeletalMeshVS = "VS_SkeletalMesh";
 		inline constexpr const char* InstancedStaticMeshVS = "VS_InstancedStaticMesh";
+		inline constexpr const char* InstancedSkeletalMeshVS = "VS_InstancedSkeletalMesh";
 		inline constexpr const char* PS = "PS";
 	}
 
@@ -177,6 +178,7 @@ namespace EUberLitDefines
 		StaticMesh,
 		SkeletalMesh,
 		InstancedStaticMesh,
+		InstancedSkeletalMesh,
 	};
 
 	inline const D3D_SHADER_MACRO Default[] = { {"LIGHTING_MODEL_PHONG", "1"}, {nullptr, nullptr} };
@@ -242,6 +244,7 @@ namespace EUberLitDefines
 		const char* VSEntryPoint =
 			VertexFactory == EVertexFactory::SkeletalMesh ? EntryPoint::SkeletalMeshVS :
 			VertexFactory == EVertexFactory::InstancedStaticMesh ? EntryPoint::InstancedStaticMeshVS :
+			VertexFactory == EVertexFactory::InstancedSkeletalMesh ? EntryPoint::InstancedSkeletalMeshVS :
 			EntryPoint::StaticMeshVS;
 		return FShaderKey(EShaderPath::UberLit,
 			GetDefines(LightingModel, VertexFactory, bWeightBoneHeatMap, bApplyFog),

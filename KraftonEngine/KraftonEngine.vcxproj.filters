@@ -1887,6 +1887,8 @@
     <ClCompile Include="HighPerformanceGPUHint.cpp" />
     <ClCompile Include="Source\Editor\Subsystem\PhysicsAssetEditingLibrary.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimationTickLODManager.cpp" />
+    <ClCompile Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyer.cpp" />
+    <ClCompile Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -5677,6 +5679,8 @@
     <ClInclude Include="Source\Engine\Animation\AnimationTickLOD.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationTickLODManager.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationTickLODHelper.h" />
+    <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h" />
+    <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />

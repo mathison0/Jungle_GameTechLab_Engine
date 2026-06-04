@@ -107,16 +107,18 @@ void FDrawCommandBuilder::BeginCollect(const FFrameContext& Frame)
 // SelectEffectiveShader — ViewMode에 따른 UberLit 셰이더 변형 선택
 // ============================================================
 FShader* FDrawCommandBuilder::SelectEffectiveShader(FShader* ProxyShader, EViewMode ViewMode,
-	bool bUseSkeletalVertexFactory, bool bUseInstancedVertexFactory, bool bWeightBoneHeatMap, bool bApplyFog)
+	bool bUseSkeletalVertexFactory, bool bUseInstancedVertexFactory, bool bUseInstancedSkeletalVertexFactory,
+	bool bWeightBoneHeatMap, bool bApplyFog)
 {
 	if (ProxyShader != FShaderManager::Get().GetOrCreate(EShaderPath::UberLit))
 		return ProxyShader;
 
 	const EUberLitDefines::EVertexFactory VertexFactory =
+		bUseInstancedSkeletalVertexFactory ? EUberLitDefines::EVertexFactory::InstancedSkeletalMesh :
 		bUseSkeletalVertexFactory ? EUberLitDefines::EVertexFactory::SkeletalMesh :
 		bUseInstancedVertexFactory ? EUberLitDefines::EVertexFactory::InstancedStaticMesh :
 		EUberLitDefines::EVertexFactory::StaticMesh;
-
+	
 	switch (ViewMode)
 	{
 	case EViewMode::Unlit:
@@ -519,7 +521,7 @@ void FDrawCommandBuilder::BuildCommandForSection(FScene& Scene, const FPrimitive
 	FShader* SectionShader = (Section.Material && Section.Material->GetShader())
 		? Section.Material->GetShader()
 		: Proxy.GetShader();
-	FShader* EffectiveShader = SelectEffectiveShader(SectionShader, CollectViewMode, BuildCtx.bGPUSkinning, false, BuildCtx.bWeightBoneHeatMap, false);
+	FShader* EffectiveShader = SelectEffectiveShader(SectionShader, CollectViewMode, BuildCtx.bGPUSkinning, false, false, BuildCtx.bWeightBoneHeatMap, false);
 
 	const FDrawCommandRenderState BaseRenderState = PassRenderStateTable->ToDrawCommandState(Pass, CollectViewMode);
 
@@ -529,6 +531,7 @@ void FDrawCommandBuilder::BuildCommandForSection(FScene& Scene, const FPrimitive
 	Cmd.RenderState = BaseRenderState;
 	Cmd.Buffer = BuildCtx.ProxyBuffer;
 	Cmd.PerObjectCB = BuildCtx.PerObjCB;
+	Cmd.PerObjectConstants = Proxy.GetPerObjectConstants();
 	Cmd.bIsSkeletal = BuildCtx.bSkeletal;
 	Cmd.bIsGpuSkinned = BuildCtx.bGPUSkinning;
 	Cmd.Buffer.FirstIndex = Section.FirstIndex;
@@ -583,7 +586,7 @@ void FDrawCommandBuilder::BuildParticleCommandForSection(FScene& Scene, const FP
 		? Section.Material->GetShader()
 		: Proxy.GetShader();
 
-	FShader* EffectiveShader = SelectEffectiveShader(SectionShader, CollectViewMode, false, bInstanced, false, bApplyFog);
+	FShader* EffectiveShader = SelectEffectiveShader(SectionShader, CollectViewMode, false, bInstanced, false, false, bApplyFog);
 
 	const FDrawCommandRenderState BaseRenderState = PassRenderStateTable->ToDrawCommandState(Pass, CollectViewMode);
 

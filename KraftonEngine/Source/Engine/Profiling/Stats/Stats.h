@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Types/CoreTypes.h"
 #include "Core/Singleton.h"
+#include "Render/Types/RenderTypes.h"
 
 #define NOMINMAX
 #include <Windows.h>
@@ -119,6 +120,123 @@ struct FDrawCallStats
 	static void Reset() { Count = 0; }
 	static void Increment() { ++Count; }
 	static uint32 Get() { return Count; }
+};
+
+struct FSkeletalRenderStats
+{
+	static uint32 SkeletalDrawCalls;
+	static uint32 SkeletalGpuSkinDrawCalls;
+	static uint32 SkeletalCpuSkinDrawCalls;
+
+	static uint32 SkeletalInstancedDrawCalls;
+	static uint32 SkeletalSubmittedInstances;
+
+	static uint32 SkeletalGpuSkinCommands;
+	static uint32 SkeletalBatchableCommands;
+	static uint32 SkeletalBatchRejectedCommands;
+	static uint32 SkeletalBatchUniqueKeys;
+	static uint32 SkeletalEstimatedInstancedDrawCalls;
+
+	static uint32 SkeletalInstanceCandidates;
+	static uint32 SkeletalInstanceRejectedCommands;
+	static uint32 SkeletalInstanceSingleCommands;
+	static uint32 SkeletalInstanceMergedDrawCalls;
+	static uint32 SkeletalInstanceMergedInstances;
+	static uint32 SkeletalInstanceOutputCommands;
+
+	static uint32 PassDrawCalls[(uint32)ERenderPass::MAX];
+
+	static void Reset()
+	{
+		SkeletalDrawCalls = 0;
+		SkeletalGpuSkinDrawCalls = 0;
+		SkeletalCpuSkinDrawCalls = 0;
+		SkeletalInstancedDrawCalls = 0;
+		SkeletalSubmittedInstances = 0;
+
+		SkeletalGpuSkinCommands = 0;
+		SkeletalBatchableCommands = 0;
+		SkeletalBatchRejectedCommands = 0;
+		SkeletalBatchUniqueKeys = 0;
+		SkeletalEstimatedInstancedDrawCalls = 0;
+
+		SkeletalInstanceCandidates = 0;
+		SkeletalInstanceRejectedCommands = 0;
+		SkeletalInstanceSingleCommands = 0;
+		SkeletalInstanceMergedDrawCalls = 0;
+		SkeletalInstanceMergedInstances = 0;
+		SkeletalInstanceOutputCommands = 0;
+
+		for (uint32 Index = 0; Index < (uint32)ERenderPass::MAX; ++Index)
+		{
+			PassDrawCalls[Index] = 0;
+		}
+	}
+
+	static void RecordDrawCall(ERenderPass Pass, bool bGpuSkinned, bool bInstanced, uint32 InstanceCount)
+	{
+		++SkeletalDrawCalls;
+
+		if (bGpuSkinned)
+		{
+			++SkeletalGpuSkinDrawCalls;
+		}
+		else
+		{
+			++SkeletalCpuSkinDrawCalls;
+		}
+
+		const uint32 PassIndex = static_cast<uint32>(Pass);
+		if (PassIndex < (uint32)ERenderPass::MAX)
+		{
+			++PassDrawCalls[PassIndex];
+		}
+
+		if (bInstanced)
+		{
+			++SkeletalInstancedDrawCalls;
+			SkeletalSubmittedInstances += InstanceCount;
+		}
+		else
+		{
+			SkeletalSubmittedInstances += 1;
+		}
+	}
+
+	static void RecordBatchAnalysis(
+		uint32 InGpuSkinCommands,
+		uint32 InBatchableCommands,
+		uint32 InRejectedCommands,
+		uint32 InUniqueBatchKeys)
+	{
+		SkeletalGpuSkinCommands = InGpuSkinCommands;
+		SkeletalBatchableCommands = InBatchableCommands;
+		SkeletalBatchRejectedCommands = InRejectedCommands;
+		SkeletalBatchUniqueKeys = InUniqueBatchKeys;
+		SkeletalEstimatedInstancedDrawCalls = InUniqueBatchKeys;
+	}
+
+	static void RecordInstanceBatching(
+		uint32 InCandidates,
+		uint32 InRejectedCommands,
+		uint32 InSingleCommands,
+		uint32 InMergedDrawCalls,
+		uint32 InMergedInstances,
+		uint32 InOutputCommands)
+	{
+		SkeletalInstanceCandidates = InCandidates;
+		SkeletalInstanceRejectedCommands = InRejectedCommands;
+		SkeletalInstanceSingleCommands = InSingleCommands;
+		SkeletalInstanceMergedDrawCalls = InMergedDrawCalls;
+		SkeletalInstanceMergedInstances = InMergedInstances;
+		SkeletalInstanceOutputCommands = InOutputCommands;
+	}
+
+	static uint32 GetPassDrawCalls(ERenderPass Pass)
+	{
+		const uint32 PassIndex = static_cast<uint32>(Pass);
+		return PassIndex < (uint32)ERenderPass::MAX ? PassDrawCalls[PassIndex] : 0;
+	}
 };
 
 // --- LOD Distribution Counter ---

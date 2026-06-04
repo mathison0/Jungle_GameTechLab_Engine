@@ -2,9 +2,10 @@
 
 #include "Render/Types/RenderTypes.h"
 #include "Render/Types/RenderStateTypes.h"
+#include "Render/Types/MaterialTextureSlot.h"
+#include "Render/Types/RenderConstants.h"
 #include "Math/Vector.h"
 #include "Core/Types/CoreTypes.h"
-#include "Render/Types/MaterialTextureSlot.h"
 
 class FShader;
 class FConstantBuffer;
@@ -78,6 +79,8 @@ struct FDrawCommand
 	// ===== Bindings =====
 	FConstantBuffer*    PerObjectCB = nullptr;        // b1: Model + Color (per-proxy)
 	FDrawCommandBindings Bindings;                    // PerShaderCB + SRVs (per-material)
+
+	FPerObjectConstants PerObjectConstants;
 
 	// ===== Sort =====
 	uint64 SortKey = 0;                              // 정렬 키 (Pass → Shader → MeshBuffer → SRV)

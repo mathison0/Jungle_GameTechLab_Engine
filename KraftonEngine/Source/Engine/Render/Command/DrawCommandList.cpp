@@ -66,6 +66,12 @@ FDrawCommand& FDrawCommandList::AddCommand()
 	return Commands.back();
 }
 
+void FDrawCommandList::ReplaceCommands(TArray<FDrawCommand>&& InCommands)
+{
+	Commands = std::move(InCommands);
+	std::memset(PassOffsets, 0, sizeof(PassOffsets));
+}
+
 void FDrawCommandList::Sort()
 {
 	if (Commands.size() > 1)
@@ -342,6 +348,8 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 
 	Cache.bForceAll = false;
 
+	bool bIssuedDraw = false;
+
 	// --- Draw ---
 	if (Cmd.Buffer.IndexCount > 0)
 	{
@@ -354,6 +362,8 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 		{
 			Ctx->DrawIndexed(Cmd.Buffer.IndexCount, Cmd.Buffer.FirstIndex, Cmd.Buffer.BaseVertex);
 		}
+
+		bIssuedDraw = true;
 	}
 	else if (Cmd.Buffer.VertexCount > 0)
 	{
@@ -365,7 +375,19 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 		{
 			Ctx->Draw(Cmd.Buffer.VertexCount, 0);
 		}
+
+		bIssuedDraw = true;
 	}
 
-	FDrawCallStats::Increment();
+	if (bIssuedDraw)
+	{
+		FDrawCallStats::Increment();
+
+		if (Cmd.bIsSkeletal)
+		{
+			FSkeletalRenderStats::RecordDrawCall(Cmd.Pass, Cmd.bIsGpuSkinned,
+				Cmd.Buffer.IsInstanced(), Cmd.Buffer.IsInstanced() ? Cmd.Buffer.InstanceCount : 1);
+		}
+	}
+
 }

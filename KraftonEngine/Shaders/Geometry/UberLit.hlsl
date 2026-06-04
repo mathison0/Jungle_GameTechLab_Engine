@@ -159,17 +159,17 @@ UberVS_Output VS_SkeletalMesh(VS_Input_PNCTTBB input)
     UberVS_Output output;
     
     FSkinningResult skinned = ApplyLinearBlendSkinning(
-    input.position,
-    input.normal,
-    input.tangent.xyz,
-    input.boneIndices,
-    input.boneWeights);
+        input.position,
+        input.normal,
+        input.tangent.xyz,
+        input.boneIndices,
+        input.boneWeights);
 
     float4 WeightedPosition = skinned.position;
     float3 WeightedNormal = skinned.normal;
     float3 WeightedTangent = skinned.tangent;
     float SelectedWeight = GetBoneInfluenceWeight(input.boneIndices, input.boneWeights, SelectedBoneIndex);
-    
+
     float3x3 M = (float3x3) Model;
     
     float4 worldPos4 = mul(WeightedPosition, Model);
@@ -186,6 +186,64 @@ UberVS_Output VS_SkeletalMesh(VS_Input_PNCTTBB input)
 
 #if defined(LIGHTING_MODEL_GOURAUD) && LIGHTING_MODEL_GOURAUD
     float3 N =  output.normal;
+
+    if (HasNormalMap > 0.5f)
+    {
+        float3 B = normalize(cross(N, T) * output.tangent.w);
+        float3x3 TBN = float3x3(T, B, N);
+
+        float3 tangentNormal = NormalTexture.SampleLevel(LinearWrapSampler, input.texcoord, 0).xyz * 2.0f - 1.0f;
+
+        N = normalize(mul(tangentNormal, TBN));
+    }
+
+    float3 V = normalize(CameraWorldPos - output.worldPos);
+    output.litDiffuse = AccumulateDiffuseVS(output.worldPos, N);
+    output.litSpecular = AccumulateSpecularVS(output.worldPos, N, V, g_DefaultShininess);
+
+#endif
+
+    return output;
+}
+
+UberVS_Output VS_InstancedSkeletalMesh(VS_Input_PNCTTBB_Instanced input)
+{
+    UberVS_Output output;
+
+    FSkinningResult skinned = ApplyLinearBlendSkinning(
+        input.position,
+        input.normal,
+        input.tangent.xyz,
+        input.boneIndices,
+        input.boneWeights);
+
+    float4 WeightedPosition = skinned.position;
+    float3 WeightedNormal = skinned.normal;
+    float3 WeightedTangent = skinned.tangent;
+    float SelectedWeight = GetBoneInfluenceWeight(input.boneIndices, input.boneWeights, SelectedBoneIndex);
+
+    float4x4 world = float4x4(
+        input.world0,
+        input.world1,
+        input.world2,
+        input.world3);
+
+    float3x3 M = (float3x3)world;
+
+    float4 worldPos4 = mul(WeightedPosition, world);
+    output.worldPos = worldPos4.xyz;
+    output.position = mul(mul(worldPos4, View), Projection);
+    output.normal = normalize(mul(WeightedNormal, M));
+    output.color = input.color * input.instanceColor * SectionColor;
+    output.texcoord = input.texcoord;
+    output.selectedBoneWeight = SelectedWeight;
+
+    float3 T = normalize(mul(WeightedTangent, M));
+    T = normalize(T - output.normal * dot(output.normal, T));
+    output.tangent = float4(T, input.tangent.w);
+
+#if defined(LIGHTING_MODEL_GOURAUD) && LIGHTING_MODEL_GOURAUD
+    float3 N = output.normal;
 
     if (HasNormalMap > 0.5f)
     {

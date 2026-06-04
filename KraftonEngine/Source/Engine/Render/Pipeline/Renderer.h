@@ -11,6 +11,7 @@
 #include "Render/RenderPass/RenderPassPipeline.h"
 #include "Render/Device/D3DDevice.h"
 #include "Render/Resource/RenderResources.h"
+#include "Render/Optimization/SkeletalInstanceBatcher.h"
 
 class FScene;
 
@@ -54,4 +55,6 @@ private:
 	FSystemResources Resources;
 	FDrawCommandBuilder Builder;
 	FRenderPassPipeline Pipeline;
+
+	FSkeletalInstanceBatcher SkeletalInstanceBatcher;
 };

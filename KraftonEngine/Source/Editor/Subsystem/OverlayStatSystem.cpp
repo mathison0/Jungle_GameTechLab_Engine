@@ -327,6 +327,57 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 	AppendSample("GPU Skeletal PreDepth (GPU Path)", SkeletalPreDepthGPUPathSample);
 	AppendModeTotal("GPU Mode Total (CPU+GPU approx)", GPUMatrixUploadSample, SkeletalPreDepthGPUPathSample);
 
+	OutLines.push_back(FString("--- Skeletal Render ---"));
+	snprintf(Buffer, sizeof(Buffer), "Draw Calls : total %u  gpu %u  cpu %u",
+		FSkeletalRenderStats::SkeletalDrawCalls,
+		FSkeletalRenderStats::SkeletalGpuSkinDrawCalls,
+		FSkeletalRenderStats::SkeletalCpuSkinDrawCalls);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Pass : predepth %u  opaque %u  alpha %u",
+		FSkeletalRenderStats::GetPassDrawCalls(ERenderPass::PreDepth),
+		FSkeletalRenderStats::GetPassDrawCalls(ERenderPass::Opaque),
+		FSkeletalRenderStats::GetPassDrawCalls(ERenderPass::AlphaBlend));
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Instancing : draws %u  submitted instances %u",
+		FSkeletalRenderStats::SkeletalInstancedDrawCalls,
+		FSkeletalRenderStats::SkeletalSubmittedInstances);
+	OutLines.push_back(FString(Buffer));
+
+	OutLines.push_back(FString("--- Skeletal Batch ---"));
+	snprintf(Buffer, sizeof(Buffer), "Commands : gpu %u  batchable %u  rejected %u",
+		FSkeletalRenderStats::SkeletalGpuSkinCommands,
+		FSkeletalRenderStats::SkeletalBatchableCommands,
+		FSkeletalRenderStats::SkeletalBatchRejectedCommands);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Unique Batch Keys : %u",
+		FSkeletalRenderStats::SkeletalBatchUniqueKeys);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Estimated Instanced Draws : %u",
+		FSkeletalRenderStats::SkeletalEstimatedInstancedDrawCalls);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Estimated Reduction : %u -> %u",
+		FSkeletalRenderStats::SkeletalBatchableCommands,
+		FSkeletalRenderStats::SkeletalEstimatedInstancedDrawCalls);
+	OutLines.push_back(FString(Buffer));
+
+	OutLines.push_back(FString("--- Skeletal Instance Build ---"));
+	snprintf(Buffer, sizeof(Buffer), "Actual : candidates %u  rejected %u  singles %u",
+		FSkeletalRenderStats::SkeletalInstanceCandidates,
+		FSkeletalRenderStats::SkeletalInstanceRejectedCommands,
+		FSkeletalRenderStats::SkeletalInstanceSingleCommands);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Merged : draws %u  instances %u  output cmds %u",
+		FSkeletalRenderStats::SkeletalInstanceMergedDrawCalls,
+		FSkeletalRenderStats::SkeletalInstanceMergedInstances,
+		FSkeletalRenderStats::SkeletalInstanceOutputCommands);
+	OutLines.push_back(FString(Buffer));
+
 	const FAnimationTickLODStats& AnimLODStats = FAnimationTickLODManager::Get().GetStats();
 	OutLines.push_back(FString("--- Animation Tick LOD ---"));
 	if (AnimLODStats.bValid)
