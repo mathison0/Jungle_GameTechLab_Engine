@@ -1,5 +1,5 @@
 {
-        "BlendState" : "AlphaBlend",
+        "BlendState" : "Opaque",
         "DepthStencilState" : "Default",
         "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
         "EmissiveIntensity" : 0.000000,
@@ -11,7 +11,7 @@
         },
         "PathFileName" : "Content/Material/Auto/M_Barbarian_Armors.mat",
         "RasterizerState" : "SolidBackCull",
-        "RenderPass" : "AlphaBlend",
+        "RenderPass" : "Opaque",
         "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
         "ShadowMode" : "Opaque",
         "Textures" : {

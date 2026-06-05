@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Editor/UI/Asset/AssetEditorWidget.h"
 #include "Object/FName.h"
@@ -33,8 +33,12 @@ private:
 	void RenderDetailsPanel(UStaticMesh* StaticMesh);
 	void RenderCollisionPanel(UStaticMesh* StaticMesh);
 	void EnsurePreviewCollisionBody();
+	void AddBlockerBoxForEditedMesh(UStaticMesh* StaticMesh);
+	void ClearBlockersForEditedMesh(UStaticMesh* StaticMesh);
 	void RebuildCollisionForEditedMesh(UStaticMesh* StaticMesh);
 	void SaveEditedStaticMesh(UStaticMesh* StaticMesh);
+
+	void GenerateBoundaryBlockersForEditedMesh(UStaticMesh* StaticMesh);
 
 private:
 	FStaticMeshEditorViewportClient ViewportClient;
@@ -43,5 +47,9 @@ private:
 	FName PreviewWorldHandle = FName::None;
 	FString WindowIdSuffix;
 	FStaticMeshCollisionBuildSettings CollisionBuildSettings;
+	FVector PendingBlockerCenter = FVector::ZeroVector;
+	FVector PendingBlockerExtents = FVector(100.0f, 100.0f, 100.0f);
 	FString LastCollisionBuildMessage;
+
+	FStaticMeshBlockerBuildSettings BlockerBuildSettings;
 };

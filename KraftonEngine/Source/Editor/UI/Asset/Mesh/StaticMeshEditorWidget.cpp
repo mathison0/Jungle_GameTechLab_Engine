@@ -89,6 +89,11 @@ void FStaticMeshEditorWidget::Open(UObject* Object)
 	const FVector Extent = Bounds.GetExtent();
 	const float FloorZ = Bounds.Min.Z - 0.02f;
 	const float FloorScale = max(Extent.X, Extent.Y) * 10.0f;
+	PendingBlockerCenter = Bounds.GetCenter();
+	PendingBlockerExtents = FVector(
+		max(Extent.X * 0.1f, 1.0f),
+		max(Extent.Y * 0.1f, 1.0f),
+		max(Extent.Z * 0.25f, 1.0f));
 
 	ADirectionalLightActor* LightActor = WorldContext.World->SpawnActor<ADirectionalLightActor>();
 	LightActor->InitDefaultComponents();
@@ -374,6 +379,39 @@ void FStaticMeshEditorWidget::RenderCollisionPanel(UStaticMesh* StaticMesh)
 		RebuildCollisionForEditedMesh(StaticMesh);
 	}
 
+	ImGui::Separator();
+
+	ImGui::Text("Boundary Blockers");
+	ImGui::DragFloat("Blocker Height", &BlockerBuildSettings.Height, 0.1f, 0.01f, 100000.0f, "%.2f");
+	ImGui::DragFloat("Blocker Thickness", &BlockerBuildSettings.Thickness, 0.1f, 0.01f, 100000.0f, "%.2f");
+	ImGui::DragFloat("Min Edge Length", &BlockerBuildSettings.MinEdgeLength, 0.1f, 0.0f, 100000.0f, "%.2f");
+	ImGui::Checkbox("Clear Existing Blockers", &BlockerBuildSettings.bClearExistingBlockers);
+
+	if (ImGui::Button("Generate Boundary Blockers", ImVec2(-1.0f, 0.0f)))
+	{
+		GenerateBoundaryBlockersForEditedMesh(StaticMesh);
+	}
+
+	ImGui::Separator();
+
+	ImGui::Text("Blockers");
+
+	const FKAggregateGeom& AggGeom = BodySetup ? BodySetup->GetAggGeom() : FKAggregateGeom();
+	ImGui::Text("Boxes: %s", FormatStaticMeshStatCount(AggGeom.BoxElems.size()).c_str());
+	ImGui::DragFloat3("Box Center", &PendingBlockerCenter.X, 1.0f, -1000000.0f, 1000000.0f, "%.2f");
+	ImGui::DragFloat3("Box Extents", &PendingBlockerExtents.X, 1.0f, 1.0f, 1000000.0f, "%.2f");
+
+	if (ImGui::Button("Add Blocker Box", ImVec2(-1.0f, 0.0f)))
+	{
+		AddBlockerBoxForEditedMesh(StaticMesh);
+	}
+
+	if (ImGui::Button("Clear Blockers", ImVec2(-1.0f, 0.0f)))
+	{
+		ClearBlockersForEditedMesh(StaticMesh);
+	}
+
+	ImGui::Separator();
 	if (ImGui::Button("Save Static Mesh", ImVec2(-1.0f, 0.0f)))
 	{
 		SaveEditedStaticMesh(StaticMesh);
@@ -394,6 +432,63 @@ void FStaticMeshEditorWidget::EnsurePreviewCollisionBody()
 			PreviewComp->CreatePhysicsState();
 		}
 	}
+}
+
+void FStaticMeshEditorWidget::AddBlockerBoxForEditedMesh(UStaticMesh* StaticMesh)
+{
+	if (!StaticMesh)
+	{
+		LastCollisionBuildMessage = "No static mesh.";
+		return;
+	}
+
+	UBodySetup* BodySetup = StaticMesh->GetOrCreateBodySetup();
+	if (!BodySetup)
+	{
+		LastCollisionBuildMessage = "Failed to create body setup.";
+		return;
+	}
+
+	PendingBlockerExtents.X = max(PendingBlockerExtents.X, 1.0f);
+	PendingBlockerExtents.Y = max(PendingBlockerExtents.Y, 1.0f);
+	PendingBlockerExtents.Z = max(PendingBlockerExtents.Z, 1.0f);
+
+	BodySetup->AddBox(PendingBlockerCenter, FQuat::Identity, PendingBlockerExtents);
+
+	if (UStaticMeshComponent* PreviewComp = ViewportClient.GetPreviewMeshComponent())
+	{
+		PreviewComp->RecreatePhysicsState();
+	}
+
+	LastCollisionBuildMessage = "Blocker box added. Boxes: "
+		+ FormatStaticMeshStatCount(BodySetup->GetAggGeom().BoxElems.size());
+	MarkDirty();
+}
+
+void FStaticMeshEditorWidget::ClearBlockersForEditedMesh(UStaticMesh* StaticMesh)
+{
+	if (!StaticMesh)
+	{
+		LastCollisionBuildMessage = "No static mesh.";
+		return;
+	}
+
+	UBodySetup* BodySetup = StaticMesh->GetBodySetup();
+	if (!BodySetup)
+	{
+		LastCollisionBuildMessage = "No body setup.";
+		return;
+	}
+
+	BodySetup->ClearShapes();
+
+	if (UStaticMeshComponent* PreviewComp = ViewportClient.GetPreviewMeshComponent())
+	{
+		PreviewComp->RecreatePhysicsState();
+	}
+
+	LastCollisionBuildMessage = "Blockers cleared.";
+	MarkDirty();
 }
 
 void FStaticMeshEditorWidget::RebuildCollisionForEditedMesh(UStaticMesh* StaticMesh)
@@ -440,4 +535,33 @@ void FStaticMeshEditorWidget::SaveEditedStaticMesh(UStaticMesh* StaticMesh)
 	{
 		LastCollisionBuildMessage = "Failed to save static mesh.";
 	}
+}
+
+void FStaticMeshEditorWidget::GenerateBoundaryBlockersForEditedMesh(UStaticMesh* StaticMesh)
+{
+	if (!StaticMesh)
+	{
+		LastCollisionBuildMessage = "No static mesh.";
+		return;
+	}
+
+	UBodySetup* BodySetup = StaticMesh->GetOrCreateBodySetup();
+	if (!BodySetup)
+	{
+		LastCollisionBuildMessage = "Failed to create body setup.";
+		return;
+	}
+
+	const int32 CreatedBoxCount =
+		BodySetup->BuildBoundaryBlockersFromComplexCollision(BlockerBuildSettings);
+
+	if (UStaticMeshComponent* PreviewComp = ViewportClient.GetPreviewMeshComponent())
+	{
+		PreviewComp->RecreatePhysicsState();
+	}
+
+	LastCollisionBuildMessage =
+		"Boundary blockers generated. Boxes: " + FormatStaticMeshStatCount(CreatedBoxCount);
+
+	MarkDirty();
 }

@@ -119,8 +119,6 @@ void FPhysicsShapeFactory::CreateShapesFromBodySetup(physx::PxPhysics& Physics, 
 				{
 					ApplyShapeFlags(*Shape, UserDataComponent, bTrigger, FilterDataOverride);
 					OutShapes.push_back(Shape);
-
-					return;
 				}
 			}
 		}
