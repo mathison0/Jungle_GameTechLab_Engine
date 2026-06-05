@@ -801,6 +801,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Viewport\GameViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Viewport\Viewport.cpp" />
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp" />
+    <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp" />
     <ClCompile Include="Source\Game\GameActorPlacements.cpp" />
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp" />
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp" />
@@ -1289,6 +1290,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Viewport\GameViewportClient.h" />
     <ClInclude Include="Source\Engine\Viewport\Viewport.h" />
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h" />
+    <ClInclude Include="Source\Game\Crowd\CrowdUnitTypes.h" />
+    <ClInclude Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.h" />
     <ClInclude Include="Source\Game\GameActorPlacements.h" />
     <ClInclude Include="Source\Game\Lua\GameLuaBindings.h" />
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h" />
