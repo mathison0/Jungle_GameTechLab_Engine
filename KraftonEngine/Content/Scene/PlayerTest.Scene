@@ -120,7 +120,7 @@
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
           "Name" : "UCharacterMovementComponent_2",
-          "ObjectId" : 14,
+          "ObjectId" : 15,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "ControllerContactOffset" : 0.050000,
@@ -149,7 +149,7 @@
         }, {
           "ClassName" : "ULuaScriptComponent",
           "Name" : "ULuaScriptComponent_5",
-          "ObjectId" : 15,
+          "ObjectId" : 16,
           "Properties" : {
             "ScriptFile" : "Game/barbarian_character.lua",
             "bAutoActivate" : true,
@@ -161,7 +161,7 @@
         }, {
           "ClassName" : "UBattleComponent",
           "Name" : "UBattleComponent_1",
-          "ObjectId" : 16,
+          "ObjectId" : 17,
           "Properties" : {
             "AttackPower" : 10.000000,
             "MaxHealth" : 100.000000,
@@ -176,7 +176,7 @@
         }, {
           "ClassName" : "UComboComponent",
           "Name" : "UComboComponent_1",
-          "ObjectId" : 17,
+          "ObjectId" : 18,
           "Properties" : {
             "InputBufferTime" : 0.300000,
             "MaxComboSteps" : 3,
@@ -209,18 +209,18 @@
                 "ObjectId" : 11,
                 "Properties" : {
                   "AngularDamping" : 0.010000,
-                  "AttachOffsetLocation" : [6.800000, 0.000000, 0.000000],
-                  "AttachOffsetRotation" : [0.000000, 0.000000, 0.000000],
-                  "AttachOffsetScale" : [10.000000, 10.000000, 10.000000],
-                  "CachedEditRotator" : [-2.151259, -7.468992, -10.855268],
+                  "AttachOffsetLocation" : [43.090000, 19.209999, -23.219999],
+                  "AttachOffsetRotation" : [-8.600000, 99.199997, 8.000000],
+                  "AttachOffsetScale" : [100.000000, 100.000000, 100.000000],
+                  "CachedEditRotator" : [45.467514, 66.439133, -9.129852],
                   "CollisionEnabled" : 0,
                   "CollisionPreset" : 0,
                   "LinearDamping" : 0.010000,
                   "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Auto/BasicShapeMaterial.mat"],
+                  "MaterialSlots" : ["Content/Material/Auto/Material.mat"],
                   "ObjectType" : 0,
-                  "RelativeTransform.Location" : [0.057460, 0.540130, 1.132053],
-                  "RelativeTransform.Scale" : [0.100000, 0.100000, 0.100000],
+                  "RelativeTransform.Location" : [0.450957, 0.389015, 0.920296],
+                  "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
                   "ResponseContainer" : {
                     "Responses[0]" : 2,
                     "Responses[1]" : 2,
@@ -228,7 +228,7 @@
                     "Responses[3]" : 2,
                     "Responses[4]" : 2
                   },
-                  "StaticMeshPath" : "Content/Data/BasicShape/Cube_StaticMesh.uasset",
+                  "StaticMeshPath" : "Content/Data/GameJam/Weapons/Axe/source/Axe_StaticMesh.uasset",
                   "TargetBoneName" : "hand_r",
                   "TranslucentSortPriority" : 0,
                   "bAutoActivate" : true,
@@ -265,7 +265,7 @@
                 "bPlaying" : true
               },
               "AnimationMode" : 2,
-              "AnimationTickLOD" : 1,
+              "AnimationTickLOD" : 0,
               "AnimationTickLODPolicy" : 0,
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
               "CollisionEnabled" : 0,
@@ -304,7 +304,45 @@
             }
           }, {
             "Children" : [{
-                "Children" : [],
+                "Children" : [{
+                    "Children" : [],
+                    "ClassName" : "UBillboardComponent",
+                    "Name" : "UBillboardComponent_123",
+                    "ObjectId" : 14,
+                    "Properties" : {
+                      "AngularDamping" : 0.010000,
+                      "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+                      "CollisionEnabled" : 0,
+                      "CollisionPreset" : 0,
+                      "LinearDamping" : 0.010000,
+                      "Mass" : 1.000000,
+                      "MaterialSlot" : "Content/Material/Editor/Camera.mat",
+                      "ObjectType" : 0,
+                      "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                      "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+                      "ResponseContainer" : {
+                        "Responses[0]" : 2,
+                        "Responses[1]" : 2,
+                        "Responses[2]" : 2,
+                        "Responses[3]" : 2,
+                        "Responses[4]" : 2
+                      },
+                      "TranslucentSortPriority" : 0,
+                      "bAutoActivate" : true,
+                      "bCastShadow" : true,
+                      "bCastShadowAsTwoSided" : false,
+                      "bEditorOnly" : true,
+                      "bEnableGravity" : true,
+                      "bGenerateOverlapEvents" : false,
+                      "bHiddenInComponentTree" : true,
+                      "bIsActive" : true,
+                      "bIsBillboard" : true,
+                      "bIsVisible" : true,
+                      "bSimulatePhysics" : false,
+                      "bTickEnable" : true
+                    },
+                    "bHiddenInComponentTree" : true
+                  }],
                 "ClassName" : "UCameraComponent",
                 "Name" : "UCameraComponent_2",
                 "ObjectId" : 13,
@@ -367,7 +405,7 @@
           "CapsuleHalfHeight" : 3.000000,
           "CapsuleRadius" : 1.800000,
           "CollisionEnabled" : 3,
-          "CollisionPreset" : 8,
+          "CollisionPreset" : 0,
           "LinearDamping" : 0.010000,
           "Mass" : 1.000000,
           "ObjectType" : 2,
@@ -405,9 +443,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [7.935550, -5.980362, 9.688433],
+    "Location" : [-0.376755, -2.879142, 3.620431],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 22.665071, 159.749725]
+    "Rotation" : [0.000000, 8.415096, 217.949478]
   },
   "Version" : 2,
   "WorldSettings" : {
