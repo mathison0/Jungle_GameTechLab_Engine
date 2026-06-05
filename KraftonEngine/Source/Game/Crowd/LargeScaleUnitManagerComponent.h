@@ -3,6 +3,7 @@
 #include "Component/ActorComponent.h"
 #include "Core/Delegate.h"
 #include "Core/Types/EngineTypes.h"
+#include "Game/Crowd/CrowdGroundQuery.h"
 #include "Game/Crowd/CrowdUnitTypes.h"
 
 #include "Source/Game/Crowd/LargeScaleUnitManagerComponent.generated.h"
@@ -39,6 +40,10 @@ public:
 	bool IsUnitAlive(FUnitHandle Handle) const;
 	FVector GetUnitPosition(FUnitHandle Handle) const;
 
+	void SetSurfaceFollowingEnabled(bool bEnabled) { bSurfaceFollowingEnabled = bEnabled; }
+	bool IsSurfaceFollowingEnabled() const { return bSurfaceFollowingEnabled; }
+	void RebuildGroundQuery();
+
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 private:
@@ -72,6 +77,8 @@ private:
 	void UpdateCombat(float DeltaTime);
 	void ProcessDamageEvents();
 	void HandleAttackEvent(const FMusouAttackEvent& Event);
+	void EnsureGroundQueryBuilt();
+	void ApplySurfaceFollowing(FCrowdUnit& Unit);
 
 	void BuildRenderData();
 	void DrawDebugUnits();
@@ -90,8 +97,10 @@ private:
 	TArray<FUnitRenderData> RenderData;
 	TMap<int64, TArray<uint32>> SpatialGrid;
 	FDelegateHandle AttackListenerHandle;
+	FCrowdGroundQuery GroundQuery;
 
 	bool bIsUpdating = false;
+	bool bGroundQueryDirty = true;
 	uint32 RandomState = 0x12345678u;
 
 	UPROPERTY(Edit, Save, Category="Crowd", DisplayName="Debug Draw")
@@ -102,6 +111,33 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd", DisplayName="Cell Size", Min=0.5f, Max=100.0f, Speed=0.1f)
 	float CellSize = 4.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Surface Following")
+	bool bSurfaceFollowingEnabled = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Ground Actor Tag")
+	FString GroundActorTag = "CrowdGround";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Allow Fallback Without Tag")
+	bool bAllowGroundFallbackWithoutTag = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Ground Trace Up", Min=0.0f, Max=1000.0f, Speed=0.1f)
+	float GroundTraceUp = 5.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Ground Trace Down", Min=0.0f, Max=1000.0f, Speed=0.1f)
+	float GroundTraceDown = 50.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Ground Height Offset", Min=-100.0f, Max=100.0f, Speed=0.01f)
+	float GroundHeightOffset = 0.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Ground Sample Cell Size", Min=0.5f, Max=100.0f, Speed=0.1f)
+	float GroundSampleCellSize = 4.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Walkable Slope Angle", Min=0.0f, Max=89.0f, Speed=1.0f)
+	float WalkableSlopeAngle = 60.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Ground Miss Tolerance Frames", Min=0, Max=30, Speed=1)
+	int32 GroundMissToleranceFrames = 2;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Max HP", Min=1.0f, Max=10000.0f, Speed=1.0f)
 	float DefaultMaxHP = 100.0f;

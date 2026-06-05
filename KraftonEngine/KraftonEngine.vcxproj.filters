@@ -1850,6 +1850,9 @@
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp">
       <Filter>Source\Engine\Viewport</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
@@ -5780,6 +5783,9 @@
     <ClInclude Include="Source\Engine\Animation\AnimationTickLODHelper.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h" />
+    <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
