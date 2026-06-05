@@ -12,3 +12,12 @@ enum class EAnimationTickLOD : uint8
 	LowRate,		// ~5-10Hz
 	Frozen			// keep last pose
 };
+
+UENUM()
+enum class EAnimationTickLODPolicy : uint8
+{
+	DistanceBased,
+	AlwaysFullRate,
+	Manual,
+	Disabled
+};

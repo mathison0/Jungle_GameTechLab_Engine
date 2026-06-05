@@ -123,6 +123,31 @@ void FAnimationTickLODManager::ApplyLOD(FAnimationTickLODEntry& Entry, const FVe
 		return;
 	}
 
+	const EAnimationTickLODPolicy Policy = Component->GetAnimationTickLODPolicy();
+
+	if (Policy == EAnimationTickLODPolicy::Disabled)
+	{
+		Component->SetEnableAnimationTickLOD(false);
+		Component->SetAnimationTickLOD(EAnimationTickLOD::FullRate);
+		RecordLOD(EAnimationTickLOD::FullRate);
+		return;
+	}
+
+	if (Policy == EAnimationTickLODPolicy::AlwaysFullRate)
+	{
+		Component->SetEnableAnimationTickLOD(true);
+		Component->SetAnimationTickLOD(EAnimationTickLOD::FullRate);
+		RecordLOD(EAnimationTickLOD::FullRate);
+		return;
+	}
+
+	if (Policy == EAnimationTickLODPolicy::Manual)
+	{
+		Component->SetEnableAnimationTickLOD(true);
+		RecordLOD(Component->GetAnimationTickLOD());
+		return;
+	}
+
 	const FVector ToComponent = Component->GetWorldLocation() - ViewLocation;
 	const float DistanceSq = ToComponent.Dot(ToComponent);
 	const FAnimationLODSettings& Settings = FAnimationLODSettings::Get();

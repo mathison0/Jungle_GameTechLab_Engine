@@ -61,6 +61,9 @@ public:
     void SetAnimationMode(EAnimationMode InMode);
     EAnimationMode GetAnimationMode() const { return AnimationMode; }
 
+	void SetAnimationTickLODPolicy(EAnimationTickLODPolicy InPolicy);
+	EAnimationTickLODPolicy GetAnimationTickLODPolicy() const { return AnimationTickLODPolicy; }
+
 	void SetAnimationTickLOD(EAnimationTickLOD InLOD);
 	EAnimationTickLOD GetAnimationTickLOD() const { return AnimationTickLOD; }
 
@@ -139,6 +142,9 @@ protected:
     UPROPERTY(Save, Instanced, Category="Animation", DisplayName="Anim Instance", Type=ObjectRef, AllowedClass=UAnimInstance)
     UAnimInstance*             AnimInstance  = nullptr;
 
+
+	UPROPERTY(Edit, Save, Category = "Animation|LOD", DisplayName = "Animation Tick LOD Policy", Enum = EAnimationTickLODPolicy)
+	EAnimationTickLODPolicy AnimationTickLODPolicy = EAnimationTickLODPolicy::DistanceBased;
 
 	UPROPERTY(Edit, Save, Category = "Animation|LOD", DisplayName = "Enable Animation Tick LOD")
 	bool bEnableAnimationTickLOD = false;

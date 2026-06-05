@@ -989,3 +989,22 @@ void USkeletalMeshComponent::SetAnimationTickInitialOffset(float OffsetSeconds)
 	AnimationTickPhaseOffset = std::max(0.0f, OffsetSeconds);
 	AnimationTickAccumulator = AnimationTickPhaseOffset;
 }
+
+void USkeletalMeshComponent::SetAnimationTickLODPolicy(EAnimationTickLODPolicy InPolicy)
+{
+	if (AnimationTickLODPolicy == InPolicy) return;
+
+	AnimationTickLODPolicy = InPolicy;
+	ResetAnimationTickLODState();
+
+	if (AnimationTickLODPolicy == EAnimationTickLODPolicy::AlwaysFullRate)
+	{
+		SetEnableAnimationTickLOD(true);
+		SetAnimationTickLOD(EAnimationTickLOD::FullRate);
+	}
+	else if (AnimationTickLODPolicy == EAnimationTickLODPolicy::Disabled)
+	{
+		SetEnableAnimationTickLOD(false);
+		SetAnimationTickLOD(EAnimationTickLOD::FullRate);
+	}
+}
