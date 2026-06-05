@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -573,13 +573,13 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponentTank.cpp" />
     <ClCompile Include="Source\Engine\Component\Particle\ParticleSystemComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\BillboardComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Primitive\BoneAttachedStaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\ClothComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\CylindricalBillboardComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\DecalComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\HeightFogComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\SkeletalMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\SkinnedMeshComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\Primitive\BoneAttachedStaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\SubUVComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\TextRenderComponent.cpp" />
@@ -803,17 +803,19 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Viewport\GameViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Viewport\Viewport.cpp" />
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp" />
-    <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp" />
-    <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp" />
     <ClCompile Include="Source\Game\GameActorPlacements.cpp" />
+    <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp" />
+    <ClCompile Include="Source\Game\Crowd\CrowdUnitAnimInstance.cpp" />
+    <ClCompile Include="Source\Game\Crowd\CrowdUnitVisualActor.cpp" />
+    <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp" />
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp" />
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp" />
-    <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\BattleComponent.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\ComboComponent.cpp" />
-    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameMode.cpp" />
+    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameState.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouPlayerController.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerEngine.cpp" />
@@ -910,6 +912,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Editor\Viewport\Level\LevelEditorViewportClient.h" />
     <ClInclude Include="Source\Engine\Animation\AnimExtractContext.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimationLODSettings.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationManager.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationMode.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationRuntime.h" />
@@ -998,13 +1001,13 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponentTank.h" />
     <ClInclude Include="Source\Engine\Component\Particle\ParticleSystemComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\BillboardComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Primitive\BoneAttachedStaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\ClothComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\CylindricalBillboardComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\DecalComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\HeightFogComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\SkeletalMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\SkinnedMeshComponent.h" />
-    <ClInclude Include="Source\Engine\Component\Primitive\BoneAttachedStaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\StaticMeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\SubUVComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\TextRenderComponent.h" />
@@ -1202,7 +1205,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Render\Geometry\SpriteParticleGeometry.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h" />
-    <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\IRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\RenderCollector.h" />
@@ -1297,18 +1299,21 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Viewport\GameViewportClient.h" />
     <ClInclude Include="Source\Engine\Viewport\Viewport.h" />
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h" />
-    <ClInclude Include="Source\Game\Crowd\CrowdUnitTypes.h" />
-    <ClInclude Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.h" />
     <ClInclude Include="Source\Game\GameActorPlacements.h" />
+    <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h" />
+    <ClInclude Include="Source\Game\Crowd\CrowdUnitAnimInstance.h" />
+    <ClInclude Include="Source\Game\Crowd\CrowdUnitTypes.h" />
+    <ClInclude Include="Source\Game\Crowd\CrowdUnitVisualActor.h" />
+    <ClInclude Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.h" />
     <ClInclude Include="Source\Game\Lua\GameLuaBindings.h" />
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h" />
-    <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AttackTypes.h" />
     <ClInclude Include="Source\Game\Musou\Combat\BattleComponent.h" />
     <ClInclude Include="Source\Game\Musou\Combat\ComboComponent.h" />
-    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameMode.h" />
+    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerEngine.h" />

@@ -5,10 +5,16 @@
 #include "Core/Types/EngineTypes.h"
 #include "Game/Crowd/CrowdGroundQuery.h"
 #include "Game/Crowd/CrowdUnitTypes.h"
+#include "Object/Ptr/SoftObjectPtr.h"
+#include "Object/Ptr/SubclassOf.h"
 
 #include "Source/Game/Crowd/LargeScaleUnitManagerComponent.generated.h"
 
+class ACrowdUnitVisualActor;
 struct FMusouAttackEvent;
+class UAnimInstance;
+class UClass;
+class USkeletalMesh;
 
 UCLASS()
 class ULargeScaleUnitManagerComponent : public UActorComponent
@@ -82,6 +88,13 @@ private:
 
 	void BuildRenderData();
 	void DrawDebugUnits();
+	void SyncVisualActors();
+	void DeactivateAllVisualActors();
+	void ReleaseVisualActorForHandle(FUnitHandle Handle);
+	void DestroyVisualActors(bool bDestroyWorldActors);
+	ACrowdUnitVisualActor* AcquireVisualActor();
+	USkeletalMesh* ResolveVisualSkeletalMesh();
+	UClass* ResolveVisualAnimClass() const;
 
 	float NextRandom01();
 	float RandomThinkInterval();
@@ -96,8 +109,13 @@ private:
 	TArray<FDamageEvent> DamageEvents;
 	TArray<FUnitRenderData> RenderData;
 	TMap<int64, TArray<uint32>> SpatialGrid;
+	TArray<ACrowdUnitVisualActor*> VisualActors;
+	TArray<ACrowdUnitVisualActor*> FreeVisualActors;
+	TMap<uint32, ACrowdUnitVisualActor*> ActiveVisualActors;
 	FDelegateHandle AttackListenerHandle;
 	FCrowdGroundQuery GroundQuery;
+	USkeletalMesh* CachedVisualSkeletalMesh = nullptr;
+	FString CachedVisualSkeletalMeshPath;
 
 	bool bIsUpdating = false;
 	bool bGroundQueryDirty = true;
@@ -108,6 +126,21 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd", DisplayName="Debug Draw Max Units", Min=0, Max=5000, Speed=10)
 	int32 DebugDrawMaxUnits = 300;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Enable Skeletal Visuals")
+	bool bEnableSkeletalVisuals = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Visual Skeletal Mesh", AssetType="SkeletalMesh")
+	FSoftObjectPtr VisualSkeletalMeshPath = "Content/Data/GameJam/Barbarian/Barbarian_SkeletalMesh.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Visual Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
+	TSubclassOf<UAnimInstance> VisualAnimInstanceClass;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Visual Scale")
+	FVector VisualScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Visual Turn Speed Deg/Sec", Min=1.0f, Max=3600.0f, Speed=10.0f)
+	float VisualTurnSpeedDegreesPerSecond = 540.0f;
 
 	UPROPERTY(Edit, Save, Category="Crowd", DisplayName="Cell Size", Min=0.5f, Max=100.0f, Speed=0.1f)
 	float CellSize = 4.0f;
@@ -165,4 +198,13 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Separation Weight", Min=0.0f, Max=20.0f, Speed=0.05f)
 	float DefaultSeparationWeight = 1.4f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Wait When Chase Blocked")
+	bool bWaitWhenChaseBlocked = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Chase Blocked Probe Distance", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float ChaseBlockedProbeDistance = 0.25f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Chase Blocked Clearance Padding", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float ChaseBlockedClearancePadding = 0.05f;
 };

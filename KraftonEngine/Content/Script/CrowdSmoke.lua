@@ -30,8 +30,8 @@ function BeginPlay()
     manager:ClearUnits()
     manager:SetDebugDrawEnabled(true)
 
-    manager:SpawnUnits(EUnitTeam.Ally, Vector.new(-0.0, 10.0, 0.0), 300, 4.0)
-    manager:SpawnUnits(EUnitTeam.Enemy, Vector.new(0.0, -10.0, 0.0), 300, 4.0)
+    manager:SpawnUnits(EUnitTeam.Ally, Vector.new(-0.0, 10.0, 0.0), 100, 4.0)
+    manager:SpawnUnits(EUnitTeam.Enemy, Vector.new(0.0, -10.0, 0.0), 100, 4.0)
 
     print("[CrowdSmoke] requested 100 allies + 100 enemies")
 end

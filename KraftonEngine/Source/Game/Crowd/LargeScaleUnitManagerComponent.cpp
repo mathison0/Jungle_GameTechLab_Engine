@@ -2,9 +2,15 @@
 
 #include "Debug/DrawDebugHelpers.h"
 #include "Object/FName.h"
+#include "Runtime/Engine.h"
+#include "Animation/AnimInstance.h"
+#include "Game/Crowd/CrowdUnitAnimInstance.h"
+#include "Game/Crowd/CrowdUnitVisualActor.h"
 #include "GameFramework/World.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Mesh/MeshManager.h"
+#include "Mesh/Skeletal/SkeletalMesh.h"
 
 #include <algorithm>
 #include <cmath>
@@ -53,6 +59,42 @@ namespace
 		return FRotator(0.0f, std::atan2(Direction.Y, Direction.X) * RadToDeg, 0.0f);
 	}
 
+	float NormalizeYawDegrees(float Angle)
+	{
+		Angle = std::fmod(Angle + 180.0f, 360.0f);
+		if (Angle < 0.0f)
+		{
+			Angle += 360.0f;
+		}
+
+		return Angle - 180.0f;
+	}
+
+	float StepYawTowards(float CurrentYaw, float TargetYaw, float MaxStepDegrees)
+	{
+		const float DeltaYaw = NormalizeYawDegrees(TargetYaw - CurrentYaw);
+		const float ClampedStep = (std::max)(MaxStepDegrees, 0.0f);
+		const float Step = (std::max)(-ClampedStep, (std::min)(DeltaYaw, ClampedStep));
+		return NormalizeYawDegrees(CurrentYaw + Step);
+	}
+
+	FRotator StepRotationTowardsDirectionXY(
+		const FRotator& CurrentRotation,
+		const FVector& Direction,
+		float DeltaTime,
+		float TurnSpeedDegreesPerSecond)
+	{
+		if (LengthSquaredXY(Direction) <= 1.e-6f)
+		{
+			return FRotator(0.0f, CurrentRotation.Yaw, 0.0f);
+		}
+
+		const float TargetYaw = RotationFromDirectionXY(Direction).Yaw;
+		const float TurnSpeed = (std::max)(TurnSpeedDegreesPerSecond, 1.0f);
+		const float MaxStepDegrees = TurnSpeed * (std::max)(DeltaTime, 0.0f);
+		return FRotator(0.0f, StepYawTowards(CurrentRotation.Yaw, TargetYaw, MaxStepDegrees), 0.0f);
+	}
+
 	AMusouGameMode* GetMusouGameModeFor(const UActorComponent* Component)
 	{
 		UWorld* World = Component ? Component->GetWorld() : nullptr;
@@ -77,6 +119,8 @@ void ULargeScaleUnitManagerComponent::BeginPlay()
 
 void ULargeScaleUnitManagerComponent::EndPlay()
 {
+	DestroyVisualActors(GetWorld() && GetWorld()->HasBegunPlay());
+
 	if (AttackListenerHandle.IsValid())
 	{
 		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
@@ -163,6 +207,7 @@ void ULargeScaleUnitManagerComponent::ClearUnits()
 	DamageEvents.clear();
 	RenderData.clear();
 	SpatialGrid.clear();
+	DestroyVisualActors(true);
 }
 
 void ULargeScaleUnitManagerComponent::RebuildGroundQuery()
@@ -275,6 +320,7 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	ProcessPendingDespawns();
 
 	BuildRenderData();
+	SyncVisualActors();
 	DrawDebugUnits();
 }
 
@@ -390,6 +436,7 @@ void ULargeScaleUnitManagerComponent::RemoveUnitInternal(FUnitHandle Handle)
 	}
 
 	FreeUnitIndices.push_back(Handle.Index);
+	ReleaseVisualActorForHandle(Handle);
 }
 
 bool ULargeScaleUnitManagerComponent::IsValidUnitHandle(FUnitHandle Handle) const
@@ -610,17 +657,27 @@ void ULargeScaleUnitManagerComponent::UpdateMovement(float DeltaTime)
 		}
 
 		FVector Desired = FVector::ZeroVector;
+		FVector FacingDir = FVector::ZeroVector;
 		if (Unit.State == EUnitState::Chase || Unit.State == EUnitState::Attack)
 		{
 			if (const FCrowdUnit* Target = ResolveUnit(Unit.Target))
 			{
 				Desired = NormalizedXY(Target->Position - Unit.Position);
-				Unit.Rotation = RotationFromDirectionXY(Desired);
+				FacingDir = Desired;
 			}
 			else
 			{
 				Unit.State = EUnitState::Idle;
 			}
+		}
+
+		if (LengthSquaredXY(FacingDir) > 1.e-6f)
+		{
+			Unit.Rotation = StepRotationTowardsDirectionXY(
+				Unit.Rotation,
+				FacingDir,
+				DeltaTime,
+				VisualTurnSpeedDegreesPerSecond);
 		}
 
 		FVector Separation = FVector::ZeroVector;
@@ -653,6 +710,72 @@ void ULargeScaleUnitManagerComponent::UpdateMovement(float DeltaTime)
 			}
 		}
 
+		if (bWaitWhenChaseBlocked && Unit.State == EUnitState::Chase && LengthSquaredXY(Desired) > 1.e-6f)
+		{
+			bool bCurrentlyOverlapping = false;
+			const float CurrentOverlapQueryRadius = (std::max)(Unit.Radius + Archetype.Radius, 0.0f);
+			QueryUnitsInRadius(Unit.Position, CurrentOverlapQueryRadius, Neighbors);
+			for (uint32 OtherIndex : Neighbors)
+			{
+				if (OtherIndex == Index || OtherIndex >= Units.size())
+				{
+					continue;
+				}
+
+				const FCrowdUnit& Other = Units[OtherIndex];
+				if (!Other.bAlive)
+				{
+					continue;
+				}
+
+				const float OverlapRadius = Unit.Radius + Other.Radius;
+				if (OverlapRadius > 0.0f && DistanceSquaredXY(Unit.Position, Other.Position) < OverlapRadius * OverlapRadius)
+				{
+					bCurrentlyOverlapping = true;
+					break;
+				}
+			}
+
+			if (!bCurrentlyOverlapping)
+			{
+				const float ClearancePadding = (std::max)(ChaseBlockedClearancePadding, 0.0f);
+				const float MinProbeDistance = (std::max)(ChaseBlockedProbeDistance, 0.0f);
+				const float ProbeDistance = (std::max)(MinProbeDistance, Archetype.MoveSpeed * DeltaTime);
+				const FVector ProbePosition = Unit.Position + Desired * ProbeDistance;
+				const float ProbeQueryRadius = (std::max)(Unit.Radius + Archetype.Radius + ClearancePadding, 0.0f);
+
+				bool bBlockedByForwardOccupancy = false;
+				QueryUnitsInRadius(ProbePosition, ProbeQueryRadius, Neighbors);
+				for (uint32 OtherIndex : Neighbors)
+				{
+					if (OtherIndex == Index || OtherIndex >= Units.size())
+					{
+						continue;
+					}
+
+					const FCrowdUnit& Other = Units[OtherIndex];
+					if (!Other.bAlive)
+					{
+						continue;
+					}
+
+					const float BlockedRadius = Unit.Radius + Other.Radius + ClearancePadding;
+					if (BlockedRadius > 0.0f && DistanceSquaredXY(ProbePosition, Other.Position) <= BlockedRadius * BlockedRadius)
+					{
+						bBlockedByForwardOccupancy = true;
+						break;
+					}
+				}
+
+				if (bBlockedByForwardOccupancy)
+				{
+					Unit.Velocity = FVector::ZeroVector;
+					ApplySurfaceFollowing(Unit);
+					continue;
+				}
+			}
+		}
+
 		FVector MoveDir = Desired;
 		if (LengthSquaredXY(Separation) > 1.e-6f)
 		{
@@ -669,7 +792,6 @@ void ULargeScaleUnitManagerComponent::UpdateMovement(float DeltaTime)
 
 		Unit.Velocity = MoveDir * Archetype.MoveSpeed;
 		Unit.Position += Unit.Velocity * DeltaTime;
-		Unit.Rotation = RotationFromDirectionXY(MoveDir);
 		ApplySurfaceFollowing(Unit);
 	}
 }
@@ -823,8 +945,201 @@ void ULargeScaleUnitManagerComponent::BuildRenderData()
 			Unit.Rotation,
 			Unit.AnimState,
 			Unit.AnimTime,
+			Unit.Velocity.Length(),
 			true
 		});
+	}
+}
+
+USkeletalMesh* ULargeScaleUnitManagerComponent::ResolveVisualSkeletalMesh()
+{
+	if (!bEnableSkeletalVisuals)
+	{
+		return nullptr;
+	}
+
+	const FString& MeshPath = VisualSkeletalMeshPath.ToString();
+	if (MeshPath.empty() || MeshPath == "None")
+	{
+		CachedVisualSkeletalMesh = nullptr;
+		CachedVisualSkeletalMeshPath.clear();
+		return nullptr;
+	}
+
+	if (CachedVisualSkeletalMesh && CachedVisualSkeletalMeshPath == MeshPath)
+	{
+		return CachedVisualSkeletalMesh;
+	}
+
+	CachedVisualSkeletalMesh = nullptr;
+	CachedVisualSkeletalMeshPath = MeshPath;
+
+	ID3D11Device* Device = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
+	if (!Device)
+	{
+		return nullptr;
+	}
+
+	CachedVisualSkeletalMesh = FMeshManager::LoadSkeletalMesh(MeshPath, Device);
+	return CachedVisualSkeletalMesh;
+}
+
+UClass* ULargeScaleUnitManagerComponent::ResolveVisualAnimClass() const
+{
+	if (UClass* Class = VisualAnimInstanceClass.Get())
+	{
+		return Class;
+	}
+
+	return UCrowdUnitAnimInstance::StaticClass();
+}
+
+ACrowdUnitVisualActor* ULargeScaleUnitManagerComponent::AcquireVisualActor()
+{
+	if (!FreeVisualActors.empty())
+	{
+		ACrowdUnitVisualActor* Actor = FreeVisualActors.back();
+		FreeVisualActors.pop_back();
+		return Actor;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	ACrowdUnitVisualActor* Actor = World->SpawnActor<ACrowdUnitVisualActor>();
+	if (Actor)
+	{
+		VisualActors.push_back(Actor);
+	}
+	return Actor;
+}
+
+void ULargeScaleUnitManagerComponent::ReleaseVisualActorForHandle(FUnitHandle Handle)
+{
+	auto It = ActiveVisualActors.find(Handle.Index);
+	if (It == ActiveVisualActors.end())
+	{
+		return;
+	}
+
+	ACrowdUnitVisualActor* Actor = It->second;
+	ActiveVisualActors.erase(It);
+
+	if (!Actor)
+	{
+		return;
+	}
+
+	Actor->DeactivateVisual();
+	FreeVisualActors.push_back(Actor);
+}
+
+void ULargeScaleUnitManagerComponent::DeactivateAllVisualActors()
+{
+	for (auto& Pair : ActiveVisualActors)
+	{
+		if (Pair.second)
+		{
+			Pair.second->DeactivateVisual();
+			FreeVisualActors.push_back(Pair.second);
+		}
+	}
+	ActiveVisualActors.clear();
+}
+
+void ULargeScaleUnitManagerComponent::DestroyVisualActors(bool bDestroyWorldActors)
+{
+	UWorld* World = GetWorld();
+
+	for (ACrowdUnitVisualActor* Actor : VisualActors)
+	{
+		if (!Actor)
+		{
+			continue;
+		}
+
+		Actor->DeactivateVisual();
+		if (bDestroyWorldActors && World)
+		{
+			World->DestroyActor(Actor);
+		}
+	}
+
+	VisualActors.clear();
+	FreeVisualActors.clear();
+	ActiveVisualActors.clear();
+}
+
+void ULargeScaleUnitManagerComponent::SyncVisualActors()
+{
+	if (!bEnableSkeletalVisuals)
+	{
+		DeactivateAllVisualActors();
+		return;
+	}
+
+	USkeletalMesh* VisualMesh = ResolveVisualSkeletalMesh();
+	if (!VisualMesh)
+	{
+		DeactivateAllVisualActors();
+		return;
+	}
+
+	UClass* AnimClass = ResolveVisualAnimClass();
+	TSet<uint32> SeenUnitIndices;
+	SeenUnitIndices.reserve(RenderData.size());
+
+	for (const FUnitRenderData& Data : RenderData)
+	{
+		if (!Data.bVisible || !Data.Handle.IsValid())
+		{
+			continue;
+		}
+
+		SeenUnitIndices.insert(Data.Handle.Index);
+
+		ACrowdUnitVisualActor* VisualActor = nullptr;
+		auto ActiveIt = ActiveVisualActors.find(Data.Handle.Index);
+		if (ActiveIt != ActiveVisualActors.end())
+		{
+			VisualActor = ActiveIt->second;
+			if (!VisualActor || VisualActor->GetUnitHandle().Generation != Data.Handle.Generation)
+			{
+				ReleaseVisualActorForHandle(FUnitHandle{ Data.Handle.Index, 0 });
+				VisualActor = nullptr;
+			}
+		}
+
+		if (!VisualActor)
+		{
+			VisualActor = AcquireVisualActor();
+			if (!VisualActor)
+			{
+				continue;
+			}
+			ActiveVisualActors[Data.Handle.Index] = VisualActor;
+		}
+
+		VisualActor->InitializeVisual(this, VisualMesh, AnimClass);
+		VisualActor->SetActorScale(VisualScale);
+		VisualActor->ApplyRenderData(Data);
+	}
+
+	TArray<uint32> StaleUnitIndices;
+	for (const auto& Pair : ActiveVisualActors)
+	{
+		if (SeenUnitIndices.find(Pair.first) == SeenUnitIndices.end())
+		{
+			StaleUnitIndices.push_back(Pair.first);
+		}
+	}
+
+	for (uint32 UnitIndex : StaleUnitIndices)
+	{
+		ReleaseVisualActorForHandle(FUnitHandle{ UnitIndex, 0 });
 	}
 }
 

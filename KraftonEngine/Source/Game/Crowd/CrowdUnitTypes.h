@@ -91,5 +91,6 @@ struct FUnitRenderData
 	FRotator Rotation = FRotator::ZeroRotator;
 	uint16 AnimState = 0;
 	float AnimTime = 0.0f;
+	float Speed = 0.0f;
 	bool bVisible = false;
 };

@@ -307,6 +307,9 @@
     <Filter Include="Source\Engine\Render\Geometry">
       <UniqueIdentifier>{4cb8c3a0-4c6e-b656-ca38-0d8476815faa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Render\Optimization">
+      <UniqueIdentifier>{4b319f08-3fbe-d814-48fa-de6ba8f5e119}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Render\Pipeline">
       <UniqueIdentifier>{5ac9b005-2a76-d0b0-3f77-2b89ae10bb53}</UniqueIdentifier>
     </Filter>
@@ -356,7 +359,7 @@
       <UniqueIdentifier>{7b75b017-e44b-6189-2a88-30dc16a5724f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Game\Crowd">
-      <UniqueIdentifier>{c053f3c3-5229-4fc2-9988-85f5576f25e4}</UniqueIdentifier>
+      <UniqueIdentifier>{1eb0138e-60b9-f2a3-68e7-cfeaf717282b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Game\Lua">
       <UniqueIdentifier>{a904550b-6c67-d00d-ee77-c5aaf7b88e71}</UniqueIdentifier>
@@ -758,6 +761,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="HighPerformanceGPUHint.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp">
       <Filter>Source\Editor</Filter>
     </ClCompile>
@@ -1167,6 +1171,9 @@
       <Filter>Source\Engine\Component\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Primitive\BillboardComponent.cpp">
+      <Filter>Source\Engine\Component\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Primitive\BoneAttachedStaticMeshComponent.cpp">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Primitive\ClothComponent.cpp">
@@ -1631,6 +1638,12 @@
     <ClCompile Include="Source\Engine\Render\Geometry\SpriteParticleGeometry.cpp">
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyer.cpp">
+      <Filter>Source\Engine\Render\Optimization</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.cpp">
+      <Filter>Source\Engine\Render\Optimization</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.cpp">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClCompile>
@@ -1850,20 +1863,29 @@
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp">
       <Filter>Source\Engine\Viewport</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\GameActorPlacements.cpp">
+      <Filter>Source\Game</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdUnitAnimInstance.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdUnitVisualActor.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp">
       <Filter>Source\Game\Crowd</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\GameActorPlacements.cpp">
-      <Filter>Source\Game</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp">
       <Filter>Source\Game\Lua</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp">
       <Filter>Source\Game\Musou\Character</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp">
+      <Filter>Source\Game\Musou\Combat</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.cpp">
       <Filter>Source\Game\Musou\Combat</Filter>
@@ -1874,10 +1896,10 @@
     <ClCompile Include="Source\Game\Musou\Combat\ComboComponent.cpp">
       <Filter>Source\Game\Musou\Combat</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp">
+    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameMode.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameMode.cpp">
+    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameState.cpp">
@@ -1938,11 +1960,6 @@
     <ClCompile Include="Intermediate\Generated\LuaBindings.generated.cpp">
       <Filter>Intermediate\Generated</Filter>
     </ClCompile>
-    <ClCompile Include="HighPerformanceGPUHint.cpp" />
-    <ClCompile Include="Source\Editor\Subsystem\PhysicsAssetEditingLibrary.cpp" />
-    <ClCompile Include="Source\Engine\Animation\AnimationTickLODManager.cpp" />
-    <ClCompile Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyer.cpp" />
-    <ClCompile Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2165,6 +2182,9 @@
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\AnimationLODSettings.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimationManager.h">
@@ -2429,6 +2449,9 @@
       <Filter>Source\Engine\Component\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Primitive\BillboardComponent.h">
+      <Filter>Source\Engine\Component\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Primitive\BoneAttachedStaticMeshComponent.h">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Primitive\ClothComponent.h">
@@ -3034,6 +3057,12 @@
     <ClInclude Include="Source\Engine\Render\Geometry\SpriteParticleGeometry.h">
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h">
+      <Filter>Source\Engine\Render\Optimization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h">
+      <Filter>Source\Engine\Render\Optimization</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClInclude>
@@ -3316,20 +3345,32 @@
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h">
       <Filter>Source\Engine\Viewport</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\GameActorPlacements.h">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdUnitAnimInstance.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdUnitTypes.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdUnitVisualActor.h">
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.h">
       <Filter>Source\Game\Crowd</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameActorPlacements.h">
-      <Filter>Source\Game</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Lua\GameLuaBindings.h">
       <Filter>Source\Game\Lua</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h">
       <Filter>Source\Game\Musou\Character</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h">
+      <Filter>Source\Game\Musou\Combat</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.h">
       <Filter>Source\Game\Musou\Combat</Filter>
@@ -3343,10 +3384,10 @@
     <ClInclude Include="Source\Game\Musou\Combat\ComboComponent.h">
       <Filter>Source\Game\Musou\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h">
+    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameMode.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameMode.h">
+    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h">
@@ -5775,16 +5816,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Subsystem\PhysicsAssetEditingLibrary.h" />
-    <ClInclude Include="Source\Engine\Physics\PhysicsAssetEditTypes.h" />
-    <ClInclude Include="Source\Engine\Animation\AnimationTickLOD.h" />
-    <ClInclude Include="Source\Engine\Animation\AnimationTickLODManager.h" />
-    <ClInclude Include="Source\Engine\Animation\AnimationTickLODHelper.h" />
-    <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h" />
-    <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h" />
-    <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h">
-      <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
