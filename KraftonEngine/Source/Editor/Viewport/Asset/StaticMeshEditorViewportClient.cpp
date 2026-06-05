@@ -7,6 +7,7 @@
 #include "Render/Scene/FScene.h"
 #include "Input/InputSystem.h"
 #include "Math/MathUtils.h"
+#include "Physics/PhysicsGeometry.h"
 #include "Render/Types/MinimalViewInfo.h"
 #include "Settings/EditorSettings.h"
 #include "Slate/SlateApplication.h"
@@ -14,6 +15,40 @@
 
 #include <cmath>
 #include <imgui.h>
+
+namespace
+{
+	void DrawDebugBoxElem(FScene& Scene, const FMatrix& LocalToWorld, const FKBoxElem& Box, const FColor& Color)
+	{
+		const FVector Signs[8] = {
+			FVector(-1.0f, -1.0f, -1.0f), FVector( 1.0f, -1.0f, -1.0f),
+			FVector( 1.0f,  1.0f, -1.0f), FVector(-1.0f,  1.0f, -1.0f),
+			FVector(-1.0f, -1.0f,  1.0f), FVector( 1.0f, -1.0f,  1.0f),
+			FVector( 1.0f,  1.0f,  1.0f), FVector(-1.0f,  1.0f,  1.0f)
+		};
+
+		FVector Corners[8];
+		for (int32 Index = 0; Index < 8; ++Index)
+		{
+			const FVector LocalCorner(
+				Signs[Index].X * Box.Extents.X,
+				Signs[Index].Y * Box.Extents.Y,
+				Signs[Index].Z * Box.Extents.Z);
+			Corners[Index] = LocalToWorld.TransformPositionWithW(Box.Center + Box.Rotation.RotateVector(LocalCorner));
+		}
+
+		const int32 Edges[12][2] = {
+			{0, 1}, {1, 2}, {2, 3}, {3, 0},
+			{4, 5}, {5, 6}, {6, 7}, {7, 4},
+			{0, 4}, {1, 5}, {2, 6}, {3, 7}
+		};
+
+		for (const int32(&Edge)[2] : Edges)
+		{
+			Scene.AddDebugLine(Corners[Edge[0]], Corners[Edge[1]], Color);
+		}
+	}
+}
 
 void FStaticMeshEditorViewportClient::Initialize(ID3D11Device* Device, uint32 Width, uint32 Height)
 {
@@ -221,6 +256,7 @@ void FStaticMeshEditorViewportClient::DrawPreviewCollision()
 	FScene& Scene = PreviewWorld->GetScene();
 	const FMatrix& LocalToWorld = PreviewMeshComponent->GetWorldMatrix();
 	const FColor CollisionColor(0, 255, 255);
+	const FColor BlockerColor(255, 220, 0);
 
 	const size_t TriangleCount = Indices.size() / 3;
 	for (size_t TriangleIndex = 0; TriangleIndex < TriangleCount; ++TriangleIndex)
@@ -240,5 +276,11 @@ void FStaticMeshEditorViewportClient::DrawPreviewCollision()
 		Scene.AddDebugLine(V0, V1, CollisionColor);
 		Scene.AddDebugLine(V1, V2, CollisionColor);
 		Scene.AddDebugLine(V2, V0, CollisionColor);
+	}
+
+	const FKAggregateGeom& AggGeom = BodySetup->GetAggGeom();
+	for (const FKBoxElem& Box : AggGeom.BoxElems)
+	{
+		DrawDebugBoxElem(Scene, LocalToWorld, Box, BlockerColor);
 	}
 }

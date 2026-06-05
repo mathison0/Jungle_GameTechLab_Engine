@@ -27,11 +27,22 @@ struct FStaticMeshCollisionBuildSettings
 	float MaxSlopeDegrees = 30.0f;
 	float MinTriangleArea = 0.0001f;
 	float WeldEpsilon = 0.5f;
-	int32 MinIslandTriangleCount = 3000;
+	int32 MinIslandTriangleCount = 30;
 
 	bool bSimplify = true;
 	int32 SimplifyAboveTriangleCount = 150000;
 	float SimplifyTargetRatio = 0.25f;
+};
+
+struct FStaticMeshBlockerBuildSettings
+{
+	float Height = 3.0f;
+	float Thickness = 0.5f;
+	float MinEdgeLength = 1.0f;
+	float MergeAngleDegrees = 15.0f;
+	float MinLoopArea = 10.0f;
+	bool bOnlyLargestLoop = true;
+	bool bClearExistingBlockers = true;
 };
 
 namespace physx
@@ -74,6 +85,8 @@ public:
 	void BuildWalkableCollisionFromStaticMesh(const FStaticMesh& Mesh, float MaxSlopeDegrees = 45.0f,
 		float MinTriangleArea = 1.0f, int32 MinIslandTriangleCount = 300);
 	void BuildWalkableCollisionFromStaticMesh(const FStaticMesh& Mesh, const FStaticMeshCollisionBuildSettings& Settings);
+	
+	int32 BuildBoundaryBlockersFromComplexCollision(const FStaticMeshBlockerBuildSettings& Settings);
 
 	const TArray<FVector>& GetComplexCollisionVertices() const { return ComplexCollisionVertices; }
 	const TArray<uint32>& GetComplexCollisionIndices() const { return ComplexCollisionIndices; }

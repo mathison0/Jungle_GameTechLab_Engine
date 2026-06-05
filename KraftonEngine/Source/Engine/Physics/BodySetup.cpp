@@ -310,6 +310,190 @@ namespace
 
 		return OutMesh;
 	}
+
+	struct FBoundaryEdgeRecord
+	{
+		uint32 A = 0;
+		uint32 B = 0;
+		int32 Count = 0;
+	};
+
+	struct FBoundaryLoop
+	{
+		TArray<uint32> Vertices;
+		float Area2D = 0.0f;
+		float Length2D = 0.0f;
+	};
+
+	FString MakeBoundaryEdgeKey(uint32 A, uint32 B)
+	{
+		if (A > B)
+		{
+			std::swap(A, B);
+		}
+
+		return std::to_string(A) + "_" + std::to_string(B);
+	}
+
+	float ComputeLoopArea2D(const TArray<uint32>& LoopVertices, const TArray<FVector>& Positions)
+	{
+		if (LoopVertices.size() < 3)
+		{
+			return 0.0f;
+		}
+
+		float Area = 0.0f;
+
+		for (size_t Index = 0; Index < LoopVertices.size(); ++Index)
+		{
+			const uint32 AIndex = LoopVertices[Index];
+			const uint32 BIndex = LoopVertices[(Index + 1) % LoopVertices.size()];
+
+			if (AIndex >= Positions.size() || BIndex >= Positions.size())
+			{
+				continue;
+			}
+
+			const FVector& A = Positions[AIndex];
+			const FVector& B = Positions[BIndex];
+
+			Area += A.X * B.Y - B.X * A.Y;
+		}
+
+		return Area * 0.5f;
+	}
+
+	float ComputeLoopLength2D(const TArray<uint32>& LoopVertices, const TArray<FVector>& Positions)
+	{
+		if (LoopVertices.size() < 2)
+		{
+			return 0.0f;
+		}
+
+		float Length = 0.0f;
+
+		for (size_t Index = 0; Index < LoopVertices.size(); ++Index)
+		{
+			const uint32 AIndex = LoopVertices[Index];
+			const uint32 BIndex = LoopVertices[(Index + 1) % LoopVertices.size()];
+
+			if (AIndex >= Positions.size() || BIndex >= Positions.size())
+			{
+				continue;
+			}
+
+			FVector Delta = Positions[BIndex] - Positions[AIndex];
+			Delta.Z = 0.0f;
+			Length += Delta.Length();
+		}
+
+		return Length;
+	}
+
+	TArray<FBoundaryLoop> BuildBoundaryLoops(
+		const TArray<FBoundaryEdgeRecord>& BoundaryEdges,
+		const TArray<FVector>& Positions)
+	{
+		TMap<uint32, TArray<uint32>> Adjacency;
+
+		for (const FBoundaryEdgeRecord& Edge : BoundaryEdges)
+		{
+			if (Edge.A >= Positions.size() || Edge.B >= Positions.size())
+			{
+				continue;
+			}
+
+			Adjacency[Edge.A].push_back(Edge.B);
+			Adjacency[Edge.B].push_back(Edge.A);
+		}
+
+		TMap<FString, bool> VisitedEdges;
+		TArray<FBoundaryLoop> Loops;
+
+		for (const FBoundaryEdgeRecord& StartEdge : BoundaryEdges)
+		{
+			const FString StartKey = MakeBoundaryEdgeKey(StartEdge.A, StartEdge.B);
+			auto VisitedIt = VisitedEdges.find(StartKey);
+			if (VisitedIt != VisitedEdges.end() && VisitedIt->second)
+			{
+				continue;
+			}
+
+			TArray<uint32> LoopVertices;
+			uint32 Prev = UINT32_MAX;
+			uint32 Current = StartEdge.A;
+			uint32 Next = StartEdge.B;
+
+			LoopVertices.push_back(Current);
+
+			while (true)
+			{
+				const FString EdgeKey = MakeBoundaryEdgeKey(Current, Next);
+				if (VisitedEdges[EdgeKey])
+				{
+					break;
+				}
+
+				VisitedEdges[EdgeKey] = true;
+				LoopVertices.push_back(Next);
+
+				Prev = Current;
+				Current = Next;
+
+				auto AdjIt = Adjacency.find(Current);
+				if (AdjIt == Adjacency.end())
+				{
+					break;
+				}
+
+				const TArray<uint32>& Neighbors = AdjIt->second;
+				uint32 Candidate = UINT32_MAX;
+
+				for (uint32 Neighbor : Neighbors)
+				{
+					if (Neighbor == Prev)
+					{
+						continue;
+					}
+
+					const FString CandidateKey = MakeBoundaryEdgeKey(Current, Neighbor);
+					if (!VisitedEdges[CandidateKey])
+					{
+						Candidate = Neighbor;
+						break;
+					}
+				}
+
+				if (Candidate == UINT32_MAX)
+				{
+					break;
+				}
+
+				Next = Candidate;
+
+				if (Next == LoopVertices[0])
+				{
+					const FString ClosingKey = MakeBoundaryEdgeKey(Current, Next);
+					if (!VisitedEdges[ClosingKey])
+					{
+						VisitedEdges[ClosingKey] = true;
+					}
+					break;
+				}
+			}
+
+			if (LoopVertices.size() >= 3)
+			{
+				FBoundaryLoop Loop;
+				Loop.Vertices = std::move(LoopVertices);
+				Loop.Area2D = ComputeLoopArea2D(Loop.Vertices, Positions);
+				Loop.Length2D = ComputeLoopLength2D(Loop.Vertices, Positions);
+				Loops.push_back(std::move(Loop));
+			}
+		}
+
+		return Loops;
+	}
 }
 
 UBodySetup::~UBodySetup()
@@ -483,6 +667,148 @@ void UBodySetup::BuildWalkableCollisionFromStaticMesh(const FStaticMesh& Mesh, f
 	Settings.MinIslandTriangleCount = MinIslandTriangleCount;
 
 	BuildWalkableCollisionFromStaticMesh(Mesh, Settings);
+}
+
+int32 UBodySetup::BuildBoundaryBlockersFromComplexCollision(const FStaticMeshBlockerBuildSettings& Settings)
+{
+	if (!HasComplexCollision()) return 0;
+
+	if (Settings.bClearExistingBlockers)
+	{
+		ClearShapes();
+	}
+
+	TMap<FString, FBoundaryEdgeRecord> EdgeRecords;
+
+	auto AddEdge = [&](uint32 A, uint32 B)
+	{
+		if (A >= ComplexCollisionVertices.size() || B >= ComplexCollisionVertices.size()) return;
+
+		const FString Key = MakeBoundaryEdgeKey(A, B);
+		FBoundaryEdgeRecord& Record = EdgeRecords[Key];
+
+		if (Record.Count == 0)
+		{
+			Record.A = std::min(A, B);
+			Record.B = std::max(A, B);
+		}
+
+		++Record.Count;
+	};
+
+	for (size_t Index = 0; Index + 2 < ComplexCollisionIndices.size(); Index += 3)
+	{
+		const uint32 I0 = ComplexCollisionIndices[Index + 0];
+		const uint32 I1 = ComplexCollisionIndices[Index + 1];
+		const uint32 I2 = ComplexCollisionIndices[Index + 2];
+
+		AddEdge(I0, I1);
+		AddEdge(I1, I2);
+		AddEdge(I2, I0);
+	}
+
+	TArray<FBoundaryEdgeRecord> BoundaryEdges;
+
+	for (const auto& Pair : EdgeRecords)
+	{
+		const FBoundaryEdgeRecord& Record = Pair.second;
+
+		if (Record.Count == 1)
+		{
+			BoundaryEdges.push_back(Record);
+		}
+	}
+
+	TArray<FBoundaryLoop> BoundaryLoops =
+		BuildBoundaryLoops(BoundaryEdges, ComplexCollisionVertices);
+
+	TArray<const FBoundaryLoop*> SelectedLoops;
+
+	if (Settings.bOnlyLargestLoop)
+	{
+		const FBoundaryLoop* LargestLoop = nullptr;
+
+		for (const FBoundaryLoop& Loop : BoundaryLoops)
+		{
+			const float AbsArea = std::abs(Loop.Area2D);
+			if (AbsArea < Settings.MinLoopArea)
+			{
+				continue;
+			}
+
+			if (!LargestLoop || AbsArea > std::abs(LargestLoop->Area2D))
+			{
+				LargestLoop = &Loop;
+			}
+		}
+
+		if (LargestLoop)
+		{
+			SelectedLoops.push_back(LargestLoop);
+		}
+	}
+	else
+	{
+		for (const FBoundaryLoop& Loop : BoundaryLoops)
+		{
+			if (std::abs(Loop.Area2D) >= Settings.MinLoopArea)
+			{
+				SelectedLoops.push_back(&Loop);
+			}
+		}
+	}
+
+	int32 CreatedBoxCount = 0;
+
+	for (const FBoundaryLoop* Loop : SelectedLoops)
+	{
+		if (!Loop || Loop->Vertices.size() < 2)
+		{
+			continue;
+		}
+
+		for (size_t Index = 0; Index < Loop->Vertices.size(); ++Index)
+		{
+			const uint32 AIndex = Loop->Vertices[Index];
+			const uint32 BIndex = Loop->Vertices[(Index + 1) % Loop->Vertices.size()];
+
+			if (AIndex >= ComplexCollisionVertices.size() || BIndex >= ComplexCollisionVertices.size())
+			{
+				continue;
+			}
+
+			const FVector P0 = ComplexCollisionVertices[AIndex];
+			const FVector P1 = ComplexCollisionVertices[BIndex];
+
+			FVector EdgeVec = P1 - P0;
+			EdgeVec.Z = 0.0f;
+
+			const float Length = EdgeVec.Length();
+			if (Length < Settings.MinEdgeLength)
+			{
+				continue;
+			}
+
+			const FVector EdgeDir = EdgeVec / Length;
+
+			const FVector Center =
+				(P0 + P1) * 0.5f
+				+ FVector(0.0f, 0.0f, Settings.Height * 0.5f);
+
+			const FVector Extents(
+				Length * 0.5f,
+				Settings.Thickness * 0.5f,
+				Settings.Height * 0.5f);
+
+			const float Yaw = std::atan2(EdgeDir.Y, EdgeDir.X);
+			const FQuat Rotation = FQuat::FromAxisAngle(FVector::ZAxisVector, Yaw);
+
+			AddBox(Center, Rotation, Extents);
+			++CreatedBoxCount;
+		}
+	}
+
+	return CreatedBoxCount;
 }
 
 void UBodySetup::BuildWalkableCollisionFromStaticMesh(const FStaticMesh& Mesh, const FStaticMeshCollisionBuildSettings& Settings)
