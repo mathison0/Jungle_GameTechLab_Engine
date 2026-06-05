@@ -100,6 +100,7 @@ void EditorProjectSettingsWidget::Render()
 
 		static const char* LODLabels[] = { "FullRate", "HalfRate", "QuarterRate", "LowRate", "Frozen" };
 		bChanged |= ImGui::Combo("PreDepth Max LOD", &PS.AnimationLOD.PreDepthMaxLOD, LODLabels, 5);
+		bChanged |= ImGui::Combo("Shadow Caster Max LOD", &PS.AnimationLOD.ShadowCasterMaxLOD, LODLabels, 5);
 
 		if (ImGui::Button("Reset Animation LOD Defaults"))
 		{
@@ -108,6 +109,7 @@ void EditorProjectSettingsWidget::Render()
 			PS.AnimationLOD.QuarterRateDistance = FAnimationLODSettings::kDefaultQuarterRateDistance;
 			PS.AnimationLOD.LowRateDistance = FAnimationLODSettings::kDefaultLowRateDistance;
 			PS.AnimationLOD.PreDepthMaxLOD = static_cast<int32>(FAnimationLODSettings::kDefaultPreDepthMaxLOD);
+			PS.AnimationLOD.ShadowCasterMaxLOD = static_cast<int32>(FAnimationLODSettings::kDefaultShadowCasterMaxLOD);
 			bChanged = true;
 		}
 

@@ -37,6 +37,7 @@ namespace PSKey
 	constexpr const char* QuarterRateDistance = "QuarterRateDistance";
 	constexpr const char* LowRateDistance = "LowRateDistance";
 	constexpr const char* PreDepthMaxLOD = "PreDepthMaxLOD";
+	constexpr const char* ShadowCasterMaxLOD = "ShadowCasterMaxLOD";
 }
 
 void FProjectSettings::SaveToFile(const FString& Path) const
@@ -79,6 +80,7 @@ void FProjectSettings::SaveToFile(const FString& Path) const
 	AnimationLODObj[PSKey::QuarterRateDistance] = AnimationLOD.QuarterRateDistance;
 	AnimationLODObj[PSKey::LowRateDistance] = AnimationLOD.LowRateDistance;
 	AnimationLODObj[PSKey::PreDepthMaxLOD] = static_cast<int>(AnimationLOD.PreDepthMaxLOD);
+	AnimationLODObj[PSKey::ShadowCasterMaxLOD] = static_cast<int>(AnimationLOD.ShadowCasterMaxLOD);
 	Root[PSKey::AnimationLODSection] = AnimationLODObj;
 
 	std::filesystem::path FilePath(FPaths::ToWide(Path));
@@ -154,6 +156,11 @@ void FProjectSettings::LoadFromFile(const FString& Path)
 			const int32 LOD = static_cast<int32>(A[PSKey::PreDepthMaxLOD].ToInt());
 			AnimationLOD.PreDepthMaxLOD = (std::max)(0, (std::min)(LOD, static_cast<int32>(EAnimationTickLOD::Frozen)));
 		}
+		if (A.hasKey(PSKey::ShadowCasterMaxLOD))
+		{
+			const int32 LOD = static_cast<int32>(A[PSKey::ShadowCasterMaxLOD].ToInt());
+			AnimationLOD.ShadowCasterMaxLOD = (std::max)(0, (std::min)(LOD, static_cast<int32>(EAnimationTickLOD::Frozen)));
+		}
 	}
 
 	if (Root.hasKey(PSKey::Shadow))
@@ -199,4 +206,7 @@ void FProjectSettings::ApplyRuntimeSettings() const
 
 	FAnimationLODSettings::Get().SetPreDepthMaxLOD(
 		static_cast<EAnimationTickLOD>(AnimationLOD.PreDepthMaxLOD));
+
+	FAnimationLODSettings::Get().SetShadowCasterMaxLOD(
+		static_cast<EAnimationTickLOD>(AnimationLOD.ShadowCasterMaxLOD));
 }

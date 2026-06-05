@@ -57,6 +57,7 @@ class FProjectSettings : public TSingleton<FProjectSettings>
 		float QuarterRateDistance = 28.0f;
 		float LowRateDistance = 45.0f;
 		int32 PreDepthMaxLOD = static_cast<int32>(EAnimationTickLOD::HalfRate);
+		int32 ShadowCasterMaxLOD = static_cast<int32>(EAnimationTickLOD::LowRate);
 	};
 
 public:

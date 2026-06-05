@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Animation/AnimationTickLOD.h"
 #include "Core/Singleton.h"
@@ -14,6 +14,7 @@ public:
 	static constexpr float kDefaultQuarterRateDistance = 28.0f;
 	static constexpr float kDefaultLowRateDistance = 45.0f;
 	static constexpr EAnimationTickLOD kDefaultPreDepthMaxLOD = EAnimationTickLOD::HalfRate;
+	static constexpr EAnimationTickLOD kDefaultShadowCasterMaxLOD = EAnimationTickLOD::LowRate;
 
 	void SetTickLODDistances(float Full, float Half, float Quarter, float Low)
 	{
@@ -45,6 +46,15 @@ public:
 		return static_cast<uint8>(LOD) <= static_cast<uint8>(PreDepthMaxLOD);
 	}
 
+	void SetShadowCasterMaxLOD(EAnimationTickLOD InLOD) { ShadowCasterMaxLOD = InLOD; }
+	void ResetShadowCasterMaxLOD() { ShadowCasterMaxLOD = kDefaultShadowCasterMaxLOD; }
+	EAnimationTickLOD GetShadowCasterMaxLOD() const { return ShadowCasterMaxLOD; }
+
+	bool ShouldEmitSkeletalShadowCaster(EAnimationTickLOD LOD) const
+	{
+		return static_cast<uint8>(LOD) <= static_cast<uint8>(ShadowCasterMaxLOD);
+	}
+
 private:
 	FAnimationLODSettings() = default;
 	~FAnimationLODSettings() = default;
@@ -55,4 +65,5 @@ private:
 	float QuarterRateDistance = kDefaultQuarterRateDistance;
 	float LowRateDistance = kDefaultLowRateDistance;
 	EAnimationTickLOD PreDepthMaxLOD = kDefaultPreDepthMaxLOD;
+	EAnimationTickLOD ShadowCasterMaxLOD = kDefaultShadowCasterMaxLOD;
 };

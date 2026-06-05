@@ -1,6 +1,8 @@
 ﻿#include "ShadowMapPass.h"
 #include "RenderPassRegistry.h"
 
+#include "Animation/AnimationLODSettings.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Materials/Material.h"
 #include "Render/Device/D3DDevice.h"
 #include "Render/Types/FrameContext.h"
@@ -695,6 +697,18 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 		if (!Partition && !LightFrustum.IntersectAABB(Proxy->GetCachedBounds())) continue;
 
 		const bool bSkeletal = Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
+
+		if (bSkeletal)
+		{
+			FSkeletalMeshSceneProxy* SkeletalProxy = static_cast<FSkeletalMeshSceneProxy*>(Proxy);
+			USkeletalMeshComponent* SMC = SkeletalProxy ? SkeletalProxy->GetSkeletalMeshComponent() : nullptr;
+
+			if (!SMC || !FAnimationLODSettings::Get().ShouldEmitSkeletalShadowCaster(SMC->GetAnimationTickLOD()))
+			{
+				continue;
+			}
+		}
+
 		const bool bGpuSkinned = bSkeletal && bUseGpuSkinning;
 
 		FDrawCommandBuffer ProxyBuffer;
