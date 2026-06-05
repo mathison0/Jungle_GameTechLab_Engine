@@ -19,7 +19,14 @@
 			justify-content: center;
 		}
 
-		#start-button {
+		#menu-buttons {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.menu-button {
 			width: 260px;
 			height: 72px;
 			padding: 0;
@@ -31,11 +38,27 @@
 			line-height: 72px;
 			text-align: center;
 		}
+
+		.secondary-button {
+			width: 220px;
+			height: 56px;
+			margin-top: 14px;
+			border-color: #bfa86b;
+			background-color: #121923;
+			color: #e8ddbd;
+			font-size: 22px;
+			line-height: 56px;
+		}
 	</style>
 </head>
 <body>
 	<div id="intro-root">
-		<div id="start-button">시작하기</div>
+		<div id="menu-buttons">
+			<div id="start-button" class="menu-button">시작하기</div>
+			<div id="settings-button" class="menu-button secondary-button">설정하기</div>
+			<div id="score-button" class="menu-button secondary-button">점수보기</div>
+			<div id="exit-button" class="menu-button secondary-button">끝내기</div>
+		</div>
 	</div>
 </body>
 </rml>

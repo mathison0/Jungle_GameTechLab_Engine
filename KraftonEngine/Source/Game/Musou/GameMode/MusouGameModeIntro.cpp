@@ -5,6 +5,11 @@
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>  // PostQuitMessage
+
 AMusouGameModeIntro::AMusouGameModeIntro()
 {
 }
@@ -24,6 +29,12 @@ void AMusouGameModeIntro::StartMatch()
 				{
 					GEngine->RequestTransitionToScene("Play");
 				}
+			});
+
+			IntroWidget->BindClick("exit-button", []()
+			{
+				UE_LOG("[MusouGameModeIntro] Exit requested from intro UI");
+				PostQuitMessage(0);
 			});
 		}
 	}
