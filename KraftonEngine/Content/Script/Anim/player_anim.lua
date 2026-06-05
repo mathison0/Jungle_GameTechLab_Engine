@@ -33,12 +33,23 @@ local JUMP_PATH = BARBARIAN_DIR .. "Barbarian_Jump_mixamo_com.uasset"
 local MONTAGES = {
     attack1 = "Content/Montages/Barbarian_Melee Attack 360 High_Montage.uasset",
     attack2 = "Content/Montages/Barbarian_Melee Attack BackHand_Montage.uasset",
-    combo   = "",   -- (추후) 좌클릭 콤보 — Combo Attack Ver. 1/2/3 섹션 구성 추천
     heavy   = "",   -- (추후) 우클릭 강공격 — Melee Attack Downward / 360 High 추천
     skill1  = "",   -- (추후) 스킬1 — Melee Attack 360 Low 등
     skill2  = "",   -- (추후) 스킬2 — Melee Run Jump Attack 등
     skill3  = "",   -- (추후) 스킬3 — Taunt Battlecry (버프류) 등
 }
+
+-- ── 좌클릭 콤보 체인 (UComboComponent 연동) ──
+-- 단계 상태/입력 버퍼/윈도우는 C++ UComboComponent가 관리하고,
+-- 여기서는 단계 → 몽타주 매핑과 재생만 담당한다.
+-- 각 몽타주에는 AnimNotify_MusouAttack(comboN) + AnimNotifyState_ComboWindow 배치 필요.
+local COMBO_MONTAGES = {
+    "Content/Montages/Barbarian_Melee Combo Attack Ver. 1_Montage.uasset",
+    "Content/Montages/Barbarian_Melee Combo Attack Ver. 2_Montage.uasset",
+    "Content/Montages/Barbarian_Melee Combo Attack Ver. 3_Montage.uasset",
+}
+local COMBO_PLAY_RATE = 1.0
+local COMBO_BLEND_IN = 0.1
 
 local DEFAULT_SLOT = "DefaultSlot"
 
@@ -68,8 +79,29 @@ local function play_montage_action(name)
     Anim.play_montage(path, nil, MONTAGE_PLAY_RATE, MONTAGE_BLEND_IN, nil)
 end
 
+-- ── 콤보 헬퍼 ──
+-- ComboComponent는 캐릭터 구성 순서상 anim init 이후에 붙을 수 있어 lazy 캐시.
+local function get_combo(self)
+    if self.Combo == nil then
+        local owner = Anim.get_owner()
+        if owner ~= nil then
+            self.Combo = owner:GetComboComponent()
+        end
+    end
+    return self.Combo
+end
+
+local function play_combo_step(step)
+    local path = COMBO_MONTAGES[step]
+    if path == nil then
+        return
+    end
+    Anim.play_montage(path, nil, COMBO_PLAY_RATE, COMBO_BLEND_IN, nil)
+end
+
 function init(self)
     self.Speed = 0
+    self.Combo = nil
 
     -- ── Locomotion sub-SM (Idle ↔ Walk ↔ Run) ──
     local loco = Anim.create_state_machine("Locomotion")
@@ -110,9 +142,35 @@ end
 function update(self, dt)
     self.Speed = Anim.get_owner_speed()
 
-    -- 좌클릭 → Attack1 (추후 콤보 어택으로 교체 예정)
+    local combo = get_combo(self)
+
+    -- ── 콤보 리셋 — 체인 끊김(윈도우 내 미입력)/완주/공중 ──
+    -- 입력 처리보다 먼저: 같은 프레임에 리셋 후 새 콤보 시작이 가능하도록.
+    if combo ~= nil and combo:IsComboActive() then
+        if Anim.is_owner_falling() or not Anim.is_montage_playing(DEFAULT_SLOT) then
+            combo:ResetCombo()
+        end
+    end
+
+    -- ── 좌클릭 → 콤보 체인 (ComboComponent 없으면 단발 attack1 폴백) ──
     if Anim.is_left_mouse_pressed() then
-        play_montage_action("attack1")
+        if combo ~= nil then
+            -- 다른 몽타주(강공격/스킬) 재생 중엔 새 콤보 시작 금지.
+            -- 콤보 진행 중이면 TryAttack이 내부에서 다음 단계 입력으로 버퍼링.
+            local bOtherMontagePlaying = not combo:IsComboActive() and Anim.is_montage_playing(DEFAULT_SLOT)
+            if not Anim.is_owner_falling() and not bOtherMontagePlaying then
+                if combo:TryAttack() then
+                    play_combo_step(1)
+                end
+            end
+        else
+            play_montage_action("attack1")
+        end
+    end
+
+    -- ── 콤보 단계 전진 — 윈도우 내 예약 입력 소비 ──
+    if combo ~= nil and combo:ConsumeQueuedAdvance() then
+        play_combo_step(combo:GetComboStep())
     end
 
     -- 우클릭 → Attack2 (추후 강공격으로 교체 예정)

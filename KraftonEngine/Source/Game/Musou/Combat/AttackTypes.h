@@ -31,6 +31,11 @@ inline const FAttackSpec* FindMusouAttackSpec(const FName& Id)
 		//  Id                  Range  Height ConeCos DmgMult KbDist KbDur
 		{ FName("attack1"),     4.0f,  2.5f,  -1.0f,  1.0f,   2.5f,  0.15f }, // 360 High — 전방위
 		{ FName("attack2"),     3.5f,  2.5f,   0.34f, 1.5f,   4.0f,  0.20f }, // Backhand — 전방 콘 (~140도)
+
+		// 좌클릭 콤보 체인 (Combo Attack Ver. 1/2/3) — 단계가 오를수록 강해진다
+		{ FName("combo1"),      3.5f,  2.5f,   0.34f, 1.0f,   1.5f,  0.10f }, // 1단 — 전방 콘, 짧은 넉백
+		{ FName("combo2"),      3.5f,  2.5f,   0.34f, 1.2f,   2.0f,  0.12f }, // 2단
+		{ FName("combo3"),      4.5f,  2.5f,  -1.0f,  2.0f,   5.0f,  0.25f }, // 3단 피니셔 — 전방위 + 강넉백
 	};
 
 	for (const FAttackSpec& Spec : Table)

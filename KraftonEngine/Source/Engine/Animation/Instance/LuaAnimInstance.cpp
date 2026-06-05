@@ -254,6 +254,15 @@ void ULuaAnimInstance::InstallBindings()
 			return Move ? Move->IsFalling() : false;
 		});
 
+	// get_owner — owner AActor 반환 (Actor usertype). 게임 컴포넌트 접근용:
+	//   local combo = Anim.get_owner():GetComboComponent()
+	// 없으면 nil — lua 측 nil 가드 필요.
+	Anim.set_function("get_owner",
+		[this]() -> AActor*
+		{
+			return OwningComponent ? OwningComponent->GetOwner() : nullptr;
+		});
+
 	// Slot 인자는 sol::object — None/missing 이면 FName::None (→ 내부에서 DefaultMontageSlot resolve).
 	// play_montage / stop_montage / is_montage_playing / jump_to_section 모두 공통 사용.
 	auto ResolveSlot = [](const sol::object& SlotObj) -> FName
