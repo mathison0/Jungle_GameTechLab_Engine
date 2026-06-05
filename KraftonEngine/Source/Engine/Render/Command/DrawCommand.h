@@ -2,12 +2,14 @@
 
 #include "Render/Types/RenderTypes.h"
 #include "Render/Types/RenderStateTypes.h"
+#include "Render/Types/MaterialTextureSlot.h"
+#include "Render/Types/RenderConstants.h"
 #include "Math/Vector.h"
 #include "Core/Types/CoreTypes.h"
-#include "Render/Types/MaterialTextureSlot.h"
 
 class FShader;
 class FConstantBuffer;
+class FSkeletalMeshSceneProxy;
 struct ID3D11ShaderResourceView;
 struct ID3D11Buffer;
 
@@ -79,6 +81,8 @@ struct FDrawCommand
 	FConstantBuffer*    PerObjectCB = nullptr;        // b1: Model + Color (per-proxy)
 	FDrawCommandBindings Bindings;                    // PerShaderCB + SRVs (per-material)
 
+	FPerObjectConstants PerObjectConstants;
+
 	// ===== Sort =====
 	uint64 SortKey = 0;                              // 정렬 키 (Pass → Shader → MeshBuffer → SRV)
 
@@ -91,6 +95,9 @@ struct FDrawCommand
 
 	// PreDepth에서 PS를 유지하고 알파 컷아웃 clip을 수행 (투명 텍셀 깊이 기록 방지)
 	bool bDepthAlphaTest = false;
+
+	// Skeletal Batching
+	const FSkeletalMeshSceneProxy* SkeletalProxy = nullptr;
 
 	// Fullscreen triangle 초기화 (PostProcess 등 SV_VertexID 기반 드로우)
 	void InitFullscreenTriangle(FShader* InShader, ERenderPass InPass, const FDrawCommandRenderState& InRenderState)

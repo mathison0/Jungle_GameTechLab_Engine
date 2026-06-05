@@ -66,6 +66,48 @@ FSkinningResult ApplyLinearBlendSkinning(
     return result;
 }
 
+FSkinningResult ApplyLinearBlendSkinningWithOffset(
+    float3 position,
+    float3 normal,
+    float3 tangent,
+    int4 boneIndices,
+    float4 boneWeights,
+    uint skinMatrixOffset)
+{
+    FSkinningResult result;
+    result.position = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    result.normal = float3(0.0f, 0.0f, 0.0f);
+    result.tangent = float3(0.0f, 0.0f, 0.0f);
+    result.accumWeight = 0.0f;
+
+    [unroll]
+    for (int i = 0; i < 4; ++i)
+    {
+        int boneIndex = boneIndices[i];
+        float weight = boneWeights[i];
+
+        if (boneIndex >= 0 && weight > 0.0f)
+        {
+            FSkinMatrix skinMatrix = SkinMatrices[skinMatrixOffset + boneIndex];
+
+            result.position += weight * MulSkinMatrix(float4(position, 1.0f), skinMatrix);
+            result.normal += weight * MulSkinMatrix(float4(normal, 0.0f), skinMatrix).xyz;
+            result.tangent += weight * MulSkinMatrix(float4(tangent, 0.0f), skinMatrix).xyz;
+            result.accumWeight += weight;
+        }
+    }
+
+    if (result.accumWeight <= 0.0f)
+    {
+        result.position = float4(position, 1.0f);
+        result.normal = normal;
+        result.tangent = tangent;
+    }
+
+    return result;
+}
+
+
 float GetBoneInfluenceWeight(int4 boneIndices, float4 boneWeights, int selectedBoneIndex)
 {
     float selectedWeight = 0.0f;

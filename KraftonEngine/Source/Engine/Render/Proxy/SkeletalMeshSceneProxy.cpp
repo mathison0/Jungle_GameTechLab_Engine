@@ -1,4 +1,4 @@
-#include "SkeletalMeshSceneProxy.h"
+﻿#include "SkeletalMeshSceneProxy.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Render/Command/DrawCommand.h"
@@ -48,6 +48,9 @@ void FSkeletalMeshSceneProxy::UpdateMesh()
 	{
 		CachedDynamicVertexCount = static_cast<uint32>(Asset->Vertices.size());
 	}
+
+	CachedSkinMatrices.clear();
+	CachedSkinMatrixRevision = static_cast<uint64>(-1);
 }
 
 bool FSkeletalMeshSceneProxy::PrepareDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, FDrawCommandBuffer& OutBuffer) const
@@ -108,6 +111,57 @@ ID3D11ShaderResourceView* FSkeletalMeshSceneProxy::GetSkinMatrixSRV(ID3D11Device
 {
 	UpdateSkinMatrixBuffer(Device, Context);
 	return SkinMatrixSRV;
+}
+
+bool FSkeletalMeshSceneProxy::BuildSkinMatrices(TArray<FMatrix>& OutMatrices, bool* bOutRebuilt) const
+{
+	if (bOutRebuilt)
+	{
+		*bOutRebuilt = false;
+	}
+
+	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
+	USkeletalMesh* Mesh = SMC ? SMC->GetSkeletalMesh() : nullptr;
+	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+
+	if (!SMC || !Asset || Asset->Bones.empty())
+	{
+		OutMatrices.clear();
+		return false;
+	}
+
+	const uint64 CurrentRevision = SMC->GetSkinnedRevision();
+	const uint32 BoneCount = static_cast<uint32>(Asset->Bones.size());
+
+	if (CachedSkinMatrixRevision == CurrentRevision && CachedSkinMatrices.size() == BoneCount)
+	{
+		OutMatrices = CachedSkinMatrices;
+		return true;
+	}
+
+	TArray<FMatrix> NewSkinMatrices;
+
+	{
+		SCOPE_STAT_CAT("GlobalSkin_BuildMatrices", "Skinning");
+		SMC->BuildSkinMatrices(NewSkinMatrices);
+	}
+
+	if (NewSkinMatrices.size() != BoneCount)
+	{
+		OutMatrices.clear();
+		return false;
+	}
+
+	CachedSkinMatrices = NewSkinMatrices;
+	CachedSkinMatrixRevision = CurrentRevision;
+	OutMatrices = CachedSkinMatrices;
+
+	if (bOutRebuilt)
+	{
+		*bOutRebuilt = true;
+	}
+
+	return true;
 }
 
 void FSkeletalMeshSceneProxy::ReleaseSkinMatrixBuffer() const
@@ -180,7 +234,8 @@ bool FSkeletalMeshSceneProxy::UpdateSkinMatrixBuffer(ID3D11Device* Device, ID3D1
 	}
 
 	TArray<FMatrix> SkinMatrices;
-	SMC->BuildSkinMatrices(SkinMatrices);
+	if (!BuildSkinMatrices(SkinMatrices)) return false;
+
 	if (SkinMatrices.size() != MatrixCount) return false;
 
 	{

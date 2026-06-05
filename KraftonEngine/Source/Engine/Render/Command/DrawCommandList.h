@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "DrawCommand.h"
 #include "Render/Resource/Buffer.h"
@@ -42,6 +42,8 @@ class FDrawCommandList
 public:
 	// 커맨드 추가 — 기본값으로 초기화된 FDrawCommand 참조 반환
 	FDrawCommand& AddCommand();
+
+	void ReplaceCommands(TArray<FDrawCommand>&& InCommands);
 
 	// Pass → SortKey 순 정렬 + 패스별 오프셋 빌드
 	void Sort();

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Animation/AnimationTickLOD.h"
 #include "Core/Types/CoreTypes.h"
 #include "Core/Singleton.h"
 #include "Platform/Paths.h"
@@ -49,15 +50,26 @@ class FProjectSettings : public TSingleton<FProjectSettings>
 		FString CrashDumpShareDir;
 	};
 
+	struct FAnimationLODOption
+	{
+		float FullRateDistance = 8.0f;
+		float HalfRateDistance = 16.0f;
+		float QuarterRateDistance = 28.0f;
+		float LowRateDistance = 45.0f;
+		int32 PreDepthMaxLOD = static_cast<int32>(EAnimationTickLOD::HalfRate);
+	};
+
 public:
 	FShadowOption Shadow;
 	FGameOption Game;
 	FPhysicsOption Physics;
 	FDiagnosticsOption Diagnostics;
+	FAnimationLODOption AnimationLOD;
 
 	// --- 직렬화 ---
 	void SaveToFile(const FString& Path) const;
 	void LoadFromFile(const FString& Path);
+	void ApplyRuntimeSettings() const;
 
 	static FString GetDefaultPath() { return FPaths::ToUtf8(FPaths::ProjectSettingsFilePath()); }
 };

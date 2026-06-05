@@ -1,5 +1,7 @@
 ﻿#include "DrawCommandBuilder.h"
 
+#include "Animation/AnimationLODSettings.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Resource/ResourceManager.h"
 #include "Render/Types/RenderTypes.h"
 #include "Render/Types/FogParams.h"
@@ -107,16 +109,18 @@ void FDrawCommandBuilder::BeginCollect(const FFrameContext& Frame)
 // SelectEffectiveShader — ViewMode에 따른 UberLit 셰이더 변형 선택
 // ============================================================
 FShader* FDrawCommandBuilder::SelectEffectiveShader(FShader* ProxyShader, EViewMode ViewMode,
-	bool bUseSkeletalVertexFactory, bool bUseInstancedVertexFactory, bool bWeightBoneHeatMap, bool bApplyFog)
+	bool bUseSkeletalVertexFactory, bool bUseInstancedVertexFactory, bool bUseInstancedSkeletalVertexFactory,
+	bool bWeightBoneHeatMap, bool bApplyFog)
 {
 	if (ProxyShader != FShaderManager::Get().GetOrCreate(EShaderPath::UberLit))
 		return ProxyShader;
 
 	const EUberLitDefines::EVertexFactory VertexFactory =
+		bUseInstancedSkeletalVertexFactory ? EUberLitDefines::EVertexFactory::InstancedSkeletalMesh :
 		bUseSkeletalVertexFactory ? EUberLitDefines::EVertexFactory::SkeletalMesh :
 		bUseInstancedVertexFactory ? EUberLitDefines::EVertexFactory::InstancedStaticMesh :
 		EUberLitDefines::EVertexFactory::StaticMesh;
-
+	
 	switch (ViewMode)
 	{
 	case EViewMode::Unlit:
@@ -406,7 +410,9 @@ void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveScene
 			SectionPass = Section.Material->GetRenderPass();
 		}
 
-		if (SectionPass == ERenderPass::Opaque)
+		const bool bEmitPreDepth = SectionPass == ERenderPass::Opaque && ShouldEmitPreDepthForProxy(*Proxy, BuildCtx);
+
+		if (bEmitPreDepth)
 		{
 			BuildCommandForSection(Scene, *Proxy, Section, ERenderPass::PreDepth, BuildCtx);
 		}
@@ -519,7 +525,7 @@ void FDrawCommandBuilder::BuildCommandForSection(FScene& Scene, const FPrimitive
 	FShader* SectionShader = (Section.Material && Section.Material->GetShader())
 		? Section.Material->GetShader()
 		: Proxy.GetShader();
-	FShader* EffectiveShader = SelectEffectiveShader(SectionShader, CollectViewMode, BuildCtx.bGPUSkinning, false, BuildCtx.bWeightBoneHeatMap, false);
+	FShader* EffectiveShader = SelectEffectiveShader(SectionShader, CollectViewMode, BuildCtx.bGPUSkinning, false, false, BuildCtx.bWeightBoneHeatMap, false);
 
 	const FDrawCommandRenderState BaseRenderState = PassRenderStateTable->ToDrawCommandState(Pass, CollectViewMode);
 
@@ -529,6 +535,7 @@ void FDrawCommandBuilder::BuildCommandForSection(FScene& Scene, const FPrimitive
 	Cmd.RenderState = BaseRenderState;
 	Cmd.Buffer = BuildCtx.ProxyBuffer;
 	Cmd.PerObjectCB = BuildCtx.PerObjCB;
+	Cmd.PerObjectConstants = Proxy.GetPerObjectConstants();
 	Cmd.bIsSkeletal = BuildCtx.bSkeletal;
 	Cmd.bIsGpuSkinned = BuildCtx.bGPUSkinning;
 	Cmd.Buffer.FirstIndex = Section.FirstIndex;
@@ -537,6 +544,7 @@ void FDrawCommandBuilder::BuildCommandForSection(FScene& Scene, const FPrimitive
 		? BuildCtx.SkeletalProxy->GetSkinMatrixSRV(CachedDevice, CachedContext)
 		: nullptr;
 	Cmd.Bindings.BoneHeatMapCB = BuildCtx.bWeightBoneHeatMap ? &BoneHeatMapCB : nullptr;
+	Cmd.SkeletalProxy = BuildCtx.SkeletalProxy;
 
 	if (Pass == ERenderPass::AlphaBlend)
 	{
@@ -603,7 +611,7 @@ void FDrawCommandBuilder::BuildParticleCommandForSection(FScene& Scene, const FP
 		? Section.Material->GetShader()
 		: Proxy.GetShader();
 
-	FShader* EffectiveShader = SelectEffectiveShader(SectionShader, CollectViewMode, false, bInstanced, false, bApplyFog);
+	FShader* EffectiveShader = SelectEffectiveShader(SectionShader, CollectViewMode, false, bInstanced, false, false, bApplyFog);
 
 	const FDrawCommandRenderState BaseRenderState = PassRenderStateTable->ToDrawCommandState(Pass, CollectViewMode);
 
@@ -1013,4 +1021,17 @@ FConstantBuffer* FDrawCommandBuilder::GetPerObjectCBForProxy(FScene* Scene, cons
 
 	EnsurePerObjectCBPoolCapacity(Scene, Proxy.GetProxyId() + 1);
 	return &PerSceneObjectCBPool[Scene][Proxy.GetProxyId()];
+}
+
+bool FDrawCommandBuilder::ShouldEmitPreDepthForProxy(const FPrimitiveSceneProxy& Proxy, const FProxyCommandBuildContext& BuildCtx)
+{
+	if (!BuildCtx.bSkeletal) return true;
+
+	const FSkeletalMeshSceneProxy* SkeletalProxy = BuildCtx.SkeletalProxy;
+	if (!SkeletalProxy) return false;
+
+	const USkeletalMeshComponent* SMC = SkeletalProxy->GetSkeletalMeshComponent();
+	if (!SMC) return false;
+
+	return FAnimationLODSettings::Get().ShouldEmitSkeletalPreDepth(SMC->GetAnimationTickLOD());
 }

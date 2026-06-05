@@ -1,8 +1,36 @@
-#include "Profiling/Stats/Stats.h"
+﻿#include "Profiling/Stats/Stats.h"
 
 #include <algorithm>
 
 uint32 FDrawCallStats::Count = 0;
+
+uint32 FSkeletalRenderStats::SkeletalDrawCalls = 0;
+uint32 FSkeletalRenderStats::SkeletalGpuSkinDrawCalls = 0;
+uint32 FSkeletalRenderStats::SkeletalCpuSkinDrawCalls = 0;
+uint32 FSkeletalRenderStats::SkeletalInstancedDrawCalls = 0;
+uint32 FSkeletalRenderStats::SkeletalSubmittedInstances = 0;
+
+uint32 FSkeletalRenderStats::SkeletalGpuSkinCommands = 0;
+uint32 FSkeletalRenderStats::SkeletalBatchableCommands = 0;
+uint32 FSkeletalRenderStats::SkeletalBatchRejectedCommands = 0;
+uint32 FSkeletalRenderStats::SkeletalBatchUniqueKeys = 0;
+uint32 FSkeletalRenderStats::SkeletalEstimatedInstancedDrawCalls = 0;
+
+uint32 FSkeletalRenderStats::SkeletalInstanceCandidates = 0;
+uint32 FSkeletalRenderStats::SkeletalInstanceRejectedCommands = 0;
+uint32 FSkeletalRenderStats::SkeletalInstanceSingleCommands = 0;
+uint32 FSkeletalRenderStats::SkeletalInstanceMergedDrawCalls = 0;
+uint32 FSkeletalRenderStats::SkeletalInstanceMergedInstances = 0;
+uint32 FSkeletalRenderStats::SkeletalInstanceOutputCommands = 0;
+
+uint32 FSkeletalRenderStats::GlobalSkinMatrixCharacters = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixCount = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixUploadBytes = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixBuildFailures = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixCommandReuses = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixPoseCacheHits = 0;
+
+uint32 FSkeletalRenderStats::PassDrawCalls[(uint32)ERenderPass::MAX] = {};
 
 #if STATS
 uint32 FLODStats::LODCount[4] = { 0, 0, 0, 0 };

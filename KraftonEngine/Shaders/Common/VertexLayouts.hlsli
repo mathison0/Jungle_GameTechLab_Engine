@@ -59,6 +59,24 @@ struct VS_Input_PNCTTBB
     float4 boneWeights : BONEWEIGHT;
 };
 
+struct VS_Input_PNCTTBB_Instanced
+{
+    float3 position : POSITION;
+    float3 normal : NORMAL;
+    float4 color : COLOR;
+    float2 texcoord : TEXTCOORD;
+    float4 tangent : TANGENT;
+    int4 boneIndices : BONEINDEX;
+    float4 boneWeights : BONEWEIGHT;
+
+    float4 world0 : INSTANCEWORLD0;
+    float4 world1 : INSTANCEWORLD1;
+    float4 world2 : INSTANCEWORLD2;
+    float4 world3 : INSTANCEWORLD3;
+    float4 instanceColor : INSTANCECOLOR;
+    uint skinMatrixOffset : INSTANCESKINOFFSET;
+};
+
 // FTextureVertex (Position + TexCoord)
 // 사용: Font, SubUV, OverlayFont
 struct VS_Input_PT
