@@ -85,12 +85,16 @@ void FTickManager::GatherTickFunctions(UWorld* World, ELevelTick TickType)
 
 	for (AActor* Actor : World->GetActors())
 	{
-		if (!ShouldDispatchActorTick(Actor, TickType))
+		if (!Actor)
 		{
 			continue;
 		}
 
-		QueueTickFunction(Actor->PrimaryActorTick);
+		const bool bActorTicks = ShouldDispatchActorTick(Actor, TickType);
+		if (bActorTicks)
+		{
+			QueueTickFunction(Actor->PrimaryActorTick);
+		}
 
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
@@ -99,7 +103,14 @@ void FTickManager::GatherTickFunctions(UWorld* World, ELevelTick TickType)
 				continue;
 			}
 
-			QueueTickFunction(Component->PrimaryComponentTick);
+			// 액터가 안 틱해도 Editor 틱에선 컴포넌트 단위 opt-in(bTickInEditor) 허용
+			// — 본 추적 부착물처럼 에디터 편집 중 갱신이 필요한 컴포넌트용.
+			const bool bComponentTicks = bActorTicks ||
+				(TickType == LEVELTICK_ViewportsOnly && Component->bTickInEditor);
+			if (bComponentTicks)
+			{
+				QueueTickFunction(Component->PrimaryComponentTick);
+			}
 		}
 	}
 }

@@ -28,7 +28,11 @@ class UBoneAttachedStaticMeshComponent : public UStaticMeshComponent
 {
 public:
 	GENERATED_BODY()
-	UBoneAttachedStaticMeshComponent() = default;
+	UBoneAttachedStaticMeshComponent()
+	{
+		// 에디터에서 본 이름/오프셋 편집 시 즉시 반영되도록 (PIE 무관 컴포넌트 단위 editor tick)
+		bTickInEditor = true;
+	}
 	~UBoneAttachedStaticMeshComponent() override = default;
 
 	void PostDuplicate() override;
