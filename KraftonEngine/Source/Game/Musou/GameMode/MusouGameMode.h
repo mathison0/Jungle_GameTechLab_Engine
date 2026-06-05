@@ -66,6 +66,8 @@ public:
 
 private:
 	void UpdateHud();
+	void SetStopMenuVisible(bool bVisible);
 
 	UUserWidget* HudWidget = nullptr;
+	bool bStopMenuVisible = false;
 };

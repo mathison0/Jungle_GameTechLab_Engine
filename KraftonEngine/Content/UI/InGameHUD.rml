@@ -87,6 +87,37 @@
 			font-size: 40px;
 			color: #e62a11;
 		}
+
+		#pause-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			display: none;
+			align-items: center;
+			justify-content: center;
+			background-color: rgba(8, 10, 14, 0.36);
+		}
+
+		#stop-button {
+			display: block;
+			width: 240px;
+			height: 68px;
+			line-height: 68px;
+			text-align: center;
+			font-size: 28px;
+			background-color: #171f2a;
+			color: #f8f3df;
+			border-top-width: 2px;
+			border-right-width: 2px;
+			border-bottom-width: 2px;
+			border-left-width: 2px;
+			border-top-color: #f2d58a;
+			border-right-color: #f2d58a;
+			border-bottom-color: #f2d58a;
+			border-left-color: #f2d58a;
+		}
 	</style>
 </head>
 <body>
@@ -99,6 +130,9 @@
 			<div id="combo-counter-frame">
 				<div id="combo-counter"></div>
 			</div>
+		</div>
+		<div id="pause-overlay">
+			<div id="stop-button">중단하기</div>
 		</div>
 	</div>
 </body>

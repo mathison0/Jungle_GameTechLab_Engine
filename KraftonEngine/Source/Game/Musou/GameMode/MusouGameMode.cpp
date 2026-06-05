@@ -4,6 +4,8 @@
 #include "GameFramework/Pawn/Pawn.h"
 #include "Component/Input/ActionComponent.h"
 #include "Core/Logging/Log.h"
+#include "Engine/Input/InputSystem.h"
+#include "Engine/Runtime/Engine.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 
@@ -47,12 +49,23 @@ void AMusouGameMode::StartMatch()
 	if (!HudWidget)
 	{
 		HudWidget = UUIManager::Get().CreateWidget(GetPlayerController(), "Content/UI/InGameHUD.rml");
+		if (HudWidget)
+		{
+			HudWidget->BindClick("stop-button", []()
+			{
+				if (GEngine)
+				{
+					GEngine->RequestTransitionToScene("Intro");
+				}
+			});
+		}
 	}
 
 	if (HudWidget)
 	{
 		HudWidget->SetWantsMouse(false);
 		HudWidget->AddToViewport(0);
+		SetStopMenuVisible(false);
 		UE_LOG("[MusouGameMode] In-game HUD added to viewport");
 	}
 
@@ -85,6 +98,12 @@ void AMusouGameMode::EndPlay()
 void AMusouGameMode::Tick(float DeltaTime)
 {
 	AGameModeBase::Tick(DeltaTime);
+
+	if (InputSystem::Get().GetKeyDown(VK_ESCAPE))
+	{
+		SetStopMenuVisible(!bStopMenuVisible);
+	}
+
 	UpdateHud();
 }
 
@@ -181,4 +200,17 @@ void AMusouGameMode::UpdateHud()
 
 	HudWidget->SetProperty("combo-counter", "opacity", "1.0");
 	HudWidget->SetProperty("combo-counter", "color", MakeComboTextColor(DisplayAlpha));
+}
+
+void AMusouGameMode::SetStopMenuVisible(bool bVisible)
+{
+	bStopMenuVisible = bVisible;
+
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	HudWidget->SetProperty("pause-overlay", "display", bStopMenuVisible ? "flex" : "none");
+	HudWidget->SetWantsMouse(bStopMenuVisible);
 }
