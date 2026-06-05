@@ -33,6 +33,15 @@ void UUserWidget::BindClick(const FString& ElementId, sol::protected_function Ca
 	}
 }
 
+void UUserWidget::BindClick(const FString& ElementId, std::function<void()> Callback)
+{
+	PendingNativeClickBindings.push_back({ ElementId, std::move(Callback) });
+	if (IsDocumentLoaded())
+	{
+		RegisterEventListeners();
+	}
+}
+
 void UUserWidget::RegisterEventListeners()
 {
 	if (!Document)
@@ -43,6 +52,20 @@ void UUserWidget::RegisterEventListeners()
 	ClearEventListeners();
 
 	for (const auto& Binding : PendingClickBindings)
+	{
+		Rml::Element* Element = Document->GetElementById(Binding.first);
+		if (!Element)
+		{
+			UE_LOG("[RmlUi] Click target not found: %s", Binding.first.c_str());
+			continue;
+		}
+
+		auto* Listener = new FWidgetClickEventListener(Binding.first, Binding.second);
+		Element->AddEventListener("click", Listener);
+		ClickListeners.push_back(Listener);
+	}
+
+	for (const auto& Binding : PendingNativeClickBindings)
 	{
 		Rml::Element* Element = Document->GetElementById(Binding.first);
 		if (!Element)

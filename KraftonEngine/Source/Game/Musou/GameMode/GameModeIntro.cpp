@@ -1,6 +1,7 @@
-#include "Game/Musou/GameMode/GameModeIntro.h"
+﻿#include "Game/Musou/GameMode/GameModeIntro.h"
 
 #include "Core/Logging/Log.h"
+#include "Engine/Runtime/Engine.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 
@@ -15,6 +16,16 @@ void AGameModeIntro::StartMatch()
 	if (!IntroWidget)
 	{
 		IntroWidget = UUIManager::Get().CreateWidget(GetPlayerController(), "Content/UI/Intro.rml");
+		if (IntroWidget)
+		{
+			IntroWidget->BindClick("start-button", []()
+			{
+				if (GEngine)
+				{
+					GEngine->RequestTransitionToScene("Play");
+				}
+			});
+		}
 	}
 
 	if (IntroWidget)
