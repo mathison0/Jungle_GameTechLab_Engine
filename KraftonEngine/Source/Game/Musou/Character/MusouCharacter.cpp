@@ -7,6 +7,7 @@
 #include "Animation/Montage/AnimMontage.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
+#include "Component/Primitive/BoneAttachedStaticMeshComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Math/Rotator.h"
 
@@ -58,6 +59,12 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 	BattleComponent = AddComponent<UBattleComponent>();
 	BattleComponent->bIsPlayerTeam = true;  // 플레이어 진영 — 적(군체/보스) 공격만 수신
 	ComboComponent  = AddComponent<UComboComponent>();
+
+	// ── 무기 슬롯 — 오른손 본 추적 (Mesh보다 늦게 추가 → 같은 프레임 포즈를 따름) ──
+	// 무기 메시는 에디터에서 Static Mesh 프로퍼티로 지정, 그립 오프셋도 에디터에서
+	// 실시간 조정 (컴포넌트 editor tick 지원).
+	WeaponComponent = AddComponent<UBoneAttachedStaticMeshComponent>();
+	WeaponComponent->TargetBoneName = "hand_r";  // Barbarian(UE 마네킹 리그) 오른손 본
 }
 
 void AMusouCharacter::PostDuplicate()
@@ -65,6 +72,7 @@ void AMusouCharacter::PostDuplicate()
 	Super::PostDuplicate();
 	BattleComponent = GetComponentByClass<UBattleComponent>();
 	ComboComponent  = GetComponentByClass<UComboComponent>();
+	WeaponComponent = GetComponentByClass<UBoneAttachedStaticMeshComponent>();
 }
 
 void AMusouCharacter::SetupInputComponent()

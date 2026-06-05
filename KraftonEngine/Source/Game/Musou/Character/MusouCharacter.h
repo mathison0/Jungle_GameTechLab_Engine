@@ -6,6 +6,7 @@
 
 class UBattleComponent;
 class UComboComponent;
+class UBoneAttachedStaticMeshComponent;
 
 // ============================================================
 // AMusouCharacter — 무쌍 플레이어 캐릭터 (Barbarian)
@@ -41,6 +42,7 @@ public:
 
 	UBattleComponent* GetBattleComponent() const { return BattleComponent; }
 	UComboComponent*  GetComboComponent()  const { return ComboComponent; }
+	UBoneAttachedStaticMeshComponent* GetWeaponComponent() const { return WeaponComponent; }
 
 protected:
 	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
@@ -64,4 +66,5 @@ protected:
 
 	UBattleComponent* BattleComponent = nullptr;
 	UComboComponent*  ComboComponent  = nullptr;
+	UBoneAttachedStaticMeshComponent* WeaponComponent = nullptr;  // 오른손(hand_r) 무기 슬롯
 };
