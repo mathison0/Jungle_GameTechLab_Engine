@@ -4,6 +4,8 @@
 #include "GameFramework/Pawn/Pawn.h"
 #include "Component/Input/ActionComponent.h"
 #include "Core/Logging/Log.h"
+#include "UI/UIManager.h"
+#include "UI/UserWidget.h"
 
 #include <algorithm>
 
@@ -21,6 +23,18 @@ void AMusouGameMode::StartMatch()
 	// 베이스가 PlayerController spawn + 첫 Pawn AutoPossess를 수행한다.
 	AGameModeBase::StartMatch();
 
+	if (!HudWidget)
+	{
+		HudWidget = UUIManager::Get().CreateWidget(GetPlayerController(), "Content/UI/InGameHUD.rml");
+	}
+
+	if (HudWidget)
+	{
+		HudWidget->SetWantsMouse(false);
+		HudWidget->AddToViewport(0);
+		UE_LOG("[MusouGameMode] In-game HUD added to viewport");
+	}
+
 	UE_LOG("[MusouGameMode] Match started");
 }
 
@@ -34,6 +48,17 @@ void AMusouGameMode::EndMatch()
 	}
 
 	AGameModeBase::EndMatch();
+}
+
+void AMusouGameMode::EndPlay()
+{
+	if (HudWidget)
+	{
+		HudWidget->RemoveFromParent();
+		HudWidget = nullptr;
+	}
+
+	AGameModeBase::EndPlay();
 }
 
 void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)

@@ -1,15 +1,15 @@
-﻿#include "Game/Musou/GameMode/GameModeIntro.h"
+#include "Game/Musou/GameMode/MusouGameModeIntro.h"
 
 #include "Core/Logging/Log.h"
 #include "Engine/Runtime/Engine.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 
-AGameModeIntro::AGameModeIntro()
+AMusouGameModeIntro::AMusouGameModeIntro()
 {
 }
 
-void AGameModeIntro::StartMatch()
+void AMusouGameModeIntro::StartMatch()
 {
 	AGameModeBase::StartMatch();
 
@@ -32,11 +32,11 @@ void AGameModeIntro::StartMatch()
 	{
 		IntroWidget->SetWantsMouse(true);
 		IntroWidget->AddToViewport(0);
-		UE_LOG("[GameModeIntro] Intro UI added to viewport");
+		UE_LOG("[MusouGameModeIntro] Intro UI added to viewport");
 	}
 }
 
-void AGameModeIntro::EndPlay()
+void AMusouGameModeIntro::EndPlay()
 {
 	if (IntroWidget)
 	{

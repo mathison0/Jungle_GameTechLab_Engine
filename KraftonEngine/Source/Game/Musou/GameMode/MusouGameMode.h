@@ -8,6 +8,7 @@
 
 class AMusouGameState;
 class APawn;
+class UUserWidget;
 
 // 공격 발동 브로드캐스트 — 군체 Manager / 보스 BattleComponent가 구독한다.
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMusouAttackPerformed, const FMusouAttackEvent&);
@@ -36,6 +37,7 @@ public:
 	// --- Match flow ---
 	void StartMatch() override;
 	void EndMatch() override;
+	void EndPlay() override;
 
 	// --- 공격 이벤트 허브 ---
 	// 군체 Manager 등 수신 시스템은 BeginPlay에서 AddRaw/AddUObject로 구독,
@@ -60,4 +62,7 @@ public:
 
 	// --- Accessors ---
 	AMusouGameState* GetMusouGameState() const;
+
+private:
+	UUserWidget* HudWidget = nullptr;
 };

@@ -2,17 +2,17 @@
 
 #include "GameFramework/GameMode/GameModeBase.h"
 
-#include "Source/Game/Musou/GameMode/GameModeIntro.generated.h"
+#include "Source/Game/Musou/GameMode/MusouGameModeIntro.generated.h"
 
 class UUserWidget;
 
 UCLASS()
-class AGameModeIntro : public AGameModeBase
+class AMusouGameModeIntro : public AGameModeBase
 {
 public:
 	GENERATED_BODY()
-	AGameModeIntro();
-	~AGameModeIntro() override = default;
+	AMusouGameModeIntro();
+	~AMusouGameModeIntro() override = default;
 
 	void StartMatch() override;
 	void EndPlay() override;

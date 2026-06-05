@@ -1865,7 +1865,7 @@
     <ClCompile Include="Source\Game\Musou\Combat\ComboComponent.cpp">
       <Filter>Source\Game\Musou\Combat</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Musou\GameMode\GameModeIntro.cpp">
+    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameMode.cpp">
@@ -3328,7 +3328,7 @@
     <ClInclude Include="Source\Game\Musou\Combat\ComboComponent.h">
       <Filter>Source\Game\Musou\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Musou\GameMode\GameModeIntro.h">
+    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameMode.h">
