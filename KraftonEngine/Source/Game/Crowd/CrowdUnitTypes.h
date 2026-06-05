@@ -6,8 +6,7 @@
 
 enum class EUnitTeam : uint8
 {
-	Player = 0,
-	Ally,
+	Ally = 0,
 	Enemy
 };
 
@@ -77,6 +76,7 @@ struct FDamageEvent
 	FUnitHandle Target;
 	float Damage = 0.0f;
 	FVector HitDirection = FVector::ZeroVector;
+	bool bCountAsPlayerKill = false;
 };
 
 struct FUnitRenderData

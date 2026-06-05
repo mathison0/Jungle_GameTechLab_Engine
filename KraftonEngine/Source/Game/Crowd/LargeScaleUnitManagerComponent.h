@@ -1,10 +1,13 @@
-#pragma once
+﻿#pragma once
 
 #include "Component/ActorComponent.h"
+#include "Core/Delegate.h"
 #include "Core/Types/EngineTypes.h"
 #include "Game/Crowd/CrowdUnitTypes.h"
 
 #include "Source/Game/Crowd/LargeScaleUnitManagerComponent.generated.h"
+
+struct FMusouAttackEvent;
 
 UCLASS()
 class ULargeScaleUnitManagerComponent : public UActorComponent
@@ -14,13 +17,16 @@ public:
 
 	ULargeScaleUnitManagerComponent();
 
+	void BeginPlay() override;
+	void EndPlay() override;
+
 	FUnitHandle SpawnUnit(EUnitTeam Team, const FVector& Position);
 	void SpawnUnits(EUnitTeam Team, const FVector& Center, int32 Count, float Radius);
 
 	void DespawnUnit(FUnitHandle Handle);
 	void ClearUnits();
 
-	void ApplyRadialDamage(const FVector& Center, float Radius, float Damage, EUnitTeam SourceTeam);
+	void ApplyRadialDamage(const FVector& Center, float Radius, float Damage, EUnitTeam TargetTeam);
 
 	int32 GetAliveCount() const;
 	int32 GetTeamAliveCount(EUnitTeam Team) const;
@@ -65,6 +71,7 @@ private:
 	void UpdateMovement(float DeltaTime);
 	void UpdateCombat(float DeltaTime);
 	void ProcessDamageEvents();
+	void HandleAttackEvent(const FMusouAttackEvent& Event);
 
 	void BuildRenderData();
 	void DrawDebugUnits();
@@ -82,6 +89,7 @@ private:
 	TArray<FDamageEvent> DamageEvents;
 	TArray<FUnitRenderData> RenderData;
 	TMap<int64, TArray<uint32>> SpatialGrid;
+	FDelegateHandle AttackListenerHandle;
 
 	bool bIsUpdating = false;
 	uint32 RandomState = 0x12345678u;

@@ -48,11 +48,11 @@ function Tick(dt)
         PrintCounts("initial")
     end
 
-    if elapsed > 4.0 and not bAppliedRadialDamage then
+    --if elapsed > 4.0 and not bAppliedRadialDamage then
         bAppliedRadialDamage = true
-        manager:ApplyRadialDamage(Vector.new(0.0, 0.0, 0.0), 6.0, 1000.0, EUnitTeam.Player)
-        print("[CrowdSmoke] radial damage requested")
-    end
+     --   manager:ApplyRadialDamage(Vector.new(0.0, 0.0, 0.0), 6.0, 1000.0, EUnitTeam.Enemy)
+     --   print("[CrowdSmoke] radial damage requested")
+    --end
 
     if elapsed > 5.0 and not bPrintedAfterDamage then
         bPrintedAfterDamage = true

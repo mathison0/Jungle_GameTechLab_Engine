@@ -61,7 +61,6 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		.Method("---@return BattleComponent?\nfunction Actor:GetBattleComponent() end");
 
 	Lua.new_enum("EUnitTeam", {
-		std::pair<sol::string_view, EUnitTeam>{ "Player", EUnitTeam::Player },
 		std::pair<sol::string_view, EUnitTeam>{ "Ally", EUnitTeam::Ally },
 		std::pair<sol::string_view, EUnitTeam>{ "Enemy", EUnitTeam::Enemy },
 	});
