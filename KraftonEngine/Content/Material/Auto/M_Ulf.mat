@@ -1,0 +1,22 @@
+{
+        "BlendState" : "AlphaBlend",
+        "DepthStencilState" : "Default",
+        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+        "EmissiveIntensity" : 0.000000,
+        "Origin" : "FbxImport",
+        "Parameters" : {
+          "HasNormalMap" : 1.000000,
+          "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "_pad" : [0.000000, 0.000000, 0.000000]
+        },
+        "PathFileName" : "Content/Material/Auto/M_Ulf.mat",
+        "RasterizerState" : "SolidBackCull",
+        "RenderPass" : "AlphaBlend",
+        "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+        "ShadowMode" : "Opaque",
+        "Textures" : {
+          "DiffuseTexture" : "Content/Data/GameJam/Ulf/Textures/T_Ulf_Albedo.PNG",
+          "NormalTexture" : "Content/Data/GameJam/Ulf/Textures/T_Ulf_Normals.PNG"
+        },
+        "bEnableBloom" : false
+      }
