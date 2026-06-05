@@ -1,5 +1,5 @@
 {
-        "BlendState" : "AlphaBlend",
+        "BlendState" : "Opaque",
         "DepthStencilState" : "Default",
         "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
         "EmissiveIntensity" : 0.000000,
@@ -11,9 +11,9 @@
         },
         "PathFileName" : "Content/Material/Auto/M_Wool.mat",
         "RasterizerState" : "SolidBackCull",
-        "RenderPass" : "AlphaBlend",
+        "RenderPass" : "Opaque",
         "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
-        "ShadowMode" : "Opaque",
+        "ShadowMode" : "Masked",
         "Textures" : {
           "DiffuseTexture" : "Content/Data/GameJam/Barbarian/Textures/Hair_Wool/T_Wool_Albedo.PNG",
           "NormalTexture" : "Content/Data/GameJam/Barbarian/Textures/Hair_Wool/T_Wool_Normals.PNG"
