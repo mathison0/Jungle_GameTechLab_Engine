@@ -11,6 +11,7 @@
 #include "Lua/LuaDocRegistry.h"
 
 #include "Game/Musou/Combat/BattleComponent.h"
+#include "Game/Musou/Combat/ComboComponent.h"
 #include "GameFramework/AActor.h"
 
 // ============================================================
@@ -53,12 +54,36 @@ void RegisterGameLuaBindings(sol::state& Lua)
 			"---@return number\nfunction BattleComponent:GetAttackPower() end",
 			[](UBattleComponent& Battle) { return Battle.GetAttackPower(); });
 
-	// ── 기존 Actor usertype 확장 — GetBattleComponent ──
+	// ── UComboComponent — 콤보 체인 상태 (입력/몽타주 재생은 lua, 상태는 C++) ──
+	FLuaDocRegistry::Get().BindType<UComboComponent>(Lua, "ComboComponent")
+		.Method("TryAttack",
+			"---@return boolean # true = 새 콤보 시작(1단) — 호출측이 1단 몽타주 재생\nfunction ComboComponent:TryAttack() end",
+			[](UComboComponent& Combo) { return Combo.TryAttack(); })
+		.Method("ConsumeQueuedAdvance",
+			"---@return boolean # true = 단계 전진 — 호출측이 GetComboStep() 단계 몽타주 재생\nfunction ComboComponent:ConsumeQueuedAdvance() end",
+			[](UComboComponent& Combo) { return Combo.ConsumeQueuedAdvance(); })
+		.Method("ResetCombo",
+			"function ComboComponent:ResetCombo() end",
+			[](UComboComponent& Combo) { Combo.ResetCombo(); })
+		.Method("IsComboActive",
+			"---@return boolean\nfunction ComboComponent:IsComboActive() end",
+			[](UComboComponent& Combo) { return Combo.IsComboActive(); })
+		.Method("GetComboStep",
+			"---@return integer # 0 = 비활성, 1..MaxComboSteps\nfunction ComboComponent:GetComboStep() end",
+			[](UComboComponent& Combo) { return Combo.GetComboStep(); })
+		.Method("IsComboWindowOpen",
+			"---@return boolean\nfunction ComboComponent:IsComboWindowOpen() end",
+			[](UComboComponent& Combo) { return Combo.IsComboWindowOpen(); });
+
+	// ── 기존 Actor usertype 확장 — Musou 컴포넌트 접근자 ──
 	sol::table ActorTable = Lua["Actor"];
 	ActorTable.set_function("GetBattleComponent",
 		[](AActor& Actor) { return Actor.GetComponentByClass<UBattleComponent>(); });
+	ActorTable.set_function("GetComboComponent",
+		[](AActor& Actor) { return Actor.GetComponentByClass<UComboComponent>(); });
 	FLuaDocRegistry::Get().Type("Actor")
-		.Method("---@return BattleComponent?\nfunction Actor:GetBattleComponent() end");
+		.Method("---@return BattleComponent?\nfunction Actor:GetBattleComponent() end")
+		.Method("---@return ComboComponent?\nfunction Actor:GetComboComponent() end");
 
 	Lua.new_enum("EUnitTeam", {
 		std::pair<sol::string_view, EUnitTeam>{ "Player", EUnitTeam::Player },

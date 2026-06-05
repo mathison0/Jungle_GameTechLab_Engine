@@ -41,9 +41,8 @@ public:
 	USkeletalMeshComponent*      GetMesh()              const { return Mesh; }
 	UCharacterMovementComponent* GetCharacterMovement() const { return CharacterMovement; }
 
-	// 자동 WASD 매핑/binding — SetupInputComponent 가 InputComponent 에 등록.
-	// 게임에선 보통 false 로 끄고 자식이 자기 매핑/binding 추가. 데모 편의용 기본 true.
-	bool bAutoInputWASD = true;
+	// WASD/Jump 입력 binding 은 게임 캐릭터(예: AMusouCharacter::SetupInputComponent)가 담당.
+	// 베이스는 AddMovementInput/Jump wrapper 만 제공한다.
 
 	// 자동 mouse look — Tick 안에서 mouse delta X/Y * MouseSensitivity 로 APawn::ControlRotation 누적.
 	// capsule 자체 회전은 안 함 — SpringArm 의 bUsePawnControlRotation 가 ControlRotation 사용해
@@ -54,9 +53,6 @@ public:
 	float MaxCameraPitch      =  60.0f; // 아래 한도
 
 protected:
-	// InputComponent 가 부착된 후 호출 — WASD axis mapping + AddMovementInput binding 등록.
-	void SetupInputComponent() override;
-
 	// 자동 mouse look + 향후 다른 per-frame 입력 처리.
 	void Tick(float DeltaTime) override;
 

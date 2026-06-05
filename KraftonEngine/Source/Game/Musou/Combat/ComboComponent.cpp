@@ -29,6 +29,9 @@ void UComboComponent::OpenComboWindow()
 void UComboComponent::CloseComboWindow()
 {
 	bWindowOpen = false;
+	// 윈도우가 닫히면 미소비 예약 입력은 폐기 — 다음 스윙으로 새지 않게.
+	bNextQueued = false;
+	BufferRemaining = 0.0f;
 }
 
 bool UComboComponent::ConsumeQueuedAdvance()
