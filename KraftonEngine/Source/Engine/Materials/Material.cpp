@@ -795,9 +795,16 @@ UMaterialInstanceDynamic* UMaterialInstanceDynamic::Create(UMaterial* InParent)
 		return nullptr;
 	}
 
-	UMaterialInstanceDynamic* Instance = UObjectManager::Get().CreateObject<UMaterialInstanceDynamic>();
-	TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> EmptyBuffers;
-	Instance->UMaterialInstance::Create(InParent->GetAssetPathFileName(), InParent, std::move(EmptyBuffers));
+	UMaterialInstanceDynamic* Instance =
+		UObjectManager::Get().CreateObject<UMaterialInstanceDynamic>();
+
+	ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+	auto Buffers = InParent->CloneConstantBuffers(Device);
+
+	Instance->UMaterialInstance::Create(
+		InParent->GetAssetPathFileName(),
+		InParent,
+		std::move(Buffers));
 
 	return Instance;
 }

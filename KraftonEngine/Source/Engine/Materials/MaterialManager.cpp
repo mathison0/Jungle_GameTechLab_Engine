@@ -797,6 +797,18 @@ bool FMaterialManager::InjectDefaultParameters(json::JSON& JsonData, FMaterialTe
 			continue;
 		}
 
+		if (ParamName == "HitFlashAmount" || ParamName == "HitFlashBloomIntensity")
+		{
+			JsonData[MatKeys::Parameters][ParamName] = 0.0f;
+			continue;
+		}
+
+		if (ParamName == "HitFlashColor")
+		{
+			JsonData[MatKeys::Parameters][ParamName] = json::Array(1.0f, 1.0f, 1.0f, 1.0f);
+			continue;
+		}
+
 		switch (Info->Size)
 		{
 			case sizeof(float) : // 4바이트 - Scalar

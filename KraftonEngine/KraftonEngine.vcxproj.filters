@@ -1181,6 +1181,9 @@
     <ClCompile Include="Source\Engine\Component\Primitive\HeightFogComponent.cpp">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Primitive\HitFlashComponent.cpp">
+      <Filter>Source\Engine\Component\Primitive</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\Primitive\SkeletalMeshComponent.cpp">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClCompile>
@@ -2441,6 +2444,9 @@
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Primitive\HeightFogComponent.h">
+      <Filter>Source\Engine\Component\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Primitive\HitFlashComponent.h">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Primitive\SkeletalMeshComponent.h">
