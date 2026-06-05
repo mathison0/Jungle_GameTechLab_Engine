@@ -65,6 +65,13 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 	// 실시간 조정 (컴포넌트 editor tick 지원).
 	WeaponComponent = AddComponent<UBoneAttachedStaticMeshComponent>();
 	WeaponComponent->TargetBoneName = "hand_r";  // Barbarian(UE 마네킹 리그) 오른손 본
+
+	// 컴포넌트 트리(인스펙터)에 보이려면 씬 그래프에 attach 필요.
+	// 본 추적은 부모 기준 relative 변환을 처리하므로 attach해도 동작 동일.
+	if (Mesh)
+	{
+		WeaponComponent->AttachToComponent(Mesh);
+	}
 }
 
 void AMusouCharacter::PostDuplicate()
