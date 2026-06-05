@@ -1,0 +1,21 @@
+{
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "ObjImport",
+  "Parameters" : {
+    "HasNormalMap" : 0.000000,
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/PERACENSE.1001.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "DiffuseTexture" : "Content/Data/Map/castillo-de-peracense-teruel/source/PERACENSE/PERACENSE.1001.jpg"
+  },
+  "bEnableBloom" : false
+}
