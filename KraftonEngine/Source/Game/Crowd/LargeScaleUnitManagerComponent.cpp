@@ -1,6 +1,7 @@
 #include "Game/Crowd/LargeScaleUnitManagerComponent.h"
 
 #include "Debug/DrawDebugHelpers.h"
+#include "Object/FName.h"
 #include "GameFramework/World.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
@@ -66,6 +67,7 @@ ULargeScaleUnitManagerComponent::ULargeScaleUnitManagerComponent()
 void ULargeScaleUnitManagerComponent::BeginPlay()
 {
 	UActorComponent::BeginPlay();
+	bGroundQueryDirty = true;
 
 	if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
 	{
@@ -163,6 +165,18 @@ void ULargeScaleUnitManagerComponent::ClearUnits()
 	SpatialGrid.clear();
 }
 
+void ULargeScaleUnitManagerComponent::RebuildGroundQuery()
+{
+	FCrowdGroundBuildParams Params;
+	Params.GroundActorTag = FName(GroundActorTag);
+	Params.bAllowFallbackWithoutTag = bAllowGroundFallbackWithoutTag;
+	Params.CellSize = GroundSampleCellSize;
+	Params.WalkableSlopeAngle = WalkableSlopeAngle;
+
+	GroundQuery.Rebuild(GetWorld(), Params);
+	bGroundQueryDirty = false;
+}
+
 void ULargeScaleUnitManagerComponent::ApplyRadialDamage(const FVector& Center, float Radius, float Damage, EUnitTeam TargetTeam)
 {
 	if (Radius <= 0.0f || Damage <= 0.0f)
@@ -242,6 +256,11 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 
 	ProcessPendingSpawns();
 	ProcessPendingDespawns();
+
+	if (bSurfaceFollowingEnabled)
+	{
+		EnsureGroundQueryBuilt();
+	}
 
 	RebuildSpatialGrid();
 
@@ -349,6 +368,8 @@ void ULargeScaleUnitManagerComponent::ActivateUnit(FUnitHandle Handle, EUnitTeam
 	Unit.Radius = Archetype.Radius;
 	Unit.ThinkTimer = RandomThinkInterval();
 	Unit.AttackCooldownRemaining = NextRandom01() * Archetype.AttackCooldown;
+
+	ApplySurfaceFollowing(Unit);
 }
 
 void ULargeScaleUnitManagerComponent::RemoveUnitInternal(FUnitHandle Handle)
@@ -642,13 +663,59 @@ void ULargeScaleUnitManagerComponent::UpdateMovement(float DeltaTime)
 		if (LengthSquaredXY(MoveDir) <= 1.e-6f || Unit.State == EUnitState::Attack)
 		{
 			Unit.Velocity = FVector::ZeroVector;
+			ApplySurfaceFollowing(Unit);
 			continue;
 		}
 
 		Unit.Velocity = MoveDir * Archetype.MoveSpeed;
 		Unit.Position += Unit.Velocity * DeltaTime;
-		Unit.Position.Z = Unit.SpawnZ;
 		Unit.Rotation = RotationFromDirectionXY(MoveDir);
+		ApplySurfaceFollowing(Unit);
+	}
+}
+
+void ULargeScaleUnitManagerComponent::EnsureGroundQueryBuilt()
+{
+	if (!bGroundQueryDirty)
+	{
+		return;
+	}
+
+	RebuildGroundQuery();
+}
+
+void ULargeScaleUnitManagerComponent::ApplySurfaceFollowing(FCrowdUnit& Unit)
+{
+	if (!bSurfaceFollowingEnabled || !Unit.bAlive)
+	{
+		return;
+	}
+
+	EnsureGroundQueryBuilt();
+	if (!GroundQuery.HasData())
+	{
+		return;
+	}
+
+	FCrowdGroundSampleParams Params;
+	Params.TraceUp = GroundTraceUp;
+	Params.TraceDown = GroundTraceDown;
+	Params.HeightOffset = GroundHeightOffset;
+
+	FCrowdGroundHit Hit;
+	if (GroundQuery.SampleGround(Unit.Position, Params, Hit))
+	{
+		Unit.Position.Z = Hit.Location.Z;
+		Unit.GroundNormal = Hit.Normal;
+		Unit.GroundMissFrames = 0;
+		Unit.bHasGround = true;
+		return;
+	}
+
+	++Unit.GroundMissFrames;
+	if (Unit.GroundMissFrames > GroundMissToleranceFrames && !Unit.bHasGround)
+	{
+		Unit.Position.Z = Unit.SpawnZ;
 	}
 }
 

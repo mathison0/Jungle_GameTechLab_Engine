@@ -112,6 +112,9 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		"GetTeamAliveCount", &ULargeScaleUnitManagerComponent::GetTeamAliveCount,
 		"SetDebugDrawEnabled", &ULargeScaleUnitManagerComponent::SetDebugDrawEnabled,
 		"IsDebugDrawEnabled", &ULargeScaleUnitManagerComponent::IsDebugDrawEnabled,
+		"SetSurfaceFollowingEnabled", &ULargeScaleUnitManagerComponent::SetSurfaceFollowingEnabled,
+		"IsSurfaceFollowingEnabled", &ULargeScaleUnitManagerComponent::IsSurfaceFollowingEnabled,
+		"RebuildGroundQuery", &ULargeScaleUnitManagerComponent::RebuildGroundQuery,
 		"IsUnitAlive", &ULargeScaleUnitManagerComponent::IsUnitAlive,
 		"GetUnitPosition", &ULargeScaleUnitManagerComponent::GetUnitPosition,
 		"GetRenderDataCount", [](ULargeScaleUnitManagerComponent& Manager)

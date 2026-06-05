@@ -802,6 +802,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Viewport\GameViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Viewport\Viewport.cpp" />
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp" />
+    <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp" />
     <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp" />
     <ClCompile Include="Source\Game\GameActorPlacements.cpp" />
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp" />
@@ -1199,6 +1200,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Render\Geometry\SpriteParticleGeometry.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h" />
+    <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\IRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\RenderCollector.h" />

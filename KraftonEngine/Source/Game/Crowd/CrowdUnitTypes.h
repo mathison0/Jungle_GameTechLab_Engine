@@ -59,6 +59,9 @@ struct FCrowdUnit
 	FVector Velocity = FVector::ZeroVector;
 	FRotator Rotation = FRotator::ZeroRotator;
 	float SpawnZ = 0.0f;
+	FVector GroundNormal = FVector::UpVector;
+	int32 GroundMissFrames = 0;
+	bool bHasGround = false;
 
 	float HP = 100.0f;
 	float Radius = 0.45f;
