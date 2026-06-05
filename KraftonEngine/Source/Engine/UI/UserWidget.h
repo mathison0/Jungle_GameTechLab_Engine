@@ -3,6 +3,7 @@
 #include "Object/Object.h"
 #include "Core/Logging/Log.h"
 #include "Source/Engine/UI/UserWidget.generated.h"
+#include <functional>
 #include <sol/sol.hpp>
 #include <utility>
 
@@ -23,18 +24,30 @@ class FWidgetClickEventListener final : public Rml::EventListener
 public:
 	FWidgetClickEventListener(FString InElementId, sol::protected_function InCallback)
 		: ElementId(std::move(InElementId))
-		, Callback(std::move(InCallback))
+		, LuaCallback(std::move(InCallback))
+	{
+	}
+
+	FWidgetClickEventListener(FString InElementId, std::function<void()> InCallback)
+		: ElementId(std::move(InElementId))
+		, NativeCallback(std::move(InCallback))
 	{
 	}
 
 	void ProcessEvent(Rml::Event& /*Event*/) override
 	{
-		if (!Callback.valid())
+		if (NativeCallback)
+		{
+			NativeCallback();
+			return;
+		}
+
+		if (!LuaCallback.valid())
 		{
 			return;
 		}
 
-		sol::protected_function_result Result = Callback();
+		sol::protected_function_result Result = LuaCallback();
 		if (!Result.valid())
 		{
 			sol::error Err = Result;
@@ -46,7 +59,8 @@ public:
 
 private:
 	FString ElementId;
-	sol::protected_function Callback;
+	sol::protected_function LuaCallback;
+	std::function<void()> NativeCallback;
 };
 
 UCLASS()
@@ -61,6 +75,7 @@ public:
 	void AddToViewport(int32 InZOrder = 0);
 	void RemoveFromParent();
 	void BindClick(const FString& ElementId, sol::protected_function Callback);
+	void BindClick(const FString& ElementId, std::function<void()> Callback);
 	void RegisterEventListeners();
 	void ClearEventListeners();
 	void SetText(const FString& ElementId, const FString& Text);
@@ -89,6 +104,7 @@ private:
 	Rml::ElementDocument* Document = nullptr;
 	FString DocumentPath;
 	TArray<std::pair<FString, sol::protected_function>> PendingClickBindings;
+	TArray<std::pair<FString, std::function<void()>>> PendingNativeClickBindings;
 	TArray<FWidgetClickEventListener*> ClickListeners;
 	int32 ZOrder = 0;
 	bool bInViewport = false;

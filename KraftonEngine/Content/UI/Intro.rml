@@ -1,0 +1,41 @@
+<rml>
+<head>
+	<title>Intro</title>
+	<style>
+		body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			background-color: rgba(8, 10, 14, 0.72);
+			font-family: "Maplestory";
+			font-weight: bold;
+		}
+
+		#intro-root {
+			width: 100%;
+			height: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		#start-button {
+			width: 260px;
+			height: 72px;
+			padding: 0;
+			border-width: 2px;
+			border-color: #f2d58a;
+			background-color: #171f2a;
+			color: #f8f3df;
+			font-size: 28px;
+			line-height: 72px;
+			text-align: center;
+		}
+	</style>
+</head>
+<body>
+	<div id="intro-root">
+		<div id="start-button">START</div>
+	</div>
+</body>
+</rml>

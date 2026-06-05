@@ -808,6 +808,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\BattleComponent.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\ComboComponent.cpp" />
+    <ClCompile Include="Source\Game\Musou\GameMode\GameModeIntro.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameMode.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameState.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouPlayerController.cpp" />
@@ -1299,6 +1300,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Musou\Combat\AttackTypes.h" />
     <ClInclude Include="Source\Game\Musou\Combat\BattleComponent.h" />
     <ClInclude Include="Source\Game\Musou\Combat\ComboComponent.h" />
+    <ClInclude Include="Source\Game\Musou\GameMode\GameModeIntro.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameMode.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h" />
