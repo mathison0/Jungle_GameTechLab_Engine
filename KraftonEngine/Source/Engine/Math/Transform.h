@@ -28,4 +28,6 @@ struct FTransform
 	void SetRotation(const FQuat& Quat) { Rotation = Quat; }
 
 	FMatrix ToMatrix() const;
+
+	FVector TransformPosition(const FVector& Point) const;
 };

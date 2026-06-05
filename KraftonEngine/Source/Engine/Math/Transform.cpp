@@ -17,3 +17,9 @@ FMatrix FTransform::ToMatrix() const
 
 	return scaleMatrix * rotationMatrix * translateMatrix;
 }
+
+FVector FTransform::TransformPosition(const FVector& Point) const
+{
+	FMatrix transformMatrix = ToMatrix();
+	return transformMatrix.TransformPositionWithW(Point);
+}

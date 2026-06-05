@@ -546,6 +546,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Primitive\WeaponTrailComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\ShapeComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Camera\CameraComponent.cpp" />
@@ -747,6 +748,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Render\Proxy\StaticMeshSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Proxy\SubUVSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Proxy\TextRenderSceneProxy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Proxy\WeaponTrailSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\AdditiveDecalPass.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\AlphaBlendPass.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\BloomPass.cpp" />
@@ -808,6 +810,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\GameActorPlacements.cpp" />
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp" />
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp" />
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\BattleComponent.cpp" />
@@ -971,6 +974,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Component\ActorComponent.h" />
     <ClInclude Include="Source\Engine\Component\MeshComponent.h" />
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Primitive\WeaponTrailComponent.h" />
     <ClInclude Include="Source\Engine\Component\SceneComponent.h" />
     <ClInclude Include="Source\Engine\Component\ShapeComponent.h" />
     <ClInclude Include="Source\Engine\Component\Camera\CameraComponent.h" />
@@ -1202,6 +1206,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Render\Geometry\SpriteParticleGeometry.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h" />
+    <ClInclude Include="Source\Engine\Render\Proxy\WeaponTrailSceneProxy.h" />
     <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\IRenderPipeline.h" />
@@ -1302,6 +1307,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\GameActorPlacements.h" />
     <ClInclude Include="Source\Game\Lua\GameLuaBindings.h" />
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AttackTypes.h" />
