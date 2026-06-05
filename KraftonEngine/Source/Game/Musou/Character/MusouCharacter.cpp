@@ -44,6 +44,10 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 	// ── 애님: Custom 모드 + ULuaAnimInstance + player_anim.lua ──
 	if (Mesh)
 	{
+		// 플레이어는 Anim Tick LOD 제외 — 평가 스킵 프레임에 root motion 이 버스트로
+		// 적용되어(0,0,Δ,0,0,Δ) 캡슐/카메라가 덜컹거리고, 에지 입력/notify 분해능도 떨어진다.
+		Mesh->SetEnableAnimationTickLOD(false);
+
 		Mesh->SetAnimInstanceClass(ULuaAnimInstance::StaticClass());
 		Mesh->SetAnimationMode(EAnimationMode::AnimationCustom);
 
