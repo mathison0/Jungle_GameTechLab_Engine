@@ -37,6 +37,7 @@ public:
 
 	void PostEditProperty(const char* PropertyName) override;
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	void RebuildCloth(bool bRecreateRenderState);
 
@@ -51,6 +52,8 @@ public:
 	int32 GetClothSubstepCount() const { return ClothDesc.SubstepCount; }
 
 private:
+	void RestoreClothResources();
+
 	UPROPERTY(Edit, Save, Category = "Cloth|Mesh", DisplayName = "Cloth Mesh", AssetType = "StaticMesh")
 	FSoftObjectPtr ClothMeshPath = "None";
 

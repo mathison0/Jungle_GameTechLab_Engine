@@ -93,7 +93,7 @@ private:
 
 	// ---- Deserialization helpers ----
 	static USceneComponent* DeserializeSceneComponentTree(json::JSON& Node, AActor* Owner, FSceneLoadContext& Context);
-	static void DeserializeProperties(UObject* Obj, json::JSON& PropsJSON, FSceneLoadContext& Context);
+	static void DeserializeProperties(UObject* Obj, json::JSON& PropsJSON, FSceneLoadContext& Context, bool bDispatchPostEdit = true);
 
 	static string GetCurrentTimeStamp();
 };

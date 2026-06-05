@@ -16,6 +16,12 @@ void ASphereActor::PostDuplicate()
 	SphereComponent = Cast<USphereComponent>(GetRootComponent());
 }
 
+void ASphereActor::PostLoad()
+{
+	Super::PostLoad();
+	SphereComponent = Cast<USphereComponent>(GetRootComponent());
+}
+
 void ASphereActor::BeginPlay()
 {
 	Super::BeginPlay();

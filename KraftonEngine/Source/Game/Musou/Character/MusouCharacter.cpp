@@ -1,4 +1,4 @@
-#include "Game/Musou/Character/MusouCharacter.h"
+﻿#include "Game/Musou/Character/MusouCharacter.h"
 
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/Combat/ComboComponent.h"
@@ -63,6 +63,13 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 void AMusouCharacter::PostDuplicate()
 {
 	Super::PostDuplicate();
+	BattleComponent = GetComponentByClass<UBattleComponent>();
+	ComboComponent  = GetComponentByClass<UComboComponent>();
+}
+
+void AMusouCharacter::PostLoad()
+{
+	Super::PostLoad();
 	BattleComponent = GetComponentByClass<UBattleComponent>();
 	ComboComponent  = GetComponentByClass<UComboComponent>();
 }

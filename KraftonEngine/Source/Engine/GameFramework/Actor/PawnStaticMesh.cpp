@@ -17,3 +17,9 @@ void APawnStaticMesh::PostDuplicate()
 {
 	StaticMeshComponent = Cast<UStaticMeshComponent>(GetRootComponent());
 }
+
+void APawnStaticMesh::PostLoad()
+{
+	Super::PostLoad();
+	StaticMeshComponent = Cast<UStaticMeshComponent>(GetRootComponent());
+}

@@ -15,3 +15,9 @@ void ABoxActor::PostDuplicate()
 {
 	BoxComponent = Cast<UBoxComponent>(GetRootComponent());
 }
+
+void ABoxActor::PostLoad()
+{
+	Super::PostLoad();
+	BoxComponent = Cast<UBoxComponent>(GetRootComponent());
+}

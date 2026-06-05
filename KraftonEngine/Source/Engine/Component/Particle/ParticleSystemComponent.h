@@ -58,6 +58,7 @@ public:
 	void EndPlay() override;
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 	void PostDuplicate() override;
+	void PostLoad() override;
 	void PostEditProperty(const char* PropertyName) override;
 
 	const TArray<FParticleEmitterInstance*>& GetEmitterInstances() const { return EmitterInstances; }

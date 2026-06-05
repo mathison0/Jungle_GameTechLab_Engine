@@ -29,6 +29,7 @@ public:
 
 	void PreGetEditableProperties() override;
 	void PostEditProperty(const char* PropertyName) override;
+	void PostLoad() override;
 
 	void Serialize(FArchive& Ar) override;
 

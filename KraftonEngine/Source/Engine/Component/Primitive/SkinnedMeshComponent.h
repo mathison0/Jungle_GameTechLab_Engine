@@ -43,6 +43,7 @@ public:
 
 	// Serialization/editor 섹션: asset pointer는 저장하지 않고 path를 저장한 뒤 로드 후 SetSkeletalMesh 흐름으로 복원한다.
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	void PostEditProperty(const char* PropertyName) override;
 	bool LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult) override;
@@ -108,6 +109,8 @@ public:
 	FMeshDataView GetMeshDataView() const override;
 
 protected:
+	void RestoreSkeletalMeshFromPath();
+
 	// Tick/skinning 섹션: animation system 없이 현재 bone edit pose를 매 frame CPU skinning 결과로 반영한다.
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 

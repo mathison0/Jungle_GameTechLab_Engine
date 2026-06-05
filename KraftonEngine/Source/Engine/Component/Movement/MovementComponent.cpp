@@ -58,6 +58,12 @@ void UMovementComponent::PostEditProperty(const char* PropertyName)
 	}
 }
 
+void UMovementComponent::PostLoad()
+{
+	UActorComponent::PostLoad();
+	ResolveUpdatedComponent();
+}
+
 void UMovementComponent::SetUpdatedComponent(USceneComponent* NewUpdatedComponent)
 {
 	UpdatedComponent = NewUpdatedComponent;

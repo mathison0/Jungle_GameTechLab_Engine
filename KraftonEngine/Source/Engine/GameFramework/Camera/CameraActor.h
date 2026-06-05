@@ -15,6 +15,7 @@ public:
 
 	void InitDefaultComponents();
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	UCameraComponent* GetCameraComponent() const;
 

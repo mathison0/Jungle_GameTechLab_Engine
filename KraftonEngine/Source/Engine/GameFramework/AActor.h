@@ -33,6 +33,7 @@ public:
 
 	void Serialize(FArchive& Ar) override;
 	UObject* Duplicate(UObject* NewOuter = nullptr) const override;
+	void PostLoad() override;
 
 	void PreGetEditableProperties() override;
 	void PostEditProperty(const char* PropertyName) override;

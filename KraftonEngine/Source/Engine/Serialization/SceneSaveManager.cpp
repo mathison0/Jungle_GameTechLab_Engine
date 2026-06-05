@@ -582,8 +582,26 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 	{
 		if (Pending.Object && Pending.Properties)
 		{
-			DeserializeProperties(Pending.Object, *Pending.Properties, LoadContextState);
+			DeserializeProperties(Pending.Object, *Pending.Properties, LoadContextState, false);
 		}
+	}
+
+	for (AActor* Actor : World->GetActors())
+	{
+		if (!Actor)
+		{
+			continue;
+		}
+
+		for (UActorComponent* Comp : Actor->GetComponents())
+		{
+			if (Comp)
+			{
+				Comp->PostLoad();
+			}
+		}
+
+		Actor->PostLoad();
 	}
 
 	for (AActor* Actor : World->GetActors())
@@ -639,7 +657,7 @@ USceneComponent* FSceneSaveManager::DeserializeSceneComponentTree(json::JSON& No
 	return Comp;
 }
 
-void FSceneSaveManager::DeserializeProperties(UObject* Obj, json::JSON& PropsJSON, FSceneLoadContext& Context)
+void FSceneSaveManager::DeserializeProperties(UObject* Obj, json::JSON& PropsJSON, FSceneLoadContext& Context, bool bDispatchPostEdit)
 {
 	if (!Obj) return;
 
@@ -690,15 +708,18 @@ void FSceneSaveManager::DeserializeProperties(UObject* Obj, json::JSON& PropsJSO
 		FSceneJsonLoadArchive Ar(PropsJSON[PropertyKey], Context);
 		Property->Serialize(Obj, Ar);
 
-		FPropertyChangedEvent Event;
-		Event.Object = Obj;
-		Event.Property = Property;
-		Event.PropertyName = Property->Name;
-		Event.DisplayName = Property->DisplayName ? Property->DisplayName : Property->Name;
-		Event.PropertyPath = Property->Name;
-		Event.Type = Property->GetType();
-		Event.ChangeType = EPropertyChangeType::Load;
-		Obj->PostEditChangeProperty(Event);
+		if (bDispatchPostEdit)
+		{
+			FPropertyChangedEvent Event;
+			Event.Object = Obj;
+			Event.Property = Property;
+			Event.PropertyName = Property->Name;
+			Event.DisplayName = Property->DisplayName ? Property->DisplayName : Property->Name;
+			Event.PropertyPath = Property->Name;
+			Event.Type = Property->GetType();
+			Event.ChangeType = EPropertyChangeType::Load;
+			Obj->PostEditChangeProperty(Event);
+		}
 	}
 
 }

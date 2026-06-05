@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "GameFramework/Pawn/LuaCharacter.h"
 
@@ -38,6 +38,7 @@ public:
 	void InitDefaultComponents(const FString& SkeletalMeshFileName) override;
 
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	UBattleComponent* GetBattleComponent() const { return BattleComponent; }
 	UComboComponent*  GetComboComponent()  const { return ComboComponent; }

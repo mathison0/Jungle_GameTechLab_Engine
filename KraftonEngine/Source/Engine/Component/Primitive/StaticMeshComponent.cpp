@@ -219,10 +219,8 @@ primitive AABB 기준으로 후보만 추립니다.
 	return false; // bHit;
 }
 
-void UStaticMeshComponent::PostDuplicate()
+void UStaticMeshComponent::RestoreStaticMeshFromPath()
 {
-	UMeshComponent::PostDuplicate();
-
 	// 메시 에셋 재로딩
 	if (!StaticMeshPath.empty() && StaticMeshPath != "None")
 	{
@@ -255,6 +253,18 @@ void UStaticMeshComponent::PostDuplicate()
 	CacheLocalBounds();
 	MarkRenderStateDirty();
 	MarkWorldBoundsDirty();
+}
+
+void UStaticMeshComponent::PostDuplicate()
+{
+	UMeshComponent::PostDuplicate();
+	RestoreStaticMeshFromPath();
+}
+
+void UStaticMeshComponent::PostLoad()
+{
+	UMeshComponent::PostLoad();
+	RestoreStaticMeshFromPath();
 }
 
 void UStaticMeshComponent::PostEditProperty(const char* PropertyName)

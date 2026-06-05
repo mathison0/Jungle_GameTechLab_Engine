@@ -70,6 +70,21 @@ void UDecalComponent::PostDuplicate()
 	MarkProxyDirty(EDirtyFlag::Material);
 }
 
+void UDecalComponent::PostLoad()
+{
+	UPrimitiveComponent::PostLoad();
+
+	if (!MaterialSlot.empty() && MaterialSlot != "None")
+	{
+		UMaterialInterface* LoadedMat = FMaterialManager::Get().GetOrCreateMaterialInterface(MaterialSlot);
+		if (LoadedMat)
+		{
+			SetMaterial(LoadedMat);
+		}
+	}
+	MarkProxyDirty(EDirtyFlag::Material);
+}
+
 FVector4 UDecalComponent::GetColor() const
 {
 	FVector4 OutColor = Color;

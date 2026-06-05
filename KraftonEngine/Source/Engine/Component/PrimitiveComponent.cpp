@@ -76,6 +76,19 @@ void UPrimitiveComponent::EndPlay()
 	USceneComponent::EndPlay();
 }
 
+void UPrimitiveComponent::PostLoad()
+{
+	USceneComponent::PostLoad();
+
+	MarkWorldBoundsDirty();
+	MarkRenderVisibilityDirty();
+
+	if (BodyInstance.IsValidBody())
+	{
+		RecreatePhysicsState();
+	}
+}
+
 void UPrimitiveComponent::MarkProxyDirty(EDirtyFlag Flag) const
 {
 	if (!SceneProxy || !Owner || !Owner->GetWorld()) return;

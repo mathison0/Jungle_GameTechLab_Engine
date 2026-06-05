@@ -25,6 +25,12 @@ void USubUVComponent::PostDuplicate()
 	SetParticle(ParticleName);
 }
 
+void USubUVComponent::PostLoad()
+{
+	UBillboardComponent::PostLoad();
+	SetParticle(ParticleName);
+}
+
 USubUVComponent::USubUVComponent()
 {
 	SetVisibility(false);

@@ -35,6 +35,7 @@ public:
 	// 코드 spawn 시 호출. 기본 BoxComponent를 Trigger 셋업과 함께 추가한다.
 	void InitDefaultComponents(const FVector& Extent = FVector(1.0f, 1.0f, 1.0f));
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 
 	// 서브클래스 override hook — 베이스의 GameMode 통지 외 추가 동작이 필요할 때.

@@ -14,6 +14,7 @@ public:
 
 	void InitDefaultComponents();
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 

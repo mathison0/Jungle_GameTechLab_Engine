@@ -66,6 +66,7 @@ public:
 	virtual void Serialize(FArchive& Ar);
 	void SerializeProperties(FArchive& Ar, uint32 RequiredFlags);
 	virtual void PostDuplicate() {}
+	virtual void PostLoad() {}
 
 	virtual void GetEditableProperties(TArray<FPropertyValue>& OutProps);
 	virtual void PreGetEditableProperties() {}

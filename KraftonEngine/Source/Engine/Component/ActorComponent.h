@@ -46,6 +46,7 @@ public:
 		PrimaryComponentTick.SetTickEnabled(bEnabled);
 	}
 	virtual void Serialize(FArchive& Ar) override;
+	void PostLoad() override;
 
 	inline bool IsActive() { return bIsActive; }
 

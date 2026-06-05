@@ -375,7 +375,17 @@ void UClothComponent::PostEditProperty(const char* PropertyName)
 void UClothComponent::PostDuplicate()
 {
 	UPrimitiveComponent::PostDuplicate();
+	RestoreClothResources();
+}
 
+void UClothComponent::PostLoad()
+{
+	UPrimitiveComponent::PostLoad();
+	RestoreClothResources();
+}
+
+void UClothComponent::RestoreClothResources()
+{
 	AttachMeshComponent = nullptr;
 
 	if (!ClothMeshPath.empty() && ClothMeshPath != "None")

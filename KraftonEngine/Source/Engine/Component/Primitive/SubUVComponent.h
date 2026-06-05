@@ -38,6 +38,7 @@ public:
 	void PostEditProperty(const char* PropertyName) override;
 
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 	void UpdateWorldAABB() const override;

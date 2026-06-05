@@ -40,3 +40,11 @@ void ALuaCharacter::PostDuplicate()
 	SpringArm          = GetComponentByClass<USpringArmComponent>();
 	Camera             = GetComponentByClass<UCameraComponent>();
 }
+
+void ALuaCharacter::PostLoad()
+{
+	Super::PostLoad();
+	LuaScriptComponent = GetComponentByClass<ULuaScriptComponent>();
+	SpringArm          = GetComponentByClass<USpringArmComponent>();
+	Camera             = GetComponentByClass<UCameraComponent>();
+}

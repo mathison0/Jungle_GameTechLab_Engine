@@ -154,6 +154,23 @@ void UParticleSystemComponent::PostDuplicate()
 	}
 }
 
+void UParticleSystemComponent::PostLoad()
+{
+	UPrimitiveComponent::PostLoad();
+
+	if (!ParticleSystemPath.IsNull())
+	{
+		LoadTemplateFromPath();
+	}
+
+	if (ParticleSystem)
+	{
+		ParticleSystemPath.SetCachedObject(ParticleSystem.Get());
+		ResetSystem();
+		MarkRenderStateDirty();
+	}
+}
+
 void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 {
 	UPrimitiveComponent::PostEditProperty(PropertyName);

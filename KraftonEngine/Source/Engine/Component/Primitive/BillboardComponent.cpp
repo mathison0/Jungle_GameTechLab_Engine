@@ -29,6 +29,20 @@ void UBillboardComponent::PostDuplicate()
 	}
 }
 
+void UBillboardComponent::PostLoad()
+{
+	UPrimitiveComponent::PostLoad();
+
+	if (!MaterialSlot.empty() && MaterialSlot != "None")
+	{
+		UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(MaterialSlot);
+		if (LoadedMat)
+		{
+			SetMaterial(LoadedMat);
+		}
+	}
+}
+
 void UBillboardComponent::SetMaterial(UMaterial* InMaterial)
 {
 	Material = InMaterial;

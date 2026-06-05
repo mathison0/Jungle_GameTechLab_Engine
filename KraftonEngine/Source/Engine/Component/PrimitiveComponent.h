@@ -65,6 +65,7 @@ public:
 
 	void BeginPlay() override;
 	void EndPlay() override;
+	void PostLoad() override;
 
 	void PostEditProperty(const char* PropertyName) override;
 	void SetRelativeScale(const FVector& NewScale) override;

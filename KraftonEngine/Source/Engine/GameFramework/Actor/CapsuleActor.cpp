@@ -14,3 +14,9 @@ void ACapsuleActor::PostDuplicate()
 {
 	CapsuleComponent = Cast<UCapsuleComponent>(GetRootComponent());
 }
+
+void ACapsuleActor::PostLoad()
+{
+	Super::PostLoad();
+	CapsuleComponent = Cast<UCapsuleComponent>(GetRootComponent());
+}

@@ -35,6 +35,7 @@ public:
 	}
 
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	ULuaScriptComponent* GetLuaScriptComponent() const { return LuaScriptComponent; }
 	USpringArmComponent* GetSpringArm()          const { return SpringArm; }

@@ -129,8 +129,7 @@ void FAnimationTickLODManager::ApplyLOD(FAnimationTickLODEntry& Entry, const FVe
 	{
 		Component->SetEnableAnimationTickLOD(false);
 		Component->SetAnimationTickLOD(EAnimationTickLOD::FullRate);
-		RecordLOD(EAnimationTickLOD::FullRate);
-		return;
+ 		return;
 	}
 
 	if (Policy == EAnimationTickLODPolicy::AlwaysFullRate)

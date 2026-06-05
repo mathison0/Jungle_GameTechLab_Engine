@@ -41,6 +41,14 @@ void ACharacter::PostDuplicate()
 	CharacterMovement = GetComponentByClass<UCharacterMovementComponent>();
 }
 
+void ACharacter::PostLoad()
+{
+	Super::PostLoad();
+	CapsuleComponent  = Cast<UCapsuleComponent>(GetRootComponent());
+	Mesh              = GetComponentByClass<USkeletalMeshComponent>();
+	CharacterMovement = GetComponentByClass<UCharacterMovementComponent>();
+}
+
 void ACharacter::AddMovementInput(const FVector& WorldDirection, float ScaleValue)
 {
 	if (CharacterMovement)

@@ -85,6 +85,13 @@ void USceneComponent::PostEditProperty(const char* PropertyName)
 	}
 }
 
+void USceneComponent::PostLoad()
+{
+	UActorComponent::PostLoad();
+	ApplyCachedEditRotator();
+	MarkTransformDirty();
+}
+
 void USceneComponent::Serialize(FArchive& Ar)
 {
 	if (Ar.IsSaving())

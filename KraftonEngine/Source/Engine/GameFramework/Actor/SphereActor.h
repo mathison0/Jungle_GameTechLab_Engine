@@ -14,6 +14,7 @@ public:
 
 	void InitDefaultComponents();
 	void PostDuplicate() override;
+	void PostLoad() override;
 	void BeginPlay() override;
 
 	USphereComponent* GetSphereComponent() const { return SphereComponent; }

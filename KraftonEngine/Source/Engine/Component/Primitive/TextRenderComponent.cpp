@@ -75,6 +75,14 @@ void UTextRenderComponent::PostDuplicate()
 	SetFont(FontName);
 }
 
+void UTextRenderComponent::PostLoad()
+{
+	UBillboardComponent::PostLoad();
+	SetFont(FontName);
+	MarkProxyDirty(EDirtyFlag::Mesh);
+	MarkWorldBoundsDirty();
+}
+
 FString UTextRenderComponent::GetOwnerUUIDToString() const
 {
 	AActor* OwnerActor = GetOwner();

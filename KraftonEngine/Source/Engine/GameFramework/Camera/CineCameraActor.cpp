@@ -18,6 +18,14 @@ void ACineCameraActor::PostDuplicate()
 	BillboardComponent = EnsureCameraBillboard();
 }
 
+void ACineCameraActor::PostLoad()
+{
+	Super::PostLoad();
+
+	CameraComponent = GetComponentByClass<UCineCameraComponent>();
+	BillboardComponent = EnsureCameraBillboard();
+}
+
 UCineCameraComponent* ACineCameraActor::GetCineCameraComponent() const
 {
 	return Cast<UCineCameraComponent>(GetCameraComponent());

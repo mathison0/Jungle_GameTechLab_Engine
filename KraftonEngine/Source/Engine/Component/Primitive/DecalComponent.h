@@ -27,6 +27,7 @@ public:
 	void PostEditProperty(const char* PropertyName) override;
 	
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	// Color (with Color)
 	void SetColor(FVector4 InColor)

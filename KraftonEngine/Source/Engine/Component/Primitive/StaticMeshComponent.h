@@ -41,6 +41,7 @@ public:
 	const TArray<UMaterialInterface*>& GetOverrideMaterials() const { return OverrideMaterials; }
 
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	// Property Editor 지원
 	void PostEditProperty(const char* PropertyName) override;
@@ -48,6 +49,7 @@ public:
 	const FString& GetStaticMeshPath() const { return StaticMeshPath.ToString(); }
 
 private:
+	void RestoreStaticMeshFromPath();
 	void CacheLocalBounds();
 
 	TObjectPtr<UStaticMesh> StaticMesh;

@@ -1190,10 +1190,8 @@ UMaterialInterface* USkinnedMeshComponent::GetMaterial(int32 ElementIndex) const
 }
 
 // Duplicate/load 섹션: 저장된 path를 실제 asset pointer로 복원하되 dirty 처리는 SetSkeletalMesh에 위임한다.
-void USkinnedMeshComponent::PostDuplicate()
+void USkinnedMeshComponent::RestoreSkeletalMeshFromPath()
 {
-	UMeshComponent::PostDuplicate();
-
 	if (!SkeletalMeshPath.empty() && SkeletalMeshPath != "None")
 	{
 		ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
@@ -1226,6 +1224,18 @@ void USkinnedMeshComponent::PostDuplicate()
 	{
 		SetSkeletalMesh(nullptr);
 	}
+}
+
+void USkinnedMeshComponent::PostDuplicate()
+{
+	UMeshComponent::PostDuplicate();
+	RestoreSkeletalMeshFromPath();
+}
+
+void USkinnedMeshComponent::PostLoad()
+{
+	UMeshComponent::PostLoad();
+	RestoreSkeletalMeshFromPath();
 }
 
 void USkinnedMeshComponent::PostEditProperty(const char* PropertyName)

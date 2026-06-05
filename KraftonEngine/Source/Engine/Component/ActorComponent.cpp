@@ -60,6 +60,23 @@ void UActorComponent::Serialize(FArchive& Ar)
 	SerializeProperties(Ar, PF_Save);
 }
 
+void UActorComponent::PostLoad()
+{
+	UObject::PostLoad();
+
+	if (bIsActive)
+	{
+		Activate();
+	}
+	else
+	{
+		Deactivate();
+	}
+
+	DestroyRenderState();
+	CreateRenderState();
+}
+
 void UActorComponent::SetEditorOnly(bool bInEditorOnly)
 {
 	if (bEditorOnly == bInEditorOnly) return;

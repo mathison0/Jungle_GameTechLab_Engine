@@ -498,6 +498,17 @@ void AActor::PreGetEditableProperties()
 	PendingTagsString = JoinTagsCommaSep(Tags);
 }
 
+void AActor::PostLoad()
+{
+	UObject::PostLoad();
+
+	SetActorLocation(PendingActorLocation);
+	SetActorRotation(PendingActorRotation);
+	SetActorScale(PendingActorScale);
+	SetVisible(PendingActorVisible);
+	SetTags(SplitTagsCommaSep(PendingTagsString));
+}
+
 void AActor::PostEditProperty(const char* PropertyName)
 {
 	UObject::PostEditProperty(PropertyName);

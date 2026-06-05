@@ -46,6 +46,7 @@ public:
 	void PostEditProperty(const char* PropertyName) override;
 
 	void PostDuplicate() override;
+	void PostLoad() override;
 
 	// --- Text ---
 	void SetText(const FString& InText) { Text = InText; }

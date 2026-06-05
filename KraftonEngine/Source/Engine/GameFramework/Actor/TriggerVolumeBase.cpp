@@ -25,6 +25,12 @@ void ATriggerVolumeBase::PostDuplicate()
 	TriggerBox = Cast<UBoxComponent>(GetRootComponent());
 }
 
+void ATriggerVolumeBase::PostLoad()
+{
+	Super::PostLoad();
+	TriggerBox = Cast<UBoxComponent>(GetRootComponent());
+}
+
 void ATriggerVolumeBase::BeginPlay()
 {
 	// 신규 spawn (World->SpawnActor<ATriggerVolumeBase>()) 경로 — 호출자가 컴포넌트를 채울
