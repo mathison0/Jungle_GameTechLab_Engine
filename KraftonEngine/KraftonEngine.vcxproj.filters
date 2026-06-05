@@ -352,6 +352,9 @@
     <Filter Include="Source\Game">
       <UniqueIdentifier>{7b75b017-e44b-6189-2a88-30dc16a5724f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\Crowd">
+      <UniqueIdentifier>{c053f3c3-5229-4fc2-9988-85f5576f25e4}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Game\Lua">
       <UniqueIdentifier>{a904550b-6c67-d00d-ee77-c5aaf7b88e71}</UniqueIdentifier>
     </Filter>
@@ -1826,6 +1829,9 @@
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp">
       <Filter>Source\Engine\Viewport</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\GameActorPlacements.cpp">
       <Filter>Source\Game</Filter>
     </ClCompile>
@@ -3241,6 +3247,12 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h">
       <Filter>Source\Engine\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdUnitTypes.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.h">
+      <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\GameActorPlacements.h">
       <Filter>Source\Game</Filter>

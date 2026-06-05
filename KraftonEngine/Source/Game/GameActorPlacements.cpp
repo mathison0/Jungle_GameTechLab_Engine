@@ -1,6 +1,5 @@
 #include "Game/GameActorPlacements.h"
 
-#include "Engine/Runtime/ActorPlacementRegistry.h"
 #include "Engine/Runtime/EngineInitHooks.h"
 
 // ============================================================

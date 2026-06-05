@@ -187,8 +187,10 @@ void AActor::BeginPlay()
 	bActorHasBegunPlay = true;
 
 	// UE 순서: 컴포넌트 BeginPlay 먼저, 그다음 Actor 본인 (오버라이드 측 Super 호출 시).
-	for (UActorComponent* Comp : OwnedComponents)
+	// BeginPlay 중 Lua나 컴포넌트 코드가 AddComponent를 호출할 수 있으므로 iterator를 잡지 않는다.
+	for (size_t Index = 0; Index < OwnedComponents.size(); ++Index)
 	{
+		UActorComponent* Comp = OwnedComponents[Index];
 		if (Comp) Comp->BeginPlay();
 	}
 }

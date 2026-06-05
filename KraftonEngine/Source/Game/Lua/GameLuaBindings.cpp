@@ -4,6 +4,9 @@
 
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Runtime/EngineInitHooks.h"
+#include "Game/Crowd/LargeScaleUnitManagerComponent.h"
+#include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
 #include "Lua/LuaScriptManager.h"
 
 // ============================================================
@@ -19,7 +22,71 @@
 // ============================================================
 void RegisterGameLuaBindings(sol::state& Lua)
 {
-	(void)Lua;
+	Lua.new_enum("EUnitTeam", {
+		std::pair<sol::string_view, EUnitTeam>{ "Player", EUnitTeam::Player },
+		std::pair<sol::string_view, EUnitTeam>{ "Ally", EUnitTeam::Ally },
+		std::pair<sol::string_view, EUnitTeam>{ "Enemy", EUnitTeam::Enemy },
+	});
+
+	Lua.new_usertype<FUnitHandle>("UnitHandle",
+		sol::constructors<FUnitHandle()>(),
+		"Index", &FUnitHandle::Index,
+		"Generation", &FUnitHandle::Generation,
+		"IsValid", &FUnitHandle::IsValid);
+
+	Lua.new_usertype<ULargeScaleUnitManagerComponent>("LargeScaleUnitManagerComponent",
+		"SpawnUnit", [](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, const FVector& Position)
+		{
+			return Manager.SpawnUnit(Team, Position);
+		},
+		"SpawnUnits", [](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, const FVector& Center, int32 Count, float Radius)
+		{
+			Manager.SpawnUnits(Team, Center, Count, Radius);
+		},
+		"DespawnUnit", &ULargeScaleUnitManagerComponent::DespawnUnit,
+		"ClearUnits", &ULargeScaleUnitManagerComponent::ClearUnits,
+		"ApplyRadialDamage", &ULargeScaleUnitManagerComponent::ApplyRadialDamage,
+		"GetAliveCount", &ULargeScaleUnitManagerComponent::GetAliveCount,
+		"GetTeamAliveCount", &ULargeScaleUnitManagerComponent::GetTeamAliveCount,
+		"SetDebugDrawEnabled", &ULargeScaleUnitManagerComponent::SetDebugDrawEnabled,
+		"IsDebugDrawEnabled", &ULargeScaleUnitManagerComponent::IsDebugDrawEnabled,
+		"IsUnitAlive", &ULargeScaleUnitManagerComponent::IsUnitAlive,
+		"GetUnitPosition", &ULargeScaleUnitManagerComponent::GetUnitPosition,
+		"GetRenderDataCount", [](ULargeScaleUnitManagerComponent& Manager)
+		{
+			return static_cast<int32>(Manager.GetRenderData().size());
+		});
+
+	sol::table Crowd = Lua.create_named_table("Crowd");
+	Crowd.set_function("GetOrCreateManager", [](sol::optional<AActor*> OwnerActor) -> ULargeScaleUnitManagerComponent*
+	{
+		if (!GEngine)
+		{
+			return nullptr;
+		}
+
+		UWorld* World = GEngine->GetWorld();
+		if (!World)
+		{
+			return nullptr;
+		}
+
+		for (AActor* Actor : World->GetActors())
+		{
+			if (!Actor)
+			{
+				continue;
+			}
+
+			if (ULargeScaleUnitManagerComponent* Manager = Actor->GetComponentByClass<ULargeScaleUnitManagerComponent>())
+			{
+				return Manager;
+			}
+		}
+
+		AActor* Owner = OwnerActor.value_or(nullptr);
+		return Owner ? Owner->AddComponent<ULargeScaleUnitManagerComponent>() : nullptr;
+	});
 }
 
 // 자기-등록 — Editor / Game 측이 RegisterGameLuaBindings 함수명을 모르고도
