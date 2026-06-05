@@ -1,4 +1,4 @@
-#include "Game/Musou/GameMode/MusouGameMode.h"
+﻿#include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/GameMode/MusouPlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
@@ -8,6 +8,27 @@
 #include "UI/UserWidget.h"
 
 #include <algorithm>
+#include <cstdio>
+
+namespace
+{
+	FString MakeComboTextColor(float Alpha)
+	{
+		const float T = std::clamp(Alpha, 0.0f, 1.0f);
+		const auto LerpChannel = [T](int32 From, int32 To)
+		{
+			return static_cast<int32>(static_cast<float>(From) + static_cast<float>(To - From) * T + 0.5f);
+		};
+
+		const int32 Red = LerpChannel(8, 230);
+		const int32 Green = LerpChannel(10, 42);
+		const int32 Blue = LerpChannel(14, 17);
+
+		char Buffer[8] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "#%02X%02X%02X", Red, Green, Blue);
+		return FString(Buffer);
+	}
+}
 
 AMusouGameMode::AMusouGameMode()
 {
@@ -59,6 +80,12 @@ void AMusouGameMode::EndPlay()
 	}
 
 	AGameModeBase::EndPlay();
+}
+
+void AMusouGameMode::Tick(float DeltaTime)
+{
+	AGameModeBase::Tick(DeltaTime);
+	UpdateHud();
 }
 
 void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)
@@ -116,4 +143,42 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 AMusouGameState* AMusouGameMode::GetMusouGameState() const
 {
 	return Cast<AMusouGameState>(GetGameState());
+}
+
+void AMusouGameMode::UpdateHud()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	const AMusouGameState* MusouState = GetMusouGameState();
+	if (!MusouState)
+	{
+		return;
+	}
+
+	const int32 Combo = MusouState->GetCombo();
+	const int32 KillCount = MusouState->GetKillCount();
+	const float ComboWindow = MusouState->ComboWindow;
+	const float ComboRemaining = MusouState->GetComboRemaining();
+	const float DisplayAlpha = (Combo > 0 && ComboWindow > 0.0f)
+		? std::clamp(ComboRemaining / ComboWindow, 0.0f, 1.0f)
+		: 0.0f;
+
+	HudWidget->SetText("kill-counter", FString("KILL ") + std::to_string(KillCount));
+
+	if (Combo > 0 && DisplayAlpha > 0.03f)
+	{
+		HudWidget->SetProperty("combo-counter-frame", "display", "block");
+		HudWidget->SetText("combo-counter", FString("Combo ") + std::to_string(Combo));
+	}
+	else
+	{
+		HudWidget->SetProperty("combo-counter-frame", "display", "none");
+		HudWidget->SetText("combo-counter", "");
+	}
+
+	HudWidget->SetProperty("combo-counter", "opacity", "1.0");
+	HudWidget->SetProperty("combo-counter", "color", MakeComboTextColor(DisplayAlpha));
 }

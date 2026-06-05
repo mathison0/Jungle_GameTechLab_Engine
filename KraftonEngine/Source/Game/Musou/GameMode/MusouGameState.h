@@ -28,6 +28,7 @@ public:
 	int32 GetKillCount() const { return KillCount; }
 	int32 GetCombo() const { return Combo; }
 	int32 GetMaxCombo() const { return MaxCombo; }
+	float GetComboRemaining() const { return ComboRemaining; }
 
 	// --- Match ---
 	float GetMatchTime() const { return MatchTime; }
