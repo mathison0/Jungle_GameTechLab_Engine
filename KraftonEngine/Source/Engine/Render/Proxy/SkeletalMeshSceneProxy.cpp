@@ -1,4 +1,4 @@
-#include "SkeletalMeshSceneProxy.h"
+﻿#include "SkeletalMeshSceneProxy.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Render/Command/DrawCommand.h"
@@ -108,6 +108,18 @@ ID3D11ShaderResourceView* FSkeletalMeshSceneProxy::GetSkinMatrixSRV(ID3D11Device
 {
 	UpdateSkinMatrixBuffer(Device, Context);
 	return SkinMatrixSRV;
+}
+
+bool FSkeletalMeshSceneProxy::BuildSkinMatrices(TArray<FMatrix>& OutMatrices) const
+{
+	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
+	USkeletalMesh* Mesh = SMC ? SMC->GetSkeletalMesh() : nullptr;
+	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+
+	if (!SMC || !Asset || Asset->Bones.empty()) return false;
+
+	SMC->BuildSkinMatrices(OutMatrices);
+	return OutMatrices.size() == Asset->Bones.size();
 }
 
 void FSkeletalMeshSceneProxy::ReleaseSkinMatrixBuffer() const

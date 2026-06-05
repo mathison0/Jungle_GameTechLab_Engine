@@ -540,6 +540,7 @@ void FDrawCommandBuilder::BuildCommandForSection(FScene& Scene, const FPrimitive
 		? BuildCtx.SkeletalProxy->GetSkinMatrixSRV(CachedDevice, CachedContext)
 		: nullptr;
 	Cmd.Bindings.BoneHeatMapCB = BuildCtx.bWeightBoneHeatMap ? &BoneHeatMapCB : nullptr;
+	Cmd.SkeletalProxy = BuildCtx.SkeletalProxy;
 
 	if (Pass == ERenderPass::AlphaBlend)
 	{

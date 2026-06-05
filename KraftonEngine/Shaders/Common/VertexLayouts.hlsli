@@ -74,6 +74,7 @@ struct VS_Input_PNCTTBB_Instanced
     float4 world2 : INSTANCEWORLD2;
     float4 world3 : INSTANCEWORLD3;
     float4 instanceColor : INSTANCECOLOR;
+    uint skinMatrixOffset : INSTANCESKINOFFSET;
 };
 
 // FTextureVertex (Position + TexCoord)

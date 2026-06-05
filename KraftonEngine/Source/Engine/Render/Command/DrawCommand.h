@@ -9,6 +9,7 @@
 
 class FShader;
 class FConstantBuffer;
+class FSkeletalMeshSceneProxy;
 struct ID3D11ShaderResourceView;
 struct ID3D11Buffer;
 
@@ -91,6 +92,9 @@ struct FDrawCommand
 	// ===== Profiling =====
 	bool bIsSkeletal = false;
 	bool bIsGpuSkinned = false;
+
+	// Skeletal Batching
+	const FSkeletalMeshSceneProxy* SkeletalProxy = nullptr;
 
 	// Fullscreen triangle 초기화 (PostProcess 등 SV_VertexID 기반 드로우)
 	void InitFullscreenTriangle(FShader* InShader, ERenderPass InPass, const FDrawCommandRenderState& InRenderState)

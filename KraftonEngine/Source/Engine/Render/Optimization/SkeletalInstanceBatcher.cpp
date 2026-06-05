@@ -3,6 +3,7 @@
 #include "Profiling/Stats/Stats.h"
 #include "Render/Command/DrawCommand.h"
 #include "Render/Shader/ShaderManager.h"
+#include "Render/Proxy/SkeletalMeshSceneProxy.h"
 
 #include <unordered_map>
 
@@ -119,7 +120,7 @@ namespace
 		return true;
 	}
 
-	FSkeletalInstanceData MakeInstanceData(const FDrawCommand& Cmd)
+	FSkeletalInstanceData MakeInstanceData(const FDrawCommand& Cmd, uint32 SkinMatrixOffset)
 	{
 		const FMatrix& World = Cmd.PerObjectConstants.Model;
 
@@ -129,6 +130,7 @@ namespace
 		Data.World2 = FVector4(World.M[2][0], World.M[2][1], World.M[2][2], World.M[2][3]);
 		Data.World3 = FVector4(World.M[3][0], World.M[3][1], World.M[3][2], World.M[3][3]);
 		Data.InstanceColor = Cmd.PerObjectConstants.Color;
+		Data.SkinMatrixOffset = SkinMatrixOffset;
 		return Data;
 	}
 
@@ -171,6 +173,21 @@ void FSkeletalInstanceBatcher::Create(ID3D11Device* InDevice, ID3D11DeviceContex
 
 void FSkeletalInstanceBatcher::Release()
 {
+	if (GlobalSkinMatrixSRV)
+	{
+		GlobalSkinMatrixSRV->Release();
+		GlobalSkinMatrixSRV = nullptr;
+	}
+
+	if (GlobalSkinMatrixBuffer)
+	{
+		GlobalSkinMatrixBuffer->Release();
+		GlobalSkinMatrixBuffer = nullptr;
+	}
+
+	GlobalSkinMatrixCapacity = 0;
+	GlobalSkinMatrices.clear();
+
 	InstanceBuffer.Release();
 	InstanceData.clear();
 	Device = nullptr;
@@ -181,6 +198,7 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 {
 	OutCommands.clear();
 	InstanceData.clear();
+	GlobalSkinMatrices.clear();
 
 	uint32 CandidateCount = 0;
 	uint32 RejectedCount = 0;
@@ -223,7 +241,17 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 
 		for (const FDrawCommand* SourceCmd : BatchCommands)
 		{
-			InstanceData.push_back(MakeInstanceData(*SourceCmd));
+			TArray<FMatrix> LocalSkinMatrices;
+			const uint32 SkinMatrixOffset = static_cast<uint32>(GlobalSkinMatrices.size());
+
+			if (!SourceCmd->SkeletalProxy || !SourceCmd->SkeletalProxy->BuildSkinMatrices(LocalSkinMatrices))
+			{
+				continue;
+			}
+
+			GlobalSkinMatrices.insert(GlobalSkinMatrices.end(), LocalSkinMatrices.begin(), LocalSkinMatrices.end());
+
+			InstanceData.push_back(MakeInstanceData(*SourceCmd, SkinMatrixOffset));
 		}
 
 		FDrawCommand MergedCmd = *BatchCommands[0];
@@ -231,7 +259,11 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 		MergedCmd.Buffer.InstanceStride = sizeof(FSkeletalInstanceData);
 		MergedCmd.Buffer.FirstInstance = FirstInstance;
 
-		MergedCmd.Buffer.InstanceCount = static_cast<uint32>(BatchCommands.size());
+		const uint32 InstanceCount = static_cast<uint32>(BatchCommands.size());
+		if (InstanceCount == 0) continue;
+		
+		MergedCmd.Buffer.InstanceCount = InstanceCount;
+
 		++MergedDrawCount;
 		MergedInstanceCount += MergedCmd.Buffer.InstanceCount;
 
@@ -252,11 +284,25 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 		InstanceBuffer.EnsureCapacity(Device, static_cast<uint32>(InstanceData.size()));
 		InstanceBuffer.Update(Context, InstanceData.data(), static_cast<uint32>(InstanceData.size()));
 
+		if (!GlobalSkinMatrices.empty())
+		{
+			if (EnsureGlobalSkinMatrixBuffer(static_cast<uint32>(GlobalSkinMatrices.size())))
+			{
+				D3D11_MAPPED_SUBRESOURCE Mapped = {};
+				if (SUCCEEDED(Context->Map(GlobalSkinMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+				{
+					std::memcpy(Mapped.pData, GlobalSkinMatrices.data(), sizeof(FMatrix) * GlobalSkinMatrices.size());
+					Context->Unmap(GlobalSkinMatrixBuffer, 0);
+				}
+			}
+		}
+
 		for (FDrawCommand& Cmd : OutCommands)
 		{
-			if (Cmd.bIsSkeletal && Cmd.bIsGpuSkinned && Cmd.Buffer.InstanceCount > 0)
+			if (Cmd.bIsSkeletal && Cmd.bIsGpuSkinned && Cmd.Buffer.InstanceCount > 0 && GlobalSkinMatrixSRV)
 			{
 				Cmd.Buffer.InstanceVB = InstanceBuffer.GetBuffer();
+				Cmd.Bindings.SkinMatrixSRV = GlobalSkinMatrixSRV;
 			}
 		}
 	}
@@ -268,4 +314,61 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 		MergedDrawCount,
 		MergedInstanceCount,
 		static_cast<uint32>(OutCommands.size()));
+}
+
+bool FSkeletalInstanceBatcher::EnsureGlobalSkinMatrixBuffer(uint32 RequiredMatrixCount)
+{
+	if (!Device || RequiredMatrixCount == 0) return false;
+
+	if (GlobalSkinMatrixBuffer && GlobalSkinMatrixSRV && RequiredMatrixCount <= GlobalSkinMatrixCapacity)
+	{
+		return true;
+	}
+
+	if (GlobalSkinMatrixSRV)
+	{
+		GlobalSkinMatrixSRV->Release();
+		GlobalSkinMatrixSRV = nullptr;
+	}
+
+	if (GlobalSkinMatrixBuffer)
+	{
+		GlobalSkinMatrixBuffer->Release();
+		GlobalSkinMatrixBuffer = nullptr;
+	}
+
+	uint32 NewCapacity = GlobalSkinMatrixCapacity > 0 ? GlobalSkinMatrixCapacity : 256;
+	while (NewCapacity < RequiredMatrixCount)
+	{
+		NewCapacity *= 2;
+	}
+
+	D3D11_BUFFER_DESC BufferDesc = {};
+	BufferDesc.ByteWidth = sizeof(FMatrix) * NewCapacity;
+	BufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	BufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	BufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	BufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	BufferDesc.StructureByteStride = sizeof(FMatrix);
+
+	if (FAILED(Device->CreateBuffer(&BufferDesc, nullptr, &GlobalSkinMatrixBuffer)))
+	{
+		return false;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	SRVDesc.Buffer.FirstElement = 0;
+	SRVDesc.Buffer.NumElements = NewCapacity;
+
+	if (FAILED(Device->CreateShaderResourceView(GlobalSkinMatrixBuffer, &SRVDesc, &GlobalSkinMatrixSRV)))
+	{
+		GlobalSkinMatrixBuffer->Release();
+		GlobalSkinMatrixBuffer = nullptr;
+		return false;
+	}
+
+	GlobalSkinMatrixCapacity = NewCapacity;
+	return true;
 }

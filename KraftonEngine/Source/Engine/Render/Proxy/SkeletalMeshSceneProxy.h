@@ -17,6 +17,8 @@ public:
 	bool PrepareDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, FDrawCommandBuffer& OutBuffer) const override;
 	bool PrepareGpuSkinningDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, FDrawCommandBuffer& OutBuffer) const;
 	ID3D11ShaderResourceView* GetSkinMatrixSRV(ID3D11Device* Device, ID3D11DeviceContext* Context) const;
+
+	bool BuildSkinMatrices(TArray<FMatrix>& OutMatrices) const;
 	
 private:
 	void RebuildSectionDraws();

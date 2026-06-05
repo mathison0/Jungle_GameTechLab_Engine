@@ -210,12 +210,13 @@ UberVS_Output VS_InstancedSkeletalMesh(VS_Input_PNCTTBB_Instanced input)
 {
     UberVS_Output output;
 
-    FSkinningResult skinned = ApplyLinearBlendSkinning(
+    FSkinningResult skinned = ApplyLinearBlendSkinningWithOffset(
         input.position,
         input.normal,
         input.tangent.xyz,
         input.boneIndices,
-        input.boneWeights);
+        input.boneWeights,
+        input.skinMatrixOffset);
 
     float4 WeightedPosition = skinned.position;
     float3 WeightedNormal = skinned.normal;

@@ -294,8 +294,9 @@ void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* 
 
 		const bool bInstanceWorld = SemanticName == "INSTANCEWORLD";
 		const bool bInstanceColor = SemanticName == "INSTANCECOLOR";
+		const bool bInstanceSkinOffset = SemanticName == "INSTANCESKINOFFSET";
 
-		if (bInstanceWorld || bInstanceColor)
+		if (bInstanceWorld || bInstanceColor || bInstanceSkinOffset)
 		{
 			Elem.InputSlot = 1;
 			Elem.InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
@@ -305,9 +306,13 @@ void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* 
 			{
 				Elem.AlignedByteOffset = ParamDesc.SemanticIndex * sizeof(FVector4);
 			}
-			else
+			else if (bInstanceColor)
 			{
 				Elem.AlignedByteOffset = 4 * sizeof(FVector4);
+			}
+			else
+			{
+				Elem.AlignedByteOffset = 5 * sizeof(FVector4);
 			}
 		}
 		else
