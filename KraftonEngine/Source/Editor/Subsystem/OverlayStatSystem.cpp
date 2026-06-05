@@ -378,6 +378,51 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 		FSkeletalRenderStats::SkeletalInstanceOutputCommands);
 	OutLines.push_back(FString(Buffer));
 
+	OutLines.push_back(FString("--- Skeletal Instance CPU ---"));
+
+	bool bHasInstanceTiming = false;
+	bHasInstanceTiming |= AppendTimingLine(
+		OutLines,
+		CPUSnapshot,
+		"Batcher Total",
+		"Skinning",
+		"SkeletalInstanceBatcher_Total");
+
+	bHasInstanceTiming |= AppendTimingLine(
+		OutLines,
+		CPUSnapshot,
+		"Build Skin Matrices",
+		"Skinning",
+		"GlobalSkin_BuildMatrices");
+
+	bHasInstanceTiming |= AppendTimingLine(
+		OutLines,
+		CPUSnapshot,
+		"Global Skin Upload",
+		"Skinning",
+		"GlobalSkin_Upload");
+
+	if (!bHasInstanceTiming)
+	{
+		OutLines.push_back(FString("No skeletal instance timing this frame"));
+	}
+
+	OutLines.push_back(FString("--- Global Skin Matrix ---"));
+	snprintf(Buffer, sizeof(Buffer), "Characters : %u  matrices %u",
+		FSkeletalRenderStats::GlobalSkinMatrixCharacters,
+		FSkeletalRenderStats::GlobalSkinMatrixCount);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Command reuse : %u  pose cache hit %u",
+		FSkeletalRenderStats::GlobalSkinMatrixCommandReuses,
+		FSkeletalRenderStats::GlobalSkinMatrixPoseCacheHits);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Upload : %.2f MB  build fail %u",
+		FSkeletalRenderStats::GlobalSkinMatrixUploadBytes / (1024.0f * 1024.0f),
+		FSkeletalRenderStats::GlobalSkinMatrixBuildFailures);
+	OutLines.push_back(FString(Buffer));
+
 	const FAnimationTickLODStats& AnimLODStats = FAnimationTickLODManager::Get().GetStats();
 	OutLines.push_back(FString("--- Animation Tick LOD ---"));
 	if (AnimLODStats.bValid)

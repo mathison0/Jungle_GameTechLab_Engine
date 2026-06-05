@@ -23,6 +23,13 @@ uint32 FSkeletalRenderStats::SkeletalInstanceMergedDrawCalls = 0;
 uint32 FSkeletalRenderStats::SkeletalInstanceMergedInstances = 0;
 uint32 FSkeletalRenderStats::SkeletalInstanceOutputCommands = 0;
 
+uint32 FSkeletalRenderStats::GlobalSkinMatrixCharacters = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixCount = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixUploadBytes = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixBuildFailures = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixCommandReuses = 0;
+uint32 FSkeletalRenderStats::GlobalSkinMatrixPoseCacheHits = 0;
+
 uint32 FSkeletalRenderStats::PassDrawCalls[(uint32)ERenderPass::MAX] = {};
 
 #if STATS

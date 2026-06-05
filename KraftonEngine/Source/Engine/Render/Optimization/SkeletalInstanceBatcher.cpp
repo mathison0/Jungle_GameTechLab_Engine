@@ -196,6 +196,8 @@ void FSkeletalInstanceBatcher::Release()
 
 void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>& InCommands, TArray<FDrawCommand>& OutCommands)
 {
+	SCOPE_STAT_CAT("SkeletalInstanceBatcher_Total", "Skinning");
+
 	OutCommands.clear();
 	InstanceData.clear();
 	GlobalSkinMatrices.clear();
@@ -206,7 +208,13 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 	uint32 MergedDrawCount = 0;
 	uint32 MergedInstanceCount = 0;
 
+	uint32 GlobalSkinCharacterCount = 0;
+	uint32 GlobalSkinBuildFailureCount = 0;
+	uint32 GlobalSkinCommandReuseCount = 0;
+	uint32 GlobalSkinPoseCacheHitCount = 0;
+
 	std::unordered_map<FSkeletalInstanceBatchKey, TArray<const FDrawCommand*>, FSkeletalInstanceBatchKeyHash> Batches;
+	std::unordered_map<const FSkeletalMeshSceneProxy*, uint32> SkinMatrixOffsetByProxy;
 
 	for (const FDrawCommand& Cmd : InCommands)
 	{
@@ -241,15 +249,44 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 
 		for (const FDrawCommand* SourceCmd : BatchCommands)
 		{
-			TArray<FMatrix> LocalSkinMatrices;
-			const uint32 SkinMatrixOffset = static_cast<uint32>(GlobalSkinMatrices.size());
-
-			if (!SourceCmd->SkeletalProxy || !SourceCmd->SkeletalProxy->BuildSkinMatrices(LocalSkinMatrices))
+			if (!SourceCmd || !SourceCmd->SkeletalProxy)
 			{
+				++GlobalSkinBuildFailureCount;
 				continue;
 			}
 
-			GlobalSkinMatrices.insert(GlobalSkinMatrices.end(), LocalSkinMatrices.begin(), LocalSkinMatrices.end());
+			uint32 SkinMatrixOffset = 0;
+
+			auto CachedOffsetIt = SkinMatrixOffsetByProxy.find(SourceCmd->SkeletalProxy);
+			if (CachedOffsetIt != SkinMatrixOffsetByProxy.end())
+			{
+				SkinMatrixOffset = CachedOffsetIt->second;
+				++GlobalSkinCommandReuseCount;
+			}
+			else
+			{
+				TArray<FMatrix> LocalSkinMatrices;
+
+				bool bRebuiltSkinMatrices = false;
+
+				if (!SourceCmd->SkeletalProxy->BuildSkinMatrices(LocalSkinMatrices, &bRebuiltSkinMatrices))
+				{
+					++GlobalSkinBuildFailureCount;
+					continue;
+				}
+
+				if (!bRebuiltSkinMatrices)
+				{
+					++GlobalSkinPoseCacheHitCount;
+				}
+
+				SkinMatrixOffset = static_cast<uint32>(GlobalSkinMatrices.size());
+
+				GlobalSkinMatrices.insert(GlobalSkinMatrices.end(), LocalSkinMatrices.begin(), LocalSkinMatrices.end());
+
+				SkinMatrixOffsetByProxy.emplace(SourceCmd->SkeletalProxy, SkinMatrixOffset);
+				++GlobalSkinCharacterCount;
+			}
 
 			InstanceData.push_back(MakeInstanceData(*SourceCmd, SkinMatrixOffset));
 		}
@@ -259,7 +296,7 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 		MergedCmd.Buffer.InstanceStride = sizeof(FSkeletalInstanceData);
 		MergedCmd.Buffer.FirstInstance = FirstInstance;
 
-		const uint32 InstanceCount = static_cast<uint32>(BatchCommands.size());
+		const uint32 InstanceCount = static_cast<uint32>(InstanceData.size()) - FirstInstance;
 		if (InstanceCount == 0) continue;
 		
 		MergedCmd.Buffer.InstanceCount = InstanceCount;
@@ -279,6 +316,13 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 		OutCommands.push_back(MergedCmd);
 	}
 
+	FSkeletalRenderStats::RecordGlobalSkinMatrixStats(GlobalSkinCharacterCount,
+		static_cast<uint32>(GlobalSkinMatrices.size()),
+		static_cast<uint32>(GlobalSkinMatrices.size() * sizeof(FMatrix)),
+		GlobalSkinBuildFailureCount,
+		GlobalSkinCommandReuseCount,
+		GlobalSkinPoseCacheHitCount);
+
 	if (!InstanceData.empty())
 	{
 		InstanceBuffer.EnsureCapacity(Device, static_cast<uint32>(InstanceData.size()));
@@ -288,6 +332,8 @@ void FSkeletalInstanceBatcher::BuildInstancedCommands(const TArray<FDrawCommand>
 		{
 			if (EnsureGlobalSkinMatrixBuffer(static_cast<uint32>(GlobalSkinMatrices.size())))
 			{
+				SCOPE_STAT_CAT("GlobalSkin_Upload", "Skinning");
+
 				D3D11_MAPPED_SUBRESOURCE Mapped = {};
 				if (SUCCEEDED(Context->Map(GlobalSkinMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 				{

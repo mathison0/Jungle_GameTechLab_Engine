@@ -144,6 +144,13 @@ struct FSkeletalRenderStats
 	static uint32 SkeletalInstanceMergedInstances;
 	static uint32 SkeletalInstanceOutputCommands;
 
+	static uint32 GlobalSkinMatrixCharacters;
+	static uint32 GlobalSkinMatrixCount;
+	static uint32 GlobalSkinMatrixUploadBytes;
+	static uint32 GlobalSkinMatrixBuildFailures;
+	static uint32 GlobalSkinMatrixCommandReuses;
+	static uint32 GlobalSkinMatrixPoseCacheHits;
+
 	static uint32 PassDrawCalls[(uint32)ERenderPass::MAX];
 
 	static void Reset()
@@ -166,6 +173,13 @@ struct FSkeletalRenderStats
 		SkeletalInstanceMergedDrawCalls = 0;
 		SkeletalInstanceMergedInstances = 0;
 		SkeletalInstanceOutputCommands = 0;
+
+		GlobalSkinMatrixCharacters = 0;
+		GlobalSkinMatrixCount = 0;
+		GlobalSkinMatrixUploadBytes = 0;
+		GlobalSkinMatrixBuildFailures = 0;
+		GlobalSkinMatrixCommandReuses = 0;
+		GlobalSkinMatrixPoseCacheHits = 0;
 
 		for (uint32 Index = 0; Index < (uint32)ERenderPass::MAX; ++Index)
 		{
@@ -230,6 +244,22 @@ struct FSkeletalRenderStats
 		SkeletalInstanceMergedDrawCalls = InMergedDrawCalls;
 		SkeletalInstanceMergedInstances = InMergedInstances;
 		SkeletalInstanceOutputCommands = InOutputCommands;
+	}
+
+	static void RecordGlobalSkinMatrixStats(
+		uint32 InCharacters,
+		uint32 InMatrixCount,
+		uint32 InUploadBytes,
+		uint32 InBuildFailures,
+		uint32 InCommandReuses,
+		uint32 InPoseCacheHits)
+	{
+		GlobalSkinMatrixCharacters = InCharacters;
+		GlobalSkinMatrixCount = InMatrixCount;
+		GlobalSkinMatrixUploadBytes = InUploadBytes;
+		GlobalSkinMatrixBuildFailures = InBuildFailures;
+		GlobalSkinMatrixCommandReuses = InCommandReuses;
+		GlobalSkinMatrixPoseCacheHits = InPoseCacheHits;
 	}
 
 	static uint32 GetPassDrawCalls(ERenderPass Pass)

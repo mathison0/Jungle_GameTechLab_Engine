@@ -1,5 +1,6 @@
 ﻿#include "DrawCommandBuilder.h"
 
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Resource/ResourceManager.h"
 #include "Render/Types/RenderTypes.h"
 #include "Render/Types/FogParams.h"
@@ -408,7 +409,9 @@ void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveScene
 			SectionPass = Section.Material->GetRenderPass();
 		}
 
-		if (SectionPass == ERenderPass::Opaque)
+		const bool bEmitPreDepth = SectionPass == ERenderPass::Opaque && ShouldEmitPreDepthForProxy(*Proxy, BuildCtx);
+
+		if (bEmitPreDepth)
 		{
 			BuildCommandForSection(Scene, *Proxy, Section, ERenderPass::PreDepth, BuildCtx);
 		}
@@ -997,4 +1000,30 @@ FConstantBuffer* FDrawCommandBuilder::GetPerObjectCBForProxy(FScene* Scene, cons
 
 	EnsurePerObjectCBPoolCapacity(Scene, Proxy.GetProxyId() + 1);
 	return &PerSceneObjectCBPool[Scene][Proxy.GetProxyId()];
+}
+
+bool FDrawCommandBuilder::ShouldEmitPreDepthForProxy(const FPrimitiveSceneProxy& Proxy, const FProxyCommandBuildContext& BuildCtx)
+{
+	if (!BuildCtx.bSkeletal) return true;
+
+	const FSkeletalMeshSceneProxy* SkeletalProxy = BuildCtx.SkeletalProxy;
+	if (!SkeletalProxy) return false;
+
+	const USkeletalMeshComponent* SMC = SkeletalProxy->GetSkeletalMeshComponent();
+	if (!SMC) return false;
+
+	switch (SMC->GetAnimationTickLOD())
+	{
+	case EAnimationTickLOD::FullRate:
+	case EAnimationTickLOD::HalfRate:
+		return true;
+
+	case EAnimationTickLOD::QuarterRate:
+		return false;
+
+	case EAnimationTickLOD::LowRate:
+	case EAnimationTickLOD::Frozen:
+	default:
+		return false;
+	}
 }

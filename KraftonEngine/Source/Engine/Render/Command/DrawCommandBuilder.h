@@ -87,6 +87,8 @@ private:
 	FConstantBuffer* GetPerObjectCBForProxy(FScene* Scene, const FPrimitiveSceneProxy& Proxy);
 	void EnsurePerObjectCBPoolCapacity(FScene* Scene, uint32 RequiredCount);
 
+	bool ShouldEmitPreDepthForProxy(const FPrimitiveSceneProxy& Proxy, const FProxyCommandBuildContext& BuildCtx);
+
 	// 커맨드 버퍼
 	FDrawCommandList DrawCommandList;
 
