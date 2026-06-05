@@ -715,6 +715,18 @@ void ObjectElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 		return;
 	}
 
+	if (Extension == ".obj")
+	{
+		// .obj 원본은 import해서 _StaticMesh.uasset을 만든 뒤 에디터로 연다.
+		// 이미 import된 경우에는 캐시된 .uasset을 그대로 로드한다.
+		if (UStaticMesh* MeshAsset = FMeshManager::LoadStaticMesh(FilePath, Context.EditorEngine->GetRenderer().GetFD3DDevice().GetDevice()))
+		{
+			Context.bPendingContentRefresh = true;
+			Context.EditorEngine->OpenAssetEditorForObject(MeshAsset);
+		}
+		return;
+	}
+
 	ShellExecuteW(nullptr, L"open", ContentItem.Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
 
