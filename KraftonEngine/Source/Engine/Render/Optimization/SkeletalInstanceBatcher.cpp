@@ -30,6 +30,8 @@ namespace
 
 		ID3D11ShaderResourceView* SRVs[(int)EMaterialTextureSlot::Max] = {};
 
+		int32 TranslucentSortPriority = 0;
+
 		bool operator==(const FSkeletalInstanceBatchKey& Other) const
 		{
 			if (Pass != Other.Pass) return false;
@@ -47,6 +49,12 @@ namespace
 			if (PerShaderCB1 != Other.PerShaderCB1) return false;
 			if (BoneHeatMapCB != Other.BoneHeatMapCB) return false;
 			if (MaterialBloomCB != Other.MaterialBloomCB) return false;
+
+			if (Pass == ERenderPass::AlphaBlend &&
+				TranslucentSortPriority != Other.TranslucentSortPriority)
+			{
+				return false;
+			}
 
 			for (int32 Index = 0; Index < (int32)EMaterialTextureSlot::Max; ++Index)
 			{
@@ -92,6 +100,10 @@ namespace
 			Mix((uintptr_t)Key.PerShaderCB1);
 			Mix((uintptr_t)Key.BoneHeatMapCB);
 			Mix((uintptr_t)Key.MaterialBloomCB);
+			if (Key.Pass == ERenderPass::AlphaBlend)
+			{
+				Mix((uintptr_t)Key.TranslucentSortPriority);
+			}
 
 			for (int32 Index = 0; Index < (int32)EMaterialTextureSlot::Max; ++Index)
 			{
@@ -112,7 +124,8 @@ namespace
 		if (Cmd.Buffer.IndexCount == 0) return false;
 
 		if (Cmd.Pass != ERenderPass::PreDepth &&
-			Cmd.Pass != ERenderPass::Opaque)
+			Cmd.Pass != ERenderPass::Opaque &&
+			Cmd.Pass != ERenderPass::AlphaBlend)
 		{
 			return false;
 		}
@@ -154,6 +167,7 @@ namespace
 		Key.PerShaderCB1 = Cmd.Bindings.PerShaderCB[1];
 		Key.BoneHeatMapCB = Cmd.Bindings.BoneHeatMapCB;
 		Key.MaterialBloomCB = Cmd.Bindings.MaterialBloomCB;
+		Key.TranslucentSortPriority = Cmd.TranslucentSortPriority;
 
 		for (int32 Index = 0; Index < (int32)EMaterialTextureSlot::Max; ++Index)
 		{
