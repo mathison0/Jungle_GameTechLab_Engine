@@ -57,42 +57,6 @@ void ACharacter::Jump()
 	}
 }
 
-void ACharacter::SetupInputComponent()
-{
-	Super::SetupInputComponent();
-
-	if (!bAutoInputWASD || !InputComponent) return;
-
-	// Capsule (RootComponent) 기준 — yaw 회전이 곧 캐릭터 facing. mouse look 이 yaw 만
-	// 변경 → forward/right vector 가 자동 회전 → WASD 가 "카메라 보는 방향" 으로 이동.
-	InputComponent->AddAxisMapping("MoveForward", 'W',  1.0f);
-	InputComponent->AddAxisMapping("MoveForward", 'S', -1.0f);
-	InputComponent->AddAxisMapping("MoveRight",   'D',  1.0f);
-	InputComponent->AddAxisMapping("MoveRight",   'A', -1.0f);
-
-	// WASD 의 forward/right 는 ControlRotation.Yaw 기준 — capsule rotation 과 무관.
-	// "카메라가 보는 방향" (yaw 만, pitch 무시) 으로 이동.
-	InputComponent->BindAxis("MoveForward", [this](float Value)
-	{
-		if (Value == 0.0f) return;
-		const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
-		AddMovementInput(YawOnly.GetForwardVector(), Value);
-	});
-	InputComponent->BindAxis("MoveRight", [this](float Value)
-	{
-		if (Value == 0.0f) return;
-		const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
-		AddMovementInput(YawOnly.GetRightVector(), Value);
-	});
-
-	// Space = Jump (VK_SPACE = 0x20). Walking 중에만 effective (CharacterMovement::Jump 가 guard).
-	InputComponent->AddActionMapping("Jump", 0x20);
-	InputComponent->BindAction("Jump", EInputEvent::Pressed, [this]()
-	{
-		Jump();
-	});
-}
-
 void ACharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);

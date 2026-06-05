@@ -43,6 +43,25 @@ public:
 	UComboComponent*  GetComboComponent()  const { return ComboComponent; }
 
 protected:
+	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
+	// ※ 공격 입력을 lua anim에서 이관한 이유: lua update()는 Animation Tick LOD
+	//   게이트 뒤에서 돌아 스킵 프레임의 에지 입력(GetKeyDown)이 소실된다.
+	//   InputComponent는 액터 틱에서 매 프레임 처리 — 입력 누락 없음.
+	void SetupInputComponent() override;
+
+	// 콤보 단계 전진/리셋 폴링 (매 프레임).
+	void Tick(float DeltaTime) override;
+
+	// ── 공격 입력 핸들러 ──
+	void OnAttackPressed();       // 좌클릭 — 콤보 체인 시작/예약
+	void OnHeavyAttackPressed();  // 우클릭 — 강공격 (현재 attack2 몽타주)
+
+	// 몽타주 재생 헬퍼 — 경로 로드 + DefaultSlot 재생. 실패 시 false.
+	bool PlayMontagePath(const char* Path, float BlendIn);
+	void PlayComboStep(int32 Step);
+	bool IsAnyMontagePlaying() const;
+	bool IsFalling() const;
+
 	UBattleComponent* BattleComponent = nullptr;
 	UComboComponent*  ComboComponent  = nullptr;
 };
