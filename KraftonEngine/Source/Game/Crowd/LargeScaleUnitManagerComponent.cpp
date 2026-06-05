@@ -2,6 +2,8 @@
 
 #include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/World.h"
+#include "Game/Musou/Combat/AttackTypes.h"
+#include "Game/Musou/GameMode/MusouGameMode.h"
 
 #include <algorithm>
 #include <cmath>
@@ -49,10 +51,40 @@ namespace
 
 		return FRotator(0.0f, std::atan2(Direction.Y, Direction.X) * RadToDeg, 0.0f);
 	}
+
+	AMusouGameMode* GetMusouGameModeFor(const UActorComponent* Component)
+	{
+		UWorld* World = Component ? Component->GetWorld() : nullptr;
+		return World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
+	}
 }
 
 ULargeScaleUnitManagerComponent::ULargeScaleUnitManagerComponent()
 {
+}
+
+void ULargeScaleUnitManagerComponent::BeginPlay()
+{
+	UActorComponent::BeginPlay();
+
+	if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+	{
+		AttackListenerHandle = GameMode->OnAttackPerformed.AddUObject(this, &ULargeScaleUnitManagerComponent::HandleAttackEvent);
+	}
+}
+
+void ULargeScaleUnitManagerComponent::EndPlay()
+{
+	if (AttackListenerHandle.IsValid())
+	{
+		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+		{
+			GameMode->OnAttackPerformed.Remove(AttackListenerHandle);
+		}
+		AttackListenerHandle.Reset();
+	}
+
+	UActorComponent::EndPlay();
 }
 
 FUnitArchetype ULargeScaleUnitManagerComponent::BuildDefaultArchetype() const
@@ -131,7 +163,7 @@ void ULargeScaleUnitManagerComponent::ClearUnits()
 	SpatialGrid.clear();
 }
 
-void ULargeScaleUnitManagerComponent::ApplyRadialDamage(const FVector& Center, float Radius, float Damage, EUnitTeam SourceTeam)
+void ULargeScaleUnitManagerComponent::ApplyRadialDamage(const FVector& Center, float Radius, float Damage, EUnitTeam TargetTeam)
 {
 	if (Radius <= 0.0f || Damage <= 0.0f)
 	{
@@ -154,7 +186,7 @@ void ULargeScaleUnitManagerComponent::ApplyRadialDamage(const FVector& Center, f
 		}
 
 		const FCrowdUnit& Unit = Units[UnitIndex];
-		if (!Unit.bAlive || !IsHostile(SourceTeam, Unit.Team))
+		if (!Unit.bAlive || Unit.Team != TargetTeam)
 		{
 			continue;
 		}
@@ -225,6 +257,50 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 
 	BuildRenderData();
 	DrawDebugUnits();
+}
+
+void ULargeScaleUnitManagerComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
+{
+	if (!Event.bFromPlayer || Event.Damage <= 0.0f || Event.Spec.Range <= 0.0f)
+	{
+		return;
+	}
+
+	RebuildSpatialGrid();
+
+	TArray<uint32> Candidates;
+	QueryUnitsInRadius(Event.Origin, Event.Spec.Range, Candidates);
+
+	int32 HitCount = 0;
+	for (uint32 UnitIndex : Candidates)
+	{
+		if (UnitIndex >= Units.size())
+		{
+			continue;
+		}
+
+		const FCrowdUnit& Unit = Units[UnitIndex];
+		if (!Unit.bAlive || Unit.Team != EUnitTeam::Enemy || !Event.IsInVolume(Unit.Position))
+		{
+			continue;
+		}
+
+		DamageEvents.push_back({
+			FUnitHandle{ UnitIndex, Unit.Generation },
+			Event.Damage,
+			NormalizedXY(Unit.Position - Event.Origin),
+			true
+		});
+		++HitCount;
+	}
+
+	if (HitCount > 0)
+	{
+		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+		{
+			GameMode->NotifyAttackHits(Event, HitCount);
+		}
+	}
 }
 
 FUnitHandle ULargeScaleUnitManagerComponent::AllocateUnitSlot()
@@ -630,6 +706,7 @@ void ULargeScaleUnitManagerComponent::ProcessDamageEvents()
 	TArray<FDamageEvent> Events = std::move(DamageEvents);
 	DamageEvents.clear();
 
+	int32 PlayerKillCount = 0;
 	for (const FDamageEvent& Event : Events)
 	{
 		FCrowdUnit* Target = ResolveUnit(Event.Target);
@@ -641,7 +718,19 @@ void ULargeScaleUnitManagerComponent::ProcessDamageEvents()
 		Target->HP -= Event.Damage;
 		if (Target->HP <= 0.0f)
 		{
+			if (Event.bCountAsPlayerKill && Target->Team == EUnitTeam::Enemy)
+			{
+				++PlayerKillCount;
+			}
 			RemoveUnitInternal(Event.Target);
+		}
+	}
+
+	if (PlayerKillCount > 0)
+	{
+		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+		{
+			GameMode->NotifyEnemiesKilled(PlayerKillCount);
 		}
 	}
 }
@@ -735,8 +824,6 @@ FColor ULargeScaleUnitManagerComponent::GetTeamDebugColor(EUnitTeam Team) const
 {
 	switch (Team)
 	{
-	case EUnitTeam::Player:
-		return FColor::Blue();
 	case EUnitTeam::Ally:
 		return FColor::Green();
 	case EUnitTeam::Enemy:
