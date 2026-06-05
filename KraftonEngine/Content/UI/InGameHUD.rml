@@ -52,34 +52,40 @@
 			background-color: #d84f4a;
 		}
 
-		#kill-counter {
+		#right-hud {
 			position: absolute;
 			right: 32px;
 			top: 28px;
+			display: block;
+			width: 420px;
+		}
+
+		#kill-counter {
+			display: block;
 			padding: 14px 18px;
 			background-color: rgba(8, 10, 14, 0.62);
-			border-top-width: 1px;
-			border-right-width: 1px;
-			border-bottom-width: 1px;
-			border-left-width: 1px;
-			border-top-color: #f2d58a;
-			border-right-color: #f2d58a;
-			border-bottom-color: #f2d58a;
-			border-left-color: #f2d58a;
 			font-size: 24px;
+			text-align: right;
+		}
+
+		#combo-counter-frame {
+			display: none;
+			margin-top: 10px;
+			width: 420px;
+			height: 76px;
+			background-color: rgba(8, 10, 14, 0.32);
 		}
 
 		#combo-counter {
-			position: absolute;
-			right: 64px;
-			top: 48%;
 			display: block;
-			width: 320px;
-			height: 64px;
-			line-height: 64px;
+			width: 384px;
+			height: 76px;
+			line-height: 76px;
+			padding-left: 18px;
+			padding-right: 18px;
 			text-align: right;
-			font-size: 42px;
-			color: rgba(230, 42, 17, 0);
+			font-size: 40px;
+			color: #e62a11;
 		}
 	</style>
 </head>
@@ -88,8 +94,12 @@
 		<div id="status-panel">
 			<progress id="hp-bar" value="1.0"></progress>
 		</div>
-		<div id="kill-counter">KILL 0</div>
-		<div id="combo-counter"></div>
+		<div id="right-hud">
+			<div id="kill-counter">KILL 0</div>
+			<div id="combo-counter-frame">
+				<div id="combo-counter"></div>
+			</div>
+		</div>
 	</div>
 </body>
 </rml>
