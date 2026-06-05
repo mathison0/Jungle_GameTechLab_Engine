@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -435,7 +435,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="HighPerformanceGPUHint.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\EditorRenderPipeline.cpp" />
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp" />
@@ -496,10 +495,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Editor\Viewport\Asset\PhysicsAssetEditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\Asset\StaticMeshEditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\Level\FLevelViewportLayout.cpp" />
-    <ClCompile Include="Source\Engine\Animation\AnimationTickLODManager.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimationManager.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimationRuntime.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimationTickLODManager.cpp" />
     <ClCompile Include="Source\Engine\Animation\Graph\AnimGraphAsset.cpp" />
     <ClCompile Include="Source\Engine\Animation\Graph\AnimGraphCompiler.cpp" />
     <ClCompile Include="Source\Engine\Animation\Graph\AnimGraphInstance.cpp" />
@@ -545,9 +544,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Collision\Ray\RayUtilsSIMD.cpp" />
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\Movement\PhysX\PhysXVehicleMovementComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponent4W.cpp" />
-    <ClCompile Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponentTank.cpp" />
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\ShapeComponent.cpp" />
@@ -571,6 +567,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Component\Movement\PendulumMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Movement\ProjectileMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Movement\RotatingMovementComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Movement\PhysX\PhysXVehicleMovementComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponent4W.cpp" />
+    <ClCompile Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponentTank.cpp" />
     <ClCompile Include="Source\Engine\Component\Particle\ParticleSystemComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\BillboardComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\ClothComponent.cpp" />
@@ -690,8 +689,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Physics\PhysXConversions.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXSDK.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXVehicle4WInstance.cpp" />
-    <ClCompile Include="Source\Engine\Physics\PhysXVehicleTankInstance.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXVehicleManager.cpp" />
+    <ClCompile Include="Source\Engine\Physics\PhysXVehicleTankInstance.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicalMaterial.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicalMaterialManager.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicsAsset.cpp" />
@@ -802,6 +801,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp" />
     <ClCompile Include="Source\Game\GameActorPlacements.cpp" />
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp" />
+    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameMode.cpp" />
+    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameState.cpp" />
+    <ClCompile Include="Source\Game\Musou\GameMode\MusouPlayerController.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerEngine.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerPanel.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerRenderPipeline.cpp" />
@@ -894,14 +896,14 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Editor\Viewport\Asset\StaticMeshEditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\Level\FLevelViewportLayout.h" />
     <ClInclude Include="Source\Editor\Viewport\Level\LevelEditorViewportClient.h" />
-    <ClInclude Include="Source\Engine\Animation\AnimationTickLOD.h" />
-    <ClInclude Include="Source\Engine\Animation\AnimationTickLODHelper.h" />
-    <ClInclude Include="Source\Engine\Animation\AnimationTickLODManager.h" />
     <ClInclude Include="Source\Engine\Animation\AnimExtractContext.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationManager.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationMode.h" />
     <ClInclude Include="Source\Engine\Animation\AnimationRuntime.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimationTickLOD.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimationTickLODHelper.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimationTickLODManager.h" />
     <ClInclude Include="Source\Engine\Animation\PoseContext.h" />
     <ClInclude Include="Source\Engine\Animation\Graph\AnimGraphAsset.h" />
     <ClInclude Include="Source\Engine\Animation\Graph\AnimGraphCompiler.h" />
@@ -956,9 +958,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Collision\Ray\RayUtilsSIMD.h" />
     <ClInclude Include="Source\Engine\Component\ActorComponent.h" />
     <ClInclude Include="Source\Engine\Component\MeshComponent.h" />
-    <ClInclude Include="Source\Engine\Component\Movement\PhysX\PhysXVehicleMovementComponent.h" />
-    <ClInclude Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponent4W.h" />
-    <ClInclude Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponentTank.h" />
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h" />
     <ClInclude Include="Source\Engine\Component\SceneComponent.h" />
     <ClInclude Include="Source\Engine\Component\ShapeComponent.h" />
@@ -982,6 +981,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Component\Movement\PendulumMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\Movement\ProjectileMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\Movement\RotatingMovementComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Movement\PhysX\PhysXVehicleMovementComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponent4W.h" />
+    <ClInclude Include="Source\Engine\Component\Movement\PhysX\VehicleMovementComponentTank.h" />
     <ClInclude Include="Source\Engine\Component\Particle\ParticleSystemComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\BillboardComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\ClothComponent.h" />
@@ -1140,8 +1142,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Physics\PhysXSDK.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXVehicle4WInstance.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXVehicleInstanceBase.h" />
-    <ClInclude Include="Source\Engine\Physics\PhysXVehicleTankInstance.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXVehicleManager.h" />
+    <ClInclude Include="Source\Engine\Physics\PhysXVehicleTankInstance.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicalMaterial.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicalMaterialManager.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsAsset.h" />
@@ -1281,6 +1283,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h" />
     <ClInclude Include="Source\Game\GameActorPlacements.h" />
     <ClInclude Include="Source\Game\Lua\GameLuaBindings.h" />
+    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameMode.h" />
+    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h" />
+    <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerEngine.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerPanel.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerRenderPipeline.h" />
