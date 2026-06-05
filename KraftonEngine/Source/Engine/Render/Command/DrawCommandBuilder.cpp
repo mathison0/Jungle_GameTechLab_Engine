@@ -567,6 +567,26 @@ void FDrawCommandBuilder::BuildCommandForSection(FScene& Scene, const FPrimitive
 			ApplyMaterialRenderState(Cmd.RenderState, Mat, BaseRenderState);
 	}
 
+	// PreDepth 알파 컷아웃 — 디퓨즈 텍스처가 있는 UberLit 섹션은 투명 텍셀이
+	// 깊이를 남기지 않도록 clip만 수행하는 PS_DepthOnly 퍼뮤테이션을 사용한다
+	if (bDepthOnly && Section.Material
+		&& SectionShader == FShaderManager::Get().GetOrCreate(EShaderPath::UberLit))
+	{
+		if (ID3D11ShaderResourceView* DiffuseSRV = Section.Material->GetSRV(EMaterialTextureSlot::Diffuse))
+		{
+			const EUberLitDefines::EVertexFactory VertexFactory = BuildCtx.bGPUSkinning
+				? EUberLitDefines::EVertexFactory::SkeletalMesh
+				: EUberLitDefines::EVertexFactory::StaticMesh;
+
+			if (FShader* DepthOnlyShader = FShaderManager::Get().GetOrCreateUberLitDepthOnlyPermutation(VertexFactory))
+			{
+				Cmd.Shader = DepthOnlyShader;
+				Cmd.bDepthAlphaTest = true;
+				Cmd.Bindings.SRVs[(int)EMaterialTextureSlot::Diffuse] = DiffuseSRV;
+			}
+		}
+	}
+
 	Cmd.BuildSortKey();
 }
 

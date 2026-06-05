@@ -89,6 +89,9 @@ struct FDrawCommand
 	bool bIsSkeletal = false;
 	bool bIsGpuSkinned = false;
 
+	// PreDepth에서 PS를 유지하고 알파 컷아웃 clip을 수행 (투명 텍셀 깊이 기록 방지)
+	bool bDepthAlphaTest = false;
+
 	// Fullscreen triangle 초기화 (PostProcess 등 SV_VertexID 기반 드로우)
 	void InitFullscreenTriangle(FShader* InShader, ERenderPass InPass, const FDrawCommandRenderState& InRenderState)
 	{

@@ -161,6 +161,7 @@ namespace EUberLitDefines
 		inline constexpr const char* SkeletalMeshVS = "VS_SkeletalMesh";
 		inline constexpr const char* InstancedStaticMeshVS = "VS_InstancedStaticMesh";
 		inline constexpr const char* PS = "PS";
+		inline constexpr const char* DepthOnlyPS = "PS_DepthOnly";
 	}
 
 	enum class ELightingModel : uint8
@@ -247,6 +248,16 @@ namespace EUberLitDefines
 			GetDefines(LightingModel, VertexFactory, bWeightBoneHeatMap, bApplyFog),
 			VSEntryPoint, EntryPoint::PS);
 	}
+
+	// PreDepth 알파 컷아웃용 — VS는 버텍스 팩토리별, PS는 clip만 수행하는 PS_DepthOnly
+	inline FShaderKey MakeDepthOnlyPermutationKey(EVertexFactory VertexFactory)
+	{
+		const char* VSEntryPoint =
+			VertexFactory == EVertexFactory::SkeletalMesh ? EntryPoint::SkeletalMeshVS :
+			VertexFactory == EVertexFactory::InstancedStaticMesh ? EntryPoint::InstancedStaticMeshVS :
+			EntryPoint::StaticMeshVS;
+		return FShaderKey(EShaderPath::UberLit, Default, VSEntryPoint, EntryPoint::DepthOnlyPS);
+	}
 }
 
 // 셰이더별 저장된 매크로 정보 (핫 리로드 시 재컴파일에 사용)
@@ -303,6 +314,8 @@ public:
 	FShader* GetOrCreateShadowDepthPermutation(EShadowDepthDefines::EVertexFactory VF, EShaderErrorMode ErrorMode = EShaderErrorMode::Notification);
 	FShader* GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel LightingModel, EUberLitDefines::EVertexFactory VertexFactory,
 		EShaderErrorMode ErrorMode = EShaderErrorMode::Notification, bool bWeightBoneHeatMap = false, bool bApplyFog = false);
+	FShader* GetOrCreateUberLitDepthOnlyPermutation(EUberLitDefines::EVertexFactory VertexFactory,
+		EShaderErrorMode ErrorMode = EShaderErrorMode::Notification);
 	FShader* FindOrCreate(const FString& Path);
 
 	// Compute Shader — 캐시 기반. 호출자는 포인터만 보관, FShaderManager가 소유 + 핫 리로드.

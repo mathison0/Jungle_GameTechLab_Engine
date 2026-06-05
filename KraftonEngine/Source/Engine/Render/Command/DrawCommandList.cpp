@@ -222,7 +222,8 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 	}
 
 	// PreDepth/SelectionMask: PS 언바인딩 — 깊이/스텐실만 기록, 셰이딩 스킵
-	if (Cmd.Pass == ERenderPass::PreDepth || Cmd.Pass == ERenderPass::SelectionMask)
+	// (단, 알파 컷아웃 PreDepth는 clip을 위해 PS_DepthOnly를 유지)
+	if ((Cmd.Pass == ERenderPass::PreDepth && !Cmd.bDepthAlphaTest) || Cmd.Pass == ERenderPass::SelectionMask)
 	{
 		Ctx->PSSetShader(nullptr, nullptr, 0);
 		Cache.Shader = nullptr;  // 다음 커맨드에서 PS 재바인딩 보장

@@ -183,6 +183,11 @@ FShader* FShaderManager::GetOrCreateUberLitPermutation(EUberLitDefines::ELightin
 	return PreCompile(EUberLitDefines::MakePermutationKey(LightingModel, VertexFactory, bWeightBoneHeatMap, bApplyFog), Defines, ErrorMode);
 }
 
+FShader* FShaderManager::GetOrCreateUberLitDepthOnlyPermutation(EUberLitDefines::EVertexFactory VertexFactory, EShaderErrorMode ErrorMode)
+{
+	return PreCompile(EUberLitDefines::MakeDepthOnlyPermutationKey(VertexFactory), EUberLitDefines::Default, ErrorMode);
+}
+
 // ============================================================
 // FindOrCreate — MaterialManager용: 경로로 셰이더 조회, 없으면 컴파일
 // ============================================================

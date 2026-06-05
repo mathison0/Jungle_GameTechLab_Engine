@@ -48,6 +48,9 @@ cbuffer PerShader1 : register(b2)
 // 머티리얼 확장 파라미터 — 팀원 A CB 시스템 완성 후 b2 확장 예정
 static const float g_DefaultShininess = 32.0f;
 
+// 알파 컷아웃 임계값 — 디퓨즈 텍스처 알파가 이 값 미만인 픽셀은 폐기
+static const float g_AlphaCutoutThreshold = 0.5f;
+
 // =============================================================================
 // VS ↔ PS 인터페이스
 // =============================================================================
@@ -224,8 +227,20 @@ UberPS_Output PS(UberVS_Output input, bool isFrontFace : SV_IsFrontFace)
     UberPS_Output output;
 
     float4 texColor = DiffuseTexture.Sample(LinearWrapSampler, input.texcoord);
-    if (texColor.a < 0.001f)
+
+    // 언바운드 SRV는 (0,0,0,0)으로 샘플되므로 크기로 텍스처 유무를 구분한다
+    uint DiffuseWidth, DiffuseHeight;
+    DiffuseTexture.GetDimensions(DiffuseWidth, DiffuseHeight);
+    if (DiffuseWidth == 0)
+    {
+        // 텍스처 미바인딩 → 흰색 폴백 (SectionColor/라이팅만 적용)
         texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+    else
+    {
+        // 알파 컷아웃: Opaque 패스는 블렌딩이 없으므로 투명 텍셀은 clip으로 폐기
+        clip(texColor.a - g_AlphaCutoutThreshold);
+    }
 
     float4 baseColor = texColor * input.color;
     float faceSign = isFrontFace ? 1.0f : -1.0f;
@@ -315,6 +330,21 @@ return output;
 
     output.Color = float4(finalColor, baseColor.a);
     output.Normal = float4(N, 1.0f); // alpha=1: 유효한 노말 마킹
-    
+
     return output;
+}
+
+// =============================================================================
+// PreDepth 전용 PS — 알파 컷아웃 텍셀이 깊이를 남기지 않도록 clip만 수행
+// (PreDepth는 RTV 없이 DSV만 바인딩되므로 색상 출력이 필요 없다)
+// =============================================================================
+void PS_DepthOnly(UberVS_Output input)
+{
+    uint DiffuseWidth, DiffuseHeight;
+    DiffuseTexture.GetDimensions(DiffuseWidth, DiffuseHeight);
+    if (DiffuseWidth == 0)
+        return; // 텍스처 없으면 컷아웃 없이 깊이 기록
+
+    float4 texColor = DiffuseTexture.Sample(LinearWrapSampler, input.texcoord);
+    clip(texColor.a - g_AlphaCutoutThreshold);
 }
