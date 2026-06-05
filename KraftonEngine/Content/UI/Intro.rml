@@ -7,7 +7,7 @@
 			height: 100%;
 			margin: 0;
 			background-color: rgba(8, 10, 14, 0.72);
-			font-family: "Maplestory";
+			font-family: "Shilla_Culture";
 			font-weight: bold;
 		}
 
@@ -35,7 +35,7 @@
 </head>
 <body>
 	<div id="intro-root">
-		<div id="start-button">START</div>
+		<div id="start-button">시작하기</div>
 	</div>
 </body>
 </rml>
