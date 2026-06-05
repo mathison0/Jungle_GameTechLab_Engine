@@ -31,6 +31,7 @@
 #include "Lua/LuaScriptManager.h"
 #include "Object/GarbageCollector.h"
 #include "Object/Object.h"
+#include "Object/Reflection/UClass.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -467,10 +468,28 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 	//MainPanel.HideEditorWindowsForPIE(); //PIE 중에는 에디터 패널을 숨김.
 	//ViewportLayout.DisableWorldAxisForPIE(); //PIE 중에는 월드 축 렌더링을 비활성화.
 
-	// PIE 월드에도 ProjectSettings의 GameMode 클래스 적용.
-	// Editor 모듈은 Game-specific 디폴트를 알 수 없으므로, ProjectSettings에
-	// 지정된 경우에만 GameMode가 spawn된다. 비어있으면 미생성 (회귀 안전).
-	if (UClass* GMClass = AGameModeBase::ResolveClassFromProjectSettings(nullptr))
+	// PIE 월드에도 씬 단위 GameMode를 우선 적용한다.
+	// 우선순위: WorldSettings.GameModeClassName -> ProjectSettings.GameModeClassName -> 미생성.
+	UClass* GMClass = nullptr;
+	const FString& SceneGMName = PIEWorld->GetWorldSettings().GameModeClassName;
+	if (!SceneGMName.empty())
+	{
+		UClass* Found = UClass::FindByName(SceneGMName.c_str());
+		if (Found && Found->IsA(AGameModeBase::StaticClass()))
+		{
+			GMClass = Found;
+		}
+		else
+		{
+			UE_LOG("[EditorEngine] WorldSettings.GameMode = '%s' 가 알 수 없는 클래스 — ProjectSettings 로 fallback",
+				SceneGMName.c_str());
+		}
+	}
+	if (!GMClass)
+	{
+		GMClass = AGameModeBase::ResolveClassFromProjectSettings(nullptr);
+	}
+	if (GMClass)
 	{
 		PIEWorld->SetGameModeClass(GMClass);
 	}

@@ -1,0 +1,101 @@
+{
+  "Actors" : [{
+      "ClassName" : "ACameraActor",
+      "Name" : "ACameraActor_0",
+      "NonSceneComponents" : [],
+      "ObjectId" : 2,
+      "Properties" : {
+        "PendingActorLocation" : [-4.558260, 0.014640, -2.695962],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_124",
+            "ObjectId" : 4,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/Camera.mat",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }],
+        "ClassName" : "UCameraComponent",
+        "Name" : "UCameraComponent_1",
+        "ObjectId" : 3,
+        "Properties" : {
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+          "CameraState.FOV" : 1.047198,
+          "CameraState.FarZ" : 1000.000000,
+          "CameraState.NearZ" : 0.100000,
+          "CameraState.OrthoWidth" : 10.000000,
+          "CameraState.bIsOrthogonal" : false,
+          "DepthOfField.FStop" : 4.000000,
+          "DepthOfField.FocusDistance" : 10.000000,
+          "DepthOfField.GatherRingCount" : 6,
+          "DepthOfField.GatherSamplesPerRing" : 20,
+          "DepthOfField.SensorWidth" : 24.576000,
+          "DepthOfField.bEnableBackground" : true,
+          "DepthOfField.bEnableForeground" : true,
+          "DepthOfField.bEnabled" : false,
+          "DepthOfField.bHalfRes" : true,
+          "RelativeTransform.Location" : [-4.558260, 0.014640, -2.695962],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "bAutoActivate" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }],
+  "ClassName" : "UWorld",
+  "ContextHandle" : "NewScene",
+  "ContextName" : "New Scene",
+  "Name" : "Intro",
+  "ObjectId" : 1,
+  "PerspectiveCamera" : {
+    "FOV" : 1.047198,
+    "FarClip" : 1000.000000,
+    "Location" : [2.633835, -1.472640, 2.188927],
+    "NearClip" : 0.100000,
+    "Rotation" : [0.000000, 32.565033, 159.299988]
+  },
+  "Version" : 2,
+  "WorldSettings" : {
+    "GameMode" : "AGameModeIntro"
+  },
+  "WorldType" : "Editor"
+}
