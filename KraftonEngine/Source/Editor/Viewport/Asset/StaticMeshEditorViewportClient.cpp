@@ -1,6 +1,10 @@
-#include "StaticMeshEditorViewportClient.h"
+﻿#include "StaticMeshEditorViewportClient.h"
 
 #include "Component/Primitive/StaticMeshComponent.h"
+#include "GameFramework/World.h"
+#include "Mesh/Static/StaticMesh.h"
+#include "Physics/BodySetup.h"
+#include "Render/Scene/FScene.h"
 #include "Input/InputSystem.h"
 #include "Math/MathUtils.h"
 #include "Render/Types/MinimalViewInfo.h"
@@ -85,6 +89,11 @@ bool FStaticMeshEditorViewportClient::GetCameraView(FMinimalViewInfo& OutPOV) co
 	OutPOV.FOV = ViewTransform.FOV;
 	OutPOV.AspectRatio = ViewTransform.AspectRatio;
 	return true;
+}
+
+void FStaticMeshEditorViewportClient::SubmitFrameDebugDraw()
+{
+	DrawPreviewCollision();
 }
 
 void FStaticMeshEditorViewportClient::Tick(float DeltaTime)
@@ -186,4 +195,50 @@ void FStaticMeshEditorViewportClient::ApplySmoothedCameraLocation(float DeltaTim
 
 	LastAppliedCameraLocation = NewLocation;
 	bLastAppliedCameraLocationInitialized = true;
+}
+
+void FStaticMeshEditorViewportClient::DrawPreviewCollision()
+{
+	if (!RenderOptions.ShowFlags.bShowCollisionShape || !PreviewWorld || !PreviewMeshComponent)
+	{
+		return;
+	}
+
+	const UStaticMesh* StaticMesh = PreviewMeshComponent->GetStaticMesh();
+	const UBodySetup* BodySetup = StaticMesh ? StaticMesh->GetBodySetup() : nullptr;
+	if (!BodySetup)
+	{
+		return;
+	}
+
+	const TArray<FVector>& Vertices = BodySetup->GetComplexCollisionVertices();
+	const TArray<uint32>& Indices = BodySetup->GetComplexCollisionIndices();
+	if (Vertices.empty() || Indices.size() < 3)
+	{
+		return;
+	}
+
+	FScene& Scene = PreviewWorld->GetScene();
+	const FMatrix& LocalToWorld = PreviewMeshComponent->GetWorldMatrix();
+	const FColor CollisionColor(0, 255, 255);
+
+	const size_t TriangleCount = Indices.size() / 3;
+	for (size_t TriangleIndex = 0; TriangleIndex < TriangleCount; ++TriangleIndex)
+	{
+		const uint32 I0 = Indices[TriangleIndex * 3 + 0];
+		const uint32 I1 = Indices[TriangleIndex * 3 + 1];
+		const uint32 I2 = Indices[TriangleIndex * 3 + 2];
+		if (I0 >= Vertices.size() || I1 >= Vertices.size() || I2 >= Vertices.size())
+		{
+			continue;
+		}
+
+		const FVector V0 = LocalToWorld.TransformPositionWithW(Vertices[I0]);
+		const FVector V1 = LocalToWorld.TransformPositionWithW(Vertices[I1]);
+		const FVector V2 = LocalToWorld.TransformPositionWithW(Vertices[I2]);
+
+		Scene.AddDebugLine(V0, V1, CollisionColor);
+		Scene.AddDebugLine(V1, V2, CollisionColor);
+		Scene.AddDebugLine(V2, V0, CollisionColor);
+	}
 }

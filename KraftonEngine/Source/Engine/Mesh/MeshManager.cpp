@@ -440,6 +440,34 @@ static bool SaveSkeletalMeshBinary(USkeletalMesh* SkeletalMesh, const FString& B
 	return Writer.IsValid();
 }
 
+bool FMeshManager::SaveStaticMeshPackage(UStaticMesh* StaticMesh)
+{
+	if (!StaticMesh)
+	{
+		return false;
+	}
+
+	const FString PackagePath = FPaths::MakeProjectRelative(StaticMesh->GetAssetPathFileName());
+	if (PackagePath.empty() || PackagePath == "None")
+	{
+		return false;
+	}
+
+	FStaticMesh* MeshAsset = StaticMesh->GetStaticMeshAsset();
+	const FString SourcePath = MeshAsset && !MeshAsset->PathFileName.empty()
+		? MeshAsset->PathFileName
+		: PackagePath;
+
+	if (!SaveStaticMeshBinary(StaticMesh, PackagePath, SourcePath))
+	{
+		return false;
+	}
+
+	StaticMeshCache[PackagePath] = StaticMesh;
+	ScanMeshAssets();
+	return true;
+}
+
 bool FMeshManager::SaveSkeletalMeshPackage(USkeletalMesh* SkeletalMesh)
 {
 	if (!SkeletalMesh)

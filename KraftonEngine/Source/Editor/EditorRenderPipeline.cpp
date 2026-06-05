@@ -404,6 +404,13 @@ void FEditorRenderPipeline::RenderPreviewViewport(IEditorPreviewViewportClient* 
 	Builder.BeginCollect(Frame);
 
 	Collector.Collect(World, Frame, Output);
+	if (Frame.RenderOptions.ShowFlags.bShowCollisionShape)
+	{
+		if (FPhysicsScene* PhysicsScene = World->GetPhysicsScene())
+		{
+			PhysicsScene->CollectDebugRender(Scene);
+		}
+	}
 	VC->SubmitFrameDebugDraw();
 	Collector.CollectDebugDraw(Frame, Scene);
 	Builder.BuildCommands(Frame, &Scene, Output);

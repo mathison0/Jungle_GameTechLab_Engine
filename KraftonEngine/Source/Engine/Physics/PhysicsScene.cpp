@@ -460,6 +460,8 @@ bool FPhysicsScene::CreateBodyFromSetup(UPrimitiveComponent* OwnerComp, FBodyIns
 	OutInstance.Body = Body;
 	Body->userData = &OutInstance;
 
+	Body->setActorFlag(physx::PxActorFlag::eVISUALIZATION, true);
+
 	Scene->addActor(*Body);
 	Bodies.push_back(&OutInstance);
 

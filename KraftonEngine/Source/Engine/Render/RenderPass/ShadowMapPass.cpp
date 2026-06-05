@@ -15,6 +15,7 @@
 #include "Render/Shader/ShaderManager.h"
 #include "Render/Resource/Buffer.h"
 #include "Render/Types/LightFrustumUtils.h"
+#include "Profiling/GPUProfiler.h"
 #include "Profiling/Stats/ShadowStats.h"
 #include "Core/ProjectSettings.h"
 #include "Collision/Octree/SpatialPartition.h"
@@ -1032,7 +1033,10 @@ void FShadowMapPass::RenderDirectionalShadows(const FPassContext& Ctx, FShadowMa
 		ShadowVP.MaxDepth = 1.0f;
 
 		DC->RSSetViewports(1, &ShadowVP);
-		DrawShadowCasters(Ctx, LightFrustum);
+		{
+			GPU_SCOPE_STAT_CAT("ShadowCasters_GPU_All", "Skinning");
+			DrawShadowCasters(Ctx, LightFrustum);
+		}
 		SHADOW_STATS_ADD_CASTER(DirectionalLight, LastDrawCasterCount);
 
 		ShadowCBCache.CSMViewProj[i] = DirectionalVP.ViewProj;
@@ -1150,7 +1154,10 @@ void FShadowMapPass::RenderSpotShadows(const FPassContext& Ctx, FShadowMapResour
 		}
 		DC->RSSetViewports(1, &ShadowVP);
 
-		DrawShadowCasters(Ctx, LightFrustum);
+		{
+			GPU_SCOPE_STAT_CAT("ShadowCasters_GPU_All", "Skinning");
+			DrawShadowCasters(Ctx, LightFrustum);
+		}
 		SHADOW_STATS_ADD_CASTER(SpotLight, LastDrawCasterCount);
 
 		float Sharpen = Env.GetSpotLight(LightIdx).ShadowSharpen;
@@ -1359,7 +1366,10 @@ void FShadowMapPass::RenderPointShadows(const FPassContext& Ctx, FShadowMapResou
 
 			DC->RSSetViewports(1, &ShadowVP);
 
-			DrawShadowCasters(Ctx, LightFrustum);
+			{
+				GPU_SCOPE_STAT_CAT("ShadowCasters_GPU_All", "Skinning");
+				DrawShadowCasters(Ctx, LightFrustum);
+			}
 			SHADOW_STATS_ADD_CASTER(PointLight, LastDrawCasterCount);
 		}
 

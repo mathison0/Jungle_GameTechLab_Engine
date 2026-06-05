@@ -3,10 +3,12 @@
 #include "Editor/UI/Asset/AssetEditorWidget.h"
 #include "Object/FName.h"
 #include "Editor/Viewport/Asset/StaticMeshEditorViewportClient.h"
+#include "Physics/BodySetup.h"
 
 struct FStaticMesh;
 struct ImDrawList;
 struct ImVec2;
+class UStaticMesh;
 
 class FStaticMeshEditorWidget : public FAssetEditorWidget
 {
@@ -28,7 +30,11 @@ public:
 
 private:
 	void RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos) const;
-	void RenderDetailsPanel(FStaticMesh* Asset) const;
+	void RenderDetailsPanel(UStaticMesh* StaticMesh);
+	void RenderCollisionPanel(UStaticMesh* StaticMesh);
+	void EnsurePreviewCollisionBody();
+	void RebuildCollisionForEditedMesh(UStaticMesh* StaticMesh);
+	void SaveEditedStaticMesh(UStaticMesh* StaticMesh);
 
 private:
 	FStaticMeshEditorViewportClient ViewportClient;
@@ -36,4 +42,6 @@ private:
 	uint32 InstanceId;
 	FName PreviewWorldHandle = FName::None;
 	FString WindowIdSuffix;
+	FStaticMeshCollisionBuildSettings CollisionBuildSettings;
+	FString LastCollisionBuildMessage;
 };

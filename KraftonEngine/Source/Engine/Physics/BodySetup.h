@@ -14,6 +14,26 @@ enum class EPhysicsAssetShapeType : uint8
 	Convex
 };
 
+enum class EStaticMeshComplexCollisionMode : uint8
+{
+	FullMesh,
+	WalkableOnly
+};
+
+struct FStaticMeshCollisionBuildSettings
+{
+	EStaticMeshComplexCollisionMode Mode = EStaticMeshComplexCollisionMode::FullMesh;
+
+	float MaxSlopeDegrees = 30.0f;
+	float MinTriangleArea = 0.0001f;
+	float WeldEpsilon = 0.5f;
+	int32 MinIslandTriangleCount = 3000;
+
+	bool bSimplify = true;
+	int32 SimplifyAboveTriangleCount = 150000;
+	float SimplifyTargetRatio = 0.25f;
+};
+
 namespace physx
 {
 	class PxTriangleMesh;
@@ -46,8 +66,14 @@ public:
 	int32 GetShapeCount(EPhysicsAssetShapeType ShapeType) const;
 	bool RemoveShape(EPhysicsAssetShapeType ShapeType, int32 ShapeIndex);
 	void ClearShapes();
+	void ClearComplexCollision();
 
 	void BuildComplexCollisionFromStaticMesh(const FStaticMesh& Mesh);
+	void RebuildComplexCollisionFromStaticMesh(const FStaticMesh& Mesh, const FStaticMeshCollisionBuildSettings& Settings);
+
+	void BuildWalkableCollisionFromStaticMesh(const FStaticMesh& Mesh, float MaxSlopeDegrees = 45.0f,
+		float MinTriangleArea = 1.0f, int32 MinIslandTriangleCount = 300);
+	void BuildWalkableCollisionFromStaticMesh(const FStaticMesh& Mesh, const FStaticMeshCollisionBuildSettings& Settings);
 
 	const TArray<FVector>& GetComplexCollisionVertices() const { return ComplexCollisionVertices; }
 	const TArray<uint32>& GetComplexCollisionIndices() const { return ComplexCollisionIndices; }

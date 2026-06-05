@@ -33,9 +33,11 @@ public:
 
 	FViewportRenderOptions& GetRenderOptions() override { return RenderOptions; }
 	const FViewportRenderOptions& GetRenderOptions() const override { return RenderOptions; }
+	UStaticMeshComponent* GetPreviewMeshComponent() const { return PreviewMeshComponent; }
 
 	void NotifyViewportResized(int32 NewWidth, int32 NewHeight) override;
 	bool GetCameraView(FMinimalViewInfo& OutPOV) const override;
+	void SubmitFrameDebugDraw() override;
 
 	void Tick(float DeltaTime);
 
@@ -44,6 +46,7 @@ private:
 	void TickInput(float DeltaTime);
 	void SyncCameraSmoothingTarget();
 	void ApplySmoothedCameraLocation(float DeltaTime);
+	void DrawPreviewCollision();
 
 private:
 	FViewport* Viewport = nullptr;

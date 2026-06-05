@@ -108,6 +108,11 @@ private:
 	mutable FSkinningOverlaySample GPUMatrixUploadSample;
 	mutable FSkinningOverlaySample SkeletalPreDepthCPUPathSample;
 	mutable FSkinningOverlaySample SkeletalPreDepthGPUPathSample;
+	mutable FSkinningOverlaySample SkeletalOpaqueCPUPathSample;
+	mutable FSkinningOverlaySample SkeletalOpaqueGPUPathSample;
+	mutable FSkinningOverlaySample SkeletalAlphaCPUPathSample;
+	mutable FSkinningOverlaySample SkeletalAlphaGPUPathSample;
+	mutable FSkinningOverlaySample ShadowCastersAllSample;
 
 	FOverlayStatLayout Layout;
 };

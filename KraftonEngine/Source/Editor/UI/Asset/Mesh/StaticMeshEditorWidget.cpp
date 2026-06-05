@@ -5,6 +5,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/Light/DirectionalLightActor.h"
 #include "GameFramework/Actor/StaticMeshActor.h"
+#include "Mesh/MeshManager.h"
 #include "Mesh/Static/StaticMesh.h"
 #include "Mesh/Static/StaticMeshAsset.h"
 #include "Runtime/Engine.h"
@@ -107,6 +108,10 @@ void FStaticMeshEditorWidget::Open(UObject* Object)
 	ViewportClient.SetPreviewWorld(WorldContext.World);
 	ViewportClient.SetPreviewActor(Actor);
 	ViewportClient.SetPreviewMeshComponent(Actor->GetComponentByClass<UStaticMeshComponent>());
+	if (PreviewComp)
+	{
+		PreviewComp->CreatePhysicsState();
+	}
 	ViewportClient.ResetCameraToPreviewBounds();
 
 	WorldContext.World->SetEditorPOVProvider(&ViewportClient);
@@ -251,7 +256,7 @@ void FStaticMeshEditorWidget::Render(float DeltaTime)
 	ImGui::BeginChild("Details", ImVec2(DetailsWidth, 0), true);
 	ImGui::Text("Static Mesh Details");
 	ImGui::Separator();
-	RenderDetailsPanel(StaticMesh ? StaticMesh->GetStaticMeshAsset() : nullptr);
+	RenderDetailsPanel(StaticMesh);
 	ImGui::EndChild();
 
 	ImGui::End();
@@ -290,8 +295,9 @@ void FStaticMeshEditorWidget::RenderMeshStatsOverlay(ImDrawList* DrawList, const
 	DrawList->AddText(TextPos, IM_COL32(235, 238, 242, 255), Text.c_str());
 }
 
-void FStaticMeshEditorWidget::RenderDetailsPanel(FStaticMesh* Asset) const
+void FStaticMeshEditorWidget::RenderDetailsPanel(UStaticMesh* StaticMesh)
 {
+	FStaticMesh* Asset = StaticMesh ? StaticMesh->GetStaticMeshAsset() : nullptr;
 	if (!Asset)
 	{
 		ImGui::TextDisabled("No static mesh data.");
@@ -302,4 +308,136 @@ void FStaticMeshEditorWidget::RenderDetailsPanel(FStaticMesh* Asset) const
 	ImGui::Text("Indices: %s", FormatStaticMeshStatCount(Asset->Indices.size()).c_str());
 	ImGui::Text("Triangles: %s", FormatStaticMeshStatCount(Asset->Indices.size() / 3).c_str());
 	ImGui::Text("Sections: %s", FormatStaticMeshStatCount(Asset->Sections.size()).c_str());
+
+	ImGui::Dummy(ImVec2(0.0f, 8.0f));
+	RenderCollisionPanel(StaticMesh);
+}
+
+void FStaticMeshEditorWidget::RenderCollisionPanel(UStaticMesh* StaticMesh)
+{
+	if (!ImGui::CollapsingHeader("Collision", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		return;
+	}
+
+	const char* Modes[] = { "Full Mesh", "Walkable Only" };
+	int ModeIndex = CollisionBuildSettings.Mode == EStaticMeshComplexCollisionMode::WalkableOnly ? 1 : 0;
+	if (ImGui::Combo("Mode", &ModeIndex, Modes, 2))
+	{
+		CollisionBuildSettings.Mode = ModeIndex == 1
+			? EStaticMeshComplexCollisionMode::WalkableOnly
+			: EStaticMeshComplexCollisionMode::FullMesh;
+	}
+
+	UBodySetup* BodySetup = StaticMesh ? StaticMesh->GetBodySetup() : nullptr;
+	const size_t CollisionVertexCount = BodySetup ? BodySetup->GetComplexCollisionVertices().size() : 0;
+	const size_t CollisionTriangleCount = BodySetup ? BodySetup->GetComplexCollisionIndices().size() / 3 : 0;
+	ImGui::Text("Collision Verts: %s", FormatStaticMeshStatCount(CollisionVertexCount).c_str());
+	ImGui::Text("Collision Tris: %s", FormatStaticMeshStatCount(CollisionTriangleCount).c_str());
+
+	bool& bPreviewCollision = ViewportClient.GetRenderOptions().ShowFlags.bShowCollisionShape;
+	if (ImGui::Checkbox("Preview Collision", &bPreviewCollision) && bPreviewCollision)
+	{
+		EnsurePreviewCollisionBody();
+	}
+
+	const bool bWalkable = CollisionBuildSettings.Mode == EStaticMeshComplexCollisionMode::WalkableOnly;
+	if (!bWalkable)
+	{
+		ImGui::BeginDisabled();
+	}
+
+	ImGui::DragFloat("Max Slope", &CollisionBuildSettings.MaxSlopeDegrees, 1.0f, 0.0f, 89.0f, "%.1f");
+	ImGui::DragFloat("Min Tri Area", &CollisionBuildSettings.MinTriangleArea, 0.0001f, 0.0f, 100000.0f, "%.5f");
+	ImGui::DragFloat("Weld Epsilon", &CollisionBuildSettings.WeldEpsilon, 0.1f, 0.0f, 1000.0f, "%.3f");
+	ImGui::DragInt("Min Island Tris", &CollisionBuildSettings.MinIslandTriangleCount, 100.0f, 0, 1000000);
+
+	ImGui::Checkbox("Simplify", &CollisionBuildSettings.bSimplify);
+	if (!CollisionBuildSettings.bSimplify)
+	{
+		ImGui::BeginDisabled();
+	}
+	ImGui::DragInt("Simplify Above", &CollisionBuildSettings.SimplifyAboveTriangleCount, 1000.0f, 0, 5000000);
+	ImGui::SliderFloat("Simplify Ratio", &CollisionBuildSettings.SimplifyTargetRatio, 0.01f, 1.0f, "%.2f");
+	if (!CollisionBuildSettings.bSimplify)
+	{
+		ImGui::EndDisabled();
+	}
+
+	if (!bWalkable)
+	{
+		ImGui::EndDisabled();
+	}
+
+	if (ImGui::Button("Rebuild Collision", ImVec2(-1.0f, 0.0f)))
+	{
+		RebuildCollisionForEditedMesh(StaticMesh);
+	}
+
+	if (ImGui::Button("Save Static Mesh", ImVec2(-1.0f, 0.0f)))
+	{
+		SaveEditedStaticMesh(StaticMesh);
+	}
+
+	if (!LastCollisionBuildMessage.empty())
+	{
+		ImGui::TextWrapped("%s", LastCollisionBuildMessage.c_str());
+	}
+}
+
+void FStaticMeshEditorWidget::EnsurePreviewCollisionBody()
+{
+	if (UStaticMeshComponent* PreviewComp = ViewportClient.GetPreviewMeshComponent())
+	{
+		if (!PreviewComp->GetBodyInstance())
+		{
+			PreviewComp->CreatePhysicsState();
+		}
+	}
+}
+
+void FStaticMeshEditorWidget::RebuildCollisionForEditedMesh(UStaticMesh* StaticMesh)
+{
+	if (!StaticMesh || !StaticMesh->GetStaticMeshAsset())
+	{
+		LastCollisionBuildMessage = "No static mesh.";
+		return;
+	}
+
+	UBodySetup* BodySetup = StaticMesh->GetOrCreateBodySetup();
+	if (!BodySetup)
+	{
+		LastCollisionBuildMessage = "Failed to create body setup.";
+		return;
+	}
+
+	BodySetup->RebuildComplexCollisionFromStaticMesh(*StaticMesh->GetStaticMeshAsset(), CollisionBuildSettings);
+
+	if (UStaticMeshComponent* PreviewComp = ViewportClient.GetPreviewMeshComponent())
+	{
+		PreviewComp->RecreatePhysicsState();
+	}
+
+	const size_t CollisionTriangleCount = BodySetup->GetComplexCollisionIndices().size() / 3;
+	LastCollisionBuildMessage = "Collision rebuilt. Tris: " + FormatStaticMeshStatCount(CollisionTriangleCount);
+	MarkDirty();
+}
+
+void FStaticMeshEditorWidget::SaveEditedStaticMesh(UStaticMesh* StaticMesh)
+{
+	if (!StaticMesh)
+	{
+		LastCollisionBuildMessage = "No static mesh to save.";
+		return;
+	}
+
+	if (FMeshManager::SaveStaticMeshPackage(StaticMesh))
+	{
+		LastCollisionBuildMessage = "Static mesh saved.";
+		ClearDirty();
+	}
+	else
+	{
+		LastCollisionBuildMessage = "Failed to save static mesh.";
+	}
 }

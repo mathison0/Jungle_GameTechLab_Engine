@@ -69,6 +69,7 @@ public:
 		FFbxSceneImportResult&        OutResult
 		);
 	static bool           ReadSkeletalMeshBinding(const FString& PackagePath, FSkeletonBinding& OutBinding);
+	static bool SaveStaticMeshPackage(UStaticMesh* StaticMesh);
 	static bool SaveSkeletalMeshPackage(USkeletalMesh* SkeletalMesh);
 	static void ScanMeshSourceFiles();
 	static void ScanFbxSourceFiles();

@@ -267,11 +267,45 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 				A.LastMs + B.LastMs);
 			OutLines.push_back(FString(Buffer));
 		};
+	auto AppendGPUPathTotal = [&]()
+		{
+			double TotalMs = 0.0;
+			uint32 ValidCount = 0;
+			auto AddIfValid = [&](const FSkinningOverlaySample& Sample)
+				{
+					if (!Sample.bValid)
+					{
+						return;
+					}
+					TotalMs += Sample.LastMs;
+					++ValidCount;
+				};
+
+			AddIfValid(GPUMatrixUploadSample);
+			AddIfValid(SkeletalPreDepthGPUPathSample);
+			AddIfValid(SkeletalOpaqueGPUPathSample);
+			AddIfValid(SkeletalAlphaGPUPathSample);
+			AddIfValid(ShadowCastersAllSample);
+
+			if (ValidCount == 0)
+			{
+				OutLines.push_back(FString("GPU Mode Total (visible approx) : waiting for samples"));
+				return;
+			}
+
+			snprintf(Buffer, sizeof(Buffer), "GPU Mode Total (visible approx) : %.3f ms", TotalMs);
+			OutLines.push_back(FString(Buffer));
+		};
 
 	MarkStale(CPUVertexSkinSample);
 	MarkStale(GPUMatrixUploadSample);
 	MarkStale(SkeletalPreDepthCPUPathSample);
 	MarkStale(SkeletalPreDepthGPUPathSample);
+	MarkStale(SkeletalOpaqueCPUPathSample);
+	MarkStale(SkeletalOpaqueGPUPathSample);
+	MarkStale(SkeletalAlphaCPUPathSample);
+	MarkStale(SkeletalAlphaGPUPathSample);
+	MarkStale(ShadowCastersAllSample);
 
 	const TArray<FStatEntry>& CPUSnapshot = FStatManager::Get().GetSnapshot();
 	for (const FStatEntry& Entry : CPUSnapshot)
@@ -315,17 +349,42 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 		{
 			UpdateSample(SkeletalPreDepthGPUPathSample, Entry);
 		}
+		else if (Entry.Name && strcmp(Entry.Name, "SkeletalOpaque_GPU_CPUPath") == 0)
+		{
+			UpdateSample(SkeletalOpaqueCPUPathSample, Entry);
+		}
+		else if (Entry.Name && strcmp(Entry.Name, "SkeletalOpaque_GPU_GPUPath") == 0)
+		{
+			UpdateSample(SkeletalOpaqueGPUPathSample, Entry);
+		}
+		else if (Entry.Name && strcmp(Entry.Name, "SkeletalAlpha_GPU_CPUPath") == 0)
+		{
+			UpdateSample(SkeletalAlphaCPUPathSample, Entry);
+		}
+		else if (Entry.Name && strcmp(Entry.Name, "SkeletalAlpha_GPU_GPUPath") == 0)
+		{
+			UpdateSample(SkeletalAlphaGPUPathSample, Entry);
+		}
+		else if (Entry.Name && strcmp(Entry.Name, "ShadowCasters_GPU_All") == 0)
+		{
+			UpdateSample(ShadowCastersAllSample, Entry);
+		}
 	}
 
 	OutLines.push_back(FString("--- CPU Skinning Mode ---"));
 	AppendSample("CPU Vertex Skin", CPUVertexSkinSample);
 	AppendSample("GPU Skeletal PreDepth (CPU Path)", SkeletalPreDepthCPUPathSample);
+	AppendSample("GPU Skeletal Opaque (CPU Path)", SkeletalOpaqueCPUPathSample);
+	AppendSample("GPU Skeletal Alpha (CPU Path)", SkeletalAlphaCPUPathSample);
 	AppendModeTotal("CPU Mode Total (CPU+GPU approx)", CPUVertexSkinSample, SkeletalPreDepthCPUPathSample);
 
 	OutLines.push_back(FString("--- GPU Skinning Mode ---"));
 	AppendSample("GPU Matrix Upload CPU", GPUMatrixUploadSample);
 	AppendSample("GPU Skeletal PreDepth (GPU Path)", SkeletalPreDepthGPUPathSample);
-	AppendModeTotal("GPU Mode Total (CPU+GPU approx)", GPUMatrixUploadSample, SkeletalPreDepthGPUPathSample);
+	AppendSample("GPU Skeletal Opaque (GPU Path)", SkeletalOpaqueGPUPathSample);
+	AppendSample("GPU Skeletal Alpha (GPU Path)", SkeletalAlphaGPUPathSample);
+	AppendSample("GPU Shadow Casters (all)", ShadowCastersAllSample);
+	AppendGPUPathTotal();
 
 	OutLines.push_back(FString("--- Skeletal Render ---"));
 	snprintf(Buffer, sizeof(Buffer), "Draw Calls : total %u  gpu %u  cpu %u",

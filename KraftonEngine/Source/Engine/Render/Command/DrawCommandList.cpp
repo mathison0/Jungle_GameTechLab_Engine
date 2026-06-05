@@ -9,6 +9,31 @@
 #include "Profiling/Stats/Stats.h"
 #include "Profiling/GPUProfiler.h"
 
+namespace
+{
+	bool IsSkeletalPassProfiled(ERenderPass Pass)
+	{
+		return Pass == ERenderPass::PreDepth ||
+			Pass == ERenderPass::Opaque ||
+			Pass == ERenderPass::AlphaBlend;
+	}
+
+	const char* GetSkeletalPassScopeName(ERenderPass Pass, bool bGpuSkinned)
+	{
+		switch (Pass)
+		{
+		case ERenderPass::PreDepth:
+			return bGpuSkinned ? "SkeletalPreDepth_GPU_GPUPath" : "SkeletalPreDepth_GPU_CPUPath";
+		case ERenderPass::Opaque:
+			return bGpuSkinned ? "SkeletalOpaque_GPU_GPUPath" : "SkeletalOpaque_GPU_CPUPath";
+		case ERenderPass::AlphaBlend:
+			return bGpuSkinned ? "SkeletalAlpha_GPU_GPUPath" : "SkeletalAlpha_GPU_CPUPath";
+		default:
+			return bGpuSkinned ? "SkeletalOther_GPU_GPUPath" : "SkeletalOther_GPU_CPUPath";
+		}
+	}
+}
+
 // ============================================================
 // FStateCache
 // ============================================================
@@ -149,7 +174,7 @@ void FDrawCommandList::SubmitRange(uint32 StartIdx, uint32 EndIdx,
 	while (i < EndIdx)
 	{
 		const FDrawCommand& Cmd = Commands[i];
-		if (!Cmd.bIsSkeletal || Cmd.Pass != ERenderPass::PreDepth)
+		if (!Cmd.bIsSkeletal || !IsSkeletalPassProfiled(Cmd.Pass))
 		{
 			SubmitCommand(Cmd, Device, Resources, Ctx, Cache);
 			++i;
@@ -157,9 +182,8 @@ void FDrawCommandList::SubmitRange(uint32 StartIdx, uint32 EndIdx,
 		}
 
 		const bool bGpuSkinned = Cmd.bIsGpuSkinned;
-		const char* ScopeName = bGpuSkinned
-			? "SkeletalPreDepth_GPU_GPUPath"
-			: "SkeletalPreDepth_GPU_CPUPath";
+		const ERenderPass ProfiledPass = Cmd.Pass;
+		const char* ScopeName = GetSkeletalPassScopeName(ProfiledPass, bGpuSkinned);
 		GPU_SCOPE_STAT_CAT(ScopeName, "Skinning");
 
 		do
@@ -169,7 +193,7 @@ void FDrawCommandList::SubmitRange(uint32 StartIdx, uint32 EndIdx,
 		}
 		while (i < EndIdx
 			&& Commands[i].bIsSkeletal
-			&& Commands[i].Pass == ERenderPass::PreDepth
+			&& Commands[i].Pass == ProfiledPass
 			&& Commands[i].bIsGpuSkinned == bGpuSkinned);
 	}
 }
