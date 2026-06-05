@@ -127,7 +127,11 @@ function update(self, dt)
 end
 
 function on_notify(self, name)
-    -- 콤보 윈도우/히트 판정 notify 는 여기서 분기 (montage notify 연동 예정)
+    -- ※ 공격 히트는 C++ AnimNotify_MusouAttack(클래스 notify)이 GameMode로 직접
+    --   브로드캐스트하므로 여기를 거치지 않는다. 이 큐는 콤보 윈도우 등
+    --   이름 기반 notify("ComboWindowOpen"/"ComboEnd")의 lua 연동용.
+    _G.MusouAnimEvents = _G.MusouAnimEvents or {}
+    table.insert(_G.MusouAnimEvents, name)
     print("[PlayerAnim] notify: " .. name)
 end
 

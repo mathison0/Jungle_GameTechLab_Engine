@@ -1,20 +1,29 @@
 #pragma once
 
 #include "Component/ActorComponent.h"
+#include "Core/Delegate.h"
 
 #include "Source/Game/Musou/Combat/BattleComponent.generated.h"
 
 class AActor;
+struct FMusouAttackEvent;
 
 // ============================================================
-// UBattleComponent — 체력/데미지 처리 (초안)
+// UBattleComponent — 체력/데미지 처리 (액터 단위: 플레이어/보스)
 //
-// 플레이어/적 공용. 사망 시 GameMode에 통지한다:
+// 잡졸 군체는 액터가 아니라 군체 Manager가 SoA로 직접 관리하므로
+// 이 컴포넌트를 쓰지 않는다. 액터 기반 유닛(플레이어/보스)만 부착.
+//
+// 피격 경로 (단일 경로):
+//   AMusouGameMode::OnAttackPerformed 구독 → HandleAttackEvent에서
+//   자기 위치로 FMusouAttackEvent::IsInVolume 셀프 판정 → ApplyDamage.
+//   진영(bIsPlayerTeam)이 공격자와 같으면 무시.
+//
+// 사망 시 GameMode에 통지:
 //   - Possessed Pawn(플레이어) 사망 → NotifyPlayerDeath
-//   - 그 외(적) 사망              → NotifyEnemyKilled (킬/콤보 누적)
+//   - 그 외(보스 등)              → NotifyEnemyKilled
 //
-// TODO(확장): 무적 시간, 피격 리액션(React Large 애님 연동),
-//             넉백, 데미지 타입/배율, 사망 애니메이션 연동
+// TODO(확장): 무적 시간, 피격 리액션(React Large 애님 연동), 사망 애니메이션
 // ============================================================
 UCLASS()
 class UBattleComponent : public UActorComponent
@@ -25,6 +34,7 @@ public:
 	~UBattleComponent() override = default;
 
 	void BeginPlay() override;
+	void EndPlay() override;
 
 	// 데미지 적용. 실제 적용된 데미지를 반환 (사망 상태면 0).
 	virtual float ApplyDamage(float Damage, AActor* DamageInstigator);
@@ -43,10 +53,23 @@ public:
 	UPROPERTY(Edit, Save, Category="Battle", DisplayName="Attack Power")
 	float AttackPower = 10.0f;
 
+	// 진영 — 플레이어 캐릭터 true / 보스·적 false. 같은 진영 공격은 무시.
+	UPROPERTY(Edit, Save, Category="Battle", DisplayName="Is Player Team")
+	bool bIsPlayerTeam = false;
+
+	// 피격 시 넉백 수용 여부 — 보스는 끄면 슈퍼아머.
+	UPROPERTY(Edit, Save, Category="Battle", DisplayName="Accept Knockback")
+	bool bAcceptKnockback = true;
+
 protected:
+	// OnAttackPerformed 수신 — 셀프 판정 후 데미지/넉백 적용 + 히트 회신.
+	virtual void HandleAttackEvent(const FMusouAttackEvent& Event);
+
 	// 사망 1회 진입점 — GameMode 통지 후 서브클래스/외부 확장.
 	virtual void OnDeath(AActor* DamageInstigator);
 
 	float Health = 0.0f;
 	bool bDead = false;
+
+	FDelegateHandle AttackListenerHandle;
 };

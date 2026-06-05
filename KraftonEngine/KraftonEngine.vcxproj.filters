@@ -1856,6 +1856,9 @@
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp">
       <Filter>Source\Game\Musou\Character</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.cpp">
+      <Filter>Source\Game\Musou\Combat</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\Combat\BattleComponent.cpp">
       <Filter>Source\Game\Musou\Combat</Filter>
     </ClCompile>
@@ -3309,6 +3312,12 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h">
       <Filter>Source\Game\Musou\Character</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.h">
+      <Filter>Source\Game\Musou\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Combat\AttackTypes.h">
+      <Filter>Source\Game\Musou\Combat</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Combat\BattleComponent.h">
       <Filter>Source\Game\Musou\Combat</Filter>

@@ -1,9 +1,17 @@
 #include "Game/Musou/Combat/BattleComponent.h"
 
+#include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Component/Input/ActionComponent.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/World.h"
 #include "Core/Logging/Log.h"
+
+static AMusouGameMode* GetMusouGameModeFor(const UActorComponent* Component)
+{
+	UWorld* World = Component ? Component->GetWorld() : nullptr;
+	return World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
+}
 
 void UBattleComponent::BeginPlay()
 {
@@ -11,6 +19,75 @@ void UBattleComponent::BeginPlay()
 
 	Health = MaxHealth;
 	bDead = false;
+
+	// 공격 이벤트 구독 — 단일 피격 경로. (Editor 월드 등 GameMode 없으면 스킵)
+	if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+	{
+		AttackListenerHandle = GameMode->OnAttackPerformed.AddUObject(this, &UBattleComponent::HandleAttackEvent);
+	}
+}
+
+void UBattleComponent::EndPlay()
+{
+	if (AttackListenerHandle.IsValid())
+	{
+		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+		{
+			GameMode->OnAttackPerformed.Remove(AttackListenerHandle);
+		}
+		AttackListenerHandle.Reset();
+	}
+
+	UActorComponent::EndPlay();
+}
+
+void UBattleComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
+{
+	if (bDead)
+	{
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	// 자기 자신의 공격 / 같은 진영 공격은 무시
+	if (Event.Attacker == OwnerActor || Event.bFromPlayer == bIsPlayerTeam)
+	{
+		return;
+	}
+
+	// 셀프 판정 — 군체 Manager와 동일한 공용 기하 사용
+	const FVector MyPos = OwnerActor->GetActorLocation();
+	if (!Event.IsInVolume(MyPos))
+	{
+		return;
+	}
+
+	ApplyDamage(Event.Damage, Event.Attacker);
+
+	// 넉백 — 공격자에서 멀어지는 수평 방향
+	if (bAcceptKnockback && !bDead)
+	{
+		if (UActionComponent* Action = OwnerActor->GetComponentByClass<UActionComponent>())
+		{
+			FVector Away = MyPos - Event.Origin;
+			Away.Z = 0.0f;
+			if (Away.Length() > 0.001f)
+			{
+				Action->Knockback(Away.Normalized(), Event.Spec.KnockbackDist, Event.Spec.KnockbackDur);
+			}
+		}
+	}
+
+	// 히트 회신 — 공격자 히트스탑 피드백
+	if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+	{
+		GameMode->NotifyAttackHits(Event, 1);
+	}
 }
 
 float UBattleComponent::ApplyDamage(float Damage, AActor* DamageInstigator)
@@ -23,7 +100,7 @@ float UBattleComponent::ApplyDamage(float Damage, AActor* DamageInstigator)
 	const float Applied = (Damage > Health) ? Health : Damage;
 	Health -= Applied;
 
-	// TODO: 피격 리액션 (React Large 애님), 무적 시간, 넉백
+	// TODO: 피격 리액션 (React Large 애님), 무적 시간
 
 	if (Health <= 0.0f)
 	{
@@ -52,13 +129,7 @@ void UBattleComponent::Kill(AActor* DamageInstigator)
 
 void UBattleComponent::OnDeath(AActor* DamageInstigator)
 {
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	AMusouGameMode* GameMode = Cast<AMusouGameMode>(World->GetGameMode());
+	AMusouGameMode* GameMode = GetMusouGameModeFor(this);
 	if (!GameMode)
 	{
 		return;

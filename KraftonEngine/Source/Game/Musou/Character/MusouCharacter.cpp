@@ -32,6 +32,7 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 
 	// ── 전투 컴포넌트 ──
 	BattleComponent = AddComponent<UBattleComponent>();
+	BattleComponent->bIsPlayerTeam = true;  // 플레이어 진영 — 적(군체/보스) 공격만 수신
 	ComboComponent  = AddComponent<UComboComponent>();
 }
 

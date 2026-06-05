@@ -5,9 +5,13 @@
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Runtime/EngineInitHooks.h"
 #include "Lua/LuaScriptManager.h"
+#include "Lua/LuaDocRegistry.h"
+
+#include "Game/Musou/Combat/BattleComponent.h"
+#include "GameFramework/AActor.h"
 
 // ============================================================
-// 게임-특화 Lua 바인딩 등록 위치 — 현재는 비어 있음.
+// 게임-특화 Lua 바인딩 등록 위치.
 //
 // Engine 의 FLuaScriptManager 가 등록하는 일반 binding (AActor / APawn / FVector /
 // UWorld / Anim 등) 만으로 동작하지 않는 game-specific usertype (ACarPawn /
@@ -19,7 +23,39 @@
 // ============================================================
 void RegisterGameLuaBindings(sol::state& Lua)
 {
-	(void)Lua;
+	// ── UBattleComponent — 히트 판정(lua)이 데미지 적용(C++)을 호출하는 진입점 ──
+	FLuaDocRegistry::Get().BindType<UBattleComponent>(Lua, "BattleComponent")
+		.Method("ApplyDamage",
+			"---@param damage number\n---@param instigator Actor?\n---@return number\nfunction BattleComponent:ApplyDamage(damage, instigator) end",
+			[](UBattleComponent& Battle, float Damage, AActor* Instigator) { return Battle.ApplyDamage(Damage, Instigator); })
+		.Method("Heal",
+			"---@param amount number\nfunction BattleComponent:Heal(amount) end",
+			[](UBattleComponent& Battle, float Amount) { Battle.Heal(Amount); })
+		.Method("Kill",
+			"---@param instigator Actor?\nfunction BattleComponent:Kill(instigator) end",
+			[](UBattleComponent& Battle, AActor* Instigator) { Battle.Kill(Instigator); })
+		.Method("IsDead",
+			"---@return boolean\nfunction BattleComponent:IsDead() end",
+			[](UBattleComponent& Battle) { return Battle.IsDead(); })
+		.Method("GetHealth",
+			"---@return number\nfunction BattleComponent:GetHealth() end",
+			[](UBattleComponent& Battle) { return Battle.GetHealth(); })
+		.Method("GetMaxHealth",
+			"---@return number\nfunction BattleComponent:GetMaxHealth() end",
+			[](UBattleComponent& Battle) { return Battle.GetMaxHealth(); })
+		.Method("GetHealthRatio",
+			"---@return number\nfunction BattleComponent:GetHealthRatio() end",
+			[](UBattleComponent& Battle) { return Battle.GetHealthRatio(); })
+		.Method("GetAttackPower",
+			"---@return number\nfunction BattleComponent:GetAttackPower() end",
+			[](UBattleComponent& Battle) { return Battle.GetAttackPower(); });
+
+	// ── 기존 Actor usertype 확장 — GetBattleComponent ──
+	sol::table ActorTable = Lua["Actor"];
+	ActorTable.set_function("GetBattleComponent",
+		[](AActor& Actor) { return Actor.GetComponentByClass<UBattleComponent>(); });
+	FLuaDocRegistry::Get().Type("Actor")
+		.Method("---@return BattleComponent?\nfunction Actor:GetBattleComponent() end");
 }
 
 // 자기-등록 — Editor / Game 측이 RegisterGameLuaBindings 함수명을 모르고도
