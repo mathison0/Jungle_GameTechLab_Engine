@@ -1,4 +1,4 @@
-#include "Game/Musou/GameMode/MusouGameMode.h"
+﻿#include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/GameMode/MusouPlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
@@ -61,6 +61,12 @@ void AMusouGameMode::EndPlay()
 	AGameModeBase::EndPlay();
 }
 
+void AMusouGameMode::Tick(float DeltaTime)
+{
+	AGameModeBase::Tick(DeltaTime);
+	UpdateHud();
+}
+
 void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)
 {
 	OnAttackPerformed.Broadcast(Event);
@@ -116,4 +122,41 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 AMusouGameState* AMusouGameMode::GetMusouGameState() const
 {
 	return Cast<AMusouGameState>(GetGameState());
+}
+
+void AMusouGameMode::UpdateHud()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	const AMusouGameState* MusouState = GetMusouGameState();
+	if (!MusouState)
+	{
+		return;
+	}
+
+	const int32 Combo = MusouState->GetCombo();
+	const int32 KillCount = MusouState->GetKillCount();
+	const float ComboWindow = MusouState->ComboWindow;
+	const float ComboRemaining = MusouState->GetComboRemaining();
+	const float Alpha = (Combo > 0 && ComboWindow > 0.0f)
+		? std::clamp(ComboRemaining / ComboWindow, 0.0f, 1.0f)
+		: 0.0f;
+
+	HudWidget->SetText("kill-counter", FString("KILL ") + std::to_string(KillCount));
+
+	if (Combo > 0)
+	{
+		HudWidget->SetText("combo-counter", FString("Combo ") + std::to_string(Combo));
+	}
+	else
+	{
+		HudWidget->SetText("combo-counter", "");
+	}
+
+	const FString AlphaText = std::to_string(Alpha);
+	HudWidget->SetProperty("combo-counter", "opacity", AlphaText);
+	HudWidget->SetProperty("combo-counter", "color", FString("rgba(230, 42, 17, ") + AlphaText + ")");
 }

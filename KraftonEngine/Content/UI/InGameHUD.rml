@@ -2,6 +2,7 @@
 <head>
 	<style>
 		body {
+			display: block;
 			width: 100%;
 			height: 100%;
 			margin: 0;
@@ -11,36 +12,43 @@
 		}
 
 		#hud-root {
+			display: block;
 			width: 100%;
 			height: 100%;
+			position: relative;
 		}
 
 		#status-panel {
 			position: absolute;
-			left: 32px;
-			top: 28px;
-			width: 280px;
-			padding: 16px 18px;
-			background-color: rgba(8, 10, 14, 0.62);
-			border-width: 1px;
-			border-color: rgba(242, 213, 138, 0.78);
-		}
-
-		#hp-label {
-			font-size: 22px;
-			color: #f8f3df;
+			left: 36px;
+			bottom: 34px;
+			display: block;
+			width: 380px;
+			height: 42px;
+			padding: 4px;
+			background-color: rgba(8, 10, 14, 0.76);
 		}
 
 		#hp-bar {
+			display: block;
 			width: 100%;
-			height: 14px;
-			margin-top: 10px;
-			background-color: rgba(255, 255, 255, 0.18);
+			height: 34px;
+			background-color: rgba(55, 18, 24, 0.82);
+			border-top-width: 2px;
+			border-right-width: 2px;
+			border-bottom-width: 2px;
+			border-left-width: 2px;
+			border-top-color: #f2d58a;
+			border-right-color: #f2d58a;
+			border-bottom-color: #f2d58a;
+			border-left-color: #f2d58a;
 		}
 
-		#hp-fill {
-			width: 76%;
-			height: 100%;
+		#hp-bar fill {
+			background-color: #d84f4a;
+		}
+
+		progress fill {
 			background-color: #d84f4a;
 		}
 
@@ -50,21 +58,38 @@
 			top: 28px;
 			padding: 14px 18px;
 			background-color: rgba(8, 10, 14, 0.62);
-			border-width: 1px;
-			border-color: rgba(242, 213, 138, 0.78);
+			border-top-width: 1px;
+			border-right-width: 1px;
+			border-bottom-width: 1px;
+			border-left-width: 1px;
+			border-top-color: #f2d58a;
+			border-right-color: #f2d58a;
+			border-bottom-color: #f2d58a;
+			border-left-color: #f2d58a;
 			font-size: 24px;
+		}
+
+		#combo-counter {
+			position: absolute;
+			right: 64px;
+			top: 48%;
+			display: block;
+			width: 320px;
+			height: 64px;
+			line-height: 64px;
+			text-align: right;
+			font-size: 42px;
+			color: rgba(230, 42, 17, 0);
 		}
 	</style>
 </head>
 <body>
 	<div id="hud-root">
 		<div id="status-panel">
-			<div id="hp-label">HP</div>
-			<div id="hp-bar">
-				<div id="hp-fill"></div>
-			</div>
+			<progress id="hp-bar" value="1.0"></progress>
 		</div>
 		<div id="kill-counter">KILL 0</div>
+		<div id="combo-counter"></div>
 	</div>
 </body>
 </rml>
