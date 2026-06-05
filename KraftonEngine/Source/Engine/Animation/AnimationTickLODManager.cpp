@@ -1,5 +1,6 @@
 ﻿#include "Animation/AnimationTickLODManager.h"
 
+#include "Animation/AnimationLODSettings.h"
 #include "Animation/AnimationTickLODHelper.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "GameFramework/World.h"
@@ -124,11 +125,17 @@ void FAnimationTickLODManager::ApplyLOD(FAnimationTickLODEntry& Entry, const FVe
 
 	const FVector ToComponent = Component->GetWorldLocation() - ViewLocation;
 	const float DistanceSq = ToComponent.Dot(ToComponent);
+	const FAnimationLODSettings& Settings = FAnimationLODSettings::Get();
 
-	const float FullSq = FullRateDistance * FullRateDistance;
-	const float HalfSq = HalfRateDistance * HalfRateDistance;
-	const float QuarterSq = QuarterRateDistance * QuarterRateDistance;
-	const float LowSq = LowRateDistance * LowRateDistance;
+	const float FullDistance = Settings.GetFullRateDistance();
+	const float HalfDistance = Settings.GetHalfRateDistance();
+	const float QuarterDistance = Settings.GetQuarterRateDistance();
+	const float LowDistance = Settings.GetLowRateDistance();
+
+	const float FullSq = FullDistance * FullDistance;
+	const float HalfSq = HalfDistance * HalfDistance;
+	const float QuarterSq = QuarterDistance * QuarterDistance;
+	const float LowSq = LowDistance * LowDistance;
 
 	EAnimationTickLOD NewLOD = EAnimationTickLOD::Frozen;
 

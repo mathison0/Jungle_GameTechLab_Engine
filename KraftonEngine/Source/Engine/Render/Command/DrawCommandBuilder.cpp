@@ -1,5 +1,6 @@
 ﻿#include "DrawCommandBuilder.h"
 
+#include "Animation/AnimationLODSettings.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Resource/ResourceManager.h"
 #include "Render/Types/RenderTypes.h"
@@ -1012,18 +1013,5 @@ bool FDrawCommandBuilder::ShouldEmitPreDepthForProxy(const FPrimitiveSceneProxy&
 	const USkeletalMeshComponent* SMC = SkeletalProxy->GetSkeletalMeshComponent();
 	if (!SMC) return false;
 
-	switch (SMC->GetAnimationTickLOD())
-	{
-	case EAnimationTickLOD::FullRate:
-	case EAnimationTickLOD::HalfRate:
-		return true;
-
-	case EAnimationTickLOD::QuarterRate:
-		return false;
-
-	case EAnimationTickLOD::LowRate:
-	case EAnimationTickLOD::Frozen:
-	default:
-		return false;
-	}
+	return FAnimationLODSettings::Get().ShouldEmitSkeletalPreDepth(SMC->GetAnimationTickLOD());
 }
