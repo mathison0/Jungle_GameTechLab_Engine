@@ -95,7 +95,7 @@
   },
   "Version" : 2,
   "WorldSettings" : {
-    "GameMode" : "AGameModeIntro"
+    "GameMode" : "AMusouGameModeIntro"
   },
   "WorldType" : "Editor"
 }

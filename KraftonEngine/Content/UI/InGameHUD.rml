@@ -1,0 +1,70 @@
+<rml>
+<head>
+	<style>
+		body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			font-family: "Maplestory";
+			font-weight: bold;
+			color: #f8f3df;
+		}
+
+		#hud-root {
+			width: 100%;
+			height: 100%;
+		}
+
+		#status-panel {
+			position: absolute;
+			left: 32px;
+			top: 28px;
+			width: 280px;
+			padding: 16px 18px;
+			background-color: rgba(8, 10, 14, 0.62);
+			border-width: 1px;
+			border-color: rgba(242, 213, 138, 0.78);
+		}
+
+		#hp-label {
+			font-size: 22px;
+			color: #f8f3df;
+		}
+
+		#hp-bar {
+			width: 100%;
+			height: 14px;
+			margin-top: 10px;
+			background-color: rgba(255, 255, 255, 0.18);
+		}
+
+		#hp-fill {
+			width: 76%;
+			height: 100%;
+			background-color: #d84f4a;
+		}
+
+		#kill-counter {
+			position: absolute;
+			right: 32px;
+			top: 28px;
+			padding: 14px 18px;
+			background-color: rgba(8, 10, 14, 0.62);
+			border-width: 1px;
+			border-color: rgba(242, 213, 138, 0.78);
+			font-size: 24px;
+		}
+	</style>
+</head>
+<body>
+	<div id="hud-root">
+		<div id="status-panel">
+			<div id="hp-label">HP</div>
+			<div id="hp-bar">
+				<div id="hp-fill"></div>
+			</div>
+		</div>
+		<div id="kill-counter">KILL 0</div>
+	</div>
+</body>
+</rml>
