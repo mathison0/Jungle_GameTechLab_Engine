@@ -23,7 +23,15 @@ class USpringArmComponent : public USceneComponent
 {
 public:
 	GENERATED_BODY()
-	USpringArmComponent() = default;
+	USpringArmComponent()
+	{
+		// CMC(TG_DuringPhysics)가 capsule 을 옮긴 뒤에 카메라 부착점을 계산해야
+		// 같은 frame 의 최종 위치를 따라간다. PrePhysics(기본)에서 계산하면
+		// stale 부모 transform 기준 relative 가 새 위치에 적용되어 — 이번 frame
+		// 이동분(특히 root motion 이동/yaw)이 lag 없이 그대로 카메라에 전달 → 흔들림.
+		PrimaryComponentTick.SetTickGroup(TG_PostPhysics);
+		PrimaryComponentTick.SetEndTickGroup(TG_PostPhysics);
+	}
 	~USpringArmComponent() override = default;
 
 	void BeginPlay() override;

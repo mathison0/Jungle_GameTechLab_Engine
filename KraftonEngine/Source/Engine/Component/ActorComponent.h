@@ -62,6 +62,10 @@ public:
 	
 	FActorComponentTickFunction PrimaryComponentTick;
 
+	// Editor 월드에서도 TickComponent 호출 (owner 액터의 bTickInEditor와 무관하게 이 컴포넌트만).
+	// 에디터 편집 중 갱신이 필요한 컴포넌트(본 추적 부착물 등)가 생성자에서 켠다.
+	bool bTickInEditor = false;
+
 protected:
 	// Component의 Tick은 UE 기준 Actor가 아닌 별도 시스템에서 돌아가나, 현재 관리를 위해 friend AActor로 설정. 추후 시스템이 완성되면 별도 매니저에서 관리하도록 리팩토링할 예정.
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction);

@@ -287,9 +287,22 @@ void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	{
 		const FRotator ActorRot = Updated->GetWorldRotation();
 		const FQuat    YawOnly  = FRotator(0.0f, 0.0f, ActorRot.Yaw).ToQuaternion();
-		const FVector  World    = YawOnly.RotateVector(RootMotionDelta.Location);
-		RootMotionWorldXY.X     = World.X;
-		RootMotionWorldXY.Y     = World.Y;
+		FVector        World    = YawOnly.RotateVector(RootMotionDelta.Location);
+
+		// 추출된 delta 는 애님(메시 자산) 로컬 단위 — 메시 컴포넌트가 스케일되어 있으면
+		// (예: 캐릭터 메시 ×3) 시각 보폭과 이동량이 어긋난다. 메시 world scale 로 보정.
+		if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+		{
+			if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
+			{
+				const FVector MeshScale = Mesh->GetWorldScale();
+				World.X *= MeshScale.X;
+				World.Y *= MeshScale.Y;
+			}
+		}
+
+		RootMotionWorldXY.X = World.X;
+		RootMotionWorldXY.Y = World.Y;
 	}
 
 	// 3) Mode 별 Z 처리 + 위치 적용 (input velocity + root motion XY 합산).

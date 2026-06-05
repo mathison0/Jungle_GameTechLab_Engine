@@ -7,6 +7,7 @@
 #include "Animation/Montage/AnimMontage.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
+#include "Component/Primitive/BoneAttachedStaticMeshComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Math/Rotator.h"
 
@@ -43,6 +44,10 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 	// ── 애님: Custom 모드 + ULuaAnimInstance + player_anim.lua ──
 	if (Mesh)
 	{
+		// 플레이어는 Anim Tick LOD 제외 — 평가 스킵 프레임에 root motion 이 버스트로
+		// 적용되어(0,0,Δ,0,0,Δ) 캡슐/카메라가 덜컹거리고, 에지 입력/notify 분해능도 떨어진다.
+		Mesh->SetEnableAnimationTickLOD(false);
+
 		Mesh->SetAnimInstanceClass(ULuaAnimInstance::StaticClass());
 		Mesh->SetAnimationMode(EAnimationMode::AnimationCustom);
 
@@ -58,6 +63,19 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 	BattleComponent = AddComponent<UBattleComponent>();
 	BattleComponent->bIsPlayerTeam = true;  // 플레이어 진영 — 적(군체/보스) 공격만 수신
 	ComboComponent  = AddComponent<UComboComponent>();
+
+	// ── 무기 슬롯 — 오른손 본 추적 (Mesh보다 늦게 추가 → 같은 프레임 포즈를 따름) ──
+	// 무기 메시는 에디터에서 Static Mesh 프로퍼티로 지정, 그립 오프셋도 에디터에서
+	// 실시간 조정 (컴포넌트 editor tick 지원).
+	WeaponComponent = AddComponent<UBoneAttachedStaticMeshComponent>();
+	WeaponComponent->TargetBoneName = "hand_r";  // Barbarian(UE 마네킹 리그) 오른손 본
+
+	// 컴포넌트 트리(인스펙터)에 보이려면 씬 그래프에 attach 필요.
+	// 본 추적은 부모 기준 relative 변환을 처리하므로 attach해도 동작 동일.
+	if (Mesh)
+	{
+		WeaponComponent->AttachToComponent(Mesh);
+	}
 }
 
 void AMusouCharacter::PostDuplicate()
@@ -65,6 +83,7 @@ void AMusouCharacter::PostDuplicate()
 	Super::PostDuplicate();
 	BattleComponent = GetComponentByClass<UBattleComponent>();
 	ComboComponent  = GetComponentByClass<UComboComponent>();
+	WeaponComponent = GetComponentByClass<UBoneAttachedStaticMeshComponent>();
 }
 
 void AMusouCharacter::PostLoad()
