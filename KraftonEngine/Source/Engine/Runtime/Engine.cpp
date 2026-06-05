@@ -57,6 +57,7 @@ void UEngine::Init(FWindowsWindow* InWindow)
 	InputSystem::Get().SetOwnerWindow(Window->GetHWND());
 
 	FProjectSettings::Get().LoadFromFile(FProjectSettings::GetDefaultPath());
+	FProjectSettings::Get().ApplyRuntimeSettings();
 
 	{
 		SCOPE_STARTUP_STAT("Renderer::Create");

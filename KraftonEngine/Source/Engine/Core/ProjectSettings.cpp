@@ -1,4 +1,5 @@
 ﻿#include "Core/ProjectSettings.h"
+#include "Animation/AnimationLODSettings.h"
 #include "SimpleJSON/json.hpp"
 
 #include <fstream>
@@ -29,6 +30,13 @@ namespace PSKey
 
 	constexpr const char* DiagnosticsSection = "Diagnostics";
 	constexpr const char* CrashDumpShareDir = "CrashDumpShareDir";
+
+	constexpr const char* AnimationLODSection = "AnimationLOD";
+	constexpr const char* FullRateDistance = "FullRateDistance";
+	constexpr const char* HalfRateDistance = "HalfRateDistance";
+	constexpr const char* QuarterRateDistance = "QuarterRateDistance";
+	constexpr const char* LowRateDistance = "LowRateDistance";
+	constexpr const char* PreDepthMaxLOD = "PreDepthMaxLOD";
 }
 
 void FProjectSettings::SaveToFile(const FString& Path) const
@@ -64,6 +72,14 @@ void FProjectSettings::SaveToFile(const FString& Path) const
 	JSON DiagnosticsObj = Object();
 	DiagnosticsObj[PSKey::CrashDumpShareDir] = Diagnostics.CrashDumpShareDir;
 	Root[PSKey::DiagnosticsSection] = DiagnosticsObj;
+
+	JSON AnimationLODObj = Object();
+	AnimationLODObj[PSKey::FullRateDistance] = AnimationLOD.FullRateDistance;
+	AnimationLODObj[PSKey::HalfRateDistance] = AnimationLOD.HalfRateDistance;
+	AnimationLODObj[PSKey::QuarterRateDistance] = AnimationLOD.QuarterRateDistance;
+	AnimationLODObj[PSKey::LowRateDistance] = AnimationLOD.LowRateDistance;
+	AnimationLODObj[PSKey::PreDepthMaxLOD] = static_cast<int>(AnimationLOD.PreDepthMaxLOD);
+	Root[PSKey::AnimationLODSection] = AnimationLODObj;
 
 	std::filesystem::path FilePath(FPaths::ToWide(Path));
 	if (FilePath.has_parent_path())
@@ -122,6 +138,24 @@ void FProjectSettings::LoadFromFile(const FString& Path)
 			Diagnostics.CrashDumpShareDir = D[PSKey::CrashDumpShareDir].ToString();
 	}
 
+	if (Root.hasKey(PSKey::AnimationLODSection))
+	{
+		JSON A = Root[PSKey::AnimationLODSection];
+		if (A.hasKey(PSKey::FullRateDistance))
+			AnimationLOD.FullRateDistance = (std::max)(0.0f, static_cast<float>(A[PSKey::FullRateDistance].ToFloat()));
+		if (A.hasKey(PSKey::HalfRateDistance))
+			AnimationLOD.HalfRateDistance = (std::max)(0.0f, static_cast<float>(A[PSKey::HalfRateDistance].ToFloat()));
+		if (A.hasKey(PSKey::QuarterRateDistance))
+			AnimationLOD.QuarterRateDistance = (std::max)(0.0f, static_cast<float>(A[PSKey::QuarterRateDistance].ToFloat()));
+		if (A.hasKey(PSKey::LowRateDistance))
+			AnimationLOD.LowRateDistance = (std::max)(0.0f, static_cast<float>(A[PSKey::LowRateDistance].ToFloat()));
+		if (A.hasKey(PSKey::PreDepthMaxLOD))
+		{
+			const int32 LOD = static_cast<int32>(A[PSKey::PreDepthMaxLOD].ToInt());
+			AnimationLOD.PreDepthMaxLOD = (std::max)(0, (std::min)(LOD, static_cast<int32>(EAnimationTickLOD::Frozen)));
+		}
+	}
+
 	if (Root.hasKey(PSKey::Shadow))
 	{
 		JSON S = Root[PSKey::Shadow];
@@ -153,4 +187,16 @@ void FProjectSettings::LoadFromFile(const FString& Path)
 			Shadow.MaxPointAtlasPages = static_cast<uint32>(v > 1 ? v : 1);
 		}
 	}
+}
+
+void FProjectSettings::ApplyRuntimeSettings() const
+{
+	FAnimationLODSettings::Get().SetTickLODDistances(
+		AnimationLOD.FullRateDistance,
+		AnimationLOD.HalfRateDistance,
+		AnimationLOD.QuarterRateDistance,
+		AnimationLOD.LowRateDistance);
+
+	FAnimationLODSettings::Get().SetPreDepthMaxLOD(
+		static_cast<EAnimationTickLOD>(AnimationLOD.PreDepthMaxLOD));
 }

@@ -726,6 +726,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Render\Geometry\LineGeometry.cpp" />
     <ClCompile Include="Source\Engine\Render\Geometry\MeshParticleGeometry.cpp" />
     <ClCompile Include="Source\Engine\Render\Geometry\SpriteParticleGeometry.cpp" />
+    <ClCompile Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyer.cpp" />
+    <ClCompile Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.cpp" />
     <ClCompile Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.cpp" />
     <ClCompile Include="Source\Engine\Render\Pipeline\RenderCollector.cpp" />
     <ClCompile Include="Source\Engine\Render\Pipeline\Renderer.cpp" />
@@ -1190,6 +1192,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Render\Geometry\LineGeometry.h" />
     <ClInclude Include="Source\Engine\Render\Geometry\MeshParticleGeometry.h" />
     <ClInclude Include="Source\Engine\Render\Geometry\SpriteParticleGeometry.h" />
+    <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h" />
+    <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\IRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\RenderCollector.h" />

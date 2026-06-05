@@ -58,9 +58,4 @@ private:
 	FAnimationTickLODStats Stats;
 
 	bool bEnabled = true;
-
-	float FullRateDistance = 8.0f;
-	float HalfRateDistance = 16.0f;
-	float QuarterRateDistance = 28.0f;
-	float LowRateDistance = 45.0f;
 };

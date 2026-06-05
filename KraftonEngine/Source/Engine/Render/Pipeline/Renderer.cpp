@@ -1,15 +1,15 @@
-#include "Renderer.h"
+﻿#include "Renderer.h"
 
 #include "Render/Types/RenderTypes.h"
 #include "Render/Shader/ShaderManager.h"
 #include "Core/Logging/Log.h"
 #include "Render/Scene/FScene.h"
+#include "Render/Optimization/SkeletalBatchAnalyzer.h"
 #include "GameFramework/World.h"
 #include "Profiling/Stats/Stats.h"
 #include "Profiling/GPUProfiler.h"
 #include "Profiling/StartupProfiler.h"
 #include "Materials/MaterialManager.h"
-
 
 void FRenderer::Create(HWND hWindow)
 {
@@ -53,6 +53,8 @@ void FRenderer::Create(HWND hWindow)
 		Builder.Create(Device.GetDevice(), Device.GetDeviceContext(), &Pipeline.GetStateTable());
 	}
 
+	SkeletalInstanceBatcher.Create(Device.GetDevice(), Device.GetDeviceContext());
+
 	// GPU Profiler 초기화
 	FGPUProfiler::Get().Initialize(Device.GetDevice(), Device.GetDeviceContext());
 }
@@ -60,6 +62,8 @@ void FRenderer::Create(HWND hWindow)
 void FRenderer::Release()
 {
 	FGPUProfiler::Get().Shutdown();
+
+	SkeletalInstanceBatcher.Release();
 
 	Builder.Release();
 	Pipeline.Release();
@@ -85,6 +89,7 @@ void FRenderer::BeginFrame()
 void FRenderer::Render(const FFrameContext& Frame, UWorld* World, FScene& Scene)
 {
 	FDrawCallStats::Reset();
+	FSkeletalRenderStats::Reset();
 
 	{
 		SCOPE_STAT_CAT("UpdateFrameBuffer", "4_ExecutePass");
@@ -101,6 +106,14 @@ void FRenderer::Render(const FFrameContext& Frame, UWorld* World, FScene& Scene)
 	FDrawCommandList& CommandList = Builder.GetCommandList();
 
 	// 커맨드 정렬 + 패스별 오프셋 빌드
+	CommandList.Sort();
+
+	FSkeletalBatchAnalyzer::Analyze(CommandList.GetCommands());
+
+	TArray<FDrawCommand> InstancedCommands;
+	SkeletalInstanceBatcher.BuildInstancedCommands(CommandList.GetCommands(), InstancedCommands);
+
+	CommandList.ReplaceCommands(std::move(InstancedCommands));
 	CommandList.Sort();
 
 	// 단일 StateCache — 패스 간 상태 유지 (DSV Read-Only 전환 등)

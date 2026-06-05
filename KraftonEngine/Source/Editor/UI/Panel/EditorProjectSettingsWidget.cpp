@@ -1,4 +1,5 @@
 ﻿#include "Editor/UI/Panel/EditorProjectSettingsWidget.h"
+#include "Animation/AnimationLODSettings.h"
 #include "Core/ProjectSettings.h"
 #include "Serialization/SceneSaveManager.h"
 #include "GameFramework/GameMode/GameModeBase.h"
@@ -9,7 +10,7 @@ void EditorProjectSettingsWidget::Render()
 {
 	if (!bOpen) return;
 
-	ImGui::SetNextWindowSize(ImVec2(360, 200), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(420, 320), ImGuiCond_FirstUseEver);
 	if (!ImGui::Begin("Project Settings", &bOpen))
 	{
 		ImGui::End();
@@ -86,6 +87,34 @@ void EditorProjectSettingsWidget::Render()
 			ImGui::EndCombo();
 		}
 		ImGui::TextDisabled("Requires scene reload to take effect.");
+	}
+
+	if (ImGui::CollapsingHeader("Animation LOD", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		bool bChanged = false;
+
+		bChanged |= ImGui::DragFloat("Full Rate Distance", &PS.AnimationLOD.FullRateDistance, 0.5f, 0.0f, 10000.0f);
+		bChanged |= ImGui::DragFloat("Half Rate Distance", &PS.AnimationLOD.HalfRateDistance, 0.5f, 0.0f, 10000.0f);
+		bChanged |= ImGui::DragFloat("Quarter Rate Distance", &PS.AnimationLOD.QuarterRateDistance, 0.5f, 0.0f, 10000.0f);
+		bChanged |= ImGui::DragFloat("Low Rate Distance", &PS.AnimationLOD.LowRateDistance, 0.5f, 0.0f, 10000.0f);
+
+		static const char* LODLabels[] = { "FullRate", "HalfRate", "QuarterRate", "LowRate", "Frozen" };
+		bChanged |= ImGui::Combo("PreDepth Max LOD", &PS.AnimationLOD.PreDepthMaxLOD, LODLabels, 5);
+
+		if (ImGui::Button("Reset Animation LOD Defaults"))
+		{
+			PS.AnimationLOD.FullRateDistance = FAnimationLODSettings::kDefaultFullRateDistance;
+			PS.AnimationLOD.HalfRateDistance = FAnimationLODSettings::kDefaultHalfRateDistance;
+			PS.AnimationLOD.QuarterRateDistance = FAnimationLODSettings::kDefaultQuarterRateDistance;
+			PS.AnimationLOD.LowRateDistance = FAnimationLODSettings::kDefaultLowRateDistance;
+			PS.AnimationLOD.PreDepthMaxLOD = static_cast<int32>(FAnimationLODSettings::kDefaultPreDepthMaxLOD);
+			bChanged = true;
+		}
+
+		if (bChanged)
+		{
+			PS.ApplyRuntimeSettings();
+		}
 	}
 
 	if (ImGui::CollapsingHeader("Shadow", ImGuiTreeNodeFlags_DefaultOpen))
