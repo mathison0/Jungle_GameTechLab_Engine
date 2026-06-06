@@ -173,6 +173,19 @@ ParticleSystemComponent = {}
 ---@param value Vector
 function ParticleSystemComponent:SetVectorParameter(parameterName, value) end
 
+---@param count integer
+---@return integer
+function ParticleSystemComponent:EmitBurst(count) end
+
+---@param location Vector
+---@param velocity Vector
+---@return integer
+function ParticleSystemComponent:EmitBurst(location, velocity) end
+
+---@param spawns { Location: Vector, Velocity: Vector }[]
+---@return integer
+function ParticleSystemComponent:EmitBurst(spawns) end
+
 function ParticleSystemComponent:Activate() end
 
 function ParticleSystemComponent:Deactivate() end
