@@ -1,4 +1,4 @@
-#include "Game/Lua/GameLuaBindings.h"
+﻿#include "Game/Lua/GameLuaBindings.h"
 
 #include "sol/sol.hpp"
 
@@ -12,6 +12,7 @@
 
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/Combat/ComboComponent.h"
+#include "Game/Musou/Effect/SlashEffectActor.h"
 #include "GameFramework/AActor.h"
 
 // ============================================================
@@ -76,14 +77,30 @@ void RegisterGameLuaBindings(sol::state& Lua)
 			[](UComboComponent& Combo) { return Combo.IsComboWindowOpen(); });
 
 	// ── 기존 Actor usertype 확장 — Musou 컴포넌트 접근자 ──
+	FLuaDocRegistry::Get().BindDerivedType<ASlashEffectActor>(
+		Lua,
+		"SlashEffectActor",
+		"Actor",
+		sol::base_classes,
+		sol::bases<AActor>())
+		.Method("ActivateSlash",
+			"---@param location Vector\n---@param rotation Vector\n---@param direction Vector\nfunction SlashEffectActor:ActivateSlash(location, rotation, direction) end",
+			[](ASlashEffectActor& SlashEffect, const FVector& Location, const FVector& Rotation, const FVector& Direction)
+			{
+				SlashEffect.ActivateSlash(Location, Rotation, Direction);
+			});
+
 	sol::table ActorTable = Lua["Actor"];
 	ActorTable.set_function("GetBattleComponent",
 		[](AActor& Actor) { return Actor.GetComponentByClass<UBattleComponent>(); });
 	ActorTable.set_function("GetComboComponent",
 		[](AActor& Actor) { return Actor.GetComponentByClass<UComboComponent>(); });
+	ActorTable.set_function("AsSlashEffectActor",
+		[](AActor& Actor) -> ASlashEffectActor* { return Cast<ASlashEffectActor>(&Actor); });
 	FLuaDocRegistry::Get().Type("Actor")
 		.Method("---@return BattleComponent?\nfunction Actor:GetBattleComponent() end")
-		.Method("---@return ComboComponent?\nfunction Actor:GetComboComponent() end");
+		.Method("---@return ComboComponent?\nfunction Actor:GetComboComponent() end")
+		.Method("---@return SlashEffectActor?\nfunction Actor:AsSlashEffectActor() end");
 
 	Lua.new_enum("EUnitTeam", {
 		std::pair<sol::string_view, EUnitTeam>{ "Ally", EUnitTeam::Ally },

@@ -1,9 +1,10 @@
-#include "Game/GameActorPlacements.h"
+﻿#include "Game/GameActorPlacements.h"
 
 #include "Engine/Runtime/ActorPlacementRegistry.h"
 #include "Engine/Runtime/EngineInitHooks.h"
 
 #include "Game/Musou/Character/MusouCharacter.h"
+#include "Game/Musou/Effect/SlashEffectActor.h"
 #include "GameFramework/World.h"
 
 // ============================================================
@@ -26,6 +27,18 @@ void RegisterGameActorPlacements()
 			}
 			return Actor;
 		});
+
+	FActorPlacementRegistry::Get().RegisterEntry("Slash Effect",
+		[](UWorld* World, const FVector& Location) -> AActor*
+		{
+			ASlashEffectActor* Actor = World->SpawnActor<ASlashEffectActor>();
+			if (Actor)
+			{
+				Actor->InitDefaultComponents();
+				Actor->SetActorLocation(Location);
+			}
+			return Actor;
+	});
 }
 
 // 자기-등록 — Editor / Game 측이 함수명을 모르고도 FEngineInitHooks::RunAll() 로 호출됨.

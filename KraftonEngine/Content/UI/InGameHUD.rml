@@ -2,57 +2,179 @@
 <head>
 	<style>
 		body {
+			display: block;
 			width: 100%;
 			height: 100%;
 			margin: 0;
-			font-family: "Maplestory";
+			font-family: "Shilla_Culture";
 			font-weight: bold;
 			color: #f8f3df;
 		}
 
 		#hud-root {
+			display: block;
 			width: 100%;
 			height: 100%;
+			position: relative;
 		}
 
 		#status-panel {
 			position: absolute;
-			left: 32px;
-			top: 28px;
-			width: 280px;
-			padding: 16px 18px;
-			background-color: rgba(8, 10, 14, 0.62);
-			border-width: 1px;
-			border-color: rgba(242, 213, 138, 0.78);
-		}
-
-		#hp-label {
-			font-size: 22px;
-			color: #f8f3df;
+			left: 36px;
+			bottom: 4px;
+			display: block;
+			width: 380px;
+			height: 42px;
+			padding: 4px;
+			background-color: rgba(8, 10, 14, 0.76);
 		}
 
 		#hp-bar {
-			width: 100%;
-			height: 14px;
-			margin-top: 10px;
-			background-color: rgba(255, 255, 255, 0.18);
+			display: block;
+			position: absolute;
+			left: 58px;
+			top: 4px;
+			width: 314px;
+			height: 17px;
+			background-color: rgb(73, 73, 73);
+			border-top-width: 2px;
+			border-right-width: 2px;
+			border-bottom-width: 2px;
+			border-left-width: 2px;
+			border-top-color: #140000;
+			border-right-color: #140000;
+			border-bottom-color: #140000;
+			border-left-color: #140000;
 		}
 
-		#hp-fill {
-			width: 76%;
-			height: 100%;
-			background-color: #d84f4a;
+		#hp-label {
+			position: absolute;
+			left: 8px;
+			top: 4px;
+			width: 44px;
+			height: 21px;
+			line-height: 21px;
+			font-size: 20px;
+			text-align: left;
+			color: #f8f3df;
+		}
+
+		#hp-bar fill {
+			background-color: #ac130e;
+		}
+
+		#right-hud {
+			position: absolute;
+			right: 32px;
+			top: 90px;
+			display: block;
+			width: 420px;
 		}
 
 		#kill-counter {
 			position: absolute;
-			right: 32px;
-			top: 28px;
-			padding: 14px 18px;
+			left: 50%;
+			bottom: 18px;
+			margin-left: -130px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 260px;
+			height: 58px;
 			background-color: rgba(8, 10, 14, 0.62);
-			border-width: 1px;
-			border-color: rgba(242, 213, 138, 0.78);
-			font-size: 24px;
+			color: #f8f3df;
+		}
+
+		#kill-count-value {
+			display: block;
+			width: 112px;
+			height: 58px;
+			line-height: 58px;
+			font-size: 42px;
+			text-align: right;
+			transform: scale(1.0);
+			transform-origin: 100% 50%;
+		}
+
+		#kill-ko-label {
+			display: block;
+			margin-left: 12px;
+			position: relative;
+			top: 4px;
+			height: 58px;
+			line-height: 58px;
+			font-size: 30px;
+			color: #d7c58a;
+		}
+
+		#combo-counter-frame {
+			display: none;
+			margin-top: 0;
+			width: 420px;
+			height: 76px;
+			background-color: rgba(8, 10, 14, 0.32);
+		}
+
+		#combo-counter {
+			display: block;
+			width: 384px;
+			height: 76px;
+			line-height: 76px;
+			padding-left: 18px;
+			padding-right: 18px;
+			text-align: right;
+			font-size: 40px;
+			transform: scale(1.0);
+			transform-origin: 100% 50%;
+			color: #e62a11;
+		}
+
+		#kill-milestone {
+			position: absolute;
+			left: 50%;
+			top: 42%;
+			margin-left: -320px;
+			margin-top: -60px;
+			display: none;
+			width: 640px;
+			height: 120px;
+			line-height: 120px;
+			text-align: center;
+			font-size: 76px;
+			transform: scale(1.0);
+			transform-origin: 50% 50%;
+			color: #f0d36a;
+		}
+
+		#pause-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			display: none;
+			align-items: center;
+			justify-content: center;
+			background-color: rgba(8, 10, 14, 0.36);
+		}
+
+		#stop-button {
+			display: block;
+			width: 240px;
+			height: 68px;
+			line-height: 68px;
+			text-align: center;
+			font-size: 28px;
+			background-color: #171f2a;
+			color: #f8f3df;
+			border-top-width: 2px;
+			border-right-width: 2px;
+			border-bottom-width: 2px;
+			border-left-width: 2px;
+			border-top-color: #f2d58a;
+			border-right-color: #f2d58a;
+			border-bottom-color: #f2d58a;
+			border-left-color: #f2d58a;
 		}
 	</style>
 </head>
@@ -60,11 +182,21 @@
 	<div id="hud-root">
 		<div id="status-panel">
 			<div id="hp-label">HP</div>
-			<div id="hp-bar">
-				<div id="hp-fill"></div>
+			<progress id="hp-bar" value="1.0"></progress>
+		</div>
+		<div id="right-hud">
+			<div id="combo-counter-frame">
+				<div id="combo-counter"></div>
 			</div>
 		</div>
-		<div id="kill-counter">KILL 0</div>
+		<div id="kill-counter">
+			<div id="kill-count-value">0</div>
+			<div id="kill-ko-label">K.O.</div>
+		</div>
+		<div id="kill-milestone"></div>
+		<div id="pause-overlay">
+			<div id="stop-button">중단하기</div>
+		</div>
 	</div>
 </body>
 </rml>

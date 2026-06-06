@@ -1,4 +1,4 @@
-#include "UI/UIManager.h"
+﻿#include "UI/UIManager.h"
 
 #include "Core/Logging/Log.h"
 #include "Input/InputSystem.h"
@@ -571,10 +571,10 @@ void UUIManager::Initialize(ID3D11Device* InDevice)
 		UE_LOG("[RmlUi] Failed to create GameViewport context.");
 	}
 
-	const std::filesystem::path FontPath = ToProjectPath("Content/Font/Maplestory Bold.ttf");
-	if (!Rml::LoadFontFace(ToRmlPath(FontPath), "Maplestory", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Bold))
+	const std::filesystem::path FontPath = ToProjectPath("Content/Font/Shilla_Culture(B).ttf");
+	if (!Rml::LoadFontFace(ToRmlPath(FontPath), "Shilla_Culture", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Bold))
 	{
-		UE_LOG("[RmlUi] Failed to load font: Content/Font/Maplestory Bold.ttf");
+		UE_LOG("[RmlUi] Failed to load font: Content/Font/Shilla_Culture(B).ttf");
 	}
 }
 

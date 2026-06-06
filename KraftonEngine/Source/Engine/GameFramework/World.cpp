@@ -364,11 +364,12 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 		FAnimationTickLODManager::Get().Tick(this, DeltaTime, ActivePOV.Location);
 	}
 
-	// bPaused 동안 PhysicsScene + TickManager skip — GameMode 타이머, Lua Tick, 차량
-	// 이동, PhysX 시뮬레이션 모두 정지. Render / UI / Input poll 은 호출자 (UEngine::Tick)
-	// 가 따로 돌리므로 영향 없음 → 메뉴/인트로 위에서 화면 보이고 클릭 가능.
+	// bPaused 동안 PhysicsScene 과 일반 Tick 은 정지하고, bTickEvenWhenPaused 대상만
+	// PauseTick 으로 유지한다. Render / UI / Input poll 은 호출자 (UEngine::Tick) 가
+	// 따로 돌리므로 영향 없음 → 메뉴/인트로 위에서 화면 보이고 클릭 가능.
 	if (bPaused)
 	{
+		TickManager.Tick(this, DeltaTime, ELevelTick::LEVELTICK_PauseTick);
 		TickPlayerCamera();
 		return;
 	}

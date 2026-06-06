@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "GameFramework/GameMode/GameStateBase.h"
 
@@ -21,13 +21,15 @@ public:
 	void Tick(float DeltaTime) override;
 
 	// --- Kill / Combo ---
-	// 적 처치 시 GameMode가 호출. 콤보 윈도우 내 연속 처치면 콤보가 누적된다.
+	// 처치 수와 콤보는 분리한다. KillCount는 처치 기준, Combo는 플레이어 타격 성공 기준으로 누적된다.
 	void AddKill();
+	void AddCombo(int32 Count = 1);
 	void ResetCombo();
 
 	int32 GetKillCount() const { return KillCount; }
 	int32 GetCombo() const { return Combo; }
 	int32 GetMaxCombo() const { return MaxCombo; }
+	float GetComboRemaining() const { return ComboRemaining; }
 
 	// --- Match ---
 	float GetMatchTime() const { return MatchTime; }

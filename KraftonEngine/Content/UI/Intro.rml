@@ -7,7 +7,7 @@
 			height: 100%;
 			margin: 0;
 			background-color: rgba(8, 10, 14, 0.72);
-			font-family: "Maplestory";
+			font-family: "Shilla_Culture";
 			font-weight: bold;
 		}
 
@@ -19,23 +19,55 @@
 			justify-content: center;
 		}
 
-		#start-button {
+		#menu-buttons {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.menu-button {
 			width: 260px;
 			height: 72px;
 			padding: 0;
-			border-width: 2px;
-			border-color: #f2d58a;
+			border-top-width: 2px;
+			border-right-width: 2px;
+			border-bottom-width: 2px;
+			border-left-width: 2px;
+			border-top-color: #f2d58a;
+			border-right-color: #f2d58a;
+			border-bottom-color: #f2d58a;
+			border-left-color: #f2d58a;
 			background-color: #171f2a;
 			color: #f8f3df;
 			font-size: 28px;
 			line-height: 72px;
 			text-align: center;
 		}
+
+		.secondary-button {
+			width: 220px;
+			height: 56px;
+			margin-top: 14px;
+			border-top-color: #bfa86b;
+			border-right-color: #bfa86b;
+			border-bottom-color: #bfa86b;
+			border-left-color: #bfa86b;
+			background-color: #121923;
+			color: #e8ddbd;
+			font-size: 22px;
+			line-height: 56px;
+		}
 	</style>
 </head>
 <body>
 	<div id="intro-root">
-		<div id="start-button">START</div>
+		<div id="menu-buttons">
+			<div id="start-button" class="menu-button">시작하기</div>
+			<div id="settings-button" class="menu-button secondary-button">설정하기</div>
+			<div id="score-button" class="menu-button secondary-button">점수보기</div>
+			<div id="exit-button" class="menu-button secondary-button">끝내기</div>
+		</div>
 	</div>
 </body>
 </rml>

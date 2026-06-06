@@ -38,6 +38,7 @@ public:
 	void StartMatch() override;
 	void EndMatch() override;
 	void EndPlay() override;
+	void Tick(float DeltaTime) override;
 
 	// --- 공격 이벤트 허브 ---
 	// 군체 Manager 등 수신 시스템은 BeginPlay에서 AddRaw/AddUObject로 구독,
@@ -64,5 +65,16 @@ public:
 	AMusouGameState* GetMusouGameState() const;
 
 private:
+	void UpdateHud(float DeltaTime);
+	void SetStopMenuVisible(bool bVisible);
+
 	UUserWidget* HudWidget = nullptr;
+	bool bStopMenuVisible = false;
+	bool bKillHudInitialized = false;
+	int32 LastHudKillCount = 0;
+	int32 LastDisplayedKillMilestone = 0;
+	int32 ActiveKillMilestone = 0;
+	float KillPopRemaining = 0.0f;
+	float KillMilestoneRemaining = 0.0f;
+	float KillMilestoneElapsed = 0.0f;
 };

@@ -1,6 +1,7 @@
 #include "Common/Functions.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Common/MaterialBloom.hlsli"
 
 // 컬러 PNG/TGA 텍스처를 단일 quad에 그리는 빌보드 전용 셰이더.
 // SubUV 와 다르게 R 채널이 아닌 알파 채널만으로 컷오프 판정한다.
@@ -22,5 +23,12 @@ float4 PS(PS_Input_Tex input) : SV_TARGET
     if (!bIsWireframe && col.a < 0.5f)
         discard;
 
-    return float4(ApplyWireframe(col.rgb), bIsWireframe ? 1.0f : col.a);
+    float3 finalColor = ApplyWireframe(col.rgb);
+
+    if (!bIsWireframe)
+    {
+        finalColor = ApplyMaterialEmissive(finalColor, col.rgb);
+    }
+
+    return float4(finalColor, bIsWireframe ? 1.0f : col.a);
 }

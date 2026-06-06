@@ -30,7 +30,16 @@ void AMusouGameState::AddKill()
 	}
 
 	++KillCount;
-	++Combo;
+}
+
+void AMusouGameState::AddCombo(int32 Count)
+{
+	if (bMatchEnded || Count <= 0)
+	{
+		return;
+	}
+
+	Combo += Count;
 	if (Combo > MaxCombo)
 	{
 		MaxCombo = Combo;

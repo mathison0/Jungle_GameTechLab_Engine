@@ -373,6 +373,9 @@
     <Filter Include="Source\Game\Musou\Combat">
       <UniqueIdentifier>{2248c9f6-541e-54ff-32c5-0bfd3352211a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\Musou\Effect">
+      <UniqueIdentifier>{d4f4e44a-0f98-43e4-ae30-651c9fb9e124}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Game\Musou\GameMode">
       <UniqueIdentifier>{ab2b9458-4f4a-530d-64b9-b74d3b0b755d}</UniqueIdentifier>
     </Filter>
@@ -758,6 +761,10 @@
     </FxCompile>
     <FxCompile Include="Shaders\UI\SubUV.hlsl">
       <Filter>Shaders\UI</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Geometry\Slash.hlsl" />
+    <FxCompile Include="Shaders\Geometry\Slash_Refraction.hlsl">
+      <Filter>Shaders\Geometry</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1186,6 +1193,12 @@
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Primitive\HeightFogComponent.cpp">
+      <Filter>Source\Engine\Component\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Primitive\HitFlashComponent.cpp">
+      <Filter>Source\Engine\Component\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Primitive\WeaponTrailComponent.cpp">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Primitive\SkeletalMeshComponent.cpp">
@@ -1695,6 +1708,9 @@
     <ClCompile Include="Source\Engine\Render\Proxy\TextRenderSceneProxy.cpp">
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Proxy\WeaponTrailSceneProxy.cpp">
+      <Filter>Source\Engine\Render\Proxy</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\AdditiveDecalPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
@@ -1753,6 +1769,9 @@
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\RenderPassRegistry.cpp">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RenderPass\RefractionPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\SelectionMaskPass.cpp">
@@ -1884,7 +1903,13 @@
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp">
       <Filter>Source\Game\Musou\Character</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.cpp">
+      <Filter>Source\Game\Musou\Combat</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp">
+      <Filter>Source\Game\Musou\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.cpp">
       <Filter>Source\Game\Musou\Combat</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.cpp">
@@ -1895,6 +1920,9 @@
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\Combat\ComboComponent.cpp">
       <Filter>Source\Game\Musou\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Effect\SlashEffectActor.cpp">
+      <Filter>Source\Game\Musou\Effect</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameMode.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
@@ -2464,6 +2492,12 @@
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Primitive\HeightFogComponent.h">
+      <Filter>Source\Engine\Component\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Primitive\HitFlashComponent.h">
+      <Filter>Source\Engine\Component\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Primitive\WeaponTrailComponent.h">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Primitive\SkeletalMeshComponent.h">
@@ -3120,6 +3154,9 @@
     <ClInclude Include="Source\Engine\Render\Proxy\TextRenderSceneProxy.h">
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Proxy\WeaponTrailSceneProxy.h">
+      <Filter>Source\Engine\Render\Proxy</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\AdditiveDecalPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
@@ -3178,6 +3215,9 @@
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\RenderPassRegistry.h">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RenderPass\RefractionPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\SelectionMaskPass.h">
@@ -3369,7 +3409,13 @@
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h">
       <Filter>Source\Game\Musou\Character</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.h">
+      <Filter>Source\Game\Musou\Combat</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h">
+      <Filter>Source\Game\Musou\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.h">
       <Filter>Source\Game\Musou\Combat</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.h">
@@ -3383,6 +3429,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Combat\ComboComponent.h">
       <Filter>Source\Game\Musou\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Effect\SlashEffectActor.h">
+      <Filter>Source\Game\Musou\Effect</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameMode.h">
       <Filter>Source\Game\Musou\GameMode</Filter>

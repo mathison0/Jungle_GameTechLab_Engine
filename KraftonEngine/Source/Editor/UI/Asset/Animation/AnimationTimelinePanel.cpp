@@ -7,10 +7,15 @@
 #include "Animation/Notify/AnimNotify.h"
 #include "Animation/Notify/AnimNotifyState.h"
 #include "Animation/AnimationManager.h"
+#include "Asset/AssetRegistry.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Core/Property/SoftObjectProperty.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
+#include "Mesh/MeshManager.h"
+#include "Materials/MaterialManager.h"
 #include "Object/Object.h"
+#include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Object/Reflection/UClass.h"
 #include "Core/Types/PropertyTypes.h"
@@ -58,6 +63,13 @@ namespace
 	// 등록된 모든 UClass 중 Base 의 구체 서브클래스만 수집 (Base 자체는 제외).
 	// ObjectFactory 가 UCLASS 등록 시 자동으로 클래스명 → 인스턴스 함수를 등록하므로
 	// 새 Notify/NotifyState 클래스를 추가하면 별도 작업 없이 자동으로 콤보에 노출된다.
+	struct FNotifyLaneLayout
+	{
+		int32 NotifyIndex = -1;
+		int32 LaneIndex = 0;
+		float BadgeW = 0.0f;
+	};
+
 	TArray<UClass*> EnumerateConcreteSubclasses(UClass* Base)
 	{
 		TArray<UClass*> Out;
@@ -127,6 +139,138 @@ namespace
 	// payload 편집용 경량 인스펙터 — 풀 FEditorPropertyWidget 의존성 없이 timeline 패널 안에서
 	// 자족. 지원 타입은 Notify payload 에 흔히 쓰일 단순형 (Bool/Int/Float/String/Vec3/Vec4/Color4).
 	// 그 외 타입은 disabled placeholder.
+	const FString* FindPropertyMetadata(const FPropertyValue& Prop, const FString& Key)
+	{
+		const TMap<FString, FString>& Metadata = Prop.GetMetadata();
+		auto It = Metadata.find(Key);
+		return It != Metadata.end() ? &It->second : nullptr;
+	}
+
+	FString GetAssetTypeMetadata(const FPropertyValue& Prop)
+	{
+		if (const FString* AssetType = FindPropertyMetadata(Prop, "assettype"))
+		{
+			return *AssetType;
+		}
+		if (const FString* AllowedClass = FindPropertyMetadata(Prop, "allowedclass"))
+		{
+			return *AllowedClass;
+		}
+		return {};
+	}
+
+	FString GetStemFromAssetPath(const FString& Path)
+	{
+		if (Path.empty() || Path == "None")
+		{
+			return "None";
+		}
+
+		size_t Start = Path.find_last_of("/\\");
+		Start = (Start == FString::npos) ? 0 : Start + 1;
+
+		size_t End = Path.find_last_of('.');
+		if (End == FString::npos || End < Start)
+		{
+			End = Path.size();
+		}
+
+		return Path.substr(Start, End - Start);
+	}
+
+	bool RenderSoftObjectAssetCombo(FPropertyValue& Prop)
+	{
+		void* ValuePtr = Prop.GetValuePtr();
+		if (!ValuePtr)
+		{
+			return false;
+		}
+
+		const FSoftObjectProperty* SoftProperty = Prop.Property ? Prop.Property->AsSoftObjectProperty() : nullptr;
+		FSoftObjectPtr* SoftPtr = SoftProperty ? nullptr : static_cast<FSoftObjectPtr*>(ValuePtr);
+		FString CurrentPath = SoftProperty ? SoftProperty->GetPathFromValuePtr(ValuePtr) : SoftPtr->ToString();
+
+		auto SetPath = [&](const FString& NewPath)
+		{
+			if (SoftProperty)
+			{
+				SoftProperty->SetPathFromValuePtr(ValuePtr, NewPath);
+			}
+			else if (SoftPtr)
+			{
+				SoftPtr->SetPath(NewPath);
+			}
+			CurrentPath = NewPath;
+		};
+
+		FString AssetType = SoftProperty ? SoftProperty->GetAssetType() : GetAssetTypeMetadata(Prop);
+		if (AssetType.empty())
+		{
+			AssetType = GetAssetTypeMetadata(Prop);
+		}
+
+		bool bChanged = false;
+		const FString Preview = GetStemFromAssetPath(CurrentPath);
+
+		if (ImGui::BeginCombo("##v", Preview.c_str()))
+		{
+			const bool bSelectedNone = CurrentPath.empty() || CurrentPath == "None";
+			if (ImGui::Selectable("None", bSelectedNone))
+			{
+				SetPath("None");
+				bChanged = true;
+			}
+			if (bSelectedNone)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+
+			if (AssetType == "Material")
+			{
+				const TArray<FMaterialAssetListItem>& MaterialFiles = FMaterialManager::Get().GetAvailableMaterialFiles();
+				for (const FMaterialAssetListItem& Item : MaterialFiles)
+				{
+					const bool bSelected = CurrentPath == Item.FullPath;
+					if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+					{
+						SetPath(Item.FullPath);
+						bChanged = true;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+			}
+			else
+			{
+				const char* RegistryType = AssetType == "StaticMesh" ? "UStaticMesh" : AssetType.c_str();
+				const TArray<FAssetListItem>& AssetFiles =
+					AssetType == "SkeletalMesh" ? FMeshManager::GetAvailableSkeletalMeshFiles() :
+					AssetType == "UStaticMesh" || AssetType == "StaticMesh" ? FMeshManager::GetAvailableStaticMeshFiles() :
+					FAssetRegistry::ListByTypeName(RegistryType);
+
+				for (const FAssetListItem& Item : AssetFiles)
+				{
+					const bool bSelected = CurrentPath == Item.FullPath;
+					if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+					{
+						SetPath(Item.FullPath);
+						bChanged = true;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		return bChanged;
+	}
+
 	bool RenderObjectPropertiesInline(UObject* Object)
 	{
 		if (!Object)
@@ -228,6 +372,11 @@ namespace
 							bChanged = true;
 						}
 					}
+					break;
+				}
+				case EPropertyType::SoftObjectRef:
+				{
+					bChanged = RenderSoftObjectAssetCombo(Prop);
 					break;
 				}
 				case EPropertyType::Name:
@@ -671,6 +820,60 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 	const float CanvasW    = std::max(FullW - HeaderW, 1.0f);
 
 	auto TimeToX = [&](float T) { return CanvasX + (T / PlayLength) * CanvasW; };
+	auto BuildNotifyLaneLayouts = [&](const TArray<FAnimNotifyEvent>& Notifies,
+		TArray<FNotifyLaneLayout>& OutLayouts) -> int32
+	{
+		OutLayouts.clear();
+		TArray<float> LaneEndXs;
+		constexpr float NotifyGap = 6.0f;
+
+		for (int32 i = 0; i < static_cast<int32>(Notifies.size()); ++i)
+		{
+			const FAnimNotifyEvent& N = Notifies[i];
+			const float StartX = TimeToX(N.TriggerTime);
+			float BadgeW = 0.0f;
+			if (N.Duration > 0.0f)
+			{
+				BadgeW = std::max(TimeToX(N.TriggerTime + N.Duration) - StartX, 6.0f);
+			}
+			else
+			{
+				const std::string Nm = N.NotifyName.ToString();
+				const ImVec2 TSz = ImGui::CalcTextSize(Nm.c_str());
+				BadgeW = TSz.x + 16.0f;
+			}
+
+			const float EndX = StartX + BadgeW + 12.0f;
+			int32 LaneIndex = 0;
+			for (; LaneIndex < static_cast<int32>(LaneEndXs.size()); ++LaneIndex)
+			{
+				if (StartX >= LaneEndXs[LaneIndex] + NotifyGap)
+				{
+					break;
+				}
+			}
+
+			if (LaneIndex >= static_cast<int32>(LaneEndXs.size()))
+			{
+				LaneEndXs.push_back(0.0f);
+			}
+
+			LaneEndXs[LaneIndex] = EndX;
+			OutLayouts.push_back({ i, LaneIndex, BadgeW });
+		}
+
+		return std::max(1, static_cast<int32>(LaneEndXs.size()));
+	};
+
+	TArray<FNotifyLaneLayout> InitialNotifyLayouts;
+	const int32 InitialNotifyLaneCount = bNotifiesExpanded
+		? BuildNotifyLaneLayouts(Seq->GetNotifies(), InitialNotifyLayouts)
+		: 1;
+	const float InitialNotifyAreaH = InitialNotifyLaneCount * NotifyLaneH;
+	if (bNotifiesExpanded)
+	{
+		TrackAreaH = std::max(TrackAreaH, RulerH + RowH + InitialNotifyAreaH + RowH * 2.0f);
+	}
 
 	const float CurrentTime  = NodeInst ? NodeInst->GetCurrentTime() : 0.0f;
 	const int   CurrentFrame = static_cast<int>(std::lround((CurrentTime / PlayLength) * EndFrame));
@@ -711,7 +914,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 	    ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 	{
 		const float LaneTop = Origin.y + RulerH + RowH;
-		const float LaneBot = LaneTop + NotifyLaneH;
+		const float LaneBot = LaneTop + InitialNotifyAreaH;
 		const float MouseY  = ImGui::GetIO().MousePos.y;
 		if (MouseY >= LaneTop && MouseY <= LaneBot)
 		{
@@ -848,10 +1051,23 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 	if (bNotifiesExpanded)
 	{
 		const float LaneY = RowY;
+		TArray<FAnimNotifyEvent>& Notifies = Seq->GetMutableModelNotifies();
+		TArray<FNotifyLaneLayout> NotifyLayouts;
+		const int32 NotifyLaneCount = BuildNotifyLaneLayouts(Notifies, NotifyLayouts);
+		const float NotifyAreaH = NotifyLaneCount * NotifyLaneH;
+
 		DL->AddRectFilled(ImVec2(Origin.x, LaneY),
-		                  ImVec2(Origin.x + HeaderW, LaneY + NotifyLaneH), ColHeaderBg);
-		DL->AddText(ImVec2(Origin.x + 26.0f, LaneY + NotifyLaneH * 0.5f - 7.0f),
-		            ColLabel, "1");
+		                  ImVec2(Origin.x + HeaderW, LaneY + NotifyAreaH), ColHeaderBg);
+		for (int32 LaneIndex = 0; LaneIndex < NotifyLaneCount; ++LaneIndex)
+		{
+			const float ThisLaneY = LaneY + LaneIndex * NotifyLaneH;
+			char LaneLabel[16];
+			std::snprintf(LaneLabel, sizeof(LaneLabel), "%d", LaneIndex + 1);
+			DL->AddText(ImVec2(Origin.x + 26.0f, ThisLaneY + NotifyLaneH * 0.5f - 7.0f),
+			            ColLabel, LaneLabel);
+			DL->AddLine(ImVec2(CanvasX, ThisLaneY + NotifyLaneH - 1.0f),
+			            ImVec2(CanvasX + CanvasW, ThisLaneY + NotifyLaneH - 1.0f), ColSeparator);
+		}
 		if (DrawAddButton("##addNotify", LaneY, NotifyLaneH))
 		{
 			// 같은 컨텍스트 popup 재사용 — playhead 시각으로 진입. 클래스 picker 제공.
@@ -859,35 +1075,35 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 			ImGui::OpenPopup("##addNotifyCtx");
 		}
 		DL->AddRectFilled(ImVec2(CanvasX, LaneY),
-		                  ImVec2(CanvasX + CanvasW, LaneY + NotifyLaneH), IM_COL32(24, 24, 24, 255));
+		                  ImVec2(CanvasX + CanvasW, LaneY + NotifyAreaH), IM_COL32(24, 24, 24, 255));
+		for (int32 LaneIndex = 0; LaneIndex < NotifyLaneCount; ++LaneIndex)
+		{
+			const float ThisLaneY = LaneY + LaneIndex * NotifyLaneH;
+			DL->AddLine(ImVec2(CanvasX, ThisLaneY + NotifyLaneH - 1.0f),
+			            ImVec2(CanvasX + CanvasW, ThisLaneY + NotifyLaneH - 1.0f), ColSeparator);
+		}
 
 		// 드래그로 시간 이동 / 우클릭으로 삭제(루프 후 지연 적용).
 		// 직렬화 소스(DataModel)를 직접 편집 → 아래에서 dispatch 캐시 동기화.
-		TArray<FAnimNotifyEvent>& Notifies = Seq->GetMutableModelNotifies();
 		int PendingDelete = -1;
 		static char  sRenameBuf[64]   = {};
 		static float sGrabOffsetTime  = 0.0f; // 잡은 지점과 앵커의 시간 차(점프 방지)
-		const float BadgeTop  = LaneY + 5.0f;
-		const float BadgeBot  = LaneY + NotifyLaneH - 5.0f;
-		const float BadgeMidY = (BadgeTop + BadgeBot) * 0.5f;
-		for (int i = 0; i < static_cast<int>(Notifies.size()); ++i)
+		for (const FNotifyLaneLayout& Layout : NotifyLayouts)
 		{
+			const int i = Layout.NotifyIndex;
+			if (i < 0 || i >= static_cast<int>(Notifies.size())) continue;
 			FAnimNotifyEvent& N   = Notifies[i];
+			const float       ThisLaneY = LaneY + Layout.LaneIndex * NotifyLaneH;
+			const float       BadgeTop  = ThisLaneY + 5.0f;
+			const float       BadgeBot  = ThisLaneY + NotifyLaneH - 5.0f;
+			const float       BadgeMidY = (BadgeTop + BadgeBot) * 0.5f;
 			const float       NX  = TimeToX(N.TriggerTime);
 			const std::string Nm  = N.NotifyName.ToString();
 			const ImVec2      TSz = ImGui::CalcTextSize(Nm.c_str());
 
 			// State (Duration>0) 는 시각적 폭 = Duration 그대로 (이름이 길어도 늘어나지 않음, 잘림).
 			// Instant 는 이름 폭 + 패딩 (시간이 0 이라 시각적 폭 의미 없음).
-			float BadgeW;
-			if (N.Duration > 0.0f)
-			{
-				BadgeW = std::max(TimeToX(N.TriggerTime + N.Duration) - NX, 6.0f);
-			}
-			else
-			{
-				BadgeW = TSz.x + 16.0f;
-			}
+			float BadgeW = Layout.BadgeW;
 
 			ImGui::PushID(i);
 
@@ -1090,9 +1306,9 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 		}
 		// 추가/삭제/드래그(시간 변경)를 dispatch 캐시에 반영 → 프리뷰에서 실제 발사.
 		Seq->RefreshRuntimeNotifies();
-		DL->AddLine(ImVec2(CanvasX, LaneY + NotifyLaneH - 1.0f),
-		            ImVec2(CanvasX + CanvasW, LaneY + NotifyLaneH - 1.0f), ColSeparator);
-		RowY += NotifyLaneH;
+		DL->AddLine(ImVec2(CanvasX, LaneY + NotifyAreaH - 1.0f),
+		            ImVec2(CanvasX + CanvasW, LaneY + NotifyAreaH - 1.0f), ColSeparator);
+		RowY += NotifyAreaH;
 	}
 
 	auto DrawSimpleHeaderRow = [&](const char* Label, bool bExpandable, bool bExpanded)

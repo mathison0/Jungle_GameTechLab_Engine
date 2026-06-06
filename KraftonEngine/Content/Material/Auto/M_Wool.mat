@@ -1,22 +1,25 @@
 {
-        "BlendState" : "Opaque",
-        "DepthStencilState" : "Default",
-        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-        "EmissiveIntensity" : 0.000000,
-        "Origin" : "FbxImport",
-        "Parameters" : {
-          "HasNormalMap" : 1.000000,
-          "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "_pad" : [0.000000, 0.000000, 0.000000]
-        },
-        "PathFileName" : "Content/Material/Auto/M_Wool.mat",
-        "RasterizerState" : "SolidBackCull",
-        "RenderPass" : "Opaque",
-        "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
-        "ShadowMode" : "Masked",
-        "Textures" : {
-          "DiffuseTexture" : "Content/Data/GameJam/Barbarian/Textures/Hair_Wool/T_Wool_Albedo.PNG",
-          "NormalTexture" : "Content/Data/GameJam/Barbarian/Textures/Hair_Wool/T_Wool_Normals.PNG"
-        },
-        "bEnableBloom" : false
-      }
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 1.000000,
+    "HitFlashAmount" : 0.000000,
+    "HitFlashBloomIntensity" : 0.000000,
+    "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/M_Wool.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Masked",
+  "Textures" : {
+    "DiffuseTexture" : "Content/Data/GameJam/Barbarian/Textures/Hair_Wool/T_Wool_Albedo.PNG",
+    "NormalTexture" : "Content/Data/GameJam/Barbarian/Textures/Hair_Wool/T_Wool_Normals.PNG"
+  },
+  "bEnableBloom" : false
+}

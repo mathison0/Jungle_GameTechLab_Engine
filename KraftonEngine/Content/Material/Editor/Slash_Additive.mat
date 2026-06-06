@@ -1,0 +1,26 @@
+{
+  "BlendState" : "Additive",
+  "DepthStencilState" : "DepthReadOnly",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 8.000000,
+  "Origin" : "Editor",
+  "Parameters" : {
+    "SlashAlpha" : 0.000000,
+    "SlashColorStrength" : 0.000000,
+    "SlashDissolve" : 0.000000,
+    "SlashDissolveSoftness" : 0.000000,
+    "SlashNoiseScroll" : 0.000000,
+    "SlashNoiseTiling" : 0.000000,
+    "SlashPad" : null,
+    "SlashTint" : [0.000000, 0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Editor/Slash_Additive.mat",
+  "RasterizerState" : "SolidNoCull",
+  "RenderPass" : "AlphaBlend",
+  "ShaderPath" : "Shaders/Geometry/Slash.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "DiffuseTexture" : "Content/Texture/white.png"
+  },
+  "bEnableBloom" : true
+}
