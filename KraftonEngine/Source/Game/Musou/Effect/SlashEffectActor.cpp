@@ -128,7 +128,7 @@ void ASlashEffectActor::ActivateSlash(
 	const FVector& Direction)
 {
 	SetActorLocation(Location);
-	SetActorRotation(Rotation + RotationOffset);
+	SetActorRotation(Rotation);
 	SetActorScale(StartScale);
 
 	if (CoreMeshComponent)

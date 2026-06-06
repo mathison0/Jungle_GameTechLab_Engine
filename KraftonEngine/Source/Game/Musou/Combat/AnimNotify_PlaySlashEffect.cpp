@@ -36,8 +36,7 @@ void UAnimNotify_PlaySlashEffect::Notify(USkeletalMeshComponent* MeshComp, UAnim
 		OwnerActor->GetActorRotation().ToVector()
 		+ RotationOffset;
 
-	const FRotator SlashRotator(SpawnRotation);
-	const FVector SlashDirection = SlashRotator.GetForwardVector().Normalized();
+	const FVector SlashDirection = Forward;
 
 	ASlashEffectActor* Effect = World->SpawnActor<ASlashEffectActor>();
 	if (!Effect)
