@@ -21,7 +21,7 @@
 		#status-panel {
 			position: absolute;
 			left: 36px;
-			bottom: 34px;
+			bottom: 4px;
 			display: block;
 			width: 380px;
 			height: 42px;
@@ -31,25 +31,36 @@
 
 		#hp-bar {
 			display: block;
-			width: 100%;
-			height: 34px;
+			position: absolute;
+			left: 58px;
+			top: 4px;
+			width: 314px;
+			height: 17px;
 			background-color: rgba(55, 18, 24, 0.82);
 			border-top-width: 2px;
 			border-right-width: 2px;
 			border-bottom-width: 2px;
 			border-left-width: 2px;
-			border-top-color: #f2d58a;
-			border-right-color: #f2d58a;
-			border-bottom-color: #f2d58a;
-			border-left-color: #f2d58a;
+			border-top-color: #140000;
+			border-right-color: #140000;
+			border-bottom-color: #140000;
+			border-left-color: #140000;
+		}
+
+		#hp-label {
+			position: absolute;
+			left: 8px;
+			top: 4px;
+			width: 44px;
+			height: 21px;
+			line-height: 21px;
+			font-size: 20px;
+			text-align: left;
+			color: #f8f3df;
 		}
 
 		#hp-bar fill {
-			background-color: #d84f4a;
-		}
-
-		progress fill {
-			background-color: #d84f4a;
+			background-color: #ac130e;
 		}
 
 		#right-hud {
@@ -123,6 +134,7 @@
 <body>
 	<div id="hud-root">
 		<div id="status-panel">
+			<div id="hp-label">HP</div>
 			<progress id="hp-bar" value="1.0"></progress>
 		</div>
 		<div id="right-hud">
