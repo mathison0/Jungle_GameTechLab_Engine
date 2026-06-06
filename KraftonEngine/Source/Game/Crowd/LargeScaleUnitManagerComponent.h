@@ -1,20 +1,22 @@
-﻿#pragma once
+#pragma once
 
 #include "Component/ActorComponent.h"
 #include "Core/Delegate.h"
 #include "Core/Types/EngineTypes.h"
+#include "Game/Crowd/CrowdAIManager.h"
+#include "Game/Crowd/CrowdCombatManager.h"
 #include "Game/Crowd/CrowdGroundQuery.h"
-#include "Game/Crowd/CrowdUnitTypes.h"
+#include "Game/Crowd/CrowdMovementManager.h"
+#include "Game/Crowd/CrowdSpatialPartition.h"
+#include "Game/Crowd/CrowdUnitStore.h"
+#include "Game/Crowd/CrowdVisualPool.h"
 #include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/SubclassOf.h"
 
 #include "Source/Game/Crowd/LargeScaleUnitManagerComponent.generated.h"
 
-class ACrowdUnitVisualActor;
 struct FMusouAttackEvent;
 class UAnimInstance;
-class UClass;
-class USkeletalMesh;
 
 UCLASS()
 class ULargeScaleUnitManagerComponent : public UActorComponent
@@ -28,7 +30,9 @@ public:
 	void EndPlay() override;
 
 	FUnitHandle SpawnUnit(EUnitTeam Team, const FVector& Position);
+	FUnitHandle SpawnUnit(EUnitTeam Team, EUnitCombatType CombatType, const FVector& Position);
 	void SpawnUnits(EUnitTeam Team, const FVector& Center, int32 Count, float Radius);
+	void SpawnUnits(EUnitTeam Team, EUnitCombatType CombatType, const FVector& Center, int32 Count, float Radius);
 
 	void DespawnUnit(FUnitHandle Handle);
 	void ClearUnits();
@@ -37,14 +41,16 @@ public:
 
 	int32 GetAliveCount() const;
 	int32 GetTeamAliveCount(EUnitTeam Team) const;
+	int32 GetTeamCombatTypeAliveCount(EUnitTeam Team, EUnitCombatType CombatType) const;
 
-	const TArray<FUnitRenderData>& GetRenderData() const { return RenderData; }
+	const TArray<FUnitRenderData>& GetRenderData() const { return VisualPool.GetRenderData(); }
 
 	void SetDebugDrawEnabled(bool bEnabled) { bDebugDrawEnabled = bEnabled; }
 	bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
 
 	bool IsUnitAlive(FUnitHandle Handle) const;
 	FVector GetUnitPosition(FUnitHandle Handle) const;
+	EUnitCombatType GetUnitCombatType(FUnitHandle Handle) const;
 
 	void SetSurfaceFollowingEnabled(bool bEnabled) { bSurfaceFollowingEnabled = bEnabled; }
 	bool IsSurfaceFollowingEnabled() const { return bSurfaceFollowingEnabled; }
@@ -53,69 +59,31 @@ public:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 private:
-	struct FPendingSpawn
-	{
-		FUnitHandle Handle;
-		EUnitTeam Team = EUnitTeam::Enemy;
-		FVector Position = FVector::ZeroVector;
-	};
+	FUnitArchetype BuildUnitArchetype(EUnitCombatType CombatType) const;
+	FCrowdMovementSettings BuildMovementSettings() const;
 
-	static bool IsHostile(EUnitTeam A, EUnitTeam B) { return A != B; }
-	static int64 MakeCellKey(int32 CellX, int32 CellY);
+	void ActivateUnit(FUnitHandle Handle, EUnitTeam Team, const FUnitArchetype& Archetype, const FVector& Position);
+	void FlushPendingSpawns();
+	void FlushPendingDespawns();
+	void RemoveUnitAndReleaseVisual(FUnitHandle Handle);
 
-	FUnitArchetype BuildDefaultArchetype() const;
-	FUnitHandle AllocateUnitSlot();
-	void ActivateUnit(FUnitHandle Handle, EUnitTeam Team, const FVector& Position);
-	void RemoveUnitInternal(FUnitHandle Handle);
-
-	bool IsValidUnitHandle(FUnitHandle Handle) const;
-	FCrowdUnit* ResolveUnit(FUnitHandle Handle);
-	const FCrowdUnit* ResolveUnit(FUnitHandle Handle) const;
-
-	void ProcessPendingSpawns();
-	void ProcessPendingDespawns();
-	void RebuildSpatialGrid();
-	void QueryUnitsInRadius(const FVector& Center, float Radius, TArray<uint32>& OutIndices) const;
-
-	FUnitHandle FindNearestHostile(uint32 UnitIndex, float MaxRange) const;
-	void UpdateAI(float DeltaTime);
-	void UpdateMovement(float DeltaTime);
-	void UpdateCombat(float DeltaTime);
-	void ProcessDamageEvents();
 	void HandleAttackEvent(const FMusouAttackEvent& Event);
 	void EnsureGroundQueryBuilt();
-	void ApplySurfaceFollowing(FCrowdUnit& Unit);
-
-	void BuildRenderData();
 	void DrawDebugUnits();
-	void SyncVisualActors();
-	void DeactivateAllVisualActors();
-	void ReleaseVisualActorForHandle(FUnitHandle Handle);
-	void DestroyVisualActors(bool bDestroyWorldActors);
-	ACrowdUnitVisualActor* AcquireVisualActor();
-	USkeletalMesh* ResolveVisualSkeletalMesh();
-	UClass* ResolveVisualAnimClass() const;
 
 	float NextRandom01();
 	float RandomThinkInterval();
-	int32 GetCellCoord(float Value) const;
 	FColor GetTeamDebugColor(EUnitTeam Team) const;
 
 private:
-	TArray<FCrowdUnit> Units;
-	TArray<uint32> FreeUnitIndices;
-	TArray<FPendingSpawn> PendingSpawns;
-	TArray<FUnitHandle> PendingDespawns;
-	TArray<FDamageEvent> DamageEvents;
-	TArray<FUnitRenderData> RenderData;
-	TMap<int64, TArray<uint32>> SpatialGrid;
-	TArray<ACrowdUnitVisualActor*> VisualActors;
-	TArray<ACrowdUnitVisualActor*> FreeVisualActors;
-	TMap<uint32, ACrowdUnitVisualActor*> ActiveVisualActors;
-	FDelegateHandle AttackListenerHandle;
+	FCrowdUnitStore UnitStore;
+	FCrowdSpatialPartition SpatialPartition;
+	FCrowdAIManager AIManager;
+	FCrowdMovementManager MovementManager;
+	FCrowdCombatManager CombatManager;
+	FCrowdVisualPool VisualPool;
 	FCrowdGroundQuery GroundQuery;
-	USkeletalMesh* CachedVisualSkeletalMesh = nullptr;
-	FString CachedVisualSkeletalMeshPath;
+	FDelegateHandle AttackListenerHandle;
 
 	bool bIsUpdating = false;
 	bool bGroundQueryDirty = true;
@@ -198,6 +166,33 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Separation Weight", Min=0.0f, Max=20.0f, Speed=0.05f)
 	float DefaultSeparationWeight = 1.4f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Max HP", Min=1.0f, Max=10000.0f, Speed=1.0f)
+	float RangedMaxHP = 70.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Move Speed", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float RangedMoveSpeed = 5.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Detect Range", Min=0.0f, Max=1000.0f, Speed=0.5f)
+	float RangedDetectRange = 24.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Attack Range", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float RangedAttackRange = 8.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Attack Damage", Min=0.0f, Max=10000.0f, Speed=0.5f)
+	float RangedAttackDamage = 8.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Attack Cooldown", Min=0.01f, Max=60.0f, Speed=0.05f)
+	float RangedAttackCooldown = 1.4f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Unit Radius", Min=0.01f, Max=50.0f, Speed=0.05f)
+	float RangedUnitRadius = 0.45f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Separation Radius", Min=0.0f, Max=50.0f, Speed=0.05f)
+	float RangedSeparationRadius = 1.1f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Separation Weight", Min=0.0f, Max=20.0f, Speed=0.05f)
+	float RangedSeparationWeight = 1.4f;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Wait When Chase Blocked")
 	bool bWaitWhenChaseBlocked = true;

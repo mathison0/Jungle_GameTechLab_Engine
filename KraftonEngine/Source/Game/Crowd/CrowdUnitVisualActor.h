@@ -26,6 +26,7 @@ public:
 	bool IsVisualActive() const { return bVisualActive; }
 	FUnitHandle GetUnitHandle() const { return UnitHandle; }
 	EUnitState GetCrowdState() const { return UnitState; }
+	EUnitCombatType GetCrowdCombatType() const { return UnitCombatType; }
 	float GetCrowdSpeed() const { return Speed; }
 
 	USkeletalMeshComponent* GetMeshComponent() const { return MeshComponent; }
@@ -38,6 +39,7 @@ private:
 	ULargeScaleUnitManagerComponent* Manager = nullptr;
 	FUnitHandle UnitHandle;
 	EUnitState UnitState = EUnitState::Idle;
+	EUnitCombatType UnitCombatType = EUnitCombatType::Melee;
 	float Speed = 0.0f;
 	bool bVisualActive = false;
 

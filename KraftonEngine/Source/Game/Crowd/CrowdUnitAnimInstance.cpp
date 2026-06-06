@@ -22,6 +22,7 @@ void UCrowdUnitAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	Speed = 0.0f;
 	LastCrowdState = EUnitState::Idle;
+	LastCrowdCombatType = EUnitCombatType::Melee;
 
 	USkeletalMeshComponent* MeshComp = GetOwningComponent();
 	ACrowdUnitVisualActor* VisualActor = MeshComp ? Cast<ACrowdUnitVisualActor>(MeshComp->GetOwner()) : nullptr;
@@ -31,6 +32,7 @@ void UCrowdUnitAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 
 	LastCrowdState = VisualActor->GetCrowdState();
+	LastCrowdCombatType = VisualActor->GetCrowdCombatType();
 	if (LastCrowdState == EUnitState::Chase)
 	{
 		Speed = VisualActor->GetCrowdSpeed();

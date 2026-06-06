@@ -1,16 +1,10 @@
 #include "Game/Crowd/LargeScaleUnitManagerComponent.h"
 
 #include "Debug/DrawDebugHelpers.h"
-#include "Object/FName.h"
-#include "Runtime/Engine.h"
-#include "Animation/AnimInstance.h"
-#include "Game/Crowd/CrowdUnitAnimInstance.h"
-#include "Game/Crowd/CrowdUnitVisualActor.h"
-#include "GameFramework/World.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
-#include "Mesh/MeshManager.h"
-#include "Mesh/Skeletal/SkeletalMesh.h"
+#include "GameFramework/World.h"
+#include "Object/FName.h"
 
 #include <algorithm>
 #include <cmath>
@@ -18,82 +12,6 @@
 namespace
 {
 	constexpr float TwoPi = 6.28318530717958647692f;
-	constexpr float RadToDeg = 57.295779513082320876f;
-
-	FVector ToXY(const FVector& V)
-	{
-		return FVector(V.X, V.Y, 0.0f);
-	}
-
-	float LengthSquaredXY(const FVector& V)
-	{
-		return V.X * V.X + V.Y * V.Y;
-	}
-
-	FVector NormalizedXY(const FVector& V)
-	{
-		const float LenSq = LengthSquaredXY(V);
-		if (LenSq <= 1.e-6f)
-		{
-			return FVector::ZeroVector;
-		}
-
-		const float InvLen = 1.0f / std::sqrt(LenSq);
-		return FVector(V.X * InvLen, V.Y * InvLen, 0.0f);
-	}
-
-	float DistanceSquaredXY(const FVector& A, const FVector& B)
-	{
-		const float DX = A.X - B.X;
-		const float DY = A.Y - B.Y;
-		return DX * DX + DY * DY;
-	}
-
-	FRotator RotationFromDirectionXY(const FVector& Direction)
-	{
-		if (LengthSquaredXY(Direction) <= 1.e-6f)
-		{
-			return FRotator::ZeroRotator;
-		}
-
-		return FRotator(0.0f, std::atan2(Direction.Y, Direction.X) * RadToDeg, 0.0f);
-	}
-
-	float NormalizeYawDegrees(float Angle)
-	{
-		Angle = std::fmod(Angle + 180.0f, 360.0f);
-		if (Angle < 0.0f)
-		{
-			Angle += 360.0f;
-		}
-
-		return Angle - 180.0f;
-	}
-
-	float StepYawTowards(float CurrentYaw, float TargetYaw, float MaxStepDegrees)
-	{
-		const float DeltaYaw = NormalizeYawDegrees(TargetYaw - CurrentYaw);
-		const float ClampedStep = (std::max)(MaxStepDegrees, 0.0f);
-		const float Step = (std::max)(-ClampedStep, (std::min)(DeltaYaw, ClampedStep));
-		return NormalizeYawDegrees(CurrentYaw + Step);
-	}
-
-	FRotator StepRotationTowardsDirectionXY(
-		const FRotator& CurrentRotation,
-		const FVector& Direction,
-		float DeltaTime,
-		float TurnSpeedDegreesPerSecond)
-	{
-		if (LengthSquaredXY(Direction) <= 1.e-6f)
-		{
-			return FRotator(0.0f, CurrentRotation.Yaw, 0.0f);
-		}
-
-		const float TargetYaw = RotationFromDirectionXY(Direction).Yaw;
-		const float TurnSpeed = (std::max)(TurnSpeedDegreesPerSecond, 1.0f);
-		const float MaxStepDegrees = TurnSpeed * (std::max)(DeltaTime, 0.0f);
-		return FRotator(0.0f, StepYawTowards(CurrentRotation.Yaw, TargetYaw, MaxStepDegrees), 0.0f);
-	}
 
 	AMusouGameMode* GetMusouGameModeFor(const UActorComponent* Component)
 	{
@@ -119,7 +37,7 @@ void ULargeScaleUnitManagerComponent::BeginPlay()
 
 void ULargeScaleUnitManagerComponent::EndPlay()
 {
-	DestroyVisualActors(GetWorld() && GetWorld()->HasBegunPlay());
+	VisualPool.DestroyVisualActors(GetWorld(), GetWorld() && GetWorld()->HasBegunPlay());
 
 	if (AttackListenerHandle.IsValid())
 	{
@@ -133,9 +51,25 @@ void ULargeScaleUnitManagerComponent::EndPlay()
 	UActorComponent::EndPlay();
 }
 
-FUnitArchetype ULargeScaleUnitManagerComponent::BuildDefaultArchetype() const
+FUnitArchetype ULargeScaleUnitManagerComponent::BuildUnitArchetype(EUnitCombatType CombatType) const
 {
 	FUnitArchetype Archetype;
+	Archetype.CombatType = CombatType;
+
+	if (CombatType == EUnitCombatType::Ranged)
+	{
+		Archetype.MaxHP = RangedMaxHP;
+		Archetype.MoveSpeed = RangedMoveSpeed;
+		Archetype.DetectRange = RangedDetectRange;
+		Archetype.AttackRange = RangedAttackRange;
+		Archetype.AttackDamage = RangedAttackDamage;
+		Archetype.AttackCooldown = RangedAttackCooldown;
+		Archetype.Radius = RangedUnitRadius;
+		Archetype.SeparationRadius = RangedSeparationRadius;
+		Archetype.SeparationWeight = RangedSeparationWeight;
+		return Archetype;
+	}
+
 	Archetype.MaxHP = DefaultMaxHP;
 	Archetype.MoveSpeed = DefaultMoveSpeed;
 	Archetype.DetectRange = DefaultDetectRange;
@@ -148,17 +82,38 @@ FUnitArchetype ULargeScaleUnitManagerComponent::BuildDefaultArchetype() const
 	return Archetype;
 }
 
+FCrowdMovementSettings ULargeScaleUnitManagerComponent::BuildMovementSettings() const
+{
+	FCrowdMovementSettings Settings;
+	Settings.bSurfaceFollowingEnabled = bSurfaceFollowingEnabled;
+	Settings.VisualTurnSpeedDegreesPerSecond = VisualTurnSpeedDegreesPerSecond;
+	Settings.bWaitWhenChaseBlocked = bWaitWhenChaseBlocked;
+	Settings.ChaseBlockedProbeDistance = ChaseBlockedProbeDistance;
+	Settings.ChaseBlockedClearancePadding = ChaseBlockedClearancePadding;
+	Settings.GroundTraceUp = GroundTraceUp;
+	Settings.GroundTraceDown = GroundTraceDown;
+	Settings.GroundHeightOffset = GroundHeightOffset;
+	Settings.GroundMissToleranceFrames = GroundMissToleranceFrames;
+	return Settings;
+}
+
 FUnitHandle ULargeScaleUnitManagerComponent::SpawnUnit(EUnitTeam Team, const FVector& Position)
 {
-	const FUnitHandle Handle = AllocateUnitSlot();
+	return SpawnUnit(Team, EUnitCombatType::Melee, Position);
+}
+
+FUnitHandle ULargeScaleUnitManagerComponent::SpawnUnit(EUnitTeam Team, EUnitCombatType CombatType, const FVector& Position)
+{
+	const FUnitHandle Handle = UnitStore.AllocateUnitSlot();
+	const FUnitArchetype Archetype = BuildUnitArchetype(CombatType);
 
 	if (bIsUpdating)
 	{
-		PendingSpawns.push_back({ Handle, Team, Position });
+		UnitStore.QueueSpawn(Handle, Team, Archetype, Position);
 	}
 	else
 	{
-		ActivateUnit(Handle, Team, Position);
+		ActivateUnit(Handle, Team, Archetype, Position);
 	}
 
 	return Handle;
@@ -166,18 +121,23 @@ FUnitHandle ULargeScaleUnitManagerComponent::SpawnUnit(EUnitTeam Team, const FVe
 
 void ULargeScaleUnitManagerComponent::SpawnUnits(EUnitTeam Team, const FVector& Center, int32 Count, float Radius)
 {
+	SpawnUnits(Team, EUnitCombatType::Melee, Center, Count, Radius);
+}
+
+void ULargeScaleUnitManagerComponent::SpawnUnits(EUnitTeam Team, EUnitCombatType CombatType, const FVector& Center, int32 Count, float Radius)
+{
 	if (Count <= 0)
 	{
 		return;
 	}
 
-	const float SpawnRadius = std::max(Radius, 0.0f);
+	const float SpawnRadius = (std::max)(Radius, 0.0f);
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
 		const float Angle = NextRandom01() * TwoPi;
 		const float Dist = std::sqrt(NextRandom01()) * SpawnRadius;
 		const FVector Offset(std::cos(Angle) * Dist, std::sin(Angle) * Dist, 0.0f);
-		SpawnUnit(Team, Center + Offset);
+		SpawnUnit(Team, CombatType, Center + Offset);
 	}
 }
 
@@ -190,24 +150,20 @@ void ULargeScaleUnitManagerComponent::DespawnUnit(FUnitHandle Handle)
 
 	if (bIsUpdating)
 	{
-		PendingDespawns.push_back(Handle);
+		UnitStore.QueueDespawn(Handle);
 	}
 	else
 	{
-		RemoveUnitInternal(Handle);
+		RemoveUnitAndReleaseVisual(Handle);
 	}
 }
 
 void ULargeScaleUnitManagerComponent::ClearUnits()
 {
-	Units.clear();
-	FreeUnitIndices.clear();
-	PendingSpawns.clear();
-	PendingDespawns.clear();
-	DamageEvents.clear();
-	RenderData.clear();
-	SpatialGrid.clear();
-	DestroyVisualActors(true);
+	UnitStore.Clear();
+	CombatManager.ClearDamageEvents();
+	VisualPool.DestroyVisualActors(GetWorld(), true);
+	SpatialPartition.Clear();
 }
 
 void ULargeScaleUnitManagerComponent::RebuildGroundQuery()
@@ -224,576 +180,145 @@ void ULargeScaleUnitManagerComponent::RebuildGroundQuery()
 
 void ULargeScaleUnitManagerComponent::ApplyRadialDamage(const FVector& Center, float Radius, float Damage, EUnitTeam TargetTeam)
 {
-	if (Radius <= 0.0f || Damage <= 0.0f)
+	if (SpatialPartition.IsEmpty())
 	{
-		return;
+		SpatialPartition.Rebuild(UnitStore.GetUnits(), CellSize);
 	}
 
-	if (SpatialGrid.empty())
-	{
-		RebuildSpatialGrid();
-	}
-
-	TArray<uint32> Candidates;
-	QueryUnitsInRadius(Center, Radius, Candidates);
-
-	for (uint32 UnitIndex : Candidates)
-	{
-		if (UnitIndex >= Units.size())
-		{
-			continue;
-		}
-
-		const FCrowdUnit& Unit = Units[UnitIndex];
-		if (!Unit.bAlive || Unit.Team != TargetTeam)
-		{
-			continue;
-		}
-
-		DamageEvents.push_back({
-			FUnitHandle{ UnitIndex, Unit.Generation },
-			Damage,
-			NormalizedXY(Unit.Position - Center)
-		});
-	}
+	CombatManager.ApplyRadialDamage(Center, Radius, Damage, TargetTeam, UnitStore, SpatialPartition);
 }
 
 int32 ULargeScaleUnitManagerComponent::GetAliveCount() const
 {
-	int32 Count = 0;
-	for (const FCrowdUnit& Unit : Units)
-	{
-		if (Unit.bAlive)
-		{
-			++Count;
-		}
-	}
-	return Count;
+	return UnitStore.GetAliveCount();
 }
 
 int32 ULargeScaleUnitManagerComponent::GetTeamAliveCount(EUnitTeam Team) const
 {
-	int32 Count = 0;
-	for (const FCrowdUnit& Unit : Units)
-	{
-		if (Unit.bAlive && Unit.Team == Team)
-		{
-			++Count;
-		}
-	}
-	return Count;
+	return UnitStore.GetTeamAliveCount(Team);
+}
+
+int32 ULargeScaleUnitManagerComponent::GetTeamCombatTypeAliveCount(EUnitTeam Team, EUnitCombatType CombatType) const
+{
+	return UnitStore.GetTeamCombatTypeAliveCount(Team, CombatType);
 }
 
 bool ULargeScaleUnitManagerComponent::IsUnitAlive(FUnitHandle Handle) const
 {
-	return IsValidUnitHandle(Handle);
+	return UnitStore.IsValidUnitHandle(Handle);
 }
 
 FVector ULargeScaleUnitManagerComponent::GetUnitPosition(FUnitHandle Handle) const
 {
-	const FCrowdUnit* Unit = ResolveUnit(Handle);
+	const FCrowdUnit* Unit = UnitStore.ResolveUnit(Handle);
 	return Unit ? Unit->Position : FVector::ZeroVector;
+}
+
+EUnitCombatType ULargeScaleUnitManagerComponent::GetUnitCombatType(FUnitHandle Handle) const
+{
+	const FCrowdUnit* Unit = UnitStore.ResolveUnit(Handle);
+	return Unit ? Unit->Archetype.CombatType : EUnitCombatType::Melee;
 }
 
 void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	ProcessPendingSpawns();
-	ProcessPendingDespawns();
+	FlushPendingSpawns();
+	FlushPendingDespawns();
 
 	if (bSurfaceFollowingEnabled)
 	{
 		EnsureGroundQueryBuilt();
 	}
 
-	RebuildSpatialGrid();
+	const FCrowdMovementSettings MovementSettings = BuildMovementSettings();
+
+	SpatialPartition.Rebuild(UnitStore.GetUnits(), CellSize);
 
 	bIsUpdating = true;
-	UpdateAI(DeltaTime);
-	UpdateMovement(DeltaTime);
-	UpdateCombat(DeltaTime);
-	ProcessDamageEvents();
+	AIManager.Update(DeltaTime, UnitStore, SpatialPartition, [this]()
+	{
+		return RandomThinkInterval();
+	});
+	MovementManager.Update(DeltaTime, UnitStore, SpatialPartition, GroundQuery, MovementSettings);
+	CombatManager.UpdateCombat(DeltaTime, UnitStore);
+
+	TArray<FUnitHandle> RemovedHandles;
+	CombatManager.ProcessDamageEvents(UnitStore, GetMusouGameModeFor(this), RemovedHandles);
+	for (FUnitHandle Handle : RemovedHandles)
+	{
+		VisualPool.ReleaseVisualActorForHandle(Handle);
+	}
+
 	bIsUpdating = false;
 
-	ProcessPendingSpawns();
-	ProcessPendingDespawns();
+	FlushPendingSpawns();
+	FlushPendingDespawns();
 
-	BuildRenderData();
-	SyncVisualActors();
+	VisualPool.BuildRenderData(UnitStore);
+	VisualPool.SyncVisualActors(
+		this,
+		GetWorld(),
+		bEnableSkeletalVisuals,
+		VisualSkeletalMeshPath,
+		VisualAnimInstanceClass,
+		VisualScale);
 	DrawDebugUnits();
+}
+
+void ULargeScaleUnitManagerComponent::ActivateUnit(
+	FUnitHandle Handle,
+	EUnitTeam Team,
+	const FUnitArchetype& Archetype,
+	const FVector& Position)
+{
+	UnitStore.ActivateUnit(
+		Handle,
+		Team,
+		Position,
+		Archetype,
+		RandomThinkInterval(),
+		NextRandom01() * Archetype.AttackCooldown);
+
+	if (FCrowdUnit* Unit = UnitStore.ResolveUnit(Handle))
+	{
+		if (bSurfaceFollowingEnabled)
+		{
+			EnsureGroundQueryBuilt();
+		}
+		MovementManager.ApplySurfaceFollowing(*Unit, GroundQuery, BuildMovementSettings());
+	}
+}
+
+void ULargeScaleUnitManagerComponent::FlushPendingSpawns()
+{
+	UnitStore.FlushPendingSpawns([this](FUnitHandle Handle, EUnitTeam Team, const FUnitArchetype& Archetype, const FVector& Position)
+	{
+		ActivateUnit(Handle, Team, Archetype, Position);
+	});
+}
+
+void ULargeScaleUnitManagerComponent::FlushPendingDespawns()
+{
+	UnitStore.FlushPendingDespawns([this](FUnitHandle Handle)
+	{
+		RemoveUnitAndReleaseVisual(Handle);
+	});
+}
+
+void ULargeScaleUnitManagerComponent::RemoveUnitAndReleaseVisual(FUnitHandle Handle)
+{
+	if (UnitStore.RemoveUnit(Handle))
+	{
+		VisualPool.ReleaseVisualActorForHandle(Handle);
+	}
 }
 
 void ULargeScaleUnitManagerComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
 {
-	if (!Event.bFromPlayer || Event.Damage <= 0.0f || Event.Spec.Range <= 0.0f)
-	{
-		return;
-	}
-
-	RebuildSpatialGrid();
-
-	TArray<uint32> Candidates;
-	QueryUnitsInRadius(Event.Origin, Event.Spec.Range, Candidates);
-
-	int32 HitCount = 0;
-	for (uint32 UnitIndex : Candidates)
-	{
-		if (UnitIndex >= Units.size())
-		{
-			continue;
-		}
-
-		const FCrowdUnit& Unit = Units[UnitIndex];
-		if (!Unit.bAlive || Unit.Team != EUnitTeam::Enemy || !Event.IsInVolume(Unit.Position))
-		{
-			continue;
-		}
-
-		DamageEvents.push_back({
-			FUnitHandle{ UnitIndex, Unit.Generation },
-			Event.Damage,
-			NormalizedXY(Unit.Position - Event.Origin),
-			true
-		});
-		++HitCount;
-	}
-
-	if (HitCount > 0)
-	{
-		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
-		{
-			GameMode->NotifyAttackHits(Event, HitCount);
-		}
-	}
-}
-
-FUnitHandle ULargeScaleUnitManagerComponent::AllocateUnitSlot()
-{
-	uint32 Index = UINT32_MAX;
-
-	if (!FreeUnitIndices.empty())
-	{
-		Index = FreeUnitIndices.back();
-		FreeUnitIndices.pop_back();
-	}
-	else
-	{
-		Index = static_cast<uint32>(Units.size());
-		Units.emplace_back();
-		Units.back().Generation = 1;
-	}
-
-	FCrowdUnit& Unit = Units[Index];
-	if (Unit.Generation == 0)
-	{
-		Unit.Generation = 1;
-	}
-
-	return FUnitHandle{ Index, Unit.Generation };
-}
-
-void ULargeScaleUnitManagerComponent::ActivateUnit(FUnitHandle Handle, EUnitTeam Team, const FVector& Position)
-{
-	if (Handle.Index >= Units.size())
-	{
-		return;
-	}
-
-	const FUnitArchetype Archetype = BuildDefaultArchetype();
-	FCrowdUnit& Unit = Units[Handle.Index];
-
-	Unit = FCrowdUnit();
-	Unit.Generation = Handle.Generation != 0 ? Handle.Generation : 1;
-	Unit.bAlive = true;
-	Unit.Team = Team;
-	Unit.State = EUnitState::Idle;
-	Unit.Position = Position;
-	Unit.SpawnZ = Position.Z;
-	Unit.HP = Archetype.MaxHP;
-	Unit.Radius = Archetype.Radius;
-	Unit.ThinkTimer = RandomThinkInterval();
-	Unit.AttackCooldownRemaining = NextRandom01() * Archetype.AttackCooldown;
-
-	ApplySurfaceFollowing(Unit);
-}
-
-void ULargeScaleUnitManagerComponent::RemoveUnitInternal(FUnitHandle Handle)
-{
-	if (!IsValidUnitHandle(Handle))
-	{
-		return;
-	}
-
-	FCrowdUnit& Unit = Units[Handle.Index];
-	Unit.bAlive = false;
-	Unit.State = EUnitState::Dead;
-	Unit.Target = {};
-	Unit.Generation++;
-	if (Unit.Generation == 0)
-	{
-		Unit.Generation = 1;
-	}
-
-	FreeUnitIndices.push_back(Handle.Index);
-	ReleaseVisualActorForHandle(Handle);
-}
-
-bool ULargeScaleUnitManagerComponent::IsValidUnitHandle(FUnitHandle Handle) const
-{
-	return Handle.IsValid()
-		&& Handle.Index < Units.size()
-		&& Units[Handle.Index].bAlive
-		&& Units[Handle.Index].Generation == Handle.Generation;
-}
-
-FCrowdUnit* ULargeScaleUnitManagerComponent::ResolveUnit(FUnitHandle Handle)
-{
-	return IsValidUnitHandle(Handle) ? &Units[Handle.Index] : nullptr;
-}
-
-const FCrowdUnit* ULargeScaleUnitManagerComponent::ResolveUnit(FUnitHandle Handle) const
-{
-	return IsValidUnitHandle(Handle) ? &Units[Handle.Index] : nullptr;
-}
-
-void ULargeScaleUnitManagerComponent::ProcessPendingSpawns()
-{
-	if (PendingSpawns.empty())
-	{
-		return;
-	}
-
-	TArray<FPendingSpawn> Spawns = std::move(PendingSpawns);
-	PendingSpawns.clear();
-
-	for (const FPendingSpawn& Spawn : Spawns)
-	{
-		ActivateUnit(Spawn.Handle, Spawn.Team, Spawn.Position);
-	}
-}
-
-void ULargeScaleUnitManagerComponent::ProcessPendingDespawns()
-{
-	if (PendingDespawns.empty())
-	{
-		return;
-	}
-
-	TArray<FUnitHandle> Despawns = std::move(PendingDespawns);
-	PendingDespawns.clear();
-
-	for (FUnitHandle Handle : Despawns)
-	{
-		RemoveUnitInternal(Handle);
-	}
-}
-
-void ULargeScaleUnitManagerComponent::RebuildSpatialGrid()
-{
-	SpatialGrid.clear();
-	SpatialGrid.reserve(Units.size());
-
-	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
-	{
-		const FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
-		{
-			continue;
-		}
-
-		const int32 CellX = GetCellCoord(Unit.Position.X);
-		const int32 CellY = GetCellCoord(Unit.Position.Y);
-		SpatialGrid[MakeCellKey(CellX, CellY)].push_back(Index);
-	}
-}
-
-void ULargeScaleUnitManagerComponent::QueryUnitsInRadius(const FVector& Center, float Radius, TArray<uint32>& OutIndices) const
-{
-	OutIndices.clear();
-
-	if (Radius <= 0.0f)
-	{
-		return;
-	}
-
-	const int32 MinX = GetCellCoord(Center.X - Radius);
-	const int32 MaxX = GetCellCoord(Center.X + Radius);
-	const int32 MinY = GetCellCoord(Center.Y - Radius);
-	const int32 MaxY = GetCellCoord(Center.Y + Radius);
-	const float RadiusSq = Radius * Radius;
-
-	for (int32 CellX = MinX; CellX <= MaxX; ++CellX)
-	{
-		for (int32 CellY = MinY; CellY <= MaxY; ++CellY)
-		{
-			auto It = SpatialGrid.find(MakeCellKey(CellX, CellY));
-			if (It == SpatialGrid.end())
-			{
-				continue;
-			}
-
-			for (uint32 UnitIndex : It->second)
-			{
-				if (UnitIndex >= Units.size())
-				{
-					continue;
-				}
-
-				const FCrowdUnit& Unit = Units[UnitIndex];
-				if (Unit.bAlive && DistanceSquaredXY(Unit.Position, Center) <= RadiusSq)
-				{
-					OutIndices.push_back(UnitIndex);
-				}
-			}
-		}
-	}
-}
-
-FUnitHandle ULargeScaleUnitManagerComponent::FindNearestHostile(uint32 UnitIndex, float MaxRange) const
-{
-	if (UnitIndex >= Units.size() || MaxRange <= 0.0f)
-	{
-		return {};
-	}
-
-	const FCrowdUnit& Unit = Units[UnitIndex];
-	if (!Unit.bAlive)
-	{
-		return {};
-	}
-
-	TArray<uint32> Candidates;
-	QueryUnitsInRadius(Unit.Position, MaxRange, Candidates);
-
-	float BestDistanceSq = MaxRange * MaxRange;
-	FUnitHandle BestTarget;
-
-	for (uint32 CandidateIndex : Candidates)
-	{
-		if (CandidateIndex == UnitIndex || CandidateIndex >= Units.size())
-		{
-			continue;
-		}
-
-		const FCrowdUnit& Candidate = Units[CandidateIndex];
-		if (!Candidate.bAlive || !IsHostile(Unit.Team, Candidate.Team))
-		{
-			continue;
-		}
-
-		const float DistSq = DistanceSquaredXY(Unit.Position, Candidate.Position);
-		if (DistSq < BestDistanceSq)
-		{
-			BestDistanceSq = DistSq;
-			BestTarget = FUnitHandle{ CandidateIndex, Candidate.Generation };
-		}
-	}
-
-	return BestTarget;
-}
-
-void ULargeScaleUnitManagerComponent::UpdateAI(float DeltaTime)
-{
-	const FUnitArchetype Archetype = BuildDefaultArchetype();
-
-	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
-	{
-		FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
-		{
-			continue;
-		}
-
-		Unit.ThinkTimer -= DeltaTime;
-		if (Unit.ThinkTimer > 0.0f)
-		{
-			continue;
-		}
-
-		Unit.ThinkTimer = RandomThinkInterval();
-
-		const FCrowdUnit* Target = ResolveUnit(Unit.Target);
-		if (Target && !IsHostile(Unit.Team, Target->Team))
-		{
-			Target = nullptr;
-			Unit.Target = {};
-		}
-
-		if (!Target)
-		{
-			Unit.Target = FindNearestHostile(Index, Archetype.DetectRange);
-			Target = ResolveUnit(Unit.Target);
-		}
-
-		if (!Target)
-		{
-			Unit.State = EUnitState::Idle;
-			continue;
-		}
-
-		const float AttackRange = std::max(Archetype.AttackRange + Unit.Radius + Target->Radius, 0.0f);
-		const bool bInAttackRange = DistanceSquaredXY(Unit.Position, Target->Position) <= AttackRange * AttackRange;
-		Unit.State = bInAttackRange ? EUnitState::Attack : EUnitState::Chase;
-	}
-}
-
-void ULargeScaleUnitManagerComponent::UpdateMovement(float DeltaTime)
-{
-	if (DeltaTime <= 0.0f)
-	{
-		return;
-	}
-
-	const FUnitArchetype Archetype = BuildDefaultArchetype();
-	TArray<uint32> Neighbors;
-
-	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
-	{
-		FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
-		{
-			continue;
-		}
-
-		FVector Desired = FVector::ZeroVector;
-		FVector FacingDir = FVector::ZeroVector;
-		if (Unit.State == EUnitState::Chase || Unit.State == EUnitState::Attack)
-		{
-			if (const FCrowdUnit* Target = ResolveUnit(Unit.Target))
-			{
-				Desired = NormalizedXY(Target->Position - Unit.Position);
-				FacingDir = Desired;
-			}
-			else
-			{
-				Unit.State = EUnitState::Idle;
-			}
-		}
-
-		if (LengthSquaredXY(FacingDir) > 1.e-6f)
-		{
-			Unit.Rotation = StepRotationTowardsDirectionXY(
-				Unit.Rotation,
-				FacingDir,
-				DeltaTime,
-				VisualTurnSpeedDegreesPerSecond);
-		}
-
-		FVector Separation = FVector::ZeroVector;
-		if (Archetype.SeparationRadius > 0.0f && Archetype.SeparationWeight > 0.0f)
-		{
-			QueryUnitsInRadius(Unit.Position, Archetype.SeparationRadius, Neighbors);
-			for (uint32 OtherIndex : Neighbors)
-			{
-				if (OtherIndex == Index || OtherIndex >= Units.size())
-				{
-					continue;
-				}
-
-				const FCrowdUnit& Other = Units[OtherIndex];
-				if (!Other.bAlive)
-				{
-					continue;
-				}
-
-				const FVector Away = ToXY(Unit.Position - Other.Position);
-				const float DistSq = LengthSquaredXY(Away);
-				if (DistSq <= 1.e-6f)
-				{
-					continue;
-				}
-
-				const float Dist = std::sqrt(DistSq);
-				const float Strength = std::max(Archetype.SeparationRadius - Dist, 0.0f) / Archetype.SeparationRadius;
-				Separation += (Away / Dist) * Strength;
-			}
-		}
-
-		if (bWaitWhenChaseBlocked && Unit.State == EUnitState::Chase && LengthSquaredXY(Desired) > 1.e-6f)
-		{
-			bool bCurrentlyOverlapping = false;
-			const float CurrentOverlapQueryRadius = (std::max)(Unit.Radius + Archetype.Radius, 0.0f);
-			QueryUnitsInRadius(Unit.Position, CurrentOverlapQueryRadius, Neighbors);
-			for (uint32 OtherIndex : Neighbors)
-			{
-				if (OtherIndex == Index || OtherIndex >= Units.size())
-				{
-					continue;
-				}
-
-				const FCrowdUnit& Other = Units[OtherIndex];
-				if (!Other.bAlive)
-				{
-					continue;
-				}
-
-				const float OverlapRadius = Unit.Radius + Other.Radius;
-				if (OverlapRadius > 0.0f && DistanceSquaredXY(Unit.Position, Other.Position) < OverlapRadius * OverlapRadius)
-				{
-					bCurrentlyOverlapping = true;
-					break;
-				}
-			}
-
-			if (!bCurrentlyOverlapping)
-			{
-				const float ClearancePadding = (std::max)(ChaseBlockedClearancePadding, 0.0f);
-				const float MinProbeDistance = (std::max)(ChaseBlockedProbeDistance, 0.0f);
-				const float ProbeDistance = (std::max)(MinProbeDistance, Archetype.MoveSpeed * DeltaTime);
-				const FVector ProbePosition = Unit.Position + Desired * ProbeDistance;
-				const float ProbeQueryRadius = (std::max)(Unit.Radius + Archetype.Radius + ClearancePadding, 0.0f);
-
-				bool bBlockedByForwardOccupancy = false;
-				QueryUnitsInRadius(ProbePosition, ProbeQueryRadius, Neighbors);
-				for (uint32 OtherIndex : Neighbors)
-				{
-					if (OtherIndex == Index || OtherIndex >= Units.size())
-					{
-						continue;
-					}
-
-					const FCrowdUnit& Other = Units[OtherIndex];
-					if (!Other.bAlive)
-					{
-						continue;
-					}
-
-					const float BlockedRadius = Unit.Radius + Other.Radius + ClearancePadding;
-					if (BlockedRadius > 0.0f && DistanceSquaredXY(ProbePosition, Other.Position) <= BlockedRadius * BlockedRadius)
-					{
-						bBlockedByForwardOccupancy = true;
-						break;
-					}
-				}
-
-				if (bBlockedByForwardOccupancy)
-				{
-					Unit.Velocity = FVector::ZeroVector;
-					ApplySurfaceFollowing(Unit);
-					continue;
-				}
-			}
-		}
-
-		FVector MoveDir = Desired;
-		if (LengthSquaredXY(Separation) > 1.e-6f)
-		{
-			MoveDir += NormalizedXY(Separation) * Archetype.SeparationWeight;
-		}
-
-		MoveDir = NormalizedXY(MoveDir);
-		if (LengthSquaredXY(MoveDir) <= 1.e-6f || Unit.State == EUnitState::Attack)
-		{
-			Unit.Velocity = FVector::ZeroVector;
-			ApplySurfaceFollowing(Unit);
-			continue;
-		}
-
-		Unit.Velocity = MoveDir * Archetype.MoveSpeed;
-		Unit.Position += Unit.Velocity * DeltaTime;
-		ApplySurfaceFollowing(Unit);
-	}
+	SpatialPartition.Rebuild(UnitStore.GetUnits(), CellSize);
+	CombatManager.HandleAttackEvent(Event, UnitStore, SpatialPartition, GetMusouGameModeFor(this));
 }
 
 void ULargeScaleUnitManagerComponent::EnsureGroundQueryBuilt()
@@ -804,343 +329,6 @@ void ULargeScaleUnitManagerComponent::EnsureGroundQueryBuilt()
 	}
 
 	RebuildGroundQuery();
-}
-
-void ULargeScaleUnitManagerComponent::ApplySurfaceFollowing(FCrowdUnit& Unit)
-{
-	if (!bSurfaceFollowingEnabled || !Unit.bAlive)
-	{
-		return;
-	}
-
-	EnsureGroundQueryBuilt();
-	if (!GroundQuery.HasData())
-	{
-		return;
-	}
-
-	FCrowdGroundSampleParams Params;
-	Params.TraceUp = GroundTraceUp;
-	Params.TraceDown = GroundTraceDown;
-	Params.HeightOffset = GroundHeightOffset;
-
-	FCrowdGroundHit Hit;
-	if (GroundQuery.SampleGround(Unit.Position, Params, Hit))
-	{
-		Unit.Position.Z = Hit.Location.Z;
-		Unit.GroundNormal = Hit.Normal;
-		Unit.GroundMissFrames = 0;
-		Unit.bHasGround = true;
-		return;
-	}
-
-	++Unit.GroundMissFrames;
-	if (Unit.GroundMissFrames > GroundMissToleranceFrames && !Unit.bHasGround)
-	{
-		Unit.Position.Z = Unit.SpawnZ;
-	}
-}
-
-void ULargeScaleUnitManagerComponent::UpdateCombat(float DeltaTime)
-{
-	const FUnitArchetype Archetype = BuildDefaultArchetype();
-
-	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
-	{
-		FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
-		{
-			continue;
-		}
-
-		Unit.AttackCooldownRemaining = std::max(Unit.AttackCooldownRemaining - DeltaTime, 0.0f);
-		Unit.AnimTime += DeltaTime;
-		Unit.AnimState = static_cast<uint16>(Unit.State);
-
-		if (Unit.State != EUnitState::Attack || Unit.AttackCooldownRemaining > 0.0f)
-		{
-			continue;
-		}
-
-		const FCrowdUnit* Target = ResolveUnit(Unit.Target);
-		if (!Target)
-		{
-			Unit.State = EUnitState::Idle;
-			continue;
-		}
-
-		const float AttackRange = std::max(Archetype.AttackRange + Unit.Radius + Target->Radius, 0.0f);
-		if (DistanceSquaredXY(Unit.Position, Target->Position) > AttackRange * AttackRange)
-		{
-			Unit.State = EUnitState::Chase;
-			continue;
-		}
-
-		DamageEvents.push_back({
-			Unit.Target,
-			Archetype.AttackDamage,
-			NormalizedXY(Target->Position - Unit.Position)
-		});
-		Unit.AttackCooldownRemaining = Archetype.AttackCooldown;
-	}
-}
-
-void ULargeScaleUnitManagerComponent::ProcessDamageEvents()
-{
-	if (DamageEvents.empty())
-	{
-		return;
-	}
-
-	TArray<FDamageEvent> Events = std::move(DamageEvents);
-	DamageEvents.clear();
-
-	int32 PlayerKillCount = 0;
-	for (const FDamageEvent& Event : Events)
-	{
-		FCrowdUnit* Target = ResolveUnit(Event.Target);
-		if (!Target || Event.Damage <= 0.0f)
-		{
-			continue;
-		}
-
-		Target->HP -= Event.Damage;
-		if (Target->HP <= 0.0f)
-		{
-			if (Event.bCountAsPlayerKill && Target->Team == EUnitTeam::Enemy)
-			{
-				++PlayerKillCount;
-			}
-			RemoveUnitInternal(Event.Target);
-		}
-	}
-
-	if (PlayerKillCount > 0)
-	{
-		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
-		{
-			GameMode->NotifyEnemiesKilled(PlayerKillCount);
-		}
-	}
-}
-
-void ULargeScaleUnitManagerComponent::BuildRenderData()
-{
-	RenderData.clear();
-	RenderData.reserve(GetAliveCount());
-
-	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
-	{
-		const FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
-		{
-			continue;
-		}
-
-		RenderData.push_back({
-			FUnitHandle{ Index, Unit.Generation },
-			Unit.Team,
-			Unit.State,
-			Unit.Position,
-			Unit.Rotation,
-			Unit.AnimState,
-			Unit.AnimTime,
-			Unit.Velocity.Length(),
-			true
-		});
-	}
-}
-
-USkeletalMesh* ULargeScaleUnitManagerComponent::ResolveVisualSkeletalMesh()
-{
-	if (!bEnableSkeletalVisuals)
-	{
-		return nullptr;
-	}
-
-	const FString& MeshPath = VisualSkeletalMeshPath.ToString();
-	if (MeshPath.empty() || MeshPath == "None")
-	{
-		CachedVisualSkeletalMesh = nullptr;
-		CachedVisualSkeletalMeshPath.clear();
-		return nullptr;
-	}
-
-	if (CachedVisualSkeletalMesh && CachedVisualSkeletalMeshPath == MeshPath)
-	{
-		return CachedVisualSkeletalMesh;
-	}
-
-	CachedVisualSkeletalMesh = nullptr;
-	CachedVisualSkeletalMeshPath = MeshPath;
-
-	ID3D11Device* Device = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
-	if (!Device)
-	{
-		return nullptr;
-	}
-
-	CachedVisualSkeletalMesh = FMeshManager::LoadSkeletalMesh(MeshPath, Device);
-	return CachedVisualSkeletalMesh;
-}
-
-UClass* ULargeScaleUnitManagerComponent::ResolveVisualAnimClass() const
-{
-	if (UClass* Class = VisualAnimInstanceClass.Get())
-	{
-		return Class;
-	}
-
-	return UCrowdUnitAnimInstance::StaticClass();
-}
-
-ACrowdUnitVisualActor* ULargeScaleUnitManagerComponent::AcquireVisualActor()
-{
-	if (!FreeVisualActors.empty())
-	{
-		ACrowdUnitVisualActor* Actor = FreeVisualActors.back();
-		FreeVisualActors.pop_back();
-		return Actor;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return nullptr;
-	}
-
-	ACrowdUnitVisualActor* Actor = World->SpawnActor<ACrowdUnitVisualActor>();
-	if (Actor)
-	{
-		VisualActors.push_back(Actor);
-	}
-	return Actor;
-}
-
-void ULargeScaleUnitManagerComponent::ReleaseVisualActorForHandle(FUnitHandle Handle)
-{
-	auto It = ActiveVisualActors.find(Handle.Index);
-	if (It == ActiveVisualActors.end())
-	{
-		return;
-	}
-
-	ACrowdUnitVisualActor* Actor = It->second;
-	ActiveVisualActors.erase(It);
-
-	if (!Actor)
-	{
-		return;
-	}
-
-	Actor->DeactivateVisual();
-	FreeVisualActors.push_back(Actor);
-}
-
-void ULargeScaleUnitManagerComponent::DeactivateAllVisualActors()
-{
-	for (auto& Pair : ActiveVisualActors)
-	{
-		if (Pair.second)
-		{
-			Pair.second->DeactivateVisual();
-			FreeVisualActors.push_back(Pair.second);
-		}
-	}
-	ActiveVisualActors.clear();
-}
-
-void ULargeScaleUnitManagerComponent::DestroyVisualActors(bool bDestroyWorldActors)
-{
-	UWorld* World = GetWorld();
-
-	for (ACrowdUnitVisualActor* Actor : VisualActors)
-	{
-		if (!Actor)
-		{
-			continue;
-		}
-
-		Actor->DeactivateVisual();
-		if (bDestroyWorldActors && World)
-		{
-			World->DestroyActor(Actor);
-		}
-	}
-
-	VisualActors.clear();
-	FreeVisualActors.clear();
-	ActiveVisualActors.clear();
-}
-
-void ULargeScaleUnitManagerComponent::SyncVisualActors()
-{
-	if (!bEnableSkeletalVisuals)
-	{
-		DeactivateAllVisualActors();
-		return;
-	}
-
-	USkeletalMesh* VisualMesh = ResolveVisualSkeletalMesh();
-	if (!VisualMesh)
-	{
-		DeactivateAllVisualActors();
-		return;
-	}
-
-	UClass* AnimClass = ResolveVisualAnimClass();
-	TSet<uint32> SeenUnitIndices;
-	SeenUnitIndices.reserve(RenderData.size());
-
-	for (const FUnitRenderData& Data : RenderData)
-	{
-		if (!Data.bVisible || !Data.Handle.IsValid())
-		{
-			continue;
-		}
-
-		SeenUnitIndices.insert(Data.Handle.Index);
-
-		ACrowdUnitVisualActor* VisualActor = nullptr;
-		auto ActiveIt = ActiveVisualActors.find(Data.Handle.Index);
-		if (ActiveIt != ActiveVisualActors.end())
-		{
-			VisualActor = ActiveIt->second;
-			if (!VisualActor || VisualActor->GetUnitHandle().Generation != Data.Handle.Generation)
-			{
-				ReleaseVisualActorForHandle(FUnitHandle{ Data.Handle.Index, 0 });
-				VisualActor = nullptr;
-			}
-		}
-
-		if (!VisualActor)
-		{
-			VisualActor = AcquireVisualActor();
-			if (!VisualActor)
-			{
-				continue;
-			}
-			ActiveVisualActors[Data.Handle.Index] = VisualActor;
-		}
-
-		VisualActor->InitializeVisual(this, VisualMesh, AnimClass);
-		VisualActor->SetActorScale(VisualScale);
-		VisualActor->ApplyRenderData(Data);
-	}
-
-	TArray<uint32> StaleUnitIndices;
-	for (const auto& Pair : ActiveVisualActors)
-	{
-		if (SeenUnitIndices.find(Pair.first) == SeenUnitIndices.end())
-		{
-			StaleUnitIndices.push_back(Pair.first);
-		}
-	}
-
-	for (uint32 UnitIndex : StaleUnitIndices)
-	{
-		ReleaseVisualActorForHandle(FUnitHandle{ UnitIndex, 0 });
-	}
 }
 
 void ULargeScaleUnitManagerComponent::DrawDebugUnits()
@@ -1156,7 +344,7 @@ void ULargeScaleUnitManagerComponent::DrawDebugUnits()
 		return;
 	}
 
-	const FUnitArchetype Archetype = BuildDefaultArchetype();
+	const TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
 	int32 Drawn = 0;
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
@@ -1174,12 +362,12 @@ void ULargeScaleUnitManagerComponent::DrawDebugUnits()
 
 		DrawDebugSphere(World, Unit.Position, Unit.Radius, 8, GetTeamDebugColor(Unit.Team), 0.0f);
 
-		if (const FCrowdUnit* Target = ResolveUnit(Unit.Target))
+		if (const FCrowdUnit* Target = UnitStore.ResolveUnit(Unit.Target))
 		{
 			DrawDebugLine(World, Unit.Position, Target->Position, FColor::Yellow(), 0.0f);
 			if (Unit.State == EUnitState::Attack)
 			{
-				DrawDebugSphere(World, Unit.Position, Archetype.AttackRange + Unit.Radius + Target->Radius, 12, FColor::Yellow(), 0.0f);
+				DrawDebugSphere(World, Unit.Position, Unit.Archetype.AttackRange + Unit.Radius + Target->Radius, 12, FColor::Yellow(), 0.0f);
 			}
 		}
 	}
@@ -1196,12 +384,6 @@ float ULargeScaleUnitManagerComponent::RandomThinkInterval()
 	return 0.1f + NextRandom01() * 0.15f;
 }
 
-int32 ULargeScaleUnitManagerComponent::GetCellCoord(float Value) const
-{
-	const float SafeCellSize = std::max(CellSize, 0.5f);
-	return static_cast<int32>(std::floor(Value / SafeCellSize));
-}
-
 FColor ULargeScaleUnitManagerComponent::GetTeamDebugColor(EUnitTeam Team) const
 {
 	switch (Team)
@@ -1212,10 +394,4 @@ FColor ULargeScaleUnitManagerComponent::GetTeamDebugColor(EUnitTeam Team) const
 	default:
 		return FColor::Red();
 	}
-}
-
-int64 ULargeScaleUnitManagerComponent::MakeCellKey(int32 CellX, int32 CellY)
-{
-	return (static_cast<int64>(static_cast<uint32>(CellX)) << 32)
-		| static_cast<uint32>(CellY);
 }

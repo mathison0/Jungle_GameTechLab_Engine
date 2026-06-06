@@ -64,6 +64,7 @@ void ACrowdUnitVisualActor::ApplyRenderData(const FUnitRenderData& InRenderData)
 
 	UnitHandle = InRenderData.Handle;
 	UnitState = InRenderData.State;
+	UnitCombatType = InRenderData.CombatType;
 	Speed = InRenderData.Speed;
 	bVisualActive = InRenderData.bVisible;
 
@@ -79,6 +80,7 @@ void ACrowdUnitVisualActor::DeactivateVisual()
 {
 	UnitHandle = {};
 	UnitState = EUnitState::Dead;
+	UnitCombatType = EUnitCombatType::Melee;
 	Speed = 0.0f;
 	bVisualActive = false;
 	bNeedsTick = false;

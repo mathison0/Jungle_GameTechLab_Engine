@@ -107,6 +107,11 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		std::pair<sol::string_view, EUnitTeam>{ "Enemy", EUnitTeam::Enemy },
 	});
 
+	Lua.new_enum("EUnitCombatType", {
+		std::pair<sol::string_view, EUnitCombatType>{ "Melee", EUnitCombatType::Melee },
+		std::pair<sol::string_view, EUnitCombatType>{ "Ranged", EUnitCombatType::Ranged },
+	});
+
 	Lua.new_usertype<FUnitHandle>("UnitHandle",
 		sol::constructors<FUnitHandle()>(),
 		"Index", &FUnitHandle::Index,
@@ -114,19 +119,30 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		"IsValid", &FUnitHandle::IsValid);
 
 	Lua.new_usertype<ULargeScaleUnitManagerComponent>("LargeScaleUnitManagerComponent",
-		"SpawnUnit", [](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, const FVector& Position)
-		{
-			return Manager.SpawnUnit(Team, Position);
-		},
-		"SpawnUnits", [](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, const FVector& Center, int32 Count, float Radius)
-		{
-			Manager.SpawnUnits(Team, Center, Count, Radius);
-		},
+		"SpawnUnit", sol::overload(
+			[](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, const FVector& Position)
+			{
+				return Manager.SpawnUnit(Team, Position);
+			},
+			[](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, EUnitCombatType CombatType, const FVector& Position)
+			{
+				return Manager.SpawnUnit(Team, CombatType, Position);
+			}),
+		"SpawnUnits", sol::overload(
+			[](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, const FVector& Center, int32 Count, float Radius)
+			{
+				Manager.SpawnUnits(Team, Center, Count, Radius);
+			},
+			[](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, EUnitCombatType CombatType, const FVector& Center, int32 Count, float Radius)
+			{
+				Manager.SpawnUnits(Team, CombatType, Center, Count, Radius);
+			}),
 		"DespawnUnit", &ULargeScaleUnitManagerComponent::DespawnUnit,
 		"ClearUnits", &ULargeScaleUnitManagerComponent::ClearUnits,
 		"ApplyRadialDamage", &ULargeScaleUnitManagerComponent::ApplyRadialDamage,
 		"GetAliveCount", &ULargeScaleUnitManagerComponent::GetAliveCount,
 		"GetTeamAliveCount", &ULargeScaleUnitManagerComponent::GetTeamAliveCount,
+		"GetTeamCombatTypeAliveCount", &ULargeScaleUnitManagerComponent::GetTeamCombatTypeAliveCount,
 		"SetDebugDrawEnabled", &ULargeScaleUnitManagerComponent::SetDebugDrawEnabled,
 		"IsDebugDrawEnabled", &ULargeScaleUnitManagerComponent::IsDebugDrawEnabled,
 		"SetSurfaceFollowingEnabled", &ULargeScaleUnitManagerComponent::SetSurfaceFollowingEnabled,
@@ -134,6 +150,7 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		"RebuildGroundQuery", &ULargeScaleUnitManagerComponent::RebuildGroundQuery,
 		"IsUnitAlive", &ULargeScaleUnitManagerComponent::IsUnitAlive,
 		"GetUnitPosition", &ULargeScaleUnitManagerComponent::GetUnitPosition,
+		"GetUnitCombatType", &ULargeScaleUnitManagerComponent::GetUnitCombatType,
 		"GetRenderDataCount", [](ULargeScaleUnitManagerComponent& Manager)
 		{
 			return static_cast<int32>(Manager.GetRenderData().size());

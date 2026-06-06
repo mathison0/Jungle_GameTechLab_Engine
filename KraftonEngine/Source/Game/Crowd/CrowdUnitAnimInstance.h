@@ -17,7 +17,9 @@ public:
 	void NativeUpdateAnimation(float DeltaSeconds) override;
 
 	EUnitState GetLastCrowdState() const { return LastCrowdState; }
+	EUnitCombatType GetLastCrowdCombatType() const { return LastCrowdCombatType; }
 
 private:
 	EUnitState LastCrowdState = EUnitState::Idle;
+	EUnitCombatType LastCrowdCombatType = EUnitCombatType::Melee;
 };

@@ -10,6 +10,12 @@ enum class EUnitTeam : uint8
 	Enemy
 };
 
+enum class EUnitCombatType : uint8
+{
+	Melee = 0,
+	Ranged
+};
+
 enum class EUnitState : uint8
 {
 	Idle = 0,
@@ -36,6 +42,7 @@ struct FUnitHandle
 
 struct FUnitArchetype
 {
+	EUnitCombatType CombatType = EUnitCombatType::Melee;
 	float MaxHP = 100.0f;
 	float MoveSpeed = 6.0f;
 	float DetectRange = 18.0f;
@@ -54,6 +61,7 @@ struct FCrowdUnit
 
 	EUnitTeam Team = EUnitTeam::Enemy;
 	EUnitState State = EUnitState::Idle;
+	FUnitArchetype Archetype;
 
 	FVector Position = FVector::ZeroVector;
 	FVector Velocity = FVector::ZeroVector;
@@ -86,6 +94,7 @@ struct FUnitRenderData
 {
 	FUnitHandle Handle;
 	EUnitTeam Team = EUnitTeam::Enemy;
+	EUnitCombatType CombatType = EUnitCombatType::Melee;
 	EUnitState State = EUnitState::Idle;
 	FVector Position = FVector::ZeroVector;
 	FRotator Rotation = FRotator::ZeroRotator;

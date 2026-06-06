@@ -1885,13 +1885,31 @@
     <ClCompile Include="Source\Game\GameActorPlacements.cpp">
       <Filter>Source\Game</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdAIManager.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdCombatManager.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdMovementManager.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdSpatialPartition.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Crowd\CrowdUnitAnimInstance.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdUnitStore.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Crowd\CrowdUnitVisualActor.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdVisualPool.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp">
@@ -3388,16 +3406,34 @@
     <ClInclude Include="Source\Game\GameActorPlacements.h">
       <Filter>Source\Game</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdAIManager.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdCombatManager.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h">
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdMovementManager.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdSpatialPartition.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdUnitAnimInstance.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdUnitStore.h">
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdUnitTypes.h">
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdUnitVisualActor.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdVisualPool.h">
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.h">
