@@ -137,6 +137,12 @@ public:
 	UPROPERTY(Edit, Save, Category = "CharacterMovement", DisplayName = "Rotation Yaw Rate", Min = 0.0f, Max = 3600.0f, Speed = 5.0f)
 	float RotationYawRate = 540.0f;   // deg/sec
 
+	// Root motion 의 회전(yaw) delta 를 캡슐에 적용할지. 기본 OFF —
+	// Mixamo 류 에셋은 스윙 모션의 몸통 회전이 root 본에 베이크돼 있어 (클립 중간 ±180°)
+	// 캡슐에 옮기면 캡슐 스핀 + 이동 방향 오염. 전용 root 본이 깨끗한 rig 에서만 켤 것.
+	UPROPERTY(Edit, Save, Category = "CharacterMovement", DisplayName = "Apply Root Motion Rotation")
+	bool  bApplyRootMotionRotation = false;
+
 private:
 	physx::PxController* Controller = nullptr;
 

@@ -1,22 +1,25 @@
 {
-        "BlendState" : "AlphaBlend",
-        "DepthStencilState" : "Default",
-        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-        "EmissiveIntensity" : 0.000000,
-        "Origin" : "FbxImport",
-        "Parameters" : {
-          "HasNormalMap" : 1.000000,
-          "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "_pad" : [0.000000, 0.000000, 0.000000]
-        },
-        "PathFileName" : "Content/Material/Auto/M_Barbarian_Cloth.mat",
-        "RasterizerState" : "SolidBackCull",
-        "RenderPass" : "AlphaBlend",
-        "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
-        "ShadowMode" : "Opaque",
-        "Textures" : {
-          "DiffuseTexture" : "Content/Data/GameJam/Barbarian/Textures/Armor/T_Barbarian_Details_Albedo.PNG",
-          "NormalTexture" : "Content/Data/GameJam/Barbarian/Textures/Armor/T_Barbarian_Armors_Normals.PNG"
-        },
-        "bEnableBloom" : false
-      }
+  "BlendState" : "AlphaBlend",
+  "DepthStencilState" : "Default",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 1.000000,
+    "HitFlashAmount" : 0.000000,
+    "HitFlashBloomIntensity" : 0.000000,
+    "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/M_Barbarian_Cloth.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "AlphaBlend",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "DiffuseTexture" : "Content/Data/GameJam/Barbarian/Textures/Armor/T_Barbarian_Details_Albedo.PNG",
+    "NormalTexture" : "Content/Data/GameJam/Barbarian/Textures/Armor/T_Barbarian_Armors_Normals.PNG"
+  },
+  "bEnableBloom" : false
+}

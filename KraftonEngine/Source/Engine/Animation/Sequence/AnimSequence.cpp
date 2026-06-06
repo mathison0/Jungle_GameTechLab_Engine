@@ -427,7 +427,8 @@ namespace
         const FSkeletalMesh* Asset,
         int32               RootBoneIndex,
         bool                bForceRootLock,
-        bool                bEnableRootMotion)
+        bool                bEnableRootMotion,
+        const FVector*      RootFirstKeyLocal)   // RM track 첫 키 (bEnableRootMotion 의 고정 기준)
     {
         if ((!bForceRootLock && !bEnableRootMotion) || !Asset)
         {
@@ -455,12 +456,28 @@ namespace
         FVector DesiredLocation = DesiredGlobal.GetLocation();
         const FVector BindLocation = BindGlobals[RootBoneIndex].GetLocation();
 
-        DesiredLocation.X = BindLocation.X;
-        DesiredLocation.Y = BindLocation.Y;
-        if (bEnableRootMotion)
+        if (bEnableRootMotion && RootFirstKeyLocal)
         {
-            DesiredLocation.Z = BindLocation.Z;
+            // UE 와 동일하게 클립 "첫 프레임" 의 root 위치에 고정 (bind 가 아님).
+            // bind(원점) 에 고정하면 베이스 포즈 (idle 등, root ≈ (-0.05,-0.13,-0.14))
+            // 와 ~17cm 차이가 생겨 몽타주 시작/끝 블렌드마다 몸 전체가 "탁" 시프트한다.
+            // 첫 키는 track local 값 — RM 본 부모 ≈ identity (local ≈ component) 가정은
+            // ExtractRootMotion 과 동일.
+            DesiredLocation = *RootFirstKeyLocal;
         }
+        else
+        {
+            DesiredLocation.X = BindLocation.X;
+            DesiredLocation.Y = BindLocation.Y;
+            if (bEnableRootMotion)
+            {
+                DesiredLocation.Z = BindLocation.Z;
+            }
+        }
+        // 회전은 포즈에 그대로 둔다 — Mixamo 류 에셋은 공격 스윙의 몸통 회전이 root 본에
+        // 베이크돼 있어 (클립 중간 yaw ±180° 까지 요동) "캐릭터 회전" 으로 해석하면 안 됨.
+        // Root motion 은 translation-only: ExtractRootMotion 의 회전 delta 도 CMC 가
+        // 기본적으로 무시한다 (CMC::bApplyRootMotionRotation 참고).
         DesiredGlobal.SetLocation(DesiredLocation);
 
         FMatrix DesiredLocal = DesiredGlobal;
@@ -714,7 +731,9 @@ void UAnimSequence::GetBonePose(FPoseContext& Output, const FAnimExtractContext&
             : std::clamp(FrameFloat - static_cast<float>(Frame0), 0.0f, 1.0f);
     }
 
-    int32 RootMotionLockBoneIndex = -1;
+    int32   RootMotionLockBoneIndex = -1;
+    FVector RootMotionFirstKey;          // RM track 첫 키 — lock 고정 기준 (UE 의 first-frame lock)
+    bool    bHasRootMotionFirstKey = false;
 
     for (const FBoneAnimationTrack& Track : Tracks)
     {
@@ -756,6 +775,11 @@ void UAnimSequence::GetBonePose(FPoseContext& Output, const FAnimExtractContext&
             Track.BoneName == RootMotionBoneName)
         {
             RootMotionLockBoneIndex = BoneIndex;
+            if (!Track.InternalTrackData.PosKeys.empty())
+            {
+                RootMotionFirstKey     = Track.InternalTrackData.PosKeys[0];
+                bHasRootMotionFirstKey = true;
+            }
         }
 
         const FRawAnimSequenceTrack& Raw = Track.InternalTrackData;
@@ -801,7 +825,8 @@ void UAnimSequence::GetBonePose(FPoseContext& Output, const FAnimExtractContext&
         Output.Pose[BoneIndex] = Result;
     }
 
-    ApplyRootLockInComponentSpace(Output, Asset, RootMotionLockBoneIndex, bForceRootLock, bEnableRootMotion);
+    ApplyRootLockInComponentSpace(Output, Asset, RootMotionLockBoneIndex, bForceRootLock, bEnableRootMotion,
+                                  bHasRootMotionFirstKey ? &RootMotionFirstKey : nullptr);
 }
 
 bool UAnimSequence::GetAnimationPose(float TimeSeconds, USkeletalMesh* InSkeletalMesh, TArray<FTransform>& OutLocalPose, bool bLooping) const
@@ -965,6 +990,11 @@ FTransform UAnimSequence::ExtractRootMotion(float PrevTime, float CurTime, bool 
 
     auto ComputeDelta = [](const FVector& P0, const FQuat& R0, const FVector& P1, const FQuat& R1) -> FTransform {
         FTransform D;
+        // Location 은 컴포넌트 공간 변위 그대로. Root motion 은 translation-only 정책 —
+        // 캡슐 yaw 가 RM 으로 회전하지 않으므로 (CMC::bApplyRootMotionRotation=false 기본)
+        // 컴포넌트 공간 변위를 캡슐의 (고정된) yaw 로 world 변환하면 방향이 정확하다.
+        // Rotation delta 는 정보로 추출만 — 적용 여부는 CMC 가 결정.
+        // (Mixamo 류 에셋은 root 본 yaw 가 스윙 모션으로 ±180° 요동 → 회전 적용 금지)
         D.Location = P1 - P0;
         D.Rotation = (R1 * R0.Inverse()).GetNormalized();
         return D;
@@ -982,7 +1012,7 @@ FTransform UAnimSequence::ExtractRootMotion(float PrevTime, float CurTime, bool 
         SampleAt(0.0f,   PA, RA);
         SampleAt(CurTime, PB, RB);
         const FTransform D2 = ComputeDelta(PA, RA, PB, RB);
-        // 합산: D2 ∘ D1 — Position 단순 합, Rotation 곱.
+        // 합산: 둘 다 컴포넌트 공간 변위라 단순 합. Rotation 은 Hamilton 곱 (우측 먼저): D1 → D2.
         Delta.Location = D1.Location + D2.Location;
         Delta.Rotation = (D2.Rotation * D1.Rotation).GetNormalized();
         return Delta;

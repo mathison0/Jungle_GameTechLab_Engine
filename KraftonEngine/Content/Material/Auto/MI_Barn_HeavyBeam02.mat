@@ -1,22 +1,25 @@
 {
-        "BlendState" : "Opaque",
-        "DepthStencilState" : "Default",
-        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-        "EmissiveIntensity" : 0.000000,
-        "Origin" : "FbxImport",
-        "Parameters" : {
-          "HasNormalMap" : 1.000000,
-          "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "_pad" : [0.000000, 0.000000, 0.000000]
-        },
-        "PathFileName" : "Content/Material/Auto/MI_Barn_HeavyBeam02.mat",
-        "RasterizerState" : "SolidBackCull",
-        "RenderPass" : "Opaque",
-        "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
-        "ShadowMode" : "Opaque",
-        "Textures" : {
-          "DiffuseTexture" : "Content/Texture/Auto/SM_BarnBase01/T_Barn_Heavybeam02_BC.png",
-          "NormalTexture" : "Content/Texture/Auto/SM_BarnBase01/T_Barn_Heavybeam02_Norm.png"
-        },
-        "bEnableBloom" : false
-      }
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 1.000000,
+    "HitFlashAmount" : 0.000000,
+    "HitFlashBloomIntensity" : 0.000000,
+    "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/MI_Barn_HeavyBeam02.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "DiffuseTexture" : "Content/Texture/Auto/SM_BarnBase01/T_Barn_Heavybeam02_BC.png",
+    "NormalTexture" : "Content/Texture/Auto/SM_BarnBase01/T_Barn_Heavybeam02_Norm.png"
+  },
+  "bEnableBloom" : false
+}

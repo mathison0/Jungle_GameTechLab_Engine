@@ -286,7 +286,8 @@ void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	if (bHadRootMotion)
 	{
 		const FRotator ActorRot = Updated->GetWorldRotation();
-		const FQuat    YawOnly  = FRotator(0.0f, 0.0f, ActorRot.Yaw).ToQuaternion();
+		// FRotator ctor 는 (Pitch, Yaw, Roll) 순서 — Yaw 는 두 번째 인자.
+		const FQuat    YawOnly  = FRotator(0.0f, ActorRot.Yaw, 0.0f).ToQuaternion();
 		FVector        World    = YawOnly.RotateVector(RootMotionDelta.Location);
 
 		// 추출된 delta 는 애님(메시 자산) 로컬 단위 — 메시 컴포넌트가 스케일되어 있으면
@@ -315,11 +316,14 @@ void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 		TickFalling(DeltaTime, RootMotionWorldXY);
 	}
 
-	// 4) Root motion yaw 적용. yaw 만 추출 — root motion 의 pitch/roll 은 캐릭터 capsule
-	//    회전에 일반적으로 의미 없음 (UE 도 yaw 만 적용).
+	// 4) Root motion yaw 적용 — 기본 OFF (bApplyRootMotionRotation).
+	//    Mixamo 류 에셋은 공격 스윙의 몸통 회전이 root 본에 베이크돼 있어 (클립 중간
+	//    yaw ±180° 요동) 캡슐에 옮기면 캡슐이 스핀하고 이동 방향까지 오염된다.
+	//    회전은 포즈(애니메이션)에 남겨두고 캡슐은 translation 만 받는 게 안전 기본값.
+	//    전용 root 본이 깨끗하게 authoring 된 rig (turn-in-place 등) 에서만 켤 것.
 	//    yaw 가 적용되면 bAppliedRootMotionYawThisFrame 을 켜서 PhysOrientToMovement /
 	//    Character 의 control yaw 덮어쓰기 둘 다 같은 frame skip 되도록 한다.
-	if (bHadRootMotion)
+	if (bHadRootMotion && bApplyRootMotionRotation)
 	{
 		const FRotator DeltaRot = RootMotionDelta.Rotation.ToRotator();
 		if (std::fabs(DeltaRot.Yaw) > 1e-4f)

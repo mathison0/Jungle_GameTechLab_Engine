@@ -1,22 +1,25 @@
 {
-        "BlendState" : "Opaque",
-        "DepthStencilState" : "DepthReadOnly",
-        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-        "EmissiveIntensity" : 0.000000,
-        "Origin" : "FbxImport",
-        "Parameters" : {
-          "HasNormalMap" : 1.000000,
-          "SectionColor" : [1.000000, 1.000000, 1.000000, 0.000000],
-          "_pad" : [0.000000, 0.000000, 0.000000]
-        },
-        "PathFileName" : "Content/Material/Auto/M_Orc_Hummer_1.mat",
-        "RasterizerState" : "SolidBackCull",
-        "RenderPass" : "Opaque",
-        "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
-        "ShadowMode" : "Opaque",
-        "Textures" : {
-          "DiffuseTexture" : "D:/ГОТОВЫЕ МОДЕЛИ ДЛЯ  UE4/Orc(Hummer)/Texture/T_Orc_Hummer_Albedo.tga",
-          "NormalTexture" : "D:/ГОТОВЫЕ МОДЕЛИ ДЛЯ  UE4/Orc(Hummer)/Texture/T_Orc_Hummer_Normals.tga"
-        },
-        "bEnableBloom" : false
-      }
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "DepthReadOnly",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 1.000000,
+    "HitFlashAmount" : 0.000000,
+    "HitFlashBloomIntensity" : 0.000000,
+    "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 0.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/M_Orc_Hummer_1.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "DiffuseTexture" : "D:/ГОТОВЫЕ МОДЕЛИ ДЛЯ  UE4/Orc(Hummer)/Texture/T_Orc_Hummer_Albedo.tga",
+    "NormalTexture" : "D:/ГОТОВЫЕ МОДЕЛИ ДЛЯ  UE4/Orc(Hummer)/Texture/T_Orc_Hummer_Normals.tga"
+  },
+  "bEnableBloom" : false
+}
