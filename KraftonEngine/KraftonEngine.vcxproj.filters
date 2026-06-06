@@ -756,6 +756,7 @@
     <FxCompile Include="Shaders\UI\SubUV.hlsl">
       <Filter>Shaders\UI</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Geometry\Slash.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Editor\EditorEngine.cpp">
@@ -1946,6 +1947,12 @@
     <ClCompile Include="Source\Engine\Animation\AnimationTickLODManager.cpp" />
     <ClCompile Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyer.cpp" />
     <ClCompile Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.cpp" />
+    <ClCompile Include="Source\Engine\Component\Primitive\WeaponTrailComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Primitive\BoneAttachedStaticMeshComponent.cpp" />
+    <ClCompile Include="Source\Engine\Render\Proxy\WeaponTrailSceneProxy.cpp" />
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.cpp" />
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
+    <ClCompile Include="Source\Game\Musou\Effect\SlashEffectActor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -5792,6 +5799,12 @@
     <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h">
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Primitive\WeaponTrailComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Primitive\BoneAttachedStaticMeshComponent.h" />
+    <ClInclude Include="Source\Engine\Render\Proxy\WeaponTrailSceneProxy.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h" />
+    <ClInclude Include="Source\Game\Musou\Effect\SlashEffectActor.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />

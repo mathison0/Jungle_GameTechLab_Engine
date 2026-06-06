@@ -816,6 +816,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\BattleComponent.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\ComboComponent.cpp" />
+    <ClCompile Include="Source\Game\Musou\Effect\SlashEffectActor.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameMode.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameState.cpp" />
@@ -1315,6 +1316,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Musou\Combat\AttackTypes.h" />
     <ClInclude Include="Source\Game\Musou\Combat\BattleComponent.h" />
     <ClInclude Include="Source\Game\Musou\Combat\ComboComponent.h" />
+    <ClInclude Include="Source\Game\Musou\Effect\SlashEffectActor.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameMode.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h" />
@@ -2239,6 +2241,13 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Geometry\Slash.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Geometry\UberLit.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
