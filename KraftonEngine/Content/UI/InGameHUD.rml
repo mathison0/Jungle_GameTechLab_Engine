@@ -158,7 +158,12 @@
 			background-color: rgba(8, 10, 14, 0.36);
 		}
 
-		#stop-button {
+		#pause-menu {
+			display: block;
+			width: 240px;
+		}
+
+		.pause-button {
 			display: block;
 			width: 240px;
 			height: 68px;
@@ -175,6 +180,10 @@
 			border-right-color: #f2d58a;
 			border-bottom-color: #f2d58a;
 			border-left-color: #f2d58a;
+		}
+
+		#restart-button {
+			margin-bottom: 16px;
 		}
 	</style>
 </head>
@@ -195,7 +204,10 @@
 		</div>
 		<div id="kill-milestone"></div>
 		<div id="pause-overlay">
-			<div id="stop-button">중단하기</div>
+			<div id="pause-menu">
+				<div id="restart-button" class="pause-button">재도전</div>
+				<div id="stop-button" class="pause-button">전투 중단</div>
+			</div>
 		</div>
 	</div>
 </body>

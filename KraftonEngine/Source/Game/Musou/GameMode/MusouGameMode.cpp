@@ -112,6 +112,14 @@ void AMusouGameMode::StartMatch()
 		HudWidget = UUIManager::Get().CreateWidget(GetPlayerController(), "Content/UI/InGameHUD.rml");
 		if (HudWidget)
 		{
+			HudWidget->BindClick("restart-button", []()
+			{
+				if (GEngine)
+				{
+					GEngine->RequestTransitionToScene("Play");
+				}
+			});
+
 			HudWidget->BindClick("stop-button", []()
 			{
 				if (GEngine)
