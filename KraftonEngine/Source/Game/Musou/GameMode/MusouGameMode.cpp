@@ -37,6 +37,7 @@ AMusouGameMode::AMusouGameMode()
 	// UE 컨벤션 — 생성자에서 게임 전용 클래스 지정.
 	// World::BeginPlay → GameMode::BeginPlay에서 GameStateClass가,
 	// GameMode::StartMatch에서 PlayerControllerClass가 spawn된다.
+	PrimaryActorTick.bTickEvenWhenPaused = true;
 	GameStateClass = AMusouGameState::StaticClass();
 	PlayerControllerClass = AMusouPlayerController::StaticClass();
 }
@@ -213,4 +214,9 @@ void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 
 	HudWidget->SetProperty("pause-overlay", "display", bStopMenuVisible ? "flex" : "none");
 	HudWidget->SetWantsMouse(bStopMenuVisible);
+
+	if (UWorld* World = GetWorld())
+	{
+		World->SetPaused(bStopMenuVisible);
+	}
 }
