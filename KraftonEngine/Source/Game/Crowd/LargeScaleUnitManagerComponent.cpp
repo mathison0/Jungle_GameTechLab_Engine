@@ -329,7 +329,8 @@ void ULargeScaleUnitManagerComponent::HandleAttackEvent(const FMusouAttackEvent&
 	{
 		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
 		{
-			GameMode->NotifyAttackHits(Event, HitCount);
+			GameMode->NotifyAttackComboHits(Event, HitCount);
+			GameMode->NotifyAttackHitFeedback(Event, HitCount);
 		}
 	}
 }

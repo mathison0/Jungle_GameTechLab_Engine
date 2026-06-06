@@ -67,6 +67,12 @@ void UBattleComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
 		return;
 	}
 
+	AMusouGameMode* GameMode = GetMusouGameModeFor(this);
+	if (GameMode)
+	{
+		GameMode->NotifyAttackComboHits(Event, 1);
+	}
+
 	ApplyDamage(Event.Damage, Event.Attacker);
 
 	// 넉백 — 공격자에서 멀어지는 수평 방향
@@ -84,9 +90,9 @@ void UBattleComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
 	}
 
 	// 히트 회신 — 공격자 히트스탑 피드백
-	if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+	if (GameMode)
 	{
-		GameMode->NotifyAttackHits(Event, 1);
+		GameMode->NotifyAttackHitFeedback(Event, 1);
 	}
 }
 

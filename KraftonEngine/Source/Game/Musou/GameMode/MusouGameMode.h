@@ -25,7 +25,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnMusouHitConfirmed, const FMusouHitEvent&)
 // 전투 파이프라인:
 //   AnimNotify_MusouAttack → BroadcastAttack(이벤트 발행)
 //     → 수신자(군체 Manager / 보스 BattleComponent)가 각자 판정·적용
-//     → 수신자가 NotifyAttackHits(히트 피드백) / NotifyEnemiesKilled(킬 집계) 회신
+//     → 수신자가 콤보 증가 / 히트 피드백 / 킬 집계를 각각 회신
 //
 // 활성화: Settings/ProjectSettings.ini → Game.GameModeClassName = "AMusouGameMode"
 //         (또는 씬별 WorldSettings.GameMode)
@@ -54,8 +54,9 @@ public:
 	// AnimNotify_MusouAttack이 호출 — 구독자 전체에 공격 이벤트 발행.
 	void BroadcastAttack(const FMusouAttackEvent& Event);
 
-	// 수신자가 히트 결과 회신 — 공격자 히트스탑(히트 수 비례) 등 타격감 피드백.
-	void NotifyAttackHits(const FMusouAttackEvent& Event, int32 HitCount);
+	// 수신자가 히트 결과를 단계별로 회신한다. 콤보 증가와 히트스탑은 타이밍 의존성이 달라 분리한다.
+	void NotifyAttackComboHits(const FMusouAttackEvent& Event, int32 HitCount);
+	void NotifyAttackHitFeedback(const FMusouAttackEvent& Event, int32 HitCount);
 
 	void NotifyHitConfirmed(const FMusouHitEvent& Event);
 
