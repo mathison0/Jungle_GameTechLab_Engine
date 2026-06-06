@@ -14,6 +14,15 @@
 
 namespace
 {
+	constexpr float KillPopDuration = 0.18f;
+
+	FString MakeScaleTransform(float Scale)
+	{
+		char Buffer[32] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "scale(%.3f)", Scale);
+		return FString(Buffer);
+	}
+
 	FString MakeComboTextColor(float Alpha)
 	{
 		const float T = std::clamp(Alpha, 0.0f, 1.0f);
@@ -29,6 +38,24 @@ namespace
 		char Buffer[8] = {};
 		std::snprintf(Buffer, sizeof(Buffer), "#%02X%02X%02X", Red, Green, Blue);
 		return FString(Buffer);
+	}
+
+	FString MakeComboScaleTransform(float Alpha)
+	{
+		const float T = std::clamp(Alpha, 0.0f, 1.0f);
+		const float SmoothT = T * T * (3.0f - 2.0f * T);
+		const float Scale = 1.0f + 0.3f * SmoothT;
+
+		return MakeScaleTransform(Scale);
+	}
+
+	FString MakeKillScaleTransform(float Alpha)
+	{
+		const float T = std::clamp(Alpha, 0.0f, 1.0f);
+		const float SmoothT = T * T * (3.0f - 2.0f * T);
+		const float Scale = 1.0f + 0.12f * SmoothT;
+
+		return MakeScaleTransform(Scale);
 	}
 }
 
@@ -105,7 +132,7 @@ void AMusouGameMode::Tick(float DeltaTime)
 		SetStopMenuVisible(!bStopMenuVisible);
 	}
 
-	UpdateHud();
+	UpdateHud(DeltaTime);
 }
 
 void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)
@@ -165,7 +192,7 @@ AMusouGameState* AMusouGameMode::GetMusouGameState() const
 	return Cast<AMusouGameState>(GetGameState());
 }
 
-void AMusouGameMode::UpdateHud()
+void AMusouGameMode::UpdateHud(float DeltaTime)
 {
 	if (!HudWidget || !HudWidget->IsDocumentLoaded())
 	{
@@ -186,7 +213,28 @@ void AMusouGameMode::UpdateHud()
 		? std::clamp(ComboRemaining / ComboWindow, 0.0f, 1.0f)
 		: 0.0f;
 
-	HudWidget->SetText("kill-counter", FString("KILL ") + std::to_string(KillCount));
+	if (!bKillHudInitialized)
+	{
+		LastHudKillCount = KillCount;
+		bKillHudInitialized = true;
+	}
+	else if (KillCount > LastHudKillCount)
+	{
+		LastHudKillCount = KillCount;
+		KillPopRemaining = KillPopDuration;
+	}
+	else if (KillCount != LastHudKillCount)
+	{
+		LastHudKillCount = KillCount;
+	}
+
+	const float KillPopAlpha = KillPopDuration > 0.0f
+		? std::clamp(KillPopRemaining / KillPopDuration, 0.0f, 1.0f)
+		: 0.0f;
+
+	HudWidget->SetText("kill-count-value", std::to_string(KillCount));
+	HudWidget->SetProperty("kill-count-value", "transform", MakeKillScaleTransform(KillPopAlpha));
+	KillPopRemaining = std::max(0.0f, KillPopRemaining - DeltaTime);
 
 	if (Combo > 0 && DisplayAlpha > 0.03f)
 	{
@@ -201,6 +249,7 @@ void AMusouGameMode::UpdateHud()
 
 	HudWidget->SetProperty("combo-counter", "opacity", "1.0");
 	HudWidget->SetProperty("combo-counter", "color", MakeComboTextColor(DisplayAlpha));
+	HudWidget->SetProperty("combo-counter", "transform", MakeComboScaleTransform(DisplayAlpha));
 }
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)

@@ -66,22 +66,50 @@
 		#right-hud {
 			position: absolute;
 			right: 32px;
-			top: 28px;
+			top: 90px;
 			display: block;
 			width: 420px;
 		}
 
 		#kill-counter {
-			display: block;
-			padding: 14px 18px;
+			position: absolute;
+			left: 50%;
+			bottom: 18px;
+			margin-left: -130px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 260px;
+			height: 58px;
 			background-color: rgba(8, 10, 14, 0.62);
-			font-size: 24px;
+			color: #f8f3df;
+		}
+
+		#kill-count-value {
+			display: block;
+			width: 112px;
+			height: 58px;
+			line-height: 58px;
+			font-size: 42px;
 			text-align: right;
+			transform: scale(1.0);
+			transform-origin: 100% 50%;
+		}
+
+		#kill-ko-label {
+			display: block;
+			margin-left: 12px;
+			position: relative;
+			top: 4px;
+			height: 58px;
+			line-height: 58px;
+			font-size: 30px;
+			color: #d7c58a;
 		}
 
 		#combo-counter-frame {
 			display: none;
-			margin-top: 10px;
+			margin-top: 0;
 			width: 420px;
 			height: 76px;
 			background-color: rgba(8, 10, 14, 0.32);
@@ -96,6 +124,8 @@
 			padding-right: 18px;
 			text-align: right;
 			font-size: 40px;
+			transform: scale(1.0);
+			transform-origin: 100% 50%;
 			color: #e62a11;
 		}
 
@@ -138,10 +168,13 @@
 			<progress id="hp-bar" value="1.0"></progress>
 		</div>
 		<div id="right-hud">
-			<div id="kill-counter">KILL 0</div>
 			<div id="combo-counter-frame">
 				<div id="combo-counter"></div>
 			</div>
+		</div>
+		<div id="kill-counter">
+			<div id="kill-count-value">0</div>
+			<div id="kill-ko-label">K.O.</div>
 		</div>
 		<div id="pause-overlay">
 			<div id="stop-button">중단하기</div>

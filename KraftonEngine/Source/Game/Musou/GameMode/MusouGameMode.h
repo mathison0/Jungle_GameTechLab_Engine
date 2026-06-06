@@ -65,9 +65,12 @@ public:
 	AMusouGameState* GetMusouGameState() const;
 
 private:
-	void UpdateHud();
+	void UpdateHud(float DeltaTime);
 	void SetStopMenuVisible(bool bVisible);
 
 	UUserWidget* HudWidget = nullptr;
 	bool bStopMenuVisible = false;
+	bool bKillHudInitialized = false;
+	int32 LastHudKillCount = 0;
+	float KillPopRemaining = 0.0f;
 };
