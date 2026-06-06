@@ -72,5 +72,9 @@ private:
 	bool bStopMenuVisible = false;
 	bool bKillHudInitialized = false;
 	int32 LastHudKillCount = 0;
+	int32 LastDisplayedKillMilestone = 0;
+	int32 ActiveKillMilestone = 0;
 	float KillPopRemaining = 0.0f;
+	float KillMilestoneRemaining = 0.0f;
+	float KillMilestoneElapsed = 0.0f;
 };

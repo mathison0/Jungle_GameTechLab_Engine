@@ -10,11 +10,17 @@
 #include "UI/UserWidget.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 namespace
 {
 	constexpr float KillPopDuration = 0.18f;
+	constexpr float KillMilestoneDuration = 1.25f;
+	constexpr float KillMilestonePopDuration = 0.24f;
+	constexpr float KillMilestoneShakeDuration = 0.48f;
+	constexpr float KillMilestoneBaseMarginLeft = -320.0f;
+	constexpr float KillMilestoneBaseMarginTop = -60.0f;
 
 	FString MakeScaleTransform(float Scale)
 	{
@@ -23,7 +29,14 @@ namespace
 		return FString(Buffer);
 	}
 
-	FString MakeComboTextColor(float Alpha)
+	FString MakePxValue(float Value)
+	{
+		char Buffer[32] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "%.1fpx", Value);
+		return FString(Buffer);
+	}
+
+	FString MakeTextColor(float Alpha, int32 FromRed, int32 FromGreen, int32 FromBlue, int32 ToRed, int32 ToGreen, int32 ToBlue)
 	{
 		const float T = std::clamp(Alpha, 0.0f, 1.0f);
 		const auto LerpChannel = [T](int32 From, int32 To)
@@ -31,13 +44,18 @@ namespace
 			return static_cast<int32>(static_cast<float>(From) + static_cast<float>(To - From) * T + 0.5f);
 		};
 
-		const int32 Red = LerpChannel(8, 230);
-		const int32 Green = LerpChannel(10, 42);
-		const int32 Blue = LerpChannel(14, 17);
+		const int32 Red = LerpChannel(FromRed, ToRed);
+		const int32 Green = LerpChannel(FromGreen, ToGreen);
+		const int32 Blue = LerpChannel(FromBlue, ToBlue);
 
 		char Buffer[8] = {};
 		std::snprintf(Buffer, sizeof(Buffer), "#%02X%02X%02X", Red, Green, Blue);
 		return FString(Buffer);
+	}
+
+	FString MakeComboTextColor(float Alpha)
+	{
+		return MakeTextColor(Alpha, 8, 10, 14, 230, 42, 17);
 	}
 
 	FString MakeComboScaleTransform(float Alpha)
@@ -54,6 +72,20 @@ namespace
 		const float T = std::clamp(Alpha, 0.0f, 1.0f);
 		const float SmoothT = T * T * (3.0f - 2.0f * T);
 		const float Scale = 1.0f + 0.12f * SmoothT;
+
+		return MakeScaleTransform(Scale);
+	}
+
+	FString MakeKillMilestoneTextColor(float Alpha)
+	{
+		return MakeTextColor(Alpha, 8, 10, 14, 240, 211, 106);
+	}
+
+	FString MakeKillMilestoneScaleTransform(float Alpha)
+	{
+		const float T = std::clamp(Alpha, 0.0f, 1.0f);
+		const float SmoothT = T * T * (3.0f - 2.0f * T);
+		const float Scale = 1.0f + 0.42f * SmoothT;
 
 		return MakeScaleTransform(Scale);
 	}
@@ -220,8 +252,19 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 	}
 	else if (KillCount > LastHudKillCount)
 	{
+		const int32 LastMilestone = LastHudKillCount / 10;
+		const int32 CurrentMilestone = KillCount / 10;
 		LastHudKillCount = KillCount;
 		KillPopRemaining = KillPopDuration;
+
+		const int32 ReachedMilestone = CurrentMilestone * 10;
+		if (CurrentMilestone > LastMilestone && ReachedMilestone > LastDisplayedKillMilestone)
+		{
+			ActiveKillMilestone = ReachedMilestone;
+			LastDisplayedKillMilestone = ActiveKillMilestone;
+			KillMilestoneElapsed = 0.0f;
+			KillMilestoneRemaining = KillMilestoneDuration;
+		}
 	}
 	else if (KillCount != LastHudKillCount)
 	{
@@ -235,6 +278,29 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 	HudWidget->SetText("kill-count-value", std::to_string(KillCount));
 	HudWidget->SetProperty("kill-count-value", "transform", MakeKillScaleTransform(KillPopAlpha));
 	KillPopRemaining = std::max(0.0f, KillPopRemaining - DeltaTime);
+
+	if (KillMilestoneRemaining > 0.0f && ActiveKillMilestone > 0)
+	{
+		const float FadeAlpha = std::clamp(KillMilestoneRemaining / KillMilestoneDuration, 0.0f, 1.0f);
+		const float PopAlpha = std::clamp(1.0f - (KillMilestoneElapsed / KillMilestonePopDuration), 0.0f, 1.0f);
+		const float ShakeAlpha = std::clamp(1.0f - (KillMilestoneElapsed / KillMilestoneShakeDuration), 0.0f, 1.0f) * FadeAlpha;
+		const float ShakeX = static_cast<float>(std::sin(KillMilestoneElapsed * 78.0f)) * 6.0f * ShakeAlpha;
+		const float ShakeY = static_cast<float>(std::sin(KillMilestoneElapsed * 113.0f + 0.7f)) * 2.5f * ShakeAlpha;
+
+		HudWidget->SetProperty("kill-milestone", "display", "block");
+		HudWidget->SetText("kill-milestone", std::to_string(ActiveKillMilestone) + " K.O.");
+		HudWidget->SetProperty("kill-milestone", "color", MakeKillMilestoneTextColor(FadeAlpha));
+		HudWidget->SetProperty("kill-milestone", "transform", MakeKillMilestoneScaleTransform(PopAlpha));
+		HudWidget->SetProperty("kill-milestone", "margin-left", MakePxValue(KillMilestoneBaseMarginLeft + ShakeX));
+		HudWidget->SetProperty("kill-milestone", "margin-top", MakePxValue(KillMilestoneBaseMarginTop + ShakeY));
+
+		KillMilestoneElapsed += DeltaTime;
+		KillMilestoneRemaining = std::max(0.0f, KillMilestoneRemaining - DeltaTime);
+	}
+	else
+	{
+		HudWidget->SetProperty("kill-milestone", "display", "none");
+	}
 
 	if (Combo > 0 && DisplayAlpha > 0.03f)
 	{

@@ -129,6 +129,23 @@
 			color: #e62a11;
 		}
 
+		#kill-milestone {
+			position: absolute;
+			left: 50%;
+			top: 42%;
+			margin-left: -320px;
+			margin-top: -60px;
+			display: none;
+			width: 640px;
+			height: 120px;
+			line-height: 120px;
+			text-align: center;
+			font-size: 76px;
+			transform: scale(1.0);
+			transform-origin: 50% 50%;
+			color: #f0d36a;
+		}
+
 		#pause-overlay {
 			position: absolute;
 			left: 0;
@@ -176,6 +193,7 @@
 			<div id="kill-count-value">0</div>
 			<div id="kill-ko-label">K.O.</div>
 		</div>
+		<div id="kill-milestone"></div>
 		<div id="pause-overlay">
 			<div id="stop-button">중단하기</div>
 		</div>
