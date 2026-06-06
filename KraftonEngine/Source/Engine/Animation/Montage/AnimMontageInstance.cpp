@@ -98,10 +98,13 @@ void UAnimMontageInstance::EnterBlendingIn(float InBlendInTime)
 
 void UAnimMontageInstance::EnterBlendingOut(float InBlendOutTime)
 {
+    // 현재 weight 에서 이어서 fade — blend-in 도중 교체/중단되면 (cross-fade 콤보 등)
+    // 1.0 으로 리셋 시 weight 가 위로 점프해 한 프레임 포즈가 튄다.
+    const float StartWeight = GetBlendWeight();
     State        = EState::BlendingOut;
-    BlendAlpha   = 1.0f;
+    BlendAlpha   = std::clamp(StartWeight, 0.0f, 1.0f);
     BlendOutTime = std::max(InBlendOutTime, 0.0f);
-    if (BlendOutTime <= 0.0f)
+    if (BlendOutTime <= 0.0f || BlendAlpha <= 0.0f)
     {
         FinishStop();
     }

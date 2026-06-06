@@ -278,23 +278,77 @@ UAnimMontageInstance* UAnimInstance::GetMontageInstance() const
 	return GetMontageInstanceForSlot(DefaultMontageSlot);
 }
 
+TArray<UAnimMontageInstance*>* UAnimInstance::GetFadingMontageInstancesForSlot(FName SlotName)
+{
+	const FName Key = (SlotName == FName::None) ? DefaultMontageSlot : SlotName;
+	for (FMontageSlotEntry& Entry : MontageSlots)
+	{
+		if (Entry.SlotName == Key) return &Entry.FadingInstances;
+	}
+	return nullptr;
+}
+
+const TArray<UAnimMontageInstance*>* UAnimInstance::GetFadingMontageInstancesForSlot(FName SlotName) const
+{
+	const FName Key = (SlotName == FName::None) ? DefaultMontageSlot : SlotName;
+	for (const FMontageSlotEntry& Entry : MontageSlots)
+	{
+		if (Entry.SlotName == Key) return &Entry.FadingInstances;
+	}
+	return nullptr;
+}
+
 void UAnimInstance::PlayMontage(UAnimMontage* Montage, FName StartSection, float PlayRate, float BlendInTime, FName SlotName)
 {
 	if (!Montage) return;
 	const FName Key = (SlotName == FName::None) ? DefaultMontageSlot : SlotName;
 
 	// 기존 slot entry 찾거나 새로 만들기 — 첫 PlayMontage 호출 시 lazy 생성.
-	UAnimMontageInstance* Instance = nullptr;
-	for (FMontageSlotEntry& Entry : MontageSlots)
+	FMontageSlotEntry* Entry = nullptr;
+	for (FMontageSlotEntry& E : MontageSlots)
 	{
-		if (Entry.SlotName == Key) { Instance = Entry.Instance; break; }
+		if (E.SlotName == Key) { Entry = &E; break; }
 	}
-	if (!Instance)
+	if (!Entry)
 	{
-		Instance = UObjectManager::Get().CreateObject<UAnimMontageInstance>(this);
-		MontageSlots.push_back({ Key, Instance });
+		MontageSlots.push_back({ Key, nullptr, {} });
+		Entry = &MontageSlots.back();
 	}
-	Instance->Play(Montage, StartSection, PlayRate, BlendInTime);
+
+	// 새 몽타주의 blend-in 시간 resolve — cross-fade 양쪽 길이를 맞추는 데 사용.
+	const float ResolvedBlendIn = (BlendInTime > 0.0f) ? BlendInTime : Montage->GetBlendInTime();
+
+	// Cross-fade: 활성 몽타주를 즉시 교체하면 이전 포즈가 한 프레임에 사라져 "탁" 튄다
+	// (콤보 체인에서 특히 두드러짐 — 스윙 중 자세/오프셋이 그대로 스냅).
+	// 기존 instance 를 FadingInstances 로 옮겨 새 몽타주의 blend-in 과 같은 길이로
+	// blend-out 시키고, 새 재생은 별도 instance 가 맡는다. Slot 노드가 둘 다 tick/blend.
+	if (Entry->Instance && Entry->Instance->IsActive())
+	{
+		Entry->Instance->Stop(ResolvedBlendIn);
+		Entry->FadingInstances.push_back(Entry->Instance);
+		Entry->Instance = nullptr;
+	}
+
+	// 새 instance — fading 목록에 Inactive 로 끝난 것이 있으면 재사용 (객체 churn 방지).
+	if (!Entry->Instance)
+	{
+		for (size_t i = 0; i < Entry->FadingInstances.size(); ++i)
+		{
+			UAnimMontageInstance* Reusable = Entry->FadingInstances[i];
+			if (Reusable && !Reusable->IsActive())
+			{
+				Entry->Instance = Reusable;
+				Entry->FadingInstances.erase(Entry->FadingInstances.begin() + i);
+				break;
+			}
+		}
+	}
+	if (!Entry->Instance)
+	{
+		Entry->Instance = UObjectManager::Get().CreateObject<UAnimMontageInstance>(this);
+	}
+
+	Entry->Instance->Play(Montage, StartSection, PlayRate, ResolvedBlendIn);
 }
 
 void UAnimInstance::StopMontage(float BlendOutTime, FName SlotName)

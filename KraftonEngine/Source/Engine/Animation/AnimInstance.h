@@ -131,6 +131,11 @@ public:
 	// Slot 별 montage instance 조회. 없으면 nullptr.
 	UAnimMontageInstance* GetMontageInstanceForSlot(FName SlotName) const;
 
+	// Slot 별 blend-out 중인 (교체된) montage instance 목록. 없으면 nullptr.
+	// FAnimNode_Slot 이 tick/blend 후 Inactive 항목을 직접 정리한다.
+	TArray<UAnimMontageInstance*>*       GetFadingMontageInstancesForSlot(FName SlotName);
+	const TArray<UAnimMontageInstance*>* GetFadingMontageInstancesForSlot(FName SlotName) const;
+
 	// Legacy alias — DefaultSlot 의 instance. 새 코드는 GetMontageInstanceForSlot 권장.
 	UAnimMontageInstance* GetMontageInstance() const;
 
@@ -179,6 +184,12 @@ protected:
 	{
 		FName                 SlotName;
 		UAnimMontageInstance* Instance = nullptr;
+
+		// Cross-fade 용 — 새 몽타주가 활성 몽타주를 교체할 때 (콤보 체인 등) 기존 instance
+		// 를 즉시 버리지 않고 여기로 옮겨 blend-out 시킨다. 한 프레임에 이전 포즈가 사라지며
+		// "탁" 튀는 현상 방지 (UE 의 montage cross-fade 와 동일 개념).
+		// Inactive 가 된 instance 는 Slot 이 정리하며, PlayMontage 가 새 instance 필요 시 재사용.
+		TArray<UAnimMontageInstance*> FadingInstances;
 	};
 	TArray<FMontageSlotEntry>     MontageSlots;
 
