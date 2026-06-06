@@ -13,6 +13,7 @@
 #include "Component/Light/LightComponentBase.h"
 #include "Component/Primitive/DecalComponent.h"
 #include "Component/Primitive/HeightFogComponent.h"
+#include "Component/Script/LuaScriptComponent.h"
 #include "GameFramework/AActor.h"
 #include "Asset/AssetRegistry.h"
 #include "Core/Property/ClassProperty.h"
@@ -203,6 +204,266 @@ namespace
 		}
 
 		Changes.clear();
+	}
+
+	bool DrawLuaPropertyResetButton(ULuaScriptComponent* LuaComponent, const FLuaEditorPropertyDescriptor& Descriptor)
+	{
+		const bool bHasOverride = LuaComponent && LuaComponent->HasLuaEditorPropertyOverride(Descriptor.Name);
+		if (!bHasOverride)
+		{
+			ImGui::BeginDisabled();
+		}
+
+		const bool bReset = ImGui::Button("Reset");
+
+		if (!bHasOverride)
+		{
+			ImGui::EndDisabled();
+		}
+
+		if (bReset && LuaComponent)
+		{
+			LuaComponent->ResetLuaEditorPropertyOverride(Descriptor.Name);
+			return true;
+		}
+		return false;
+	}
+
+	bool RenderLuaPropertyValueWidget(ULuaScriptComponent* LuaComponent, const FLuaEditorPropertyDescriptor& Descriptor)
+	{
+		if (!LuaComponent)
+		{
+			return false;
+		}
+
+		bool bChanged = false;
+		FLuaScriptPropertyOverride Value = LuaComponent->GetLuaEditorPropertyValue(Descriptor);
+		const float ResetWidth = ImGui::CalcTextSize("Reset").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		const float Spacing = ImGui::GetStyle().ItemSpacing.x;
+
+		auto CommitValue = [&]()
+		{
+			LuaComponent->SetLuaEditorPropertyValue(Descriptor, Value);
+			bChanged = true;
+		};
+
+		switch (Descriptor.Type)
+		{
+		case ELuaEditorPropertyType::Bool:
+		{
+			if (ImGui::Checkbox("##LuaValue", &Value.BoolValue))
+			{
+				CommitValue();
+			}
+			break;
+		}
+		case ELuaEditorPropertyType::Int:
+		{
+			ImGui::SetNextItemWidth(-(ResetWidth + Spacing));
+			const float Speed = Descriptor.Speed > 0.0f ? Descriptor.Speed : 1.0f;
+			bool bValueChanged = false;
+			if (Descriptor.bHasMin && Descriptor.bHasMax)
+			{
+				bValueChanged = ImGui::DragInt("##LuaValue", &Value.IntValue, Speed, static_cast<int32>(Descriptor.Min), static_cast<int32>(Descriptor.Max));
+			}
+			else
+			{
+				bValueChanged = ImGui::DragInt("##LuaValue", &Value.IntValue, Speed);
+			}
+			if (bValueChanged)
+			{
+				if (Descriptor.bHasMin)
+				{
+					Value.IntValue = std::max(Value.IntValue, static_cast<int32>(Descriptor.Min));
+				}
+				if (Descriptor.bHasMax)
+				{
+					Value.IntValue = std::min(Value.IntValue, static_cast<int32>(Descriptor.Max));
+				}
+				CommitValue();
+			}
+			ImGui::SameLine();
+			bChanged |= DrawLuaPropertyResetButton(LuaComponent, Descriptor);
+			break;
+		}
+		case ELuaEditorPropertyType::Float:
+		{
+			ImGui::SetNextItemWidth(-(ResetWidth + Spacing));
+			const float Speed = Descriptor.Speed > 0.0f ? Descriptor.Speed : 0.1f;
+			bool bValueChanged = false;
+			if (Descriptor.bHasMin && Descriptor.bHasMax)
+			{
+				bValueChanged = ImGui::DragFloat("##LuaValue", &Value.FloatValue, Speed, Descriptor.Min, Descriptor.Max, "%.4f");
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat("##LuaValue", &Value.FloatValue, Speed);
+			}
+			if (bValueChanged)
+			{
+				if (Descriptor.bHasMin)
+				{
+					Value.FloatValue = std::max(Value.FloatValue, Descriptor.Min);
+				}
+				if (Descriptor.bHasMax)
+				{
+					Value.FloatValue = std::min(Value.FloatValue, Descriptor.Max);
+				}
+				CommitValue();
+			}
+			ImGui::SameLine();
+			bChanged |= DrawLuaPropertyResetButton(LuaComponent, Descriptor);
+			break;
+		}
+		case ELuaEditorPropertyType::String:
+		{
+			ImGui::SetNextItemWidth(-(ResetWidth + Spacing));
+			char Buffer[256];
+			strncpy_s(Buffer, sizeof(Buffer), Value.StringValue.c_str(), _TRUNCATE);
+			if (ImGui::InputText("##LuaValue", Buffer, sizeof(Buffer)))
+			{
+				Value.StringValue = Buffer;
+				CommitValue();
+			}
+			ImGui::SameLine();
+			bChanged |= DrawLuaPropertyResetButton(LuaComponent, Descriptor);
+			break;
+		}
+		case ELuaEditorPropertyType::Vector:
+		{
+			ImGui::SetNextItemWidth(-(ResetWidth + Spacing));
+			const float Speed = Descriptor.Speed > 0.0f ? Descriptor.Speed : 0.1f;
+			if (ImGui::DragFloat3("##LuaValue", Value.VectorValue.Data, Speed))
+			{
+				for (float& Component : Value.VectorValue.Data)
+				{
+					if (Descriptor.bHasMin)
+					{
+						Component = std::max(Component, Descriptor.Min);
+					}
+					if (Descriptor.bHasMax)
+					{
+						Component = std::min(Component, Descriptor.Max);
+					}
+				}
+				CommitValue();
+			}
+			ImGui::SameLine();
+			bChanged |= DrawLuaPropertyResetButton(LuaComponent, Descriptor);
+			break;
+		}
+		case ELuaEditorPropertyType::Enum:
+		{
+			ImGui::SetNextItemWidth(-(ResetWidth + Spacing));
+			if (!Descriptor.Options.empty())
+			{
+				const char* Preview = Value.EnumValue.empty() ? "None" : Value.EnumValue.c_str();
+				if (ImGui::BeginCombo("##LuaValue", Preview))
+				{
+					for (const FString& Option : Descriptor.Options)
+					{
+						const bool bSelected = Value.EnumValue == Option;
+						if (ImGui::Selectable(Option.c_str(), bSelected))
+						{
+							Value.EnumValue = Option;
+							Value.EnumType = Descriptor.EnumType;
+							CommitValue();
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
+			}
+			else
+			{
+				char Buffer[256];
+				strncpy_s(Buffer, sizeof(Buffer), Value.EnumValue.c_str(), _TRUNCATE);
+				if (ImGui::InputText("##LuaValue", Buffer, sizeof(Buffer)))
+				{
+					Value.EnumValue = Buffer;
+					Value.EnumType = Descriptor.EnumType;
+					CommitValue();
+				}
+			}
+			ImGui::SameLine();
+			bChanged |= DrawLuaPropertyResetButton(LuaComponent, Descriptor);
+			break;
+		}
+		default:
+			ImGui::TextDisabled("Unsupported");
+			break;
+		}
+
+		if (Descriptor.Type == ELuaEditorPropertyType::Bool)
+		{
+			ImGui::SameLine();
+			bChanged |= DrawLuaPropertyResetButton(LuaComponent, Descriptor);
+		}
+
+		return bChanged;
+	}
+
+	bool RenderLuaScriptEditorProperties(ULuaScriptComponent* LuaComponent)
+	{
+		if (!LuaComponent)
+		{
+			return false;
+		}
+
+		const TArray<FLuaEditorPropertyDescriptor>& Descriptors = LuaComponent->GetLuaEditorPropertyDescriptors();
+		if (Descriptors.empty())
+		{
+			return false;
+		}
+
+		bool bChanged = false;
+
+		ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.22f, 0.22f, 0.22f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.27f, 0.27f, 0.27f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.30f, 0.30f, 0.30f, 1.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 3.0f));
+
+		const bool bOpen = ImGui::CollapsingHeader("Lua Properties", ImGuiTreeNodeFlags_DefaultOpen);
+
+		ImGui::PopStyleVar();
+		ImGui::PopStyleColor(3);
+
+		if (!bOpen)
+		{
+			return false;
+		}
+
+		if (ImGui::BeginTable("##LuaPropertyTable", 2,
+			ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_PadOuterX | ImGuiTableFlags_RowBg))
+		{
+			ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 275.0f);
+			ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+			ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImVec4(0.13f, 0.13f, 0.13f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(0.145f, 0.145f, 0.145f, 1.0f));
+
+			for (const FLuaEditorPropertyDescriptor& Descriptor : Descriptors)
+			{
+				ImGui::TableNextRow();
+				ImGui::PushID(Descriptor.Name.c_str());
+
+				ImGui::TableSetColumnIndex(0);
+				ImGui::TextUnformatted(Descriptor.DisplayName.empty() ? Descriptor.Name.c_str() : Descriptor.DisplayName.c_str());
+
+				ImGui::TableSetColumnIndex(1);
+				bChanged |= RenderLuaPropertyValueWidget(LuaComponent, Descriptor);
+
+				ImGui::PopID();
+			}
+
+			ImGui::EndTable();
+			ImGui::PopStyleColor(2);
+		}
+
+		return bChanged;
 	}
 
 	bool CopyPropertyValue(const FPropertyValue& SrcValue, FPropertyValue& DstValue)
@@ -1158,6 +1419,14 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 
 			ImGui::EndTable();
 			ImGui::PopStyleColor(2);
+		}
+	}
+
+	if (ULuaScriptComponent* LuaComponent = Cast<ULuaScriptComponent>(SelectedComponent))
+	{
+		if (RenderLuaScriptEditorProperties(LuaComponent))
+		{
+			bAnyChanged = true;
 		}
 	}
 

@@ -1,19 +1,21 @@
-bEnabled = true
-Team = EUnitTeam.Enemy
-CombatType = EUnitCombatType.Melee
-SpawnInterval = 2.0
-SpawnCountPerWave = 5
-MaxAliveUnits = 50
-SpawnRadius = 3.0
-InitialSpawnCount = 10
-bDespawnOwnedUnitsOnDisable = false
-bDespawnOwnedUnitsOnEndPlay = false
-bDebugLog = false
+EditorProperties = {
+    bEnabled = { type = "bool", default = true, display = "Enabled" },
+    Team = { type = "enum", enum = "EUnitTeam", options = { "Ally", "Enemy" }, default = "Enemy" },
+    CombatType = { type = "enum", enum = "EUnitCombatType", options = { "Melee", "Ranged" }, default = "Melee" },
+    SpawnInterval = { type = "float", default = 2.0, min = 0.0, speed = 0.1, display = "Spawn Interval" },
+    SpawnCountPerWave = { type = "int", default = 5, min = 0, speed = 1, display = "Spawn Count Per Wave" },
+    MaxAliveUnits = { type = "int", default = 50, min = 0, speed = 1, display = "Max Alive Units" },
+    SpawnRadius = { type = "float", default = 3.0, min = 0.0, speed = 0.1, display = "Spawn Radius" },
+    InitialSpawnCount = { type = "int", default = 10, min = 0, speed = 1, display = "Initial Spawn Count" },
+    bDespawnOwnedUnitsOnDisable = { type = "bool", default = false, display = "Despawn Owned Units On Disable" },
+    bDespawnOwnedUnitsOnEndPlay = { type = "bool", default = false, display = "Despawn Owned Units On EndPlay" },
+    bDebugLog = { type = "bool", default = false, display = "Debug Log" },
+}
 
 local manager = nil
 local ownedHandles = {}
 local spawnTimer = 0.0
-local bLastEnabled = bEnabled
+local bLastEnabled = true
 
 local function ClampNonNegativeNumber(value)
     value = tonumber(value) or 0.0
