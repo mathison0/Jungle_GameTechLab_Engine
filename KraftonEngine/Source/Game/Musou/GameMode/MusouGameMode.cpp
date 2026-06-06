@@ -256,6 +256,7 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 
 	const int32 Combo = MusouState->GetCombo();
 	const int32 KillCount = MusouState->GetKillCount();
+	const int64 Score = MusouState->GetScore();
 	const float ComboWindow = MusouState->ComboWindow;
 	const float ComboRemaining = MusouState->GetComboRemaining();
 	const float DisplayAlpha = (Combo > 0 && ComboWindow > 0.0f)
@@ -274,6 +275,7 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 		}
 	}
 	HudWidget->SetAttribute("hp-bar", "value", PlayerHealthRatio);
+	HudWidget->SetText("score-counter", FString("score: ") + std::to_string(static_cast<long long>(Score)));
 
 	if (!bKillHudInitialized)
 	{
