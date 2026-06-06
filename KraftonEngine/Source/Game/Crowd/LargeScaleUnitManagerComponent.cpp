@@ -1,4 +1,4 @@
-#include "Game/Crowd/LargeScaleUnitManagerComponent.h"
+﻿#include "Game/Crowd/LargeScaleUnitManagerComponent.h"
 
 #include "Debug/DrawDebugHelpers.h"
 #include "Object/FName.h"
@@ -302,6 +302,18 @@ void ULargeScaleUnitManagerComponent::HandleAttackEvent(const FMusouAttackEvent&
 		if (!Unit.bAlive || Unit.Team != EUnitTeam::Enemy || !Event.IsInVolume(Unit.Position))
 		{
 			continue;
+		}
+
+		FMusouHitEvent Hit;
+		Hit.Attack = &Event;
+		Hit.UnitHandle = FUnitHandle{ UnitIndex, Unit.Generation };
+		Hit.HitLocation = Unit.Position;
+		Hit.HitDirection = NormalizedXY(Unit.Position - Event.Origin);
+		Hit.Damage = Event.Damage;
+
+		if (AMusouGameMode* GameMode = GetMusouGameModeFor(this))
+		{
+			GameMode->NotifyHitConfirmed(Hit);
 		}
 
 		DamageEvents.push_back({

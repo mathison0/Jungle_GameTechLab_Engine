@@ -21,15 +21,40 @@ void FSpriteParticleGeometry::Clear()
 
 void FSpriteParticleGeometry::AddParticleQuad(const FBaseParticle& Particle, const FVector& CameraRight, const FVector& CameraUp)
 {
-	AddParticleQuad(Particle, CameraRight, CameraUp, { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 });
+	AddParticleQuad(Particle, CameraRight, CameraUp, false, 0.0f, { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 });
 }
 
 void FSpriteParticleGeometry::AddParticleQuad(const FBaseParticle& Particle, const FVector& CameraRight, const FVector& CameraUp,
 	const FVector2& TopLeftUV, const FVector2& TopRightUV, const FVector2& BottomLeftUV, const FVector2& BottomRightUV)
 {
+	AddParticleQuad(Particle, CameraRight, CameraUp, false, 0.0f, TopLeftUV, TopRightUV, BottomLeftUV, BottomRightUV);
+}
+
+void FSpriteParticleGeometry::AddParticleQuad(const FBaseParticle& Particle, const FVector& CameraRight, const FVector& CameraUp,
+	bool bVelocityScreenAligned, float MinVelocitySquared,
+	const FVector2& TopLeftUV, const FVector2& TopRightUV, const FVector2& BottomLeftUV, const FVector2& BottomRightUV)
+{
 	const FVector Center = Particle.Position;
-	const FVector HalfRight = CameraRight * (Particle.Size.X * 0.5f);
-	const FVector HalfUp = CameraUp * (Particle.Size.Y * 0.5f);
+	FVector AxisRight = CameraRight;
+	FVector AxisUp = CameraUp;
+
+	if (bVelocityScreenAligned && Particle.Velocity.LengthSquared() >= MinVelocitySquared)
+	{
+		const float ScreenVelocityX = Particle.Velocity.Dot(CameraRight);
+		const float ScreenVelocityY = Particle.Velocity.Dot(CameraUp);
+		const float ScreenVelocityLengthSquared = ScreenVelocityX * ScreenVelocityX + ScreenVelocityY * ScreenVelocityY;
+
+		if (ScreenVelocityLengthSquared >= MinVelocitySquared)
+		{
+			AxisRight = CameraRight * ScreenVelocityX + CameraUp * ScreenVelocityY;
+			AxisRight.Normalize();
+			AxisUp = CameraRight * -ScreenVelocityY + CameraUp * ScreenVelocityX;
+			AxisUp.Normalize();
+		}
+	}
+
+	const FVector HalfRight = AxisRight * (Particle.Size.X * 0.5f);
+	const FVector HalfUp = AxisUp * (Particle.Size.Y * 0.5f);
 
 	const FVector TopLeft = Center - HalfRight + HalfUp;
 	const FVector TopRight = Center + HalfRight + HalfUp;

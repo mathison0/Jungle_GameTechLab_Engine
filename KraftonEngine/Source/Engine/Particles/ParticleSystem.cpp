@@ -11,6 +11,26 @@
 
 namespace
 {
+	constexpr uint32 ParticleSystemExtensionMagic = 0x58465350; // PSFX
+	constexpr uint32 ParticleSystemExtensionVersion = 1;
+
+	struct FParticleSpriteFacingExtensionEntry
+	{
+		uint32 EmitterIndex = 0;
+		uint32 LODIndex = 0;
+		int32 FacingMode = static_cast<int32>(EParticleSpriteFacingMode::CameraFacing);
+		float VelocityFacingMinSpeed = 1.0f;
+
+		friend FArchive& operator<<(FArchive& Ar, FParticleSpriteFacingExtensionEntry& Entry)
+		{
+			Ar << Entry.EmitterIndex;
+			Ar << Entry.LODIndex;
+			Ar << Entry.FacingMode;
+			Ar << Entry.VelocityFacingMinSpeed;
+			return Ar;
+		}
+	};
+
 	UParticleModuleRequired* CreateDefaultRequiredModule(float EmitterDuration, bool bLooping)
 	{
 		UParticleModuleRequired* RequiredModule = UObjectManager::Get().CreateObject<UParticleModuleRequired>();
@@ -177,6 +197,103 @@ namespace
 		}
 		SharedLODLevel->SetAllModuleEditStates(EParticleModuleEditState::Shared);
 		return SharedLODLevel;
+	}
+
+	void SerializeParticleSystemExtension(FArchive& Ar, TArray<UParticleEmitter*>& Emitters)
+	{
+		if (Ar.IsLoading())
+		{
+			if (Ar.AtEnd())
+			{
+				return;
+			}
+
+			uint32 Magic = 0;
+			uint32 Version = 0;
+			uint32 EntryCount = 0;
+			Ar << Magic;
+			Ar << Version;
+			Ar << EntryCount;
+
+			if (Magic != ParticleSystemExtensionMagic || Version != ParticleSystemExtensionVersion)
+			{
+				return;
+			}
+
+			for (uint32 EntryIndex = 0; EntryIndex < EntryCount; ++EntryIndex)
+			{
+				FParticleSpriteFacingExtensionEntry Entry;
+				Ar << Entry;
+
+				if (Entry.EmitterIndex >= Emitters.size())
+				{
+					continue;
+				}
+
+				UParticleEmitter* Emitter = Emitters[Entry.EmitterIndex];
+				if (!Emitter || Entry.LODIndex >= Emitter->GetLODLevels().size())
+				{
+					continue;
+				}
+
+				UParticleLODLevel* LODLevel = Emitter->GetLODLevel(static_cast<int32>(Entry.LODIndex));
+				UParticleModuleRequired* RequiredModule = LODLevel
+					? LODLevel->FindResolvedModule<UParticleModuleRequired>(Emitter)
+					: nullptr;
+				if (!RequiredModule)
+				{
+					continue;
+				}
+
+				RequiredModule->SpriteFacingMode = Entry.FacingMode == static_cast<int32>(EParticleSpriteFacingMode::VelocityScreenAligned)
+					? EParticleSpriteFacingMode::VelocityScreenAligned
+					: EParticleSpriteFacingMode::CameraFacing;
+				RequiredModule->VelocityFacingMinSpeed = Entry.VelocityFacingMinSpeed;
+			}
+			return;
+		}
+
+		uint32 Magic = ParticleSystemExtensionMagic;
+		uint32 Version = ParticleSystemExtensionVersion;
+		TArray<FParticleSpriteFacingExtensionEntry> Entries;
+
+		for (uint32 EmitterIndex = 0; EmitterIndex < static_cast<uint32>(Emitters.size()); ++EmitterIndex)
+		{
+			UParticleEmitter* Emitter = Emitters[EmitterIndex];
+			if (!Emitter)
+			{
+				continue;
+			}
+
+			const TArray<UParticleLODLevel*>& LODLevels = Emitter->GetLODLevels();
+			for (uint32 LODIndex = 0; LODIndex < static_cast<uint32>(LODLevels.size()); ++LODIndex)
+			{
+				UParticleLODLevel* LODLevel = LODLevels[LODIndex];
+				UParticleModuleRequired* RequiredModule = LODLevel
+					? LODLevel->FindResolvedModule<UParticleModuleRequired>(Emitter)
+					: nullptr;
+				if (!RequiredModule)
+				{
+					continue;
+				}
+
+				FParticleSpriteFacingExtensionEntry Entry;
+				Entry.EmitterIndex = EmitterIndex;
+				Entry.LODIndex = LODIndex;
+				Entry.FacingMode = static_cast<int32>(RequiredModule->SpriteFacingMode);
+				Entry.VelocityFacingMinSpeed = RequiredModule->VelocityFacingMinSpeed;
+				Entries.push_back(Entry);
+			}
+		}
+
+		uint32 EntryCount = static_cast<uint32>(Entries.size());
+		Ar << Magic;
+		Ar << Version;
+		Ar << EntryCount;
+		for (FParticleSpriteFacingExtensionEntry& Entry : Entries)
+		{
+			Ar << Entry;
+		}
 	}
 }
 
@@ -585,6 +702,8 @@ void UParticleSystem::Serialize(FArchive& Ar)
 	{
 		NormalizeLODLevels();
 	}
+
+	SerializeParticleSystemExtension(Ar, Emitters);
 }
 
 void UParticleSystem::AddReferencedObjects(FReferenceCollector& Collector)

@@ -208,6 +208,11 @@ void AMusouGameMode::NotifyAttackHits(const FMusouAttackEvent& Event, int32 HitC
 	}
 }
 
+void AMusouGameMode::NotifyHitConfirmed(const FMusouHitEvent& Event)
+{
+	OnHitConfirmed.Broadcast(Event);
+}
+
 void AMusouGameMode::NotifyEnemyKilled(APawn* Killed)
 {
 	if (AMusouGameState* MusouState = GetMusouGameState())

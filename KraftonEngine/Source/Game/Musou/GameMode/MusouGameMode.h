@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "GameFramework/GameMode/GameModeBase.h"
 #include "Core/Delegate.h"
 #include "Game/Musou/Combat/AttackTypes.h"
+#include "Game/Musou/Combat/HitTypes.h"
 
 #include "Source/Game/Musou/GameMode/MusouGameMode.generated.h"
 
@@ -12,6 +13,9 @@ class UUserWidget;
 
 // 공격 발동 브로드캐스트 — 군체 Manager / 보스 BattleComponent가 구독한다.
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMusouAttackPerformed, const FMusouAttackEvent&);
+
+// Hit Event
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnMusouHitConfirmed, const FMusouHitEvent&);
 
 // ============================================================
 // AMusouGameMode — 무쌍 게임 룰의 주체 + 전투 이벤트 허브
@@ -45,11 +49,15 @@ public:
 	// EndPlay에서 핸들로 Remove.
 	FOnMusouAttackPerformed OnAttackPerformed;
 
+	FOnMusouHitConfirmed OnHitConfirmed;
+
 	// AnimNotify_MusouAttack이 호출 — 구독자 전체에 공격 이벤트 발행.
 	void BroadcastAttack(const FMusouAttackEvent& Event);
 
 	// 수신자가 히트 결과 회신 — 공격자 히트스탑(히트 수 비례) 등 타격감 피드백.
 	void NotifyAttackHits(const FMusouAttackEvent& Event, int32 HitCount);
+
+	void NotifyHitConfirmed(const FMusouHitEvent& Event);
 
 	// --- 게임 룰 이벤트 진입점 ---
 	// 적 처치 시 호출 (적 사망 처리 코드에서). GameState에 킬/콤보 누적.

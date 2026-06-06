@@ -11,6 +11,13 @@
 
 class UMaterialInterface;
 
+UENUM()
+enum class EParticleSpriteFacingMode : uint8
+{
+	CameraFacing,
+	VelocityScreenAligned,
+};
+
 UCLASS()
 class UParticleModule : public UObject
 {
@@ -52,6 +59,12 @@ public:
 
 	UPROPERTY(Edit, Save, Category="Particle|Required|SubUV", DisplayName="Sub Images Vertical", Min=1.0f, Speed=1.0f)
 	int32 SubImagesVertical = 1;
+
+	UPROPERTY(Edit, Category="Particle|Required|Sprite", DisplayName="Sprite Facing Mode", Enum=EParticleSpriteFacingMode)
+	EParticleSpriteFacingMode SpriteFacingMode = EParticleSpriteFacingMode::CameraFacing;
+
+	UPROPERTY(Edit, Category="Particle|Required|Sprite", DisplayName="Velocity Facing Min Speed", Min=0.0f, Speed=1.0f)
+	float VelocityFacingMinSpeed = 1.0f;
 };
 
 UCLASS()

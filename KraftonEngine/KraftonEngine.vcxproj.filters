@@ -1961,6 +1961,7 @@
     <ClCompile Include="Source\Game\Musou\Effect\SlashEffectActor.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\RefractionPass.cpp" />
+    <ClCompile Include="Source\Game\Musou\Combat\MusouHitEffectComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -5818,6 +5819,8 @@
     <ClInclude Include="Source\Game\Musou\Effect\SlashEffectActor.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.h" />
     <ClInclude Include="Source\Engine\Render\RenderPass\RefractionPass.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\HitTypes.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\MusouHitEffectComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />

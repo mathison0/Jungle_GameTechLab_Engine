@@ -190,6 +190,10 @@ uint32 FDynamicSpriteEmitterDataBase::BuildDynamicVertexData(const FFrameContext
 	const UParticleModuleRequired* RequiredModule = Source.Instance->GetRequiredModule();
 	const int32 SubImagesHorizontal = RequiredModule ? RequiredModule->SubImagesHorizontal : 1;
 	const int32 SubImagesVertical = RequiredModule ? RequiredModule->SubImagesVertical : 1;
+	const bool bVelocityScreenAligned = RequiredModule
+		&& RequiredModule->SpriteFacingMode == EParticleSpriteFacingMode::VelocityScreenAligned;
+	const float VelocityFacingMinSpeed = RequiredModule ? RequiredModule->VelocityFacingMinSpeed : 1.0f;
+	const float VelocityFacingMinSpeedSquared = VelocityFacingMinSpeed * VelocityFacingMinSpeed;
 	for (uint16 ParticleSlot : RenderOrder)
 	{
 		const FBaseParticle& Particle = Data.GetParticle(ParticleSlot);
@@ -198,7 +202,16 @@ uint32 FDynamicSpriteEmitterDataBase::BuildDynamicVertexData(const FFrameContext
 		FVector2 BottomLeftUV;
 		FVector2 BottomRightUV;
 		GetParticleSubUVs(Particle, SubImagesHorizontal, SubImagesVertical, TopLeftUV, TopRightUV, BottomLeftUV, BottomRightUV);
-		OutGeometry.AddParticleQuad(Particle, Frame.CameraRight, Frame.CameraUp, TopLeftUV, TopRightUV, BottomLeftUV, BottomRightUV);
+		OutGeometry.AddParticleQuad(
+			Particle,
+			Frame.CameraRight,
+			Frame.CameraUp,
+			bVelocityScreenAligned,
+			VelocityFacingMinSpeedSquared,
+			TopLeftUV,
+			TopRightUV,
+			BottomLeftUV,
+			BottomRightUV);
 	}
 
 	return OutGeometry.GetIndexCount() - FirstIndex;

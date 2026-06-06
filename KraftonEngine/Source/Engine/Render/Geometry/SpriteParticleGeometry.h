@@ -18,6 +18,9 @@ public:
 	void AddParticleQuad(const FBaseParticle& Particle, const FVector& CameraRight, const FVector& CameraUp);
 	void AddParticleQuad(const FBaseParticle& Particle, const FVector& CameraRight, const FVector& CameraUp,
 		const FVector2& TopLeftUV, const FVector2& TopRightUV, const FVector2& BottomLeftUV, const FVector2& BottomRightUV);
+	void AddParticleQuad(const FBaseParticle& Particle, const FVector& CameraRight, const FVector& CameraUp,
+		bool bVelocityScreenAligned, float MinVelocitySquared,
+		const FVector2& TopLeftUV, const FVector2& TopRightUV, const FVector2& BottomLeftUV, const FVector2& BottomRightUV);
 	void AddQuad(const FVector& TopLeft, const FVector& TopRight, const FVector& BottomLeft, const FVector& BottomRight,
 		const FVector4& Color, const FVector2& TopLeftUV, const FVector2& TopRightUV, const FVector2& BottomLeftUV, const FVector2& BottomRightUV);
 	void AddQuad(const FVector& TopLeft, const FVector& TopRight, const FVector& BottomLeft, const FVector& BottomRight,
