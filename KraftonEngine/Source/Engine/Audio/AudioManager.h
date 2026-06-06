@@ -15,6 +15,7 @@ public:
 
 	bool LoadAudio(const FString& Key, const FString& Path, bool bLoop = false);
 	void PlayAudio(const FString& Key, float Volume = 1.0f);
+	void PlaySfxLimited(const FString& Key, float Volume = 1.0f, int32 MaxConcurrent = 4, float MinIntervalSeconds = 0.0f);
 	void PlayBGM(const FString& Key, float Volume = 1.0f);
 	void StopBGM();
 	void PlayLoop(const FString& Key, const FString& LoopName, float Volume = 1.0f, float Pitch = 1.0f);
@@ -27,8 +28,17 @@ public:
 	void SetMasterVolume(float Volume);
 
 private:
+	struct FManagedSfxChannel
+	{
+		FMOD::Channel* Channel = nullptr;
+		double StartTimeSeconds = 0.0;
+	};
+
 	void LoadDefaultAudios();
 	FMOD::Channel* FindPlayingLoopChannel(const FString& LoopName);
+	void CleanupManagedSfxChannels(const FString& Key);
+	void StopManagedSfxChannels(const FString& Key);
+	double GetAudioTimeSeconds() const;
 
 private:
 	FAudioManager() = default;
@@ -39,5 +49,8 @@ private:
 	FMOD::Channel* BGMChannel = nullptr;
 
 	TMap<FString, FMOD::Sound*> Audios;
+	TMap<FString, FString> AudioPaths;
 	TMap<FString, FMOD::Channel*> LoopChannels;
+	TMap<FString, TArray<FManagedSfxChannel>> ManagedSfxChannels;
+	TMap<FString, double> LastManagedSfxPlayTimes;
 };
