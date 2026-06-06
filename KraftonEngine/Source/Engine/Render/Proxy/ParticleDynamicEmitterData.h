@@ -60,6 +60,15 @@ struct FDynamicRibbonEmitterData : public FDynamicSpriteEmitterDataBase
 	uint32 BuildDynamicVertexData(const FFrameContext& Frame, FSpriteParticleGeometry& OutGeometry) const;
 };
 
+struct FDynamicTrailEmitterData : public FDynamicSpriteEmitterDataBase
+{
+	FDynamicTrailEmitterData(int32 InEmitterIndex, const FDynamicEmitterReplayDataBase& InSource);
+
+	int32 GetDynamicVertexStride() const override;
+	void SortParticleRenderOrder(const FFrameContext& Frame, TArray<uint16>& RenderOrder) const override;
+	uint32 BuildDynamicVertexData(const FFrameContext& Frame, FSpriteParticleGeometry& OutGeometry) const;
+};
+
 struct FDynamicBeamEmitterData : public FDynamicSpriteEmitterDataBase
 {
 	FDynamicBeamEmitterData(int32 InEmitterIndex, const FDynamicEmitterReplayDataBase& InSource);

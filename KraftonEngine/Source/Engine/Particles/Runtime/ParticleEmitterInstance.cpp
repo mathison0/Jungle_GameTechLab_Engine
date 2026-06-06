@@ -127,6 +127,54 @@ void FParticleEmitterInstance::Reset()
 	bSpawningEnabled = true;
 }
 
+int32 FParticleEmitterInstance::EmitBurst(int32 Count)
+{
+	if (!ParticleData || Count <= 0)
+	{
+		return 0;
+	}
+
+	int32 SpawnedCount = 0;
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		FBaseParticle* Particle = SpawnParticle();
+		if (!Particle)
+		{
+			break;
+		}
+
+		InitializeParticle(*Particle);
+		++ParticleCounter;
+		++SpawnedCount;
+	}
+
+	return SpawnedCount;
+}
+
+int32 FParticleEmitterInstance::EmitBurst(const TArray<FParticleBurstSpawn>& SpawnInfos)
+{
+	if (!ParticleData || SpawnInfos.empty())
+	{
+		return 0;
+	}
+
+	int32 SpawnedCount = 0;
+	for (const FParticleBurstSpawn& SpawnInfo : SpawnInfos)
+	{
+		FBaseParticle* Particle = SpawnParticle();
+		if (!Particle)
+		{
+			break;
+		}
+
+		InitializeParticle(*Particle, SpawnInfo);
+		++ParticleCounter;
+		++SpawnedCount;
+	}
+
+	return SpawnedCount;
+}
+
 int32 FParticleEmitterInstance::SpawnParticles(float DeltaTime)
 {
 	if (!bSpawningEnabled || DeltaTime <= 0.0f || ActiveParticles >= MaxActiveParticles)
@@ -195,6 +243,32 @@ void FParticleEmitterInstance::InitializeParticle(FBaseParticle& Particle, const
 	Particle.bAlive = true;
 
 	RunSpawnModules(Particle, EmitterTime);
+
+	if (bGenerateSpawnEvents)
+	{
+		QueueParticleEvent(EParticleEventType::Spawn, SpawnEventName, Particle, static_cast<int32>(Particle.FrameIndex));
+	}
+}
+
+void FParticleEmitterInstance::InitializeParticle(FBaseParticle& Particle, const FParticleBurstSpawn& SpawnInfo)
+{
+	Particle.Position = SpawnInfo.Location;
+	Particle.OldPosition = SpawnInfo.Location;
+	Particle.Velocity = DefaultVelocity;
+	Particle.Size = DefaultSize;
+	Particle.Rotation = 0.0f;
+	Particle.RotationRate = 0.0f;
+	Particle.Color = DefaultColor;
+	Particle.Lifetime = DefaultLifetime;
+	Particle.Age = 0.0f;
+	Particle.RelativeTime = 0.0f;
+	Particle.OneOverMaxLifetime = DefaultLifetime > 0.0f ? 1.0f / DefaultLifetime : 1.0f;
+	Particle.RandomSeed = FDistributionSampling::RandomSeed();
+	Particle.FrameIndex = ParticleCounter;
+	Particle.bAlive = true;
+
+	RunSpawnModules(Particle, EmitterTime);
+	ApplyBurstSpawnOverrides(Particle, SpawnInfo);
 
 	if (bGenerateSpawnEvents)
 	{
@@ -315,6 +389,30 @@ void FParticleEmitterInstance::ReceiveParticleEvent(const FParticleCollisionEven
 			Receiver->ReceiveEvent(this, Event);
 		}
 	}
+}
+
+void FParticleEmitterInstance::ApplyBurstSpawnOverrides(FBaseParticle& Particle, const FParticleBurstSpawn& SpawnInfo)
+{
+	Particle.Position = SpawnInfo.Location;
+	Particle.OldPosition = SpawnInfo.Location;
+	Particle.Velocity = SpawnInfo.Velocity;
+
+	UParticleModuleTypeDataTrail* TrailTypeData = CurrentLODLevel
+		? Cast<UParticleModuleTypeDataTrail>(CurrentLODLevel->ResolveTypeDataModule(SpriteTemplate))
+		: nullptr;
+	if (!TrailTypeData || PayloadOffset < 0 || PayloadOffset + static_cast<int32>(sizeof(FTrailParticlePayload)) > ParticleStride)
+	{
+		return;
+	}
+
+	FTrailParticlePayload* Payload = reinterpret_cast<FTrailParticlePayload*>(reinterpret_cast<uint8*>(&Particle) + PayloadOffset);
+	const float Width = Payload->Width;
+	*Payload = FTrailParticlePayload();
+	Payload->Positions[0] = SpawnInfo.Location;
+	Payload->Ages[0] = 0.0f;
+	Payload->Distances[0] = 0.0f;
+	Payload->SampleCount = 1;
+	Payload->Width = Width;
 }
 
 void FParticleEmitterInstance::AllocateParticleData(int32 InMaxActiveParticles)

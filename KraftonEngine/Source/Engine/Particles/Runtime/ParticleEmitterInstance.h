@@ -19,6 +19,8 @@ struct FParticleEmitterInstance
 	virtual void Init(UParticleEmitter* InTemplate, UParticleSystemComponent* InComponent);
 	virtual void Tick(float DeltaTime);
 	virtual void Reset();
+	int32 EmitBurst(int32 Count);
+	int32 EmitBurst(const TArray<FParticleBurstSpawn>& SpawnInfos);
 	void SetLODLevelIndex(int32 LODLevelIndex);
 
 	bool IsActive() const { return bActive; }
@@ -118,6 +120,7 @@ protected:
 	virtual int32 SpawnParticles(float DeltaTime);
 	virtual void InitializeParticle(FBaseParticle& Particle);
 	void InitializeParticle(FBaseParticle& Particle, const FVector& SpawnLocation);
+	void InitializeParticle(FBaseParticle& Particle, const FParticleBurstSpawn& SpawnInfo);
 	virtual void UpdateParticles(float DeltaTime);
 	virtual void KillParticle(int32 ParticleIndex);
 	void CompactDeadParticles();
@@ -133,6 +136,7 @@ protected:
 	UParticleModuleSpawn* GetSpawnModule() const;
 	bool CanUseLODLevel(const UParticleLODLevel* LODLevel) const;
 	void RefreshEventGeneratorFlags();
+	void ApplyBurstSpawnOverrides(FBaseParticle& Particle, const FParticleBurstSpawn& SpawnInfo);
 
 	void RunSpawnModules(FBaseParticle& Particle, float SpawnTime);
 	void RunUpdateModules(float DeltaTime);

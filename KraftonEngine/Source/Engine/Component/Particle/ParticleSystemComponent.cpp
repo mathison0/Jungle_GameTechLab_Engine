@@ -40,6 +40,54 @@ void UParticleSystemComponent::SetEmitterSpawningEnabled(bool bEnabled)
 	}
 }
 
+int32 UParticleSystemComponent::EmitBurst(int32 Count)
+{
+	if (Count <= 0)
+	{
+		return 0;
+	}
+
+	int32 SpawnedCount = 0;
+	for (FParticleEmitterInstance* Instance : EmitterInstances)
+	{
+		if (Instance && Instance->IsActive())
+		{
+			SpawnedCount += Instance->EmitBurst(Count);
+		}
+	}
+
+	if (SpawnedCount > 0)
+	{
+		MarkProxyDirty(EDirtyFlag::Mesh);
+	}
+
+	return SpawnedCount;
+}
+
+int32 UParticleSystemComponent::EmitBurst(const TArray<FParticleBurstSpawn>& SpawnInfos)
+{
+	if (SpawnInfos.empty())
+	{
+		return 0;
+	}
+
+	int32 SpawnedCount = 0;
+	for (FParticleEmitterInstance* Instance : EmitterInstances)
+	{
+		if (Instance && Instance->IsActive())
+		{
+			SpawnedCount += Instance->EmitBurst(SpawnInfos);
+		}
+	}
+
+	if (SpawnedCount > 0)
+	{
+		MarkProxyDirty(EDirtyFlag::Mesh);
+	}
+
+	return SpawnedCount;
+}
+
 void UParticleSystemComponent::SetVectorParameter(const FName& ParameterName, const FVector& Value)
 {
 	if (!ParameterName.IsValid() || ParameterName == FName::None)

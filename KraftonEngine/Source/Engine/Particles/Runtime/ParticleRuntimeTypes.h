@@ -29,6 +29,12 @@ struct FBaseParticle
 	bool bAlive = false;
 };
 
+struct FParticleBurstSpawn
+{
+	FVector Location = FVector::ZeroVector;
+	FVector Velocity = FVector::ZeroVector;
+};
+
 struct FParticleDataContainer
 {
 	FParticleDataContainer() = default;

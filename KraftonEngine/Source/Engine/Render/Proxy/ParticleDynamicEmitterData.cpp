@@ -62,6 +62,22 @@ namespace
 		return Cast<UParticleModuleTypeDataBeam>(LODLevel->ResolveTypeDataModule(Instance->SpriteTemplate));
 	}
 
+	const UParticleModuleTypeDataTrail* GetTrailTypeData(const FParticleEmitterInstance* Instance)
+	{
+		if (!Instance)
+		{
+			return nullptr;
+		}
+
+		const UParticleLODLevel* LODLevel = Instance->GetCurrentLODLevel();
+		if (!LODLevel)
+		{
+			return nullptr;
+		}
+
+		return Cast<UParticleModuleTypeDataTrail>(LODLevel->ResolveTypeDataModule(Instance->SpriteTemplate));
+	}
+
 	FVector ApplyBeamNoise(const FBeamParticlePayload& Payload, const FFrameContext& Frame, const FVector& Position, float T)
 	{
 		if (T <= 0.0f || T >= 1.0f || Payload.NoiseFrequency <= 0.0f || Payload.NoiseRange.LengthSquared() <= 0.0001f)
@@ -424,6 +440,191 @@ uint32 FDynamicRibbonEmitterData::BuildDynamicVertexData(const FFrameContext& Fr
 	}
 
 	FlushRibbonPoints(Points);
+
+	return OutGeometry.GetIndexCount() - FirstIndex;
+}
+
+FDynamicTrailEmitterData::FDynamicTrailEmitterData(int32 InEmitterIndex, const FDynamicEmitterReplayDataBase& InSource)
+	: FDynamicSpriteEmitterDataBase(InEmitterIndex, InSource, true)
+{
+}
+
+int32 FDynamicTrailEmitterData::GetDynamicVertexStride() const
+{
+	return sizeof(FParticleSpriteVertex);
+}
+
+void FDynamicTrailEmitterData::SortParticleRenderOrder(const FFrameContext& Frame, TArray<uint16>& RenderOrder) const
+{
+	FDynamicSpriteEmitterDataBase::SortParticleRenderOrder(Frame, RenderOrder);
+}
+
+uint32 FDynamicTrailEmitterData::BuildDynamicVertexData(const FFrameContext& Frame, FSpriteParticleGeometry& OutGeometry) const
+{
+	if (!Source.Instance) return 0;
+
+	TArray<uint16> RenderOrder;
+	GatherAliveParticleIndices(RenderOrder);
+	SortParticleRenderOrder(Frame, RenderOrder);
+
+	if (RenderOrder.empty()) return 0;
+
+	const uint32 FirstIndex = OutGeometry.GetIndexCount();
+	const FParticleDataContainer& Data = Source.Instance->GetParticleDataContainer();
+	const UParticleModuleRequired* RequiredModule = Source.Instance->GetRequiredModule();
+	const int32 SubImagesHorizontal = RequiredModule ? RequiredModule->SubImagesHorizontal : 1;
+	const int32 SubImagesVertical = RequiredModule ? RequiredModule->SubImagesVertical : 1;
+	const bool bVelocityScreenAligned = RequiredModule
+		&& RequiredModule->SpriteFacingMode == EParticleSpriteFacingMode::VelocityScreenAligned;
+	const float VelocityFacingMinSpeed = RequiredModule ? RequiredModule->VelocityFacingMinSpeed : 1.0f;
+	const float VelocityFacingMinSpeedSquared = VelocityFacingMinSpeed * VelocityFacingMinSpeed;
+
+	const UParticleModuleTypeDataTrail* TrailTypeData = GetTrailTypeData(Source.Instance);
+	const float TrailLifetime = TrailTypeData ? (std::max)(TrailTypeData->TrailLifetime, 0.01f) : 0.25f;
+	const float TextureTileDistance = TrailTypeData ? (std::max)(TrailTypeData->TextureTileDistance, 1.0f) : 100.0f;
+
+	for (uint16 ParticleSlot : RenderOrder)
+	{
+		const FBaseParticle& Particle = Data.GetParticle(ParticleSlot);
+		const FTrailParticlePayload* Payload = GetParticlePayloadBySlot<FTrailParticlePayload>(Source.Instance, ParticleSlot);
+
+		if (Payload && Payload->SampleCount >= 1)
+		{
+			struct FTrailRenderPoint
+			{
+				FVector Position;
+				float Age = 0.0f;
+				float Distance = 0.0f;
+			};
+
+			TArray<FTrailRenderPoint> TrailPoints;
+			TrailPoints.reserve(Payload->SampleCount + 1);
+
+			for (int32 SampleIndex = 0; SampleIndex < Payload->SampleCount; ++SampleIndex)
+			{
+				if (Payload->Ages[SampleIndex] >= TrailLifetime && SampleIndex + 1 < Payload->SampleCount)
+				{
+					continue;
+				}
+
+				TrailPoints.push_back({
+					Payload->Positions[SampleIndex],
+					Payload->Ages[SampleIndex],
+					Payload->Distances[SampleIndex]
+				});
+			}
+
+			if (!TrailPoints.empty())
+			{
+				const FTrailRenderPoint& LastPoint = TrailPoints.back();
+				const float TipDistance = FVector::Distance(LastPoint.Position, Particle.Position);
+				if (TipDistance > 0.0001f)
+				{
+					TrailPoints.push_back({
+						Particle.Position,
+						0.0f,
+						LastPoint.Distance + TipDistance
+					});
+				}
+			}
+
+			if (TrailPoints.size() >= 2)
+			{
+				TArray<uint32> LeftIndices;
+				TArray<uint32> RightIndices;
+				LeftIndices.reserve(TrailPoints.size());
+				RightIndices.reserve(TrailPoints.size());
+
+				for (int32 SampleIndex = 0; SampleIndex < static_cast<int32>(TrailPoints.size()); ++SampleIndex)
+				{
+					FVector Tangent;
+					if (SampleIndex == 0)
+					{
+						Tangent = TrailPoints[1].Position - TrailPoints[0].Position;
+					}
+					else if (SampleIndex == static_cast<int32>(TrailPoints.size()) - 1)
+					{
+						Tangent = TrailPoints[SampleIndex].Position - TrailPoints[SampleIndex - 1].Position;
+					}
+					else
+					{
+						Tangent = TrailPoints[SampleIndex + 1].Position - TrailPoints[SampleIndex - 1].Position;
+					}
+
+					if (Tangent.LengthSquared() <= 0.0001f)
+					{
+						continue;
+					}
+
+					Tangent.Normalize();
+
+					FVector ViewTangent = Tangent - Frame.CameraForward * Tangent.Dot(Frame.CameraForward);
+					FVector Side = Frame.CameraRight;
+					if (ViewTangent.LengthSquared() > 0.0001f)
+					{
+						ViewTangent.Normalize();
+						Side = Frame.CameraForward.Cross(ViewTangent);
+						if (Side.LengthSquared() > 0.0001f)
+						{
+							Side.Normalize();
+						}
+						else
+						{
+							Side = Frame.CameraRight;
+						}
+					}
+
+					const float AgeT = (std::max)(0.0f, (std::min)(TrailPoints[SampleIndex].Age / TrailLifetime, 1.0f));
+					const float Width = Payload->Width * (1.0f - AgeT);
+					const float Alpha = Particle.Color.W * (1.0f - AgeT);
+					const FVector HalfWidth = Side * (Width * 0.5f);
+					const FVector Position = TrailPoints[SampleIndex].Position;
+					const FVector4 Color(Particle.Color.X, Particle.Color.Y, Particle.Color.Z, Alpha);
+					const float U = TrailPoints[SampleIndex].Distance / TextureTileDistance;
+
+					LeftIndices.push_back(OutGeometry.AddVertex({
+						Position - HalfWidth,
+						Color,
+						FVector2(U, 0.0f)
+					}));
+
+					RightIndices.push_back(OutGeometry.AddVertex({
+						Position + HalfWidth,
+						Color,
+						FVector2(U, 1.0f)
+					}));
+				}
+
+				const int32 VertexPointCount = static_cast<int32>(LeftIndices.size());
+				for (int32 PointIndex = 0; PointIndex + 1 < VertexPointCount; ++PointIndex)
+				{
+					const uint32 Left0 = LeftIndices[PointIndex];
+					const uint32 Right0 = RightIndices[PointIndex];
+					const uint32 Left1 = LeftIndices[PointIndex + 1];
+					const uint32 Right1 = RightIndices[PointIndex + 1];
+
+					OutGeometry.AddTriangle(Left0, Right0, Left1);
+					OutGeometry.AddTriangle(Right0, Right1, Left1);
+				}
+			}
+		}
+
+		FVector2 TopLeftUV;
+		FVector2 TopRightUV;
+		FVector2 BottomLeftUV;
+		FVector2 BottomRightUV;
+		GetParticleSubUVs(Particle, SubImagesHorizontal, SubImagesVertical, TopLeftUV, TopRightUV, BottomLeftUV, BottomRightUV);
+		OutGeometry.AddParticleQuad(
+			Particle,
+			Frame.CameraRight,
+			Frame.CameraUp,
+			bVelocityScreenAligned,
+			VelocityFacingMinSpeedSquared,
+			TopLeftUV,
+			TopRightUV,
+			BottomLeftUV,
+			BottomRightUV);
+	}
 
 	return OutGeometry.GetIndexCount() - FirstIndex;
 }

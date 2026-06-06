@@ -5,6 +5,7 @@
 #include "Object/Ptr/ObjectPtr.h"
 #include "Object/Ptr/SoftObjectPtr.h"
 #include "Particles/Runtime/ParticleCollisionEvent.h"
+#include "Particles/Runtime/ParticleRuntimeTypes.h"
 
 #include "Source/Engine/Component/Particle/ParticleSystemComponent.generated.h"
 
@@ -47,6 +48,8 @@ public:
 	UParticleSystem* GetTemplate() const { return ParticleSystem.Get(); }
 
 	void SetEmitterSpawningEnabled(bool bEnabled);
+	int32 EmitBurst(int32 Count);
+	int32 EmitBurst(const TArray<FParticleBurstSpawn>& SpawnInfos);
 	void SetVectorParameter(const FName& ParameterName, const FVector& Value);
 	void SetVectorParameter(const FString& ParameterName, const FVector& Value);
 	bool GetVectorParameter(const FName& ParameterName, FVector& OutValue) const;

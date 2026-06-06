@@ -14,6 +14,7 @@ struct FParticleViewportStats
 	int32 MeshEmitters = 0;
 	int32 RibbonEmitters = 0;
 	int32 BeamEmitters = 0;
+	int32 TrailEmitters = 0;
 
 	int32 DrawBatches = 0;
 	int32 DrawSections = 0;
@@ -37,6 +38,7 @@ struct FParticleViewportStats
 		MeshEmitters += Other.MeshEmitters;
 		RibbonEmitters += Other.RibbonEmitters;
 		BeamEmitters += Other.BeamEmitters;
+		TrailEmitters += Other.TrailEmitters;
 		DrawBatches += Other.DrawBatches;
 		DrawSections += Other.DrawSections;
 		MeshInstances += Other.MeshInstances;

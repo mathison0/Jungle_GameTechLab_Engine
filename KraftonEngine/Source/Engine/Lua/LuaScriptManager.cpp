@@ -1023,6 +1023,44 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 	{
 		Component.SetVectorParameter(ParameterName, Value);
 	},
+		"EmitBurst", sol::overload(
+			static_cast<int32(UParticleSystemComponent::*)(int32)>(&UParticleSystemComponent::EmitBurst),
+			[](UParticleSystemComponent& Component, const FVector& Location, const FVector& Velocity)
+			{
+				TArray<FParticleBurstSpawn> SpawnInfos;
+				FParticleBurstSpawn SpawnInfo;
+				SpawnInfo.Location = Location;
+				SpawnInfo.Velocity = Velocity;
+				SpawnInfos.push_back(SpawnInfo);
+				return Component.EmitBurst(SpawnInfos);
+			},
+			[](UParticleSystemComponent& Component, sol::table SpawnTable)
+			{
+				TArray<FParticleBurstSpawn> SpawnInfos;
+				for (auto&& Entry : SpawnTable)
+				{
+					sol::object Value = Entry.second;
+					if (!Value.valid() || Value.get_type() != sol::type::table)
+					{
+						continue;
+					}
+
+					sol::table SpawnInfoTable = Value.as<sol::table>();
+					sol::optional<FVector> Location = SpawnInfoTable["Location"];
+					sol::optional<FVector> Velocity = SpawnInfoTable["Velocity"];
+					if (!Location || !Velocity)
+					{
+						continue;
+					}
+
+					FParticleBurstSpawn SpawnInfo;
+					SpawnInfo.Location = *Location;
+					SpawnInfo.Velocity = *Velocity;
+					SpawnInfos.push_back(SpawnInfo);
+				}
+
+				return Component.EmitBurst(SpawnInfos);
+			}),
 		"Activate", &UParticleSystemComponent::Activate,
 		"Deactivate", &UParticleSystemComponent::Deactivate,
 		"ResetSystem", &UParticleSystemComponent::ResetSystem,
@@ -1030,6 +1068,9 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 
 	FLuaDocRegistry::Get().Type("ParticleSystemComponent", "PrimitiveComponent")
 		.Method("---@param parameterName string\n---@param value Vector\nfunction ParticleSystemComponent:SetVectorParameter(parameterName, value) end")
+		.Method("---@param count integer\n---@return integer\nfunction ParticleSystemComponent:EmitBurst(count) end")
+		.Method("---@param location Vector\n---@param velocity Vector\n---@return integer\nfunction ParticleSystemComponent:EmitBurst(location, velocity) end")
+		.Method("---@param spawns { Location: Vector, Velocity: Vector }[]\n---@return integer\nfunction ParticleSystemComponent:EmitBurst(spawns) end")
 		.Method("function ParticleSystemComponent:Activate() end")
 		.Method("function ParticleSystemComponent:Deactivate() end")
 		.Method("function ParticleSystemComponent:ResetSystem() end")

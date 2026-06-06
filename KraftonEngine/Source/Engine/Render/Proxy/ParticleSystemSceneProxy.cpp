@@ -112,6 +112,9 @@ void FParticleSystemSceneProxy::BuildDynamicEmitters(const FFrameContext& Frame,
 			case EParticleRenderType::Beam:
 				++CachedStats.BeamEmitters;
 				break;
+			case EParticleRenderType::Trail:
+				++CachedStats.TrailEmitters;
+				break;
 			case EParticleRenderType::Mesh:
 				++CachedStats.MeshEmitters;
 				break;
@@ -149,6 +152,10 @@ void FParticleSystemSceneProxy::AppendEmitter(const FFrameContext& Frame, int32 
 
 		case EParticleRenderType::Beam:
 			AppendBeamEmitter(Frame, EmitterIndex, Source);
+			break;
+
+		case EParticleRenderType::Trail:
+			AppendTrailEmitter(Frame, EmitterIndex, Source);
 			break;
 
 		case EParticleRenderType::Mesh:
@@ -211,6 +218,19 @@ void FParticleSystemSceneProxy::AppendBeamEmitter(const FFrameContext& Frame, in
 	const uint32 FirstIndex = SpriteGeometry.GetIndexCount();
 
 	FDynamicBeamEmitterData DynamicData(EmitterIndex, Source);
+	const uint32 IndexCount = DynamicData.BuildDynamicVertexData(Frame, SpriteGeometry);
+	if (IndexCount > 0)
+	{
+		Batch.Sections.push_back({ Source.Material, FirstIndex, IndexCount });
+	}
+}
+
+void FParticleSystemSceneProxy::AppendTrailEmitter(const FFrameContext& Frame, int32 EmitterIndex, const FDynamicEmitterReplayDataBase& Source)
+{
+	FParticleDrawBatch& Batch = FindOrAddDrawBatch(EParticleRenderType::Trail);
+	const uint32 FirstIndex = SpriteGeometry.GetIndexCount();
+
+	FDynamicTrailEmitterData DynamicData(EmitterIndex, Source);
 	const uint32 IndexCount = DynamicData.BuildDynamicVertexData(Frame, SpriteGeometry);
 	if (IndexCount > 0)
 	{
@@ -292,6 +312,7 @@ bool FParticleSystemSceneProxy::PrepareParticleDrawBuffer(const FParticleDrawBat
 	case EParticleRenderType::Sprite:
 	case EParticleRenderType::Ribbon:
 	case EParticleRenderType::Beam:
+	case EParticleRenderType::Trail:
 	{
 		if (SpriteIndexCount == 0 || Batch.Sections.empty()) return false;
 

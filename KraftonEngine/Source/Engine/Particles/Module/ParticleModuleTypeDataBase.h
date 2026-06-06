@@ -15,6 +15,7 @@ class UParticleSystemComponent;
 class UParticleModuleTypeDataMesh;
 class UParticleModuleTypeDataRibbon;
 class UParticleModuleTypeDataBeam;
+class UParticleModuleTypeDataTrail;
 
 
 enum class EParticleRenderType
@@ -23,6 +24,7 @@ enum class EParticleRenderType
 	Mesh,
 	Ribbon,
 	Beam,
+	Trail,
 	GPU,
 };
 
@@ -61,6 +63,17 @@ struct FRibbonParticlePayload
 	uint16 RibbonId = 0;
 	uint16 SourceParticleIndex = 0;
 	uint16 NextParticleIndex = 0;
+};
+
+struct FTrailParticlePayload
+{
+	static constexpr int32 MaxSamples = 16;
+
+	FVector Positions[MaxSamples];
+	float Ages[MaxSamples] = {};
+	float Distances[MaxSamples] = {};
+	int32 SampleCount = 0;
+	float Width = 8.0f;
 };
 
 struct FBeamParticlePayload
@@ -106,6 +119,20 @@ struct FParticleRibbonEmitterInstance : public FParticleEmitterInstance
 	}
 
 	UParticleModuleTypeDataRibbon* TypeDataModule = nullptr;
+};
+
+struct FParticleTrailEmitterInstance : public FParticleEmitterInstance
+{
+	FParticleTrailEmitterInstance() = default;
+	FParticleTrailEmitterInstance(UParticleEmitter* InEmitter, UParticleSystemComponent* InComponent, UParticleModuleTypeDataTrail* InTypeDataModule)
+		: TypeDataModule(InTypeDataModule)
+	{
+		InstancePayloadSize = sizeof(FTrailParticlePayload);
+		InstancePayloadAlignment = static_cast<int32>(alignof(FTrailParticlePayload));
+		Init(InEmitter, InComponent);
+	}
+
+	UParticleModuleTypeDataTrail* TypeDataModule = nullptr;
 };
 
 struct FParticleBeamEmitterInstance : public FParticleEmitterInstance
@@ -341,6 +368,146 @@ public:
 	int32 GetParticlePayloadAlignment() const override
 	{
 		return static_cast<int32>(alignof(FRibbonParticlePayload));
+	}
+};
+
+UCLASS()
+class UParticleModuleTypeDataTrail : public UParticleModuleTypeDataBase
+{
+public:
+	GENERATED_BODY()
+	UParticleModuleTypeDataTrail()
+	{
+		TrailWidth.Constant = 8.0f;
+		TrailWidth.MinValue = 8.0f;
+		TrailWidth.MaxValue = 8.0f;
+	}
+
+	UPROPERTY(Edit, Save, Category = "Particle|TypeData|Trail", DisplayName = "Trail Width", Type = Struct, Struct = FRawDistributionFloat)
+	FRawDistributionFloat TrailWidth;
+
+	UPROPERTY(Edit, Save, Category = "Particle|TypeData|Trail", DisplayName = "Trail Lifetime", Min = 0.01f, Speed = 0.01f)
+	float TrailLifetime = 0.25f;
+
+	UPROPERTY(Edit, Save, Category = "Particle|TypeData|Trail", DisplayName = "Min Sample Distance", Min = 0.0f, Speed = 1.0f)
+	float MinSampleDistance = 8.0f;
+
+	UPROPERTY(Edit, Save, Category = "Particle|TypeData|Trail", DisplayName = "Texture Tile Distance", Min = 1.0f, Speed = 1.0f)
+	float TextureTileDistance = 100.0f;
+
+	bool IsSpawnModule() const override { return true; }
+	bool IsUpdateModule() const override { return true; }
+
+	FParticleEmitterInstance* CreateInstance(UParticleEmitter* Emitter, UParticleSystemComponent* Component) override
+	{
+		return new FParticleTrailEmitterInstance(Emitter, Component, this);
+	}
+
+	void Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle& Particle) override
+	{
+		if (!Owner || Offset < 0 || Offset + static_cast<int32>(sizeof(FTrailParticlePayload)) > Owner->ParticleStride)
+		{
+			return;
+		}
+
+		FTrailParticlePayload* Payload = reinterpret_cast<FTrailParticlePayload*>(reinterpret_cast<uint8*>(&Particle) + Offset);
+		*Payload = FTrailParticlePayload();
+		Payload->Positions[0] = Particle.Position;
+		Payload->Ages[0] = 0.0f;
+		Payload->Distances[0] = 0.0f;
+		Payload->SampleCount = 1;
+		Payload->Width = TrailWidth.GetValue(SpawnTime, FDistributionSampling::RandomUnit(Particle.RandomSeed, "TrailWidth"));
+	}
+
+	void Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime) override
+	{
+		if (!Owner || Offset < 0 || Offset + static_cast<int32>(sizeof(FTrailParticlePayload)) > Owner->ParticleStride)
+		{
+			return;
+		}
+
+		struct
+		{
+			FParticleEmitterInstance& Owner;
+			int32 Offset;
+			float DeltaTime;
+		} Context{ *Owner, Offset, DeltaTime };
+
+		BEGIN_UPDATE_LOOP
+			FTrailParticlePayload* Payload = reinterpret_cast<FTrailParticlePayload*>(ParticleBase + CurrentOffset);
+			UpdateTrailPayload(*Payload, *Particle, Context.DeltaTime);
+		END_UPDATE_LOOP
+	}
+
+	EParticleRenderType GetRenderType() const override
+	{
+		return EParticleRenderType::Trail;
+	}
+
+	int32 GetParticlePayloadSize() const override
+	{
+		return sizeof(FTrailParticlePayload);
+	}
+
+	int32 GetParticlePayloadAlignment() const override
+	{
+		return static_cast<int32>(alignof(FTrailParticlePayload));
+	}
+
+private:
+	void UpdateTrailPayload(FTrailParticlePayload& Payload, const FBaseParticle& Particle, float DeltaTime) const
+	{
+		for (int32 SampleIndex = 0; SampleIndex < Payload.SampleCount; ++SampleIndex)
+		{
+			Payload.Ages[SampleIndex] += DeltaTime;
+		}
+
+		while (Payload.SampleCount > 1 && Payload.Ages[0] >= TrailLifetime)
+		{
+			for (int32 SampleIndex = 1; SampleIndex < Payload.SampleCount; ++SampleIndex)
+			{
+				Payload.Positions[SampleIndex - 1] = Payload.Positions[SampleIndex];
+				Payload.Ages[SampleIndex - 1] = Payload.Ages[SampleIndex];
+				Payload.Distances[SampleIndex - 1] = Payload.Distances[SampleIndex];
+			}
+			--Payload.SampleCount;
+		}
+
+		if (Payload.SampleCount <= 0)
+		{
+			Payload.Positions[0] = Particle.Position;
+			Payload.Ages[0] = 0.0f;
+			Payload.Distances[0] = 0.0f;
+			Payload.SampleCount = 1;
+			return;
+		}
+
+		const int32 LastIndex = Payload.SampleCount - 1;
+		const float MoveDistance = FVector::Distance(Payload.Positions[LastIndex], Particle.Position);
+		if (MoveDistance >= MinSampleDistance && Payload.SampleCount < FTrailParticlePayload::MaxSamples)
+		{
+			const int32 NewIndex = Payload.SampleCount++;
+			Payload.Positions[NewIndex] = Particle.Position;
+			Payload.Ages[NewIndex] = 0.0f;
+			Payload.Distances[NewIndex] = Payload.Distances[NewIndex - 1] + MoveDistance;
+			return;
+		}
+
+		if (MoveDistance >= MinSampleDistance && Payload.SampleCount >= FTrailParticlePayload::MaxSamples)
+		{
+			for (int32 SampleIndex = 1; SampleIndex < Payload.SampleCount; ++SampleIndex)
+			{
+				Payload.Positions[SampleIndex - 1] = Payload.Positions[SampleIndex];
+				Payload.Ages[SampleIndex - 1] = Payload.Ages[SampleIndex];
+				Payload.Distances[SampleIndex - 1] = Payload.Distances[SampleIndex];
+			}
+
+			const int32 TipIndex = Payload.SampleCount - 1;
+			const int32 PreviousIndex = TipIndex > 0 ? TipIndex - 1 : TipIndex;
+			Payload.Positions[TipIndex] = Particle.Position;
+			Payload.Ages[TipIndex] = 0.0f;
+			Payload.Distances[TipIndex] = Payload.Distances[PreviousIndex] + FVector::Distance(Payload.Positions[PreviousIndex], Particle.Position);
+		}
 	}
 };
 

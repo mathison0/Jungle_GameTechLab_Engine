@@ -376,6 +376,7 @@ namespace
 			|| Cast<UParticleModuleTypeDataMesh>(Module)
 			|| Cast<UParticleModuleTypeDataRibbon>(Module)
 			|| Cast<UParticleModuleTypeDataBeam>(Module)
+			|| Cast<UParticleModuleTypeDataTrail>(Module)
 			|| Cast<UParticleModuleBeamSource>(Module)
 			|| Cast<UParticleModuleBeamNoise>(Module)
 			|| Cast<UParticleModuleBeamTarget>(Module);
@@ -1064,6 +1065,7 @@ namespace
 		case EParticleRenderType::Mesh: return "Mesh";
 		case EParticleRenderType::Ribbon: return "Ribbon";
 		case EParticleRenderType::Beam: return "Beam";
+		case EParticleRenderType::Trail: return "Trail";
 		case EParticleRenderType::GPU: return "GPU";
 		default: return "Unknown";
 		}
@@ -1088,6 +1090,7 @@ namespace
 		case EParticleRenderType::Mesh: return "Mesh Data";
 		case EParticleRenderType::Ribbon: return "Ribbon Data";
 		case EParticleRenderType::Beam: return "Beam Data";
+		case EParticleRenderType::Trail: return "Trail Data";
 		case EParticleRenderType::GPU: return "GPU Sprites";
 		default: return TypeDataModule->GetClass()->GetName();
 		}
@@ -2949,6 +2952,10 @@ void FParticleSystemEditorWidget::RenderEmittersPanel(const ImVec2& Size)
 				{
 					SetTypeDataModule(UObjectManager::Get().CreateObject<UParticleModuleTypeDataBeam>());
 				}
+				if (ImGui::MenuItem("Trail"))
+				{
+					SetTypeDataModule(UObjectManager::Get().CreateObject<UParticleModuleTypeDataTrail>());
+				}
 				ImGui::EndMenu();
 			}
 
@@ -4041,6 +4048,10 @@ bool FParticleSystemEditorWidget::SelectModuleDistributionCurves(UParticleModule
 	{
 		bChanged |= AppendDistributionCurve(Module, &BeamTypeData->BeamWidth, "BeamWidth");
 		bChanged |= AppendDistributionCurve(Module, &BeamTypeData->Distance, "Distance");
+	}
+	else if (UParticleModuleTypeDataTrail* TrailTypeData = Cast<UParticleModuleTypeDataTrail>(Module))
+	{
+		bChanged |= AppendDistributionCurve(Module, &TrailTypeData->TrailWidth, "TrailWidth");
 	}
 	else if (UParticleModuleBeamSource* BeamSourceModule = Cast<UParticleModuleBeamSource>(Module))
 	{
