@@ -24,12 +24,23 @@ void AMusouGameState::Tick(float DeltaTime)
 
 void AMusouGameState::AddKill()
 {
+	AddKills(1);
+}
+
+void AMusouGameState::AddKills(int32 Count)
+{
 	if (bMatchEnded)
 	{
 		return;
 	}
 
-	++KillCount;
+	if (Count <= 0)
+	{
+		return;
+	}
+
+	KillCount += Count;
+	Score += static_cast<int64>(Count) * static_cast<int64>(Combo);
 }
 
 void AMusouGameState::AddCombo(int32 Count)

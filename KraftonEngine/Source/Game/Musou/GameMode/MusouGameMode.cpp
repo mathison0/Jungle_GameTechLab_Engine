@@ -146,8 +146,11 @@ void AMusouGameMode::EndMatch()
 	if (AMusouGameState* MusouState = GetMusouGameState())
 	{
 		MusouState->SetMatchEnded(true);
-		UE_LOG("[MusouGameMode] Match ended — Kills=%d MaxCombo=%d Time=%.1fs",
-			MusouState->GetKillCount(), MusouState->GetMaxCombo(), MusouState->GetMatchTime());
+		UE_LOG("[MusouGameMode] Match ended — Kills=%d Score=%lld MaxCombo=%d Time=%.1fs",
+			MusouState->GetKillCount(),
+			static_cast<long long>(MusouState->GetScore()),
+			MusouState->GetMaxCombo(),
+			MusouState->GetMatchTime());
 	}
 
 	AGameModeBase::EndMatch();
@@ -224,10 +227,7 @@ void AMusouGameMode::NotifyEnemiesKilled(int32 Count)
 		return;
 	}
 
-	for (int32 i = 0; i < Count; ++i)
-	{
-		MusouState->AddKill();
-	}
+	MusouState->AddKills(Count);
 }
 
 void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
