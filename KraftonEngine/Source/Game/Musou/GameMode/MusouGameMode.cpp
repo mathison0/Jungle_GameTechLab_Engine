@@ -180,6 +180,14 @@ void AMusouGameMode::NotifyAttackHits(const FMusouAttackEvent& Event, int32 HitC
 		return;
 	}
 
+	if (Event.bFromPlayer)
+	{
+		if (AMusouGameState* MusouState = GetMusouGameState())
+		{
+			MusouState->AddCombo(HitCount);
+		}
+	}
+
 	// 히트 수 비례 히트스탑 — 대량 학살 타격감. (수신자별 회신이므로 짧게 유지)
 	constexpr float HitStopBase = 0.05f;
 	constexpr float HitStopPerHit = 0.005f;
