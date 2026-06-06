@@ -23,12 +23,14 @@ public:
 	// --- Kill / Combo ---
 	// 처치 수와 콤보는 분리한다. KillCount는 처치 기준, Combo는 플레이어 타격 성공 기준으로 누적된다.
 	void AddKill();
+	void AddKills(int32 Count);
 	void AddCombo(int32 Count = 1);
 	void ResetCombo();
 
 	int32 GetKillCount() const { return KillCount; }
 	int32 GetCombo() const { return Combo; }
 	int32 GetMaxCombo() const { return MaxCombo; }
+	int64 GetScore() const { return Score; }
 	float GetComboRemaining() const { return ComboRemaining; }
 
 	// --- Match ---
@@ -44,6 +46,7 @@ private:
 	int32 KillCount = 0;
 	int32 Combo = 0;
 	int32 MaxCombo = 0;
+	int64 Score = 0;
 	float ComboRemaining = 0.0f;  // 콤보 윈도우 잔여 시간
 	float MatchTime = 0.0f;       // 매치 경과 시간(초)
 	bool bMatchEnded = false;

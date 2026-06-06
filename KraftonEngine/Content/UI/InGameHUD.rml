@@ -65,6 +65,19 @@
 			width: 420px;
 		}
 
+		#score-counter {
+			position: absolute;
+			right: 32px;
+			top: 28px;
+			display: block;
+			width: 420px;
+			height: 44px;
+			line-height: 44px;
+			text-align: right;
+			font-size: 30px;
+			color: #f8f3df;
+		}
+
 		#kill-counter {
 			position: absolute;
 			left: 50%;
@@ -186,6 +199,7 @@
 			<div id="hp-label">HP</div>
 			<progress id="hp-bar" value="1.0"></progress>
 		</div>
+		<div id="score-counter">score: 0</div>
 		<div id="right-hud">
 			<div id="combo-counter-frame">
 				<div id="combo-counter"></div>

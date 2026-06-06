@@ -146,8 +146,11 @@ void AMusouGameMode::EndMatch()
 	if (AMusouGameState* MusouState = GetMusouGameState())
 	{
 		MusouState->SetMatchEnded(true);
-		UE_LOG("[MusouGameMode] Match ended — Kills=%d MaxCombo=%d Time=%.1fs",
-			MusouState->GetKillCount(), MusouState->GetMaxCombo(), MusouState->GetMatchTime());
+		UE_LOG("[MusouGameMode] Match ended — Kills=%d Score=%lld MaxCombo=%d Time=%.1fs",
+			MusouState->GetKillCount(),
+			static_cast<long long>(MusouState->GetScore()),
+			MusouState->GetMaxCombo(),
+			MusouState->GetMatchTime());
 	}
 
 	AGameModeBase::EndMatch();
@@ -229,10 +232,7 @@ void AMusouGameMode::NotifyEnemiesKilled(int32 Count)
 		return;
 	}
 
-	for (int32 i = 0; i < Count; ++i)
-	{
-		MusouState->AddKill();
-	}
+	MusouState->AddKills(Count);
 }
 
 void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
@@ -261,6 +261,7 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 
 	const int32 Combo = MusouState->GetCombo();
 	const int32 KillCount = MusouState->GetKillCount();
+	const int64 Score = MusouState->GetScore();
 	const float ComboWindow = MusouState->ComboWindow;
 	const float ComboRemaining = MusouState->GetComboRemaining();
 	const float DisplayAlpha = (Combo > 0 && ComboWindow > 0.0f)
@@ -279,6 +280,7 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 		}
 	}
 	HudWidget->SetAttribute("hp-bar", "value", PlayerHealthRatio);
+	HudWidget->SetText("score-counter", FString("score: ") + std::to_string(static_cast<long long>(Score)));
 
 	if (!bKillHudInitialized)
 	{
