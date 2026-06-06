@@ -30,6 +30,17 @@ namespace
 		std::snprintf(Buffer, sizeof(Buffer), "#%02X%02X%02X", Red, Green, Blue);
 		return FString(Buffer);
 	}
+
+	FString MakeComboScaleTransform(float Alpha)
+	{
+		const float T = std::clamp(Alpha, 0.0f, 1.0f);
+		const float SmoothT = T * T * (3.0f - 2.0f * T);
+		const float Scale = 1.0f + 0.3f * SmoothT;
+
+		char Buffer[32] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "scale(%.3f)", Scale);
+		return FString(Buffer);
+	}
 }
 
 AMusouGameMode::AMusouGameMode()
@@ -201,6 +212,7 @@ void AMusouGameMode::UpdateHud()
 
 	HudWidget->SetProperty("combo-counter", "opacity", "1.0");
 	HudWidget->SetProperty("combo-counter", "color", MakeComboTextColor(DisplayAlpha));
+	HudWidget->SetProperty("combo-counter", "transform", MakeComboScaleTransform(DisplayAlpha));
 }
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)

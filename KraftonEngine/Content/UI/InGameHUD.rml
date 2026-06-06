@@ -96,6 +96,8 @@
 			padding-right: 18px;
 			text-align: right;
 			font-size: 40px;
+			transform: scale(1.0);
+			transform-origin: 100% 50%;
 			color: #e62a11;
 		}
 
