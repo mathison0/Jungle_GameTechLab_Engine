@@ -37,14 +37,8 @@
 			width: 314px;
 			height: 17px;
 			background-color: rgb(73, 73, 73);
-			border-top-width: 2px;
-			border-right-width: 2px;
-			border-bottom-width: 2px;
-			border-left-width: 2px;
-			border-top-color: #140000;
-			border-right-color: #140000;
-			border-bottom-color: #140000;
-			border-left-color: #140000;
+			border-width: 2px;
+			border-color: #140000;
 		}
 
 		#hp-label {
@@ -155,7 +149,7 @@
 			display: none;
 			align-items: center;
 			justify-content: center;
-			background-color: rgba(8, 10, 14, 0.36);
+			background-color: #1616165c;
 		}
 
 		#pause-menu {
@@ -170,16 +164,15 @@
 			line-height: 68px;
 			text-align: center;
 			font-size: 28px;
-			background-color: #171f2a;
-			color: #f8f3df;
-			border-top-width: 2px;
-			border-right-width: 2px;
-			border-bottom-width: 2px;
-			border-left-width: 2px;
-			border-top-color: #f2d58a;
-			border-right-color: #f2d58a;
-			border-bottom-color: #f2d58a;
-			border-left-color: #f2d58a;
+			background-color: #222222f1;
+			color: #dddddd;
+			border-width: 2px;
+			border-color: #dddddd;
+		}
+
+		.pause-button:hover {
+			background-color: #dddddd;
+			color: #222222f1;
 		}
 
 		#restart-button {

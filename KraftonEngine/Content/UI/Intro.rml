@@ -30,16 +30,10 @@
 			width: 260px;
 			height: 72px;
 			padding: 0;
-			border-top-width: 2px;
-			border-right-width: 2px;
-			border-bottom-width: 2px;
-			border-left-width: 2px;
-			border-top-color: #f2d58a;
-			border-right-color: #f2d58a;
-			border-bottom-color: #f2d58a;
-			border-left-color: #f2d58a;
-			background-color: #171f2a;
-			color: #f8f3df;
+			border-width: 2px;
+			border-color: #dddddd;
+			background-color: #222222f1;
+			color: #dddddd;
 			font-size: 28px;
 			line-height: 72px;
 			text-align: center;
@@ -49,14 +43,21 @@
 			width: 220px;
 			height: 56px;
 			margin-top: 14px;
-			border-top-color: #bfa86b;
-			border-right-color: #bfa86b;
-			border-bottom-color: #bfa86b;
-			border-left-color: #bfa86b;
-			background-color: #121923;
-			color: #e8ddbd;
+			border-color: #dddddd;
+			background-color: #1b1b1bf1;
+			color: #dddddd;
 			font-size: 22px;
 			line-height: 56px;
+		}
+
+		.menu-button:hover {
+			background-color: #dddddd;
+			color: #1b1b1bf1;
+		}
+
+		.secondary-button:hover {
+			background-color: #dddddd;
+			color: #1b1b1bf1;
 		}
 	</style>
 </head>
