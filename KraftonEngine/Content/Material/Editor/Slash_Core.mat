@@ -1,27 +1,27 @@
 {
-  "BlendState" : "AlphaBlend",
-  "DepthStencilState" : "DepthReadOnly",
-  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-  "EmissiveIntensity" : 10.000000,
-  "Origin" : "Editor",
-  "Parameters" : {
-    "SlashAlpha" : 1.000000,
-    "SlashColorStrength" : 1.000000,
-    "SlashDissolve" : 0.000000,
-    "SlashDissolveSoftness" : 0.180000,
-    "SlashNoiseScroll" : 0.000000,
-    "SlashNoiseTiling" : 2.000000,
-    "SlashPad" : null,
-    "SlashTint" : [1.000000, 1.000000, 1.000000, 1.000000]
-  },
-  "PathFileName" : "Content/Material/Editor/Slash_Core.mat",
-  "RasterizerState" : "SolidNoCull",
-  "RenderPass" : "AlphaBlend",
-  "ShaderPath" : "Shaders/Geometry/Slash.hlsl",
-  "ShadowMode" : "Opaque",
-  "Textures" : {
-    "Custom0Texture" : "Content/Texture/noise.png",
-    "DiffuseTexture" : "Content/Texture/Slash.png"
-  },
-  "bEnableBloom" : false
-}
+        "BlendState" : "AlphaBlend",
+        "DepthStencilState" : "NoDepth",
+        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+        "EmissiveIntensity" : 10.000000,
+        "Origin" : "Editor",
+        "Parameters" : {
+          "SlashAlpha" : 1.000000,
+          "SlashColorStrength" : 1.000000,
+          "SlashDissolve" : 0.000000,
+          "SlashDissolveSoftness" : 0.180000,
+          "SlashNoiseScroll" : 0.000000,
+          "SlashNoiseTiling" : 2.000000,
+          "SlashPad" : null,
+          "SlashTint" : [1.000000, 1.000000, 1.000000, 1.000000]
+        },
+        "PathFileName" : "Content/Material/Editor/Slash_Core.mat",
+        "RasterizerState" : "SolidNoCull",
+        "RenderPass" : "AlphaBlend",
+        "ShaderPath" : "Shaders/Geometry/Slash.hlsl",
+        "ShadowMode" : "None",
+        "Textures" : {
+          "Custom0Texture" : "Content/Texture/noise.png",
+          "DiffuseTexture" : "Content/Texture/Slash.png"
+        },
+        "bEnableBloom" : false
+      }

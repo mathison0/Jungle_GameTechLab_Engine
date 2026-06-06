@@ -1,8 +1,8 @@
 {
-        "BlendState" : "AlphaBlend",
+        "BlendState" : "Additive",
         "DepthStencilState" : "DepthReadOnly",
         "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-        "EmissiveIntensity" : 10.000000,
+        "EmissiveIntensity" : 8.000000,
         "Origin" : "Editor",
         "PathFileName" : "Content/Material/Editor/WeaponTrail_Additive.mat",
         "RasterizerState" : "SolidNoCull",

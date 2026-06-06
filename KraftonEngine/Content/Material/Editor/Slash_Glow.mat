@@ -1,6 +1,6 @@
 {
         "BlendState" : "Additive",
-        "DepthStencilState" : "DepthReadOnly",
+        "DepthStencilState" : "NoDepth",
         "EmissiveColor" : [0.350000, 0.750000, 1.000000, 1.000000],
         "EmissiveIntensity" : 5.000000,
         "Origin" : "Editor",
@@ -18,7 +18,7 @@
         "RasterizerState" : "SolidNoCull",
         "RenderPass" : "AlphaBlend",
         "ShaderPath" : "Shaders/Geometry/Slash.hlsl",
-        "ShadowMode" : "Opaque",
+        "ShadowMode" : "None",
         "Textures" : {
           "Custom0Texture" : "Content/Texture/noise.png",
           "DiffuseTexture" : "Content/Texture/Slash_Glow.png"
