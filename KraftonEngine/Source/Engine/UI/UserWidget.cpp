@@ -139,3 +139,21 @@ bool UUserWidget::SetProperty(const FString& ElementId, const FString& PropertyN
 
 	return Element->SetProperty(PropertyName.c_str(), Value.c_str());
 }
+
+bool UUserWidget::SetAttribute(const FString& ElementId, const FString& AttributeName, float Value)
+{
+	if (!Document)
+	{
+		return false;
+	}
+
+	Rml::Element* Element = Document->GetElementById(ElementId);
+	if (!Element)
+	{
+		UE_LOG("[RmlUi] Attribute target not found: %s", ElementId.c_str());
+		return false;
+	}
+
+	Element->SetAttribute(AttributeName.c_str(), Value);
+	return true;
+}
