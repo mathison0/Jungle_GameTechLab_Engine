@@ -1,4 +1,5 @@
 ﻿#include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/GameMode/MusouPlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
@@ -179,6 +180,14 @@ void AMusouGameMode::NotifyAttackHits(const FMusouAttackEvent& Event, int32 HitC
 		return;
 	}
 
+	if (Event.bFromPlayer)
+	{
+		if (AMusouGameState* MusouState = GetMusouGameState())
+		{
+			MusouState->AddCombo(HitCount);
+		}
+	}
+
 	// 히트 수 비례 히트스탑 — 대량 학살 타격감. (수신자별 회신이므로 짧게 유지)
 	constexpr float HitStopBase = 0.05f;
 	constexpr float HitStopPerHit = 0.005f;
@@ -244,6 +253,19 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 	const float DisplayAlpha = (Combo > 0 && ComboWindow > 0.0f)
 		? std::clamp(ComboRemaining / ComboWindow, 0.0f, 1.0f)
 		: 0.0f;
+
+	float PlayerHealthRatio = 1.0f;
+	if (APlayerController* PlayerController = GetPlayerController())
+	{
+		if (APawn* PlayerPawn = PlayerController->GetPossessedPawn())
+		{
+			if (UBattleComponent* Battle = PlayerPawn->GetComponentByClass<UBattleComponent>())
+			{
+				PlayerHealthRatio = std::clamp(Battle->GetHealthRatio(), 0.0f, 1.0f);
+			}
+		}
+	}
+	HudWidget->SetAttribute("hp-bar", "value", PlayerHealthRatio);
 
 	if (!bKillHudInitialized)
 	{
