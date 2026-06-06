@@ -168,6 +168,14 @@ void ASlashEffectActor::FinishSlash()
 
 	SetSlashAlpha(0.0f);
 	SetVisible(false);
+
+	if (bDestroyOnFinish)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->DestroyActor(this);
+		}
+	}
 }
 
 void ASlashEffectActor::PostDuplicate()

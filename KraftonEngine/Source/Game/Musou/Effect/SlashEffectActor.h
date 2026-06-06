@@ -31,6 +31,8 @@ public:
 
 	void ActivateSlash(const FVector& Location, const FVector& Rotation, const FVector& Direction);
 
+	void SetDestroyOnFinish(bool bInDestroyOnFinish) { bDestroyOnFinish = bInDestroyOnFinish; }
+
 protected:
 	void LoadSlashAssets();
 	void FinishSlash();
@@ -102,4 +104,6 @@ protected:
 	float Age = 0.0f;
 	bool bActive = false;
 	FVector MoveDirection = FVector(1.0f, 0.0f, 0.0f);
+
+	bool bDestroyOnFinish = false;
 };

@@ -1953,6 +1953,7 @@
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
     <ClCompile Include="Source\Game\Musou\Effect\SlashEffectActor.cpp" />
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -5805,6 +5806,7 @@
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h" />
     <ClInclude Include="Source\Game\Musou\Effect\SlashEffectActor.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
