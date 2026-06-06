@@ -25,6 +25,15 @@
 
 namespace
 {
+	// QueryOnly overlap 컴포넌트도 PhysX trigger pair를 받으려면 dynamic actor가 필요하다.
+	// 실제 물리 시뮬레이션은 하지 않도록 kinematic body로 만들어 onTrigger 콜백만 받는다.
+	bool ShouldUseKinematicOverlapBody(ECollisionEnabled CollisionEnabled, bool bGenerateOverlapEvents, bool bSimulatePhysics)
+	{
+		return !bSimulatePhysics
+			&& bGenerateOverlapEvents
+			&& CollisionEnabled == ECollisionEnabled::QueryOnly;
+	}
+
 	FVector ToClothLocalPoint(const FMatrix& WorldToCloth, const physx::PxVec3& WorldPoint)
 	{
 		return WorldToCloth.TransformPositionWithW(FVector(WorldPoint.x, WorldPoint.y, WorldPoint.z));
@@ -345,11 +354,26 @@ bool FPhysicsScene::CreateBody(UPrimitiveComponent* OwnerComp, FBodyInstance& Ou
 	OutInstance.OwnerComponent = OwnerComp;
 
 	physx::PxRigidActor* Body = nullptr;
+	const bool bKinematicOverlapBody = ShouldUseKinematicOverlapBody(
+		OwnerComp->GetCollisionEnabled(),
+		OwnerComp->GetGenerateOverlapEvents(),
+		OwnerComp->IsSimulatingPhysics());
 
-	if (OwnerComp->IsSimulatingPhysics())
+	if (OwnerComp->IsSimulatingPhysics() || bKinematicOverlapBody)
 	{
-		Body = Physics->createRigidDynamic(ToPxTransform(OwnerComp->GetWorldLocation(), OwnerComp->GetWorldRotation().ToQuaternion()));
-		OutInstance.Mode = EBodyInstanceMode::Dynamic;
+		physx::PxRigidDynamic* DynamicBody = Physics->createRigidDynamic(
+			ToPxTransform(OwnerComp->GetWorldLocation(), OwnerComp->GetWorldRotation().ToQuaternion()));
+		Body = DynamicBody;
+		if (DynamicBody && bKinematicOverlapBody)
+		{
+			DynamicBody->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, true);
+			DynamicBody->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, true);
+			OutInstance.Mode = EBodyInstanceMode::Kinematic;
+		}
+		else
+		{
+			OutInstance.Mode = EBodyInstanceMode::Dynamic;
+		}
 	}
 	else
 	{
@@ -406,11 +430,25 @@ bool FPhysicsScene::CreateBodyFromSetup(UPrimitiveComponent* OwnerComp, FBodyIns
 	const physx::PxTransform Pose = ToPxTransform(WorldLocation, WorldRotation);
 
 	physx::PxRigidActor* Body = nullptr;
+	const bool bKinematicOverlapBody = ShouldUseKinematicOverlapBody(
+		CollisionEnabled,
+		bGenerateOverlapEvents,
+		bSimulatePhysics);
 
-	if (bSimulatePhysics)
+	if (bSimulatePhysics || bKinematicOverlapBody)
 	{
-		Body = Physics->createRigidDynamic(Pose);
-		OutInstance.Mode = EBodyInstanceMode::Dynamic;
+		physx::PxRigidDynamic* DynamicBody = Physics->createRigidDynamic(Pose);
+		Body = DynamicBody;
+		if (DynamicBody && bKinematicOverlapBody)
+		{
+			DynamicBody->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, true);
+			DynamicBody->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, true);
+			OutInstance.Mode = EBodyInstanceMode::Kinematic;
+		}
+		else
+		{
+			OutInstance.Mode = EBodyInstanceMode::Dynamic;
+		}
 	}
 	else
 	{

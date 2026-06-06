@@ -1305,6 +1305,9 @@
     <ClCompile Include="Source\Engine\GameFramework\Actor\HeightFogActor.cpp">
       <Filter>Source\Engine\GameFramework\Actor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\Actor\LevelTransitionTriggerVolume.cpp">
+      <Filter>Source\Engine\GameFramework\Actor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\Actor\PawnStaticMesh.cpp">
       <Filter>Source\Engine\GameFramework\Actor</Filter>
     </ClCompile>
@@ -2606,6 +2609,9 @@
       <Filter>Source\Engine\GameFramework\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\Actor\HeightFogActor.h">
+      <Filter>Source\Engine\GameFramework\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\Actor\LevelTransitionTriggerVolume.h">
       <Filter>Source\Engine\GameFramework\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\Actor\PawnStaticMesh.h">

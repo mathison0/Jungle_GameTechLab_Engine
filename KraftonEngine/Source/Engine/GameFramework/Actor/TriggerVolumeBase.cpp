@@ -8,8 +8,22 @@
 
 void ATriggerVolumeBase::InitDefaultComponents(const FVector& Extent)
 {
-	TriggerBox = AddComponent<UBoxComponent>();
-	SetRootComponent(TriggerBox);
+	// Runtime SpawnActor는 placement 코드가 InitDefaultComponents를 다시 호출하기 전에 BeginPlay를 먼저 부를 수 있다.
+	// 기존 root box를 재사용해 overlap delegate가 실제 활성 trigger component에 계속 묶여 있게 한다.
+	if (!TriggerBox)
+	{
+		TriggerBox = Cast<UBoxComponent>(GetRootComponent());
+	}
+
+	if (!TriggerBox)
+	{
+		TriggerBox = AddComponent<UBoxComponent>();
+		SetRootComponent(TriggerBox);
+	}
+	else if (!GetRootComponent())
+	{
+		SetRootComponent(TriggerBox);
+	}
 
 	TriggerBox->SetBoxExtent(Extent);
 	// Overlap-only — 물리적으로 충돌하지 않고 진입만 감지.

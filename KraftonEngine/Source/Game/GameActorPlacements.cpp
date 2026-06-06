@@ -5,6 +5,7 @@
 
 #include "Game/Musou/Character/MusouCharacter.h"
 #include "Game/Musou/Effect/SlashEffectActor.h"
+#include "GameFramework/Actor/LevelTransitionTriggerVolume.h"
 #include "GameFramework/World.h"
 
 // ============================================================
@@ -32,6 +33,18 @@ void RegisterGameActorPlacements()
 		[](UWorld* World, const FVector& Location) -> AActor*
 		{
 			ASlashEffectActor* Actor = World->SpawnActor<ASlashEffectActor>();
+			if (Actor)
+			{
+				Actor->InitDefaultComponents();
+				Actor->SetActorLocation(Location);
+			}
+			return Actor;
+	});
+
+	FActorPlacementRegistry::Get().RegisterEntry("Level Transition Trigger",
+		[](UWorld* World, const FVector& Location) -> AActor*
+		{
+			ALevelTransitionTriggerVolume* Actor = World->SpawnActor<ALevelTransitionTriggerVolume>();
 			if (Actor)
 			{
 				Actor->InitDefaultComponents();
