@@ -7,10 +7,15 @@
 #include "Animation/Notify/AnimNotify.h"
 #include "Animation/Notify/AnimNotifyState.h"
 #include "Animation/AnimationManager.h"
+#include "Asset/AssetRegistry.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Core/Property/SoftObjectProperty.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
+#include "Mesh/MeshManager.h"
+#include "Materials/MaterialManager.h"
 #include "Object/Object.h"
+#include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Object/Reflection/UClass.h"
 #include "Core/Types/PropertyTypes.h"
@@ -134,6 +139,138 @@ namespace
 	// payload 편집용 경량 인스펙터 — 풀 FEditorPropertyWidget 의존성 없이 timeline 패널 안에서
 	// 자족. 지원 타입은 Notify payload 에 흔히 쓰일 단순형 (Bool/Int/Float/String/Vec3/Vec4/Color4).
 	// 그 외 타입은 disabled placeholder.
+	const FString* FindPropertyMetadata(const FPropertyValue& Prop, const FString& Key)
+	{
+		const TMap<FString, FString>& Metadata = Prop.GetMetadata();
+		auto It = Metadata.find(Key);
+		return It != Metadata.end() ? &It->second : nullptr;
+	}
+
+	FString GetAssetTypeMetadata(const FPropertyValue& Prop)
+	{
+		if (const FString* AssetType = FindPropertyMetadata(Prop, "assettype"))
+		{
+			return *AssetType;
+		}
+		if (const FString* AllowedClass = FindPropertyMetadata(Prop, "allowedclass"))
+		{
+			return *AllowedClass;
+		}
+		return {};
+	}
+
+	FString GetStemFromAssetPath(const FString& Path)
+	{
+		if (Path.empty() || Path == "None")
+		{
+			return "None";
+		}
+
+		size_t Start = Path.find_last_of("/\\");
+		Start = (Start == FString::npos) ? 0 : Start + 1;
+
+		size_t End = Path.find_last_of('.');
+		if (End == FString::npos || End < Start)
+		{
+			End = Path.size();
+		}
+
+		return Path.substr(Start, End - Start);
+	}
+
+	bool RenderSoftObjectAssetCombo(FPropertyValue& Prop)
+	{
+		void* ValuePtr = Prop.GetValuePtr();
+		if (!ValuePtr)
+		{
+			return false;
+		}
+
+		const FSoftObjectProperty* SoftProperty = Prop.Property ? Prop.Property->AsSoftObjectProperty() : nullptr;
+		FSoftObjectPtr* SoftPtr = SoftProperty ? nullptr : static_cast<FSoftObjectPtr*>(ValuePtr);
+		FString CurrentPath = SoftProperty ? SoftProperty->GetPathFromValuePtr(ValuePtr) : SoftPtr->ToString();
+
+		auto SetPath = [&](const FString& NewPath)
+		{
+			if (SoftProperty)
+			{
+				SoftProperty->SetPathFromValuePtr(ValuePtr, NewPath);
+			}
+			else if (SoftPtr)
+			{
+				SoftPtr->SetPath(NewPath);
+			}
+			CurrentPath = NewPath;
+		};
+
+		FString AssetType = SoftProperty ? SoftProperty->GetAssetType() : GetAssetTypeMetadata(Prop);
+		if (AssetType.empty())
+		{
+			AssetType = GetAssetTypeMetadata(Prop);
+		}
+
+		bool bChanged = false;
+		const FString Preview = GetStemFromAssetPath(CurrentPath);
+
+		if (ImGui::BeginCombo("##v", Preview.c_str()))
+		{
+			const bool bSelectedNone = CurrentPath.empty() || CurrentPath == "None";
+			if (ImGui::Selectable("None", bSelectedNone))
+			{
+				SetPath("None");
+				bChanged = true;
+			}
+			if (bSelectedNone)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+
+			if (AssetType == "Material")
+			{
+				const TArray<FMaterialAssetListItem>& MaterialFiles = FMaterialManager::Get().GetAvailableMaterialFiles();
+				for (const FMaterialAssetListItem& Item : MaterialFiles)
+				{
+					const bool bSelected = CurrentPath == Item.FullPath;
+					if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+					{
+						SetPath(Item.FullPath);
+						bChanged = true;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+			}
+			else
+			{
+				const char* RegistryType = AssetType == "StaticMesh" ? "UStaticMesh" : AssetType.c_str();
+				const TArray<FAssetListItem>& AssetFiles =
+					AssetType == "SkeletalMesh" ? FMeshManager::GetAvailableSkeletalMeshFiles() :
+					AssetType == "UStaticMesh" || AssetType == "StaticMesh" ? FMeshManager::GetAvailableStaticMeshFiles() :
+					FAssetRegistry::ListByTypeName(RegistryType);
+
+				for (const FAssetListItem& Item : AssetFiles)
+				{
+					const bool bSelected = CurrentPath == Item.FullPath;
+					if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+					{
+						SetPath(Item.FullPath);
+						bChanged = true;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		return bChanged;
+	}
+
 	bool RenderObjectPropertiesInline(UObject* Object)
 	{
 		if (!Object)
@@ -235,6 +372,11 @@ namespace
 							bChanged = true;
 						}
 					}
+					break;
+				}
+				case EPropertyType::SoftObjectRef:
+				{
+					bChanged = RenderSoftObjectAssetCombo(Prop);
 					break;
 				}
 				case EPropertyType::Name:

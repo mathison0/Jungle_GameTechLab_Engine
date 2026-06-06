@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/SoftObjectPtr.h"
 
 #include "Source/Game/Musou/Effect/SlashEffectActor.generated.h"
 
@@ -32,6 +33,27 @@ public:
 	void ActivateSlash(const FVector& Location, const FVector& Rotation, const FVector& Direction);
 
 	void SetDestroyOnFinish(bool bInDestroyOnFinish) { bDestroyOnFinish = bInDestroyOnFinish; }
+	void ConfigureSlashEffect(
+		const FSoftObjectPtr& InMeshPath,
+		const FSoftObjectPtr& InCoreMaterialPath,
+		const FSoftObjectPtr& InGlowMaterialPath,
+		const FSoftObjectPtr& InRefractionMaterialPath,
+		const FVector& InCoreRelativeScale,
+		const FVector& InGlowRelativeScale,
+		const FVector& InRefractionRelativeScale,
+		float InGlowAlphaMultiplier,
+		float InLifetime,
+		const FVector& InStartScale,
+		const FVector& InPeakScale,
+		const FVector& InEndScale,
+		float InMoveSpeed,
+		const FVector& InRotationOffset,
+		float InCoreFadeOutSpeed,
+		float InGlowFadeOutSpeed,
+		float InDissolveStartTime,
+		float InDissolveEndValue,
+		float InNoiseScrollSpeed,
+		float InRefractionStrength);
 
 protected:
 	void LoadSlashAssets();
@@ -50,14 +72,14 @@ protected:
 	UMaterialInterface* CoreMaterial = nullptr;
 	UMaterialInterface* GlowMaterial = nullptr;
 
-	UPROPERTY(Edit, Save, Category = "SlashEffect")
-	FString MeshPath = DefaultMeshPath;
+	UPROPERTY(Edit, Save, Category = "SlashEffect", AssetType = "StaticMesh")
+	FSoftObjectPtr MeshPath = DefaultMeshPath;
 
-	UPROPERTY(Edit, Save, Category = "SlashEffect")
-	FString CoreMaterialPath = "Content/Material/Editor/Slash_Core.mat";
+	UPROPERTY(Edit, Save, Category = "SlashEffect", AssetType = "Material")
+	FSoftObjectPtr CoreMaterialPath = "Content/Material/Editor/Slash_Core.mat";
 
-	UPROPERTY(Edit, Save, Category = "SlashEffect")
-	FString GlowMaterialPath = "Content/Material/Editor/Slash_Glow.mat";
+	UPROPERTY(Edit, Save, Category = "SlashEffect", AssetType = "Material")
+	FSoftObjectPtr GlowMaterialPath = "Content/Material/Editor/Slash_Glow.mat";
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
 	FVector CoreRelativeScale = FVector(1.0f, 1.0f, 1.0f);
@@ -104,8 +126,8 @@ protected:
 	UStaticMeshComponent* RefractionMeshComponent = nullptr;
 	UMaterialInterface* RefractionMaterial = nullptr;
 
-	UPROPERTY(Edit, Save, Category = "SlashEffect")
-	FString RefractionMaterialPath = "Content/Material/Editor/Slash_Refraction.mat";
+	UPROPERTY(Edit, Save, Category = "SlashEffect", AssetType = "Material")
+	FSoftObjectPtr RefractionMaterialPath = "Content/Material/Editor/Slash_Refraction.mat";
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
 	FVector RefractionRelativeScale = FVector(1.35f, 1.35f, 1.35f);

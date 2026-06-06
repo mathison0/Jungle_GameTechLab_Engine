@@ -45,6 +45,27 @@ void UAnimNotify_PlaySlashEffect::Notify(USkeletalMeshComponent* MeshComp, UAnim
 		return;
 	}
 
+	Effect->ConfigureSlashEffect(
+		MeshPath,
+		CoreMaterialPath,
+		GlowMaterialPath,
+		RefractionMaterialPath,
+		CoreRelativeScale,
+		GlowRelativeScale,
+		RefractionRelativeScale,
+		GlowAlphaMultiplier,
+		Lifetime,
+		StartScale,
+		PeakScale,
+		EndScale,
+		MoveSpeed,
+		FVector::ZeroVector,
+		CoreFadeOutSpeed,
+		GlowFadeOutSpeed,
+		DissolveStartTime,
+		DissolveEndValue,
+		NoiseScrollSpeed,
+		RefractionStrength);
 	Effect->InitDefaultComponents();
 	Effect->SetDestroyOnFinish(true);
 	Effect->ActivateSlash(SpawnLocation, SpawnRotation, SlashDirection);

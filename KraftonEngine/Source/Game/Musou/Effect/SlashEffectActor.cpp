@@ -30,7 +30,7 @@ void ASlashEffectActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!CoreMeshComponent || !GlowMeshComponent)
+	if (!CoreMeshComponent || !GlowMeshComponent || !RefractionMeshComponent)
 	{
 		ResolveComponents();
 	}
@@ -47,10 +47,10 @@ void ASlashEffectActor::LoadSlashAssets()
 	}
 
 	ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-	UStaticMesh* Mesh = FMeshManager::LoadStaticMesh(MeshPath, Device);
+	UStaticMesh* Mesh = FMeshManager::LoadStaticMesh(MeshPath.ToString(), Device);
 
-	CoreMaterial = FMaterialManager::Get().GetOrCreateMaterialInterface(CoreMaterialPath);
-	GlowMaterial = FMaterialManager::Get().GetOrCreateMaterialInterface(GlowMaterialPath);
+	CoreMaterial = FMaterialManager::Get().GetOrCreateMaterialInterface(CoreMaterialPath.ToString());
+	GlowMaterial = FMaterialManager::Get().GetOrCreateMaterialInterface(GlowMaterialPath.ToString());
 
 	if (CoreMeshComponent)
 	{
@@ -66,7 +66,7 @@ void ASlashEffectActor::LoadSlashAssets()
 		GlowMeshComponent->SetRelativeScale(GlowRelativeScale);
 	}
 
-	RefractionMaterial = FMaterialManager::Get().GetOrCreateMaterialInterface(RefractionMaterialPath);
+	RefractionMaterial = FMaterialManager::Get().GetOrCreateMaterialInterface(RefractionMaterialPath.ToString());
 
 	if (RefractionMeshComponent)
 	{
@@ -74,6 +74,52 @@ void ASlashEffectActor::LoadSlashAssets()
 		RefractionMeshComponent->SetMaterial(0, RefractionMaterial);
 		RefractionMeshComponent->SetRelativeScale(RefractionRelativeScale);
 	}
+}
+
+void ASlashEffectActor::ConfigureSlashEffect(
+	const FSoftObjectPtr& InMeshPath,
+	const FSoftObjectPtr& InCoreMaterialPath,
+	const FSoftObjectPtr& InGlowMaterialPath,
+	const FSoftObjectPtr& InRefractionMaterialPath,
+	const FVector& InCoreRelativeScale,
+	const FVector& InGlowRelativeScale,
+	const FVector& InRefractionRelativeScale,
+	float InGlowAlphaMultiplier,
+	float InLifetime,
+	const FVector& InStartScale,
+	const FVector& InPeakScale,
+	const FVector& InEndScale,
+	float InMoveSpeed,
+	const FVector& InRotationOffset,
+	float InCoreFadeOutSpeed,
+	float InGlowFadeOutSpeed,
+	float InDissolveStartTime,
+	float InDissolveEndValue,
+	float InNoiseScrollSpeed,
+	float InRefractionStrength)
+{
+	MeshPath = InMeshPath;
+	CoreMaterialPath = InCoreMaterialPath;
+	GlowMaterialPath = InGlowMaterialPath;
+	RefractionMaterialPath = InRefractionMaterialPath;
+
+	CoreRelativeScale = InCoreRelativeScale;
+	GlowRelativeScale = InGlowRelativeScale;
+	RefractionRelativeScale = InRefractionRelativeScale;
+
+	GlowAlphaMultiplier = InGlowAlphaMultiplier;
+	Lifetime = InLifetime;
+	StartScale = InStartScale;
+	PeakScale = InPeakScale;
+	EndScale = InEndScale;
+	MoveSpeed = InMoveSpeed;
+	RotationOffset = InRotationOffset;
+	CoreFadeOutSpeed = InCoreFadeOutSpeed;
+	GlowFadeOutSpeed = InGlowFadeOutSpeed;
+	DissolveStartTime = InDissolveStartTime;
+	DissolveEndValue = InDissolveEndValue;
+	NoiseScrollSpeed = InNoiseScrollSpeed;
+	RefractionStrength = InRefractionStrength;
 }
 
 void ASlashEffectActor::ActivateSlash(
@@ -93,6 +139,11 @@ void ASlashEffectActor::ActivateSlash(
 	if (GlowMeshComponent)
 	{
 		GlowMeshComponent->SetRelativeScale(GlowRelativeScale);
+	}
+
+	if (RefractionMeshComponent)
+	{
+		RefractionMeshComponent->SetRelativeScale(RefractionRelativeScale);
 	}
 
 	MoveDirection = Direction.Normalized();
@@ -259,6 +310,7 @@ void ASlashEffectActor::ResolveComponents()
 
 	CoreMeshComponent = nullptr;
 	GlowMeshComponent = nullptr;
+	RefractionMeshComponent = nullptr;
 
 	for (UActorComponent* Component : GetComponents())
 	{
@@ -275,6 +327,10 @@ void ASlashEffectActor::ResolveComponents()
 		else if (!GlowMeshComponent)
 		{
 			GlowMeshComponent = MeshComp;
+		}
+		else if (!RefractionMeshComponent)
+		{
+			RefractionMeshComponent = MeshComp;
 			break;
 		}
 	}
