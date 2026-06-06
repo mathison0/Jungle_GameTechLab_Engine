@@ -767,6 +767,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Engine\Render\RenderPass\PassRenderStateTable.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\PostProcessPass.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\PreDepthPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\RenderPass\RefractionPass.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\RenderPassBase.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\RenderPassPipeline.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\RenderPassRegistry.cpp" />
@@ -1211,6 +1212,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalBatchAnalyzer.h" />
     <ClInclude Include="Source\Engine\Render\Optimization\SkeletalInstanceBatcher.h" />
     <ClInclude Include="Source\Engine\Render\Proxy\WeaponTrailSceneProxy.h" />
+    <ClInclude Include="Source\Engine\Render\RenderPass\RefractionPass.h" />
     <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Pipeline\IRenderPipeline.h" />
@@ -2248,6 +2250,13 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Geometry\Slash_Refraction.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
     </FxCompile>

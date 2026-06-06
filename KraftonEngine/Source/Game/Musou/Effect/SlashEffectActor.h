@@ -93,13 +93,25 @@ protected:
 	float GlowFadeOutSpeed = 0.75f;
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
-	float DissolveStartTime = 0.35f;
+	float DissolveStartTime = 0.5f;
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
-	float DissolveEndValue = 0.85f;
+	float DissolveEndValue = 0.7f;
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
 	float NoiseScrollSpeed = 1.6f;
+
+	UStaticMeshComponent* RefractionMeshComponent = nullptr;
+	UMaterialInterface* RefractionMaterial = nullptr;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect")
+	FString RefractionMaterialPath = "Content/Material/Editor/Slash_Refraction.mat";
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect")
+	FVector RefractionRelativeScale = FVector(1.35f, 1.35f, 1.35f);
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect")
+	float RefractionStrength = 0.035f;
 
 	float Age = 0.0f;
 	bool bActive = false;

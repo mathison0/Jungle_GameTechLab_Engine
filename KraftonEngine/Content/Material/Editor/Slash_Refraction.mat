@@ -1,0 +1,26 @@
+{
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "DepthReadOnly",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "Editor",
+  "Parameters" : {
+    "RefractionDirection" : null,
+    "RefractionEdgeBoost" : 1.000000,
+    "RefractionNoiseScroll" : 0.000000,
+    "RefractionNoiseTiling" : 5.000000,
+    "RefractionPad0" : 0.000000,
+    "RefractionStrength" : 0.350000,
+    "SlashAlpha" : 1.000000
+  },
+  "PathFileName" : "Content/Material/Editor/Slash_Refraction.mat",
+  "RasterizerState" : "SolidNoCull",
+  "RenderPass" : "Refraction",
+  "ShaderPath" : "Shaders/Geometry/Slash_Refraction.hlsl",
+  "ShadowMode" : "None",
+  "Textures" : {
+    "Custom0Texture" : "Content/Texture/noise.png",
+    "DiffuseTexture" : "Content/Texture/Slash.png"
+  },
+  "bEnableBloom" : false
+}

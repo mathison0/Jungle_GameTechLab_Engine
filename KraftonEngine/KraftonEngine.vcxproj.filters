@@ -757,6 +757,9 @@
       <Filter>Shaders\UI</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Geometry\Slash.hlsl" />
+    <FxCompile Include="Shaders\Geometry\Slash_Refraction.hlsl">
+      <Filter>Shaders\Geometry</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Editor\EditorEngine.cpp">
@@ -1954,6 +1957,7 @@
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
     <ClCompile Include="Source\Game\Musou\Effect\SlashEffectActor.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.cpp" />
+    <ClCompile Include="Source\Engine\Render\RenderPass\RefractionPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -5807,6 +5811,7 @@
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h" />
     <ClInclude Include="Source\Game\Musou\Effect\SlashEffectActor.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.h" />
+    <ClInclude Include="Source\Engine\Render\RenderPass\RefractionPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />

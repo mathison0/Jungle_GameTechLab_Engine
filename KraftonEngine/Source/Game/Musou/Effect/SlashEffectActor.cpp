@@ -17,6 +17,9 @@ void ASlashEffectActor::InitDefaultComponents()
 	GlowMeshComponent = AddComponent<UStaticMeshComponent>();
 	GlowMeshComponent->AttachToComponent(SlashRootComponent);
 
+	RefractionMeshComponent = AddComponent<UStaticMeshComponent>();
+	RefractionMeshComponent->AttachToComponent(SlashRootComponent);
+
 	LoadSlashAssets();
 
 	SetVisible(false);
@@ -61,6 +64,15 @@ void ASlashEffectActor::LoadSlashAssets()
 		GlowMeshComponent->SetStaticMesh(Mesh);
 		GlowMeshComponent->SetMaterial(0, GlowMaterial);
 		GlowMeshComponent->SetRelativeScale(GlowRelativeScale);
+	}
+
+	RefractionMaterial = FMaterialManager::Get().GetOrCreateMaterialInterface(RefractionMaterialPath);
+
+	if (RefractionMeshComponent)
+	{
+		RefractionMeshComponent->SetStaticMesh(Mesh);
+		RefractionMeshComponent->SetMaterial(0, RefractionMaterial);
+		RefractionMeshComponent->SetRelativeScale(RefractionRelativeScale);
 	}
 }
 
@@ -231,6 +243,13 @@ void ASlashEffectActor::SetSlashMaterialParams(
 		GlowMaterial->SetScalarParameter("SlashAlpha", GlowAlpha);
 		GlowMaterial->SetScalarParameter("SlashDissolve", Dissolve * 0.75f);
 		GlowMaterial->SetScalarParameter("SlashNoiseScroll", NoiseScroll * 0.65f);
+	}
+
+	if (RefractionMaterial)
+	{
+		RefractionMaterial->SetScalarParameter("SlashAlpha", CoreAlpha);
+		RefractionMaterial->SetScalarParameter("RefractionStrength", RefractionStrength * CoreAlpha);
+		RefractionMaterial->SetScalarParameter("RefractionNoiseScroll", NoiseScroll);
 	}
 }
 
