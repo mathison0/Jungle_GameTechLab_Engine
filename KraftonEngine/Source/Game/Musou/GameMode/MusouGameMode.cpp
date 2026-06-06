@@ -184,7 +184,7 @@ void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)
 	OnAttackPerformed.Broadcast(Event);
 }
 
-void AMusouGameMode::NotifyAttackHits(const FMusouAttackEvent& Event, int32 HitCount)
+void AMusouGameMode::NotifyAttackComboHits(const FMusouAttackEvent& Event, int32 HitCount)
 {
 	if (HitCount <= 0 || !Event.Attacker)
 	{
@@ -197,6 +197,14 @@ void AMusouGameMode::NotifyAttackHits(const FMusouAttackEvent& Event, int32 HitC
 		{
 			MusouState->AddCombo(HitCount);
 		}
+	}
+}
+
+void AMusouGameMode::NotifyAttackHitFeedback(const FMusouAttackEvent& Event, int32 HitCount)
+{
+	if (HitCount <= 0 || !Event.Attacker)
+	{
+		return;
 	}
 
 	// 히트 수 비례 히트스탑 — 대량 학살 타격감. (수신자별 회신이므로 짧게 유지)

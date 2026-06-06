@@ -1,5 +1,6 @@
 ﻿#include "Game/Musou/Combat/MusouHitEffectComponent.h"
 
+#include "Audio/AudioManager.h"
 #include "Component/Particle/ParticleSystemComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
@@ -15,6 +16,12 @@ void UMusouHitEffectComponent::BeginPlay()
 	if (!HitParticlePath.IsNull())
 	{
 		CachedHitParticle = FParticleSystemManager::Get().Load(HitParticlePath.ToString());
+	}
+
+	if (!HitSoundPath.empty())
+	{
+		HitSoundKey = FString("MusouHit:") + HitSoundPath;
+		FAudioManager::Get().LoadAudio(HitSoundKey, HitSoundPath, false);
 	}
 
 	UWorld* World = GetWorld();
@@ -71,6 +78,11 @@ void UMusouHitEffectComponent::FlushHits(float DeltaTime)
 	const int32 Budget = std::max(0, MaxHitParticles);
 	const int32 PlayCount = std::min(static_cast<int32>(PendingHits.size()), Budget);
 
+	if (PlayCount > 0)
+	{
+		PlayHitAudio(); // 이번 프레임 히트 묶음당 1회만 재생
+	}
+
 	for (int32 i = 0; i < PlayCount; ++i)
 	{
 		PlayHitParticle(PendingHits[i]);
@@ -114,7 +126,7 @@ UParticleSystemComponent* UMusouHitEffectComponent::AcquireParticle()
 void UMusouHitEffectComponent::PlayHitParticle(const FMusouHitEvent& Hit)
 {
 	if (!CachedHitParticle) return;
-	
+
 	UParticleSystemComponent* Particle = AcquireParticle();
 	if (!Particle) return;
 
@@ -144,4 +156,14 @@ void UMusouHitEffectComponent::UpdateActiveParticles(float DeltaTime)
 			}
 		}
 	}
+}
+
+void UMusouHitEffectComponent::PlayHitAudio()
+{
+	if (HitSoundKey.empty()) return;
+	FAudioManager::Get().PlaySfxLimited(
+		HitSoundKey,
+		HitSoundVolume,
+		MaxConcurrentHitSounds,
+		HitSoundMinInterval);
 }
