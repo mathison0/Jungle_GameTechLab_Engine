@@ -40,7 +40,13 @@ private:
 	float Intensity = 1.0f;
 
 	UPROPERTY(Edit, Save, Category = "HitFlash")
-	float BloomIntensity = 2.0f;
+	float FillAmount = 0.15f;
+
+	UPROPERTY(Edit, Save, Category = "HitFlash")
+	float RimIntensity = 3.0f;
+
+	UPROPERTY(Edit, Save, Category = "HitFlash")
+	float RimPower = 3.0f;
 
 	UPROPERTY(Edit, Save, Category = "HitFlash", Type = Color4)
 	FVector4 FlashColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);

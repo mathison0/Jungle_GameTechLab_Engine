@@ -7,6 +7,7 @@
 class UBattleComponent;
 class UComboComponent;
 class UBoneAttachedStaticMeshComponent;
+class UHitFlashComponent;
 
 // ============================================================
 // AMusouCharacter — 무쌍 플레이어 캐릭터 (Barbarian)
@@ -38,6 +39,8 @@ public:
 	// 메시 교체 가능 버전 — 애님 스크립트/전투 컴포넌트는 동일하게 부착.
 	void InitDefaultComponents(const FString& SkeletalMeshFileName) override;
 
+	void BeginPlay() override;
+
 	void PostDuplicate() override;
 	void PostLoad() override;
 
@@ -68,4 +71,7 @@ protected:
 	UBattleComponent* BattleComponent = nullptr;
 	UComboComponent*  ComboComponent  = nullptr;
 	UBoneAttachedStaticMeshComponent* WeaponComponent = nullptr;  // 오른손(hand_r) 무기 슬롯
+
+	UPROPERTY(Edit, Save, Category = "Combat|FX")
+	UHitFlashComponent* HitFlashComponent = nullptr;
 };

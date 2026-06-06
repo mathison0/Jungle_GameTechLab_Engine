@@ -9,6 +9,7 @@
 #include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/Primitive/BoneAttachedStaticMeshComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Component/Primitive/HitFlashComponent.h"
 #include "Math/Rotator.h"
 
 namespace
@@ -76,6 +77,22 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 	{
 		WeaponComponent->AttachToComponent(Mesh);
 	}
+
+	HitFlashComponent = AddComponent<UHitFlashComponent>();
+	if (Mesh)
+	{
+		HitFlashComponent->InitializeFromSkinnedMesh(Mesh);
+	}
+}
+
+void AMusouCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (HitFlashComponent && Mesh)
+	{
+		HitFlashComponent->InitializeFromSkinnedMesh(Mesh);
+	}
 }
 
 void AMusouCharacter::PostDuplicate()
@@ -84,6 +101,7 @@ void AMusouCharacter::PostDuplicate()
 	BattleComponent = GetComponentByClass<UBattleComponent>();
 	ComboComponent  = GetComponentByClass<UComboComponent>();
 	WeaponComponent = GetComponentByClass<UBoneAttachedStaticMeshComponent>();
+	HitFlashComponent = GetComponentByClass<UHitFlashComponent>();
 }
 
 void AMusouCharacter::PostLoad()
@@ -91,6 +109,8 @@ void AMusouCharacter::PostLoad()
 	Super::PostLoad();
 	BattleComponent = GetComponentByClass<UBattleComponent>();
 	ComboComponent  = GetComponentByClass<UComboComponent>();
+	WeaponComponent = GetComponentByClass<UBoneAttachedStaticMeshComponent>();
+	HitFlashComponent = GetComponentByClass<UHitFlashComponent>();
 }
 
 void AMusouCharacter::SetupInputComponent()
@@ -142,6 +162,15 @@ void AMusouCharacter::SetupInputComponent()
 	InputComponent->BindAction("HeavyAttack", EInputEvent::Pressed, [this]()
 	{
 		OnHeavyAttackPressed();
+	});
+
+	InputComponent->AddActionMapping("TestHitFlash", 'F');
+	InputComponent->BindAction("TestHitFlash", EInputEvent::Pressed, [this]()
+	{
+		if (HitFlashComponent)
+		{
+			HitFlashComponent->PlayFlash();
+		}
 	});
 
 	// TODO: 스킬 1/2/3 ('1'/'2'/'3') — 스킬 몽타주 확정 후 추가

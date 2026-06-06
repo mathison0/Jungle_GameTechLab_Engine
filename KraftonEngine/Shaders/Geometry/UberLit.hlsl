@@ -43,8 +43,11 @@ cbuffer PerShader1 : register(b2)
 
     float HasNormalMap;
     float HitFlashAmount;
-    float HitFlashBloomIntensity;
-    float _pad;
+    float HitFlashFillAmount;
+    float HitFlashRimIntensity;
+
+    float HitFlashRimPower;
+    float3 _pad;
 
     float4 HitFlashColor;
 };
@@ -394,8 +397,11 @@ return output;
 
     float FlashAmount = saturate(HitFlashAmount);
     float3 FlashColor = HitFlashColor.rgb;
-    finalColor = lerp(finalColor, FlashColor, FlashAmount);
-    finalColor += FlashColor * FlashAmount * max(HitFlashBloomIntensity, 0.0f);
+    float FillAmount = FlashAmount * saturate(HitFlashFillAmount);
+    float Rim = pow(saturate(1.0f - saturate(dot(normalize(N), normalize(V)))), max(HitFlashRimPower, 0.001f));
+
+    finalColor = lerp(finalColor, FlashColor, FillAmount);
+    finalColor += FlashColor * Rim * FlashAmount * max(HitFlashRimIntensity, 0.0f);
 
     output.Color = float4(finalColor, baseColor.a);
     output.Normal = float4(N, 1.0f); // alpha=1: 유효한 노말 마킹

@@ -68,7 +68,9 @@ void UHitFlashComponent::ApplyFlashAmount(float Amount)
 		}
 
 		Material->SetScalarParameter("HitFlashAmount", Amount);
-		Material->SetScalarParameter("HitFlashBloomIntensity", BloomIntensity);
+		Material->SetScalarParameter("HitFlashFillAmount", FillAmount);
+		Material->SetScalarParameter("HitFlashRimIntensity", RimIntensity);
+		Material->SetScalarParameter("HitFlashRimPower", RimPower);
 		Material->SetVector4Parameter("HitFlashColor", FlashColor);
 	}
 }
@@ -115,7 +117,9 @@ void UHitFlashComponent::BuildDynamicMaterials()
 		}
 
 		DynamicMaterial->SetScalarParameter("HitFlashAmount", 0.0f);
-		DynamicMaterial->SetScalarParameter("HitFlashBloomIntensity", BloomIntensity);
+		DynamicMaterial->SetScalarParameter("HitFlashFillAmount", FillAmount);
+		DynamicMaterial->SetScalarParameter("HitFlashRimIntensity", RimIntensity);
+		DynamicMaterial->SetScalarParameter("HitFlashRimPower", RimPower);
 		DynamicMaterial->SetVector4Parameter("HitFlashColor", FlashColor);
 
 		TargetSkinnedMesh->SetMaterial(Index, DynamicMaterial);
