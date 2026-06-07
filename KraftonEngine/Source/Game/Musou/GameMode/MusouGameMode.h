@@ -8,6 +8,7 @@
 #include "Source/Game/Musou/GameMode/MusouGameMode.generated.h"
 
 class AMusouGameState;
+class AActor;
 class APawn;
 class UUserWidget;
 
@@ -70,6 +71,9 @@ public:
 	// 플레이어 사망 시 호출 — 매치 종료.
 	virtual void NotifyPlayerDeath(APawn* Player);
 
+	// 플레이어에게 실제 데미지가 적용된 순간 호출 — HUD 피격 연출 진입점.
+	virtual void NotifyPlayerDamaged(APawn* Player, float Damage, AActor* DamageInstigator);
+
 	// --- Accessors ---
 	AMusouGameState* GetMusouGameState() const;
 
@@ -86,4 +90,6 @@ private:
 	float KillPopRemaining = 0.0f;
 	float KillMilestoneRemaining = 0.0f;
 	float KillMilestoneElapsed = 0.0f;
+	float BloodVignetteRemaining = 0.0f;
+	float BloodVignetteIntensity = 0.0f;
 };

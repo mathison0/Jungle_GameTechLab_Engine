@@ -22,7 +22,10 @@ namespace
 	constexpr float KillMilestoneShakeDuration = 0.48f;
 	constexpr float KillMilestoneBaseMarginLeft = -320.0f;
 	constexpr float KillMilestoneBaseMarginTop = -60.0f;
-
+	constexpr float BloodVignetteDuration = 1.8f;
+	constexpr float BloodVignetteBaseOpacity = 0.90f;
+	constexpr float BloodVignetteMinIntensity = 0.55f;
+	constexpr float BloodVignetteFullDamage = 30.0f;
 	FString MakeScaleTransform(float Scale)
 	{
 		char Buffer[32] = {};
@@ -89,6 +92,15 @@ namespace
 		const float Scale = 1.0f + 0.42f * SmoothT;
 
 		return MakeScaleTransform(Scale);
+	}
+
+	FString MakeOpacityValue(float Alpha)
+	{
+		const float ClampedAlpha = std::clamp(Alpha, 0.0f, 1.0f);
+
+		char Buffer[16] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "%.3f", ClampedAlpha);
+		return FString(Buffer);
 	}
 }
 
@@ -249,6 +261,20 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 	EndMatch();
 }
 
+void AMusouGameMode::NotifyPlayerDamaged(APawn* Player, float Damage, AActor* DamageInstigator)
+{
+	(void)DamageInstigator;
+
+	if (!Player || Damage <= 0.0f)
+	{
+		return;
+	}
+
+	const float DamageIntensity = std::clamp(Damage / BloodVignetteFullDamage, BloodVignetteMinIntensity, 1.0f);
+	BloodVignetteIntensity = std::max(BloodVignetteIntensity, DamageIntensity);
+	BloodVignetteRemaining = BloodVignetteDuration;
+}
+
 AMusouGameState* AMusouGameMode::GetMusouGameState() const
 {
 	return Cast<AMusouGameState>(GetGameState());
@@ -361,6 +387,29 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 	HudWidget->SetProperty("combo-counter", "opacity", "1.0");
 	HudWidget->SetProperty("combo-counter", "color", MakeComboTextColor(DisplayAlpha));
 	HudWidget->SetProperty("combo-counter", "transform", MakeComboScaleTransform(DisplayAlpha));
+
+	const float BloodTimeAlpha = BloodVignetteDuration > 0.0f
+		? std::clamp(BloodVignetteRemaining / BloodVignetteDuration, 0.0f, 1.0f)
+		: 0.0f;
+	const float BloodFadeAlpha = BloodTimeAlpha * BloodTimeAlpha;
+	const float BloodAlpha = BloodVignetteBaseOpacity * BloodVignetteIntensity * BloodFadeAlpha;
+
+	if (BloodAlpha > 0.01f)
+	{
+		HudWidget->SetProperty("blood-vignette", "opacity", MakeOpacityValue(BloodAlpha));
+		HudWidget->SetProperty("blood-vignette", "visibility", "visible");
+	}
+	else
+	{
+		HudWidget->SetProperty("blood-vignette", "opacity", "0");
+		HudWidget->SetProperty("blood-vignette", "visibility", "hidden");
+	}
+
+	BloodVignetteRemaining = std::max(0.0f, BloodVignetteRemaining - DeltaTime);
+	if (BloodVignetteRemaining <= 0.0f)
+	{
+		BloodVignetteIntensity = 0.0f;
+	}
 }
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)
