@@ -15,8 +15,9 @@ class UHitFlashComponent;
 class UAnimMontage;
 class UAnimSequence;
 
-// 공격 스텝 정의 — AttackDataRegistry.h (Content/Script/Data/attack_data.lua 에서 로드).
+// 공격 스텝/슬롯 정의 — AttackDataRegistry.h (Content/Script/Data/attack_data.lua 에서 로드).
 struct FMusouAttackStep;
+struct FMusouAttackSlot;
 
 // ============================================================
 // AMusouCharacter — 무쌍 플레이어 캐릭터 (Barbarian)
@@ -57,6 +58,10 @@ public:
 	UComboComponent*  GetComboComponent()  const { return ComboComponent; }
 	UBoneAttachedStaticMeshComponent* GetWeaponComponent() const { return WeaponComponent; }
 
+	// launcher(self_launch) 발동 시 AnimNotify_MusouAttack 이 호출 — 착지까지
+	// 공중 공격이 저글 체인(AirborneJuggle)으로 진입한다. 일반 점프는 단발 점프 공격 유지.
+	void OnSelfLaunched() { bJuggleAirborne = true; }
+
 protected:
 	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
 	// ※ 공격 입력을 lua anim에서 이관한 이유: lua update()는 Animation Tick LOD
@@ -70,6 +75,13 @@ protected:
 	// ── 공격 입력 핸들러 ──
 	void OnAttackPressed();       // 좌클릭 — 콤보 체인 시작/예약 (컨텍스트별 체인)
 	void OnHeavyAttackPressed();  // 우클릭 — 강공격 (컨텍스트별 단발 / 콤보 중엔 분기 예약)
+	void OnUltimatePressed();     // R — 무쌍기 (게이지 가득 + 지상, 진행 동작 전부 캔슬)
+	void OnDodgePressed();        // Shift — 구르기 (입력 방향, 전 구간 무적, 후딜 캔슬 가능)
+
+	// 무쌍기 난무 — Tick 이 몽타주 종료를 감지해 다음 슬롯 자동 재생. 체인 소진 시 정리.
+	void UpdateUltimateChain();
+	void EndUltimate();
+	void EndRoll();
 
 	// 진입 컨텍스트 판정 — Falling → Airborne, XY 속도 ≥ 임계 → Moving, 그 외 Idle.
 	EAttackContext ResolveAttackContext() const;
@@ -85,10 +97,18 @@ protected:
 	// 콤보 전진/분기 예약이 살아 있으면 보류 — 체인이 끊기지 않게.
 	void TryMovementCancelMontage();
 
+	// 공중 콤보 행 타임 — 공중 체인 진행 중 CMC 중력을 줄여 체공 연장, 종료 시 원복.
+	// 매 Tick 호출 (feedback.air_combo.gravity_scale, lua 튜닝).
+	void UpdateAirComboHang();
+
 	// 공격 스텝 재생 — 에디터 몽타주 우선, 없으면 시퀀스에서 런타임 생성 (기본 notify 주입).
 	bool          PlayAttackStep(const FMusouAttackStep& Step);
 	UAnimMontage* ResolveStepMontage(const FMusouAttackStep& Step);
 	void          InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step);
+
+	// 슬롯에서 변주 1개 선택 — 랜덤 + 직전 변주 반복 회피. 빈 슬롯이면 nullptr.
+	const FMusouAttackStep* PickVariant(const FMusouAttackSlot& Slot);
+	bool PlayAttackSlot(const FMusouAttackSlot& Slot);   // PickVariant → PlayAttackStep
 
 	void PlayComboStep(int32 Step);
 	void PlayBranchFinisher(int32 BranchStep);  // 콤보 N단 분기 피니셔 (무쌍 차지어택식)
@@ -124,4 +144,22 @@ protected:
 	// notify 주입 이력 (시퀀스 → 주입 시점의 attack_data 버전). 핫리로드로 버전이
 	// 바뀌면 Auto* notify 를 걷어내고 새 값으로 재주입 — 라이브 타이밍 튜닝용.
 	TArray<std::pair<UAnimSequence*, int32>> InjectedSequenceVersions;
+
+	// 슬롯별 직전 변주 인덱스 (같은 모션 연속 재생 회피). key = 슬롯 주소 —
+	// 데이터 핫리로드로 슬롯이 재구성되면 자연히 미스나서 새로 기록된다.
+	TArray<std::pair<const void*, int32>> LastVariantPick;
+
+	// 공중 콤보 행 타임 상태 — 적용 중이면 SavedGravity 로 원복해야 한다.
+	bool  bAirComboHangActive = false;
+	float SavedGravity = 9.8f;
+
+	// launcher 로 떠오른 상태 — 공중 공격이 저글 체인으로 진입. 착지 시 해제 (Tick).
+	bool  bJuggleAirborne = false;
+
+	// 무쌍기 난무 상태 — 활성 동안 무적 + 슬롯 순차 자동 재생 (UltimateStep = 다음 인덱스).
+	bool  bUltimateActive = false;
+	int32 UltimateStep = 0;
+
+	// 구르기 상태 — 활성 동안 무적. 몽타주 종료 시 해제 (Tick).
+	bool  bRolling = false;
 };

@@ -20,16 +20,16 @@
 local BARBARIAN_DIR = "Content/Data/GameJam/Barbarian/"
 
 -- ── Locomotion 시퀀스 ──
-local IDLE_PATH = BARBARIAN_DIR .. "Barbarian_Idle.uasset"
-local WALK_PATH = BARBARIAN_DIR .. "Barbarian_Walk Forward.uasset"
-local RUN_PATH  = BARBARIAN_DIR .. "Barbarian_Run Forward.uasset"
-local JUMP_PATH = BARBARIAN_DIR .. "Barbarian_Jump_mixamo_com.uasset"
+local IDLE_PATH = BARBARIAN_DIR .. "great sword idle_mixamo_com.uasset"
+local WALK_PATH = BARBARIAN_DIR .. "great sword walk_mixamo_com.uasset"
+local RUN_PATH  = BARBARIAN_DIR .. "great sword run (2)_mixamo_com.uasset"
+local JUMP_PATH = BARBARIAN_DIR .. "great sword jump_mixamo_com.uasset"
 
 local DEFAULT_SLOT = "DefaultSlot"
 
 -- ── 튜닝 상수 ──
 local WALK_THRESHOLD = 0.5    -- 이 속도 초과 = Walk
-local RUN_THRESHOLD  = 350.0  -- 이 속도 초과 = Run (캐릭터 이동속도에 맞춰 조절)
+local RUN_THRESHOLD  = 5.0  -- 이 속도 초과 = Run (캐릭터 이동속도에 맞춰 조절)
 local LOCO_BLEND     = 0.2    -- locomotion 상태 전환 블렌드 시간
 local JUMP_BLEND_IN  = 0.1
 local JUMP_BLEND_OUT = 0.3

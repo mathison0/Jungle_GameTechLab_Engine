@@ -3,9 +3,9 @@
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Component/Input/ActionComponent.h"
+#include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/World.h"
-#include "Core/Logging/Log.h"
 
 static AMusouGameMode* GetMusouGameModeFor(const UActorComponent* Component)
 {
@@ -98,13 +98,24 @@ void UBattleComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
 
 float UBattleComponent::ApplyDamage(float Damage, AActor* DamageInstigator)
 {
-	if (bDead || Damage <= 0.0f)
+	if (bDead || bInvincible || Damage <= 0.0f)
 	{
 		return 0.0f;
 	}
 
 	const float Applied = (Damage > Health) ? Health : Damage;
 	Health -= Applied;
+
+	if (Applied > 0.0f)
+	{
+		APawn* OwnerPawn = Cast<APawn>(GetOwner());
+		AMusouGameMode* GameMode = GetMusouGameModeFor(this);
+		APlayerController* PlayerController = GameMode ? GameMode->GetPlayerController() : nullptr;
+		if (OwnerPawn && PlayerController && PlayerController->GetPossessedPawn() == OwnerPawn)
+		{
+			GameMode->NotifyPlayerDamaged(OwnerPawn, Damage, Health, MaxHealth, DamageInstigator);
+		}
+	}
 
 	// TODO: 피격 리액션 (React Large 애님), 무적 시간
 

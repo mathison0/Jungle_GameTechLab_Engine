@@ -75,6 +75,21 @@ public:
 	UPROPERTY(Edit, Save, Category = "SlashEffect|Noise")
 	float NoiseScrollSpeed = 1.6f;
 
+	UPROPERTY(Edit, Save, Category = "SlashEffect|Mask")
+	float RevealDurationRatio = 0.18f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|Mask")
+	float RevealSoftness = 0.08f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|Mask")
+	float EdgeSoftness = 0.12f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|Mask")
+	float TailFadeStart = 1.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|Mask")
+	float TrailLength = 0.55f;
+
 	UPROPERTY(Edit, Save, Category = "SlashEffect|Refraction")
 	float RefractionStrength = 0.035f;
 

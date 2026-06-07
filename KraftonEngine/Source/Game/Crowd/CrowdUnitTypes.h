@@ -107,6 +107,10 @@ struct FCrowdUnit
 	float StateTimeRemaining = 0.0f;
 	float KnockbackTimeRemaining = 0.0f;
 	FVector KnockbackVelocity = FVector::ZeroVector;
+	// 띄우기 (플레이어 launcher 공격) — 공중에 있는 동안 KnockDown 상태가 유지되고
+	// MovementManager 가 Z 포물선을 적분한다. 착지 시 해제 후 잔여 다운 시간 소화.
+	bool bAirborne = false;
+	float AirborneVelZ = 0.0f;
 	ECrowdUnitLOD LOD = ECrowdUnitLOD::Full;
 	float LODUpdateTimeRemaining = 0.0f;
 	float LODAccumulatedDeltaTime = 0.0f;
@@ -162,6 +166,7 @@ struct FDamageEvent
 	bool bCanKnockDown = false;
 	float KnockbackDistance = 0.0f;
 	float KnockbackDuration = 0.0f;
+	float LaunchVelocityZ = 0.0f;   // 띄우기 초기 수직 속도 (FAttackSpec.LaunchZ). 0 = 없음
 };
 
 struct FUnitRenderData

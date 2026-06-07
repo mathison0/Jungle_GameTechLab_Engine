@@ -23,7 +23,7 @@ struct FParticleEmitterInstance
 	int32 EmitBurst(const TArray<FParticleBurstSpawn>& SpawnInfos);
 	void SetLODLevelIndex(int32 LODLevelIndex);
 
-	bool IsActive() const { return bActive; }
+	bool IsActive() const { return bActive || ActiveParticles > 0; }
 	void SetActive(bool bInActive) { bActive = bInActive; }
 
 	bool IsSpawningEnabled() const { return bSpawningEnabled; }
@@ -118,6 +118,7 @@ struct FParticleEmitterInstance
 
 protected:
 	virtual int32 SpawnParticles(float DeltaTime);
+	int32 SpawnBurstParticles(float PreviousEmitterTime, float CurrentEmitterTime);
 	virtual void InitializeParticle(FBaseParticle& Particle);
 	void InitializeParticle(FBaseParticle& Particle, const FVector& SpawnLocation);
 	void InitializeParticle(FBaseParticle& Particle, const FParticleBurstSpawn& SpawnInfo);
@@ -152,6 +153,7 @@ protected:
 	FVector DefaultSize = FVector(1.0f, 1.0f, 1.0f);
 	FVector4 DefaultColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 	float EmitterTime = 0.0f;
+	bool bBurstEmitted = false;
 	bool bActive = true;
 	bool bSpawningEnabled = true;
 };

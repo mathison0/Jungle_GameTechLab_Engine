@@ -71,6 +71,8 @@ namespace
 			Unit.Velocity = FVector::ZeroVector;
 			Unit.KnockbackTimeRemaining = 0.0f;
 			Unit.KnockbackVelocity = FVector::ZeroVector;
+			Unit.bAirborne = false;   // 공중 사망 — 시체는 그 자리에서 정리 (이동 시뮬 제외 대상)
+			Unit.AirborneVelZ = 0.0f;
 			return true;
 		}
 
@@ -88,6 +90,14 @@ namespace
 			Unit.KnockbackTimeRemaining = 0.0f;
 			Unit.KnockbackVelocity = FVector::ZeroVector;
 			Unit.Velocity = FVector::ZeroVector;
+		}
+
+		// 띄우기 — 공중 상태 진입/갱신. 이미 공중이어도 재타격 시 다시 솟구침 (저글).
+		// 공중 동안 상태 만료는 보류(UpdateStateTimers)되고 착지 후 잔여 시간을 소화한다.
+		if (Event.LaunchVelocityZ > 0.0f)
+		{
+			Unit.bAirborne = true;
+			Unit.AirborneVelZ = Event.LaunchVelocityZ;
 		}
 
 		return true;
@@ -193,7 +203,8 @@ void FCrowdCombatManager::HandleAttackEvent(
 			true,
 			true,
 			Event.Spec.KnockbackDist,
-			Event.Spec.KnockbackDur
+			Event.Spec.KnockbackDur,
+			Event.Spec.LaunchZ
 		});
 		++HitCount;
 	};
@@ -248,6 +259,13 @@ void FCrowdCombatManager::UpdateStateTimers(
 	{
 		FCrowdUnit& Unit = Units[Index];
 		if (!Unit.bAlive || !IsCrowdUnitControlLocked(Unit.State))
+		{
+			continue;
+		}
+
+		// 공중(띄움) 동안엔 상태 만료 보류 — 착지(MovementManager) 후 잔여 시간 소화.
+		// (만료를 허용하면 공중에서 Idle 로 풀려 지면 스냅으로 순간이동한다.)
+		if (Unit.bAirborne && Unit.State != EUnitState::Dead)
 		{
 			continue;
 		}
@@ -397,8 +415,11 @@ void FCrowdCombatManager::ProcessDamageEvents(
 			continue;
 		}
 
-		const bool bShouldKnockDown = Event.bCanKnockDown
-			&& Event.KnockbackDistance >= (std::max)(Settings.KnockDownMinKnockbackDistance, 0.0f);
+		// 띄우기 공격은 넉백 거리와 무관하게 다운 — 공중에 뜬 채 Hit(0.18s) 가
+		// 끝나버리면 어색하므로 KnockDown 으로 진입시켜 착지까지 유지한다.
+		const bool bShouldKnockDown = (Event.bCanKnockDown
+			&& Event.KnockbackDistance >= (std::max)(Settings.KnockDownMinKnockbackDistance, 0.0f))
+			|| Event.LaunchVelocityZ > 0.0f;
 		if (bShouldKnockDown)
 		{
 			ApplyTimedReactionState(*Target, EUnitState::KnockDown, Settings.KnockDownStateDuration, Event);

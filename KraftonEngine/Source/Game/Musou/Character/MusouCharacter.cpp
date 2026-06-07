@@ -5,6 +5,13 @@
 #include "Game/Musou/Combat/ComboComponent.h"
 #include "Game/Musou/Combat/AnimNotify_MusouAttack.h"
 #include "Game/Musou/Combat/AnimNotifyState_ComboWindow.h"
+#include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Game/Musou/GameMode/MusouGameState.h"
+#include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/Camera/WaveOscillatorCameraShake.h"
+#include "GameFramework/GameMode/PlayerController.h"
+#include "GameFramework/World.h"
+#include "Component/Input/ActionComponent.h"
 #include "Animation/AnimationManager.h"
 #include "Animation/Instance/LuaAnimInstance.h"
 #include "Animation/Montage/AnimMontage.h"
@@ -21,6 +28,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 // 공격 체인/스펙/스텝 데이터는 전부 Content/Script/Data/attack_data.lua —
 // FAttackDataRegistry 가 로드/핫리로드. 여기는 재생 로직만 남는다.
@@ -173,6 +181,20 @@ void AMusouCharacter::SetupInputComponent()
 		OnHeavyAttackPressed();
 	});
 
+	// R = 무쌍기 — 게이지(킬 적립) 가득 시 발동. 진행 중 동작 전부 캔슬하는 최우선 입력.
+	InputComponent->AddActionMapping("Ultimate", 'R');
+	InputComponent->BindAction("Ultimate", EInputEvent::Pressed, [this]()
+	{
+		OnUltimatePressed();
+	});
+
+	// Shift = 구르기 (VK_SHIFT = 0x10) — 입력 방향으로 회피, 후딜(콤보 윈도우/말미) 캔슬 가능.
+	InputComponent->AddActionMapping("Dodge", 0x10);
+	InputComponent->BindAction("Dodge", EInputEvent::Pressed, [this]()
+	{
+		OnDodgePressed();
+	});
+
 	InputComponent->AddActionMapping("TestHitFlash", 'F');
 	InputComponent->BindAction("TestHitFlash", EInputEvent::Pressed, [this]()
 	{
@@ -194,12 +216,28 @@ void AMusouCharacter::Tick(float DeltaTime)
 		return;
 	}
 
+	// launcher 저글 상태 해제 — 착지하면 다음 공중 진입은 일반 점프 공격으로.
+	if (bJuggleAirborne && !IsFalling())
+	{
+		bJuggleAirborne = false;
+	}
+
+	// 무쌍기 난무 — 현재 슬롯이 끝났으면 다음 슬롯 자동 재생 / 체인 소진 시 정리.
+	UpdateUltimateChain();
+
+	// 구르기 종료 — 몽타주가 끝나면 무적 해제.
+	if (bRolling && !IsAnyMontagePlaying())
+	{
+		EndRoll();
+	}
+
 	// 콤보 리셋 — 체인 끊김(윈도우 내 미입력)/완주, 또는 지상 체인 중 낙하(절벽 등).
 	// 공중 체인은 낙하가 전제라 낙하 리셋에서 제외 — 몽타주 종료로만 리셋.
 	// 입력 콜백(InputComponent 틱)보다 늦게 돌더라도 다음 입력 전에 정리되면 충분.
 	if (ComboComponent->IsComboActive())
 	{
-		const bool bAirChain = (ActiveChainContext == EAttackContext::Airborne);
+		const bool bAirChain = (ActiveChainContext == EAttackContext::Airborne
+			|| ActiveChainContext == EAttackContext::AirborneJuggle);
 		if (!IsAnyMontagePlaying() || (!bAirChain && IsFalling()))
 		{
 			ComboComponent->ResetCombo();
@@ -216,6 +254,39 @@ void AMusouCharacter::Tick(float DeltaTime)
 	else if (ComboComponent->ConsumeQueuedAdvance())
 	{
 		PlayComboStep(ComboComponent->GetComboStep());
+	}
+
+	// 공중 콤보 행 타임 — 공중 체인 진행 중 중력 감쇠 적용/원복.
+	UpdateAirComboHang();
+}
+
+void AMusouCharacter::UpdateAirComboHang()
+{
+	if (!CharacterMovement)
+	{
+		return;
+	}
+
+	// 저글 체인 콤보가 살아 있고, 공중에서 "하강 중"일 때만 — 상승 구간까지 감쇠하면
+	// 점프/launcher 의 위쪽 속도가 안 깎여 공격 중 계속 떠오르는 느낌이 난다 (정점 이후만 적용).
+	// 일반 점프 공격(Airborne 단발)은 행 타임 없음 — 기존 낙하감 유지.
+	const bool bWantHang = ComboComponent
+		&& ComboComponent->IsComboActive()
+		&& ActiveChainContext == EAttackContext::AirborneJuggle
+		&& IsFalling()
+		&& CharacterMovement->GetVelocity().Z <= 0.0f;
+
+	if (bWantHang && !bAirComboHangActive)
+	{
+		const float Scale = FAttackDataRegistry::Get().GetFeedback().AirComboGravityScale;
+		SavedGravity = CharacterMovement->Gravity;
+		CharacterMovement->Gravity = SavedGravity * Scale;
+		bAirComboHangActive = true;
+	}
+	else if (!bWantHang && bAirComboHangActive)
+	{
+		CharacterMovement->Gravity = SavedGravity;
+		bAirComboHangActive = false;
 	}
 }
 
@@ -242,7 +313,7 @@ void AMusouCharacter::OnAttackPressed()
 		Data.EnsureFresh();
 
 		ActiveChainContext = ResolveAttackContext();
-		const TArray<FMusouAttackStep>& Chain = Data.GetLightChain(ActiveChainContext);
+		const TArray<FMusouAttackSlot>& Chain = Data.GetLightChain(ActiveChainContext);
 		if (Chain.empty())
 		{
 			return;
@@ -273,9 +344,169 @@ void AMusouCharacter::OnHeavyAttackPressed()
 	FAttackDataRegistry& Data = FAttackDataRegistry::Get();
 	Data.EnsureFresh();
 
-	if (const FMusouAttackStep* Step = Data.GetHeavyStep(ResolveAttackContext()))
+	if (const FMusouAttackSlot* Slot = Data.GetHeavySlot(ResolveAttackContext()))
 	{
-		PlayAttackStep(*Step);
+		PlayAttackSlot(*Slot);
+	}
+}
+
+void AMusouCharacter::OnUltimatePressed()
+{
+	// 지상에서만, 중복 발동 금지. 진행 중인 콤보/몽타주는 발동 시 전부 캔슬 (최우선 입력).
+	if (bUltimateActive || IsFalling())
+	{
+		return;
+	}
+
+	FAttackDataRegistry& Data = FAttackDataRegistry::Get();
+	Data.EnsureFresh();
+
+	const TArray<FMusouAttackSlot>& Chain = Data.GetUltimateChain();
+	if (Chain.empty())
+	{
+		return;   // lua 에 chains.ultimate 미정의 — 기능 비활성
+	}
+
+	AMusouGameMode* GameMode = GetWorld() ? Cast<AMusouGameMode>(GetWorld()->GetGameMode()) : nullptr;
+	AMusouGameState* GameState = GameMode ? GameMode->GetMusouGameState() : nullptr;
+	if (!GameState || !GameState->TryConsumeMusouGauge())
+	{
+		return;   // 게이지 부족
+	}
+
+	if (ComboComponent)
+	{
+		ComboComponent->ResetCombo();
+	}
+	EndRoll();   // 구르기 중 발동 — 구르기 상태 정리 (무적은 아래서 다시 켠다)
+
+	bUltimateActive = true;
+	UltimateStep = 1;   // 0번은 지금 즉시 재생 — Tick 이 1번부터 이어간다
+
+	// 난무 동안 무적 — 군체에 둘러싸여 발동하는 기술이라 피격으로 끊기면 의미가 없다.
+	if (BattleComponent)
+	{
+		BattleComponent->SetInvincible(true);
+	}
+
+	// 발동 연출 — 짧은 글로벌 슬로모 + 강셰이크 (킬 버스트 인프라 재사용).
+	if (UActionComponent* Action = GetComponentByClass<UActionComponent>())
+	{
+		Action->Slomo(0.4f, 0.3f);
+	}
+	if (APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+	{
+		if (APlayerCameraManager* CamMgr = PC->GetPlayerCameraManager())
+		{
+			CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(0.5f);
+		}
+	}
+
+	// 첫 슬롯 즉시 재생 — 진행 중 몽타주가 있어도 PlayMontage 가 cross-fade 로 교체.
+	if (!PlayAttackSlot(Chain[0]))
+	{
+		EndUltimate();   // 재생 실패 — 무적 고착 방지
+	}
+}
+
+void AMusouCharacter::UpdateUltimateChain()
+{
+	if (!bUltimateActive)
+	{
+		return;
+	}
+
+	// 현재 슬롯이 아직 본 재생 중이면 대기. blend-out 에 들어갔으면 다음 슬롯으로
+	// cross-fade — 완전히 끝나길 기다리면 슬롯 사이에 idle 포즈가 새어 나온다.
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	UAnimMontageInstance* MontageInstance = AnimInstance ? AnimInstance->GetMontageInstance() : nullptr;
+	if (MontageInstance && MontageInstance->IsActive() && !MontageInstance->IsBlendingOut())
+	{
+		return;
+	}
+
+	const TArray<FMusouAttackSlot>& Chain = FAttackDataRegistry::Get().GetUltimateChain();
+	if (UltimateStep >= static_cast<int32>(Chain.size()))
+	{
+		EndUltimate();
+		return;
+	}
+
+	const int32 Step = UltimateStep++;
+	if (!PlayAttackSlot(Chain[Step]))
+	{
+		EndUltimate();
+	}
+}
+
+void AMusouCharacter::EndUltimate()
+{
+	bUltimateActive = false;
+	UltimateStep = 0;
+
+	if (BattleComponent)
+	{
+		BattleComponent->SetInvincible(false);
+	}
+}
+
+void AMusouCharacter::OnDodgePressed()
+{
+	// 지상 전용. 무쌍기 중엔 불가, 구르기 중복 불가.
+	if (bUltimateActive || bRolling || IsFalling())
+	{
+		return;
+	}
+
+	// 캔슬 규칙 — 후딜만 캔슬 가능: 몽타주 없음 / 말미 unlock·blend-out / 콤보 윈도우 개방.
+	// 스윙 본체(선딜+히트 전)는 캔슬 불가 — 공격 커밋은 유지한다.
+	const bool bCanRoll = !IsMovementLockedByMontage()
+		|| (ComboComponent && ComboComponent->IsComboWindowOpen());
+	if (!bCanRoll)
+	{
+		return;
+	}
+
+	FAttackDataRegistry& Data = FAttackDataRegistry::Get();
+	Data.EnsureFresh();
+
+	const FMusouAttackSlot* Dodge = Data.GetDodgeSlot();
+	if (!Dodge)
+	{
+		return;   // lua 에 chains.dodge 미정의 — 기능 비활성
+	}
+
+	if (ComboComponent)
+	{
+		ComboComponent->ResetCombo();
+	}
+
+	// PlayAttackSlot 의 회전 스냅이 입력 방향으로 굴러가게 해준다 (입력 없으면 전방).
+	if (!PlayAttackSlot(*Dodge))
+	{
+		return;   // 에셋 미임포트 등 — 로그는 ResolveStepMontage 경로가 남김
+	}
+
+	// 전 구간 무적 — 회피 보상. 몽타주 종료 시 Tick 이 해제.
+	bRolling = true;
+	if (BattleComponent)
+	{
+		BattleComponent->SetInvincible(true);
+	}
+}
+
+void AMusouCharacter::EndRoll()
+{
+	if (!bRolling)
+	{
+		return;
+	}
+	bRolling = false;
+
+	// 무쌍기가 무적을 쓰는 중이면 유지 — 그 외엔 해제.
+	if (BattleComponent && !bUltimateActive)
+	{
+		BattleComponent->SetInvincible(false);
 	}
 }
 
@@ -283,7 +514,8 @@ EAttackContext AMusouCharacter::ResolveAttackContext() const
 {
 	if (IsFalling())
 	{
-		return EAttackContext::Airborne;
+		// launcher 로 떠올랐으면 저글 체인, 일반 점프/낙하는 단발 점프 공격.
+		return bJuggleAirborne ? EAttackContext::AirborneJuggle : EAttackContext::Airborne;
 	}
 
 	if (CharacterMovement)
@@ -360,6 +592,50 @@ void AMusouCharacter::SnapFacingToInput()
 	CapsuleComponent->SetRelativeRotation(R);
 }
 
+const FMusouAttackStep* AMusouCharacter::PickVariant(const FMusouAttackSlot& Slot)
+{
+	const int32 Num = static_cast<int32>(Slot.Variants.size());
+	if (Num <= 0)
+	{
+		return nullptr;
+	}
+	if (Num == 1)
+	{
+		return &Slot.Variants[0];
+	}
+
+	int32 Index = std::rand() % Num;
+
+	// 직전 변주 반복 회피 — 같은 슬롯에서 연속으로 같은 모션이 나오면 변주 체감이 죽는다.
+	// (key = 슬롯 주소. 데이터 핫리로드로 슬롯이 재구성되면 미스 → 새로 기록.)
+	bool bRecorded = false;
+	for (auto& Entry : LastVariantPick)
+	{
+		if (Entry.first == &Slot)
+		{
+			if (Index == Entry.second)
+			{
+				Index = (Index + 1) % Num;
+			}
+			Entry.second = Index;
+			bRecorded = true;
+			break;
+		}
+	}
+	if (!bRecorded)
+	{
+		LastVariantPick.push_back({ &Slot, Index });
+	}
+
+	return &Slot.Variants[Index];
+}
+
+bool AMusouCharacter::PlayAttackSlot(const FMusouAttackSlot& Slot)
+{
+	const FMusouAttackStep* Step = PickVariant(Slot);
+	return Step && PlayAttackStep(*Step);
+}
+
 bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step)
 {
 	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
@@ -377,13 +653,31 @@ bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step)
 	// 회전 스냅 — 모든 공격 스텝(시작/전진/분기/강공격) 공통. 스텝마다 재조준 가능.
 	SnapFacingToInput();
 
-	AnimInstance->PlayMontage(Montage, FName::None, 1.0f, Step.BlendIn);
+	// 재생속도 변주 — [Min, Max] 균등 랜덤. notify/RM 은 시퀀스 시간축이라 비율 유지.
+	float PlayRate = Step.PlayRateMin;
+	if (Step.PlayRateMax > Step.PlayRateMin)
+	{
+		const float T = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+		PlayRate = Step.PlayRateMin + (Step.PlayRateMax - Step.PlayRateMin) * T;
+	}
+
+	AnimInstance->PlayMontage(Montage, FName::None, PlayRate, Step.BlendIn);
 	return true;
 }
 
 UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 {
 	FAnimationManager& Manager = FAnimationManager::Get();
+
+	// RM 강제 (lua force_root_motion) — 임포트 직후 RM 꺼진 에셋을 에디터 재저장 없이 사용.
+	// (SetEnableRootMotion 이 bForceRootLock 상호 배제도 처리)
+	auto ApplyRootMotionOverride = [&Step](UAnimSequence* Sequence)
+	{
+		if (Step.bForceRootMotion && Sequence && !Sequence->GetEnableRootMotion())
+		{
+			Sequence->SetEnableRootMotion(true);
+		}
+	};
 
 	// 1) 런타임 생성 캐시 — fallback 으로 한 번 만든 몽타주 재사용 (실패 로그 반복 방지).
 	//    데이터 핫리로드로 버전이 바뀌었으면 주입 notify 만 갱신 (Inject 가 버전 비교).
@@ -393,6 +687,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 		{
 			if (Entry.first == Step.SequencePath)
 			{
+				ApplyRootMotionOverride(Entry.second->GetSourceSequence());
 				InjectDefaultAttackNotifies(Entry.second->GetSourceSequence(), Step);
 				return Entry.second;
 			}
@@ -406,6 +701,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 	{
 		if (UAnimMontage* Montage = Manager.LoadMontage(Step.MontagePath))
 		{
+			ApplyRootMotionOverride(Montage->GetSourceSequence());
 			InjectDefaultAttackNotifies(Montage->GetSourceSequence(), Step);
 			return Montage;
 		}
@@ -423,6 +719,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 		return nullptr;
 	}
 
+	ApplyRootMotionOverride(Sequence);
 	InjectDefaultAttackNotifies(Sequence, Step);
 
 	UAnimMontage* Montage = Manager.CreateMontage(Sequence, Sequence->GetName() + "_RuntimeMontage");
@@ -523,21 +820,21 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 
 void AMusouCharacter::PlayComboStep(int32 Step)
 {
-	const TArray<FMusouAttackStep>& Chain = FAttackDataRegistry::Get().GetLightChain(ActiveChainContext);
+	const TArray<FMusouAttackSlot>& Chain = FAttackDataRegistry::Get().GetLightChain(ActiveChainContext);
 	if (Step < 1 || Step > static_cast<int32>(Chain.size()))
 	{
 		return;
 	}
 
-	PlayAttackStep(Chain[Step - 1]);
+	PlayAttackSlot(Chain[Step - 1]);
 }
 
 void AMusouCharacter::PlayBranchFinisher(int32 BranchStep)
 {
 	// 테이블보다 깊은 단수는 마지막 분기로 clamp — Registry 가 처리.
-	if (const FMusouAttackStep* Step = FAttackDataRegistry::Get().GetBranchFinisher(BranchStep))
+	if (const FMusouAttackSlot* Slot = FAttackDataRegistry::Get().GetBranchFinisher(BranchStep))
 	{
-		PlayAttackStep(*Step);
+		PlayAttackSlot(*Slot);
 	}
 }
 

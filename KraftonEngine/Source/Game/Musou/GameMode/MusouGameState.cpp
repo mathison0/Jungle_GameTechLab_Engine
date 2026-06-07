@@ -1,5 +1,9 @@
 #include "Game/Musou/GameMode/MusouGameState.h"
 
+#include "Game/Musou/Combat/AttackDataRegistry.h"
+
+#include <algorithm>
+
 void AMusouGameState::Tick(float DeltaTime)
 {
 	AGameStateBase::Tick(DeltaTime);
@@ -41,6 +45,20 @@ void AMusouGameState::AddKills(int32 Count)
 
 	KillCount += Count;
 	Score += static_cast<int64>(Count) * static_cast<int64>(Combo);
+
+	// 무쌍 게이지 적립 — kills_to_fill 킬이면 가득 (attack_data.lua feedback.ultimate).
+	const int32 KillsToFill = (std::max)(FAttackDataRegistry::Get().GetFeedback().UltimateKillsToFill, 1);
+	MusouGauge = (std::min)(MusouGauge + static_cast<float>(Count) / static_cast<float>(KillsToFill), 1.0f);
+}
+
+bool AMusouGameState::TryConsumeMusouGauge()
+{
+	if (!IsMusouGaugeFull())
+	{
+		return false;
+	}
+	MusouGauge = 0.0f;
+	return true;
 }
 
 void AMusouGameState::AddCombo(int32 Count)

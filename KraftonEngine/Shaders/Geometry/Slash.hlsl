@@ -19,6 +19,12 @@ cbuffer SlashParams : register(b2)
     float SlashNoiseTiling;
     float SlashNoiseScroll;
     float2 SlashPad;
+
+    float SlashReveal;
+    float SlashRevealSoftness;
+    float SlashEdgeSoftness;
+    float SlashTailFadeStart;
+    float SlashTrailLength;
 };
 
 PS_Input_Particle VS(VS_Input_PNCTT input)
@@ -52,9 +58,33 @@ float4 PS(PS_Input_Particle input) : SV_TARGET
         noise
     );
 
+    float revealSoftness = max(SlashRevealSoftness, 0.001f);
+    float revealHead = saturate(SlashReveal);
+    float leadingMask = 1.0f - smoothstep(revealHead, revealHead + revealSoftness, uv.x);
+
+    float trailingMask = 1.0f;
+    float trailLength = saturate(SlashTrailLength);
+    if (trailLength < 0.999f)
+    {
+        float trailStart = revealHead - trailLength;
+        trailingMask = smoothstep(trailStart, trailStart + revealSoftness, uv.x);
+    }
+
+    float edgeSoftness = max(SlashEdgeSoftness, 0.001f);
+    float edgeMask = smoothstep(0.0f, edgeSoftness, uv.y)
+        * (1.0f - smoothstep(1.0f - edgeSoftness, 1.0f, uv.y));
+
+    float tailMask = 1.0f;
+    if (SlashTailFadeStart < 0.999f)
+    {
+        tailMask = 1.0f - smoothstep(SlashTailFadeStart, 1.0f, uv.x);
+    }
+
+    float shapeMask = saturate(leadingMask * trailingMask * edgeMask * tailMask);
+
     float4 color = tex * input.color;
     color.rgb *= SlashTint.rgb * SlashColorStrength;
-    color.a *= SlashAlpha * SlashTint.a * dissolve;
+    color.a *= SlashAlpha * SlashTint.a * dissolve * shapeMask;
 
     color.rgb = ApplyHeightFog(color.rgb, input.worldPos);
     color.rgb = ApplyMaterialEmissive(color.rgb);

@@ -96,7 +96,12 @@ void ASlashEffectActor::ConfigureSlashEffect(
 	float InDissolveStartTime,
 	float InDissolveEndValue,
 	float InNoiseScrollSpeed,
-	float InRefractionStrength)
+	float InRefractionStrength,
+	float InRevealDurationRatio,
+	float InRevealSoftness,
+	float InEdgeSoftness,
+	float InTailFadeStart,
+	float InTrailLength)
 {
 	MeshPath = InMeshPath;
 	CoreMaterialPath = InCoreMaterialPath;
@@ -120,6 +125,11 @@ void ASlashEffectActor::ConfigureSlashEffect(
 	DissolveEndValue = InDissolveEndValue;
 	NoiseScrollSpeed = InNoiseScrollSpeed;
 	RefractionStrength = InRefractionStrength;
+	RevealDurationRatio = InRevealDurationRatio;
+	RevealSoftness = InRevealSoftness;
+	EdgeSoftness = InEdgeSoftness;
+	TailFadeStart = InTailFadeStart;
+	TrailLength = InTrailLength;
 }
 
 void ASlashEffectActor::ActivateSlash(
@@ -150,7 +160,7 @@ void ASlashEffectActor::ActivateSlash(
 	Age = 0.0f;
 	bActive = true;
 
-	SetSlashMaterialParams(1.0f, GlowAlphaMultiplier, 0.0f, 0.0f);
+	SetSlashMaterialParams(1.0f, GlowAlphaMultiplier, 0.0f, 0.0f, 0.0f);
 	SetVisible(true);
 }
 
@@ -209,9 +219,12 @@ void ASlashEffectActor::Tick(float DeltaTime)
 	}
 
 	const float NoiseScroll = Age * NoiseScrollSpeed;
+	const float Reveal = RevealDurationRatio > 0.0f
+		? FMath::Clamp(T / RevealDurationRatio, 0.0f, 1.0f)
+		: 1.0f;
 
 	SetActorScale(CurrentScale);
-	SetSlashMaterialParams(CoreAlpha, GlowAlpha, Dissolve, NoiseScroll);
+	SetSlashMaterialParams(CoreAlpha, GlowAlpha, Dissolve, NoiseScroll, Reveal);
 
 	if (MoveSpeed > 0.0f)
 	{
@@ -276,17 +289,24 @@ void ASlashEffectActor::SetSlashMaterialParams(
 	float CoreAlpha,
 	float GlowAlpha,
 	float Dissolve,
-	float NoiseScroll)
+	float NoiseScroll,
+	float Reveal)
 {
 	CoreAlpha = FMath::Clamp(CoreAlpha, 0.0f, 1.0f);
 	GlowAlpha = FMath::Clamp(GlowAlpha, 0.0f, 1.0f);
 	Dissolve = FMath::Clamp(Dissolve, 0.0f, 1.0f);
+	Reveal = FMath::Clamp(Reveal, 0.0f, 1.0f);
 
 	if (CoreMaterial)
 	{
 		CoreMaterial->SetScalarParameter("SlashAlpha", CoreAlpha);
 		CoreMaterial->SetScalarParameter("SlashDissolve", Dissolve);
 		CoreMaterial->SetScalarParameter("SlashNoiseScroll", NoiseScroll);
+		CoreMaterial->SetScalarParameter("SlashReveal", Reveal);
+		CoreMaterial->SetScalarParameter("SlashRevealSoftness", RevealSoftness);
+		CoreMaterial->SetScalarParameter("SlashEdgeSoftness", EdgeSoftness);
+		CoreMaterial->SetScalarParameter("SlashTailFadeStart", TailFadeStart);
+		CoreMaterial->SetScalarParameter("SlashTrailLength", TrailLength);
 	}
 
 	if (GlowMaterial)
@@ -294,6 +314,11 @@ void ASlashEffectActor::SetSlashMaterialParams(
 		GlowMaterial->SetScalarParameter("SlashAlpha", GlowAlpha);
 		GlowMaterial->SetScalarParameter("SlashDissolve", Dissolve * 0.75f);
 		GlowMaterial->SetScalarParameter("SlashNoiseScroll", NoiseScroll * 0.65f);
+		GlowMaterial->SetScalarParameter("SlashReveal", Reveal);
+		GlowMaterial->SetScalarParameter("SlashRevealSoftness", RevealSoftness);
+		GlowMaterial->SetScalarParameter("SlashEdgeSoftness", EdgeSoftness);
+		GlowMaterial->SetScalarParameter("SlashTailFadeStart", TailFadeStart);
+		GlowMaterial->SetScalarParameter("SlashTrailLength", TrailLength);
 	}
 
 	if (RefractionMaterial)
@@ -301,6 +326,11 @@ void ASlashEffectActor::SetSlashMaterialParams(
 		RefractionMaterial->SetScalarParameter("SlashAlpha", CoreAlpha);
 		RefractionMaterial->SetScalarParameter("RefractionStrength", RefractionStrength * CoreAlpha);
 		RefractionMaterial->SetScalarParameter("RefractionNoiseScroll", NoiseScroll);
+		RefractionMaterial->SetScalarParameter("SlashReveal", Reveal);
+		RefractionMaterial->SetScalarParameter("SlashRevealSoftness", RevealSoftness);
+		RefractionMaterial->SetScalarParameter("SlashEdgeSoftness", EdgeSoftness);
+		RefractionMaterial->SetScalarParameter("SlashTailFadeStart", TailFadeStart);
+		RefractionMaterial->SetScalarParameter("SlashTrailLength", TrailLength);
 	}
 }
 

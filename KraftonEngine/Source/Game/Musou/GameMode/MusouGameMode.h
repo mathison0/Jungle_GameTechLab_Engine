@@ -4,10 +4,12 @@
 #include "Core/Delegate.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/Combat/HitTypes.h"
+#include "Game/Musou/UI/MusouHudPresenter.h"
 
 #include "Source/Game/Musou/GameMode/MusouGameMode.generated.h"
 
 class AMusouGameState;
+class AActor;
 class APawn;
 class UUserWidget;
 
@@ -70,20 +72,17 @@ public:
 	// 플레이어 사망 시 호출 — 매치 종료.
 	virtual void NotifyPlayerDeath(APawn* Player);
 
+	// 플레이어에게 실제 데미지가 적용된 순간 호출 — HUD 피격 연출 진입점.
+	virtual void NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator);
+
 	// --- Accessors ---
 	AMusouGameState* GetMusouGameState() const;
 
 private:
-	void UpdateHud(float DeltaTime);
 	void SetStopMenuVisible(bool bVisible);
+	float GetPlayerHealthRatio() const;
 
 	UUserWidget* HudWidget = nullptr;
+	FMusouHudPresenter HudPresenter;
 	bool bStopMenuVisible = false;
-	bool bKillHudInitialized = false;
-	int32 LastHudKillCount = 0;
-	int32 LastDisplayedKillMilestone = 0;
-	int32 ActiveKillMilestone = 0;
-	float KillPopRemaining = 0.0f;
-	float KillMilestoneRemaining = 0.0f;
-	float KillMilestoneElapsed = 0.0f;
 };

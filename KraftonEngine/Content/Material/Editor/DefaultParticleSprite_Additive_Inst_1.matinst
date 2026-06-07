@@ -1,0 +1,13 @@
+{
+        "Parameters" : {
+
+        },
+        "ParentMaterial" : "Content/Material/Editor/DefaultParticleSprite_Additive.mat",
+        "PathFileName" : "Content/Material/Editor/DefaultParticleSprite_Additive_Inst_1.matinst",
+        "Textures" : {
+          "DiffuseTexture" : "Content/Texture/micro-star.png"
+        },
+        "bOverrideEmissiveColor" : false,
+        "bOverrideEmissiveIntensity" : false,
+        "bOverrideEnableBloom" : false
+      }
