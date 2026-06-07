@@ -14,6 +14,7 @@
 #include "Engine/Runtime/Engine.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
+#include "Viewport/GameViewportClient.h"
 
 #include <algorithm>
 
@@ -32,6 +33,19 @@ namespace
 		APlayerController* PC = GEngine->GetWorld()->GetFirstPlayerController();
 		return PC ? PC->GetPlayerCameraManager() : nullptr;
 	}
+
+	void SetGameInputPossessed(bool bPossessed)
+	{
+		if (!GEngine)
+		{
+			return;
+		}
+
+		if (UGameViewportClient* GameViewportClient = GEngine->GetGameViewportClient())
+		{
+			GameViewportClient->SetInputPossessed(bPossessed);
+		}
+	}
 }
 
 AMusouGameMode::AMusouGameMode()
@@ -48,6 +62,7 @@ void AMusouGameMode::StartMatch()
 {
 	// 베이스가 PlayerController spawn + 첫 Pawn AutoPossess를 수행한다.
 	AGameModeBase::StartMatch();
+	SetGameInputPossessed(true);
 
 	if (!HudWidget)
 	{
@@ -235,12 +250,13 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 {
 	UE_LOG("[MusouGameMode] Player died");
 	EndMatch();
+	SetGameInputPossessed(false);
 	bStopMenuVisible = false;
 	HudPresenter.StartDeathOverlay();
 
 	if (UWorld* World = GetWorld())
 	{
-		World->SetPaused(true);
+		World->SetPaused(false);
 	}
 }
 
