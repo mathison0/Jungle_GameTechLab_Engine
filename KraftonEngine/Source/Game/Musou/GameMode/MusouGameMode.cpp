@@ -1,4 +1,5 @@
 ﻿#include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Game/Musou/Character/MusouCharacter.h"
 #include "Game/Musou/Combat/AttackDataRegistry.h"
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
@@ -302,6 +303,12 @@ void AMusouGameMode::NotifyPlayerDamaged(APawn* Player, float Damage, float Play
 	}
 
 	HudPresenter.NotifyPlayerDamaged(Damage, PlayerCurrentHealth, PlayerMaxHealth);
+
+	// 피격 리액션 — 평시 피격 시 휘청 모션 (공격/구르기/무쌍기 중엔 캐릭터가 스킵 판단).
+	if (AMusouCharacter* MusouCharacter = Cast<AMusouCharacter>(Player))
+	{
+		MusouCharacter->PlayHitReaction();
+	}
 }
 
 AMusouGameState* AMusouGameMode::GetMusouGameState() const

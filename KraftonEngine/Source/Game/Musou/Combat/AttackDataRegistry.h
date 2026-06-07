@@ -71,6 +71,9 @@ struct FMusouFeedbackParams
 
 	// 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
 	int32 UltimateKillsToFill = 40;
+
+	// 플레이어 피격 리액션 최소 간격 (초) — 군체 다단 히트로 스턴락되지 않게
+	float HitReactCooldown = 1.2f;
 };
 
 class FAttackDataRegistry
@@ -104,6 +107,9 @@ public:
 	// 구르기 (회피) — 미정의면 nullptr (기능 비활성).
 	const FMusouAttackSlot* GetDodgeSlot() const { return DodgeSlot.IsValid() ? &DodgeSlot : nullptr; }
 
+	// 플레이어 피격 리액션 — 변주 슬롯 (좌/우 휘청 등). 미정의면 nullptr (기능 비활성).
+	const FMusouAttackSlot* GetHitReactSlot() const { return HitReactSlot.IsValid() ? &HitReactSlot : nullptr; }
+
 	// 전투 피드백 연출 파라미터 (킬 버스트 슬로모/셰이크 등).
 	const FMusouFeedbackParams& GetFeedback() const { return Feedback; }
 
@@ -122,6 +128,7 @@ private:
 	TArray<FMusouAttackSlot> BranchFinishers;
 	TArray<FMusouAttackSlot> UltimateChain;
 	FMusouAttackSlot         DodgeSlot;
+	FMusouAttackSlot         HitReactSlot;
 	FMusouFeedbackParams     Feedback;
 
 	int32 Version = 0;

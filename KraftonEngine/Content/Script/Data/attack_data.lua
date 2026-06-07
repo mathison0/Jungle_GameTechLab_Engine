@@ -207,6 +207,14 @@ return {
         roll          = { montage = montage("Standing Dive Forward_mixamo_com"),
                           sequence = seq("Standing Dive Forward_mixamo_com"),
                           blend_in = 0.08, play_rate = 1.15, force_root_motion = true },
+
+        -- 플레이어 피격 리액션 — 좌/우 휘청 (공격 아님). 빠르게 재생해 후딜 최소화
+        react_left    = { montage = montage("Barbarian_React Large From Left"),
+                          sequence = seq("Barbarian_React Large From Left"),
+                          blend_in = 0.08, play_rate = { 1.2, 1.3 } },
+        react_right   = { montage = montage("Barbarian_React Large From Right"),
+                          sequence = seq("Barbarian_React Large From Right"),
+                          blend_in = 0.08, play_rate = { 1.2, 1.3 } },
     },
 
     chains = {
@@ -245,6 +253,9 @@ return {
 
         -- 구르기 (Shift) — 후딜(콤보 윈도우/말미) 캔슬 가능, 전 구간 무적
         dodge = "roll",
+
+        -- 플레이어 피격 리액션 — 좌/우 랜덤 (직전 반복 회피). 평시 피격만, 쿨다운은 feedback
+        hit_react = { "react_left", "react_right" },
     },
 
     -- ── 전투 피드백/연출 (AMusouGameMode / AMusouCharacter 소비) ──
@@ -265,6 +276,11 @@ return {
         -- 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
         ultimate = {
             kills_to_fill = 30,
+        },
+
+        -- 플레이어 피격 리액션 — 최소 간격 (초). 군체 다단 히트 스턴락 방지
+        hit_react = {
+            cooldown = 1.2,
         },
     },
 }
