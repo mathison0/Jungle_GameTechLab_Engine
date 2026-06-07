@@ -204,7 +204,9 @@ void FMusouHudPresenter::StartDeathOverlay()
 
 void FMusouHudPresenter::UpdateStatusHud(const AMusouGameState* MusouState, float PlayerHealthRatio)
 {
-	Widget->SetAttribute("hp-bar", "value", std::clamp(PlayerHealthRatio, 0.0f, 1.0f));
+	const float DisplayHealthRatio = bDeathOverlayVisible ? 0.0f : PlayerHealthRatio;
+
+	Widget->SetAttribute("hp-bar", "value", std::clamp(DisplayHealthRatio, 0.0f, 1.0f));
 	Widget->SetText("score-counter", FString("score: ") + std::to_string(static_cast<long long>(MusouState->GetScore())));
 	Widget->SetAttribute("musou-bar", "value", MusouState->GetMusouGauge());
 	Widget->SetProperty("musou-ready-label", "visibility", MusouState->IsMusouGaugeFull() ? "visible" : "hidden");
