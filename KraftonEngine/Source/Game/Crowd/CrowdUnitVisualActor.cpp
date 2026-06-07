@@ -4,6 +4,7 @@
 #include "Animation/AnimationTickLOD.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Game/Crowd/CrowdMeleeAnimInstance.h"
+#include "Game/Crowd/LargeScaleUnitManagerComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 
 namespace
@@ -104,6 +105,8 @@ void ACrowdUnitVisualActor::ApplyRenderData(const FUnitRenderData& InRenderData)
 	Velocity = InRenderData.Velocity;
 	Speed = InRenderData.Speed;
 	CircleAroundDirectionSign = InRenderData.CircleAroundDirectionSign;
+	AnimTime = InRenderData.AnimTime;
+	bKnockDownGettingUp = InRenderData.bKnockDownGettingUp;
 	bVisualActive = InRenderData.bVisible;
 
 	SetActorLocation(InRenderData.Position);
@@ -125,6 +128,8 @@ void ACrowdUnitVisualActor::DeactivateVisual()
 	Velocity = FVector::ZeroVector;
 	Speed = 0.0f;
 	CircleAroundDirectionSign = 1.0f;
+	AnimTime = 0.0f;
+	bKnockDownGettingUp = false;
 	bVisualActive = false;
 	bNeedsTick = false;
 
@@ -136,6 +141,11 @@ void ACrowdUnitVisualActor::DeactivateVisual()
 	}
 
 	SetVisible(false);
+}
+
+bool ACrowdUnitVisualActor::ShouldLogCrowdAnimationState() const
+{
+	return Manager && Manager->IsUnitAnimationStateLogEnabled();
 }
 
 void ACrowdUnitVisualActor::Tick(float DeltaTime)

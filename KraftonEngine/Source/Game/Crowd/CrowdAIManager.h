@@ -10,6 +10,8 @@ struct FCrowdAISettings
 	float PlayerProxyRadius = 0.6f;
 	float SlotArriveTolerance = 0.5f;
 	float CircleAroundRadiusTolerance = 0.75f;
+	float AttackStateExitHysteresis = 0.35f;
+	float CircleAroundStateHysteresis = 0.35f;
 };
 
 class FCrowdAIManager

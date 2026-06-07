@@ -73,10 +73,12 @@ void FCrowdAIManager::Update(
 		}
 
 		const float AttackRange = (std::max)(Unit.Archetype.AttackRange + Unit.Radius + Target->Radius, 0.0f);
+		const float AttackExitRange = AttackRange + (std::max)(Settings.AttackStateExitHysteresis, 0.0f);
 		const float DistanceSq = DistanceSquaredXY(Unit.Position, Target->Position);
 		const bool bInAttackRange = DistanceSq <= AttackRange * AttackRange;
+		const bool bCanStayInAttack = Unit.State == EUnitState::Attack && DistanceSq <= AttackExitRange * AttackExitRange;
 		Unit.TargetKind = ECrowdTargetKind::Unit;
-		Unit.State = bInAttackRange ? EUnitState::Attack : EUnitState::Chase;
+		Unit.State = (bInAttackRange || bCanStayInAttack) ? EUnitState::Attack : EUnitState::Chase;
 	}
 }
 
@@ -95,8 +97,11 @@ void FCrowdAIManager::UpdatePlayerTargetState(FCrowdUnit& Unit, const FCrowdAISe
 	Unit.LookAtLocation = Settings.PlayerLocation;
 
 	const float AttackRange = (std::max)(Unit.Archetype.AttackRange + Unit.Radius + Settings.PlayerProxyRadius, 0.0f);
-	const bool bInAttackRange = DistanceSquaredXY(Unit.Position, Settings.PlayerLocation) <= AttackRange * AttackRange;
-	if (Unit.bHasAttackToken && bInAttackRange)
+	const float AttackExitRange = AttackRange + (std::max)(Settings.AttackStateExitHysteresis, 0.0f);
+	const float DistanceSq = DistanceSquaredXY(Unit.Position, Settings.PlayerLocation);
+	const bool bInAttackRange = DistanceSq <= AttackRange * AttackRange;
+	const bool bCanStayInAttack = Unit.State == EUnitState::Attack && DistanceSq <= AttackExitRange * AttackExitRange;
+	if (Unit.bHasAttackToken && (bInAttackRange || bCanStayInAttack))
 	{
 		Unit.State = EUnitState::Attack;
 		return;
@@ -109,9 +114,11 @@ void FCrowdAIManager::UpdatePlayerTargetState(FCrowdUnit& Unit, const FCrowdAISe
 	}
 
 	const float OrbitTolerance = (std::max)(Settings.CircleAroundRadiusTolerance, 0.0f);
+	const float OrbitExitTolerance = OrbitTolerance + (std::max)(Settings.CircleAroundStateHysteresis, 0.0f);
 	const float CurrentRadius = std::sqrt(DistanceSquaredXY(Unit.Position, Settings.PlayerLocation));
 	const float TargetRadius = std::sqrt(DistanceSquaredXY(Unit.MoveGoal, Settings.PlayerLocation));
-	const bool bInOrbitBand = std::abs(CurrentRadius - TargetRadius) <= OrbitTolerance;
+	const float EffectiveOrbitTolerance = Unit.State == EUnitState::CircleAround ? OrbitExitTolerance : OrbitTolerance;
+	const bool bInOrbitBand = std::abs(CurrentRadius - TargetRadius) <= EffectiveOrbitTolerance;
 	Unit.State = bInOrbitBand ? EUnitState::CircleAround : EUnitState::Move;
 }
 

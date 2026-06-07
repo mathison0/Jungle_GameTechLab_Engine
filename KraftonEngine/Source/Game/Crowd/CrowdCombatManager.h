@@ -13,6 +13,7 @@ struct FCrowdCombatSettings
 	float KnockDownStateDuration = 0.65f;
 	float DeadStateDuration = 1.0f;
 	float KnockDownMinKnockbackDistance = 4.0f;
+	float AttackStateExitHysteresis = 0.35f;
 };
 
 class FCrowdCombatManager
@@ -39,7 +40,12 @@ public:
 		FCrowdUnitStore& UnitStore,
 		TArray<FUnitHandle>& OutRemovedHandles);
 
-	void UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitStore, APawn* PlayerPawn, float PlayerProxyRadius);
+	void UpdateCombat(
+		float DeltaTime,
+		FCrowdUnitStore& UnitStore,
+		APawn* PlayerPawn,
+		float PlayerProxyRadius,
+		const FCrowdCombatSettings& Settings);
 	void ProcessDamageEvents(
 		FCrowdUnitStore& UnitStore,
 		AMusouGameMode* GameMode,
