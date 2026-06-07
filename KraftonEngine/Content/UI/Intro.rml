@@ -6,57 +6,89 @@
 			width: 100%;
 			height: 100%;
 			margin: 0;
-			background-color: rgba(8, 10, 14, 0.72);
+			background-color: #050505;
 			font-family: "Shilla_Culture";
 			font-weight: bold;
 		}
 
 		#intro-root {
 			position: relative;
-			display: flex;
-			align-items: center;
-			justify-content: center;
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+		}
+
+		#intro-background {
+			position: absolute;
+			left: 0;
+			top: 0;
 			width: 100%;
 			height: 100%;
 		}
 
 		#menu-buttons {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
+			position: absolute;
+			left: 20%;
+			top: 52%;
+			display: block;
+			width: 24%;
 		}
 
 		.menu-button {
-			width: 260px;
-			height: 72px;
+			position: relative;
+			display: block;
+			width: 100%;
+			height: 76px;
 			padding: 0;
-			border-width: 2px;
-			border-color: #dddddd;
-			background-color: #222222f1;
-			color: #dddddd;
-			font-size: 28px;
-			line-height: 72px;
+			margin-top: 0px;
+			border-width: 0;
+			background-color: transparent;
+			color: #f2e2c8;
+			font-size: 26px;
+			line-height: 76px;
 			text-align: center;
 		}
 
 		.secondary-button {
-			width: 220px;
-			height: 56px;
-			margin-top: 14px;
-			border-color: #dddddd;
-			background-color: #1b1b1bf1;
-			color: #dddddd;
-			font-size: 22px;
-			line-height: 56px;
+			width: 100%;
+			height: 76px;
+			font-size: 24px;
+			line-height: 76px;
 		}
 
-		.menu-button:hover,
-		.menu-button.selected,
-		.secondary-button:hover,
-		.secondary-button.selected {
-			background-color: #dddddd;
-			color: #1b1b1bf1;
+		.button-frame {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.button-frame-hover {
+			display: none;
+		}
+
+		.button-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 100%;
+			height: 76px;
+			line-height: 76px;
+			text-align: center;
+		}
+
+		.menu-button.selected .button-frame-normal {
+			display: none;
+		}
+
+		.menu-button.selected .button-frame-hover {
+			display: block;
+		}
+
+		.menu-button.selected .button-label {
+			color: #fff1b0;
 		}
 
 		#scoreboard-overlay-host {
@@ -259,11 +291,28 @@
 </head>
 <body>
 	<div id="intro-root">
+		<img id="intro-background" src="JungleMusou_Title.png" />
 		<div id="menu-buttons">
-			<div id="start-button" class="menu-button">전투 참가</div>
-			<div id="settings-button" class="menu-button secondary-button">설정</div>
-			<div id="score-button" class="menu-button secondary-button">스코어</div>
-			<div id="exit-button" class="menu-button secondary-button">게임 종료</div>
+			<div id="start-button" class="menu-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">전투 참가</div>
+			</div>
+			<div id="settings-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">설정</div>
+			</div>
+			<div id="score-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">스코어</div>
+			</div>
+			<div id="exit-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">게임 종료</div>
+			</div>
 		</div>
 		<div id="scoreboard-overlay-host"></div>
 	</div>

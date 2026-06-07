@@ -486,7 +486,9 @@ Rml::TextureHandle FRmlRenderInterfaceD3D11::LoadTexture(Rml::Vector2i& TextureD
 		D3D11_BIND_SHADER_RESOURCE,
 		0,
 		0,
-		DirectX::WIC_LOADER_IGNORE_SRGB,
+		// RML UI는 GammaCorrection pass 전에 SceneColor에 합성된다.
+		// PNG/JPG 색상 이미지를 linear texture처럼 샘플링하면 최종 감마 보정에서 화면이 허옇게 뜨므로 sRGB로 로드한다.
+		DirectX::WIC_LOADER_FORCE_SRGB,
 		&Resource,
 		&SRV);
 
