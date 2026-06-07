@@ -329,10 +329,10 @@
 			position: absolute;
 			left: 50%;
 			top: 50%;
-			margin-left: -280px;
+			margin-left: -370px;
 			margin-top: 112px;
 			display: block;
-			width: 520px;
+			width: 700px;
 			height: 360px;
 			padding: 18px;
 			background-color: #08020298;
@@ -344,7 +344,7 @@
 			position: absolute;
 			left: 0;
 			top: 0;
-			width: 556px;
+			width: 736px;
 			height: 396px;
 			opacity: 0.78;
 			z-index: 0;
@@ -378,14 +378,14 @@
 			z-index: 1;
 			display: flex;
 			align-items: center;
-			width: 520px;
+			width: 700px;
 			height: 48px;
 			margin-top: 8px;
 		}
 
 		#scoreboard-name-input {
 			display: block;
-			width: 382px;
+			width: 562px;
 			height: 40px;
 			line-height: 40px;
 			padding-left: 10px;
@@ -420,7 +420,7 @@
 			position: relative;
 			z-index: 1;
 			display: block;
-			width: 520px;
+			width: 700px;
 			height: 24px;
 			line-height: 24px;
 			margin-top: 4px;
@@ -432,7 +432,7 @@
 			position: relative;
 			z-index: 1;
 			display: block;
-			width: 520px;
+			width: 700px;
 			height: 146px;
 			margin-top: 10px;
 			overflow: hidden;
@@ -441,7 +441,7 @@
 		.scoreboard-row {
 			position: relative;
 			display: block;
-			width: 520px;
+			width: 700px;
 			height: 34px;
 			margin-bottom: 2px;
 			background-color: rgba(248, 243, 223, 0.08);
@@ -449,9 +449,9 @@
 
 		.scoreboard-rank {
 			position: absolute;
-			left: 8px;
+			left: 10px;
 			top: 0;
-			width: 34px;
+			width: 42px;
 			height: 34px;
 			line-height: 34px;
 			font-size: 20px;
@@ -461,9 +461,9 @@
 
 		.scoreboard-name {
 			position: absolute;
-			left: 50px;
+			left: 64px;
 			top: 0;
-			width: 144px;
+			width: 170px;
 			height: 34px;
 			line-height: 34px;
 			font-size: 20px;
@@ -472,9 +472,9 @@
 
 		.scoreboard-entry-score {
 			position: absolute;
-			left: 200px;
+			left: 248px;
 			top: 0;
-			width: 96px;
+			width: 130px;
 			height: 34px;
 			line-height: 34px;
 			font-size: 22px;
@@ -484,19 +484,20 @@
 
 		.scoreboard-entry-details {
 			position: absolute;
-			left: 310px;
+			left: 396px;
 			top: 0;
-			width: 202px;
+			width: 290px;
 			height: 34px;
 			line-height: 34px;
 			font-size: 16px;
 			color: #d6ccb1;
 			text-align: right;
+			white-space: nowrap;
 		}
 
 		.scoreboard-empty {
 			display: block;
-			width: 520px;
+			width: 700px;
 			height: 72px;
 			line-height: 72px;
 			font-size: 22px;
@@ -510,7 +511,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			width: 520px;
+			width: 700px;
 			height: 30px;
 			margin-top: 4px;
 		}
@@ -559,7 +560,7 @@
 			width: 180px;
 			height: 48px;
 			line-height: 48px;
-			margin-left: 170px;
+			margin-left: 260px;
 			margin-top: 14px;
 			padding: 0;
 			text-align: center;
@@ -628,7 +629,7 @@
 			position: relative;
 			z-index: 1;
 			display: none;
-			width: 520px;
+			width: 700px;
 			height: 48px;
 			margin-top: 8px;
 			align-items: center;
