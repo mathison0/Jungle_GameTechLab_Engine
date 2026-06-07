@@ -241,6 +241,16 @@
 			width: 240px;
 		}
 
+		#death-menu {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -120px;
+			margin-top: 112px;
+			display: none;
+			width: 240px;
+		}
+
 		.pause-button {
 			display: block;
 			width: 240px;
@@ -264,6 +274,10 @@
 		}
 
 		#restart-button {
+			margin-bottom: 16px;
+		}
+
+		#death-restart-button {
 			margin-bottom: 16px;
 		}
 	</style>
@@ -296,6 +310,10 @@
 				<div id="resume-button" class="pause-button">재개하기</div>
 				<div id="restart-button" class="pause-button">재도전</div>
 				<div id="stop-button" class="pause-button">전투 중단</div>
+			</div>
+			<div id="death-menu">
+				<div id="death-restart-button" class="pause-button">재도전</div>
+				<div id="death-stop-button" class="pause-button">전투 중단</div>
 			</div>
 		</div>
 	</div>
