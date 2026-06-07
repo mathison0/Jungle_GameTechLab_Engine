@@ -54,6 +54,8 @@ namespace
 
 void ASlashEffectActor::InitDefaultComponents()
 {
+	bTickInEditor = true;
+
 	SlashRootComponent = AddComponent<USceneComponent>();
 	SetRootComponent(SlashRootComponent);
 

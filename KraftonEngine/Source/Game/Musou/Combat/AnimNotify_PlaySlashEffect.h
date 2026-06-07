@@ -22,6 +22,9 @@ public:
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
 	bool bOnlyPlayer = true;
 
+	UPROPERTY(Edit, Category = "SlashEffect")
+	bool bPreviewInEditor = true;
+
 	UPROPERTY(Edit, Save, Category = "SlashEffect|Assets", AssetType = "StaticMesh")
 	FSoftObjectPtr MeshPath = "Content/Data/Effect/Slash_StaticMesh.uasset";
 

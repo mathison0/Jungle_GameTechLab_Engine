@@ -112,13 +112,52 @@ private:
 	bool bEnableSkeletalVisuals = true;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Skeletal Mesh", AssetType="SkeletalMesh")
-	FSoftObjectPtr AllyMeleeVisualSkeletalMeshPath = "None";
+	FSoftObjectPtr AllyMeleeVisualSkeletalMeshPath = "Content/Data/GameJam/Knight/SK_Knight_SkeletalMesh.uasset";
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
 	TSubclassOf<UAnimInstance> AllyMeleeVisualAnimInstanceClass;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Scale")
 	FVector AllyMeleeVisualScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Idle Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeIdleSequencePath = "Content/Data/GameJam/Knight/Knight_Idle_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Walk Forward Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeWalkForwardSequencePath = "Content/Data/GameJam/Knight/Knight_Walk_Forward_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Walk Backward Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeWalkBackwardSequencePath = "Content/Data/GameJam/Knight/Knight_Walk_Backward_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Run Forward Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeRunForwardSequencePath = "Content/Data/GameJam/Knight/Knight_Run_Forward_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Run Backward Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeRunBackwardSequencePath = "Content/Data/GameJam/Knight/Knight_Run_Backward_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Strafe Walk Left Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeStrafeWalkLeftSequencePath = "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Left_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Strafe Walk Right Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeStrafeWalkRightSequencePath = "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Right_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Strafe Run Left Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeStrafeRunLeftSequencePath = "Content/Data/GameJam/Knight/Knight_Strafe_Run_Left_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Strafe Run Right Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeStrafeRunRightSequencePath = "Content/Data/GameJam/Knight/Knight_Strafe_Run_Right_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Attack Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeAttackSequencePath = "Content/Data/GameJam/Knight/Knight_Attack_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Hit Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeHitSequencePath = "Content/Data/GameJam/Knight/Knight_Impact_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee KnockDown Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeKnockDownSequencePath = "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Dead Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeDeadSequencePath = "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset";
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Ranged", DisplayName="Ally Ranged Skeletal Mesh", AssetType="SkeletalMesh")
 	FSoftObjectPtr AllyRangedVisualSkeletalMeshPath = "None";
@@ -130,13 +169,52 @@ private:
 	FVector AllyRangedVisualScale = FVector(1.0f, 1.0f, 1.0f);
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Skeletal Mesh", AssetType="SkeletalMesh")
-	FSoftObjectPtr EnemyMeleeVisualSkeletalMeshPath = "None";
+	FSoftObjectPtr EnemyMeleeVisualSkeletalMeshPath = "Content/Data/GameJam/Knight/SK_Knight_SkeletalMesh.uasset";
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
 	TSubclassOf<UAnimInstance> EnemyMeleeVisualAnimInstanceClass;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Scale")
 	FVector EnemyMeleeVisualScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Idle Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeIdleSequencePath = "Content/Data/GameJam/Knight/Knight_Idle_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Walk Forward Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeWalkForwardSequencePath = "Content/Data/GameJam/Knight/Knight_Walk_Forward_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Walk Backward Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeWalkBackwardSequencePath = "Content/Data/GameJam/Knight/Knight_Walk_Backward_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Run Forward Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeRunForwardSequencePath = "Content/Data/GameJam/Knight/Knight_Run_Forward_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Run Backward Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeRunBackwardSequencePath = "Content/Data/GameJam/Knight/Knight_Run_Backward_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Strafe Walk Left Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeStrafeWalkLeftSequencePath = "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Left_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Strafe Walk Right Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeStrafeWalkRightSequencePath = "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Right_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Strafe Run Left Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeStrafeRunLeftSequencePath = "Content/Data/GameJam/Knight/Knight_Strafe_Run_Left_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Strafe Run Right Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeStrafeRunRightSequencePath = "Content/Data/GameJam/Knight/Knight_Strafe_Run_Right_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Attack Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeAttackSequencePath = "Content/Data/GameJam/Knight/Knight_Attack_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Hit Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeHitSequencePath = "Content/Data/GameJam/Knight/Knight_Impact_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee KnockDown Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeKnockDownSequencePath = "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Dead Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeDeadSequencePath = "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset";
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Ranged", DisplayName="Enemy Ranged Skeletal Mesh", AssetType="SkeletalMesh")
 	FSoftObjectPtr EnemyRangedVisualSkeletalMeshPath = "None";

@@ -13,14 +13,20 @@ void UAnimNotify_PlaySlashEffect::Notify(USkeletalMeshComponent* MeshComp, UAnim
 	AActor* OwnerActor = MeshComp->GetOwner();
 	if (!OwnerActor) return;
 
-	if (bOnlyPlayer)
+	UWorld* World = OwnerActor->GetWorld();
+	if (!World) return;
+
+	const bool bIsEditorPreview = World->GetWorldType() == EWorldType::EditorPreview;
+	if (bIsEditorPreview && !bPreviewInEditor)
+	{
+		return;
+	}
+
+	if (bOnlyPlayer && !bIsEditorPreview)
 	{
 		APawn* OwnerPawn = Cast<APawn>(OwnerActor);
 		if (!OwnerPawn || !OwnerPawn->IsPossessed()) return;
 	}
-
-	UWorld* World = OwnerActor->GetWorld();
-	if (!World) return;
 
 	const FVector Forward = OwnerActor->GetActorForward().Normalized();
 	const FVector Right = OwnerActor->GetActorRight().Normalized();
@@ -44,6 +50,7 @@ void UAnimNotify_PlaySlashEffect::Notify(USkeletalMeshComponent* MeshComp, UAnim
 		return;
 	}
 
+	Effect->bTickInEditor = true;
 	Effect->ConfigureSlashEffect(
 		MeshPath,
 		CoreMaterialPath,
