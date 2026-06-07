@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Game/Musou/UI/MusouMenuNavigator.h"
 #include "Game/Musou/UI/MusouScoreboardOverlayPresenter.h"
 #include "GameFramework/GameMode/GameModeBase.h"
 
@@ -20,17 +21,15 @@ public:
 	void Tick(float DeltaTime) override;
 
 private:
-	void SelectIntroButton(int32 ButtonIndex);
-	void MoveIntroSelection(int32 Delta);
-	void ExecuteIntroSelection();
-	void UpdateIntroSelectionVisuals();
+	void ConfigureIntroMenuNavigator();
+	void HandleIntroMenuInput();
 	void ShowScoreboard();
 	void HideScoreboard();
 	void ShowPreviousScoreboardPage();
 	void ShowNextScoreboardPage();
 
 	UUserWidget* IntroWidget = nullptr;
+	FMusouMenuNavigator IntroMenuNavigator;
 	FMusouScoreboardOverlayPresenter ScoreboardOverlay;
-	int32 SelectedIntroButtonIndex = 0;
 	bool bScoreboardVisible = false;
 };

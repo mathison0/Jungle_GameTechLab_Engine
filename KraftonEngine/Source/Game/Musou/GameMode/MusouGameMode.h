@@ -6,6 +6,7 @@
 #include "Game/Musou/Combat/HitTypes.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/UI/MusouHudPresenter.h"
+#include "Game/Musou/UI/MusouMenuNavigator.h"
 
 #include "Source/Game/Musou/GameMode/MusouGameMode.generated.h"
 
@@ -93,36 +94,21 @@ public:
 private:
 	void SetStopMenuVisible(bool bVisible);
 	float GetPlayerHealthRatio() const;
-	void BindHudMenuHoverHandlers();
-	void SelectPauseMenuButton(int32 ButtonIndex);
-	void SelectDeathMenuButton(int32 ButtonIndex);
-	void SelectVictoryMenuButton(int32 ButtonIndex);
-	void MovePauseMenuSelection(int32 Delta);
-	void MoveDeathMenuSelection(int32 Delta);
-	void MoveVictoryMenuSelection(int32 Delta);
-	void ExecutePauseMenuSelection();
-	void ExecuteDeathMenuSelection();
-	void ExecuteVictoryMenuSelection();
+	void ConfigureHudMenuNavigators();
 	void HandlePauseMenuInput();
 	void HandleDeathMenuInput();
 	void HandleVictoryMenuInput();
 	void SubmitVictoryScore();
-	void UpdatePauseMenuSelectionVisuals();
-	void UpdateDeathMenuSelectionVisuals();
-	void UpdateVictoryMenuSelectionVisuals();
-	void ClearHudButtonSelection(const char* const* ButtonIds, int32 ButtonCount);
 
 	UUserWidget* HudWidget = nullptr;
 	FMusouHudPresenter HudPresenter;
+	FMusouMenuNavigator PauseMenuNavigator;
+	FMusouMenuNavigator DeathMenuNavigator;
+	FMusouMenuNavigator VictoryMenuNavigator;
 
-	// 결과 오버레이가 떠 있으면 pause 메뉴 선택 상태와 겹치지 않도록 각 메뉴별 선택을 분리한다.
+	// 결과 오버레이가 떠 있으면 pause 메뉴 입력을 막고, 활성 메뉴 선택은 각 navigator가 보관한다.
 	bool bStopMenuVisible = false;
-	bool bDeathMenuSelectionInitialized = false;
-	bool bVictoryMenuSelectionInitialized = false;
 	bool bHasPendingVictoryResult = false;
 	bool bVictoryScoreSubmitted = false;
 	FMusouMatchResult PendingVictoryResult;
-	int32 SelectedPauseButtonIndex = 0;
-	int32 SelectedDeathButtonIndex = 0;
-	int32 SelectedVictoryButtonIndex = 0;
 };

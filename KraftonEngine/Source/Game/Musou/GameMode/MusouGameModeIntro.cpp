@@ -72,13 +72,7 @@ void AMusouGameModeIntro::StartMatch()
 				PostQuitMessage(0);
 			});
 
-			for (int32 ButtonIndex = 0; ButtonIndex < IntroButtonCount; ++ButtonIndex)
-			{
-				IntroWidget->BindMouseOver(IntroButtonIds[ButtonIndex], [this, ButtonIndex]()
-				{
-					SelectIntroButton(ButtonIndex);
-				});
-			}
+			ConfigureIntroMenuNavigator();
 		}
 	}
 
@@ -88,7 +82,7 @@ void AMusouGameModeIntro::StartMatch()
 		IntroWidget->AddToViewport(0);
 		ScoreboardOverlay.SetWidget(IntroWidget);
 		HideScoreboard();
-		SelectIntroButton(0);
+		IntroMenuNavigator.Select(0);
 		UE_LOG("[MusouGameModeIntro] Intro UI added to viewport");
 	}
 }
@@ -96,6 +90,7 @@ void AMusouGameModeIntro::StartMatch()
 void AMusouGameModeIntro::EndPlay()
 {
 	ScoreboardOverlay.SetWidget(nullptr);
+	IntroMenuNavigator.SetWidget(nullptr);
 
 	if (IntroWidget)
 	{
@@ -133,57 +128,27 @@ void AMusouGameModeIntro::Tick(float DeltaTime)
 		return;
 	}
 
-	if (Input.GetKeyDown(VK_UP))
-	{
-		MoveIntroSelection(-1);
-	}
-	if (Input.GetKeyDown(VK_DOWN))
-	{
-		MoveIntroSelection(1);
-	}
-	if (Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
-	{
-		ExecuteIntroSelection();
-	}
+	HandleIntroMenuInput();
 }
 
-void AMusouGameModeIntro::SelectIntroButton(int32 ButtonIndex)
+void AMusouGameModeIntro::ConfigureIntroMenuNavigator()
 {
-	if (IntroButtonCount <= 0)
+	if (!IntroWidget)
 	{
 		return;
 	}
 
-	SelectedIntroButtonIndex = (ButtonIndex % IntroButtonCount + IntroButtonCount) % IntroButtonCount;
-	UpdateIntroSelectionVisuals();
+	IntroMenuNavigator.SetWidget(IntroWidget);
+	IntroMenuNavigator.SetButtons(IntroButtonIds, IntroButtonCount);
+	IntroMenuNavigator.BindHoverHandlers([this]()
+	{
+		return !bScoreboardVisible;
+	});
 }
 
-void AMusouGameModeIntro::MoveIntroSelection(int32 Delta)
+void AMusouGameModeIntro::HandleIntroMenuInput()
 {
-	SelectIntroButton(SelectedIntroButtonIndex + Delta);
-}
-
-void AMusouGameModeIntro::ExecuteIntroSelection()
-{
-	if (!IntroWidget || !IntroWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	IntroWidget->Click(IntroButtonIds[SelectedIntroButtonIndex]);
-}
-
-void AMusouGameModeIntro::UpdateIntroSelectionVisuals()
-{
-	if (!IntroWidget || !IntroWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	for (int32 ButtonIndex = 0; ButtonIndex < IntroButtonCount; ++ButtonIndex)
-	{
-		IntroWidget->SetClass(IntroButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedIntroButtonIndex);
-	}
+	IntroMenuNavigator.HandleVerticalInput(InputSystem::Get());
 }
 
 void AMusouGameModeIntro::ShowScoreboard()
@@ -207,6 +172,7 @@ void AMusouGameModeIntro::HideScoreboard()
 
 	bScoreboardVisible = false;
 	ScoreboardOverlay.Hide();
+	IntroMenuNavigator.EnsureSelection();
 }
 
 void AMusouGameModeIntro::ShowPreviousScoreboardPage()
