@@ -61,6 +61,17 @@ bool AMusouGameState::TryConsumeMusouGauge()
 	return true;
 }
 
+FMusouMatchResult AMusouGameState::MakeMatchResult(bool bVictory) const
+{
+	FMusouMatchResult Result;
+	Result.bVictory = bVictory;
+	Result.Score = Score;
+	Result.KillCount = KillCount;
+	Result.MaxCombo = MaxCombo;
+	Result.MatchTime = MatchTime;
+	return Result;
+}
+
 void AMusouGameState::AddCombo(int32 Count)
 {
 	if (bMatchEnded || Count <= 0)
