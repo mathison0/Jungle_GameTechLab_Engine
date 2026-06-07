@@ -5,6 +5,13 @@
 #include "Game/Musou/Combat/ComboComponent.h"
 #include "Game/Musou/Combat/AnimNotify_MusouAttack.h"
 #include "Game/Musou/Combat/AnimNotifyState_ComboWindow.h"
+#include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Game/Musou/GameMode/MusouGameState.h"
+#include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/Camera/WaveOscillatorCameraShake.h"
+#include "GameFramework/GameMode/PlayerController.h"
+#include "GameFramework/World.h"
+#include "Component/Input/ActionComponent.h"
 #include "Animation/AnimationManager.h"
 #include "Animation/Instance/LuaAnimInstance.h"
 #include "Animation/Montage/AnimMontage.h"
@@ -174,6 +181,13 @@ void AMusouCharacter::SetupInputComponent()
 		OnHeavyAttackPressed();
 	});
 
+	// R = 무쌍기 — 게이지(킬 적립) 가득 시 발동. 진행 중 동작 전부 캔슬하는 최우선 입력.
+	InputComponent->AddActionMapping("Ultimate", 'R');
+	InputComponent->BindAction("Ultimate", EInputEvent::Pressed, [this]()
+	{
+		OnUltimatePressed();
+	});
+
 	InputComponent->AddActionMapping("TestHitFlash", 'F');
 	InputComponent->BindAction("TestHitFlash", EInputEvent::Pressed, [this]()
 	{
@@ -200,6 +214,9 @@ void AMusouCharacter::Tick(float DeltaTime)
 	{
 		bJuggleAirborne = false;
 	}
+
+	// 무쌍기 난무 — 현재 슬롯이 끝났으면 다음 슬롯 자동 재생 / 체인 소진 시 정리.
+	UpdateUltimateChain();
 
 	// 콤보 리셋 — 체인 끊김(윈도우 내 미입력)/완주, 또는 지상 체인 중 낙하(절벽 등).
 	// 공중 체인은 낙하가 전제라 낙하 리셋에서 제외 — 몽타주 종료로만 리셋.
@@ -317,6 +334,105 @@ void AMusouCharacter::OnHeavyAttackPressed()
 	if (const FMusouAttackSlot* Slot = Data.GetHeavySlot(ResolveAttackContext()))
 	{
 		PlayAttackSlot(*Slot);
+	}
+}
+
+void AMusouCharacter::OnUltimatePressed()
+{
+	// 지상에서만, 중복 발동 금지. 진행 중인 콤보/몽타주는 발동 시 전부 캔슬 (최우선 입력).
+	if (bUltimateActive || IsFalling())
+	{
+		return;
+	}
+
+	FAttackDataRegistry& Data = FAttackDataRegistry::Get();
+	Data.EnsureFresh();
+
+	const TArray<FMusouAttackSlot>& Chain = Data.GetUltimateChain();
+	if (Chain.empty())
+	{
+		return;   // lua 에 chains.ultimate 미정의 — 기능 비활성
+	}
+
+	AMusouGameMode* GameMode = GetWorld() ? Cast<AMusouGameMode>(GetWorld()->GetGameMode()) : nullptr;
+	AMusouGameState* GameState = GameMode ? GameMode->GetMusouGameState() : nullptr;
+	if (!GameState || !GameState->TryConsumeMusouGauge())
+	{
+		return;   // 게이지 부족
+	}
+
+	if (ComboComponent)
+	{
+		ComboComponent->ResetCombo();
+	}
+
+	bUltimateActive = true;
+	UltimateStep = 1;   // 0번은 지금 즉시 재생 — Tick 이 1번부터 이어간다
+
+	// 난무 동안 무적 — 군체에 둘러싸여 발동하는 기술이라 피격으로 끊기면 의미가 없다.
+	if (BattleComponent)
+	{
+		BattleComponent->SetInvincible(true);
+	}
+
+	// 발동 연출 — 짧은 글로벌 슬로모 + 강셰이크 (킬 버스트 인프라 재사용).
+	if (UActionComponent* Action = GetComponentByClass<UActionComponent>())
+	{
+		Action->Slomo(0.4f, 0.3f);
+	}
+	if (APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+	{
+		if (APlayerCameraManager* CamMgr = PC->GetPlayerCameraManager())
+		{
+			CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(0.5f);
+		}
+	}
+
+	// 첫 슬롯 즉시 재생 — 진행 중 몽타주가 있어도 PlayMontage 가 cross-fade 로 교체.
+	if (!PlayAttackSlot(Chain[0]))
+	{
+		EndUltimate();   // 재생 실패 — 무적 고착 방지
+	}
+}
+
+void AMusouCharacter::UpdateUltimateChain()
+{
+	if (!bUltimateActive)
+	{
+		return;
+	}
+
+	// 현재 슬롯이 아직 본 재생 중이면 대기. blend-out 에 들어갔으면 다음 슬롯으로
+	// cross-fade — 완전히 끝나길 기다리면 슬롯 사이에 idle 포즈가 새어 나온다.
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	UAnimMontageInstance* MontageInstance = AnimInstance ? AnimInstance->GetMontageInstance() : nullptr;
+	if (MontageInstance && MontageInstance->IsActive() && !MontageInstance->IsBlendingOut())
+	{
+		return;
+	}
+
+	const TArray<FMusouAttackSlot>& Chain = FAttackDataRegistry::Get().GetUltimateChain();
+	if (UltimateStep >= static_cast<int32>(Chain.size()))
+	{
+		EndUltimate();
+		return;
+	}
+
+	const int32 Step = UltimateStep++;
+	if (!PlayAttackSlot(Chain[Step]))
+	{
+		EndUltimate();
+	}
+}
+
+void AMusouCharacter::EndUltimate()
+{
+	bUltimateActive = false;
+	UltimateStep = 0;
+
+	if (BattleComponent)
+	{
+		BattleComponent->SetInvincible(false);
 	}
 }
 

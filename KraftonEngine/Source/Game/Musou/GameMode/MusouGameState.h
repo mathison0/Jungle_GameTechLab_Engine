@@ -33,6 +33,13 @@ public:
 	int64 GetScore() const { return Score; }
 	float GetComboRemaining() const { return ComboRemaining; }
 
+	// --- 무쌍 게이지 (0..1) ---
+	// 킬로 차오르고(AddKills 가 feedback.ultimate.kills_to_fill 기준 적립),
+	// 가득 차면 무쌍기(AMusouCharacter) 발동 가능. 발동 시 TryConsumeMusouGauge 로 소모.
+	float GetMusouGauge() const { return MusouGauge; }
+	bool IsMusouGaugeFull() const { return MusouGauge >= 1.0f; }
+	bool TryConsumeMusouGauge();   // 가득 찼을 때만 소모하고 true
+
 	// --- Match ---
 	float GetMatchTime() const { return MatchTime; }
 	bool IsMatchEnded() const { return bMatchEnded; }
@@ -49,5 +56,6 @@ private:
 	int64 Score = 0;
 	float ComboRemaining = 0.0f;  // 콤보 윈도우 잔여 시간
 	float MatchTime = 0.0f;       // 매치 경과 시간(초)
+	float MusouGauge = 0.0f;      // 무쌍 게이지 (0..1) — 킬 적립, 무쌍기 발동 시 소모
 	bool bMatchEnded = false;
 };

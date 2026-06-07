@@ -276,6 +276,16 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 	}
 
+	// ── ultimate (선택) — 무쌍기 난무 체인 ──
+	TArray<FMusouAttackSlot> NewUltimate;
+	if (sol::optional<sol::table> ChainsT = Root["chains"])
+	{
+		if (sol::optional<sol::table> UltimateT = (*ChainsT)["ultimate"])
+		{
+			ParseSlotArray(*UltimateT, NewUltimate);
+		}
+	}
+
 	// ── feedback (선택) — 없거나 일부만 있으면 구조체 기본값 유지 ──
 	FMusouFeedbackParams NewFeedback;
 	if (sol::optional<sol::table> FeedbackT = Root["feedback"])
@@ -290,6 +300,10 @@ bool FAttackDataRegistry::LoadFromLua()
 		if (sol::optional<sol::table> AirCombo = (*FeedbackT)["air_combo"])
 		{
 			NewFeedback.AirComboGravityScale = AirCombo->get_or("gravity_scale", NewFeedback.AirComboGravityScale);
+		}
+		if (sol::optional<sol::table> Ultimate = (*FeedbackT)["ultimate"])
+		{
+			NewFeedback.UltimateKillsToFill = Ultimate->get_or("kills_to_fill", NewFeedback.UltimateKillsToFill);
 		}
 	}
 
@@ -307,6 +321,7 @@ bool FAttackDataRegistry::LoadFromLua()
 		HeavySlots[i]  = std::move(NewHeavy[i]);
 	}
 	BranchFinishers = std::move(NewBranch);
+	UltimateChain = std::move(NewUltimate);
 	Feedback = NewFeedback;
 	++Version;
 	return true;
@@ -376,6 +391,7 @@ void FAttackDataRegistry::LoadDefaults()
 		Single(MakeStep("Barbarian_Melee Attack 360 High",   "Barbarian_Melee Attack 360 High",   0.1f, "attack1", 0.45f, -1.0f, -1.0f)),
 	};
 
+	UltimateChain.clear();               // 내장 fallback 에선 무쌍기 비활성 (lua 전용 구성)
 	Feedback = FMusouFeedbackParams();   // 구조체 기본값
 
 	++Version;
