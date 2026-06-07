@@ -29,13 +29,22 @@ inline const FAttackSpec* FindMusouAttackSpec(const FName& Id)
 	static const FAttackSpec Table[] =
 	{
 		//  Id                  Range  Height ConeCos DmgMult KbDist KbDur
-		{ FName("attack1"),     4.0f,  2.5f,  -1.0f,  1.0f,   2.5f,  0.15f }, // 360 High — 전방위
+		{ FName("attack1"),     5.0f,  2.5f,  -1.0f,  2.5f,   6.0f,  0.30f }, // 360 High — 전방위. 3단 분기 피니셔 (시퀀스에 저작된 id)
 		{ FName("attack2"),     3.5f,  2.5f,   0.34f, 1.5f,   4.0f,  0.20f }, // Backhand — 전방 콘 (~140도)
 
 		// 좌클릭 콤보 체인 (Combo Attack Ver. 1/2/3) — 단계가 오를수록 강해진다
 		{ FName("combo1"),      3.5f,  2.5f,   0.34f, 1.0f,   1.5f,  0.10f }, // 1단 — 전방 콘, 짧은 넉백
 		{ FName("combo2"),      3.5f,  2.5f,   0.34f, 1.2f,   2.0f,  0.12f }, // 2단
 		{ FName("combo3"),      4.5f,  2.5f,  -1.0f,  2.0f,   5.0f,  0.25f }, // 3단 피니셔 — 전방위 + 강넉백
+
+		// 진입 컨텍스트 변형 (MusouCharacter 의 공격 체인 테이블 참조)
+		{ FName("dash_attack"), 4.0f,  2.5f,   0.34f, 1.5f,   3.5f,  0.20f }, // 이동 중 콤보 진입 — 돌진 베기 (전방 콘)
+		{ FName("spin_attack"), 4.5f,  2.5f,  -1.0f,  1.8f,   4.0f,  0.20f }, // 이동 중 강공격 — 전진 회전베기 (전방위)
+		{ FName("jump_attack"), 4.5f,  3.5f,  -1.0f,  2.0f,   4.5f,  0.25f }, // 공중 공격 — 도약 내려찍기 (Height 여유)
+
+		// 콤보 분기 피니셔 (□..△ — N단 진행 중 강공격). 깊을수록 강력. 3단 분기는 attack1(360 High) 재사용.
+		{ FName("branch1"),     4.0f,  2.5f,   0.34f, 1.4f,   3.0f,  0.18f }, // 1단 분기 — Horizontal 와이드 횡베기 (전방 콘)
+		{ FName("branch2"),     4.5f,  2.0f,  -1.0f,  1.8f,   4.5f,  0.22f }, // 2단 분기 — 360 Low 로우 스핀 (전방위)
 	};
 
 	for (const FAttackSpec& Spec : Table)
