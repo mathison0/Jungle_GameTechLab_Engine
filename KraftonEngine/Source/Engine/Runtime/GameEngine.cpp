@@ -14,6 +14,27 @@
 #include "Object/Reflection/UClass.h"
 #include "Core/ProjectSettings.h"
 #include "Core/Logging/Log.h"
+#include "UI/UIManager.h"
+#include "UI/UserWidget.h"
+
+namespace
+{
+	constexpr float LoadingMinVisibleDuration = 1.2f;
+	constexpr float LoadingDotInterval = 0.22f;
+	constexpr int32 LoadingScreenZOrder = 10000;
+
+	FString MakeLoadingText(float Elapsed)
+	{
+		const int32 DotCount = 1 + (static_cast<int32>(Elapsed / LoadingDotInterval) % 3);
+
+		FString Text = "Loading";
+		for (int32 DotIndex = 0; DotIndex < DotCount; ++DotIndex)
+		{
+			Text += ".";
+		}
+		return Text;
+	}
+}
 
 void UGameEngine::Init(FWindowsWindow* InWindow)
 {
@@ -82,7 +103,7 @@ void UGameEngine::Tick(float DeltaTime)
 
 	// World->Tick / Render 가 모두 끝난 이후에 transition 처리 — Lua callback 안에서
 	// 요청이 들어와도 Tick/Render 흐름이 valid 한 액터/컴포넌트로 진행한 뒤 안전하게 destroy.
-	ProcessPendingTransition();
+	ProcessPendingTransition(DeltaTime);
 }
 
 void UGameEngine::OnWindowResized(uint32 Width, uint32 Height)
@@ -136,17 +157,77 @@ void UGameEngine::LoadStartLevel()
 void UGameEngine::RequestTransitionToScene(const FString& InScenePath)
 {
 	PendingScenePath = InScenePath;
-	bPendingSceneTransition = true;
+	SceneTransitionState = ESceneTransitionState::ShowLoading;
+	LoadingElapsed = 0.0f;
 }
 
-void UGameEngine::ProcessPendingTransition()
+void UGameEngine::ProcessPendingTransition(float DeltaTime)
 {
-	if (!bPendingSceneTransition)
+	switch (SceneTransitionState)
 	{
+	case ESceneTransitionState::None:
+		return;
+
+	case ESceneTransitionState::ShowLoading:
+		ShowLoadingScreen();
+		UpdateLoadingScreen(0.0f);
+		SceneTransitionState = ESceneTransitionState::WaitBeforeLoad;
+		return;
+
+	case ESceneTransitionState::WaitBeforeLoad:
+		UpdateLoadingScreen(DeltaTime);
+		if (LoadingElapsed >= LoadingMinVisibleDuration)
+		{
+			SceneTransitionState = ESceneTransitionState::LoadScene;
+		}
+		return;
+
+	case ESceneTransitionState::LoadScene:
+		LoadPendingSceneTransition();
+		SceneTransitionState = ESceneTransitionState::HideLoading;
+		return;
+
+	case ESceneTransitionState::HideLoading:
+		HideLoadingScreen();
+		SceneTransitionState = ESceneTransitionState::None;
 		return;
 	}
-	bPendingSceneTransition = false;
+}
 
+void UGameEngine::ShowLoadingScreen()
+{
+	if (!LoadingWidget)
+	{
+		LoadingWidget = UUIManager::Get().CreateWidget(nullptr, "Content/UI/Loading.rml");
+	}
+
+	if (LoadingWidget)
+	{
+		LoadingWidget->SetWantsMouse(false);
+		LoadingWidget->AddToViewport(LoadingScreenZOrder);
+	}
+}
+
+void UGameEngine::UpdateLoadingScreen(float DeltaTime)
+{
+	LoadingElapsed += DeltaTime;
+
+	if (LoadingWidget && LoadingWidget->IsDocumentLoaded())
+	{
+		LoadingWidget->SetText("loading-text", MakeLoadingText(LoadingElapsed));
+	}
+}
+
+void UGameEngine::HideLoadingScreen()
+{
+	if (LoadingWidget && LoadingWidget->IsInViewport())
+	{
+		LoadingWidget->RemoveFromParent();
+	}
+}
+
+void UGameEngine::LoadPendingSceneTransition()
+{
 	const FString ScenePath = std::move(PendingScenePath);
 	PendingScenePath.clear();
 

@@ -5,6 +5,8 @@
 
 #include "Source/Engine/Runtime/GameEngine.generated.h"
 
+class UUserWidget;
+
 UCLASS()
 class UGameEngine : public UEngine
 {
@@ -27,6 +29,15 @@ public:
 	void RequestTransitionToScene(const FString& InScenePath) override;
 
 private:
+	enum class ESceneTransitionState
+	{
+		None,
+		ShowLoading,
+		WaitBeforeLoad,
+		LoadScene,
+		HideLoading,
+	};
+
 	void LoadStartLevel();
 	bool LoadSceneFromPath(const FString& FilePath);
 
@@ -34,11 +45,17 @@ private:
 	FString ResolveSceneFilePath(const FString& InNameOrPath) const;
 
 	// UGameEngine::Tick 끝에서 호출 — 펜딩 요청이 있으면 이 시점에 destroy + load + BeginPlay 실행.
-	void ProcessPendingTransition();
+	void ProcessPendingTransition(float DeltaTime);
+	void ShowLoadingScreen();
+	void UpdateLoadingScreen(float DeltaTime);
+	void HideLoadingScreen();
+	void LoadPendingSceneTransition();
 
 private:
 	FViewport* StandaloneViewport = nullptr;
 
-	bool bPendingSceneTransition = false;
+	ESceneTransitionState SceneTransitionState = ESceneTransitionState::None;
 	FString PendingScenePath;
+	UUserWidget* LoadingWidget = nullptr;
+	float LoadingElapsed = 0.0f;
 };
