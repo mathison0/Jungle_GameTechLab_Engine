@@ -280,7 +280,7 @@ return {
 
         -- 플레이어 피격 리액션 — 최소 간격 (초). 군체 다단 히트 스턴락 방지
         hit_react = {
-            cooldown = 1.2,
+            cooldown = 3.0,
         },
     },
 }
