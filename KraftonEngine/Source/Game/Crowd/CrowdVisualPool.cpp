@@ -36,9 +36,11 @@ void FCrowdVisualPool::BuildRenderData(const FCrowdUnitStore& UnitStore)
 			Unit.LOD,
 			Unit.Position,
 			Unit.Rotation,
+			Unit.Velocity,
 			Unit.AnimState,
 			Unit.AnimTime,
 			Unit.Velocity.Length(),
+			Unit.CircleAroundDirectionSign,
 			true
 		});
 	}
@@ -98,7 +100,7 @@ void FCrowdVisualPool::SyncVisualActors(
 			ActiveVisualActors[Data.Handle.Index] = VisualActor;
 		}
 
-		VisualActor->InitializeVisual(Manager, VisualMesh, AnimClass);
+		VisualActor->InitializeVisual(Manager, VisualMesh, AnimClass, VisualDesc.MeleeAnimations);
 		VisualActor->SetActorScale(VisualDesc.Scale);
 		VisualActor->ApplyRenderData(Data);
 	}

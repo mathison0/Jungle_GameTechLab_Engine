@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Animation/Instance/CharacterAnimInstance.h"
+#include "Animation/AnimInstance.h"
 #include "Game/Crowd/CrowdUnitTypes.h"
 
 #include "Source/Game/Crowd/CrowdUnitAnimInstance.generated.h"
 
 UCLASS()
-class UCrowdUnitAnimInstance : public UCharacterAnimInstance
+class UCrowdUnitAnimInstance : public UAnimInstance
 {
 public:
 	GENERATED_BODY()
@@ -18,8 +18,24 @@ public:
 
 	EUnitState GetLastCrowdState() const { return LastCrowdState; }
 	EUnitCombatType GetLastCrowdCombatType() const { return LastCrowdCombatType; }
+	ECrowdUnitLOD GetLastCrowdLOD() const { return LastCrowdLOD; }
+	float GetCrowdSpeed() const { return Speed; }
+	float GetCrowdMoveForwardAmount() const { return MoveForwardAmount; }
+	float GetCrowdMoveRightAmount() const { return MoveRightAmount; }
+	float GetCrowdCircleAroundDirectionSign() const { return CircleAroundDirectionSign; }
 
-private:
+	UPROPERTY(Edit, Category="Animation|Crowd", DisplayName="Speed", Min=0.0f, Max=100.0f, Speed=0.5f)
+	float Speed = 0.0f;
+
+	UPROPERTY(Edit, Category="Animation|Crowd", DisplayName="Move Forward Amount", Min=-1.0f, Max=1.0f, Speed=0.05f)
+	float MoveForwardAmount = 0.0f;
+
+	UPROPERTY(Edit, Category="Animation|Crowd", DisplayName="Move Right Amount", Min=-1.0f, Max=1.0f, Speed=0.05f)
+	float MoveRightAmount = 0.0f;
+
+protected:
 	EUnitState LastCrowdState = EUnitState::Idle;
 	EUnitCombatType LastCrowdCombatType = EUnitCombatType::Melee;
+	ECrowdUnitLOD LastCrowdLOD = ECrowdUnitLOD::Full;
+	float CircleAroundDirectionSign = 1.0f;
 };

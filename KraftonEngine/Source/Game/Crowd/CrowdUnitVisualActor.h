@@ -18,7 +18,11 @@ public:
 
 	ACrowdUnitVisualActor();
 
-	void InitializeVisual(ULargeScaleUnitManagerComponent* InManager, USkeletalMesh* InMesh, UClass* InAnimClass);
+	void InitializeVisual(
+		ULargeScaleUnitManagerComponent* InManager,
+		USkeletalMesh* InMesh,
+		UClass* InAnimClass,
+		const FCrowdMeleeAnimationSet& InMeleeAnimationSet);
 	void ApplyRenderData(const FUnitRenderData& InRenderData);
 	void DeactivateVisual();
 	void Tick(float DeltaTime) override;
@@ -29,6 +33,8 @@ public:
 	EUnitCombatType GetCrowdCombatType() const { return UnitCombatType; }
 	ECrowdUnitLOD GetCrowdLOD() const { return UnitLOD; }
 	float GetCrowdSpeed() const { return Speed; }
+	const FVector& GetCrowdVelocity() const { return Velocity; }
+	float GetCrowdCircleAroundDirectionSign() const { return CircleAroundDirectionSign; }
 
 	USkeletalMeshComponent* GetMeshComponent() const { return MeshComponent; }
 
@@ -42,9 +48,12 @@ private:
 	EUnitState UnitState = EUnitState::Idle;
 	EUnitCombatType UnitCombatType = EUnitCombatType::Melee;
 	ECrowdUnitLOD UnitLOD = ECrowdUnitLOD::Full;
+	FVector Velocity = FVector::ZeroVector;
 	float Speed = 0.0f;
+	float CircleAroundDirectionSign = 1.0f;
 	bool bVisualActive = false;
 
 	USkeletalMesh* CurrentMesh = nullptr;
 	UClass* CurrentAnimClass = nullptr;
+	FCrowdMeleeAnimationSet CurrentMeleeAnimationSet;
 };

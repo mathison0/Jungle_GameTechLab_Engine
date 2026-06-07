@@ -16,6 +16,7 @@ struct FCrowdVisualDesc
 	FSoftObjectPtr SkeletalMeshPath = "None";
 	TSubclassOf<UAnimInstance> AnimInstanceClass;
 	FVector Scale = FVector(1.0f, 1.0f, 1.0f);
+	FCrowdMeleeAnimationSet MeleeAnimations;
 };
 
 class FCrowdVisualPool

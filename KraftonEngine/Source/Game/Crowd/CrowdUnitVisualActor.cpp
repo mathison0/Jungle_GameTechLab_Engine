@@ -3,6 +3,7 @@
 #include "Animation/AnimationMode.h"
 #include "Animation/AnimationTickLOD.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Game/Crowd/CrowdMeleeAnimInstance.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 
 namespace
@@ -51,7 +52,11 @@ USkeletalMeshComponent* ACrowdUnitVisualActor::EnsureMeshComponent()
 	return MeshComponent;
 }
 
-void ACrowdUnitVisualActor::InitializeVisual(ULargeScaleUnitManagerComponent* InManager, USkeletalMesh* InMesh, UClass* InAnimClass)
+void ACrowdUnitVisualActor::InitializeVisual(
+	ULargeScaleUnitManagerComponent* InManager,
+	USkeletalMesh* InMesh,
+	UClass* InAnimClass,
+	const FCrowdMeleeAnimationSet& InMeleeAnimationSet)
 {
 	Manager = InManager;
 	USkeletalMeshComponent* VisualMeshComponent = EnsureMeshComponent();
@@ -73,6 +78,16 @@ void ACrowdUnitVisualActor::InitializeVisual(ULargeScaleUnitManagerComponent* In
 	}
 
 	VisualMeshComponent->SetAnimationMode(InAnimClass ? EAnimationMode::AnimationCustom : EAnimationMode::None);
+
+	if (CurrentMeleeAnimationSet != InMeleeAnimationSet)
+	{
+		CurrentMeleeAnimationSet = InMeleeAnimationSet;
+	}
+
+	if (UCrowdMeleeAnimInstance* MeleeAnim = Cast<UCrowdMeleeAnimInstance>(VisualMeshComponent->GetAnimInstance()))
+	{
+		MeleeAnim->SetMeleeAnimationSet(CurrentMeleeAnimationSet);
+	}
 }
 
 void ACrowdUnitVisualActor::ApplyRenderData(const FUnitRenderData& InRenderData)
@@ -86,7 +101,9 @@ void ACrowdUnitVisualActor::ApplyRenderData(const FUnitRenderData& InRenderData)
 	UnitState = InRenderData.State;
 	UnitCombatType = InRenderData.CombatType;
 	UnitLOD = InRenderData.LOD;
+	Velocity = InRenderData.Velocity;
 	Speed = InRenderData.Speed;
+	CircleAroundDirectionSign = InRenderData.CircleAroundDirectionSign;
 	bVisualActive = InRenderData.bVisible;
 
 	SetActorLocation(InRenderData.Position);
@@ -105,7 +122,9 @@ void ACrowdUnitVisualActor::DeactivateVisual()
 	UnitState = EUnitState::Dead;
 	UnitCombatType = EUnitCombatType::Melee;
 	UnitLOD = ECrowdUnitLOD::Full;
+	Velocity = FVector::ZeroVector;
 	Speed = 0.0f;
+	CircleAroundDirectionSign = 1.0f;
 	bVisualActive = false;
 	bNeedsTick = false;
 

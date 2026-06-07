@@ -813,6 +813,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Crowd\CrowdCombatManager.cpp" />
     <ClCompile Include="Source\Game\Crowd\CrowdEngagementManager.cpp" />
     <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp" />
+    <ClCompile Include="Source\Game\Crowd\CrowdMeleeAnimInstance.cpp" />
     <ClCompile Include="Source\Game\Crowd\CrowdMovementManager.cpp" />
     <ClCompile Include="Source\Game\Crowd\CrowdSpatialPartition.cpp" />
     <ClCompile Include="Source\Game\Crowd\CrowdUnitAnimInstance.cpp" />
@@ -1327,6 +1328,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Crowd\CrowdCombatManager.h" />
     <ClInclude Include="Source\Game\Crowd\CrowdEngagementManager.h" />
     <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h" />
+    <ClInclude Include="Source\Game\Crowd\CrowdMeleeAnimInstance.h" />
     <ClInclude Include="Source\Game\Crowd\CrowdMovementManager.h" />
     <ClInclude Include="Source\Game\Crowd\CrowdSpatialPartition.h" />
     <ClInclude Include="Source\Game\Crowd\CrowdUnitAnimInstance.h" />
