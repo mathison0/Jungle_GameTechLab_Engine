@@ -95,6 +95,9 @@ void AMusouCharacter::BeginPlay()
 	{
 		HitFlashComponent->InitializeFromSkinnedMesh(Mesh);
 	}
+
+	// 시작 무기 상태 동기화 — 기본 납도(등에 멘 상태). 첫 공격/X 입력으로 발도.
+	ApplyWeaponState();
 }
 
 void AMusouCharacter::PostDuplicate()
@@ -195,6 +198,14 @@ void AMusouCharacter::SetupInputComponent()
 		OnDodgePressed();
 	});
 
+	// X = 발도/납도 토글 — 납도 상태에선 로코모션이 비무장 세트로 바뀌고 (lua 플래그),
+	// 공격 입력이 발도로 변환된다. 무기는 모션 중간에 손↔등으로 옮겨짐.
+	InputComponent->AddActionMapping("ToggleWeapon", 'X');
+	InputComponent->BindAction("ToggleWeapon", EInputEvent::Pressed, [this]()
+	{
+		OnToggleWeaponPressed();
+	});
+
 	InputComponent->AddActionMapping("TestHitFlash", 'F');
 	InputComponent->BindAction("TestHitFlash", EInputEvent::Pressed, [this]()
 	{
@@ -235,6 +246,17 @@ void AMusouCharacter::Tick(float DeltaTime)
 	if (HitReactCooldownRemaining > 0.0f)
 	{
 		HitReactCooldownRemaining -= DeltaTime;
+	}
+
+	// 발도/납도 본 스왑 — 모션 중간(손이 등에 닿는 타이밍)에 무기 손↔등 이동.
+	if (WeaponSwapDelay >= 0.0f)
+	{
+		WeaponSwapDelay -= DeltaTime;
+		if (WeaponSwapDelay < 0.0f)
+		{
+			bWeaponDrawn = bPendingWeaponDrawn;
+			ApplyWeaponState();
+		}
 	}
 
 	// 콤보 리셋 — 체인 끊김(윈도우 내 미입력)/완주, 또는 지상 체인 중 낙하(절벽 등).
@@ -298,6 +320,13 @@ void AMusouCharacter::UpdateAirComboHang()
 
 void AMusouCharacter::OnAttackPressed()
 {
+	// 납도 상태 — 공격 대신 발도 (발도 후 다시 누르면 콤보 시작).
+	if (!bWeaponDrawn)
+	{
+		OnToggleWeaponPressed();
+		return;
+	}
+
 	if (!ComboComponent)
 	{
 		return;
@@ -335,6 +364,13 @@ void AMusouCharacter::OnAttackPressed()
 
 void AMusouCharacter::OnHeavyAttackPressed()
 {
+	// 납도 상태 — 공격 대신 발도.
+	if (!bWeaponDrawn)
+	{
+		OnToggleWeaponPressed();
+		return;
+	}
+
 	// 콤보 진행 중 — 분기 피니셔 예약 (□..△). 윈도우에서 Tick 이 소비해 단수별 피니셔 재생.
 	if (ComboComponent && ComboComponent->IsComboActive())
 	{
@@ -385,6 +421,11 @@ void AMusouCharacter::OnUltimatePressed()
 		ComboComponent->ResetCombo();
 	}
 	EndRoll();   // 구르기 중 발동 — 구르기 상태 정리 (무적은 아래서 다시 켠다)
+
+	// 납도 상태 발동 — 즉시 발도 (난무가 모션을 점유하므로 발도 모션은 생략).
+	bWeaponDrawn = true;
+	WeaponSwapDelay = -1.0f;
+	ApplyWeaponState();
 
 	bUltimateActive = true;
 	UltimateStep = 1;   // 0번은 지금 즉시 재생 — Tick 이 1번부터 이어간다
@@ -513,6 +554,50 @@ void AMusouCharacter::EndRoll()
 	if (BattleComponent && !bUltimateActive)
 	{
 		BattleComponent->SetInvincible(false);
+	}
+}
+
+void AMusouCharacter::OnToggleWeaponPressed()
+{
+	// 다른 동작 중엔 토글 금지 — 진행 중 몽타주(공격/구르기/발도납도 자신 포함) 우선.
+	if (bUltimateActive || bRolling || IsAnyMontagePlaying())
+	{
+		return;
+	}
+
+	FAttackDataRegistry& Data = FAttackDataRegistry::Get();
+	Data.EnsureFresh();
+
+	bPendingWeaponDrawn = !bWeaponDrawn;
+
+	const FMusouAttackSlot* Slot = bWeaponDrawn ? Data.GetWeaponSheatheSlot() : Data.GetWeaponDrawSlot();
+	if (!Slot || !PlayAttackSlot(*Slot))
+	{
+		// 모션 미정의/재생 실패 — 즉시 스왑 폴백.
+		bWeaponDrawn = bPendingWeaponDrawn;
+		WeaponSwapDelay = -1.0f;
+		ApplyWeaponState();
+		return;
+	}
+
+	// 본 스왑은 모션 중간 (손이 등에 닿는 타이밍) — 남은 재생 시간 × swap_frac 뒤에 적용.
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	UAnimMontageInstance* MontageInstance = AnimInstance ? AnimInstance->GetMontageInstance() : nullptr;
+	const float Remaining = MontageInstance ? MontageInstance->GetSectionRemainingTime() : 0.0f;
+	WeaponSwapDelay = Remaining * Data.GetFeedback().WeaponSwapFrac;
+}
+
+void AMusouCharacter::ApplyWeaponState()
+{
+	if (WeaponComponent)
+	{
+		WeaponComponent->SetSheathed(!bWeaponDrawn);
+	}
+
+	// lua 로코모션 분기용 플래그 — player_anim.lua 가 Anim.get_flag("WeaponDrawn") 으로 읽는다.
+	if (ULuaAnimInstance* LuaAnim = Cast<ULuaAnimInstance>(Mesh ? Mesh->GetAnimInstance() : nullptr))
+	{
+		LuaAnim->SetAnimFlag("WeaponDrawn", bWeaponDrawn);
 	}
 }
 

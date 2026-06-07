@@ -215,6 +215,14 @@ return {
         react_right   = { montage = montage("Barbarian_React Large From Right"),
                           sequence = seq("Barbarian_React Large From Right"),
                           blend_in = 0.08, play_rate = { 1.2, 1.3 } },
+
+        -- 발도/납도 (X) — 등 뒤로 뽑기/넣기. 본 스왑 시점은 feedback.weapon.swap_frac
+        equip         = { montage = montage("Barbarian_Equip Over Shoulder"),
+                          sequence = seq("Barbarian_Equip Over Shoulder"),
+                          blend_in = 0.1, play_rate = 1.2 },
+        disarm        = { montage = montage("Barbarian_Disarm Over Shoulder"),
+                          sequence = seq("Barbarian_Disarm Over Shoulder"),
+                          blend_in = 0.1, play_rate = 1.2 },
     },
 
     chains = {
@@ -256,6 +264,10 @@ return {
 
         -- 플레이어 피격 리액션 — 좌/우 랜덤 (직전 반복 회피). 평시 피격만, 쿨다운은 feedback
         hit_react = { "react_left", "react_right" },
+
+        -- 발도/납도 (X) — 납도 중 공격 입력도 발도로 변환. 모션 미정의 시 즉시 스왑 폴백
+        weapon_draw    = "equip",
+        weapon_sheathe = "disarm",
     },
 
     -- ── 전투 피드백/연출 (AMusouGameMode / AMusouCharacter 소비) ──
@@ -281,6 +293,11 @@ return {
         -- 플레이어 피격 리액션 — 최소 간격 (초). 군체 다단 히트 스턴락 방지
         hit_react = {
             cooldown = 3.0,
+        },
+
+        -- 발도/납도 — 모션 진행 중 무기 본 스왑(손↔등) 시점 (재생 길이 비율)
+        weapon = {
+            swap_frac = 0.45,
         },
     },
 }

@@ -56,6 +56,26 @@ public:
 	UPROPERTY(Edit, Save, Category = "BoneAttach", DisplayName = "Attach Offset Scale", Type = Vec3, Speed = 0.01f)
 	FVector AttachOffsetScale = FVector(1.0f, 1.0f, 1.0f);
 
+	// ── 칼집 프로필 — 납도 상태(등에 멘 무기)용 본/오프셋. bSheathed 로 전환 ──
+	// 에디터에서 bSheathed 를 켜고 오프셋을 조정하면 등 위치를 실시간 튜닝할 수 있다.
+	UPROPERTY(Edit, Save, Category = "BoneAttach|Sheath", DisplayName = "Sheathed")
+	bool bSheathed = false;
+
+	UPROPERTY(Edit, Save, Category = "BoneAttach|Sheath", DisplayName = "Sheath Bone")
+	FString SheathBoneName = "spine_03";
+
+	UPROPERTY(Edit, Save, Category = "BoneAttach|Sheath", DisplayName = "Sheath Offset Location", Type = Vec3, Speed = 0.01f)
+	FVector SheathOffsetLocation = FVector::ZeroVector;
+
+	UPROPERTY(Edit, Save, Category = "BoneAttach|Sheath", DisplayName = "Sheath Offset Rotation", Type = Rotator, Speed = 0.1f)
+	FRotator SheathOffsetRotation = FRotator::ZeroRotator;
+
+	UPROPERTY(Edit, Save, Category = "BoneAttach|Sheath", DisplayName = "Sheath Offset Scale", Type = Vec3, Speed = 0.01f)
+	FVector SheathOffsetScale = FVector(1.0f, 1.0f, 1.0f);
+
+	void SetSheathed(bool bInSheathed) { bSheathed = bInSheathed; }
+	bool IsSheathed() const { return bSheathed; }
+
 protected:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 

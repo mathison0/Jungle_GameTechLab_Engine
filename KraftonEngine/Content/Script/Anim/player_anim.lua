@@ -19,11 +19,16 @@
 
 local BARBARIAN_DIR = "Content/Data/GameJam/Barbarian/"
 
--- ── Locomotion 시퀀스 ──
-local IDLE_PATH = BARBARIAN_DIR .. "great sword idle_mixamo_com.uasset"
-local WALK_PATH = BARBARIAN_DIR .. "great sword walk_mixamo_com.uasset"
-local RUN_PATH  = BARBARIAN_DIR .. "great sword run (2)_mixamo_com.uasset"
-local JUMP_PATH = BARBARIAN_DIR .. "great sword jump_mixamo_com.uasset"
+-- ── Locomotion 시퀀스 — 발도(그레이트소드) / 납도(비무장) 2세트 ──
+local ARMED_IDLE_PATH = BARBARIAN_DIR .. "great sword idle_mixamo_com.uasset"
+local ARMED_WALK_PATH = BARBARIAN_DIR .. "great sword walk_mixamo_com.uasset"
+local ARMED_RUN_PATH  = BARBARIAN_DIR .. "great sword run (2)_mixamo_com.uasset"
+local ARMED_JUMP_PATH = BARBARIAN_DIR .. "great sword jump_mixamo_com.uasset"
+
+local UNARMED_IDLE_PATH = BARBARIAN_DIR .. "Idle_mixamo_com.uasset"
+local UNARMED_WALK_PATH = BARBARIAN_DIR .. "Walking_mixamo_com.uasset"
+local UNARMED_RUN_PATH  = BARBARIAN_DIR .. "Running_mixamo_com.uasset"
+local UNARMED_JUMP_PATH = BARBARIAN_DIR .. "sword and shield jump_mixamo_com.uasset"
 
 local DEFAULT_SLOT = "DefaultSlot"
 
@@ -31,17 +36,16 @@ local DEFAULT_SLOT = "DefaultSlot"
 local WALK_THRESHOLD = 0.5    -- 이 속도 초과 = Walk
 local RUN_THRESHOLD  = 5.0  -- 이 속도 초과 = Run (캐릭터 이동속도에 맞춰 조절)
 local LOCO_BLEND     = 0.2    -- locomotion 상태 전환 블렌드 시간
+local ARM_BLEND      = 0.25   -- 발도↔납도 로코모션 전환 블렌드
 local JUMP_BLEND_IN  = 0.1
 local JUMP_BLEND_OUT = 0.3
 
-function init(self)
-    self.Speed = 0
-
-    -- ── Locomotion sub-SM (Idle ↔ Walk ↔ Run) ──
-    local loco = Anim.create_state_machine("Locomotion")
-    Anim.sm_add_state(loco, "Idle", Anim.create_sequence_player(IDLE_PATH, 1.0, true))
-    Anim.sm_add_state(loco, "Walk", Anim.create_sequence_player(WALK_PATH, 1.0, true))
-    Anim.sm_add_state(loco, "Run",  Anim.create_sequence_player(RUN_PATH,  1.0, true))
+-- Idle/Walk/Run sub-SM 생성기 — 발도/납도 세트가 구조 동일.
+local function make_locomotion(self, name, idle_path, walk_path, run_path)
+    local loco = Anim.create_state_machine(name)
+    Anim.sm_add_state(loco, "Idle", Anim.create_sequence_player(idle_path, 1.0, true))
+    Anim.sm_add_state(loco, "Walk", Anim.create_sequence_player(walk_path, 1.0, true))
+    Anim.sm_add_state(loco, "Run",  Anim.create_sequence_player(run_path,  1.0, true))
 
     Anim.sm_add_transition(loco, "Idle", "Walk",
         function() return self.Speed >  WALK_THRESHOLD end, LOCO_BLEND)
@@ -55,16 +59,48 @@ function init(self)
     Anim.sm_add_transition(loco, "Run", "Idle",
         function() return self.Speed <= WALK_THRESHOLD end, LOCO_BLEND)
     Anim.sm_set_initial_state(loco, "Idle")
+    return loco
+end
 
-    -- ── Top SM (Locomotion ↔ Jump) ──
+function init(self)
+    self.Speed = 0
+
+    -- ── Locomotion 2세트 — C++ 의 SetAnimFlag("WeaponDrawn") 으로 전환 ──
+    local loco_armed   = make_locomotion(self, "LocomotionArmed",
+        ARMED_IDLE_PATH, ARMED_WALK_PATH, ARMED_RUN_PATH)
+    local loco_unarmed = make_locomotion(self, "LocomotionUnarmed",
+        UNARMED_IDLE_PATH, UNARMED_WALK_PATH, UNARMED_RUN_PATH)
+
+    -- ── Top SM (Unarmed ↔ Armed, 점프도 무기 상태별 분리) ──
     local top = Anim.create_state_machine("Top")
-    Anim.sm_add_state(top, "Locomotion", loco)
-    Anim.sm_add_state(top, "Jump", Anim.create_sequence_player(JUMP_PATH, 1.0, false))
-    Anim.sm_add_transition(top, "AnyState", "Jump",
+    Anim.sm_add_state(top, "Unarmed", loco_unarmed)
+    Anim.sm_add_state(top, "Armed",   loco_armed)
+    Anim.sm_add_state(top, "JumpArmed",   Anim.create_sequence_player(ARMED_JUMP_PATH,   1.0, false))
+    Anim.sm_add_state(top, "JumpUnarmed", Anim.create_sequence_player(UNARMED_JUMP_PATH, 1.0, false))
+
+    Anim.sm_add_transition(top, "Unarmed", "Armed",
+        function() return Anim.get_flag("WeaponDrawn") end, ARM_BLEND)
+    Anim.sm_add_transition(top, "Armed", "Unarmed",
+        function() return not Anim.get_flag("WeaponDrawn") end, ARM_BLEND)
+
+    -- 낙하 진입 — 무기 상태에 맞는 점프로. (지상 상태에서만 — 점프 간 상호 전이 방지)
+    Anim.sm_add_transition(top, "Unarmed", "JumpUnarmed",
         function() return Anim.is_owner_falling() end, JUMP_BLEND_IN)
-    Anim.sm_add_transition(top, "Jump", "Locomotion",
-        function() return not Anim.is_owner_falling() end, JUMP_BLEND_OUT)
-    Anim.sm_set_initial_state(top, "Locomotion")
+    Anim.sm_add_transition(top, "Armed", "JumpArmed",
+        function() return Anim.is_owner_falling() end, JUMP_BLEND_IN)
+
+    -- 착지 복귀 — 그 시점 무기 상태로 (공중 발도 등 상태 변화 케이스 포함)
+    Anim.sm_add_transition(top, "JumpArmed", "Armed",
+        function() return not Anim.is_owner_falling() and Anim.get_flag("WeaponDrawn") end, JUMP_BLEND_OUT)
+    Anim.sm_add_transition(top, "JumpArmed", "Unarmed",
+        function() return not Anim.is_owner_falling() and not Anim.get_flag("WeaponDrawn") end, JUMP_BLEND_OUT)
+    Anim.sm_add_transition(top, "JumpUnarmed", "Armed",
+        function() return not Anim.is_owner_falling() and Anim.get_flag("WeaponDrawn") end, JUMP_BLEND_OUT)
+    Anim.sm_add_transition(top, "JumpUnarmed", "Unarmed",
+        function() return not Anim.is_owner_falling() and not Anim.get_flag("WeaponDrawn") end, JUMP_BLEND_OUT)
+
+    -- 시작은 납도 (C++ 기본값과 일치 — bWeaponDrawn = false)
+    Anim.sm_set_initial_state(top, "Unarmed")
 
     -- ── DefaultSlot — 풀바디 montage 진입점 (C++에서 재생하는 공격 몽타주가 여기로) ──
     -- 상반신 분리가 필요해지면 yui_character.lua 의 LayeredBlendPerBone 패턴 참고.

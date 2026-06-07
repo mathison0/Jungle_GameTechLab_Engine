@@ -485,6 +485,10 @@ function Anim.get_owner_movement_mode() end
 ---@return boolean
 function Anim.is_owner_falling() end
 
+---@param name string
+---@return boolean
+function Anim.get_flag(name) end
+
 ---@param path string
 ---@param section? string
 ---@param rate? number

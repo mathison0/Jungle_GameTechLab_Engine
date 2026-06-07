@@ -278,10 +278,12 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 	}
 
-	// ── ultimate / dodge / hit_react (선택) ──
+	// ── ultimate / dodge / hit_react / weapon (선택) ──
 	TArray<FMusouAttackSlot> NewUltimate;
 	FMusouAttackSlot         NewDodge;
 	FMusouAttackSlot         NewHitReact;
+	FMusouAttackSlot         NewWeaponDraw;
+	FMusouAttackSlot         NewWeaponSheathe;
 	if (sol::optional<sol::table> ChainsT = Root["chains"])
 	{
 		if (sol::optional<sol::table> UltimateT = (*ChainsT)["ultimate"])
@@ -290,6 +292,8 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 		NewDodge = ParseSlot((*ChainsT)["dodge"]);
 		NewHitReact = ParseSlot((*ChainsT)["hit_react"]);
+		NewWeaponDraw = ParseSlot((*ChainsT)["weapon_draw"]);
+		NewWeaponSheathe = ParseSlot((*ChainsT)["weapon_sheathe"]);
 	}
 
 	// ── feedback (선택) — 없거나 일부만 있으면 구조체 기본값 유지 ──
@@ -315,6 +319,10 @@ bool FAttackDataRegistry::LoadFromLua()
 		{
 			NewFeedback.HitReactCooldown = HitReact->get_or("cooldown", NewFeedback.HitReactCooldown);
 		}
+		if (sol::optional<sol::table> Weapon = (*FeedbackT)["weapon"])
+		{
+			NewFeedback.WeaponSwapFrac = Weapon->get_or("swap_frac", NewFeedback.WeaponSwapFrac);
+		}
 	}
 
 	if (NewSpecs.empty() || NewLight[0].empty())
@@ -334,6 +342,8 @@ bool FAttackDataRegistry::LoadFromLua()
 	UltimateChain = std::move(NewUltimate);
 	DodgeSlot = std::move(NewDodge);
 	HitReactSlot = std::move(NewHitReact);
+	WeaponDrawSlot = std::move(NewWeaponDraw);
+	WeaponSheatheSlot = std::move(NewWeaponSheathe);
 	Feedback = NewFeedback;
 	++Version;
 	return true;
@@ -403,9 +413,11 @@ void FAttackDataRegistry::LoadDefaults()
 		Single(MakeStep("Barbarian_Melee Attack 360 High",   "Barbarian_Melee Attack 360 High",   0.1f, "attack1", 0.45f, -1.0f, -1.0f)),
 	};
 
-	UltimateChain.clear();               // 내장 fallback 에선 무쌍기/구르기/피격 리액션 비활성 (lua 전용 구성)
+	UltimateChain.clear();               // 내장 fallback 에선 무쌍기/구르기/피격 리액션/발도납도 비활성 (lua 전용 구성)
 	DodgeSlot = FMusouAttackSlot();
 	HitReactSlot = FMusouAttackSlot();
+	WeaponDrawSlot = FMusouAttackSlot();
+	WeaponSheatheSlot = FMusouAttackSlot();
 	Feedback = FMusouFeedbackParams();   // 구조체 기본값
 
 	++Version;

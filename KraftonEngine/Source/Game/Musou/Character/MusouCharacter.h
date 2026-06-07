@@ -66,6 +66,8 @@ public:
 	// (공격/구르기/무쌍기/공중 중엔 모션 우선으로 스킵), 쿨다운으로 스턴락 방지.
 	void PlayHitReaction();
 
+	bool IsWeaponDrawn() const { return bWeaponDrawn; }
+
 protected:
 	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
 	// ※ 공격 입력을 lua anim에서 이관한 이유: lua update()는 Animation Tick LOD
@@ -81,6 +83,10 @@ protected:
 	void OnHeavyAttackPressed();  // 우클릭 — 강공격 (컨텍스트별 단발 / 콤보 중엔 분기 예약)
 	void OnUltimatePressed();     // R — 무쌍기 (게이지 가득 + 지상, 진행 동작 전부 캔슬)
 	void OnDodgePressed();        // Shift — 구르기 (입력 방향, 전 구간 무적, 후딜 캔슬 가능)
+	void OnToggleWeaponPressed(); // X — 발도/납도 토글 (납도 중 공격 입력도 발도로 변환)
+
+	// 무기 상태를 무기 컴포넌트(손↔등 본)와 lua 애님 플래그("WeaponDrawn")에 동기화.
+	void ApplyWeaponState();
 
 	// 무쌍기 난무 — Tick 이 몽타주 종료를 감지해 다음 슬롯 자동 재생. 체인 소진 시 정리.
 	void UpdateUltimateChain();
@@ -169,4 +175,12 @@ protected:
 
 	// 피격 리액션 쿨다운 잔여 (초) — 군체 다단 히트 스턴락 방지 (feedback.hit_react.cooldown).
 	float HitReactCooldownRemaining = 0.0f;
+
+	// 무기 상태 — false = 납도(등에 멘 상태, 시작 기본값). 납도 중 공격 입력은 발도로 변환.
+	bool  bWeaponDrawn = false;
+
+	// 발도/납도 모션 중간 본 스왑 대기 (초, 음수 = 없음). Tick 이 카운트다운 후 적용 —
+	// 손이 등에 닿는 타이밍(feedback.weapon.swap_frac)에 무기가 손↔등으로 옮겨진다.
+	float WeaponSwapDelay = -1.0f;
+	bool  bPendingWeaponDrawn = false;
 };

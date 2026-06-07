@@ -178,6 +178,31 @@ void ULuaAnimInstance::ReloadScript()
 	NativeInitializeAnimation();
 }
 
+void ULuaAnimInstance::SetAnimFlag(const FString& Name, bool bValue)
+{
+	for (auto& Entry : AnimFlags)
+	{
+		if (Entry.first == Name)
+		{
+			Entry.second = bValue;
+			return;
+		}
+	}
+	AnimFlags.push_back({ Name, bValue });
+}
+
+bool ULuaAnimInstance::GetAnimFlag(const FString& Name) const
+{
+	for (const auto& Entry : AnimFlags)
+	{
+		if (Entry.first == Name)
+		{
+			return Entry.second;
+		}
+	}
+	return false;
+}
+
 void ULuaAnimInstance::ClearGraph()
 {
 	// RootNode 가 OwnedNodes 의 raw 를 가리키는 상태 — dangling 방지 위해 RootNode 먼저 nullptr.
@@ -261,6 +286,14 @@ void ULuaAnimInstance::InstallBindings()
 		[this]() -> AActor*
 		{
 			return OwningComponent ? OwningComponent->GetOwner() : nullptr;
+		});
+
+	// get_flag — 게임 코드가 SetAnimFlag 로 밀어넣은 범용 bool 상태 조회.
+	// 예: Anim.get_flag("WeaponDrawn") 으로 발도/납도 로코모션 분기. 미설정은 false.
+	Anim.set_function("get_flag",
+		[this](const std::string& Name) -> bool
+		{
+			return GetAnimFlag(Name);
 		});
 
 	// Slot 인자는 sol::object — None/missing 이면 FName::None (→ 내부에서 DefaultMontageSlot resolve).

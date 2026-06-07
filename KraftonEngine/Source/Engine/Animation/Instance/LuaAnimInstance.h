@@ -3,6 +3,7 @@
 #include "Animation/AnimInstance.h"
 
 #include <sol/sol.hpp>
+#include <utility>
 
 class UAnimSequenceBase;
 
@@ -51,6 +52,12 @@ public:
 	// FLuaScriptManager 가 .lua 변경 감지 시 호출.
 	void ReloadScript();
 
+	// ── 범용 anim flag — 게임 코드 → lua 그래프 상태 전달 채널 ──
+	// 예: 캐릭터가 SetAnimFlag("WeaponDrawn", true) → lua 가 Anim.get_flag("WeaponDrawn")
+	// 으로 읽어 로코모션 세트를 전환한다. 미설정 플래그는 false.
+	void SetAnimFlag(const FString& Name, bool bValue);
+	bool GetAnimFlag(const FString& Name) const;
+
 private:
 	void ClearGraph();      // ReloadScript 경로 — RootNode + OwnedNodes + lua env 정리.
 	void InstallBindings();
@@ -68,4 +75,7 @@ private:
 	TArray<float>                 LuaMorphWeights;
 	TArray<uint8>                 LuaMorphOverrideMask;
 	bool                          bLuaMorphOverrideEnabled = false;
+
+	// 범용 anim flag 저장소 — 항목 수가 적어 선형 탐색으로 충분.
+	TArray<std::pair<FString, bool>> AnimFlags;
 };

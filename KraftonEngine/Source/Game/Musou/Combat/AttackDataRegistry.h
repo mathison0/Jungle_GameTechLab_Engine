@@ -74,6 +74,9 @@ struct FMusouFeedbackParams
 
 	// 플레이어 피격 리액션 최소 간격 (초) — 군체 다단 히트로 스턴락되지 않게
 	float HitReactCooldown = 1.2f;
+
+	// 발도/납도 — 모션 진행 중 무기 본 스왑(손↔등) 시점 (재생 길이 비율, 손이 등에 닿는 즈음)
+	float WeaponSwapFrac = 0.45f;
 };
 
 class FAttackDataRegistry
@@ -110,6 +113,10 @@ public:
 	// 플레이어 피격 리액션 — 변주 슬롯 (좌/우 휘청 등). 미정의면 nullptr (기능 비활성).
 	const FMusouAttackSlot* GetHitReactSlot() const { return HitReactSlot.IsValid() ? &HitReactSlot : nullptr; }
 
+	// 발도/납도 모션 — 미정의면 nullptr (호출측이 즉시 스왑으로 폴백).
+	const FMusouAttackSlot* GetWeaponDrawSlot() const { return WeaponDrawSlot.IsValid() ? &WeaponDrawSlot : nullptr; }
+	const FMusouAttackSlot* GetWeaponSheatheSlot() const { return WeaponSheatheSlot.IsValid() ? &WeaponSheatheSlot : nullptr; }
+
 	// 전투 피드백 연출 파라미터 (킬 버스트 슬로모/셰이크 등).
 	const FMusouFeedbackParams& GetFeedback() const { return Feedback; }
 
@@ -129,6 +136,8 @@ private:
 	TArray<FMusouAttackSlot> UltimateChain;
 	FMusouAttackSlot         DodgeSlot;
 	FMusouAttackSlot         HitReactSlot;
+	FMusouAttackSlot         WeaponDrawSlot;
+	FMusouAttackSlot         WeaponSheatheSlot;
 	FMusouFeedbackParams     Feedback;
 
 	int32 Version = 0;
