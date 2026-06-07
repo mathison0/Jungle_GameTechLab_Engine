@@ -463,16 +463,19 @@ namespace
             // 와 ~17cm 차이가 생겨 몽타주 시작/끝 블렌드마다 몸 전체가 "탁" 시프트한다.
             // 첫 키는 track local 값 — RM 본 부모 ≈ identity (local ≈ component) 가정은
             // ExtractRootMotion 과 동일.
-            DesiredLocation = *RootFirstKeyLocal;
+            //
+            // ※ 고정은 X/Y 만 — Z 는 애니메이션 값을 포즈에 유지 (ForceRootLock 과 동일).
+            //   CMC 는 RM delta 의 XY 만 캡슐에 적용한다 (Walking floor stick / Falling
+            //   gravity 가 Z 결정). Z 까지 고정하면 수직 움직임이 포즈에서도 캡슐에서도
+            //   사라져, 구르기류 클립에서 회전 피벗이 선 자세 높이에 박힌 채 사지가
+            //   바닥을 뚫는다 (제자리 파묻힘 증상).
+            DesiredLocation.X = RootFirstKeyLocal->X;
+            DesiredLocation.Y = RootFirstKeyLocal->Y;
         }
         else
         {
             DesiredLocation.X = BindLocation.X;
             DesiredLocation.Y = BindLocation.Y;
-            if (bEnableRootMotion)
-            {
-                DesiredLocation.Z = BindLocation.Z;
-            }
         }
         // 회전은 포즈에 그대로 둔다 — Mixamo 류 에셋은 공격 스윙의 몸통 회전이 root 본에
         // 베이크돼 있어 (클립 중간 yaw ±180° 까지 요동) "캐릭터 회전" 으로 해석하면 안 됨.

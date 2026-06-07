@@ -131,6 +131,13 @@ return {
                           sequence = seq("Barbarian_Melee Attack Downward"),
                           blend_in = 0.1, attack_id = "musou_slam", hit_frac = 0.50,
                           play_rate = 1.05 },
+
+        -- 구르기 (Shift) — 입력 방향 회피. 공격 아님 (attack_id 없음), 전 구간 무적은 C++.
+        -- ※ Standing Dive Forward.fbx 를 에디터에서 Barbarian 스켈레톤으로 임포트해야 활성화.
+        --   force_root_motion: 임포트 직후 RM 플래그가 꺼져 있어도 런타임에 강제로 켠다.
+        roll          = { montage = montage("Standing Dive Forward_mixamo_com"),
+                          sequence = seq("Standing Dive Forward_mixamo_com"),
+                          blend_in = 0.08, play_rate = 1.15, force_root_motion = true },
     },
 
     chains = {
@@ -161,6 +168,9 @@ return {
         -- 무쌍기 (R, 게이지 가득) — 난무: 슬롯 순차 자동 재생, 전 구간 무적.
         -- ※ spin_low(self_launch) 처럼 자기 띄움 있는 스텝은 넣지 말 것 — 난무가 공중으로 끊긴다.
         ultimate = { "horizontal", "spin_high", "u_slam" },
+
+        -- 구르기 (Shift) — 후딜(콤보 윈도우/말미) 캔슬 가능, 전 구간 무적
+        dodge = "roll",
     },
 
     -- ── 전투 피드백/연출 (AMusouGameMode / AMusouCharacter 소비) ──

@@ -47,6 +47,8 @@ namespace
 		Step.AttackId     = T.get_or("attack_id", std::string());
 		Step.HitFrac      = T.get_or("hit_frac", -1.0f);
 
+		Step.bForceRootMotion = T.get_or("force_root_motion", false);
+
 		// play_rate — 숫자(고정) 또는 { min, max } (균등 랜덤)
 		sol::object RateObj = T["play_rate"];
 		if (RateObj.is<float>())
@@ -276,14 +278,16 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 	}
 
-	// ── ultimate (선택) — 무쌍기 난무 체인 ──
+	// ── ultimate / dodge (선택) ──
 	TArray<FMusouAttackSlot> NewUltimate;
+	FMusouAttackSlot         NewDodge;
 	if (sol::optional<sol::table> ChainsT = Root["chains"])
 	{
 		if (sol::optional<sol::table> UltimateT = (*ChainsT)["ultimate"])
 		{
 			ParseSlotArray(*UltimateT, NewUltimate);
 		}
+		NewDodge = ParseSlot((*ChainsT)["dodge"]);
 	}
 
 	// ── feedback (선택) — 없거나 일부만 있으면 구조체 기본값 유지 ──
@@ -322,6 +326,7 @@ bool FAttackDataRegistry::LoadFromLua()
 	}
 	BranchFinishers = std::move(NewBranch);
 	UltimateChain = std::move(NewUltimate);
+	DodgeSlot = std::move(NewDodge);
 	Feedback = NewFeedback;
 	++Version;
 	return true;
@@ -391,7 +396,8 @@ void FAttackDataRegistry::LoadDefaults()
 		Single(MakeStep("Barbarian_Melee Attack 360 High",   "Barbarian_Melee Attack 360 High",   0.1f, "attack1", 0.45f, -1.0f, -1.0f)),
 	};
 
-	UltimateChain.clear();               // 내장 fallback 에선 무쌍기 비활성 (lua 전용 구성)
+	UltimateChain.clear();               // 내장 fallback 에선 무쌍기/구르기 비활성 (lua 전용 구성)
+	DodgeSlot = FMusouAttackSlot();
 	Feedback = FMusouFeedbackParams();   // 구조체 기본값
 
 	++Version;

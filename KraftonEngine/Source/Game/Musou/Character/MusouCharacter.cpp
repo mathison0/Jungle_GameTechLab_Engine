@@ -188,6 +188,13 @@ void AMusouCharacter::SetupInputComponent()
 		OnUltimatePressed();
 	});
 
+	// Shift = 구르기 (VK_SHIFT = 0x10) — 입력 방향으로 회피, 후딜(콤보 윈도우/말미) 캔슬 가능.
+	InputComponent->AddActionMapping("Dodge", 0x10);
+	InputComponent->BindAction("Dodge", EInputEvent::Pressed, [this]()
+	{
+		OnDodgePressed();
+	});
+
 	InputComponent->AddActionMapping("TestHitFlash", 'F');
 	InputComponent->BindAction("TestHitFlash", EInputEvent::Pressed, [this]()
 	{
@@ -217,6 +224,12 @@ void AMusouCharacter::Tick(float DeltaTime)
 
 	// 무쌍기 난무 — 현재 슬롯이 끝났으면 다음 슬롯 자동 재생 / 체인 소진 시 정리.
 	UpdateUltimateChain();
+
+	// 구르기 종료 — 몽타주가 끝나면 무적 해제.
+	if (bRolling && !IsAnyMontagePlaying())
+	{
+		EndRoll();
+	}
 
 	// 콤보 리셋 — 체인 끊김(윈도우 내 미입력)/완주, 또는 지상 체인 중 낙하(절벽 등).
 	// 공중 체인은 낙하가 전제라 낙하 리셋에서 제외 — 몽타주 종료로만 리셋.
@@ -365,6 +378,7 @@ void AMusouCharacter::OnUltimatePressed()
 	{
 		ComboComponent->ResetCombo();
 	}
+	EndRoll();   // 구르기 중 발동 — 구르기 상태 정리 (무적은 아래서 다시 켠다)
 
 	bUltimateActive = true;
 	UltimateStep = 1;   // 0번은 지금 즉시 재생 — Tick 이 1번부터 이어간다
@@ -431,6 +445,66 @@ void AMusouCharacter::EndUltimate()
 	UltimateStep = 0;
 
 	if (BattleComponent)
+	{
+		BattleComponent->SetInvincible(false);
+	}
+}
+
+void AMusouCharacter::OnDodgePressed()
+{
+	// 지상 전용. 무쌍기 중엔 불가, 구르기 중복 불가.
+	if (bUltimateActive || bRolling || IsFalling())
+	{
+		return;
+	}
+
+	// 캔슬 규칙 — 후딜만 캔슬 가능: 몽타주 없음 / 말미 unlock·blend-out / 콤보 윈도우 개방.
+	// 스윙 본체(선딜+히트 전)는 캔슬 불가 — 공격 커밋은 유지한다.
+	const bool bCanRoll = !IsMovementLockedByMontage()
+		|| (ComboComponent && ComboComponent->IsComboWindowOpen());
+	if (!bCanRoll)
+	{
+		return;
+	}
+
+	FAttackDataRegistry& Data = FAttackDataRegistry::Get();
+	Data.EnsureFresh();
+
+	const FMusouAttackSlot* Dodge = Data.GetDodgeSlot();
+	if (!Dodge)
+	{
+		return;   // lua 에 chains.dodge 미정의 — 기능 비활성
+	}
+
+	if (ComboComponent)
+	{
+		ComboComponent->ResetCombo();
+	}
+
+	// PlayAttackSlot 의 회전 스냅이 입력 방향으로 굴러가게 해준다 (입력 없으면 전방).
+	if (!PlayAttackSlot(*Dodge))
+	{
+		return;   // 에셋 미임포트 등 — 로그는 ResolveStepMontage 경로가 남김
+	}
+
+	// 전 구간 무적 — 회피 보상. 몽타주 종료 시 Tick 이 해제.
+	bRolling = true;
+	if (BattleComponent)
+	{
+		BattleComponent->SetInvincible(true);
+	}
+}
+
+void AMusouCharacter::EndRoll()
+{
+	if (!bRolling)
+	{
+		return;
+	}
+	bRolling = false;
+
+	// 무쌍기가 무적을 쓰는 중이면 유지 — 그 외엔 해제.
+	if (BattleComponent && !bUltimateActive)
 	{
 		BattleComponent->SetInvincible(false);
 	}
@@ -595,6 +669,16 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 {
 	FAnimationManager& Manager = FAnimationManager::Get();
 
+	// RM 강제 (lua force_root_motion) — 임포트 직후 RM 꺼진 에셋을 에디터 재저장 없이 사용.
+	// (SetEnableRootMotion 이 bForceRootLock 상호 배제도 처리)
+	auto ApplyRootMotionOverride = [&Step](UAnimSequence* Sequence)
+	{
+		if (Step.bForceRootMotion && Sequence && !Sequence->GetEnableRootMotion())
+		{
+			Sequence->SetEnableRootMotion(true);
+		}
+	};
+
 	// 1) 런타임 생성 캐시 — fallback 으로 한 번 만든 몽타주 재사용 (실패 로그 반복 방지).
 	//    데이터 핫리로드로 버전이 바뀌었으면 주입 notify 만 갱신 (Inject 가 버전 비교).
 	if (!Step.SequencePath.empty())
@@ -603,6 +687,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 		{
 			if (Entry.first == Step.SequencePath)
 			{
+				ApplyRootMotionOverride(Entry.second->GetSourceSequence());
 				InjectDefaultAttackNotifies(Entry.second->GetSourceSequence(), Step);
 				return Entry.second;
 			}
@@ -616,6 +701,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 	{
 		if (UAnimMontage* Montage = Manager.LoadMontage(Step.MontagePath))
 		{
+			ApplyRootMotionOverride(Montage->GetSourceSequence());
 			InjectDefaultAttackNotifies(Montage->GetSourceSequence(), Step);
 			return Montage;
 		}
@@ -633,6 +719,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 		return nullptr;
 	}
 
+	ApplyRootMotionOverride(Sequence);
 	InjectDefaultAttackNotifies(Sequence, Step);
 
 	UAnimMontage* Montage = Manager.CreateMontage(Sequence, Sequence->GetName() + "_RuntimeMontage");
