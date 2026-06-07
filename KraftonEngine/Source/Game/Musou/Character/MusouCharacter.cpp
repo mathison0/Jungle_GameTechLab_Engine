@@ -29,6 +29,7 @@ namespace
 
 	constexpr float GComboBlendIn = 0.1f;
 	constexpr float GHeavyBlendIn = 0.2f;
+	constexpr float GDebugSelfDamage = 10.0f;
 }
 
 void AMusouCharacter::InitDefaultComponents()
@@ -170,6 +171,15 @@ void AMusouCharacter::SetupInputComponent()
 		if (HitFlashComponent)
 		{
 			HitFlashComponent->PlayFlash();
+		}
+	});
+
+	InputComponent->AddActionMapping("TestPlayerDamage", 'T');
+	InputComponent->BindAction("TestPlayerDamage", EInputEvent::Pressed, [this]()
+	{
+		if (BattleComponent)
+		{
+			BattleComponent->ApplyDamage(GDebugSelfDamage, this);
 		}
 	});
 
