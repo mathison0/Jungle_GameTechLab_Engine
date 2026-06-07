@@ -44,6 +44,19 @@ namespace
 		Step.AttackId     = T.get_or("attack_id", std::string());
 		Step.HitFrac      = T.get_or("hit_frac", -1.0f);
 
+		// play_rate — 숫자(고정) 또는 { min, max } (균등 랜덤)
+		sol::object RateObj = T["play_rate"];
+		if (RateObj.is<float>())
+		{
+			Step.PlayRateMin = Step.PlayRateMax = RateObj.as<float>();
+		}
+		else if (RateObj.is<sol::table>())
+		{
+			sol::table Rate = RateObj.as<sol::table>();
+			Step.PlayRateMin = Rate.get_or(1, 1.0f);
+			Step.PlayRateMax = Rate.get_or(2, Step.PlayRateMin);
+		}
+
 		sol::optional<sol::table> Window = T["window"];
 		if (Window)
 		{
@@ -184,27 +197,54 @@ bool FAttackDataRegistry::LoadFromLua()
 		return nullptr;
 	};
 
-	auto ParseStepIdArray = [&FindStep](const sol::table& Arr, TArray<FMusouAttackStep>& Out)
+	// 체인 칸 1개 — 스텝 id 1개(string) 또는 변주 후보 배열({ "a", "b" }) 둘 다 슬롯으로 정규화.
+	auto ParseSlot = [&FindStep](const sol::object& Entry) -> FMusouAttackSlot
+	{
+		FMusouAttackSlot Slot;
+		if (Entry.is<std::string>())
+		{
+			if (const FMusouAttackStep* Step = FindStep(Entry.as<std::string>()))
+			{
+				Slot.Variants.push_back(*Step);
+			}
+		}
+		else if (Entry.is<sol::table>())
+		{
+			sol::table Arr = Entry.as<sol::table>();
+			const int32 Num = static_cast<int32>(Arr.size());
+			for (int32 i = 1; i <= Num; ++i)
+			{
+				sol::optional<std::string> Id = Arr[i];
+				if (!Id)
+				{
+					continue;
+				}
+				if (const FMusouAttackStep* Step = FindStep(*Id))
+				{
+					Slot.Variants.push_back(*Step);
+				}
+			}
+		}
+		return Slot;
+	};
+
+	auto ParseSlotArray = [&ParseSlot](const sol::table& Arr, TArray<FMusouAttackSlot>& Out)
 	{
 		const int32 Num = static_cast<int32>(Arr.size());
 		for (int32 i = 1; i <= Num; ++i)
 		{
-			sol::optional<std::string> Id = Arr[i];
-			if (!Id)
+			FMusouAttackSlot Slot = ParseSlot(Arr[i]);
+			if (Slot.IsValid())
 			{
-				continue;
-			}
-			if (const FMusouAttackStep* Step = FindStep(*Id))
-			{
-				Out.push_back(*Step);
+				Out.push_back(std::move(Slot));
 			}
 		}
 	};
 
 	// ── chains ──
-	TArray<FMusouAttackStep> NewLight[3];
-	FMusouAttackStep         NewHeavy[3];
-	TArray<FMusouAttackStep> NewBranch;
+	TArray<FMusouAttackSlot> NewLight[3];
+	FMusouAttackSlot         NewHeavy[3];
+	TArray<FMusouAttackSlot> NewBranch;
 
 	static const char* ContextKeys[3] = { "idle", "moving", "air" };   // EAttackContext 순서
 
@@ -216,7 +256,7 @@ bool FAttackDataRegistry::LoadFromLua()
 			{
 				if (sol::optional<sol::table> Arr = (*LightT)[ContextKeys[i]])
 				{
-					ParseStepIdArray(*Arr, NewLight[i]);
+					ParseSlotArray(*Arr, NewLight[i]);
 				}
 			}
 		}
@@ -224,18 +264,12 @@ bool FAttackDataRegistry::LoadFromLua()
 		{
 			for (int32 i = 0; i < 3; ++i)
 			{
-				if (sol::optional<std::string> Id = (*HeavyT)[ContextKeys[i]])
-				{
-					if (const FMusouAttackStep* Step = FindStep(*Id))
-					{
-						NewHeavy[i] = *Step;
-					}
-				}
+				NewHeavy[i] = ParseSlot((*HeavyT)[ContextKeys[i]]);
 			}
 		}
 		if (sol::optional<sol::table> BranchT = (*ChainsT)["branch"])
 		{
-			ParseStepIdArray(*BranchT, NewBranch);
+			ParseSlotArray(*BranchT, NewBranch);
 		}
 	}
 
@@ -250,7 +284,7 @@ bool FAttackDataRegistry::LoadFromLua()
 	for (int32 i = 0; i < 3; ++i)
 	{
 		LightChains[i] = std::move(NewLight[i]);
-		HeavySteps[i]  = NewHeavy[i];
+		HeavySlots[i]  = std::move(NewHeavy[i]);
 	}
 	BranchFinishers = std::move(NewBranch);
 	++Version;
@@ -298,18 +332,25 @@ void FAttackDataRegistry::LoadDefaults()
 	const FMusouAttackStep Slide    = MakeStep("great sword slide attack_mixamo_com", "great sword slide attack_mixamo_com", 0.1f, "dash_attack", 0.35f, 0.55f, 0.85f);
 	const FMusouAttackStep JumpAtk  = MakeStep("great sword jump attack_mixamo_com", "great sword jump attack_mixamo_com", 0.15f, "jump_attack", 0.45f, -1.0f, -1.0f);
 
-	LightChains[ContextIndex(EAttackContext::Idle)]     = { ComboV1, ComboV2, ComboV3 };
-	LightChains[ContextIndex(EAttackContext::Moving)]   = { Slide,   ComboV2, ComboV3 };
-	LightChains[ContextIndex(EAttackContext::Airborne)] = { JumpAtk };
+	auto Single = [](const FMusouAttackStep& Step)
+	{
+		FMusouAttackSlot Slot;
+		Slot.Variants.push_back(Step);
+		return Slot;
+	};
 
-	HeavySteps[ContextIndex(EAttackContext::Idle)]     = MakeStep("Barbarian_Melee Attack Backhand", nullptr, 0.2f, nullptr, -1.0f, -1.0f, -1.0f);
-	HeavySteps[ContextIndex(EAttackContext::Moving)]   = MakeStep("great sword high spin attack_mixamo_com", "great sword high spin attack_mixamo_com", 0.15f, "spin_attack", 0.40f, -1.0f, -1.0f);
-	HeavySteps[ContextIndex(EAttackContext::Airborne)] = JumpAtk;
+	LightChains[ContextIndex(EAttackContext::Idle)]     = { Single(ComboV1), Single(ComboV2), Single(ComboV3) };
+	LightChains[ContextIndex(EAttackContext::Moving)]   = { Single(Slide),   Single(ComboV2), Single(ComboV3) };
+	LightChains[ContextIndex(EAttackContext::Airborne)] = { Single(JumpAtk) };
+
+	HeavySlots[ContextIndex(EAttackContext::Idle)]     = Single(MakeStep("Barbarian_Melee Attack Backhand", nullptr, 0.2f, nullptr, -1.0f, -1.0f, -1.0f));
+	HeavySlots[ContextIndex(EAttackContext::Moving)]   = Single(MakeStep("great sword high spin attack_mixamo_com", "great sword high spin attack_mixamo_com", 0.15f, "spin_attack", 0.40f, -1.0f, -1.0f));
+	HeavySlots[ContextIndex(EAttackContext::Airborne)] = Single(JumpAtk);
 
 	BranchFinishers = {
-		MakeStep("Barbarian_Melee Attack Horizontal", "Barbarian_Melee Attack Horizontal", 0.1f, "branch1", 0.40f, -1.0f, -1.0f),
-		MakeStep("Barbarian_Melee Attack 360 Low",    "Barbarian_Melee Attack 360 Low",    0.1f, "branch2", 0.45f, -1.0f, -1.0f),
-		MakeStep("Barbarian_Melee Attack 360 High",   "Barbarian_Melee Attack 360 High",   0.1f, "attack1", 0.45f, -1.0f, -1.0f),
+		Single(MakeStep("Barbarian_Melee Attack Horizontal", "Barbarian_Melee Attack Horizontal", 0.1f, "branch1", 0.40f, -1.0f, -1.0f)),
+		Single(MakeStep("Barbarian_Melee Attack 360 Low",    "Barbarian_Melee Attack 360 Low",    0.1f, "branch2", 0.45f, -1.0f, -1.0f)),
+		Single(MakeStep("Barbarian_Melee Attack 360 High",   "Barbarian_Melee Attack 360 High",   0.1f, "attack1", 0.45f, -1.0f, -1.0f)),
 	};
 
 	++Version;
@@ -327,18 +368,18 @@ const FAttackSpec* FAttackDataRegistry::FindSpec(const FName& Id) const
 	return nullptr;
 }
 
-const TArray<FMusouAttackStep>& FAttackDataRegistry::GetLightChain(EAttackContext Context) const
+const TArray<FMusouAttackSlot>& FAttackDataRegistry::GetLightChain(EAttackContext Context) const
 {
 	return LightChains[ContextIndex(Context)];
 }
 
-const FMusouAttackStep* FAttackDataRegistry::GetHeavyStep(EAttackContext Context) const
+const FMusouAttackSlot* FAttackDataRegistry::GetHeavySlot(EAttackContext Context) const
 {
-	const FMusouAttackStep& Step = HeavySteps[ContextIndex(Context)];
-	return Step.IsValid() ? &Step : nullptr;
+	const FMusouAttackSlot& Slot = HeavySlots[ContextIndex(Context)];
+	return Slot.IsValid() ? &Slot : nullptr;
 }
 
-const FMusouAttackStep* FAttackDataRegistry::GetBranchFinisher(int32 ComboStep) const
+const FMusouAttackSlot* FAttackDataRegistry::GetBranchFinisher(int32 ComboStep) const
 {
 	if (BranchFinishers.empty() || ComboStep < 1)
 	{

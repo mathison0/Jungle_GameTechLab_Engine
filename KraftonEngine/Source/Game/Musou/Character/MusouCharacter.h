@@ -15,8 +15,9 @@ class UHitFlashComponent;
 class UAnimMontage;
 class UAnimSequence;
 
-// 공격 스텝 정의 — AttackDataRegistry.h (Content/Script/Data/attack_data.lua 에서 로드).
+// 공격 스텝/슬롯 정의 — AttackDataRegistry.h (Content/Script/Data/attack_data.lua 에서 로드).
 struct FMusouAttackStep;
+struct FMusouAttackSlot;
 
 // ============================================================
 // AMusouCharacter — 무쌍 플레이어 캐릭터 (Barbarian)
@@ -90,6 +91,10 @@ protected:
 	UAnimMontage* ResolveStepMontage(const FMusouAttackStep& Step);
 	void          InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step);
 
+	// 슬롯에서 변주 1개 선택 — 랜덤 + 직전 변주 반복 회피. 빈 슬롯이면 nullptr.
+	const FMusouAttackStep* PickVariant(const FMusouAttackSlot& Slot);
+	bool PlayAttackSlot(const FMusouAttackSlot& Slot);   // PickVariant → PlayAttackStep
+
 	void PlayComboStep(int32 Step);
 	void PlayBranchFinisher(int32 BranchStep);  // 콤보 N단 분기 피니셔 (무쌍 차지어택식)
 	bool IsAnyMontagePlaying() const;
@@ -124,4 +129,8 @@ protected:
 	// notify 주입 이력 (시퀀스 → 주입 시점의 attack_data 버전). 핫리로드로 버전이
 	// 바뀌면 Auto* notify 를 걷어내고 새 값으로 재주입 — 라이브 타이밍 튜닝용.
 	TArray<std::pair<UAnimSequence*, int32>> InjectedSequenceVersions;
+
+	// 슬롯별 직전 변주 인덱스 (같은 모션 연속 재생 회피). key = 슬롯 주소 —
+	// 데이터 핫리로드로 슬롯이 재구성되면 자연히 미스나서 새로 기록된다.
+	TArray<std::pair<const void*, int32>> LastVariantPick;
 };
