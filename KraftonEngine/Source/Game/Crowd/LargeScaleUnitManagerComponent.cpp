@@ -10,10 +10,14 @@
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/World.h"
+#include "Mesh/MeshManager.h"
+#include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Object/FName.h"
+#include "Runtime/Engine.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace
 {
@@ -69,16 +73,80 @@ namespace
 
 	FCrowdVisualDesc MakeVisualDesc(
 		const FSoftObjectPtr& SkeletalMeshPath,
+		const TArray<FSoftObjectPtr>& MaterialSlots,
 		const TSubclassOf<UAnimInstance>& AnimInstanceClass,
 		const FVector& Scale,
 		const FCrowdMeleeAnimationSet& MeleeAnimations = FCrowdMeleeAnimationSet())
 	{
 		FCrowdVisualDesc Desc;
 		Desc.SkeletalMeshPath = SkeletalMeshPath;
+		Desc.MaterialSlots = MaterialSlots;
 		Desc.AnimInstanceClass = AnimInstanceClass;
 		Desc.Scale = Scale;
 		Desc.MeleeAnimations = MeleeAnimations;
 		return Desc;
+	}
+
+	void SyncVisualMaterialSlotsFromSkeletalMesh(
+		const FSoftObjectPtr& SkeletalMeshPath,
+		TArray<FSoftObjectPtr>& MaterialSlots,
+		bool bPreserveExistingSlots)
+	{
+		const FString MeshPath = SkeletalMeshPath.ToString();
+		if (MeshPath.empty() || MeshPath == "None")
+		{
+			MaterialSlots.clear();
+			return;
+		}
+
+		ID3D11Device* Device = GEngine
+			? GEngine->GetRenderer().GetFD3DDevice().GetDevice()
+			: nullptr;
+		USkeletalMesh* Mesh = Device ? FMeshManager::LoadSkeletalMesh(MeshPath, Device) : nullptr;
+		if (!Mesh)
+		{
+			return;
+		}
+
+		const TArray<FSoftObjectPtr> SavedSlots = MaterialSlots;
+		const TArray<FSkeletalMaterial>& DefaultMaterials = Mesh->GetSkeletalMaterials();
+		MaterialSlots.resize(DefaultMaterials.size());
+
+		for (int32 Index = 0; Index < static_cast<int32>(DefaultMaterials.size()); ++Index)
+		{
+			const FSkeletalMaterial& DefaultMaterial = DefaultMaterials[Index];
+			if (DefaultMaterial.MaterialInterface)
+			{
+				MaterialSlots[Index] = DefaultMaterial.MaterialInterface->GetAssetPathFileName();
+			}
+			else if (!DefaultMaterial.MaterialPath.empty())
+			{
+				MaterialSlots[Index] = DefaultMaterial.MaterialPath;
+			}
+			else
+			{
+				MaterialSlots[Index] = "None";
+			}
+		}
+
+		if (bPreserveExistingSlots)
+		{
+			const int32 CopyCount = (std::min)(
+				static_cast<int32>(MaterialSlots.size()),
+				static_cast<int32>(SavedSlots.size()));
+			for (int32 Index = 0; Index < CopyCount; ++Index)
+			{
+				MaterialSlots[Index] = SavedSlots[Index];
+			}
+		}
+	}
+
+	bool NeedsInitialMaterialSlotSync(
+		const FSoftObjectPtr& SkeletalMeshPath,
+		const TArray<FSoftObjectPtr>& MaterialSlots)
+	{
+		const FString MeshPath = SkeletalMeshPath.ToString();
+		return !MeshPath.empty() && MeshPath != "None" && MaterialSlots.empty();
 	}
 
 	FCrowdMeleeAnimationSet MakeMeleeAnimationSet(
@@ -120,6 +188,7 @@ ULargeScaleUnitManagerComponent::ULargeScaleUnitManagerComponent()
 {
 	AllyMeleeVisualAnimInstanceClass = UCrowdMeleeAnimInstance::StaticClass();
 	EnemyMeleeVisualAnimInstanceClass = UCrowdMeleeAnimInstance::StaticClass();
+	SyncVisualMaterialSlotsFromSkeletalMeshes(false);
 }
 
 void ULargeScaleUnitManagerComponent::BeginPlay()
@@ -147,6 +216,92 @@ void ULargeScaleUnitManagerComponent::EndPlay()
 	}
 
 	UActorComponent::EndPlay();
+}
+
+void ULargeScaleUnitManagerComponent::PostDuplicate()
+{
+	UActorComponent::PostDuplicate();
+	SyncVisualMaterialSlotsFromSkeletalMeshes(true);
+}
+
+void ULargeScaleUnitManagerComponent::PostLoad()
+{
+	UActorComponent::PostLoad();
+	SyncVisualMaterialSlotsFromSkeletalMeshes(true);
+}
+
+void ULargeScaleUnitManagerComponent::PreGetEditableProperties()
+{
+	UActorComponent::PreGetEditableProperties();
+
+	if (NeedsInitialMaterialSlotSync(AllyMeleeVisualSkeletalMeshPath, AllyMeleeVisualMaterialSlots) ||
+		NeedsInitialMaterialSlotSync(AllyRangedVisualSkeletalMeshPath, AllyRangedVisualMaterialSlots) ||
+		NeedsInitialMaterialSlotSync(EnemyMeleeVisualSkeletalMeshPath, EnemyMeleeVisualMaterialSlots) ||
+		NeedsInitialMaterialSlotSync(EnemyRangedVisualSkeletalMeshPath, EnemyRangedVisualMaterialSlots))
+	{
+		SyncVisualMaterialSlotsFromSkeletalMeshes(true);
+	}
+}
+
+void ULargeScaleUnitManagerComponent::PostEditProperty(const char* PropertyName)
+{
+	UActorComponent::PostEditProperty(PropertyName);
+
+	if (std::strcmp(PropertyName, "AllyMeleeVisualSkeletalMeshPath") == 0 ||
+		std::strcmp(PropertyName, "Ally Melee Skeletal Mesh") == 0)
+	{
+		SyncVisualMaterialSlotsFromSkeletalMesh(
+			AllyMeleeVisualSkeletalMeshPath,
+			AllyMeleeVisualMaterialSlots,
+			false);
+	}
+
+	if (std::strcmp(PropertyName, "AllyRangedVisualSkeletalMeshPath") == 0 ||
+		std::strcmp(PropertyName, "Ally Ranged Skeletal Mesh") == 0)
+	{
+		SyncVisualMaterialSlotsFromSkeletalMesh(
+			AllyRangedVisualSkeletalMeshPath,
+			AllyRangedVisualMaterialSlots,
+			false);
+	}
+
+	if (std::strcmp(PropertyName, "EnemyMeleeVisualSkeletalMeshPath") == 0 ||
+		std::strcmp(PropertyName, "Enemy Melee Skeletal Mesh") == 0)
+	{
+		SyncVisualMaterialSlotsFromSkeletalMesh(
+			EnemyMeleeVisualSkeletalMeshPath,
+			EnemyMeleeVisualMaterialSlots,
+			false);
+	}
+
+	if (std::strcmp(PropertyName, "EnemyRangedVisualSkeletalMeshPath") == 0 ||
+		std::strcmp(PropertyName, "Enemy Ranged Skeletal Mesh") == 0)
+	{
+		SyncVisualMaterialSlotsFromSkeletalMesh(
+			EnemyRangedVisualSkeletalMeshPath,
+			EnemyRangedVisualMaterialSlots,
+			false);
+	}
+}
+
+void ULargeScaleUnitManagerComponent::SyncVisualMaterialSlotsFromSkeletalMeshes(bool bPreserveExistingSlots)
+{
+	SyncVisualMaterialSlotsFromSkeletalMesh(
+		AllyMeleeVisualSkeletalMeshPath,
+		AllyMeleeVisualMaterialSlots,
+		bPreserveExistingSlots);
+	SyncVisualMaterialSlotsFromSkeletalMesh(
+		AllyRangedVisualSkeletalMeshPath,
+		AllyRangedVisualMaterialSlots,
+		bPreserveExistingSlots);
+	SyncVisualMaterialSlotsFromSkeletalMesh(
+		EnemyMeleeVisualSkeletalMeshPath,
+		EnemyMeleeVisualMaterialSlots,
+		bPreserveExistingSlots);
+	SyncVisualMaterialSlotsFromSkeletalMesh(
+		EnemyRangedVisualSkeletalMeshPath,
+		EnemyRangedVisualMaterialSlots,
+		bPreserveExistingSlots);
 }
 
 FUnitArchetype ULargeScaleUnitManagerComponent::BuildUnitArchetype(EUnitCombatType CombatType) const
@@ -238,11 +393,16 @@ FCrowdVisualDesc ULargeScaleUnitManagerComponent::BuildVisualDesc(EUnitTeam Team
 	case EUnitTeam::Ally:
 		if (CombatType == EUnitCombatType::Ranged)
 		{
-			return MakeVisualDesc(AllyRangedVisualSkeletalMeshPath, AllyRangedVisualAnimInstanceClass, AllyRangedVisualScale);
+			return MakeVisualDesc(
+				AllyRangedVisualSkeletalMeshPath,
+				AllyRangedVisualMaterialSlots,
+				AllyRangedVisualAnimInstanceClass,
+				AllyRangedVisualScale);
 		}
 
 		return MakeVisualDesc(
 			AllyMeleeVisualSkeletalMeshPath,
+			AllyMeleeVisualMaterialSlots,
 			AllyMeleeVisualAnimInstanceClass,
 			AllyMeleeVisualScale,
 			MakeMeleeAnimationSet(
@@ -264,11 +424,16 @@ FCrowdVisualDesc ULargeScaleUnitManagerComponent::BuildVisualDesc(EUnitTeam Team
 	default:
 		if (CombatType == EUnitCombatType::Ranged)
 		{
-			return MakeVisualDesc(EnemyRangedVisualSkeletalMeshPath, EnemyRangedVisualAnimInstanceClass, EnemyRangedVisualScale);
+			return MakeVisualDesc(
+				EnemyRangedVisualSkeletalMeshPath,
+				EnemyRangedVisualMaterialSlots,
+				EnemyRangedVisualAnimInstanceClass,
+				EnemyRangedVisualScale);
 		}
 
 		return MakeVisualDesc(
 			EnemyMeleeVisualSkeletalMeshPath,
+			EnemyMeleeVisualMaterialSlots,
 			EnemyMeleeVisualAnimInstanceClass,
 			EnemyMeleeVisualScale,
 			MakeMeleeAnimationSet(

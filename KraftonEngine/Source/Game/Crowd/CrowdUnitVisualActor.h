@@ -7,6 +7,7 @@
 
 class UClass;
 class ULargeScaleUnitManagerComponent;
+class UMaterialInterface;
 class USkeletalMesh;
 class USkeletalMeshComponent;
 
@@ -21,6 +22,7 @@ public:
 	void InitializeVisual(
 		ULargeScaleUnitManagerComponent* InManager,
 		USkeletalMesh* InMesh,
+		const TArray<UMaterialInterface*>& InMaterials,
 		UClass* InAnimClass,
 		const FCrowdMeleeAnimationSet& InMeleeAnimationSet);
 	void ApplyRenderData(const FUnitRenderData& InRenderData);
@@ -59,6 +61,7 @@ private:
 	bool bVisualActive = false;
 
 	USkeletalMesh* CurrentMesh = nullptr;
+	TArray<UMaterialInterface*> CurrentMaterials;
 	UClass* CurrentAnimClass = nullptr;
 	FCrowdMeleeAnimationSet CurrentMeleeAnimationSet;
 };
