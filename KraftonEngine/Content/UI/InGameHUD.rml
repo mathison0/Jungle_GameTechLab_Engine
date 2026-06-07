@@ -212,6 +212,10 @@
 			color: #222222f1;
 		}
 
+		#resume-button {
+			margin-bottom: 68px;
+		}
+
 		#restart-button {
 			margin-bottom: 16px;
 		}
@@ -239,6 +243,7 @@
 		</div>
 		<div id="pause-overlay">
 			<div id="pause-menu">
+				<div id="resume-button" class="pause-button">재개하기</div>
 				<div id="restart-button" class="pause-button">재도전</div>
 				<div id="stop-button" class="pause-button">전투 중단</div>
 			</div>
