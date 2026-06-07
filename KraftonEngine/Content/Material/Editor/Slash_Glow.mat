@@ -31,7 +31,7 @@
         "ShadowMode" : "None",
         "Textures" : {
           "Custom0Texture" : "Content/Texture/noise.png",
-          "DiffuseTexture" : "Content/Texture/white.png"
+          "DiffuseTexture" : "Content/Texture/SparkStreak.png"
         },
         "bEnableBloom" : true
       }

@@ -5,7 +5,7 @@
         "ParentMaterial" : "Content/Material/Editor/Slash_Core.mat",
         "PathFileName" : "Content/Material/Editor/Slash_Core_Inst.matinst",
         "Textures" : {
-
+          "DiffuseTexture" : "Content/Texture/SparkStreak.png"
         },
         "bOverrideEmissiveColor" : false,
         "bOverrideEmissiveIntensity" : false,

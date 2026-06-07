@@ -6,7 +6,7 @@
         "ParentMaterial" : "Content/Material/Editor/Slash_Glow.mat",
         "PathFileName" : "Content/Material/Editor/Slash_Glow_Inst.matinst",
         "Textures" : {
-
+          "DiffuseTexture" : "Content/Texture/SparkStreak.png"
         },
         "bOverrideEmissiveColor" : false,
         "bOverrideEmissiveIntensity" : true,
