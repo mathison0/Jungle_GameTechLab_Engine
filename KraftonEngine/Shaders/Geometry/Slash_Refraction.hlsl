@@ -22,15 +22,55 @@ cbuffer SlashRefractionParams : register(b2)
     float SlashEdgeSoftness;
     float SlashTailFadeStart;
     float SlashTrailLength;
+    float SlashScreenThickness;
+    float SlashScreenThicknessStrength;
+    float2 SlashRefractionPad;
 };
+
+float4 ApplySlashScreenThickness(VS_Input_PNCTT input, float4 worldPos, float4 clipPos)
+{
+    float strength = max(SlashScreenThicknessStrength, 0.0f);
+    float thickness = max(SlashScreenThickness, 0.0f) * strength;
+    if (thickness <= 0.0f)
+    {
+        return clipPos;
+    }
+
+    float3 worldTangent = mul(float4(input.tangent.xyz, 0.0f), Model).xyz;
+    if (dot(worldTangent, worldTangent) <= 0.000001f)
+    {
+        return clipPos;
+    }
+
+    worldTangent = normalize(worldTangent);
+
+    float4 tangentClip = mul(mul(float4(worldPos.xyz + worldTangent, 1.0f), View), Projection);
+    float clipW = abs(clipPos.w) > 0.00001f ? clipPos.w : 0.00001f;
+    float tangentW = abs(tangentClip.w) > 0.00001f ? tangentClip.w : 0.00001f;
+    float2 screenTangent = tangentClip.xy / tangentW - clipPos.xy / clipW;
+
+    if (dot(screenTangent, screenTangent) <= 0.00000001f)
+    {
+        return clipPos;
+    }
+
+    float2 screenNormal = normalize(float2(-screenTangent.y, screenTangent.x));
+    float2 viewportSize = max(ViewportSize, float2(1.0f, 1.0f));
+    float2 ndcPerPixel = 2.0f / viewportSize;
+    float side = input.texcoord.y * 2.0f - 1.0f;
+
+    clipPos.xy += screenNormal * ndcPerPixel * thickness * side * clipPos.w;
+    return clipPos;
+}
 
 PS_Input_Particle VS(VS_Input_PNCTT input)
 {
     PS_Input_Particle output;
 
     float4 worldPos = mul(float4(input.position, 1.0f), Model);
+    float4 clipPos = mul(mul(worldPos, View), Projection);
     output.worldPos = worldPos.xyz;
-    output.position = mul(mul(worldPos, View), Projection);
+    output.position = ApplySlashScreenThickness(input, worldPos, clipPos);
     output.color = input.color;
     output.texcoord = input.texcoord;
 

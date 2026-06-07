@@ -1,21 +1,26 @@
 {
-        "BlendState" : "Opaque",
-        "DepthStencilState" : "Default",
-        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-        "EmissiveIntensity" : 5.000000,
-        "Origin" : "FbxImport",
-        "Parameters" : {
-          "HasNormalMap" : 0.000000,
-          "SectionColor" : [0.500000, 0.500000, 1.000000, 1.000000],
-          "_pad" : [0.000000, 0.000000, 0.000000]
-        },
-        "PathFileName" : "Content/Material/Auto/MI_PrototypeGrid_Gray.mat",
-        "RasterizerState" : "SolidBackCull",
-        "RenderPass" : "Opaque",
-        "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
-        "ShadowMode" : "Opaque",
-        "Textures" : {
-          "DiffuseTexture" : "Content/Data/GameJam/RT_222_Tex.png"
-        },
-        "bEnableBloom" : false
-      }
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 5.000000,
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 0.000000,
+    "HitFlashAmount" : 0.000000,
+    "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "HitFlashFillAmount" : 0.150000,
+    "HitFlashRimIntensity" : 3.000000,
+    "HitFlashRimPower" : 3.000000,
+    "SectionColor" : [0.500000, 0.500000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/MI_PrototypeGrid_Gray.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "DiffuseTexture" : "Content/Data/GameJam/RT_222_Tex.png"
+  },
+  "bEnableBloom" : false
+}

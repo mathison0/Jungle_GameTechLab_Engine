@@ -1,10 +1,56 @@
 ﻿#include "Game/Musou/Effect/SlashEffectActor.h"
 
+#include "Component/Particle/ParticleSystemComponent.h"
 #include "Component/Primitive/StaticMeshComponent.h"
+#include "Math/Matrix.h"
+#include "Math/Quat.h"
 #include "Engine/Runtime/Engine.h"
 #include "Materials/MaterialManager.h"
 #include "Mesh/MeshManager.h"
+#include "Particles/ParticleSystemManager.h"
+#include "Particles/Runtime/ParticleRuntimeTypes.h"
 #include "Render/Pipeline/Renderer.h"
+
+#include <cmath>
+
+namespace
+{
+	float SlashSparkRandom01(int32 Index, int32 Salt)
+	{
+		const float Value = std::sin(static_cast<float>(Index * 127 + Salt * 311) * 12.9898f) * 43758.5453f;
+		return Value - std::floor(Value);
+	}
+
+	float SlashSparkSignedRandom(int32 Index, int32 Salt)
+	{
+		return SlashSparkRandom01(Index, Salt) * 2.0f - 1.0f;
+	}
+
+	void BuildArcSparkLocalFrame(
+		ESlashArcSparkPlaneMode PlaneMode,
+		float SinAngle,
+		float CosAngle,
+		FVector& OutDirection,
+		FVector& OutTangent)
+	{
+		switch (PlaneMode)
+		{
+		case ESlashArcSparkPlaneMode::XZ:
+			OutDirection = FVector(SinAngle, 0.0f, CosAngle);
+			OutTangent = FVector(CosAngle, 0.0f, -SinAngle);
+			break;
+		case ESlashArcSparkPlaneMode::XY:
+			OutDirection = FVector(SinAngle, CosAngle, 0.0f);
+			OutTangent = FVector(CosAngle, -SinAngle, 0.0f);
+			break;
+		case ESlashArcSparkPlaneMode::YZ:
+		default:
+			OutDirection = FVector(0.0f, SinAngle, CosAngle);
+			OutTangent = FVector(0.0f, CosAngle, -SinAngle);
+			break;
+		}
+	}
+}
 
 void ASlashEffectActor::InitDefaultComponents()
 {
@@ -20,6 +66,10 @@ void ASlashEffectActor::InitDefaultComponents()
 	RefractionMeshComponent = AddComponent<UStaticMeshComponent>();
 	RefractionMeshComponent->AttachToComponent(SlashRootComponent);
 
+	ArcSparkComponent = AddComponent<UParticleSystemComponent>();
+	ArcSparkComponent->AttachToComponent(SlashRootComponent);
+	ArcSparkComponent->Deactivate();
+
 	LoadSlashAssets();
 
 	SetVisible(false);
@@ -30,7 +80,7 @@ void ASlashEffectActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!CoreMeshComponent || !GlowMeshComponent || !RefractionMeshComponent)
+	if (!CoreMeshComponent || !GlowMeshComponent || !RefractionMeshComponent || !ArcSparkComponent)
 	{
 		ResolveComponents();
 	}
@@ -74,6 +124,16 @@ void ASlashEffectActor::LoadSlashAssets()
 		RefractionMeshComponent->SetMaterial(0, RefractionMaterial);
 		RefractionMeshComponent->SetRelativeScale(RefractionRelativeScale);
 	}
+
+	ArcSparkParticle = ArcSparkParticlePath.IsNull()
+		? nullptr
+		: FParticleSystemManager::Get().Load(ArcSparkParticlePath.ToString());
+
+	if (ArcSparkComponent)
+	{
+		ArcSparkComponent->SetTemplate(ArcSparkParticle);
+		ArcSparkComponent->Deactivate();
+	}
 }
 
 void ASlashEffectActor::ConfigureSlashEffect(
@@ -101,7 +161,29 @@ void ASlashEffectActor::ConfigureSlashEffect(
 	float InRevealSoftness,
 	float InEdgeSoftness,
 	float InTailFadeStart,
-	float InTrailLength)
+	float InTrailLength,
+	float InCoreScreenThickness,
+	float InCoreScreenThicknessStrength,
+	float InGlowScreenThickness,
+	float InGlowScreenThicknessStrength,
+	float InRefractionScreenThickness,
+	float InRefractionScreenThicknessStrength,
+	const FVector4& InDissolveEdgeColor,
+	float InDissolveEdgeWidth,
+	float InCoreDissolveEdgeIntensity,
+	float InGlowDissolveEdgeIntensity,
+	bool bInSpawnArcSparks,
+	const FSoftObjectPtr& InArcSparkParticlePath,
+	int32 InArcSparkCount,
+	float InArcSparkRadius,
+	float InArcSparkAngleMin,
+	float InArcSparkAngleMax,
+	ESlashArcSparkPlaneMode InArcSparkPlaneMode,
+	float InArcSparkOutwardSpeed,
+	float InArcSparkTangentSpeed,
+	float InArcSparkUpSpeed,
+	float InArcSparkPositionJitter,
+	float InArcSparkSpeedJitter)
 {
 	MeshPath = InMeshPath;
 	CoreMaterialPath = InCoreMaterialPath;
@@ -130,6 +212,28 @@ void ASlashEffectActor::ConfigureSlashEffect(
 	EdgeSoftness = InEdgeSoftness;
 	TailFadeStart = InTailFadeStart;
 	TrailLength = InTrailLength;
+	CoreScreenThickness = InCoreScreenThickness;
+	CoreScreenThicknessStrength = InCoreScreenThicknessStrength;
+	GlowScreenThickness = InGlowScreenThickness;
+	GlowScreenThicknessStrength = InGlowScreenThicknessStrength;
+	RefractionScreenThickness = InRefractionScreenThickness;
+	RefractionScreenThicknessStrength = InRefractionScreenThicknessStrength;
+	DissolveEdgeColor = InDissolveEdgeColor;
+	DissolveEdgeWidth = InDissolveEdgeWidth;
+	CoreDissolveEdgeIntensity = InCoreDissolveEdgeIntensity;
+	GlowDissolveEdgeIntensity = InGlowDissolveEdgeIntensity;
+	bSpawnArcSparks = bInSpawnArcSparks;
+	ArcSparkParticlePath = InArcSparkParticlePath;
+	ArcSparkCount = InArcSparkCount;
+	ArcSparkRadius = InArcSparkRadius;
+	ArcSparkAngleMin = InArcSparkAngleMin;
+	ArcSparkAngleMax = InArcSparkAngleMax;
+	ArcSparkPlaneMode = InArcSparkPlaneMode;
+	ArcSparkOutwardSpeed = InArcSparkOutwardSpeed;
+	ArcSparkTangentSpeed = InArcSparkTangentSpeed;
+	ArcSparkUpSpeed = InArcSparkUpSpeed;
+	ArcSparkPositionJitter = InArcSparkPositionJitter;
+	ArcSparkSpeedJitter = InArcSparkSpeedJitter;
 }
 
 void ASlashEffectActor::ActivateSlash(
@@ -144,16 +248,19 @@ void ASlashEffectActor::ActivateSlash(
 	if (CoreMeshComponent)
 	{
 		CoreMeshComponent->SetRelativeScale(CoreRelativeScale);
+		CoreMeshComponent->SetRelativeRotation(FQuat::Identity);
 	}
 
 	if (GlowMeshComponent)
 	{
 		GlowMeshComponent->SetRelativeScale(GlowRelativeScale);
+		GlowMeshComponent->SetRelativeRotation(FQuat::Identity);
 	}
 
 	if (RefractionMeshComponent)
 	{
 		RefractionMeshComponent->SetRelativeScale(RefractionRelativeScale);
+		RefractionMeshComponent->SetRelativeRotation(FQuat::Identity);
 	}
 
 	MoveDirection = Direction.Normalized();
@@ -162,6 +269,7 @@ void ASlashEffectActor::ActivateSlash(
 
 	SetSlashMaterialParams(1.0f, GlowAlphaMultiplier, 0.0f, 0.0f, 0.0f);
 	SetVisible(true);
+	SpawnArcSparks();
 }
 
 void ASlashEffectActor::Tick(float DeltaTime)
@@ -297,6 +405,13 @@ void ASlashEffectActor::SetSlashMaterialParams(
 	Dissolve = FMath::Clamp(Dissolve, 0.0f, 1.0f);
 	Reveal = FMath::Clamp(Reveal, 0.0f, 1.0f);
 
+	const float GlowReveal = FMath::Clamp(Reveal - 0.10f, 0.0f, 1.0f);
+	const float GlowDissolve = FMath::Clamp(Dissolve * 0.65f, 0.0f, 1.0f);
+	const float GlowTrailLength = FMath::Clamp(TrailLength + 0.15f, 0.0f, 1.0f);
+
+	const float RefractionReveal = FMath::Clamp(Reveal + 0.15f, 0.0f, 1.0f);
+	const float RefractionTrailLength = FMath::Clamp(TrailLength - 0.15f, 0.0f, 1.0f);
+
 	if (CoreMaterial)
 	{
 		CoreMaterial->SetScalarParameter("SlashAlpha", CoreAlpha);
@@ -307,18 +422,28 @@ void ASlashEffectActor::SetSlashMaterialParams(
 		CoreMaterial->SetScalarParameter("SlashEdgeSoftness", EdgeSoftness);
 		CoreMaterial->SetScalarParameter("SlashTailFadeStart", TailFadeStart);
 		CoreMaterial->SetScalarParameter("SlashTrailLength", TrailLength);
+		CoreMaterial->SetScalarParameter("SlashScreenThickness", CoreScreenThickness);
+		CoreMaterial->SetScalarParameter("SlashScreenThicknessStrength", CoreScreenThicknessStrength);
+		CoreMaterial->SetVector4Parameter("SlashDissolveEdgeColor", DissolveEdgeColor);
+		CoreMaterial->SetScalarParameter("SlashDissolveEdgeWidth", DissolveEdgeWidth);
+		CoreMaterial->SetScalarParameter("SlashDissolveEdgeIntensity", CoreDissolveEdgeIntensity);
 	}
 
 	if (GlowMaterial)
 	{
 		GlowMaterial->SetScalarParameter("SlashAlpha", GlowAlpha);
-		GlowMaterial->SetScalarParameter("SlashDissolve", Dissolve * 0.75f);
+		GlowMaterial->SetScalarParameter("SlashDissolve", GlowDissolve);
 		GlowMaterial->SetScalarParameter("SlashNoiseScroll", NoiseScroll * 0.65f);
-		GlowMaterial->SetScalarParameter("SlashReveal", Reveal);
+		GlowMaterial->SetScalarParameter("SlashReveal", GlowReveal);
 		GlowMaterial->SetScalarParameter("SlashRevealSoftness", RevealSoftness);
 		GlowMaterial->SetScalarParameter("SlashEdgeSoftness", EdgeSoftness);
 		GlowMaterial->SetScalarParameter("SlashTailFadeStart", TailFadeStart);
-		GlowMaterial->SetScalarParameter("SlashTrailLength", TrailLength);
+		GlowMaterial->SetScalarParameter("SlashTrailLength", GlowTrailLength);
+		GlowMaterial->SetScalarParameter("SlashScreenThickness", GlowScreenThickness);
+		GlowMaterial->SetScalarParameter("SlashScreenThicknessStrength", GlowScreenThicknessStrength);
+		GlowMaterial->SetVector4Parameter("SlashDissolveEdgeColor", DissolveEdgeColor);
+		GlowMaterial->SetScalarParameter("SlashDissolveEdgeWidth", DissolveEdgeWidth);
+		GlowMaterial->SetScalarParameter("SlashDissolveEdgeIntensity", GlowDissolveEdgeIntensity);
 	}
 
 	if (RefractionMaterial)
@@ -326,12 +451,100 @@ void ASlashEffectActor::SetSlashMaterialParams(
 		RefractionMaterial->SetScalarParameter("SlashAlpha", CoreAlpha);
 		RefractionMaterial->SetScalarParameter("RefractionStrength", RefractionStrength * CoreAlpha);
 		RefractionMaterial->SetScalarParameter("RefractionNoiseScroll", NoiseScroll);
-		RefractionMaterial->SetScalarParameter("SlashReveal", Reveal);
+		RefractionMaterial->SetScalarParameter("SlashReveal", RefractionReveal);
 		RefractionMaterial->SetScalarParameter("SlashRevealSoftness", RevealSoftness);
 		RefractionMaterial->SetScalarParameter("SlashEdgeSoftness", EdgeSoftness);
 		RefractionMaterial->SetScalarParameter("SlashTailFadeStart", TailFadeStart);
-		RefractionMaterial->SetScalarParameter("SlashTrailLength", TrailLength);
+		RefractionMaterial->SetScalarParameter("SlashTrailLength", RefractionTrailLength);
+		RefractionMaterial->SetScalarParameter("SlashScreenThickness", RefractionScreenThickness);
+		RefractionMaterial->SetScalarParameter("SlashScreenThicknessStrength", RefractionScreenThicknessStrength);
 	}
+}
+
+void ASlashEffectActor::SpawnArcSparks()
+{
+	if (!bSpawnArcSparks || !ArcSparkComponent || !ArcSparkParticle || ArcSparkCount <= 0)
+	{
+		return;
+	}
+
+	ArcSparkComponent->SetTemplate(ArcSparkParticle);
+	ArcSparkComponent->ResetSystem();
+	ArcSparkComponent->Activate();
+
+	TArray<FParticleBurstSpawn> SpawnInfos;
+	SpawnInfos.reserve(ArcSparkCount);
+
+	const FMatrix SparkWorldMatrix = CoreMeshComponent
+		? CoreMeshComponent->GetWorldMatrix()
+		: GetRootComponent()
+			? GetRootComponent()->GetWorldMatrix()
+			: FMatrix::MakeTranslationMatrix(GetActorLocation());
+	const float AngleRange = ArcSparkAngleMax - ArcSparkAngleMin;
+
+	for (int32 Index = 0; Index < ArcSparkCount; ++Index)
+	{
+		const float Fraction = ArcSparkCount > 1
+			? static_cast<float>(Index) / static_cast<float>(ArcSparkCount - 1)
+			: 0.5f;
+		const float AngleDeg = ArcSparkAngleMin + AngleRange * Fraction;
+		const float AngleRad = AngleDeg * FMath::DegToRad;
+
+		const float PositionJitter = ArcSparkPositionJitter * SlashSparkSignedRandom(Index, 1);
+		float Radius = ArcSparkRadius + PositionJitter;
+		if (Radius < 0.0f)
+		{
+			Radius = 0.0f;
+		}
+		const float SinAngle = std::sin(AngleRad);
+		const float CosAngle = std::cos(AngleRad);
+
+		FVector LocalOutward;
+		FVector LocalTangent;
+		BuildArcSparkLocalFrame(ArcSparkPlaneMode, SinAngle, CosAngle, LocalOutward, LocalTangent);
+
+		FVector LocalPosition = LocalOutward * Radius;
+		if (LocalOutward.LengthSquared() <= 0.0001f)
+		{
+			LocalOutward = FVector::UpVector;
+		}
+		LocalOutward.Normalize();
+
+		if (LocalTangent.LengthSquared() <= 0.0001f)
+		{
+			LocalTangent = FVector::RightVector;
+		}
+		LocalTangent.Normalize();
+
+		const float SpeedScale = 1.0f + ArcSparkSpeedJitter * SlashSparkSignedRandom(Index, 2);
+		const float TangentSign = SlashSparkRandom01(Index, 3) > 0.5f ? 1.0f : -1.0f;
+		const FVector WorldPosition = SparkWorldMatrix.TransformPositionWithW(LocalPosition);
+		FVector WorldOutward = SparkWorldMatrix.TransformVector(LocalOutward);
+		if (WorldOutward.LengthSquared() <= 0.0001f)
+		{
+			WorldOutward = FVector::UpVector;
+		}
+		WorldOutward.Normalize();
+
+		FVector WorldTangent = SparkWorldMatrix.TransformVector(LocalTangent);
+		if (WorldTangent.LengthSquared() <= 0.0001f)
+		{
+			WorldTangent = FVector::RightVector;
+		}
+		WorldTangent.Normalize();
+
+		const FVector WorldVelocity =
+			WorldOutward * ArcSparkOutwardSpeed * SpeedScale
+			+ WorldTangent * ArcSparkTangentSpeed * TangentSign
+			+ FVector::UpVector * ArcSparkUpSpeed;
+
+		FParticleBurstSpawn SpawnInfo;
+		SpawnInfo.Location = WorldPosition;
+		SpawnInfo.Velocity = WorldVelocity;
+		SpawnInfos.push_back(SpawnInfo);
+	}
+
+	ArcSparkComponent->EmitBurst(SpawnInfos);
 }
 
 void ASlashEffectActor::ResolveComponents()
@@ -341,6 +554,7 @@ void ASlashEffectActor::ResolveComponents()
 	CoreMeshComponent = nullptr;
 	GlowMeshComponent = nullptr;
 	RefractionMeshComponent = nullptr;
+	ArcSparkComponent = GetComponentByClass<UParticleSystemComponent>();
 
 	for (UActorComponent* Component : GetComponents())
 	{

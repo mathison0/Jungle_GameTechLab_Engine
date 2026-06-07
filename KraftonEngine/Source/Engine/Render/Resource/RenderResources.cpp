@@ -823,6 +823,8 @@ void FSystemResources::UpdateFrameBuffer(FD3DDevice& Device, const FFrameContext
 	frameConstantData.bIsWireframe = (Frame.RenderOptions.ViewMode == EViewMode::Wireframe);
 	frameConstantData.WireframeColor = Frame.WireframeColor;
 	frameConstantData.CameraWorldPos = Frame.CameraPosition;
+	frameConstantData.ViewportWidth = Frame.ViewportWidth > 0.0f ? Frame.ViewportWidth : 1.0f;
+	frameConstantData.ViewportHeight = Frame.ViewportHeight > 0.0f ? Frame.ViewportHeight : 1.0f;
 
 	if (GEngine && GEngine->GetTimer())
 	{

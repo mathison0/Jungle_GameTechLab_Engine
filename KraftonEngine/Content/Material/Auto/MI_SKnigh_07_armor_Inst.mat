@@ -1,21 +1,26 @@
 {
-        "BlendState" : "AlphaBlend",
-        "DepthStencilState" : "Default",
-        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-        "EmissiveIntensity" : 0.000000,
-        "Origin" : "FbxImport",
-        "Parameters" : {
-          "HasNormalMap" : 1.000000,
-          "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "_pad" : [0.000000, 0.000000, 0.000000]
-        },
-        "PathFileName" : "Content/Material/Auto/MI_SKnigh_07_armor_Inst.mat",
-        "RasterizerState" : "SolidBackCull",
-        "RenderPass" : "AlphaBlend",
-        "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
-        "ShadowMode" : "Opaque",
-        "Textures" : {
-          "NormalTexture" : "Content/Texture/Auto/SK_SKnight_07_full/T_armor_7_Normal.png"
-        },
-        "bEnableBloom" : false
-      }
+  "BlendState" : "AlphaBlend",
+  "DepthStencilState" : "Default",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 1.000000,
+    "HitFlashAmount" : 0.000000,
+    "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "HitFlashFillAmount" : 0.150000,
+    "HitFlashRimIntensity" : 3.000000,
+    "HitFlashRimPower" : 3.000000,
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/MI_SKnigh_07_armor_Inst.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "AlphaBlend",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "NormalTexture" : "Content/Texture/Auto/SK_SKnight_07_full/T_armor_7_Normal.png"
+  },
+  "bEnableBloom" : false
+}

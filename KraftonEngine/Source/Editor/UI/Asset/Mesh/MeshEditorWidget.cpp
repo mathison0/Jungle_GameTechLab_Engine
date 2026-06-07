@@ -1243,6 +1243,14 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 				if (UAnimMontage* M = FAnimationManager::Get().LoadMontage(E.FullPath))
 				{
 					AnimTabState.CurrentMontage = M;
+					if (UAnimSequence* SourceSeq = M->GetSourceSequence())
+					{
+						if (SourceSeq->IsCompatibleWith(SkeletalMesh))
+						{
+							AnimTabState.CurrentSequence = SourceSeq;
+							ApplyAnimationToComponent();
+						}
+					}
 				}
 			}
 			else

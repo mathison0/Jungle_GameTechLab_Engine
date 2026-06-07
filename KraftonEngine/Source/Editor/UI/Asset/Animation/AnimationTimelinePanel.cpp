@@ -20,6 +20,7 @@
 #include "Object/Reflection/UClass.h"
 #include "Core/Types/PropertyTypes.h"
 #include "Editor/UI/Asset/Animation/MorphCurveEditObject.h"
+#include "Serialization/MemoryArchive.h"
 
 #include <imgui.h>
 #include <algorithm>
@@ -70,6 +71,15 @@ namespace
 		float BadgeW = 0.0f;
 	};
 
+	struct FNotifyClipboard
+	{
+		bool bValid = false;
+		FString NotifyName;
+		TArray<uint8> SerializedEvent;
+	};
+
+	FNotifyClipboard GNotifyClipboard;
+
 	TArray<UClass*> EnumerateConcreteSubclasses(UClass* Base)
 	{
 		TArray<UClass*> Out;
@@ -108,6 +118,42 @@ namespace
 			}
 		}
 		return Event;
+	}
+
+	void CopyNotifyToClipboard(FAnimNotifyEvent& Event)
+	{
+		FMemoryArchive Writer(true /*bInIsSaving*/);
+		Event.Serialize(Writer, nullptr);
+
+		GNotifyClipboard.bValid = true;
+		GNotifyClipboard.NotifyName = Event.NotifyName.ToString();
+		GNotifyClipboard.SerializedEvent = Writer.GetBuffer();
+	}
+
+	int32 PasteNotifyFromClipboard(UAnimSequence* Seq, float PasteTime, float PlayLength)
+	{
+		if (!Seq || !GNotifyClipboard.bValid || GNotifyClipboard.SerializedEvent.empty())
+		{
+			return -1;
+		}
+
+		FAnimNotifyEvent NewEvent;
+		FMemoryArchive Reader(GNotifyClipboard.SerializedEvent, false /*bInIsSaving*/);
+		NewEvent.Serialize(Reader, Seq->GetDataModel());
+
+		const bool bHasDur = NewEvent.Duration > 0.0f;
+		if (bHasDur)
+		{
+			NewEvent.Duration = std::min(NewEvent.Duration, std::max(PlayLength, 0.0f));
+		}
+
+		const float MaxStart = bHasDur ? std::max(PlayLength - NewEvent.Duration, 0.0f)
+		                               : std::max(PlayLength, 0.0f);
+		NewEvent.TriggerTime = std::clamp(PasteTime, 0.0f, MaxStart);
+
+		TArray<FAnimNotifyEvent>& Notifies = Seq->GetMutableModelNotifies();
+		Notifies.push_back(std::move(NewEvent));
+		return static_cast<int32>(Notifies.size()) - 1;
 	}
 
 	// 가용 폭에 안 맞으면 끝에 "..." 을 붙여 잘라낸다. CalcTextSize 가 픽셀 단위 폭을 알려주므로
@@ -878,6 +924,28 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 	const float CurrentTime  = NodeInst ? NodeInst->GetCurrentTime() : 0.0f;
 	const int   CurrentFrame = static_cast<int>(std::lround((CurrentTime / PlayLength) * EndFrame));
 
+	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+	    !ImGui::GetIO().WantTextInput && ImGui::GetIO().KeyCtrl)
+	{
+		TArray<FAnimNotifyEvent>& Notifies = Seq->GetMutableModelNotifies();
+		if (ImGui::IsKeyPressed(ImGuiKey_C, false) &&
+		    InOutSelectedNotifyIndex >= 0 &&
+		    InOutSelectedNotifyIndex < static_cast<int32>(Notifies.size()))
+		{
+			CopyNotifyToClipboard(Notifies[InOutSelectedNotifyIndex]);
+		}
+		if (ImGui::IsKeyPressed(ImGuiKey_V, false) && GNotifyClipboard.bValid)
+		{
+			const int32 NewIndex = PasteNotifyFromClipboard(Seq, CurrentTime, PlayLength);
+			if (NewIndex >= 0)
+			{
+				Seq->RefreshRuntimeNotifies();
+				InOutSelectedNotifyIndex = NewIndex;
+				SaveSeqNow();
+			}
+		}
+	}
+
 	// ── 배경 ──
 	DL->AddRectFilled(Origin, ImVec2(Origin.x + FullW, Origin.y + PanelHeight), ColPanelBg);
 	DL->AddRectFilled(ImVec2(CanvasX, Origin.y),
@@ -930,6 +998,24 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 		ImGui::Separator();
 
 		// 등록된 UAnimNotify 자손 (instant) 클래스 enum → 콤보 메뉴.
+		if (!GNotifyClipboard.bValid) ImGui::BeginDisabled();
+		if (ImGui::MenuItem("Paste Notify"))
+		{
+			const int32 NewIndex = PasteNotifyFromClipboard(Seq, sPendingNotifyTime, PlayLength);
+			if (NewIndex >= 0)
+			{
+				Seq->RefreshRuntimeNotifies();
+				InOutSelectedNotifyIndex = NewIndex;
+				SaveSeqNow();
+			}
+		}
+		if (!GNotifyClipboard.bValid) ImGui::EndDisabled();
+		if (GNotifyClipboard.bValid)
+		{
+			ImGui::TextDisabled("Clipboard: %s", GNotifyClipboard.NotifyName.c_str());
+		}
+		ImGui::Separator();
+
 		if (ImGui::BeginMenu("Add Notify (instant)"))
 		{
 			const TArray<UClass*> NotifyClasses = EnumerateConcreteSubclasses(UAnimNotify::StaticClass());
@@ -1086,6 +1172,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 		// 드래그로 시간 이동 / 우클릭으로 삭제(루프 후 지연 적용).
 		// 직렬화 소스(DataModel)를 직접 편집 → 아래에서 dispatch 캐시 동기화.
 		int PendingDelete = -1;
+		float PendingPasteTime = -1.0f;
 		static char  sRenameBuf[64]   = {};
 		static float sGrabOffsetTime  = 0.0f; // 잡은 지점과 앵커의 시간 차(점프 방지)
 		for (const FNotifyLaneLayout& Layout : NotifyLayouts)
@@ -1194,6 +1281,17 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 				InOutSelectedNotifyIndex = i;
 				ImGui::TextDisabled("%s", Nm.c_str());
 				ImGui::Separator();
+				if (ImGui::MenuItem("Copy"))
+				{
+					CopyNotifyToClipboard(N);
+				}
+				if (!GNotifyClipboard.bValid) ImGui::BeginDisabled();
+				if (ImGui::MenuItem("Paste at Playhead"))
+				{
+					PendingPasteTime = CurrentTime;
+				}
+				if (!GNotifyClipboard.bValid) ImGui::EndDisabled();
+				ImGui::Separator();
 				if (ImGui::MenuItem("Rename"))
 				{
 					bOpenRename = true;
@@ -1273,6 +1371,16 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 					            IM_COL32(20, 35, 22, 255), Disp.c_str());
 					DL->PopClipRect();
 				}
+			}
+		}
+		if (PendingPasteTime >= 0.0f)
+		{
+			const int32 NewIndex = PasteNotifyFromClipboard(Seq, PendingPasteTime, PlayLength);
+			if (NewIndex >= 0)
+			{
+				Seq->RefreshRuntimeNotifies();
+				InOutSelectedNotifyIndex = NewIndex;
+				SaveSeqNow();
 			}
 		}
 		if (PendingDelete >= 0 && PendingDelete < static_cast<int>(Notifies.size()))

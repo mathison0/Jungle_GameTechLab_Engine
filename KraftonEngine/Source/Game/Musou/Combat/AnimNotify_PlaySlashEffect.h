@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Animation/Notify/AnimNotify.h"
+#include "Game/Musou/Effect/SlashEffectActor.h"
 #include "Math/Vector.h"
 #include "Object/Ptr/SoftObjectPtr.h"
 
@@ -92,6 +93,72 @@ public:
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect|Refraction")
 	float RefractionStrength = 0.035f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float CoreScreenThickness = 2.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float CoreScreenThicknessStrength = 0.5f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float GlowScreenThickness = 8.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float GlowScreenThicknessStrength = 1.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float RefractionScreenThickness = 3.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float RefractionScreenThicknessStrength = 0.5f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|DissolveEdge", Type = Color4)
+	FVector4 DissolveEdgeColor = FVector4(1.0f, 0.75f, 0.35f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|DissolveEdge")
+	float DissolveEdgeWidth = 0.06f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|DissolveEdge")
+	float CoreDissolveEdgeIntensity = 1.5f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|DissolveEdge")
+	float GlowDissolveEdgeIntensity = 3.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	bool bSpawnArcSparks = false;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark", AssetType = "UParticleSystem")
+	FSoftObjectPtr ArcSparkParticlePath = "Content/Particle/Slash_ArcSpark.uasset";
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	int32 ArcSparkCount = 18;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkRadius = 1.2f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkAngleMin = -70.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkAngleMax = 70.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark", Enum = ESlashArcSparkPlaneMode)
+	ESlashArcSparkPlaneMode ArcSparkPlaneMode = ESlashArcSparkPlaneMode::YZ;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkOutwardSpeed = 1.5f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkTangentSpeed = 0.4f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkUpSpeed = 0.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkPositionJitter = 0.03f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkSpeedJitter = 0.1f;
 
 	void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Anim) override;
 };

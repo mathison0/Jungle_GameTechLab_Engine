@@ -69,7 +69,29 @@ void UAnimNotify_PlaySlashEffect::Notify(USkeletalMeshComponent* MeshComp, UAnim
 		RevealSoftness,
 		EdgeSoftness,
 		TailFadeStart,
-		TrailLength);
+		TrailLength,
+		CoreScreenThickness,
+		CoreScreenThicknessStrength,
+		GlowScreenThickness,
+		GlowScreenThicknessStrength,
+		RefractionScreenThickness,
+		RefractionScreenThicknessStrength,
+		DissolveEdgeColor,
+		DissolveEdgeWidth,
+		CoreDissolveEdgeIntensity,
+		GlowDissolveEdgeIntensity,
+		bSpawnArcSparks,
+		ArcSparkParticlePath,
+		ArcSparkCount,
+		ArcSparkRadius,
+		ArcSparkAngleMin,
+		ArcSparkAngleMax,
+		ArcSparkPlaneMode,
+		ArcSparkOutwardSpeed,
+		ArcSparkTangentSpeed,
+		ArcSparkUpSpeed,
+		ArcSparkPositionJitter,
+		ArcSparkSpeedJitter);
 	Effect->InitDefaultComponents();
 	Effect->SetDestroyOnFinish(true);
 	Effect->ActivateSlash(SpawnLocation, SpawnRotation, SlashDirection);

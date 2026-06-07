@@ -7,6 +7,16 @@
 
 class UStaticMeshComponent;
 class UMaterialInterface;
+class UParticleSystem;
+class UParticleSystemComponent;
+
+UENUM()
+enum class ESlashArcSparkPlaneMode : uint8
+{
+	YZ,
+	XZ,
+	XY,
+};
 
 UCLASS()
 class ASlashEffectActor : public AActor
@@ -58,7 +68,29 @@ public:
 		float InRevealSoftness,
 		float InEdgeSoftness,
 		float InTailFadeStart,
-		float InTrailLength);
+		float InTrailLength,
+		float InCoreScreenThickness,
+		float InCoreScreenThicknessStrength,
+		float InGlowScreenThickness,
+		float InGlowScreenThicknessStrength,
+		float InRefractionScreenThickness,
+		float InRefractionScreenThicknessStrength,
+		const FVector4& InDissolveEdgeColor,
+		float InDissolveEdgeWidth,
+		float InCoreDissolveEdgeIntensity,
+		float InGlowDissolveEdgeIntensity,
+		bool bInSpawnArcSparks,
+		const FSoftObjectPtr& InArcSparkParticlePath,
+		int32 InArcSparkCount,
+		float InArcSparkRadius,
+		float InArcSparkAngleMin,
+		float InArcSparkAngleMax,
+		ESlashArcSparkPlaneMode InArcSparkPlaneMode,
+		float InArcSparkOutwardSpeed,
+		float InArcSparkTangentSpeed,
+		float InArcSparkUpSpeed,
+		float InArcSparkPositionJitter,
+		float InArcSparkSpeedJitter);
 
 protected:
 	void LoadSlashAssets();
@@ -66,6 +98,7 @@ protected:
 
 	void SetSlashAlpha(float Alpha);
 	void SetSlashMaterialParams(float CoreAlpha, float GlowAlpha, float Dissolve, float NoiseScroll, float Reveal);
+	void SpawnArcSparks();
 
 	void ResolveComponents();
 
@@ -73,9 +106,11 @@ protected:
 	USceneComponent* SlashRootComponent = nullptr;
 	UStaticMeshComponent* CoreMeshComponent = nullptr;
 	UStaticMeshComponent* GlowMeshComponent = nullptr;
+	UParticleSystemComponent* ArcSparkComponent = nullptr;
 
 	UMaterialInterface* CoreMaterial = nullptr;
 	UMaterialInterface* GlowMaterial = nullptr;
+	UParticleSystem* ArcSparkParticle = nullptr;
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect", AssetType = "StaticMesh")
 	FSoftObjectPtr MeshPath = DefaultMeshPath;
@@ -143,6 +178,66 @@ protected:
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
 	float TrailLength = 0.55f;
 
+	UPROPERTY(Edit, Save, Category = "SlashEffect|DissolveEdge", Type = Color4)
+	FVector4 DissolveEdgeColor = FVector4(1.0f, 0.75f, 0.35f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|DissolveEdge")
+	float DissolveEdgeWidth = 0.06f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|DissolveEdge")
+	float CoreDissolveEdgeIntensity = 1.5f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|DissolveEdge")
+	float GlowDissolveEdgeIntensity = 3.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	bool bSpawnArcSparks = false;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark", AssetType = "UParticleSystem")
+	FSoftObjectPtr ArcSparkParticlePath = "Content/Particle/Slash_ArcSpark.uasset";
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	int32 ArcSparkCount = 18;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkRadius = 1.2f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkAngleMin = -70.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkAngleMax = 70.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark", Enum = ESlashArcSparkPlaneMode)
+	ESlashArcSparkPlaneMode ArcSparkPlaneMode = ESlashArcSparkPlaneMode::YZ;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkOutwardSpeed = 1.5f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkTangentSpeed = 0.4f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkUpSpeed = 0.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkPositionJitter = 0.03f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ArcSpark")
+	float ArcSparkSpeedJitter = 0.1f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float CoreScreenThickness = 2.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float CoreScreenThicknessStrength = 0.5f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float GlowScreenThickness = 8.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float GlowScreenThicknessStrength = 1.0f;
+
 	UStaticMeshComponent* RefractionMeshComponent = nullptr;
 	UMaterialInterface* RefractionMaterial = nullptr;
 
@@ -154,6 +249,12 @@ protected:
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
 	float RefractionStrength = 0.035f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float RefractionScreenThickness = 3.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect|ScreenThickness")
+	float RefractionScreenThicknessStrength = 0.5f;
 
 	float Age = 0.0f;
 	bool bActive = false;
