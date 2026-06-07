@@ -11,6 +11,9 @@ struct FCrowdMovementSettings
 	bool bWaitWhenChaseBlocked = true;
 	float ChaseBlockedProbeDistance = 0.25f;
 	float ChaseBlockedClearancePadding = 0.05f;
+	float CircleAroundSpeedScale = 0.75f;
+	float CircleAroundRadiusTolerance = 0.75f;
+	float CircleAroundRadialCorrectionWeight = 0.65f;
 	float GroundTraceUp = 5.0f;
 	float GroundTraceDown = 50.0f;
 	float GroundHeightOffset = 0.0f;

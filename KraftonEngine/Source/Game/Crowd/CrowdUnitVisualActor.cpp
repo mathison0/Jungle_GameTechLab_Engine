@@ -1,8 +1,28 @@
 #include "Game/Crowd/CrowdUnitVisualActor.h"
 
 #include "Animation/AnimationMode.h"
+#include "Animation/AnimationTickLOD.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
+
+namespace
+{
+	EAnimationTickLOD ToAnimationTickLOD(ECrowdUnitLOD LOD)
+	{
+		switch (LOD)
+		{
+		case ECrowdUnitLOD::Simple:
+			return EAnimationTickLOD::QuarterRate;
+		case ECrowdUnitLOD::Formation:
+			return EAnimationTickLOD::LowRate;
+		case ECrowdUnitLOD::Dormant:
+			return EAnimationTickLOD::Frozen;
+		case ECrowdUnitLOD::Full:
+		default:
+			return EAnimationTickLOD::FullRate;
+		}
+	}
+}
 
 ACrowdUnitVisualActor::ACrowdUnitVisualActor()
 {
@@ -65,6 +85,7 @@ void ACrowdUnitVisualActor::ApplyRenderData(const FUnitRenderData& InRenderData)
 	UnitHandle = InRenderData.Handle;
 	UnitState = InRenderData.State;
 	UnitCombatType = InRenderData.CombatType;
+	UnitLOD = InRenderData.LOD;
 	Speed = InRenderData.Speed;
 	bVisualActive = InRenderData.bVisible;
 
@@ -73,7 +94,9 @@ void ACrowdUnitVisualActor::ApplyRenderData(const FUnitRenderData& InRenderData)
 	SetVisible(bVisualActive);
 
 	bNeedsTick = bVisualActive;
-	MeshComponent->SetComponentTickEnabled(bVisualActive);
+	MeshComponent->SetEnableAnimationTickLOD(UnitLOD != ECrowdUnitLOD::Full);
+	MeshComponent->SetAnimationTickLOD(ToAnimationTickLOD(UnitLOD));
+	MeshComponent->SetComponentTickEnabled(bVisualActive && UnitLOD != ECrowdUnitLOD::Dormant);
 }
 
 void ACrowdUnitVisualActor::DeactivateVisual()
@@ -81,12 +104,15 @@ void ACrowdUnitVisualActor::DeactivateVisual()
 	UnitHandle = {};
 	UnitState = EUnitState::Dead;
 	UnitCombatType = EUnitCombatType::Melee;
+	UnitLOD = ECrowdUnitLOD::Full;
 	Speed = 0.0f;
 	bVisualActive = false;
 	bNeedsTick = false;
 
 	if (MeshComponent)
 	{
+		MeshComponent->SetEnableAnimationTickLOD(false);
+		MeshComponent->SetAnimationTickLOD(EAnimationTickLOD::FullRate);
 		MeshComponent->SetComponentTickEnabled(false);
 	}
 

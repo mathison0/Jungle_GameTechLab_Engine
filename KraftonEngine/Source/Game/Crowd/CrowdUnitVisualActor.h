@@ -27,6 +27,7 @@ public:
 	FUnitHandle GetUnitHandle() const { return UnitHandle; }
 	EUnitState GetCrowdState() const { return UnitState; }
 	EUnitCombatType GetCrowdCombatType() const { return UnitCombatType; }
+	ECrowdUnitLOD GetCrowdLOD() const { return UnitLOD; }
 	float GetCrowdSpeed() const { return Speed; }
 
 	USkeletalMeshComponent* GetMeshComponent() const { return MeshComponent; }
@@ -40,6 +41,7 @@ private:
 	FUnitHandle UnitHandle;
 	EUnitState UnitState = EUnitState::Idle;
 	EUnitCombatType UnitCombatType = EUnitCombatType::Melee;
+	ECrowdUnitLOD UnitLOD = ECrowdUnitLOD::Full;
 	float Speed = 0.0f;
 	bool bVisualActive = false;
 

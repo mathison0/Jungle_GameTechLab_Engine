@@ -23,7 +23,7 @@ void FCrowdVisualPool::BuildRenderData(const FCrowdUnitStore& UnitStore)
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
 		const FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
+		if (!IsCrowdUnitVisibleForRender(Unit))
 		{
 			continue;
 		}
@@ -33,6 +33,7 @@ void FCrowdVisualPool::BuildRenderData(const FCrowdUnitStore& UnitStore)
 			Unit.Team,
 			Unit.Archetype.CombatType,
 			Unit.State,
+			Unit.LOD,
 			Unit.Position,
 			Unit.Rotation,
 			Unit.AnimState,

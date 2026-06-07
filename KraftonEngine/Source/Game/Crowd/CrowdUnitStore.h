@@ -26,6 +26,7 @@ public:
 	void FlushPendingDespawns(const FRemoveUnitFunc& RemoveUnit);
 
 	bool IsValidUnitHandle(FUnitHandle Handle) const;
+	bool IsUnitAliveForGameplay(FUnitHandle Handle) const;
 	bool IsUnitCombatActive(FUnitHandle Handle) const;
 	FCrowdUnit* ResolveUnit(FUnitHandle Handle);
 	const FCrowdUnit* ResolveUnit(FUnitHandle Handle) const;

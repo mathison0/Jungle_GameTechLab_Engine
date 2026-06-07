@@ -79,6 +79,10 @@ bool FCrowdUnitStore::RemoveUnit(FUnitHandle Handle)
 	Unit.bAlive = false;
 	Unit.State = EUnitState::Dead;
 	Unit.Target = {};
+	Unit.TargetKind = ECrowdTargetKind::None;
+	Unit.bHasCombatSlot = false;
+	Unit.bHasAttackToken = false;
+	Unit.CombatSlotIndex = -1;
 	Unit.Generation++;
 	if (Unit.Generation == 0)
 	{
@@ -143,6 +147,14 @@ bool FCrowdUnitStore::IsValidUnitHandle(FUnitHandle Handle) const
 		&& Units[Handle.Index].Generation == Handle.Generation;
 }
 
+bool FCrowdUnitStore::IsUnitAliveForGameplay(FUnitHandle Handle) const
+{
+	return Handle.IsValid()
+		&& Handle.Index < Units.size()
+		&& Units[Handle.Index].Generation == Handle.Generation
+		&& IsCrowdUnitAliveForGameplay(Units[Handle.Index]);
+}
+
 bool FCrowdUnitStore::IsUnitCombatActive(FUnitHandle Handle) const
 {
 	return Handle.IsValid()
@@ -166,7 +178,7 @@ int32 FCrowdUnitStore::GetAliveCount() const
 	int32 Count = 0;
 	for (const FCrowdUnit& Unit : Units)
 	{
-		if (IsCrowdUnitCombatActive(Unit))
+		if (IsCrowdUnitAliveForGameplay(Unit))
 		{
 			++Count;
 		}
@@ -179,7 +191,7 @@ int32 FCrowdUnitStore::GetTeamAliveCount(EUnitTeam Team) const
 	int32 Count = 0;
 	for (const FCrowdUnit& Unit : Units)
 	{
-		if (IsCrowdUnitCombatActive(Unit) && Unit.Team == Team)
+		if (IsCrowdUnitAliveForGameplay(Unit) && Unit.Team == Team)
 		{
 			++Count;
 		}
@@ -192,7 +204,7 @@ int32 FCrowdUnitStore::GetTeamCombatTypeAliveCount(EUnitTeam Team, EUnitCombatTy
 	int32 Count = 0;
 	for (const FCrowdUnit& Unit : Units)
 	{
-		if (IsCrowdUnitCombatActive(Unit) && Unit.Team == Team && Unit.Archetype.CombatType == CombatType)
+		if (IsCrowdUnitAliveForGameplay(Unit) && Unit.Team == Team && Unit.Archetype.CombatType == CombatType)
 		{
 			++Count;
 		}

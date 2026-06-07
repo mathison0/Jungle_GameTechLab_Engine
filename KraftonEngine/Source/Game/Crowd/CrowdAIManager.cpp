@@ -1,6 +1,7 @@
 #include "Game/Crowd/CrowdAIManager.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -16,18 +17,26 @@ void FCrowdAIManager::Update(
 	float DeltaTime,
 	FCrowdUnitStore& UnitStore,
 	const FCrowdSpatialPartition& SpatialPartition,
+	const FCrowdAISettings& Settings,
 	const TFunction<float()>& RandomThinkInterval) const
 {
 	TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
 		FCrowdUnit& Unit = Units[Index];
-		if (!IsCrowdUnitCombatActive(Unit) || IsCrowdUnitControlLocked(Unit.State))
+		if (!ShouldSimulateCrowdUnitThisFrame(Unit) || IsCrowdUnitControlLocked(Unit.State))
 		{
 			continue;
 		}
 
-		Unit.ThinkTimer -= DeltaTime;
+		if (Unit.TargetKind == ECrowdTargetKind::Player)
+		{
+			UpdatePlayerTargetState(Unit, Settings);
+			continue;
+		}
+
+		const float UnitDeltaTime = Unit.SimulationDeltaTime > 0.0f ? Unit.SimulationDeltaTime : DeltaTime;
+		Unit.ThinkTimer -= UnitDeltaTime;
 		if (Unit.ThinkTimer > 0.0f)
 		{
 			continue;
@@ -46,6 +55,7 @@ void FCrowdAIManager::Update(
 			{
 				Target = nullptr;
 				Unit.Target = {};
+				Unit.TargetKind = ECrowdTargetKind::None;
 			}
 		}
 
@@ -53,6 +63,7 @@ void FCrowdAIManager::Update(
 		{
 			Unit.Target = FindNearestHostile(UnitStore, SpatialPartition, Index, Unit.Archetype.DetectRange);
 			Target = UnitStore.ResolveUnit(Unit.Target);
+			Unit.TargetKind = Target ? ECrowdTargetKind::Unit : ECrowdTargetKind::None;
 		}
 
 		if (!Target)
@@ -64,8 +75,44 @@ void FCrowdAIManager::Update(
 		const float AttackRange = (std::max)(Unit.Archetype.AttackRange + Unit.Radius + Target->Radius, 0.0f);
 		const float DistanceSq = DistanceSquaredXY(Unit.Position, Target->Position);
 		const bool bInAttackRange = DistanceSq <= AttackRange * AttackRange;
+		Unit.TargetKind = ECrowdTargetKind::Unit;
 		Unit.State = bInAttackRange ? EUnitState::Attack : EUnitState::Chase;
 	}
+}
+
+void FCrowdAIManager::UpdatePlayerTargetState(FCrowdUnit& Unit, const FCrowdAISettings& Settings) const
+{
+	if (!Settings.bHasPlayerTarget || !Unit.bHasCombatSlot)
+	{
+		Unit.TargetKind = ECrowdTargetKind::None;
+		Unit.Target = {};
+		Unit.bHasAttackToken = false;
+		Unit.State = EUnitState::Idle;
+		return;
+	}
+
+	Unit.Target = {};
+	Unit.LookAtLocation = Settings.PlayerLocation;
+
+	const float AttackRange = (std::max)(Unit.Archetype.AttackRange + Unit.Radius + Settings.PlayerProxyRadius, 0.0f);
+	const bool bInAttackRange = DistanceSquaredXY(Unit.Position, Settings.PlayerLocation) <= AttackRange * AttackRange;
+	if (Unit.bHasAttackToken && bInAttackRange)
+	{
+		Unit.State = EUnitState::Attack;
+		return;
+	}
+
+	if (Unit.bHasAttackToken)
+	{
+		Unit.State = EUnitState::Chase;
+		return;
+	}
+
+	const float OrbitTolerance = (std::max)(Settings.CircleAroundRadiusTolerance, 0.0f);
+	const float CurrentRadius = std::sqrt(DistanceSquaredXY(Unit.Position, Settings.PlayerLocation));
+	const float TargetRadius = std::sqrt(DistanceSquaredXY(Unit.MoveGoal, Settings.PlayerLocation));
+	const bool bInOrbitBand = std::abs(CurrentRadius - TargetRadius) <= OrbitTolerance;
+	Unit.State = bInOrbitBand ? EUnitState::CircleAround : EUnitState::Move;
 }
 
 FUnitHandle FCrowdAIManager::FindNearestHostile(

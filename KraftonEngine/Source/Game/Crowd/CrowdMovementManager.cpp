@@ -120,14 +120,21 @@ void FCrowdMovementManager::Update(
 			continue;
 		}
 
+		if (!ShouldSimulateCrowdUnitThisFrame(Unit))
+		{
+			continue;
+		}
+
+		const float UnitDeltaTime = Unit.SimulationDeltaTime > 0.0f ? Unit.SimulationDeltaTime : DeltaTime;
+
 		if (Unit.State == EUnitState::Hit || Unit.State == EUnitState::KnockDown)
 		{
-			const float KnockbackStep = (std::min)(DeltaTime, (std::max)(Unit.KnockbackTimeRemaining, 0.0f));
+			const float KnockbackStep = (std::min)(UnitDeltaTime, (std::max)(Unit.KnockbackTimeRemaining, 0.0f));
 			if (KnockbackStep > 0.0f && LengthSquaredXY(Unit.KnockbackVelocity) > 1.e-6f)
 			{
 				Unit.Position += Unit.KnockbackVelocity * KnockbackStep;
 				Unit.Velocity = Unit.KnockbackVelocity;
-				Unit.KnockbackTimeRemaining = (std::max)(Unit.KnockbackTimeRemaining - DeltaTime, 0.0f);
+				Unit.KnockbackTimeRemaining = (std::max)(Unit.KnockbackTimeRemaining - UnitDeltaTime, 0.0f);
 			}
 			else
 			{
@@ -142,7 +149,54 @@ void FCrowdMovementManager::Update(
 		const FUnitArchetype& Archetype = Unit.Archetype;
 		FVector Desired = FVector::ZeroVector;
 		FVector FacingDir = FVector::ZeroVector;
-		if (Unit.State == EUnitState::Chase || Unit.State == EUnitState::Attack || Unit.State == EUnitState::CircleAround)
+		float MoveSpeedScale = 1.0f;
+		if (Unit.TargetKind == ECrowdTargetKind::Player)
+		{
+			FacingDir = NormalizedXY(Unit.LookAtLocation - Unit.Position);
+			if (Unit.State == EUnitState::Move)
+			{
+				Desired = NormalizedXY(Unit.MoveGoal - Unit.Position);
+			}
+			else if (Unit.State == EUnitState::Chase)
+			{
+				Desired = FacingDir;
+			}
+			else if (Unit.State == EUnitState::CircleAround && LengthSquaredXY(FacingDir) > 1.e-6f)
+			{
+				FVector RadialDir = NormalizedXY(Unit.Position - Unit.LookAtLocation);
+				if (LengthSquaredXY(RadialDir) <= 1.e-6f)
+				{
+					RadialDir = NormalizedXY(Unit.MoveGoal - Unit.LookAtLocation);
+				}
+				if (LengthSquaredXY(RadialDir) <= 1.e-6f)
+				{
+					RadialDir = FVector(1.0f, 0.0f, 0.0f);
+				}
+
+				const float DirectionSign = Unit.CircleAroundDirectionSign >= 0.0f ? 1.0f : -1.0f;
+				Desired = FVector(-RadialDir.Y, RadialDir.X, 0.0f) * DirectionSign;
+
+				const float TargetRadius = std::sqrt(LengthSquaredXY(Unit.MoveGoal - Unit.LookAtLocation));
+				const float CurrentRadius = std::sqrt(LengthSquaredXY(Unit.Position - Unit.LookAtLocation));
+				const float RadiusError = TargetRadius - CurrentRadius;
+				const float RadiusTolerance = (std::max)(Settings.CircleAroundRadiusTolerance, 0.0f);
+				const float CorrectionWeight = (std::max)(Settings.CircleAroundRadialCorrectionWeight, 0.0f);
+				if (std::abs(RadiusError) > RadiusTolerance && CorrectionWeight > 0.0f)
+				{
+					const float CorrectionSign = RadiusError > 0.0f ? 1.0f : -1.0f;
+					Desired += RadialDir * CorrectionSign * CorrectionWeight;
+				}
+
+				Desired = NormalizedXY(Desired);
+				MoveSpeedScale = (std::max)(Settings.CircleAroundSpeedScale, 0.0f);
+			}
+		}
+		else if (Unit.State == EUnitState::Move)
+		{
+			Desired = NormalizedXY(Unit.MoveGoal - Unit.Position);
+			FacingDir = Desired;
+		}
+		else if (Unit.State == EUnitState::Chase || Unit.State == EUnitState::Attack || Unit.State == EUnitState::CircleAround)
 		{
 			if (const FCrowdUnit* Target = UnitStore.ResolveUnit(Unit.Target))
 			{
@@ -171,7 +225,7 @@ void FCrowdMovementManager::Update(
 			Unit.Rotation = StepRotationTowardsDirectionXY(
 				Unit.Rotation,
 				FacingDir,
-				DeltaTime,
+				UnitDeltaTime,
 				Settings.VisualTurnSpeedDegreesPerSecond);
 		}
 
@@ -187,7 +241,7 @@ void FCrowdMovementManager::Update(
 				}
 
 				const FCrowdUnit& Other = Units[OtherIndex];
-				if (!Other.bAlive)
+				if (!IsCrowdUnitCombatActive(Other))
 				{
 					continue;
 				}
@@ -218,7 +272,7 @@ void FCrowdMovementManager::Update(
 				}
 
 				const FCrowdUnit& Other = Units[OtherIndex];
-				if (!Other.bAlive)
+				if (!IsCrowdUnitCombatActive(Other))
 				{
 					continue;
 				}
@@ -235,7 +289,7 @@ void FCrowdMovementManager::Update(
 			{
 				const float ClearancePadding = (std::max)(Settings.ChaseBlockedClearancePadding, 0.0f);
 				const float MinProbeDistance = (std::max)(Settings.ChaseBlockedProbeDistance, 0.0f);
-				const float ProbeDistance = (std::max)(MinProbeDistance, Archetype.MoveSpeed * DeltaTime);
+				const float ProbeDistance = (std::max)(MinProbeDistance, Archetype.MoveSpeed * UnitDeltaTime);
 				const FVector ProbePosition = Unit.Position + Desired * ProbeDistance;
 				const float ProbeQueryRadius = (std::max)(Unit.Radius + MaxAliveRadius + ClearancePadding, 0.0f);
 
@@ -249,7 +303,7 @@ void FCrowdMovementManager::Update(
 					}
 
 					const FCrowdUnit& Other = Units[OtherIndex];
-					if (!Other.bAlive)
+					if (!IsCrowdUnitCombatActive(Other))
 					{
 						continue;
 					}
@@ -285,8 +339,8 @@ void FCrowdMovementManager::Update(
 			continue;
 		}
 
-		Unit.Velocity = MoveDir * Archetype.MoveSpeed;
-		Unit.Position += Unit.Velocity * DeltaTime;
+		Unit.Velocity = MoveDir * Archetype.MoveSpeed * MoveSpeedScale;
+		Unit.Position += Unit.Velocity * UnitDeltaTime;
 		ApplySurfaceFollowing(Unit, GroundQuery, Settings);
 	}
 }

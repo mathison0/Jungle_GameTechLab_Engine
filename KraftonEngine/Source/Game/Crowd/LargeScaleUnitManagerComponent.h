@@ -5,6 +5,7 @@
 #include "Core/Types/EngineTypes.h"
 #include "Game/Crowd/CrowdAIManager.h"
 #include "Game/Crowd/CrowdCombatManager.h"
+#include "Game/Crowd/CrowdEngagementManager.h"
 #include "Game/Crowd/CrowdGroundQuery.h"
 #include "Game/Crowd/CrowdMovementManager.h"
 #include "Game/Crowd/CrowdSpatialPartition.h"
@@ -16,6 +17,7 @@
 #include "Source/Game/Crowd/LargeScaleUnitManagerComponent.generated.h"
 
 struct FMusouAttackEvent;
+class APawn;
 class UAnimInstance;
 
 UCLASS()
@@ -62,6 +64,7 @@ private:
 	FUnitArchetype BuildUnitArchetype(EUnitCombatType CombatType) const;
 	FCrowdMovementSettings BuildMovementSettings() const;
 	FCrowdCombatSettings BuildCombatSettings() const;
+	FCrowdEngagementSettings BuildEngagementSettings() const;
 	FCrowdVisualDesc BuildVisualDesc(EUnitTeam Team, EUnitCombatType CombatType) const;
 
 	void ActivateUnit(FUnitHandle Handle, EUnitTeam Team, const FUnitArchetype& Archetype, const FVector& Position);
@@ -71,15 +74,22 @@ private:
 
 	void HandleAttackEvent(const FMusouAttackEvent& Event);
 	void EnsureGroundQueryBuilt();
+	APawn* ResolvePlayerPawn() const;
+	void UpdateCrowdLOD(float DeltaTime);
+	FVector ResolveCrowdLODReferenceLocation(bool& bOutHasReference) const;
+	ECrowdUnitLOD SelectCrowdLOD(ECrowdUnitLOD CurrentLOD, const FVector& UnitPosition, const FVector& ReferenceLocation) const;
+	float GetCrowdLODUpdateInterval(ECrowdUnitLOD LOD) const;
 	void DrawDebugUnits();
 
 	float NextRandom01();
 	float RandomThinkInterval();
 	FColor GetTeamDebugColor(EUnitTeam Team) const;
+	FColor GetLODDebugColor(ECrowdUnitLOD LOD) const;
 
 private:
 	FCrowdUnitStore UnitStore;
 	FCrowdSpatialPartition SpatialPartition;
+	FCrowdEngagementManager EngagementManager;
 	FCrowdAIManager AIManager;
 	FCrowdMovementManager MovementManager;
 	FCrowdCombatManager CombatManager;
@@ -90,6 +100,7 @@ private:
 	bool bIsUpdating = false;
 	bool bGroundQueryDirty = true;
 	uint32 RandomState = 0x12345678u;
+	uint32 LODUpdateCursor = 0;
 
 	UPROPERTY(Edit, Save, Category="Crowd", DisplayName="Debug Draw")
 	bool bDebugDrawEnabled = true;
@@ -141,6 +152,66 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd", DisplayName="Cell Size", Min=0.5f, Max=100.0f, Speed=0.1f)
 	float CellSize = 4.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|LOD", DisplayName="Enable Crowd LOD")
+	bool bEnableCrowdLOD = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|LOD", DisplayName="Full LOD Distance", Min=0.0f, Max=10000.0f, Speed=1.0f)
+	float FullLODDistance = 30.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|LOD", DisplayName="Simple LOD Distance", Min=0.0f, Max=10000.0f, Speed=1.0f)
+	float SimpleLODDistance = 60.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|LOD", DisplayName="Formation LOD Distance", Min=0.0f, Max=10000.0f, Speed=1.0f)
+	float FormationLODDistance = 100.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|LOD", DisplayName="LOD Hysteresis", Min=0.0f, Max=1000.0f, Speed=0.5f)
+	float LODHysteresis = 5.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|LOD", DisplayName="Simple Update Interval", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float SimpleUpdateInterval = 0.20f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|LOD", DisplayName="Formation Update Interval", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float FormationUpdateInterval = 0.50f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Enable Player Engagement")
+	bool bEnablePlayerEngagement = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Engagement Radius", Min=0.0f, Max=1000.0f, Speed=0.5f)
+	float PlayerEngagementRadius = 18.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Proxy Radius", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float PlayerProxyRadius = 0.6f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Melee Combat Slot Count", Min=0, Max=64, Speed=1)
+	int32 MeleeCombatSlotCount = 8;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Ranged Combat Slot Count", Min=0, Max=64, Speed=1)
+	int32 RangedCombatSlotCount = 8;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Melee Slot Radius", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float MeleeSlotRadius = 2.2f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Ranged Slot Radius", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float RangedSlotRadius = 7.5f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Melee Attack Token Count", Min=0, Max=64, Speed=1)
+	int32 MeleeAttackTokenCount = 2;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Ranged Attack Token Count", Min=0, Max=64, Speed=1)
+	int32 RangedAttackTokenCount = 1;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Slot Arrive Tolerance", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float SlotArriveTolerance = 0.5f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Circle Around Speed Scale", Min=0.0f, Max=5.0f, Speed=0.05f)
+	float CircleAroundSpeedScale = 0.75f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Circle Around Radius Tolerance", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float CircleAroundRadiusTolerance = 0.75f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Circle Around Radial Correction Weight", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float CircleAroundRadialCorrectionWeight = 0.65f;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Surface Following")
 	bool bSurfaceFollowingEnabled = true;

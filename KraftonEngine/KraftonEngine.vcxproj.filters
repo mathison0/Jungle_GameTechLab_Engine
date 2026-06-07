@@ -1891,6 +1891,9 @@
     <ClCompile Include="Source\Game\Crowd\CrowdCombatManager.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdEngagementManager.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
@@ -3410,6 +3413,9 @@
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdCombatManager.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdEngagementManager.h">
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h">

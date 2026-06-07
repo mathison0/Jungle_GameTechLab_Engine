@@ -28,6 +28,21 @@ enum class EUnitState : uint8
 	Dead
 };
 
+enum class ECrowdUnitLOD : uint8
+{
+	Full = 0,
+	Simple,
+	Formation,
+	Dormant
+};
+
+enum class ECrowdTargetKind : uint8
+{
+	None = 0,
+	Unit,
+	Player
+};
+
 struct FUnitHandle
 {
 	uint32 Index = UINT32_MAX;
@@ -80,19 +95,48 @@ struct FCrowdUnit
 	float Radius = 0.45f;
 
 	FUnitHandle Target;
+	ECrowdTargetKind TargetKind = ECrowdTargetKind::None;
+	FVector MoveGoal = FVector::ZeroVector;
+	FVector LookAtLocation = FVector::ZeroVector;
+	int32 CombatSlotIndex = -1;
+	bool bHasCombatSlot = false;
+	bool bHasAttackToken = false;
+	float CircleAroundDirectionSign = 1.0f;
 	float AttackCooldownRemaining = 0.0f;
 	float ThinkTimer = 0.0f;
 	float StateTimeRemaining = 0.0f;
 	float KnockbackTimeRemaining = 0.0f;
 	FVector KnockbackVelocity = FVector::ZeroVector;
+	ECrowdUnitLOD LOD = ECrowdUnitLOD::Full;
+	float LODUpdateTimeRemaining = 0.0f;
+	float LODAccumulatedDeltaTime = 0.0f;
+	float SimulationDeltaTime = 0.0f;
+	bool bSimulateThisFrame = true;
 
 	uint16 AnimState = 0;
 	float AnimTime = 0.0f;
 };
 
+inline bool IsCrowdUnitAliveForGameplay(const FCrowdUnit& Unit)
+{
+	return Unit.bAlive
+		&& Unit.State != EUnitState::Dead;
+}
+
 inline bool IsCrowdUnitCombatActive(const FCrowdUnit& Unit)
 {
-	return Unit.bAlive && Unit.State != EUnitState::Dead;
+	return IsCrowdUnitAliveForGameplay(Unit)
+		&& Unit.LOD != ECrowdUnitLOD::Dormant;
+}
+
+inline bool ShouldSimulateCrowdUnitThisFrame(const FCrowdUnit& Unit)
+{
+	return IsCrowdUnitCombatActive(Unit) && Unit.bSimulateThisFrame;
+}
+
+inline bool IsCrowdUnitVisibleForRender(const FCrowdUnit& Unit)
+{
+	return Unit.bAlive && Unit.LOD != ECrowdUnitLOD::Dormant;
 }
 
 inline bool IsCrowdUnitControlLocked(EUnitState State)
@@ -126,6 +170,7 @@ struct FUnitRenderData
 	EUnitTeam Team = EUnitTeam::Enemy;
 	EUnitCombatType CombatType = EUnitCombatType::Melee;
 	EUnitState State = EUnitState::Idle;
+	ECrowdUnitLOD LOD = ECrowdUnitLOD::Full;
 	FVector Position = FVector::ZeroVector;
 	FRotator Rotation = FRotator::ZeroRotator;
 	uint16 AnimState = 0;

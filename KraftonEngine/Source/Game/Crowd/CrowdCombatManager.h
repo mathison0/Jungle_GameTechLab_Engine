@@ -4,6 +4,7 @@
 #include "Game/Crowd/CrowdUnitStore.h"
 
 class AMusouGameMode;
+class APawn;
 struct FMusouAttackEvent;
 
 struct FCrowdCombatSettings
@@ -38,7 +39,7 @@ public:
 		FCrowdUnitStore& UnitStore,
 		TArray<FUnitHandle>& OutRemovedHandles);
 
-	void UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitStore);
+	void UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitStore, APawn* PlayerPawn, float PlayerProxyRadius);
 	void ProcessDamageEvents(
 		FCrowdUnitStore& UnitStore,
 		AMusouGameMode* GameMode,
