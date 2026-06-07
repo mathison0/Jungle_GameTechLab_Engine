@@ -71,6 +71,13 @@ return {
 
         -- 무쌍기 마무리 강타 — 광범위 전방위 + 강넉백 + 띄움 (난무의 방점)
         musou_slam  = { range = 7.0, height = 3.0, cone_deg = 360, dmg = 3.0, kb = 7.0, kb_dur = 0.30, shake = 0.4, launch = 6.0 },
+
+        -- Boss patterns - boss_data.lua references these by attack_id.
+        boss_slash  = { range = 4.8, height = 3.0, cone_deg = 150, dmg = 1.0, kb = 3.5, kb_dur = 0.22, shake = 0.12 },
+        boss_spin   = { range = 6.0, height = 3.2, cone_deg = 360, dmg = 1.4, kb = 5.0, kb_dur = 0.30, shake = 0.18 },
+        boss_bolt   = { range = 11.0, height = 3.0, cone_deg = 35, dmg = 1.1, kb = 2.0, kb_dur = 0.15, shake = 0.08 },
+        boss_nova   = { range = 5.8, height = 3.2, cone_deg = 360, dmg = 1.3, kb = 4.5, kb_dur = 0.25, shake = 0.15 },
+        boss_dash_slash = { range = 5.5, height = 3.0, cone_deg = 120, dmg = 1.2, kb = 4.0, kb_dur = 0.25 },
     },
 
     steps = {

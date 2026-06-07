@@ -367,6 +367,9 @@
     <Filter Include="Source\Game\Musou">
       <UniqueIdentifier>{3eb37816-a348-8af1-340c-9263c9f54844}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\Musou\Boss">
+      <UniqueIdentifier>{2a782483-8c94-4e6d-b857-f2a52df92cd9}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Game\Musou\Character">
       <UniqueIdentifier>{f1a26e06-8b90-0691-0673-b381de5fbccd}</UniqueIdentifier>
     </Filter>
@@ -1927,6 +1930,15 @@
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp">
       <Filter>Source\Game\Lua</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Boss\BossPatternComponent.cpp">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Boss\BossPatternDataRegistry.cpp">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Boss\MusouBossCharacter.cpp">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp">
       <Filter>Source\Game\Musou\Character</Filter>
     </ClCompile>
@@ -3462,6 +3474,18 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Lua\GameLuaBindings.h">
       <Filter>Source\Game\Lua</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternComponent.h">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternDataRegistry.h">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternTypes.h">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Boss\MusouBossCharacter.h">
+      <Filter>Source\Game\Musou\Boss</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h">
       <Filter>Source\Game\Musou\Character</Filter>
