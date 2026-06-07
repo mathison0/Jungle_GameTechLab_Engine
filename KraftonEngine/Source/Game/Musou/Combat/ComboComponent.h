@@ -70,6 +70,8 @@ public:
 	int32 GetComboStep() const { return ComboStep; }
 	bool IsComboWindowOpen() const { return bWindowOpen; }
 	bool IsBranchActive() const { return bBranchActive; }
+	// 전진/분기 예약이 살아 있는지 — 이동 입력에 의한 몽타주 조기 캔슬을 보류하는 판정용.
+	bool HasQueuedInput() const { return bNextQueued || bHeavyQueued; }
 
 	// 콤보 최대 단수 (Combo Attack Ver. 1/2/3 기준 3단)
 	UPROPERTY(Edit, Save, Category="Combo", DisplayName="Max Combo Steps")

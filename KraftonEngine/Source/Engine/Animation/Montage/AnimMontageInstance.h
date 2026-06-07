@@ -46,6 +46,10 @@ public:
     float         GetSectionTime() const { return SectionTime; }
     float         GetBlendWeight() const;
 
+    // 현재 section 의 남은 재생 시간 (sec, PlayRate 반영). chain 의 다음 section 은 포함 안 함 —
+    // 단일 default section 몽타주(공격류)의 "끝까지 남은 시간" 조회용 (이동 잠금 해제 판정 등).
+    float GetSectionRemainingTime() const;
+
     // ── 매 프레임 ──
     void Tick(float DeltaSeconds, UAnimInstance* Owner);
     void EvaluateMontagePose(FPoseContext& OutMontagePose);   // section + time → SourceSequence GetBonePose

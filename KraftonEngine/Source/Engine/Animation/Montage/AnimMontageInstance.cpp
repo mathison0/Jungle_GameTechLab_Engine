@@ -72,6 +72,19 @@ FName UAnimMontageInstance::GetCurrentSectionName() const
     return Sections[CurrentSectionIndex].SectionName;
 }
 
+float UAnimMontageInstance::GetSectionRemainingTime() const
+{
+    if (State == EState::Inactive || !CurrentMontage) return 0.0f;
+
+    const auto& Sections = CurrentMontage->GetSections();
+    if (CurrentSectionIndex < 0 || CurrentSectionIndex >= static_cast<int32>(Sections.size())) return 0.0f;
+
+    const FCompositeSection& Cur    = Sections[CurrentSectionIndex];
+    const float              CurLen = std::max(Cur.LinkTime - Cur.StartTime, 0.0f);
+    const float              Remain = std::max(CurLen - SectionTime, 0.0f);
+    return (PlayRate > 0.0f) ? Remain / PlayRate : Remain;
+}
+
 float UAnimMontageInstance::GetBlendWeight() const
 {
     switch (State)

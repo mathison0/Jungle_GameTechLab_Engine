@@ -84,6 +84,14 @@ protected:
 	// 공격 스텝 시작 시 이번 프레임 WASD 입력 방향으로 캡슐 yaw 즉시 회전 (입력 없으면 유지).
 	void SnapFacingToInput();
 
+	// 몽타주에 의한 이동/점프 잠금 — 말미 MontageMoveUnlockTail 구간과 blend-out 중엔 해제
+	// (UE 의 BlendOutTriggerTime 개념 이식: 후딜 꼬리에서 컨트롤 자연 복귀).
+	bool IsMovementLockedByMontage() const;
+
+	// 잠금 해제 구간에서 이동 입력이 오면 몽타주 조기 blend-out (UE 의 recovery cancel 패턴).
+	// 콤보 전진/분기 예약이 살아 있으면 보류 — 체인이 끊기지 않게.
+	void TryMovementCancelMontage();
+
 	// 공격 스텝 재생 — 에디터 몽타주 우선, 없으면 시퀀스에서 런타임 생성 (기본 notify 주입).
 	bool          PlayAttackStep(const FMusouAttackStepDef& Step);
 	UAnimMontage* ResolveStepMontage(const FMusouAttackStepDef& Step);
@@ -104,6 +112,10 @@ protected:
 	// 이동 중 공격 판정 임계 (m/s, XY) — MaxWalkSpeed 6.0 의 1/3 기준.
 	UPROPERTY(Edit, Save, Category = "Combat", DisplayName = "Moving Attack Speed Threshold", Min=0.0f, Max=10.0f, Speed=0.1f)
 	float MovingAttackSpeedThreshold = 2.0f;
+
+	// 몽타주 말미에서 이동 잠금이 풀리는 여유 시간 (초) — 0 이면 끝까지 잠금.
+	UPROPERTY(Edit, Save, Category = "Combat", DisplayName = "Montage Move Unlock Tail", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float MontageMoveUnlockTail = 0.2f;
 
 	// 콤보 시작 시점에 고정되는 활성 체인 컨텍스트 — 진행 중 컨텍스트 변화에 영향받지 않음.
 	EAttackContext ActiveChainContext = EAttackContext::Idle;

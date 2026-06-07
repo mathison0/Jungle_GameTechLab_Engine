@@ -7,6 +7,7 @@
 #include "Animation/AnimationManager.h"
 #include "Animation/Instance/LuaAnimInstance.h"
 #include "Animation/Montage/AnimMontage.h"
+#include "Animation/Montage/AnimMontageInstance.h"
 #include "Animation/Sequence/AnimSequence.h"
 #include "Animation/Sequence/AnimDataModel.h"
 #include "Component/Input/InputComponent.h"
@@ -226,25 +227,35 @@ void AMusouCharacter::SetupInputComponent()
 	// MoveInputThisFrame: 축 바인딩은 value=0 이어도 매 프레임 등록 순서대로 호출되므로
 	// MoveForward(첫 바인딩)가 재설정, MoveRight 가 합산 — 프레임 단위로 깨끗하게 재구축.
 	// 액션 바인딩(공격)은 축 이후에 돌아 같은 프레임 입력을 SnapFacingToInput 이 읽는다.
+	//
+	// 몽타주 재생 중 이동 잠금: AddMovementInput 만 차단 — 이동은 root motion 이 전담.
+	// 말미 MontageMoveUnlockTail 구간에선 잠금 해제 + 이동 입력으로 조기 blend-out 캔슬
+	// (UE 의 BlendOutTriggerTime / recovery cancel 패턴). MoveInputThisFrame 재구축은
+	// 잠금과 무관하게 유지 (콤보 전진/분기 시 재조준 입력원).
 	InputComponent->BindAxis("MoveForward", [this](float Value)
 	{
 		const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
 		MoveInputThisFrame = YawOnly.GetForwardVector() * Value;
-		if (Value == 0.0f) return;
+		if (Value == 0.0f || IsMovementLockedByMontage()) return;
+		TryMovementCancelMontage();
 		AddMovementInput(YawOnly.GetForwardVector(), Value);
 	});
 	InputComponent->BindAxis("MoveRight", [this](float Value)
 	{
 		const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
 		MoveInputThisFrame += YawOnly.GetRightVector() * Value;
-		if (Value == 0.0f) return;
+		if (Value == 0.0f || IsMovementLockedByMontage()) return;
+		TryMovementCancelMontage();
 		AddMovementInput(YawOnly.GetRightVector(), Value);
 	});
 
 	// Space = Jump (VK_SPACE = 0x20). Walking 중에만 effective (CharacterMovement::Jump 가 guard).
+	// 몽타주 재생 중(공격 스윙 등)엔 점프도 잠금 — 이동 잠금과 동일 정책 (말미 해제 포함).
 	InputComponent->AddActionMapping("Jump", 0x20);
 	InputComponent->BindAction("Jump", EInputEvent::Pressed, [this]()
 	{
+		if (IsMovementLockedByMontage()) return;
+		TryMovementCancelMontage();
 		Jump();
 	});
 
@@ -372,6 +383,44 @@ EAttackContext AMusouCharacter::ResolveAttackContext() const
 		}
 	}
 	return EAttackContext::Idle;
+}
+
+bool AMusouCharacter::IsMovementLockedByMontage() const
+{
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	UAnimMontageInstance* MI = AnimInstance ? AnimInstance->GetMontageInstance() : nullptr;
+	if (!MI || !MI->IsActive())
+	{
+		return false;
+	}
+
+	// Blend-out 중 = 이미 로코모션으로 복귀 중 — 컨트롤도 같이 복귀.
+	if (MI->IsBlendingOut())
+	{
+		return false;
+	}
+
+	// 말미 여유 구간 — 클립이 끝나기 전 미리 컨트롤 반환 (UE BlendOutTriggerTime 대응).
+	return MI->GetSectionRemainingTime() > MontageMoveUnlockTail;
+}
+
+void AMusouCharacter::TryMovementCancelMontage()
+{
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	UAnimMontageInstance* MI = AnimInstance ? AnimInstance->GetMontageInstance() : nullptr;
+	if (!MI || !MI->IsActive() || MI->IsBlendingOut())
+	{
+		return;
+	}
+
+	// 콤보 전진/분기 예약이 살아 있으면 캔슬 보류 — 다음 스텝이 곧 재생되므로 체인 우선.
+	if (ComboComponent && ComboComponent->HasQueuedInput())
+	{
+		return;
+	}
+
+	// 몽타주 기본 BlendOutTime 으로 조기 blend-out — 이동 모션과 cross-fade 되며 복귀.
+	AnimInstance->StopMontage();
 }
 
 void AMusouCharacter::SnapFacingToInput()
