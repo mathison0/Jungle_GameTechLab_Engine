@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "GameFramework/Pawn/LuaCharacter.h"
+#include "Game/Musou/Combat/AttackTypes.h"   // EAttackContext
 #include "Math/Vector.h"
 
 #include <utility>
@@ -14,16 +15,8 @@ class UHitFlashComponent;
 class UAnimMontage;
 class UAnimSequence;
 
-// 공격 체인 테이블 행 — MusouCharacter.cpp 에 정의 (몽타주/시퀀스 경로 + fallback notify 파라미터).
-struct FMusouAttackStepDef;
-
-// 공격 진입 컨텍스트 — 같은 입력이라도 시작 상태에 따라 다른 체인/몽타주로 진입.
-enum class EAttackContext : uint8
-{
-	Idle,      // 지상 + 거의 정지
-	Moving,    // 지상 + 이동 중 (속도 ≥ MovingAttackSpeedThreshold)
-	Airborne,  // 점프/낙하 중
-};
+// 공격 스텝 정의 — AttackDataRegistry.h (Content/Script/Data/attack_data.lua 에서 로드).
+struct FMusouAttackStep;
 
 // ============================================================
 // AMusouCharacter — 무쌍 플레이어 캐릭터 (Barbarian)
@@ -93,9 +86,9 @@ protected:
 	void TryMovementCancelMontage();
 
 	// 공격 스텝 재생 — 에디터 몽타주 우선, 없으면 시퀀스에서 런타임 생성 (기본 notify 주입).
-	bool          PlayAttackStep(const FMusouAttackStepDef& Step);
-	UAnimMontage* ResolveStepMontage(const FMusouAttackStepDef& Step);
-	void          InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStepDef& Step);
+	bool          PlayAttackStep(const FMusouAttackStep& Step);
+	UAnimMontage* ResolveStepMontage(const FMusouAttackStep& Step);
+	void          InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step);
 
 	void PlayComboStep(int32 Step);
 	void PlayBranchFinisher(int32 BranchStep);  // 콤보 N단 분기 피니셔 (무쌍 차지어택식)
@@ -127,4 +120,8 @@ protected:
 	// 런타임 fallback 몽타주 캐시 (시퀀스 경로 → 생성 몽타주). 에디터 저작 몽타주가
 	// 없을 때만 채워짐 — 액터 수명과 함께 정리.
 	TArray<std::pair<FString, UAnimMontage*>> RuntimeAttackMontages;
+
+	// notify 주입 이력 (시퀀스 → 주입 시점의 attack_data 버전). 핫리로드로 버전이
+	// 바뀌면 Auto* notify 를 걷어내고 새 값으로 재주입 — 라이브 타이밍 튜닝용.
+	TArray<std::pair<UAnimSequence*, int32>> InjectedSequenceVersions;
 };

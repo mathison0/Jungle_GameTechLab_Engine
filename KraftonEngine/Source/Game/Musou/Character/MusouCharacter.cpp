@@ -1,5 +1,6 @@
 ﻿#include "Game/Musou/Character/MusouCharacter.h"
 
+#include "Game/Musou/Combat/AttackDataRegistry.h"
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/Combat/ComboComponent.h"
 #include "Game/Musou/Combat/AnimNotify_MusouAttack.h"
@@ -18,112 +19,11 @@
 #include "Component/Shape/CapsuleComponent.h"
 #include "Math/Rotator.h"
 
+#include <algorithm>
 #include <cmath>
 
-// ── 공격 체인 테이블 행 ──
-// MontagePath 가 있으면 에디터 저작 몽타주 우선 (notify 는 source 시퀀스에 저작).
-// 로드 실패 시 SequencePath 의 시퀀스로 몽타주를 런타임 생성하고 기본 notify
-// (MusouAttack 히트 + ComboWindow) 를 PlayLength 비율 위치에 주입한다 —
-// 에디터에서 몽타주를 저작해 같은 경로에 저장하면 다음 세션부터 그쪽이 자동 우선.
-struct FMusouAttackStepDef
-{
-	const char* MontagePath;      // null 가능 — fallback 전용 스텝
-	const char* SequencePath;     // null 이면 fallback 없음 (몽타주 필수)
-	float       BlendIn;
-
-	// ── fallback notify 주입 파라미터 (SequencePath 경로로 생성될 때만 사용) ──
-	const char* AttackId;         // AttackTypes.h 테이블 키. null = 히트 notify 안 박음
-	float       HitFrac;          // MusouAttack 위치 (PlayLength 비율). <0 = 없음
-	float       WindowBeginFrac;  // ComboWindow 시작 비율. <0 = 윈도우 없음 (체인 말단/단발)
-	float       WindowEndFrac;
-};
-
-namespace
-{
-	// ── 좌클릭 콤보 체인 — 진입 컨텍스트별 ──
-	// 기존 3단 (몽타주/notify 에디터 저작 완료)
-	constexpr FMusouAttackStepDef GIdleLightChain[] =
-	{
-		{ "Content/Montages/Barbarian_Melee Combo Attack Ver. 1_Montage.uasset", nullptr, 0.1f, nullptr, -1.0f, -1.0f, -1.0f },
-		{ "Content/Montages/Barbarian_Melee Combo Attack Ver. 2_Montage.uasset", nullptr, 0.1f, nullptr, -1.0f, -1.0f, -1.0f },
-		{ "Content/Montages/Barbarian_Melee Combo Attack Ver. 3_Montage.uasset", nullptr, 0.1f, nullptr, -1.0f, -1.0f, -1.0f },
-	};
-
-	// 이동 중 — 1단이 돌진 베기 (slide attack, RM +3.56m) 로 바뀌고 2단부터 제자리 체인 합류.
-	constexpr FMusouAttackStepDef GMovingLightChain[] =
-	{
-		{ "Content/Montages/great sword slide attack_mixamo_com_Montage.uasset",
-		  "Content/Data/GameJam/Barbarian/great sword slide attack_mixamo_com.uasset",
-		  0.1f, "dash_attack", 0.35f, 0.55f, 0.85f },
-		{ "Content/Montages/Barbarian_Melee Combo Attack Ver. 2_Montage.uasset", nullptr, 0.1f, nullptr, -1.0f, -1.0f, -1.0f },
-		{ "Content/Montages/Barbarian_Melee Combo Attack Ver. 3_Montage.uasset", nullptr, 0.1f, nullptr, -1.0f, -1.0f, -1.0f },
-	};
-
-	// 공중 — 단발 도약 내려찍기 (RM 전진 +3.25m, Z 는 CMC 정책상 gravity 가 결정).
-	// 착지 후에도 끝까지 재생 — 전진 RM 이 착지 돌진감을 만든다.
-	constexpr FMusouAttackStepDef GAirLightChain[] =
-	{
-		{ "Content/Montages/great sword jump attack_mixamo_com_Montage.uasset",
-		  "Content/Data/GameJam/Barbarian/great sword jump attack_mixamo_com.uasset",
-		  0.15f, "jump_attack", 0.45f, -1.0f, -1.0f },
-	};
-
-	// ── 우클릭 강공격 — 컨텍스트별 단발 ──
-	constexpr FMusouAttackStepDef GIdleHeavyStep =
-		{ "Content/Montages/Barbarian_Melee Attack Backhand_Montage.uasset", nullptr, 0.2f, nullptr, -1.0f, -1.0f, -1.0f };
-
-	// 이동 중 — 전진 회전베기 (high spin attack, RM +2.43m)
-	constexpr FMusouAttackStepDef GMovingHeavyStep =
-		{ "Content/Montages/great sword high spin attack_mixamo_com_Montage.uasset",
-		  "Content/Data/GameJam/Barbarian/great sword high spin attack_mixamo_com.uasset",
-		  0.15f, "spin_attack", 0.40f, -1.0f, -1.0f };
-
-	// 공중 — 좌클릭과 동일한 도약 내려찍기 (전용 모션 확보 시 교체)
-	constexpr FMusouAttackStepDef GAirHeavyStep = GAirLightChain[0];
-
-	// ── 콤보 분기 피니셔 — 콤보 N단 진행 중 강공격 (무쌍 차지어택식 □..△) ──
-	// 인덱스 = 분기 시점 단수 - 1. 깊을수록 화려/강력. 윈도우 없음 — 분기 후 체인 종료.
-	// 몽타주는 전부 에디터 저작본 존재; Horizontal/360 Low 시퀀스엔 히트 notify 가 없어
-	// ResolveStepMontage 가 주입(branch1/2), 360 High 는 attack1 저작본 존중 (주입 스킵).
-	constexpr FMusouAttackStepDef GBranchFinishers[] =
-	{
-		{ "Content/Montages/Barbarian_Melee Attack Horizontal_Montage.uasset",
-		  "Content/Data/GameJam/Barbarian/Barbarian_Melee Attack Horizontal.uasset",
-		  0.1f, "branch1", 0.40f, -1.0f, -1.0f },  // 1단 분기 — 와이드 횡베기
-		{ "Content/Montages/Barbarian_Melee Attack 360 Low_Montage.uasset",
-		  "Content/Data/GameJam/Barbarian/Barbarian_Melee Attack 360 Low.uasset",
-		  0.1f, "branch2", 0.45f, -1.0f, -1.0f },  // 2단 분기 — 로우 스핀 (전방위)
-		{ "Content/Montages/Barbarian_Melee Attack 360 High_Montage.uasset",
-		  "Content/Data/GameJam/Barbarian/Barbarian_Melee Attack 360 High.uasset",
-		  0.1f, "attack1", 0.45f, -1.0f, -1.0f },  // 3단 분기 — 하이 스핀 대피니셔
-	};
-
-	const FMusouAttackStepDef* GetLightChain(EAttackContext Context, int32& OutNumSteps)
-	{
-		switch (Context)
-		{
-		case EAttackContext::Moving:
-			OutNumSteps = static_cast<int32>(sizeof(GMovingLightChain) / sizeof(GMovingLightChain[0]));
-			return GMovingLightChain;
-		case EAttackContext::Airborne:
-			OutNumSteps = static_cast<int32>(sizeof(GAirLightChain) / sizeof(GAirLightChain[0]));
-			return GAirLightChain;
-		default:
-			OutNumSteps = static_cast<int32>(sizeof(GIdleLightChain) / sizeof(GIdleLightChain[0]));
-			return GIdleLightChain;
-		}
-	}
-
-	const FMusouAttackStepDef& GetHeavyStep(EAttackContext Context)
-	{
-		switch (Context)
-		{
-		case EAttackContext::Moving:   return GMovingHeavyStep;
-		case EAttackContext::Airborne: return GAirHeavyStep;
-		default:                       return GIdleHeavyStep;
-		}
-	}
-}
+// 공격 체인/스펙/스텝 데이터는 전부 Content/Script/Data/attack_data.lua —
+// FAttackDataRegistry 가 로드/핫리로드. 여기는 재생 로직만 남는다.
 
 void AMusouCharacter::InitDefaultComponents()
 {
@@ -335,12 +235,19 @@ void AMusouCharacter::OnAttackPressed()
 
 	// 새 콤보 시작 — 진입 컨텍스트를 이 시점에 한 번만 평가해 체인 고정.
 	// (진행 중 컨텍스트가 바뀌어도 체인은 유지 — 2단부터 다른 체인으로 새지 않게.)
+	// 데이터 핫리로드 체크도 여기 — 콤보 진행 중엔 체인이 바뀌지 않는다.
 	if (!ComboComponent->IsComboActive())
 	{
+		FAttackDataRegistry& Data = FAttackDataRegistry::Get();
+		Data.EnsureFresh();
+
 		ActiveChainContext = ResolveAttackContext();
-		int32 NumSteps = 0;
-		GetLightChain(ActiveChainContext, NumSteps);
-		ComboComponent->SetMaxComboSteps(NumSteps);
+		const TArray<FMusouAttackStep>& Chain = Data.GetLightChain(ActiveChainContext);
+		if (Chain.empty())
+		{
+			return;
+		}
+		ComboComponent->SetMaxComboSteps(static_cast<int32>(Chain.size()));
 	}
 
 	if (ComboComponent->TryAttack())
@@ -363,7 +270,13 @@ void AMusouCharacter::OnHeavyAttackPressed()
 		return;
 	}
 
-	PlayAttackStep(GetHeavyStep(ResolveAttackContext()));
+	FAttackDataRegistry& Data = FAttackDataRegistry::Get();
+	Data.EnsureFresh();
+
+	if (const FMusouAttackStep* Step = Data.GetHeavyStep(ResolveAttackContext()))
+	{
+		PlayAttackStep(*Step);
+	}
 }
 
 EAttackContext AMusouCharacter::ResolveAttackContext() const
@@ -447,7 +360,7 @@ void AMusouCharacter::SnapFacingToInput()
 	CapsuleComponent->SetRelativeRotation(R);
 }
 
-bool AMusouCharacter::PlayAttackStep(const FMusouAttackStepDef& Step)
+bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step)
 {
 	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
 	if (!AnimInstance)
@@ -468,17 +381,19 @@ bool AMusouCharacter::PlayAttackStep(const FMusouAttackStepDef& Step)
 	return true;
 }
 
-UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStepDef& Step)
+UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 {
 	FAnimationManager& Manager = FAnimationManager::Get();
 
 	// 1) 런타임 생성 캐시 — fallback 으로 한 번 만든 몽타주 재사용 (실패 로그 반복 방지).
-	if (Step.SequencePath)
+	//    데이터 핫리로드로 버전이 바뀌었으면 주입 notify 만 갱신 (Inject 가 버전 비교).
+	if (!Step.SequencePath.empty())
 	{
 		for (const auto& Entry : RuntimeAttackMontages)
 		{
 			if (Entry.first == Step.SequencePath)
 			{
+				InjectDefaultAttackNotifies(Entry.second->GetSourceSequence(), Step);
 				return Entry.second;
 			}
 		}
@@ -487,7 +402,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStepDef& Ste
 	// 2) 에디터 저작 몽타주 우선. 단 소스 시퀀스에 notify 가 하나도 저작 안 된 경우
 	//    (Horizontal/360 Low 등 모션만 있는 에셋) 는 fallback 과 동일하게 기본 notify 주입 —
 	//    InjectDefaultAttackNotifies 가 저작본 존재 시 스스로 스킵하므로 무조건 호출해도 안전.
-	if (Step.MontagePath)
+	if (!Step.MontagePath.empty())
 	{
 		if (UAnimMontage* Montage = Manager.LoadMontage(Step.MontagePath))
 		{
@@ -497,7 +412,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStepDef& Ste
 	}
 
 	// 3) Fallback — 시퀀스에서 런타임 생성 + 기본 notify 주입.
-	if (!Step.SequencePath)
+	if (Step.SequencePath.empty())
 	{
 		return nullptr;
 	}
@@ -517,16 +432,43 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStepDef& Ste
 	}
 	Montage->EnsureDefaultSection();
 
-	RuntimeAttackMontages.push_back({ FString(Step.SequencePath), Montage });
+	RuntimeAttackMontages.push_back({ Step.SequencePath, Montage });
 	return Montage;
 }
 
-void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStepDef& Step)
+void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step)
 {
-	// 시퀀스에 이미 notify 가 저작돼 있으면 존중 — 주입 스킵.
-	if (!Sequence || !Sequence->GetNotifies().empty())
+	if (!Sequence)
 	{
 		return;
+	}
+
+	// 저작 notify 존중 — 우리가 주입한 Auto* 외의 notify 가 하나라도 있으면 손대지 않는다.
+	static const FName AutoHitName("AutoMusouAttack");
+	static const FName AutoWindowName("AutoComboWindow");
+	for (const FAnimNotifyEvent& Existing : Sequence->GetNotifies())
+	{
+		if (Existing.NotifyName != AutoHitName && Existing.NotifyName != AutoWindowName)
+		{
+			return;
+		}
+	}
+
+	// 주입 이력 — 같은 데이터 버전이면 그대로 사용, 바뀌었으면 Auto* 걷어내고 재주입.
+	const int32 CurVersion = FAttackDataRegistry::Get().GetVersion();
+	bool bRecorded = false;
+	for (auto& Entry : InjectedSequenceVersions)
+	{
+		if (Entry.first == Sequence)
+		{
+			if (Entry.second == CurVersion)
+			{
+				return;
+			}
+			Entry.second = CurVersion;
+			bRecorded = true;
+			break;
+		}
 	}
 
 	UAnimDataModel* Model = Sequence->GetDataModel();
@@ -536,16 +478,30 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 		return;
 	}
 
+	if (!bRecorded)
+	{
+		InjectedSequenceVersions.push_back({ Sequence, CurVersion });
+	}
+
 	TArray<FAnimNotifyEvent>& ModelNotifies = Sequence->GetMutableModelNotifies();
 
+	// 핫리로드 재주입 — 기존 Auto* 제거 (위 가드로 이 시점엔 Auto* 만 존재).
+	ModelNotifies.erase(
+		std::remove_if(ModelNotifies.begin(), ModelNotifies.end(),
+			[](const FAnimNotifyEvent& Ev)
+			{
+				return Ev.NotifyName == AutoHitName || Ev.NotifyName == AutoWindowName;
+			}),
+		ModelNotifies.end());
+
 	// 히트 판정 — 스윙 임팩트 추정 지점. 정확한 타이밍은 에디터 저작으로 대체 권장.
-	if (Step.AttackId && Step.HitFrac >= 0.0f)
+	if (!Step.AttackId.empty() && Step.HitFrac >= 0.0f)
 	{
 		UAnimNotify_MusouAttack* Hit = UObjectManager::Get().CreateObject<UAnimNotify_MusouAttack>(Model);
 		Hit->AttackId = Step.AttackId;
 
 		FAnimNotifyEvent Event;
-		Event.NotifyName  = FName("AutoMusouAttack");
+		Event.NotifyName  = AutoHitName;
 		Event.TriggerTime = Length * Step.HitFrac;
 		Event.Notify      = Hit;
 		ModelNotifies.push_back(Event);
@@ -555,7 +511,7 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 	if (Step.WindowBeginFrac >= 0.0f && Step.WindowEndFrac > Step.WindowBeginFrac)
 	{
 		FAnimNotifyEvent Event;
-		Event.NotifyName  = FName("AutoComboWindow");
+		Event.NotifyName  = AutoWindowName;
 		Event.TriggerTime = Length * Step.WindowBeginFrac;
 		Event.Duration    = Length * (Step.WindowEndFrac - Step.WindowBeginFrac);
 		Event.NotifyState = UObjectManager::Get().CreateObject<UAnimNotifyState_ComboWindow>(Model);
@@ -567,9 +523,8 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 
 void AMusouCharacter::PlayComboStep(int32 Step)
 {
-	int32 NumSteps = 0;
-	const FMusouAttackStepDef* Chain = GetLightChain(ActiveChainContext, NumSteps);
-	if (!Chain || Step < 1 || Step > NumSteps)
+	const TArray<FMusouAttackStep>& Chain = FAttackDataRegistry::Get().GetLightChain(ActiveChainContext);
+	if (Step < 1 || Step > static_cast<int32>(Chain.size()))
 	{
 		return;
 	}
@@ -579,15 +534,11 @@ void AMusouCharacter::PlayComboStep(int32 Step)
 
 void AMusouCharacter::PlayBranchFinisher(int32 BranchStep)
 {
-	constexpr int32 NumBranches = static_cast<int32>(sizeof(GBranchFinishers) / sizeof(GBranchFinishers[0]));
-	if (BranchStep < 1)
+	// 테이블보다 깊은 단수는 마지막 분기로 clamp — Registry 가 처리.
+	if (const FMusouAttackStep* Step = FAttackDataRegistry::Get().GetBranchFinisher(BranchStep))
 	{
-		return;
+		PlayAttackStep(*Step);
 	}
-
-	// 테이블보다 깊은 단수(향후 4단+ 체인)는 마지막 분기로 clamp — 대피니셔 공유.
-	const int32 Index = (BranchStep <= NumBranches) ? BranchStep - 1 : NumBranches - 1;
-	PlayAttackStep(GBranchFinishers[Index]);
 }
 
 bool AMusouCharacter::IsAnyMontagePlaying() const
