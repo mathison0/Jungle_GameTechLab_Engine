@@ -16,8 +16,13 @@
 --   sequence  fallback 시퀀스. 시퀀스에 저작 notify 가 없으면 아래 값으로 자동 주입:
 --   attack_id 히트 notify 의 spec 키 / hit_frac 히트 위치 (길이 비율)
 --   window    콤보 윈도우 { 시작비율, 끝비율 } — 없으면 체인 말단/단발
+--   play_rate 재생속도. 숫자 = 고정, { min, max } = 매 재생 균등 랜덤 (기본 1.0)
+--             notify/RM 은 길이 비율 기준이라 속도를 바꿔도 히트 타이밍은 안 깨진다
 --
 -- ── chains: 흐름 구성 — 스텝 id 참조라 재배열이 한 줄 ──
+--   체인 칸에 id 1개 대신 배열을 쓰면 랜덤 변주 (직전 모션 반복 회피는 C++ 처리):
+--     idle = { "combo_v1", "combo_v2", "combo_v3" }            ← 변주 없음
+--     idle = { { "combo_v1", "kick" }, "combo_v2", ... }       ← 1단이 둘 중 랜덤
 
 local BARBARIAN_DIR = "Content/Data/GameJam/Barbarian/"
 local MONTAGE_DIR   = "Content/Montages/"
@@ -48,14 +53,34 @@ return {
 
     steps = {
         -- 기존 3단 콤보 (몽타주/notify 에디터 저작 완료 — 주입 안 함)
-        combo_v1      = { montage = montage("Barbarian_Melee Combo Attack Ver. 1"), blend_in = 0.1 },
-        combo_v2      = { montage = montage("Barbarian_Melee Combo Attack Ver. 2"), blend_in = 0.1 },
-        combo_v3      = { montage = montage("Barbarian_Melee Combo Attack Ver. 3"), blend_in = 0.1 },
+        -- 단계가 오를수록 살짝 빨라진다 + 매 재생 ±5% 지터로 기계적인 반복감 제거
+        combo_v1      = { montage = montage("Barbarian_Melee Combo Attack Ver. 1"), blend_in = 0.1,
+                          play_rate = { 0.95, 1.05 } },
+        combo_v2      = { montage = montage("Barbarian_Melee Combo Attack Ver. 2"), blend_in = 0.1,
+                          play_rate = { 1.00, 1.10 } },
+        combo_v3      = { montage = montage("Barbarian_Melee Combo Attack Ver. 3"), blend_in = 0.1,
+                          play_rate = 1.10 },
+
+        -- 콤보 변주 (체인 칸에서 기존 단계와 랜덤 교차) — 시퀀스에 notify 없음 → 주입
+        kick          = { montage = montage("Barbarian_Melee Attack Kick Ver. 2"),       -- 1.40s, 제자리 킥
+                          sequence = seq("Barbarian_Melee Attack Kick Ver. 2"),
+                          blend_in = 0.1, attack_id = "combo1", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          play_rate = { 0.95, 1.05 } },
+        gs_slash4     = { montage = montage("great sword slash (4)_mixamo_com"),         -- 1.80s, 전진 +1.1m 베기
+                          sequence = seq("great sword slash (4)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "combo2", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          play_rate = { 1.00, 1.10 } },
 
         -- 이동 진입 — 돌진 베기 (RM +3.56m)
         slide         = { montage = montage("great sword slide attack_mixamo_com"),
                           sequence = seq("great sword slide attack_mixamo_com"),
                           blend_in = 0.1, attack_id = "dash_attack", hit_frac = 0.35, window = { 0.55, 0.85 } },
+
+        -- 이동 진입 변주 — 한손 돌진 베기 (2.33s, RM +3.69m, slide 와 프로필 유사)
+        ss_lunge      = { montage = montage("sword and shield attack_mixamo_com"),
+                          sequence = seq("sword and shield attack_mixamo_com"),
+                          blend_in = 0.1, attack_id = "dash_attack", hit_frac = 0.45, window = { 0.60, 0.85 },
+                          play_rate = { 1.00, 1.10 } },
 
         -- 공중 — 도약 내려찍기 (RM 전진 +3.25m, 착지 후에도 끝까지 재생)
         jump          = { montage = montage("great sword jump attack_mixamo_com"),
@@ -81,10 +106,11 @@ return {
     },
 
     chains = {
-        -- 좌클릭 콤보 — 진입 컨텍스트별. 이동 중엔 1단이 돌진 베기로 바뀌고 2단부터 합류
+        -- 좌클릭 콤보 — 진입 컨텍스트별. 이동 중엔 1단이 돌진 베기로 바뀌고 2단부터 합류.
+        -- 1/2단은 변주 배열 — 매 콤보 랜덤 (직전 모션 반복 회피). 3단 피니셔는 고정이 연출상 안정적.
         light = {
-            idle   = { "combo_v1", "combo_v2", "combo_v3" },
-            moving = { "slide", "combo_v2", "combo_v3" },
+            idle   = { { "combo_v1", "kick" }, { "combo_v2", "gs_slash4" }, "combo_v3" },
+            moving = { { "slide", "ss_lunge" }, { "combo_v2", "gs_slash4" }, "combo_v3" },
             air    = { "jump" },
         },
 
