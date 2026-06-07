@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 // 공격 체인/스펙/스텝 데이터는 전부 Content/Script/Data/attack_data.lua —
 // FAttackDataRegistry 가 로드/핫리로드. 여기는 재생 로직만 남는다.
@@ -242,7 +243,7 @@ void AMusouCharacter::OnAttackPressed()
 		Data.EnsureFresh();
 
 		ActiveChainContext = ResolveAttackContext();
-		const TArray<FMusouAttackStep>& Chain = Data.GetLightChain(ActiveChainContext);
+		const TArray<FMusouAttackSlot>& Chain = Data.GetLightChain(ActiveChainContext);
 		if (Chain.empty())
 		{
 			return;
@@ -273,9 +274,9 @@ void AMusouCharacter::OnHeavyAttackPressed()
 	FAttackDataRegistry& Data = FAttackDataRegistry::Get();
 	Data.EnsureFresh();
 
-	if (const FMusouAttackStep* Step = Data.GetHeavyStep(ResolveAttackContext()))
+	if (const FMusouAttackSlot* Slot = Data.GetHeavySlot(ResolveAttackContext()))
 	{
-		PlayAttackStep(*Step);
+		PlayAttackSlot(*Slot);
 	}
 }
 
@@ -360,6 +361,50 @@ void AMusouCharacter::SnapFacingToInput()
 	CapsuleComponent->SetRelativeRotation(R);
 }
 
+const FMusouAttackStep* AMusouCharacter::PickVariant(const FMusouAttackSlot& Slot)
+{
+	const int32 Num = static_cast<int32>(Slot.Variants.size());
+	if (Num <= 0)
+	{
+		return nullptr;
+	}
+	if (Num == 1)
+	{
+		return &Slot.Variants[0];
+	}
+
+	int32 Index = std::rand() % Num;
+
+	// 직전 변주 반복 회피 — 같은 슬롯에서 연속으로 같은 모션이 나오면 변주 체감이 죽는다.
+	// (key = 슬롯 주소. 데이터 핫리로드로 슬롯이 재구성되면 미스 → 새로 기록.)
+	bool bRecorded = false;
+	for (auto& Entry : LastVariantPick)
+	{
+		if (Entry.first == &Slot)
+		{
+			if (Index == Entry.second)
+			{
+				Index = (Index + 1) % Num;
+			}
+			Entry.second = Index;
+			bRecorded = true;
+			break;
+		}
+	}
+	if (!bRecorded)
+	{
+		LastVariantPick.push_back({ &Slot, Index });
+	}
+
+	return &Slot.Variants[Index];
+}
+
+bool AMusouCharacter::PlayAttackSlot(const FMusouAttackSlot& Slot)
+{
+	const FMusouAttackStep* Step = PickVariant(Slot);
+	return Step && PlayAttackStep(*Step);
+}
+
 bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step)
 {
 	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
@@ -377,7 +422,15 @@ bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step)
 	// 회전 스냅 — 모든 공격 스텝(시작/전진/분기/강공격) 공통. 스텝마다 재조준 가능.
 	SnapFacingToInput();
 
-	AnimInstance->PlayMontage(Montage, FName::None, 1.0f, Step.BlendIn);
+	// 재생속도 변주 — [Min, Max] 균등 랜덤. notify/RM 은 시퀀스 시간축이라 비율 유지.
+	float PlayRate = Step.PlayRateMin;
+	if (Step.PlayRateMax > Step.PlayRateMin)
+	{
+		const float T = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+		PlayRate = Step.PlayRateMin + (Step.PlayRateMax - Step.PlayRateMin) * T;
+	}
+
+	AnimInstance->PlayMontage(Montage, FName::None, PlayRate, Step.BlendIn);
 	return true;
 }
 
@@ -523,21 +576,21 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 
 void AMusouCharacter::PlayComboStep(int32 Step)
 {
-	const TArray<FMusouAttackStep>& Chain = FAttackDataRegistry::Get().GetLightChain(ActiveChainContext);
+	const TArray<FMusouAttackSlot>& Chain = FAttackDataRegistry::Get().GetLightChain(ActiveChainContext);
 	if (Step < 1 || Step > static_cast<int32>(Chain.size()))
 	{
 		return;
 	}
 
-	PlayAttackStep(Chain[Step - 1]);
+	PlayAttackSlot(Chain[Step - 1]);
 }
 
 void AMusouCharacter::PlayBranchFinisher(int32 BranchStep)
 {
 	// 테이블보다 깊은 단수는 마지막 분기로 clamp — Registry 가 처리.
-	if (const FMusouAttackStep* Step = FAttackDataRegistry::Get().GetBranchFinisher(BranchStep))
+	if (const FMusouAttackSlot* Slot = FAttackDataRegistry::Get().GetBranchFinisher(BranchStep))
 	{
-		PlayAttackStep(*Step);
+		PlayAttackSlot(*Slot);
 	}
 }
 

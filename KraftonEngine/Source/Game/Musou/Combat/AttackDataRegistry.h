@@ -29,6 +29,11 @@ struct FMusouAttackStep
 	FString SequencePath;           // 비어 있으면 fallback 없음 (몽타주 필수)
 	float   BlendIn = 0.1f;
 
+	// 재생속도 — [Min, Max] 균등 랜덤 (같으면 고정). lua: play_rate = 1.1 또는 { 0.95, 1.15 }
+	// notify/RM 은 시퀀스 시간축 기준이라 속도를 바꿔도 히트 타이밍 비율은 유지된다.
+	float   PlayRateMin = 1.0f;
+	float   PlayRateMax = 1.0f;
+
 	// ── notify 주입 파라미터 (시퀀스에 저작 notify 가 없을 때만 사용) ──
 	FString AttackId;               // specs 키. 비어 있으면 히트 notify 안 박음
 	float   HitFrac = -1.0f;        // MusouAttack 위치 (PlayLength 비율). <0 = 없음
@@ -36,6 +41,16 @@ struct FMusouAttackStep
 	float   WindowEndFrac = -1.0f;
 
 	bool IsValid() const { return !MontagePath.empty() || !SequencePath.empty(); }
+};
+
+// 체인의 한 칸 — 동일 역할(같은 단수/입력)의 변주 후보 묶음.
+// lua chains 의 스텝 id 1개(string)/배열 표기를 모두 슬롯으로 정규화한다.
+// 어느 변주를 재생할지는 호출측(MusouCharacter::PickVariant)이 결정 — 직전 변주 반복 회피.
+struct FMusouAttackSlot
+{
+	TArray<FMusouAttackStep> Variants;
+
+	bool IsValid() const { return !Variants.empty(); }
 };
 
 class FAttackDataRegistry
@@ -52,15 +67,15 @@ public:
 
 	const FAttackSpec* FindSpec(const FName& Id) const;
 
-	// 좌클릭 콤보 체인 — 비어 있을 수 있음 (호출측이 empty 가드).
-	const TArray<FMusouAttackStep>& GetLightChain(EAttackContext Context) const;
+	// 좌클릭 콤보 체인 (슬롯 = 단수, 슬롯 안 = 변주 후보) — 비어 있을 수 있음 (호출측이 empty 가드).
+	const TArray<FMusouAttackSlot>& GetLightChain(EAttackContext Context) const;
 
 	// 우클릭 강공격 — 미정의 컨텍스트면 nullptr.
-	const FMusouAttackStep* GetHeavyStep(EAttackContext Context) const;
+	const FMusouAttackSlot* GetHeavySlot(EAttackContext Context) const;
 
 	// 콤보 분기 피니셔 — 인덱스 = 분기 시점 단수 (1 기반). 단수 초과 시 마지막으로 clamp,
 	// 테이블이 비었으면 nullptr.
-	const FMusouAttackStep* GetBranchFinisher(int32 ComboStep) const;
+	const FMusouAttackSlot* GetBranchFinisher(int32 ComboStep) const;
 
 private:
 	FAttackDataRegistry() = default;
@@ -71,9 +86,9 @@ private:
 	static int32 ContextIndex(EAttackContext Context) { return static_cast<int32>(Context); }
 
 	TArray<FAttackSpec>      Specs;
-	TArray<FMusouAttackStep> LightChains[3];   // EAttackContext 인덱스
-	FMusouAttackStep         HeavySteps[3];    // IsValid() == false 면 미정의
-	TArray<FMusouAttackStep> BranchFinishers;
+	TArray<FMusouAttackSlot> LightChains[3];   // EAttackContext 인덱스
+	FMusouAttackSlot         HeavySlots[3];    // IsValid() == false 면 미정의
+	TArray<FMusouAttackSlot> BranchFinishers;
 
 	int32 Version = 0;
 	bool  bLoadedOnce = false;
