@@ -1,7 +1,7 @@
 #include "Game/Musou/UI/MusouHudPresenter.h"
 
 #include "Game/Musou/GameMode/MusouGameState.h"
-#include "Game/Musou/Score/MusouScoreboard.h"
+#include "Game/Musou/UI/MusouScoreboardView.h"
 #include "UI/UserWidget.h"
 
 #include <algorithm>
@@ -149,98 +149,16 @@ namespace
 		return FString(Buffer);
 	}
 
-	FString EscapeRmlText(const FString& Text)
+	FMusouScoreboardViewStyle MakeVictoryScoreboardStyle()
 	{
-		FString Escaped;
-		Escaped.reserve(Text.size());
-
-		for (char Ch : Text)
-		{
-			switch (Ch)
-			{
-			case '&':
-				Escaped += "&amp;";
-				break;
-			case '<':
-				Escaped += "&lt;";
-				break;
-			case '>':
-				Escaped += "&gt;";
-				break;
-			case '"':
-				Escaped += "&quot;";
-				break;
-			default:
-				Escaped += Ch;
-				break;
-			}
-		}
-
-		return Escaped;
-	}
-
-	int32 GetScoreboardPageCount(size_t EntryCount)
-	{
-		if (EntryCount == 0)
-		{
-			return 1;
-		}
-
-		return static_cast<int32>((EntryCount + ScoreboardPageSize - 1) / ScoreboardPageSize);
-	}
-
-	int32 ClampScoreboardPageIndex(int32 PageIndex, size_t EntryCount)
-	{
-		const int32 PageCount = GetScoreboardPageCount(EntryCount);
-		return std::clamp(PageIndex, 0, PageCount - 1);
-	}
-
-	int32 GetScoreboardDisplayRank(const TArray<FMusouScoreboardEntry>& Entries, int32 EntryIndex)
-	{
-		int32 Rank = EntryIndex + 1;
-		while (Rank > 1 && Entries[static_cast<size_t>(Rank - 2)].Score == Entries[static_cast<size_t>(EntryIndex)].Score)
-		{
-			--Rank;
-		}
-		return Rank;
-	}
-
-	FString MakeScoreboardRowsRml(const TArray<FMusouScoreboardEntry>& Entries, int32 PageIndex)
-	{
-		if (Entries.empty())
-		{
-			return "<div class=\"scoreboard-empty\">저장된 기록이 없습니다.</div>";
-		}
-
-		const int32 FirstEntryIndex = ClampScoreboardPageIndex(PageIndex, Entries.size()) * ScoreboardPageSize;
-		const int32 LastEntryIndex = std::min(FirstEntryIndex + ScoreboardPageSize, static_cast<int32>(Entries.size()));
-
-		FString Rows;
-		for (int32 EntryIndex = FirstEntryIndex; EntryIndex < LastEntryIndex; ++EntryIndex)
-		{
-			const FMusouScoreboardEntry& Entry = Entries[static_cast<size_t>(EntryIndex)];
-			const FString EscapedName = EscapeRmlText(Entry.PlayerName);
-			const int32 DisplayRank = GetScoreboardDisplayRank(Entries, EntryIndex);
-
-			char Buffer[192] = {};
-			std::snprintf(Buffer, sizeof(Buffer),
-				"<div class=\"scoreboard-rank\">%d</div>"
-				"<div class=\"scoreboard-name\">%s</div>"
-				"<div class=\"scoreboard-entry-score\">%lld</div>"
-				"<div class=\"scoreboard-entry-details\">K.O. %d / Combo %d / %.1fs</div>",
-				DisplayRank,
-				EscapedName.c_str(),
-				static_cast<long long>(Entry.Score),
-				Entry.KillCount,
-				Entry.MaxCombo,
-				Entry.MatchTime);
-
-			Rows += "<div class=\"scoreboard-row\">";
-			Rows += Buffer;
-			Rows += "</div>";
-		}
-
-		return Rows;
+		return FMusouScoreboardViewStyle{
+			"scoreboard-row",
+			"scoreboard-rank",
+			"scoreboard-name",
+			"scoreboard-entry-score",
+			"scoreboard-entry-details",
+			"scoreboard-empty",
+		};
 	}
 }
 
@@ -432,7 +350,7 @@ void FMusouHudPresenter::ShowPreviousScoreboardPage()
 
 void FMusouHudPresenter::ShowNextScoreboardPage()
 {
-	const int32 LastPageIndex = GetScoreboardPageCount(ScoreboardEntries.size()) - 1;
+	const int32 LastPageIndex = FMusouScoreboardView::GetPageCount(ScoreboardEntries.size(), ScoreboardPageSize) - 1;
 	if (ScoreboardPageIndex >= LastPageIndex)
 	{
 		return;
@@ -666,7 +584,7 @@ void FMusouHudPresenter::SetScoreboardEntries(const TArray<FMusouScoreboardEntry
 	}
 	else
 	{
-		ScoreboardPageIndex = ClampScoreboardPageIndex(ScoreboardPageIndex, ScoreboardEntries.size());
+		ScoreboardPageIndex = FMusouScoreboardView::ClampPageIndex(ScoreboardPageIndex, ScoreboardEntries.size(), ScoreboardPageSize);
 	}
 
 	RenderScoreboardPage();
@@ -679,8 +597,8 @@ void FMusouHudPresenter::RenderScoreboardPage()
 		return;
 	}
 
-	ScoreboardPageIndex = ClampScoreboardPageIndex(ScoreboardPageIndex, ScoreboardEntries.size());
-	Widget->SetText("scoreboard-list", MakeScoreboardRowsRml(ScoreboardEntries, ScoreboardPageIndex));
+	ScoreboardPageIndex = FMusouScoreboardView::ClampPageIndex(ScoreboardPageIndex, ScoreboardEntries.size(), ScoreboardPageSize);
+	Widget->SetText("scoreboard-list", FMusouScoreboardView::MakeRowsRml(ScoreboardEntries, ScoreboardPageIndex, ScoreboardPageSize, MakeVictoryScoreboardStyle()));
 	UpdateScoreboardPager();
 }
 
@@ -691,8 +609,8 @@ void FMusouHudPresenter::UpdateScoreboardPager()
 		return;
 	}
 
-	const int32 PageCount = GetScoreboardPageCount(ScoreboardEntries.size());
-	ScoreboardPageIndex = ClampScoreboardPageIndex(ScoreboardPageIndex, ScoreboardEntries.size());
+	const int32 PageCount = FMusouScoreboardView::GetPageCount(ScoreboardEntries.size(), ScoreboardPageSize);
+	ScoreboardPageIndex = FMusouScoreboardView::ClampPageIndex(ScoreboardPageIndex, ScoreboardEntries.size(), ScoreboardPageSize);
 
 	Widget->SetText("scoreboard-page-label",
 		std::to_string(ScoreboardPageIndex + 1) + " / " + std::to_string(PageCount));
