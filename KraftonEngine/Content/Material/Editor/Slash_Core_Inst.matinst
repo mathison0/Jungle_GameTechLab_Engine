@@ -1,0 +1,13 @@
+{
+        "Parameters" : {
+          "SlashTint" : [1.000000, 0.920000, 0.720000, 1.000000]
+        },
+        "ParentMaterial" : "Content/Material/Editor/Slash_Core.mat",
+        "PathFileName" : "Content/Material/Editor/Slash_Core_Inst.matinst",
+        "Textures" : {
+
+        },
+        "bOverrideEmissiveColor" : false,
+        "bOverrideEmissiveIntensity" : false,
+        "bOverrideEnableBloom" : false
+      }

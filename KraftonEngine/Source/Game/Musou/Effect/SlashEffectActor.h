@@ -53,14 +53,19 @@ public:
 		float InDissolveStartTime,
 		float InDissolveEndValue,
 		float InNoiseScrollSpeed,
-		float InRefractionStrength);
+		float InRefractionStrength,
+		float InRevealDurationRatio,
+		float InRevealSoftness,
+		float InEdgeSoftness,
+		float InTailFadeStart,
+		float InTrailLength);
 
 protected:
 	void LoadSlashAssets();
 	void FinishSlash();
 
 	void SetSlashAlpha(float Alpha);
-	void SetSlashMaterialParams(float CoreAlpha, float GlowAlpha, float Dissolve, float NoiseScroll);
+	void SetSlashMaterialParams(float CoreAlpha, float GlowAlpha, float Dissolve, float NoiseScroll, float Reveal);
 
 	void ResolveComponents();
 
@@ -122,6 +127,21 @@ protected:
 
 	UPROPERTY(Edit, Save, Category = "SlashEffect")
 	float NoiseScrollSpeed = 1.6f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect")
+	float RevealDurationRatio = 0.18f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect")
+	float RevealSoftness = 0.08f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect")
+	float EdgeSoftness = 0.12f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect")
+	float TailFadeStart = 1.0f;
+
+	UPROPERTY(Edit, Save, Category = "SlashEffect")
+	float TrailLength = 0.55f;
 
 	UStaticMeshComponent* RefractionMeshComponent = nullptr;
 	UMaterialInterface* RefractionMaterial = nullptr;

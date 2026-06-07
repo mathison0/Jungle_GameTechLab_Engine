@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Component/Particle/ParticleSystemComponent.h"
 #include "Object/Object.h"
 #include "Particles/Runtime/ParticleEmitterInstance.h"
 #include "Particles/Runtime/ParticleRuntimeTypes.h"
@@ -82,6 +83,12 @@ public:
 	UPROPERTY(Edit, Save, Category="Particle|Spawn", DisplayName="Spawn Rate", Type=Struct, Struct=FRawDistributionFloat)
 	FRawDistributionFloat SpawnRate;
 
+	UPROPERTY(Edit, Category="Particle|Spawn|Burst", DisplayName="Burst Count", Min=0.0f, Speed=1.0f)
+	int32 BurstCount = 0;
+
+	UPROPERTY(Edit, Category="Particle|Spawn|Burst", DisplayName="Burst Time", Min=0.0f, Speed=0.01f)
+	float BurstTime = 0.0f;
+
 	virtual bool IsSpawnModule() const override { return true; }
 };
 
@@ -150,6 +157,65 @@ public:
 	void Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle& Particle) override
 	{
 		Particle.Velocity = StartVelocity.GetValue(SpawnTime, FDistributionSampling::RandomUnitVector(Particle.RandomSeed, "StartVelocity"));
+	}
+};
+
+UCLASS()
+class UParticleModuleVelocityRadial : public UParticleModule
+{
+public:
+	GENERATED_BODY()
+	UParticleModuleVelocityRadial()
+	{
+		Speed.Mode = EDistributionValueMode::Uniform;
+		Speed.Constant = 240.0f;
+		Speed.MinValue = 160.0f;
+		Speed.MaxValue = 420.0f;
+		DirectionScale = FVector(1.0f, 1.0f, 0.35f);
+		OriginOffset = FVector::ZeroVector;
+	}
+
+	bool IsSpawnModule() const override { return true; }
+
+	UPROPERTY(Edit, Save, Category="Particle|Velocity|Radial", DisplayName="Speed", Type=Struct, Struct=FRawDistributionFloat)
+	FRawDistributionFloat Speed;
+
+	UPROPERTY(Edit, Save, Category="Particle|Velocity|Radial", DisplayName="Origin Offset")
+	FVector OriginOffset = FVector::ZeroVector;
+
+	UPROPERTY(Edit, Save, Category="Particle|Velocity|Radial", DisplayName="Direction Scale")
+	FVector DirectionScale = FVector(1.0f, 1.0f, 0.35f);
+
+	UPROPERTY(Edit, Save, Category="Particle|Velocity|Radial", DisplayName="Add To Existing Velocity")
+	bool bAdditive = false;
+
+	void Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle& Particle) override
+	{
+		(void)Offset;
+
+		const FVector ComponentLocation = Owner && Owner->GetComponent()
+			? Owner->GetComponent()->GetWorldLocation()
+			: FVector::ZeroVector;
+		const FVector Origin = ComponentLocation + OriginOffset;
+		FVector Direction = Particle.Position - Origin;
+		if (Direction.LengthSquared() <= 0.0001f)
+		{
+			Direction = FDistributionSampling::RandomUnitVector(Particle.RandomSeed, "RadialVelocityDirection");
+		}
+
+		Direction = FVector(
+			Direction.X * DirectionScale.X,
+			Direction.Y * DirectionScale.Y,
+			Direction.Z * DirectionScale.Z);
+		if (Direction.LengthSquared() <= 0.0001f)
+		{
+			Direction = FVector::UpVector;
+		}
+		Direction.Normalize();
+
+		const float ParticleSpeed = Speed.GetValue(SpawnTime, FDistributionSampling::RandomUnit(Particle.RandomSeed, "RadialVelocitySpeed"));
+		const FVector RadialVelocity = Direction * ParticleSpeed;
+		Particle.Velocity = bAdditive ? Particle.Velocity + RadialVelocity : RadialVelocity;
 	}
 };
 

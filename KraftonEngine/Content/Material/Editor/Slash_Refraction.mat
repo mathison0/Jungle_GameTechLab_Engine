@@ -11,7 +11,12 @@
     "RefractionNoiseTiling" : 5.000000,
     "RefractionPad0" : 0.000000,
     "RefractionStrength" : 0.350000,
-    "SlashAlpha" : 1.000000
+    "SlashAlpha" : 1.000000,
+    "SlashEdgeSoftness" : 0.120000,
+    "SlashReveal" : 1.000000,
+    "SlashRevealSoftness" : 0.080000,
+    "SlashTailFadeStart" : 1.000000,
+    "SlashTrailLength" : 0.550000
   },
   "PathFileName" : "Content/Material/Editor/Slash_Refraction.mat",
   "RasterizerState" : "SolidNoCull",

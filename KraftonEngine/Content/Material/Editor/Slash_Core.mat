@@ -1,6 +1,6 @@
 {
   "BlendState" : "AlphaBlend",
-  "DepthStencilState" : "NoDepth",
+  "DepthStencilState" : "DepthReadOnly",
   "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
   "EmissiveIntensity" : 10.000000,
   "Origin" : "Editor",
@@ -9,10 +9,15 @@
     "SlashColorStrength" : 1.000000,
     "SlashDissolve" : 0.000000,
     "SlashDissolveSoftness" : 0.180000,
+    "SlashEdgeSoftness" : 0.120000,
     "SlashNoiseScroll" : 0.000000,
     "SlashNoiseTiling" : 2.000000,
     "SlashPad" : null,
-    "SlashTint" : [1.000000, 1.000000, 1.000000, 1.000000]
+    "SlashReveal" : 1.000000,
+    "SlashRevealSoftness" : 0.080000,
+    "SlashTailFadeStart" : 1.000000,
+    "SlashTint" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "SlashTrailLength" : 0.550000
   },
   "PathFileName" : "Content/Material/Editor/Slash_Core.mat",
   "RasterizerState" : "SolidNoCull",

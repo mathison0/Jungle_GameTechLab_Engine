@@ -12,7 +12,7 @@
 namespace
 {
 	constexpr uint32 ParticleSystemExtensionMagic = 0x58465350; // PSFX
-	constexpr uint32 ParticleSystemExtensionVersion = 1;
+	constexpr uint32 ParticleSystemExtensionVersion = 2;
 
 	struct FParticleSpriteFacingExtensionEntry
 	{
@@ -27,6 +27,25 @@ namespace
 			Ar << Entry.LODIndex;
 			Ar << Entry.FacingMode;
 			Ar << Entry.VelocityFacingMinSpeed;
+			return Ar;
+		}
+	};
+
+	struct FParticleSpawnBurstExtensionEntry
+	{
+		uint32 EmitterIndex = 0;
+		uint32 LODIndex = 0;
+		uint32 ModuleIndex = 0;
+		int32 BurstCount = 0;
+		float BurstTime = 0.0f;
+
+		friend FArchive& operator<<(FArchive& Ar, FParticleSpawnBurstExtensionEntry& Entry)
+		{
+			Ar << Entry.EmitterIndex;
+			Ar << Entry.LODIndex;
+			Ar << Entry.ModuleIndex;
+			Ar << Entry.BurstCount;
+			Ar << Entry.BurstTime;
 			return Ar;
 		}
 	};
@@ -215,12 +234,13 @@ namespace
 			Ar << Version;
 			Ar << EntryCount;
 
-			if (Magic != ParticleSystemExtensionMagic || Version != ParticleSystemExtensionVersion)
+			if (Magic != ParticleSystemExtensionMagic || (Version != 1 && Version != 2))
 			{
 				return;
 			}
 
-			for (uint32 EntryIndex = 0; EntryIndex < EntryCount; ++EntryIndex)
+			const uint32 SpriteFacingEntryCount = EntryCount;
+			for (uint32 EntryIndex = 0; EntryIndex < SpriteFacingEntryCount; ++EntryIndex)
 			{
 				FParticleSpriteFacingExtensionEntry Entry;
 				Ar << Entry;
@@ -250,12 +270,50 @@ namespace
 					: EParticleSpriteFacingMode::CameraFacing;
 				RequiredModule->VelocityFacingMinSpeed = Entry.VelocityFacingMinSpeed;
 			}
+
+			if (Version >= 2 && !Ar.AtEnd())
+			{
+				uint32 BurstEntryCount = 0;
+				Ar << BurstEntryCount;
+				for (uint32 EntryIndex = 0; EntryIndex < BurstEntryCount; ++EntryIndex)
+				{
+					FParticleSpawnBurstExtensionEntry Entry;
+					Ar << Entry;
+
+					if (Entry.EmitterIndex >= Emitters.size())
+					{
+						continue;
+					}
+
+					UParticleEmitter* Emitter = Emitters[Entry.EmitterIndex];
+					if (!Emitter || Entry.LODIndex >= Emitter->GetLODLevels().size())
+					{
+						continue;
+					}
+
+					UParticleLODLevel* LODLevel = Emitter->GetLODLevel(static_cast<int32>(Entry.LODIndex));
+					if (!LODLevel || Entry.ModuleIndex >= LODLevel->GetModules().size())
+					{
+						continue;
+					}
+
+					UParticleModuleSpawn* SpawnModule = Cast<UParticleModuleSpawn>(LODLevel->ResolveModule(static_cast<int32>(Entry.ModuleIndex), Emitter));
+					if (!SpawnModule)
+					{
+						continue;
+					}
+
+					SpawnModule->BurstCount = Entry.BurstCount;
+					SpawnModule->BurstTime = Entry.BurstTime;
+				}
+			}
 			return;
 		}
 
 		uint32 Magic = ParticleSystemExtensionMagic;
 		uint32 Version = ParticleSystemExtensionVersion;
-		TArray<FParticleSpriteFacingExtensionEntry> Entries;
+		TArray<FParticleSpriteFacingExtensionEntry> SpriteFacingEntries;
+		TArray<FParticleSpawnBurstExtensionEntry> BurstEntries;
 
 		for (uint32 EmitterIndex = 0; EmitterIndex < static_cast<uint32>(Emitters.size()); ++EmitterIndex)
 		{
@@ -282,15 +340,40 @@ namespace
 				Entry.LODIndex = LODIndex;
 				Entry.FacingMode = static_cast<int32>(RequiredModule->SpriteFacingMode);
 				Entry.VelocityFacingMinSpeed = RequiredModule->VelocityFacingMinSpeed;
-				Entries.push_back(Entry);
+				SpriteFacingEntries.push_back(Entry);
+
+				const TArray<UParticleModule*>& Modules = LODLevel->GetModules();
+				for (uint32 ModuleIndex = 0; ModuleIndex < static_cast<uint32>(Modules.size()); ++ModuleIndex)
+				{
+					UParticleModuleSpawn* SpawnModule = Cast<UParticleModuleSpawn>(LODLevel->ResolveModule(static_cast<int32>(ModuleIndex), Emitter));
+					if (!SpawnModule)
+					{
+						continue;
+					}
+
+					FParticleSpawnBurstExtensionEntry BurstEntry;
+					BurstEntry.EmitterIndex = EmitterIndex;
+					BurstEntry.LODIndex = LODIndex;
+					BurstEntry.ModuleIndex = ModuleIndex;
+					BurstEntry.BurstCount = SpawnModule->BurstCount;
+					BurstEntry.BurstTime = SpawnModule->BurstTime;
+					BurstEntries.push_back(BurstEntry);
+				}
 			}
 		}
 
-		uint32 EntryCount = static_cast<uint32>(Entries.size());
+		uint32 EntryCount = static_cast<uint32>(SpriteFacingEntries.size());
 		Ar << Magic;
 		Ar << Version;
 		Ar << EntryCount;
-		for (FParticleSpriteFacingExtensionEntry& Entry : Entries)
+		for (FParticleSpriteFacingExtensionEntry& Entry : SpriteFacingEntries)
+		{
+			Ar << Entry;
+		}
+
+		uint32 BurstEntryCount = static_cast<uint32>(BurstEntries.size());
+		Ar << BurstEntryCount;
+		for (FParticleSpawnBurstExtensionEntry& Entry : BurstEntries)
 		{
 			Ar << Entry;
 		}

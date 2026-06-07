@@ -367,6 +367,7 @@ namespace
 			|| Cast<UParticleModuleLifetime>(Module)
 			|| Cast<UParticleModuleLocation>(Module)
 			|| Cast<UParticleModuleVelocity>(Module)
+			|| Cast<UParticleModuleVelocityRadial>(Module)
 			|| Cast<UParticleModuleRotation>(Module)
 			|| Cast<UParticleModuleRotationRate>(Module)
 			|| Cast<UParticleModuleAcceleration>(Module)
@@ -1107,6 +1108,7 @@ namespace
 		if (Cast<UParticleModuleLifetime>(Module)) return "Lifetime";
 		if (Cast<UParticleModuleLocation>(Module)) return "Initial Location";
 		if (Cast<UParticleModuleVelocity>(Module)) return "Initial Velocity";
+		if (Cast<UParticleModuleVelocityRadial>(Module)) return "Initial Radial Velocity";
 		if (Cast<UParticleModuleRotation>(Module)) return "Initial Rotation";
 		if (Cast<UParticleModuleRotationRate>(Module)) return "Initial Rotation Rate";
 		if (Cast<UParticleModuleAcceleration>(Module)) return "Acceleration";
@@ -3083,6 +3085,10 @@ void FParticleSystemEditorWidget::RenderEmittersPanel(const ImVec2& Size)
 				{
 					AddModule(UObjectManager::Get().CreateObject<UParticleModuleVelocity>());
 				}
+				if (ImGui::MenuItem("Initial Radial Velocity"))
+				{
+					AddModule(UObjectManager::Get().CreateObject<UParticleModuleVelocityRadial>());
+				}
 				ImGui::EndMenu();
 			}
 			ImGui::EndDisabled();
@@ -4004,6 +4010,10 @@ bool FParticleSystemEditorWidget::SelectModuleDistributionCurves(UParticleModule
 	else if (UParticleModuleVelocity* VelocityModule = Cast<UParticleModuleVelocity>(Module))
 	{
 		bChanged |= AppendDistributionCurve(Module, &VelocityModule->StartVelocity, "StartVelocity");
+	}
+	else if (UParticleModuleVelocityRadial* RadialVelocityModule = Cast<UParticleModuleVelocityRadial>(Module))
+	{
+		bChanged |= AppendDistributionCurve(Module, &RadialVelocityModule->Speed, "Speed");
 	}
 	else if (UParticleModuleRotation* RotationModule = Cast<UParticleModuleRotation>(Module))
 	{

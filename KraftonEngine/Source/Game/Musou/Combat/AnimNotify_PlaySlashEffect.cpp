@@ -64,7 +64,12 @@ void UAnimNotify_PlaySlashEffect::Notify(USkeletalMeshComponent* MeshComp, UAnim
 		DissolveStartTime,
 		DissolveEndValue,
 		NoiseScrollSpeed,
-		RefractionStrength);
+		RefractionStrength,
+		RevealDurationRatio,
+		RevealSoftness,
+		EdgeSoftness,
+		TailFadeStart,
+		TrailLength);
 	Effect->InitDefaultComponents();
 	Effect->SetDestroyOnFinish(true);
 	Effect->ActivateSlash(SpawnLocation, SpawnRotation, SlashDirection);

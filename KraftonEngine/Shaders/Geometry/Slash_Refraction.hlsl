@@ -16,6 +16,12 @@ cbuffer SlashRefractionParams : register(b2)
     float RefractionEdgeBoost;
     float RefractionPad0;
     float2 RefractionDirection;
+
+    float SlashReveal;
+    float SlashRevealSoftness;
+    float SlashEdgeSoftness;
+    float SlashTailFadeStart;
+    float SlashTrailLength;
 };
 
 PS_Input_Particle VS(VS_Input_PNCTT input)
@@ -38,6 +44,33 @@ float GetSlashMask(float4 maskTex)
     float alphaMask = maskTex.a;
 
     return saturate(max(rgbMask, alphaMask));
+}
+
+float GetSlashShapeMask(float2 uv)
+{
+    float revealSoftness = max(SlashRevealSoftness, 0.001f);
+    float revealHead = saturate(SlashReveal);
+    float leadingMask = 1.0f - smoothstep(revealHead, revealHead + revealSoftness, uv.x);
+
+    float trailingMask = 1.0f;
+    float trailLength = saturate(SlashTrailLength);
+    if (trailLength < 0.999f)
+    {
+        float trailStart = revealHead - trailLength;
+        trailingMask = smoothstep(trailStart, trailStart + revealSoftness, uv.x);
+    }
+
+    float edgeSoftness = max(SlashEdgeSoftness, 0.001f);
+    float edgeMask = smoothstep(0.0f, edgeSoftness, uv.y)
+        * (1.0f - smoothstep(1.0f - edgeSoftness, 1.0f, uv.y));
+
+    float tailMask = 1.0f;
+    if (SlashTailFadeStart < 0.999f)
+    {
+        tailMask = 1.0f - smoothstep(SlashTailFadeStart, 1.0f, uv.x);
+    }
+
+    return saturate(leadingMask * trailingMask * edgeMask * tailMask);
 }
 
 float4 PS(PS_Input_Particle input) : SV_TARGET
@@ -72,9 +105,8 @@ float4 PS(PS_Input_Particle input) : SV_TARGET
 
     // 텍스처 마스크 대신 UV 기반 소프트 마스크.
     // 메쉬 전체는 살리고, UV 가장자리만 살짝 부드럽게 줄임.
-    float edgeX = smoothstep(0.00f, 0.08f, uv.x) * (1.0f - smoothstep(0.92f, 1.00f, uv.x));
-    float edgeY = smoothstep(0.00f, 0.08f, uv.y) * (1.0f - smoothstep(0.92f, 1.00f, uv.y));
-    float softMeshMask = saturate(edgeX * edgeY);
+    float maskTex = GetSlashMask(MaskTexture.Sample(LinearWrapSampler, uv));
+    float softMeshMask = saturate(GetSlashShapeMask(uv) * maskTex * SlashAlpha);
 
     // 일단 확실히 보이도록 강도 마스크를 넓게 준다.
     float ridge = 1.0f;
