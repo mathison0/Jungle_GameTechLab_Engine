@@ -274,6 +274,19 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 	}
 
+	// ── feedback (선택) — 없거나 일부만 있으면 구조체 기본값 유지 ──
+	FMusouFeedbackParams NewFeedback;
+	if (sol::optional<sol::table> FeedbackT = Root["feedback"])
+	{
+		if (sol::optional<sol::table> Burst = (*FeedbackT)["kill_burst"])
+		{
+			NewFeedback.KillBurstMinKills   = Burst->get_or("min_kills",  NewFeedback.KillBurstMinKills);
+			NewFeedback.KillBurstSlomoDur   = Burst->get_or("slomo_dur",  NewFeedback.KillBurstSlomoDur);
+			NewFeedback.KillBurstSlomoRate  = Burst->get_or("slomo_rate", NewFeedback.KillBurstSlomoRate);
+			NewFeedback.KillBurstShakeScale = Burst->get_or("shake",      NewFeedback.KillBurstShakeScale);
+		}
+	}
+
 	if (NewSpecs.empty() || NewLight[0].empty())
 	{
 		UE_LOG("[AttackData] specs 또는 light.idle 체인이 비어 있음 — 기존 데이터 유지");
@@ -288,6 +301,7 @@ bool FAttackDataRegistry::LoadFromLua()
 		HeavySlots[i]  = std::move(NewHeavy[i]);
 	}
 	BranchFinishers = std::move(NewBranch);
+	Feedback = NewFeedback;
 	++Version;
 	return true;
 }
@@ -353,6 +367,8 @@ void FAttackDataRegistry::LoadDefaults()
 		Single(MakeStep("Barbarian_Melee Attack 360 Low",    "Barbarian_Melee Attack 360 Low",    0.1f, "branch2", 0.45f, -1.0f, -1.0f)),
 		Single(MakeStep("Barbarian_Melee Attack 360 High",   "Barbarian_Melee Attack 360 High",   0.1f, "attack1", 0.45f, -1.0f, -1.0f)),
 	};
+
+	Feedback = FMusouFeedbackParams();   // 구조체 기본값
 
 	++Version;
 }

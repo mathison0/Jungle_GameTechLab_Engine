@@ -1,4 +1,5 @@
 ﻿#include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Game/Musou/Combat/AttackDataRegistry.h"
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/GameMode/MusouPlayerController.h"
@@ -31,13 +32,8 @@ namespace
 	constexpr float BloodVignetteMinIntensity = 0.55f;
 	constexpr float BloodVignetteFullDamage = 30.0f;
 
-	// ── 킬 버스트 연출 — 한 번의 공격 이벤트로 N마리 이상 쓸어담으면 슬로모 + 강셰이크 ──
-	// 글로벌 타임 딜레이션(ActionComponent::Slomo)이라 화면 전체가 잠깐 늘어진다.
-	// 히트스탑(0.05~0.12s)과 별개 — 둘 다 걸리면 RefreshGlobalTimeDilation 이 합성.
-	constexpr int32 KillBurstMinKills   = 5;
-	constexpr float KillBurstSlomoDur   = 0.25f;   // 초 (실시간)
-	constexpr float KillBurstSlomoRate  = 0.25f;   // 타임스케일 (0..1)
-	constexpr float KillBurstShakeScale = 0.4f;
+	// 킬 버스트 연출 파라미터(임계/슬로모/셰이크)는 attack_data.lua 의 feedback 테이블 —
+	// FAttackDataRegistry::GetFeedback() 으로 조회 (핫리로드 튜닝).
 
 	// 첫 로컬 플레이어의 카메라 매니저 — 셰이크 발동 지점. 없으면 null (조용히 스킵).
 	APlayerCameraManager* GetLocalCameraManager()
@@ -289,7 +285,10 @@ void AMusouGameMode::NotifyEnemiesKilled(int32 Count)
 
 	// 킬 버스트 슬로모 — 한 공격 이벤트(스윙 1회 판정)로 대량 처치 시 화면 전체가
 	// 잠깐 늘어지는 무쌍식 학살 연출. 피니셔류는 전방위 강판정이라 자연히 자주 발동.
-	if (Count >= KillBurstMinKills)
+	// 파라미터는 attack_data.lua feedback.kill_burst — 글로벌 타임 딜레이션이라
+	// 히트스탑(0.05~0.12s)과 겹치면 RefreshGlobalTimeDilation 이 합성한다.
+	const FMusouFeedbackParams& Feedback = FAttackDataRegistry::Get().GetFeedback();
+	if (Count >= Feedback.KillBurstMinKills)
 	{
 		if (APlayerController* PC = GEngine && GEngine->GetWorld() ? GEngine->GetWorld()->GetFirstPlayerController() : nullptr)
 		{
@@ -297,12 +296,12 @@ void AMusouGameMode::NotifyEnemiesKilled(int32 Count)
 			{
 				if (UActionComponent* Action = PlayerPawn->GetComponentByClass<UActionComponent>())
 				{
-					Action->Slomo(KillBurstSlomoDur, KillBurstSlomoRate);
+					Action->Slomo(Feedback.KillBurstSlomoDur, Feedback.KillBurstSlomoRate);
 				}
 			}
 			if (APlayerCameraManager* CamMgr = PC->GetPlayerCameraManager())
 			{
-				CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(KillBurstShakeScale);
+				CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(Feedback.KillBurstShakeScale);
 			}
 		}
 	}

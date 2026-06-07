@@ -125,4 +125,15 @@ return {
         -- 콤보 분기 피니셔 (□..△) — 인덱스 = 분기 시점 단수. 단수 초과 시 마지막으로 clamp
         branch = { "horizontal", "spin_low", "spin_high" },
     },
+
+    -- ── 전투 피드백 연출 (AMusouGameMode 소비) ──
+    feedback = {
+        -- 킬 버스트 — 스윙 1회 판정으로 min_kills 이상 처치 시 글로벌 슬로모 + 강셰이크
+        kill_burst = {
+            min_kills  = 5,
+            slomo_dur  = 0.25,  -- 슬로모 지속 (실시간 초)
+            slomo_rate = 0.25,  -- 타임스케일 (0..1, 낮을수록 느려짐)
+            shake      = 0.4,   -- 버스트 카메라 셰이크 강도
+        },
+    },
 }

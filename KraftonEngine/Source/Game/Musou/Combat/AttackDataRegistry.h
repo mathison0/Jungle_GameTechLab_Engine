@@ -53,6 +53,16 @@ struct FMusouAttackSlot
 	bool IsValid() const { return !Variants.empty(); }
 };
 
+// 전투 피드백 연출 파라미터 — attack_data.lua 의 feedback 테이블 (없으면 아래 기본값).
+// 소비처는 AMusouGameMode (킬 버스트 슬로모/셰이크).
+struct FMusouFeedbackParams
+{
+	int32 KillBurstMinKills   = 5;      // 스윙 1회 판정으로 이 수 이상 처치 시 발동
+	float KillBurstSlomoDur   = 0.25f;  // 슬로모 지속 (실시간 초)
+	float KillBurstSlomoRate  = 0.25f;  // 슬로모 타임스케일 (0..1)
+	float KillBurstShakeScale = 0.4f;   // 버스트 카메라 셰이크 강도
+};
+
 class FAttackDataRegistry
 {
 public:
@@ -77,6 +87,9 @@ public:
 	// 테이블이 비었으면 nullptr.
 	const FMusouAttackSlot* GetBranchFinisher(int32 ComboStep) const;
 
+	// 전투 피드백 연출 파라미터 (킬 버스트 슬로모/셰이크 등).
+	const FMusouFeedbackParams& GetFeedback() const { return Feedback; }
+
 private:
 	FAttackDataRegistry() = default;
 
@@ -89,6 +102,7 @@ private:
 	TArray<FMusouAttackSlot> LightChains[3];   // EAttackContext 인덱스
 	FMusouAttackSlot         HeavySlots[3];    // IsValid() == false 면 미정의
 	TArray<FMusouAttackSlot> BranchFinishers;
+	FMusouFeedbackParams     Feedback;
 
 	int32 Version = 0;
 	bool  bLoadedOnce = false;
