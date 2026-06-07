@@ -3,6 +3,7 @@
 #include "Animation/AnimationMode.h"
 #include "Animation/Instance/LuaAnimInstance.h"
 #include "Component/Movement/CharacterMovementComponent.h"
+#include "Component/Primitive/HitFlashComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Game/Musou/Boss/BossPatternComponent.h"
 #include "Game/Musou/Boss/BossPatternDataRegistry.h"
@@ -40,12 +41,16 @@ void AMusouBossCharacter::InitDefaultComponents(const FString& SkeletalMeshFileN
 	PatternComponent = AddComponent<UBossPatternComponent>();
 	PatternComponent->BossId = BossId;
 
+	HitFlashComponent = AddComponent<UHitFlashComponent>();
+
 	ApplyBossDefinition();
+	InitializeHitFlash();
 }
 
 void AMusouBossCharacter::BeginPlay()
 {
 	ApplyBossDefinition();
+	InitializeHitFlash();
 	Super::BeginPlay();
 }
 
@@ -54,7 +59,9 @@ void AMusouBossCharacter::PostDuplicate()
 	Super::PostDuplicate();
 	BattleComponent = GetComponentByClass<UBattleComponent>();
 	PatternComponent = GetComponentByClass<UBossPatternComponent>();
+	HitFlashComponent = GetComponentByClass<UHitFlashComponent>();
 	ApplyBossDefinition();
+	InitializeHitFlash();
 }
 
 void AMusouBossCharacter::PostLoad()
@@ -62,7 +69,9 @@ void AMusouBossCharacter::PostLoad()
 	Super::PostLoad();
 	BattleComponent = GetComponentByClass<UBattleComponent>();
 	PatternComponent = GetComponentByClass<UBossPatternComponent>();
+	HitFlashComponent = GetComponentByClass<UHitFlashComponent>();
 	ApplyBossDefinition();
+	InitializeHitFlash();
 }
 
 void AMusouBossCharacter::ApplyBossDefinition()
@@ -111,5 +120,23 @@ void AMusouBossCharacter::EnsureBossAnimation(const FString& AnimScript)
 	{
 		LuaAnim->ScriptFile = AnimScript;
 		Mesh->InitializeAnimation();
+	}
+}
+
+void AMusouBossCharacter::InitializeHitFlash()
+{
+	if (!HitFlashComponent)
+	{
+		HitFlashComponent = GetComponentByClass<UHitFlashComponent>();
+	}
+
+	if (!HitFlashComponent)
+	{
+		HitFlashComponent = AddComponent<UHitFlashComponent>();
+	}
+
+	if (HitFlashComponent && Mesh)
+	{
+		HitFlashComponent->InitializeFromSkinnedMesh(Mesh);
 	}
 }

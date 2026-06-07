@@ -7,6 +7,7 @@
 
 class UBattleComponent;
 class UBossPatternComponent;
+class UHitFlashComponent;
 
 UCLASS()
 class AMusouBossCharacter : public ALuaCharacter
@@ -36,7 +37,9 @@ public:
 private:
 	void ApplyBossDefinition();
 	void EnsureBossAnimation(const FString& AnimScript);
+	void InitializeHitFlash();
 
 	UBattleComponent* BattleComponent = nullptr;
 	UBossPatternComponent* PatternComponent = nullptr;
+	UHitFlashComponent* HitFlashComponent = nullptr;
 };
