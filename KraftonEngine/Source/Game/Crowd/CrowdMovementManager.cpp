@@ -6,6 +6,7 @@
 namespace
 {
 	constexpr float RadToDeg = 57.295779513082320876f;
+	constexpr float GoldenAngleRadians = 2.39996322972865332f;
 
 	FVector ToXY(const FVector& V)
 	{
@@ -27,6 +28,12 @@ namespace
 
 		const float InvLen = 1.0f / std::sqrt(LenSq);
 		return FVector(V.X * InvLen, V.Y * InvLen, 0.0f);
+	}
+
+	FVector DeterministicUnitDirectionXY(uint32 UnitIndex)
+	{
+		const float Angle = static_cast<float>(UnitIndex) * GoldenAngleRadians;
+		return FVector(std::cos(Angle), std::sin(Angle), 0.0f);
 	}
 
 	float DistanceSquaredXY(const FVector& A, const FVector& B)
@@ -259,6 +266,31 @@ void FCrowdMovementManager::Update(
 			}
 		}
 
+		FVector PlayerSeparation = FVector::ZeroVector;
+		if (Settings.bEnablePlayerSeparation
+			&& Settings.bHasPlayerSeparationTarget
+			&& Settings.PlayerSeparationWeight > 0.0f)
+		{
+			const float EffectiveRadius = (std::max)(
+				Settings.PlayerProxyRadius + Unit.Radius + Settings.PlayerSeparationPadding,
+				0.0f);
+			const FVector AwayFromPlayer = ToXY(Unit.Position - Settings.PlayerSeparationLocation);
+			const float DistSq = LengthSquaredXY(AwayFromPlayer);
+			if (EffectiveRadius > 0.0f && DistSq < EffectiveRadius * EffectiveRadius)
+			{
+				if (DistSq > 1.e-6f)
+				{
+					const float Dist = std::sqrt(DistSq);
+					const float Strength = (EffectiveRadius - Dist) / EffectiveRadius;
+					PlayerSeparation = (AwayFromPlayer / Dist) * Strength;
+				}
+				else
+				{
+					PlayerSeparation = DeterministicUnitDirectionXY(Index);
+				}
+			}
+		}
+
 		if (Settings.bWaitWhenChaseBlocked && Unit.State == EUnitState::Chase && LengthSquaredXY(Desired) > 1.e-6f)
 		{
 			bool bCurrentlyOverlapping = false;
@@ -325,14 +357,23 @@ void FCrowdMovementManager::Update(
 			}
 		}
 
+		const bool bHasPlayerSeparation = LengthSquaredXY(PlayerSeparation) > 1.e-6f;
 		FVector MoveDir = Desired;
-		if (LengthSquaredXY(Separation) > 1.e-6f)
+		if (Unit.State == EUnitState::Attack)
+		{
+			MoveDir = bHasPlayerSeparation ? PlayerSeparation * Settings.PlayerSeparationWeight : FVector::ZeroVector;
+		}
+		else if (LengthSquaredXY(Separation) > 1.e-6f)
 		{
 			MoveDir += NormalizedXY(Separation) * Archetype.SeparationWeight;
 		}
+		if (Unit.State != EUnitState::Attack && bHasPlayerSeparation)
+		{
+			MoveDir += PlayerSeparation * Settings.PlayerSeparationWeight;
+		}
 
 		MoveDir = NormalizedXY(MoveDir);
-		if (LengthSquaredXY(MoveDir) <= 1.e-6f || Unit.State == EUnitState::Attack)
+		if (LengthSquaredXY(MoveDir) <= 1.e-6f)
 		{
 			Unit.Velocity = FVector::ZeroVector;
 			ApplySurfaceFollowing(Unit, GroundQuery, Settings);

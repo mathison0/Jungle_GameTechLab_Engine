@@ -140,6 +140,9 @@ FCrowdMovementSettings ULargeScaleUnitManagerComponent::BuildMovementSettings() 
 	Settings.CircleAroundSpeedScale = CircleAroundSpeedScale;
 	Settings.CircleAroundRadiusTolerance = CircleAroundRadiusTolerance;
 	Settings.CircleAroundRadialCorrectionWeight = CircleAroundRadialCorrectionWeight;
+	Settings.bEnablePlayerSeparation = bEnablePlayerSeparation;
+	Settings.PlayerSeparationPadding = PlayerSeparationPadding;
+	Settings.PlayerSeparationWeight = PlayerSeparationWeight;
 	Settings.GroundTraceUp = GroundTraceUp;
 	Settings.GroundTraceDown = GroundTraceDown;
 	Settings.GroundHeightOffset = GroundHeightOffset;
@@ -333,12 +336,15 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 
 	UpdateCrowdLOD(DeltaTime);
 
-	const FCrowdMovementSettings MovementSettings = BuildMovementSettings();
+	FCrowdMovementSettings MovementSettings = BuildMovementSettings();
 	const FCrowdCombatSettings CombatSettings = BuildCombatSettings();
 	const FCrowdEngagementSettings EngagementSettings = BuildEngagementSettings();
 	APawn* PlayerPawn = ResolvePlayerPawn();
 	const bool bHasPlayerPawn = PlayerPawn != nullptr;
 	const FVector PlayerLocation = PlayerPawn ? PlayerPawn->GetActorLocation() : FVector::ZeroVector;
+	MovementSettings.bHasPlayerSeparationTarget = bHasPlayerPawn;
+	MovementSettings.PlayerSeparationLocation = PlayerLocation;
+	MovementSettings.PlayerProxyRadius = EngagementSettings.PlayerProxyRadius;
 
 	TArray<FUnitHandle> RemovedHandles;
 	CombatManager.UpdateStateTimers(DeltaTime, UnitStore, RemovedHandles);
@@ -653,6 +659,12 @@ void ULargeScaleUnitManagerComponent::DrawDebugUnits()
 		const FVector PlayerLocation = PlayerPawn->GetActorLocation() + FVector(0.0f, 0.0f, 0.05f);
 		DrawDebugCircleXY(World, PlayerLocation, (std::max)(MeleeSlotRadius, 0.0f), 48, FColor(255, 160, 0), 0.0f);
 		DrawDebugCircleXY(World, PlayerLocation, (std::max)(RangedSlotRadius, 0.0f), 64, FColor(0, 160, 255), 0.0f);
+		if (bEnablePlayerSeparation)
+		{
+			const float MaxUnitRadius = (std::max)((std::max)(DefaultUnitRadius, RangedUnitRadius), 0.0f);
+			const float SeparationRadius = (std::max)(PlayerProxyRadius + PlayerSeparationPadding + MaxUnitRadius, 0.0f);
+			DrawDebugCircleXY(World, PlayerLocation, SeparationRadius, 40, FColor(80, 255, 120), 0.0f);
+		}
 	}
 
 	const TArray<FCrowdUnit>& Units = UnitStore.GetUnits();

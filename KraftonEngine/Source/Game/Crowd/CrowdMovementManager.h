@@ -14,6 +14,12 @@ struct FCrowdMovementSettings
 	float CircleAroundSpeedScale = 0.75f;
 	float CircleAroundRadiusTolerance = 0.75f;
 	float CircleAroundRadialCorrectionWeight = 0.65f;
+	bool bHasPlayerSeparationTarget = false;
+	FVector PlayerSeparationLocation = FVector::ZeroVector;
+	float PlayerProxyRadius = 0.6f;
+	bool bEnablePlayerSeparation = true;
+	float PlayerSeparationPadding = 0.15f;
+	float PlayerSeparationWeight = 2.0f;
 	float GroundTraceUp = 5.0f;
 	float GroundTraceDown = 50.0f;
 	float GroundHeightOffset = 0.0f;

@@ -183,6 +183,15 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Proxy Radius", Min=0.0f, Max=100.0f, Speed=0.05f)
 	float PlayerProxyRadius = 0.6f;
 
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Enable Player Separation")
+	bool bEnablePlayerSeparation = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Separation Padding", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float PlayerSeparationPadding = 0.15f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Separation Weight", Min=0.0f, Max=20.0f, Speed=0.05f)
+	float PlayerSeparationWeight = 2.0f;
+
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Melee Combat Slot Count", Min=0, Max=64, Speed=1)
 	int32 MeleeCombatSlotCount = 8;
 
