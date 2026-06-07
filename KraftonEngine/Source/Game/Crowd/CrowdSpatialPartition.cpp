@@ -27,7 +27,7 @@ void FCrowdSpatialPartition::Rebuild(const TArray<FCrowdUnit>& Units, float InCe
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
 		const FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
+		if (!IsCrowdUnitCombatActive(Unit))
 		{
 			continue;
 		}
@@ -75,7 +75,7 @@ void FCrowdSpatialPartition::QueryUnitsInRadius(
 				}
 
 				const FCrowdUnit& Unit = Units[UnitIndex];
-				if (Unit.bAlive && DistanceSquaredXY(Unit.Position, Center) <= RadiusSq)
+				if (IsCrowdUnitCombatActive(Unit) && DistanceSquaredXY(Unit.Position, Center) <= RadiusSq)
 				{
 					OutIndices.push_back(UnitIndex);
 				}

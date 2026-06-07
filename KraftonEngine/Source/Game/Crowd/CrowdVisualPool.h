@@ -11,9 +11,18 @@ class ULargeScaleUnitManagerComponent;
 class USkeletalMesh;
 class UWorld;
 
+struct FCrowdVisualDesc
+{
+	FSoftObjectPtr SkeletalMeshPath = "None";
+	TSubclassOf<UAnimInstance> AnimInstanceClass;
+	FVector Scale = FVector(1.0f, 1.0f, 1.0f);
+};
+
 class FCrowdVisualPool
 {
 public:
+	using FResolveVisualDescFunc = TFunction<FCrowdVisualDesc(const FUnitRenderData&)>;
+
 	const TArray<FUnitRenderData>& GetRenderData() const { return RenderData; }
 
 	void ClearRenderData();
@@ -22,9 +31,7 @@ public:
 		ULargeScaleUnitManagerComponent* Manager,
 		UWorld* World,
 		bool bEnableSkeletalVisuals,
-		const FSoftObjectPtr& VisualSkeletalMeshPath,
-		const TSubclassOf<UAnimInstance>& VisualAnimInstanceClass,
-		const FVector& VisualScale);
+		const FResolveVisualDescFunc& ResolveVisualDesc);
 
 	void ReleaseVisualActorForHandle(FUnitHandle Handle);
 	void DeactivateAllVisualActors();
@@ -32,14 +39,13 @@ public:
 
 private:
 	ACrowdUnitVisualActor* AcquireVisualActor(UWorld* World);
-	USkeletalMesh* ResolveVisualSkeletalMesh(bool bEnableSkeletalVisuals, const FSoftObjectPtr& VisualSkeletalMeshPath);
-	UClass* ResolveVisualAnimClass(const TSubclassOf<UAnimInstance>& VisualAnimInstanceClass) const;
+	USkeletalMesh* ResolveVisualSkeletalMesh(const FSoftObjectPtr& SkeletalMeshPath);
+	UClass* ResolveVisualAnimClass(const TSubclassOf<UAnimInstance>& AnimInstanceClass) const;
 
 private:
 	TArray<FUnitRenderData> RenderData;
 	TArray<ACrowdUnitVisualActor*> VisualActors;
 	TArray<ACrowdUnitVisualActor*> FreeVisualActors;
 	TMap<uint32, ACrowdUnitVisualActor*> ActiveVisualActors;
-	USkeletalMesh* CachedVisualSkeletalMesh = nullptr;
-	FString CachedVisualSkeletalMeshPath;
+	TMap<FString, USkeletalMesh*> CachedVisualSkeletalMeshes;
 };

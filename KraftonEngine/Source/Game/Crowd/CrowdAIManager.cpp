@@ -22,7 +22,7 @@ void FCrowdAIManager::Update(
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
 		FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
+		if (!IsCrowdUnitCombatActive(Unit) || IsCrowdUnitControlLocked(Unit.State))
 		{
 			continue;
 		}
@@ -36,10 +36,17 @@ void FCrowdAIManager::Update(
 		Unit.ThinkTimer = RandomThinkInterval ? RandomThinkInterval() : 0.1f;
 
 		const FCrowdUnit* Target = UnitStore.ResolveUnit(Unit.Target);
-		if (Target && !IsHostile(Unit.Team, Target->Team))
+		if (Target)
 		{
-			Target = nullptr;
-			Unit.Target = {};
+			const float LoseTargetRange = (std::max)(Unit.Archetype.LoseTargetRange, 0.0f);
+			const bool bTargetStillUsable = IsCrowdUnitCombatActive(*Target)
+				&& IsHostile(Unit.Team, Target->Team)
+				&& DistanceSquaredXY(Unit.Position, Target->Position) <= LoseTargetRange * LoseTargetRange;
+			if (!bTargetStillUsable)
+			{
+				Target = nullptr;
+				Unit.Target = {};
+			}
 		}
 
 		if (!Target)
@@ -55,7 +62,8 @@ void FCrowdAIManager::Update(
 		}
 
 		const float AttackRange = (std::max)(Unit.Archetype.AttackRange + Unit.Radius + Target->Radius, 0.0f);
-		const bool bInAttackRange = DistanceSquaredXY(Unit.Position, Target->Position) <= AttackRange * AttackRange;
+		const float DistanceSq = DistanceSquaredXY(Unit.Position, Target->Position);
+		const bool bInAttackRange = DistanceSq <= AttackRange * AttackRange;
 		Unit.State = bInAttackRange ? EUnitState::Attack : EUnitState::Chase;
 	}
 }
@@ -73,7 +81,7 @@ FUnitHandle FCrowdAIManager::FindNearestHostile(
 	}
 
 	const FCrowdUnit& Unit = Units[UnitIndex];
-	if (!Unit.bAlive)
+	if (!IsCrowdUnitCombatActive(Unit))
 	{
 		return {};
 	}
@@ -92,7 +100,7 @@ FUnitHandle FCrowdAIManager::FindNearestHostile(
 		}
 
 		const FCrowdUnit& Candidate = Units[CandidateIndex];
-		if (!Candidate.bAlive || !IsHostile(Unit.Team, Candidate.Team))
+		if (!IsCrowdUnitCombatActive(Candidate) || !IsHostile(Unit.Team, Candidate.Team))
 		{
 			continue;
 		}

@@ -47,9 +47,7 @@ void FCrowdVisualPool::SyncVisualActors(
 	ULargeScaleUnitManagerComponent* Manager,
 	UWorld* World,
 	bool bEnableSkeletalVisuals,
-	const FSoftObjectPtr& VisualSkeletalMeshPath,
-	const TSubclassOf<UAnimInstance>& VisualAnimInstanceClass,
-	const FVector& VisualScale)
+	const FResolveVisualDescFunc& ResolveVisualDesc)
 {
 	if (!bEnableSkeletalVisuals)
 	{
@@ -57,14 +55,6 @@ void FCrowdVisualPool::SyncVisualActors(
 		return;
 	}
 
-	USkeletalMesh* VisualMesh = ResolveVisualSkeletalMesh(bEnableSkeletalVisuals, VisualSkeletalMeshPath);
-	if (!VisualMesh)
-	{
-		DeactivateAllVisualActors();
-		return;
-	}
-
-	UClass* AnimClass = ResolveVisualAnimClass(VisualAnimInstanceClass);
 	TSet<uint32> SeenUnitIndices;
 	SeenUnitIndices.reserve(RenderData.size());
 
@@ -75,6 +65,14 @@ void FCrowdVisualPool::SyncVisualActors(
 			continue;
 		}
 
+		const FCrowdVisualDesc VisualDesc = ResolveVisualDesc ? ResolveVisualDesc(Data) : FCrowdVisualDesc();
+		USkeletalMesh* VisualMesh = ResolveVisualSkeletalMesh(VisualDesc.SkeletalMeshPath);
+		if (!VisualMesh)
+		{
+			continue;
+		}
+
+		UClass* AnimClass = ResolveVisualAnimClass(VisualDesc.AnimInstanceClass);
 		SeenUnitIndices.insert(Data.Handle.Index);
 
 		ACrowdUnitVisualActor* VisualActor = nullptr;
@@ -100,7 +98,7 @@ void FCrowdVisualPool::SyncVisualActors(
 		}
 
 		VisualActor->InitializeVisual(Manager, VisualMesh, AnimClass);
-		VisualActor->SetActorScale(VisualScale);
+		VisualActor->SetActorScale(VisualDesc.Scale);
 		VisualActor->ApplyRenderData(Data);
 	}
 
@@ -172,6 +170,7 @@ void FCrowdVisualPool::DestroyVisualActors(UWorld* World, bool bDestroyWorldActo
 	VisualActors.clear();
 	FreeVisualActors.clear();
 	ActiveVisualActors.clear();
+	CachedVisualSkeletalMeshes.clear();
 }
 
 ACrowdUnitVisualActor* FCrowdVisualPool::AcquireVisualActor(UWorld* World)
@@ -196,30 +195,19 @@ ACrowdUnitVisualActor* FCrowdVisualPool::AcquireVisualActor(UWorld* World)
 	return Actor;
 }
 
-USkeletalMesh* FCrowdVisualPool::ResolveVisualSkeletalMesh(
-	bool bEnableSkeletalVisuals,
-	const FSoftObjectPtr& VisualSkeletalMeshPath)
+USkeletalMesh* FCrowdVisualPool::ResolveVisualSkeletalMesh(const FSoftObjectPtr& SkeletalMeshPath)
 {
-	if (!bEnableSkeletalVisuals)
-	{
-		return nullptr;
-	}
-
-	const FString MeshPath = VisualSkeletalMeshPath.ToString();
+	const FString MeshPath = SkeletalMeshPath.ToString();
 	if (MeshPath.empty() || MeshPath == "None")
 	{
-		CachedVisualSkeletalMesh = nullptr;
-		CachedVisualSkeletalMeshPath.clear();
 		return nullptr;
 	}
 
-	if (CachedVisualSkeletalMesh && CachedVisualSkeletalMeshPath == MeshPath)
+	auto CachedIt = CachedVisualSkeletalMeshes.find(MeshPath);
+	if (CachedIt != CachedVisualSkeletalMeshes.end())
 	{
-		return CachedVisualSkeletalMesh;
+		return CachedIt->second;
 	}
-
-	CachedVisualSkeletalMesh = nullptr;
-	CachedVisualSkeletalMeshPath = MeshPath;
 
 	ID3D11Device* Device = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
 	if (!Device)
@@ -227,13 +215,17 @@ USkeletalMesh* FCrowdVisualPool::ResolveVisualSkeletalMesh(
 		return nullptr;
 	}
 
-	CachedVisualSkeletalMesh = FMeshManager::LoadSkeletalMesh(MeshPath, Device);
-	return CachedVisualSkeletalMesh;
+	USkeletalMesh* VisualMesh = FMeshManager::LoadSkeletalMesh(MeshPath, Device);
+	if (VisualMesh)
+	{
+		CachedVisualSkeletalMeshes[MeshPath] = VisualMesh;
+	}
+	return VisualMesh;
 }
 
-UClass* FCrowdVisualPool::ResolveVisualAnimClass(const TSubclassOf<UAnimInstance>& VisualAnimInstanceClass) const
+UClass* FCrowdVisualPool::ResolveVisualAnimClass(const TSubclassOf<UAnimInstance>& AnimInstanceClass) const
 {
-	if (UClass* Class = VisualAnimInstanceClass.Get())
+	if (UClass* Class = AnimInstanceClass.Get())
 	{
 		return Class;
 	}

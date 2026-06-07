@@ -27,6 +27,68 @@ namespace
 		const float DY = A.Y - B.Y;
 		return DX * DX + DY * DY;
 	}
+
+	int32 ReactionPriority(EUnitState State)
+	{
+		switch (State)
+		{
+		case EUnitState::Dead:
+			return 3;
+		case EUnitState::KnockDown:
+			return 2;
+		case EUnitState::Hit:
+			return 1;
+		default:
+			return 0;
+		}
+	}
+
+	bool ApplyTimedReactionState(
+		FCrowdUnit& Unit,
+		EUnitState NewState,
+		float Duration,
+		const FDamageEvent& Event)
+	{
+		const int32 CurrentPriority = ReactionPriority(Unit.State);
+		const int32 NewPriority = ReactionPriority(NewState);
+		if (CurrentPriority > NewPriority)
+		{
+			return false;
+		}
+
+		const EUnitState PreviousState = Unit.State;
+		Unit.State = NewState;
+		Unit.StateTimeRemaining = (std::max)(Duration, 0.0f);
+		Unit.AnimState = static_cast<uint16>(Unit.State);
+		Unit.AnimTime = 0.0f;
+
+		if (NewState == EUnitState::Dead)
+		{
+			Unit.Target = {};
+			Unit.Velocity = FVector::ZeroVector;
+			Unit.KnockbackTimeRemaining = 0.0f;
+			Unit.KnockbackVelocity = FVector::ZeroVector;
+			return true;
+		}
+
+		const FVector KnockbackDirection = NormalizedXY(Event.HitDirection);
+		const bool bHasKnockback = Event.KnockbackDistance > 0.0f
+			&& Event.KnockbackDuration > 0.0f
+			&& !KnockbackDirection.IsNearlyZero();
+		if (bHasKnockback)
+		{
+			Unit.KnockbackTimeRemaining = Event.KnockbackDuration;
+			Unit.KnockbackVelocity = KnockbackDirection * (Event.KnockbackDistance / Event.KnockbackDuration);
+		}
+		else if (PreviousState != NewState)
+		{
+			Unit.KnockbackTimeRemaining = 0.0f;
+			Unit.KnockbackVelocity = FVector::ZeroVector;
+			Unit.Velocity = FVector::ZeroVector;
+		}
+
+		return true;
+	}
 }
 
 void FCrowdCombatManager::ClearDamageEvents()
@@ -105,7 +167,10 @@ void FCrowdCombatManager::HandleAttackEvent(
 			FUnitHandle{ UnitIndex, Unit.Generation },
 			Event.Damage,
 			NormalizedXY(Unit.Position - Event.Origin),
-			true
+			true,
+			true,
+			Event.Spec.KnockbackDist,
+			Event.Spec.KnockbackDur
 		});
 		++HitCount;
 	}
@@ -116,13 +181,56 @@ void FCrowdCombatManager::HandleAttackEvent(
 	}
 }
 
+void FCrowdCombatManager::UpdateStateTimers(
+	float DeltaTime,
+	FCrowdUnitStore& UnitStore,
+	TArray<FUnitHandle>& OutRemovedHandles)
+{
+	OutRemovedHandles.clear();
+
+	TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
+	const float TimeStep = (std::max)(DeltaTime, 0.0f);
+	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
+	{
+		FCrowdUnit& Unit = Units[Index];
+		if (!Unit.bAlive || !IsCrowdUnitControlLocked(Unit.State))
+		{
+			continue;
+		}
+
+		Unit.StateTimeRemaining = (std::max)(Unit.StateTimeRemaining - TimeStep, 0.0f);
+		if (Unit.StateTimeRemaining > 0.0f)
+		{
+			continue;
+		}
+
+		if (Unit.State == EUnitState::Dead)
+		{
+			FUnitHandle Handle{ Index, Unit.Generation };
+			if (UnitStore.RemoveUnit(Handle))
+			{
+				OutRemovedHandles.push_back(Handle);
+			}
+			continue;
+		}
+
+		Unit.State = EUnitState::Idle;
+		Unit.StateTimeRemaining = 0.0f;
+		Unit.KnockbackTimeRemaining = 0.0f;
+		Unit.KnockbackVelocity = FVector::ZeroVector;
+		Unit.Velocity = FVector::ZeroVector;
+		Unit.AnimState = static_cast<uint16>(Unit.State);
+		Unit.AnimTime = 0.0f;
+	}
+}
+
 void FCrowdCombatManager::UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitStore)
 {
 	TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
 		FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive)
+		if (!IsCrowdUnitCombatActive(Unit))
 		{
 			continue;
 		}
@@ -138,7 +246,7 @@ void FCrowdCombatManager::UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitSto
 
 		const FUnitArchetype& Archetype = Unit.Archetype;
 		const FCrowdUnit* Target = UnitStore.ResolveUnit(Unit.Target);
-		if (!Target)
+		if (!Target || !IsCrowdUnitCombatActive(*Target))
 		{
 			Unit.State = EUnitState::Idle;
 			continue;
@@ -163,6 +271,7 @@ void FCrowdCombatManager::UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitSto
 void FCrowdCombatManager::ProcessDamageEvents(
 	FCrowdUnitStore& UnitStore,
 	AMusouGameMode* GameMode,
+	const FCrowdCombatSettings& Settings,
 	TArray<FUnitHandle>& OutRemovedHandles)
 {
 	OutRemovedHandles.clear();
@@ -178,7 +287,7 @@ void FCrowdCombatManager::ProcessDamageEvents(
 	for (const FDamageEvent& Event : Events)
 	{
 		FCrowdUnit* Target = UnitStore.ResolveUnit(Event.Target);
-		if (!Target || Event.Damage <= 0.0f)
+		if (!Target || !IsCrowdUnitCombatActive(*Target) || Event.Damage <= 0.0f)
 		{
 			continue;
 		}
@@ -186,15 +295,29 @@ void FCrowdCombatManager::ProcessDamageEvents(
 		Target->HP -= Event.Damage;
 		if (Target->HP <= 0.0f)
 		{
+			Target->HP = 0.0f;
 			if (Event.bCountAsPlayerKill && Target->Team == EUnitTeam::Enemy)
 			{
 				++PlayerKillCount;
 			}
 
-			if (UnitStore.RemoveUnit(Event.Target))
+			ApplyTimedReactionState(*Target, EUnitState::Dead, Settings.DeadStateDuration, Event);
+			if (Settings.DeadStateDuration <= 0.0f && UnitStore.RemoveUnit(Event.Target))
 			{
 				OutRemovedHandles.push_back(Event.Target);
 			}
+			continue;
+		}
+
+		const bool bShouldKnockDown = Event.bCanKnockDown
+			&& Event.KnockbackDistance >= (std::max)(Settings.KnockDownMinKnockbackDistance, 0.0f);
+		if (bShouldKnockDown)
+		{
+			ApplyTimedReactionState(*Target, EUnitState::KnockDown, Settings.KnockDownStateDuration, Event);
+		}
+		else
+		{
+			ApplyTimedReactionState(*Target, EUnitState::Hit, Settings.HitStateDuration, Event);
 		}
 	}
 

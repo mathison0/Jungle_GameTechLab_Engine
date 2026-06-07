@@ -100,7 +100,7 @@ void FCrowdMovementManager::Update(
 	float MaxAliveRadius = 0.0f;
 	for (const FCrowdUnit& Unit : Units)
 	{
-		if (Unit.bAlive)
+		if (IsCrowdUnitCombatActive(Unit))
 		{
 			MaxAliveRadius = (std::max)(MaxAliveRadius, Unit.Radius);
 		}
@@ -114,15 +114,51 @@ void FCrowdMovementManager::Update(
 			continue;
 		}
 
+		if (Unit.State == EUnitState::Dead)
+		{
+			Unit.Velocity = FVector::ZeroVector;
+			continue;
+		}
+
+		if (Unit.State == EUnitState::Hit || Unit.State == EUnitState::KnockDown)
+		{
+			const float KnockbackStep = (std::min)(DeltaTime, (std::max)(Unit.KnockbackTimeRemaining, 0.0f));
+			if (KnockbackStep > 0.0f && LengthSquaredXY(Unit.KnockbackVelocity) > 1.e-6f)
+			{
+				Unit.Position += Unit.KnockbackVelocity * KnockbackStep;
+				Unit.Velocity = Unit.KnockbackVelocity;
+				Unit.KnockbackTimeRemaining = (std::max)(Unit.KnockbackTimeRemaining - DeltaTime, 0.0f);
+			}
+			else
+			{
+				Unit.Velocity = FVector::ZeroVector;
+				Unit.KnockbackTimeRemaining = 0.0f;
+			}
+
+			ApplySurfaceFollowing(Unit, GroundQuery, Settings);
+			continue;
+		}
+
 		const FUnitArchetype& Archetype = Unit.Archetype;
 		FVector Desired = FVector::ZeroVector;
 		FVector FacingDir = FVector::ZeroVector;
-		if (Unit.State == EUnitState::Chase || Unit.State == EUnitState::Attack)
+		if (Unit.State == EUnitState::Chase || Unit.State == EUnitState::Attack || Unit.State == EUnitState::CircleAround)
 		{
 			if (const FCrowdUnit* Target = UnitStore.ResolveUnit(Unit.Target))
 			{
-				Desired = NormalizedXY(Target->Position - Unit.Position);
-				FacingDir = Desired;
+				if (IsCrowdUnitCombatActive(*Target))
+				{
+					FacingDir = NormalizedXY(Target->Position - Unit.Position);
+					Desired = FacingDir;
+					if (Unit.State == EUnitState::CircleAround)
+					{
+						Desired = FVector(-FacingDir.Y, FacingDir.X, 0.0f);
+					}
+				}
+				else
+				{
+					Unit.State = EUnitState::Idle;
+				}
 			}
 			else
 			{

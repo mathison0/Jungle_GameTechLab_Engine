@@ -33,7 +33,7 @@ void UCrowdUnitAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	LastCrowdState = VisualActor->GetCrowdState();
 	LastCrowdCombatType = VisualActor->GetCrowdCombatType();
-	if (LastCrowdState == EUnitState::Chase)
+	if (IsCrowdUnitMovingState(LastCrowdState))
 	{
 		Speed = VisualActor->GetCrowdSpeed();
 	}

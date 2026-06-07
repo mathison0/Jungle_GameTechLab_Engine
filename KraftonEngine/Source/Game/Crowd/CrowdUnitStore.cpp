@@ -143,6 +143,14 @@ bool FCrowdUnitStore::IsValidUnitHandle(FUnitHandle Handle) const
 		&& Units[Handle.Index].Generation == Handle.Generation;
 }
 
+bool FCrowdUnitStore::IsUnitCombatActive(FUnitHandle Handle) const
+{
+	return Handle.IsValid()
+		&& Handle.Index < Units.size()
+		&& Units[Handle.Index].Generation == Handle.Generation
+		&& IsCrowdUnitCombatActive(Units[Handle.Index]);
+}
+
 FCrowdUnit* FCrowdUnitStore::ResolveUnit(FUnitHandle Handle)
 {
 	return IsValidUnitHandle(Handle) ? &Units[Handle.Index] : nullptr;
@@ -158,7 +166,7 @@ int32 FCrowdUnitStore::GetAliveCount() const
 	int32 Count = 0;
 	for (const FCrowdUnit& Unit : Units)
 	{
-		if (Unit.bAlive)
+		if (IsCrowdUnitCombatActive(Unit))
 		{
 			++Count;
 		}
@@ -171,7 +179,7 @@ int32 FCrowdUnitStore::GetTeamAliveCount(EUnitTeam Team) const
 	int32 Count = 0;
 	for (const FCrowdUnit& Unit : Units)
 	{
-		if (Unit.bAlive && Unit.Team == Team)
+		if (IsCrowdUnitCombatActive(Unit) && Unit.Team == Team)
 		{
 			++Count;
 		}
@@ -184,7 +192,7 @@ int32 FCrowdUnitStore::GetTeamCombatTypeAliveCount(EUnitTeam Team, EUnitCombatTy
 	int32 Count = 0;
 	for (const FCrowdUnit& Unit : Units)
 	{
-		if (Unit.bAlive && Unit.Team == Team && Unit.Archetype.CombatType == CombatType)
+		if (IsCrowdUnitCombatActive(Unit) && Unit.Team == Team && Unit.Archetype.CombatType == CombatType)
 		{
 			++Count;
 		}

@@ -61,6 +61,8 @@ public:
 private:
 	FUnitArchetype BuildUnitArchetype(EUnitCombatType CombatType) const;
 	FCrowdMovementSettings BuildMovementSettings() const;
+	FCrowdCombatSettings BuildCombatSettings() const;
+	FCrowdVisualDesc BuildVisualDesc(EUnitTeam Team, EUnitCombatType CombatType) const;
 
 	void ActivateUnit(FUnitHandle Handle, EUnitTeam Team, const FUnitArchetype& Archetype, const FVector& Position);
 	void FlushPendingSpawns();
@@ -98,14 +100,41 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Enable Skeletal Visuals")
 	bool bEnableSkeletalVisuals = true;
 
-	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Visual Skeletal Mesh", AssetType="SkeletalMesh")
-	FSoftObjectPtr VisualSkeletalMeshPath = "Content/Data/GameJam/Barbarian/Barbarian_SkeletalMesh.uasset";
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Skeletal Mesh", AssetType="SkeletalMesh")
+	FSoftObjectPtr AllyMeleeVisualSkeletalMeshPath = "None";
 
-	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Visual Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
-	TSubclassOf<UAnimInstance> VisualAnimInstanceClass;
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
+	TSubclassOf<UAnimInstance> AllyMeleeVisualAnimInstanceClass;
 
-	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Visual Scale")
-	FVector VisualScale = FVector(1.0f, 1.0f, 1.0f);
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Scale")
+	FVector AllyMeleeVisualScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Ranged", DisplayName="Ally Ranged Skeletal Mesh", AssetType="SkeletalMesh")
+	FSoftObjectPtr AllyRangedVisualSkeletalMeshPath = "None";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Ranged", DisplayName="Ally Ranged Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
+	TSubclassOf<UAnimInstance> AllyRangedVisualAnimInstanceClass;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Ranged", DisplayName="Ally Ranged Scale")
+	FVector AllyRangedVisualScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Skeletal Mesh", AssetType="SkeletalMesh")
+	FSoftObjectPtr EnemyMeleeVisualSkeletalMeshPath = "None";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
+	TSubclassOf<UAnimInstance> EnemyMeleeVisualAnimInstanceClass;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Scale")
+	FVector EnemyMeleeVisualScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Ranged", DisplayName="Enemy Ranged Skeletal Mesh", AssetType="SkeletalMesh")
+	FSoftObjectPtr EnemyRangedVisualSkeletalMeshPath = "None";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Ranged", DisplayName="Enemy Ranged Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
+	TSubclassOf<UAnimInstance> EnemyRangedVisualAnimInstanceClass;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Ranged", DisplayName="Enemy Ranged Scale")
+	FVector EnemyRangedVisualScale = FVector(1.0f, 1.0f, 1.0f);
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Visual Turn Speed Deg/Sec", Min=1.0f, Max=3600.0f, Speed=10.0f)
 	float VisualTurnSpeedDegreesPerSecond = 540.0f;
@@ -149,6 +178,9 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Detect Range", Min=0.0f, Max=1000.0f, Speed=0.5f)
 	float DefaultDetectRange = 18.0f;
 
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Lose Target Range", Min=0.0f, Max=1000.0f, Speed=0.5f)
+	float DefaultLoseTargetRange = 24.0f;
+
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Attack Range", Min=0.0f, Max=100.0f, Speed=0.1f)
 	float DefaultAttackRange = 1.4f;
 
@@ -176,6 +208,9 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Detect Range", Min=0.0f, Max=1000.0f, Speed=0.5f)
 	float RangedDetectRange = 24.0f;
 
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Lose Target Range", Min=0.0f, Max=1000.0f, Speed=0.5f)
+	float RangedLoseTargetRange = 32.0f;
+
 	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Attack Range", Min=0.0f, Max=100.0f, Speed=0.1f)
 	float RangedAttackRange = 8.0f;
 
@@ -193,6 +228,18 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit|Ranged", DisplayName="Ranged Separation Weight", Min=0.0f, Max=20.0f, Speed=0.05f)
 	float RangedSeparationWeight = 1.4f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|State", DisplayName="Hit State Duration", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float HitStateDuration = 0.18f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|State", DisplayName="KnockDown State Duration", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float KnockDownStateDuration = 0.65f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|State", DisplayName="Dead State Duration", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float DeadStateDuration = 1.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit|State", DisplayName="KnockDown Min Knockback Distance", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float KnockDownMinKnockbackDistance = 4.0f;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Wait When Chase Blocked")
 	bool bWaitWhenChaseBlocked = true;

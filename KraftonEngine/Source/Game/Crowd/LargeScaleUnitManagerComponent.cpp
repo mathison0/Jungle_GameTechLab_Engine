@@ -1,5 +1,6 @@
 #include "Game/Crowd/LargeScaleUnitManagerComponent.h"
 
+#include "Animation/AnimInstance.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
@@ -17,6 +18,18 @@ namespace
 	{
 		UWorld* World = Component ? Component->GetWorld() : nullptr;
 		return World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
+	}
+
+	FCrowdVisualDesc MakeVisualDesc(
+		const FSoftObjectPtr& SkeletalMeshPath,
+		const TSubclassOf<UAnimInstance>& AnimInstanceClass,
+		const FVector& Scale)
+	{
+		FCrowdVisualDesc Desc;
+		Desc.SkeletalMeshPath = SkeletalMeshPath;
+		Desc.AnimInstanceClass = AnimInstanceClass;
+		Desc.Scale = Scale;
+		return Desc;
 	}
 }
 
@@ -61,6 +74,7 @@ FUnitArchetype ULargeScaleUnitManagerComponent::BuildUnitArchetype(EUnitCombatTy
 		Archetype.MaxHP = RangedMaxHP;
 		Archetype.MoveSpeed = RangedMoveSpeed;
 		Archetype.DetectRange = RangedDetectRange;
+		Archetype.LoseTargetRange = RangedLoseTargetRange;
 		Archetype.AttackRange = RangedAttackRange;
 		Archetype.AttackDamage = RangedAttackDamage;
 		Archetype.AttackCooldown = RangedAttackCooldown;
@@ -73,6 +87,7 @@ FUnitArchetype ULargeScaleUnitManagerComponent::BuildUnitArchetype(EUnitCombatTy
 	Archetype.MaxHP = DefaultMaxHP;
 	Archetype.MoveSpeed = DefaultMoveSpeed;
 	Archetype.DetectRange = DefaultDetectRange;
+	Archetype.LoseTargetRange = DefaultLoseTargetRange;
 	Archetype.AttackRange = DefaultAttackRange;
 	Archetype.AttackDamage = DefaultAttackDamage;
 	Archetype.AttackCooldown = DefaultAttackCooldown;
@@ -95,6 +110,38 @@ FCrowdMovementSettings ULargeScaleUnitManagerComponent::BuildMovementSettings() 
 	Settings.GroundHeightOffset = GroundHeightOffset;
 	Settings.GroundMissToleranceFrames = GroundMissToleranceFrames;
 	return Settings;
+}
+
+FCrowdCombatSettings ULargeScaleUnitManagerComponent::BuildCombatSettings() const
+{
+	FCrowdCombatSettings Settings;
+	Settings.HitStateDuration = HitStateDuration;
+	Settings.KnockDownStateDuration = KnockDownStateDuration;
+	Settings.DeadStateDuration = DeadStateDuration;
+	Settings.KnockDownMinKnockbackDistance = KnockDownMinKnockbackDistance;
+	return Settings;
+}
+
+FCrowdVisualDesc ULargeScaleUnitManagerComponent::BuildVisualDesc(EUnitTeam Team, EUnitCombatType CombatType) const
+{
+	switch (Team)
+	{
+	case EUnitTeam::Ally:
+		if (CombatType == EUnitCombatType::Ranged)
+		{
+			return MakeVisualDesc(AllyRangedVisualSkeletalMeshPath, AllyRangedVisualAnimInstanceClass, AllyRangedVisualScale);
+		}
+
+		return MakeVisualDesc(AllyMeleeVisualSkeletalMeshPath, AllyMeleeVisualAnimInstanceClass, AllyMeleeVisualScale);
+	case EUnitTeam::Enemy:
+	default:
+		if (CombatType == EUnitCombatType::Ranged)
+		{
+			return MakeVisualDesc(EnemyRangedVisualSkeletalMeshPath, EnemyRangedVisualAnimInstanceClass, EnemyRangedVisualScale);
+		}
+
+		return MakeVisualDesc(EnemyMeleeVisualSkeletalMeshPath, EnemyMeleeVisualAnimInstanceClass, EnemyMeleeVisualScale);
+	}
 }
 
 FUnitHandle ULargeScaleUnitManagerComponent::SpawnUnit(EUnitTeam Team, const FVector& Position)
@@ -205,7 +252,7 @@ int32 ULargeScaleUnitManagerComponent::GetTeamCombatTypeAliveCount(EUnitTeam Tea
 
 bool ULargeScaleUnitManagerComponent::IsUnitAlive(FUnitHandle Handle) const
 {
-	return UnitStore.IsValidUnitHandle(Handle);
+	return UnitStore.IsUnitCombatActive(Handle);
 }
 
 FVector ULargeScaleUnitManagerComponent::GetUnitPosition(FUnitHandle Handle) const
@@ -233,9 +280,16 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	}
 
 	const FCrowdMovementSettings MovementSettings = BuildMovementSettings();
+	const FCrowdCombatSettings CombatSettings = BuildCombatSettings();
+
+	TArray<FUnitHandle> RemovedHandles;
+	CombatManager.UpdateStateTimers(DeltaTime, UnitStore, RemovedHandles);
+	for (FUnitHandle Handle : RemovedHandles)
+	{
+		VisualPool.ReleaseVisualActorForHandle(Handle);
+	}
 
 	SpatialPartition.Rebuild(UnitStore.GetUnits(), CellSize);
-
 	bIsUpdating = true;
 	AIManager.Update(DeltaTime, UnitStore, SpatialPartition, [this]()
 	{
@@ -244,8 +298,7 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	MovementManager.Update(DeltaTime, UnitStore, SpatialPartition, GroundQuery, MovementSettings);
 	CombatManager.UpdateCombat(DeltaTime, UnitStore);
 
-	TArray<FUnitHandle> RemovedHandles;
-	CombatManager.ProcessDamageEvents(UnitStore, GetMusouGameModeFor(this), RemovedHandles);
+	CombatManager.ProcessDamageEvents(UnitStore, GetMusouGameModeFor(this), CombatSettings, RemovedHandles);
 	for (FUnitHandle Handle : RemovedHandles)
 	{
 		VisualPool.ReleaseVisualActorForHandle(Handle);
@@ -261,9 +314,10 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 		this,
 		GetWorld(),
 		bEnableSkeletalVisuals,
-		VisualSkeletalMeshPath,
-		VisualAnimInstanceClass,
-		VisualScale);
+		[this](const FUnitRenderData& Data)
+		{
+			return BuildVisualDesc(Data.Team, Data.CombatType);
+		});
 	DrawDebugUnits();
 }
 

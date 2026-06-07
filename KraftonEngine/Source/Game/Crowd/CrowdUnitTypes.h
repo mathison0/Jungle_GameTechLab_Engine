@@ -19,8 +19,12 @@ enum class EUnitCombatType : uint8
 enum class EUnitState : uint8
 {
 	Idle = 0,
+	Move,
 	Chase,
+	CircleAround,
 	Attack,
+	Hit,
+	KnockDown,
 	Dead
 };
 
@@ -52,6 +56,7 @@ struct FUnitArchetype
 	float Radius = 0.45f;
 	float SeparationRadius = 1.1f;
 	float SeparationWeight = 1.4f;
+	float LoseTargetRange = 24.0f;
 };
 
 struct FCrowdUnit
@@ -77,10 +82,32 @@ struct FCrowdUnit
 	FUnitHandle Target;
 	float AttackCooldownRemaining = 0.0f;
 	float ThinkTimer = 0.0f;
+	float StateTimeRemaining = 0.0f;
+	float KnockbackTimeRemaining = 0.0f;
+	FVector KnockbackVelocity = FVector::ZeroVector;
 
 	uint16 AnimState = 0;
 	float AnimTime = 0.0f;
 };
+
+inline bool IsCrowdUnitCombatActive(const FCrowdUnit& Unit)
+{
+	return Unit.bAlive && Unit.State != EUnitState::Dead;
+}
+
+inline bool IsCrowdUnitControlLocked(EUnitState State)
+{
+	return State == EUnitState::Hit
+		|| State == EUnitState::KnockDown
+		|| State == EUnitState::Dead;
+}
+
+inline bool IsCrowdUnitMovingState(EUnitState State)
+{
+	return State == EUnitState::Move
+		|| State == EUnitState::Chase
+		|| State == EUnitState::CircleAround;
+}
 
 struct FDamageEvent
 {
@@ -88,6 +115,9 @@ struct FDamageEvent
 	float Damage = 0.0f;
 	FVector HitDirection = FVector::ZeroVector;
 	bool bCountAsPlayerKill = false;
+	bool bCanKnockDown = false;
+	float KnockbackDistance = 0.0f;
+	float KnockbackDuration = 0.0f;
 };
 
 struct FUnitRenderData

@@ -6,6 +6,14 @@
 class AMusouGameMode;
 struct FMusouAttackEvent;
 
+struct FCrowdCombatSettings
+{
+	float HitStateDuration = 0.18f;
+	float KnockDownStateDuration = 0.65f;
+	float DeadStateDuration = 1.0f;
+	float KnockDownMinKnockbackDistance = 4.0f;
+};
+
 class FCrowdCombatManager
 {
 public:
@@ -25,8 +33,17 @@ public:
 		const FCrowdSpatialPartition& SpatialPartition,
 		AMusouGameMode* GameMode);
 
+	void UpdateStateTimers(
+		float DeltaTime,
+		FCrowdUnitStore& UnitStore,
+		TArray<FUnitHandle>& OutRemovedHandles);
+
 	void UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitStore);
-	void ProcessDamageEvents(FCrowdUnitStore& UnitStore, AMusouGameMode* GameMode, TArray<FUnitHandle>& OutRemovedHandles);
+	void ProcessDamageEvents(
+		FCrowdUnitStore& UnitStore,
+		AMusouGameMode* GameMode,
+		const FCrowdCombatSettings& Settings,
+		TArray<FUnitHandle>& OutRemovedHandles);
 
 private:
 	TArray<FDamageEvent> DamageEvents;
