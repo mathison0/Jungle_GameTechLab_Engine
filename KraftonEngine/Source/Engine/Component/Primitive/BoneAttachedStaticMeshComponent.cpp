@@ -31,23 +31,26 @@ void UBoneAttachedStaticMeshComponent::UpdateBoneAttachment()
 		return;
 	}
 
-	const FTransform AttachLocalOffset(AttachOffsetLocation, AttachOffsetRotation, AttachOffsetScale);
-
-	FTransform SocketWorldTransform;
-	if (!TargetMesh->GetBoneSocketWorldTransform(TargetBoneName, AttachLocalOffset, SocketWorldTransform))
+	// 본 월드는 raw 행렬로 — GetBoneSocketWorldTransform 경로는 중간에 TRS 분해→재합성을
+	// 거치며 (스케일/시어 소실 + 분해 오차 누적) 특정 포즈에서 회전이 틀어진다.
+	// 행렬로만 합성하고 분해는 마지막 SetRelativeTransform 직전 한 번만.
+	FMatrix BoneWorldMatrix;
+	if (!TargetMesh->GetBoneWorldMatrixByName(TargetBoneName, BoneWorldMatrix))
 	{
 		return;
 	}
 
+	const FTransform AttachLocalOffset(AttachOffsetLocation, AttachOffsetRotation, AttachOffsetScale);
+	const FMatrix SocketWorldMatrix = AttachLocalOffset.ToMatrix() * BoneWorldMatrix;
+
 	// 부모가 있으면 부모 기준 relative로 변환 — UClothComponent::UpdateBoneAttachment와 동일 패턴.
-	FTransform TargetRelativeTransform = SocketWorldTransform;
+	FMatrix TargetRelativeMatrix = SocketWorldMatrix;
 	if (USceneComponent* ParentComponent = GetParent())
 	{
-		const FMatrix TargetRelativeMatrix = SocketWorldTransform.ToMatrix() * ParentComponent->GetWorldMatrix().GetInverse();
-		TargetRelativeTransform = FTransform(TargetRelativeMatrix);
+		TargetRelativeMatrix = SocketWorldMatrix * ParentComponent->GetWorldMatrix().GetInverse();
 	}
 
-	SetRelativeTransform(TargetRelativeTransform);
+	SetRelativeTransform(FTransform(TargetRelativeMatrix));
 }
 
 USkinnedMeshComponent* UBoneAttachedStaticMeshComponent::ResolveTargetMeshComponent()
