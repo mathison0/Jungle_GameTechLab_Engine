@@ -5,7 +5,7 @@
   "EmissiveIntensity" : 0.000000,
   "Origin" : "FbxImport",
   "Parameters" : {
-    "HasNormalMap" : 1.000000,
+    "HasNormalMap" : 0.000000,
     "HitFlashAmount" : 0.000000,
     "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
     "HitFlashFillAmount" : 0.150000,
@@ -14,14 +14,13 @@
     "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
     "_pad" : [0.000000, 0.000000, 0.000000]
   },
-  "PathFileName" : "Content/Material/Auto/FastTerrain.mat",
+  "PathFileName" : "Content/Material/Auto/Woodplank.mat",
   "RasterizerState" : "SolidBackCull",
   "RenderPass" : "Opaque",
   "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
   "ShadowMode" : "Opaque",
   "Textures" : {
-    "DiffuseTexture" : "Content/Data/Map/free-quick-terrain-test/textures/diff2.jpg",
-    "NormalTexture" : "Content/Data/Map/free-quick-terrain-test/textures/nrm.png"
+    "DiffuseTexture" : "Content/Texture/Auto/wallgate1/ui2leaxlw_2K_Albedo.jpg"
   },
   "bEnableBloom" : false
 }
