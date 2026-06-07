@@ -12,5 +12,5 @@
         "Textures" : {
           "DiffuseTexture" : "Content/Texture/white.png"
         },
-        "bEnableBloom" : true
+        "bEnableBloom" : false
       }
