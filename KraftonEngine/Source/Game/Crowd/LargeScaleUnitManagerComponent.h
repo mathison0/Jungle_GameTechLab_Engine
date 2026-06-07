@@ -30,6 +30,9 @@ public:
 
 	void BeginPlay() override;
 	void EndPlay() override;
+	void PostDuplicate() override;
+	void PostLoad() override;
+	void PreGetEditableProperties() override;
 
 	FUnitHandle SpawnUnit(EUnitTeam Team, const FVector& Position);
 	FUnitHandle SpawnUnit(EUnitTeam Team, EUnitCombatType CombatType, const FVector& Position);
@@ -59,6 +62,7 @@ public:
 	bool IsSurfaceFollowingEnabled() const { return bSurfaceFollowingEnabled; }
 	void RebuildGroundQuery();
 
+	void PostEditProperty(const char* PropertyName) override;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 private:
@@ -86,6 +90,7 @@ private:
 	float RandomThinkInterval();
 	FColor GetTeamDebugColor(EUnitTeam Team) const;
 	FColor GetLODDebugColor(ECrowdUnitLOD LOD) const;
+	void SyncVisualMaterialSlotsFromSkeletalMeshes(bool bPreserveExistingSlots);
 
 private:
 	FCrowdUnitStore UnitStore;
@@ -117,6 +122,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Skeletal Mesh", AssetType="SkeletalMesh")
 	FSoftObjectPtr AllyMeleeVisualSkeletalMeshPath = "Content/Data/GameJam/Knight/SK_Knight_SkeletalMesh.uasset";
+
+	UPROPERTY(Edit, Save, EditFixedSize, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Materials", AssetType="Material")
+	TArray<FSoftObjectPtr> AllyMeleeVisualMaterialSlots;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee", DisplayName="Ally Melee Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
 	TSubclassOf<UAnimInstance> AllyMeleeVisualAnimInstanceClass;
@@ -169,6 +177,9 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Ranged", DisplayName="Ally Ranged Skeletal Mesh", AssetType="SkeletalMesh")
 	FSoftObjectPtr AllyRangedVisualSkeletalMeshPath = "None";
 
+	UPROPERTY(Edit, Save, EditFixedSize, Category="Crowd|Visual|Ally|Ranged", DisplayName="Ally Ranged Materials", AssetType="Material")
+	TArray<FSoftObjectPtr> AllyRangedVisualMaterialSlots;
+
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Ranged", DisplayName="Ally Ranged Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
 	TSubclassOf<UAnimInstance> AllyRangedVisualAnimInstanceClass;
 
@@ -177,6 +188,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Skeletal Mesh", AssetType="SkeletalMesh")
 	FSoftObjectPtr EnemyMeleeVisualSkeletalMeshPath = "Content/Data/GameJam/Knight/SK_Knight_SkeletalMesh.uasset";
+
+	UPROPERTY(Edit, Save, EditFixedSize, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Materials", AssetType="Material")
+	TArray<FSoftObjectPtr> EnemyMeleeVisualMaterialSlots;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee", DisplayName="Enemy Melee Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
 	TSubclassOf<UAnimInstance> EnemyMeleeVisualAnimInstanceClass;
@@ -228,6 +242,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Ranged", DisplayName="Enemy Ranged Skeletal Mesh", AssetType="SkeletalMesh")
 	FSoftObjectPtr EnemyRangedVisualSkeletalMeshPath = "None";
+
+	UPROPERTY(Edit, Save, EditFixedSize, Category="Crowd|Visual|Enemy|Ranged", DisplayName="Enemy Ranged Materials", AssetType="Material")
+	TArray<FSoftObjectPtr> EnemyRangedVisualMaterialSlots;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Ranged", DisplayName="Enemy Ranged Anim Instance Class", Type=ClassRef, AllowedClass=UAnimInstance)
 	TSubclassOf<UAnimInstance> EnemyRangedVisualAnimInstanceClass;

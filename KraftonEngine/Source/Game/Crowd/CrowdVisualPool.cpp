@@ -4,6 +4,7 @@
 #include "Game/Crowd/CrowdUnitAnimInstance.h"
 #include "Game/Crowd/CrowdUnitVisualActor.h"
 #include "Game/Crowd/LargeScaleUnitManagerComponent.h"
+#include "Materials/MaterialManager.h"
 #include "GameFramework/World.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
@@ -76,6 +77,7 @@ void FCrowdVisualPool::SyncVisualActors(
 			continue;
 		}
 
+		TArray<UMaterialInterface*> VisualMaterials = ResolveVisualMaterials(VisualDesc.MaterialSlots);
 		UClass* AnimClass = ResolveVisualAnimClass(VisualDesc.AnimInstanceClass);
 		SeenUnitIndices.insert(Data.Handle.Index);
 
@@ -101,7 +103,7 @@ void FCrowdVisualPool::SyncVisualActors(
 			ActiveVisualActors[Data.Handle.Index] = VisualActor;
 		}
 
-		VisualActor->InitializeVisual(Manager, VisualMesh, AnimClass, VisualDesc.MeleeAnimations);
+		VisualActor->InitializeVisual(Manager, VisualMesh, VisualMaterials, AnimClass, VisualDesc.MeleeAnimations);
 		VisualActor->SetActorScale(VisualDesc.Scale);
 		VisualActor->ApplyRenderData(Data);
 	}
@@ -175,6 +177,7 @@ void FCrowdVisualPool::DestroyVisualActors(UWorld* World, bool bDestroyWorldActo
 	FreeVisualActors.clear();
 	ActiveVisualActors.clear();
 	CachedVisualSkeletalMeshes.clear();
+	CachedVisualMaterials.clear();
 }
 
 ACrowdUnitVisualActor* FCrowdVisualPool::AcquireVisualActor(UWorld* World)
@@ -225,6 +228,38 @@ USkeletalMesh* FCrowdVisualPool::ResolveVisualSkeletalMesh(const FSoftObjectPtr&
 		CachedVisualSkeletalMeshes[MeshPath] = VisualMesh;
 	}
 	return VisualMesh;
+}
+
+TArray<UMaterialInterface*> FCrowdVisualPool::ResolveVisualMaterials(const TArray<FSoftObjectPtr>& MaterialSlots)
+{
+	TArray<UMaterialInterface*> Materials;
+	Materials.reserve(MaterialSlots.size());
+
+	for (const FSoftObjectPtr& MaterialPath : MaterialSlots)
+	{
+		const FString Path = MaterialPath.ToString();
+		if (Path.empty() || Path == "None")
+		{
+			Materials.push_back(nullptr);
+			continue;
+		}
+
+		auto CachedIt = CachedVisualMaterials.find(Path);
+		if (CachedIt != CachedVisualMaterials.end())
+		{
+			Materials.push_back(CachedIt->second);
+			continue;
+		}
+
+		UMaterialInterface* Material = FMaterialManager::Get().GetOrCreateMaterialInterface(Path);
+		if (Material)
+		{
+			CachedVisualMaterials[Path] = Material;
+		}
+		Materials.push_back(Material);
+	}
+
+	return Materials;
 }
 
 UClass* FCrowdVisualPool::ResolveVisualAnimClass(const TSubclassOf<UAnimInstance>& AnimInstanceClass) const

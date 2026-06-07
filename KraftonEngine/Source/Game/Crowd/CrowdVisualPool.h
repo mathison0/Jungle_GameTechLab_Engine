@@ -8,12 +8,14 @@ class ACrowdUnitVisualActor;
 class UAnimInstance;
 class UClass;
 class ULargeScaleUnitManagerComponent;
+class UMaterialInterface;
 class USkeletalMesh;
 class UWorld;
 
 struct FCrowdVisualDesc
 {
 	FSoftObjectPtr SkeletalMeshPath = "None";
+	TArray<FSoftObjectPtr> MaterialSlots;
 	TSubclassOf<UAnimInstance> AnimInstanceClass;
 	FVector Scale = FVector(1.0f, 1.0f, 1.0f);
 	FCrowdMeleeAnimationSet MeleeAnimations;
@@ -41,6 +43,7 @@ public:
 private:
 	ACrowdUnitVisualActor* AcquireVisualActor(UWorld* World);
 	USkeletalMesh* ResolveVisualSkeletalMesh(const FSoftObjectPtr& SkeletalMeshPath);
+	TArray<UMaterialInterface*> ResolveVisualMaterials(const TArray<FSoftObjectPtr>& MaterialSlots);
 	UClass* ResolveVisualAnimClass(const TSubclassOf<UAnimInstance>& AnimInstanceClass) const;
 
 private:
@@ -49,4 +52,5 @@ private:
 	TArray<ACrowdUnitVisualActor*> FreeVisualActors;
 	TMap<uint32, ACrowdUnitVisualActor*> ActiveVisualActors;
 	TMap<FString, USkeletalMesh*> CachedVisualSkeletalMeshes;
+	TMap<FString, UMaterialInterface*> CachedVisualMaterials;
 };
