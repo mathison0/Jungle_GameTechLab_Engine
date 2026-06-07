@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Types/CoreTypes.h"
 #include "Math/Rotator.h"
 #include "Math/Vector.h"
+#include "Object/Ptr/SoftObjectPtr.h"
 
 enum class EUnitTeam : uint8
 {
@@ -41,6 +42,45 @@ enum class ECrowdTargetKind : uint8
 	None = 0,
 	Unit,
 	Player
+};
+
+struct FCrowdMeleeAnimationSet
+{
+	FSoftObjectPtr IdleSequencePath = "None";
+	FSoftObjectPtr WalkForwardSequencePath = "None";
+	FSoftObjectPtr WalkBackwardSequencePath = "None";
+	FSoftObjectPtr RunForwardSequencePath = "None";
+	FSoftObjectPtr RunBackwardSequencePath = "None";
+	FSoftObjectPtr StrafeWalkLeftSequencePath = "None";
+	FSoftObjectPtr StrafeWalkRightSequencePath = "None";
+	FSoftObjectPtr StrafeRunLeftSequencePath = "None";
+	FSoftObjectPtr StrafeRunRightSequencePath = "None";
+	FSoftObjectPtr AttackSequencePath = "None";
+	FSoftObjectPtr HitSequencePath = "None";
+	FSoftObjectPtr KnockDownSequencePath = "None";
+	FSoftObjectPtr DeadSequencePath = "None";
+
+	bool operator==(const FCrowdMeleeAnimationSet& Other) const
+	{
+		return IdleSequencePath.ToString() == Other.IdleSequencePath.ToString()
+			&& WalkForwardSequencePath.ToString() == Other.WalkForwardSequencePath.ToString()
+			&& WalkBackwardSequencePath.ToString() == Other.WalkBackwardSequencePath.ToString()
+			&& RunForwardSequencePath.ToString() == Other.RunForwardSequencePath.ToString()
+			&& RunBackwardSequencePath.ToString() == Other.RunBackwardSequencePath.ToString()
+			&& StrafeWalkLeftSequencePath.ToString() == Other.StrafeWalkLeftSequencePath.ToString()
+			&& StrafeWalkRightSequencePath.ToString() == Other.StrafeWalkRightSequencePath.ToString()
+			&& StrafeRunLeftSequencePath.ToString() == Other.StrafeRunLeftSequencePath.ToString()
+			&& StrafeRunRightSequencePath.ToString() == Other.StrafeRunRightSequencePath.ToString()
+			&& AttackSequencePath.ToString() == Other.AttackSequencePath.ToString()
+			&& HitSequencePath.ToString() == Other.HitSequencePath.ToString()
+			&& KnockDownSequencePath.ToString() == Other.KnockDownSequencePath.ToString()
+			&& DeadSequencePath.ToString() == Other.DeadSequencePath.ToString();
+	}
+
+	bool operator!=(const FCrowdMeleeAnimationSet& Other) const
+	{
+		return !(*this == Other);
+	}
 };
 
 struct FUnitHandle
@@ -178,8 +218,10 @@ struct FUnitRenderData
 	ECrowdUnitLOD LOD = ECrowdUnitLOD::Full;
 	FVector Position = FVector::ZeroVector;
 	FRotator Rotation = FRotator::ZeroRotator;
+	FVector Velocity = FVector::ZeroVector;
 	uint16 AnimState = 0;
 	float AnimTime = 0.0f;
 	float Speed = 0.0f;
+	float CircleAroundDirectionSign = 1.0f;
 	bool bVisible = false;
 };

@@ -1900,6 +1900,9 @@
     <ClCompile Include="Source\Game\Crowd\CrowdGroundQuery.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Crowd\CrowdMeleeAnimInstance.cpp">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Crowd\CrowdMovementManager.cpp">
       <Filter>Source\Game\Crowd</Filter>
     </ClCompile>
@@ -3428,6 +3431,9 @@
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdGroundQuery.h">
+      <Filter>Source\Game\Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Crowd\CrowdMeleeAnimInstance.h">
       <Filter>Source\Game\Crowd</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Crowd\CrowdMovementManager.h">

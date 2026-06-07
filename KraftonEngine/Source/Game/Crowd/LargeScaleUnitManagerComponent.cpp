@@ -2,6 +2,7 @@
 
 #include "Animation/AnimInstance.h"
 #include "Debug/DrawDebugHelpers.h"
+#include "Game/Crowd/CrowdMeleeAnimInstance.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
 #include "GameFramework/GameMode/PlayerController.h"
@@ -55,18 +56,54 @@ namespace
 	FCrowdVisualDesc MakeVisualDesc(
 		const FSoftObjectPtr& SkeletalMeshPath,
 		const TSubclassOf<UAnimInstance>& AnimInstanceClass,
-		const FVector& Scale)
+		const FVector& Scale,
+		const FCrowdMeleeAnimationSet& MeleeAnimations = FCrowdMeleeAnimationSet())
 	{
 		FCrowdVisualDesc Desc;
 		Desc.SkeletalMeshPath = SkeletalMeshPath;
 		Desc.AnimInstanceClass = AnimInstanceClass;
 		Desc.Scale = Scale;
+		Desc.MeleeAnimations = MeleeAnimations;
 		return Desc;
+	}
+
+	FCrowdMeleeAnimationSet MakeMeleeAnimationSet(
+		const FSoftObjectPtr& IdleSequencePath,
+		const FSoftObjectPtr& WalkForwardSequencePath,
+		const FSoftObjectPtr& WalkBackwardSequencePath,
+		const FSoftObjectPtr& RunForwardSequencePath,
+		const FSoftObjectPtr& RunBackwardSequencePath,
+		const FSoftObjectPtr& StrafeWalkLeftSequencePath,
+		const FSoftObjectPtr& StrafeWalkRightSequencePath,
+		const FSoftObjectPtr& StrafeRunLeftSequencePath,
+		const FSoftObjectPtr& StrafeRunRightSequencePath,
+		const FSoftObjectPtr& AttackSequencePath,
+		const FSoftObjectPtr& HitSequencePath,
+		const FSoftObjectPtr& KnockDownSequencePath,
+		const FSoftObjectPtr& DeadSequencePath)
+	{
+		FCrowdMeleeAnimationSet Set;
+		Set.IdleSequencePath = IdleSequencePath;
+		Set.WalkForwardSequencePath = WalkForwardSequencePath;
+		Set.WalkBackwardSequencePath = WalkBackwardSequencePath;
+		Set.RunForwardSequencePath = RunForwardSequencePath;
+		Set.RunBackwardSequencePath = RunBackwardSequencePath;
+		Set.StrafeWalkLeftSequencePath = StrafeWalkLeftSequencePath;
+		Set.StrafeWalkRightSequencePath = StrafeWalkRightSequencePath;
+		Set.StrafeRunLeftSequencePath = StrafeRunLeftSequencePath;
+		Set.StrafeRunRightSequencePath = StrafeRunRightSequencePath;
+		Set.AttackSequencePath = AttackSequencePath;
+		Set.HitSequencePath = HitSequencePath;
+		Set.KnockDownSequencePath = KnockDownSequencePath;
+		Set.DeadSequencePath = DeadSequencePath;
+		return Set;
 	}
 }
 
 ULargeScaleUnitManagerComponent::ULargeScaleUnitManagerComponent()
 {
+	AllyMeleeVisualAnimInstanceClass = UCrowdMeleeAnimInstance::StaticClass();
+	EnemyMeleeVisualAnimInstanceClass = UCrowdMeleeAnimInstance::StaticClass();
 }
 
 void ULargeScaleUnitManagerComponent::BeginPlay()
@@ -186,7 +223,24 @@ FCrowdVisualDesc ULargeScaleUnitManagerComponent::BuildVisualDesc(EUnitTeam Team
 			return MakeVisualDesc(AllyRangedVisualSkeletalMeshPath, AllyRangedVisualAnimInstanceClass, AllyRangedVisualScale);
 		}
 
-		return MakeVisualDesc(AllyMeleeVisualSkeletalMeshPath, AllyMeleeVisualAnimInstanceClass, AllyMeleeVisualScale);
+		return MakeVisualDesc(
+			AllyMeleeVisualSkeletalMeshPath,
+			AllyMeleeVisualAnimInstanceClass,
+			AllyMeleeVisualScale,
+			MakeMeleeAnimationSet(
+				AllyMeleeIdleSequencePath,
+				AllyMeleeWalkForwardSequencePath,
+				AllyMeleeWalkBackwardSequencePath,
+				AllyMeleeRunForwardSequencePath,
+				AllyMeleeRunBackwardSequencePath,
+				AllyMeleeStrafeWalkLeftSequencePath,
+				AllyMeleeStrafeWalkRightSequencePath,
+				AllyMeleeStrafeRunLeftSequencePath,
+				AllyMeleeStrafeRunRightSequencePath,
+				AllyMeleeAttackSequencePath,
+				AllyMeleeHitSequencePath,
+				AllyMeleeKnockDownSequencePath,
+				AllyMeleeDeadSequencePath));
 	case EUnitTeam::Enemy:
 	default:
 		if (CombatType == EUnitCombatType::Ranged)
@@ -194,7 +248,24 @@ FCrowdVisualDesc ULargeScaleUnitManagerComponent::BuildVisualDesc(EUnitTeam Team
 			return MakeVisualDesc(EnemyRangedVisualSkeletalMeshPath, EnemyRangedVisualAnimInstanceClass, EnemyRangedVisualScale);
 		}
 
-		return MakeVisualDesc(EnemyMeleeVisualSkeletalMeshPath, EnemyMeleeVisualAnimInstanceClass, EnemyMeleeVisualScale);
+		return MakeVisualDesc(
+			EnemyMeleeVisualSkeletalMeshPath,
+			EnemyMeleeVisualAnimInstanceClass,
+			EnemyMeleeVisualScale,
+			MakeMeleeAnimationSet(
+				EnemyMeleeIdleSequencePath,
+				EnemyMeleeWalkForwardSequencePath,
+				EnemyMeleeWalkBackwardSequencePath,
+				EnemyMeleeRunForwardSequencePath,
+				EnemyMeleeRunBackwardSequencePath,
+				EnemyMeleeStrafeWalkLeftSequencePath,
+				EnemyMeleeStrafeWalkRightSequencePath,
+				EnemyMeleeStrafeRunLeftSequencePath,
+				EnemyMeleeStrafeRunRightSequencePath,
+				EnemyMeleeAttackSequencePath,
+				EnemyMeleeHitSequencePath,
+				EnemyMeleeKnockDownSequencePath,
+				EnemyMeleeDeadSequencePath));
 	}
 }
 
