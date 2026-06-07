@@ -33,8 +33,15 @@ namespace
 		"death-stop-button",
 	};
 
+	// 승리 결과 메뉴는 사망 메뉴와 같은 입력/hover 흐름을 쓰되, id만 분리해 둔다.
+	constexpr const char* VictoryMenuButtonIds[] = {
+		"victory-restart-button",
+		"victory-stop-button",
+	};
+
 	constexpr int32 PauseMenuButtonCount = 3;
 	constexpr int32 DeathMenuButtonCount = 2;
+	constexpr int32 VictoryMenuButtonCount = 2;
 
 	// 첫 로컬 플레이어의 카메라 매니저 — 셰이크 발동 지점. 없으면 null (조용히 스킵).
 	APlayerCameraManager* GetLocalCameraManager()
@@ -105,8 +112,10 @@ void AMusouGameMode::StartMatch()
 
 			HudWidget->BindClick("restart-button", RestartMatch);
 			HudWidget->BindClick("death-restart-button", RestartMatch);
+			HudWidget->BindClick("victory-restart-button", RestartMatch);
 			HudWidget->BindClick("stop-button", StopMatch);
 			HudWidget->BindClick("death-stop-button", StopMatch);
+			HudWidget->BindClick("victory-stop-button", StopMatch);
 			BindHudMenuHoverHandlers();
 		}
 	}
@@ -155,12 +164,19 @@ void AMusouGameMode::Tick(float DeltaTime)
 {
 	AGameModeBase::Tick(DeltaTime);
 
-	if (!HudPresenter.IsDeathOverlayVisible() && InputSystem::Get().GetKeyDown(VK_ESCAPE))
+	// TODO: 실제 승리 조건이 들어오면 제거할 테스트 진입점.
+	// 현재는 플레이 중 T 키로 승리 확정 흐름과 결과 오버레이를 검증한다.
+	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible && InputSystem::Get().GetKeyDown('T'))
+	{
+		NotifyVictory();
+	}
+
+	if (!HudPresenter.IsResultOverlayVisible() && InputSystem::Get().GetKeyDown(VK_ESCAPE))
 	{
 		SetStopMenuVisible(!bStopMenuVisible);
 	}
 
-	if (bStopMenuVisible && !HudPresenter.IsDeathOverlayVisible())
+	if (bStopMenuVisible && !HudPresenter.IsResultOverlayVisible())
 	{
 		HandlePauseMenuInput();
 	}
@@ -176,6 +192,18 @@ void AMusouGameMode::Tick(float DeltaTime)
 		}
 
 		HandleDeathMenuInput();
+	}
+
+	if (HudPresenter.AreVictoryButtonsVisible())
+	{
+		// 결과 문구가 모두 페이드인된 뒤 버튼이 나타나는 첫 프레임에 기본 선택을 맞춘다.
+		if (!bVictoryMenuSelectionInitialized)
+		{
+			bVictoryMenuSelectionInitialized = true;
+			SelectVictoryMenuButton(0);
+		}
+
+		HandleVictoryMenuInput();
 	}
 }
 
@@ -278,13 +306,63 @@ void AMusouGameMode::NotifyEnemiesKilled(int32 Count)
 
 void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 {
+	AMusouGameState* MusouState = GetMusouGameState();
+	if (MusouState)
+	{
+		if (MusouState->IsMatchEnded())
+		{
+			return;
+		}
+	}
+
 	UE_LOG("[MusouGameMode] Player died");
 	EndMatch();
 	SetGameInputPossessed(false);
 	bStopMenuVisible = false;
 	bDeathMenuSelectionInitialized = false;
+	bVictoryMenuSelectionInitialized = false;
 	HudPresenter.StartDeathOverlay();
 	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
+	ClearHudButtonSelection(VictoryMenuButtonIds, VictoryMenuButtonCount);
+
+	if (UWorld* World = GetWorld())
+	{
+		World->SetPaused(false);
+	}
+}
+
+void AMusouGameMode::NotifyVictory()
+{
+	AMusouGameState* MusouState = GetMusouGameState();
+	if (!MusouState || MusouState->IsMatchEnded())
+	{
+		return;
+	}
+
+	// 점수는 승리 확정 순간에 먼저 고정한다.
+	// EndMatch 이후 outro/UI tick이 이어져도 저장될 결과는 이 Result 하나만 사용한다.
+	FMusouMatchResult Result = MusouState->MakeMatchResult(true);
+
+	UE_LOG("[MusouGameMode] Victory resolved — Kills=%d Score=%lld MaxCombo=%d Time=%.1fs",
+		Result.KillCount,
+		static_cast<long long>(Result.Score),
+		Result.MaxCombo,
+		Result.MatchTime);
+
+	EndMatch();
+	SetGameInputPossessed(false);
+	bStopMenuVisible = false;
+	bDeathMenuSelectionInitialized = false;
+	bVictoryMenuSelectionInitialized = false;
+
+	// 스코어보드 저장, outro 시작 같은 후속 시스템은 여기에서 Result를 구독하면 된다.
+	OnVictoryResolved.Broadcast(Result);
+
+	// 현재 단계에서는 승리 오버레이를 즉시 띄운다. 나중에 outro가 생기면
+	// outro 시작/종료 타이밍에 맞춰 이 호출 위치만 조정하면 된다.
+	HudPresenter.StartVictoryOverlay(Result);
+	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
+	ClearHudButtonSelection(DeathMenuButtonIds, DeathMenuButtonCount);
 
 	if (UWorld* World = GetWorld())
 	{
@@ -327,7 +405,7 @@ float AMusouGameMode::GetPlayerHealthRatio() const
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 {
-	if (HudPresenter.IsDeathOverlayVisible())
+	if (HudPresenter.IsResultOverlayVisible())
 	{
 		return;
 	}
@@ -361,7 +439,7 @@ void AMusouGameMode::BindHudMenuHoverHandlers()
 	{
 		HudWidget->BindMouseOver(PauseMenuButtonIds[ButtonIndex], [this, ButtonIndex]()
 		{
-			if (bStopMenuVisible && !HudPresenter.IsDeathOverlayVisible())
+			if (bStopMenuVisible && !HudPresenter.IsResultOverlayVisible())
 			{
 				SelectPauseMenuButton(ButtonIndex);
 			}
@@ -378,6 +456,17 @@ void AMusouGameMode::BindHudMenuHoverHandlers()
 			}
 		});
 	}
+
+	for (int32 ButtonIndex = 0; ButtonIndex < VictoryMenuButtonCount; ++ButtonIndex)
+	{
+		HudWidget->BindMouseOver(VictoryMenuButtonIds[ButtonIndex], [this, ButtonIndex]()
+		{
+			if (HudPresenter.AreVictoryButtonsVisible())
+			{
+				SelectVictoryMenuButton(ButtonIndex);
+			}
+		});
+	}
 }
 
 void AMusouGameMode::SelectPauseMenuButton(int32 ButtonIndex)
@@ -385,6 +474,7 @@ void AMusouGameMode::SelectPauseMenuButton(int32 ButtonIndex)
 	SelectedPauseButtonIndex = (ButtonIndex % PauseMenuButtonCount + PauseMenuButtonCount) % PauseMenuButtonCount;
 	UpdatePauseMenuSelectionVisuals();
 	ClearHudButtonSelection(DeathMenuButtonIds, DeathMenuButtonCount);
+	ClearHudButtonSelection(VictoryMenuButtonIds, VictoryMenuButtonCount);
 }
 
 void AMusouGameMode::SelectDeathMenuButton(int32 ButtonIndex)
@@ -392,6 +482,15 @@ void AMusouGameMode::SelectDeathMenuButton(int32 ButtonIndex)
 	SelectedDeathButtonIndex = (ButtonIndex % DeathMenuButtonCount + DeathMenuButtonCount) % DeathMenuButtonCount;
 	UpdateDeathMenuSelectionVisuals();
 	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
+	ClearHudButtonSelection(VictoryMenuButtonIds, VictoryMenuButtonCount);
+}
+
+void AMusouGameMode::SelectVictoryMenuButton(int32 ButtonIndex)
+{
+	SelectedVictoryButtonIndex = (ButtonIndex % VictoryMenuButtonCount + VictoryMenuButtonCount) % VictoryMenuButtonCount;
+	UpdateVictoryMenuSelectionVisuals();
+	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
+	ClearHudButtonSelection(DeathMenuButtonIds, DeathMenuButtonCount);
 }
 
 void AMusouGameMode::MovePauseMenuSelection(int32 Delta)
@@ -402,6 +501,11 @@ void AMusouGameMode::MovePauseMenuSelection(int32 Delta)
 void AMusouGameMode::MoveDeathMenuSelection(int32 Delta)
 {
 	SelectDeathMenuButton(SelectedDeathButtonIndex + Delta);
+}
+
+void AMusouGameMode::MoveVictoryMenuSelection(int32 Delta)
+{
+	SelectVictoryMenuButton(SelectedVictoryButtonIndex + Delta);
 }
 
 void AMusouGameMode::ExecutePauseMenuSelection()
@@ -422,6 +526,16 @@ void AMusouGameMode::ExecuteDeathMenuSelection()
 	}
 
 	HudWidget->Click(DeathMenuButtonIds[SelectedDeathButtonIndex]);
+}
+
+void AMusouGameMode::ExecuteVictoryMenuSelection()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	HudWidget->Click(VictoryMenuButtonIds[SelectedVictoryButtonIndex]);
 }
 
 void AMusouGameMode::HandlePauseMenuInput()
@@ -458,6 +572,24 @@ void AMusouGameMode::HandleDeathMenuInput()
 	}
 }
 
+void AMusouGameMode::HandleVictoryMenuInput()
+{
+	InputSystem& Input = InputSystem::Get();
+	// 사망 결과 메뉴와 동일한 조작 체계: 위/아래 이동, Enter/Space 실행.
+	if (Input.GetKeyDown(VK_UP))
+	{
+		MoveVictoryMenuSelection(-1);
+	}
+	if (Input.GetKeyDown(VK_DOWN))
+	{
+		MoveVictoryMenuSelection(1);
+	}
+	if (Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
+	{
+		ExecuteVictoryMenuSelection();
+	}
+}
+
 void AMusouGameMode::UpdatePauseMenuSelectionVisuals()
 {
 	if (!HudWidget || !HudWidget->IsDocumentLoaded())
@@ -481,6 +613,19 @@ void AMusouGameMode::UpdateDeathMenuSelectionVisuals()
 	for (int32 ButtonIndex = 0; ButtonIndex < DeathMenuButtonCount; ++ButtonIndex)
 	{
 		HudWidget->SetClass(DeathMenuButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedDeathButtonIndex);
+	}
+}
+
+void AMusouGameMode::UpdateVictoryMenuSelectionVisuals()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	for (int32 ButtonIndex = 0; ButtonIndex < VictoryMenuButtonCount; ++ButtonIndex)
+	{
+		HudWidget->SetClass(VictoryMenuButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedVictoryButtonIndex);
 	}
 }
 

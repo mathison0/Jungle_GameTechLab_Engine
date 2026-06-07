@@ -28,6 +28,15 @@ namespace
 	constexpr float DeathTitleFadeDelay = 0.25f;
 	constexpr float DeathTitleFadeDuration = 1.15f;
 
+	// 승리 결과 연출은 배경 → 타이틀 → 점수/세부 결과 순서로 차례로 드러낸다.
+	// 버튼은 점수 영역의 페이드인이 끝난 뒤 활성화된다.
+	constexpr float VictoryOverlayFadeDuration = 0.75f;
+	constexpr float VictoryOverlayMaxAlpha = 0.66f;
+	constexpr float VictoryTitleFadeDelay = 0.15f;
+	constexpr float VictoryTitleFadeDuration = 0.85f;
+	constexpr float VictoryScoreFadeDelay = 0.55f;
+	constexpr float VictoryScoreFadeDuration = 0.75f;
+
 	FString MakeScaleTransform(float Scale)
 	{
 		char Buffer[32] = {};
@@ -111,6 +120,27 @@ namespace
 		std::snprintf(Buffer, sizeof(Buffer), "#080A0E%02X", AlphaByte);
 		return FString(Buffer);
 	}
+
+	FString MakeVictoryOverlayColor(float Alpha)
+	{
+		const float ClampedAlpha = std::clamp(Alpha, 0.0f, 1.0f);
+		const int32 AlphaByte = static_cast<int32>(ClampedAlpha * 255.0f + 0.5f);
+
+		char Buffer[16] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "#07110C%02X", AlphaByte);
+		return FString(Buffer);
+	}
+
+	// 결과 화면의 보조 정보 문구. 실제 스코어보드 UI가 들어오면 같은 Result를 넘겨 재사용한다.
+	FString MakeVictoryDetailsText(const FMusouMatchResult& Result)
+	{
+		char Buffer[128] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "K.O. %d   Max Combo %d   Time %.1fs",
+			Result.KillCount,
+			Result.MaxCombo,
+			Result.MatchTime);
+		return FString(Buffer);
+	}
 }
 
 void FMusouHudPresenter::SetWidget(UUserWidget* InWidget)
@@ -134,11 +164,13 @@ void FMusouHudPresenter::Tick(float DeltaTime, const AMusouGameState* MusouState
 
 	UpdateBloodVignette(DeltaTime);
 	UpdateDeathOverlay(DeltaTime);
+	UpdateVictoryOverlay(DeltaTime);
 }
 
 void FMusouHudPresenter::SetPauseMenuVisible(bool bVisible)
 {
-	if (bDeathOverlayVisible || !Widget || !Widget->IsDocumentLoaded())
+	// 결과 오버레이가 떠 있을 때 pause 메뉴가 겹치면 마우스 포커스가 꼬이므로 무시한다.
+	if (IsResultOverlayVisible() || !Widget || !Widget->IsDocumentLoaded())
 	{
 		return;
 	}
@@ -179,7 +211,7 @@ void FMusouHudPresenter::NotifyPlayerDamaged(float Damage, float PlayerCurrentHe
 
 void FMusouHudPresenter::StartDeathOverlay()
 {
-	if (bDeathOverlayVisible)
+	if (bDeathOverlayVisible || bVictoryOverlayVisible)
 	{
 		return;
 	}
@@ -197,8 +229,51 @@ void FMusouHudPresenter::StartDeathOverlay()
 	Widget->SetProperty("pause-overlay", "background-color", MakeOverlayColor(0.0f));
 	Widget->SetProperty("death-title", "display", "block");
 	Widget->SetProperty("death-title", "opacity", "0");
+	Widget->SetProperty("victory-title", "display", "none");
+	Widget->SetProperty("victory-score", "display", "none");
+	Widget->SetProperty("victory-details", "display", "none");
 	Widget->SetProperty("pause-menu", "display", "none");
 	Widget->SetProperty("death-menu", "display", "none");
+	Widget->SetProperty("victory-menu", "display", "none");
+	Widget->SetWantsMouse(false);
+}
+
+void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result)
+{
+	if (bVictoryOverlayVisible || bDeathOverlayVisible)
+	{
+		return;
+	}
+
+	bVictoryOverlayVisible = true;
+	bVictoryButtonsVisible = false;
+	VictoryOverlayElapsed = 0.0f;
+
+	if (!Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	Widget->SetProperty("blood-vignette", "visibility", "hidden");
+	Widget->SetProperty("blood-vignette", "opacity", "0");
+	Widget->SetProperty("pause-overlay", "display", "block");
+	Widget->SetProperty("pause-overlay", "background-color", MakeVictoryOverlayColor(0.0f));
+
+	// 같은 pause-overlay 레이어를 공유하므로 다른 메뉴/타이틀을 먼저 모두 접는다.
+	Widget->SetProperty("death-title", "display", "none");
+	Widget->SetProperty("death-menu", "display", "none");
+	Widget->SetProperty("pause-menu", "display", "none");
+	Widget->SetProperty("victory-title", "display", "block");
+	Widget->SetProperty("victory-title", "opacity", "0");
+	Widget->SetProperty("victory-score", "display", "block");
+	Widget->SetProperty("victory-score", "opacity", "0");
+	Widget->SetProperty("victory-details", "display", "block");
+	Widget->SetProperty("victory-details", "opacity", "0");
+	Widget->SetProperty("victory-menu", "display", "none");
+
+	// 표시 값은 승리 확정 시점에 고정된 Result만 사용한다.
+	Widget->SetText("victory-score", FString("score: ") + std::to_string(static_cast<long long>(Result.Score)));
+	Widget->SetText("victory-details", MakeVictoryDetailsText(Result));
 	Widget->SetWantsMouse(false);
 }
 
@@ -355,6 +430,49 @@ void FMusouHudPresenter::UpdateDeathOverlay(float DeltaTime)
 		bDeathButtonsVisible = true;
 		Widget->SetProperty("pause-menu", "display", "none");
 		Widget->SetProperty("death-menu", "display", "block");
+		Widget->SetWantsMouse(true);
+	}
+}
+
+void FMusouHudPresenter::UpdateVictoryOverlay(float DeltaTime)
+{
+	if (!bVictoryOverlayVisible)
+	{
+		return;
+	}
+
+	VictoryOverlayElapsed += DeltaTime;
+
+	const float OverlayAlpha = VictoryOverlayMaxAlpha * SmoothStep01(VictoryOverlayElapsed / VictoryOverlayFadeDuration);
+	const float TitleAlpha = SmoothStep01((VictoryOverlayElapsed - VictoryTitleFadeDelay) / VictoryTitleFadeDuration);
+	const float ScoreAlpha = SmoothStep01((VictoryOverlayElapsed - VictoryScoreFadeDelay) / VictoryScoreFadeDuration);
+
+	// overlay는 매 프레임 직접 값을 갱신해 RML transition 의존 없이 동일한 타이밍을 보장한다.
+	Widget->SetProperty("pause-overlay", "display", "block");
+	Widget->SetProperty("pause-overlay", "background-color", MakeVictoryOverlayColor(OverlayAlpha));
+	Widget->SetProperty("victory-title", "display", "block");
+	Widget->SetProperty("victory-title", "opacity", MakeOpacityValue(TitleAlpha));
+	Widget->SetProperty("victory-score", "display", "block");
+	Widget->SetProperty("victory-score", "opacity", MakeOpacityValue(ScoreAlpha));
+	Widget->SetProperty("victory-details", "display", "block");
+	Widget->SetProperty("victory-details", "opacity", MakeOpacityValue(ScoreAlpha));
+
+	if (ScoreAlpha < 1.0f)
+	{
+		// 결과 문구가 완전히 나타나기 전까지는 실수 클릭/엔터 입력을 막는다.
+		Widget->SetProperty("pause-menu", "display", "none");
+		Widget->SetProperty("death-menu", "display", "none");
+		Widget->SetProperty("victory-menu", "display", "none");
+		Widget->SetWantsMouse(false);
+		return;
+	}
+
+	if (!bVictoryButtonsVisible)
+	{
+		bVictoryButtonsVisible = true;
+		Widget->SetProperty("pause-menu", "display", "none");
+		Widget->SetProperty("death-menu", "display", "none");
+		Widget->SetProperty("victory-menu", "display", "block");
 		Widget->SetWantsMouse(true);
 	}
 }

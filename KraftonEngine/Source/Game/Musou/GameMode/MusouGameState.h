@@ -4,6 +4,17 @@
 
 #include "Source/Game/Musou/GameMode/MusouGameState.generated.h"
 
+// 승리/패배가 확정된 순간의 결과 스냅샷.
+// 이후 outro, 스코어보드 저장, 결과 UI는 이 값을 기준으로 삼아 점수 흔들림을 막는다.
+struct FMusouMatchResult
+{
+	bool bVictory = false;    // true면 승리, false면 패배/중단 계열 결과로 확장 가능
+	int64 Score = 0;          // 승리/패배 확정 순간의 최종 점수
+	int32 KillCount = 0;      // 최종 처치 수
+	int32 MaxCombo = 0;       // 매치 중 달성한 최대 콤보
+	float MatchTime = 0.0f;   // 매치 진행 시간(초)
+};
+
 // ============================================================
 // AMusouGameState — 무쌍 게임의 런타임 상태(데이터) 보유
 //
@@ -44,6 +55,10 @@ public:
 	float GetMatchTime() const { return MatchTime; }
 	bool IsMatchEnded() const { return bMatchEnded; }
 	void SetMatchEnded(bool bEnded) { bMatchEnded = bEnded; }
+
+	// 결과 확정 시점의 값을 한 번에 복사한다. EndMatch 이후 점수/시간 갱신이 멈추더라도
+	// UI와 저장소가 같은 값을 보도록 GameMode에서 이 스냅샷을 전달한다.
+	FMusouMatchResult MakeMatchResult(bool bVictory) const;
 
 	// 콤보 유지 시간(초) — 이 시간 내 추가 킬이 없으면 콤보 리셋
 	UPROPERTY(Edit, Save, Category="Musou", DisplayName="Combo Window")

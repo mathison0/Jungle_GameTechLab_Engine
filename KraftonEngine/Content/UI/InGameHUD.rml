@@ -231,6 +231,52 @@
 			color: #f8f3df;
 		}
 
+		/* 승리 결과 오버레이: GameMode의 NotifyVictory 결과 스냅샷을 표시한다. */
+		#victory-title {
+			position: absolute;
+			left: 0;
+			top: 38%;
+			margin-top: -62px;
+			display: none;
+			width: 100%;
+			height: 124px;
+			line-height: 124px;
+			text-align: center;
+			font-size: 118px;
+			opacity: 0;
+			color: #f0d36a;
+		}
+
+		#victory-score {
+			position: absolute;
+			left: 0;
+			top: 50%;
+			margin-top: -14px;
+			display: none;
+			width: 100%;
+			height: 68px;
+			line-height: 68px;
+			text-align: center;
+			font-size: 54px;
+			opacity: 0;
+			color: #f8f3df;
+		}
+
+		#victory-details {
+			position: absolute;
+			left: 0;
+			top: 50%;
+			margin-top: 58px;
+			display: none;
+			width: 100%;
+			height: 34px;
+			line-height: 34px;
+			text-align: center;
+			font-size: 28px;
+			opacity: 0;
+			color: #d6ccb1;
+		}
+
 		#pause-menu {
 			position: absolute;
 			left: 50%;
@@ -242,6 +288,16 @@
 		}
 
 		#death-menu {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -120px;
+			margin-top: 112px;
+			display: none;
+			width: 240px;
+		}
+
+		#victory-menu {
 			position: absolute;
 			left: 50%;
 			top: 50%;
@@ -281,6 +337,10 @@
 		#death-restart-button {
 			margin-bottom: 16px;
 		}
+
+		#victory-restart-button {
+			margin-bottom: 16px;
+		}
 	</style>
 </head>
 <body>
@@ -307,6 +367,10 @@
 		</div>
 		<div id="pause-overlay">
 			<div id="death-title">전사</div>
+			<!-- 승리 결과 영역: 점수/세부 기록은 FMusouMatchResult 기준으로 갱신된다. -->
+			<div id="victory-title">승리</div>
+			<div id="victory-score">score: 0</div>
+			<div id="victory-details">K.O. 0   Max Combo 0   Time 0.0s</div>
 			<div id="pause-menu">
 				<div id="resume-button" class="pause-button">재개하기</div>
 				<div id="restart-button" class="pause-button">재도전</div>
@@ -315,6 +379,10 @@
 			<div id="death-menu">
 				<div id="death-restart-button" class="pause-button">재도전</div>
 				<div id="death-stop-button" class="pause-button">전투 중단</div>
+			</div>
+			<div id="victory-menu">
+				<div id="victory-restart-button" class="pause-button">재도전</div>
+				<div id="victory-stop-button" class="pause-button">나가기</div>
 			</div>
 		</div>
 	</div>
