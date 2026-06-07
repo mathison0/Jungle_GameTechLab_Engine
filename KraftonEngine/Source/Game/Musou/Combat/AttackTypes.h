@@ -6,12 +6,22 @@
 
 class APawn;
 
+// 공격 진입 컨텍스트 — 같은 입력이라도 시작 상태에 따라 다른 체인/몽타주로 진입.
+// (MusouCharacter 가 콤보 시작 시 1회 판정, FAttackDataRegistry 의 체인 키)
+enum class EAttackContext : uint8
+{
+	Idle,      // 지상 + 거의 정지
+	Moving,    // 지상 + 이동 중 (속도 ≥ MovingAttackSpeedThreshold)
+	Airborne,  // 점프/낙하 중
+};
+
 // ============================================================
-// FAttackSpec — 공격 1종의 판정/연출 속성 (lua ATTACKS 테이블의 C++ 이관)
+// FAttackSpec — 공격 1종의 판정/연출 속성
 //
-// 튜닝은 FindMusouAttackSpec의 정적 테이블에서.
-// 신규 공격(콤보 단계/강공격/스킬)은 테이블에 행 추가 + 몽타주에
-// AnimNotify_MusouAttack(AttackId) 배치만 하면 된다.
+// 정의/튜닝은 Content/Script/Data/attack_data.lua 의 specs 테이블에서
+// (저장 시 핫리로드). FAttackDataRegistry 가 로드해서 보관한다.
+// 신규 공격(콤보 단계/강공격/스킬)은 lua 에 spec + step 행 추가 + 몽타주에
+// AnimNotify_MusouAttack(AttackId) 배치(또는 hit_frac 자동 주입)만 하면 된다.
 // ============================================================
 struct FAttackSpec
 {
@@ -24,29 +34,8 @@ struct FAttackSpec
 	float KnockbackDur = 0.15f;
 };
 
-inline const FAttackSpec* FindMusouAttackSpec(const FName& Id)
-{
-	static const FAttackSpec Table[] =
-	{
-		//  Id                  Range  Height ConeCos DmgMult KbDist KbDur
-		{ FName("attack1"),     4.0f,  2.5f,  -1.0f,  1.0f,   2.5f,  0.15f }, // 360 High — 전방위
-		{ FName("attack2"),     3.5f,  2.5f,   0.34f, 1.5f,   4.0f,  0.20f }, // Backhand — 전방 콘 (~140도)
-
-		// 좌클릭 콤보 체인 (Combo Attack Ver. 1/2/3) — 단계가 오를수록 강해진다
-		{ FName("combo1"),      3.5f,  2.5f,   0.34f, 1.0f,   1.5f,  0.10f }, // 1단 — 전방 콘, 짧은 넉백
-		{ FName("combo2"),      3.5f,  2.5f,   0.34f, 1.2f,   2.0f,  0.12f }, // 2단
-		{ FName("combo3"),      4.5f,  2.5f,  -1.0f,  2.0f,   5.0f,  0.25f }, // 3단 피니셔 — 전방위 + 강넉백
-	};
-
-	for (const FAttackSpec& Spec : Table)
-	{
-		if (Spec.Id == Id)
-		{
-			return &Spec;
-		}
-	}
-	return nullptr;
-}
+// Id 로 spec 조회 — FAttackDataRegistry 위임 (AttackDataRegistry.cpp 정의). 없으면 nullptr.
+const FAttackSpec* FindMusouAttackSpec(const FName& Id);
 
 // ============================================================
 // FMusouAttackEvent — 공격 발동 1회의 스냅샷

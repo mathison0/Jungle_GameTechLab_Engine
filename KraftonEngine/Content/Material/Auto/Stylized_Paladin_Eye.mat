@@ -1,0 +1,27 @@
+{
+        "BlendState" : "Opaque",
+        "DepthStencilState" : "Default",
+        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+        "EmissiveIntensity" : 0.000000,
+        "Origin" : "FbxImport",
+        "Parameters" : {
+          "HasNormalMap" : 1.000000,
+          "HitFlashAmount" : 0.000000,
+          "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "HitFlashFillAmount" : 0.150000,
+          "HitFlashRimIntensity" : 3.000000,
+          "HitFlashRimPower" : 3.000000,
+          "SectionColor" : [0.800000, 0.800000, 0.800000, 1.000000],
+          "_pad" : [0.000000, 0.000000, 0.000000]
+        },
+        "PathFileName" : "Content/Material/Auto/Stylized_Paladin_Eye.mat",
+        "RasterizerState" : "SolidBackCull",
+        "RenderPass" : "Opaque",
+        "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+        "ShadowMode" : "Opaque",
+        "Textures" : {
+          "DiffuseTexture" : "Content/Data/GameJam/Paladin/Textures/Eye_Iris_Color.PNG",
+          "NormalTexture" : "Content/Data/GameJam/Paladin/Textures/Eye_Iris_Normal.PNG"
+        },
+        "bEnableBloom" : false
+      }
