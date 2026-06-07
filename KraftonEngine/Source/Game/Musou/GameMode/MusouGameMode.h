@@ -72,7 +72,7 @@ public:
 	virtual void NotifyPlayerDeath(APawn* Player);
 
 	// 플레이어에게 실제 데미지가 적용된 순간 호출 — HUD 피격 연출 진입점.
-	virtual void NotifyPlayerDamaged(APawn* Player, float Damage, AActor* DamageInstigator);
+	virtual void NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator);
 
 	// --- Accessors ---
 	AMusouGameState* GetMusouGameState() const;

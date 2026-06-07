@@ -26,6 +26,8 @@ namespace
 	constexpr float BloodVignetteBaseOpacity = 0.90f;
 	constexpr float BloodVignetteMinIntensity = 0.55f;
 	constexpr float BloodVignetteFullDamage = 30.0f;
+	constexpr float BloodVignetteMinTriggerHealthRatio = 0.15f;
+	constexpr float BloodVignetteLowHealthTriggerRatio = 0.35f;
 	FString MakeScaleTransform(float Scale)
 	{
 		char Buffer[32] = {};
@@ -261,11 +263,17 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 	EndMatch();
 }
 
-void AMusouGameMode::NotifyPlayerDamaged(APawn* Player, float Damage, AActor* DamageInstigator)
+void AMusouGameMode::NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator)
 {
 	(void)DamageInstigator;
 
-	if (!Player || Damage <= 0.0f)
+	if (!Player || Damage <= 0.0f || PlayerMaxHealth <= 0.0f)
+	{
+		return;
+	}
+
+	const bool bLowHealth = PlayerCurrentHealth <= PlayerMaxHealth * BloodVignetteLowHealthTriggerRatio;
+	if (!bLowHealth && Damage < PlayerMaxHealth * BloodVignetteMinTriggerHealthRatio)
 	{
 		return;
 	}

@@ -113,7 +113,7 @@ float UBattleComponent::ApplyDamage(float Damage, AActor* DamageInstigator)
 		APlayerController* PlayerController = GameMode ? GameMode->GetPlayerController() : nullptr;
 		if (OwnerPawn && PlayerController && PlayerController->GetPossessedPawn() == OwnerPawn)
 		{
-			GameMode->NotifyPlayerDamaged(OwnerPawn, Applied, DamageInstigator);
+			GameMode->NotifyPlayerDamaged(OwnerPawn, Damage, Health, MaxHealth, DamageInstigator);
 		}
 	}
 
