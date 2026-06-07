@@ -1,4 +1,4 @@
-#include "Game/Musou/UI/MusouScoreboardOverlayPresenter.h"
+﻿#include "Game/Musou/UI/MusouScoreboardOverlayPresenter.h"
 
 #include "Game/Musou/UI/MusouScoreboardView.h"
 #include "UI/UserWidget.h"
@@ -40,7 +40,8 @@ namespace
 		return
 			"<div id=\"scoreboard-overlay\">"
 				"<div id=\"scoreboard-panel\">"
-					"<div id=\"scoreboard-title\">스코어보드</div>"
+					"<img id=\"scoreboard-panel-bg\" src=\"ScoreBoard_bg.png\" />"
+					"<div id=\"scoreboard-title\">스코어 보드</div>"
 					"<div id=\"scoreboard-input-row\">"
 						"<input id=\"scoreboard-name-input\" type=\"text\" value=\"Player\" />"
 						"<div id=\"scoreboard-save-button\">저장</div>"
@@ -52,7 +53,11 @@ namespace
 						"<div id=\"scoreboard-page-label\">1 / 1</div>"
 						"<div id=\"scoreboard-next-button\" class=\"scoreboard-page-button\">&gt;</div>"
 					"</div>"
-					"<div id=\"scoreboard-close-button\" class=\"scoreboard-action-button\">닫기</div>"
+					"<div id=\"scoreboard-close-button\" class=\"scoreboard-action-button\">"
+						"<img class=\"scoreboard-close-button-frame scoreboard-close-button-frame-normal\" src=\"btn_normal.png\" />"
+						"<img class=\"scoreboard-close-button-frame scoreboard-close-button-frame-hover\" src=\"btn_hover.png\" />"
+						"<div class=\"scoreboard-close-button-label\">닫기</div>"
+					"</div>"
 					"<div id=\"victory-menu\">"
 						"<div id=\"victory-restart-button\" class=\"pause-button scoreboard-action-button\">"
 							"<img class=\"pause-button-frame pause-button-frame-normal\" src=\"btn_normal.png\" />"
