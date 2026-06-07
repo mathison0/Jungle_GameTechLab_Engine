@@ -37,10 +37,17 @@ return {
         attack1     = { range = 5.0, height = 2.5, cone_deg = 360, dmg = 2.5, kb = 6.0, kb_dur = 0.30, shake = 0.25 }, -- 360 High — 3단 분기 대피니셔 (시퀀스에 저작된 id)
         attack2     = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.5, kb = 4.0, kb_dur = 0.20, shake = 0.10 }, -- Backhand
 
-        -- 좌클릭 콤보 체인 — 단계가 오를수록 강해진다
-        combo1      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.0, kb = 1.5, kb_dur = 0.10, shake = 0.05 },
-        combo2      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.2, kb = 2.0, kb_dur = 0.12, shake = 0.08 },
-        combo3      = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 2.0, kb = 5.0, kb_dur = 0.25, shake = 0.18 }, -- 3단 피니셔
+        -- 좌클릭 콤보 체인 — 단계가 오를수록 강해진다 (주입형 스텝용)
+        light1      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.0, kb = 1.5, kb_dur = 0.10, shake = 0.05 },
+        light2      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.2, kb = 2.0, kb_dur = 0.12, shake = 0.08 },
+        light3      = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 2.0, kb = 5.0, kb_dur = 0.25, shake = 0.18 }, -- 3단 피니셔
+
+        -- ※ 레거시 — Combo Ver.1/2/3 몽타주의 "저작" notify 가 이 id 들을 참조 (시퀀스에
+        --   박혀 있어 lua 에서 못 바꿈). 세 몽타주 모두 현재 3단 피니셔 풀 전용이라
+        --   값은 light3(3단급) 와 동일하게 맞춰둠 — 다른 단수로 옮기면 여기도 조정할 것.
+        combo1      = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 2.0, kb = 5.0, kb_dur = 0.25, shake = 0.18 },
+        combo2      = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 2.0, kb = 5.0, kb_dur = 0.25, shake = 0.18 },
+        combo3      = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 2.0, kb = 5.0, kb_dur = 0.25, shake = 0.18 },
 
         -- 진입 컨텍스트 변형
         dash_attack = { range = 4.0, height = 2.5, cone_deg = 140, dmg = 1.5, kb = 3.5, kb_dur = 0.20, shake = 0.12 }, -- 이동 중 콤보 진입 — 돌진 베기
@@ -59,6 +66,9 @@ return {
         air1        = { range = 4.0, height = 3.5, cone_deg = 360, dmg = 1.2, kb = 1.0, kb_dur = 0.10, shake = 0.08, launch = 5.0 }, -- 공중 1타 — 재띄움 (저글 유지)
         air2        = { range = 4.0, height = 3.5, cone_deg = 360, dmg = 1.4, kb = 1.5, kb_dur = 0.12, shake = 0.10, launch = 5.0 }, -- 공중 2타
 
+        -- 공중 강공격 — 도약 내려찍기 강화판 (광역 + 강넉백)
+        jump_heavy  = { range = 5.0, height = 3.5, cone_deg = 360, dmg = 2.3, kb = 5.0, kb_dur = 0.25, shake = 0.2 },
+
         -- 무쌍기 마무리 강타 — 광범위 전방위 + 강넉백 + 띄움 (난무의 방점)
         musou_slam  = { range = 7.0, height = 3.0, cone_deg = 360, dmg = 3.0, kb = 7.0, kb_dur = 0.30, shake = 0.4, launch = 6.0 },
     },
@@ -76,12 +86,64 @@ return {
         -- 콤보 변주 (체인 칸에서 기존 단계와 랜덤 교차) — 시퀀스에 notify 없음 → 주입
         kick          = { montage = montage("Barbarian_Melee Attack Kick Ver. 2"),       -- 1.40s, 제자리 킥
                           sequence = seq("Barbarian_Melee Attack Kick Ver. 2"),
-                          blend_in = 0.1, attack_id = "combo1", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          blend_in = 0.1, attack_id = "light1", hit_frac = 0.40, window = { 0.55, 0.85 },
                           play_rate = { 0.95, 1.05 } },
         gs_slash4     = { montage = montage("great sword slash (4)_mixamo_com"),         -- 1.80s, 전진 +1.1m 베기
                           sequence = seq("great sword slash (4)_mixamo_com"),
-                          blend_in = 0.1, attack_id = "combo2", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          blend_in = 0.1, attack_id = "light2", hit_frac = 0.40, window = { 0.55, 0.85 },
                           play_rate = { 1.00, 1.10 } },
+
+        -- idle 1단 변주 후보군 — 전부 제자리 베기 (RM 없음, 1.3~1.5s)
+        -- ※ great sword slash (5) 는 air_slash1 이 같은 시퀀스 사용 중 (시퀀스당 주입
+        --   attack_id 1개 제한) — idle 후보로 못 씀. 대체 필요 시 slash (3) 검토.
+        ss_slash      = { montage = montage("sword and shield slash_mixamo_com"),        -- 1.50s
+                          sequence = seq("sword and shield slash_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light1", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          play_rate = { 0.95, 1.05 } },
+        ss_slash5     = { montage = montage("sword and shield slash (5)_mixamo_com"),    -- 1.37s
+                          sequence = seq("sword and shield slash (5)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light1", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          play_rate = { 0.95, 1.05 } },
+        gs_slash      = { montage = montage("great sword slash_mixamo_com"),             -- 1.27s
+                          sequence = seq("great sword slash_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light1", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          play_rate = { 0.95, 1.05 } },
+
+        -- 2단 변주 후보군 (gs_slash4 포함 — idle/moving 공용). 전진 RM 있는 것들은 추격감 부여
+        ss_slash3     = { montage = montage("sword and shield slash (3)_mixamo_com"),    -- 1.67s, 제자리
+                          sequence = seq("sword and shield slash (3)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light2", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          play_rate = { 1.00, 1.10 } },
+        ss_atk2       = { montage = montage("sword and shield attack (2)_mixamo_com"),   -- 1.30s, 전진 +3.0m
+                          sequence = seq("sword and shield attack (2)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light2", hit_frac = 0.45, window = { 0.55, 0.85 },
+                          play_rate = { 1.00, 1.10 } },
+        ss_atk3       = { montage = montage("sword and shield attack (3)_mixamo_com"),   -- 1.73s, 전진 +2.5m
+                          sequence = seq("sword and shield attack (3)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light2", hit_frac = 0.45, window = { 0.55, 0.85 },
+                          play_rate = { 1.00, 1.10 } },
+        gs_slash3     = { montage = montage("great sword slash (3)_mixamo_com"),         -- 1.83s, 제자리
+                          sequence = seq("great sword slash (3)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light2", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          play_rate = { 1.00, 1.10 } },
+        inward_slash  = { montage = montage("Barbarian Sword Inward Slash_mixamo_com"),  -- 2.20s, 제자리 (느려서 속도 보정)
+                          sequence = seq("Barbarian Sword Inward Slash_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light2", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          play_rate = { 1.15, 1.25 } },
+
+        -- 3단 변주 후보군 (피니셔) — 윈도우는 3단 분기(□□□△) 입력용. 긴 클립은 속도 보정
+        ss_slash4     = { montage = montage("sword and shield slash (4)_mixamo_com"),    -- 2.43s, 전진 +1.0m
+                          sequence = seq("sword and shield slash (4)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light3", hit_frac = 0.45, window = { 0.55, 0.85 },
+                          play_rate = { 1.05, 1.15 } },
+        ss_slash2     = { montage = montage("sword and shield slash (2)_mixamo_com"),    -- 3.53s, 전진 +2.3m (속도 보정)
+                          sequence = seq("sword and shield slash (2)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light3", hit_frac = 0.45, window = { 0.55, 0.85 },
+                          play_rate = { 1.25, 1.35 } },
+        gs_slash2     = { montage = montage("great sword slash (2)_mixamo_com"),         -- 3.53s, 전진 +3.0m (속도 보정)
+                          sequence = seq("great sword slash (2)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "light3", hit_frac = 0.45, window = { 0.55, 0.85 },
+                          play_rate = { 1.25, 1.35 } },
 
         -- 이동 진입 — 돌진 베기 (RM +3.56m)
         slide         = { montage = montage("great sword slide attack_mixamo_com"),
@@ -111,6 +173,13 @@ return {
 
         -- 강공격
         backhand      = { montage = montage("Barbarian_Melee Attack Backhand"), blend_in = 0.2 },
+
+        -- 공중 강공격 — Jump Attack (3.80s, 전진 +2.25m, 긴 클립이라 속도 보정).
+        -- RM=0 + ForceRootLock 으로 임포트된 에셋 — force_root_motion 으로 런타임 RM 활성.
+        jump_heavy    = { montage = montage("Jump Attack_mixamo_com"),
+                          sequence = seq("Jump Attack_mixamo_com"),
+                          blend_in = 0.12, attack_id = "jump_heavy", hit_frac = 0.50,
+                          play_rate = { 1.25, 1.35 }, force_root_motion = true },
         spin_high_fwd = { montage = montage("great sword high spin attack_mixamo_com"),
                           sequence = seq("great sword high spin attack_mixamo_com"),
                           blend_in = 0.15, attack_id = "spin_attack", hit_frac = 0.40 },
@@ -144,22 +213,27 @@ return {
         -- 좌클릭 콤보 — 진입 컨텍스트별. 이동 중엔 1단이 돌진 베기로 바뀌고 2단부터 합류.
         -- 1/2단은 변주 배열 — 매 콤보 랜덤 (직전 모션 반복 회피). 3단 피니셔는 고정이 연출상 안정적.
         light = {
-            idle   = { { "combo_v1", "kick" }, { "combo_v2", "gs_slash4" }, "combo_v3" },
-            moving = { { "slide", "ss_lunge" }, { "combo_v2", "gs_slash4" }, "combo_v3" },
+            -- 전 단수 변주 풀 (2/3단은 idle/moving 공용) — 직전 모션 반복 회피는 C++ 처리
+            idle   = { { "ss_slash", "ss_slash5", "gs_slash" },
+                       { "gs_slash4", "ss_slash3", "ss_atk2", "ss_atk3", "gs_slash3", "inward_slash" },
+                       { "combo_v3", "combo_v1", "combo_v2", "ss_slash4", "ss_slash2", "gs_slash2" } },
+            moving = { { "slide", "ss_lunge" },
+                       { "gs_slash4", "ss_slash3", "ss_atk2", "ss_atk3", "gs_slash3", "inward_slash" },
+                       { "combo_v3", "combo_v1", "combo_v2", "ss_slash4", "ss_slash2", "gs_slash2" } },
 
             -- 일반 점프 공격 — 단발 내려찍기 (기존 동작). 행 타임 없음.
             air        = { "jump" },
 
             -- launcher(branch2 self_launch) 로 떠올랐을 때만 — 공중 저글 3단.
             -- 슬래시 2연타(재띄움으로 저글 유지, 정점 이후 행 타임) → 내려찍기 피니셔로 착지.
-            air_juggle = { "air_slash1", "air_slash2", "jump" },
+            air_juggle = { "air_slash1", "air_slash2", "jump_heavy" },
         },
 
         -- 우클릭 강공격 — 컨텍스트별 단발
         heavy = {
             idle   = "backhand",
             moving = "spin_high_fwd",
-            air    = "jump",   -- 전용 모션 확보 시 교체
+            air    = "jump_heavy",   -- 전용 도약 강타 (저글 중 강공격도 동일 — air_juggle 폴백)
         },
 
         -- 콤보 분기 피니셔 (□..△) — 인덱스 = 분기 시점 단수. 단수 초과 시 마지막으로 clamp
