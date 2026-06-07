@@ -379,6 +379,9 @@
     <Filter Include="Source\Game\Musou\GameMode">
       <UniqueIdentifier>{ab2b9458-4f4a-530d-64b9-b74d3b0b755d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\Musou\Score">
+      <UniqueIdentifier>{5d8c1a5c-2f7e-4a74-ae74-1d11fa14e503}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Game\Musou\UI">
       <UniqueIdentifier>{d6e2c21b-89f3-4e44-a3ce-18963462ef2a}</UniqueIdentifier>
     </Filter>
@@ -1963,6 +1966,9 @@
     <ClCompile Include="Source\Game\Musou\GameMode\MusouPlayerController.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Score\MusouScoreboard.cpp">
+      <Filter>Source\Game\Musou\Score</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\UI\MusouHudPresenter.cpp">
       <Filter>Source\Game\Musou\UI</Filter>
     </ClCompile>
@@ -3501,6 +3507,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Score\MusouScoreboard.h">
+      <Filter>Source\Game\Musou\Score</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\UI\MusouHudPresenter.h">
       <Filter>Source\Game\Musou\UI</Filter>

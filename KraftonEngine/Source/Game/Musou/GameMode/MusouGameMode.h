@@ -4,6 +4,7 @@
 #include "Core/Delegate.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/Combat/HitTypes.h"
+#include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/UI/MusouHudPresenter.h"
 
 #include "Source/Game/Musou/GameMode/MusouGameMode.generated.h"
@@ -105,6 +106,7 @@ private:
 	void HandlePauseMenuInput();
 	void HandleDeathMenuInput();
 	void HandleVictoryMenuInput();
+	void SubmitVictoryScore();
 	void UpdatePauseMenuSelectionVisuals();
 	void UpdateDeathMenuSelectionVisuals();
 	void UpdateVictoryMenuSelectionVisuals();
@@ -117,6 +119,9 @@ private:
 	bool bStopMenuVisible = false;
 	bool bDeathMenuSelectionInitialized = false;
 	bool bVictoryMenuSelectionInitialized = false;
+	bool bHasPendingVictoryResult = false;
+	bool bVictoryScoreSubmitted = false;
+	FMusouMatchResult PendingVictoryResult;
 	int32 SelectedPauseButtonIndex = 0;
 	int32 SelectedDeathButtonIndex = 0;
 	int32 SelectedVictoryButtonIndex = 0;

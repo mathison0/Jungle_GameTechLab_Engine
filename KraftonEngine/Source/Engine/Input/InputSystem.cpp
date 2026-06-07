@@ -1,5 +1,6 @@
 #include "Engine/Input/InputSystem.h"
 #include <cmath>
+#include <utility>
 
 void InputSystem::Tick()
 {
@@ -113,6 +114,23 @@ void InputSystem::AddRawMouseDelta(int DeltaX, int DeltaY)
     RawMouseDeltaAccumY += DeltaY;
 }
 
+void InputSystem::AddTextInputCharacter(char32_t Character)
+{
+    if (Character == U'\0')
+    {
+        return;
+    }
+
+    PendingTextInputCharacters.push_back(Character);
+}
+
+std::vector<char32_t> InputSystem::ConsumeTextInputCharacters()
+{
+    std::vector<char32_t> Result = std::move(PendingTextInputCharacters);
+    PendingTextInputCharacters.clear();
+    return Result;
+}
+
 void InputSystem::ResetTransientState()
 {
     bLeftDragJustStarted = false;
@@ -122,6 +140,7 @@ void InputSystem::ResetTransientState()
     ResetDragState();
     ResetMouseDelta();
     ResetWheelDelta();
+    PendingTextInputCharacters.clear();
     UpdateCurrentSnapshot();
 }
 
@@ -161,6 +180,7 @@ void InputSystem::ResetCaptureStateForPIEEnd()
     GuiState.bUsingMouse = false;
     GuiState.bUsingKeyboard = false;
     GuiState.bUsingTextInput = false;
+    PendingTextInputCharacters.clear();
     UpdateCurrentSnapshot();
 }
 

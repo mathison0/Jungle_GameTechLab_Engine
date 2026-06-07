@@ -43,6 +43,43 @@ LRESULT FWindowsApplication::WndProc(HWND hWnd, unsigned int Msg, WPARAM wParam,
 	case WM_MOUSEWHEEL:
 		InputSystem::Get().AddScrollDelta(GET_WHEEL_DELTA_WPARAM(wParam));
 		return 0;
+	case WM_CHAR:
+	{
+		const wchar_t CodeUnit = static_cast<wchar_t>(wParam);
+		char32_t Codepoint = static_cast<char32_t>(CodeUnit);
+
+		if (CodeUnit >= 0xD800 && CodeUnit <= 0xDBFF)
+		{
+			PendingHighSurrogate = CodeUnit;
+			return 0;
+		}
+
+		if (CodeUnit >= 0xDC00 && CodeUnit <= 0xDFFF)
+		{
+			if (PendingHighSurrogate != 0)
+			{
+				Codepoint = 0x10000
+					+ ((static_cast<char32_t>(PendingHighSurrogate) - 0xD800) << 10)
+					+ (static_cast<char32_t>(CodeUnit) - 0xDC00);
+				PendingHighSurrogate = 0;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+		else
+		{
+			PendingHighSurrogate = 0;
+		}
+
+		// Backspace/Enter 같은 제어키는 key event로 처리하고, 실제 입력 가능한 문자만 넘긴다.
+		if (Codepoint >= 0x20 && Codepoint != 0x7F)
+		{
+			InputSystem::Get().AddTextInputCharacter(Codepoint);
+		}
+		return 0;
+	}
 	case WM_INPUT:
 	{
 		UINT DataSize = 0;
