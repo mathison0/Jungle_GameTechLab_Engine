@@ -32,23 +32,24 @@ local function montage(name) return MONTAGE_DIR .. name .. "_Montage.uasset" end
 
 return {
     specs = {
-        --                 range height cone_deg dmg   kb    kb_dur
-        attack1     = { range = 5.0, height = 2.5, cone_deg = 360, dmg = 2.5, kb = 6.0, kb_dur = 0.30 }, -- 360 High — 3단 분기 대피니셔 (시퀀스에 저작된 id)
-        attack2     = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.5, kb = 4.0, kb_dur = 0.20 }, -- Backhand
+        -- shake: 히트 시 카메라 셰이크 강도 (0/생략 = 없음). 피니셔일수록 크게.
+        --                 range height cone_deg dmg   kb    kb_dur shake
+        attack1     = { range = 5.0, height = 2.5, cone_deg = 360, dmg = 2.5, kb = 6.0, kb_dur = 0.30, shake = 0.25 }, -- 360 High — 3단 분기 대피니셔 (시퀀스에 저작된 id)
+        attack2     = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.5, kb = 4.0, kb_dur = 0.20, shake = 0.10 }, -- Backhand
 
         -- 좌클릭 콤보 체인 — 단계가 오를수록 강해진다
-        combo1      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.0, kb = 1.5, kb_dur = 0.10 },
-        combo2      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.2, kb = 2.0, kb_dur = 0.12 },
-        combo3      = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 2.0, kb = 5.0, kb_dur = 0.25 }, -- 3단 피니셔
+        combo1      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.0, kb = 1.5, kb_dur = 0.10, shake = 0.05 },
+        combo2      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.2, kb = 2.0, kb_dur = 0.12, shake = 0.08 },
+        combo3      = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 2.0, kb = 5.0, kb_dur = 0.25, shake = 0.18 }, -- 3단 피니셔
 
         -- 진입 컨텍스트 변형
-        dash_attack = { range = 4.0, height = 2.5, cone_deg = 140, dmg = 1.5, kb = 3.5, kb_dur = 0.20 }, -- 이동 중 콤보 진입 — 돌진 베기
-        spin_attack = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 1.8, kb = 4.0, kb_dur = 0.20 }, -- 이동 중 강공격 — 전진 회전베기
-        jump_attack = { range = 4.5, height = 3.5, cone_deg = 360, dmg = 2.0, kb = 4.5, kb_dur = 0.25 }, -- 공중 — 도약 내려찍기 (height 여유)
+        dash_attack = { range = 4.0, height = 2.5, cone_deg = 140, dmg = 1.5, kb = 3.5, kb_dur = 0.20, shake = 0.12 }, -- 이동 중 콤보 진입 — 돌진 베기
+        spin_attack = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 1.8, kb = 4.0, kb_dur = 0.20, shake = 0.13 }, -- 이동 중 강공격 — 전진 회전베기
+        jump_attack = { range = 4.5, height = 3.5, cone_deg = 360, dmg = 2.0, kb = 4.5, kb_dur = 0.25, shake = 0.15 }, -- 공중 — 도약 내려찍기 (height 여유)
 
         -- 콤보 분기 피니셔 (□..△) — 깊을수록 강력. 3단 분기는 attack1 재사용
-        branch1     = { range = 4.0, height = 2.5, cone_deg = 140, dmg = 1.4, kb = 3.0, kb_dur = 0.18 }, -- Horizontal 와이드 횡베기
-        branch2     = { range = 4.5, height = 2.0, cone_deg = 360, dmg = 1.8, kb = 4.5, kb_dur = 0.22 }, -- 360 Low 로우 스핀
+        branch1     = { range = 4.0, height = 2.5, cone_deg = 140, dmg = 1.4, kb = 3.0, kb_dur = 0.18, shake = 0.12 }, -- Horizontal 와이드 횡베기
+        branch2     = { range = 4.5, height = 2.0, cone_deg = 360, dmg = 1.8, kb = 4.5, kb_dur = 0.22, shake = 0.15 }, -- 360 Low 로우 스핀
     },
 
     steps = {

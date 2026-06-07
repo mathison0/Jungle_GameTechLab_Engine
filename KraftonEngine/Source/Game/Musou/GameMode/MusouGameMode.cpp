@@ -2,7 +2,11 @@
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/GameMode/MusouPlayerController.h"
+#include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/Camera/WaveOscillatorCameraShake.h"
+#include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
+#include "GameFramework/World.h"
 #include "Component/Input/ActionComponent.h"
 #include "Core/Logging/Log.h"
 #include "Engine/Input/InputSystem.h"
@@ -26,6 +30,25 @@ namespace
 	constexpr float BloodVignetteBaseOpacity = 0.90f;
 	constexpr float BloodVignetteMinIntensity = 0.55f;
 	constexpr float BloodVignetteFullDamage = 30.0f;
+
+	// ── 킬 버스트 연출 — 한 번의 공격 이벤트로 N마리 이상 쓸어담으면 슬로모 + 강셰이크 ──
+	// 글로벌 타임 딜레이션(ActionComponent::Slomo)이라 화면 전체가 잠깐 늘어진다.
+	// 히트스탑(0.05~0.12s)과 별개 — 둘 다 걸리면 RefreshGlobalTimeDilation 이 합성.
+	constexpr int32 KillBurstMinKills   = 5;
+	constexpr float KillBurstSlomoDur   = 0.25f;   // 초 (실시간)
+	constexpr float KillBurstSlomoRate  = 0.25f;   // 타임스케일 (0..1)
+	constexpr float KillBurstShakeScale = 0.4f;
+
+	// 첫 로컬 플레이어의 카메라 매니저 — 셰이크 발동 지점. 없으면 null (조용히 스킵).
+	APlayerCameraManager* GetLocalCameraManager()
+	{
+		if (!GEngine || !GEngine->GetWorld())
+		{
+			return nullptr;
+		}
+		APlayerController* PC = GEngine->GetWorld()->GetFirstPlayerController();
+		return PC ? PC->GetPlayerCameraManager() : nullptr;
+	}
 	FString MakeScaleTransform(float Scale)
 	{
 		char Buffer[32] = {};
@@ -229,6 +252,16 @@ void AMusouGameMode::NotifyAttackHitFeedback(const FMusouAttackEvent& Event, int
 		const float Duration = std::min(HitStopBase + HitStopPerHit * static_cast<float>(HitCount), HitStopMax);
 		Action->LocalHitStop(Duration);
 	}
+
+	// 히트 카메라 셰이크 — 강도는 스펙별 (attack_data.lua specs.shake, 핫리로드 튜닝).
+	// 플레이어 공격만 — 적 공격이 플레이어 카메라를 흔들면 피격 연출과 겹쳐 혼란.
+	if (Event.bFromPlayer && Event.Spec.ShakeScale > 0.0f)
+	{
+		if (APlayerCameraManager* CamMgr = GetLocalCameraManager())
+		{
+			CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(Event.Spec.ShakeScale);
+		}
+	}
 }
 
 void AMusouGameMode::NotifyHitConfirmed(const FMusouHitEvent& Event)
@@ -253,6 +286,26 @@ void AMusouGameMode::NotifyEnemiesKilled(int32 Count)
 	}
 
 	MusouState->AddKills(Count);
+
+	// 킬 버스트 슬로모 — 한 공격 이벤트(스윙 1회 판정)로 대량 처치 시 화면 전체가
+	// 잠깐 늘어지는 무쌍식 학살 연출. 피니셔류는 전방위 강판정이라 자연히 자주 발동.
+	if (Count >= KillBurstMinKills)
+	{
+		if (APlayerController* PC = GEngine && GEngine->GetWorld() ? GEngine->GetWorld()->GetFirstPlayerController() : nullptr)
+		{
+			if (APawn* PlayerPawn = PC->GetPossessedPawn())
+			{
+				if (UActionComponent* Action = PlayerPawn->GetComponentByClass<UActionComponent>())
+				{
+					Action->Slomo(KillBurstSlomoDur, KillBurstSlomoRate);
+				}
+			}
+			if (APlayerCameraManager* CamMgr = PC->GetPlayerCameraManager())
+			{
+				CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(KillBurstShakeScale);
+			}
+		}
+	}
 }
 
 void AMusouGameMode::NotifyPlayerDeath(APawn* Player)

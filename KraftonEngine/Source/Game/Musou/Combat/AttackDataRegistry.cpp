@@ -32,6 +32,7 @@ namespace
 		S.DamageMult    = T.get_or("dmg",      1.0f);
 		S.KnockbackDist = T.get_or("kb",       2.5f);
 		S.KnockbackDur  = T.get_or("kb_dur",   0.15f);
+		S.ShakeScale    = T.get_or("shake",    0.0f);
 		return S;
 	}
 

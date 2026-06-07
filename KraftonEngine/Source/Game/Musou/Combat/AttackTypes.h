@@ -32,6 +32,7 @@ struct FAttackSpec
 	float DamageMult = 1.0f;     // 데미지 = 공격자 AttackPower × 배율
 	float KnockbackDist = 2.5f;
 	float KnockbackDur = 0.15f;
+	float ShakeScale = 0.0f;     // 히트 시 카메라 셰이크 강도 (0 = 없음). lua: shake
 };
 
 // Id 로 spec 조회 — FAttackDataRegistry 위임 (AttackDataRegistry.cpp 정의). 없으면 nullptr.
