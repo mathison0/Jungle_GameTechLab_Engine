@@ -23,6 +23,8 @@ public:
 	float GetCrowdMoveForwardAmount() const { return MoveForwardAmount; }
 	float GetCrowdMoveRightAmount() const { return MoveRightAmount; }
 	float GetCrowdCircleAroundDirectionSign() const { return CircleAroundDirectionSign; }
+	float GetCrowdAnimTime() const { return AnimTime; }
+	bool IsCrowdKnockDownGettingUp() const { return bKnockDownGettingUp; }
 
 	UPROPERTY(Edit, Category="Animation|Crowd", DisplayName="Speed", Min=0.0f, Max=100.0f, Speed=0.5f)
 	float Speed = 0.0f;
@@ -38,4 +40,6 @@ protected:
 	EUnitCombatType LastCrowdCombatType = EUnitCombatType::Melee;
 	ECrowdUnitLOD LastCrowdLOD = ECrowdUnitLOD::Full;
 	float CircleAroundDirectionSign = 1.0f;
+	float AnimTime = 0.0f;
+	bool bKnockDownGettingUp = false;
 };

@@ -35,6 +35,9 @@ public:
 	float GetCrowdSpeed() const { return Speed; }
 	const FVector& GetCrowdVelocity() const { return Velocity; }
 	float GetCrowdCircleAroundDirectionSign() const { return CircleAroundDirectionSign; }
+	float GetCrowdAnimTime() const { return AnimTime; }
+	bool IsCrowdKnockDownGettingUp() const { return bKnockDownGettingUp; }
+	bool ShouldLogCrowdAnimationState() const;
 
 	USkeletalMeshComponent* GetMeshComponent() const { return MeshComponent; }
 
@@ -51,6 +54,8 @@ private:
 	FVector Velocity = FVector::ZeroVector;
 	float Speed = 0.0f;
 	float CircleAroundDirectionSign = 1.0f;
+	float AnimTime = 0.0f;
+	bool bKnockDownGettingUp = false;
 	bool bVisualActive = false;
 
 	USkeletalMesh* CurrentMesh = nullptr;

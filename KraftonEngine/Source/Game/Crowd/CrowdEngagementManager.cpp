@@ -94,7 +94,7 @@ void FCrowdEngagementManager::Update(
 	TArray<uint32> RangedCandidates;
 
 	const float EngagementRadius = (std::max)(Settings.PlayerEngagementRadius, 0.0f);
-	const float EngagementRadiusSq = EngagementRadius * EngagementRadius;
+	const float EngagementExitRadius = EngagementRadius + (std::max)(Settings.PlayerEngagementExitHysteresis, 0.0f);
 	const bool bCanEngagePlayer = Settings.bEnablePlayerEngagement && bHasPlayer && EngagementRadius > 0.0f;
 
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
@@ -106,12 +106,14 @@ void FCrowdEngagementManager::Update(
 		ResetPlayerEngagement(Unit);
 		Unit.bHasAttackToken = bHadAttackToken;
 		Unit.CombatSlotIndex = PreviousCombatSlotIndex;
+		const float EffectiveEngagementRadius = bHadPlayerEngagement ? EngagementExitRadius : EngagementRadius;
+		const float EffectiveEngagementRadiusSq = EffectiveEngagementRadius * EffectiveEngagementRadius;
 
 		if (!bCanEngagePlayer
 			|| Unit.Team != EUnitTeam::Enemy
 			|| !IsCrowdUnitCombatActive(Unit)
 			|| IsCrowdUnitControlLocked(Unit.State)
-			|| DistanceSquaredXY(Unit.Position, PlayerLocation) > EngagementRadiusSq)
+			|| DistanceSquaredXY(Unit.Position, PlayerLocation) > EffectiveEngagementRadiusSq)
 		{
 			Unit.bHasAttackToken = false;
 			Unit.CombatSlotIndex = -1;

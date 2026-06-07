@@ -1,6 +1,8 @@
 ﻿#include "Game/Crowd/LargeScaleUnitManagerComponent.h"
 
+#include "Animation/AnimationManager.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/Sequence/AnimSequence.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "Game/Crowd/CrowdMeleeAnimInstance.h"
 #include "Game/Musou/Combat/AttackTypes.h"
@@ -28,6 +30,18 @@ namespace
 	float Square(float Value)
 	{
 		return Value * Value;
+	}
+
+	float ResolveAnimationPlayLength(const FSoftObjectPtr& SequencePath)
+	{
+		const FString Path = SequencePath.ToString();
+		if (Path.empty() || Path == "None")
+		{
+			return 0.0f;
+		}
+
+		UAnimSequence* Sequence = FAnimationManager::Get().LoadAnimation(Path);
+		return Sequence ? (std::max)(Sequence->GetPlayLength(), 0.0f) : 0.0f;
 	}
 
 	void DrawDebugCircleXY(UWorld* World, const FVector& Center, float Radius, int32 Segments, const FColor& Color, float Duration)
@@ -80,6 +94,7 @@ namespace
 		const FSoftObjectPtr& AttackSequencePath,
 		const FSoftObjectPtr& HitSequencePath,
 		const FSoftObjectPtr& KnockDownSequencePath,
+		const FSoftObjectPtr& GettingUpSequencePath,
 		const FSoftObjectPtr& DeadSequencePath)
 	{
 		FCrowdMeleeAnimationSet Set;
@@ -95,6 +110,7 @@ namespace
 		Set.AttackSequencePath = AttackSequencePath;
 		Set.HitSequencePath = HitSequencePath;
 		Set.KnockDownSequencePath = KnockDownSequencePath;
+		Set.GettingUpSequencePath = GettingUpSequencePath;
 		Set.DeadSequencePath = DeadSequencePath;
 		return Set;
 	}
@@ -194,6 +210,7 @@ FCrowdCombatSettings ULargeScaleUnitManagerComponent::BuildCombatSettings() cons
 	Settings.KnockDownStateDuration = KnockDownStateDuration;
 	Settings.DeadStateDuration = DeadStateDuration;
 	Settings.KnockDownMinKnockbackDistance = KnockDownMinKnockbackDistance;
+	Settings.AttackStateExitHysteresis = AttackStateExitHysteresis;
 	return Settings;
 }
 
@@ -202,6 +219,7 @@ FCrowdEngagementSettings ULargeScaleUnitManagerComponent::BuildEngagementSetting
 	FCrowdEngagementSettings Settings;
 	Settings.bEnablePlayerEngagement = bEnablePlayerEngagement;
 	Settings.PlayerEngagementRadius = PlayerEngagementRadius;
+	Settings.PlayerEngagementExitHysteresis = PlayerEngagementExitHysteresis;
 	Settings.PlayerProxyRadius = PlayerProxyRadius;
 	Settings.MeleeCombatSlotCount = MeleeCombatSlotCount;
 	Settings.RangedCombatSlotCount = RangedCombatSlotCount;
@@ -240,6 +258,7 @@ FCrowdVisualDesc ULargeScaleUnitManagerComponent::BuildVisualDesc(EUnitTeam Team
 				AllyMeleeAttackSequencePath,
 				AllyMeleeHitSequencePath,
 				AllyMeleeKnockDownSequencePath,
+				AllyMeleeGettingUpSequencePath,
 				AllyMeleeDeadSequencePath));
 	case EUnitTeam::Enemy:
 	default:
@@ -265,6 +284,7 @@ FCrowdVisualDesc ULargeScaleUnitManagerComponent::BuildVisualDesc(EUnitTeam Team
 				EnemyMeleeAttackSequencePath,
 				EnemyMeleeHitSequencePath,
 				EnemyMeleeKnockDownSequencePath,
+				EnemyMeleeGettingUpSequencePath,
 				EnemyMeleeDeadSequencePath));
 	}
 }
@@ -433,12 +453,14 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	AISettings.PlayerProxyRadius = EngagementSettings.PlayerProxyRadius;
 	AISettings.SlotArriveTolerance = EngagementSettings.SlotArriveTolerance;
 	AISettings.CircleAroundRadiusTolerance = CircleAroundRadiusTolerance;
+	AISettings.AttackStateExitHysteresis = AttackStateExitHysteresis;
+	AISettings.CircleAroundStateHysteresis = CircleAroundStateHysteresis;
 	AIManager.Update(DeltaTime, UnitStore, SpatialPartition, AISettings, [this]()
 	{
 		return RandomThinkInterval();
 	});
 	MovementManager.Update(DeltaTime, UnitStore, SpatialPartition, GroundQuery, MovementSettings);
-	CombatManager.UpdateCombat(DeltaTime, UnitStore, PlayerPawn, EngagementSettings.PlayerProxyRadius);
+	CombatManager.UpdateCombat(DeltaTime, UnitStore, PlayerPawn, EngagementSettings.PlayerProxyRadius, CombatSettings);
 
 	CombatManager.ProcessDamageEvents(UnitStore, GetMusouGameModeFor(this), CombatSettings, RemovedHandles);
 	for (FUnitHandle Handle : RemovedHandles)
@@ -479,6 +501,13 @@ void ULargeScaleUnitManagerComponent::ActivateUnit(
 
 	if (FCrowdUnit* Unit = UnitStore.ResolveUnit(Handle))
 	{
+		if (Unit->Archetype.CombatType == EUnitCombatType::Melee)
+		{
+			const FCrowdMeleeAnimationSet& MeleeAnimations = BuildVisualDesc(Team, Unit->Archetype.CombatType).MeleeAnimations;
+			Unit->KnockDownAnimDuration = ResolveAnimationPlayLength(MeleeAnimations.KnockDownSequencePath);
+			Unit->GettingUpAnimDuration = ResolveAnimationPlayLength(MeleeAnimations.GettingUpSequencePath);
+		}
+
 		if (bSurfaceFollowingEnabled)
 		{
 			EnsureGroundQueryBuilt();

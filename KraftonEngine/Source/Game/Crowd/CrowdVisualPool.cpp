@@ -41,6 +41,7 @@ void FCrowdVisualPool::BuildRenderData(const FCrowdUnitStore& UnitStore)
 			Unit.AnimTime,
 			Unit.Velocity.Length(),
 			Unit.CircleAroundDirectionSign,
+			Unit.bKnockDownGettingUp,
 			true
 		});
 	}

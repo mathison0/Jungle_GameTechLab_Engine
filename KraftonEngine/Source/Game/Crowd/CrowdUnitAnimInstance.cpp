@@ -27,6 +27,8 @@ void UCrowdUnitAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	LastCrowdCombatType = EUnitCombatType::Melee;
 	LastCrowdLOD = ECrowdUnitLOD::Full;
 	CircleAroundDirectionSign = 1.0f;
+	AnimTime = 0.0f;
+	bKnockDownGettingUp = false;
 
 	USkeletalMeshComponent* MeshComp = GetOwningComponent();
 	ACrowdUnitVisualActor* VisualActor = MeshComp ? Cast<ACrowdUnitVisualActor>(MeshComp->GetOwner()) : nullptr;
@@ -39,6 +41,8 @@ void UCrowdUnitAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	LastCrowdCombatType = VisualActor->GetCrowdCombatType();
 	LastCrowdLOD = VisualActor->GetCrowdLOD();
 	CircleAroundDirectionSign = VisualActor->GetCrowdCircleAroundDirectionSign();
+	AnimTime = VisualActor->GetCrowdAnimTime();
+	bKnockDownGettingUp = VisualActor->IsCrowdKnockDownGettingUp();
 	if (IsCrowdUnitMovingState(LastCrowdState))
 	{
 		Speed = VisualActor->GetCrowdSpeed();

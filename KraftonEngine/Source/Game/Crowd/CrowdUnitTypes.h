@@ -58,6 +58,7 @@ struct FCrowdMeleeAnimationSet
 	FSoftObjectPtr AttackSequencePath = "None";
 	FSoftObjectPtr HitSequencePath = "None";
 	FSoftObjectPtr KnockDownSequencePath = "None";
+	FSoftObjectPtr GettingUpSequencePath = "None";
 	FSoftObjectPtr DeadSequencePath = "None";
 
 	bool operator==(const FCrowdMeleeAnimationSet& Other) const
@@ -74,6 +75,7 @@ struct FCrowdMeleeAnimationSet
 			&& AttackSequencePath.ToString() == Other.AttackSequencePath.ToString()
 			&& HitSequencePath.ToString() == Other.HitSequencePath.ToString()
 			&& KnockDownSequencePath.ToString() == Other.KnockDownSequencePath.ToString()
+			&& GettingUpSequencePath.ToString() == Other.GettingUpSequencePath.ToString()
 			&& DeadSequencePath.ToString() == Other.DeadSequencePath.ToString();
 	}
 
@@ -151,6 +153,11 @@ struct FCrowdUnit
 	// MovementManager 가 Z 포물선을 적분한다. 착지 시 해제 후 잔여 다운 시간 소화.
 	bool bAirborne = false;
 	float AirborneVelZ = 0.0f;
+	float KnockDownAnimDuration = 0.0f;
+	float GettingUpAnimDuration = 0.0f;
+	float KnockDownFlyingBackTimeRemaining = 0.0f;
+	float KnockDownGettingUpTimeRemaining = 0.0f;
+	bool bKnockDownGettingUp = false;
 	ECrowdUnitLOD LOD = ECrowdUnitLOD::Full;
 	float LODUpdateTimeRemaining = 0.0f;
 	float LODAccumulatedDeltaTime = 0.0f;
@@ -223,5 +230,6 @@ struct FUnitRenderData
 	float AnimTime = 0.0f;
 	float Speed = 0.0f;
 	float CircleAroundDirectionSign = 1.0f;
+	bool bKnockDownGettingUp = false;
 	bool bVisible = false;
 };

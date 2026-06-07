@@ -6,6 +6,7 @@ struct FCrowdEngagementSettings
 {
 	bool bEnablePlayerEngagement = true;
 	float PlayerEngagementRadius = 18.0f;
+	float PlayerEngagementExitHysteresis = 2.0f;
 	float PlayerProxyRadius = 0.6f;
 	int32 MeleeCombatSlotCount = 8;
 	int32 RangedCombatSlotCount = 8;
