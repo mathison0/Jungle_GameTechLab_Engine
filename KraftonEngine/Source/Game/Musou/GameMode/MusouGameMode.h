@@ -80,9 +80,13 @@ public:
 private:
 	void UpdateHud(float DeltaTime);
 	void SetStopMenuVisible(bool bVisible);
+	void StartDeathOverlay();
+	void UpdateDeathOverlay(float DeltaTime);
 
 	UUserWidget* HudWidget = nullptr;
 	bool bStopMenuVisible = false;
+	bool bDeathOverlayVisible = false;
+	bool bDeathButtonsVisible = false;
 	bool bKillHudInitialized = false;
 	int32 LastHudKillCount = 0;
 	int32 LastDisplayedKillMilestone = 0;
@@ -92,4 +96,5 @@ private:
 	float KillMilestoneElapsed = 0.0f;
 	float BloodVignetteRemaining = 0.0f;
 	float BloodVignetteIntensity = 0.0f;
+	float DeathOverlayElapsed = 0.0f;
 };

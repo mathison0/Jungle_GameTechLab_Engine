@@ -33,6 +33,12 @@ namespace
 	constexpr float BloodVignetteFullDamage = 30.0f;
 	constexpr float BloodVignetteMinTriggerHealthRatio = 0.15f;
 	constexpr float BloodVignetteLowHealthTriggerRatio = 0.35f;
+	constexpr float DeathOverlayFadeDuration = 0.85f;
+	constexpr float DeathOverlayMaxAlpha = 0.72f;
+	constexpr float DeathTitleFadeDelay = 0.25f;
+	constexpr float DeathTitleFadeDuration = 1.15f;
+	constexpr float PauseMenuMarginTop = -144.0f;
+	constexpr float DeathMenuMarginTop = 112.0f;
 
 	// 킬 버스트 연출 파라미터(임계/슬로모/셰이크)는 attack_data.lua 의 feedback 테이블 —
 	// FAttackDataRegistry::GetFeedback() 으로 조회 (핫리로드 튜닝).
@@ -47,6 +53,7 @@ namespace
 		APlayerController* PC = GEngine->GetWorld()->GetFirstPlayerController();
 		return PC ? PC->GetPlayerCameraManager() : nullptr;
 	}
+
 	FString MakeScaleTransform(float Scale)
 	{
 		char Buffer[32] = {};
@@ -121,6 +128,22 @@ namespace
 
 		char Buffer[16] = {};
 		std::snprintf(Buffer, sizeof(Buffer), "%.3f", ClampedAlpha);
+		return FString(Buffer);
+	}
+
+	float SmoothStep01(float Value)
+	{
+		const float T = std::clamp(Value, 0.0f, 1.0f);
+		return T * T * (3.0f - 2.0f * T);
+	}
+
+	FString MakeOverlayColor(float Alpha)
+	{
+		const float ClampedAlpha = std::clamp(Alpha, 0.0f, 1.0f);
+		const int32 AlphaByte = static_cast<int32>(ClampedAlpha * 255.0f + 0.5f);
+
+		char Buffer[16] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "#080A0E%02X", AlphaByte);
 		return FString(Buffer);
 	}
 }
@@ -209,12 +232,13 @@ void AMusouGameMode::Tick(float DeltaTime)
 {
 	AGameModeBase::Tick(DeltaTime);
 
-	if (InputSystem::Get().GetKeyDown(VK_ESCAPE))
+	if (!bDeathOverlayVisible && InputSystem::Get().GetKeyDown(VK_ESCAPE))
 	{
 		SetStopMenuVisible(!bStopMenuVisible);
 	}
 
 	UpdateHud(DeltaTime);
+	UpdateDeathOverlay(DeltaTime);
 }
 
 void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)
@@ -318,6 +342,7 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 {
 	UE_LOG("[MusouGameMode] Player died");
 	EndMatch();
+	StartDeathOverlay();
 }
 
 void AMusouGameMode::NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator)
@@ -486,6 +511,11 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 {
+	if (bDeathOverlayVisible)
+	{
+		return;
+	}
+
 	bStopMenuVisible = bVisible;
 
 	if (!HudWidget || !HudWidget->IsDocumentLoaded())
@@ -493,11 +523,97 @@ void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 		return;
 	}
 
-	HudWidget->SetProperty("pause-overlay", "display", bStopMenuVisible ? "flex" : "none");
+	if (bStopMenuVisible)
+	{
+		HudWidget->SetProperty("pause-overlay", "background-color", "#1616165c");
+		HudWidget->SetProperty("death-title", "display", "none");
+		HudWidget->SetProperty("death-title", "opacity", "0");
+		HudWidget->SetProperty("pause-menu", "display", "block");
+		HudWidget->SetProperty("pause-menu", "margin-top", MakePxValue(PauseMenuMarginTop));
+		HudWidget->SetProperty("resume-button", "display", "block");
+		HudWidget->SetProperty("restart-button", "display", "block");
+		HudWidget->SetProperty("stop-button", "display", "block");
+	}
+
+	HudWidget->SetProperty("pause-overlay", "display", bStopMenuVisible ? "block" : "none");
 	HudWidget->SetWantsMouse(bStopMenuVisible);
 
 	if (UWorld* World = GetWorld())
 	{
 		World->SetPaused(bStopMenuVisible);
+	}
+}
+
+void AMusouGameMode::StartDeathOverlay()
+{
+	if (bDeathOverlayVisible)
+	{
+		return;
+	}
+
+	bStopMenuVisible = false;
+	bDeathOverlayVisible = true;
+	bDeathButtonsVisible = false;
+	DeathOverlayElapsed = 0.0f;
+
+	if (HudWidget && HudWidget->IsDocumentLoaded())
+	{
+		HudWidget->SetProperty("pause-overlay", "display", "block");
+		HudWidget->SetProperty("pause-overlay", "background-color", MakeOverlayColor(0.0f));
+		HudWidget->SetProperty("death-title", "display", "block");
+		HudWidget->SetProperty("death-title", "opacity", "0");
+		HudWidget->SetProperty("pause-menu", "display", "none");
+		HudWidget->SetProperty("pause-menu", "margin-top", MakePxValue(DeathMenuMarginTop));
+		HudWidget->SetProperty("resume-button", "display", "none");
+		HudWidget->SetProperty("restart-button", "display", "block");
+		HudWidget->SetProperty("stop-button", "display", "block");
+		HudWidget->SetWantsMouse(false);
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		World->SetPaused(true);
+	}
+}
+
+void AMusouGameMode::UpdateDeathOverlay(float DeltaTime)
+{
+	if (!bDeathOverlayVisible)
+	{
+		return;
+	}
+
+	DeathOverlayElapsed += DeltaTime;
+
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	const float OverlayAlpha = DeathOverlayMaxAlpha * SmoothStep01(DeathOverlayElapsed / DeathOverlayFadeDuration);
+	const float TitleAlpha = SmoothStep01((DeathOverlayElapsed - DeathTitleFadeDelay) / DeathTitleFadeDuration);
+
+	HudWidget->SetProperty("pause-overlay", "display", "block");
+	HudWidget->SetProperty("pause-overlay", "background-color", MakeOverlayColor(OverlayAlpha));
+	HudWidget->SetProperty("death-title", "display", "block");
+	HudWidget->SetProperty("death-title", "opacity", MakeOpacityValue(TitleAlpha));
+
+	if (TitleAlpha < 1.0f)
+	{
+		HudWidget->SetProperty("pause-menu", "display", "none");
+		HudWidget->SetProperty("resume-button", "display", "none");
+		HudWidget->SetWantsMouse(false);
+		return;
+	}
+
+	if (!bDeathButtonsVisible)
+	{
+		bDeathButtonsVisible = true;
+		HudWidget->SetProperty("pause-menu", "display", "block");
+		HudWidget->SetProperty("pause-menu", "margin-top", MakePxValue(DeathMenuMarginTop));
+		HudWidget->SetProperty("resume-button", "display", "none");
+		HudWidget->SetProperty("restart-button", "display", "block");
+		HudWidget->SetProperty("stop-button", "display", "block");
+		HudWidget->SetWantsMouse(true);
 	}
 }

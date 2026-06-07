@@ -213,12 +213,30 @@
 			height: 100%;
 			z-index: 100;
 			display: none;
-			align-items: center;
-			justify-content: center;
 			background-color: #1616165c;
 		}
 
+		#death-title {
+			position: absolute;
+			left: 0;
+			top: 50%;
+			margin-top: -60px;
+			display: none;
+			width: 100%;
+			height: 120px;
+			line-height: 120px;
+			text-align: center;
+			font-size: 112px;
+			opacity: 0;
+			color: #f8f3df;
+		}
+
 		#pause-menu {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -120px;
+			margin-top: -144px;
 			display: block;
 			width: 240px;
 		}
@@ -273,6 +291,7 @@
 			<img id="blood-vignette-image" src="BloodOverlay.png" />
 		</div>
 		<div id="pause-overlay">
+			<div id="death-title">전사</div>
 			<div id="pause-menu">
 				<div id="resume-button" class="pause-button">재개하기</div>
 				<div id="restart-button" class="pause-button">재도전</div>
