@@ -3,6 +3,7 @@
 #include "Core/Logging/Log.h"
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Runtime/Engine.h"
+#include "Game/Musou/Score/MusouScoreboard.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 
@@ -21,6 +22,7 @@ namespace
 	};
 
 	constexpr int32 IntroButtonCount = 4;
+	constexpr int32 IntroScoreboardPageSize = 10;
 }
 
 AMusouGameModeIntro::AMusouGameModeIntro()
@@ -44,6 +46,26 @@ void AMusouGameModeIntro::StartMatch()
 				}
 			});
 
+			IntroWidget->BindClick("score-button", [this]()
+			{
+				ShowScoreboard();
+			});
+
+			IntroWidget->BindClick("scoreboard-prev-button", [this]()
+			{
+				ShowPreviousScoreboardPage();
+			});
+
+			IntroWidget->BindClick("scoreboard-next-button", [this]()
+			{
+				ShowNextScoreboardPage();
+			});
+
+			IntroWidget->BindClick("scoreboard-close-button", [this]()
+			{
+				HideScoreboard();
+			});
+
 			IntroWidget->BindClick("exit-button", []()
 			{
 				UE_LOG("[MusouGameModeIntro] Exit requested from intro UI");
@@ -64,6 +86,8 @@ void AMusouGameModeIntro::StartMatch()
 	{
 		IntroWidget->SetWantsMouse(true);
 		IntroWidget->AddToViewport(0);
+		ScoreboardOverlay.SetWidget(IntroWidget);
+		HideScoreboard();
 		SelectIntroButton(0);
 		UE_LOG("[MusouGameModeIntro] Intro UI added to viewport");
 	}
@@ -71,6 +95,8 @@ void AMusouGameModeIntro::StartMatch()
 
 void AMusouGameModeIntro::EndPlay()
 {
+	ScoreboardOverlay.SetWidget(nullptr);
+
 	if (IntroWidget)
 	{
 		IntroWidget->RemoveFromParent();
@@ -90,6 +116,23 @@ void AMusouGameModeIntro::Tick(float DeltaTime)
 	}
 
 	InputSystem& Input = InputSystem::Get();
+	if (bScoreboardVisible)
+	{
+		if (Input.GetKeyDown(VK_ESCAPE))
+		{
+			HideScoreboard();
+		}
+		if (Input.GetKeyDown(VK_LEFT))
+		{
+			ShowPreviousScoreboardPage();
+		}
+		if (Input.GetKeyDown(VK_RIGHT))
+		{
+			ShowNextScoreboardPage();
+		}
+		return;
+	}
+
 	if (Input.GetKeyDown(VK_UP))
 	{
 		MoveIntroSelection(-1);
@@ -141,4 +184,37 @@ void AMusouGameModeIntro::UpdateIntroSelectionVisuals()
 	{
 		IntroWidget->SetClass(IntroButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedIntroButtonIndex);
 	}
+}
+
+void AMusouGameModeIntro::ShowScoreboard()
+{
+	if (!IntroWidget || !IntroWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	bScoreboardVisible = true;
+	ScoreboardOverlay.ShowReadOnly(FMusouScoreboard::LoadEntries(), IntroScoreboardPageSize);
+}
+
+void AMusouGameModeIntro::HideScoreboard()
+{
+	if (!IntroWidget || !IntroWidget->IsDocumentLoaded())
+	{
+		bScoreboardVisible = false;
+		return;
+	}
+
+	bScoreboardVisible = false;
+	ScoreboardOverlay.Hide();
+}
+
+void AMusouGameModeIntro::ShowPreviousScoreboardPage()
+{
+	ScoreboardOverlay.ShowPreviousPage();
+}
+
+void AMusouGameModeIntro::ShowNextScoreboardPage()
+{
+	ScoreboardOverlay.ShowNextPage();
 }

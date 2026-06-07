@@ -36,6 +36,7 @@ namespace
 	constexpr float VictoryTitleFadeDuration = 0.85f;
 	constexpr float VictoryScoreFadeDelay = 0.55f;
 	constexpr float VictoryScoreFadeDuration = 0.75f;
+	constexpr int32 ScoreboardPageSize = 4;
 
 	FString MakeScaleTransform(float Scale)
 	{
@@ -134,18 +135,25 @@ namespace
 	// 결과 화면의 보조 정보 문구. 실제 스코어보드 UI가 들어오면 같은 Result를 넘겨 재사용한다.
 	FString MakeVictoryDetailsText(const FMusouMatchResult& Result)
 	{
-		char Buffer[128] = {};
-		std::snprintf(Buffer, sizeof(Buffer), "K.O. %d   Max Combo %d   Time %.1fs",
+		char Buffer[256] = {};
+		std::snprintf(Buffer, sizeof(Buffer),
+			"<span class=\"victory-detail-item\">K.O. %d</span>"
+			"<span class=\"victory-detail-separator\">/</span>"
+			"<span class=\"victory-detail-item\">Max Combo %d</span>"
+			"<span class=\"victory-detail-separator\">/</span>"
+			"<span class=\"victory-detail-item\">Time %.1fs</span>",
 			Result.KillCount,
 			Result.MaxCombo,
 			Result.MatchTime);
 		return FString(Buffer);
 	}
+
 }
 
 void FMusouHudPresenter::SetWidget(UUserWidget* InWidget)
 {
 	Widget = InWidget;
+	ScoreboardOverlay.SetWidget(InWidget);
 }
 
 void FMusouHudPresenter::Tick(float DeltaTime, const AMusouGameState* MusouState, float PlayerHealthRatio)
@@ -232,13 +240,14 @@ void FMusouHudPresenter::StartDeathOverlay()
 	Widget->SetProperty("victory-title", "display", "none");
 	Widget->SetProperty("victory-score", "display", "none");
 	Widget->SetProperty("victory-details", "display", "none");
+	ScoreboardOverlay.Hide();
 	Widget->SetProperty("pause-menu", "display", "none");
 	Widget->SetProperty("death-menu", "display", "none");
 	Widget->SetProperty("victory-menu", "display", "none");
 	Widget->SetWantsMouse(false);
 }
 
-void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result)
+void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result, const TArray<FMusouScoreboardEntry>& ScoreboardEntries)
 {
 	if (bVictoryOverlayVisible || bDeathOverlayVisible)
 	{
@@ -247,7 +256,10 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result)
 
 	bVictoryOverlayVisible = true;
 	bVictoryButtonsVisible = false;
+	bVictoryScoreboardVisible = false;
+	bVictoryScoreSubmitted = false;
 	VictoryOverlayElapsed = 0.0f;
+	VictoryHealthRatio = std::clamp(Result.PlayerHealthRatio, 0.0f, 1.0f);
 
 	if (!Widget || !Widget->IsDocumentLoaded())
 	{
@@ -269,7 +281,8 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result)
 	Widget->SetProperty("victory-score", "opacity", "0");
 	Widget->SetProperty("victory-details", "display", "block");
 	Widget->SetProperty("victory-details", "opacity", "0");
-	Widget->SetProperty("victory-menu", "display", "none");
+	ScoreboardOverlay.ConfigureSaveMode(ScoreboardEntries, ScoreboardPageSize, "Player", "이름 입력 후 저장하면 랭킹에 반영됩니다.");
+	ScoreboardOverlay.Hide();
 
 	// 표시 값은 승리 확정 시점에 고정된 Result만 사용한다.
 	Widget->SetText("victory-score", FString("score: ") + std::to_string(static_cast<long long>(Result.Score)));
@@ -277,9 +290,55 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result)
 	Widget->SetWantsMouse(false);
 }
 
+void FMusouHudPresenter::NotifyVictoryScoreSubmitted(const TArray<FMusouScoreboardEntry>& ScoreboardEntries)
+{
+	bVictoryScoreSubmitted = true;
+	ScoreboardOverlay.NotifyScoreSubmitted(ScoreboardEntries, "저장 완료");
+
+	if (!Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	if (bVictoryScoreboardVisible)
+	{
+		bVictoryButtonsVisible = true;
+		Widget->SetWantsMouse(true);
+	}
+}
+
+void FMusouHudPresenter::NotifyVictoryScoreSaveFailed()
+{
+	if (!Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	ScoreboardOverlay.SetSaveStatus("저장 실패");
+}
+
+void FMusouHudPresenter::ShowPreviousScoreboardPage()
+{
+	ScoreboardOverlay.ShowPreviousPage();
+}
+
+void FMusouHudPresenter::ShowNextScoreboardPage()
+{
+	ScoreboardOverlay.ShowNextPage();
+}
+
 void FMusouHudPresenter::UpdateStatusHud(const AMusouGameState* MusouState, float PlayerHealthRatio)
 {
-	const float DisplayHealthRatio = bDeathOverlayVisible ? 0.0f : PlayerHealthRatio;
+	float DisplayHealthRatio = PlayerHealthRatio;
+	if (bDeathOverlayVisible)
+	{
+		DisplayHealthRatio = 0.0f;
+	}
+	else if (bVictoryOverlayVisible)
+	{
+		// 승리 후에는 EndMatch가 Pawn을 UnPossess하므로 GameMode의 fallback HP(1.0f)를 쓰지 않는다.
+		DisplayHealthRatio = VictoryHealthRatio;
+	}
 
 	Widget->SetAttribute("hp-bar", "value", std::clamp(DisplayHealthRatio, 0.0f, 1.0f));
 	Widget->SetText("score-counter", FString("score: ") + std::to_string(static_cast<long long>(MusouState->GetScore())));
@@ -463,16 +522,21 @@ void FMusouHudPresenter::UpdateVictoryOverlay(float DeltaTime)
 		Widget->SetProperty("pause-menu", "display", "none");
 		Widget->SetProperty("death-menu", "display", "none");
 		Widget->SetProperty("victory-menu", "display", "none");
+		ScoreboardOverlay.Hide();
 		Widget->SetWantsMouse(false);
 		return;
 	}
 
-	if (!bVictoryButtonsVisible)
+	if (!bVictoryScoreboardVisible)
 	{
+		bVictoryScoreboardVisible = true;
 		bVictoryButtonsVisible = true;
 		Widget->SetProperty("pause-menu", "display", "none");
 		Widget->SetProperty("death-menu", "display", "none");
-		Widget->SetProperty("victory-menu", "display", "block");
+		ScoreboardOverlay.Show();
 		Widget->SetWantsMouse(true);
+
+		// 스코어보드가 열린 직후 바로 이름을 입력할 수 있도록 입력창에 포커스를 준다.
+		ScoreboardOverlay.FocusNameInput();
 	}
 }

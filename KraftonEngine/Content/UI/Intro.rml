@@ -12,11 +12,12 @@
 		}
 
 		#intro-root {
-			width: 100%;
-			height: 100%;
+			position: relative;
 			display: flex;
 			align-items: center;
 			justify-content: center;
+			width: 100%;
+			height: 100%;
 		}
 
 		#menu-buttons {
@@ -51,15 +52,208 @@
 		}
 
 		.menu-button:hover,
-		.menu-button.selected {
-			background-color: #dddddd;
-			color: #1b1b1bf1;
-		}
-
+		.menu-button.selected,
 		.secondary-button:hover,
 		.secondary-button.selected {
 			background-color: #dddddd;
 			color: #1b1b1bf1;
+		}
+
+		#scoreboard-overlay-host {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+		}
+
+		#scoreboard-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #030508a3;
+		}
+
+		#scoreboard-panel {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -370px;
+			margin-top: -300px;
+			display: block;
+			width: 700px;
+			height: 560px;
+			padding: 20px;
+			background-color: #0c0f14f2;
+			border-width: 2px;
+			border-color: #f0d36a;
+			color: #f8f3df;
+		}
+
+		#scoreboard-title {
+			display: block;
+			width: 700px;
+			height: 36px;
+			line-height: 36px;
+			font-size: 34px;
+			text-align: center;
+			color: #f0d36a;
+		}
+
+		#scoreboard-input-row {
+			display: none;
+		}
+
+		#scoreboard-save-status {
+			display: none;
+		}
+
+		#scoreboard-list {
+			display: block;
+			width: 700px;
+			height: 360px;
+			margin-top: 14px;
+			overflow: hidden;
+		}
+
+		.scoreboard-row {
+			position: relative;
+			display: block;
+			width: 700px;
+			height: 34px;
+			margin-bottom: 2px;
+			background-color: rgba(248, 243, 223, 0.08);
+		}
+
+		.scoreboard-rank {
+			position: absolute;
+			left: 10px;
+			top: 0;
+			width: 42px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 20px;
+			text-align: center;
+			color: #f0d36a;
+		}
+
+		.scoreboard-name {
+			position: absolute;
+			left: 64px;
+			top: 0;
+			width: 170px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 20px;
+			color: #f8f3df;
+		}
+
+		.scoreboard-entry-score {
+			position: absolute;
+			left: 248px;
+			top: 0;
+			width: 130px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 22px;
+			text-align: right;
+			color: #ffffff;
+		}
+
+		.scoreboard-entry-details {
+			position: absolute;
+			left: 396px;
+			top: 0;
+			width: 290px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 16px;
+			text-align: right;
+			color: #d6ccb1;
+		}
+
+		.scoreboard-empty {
+			display: block;
+			width: 700px;
+			height: 180px;
+			line-height: 180px;
+			font-size: 24px;
+			text-align: center;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-pager {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 700px;
+			height: 34px;
+			margin-top: 10px;
+		}
+
+		.scoreboard-page-button {
+			display: block;
+			width: 38px;
+			height: 30px;
+			line-height: 30px;
+			margin-left: 8px;
+			margin-right: 8px;
+			text-align: center;
+			font-size: 24px;
+			background-color: rgba(240, 211, 106, 0.18);
+			color: #f0d36a;
+			border-width: 1px;
+			border-color: #f0d36a;
+		}
+
+		.scoreboard-page-button:hover {
+			background-color: #f0d36a;
+			color: #17130c;
+		}
+
+		.scoreboard-page-button.disabled,
+		.scoreboard-page-button.disabled:hover {
+			background-color: rgba(248, 243, 223, 0.04);
+			color: #6f6858;
+			border-color: #6f6858;
+		}
+
+		#scoreboard-page-label {
+			display: block;
+			width: 80px;
+			height: 30px;
+			line-height: 30px;
+			text-align: center;
+			font-size: 18px;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-close-button {
+			display: block;
+			width: 180px;
+			height: 50px;
+			line-height: 50px;
+			margin-left: 260px;
+			margin-top: 18px;
+			text-align: center;
+			font-size: 24px;
+			background-color: #222222f1;
+			color: #dddddd;
+			border-width: 2px;
+			border-color: #dddddd;
+		}
+
+		#scoreboard-close-button:hover {
+			background-color: #dddddd;
+			color: #1b1b1bf1;
+		}
+
+		#victory-menu {
+			display: none;
 		}
 	</style>
 </head>
@@ -71,6 +265,7 @@
 			<div id="score-button" class="menu-button secondary-button">스코어</div>
 			<div id="exit-button" class="menu-button secondary-button">게임 종료</div>
 		</div>
+		<div id="scoreboard-overlay-host"></div>
 	</div>
 </body>
 </rml>

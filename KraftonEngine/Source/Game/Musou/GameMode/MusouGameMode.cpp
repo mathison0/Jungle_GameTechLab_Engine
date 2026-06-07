@@ -4,6 +4,7 @@
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/GameMode/MusouPlayerController.h"
+#include "Game/Musou/Score/MusouScoreboard.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/Camera/WaveOscillatorCameraShake.h"
 #include "GameFramework/GameMode/PlayerController.h"
@@ -117,9 +118,24 @@ void AMusouGameMode::StartMatch()
 			HudWidget->BindClick("stop-button", StopMatch);
 			HudWidget->BindClick("death-stop-button", StopMatch);
 			HudWidget->BindClick("victory-stop-button", StopMatch);
+			HudWidget->BindClick("scoreboard-save-button", [this]()
+			{
+				SubmitVictoryScore();
+			});
+			HudWidget->BindClick("scoreboard-prev-button", [this]()
+			{
+				HudPresenter.ShowPreviousScoreboardPage();
+			});
+			HudWidget->BindClick("scoreboard-next-button", [this]()
+			{
+				HudPresenter.ShowNextScoreboardPage();
+			});
 			BindHudMenuHoverHandlers();
 		}
 	}
+
+	bHasPendingVictoryResult = false;
+	bVictoryScoreSubmitted = false;
 
 	if (HudWidget)
 	{
@@ -322,6 +338,8 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 	bStopMenuVisible = false;
 	bDeathMenuSelectionInitialized = false;
 	bVictoryMenuSelectionInitialized = false;
+	bHasPendingVictoryResult = false;
+	bVictoryScoreSubmitted = false;
 	HudPresenter.StartDeathOverlay();
 	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
 	ClearHudButtonSelection(VictoryMenuButtonIds, VictoryMenuButtonCount);
@@ -343,6 +361,10 @@ void AMusouGameMode::NotifyVictory()
 	// 점수는 승리 확정 순간에 먼저 고정한다.
 	// EndMatch 이후 outro/UI tick이 이어져도 저장될 결과는 이 Result 하나만 사용한다.
 	FMusouMatchResult Result = MusouState->MakeMatchResult(true);
+	Result.PlayerHealthRatio = GetPlayerHealthRatio(); // EndMatch가 UnPossess하기 전에 현재 HP를 고정한다.
+	PendingVictoryResult = Result;
+	bHasPendingVictoryResult = true;
+	bVictoryScoreSubmitted = false;
 
 	UE_LOG("[MusouGameMode] Victory resolved — Kills=%d Score=%lld MaxCombo=%d Time=%.1fs",
 		Result.KillCount,
@@ -361,7 +383,7 @@ void AMusouGameMode::NotifyVictory()
 
 	// 현재 단계에서는 승리 오버레이를 즉시 띄운다. 나중에 outro가 생기면
 	// outro 시작/종료 타이밍에 맞춰 이 호출 위치만 조정하면 된다.
-	HudPresenter.StartVictoryOverlay(Result);
+	HudPresenter.StartVictoryOverlay(Result, FMusouScoreboard::LoadEntries());
 	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
 	ClearHudButtonSelection(DeathMenuButtonIds, DeathMenuButtonCount);
 
@@ -408,6 +430,31 @@ float AMusouGameMode::GetPlayerHealthRatio() const
 	}
 
 	return 1.0f;
+}
+
+void AMusouGameMode::SubmitVictoryScore()
+{
+	if (!bHasPendingVictoryResult || bVictoryScoreSubmitted)
+	{
+		return;
+	}
+
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	TArray<FMusouScoreboardEntry> UpdatedEntries;
+	if (!FMusouScoreboard::Submit(PendingVictoryResult, HudWidget->GetValue("scoreboard-name-input"), &UpdatedEntries))
+	{
+		HudPresenter.NotifyVictoryScoreSaveFailed();
+		return;
+	}
+
+	// 저장 버튼을 누른 바로 이 시점에만 실제 스코어보드 파일과 화면 목록이 갱신된다.
+	bVictoryScoreSubmitted = true;
+	bVictoryMenuSelectionInitialized = false;
+	HudPresenter.NotifyVictoryScoreSubmitted(UpdatedEntries);
 }
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)
@@ -582,6 +629,12 @@ void AMusouGameMode::HandleDeathMenuInput()
 void AMusouGameMode::HandleVictoryMenuInput()
 {
 	InputSystem& Input = InputSystem::Get();
+	if (Input.IsGuiUsingTextInput())
+	{
+		// 이름 입력 중에는 Enter/Space/방향키를 Rml input이 우선 처리하도록 둔다.
+		return;
+	}
+
 	// 사망 결과 메뉴와 동일한 조작 체계: 위/아래 이동, Enter/Space 실행.
 	if (Input.GetKeyDown(VK_UP))
 	{

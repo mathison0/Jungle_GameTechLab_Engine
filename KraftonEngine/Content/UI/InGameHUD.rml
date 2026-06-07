@@ -277,6 +277,262 @@
 			color: #d6ccb1;
 		}
 
+		.victory-detail-item {
+			display: inline-block;
+			margin-left: 18px;
+			margin-right: 18px;
+		}
+
+		.victory-detail-separator {
+			display: inline-block;
+			color: #f0d36a;
+		}
+
+		#scoreboard-overlay-host {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+		}
+
+		#scoreboard-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #00000000;
+		}
+
+		#scoreboard-overlay.scoreboard-read-only {
+			background-color: #030508a3;
+		}
+
+		#scoreboard-panel {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -280px;
+			margin-top: 112px;
+			display: block;
+			width: 520px;
+			height: 360px;
+			padding: 18px;
+			background-color: #0c0f14ea;
+			border-width: 2px;
+			border-color: #f0d36a;
+			color: #f8f3df;
+		}
+
+		#scoreboard-panel.scoreboard-read-only {
+			margin-left: -370px;
+			margin-top: -300px;
+			width: 700px;
+			height: 560px;
+		}
+
+		#scoreboard-title {
+			display: block;
+			height: 30px;
+			line-height: 30px;
+			font-size: 28px;
+			color: #f0d36a;
+		}
+
+		#scoreboard-input-row {
+			display: flex;
+			align-items: center;
+			width: 520px;
+			height: 48px;
+			margin-top: 8px;
+		}
+
+		#scoreboard-name-input {
+			display: block;
+			width: 382px;
+			height: 40px;
+			line-height: 40px;
+			padding-left: 10px;
+			padding-right: 10px;
+			font-size: 24px;
+			background-color: #f8f3df;
+			color: #151515;
+			border-width: 2px;
+			border-color: #3a3120;
+		}
+
+		#scoreboard-save-button {
+			display: block;
+			width: 78px;
+			height: 40px;
+			line-height: 40px;
+			margin-left: 18px;
+			text-align: center;
+			font-size: 22px;
+			background-color: #f0d36a;
+			color: #17130c;
+			border-width: 2px;
+			border-color: #f8f3df;
+		}
+
+		#scoreboard-save-button:hover {
+			background-color: #f8f3df;
+			color: #17130c;
+		}
+
+		#scoreboard-save-status {
+			display: block;
+			width: 520px;
+			height: 24px;
+			line-height: 24px;
+			margin-top: 4px;
+			font-size: 18px;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-list {
+			display: block;
+			width: 520px;
+			height: 146px;
+			margin-top: 10px;
+			overflow: hidden;
+		}
+
+		.scoreboard-row {
+			position: relative;
+			display: block;
+			width: 520px;
+			height: 34px;
+			margin-bottom: 2px;
+			background-color: rgba(248, 243, 223, 0.08);
+		}
+
+		.scoreboard-rank {
+			position: absolute;
+			left: 8px;
+			top: 0;
+			width: 34px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 20px;
+			color: #f0d36a;
+			text-align: center;
+		}
+
+		.scoreboard-name {
+			position: absolute;
+			left: 50px;
+			top: 0;
+			width: 144px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 20px;
+			color: #f8f3df;
+		}
+
+		.scoreboard-entry-score {
+			position: absolute;
+			left: 200px;
+			top: 0;
+			width: 96px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 22px;
+			color: #ffffff;
+			text-align: right;
+		}
+
+		.scoreboard-entry-details {
+			position: absolute;
+			left: 310px;
+			top: 0;
+			width: 202px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 16px;
+			color: #d6ccb1;
+			text-align: right;
+		}
+
+		.scoreboard-empty {
+			display: block;
+			width: 520px;
+			height: 72px;
+			line-height: 72px;
+			font-size: 22px;
+			text-align: center;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-pager {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 520px;
+			height: 30px;
+			margin-top: 4px;
+		}
+
+		.scoreboard-page-button {
+			display: block;
+			width: 34px;
+			height: 28px;
+			line-height: 28px;
+			margin-left: 6px;
+			margin-right: 6px;
+			text-align: center;
+			font-size: 24px;
+			background-color: rgba(240, 211, 106, 0.18);
+			color: #f0d36a;
+			border-width: 1px;
+			border-color: #f0d36a;
+		}
+
+		.scoreboard-page-button:hover {
+			background-color: #f0d36a;
+			color: #17130c;
+		}
+
+		.scoreboard-page-button.disabled,
+		.scoreboard-page-button.disabled:hover {
+			background-color: rgba(248, 243, 223, 0.04);
+			color: #6f6858;
+			border-color: #6f6858;
+		}
+
+		#scoreboard-page-label {
+			display: block;
+			width: 72px;
+			height: 28px;
+			line-height: 28px;
+			text-align: center;
+			font-size: 18px;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-close-button {
+			display: none;
+			width: 180px;
+			height: 48px;
+			line-height: 48px;
+			margin-left: 170px;
+			margin-top: 14px;
+			text-align: center;
+			font-size: 22px;
+			background-color: #222222f1;
+			color: #dddddd;
+			border-width: 2px;
+			border-color: #dddddd;
+		}
+
+		#scoreboard-close-button:hover {
+			background-color: #dddddd;
+			color: #222222f1;
+		}
+
 		#pause-menu {
 			position: absolute;
 			left: 50%;
@@ -298,13 +554,19 @@
 		}
 
 		#victory-menu {
-			position: absolute;
-			left: 50%;
-			top: 50%;
-			margin-left: -120px;
-			margin-top: 112px;
 			display: none;
-			width: 240px;
+			width: 520px;
+			height: 48px;
+			margin-top: 8px;
+			align-items: center;
+			justify-content: center;
+		}
+
+		#victory-menu .pause-button {
+			width: 156px;
+			height: 44px;
+			line-height: 44px;
+			font-size: 22px;
 		}
 
 		.pause-button {
@@ -339,7 +601,8 @@
 		}
 
 		#victory-restart-button {
-			margin-bottom: 16px;
+			margin-right: 18px;
+			margin-bottom: 0;
 		}
 	</style>
 </head>
@@ -371,6 +634,7 @@
 			<div id="victory-title">승리</div>
 			<div id="victory-score">score: 0</div>
 			<div id="victory-details">K.O. 0   Max Combo 0   Time 0.0s</div>
+			<div id="scoreboard-overlay-host"></div>
 			<div id="pause-menu">
 				<div id="resume-button" class="pause-button">재개하기</div>
 				<div id="restart-button" class="pause-button">재도전</div>
@@ -379,10 +643,6 @@
 			<div id="death-menu">
 				<div id="death-restart-button" class="pause-button">재도전</div>
 				<div id="death-stop-button" class="pause-button">전투 중단</div>
-			</div>
-			<div id="victory-menu">
-				<div id="victory-restart-button" class="pause-button">재도전</div>
-				<div id="victory-stop-button" class="pause-button">나가기</div>
 			</div>
 		</div>
 	</div>

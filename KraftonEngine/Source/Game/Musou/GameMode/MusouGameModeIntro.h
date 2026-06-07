@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Game/Musou/UI/MusouScoreboardOverlayPresenter.h"
 #include "GameFramework/GameMode/GameModeBase.h"
 
 #include "Source/Game/Musou/GameMode/MusouGameModeIntro.generated.h"
@@ -23,7 +24,13 @@ private:
 	void MoveIntroSelection(int32 Delta);
 	void ExecuteIntroSelection();
 	void UpdateIntroSelectionVisuals();
+	void ShowScoreboard();
+	void HideScoreboard();
+	void ShowPreviousScoreboardPage();
+	void ShowNextScoreboardPage();
 
 	UUserWidget* IntroWidget = nullptr;
+	FMusouScoreboardOverlayPresenter ScoreboardOverlay;
 	int32 SelectedIntroButtonIndex = 0;
+	bool bScoreboardVisible = false;
 };

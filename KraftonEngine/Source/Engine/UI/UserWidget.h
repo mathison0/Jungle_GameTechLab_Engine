@@ -99,6 +99,9 @@ public:
 	void RegisterEventListeners();
 	void ClearEventListeners();
 	void SetText(const FString& ElementId, const FString& Text);
+	FString GetValue(const FString& ElementId) const;
+	bool SetValue(const FString& ElementId, const FString& Value);
+	bool Focus(const FString& ElementId, bool bFocusVisible = true);
 	bool SetProperty(const FString& ElementId, const FString& PropertyName, const FString& Value);
 	bool SetAttribute(const FString& ElementId, const FString& AttributeName, float Value);
 	bool SetClass(const FString& ElementId, const FString& ClassName, bool bActive);

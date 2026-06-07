@@ -3,6 +3,7 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <vector>
 #include "Core/Singleton.h"
 
 struct FGuiInputState
@@ -72,6 +73,8 @@ public:
     void SetUseRawMouse(bool bEnable);
     bool IsUsingRawMouse() const { return bUseRawMouse; }
     void AddRawMouseDelta(int DeltaX, int DeltaY);
+    void AddTextInputCharacter(char32_t Character);
+    std::vector<char32_t> ConsumeTextInputCharacters();
     void ResetTransientState();
     void ResetAllKeyStates();
     void ResetMouseDelta();
@@ -175,6 +178,7 @@ private:
     FGuiInputState GuiState{};
     FInputSystemSnapshot CurrentSnapshot{};
     bool bWindowFocused = true;
+    std::vector<char32_t> PendingTextInputCharacters;
 
     static constexpr int DRAG_THRESHOLD = 5;
 
