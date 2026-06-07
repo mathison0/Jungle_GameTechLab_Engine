@@ -24,6 +24,10 @@ struct FCrowdMovementSettings
 	float GroundTraceDown = 50.0f;
 	float GroundHeightOffset = 0.0f;
 	int32 GroundMissToleranceFrames = 2;
+
+	// 띄우기(launcher) 공중 중력 (m/s²) — 플레이어 공중 콤보와 겹치도록 실제 중력보다
+	// 약하게 잡아 체공을 늘린다. FCrowdUnit::bAirborne 동안 Z 포물선에 사용.
+	float LaunchGravity = 12.0f;
 };
 
 class FCrowdMovementManager

@@ -53,14 +53,17 @@ struct FMusouAttackSlot
 	bool IsValid() const { return !Variants.empty(); }
 };
 
-// 전투 피드백 연출 파라미터 — attack_data.lua 의 feedback 테이블 (없으면 아래 기본값).
-// 소비처는 AMusouGameMode (킬 버스트 슬로모/셰이크).
+// 전투 피드백/연출 파라미터 — attack_data.lua 의 feedback 테이블 (없으면 아래 기본값).
+// 소비처: AMusouGameMode (킬 버스트), AMusouCharacter (공중 콤보 행 타임).
 struct FMusouFeedbackParams
 {
 	int32 KillBurstMinKills   = 5;      // 스윙 1회 판정으로 이 수 이상 처치 시 발동
 	float KillBurstSlomoDur   = 0.25f;  // 슬로모 지속 (실시간 초)
 	float KillBurstSlomoRate  = 0.25f;  // 슬로모 타임스케일 (0..1)
 	float KillBurstShakeScale = 0.4f;   // 버스트 카메라 셰이크 강도
+
+	// 공중 콤보 행 타임 — 공중 체인 진행 중 플레이어 중력 배율 (1 = 변화 없음)
+	float AirComboGravityScale = 0.25f;
 };
 
 class FAttackDataRegistry
@@ -78,9 +81,10 @@ public:
 	const FAttackSpec* FindSpec(const FName& Id) const;
 
 	// 좌클릭 콤보 체인 (슬롯 = 단수, 슬롯 안 = 변주 후보) — 비어 있을 수 있음 (호출측이 empty 가드).
+	// AirborneJuggle 체인이 미정의면 Airborne 체인으로 폴백.
 	const TArray<FMusouAttackSlot>& GetLightChain(EAttackContext Context) const;
 
-	// 우클릭 강공격 — 미정의 컨텍스트면 nullptr.
+	// 우클릭 강공격 — 미정의 컨텍스트면 nullptr (AirborneJuggle 은 Airborne 폴백).
 	const FMusouAttackSlot* GetHeavySlot(EAttackContext Context) const;
 
 	// 콤보 분기 피니셔 — 인덱스 = 분기 시점 단수 (1 기반). 단수 초과 시 마지막으로 clamp,
@@ -97,10 +101,11 @@ private:
 	void LoadDefaults();  // 컴파일 내장 기본 데이터 (lua 부재/최초 실패 시)
 
 	static int32 ContextIndex(EAttackContext Context) { return static_cast<int32>(Context); }
+	static constexpr int32 NumContexts = static_cast<int32>(EAttackContext::Count);
 
 	TArray<FAttackSpec>      Specs;
-	TArray<FMusouAttackSlot> LightChains[3];   // EAttackContext 인덱스
-	FMusouAttackSlot         HeavySlots[3];    // IsValid() == false 면 미정의
+	TArray<FMusouAttackSlot> LightChains[NumContexts];   // EAttackContext 인덱스
+	FMusouAttackSlot         HeavySlots[NumContexts];    // IsValid() == false 면 미정의
 	TArray<FMusouAttackSlot> BranchFinishers;
 	FMusouFeedbackParams     Feedback;
 

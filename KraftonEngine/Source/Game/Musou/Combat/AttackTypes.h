@@ -10,9 +10,12 @@ class APawn;
 // (MusouCharacter 가 콤보 시작 시 1회 판정, FAttackDataRegistry 의 체인 키)
 enum class EAttackContext : uint8
 {
-	Idle,      // 지상 + 거의 정지
-	Moving,    // 지상 + 이동 중 (속도 ≥ MovingAttackSpeedThreshold)
-	Airborne,  // 점프/낙하 중
+	Idle,           // 지상 + 거의 정지
+	Moving,         // 지상 + 이동 중 (속도 ≥ MovingAttackSpeedThreshold)
+	Airborne,       // 일반 점프/낙하 중 — 단발 점프 공격
+	AirborneJuggle, // launcher(self_launch) 로 떠오른 상태 — 공중 저글 체인. 착지 시 해제
+
+	Count,
 };
 
 // ============================================================
@@ -33,6 +36,9 @@ struct FAttackSpec
 	float KnockbackDist = 2.5f;
 	float KnockbackDur = 0.15f;
 	float ShakeScale = 0.0f;     // 히트 시 카메라 셰이크 강도 (0 = 없음). lua: shake
+	float LaunchZ = 0.0f;        // 띄우기 초기 수직 속도 (m/s, 0 = 없음). lua: launch — 군체 저글 진입
+	float SelfLaunchZ = 0.0f;    // 공격자 자기 상승 속도 (m/s, 0 = 없음). lua: self_launch —
+	                             // launcher 발동 시 플레이어도 같이 떠올라 공중 콤보로 직행
 };
 
 // Id 로 spec 조회 — FAttackDataRegistry 위임 (AttackDataRegistry.cpp 정의). 없으면 nullptr.

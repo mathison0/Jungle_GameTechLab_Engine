@@ -235,6 +235,19 @@ void UCharacterMovementComponent::Jump()
 	bWantsJump = true;
 }
 
+void UCharacterMovementComponent::LaunchUpward(float UpVelocity)
+{
+	if (UpVelocity <= 0.0f)
+	{
+		return;
+	}
+
+	// Jump 의 bWantsJump 경로(다음 TickWalking 에서 소비)와 달리 즉시 적용 —
+	// 발동 프레임에 바로 떠올라야 launcher 의 적/플레이어 상승이 동기화된다.
+	Velocity.Z = UpVelocity;
+	SetMovementMode(EMovementMode::Falling);
+}
+
 void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);

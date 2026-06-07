@@ -195,12 +195,19 @@ void AMusouCharacter::Tick(float DeltaTime)
 		return;
 	}
 
+	// launcher 저글 상태 해제 — 착지하면 다음 공중 진입은 일반 점프 공격으로.
+	if (bJuggleAirborne && !IsFalling())
+	{
+		bJuggleAirborne = false;
+	}
+
 	// 콤보 리셋 — 체인 끊김(윈도우 내 미입력)/완주, 또는 지상 체인 중 낙하(절벽 등).
 	// 공중 체인은 낙하가 전제라 낙하 리셋에서 제외 — 몽타주 종료로만 리셋.
 	// 입력 콜백(InputComponent 틱)보다 늦게 돌더라도 다음 입력 전에 정리되면 충분.
 	if (ComboComponent->IsComboActive())
 	{
-		const bool bAirChain = (ActiveChainContext == EAttackContext::Airborne);
+		const bool bAirChain = (ActiveChainContext == EAttackContext::Airborne
+			|| ActiveChainContext == EAttackContext::AirborneJuggle);
 		if (!IsAnyMontagePlaying() || (!bAirChain && IsFalling()))
 		{
 			ComboComponent->ResetCombo();
@@ -217,6 +224,39 @@ void AMusouCharacter::Tick(float DeltaTime)
 	else if (ComboComponent->ConsumeQueuedAdvance())
 	{
 		PlayComboStep(ComboComponent->GetComboStep());
+	}
+
+	// 공중 콤보 행 타임 — 공중 체인 진행 중 중력 감쇠 적용/원복.
+	UpdateAirComboHang();
+}
+
+void AMusouCharacter::UpdateAirComboHang()
+{
+	if (!CharacterMovement)
+	{
+		return;
+	}
+
+	// 저글 체인 콤보가 살아 있고, 공중에서 "하강 중"일 때만 — 상승 구간까지 감쇠하면
+	// 점프/launcher 의 위쪽 속도가 안 깎여 공격 중 계속 떠오르는 느낌이 난다 (정점 이후만 적용).
+	// 일반 점프 공격(Airborne 단발)은 행 타임 없음 — 기존 낙하감 유지.
+	const bool bWantHang = ComboComponent
+		&& ComboComponent->IsComboActive()
+		&& ActiveChainContext == EAttackContext::AirborneJuggle
+		&& IsFalling()
+		&& CharacterMovement->GetVelocity().Z <= 0.0f;
+
+	if (bWantHang && !bAirComboHangActive)
+	{
+		const float Scale = FAttackDataRegistry::Get().GetFeedback().AirComboGravityScale;
+		SavedGravity = CharacterMovement->Gravity;
+		CharacterMovement->Gravity = SavedGravity * Scale;
+		bAirComboHangActive = true;
+	}
+	else if (!bWantHang && bAirComboHangActive)
+	{
+		CharacterMovement->Gravity = SavedGravity;
+		bAirComboHangActive = false;
 	}
 }
 
@@ -284,7 +324,8 @@ EAttackContext AMusouCharacter::ResolveAttackContext() const
 {
 	if (IsFalling())
 	{
-		return EAttackContext::Airborne;
+		// launcher 로 떠올랐으면 저글 체인, 일반 점프/낙하는 단발 점프 공격.
+		return bJuggleAirborne ? EAttackContext::AirborneJuggle : EAttackContext::Airborne;
 	}
 
 	if (CharacterMovement)

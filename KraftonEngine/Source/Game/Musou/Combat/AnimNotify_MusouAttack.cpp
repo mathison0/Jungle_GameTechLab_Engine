@@ -1,8 +1,11 @@
 #include "Game/Musou/Combat/AnimNotify_MusouAttack.h"
 
+#include "Game/Musou/Character/MusouCharacter.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Animation/AnimInstance.h"
+#include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Types/EngineTypes.h"
 #include "Debug/DrawDebugHelpers.h"
@@ -65,6 +68,28 @@ void UAnimNotify_MusouAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
 	}
 
 	GameMode->BroadcastAttack(Event);
+
+	// 자기 상승 (launcher) — 적이 뜨는 순간 공격자도 같이 솟구쳐 공중 콤보로 직행.
+	// 진행 중이던 지상 몽타주는 짧게 blend-out — 상승 중 바로 공중 체인 입력이 가능하도록
+	// (몽타주가 남아 있으면 잔여 후딜 동안 입력이 막혀 적이 먼저 떨어진다).
+	if (Event.bFromPlayer && Spec->SelfLaunchZ > 0.0f)
+	{
+		if (UCharacterMovementComponent* Movement = OwnerActor->GetComponentByClass<UCharacterMovementComponent>())
+		{
+			Movement->LaunchUpward(Spec->SelfLaunchZ);
+
+			if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance())
+			{
+				AnimInstance->StopMontage(0.15f);
+			}
+
+			// 착지까지 공중 공격이 저글 체인(AirborneJuggle)으로 진입.
+			if (AMusouCharacter* MusouCharacter = Cast<AMusouCharacter>(OwnerActor))
+			{
+				MusouCharacter->OnSelfLaunched();
+			}
+		}
+	}
 }
 
 // 판정 범위 시각화 — 360도는 원, 콘은 부채꼴(호 + 양 끝 변).

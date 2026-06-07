@@ -49,7 +49,15 @@ return {
 
         -- 콤보 분기 피니셔 (□..△) — 깊을수록 강력. 3단 분기는 attack1 재사용
         branch1     = { range = 4.0, height = 2.5, cone_deg = 140, dmg = 1.4, kb = 3.0, kb_dur = 0.18, shake = 0.12 }, -- Horizontal 와이드 횡베기
-        branch2     = { range = 4.5, height = 2.0, cone_deg = 360, dmg = 1.8, kb = 4.5, kb_dur = 0.22, shake = 0.15 }, -- 360 Low 로우 스핀
+        -- 2단 분기 = launcher: 로우 스핀으로 주변을 띄운다 (launch = 적, self_launch = 플레이어).
+        -- 발동 순간 플레이어도 같이 솟구쳐 점프 없이 공중 체인으로 직행 — 저글 시작.
+        -- 넉백은 줄여서 적이 머리 위에 머물게.
+        branch2     = { range = 4.5, height = 2.0, cone_deg = 360, dmg = 1.8, kb = 1.5, kb_dur = 0.22, shake = 0.15,
+                        launch = 8.0, self_launch = 7.5 }, -- 360 Low 로우 스핀 (launcher)
+
+        -- 공중 체인 — height 여유 (플레이어가 공중이라 위아래로 넓게 판정)
+        air1        = { range = 4.0, height = 3.5, cone_deg = 360, dmg = 1.2, kb = 1.0, kb_dur = 0.10, shake = 0.08, launch = 5.0 }, -- 공중 1타 — 재띄움 (저글 유지)
+        air2        = { range = 4.0, height = 3.5, cone_deg = 360, dmg = 1.4, kb = 1.5, kb_dur = 0.12, shake = 0.10, launch = 5.0 }, -- 공중 2타
     },
 
     steps = {
@@ -83,10 +91,20 @@ return {
                           blend_in = 0.1, attack_id = "dash_attack", hit_frac = 0.45, window = { 0.60, 0.85 },
                           play_rate = { 1.00, 1.10 } },
 
-        -- 공중 — 도약 내려찍기 (RM 전진 +3.25m, 착지 후에도 끝까지 재생)
+        -- 공중 — 도약 내려찍기 (RM 전진 +3.25m, 착지 후에도 끝까지 재생). 공중 체인 피니셔
         jump          = { montage = montage("great sword jump attack_mixamo_com"),
                           sequence = seq("great sword jump attack_mixamo_com"),
                           blend_in = 0.15, attack_id = "jump_attack", hit_frac = 0.45 },
+
+        -- 공중 체인 1/2타 — 제자리 휘두르기 (RM 없음, 행 타임 동안 천천히 낙하하며 연계)
+        air_slash1    = { montage = montage("great sword slash (5)_mixamo_com"),
+                          sequence = seq("great sword slash (5)_mixamo_com"),
+                          blend_in = 0.1, attack_id = "air1", hit_frac = 0.40, window = { 0.50, 0.85 },
+                          play_rate = { 1.05, 1.15 } },
+        air_slash2    = { montage = montage("great sword attack_mixamo_com"),
+                          sequence = seq("great sword attack_mixamo_com"),
+                          blend_in = 0.1, attack_id = "air2", hit_frac = 0.40, window = { 0.50, 0.85 },
+                          play_rate = { 1.05, 1.15 } },
 
         -- 강공격
         backhand      = { montage = montage("Barbarian_Melee Attack Backhand"), blend_in = 0.2 },
@@ -112,7 +130,13 @@ return {
         light = {
             idle   = { { "combo_v1", "kick" }, { "combo_v2", "gs_slash4" }, "combo_v3" },
             moving = { { "slide", "ss_lunge" }, { "combo_v2", "gs_slash4" }, "combo_v3" },
-            air    = { "jump" },
+
+            -- 일반 점프 공격 — 단발 내려찍기 (기존 동작). 행 타임 없음.
+            air        = { "jump" },
+
+            -- launcher(branch2 self_launch) 로 떠올랐을 때만 — 공중 저글 3단.
+            -- 슬래시 2연타(재띄움으로 저글 유지, 정점 이후 행 타임) → 내려찍기 피니셔로 착지.
+            air_juggle = { "air_slash1", "air_slash2", "jump" },
         },
 
         -- 우클릭 강공격 — 컨텍스트별 단발
@@ -126,7 +150,7 @@ return {
         branch = { "horizontal", "spin_low", "spin_high" },
     },
 
-    -- ── 전투 피드백 연출 (AMusouGameMode 소비) ──
+    -- ── 전투 피드백/연출 (AMusouGameMode / AMusouCharacter 소비) ──
     feedback = {
         -- 킬 버스트 — 스윙 1회 판정으로 min_kills 이상 처치 시 글로벌 슬로모 + 강셰이크
         kill_burst = {
@@ -134,6 +158,11 @@ return {
             slomo_dur  = 0.25,  -- 슬로모 지속 (실시간 초)
             slomo_rate = 0.25,  -- 타임스케일 (0..1, 낮을수록 느려짐)
             shake      = 0.4,   -- 버스트 카메라 셰이크 강도
+        },
+
+        -- 공중 콤보 행 타임 — 공중 체인 진행 중 플레이어 중력 배율 (1 = 그대로)
+        air_combo = {
+            gravity_scale = 0.25,
         },
     },
 }
