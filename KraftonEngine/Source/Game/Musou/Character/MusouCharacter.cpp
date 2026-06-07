@@ -231,6 +231,12 @@ void AMusouCharacter::Tick(float DeltaTime)
 		EndRoll();
 	}
 
+	// 피격 리액션 쿨다운 소모.
+	if (HitReactCooldownRemaining > 0.0f)
+	{
+		HitReactCooldownRemaining -= DeltaTime;
+	}
+
 	// 콤보 리셋 — 체인 끊김(윈도우 내 미입력)/완주, 또는 지상 체인 중 낙하(절벽 등).
 	// 공중 체인은 낙하가 전제라 낙하 리셋에서 제외 — 몽타주 종료로만 리셋.
 	// 입력 콜백(InputComponent 틱)보다 늦게 돌더라도 다음 입력 전에 정리되면 충분.
@@ -508,6 +514,51 @@ void AMusouCharacter::EndRoll()
 	{
 		BattleComponent->SetInvincible(false);
 	}
+}
+
+void AMusouCharacter::PlayHitReaction()
+{
+	// 모션 우선 — 공격/구르기/무쌍기/공중 중 피격은 휘청 없이 진행 (무쌍식 슈퍼아머 느낌).
+	// 몽타주 재생 중 체크가 이들 대부분을 커버하지만 상태 플래그도 명시적으로 가드.
+	if (bUltimateActive || bRolling || IsFalling() || IsAnyMontagePlaying())
+	{
+		return;
+	}
+
+	if (HitReactCooldownRemaining > 0.0f)
+	{
+		return;
+	}
+
+	const FMusouAttackSlot* Slot = FAttackDataRegistry::Get().GetHitReactSlot();
+	if (!Slot)
+	{
+		return;   // lua 에 chains.hit_react 미정의 — 기능 비활성
+	}
+
+	const FMusouAttackStep* Step = PickVariant(*Slot);
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	if (!Step || !AnimInstance)
+	{
+		return;
+	}
+
+	UAnimMontage* Montage = ResolveStepMontage(*Step);
+	if (!Montage)
+	{
+		return;
+	}
+
+	// PlayAttackStep 을 안 쓰는 이유: 피격은 입력 방향 회전 스냅이 부적절.
+	float PlayRate = Step->PlayRateMin;
+	if (Step->PlayRateMax > Step->PlayRateMin)
+	{
+		const float T = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+		PlayRate = Step->PlayRateMin + (Step->PlayRateMax - Step->PlayRateMin) * T;
+	}
+	AnimInstance->PlayMontage(Montage, FName::None, PlayRate, Step->BlendIn);
+
+	HitReactCooldownRemaining = FAttackDataRegistry::Get().GetFeedback().HitReactCooldown;
 }
 
 EAttackContext AMusouCharacter::ResolveAttackContext() const

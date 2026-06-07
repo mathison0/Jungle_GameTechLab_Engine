@@ -62,6 +62,10 @@ public:
 	// 공중 공격이 저글 체인(AirborneJuggle)으로 진입한다. 일반 점프는 단발 점프 공격 유지.
 	void OnSelfLaunched() { bJuggleAirborne = true; }
 
+	// 피격 리액션 — GameMode::NotifyPlayerDamaged 가 호출. 평시 피격만 휘청
+	// (공격/구르기/무쌍기/공중 중엔 모션 우선으로 스킵), 쿨다운으로 스턴락 방지.
+	void PlayHitReaction();
+
 protected:
 	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
 	// ※ 공격 입력을 lua anim에서 이관한 이유: lua update()는 Animation Tick LOD
@@ -162,4 +166,7 @@ protected:
 
 	// 구르기 상태 — 활성 동안 무적. 몽타주 종료 시 해제 (Tick).
 	bool  bRolling = false;
+
+	// 피격 리액션 쿨다운 잔여 (초) — 군체 다단 히트 스턴락 방지 (feedback.hit_react.cooldown).
+	float HitReactCooldownRemaining = 0.0f;
 };

@@ -71,8 +71,15 @@ namespace
 			Unit.Velocity = FVector::ZeroVector;
 			Unit.KnockbackTimeRemaining = 0.0f;
 			Unit.KnockbackVelocity = FVector::ZeroVector;
-			Unit.bAirborne = false;   // 공중 사망 — 시체는 그 자리에서 정리 (이동 시뮬 제외 대상)
-			Unit.AirborneVelZ = 0.0f;
+
+			// 공중 사망 시체는 bAirborne 유지 — MovementManager 의 Dead 분기가 착지까지
+			// 낙하시킨다 (저글 킬이 공중에 떠 있지 않게). 띄우기 공격으로 즉사한 적도
+			// 시체가 솟구치며 날아간다 — 무쌍식 학살 연출.
+			if (Event.LaunchVelocityZ > 0.0f)
+			{
+				Unit.bAirborne = true;
+				Unit.AirborneVelZ = Event.LaunchVelocityZ;
+			}
 			return true;
 		}
 

@@ -113,6 +113,37 @@ void FCrowdMovementManager::Update(
 		}
 	}
 
+	// 띄움 상태 — Z 포물선 적분 + 착지 판정. 지면 스냅은 착지 전까지 생략.
+	// Hit/KnockDown(저글) 과 Dead(시체 낙하) 가 공유한다.
+	auto IntegrateAirborneFall = [&GroundQuery, &Settings](FCrowdUnit& Unit, float Dt)
+	{
+		Unit.Position.Z += Unit.AirborneVelZ * Dt;
+		Unit.AirborneVelZ -= Settings.LaunchGravity * Dt;
+
+		if (Unit.AirborneVelZ < 0.0f)
+		{
+			// 하강 중 — 지면을 찾아 착지 체크. 못 찾으면 SpawnZ 를 바닥으로.
+			FCrowdGroundSampleParams Params;
+			Params.TraceUp = Settings.GroundTraceUp;
+			Params.TraceDown = Settings.GroundTraceDown;
+			Params.HeightOffset = Settings.GroundHeightOffset;
+
+			float FloorZ = Unit.SpawnZ;
+			FCrowdGroundHit GroundHit;
+			if (GroundQuery.SampleGround(Unit.Position, Params, GroundHit))
+			{
+				FloorZ = GroundHit.Location.Z;
+			}
+
+			if (Unit.Position.Z <= FloorZ)
+			{
+				Unit.Position.Z = FloorZ;
+				Unit.bAirborne = false;
+				Unit.AirborneVelZ = 0.0f;
+			}
+		}
+	};
+
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
 		FCrowdUnit& Unit = Units[Index];
@@ -124,6 +155,12 @@ void FCrowdMovementManager::Update(
 		if (Unit.State == EUnitState::Dead)
 		{
 			Unit.Velocity = FVector::ZeroVector;
+
+			// 공중 사망 시체 낙하 — 저글 킬이 공중에 떠 있지 않게 착지까지 떨어뜨린다.
+			if (Unit.bAirborne)
+			{
+				IntegrateAirborneFall(Unit, DeltaTime);
+			}
 			continue;
 		}
 
@@ -149,35 +186,10 @@ void FCrowdMovementManager::Update(
 				Unit.KnockbackTimeRemaining = 0.0f;
 			}
 
-			// 띄움 상태 — Z 포물선 적분 + 착지 판정. 지면 스냅은 착지 전까지 생략.
 			// (상태 만료는 UpdateStateTimers 가 bAirborne 동안 보류 — 착지 후 소화)
 			if (Unit.bAirborne)
 			{
-				Unit.Position.Z += Unit.AirborneVelZ * UnitDeltaTime;
-				Unit.AirborneVelZ -= Settings.LaunchGravity * UnitDeltaTime;
-
-				if (Unit.AirborneVelZ < 0.0f)
-				{
-					// 하강 중 — 지면을 찾아 착지 체크. 못 찾으면 SpawnZ 를 바닥으로.
-					FCrowdGroundSampleParams Params;
-					Params.TraceUp = Settings.GroundTraceUp;
-					Params.TraceDown = Settings.GroundTraceDown;
-					Params.HeightOffset = Settings.GroundHeightOffset;
-
-					float FloorZ = Unit.SpawnZ;
-					FCrowdGroundHit GroundHit;
-					if (GroundQuery.SampleGround(Unit.Position, Params, GroundHit))
-					{
-						FloorZ = GroundHit.Location.Z;
-					}
-
-					if (Unit.Position.Z <= FloorZ)
-					{
-						Unit.Position.Z = FloorZ;
-						Unit.bAirborne = false;
-						Unit.AirborneVelZ = 0.0f;
-					}
-				}
+				IntegrateAirborneFall(Unit, UnitDeltaTime);
 				continue;
 			}
 
