@@ -16,20 +16,36 @@
 #include <RmlUi/Core.h>
 
 class APlayerController;
-class FWidgetClickEventListener;
+class FWidgetEventListener;
 namespace Rml { class ElementDocument; }
 
-class FWidgetClickEventListener final : public Rml::EventListener
+struct FWidgetLuaEventBinding
+{
+	FString ElementId;
+	FString EventName;
+	sol::protected_function Callback;
+};
+
+struct FWidgetNativeEventBinding
+{
+	FString ElementId;
+	FString EventName;
+	std::function<void()> Callback;
+};
+
+class FWidgetEventListener final : public Rml::EventListener
 {
 public:
-	FWidgetClickEventListener(FString InElementId, sol::protected_function InCallback)
+	FWidgetEventListener(FString InElementId, FString InEventName, sol::protected_function InCallback)
 		: ElementId(std::move(InElementId))
+		, EventName(std::move(InEventName))
 		, LuaCallback(std::move(InCallback))
 	{
 	}
 
-	FWidgetClickEventListener(FString InElementId, std::function<void()> InCallback)
+	FWidgetEventListener(FString InElementId, FString InEventName, std::function<void()> InCallback)
 		: ElementId(std::move(InElementId))
+		, EventName(std::move(InEventName))
 		, NativeCallback(std::move(InCallback))
 	{
 	}
@@ -51,14 +67,16 @@ public:
 		if (!Result.valid())
 		{
 			sol::error Err = Result;
-			UE_LOG("[Lua] UI click callback error: %s", Err.what());
+			UE_LOG("[Lua] UI event callback error: %s", Err.what());
 		}
 	}
 
 	const FString& GetElementId() const { return ElementId; }
+	const FString& GetEventName() const { return EventName; }
 
 private:
 	FString ElementId;
+	FString EventName;
 	sol::protected_function LuaCallback;
 	std::function<void()> NativeCallback;
 };
@@ -76,11 +94,15 @@ public:
 	void RemoveFromParent();
 	void BindClick(const FString& ElementId, sol::protected_function Callback);
 	void BindClick(const FString& ElementId, std::function<void()> Callback);
+	void BindEvent(const FString& ElementId, const FString& EventName, std::function<void()> Callback);
+	void BindMouseOver(const FString& ElementId, std::function<void()> Callback);
 	void RegisterEventListeners();
 	void ClearEventListeners();
 	void SetText(const FString& ElementId, const FString& Text);
 	bool SetProperty(const FString& ElementId, const FString& PropertyName, const FString& Value);
 	bool SetAttribute(const FString& ElementId, const FString& AttributeName, float Value);
+	bool SetClass(const FString& ElementId, const FString& ClassName, bool bActive);
+	bool Click(const FString& ElementId);
 
 	APlayerController* GetOwningPlayer() const { return OwningPlayer; }
 	const FString& GetDocumentPath() const { return DocumentPath; }
@@ -104,9 +126,9 @@ private:
 	APlayerController* OwningPlayer = nullptr;
 	Rml::ElementDocument* Document = nullptr;
 	FString DocumentPath;
-	TArray<std::pair<FString, sol::protected_function>> PendingClickBindings;
-	TArray<std::pair<FString, std::function<void()>>> PendingNativeClickBindings;
-	TArray<FWidgetClickEventListener*> ClickListeners;
+	TArray<FWidgetLuaEventBinding> PendingLuaEventBindings;
+	TArray<FWidgetNativeEventBinding> PendingNativeEventBindings;
+	TArray<FWidgetEventListener*> EventListeners;
 	int32 ZOrder = 0;
 	bool bInViewport = false;
 	bool bDocumentLoaded = false;

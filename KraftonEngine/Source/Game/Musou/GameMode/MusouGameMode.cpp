@@ -22,6 +22,19 @@ namespace
 {
 	// 킬 버스트 연출 파라미터(임계/슬로모/셰이크)는 attack_data.lua 의 feedback 테이블 —
 	// FAttackDataRegistry::GetFeedback() 으로 조회 (핫리로드 튜닝).
+	constexpr const char* PauseMenuButtonIds[] = {
+		"resume-button",
+		"restart-button",
+		"stop-button",
+	};
+
+	constexpr const char* DeathMenuButtonIds[] = {
+		"death-restart-button",
+		"death-stop-button",
+	};
+
+	constexpr int32 PauseMenuButtonCount = 3;
+	constexpr int32 DeathMenuButtonCount = 2;
 
 	// 첫 로컬 플레이어의 카메라 매니저 — 셰이크 발동 지점. 없으면 null (조용히 스킵).
 	APlayerCameraManager* GetLocalCameraManager()
@@ -94,6 +107,7 @@ void AMusouGameMode::StartMatch()
 			HudWidget->BindClick("death-restart-button", RestartMatch);
 			HudWidget->BindClick("stop-button", StopMatch);
 			HudWidget->BindClick("death-stop-button", StopMatch);
+			BindHudMenuHoverHandlers();
 		}
 	}
 
@@ -146,7 +160,23 @@ void AMusouGameMode::Tick(float DeltaTime)
 		SetStopMenuVisible(!bStopMenuVisible);
 	}
 
+	if (bStopMenuVisible && !HudPresenter.IsDeathOverlayVisible())
+	{
+		HandlePauseMenuInput();
+	}
+
 	HudPresenter.Tick(DeltaTime, GetMusouGameState(), GetPlayerHealthRatio());
+
+	if (HudPresenter.AreDeathButtonsVisible())
+	{
+		if (!bDeathMenuSelectionInitialized)
+		{
+			bDeathMenuSelectionInitialized = true;
+			SelectDeathMenuButton(0);
+		}
+
+		HandleDeathMenuInput();
+	}
 }
 
 void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)
@@ -252,7 +282,9 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 	EndMatch();
 	SetGameInputPossessed(false);
 	bStopMenuVisible = false;
+	bDeathMenuSelectionInitialized = false;
 	HudPresenter.StartDeathOverlay();
+	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
 
 	if (UWorld* World = GetWorld())
 	{
@@ -303,8 +335,164 @@ void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 	bStopMenuVisible = bVisible;
 	HudPresenter.SetPauseMenuVisible(bStopMenuVisible);
 
+	if (bStopMenuVisible)
+	{
+		SelectPauseMenuButton(0);
+	}
+	else
+	{
+		ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
+	}
+
 	if (UWorld* World = GetWorld())
 	{
 		World->SetPaused(bStopMenuVisible);
+	}
+}
+
+void AMusouGameMode::BindHudMenuHoverHandlers()
+{
+	if (!HudWidget)
+	{
+		return;
+	}
+
+	for (int32 ButtonIndex = 0; ButtonIndex < PauseMenuButtonCount; ++ButtonIndex)
+	{
+		HudWidget->BindMouseOver(PauseMenuButtonIds[ButtonIndex], [this, ButtonIndex]()
+		{
+			if (bStopMenuVisible && !HudPresenter.IsDeathOverlayVisible())
+			{
+				SelectPauseMenuButton(ButtonIndex);
+			}
+		});
+	}
+
+	for (int32 ButtonIndex = 0; ButtonIndex < DeathMenuButtonCount; ++ButtonIndex)
+	{
+		HudWidget->BindMouseOver(DeathMenuButtonIds[ButtonIndex], [this, ButtonIndex]()
+		{
+			if (HudPresenter.AreDeathButtonsVisible())
+			{
+				SelectDeathMenuButton(ButtonIndex);
+			}
+		});
+	}
+}
+
+void AMusouGameMode::SelectPauseMenuButton(int32 ButtonIndex)
+{
+	SelectedPauseButtonIndex = (ButtonIndex % PauseMenuButtonCount + PauseMenuButtonCount) % PauseMenuButtonCount;
+	UpdatePauseMenuSelectionVisuals();
+	ClearHudButtonSelection(DeathMenuButtonIds, DeathMenuButtonCount);
+}
+
+void AMusouGameMode::SelectDeathMenuButton(int32 ButtonIndex)
+{
+	SelectedDeathButtonIndex = (ButtonIndex % DeathMenuButtonCount + DeathMenuButtonCount) % DeathMenuButtonCount;
+	UpdateDeathMenuSelectionVisuals();
+	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
+}
+
+void AMusouGameMode::MovePauseMenuSelection(int32 Delta)
+{
+	SelectPauseMenuButton(SelectedPauseButtonIndex + Delta);
+}
+
+void AMusouGameMode::MoveDeathMenuSelection(int32 Delta)
+{
+	SelectDeathMenuButton(SelectedDeathButtonIndex + Delta);
+}
+
+void AMusouGameMode::ExecutePauseMenuSelection()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	HudWidget->Click(PauseMenuButtonIds[SelectedPauseButtonIndex]);
+}
+
+void AMusouGameMode::ExecuteDeathMenuSelection()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	HudWidget->Click(DeathMenuButtonIds[SelectedDeathButtonIndex]);
+}
+
+void AMusouGameMode::HandlePauseMenuInput()
+{
+	InputSystem& Input = InputSystem::Get();
+	if (Input.GetKeyDown(VK_UP))
+	{
+		MovePauseMenuSelection(-1);
+	}
+	if (Input.GetKeyDown(VK_DOWN))
+	{
+		MovePauseMenuSelection(1);
+	}
+	if (Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
+	{
+		ExecutePauseMenuSelection();
+	}
+}
+
+void AMusouGameMode::HandleDeathMenuInput()
+{
+	InputSystem& Input = InputSystem::Get();
+	if (Input.GetKeyDown(VK_UP))
+	{
+		MoveDeathMenuSelection(-1);
+	}
+	if (Input.GetKeyDown(VK_DOWN))
+	{
+		MoveDeathMenuSelection(1);
+	}
+	if (Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
+	{
+		ExecuteDeathMenuSelection();
+	}
+}
+
+void AMusouGameMode::UpdatePauseMenuSelectionVisuals()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	for (int32 ButtonIndex = 0; ButtonIndex < PauseMenuButtonCount; ++ButtonIndex)
+	{
+		HudWidget->SetClass(PauseMenuButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedPauseButtonIndex);
+	}
+}
+
+void AMusouGameMode::UpdateDeathMenuSelectionVisuals()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	for (int32 ButtonIndex = 0; ButtonIndex < DeathMenuButtonCount; ++ButtonIndex)
+	{
+		HudWidget->SetClass(DeathMenuButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedDeathButtonIndex);
+	}
+}
+
+void AMusouGameMode::ClearHudButtonSelection(const char* const* ButtonIds, int32 ButtonCount)
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	for (int32 ButtonIndex = 0; ButtonIndex < ButtonCount; ++ButtonIndex)
+	{
+		HudWidget->SetClass(ButtonIds[ButtonIndex], "selected", false);
 	}
 }

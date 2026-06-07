@@ -81,8 +81,23 @@ public:
 private:
 	void SetStopMenuVisible(bool bVisible);
 	float GetPlayerHealthRatio() const;
+	void BindHudMenuHoverHandlers();
+	void SelectPauseMenuButton(int32 ButtonIndex);
+	void SelectDeathMenuButton(int32 ButtonIndex);
+	void MovePauseMenuSelection(int32 Delta);
+	void MoveDeathMenuSelection(int32 Delta);
+	void ExecutePauseMenuSelection();
+	void ExecuteDeathMenuSelection();
+	void HandlePauseMenuInput();
+	void HandleDeathMenuInput();
+	void UpdatePauseMenuSelectionVisuals();
+	void UpdateDeathMenuSelectionVisuals();
+	void ClearHudButtonSelection(const char* const* ButtonIds, int32 ButtonCount);
 
 	UUserWidget* HudWidget = nullptr;
 	FMusouHudPresenter HudPresenter;
 	bool bStopMenuVisible = false;
+	bool bDeathMenuSelectionInitialized = false;
+	int32 SelectedPauseButtonIndex = 0;
+	int32 SelectedDeathButtonIndex = 0;
 };

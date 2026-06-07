@@ -26,7 +26,7 @@ void UUserWidget::RemoveFromParent()
 
 void UUserWidget::BindClick(const FString& ElementId, sol::protected_function Callback)
 {
-	PendingClickBindings.push_back({ ElementId, Callback });
+	PendingLuaEventBindings.push_back({ ElementId, "click", std::move(Callback) });
 	if (IsDocumentLoaded())
 	{
 		RegisterEventListeners();
@@ -35,11 +35,21 @@ void UUserWidget::BindClick(const FString& ElementId, sol::protected_function Ca
 
 void UUserWidget::BindClick(const FString& ElementId, std::function<void()> Callback)
 {
-	PendingNativeClickBindings.push_back({ ElementId, std::move(Callback) });
+	BindEvent(ElementId, "click", std::move(Callback));
+}
+
+void UUserWidget::BindEvent(const FString& ElementId, const FString& EventName, std::function<void()> Callback)
+{
+	PendingNativeEventBindings.push_back({ ElementId, EventName, std::move(Callback) });
 	if (IsDocumentLoaded())
 	{
 		RegisterEventListeners();
 	}
+}
+
+void UUserWidget::BindMouseOver(const FString& ElementId, std::function<void()> Callback)
+{
+	BindEvent(ElementId, "mouseover", std::move(Callback));
 }
 
 void UUserWidget::RegisterEventListeners()
@@ -51,32 +61,32 @@ void UUserWidget::RegisterEventListeners()
 
 	ClearEventListeners();
 
-	for (const auto& Binding : PendingClickBindings)
+	for (const FWidgetLuaEventBinding& Binding : PendingLuaEventBindings)
 	{
-		Rml::Element* Element = Document->GetElementById(Binding.first);
+		Rml::Element* Element = Document->GetElementById(Binding.ElementId);
 		if (!Element)
 		{
-			UE_LOG("[RmlUi] Click target not found: %s", Binding.first.c_str());
+			UE_LOG("[RmlUi] Event target not found: %s", Binding.ElementId.c_str());
 			continue;
 		}
 
-		auto* Listener = new FWidgetClickEventListener(Binding.first, Binding.second);
-		Element->AddEventListener("click", Listener);
-		ClickListeners.push_back(Listener);
+		auto* Listener = new FWidgetEventListener(Binding.ElementId, Binding.EventName, Binding.Callback);
+		Element->AddEventListener(Binding.EventName.c_str(), Listener);
+		EventListeners.push_back(Listener);
 	}
 
-	for (const auto& Binding : PendingNativeClickBindings)
+	for (const FWidgetNativeEventBinding& Binding : PendingNativeEventBindings)
 	{
-		Rml::Element* Element = Document->GetElementById(Binding.first);
+		Rml::Element* Element = Document->GetElementById(Binding.ElementId);
 		if (!Element)
 		{
-			UE_LOG("[RmlUi] Click target not found: %s", Binding.first.c_str());
+			UE_LOG("[RmlUi] Event target not found: %s", Binding.ElementId.c_str());
 			continue;
 		}
 
-		auto* Listener = new FWidgetClickEventListener(Binding.first, Binding.second);
-		Element->AddEventListener("click", Listener);
-		ClickListeners.push_back(Listener);
+		auto* Listener = new FWidgetEventListener(Binding.ElementId, Binding.EventName, Binding.Callback);
+		Element->AddEventListener(Binding.EventName.c_str(), Listener);
+		EventListeners.push_back(Listener);
 	}
 }
 
@@ -84,7 +94,7 @@ void UUserWidget::ClearEventListeners()
 {
 	if (Document)
 	{
-		for (FWidgetClickEventListener* Listener : ClickListeners)
+		for (FWidgetEventListener* Listener : EventListeners)
 		{
 			if (!Listener)
 			{
@@ -94,16 +104,16 @@ void UUserWidget::ClearEventListeners()
 			Rml::Element* Element = Document->GetElementById(Listener->GetElementId());
 			if (Element)
 			{
-				Element->RemoveEventListener("click", Listener);
+				Element->RemoveEventListener(Listener->GetEventName().c_str(), Listener);
 			}
 		}
 	}
 
-	for (FWidgetClickEventListener* Listener : ClickListeners)
+	for (FWidgetEventListener* Listener : EventListeners)
 	{
 		delete Listener;
 	}
-	ClickListeners.clear();
+	EventListeners.clear();
 }
 
 void UUserWidget::SetText(const FString& ElementId, const FString& Text)
@@ -155,5 +165,41 @@ bool UUserWidget::SetAttribute(const FString& ElementId, const FString& Attribut
 	}
 
 	Element->SetAttribute(AttributeName.c_str(), Value);
+	return true;
+}
+
+bool UUserWidget::SetClass(const FString& ElementId, const FString& ClassName, bool bActive)
+{
+	if (!Document)
+	{
+		return false;
+	}
+
+	Rml::Element* Element = Document->GetElementById(ElementId);
+	if (!Element)
+	{
+		UE_LOG("[RmlUi] Class target not found: %s", ElementId.c_str());
+		return false;
+	}
+
+	Element->SetClass(ClassName.c_str(), bActive);
+	return true;
+}
+
+bool UUserWidget::Click(const FString& ElementId)
+{
+	if (!Document)
+	{
+		return false;
+	}
+
+	Rml::Element* Element = Document->GetElementById(ElementId);
+	if (!Element)
+	{
+		UE_LOG("[RmlUi] Click target not found: %s", ElementId.c_str());
+		return false;
+	}
+
+	Element->Click();
 	return true;
 }

@@ -16,6 +16,7 @@ public:
 	void StartDeathOverlay();
 
 	bool IsDeathOverlayVisible() const { return bDeathOverlayVisible; }
+	bool AreDeathButtonsVisible() const { return bDeathButtonsVisible; }
 
 private:
 	void UpdateStatusHud(const AMusouGameState* MusouState, float PlayerHealthRatio);
