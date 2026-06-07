@@ -248,6 +248,7 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result)
 	bVictoryOverlayVisible = true;
 	bVictoryButtonsVisible = false;
 	VictoryOverlayElapsed = 0.0f;
+	VictoryHealthRatio = std::clamp(Result.PlayerHealthRatio, 0.0f, 1.0f);
 
 	if (!Widget || !Widget->IsDocumentLoaded())
 	{
@@ -279,7 +280,16 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result)
 
 void FMusouHudPresenter::UpdateStatusHud(const AMusouGameState* MusouState, float PlayerHealthRatio)
 {
-	const float DisplayHealthRatio = bDeathOverlayVisible ? 0.0f : PlayerHealthRatio;
+	float DisplayHealthRatio = PlayerHealthRatio;
+	if (bDeathOverlayVisible)
+	{
+		DisplayHealthRatio = 0.0f;
+	}
+	else if (bVictoryOverlayVisible)
+	{
+		// 승리 후에는 EndMatch가 Pawn을 UnPossess하므로 GameMode의 fallback HP(1.0f)를 쓰지 않는다.
+		DisplayHealthRatio = VictoryHealthRatio;
+	}
 
 	Widget->SetAttribute("hp-bar", "value", std::clamp(DisplayHealthRatio, 0.0f, 1.0f));
 	Widget->SetText("score-counter", FString("score: ") + std::to_string(static_cast<long long>(MusouState->GetScore())));

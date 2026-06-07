@@ -13,6 +13,7 @@ struct FMusouMatchResult
 	int32 KillCount = 0;      // 최종 처치 수
 	int32 MaxCombo = 0;       // 매치 중 달성한 최대 콤보
 	float MatchTime = 0.0f;   // 매치 진행 시간(초)
+	float PlayerHealthRatio = 1.0f; // 결과 확정 순간의 플레이어 HP 비율(0..1)
 };
 
 // ============================================================

@@ -57,4 +57,5 @@ private:
 	float BloodVignetteIntensity = 0.0f;
 	float DeathOverlayElapsed = 0.0f;
 	float VictoryOverlayElapsed = 0.0f;
+	float VictoryHealthRatio = 1.0f;
 };

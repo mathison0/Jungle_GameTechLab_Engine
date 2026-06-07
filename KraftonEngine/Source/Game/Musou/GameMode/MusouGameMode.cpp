@@ -342,6 +342,7 @@ void AMusouGameMode::NotifyVictory()
 	// 점수는 승리 확정 순간에 먼저 고정한다.
 	// EndMatch 이후 outro/UI tick이 이어져도 저장될 결과는 이 Result 하나만 사용한다.
 	FMusouMatchResult Result = MusouState->MakeMatchResult(true);
+	Result.PlayerHealthRatio = GetPlayerHealthRatio(); // EndMatch가 UnPossess하기 전에 현재 HP를 고정한다.
 
 	UE_LOG("[MusouGameMode] Victory resolved — Kills=%d Score=%lld MaxCombo=%d Time=%.1fs",
 		Result.KillCount,
