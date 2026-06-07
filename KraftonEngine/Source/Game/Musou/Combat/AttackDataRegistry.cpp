@@ -32,6 +32,9 @@ namespace
 		S.DamageMult    = T.get_or("dmg",      1.0f);
 		S.KnockbackDist = T.get_or("kb",       2.5f);
 		S.KnockbackDur  = T.get_or("kb_dur",   0.15f);
+		S.ShakeScale    = T.get_or("shake",    0.0f);
+		S.LaunchZ       = T.get_or("launch",   0.0f);
+		S.SelfLaunchZ   = T.get_or("self_launch", 0.0f);
 		return S;
 	}
 
@@ -242,17 +245,17 @@ bool FAttackDataRegistry::LoadFromLua()
 	};
 
 	// ── chains ──
-	TArray<FMusouAttackSlot> NewLight[3];
-	FMusouAttackSlot         NewHeavy[3];
+	TArray<FMusouAttackSlot> NewLight[NumContexts];
+	FMusouAttackSlot         NewHeavy[NumContexts];
 	TArray<FMusouAttackSlot> NewBranch;
 
-	static const char* ContextKeys[3] = { "idle", "moving", "air" };   // EAttackContext 순서
+	static const char* ContextKeys[NumContexts] = { "idle", "moving", "air", "air_juggle" };   // EAttackContext 순서
 
 	if (sol::optional<sol::table> ChainsT = Root["chains"])
 	{
 		if (sol::optional<sol::table> LightT = (*ChainsT)["light"])
 		{
-			for (int32 i = 0; i < 3; ++i)
+			for (int32 i = 0; i < NumContexts; ++i)
 			{
 				if (sol::optional<sol::table> Arr = (*LightT)[ContextKeys[i]])
 				{
@@ -262,7 +265,7 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 		if (sol::optional<sol::table> HeavyT = (*ChainsT)["heavy"])
 		{
-			for (int32 i = 0; i < 3; ++i)
+			for (int32 i = 0; i < NumContexts; ++i)
 			{
 				NewHeavy[i] = ParseSlot((*HeavyT)[ContextKeys[i]]);
 			}
@@ -270,6 +273,23 @@ bool FAttackDataRegistry::LoadFromLua()
 		if (sol::optional<sol::table> BranchT = (*ChainsT)["branch"])
 		{
 			ParseSlotArray(*BranchT, NewBranch);
+		}
+	}
+
+	// ── feedback (선택) — 없거나 일부만 있으면 구조체 기본값 유지 ──
+	FMusouFeedbackParams NewFeedback;
+	if (sol::optional<sol::table> FeedbackT = Root["feedback"])
+	{
+		if (sol::optional<sol::table> Burst = (*FeedbackT)["kill_burst"])
+		{
+			NewFeedback.KillBurstMinKills   = Burst->get_or("min_kills",  NewFeedback.KillBurstMinKills);
+			NewFeedback.KillBurstSlomoDur   = Burst->get_or("slomo_dur",  NewFeedback.KillBurstSlomoDur);
+			NewFeedback.KillBurstSlomoRate  = Burst->get_or("slomo_rate", NewFeedback.KillBurstSlomoRate);
+			NewFeedback.KillBurstShakeScale = Burst->get_or("shake",      NewFeedback.KillBurstShakeScale);
+		}
+		if (sol::optional<sol::table> AirCombo = (*FeedbackT)["air_combo"])
+		{
+			NewFeedback.AirComboGravityScale = AirCombo->get_or("gravity_scale", NewFeedback.AirComboGravityScale);
 		}
 	}
 
@@ -281,12 +301,13 @@ bool FAttackDataRegistry::LoadFromLua()
 
 	// 전부 성공 — 멤버 교체 + 세대 증가.
 	Specs = std::move(NewSpecs);
-	for (int32 i = 0; i < 3; ++i)
+	for (int32 i = 0; i < NumContexts; ++i)
 	{
 		LightChains[i] = std::move(NewLight[i]);
 		HeavySlots[i]  = std::move(NewHeavy[i]);
 	}
 	BranchFinishers = std::move(NewBranch);
+	Feedback = NewFeedback;
 	++Version;
 	return true;
 }
@@ -339,19 +360,23 @@ void FAttackDataRegistry::LoadDefaults()
 		return Slot;
 	};
 
-	LightChains[ContextIndex(EAttackContext::Idle)]     = { Single(ComboV1), Single(ComboV2), Single(ComboV3) };
-	LightChains[ContextIndex(EAttackContext::Moving)]   = { Single(Slide),   Single(ComboV2), Single(ComboV3) };
-	LightChains[ContextIndex(EAttackContext::Airborne)] = { Single(JumpAtk) };
+	LightChains[ContextIndex(EAttackContext::Idle)]           = { Single(ComboV1), Single(ComboV2), Single(ComboV3) };
+	LightChains[ContextIndex(EAttackContext::Moving)]         = { Single(Slide),   Single(ComboV2), Single(ComboV3) };
+	LightChains[ContextIndex(EAttackContext::Airborne)]       = { Single(JumpAtk) };
+	LightChains[ContextIndex(EAttackContext::AirborneJuggle)] = { Single(JumpAtk) };
 
-	HeavySlots[ContextIndex(EAttackContext::Idle)]     = Single(MakeStep("Barbarian_Melee Attack Backhand", nullptr, 0.2f, nullptr, -1.0f, -1.0f, -1.0f));
-	HeavySlots[ContextIndex(EAttackContext::Moving)]   = Single(MakeStep("great sword high spin attack_mixamo_com", "great sword high spin attack_mixamo_com", 0.15f, "spin_attack", 0.40f, -1.0f, -1.0f));
-	HeavySlots[ContextIndex(EAttackContext::Airborne)] = Single(JumpAtk);
+	HeavySlots[ContextIndex(EAttackContext::Idle)]           = Single(MakeStep("Barbarian_Melee Attack Backhand", nullptr, 0.2f, nullptr, -1.0f, -1.0f, -1.0f));
+	HeavySlots[ContextIndex(EAttackContext::Moving)]         = Single(MakeStep("great sword high spin attack_mixamo_com", "great sword high spin attack_mixamo_com", 0.15f, "spin_attack", 0.40f, -1.0f, -1.0f));
+	HeavySlots[ContextIndex(EAttackContext::Airborne)]       = Single(JumpAtk);
+	HeavySlots[ContextIndex(EAttackContext::AirborneJuggle)] = Single(JumpAtk);
 
 	BranchFinishers = {
 		Single(MakeStep("Barbarian_Melee Attack Horizontal", "Barbarian_Melee Attack Horizontal", 0.1f, "branch1", 0.40f, -1.0f, -1.0f)),
 		Single(MakeStep("Barbarian_Melee Attack 360 Low",    "Barbarian_Melee Attack 360 Low",    0.1f, "branch2", 0.45f, -1.0f, -1.0f)),
 		Single(MakeStep("Barbarian_Melee Attack 360 High",   "Barbarian_Melee Attack 360 High",   0.1f, "attack1", 0.45f, -1.0f, -1.0f)),
 	};
+
+	Feedback = FMusouFeedbackParams();   // 구조체 기본값
 
 	++Version;
 }
@@ -370,13 +395,29 @@ const FAttackSpec* FAttackDataRegistry::FindSpec(const FName& Id) const
 
 const TArray<FMusouAttackSlot>& FAttackDataRegistry::GetLightChain(EAttackContext Context) const
 {
-	return LightChains[ContextIndex(Context)];
+	const TArray<FMusouAttackSlot>& Chain = LightChains[ContextIndex(Context)];
+
+	// 저글 체인 미정의 시 일반 공중 체인 폴백 — lua 에 air_juggle 키가 없어도 동작.
+	if (Context == EAttackContext::AirborneJuggle && Chain.empty())
+	{
+		return LightChains[ContextIndex(EAttackContext::Airborne)];
+	}
+	return Chain;
 }
 
 const FMusouAttackSlot* FAttackDataRegistry::GetHeavySlot(EAttackContext Context) const
 {
 	const FMusouAttackSlot& Slot = HeavySlots[ContextIndex(Context)];
-	return Slot.IsValid() ? &Slot : nullptr;
+	if (Slot.IsValid())
+	{
+		return &Slot;
+	}
+	if (Context == EAttackContext::AirborneJuggle)
+	{
+		const FMusouAttackSlot& AirSlot = HeavySlots[ContextIndex(EAttackContext::Airborne)];
+		return AirSlot.IsValid() ? &AirSlot : nullptr;
+	}
+	return nullptr;
 }
 
 const FMusouAttackSlot* FAttackDataRegistry::GetBranchFinisher(int32 ComboStep) const

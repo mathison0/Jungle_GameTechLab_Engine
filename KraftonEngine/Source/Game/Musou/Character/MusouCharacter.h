@@ -58,6 +58,10 @@ public:
 	UComboComponent*  GetComboComponent()  const { return ComboComponent; }
 	UBoneAttachedStaticMeshComponent* GetWeaponComponent() const { return WeaponComponent; }
 
+	// launcher(self_launch) 발동 시 AnimNotify_MusouAttack 이 호출 — 착지까지
+	// 공중 공격이 저글 체인(AirborneJuggle)으로 진입한다. 일반 점프는 단발 점프 공격 유지.
+	void OnSelfLaunched() { bJuggleAirborne = true; }
+
 protected:
 	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
 	// ※ 공격 입력을 lua anim에서 이관한 이유: lua update()는 Animation Tick LOD
@@ -85,6 +89,10 @@ protected:
 	// 잠금 해제 구간에서 이동 입력이 오면 몽타주 조기 blend-out (UE 의 recovery cancel 패턴).
 	// 콤보 전진/분기 예약이 살아 있으면 보류 — 체인이 끊기지 않게.
 	void TryMovementCancelMontage();
+
+	// 공중 콤보 행 타임 — 공중 체인 진행 중 CMC 중력을 줄여 체공 연장, 종료 시 원복.
+	// 매 Tick 호출 (feedback.air_combo.gravity_scale, lua 튜닝).
+	void UpdateAirComboHang();
 
 	// 공격 스텝 재생 — 에디터 몽타주 우선, 없으면 시퀀스에서 런타임 생성 (기본 notify 주입).
 	bool          PlayAttackStep(const FMusouAttackStep& Step);
@@ -133,4 +141,11 @@ protected:
 	// 슬롯별 직전 변주 인덱스 (같은 모션 연속 재생 회피). key = 슬롯 주소 —
 	// 데이터 핫리로드로 슬롯이 재구성되면 자연히 미스나서 새로 기록된다.
 	TArray<std::pair<const void*, int32>> LastVariantPick;
+
+	// 공중 콤보 행 타임 상태 — 적용 중이면 SavedGravity 로 원복해야 한다.
+	bool  bAirComboHangActive = false;
+	float SavedGravity = 9.8f;
+
+	// launcher 로 떠오른 상태 — 공중 공격이 저글 체인으로 진입. 착지 시 해제 (Tick).
+	bool  bJuggleAirborne = false;
 };

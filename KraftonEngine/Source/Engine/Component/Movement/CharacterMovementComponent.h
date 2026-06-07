@@ -57,6 +57,10 @@ public:
 	void SetMovementMode(EMovementMode NewMode);
 	void Jump();
 
+	// 위쪽 임펄스 — Velocity.Z 를 지정값으로 강제하고 Falling 전환.
+	// Jump 와 달리 Walking 가드/고정 점프력 없이 임의 속도로 띄운다 (launcher 자기 상승 등).
+	void LaunchUpward(float UpVelocity);
+
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 	// 직전 TickComponent 에서 root motion 의 yaw 가 capsule rotation 에 실제로 적용됐는지.
