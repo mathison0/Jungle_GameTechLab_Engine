@@ -26,35 +26,47 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 
 void FParticleEmitterInstance::Tick(float DeltaTime)
 {
-	if (!bActive || !SpriteTemplate)
+	if (!SpriteTemplate || (!bActive && ActiveParticles <= 0))
 	{
 		return;
 	}
 
 	CollisionEventQueue.clear();
 	RefreshEventGeneratorFlags();
-	EmitterTime += DeltaTime;
-
-	const UParticleModuleRequired* RequiredModule = GetRequiredModule();
-	const float Duration = RequiredModule ? RequiredModule->EmitterDuration : SpriteTemplate->GetEmitterDuration();
-	if (Duration > 0.0f && EmitterTime >= Duration)
+	if (bActive)
 	{
-		const bool bLooping = RequiredModule ? RequiredModule->bLooping : SpriteTemplate->IsLooping();
-		if (bLooping)
+		const float PreviousEmitterTime = EmitterTime;
+		EmitterTime += DeltaTime;
+
+		const UParticleModuleRequired* RequiredModule = GetRequiredModule();
+		const float Duration = RequiredModule ? RequiredModule->EmitterDuration : SpriteTemplate->GetEmitterDuration();
+		if (Duration > 0.0f && EmitterTime >= Duration)
 		{
-			while (EmitterTime >= Duration)
+			const bool bLooping = RequiredModule ? RequiredModule->bLooping : SpriteTemplate->IsLooping();
+			if (bLooping)
 			{
-				EmitterTime -= Duration;
+				while (EmitterTime >= Duration)
+				{
+					SpawnBurstParticles(PreviousEmitterTime, Duration);
+					EmitterTime -= Duration;
+					bBurstEmitted = false;
+				}
+			}
+			else
+			{
+				EmitterTime = Duration;
+				SpawnBurstParticles(PreviousEmitterTime, EmitterTime);
+				bActive = false;
+				bSpawningEnabled = false;
 			}
 		}
 		else
 		{
-			EmitterTime = Duration;
-			bActive = false;
+			SpawnBurstParticles(PreviousEmitterTime, EmitterTime);
 		}
-	}
 
-	SpawnParticles(DeltaTime);
+		SpawnParticles(DeltaTime);
+	}
 	UpdateParticles(DeltaTime);
 }
 
@@ -123,6 +135,7 @@ void FParticleEmitterInstance::Reset()
 	SpawnEventName = FName("Spawn");
 	KillEventName = FName("Kill");
 	CollisionEventName = FName("Collision");
+	bBurstEmitted = false;
 	bActive = true;
 	bSpawningEnabled = true;
 }
@@ -217,6 +230,29 @@ int32 FParticleEmitterInstance::SpawnParticles(float DeltaTime)
 
 	SpawnFraction -= static_cast<float>(SpawnedCount);
 	return SpawnedCount;
+}
+
+int32 FParticleEmitterInstance::SpawnBurstParticles(float PreviousEmitterTime, float CurrentEmitterTime)
+{
+	if (!bSpawningEnabled || bBurstEmitted || ActiveParticles >= MaxActiveParticles)
+	{
+		return 0;
+	}
+
+	const UParticleModuleSpawn* SpawnModule = GetSpawnModule();
+	if (!SpawnModule || SpawnModule->BurstCount <= 0)
+	{
+		return 0;
+	}
+
+	const float BurstTime = (std::max)(0.0f, SpawnModule->BurstTime);
+	if (BurstTime < PreviousEmitterTime || BurstTime > CurrentEmitterTime)
+	{
+		return 0;
+	}
+
+	bBurstEmitted = true;
+	return EmitBurst(SpawnModule->BurstCount);
 }
 
 void FParticleEmitterInstance::InitializeParticle(FBaseParticle& Particle)

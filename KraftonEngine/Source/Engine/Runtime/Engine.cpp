@@ -99,7 +99,7 @@ void UEngine::Shutdown()
 		DestroyWorldContext(WorldList.back().ContextHandle);
 	}
 
-	// UI 가 Lua callback (FWidgetClickEventListener::Callback 의 sol::protected_function 등)
+	// UI 가 Lua callback (FWidgetEventListener::Callback 의 sol::protected_function 등)
 	// 을 보유하므로, 위젯 destroy 시점에 lua_State 가 살아있어야 deref 가 안전.
 	// 따라서 UIManager → LuaScriptManager 순서.
 	UUIManager::Get().Shutdown();

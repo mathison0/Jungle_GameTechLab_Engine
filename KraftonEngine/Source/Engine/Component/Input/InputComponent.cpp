@@ -1,6 +1,7 @@
 #include "InputComponent.h"
 
 #include "Core/Logging/Log.h"
+#include "GameFramework/Pawn/Pawn.h"
 #include "Input/InputSystem.h"
 #include "Object/Reflection/ObjectFactory.h"
 void UInputComponent::AddAxisMapping(const FString& Name, int VKey, float Scale)
@@ -46,6 +47,14 @@ void UInputComponent::ClearBindings()
 void UInputComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+	{
+		if (!OwnerPawn->IsPossessed())
+		{
+			return;
+		}
+	}
 
 	const InputSystem& In = InputSystem::Get();
 

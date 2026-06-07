@@ -379,6 +379,9 @@
     <Filter Include="Source\Game\Musou\GameMode">
       <UniqueIdentifier>{ab2b9458-4f4a-530d-64b9-b74d3b0b755d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\Musou\UI">
+      <UniqueIdentifier>{d6e2c21b-89f3-4e44-a3ce-18963462ef2a}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\ObjViewer">
       <UniqueIdentifier>{3e63d691-bd37-40d8-2cea-c874f8e3a95b}</UniqueIdentifier>
     </Filter>
@@ -1960,6 +1963,9 @@
     <ClCompile Include="Source\Game\Musou\GameMode\MusouPlayerController.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\UI\MusouHudPresenter.cpp">
+      <Filter>Source\Game\Musou\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\ObjViewer\ObjViewerEngine.cpp">
       <Filter>Source\ObjViewer</Filter>
     </ClCompile>
@@ -3495,6 +3501,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\UI\MusouHudPresenter.h">
+      <Filter>Source\Game\Musou\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\ObjViewer\ObjViewerEngine.h">
       <Filter>Source\ObjViewer</Filter>

@@ -835,6 +835,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameState.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouPlayerController.cpp" />
+    <ClCompile Include="Source\Game\Musou\UI\MusouHudPresenter.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerEngine.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerPanel.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerRenderPipeline.cpp" />
@@ -1351,6 +1352,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h" />
+    <ClInclude Include="Source\Game\Musou\UI\MusouHudPresenter.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerEngine.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerPanel.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerRenderPipeline.h" />

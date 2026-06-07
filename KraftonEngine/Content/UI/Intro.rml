@@ -50,12 +50,14 @@
 			line-height: 56px;
 		}
 
-		.menu-button:hover {
+		.menu-button:hover,
+		.menu-button.selected {
 			background-color: #dddddd;
 			color: #1b1b1bf1;
 		}
 
-		.secondary-button:hover {
+		.secondary-button:hover,
+		.secondary-button.selected {
 			background-color: #dddddd;
 			color: #1b1b1bf1;
 		}

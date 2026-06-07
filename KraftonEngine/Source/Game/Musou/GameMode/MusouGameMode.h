@@ -4,6 +4,7 @@
 #include "Core/Delegate.h"
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/Combat/HitTypes.h"
+#include "Game/Musou/UI/MusouHudPresenter.h"
 
 #include "Source/Game/Musou/GameMode/MusouGameMode.generated.h"
 
@@ -78,18 +79,25 @@ public:
 	AMusouGameState* GetMusouGameState() const;
 
 private:
-	void UpdateHud(float DeltaTime);
 	void SetStopMenuVisible(bool bVisible);
+	float GetPlayerHealthRatio() const;
+	void BindHudMenuHoverHandlers();
+	void SelectPauseMenuButton(int32 ButtonIndex);
+	void SelectDeathMenuButton(int32 ButtonIndex);
+	void MovePauseMenuSelection(int32 Delta);
+	void MoveDeathMenuSelection(int32 Delta);
+	void ExecutePauseMenuSelection();
+	void ExecuteDeathMenuSelection();
+	void HandlePauseMenuInput();
+	void HandleDeathMenuInput();
+	void UpdatePauseMenuSelectionVisuals();
+	void UpdateDeathMenuSelectionVisuals();
+	void ClearHudButtonSelection(const char* const* ButtonIds, int32 ButtonCount);
 
 	UUserWidget* HudWidget = nullptr;
+	FMusouHudPresenter HudPresenter;
 	bool bStopMenuVisible = false;
-	bool bKillHudInitialized = false;
-	int32 LastHudKillCount = 0;
-	int32 LastDisplayedKillMilestone = 0;
-	int32 ActiveKillMilestone = 0;
-	float KillPopRemaining = 0.0f;
-	float KillMilestoneRemaining = 0.0f;
-	float KillMilestoneElapsed = 0.0f;
-	float BloodVignetteRemaining = 0.0f;
-	float BloodVignetteIntensity = 0.0f;
+	bool bDeathMenuSelectionInitialized = false;
+	int32 SelectedPauseButtonIndex = 0;
+	int32 SelectedDeathButtonIndex = 0;
 };

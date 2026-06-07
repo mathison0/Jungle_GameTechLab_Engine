@@ -70,7 +70,7 @@ void ACharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bAutoInputMouseLook)
+	if (bAutoInputMouseLook && IsPossessed())
 	{
 		const InputSystem& In = InputSystem::Get();
 		const int DX = In.MouseDeltaX();
