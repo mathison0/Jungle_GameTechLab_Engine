@@ -34,6 +34,10 @@ struct FMusouAttackStep
 	float   PlayRateMin = 1.0f;
 	float   PlayRateMax = 1.0f;
 
+	// 시퀀스의 bEnableRootMotion 을 로드 시 강제 — 임포트 직후 RM 플래그가 꺼진 에셋
+	// (구르기 등) 을 에디터 재저장 없이 쓰기 위한 런타임 override. lua: force_root_motion
+	bool    bForceRootMotion = false;
+
 	// ── notify 주입 파라미터 (시퀀스에 저작 notify 가 없을 때만 사용) ──
 	FString AttackId;               // specs 키. 비어 있으면 히트 notify 안 박음
 	float   HitFrac = -1.0f;        // MusouAttack 위치 (PlayLength 비율). <0 = 없음
@@ -64,6 +68,9 @@ struct FMusouFeedbackParams
 
 	// 공중 콤보 행 타임 — 공중 체인 진행 중 플레이어 중력 배율 (1 = 변화 없음)
 	float AirComboGravityScale = 0.25f;
+
+	// 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
+	int32 UltimateKillsToFill = 40;
 };
 
 class FAttackDataRegistry
@@ -91,6 +98,12 @@ public:
 	// 테이블이 비었으면 nullptr.
 	const FMusouAttackSlot* GetBranchFinisher(int32 ComboStep) const;
 
+	// 무쌍기 난무 체인 — 순차 자동 재생 (몽타주 끝나면 다음 슬롯). 비어 있으면 발동 불가.
+	const TArray<FMusouAttackSlot>& GetUltimateChain() const { return UltimateChain; }
+
+	// 구르기 (회피) — 미정의면 nullptr (기능 비활성).
+	const FMusouAttackSlot* GetDodgeSlot() const { return DodgeSlot.IsValid() ? &DodgeSlot : nullptr; }
+
 	// 전투 피드백 연출 파라미터 (킬 버스트 슬로모/셰이크 등).
 	const FMusouFeedbackParams& GetFeedback() const { return Feedback; }
 
@@ -107,6 +120,8 @@ private:
 	TArray<FMusouAttackSlot> LightChains[NumContexts];   // EAttackContext 인덱스
 	FMusouAttackSlot         HeavySlots[NumContexts];    // IsValid() == false 면 미정의
 	TArray<FMusouAttackSlot> BranchFinishers;
+	TArray<FMusouAttackSlot> UltimateChain;
+	FMusouAttackSlot         DodgeSlot;
 	FMusouFeedbackParams     Feedback;
 
 	int32 Version = 0;

@@ -381,6 +381,13 @@ void AMusouGameMode::UpdateHud(float DeltaTime)
 	HudWidget->SetAttribute("hp-bar", "value", PlayerHealthRatio);
 	HudWidget->SetText("score-counter", FString("score: ") + std::to_string(static_cast<long long>(Score)));
 
+	// 무쌍 게이지 — 킬로 차오르고 가득 차면 R 라벨 표시 (AMusouCharacter 가 발동/소모).
+	if (AMusouGameState* MusouState = GetMusouGameState())
+	{
+		HudWidget->SetAttribute("musou-bar", "value", MusouState->GetMusouGauge());
+		HudWidget->SetProperty("musou-ready-label", "visibility", MusouState->IsMusouGaugeFull() ? "visible" : "hidden");
+	}
+
 	if (!bKillHudInitialized)
 	{
 		LastHudKillCount = KillCount;

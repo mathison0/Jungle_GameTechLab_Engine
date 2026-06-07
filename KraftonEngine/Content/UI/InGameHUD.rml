@@ -57,6 +57,35 @@
 			background-color: #ac130ee3;
 		}
 
+		#musou-bar {
+			display: block;
+			position: absolute;
+			left: 58px;
+			top: 26px;
+			width: 400px;
+			height: 10px;
+			background-color: rgba(73, 73, 73, 0);
+			border-width: 2px;
+			border-color: #140000;
+		}
+
+		#musou-bar fill {
+			background-color: #2a86e6e3;
+		}
+
+		#musou-ready-label {
+			position: absolute;
+			left: 8px;
+			top: 26px;
+			width: 44px;
+			height: 14px;
+			line-height: 14px;
+			font-size: 18px;
+			text-align: left;
+			visibility: hidden;
+			color: #6fc3ff;
+		}
+
 		#right-hud {
 			position: absolute;
 			right: 32px;
@@ -226,6 +255,8 @@
 		<div id="status-panel">
 			<div id="hp-label">HP</div>
 			<progress id="hp-bar" value="1.0"></progress>
+			<div id="musou-ready-label">R!</div>
+			<progress id="musou-bar" value="0.0"></progress>
 		</div>
 		<div id="score-counter">score: 0</div>
 		<div id="right-hud">

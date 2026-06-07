@@ -75,6 +75,13 @@ protected:
 	// ── 공격 입력 핸들러 ──
 	void OnAttackPressed();       // 좌클릭 — 콤보 체인 시작/예약 (컨텍스트별 체인)
 	void OnHeavyAttackPressed();  // 우클릭 — 강공격 (컨텍스트별 단발 / 콤보 중엔 분기 예약)
+	void OnUltimatePressed();     // R — 무쌍기 (게이지 가득 + 지상, 진행 동작 전부 캔슬)
+	void OnDodgePressed();        // Shift — 구르기 (입력 방향, 전 구간 무적, 후딜 캔슬 가능)
+
+	// 무쌍기 난무 — Tick 이 몽타주 종료를 감지해 다음 슬롯 자동 재생. 체인 소진 시 정리.
+	void UpdateUltimateChain();
+	void EndUltimate();
+	void EndRoll();
 
 	// 진입 컨텍스트 판정 — Falling → Airborne, XY 속도 ≥ 임계 → Moving, 그 외 Idle.
 	EAttackContext ResolveAttackContext() const;
@@ -148,4 +155,11 @@ protected:
 
 	// launcher 로 떠오른 상태 — 공중 공격이 저글 체인으로 진입. 착지 시 해제 (Tick).
 	bool  bJuggleAirborne = false;
+
+	// 무쌍기 난무 상태 — 활성 동안 무적 + 슬롯 순차 자동 재생 (UltimateStep = 다음 인덱스).
+	bool  bUltimateActive = false;
+	int32 UltimateStep = 0;
+
+	// 구르기 상태 — 활성 동안 무적. 몽타주 종료 시 해제 (Tick).
+	bool  bRolling = false;
 };

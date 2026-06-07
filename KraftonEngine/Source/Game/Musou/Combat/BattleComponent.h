@@ -41,6 +41,10 @@ public:
 	void Heal(float Amount);
 	void Kill(AActor* DamageInstigator = nullptr);
 
+	// 무적 — 무쌍기 등 연출 구간 동안 피해 무시 (ApplyDamage 가 0 반환).
+	void SetInvincible(bool bEnable) { bInvincible = bEnable; }
+	bool IsInvincible() const { return bInvincible; }
+
 	bool IsDead() const { return bDead; }
 	float GetHealth() const { return Health; }
 	float GetMaxHealth() const { return MaxHealth; }
@@ -70,6 +74,7 @@ protected:
 
 	float Health = 0.0f;
 	bool bDead = false;
+	bool bInvincible = false;   // 무쌍기 등 일시 무적 (직렬화 제외 — 런타임 전용)
 
 	FDelegateHandle AttackListenerHandle;
 };

@@ -58,6 +58,9 @@ return {
         -- 공중 체인 — height 여유 (플레이어가 공중이라 위아래로 넓게 판정)
         air1        = { range = 4.0, height = 3.5, cone_deg = 360, dmg = 1.2, kb = 1.0, kb_dur = 0.10, shake = 0.08, launch = 5.0 }, -- 공중 1타 — 재띄움 (저글 유지)
         air2        = { range = 4.0, height = 3.5, cone_deg = 360, dmg = 1.4, kb = 1.5, kb_dur = 0.12, shake = 0.10, launch = 5.0 }, -- 공중 2타
+
+        -- 무쌍기 마무리 강타 — 광범위 전방위 + 강넉백 + 띄움 (난무의 방점)
+        musou_slam  = { range = 7.0, height = 3.0, cone_deg = 360, dmg = 3.0, kb = 7.0, kb_dur = 0.30, shake = 0.4, launch = 6.0 },
     },
 
     steps = {
@@ -122,6 +125,19 @@ return {
         spin_high     = { montage = montage("Barbarian_Melee Attack 360 High"),
                           sequence = seq("Barbarian_Melee Attack 360 High"),
                           blend_in = 0.1, attack_id = "attack1", hit_frac = 0.45 },
+
+        -- 무쌍기 마무리 — Downward 내려찍기 (2.27s, 제자리 강타). 난무 전용
+        u_slam        = { montage = montage("Barbarian_Melee Attack Downward"),
+                          sequence = seq("Barbarian_Melee Attack Downward"),
+                          blend_in = 0.1, attack_id = "musou_slam", hit_frac = 0.50,
+                          play_rate = 1.05 },
+
+        -- 구르기 (Shift) — 입력 방향 회피. 공격 아님 (attack_id 없음), 전 구간 무적은 C++.
+        -- ※ Standing Dive Forward.fbx 를 에디터에서 Barbarian 스켈레톤으로 임포트해야 활성화.
+        --   force_root_motion: 임포트 직후 RM 플래그가 꺼져 있어도 런타임에 강제로 켠다.
+        roll          = { montage = montage("Standing Dive Forward_mixamo_com"),
+                          sequence = seq("Standing Dive Forward_mixamo_com"),
+                          blend_in = 0.08, play_rate = 1.15, force_root_motion = true },
     },
 
     chains = {
@@ -148,6 +164,13 @@ return {
 
         -- 콤보 분기 피니셔 (□..△) — 인덱스 = 분기 시점 단수. 단수 초과 시 마지막으로 clamp
         branch = { "horizontal", "spin_low", "spin_high" },
+
+        -- 무쌍기 (R, 게이지 가득) — 난무: 슬롯 순차 자동 재생, 전 구간 무적.
+        -- ※ spin_low(self_launch) 처럼 자기 띄움 있는 스텝은 넣지 말 것 — 난무가 공중으로 끊긴다.
+        ultimate = { "horizontal", "spin_high", "u_slam" },
+
+        -- 구르기 (Shift) — 후딜(콤보 윈도우/말미) 캔슬 가능, 전 구간 무적
+        dodge = "roll",
     },
 
     -- ── 전투 피드백/연출 (AMusouGameMode / AMusouCharacter 소비) ──
@@ -163,6 +186,11 @@ return {
         -- 공중 콤보 행 타임 — 공중 체인 진행 중 플레이어 중력 배율 (1 = 그대로)
         air_combo = {
             gravity_scale = 0.25,
+        },
+
+        -- 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
+        ultimate = {
+            kills_to_fill = 30,
         },
     },
 }
