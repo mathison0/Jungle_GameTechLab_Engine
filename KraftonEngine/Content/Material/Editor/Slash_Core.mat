@@ -1,37 +1,37 @@
 {
-  "BlendState" : "AlphaBlend",
-  "DepthStencilState" : "DepthReadOnly",
-  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-  "EmissiveIntensity" : 10.000000,
-  "Origin" : "Editor",
-  "Parameters" : {
-    "SlashAlpha" : 1.000000,
-    "SlashColorStrength" : 1.000000,
-    "SlashDissolve" : 0.000000,
-    "SlashDissolveEdgeColor" : [1.000000, 0.750000, 0.350000, 1.000000],
-    "SlashDissolveEdgeIntensity" : 1.500000,
-    "SlashDissolveEdgePad" : null,
-    "SlashDissolveEdgeWidth" : 0.060000,
-    "SlashDissolveSoftness" : 0.180000,
-    "SlashEdgeSoftness" : 0.120000,
-    "SlashNoiseScroll" : 0.000000,
-    "SlashNoiseTiling" : 2.000000,
-    "SlashReveal" : 1.000000,
-    "SlashRevealSoftness" : 0.080000,
-    "SlashScreenThickness" : 2.000000,
-    "SlashScreenThicknessStrength" : 0.500000,
-    "SlashTailFadeStart" : 1.000000,
-    "SlashTint" : [1.000000, 1.000000, 1.000000, 1.000000],
-    "SlashTrailLength" : 0.550000
-  },
-  "PathFileName" : "Content/Material/Editor/Slash_Core.mat",
-  "RasterizerState" : "SolidNoCull",
-  "RenderPass" : "AlphaBlend",
-  "ShaderPath" : "Shaders/Geometry/Slash.hlsl",
-  "ShadowMode" : "None",
-  "Textures" : {
-    "Custom0Texture" : "Content/Texture/noise.png",
-    "DiffuseTexture" : "Content/Texture/Slash.png"
-  },
-  "bEnableBloom" : false
-}
+        "BlendState" : "AlphaBlend",
+        "DepthStencilState" : "DepthReadOnly",
+        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+        "EmissiveIntensity" : 10.000000,
+        "Origin" : "Editor",
+        "Parameters" : {
+          "SlashAlpha" : 1.000000,
+          "SlashColorStrength" : 1.000000,
+          "SlashDissolve" : 0.000000,
+          "SlashDissolveEdgeColor" : [1.000000, 0.750000, 0.350000, 1.000000],
+          "SlashDissolveEdgeIntensity" : 1.500000,
+          "SlashDissolveEdgePad" : null,
+          "SlashDissolveEdgeWidth" : 0.060000,
+          "SlashDissolveSoftness" : 0.180000,
+          "SlashEdgeSoftness" : 0.120000,
+          "SlashNoiseScroll" : 0.000000,
+          "SlashNoiseTiling" : 2.000000,
+          "SlashReveal" : 1.000000,
+          "SlashRevealSoftness" : 0.080000,
+          "SlashScreenThickness" : 2.000000,
+          "SlashScreenThicknessStrength" : 0.500000,
+          "SlashTailFadeStart" : 1.000000,
+          "SlashTint" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "SlashTrailLength" : 0.550000
+        },
+        "PathFileName" : "Content/Material/Editor/Slash_Core.mat",
+        "RasterizerState" : "SolidNoCull",
+        "RenderPass" : "AlphaBlend",
+        "ShaderPath" : "Shaders/Geometry/Slash.hlsl",
+        "ShadowMode" : "None",
+        "Textures" : {
+          "Custom0Texture" : "Content/Texture/noise.png",
+          "DiffuseTexture" : "Content/Texture/white.png"
+        },
+        "bEnableBloom" : false
+      }
