@@ -570,21 +570,55 @@
 		}
 
 		.pause-button {
+			position: relative;
 			display: block;
 			width: 240px;
 			height: 68px;
 			line-height: 68px;
 			text-align: center;
 			font-size: 28px;
-			background-color: #222222f1;
-			color: #dddddd;
-			border-width: 2px;
-			border-color: #dddddd;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
 		}
 
-		.pause-button.selected {
-			background-color: #dddddd;
-			color: #222222f1;
+		.pause-button-frame {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.pause-button-frame-hover {
+			display: none;
+		}
+
+		.pause-button-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 100%;
+			height: 100%;
+			line-height: 68px;
+			text-align: center;
+		}
+
+		#victory-menu .pause-button-label {
+			line-height: 44px;
+		}
+
+		.pause-button.selected .pause-button-frame-normal {
+			display: none;
+		}
+
+		.pause-button.selected .pause-button-frame-hover {
+			display: block;
+		}
+
+		.pause-button.selected .pause-button-label {
+			color: #fff1b0;
 		}
 
 		#resume-button {
@@ -635,13 +669,33 @@
 			<div id="victory-details">K.O. 0   Max Combo 0   Time 0.0s</div>
 			<div id="scoreboard-overlay-host"></div>
 			<div id="pause-menu">
-				<div id="resume-button" class="pause-button">재개하기</div>
-				<div id="restart-button" class="pause-button">재도전</div>
-				<div id="stop-button" class="pause-button">전투 중단</div>
+				<div id="resume-button" class="pause-button">
+					<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
+					<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
+					<div class="pause-button-label">재개하기</div>
+				</div>
+				<div id="restart-button" class="pause-button">
+					<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
+					<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
+					<div class="pause-button-label">재도전</div>
+				</div>
+				<div id="stop-button" class="pause-button">
+					<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
+					<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
+					<div class="pause-button-label">전투 중단</div>
+				</div>
 			</div>
 			<div id="death-menu">
-				<div id="death-restart-button" class="pause-button">재도전</div>
-				<div id="death-stop-button" class="pause-button">전투 중단</div>
+				<div id="death-restart-button" class="pause-button">
+					<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
+					<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
+					<div class="pause-button-label">재도전</div>
+				</div>
+				<div id="death-stop-button" class="pause-button">
+					<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
+					<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
+					<div class="pause-button-label">전투 중단</div>
+				</div>
 			</div>
 		</div>
 	</div>
