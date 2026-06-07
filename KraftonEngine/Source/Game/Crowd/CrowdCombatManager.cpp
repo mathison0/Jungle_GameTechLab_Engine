@@ -46,6 +46,102 @@ namespace
 		}
 	}
 
+	void ResetKnockDownRecovery(FCrowdUnit& Unit)
+	{
+		Unit.KnockDownFlyingBackTimeRemaining = 0.0f;
+		Unit.KnockDownGettingUpTimeRemaining = 0.0f;
+		Unit.bKnockDownGettingUp = false;
+	}
+
+	bool CanUseAnimationDrivenKnockDown(const FCrowdUnit& Unit)
+	{
+		return Unit.Archetype.CombatType == EUnitCombatType::Melee
+			&& Unit.KnockDownAnimDuration > 0.0f
+			&& Unit.GettingUpAnimDuration > 0.0f;
+	}
+
+	bool HasAnimationDrivenKnockDown(const FCrowdUnit& Unit)
+	{
+		return Unit.KnockDownFlyingBackTimeRemaining > 0.0f
+			|| Unit.KnockDownGettingUpTimeRemaining > 0.0f
+			|| Unit.bKnockDownGettingUp;
+	}
+
+	void ConfigureKnockDownRecovery(FCrowdUnit& Unit, float FallbackDuration, const FDamageEvent& Event)
+	{
+		ResetKnockDownRecovery(Unit);
+		if (!CanUseAnimationDrivenKnockDown(Unit))
+		{
+			Unit.StateTimeRemaining = (std::max)(FallbackDuration, 0.0f);
+			return;
+		}
+
+		const float KnockbackDuration = (std::max)(Event.KnockbackDuration, 0.0f);
+		Unit.KnockDownFlyingBackTimeRemaining = (std::max)(Unit.KnockDownAnimDuration, KnockbackDuration);
+		Unit.KnockDownGettingUpTimeRemaining = Unit.GettingUpAnimDuration;
+		Unit.bKnockDownGettingUp = false;
+		Unit.StateTimeRemaining = Unit.KnockDownFlyingBackTimeRemaining + Unit.KnockDownGettingUpTimeRemaining;
+	}
+
+	void FinishControlLockedState(FCrowdUnit& Unit)
+	{
+		Unit.State = EUnitState::Idle;
+		Unit.StateTimeRemaining = 0.0f;
+		Unit.KnockbackTimeRemaining = 0.0f;
+		Unit.KnockbackVelocity = FVector::ZeroVector;
+		Unit.Velocity = FVector::ZeroVector;
+		Unit.bAirborne = false;
+		Unit.AirborneVelZ = 0.0f;
+		ResetKnockDownRecovery(Unit);
+		Unit.AnimState = static_cast<uint16>(Unit.State);
+		Unit.AnimTime = 0.0f;
+	}
+
+	bool UpdateAnimationDrivenKnockDown(FCrowdUnit& Unit, float TimeStep)
+	{
+		if (!HasAnimationDrivenKnockDown(Unit))
+		{
+			return false;
+		}
+
+		if (!Unit.bKnockDownGettingUp)
+		{
+			Unit.KnockDownFlyingBackTimeRemaining =
+				(std::max)(Unit.KnockDownFlyingBackTimeRemaining - TimeStep, 0.0f);
+			Unit.StateTimeRemaining = Unit.KnockDownFlyingBackTimeRemaining + Unit.KnockDownGettingUpTimeRemaining;
+			if (Unit.KnockDownFlyingBackTimeRemaining > 0.0f
+				|| Unit.bAirborne
+				|| Unit.KnockbackTimeRemaining > 0.0f)
+			{
+				return true;
+			}
+
+			Unit.bKnockDownGettingUp = true;
+			Unit.Velocity = FVector::ZeroVector;
+			Unit.AnimState = static_cast<uint16>(Unit.State);
+			Unit.AnimTime = 0.0f;
+			Unit.StateTimeRemaining = Unit.KnockDownGettingUpTimeRemaining;
+			if (Unit.KnockDownGettingUpTimeRemaining > 0.0f)
+			{
+				return true;
+			}
+
+			FinishControlLockedState(Unit);
+			return true;
+		}
+
+		Unit.KnockDownGettingUpTimeRemaining =
+			(std::max)(Unit.KnockDownGettingUpTimeRemaining - TimeStep, 0.0f);
+		Unit.StateTimeRemaining = Unit.KnockDownGettingUpTimeRemaining;
+		if (Unit.KnockDownGettingUpTimeRemaining > 0.0f)
+		{
+			return true;
+		}
+
+		FinishControlLockedState(Unit);
+		return true;
+	}
+
 	bool ApplyTimedReactionState(
 		FCrowdUnit& Unit,
 		EUnitState NewState,
@@ -61,12 +157,13 @@ namespace
 
 		const EUnitState PreviousState = Unit.State;
 		Unit.State = NewState;
-		Unit.StateTimeRemaining = (std::max)(Duration, 0.0f);
+		ResetKnockDownRecovery(Unit);
 		Unit.AnimState = static_cast<uint16>(Unit.State);
 		Unit.AnimTime = 0.0f;
 
 		if (NewState == EUnitState::Dead)
 		{
+			Unit.StateTimeRemaining = (std::max)(Duration, 0.0f);
 			Unit.Target = {};
 			Unit.Velocity = FVector::ZeroVector;
 			Unit.KnockbackTimeRemaining = 0.0f;
@@ -83,6 +180,15 @@ namespace
 			return true;
 		}
 
+		if (NewState == EUnitState::KnockDown)
+		{
+			ConfigureKnockDownRecovery(Unit, Duration, Event);
+		}
+		else
+		{
+			Unit.StateTimeRemaining = (std::max)(Duration, 0.0f);
+		}
+
 		const FVector KnockbackDirection = NormalizedXY(Event.HitDirection);
 		const bool bHasKnockback = Event.KnockbackDistance > 0.0f
 			&& Event.KnockbackDuration > 0.0f
@@ -92,7 +198,7 @@ namespace
 			Unit.KnockbackTimeRemaining = Event.KnockbackDuration;
 			Unit.KnockbackVelocity = KnockbackDirection * (Event.KnockbackDistance / Event.KnockbackDuration);
 		}
-		else if (PreviousState != NewState)
+		else if (PreviousState != NewState || NewState == EUnitState::KnockDown)
 		{
 			Unit.KnockbackTimeRemaining = 0.0f;
 			Unit.KnockbackVelocity = FVector::ZeroVector;
@@ -270,6 +376,11 @@ void FCrowdCombatManager::UpdateStateTimers(
 			continue;
 		}
 
+		if (Unit.State == EUnitState::KnockDown && UpdateAnimationDrivenKnockDown(Unit, TimeStep))
+		{
+			continue;
+		}
+
 		// 공중(띄움) 동안엔 상태 만료 보류 — 착지(MovementManager) 후 잔여 시간 소화.
 		// (만료를 허용하면 공중에서 Idle 로 풀려 지면 스냅으로 순간이동한다.)
 		if (Unit.bAirborne && Unit.State != EUnitState::Dead)
@@ -293,17 +404,16 @@ void FCrowdCombatManager::UpdateStateTimers(
 			continue;
 		}
 
-		Unit.State = EUnitState::Idle;
-		Unit.StateTimeRemaining = 0.0f;
-		Unit.KnockbackTimeRemaining = 0.0f;
-		Unit.KnockbackVelocity = FVector::ZeroVector;
-		Unit.Velocity = FVector::ZeroVector;
-		Unit.AnimState = static_cast<uint16>(Unit.State);
-		Unit.AnimTime = 0.0f;
+		FinishControlLockedState(Unit);
 	}
 }
 
-void FCrowdCombatManager::UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitStore, APawn* PlayerPawn, float PlayerProxyRadius)
+void FCrowdCombatManager::UpdateCombat(
+	float DeltaTime,
+	FCrowdUnitStore& UnitStore,
+	APawn* PlayerPawn,
+	float PlayerProxyRadius,
+	const FCrowdCombatSettings& Settings)
 {
 	TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
@@ -341,9 +451,14 @@ void FCrowdCombatManager::UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitSto
 
 			const FUnitArchetype& Archetype = Unit.Archetype;
 			const float AttackRange = (std::max)(Archetype.AttackRange + Unit.Radius + (std::max)(PlayerProxyRadius, 0.0f), 0.0f);
-			if (DistanceSquaredXY(Unit.Position, PlayerPawn->GetActorLocation()) > AttackRange * AttackRange)
+			const float AttackExitRange = AttackRange + (std::max)(Settings.AttackStateExitHysteresis, 0.0f);
+			const float DistanceSq = DistanceSquaredXY(Unit.Position, PlayerPawn->GetActorLocation());
+			if (DistanceSq > AttackRange * AttackRange)
 			{
-				Unit.State = EUnitState::Chase;
+				if (DistanceSq > AttackExitRange * AttackExitRange)
+				{
+					Unit.State = EUnitState::Chase;
+				}
 				continue;
 			}
 
@@ -366,9 +481,14 @@ void FCrowdCombatManager::UpdateCombat(float DeltaTime, FCrowdUnitStore& UnitSto
 		}
 
 		const float AttackRange = (std::max)(Archetype.AttackRange + Unit.Radius + Target->Radius, 0.0f);
-		if (DistanceSquaredXY(Unit.Position, Target->Position) > AttackRange * AttackRange)
+		const float AttackExitRange = AttackRange + (std::max)(Settings.AttackStateExitHysteresis, 0.0f);
+		const float DistanceSq = DistanceSquaredXY(Unit.Position, Target->Position);
+		if (DistanceSq > AttackRange * AttackRange)
 		{
-			Unit.State = EUnitState::Chase;
+			if (DistanceSq > AttackExitRange * AttackExitRange)
+			{
+				Unit.State = EUnitState::Chase;
+			}
 			continue;
 		}
 

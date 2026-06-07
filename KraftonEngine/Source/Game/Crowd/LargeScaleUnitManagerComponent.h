@@ -49,6 +49,7 @@ public:
 
 	void SetDebugDrawEnabled(bool bEnabled) { bDebugDrawEnabled = bEnabled; }
 	bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
+	bool IsUnitAnimationStateLogEnabled() const { return bLogUnitAnimationState; }
 
 	bool IsUnitAlive(FUnitHandle Handle) const;
 	FVector GetUnitPosition(FUnitHandle Handle) const;
@@ -108,6 +109,9 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd", DisplayName="Debug Draw Max Units", Min=0, Max=5000, Speed=10)
 	int32 DebugDrawMaxUnits = 300;
 
+	UPROPERTY(Edit, Save, Category="Crowd|Debug", DisplayName="Log Unit Animation State")
+	bool bLogUnitAnimationState = true;
+
 	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Enable Skeletal Visuals")
 	bool bEnableSkeletalVisuals = true;
 
@@ -155,6 +159,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee KnockDown Sequence", AssetType="UAnimSequence")
 	FSoftObjectPtr AllyMeleeKnockDownSequencePath = "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Getting Up Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr AllyMeleeGettingUpSequencePath = "Content/Data/GameJam/Knight/Knight_Getting_Up_mixamo_com.uasset";
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Ally|Melee|Animation", DisplayName="Ally Melee Dead Sequence", AssetType="UAnimSequence")
 	FSoftObjectPtr AllyMeleeDeadSequencePath = "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset";
@@ -213,6 +220,9 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee KnockDown Sequence", AssetType="UAnimSequence")
 	FSoftObjectPtr EnemyMeleeKnockDownSequencePath = "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset";
 
+	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Getting Up Sequence", AssetType="UAnimSequence")
+	FSoftObjectPtr EnemyMeleeGettingUpSequencePath = "Content/Data/GameJam/Knight/Knight_Getting_Up_mixamo_com.uasset";
+
 	UPROPERTY(Edit, Save, Category="Crowd|Visual|Enemy|Melee|Animation", DisplayName="Enemy Melee Dead Sequence", AssetType="UAnimSequence")
 	FSoftObjectPtr EnemyMeleeDeadSequencePath = "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset";
 
@@ -258,6 +268,9 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Engagement Radius", Min=0.0f, Max=1000.0f, Speed=0.5f)
 	float PlayerEngagementRadius = 18.0f;
 
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Engagement Exit Hysteresis", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float PlayerEngagementExitHysteresis = 2.0f;
+
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Proxy Radius", Min=0.0f, Max=100.0f, Speed=0.05f)
 	float PlayerProxyRadius = 0.6f;
 
@@ -296,6 +309,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Circle Around Radius Tolerance", Min=0.0f, Max=100.0f, Speed=0.05f)
 	float CircleAroundRadiusTolerance = 0.75f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Circle Around State Hysteresis", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float CircleAroundStateHysteresis = 0.35f;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Circle Around Radial Correction Weight", Min=0.0f, Max=10.0f, Speed=0.05f)
 	float CircleAroundRadialCorrectionWeight = 0.65f;
@@ -341,6 +357,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Attack Range", Min=0.0f, Max=100.0f, Speed=0.1f)
 	float DefaultAttackRange = 1.4f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Attack State Exit Hysteresis", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AttackStateExitHysteresis = 0.35f;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Attack Damage", Min=0.0f, Max=10000.0f, Speed=0.5f)
 	float DefaultAttackDamage = 10.0f;
