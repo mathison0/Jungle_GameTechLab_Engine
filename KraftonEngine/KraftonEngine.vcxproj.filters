@@ -1969,6 +1969,9 @@
     <ClCompile Include="Source\Game\Musou\Score\MusouScoreboard.cpp">
       <Filter>Source\Game\Musou\Score</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\UI\MusouScoreboardOverlayPresenter.cpp">
+      <Filter>Source\Game\Musou\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\UI\MusouScoreboardView.cpp">
       <Filter>Source\Game\Musou\UI</Filter>
     </ClCompile>
@@ -3513,6 +3516,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Score\MusouScoreboard.h">
       <Filter>Source\Game\Musou\Score</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\UI\MusouScoreboardOverlayPresenter.h">
+      <Filter>Source\Game\Musou\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\UI\MusouScoreboardView.h">
       <Filter>Source\Game\Musou\UI</Filter>

@@ -1,7 +1,6 @@
 #include "Game/Musou/UI/MusouHudPresenter.h"
 
 #include "Game/Musou/GameMode/MusouGameState.h"
-#include "Game/Musou/UI/MusouScoreboardView.h"
 #include "UI/UserWidget.h"
 
 #include <algorithm>
@@ -149,22 +148,12 @@ namespace
 		return FString(Buffer);
 	}
 
-	FMusouScoreboardViewStyle MakeVictoryScoreboardStyle()
-	{
-		return FMusouScoreboardViewStyle{
-			"scoreboard-row",
-			"scoreboard-rank",
-			"scoreboard-name",
-			"scoreboard-entry-score",
-			"scoreboard-entry-details",
-			"scoreboard-empty",
-		};
-	}
 }
 
 void FMusouHudPresenter::SetWidget(UUserWidget* InWidget)
 {
 	Widget = InWidget;
+	ScoreboardOverlay.SetWidget(InWidget);
 }
 
 void FMusouHudPresenter::Tick(float DeltaTime, const AMusouGameState* MusouState, float PlayerHealthRatio)
@@ -251,7 +240,7 @@ void FMusouHudPresenter::StartDeathOverlay()
 	Widget->SetProperty("victory-title", "display", "none");
 	Widget->SetProperty("victory-score", "display", "none");
 	Widget->SetProperty("victory-details", "display", "none");
-	Widget->SetProperty("scoreboard-panel", "display", "none");
+	ScoreboardOverlay.Hide();
 	Widget->SetProperty("pause-menu", "display", "none");
 	Widget->SetProperty("death-menu", "display", "none");
 	Widget->SetProperty("victory-menu", "display", "none");
@@ -269,7 +258,6 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result, co
 	bVictoryButtonsVisible = false;
 	bVictoryScoreboardVisible = false;
 	bVictoryScoreSubmitted = false;
-	ScoreboardPageIndex = 0;
 	VictoryOverlayElapsed = 0.0f;
 	VictoryHealthRatio = std::clamp(Result.PlayerHealthRatio, 0.0f, 1.0f);
 
@@ -293,36 +281,28 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result, co
 	Widget->SetProperty("victory-score", "opacity", "0");
 	Widget->SetProperty("victory-details", "display", "block");
 	Widget->SetProperty("victory-details", "opacity", "0");
-	Widget->SetProperty("scoreboard-panel", "display", "none");
-	Widget->SetProperty("scoreboard-save-button", "display", "block");
-	Widget->SetProperty("victory-menu", "display", "none");
+	ScoreboardOverlay.ConfigureSaveMode(ScoreboardEntries, ScoreboardPageSize, "Player", "이름 입력 후 저장하면 랭킹에 반영됩니다.");
+	ScoreboardOverlay.Hide();
 
 	// 표시 값은 승리 확정 시점에 고정된 Result만 사용한다.
 	Widget->SetText("victory-score", FString("score: ") + std::to_string(static_cast<long long>(Result.Score)));
 	Widget->SetText("victory-details", MakeVictoryDetailsText(Result));
-	Widget->SetText("scoreboard-save-status", "이름 입력 후 저장하면 랭킹에 반영됩니다.");
-	Widget->SetValue("scoreboard-name-input", "Player");
-	SetScoreboardEntries(ScoreboardEntries, true);
 	Widget->SetWantsMouse(false);
 }
 
 void FMusouHudPresenter::NotifyVictoryScoreSubmitted(const TArray<FMusouScoreboardEntry>& ScoreboardEntries)
 {
 	bVictoryScoreSubmitted = true;
-	SetScoreboardEntries(ScoreboardEntries, true);
+	ScoreboardOverlay.NotifyScoreSubmitted(ScoreboardEntries, "저장 완료");
 
 	if (!Widget || !Widget->IsDocumentLoaded())
 	{
 		return;
 	}
 
-	Widget->SetText("scoreboard-save-status", "저장 완료");
-	Widget->SetProperty("scoreboard-save-button", "display", "none");
-
 	if (bVictoryScoreboardVisible)
 	{
 		bVictoryButtonsVisible = true;
-		Widget->SetProperty("victory-menu", "display", "flex");
 		Widget->SetWantsMouse(true);
 	}
 }
@@ -334,30 +314,17 @@ void FMusouHudPresenter::NotifyVictoryScoreSaveFailed()
 		return;
 	}
 
-	Widget->SetText("scoreboard-save-status", "저장 실패");
+	ScoreboardOverlay.SetSaveStatus("저장 실패");
 }
 
 void FMusouHudPresenter::ShowPreviousScoreboardPage()
 {
-	if (ScoreboardPageIndex <= 0)
-	{
-		return;
-	}
-
-	--ScoreboardPageIndex;
-	RenderScoreboardPage();
+	ScoreboardOverlay.ShowPreviousPage();
 }
 
 void FMusouHudPresenter::ShowNextScoreboardPage()
 {
-	const int32 LastPageIndex = FMusouScoreboardView::GetPageCount(ScoreboardEntries.size(), ScoreboardPageSize) - 1;
-	if (ScoreboardPageIndex >= LastPageIndex)
-	{
-		return;
-	}
-
-	++ScoreboardPageIndex;
-	RenderScoreboardPage();
+	ScoreboardOverlay.ShowNextPage();
 }
 
 void FMusouHudPresenter::UpdateStatusHud(const AMusouGameState* MusouState, float PlayerHealthRatio)
@@ -555,7 +522,7 @@ void FMusouHudPresenter::UpdateVictoryOverlay(float DeltaTime)
 		Widget->SetProperty("pause-menu", "display", "none");
 		Widget->SetProperty("death-menu", "display", "none");
 		Widget->SetProperty("victory-menu", "display", "none");
-		Widget->SetProperty("scoreboard-panel", "display", "none");
+		ScoreboardOverlay.Hide();
 		Widget->SetWantsMouse(false);
 		return;
 	}
@@ -566,54 +533,10 @@ void FMusouHudPresenter::UpdateVictoryOverlay(float DeltaTime)
 		bVictoryButtonsVisible = true;
 		Widget->SetProperty("pause-menu", "display", "none");
 		Widget->SetProperty("death-menu", "display", "none");
-		Widget->SetProperty("scoreboard-panel", "display", "block");
-		Widget->SetProperty("victory-menu", "display", "flex");
+		ScoreboardOverlay.Show();
 		Widget->SetWantsMouse(true);
 
 		// 스코어보드가 열린 직후 바로 이름을 입력할 수 있도록 입력창에 포커스를 준다.
-		Widget->Focus("scoreboard-name-input", true);
+		ScoreboardOverlay.FocusNameInput();
 	}
-}
-
-void FMusouHudPresenter::SetScoreboardEntries(const TArray<FMusouScoreboardEntry>& Entries, bool bResetPage)
-{
-	ScoreboardEntries = Entries;
-	if (bResetPage)
-	{
-		ScoreboardPageIndex = 0;
-	}
-	else
-	{
-		ScoreboardPageIndex = FMusouScoreboardView::ClampPageIndex(ScoreboardPageIndex, ScoreboardEntries.size(), ScoreboardPageSize);
-	}
-
-	RenderScoreboardPage();
-}
-
-void FMusouHudPresenter::RenderScoreboardPage()
-{
-	if (!Widget || !Widget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	ScoreboardPageIndex = FMusouScoreboardView::ClampPageIndex(ScoreboardPageIndex, ScoreboardEntries.size(), ScoreboardPageSize);
-	Widget->SetText("scoreboard-list", FMusouScoreboardView::MakeRowsRml(ScoreboardEntries, ScoreboardPageIndex, ScoreboardPageSize, MakeVictoryScoreboardStyle()));
-	UpdateScoreboardPager();
-}
-
-void FMusouHudPresenter::UpdateScoreboardPager()
-{
-	if (!Widget || !Widget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	const int32 PageCount = FMusouScoreboardView::GetPageCount(ScoreboardEntries.size(), ScoreboardPageSize);
-	ScoreboardPageIndex = FMusouScoreboardView::ClampPageIndex(ScoreboardPageIndex, ScoreboardEntries.size(), ScoreboardPageSize);
-
-	Widget->SetText("scoreboard-page-label",
-		std::to_string(ScoreboardPageIndex + 1) + " / " + std::to_string(PageCount));
-	Widget->SetClass("scoreboard-prev-button", "disabled", ScoreboardPageIndex <= 0);
-	Widget->SetClass("scoreboard-next-button", "disabled", ScoreboardPageIndex >= PageCount - 1);
 }

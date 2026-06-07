@@ -2,6 +2,7 @@
 
 #include "Core/Types/CoreTypes.h"
 #include "Game/Musou/Score/MusouScoreboard.h"
+#include "Game/Musou/UI/MusouScoreboardOverlayPresenter.h"
 
 class AMusouGameState;
 struct FMusouMatchResult;
@@ -40,11 +41,9 @@ private:
 	void UpdateBloodVignette(float DeltaTime);
 	void UpdateDeathOverlay(float DeltaTime);
 	void UpdateVictoryOverlay(float DeltaTime);
-	void SetScoreboardEntries(const TArray<FMusouScoreboardEntry>& Entries, bool bResetPage);
-	void RenderScoreboardPage();
-	void UpdateScoreboardPager();
 
 	UUserWidget* Widget = nullptr;
+	FMusouScoreboardOverlayPresenter ScoreboardOverlay;
 
 	bool bKillHudInitialized = false;
 	bool bDeathOverlayVisible = false;
@@ -55,8 +54,6 @@ private:
 	bool bVictoryButtonsVisible = false;
 	bool bVictoryScoreboardVisible = false;
 	bool bVictoryScoreSubmitted = false;
-	TArray<FMusouScoreboardEntry> ScoreboardEntries;
-	int32 ScoreboardPageIndex = 0;
 
 	int32 LastHudKillCount = 0;
 	int32 LastDisplayedKillMilestone = 0;

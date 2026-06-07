@@ -12,12 +12,12 @@
 		}
 
 		#intro-root {
-			width: 100%;
-			height: 100%;
 			position: relative;
 			display: flex;
 			align-items: center;
 			justify-content: center;
+			width: 100%;
+			height: 100%;
 		}
 
 		#menu-buttons {
@@ -52,34 +52,49 @@
 		}
 
 		.menu-button:hover,
-		.menu-button.selected {
-			background-color: #dddddd;
-			color: #1b1b1bf1;
-		}
-
+		.menu-button.selected,
 		.secondary-button:hover,
 		.secondary-button.selected {
 			background-color: #dddddd;
 			color: #1b1b1bf1;
 		}
 
-		#intro-scoreboard-panel {
+		#scoreboard-overlay-host {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+		}
+
+		#scoreboard-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #030508a3;
+		}
+
+		#scoreboard-panel {
 			position: absolute;
 			left: 50%;
 			top: 50%;
 			margin-left: -370px;
 			margin-top: -300px;
-			display: none;
+			display: block;
 			width: 700px;
 			height: 560px;
 			padding: 20px;
-			background-color: rgba(12, 15, 20, 0.94);
+			background-color: #0c0f14f2;
 			border-width: 2px;
 			border-color: #f0d36a;
 			color: #f8f3df;
 		}
 
-		#intro-scoreboard-title {
+		#scoreboard-title {
 			display: block;
 			width: 700px;
 			height: 36px;
@@ -89,7 +104,15 @@
 			color: #f0d36a;
 		}
 
-		#intro-scoreboard-list {
+		#scoreboard-input-row {
+			display: none;
+		}
+
+		#scoreboard-save-status {
+			display: none;
+		}
+
+		#scoreboard-list {
 			display: block;
 			width: 700px;
 			height: 360px;
@@ -97,7 +120,7 @@
 			overflow: hidden;
 		}
 
-		.intro-scoreboard-row {
+		.scoreboard-row {
 			position: relative;
 			display: block;
 			width: 700px;
@@ -106,7 +129,7 @@
 			background-color: rgba(248, 243, 223, 0.08);
 		}
 
-		.intro-scoreboard-rank {
+		.scoreboard-rank {
 			position: absolute;
 			left: 10px;
 			top: 0;
@@ -118,7 +141,7 @@
 			color: #f0d36a;
 		}
 
-		.intro-scoreboard-name {
+		.scoreboard-name {
 			position: absolute;
 			left: 64px;
 			top: 0;
@@ -129,7 +152,7 @@
 			color: #f8f3df;
 		}
 
-		.intro-scoreboard-score {
+		.scoreboard-entry-score {
 			position: absolute;
 			left: 248px;
 			top: 0;
@@ -141,7 +164,7 @@
 			color: #ffffff;
 		}
 
-		.intro-scoreboard-details {
+		.scoreboard-entry-details {
 			position: absolute;
 			left: 396px;
 			top: 0;
@@ -153,7 +176,7 @@
 			color: #d6ccb1;
 		}
 
-		.intro-scoreboard-empty {
+		.scoreboard-empty {
 			display: block;
 			width: 700px;
 			height: 180px;
@@ -163,7 +186,7 @@
 			color: #d6ccb1;
 		}
 
-		#intro-scoreboard-pager {
+		#scoreboard-pager {
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -172,7 +195,7 @@
 			margin-top: 10px;
 		}
 
-		.intro-scoreboard-page-button {
+		.scoreboard-page-button {
 			display: block;
 			width: 38px;
 			height: 30px;
@@ -187,19 +210,19 @@
 			border-color: #f0d36a;
 		}
 
-		.intro-scoreboard-page-button:hover {
+		.scoreboard-page-button:hover {
 			background-color: #f0d36a;
 			color: #17130c;
 		}
 
-		.intro-scoreboard-page-button.disabled,
-		.intro-scoreboard-page-button.disabled:hover {
+		.scoreboard-page-button.disabled,
+		.scoreboard-page-button.disabled:hover {
 			background-color: rgba(248, 243, 223, 0.04);
 			color: #6f6858;
 			border-color: #6f6858;
 		}
 
-		#intro-scoreboard-page-label {
+		#scoreboard-page-label {
 			display: block;
 			width: 80px;
 			height: 30px;
@@ -209,7 +232,7 @@
 			color: #d6ccb1;
 		}
 
-		#intro-scoreboard-close-button {
+		#scoreboard-close-button {
 			display: block;
 			width: 180px;
 			height: 50px;
@@ -224,9 +247,13 @@
 			border-color: #dddddd;
 		}
 
-		#intro-scoreboard-close-button:hover {
+		#scoreboard-close-button:hover {
 			background-color: #dddddd;
 			color: #1b1b1bf1;
+		}
+
+		#victory-menu {
+			display: none;
 		}
 	</style>
 </head>
@@ -238,16 +265,7 @@
 			<div id="score-button" class="menu-button secondary-button">스코어</div>
 			<div id="exit-button" class="menu-button secondary-button">게임 종료</div>
 		</div>
-		<div id="intro-scoreboard-panel">
-			<div id="intro-scoreboard-title">스코어보드</div>
-			<div id="intro-scoreboard-list"></div>
-			<div id="intro-scoreboard-pager">
-				<div id="intro-scoreboard-prev-button" class="intro-scoreboard-page-button">&lt;</div>
-				<div id="intro-scoreboard-page-label">1 / 1</div>
-				<div id="intro-scoreboard-next-button" class="intro-scoreboard-page-button">&gt;</div>
-			</div>
-			<div id="intro-scoreboard-close-button">닫기</div>
-		</div>
+		<div id="scoreboard-overlay-host"></div>
 	</div>
 </body>
 </rml>

@@ -288,20 +288,50 @@
 			color: #f0d36a;
 		}
 
+		#scoreboard-overlay-host {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+		}
+
+		#scoreboard-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #00000000;
+		}
+
+		#scoreboard-overlay.scoreboard-read-only {
+			background-color: #030508a3;
+		}
+
 		#scoreboard-panel {
 			position: absolute;
 			left: 50%;
 			top: 50%;
 			margin-left: -280px;
 			margin-top: 112px;
-			display: none;
+			display: block;
 			width: 520px;
 			height: 360px;
 			padding: 18px;
-			background-color: rgba(12, 15, 20, 0.92);
+			background-color: #0c0f14ea;
 			border-width: 2px;
 			border-color: #f0d36a;
 			color: #f8f3df;
+		}
+
+		#scoreboard-panel.scoreboard-read-only {
+			margin-left: -370px;
+			margin-top: -300px;
+			width: 700px;
+			height: 560px;
 		}
 
 		#scoreboard-title {
@@ -483,6 +513,26 @@
 			color: #d6ccb1;
 		}
 
+		#scoreboard-close-button {
+			display: none;
+			width: 180px;
+			height: 48px;
+			line-height: 48px;
+			margin-left: 170px;
+			margin-top: 14px;
+			text-align: center;
+			font-size: 22px;
+			background-color: #222222f1;
+			color: #dddddd;
+			border-width: 2px;
+			border-color: #dddddd;
+		}
+
+		#scoreboard-close-button:hover {
+			background-color: #dddddd;
+			color: #222222f1;
+		}
+
 		#pause-menu {
 			position: absolute;
 			left: 50%;
@@ -584,24 +634,7 @@
 			<div id="victory-title">승리</div>
 			<div id="victory-score">score: 0</div>
 			<div id="victory-details">K.O. 0   Max Combo 0   Time 0.0s</div>
-			<div id="scoreboard-panel">
-				<div id="scoreboard-title">스코어보드</div>
-				<div id="scoreboard-input-row">
-					<input id="scoreboard-name-input" type="text" value="Player" />
-					<div id="scoreboard-save-button">저장</div>
-				</div>
-				<div id="scoreboard-save-status">이름 입력 후 저장하면 랭킹에 반영됩니다.</div>
-				<div id="scoreboard-list"></div>
-				<div id="scoreboard-pager">
-					<div id="scoreboard-prev-button" class="scoreboard-page-button">&lt;</div>
-					<div id="scoreboard-page-label">1 / 1</div>
-					<div id="scoreboard-next-button" class="scoreboard-page-button">&gt;</div>
-				</div>
-				<div id="victory-menu">
-					<div id="victory-restart-button" class="pause-button">재도전</div>
-					<div id="victory-stop-button" class="pause-button">나가기</div>
-				</div>
-			</div>
+			<div id="scoreboard-overlay-host"></div>
 			<div id="pause-menu">
 				<div id="resume-button" class="pause-button">재개하기</div>
 				<div id="restart-button" class="pause-button">재도전</div>
