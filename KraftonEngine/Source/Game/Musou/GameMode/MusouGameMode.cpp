@@ -16,24 +16,9 @@
 #include "UI/UserWidget.h"
 
 #include <algorithm>
-#include <cmath>
-#include <cstdio>
 
 namespace
 {
-	constexpr float KillPopDuration = 0.18f;
-	constexpr float KillMilestoneDuration = 1.25f;
-	constexpr float KillMilestonePopDuration = 0.24f;
-	constexpr float KillMilestoneShakeDuration = 0.48f;
-	constexpr float KillMilestoneBaseMarginLeft = -320.0f;
-	constexpr float KillMilestoneBaseMarginTop = -60.0f;
-	constexpr float BloodVignetteDuration = 1.8f;
-	constexpr float BloodVignetteBaseOpacity = 0.90f;
-	constexpr float BloodVignetteMinIntensity = 0.55f;
-	constexpr float BloodVignetteFullDamage = 30.0f;
-	constexpr float BloodVignetteMinTriggerHealthRatio = 0.15f;
-	constexpr float BloodVignetteLowHealthTriggerRatio = 0.35f;
-
 	// 킬 버스트 연출 파라미터(임계/슬로모/셰이크)는 attack_data.lua 의 feedback 테이블 —
 	// FAttackDataRegistry::GetFeedback() 으로 조회 (핫리로드 튜닝).
 
@@ -46,82 +31,6 @@ namespace
 		}
 		APlayerController* PC = GEngine->GetWorld()->GetFirstPlayerController();
 		return PC ? PC->GetPlayerCameraManager() : nullptr;
-	}
-	FString MakeScaleTransform(float Scale)
-	{
-		char Buffer[32] = {};
-		std::snprintf(Buffer, sizeof(Buffer), "scale(%.3f)", Scale);
-		return FString(Buffer);
-	}
-
-	FString MakePxValue(float Value)
-	{
-		char Buffer[32] = {};
-		std::snprintf(Buffer, sizeof(Buffer), "%.1fpx", Value);
-		return FString(Buffer);
-	}
-
-	FString MakeTextColor(float Alpha, int32 FromRed, int32 FromGreen, int32 FromBlue, int32 ToRed, int32 ToGreen, int32 ToBlue)
-	{
-		const float T = std::clamp(Alpha, 0.0f, 1.0f);
-		const auto LerpChannel = [T](int32 From, int32 To)
-		{
-			return static_cast<int32>(static_cast<float>(From) + static_cast<float>(To - From) * T + 0.5f);
-		};
-
-		const int32 Red = LerpChannel(FromRed, ToRed);
-		const int32 Green = LerpChannel(FromGreen, ToGreen);
-		const int32 Blue = LerpChannel(FromBlue, ToBlue);
-
-		char Buffer[8] = {};
-		std::snprintf(Buffer, sizeof(Buffer), "#%02X%02X%02X", Red, Green, Blue);
-		return FString(Buffer);
-	}
-
-	FString MakeComboTextColor(float Alpha)
-	{
-		return MakeTextColor(Alpha, 8, 10, 14, 230, 42, 17);
-	}
-
-	FString MakeComboScaleTransform(float Alpha)
-	{
-		const float T = std::clamp(Alpha, 0.0f, 1.0f);
-		const float SmoothT = T * T * (3.0f - 2.0f * T);
-		const float Scale = 1.0f + 0.3f * SmoothT;
-
-		return MakeScaleTransform(Scale);
-	}
-
-	FString MakeKillScaleTransform(float Alpha)
-	{
-		const float T = std::clamp(Alpha, 0.0f, 1.0f);
-		const float SmoothT = T * T * (3.0f - 2.0f * T);
-		const float Scale = 1.0f + 0.12f * SmoothT;
-
-		return MakeScaleTransform(Scale);
-	}
-
-	FString MakeKillMilestoneTextColor(float Alpha)
-	{
-		return MakeTextColor(Alpha, 8, 10, 14, 240, 211, 106);
-	}
-
-	FString MakeKillMilestoneScaleTransform(float Alpha)
-	{
-		const float T = std::clamp(Alpha, 0.0f, 1.0f);
-		const float SmoothT = T * T * (3.0f - 2.0f * T);
-		const float Scale = 1.0f + 0.42f * SmoothT;
-
-		return MakeScaleTransform(Scale);
-	}
-
-	FString MakeOpacityValue(float Alpha)
-	{
-		const float ClampedAlpha = std::clamp(Alpha, 0.0f, 1.0f);
-
-		char Buffer[16] = {};
-		std::snprintf(Buffer, sizeof(Buffer), "%.3f", ClampedAlpha);
-		return FString(Buffer);
 	}
 }
 
@@ -145,31 +54,37 @@ void AMusouGameMode::StartMatch()
 		HudWidget = UUIManager::Get().CreateWidget(GetPlayerController(), "Content/UI/InGameHUD.rml");
 		if (HudWidget)
 		{
-			HudWidget->BindClick("resume-button", [this]()
-			{
-				SetStopMenuVisible(false);
-			});
-
-			HudWidget->BindClick("restart-button", []()
+			auto RestartMatch = []()
 			{
 				if (GEngine)
 				{
 					GEngine->RequestTransitionToScene("Play");
 				}
-			});
+			};
 
-			HudWidget->BindClick("stop-button", []()
+			auto StopMatch = []()
 			{
 				if (GEngine)
 				{
 					GEngine->RequestTransitionToScene("Intro");
 				}
+			};
+
+			HudWidget->BindClick("resume-button", [this]()
+			{
+				SetStopMenuVisible(false);
 			});
+
+			HudWidget->BindClick("restart-button", RestartMatch);
+			HudWidget->BindClick("death-restart-button", RestartMatch);
+			HudWidget->BindClick("stop-button", StopMatch);
+			HudWidget->BindClick("death-stop-button", StopMatch);
 		}
 	}
 
 	if (HudWidget)
 	{
+		HudPresenter.SetWidget(HudWidget);
 		HudWidget->SetWantsMouse(false);
 		HudWidget->AddToViewport(0);
 		SetStopMenuVisible(false);
@@ -196,6 +111,8 @@ void AMusouGameMode::EndMatch()
 
 void AMusouGameMode::EndPlay()
 {
+	HudPresenter.SetWidget(nullptr);
+
 	if (HudWidget)
 	{
 		HudWidget->RemoveFromParent();
@@ -209,12 +126,12 @@ void AMusouGameMode::Tick(float DeltaTime)
 {
 	AGameModeBase::Tick(DeltaTime);
 
-	if (InputSystem::Get().GetKeyDown(VK_ESCAPE))
+	if (!HudPresenter.IsDeathOverlayVisible() && InputSystem::Get().GetKeyDown(VK_ESCAPE))
 	{
 		SetStopMenuVisible(!bStopMenuVisible);
 	}
 
-	UpdateHud(DeltaTime);
+	HudPresenter.Tick(DeltaTime, GetMusouGameState(), GetPlayerHealthRatio());
 }
 
 void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)
@@ -318,26 +235,25 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 {
 	UE_LOG("[MusouGameMode] Player died");
 	EndMatch();
+	bStopMenuVisible = false;
+	HudPresenter.StartDeathOverlay();
+
+	if (UWorld* World = GetWorld())
+	{
+		World->SetPaused(true);
+	}
 }
 
 void AMusouGameMode::NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator)
 {
 	(void)DamageInstigator;
 
-	if (!Player || Damage <= 0.0f || PlayerMaxHealth <= 0.0f)
+	if (!Player)
 	{
 		return;
 	}
 
-	const bool bLowHealth = PlayerCurrentHealth <= PlayerMaxHealth * BloodVignetteLowHealthTriggerRatio;
-	if (!bLowHealth && Damage < PlayerMaxHealth * BloodVignetteMinTriggerHealthRatio)
-	{
-		return;
-	}
-
-	const float DamageIntensity = std::clamp(Damage / BloodVignetteFullDamage, BloodVignetteMinIntensity, 1.0f);
-	BloodVignetteIntensity = std::max(BloodVignetteIntensity, DamageIntensity);
-	BloodVignetteRemaining = BloodVignetteDuration;
+	HudPresenter.NotifyPlayerDamaged(Damage, PlayerCurrentHealth, PlayerMaxHealth);
 }
 
 AMusouGameState* AMusouGameMode::GetMusouGameState() const
@@ -345,156 +261,31 @@ AMusouGameState* AMusouGameMode::GetMusouGameState() const
 	return Cast<AMusouGameState>(GetGameState());
 }
 
-void AMusouGameMode::UpdateHud(float DeltaTime)
+float AMusouGameMode::GetPlayerHealthRatio() const
 {
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	const AMusouGameState* MusouState = GetMusouGameState();
-	if (!MusouState)
-	{
-		return;
-	}
-
-	const int32 Combo = MusouState->GetCombo();
-	const int32 KillCount = MusouState->GetKillCount();
-	const int64 Score = MusouState->GetScore();
-	const float ComboWindow = MusouState->ComboWindow;
-	const float ComboRemaining = MusouState->GetComboRemaining();
-	const float DisplayAlpha = (Combo > 0 && ComboWindow > 0.0f)
-		? std::clamp(ComboRemaining / ComboWindow, 0.0f, 1.0f)
-		: 0.0f;
-
-	float PlayerHealthRatio = 1.0f;
 	if (APlayerController* PlayerController = GetPlayerController())
 	{
 		if (APawn* PlayerPawn = PlayerController->GetPossessedPawn())
 		{
 			if (UBattleComponent* Battle = PlayerPawn->GetComponentByClass<UBattleComponent>())
 			{
-				PlayerHealthRatio = std::clamp(Battle->GetHealthRatio(), 0.0f, 1.0f);
+				return std::clamp(Battle->GetHealthRatio(), 0.0f, 1.0f);
 			}
 		}
 	}
-	HudWidget->SetAttribute("hp-bar", "value", PlayerHealthRatio);
-	HudWidget->SetText("score-counter", FString("score: ") + std::to_string(static_cast<long long>(Score)));
 
-	// 무쌍 게이지 — 킬로 차오르고 가득 차면 R 라벨 표시 (AMusouCharacter 가 발동/소모).
-	if (AMusouGameState* MusouState = GetMusouGameState())
-	{
-		HudWidget->SetAttribute("musou-bar", "value", MusouState->GetMusouGauge());
-		HudWidget->SetProperty("musou-ready-label", "visibility", MusouState->IsMusouGaugeFull() ? "visible" : "hidden");
-	}
-
-	if (!bKillHudInitialized)
-	{
-		LastHudKillCount = KillCount;
-		bKillHudInitialized = true;
-	}
-	else if (KillCount > LastHudKillCount)
-	{
-		const int32 LastMilestone = LastHudKillCount / 10;
-		const int32 CurrentMilestone = KillCount / 10;
-		LastHudKillCount = KillCount;
-		KillPopRemaining = KillPopDuration;
-
-		const int32 ReachedMilestone = CurrentMilestone * 10;
-		if (CurrentMilestone > LastMilestone && ReachedMilestone > LastDisplayedKillMilestone)
-		{
-			ActiveKillMilestone = ReachedMilestone;
-			LastDisplayedKillMilestone = ActiveKillMilestone;
-			KillMilestoneElapsed = 0.0f;
-			KillMilestoneRemaining = KillMilestoneDuration;
-		}
-	}
-	else if (KillCount != LastHudKillCount)
-	{
-		LastHudKillCount = KillCount;
-	}
-
-	const float KillPopAlpha = KillPopDuration > 0.0f
-		? std::clamp(KillPopRemaining / KillPopDuration, 0.0f, 1.0f)
-		: 0.0f;
-
-	HudWidget->SetText("kill-count-value", std::to_string(KillCount));
-	HudWidget->SetProperty("kill-count-value", "transform", MakeKillScaleTransform(KillPopAlpha));
-	KillPopRemaining = std::max(0.0f, KillPopRemaining - DeltaTime);
-
-	if (KillMilestoneRemaining > 0.0f && ActiveKillMilestone > 0)
-	{
-		const float FadeAlpha = std::clamp(KillMilestoneRemaining / KillMilestoneDuration, 0.0f, 1.0f);
-		const float PopAlpha = std::clamp(1.0f - (KillMilestoneElapsed / KillMilestonePopDuration), 0.0f, 1.0f);
-		const float ShakeAlpha = std::clamp(1.0f - (KillMilestoneElapsed / KillMilestoneShakeDuration), 0.0f, 1.0f) * FadeAlpha;
-		const float ShakeX = static_cast<float>(std::sin(KillMilestoneElapsed * 78.0f)) * 6.0f * ShakeAlpha;
-		const float ShakeY = static_cast<float>(std::sin(KillMilestoneElapsed * 113.0f + 0.7f)) * 2.5f * ShakeAlpha;
-
-		HudWidget->SetProperty("kill-milestone", "display", "block");
-		HudWidget->SetText("kill-milestone", std::to_string(ActiveKillMilestone) + " K.O.");
-		HudWidget->SetProperty("kill-milestone", "color", MakeKillMilestoneTextColor(FadeAlpha));
-		HudWidget->SetProperty("kill-milestone", "transform", MakeKillMilestoneScaleTransform(PopAlpha));
-		HudWidget->SetProperty("kill-milestone", "margin-left", MakePxValue(KillMilestoneBaseMarginLeft + ShakeX));
-		HudWidget->SetProperty("kill-milestone", "margin-top", MakePxValue(KillMilestoneBaseMarginTop + ShakeY));
-
-		KillMilestoneElapsed += DeltaTime;
-		KillMilestoneRemaining = std::max(0.0f, KillMilestoneRemaining - DeltaTime);
-	}
-	else
-	{
-		HudWidget->SetProperty("kill-milestone", "display", "none");
-	}
-
-	if (Combo > 0 && DisplayAlpha > 0.03f)
-	{
-		HudWidget->SetProperty("combo-counter-frame", "display", "block");
-		HudWidget->SetText("combo-counter", FString("Combo ") + std::to_string(Combo));
-	}
-	else
-	{
-		HudWidget->SetProperty("combo-counter-frame", "display", "none");
-		HudWidget->SetText("combo-counter", "");
-	}
-
-	HudWidget->SetProperty("combo-counter", "opacity", "1.0");
-	HudWidget->SetProperty("combo-counter", "color", MakeComboTextColor(DisplayAlpha));
-	HudWidget->SetProperty("combo-counter", "transform", MakeComboScaleTransform(DisplayAlpha));
-
-	const float BloodTimeAlpha = BloodVignetteDuration > 0.0f
-		? std::clamp(BloodVignetteRemaining / BloodVignetteDuration, 0.0f, 1.0f)
-		: 0.0f;
-	const float BloodFadeAlpha = BloodTimeAlpha * BloodTimeAlpha;
-	const float BloodAlpha = BloodVignetteBaseOpacity * BloodVignetteIntensity * BloodFadeAlpha;
-
-	if (BloodAlpha > 0.01f)
-	{
-		HudWidget->SetProperty("blood-vignette", "opacity", MakeOpacityValue(BloodAlpha));
-		HudWidget->SetProperty("blood-vignette", "visibility", "visible");
-	}
-	else
-	{
-		HudWidget->SetProperty("blood-vignette", "opacity", "0");
-		HudWidget->SetProperty("blood-vignette", "visibility", "hidden");
-	}
-
-	BloodVignetteRemaining = std::max(0.0f, BloodVignetteRemaining - DeltaTime);
-	if (BloodVignetteRemaining <= 0.0f)
-	{
-		BloodVignetteIntensity = 0.0f;
-	}
+	return 1.0f;
 }
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 {
-	bStopMenuVisible = bVisible;
-
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	if (HudPresenter.IsDeathOverlayVisible())
 	{
 		return;
 	}
 
-	HudWidget->SetProperty("pause-overlay", "display", bStopMenuVisible ? "flex" : "none");
-	HudWidget->SetWantsMouse(bStopMenuVisible);
+	bStopMenuVisible = bVisible;
+	HudPresenter.SetPauseMenuVisible(bStopMenuVisible);
 
 	if (UWorld* World = GetWorld())
 	{
