@@ -133,6 +133,72 @@ void UUserWidget::SetText(const FString& ElementId, const FString& Text)
 	Element->SetInnerRML(Text.c_str());
 }
 
+FString UUserWidget::GetValue(const FString& ElementId) const
+{
+	if (!Document)
+	{
+		return {};
+	}
+
+	Rml::Element* Element = Document->GetElementById(ElementId);
+	if (!Element)
+	{
+		UE_LOG("[RmlUi] Value target not found: %s", ElementId.c_str());
+		return {};
+	}
+
+	Rml::ElementFormControl* FormControl = rmlui_dynamic_cast<Rml::ElementFormControl*>(Element);
+	if (!FormControl)
+	{
+		UE_LOG("[RmlUi] Value target is not a form control: %s", ElementId.c_str());
+		return {};
+	}
+
+	return FString(FormControl->GetValue().c_str());
+}
+
+bool UUserWidget::SetValue(const FString& ElementId, const FString& Value)
+{
+	if (!Document)
+	{
+		return false;
+	}
+
+	Rml::Element* Element = Document->GetElementById(ElementId);
+	if (!Element)
+	{
+		UE_LOG("[RmlUi] Value target not found: %s", ElementId.c_str());
+		return false;
+	}
+
+	Rml::ElementFormControl* FormControl = rmlui_dynamic_cast<Rml::ElementFormControl*>(Element);
+	if (!FormControl)
+	{
+		UE_LOG("[RmlUi] Value target is not a form control: %s", ElementId.c_str());
+		return false;
+	}
+
+	FormControl->SetValue(Value.c_str());
+	return true;
+}
+
+bool UUserWidget::Focus(const FString& ElementId, bool bFocusVisible)
+{
+	if (!Document)
+	{
+		return false;
+	}
+
+	Rml::Element* Element = Document->GetElementById(ElementId);
+	if (!Element)
+	{
+		UE_LOG("[RmlUi] Focus target not found: %s", ElementId.c_str());
+		return false;
+	}
+
+	return Element->Focus(bFocusVisible);
+}
+
 bool UUserWidget::SetProperty(const FString& ElementId, const FString& PropertyName, const FString& Value)
 {
 	if (!Document)

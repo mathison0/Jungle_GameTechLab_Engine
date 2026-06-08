@@ -3,6 +3,7 @@
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Component/Input/ActionComponent.h"
+#include "Component/Primitive/HitFlashComponent.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/World.h"
@@ -108,6 +109,14 @@ float UBattleComponent::ApplyDamage(float Damage, AActor* DamageInstigator)
 
 	if (Applied > 0.0f)
 	{
+		if (AActor* OwnerActor = GetOwner())
+		{
+			if (UHitFlashComponent* HitFlash = OwnerActor->GetComponentByClass<UHitFlashComponent>())
+			{
+				HitFlash->PlayFlash();
+			}
+		}
+
 		APawn* OwnerPawn = Cast<APawn>(GetOwner());
 		AMusouGameMode* GameMode = GetMusouGameModeFor(this);
 		APlayerController* PlayerController = GameMode ? GameMode->GetPlayerController() : nullptr;

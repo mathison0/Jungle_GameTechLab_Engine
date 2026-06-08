@@ -77,6 +77,138 @@ namespace
 	{
 		return FPaths::ToUtf8(Path.generic_wstring());
 	}
+
+	// RmlUi는 Ctrl/Shift/Alt 같은 보조키 상태를 별도 bitmask로 받는다.
+	// Win32 키 상태를 RmlUi 이벤트에 그대로 넘길 수 있는 modifier 값으로 변환한다.
+	int MakeRmlKeyModifierState(const InputSystem& Input)
+	{
+		int Modifiers = 0;
+		if (Input.GetKey(VK_CONTROL) || Input.GetKey(VK_LCONTROL) || Input.GetKey(VK_RCONTROL))
+		{
+			Modifiers |= Rml::Input::KM_CTRL;
+		}
+		if (Input.GetKey(VK_SHIFT) || Input.GetKey(VK_LSHIFT) || Input.GetKey(VK_RSHIFT))
+		{
+			Modifiers |= Rml::Input::KM_SHIFT;
+		}
+		if (Input.GetKey(VK_MENU) || Input.GetKey(VK_LMENU) || Input.GetKey(VK_RMENU))
+		{
+			Modifiers |= Rml::Input::KM_ALT;
+		}
+		if ((::GetKeyState(VK_CAPITAL) & 0x0001) != 0)
+		{
+			Modifiers |= Rml::Input::KM_CAPSLOCK;
+		}
+		if ((::GetKeyState(VK_NUMLOCK) & 0x0001) != 0)
+		{
+			Modifiers |= Rml::Input::KM_NUMLOCK;
+		}
+		if ((::GetKeyState(VK_SCROLL) & 0x0001) != 0)
+		{
+			Modifiers |= Rml::Input::KM_SCROLLLOCK;
+		}
+		return Modifiers;
+	}
+
+	// Windows VK_* 코드를 RmlUi의 KeyIdentifier로 변환한다.
+	// 문자 입력 자체는 WM_CHAR -> ProcessTextInput 경로로 처리하고,
+	// 여기서는 Backspace/Delete/방향키/Enter처럼 input 편집에 필요한 key event를 보낸다.
+	Rml::Input::KeyIdentifier TranslateVirtualKeyToRml(int VK)
+	{
+		if (VK >= '0' && VK <= '9')
+		{
+			return static_cast<Rml::Input::KeyIdentifier>(Rml::Input::KI_0 + (VK - '0'));
+		}
+		if (VK >= 'A' && VK <= 'Z')
+		{
+			return static_cast<Rml::Input::KeyIdentifier>(Rml::Input::KI_A + (VK - 'A'));
+		}
+		if (VK >= VK_NUMPAD0 && VK <= VK_NUMPAD9)
+		{
+			return static_cast<Rml::Input::KeyIdentifier>(Rml::Input::KI_NUMPAD0 + (VK - VK_NUMPAD0));
+		}
+		if (VK >= VK_F1 && VK <= VK_F24)
+		{
+			return static_cast<Rml::Input::KeyIdentifier>(Rml::Input::KI_F1 + (VK - VK_F1));
+		}
+
+		switch (VK)
+		{
+		case VK_SPACE: return Rml::Input::KI_SPACE;
+		case VK_OEM_1: return Rml::Input::KI_OEM_1;
+		case VK_OEM_PLUS: return Rml::Input::KI_OEM_PLUS;
+		case VK_OEM_COMMA: return Rml::Input::KI_OEM_COMMA;
+		case VK_OEM_MINUS: return Rml::Input::KI_OEM_MINUS;
+		case VK_OEM_PERIOD: return Rml::Input::KI_OEM_PERIOD;
+		case VK_OEM_2: return Rml::Input::KI_OEM_2;
+		case VK_OEM_3: return Rml::Input::KI_OEM_3;
+		case VK_OEM_4: return Rml::Input::KI_OEM_4;
+		case VK_OEM_5: return Rml::Input::KI_OEM_5;
+		case VK_OEM_6: return Rml::Input::KI_OEM_6;
+		case VK_OEM_7: return Rml::Input::KI_OEM_7;
+		case VK_OEM_8: return Rml::Input::KI_OEM_8;
+		case VK_OEM_102: return Rml::Input::KI_OEM_102;
+		case VK_BACK: return Rml::Input::KI_BACK;
+		case VK_TAB: return Rml::Input::KI_TAB;
+		case VK_CLEAR: return Rml::Input::KI_CLEAR;
+		case VK_RETURN: return Rml::Input::KI_RETURN;
+		case VK_PAUSE: return Rml::Input::KI_PAUSE;
+		case VK_CAPITAL: return Rml::Input::KI_CAPITAL;
+		case VK_HANGUL: return Rml::Input::KI_HANGUL;
+		case VK_HANJA: return Rml::Input::KI_HANJA;
+		case VK_ESCAPE: return Rml::Input::KI_ESCAPE;
+		case VK_CONVERT: return Rml::Input::KI_CONVERT;
+		case VK_NONCONVERT: return Rml::Input::KI_NONCONVERT;
+		case VK_ACCEPT: return Rml::Input::KI_ACCEPT;
+		case VK_MODECHANGE: return Rml::Input::KI_MODECHANGE;
+		case VK_PRIOR: return Rml::Input::KI_PRIOR;
+		case VK_NEXT: return Rml::Input::KI_NEXT;
+		case VK_END: return Rml::Input::KI_END;
+		case VK_HOME: return Rml::Input::KI_HOME;
+		case VK_LEFT: return Rml::Input::KI_LEFT;
+		case VK_UP: return Rml::Input::KI_UP;
+		case VK_RIGHT: return Rml::Input::KI_RIGHT;
+		case VK_DOWN: return Rml::Input::KI_DOWN;
+		case VK_SELECT: return Rml::Input::KI_SELECT;
+		case VK_PRINT: return Rml::Input::KI_PRINT;
+		case VK_EXECUTE: return Rml::Input::KI_EXECUTE;
+		case VK_SNAPSHOT: return Rml::Input::KI_SNAPSHOT;
+		case VK_INSERT: return Rml::Input::KI_INSERT;
+		case VK_DELETE: return Rml::Input::KI_DELETE;
+		case VK_HELP: return Rml::Input::KI_HELP;
+		case VK_LWIN: return Rml::Input::KI_LWIN;
+		case VK_RWIN: return Rml::Input::KI_RWIN;
+		case VK_APPS: return Rml::Input::KI_APPS;
+		case VK_SLEEP: return Rml::Input::KI_SLEEP;
+		case VK_NUMLOCK: return Rml::Input::KI_NUMLOCK;
+		case VK_SCROLL: return Rml::Input::KI_SCROLL;
+		case VK_LSHIFT: return Rml::Input::KI_LSHIFT;
+		case VK_RSHIFT: return Rml::Input::KI_RSHIFT;
+		case VK_LCONTROL: return Rml::Input::KI_LCONTROL;
+		case VK_RCONTROL: return Rml::Input::KI_RCONTROL;
+		case VK_LMENU: return Rml::Input::KI_LMENU;
+		case VK_RMENU: return Rml::Input::KI_RMENU;
+		case VK_BROWSER_BACK: return Rml::Input::KI_BROWSER_BACK;
+		case VK_BROWSER_FORWARD: return Rml::Input::KI_BROWSER_FORWARD;
+		case VK_BROWSER_REFRESH: return Rml::Input::KI_BROWSER_REFRESH;
+		case VK_BROWSER_STOP: return Rml::Input::KI_BROWSER_STOP;
+		case VK_BROWSER_SEARCH: return Rml::Input::KI_BROWSER_SEARCH;
+		case VK_BROWSER_FAVORITES: return Rml::Input::KI_BROWSER_FAVORITES;
+		case VK_BROWSER_HOME: return Rml::Input::KI_BROWSER_HOME;
+		case VK_VOLUME_MUTE: return Rml::Input::KI_VOLUME_MUTE;
+		case VK_VOLUME_DOWN: return Rml::Input::KI_VOLUME_DOWN;
+		case VK_VOLUME_UP: return Rml::Input::KI_VOLUME_UP;
+		case VK_MEDIA_NEXT_TRACK: return Rml::Input::KI_MEDIA_NEXT_TRACK;
+		case VK_MEDIA_PREV_TRACK: return Rml::Input::KI_MEDIA_PREV_TRACK;
+		case VK_MEDIA_STOP: return Rml::Input::KI_MEDIA_STOP;
+		case VK_MEDIA_PLAY_PAUSE: return Rml::Input::KI_MEDIA_PLAY_PAUSE;
+		case VK_LAUNCH_MAIL: return Rml::Input::KI_LAUNCH_MAIL;
+		case VK_LAUNCH_MEDIA_SELECT: return Rml::Input::KI_LAUNCH_MEDIA_SELECT;
+		case VK_LAUNCH_APP1: return Rml::Input::KI_LAUNCH_APP1;
+		case VK_LAUNCH_APP2: return Rml::Input::KI_LAUNCH_APP2;
+		default: return Rml::Input::KI_UNKNOWN;
+		}
+	}
 }
 
 double FRmlSystemInterface::GetElapsedTime()
@@ -354,7 +486,9 @@ Rml::TextureHandle FRmlRenderInterfaceD3D11::LoadTexture(Rml::Vector2i& TextureD
 		D3D11_BIND_SHADER_RESOURCE,
 		0,
 		0,
-		DirectX::WIC_LOADER_IGNORE_SRGB,
+		// RML UI는 GammaCorrection pass 전에 SceneColor에 합성된다.
+		// PNG/JPG 색상 이미지를 linear texture처럼 샘플링하면 최종 감마 보정에서 화면이 허옇게 뜨므로 sRGB로 로드한다.
+		DirectX::WIC_LOADER_FORCE_SRGB,
 		&Resource,
 		&SRV);
 
@@ -571,10 +705,10 @@ void UUIManager::Initialize(ID3D11Device* InDevice)
 		UE_LOG("[RmlUi] Failed to create GameViewport context.");
 	}
 
-	const std::filesystem::path FontPath = ToProjectPath("Content/Font/Shilla_Culture(B).ttf");
-	if (!Rml::LoadFontFace(ToRmlPath(FontPath), "Shilla_Culture", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Bold))
+	const std::filesystem::path FontPath = ToProjectPath("Content/Font/HeirofLightBold.ttf");
+	if (!Rml::LoadFontFace(ToRmlPath(FontPath), "HeirofLight", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Bold))
 	{
-		UE_LOG("[RmlUi] Failed to load font: Content/Font/Shilla_Culture(B).ttf");
+		UE_LOG("[RmlUi] Failed to load font: Content/Font/HeirofLightBold.ttf");
 	}
 }
 
@@ -792,7 +926,9 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 	}
 
 	InputSystem& Input = InputSystem::Get();
-	const int KeyModifierState = 0;
+	// WantsMouse가 켜진 Rml 위젯이 있으면 해당 프레임에는 UI가 키보드/문자 입력도 받을 수 있게 한다.
+	const bool bWantsUiInput = AnyViewportWidgetWantsMouse();
+	const int KeyModifierState = MakeRmlKeyModifierState(Input);
 
 	int MouseX = 0;
 	int MouseY = 0;
@@ -818,6 +954,53 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 	{
 		RmlContext->ProcessMouseButtonUp(0, KeyModifierState);
 	}
+
+	if (Input.GetScrollDelta() != 0)
+	{
+		// Rml 문서 내부의 스크롤 가능한 요소와 form control이 휠 입력을 받을 수 있게 전달한다.
+		RmlContext->ProcessMouseWheel({ 0.0f, -Input.GetScrollNotches() }, KeyModifierState);
+	}
+
+	if (bWantsUiInput)
+	{
+		// Rml input에서 Backspace/Delete/방향키/Enter 등이 동작하려면 문자와 별개로 key down/up 이벤트가 필요하다.
+		for (int VK = 0; VK < 256; ++VK)
+		{
+			const Rml::Input::KeyIdentifier KeyIdentifier = TranslateVirtualKeyToRml(VK);
+			if (KeyIdentifier == Rml::Input::KI_UNKNOWN)
+			{
+				continue;
+			}
+
+			if (Input.GetKeyDown(VK))
+			{
+				RmlContext->ProcessKeyDown(KeyIdentifier, KeyModifierState);
+			}
+			if (Input.GetKeyUp(VK))
+			{
+				RmlContext->ProcessKeyUp(KeyIdentifier, KeyModifierState);
+			}
+		}
+
+		// WM_CHAR로 수집한 실제 입력 문자를 RmlUi에 전달한다.
+		// 이 경로가 있어야 영문/한글/기호가 input value로 들어간다.
+		for (char32_t Character : Input.ConsumeTextInputCharacters())
+		{
+			RmlContext->ProcessTextInput(static_cast<Rml::Character>(Character));
+		}
+	}
+	else
+	{
+		// UI가 입력을 받지 않는 프레임의 문자 큐는 다음 UI 포커스에 섞이지 않도록 비운다.
+		Input.ConsumeTextInputCharacters();
+	}
+
+	Rml::Element* FocusElement = RmlContext->GetFocusElement();
+	const bool bTextInputFocused = FocusElement && rmlui_dynamic_cast<Rml::ElementFormControl*>(FocusElement) != nullptr;
+	Input.SetGuiMouseCapture(bWantsUiInput);
+	Input.SetGuiKeyboardCapture(bWantsUiInput);
+	// GameMode 쪽 메뉴 단축키가 이름 입력 중 Enter/Space를 가로채지 않도록 form control 포커스 여부를 공유한다.
+	Input.SetGuiTextInputCapture(bTextInputFocused);
 	bDispatchingRmlEvents = false;
 }
 

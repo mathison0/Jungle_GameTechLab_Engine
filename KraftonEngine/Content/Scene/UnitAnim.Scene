@@ -9,6 +9,7 @@
           "Properties" : {
             "AllyMeleeAttackSequencePath" : "Content/Data/GameJam/Knight/Knight_Attack_mixamo_com.uasset",
             "AllyMeleeDeadSequencePath" : "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset",
+            "AllyMeleeGettingUpSequencePath" : "Content/Data/GameJam/Knight/Knight_Getting_Up_mixamo_com.uasset",
             "AllyMeleeHitSequencePath" : "Content/Data/GameJam/Knight/Knight_Impact_mixamo_com.uasset",
             "AllyMeleeIdleSequencePath" : "Content/Data/GameJam/Knight/Knight_Idle_mixamo_com.uasset",
             "AllyMeleeKnockDownSequencePath" : "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset",
@@ -19,11 +20,13 @@
             "AllyMeleeStrafeWalkLeftSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Left_mixamo_com.uasset",
             "AllyMeleeStrafeWalkRightSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Right_mixamo_com.uasset",
             "AllyMeleeVisualAnimInstanceClass" : "UCrowdMeleeAnimInstance",
+            "AllyMeleeVisualMaterialSlots" : ["Content/Material/Auto/M_Knight_Armors_Weapon.mat", "Content/Material/Auto/M_Knight_Armors_Weapon.mat", "Content/Material/Auto/M_Knight_Armors_Weapon.mat"],
             "AllyMeleeVisualScale" : [1.000000, 1.000000, 1.000000],
             "AllyMeleeVisualSkeletalMeshPath" : "Content/Data/GameJam/Knight/SK_Knight_SkeletalMesh.uasset",
             "AllyMeleeWalkBackwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Walk_Backward_mixamo_com.uasset",
             "AllyMeleeWalkForwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Walk_Forward_mixamo_com.uasset",
             "AllyRangedVisualAnimInstanceClass" : "None",
+            "AllyRangedVisualMaterialSlots" : [],
             "AllyRangedVisualScale" : [1.000000, 1.000000, 1.000000],
             "AllyRangedVisualSkeletalMeshPath" : "None",
             "AttackStateExitHysteresis" : 0.350000,
@@ -48,6 +51,7 @@
             "DefaultUnitRadius" : 0.450000,
             "EnemyMeleeAttackSequencePath" : "Content/Data/GameJam/Knight/Knight_Attack_mixamo_com.uasset",
             "EnemyMeleeDeadSequencePath" : "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset",
+            "EnemyMeleeGettingUpSequencePath" : "Content/Data/GameJam/Knight/Knight_Getting_Up_mixamo_com.uasset",
             "EnemyMeleeHitSequencePath" : "Content/Data/GameJam/Knight/Knight_Impact_mixamo_com.uasset",
             "EnemyMeleeIdleSequencePath" : "Content/Data/GameJam/Knight/Knight_Idle_mixamo_com.uasset",
             "EnemyMeleeKnockDownSequencePath" : "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset",
@@ -58,11 +62,13 @@
             "EnemyMeleeStrafeWalkLeftSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Left_mixamo_com.uasset",
             "EnemyMeleeStrafeWalkRightSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Right_mixamo_com.uasset",
             "EnemyMeleeVisualAnimInstanceClass" : "UCrowdMeleeAnimInstance",
+            "EnemyMeleeVisualMaterialSlots" : ["Content/Material/Auto/M_Knight_Armors_Weapon_Inst.matinst", "Content/Material/Auto/M_Knight_Armors_Weapon_Inst.matinst", "Content/Material/Auto/M_Knight_Armors_Weapon_Inst.matinst"],
             "EnemyMeleeVisualScale" : [1.000000, 1.000000, 1.000000],
             "EnemyMeleeVisualSkeletalMeshPath" : "Content/Data/GameJam/Knight/SK_Knight_SkeletalMesh.uasset",
             "EnemyMeleeWalkBackwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Walk_Backward_mixamo_com.uasset",
             "EnemyMeleeWalkForwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Walk_Forward_mixamo_com.uasset",
             "EnemyRangedVisualAnimInstanceClass" : "None",
+            "EnemyRangedVisualMaterialSlots" : [],
             "EnemyRangedVisualScale" : [1.000000, 1.000000, 1.000000],
             "EnemyRangedVisualSkeletalMeshPath" : "None",
             "FormationLODDistance" : 100.000000,
@@ -106,7 +112,7 @@
             "WalkableSlopeAngle" : 60.000000,
             "bAllowGroundFallbackWithoutTag" : true,
             "bAutoActivate" : true,
-            "bDebugDrawEnabled" : true,
+            "bDebugDrawEnabled" : false,
             "bEditorOnly" : false,
             "bEnableCrowdLOD" : true,
             "bEnablePlayerEngagement" : true,
@@ -512,6 +518,82 @@
               "bTickEnable" : true
             },
             "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_136",
+            "ObjectId" : 18,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.mat",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_136",
+            "ObjectId" : 19,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.mat",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
           }],
         "ClassName" : "UDirectionalLightComponent",
         "Name" : "UDirectionalLightComponent_1",
@@ -542,7 +624,7 @@
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
           "Name" : "UCharacterMovementComponent_3",
-          "ObjectId" : 30,
+          "ObjectId" : 34,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "ControllerContactOffset" : 0.050000,
@@ -557,7 +639,7 @@
             "MaxWalkSpeed" : 6.000000,
             "RotationYawRate" : 540.000000,
             "UpdatedComponent" : {
-              "ObjectId" : 19
+              "ObjectId" : 21
             },
             "WalkableSlopeAngle" : 45.000000,
             "bApplyRootMotionRotation" : false,
@@ -572,7 +654,7 @@
         }, {
           "ClassName" : "ULuaScriptComponent",
           "Name" : "ULuaScriptComponent_7",
-          "ObjectId" : 31,
+          "ObjectId" : 35,
           "Properties" : {
             "LuaPropertyOverrides" : [],
             "ScriptFile" : "Game/barbarian_character.lua",
@@ -585,7 +667,7 @@
         }, {
           "ClassName" : "UBattleComponent",
           "Name" : "UBattleComponent_2",
-          "ObjectId" : 32,
+          "ObjectId" : 36,
           "Properties" : {
             "AttackPower" : 10.000000,
             "MaxHealth" : 100.000000,
@@ -600,7 +682,7 @@
         }, {
           "ClassName" : "UComboComponent",
           "Name" : "UComboComponent_2",
-          "ObjectId" : 33,
+          "ObjectId" : 37,
           "Properties" : {
             "InputBufferTime" : 0.300000,
             "MaxComboSteps" : 3,
@@ -613,7 +695,7 @@
         }, {
           "ClassName" : "UHitFlashComponent",
           "Name" : "UHitFlashComponent_0",
-          "ObjectId" : 34,
+          "ObjectId" : 38,
           "Properties" : {
             "Duration" : 0.120000,
             "FillAmount" : 0.150000,
@@ -628,10 +710,10 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 18,
+      "ObjectId" : 20,
       "Properties" : {
         "HitFlashComponent" : {
-          "ObjectId" : 34
+          "ObjectId" : 38
         },
         "MontageMoveUnlockTail" : 0.200000,
         "MovingAttackSpeedThreshold" : 2.000000,
@@ -652,13 +734,13 @@
                 "Children" : [],
                 "ClassName" : "UBoneAttachedStaticMeshComponent",
                 "Name" : "UBoneAttachedStaticMeshComponent_0",
-                "ObjectId" : 21,
+                "ObjectId" : 23,
                 "Properties" : {
                   "AngularDamping" : 0.010000,
                   "AttachOffsetLocation" : [69.699997, 47.389999, 16.440001],
                   "AttachOffsetRotation" : [73.699997, -89.599998, 13.300000],
                   "AttachOffsetScale" : [10.000000, 10.000000, 10.000000],
-                  "CachedEditRotator" : [1.324089, -17.633770, 8.705835],
+                  "CachedEditRotator" : [36.321186, -103.523834, 29.169998],
                   "CollisionEnabled" : 0,
                   "CollisionPreset" : 0,
                   "LinearDamping" : 0.010000,
@@ -693,7 +775,7 @@
               }],
             "ClassName" : "USkeletalMeshComponent",
             "Name" : "USkeletalMeshComponent_5",
-            "ObjectId" : 20,
+            "ObjectId" : 22,
             "Properties" : {
               "AngularDamping" : 0.010000,
               "AnimInstance" : {
@@ -754,82 +836,6 @@
                     "Children" : [],
                     "ClassName" : "UBillboardComponent",
                     "Name" : "UBillboardComponent_139",
-                    "ObjectId" : 24,
-                    "Properties" : {
-                      "AngularDamping" : 0.010000,
-                      "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
-                      "CollisionEnabled" : 0,
-                      "CollisionPreset" : 0,
-                      "LinearDamping" : 0.010000,
-                      "Mass" : 1.000000,
-                      "MaterialSlot" : "Content/Material/Editor/Camera.mat",
-                      "ObjectType" : 0,
-                      "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                      "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-                      "ResponseContainer" : {
-                        "Responses[0]" : 2,
-                        "Responses[1]" : 2,
-                        "Responses[2]" : 2,
-                        "Responses[3]" : 2,
-                        "Responses[4]" : 2
-                      },
-                      "TranslucentSortPriority" : 0,
-                      "bAutoActivate" : true,
-                      "bCastShadow" : true,
-                      "bCastShadowAsTwoSided" : false,
-                      "bEditorOnly" : true,
-                      "bEnableGravity" : true,
-                      "bGenerateOverlapEvents" : false,
-                      "bHiddenInComponentTree" : true,
-                      "bIsActive" : true,
-                      "bIsBillboard" : true,
-                      "bIsVisible" : true,
-                      "bSimulatePhysics" : false,
-                      "bTickEnable" : true
-                    },
-                    "bHiddenInComponentTree" : true
-                  }, {
-                    "Children" : [],
-                    "ClassName" : "UBillboardComponent",
-                    "Name" : "UBillboardComponent_147",
-                    "ObjectId" : 25,
-                    "Properties" : {
-                      "AngularDamping" : 0.010000,
-                      "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
-                      "CollisionEnabled" : 0,
-                      "CollisionPreset" : 0,
-                      "LinearDamping" : 0.010000,
-                      "Mass" : 1.000000,
-                      "MaterialSlot" : "Content/Material/Editor/Camera.mat",
-                      "ObjectType" : 0,
-                      "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                      "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-                      "ResponseContainer" : {
-                        "Responses[0]" : 2,
-                        "Responses[1]" : 2,
-                        "Responses[2]" : 2,
-                        "Responses[3]" : 2,
-                        "Responses[4]" : 2
-                      },
-                      "TranslucentSortPriority" : 0,
-                      "bAutoActivate" : true,
-                      "bCastShadow" : true,
-                      "bCastShadowAsTwoSided" : false,
-                      "bEditorOnly" : true,
-                      "bEnableGravity" : true,
-                      "bGenerateOverlapEvents" : false,
-                      "bHiddenInComponentTree" : true,
-                      "bIsActive" : true,
-                      "bIsBillboard" : true,
-                      "bIsVisible" : true,
-                      "bSimulatePhysics" : false,
-                      "bTickEnable" : true
-                    },
-                    "bHiddenInComponentTree" : true
-                  }, {
-                    "Children" : [],
-                    "ClassName" : "UBillboardComponent",
-                    "Name" : "UBillboardComponent_143",
                     "ObjectId" : 26,
                     "Properties" : {
                       "AngularDamping" : 0.010000,
@@ -867,7 +873,7 @@
                   }, {
                     "Children" : [],
                     "ClassName" : "UBillboardComponent",
-                    "Name" : "UBillboardComponent_136",
+                    "Name" : "UBillboardComponent_147",
                     "ObjectId" : 27,
                     "Properties" : {
                       "AngularDamping" : 0.010000,
@@ -905,7 +911,7 @@
                   }, {
                     "Children" : [],
                     "ClassName" : "UBillboardComponent",
-                    "Name" : "UBillboardComponent_139",
+                    "Name" : "UBillboardComponent_143",
                     "ObjectId" : 28,
                     "Properties" : {
                       "AngularDamping" : 0.010000,
@@ -943,8 +949,160 @@
                   }, {
                     "Children" : [],
                     "ClassName" : "UBillboardComponent",
-                    "Name" : "UBillboardComponent_141",
+                    "Name" : "UBillboardComponent_136",
                     "ObjectId" : 29,
+                    "Properties" : {
+                      "AngularDamping" : 0.010000,
+                      "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+                      "CollisionEnabled" : 0,
+                      "CollisionPreset" : 0,
+                      "LinearDamping" : 0.010000,
+                      "Mass" : 1.000000,
+                      "MaterialSlot" : "Content/Material/Editor/Camera.mat",
+                      "ObjectType" : 0,
+                      "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                      "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+                      "ResponseContainer" : {
+                        "Responses[0]" : 2,
+                        "Responses[1]" : 2,
+                        "Responses[2]" : 2,
+                        "Responses[3]" : 2,
+                        "Responses[4]" : 2
+                      },
+                      "TranslucentSortPriority" : 0,
+                      "bAutoActivate" : true,
+                      "bCastShadow" : true,
+                      "bCastShadowAsTwoSided" : false,
+                      "bEditorOnly" : true,
+                      "bEnableGravity" : true,
+                      "bGenerateOverlapEvents" : false,
+                      "bHiddenInComponentTree" : true,
+                      "bIsActive" : true,
+                      "bIsBillboard" : true,
+                      "bIsVisible" : true,
+                      "bSimulatePhysics" : false,
+                      "bTickEnable" : true
+                    },
+                    "bHiddenInComponentTree" : true
+                  }, {
+                    "Children" : [],
+                    "ClassName" : "UBillboardComponent",
+                    "Name" : "UBillboardComponent_139",
+                    "ObjectId" : 30,
+                    "Properties" : {
+                      "AngularDamping" : 0.010000,
+                      "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+                      "CollisionEnabled" : 0,
+                      "CollisionPreset" : 0,
+                      "LinearDamping" : 0.010000,
+                      "Mass" : 1.000000,
+                      "MaterialSlot" : "Content/Material/Editor/Camera.mat",
+                      "ObjectType" : 0,
+                      "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                      "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+                      "ResponseContainer" : {
+                        "Responses[0]" : 2,
+                        "Responses[1]" : 2,
+                        "Responses[2]" : 2,
+                        "Responses[3]" : 2,
+                        "Responses[4]" : 2
+                      },
+                      "TranslucentSortPriority" : 0,
+                      "bAutoActivate" : true,
+                      "bCastShadow" : true,
+                      "bCastShadowAsTwoSided" : false,
+                      "bEditorOnly" : true,
+                      "bEnableGravity" : true,
+                      "bGenerateOverlapEvents" : false,
+                      "bHiddenInComponentTree" : true,
+                      "bIsActive" : true,
+                      "bIsBillboard" : true,
+                      "bIsVisible" : true,
+                      "bSimulatePhysics" : false,
+                      "bTickEnable" : true
+                    },
+                    "bHiddenInComponentTree" : true
+                  }, {
+                    "Children" : [],
+                    "ClassName" : "UBillboardComponent",
+                    "Name" : "UBillboardComponent_141",
+                    "ObjectId" : 31,
+                    "Properties" : {
+                      "AngularDamping" : 0.010000,
+                      "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+                      "CollisionEnabled" : 0,
+                      "CollisionPreset" : 0,
+                      "LinearDamping" : 0.010000,
+                      "Mass" : 1.000000,
+                      "MaterialSlot" : "Content/Material/Editor/Camera.mat",
+                      "ObjectType" : 0,
+                      "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                      "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+                      "ResponseContainer" : {
+                        "Responses[0]" : 2,
+                        "Responses[1]" : 2,
+                        "Responses[2]" : 2,
+                        "Responses[3]" : 2,
+                        "Responses[4]" : 2
+                      },
+                      "TranslucentSortPriority" : 0,
+                      "bAutoActivate" : true,
+                      "bCastShadow" : true,
+                      "bCastShadowAsTwoSided" : false,
+                      "bEditorOnly" : true,
+                      "bEnableGravity" : true,
+                      "bGenerateOverlapEvents" : false,
+                      "bHiddenInComponentTree" : true,
+                      "bIsActive" : true,
+                      "bIsBillboard" : true,
+                      "bIsVisible" : true,
+                      "bSimulatePhysics" : false,
+                      "bTickEnable" : true
+                    },
+                    "bHiddenInComponentTree" : true
+                  }, {
+                    "Children" : [],
+                    "ClassName" : "UBillboardComponent",
+                    "Name" : "UBillboardComponent_143",
+                    "ObjectId" : 32,
+                    "Properties" : {
+                      "AngularDamping" : 0.010000,
+                      "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+                      "CollisionEnabled" : 0,
+                      "CollisionPreset" : 0,
+                      "LinearDamping" : 0.010000,
+                      "Mass" : 1.000000,
+                      "MaterialSlot" : "Content/Material/Editor/Camera.mat",
+                      "ObjectType" : 0,
+                      "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                      "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+                      "ResponseContainer" : {
+                        "Responses[0]" : 2,
+                        "Responses[1]" : 2,
+                        "Responses[2]" : 2,
+                        "Responses[3]" : 2,
+                        "Responses[4]" : 2
+                      },
+                      "TranslucentSortPriority" : 0,
+                      "bAutoActivate" : true,
+                      "bCastShadow" : true,
+                      "bCastShadowAsTwoSided" : false,
+                      "bEditorOnly" : true,
+                      "bEnableGravity" : true,
+                      "bGenerateOverlapEvents" : false,
+                      "bHiddenInComponentTree" : true,
+                      "bIsActive" : true,
+                      "bIsBillboard" : true,
+                      "bIsVisible" : true,
+                      "bSimulatePhysics" : false,
+                      "bTickEnable" : true
+                    },
+                    "bHiddenInComponentTree" : true
+                  }, {
+                    "Children" : [],
+                    "ClassName" : "UBillboardComponent",
+                    "Name" : "UBillboardComponent_144",
+                    "ObjectId" : 33,
                     "Properties" : {
                       "AngularDamping" : 0.010000,
                       "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -981,7 +1139,7 @@
                   }],
                 "ClassName" : "UCameraComponent",
                 "Name" : "UCameraComponent_3",
-                "ObjectId" : 23,
+                "ObjectId" : 25,
                 "Properties" : {
                   "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
                   "CameraState.FOV" : 1.047198,
@@ -1009,7 +1167,7 @@
               }],
             "ClassName" : "USpringArmComponent",
             "Name" : "USpringArmComponent_3",
-            "ObjectId" : 22,
+            "ObjectId" : 24,
             "Properties" : {
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
               "CameraLagMaxDistance" : 0.000000,
@@ -1034,7 +1192,7 @@
           }],
         "ClassName" : "UCapsuleComponent",
         "Name" : "UCapsuleComponent_3",
-        "ObjectId" : 19,
+        "ObjectId" : 21,
         "Properties" : {
           "AngularDamping" : 0.010000,
           "CachedEditRotator" : [0.000000, -70.599205, 0.000000],
@@ -1074,7 +1232,7 @@
       "ClassName" : "ALevelTransitionTriggerVolume",
       "Name" : "ALevelTransitionTriggerVolume_0",
       "NonSceneComponents" : [],
-      "ObjectId" : 35,
+      "ObjectId" : 39,
       "Properties" : {
         "PendingActorLocation" : [-16.228340, -107.739883, -0.590496],
         "PendingActorRotation" : [0.000000, -15.999994, 0.000000],
@@ -1090,7 +1248,7 @@
         "Children" : [],
         "ClassName" : "UBoxComponent",
         "Name" : "UBoxComponent_3",
-        "ObjectId" : 36,
+        "ObjectId" : 40,
         "Properties" : {
           "AngularDamping" : 0.010000,
           "BoxExtent" : [1.000000, 1.000000, 1.000000],
@@ -1129,7 +1287,7 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "Ground",
       "NonSceneComponents" : [],
-      "ObjectId" : 37,
+      "ObjectId" : 41,
       "Properties" : {
         "PendingActorLocation" : [0.000000, 0.000000, -1.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1142,7 +1300,7 @@
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
         "Name" : "UStaticMeshComponent_58",
-        "ObjectId" : 38,
+        "ObjectId" : 42,
         "Properties" : {
           "AngularDamping" : 0.010000,
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -1182,7 +1340,7 @@
       "NonSceneComponents" : [{
           "ClassName" : "ULuaScriptComponent",
           "Name" : "ULuaScriptComponent_5",
-          "ObjectId" : 41,
+          "ObjectId" : 45,
           "Properties" : {
             "LuaPropertyOverrides" : [{
                 "BoolValue" : false,
@@ -1223,7 +1381,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 39,
+      "ObjectId" : 43,
       "Properties" : {
         "PendingActorLocation" : [-0.631645, 0.315869, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1236,10 +1394,92 @@
         "Children" : [],
         "ClassName" : "USceneComponent",
         "Name" : "USceneComponent_5",
-        "ObjectId" : 40,
+        "ObjectId" : 44,
         "Properties" : {
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "RelativeTransform.Location" : [-0.631645, 0.315869, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "bAutoActivate" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "AActor",
+      "Name" : "Spawner_Copy",
+      "NonSceneComponents" : [{
+          "ClassName" : "ULuaScriptComponent",
+          "Name" : "ULuaScriptComponent_5",
+          "ObjectId" : 48,
+          "Properties" : {
+            "LuaPropertyOverrides" : [{
+                "BoolValue" : false,
+                "EnumType" : "",
+                "EnumValue" : "",
+                "FloatValue" : 0.000000,
+                "IntValue" : 5,
+                "Name" : "SpawnCountPerWave",
+                "StringValue" : "",
+                "Type" : "int",
+                "VectorValue" : [0.000000, 0.000000, 0.000000]
+              }, {
+                "BoolValue" : false,
+                "EnumType" : "",
+                "EnumValue" : "",
+                "FloatValue" : 0.000000,
+                "IntValue" : 50,
+                "Name" : "MaxAliveUnits",
+                "StringValue" : "",
+                "Type" : "int",
+                "VectorValue" : [0.000000, 0.000000, 0.000000]
+              }, {
+                "BoolValue" : false,
+                "EnumType" : "",
+                "EnumValue" : "",
+                "FloatValue" : 0.000000,
+                "IntValue" : 5,
+                "Name" : "InitialSpawnCount",
+                "StringValue" : "",
+                "Type" : "int",
+                "VectorValue" : [0.000000, 0.000000, 0.000000]
+              }, {
+                "BoolValue" : false,
+                "EnumType" : "EUnitTeam",
+                "EnumValue" : "Ally",
+                "FloatValue" : 0.000000,
+                "IntValue" : 0,
+                "Name" : "Team",
+                "StringValue" : "",
+                "Type" : "enum",
+                "VectorValue" : [0.000000, 0.000000, 0.000000]
+              }],
+            "ScriptFile" : "UnitSpawner.lua",
+            "bAutoActivate" : true,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bTickEnable" : true
+          }
+        }],
+      "ObjectId" : 46,
+      "Properties" : {
+        "PendingActorLocation" : [11.267997, 0.415869, 0.100000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_5",
+        "ObjectId" : 47,
+        "Properties" : {
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+          "RelativeTransform.Location" : [11.267997, 0.415869, 0.100000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "bAutoActivate" : true,
           "bEditorOnly" : false,
@@ -1257,9 +1497,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [20.858961, 0.433709, 8.759043],
+    "Location" : [4.962794, 13.937535, 5.933646],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 21.616377, 156.602386]
+    "Rotation" : [0.000000, 18.616385, 265.349976]
   },
   "Version" : 2,
   "WorldSettings" : {

@@ -370,6 +370,9 @@
     <Filter Include="Source\Game\Musou\Camera">
       <UniqueIdentifier>{778f9ca2-3fce-41cf-af71-dc8a1f0eaf71}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\Musou\Boss">
+      <UniqueIdentifier>{2a782483-8c94-4e6d-b857-f2a52df92cd9}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Game\Musou\Character">
       <UniqueIdentifier>{f1a26e06-8b90-0691-0673-b381de5fbccd}</UniqueIdentifier>
     </Filter>
@@ -381,6 +384,9 @@
     </Filter>
     <Filter Include="Source\Game\Musou\GameMode">
       <UniqueIdentifier>{ab2b9458-4f4a-530d-64b9-b74d3b0b755d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Musou\Score">
+      <UniqueIdentifier>{5d8c1a5c-2f7e-4a74-ae74-1d11fa14e503}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Game\Musou\UI">
       <UniqueIdentifier>{0c4ef601-1e96-3515-9b58-f9d677e94ac5}</UniqueIdentifier>
@@ -1934,6 +1940,15 @@
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp">
       <Filter>Source\Game\Lua</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Boss\BossPatternComponent.cpp">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Boss\BossPatternDataRegistry.cpp">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Boss\MusouBossCharacter.cpp">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp">
       <Filter>Source\Game\Musou\Character</Filter>
     </ClCompile>
@@ -1978,6 +1993,18 @@
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\GameMode\MusouPlayerController.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Score\MusouScoreboard.cpp">
+      <Filter>Source\Game\Musou\Score</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\UI\MusouMenuNavigator.cpp">
+      <Filter>Source\Game\Musou\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\UI\MusouScoreboardOverlayPresenter.cpp">
+      <Filter>Source\Game\Musou\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\UI\MusouScoreboardView.cpp">
+      <Filter>Source\Game\Musou\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\UI\MusouHudPresenter.cpp">
       <Filter>Source\Game\Musou\UI</Filter>
@@ -3479,6 +3506,18 @@
     <ClInclude Include="Source\Game\Lua\GameLuaBindings.h">
       <Filter>Source\Game\Lua</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternComponent.h">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternDataRegistry.h">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternTypes.h">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Boss\MusouBossCharacter.h">
+      <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h">
       <Filter>Source\Game\Musou\Character</Filter>
     </ClInclude>
@@ -3529,6 +3568,18 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Score\MusouScoreboard.h">
+      <Filter>Source\Game\Musou\Score</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\UI\MusouMenuNavigator.h">
+      <Filter>Source\Game\Musou\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\UI\MusouScoreboardOverlayPresenter.h">
+      <Filter>Source\Game\Musou\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\UI\MusouScoreboardView.h">
+      <Filter>Source\Game\Musou\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\UI\MusouHudPresenter.h">
       <Filter>Source\Game\Musou\UI</Filter>

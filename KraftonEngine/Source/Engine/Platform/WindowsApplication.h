@@ -40,6 +40,7 @@ private:
 
 	bool bIsExitRequested = false;
 	bool bIsResizing = false;
+	wchar_t PendingHighSurrogate = 0;
 
 	FOnSizingCallback OnSizingCallback;
 	FOnResizedCallback OnResizedCallback;

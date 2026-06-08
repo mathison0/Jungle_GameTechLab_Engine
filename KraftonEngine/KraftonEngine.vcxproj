@@ -821,6 +821,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Crowd\CrowdVisualPool.cpp" />
     <ClCompile Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.cpp" />
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp" />
+    <ClCompile Include="Source\Game\Musou\Boss\BossPatternComponent.cpp" />
+    <ClCompile Include="Source\Game\Musou\Boss\BossPatternDataRegistry.cpp" />
+    <ClCompile Include="Source\Game\Musou\Boss\MusouBossCharacter.cpp" />
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp" />
     <ClCompile Include="Source\Game\Musou\Camera\AnimNotifyState_CameraShot.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
@@ -836,6 +839,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameState.cpp" />
     <ClCompile Include="Source\Game\Musou\GameMode\MusouPlayerController.cpp" />
+    <ClCompile Include="Source\Game\Musou\Score\MusouScoreboard.cpp" />
+    <ClCompile Include="Source\Game\Musou\UI\MusouMenuNavigator.cpp" />
+    <ClCompile Include="Source\Game\Musou\UI\MusouScoreboardOverlayPresenter.cpp" />
+    <ClCompile Include="Source\Game\Musou\UI\MusouScoreboardView.cpp" />
     <ClCompile Include="Source\Game\Musou\UI\MusouHudPresenter.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerEngine.cpp" />
     <ClCompile Include="Source\ObjViewer\ObjViewerPanel.cpp" />
@@ -1338,6 +1345,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Crowd\CrowdVisualPool.h" />
     <ClInclude Include="Source\Game\Crowd\LargeScaleUnitManagerComponent.h" />
     <ClInclude Include="Source\Game\Lua\GameLuaBindings.h" />
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternComponent.h" />
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternDataRegistry.h" />
+    <ClInclude Include="Source\Game\Musou\Boss\BossPatternTypes.h" />
+    <ClInclude Include="Source\Game\Musou\Boss\MusouBossCharacter.h" />
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h" />
     <ClInclude Include="Source\Game\Musou\Camera\AnimNotifyState_CameraShot.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h" />
@@ -1355,6 +1366,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h" />
+    <ClInclude Include="Source\Game\Musou\Score\MusouScoreboard.h" />
+    <ClInclude Include="Source\Game\Musou\UI\MusouMenuNavigator.h" />
+    <ClInclude Include="Source\Game\Musou\UI\MusouScoreboardOverlayPresenter.h" />
+    <ClInclude Include="Source\Game\Musou\UI\MusouScoreboardView.h" />
     <ClInclude Include="Source\Game\Musou\UI\MusouHudPresenter.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerEngine.h" />
     <ClInclude Include="Source\ObjViewer\ObjViewerPanel.h" />

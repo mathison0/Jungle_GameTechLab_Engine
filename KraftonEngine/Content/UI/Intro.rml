@@ -6,71 +6,369 @@
 			width: 100%;
 			height: 100%;
 			margin: 0;
-			background-color: rgba(8, 10, 14, 0.72);
-			font-family: "Shilla_Culture";
+			background-color: #050505;
+			font-family: "HeirofLight";
 			font-weight: bold;
 		}
 
 		#intro-root {
+			position: relative;
 			width: 100%;
 			height: 100%;
-			display: flex;
-			align-items: center;
-			justify-content: center;
+			overflow: hidden;
+		}
+
+		#intro-background {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
 		}
 
 		#menu-buttons {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
+			position: absolute;
+			left: 20%;
+			top: 52%;
+			display: block;
+			width: 24%;
 		}
 
 		.menu-button {
-			width: 260px;
-			height: 72px;
+			position: relative;
+			display: block;
+			width: 100%;
+			height: 76px;
 			padding: 0;
-			border-width: 2px;
-			border-color: #dddddd;
-			background-color: #222222f1;
-			color: #dddddd;
-			font-size: 28px;
-			line-height: 72px;
+			margin-top: 16px;
+			border-width: 0;
+			background-color: transparent;
+			color: #f2e2c8;
+			font-size: 26px;
+			line-height: 76px;
 			text-align: center;
 		}
 
 		.secondary-button {
-			width: 220px;
-			height: 56px;
+			width: 100%;
+			height: 76px;
+			font-size: 24px;
+			line-height: 76px;
+		}
+
+		.button-frame {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.button-frame-hover {
+			display: none;
+		}
+
+		.button-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 100%;
+			height: 76px;
+			line-height: 76px;
+			text-align: center;
+		}
+
+		.menu-button.selected .button-frame-normal {
+			display: none;
+		}
+
+		.menu-button.selected .button-frame-hover {
+			display: block;
+		}
+
+		.menu-button.selected .button-label {
+			color: #fff1b0;
+		}
+
+		#scoreboard-overlay-host {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+		}
+
+		#scoreboard-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #030508a3;
+		}
+
+		#scoreboard-panel {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -370px;
+			margin-top: -300px;
+			display: block;
+			width: 700px;
+			height: 560px;
+			padding: 20px;
+			background-color: #080202a8;
+			border-width: 0;
+			color: #f8f3df;
+		}
+
+		#scoreboard-panel-bg {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 740px;
+			height: 600px;
+			opacity: 0.78;
+			z-index: 0;
+			pointer-events: none;
+		}
+
+		#scoreboard-title {
+			position: relative;
+			z-index: 1;
+			display: block;
+			width: 700px;
+			height: 36px;
+			line-height: 36px;
+			font-size: 34px;
+			text-align: center;
+			color: #f0d36a;
+		}
+
+		#scoreboard-input-row {
+			position: relative;
+			z-index: 1;
+			display: none;
+		}
+
+		#scoreboard-save-status {
+			position: relative;
+			z-index: 1;
+			display: none;
+		}
+
+		#scoreboard-list {
+			position: relative;
+			z-index: 1;
+			display: block;
+			width: 700px;
+			height: 360px;
 			margin-top: 14px;
-			border-color: #dddddd;
-			background-color: #1b1b1bf1;
-			color: #dddddd;
+			overflow: hidden;
+		}
+
+		.scoreboard-row {
+			position: relative;
+			display: block;
+			width: 700px;
+			height: 34px;
+			margin-bottom: 2px;
+			background-color: rgba(248, 243, 223, 0.08);
+		}
+
+		.scoreboard-rank {
+			position: absolute;
+			left: 10px;
+			top: 0;
+			width: 42px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 20px;
+			text-align: center;
+			color: #f0d36a;
+		}
+
+		.scoreboard-name {
+			position: absolute;
+			left: 64px;
+			top: 0;
+			width: 170px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 20px;
+			color: #f8f3df;
+		}
+
+		.scoreboard-entry-score {
+			position: absolute;
+			left: 248px;
+			top: 0;
+			width: 130px;
+			height: 34px;
+			line-height: 34px;
 			font-size: 22px;
-			line-height: 56px;
+			text-align: right;
+			color: #ffffff;
 		}
 
-		.menu-button:hover,
-		.menu-button.selected {
-			background-color: #dddddd;
-			color: #1b1b1bf1;
+		.scoreboard-entry-details {
+			position: absolute;
+			left: 396px;
+			top: 0;
+			width: 290px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 16px;
+			text-align: right;
+			color: #d6ccb1;
 		}
 
-		.secondary-button:hover,
-		.secondary-button.selected {
-			background-color: #dddddd;
-			color: #1b1b1bf1;
+		.scoreboard-empty {
+			display: block;
+			width: 700px;
+			height: 180px;
+			line-height: 180px;
+			font-size: 24px;
+			text-align: center;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-pager {
+			position: relative;
+			z-index: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 700px;
+			height: 34px;
+			margin-top: 10px;
+		}
+
+		.scoreboard-page-button {
+			display: block;
+			width: 38px;
+			height: 30px;
+			line-height: 30px;
+			margin-left: 8px;
+			margin-right: 8px;
+			text-align: center;
+			font-size: 24px;
+			background-color: rgba(240, 211, 106, 0.18);
+			color: #f0d36a;
+			border-width: 1px;
+			border-color: #f0d36a;
+		}
+
+		.scoreboard-page-button:hover {
+			background-color: #f0d36a;
+			color: #17130c;
+		}
+
+		.scoreboard-page-button.disabled,
+		.scoreboard-page-button.disabled:hover {
+			background-color: rgba(248, 243, 223, 0.04);
+			color: #6f6858;
+			border-color: #6f6858;
+		}
+
+		#scoreboard-page-label {
+			display: block;
+			width: 80px;
+			height: 30px;
+			line-height: 30px;
+			text-align: center;
+			font-size: 18px;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-close-button {
+			position: relative;
+			z-index: 1;
+			display: block;
+			width: 180px;
+			height: 50px;
+			line-height: 50px;
+			margin-left: 260px;
+			margin-top: 18px;
+			padding: 0;
+			text-align: center;
+			font-size: 24px;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		.scoreboard-close-button-frame {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.scoreboard-close-button-frame-hover {
+			display: none;
+		}
+
+		.scoreboard-close-button-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 100%;
+			height: 100%;
+			line-height: 50px;
+			text-align: center;
+		}
+
+		#scoreboard-close-button:hover .scoreboard-close-button-frame-normal {
+			display: none;
+		}
+
+		#scoreboard-close-button:hover .scoreboard-close-button-frame-hover {
+			display: block;
+		}
+
+		#scoreboard-close-button:hover .scoreboard-close-button-label {
+			color: #fff1b0;
+		}
+
+		#victory-menu {
+			position: relative;
+			z-index: 1;
+			display: none;
 		}
 	</style>
 </head>
 <body>
 	<div id="intro-root">
+		<img id="intro-background" src="JungleMusou_Title.png" />
 		<div id="menu-buttons">
-			<div id="start-button" class="menu-button">전투 참가</div>
-			<div id="settings-button" class="menu-button secondary-button">설정</div>
-			<div id="score-button" class="menu-button secondary-button">스코어</div>
-			<div id="exit-button" class="menu-button secondary-button">게임 종료</div>
+			<div id="start-button" class="menu-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">전투 참가</div>
+			</div>
+			<div id="settings-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">설정</div>
+			</div>
+			<div id="score-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">스코어 보드</div>
+			</div>
+			<div id="exit-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">게임 종료</div>
+			</div>
 		</div>
+		<div id="scoreboard-overlay-host"></div>
 	</div>
 </body>
 </rml>

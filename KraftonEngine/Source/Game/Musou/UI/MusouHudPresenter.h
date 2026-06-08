@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Core/Types/CoreTypes.h"
+#include "Game/Musou/Score/MusouScoreboard.h"
+#include "Game/Musou/UI/MusouScoreboardOverlayPresenter.h"
 
 class AMusouGameState;
 struct FMusouMatchResult;
@@ -18,7 +20,11 @@ public:
 
 	// 승리 확정 결과를 받아 결과 오버레이를 시작한다.
 	// 점수/킬/콤보 표시는 GameState를 다시 읽지 않고 Result 스냅샷만 사용한다.
-	void StartVictoryOverlay(const FMusouMatchResult& Result);
+	void StartVictoryOverlay(const FMusouMatchResult& Result, const TArray<FMusouScoreboardEntry>& ScoreboardEntries);
+	void NotifyVictoryScoreSubmitted(const TArray<FMusouScoreboardEntry>& ScoreboardEntries);
+	void NotifyVictoryScoreSaveFailed();
+	void ShowPreviousScoreboardPage();
+	void ShowNextScoreboardPage();
 
 	bool IsDeathOverlayVisible() const { return bDeathOverlayVisible; }
 	bool IsVictoryOverlayVisible() const { return bVictoryOverlayVisible; }
@@ -37,6 +43,7 @@ private:
 	void UpdateVictoryOverlay(float DeltaTime);
 
 	UUserWidget* Widget = nullptr;
+	FMusouScoreboardOverlayPresenter ScoreboardOverlay;
 
 	bool bKillHudInitialized = false;
 	bool bDeathOverlayVisible = false;
@@ -45,6 +52,8 @@ private:
 	// 승리 버튼은 결과 문구 페이드인이 끝난 뒤에만 마우스/키보드 입력을 받는다.
 	bool bVictoryOverlayVisible = false;
 	bool bVictoryButtonsVisible = false;
+	bool bVictoryScoreboardVisible = false;
+	bool bVictoryScoreSubmitted = false;
 
 	int32 LastHudKillCount = 0;
 	int32 LastDisplayedKillMilestone = 0;
@@ -57,4 +66,5 @@ private:
 	float BloodVignetteIntensity = 0.0f;
 	float DeathOverlayElapsed = 0.0f;
 	float VictoryOverlayElapsed = 0.0f;
+	float VictoryHealthRatio = 1.0f;
 };

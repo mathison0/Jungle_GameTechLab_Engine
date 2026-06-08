@@ -3,6 +3,7 @@
 #include "Engine/Runtime/ActorPlacementRegistry.h"
 #include "Engine/Runtime/EngineInitHooks.h"
 
+#include "Game/Musou/Boss/MusouBossCharacter.h"
 #include "Game/Musou/Character/MusouCharacter.h"
 #include "Game/Musou/Effect/SlashEffectActor.h"
 #include "GameFramework/Actor/LevelTransitionTriggerVolume.h"
@@ -21,6 +22,18 @@ void RegisterGameActorPlacements()
 		[](UWorld* World, const FVector& Location) -> AActor*
 		{
 			AMusouCharacter* Actor = World->SpawnActor<AMusouCharacter>();
+			if (Actor)
+			{
+				Actor->InitDefaultComponents();
+				Actor->SetActorLocation(Location);
+			}
+			return Actor;
+		});
+
+	FActorPlacementRegistry::Get().RegisterEntry("Musou Boss",
+		[](UWorld* World, const FVector& Location) -> AActor*
+		{
+			AMusouBossCharacter* Actor = World->SpawnActor<AMusouBossCharacter>();
 			if (Actor)
 			{
 				Actor->InitDefaultComponents();

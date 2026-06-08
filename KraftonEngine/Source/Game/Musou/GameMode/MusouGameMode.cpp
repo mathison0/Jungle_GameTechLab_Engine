@@ -4,6 +4,7 @@
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/GameMode/MusouPlayerController.h"
+#include "Game/Musou/Score/MusouScoreboard.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/Camera/WaveOscillatorCameraShake.h"
 #include "GameFramework/GameMode/PlayerController.h"
@@ -117,9 +118,24 @@ void AMusouGameMode::StartMatch()
 			HudWidget->BindClick("stop-button", StopMatch);
 			HudWidget->BindClick("death-stop-button", StopMatch);
 			HudWidget->BindClick("victory-stop-button", StopMatch);
-			BindHudMenuHoverHandlers();
+			HudWidget->BindClick("scoreboard-save-button", [this]()
+			{
+				SubmitVictoryScore();
+			});
+			HudWidget->BindClick("scoreboard-prev-button", [this]()
+			{
+				HudPresenter.ShowPreviousScoreboardPage();
+			});
+			HudWidget->BindClick("scoreboard-next-button", [this]()
+			{
+				HudPresenter.ShowNextScoreboardPage();
+			});
+			ConfigureHudMenuNavigators();
 		}
 	}
+
+	bHasPendingVictoryResult = false;
+	bVictoryScoreSubmitted = false;
 
 	if (HudWidget)
 	{
@@ -151,6 +167,9 @@ void AMusouGameMode::EndMatch()
 void AMusouGameMode::EndPlay()
 {
 	HudPresenter.SetWidget(nullptr);
+	PauseMenuNavigator.SetWidget(nullptr);
+	DeathMenuNavigator.SetWidget(nullptr);
+	VictoryMenuNavigator.SetWidget(nullptr);
 
 	if (HudWidget)
 	{
@@ -186,24 +205,14 @@ void AMusouGameMode::Tick(float DeltaTime)
 
 	if (HudPresenter.AreDeathButtonsVisible())
 	{
-		if (!bDeathMenuSelectionInitialized)
-		{
-			bDeathMenuSelectionInitialized = true;
-			SelectDeathMenuButton(0);
-		}
-
+		DeathMenuNavigator.EnsureSelection();
 		HandleDeathMenuInput();
 	}
 
 	if (HudPresenter.AreVictoryButtonsVisible())
 	{
 		// 결과 문구가 모두 페이드인된 뒤 버튼이 나타나는 첫 프레임에 기본 선택을 맞춘다.
-		if (!bVictoryMenuSelectionInitialized)
-		{
-			bVictoryMenuSelectionInitialized = true;
-			SelectVictoryMenuButton(0);
-		}
-
+		VictoryMenuNavigator.EnsureSelection();
 		HandleVictoryMenuInput();
 	}
 }
@@ -320,11 +329,12 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 	EndMatch();
 	SetGameInputPossessed(false);
 	bStopMenuVisible = false;
-	bDeathMenuSelectionInitialized = false;
-	bVictoryMenuSelectionInitialized = false;
+	bHasPendingVictoryResult = false;
+	bVictoryScoreSubmitted = false;
 	HudPresenter.StartDeathOverlay();
-	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
-	ClearHudButtonSelection(VictoryMenuButtonIds, VictoryMenuButtonCount);
+	PauseMenuNavigator.ClearSelection();
+	DeathMenuNavigator.ClearSelection();
+	VictoryMenuNavigator.ClearSelection();
 
 	if (UWorld* World = GetWorld())
 	{
@@ -343,6 +353,10 @@ void AMusouGameMode::NotifyVictory()
 	// 점수는 승리 확정 순간에 먼저 고정한다.
 	// EndMatch 이후 outro/UI tick이 이어져도 저장될 결과는 이 Result 하나만 사용한다.
 	FMusouMatchResult Result = MusouState->MakeMatchResult(true);
+	Result.PlayerHealthRatio = GetPlayerHealthRatio(); // EndMatch가 UnPossess하기 전에 현재 HP를 고정한다.
+	PendingVictoryResult = Result;
+	bHasPendingVictoryResult = true;
+	bVictoryScoreSubmitted = false;
 
 	UE_LOG("[MusouGameMode] Victory resolved — Kills=%d Score=%lld MaxCombo=%d Time=%.1fs",
 		Result.KillCount,
@@ -353,17 +367,16 @@ void AMusouGameMode::NotifyVictory()
 	EndMatch();
 	SetGameInputPossessed(false);
 	bStopMenuVisible = false;
-	bDeathMenuSelectionInitialized = false;
-	bVictoryMenuSelectionInitialized = false;
 
 	// 스코어보드 저장, outro 시작 같은 후속 시스템은 여기에서 Result를 구독하면 된다.
 	OnVictoryResolved.Broadcast(Result);
 
 	// 현재 단계에서는 승리 오버레이를 즉시 띄운다. 나중에 outro가 생기면
 	// outro 시작/종료 타이밍에 맞춰 이 호출 위치만 조정하면 된다.
-	HudPresenter.StartVictoryOverlay(Result);
-	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
-	ClearHudButtonSelection(DeathMenuButtonIds, DeathMenuButtonCount);
+	HudPresenter.StartVictoryOverlay(Result, FMusouScoreboard::LoadEntries());
+	PauseMenuNavigator.ClearSelection();
+	DeathMenuNavigator.ClearSelection();
+	VictoryMenuNavigator.ClearSelection();
 
 	if (UWorld* World = GetWorld())
 	{
@@ -410,6 +423,31 @@ float AMusouGameMode::GetPlayerHealthRatio() const
 	return 1.0f;
 }
 
+void AMusouGameMode::SubmitVictoryScore()
+{
+	if (!bHasPendingVictoryResult || bVictoryScoreSubmitted)
+	{
+		return;
+	}
+
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	TArray<FMusouScoreboardEntry> UpdatedEntries;
+	if (!FMusouScoreboard::Submit(PendingVictoryResult, HudWidget->GetValue("scoreboard-name-input"), &UpdatedEntries))
+	{
+		HudPresenter.NotifyVictoryScoreSaveFailed();
+		return;
+	}
+
+	// 저장 버튼을 누른 바로 이 시점에만 실제 스코어보드 파일과 화면 목록이 갱신된다.
+	bVictoryScoreSubmitted = true;
+	VictoryMenuNavigator.ClearSelection();
+	HudPresenter.NotifyVictoryScoreSubmitted(UpdatedEntries);
+}
+
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 {
 	if (HudPresenter.IsResultOverlayVisible())
@@ -422,11 +460,11 @@ void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 
 	if (bStopMenuVisible)
 	{
-		SelectPauseMenuButton(0);
+		PauseMenuNavigator.Select(0);
 	}
 	else
 	{
-		ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
+		PauseMenuNavigator.ClearSelection();
 	}
 
 	if (UWorld* World = GetWorld())
@@ -435,216 +473,47 @@ void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 	}
 }
 
-void AMusouGameMode::BindHudMenuHoverHandlers()
+void AMusouGameMode::ConfigureHudMenuNavigators()
 {
 	if (!HudWidget)
 	{
 		return;
 	}
 
-	for (int32 ButtonIndex = 0; ButtonIndex < PauseMenuButtonCount; ++ButtonIndex)
+	PauseMenuNavigator.SetWidget(HudWidget);
+	PauseMenuNavigator.SetButtons(PauseMenuButtonIds, PauseMenuButtonCount);
+	PauseMenuNavigator.BindHoverHandlers([this]()
 	{
-		HudWidget->BindMouseOver(PauseMenuButtonIds[ButtonIndex], [this, ButtonIndex]()
-		{
-			if (bStopMenuVisible && !HudPresenter.IsResultOverlayVisible())
-			{
-				SelectPauseMenuButton(ButtonIndex);
-			}
-		});
-	}
+		return bStopMenuVisible && !HudPresenter.IsResultOverlayVisible();
+	});
 
-	for (int32 ButtonIndex = 0; ButtonIndex < DeathMenuButtonCount; ++ButtonIndex)
+	DeathMenuNavigator.SetWidget(HudWidget);
+	DeathMenuNavigator.SetButtons(DeathMenuButtonIds, DeathMenuButtonCount);
+	DeathMenuNavigator.BindHoverHandlers([this]()
 	{
-		HudWidget->BindMouseOver(DeathMenuButtonIds[ButtonIndex], [this, ButtonIndex]()
-		{
-			if (HudPresenter.AreDeathButtonsVisible())
-			{
-				SelectDeathMenuButton(ButtonIndex);
-			}
-		});
-	}
+		return HudPresenter.AreDeathButtonsVisible();
+	});
 
-	for (int32 ButtonIndex = 0; ButtonIndex < VictoryMenuButtonCount; ++ButtonIndex)
+	VictoryMenuNavigator.SetWidget(HudWidget);
+	VictoryMenuNavigator.SetButtons(VictoryMenuButtonIds, VictoryMenuButtonCount);
+	VictoryMenuNavigator.BindHoverHandlers([this]()
 	{
-		HudWidget->BindMouseOver(VictoryMenuButtonIds[ButtonIndex], [this, ButtonIndex]()
-		{
-			if (HudPresenter.AreVictoryButtonsVisible())
-			{
-				SelectVictoryMenuButton(ButtonIndex);
-			}
-		});
-	}
-}
-
-void AMusouGameMode::SelectPauseMenuButton(int32 ButtonIndex)
-{
-	SelectedPauseButtonIndex = (ButtonIndex % PauseMenuButtonCount + PauseMenuButtonCount) % PauseMenuButtonCount;
-	UpdatePauseMenuSelectionVisuals();
-	ClearHudButtonSelection(DeathMenuButtonIds, DeathMenuButtonCount);
-	ClearHudButtonSelection(VictoryMenuButtonIds, VictoryMenuButtonCount);
-}
-
-void AMusouGameMode::SelectDeathMenuButton(int32 ButtonIndex)
-{
-	SelectedDeathButtonIndex = (ButtonIndex % DeathMenuButtonCount + DeathMenuButtonCount) % DeathMenuButtonCount;
-	UpdateDeathMenuSelectionVisuals();
-	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
-	ClearHudButtonSelection(VictoryMenuButtonIds, VictoryMenuButtonCount);
-}
-
-void AMusouGameMode::SelectVictoryMenuButton(int32 ButtonIndex)
-{
-	SelectedVictoryButtonIndex = (ButtonIndex % VictoryMenuButtonCount + VictoryMenuButtonCount) % VictoryMenuButtonCount;
-	UpdateVictoryMenuSelectionVisuals();
-	ClearHudButtonSelection(PauseMenuButtonIds, PauseMenuButtonCount);
-	ClearHudButtonSelection(DeathMenuButtonIds, DeathMenuButtonCount);
-}
-
-void AMusouGameMode::MovePauseMenuSelection(int32 Delta)
-{
-	SelectPauseMenuButton(SelectedPauseButtonIndex + Delta);
-}
-
-void AMusouGameMode::MoveDeathMenuSelection(int32 Delta)
-{
-	SelectDeathMenuButton(SelectedDeathButtonIndex + Delta);
-}
-
-void AMusouGameMode::MoveVictoryMenuSelection(int32 Delta)
-{
-	SelectVictoryMenuButton(SelectedVictoryButtonIndex + Delta);
-}
-
-void AMusouGameMode::ExecutePauseMenuSelection()
-{
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	HudWidget->Click(PauseMenuButtonIds[SelectedPauseButtonIndex]);
-}
-
-void AMusouGameMode::ExecuteDeathMenuSelection()
-{
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	HudWidget->Click(DeathMenuButtonIds[SelectedDeathButtonIndex]);
-}
-
-void AMusouGameMode::ExecuteVictoryMenuSelection()
-{
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	HudWidget->Click(VictoryMenuButtonIds[SelectedVictoryButtonIndex]);
+		return HudPresenter.AreVictoryButtonsVisible();
+	});
 }
 
 void AMusouGameMode::HandlePauseMenuInput()
 {
-	InputSystem& Input = InputSystem::Get();
-	if (Input.GetKeyDown(VK_UP))
-	{
-		MovePauseMenuSelection(-1);
-	}
-	if (Input.GetKeyDown(VK_DOWN))
-	{
-		MovePauseMenuSelection(1);
-	}
-	if (Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
-	{
-		ExecutePauseMenuSelection();
-	}
+	PauseMenuNavigator.HandleVerticalInput(InputSystem::Get());
 }
 
 void AMusouGameMode::HandleDeathMenuInput()
 {
-	InputSystem& Input = InputSystem::Get();
-	if (Input.GetKeyDown(VK_UP))
-	{
-		MoveDeathMenuSelection(-1);
-	}
-	if (Input.GetKeyDown(VK_DOWN))
-	{
-		MoveDeathMenuSelection(1);
-	}
-	if (Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
-	{
-		ExecuteDeathMenuSelection();
-	}
+	DeathMenuNavigator.HandleVerticalInput(InputSystem::Get());
 }
 
 void AMusouGameMode::HandleVictoryMenuInput()
 {
-	InputSystem& Input = InputSystem::Get();
-	// 사망 결과 메뉴와 동일한 조작 체계: 위/아래 이동, Enter/Space 실행.
-	if (Input.GetKeyDown(VK_UP))
-	{
-		MoveVictoryMenuSelection(-1);
-	}
-	if (Input.GetKeyDown(VK_DOWN))
-	{
-		MoveVictoryMenuSelection(1);
-	}
-	if (Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
-	{
-		ExecuteVictoryMenuSelection();
-	}
-}
-
-void AMusouGameMode::UpdatePauseMenuSelectionVisuals()
-{
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	for (int32 ButtonIndex = 0; ButtonIndex < PauseMenuButtonCount; ++ButtonIndex)
-	{
-		HudWidget->SetClass(PauseMenuButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedPauseButtonIndex);
-	}
-}
-
-void AMusouGameMode::UpdateDeathMenuSelectionVisuals()
-{
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	for (int32 ButtonIndex = 0; ButtonIndex < DeathMenuButtonCount; ++ButtonIndex)
-	{
-		HudWidget->SetClass(DeathMenuButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedDeathButtonIndex);
-	}
-}
-
-void AMusouGameMode::UpdateVictoryMenuSelectionVisuals()
-{
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	for (int32 ButtonIndex = 0; ButtonIndex < VictoryMenuButtonCount; ++ButtonIndex)
-	{
-		HudWidget->SetClass(VictoryMenuButtonIds[ButtonIndex], "selected", ButtonIndex == SelectedVictoryButtonIndex);
-	}
-}
-
-void AMusouGameMode::ClearHudButtonSelection(const char* const* ButtonIds, int32 ButtonCount)
-{
-	if (!HudWidget || !HudWidget->IsDocumentLoaded())
-	{
-		return;
-	}
-
-	for (int32 ButtonIndex = 0; ButtonIndex < ButtonCount; ++ButtonIndex)
-	{
-		HudWidget->SetClass(ButtonIds[ButtonIndex], "selected", false);
-	}
+	// 이름 입력 중에는 Enter/Space/방향키를 RML input이 우선 처리하도록 둔다.
+	VictoryMenuNavigator.HandleVerticalInput(InputSystem::Get(), true);
 }

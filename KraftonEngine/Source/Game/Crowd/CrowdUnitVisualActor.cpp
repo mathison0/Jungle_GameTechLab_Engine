@@ -56,6 +56,7 @@ USkeletalMeshComponent* ACrowdUnitVisualActor::EnsureMeshComponent()
 void ACrowdUnitVisualActor::InitializeVisual(
 	ULargeScaleUnitManagerComponent* InManager,
 	USkeletalMesh* InMesh,
+	const TArray<UMaterialInterface*>& InMaterials,
 	UClass* InAnimClass,
 	const FCrowdMeleeAnimationSet& InMeleeAnimationSet)
 {
@@ -66,10 +67,24 @@ void ACrowdUnitVisualActor::InitializeVisual(
 		return;
 	}
 
-	if (CurrentMesh != InMesh)
+	const bool bMeshChanged = CurrentMesh != InMesh;
+	if (bMeshChanged)
 	{
 		CurrentMesh = InMesh;
 		VisualMeshComponent->SetSkeletalMesh(InMesh);
+	}
+
+	if (bMeshChanged || CurrentMaterials != InMaterials)
+	{
+		CurrentMaterials = InMaterials;
+		const int32 MaterialCount = static_cast<int32>(VisualMeshComponent->GetOverrideMaterials().size());
+		for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
+		{
+			UMaterialInterface* Material = MaterialIndex < static_cast<int32>(InMaterials.size())
+				? InMaterials[MaterialIndex]
+				: nullptr;
+			VisualMeshComponent->SetMaterial(MaterialIndex, Material);
+		}
 	}
 
 	if (CurrentAnimClass != InAnimClass)
@@ -138,8 +153,14 @@ void ACrowdUnitVisualActor::DeactivateVisual()
 		MeshComponent->SetEnableAnimationTickLOD(false);
 		MeshComponent->SetAnimationTickLOD(EAnimationTickLOD::FullRate);
 		MeshComponent->SetComponentTickEnabled(false);
+		const int32 MaterialCount = static_cast<int32>(MeshComponent->GetOverrideMaterials().size());
+		for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
+		{
+			MeshComponent->SetMaterial(MaterialIndex, nullptr);
+		}
 	}
 
+	CurrentMaterials.clear();
 	SetVisible(false);
 }
 
