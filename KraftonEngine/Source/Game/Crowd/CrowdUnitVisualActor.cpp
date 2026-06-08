@@ -236,6 +236,11 @@ bool ACrowdUnitVisualActor::ShouldLogCrowdAnimationState() const
 	return Manager && Manager->IsUnitAnimationStateLogEnabled();
 }
 
+float ACrowdUnitVisualActor::GetCrowdLocomotionIdleSpeedThreshold() const
+{
+	return Manager ? Manager->GetCrowdLocomotionIdleSpeedThreshold() : 0.15f;
+}
+
 void ACrowdUnitVisualActor::Tick(float DeltaTime)
 {
 	(void)DeltaTime;

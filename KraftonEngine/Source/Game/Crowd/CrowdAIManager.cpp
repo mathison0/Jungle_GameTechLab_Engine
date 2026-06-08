@@ -45,6 +45,25 @@ namespace
 
 		return Settings.PlayerLocation - Forward * BackOffset + Right * SideOffset;
 	}
+
+	float Square(float Value)
+	{
+		return Value * Value;
+	}
+
+	int64 MakeUnitTargetClaimKey(FUnitHandle Handle)
+	{
+		return (static_cast<int64>(static_cast<uint32>(Handle.Index)) << 32)
+			| static_cast<uint32>(Handle.Generation);
+	}
+
+	void AddUnitTargetClaim(TMap<int64, int32>& UnitTargetClaimCounts, FUnitHandle TargetHandle)
+	{
+		if (TargetHandle.IsValid())
+		{
+			++UnitTargetClaimCounts[MakeUnitTargetClaimKey(TargetHandle)];
+		}
+	}
 }
 
 void FCrowdAIManager::Update(
@@ -55,6 +74,28 @@ void FCrowdAIManager::Update(
 	const TFunction<float()>& RandomThinkInterval) const
 {
 	TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
+	TMap<int64, int32> UnitTargetClaimCounts;
+	if (Settings.bEnableUnitTargetDistribution)
+	{
+		for (const FCrowdUnit& Unit : Units)
+		{
+			if (!IsCrowdUnitCombatActive(Unit) || Unit.TargetKind != ECrowdTargetKind::Unit)
+			{
+				continue;
+			}
+
+			const FCrowdUnit* Target = UnitStore.ResolveUnit(Unit.Target);
+			const float LoseTargetRange = (std::max)(Unit.Archetype.LoseTargetRange, 0.0f);
+			if (Target
+				&& IsCrowdUnitCombatActive(*Target)
+				&& IsHostile(Unit.Team, Target->Team)
+				&& DistanceSquaredXY(Unit.Position, Target->Position) <= LoseTargetRange * LoseTargetRange)
+			{
+				AddUnitTargetClaim(UnitTargetClaimCounts, Unit.Target);
+			}
+		}
+	}
+
 	int32 AllyFollowSlotIndex = 0;
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
@@ -69,13 +110,19 @@ void FCrowdAIManager::Update(
 
 		if (Unit.TargetKind == ECrowdTargetKind::Player)
 		{
+			Unit.FriendlyBlockedTime = 0.0f;
 			UpdatePlayerTargetState(Unit, Settings);
 			continue;
 		}
 
 		const float UnitDeltaTime = Unit.SimulationDeltaTime > 0.0f ? Unit.SimulationDeltaTime : DeltaTime;
+		const float FriendlyBlockedRetargetTime = (std::max)(Settings.FriendlyBlockedRetargetTime, 0.0f);
+		const bool bRetargetDueToFriendlyBlock = FriendlyBlockedRetargetTime > 0.0f
+			&& Unit.TargetKind == ECrowdTargetKind::Unit
+			&& Unit.State == EUnitState::Chase
+			&& Unit.FriendlyBlockedTime >= FriendlyBlockedRetargetTime;
 		Unit.ThinkTimer -= UnitDeltaTime;
-		if (Unit.ThinkTimer > 0.0f)
+		if (Unit.ThinkTimer > 0.0f && !bRetargetDueToFriendlyBlock)
 		{
 			continue;
 		}
@@ -94,14 +141,32 @@ void FCrowdAIManager::Update(
 				Target = nullptr;
 				Unit.Target = {};
 				Unit.TargetKind = ECrowdTargetKind::None;
+				Unit.FriendlyBlockedTime = 0.0f;
+			}
+			else if (bRetargetDueToFriendlyBlock)
+			{
+				Target = nullptr;
+				Unit.Target = {};
+				Unit.TargetKind = ECrowdTargetKind::None;
+				Unit.FriendlyBlockedTime = 0.0f;
 			}
 		}
 
 		if (!Target)
 		{
-			Unit.Target = FindNearestHostile(UnitStore, SpatialPartition, Index, Unit.Archetype.DetectRange);
+			Unit.Target = FindNearestHostile(
+				UnitStore,
+				SpatialPartition,
+				Settings,
+				UnitTargetClaimCounts,
+				Index,
+				Unit.Archetype.DetectRange);
 			Target = UnitStore.ResolveUnit(Unit.Target);
 			Unit.TargetKind = Target ? ECrowdTargetKind::Unit : ECrowdTargetKind::None;
+			if (Target && Settings.bEnableUnitTargetDistribution)
+			{
+				AddUnitTargetClaim(UnitTargetClaimCounts, Unit.Target);
+			}
 		}
 
 		if (!Target)
@@ -112,6 +177,7 @@ void FCrowdAIManager::Update(
 			}
 
 			Unit.State = EUnitState::Idle;
+			Unit.FriendlyBlockedTime = 0.0f;
 			continue;
 		}
 
@@ -122,6 +188,10 @@ void FCrowdAIManager::Update(
 		const bool bCanStayInAttack = Unit.State == EUnitState::Attack && DistanceSq <= AttackExitRange * AttackExitRange;
 		Unit.TargetKind = ECrowdTargetKind::Unit;
 		Unit.State = (bInAttackRange || bCanStayInAttack) ? EUnitState::Attack : EUnitState::Chase;
+		if (Unit.State != EUnitState::Chase)
+		{
+			Unit.FriendlyBlockedTime = 0.0f;
+		}
 	}
 }
 
@@ -148,10 +218,12 @@ bool FCrowdAIManager::UpdateAllyFollowPlayerState(FCrowdUnit& Unit, const FCrowd
 	{
 		Unit.State = EUnitState::Idle;
 		Unit.Velocity = FVector::ZeroVector;
+		Unit.FriendlyBlockedTime = 0.0f;
 		return true;
 	}
 
 	Unit.State = EUnitState::Move;
+	Unit.FriendlyBlockedTime = 0.0f;
 	return true;
 }
 
@@ -163,9 +235,11 @@ void FCrowdAIManager::UpdatePlayerTargetState(FCrowdUnit& Unit, const FCrowdAISe
 		Unit.Target = {};
 		Unit.bHasAttackToken = false;
 		Unit.State = EUnitState::Idle;
+		Unit.FriendlyBlockedTime = 0.0f;
 		return;
 	}
 
+	Unit.FriendlyBlockedTime = 0.0f;
 	Unit.Target = {};
 	Unit.LookAtLocation = Settings.PlayerLocation;
 
@@ -198,6 +272,8 @@ void FCrowdAIManager::UpdatePlayerTargetState(FCrowdUnit& Unit, const FCrowdAISe
 FUnitHandle FCrowdAIManager::FindNearestHostile(
 	const FCrowdUnitStore& UnitStore,
 	const FCrowdSpatialPartition& SpatialPartition,
+	const FCrowdAISettings& Settings,
+	const TMap<int64, int32>& UnitTargetClaimCounts,
 	uint32 UnitIndex,
 	float MaxRange) const
 {
@@ -216,7 +292,9 @@ FUnitHandle FCrowdAIManager::FindNearestHostile(
 	TArray<uint32> Candidates;
 	SpatialPartition.QueryUnitsInRadius(Units, Unit.Position, MaxRange, Candidates);
 
-	float BestDistanceSq = MaxRange * MaxRange;
+	bool bHasBestTarget = false;
+	float BestScore = 0.0f;
+	float BestDistanceSq = 0.0f;
 	FUnitHandle BestTarget;
 
 	for (uint32 CandidateIndex : Candidates)
@@ -233,8 +311,25 @@ FUnitHandle FCrowdAIManager::FindNearestHostile(
 		}
 
 		const float DistSq = DistanceSquaredXY(Unit.Position, Candidate.Position);
-		if (DistSq < BestDistanceSq)
+		float Score = DistSq;
+		if (Settings.bEnableUnitTargetDistribution)
 		{
+			const int64 ClaimKey = MakeUnitTargetClaimKey(FUnitHandle{ CandidateIndex, Candidate.Generation });
+			auto ClaimIt = UnitTargetClaimCounts.find(ClaimKey);
+			const int32 ClaimCount = ClaimIt != UnitTargetClaimCounts.end() ? ClaimIt->second : 0;
+			const int32 SoftCapacity = (std::max)(Settings.UnitTargetSoftCapacity, 0);
+			const int32 OverCapacityCount = (std::max)(ClaimCount - SoftCapacity + 1, 0);
+			const float PenaltyDistance = (std::max)(Settings.UnitTargetContestPenaltyDistance, 0.0f);
+			if (OverCapacityCount > 0 && PenaltyDistance > 0.0f)
+			{
+				Score += Square(PenaltyDistance * static_cast<float>(OverCapacityCount));
+			}
+		}
+
+		if (!bHasBestTarget || Score < BestScore || (Score == BestScore && DistSq < BestDistanceSq))
+		{
+			bHasBestTarget = true;
+			BestScore = Score;
 			BestDistanceSq = DistSq;
 			BestTarget = FUnitHandle{ CandidateIndex, Candidate.Generation };
 		}

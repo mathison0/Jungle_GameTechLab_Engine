@@ -24,6 +24,7 @@ public:
 	float GetCrowdMoveRightAmount() const { return MoveRightAmount; }
 	float GetCrowdCircleAroundDirectionSign() const { return CircleAroundDirectionSign; }
 	float GetCrowdAnimTime() const { return AnimTime; }
+	float GetCrowdLocomotionIdleSpeedThreshold() const { return LocomotionIdleSpeedThreshold; }
 	bool IsCrowdKnockDownGettingUp() const { return bKnockDownGettingUp; }
 
 	UPROPERTY(Edit, Category="Animation|Crowd", DisplayName="Speed", Min=0.0f, Max=100.0f, Speed=0.5f)
@@ -41,5 +42,6 @@ protected:
 	ECrowdUnitLOD LastCrowdLOD = ECrowdUnitLOD::Full;
 	float CircleAroundDirectionSign = 1.0f;
 	float AnimTime = 0.0f;
+	float LocomotionIdleSpeedThreshold = 0.15f;
 	bool bKnockDownGettingUp = false;
 };

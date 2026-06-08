@@ -345,9 +345,19 @@ FCrowdMovementSettings ULargeScaleUnitManagerComponent::BuildMovementSettings() 
 	Settings.bWaitWhenChaseBlocked = bWaitWhenChaseBlocked;
 	Settings.ChaseBlockedProbeDistance = ChaseBlockedProbeDistance;
 	Settings.ChaseBlockedClearancePadding = ChaseBlockedClearancePadding;
+	Settings.bEnableChaseBlockedSideStep = bEnableChaseBlockedSideStep;
+	Settings.ChaseBlockedSideStepSpeedScale = ChaseBlockedSideStepSpeedScale;
+	Settings.bTreatFriendlyChaseBlockersAsSoft = bTreatFriendlyChaseBlockersAsSoft;
+	Settings.FriendlyChaseBlockScoreScale = FriendlyChaseBlockScoreScale;
 	Settings.CircleAroundSpeedScale = CircleAroundSpeedScale;
 	Settings.CircleAroundRadiusTolerance = CircleAroundRadiusTolerance;
 	Settings.CircleAroundRadialCorrectionWeight = CircleAroundRadialCorrectionWeight;
+	Settings.bEnableAttackSeparation = bEnableAttackSeparation;
+	Settings.AttackSeparationSpeedScale = AttackSeparationSpeedScale;
+	Settings.SeparationDeadZone = SeparationDeadZone;
+	Settings.SeparationOnlySpeedScale = SeparationOnlySpeedScale;
+	Settings.bEnableSeparationVelocitySmoothing = bEnableSeparationVelocitySmoothing;
+	Settings.SeparationVelocityBlendSpeed = SeparationVelocityBlendSpeed;
 	Settings.bEnablePlayerSeparation = bEnablePlayerSeparation;
 	Settings.PlayerSeparationPadding = PlayerSeparationPadding;
 	Settings.PlayerSeparationWeight = PlayerSeparationWeight;
@@ -629,6 +639,10 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	AISettings.AllyFollowColumnCount = AllyFollowColumnCount;
 	AISettings.AllyFollowArriveTolerance = AllyFollowArriveTolerance;
 	AISettings.AllyFollowResumeDistance = AllyFollowResumeDistance;
+	AISettings.bEnableUnitTargetDistribution = bEnableUnitTargetDistribution;
+	AISettings.UnitTargetSoftCapacity = UnitTargetSoftCapacity;
+	AISettings.UnitTargetContestPenaltyDistance = UnitTargetContestPenaltyDistance;
+	AISettings.FriendlyBlockedRetargetTime = FriendlyBlockedRetargetTime;
 	AIManager.Update(DeltaTime, UnitStore, SpatialPartition, AISettings, [this]()
 	{
 		return RandomThinkInterval();

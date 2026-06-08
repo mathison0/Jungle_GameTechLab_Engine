@@ -146,6 +146,7 @@ struct FCrowdUnit
 	float CircleAroundDirectionSign = 1.0f;
 	float AttackCooldownRemaining = 0.0f;
 	float ThinkTimer = 0.0f;
+	float FriendlyBlockedTime = 0.0f;
 	float StateTimeRemaining = 0.0f;
 	float KnockbackTimeRemaining = 0.0f;
 	FVector KnockbackVelocity = FVector::ZeroVector;

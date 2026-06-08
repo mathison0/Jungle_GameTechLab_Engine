@@ -20,6 +20,10 @@ struct FCrowdAISettings
 	int32 AllyFollowColumnCount = 3;
 	float AllyFollowArriveTolerance = 0.5f;
 	float AllyFollowResumeDistance = 1.25f;
+	bool bEnableUnitTargetDistribution = true;
+	int32 UnitTargetSoftCapacity = 2;
+	float UnitTargetContestPenaltyDistance = 2.0f;
+	float FriendlyBlockedRetargetTime = 0.45f;
 };
 
 class FCrowdAIManager
@@ -39,6 +43,8 @@ private:
 	FUnitHandle FindNearestHostile(
 		const FCrowdUnitStore& UnitStore,
 		const FCrowdSpatialPartition& SpatialPartition,
+		const FCrowdAISettings& Settings,
+		const TMap<int64, int32>& UnitTargetClaimCounts,
 		uint32 UnitIndex,
 		float MaxRange) const;
 };
