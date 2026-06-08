@@ -15,6 +15,7 @@
 #include "Core/Logging/Log.h"
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Runtime/Engine.h"
+#include "Engine/Runtime/GameEngine.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 #include "Viewport/GameViewportClient.h"
@@ -79,6 +80,32 @@ namespace
 		char Buffer[32] = {};
 		std::snprintf(Buffer, sizeof(Buffer), "BGM %d%%", Percent);
 		return FString(Buffer);
+	}
+
+	bool ShouldStartIntroStoryDialog(UWorld* World)
+	{
+		if (!GEngine || !World)
+		{
+			return false;
+		}
+
+		FString CurrentSceneName;
+		FString PreviousSceneName;
+		if (UGameEngine* GameEngine = Cast<UGameEngine>(GEngine))
+		{
+			CurrentSceneName = GameEngine->GetCurrentSceneName();
+			PreviousSceneName = GameEngine->GetPreviousSceneName();
+		}
+
+		if (CurrentSceneName.empty())
+		{
+			if (const FWorldContext* Context = GEngine->GetWorldContextFromWorld(World))
+			{
+				CurrentSceneName = Context->ContextName;
+			}
+		}
+
+		return PreviousSceneName == "Intro" && CurrentSceneName == "Play";
 	}
 }
 
@@ -183,7 +210,7 @@ void AMusouGameMode::StartMatch()
 		HudWidget->SetWantsMouse(false);
 		HudWidget->AddToViewport(0);
 		SetStopMenuVisible(false);
-		if (HudPresenter.StartIntroDialog())
+		if (ShouldStartIntroStoryDialog(GetWorld()) && HudPresenter.StartIntroDialog())
 		{
 			SetGameInputPossessed(false);
 			bPendingIntroWorldPause = true;

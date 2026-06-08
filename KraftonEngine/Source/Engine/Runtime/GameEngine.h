@@ -21,6 +21,8 @@ public:
 	void OnWindowResized(uint32 Width, uint32 Height) override;
 
 	FViewport* GetStandaloneViewport() const { return StandaloneViewport; }
+	const FString& GetCurrentSceneName() const { return CurrentSceneName; }
+	const FString& GetPreviousSceneName() const { return PreviousSceneName; }
 
 	// 다음 frame Tick 끝에서 active world 를 destroy 하고 InScenePath 의 scene 으로 교체.
 	// 호출은 Lua / GameMode 어디서든 안전 — 실제 destroy/load 는 World->Tick 바깥에서 일어나
@@ -56,6 +58,8 @@ private:
 
 	ESceneTransitionState SceneTransitionState = ESceneTransitionState::None;
 	FString PendingScenePath;
+	FString CurrentSceneName;
+	FString PreviousSceneName;
 	UUserWidget* LoadingWidget = nullptr;
 	float LoadingElapsed = 0.0f;
 };

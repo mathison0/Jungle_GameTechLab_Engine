@@ -234,6 +234,8 @@ void UGameEngine::LoadPendingSceneTransition()
 	// Lua 에서 "Map" 같은 이름만 넘겨도 동작하도록 SceneDir/Map.Scene 으로 풀어준다.
 	const FString FilePath = ResolveSceneFilePath(ScenePath);
 
+	PreviousSceneName = CurrentSceneName;
+
 	// 기존 active world 파괴 — EndPlay → 액터/컴포넌트 destruct → PhysicsScene unique_ptr 해제.
 	const FName OldHandle = GetActiveWorldHandle();
 	DestroyWorldContext(OldHandle);
@@ -314,6 +316,7 @@ bool UGameEngine::LoadSceneFromPath(const FString& InScenePath)
 
 	WorldList.push_back(LoadContext);
 	SetActiveWorld(LoadContext.ContextHandle);
+	CurrentSceneName = LoadContext.ContextName;
 
 
 	return true;

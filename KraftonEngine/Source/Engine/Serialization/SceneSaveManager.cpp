@@ -490,9 +490,9 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 	// 시 CreateRenderState 의 "EditorOnly && WorldType != Editor" 체크가 잘못 통과돼 Game
 	// 빌드에서도 editor billboard SceneProxy 가 만들어지는 버그를 막기 위해.
 	World->SetWorldType(WorldType);
-	FString ContextName = root.hasKey(SceneKeys::ContextName)
-		? root[SceneKeys::ContextName].ToString()
-		: "Loaded Scene";
+	FString ContextName = root.hasKey(SceneKeys::Name)
+		? root[SceneKeys::Name].ToString()
+		: (root.hasKey(SceneKeys::ContextName) ? root[SceneKeys::ContextName].ToString() : "Loaded Scene");
 	FString ContextHandle = root.hasKey(SceneKeys::ContextHandle)
 		? root[SceneKeys::ContextHandle].ToString()
 		: ContextName;
