@@ -38,6 +38,8 @@ namespace
 		if (Type == "play_montage") return EBossSequenceStepType::PlayMontage;
 		if (Type == "blend_camera") return EBossSequenceStepType::BlendCamera;
 		if (Type == "restore_camera") return EBossSequenceStepType::RestoreCamera;
+		if (Type == "fade_in") return EBossSequenceStepType::CameraFadeIn;
+		if (Type == "fade_out") return EBossSequenceStepType::CameraFadeOut;
 		if (Type == "play_sound") return EBossSequenceStepType::PlayAudio;
 		if (Type == "lock_player") return EBossSequenceStepType::LockPlayer;
 		if (Type == "unlock_player") return EBossSequenceStepType::UnlockPlayer;
@@ -116,6 +118,7 @@ namespace
 		Step.FOV = T.get_or("fov", 0.87266463f);
 		Step.bValue = T.get_or("value", false);
 		Step.bLoop = T.get_or("loop", false);
+		Step.CameraTag = T.get_or("camera_tag", std::string());
 		return Step;
 	}
 

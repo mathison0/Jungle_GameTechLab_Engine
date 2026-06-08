@@ -90,7 +90,9 @@ enum class EBossSequenceStepType : uint8
 	FaceBossToPlayer,
 	StopMovement,
 	SetInvincible,
-	DestroyActor
+	DestroyActor,
+	CameraFadeIn,
+	CameraFadeOut
 };
 
 struct FBossSequenceStep
@@ -110,6 +112,7 @@ struct FBossSequenceStep
 	float FOV = 0.87266463f;
 	bool bValue = false;
 	bool bLoop = false;
+	FString CameraTag;
 };
 
 struct FBossPhaseSequence
