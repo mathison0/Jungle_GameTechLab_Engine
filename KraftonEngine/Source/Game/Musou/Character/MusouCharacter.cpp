@@ -682,7 +682,9 @@ void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* 
 
 	// 프레이밍 yaw 를 시작 시점에 동결. 시네캠은 캡슐 자식이지만 위치/시선을 이 동결
 	// yaw 로 매 프레임 월드 구동(AimShotCamera)해, 공격 중 캡슐 yaw 스냅과 디커플 → 튐 제거.
-	ShotYaw = GetActorRotation().Yaw;
+	// 앵커: 기본은 카메라 뷰(ControlRotation) 기준 — 캐릭터가 옆을 봐도 화면 기준 일관 +
+	//   메인캠과 가까워 블렌드 호가 작아 튐 감소. anchor="character" 면 캐릭터 facing 기준.
+	ShotYaw = Shot.bCameraRelative ? GetControlRotation().Yaw : GetActorRotation().Yaw;
 
 	Cam->SetFOV(Shot.FOVRad > 0.0f ? Shot.FOVRad : MainCam->GetFOV());
 
@@ -1251,10 +1253,11 @@ void AMusouCharacter::InjectCameraShotNotifies(UAnimSequence* Sequence, const FM
 		State->Offset       = Shot.Offset;
 		State->Rotation     = Shot.Rotation;
 		State->FOV          = Shot.FOVRad;
-		State->bLookAt      = Shot.bLookAt;
-		State->LookAtHeight = Shot.LookAtHeight;
-		State->bFollow      = Shot.bFollow;
-		State->Letterbox    = Shot.Letterbox;
+		State->bLookAt         = Shot.bLookAt;
+		State->LookAtHeight    = Shot.LookAtHeight;
+		State->bFollow         = Shot.bFollow;
+		State->Letterbox       = Shot.Letterbox;
+		State->bCameraRelative = Shot.bCameraRelative;
 
 		FAnimNotifyEvent Event;
 		Event.NotifyName  = AutoShotName;

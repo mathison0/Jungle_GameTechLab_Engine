@@ -41,6 +41,11 @@ struct FMusouCameraShot
 	bool  bFollow = true;       // false = 샷 시작 위치에 월드 고정
 	float Letterbox = 0.0f;     // 레터박스 두께 비율 (0 = 없음)
 
+	// offset/위치를 어느 yaw 기준으로 배치할지. true(기본) = 카메라 뷰(ControlRotation) 기준
+	//  → 캐릭터가 어딜 보든 화면 기준 일관 + 메인캠과 가까워 블렌드 튐 감소.
+	// false = 캐릭터 facing 기준 (도약/돌진 방향 추적샷 등). lua: anchor = "camera"/"character"
+	bool  bCameraRelative = true;
+
 	bool IsValid() const { return BeginFrac >= 0.0f && EndFrac > BeginFrac; }
 };
 

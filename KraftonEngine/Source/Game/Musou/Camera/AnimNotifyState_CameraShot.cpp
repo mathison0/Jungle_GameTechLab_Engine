@@ -27,10 +27,11 @@ void UAnimNotifyState_CameraShot::NotifyBegin(USkeletalMeshComponent* MeshComp, 
 	Shot.Offset       = Offset;
 	Shot.Rotation     = Rotation;
 	Shot.FOVRad       = FOV;
-	Shot.bLookAt      = bLookAt;
-	Shot.LookAtHeight = LookAtHeight;
-	Shot.bFollow      = bFollow;
-	Shot.Letterbox    = Letterbox;
+	Shot.bLookAt         = bLookAt;
+	Shot.LookAtHeight    = LookAtHeight;
+	Shot.bFollow         = bFollow;
+	Shot.Letterbox       = Letterbox;
+	Shot.bCameraRelative = bCameraRelative;
 
 	// Token = this — 같은 몽타주에 샷이 여러 개일 때 뒷 샷이 인수하면
 	// 앞 샷의 NotifyEnd 가 복귀 블렌드를 걸지 않도록 식별한다.

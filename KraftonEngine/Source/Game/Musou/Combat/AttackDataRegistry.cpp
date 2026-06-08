@@ -109,6 +109,10 @@ namespace
 				Shot.bFollow      = ShotT->get_or("follow", true);
 				Shot.Letterbox    = ShotT->get_or("letterbox", 0.0f);
 
+				// anchor — offset 기준 yaw. "character" 면 캐릭터 facing, 그 외(기본)는 카메라 뷰.
+				const std::string Anchor = ShotT->get_or("anchor", std::string("camera"));
+				Shot.bCameraRelative = (Anchor != "character");
+
 				if (Shot.IsValid())
 				{
 					Step.CameraShots.push_back(Shot);
