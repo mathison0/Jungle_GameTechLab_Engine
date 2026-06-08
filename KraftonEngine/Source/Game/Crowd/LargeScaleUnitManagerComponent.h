@@ -300,6 +300,27 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Separation Weight", Min=0.0f, Max=20.0f, Speed=0.05f)
 	float PlayerSeparationWeight = 2.0f;
 
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Enable Ally Follow Player")
+	bool bEnableAllyFollowPlayer = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Distance", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float AllyFollowDistance = 3.5f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Column Spacing", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AllyFollowColumnSpacing = 1.2f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Row Spacing", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AllyFollowRowSpacing = 1.5f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Column Count", Min=1, Max=16, Speed=1)
+	int32 AllyFollowColumnCount = 3;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Arrive Tolerance", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AllyFollowArriveTolerance = 0.5f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Resume Distance", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AllyFollowResumeDistance = 1.25f;
+
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Melee Combat Slot Count", Min=0, Max=64, Speed=1)
 	int32 MeleeCombatSlotCount = 8;
 

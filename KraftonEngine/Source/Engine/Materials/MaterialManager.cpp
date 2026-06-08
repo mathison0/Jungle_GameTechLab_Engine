@@ -99,6 +99,14 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 {
 	std::filesystem::path Path(FPaths::ToWide(MatFilePath));
 	FString GenericPath = FPaths::ToUtf8(Path.generic_wstring());
+	FString Extension = FPaths::ToUtf8(Path.extension().wstring());
+
+	if (Extension == ".matinst")
+	{
+		UMaterialInstance* Instance = GetOrCreateMaterialInstance(GenericPath);
+		return Instance ? Instance->GetParent() : nullptr;
+	}
+
 	// 1. 캐시 반환
 	auto It = MaterialCache.find(GenericPath);
 	if (It != MaterialCache.end())

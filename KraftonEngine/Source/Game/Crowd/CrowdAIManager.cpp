@@ -11,6 +11,40 @@ namespace
 		const float DY = A.Y - B.Y;
 		return DX * DX + DY * DY;
 	}
+
+	FVector NormalizedXY(const FVector& V)
+	{
+		const float LenSq = V.X * V.X + V.Y * V.Y;
+		if (LenSq <= 1.e-6f)
+		{
+			return FVector::ZeroVector;
+		}
+
+		const float InvLen = 1.0f / std::sqrt(LenSq);
+		return FVector(V.X * InvLen, V.Y * InvLen, 0.0f);
+	}
+
+	FVector BuildAllyFollowGoal(const FCrowdAISettings& Settings, int32 FollowSlotIndex)
+	{
+		FVector Forward = NormalizedXY(Settings.PlayerForward);
+		if (Forward.IsNearlyZero())
+		{
+			Forward = FVector::ForwardVector;
+		}
+
+		const int32 ColumnCount = (std::max)(Settings.AllyFollowColumnCount, 1);
+		const int32 SafeSlotIndex = (std::max)(FollowSlotIndex, 0);
+		const int32 RowIndex = SafeSlotIndex / ColumnCount;
+		const int32 ColumnIndex = SafeSlotIndex % ColumnCount;
+		const float ColumnCenter = (static_cast<float>(ColumnCount) - 1.0f) * 0.5f;
+		const float SideOffset = (static_cast<float>(ColumnIndex) - ColumnCenter)
+			* (std::max)(Settings.AllyFollowColumnSpacing, 0.0f);
+		const float BackOffset = (std::max)(Settings.AllyFollowDistance, 0.0f)
+			+ static_cast<float>(RowIndex) * (std::max)(Settings.AllyFollowRowSpacing, 0.0f);
+		const FVector Right(-Forward.Y, Forward.X, 0.0f);
+
+		return Settings.PlayerLocation - Forward * BackOffset + Right * SideOffset;
+	}
 }
 
 void FCrowdAIManager::Update(
@@ -21,9 +55,13 @@ void FCrowdAIManager::Update(
 	const TFunction<float()>& RandomThinkInterval) const
 {
 	TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
+	int32 AllyFollowSlotIndex = 0;
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
 		FCrowdUnit& Unit = Units[Index];
+		const int32 CurrentAllyFollowSlotIndex = Unit.Team == EUnitTeam::Ally && IsCrowdUnitCombatActive(Unit)
+			? AllyFollowSlotIndex++
+			: -1;
 		if (!ShouldSimulateCrowdUnitThisFrame(Unit) || IsCrowdUnitControlLocked(Unit.State))
 		{
 			continue;
@@ -68,6 +106,11 @@ void FCrowdAIManager::Update(
 
 		if (!Target)
 		{
+			if (UpdateAllyFollowPlayerState(Unit, Settings, CurrentAllyFollowSlotIndex))
+			{
+				continue;
+			}
+
 			Unit.State = EUnitState::Idle;
 			continue;
 		}
@@ -80,6 +123,36 @@ void FCrowdAIManager::Update(
 		Unit.TargetKind = ECrowdTargetKind::Unit;
 		Unit.State = (bInAttackRange || bCanStayInAttack) ? EUnitState::Attack : EUnitState::Chase;
 	}
+}
+
+bool FCrowdAIManager::UpdateAllyFollowPlayerState(FCrowdUnit& Unit, const FCrowdAISettings& Settings, int32 FollowSlotIndex) const
+{
+	if (!Settings.bEnableAllyFollowPlayer
+		|| !Settings.bHasPlayerTarget
+		|| FollowSlotIndex < 0
+		|| Unit.Team != EUnitTeam::Ally
+		|| Unit.TargetKind != ECrowdTargetKind::None
+		|| (Unit.State != EUnitState::Idle && Unit.State != EUnitState::Move))
+	{
+		return false;
+	}
+
+	const FVector FollowGoal = BuildAllyFollowGoal(Settings, FollowSlotIndex);
+	Unit.MoveGoal = FollowGoal;
+
+	const float DistanceSq = DistanceSquaredXY(Unit.Position, FollowGoal);
+	const float ArriveTolerance = (std::max)(Settings.AllyFollowArriveTolerance, 0.0f);
+	const float ResumeDistance = (std::max)(Settings.AllyFollowResumeDistance, ArriveTolerance);
+	const float EffectiveTolerance = Unit.State == EUnitState::Move ? ArriveTolerance : ResumeDistance;
+	if (DistanceSq <= EffectiveTolerance * EffectiveTolerance)
+	{
+		Unit.State = EUnitState::Idle;
+		Unit.Velocity = FVector::ZeroVector;
+		return true;
+	}
+
+	Unit.State = EUnitState::Move;
+	return true;
 }
 
 void FCrowdAIManager::UpdatePlayerTargetState(FCrowdUnit& Unit, const FCrowdAISettings& Settings) const

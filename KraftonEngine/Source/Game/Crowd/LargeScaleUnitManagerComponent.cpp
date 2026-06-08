@@ -598,6 +598,7 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	APawn* PlayerPawn = ResolvePlayerPawn();
 	const bool bHasPlayerPawn = PlayerPawn != nullptr;
 	const FVector PlayerLocation = PlayerPawn ? PlayerPawn->GetActorLocation() : FVector::ZeroVector;
+	const FVector PlayerForward = PlayerPawn ? PlayerPawn->GetActorForward() : FVector::ForwardVector;
 	MovementSettings.bHasPlayerSeparationTarget = bHasPlayerPawn;
 	MovementSettings.PlayerSeparationLocation = PlayerLocation;
 	MovementSettings.PlayerProxyRadius = EngagementSettings.PlayerProxyRadius;
@@ -615,11 +616,19 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	FCrowdAISettings AISettings;
 	AISettings.bHasPlayerTarget = bHasPlayerPawn;
 	AISettings.PlayerLocation = PlayerLocation;
+	AISettings.PlayerForward = PlayerForward;
 	AISettings.PlayerProxyRadius = EngagementSettings.PlayerProxyRadius;
 	AISettings.SlotArriveTolerance = EngagementSettings.SlotArriveTolerance;
 	AISettings.CircleAroundRadiusTolerance = CircleAroundRadiusTolerance;
 	AISettings.AttackStateExitHysteresis = AttackStateExitHysteresis;
 	AISettings.CircleAroundStateHysteresis = CircleAroundStateHysteresis;
+	AISettings.bEnableAllyFollowPlayer = bEnableAllyFollowPlayer;
+	AISettings.AllyFollowDistance = AllyFollowDistance;
+	AISettings.AllyFollowColumnSpacing = AllyFollowColumnSpacing;
+	AISettings.AllyFollowRowSpacing = AllyFollowRowSpacing;
+	AISettings.AllyFollowColumnCount = AllyFollowColumnCount;
+	AISettings.AllyFollowArriveTolerance = AllyFollowArriveTolerance;
+	AISettings.AllyFollowResumeDistance = AllyFollowResumeDistance;
 	AIManager.Update(DeltaTime, UnitStore, SpatialPartition, AISettings, [this]()
 	{
 		return RandomThinkInterval();
