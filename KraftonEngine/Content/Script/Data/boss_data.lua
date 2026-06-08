@@ -39,6 +39,25 @@ return {
                 { type = "destroy_actor", time = 5.0 },
             },
 
+            phase_sequences = {
+                {
+                    id = "phase_2_intro",
+                    hp = 0.5,
+                    once = true,
+                    steps = {
+                        { type = "set_pattern_enabled", time = 0.0, value = false },
+                        { type = "face_target", time = 0.0 },
+                        { type = "set_invincible", time = 0.0, value = true },
+                        { type = "play_sound", time = 0.4, sound = "Boss_Warrior/boss_warrior_phase2.wav", volume = 1.0 },
+                        { type = "dialogue", time = 0.4, text = "이제부터 시작이다." },
+                        { type = "play_montage", time = 0.7, montage = montage("sword and shield power up_mixamo_com_Warrior"), play_rate = 1.0, blend_in = 0.1 },
+                        { type = "warning_rim", time = 1.3, duration = 1.5, color = { 1.0, 0.05, 0.02, 1.0 }, intensity = 5.0, rim = 5.0, rim_power = 5.0, fill = 0.0 },
+                        { type = "set_invincible", time = 3.0, value = false },
+                        { type = "set_pattern_enabled", time = 2.7, value = true },
+                    },
+                },
+            },
+
             patterns = {
                 {
                     id = "slash",
@@ -46,7 +65,7 @@ return {
                     min_range = 0.0,
                     max_range = 4.5,
                     cooldown = 2.0,
-                    recovery = 0.75,
+                    recovery = 2.0,
                     weight = 5,
                     hp = { 0.0, 1.0 },
                     steps = {
@@ -61,7 +80,7 @@ return {
                     min_range = 0.0,
                     max_range = 6.0,
                     cooldown = 5.5,
-                    recovery = 1.2,
+                    recovery = 2.0,
                     weight = 2,
                     hp = { 0.0, 1.0 },
                     steps = {
@@ -77,7 +96,7 @@ return {
                     min_range = 4.0,
                     max_range = 9.0,
                     cooldown = 4.0,
-                    recovery = 0.9,
+                    recovery = 2.0,
                     weight = 3,
                     hp = { 0.0, 1.0 },
                     steps = {
@@ -94,7 +113,7 @@ return {
                     min_range = 0.0,
                     max_range = 5.0,
                     cooldown = 8.0,
-                    recovery = 1.5,
+                    recovery = 2.0,
                     weight = 4,
                     hp = { 0.0, 0.7 },
                     steps = {

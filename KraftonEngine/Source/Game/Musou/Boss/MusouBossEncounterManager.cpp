@@ -61,13 +61,14 @@ void AMusouBossEncounterManager::Tick(float DeltaTime)
 		StartDeath();
 	}
 
-	if (ActiveSequenceKind == EBossSequenceKind::None)
+	if (ActiveSequenceKind != EBossSequenceKind::None)
 	{
+		SequenceTime += (std::max)(DeltaTime, 0.0f);
+		TickActiveSequence(DeltaTime);
 		return;
 	}
 
-	SequenceTime += (std::max)(DeltaTime, 0.0f);
-	TickActiveSequence(DeltaTime);
+	TryStartPhaseSequence();
 }
 
 void AMusouBossEncounterManager::StartIntro()
@@ -238,6 +239,14 @@ bool AMusouBossEncounterManager::LoadSequencesFromBossDefinition()
 				BossId.ToString().c_str());
 			bLoadedAny = true;
 		}
+		if (!Definition->PhaseSequences.empty())
+		{
+			PhaseSequences = Definition->PhaseSequences;
+			UE_LOG("[BossPhase] loaded %d phase sequences for BossId '%s'",
+				static_cast<int32>(PhaseSequences.size()),
+				BossId.ToString().c_str());
+			bLoadedAny = true;
+		}
 		return bLoadedAny;
 	}
 
@@ -355,6 +364,50 @@ void AMusouBossEncounterManager::StartSequence(EBossSequenceKind Kind, const TAr
 	}
 }
 
+bool AMusouBossEncounterManager::TryStartPhaseSequence()
+{
+	if (!BossBattle || BossBattle->IsDead() || PhaseSequences.empty())
+	{
+		return false;
+	}
+
+	const float HealthRatio = BossBattle->GetHealthRatio();
+	for (const FBossPhaseSequence& Phase : PhaseSequences)
+	{
+		if (!Phase.Id.IsValid() || Phase.Steps.empty() || HealthRatio > Phase.HealthRatio)
+		{
+			continue;
+		}
+
+		bool bAlreadyTriggered = false;
+		for (const FName& TriggeredId : TriggeredPhaseIds)
+		{
+			if (TriggeredId == Phase.Id)
+			{
+				bAlreadyTriggered = true;
+				break;
+			}
+		}
+		if (Phase.bOnce && bAlreadyTriggered)
+		{
+			continue;
+		}
+
+		if (Phase.bOnce)
+		{
+			TriggeredPhaseIds.push_back(Phase.Id);
+		}
+
+		StartSequence(EBossSequenceKind::Phase, Phase.Steps);
+		UE_LOG("[BossPhase] started '%s' at health ratio %.3f",
+			Phase.Id.ToString().c_str(),
+			HealthRatio);
+		return true;
+	}
+
+	return false;
+}
+
 void AMusouBossEncounterManager::FinishSequence()
 {
 	if (ActiveSequenceKind == EBossSequenceKind::Intro)
@@ -369,6 +422,15 @@ void AMusouBossEncounterManager::FinishSequence()
 		ActiveSequenceKind = EBossSequenceKind::None;
 		ActiveSteps.clear();
 		UE_LOG("[BossDeath] finished");
+		return;
+	}
+
+	if (ActiveSequenceKind == EBossSequenceKind::Phase)
+	{
+		bIntroCameraActive = false;
+		ActiveSequenceKind = EBossSequenceKind::None;
+		ActiveSteps.clear();
+		UE_LOG("[BossPhase] finished");
 		return;
 	}
 

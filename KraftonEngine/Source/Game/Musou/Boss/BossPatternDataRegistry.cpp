@@ -119,6 +119,28 @@ namespace
 		return Step;
 	}
 
+	FBossPhaseSequence ParsePhaseSequence(const sol::table& T)
+	{
+		FBossPhaseSequence Phase;
+		Phase.Id = FName(T.get_or("id", std::string()));
+		Phase.HealthRatio = Clamp01(T.get_or("hp", 0.5f));
+		Phase.bOnce = T.get_or("once", true);
+
+		if (sol::optional<sol::table> StepsT = T["steps"])
+		{
+			for (int32 Index = 1; Index <= static_cast<int32>(StepsT->size()); ++Index)
+			{
+				sol::optional<sol::table> StepT = (*StepsT)[Index];
+				if (StepT)
+				{
+					Phase.Steps.push_back(ParseSequenceStep(*StepT));
+				}
+			}
+		}
+
+		return Phase;
+	}
+
 	FBossPattern ParsePattern(const FString& Id, const sol::table& T)
 	{
 		FBossPattern Pattern;
@@ -310,6 +332,24 @@ bool FBossPatternDataRegistry::LoadFromLua()
 				if (StepT)
 				{
 					Boss.DeathSteps.push_back(ParseSequenceStep(*StepT));
+				}
+			}
+		}
+
+		if (sol::optional<sol::table> PhaseSequencesT = BossT["phase_sequences"])
+		{
+			for (int32 Index = 1; Index <= static_cast<int32>(PhaseSequencesT->size()); ++Index)
+			{
+				sol::optional<sol::table> PhaseT = (*PhaseSequencesT)[Index];
+				if (!PhaseT)
+				{
+					continue;
+				}
+
+				FBossPhaseSequence Phase = ParsePhaseSequence(*PhaseT);
+				if (Phase.Id.IsValid() && !Phase.Steps.empty())
+				{
+					Boss.PhaseSequences.push_back(std::move(Phase));
 				}
 			}
 		}

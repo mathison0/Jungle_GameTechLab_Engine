@@ -112,6 +112,14 @@ struct FBossSequenceStep
 	bool bLoop = false;
 };
 
+struct FBossPhaseSequence
+{
+	FName Id = FName::None;
+	float HealthRatio = 0.5f;
+	bool bOnce = true;
+	TArray<FBossSequenceStep> Steps;
+};
+
 struct FBossDefinition
 {
 	FName BossId = FName::None;
@@ -130,6 +138,7 @@ struct FBossDefinition
 	float RunMontageBlendIn = 0.1f;
 	TArray<FBossSequenceStep> IntroSteps;
 	TArray<FBossSequenceStep> DeathSteps;
+	TArray<FBossPhaseSequence> PhaseSequences;
 	TArray<FBossPattern> Patterns;
 
 	bool IsValid() const { return BossId.IsValid() && !Patterns.empty(); }

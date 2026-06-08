@@ -27,6 +27,7 @@ enum class EBossSequenceKind : uint8
 {
 	None = 0,
 	Intro,
+	Phase,
 	Death
 };
 
@@ -99,6 +100,7 @@ private:
 	void BuildDefaultIntroSteps();
 	void BuildDefaultDeathSteps();
 	void StartSequence(EBossSequenceKind Kind, const TArray<FBossSequenceStep>& Steps);
+	bool TryStartPhaseSequence();
 	void FinishSequence();
 	void TickActiveSequence(float DeltaTime);
 	void ExecuteSequenceStep(const FBossSequenceStep& Step);
@@ -112,8 +114,10 @@ private:
 	EBossSequenceKind ActiveSequenceKind = EBossSequenceKind::None;
 	TArray<FBossSequenceStep> IntroSteps;
 	TArray<FBossSequenceStep> DeathSteps;
+	TArray<FBossPhaseSequence> PhaseSequences;
 	TArray<FBossSequenceStep> ActiveSteps;
 	TArray<uint8> StepExecuted;
+	TArray<FName> TriggeredPhaseIds;
 	AMusouBossCharacter* Boss = nullptr;
 	AMusouCharacter* Player = nullptr;
 	APlayerController* PlayerController = nullptr;
