@@ -373,6 +373,9 @@
     <Filter Include="Source\Game\Musou\Boss">
       <UniqueIdentifier>{2a782483-8c94-4e6d-b857-f2a52df92cd9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\Musou\MainBoss">
+      <UniqueIdentifier>{b071cc5c-8e88-4e3d-8a78-f8c473e765d5}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Game\Musou\Character">
       <UniqueIdentifier>{f1a26e06-8b90-0691-0673-b381de5fbccd}</UniqueIdentifier>
     </Filter>
@@ -1951,6 +1954,15 @@
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\Boss\MusouBossCharacter.cpp">
       <Filter>Source\Game\Musou\Boss</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\MainBoss\AnimNotify_MainBossThrowAimStart.cpp">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\MainBoss\MainBossCharacter.cpp">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\MainBoss\MainBossPatternComponent.cpp">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp">
       <Filter>Source\Game\Musou\Character</Filter>
@@ -3538,6 +3550,18 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Boss\MusouBossCharacter.h">
       <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\MainBoss\AnimNotify_MainBossThrowAimStart.h">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\MainBoss\MainBossCharacter.h">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\MainBoss\MainBossPatternComponent.h">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\MainBoss\MainBossPatternTypes.h">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h">
       <Filter>Source\Game\Musou\Character</Filter>

@@ -92,6 +92,16 @@ return {
         boss_bolt   = { range = 11.0, height = 3.0, cone_deg = 35, dmg = 1.1, kb = 2.0, kb_dur = 0.15, shake = 0.08 },
         boss_nova   = { range = 5.8, height = 3.2, cone_deg = 360, dmg = 1.3, kb = 4.5, kb_dur = 0.25, shake = 0.15 },
         boss_dash_slash = { range = 5.5, height = 3.0, cone_deg = 120, dmg = 1.2, kb = 4.0, kb_dur = 0.25 },
+
+        -- Main boss patterns - Golem_Boss animation notifies reference these by AttackId.
+        main_boss_attack_slow  = { range = 5.8, height = 3.5, cone_deg = 160, dmg = 1.25, kb = 4.5, kb_dur = 0.27, shake = 0.18 },
+        main_boss_attack_kick  = { range = 4.8, height = 3.0, cone_deg = 120, dmg = 1.00, kb = 5.0, kb_dur = 0.22, shake = 0.12 },
+        main_boss_attack       = { range = 5.6, height = 3.5, cone_deg = 150, dmg = 1.15, kb = 4.0, kb_dur = 0.25, shake = 0.16 },
+        main_boss_combo2_v1    = { range = 5.5, height = 3.5, cone_deg = 180, dmg = 1.25, kb = 5.0, kb_dur = 0.26, shake = 0.16 },
+        main_boss_combo2_v2    = { range = 5.5, height = 3.5, cone_deg = 180, dmg = 1.30, kb = 5.0, kb_dur = 0.26, shake = 0.17 },
+        main_boss_jump_attack  = { range = 6.5, height = 4.0, cone_deg = 360, dmg = 1.55, kb = 6.0, kb_dur = 0.30, shake = 0.22 },
+        main_boss_throw_attack = { range = 15.0, height = 3.5, cone_deg = 35,  dmg = 1.20, kb = 3.0, kb_dur = 0.18, shake = 0.10 },
+        main_boss_combo3       = { range = 6.0, height = 3.5, cone_deg = 180, dmg = 1.35, kb = 5.5, kb_dur = 0.28, shake = 0.18 },
     },
 
     steps = {

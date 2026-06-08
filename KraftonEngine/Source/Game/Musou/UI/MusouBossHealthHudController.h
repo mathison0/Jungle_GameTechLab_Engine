@@ -3,6 +3,7 @@
 #include "Core/Types/CoreTypes.h"
 
 class AMusouBossCharacter;
+class AMainBossCharacter;
 class APawn;
 class FMusouHudPresenter;
 struct FMusouHitEvent;
@@ -17,12 +18,12 @@ public:
 	void Clear();
 
 private:
-	void ShowFor(AMusouBossCharacter* Boss, bool bKilled);
-	FString MakeBossName(const AMusouBossCharacter* Boss) const;
+	void ShowFor(APawn* Boss, bool bKilled);
+	FString MakeBossName(const APawn* Boss) const;
 	FString GetActiveBossNameOrFallback() const;
 
 	FMusouHudPresenter* Presenter = nullptr;
-	AMusouBossCharacter* ActiveBossHealthActor = nullptr;
+	APawn* ActiveBossHealthActor = nullptr;
 	FString ActiveBossHealthName;
 	bool bHidePending = false;
 	float HideRemaining = 0.0f;

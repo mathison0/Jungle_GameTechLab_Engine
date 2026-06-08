@@ -3,6 +3,7 @@
 #include "Game/Musou/Boss/MusouBossCharacter.h"
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/Combat/HitTypes.h"
+#include "Game/Musou/MainBoss/MainBossCharacter.h"
 #include "Game/Musou/UI/MusouHudPresenter.h"
 #include "GameFramework/Pawn/Pawn.h"
 
@@ -39,7 +40,7 @@ void FMusouBossHealthHudController::Tick(float DeltaTime)
 		return;
 	}
 
-	UBattleComponent* Battle = ActiveBossHealthActor->GetBattleComponent();
+	UBattleComponent* Battle = ActiveBossHealthActor->GetComponentByClass<UBattleComponent>();
 	if (!Battle)
 	{
 		Clear();
@@ -76,12 +77,18 @@ void FMusouBossHealthHudController::NotifyHitConfirmed(const FMusouHitEvent& Eve
 	if (AMusouBossCharacter* Boss = Cast<AMusouBossCharacter>(Event.HitActor))
 	{
 		ShowFor(Boss, Event.bKilled);
+		return;
+	}
+
+	if (AMainBossCharacter* Boss = Cast<AMainBossCharacter>(Event.HitActor))
+	{
+		ShowFor(Boss, Event.bKilled);
 	}
 }
 
 void FMusouBossHealthHudController::NotifyEnemyKilled(APawn* Killed)
 {
-	if (ActiveBossHealthActor && Killed == static_cast<APawn*>(ActiveBossHealthActor))
+	if (ActiveBossHealthActor && Killed == ActiveBossHealthActor)
 	{
 		ShowFor(ActiveBossHealthActor, true);
 	}
@@ -100,14 +107,14 @@ void FMusouBossHealthHudController::Clear()
 	}
 }
 
-void FMusouBossHealthHudController::ShowFor(AMusouBossCharacter* Boss, bool bKilled)
+void FMusouBossHealthHudController::ShowFor(APawn* Boss, bool bKilled)
 {
 	if (!Boss)
 	{
 		return;
 	}
 
-	UBattleComponent* Battle = Boss->GetBattleComponent();
+	UBattleComponent* Battle = Boss->GetComponentByClass<UBattleComponent>();
 	if (!Battle)
 	{
 		return;
@@ -134,27 +141,38 @@ void FMusouBossHealthHudController::ShowFor(AMusouBossCharacter* Boss, bool bKil
 	HideRemaining = 0.0f;
 }
 
-FString FMusouBossHealthHudController::MakeBossName(const AMusouBossCharacter* Boss) const
+FString FMusouBossHealthHudController::MakeBossName(const APawn* Boss) const
 {
 	if (!Boss)
 	{
 		return FString("BOSS");
 	}
 
-	const FString BossDisplayName = Boss->GetBossDisplayName();
-	if (!BossDisplayName.empty())
+	if (const AMusouBossCharacter* MiddleBoss = Cast<AMusouBossCharacter>(Boss))
 	{
-		return BossDisplayName;
+		const FString BossDisplayName = MiddleBoss->GetBossDisplayName();
+		if (!BossDisplayName.empty())
+		{
+			return BossDisplayName;
+		}
+
+		if (!MiddleBoss->BossId.IsValid())
+		{
+			return FString("BOSS");
+		}
+
+		FString BossName = MiddleBoss->BossId.ToString();
+		std::replace(BossName.begin(), BossName.end(), '_', ' ');
+		return BossName.empty() ? FString("BOSS") : BossName;
 	}
 
-	if (!Boss->BossId.IsValid())
+	if (const AMainBossCharacter* MainBoss = Cast<AMainBossCharacter>(Boss))
 	{
-		return FString("BOSS");
+		const FString BossDisplayName = MainBoss->GetBossDisplayName();
+		return BossDisplayName.empty() ? FString("BOSS") : BossDisplayName;
 	}
 
-	FString BossName = Boss->BossId.ToString();
-	std::replace(BossName.begin(), BossName.end(), '_', ' ');
-	return BossName.empty() ? FString("BOSS") : BossName;
+	return FString("BOSS");
 }
 
 FString FMusouBossHealthHudController::GetActiveBossNameOrFallback() const
