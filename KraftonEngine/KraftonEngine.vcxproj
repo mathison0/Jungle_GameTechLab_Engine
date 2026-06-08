@@ -833,6 +833,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_GroundSlamShockwave.cpp" />
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_UltimateLeap.cpp" />
+    <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_UltimateAdvance.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AttackDataRegistry.cpp" />
@@ -1365,6 +1367,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_GroundSlamShockwave.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_UltimateLeap.h" />
+    <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_UltimateAdvance.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_MusouAttack.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotify_PlaySlashEffect.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AttackDataRegistry.h" />

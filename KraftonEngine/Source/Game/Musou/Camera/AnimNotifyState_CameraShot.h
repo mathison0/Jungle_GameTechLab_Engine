@@ -57,6 +57,10 @@ public:
 	UPROPERTY(Edit, Save, Category = "CameraShot", DisplayName = "Look At Height", Min = -2.0f, Max = 3.0f, Speed = 0.05f)
 	float LookAtHeight = 0.5f;
 
+	// >0 = 캐릭터 대신 전방 이 거리(m) 지점을 바라봄 — 검기 사선/전방 진행을 화면에 담는다.
+	UPROPERTY(Edit, Save, Category = "CameraShot", DisplayName = "Look Ahead (m)", Min = 0.0f, Max = 20.0f, Speed = 0.1f)
+	float LookAhead = 0.0f;
+
 	// true = 캐릭터를 따라다니는 샷, false = 샷 시작 위치에 월드 고정 (캐릭터가 프레임 안에서 움직임).
 	UPROPERTY(Edit, Save, Category = "CameraShot", DisplayName = "Follow Character")
 	bool bFollow = true;

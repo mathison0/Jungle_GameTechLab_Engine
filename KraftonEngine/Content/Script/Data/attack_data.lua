@@ -89,6 +89,10 @@ return {
         -- 무쌍기 마무리 강타 — 광범위 전방위 + 강넉백 + 띄움 (난무의 방점)
         musou_slam  = { range = 7.0, height = 3.0, cone_deg = 360, dmg = 3.0, kb = 7.0, kb_dur = 0.30, shake = 0.4, launch = 6.0 },
 
+        -- 무쌍기 전방 진행 충격파 펄스 — 좁은 반경으로 "지나가며 한 번" 행진감. 전방 콘으로
+        -- 진행 방향만 때린다. shake 는 펄스마다 누적되므로 슬램의 1/5(0.08)로 낮춤.
+        musou_wave  = { range = 2.5, height = 3.0, cone_deg = 200, dmg = 1.5, kb = 4.5, kb_dur = 0.20, shake = 0.08, launch = 2.5 },
+
         -- Boss patterns - boss_data.lua references these by attack_id.
         boss_slash  = { range = 4.8, height = 3.0, cone_deg = 150, dmg = 1.0, kb = 3.5, kb_dur = 0.22, shake = 0.12 },
         boss_spin   = { range = 6.0, height = 3.2, cone_deg = 360, dmg = 1.4, kb = 5.0, kb_dur = 0.30, shake = 0.18 },
@@ -232,24 +236,40 @@ return {
                                        offset = { 3.5, -2.0, 0.3 }, fov = 55, look_height = 0.8,
                                        letterbox = 0.12 } } },
 
-        -- ▶ 신규 무쌍기 — 단발 몽타주: 뒤로 빠졌다가 바닥 강타 → 전방 진행 충격파(순차 데미지).
-        --   · 몽타주/루트모션은 단발 에셋 입수 시 교체 (지금은 Downward 로 초안).
-        --   · force_root_motion: 백스텝+강타 이동을 몽타주 RM 으로 (에셋 RM 플래그 꺼져 있어도 강제).
-        --   · camera: 강타 직전 시네마틱 윈드업(로우앵글 풀백) → 임팩트.
-        --   · shockwave: trigger_frac(강타 프레임)에 전방 진행 충격파 주입 — origin 만 전진하며
-        --     pulses 개의 검기(placeholder) + musou_slam 판정을 distance/duration 동안 순차 발사.
-        ultimate_slam = { montage = montage("Barbarian_Melee Attack Downward"),
-                          sequence = seq("Barbarian_Melee Attack Downward"),
-                          blend_in = 0.12, attack_id = "musou_slam", hit_frac = 0.50,
-                          play_rate = 1.0, force_root_motion = true,
-                          -- 강타 직전 윈드업 → 임팩트 로우앵글. 한 박자 길게 잡아 "강한 걸 쓴다" 강조.
-                          camera = { { begin_frac = 0.0, end_frac = 0.85, blend_in = 0.25, blend_out = 0.35,
-                                       offset = { 4.0, -2.2, 0.2 }, fov = 52, look_height = 0.7,
+        -- ▶ 신규 무쌍기 1단 — 제자리 백플립으로 뒤로 빠짐 (Backflip, 로컬 에셋).
+        --   · 발동 시 글로벌 슬로모(OnUltimatePressed)로 "잠시 멈췄다" 시네마틱하게 들어감.
+        --   · leap: 도약 프레임에 후방+상방 임펄스 — 제자리 백플립을 실제로 뒤로 빼준다.
+        --       up 으로 높이, gravity(<1)로 체공 연장 → 공중에서 2단 강타가 돌게 한다.
+        --       체공 ≈ 2·up/(9.8·gravity). 궁극기 종료 시 중력/회전 자동 복원.
+        --   · advance: 적당한 시점에 2단(백핸드 강타)으로 조기 cross-fade (안 박히면 몽타주 끝에 폴백).
+        --   ※ 에디터에서 직접 UltimateLeap/UltimateAdvance notify 를 저작하면 그게 우선.
+        ult_backflip  = { sequence = seq("Backflip_mixamo_com"),
+                          blend_in = 0.08, play_rate = 1.0,
+                          -- 도입 시네마틱 — 살짝 끌어내린 로우앵글 + 레터박스로 "강한 걸 쓴다" 강조
+                          camera = { { begin_frac = 0.0, end_frac = 0.9, blend_in = 0.2, blend_out = 0.25,
+                                       offset = { 4.0, -2.0, 0.4 }, fov = 54, look_height = 0.8,
                                        letterbox = 0.14 } },
-                          -- 강타(hit_frac≈0.50) 직후 충격파 발동 — 전방 14m, 0.8s 동안 10발 순차.
-                          shockwave = { trigger_frac = 0.52, distance = 14.0, duration = 0.8,
-                                        pulses = 10, attack_id = "musou_slam",
-                                        slash_speed = 9.0, slash_life = 0.45 } },
+                          leap    = { trigger_frac = 0.12, back = 6.0, up = 4.5, gravity = 0.3 },
+                          advance = { trigger_frac = 0.62 } },
+
+        -- ▶ 신규 무쌍기 2단 — 백핸드 강타 + 전방 진행 충격파(검기). (Standing Backhand, 로컬 에셋)
+        --   · hit_frac: 강타 임팩트 1회(캐릭터 위치 musou_slam 판정).
+        --   · shockwave.trigger_frac: 검기가 날아가는 타이밍 — origin 만 전진하며 distance/duration
+        --     동안 pulses 개의 검기(placeholder) + musou_slam 판정을 순차 발사.
+        ult_backhand  = { sequence = seq("Standing Melee Attack Backhand_mixamo_com"),
+                          blend_in = 0.15, attack_id = "musou_slam", hit_frac = 0.40,
+                          play_rate = 1.0, plant_in_air = true,   -- 강타 시작 시 속도0/중력0 → 공중 제자리 고정
+                          -- 검기 사선 프레이밍 — 캐릭터(타겟 facing) 기준 뒤/측면/높이에서 전방 7m 를
+                          -- 바라봐 전방으로 날아가는 검기를 화면에 담는다. anchor=character (타겟 사선 추적).
+                          --   look_ahead 키우면 더 멀리, offset 으로 카메라 위치(전후/좌우/상하) 조정.
+                          camera = { { begin_frac = 0.0, end_frac = 0.85, blend_in = 0.2, blend_out = 0.3,
+                                       offset = { -3.0, -4.5, 3.0 }, fov = 60, look_ahead = 7.0, look_height = 0.5,
+                                       anchor = "character", letterbox = 0.14 } },
+                          -- 검기 발사 타이밍 — 강타 직후. 전방 14m, 0.8s 동안 10발 순차 (타겟 방향으로).
+                          -- slash_yaw: 검기 메시 시각 회전 보정(진행 yaw + 이 값). 기존 검기 규칙=90.
+                          shockwave = { trigger_frac = 0.42, distance = 14.0, duration = 0.8,
+                                        pulses = 10, attack_id = "musou_wave",
+                                        slash_speed = 9.0, slash_life = 0.45, slash_yaw = 0 } },
 
         -- 구르기 (Shift) — 입력 방향 회피. 공격 아님 (attack_id 없음), 전 구간 무적은 C++.
         -- ※ Standing Dive Forward.fbx 를 에디터에서 Barbarian 스켈레톤으로 임포트해야 활성화.
@@ -306,10 +326,10 @@ return {
         -- 콤보 분기 피니셔 (□..△) — 인덱스 = 분기 시점 단수. 단수 초과 시 마지막으로 clamp
         branch = { "horizontal", "spin_low", "spin_high" },
 
-        -- 무쌍기 (R, 게이지 가득) — 단발: 뒤로 빠졌다 바닥 강타 → 전방 진행 충격파. 전 구간 무적.
-        -- 단일 슬롯이므로 UpdateUltimateChain 이 1스텝 후 자동 종료. 충격파는 캐릭터 Tick 이 독립 구동.
-        -- ※ self_launch(자기 띄움) 스텝 금지 — 충격파/연출이 공중으로 끊긴다.
-        ultimate = { "ultimate_slam" },
+        -- 무쌍기 (R, 게이지 가득) — 2단: 백플립(뒤로 빠짐)→백핸드 강타+전방 진행 충격파. 전 구간 무적.
+        -- 발동 시 슬로모로 시네마틱 진입. 1단 advance notify 가 2단으로 조기 전환(폴백: 몽타주 끝).
+        -- 충격파(검기)는 2단 shockwave.trigger_frac 에서 캐릭터 Tick 이 독립 구동.
+        ultimate = { "ult_backflip", "ult_backhand" },
 
         -- 구르기 (Shift) — 후딜(콤보 윈도우/말미) 캔슬 가능, 전 구간 무적
         dodge = "roll",
@@ -339,7 +359,7 @@ return {
 
         -- 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
         ultimate = {
-            kills_to_fill = 10,
+            kills_to_fill = 2,
         },
 
         -- 플레이어 피격 리액션 — 최소 간격 (초). 군체 다단 히트 스턴락 방지

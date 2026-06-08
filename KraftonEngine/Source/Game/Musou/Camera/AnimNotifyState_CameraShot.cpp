@@ -29,6 +29,7 @@ void UAnimNotifyState_CameraShot::NotifyBegin(USkeletalMeshComponent* MeshComp, 
 	Shot.FOVRad       = FOV;
 	Shot.bLookAt         = bLookAt;
 	Shot.LookAtHeight    = LookAtHeight;
+	Shot.LookAhead       = LookAhead;
 	Shot.bFollow         = bFollow;
 	Shot.Letterbox       = Letterbox;
 	Shot.bCameraRelative = bCameraRelative;

@@ -38,6 +38,7 @@ struct FMusouCameraShot
 	float FOVRad = 0.0f;        // 0 = 메인 카메라 FOV 유지. lua 'fov' 는 도(deg) 단위
 	bool  bLookAt = true;       // 매 프레임 캐릭터를 바라봄 (Rotation 무시)
 	float LookAtHeight = 0.5f;  // 시선 목표 — 액터 위치 기준 +Z (m)
+	float LookAhead = 0.0f;     // >0 = 캐릭터 대신 전방 LookAhead m 지점을 바라봄 (검기 사선 프레이밍)
 	bool  bFollow = true;       // false = 샷 시작 위치에 월드 고정
 	float Letterbox = 0.0f;     // 레터박스 두께 비율 (0 = 없음)
 
@@ -61,8 +62,28 @@ struct FMusouShockwave
 	FString AttackId;              // 펄스 판정 spec 키 (비면 슬램 spec 사용)
 	float   SlashSpeed = 9.0f;     // 검기(placeholder) 진행 속도
 	float   SlashLife = 0.45f;     // 검기 수명 (초)
+	float   SlashYaw = 90.0f;      // 검기 메시 시각 회전 보정 (진행 yaw + 이 값). 기존 검기 규칙=90
 
 	bool IsValid() const { return TriggerFrac >= 0.0f && Pulses > 0 && Distance > 0.0f; }
+};
+
+// 궁극기 백플립 도약 — 제자리 백플립을 후방+상방 임펄스로 실제로 빼준다.
+struct FMusouLeap
+{
+	float TriggerFrac = -1.0f;  // 도약 프레임 (PlayLength 비율). <0 = 없음
+	float Back = 6.0f;          // 후방 수평 속도 (m/s)
+	float Up = 4.0f;            // 상방 속도 (m/s)
+	float Gravity = 0.3f;       // 도약 후 중력 배율 (체공 연장). 궁극기 종료 시 1.0 복원
+
+	bool IsValid() const { return TriggerFrac >= 0.0f; }
+};
+
+// 궁극기 다음 슬롯 조기 전환 — 현재 슬롯 종료 전에 cross-fade (백플립→강타 블렌드).
+struct FMusouAdvance
+{
+	float TriggerFrac = -1.0f;  // 전환 프레임 (PlayLength 비율). <0 = 없음 (몽타주 끝에 폴백)
+
+	bool IsValid() const { return TriggerFrac >= 0.0f; }
 };
 
 // 공격 스텝 정의 — attack_data.lua 의 steps 항목 1개.
@@ -83,6 +104,10 @@ struct FMusouAttackStep
 	// (구르기 등) 을 에디터 재저장 없이 쓰기 위한 런타임 override. lua: force_root_motion
 	bool    bForceRootMotion = false;
 
+	// 궁극기 강타 제자리 고정 — 이 스텝이 무쌍기 중 재생되면 속도 0 + 중력 0 으로 공중에
+	// 못 박는다 (백핸드가 뒤로 밀리지 않게). lua: plant_in_air = true. EndUltimate 에서 중력 복원.
+	bool    bPlantInAir = false;
+
 	// ── notify 주입 파라미터 (시퀀스에 저작 notify 가 없을 때만 사용) ──
 	FString AttackId;               // specs 키. 비어 있으면 히트 notify 안 박음
 	float   HitFrac = -1.0f;        // MusouAttack 위치 (PlayLength 비율). <0 = 없음
@@ -94,6 +119,12 @@ struct FMusouAttackStep
 
 	// 전방 진행 충격파 — 궁극기 지면 강타용. lua: shockwave = { trigger_frac=.., ... }
 	FMusouShockwave Shockwave;
+
+	// 궁극기 백플립 도약 — lua: leap = { trigger_frac=.., back=.., up=.. }
+	FMusouLeap Leap;
+
+	// 궁극기 다음 슬롯 조기 전환 — lua: advance = { trigger_frac=.. }
+	FMusouAdvance Advance;
 
 	bool IsValid() const { return !MontagePath.empty() || !SequencePath.empty(); }
 };

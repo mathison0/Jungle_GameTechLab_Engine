@@ -42,5 +42,8 @@ public:
 	UPROPERTY(Edit, Save, Category = "GroundSlam", DisplayName = "Slash Life (s)", Min = 0.05f, Max = 2.0f, Speed = 0.01f)
 	float SlashLife = 0.45f;
 
+	UPROPERTY(Edit, Save, Category = "GroundSlam", DisplayName = "Slash Yaw Offset", Min = -180.0f, Max = 180.0f, Speed = 1.0f)
+	float SlashYaw = 90.0f;
+
 	void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Anim) override;
 };

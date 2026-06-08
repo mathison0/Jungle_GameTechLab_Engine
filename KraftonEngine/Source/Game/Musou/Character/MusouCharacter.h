@@ -80,7 +80,17 @@ public:
 	// 궁극기 지면 강타 충격파 — 시작점에서 전방으로 Distance/Duration 동안 Pulses 개의
 	// 데미지 판정 + 검기(placeholder)를 순차 발사. AnimNotify_GroundSlamShockwave 가 호출.
 	void StartGroundSlamShockwave(const FVector& Origin, const FVector& Dir, float Distance,
-		float Duration, int32 Pulses, FName SpecId, float SlashSpeed, float SlashLife);
+		float Duration, int32 Pulses, FName SpecId, float SlashSpeed, float SlashLife, float SlashYaw);
+
+	// 궁극기 백플립 도약 — 후방+상방 임펄스로 제자리 백플립을 실제로 빼준다. (leap notify 호출)
+	// GravityScale < 1 이면 체공을 연장 — 공중에서 다음 강타 몽타주가 돌게 한다.
+	void LaunchBackflip(float BackSpeed, float UpSpeed, float GravityScale);
+
+	// 궁극기 다음 슬롯 조기 전환 — 현재 슬롯 종료 전 cross-fade. (advance notify 호출)
+	void AdvanceUltimateNow();
+
+	// 무쌍기 락온 — 전방 최근접 적(보스 우선)의 위치를 찾는다. 발동 시 그쪽으로 facing 고정용.
+	bool FindNearestEnemyTarget(FVector& OutPos) const;
 
 	// 튜토리얼 심화 단계 감지용.
 	// 평면(XY) 속도 — 이동/대시 단계를 키가 아닌 실제 속도로 판정.
@@ -131,6 +141,9 @@ protected:
 	// 충격파 — Tick 이 펄스를 전방으로 순차 broadcast + 검기 스폰. 궁극기 몽타주와 독립.
 	void UpdateShockwave(float DeltaTime);
 	void EmitShockwavePulse(const FVector& WorldOrigin, const FVector& Dir);
+
+	// 궁극기 마무리 착지 임팩트 — 슬램 하강이 지면에 닿는 순간 1회 (히트스톱+셰이크+방사 검기+AOE).
+	void TriggerUltimateLandingImpact();
 	void EndRoll();
 
 	// 진입 컨텍스트 판정 — Falling → Airborne, XY 속도 ≥ 임계 → Moving, 그 외 Idle.
@@ -232,6 +245,13 @@ protected:
 	bool  bUltimateActive = false;
 	int32 UltimateStep = 0;
 
+	// 궁극기 종료 시 슬램 하강 예약 — 지면에 닿는 순간 Tick 이 착지 임팩트를 1회 발동.
+	bool  bUltimateLandingPending = false;
+
+	// 충격파가 깔릴 지면 높이(Z) — 발동 시점에 캡처. 강타 때 캐릭터가 공중에 떠 있어도
+	// 검기/판정은 이 Z(지면 또는 타겟 높이)에서 진행해야 지상 적을 때린다.
+	float UltimateWaveZ = 0.0f;
+
 	// 전방 진행 충격파 상태 — Tick 이 펄스를 순차 발사. 궁극기 몽타주 종료와 무관하게 진행.
 	struct FShockwaveRun
 	{
@@ -246,6 +266,7 @@ protected:
 		FName   SpecId;
 		float   SlashSpeed = 9.0f;
 		float   SlashLife  = 0.45f;
+		float   SlashYaw   = 90.0f;
 	};
 	FShockwaveRun ShockwaveRun;
 

@@ -22,5 +22,5 @@ void UAnimNotify_GroundSlamShockwave::Notify(USkeletalMeshComponent* MeshComp, U
 	Character->StartGroundSlamShockwave(
 		Character->GetActorLocation(),
 		Character->GetActorForward(),
-		Distance, Duration, Pulses, FName(AttackId), SlashSpeed, SlashLife);
+		Distance, Duration, Pulses, FName(AttackId), SlashSpeed, SlashLife, SlashYaw);
 }
