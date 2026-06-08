@@ -8,7 +8,7 @@ return {
     bosses = {
         knight_boss = {
             display_name = "Knight",
-            max_hp = 50,
+            max_hp = 500,
             attack_power = 18,
             move_speed = 1.6,
             stop_distance = 2.8,
