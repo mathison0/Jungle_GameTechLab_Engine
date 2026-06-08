@@ -23,10 +23,11 @@ namespace
 		"settings-button",
 		"score-button",
 		"controls-button",
+		"credits-button",
 		"exit-button",
 	};
 
-	constexpr int32 IntroButtonCount = 5;
+	constexpr int32 IntroButtonCount = 6;
 	constexpr int32 IntroScoreboardPageSize = 10;
 	constexpr float BGMVolumeStep = 0.1f;
 
@@ -103,6 +104,14 @@ void AMusouGameModeIntro::StartMatch()
 			IntroWidget->BindClick("keyguide-close-button", [this]()
 			{
 				HideKeyGuide();
+			});
+
+			IntroWidget->BindClick("credits-button", []()
+			{
+				if (GEngine)
+				{
+					GEngine->RequestTransitionToScene("Credits");
+				}
 			});
 
 			IntroWidget->BindClick("exit-button", []()

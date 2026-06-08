@@ -29,7 +29,7 @@
 		#menu-buttons {
 			position: absolute;
 			left: 20%;
-			top: 52%;
+			top: 46%;
 			display: block;
 			width: 24%;
 		}
@@ -559,6 +559,11 @@
 				<img class="button-frame button-frame-normal" src="btn_normal.png" />
 				<img class="button-frame button-frame-hover" src="btn_hover.png" />
 				<div class="button-label">조작 안내</div>
+			</div>
+			<div id="credits-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">크레딧</div>
 			</div>
 			<div id="exit-button" class="menu-button secondary-button">
 				<img class="button-frame button-frame-normal" src="btn_normal.png" />

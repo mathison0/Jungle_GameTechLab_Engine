@@ -69,11 +69,27 @@ public:
 
 	bool IsWeaponDrawn() const { return bWeaponDrawn; }
 
+	// 입력 없는 자동 전투용(크레딧 아웃트로 등) — 좌클릭 공격과 동일 진입점.
+	// 납도 상태면 첫 호출이 발도, 이후 호출이 콤보를 이어간다.
+	void TriggerAutoAttack() { OnAttackPressed(); }
+
+	// 강제 납도 요청 — 무기가 뽑혀 있을 때만. 모션 중이면 토글이 스스로 무시하므로
+	// 매 틱 호출해도 안전(검집에 들어가면 IsWeaponDrawn()==false 가 되어 멈춘다).
+	void RequestSheathe() { if (bWeaponDrawn) { OnToggleWeaponPressed(); } }
+
 	// ── 몽타주 카메라 샷 — AnimNotifyState_CameraShot 이 구동 ──
 	// 상시 연출 카메라 2대(핑퐁)로 메인(SpringArm) 카메라와 블렌드 전환.
 	// Token = notify 객체 — 뒷 샷이 인수하면 앞 샷의 End 가 복귀를 걸지 않게 식별.
 	void StartCameraShot(const FMusouCameraShot& Shot, const void* Token);
 	void EndCameraShot(const void* Token);
+
+	// 몽타주 카메라 샷(화면 전환) 억제 — 크레딧 아웃트로 등 고정 시점에서 자동 전투를
+	// 돌릴 때 공격 notify 의 샷 전환이 카메라를 가로채지 않도록 끈다.
+	void SetCameraShotsSuppressed(bool bSuppressed) { bSuppressCameraShots = bSuppressed; }
+
+	// 공격 시 "입력 없으면 카메라 정면으로 재조준"(SnapFacingToInput) 억제 — 크레딧 자동
+	// 전투처럼 입력/시점이 없는 상황에서 캐릭터가 엉뚱한 방향으로 휙 도는 것을 막는다.
+	void SetCameraFacingSuppressed(bool bSuppressed) { bSuppressCameraFacing = bSuppressed; }
 
 protected:
 	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
@@ -221,6 +237,8 @@ protected:
 	FVector               ShotWorldLock = FVector(0.0f, 0.0f, 0.0f);  // bFollow=false 샷의 고정 월드 위치
 	float                 ShotYaw = 0.0f;  // 샷 시작 시 동결한 프레이밍 yaw — 위치/시선을 이 값 기준
 	                                        // 월드 구동해 공격 중 캡슐 yaw 스냅과 디커플(카메라 튐 제거)
+	bool                  bSuppressCameraShots = false;  // true 면 StartCameraShot 무시 (크레딧 고정 시점)
+	bool                  bSuppressCameraFacing = false; // true 면 공격 시 카메라 정면 재조준 스냅 끔
 
 	// 카메라 샷 주입 이력 (시퀀스 → 데이터 버전) — 공격 notify 주입과 별도 추적
 	// (가드 조건이 달라 같은 시퀀스라도 주입 가능 여부가 다르다).

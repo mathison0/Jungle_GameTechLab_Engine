@@ -2,11 +2,12 @@
 <head>
 	<title>Credits</title>
 	<style>
+		/* 배경 반투명 — 뒤에서 도는 3D 전투(메인 캐릭터 + 병사 군체)가 비치도록. */
 		body {
 			width: 100%;
 			height: 100%;
 			margin: 0;
-			background-color: #040404;
+			background-color: transparent;
 			font-family: "HeirofLight";
 			font-weight: bold;
 		}
@@ -16,7 +17,7 @@
 			width: 100%;
 			height: 100%;
 			overflow: hidden;
-			background-color: #040404;
+			background-color: rgba(4, 4, 6, 0.45);
 		}
 
 		/* 아래에서 위로 흐르는 롤 — top 을 C++(AMusouGameModeCredits)가 매 틱 갱신해
@@ -49,7 +50,7 @@
 			margin-top: 18px;
 			text-align: center;
 			font-size: 34px;
-			color: #d6ccb1;
+			color: #1a1410;
 		}
 
 		.credits-section-title {
@@ -67,7 +68,7 @@
 			margin-top: 22px;
 			text-align: center;
 			font-size: 44px;
-			color: #f8f3df;
+			color: #14110d;
 		}
 
 		#credits-thanks {
