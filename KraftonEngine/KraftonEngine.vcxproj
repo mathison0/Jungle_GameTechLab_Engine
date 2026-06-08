@@ -826,6 +826,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Musou\Boss\MusouBossCharacter.cpp" />
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp" />
     <ClCompile Include="Source\Game\Musou\Camera\AnimNotify_CameraShake.cpp" />
+    <ClCompile Include="Source\Game\Musou\Camera\AnimNotify_Slomo.cpp" />
     <ClCompile Include="Source\Game\Musou\Camera\AnimNotifyState_CameraShot.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.cpp" />
     <ClCompile Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.cpp" />
@@ -1352,6 +1353,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Musou\Boss\MusouBossCharacter.h" />
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h" />
     <ClInclude Include="Source\Game\Musou\Camera\AnimNotify_CameraShake.h" />
+    <ClInclude Include="Source\Game\Musou\Camera\AnimNotify_Slomo.h" />
     <ClInclude Include="Source\Game\Musou\Camera\AnimNotifyState_CameraShot.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_ComboWindow.h" />
     <ClInclude Include="Source\Game\Musou\Combat\AnimNotifyState_WeaponTrail.h" />
