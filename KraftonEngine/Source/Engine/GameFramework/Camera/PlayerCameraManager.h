@@ -14,6 +14,14 @@ class UCameraShakeAsset;
 class UCameraShakeBase;
 class UClass;
 
+enum class ECameraRequestPriority : uint8
+{
+	Gameplay = 0,
+	Attack = 10,
+	BossSequence = 50,
+	System = 100
+};
+
 // UE: APlayerCameraManager — PC 가 소유하는 카메라 매니저. AActor 기반.
 // E.1: UCameraManager 에서 변환. 호출자 시그니처/인터페이스 동일, 베이스만 AActor.
 UCLASS()
@@ -41,10 +49,13 @@ public:
 	//  카메라 컴포넌트를 두는 구조라 컴포넌트 단위 blend 가 필요.)
 	// BlendTime <= 0 이면 즉시 swap, > 0 이면 ActiveCamera 는 그대로 두고 PendingActiveCamera
 	// 로 보관해 GetCameraView/UpdateCamera 가 보간.
-	void SetActiveCameraWithBlend(
+	bool SetActiveCameraWithBlend(
 		UCameraComponent* NewCamera,
 		float BlendTime,
-		EViewTargetBlendFunction BlendFunction = EViewTargetBlendFunction::VTBlend_Linear);
+		EViewTargetBlendFunction BlendFunction = EViewTargetBlendFunction::VTBlend_Linear,
+		ECameraRequestPriority Priority = ECameraRequestPriority::Gameplay,
+		bool bLockPriority = false);
+	void ReleaseCameraRequestPriority(ECameraRequestPriority Priority);
 
 	UCameraComponent* GetPossessedCamera() const { return PossessedCamera; }
 	void Possess(UCameraComponent* NewCamera) { PossessedCamera = NewCamera; }
@@ -182,6 +193,8 @@ private:
 	float ActiveCameraBlendTimeRemaining = 0.0f;
 	float ActiveCameraBlendDuration = 0.0f;
 	EViewTargetBlendFunction ActiveCameraBlendFunction = EViewTargetBlendFunction::VTBlend_Linear;
+	ECameraRequestPriority ActiveCameraRequestPriority = ECameraRequestPriority::Gameplay;
+	bool bCameraRequestPriorityLocked = false;
 
 	// 블렌드 진행 중 SetActiveCameraWithBlend 가 다시 호출되면, 이전 ActiveCamera 가 아니라
 	// "현재 화면에 보이는 보간 POV"에서 새 블렌드를 시작해야 튀지 않는다. 그 스냅샷.

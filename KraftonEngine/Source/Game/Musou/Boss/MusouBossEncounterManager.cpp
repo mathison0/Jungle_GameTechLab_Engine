@@ -4,6 +4,7 @@
 #include "Component/Camera/CineCameraComponent.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
+#include "Component/Primitive/HitFlashComponent.h"
 #include "Component/SceneComponent.h"
 #include "Core/Logging/Log.h"
 #include "Game/Musou/Boss/BossPatternComponent.h"
@@ -11,7 +12,9 @@
 #include "Game/Musou/Boss/MusouBossCharacter.h"
 #include "Game/Musou/Character/MusouCharacter.h"
 #include "Game/Musou/Combat/BattleComponent.h"
+#include "Game/Musou/MusouGameSettings.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/Camera/WaveOscillatorCameraShake.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/World.h"
@@ -118,7 +121,12 @@ void AMusouBossEncounterManager::FinishIntro()
 	{
 		if (ReturnCamera)
 		{
-			CameraManager->SetActiveCameraWithBlend(ReturnCamera, CameraBlendOut, EViewTargetBlendFunction::VTBlend_EaseInOut);
+			CameraManager->SetActiveCameraWithBlend(
+				ReturnCamera,
+				CameraBlendOut,
+				EViewTargetBlendFunction::VTBlend_EaseInOut,
+				ECameraRequestPriority::BossSequence,
+				true);
 			CameraManager->Possess(ReturnCamera);
 		}
 	}
@@ -132,6 +140,10 @@ void AMusouBossEncounterManager::FinishIntro()
 	ActiveSequenceKind = EBossSequenceKind::None;
 	ActiveSteps.clear();
 	IntroState = EBossEncounterIntroState::Complete;
+	if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+	{
+		CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
+	}
 	UE_LOG("[BossIntro] finished");
 }
 
@@ -421,6 +433,10 @@ void AMusouBossEncounterManager::FinishSequence()
 		bIntroCameraActive = false;
 		ActiveSequenceKind = EBossSequenceKind::None;
 		ActiveSteps.clear();
+		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+		{
+			CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
+		}
 		UE_LOG("[BossDeath] finished");
 		return;
 	}
@@ -430,12 +446,20 @@ void AMusouBossEncounterManager::FinishSequence()
 		bIntroCameraActive = false;
 		ActiveSequenceKind = EBossSequenceKind::None;
 		ActiveSteps.clear();
+		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+		{
+			CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
+		}
 		UE_LOG("[BossPhase] finished");
 		return;
 	}
 
 	ActiveSequenceKind = EBossSequenceKind::None;
 	ActiveSteps.clear();
+	if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+	{
+		CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
+	}
 }
 
 void AMusouBossEncounterManager::TickActiveSequence(float DeltaTime)
@@ -507,7 +531,12 @@ void AMusouBossEncounterManager::ExecuteSequenceStep(const FBossSequenceStep& St
 
 			if (SequenceCamera)
 			{
-				CameraManager->SetActiveCameraWithBlend(SequenceCamera, Step.Duration, EViewTargetBlendFunction::VTBlend_EaseInOut);
+				CameraManager->SetActiveCameraWithBlend(
+					SequenceCamera,
+					Step.Duration,
+					EViewTargetBlendFunction::VTBlend_EaseInOut,
+					ECameraRequestPriority::BossSequence,
+					true);
 				CameraManager->Possess(SequenceCamera);
 				bIntroCameraActive = bUseGeneratedCamera;
 			}
@@ -518,7 +547,12 @@ void AMusouBossEncounterManager::ExecuteSequenceStep(const FBossSequenceStep& St
 		{
 			if (ReturnCamera)
 			{
-				CameraManager->SetActiveCameraWithBlend(ReturnCamera, Step.Duration, EViewTargetBlendFunction::VTBlend_EaseInOut);
+				CameraManager->SetActiveCameraWithBlend(
+					ReturnCamera,
+					Step.Duration,
+					EViewTargetBlendFunction::VTBlend_EaseInOut,
+					ECameraRequestPriority::BossSequence,
+					true);
 				CameraManager->Possess(ReturnCamera);
 			}
 		}
@@ -534,6 +568,37 @@ void AMusouBossEncounterManager::ExecuteSequenceStep(const FBossSequenceStep& St
 		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
 		{
 			CameraManager->StartCameraFade(0.0f, 1.0f, Step.Duration, FLinearColor::Black(), false, true);
+		}
+		break;
+	case EBossSequenceStepType::CameraShake:
+		if (FMusouGameSettings::Get().IsCameraShakeEnabled())
+		{
+			if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+			{
+				if (!Step.ShakeAssetPath.empty())
+				{
+					CameraManager->StartCameraShakeAsset(Step.ShakeAssetPath, Step.ShakeScale);
+				}
+				else
+				{
+					CameraManager->StartCameraShake<UWaveOscillatorCameraShake>(Step.ShakeScale);
+				}
+			}
+		}
+		break;
+	case EBossSequenceStepType::WarningRim:
+		if (Boss)
+		{
+			if (UHitFlashComponent* HitFlash = Boss->GetComponentByClass<UHitFlashComponent>())
+			{
+				HitFlash->PlayFlash(
+					Step.Color,
+					Step.Duration,
+					Step.Intensity,
+					Step.RimIntensity,
+					Step.RimPower,
+					Step.FillAmount);
+			}
 		}
 		break;
 	case EBossSequenceStepType::PlayAudio:

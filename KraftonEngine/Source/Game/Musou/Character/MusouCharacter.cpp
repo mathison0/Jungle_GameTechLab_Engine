@@ -709,7 +709,16 @@ void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* 
 	// 위치/시선 1프레임 선적용 — 블렌드 목적지 POV 가 처음부터 정답이도록.
 	AimShotCamera();
 
-	CamMgr->SetActiveCameraWithBlend(Cam, Shot.BlendIn, EViewTargetBlendFunction::VTBlend_EaseInOut);
+	if (!CamMgr->SetActiveCameraWithBlend(
+		Cam,
+		Shot.BlendIn,
+		EViewTargetBlendFunction::VTBlend_EaseInOut,
+		ECameraRequestPriority::Attack))
+	{
+		ActiveShotToken = nullptr;
+		ActiveShotCam = nullptr;
+		bAutoInputMouseLook = true;
+	}
 }
 
 void AMusouCharacter::EndCameraShot(const void* Token)
@@ -730,7 +739,11 @@ void AMusouCharacter::EndCameraShot(const void* Token)
 	UCameraComponent* MainCam = GetCamera();
 	if (CamMgr && MainCam)
 	{
-		CamMgr->SetActiveCameraWithBlend(MainCam, ActiveShot.BlendOut, EViewTargetBlendFunction::VTBlend_EaseInOut);
+		CamMgr->SetActiveCameraWithBlend(
+			MainCam,
+			ActiveShot.BlendOut,
+			EViewTargetBlendFunction::VTBlend_EaseInOut,
+			ECameraRequestPriority::Attack);
 	}
 }
 

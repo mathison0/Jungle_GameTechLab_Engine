@@ -137,12 +137,23 @@ bool APlayerCameraManager::ToggleActiveCameraForActor(const AActor* Actor, float
 	return true;
 }
 
-void APlayerCameraManager::SetActiveCameraWithBlend(UCameraComponent* NewCamera, float BlendTime, EViewTargetBlendFunction BlendFunction)
+bool APlayerCameraManager::SetActiveCameraWithBlend(
+	UCameraComponent* NewCamera,
+	float BlendTime,
+	EViewTargetBlendFunction BlendFunction,
+	ECameraRequestPriority Priority,
+	bool bLockPriority)
 {
-	if (!NewCamera) return;
+	if (!NewCamera) return false;
 
 	const bool bBlendInProgress = (PendingActiveCamera
 		&& ActiveCameraBlendTimeRemaining > 0.0f && ActiveCameraBlendDuration > 0.0f);
+
+	if ((bCameraRequestPriorityLocked || bBlendInProgress)
+		&& static_cast<uint8>(Priority) < static_cast<uint8>(ActiveCameraRequestPriority))
+	{
+		return false;
+	}
 
 	// 즉시 전환: BlendTime 미지정, 또는 보간 중이 아니면서 source 가 없거나 같은 카메라.
 	// (보간 중이면 같은 카메라로의 복귀도 현재 POV 에서 부드럽게 이어가야 하므로 즉시 전환 금지.)
@@ -154,7 +165,9 @@ void APlayerCameraManager::SetActiveCameraWithBlend(UCameraComponent* NewCamera,
 		ActiveCameraBlendTimeRemaining = 0.0f;
 		ActiveCameraBlendDuration = 0.0f;
 		bUseBlendFromSnapshot = false;
-		return;
+		ActiveCameraRequestPriority = Priority;
+		bCameraRequestPriorityLocked = bLockPriority;
+		return true;
 	}
 
 	// 보간 중 재호출 — 현재 화면 POV(진행 중 보간 결과)를 스냅샷해 새 블렌드의 source 로 쓴다.
@@ -179,6 +192,20 @@ void APlayerCameraManager::SetActiveCameraWithBlend(UCameraComponent* NewCamera,
 	ActiveCameraBlendDuration = BlendTime;
 	ActiveCameraBlendTimeRemaining = BlendTime;
 	ActiveCameraBlendFunction = BlendFunction;
+	ActiveCameraRequestPriority = Priority;
+	bCameraRequestPriorityLocked = bLockPriority;
+	return true;
+}
+
+void APlayerCameraManager::ReleaseCameraRequestPriority(ECameraRequestPriority Priority)
+{
+	if (static_cast<uint8>(Priority) < static_cast<uint8>(ActiveCameraRequestPriority))
+	{
+		return;
+	}
+
+	ActiveCameraRequestPriority = ECameraRequestPriority::Gameplay;
+	bCameraRequestPriorityLocked = false;
 }
 
 // ─────────────────────────────────────────────────────────────────

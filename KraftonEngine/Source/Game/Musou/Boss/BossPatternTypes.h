@@ -92,7 +92,9 @@ enum class EBossSequenceStepType : uint8
 	SetInvincible,
 	DestroyActor,
 	CameraFadeIn,
-	CameraFadeOut
+	CameraFadeOut,
+	CameraShake,
+	WarningRim
 };
 
 struct FBossSequenceStep
@@ -113,6 +115,13 @@ struct FBossSequenceStep
 	bool bValue = false;
 	bool bLoop = false;
 	FString CameraTag;
+	FString ShakeAssetPath;
+	float ShakeScale = 1.0f;
+	FVector4 Color = FVector4(1.0f, 0.05f, 0.02f, 1.0f);
+	float Intensity = 2.5f;
+	float RimIntensity = 5.0f;
+	float RimPower = 3.0f;
+	float FillAmount = 0.0f;
 };
 
 struct FBossPhaseSequence

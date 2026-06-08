@@ -40,6 +40,8 @@ namespace
 		if (Type == "restore_camera") return EBossSequenceStepType::RestoreCamera;
 		if (Type == "fade_in") return EBossSequenceStepType::CameraFadeIn;
 		if (Type == "fade_out") return EBossSequenceStepType::CameraFadeOut;
+		if (Type == "camera_shake") return EBossSequenceStepType::CameraShake;
+		if (Type == "warning_rim") return EBossSequenceStepType::WarningRim;
 		if (Type == "play_sound") return EBossSequenceStepType::PlayAudio;
 		if (Type == "lock_player") return EBossSequenceStepType::LockPlayer;
 		if (Type == "unlock_player") return EBossSequenceStepType::UnlockPlayer;
@@ -119,6 +121,13 @@ namespace
 		Step.bValue = T.get_or("value", false);
 		Step.bLoop = T.get_or("loop", false);
 		Step.CameraTag = T.get_or("camera_tag", std::string());
+		Step.ShakeAssetPath = T.get_or("shake", std::string());
+		Step.ShakeScale = T.get_or("scale", 1.0f);
+		Step.Color = ParseColor(T["color"], Step.Color);
+		Step.Intensity = T.get_or("intensity", Step.Intensity);
+		Step.RimIntensity = T.get_or("rim", Step.RimIntensity);
+		Step.RimPower = T.get_or("rim_power", Step.RimPower);
+		Step.FillAmount = T.get_or("fill", Step.FillAmount);
 		return Step;
 	}
 
