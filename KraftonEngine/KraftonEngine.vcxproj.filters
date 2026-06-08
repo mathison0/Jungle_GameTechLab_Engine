@@ -1955,6 +1955,9 @@
     <ClCompile Include="Source\Game\Musou\Boss\MusouBossCharacter.cpp">
       <Filter>Source\Game\Musou\Boss</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\MainBoss\AnimNotify_GolemFootstep.cpp">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\MainBoss\AnimNotify_MainBossThrowAimStart.cpp">
       <Filter>Source\Game\Musou\MainBoss</Filter>
     </ClCompile>
@@ -3562,6 +3565,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Boss\MusouBossCharacter.h">
       <Filter>Source\Game\Musou\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\MainBoss\AnimNotify_GolemFootstep.h">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\MainBoss\AnimNotify_MainBossThrowAimStart.h">
       <Filter>Source\Game\Musou\MainBoss</Filter>
