@@ -141,18 +141,40 @@ void APlayerCameraManager::SetActiveCameraWithBlend(UCameraComponent* NewCamera,
 {
 	if (!NewCamera) return;
 
-	// 즉시 전환: BlendTime 미지정 또는 기존 ActiveCamera 가 없어 lerp 의 source 가 없는 경우.
-	if (BlendTime <= 0.0f || !ActiveCamera || ActiveCamera == NewCamera)
+	const bool bBlendInProgress = (PendingActiveCamera
+		&& ActiveCameraBlendTimeRemaining > 0.0f && ActiveCameraBlendDuration > 0.0f);
+
+	// 즉시 전환: BlendTime 미지정, 또는 보간 중이 아니면서 source 가 없거나 같은 카메라.
+	// (보간 중이면 같은 카메라로의 복귀도 현재 POV 에서 부드럽게 이어가야 하므로 즉시 전환 금지.)
+	if (BlendTime <= 0.0f
+		|| (!bBlendInProgress && (!ActiveCamera || ActiveCamera == NewCamera)))
 	{
 		ActiveCamera = NewCamera;
 		PendingActiveCamera = nullptr;
 		ActiveCameraBlendTimeRemaining = 0.0f;
 		ActiveCameraBlendDuration = 0.0f;
+		bUseBlendFromSnapshot = false;
 		return;
 	}
 
-	// 보간 전환: ActiveCamera 는 그대로 둬서 GetCameraView 의 source 로 사용. UpdateCamera 가
-	// timer 를 줄이다 0 도달 시 ActiveCamera = PendingActiveCamera swap.
+	// 보간 중 재호출 — 현재 화면 POV(진행 중 보간 결과)를 스냅샷해 새 블렌드의 source 로 쓴다.
+	// 안 그러면 ActiveCamera(옛 source)에서 다시 시작해 화면이 튄다. (연속 컷/조기 복귀 대응)
+	if (bBlendInProgress)
+	{
+		FMinimalViewInfo CurrentPOV;
+		if (GetCameraView(CurrentPOV))
+		{
+			BlendFromPOVSnapshot = CurrentPOV;
+			bUseBlendFromSnapshot = true;
+		}
+	}
+	else
+	{
+		// 정지 상태에서 시작 — ActiveCamera 가 source.
+		bUseBlendFromSnapshot = false;
+	}
+
+	// 보간 전환: ActiveCamera(또는 스냅샷)는 source 로 두고 UpdateCamera 가 timer 0 도달 시 swap.
 	PendingActiveCamera = NewCamera;
 	ActiveCameraBlendDuration = BlendTime;
 	ActiveCameraBlendTimeRemaining = BlendTime;
@@ -410,12 +432,20 @@ bool APlayerCameraManager::GetCameraView(FMinimalViewInfo& OutPOV) const
 	// (우선) ActiveCamera 단위 blend 가 진행 중이면 현재 ActiveCamera ↔ PendingActiveCamera 보간.
 	// 같은 액터 내 컴포넌트 간 전환에 사용. ViewTarget blend 와 동시 진행 시 ActiveCamera 가 더
 	// 최근 의도이므로 우선.
-	if (PendingActiveCamera && ActiveCamera
+	if (PendingActiveCamera && (ActiveCamera || bUseBlendFromSnapshot)
 		&& ActiveCameraBlendTimeRemaining > 0.0f && ActiveCameraBlendDuration > 0.0f)
 	{
 		FMinimalViewInfo FromPOV;
 		FMinimalViewInfo ToPOV;
-		ActiveCamera->GetCameraView(0.0f, FromPOV);
+		// 보간 중 인터럽트로 시드된 스냅샷이 있으면 그 POV 에서, 아니면 옛 ActiveCamera 에서.
+		if (bUseBlendFromSnapshot)
+		{
+			FromPOV = BlendFromPOVSnapshot;
+		}
+		else
+		{
+			ActiveCamera->GetCameraView(0.0f, FromPOV);
+		}
 		PendingActiveCamera->GetCameraView(0.0f, ToPOV);
 
 		float Alpha = 1.0f - (ActiveCameraBlendTimeRemaining / ActiveCameraBlendDuration);
@@ -498,6 +528,7 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 			ActiveCamera = PendingActiveCamera;
 			PendingActiveCamera = nullptr;
 			ActiveCameraBlendDuration = 0.0f;
+			bUseBlendFromSnapshot = false;   // 블렌드 완료 — 스냅샷 source 해제.
 		}
 	}
 

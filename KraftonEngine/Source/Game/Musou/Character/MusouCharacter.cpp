@@ -231,11 +231,10 @@ void AMusouCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// 몽타주 카메라 샷 — look_at/월드 고정 유지 + 종료 안전망.
-	UpdateCameraShot();
-
 	if (!ComboComponent)
 	{
+		// 콤보 컴포넌트가 없어도 진행 중 카메라 샷은 유지/복귀해야 한다.
+		UpdateCameraShot();
 		return;
 	}
 
@@ -298,6 +297,11 @@ void AMusouCharacter::Tick(float DeltaTime)
 
 	// 공중 콤보 행 타임 — 공중 체인 진행 중 중력 감쇠 적용/원복.
 	UpdateAirComboHang();
+
+	// 몽타주 카메라 샷 — look_at/월드 고정 유지 + 종료 안전망.
+	// ※ 콤보 전진(SnapFacingToInput 캡슐 yaw 스냅) *이후* 에 갱신해야 look-at 회전이
+	//   같은 프레임의 최종 캡슐 yaw 를 반영한다 (스냅 전에 갱신하면 1프레임 회전 튐).
+	UpdateCameraShot();
 }
 
 void AMusouCharacter::UpdateAirComboHang()
@@ -658,8 +662,14 @@ void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* 
 	// 핑퐁 — 직전 샷 카메라는 블렌드 source 일 수 있으므로 반대쪽을 쓴다.
 	UCineCameraComponent* Cam = (ActiveShotCam == CineCamA) ? CineCamB : CineCamA;
 
-	Cam->SetRelativeLocation(Shot.Offset);
-	Cam->SetRelativeRotation(Shot.Rotation);
+	ActiveShot      = Shot;
+	ActiveShotCam   = Cam;
+	ActiveShotToken = Token;
+
+	// 프레이밍 yaw 를 시작 시점에 동결. 시네캠은 캡슐 자식이지만 위치/시선을 이 동결
+	// yaw 로 매 프레임 월드 구동(AimShotCamera)해, 공격 중 캡슐 yaw 스냅과 디커플 → 튐 제거.
+	ShotYaw = GetActorRotation().Yaw;
+
 	Cam->SetFOV(Shot.FOVRad > 0.0f ? Shot.FOVRad : MainCam->GetFOV());
 
 	// 레터박스 — ActiveCamera 로 swap 완료된 시점부터 렌더러가 읽는다.
@@ -670,10 +680,6 @@ void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* 
 		Cam->SetLetterboxThickness(Shot.Letterbox);
 	}
 
-	ActiveShot      = Shot;
-	ActiveShotCam   = Cam;
-	ActiveShotToken = Token;
-
 	// 샷 동안 마우스 룩 동결 — ControlRotation 이 누적되면 블렌드로 메인 복귀할 때
 	// 샷 중 돌린 각도가 그대로 반영돼 카메라가 튄다. 핑퐁 연속 컷에서도 토큰 불일치
 	// End 는 복귀를 안 걸어 체인 내내 false 유지 (마지막 End/안전망에서만 복원).
@@ -681,11 +687,12 @@ void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* 
 
 	if (!Shot.bFollow)
 	{
-		// 월드 고정 샷 — 시작 시점 위치를 캡처해 두고 매 틱 되돌린다 (부모 이동 상쇄).
-		ShotWorldLock = Cam->GetWorldLocation();
+		// 월드 고정 샷 — 동결 yaw 기준 시작 위치를 캡처. 이후 AimShotCamera 가 매 틱 되돌린다.
+		const FVector YawOffset = FRotator(0.0f, ShotYaw, 0.0f).ToQuaternion().RotateVector(Shot.Offset);
+		ShotWorldLock = GetActorLocation() + YawOffset;
 	}
 
-	// 시선 1프레임 선적용 — 블렌드 목적지 POV 가 처음부터 정답이도록.
+	// 위치/시선 1프레임 선적용 — 블렌드 목적지 POV 가 처음부터 정답이도록.
 	AimShotCamera();
 
 	CamMgr->SetActiveCameraWithBlend(Cam, Shot.BlendIn, EViewTargetBlendFunction::VTBlend_EaseInOut);
@@ -738,35 +745,51 @@ void AMusouCharacter::AimShotCamera()
 		return;
 	}
 
-	if (!ActiveShot.bFollow)
-	{
-		Cam->SetWorldLocation(ShotWorldLock);
-	}
-
-	if (!ActiveShot.bLookAt)
-	{
-		return;
-	}
-
-	// 월드 시선 → 캡슐 로컬 변환. 캡슐은 직립(yaw 만 가짐) 전제 —
-	// 월드 yaw 에서 액터 yaw 만 빼면 로컬 yaw 가 된다 (pitch 는 그대로).
-	const FVector Target = GetActorLocation() + FVector(0.0f, 0.0f, ActiveShot.LookAtHeight);
-	const FVector Diff   = Target - Cam->GetWorldLocation();
-	const float Len = std::sqrt(Diff.X * Diff.X + Diff.Y * Diff.Y + Diff.Z * Diff.Z);
-	if (Len < 0.01f)
-	{
-		return;
-	}
-	const FVector Dir = Diff * (1.0f / Len);
-
 	constexpr float Rad2Deg = 180.0f / 3.14159265f;
-	FRotator Rel = FRotator::ZeroRotator;
-	Rel.Pitch = -std::asin(Dir.Z) * Rad2Deg;                      // UCameraComponent::LookAt 과 동일 부호 규약
-	if (std::fabs(Dir.Z) < 0.999f)
+
+	// ── 위치 — 동결 ShotYaw 기준 offset 을 월드로 구동. 캡슐 yaw 스냅과 무관(튐 제거).
+	//   bFollow : 캐릭터 위치 + 동결 yaw offset 을 매 틱 추적.
+	//   !bFollow: 시작 시점 캡처한 ShotWorldLock 으로 고정 (부모 이동 상쇄).
+	FVector WorldPos;
+	if (ActiveShot.bFollow)
 	{
-		Rel.Yaw = std::atan2(Dir.Y, Dir.X) * Rad2Deg - GetActorRotation().Yaw;
+		const FVector YawOffset = FRotator(0.0f, ShotYaw, 0.0f).ToQuaternion().RotateVector(ActiveShot.Offset);
+		WorldPos = GetActorLocation() + YawOffset;
 	}
-	Cam->SetRelativeRotation(Rel);
+	else
+	{
+		WorldPos = ShotWorldLock;
+	}
+	Cam->SetWorldLocation(WorldPos);
+
+	// ── 회전 — SetRelativeRotation 은 부모(캡슐) 기준이므로 액터 yaw 를 빼 월드 기준으로 환산.
+	//   덕분에 캡슐 yaw 가 스냅돼도 (parentYaw + Rel) 가 의도한 월드 각도로 유지된다.
+	if (ActiveShot.bLookAt)
+	{
+		// 캐릭터를 바라본다.
+		const FVector Target = GetActorLocation() + FVector(0.0f, 0.0f, ActiveShot.LookAtHeight);
+		const FVector Diff   = Target - WorldPos;
+		const float Len = std::sqrt(Diff.X * Diff.X + Diff.Y * Diff.Y + Diff.Z * Diff.Z);
+		if (Len < 0.01f)
+		{
+			return;
+		}
+		const FVector Dir = Diff * (1.0f / Len);
+		FRotator Rel = FRotator::ZeroRotator;
+		Rel.Pitch = -std::asin(Dir.Z) * Rad2Deg;                  // UCameraComponent::LookAt 과 동일 부호 규약
+		if (std::fabs(Dir.Z) < 0.999f)
+		{
+			Rel.Yaw = std::atan2(Dir.Y, Dir.X) * Rad2Deg - GetActorRotation().Yaw;
+		}
+		Cam->SetRelativeRotation(Rel);
+	}
+	else
+	{
+		// 고정 시선 — 월드 회전 = 동결 ShotYaw + 저작 Rotation. 부모 yaw 차감으로 환산.
+		FRotator Rel = ActiveShot.Rotation;
+		Rel.Yaw = ShotYaw + ActiveShot.Rotation.Yaw - GetActorRotation().Yaw;
+		Cam->SetRelativeRotation(Rel);
+	}
 }
 
 void AMusouCharacter::PlayHitReaction()

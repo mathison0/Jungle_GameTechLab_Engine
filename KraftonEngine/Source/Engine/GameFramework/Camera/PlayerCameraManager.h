@@ -183,6 +183,11 @@ private:
 	float ActiveCameraBlendDuration = 0.0f;
 	EViewTargetBlendFunction ActiveCameraBlendFunction = EViewTargetBlendFunction::VTBlend_Linear;
 
+	// 블렌드 진행 중 SetActiveCameraWithBlend 가 다시 호출되면, 이전 ActiveCamera 가 아니라
+	// "현재 화면에 보이는 보간 POV"에서 새 블렌드를 시작해야 튀지 않는다. 그 스냅샷.
+	bool bUseBlendFromSnapshot = false;
+	FMinimalViewInfo BlendFromPOVSnapshot;
+
 	// Camera modifier list — priority 오름차순 정렬. 기본 ShakeModifier 1개를 lazy 추가.
 	TArray<UCameraModifier*> ModifierList;
 	UCameraModifier_CameraShake* ShakeModifier = nullptr;  // 빠른 접근용 캐시
