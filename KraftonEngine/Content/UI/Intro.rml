@@ -266,7 +266,7 @@
 			width: 220px;
 			height: 18px;
 			margin-top: 10px;
-			background-color: rgba(73, 73, 73, 0.35);
+			background-color: #49494959;
 			border-width: 1px;
 			border-color: #f0d36a;
 		}
@@ -445,7 +445,7 @@
 			width: 700px;
 			height: 34px;
 			margin-bottom: 2px;
-			background-color: rgba(248, 243, 223, 0.08);
+			background-color: #f8f3df14;
 		}
 
 		.scoreboard-rank {
@@ -525,7 +525,7 @@
 			margin-right: 8px;
 			text-align: center;
 			font-size: 24px;
-			background-color: rgba(240, 211, 106, 0.18);
+			background-color: #f0d36a2e;
 			color: #f0d36a;
 			border-width: 1px;
 			border-color: #f0d36a;
@@ -538,7 +538,7 @@
 
 		.scoreboard-page-button.disabled,
 		.scoreboard-page-button.disabled:hover {
-			background-color: rgba(248, 243, 223, 0.04);
+			background-color: #f8f3df0a;
 			color: #6f6858;
 			border-color: #6f6858;
 		}

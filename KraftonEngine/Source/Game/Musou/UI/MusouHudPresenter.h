@@ -58,6 +58,9 @@ private:
 	void UpdateComboHud(const AMusouGameState* MusouState);
 	void UpdateBloodVignette(float DeltaTime);
 	void UpdateStoryDialog(float DeltaTime);
+	void UpdateStoryDialogCutscene(float DeltaTime);
+	void BeginStoryDialogCutsceneTransition();
+	void HideStoryDialogCutscenes();
 	void RenderStoryDialogText();
 	void FinishStoryDialog();
 	bool StartStoryDialog(EStoryDialogKind InKind);
@@ -84,6 +87,8 @@ private:
 	int32 LastDisplayedKillMilestone = 0;
 	int32 ActiveKillMilestone = 0;
 	int32 StoryDialogPageIndex = 0;
+	int32 StoryDialogCutsceneIndex = -1;
+	int32 StoryDialogCutscenePreviousIndex = -1;
 
 	float KillPopRemaining = 0.0f;
 	float KillMilestoneRemaining = 0.0f;
@@ -93,7 +98,9 @@ private:
 	float StoryDialogTextProgress = 0.0f;
 	float StoryDialogElapsed = 0.0f;
 	float StoryDialogFadeOutElapsed = 0.0f;
+	float StoryDialogCutsceneFadeElapsed = 0.0f;
 	float DeathOverlayElapsed = 0.0f;
 	float VictoryOverlayElapsed = 0.0f;
 	float VictoryHealthRatio = 1.0f;
+	bool bStoryDialogCutsceneFadeActive = false;
 };

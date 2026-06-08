@@ -17,7 +17,7 @@
 			width: 100%;
 			height: 100%;
 			overflow: hidden;
-			background-color: rgba(4, 4, 6, 0.45);
+			background-color: #04040673;
 		}
 
 		/* 아래에서 위로 흐르는 롤 — top 을 C++(AMusouGameModeCredits)가 매 틱 갱신해

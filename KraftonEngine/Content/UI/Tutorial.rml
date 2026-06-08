@@ -27,14 +27,14 @@
 			width: 920px;
 			height: 132px;
 			padding: 14px;
-			background-color: rgba(6, 4, 2, 0.78);
+			background-color: #060402c7;
 			border-width: 2px;
 			border-color: #6b5a2e;
 		}
 
 		/* 단계 클리어 — 초록 플래시로 '성공'을 명확히 표시. */
 		#tutorial-bar.cleared {
-			background-color: rgba(18, 56, 14, 0.86);
+			background-color: #12380edb;
 			border-color: #5fbf3a;
 		}
 

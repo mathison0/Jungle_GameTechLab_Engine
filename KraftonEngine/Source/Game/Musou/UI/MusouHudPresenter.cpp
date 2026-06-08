@@ -31,8 +31,16 @@ namespace
 	constexpr float StoryDialogCharsPerSecond = 24.0f;
 	constexpr float StoryDialogIndicatorPulseSpeed = 5.0f;
 	constexpr float StoryDialogFadeOutDuration = 1.0f;
+	constexpr float StoryDialogCutsceneFadeDuration = 1.5f;
 	constexpr const char* StoryDialogBlackOverlayColor = "#000000ff";
 	constexpr const char* StoryDialogTransparentOverlayColor = "#00000000";
+	constexpr int32 StoryDialogCutsceneCount = 3;
+
+	const char* StoryDialogCutsceneElementIds[StoryDialogCutsceneCount] = {
+		"story-dialog-intro-cutscene-1",
+		"story-dialog-intro-cutscene-2",
+		"story-dialog-intro-cutscene-3",
+	};
 
 	// 승리 결과 연출은 배경 → 타이틀 → 점수/세부 결과 순서로 차례로 드러낸다.
 	// 버튼은 점수 영역의 페이드인이 끝난 뒤 활성화된다.
@@ -153,6 +161,22 @@ namespace
 			"이것이 마지막 전투다.",
 		};
 		return Pages;
+	}
+
+	int32 GetIntroDialogCutsceneIndex(int32 PageIndex)
+	{
+		switch (PageIndex)
+		{
+		case 0:
+			return 0;
+		case 1:
+		case 2:
+			return 1;
+		case 3:
+			return 2;
+		default:
+			return -1;
+		}
 	}
 
 	int32 GetUtf8CodepointLength(unsigned char LeadByte)
@@ -376,6 +400,7 @@ bool FMusouHudPresenter::AdvanceStoryDialog()
 		StoryDialogElapsed = 0.0f;
 		Widget->SetProperty("story-dialog-next-indicator", "visibility", "hidden");
 		Widget->SetProperty("story-dialog-next-indicator", "opacity", "0");
+		BeginStoryDialogCutsceneTransition();
 		RenderStoryDialogText();
 		return false;
 	}
@@ -693,12 +718,129 @@ void FMusouHudPresenter::UpdateBloodVignette(float DeltaTime)
 	}
 }
 
+void FMusouHudPresenter::UpdateStoryDialogCutscene(float DeltaTime)
+{
+	if (!bStoryDialogCutsceneFadeActive || !Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	StoryDialogCutsceneFadeElapsed += DeltaTime;
+	const float Alpha = SmoothStep01(StoryDialogCutsceneFadeElapsed / StoryDialogCutsceneFadeDuration);
+
+	if (StoryDialogCutscenePreviousIndex >= 0 && StoryDialogCutscenePreviousIndex < StoryDialogCutsceneCount)
+	{
+		Widget->SetProperty(StoryDialogCutsceneElementIds[StoryDialogCutscenePreviousIndex], "display", "block");
+		Widget->SetProperty(StoryDialogCutsceneElementIds[StoryDialogCutscenePreviousIndex], "opacity", MakeOpacityValue(1.0f - Alpha));
+	}
+
+	if (StoryDialogCutsceneIndex >= 0 && StoryDialogCutsceneIndex < StoryDialogCutsceneCount)
+	{
+		Widget->SetProperty(StoryDialogCutsceneElementIds[StoryDialogCutsceneIndex], "display", "block");
+		Widget->SetProperty(StoryDialogCutsceneElementIds[StoryDialogCutsceneIndex], "opacity", MakeOpacityValue(Alpha));
+	}
+
+	if (Alpha < 1.0f)
+	{
+		return;
+	}
+
+	if (StoryDialogCutscenePreviousIndex >= 0
+		&& StoryDialogCutscenePreviousIndex < StoryDialogCutsceneCount
+		&& StoryDialogCutscenePreviousIndex != StoryDialogCutsceneIndex)
+	{
+		Widget->SetProperty(StoryDialogCutsceneElementIds[StoryDialogCutscenePreviousIndex], "display", "none");
+		Widget->SetProperty(StoryDialogCutsceneElementIds[StoryDialogCutscenePreviousIndex], "opacity", "0");
+	}
+
+	if (StoryDialogCutsceneIndex >= 0 && StoryDialogCutsceneIndex < StoryDialogCutsceneCount)
+	{
+		Widget->SetProperty(StoryDialogCutsceneElementIds[StoryDialogCutsceneIndex], "display", "block");
+		Widget->SetProperty(StoryDialogCutsceneElementIds[StoryDialogCutsceneIndex], "opacity", "1");
+	}
+	else
+	{
+		HideStoryDialogCutscenes();
+		return;
+	}
+
+	StoryDialogCutscenePreviousIndex = -1;
+	StoryDialogCutsceneFadeElapsed = 0.0f;
+	bStoryDialogCutsceneFadeActive = false;
+}
+
+void FMusouHudPresenter::BeginStoryDialogCutsceneTransition()
+{
+	if (!Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	if (StoryDialogKind != EStoryDialogKind::Intro)
+	{
+		HideStoryDialogCutscenes();
+		return;
+	}
+
+	const int32 NextCutsceneIndex = GetIntroDialogCutsceneIndex(StoryDialogPageIndex);
+	if (NextCutsceneIndex == StoryDialogCutsceneIndex)
+	{
+		for (int32 Index = 0; Index < StoryDialogCutsceneCount; ++Index)
+		{
+			const bool bCurrentCutscene = Index == StoryDialogCutsceneIndex;
+			Widget->SetProperty(StoryDialogCutsceneElementIds[Index], "display", bCurrentCutscene ? "block" : "none");
+			Widget->SetProperty(StoryDialogCutsceneElementIds[Index], "opacity", bCurrentCutscene ? "1" : "0");
+		}
+		StoryDialogCutscenePreviousIndex = -1;
+		StoryDialogCutsceneFadeElapsed = 0.0f;
+		bStoryDialogCutsceneFadeActive = false;
+		return;
+	}
+
+	StoryDialogCutscenePreviousIndex = StoryDialogCutsceneIndex;
+	StoryDialogCutsceneIndex = NextCutsceneIndex;
+	StoryDialogCutsceneFadeElapsed = 0.0f;
+	bStoryDialogCutsceneFadeActive = true;
+
+	for (int32 Index = 0; Index < StoryDialogCutsceneCount; ++Index)
+	{
+		const bool bShouldDisplay =
+			Index == StoryDialogCutscenePreviousIndex || Index == StoryDialogCutsceneIndex;
+		Widget->SetProperty(StoryDialogCutsceneElementIds[Index], "display", bShouldDisplay ? "block" : "none");
+		Widget->SetProperty(StoryDialogCutsceneElementIds[Index], "opacity", Index == StoryDialogCutscenePreviousIndex ? "1" : "0");
+	}
+
+	if (StoryDialogCutscenePreviousIndex < 0 && StoryDialogCutsceneIndex < 0)
+	{
+		HideStoryDialogCutscenes();
+	}
+}
+
+void FMusouHudPresenter::HideStoryDialogCutscenes()
+{
+	if (Widget && Widget->IsDocumentLoaded())
+	{
+		for (int32 Index = 0; Index < StoryDialogCutsceneCount; ++Index)
+		{
+			Widget->SetProperty(StoryDialogCutsceneElementIds[Index], "display", "none");
+			Widget->SetProperty(StoryDialogCutsceneElementIds[Index], "opacity", "0");
+		}
+	}
+
+	StoryDialogCutsceneIndex = -1;
+	StoryDialogCutscenePreviousIndex = -1;
+	StoryDialogCutsceneFadeElapsed = 0.0f;
+	bStoryDialogCutsceneFadeActive = false;
+}
+
 void FMusouHudPresenter::UpdateStoryDialog(float DeltaTime)
 {
 	if ((!IsStoryDialogActive()) || !Widget || !Widget->IsDocumentLoaded())
 	{
 		return;
 	}
+
+	UpdateStoryDialogCutscene(DeltaTime);
 
 	if (bStoryDialogFadeOutActive)
 	{
@@ -781,6 +923,7 @@ void FMusouHudPresenter::FinishStoryDialog()
 	}
 
 	Widget->SetWantsMouse(false);
+	HideStoryDialogCutscenes();
 
 	if (FinishedKind == EStoryDialogKind::Outro)
 	{
@@ -809,6 +952,7 @@ bool FMusouHudPresenter::StartStoryDialog(EStoryDialogKind InKind)
 	}
 
 	bStoryDialogFadeOutActive = false;
+	HideStoryDialogCutscenes();
 	StoryDialogPageIndex = 0;
 	StoryDialogTextProgress = 0.0f;
 	StoryDialogElapsed = 0.0f;
@@ -824,6 +968,7 @@ bool FMusouHudPresenter::StartStoryDialog(EStoryDialogKind InKind)
 	Widget->SetProperty("story-dialog-next-indicator", "opacity", "0");
 	Widget->SetText("story-dialog-text", "");
 	Widget->SetWantsMouse(false);
+	BeginStoryDialogCutsceneTransition();
 	RenderStoryDialogText();
 	Widget->SetProperty("story-dialog-panel", "display", "block");
 	Widget->SetProperty("story-dialog-overlay", "display", "block");
