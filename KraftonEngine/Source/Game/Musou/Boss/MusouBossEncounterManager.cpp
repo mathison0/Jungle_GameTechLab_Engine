@@ -486,22 +486,30 @@ void AMusouBossEncounterManager::ExecuteSequenceStep(const FBossSequenceStep& St
 		}
 		break;
 	case EBossSequenceStepType::BlendCamera:
-		CameraOffset = Step.CameraOffset;
-		LookAtHeight = Step.LookAtHeight;
-		IntroFOV = Step.FOV;
-		EnsureIntroCamera();
-		UpdateIntroCamera();
 		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
 		{
 			if (!ReturnCamera)
 			{
 				ReturnCamera = CameraManager->GetActiveCamera();
 			}
-			if (IntroCamera)
+
+			UCameraComponent* SequenceCamera = FindSequenceCameraByTag(Step.CameraTag);
+			const bool bUseGeneratedCamera = SequenceCamera == nullptr;
+			if (bUseGeneratedCamera)
 			{
-				CameraManager->SetActiveCameraWithBlend(IntroCamera, Step.Duration, EViewTargetBlendFunction::VTBlend_EaseInOut);
-				CameraManager->Possess(IntroCamera);
-				bIntroCameraActive = true;
+				CameraOffset = Step.CameraOffset;
+				LookAtHeight = Step.LookAtHeight;
+				IntroFOV = Step.FOV;
+				EnsureIntroCamera();
+				UpdateIntroCamera();
+				SequenceCamera = IntroCamera;
+			}
+
+			if (SequenceCamera)
+			{
+				CameraManager->SetActiveCameraWithBlend(SequenceCamera, Step.Duration, EViewTargetBlendFunction::VTBlend_EaseInOut);
+				CameraManager->Possess(SequenceCamera);
+				bIntroCameraActive = bUseGeneratedCamera;
 			}
 		}
 		break;
@@ -515,6 +523,18 @@ void AMusouBossEncounterManager::ExecuteSequenceStep(const FBossSequenceStep& St
 			}
 		}
 		bIntroCameraActive = false;
+		break;
+	case EBossSequenceStepType::CameraFadeIn:
+		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+		{
+			CameraManager->StartCameraFade(1.0f, 0.0f, Step.Duration, FLinearColor::Black(), false, false);
+		}
+		break;
+	case EBossSequenceStepType::CameraFadeOut:
+		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+		{
+			CameraManager->StartCameraFade(0.0f, 1.0f, Step.Duration, FLinearColor::Black(), false, true);
+		}
 		break;
 	case EBossSequenceStepType::PlayAudio:
 		if (!Step.SoundPath.empty())
@@ -599,6 +619,42 @@ void AMusouBossEncounterManager::EnsureIntroCamera()
 	{
 		IntroCamera->AttachToComponent(GetRootComponent());
 	}
+}
+
+UCameraComponent* AMusouBossEncounterManager::FindSequenceCameraByTag(const FString& CameraTag) const
+{
+	if (CameraTag.empty())
+	{
+		return nullptr;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	const FName TagName(CameraTag);
+	for (AActor* Actor : World->GetActors())
+	{
+		if (!Actor || !Actor->HasTag(TagName))
+		{
+			continue;
+		}
+
+		if (UCineCameraComponent* CineCamera = Actor->GetComponentByClass<UCineCameraComponent>())
+		{
+			return CineCamera;
+		}
+
+		if (UCameraComponent* Camera = Actor->GetComponentByClass<UCameraComponent>())
+		{
+			return Camera;
+		}
+	}
+
+	UE_LOG("[BossSequence] camera_tag '%s' not found - using generated camera", CameraTag.c_str());
+	return nullptr;
 }
 
 void AMusouBossEncounterManager::UpdateIntroCamera()

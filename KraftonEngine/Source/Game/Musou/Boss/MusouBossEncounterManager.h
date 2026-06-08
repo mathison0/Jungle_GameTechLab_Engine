@@ -105,6 +105,7 @@ private:
 	void TickActiveSequence(float DeltaTime);
 	void ExecuteSequenceStep(const FBossSequenceStep& Step);
 	void EnsureIntroCamera();
+	UCameraComponent* FindSequenceCameraByTag(const FString& CameraTag) const;
 	void UpdateIntroCamera();
 	void FaceBossToPlayer();
 	float GetActiveSequenceEndTime() const;
