@@ -15,6 +15,7 @@ class FMusouHudPresenter
 		None,
 		Intro,
 		Outro,
+		FinalBoss,
 	};
 
 public:
@@ -27,6 +28,7 @@ public:
 	void HideBossHealth();
 	bool StartIntroDialog();
 	bool StartOutroDialog();
+	bool StartFinalBossDialog();
 	bool AdvanceStoryDialog();
 	void StartDeathOverlay();
 
@@ -42,6 +44,7 @@ public:
 	bool IsVictoryOverlayVisible() const { return bVictoryOverlayVisible; }
 	bool IsIntroDialogVisible() const { return StoryDialogKind == EStoryDialogKind::Intro; }
 	bool IsOutroDialogVisible() const { return StoryDialogKind == EStoryDialogKind::Outro; }
+	bool IsFinalBossDialogVisible() const { return StoryDialogKind == EStoryDialogKind::FinalBoss; }
 	bool IsStoryDialogActive() const { return StoryDialogKind != EStoryDialogKind::None || bStoryDialogFadeOutActive; }
 
 	// 사망/승리 결과 오버레이가 떠 있는 동안은 pause 메뉴와 게임 입력을 열지 않는다.

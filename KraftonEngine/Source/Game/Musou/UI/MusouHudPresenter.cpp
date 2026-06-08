@@ -31,6 +31,8 @@ namespace
 	constexpr float StoryDialogCharsPerSecond = 24.0f;
 	constexpr float StoryDialogIndicatorPulseSpeed = 5.0f;
 	constexpr float StoryDialogFadeOutDuration = 1.0f;
+	constexpr const char* StoryDialogBlackOverlayColor = "#000000ff";
+	constexpr const char* StoryDialogTransparentOverlayColor = "#00000000";
 
 	// 승리 결과 연출은 배경 → 타이틀 → 점수/세부 결과 순서로 차례로 드러낸다.
 	// 버튼은 점수 영역의 페이드인이 끝난 뒤 활성화된다.
@@ -137,6 +139,18 @@ namespace
 			"하지만 이 평화가 영원할지는 아무도 알 수 없다.",
 			"언젠가 또 다른 어둠이 찾아온다면,\n우리는 다시 검을 들 것이다.",
 			"정글의 땅을 지키기 위해.",
+		};
+		return Pages;
+	}
+
+	const TArray<FString>& GetFinalBossDialogPages()
+	{
+		static const TArray<FString> Pages = {
+			"……늦었다.",
+			"오래전 세계를 멸망 직전까지 몰아넣었던 그 존재가\n다시 이 땅에 모습을 드러냈다.",
+			"깨어난 골렘을 쓰러뜨리지 못한다면,\n세계의 평화는 이곳에서 사라질 것이다.",
+			"검을 들어라.",
+			"이것이 마지막 전투다.",
 		};
 		return Pages;
 	}
@@ -326,6 +340,11 @@ bool FMusouHudPresenter::StartIntroDialog()
 bool FMusouHudPresenter::StartOutroDialog()
 {
 	return StartStoryDialog(EStoryDialogKind::Outro);
+}
+
+bool FMusouHudPresenter::StartFinalBossDialog()
+{
+	return StartStoryDialog(EStoryDialogKind::FinalBoss);
 }
 
 bool FMusouHudPresenter::AdvanceStoryDialog()
@@ -775,6 +794,7 @@ void FMusouHudPresenter::FinishStoryDialog()
 
 	Widget->SetProperty("story-dialog-overlay", "display", "none");
 	Widget->SetProperty("story-dialog-overlay", "opacity", "1");
+	Widget->SetProperty("story-dialog-overlay", "background-color", StoryDialogBlackOverlayColor);
 	Widget->SetProperty("story-dialog-panel", "display", "block");
 }
 
@@ -794,7 +814,12 @@ bool FMusouHudPresenter::StartStoryDialog(EStoryDialogKind InKind)
 	StoryDialogElapsed = 0.0f;
 	StoryDialogFadeOutElapsed = 0.0f;
 
+	const bool bUseSceneOverlay = InKind == EStoryDialogKind::Intro || InKind == EStoryDialogKind::Outro;
 	Widget->SetProperty("story-dialog-overlay", "opacity", "1");
+	Widget->SetProperty(
+		"story-dialog-overlay",
+		"background-color",
+		bUseSceneOverlay ? StoryDialogBlackOverlayColor : StoryDialogTransparentOverlayColor);
 	Widget->SetProperty("story-dialog-next-indicator", "visibility", "hidden");
 	Widget->SetProperty("story-dialog-next-indicator", "opacity", "0");
 	Widget->SetText("story-dialog-text", "");
@@ -813,6 +838,8 @@ const TArray<FString>& FMusouHudPresenter::GetActiveStoryDialogPages() const
 		return GetIntroDialogPages();
 	case EStoryDialogKind::Outro:
 		return GetOutroDialogPages();
+	case EStoryDialogKind::FinalBoss:
+		return GetFinalBossDialogPages();
 	default:
 		break;
 	}

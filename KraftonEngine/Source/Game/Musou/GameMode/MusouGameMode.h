@@ -91,6 +91,9 @@ public:
 	// 승리 조건 달성 시 호출 — 결과 스냅샷 생성 후 매치 종료.
 	virtual void NotifyVictory();
 
+	// 최종 보스 조우 시 호출 — 전투 전 story dialog를 띄우고 월드를 일시정지한다.
+	virtual void NotifyFinalBossEncounterStarted();
+
 	// 플레이어에게 실제 데미지가 적용된 순간 호출 — HUD 피격 연출 진입점.
 	virtual void NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator);
 

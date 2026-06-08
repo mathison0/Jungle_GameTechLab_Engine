@@ -342,11 +342,12 @@ void AMusouGameMode::Tick(float DeltaTime)
 	{
 		const bool bWasIntroDialog = HudPresenter.IsIntroDialogVisible();
 		const bool bWasOutroDialog = HudPresenter.IsOutroDialogVisible();
-		if ((bWasIntroDialog || bWasOutroDialog) && (Input.GetKeyDown(VK_SPACE) || Input.GetKeyDown(VK_LBUTTON)))
+		const bool bWasFinalBossDialog = HudPresenter.IsFinalBossDialogVisible();
+		if ((bWasIntroDialog || bWasOutroDialog || bWasFinalBossDialog) && (Input.GetKeyDown(VK_SPACE) || Input.GetKeyDown(VK_LBUTTON)))
 		{
 			if (HudPresenter.AdvanceStoryDialog())
 			{
-				if (bWasIntroDialog)
+				if (bWasIntroDialog || bWasFinalBossDialog)
 				{
 					SetGameInputPossessed(true);
 					if (UWorld* World = GetWorld())
@@ -375,6 +376,13 @@ void AMusouGameMode::Tick(float DeltaTime)
 	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible && Input.GetKeyDown('T'))
 	{
 		NotifyVictory();
+	}
+
+	// TODO: 최종 보스 등장 연출이 연결되면 제거할 테스트 진입점.
+	// 현재는 플레이 중 Y 키로 최종 보스 story dialog를 검증한다.
+	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible && Input.GetKeyDown('Y'))
+	{
+		NotifyFinalBossEncounterStarted();
 	}
 
 	// 일시정지/설정 토글 — ESC 또는 P. (PIE 에서는 ESC 가 에디터의 PIE 종료에 쓰이므로
@@ -658,6 +666,32 @@ void AMusouGameMode::NotifyVictory()
 	if (UWorld* World = GetWorld())
 	{
 		World->SetPaused(bStartedOutroDialog);
+	}
+}
+
+void AMusouGameMode::NotifyFinalBossEncounterStarted()
+{
+	AMusouGameState* MusouState = GetMusouGameState();
+	if ((MusouState && MusouState->IsMatchEnded()) || HudPresenter.IsStoryDialogActive() || HudPresenter.IsResultOverlayVisible())
+	{
+		return;
+	}
+
+	SetStopMenuVisible(false);
+
+	if (!HudPresenter.StartFinalBossDialog())
+	{
+		return;
+	}
+
+	SetGameInputPossessed(false);
+	PauseMenuNavigator.ClearSelection();
+	DeathMenuNavigator.ClearSelection();
+	VictoryMenuNavigator.ClearSelection();
+
+	if (UWorld* World = GetWorld())
+	{
+		World->SetPaused(true);
 	}
 }
 
