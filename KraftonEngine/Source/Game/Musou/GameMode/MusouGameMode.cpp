@@ -394,6 +394,63 @@ void AMusouGameMode::Tick(float DeltaTime)
 		NotifyFinalBossEncounterStarted();
 	}
 
+	// ── 치트 (디버그) — F1 플레이어 죽이기 / F2 보스 죽이기 / F3 무적 토글 / F4 체력 +100 /
+	//                   F5 공격력 999999 토글 ──
+	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible)
+	{
+		APawn* PlayerPawn = GetPlayerController() ? GetPlayerController()->GetPossessedPawn() : nullptr;
+		UBattleComponent* PlayerBattle = PlayerPawn ? PlayerPawn->GetComponentByClass<UBattleComponent>() : nullptr;
+
+		if (PlayerBattle && Input.GetKeyDown(VK_F1))
+		{
+			PlayerBattle->Kill();
+			UE_LOG("[Cheat] 플레이어 죽이기");
+		}
+		if (PlayerBattle && Input.GetKeyDown(VK_F3))
+		{
+			const bool bOn = !PlayerBattle->IsCheatInvincible();
+			PlayerBattle->SetCheatInvincible(bOn);
+			UE_LOG("[Cheat] 무적 %s", bOn ? "ON" : "OFF");
+		}
+		if (PlayerBattle && Input.GetKeyDown(VK_F4))
+		{
+			PlayerBattle->Heal(100.0f);
+			UE_LOG("[Cheat] 체력 +100 (%.0f/%.0f)", PlayerBattle->GetHealth(), PlayerBattle->GetMaxHealth());
+		}
+		if (PlayerBattle && Input.GetKeyDown(VK_F5))
+		{
+			const bool bOn = !PlayerBattle->IsCheatAttackPower();
+			PlayerBattle->SetCheatAttackPower(bOn);
+			UE_LOG("[Cheat] 공격력 999999 %s", bOn ? "ON" : "OFF");
+		}
+
+		// F2: 보스 죽이기 — 플레이어 외 BattleComponent 보유 액터(보스류)를 전부 처치.
+		// (군체 잡졸은 BattleComponent 가 없는 SoA 라 영향 없음.)
+		if (Input.GetKeyDown(VK_F2))
+		{
+			int32 Killed = 0;
+			if (UWorld* World = GetWorld())
+			{
+				for (AActor* Actor : World->GetActors())
+				{
+					if (!Actor || Actor == PlayerPawn)
+					{
+						continue;
+					}
+					if (UBattleComponent* Battle = Actor->GetComponentByClass<UBattleComponent>())
+					{
+						if (!Battle->IsDead())
+						{
+							Battle->Kill();
+							++Killed;
+						}
+					}
+				}
+			}
+			UE_LOG("[Cheat] 보스 죽이기 — %d 처치", Killed);
+		}
+	}
+
 	// 일시정지/설정 토글 — ESC 또는 P. (PIE 에서는 ESC 가 에디터의 PIE 종료에 쓰이므로
 	// P 로도 열 수 있게 해 PIE/패키징 양쪽에서 인게임 설정 접근이 가능하도록 한다.)
 	if (!HudPresenter.IsResultOverlayVisible()
@@ -455,12 +512,22 @@ void AMusouGameMode::NotifyAttackComboHits(const FMusouAttackEvent& Event, int32
 		{
 			MusouState->AddCombo(HitCount);
 
-			// 무쌍 게이지 — 적중 누적으로 적립. 단 무쌍기 자체의 충격파/착지 히트로는
-			// 재충전되지 않게 발동 중이면 제외 (끝나면 평시 타격으로 다시 채운다).
+			// 무쌍 게이지 + 콤보 회복 — 적중 누적. 단 무쌍기 자체의 충격파/착지 히트로는
+			// 재충전/회복되지 않게 발동 중이면 제외 (끝나면 평시 타격만 반영).
 			AMusouCharacter* Player = Cast<AMusouCharacter>(Event.Attacker);
 			if (!Player || !Player->IsUltimateActive())
 			{
 				MusouState->AddMusouGaugeFromHits(HitCount);
+
+				// 콤보 회복 — 적중 수 × feedback.heal.per_hit 만큼 플레이어 체력 회복.
+				const float HealPerHit = FAttackDataRegistry::Get().GetFeedback().HealPerComboHit;
+				if (HealPerHit > 0.0f && Player)
+				{
+					if (UBattleComponent* Battle = Player->GetBattleComponent())
+					{
+						Battle->Heal(HealPerHit * static_cast<float>(HitCount));
+					}
+				}
 			}
 		}
 	}

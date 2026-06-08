@@ -154,6 +154,9 @@ struct FMusouFeedbackParams
 	// 무쌍 게이지 — 이 히트 수(적중 누적)를 채우면 무쌍기(R) 발동 가능
 	int32 UltimateHitsToFill = 80;
 
+	// 콤보 회복 — 플레이어 적중 1회당 회복하는 HP (0 = 회복 없음). 군체 콤보로 체력 유지.
+	float HealPerComboHit = 0.0f;
+
 	// 플레이어 피격 리액션 최소 간격 (초) — 군체 다단 히트로 스턴락되지 않게
 	float HitReactCooldown = 1.2f;
 
