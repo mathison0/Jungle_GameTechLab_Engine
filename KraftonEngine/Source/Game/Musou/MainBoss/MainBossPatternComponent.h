@@ -31,6 +31,7 @@ public:
 	void PrepareDormantPose();
 	float PlayEncounterGettingUp(APawn* Target);
 	float PlayEncounterBattlecry(APawn* Target);
+	float PlayEncounterSequence(const FString& SequencePath, APawn* Target, float PlayRate = 1.0f);
 	void StartEncounterCombat();
 
 	UPROPERTY(Edit, Save, Category="Main Boss|Animation", DisplayName="Idle Sequence", AssetType="UAnimSequence")

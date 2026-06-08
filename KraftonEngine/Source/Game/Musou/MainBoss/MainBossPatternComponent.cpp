@@ -345,6 +345,23 @@ float UMainBossPatternComponent::PlayEncounterBattlecry(APawn* Target)
 	return Sequence ? (std::max)(Sequence->GetPlayLength(), 0.2f) : 1.0f;
 }
 
+float UMainBossPatternComponent::PlayEncounterSequence(const FString& SequencePath, APawn* Target, float PlayRate)
+{
+	ResetThrowAim();
+	bDormant = false;
+	bEncounterCinematic = true;
+	bPatternEnabled = false;
+	CurrentPattern = nullptr;
+	CurrentStepIndex = 0;
+	State = EMainBossPatternState::Decide;
+	StateTime = 0.0f;
+	ActiveExecutionTime = 0.0f;
+
+	FaceTarget(Target);
+	UAnimSequence* Sequence = PlaySequencePath(SequencePath, false, (std::max)(PlayRate, 0.01f), true);
+	return Sequence ? (std::max)(Sequence->GetPlayLength() / (std::max)(PlayRate, 0.01f), 0.2f) : 1.0f;
+}
+
 void UMainBossPatternComponent::StartEncounterCombat()
 {
 	ResetThrowAim();

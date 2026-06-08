@@ -1,6 +1,8 @@
 local MONTAGE_DIR = "Content/Montages/"
+local GOLEM_BOSS_DIR = "Content/Data/GameJam/Golem_Boss/"
 
 local function montage(name) return MONTAGE_DIR .. name .. "_Montage.uasset" end
+local function golem_boss_anim(name) return GOLEM_BOSS_DIR .. name .. ".uasset" end
 
 return {
     bosses = {
@@ -18,6 +20,7 @@ return {
             intro = {
                 { type = "lock_player", time = 0.0, value = true },
                 { type = "set_pattern_enabled", time = 0.0, value = false },
+                { type = "set_particle_enabled", time = 0.0, value = false },
                 { type = "face_target", time = 0.0 },
                 { type = "fade_out", time = 0.0, duration = 0.25 },
                 { type = "blend_camera", time = 0.0, duration = 0.35, offset = { 10.5, 1.0, 2.0 }, look_at_height = 1.5, fov = 0.87266463, camera_tag = "WarriorBoss" },
@@ -35,6 +38,7 @@ return {
 
             death = {
                 { type = "set_pattern_enabled", time = 0.0, value = false },
+                { type = "set_particle_enabled", time = 0.0, value = false },
                 { type = "stop_movement", time = 0.0 },
                 { type = "set_invincible", time = 0.0, value = true },
                 { type = "play_sound", time = 0.05, sound = "Boss_Warrior/boss_warrior_death.wav", volume = 1.0 },
@@ -59,6 +63,7 @@ return {
                         { type = "dialogue", time = 0.4, text = "이제부터 시작이다!" },
                         { type = "play_montage", time = 0.7, montage = montage("sword and shield power up_mixamo_com_Warrior"), play_rate = 1.0, blend_in = 0.1 },
                         { type = "warning_rim", time = 1.3, duration = 1.5, color = { 1.0, 0.05, 0.02, 1.0 }, intensity = 10.0, rim = 10.0, rim_power = 10.0, fill = 0.2 },
+                        { type = "set_particle_enabled", time = 1.3, value = true },
                         { type = "restore_camera", time = 2.65, duration = 0.35 },
                         { type = "set_invincible", time = 3.0, value = false },
                         { type = "set_pattern_enabled", time = 3.0, value = true },
@@ -203,6 +208,30 @@ return {
                         { type = "face_target", time = 1.5 }
                     },
                 }
+            },
+        },
+
+        golem_boss = {
+            display_name = "Golem",
+
+            intro = {
+                { type = "lock_player", time = 0.0, value = true },
+                { type = "set_pattern_enabled", time = 0.0, value = false },
+                { type = "set_invincible", time = 0.0, value = true },
+                { type = "face_target", time = 0.0 },
+                { type = "fade_out", time = 0.0, duration = 0.25 },
+                { type = "blend_camera", time = 0.0, duration = 0.35, offset = { 10.5, -2.5, 4.0 }, look_at_height = 4.0, fov = 0.87266463 },
+                { type = "fade_in", time = 0.6, duration = 0.35 },
+                { type = "play_sound", time = 0.6, sound = "Boss_Golem/earthquake.wav", volume = 1.0 },
+                { type = "camera_shake", time = 0.6, scale = 1.25, shake = "Content/Particle/Earthquake.uasset" },
+                { type = "play_montage", time = 0.6, montage = golem_boss_anim("Golem_Boss_Getting_Up_mixamo_com"), play_rate = 1.0 },
+                { type = "face_target", time = 9.0 },
+                { type = "play_montage", time = 9.0, montage = golem_boss_anim("Golem_Boss_Battlecry_mixamo_com"), play_rate = 1.0 },
+                { type = "camera_shake", time = 9.0, scale = 1.0, shake = "Content/Particle/GolemGrowl.uasset" },
+                { type = "restore_camera", time = 11.0, duration = 0.35 },
+                { type = "set_invincible", time = 11.0, value = false },
+                { type = "unlock_player", time = 11.0 },
+                { type = "set_pattern_enabled", time = 11.0, value = true },
             },
         },
 

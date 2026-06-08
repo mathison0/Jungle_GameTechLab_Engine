@@ -42,6 +42,7 @@ namespace
 		if (Type == "fade_out") return EBossSequenceStepType::CameraFadeOut;
 		if (Type == "camera_shake") return EBossSequenceStepType::CameraShake;
 		if (Type == "warning_rim") return EBossSequenceStepType::WarningRim;
+		if (Type == "set_particle_enabled") return EBossSequenceStepType::SetParticleEnabled;
 		if (Type == "play_sound") return EBossSequenceStepType::PlayAudio;
 		if (Type == "lock_player") return EBossSequenceStepType::LockPlayer;
 		if (Type == "unlock_player") return EBossSequenceStepType::UnlockPlayer;
@@ -388,7 +389,7 @@ bool FBossPatternDataRegistry::LoadFromLua()
 			}
 		}
 
-		if (Boss.IsValid())
+		if (Boss.IsValid() || !Boss.IntroSteps.empty())
 		{
 			NewBosses.push_back(std::move(Boss));
 		}
