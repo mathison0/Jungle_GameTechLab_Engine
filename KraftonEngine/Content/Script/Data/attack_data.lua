@@ -52,10 +52,11 @@ return {
         -- shake: 히트 시 카메라 셰이크 강도 (0/생략 = 없음). 피니셔일수록 크게.
         --                 range height cone_deg dmg   kb    kb_dur shake
         attack1     = { range = 5.0, height = 2.5, cone_deg = 360, dmg = 2.5, kb = 6.0, kb_dur = 0.30, shake = 0.25 }, -- 360 High — 3단 분기 대피니셔 (시퀀스에 저작된 id)
-        attack2     = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.5, kb = 4.0, kb_dur = 0.20, shake = 0.10 }, -- Backhand
+        attack2     = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.5, kb = 4.0, kb_dur = 0.20, shake = 0.10, hit_sound = "punch.wav" }, -- Backhand
 
         -- 좌클릭 콤보 체인 — 단계가 오를수록 강해진다 (주입형 스텝용)
         light1      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.0, kb = 1.5, kb_dur = 0.10, shake = 0.05 },
+        kick_light1 = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.0, kb = 1.5, kb_dur = 0.10, shake = 0.05, hit_sound = "punch.wav" },
         light2      = { range = 3.5, height = 2.5, cone_deg = 140, dmg = 1.2, kb = 2.0, kb_dur = 0.12, shake = 0.08 },
         light3      = { range = 4.5, height = 2.5, cone_deg = 360, dmg = 2.0, kb = 5.0, kb_dur = 0.25, shake = 0.18 }, -- 3단 피니셔
 
@@ -84,7 +85,7 @@ return {
         air2        = { range = 4.0, height = 3.5, cone_deg = 360, dmg = 1.4, kb = 1.5, kb_dur = 0.12, shake = 0.10, launch = 5.0 }, -- 공중 2타
 
         -- 공중 강공격 — 도약 내려찍기 강화판 (광역 + 강넉백)
-        jump_heavy  = { range = 5.0, height = 3.5, cone_deg = 360, dmg = 2.3, kb = 5.0, kb_dur = 0.25, shake = 0.2 },
+        jump_heavy  = { range = 5.0, height = 3.5, cone_deg = 360, dmg = 2.3, kb = 5.0, kb_dur = 0.25, shake = 0.2, hit_sound = "punch.wav" },
 
         -- 무쌍기 마무리 강타 — 광범위 전방위 + 강넉백 + 띄움 (난무의 방점)
         musou_slam  = { range = 7.0, height = 3.0, cone_deg = 360, dmg = 3.0, kb = 7.0, kb_dur = 0.30, shake = 0.4, launch = 6.0 },
@@ -101,14 +102,14 @@ return {
         boss_dash_slash = { range = 5.5, height = 3.0, cone_deg = 120, dmg = 1.2, kb = 4.0, kb_dur = 0.25 },
 
         -- Main boss patterns - Golem_Boss animation notifies reference these by AttackId.
-        main_boss_attack_slow  = { range = 5.8, height = 3.5, cone_deg = 160, dmg = 1.25, kb = 4.5, kb_dur = 0.27, shake = 0.18 },
-        main_boss_attack_kick  = { range = 4.8, height = 3.0, cone_deg = 120, dmg = 1.00, kb = 5.0, kb_dur = 0.22, shake = 0.12 },
-        main_boss_attack       = { range = 5.6, height = 3.5, cone_deg = 150, dmg = 1.15, kb = 4.0, kb_dur = 0.25, shake = 0.16 },
-        main_boss_combo2_v1    = { range = 5.5, height = 3.5, cone_deg = 180, dmg = 1.25, kb = 5.0, kb_dur = 0.26, shake = 0.16 },
-        main_boss_combo2_v2    = { range = 5.5, height = 3.5, cone_deg = 180, dmg = 1.30, kb = 5.0, kb_dur = 0.26, shake = 0.17 },
-        main_boss_jump_attack  = { range = 6.5, height = 4.0, cone_deg = 360, dmg = 1.55, kb = 6.0, kb_dur = 0.30, shake = 0.22 },
-        main_boss_throw_attack = { range = 15.0, height = 3.5, cone_deg = 35,  dmg = 1.20, kb = 3.0, kb_dur = 0.18, shake = 0.10 },
-        main_boss_combo3       = { range = 6.0, height = 3.5, cone_deg = 180, dmg = 1.35, kb = 5.5, kb_dur = 0.28, shake = 0.18 },
+        main_boss_attack_slow  = { range = 5.8, height = 3.5, cone_deg = 160, dmg = 1.25, kb = 4.5, kb_dur = 0.27, shake = 0.18, hit_sound = "punch.wav" },
+        main_boss_attack_kick  = { range = 4.8, height = 3.0, cone_deg = 120, dmg = 1.00, kb = 5.0, kb_dur = 0.22, shake = 0.12, hit_sound = "punch.wav" },
+        main_boss_attack       = { range = 5.6, height = 3.5, cone_deg = 150, dmg = 1.15, kb = 4.0, kb_dur = 0.25, shake = 0.16, hit_sound = "punch.wav" },
+        main_boss_combo2_v1    = { range = 5.5, height = 3.5, cone_deg = 180, dmg = 1.25, kb = 5.0, kb_dur = 0.26, shake = 0.16, hit_sound = "punch.wav" },
+        main_boss_combo2_v2    = { range = 5.5, height = 3.5, cone_deg = 180, dmg = 1.30, kb = 5.0, kb_dur = 0.26, shake = 0.17, hit_sound = "punch.wav" },
+        main_boss_jump_attack  = { range = 6.5, height = 4.0, cone_deg = 360, dmg = 1.55, kb = 6.0, kb_dur = 0.30, shake = 0.22, hit_sound = "punch.wav" },
+        main_boss_throw_attack = { range = 15.0, height = 3.5, cone_deg = 35,  dmg = 1.20, kb = 3.0, kb_dur = 0.18, shake = 0.10, hit_sound = "punch.wav" },
+        main_boss_combo3       = { range = 6.0, height = 3.5, cone_deg = 180, dmg = 1.35, kb = 5.5, kb_dur = 0.28, shake = 0.18, hit_sound = "punch.wav" },
     },
 
     steps = {
@@ -124,7 +125,7 @@ return {
         -- 콤보 변주 (체인 칸에서 기존 단계와 랜덤 교차) — 시퀀스에 notify 없음 → 주입
         kick          = { montage = montage("Barbarian_Melee Attack Kick Ver. 2"),       -- 1.40s, 제자리 킥
                           sequence = seq("Barbarian_Melee Attack Kick Ver. 2"),
-                          blend_in = 0.1, attack_id = "light1", hit_frac = 0.40, window = { 0.55, 0.85 },
+                          blend_in = 0.1, attack_id = "kick_light1", hit_frac = 0.40, window = { 0.55, 0.85 },
                           play_rate = { 0.95, 1.05 } },
         gs_slash4     = { montage = montage("great sword slash (4)_mixamo_com"),         -- 1.80s, 전진 +1.1m 베기
                           sequence = seq("great sword slash (4)_mixamo_com"),

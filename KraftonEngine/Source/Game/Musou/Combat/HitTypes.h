@@ -17,4 +17,6 @@ struct FMusouHitEvent
 
 	float Damage = 0.0f;
 	bool bKilled = false;
+
+	FString HitSoundPath;
 };

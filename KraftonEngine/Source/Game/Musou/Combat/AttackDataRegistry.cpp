@@ -35,6 +35,7 @@ namespace
 		S.ShakeScale    = T.get_or("shake",    0.0f);
 		S.LaunchZ       = T.get_or("launch",   0.0f);
 		S.SelfLaunchZ   = T.get_or("self_launch", 0.0f);
+		S.HitSoundPath  = T.get_or("hit_sound", std::string("slash.mp3"));
 		return S;
 	}
 
