@@ -1,5 +1,5 @@
 local BGM_KEY = "Play1BGM"
-local BGM_PATH = "Play1_bgm.wav"
+local BGM_PATH = "Play1_bgm.mp3"
 
 function BeginPlay()
     if AudioManager.Load(BGM_KEY, BGM_PATH, true) then
