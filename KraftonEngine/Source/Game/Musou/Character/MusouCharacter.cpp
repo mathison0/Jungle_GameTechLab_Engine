@@ -432,8 +432,9 @@ void AMusouCharacter::OnHeavyAttackPressed()
 
 void AMusouCharacter::OnUltimatePressed()
 {
-	// 지상에서만, 중복 발동 금지. 진행 중인 콤보/몽타주는 발동 시 전부 캔슬 (최우선 입력).
-	if (bUltimateActive || IsFalling())
+	// 중복 발동만 금지 — 공중 콤보 중에도 발동 가능 (좌좌우 → 궁 등). 진행 중인 콤보/몽타주는
+	// 발동 시 전부 캔슬 (최우선 입력). 공중에서 발동하면 백플립/강타/충격파 후 슬램 착지로 마무리.
+	if (bUltimateActive)
 	{
 		return;
 	}
@@ -459,6 +460,15 @@ void AMusouCharacter::OnUltimatePressed()
 		ComboComponent->ResetCombo();
 	}
 	EndRoll();   // 구르기 중 발동 — 구르기 상태 정리 (무적은 아래서 다시 켠다)
+
+	// 공중 콤보 중 발동 — 저글/행 타임 상태 정리. 행 타임은 Gravity 를 직접 줄여 두므로
+	// 명시 복원해야 궁극기 leap 의 GravityScale 과 이중 감쇠되지 않는다.
+	bJuggleAirborne = false;
+	if (CharacterMovement && bAirComboHangActive)
+	{
+		CharacterMovement->Gravity = SavedGravity;
+		bAirComboHangActive = false;
+	}
 
 	// 납도 상태 발동 — 즉시 발도 (난무가 모션을 점유하므로 발도 모션은 생략).
 	bWeaponDrawn = true;
