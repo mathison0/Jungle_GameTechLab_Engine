@@ -1,4 +1,4 @@
-#include "Engine/Runtime/GameRenderPipeline.h"
+﻿#include "Engine/Runtime/GameRenderPipeline.h"
 
 #include "Engine/Runtime/GameEngine.h"
 #include "GameFramework/GameMode/PlayerController.h"
@@ -62,7 +62,7 @@ void FGameRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 	Frame.WorldType = World->GetWorldType();
 
 	FViewportRenderOptions Opts;
-	Opts.ViewMode = EViewMode::Lit_Phong;
+	Opts.ViewMode = EViewMode::Lit_Lambert;
 	Frame.SetRenderOptions(Opts);
 
 	FScene* Scene = &World->GetScene();
