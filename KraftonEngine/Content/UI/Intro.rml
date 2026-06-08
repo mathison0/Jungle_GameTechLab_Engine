@@ -29,7 +29,7 @@
 		#menu-buttons {
 			position: absolute;
 			left: 20%;
-			top: 52%;
+			top: 46%;
 			display: block;
 			width: 24%;
 		}
@@ -202,6 +202,85 @@
 		#audio-settings-close-button {
 			margin-left: 100px;
 			margin-top: 28px;
+			width: 240px;
+		}
+
+		@keyframes keyguide-in {
+			from { opacity: 0; transform: translateY(48px); }
+			to   { opacity: 1; transform: translateY(0px); }
+		}
+
+		#keyguide-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #030508c8;
+		}
+
+		#keyguide-panel {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -310px;
+			margin-top: -290px;
+			display: block;
+			width: 620px;
+			height: 580px;
+			padding: 30px;
+			background-color: #080202e6;
+			border-width: 2px;
+			border-color: #6b5a2e;
+			color: #f8f3df;
+			animation: keyguide-in 0.35s ease-out;
+		}
+
+		#keyguide-title {
+			display: block;
+			width: 620px;
+			height: 52px;
+			line-height: 52px;
+			margin-bottom: 14px;
+			text-align: center;
+			font-size: 36px;
+			color: #f0d36a;
+		}
+
+		.keyguide-row {
+			display: flex;
+			align-items: center;
+			width: 620px;
+			height: 44px;
+			margin-bottom: 8px;
+		}
+
+		.keyguide-key {
+			display: block;
+			width: 180px;
+			height: 40px;
+			line-height: 40px;
+			margin-right: 28px;
+			text-align: center;
+			font-size: 21px;
+			color: #17130c;
+			background-color: #f0d36a;
+			border-width: 1px;
+			border-color: #b89a3c;
+		}
+
+		.keyguide-desc {
+			display: block;
+			height: 40px;
+			line-height: 40px;
+			font-size: 24px;
+			color: #f8f3df;
+		}
+
+		#keyguide-close-button {
+			margin-left: 190px;
+			margin-top: 22px;
 			width: 240px;
 		}
 
@@ -476,6 +555,16 @@
 				<img class="button-frame button-frame-hover" src="btn_hover.png" />
 				<div class="button-label">스코어 보드</div>
 			</div>
+			<div id="controls-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">조작 안내</div>
+			</div>
+			<div id="credits-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">크레딧</div>
+			</div>
 			<div id="exit-button" class="menu-button secondary-button">
 				<img class="button-frame button-frame-normal" src="btn_normal.png" />
 				<img class="button-frame button-frame-hover" src="btn_hover.png" />
@@ -502,6 +591,24 @@
 					</div>
 				</div>
 				<div id="audio-settings-close-button" class="menu-button secondary-button">
+					<img class="button-frame button-frame-normal" src="btn_normal.png" />
+					<img class="button-frame button-frame-hover" src="btn_hover.png" />
+					<div class="button-label">뒤로</div>
+				</div>
+			</div>
+		</div>
+		<div id="keyguide-overlay">
+			<div id="keyguide-panel">
+				<div id="keyguide-title">조작 안내</div>
+				<div class="keyguide-row"><div class="keyguide-key">W A S D</div><div class="keyguide-desc">이동</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">마우스</div><div class="keyguide-desc">시점 회전</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">좌클릭</div><div class="keyguide-desc">공격 (콤보)</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">우클릭</div><div class="keyguide-desc">강공격 / 콤보 분기</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">Space</div><div class="keyguide-desc">점프</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">Shift</div><div class="keyguide-desc">구르기 (회피 · 무적)</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">R</div><div class="keyguide-desc">무쌍기 (게이지 가득 시)</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">X</div><div class="keyguide-desc">발도 / 납도</div></div>
+				<div id="keyguide-close-button" class="menu-button secondary-button">
 					<img class="button-frame button-frame-normal" src="btn_normal.png" />
 					<img class="button-frame button-frame-hover" src="btn_hover.png" />
 					<div class="button-label">뒤로</div>

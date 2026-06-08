@@ -652,6 +652,12 @@ void AMusouCharacter::EnsureCinematicCameras()
 
 void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* Token)
 {
+	// 크레딧 아웃트로 등 고정 시점 — 몽타주 카메라 샷 전환을 통째로 무시.
+	if (bSuppressCameraShots)
+	{
+		return;
+	}
+
 	APlayerCameraManager* CamMgr = GetLocalCameraManager();
 	UCameraComponent* MainCam = GetCamera();
 	if (!CamMgr || !MainCam || !CineCamA || !CineCamB)
@@ -912,9 +918,10 @@ void AMusouCharacter::SnapFacingToInput(bool bDefaultToCameraForward)
 		// WASD 입력은 ControlRotation.Yaw(카메라) 기준이라 이미 카메라 상대 방향.
 		TargetYaw = std::atan2(Input.Y, Input.X) * (180.0f / 3.14159265f);
 	}
-	else if (bDefaultToCameraForward)
+	else if (bDefaultToCameraForward && !bSuppressCameraFacing)
 	{
 		// 공격 시 입력 없으면 카메라 정면으로 재조준 — "공격하면 카메라 쪽을 본다".
+		// (크레딧 자동 전투처럼 bSuppressCameraFacing 면 이 재조준을 끄고 현재 facing 유지.)
 		TargetYaw = GetControlRotation().Yaw;
 	}
 	else

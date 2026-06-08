@@ -22,10 +22,12 @@ namespace
 		"start-button",
 		"settings-button",
 		"score-button",
+		"controls-button",
+		"credits-button",
 		"exit-button",
 	};
 
-	constexpr int32 IntroButtonCount = 4;
+	constexpr int32 IntroButtonCount = 6;
 	constexpr int32 IntroScoreboardPageSize = 10;
 	constexpr float BGMVolumeStep = 0.1f;
 
@@ -95,6 +97,23 @@ void AMusouGameModeIntro::StartMatch()
 				HideScoreboard();
 			});
 
+			IntroWidget->BindClick("controls-button", [this]()
+			{
+				ShowKeyGuide();
+			});
+			IntroWidget->BindClick("keyguide-close-button", [this]()
+			{
+				HideKeyGuide();
+			});
+
+			IntroWidget->BindClick("credits-button", []()
+			{
+				if (GEngine)
+				{
+					GEngine->RequestTransitionToScene("Credits");
+				}
+			});
+
 			IntroWidget->BindClick("exit-button", []()
 			{
 				UE_LOG("[MusouGameModeIntro] Exit requested from intro UI");
@@ -112,6 +131,7 @@ void AMusouGameModeIntro::StartMatch()
 		ScoreboardOverlay.SetWidget(IntroWidget);
 		HideScoreboard();
 		HideAudioSettings();
+		HideKeyGuide();
 		IntroMenuNavigator.Select(0);
 		UE_LOG("[MusouGameModeIntro] Intro UI added to viewport");
 	}
@@ -171,6 +191,15 @@ void AMusouGameModeIntro::Tick(float DeltaTime)
 		return;
 	}
 
+	if (bKeyGuideVisible)
+	{
+		if (Input.GetKeyDown(VK_ESCAPE) || Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
+		{
+			HideKeyGuide();
+		}
+		return;
+	}
+
 	HandleIntroMenuInput();
 }
 
@@ -185,7 +214,7 @@ void AMusouGameModeIntro::ConfigureIntroMenuNavigator()
 	IntroMenuNavigator.SetButtons(IntroButtonIds, IntroButtonCount);
 	IntroMenuNavigator.BindHoverHandlers([this]()
 	{
-		return !bScoreboardVisible && !bAudioSettingsVisible;
+		return !bScoreboardVisible && !bAudioSettingsVisible && !bKeyGuideVisible;
 	});
 }
 
@@ -277,6 +306,31 @@ void AMusouGameModeIntro::HideScoreboard()
 
 	bScoreboardVisible = false;
 	ScoreboardOverlay.Hide();
+	IntroMenuNavigator.EnsureSelection();
+}
+
+void AMusouGameModeIntro::ShowKeyGuide()
+{
+	if (!IntroWidget || !IntroWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	bKeyGuideVisible = true;
+	IntroMenuNavigator.ClearSelection();
+	IntroWidget->SetProperty("keyguide-overlay", "display", "block");
+}
+
+void AMusouGameModeIntro::HideKeyGuide()
+{
+	if (!IntroWidget || !IntroWidget->IsDocumentLoaded())
+	{
+		bKeyGuideVisible = false;
+		return;
+	}
+
+	bKeyGuideVisible = false;
+	IntroWidget->SetProperty("keyguide-overlay", "display", "none");
 	IntroMenuNavigator.EnsureSelection();
 }
 
