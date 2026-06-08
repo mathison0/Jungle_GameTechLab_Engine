@@ -85,6 +85,21 @@ void ACharacter::Tick(float DeltaTime)
 			Rot.Pitch  = std::clamp(Rot.Pitch, MinCameraPitch, MaxCameraPitch);
 			SetControlRotation(Rot);
 		}
+
+		// 게임패드 우스틱 — 마우스와 동일하게 ControlRotation 누적 (deg/sec). 스틱 위 = 위를 본다.
+		if (In.IsGamepadConnected())
+		{
+			const float RX = In.GamepadRightX();
+			const float RY = In.GamepadRightY();
+			if (RX != 0.0f || RY != 0.0f)
+			{
+				FRotator Rot = GetControlRotation();
+				Rot.Yaw   += RX * GamepadLookSpeed * DeltaTime;
+				Rot.Pitch += -RY * GamepadLookSpeed * DeltaTime;   // 위=마이너스 pitch
+				Rot.Pitch  = std::clamp(Rot.Pitch, MinCameraPitch, MaxCameraPitch);
+				SetControlRotation(Rot);
+			}
+		}
 	}
 
 	// 같은 frame 안 ControlRotation 변경을 capsule (RootComponent) 에 즉시 반영 — 1 frame 지연 없음.
