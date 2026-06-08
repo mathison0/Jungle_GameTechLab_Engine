@@ -3,6 +3,7 @@
 #include "Animation/AnimationManager.h"
 #include "Animation/Sequence/AnimSequence.h"
 #include "Component/Movement/CharacterMovementComponent.h"
+#include "Component/Primitive/HitFlashComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Logging/Log.h"
 #include "Game/Musou/Combat/BattleComponent.h"
@@ -504,6 +505,29 @@ void UMainBossPatternComponent::TickThrowAim(float DeltaTime, APawn* Target)
 	FaceTargetLimited(Target, DeltaTime, Step->AimTurnSpeedDegPerSec);
 }
 
+void UMainBossPatternComponent::PlayAttackStartWarningRim()
+{
+	if (!bUseAttackStartWarningRim)
+	{
+		return;
+	}
+
+	AActor* Owner = GetOwner();
+	UHitFlashComponent* HitFlash = Owner ? Owner->GetComponentByClass<UHitFlashComponent>() : nullptr;
+	if (!HitFlash)
+	{
+		return;
+	}
+
+	HitFlash->PlayFlash(
+		AttackStartWarningRimColor,
+		AttackStartWarningRimDuration,
+		AttackStartWarningRimIntensity,
+		AttackStartWarningRimRimIntensity,
+		AttackStartWarningRimRimPower,
+		AttackStartWarningRimFillAmount);
+}
+
 int32 UMainBossPatternComponent::GetCurrentPhase() const
 {
 	return bPhase2Entered ? 2 : 1;
@@ -671,6 +695,7 @@ void UMainBossPatternComponent::EnterExecute(const FMainBossPattern& Pattern, in
 	}
 
 	FaceTarget(Target);
+	PlayAttackStartWarningRim();
 	UAnimSequence* Sequence = PlaySequencePath(Step->SequencePath, false, Step->PlayRate, true);
 
 	ActiveExecutionTime = 0.2f;

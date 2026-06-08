@@ -2,6 +2,7 @@
 
 #include "Component/ActorComponent.h"
 #include "Game/Musou/MainBoss/MainBossPatternTypes.h"
+#include "Math/Vector.h"
 
 #include <utility>
 
@@ -37,6 +38,27 @@ public:
 	UPROPERTY(Edit, Save, Category="Main Boss|Animation", DisplayName="Battlecry Sequence", AssetType="UAnimSequence")
 	FString BattlecrySequencePath = "Content/Data/GameJam/Golem_Boss/Golem_Boss_Battlecry_mixamo_com.uasset";
 
+	UPROPERTY(Edit, Save, Category="Main Boss|Warning Rim", DisplayName="Use Attack Start Warning Rim")
+	bool bUseAttackStartWarningRim = true;
+
+	UPROPERTY(Edit, Save, Category="Main Boss|Warning Rim", DisplayName="Attack Start Warning Rim Duration")
+	float AttackStartWarningRimDuration = 0.35f;
+
+	UPROPERTY(Edit, Save, Category="Main Boss|Warning Rim", DisplayName="Attack Start Warning Rim Color", Type=Color4)
+	FVector4 AttackStartWarningRimColor = FVector4(1.0f, 0.05f, 0.02f, 1.0f);
+
+	UPROPERTY(Edit, Save, Category="Main Boss|Warning Rim", DisplayName="Attack Start Warning Rim Intensity")
+	float AttackStartWarningRimIntensity = 2.5f;
+
+	UPROPERTY(Edit, Save, Category="Main Boss|Warning Rim", DisplayName="Attack Start Warning Rim Rim Intensity")
+	float AttackStartWarningRimRimIntensity = 5.0f;
+
+	UPROPERTY(Edit, Save, Category="Main Boss|Warning Rim", DisplayName="Attack Start Warning Rim Rim Power")
+	float AttackStartWarningRimRimPower = 3.0f;
+
+	UPROPERTY(Edit, Save, Category="Main Boss|Warning Rim", DisplayName="Attack Start Warning Rim Fill Amount")
+	float AttackStartWarningRimFillAmount = 0.0f;
+
 	UPROPERTY(Edit, Save, Category="Main Boss|Debug", DisplayName="Debug Log")
 	bool bDebugLog = false;
 
@@ -50,6 +72,7 @@ private:
 	void MoveTowardTarget(APawn* Target, float DeltaTime, float StopDistance);
 	void ResetThrowAim();
 	void TickThrowAim(float DeltaTime, APawn* Target);
+	void PlayAttackStartWarningRim();
 
 	int32 GetCurrentPhase() const;
 	void UpdatePhaseTransition(const UBattleComponent* Battle);
