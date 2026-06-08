@@ -123,6 +123,8 @@ private:
 	// 결과 오버레이가 떠 있으면 pause 메뉴 입력을 막고, 활성 메뉴 선택은 각 navigator가 보관한다.
 	bool bStopMenuVisible = false;
 	bool bAudioSettingsVisible = false;
+	// intro 검은 overlay는 즉시 띄우되, SpringArm/카메라 첫 Tick 이후 월드를 pause 한다.
+	bool bPendingIntroWorldPause = false;
 	bool bHasPendingVictoryResult = false;
 	bool bVictoryScoreSubmitted = false;
 	FMusouMatchResult PendingVictoryResult;

@@ -173,6 +173,7 @@ void AMusouGameMode::StartMatch()
 
 	bHasPendingVictoryResult = false;
 	bVictoryScoreSubmitted = false;
+	bPendingIntroWorldPause = false;
 
 	if (HudWidget)
 	{
@@ -183,10 +184,7 @@ void AMusouGameMode::StartMatch()
 		if (HudPresenter.StartIntroDialog())
 		{
 			SetGameInputPossessed(false);
-			if (UWorld* World = GetWorld())
-			{
-				World->SetPaused(true);
-			}
+			bPendingIntroWorldPause = true;
 		}
 		UE_LOG("[MusouGameMode] In-game HUD added to viewport");
 	}
@@ -211,6 +209,7 @@ void AMusouGameMode::EndMatch()
 
 void AMusouGameMode::EndPlay()
 {
+	bPendingIntroWorldPause = false;
 	HudPresenter.SetWidget(nullptr);
 	PauseMenuNavigator.SetWidget(nullptr);
 	DeathMenuNavigator.SetWidget(nullptr);
@@ -231,6 +230,18 @@ void AMusouGameMode::Tick(float DeltaTime)
 
 	// 맞았을 때만 슬로모 — 예약/직전히트 기록 만료 처리.
 	TickHitSlomoQueue(DeltaTime);
+
+	if (bPendingIntroWorldPause)
+	{
+		bPendingIntroWorldPause = false;
+		if (HudPresenter.IsIntroDialogVisible())
+		{
+			if (UWorld* World = GetWorld())
+			{
+				World->SetPaused(true);
+			}
+		}
+	}
 
 	InputSystem& Input = InputSystem::Get();
 	if (HudPresenter.IsStoryDialogActive())
