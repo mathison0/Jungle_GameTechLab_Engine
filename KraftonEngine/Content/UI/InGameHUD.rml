@@ -18,6 +18,16 @@
 			position: relative;
 		}
 
+		#hp-label,
+		#musou-ready-label,
+		#score-counter,
+		#kill-count-value,
+		#kill-ko-label,
+		#combo-counter,
+		#boss-name {
+			font-effect: shadow(2px 2px #080202cc);
+		}
+
 		#status-panel {
 			position: absolute;
 			left: 36px;
@@ -26,7 +36,6 @@
 			width: 500px;
 			height: 82px;
 			padding: 0;
-			background-color: rgba(8, 10, 14, 0.76);
 		}
 
 		#hp-bar {
@@ -132,7 +141,6 @@
 			justify-content: center;
 			width: 260px;
 			height: 58px;
-			background-color: rgba(8, 10, 14, 0.62);
 			color: #f8f3df;
 		}
 
@@ -163,7 +171,6 @@
 			margin-top: 0;
 			width: 420px;
 			height: 76px;
-			background-color: rgba(8, 10, 14, 0.32);
 		}
 
 		#combo-counter {
@@ -195,6 +202,7 @@
 			transform: scale(1.0);
 			transform-origin: 50% 50%;
 			color: #f0d36a;
+			font-effect: shadow(4px 4px #080202d8);
 		}
 
 		#blood-vignette {
