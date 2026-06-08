@@ -87,6 +87,15 @@ public:
     bool GetKey(int VK) const { return CurrentStates[VK]; }
     bool GetKeyUp(int VK) const { return !CurrentStates[VK] && PrevStates[VK]; }
 
+    // Gamepad (XInput 컨트롤러 0). 버튼은 매 Tick 해당 액션 VK 상태에 주입되어
+    // 키보드/마우스 바인딩(이동/공격/메뉴)이 코드 변경 없이 그대로 동작한다.
+    // 스틱은 아날로그 값(-1..1, 데드존 적용) — 우스틱 카메라 룩 등에서 직접 읽는다.
+    bool  IsGamepadConnected() const { return bGamepadConnected; }
+    float GamepadLeftX()  const { return GamepadLX; }
+    float GamepadLeftY()  const { return GamepadLY; }
+    float GamepadRightX() const { return GamepadRX; }
+    float GamepadRightY() const { return GamepadRY; }
+
     // Mouse position
     POINT GetMousePos() const { return MousePos; }
     POINT GetMouseClientPos() const
@@ -141,6 +150,14 @@ public:
 private:
     bool CurrentStates[256] = { false };
     bool PrevStates[256] = { false };
+
+    // Gamepad (XInput) — Tick 에서 폴링. 버튼은 CurrentStates[VK] 에 OR 주입.
+    bool  bGamepadConnected = false;
+    float GamepadLX = 0.0f;
+    float GamepadLY = 0.0f;
+    float GamepadRX = 0.0f;
+    float GamepadRY = 0.0f;
+    void  PollGamepad();
 
     // Mouse members
     POINT MousePos = { 0, 0 };

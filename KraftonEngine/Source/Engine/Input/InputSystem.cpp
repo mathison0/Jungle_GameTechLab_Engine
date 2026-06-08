@@ -1,6 +1,8 @@
 #include "Engine/Input/InputSystem.h"
 #include <cmath>
 #include <utility>
+#include <Xinput.h>
+#pragma comment(lib, "Xinput.lib")
 
 void InputSystem::Tick()
 {
@@ -8,6 +10,8 @@ void InputSystem::Tick()
     bWindowFocused = !OwnerHWnd || GetForegroundWindow() == OwnerHWnd;
     if (!bWindowFocused)
     {
+        bGamepadConnected = false;
+        GamepadLX = GamepadLY = GamepadRX = GamepadRY = 0.0f;
         ResetAllKeyStates();
         ResetTransientState();
         UpdateCurrentSnapshot();
@@ -19,6 +23,10 @@ void InputSystem::Tick()
         PrevStates[i] = CurrentStates[i];
         CurrentStates[i] = (GetAsyncKeyState(i) & 0x8000) != 0;
     }
+
+    // 게임패드 — 키보드 폴링 직후 버튼 상태를 CurrentStates 에 OR 주입 (PrevStates 는 위에서
+    // 이미 보존됐으므로 GetKeyDown 엣지 감지가 게임패드에도 그대로 적용된다).
+    PollGamepad();
 
     bLeftDragJustStarted = false;
     bRightDragJustStarted = false;
@@ -78,6 +86,60 @@ void InputSystem::Tick()
     }
 
     UpdateCurrentSnapshot();
+}
+
+void InputSystem::PollGamepad()
+{
+    XINPUT_STATE State;
+    ZeroMemory(&State, sizeof(State));
+    if (XInputGetState(0, &State) != ERROR_SUCCESS)
+    {
+        bGamepadConnected = false;
+        GamepadLX = GamepadLY = GamepadRX = GamepadRY = 0.0f;
+        return;
+    }
+    bGamepadConnected = true;
+    const XINPUT_GAMEPAD& Pad = State.Gamepad;
+
+    // 스틱 정규화 + 데드존 — 데드존 밖 구간을 0..1 로 재매핑.
+    auto Normalize = [](SHORT V, SHORT Deadzone) -> float
+    {
+        const float F = static_cast<float>(V);
+        const float D = static_cast<float>(Deadzone);
+        if (F >  D) { return (F - D) / (32767.0f - D); }
+        if (F < -D) { return (F + D) / (32767.0f - D); }
+        return 0.0f;
+    };
+    GamepadLX = Normalize(Pad.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+    GamepadLY = Normalize(Pad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+    GamepadRX = Normalize(Pad.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+    GamepadRY = Normalize(Pad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+
+    const WORD B = Pad.wButtons;
+    auto Inject = [this](int VK, bool bPressed) { if (bPressed) { CurrentStates[VK] = true; } };
+
+    // 버튼 → 액션 VK 주입 (키보드/마우스와 OR — 둘 다 같은 동작).
+    Inject(0x20, (B & XINPUT_GAMEPAD_A) != 0);              // A  → 점프(Space) / 메뉴 확인
+    Inject(0x0D, (B & XINPUT_GAMEPAD_A) != 0);              // A  → Enter (메뉴 확인 보강)
+    Inject(0x01, (B & XINPUT_GAMEPAD_X) != 0);              // X  → 약공격(LBUTTON)
+    Inject(0x02, (B & XINPUT_GAMEPAD_Y) != 0);              // Y  → 강공격(RBUTTON)
+    Inject(0x10, (B & XINPUT_GAMEPAD_B) != 0);              // B  → 구르기(Shift)
+    Inject(0x52, (B & XINPUT_GAMEPAD_RIGHT_SHOULDER) != 0); // RB → 무쌍기(R)
+    Inject(0x58, (B & XINPUT_GAMEPAD_LEFT_SHOULDER) != 0);  // LB → 발도/납도(X키)
+    Inject(0x1B, (B & XINPUT_GAMEPAD_START) != 0);          // Start → 일시정지(ESC)
+
+    // D-pad → 메뉴 방향키 (인게임엔 미사용이라 무해).
+    Inject(0x25, (B & XINPUT_GAMEPAD_DPAD_LEFT) != 0);      // ←
+    Inject(0x27, (B & XINPUT_GAMEPAD_DPAD_RIGHT) != 0);     // →
+    Inject(0x26, (B & XINPUT_GAMEPAD_DPAD_UP) != 0);        // ↑
+    Inject(0x28, (B & XINPUT_GAMEPAD_DPAD_DOWN) != 0);      // ↓
+
+    // 좌스틱 → WASD 이동 (디지털, 임계 0.5). 기존 이동/잠금/재조준 경로를 그대로 탄다.
+    constexpr float MoveThreshold = 0.5f;
+    Inject(0x57, GamepadLY >  MoveThreshold);   // W (전진)
+    Inject(0x53, GamepadLY < -MoveThreshold);   // S (후진)
+    Inject(0x44, GamepadLX >  MoveThreshold);   // D (우)
+    Inject(0x41, GamepadLX < -MoveThreshold);   // A (좌)
 }
 
 FInputSystemSnapshot InputSystem::TickAndMakeSnapshot()
