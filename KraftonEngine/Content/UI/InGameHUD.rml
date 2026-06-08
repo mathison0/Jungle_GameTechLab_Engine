@@ -912,6 +912,7 @@
 			height: 56px;
 			line-height: 56px;
 			text-align: center;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
 		}
 
 		#audio-settings-meter {
@@ -1014,15 +1015,11 @@
 			height: 100%;
 			line-height: 68px;
 			text-align: center;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
 		}
 
 		#victory-menu .pause-button-label {
 			line-height: 44px;
-		}
-
-		#death-menu .pause-button-label,
-		#victory-menu .pause-button-label {
-			font-effect: glow(1px 3px 2px 2px #080202cc);
 		}
 
 		.pause-button.selected .pause-button-frame-normal {
