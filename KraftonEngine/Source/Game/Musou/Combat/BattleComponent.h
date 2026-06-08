@@ -45,6 +45,10 @@ public:
 	void SetInvincible(bool bEnable) { bInvincible = bEnable; }
 	bool IsInvincible() const { return bInvincible; }
 
+	// 치트 무적 — 토글식. 무쌍기 무적(bInvincible)과 독립이라 무쌍기 종료에 안 풀린다.
+	void SetCheatInvincible(bool bEnable) { bCheatInvincible = bEnable; }
+	bool IsCheatInvincible() const { return bCheatInvincible; }
+
 	bool IsDead() const { return bDead; }
 	float GetHealth() const { return Health; }
 	float GetMaxHealth() const { return MaxHealth; }
@@ -56,7 +60,11 @@ public:
 		Health = (NewHealth < 0.0f) ? 0.0f : ((NewHealth > MaxHealth) ? MaxHealth : NewHealth);
 		bDead = (Health <= 0.0f);
 	}
-	float GetAttackPower() const { return AttackPower; }
+	float GetAttackPower() const { return bCheatAttackPower ? 999999.0f : AttackPower; }
+
+	// 치트 공격력 — 토글식. 켜면 GetAttackPower 가 999999 반환 (런타임 전용).
+	void SetCheatAttackPower(bool bEnable) { bCheatAttackPower = bEnable; }
+	bool IsCheatAttackPower() const { return bCheatAttackPower; }
 
 	UPROPERTY(Edit, Save, Category="Battle", DisplayName="Max Health")
 	float MaxHealth = 100.0f;
@@ -82,6 +90,8 @@ protected:
 	float Health = 0.0f;
 	bool bDead = false;
 	bool bInvincible = false;   // 무쌍기 등 일시 무적 (직렬화 제외 — 런타임 전용)
+	bool bCheatInvincible = false;   // 치트 토글 무적 (런타임 전용)
+	bool bCheatAttackPower = false;  // 치트 토글 공격력 999999 (런타임 전용)
 
 	FDelegateHandle AttackListenerHandle;
 };
