@@ -25,10 +25,43 @@ void UHitFlashComponent::PlayFlash()
 		BuildDynamicMaterials();
 	}
 
+	ActiveDuration = Duration;
+	ActiveIntensity = Intensity;
+	ActiveFillAmount = FillAmount;
+	ActiveRimIntensity = RimIntensity;
+	ActiveRimPower = RimPower;
+	ActiveFlashColor = FlashColor;
+
 	Age = 0.0f;
 	bPlaying = true;
 
-	ApplyFlashAmount(Intensity);
+	ApplyFlashAmount(ActiveIntensity);
+}
+
+void UHitFlashComponent::PlayFlash(
+	const FVector4& InColor,
+	float InDuration,
+	float InIntensity,
+	float InRimIntensity,
+	float InRimPower,
+	float InFillAmount)
+{
+	if (DynamicMaterials.empty())
+	{
+		BuildDynamicMaterials();
+	}
+
+	ActiveDuration = (std::max)(InDuration, 0.001f);
+	ActiveIntensity = (std::max)(InIntensity, 0.0f);
+	ActiveFillAmount = (std::max)(InFillAmount, 0.0f);
+	ActiveRimIntensity = (std::max)(InRimIntensity, 0.0f);
+	ActiveRimPower = (std::max)(InRimPower, 0.001f);
+	ActiveFlashColor = InColor;
+
+	Age = 0.0f;
+	bPlaying = true;
+
+	ApplyFlashAmount(ActiveIntensity);
 }
 
 void UHitFlashComponent::TickComponent(
@@ -45,10 +78,10 @@ void UHitFlashComponent::TickComponent(
 
 	Age += DeltaTime;
 
-	const float SafeDuration = std::max(Duration, 0.001f);
+	const float SafeDuration = std::max(ActiveDuration, 0.001f);
 	const float T = FMath::Clamp(Age / SafeDuration, 0.0f, 1.0f);
 
-	const float Amount = Intensity * (1.0f - T);
+	const float Amount = ActiveIntensity * (1.0f - T);
 	ApplyFlashAmount(Amount);
 
 	if (T >= 1.0f)
@@ -68,10 +101,10 @@ void UHitFlashComponent::ApplyFlashAmount(float Amount)
 		}
 
 		Material->SetScalarParameter("HitFlashAmount", Amount);
-		Material->SetScalarParameter("HitFlashFillAmount", FillAmount);
-		Material->SetScalarParameter("HitFlashRimIntensity", RimIntensity);
-		Material->SetScalarParameter("HitFlashRimPower", RimPower);
-		Material->SetVector4Parameter("HitFlashColor", FlashColor);
+		Material->SetScalarParameter("HitFlashFillAmount", ActiveFillAmount);
+		Material->SetScalarParameter("HitFlashRimIntensity", ActiveRimIntensity);
+		Material->SetScalarParameter("HitFlashRimPower", ActiveRimPower);
+		Material->SetVector4Parameter("HitFlashColor", ActiveFlashColor);
 	}
 }
 

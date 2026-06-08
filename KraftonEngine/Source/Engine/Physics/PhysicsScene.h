@@ -46,7 +46,8 @@ public:
 
 	bool Raycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
-		const AActor* IgnoreActor = nullptr);
+		const AActor* IgnoreActor = nullptr,
+		ECollisionChannel IgnoredObjectType = ECollisionChannel::MAX);
 	bool SweepSphere(const FVector& Start, const FVector& Dir, float MaxDist, float Radius, FHitResult& OutHit,
 		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
 		const AActor* IgnoreActor = nullptr);

@@ -21,6 +21,13 @@ public:
 
 	void InitializeFromSkinnedMesh(USkinnedMeshComponent* InMesh);
 	void PlayFlash();
+	void PlayFlash(
+		const FVector4& InColor,
+		float InDuration,
+		float InIntensity,
+		float InRimIntensity,
+		float InRimPower = 3.0f,
+		float InFillAmount = 0.0f);
 
 protected:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
@@ -50,6 +57,13 @@ private:
 
 	UPROPERTY(Edit, Save, Category = "HitFlash", Type = Color4)
 	FVector4 FlashColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+
+	float ActiveDuration = 0.12f;
+	float ActiveIntensity = 1.0f;
+	float ActiveFillAmount = 0.15f;
+	float ActiveRimIntensity = 3.0f;
+	float ActiveRimPower = 3.0f;
+	FVector4 ActiveFlashColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	float Age = 0.0f;
 	bool bPlaying = false;

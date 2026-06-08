@@ -28,6 +28,7 @@ namespace
 		if (Type == "projectile") return EBossPatternStepType::SpawnProjectile;
 		if (Type == "effect") return EBossPatternStepType::SpawnEffect;
 		if (Type == "invincible") return EBossPatternStepType::SetInvincible;
+		if (Type == "warning_rim") return EBossPatternStepType::WarningRim;
 		return EBossPatternStepType::Wait;
 	}
 
@@ -62,6 +63,21 @@ namespace
 			T.get_or(3, DefaultValue.Z));
 	}
 
+	FVector4 ParseColor(const sol::object& Obj, const FVector4& DefaultValue)
+	{
+		if (!Obj.is<sol::table>())
+		{
+			return DefaultValue;
+		}
+
+		sol::table T = Obj.as<sol::table>();
+		return FVector4(
+			T.get_or(1, DefaultValue.X),
+			T.get_or(2, DefaultValue.Y),
+			T.get_or(3, DefaultValue.Z),
+			T.get_or(4, DefaultValue.W));
+	}
+
 	FBossPatternStep ParseStep(const sol::table& T)
 	{
 		FBossPatternStep Step;
@@ -73,7 +89,12 @@ namespace
 		Step.ProjectileClassName = T.get_or("projectile", std::string());
 		Step.EffectPath = T.get_or("effect", std::string());
 		Step.Offset = ParseVector(T["offset"]);
+		Step.Color = ParseColor(T["color"], Step.Color);
 		Step.Speed = T.get_or("speed", 0.0f);
+		Step.Intensity = T.get_or("intensity", Step.Intensity);
+		Step.RimIntensity = T.get_or("rim", Step.RimIntensity);
+		Step.RimPower = T.get_or("rim_power", Step.RimPower);
+		Step.FillAmount = T.get_or("fill", Step.FillAmount);
 		Step.bValue = T.get_or("value", false);
 		return Step;
 	}

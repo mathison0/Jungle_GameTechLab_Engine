@@ -5,9 +5,9 @@ local function montage(name) return MONTAGE_DIR .. name .. "_Montage.uasset" end
 return {
     bosses = {
         knight_boss = {
-            max_hp = 100,
+            max_hp = 1000,
             attack_power = 18,
-            move_speed = 3.2,
+            move_speed = 1.6,
             stop_distance = 2.8,
             mesh = "Content/Data/GameJam/Warrior/SK_Warrior_SkeletalMesh.uasset",
             anim_script = "Anim/boss_knight_anim.lua",
@@ -42,27 +42,33 @@ return {
                 {
                     id = "slash",
                     attack_id = "boss_slash",
-                    montage = montage("sword and shield slash_mixamo_com"),
                     min_range = 0.0,
                     max_range = 4.5,
                     cooldown = 2.0,
-                    telegraph = 0.45,
-                    attack_time = 0.15,
                     recovery = 0.75,
                     weight = 5,
                     hp = { 0.0, 1.0 },
+                    steps = {
+                        { type = "face_target", time = 0.0 },
+                        { type = "warning_rim", time = 0.0, duration = 0.35, color = { 1.0, 0.05, 0.02, 1.0 }, intensity = 2.5, rim = 5.0, rim_power = 3.0, fill = 0.0 },
+                        { type = "play_montage", time = 0.5, montage = montage("sword and shield slash_mixamo_com") },
+                    },
                 },
                 {
-                    id = "spin",
-                    attack_id = "boss_spin",
+                    id = "jump_slash",
+                    attack_id = "boss_jump_slash",
                     min_range = 0.0,
                     max_range = 6.0,
                     cooldown = 5.5,
-                    telegraph = 0.9,
-                    attack_time = 0.1,
                     recovery = 1.2,
                     weight = 2,
-                    hp = { 0.0, 0.65 },
+                    hp = { 0.0, 1.0 },
+                    steps = {
+                        { type = "face_target", time = 0.0 },
+                        { type = "warning_rim", time = 0.0, duration = 0.35, color = { 1.0, 0.05, 0.02, 1.0 }, intensity = 2.5, rim = 5.0, rim_power = 3.0, fill = 0.0 },
+                        { type = "play_montage", time = 0.5, montage = montage("sword and shield attack_mixamo_com_Warrior") },
+                        { type = "dash", time = 0.6, duration = 0.2, speed = 8.0 }
+                    },
                 },
                 {
                     id = "dash_slash",
@@ -75,9 +81,28 @@ return {
                     hp = { 0.0, 1.0 },
                     steps = {
                         { type = "face_target", time = 0.0 },
-                        { type = "play_montage", time = 0.0, montage = montage("sword and shield slash_mixamo_com") },
-                        { type = "dash", time = 0.20, duration = 0.35, speed = 11.0 },
-                        { type = "attack", time = 0.38, attack_id = "boss_dash_slash" },
+                        { type = "warning_rim", time = 0.0, duration = 0.35, color = { 1.0, 0.05, 0.02, 1.0 }, intensity = 2.5, rim = 5.0, rim_power = 3.0, fill = 0.0 },
+                        { type = "wait", time = 0.5 },
+                        { type = "dash", time = 0.5, duration = 0.35, speed = 11.0 },
+                        { type = "play_montage", time = 0.8, montage = montage("sword and shield slash_mixamo_com") },
+                    },
+                },
+                {
+                    id = "continuous_slash",
+                    attack_id = "boss_continuous_slash",
+                    min_range = 0.0,
+                    max_range = 5.0,
+                    cooldown = 8.0,
+                    recovery = 1.5,
+                    weight = 4,
+                    hp = { 0.0, 0.7 },
+                    steps = {
+                        { type = "face_target", time = 0.0 },
+                        { type = "warning_rim", time = 0.0, duration = 0.35, color = { 1.0, 0.05, 0.02, 1.0 }, intensity = 2.5, rim = 5.0, rim_power = 3.0, fill = 0.0 },
+                        { type = "dash", time = 0.20, duration = 0.35, speed = 5.0 },
+                        { type = "play_montage", time = 0.0, montage = montage("sword and shield slash (2)_mixamo_com_Warrior") },
+                        { type = "face_target", time = 1.0 },
+                        { type = "face_target", time = 1.5 }
                     },
                 }
             },

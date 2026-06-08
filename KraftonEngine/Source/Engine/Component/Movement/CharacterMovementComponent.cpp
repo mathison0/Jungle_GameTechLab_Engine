@@ -28,20 +28,12 @@ namespace
 	class FCharacterControllerFilterCallback final : public physx::PxControllerFilterCallback
 	{
 	public:
-		explicit FCharacterControllerFilterCallback(bool bInIgnoreOtherControllers)
-			: bIgnoreOtherControllers(bInIgnoreOtherControllers)
-		{
-		}
-
 		bool filter(const physx::PxController& a, const physx::PxController& b) override
 		{
 			(void)a;
 			(void)b;
-			return !bIgnoreOtherControllers;
+			return true;
 		}
-
-	private:
-		bool bIgnoreOtherControllers = false;
 	};
 }
 
@@ -182,8 +174,7 @@ void UCharacterMovementComponent::SyncControllerToUpdatedComponentIfNeeded()
 
 FControllerMoveResult UCharacterMovementComponent::MoveController(
 	const FVector& Delta,
-	float DeltaTime,
-	bool bIgnorePawnFloor)
+	float DeltaTime)
 {
 	if (!EnsureController())
 	{
@@ -191,36 +182,44 @@ FControllerMoveResult UCharacterMovementComponent::MoveController(
 	}
 
 	const physx::PxVec3 Disp(Delta.X, Delta.Y, Delta.Z);
-	const ECollisionChannel IgnoredObjectType = bIgnorePawnFloor ? ECollisionChannel::Pawn : ECollisionChannel::MAX;
-	FPhysicsRaycastFilterCallback QueryFilter(ECollisionChannel::Pawn, GetOwner(), IgnoredObjectType);
-	FCharacterControllerFilterCallback ControllerFilter(bIgnorePawnFloor);
+	FPhysicsRaycastFilterCallback QueryFilter(ECollisionChannel::Pawn, GetOwner());
+	FCharacterControllerFilterCallback ControllerFilter;
 
 	physx::PxControllerFilters Filters(nullptr, &QueryFilter, &ControllerFilter);
 
 	const physx::PxControllerCollisionFlags Flags = Controller->move(Disp, ControllerMinMoveDistance, DeltaTime, Filters);
 	FControllerMoveResult Result;
 	Result.bHitDown = Flags.isSet(physx::PxControllerCollisionFlag::eCOLLISION_DOWN);
-	Result.bHitDownOnWalkableFloor = Result.bHitDown;
-
-	if (Result.bHitDown)
-	{
-		physx::PxControllerState State;
-		Controller->getState(State);
-
-		bool bStandingOnPawn = State.standOnAnotherCCT;
-		if (State.touchedShape)
-		{
-			if (UPrimitiveComponent* TouchedComponent = GetComponentFromQueryShape(State.touchedShape))
-			{
-				bStandingOnPawn = bStandingOnPawn || TouchedComponent->GetCollisionObjectType() == ECollisionChannel::Pawn;
-			}
-		}
-
-		Result.bHitDownOnWalkableFloor = !bStandingOnPawn;
-	}
 
 	SyncUpdatedComponentFromController();
 	return Result;
+}
+
+bool UCharacterMovementComponent::FindWalkableFloor(float ProbeDistance) const
+{
+	const UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(GetUpdatedComponent());
+	const UWorld* World = GetWorld();
+	FPhysicsScene* PhysicsScene = World ? World->GetPhysicsScene() : nullptr;
+	if (!Capsule || !PhysicsScene || ProbeDistance <= 0.0f)
+	{
+		return false;
+	}
+
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+	const float StartOffset = (std::max)(0.0f, HalfHeight - ControllerContactOffset);
+	const FVector Start = Capsule->GetWorldLocation() + FVector(0.0f, 0.0f, -StartOffset);
+	const float MaxDist = ProbeDistance + ControllerContactOffset * 2.0f;
+
+	FHitResult Hit;
+	if (!PhysicsScene->Raycast(Start, FVector(0.0f, 0.0f, -1.0f), MaxDist, Hit,
+		ECollisionChannel::Pawn, GetOwner(), ECollisionChannel::Pawn))
+	{
+		return false;
+	}
+
+	const float ClampedSlope = std::clamp(WalkableSlopeAngle, 0.0f, 89.0f);
+	const float MinNormalZ = std::cos(ClampedSlope * FMath::DegToRad);
+	return Hit.ImpactNormal.Z >= MinNormalZ;
 }
 
 void UCharacterMovementComponent::AddInputVector(const FVector& WorldDirection, float ScaleValue)
@@ -487,7 +486,7 @@ void UCharacterMovementComponent::TickWalking(float DeltaTime, const FVector& Ro
 	// Walking 중 Z velocity 는 0 — floor stick 으로만 Z 결정.
 	Velocity.Z = 0.0f;
 
-	// XY movement blocks pawns, floor stick ignores pawns so characters cannot stand on each other.
+	// XY movement blocks pawns; floor detection is a separate query that ignores pawns.
 	const FVector XYOffset(
 		Velocity.X * DeltaTime + RootMotionWorldXY.X,
 		Velocity.Y * DeltaTime + RootMotionWorldXY.Y,
@@ -497,8 +496,8 @@ void UCharacterMovementComponent::TickWalking(float DeltaTime, const FVector& Ro
 		MoveController(XYOffset, DeltaTime);
 	}
 
-	const FControllerMoveResult Result = MoveController(FVector(0.0f, 0.0f, -FloorProbeDistance), DeltaTime, true);
-	const bool bHitDown = Result.bHitDownOnWalkableFloor;
+	MoveController(FVector(0.0f, 0.0f, -FloorProbeDistance), DeltaTime);
+	const bool bHitDown = FindWalkableFloor(FloorProbeDistance);
 
 	if (bHitDown)
 	{
@@ -523,7 +522,7 @@ void UCharacterMovementComponent::TickFalling(float DeltaTime, const FVector& Ro
 	// Gravity — Z 만. (양수 Gravity → -Z 가속)
 	Velocity.Z -= Gravity * DeltaTime;
 
-	// Horizontal movement blocks pawns. Downward landing ignores pawns so other characters are not floors.
+	// Horizontal and vertical movement both keep pawn/CCT collision. Landing uses a separate floor query.
 	const FVector XYOffset(
 		Velocity.X * DeltaTime + RootMotionWorldXY.X,
 		Velocity.Y * DeltaTime + RootMotionWorldXY.Y,
@@ -534,8 +533,8 @@ void UCharacterMovementComponent::TickFalling(float DeltaTime, const FVector& Ro
 	}
 
 	const FVector ZOffset(0.0f, 0.0f, Velocity.Z * DeltaTime);
-	const FControllerMoveResult Result = MoveController(ZOffset, DeltaTime, Velocity.Z <= 0.0f);
-	const bool bHitDown = Result.bHitDownOnWalkableFloor;
+	const FControllerMoveResult Result = MoveController(ZOffset, DeltaTime);
+	const bool bHitDown = Result.bHitDown && FindWalkableFloor((std::max)(FloorProbeDistance, -ZOffset.Z + ControllerContactOffset));
 
 	if (Velocity.Z <= 0.0f && bHitDown)
 	{

@@ -34,6 +34,7 @@
 
 #include <imgui.h>
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 
@@ -73,6 +74,75 @@ namespace
 		return A.SkeletonPath == B.SkeletonPath
 			&& A.SkeletonAssetGuid == B.SkeletonAssetGuid
 			&& A.CompatibilitySignature == B.CompatibilitySignature;
+	}
+
+	FString ExtractAssetStem(const FString& Path)
+	{
+		const size_t LastSlash = Path.find_last_of("/\\");
+		const size_t Start = (LastSlash == FString::npos) ? 0 : LastSlash + 1;
+		const size_t LastDot = Path.find_last_of('.');
+		const size_t End = (LastDot == FString::npos || LastDot < Start) ? Path.size() : LastDot;
+		return Path.substr(Start, End - Start);
+	}
+
+	bool EndsWithString(const FString& Value, const FString& Suffix)
+	{
+		return Value.size() >= Suffix.size()
+			&& Value.compare(Value.size() - Suffix.size(), Suffix.size(), Suffix) == 0;
+	}
+
+	FString SanitizeNameToken(const FString& Value)
+	{
+		FString Result;
+		Result.reserve(Value.size());
+		bool bLastWasUnderscore = false;
+		for (unsigned char Ch : Value)
+		{
+			const bool bValid = std::isalnum(Ch) || Ch == '_';
+			if (bValid)
+			{
+				Result.push_back(static_cast<char>(Ch));
+				bLastWasUnderscore = Ch == '_';
+			}
+			else if (!bLastWasUnderscore)
+			{
+				Result.push_back('_');
+				bLastWasUnderscore = true;
+			}
+		}
+		while (!Result.empty() && Result.front() == '_')
+		{
+			Result.erase(Result.begin());
+		}
+		while (!Result.empty() && Result.back() == '_')
+		{
+			Result.pop_back();
+		}
+		return Result;
+	}
+
+	FString MakeSkeletonMontageSuffix(const UAnimSequence* Sequence)
+	{
+		FString Suffix = Sequence ? ExtractAssetStem(Sequence->GetSkeletonBinding().SkeletonPath) : FString();
+		if (Suffix.empty() || Suffix == "None")
+		{
+			Suffix = "Skeleton";
+		}
+		if (Suffix.rfind("SK_", 0) == 0)
+		{
+			Suffix.erase(0, 3);
+		}
+		if (EndsWithString(Suffix, "_Skeleton"))
+		{
+			Suffix.erase(Suffix.size() - FString("_Skeleton").size());
+		}
+		else if (EndsWithString(Suffix, "Skeleton"))
+		{
+			Suffix.erase(Suffix.size() - FString("Skeleton").size());
+		}
+
+		Suffix = SanitizeNameToken(Suffix);
+		return Suffix.empty() ? FString("Skeleton") : Suffix;
 	}
 
 	TMap<FString, double> GMeshImportDurationsByAssetPath;
@@ -1159,24 +1229,15 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 	const TArray<FAssetListItem>& AnimFiles     = GetCachedAnimationFilesForCurrentSkeleton();
 	const TArray<FAssetListItem>& MontageFiles  = FAnimationManager::Get().GetAvailableMontageFiles();
 
-	// asset 경로의 stem (확장자/디렉토리 제거) — 자동 montage 이름의 source 식별자.
-	auto ExtractStem = [](const FString& Path) -> FString
-	{
-		const size_t LastSlash = Path.find_last_of("/\\");
-		const size_t Start = (LastSlash == FString::npos) ? 0 : LastSlash + 1;
-		const size_t LastDot = Path.find_last_of('.');
-		const size_t End = (LastDot == FString::npos || LastDot < Start) ? Path.size() : LastDot;
-		return Path.substr(Start, End - Start);
-	};
-
 	// + New Montage — 현재 선택된 sequence 가 있으면 source 로 새 montage 생성.
-	// 이름은 sequence 의 asset path stem 사용 (UObject::GetName() 의 자동생성 ObjectName 회피).
+	// 이름은 sequence stem + skeleton suffix 를 사용해 서로 다른 skeleton montage 충돌을 피한다.
 	const bool bCanCreateMontage = (AnimTabState.CurrentSequence != nullptr) && !AnimTabState.bMontageSelected;
 	if (!bCanCreateMontage) ImGui::BeginDisabled();
 	if (ImGui::Button("+ New Montage (from selected sequence)", ImVec2(-1.0f, 0.0f)))
 	{
-		const FString Stem = ExtractStem(AnimTabState.CurrentSequence->GetAssetPathFileName());
-		const FString MontageName = Stem + "_Montage";
+		const FString Stem = ExtractAssetStem(AnimTabState.CurrentSequence->GetAssetPathFileName());
+		const FString SkeletonSuffix = MakeSkeletonMontageSuffix(AnimTabState.CurrentSequence);
+		const FString MontageName = Stem + "_" + SkeletonSuffix + "_Montage";
 		const FString PackagePath = FString("Content/Montages/") + MontageName + ".uasset";
 		UAnimMontage* Montage = FAnimationManager::Get().CreateMontage(AnimTabState.CurrentSequence, MontageName);
 		if (Montage)

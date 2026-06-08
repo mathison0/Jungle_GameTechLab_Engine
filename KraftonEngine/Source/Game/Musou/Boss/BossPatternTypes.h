@@ -24,7 +24,8 @@ enum class EBossPatternStepType : uint8
 	Dash,
 	SpawnProjectile,
 	SpawnEffect,
-	SetInvincible
+	SetInvincible,
+	WarningRim
 };
 
 struct FBossPatternStep
@@ -38,7 +39,12 @@ struct FBossPatternStep
 	FString ProjectileClassName;
 	FString EffectPath;
 	FVector Offset = FVector::ZeroVector;
+	FVector4 Color = FVector4(1.0f, 0.05f, 0.02f, 1.0f);
 	float Speed = 0.0f;
+	float Intensity = 2.5f;
+	float RimIntensity = 5.0f;
+	float RimPower = 3.0f;
+	float FillAmount = 0.0f;
 	bool bValue = false;
 };
 

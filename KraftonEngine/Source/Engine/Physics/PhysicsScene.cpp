@@ -710,7 +710,7 @@ void FPhysicsScene::PrepareCharacterControllers(float DeltaTime)
 }
 
 bool FPhysicsScene::Raycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
-	ECollisionChannel TraceChannel, const AActor* IgnoreActor)
+	ECollisionChannel TraceChannel, const AActor* IgnoreActor, ECollisionChannel IgnoredObjectType)
 {
 	SCOPE_STAT_CAT("PhysX_Raycast", "PhysX");
 
@@ -728,7 +728,7 @@ bool FPhysicsScene::Raycast(const FVector& Start, const FVector& Dir, float MaxD
 		physx::PxQueryFlag::eDYNAMIC |
 		physx::PxQueryFlag::ePREFILTER;
 
-	FPhysicsRaycastFilterCallback FilterCallback(TraceChannel, IgnoreActor);
+	FPhysicsRaycastFilterCallback FilterCallback(TraceChannel, IgnoreActor, IgnoredObjectType);
 
 	const bool bHit = Scene->raycast(ToPxVec3(Start), ToPxVec3(RayDir), MaxDist, HitBuffer,
 		physx::PxHitFlag::ePOSITION | physx::PxHitFlag::eNORMAL | physx::PxHitFlag::eFACE_INDEX,

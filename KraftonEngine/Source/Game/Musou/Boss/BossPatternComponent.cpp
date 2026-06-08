@@ -6,6 +6,7 @@
 #include "Animation/Montage/AnimMontage.h"
 #include "Core/Logging/Log.h"
 #include "Component/Movement/CharacterMovementComponent.h"
+#include "Component/Primitive/HitFlashComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Game/Musou/Boss/BossPatternDataRegistry.h"
 #include "Game/Musou/Combat/AttackTypes.h"
@@ -620,6 +621,21 @@ void UBossPatternComponent::ExecuteStep(const FBossPatternStep& Step)
 		if (UBattleComponent* Battle = ResolveBattleComponent())
 		{
 			Battle->SetInvincible(Step.bValue);
+		}
+		break;
+	case EBossPatternStepType::WarningRim:
+		if (AActor* Owner = GetOwner())
+		{
+			if (UHitFlashComponent* HitFlash = Owner->GetComponentByClass<UHitFlashComponent>())
+			{
+				HitFlash->PlayFlash(
+					Step.Color,
+					Step.Duration,
+					Step.Intensity,
+					Step.RimIntensity,
+					Step.RimPower,
+					Step.FillAmount);
+			}
 		}
 		break;
 	case EBossPatternStepType::SpawnProjectile:
