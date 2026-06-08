@@ -25,7 +25,7 @@
 		#kill-ko-label,
 		#combo-counter,
 		#boss-name {
-			font-effect: shadow(2px 2px #080202cc);
+			font-effect: glow(1px 3px 2px 2px #080202cc);
 		}
 
 		#status-panel {
@@ -202,7 +202,7 @@
 			transform: scale(1.0);
 			transform-origin: 50% 50%;
 			color: #f0d36a;
-			font-effect: shadow(4px 4px #080202d8);
+			font-effect: glow(2px 6px 4px 4px #080202d8);
 		}
 
 		#blood-vignette {
