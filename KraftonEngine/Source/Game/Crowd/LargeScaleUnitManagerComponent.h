@@ -36,6 +36,8 @@ public:
 
 	FUnitHandle SpawnUnit(EUnitTeam Team, const FVector& Position);
 	FUnitHandle SpawnUnit(EUnitTeam Team, EUnitCombatType CombatType, const FVector& Position);
+	FUnitHandle SpawnUnitMoveTo(EUnitTeam Team, const FVector& Position, const FVector& MoveGoal);
+	FUnitHandle SpawnUnitMoveTo(EUnitTeam Team, EUnitCombatType CombatType, const FVector& Position, const FVector& MoveGoal);
 	void SpawnUnits(EUnitTeam Team, const FVector& Center, int32 Count, float Radius);
 	void SpawnUnits(EUnitTeam Team, EUnitCombatType CombatType, const FVector& Center, int32 Count, float Radius);
 
@@ -73,7 +75,13 @@ private:
 	FCrowdEngagementSettings BuildEngagementSettings() const;
 	FCrowdVisualDesc BuildVisualDesc(EUnitTeam Team, EUnitCombatType CombatType) const;
 
-	void ActivateUnit(FUnitHandle Handle, EUnitTeam Team, const FUnitArchetype& Archetype, const FVector& Position);
+	void ActivateUnit(
+		FUnitHandle Handle,
+		EUnitTeam Team,
+		const FUnitArchetype& Archetype,
+		const FVector& Position,
+		bool bHasInitialMoveGoal = false,
+		const FVector& InitialMoveGoal = FVector::ZeroVector);
 	void FlushPendingSpawns();
 	void FlushPendingDespawns();
 	void RemoveUnitAndReleaseVisual(FUnitHandle Handle);
@@ -399,6 +407,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Friendly Blocked Retarget Time", Min=0.0f, Max=10.0f, Speed=0.01f)
 	float FriendlyBlockedRetargetTime = 0.45f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Unit Move Goal Arrive Tolerance", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float UnitMoveGoalArriveTolerance = 0.5f;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Surface Following")
 	bool bSurfaceFollowingEnabled = true;

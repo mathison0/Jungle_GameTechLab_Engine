@@ -5,11 +5,17 @@
 class FCrowdUnitStore
 {
 public:
-	using FActivateSpawnFunc = TFunction<void(FUnitHandle, EUnitTeam, const FUnitArchetype&, const FVector&)>;
+	using FActivateSpawnFunc = TFunction<void(FUnitHandle, EUnitTeam, const FUnitArchetype&, const FVector&, bool, const FVector&)>;
 	using FRemoveUnitFunc = TFunction<void(FUnitHandle)>;
 
 	FUnitHandle AllocateUnitSlot();
-	void QueueSpawn(FUnitHandle Handle, EUnitTeam Team, const FUnitArchetype& Archetype, const FVector& Position);
+	void QueueSpawn(
+		FUnitHandle Handle,
+		EUnitTeam Team,
+		const FUnitArchetype& Archetype,
+		const FVector& Position,
+		bool bHasInitialMoveGoal = false,
+		const FVector& InitialMoveGoal = FVector::ZeroVector);
 	void ActivateUnit(
 		FUnitHandle Handle,
 		EUnitTeam Team,
@@ -45,6 +51,8 @@ private:
 		EUnitTeam Team = EUnitTeam::Enemy;
 		FUnitArchetype Archetype;
 		FVector Position = FVector::ZeroVector;
+		bool bHasInitialMoveGoal = false;
+		FVector InitialMoveGoal = FVector::ZeroVector;
 	};
 
 private:

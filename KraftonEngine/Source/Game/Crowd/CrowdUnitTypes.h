@@ -41,7 +41,8 @@ enum class ECrowdTargetKind : uint8
 {
 	None = 0,
 	Unit,
-	Player
+	Player,
+	Location
 };
 
 struct FCrowdMeleeAnimationSet

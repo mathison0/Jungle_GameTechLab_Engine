@@ -5,8 +5,11 @@ EditorProperties = {
     SpawnInterval = { type = "float", default = 2.0, min = 0.0, speed = 0.1, display = "Spawn Interval" },
     SpawnCountPerWave = { type = "int", default = 5, min = 0, speed = 1, display = "Spawn Count Per Wave" },
     MaxAliveUnits = { type = "int", default = 50, min = 0, speed = 1, display = "Max Alive Units" },
+    MaxTotalSpawnedUnits = { type = "int", default = 0, min = 0, speed = 1, display = "Max Total Spawned Units" },
     SpawnRadius = { type = "float", default = 3.0, min = 0.0, speed = 0.1, display = "Spawn Radius" },
     InitialSpawnCount = { type = "int", default = 10, min = 0, speed = 1, display = "Initial Spawn Count" },
+    bMoveToTargetOnSpawn = { type = "bool", default = false, display = "Move To Target On Spawn" },
+    MoveTargetLocation = { type = "vector", default = Vector.new(0.0, 0.0, 0.0), speed = 0.1, display = "Move Target Location" },
     bDespawnOwnedUnitsOnDisable = { type = "bool", default = false, display = "Despawn Owned Units On Disable" },
     bDespawnOwnedUnitsOnEndPlay = { type = "bool", default = false, display = "Despawn Owned Units On EndPlay" },
     bDebugLog = { type = "bool", default = false, display = "Debug Log" },
@@ -16,6 +19,7 @@ local manager = nil
 local ownedHandles = {}
 local spawnTimer = 0.0
 local bLastEnabled = true
+local totalSpawnedCount = 0
 
 local function ClampNonNegativeNumber(value)
     value = tonumber(value) or 0.0
@@ -27,6 +31,15 @@ end
 
 local function ClampNonNegativeInteger(value)
     return math.floor(ClampNonNegativeNumber(value))
+end
+
+local function GetRemainingTotalSpawnBudget()
+    local maxTotal = ClampNonNegativeInteger(MaxTotalSpawnedUnits)
+    if maxTotal <= 0 then
+        return nil
+    end
+
+    return maxTotal - totalSpawnedCount
 end
 
 local function GetSpawnCenter()
@@ -98,12 +111,20 @@ local function SpawnOneUnit()
         return false
     end
 
-    local handle = manager:SpawnUnit(Team, CombatType, MakeSpawnPosition())
+    local spawnPosition = MakeSpawnPosition()
+    local handle = nil
+    if bMoveToTargetOnSpawn then
+        handle = manager:SpawnUnitMoveTo(Team, CombatType, spawnPosition, MoveTargetLocation)
+    else
+        handle = manager:SpawnUnit(Team, CombatType, spawnPosition)
+    end
+
     if handle == nil or not handle:IsValid() then
         return false
     end
 
     table.insert(ownedHandles, handle)
+    totalSpawnedCount = totalSpawnedCount + 1
     return true
 end
 
@@ -119,6 +140,15 @@ local function SpawnUpTo(requestedCount)
         return 0
     end
 
+    local totalRemaining = GetRemainingTotalSpawnBudget()
+    if totalRemaining ~= nil then
+        if totalRemaining <= 0 then
+            return 0
+        end
+
+        remaining = math.min(remaining, totalRemaining)
+    end
+
     local count = math.min(ClampNonNegativeInteger(requestedCount), remaining)
     local spawned = 0
     for _ = 1, count do
@@ -128,7 +158,7 @@ local function SpawnUpTo(requestedCount)
     end
 
     if bDebugLog and spawned > 0 then
-        print("[UnitSpawner] spawned=" .. spawned .. " ownedAlive=" .. PruneOwnedHandles())
+        print("[UnitSpawner] spawned=" .. spawned .. " ownedAlive=" .. PruneOwnedHandles() .. " totalSpawned=" .. totalSpawnedCount)
     end
 
     return spawned
@@ -143,6 +173,7 @@ function BeginPlay()
     ownedHandles = {}
     spawnTimer = 0.0
     bLastEnabled = bEnabled
+    totalSpawnedCount = 0
 
     if manager == nil then
         if bDebugLog then

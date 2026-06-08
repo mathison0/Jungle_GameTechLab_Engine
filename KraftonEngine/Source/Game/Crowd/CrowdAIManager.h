@@ -24,6 +24,7 @@ struct FCrowdAISettings
 	int32 UnitTargetSoftCapacity = 2;
 	float UnitTargetContestPenaltyDistance = 2.0f;
 	float FriendlyBlockedRetargetTime = 0.45f;
+	float UnitMoveGoalArriveTolerance = 0.5f;
 };
 
 class FCrowdAIManager
