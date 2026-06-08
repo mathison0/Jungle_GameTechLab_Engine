@@ -51,6 +51,8 @@ namespace
 	constexpr int32 DeathMenuButtonCount = 2;
 	constexpr int32 VictoryMenuButtonCount = 2;
 	constexpr float BGMVolumeStep = 0.1f;
+	constexpr const char* MainBossBGMKey = "MainBossBGM";
+	constexpr const char* MainBossBGMPath = "MainBoss_bgm.mp3";
 
 	// 첫 로컬 플레이어의 카메라 매니저 — 셰이크 발동 지점. 없으면 null (조용히 스킵).
 	APlayerCameraManager* GetLocalCameraManager()
@@ -106,6 +108,19 @@ namespace
 		}
 
 		return CurrentSceneName == "Play";
+	}
+
+	void PlayMainBossBGM()
+	{
+		FAudioManager& AudioManager = FAudioManager::Get();
+		if (AudioManager.LoadAudio(MainBossBGMKey, MainBossBGMPath, true))
+		{
+			AudioManager.PlayBGM(MainBossBGMKey, AudioManager.GetBGMVolume());
+		}
+		else
+		{
+			UE_LOG("[MusouGameMode] Failed to load main boss BGM: %s", MainBossBGMPath);
+		}
 	}
 }
 
@@ -358,6 +373,10 @@ void AMusouGameMode::Tick(float DeltaTime)
 			{
 				if (bWasIntroDialog || bWasFinalBossDialog)
 				{
+					if (bWasFinalBossDialog)
+					{
+						PlayMainBossBGM();
+					}
 					SetGameInputPossessed(true);
 					if (UWorld* World = GetWorld())
 					{
