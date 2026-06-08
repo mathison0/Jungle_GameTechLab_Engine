@@ -154,6 +154,13 @@ void AMusouCharacter::SetupInputComponent()
 	InputComponent->AddAxisMapping("MoveRight",   'D',  1.0f);
 	InputComponent->AddAxisMapping("MoveRight",   'A', -1.0f);
 
+	// 방향키도 이동에 함께 묶음 (WASD 와 동일). 같은 축 이름에 합산되며, 게임패드 D-pad 도
+	// 이 방향키 VK 로 주입되므로 D-pad 이동까지 자동 지원. (↑0x26 ↓0x28 →0x27 ←0x25)
+	InputComponent->AddAxisMapping("MoveForward", 0x26,  1.0f);   // ↑
+	InputComponent->AddAxisMapping("MoveForward", 0x28, -1.0f);   // ↓
+	InputComponent->AddAxisMapping("MoveRight",   0x27,  1.0f);   // →
+	InputComponent->AddAxisMapping("MoveRight",   0x25, -1.0f);   // ←
+
 	// MoveInputThisFrame: 축 바인딩은 value=0 이어도 매 프레임 등록 순서대로 호출되므로
 	// MoveForward(첫 바인딩)가 재설정, MoveRight 가 합산 — 프레임 단위로 깨끗하게 재구축.
 	// 액션 바인딩(공격)은 축 이후에 돌아 같은 프레임 입력을 SnapFacingToInput 이 읽는다.
