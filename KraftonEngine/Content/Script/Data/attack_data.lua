@@ -98,11 +98,11 @@ return {
         -- 기존 3단 콤보 (몽타주/notify 에디터 저작 완료 — 주입 안 함)
         -- 단계가 오를수록 살짝 빨라진다 + 매 재생 ±5% 지터로 기계적인 반복감 제거
         combo_v1      = { montage = montage("Barbarian_Melee Combo Attack Ver. 1"), blend_in = 0.1,
-                          play_rate = { 0.95, 1.05 } },
+                          play_rate = { 1.4, 1.6 } },
         combo_v2      = { montage = montage("Barbarian_Melee Combo Attack Ver. 2"), blend_in = 0.1,
-                          play_rate = { 1.00, 1.10 } },
+                          play_rate = { 1.4, 1.6 } },
         combo_v3      = { montage = montage("Barbarian_Melee Combo Attack Ver. 3"), blend_in = 0.1,
-                          play_rate = 1.10 },
+                          play_rate = { 1.4, 1.6 } },
 
         -- 콤보 변주 (체인 칸에서 기존 단계와 랜덤 교차) — 시퀀스에 notify 없음 → 주입
         kick          = { montage = montage("Barbarian_Melee Attack Kick Ver. 2"),       -- 1.40s, 제자리 킥
@@ -156,15 +156,15 @@ return {
         ss_slash4     = { montage = montage("sword and shield slash (4)_mixamo_com"),    -- 2.43s, 전진 +1.0m
                           sequence = seq("sword and shield slash (4)_mixamo_com"),
                           blend_in = 0.1, attack_id = "light3", hit_frac = 0.45, window = { 0.55, 0.85 },
-                          play_rate = { 1.05, 1.15 } },
+                          play_rate = { 1.2, 1.3 } },
         ss_slash2     = { montage = montage("sword and shield slash (2)_mixamo_com"),    -- 3.53s, 전진 +2.3m (속도 보정)
                           sequence = seq("sword and shield slash (2)_mixamo_com"),
                           blend_in = 0.1, attack_id = "light3", hit_frac = 0.45, window = { 0.55, 0.85 },
-                          play_rate = { 1.25, 1.35 } },
+                          play_rate = { 1.4, 1.6 } },
         gs_slash2     = { montage = montage("great sword slash (2)_mixamo_com"),         -- 3.53s, 전진 +3.0m (속도 보정)
                           sequence = seq("great sword slash (2)_mixamo_com"),
                           blend_in = 0.1, attack_id = "light3", hit_frac = 0.45, window = { 0.55, 0.85 },
-                          play_rate = { 1.25, 1.35 } },
+                          play_rate = { 1.4, 1.6 } },
 
         -- 이동 진입 — 돌진 베기 (RM +3.56m)
         slide         = { montage = montage("great sword slide attack_mixamo_com"),
@@ -234,7 +234,7 @@ return {
         --   force_root_motion: 임포트 직후 RM 플래그가 꺼져 있어도 런타임에 강제로 켠다.
         roll          = { montage = montage("Standing Dive Forward_mixamo_com"),
                           sequence = seq("Standing Dive Forward_mixamo_com"),
-                          blend_in = 0.08, play_rate = 1.15, force_root_motion = true },
+                          blend_in = 0.08, play_rate = 1.35, force_root_motion = true },
 
         -- 플레이어 피격 리액션 — 좌/우 휘청 (공격 아님). 빠르게 재생해 후딜 최소화
         react_left    = { montage = montage("Barbarian_React Large From Left"),
