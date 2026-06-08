@@ -16,6 +16,8 @@ public:
 	void Tick(float DeltaTime, const AMusouGameState* MusouState, float PlayerHealthRatio);
 	void SetPauseMenuVisible(bool bVisible);
 	void NotifyPlayerDamaged(float Damage, float PlayerCurrentHealth, float PlayerMaxHealth);
+	bool StartIntroDialog();
+	bool AdvanceIntroDialog();
 	void StartDeathOverlay();
 
 	// 승리 확정 결과를 받아 결과 오버레이를 시작한다.
@@ -28,6 +30,7 @@ public:
 
 	bool IsDeathOverlayVisible() const { return bDeathOverlayVisible; }
 	bool IsVictoryOverlayVisible() const { return bVictoryOverlayVisible; }
+	bool IsIntroDialogVisible() const { return bIntroDialogVisible; }
 
 	// 사망/승리 결과 오버레이가 떠 있는 동안은 pause 메뉴와 게임 입력을 열지 않는다.
 	bool IsResultOverlayVisible() const { return bDeathOverlayVisible || bVictoryOverlayVisible; }
@@ -39,6 +42,9 @@ private:
 	void UpdateKillHud(float DeltaTime, const AMusouGameState* MusouState);
 	void UpdateComboHud(const AMusouGameState* MusouState);
 	void UpdateBloodVignette(float DeltaTime);
+	void UpdateIntroDialog(float DeltaTime);
+	void RenderIntroDialogText();
+	void FinishIntroDialog();
 	void UpdateDeathOverlay(float DeltaTime);
 	void UpdateVictoryOverlay(float DeltaTime);
 
@@ -46,6 +52,7 @@ private:
 	FMusouScoreboardOverlayPresenter ScoreboardOverlay;
 
 	bool bKillHudInitialized = false;
+	bool bIntroDialogVisible = false;
 	bool bDeathOverlayVisible = false;
 	bool bDeathButtonsVisible = false;
 
@@ -58,12 +65,15 @@ private:
 	int32 LastHudKillCount = 0;
 	int32 LastDisplayedKillMilestone = 0;
 	int32 ActiveKillMilestone = 0;
+	int32 IntroDialogPageIndex = 0;
 
 	float KillPopRemaining = 0.0f;
 	float KillMilestoneRemaining = 0.0f;
 	float KillMilestoneElapsed = 0.0f;
 	float BloodVignetteRemaining = 0.0f;
 	float BloodVignetteIntensity = 0.0f;
+	float IntroDialogTextProgress = 0.0f;
+	float IntroDialogElapsed = 0.0f;
 	float DeathOverlayElapsed = 0.0f;
 	float VictoryOverlayElapsed = 0.0f;
 	float VictoryHealthRatio = 1.0f;

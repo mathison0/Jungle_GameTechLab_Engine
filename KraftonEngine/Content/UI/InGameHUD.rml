@@ -219,6 +219,69 @@
 			display: block;
 		}
 
+		#intro-dialog-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 90;
+			display: none;
+			background-color: #000000ff;
+			pointer-events: none;
+		}
+
+		#intro-dialog-panel {
+			position: absolute;
+			left: 50%;
+			bottom: 48px;
+			margin-left: -500px;
+			width: 1000px;
+			height: 248px;
+		}
+
+		#intro-dialog-bg {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 1000px;
+			height: 248px;
+			opacity: 0.94;
+		}
+
+		#intro-dialog-text {
+			position: absolute;
+			left: 94px;
+			top: 54px;
+			display: block;
+			width: 812px;
+			height: 124px;
+			line-height: 40px;
+			font-size: 25px;
+			color: #f8f3df;
+			white-space: normal;
+		}
+
+		.intro-dialog-glyph {
+			display: inline;
+			color: #f8f3df;
+		}
+
+		#intro-dialog-next-indicator {
+			position: absolute;
+			right: 92px;
+			bottom: 42px;
+			display: block;
+			width: 38px;
+			height: 36px;
+			line-height: 36px;
+			text-align: center;
+			font-size: 34px;
+			color: #f0d36a;
+			visibility: hidden;
+			opacity: 0;
+		}
+
 		#pause-overlay {
 			position: absolute;
 			left: 0;
@@ -844,6 +907,13 @@
 		<div id="kill-milestone"></div>
 		<div id="blood-vignette">
 			<img id="blood-vignette-image" src="BloodOverlay.png" />
+		</div>
+		<div id="intro-dialog-overlay">
+			<div id="intro-dialog-panel">
+				<img id="intro-dialog-bg" src="dialog_bg.png" />
+				<div id="intro-dialog-text"></div>
+				<div id="intro-dialog-next-indicator">&gt;</div>
+			</div>
 		</div>
 		<div id="pause-overlay">
 			<div id="death-title">전사</div>

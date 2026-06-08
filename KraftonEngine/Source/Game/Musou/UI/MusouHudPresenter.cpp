@@ -28,6 +28,9 @@ namespace
 	constexpr float DeathTitleFadeDelay = 0.25f;
 	constexpr float DeathTitleFadeDuration = 1.15f;
 
+	constexpr float IntroDialogCharsPerSecond = 24.0f;
+	constexpr float IntroDialogIndicatorPulseSpeed = 5.0f;
+
 	// 승리 결과 연출은 배경 → 타이틀 → 점수/세부 결과 순서로 차례로 드러낸다.
 	// 버튼은 점수 영역의 페이드인이 끝난 뒤 활성화된다.
 	constexpr float VictoryOverlayFadeDuration = 0.75f;
@@ -112,6 +115,131 @@ namespace
 		return FString(Buffer);
 	}
 
+	const TArray<FString>& GetIntroDialogPages()
+	{
+		static const TArray<FString> Pages = {
+			"고대의 파괴자, 골렘.",
+			"오래전 봉인된 그 존재를 부활시키기 위해\n어둠 속에 있던 악의 세력이 다시 움직이기 시작했다.",
+			"골렘이 깨어나는 순간,\n세계의 평화는 무너지고 모든 생명은 파멸을 맞이할 것이다.",
+			"우리는 그 부활을 막기 위해 이 전장에 섰다.",
+			"적의 군세를 돌파하고,\n골렘의 부활을 막아라.",
+		};
+		return Pages;
+	}
+
+	int32 GetUtf8CodepointLength(unsigned char LeadByte)
+	{
+		if ((LeadByte & 0x80) == 0)
+		{
+			return 1;
+		}
+		if ((LeadByte & 0xE0) == 0xC0)
+		{
+			return 2;
+		}
+		if ((LeadByte & 0xF0) == 0xE0)
+		{
+			return 3;
+		}
+		if ((LeadByte & 0xF8) == 0xF0)
+		{
+			return 4;
+		}
+		return 1;
+	}
+
+	FString EscapeRmlText(const FString& Text)
+	{
+		FString Escaped;
+		Escaped.reserve(Text.size());
+		for (char C : Text)
+		{
+			switch (C)
+			{
+			case '&': Escaped += "&amp;"; break;
+			case '<': Escaped += "&lt;"; break;
+			case '>': Escaped += "&gt;"; break;
+			case '"': Escaped += "&quot;"; break;
+			case '\'': Escaped += "&#39;"; break;
+			default: Escaped.push_back(C); break;
+			}
+		}
+		return Escaped;
+	}
+
+	int32 CountIntroDialogGlyphs(const FString& Text)
+	{
+		int32 Count = 0;
+		for (size_t Index = 0; Index < Text.size();)
+		{
+			const char C = Text[Index];
+			if (C == '\r' || C == '\n')
+			{
+				++Index;
+				continue;
+			}
+
+			const int32 Length = std::min<int32>(
+				GetUtf8CodepointLength(static_cast<unsigned char>(C)),
+				static_cast<int32>(Text.size() - Index));
+			Index += static_cast<size_t>(Length);
+			++Count;
+		}
+		return Count;
+	}
+
+	FString MakeIntroDialogTextRml(const FString& Text, float VisibleGlyphs)
+	{
+		const int32 FullyVisibleGlyphs = static_cast<int32>(std::floor(std::max(0.0f, VisibleGlyphs)));
+		const float CurrentGlyphAlpha = std::clamp(VisibleGlyphs - static_cast<float>(FullyVisibleGlyphs), 0.0f, 1.0f);
+
+		FString Rml;
+		Rml.reserve(Text.size() * 8);
+
+		int32 GlyphIndex = 0;
+		for (size_t Index = 0; Index < Text.size();)
+		{
+			const char C = Text[Index];
+			if (C == '\r')
+			{
+				++Index;
+				continue;
+			}
+			if (C == '\n')
+			{
+				Rml += "<br/>";
+				++Index;
+				continue;
+			}
+
+			const int32 Length = std::min<int32>(
+				GetUtf8CodepointLength(static_cast<unsigned char>(C)),
+				static_cast<int32>(Text.size() - Index));
+			const FString Glyph = Text.substr(Index, static_cast<size_t>(Length));
+
+			float GlyphAlpha = 0.0f;
+			if (GlyphIndex < FullyVisibleGlyphs)
+			{
+				GlyphAlpha = 1.0f;
+			}
+			else if (GlyphIndex == FullyVisibleGlyphs)
+			{
+				GlyphAlpha = CurrentGlyphAlpha;
+			}
+
+			Rml += "<span class=\"intro-dialog-glyph\" style=\"opacity:";
+			Rml += MakeOpacityValue(GlyphAlpha);
+			Rml += ";\">";
+			Rml += (C == ' ') ? "&#160;" : EscapeRmlText(Glyph);
+			Rml += "</span>";
+
+			Index += static_cast<size_t>(Length);
+			++GlyphIndex;
+		}
+
+		return Rml;
+	}
+
 	FString MakeOverlayColor(float Alpha)
 	{
 		const float ClampedAlpha = std::clamp(Alpha, 0.0f, 1.0f);
@@ -171,8 +299,67 @@ void FMusouHudPresenter::Tick(float DeltaTime, const AMusouGameState* MusouState
 	}
 
 	UpdateBloodVignette(DeltaTime);
+	UpdateIntroDialog(DeltaTime);
 	UpdateDeathOverlay(DeltaTime);
 	UpdateVictoryOverlay(DeltaTime);
+}
+
+bool FMusouHudPresenter::StartIntroDialog()
+{
+	if (!Widget || !Widget->IsDocumentLoaded() || GetIntroDialogPages().empty())
+	{
+		return false;
+	}
+
+	bIntroDialogVisible = true;
+	IntroDialogPageIndex = 0;
+	IntroDialogTextProgress = 0.0f;
+	IntroDialogElapsed = 0.0f;
+
+	Widget->SetProperty("intro-dialog-overlay", "display", "block");
+	Widget->SetProperty("intro-dialog-next-indicator", "visibility", "hidden");
+	Widget->SetProperty("intro-dialog-next-indicator", "opacity", "0");
+	Widget->SetText("intro-dialog-text", "");
+	Widget->SetWantsMouse(false);
+	RenderIntroDialogText();
+	return true;
+}
+
+bool FMusouHudPresenter::AdvanceIntroDialog()
+{
+	if (!bIntroDialogVisible)
+	{
+		return false;
+	}
+
+	const TArray<FString>& Pages = GetIntroDialogPages();
+	if (IntroDialogPageIndex < 0 || IntroDialogPageIndex >= static_cast<int32>(Pages.size()))
+	{
+		FinishIntroDialog();
+		return true;
+	}
+
+	const int32 CurrentGlyphCount = CountIntroDialogGlyphs(Pages[IntroDialogPageIndex]);
+	if (IntroDialogTextProgress < static_cast<float>(CurrentGlyphCount))
+	{
+		IntroDialogTextProgress = static_cast<float>(CurrentGlyphCount);
+		RenderIntroDialogText();
+		return false;
+	}
+
+	if (IntroDialogPageIndex + 1 < static_cast<int32>(Pages.size()))
+	{
+		++IntroDialogPageIndex;
+		IntroDialogTextProgress = 0.0f;
+		IntroDialogElapsed = 0.0f;
+		Widget->SetProperty("intro-dialog-next-indicator", "visibility", "hidden");
+		Widget->SetProperty("intro-dialog-next-indicator", "opacity", "0");
+		RenderIntroDialogText();
+		return false;
+	}
+
+	FinishIntroDialog();
+	return true;
 }
 
 void FMusouHudPresenter::SetPauseMenuVisible(bool bVisible)
@@ -457,6 +644,82 @@ void FMusouHudPresenter::UpdateBloodVignette(float DeltaTime)
 	{
 		BloodVignetteIntensity = 0.0f;
 	}
+}
+
+void FMusouHudPresenter::UpdateIntroDialog(float DeltaTime)
+{
+	if (!bIntroDialogVisible || !Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	const TArray<FString>& Pages = GetIntroDialogPages();
+	if (IntroDialogPageIndex < 0 || IntroDialogPageIndex >= static_cast<int32>(Pages.size()))
+	{
+		FinishIntroDialog();
+		return;
+	}
+
+	IntroDialogElapsed += DeltaTime;
+
+	const int32 CurrentGlyphCount = CountIntroDialogGlyphs(Pages[IntroDialogPageIndex]);
+	const float PreviousProgress = IntroDialogTextProgress;
+	IntroDialogTextProgress = std::min(
+		static_cast<float>(CurrentGlyphCount),
+		IntroDialogTextProgress + DeltaTime * IntroDialogCharsPerSecond);
+
+	if (IntroDialogTextProgress != PreviousProgress)
+	{
+		RenderIntroDialogText();
+	}
+
+	const bool bPageComplete = IntroDialogTextProgress >= static_cast<float>(CurrentGlyphCount);
+	if (bPageComplete)
+	{
+		const float Pulse = 0.5f + 0.5f * static_cast<float>(std::sin(IntroDialogElapsed * IntroDialogIndicatorPulseSpeed));
+		Widget->SetProperty("intro-dialog-next-indicator", "visibility", "visible");
+		Widget->SetProperty("intro-dialog-next-indicator", "opacity", MakeOpacityValue(0.45f + Pulse * 0.55f));
+	}
+	else
+	{
+		Widget->SetProperty("intro-dialog-next-indicator", "visibility", "hidden");
+		Widget->SetProperty("intro-dialog-next-indicator", "opacity", "0");
+	}
+}
+
+void FMusouHudPresenter::RenderIntroDialogText()
+{
+	if (!bIntroDialogVisible || !Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	const TArray<FString>& Pages = GetIntroDialogPages();
+	if (IntroDialogPageIndex < 0 || IntroDialogPageIndex >= static_cast<int32>(Pages.size()))
+	{
+		return;
+	}
+
+	Widget->SetText("intro-dialog-text", MakeIntroDialogTextRml(Pages[IntroDialogPageIndex], IntroDialogTextProgress));
+}
+
+void FMusouHudPresenter::FinishIntroDialog()
+{
+	bIntroDialogVisible = false;
+	IntroDialogPageIndex = 0;
+	IntroDialogTextProgress = 0.0f;
+	IntroDialogElapsed = 0.0f;
+
+	if (!Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	Widget->SetText("intro-dialog-text", "");
+	Widget->SetProperty("intro-dialog-overlay", "display", "none");
+	Widget->SetProperty("intro-dialog-next-indicator", "visibility", "hidden");
+	Widget->SetProperty("intro-dialog-next-indicator", "opacity", "0");
+	Widget->SetWantsMouse(false);
 }
 
 void FMusouHudPresenter::UpdateDeathOverlay(float DeltaTime)

@@ -171,6 +171,14 @@ void AMusouGameMode::StartMatch()
 		HudWidget->SetWantsMouse(false);
 		HudWidget->AddToViewport(0);
 		SetStopMenuVisible(false);
+		if (HudPresenter.StartIntroDialog())
+		{
+			SetGameInputPossessed(false);
+			if (UWorld* World = GetWorld())
+			{
+				World->SetPaused(true);
+			}
+		}
 		UE_LOG("[MusouGameMode] In-game HUD added to viewport");
 	}
 
@@ -215,14 +223,33 @@ void AMusouGameMode::Tick(float DeltaTime)
 	// 맞았을 때만 슬로모 — 예약/직전히트 기록 만료 처리.
 	TickHitSlomoQueue(DeltaTime);
 
+	InputSystem& Input = InputSystem::Get();
+	if (HudPresenter.IsIntroDialogVisible())
+	{
+		if (Input.GetKeyDown(VK_SPACE) || Input.GetKeyDown(VK_LBUTTON))
+		{
+			if (HudPresenter.AdvanceIntroDialog())
+			{
+				SetGameInputPossessed(true);
+				if (UWorld* World = GetWorld())
+				{
+					World->SetPaused(false);
+				}
+			}
+		}
+
+		HudPresenter.Tick(DeltaTime, GetMusouGameState(), GetPlayerHealthRatio());
+		return;
+	}
+
 	// TODO: 실제 승리 조건이 들어오면 제거할 테스트 진입점.
 	// 현재는 플레이 중 T 키로 승리 확정 흐름과 결과 오버레이를 검증한다.
-	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible && InputSystem::Get().GetKeyDown('T'))
+	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible && Input.GetKeyDown('T'))
 	{
 		NotifyVictory();
 	}
 
-	if (!HudPresenter.IsResultOverlayVisible() && InputSystem::Get().GetKeyDown(VK_ESCAPE))
+	if (!HudPresenter.IsResultOverlayVisible() && Input.GetKeyDown(VK_ESCAPE))
 	{
 		if (bAudioSettingsVisible)
 		{
@@ -561,7 +588,7 @@ void AMusouGameMode::SubmitVictoryScore()
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 {
-	if (HudPresenter.IsResultOverlayVisible())
+	if (HudPresenter.IsIntroDialogVisible() || HudPresenter.IsResultOverlayVisible())
 	{
 		return;
 	}
