@@ -429,6 +429,57 @@
 			display: none;
 		}
 
+		#scoreboard-save-button {
+			position: relative;
+			display: block;
+			width: 78px;
+			height: 40px;
+			line-height: 40px;
+			margin-left: 18px;
+			padding: 0;
+			text-align: center;
+			font-size: 22px;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		.scoreboard-save-button-frame {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.scoreboard-save-button-frame-hover {
+			display: none;
+		}
+
+		.scoreboard-save-button-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 100%;
+			height: 100%;
+			line-height: 40px;
+			text-align: center;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
+		}
+
+		#scoreboard-save-button:hover .scoreboard-save-button-frame-normal {
+			display: none;
+		}
+
+		#scoreboard-save-button:hover .scoreboard-save-button-frame-hover {
+			display: block;
+		}
+
+		#scoreboard-save-button:hover .scoreboard-save-button-label {
+			color: #fff1b0;
+		}
+
 		#scoreboard-list {
 			position: relative;
 			z-index: 1;
