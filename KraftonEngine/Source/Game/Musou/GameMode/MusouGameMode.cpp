@@ -499,7 +499,7 @@ void AMusouGameMode::BroadcastAttack(const FMusouAttackEvent& Event)
 	OnAttackPerformed.Broadcast(Event);
 }
 
-void AMusouGameMode::NotifyAttackComboHits(const FMusouAttackEvent& Event, int32 HitCount)
+void AMusouGameMode::NotifyAttackComboHits(const FMusouAttackEvent& Event, int32 HitCount, bool bBossHit)
 {
 	if (HitCount <= 0 || !Event.Attacker)
 	{
@@ -517,7 +517,10 @@ void AMusouGameMode::NotifyAttackComboHits(const FMusouAttackEvent& Event, int32
 			AMusouCharacter* Player = Cast<AMusouCharacter>(Event.Attacker);
 			if (!Player || !Player->IsUltimateActive())
 			{
-				MusouState->AddMusouGaugeFromHits(HitCount);
+				// 보스 적중은 게이지 배율 적용 (feedback.ultimate.boss_gauge_mult, 기본 5).
+				const float GaugeMult = bBossHit
+					? FAttackDataRegistry::Get().GetFeedback().UltimateBossGaugeMult : 1.0f;
+				MusouState->AddMusouGaugeFromHits(HitCount, GaugeMult);
 
 				// 콤보 회복 — 적중 수 × feedback.heal.per_hit 만큼 플레이어 체력 회복.
 				const float HealPerHit = FAttackDataRegistry::Get().GetFeedback().HealPerComboHit;

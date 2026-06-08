@@ -52,7 +52,7 @@ public:
 	float GetMusouGauge() const { return MusouGauge; }
 	bool IsMusouGaugeFull() const { return MusouGauge >= 1.0f; }
 	bool TryConsumeMusouGauge();   // 가득 찼을 때만 소모하고 true
-	void AddMusouGaugeFromHits(int32 HitCount);   // 플레이어 적중 수만큼 게이지 적립
+	void AddMusouGaugeFromHits(int32 HitCount, float Mult = 1.0f);   // 적중 수 × Mult 만큼 게이지 적립
 
 	// --- Match ---
 	float GetMatchTime() const;

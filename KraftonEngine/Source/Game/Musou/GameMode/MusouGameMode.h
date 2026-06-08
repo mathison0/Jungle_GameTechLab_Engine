@@ -68,7 +68,7 @@ public:
 	void BroadcastAttack(const FMusouAttackEvent& Event);
 
 	// 수신자가 히트 결과를 단계별로 회신한다. 콤보 증가와 히트스탑은 타이밍 의존성이 달라 분리한다.
-	void NotifyAttackComboHits(const FMusouAttackEvent& Event, int32 HitCount);
+	void NotifyAttackComboHits(const FMusouAttackEvent& Event, int32 HitCount, bool bBossHit = false);
 	void NotifyAttackHitFeedback(const FMusouAttackEvent& Event, int32 HitCount);
 
 	void NotifyHitConfirmed(const FMusouHitEvent& Event);
