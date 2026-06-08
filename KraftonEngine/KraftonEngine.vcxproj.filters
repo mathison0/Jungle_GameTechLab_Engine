@@ -1952,6 +1952,12 @@
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp">
       <Filter>Source\Game\Musou\Character</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Camera\AnimNotify_CameraShake.cpp">
+      <Filter>Source\Game\Musou\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Musou\Camera\AnimNotify_Slomo.cpp">
+      <Filter>Source\Game\Musou\Camera</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\Camera\AnimNotifyState_CameraShot.cpp">
       <Filter>Source\Game\Musou\Camera</Filter>
     </ClCompile>
@@ -3520,6 +3526,12 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h">
       <Filter>Source\Game\Musou\Character</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Camera\AnimNotify_CameraShake.h">
+      <Filter>Source\Game\Musou\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\Camera\AnimNotify_Slomo.h">
+      <Filter>Source\Game\Musou\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\Camera\AnimNotifyState_CameraShot.h">
       <Filter>Source\Game\Musou\Camera</Filter>

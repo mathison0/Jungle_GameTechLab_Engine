@@ -72,6 +72,11 @@ public:
 
 	void NotifyHitConfirmed(const FMusouHitEvent& Event);
 
+	// "맞았을 때만" 슬로모 예약 — AnimNotify_Slomo(bOnlyOnHit)가 호출. Attacker 가
+	// Window(실시간 초) 내 실제 히트를 내면 그 순간 Slomo 발동, 아니면 폐기.
+	// 같은 프레임에 히트가 먼저 처리되는 순서도 직전 히트 기록으로 커버한다.
+	void RequestHitSlomo(APawn* Attacker, float Duration, float TimeDilation, float Window);
+
 	// --- 게임 룰 이벤트 진입점 ---
 	// 적 처치 시 호출 (적 사망 처리 코드에서). GameState에 킬/콤보 누적.
 	virtual void NotifyEnemyKilled(APawn* Killed);
@@ -92,6 +97,10 @@ public:
 	AMusouGameState* GetMusouGameState() const;
 
 private:
+	// 맞았을 때만 슬로모 — 예약/직전히트 큐 처리.
+	void FireHitSlomo(APawn* Attacker, float Duration, float TimeDilation) const;
+	void TickHitSlomoQueue(float DeltaTime);
+
 	void SetStopMenuVisible(bool bVisible);
 	float GetPlayerHealthRatio() const;
 	void ConfigureHudMenuNavigators();
@@ -111,4 +120,21 @@ private:
 	bool bHasPendingVictoryResult = false;
 	bool bVictoryScoreSubmitted = false;
 	FMusouMatchResult PendingVictoryResult;
+
+	// 맞았을 때만 슬로모 — 히트 회신을 기다리는 예약, 그리고 같은 프레임에 히트가
+	// 먼저 처리되는 순서를 덮기 위한 직전 히트 기록(짧은 수명). 둘 다 Tick 에서 만료.
+	struct FPendingHitSlomo
+	{
+		APawn* Attacker = nullptr;
+		float Duration = 0.0f;
+		float Dilation = 1.0f;
+		float TimeRemaining = 0.0f;
+	};
+	struct FRecentAttackHit
+	{
+		APawn* Attacker = nullptr;
+		float TimeRemaining = 0.0f;
+	};
+	TArray<FPendingHitSlomo> PendingHitSlomos;
+	TArray<FRecentAttackHit> RecentAttackHits;
 };

@@ -184,6 +184,9 @@ void AMusouGameMode::Tick(float DeltaTime)
 {
 	AGameModeBase::Tick(DeltaTime);
 
+	// 맞았을 때만 슬로모 — 예약/직전히트 기록 만료 처리.
+	TickHitSlomoQueue(DeltaTime);
+
 	// TODO: 실제 승리 조건이 들어오면 제거할 테스트 진입점.
 	// 현재는 플레이 중 T 키로 승리 확정 흐름과 결과 오버레이를 검증한다.
 	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible && InputSystem::Get().GetKeyDown('T'))
@@ -265,11 +268,77 @@ void AMusouGameMode::NotifyAttackHitFeedback(const FMusouAttackEvent& Event, int
 			CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(Event.Spec.ShakeScale);
 		}
 	}
+
+	// "맞았을 때만" 슬로모 — 이 공격이 실제로 명중했으니, 대기 중인 on-hit 예약을 발동.
+	// 또한 같은 프레임에 슬로모 notify 가 뒤늦게 들어오는 순서를 덮도록 직전 히트를 짧게 기록.
+	RecentAttackHits.push_back({ Event.Attacker, 0.05f });
+	for (int32 i = static_cast<int32>(PendingHitSlomos.size()) - 1; i >= 0; --i)
+	{
+		if (PendingHitSlomos[i].Attacker == Event.Attacker)
+		{
+			FireHitSlomo(PendingHitSlomos[i].Attacker, PendingHitSlomos[i].Duration, PendingHitSlomos[i].Dilation);
+			PendingHitSlomos.erase(PendingHitSlomos.begin() + i);
+		}
+	}
 }
 
 void AMusouGameMode::NotifyHitConfirmed(const FMusouHitEvent& Event)
 {
 	OnHitConfirmed.Broadcast(Event);
+}
+
+void AMusouGameMode::RequestHitSlomo(APawn* Attacker, float Duration, float TimeDilation, float Window)
+{
+	if (!Attacker)
+	{
+		return;
+	}
+
+	// 같은 프레임에 히트가 먼저 처리된 경우(공격 notify 가 슬로모 notify 보다 앞) —
+	// 직전 히트 기록이 있으면 즉시 발동.
+	for (const FRecentAttackHit& Hit : RecentAttackHits)
+	{
+		if (Hit.Attacker == Attacker)
+		{
+			FireHitSlomo(Attacker, Duration, TimeDilation);
+			return;
+		}
+	}
+
+	// 아직 히트 전 — Window 동안 예약. 그 안에 명중하면 NotifyAttackHitFeedback 이 발동.
+	PendingHitSlomos.push_back({ Attacker, Duration, TimeDilation, Window });
+}
+
+void AMusouGameMode::FireHitSlomo(APawn* Attacker, float Duration, float TimeDilation) const
+{
+	if (!Attacker)
+	{
+		return;
+	}
+	if (UActionComponent* Action = Attacker->GetComponentByClass<UActionComponent>())
+	{
+		Action->Slomo(Duration, TimeDilation);
+	}
+}
+
+void AMusouGameMode::TickHitSlomoQueue(float DeltaTime)
+{
+	for (int32 i = static_cast<int32>(PendingHitSlomos.size()) - 1; i >= 0; --i)
+	{
+		PendingHitSlomos[i].TimeRemaining -= DeltaTime;
+		if (PendingHitSlomos[i].TimeRemaining <= 0.0f)
+		{
+			PendingHitSlomos.erase(PendingHitSlomos.begin() + i);
+		}
+	}
+	for (int32 i = static_cast<int32>(RecentAttackHits.size()) - 1; i >= 0; --i)
+	{
+		RecentAttackHits[i].TimeRemaining -= DeltaTime;
+		if (RecentAttackHits[i].TimeRemaining <= 0.0f)
+		{
+			RecentAttackHits.erase(RecentAttackHits.begin() + i);
+		}
+	}
 }
 
 void AMusouGameMode::NotifyEnemyKilled(APawn* Killed)
