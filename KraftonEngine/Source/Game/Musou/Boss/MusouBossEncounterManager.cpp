@@ -497,6 +497,10 @@ void AMusouBossEncounterManager::FinishSequence()
 		ActiveSequenceKind = EBossSequenceKind::None;
 		ActiveSteps.clear();
 		HideBossSequenceDialogue(GetWorld());
+		if (AMusouGameMode* GameMode = ResolveMusouGameMode(GetWorld()))
+		{
+			GameMode->SetHudVisible(true);
+		}
 		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
 		{
 			CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
