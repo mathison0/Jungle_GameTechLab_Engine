@@ -49,6 +49,13 @@ public:
 	float GetHealth() const { return Health; }
 	float GetMaxHealth() const { return MaxHealth; }
 	float GetHealthRatio() const { return MaxHealth > 0.0f ? Health / MaxHealth : 0.0f; }
+
+	// 씬 전환 보존 복원용 — 체력 직접 설정 ([0,MaxHealth] 클램프, 0 이하면 사망 처리).
+	void SetHealth(float NewHealth)
+	{
+		Health = (NewHealth < 0.0f) ? 0.0f : ((NewHealth > MaxHealth) ? MaxHealth : NewHealth);
+		bDead = (Health <= 0.0f);
+	}
 	float GetAttackPower() const { return AttackPower; }
 
 	UPROPERTY(Edit, Save, Category="Battle", DisplayName="Max Health")

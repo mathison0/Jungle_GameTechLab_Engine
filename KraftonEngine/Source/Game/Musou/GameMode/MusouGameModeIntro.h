@@ -27,6 +27,7 @@ private:
 	void HideAudioSettings();
 	void AdjustBGMVolume(float Delta);
 	void RefreshAudioSettingsUI();
+	void RefreshCameraDirectionUI();   // 설정 패널 "카메라 연출" 토글 라벨 갱신
 	void HandleAudioSettingsInput();
 	void ShowScoreboard();
 	void HideScoreboard();
