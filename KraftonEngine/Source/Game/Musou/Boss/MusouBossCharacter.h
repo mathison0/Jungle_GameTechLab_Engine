@@ -30,15 +30,20 @@ public:
 
 	UBattleComponent* GetBattleComponent() const { return BattleComponent; }
 	UBossPatternComponent* GetPatternComponent() const { return PatternComponent; }
+	FString GetBossDisplayName() const;
 
 	UPROPERTY(Edit, Save, Category="Boss", DisplayName="Boss Id")
 	FName BossId = FName("knight_boss");
+
+	UPROPERTY(Edit, Save, Category="Boss", DisplayName="Display Name")
+	FString DisplayName;
 
 private:
 	void ApplyBossDefinition();
 	void EnsureBossAnimation(const FString& AnimScript);
 	void InitializeHitFlash();
 
+	FString DefinitionDisplayName;
 	UBattleComponent* BattleComponent = nullptr;
 	UBossPatternComponent* PatternComponent = nullptr;
 	UHitFlashComponent* HitFlashComponent = nullptr;

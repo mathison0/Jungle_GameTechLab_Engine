@@ -219,6 +219,53 @@
 			display: block;
 		}
 
+		#boss-health-panel {
+			position: absolute;
+			left: 50%;
+			top: 28px;
+			margin-left: -320px;
+			display: none;
+			width: 640px;
+			height: 60px;
+			z-index: 30;
+			pointer-events: none;
+		}
+
+		#boss-name {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 640px;
+			height: 22px;
+			line-height: 22px;
+			text-align: center;
+			font-size: 26px;
+			color: #f8f3df;
+		}
+
+		#boss-hp-bar {
+			display: block;
+			position: absolute;
+			left: 84px;
+			top: 42px;
+			width: 472px;
+			height: 16px;
+			background-color: rgba(73, 73, 73, 0);
+			border-width: 0;
+		}
+
+		#boss-hp-bar-frame {
+			position: absolute;
+			left: 70px;
+			top: 37px;
+			width: 500px;
+			height: 24px;
+		}
+
+		#boss-hp-bar fill {
+			background-color: #ac130ee3;
+		}
+
 		#story-dialog-overlay {
 			position: absolute;
 			left: 0;
@@ -290,7 +337,7 @@
 			height: 100%;
 			z-index: 100;
 			display: none;
-			background-color: #1616165c;
+			background-color: #161616a2;
 		}
 
 		#death-title {
@@ -907,6 +954,11 @@
 		<div id="kill-milestone"></div>
 		<div id="blood-vignette">
 			<img id="blood-vignette-image" src="BloodOverlay.png" />
+		</div>
+		<div id="boss-health-panel">
+			<div id="boss-name">BOSS</div>
+			<progress id="boss-hp-bar" value="1.0"></progress>
+			<img id="boss-hp-bar-frame" src="Bar_Frame.png" />
 		</div>
 		<div id="story-dialog-overlay">
 			<div id="story-dialog-panel">

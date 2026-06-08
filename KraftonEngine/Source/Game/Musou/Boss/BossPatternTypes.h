@@ -115,6 +115,7 @@ struct FBossSequenceStep
 struct FBossDefinition
 {
 	FName BossId = FName::None;
+	FString DisplayName;
 	float MaxHealth = 1000.0f;
 	float AttackPower = 20.0f;
 	float MoveSpeed = 3.0f;
