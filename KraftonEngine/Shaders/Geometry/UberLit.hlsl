@@ -35,6 +35,7 @@
 // =============================================================================
 Texture2D DiffuseTexture : register(t0);
 Texture2D NormalTexture : register(t1);
+Texture2D SpecularTexture : register(t6);
 
 // ── Per-Object Material (b2) — 기존 StaticMesh 와 레이아웃 동일 (호환성) ──
 cbuffer PerShader1 : register(b2)
@@ -50,6 +51,9 @@ cbuffer PerShader1 : register(b2)
     float3 _pad;
 
     float4 HitFlashColor;
+
+    float HasSpecularMap;
+    float3 _specularPad;
 };
 
 
@@ -382,6 +386,11 @@ return output;
     specular = AccumulateSpecular(input.worldPos, N, V, g_DefaultShininess, input.position);
 
 #endif
+
+    if (HasSpecularMap >= 0.5f)
+    {
+        specular *= SpecularTexture.Sample(LinearWrapSampler, input.texcoord).r;
+    }
 
     output.Culling = ComputeCullingHeatmap(input.position, input.worldPos);
     // Diffuse에만 albedo를 곱하고, Specular는 빛 색상 그대로 더한다

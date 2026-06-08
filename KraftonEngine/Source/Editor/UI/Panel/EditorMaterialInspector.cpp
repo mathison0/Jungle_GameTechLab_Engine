@@ -4,6 +4,7 @@
 #include "Editor/UI/ContentBrowser/ContentItem.h"
 #include "SimpleJSON/json.hpp"
 #include "Engine/Materials/Material.h"
+#include "Engine/Render/Types/MaterialTextureSlot.h"
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Texture/Texture2D.h"
 
@@ -186,7 +187,13 @@ void FEditorMaterialInspector::RenderTextureSection()
 				if (NewTexture)
 				{
 					CachedMaterial->SetTextureParameter(SlotName, NewTexture);
+					CachedJson["Textures"][SlotName.c_str()] = NewTexturePath.c_str();
+					if (MaterialTextureSlot::IsSpecularParameterName(SlotName))
+					{
+						CachedJson["Parameters"]["HasSpecularMap"] = 1.0f;
+					}
 					CachedMaterial->RebuildCachedSRVs();
+					SaveMaterialJson();
 				}
 
 			}

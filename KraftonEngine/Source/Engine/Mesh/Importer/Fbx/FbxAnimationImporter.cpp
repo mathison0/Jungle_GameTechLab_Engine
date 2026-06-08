@@ -24,7 +24,7 @@ namespace
 		SdkEvaluatorOnly
 	};
 
-	static constexpr EFbxAnimationBakePolicy GAnimationBakePolicy          = EFbxAnimationBakePolicy::DirectLayeredOnly;
+	static constexpr EFbxAnimationBakePolicy GAnimationBakePolicy          = EFbxAnimationBakePolicy::SdkEvaluatorOnly;
 	static constexpr bool                    GValidateDirectBakeAgainstSdk = false;
 	static constexpr bool                    GStoreSourceTransformCurves   = false;
 	static constexpr double                  GDirectBakeErrorTolerance     = 0.001;
