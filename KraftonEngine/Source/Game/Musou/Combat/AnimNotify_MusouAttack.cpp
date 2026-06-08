@@ -4,6 +4,7 @@
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Game/Musou/MainBoss/MainBossPatternComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
@@ -30,7 +31,8 @@ void UAnimNotify_MusouAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
 		return;
 	}
 
-	const FAttackSpec* Spec = FindMusouAttackSpec(FName(AttackId));
+	const FName AttackName(AttackId);
+	const FAttackSpec* Spec = FindMusouAttackSpec(AttackName);
 	if (!Spec)
 	{
 		UE_LOG("[MusouAttack] unknown AttackId '%s' — AttackTypes.h 테이블 확인", AttackId.c_str());
@@ -52,6 +54,11 @@ void UAnimNotify_MusouAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
 	if (UBattleComponent* Battle = OwnerActor->GetComponentByClass<UBattleComponent>())
 	{
 		AttackPower = Battle->GetAttackPower();
+	}
+
+	if (UMainBossPatternComponent* MainBossPattern = OwnerActor->GetComponentByClass<UMainBossPatternComponent>())
+	{
+		MainBossPattern->NotifyAttackBeforeBroadcast(AttackName);
 	}
 
 	FMusouAttackEvent Event;
