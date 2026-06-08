@@ -48,6 +48,7 @@ namespace
 		Step.HitFrac      = T.get_or("hit_frac", -1.0f);
 
 		Step.bForceRootMotion = T.get_or("force_root_motion", false);
+		Step.bPlantInAir      = T.get_or("plant_in_air", false);
 
 		// play_rate — 숫자(고정) 또는 { min, max } (균등 랜덤)
 		sol::object RateObj = T["play_rate"];
@@ -106,8 +107,13 @@ namespace
 
 				Shot.bLookAt      = ShotT->get_or("look_at", true);
 				Shot.LookAtHeight = ShotT->get_or("look_height", Shot.LookAtHeight);
+				Shot.LookAhead    = ShotT->get_or("look_ahead", 0.0f);
 				Shot.bFollow      = ShotT->get_or("follow", true);
 				Shot.Letterbox    = ShotT->get_or("letterbox", 0.0f);
+
+				// anchor — offset 기준 yaw. "character" 면 캐릭터 facing, 그 외(기본)는 카메라 뷰.
+				const std::string Anchor = ShotT->get_or("anchor", std::string("camera"));
+				Shot.bCameraRelative = (Anchor != "character");
 
 				if (Shot.IsValid())
 				{
@@ -119,6 +125,53 @@ namespace
 				}
 			}
 		}
+
+		// shockwave — 전방 진행 충격파 (궁극기 지면 강타). 단일 테이블.
+		if (sol::optional<sol::table> SwT = T["shockwave"])
+		{
+			FMusouShockwave& Sw = Step.Shockwave;
+			Sw.TriggerFrac = SwT->get_or("trigger_frac", -1.0f);
+			Sw.Distance    = SwT->get_or("distance",  Sw.Distance);
+			Sw.Duration    = SwT->get_or("duration",  Sw.Duration);
+			Sw.Pulses      = SwT->get_or("pulses",    Sw.Pulses);
+			Sw.AttackId    = SwT->get_or("attack_id", Step.AttackId);   // 비면 스텝 attack_id 사용
+			Sw.SlashSpeed  = SwT->get_or("slash_speed", Sw.SlashSpeed);
+			Sw.SlashLife   = SwT->get_or("slash_life",  Sw.SlashLife);
+			Sw.SlashYaw    = SwT->get_or("slash_yaw",   Sw.SlashYaw);
+			if (!Sw.IsValid())
+			{
+				UE_LOG("[AttackData] shockwave 무효 (trigger_frac/pulses/distance 확인) — 스킵");
+				Step.Shockwave = FMusouShockwave();
+			}
+		}
+
+		// leap — 궁극기 백플립 도약 (후방+상방 임펄스). 단일 테이블.
+		if (sol::optional<sol::table> LpT = T["leap"])
+		{
+			FMusouLeap& Lp = Step.Leap;
+			Lp.TriggerFrac = LpT->get_or("trigger_frac", -1.0f);
+			Lp.Back        = LpT->get_or("back", Lp.Back);
+			Lp.Up          = LpT->get_or("up",   Lp.Up);
+			Lp.Gravity     = LpT->get_or("gravity", Lp.Gravity);
+			if (!Lp.IsValid())
+			{
+				UE_LOG("[AttackData] leap 무효 (trigger_frac 확인) — 스킵");
+				Step.Leap = FMusouLeap();
+			}
+		}
+
+		// advance — 궁극기 다음 슬롯 조기 전환. 단일 테이블.
+		if (sol::optional<sol::table> AdT = T["advance"])
+		{
+			FMusouAdvance& Ad = Step.Advance;
+			Ad.TriggerFrac = AdT->get_or("trigger_frac", -1.0f);
+			if (!Ad.IsValid())
+			{
+				UE_LOG("[AttackData] advance 무효 (trigger_frac 확인) — 스킵");
+				Step.Advance = FMusouAdvance();
+			}
+		}
+
 		return Step;
 	}
 }
@@ -364,7 +417,7 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 		if (sol::optional<sol::table> Ultimate = (*FeedbackT)["ultimate"])
 		{
-			NewFeedback.UltimateKillsToFill = Ultimate->get_or("kills_to_fill", NewFeedback.UltimateKillsToFill);
+			NewFeedback.UltimateHitsToFill = Ultimate->get_or("hits_to_fill", NewFeedback.UltimateHitsToFill);
 		}
 		if (sol::optional<sol::table> HitReact = (*FeedbackT)["hit_react"])
 		{

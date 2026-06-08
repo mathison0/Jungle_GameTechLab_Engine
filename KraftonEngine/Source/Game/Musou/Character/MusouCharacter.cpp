@@ -4,7 +4,14 @@
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/Combat/ComboComponent.h"
 #include "Game/Musou/Combat/AnimNotify_MusouAttack.h"
+#include "Game/Musou/Combat/AnimNotify_GroundSlamShockwave.h"
+#include "Game/Musou/Combat/AnimNotify_UltimateLeap.h"
+#include "Game/Musou/Combat/AnimNotify_UltimateAdvance.h"
 #include "Game/Musou/Combat/AnimNotifyState_ComboWindow.h"
+#include "Game/Musou/Effect/SlashEffectActor.h"
+#include "Game/Musou/Boss/MusouBossCharacter.h"
+#include "Game/Crowd/LargeScaleUnitManagerComponent.h"
+#include "Game/Crowd/CrowdUnitTypes.h"
 #include "Game/Musou/Camera/AnimNotifyState_CameraShot.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
@@ -236,6 +243,16 @@ void AMusouCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// 충격파는 몽타주/콤보 상태와 무관하게 진행 — 항상 먼저 갱신.
+	UpdateShockwave(DeltaTime);
+
+	// 궁극기 마무리 슬램 — 내리꽂기가 지면에 닿는 순간 착지 임팩트 1회.
+	if (bUltimateLandingPending && !IsFalling())
+	{
+		bUltimateLandingPending = false;
+		TriggerUltimateLandingImpact();
+	}
+
 	if (!ComboComponent)
 	{
 		// 콤보 컴포넌트가 없어도 진행 중 카메라 샷은 유지/복귀해야 한다.
@@ -457,10 +474,19 @@ void AMusouCharacter::OnUltimatePressed()
 		BattleComponent->SetInvincible(true);
 	}
 
-	// 발동 연출 — 짧은 글로벌 슬로모 + 강셰이크 (킬 버스트 인프라 재사용).
+	// 난무 동안 orient-to-movement 차단 — 백플립이 뒤로 launch 되면 PhysOrientToMovement 가
+	// 속도(후방) 방향으로 캡슐을 돌려 카메라 쪽으로 휙 도는 증상을 막는다 (facing 은 발동 시점
+	// 고정). EndUltimate 에서 복원.
+	if (UCharacterMovementComponent* Movement = GetComponentByClass<UCharacterMovementComponent>())
+	{
+		Movement->bOrientRotationToMovement = false;
+	}
+
+	// 발동 연출 — "잠시 멈추고 시퀀스" 비트. 글로벌 슬로모를 거의 정지에 가깝게 깔아
+	// 백플립 도입을 시네마틱하게 끌었다가 풀린다 (+ 강셰이크는 킬 버스트 인프라 재사용).
 	if (UActionComponent* Action = GetComponentByClass<UActionComponent>())
 	{
-		Action->Slomo(0.4f, 0.3f);
+		Action->Slomo(0.5f, 0.06f);
 	}
 	if (FMusouGameSettings::Get().IsCameraShakeEnabled())
 	{
@@ -474,9 +500,32 @@ void AMusouCharacter::OnUltimatePressed()
 	}
 
 	// 첫 슬롯 즉시 재생 — 진행 중 몽타주가 있어도 PlayMontage 가 cross-fade 로 교체.
+	// (PlayAttackSlot 이 입력/카메라 정면으로 facing 을 먼저 스냅한다.)
 	if (!PlayAttackSlot(Chain[0]))
 	{
 		EndUltimate();   // 재생 실패 — 무적 고착 방지
+		return;
+	}
+
+	// 충격파 지면 높이 — 발동 시점은 지상이므로 캐릭터 Z 가 지면 기준. 타겟이 있으면 그 높이.
+	UltimateWaveZ = GetActorLocation().Z;
+
+	// 락온 — 전방 최근접 적(보스 우선)을 향해 facing 고정. 검기 진행/카메라 사선/강타 방향이
+	// 모두 이 facing 을 따른다 (orient-to-movement 는 위에서 껐으므로 궁극기 내내 유지).
+	// 적이 없으면 직전 스냅(카메라 정면) 그대로.
+	FVector TargetPos;
+	if (CapsuleComponent && FindNearestEnemyTarget(TargetPos))
+	{
+		UltimateWaveZ = TargetPos.Z;   // 타겟(지상 적) 높이에 검기/판정을 깔아 확실히 맞춘다.
+
+		FVector To = TargetPos - GetActorLocation();
+		To.Z = 0.0f;
+		if (To.X * To.X + To.Y * To.Y > 1e-4f)
+		{
+			FRotator R = CapsuleComponent->GetRelativeRotation();
+			R.Yaw = std::atan2(To.Y, To.X) * (180.0f / 3.14159265f);
+			CapsuleComponent->SetRelativeRotation(R);
+		}
 	}
 }
 
@@ -504,7 +553,8 @@ void AMusouCharacter::UpdateUltimateChain()
 	}
 
 	const int32 Step = UltimateStep++;
-	if (!PlayAttackSlot(Chain[Step]))
+	// 후속 슬롯은 카메라 재조준 끔 — 발동 시점 facing 유지.
+	if (!PlayAttackSlot(Chain[Step], /*bFaceCameraIfNoInput=*/false))
 	{
 		EndUltimate();
 	}
@@ -518,6 +568,297 @@ void AMusouCharacter::EndUltimate()
 	if (BattleComponent)
 	{
 		BattleComponent->SetInvincible(false);
+	}
+
+	// 발동 시 끈 회전/중력 복원 — 백플립 leap 의 약한 중력과 orient-to-movement 차단을 되돌린다.
+	if (UCharacterMovementComponent* Movement = GetComponentByClass<UCharacterMovementComponent>())
+	{
+		Movement->bOrientRotationToMovement = true;
+		Movement->SetGravityScale(1.0f);
+
+		// 강한 마무리 착지 — 공중(체공 중)이면 빠르게 내리꽂고, 지면에 닿는 순간 임팩트(Tick).
+		if (Movement->IsFalling())
+		{
+			Movement->LaunchAerial(FVector(0.0f, 0.0f, -18.0f));
+			bUltimateLandingPending = true;
+		}
+	}
+}
+
+void AMusouCharacter::AdvanceUltimateNow()
+{
+	// 백플립 advance notify → 현재 슬롯 종료를 기다리지 않고 다음 슬롯으로 즉시 cross-fade.
+	// 이후는 UpdateUltimateChain 이 이어받아 체인 소진 시 정리 (UltimateStep 증가로 중복 방지).
+	if (!bUltimateActive)
+	{
+		return;
+	}
+
+	const TArray<FMusouAttackSlot>& Chain = FAttackDataRegistry::Get().GetUltimateChain();
+	if (UltimateStep >= static_cast<int32>(Chain.size()))
+	{
+		return;
+	}
+
+	const int32 Step = UltimateStep++;
+	// 후속 슬롯은 카메라 재조준 끔 — 발동 시점 facing 을 유지(공중에서 휙 도는 것 방지).
+	if (!PlayAttackSlot(Chain[Step], /*bFaceCameraIfNoInput=*/false))
+	{
+		EndUltimate();
+	}
+}
+
+bool AMusouCharacter::FindNearestEnemyTarget(FVector& OutPos) const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	const FVector Self = GetActorLocation();
+	const FVector Fwd  = GetActorForward();   // 발동 시점 facing(카메라 정면 스냅 직후) = 전방 기준
+	constexpr float MaxRangeSq  = 30.0f * 30.0f;   // 락온 최대 거리 (m)
+	constexpr float FrontDotMin = -0.25f;          // 약간 뒤까지 허용, 정반대 방향은 제외
+
+	bool   bFound    = false;
+	float  BestScore = 3.4e38f;
+	FVector Best(0.0f, 0.0f, 0.0f);
+
+	// 거리 - 전방성 보너스 점수로 "가까우면서 정면에 가까운" 적을 고른다.
+	auto Consider = [&](const FVector& Pos)
+	{
+		FVector To = Pos - Self;
+		To.Z = 0.0f;
+		const float DistSq = To.X * To.X + To.Y * To.Y;
+		if (DistSq > MaxRangeSq || DistSq < 1e-4f)
+		{
+			return;
+		}
+		const float Dist = std::sqrt(DistSq);
+		const float Dot  = (To.X * Fwd.X + To.Y * Fwd.Y) / Dist;
+		if (Dot < FrontDotMin)
+		{
+			return;
+		}
+		const float Score = Dist - Dot * 3.0f;
+		if (Score < BestScore)
+		{
+			BestScore = Score;
+			Best      = Pos;
+			bFound    = true;
+		}
+	};
+
+	for (AActor* Actor : World->GetActors())
+	{
+		if (!Actor)
+		{
+			continue;
+		}
+
+		// 보스 — 살아있으면 후보 (우선순위는 점수로 자연 처리).
+		if (AMusouBossCharacter* Boss = Cast<AMusouBossCharacter>(Actor))
+		{
+			UBattleComponent* BC = Boss->GetBattleComponent();
+			if (!BC || !BC->IsDead())
+			{
+				Consider(Boss->GetActorLocation());
+			}
+			continue;
+		}
+
+		// 군중 — 유닛 매니저 렌더데이터에서 살아있는 적 유닛.
+		if (ULargeScaleUnitManagerComponent* Mgr = Actor->GetComponentByClass<ULargeScaleUnitManagerComponent>())
+		{
+			for (const FUnitRenderData& U : Mgr->GetRenderData())
+			{
+				if (U.Team != EUnitTeam::Enemy || U.State == EUnitState::Dead)
+				{
+					continue;
+				}
+				Consider(U.Position);
+			}
+		}
+	}
+
+	if (bFound)
+	{
+		OutPos = Best;
+	}
+	return bFound;
+}
+
+void AMusouCharacter::LaunchBackflip(float BackSpeed, float UpSpeed, float GravityScale)
+{
+	// 제자리 백플립을 후방+상방 임펄스로 실제로 빼준다 (백플립 leap notify).
+	// 약한 중력으로 체공을 늘려 다음 강타 몽타주가 공중에서 돌게 한다 (EndUltimate 에서 1.0 복원).
+	if (UCharacterMovementComponent* Movement = GetComponentByClass<UCharacterMovementComponent>())
+	{
+		const FVector Back = GetActorForward() * (-BackSpeed);
+		Movement->LaunchAerial(FVector(Back.X, Back.Y, UpSpeed));
+		Movement->SetGravityScale(GravityScale);
+	}
+}
+
+void AMusouCharacter::TriggerUltimateLandingImpact()
+{
+	UWorld* World = GetWorld();
+	const FVector Origin = GetActorLocation();
+
+	// 임팩트 — 짧은 히트스톱 + 강셰이크로 "쾅" 하고 내리꽂는 무게감.
+	if (UActionComponent* Action = GetComponentByClass<UActionComponent>())
+	{
+		Action->HitStop(0.07f, 0.0f);
+	}
+	if (FMusouGameSettings::Get().IsCameraShakeEnabled())
+	{
+		if (APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr)
+		{
+			if (APlayerCameraManager* CamMgr = PC->GetPlayerCameraManager())
+			{
+				CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(0.6f);
+			}
+		}
+	}
+
+	// 방사형 검기 링 — 착지 지점에서 사방으로 퍼지는 충격 (placeholder).
+	if (World)
+	{
+		constexpr int32 RingCount = 8;
+		for (int32 i = 0; i < RingCount; ++i)
+		{
+			const float Ang = (2.0f * 3.14159265f) * (static_cast<float>(i) / RingCount);
+			const FVector Dir(std::cos(Ang), std::sin(Ang), 0.0f);
+			ASlashEffectActor* Slash = World->SpawnActor<ASlashEffectActor>();
+			if (!Slash)
+			{
+				continue;
+			}
+			const float YawDeg = Ang * (180.0f / 3.14159265f);
+			Slash->SetDestroyOnFinish(true);
+			Slash->InitDefaultComponents();
+			Slash->SetMotion(7.0f, 0.35f);
+			Slash->ActivateSlash(Origin + FVector(0.0f, 0.0f, 0.4f), FVector(0.0f, YawDeg + 90.0f, 0.0f), Dir);
+		}
+	}
+
+	// 착지 AOE — 주변 적에게 슬램 판정 한 방.
+	AMusouGameMode* GameMode = World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
+	if (GameMode)
+	{
+		if (const FAttackSpec* Spec = FindMusouAttackSpec(FName("musou_slam")))
+		{
+			const float AttackPower = BattleComponent ? BattleComponent->GetAttackPower() : 10.0f;
+			FMusouAttackEvent Event;
+			Event.Attacker    = this;
+			Event.Spec        = *Spec;
+			Event.Origin      = Origin;
+			Event.Forward     = GetActorForward();
+			Event.Damage      = AttackPower * Spec->DamageMult;
+			Event.bFromPlayer = IsPossessed();
+			GameMode->BroadcastAttack(Event);
+		}
+	}
+}
+
+void AMusouCharacter::StartGroundSlamShockwave(const FVector& Origin, const FVector& Dir, float Distance,
+	float Duration, int32 Pulses, FName SpecId, float SlashSpeed, float SlashLife, float SlashYaw)
+{
+	FVector D = Dir;
+	D.Z = 0.0f;
+	const float Len = std::sqrt(D.X * D.X + D.Y * D.Y);
+
+	ShockwaveRun.bActive    = true;
+	// XY 는 강타 위치(공중일 수 있음), Z 는 발동 시 캡처한 지면/타겟 높이 — 검기/판정이 지상에 깔린다.
+	ShockwaveRun.StartPos   = FVector(Origin.X, Origin.Y, UltimateWaveZ);
+	ShockwaveRun.Dir        = (Len > 0.001f) ? (D * (1.0f / Len)) : FVector(1.0f, 0.0f, 0.0f);
+	ShockwaveRun.Distance   = Distance;
+	ShockwaveRun.Duration   = (Duration > 0.01f) ? Duration : 0.01f;
+	ShockwaveRun.Elapsed    = 0.0f;
+	ShockwaveRun.Pulses     = (Pulses < 1) ? 1 : Pulses;
+	ShockwaveRun.NextPulse  = 0;
+	ShockwaveRun.SpecId     = SpecId;
+	ShockwaveRun.SlashSpeed = SlashSpeed;
+	ShockwaveRun.SlashLife  = SlashLife;
+	ShockwaveRun.SlashYaw   = SlashYaw;
+
+	// 첫 펄스(시작점)는 강타와 동시에 즉시 발사.
+	UpdateShockwave(0.0f);
+}
+
+void AMusouCharacter::UpdateShockwave(float DeltaTime)
+{
+	if (!ShockwaveRun.bActive)
+	{
+		return;
+	}
+
+	ShockwaveRun.Elapsed += DeltaTime;
+
+	// 펄스 i 는 t_i = Duration * i/(N-1) 시점, origin = Start + Dir*Distance*(i/(N-1)) 에서 발사.
+	// Elapsed 가 지난 펄스를 모두 따라잡아 발사 — 프레임 드랍에도 빠짐 없이 순차 진행.
+	const int32 N = ShockwaveRun.Pulses;
+	const float Denom = (N > 1) ? static_cast<float>(N - 1) : 1.0f;
+	while (ShockwaveRun.NextPulse < N)
+	{
+		const float Frac = (N > 1) ? (static_cast<float>(ShockwaveRun.NextPulse) / Denom) : 0.0f;
+		const float TPulse = ShockwaveRun.Duration * Frac;
+		if (ShockwaveRun.Elapsed + 1e-4f < TPulse)
+		{
+			break; // 아직 이 펄스 시간 전 — 다음 Tick 에서.
+		}
+
+		const FVector PulseOrigin = ShockwaveRun.StartPos + ShockwaveRun.Dir * (ShockwaveRun.Distance * Frac);
+		EmitShockwavePulse(PulseOrigin, ShockwaveRun.Dir);
+		++ShockwaveRun.NextPulse;
+	}
+
+	if (ShockwaveRun.NextPulse >= N && ShockwaveRun.Elapsed >= ShockwaveRun.Duration)
+	{
+		ShockwaveRun.bActive = false;
+	}
+}
+
+void AMusouCharacter::EmitShockwavePulse(const FVector& WorldOrigin, const FVector& Dir)
+{
+	UWorld* World = GetWorld();
+
+	// 데미지 — spec 기하를 그대로 쓰되 origin 만 전방으로 전진시켜 broadcast.
+	AMusouGameMode* GameMode = World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
+	if (GameMode)
+	{
+		const FAttackSpec* Spec = FindMusouAttackSpec(ShockwaveRun.SpecId);
+		if (Spec)
+		{
+			float AttackPower = BattleComponent ? BattleComponent->GetAttackPower() : 10.0f;
+
+			FMusouAttackEvent Event;
+			Event.Attacker    = this;
+			Event.Spec        = *Spec;
+			Event.Origin      = WorldOrigin;
+			Event.Forward     = Dir;
+			Event.Damage      = AttackPower * Spec->DamageMult;
+			Event.bFromPlayer = IsPossessed();
+			GameMode->BroadcastAttack(Event);
+		}
+	}
+
+	// 검기(placeholder) — 펄스 위치에서 전방으로 날아가는 슬래시. 실제 충격파 파티클로 교체 예정.
+	if (World)
+	{
+		ASlashEffectActor* Slash = World->SpawnActor<ASlashEffectActor>();
+		if (Slash)
+		{
+			// 시각 회전 — 진행 yaw + SlashYaw 보정 (기존 검기 규칙: GetActorRotation + (0,90,0)).
+			// 진행 방향 Dir 은 전방 그대로. 메시가 틀어져 보이면 lua slash_yaw 로 조정.
+			const float YawDeg = std::atan2(Dir.Y, Dir.X) * (180.0f / 3.14159265f);
+			Slash->SetDestroyOnFinish(true);
+			Slash->InitDefaultComponents();
+			Slash->SetMotion(ShockwaveRun.SlashSpeed, ShockwaveRun.SlashLife);
+			Slash->ActivateSlash(WorldOrigin + FVector(0.0f, 0.0f, 0.5f),
+				FVector(0.0f, YawDeg + ShockwaveRun.SlashYaw, 0.0f), Dir);
+		}
 	}
 }
 
@@ -682,7 +1023,9 @@ void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* 
 
 	// 프레이밍 yaw 를 시작 시점에 동결. 시네캠은 캡슐 자식이지만 위치/시선을 이 동결
 	// yaw 로 매 프레임 월드 구동(AimShotCamera)해, 공격 중 캡슐 yaw 스냅과 디커플 → 튐 제거.
-	ShotYaw = GetActorRotation().Yaw;
+	// 앵커: 기본은 카메라 뷰(ControlRotation) 기준 — 캐릭터가 옆을 봐도 화면 기준 일관 +
+	//   메인캠과 가까워 블렌드 호가 작아 튐 감소. anchor="character" 면 캐릭터 facing 기준.
+	ShotYaw = Shot.bCameraRelative ? GetControlRotation().Yaw : GetActorRotation().Yaw;
 
 	Cam->SetFOV(Shot.FOVRad > 0.0f ? Shot.FOVRad : MainCam->GetFOV());
 
@@ -793,8 +1136,20 @@ void AMusouCharacter::AimShotCamera()
 	//   덕분에 캡슐 yaw 가 스냅돼도 (parentYaw + Rel) 가 의도한 월드 각도로 유지된다.
 	if (ActiveShot.bLookAt)
 	{
-		// 캐릭터를 바라본다.
-		const FVector Target = GetActorLocation() + FVector(0.0f, 0.0f, ActiveShot.LookAtHeight);
+		// 기본은 캐릭터를 바라본다. LookAhead>0 이면 동결 ShotYaw 전방 그 거리만큼 앞 지점을
+		// 바라본다 — 궁극기 검기가 전방으로 날아가는 사선을 화면에 담기 위해.
+		FVector Target = GetActorLocation() + FVector(0.0f, 0.0f, ActiveShot.LookAtHeight);
+		if (ActiveShot.LookAhead > 0.0f)
+		{
+			const FVector AheadDir = FRotator(0.0f, ShotYaw, 0.0f).ToQuaternion().RotateVector(FVector(1.0f, 0.0f, 0.0f));
+			Target += AheadDir * ActiveShot.LookAhead;
+			// 궁극기 중엔 캐릭터가 공중에 떠 있어도 검기는 지면(UltimateWaveZ)에 깔린다 —
+			// 시선 높이를 지면 기준으로 내려 전방 사선을 화면에 담는다.
+			if (bUltimateActive)
+			{
+				Target.Z = UltimateWaveZ + ActiveShot.LookAtHeight;
+			}
+		}
 		const FVector Diff   = Target - WorldPos;
 		const float Len = std::sqrt(Diff.X * Diff.X + Diff.Y * Diff.Y + Diff.Z * Diff.Z);
 		if (Len < 0.01f)
@@ -1030,6 +1385,17 @@ bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step, bool bFaceCam
 	// SlotName=None → DefaultSlot(풀바디). "UpperBody" → 상반신만 (하체는 로코모션 유지).
 	AnimInstance->PlayMontage(Montage, FName::None, PlayRate, Step.BlendIn, SlotName);
 
+	// 궁극기 강타 제자리 고정 — 백플립 leap 의 잔여 후방 속도로 강타가 뒤로 밀리는 것을 막는다.
+	// 속도 0 + 중력 0 으로 공중에 못 박고, EndUltimate 가 중력을 복원한다.
+	if (bUltimateActive && Step.bPlantInAir)
+	{
+		if (UCharacterMovementComponent* Movement = GetComponentByClass<UCharacterMovementComponent>())
+		{
+			Movement->SetVelocity(FVector(0.0f, 0.0f, 0.0f));
+			Movement->SetGravityScale(0.0f);
+		}
+	}
+
 	// 마지막 재생 기술 기록 — 튜토리얼이 카운터 증가 + AttackId 일치로 기술 발동을 감지.
 	LastPlayedAttackId = Step.AttackId;
 	++AttackPlayCounter;
@@ -1119,10 +1485,14 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 	static const FName AutoHitName("AutoMusouAttack");
 	static const FName AutoWindowName("AutoComboWindow");
 	static const FName AutoShotName("AutoCameraShot");
+	static const FName AutoSlamName("AutoGroundSlam");
+	static const FName AutoLeapName("AutoUltimateLeap");
+	static const FName AutoAdvanceName("AutoUltimateAdvance");
 	for (const FAnimNotifyEvent& Existing : Sequence->GetNotifies())
 	{
 		if (Existing.NotifyName != AutoHitName && Existing.NotifyName != AutoWindowName
-			&& Existing.NotifyName != AutoShotName)
+			&& Existing.NotifyName != AutoShotName && Existing.NotifyName != AutoSlamName
+			&& Existing.NotifyName != AutoLeapName && Existing.NotifyName != AutoAdvanceName)
 		{
 			return;
 		}
@@ -1164,9 +1534,59 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 		std::remove_if(ModelNotifies.begin(), ModelNotifies.end(),
 			[](const FAnimNotifyEvent& Ev)
 			{
-				return Ev.NotifyName == AutoHitName || Ev.NotifyName == AutoWindowName;
+				return Ev.NotifyName == AutoHitName || Ev.NotifyName == AutoWindowName
+					|| Ev.NotifyName == AutoSlamName || Ev.NotifyName == AutoLeapName
+					|| Ev.NotifyName == AutoAdvanceName;
 			}),
 		ModelNotifies.end());
+
+	// 궁극기 백플립 도약 — lua leap 블록 → trigger_frac 에 주입.
+	if (Step.Leap.IsValid())
+	{
+		const FMusouLeap& Lp = Step.Leap;
+		UAnimNotify_UltimateLeap* Leap = UObjectManager::Get().CreateObject<UAnimNotify_UltimateLeap>(Model);
+		Leap->BackSpeed    = Lp.Back;
+		Leap->UpSpeed      = Lp.Up;
+		Leap->GravityScale = Lp.Gravity;
+
+		FAnimNotifyEvent Event;
+		Event.NotifyName  = AutoLeapName;
+		Event.TriggerTime = Length * Lp.TriggerFrac;
+		Event.Notify      = Leap;
+		ModelNotifies.push_back(Event);
+	}
+
+	// 궁극기 다음 슬롯 조기 전환 — lua advance 블록 → trigger_frac 에 주입.
+	if (Step.Advance.IsValid())
+	{
+		UAnimNotify_UltimateAdvance* Advance = UObjectManager::Get().CreateObject<UAnimNotify_UltimateAdvance>(Model);
+
+		FAnimNotifyEvent Event;
+		Event.NotifyName  = AutoAdvanceName;
+		Event.TriggerTime = Length * Step.Advance.TriggerFrac;
+		Event.Notify      = Advance;
+		ModelNotifies.push_back(Event);
+	}
+
+	// 전방 진행 충격파 — 궁극기 지면 강타. lua shockwave 블록 → trigger_frac 에 주입.
+	if (Step.Shockwave.IsValid())
+	{
+		const FMusouShockwave& Sw = Step.Shockwave;
+		UAnimNotify_GroundSlamShockwave* Slam = UObjectManager::Get().CreateObject<UAnimNotify_GroundSlamShockwave>(Model);
+		Slam->Distance   = Sw.Distance;
+		Slam->Duration   = Sw.Duration;
+		Slam->Pulses     = Sw.Pulses;
+		Slam->AttackId   = Sw.AttackId.empty() ? Step.AttackId : Sw.AttackId;
+		Slam->SlashSpeed = Sw.SlashSpeed;
+		Slam->SlashLife  = Sw.SlashLife;
+		Slam->SlashYaw   = Sw.SlashYaw;
+
+		FAnimNotifyEvent Event;
+		Event.NotifyName  = AutoSlamName;
+		Event.TriggerTime = Length * Sw.TriggerFrac;
+		Event.Notify      = Slam;
+		ModelNotifies.push_back(Event);
+	}
 
 	// 히트 판정 — 스윙 임팩트 추정 지점. 정확한 타이밍은 에디터 저작으로 대체 권장.
 	if (!Step.AttackId.empty() && Step.HitFrac >= 0.0f)
@@ -1264,10 +1684,12 @@ void AMusouCharacter::InjectCameraShotNotifies(UAnimSequence* Sequence, const FM
 		State->Offset       = Shot.Offset;
 		State->Rotation     = Shot.Rotation;
 		State->FOV          = Shot.FOVRad;
-		State->bLookAt      = Shot.bLookAt;
-		State->LookAtHeight = Shot.LookAtHeight;
-		State->bFollow      = Shot.bFollow;
-		State->Letterbox    = Shot.Letterbox;
+		State->bLookAt         = Shot.bLookAt;
+		State->LookAtHeight    = Shot.LookAtHeight;
+		State->LookAhead       = Shot.LookAhead;
+		State->bFollow         = Shot.bFollow;
+		State->Letterbox       = Shot.Letterbox;
+		State->bCameraRelative = Shot.bCameraRelative;
 
 		FAnimNotifyEvent Event;
 		Event.NotifyName  = AutoShotName;

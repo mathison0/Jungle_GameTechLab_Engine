@@ -61,6 +61,14 @@ public:
 	// Jump 와 달리 Walking 가드/고정 점프력 없이 임의 속도로 띄운다 (launcher 자기 상승 등).
 	void LaunchUpward(float UpVelocity);
 
+	// 임의 방향 임펄스 — Velocity 를 통째로 지정하고 Falling 전환 (백스텝 도약 등).
+	void LaunchAerial(const FVector& NewVelocity);
+
+	// 런타임 중력 배율 — Gravity 에 곱해 적용 (1.0 = 평소). 궁극기 공중 체공처럼 일시
+	// 부양에 쓴다. 직렬화 안 함 — 끝나면 반드시 1.0 으로 복원할 것.
+	void  SetGravityScale(float Scale) { GravityScale = Scale; }
+	float GetGravityScale() const { return GravityScale; }
+
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 	// 직전 TickComponent 에서 root motion 의 yaw 가 capsule rotation 에 실제로 적용됐는지.
@@ -70,6 +78,9 @@ public:
 
 	const FVector& GetVelocity() const { return Velocity; }
 	float          GetSpeed()    const { return Velocity.Length(); }
+
+	// 속도 직접 지정 — 공중 정지(궁극기 강타 제자리 고정) 등. mode 전환은 안 함.
+	void SetVelocity(const FVector& V) { Velocity = V; }
 
 	EMovementMode  GetMovementMode() const { return MovementMode; }
 	bool           IsWalking() const { return MovementMode == EMovementMode::Walking; }
@@ -131,7 +142,8 @@ public:
 	UPROPERTY(Edit, Save, Category = "CharacterMovement", DisplayName = "Braking Friction", Min = 0.0f, Max = 100.0f, Speed = 0.1f)
 	float BrakingFriction = 8.0f;     // 입력 없을 때 감속률 (m/s^2). Walking 만 적용.
 	UPROPERTY(Edit, Save, Category = "CharacterMovement", DisplayName = "Gravity", Min = 0.0f, Max = 100.0f, Speed = 0.1f)
-	float Gravity = 9.8f;     // m/s^2 (positive — 적용 시 Velocity.Z -= Gravity*dt)
+	float Gravity = 9.8f;     // m/s^2 (positive — 적용 시 Velocity.Z -= Gravity*GravityScale*dt)
+	float GravityScale = 1.0f;   // 런타임 전용 (저장 X) — 일시 부양 배율
 	UPROPERTY(Edit, Save, Category = "CharacterMovement", DisplayName = "Floor Probe Distance", Min = 0.0f, Max = 5.0f, Speed = 0.01f)
 	float FloorProbeDistance = 0.1f;     // capsule HalfHeight 아래 추가 probe 거리
 	UPROPERTY(Edit, Save, Category = "CharacterMovement", DisplayName = "Jump Z Velocity", Min = 0.0f, Max = 50.0f, Speed = 0.1f)
