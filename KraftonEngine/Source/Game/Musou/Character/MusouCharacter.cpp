@@ -668,6 +668,11 @@ void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* 
 	ActiveShotCam   = Cam;
 	ActiveShotToken = Token;
 
+	// 샷 동안 마우스 룩 동결 — ControlRotation 이 누적되면 블렌드로 메인 복귀할 때
+	// 샷 중 돌린 각도가 그대로 반영돼 카메라가 튄다. 핑퐁 연속 컷에서도 토큰 불일치
+	// End 는 복귀를 안 걸어 체인 내내 false 유지 (마지막 End/안전망에서만 복원).
+	bAutoInputMouseLook = false;
+
 	if (!Shot.bFollow)
 	{
 		// 월드 고정 샷 — 시작 시점 위치를 캡처해 두고 매 틱 되돌린다 (부모 이동 상쇄).
@@ -689,6 +694,10 @@ void AMusouCharacter::EndCameraShot(const void* Token)
 	}
 	ActiveShotToken = nullptr;
 	// ActiveShotCam 은 유지 — 직후 새 샷이 시작될 때 핑퐁 판단에 쓰인다.
+
+	// 마우스 룩 복원 — 이 시점의 ControlRotation(샷 동안 동결돼 시작 시점 그대로)으로
+	// 메인 카메라가 블렌드 복귀하므로, 복귀 후 카메라 각도가 샷 직전과 동일하다.
+	bAutoInputMouseLook = true;
 
 	APlayerCameraManager* CamMgr = GetLocalCameraManager();
 	UCameraComponent* MainCam = GetCamera();
