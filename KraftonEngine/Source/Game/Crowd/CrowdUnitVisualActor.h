@@ -8,6 +8,7 @@
 class UClass;
 class ULargeScaleUnitManagerComponent;
 class UMaterialInterface;
+class UMaterialInstanceDynamic;
 class USkeletalMesh;
 class USkeletalMeshComponent;
 
@@ -45,6 +46,8 @@ public:
 
 private:
 	USkeletalMeshComponent* EnsureMeshComponent();
+	void BuildDynamicMaterials();
+	void ApplyHitFlashAmount(float Amount);
 
 private:
 	USkeletalMeshComponent* MeshComponent = nullptr;
@@ -62,6 +65,7 @@ private:
 
 	USkeletalMesh* CurrentMesh = nullptr;
 	TArray<UMaterialInterface*> CurrentMaterials;
+	TArray<UMaterialInstanceDynamic*> DynamicMaterials;
 	UClass* CurrentAnimClass = nullptr;
 	FCrowdMeleeAnimationSet CurrentMeleeAnimationSet;
 };

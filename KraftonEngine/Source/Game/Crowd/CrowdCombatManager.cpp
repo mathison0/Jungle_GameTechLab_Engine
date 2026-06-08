@@ -315,6 +315,7 @@ void FCrowdCombatManager::HandleAttackEvent(
 			NormalizedXY(Unit.Position - Event.Origin),
 			true,
 			true,
+			true,
 			Event.Spec.KnockbackDist,
 			Event.Spec.KnockbackDur,
 			Event.Spec.LaunchZ
@@ -371,7 +372,13 @@ void FCrowdCombatManager::UpdateStateTimers(
 	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
 	{
 		FCrowdUnit& Unit = Units[Index];
-		if (!Unit.bAlive || !IsCrowdUnitControlLocked(Unit.State))
+		if (!Unit.bAlive)
+		{
+			continue;
+		}
+
+		Unit.HitFlashTimeRemaining = (std::max)(Unit.HitFlashTimeRemaining - TimeStep, 0.0f);
+		if (!IsCrowdUnitControlLocked(Unit.State))
 		{
 			continue;
 		}
@@ -526,6 +533,12 @@ void FCrowdCombatManager::ProcessDamageEvents(
 		}
 
 		Target->HP -= Event.Damage;
+		if (Event.bTriggerHitFlash)
+		{
+			Target->HitFlashDuration = (std::max)(Settings.HitFlashDuration, 0.001f);
+			Target->HitFlashIntensity = (std::max)(Settings.HitFlashIntensity, 0.0f);
+			Target->HitFlashTimeRemaining = Target->HitFlashDuration;
+		}
 		if (Target->HP <= 0.0f)
 		{
 			Target->HP = 0.0f;

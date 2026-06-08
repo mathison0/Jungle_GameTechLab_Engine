@@ -42,6 +42,9 @@ void FCrowdVisualPool::BuildRenderData(const FCrowdUnitStore& UnitStore)
 			Unit.AnimTime,
 			Unit.Velocity.Length(),
 			Unit.CircleAroundDirectionSign,
+			Unit.HitFlashDuration > 0.0f
+				? Unit.HitFlashIntensity * FMath::Clamp(Unit.HitFlashTimeRemaining / Unit.HitFlashDuration, 0.0f, 1.0f)
+				: 0.0f,
 			Unit.bKnockDownGettingUp,
 			true
 		});

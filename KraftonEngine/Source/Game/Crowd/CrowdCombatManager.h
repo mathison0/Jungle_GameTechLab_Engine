@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Game/Crowd/CrowdSpatialPartition.h"
 #include "Game/Crowd/CrowdUnitStore.h"
@@ -14,6 +14,8 @@ struct FCrowdCombatSettings
 	float DeadStateDuration = 1.0f;
 	float KnockDownMinKnockbackDistance = 4.0f;
 	float AttackStateExitHysteresis = 0.35f;
+	float HitFlashDuration = 0.12f;
+	float HitFlashIntensity = 1.0f;
 };
 
 class FCrowdCombatManager

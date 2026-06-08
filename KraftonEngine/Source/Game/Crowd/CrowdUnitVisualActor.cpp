@@ -5,6 +5,7 @@
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Game/Crowd/CrowdMeleeAnimInstance.h"
 #include "Game/Crowd/LargeScaleUnitManagerComponent.h"
+#include "Materials/Material.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 
 namespace
@@ -85,6 +86,8 @@ void ACrowdUnitVisualActor::InitializeVisual(
 				: nullptr;
 			VisualMeshComponent->SetMaterial(MaterialIndex, Material);
 		}
+		BuildDynamicMaterials();
+		ApplyHitFlashAmount(0.0f);
 	}
 
 	if (CurrentAnimClass != InAnimClass)
@@ -127,6 +130,7 @@ void ACrowdUnitVisualActor::ApplyRenderData(const FUnitRenderData& InRenderData)
 	SetActorLocation(InRenderData.Position);
 	SetActorRotation(InRenderData.Rotation);
 	SetVisible(bVisualActive);
+	ApplyHitFlashAmount(bVisualActive ? InRenderData.HitFlashAmount : 0.0f);
 
 	bNeedsTick = bVisualActive;
 	MeshComponent->SetEnableAnimationTickLOD(UnitLOD != ECrowdUnitLOD::Full);
@@ -150,6 +154,7 @@ void ACrowdUnitVisualActor::DeactivateVisual()
 
 	if (MeshComponent)
 	{
+		ApplyHitFlashAmount(0.0f);
 		MeshComponent->SetEnableAnimationTickLOD(false);
 		MeshComponent->SetAnimationTickLOD(EAnimationTickLOD::FullRate);
 		MeshComponent->SetComponentTickEnabled(false);
@@ -161,7 +166,69 @@ void ACrowdUnitVisualActor::DeactivateVisual()
 	}
 
 	CurrentMaterials.clear();
+	DynamicMaterials.clear();
 	SetVisible(false);
+}
+
+void ACrowdUnitVisualActor::BuildDynamicMaterials()
+{
+	DynamicMaterials.clear();
+
+	if (!MeshComponent)
+	{
+		return;
+	}
+
+	const TArray<UMaterialInterface*>& Materials = MeshComponent->GetOverrideMaterials();
+	for (int32 Index = 0; Index < static_cast<int32>(Materials.size()); ++Index)
+	{
+		UMaterialInterface* SourceMaterial = MeshComponent->GetMaterial(Index);
+		if (!SourceMaterial)
+		{
+			continue;
+		}
+
+		UMaterial* ParentMaterial = nullptr;
+		if (UMaterial* Material = Cast<UMaterial>(SourceMaterial))
+		{
+			ParentMaterial = Material;
+		}
+		else if (UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(SourceMaterial))
+		{
+			ParentMaterial = MaterialInstance->GetParent();
+		}
+
+		if (!ParentMaterial)
+		{
+			continue;
+		}
+
+		UMaterialInstanceDynamic* DynamicMaterial = UMaterialInstanceDynamic::Create(ParentMaterial);
+		if (!DynamicMaterial)
+		{
+			continue;
+		}
+
+		MeshComponent->SetMaterial(Index, DynamicMaterial);
+		DynamicMaterials.push_back(DynamicMaterial);
+	}
+}
+
+void ACrowdUnitVisualActor::ApplyHitFlashAmount(float Amount)
+{
+	for (UMaterialInstanceDynamic* Material : DynamicMaterials)
+	{
+		if (!Material)
+		{
+			continue;
+		}
+
+		Material->SetScalarParameter("HitFlashAmount", Amount);
+		Material->SetScalarParameter("HitFlashFillAmount", 0.15f);
+		Material->SetScalarParameter("HitFlashRimIntensity", 3.0f);
+		Material->SetScalarParameter("HitFlashRimPower", 3.0f);
+		Material->SetVector4Parameter("HitFlashColor", FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+	}
 }
 
 bool ACrowdUnitVisualActor::ShouldLogCrowdAnimationState() const
