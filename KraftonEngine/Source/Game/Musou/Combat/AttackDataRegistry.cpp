@@ -386,6 +386,7 @@ bool FAttackDataRegistry::LoadFromLua()
 	TArray<FMusouAttackSlot> NewUltimate;
 	FMusouAttackSlot         NewDodge;
 	FMusouAttackSlot         NewHitReact;
+	FMusouAttackSlot         NewDeath;
 	FMusouAttackSlot         NewWeaponDraw;
 	FMusouAttackSlot         NewWeaponSheathe;
 	if (sol::optional<sol::table> ChainsT = Root["chains"])
@@ -396,6 +397,7 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 		NewDodge = ParseSlot((*ChainsT)["dodge"]);
 		NewHitReact = ParseSlot((*ChainsT)["hit_react"]);
+		NewDeath = ParseSlot((*ChainsT)["death"]);
 		NewWeaponDraw = ParseSlot((*ChainsT)["weapon_draw"]);
 		NewWeaponSheathe = ParseSlot((*ChainsT)["weapon_sheathe"]);
 	}
@@ -446,6 +448,7 @@ bool FAttackDataRegistry::LoadFromLua()
 	UltimateChain = std::move(NewUltimate);
 	DodgeSlot = std::move(NewDodge);
 	HitReactSlot = std::move(NewHitReact);
+	DeathSlot = std::move(NewDeath);
 	WeaponDrawSlot = std::move(NewWeaponDraw);
 	WeaponSheatheSlot = std::move(NewWeaponSheathe);
 	Feedback = NewFeedback;
@@ -520,6 +523,7 @@ void FAttackDataRegistry::LoadDefaults()
 	UltimateChain.clear();               // 내장 fallback 에선 무쌍기/구르기/피격 리액션/발도납도 비활성 (lua 전용 구성)
 	DodgeSlot = FMusouAttackSlot();
 	HitReactSlot = FMusouAttackSlot();
+	DeathSlot = FMusouAttackSlot();
 	WeaponDrawSlot = FMusouAttackSlot();
 	WeaponSheatheSlot = FMusouAttackSlot();
 	Feedback = FMusouFeedbackParams();   // 구조체 기본값

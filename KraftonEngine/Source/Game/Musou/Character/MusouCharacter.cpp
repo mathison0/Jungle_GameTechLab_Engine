@@ -1219,6 +1219,43 @@ void AMusouCharacter::PlayHitReaction()
 	HitReactCooldownRemaining = FAttackDataRegistry::Get().GetFeedback().HitReactCooldown;
 }
 
+void AMusouCharacter::PlayDeathAnimation()
+{
+	if (bDead)
+	{
+		return;   // 1회만
+	}
+	bDead = true;
+
+	// 진행 중 상태 정리 — 충격파/무쌍기 잔여가 사망 연출에 끼어들지 않게.
+	ShockwaveRun.bActive = false;
+	bUltimateActive = false;
+
+	const FMusouAttackSlot* Slot = FAttackDataRegistry::Get().GetDeathSlot();
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	if (!Slot || !AnimInstance)
+	{
+		return;   // lua 에 chains.death 미정의 — 연출 없이 사망 (게임 흐름은 GameMode 가 처리)
+	}
+
+	const FMusouAttackStep* Step = PickVariant(*Slot);
+	if (!Step)
+	{
+		return;
+	}
+
+	UAnimMontage* Montage = ResolveStepMontage(*Step);
+	if (!Montage)
+	{
+		return;
+	}
+
+	// 쓰러진 마지막 포즈 유지 — 끝에서 idle 로 복귀하면 안 되므로 blend-out 을 아주 길게.
+	// (몽타주는 blend-out 중 SectionTime 을 끝 프레임에 clamp → 쓰러진 포즈가 그대로 남는다.)
+	Montage->SetBlendOutTime(600.0f);
+	AnimInstance->PlayMontage(Montage, FName::None, 1.0f, Step->BlendIn);
+}
+
 EAttackContext AMusouCharacter::ResolveAttackContext() const
 {
 	if (IsFalling())

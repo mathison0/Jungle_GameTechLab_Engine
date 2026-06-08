@@ -296,6 +296,11 @@ return {
                           sequence = seq("Barbarian_React Large From Right"),
                           blend_in = 0.08, play_rate = { 1.7, 1.9 } },
 
+        -- 플레이어 사망 — 쓰러지는 연출. 끝에서 idle 로 복귀하지 않게 C++ 가 blend-out 을 길게
+        -- 잡아 쓰러진 포즈를 유지한다 (사망 오버레이가 위로 페이드). 공격 아님 (attack_id 없음).
+        death         = { sequence = seq("two handed sword death_mixamo_com"),
+                          blend_in = 0.12, play_rate = 1.0 },
+
         -- 발도/납도 (X) — 등 뒤로 뽑기/넣기. 본 스왑 시점은 feedback.weapon.swap_frac
         equip         = { montage = montage("Barbarian_Equip Over Shoulder"),
                           sequence = seq("Barbarian_Equip Over Shoulder"),
@@ -346,6 +351,9 @@ return {
 
         -- 플레이어 피격 리액션 — 좌/우 랜덤 (직전 반복 회피). 평시 피격만, 쿨다운은 feedback
         hit_react = { "react_left", "react_right" },
+
+        -- 플레이어 사망 연출 — 체력 0 시 1회 재생 (NotifyPlayerDeath)
+        death = "death",
 
         -- 발도/납도 (X) — 납도 중 공격 입력도 발도로 변환. 모션 미정의 시 즉시 스왑 폴백
         weapon_draw    = "equip",

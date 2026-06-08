@@ -195,6 +195,9 @@ public:
 	// 플레이어 피격 리액션 — 변주 슬롯 (좌/우 휘청 등). 미정의면 nullptr (기능 비활성).
 	const FMusouAttackSlot* GetHitReactSlot() const { return HitReactSlot.IsValid() ? &HitReactSlot : nullptr; }
 
+	// 플레이어 사망 연출 — 미정의면 nullptr (연출 없이 즉시 사망 처리).
+	const FMusouAttackSlot* GetDeathSlot() const { return DeathSlot.IsValid() ? &DeathSlot : nullptr; }
+
 	// 발도/납도 모션 — 미정의면 nullptr (호출측이 즉시 스왑으로 폴백).
 	const FMusouAttackSlot* GetWeaponDrawSlot() const { return WeaponDrawSlot.IsValid() ? &WeaponDrawSlot : nullptr; }
 	const FMusouAttackSlot* GetWeaponSheatheSlot() const { return WeaponSheatheSlot.IsValid() ? &WeaponSheatheSlot : nullptr; }
@@ -218,6 +221,7 @@ private:
 	TArray<FMusouAttackSlot> UltimateChain;
 	FMusouAttackSlot         DodgeSlot;
 	FMusouAttackSlot         HitReactSlot;
+	FMusouAttackSlot         DeathSlot;
 	FMusouAttackSlot         WeaponDrawSlot;
 	FMusouAttackSlot         WeaponSheatheSlot;
 	FMusouFeedbackParams     Feedback;
