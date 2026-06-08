@@ -10,6 +10,7 @@
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/World.h"
+#include "Audio/AudioManager.h"
 #include "Component/Input/ActionComponent.h"
 #include "Core/Logging/Log.h"
 #include "Engine/Input/InputSystem.h"
@@ -19,6 +20,7 @@
 #include "Viewport/GameViewportClient.h"
 
 #include <algorithm>
+#include <cstdio>
 
 namespace
 {
@@ -26,6 +28,7 @@ namespace
 	// FAttackDataRegistry::GetFeedback() 으로 조회 (핫리로드 튜닝).
 	constexpr const char* PauseMenuButtonIds[] = {
 		"resume-button",
+		"audio-settings-button",
 		"restart-button",
 		"stop-button",
 	};
@@ -41,9 +44,10 @@ namespace
 		"victory-stop-button",
 	};
 
-	constexpr int32 PauseMenuButtonCount = 3;
+	constexpr int32 PauseMenuButtonCount = 4;
 	constexpr int32 DeathMenuButtonCount = 2;
 	constexpr int32 VictoryMenuButtonCount = 2;
+	constexpr float BGMVolumeStep = 0.1f;
 
 	// 첫 로컬 플레이어의 카메라 매니저 — 셰이크 발동 지점. 없으면 null (조용히 스킵).
 	APlayerCameraManager* GetLocalCameraManager()
@@ -67,6 +71,14 @@ namespace
 		{
 			GameViewportClient->SetInputPossessed(bPossessed);
 		}
+	}
+
+	FString MakeBGMVolumeText(float Volume)
+	{
+		const int32 Percent = static_cast<int32>(std::clamp(Volume, 0.0f, 1.0f) * 100.0f + 0.5f);
+		char Buffer[32] = {};
+		std::snprintf(Buffer, sizeof(Buffer), "BGM %d%%", Percent);
+		return FString(Buffer);
 	}
 }
 
@@ -110,6 +122,22 @@ void AMusouGameMode::StartMatch()
 			HudWidget->BindClick("resume-button", [this]()
 			{
 				SetStopMenuVisible(false);
+			});
+			HudWidget->BindClick("audio-settings-button", [this]()
+			{
+				ShowAudioSettings();
+			});
+			HudWidget->BindClick("bgm-volume-down-button", [this]()
+			{
+				AdjustBGMVolume(-BGMVolumeStep);
+			});
+			HudWidget->BindClick("bgm-volume-up-button", [this]()
+			{
+				AdjustBGMVolume(BGMVolumeStep);
+			});
+			HudWidget->BindClick("audio-settings-close-button", [this]()
+			{
+				HideAudioSettings();
 			});
 
 			HudWidget->BindClick("restart-button", RestartMatch);
@@ -196,12 +224,26 @@ void AMusouGameMode::Tick(float DeltaTime)
 
 	if (!HudPresenter.IsResultOverlayVisible() && InputSystem::Get().GetKeyDown(VK_ESCAPE))
 	{
-		SetStopMenuVisible(!bStopMenuVisible);
+		if (bAudioSettingsVisible)
+		{
+			HideAudioSettings();
+		}
+		else
+		{
+			SetStopMenuVisible(!bStopMenuVisible);
+		}
 	}
 
 	if (bStopMenuVisible && !HudPresenter.IsResultOverlayVisible())
 	{
-		HandlePauseMenuInput();
+		if (bAudioSettingsVisible)
+		{
+			HandleAudioSettingsInput();
+		}
+		else
+		{
+			HandlePauseMenuInput();
+		}
 	}
 
 	HudPresenter.Tick(DeltaTime, GetMusouGameState(), GetPlayerHealthRatio());
@@ -526,6 +568,15 @@ void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 
 	bStopMenuVisible = bVisible;
 	HudPresenter.SetPauseMenuVisible(bStopMenuVisible);
+	bAudioSettingsVisible = false;
+	if (HudWidget && HudWidget->IsDocumentLoaded())
+	{
+		HudWidget->SetProperty("audio-settings-panel", "display", "none");
+		if (bStopMenuVisible)
+		{
+			RefreshAudioSettingsUI();
+		}
+	}
 
 	if (bStopMenuVisible)
 	{
@@ -569,6 +620,73 @@ void AMusouGameMode::ConfigureHudMenuNavigators()
 	{
 		return HudPresenter.AreVictoryButtonsVisible();
 	});
+}
+
+void AMusouGameMode::ShowAudioSettings()
+{
+	if (!bStopMenuVisible || !HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	bAudioSettingsVisible = true;
+	PauseMenuNavigator.ClearSelection();
+	HudWidget->SetProperty("pause-menu", "display", "none");
+	HudWidget->SetProperty("audio-settings-panel", "display", "block");
+	RefreshAudioSettingsUI();
+}
+
+void AMusouGameMode::HideAudioSettings()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		bAudioSettingsVisible = false;
+		return;
+	}
+
+	bAudioSettingsVisible = false;
+	HudWidget->SetProperty("audio-settings-panel", "display", "none");
+	if (bStopMenuVisible && !HudPresenter.IsResultOverlayVisible())
+	{
+		HudWidget->SetProperty("pause-menu", "display", "block");
+		PauseMenuNavigator.EnsureSelection(1);
+	}
+}
+
+void AMusouGameMode::AdjustBGMVolume(float Delta)
+{
+	FAudioManager& AudioManager = FAudioManager::Get();
+	AudioManager.SetBGMVolume(AudioManager.GetBGMVolume() + Delta);
+	RefreshAudioSettingsUI();
+}
+
+void AMusouGameMode::RefreshAudioSettingsUI()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	const float Volume = std::clamp(FAudioManager::Get().GetBGMVolume(), 0.0f, 1.0f);
+	HudWidget->SetText("bgm-volume-label", MakeBGMVolumeText(Volume));
+	HudWidget->SetAttribute("bgm-volume-bar", "value", Volume);
+}
+
+void AMusouGameMode::HandleAudioSettingsInput()
+{
+	InputSystem& Input = InputSystem::Get();
+	if (Input.GetKeyDown(VK_LEFT))
+	{
+		AdjustBGMVolume(-BGMVolumeStep);
+	}
+	if (Input.GetKeyDown(VK_RIGHT))
+	{
+		AdjustBGMVolume(BGMVolumeStep);
+	}
+	if (Input.GetKeyDown(VK_RETURN) || Input.GetKeyDown(VK_SPACE))
+	{
+		HideAudioSettings();
+	}
 }
 
 void AMusouGameMode::HandlePauseMenuInput()

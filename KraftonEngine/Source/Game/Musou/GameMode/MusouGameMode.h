@@ -104,6 +104,11 @@ private:
 	void SetStopMenuVisible(bool bVisible);
 	float GetPlayerHealthRatio() const;
 	void ConfigureHudMenuNavigators();
+	void ShowAudioSettings();
+	void HideAudioSettings();
+	void AdjustBGMVolume(float Delta);
+	void RefreshAudioSettingsUI();
+	void HandleAudioSettingsInput();
 	void HandlePauseMenuInput();
 	void HandleDeathMenuInput();
 	void HandleVictoryMenuInput();
@@ -117,6 +122,7 @@ private:
 
 	// 결과 오버레이가 떠 있으면 pause 메뉴 입력을 막고, 활성 메뉴 선택은 각 navigator가 보관한다.
 	bool bStopMenuVisible = false;
+	bool bAudioSettingsVisible = false;
 	bool bHasPendingVictoryResult = false;
 	bool bVictoryScoreSubmitted = false;
 	FMusouMatchResult PendingVictoryResult;

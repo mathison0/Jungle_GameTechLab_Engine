@@ -18,6 +18,8 @@ public:
 	void PlaySfxLimited(const FString& Key, float Volume = 1.0f, int32 MaxConcurrent = 4, float MinIntervalSeconds = 0.0f);
 	void PlayBGM(const FString& Key, float Volume = 1.0f);
 	void StopBGM();
+	void SetBGMVolume(float Volume);
+	float GetBGMVolume() const { return BGMVolume; }
 	void PlayLoop(const FString& Key, const FString& LoopName, float Volume = 1.0f, float Pitch = 1.0f);
 	void StopLoop(const FString& LoopName);
 	void StopAllLoops();
@@ -47,6 +49,7 @@ private:
 	FMOD::System* System = nullptr;
 	FMOD::ChannelGroup* MasterGroup = nullptr;
 	FMOD::Channel* BGMChannel = nullptr;
+	float BGMVolume = 0.6f;
 
 	TMap<FString, FMOD::Sound*> Audios;
 	TMap<FString, FString> AudioPaths;

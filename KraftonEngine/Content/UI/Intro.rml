@@ -91,6 +91,120 @@
 			color: #fff1b0;
 		}
 
+		#audio-settings-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #030508a3;
+		}
+
+		#audio-settings-panel {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -220px;
+			margin-top: -145px;
+			display: block;
+			width: 440px;
+			height: 290px;
+			background-color: #080202d8;
+			color: #f8f3df;
+		}
+
+		#audio-settings-title {
+			display: block;
+			width: 440px;
+			height: 56px;
+			line-height: 56px;
+			margin-top: 18px;
+			text-align: center;
+			font-size: 34px;
+			color: #f0d36a;
+		}
+
+		#audio-settings-row {
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 440px;
+			height: 72px;
+			margin-top: 28px;
+		}
+
+		.audio-step-button {
+			position: relative;
+			display: block;
+			width: 64px;
+			height: 56px;
+			line-height: 56px;
+			text-align: center;
+			font-size: 34px;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		.audio-step-button:hover .button-frame-normal {
+			display: none;
+		}
+
+		.audio-step-button:hover .button-frame-hover {
+			display: block;
+		}
+
+		.audio-step-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 64px;
+			height: 56px;
+			line-height: 56px;
+			text-align: center;
+		}
+
+		#audio-settings-meter {
+			display: block;
+			width: 220px;
+			height: 56px;
+			margin-left: 20px;
+			margin-right: 20px;
+		}
+
+		#bgm-volume-label {
+			display: block;
+			width: 220px;
+			height: 26px;
+			line-height: 26px;
+			text-align: center;
+			font-size: 22px;
+			color: #f8f3df;
+		}
+
+		#bgm-volume-bar {
+			display: block;
+			width: 220px;
+			height: 18px;
+			margin-top: 10px;
+			background-color: rgba(73, 73, 73, 0.35);
+			border-width: 1px;
+			border-color: #f0d36a;
+		}
+
+		#bgm-volume-bar fill {
+			background-color: #f0d36a;
+		}
+
+		#audio-settings-close-button {
+			margin-left: 100px;
+			margin-top: 28px;
+			width: 240px;
+		}
+
 		#scoreboard-overlay-host {
 			position: absolute;
 			left: 0;
@@ -366,6 +480,32 @@
 				<img class="button-frame button-frame-normal" src="btn_normal.png" />
 				<img class="button-frame button-frame-hover" src="btn_hover.png" />
 				<div class="button-label">게임 종료</div>
+			</div>
+		</div>
+		<div id="audio-settings-overlay">
+			<div id="audio-settings-panel">
+				<div id="audio-settings-title">오디오 설정</div>
+				<div id="audio-settings-row">
+					<div id="bgm-volume-down-button" class="audio-step-button">
+						<img class="button-frame button-frame-normal" src="btn_normal.png" />
+						<img class="button-frame button-frame-hover" src="btn_hover.png" />
+						<div class="audio-step-label">-</div>
+					</div>
+					<div id="audio-settings-meter">
+						<div id="bgm-volume-label">BGM 60%</div>
+						<progress id="bgm-volume-bar" value="0.6"></progress>
+					</div>
+					<div id="bgm-volume-up-button" class="audio-step-button">
+						<img class="button-frame button-frame-normal" src="btn_normal.png" />
+						<img class="button-frame button-frame-hover" src="btn_hover.png" />
+						<div class="audio-step-label">+</div>
+					</div>
+				</div>
+				<div id="audio-settings-close-button" class="menu-button secondary-button">
+					<img class="button-frame button-frame-normal" src="btn_normal.png" />
+					<img class="button-frame button-frame-hover" src="btn_hover.png" />
+					<div class="button-label">뒤로</div>
+				</div>
 			</div>
 		</div>
 		<div id="scoreboard-overlay-host"></div>

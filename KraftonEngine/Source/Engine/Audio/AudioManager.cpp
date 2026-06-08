@@ -195,12 +195,13 @@ void FAudioManager::PlayBGM(const FString& Key, float Volume)
 		return;
 	}
 
+	BGMVolume = std::clamp(Volume, 0.0f, 1.0f);
 	StopBGM();
 	System->playSound(Audios[Key], nullptr, false, &BGMChannel);
 
 	if (BGMChannel)
 	{
-		BGMChannel->setVolume(Volume);
+		BGMChannel->setVolume(BGMVolume);
 	}
 }
 
@@ -210,6 +211,15 @@ void FAudioManager::StopBGM()
 	{
 		BGMChannel->stop();
 		BGMChannel = nullptr;
+	}
+}
+
+void FAudioManager::SetBGMVolume(float Volume)
+{
+	BGMVolume = std::clamp(Volume, 0.0f, 1.0f);
+	if (BGMChannel)
+	{
+		BGMChannel->setVolume(BGMVolume);
 	}
 }
 

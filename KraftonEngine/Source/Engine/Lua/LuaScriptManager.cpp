@@ -779,6 +779,14 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
 	{
 		FAudioManager::Get().StopBGM();
 	});
+	AudioManager.set_function("SetBGMVolume", [](float Volume)
+	{
+		FAudioManager::Get().SetBGMVolume(Volume);
+	});
+	AudioManager.set_function("GetBGMVolume", []()
+	{
+		return FAudioManager::Get().GetBGMVolume();
+	});
 	AudioManager.set_function("PlayLoop", [](const FString& SoundName, const FString& LoopName, sol::optional<float> Volume, sol::optional<float> Pitch)
 	{
 		FAudioManager::Get().PlayLoop(SoundName, LoopName, Volume.value_or(1.0f), Pitch.value_or(1.0f));

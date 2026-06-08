@@ -23,6 +23,11 @@ public:
 private:
 	void ConfigureIntroMenuNavigator();
 	void HandleIntroMenuInput();
+	void ShowAudioSettings();
+	void HideAudioSettings();
+	void AdjustBGMVolume(float Delta);
+	void RefreshAudioSettingsUI();
+	void HandleAudioSettingsInput();
 	void ShowScoreboard();
 	void HideScoreboard();
 	void ShowPreviousScoreboardPage();
@@ -32,4 +37,5 @@ private:
 	FMusouMenuNavigator IntroMenuNavigator;
 	FMusouScoreboardOverlayPresenter ScoreboardOverlay;
 	bool bScoreboardVisible = false;
+	bool bAudioSettingsVisible = false;
 };
