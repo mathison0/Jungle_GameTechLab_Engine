@@ -219,6 +219,8 @@ protected:
 	UCineCameraComponent* ActiveShotCam   = nullptr;  // 직전/현재 샷 카메라 — 핑퐁 판단용
 	FMusouCameraShot      ActiveShot;
 	FVector               ShotWorldLock = FVector(0.0f, 0.0f, 0.0f);  // bFollow=false 샷의 고정 월드 위치
+	float                 ShotYaw = 0.0f;  // 샷 시작 시 동결한 프레이밍 yaw — 위치/시선을 이 값 기준
+	                                        // 월드 구동해 공격 중 캡슐 yaw 스냅과 디커플(카메라 튐 제거)
 
 	// 카메라 샷 주입 이력 (시퀀스 → 데이터 버전) — 공격 notify 주입과 별도 추적
 	// (가드 조건이 달라 같은 시퀀스라도 주입 가능 여부가 다르다).
