@@ -4,6 +4,7 @@
 #include "Component/Camera/CineCameraComponent.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
+#include "Component/Particle/ParticleSystemComponent.h"
 #include "Component/Primitive/HitFlashComponent.h"
 #include "Component/SceneComponent.h"
 #include "Core/Logging/Log.h"
@@ -653,6 +654,9 @@ void AMusouBossEncounterManager::ExecuteSequenceStep(const FBossSequenceStep& St
 			}
 		}
 		break;
+	case EBossSequenceStepType::SetParticleEnabled:
+		SetBossParticlesEnabled(Step.bValue);
+		break;
 	case EBossSequenceStepType::PlayAudio:
 		if (!Step.SoundPath.empty())
 		{
@@ -717,6 +721,35 @@ void AMusouBossEncounterManager::ExecuteSequenceStep(const FBossSequenceStep& St
 	case EBossSequenceStepType::Wait:
 	default:
 		break;
+	}
+}
+
+void AMusouBossEncounterManager::SetBossParticlesEnabled(bool bEnabled)
+{
+	if (!Boss)
+	{
+		return;
+	}
+
+	for (UActorComponent* Component : Boss->GetComponents())
+	{
+		UParticleSystemComponent* Particle = Cast<UParticleSystemComponent>(Component);
+		if (!Particle)
+		{
+			continue;
+		}
+
+		if (bEnabled)
+		{
+			Particle->ResetSystem();
+			Particle->Activate();
+			Particle->SetEmitterSpawningEnabled(true);
+		}
+		else
+		{
+			Particle->SetEmitterSpawningEnabled(false);
+			Particle->Deactivate();
+		}
 	}
 }
 

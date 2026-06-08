@@ -94,7 +94,8 @@ enum class EBossSequenceStepType : uint8
 	CameraFadeIn,
 	CameraFadeOut,
 	CameraShake,
-	WarningRim
+	WarningRim,
+	SetParticleEnabled
 };
 
 struct FBossSequenceStep

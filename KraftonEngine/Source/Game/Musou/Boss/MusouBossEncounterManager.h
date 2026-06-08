@@ -104,6 +104,7 @@ private:
 	void FinishSequence();
 	void TickActiveSequence(float DeltaTime);
 	void ExecuteSequenceStep(const FBossSequenceStep& Step);
+	void SetBossParticlesEnabled(bool bEnabled);
 	void EnsureIntroCamera();
 	UCameraComponent* FindSequenceCameraByTag(const FString& CameraTag) const;
 	void UpdateIntroCamera();

@@ -1,13 +1,16 @@
-#include "Game/Musou/MainBoss/MainBossEncounterManager.h"
+﻿#include "Game/Musou/MainBoss/MainBossEncounterManager.h"
 
+#include "Audio/AudioManager.h"
 #include "Component/Camera/CineCameraComponent.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Component/SceneComponent.h"
 #include "Core/Logging/Log.h"
+#include "Game/Musou/Boss/BossPatternDataRegistry.h"
 #include "Game/Musou/Boss/MusouBossCharacter.h"
 #include "Game/Musou/Character/MusouCharacter.h"
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
+#include "Game/Musou/MusouGameSettings.h"
 #include "Game/Musou/MainBoss/MainBossCharacter.h"
 #include "Game/Musou/MainBoss/MainBossPatternComponent.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
@@ -104,10 +107,13 @@ void AMainBossEncounterManager::Tick(float DeltaTime)
 		AMusouGameMode* GameMode = ResolveMusouGameMode();
 		if (!GameMode || !GameMode->IsFinalBossEncounterDialogActive())
 		{
-			StartGettingUp();
+			StartIntroSequence();
 		}
 		break;
 	}
+	case EMainBossEncounterFlowState::IntroSequence:
+		TickIntroSequence(SafeDeltaTime);
+		break;
 	case EMainBossEncounterFlowState::GettingUp:
 		if (StateTime >= ActiveSequenceDuration)
 		{
@@ -258,7 +264,46 @@ void AMainBossEncounterManager::StartFinalBossDialog()
 		return;
 	}
 
-	StartGettingUp();
+	StartIntroSequence();
+}
+
+void AMainBossEncounterManager::StartIntroSequence()
+{
+	if (!ResolveMainBoss())
+	{
+		return;
+	}
+
+	if (!LoadIntroSteps() || IntroSteps.empty())
+	{
+		StartGettingUp();
+		return;
+	}
+
+	ResolvePlayer();
+	SetCinematicLock(true);
+	if (AMusouGameMode* GameMode = ResolveMusouGameMode())
+	{
+		if (bHideHudDuringCinematic)
+		{
+			GameMode->SetHudVisible(false);
+		}
+	}
+
+	if (MainBossBattle)
+	{
+		MainBossBattle->SetInvincible(true);
+	}
+	if (MainBossPattern)
+	{
+		MainBossPattern->SetPatternEnabled(false);
+	}
+
+	StateTime = 0.0f;
+	ActiveSequenceDuration = 0.0f;
+	IntroStepExecuted.assign(IntroSteps.size(), 0);
+	FlowState = EMainBossEncounterFlowState::IntroSequence;
+	UE_LOG("[MainBossEncounter] data intro started: %s", MainBossDataId.ToString().c_str());
 }
 
 void AMainBossEncounterManager::StartGettingUp()
@@ -307,6 +352,7 @@ void AMainBossEncounterManager::StartGettingUp()
 	}
 
 	ActiveSequenceDuration = MainBossPattern->PlayEncounterGettingUp(Player);
+	PlayGettingUpEffects();
 	StateTime = 0.0f;
 	FlowState = EMainBossEncounterFlowState::GettingUp;
 	UE_LOG("[MainBossEncounter] getting up started");
@@ -321,6 +367,7 @@ void AMainBossEncounterManager::StartBattlecry()
 
 	FaceMainBossToPlayer();
 	ActiveSequenceDuration = MainBossPattern->PlayEncounterBattlecry(Player);
+	PlayBattlecryEffects();
 	StateTime = 0.0f;
 	FlowState = EMainBossEncounterFlowState::Battlecry;
 	UE_LOG("[MainBossEncounter] battlecry started");
@@ -352,6 +399,186 @@ void AMainBossEncounterManager::FinishEncounter()
 	bEncounterCameraActive = false;
 	FlowState = EMainBossEncounterFlowState::Complete;
 	UE_LOG("[MainBossEncounter] combat started");
+}
+
+bool AMainBossEncounterManager::LoadIntroSteps()
+{
+	if (bIntroStepsLoaded)
+	{
+		return !IntroSteps.empty();
+	}
+
+	bIntroStepsLoaded = true;
+	IntroSteps.clear();
+
+	const FBossDefinition* Definition = FBossPatternDataRegistry::Get().FindBoss(MainBossDataId);
+	if (!Definition)
+	{
+		UE_LOG("[MainBossEncounter] intro data not found: %s", MainBossDataId.ToString().c_str());
+		return false;
+	}
+
+	IntroSteps = Definition->IntroSteps;
+	return !IntroSteps.empty();
+}
+
+void AMainBossEncounterManager::TickIntroSequence(float DeltaTime)
+{
+	if (bEncounterCameraActive)
+	{
+		UpdateEncounterCamera();
+	}
+
+	for (int32 Index = 0; Index < static_cast<int32>(IntroSteps.size()); ++Index)
+	{
+		if (Index < static_cast<int32>(IntroStepExecuted.size()) && IntroStepExecuted[Index] != 0)
+		{
+			continue;
+		}
+
+		const FBossSequenceStep& Step = IntroSteps[Index];
+		if (StateTime < Step.Time)
+		{
+			continue;
+		}
+
+		ExecuteIntroStep(Step);
+		if (Index < static_cast<int32>(IntroStepExecuted.size()))
+		{
+			IntroStepExecuted[Index] = 1;
+		}
+	}
+
+	if (StateTime >= GetIntroSequenceEndTime())
+	{
+		FinishEncounter();
+	}
+	(void)DeltaTime;
+}
+
+void AMainBossEncounterManager::ExecuteIntroStep(const FBossSequenceStep& Step)
+{
+	switch (Step.Type)
+	{
+	case EBossSequenceStepType::Dialogue:
+		UE_LOG("[MainBossIntro] Boss: %s", Step.Text.c_str());
+		break;
+	case EBossSequenceStepType::PlayMontage:
+		if (MainBossPattern && !Step.MontagePath.empty())
+		{
+			MainBossPattern->PlayEncounterSequence(Step.MontagePath, ResolvePlayer(), Step.PlayRate);
+		}
+		break;
+	case EBossSequenceStepType::BlendCamera:
+		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+		{
+			if (!ReturnCamera)
+			{
+				ReturnCamera = CameraManager->GetActiveCamera();
+			}
+
+			UCameraComponent* SequenceCamera = FindSequenceCameraByTag(Step.CameraTag);
+			const bool bUseGeneratedCamera = SequenceCamera == nullptr;
+			if (bUseGeneratedCamera)
+			{
+				CameraOffset = Step.CameraOffset;
+				LookAtHeight = Step.LookAtHeight;
+				EncounterFOV = Step.FOV;
+				EnsureEncounterCamera();
+				UpdateEncounterCamera();
+				SequenceCamera = EncounterCamera;
+			}
+
+			if (SequenceCamera)
+			{
+				CameraManager->SetActiveCameraWithBlend(
+					SequenceCamera,
+					Step.Duration,
+					EViewTargetBlendFunction::VTBlend_EaseInOut,
+					ECameraRequestPriority::BossSequence,
+					true);
+				CameraManager->Possess(SequenceCamera);
+				bEncounterCameraActive = bUseGeneratedCamera;
+			}
+		}
+		break;
+	case EBossSequenceStepType::RestoreCamera:
+		RestorePlayerCamera();
+		bEncounterCameraActive = false;
+		break;
+	case EBossSequenceStepType::CameraFadeIn:
+		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+		{
+			CameraManager->StartCameraFade(1.0f, 0.0f, Step.Duration, FLinearColor::Black(), false, false);
+		}
+		break;
+	case EBossSequenceStepType::CameraFadeOut:
+		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+		{
+			CameraManager->StartCameraFade(0.0f, 1.0f, Step.Duration, FLinearColor::Black(), false, true);
+		}
+		break;
+	case EBossSequenceStepType::CameraShake:
+		if (FMusouGameSettings::Get().IsCameraShakeEnabled())
+		{
+			if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
+			{
+				if (!Step.ShakeAssetPath.empty())
+				{
+					CameraManager->StartCameraShakeAsset(Step.ShakeAssetPath, Step.ShakeScale);
+				}
+			}
+		}
+		break;
+	case EBossSequenceStepType::PlayAudio:
+		if (!Step.SoundPath.empty())
+		{
+			const FString Key = FString("MainBossIntro:") + Step.SoundPath;
+			if (FAudioManager::Get().LoadAudio(Key, Step.SoundPath, Step.bLoop))
+			{
+				FAudioManager::Get().PlayAudio(Key, Step.Volume);
+			}
+			else
+			{
+				UE_LOG("[MainBossIntro] failed to load sound: %s", Step.SoundPath.c_str());
+			}
+		}
+		break;
+	case EBossSequenceStepType::LockPlayer:
+		SetCinematicLock(Step.bValue);
+		break;
+	case EBossSequenceStepType::UnlockPlayer:
+		SetCinematicLock(false);
+		break;
+	case EBossSequenceStepType::SetBossPatternEnabled:
+		if (MainBossPattern)
+		{
+			MainBossPattern->SetPatternEnabled(Step.bValue);
+		}
+		break;
+	case EBossSequenceStepType::FaceBossToPlayer:
+		FaceMainBossToPlayer();
+		break;
+	case EBossSequenceStepType::SetInvincible:
+		if (MainBossBattle)
+		{
+			MainBossBattle->SetInvincible(Step.bValue);
+		}
+		break;
+	case EBossSequenceStepType::Wait:
+	default:
+		break;
+	}
+}
+
+float AMainBossEncounterManager::GetIntroSequenceEndTime() const
+{
+	float EndTime = 0.0f;
+	for (const FBossSequenceStep& Step : IntroSteps)
+	{
+		EndTime = (std::max)(EndTime, Step.Time + Step.Duration);
+	}
+	return EndTime;
 }
 
 void AMainBossEncounterManager::SetCinematicLock(bool bLocked)
@@ -397,6 +624,41 @@ void AMainBossEncounterManager::EnsureEncounterCamera()
 	{
 		EncounterCamera->AttachToComponent(GetRootComponent());
 	}
+}
+
+UCameraComponent* AMainBossEncounterManager::FindSequenceCameraByTag(const FString& CameraTag) const
+{
+	if (CameraTag.empty())
+	{
+		return nullptr;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	const FName TagName(CameraTag);
+	for (AActor* Actor : World->GetActors())
+	{
+		if (!Actor || !Actor->HasTag(TagName))
+		{
+			continue;
+		}
+
+		if (UCineCameraComponent* CineCamera = Actor->GetComponentByClass<UCineCameraComponent>())
+		{
+			return CineCamera;
+		}
+
+		if (UCameraComponent* Camera = Actor->GetComponentByClass<UCameraComponent>())
+		{
+			return Camera;
+		}
+	}
+
+	return nullptr;
 }
 
 void AMainBossEncounterManager::UpdateEncounterCamera()
@@ -446,6 +708,54 @@ void AMainBossEncounterManager::RestorePlayerCamera()
 			CameraManager->Possess(ReturnCamera);
 		}
 		CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
+	}
+}
+
+void AMainBossEncounterManager::PlayGettingUpEffects()
+{
+	if (PlayerController)
+	{
+		if (FMusouGameSettings::Get().IsCameraShakeEnabled())
+		{
+			if (APlayerCameraManager* CameraManager = PlayerController->GetPlayerCameraManager())
+			{
+				if (!GettingUpShakeAssetPath.empty())
+				{
+					CameraManager->StartCameraShakeAsset(GettingUpShakeAssetPath, GettingUpShakeScale);
+				}
+			}
+		}
+	}
+
+	if (!GettingUpSoundPath.empty())
+	{
+		const FString Key = FString("MainBossEncounter:") + GettingUpSoundPath;
+		if (FAudioManager::Get().LoadAudio(Key, GettingUpSoundPath, false))
+		{
+			FAudioManager::Get().PlayAudio(Key, GettingUpSoundVolume);
+		}
+		else
+		{
+			UE_LOG("[MainBossEncounter] failed to load getting up sound: %s", GettingUpSoundPath.c_str());
+		}
+	}
+}
+
+void AMainBossEncounterManager::PlayBattlecryEffects()
+{
+	if (!PlayerController || !FMusouGameSettings::Get().IsCameraShakeEnabled())
+	{
+		return;
+	}
+
+	if (BattlecryShakeAssetPath.empty())
+	{
+		return;
+	}
+
+	if (APlayerCameraManager* CameraManager = PlayerController->GetPlayerCameraManager())
+	{
+		CameraManager->StartCameraShakeAsset(BattlecryShakeAssetPath, BattlecryShakeScale);
 	}
 }
 

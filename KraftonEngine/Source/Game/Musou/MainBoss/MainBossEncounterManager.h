@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Game/Musou/Boss/BossPatternTypes.h"
 #include "GameFramework/AActor.h"
 #include "Math/Vector.h"
 #include "Object/FName.h"
@@ -22,6 +23,7 @@ enum class EMainBossEncounterFlowState : uint8
 	WaitingForMiddleBoss,
 	WaitingForMiddleBossRemoval,
 	WaitingForDialog,
+	IntroSequence,
 	GettingUp,
 	Battlecry,
 	Complete
@@ -48,6 +50,9 @@ public:
 	UPROPERTY(Edit, Save, Category="Final Boss Encounter", DisplayName="Main Boss Tag")
 	FName MainBossTag = FName("FinalBoss");
 
+	UPROPERTY(Edit, Save, Category="Final Boss Encounter", DisplayName="Main Boss Data Id")
+	FName MainBossDataId = FName("golem_boss");
+
 	UPROPERTY(Edit, Save, Category="Final Boss Encounter", DisplayName="Lock Player During Cinematic")
 	bool bLockPlayerDuringCinematic = true;
 
@@ -69,6 +74,24 @@ public:
 	UPROPERTY(Edit, Save, Category="Final Boss Encounter|Camera", DisplayName="FOV")
 	float EncounterFOV = 0.87266463f;
 
+	UPROPERTY(Edit, Save, Category="Final Boss Encounter|Effects", DisplayName="Getting Up Shake Scale")
+	float GettingUpShakeScale = 1.25f;
+
+	UPROPERTY(Edit, Save, Category="Final Boss Encounter|Effects", DisplayName="Getting Up Shake Asset")
+	FString GettingUpShakeAssetPath = "Content/Particle/Earthquake.uasset";
+
+	UPROPERTY(Edit, Save, Category="Final Boss Encounter|Effects", DisplayName="Getting Up Sound")
+	FString GettingUpSoundPath = "Boss_Golem/earthquake.wav";
+
+	UPROPERTY(Edit, Save, Category="Final Boss Encounter|Effects", DisplayName="Getting Up Sound Volume")
+	float GettingUpSoundVolume = 1.0f;
+
+	UPROPERTY(Edit, Save, Category="Final Boss Encounter|Effects", DisplayName="Battlecry Shake Scale")
+	float BattlecryShakeScale = 1.0f;
+
+	UPROPERTY(Edit, Save, Category="Final Boss Encounter|Effects", DisplayName="Battlecry Shake Asset")
+	FString BattlecryShakeAssetPath = "Content/Particle/GolemGrowl.uasset";
+
 private:
 	bool ResolveMainBoss();
 	AMusouBossCharacter* FindMiddleBoss() const;
@@ -79,14 +102,22 @@ private:
 	bool IsMiddleBossDead(const AMusouBossCharacter* Boss) const;
 	void PrepareMainBossDormant();
 	void StartFinalBossDialog();
+	void StartIntroSequence();
 	void StartGettingUp();
 	void StartBattlecry();
 	void FinishEncounter();
+	bool LoadIntroSteps();
+	void TickIntroSequence(float DeltaTime);
+	void ExecuteIntroStep(const FBossSequenceStep& Step);
+	float GetIntroSequenceEndTime() const;
 	void SetCinematicLock(bool bLocked);
 	void EnsureEncounterCamera();
+	UCameraComponent* FindSequenceCameraByTag(const FString& CameraTag) const;
 	void UpdateEncounterCamera();
 	void RestorePlayerCamera();
 	void FaceMainBossToPlayer();
+	void PlayGettingUpEffects();
+	void PlayBattlecryEffects();
 
 	EMainBossEncounterFlowState FlowState = EMainBossEncounterFlowState::WaitingForMiddleBoss;
 	AMainBossCharacter* MainBoss = nullptr;
@@ -98,7 +129,10 @@ private:
 	UCameraComponent* ReturnCamera = nullptr;
 	float StateTime = 0.0f;
 	float ActiveSequenceDuration = 0.0f;
+	TArray<FBossSequenceStep> IntroSteps;
+	TArray<uint8> IntroStepExecuted;
 	bool bMainBossPrepared = false;
+	bool bIntroStepsLoaded = false;
 	bool bMiddleBossDeathObserved = false;
 	bool bPlayerWasLocked = false;
 	bool bEncounterCameraActive = false;
