@@ -32,10 +32,13 @@ private:
 	void HideScoreboard();
 	void ShowPreviousScoreboardPage();
 	void ShowNextScoreboardPage();
+	void ShowKeyGuide();
+	void HideKeyGuide();
 
 	UUserWidget* IntroWidget = nullptr;
 	FMusouMenuNavigator IntroMenuNavigator;
 	FMusouScoreboardOverlayPresenter ScoreboardOverlay;
 	bool bScoreboardVisible = false;
 	bool bAudioSettingsVisible = false;
+	bool bKeyGuideVisible = false;
 };

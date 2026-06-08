@@ -1,0 +1,117 @@
+<rml>
+<head>
+	<title>Credits</title>
+	<style>
+		body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			background-color: #040404;
+			font-family: "HeirofLight";
+			font-weight: bold;
+		}
+
+		#credits-root {
+			position: relative;
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+			background-color: #040404;
+		}
+
+		/* 아래에서 위로 흐르는 롤 — top 을 C++(AMusouGameModeCredits)가 매 틱 갱신해
+		   확실히 스크롤시킨다 (RCSS 애니메이션 지원과 무관하게 동작 보장). 시작은 화면 아래. */
+		#credits-roll {
+			position: absolute;
+			left: 0;
+			top: 1080px;
+			width: 100%;
+		}
+
+		.credits-block {
+			display: block;
+			width: 100%;
+			text-align: center;
+		}
+
+		#credits-game-title {
+			display: block;
+			width: 100%;
+			margin-top: 40px;
+			text-align: center;
+			font-size: 92px;
+			color: #f0d36a;
+		}
+
+		#credits-lab {
+			display: block;
+			width: 100%;
+			margin-top: 18px;
+			text-align: center;
+			font-size: 34px;
+			color: #d6ccb1;
+		}
+
+		.credits-section-title {
+			display: block;
+			width: 100%;
+			margin-top: 96px;
+			text-align: center;
+			font-size: 30px;
+			color: #b89a3c;
+		}
+
+		.credits-name {
+			display: block;
+			width: 100%;
+			margin-top: 22px;
+			text-align: center;
+			font-size: 44px;
+			color: #f8f3df;
+		}
+
+		#credits-thanks {
+			display: block;
+			width: 100%;
+			margin-top: 120px;
+			text-align: center;
+			font-size: 56px;
+			color: #f0d36a;
+		}
+
+		/* 건너뛰기 안내 — 은은하게 깜빡. */
+		@keyframes skip-pulse {
+			from { opacity: 0.25; }
+			to   { opacity: 0.85; }
+		}
+
+		#credits-skip-hint {
+			position: absolute;
+			left: 0;
+			bottom: 36px;
+			width: 100%;
+			text-align: center;
+			font-size: 22px;
+			color: #9c947f;
+			animation: skip-pulse 1.4s ease-in-out infinite alternate;
+		}
+	</style>
+</head>
+<body>
+	<div id="credits-root">
+		<div id="credits-roll">
+			<div id="credits-game-title">정글무쌍</div>
+			<div id="credits-lab">Game Tech Lab 3기</div>
+
+			<div class="credits-section-title">TEAM</div>
+			<div class="credits-name">국동진</div>
+			<div class="credits-name">심우진</div>
+			<div class="credits-name">박세영</div>
+			<div class="credits-name">강명호</div>
+
+			<div id="credits-thanks">감사합니다</div>
+		</div>
+		<div id="credits-skip-hint">아무 키나 눌러 건너뛰기</div>
+	</div>
+</body>
+</rml>

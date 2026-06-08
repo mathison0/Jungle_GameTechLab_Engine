@@ -119,6 +119,15 @@ void AMusouGameMode::StartMatch()
 				}
 			};
 
+			// 승리 후 "그만두기" — 엔딩 크레딧 아웃트로(Credits 씬)로. 크레딧이 끝나면 Intro 복귀.
+			auto RollCredits = []()
+			{
+				if (GEngine)
+				{
+					GEngine->RequestTransitionToScene("Credits");
+				}
+			};
+
 			HudWidget->BindClick("resume-button", [this]()
 			{
 				SetStopMenuVisible(false);
@@ -145,7 +154,7 @@ void AMusouGameMode::StartMatch()
 			HudWidget->BindClick("victory-restart-button", RestartMatch);
 			HudWidget->BindClick("stop-button", StopMatch);
 			HudWidget->BindClick("death-stop-button", StopMatch);
-			HudWidget->BindClick("victory-stop-button", StopMatch);
+			HudWidget->BindClick("victory-stop-button", RollCredits);
 			HudWidget->BindClick("scoreboard-save-button", [this]()
 			{
 				SubmitVictoryScore();
