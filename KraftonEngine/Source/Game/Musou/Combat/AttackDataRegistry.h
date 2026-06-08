@@ -49,6 +49,22 @@ struct FMusouCameraShot
 	bool IsValid() const { return BeginFrac >= 0.0f && EndFrac > BeginFrac; }
 };
 
+// 전방 진행 충격파 — 궁극기 지면 강타용. 한 점에서 즉발 판정이 아니라 시작점에서
+// 전방으로 Distance 만큼 Duration 동안 Pulses 개의 판정/검기를 순차 발사 → "길게 순차 데미지".
+// 데미지 판정 기하는 AttackId 의 spec(range/cone/height/dmg)을 펄스마다 origin 만 전진시켜 사용.
+struct FMusouShockwave
+{
+	float   TriggerFrac = -1.0f;   // 몽타주 발동 시점 (지면 강타 프레임). <0 = 없음
+	float   Distance = 12.0f;      // 전방 진행 총 거리 (m)
+	float   Duration = 0.7f;       // 진행 시간 (초)
+	int32   Pulses = 8;            // 데미지/검기 펄스 수
+	FString AttackId;              // 펄스 판정 spec 키 (비면 슬램 spec 사용)
+	float   SlashSpeed = 9.0f;     // 검기(placeholder) 진행 속도
+	float   SlashLife = 0.45f;     // 검기 수명 (초)
+
+	bool IsValid() const { return TriggerFrac >= 0.0f && Pulses > 0 && Distance > 0.0f; }
+};
+
 // 공격 스텝 정의 — attack_data.lua 의 steps 항목 1개.
 // 몽타주 경로가 있으면 에디터 저작본 우선, 로드 실패 시 SequencePath 의 시퀀스로
 // 런타임 몽타주를 생성하고 아래 notify 파라미터를 주입한다 (MusouCharacter 담당).
@@ -75,6 +91,9 @@ struct FMusouAttackStep
 
 	// 몽타주 카메라 연출 — 비어 있으면 연출 없음 (대부분의 스텝). lua: camera = { {...}, ... }
 	TArray<FMusouCameraShot> CameraShots;
+
+	// 전방 진행 충격파 — 궁극기 지면 강타용. lua: shockwave = { trigger_frac=.., ... }
+	FMusouShockwave Shockwave;
 
 	bool IsValid() const { return !MontagePath.empty() || !SequencePath.empty(); }
 };

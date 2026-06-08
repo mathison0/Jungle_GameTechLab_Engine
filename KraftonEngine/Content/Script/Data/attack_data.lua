@@ -232,6 +232,25 @@ return {
                                        offset = { 3.5, -2.0, 0.3 }, fov = 55, look_height = 0.8,
                                        letterbox = 0.12 } } },
 
+        -- ▶ 신규 무쌍기 — 단발 몽타주: 뒤로 빠졌다가 바닥 강타 → 전방 진행 충격파(순차 데미지).
+        --   · 몽타주/루트모션은 단발 에셋 입수 시 교체 (지금은 Downward 로 초안).
+        --   · force_root_motion: 백스텝+강타 이동을 몽타주 RM 으로 (에셋 RM 플래그 꺼져 있어도 강제).
+        --   · camera: 강타 직전 시네마틱 윈드업(로우앵글 풀백) → 임팩트.
+        --   · shockwave: trigger_frac(강타 프레임)에 전방 진행 충격파 주입 — origin 만 전진하며
+        --     pulses 개의 검기(placeholder) + musou_slam 판정을 distance/duration 동안 순차 발사.
+        ultimate_slam = { montage = montage("Barbarian_Melee Attack Downward"),
+                          sequence = seq("Barbarian_Melee Attack Downward"),
+                          blend_in = 0.12, attack_id = "musou_slam", hit_frac = 0.50,
+                          play_rate = 1.0, force_root_motion = true,
+                          -- 강타 직전 윈드업 → 임팩트 로우앵글. 한 박자 길게 잡아 "강한 걸 쓴다" 강조.
+                          camera = { { begin_frac = 0.0, end_frac = 0.85, blend_in = 0.25, blend_out = 0.35,
+                                       offset = { 4.0, -2.2, 0.2 }, fov = 52, look_height = 0.7,
+                                       letterbox = 0.14 } },
+                          -- 강타(hit_frac≈0.50) 직후 충격파 발동 — 전방 14m, 0.8s 동안 10발 순차.
+                          shockwave = { trigger_frac = 0.52, distance = 14.0, duration = 0.8,
+                                        pulses = 10, attack_id = "musou_slam",
+                                        slash_speed = 9.0, slash_life = 0.45 } },
+
         -- 구르기 (Shift) — 입력 방향 회피. 공격 아님 (attack_id 없음), 전 구간 무적은 C++.
         -- ※ Standing Dive Forward.fbx 를 에디터에서 Barbarian 스켈레톤으로 임포트해야 활성화.
         --   force_root_motion: 임포트 직후 RM 플래그가 꺼져 있어도 런타임에 강제로 켠다.
@@ -287,9 +306,10 @@ return {
         -- 콤보 분기 피니셔 (□..△) — 인덱스 = 분기 시점 단수. 단수 초과 시 마지막으로 clamp
         branch = { "horizontal", "spin_low", "spin_high" },
 
-        -- 무쌍기 (R, 게이지 가득) — 난무: 슬롯 순차 자동 재생, 전 구간 무적.
-        -- ※ spin_low(self_launch) 처럼 자기 띄움 있는 스텝은 넣지 말 것 — 난무가 공중으로 끊긴다.
-        ultimate = { "horizontal", "spin_high", "u_slam" },
+        -- 무쌍기 (R, 게이지 가득) — 단발: 뒤로 빠졌다 바닥 강타 → 전방 진행 충격파. 전 구간 무적.
+        -- 단일 슬롯이므로 UpdateUltimateChain 이 1스텝 후 자동 종료. 충격파는 캐릭터 Tick 이 독립 구동.
+        -- ※ self_launch(자기 띄움) 스텝 금지 — 충격파/연출이 공중으로 끊긴다.
+        ultimate = { "ultimate_slam" },
 
         -- 구르기 (Shift) — 후딜(콤보 윈도우/말미) 캔슬 가능, 전 구간 무적
         dodge = "roll",
@@ -319,7 +339,7 @@ return {
 
         -- 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
         ultimate = {
-            kills_to_fill = 15,
+            kills_to_fill = 10,
         },
 
         -- 플레이어 피격 리액션 — 최소 간격 (초). 군체 다단 히트 스턴락 방지

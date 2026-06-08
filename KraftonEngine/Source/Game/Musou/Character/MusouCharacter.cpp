@@ -4,7 +4,9 @@
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/Combat/ComboComponent.h"
 #include "Game/Musou/Combat/AnimNotify_MusouAttack.h"
+#include "Game/Musou/Combat/AnimNotify_GroundSlamShockwave.h"
 #include "Game/Musou/Combat/AnimNotifyState_ComboWindow.h"
+#include "Game/Musou/Effect/SlashEffectActor.h"
 #include "Game/Musou/Camera/AnimNotifyState_CameraShot.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
@@ -235,6 +237,9 @@ void AMusouCharacter::SetupInputComponent()
 void AMusouCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// 충격파는 몽타주/콤보 상태와 무관하게 진행 — 항상 먼저 갱신.
+	UpdateShockwave(DeltaTime);
 
 	if (!ComboComponent)
 	{
@@ -518,6 +523,101 @@ void AMusouCharacter::EndUltimate()
 	if (BattleComponent)
 	{
 		BattleComponent->SetInvincible(false);
+	}
+}
+
+void AMusouCharacter::StartGroundSlamShockwave(const FVector& Origin, const FVector& Dir, float Distance,
+	float Duration, int32 Pulses, FName SpecId, float SlashSpeed, float SlashLife)
+{
+	FVector D = Dir;
+	D.Z = 0.0f;
+	const float Len = std::sqrt(D.X * D.X + D.Y * D.Y);
+
+	ShockwaveRun.bActive    = true;
+	ShockwaveRun.StartPos   = Origin;
+	ShockwaveRun.Dir        = (Len > 0.001f) ? (D * (1.0f / Len)) : FVector(1.0f, 0.0f, 0.0f);
+	ShockwaveRun.Distance   = Distance;
+	ShockwaveRun.Duration   = (Duration > 0.01f) ? Duration : 0.01f;
+	ShockwaveRun.Elapsed    = 0.0f;
+	ShockwaveRun.Pulses     = (Pulses < 1) ? 1 : Pulses;
+	ShockwaveRun.NextPulse  = 0;
+	ShockwaveRun.SpecId     = SpecId;
+	ShockwaveRun.SlashSpeed = SlashSpeed;
+	ShockwaveRun.SlashLife  = SlashLife;
+
+	// 첫 펄스(시작점)는 강타와 동시에 즉시 발사.
+	UpdateShockwave(0.0f);
+}
+
+void AMusouCharacter::UpdateShockwave(float DeltaTime)
+{
+	if (!ShockwaveRun.bActive)
+	{
+		return;
+	}
+
+	ShockwaveRun.Elapsed += DeltaTime;
+
+	// 펄스 i 는 t_i = Duration * i/(N-1) 시점, origin = Start + Dir*Distance*(i/(N-1)) 에서 발사.
+	// Elapsed 가 지난 펄스를 모두 따라잡아 발사 — 프레임 드랍에도 빠짐 없이 순차 진행.
+	const int32 N = ShockwaveRun.Pulses;
+	const float Denom = (N > 1) ? static_cast<float>(N - 1) : 1.0f;
+	while (ShockwaveRun.NextPulse < N)
+	{
+		const float Frac = (N > 1) ? (static_cast<float>(ShockwaveRun.NextPulse) / Denom) : 0.0f;
+		const float TPulse = ShockwaveRun.Duration * Frac;
+		if (ShockwaveRun.Elapsed + 1e-4f < TPulse)
+		{
+			break; // 아직 이 펄스 시간 전 — 다음 Tick 에서.
+		}
+
+		const FVector PulseOrigin = ShockwaveRun.StartPos + ShockwaveRun.Dir * (ShockwaveRun.Distance * Frac);
+		EmitShockwavePulse(PulseOrigin, ShockwaveRun.Dir);
+		++ShockwaveRun.NextPulse;
+	}
+
+	if (ShockwaveRun.NextPulse >= N && ShockwaveRun.Elapsed >= ShockwaveRun.Duration)
+	{
+		ShockwaveRun.bActive = false;
+	}
+}
+
+void AMusouCharacter::EmitShockwavePulse(const FVector& WorldOrigin, const FVector& Dir)
+{
+	UWorld* World = GetWorld();
+
+	// 데미지 — spec 기하를 그대로 쓰되 origin 만 전방으로 전진시켜 broadcast.
+	AMusouGameMode* GameMode = World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
+	if (GameMode)
+	{
+		const FAttackSpec* Spec = FindMusouAttackSpec(ShockwaveRun.SpecId);
+		if (Spec)
+		{
+			float AttackPower = BattleComponent ? BattleComponent->GetAttackPower() : 10.0f;
+
+			FMusouAttackEvent Event;
+			Event.Attacker    = this;
+			Event.Spec        = *Spec;
+			Event.Origin      = WorldOrigin;
+			Event.Forward     = Dir;
+			Event.Damage      = AttackPower * Spec->DamageMult;
+			Event.bFromPlayer = IsPossessed();
+			GameMode->BroadcastAttack(Event);
+		}
+	}
+
+	// 검기(placeholder) — 펄스 위치에서 전방으로 날아가는 슬래시. 실제 충격파 파티클로 교체 예정.
+	if (World)
+	{
+		ASlashEffectActor* Slash = World->SpawnActor<ASlashEffectActor>();
+		if (Slash)
+		{
+			const float YawDeg = std::atan2(Dir.Y, Dir.X) * (180.0f / 3.14159265f);
+			Slash->SetDestroyOnFinish(true);
+			Slash->InitDefaultComponents();
+			Slash->SetMotion(ShockwaveRun.SlashSpeed, ShockwaveRun.SlashLife);
+			Slash->ActivateSlash(WorldOrigin + FVector(0.0f, 0.0f, 0.5f), FVector(0.0f, YawDeg, 0.0f), Dir);
+		}
 	}
 }
 
@@ -1108,10 +1208,11 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 	static const FName AutoHitName("AutoMusouAttack");
 	static const FName AutoWindowName("AutoComboWindow");
 	static const FName AutoShotName("AutoCameraShot");
+	static const FName AutoSlamName("AutoGroundSlam");
 	for (const FAnimNotifyEvent& Existing : Sequence->GetNotifies())
 	{
 		if (Existing.NotifyName != AutoHitName && Existing.NotifyName != AutoWindowName
-			&& Existing.NotifyName != AutoShotName)
+			&& Existing.NotifyName != AutoShotName && Existing.NotifyName != AutoSlamName)
 		{
 			return;
 		}
@@ -1153,9 +1254,29 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 		std::remove_if(ModelNotifies.begin(), ModelNotifies.end(),
 			[](const FAnimNotifyEvent& Ev)
 			{
-				return Ev.NotifyName == AutoHitName || Ev.NotifyName == AutoWindowName;
+				return Ev.NotifyName == AutoHitName || Ev.NotifyName == AutoWindowName
+					|| Ev.NotifyName == AutoSlamName;
 			}),
 		ModelNotifies.end());
+
+	// 전방 진행 충격파 — 궁극기 지면 강타. lua shockwave 블록 → trigger_frac 에 주입.
+	if (Step.Shockwave.IsValid())
+	{
+		const FMusouShockwave& Sw = Step.Shockwave;
+		UAnimNotify_GroundSlamShockwave* Slam = UObjectManager::Get().CreateObject<UAnimNotify_GroundSlamShockwave>(Model);
+		Slam->Distance   = Sw.Distance;
+		Slam->Duration   = Sw.Duration;
+		Slam->Pulses     = Sw.Pulses;
+		Slam->AttackId   = Sw.AttackId.empty() ? Step.AttackId : Sw.AttackId;
+		Slam->SlashSpeed = Sw.SlashSpeed;
+		Slam->SlashLife  = Sw.SlashLife;
+
+		FAnimNotifyEvent Event;
+		Event.NotifyName  = AutoSlamName;
+		Event.TriggerTime = Length * Sw.TriggerFrac;
+		Event.Notify      = Slam;
+		ModelNotifies.push_back(Event);
+	}
 
 	// 히트 판정 — 스윙 임팩트 추정 지점. 정확한 타이밍은 에디터 저작으로 대체 권장.
 	if (!Step.AttackId.empty() && Step.HitFrac >= 0.0f)

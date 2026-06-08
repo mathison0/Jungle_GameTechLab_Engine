@@ -43,6 +43,10 @@ public:
 	void ActivateSlash(const FVector& Location, const FVector& Rotation, const FVector& Direction);
 
 	void SetDestroyOnFinish(bool bInDestroyOnFinish) { bDestroyOnFinish = bInDestroyOnFinish; }
+
+	// 진행 속도/수명만 빠르게 조정 — ConfigureSlashEffect(전체 프리셋) 없이 기본 에셋으로
+	// 전방으로 날리는 검기 placeholder 를 쓸 때 (궁극기 충격파 등). ActivateSlash 전에 호출.
+	void SetMotion(float InMoveSpeed, float InLifetime) { MoveSpeed = InMoveSpeed; Lifetime = InLifetime; }
 	void ConfigureSlashEffect(
 		const FSoftObjectPtr& InMeshPath,
 		const FSoftObjectPtr& InCoreMaterialPath,

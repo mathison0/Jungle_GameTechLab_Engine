@@ -77,6 +77,11 @@ public:
 	// 매 틱 호출해도 안전(검집에 들어가면 IsWeaponDrawn()==false 가 되어 멈춘다).
 	void RequestSheathe() { if (bWeaponDrawn) { OnToggleWeaponPressed(); } }
 
+	// 궁극기 지면 강타 충격파 — 시작점에서 전방으로 Distance/Duration 동안 Pulses 개의
+	// 데미지 판정 + 검기(placeholder)를 순차 발사. AnimNotify_GroundSlamShockwave 가 호출.
+	void StartGroundSlamShockwave(const FVector& Origin, const FVector& Dir, float Distance,
+		float Duration, int32 Pulses, FName SpecId, float SlashSpeed, float SlashLife);
+
 	// 튜토리얼 심화 단계 감지용.
 	// 평면(XY) 속도 — 이동/대시 단계를 키가 아닌 실제 속도로 판정.
 	float GetPlanarSpeed() const;
@@ -122,6 +127,10 @@ protected:
 	// 무쌍기 난무 — Tick 이 몽타주 종료를 감지해 다음 슬롯 자동 재생. 체인 소진 시 정리.
 	void UpdateUltimateChain();
 	void EndUltimate();
+
+	// 충격파 — Tick 이 펄스를 전방으로 순차 broadcast + 검기 스폰. 궁극기 몽타주와 독립.
+	void UpdateShockwave(float DeltaTime);
+	void EmitShockwavePulse(const FVector& WorldOrigin, const FVector& Dir);
 	void EndRoll();
 
 	// 진입 컨텍스트 판정 — Falling → Airborne, XY 속도 ≥ 임계 → Moving, 그 외 Idle.
@@ -222,6 +231,23 @@ protected:
 	// 무쌍기 난무 상태 — 활성 동안 무적 + 슬롯 순차 자동 재생 (UltimateStep = 다음 인덱스).
 	bool  bUltimateActive = false;
 	int32 UltimateStep = 0;
+
+	// 전방 진행 충격파 상태 — Tick 이 펄스를 순차 발사. 궁극기 몽타주 종료와 무관하게 진행.
+	struct FShockwaveRun
+	{
+		bool    bActive   = false;
+		FVector StartPos  = FVector(0.0f, 0.0f, 0.0f);
+		FVector Dir       = FVector(1.0f, 0.0f, 0.0f);
+		float   Distance  = 12.0f;
+		float   Duration  = 0.7f;
+		float   Elapsed   = 0.0f;
+		int32   Pulses    = 8;
+		int32   NextPulse = 0;
+		FName   SpecId;
+		float   SlashSpeed = 9.0f;
+		float   SlashLife  = 0.45f;
+	};
+	FShockwaveRun ShockwaveRun;
 
 	// 구르기 상태 — 활성 동안 무적. 몽타주 종료 시 해제 (Tick).
 	bool  bRolling = false;
