@@ -154,6 +154,9 @@ struct FMusouFeedbackParams
 	// 무쌍 게이지 — 이 히트 수(적중 누적)를 채우면 무쌍기(R) 발동 가능
 	int32 UltimateHitsToFill = 80;
 
+	// 보스 적중 시 게이지 적립 배율 — 보스를 때리면 일반 적보다 빠르게 충전 (기본 5배).
+	float UltimateBossGaugeMult = 5.0f;
+
 	// 콤보 회복 — 플레이어 적중 1회당 회복하는 HP (0 = 회복 없음). 군체 콤보로 체력 유지.
 	float HealPerComboHit = 0.0f;
 

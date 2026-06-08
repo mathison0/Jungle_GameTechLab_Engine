@@ -421,6 +421,7 @@ bool FAttackDataRegistry::LoadFromLua()
 		if (sol::optional<sol::table> Ultimate = (*FeedbackT)["ultimate"])
 		{
 			NewFeedback.UltimateHitsToFill = Ultimate->get_or("hits_to_fill", NewFeedback.UltimateHitsToFill);
+			NewFeedback.UltimateBossGaugeMult = Ultimate->get_or("boss_gauge_mult", NewFeedback.UltimateBossGaugeMult);
 		}
 		if (sol::optional<sol::table> Heal = (*FeedbackT)["heal"])
 		{

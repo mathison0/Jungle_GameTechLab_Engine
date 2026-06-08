@@ -77,7 +77,8 @@ void UBattleComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
 	}
 	if (GameMode)
 	{
-		GameMode->NotifyAttackComboHits(Event, 1);
+		// 액터 BattleComponent 피격은 보스류(군체 잡졸은 SoA, 매니저가 별도 통지) — 게이지 배율 적용.
+		GameMode->NotifyAttackComboHits(Event, 1, /*bBossHit=*/true);
 	}
 
 	if (GameMode)
