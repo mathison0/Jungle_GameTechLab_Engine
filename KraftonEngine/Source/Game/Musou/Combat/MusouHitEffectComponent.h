@@ -38,7 +38,7 @@ private:
 	void PlayHitParticle(const FMusouHitEvent& Hit);
 	void UpdateActiveParticles(float DeltaTime);
 
-	void PlayHitAudio();
+	void PlayHitAudio(const FMusouHitEvent& Hit);
 
 private:
 	TArray<FMusouHitEvent> PendingHits;
@@ -63,7 +63,7 @@ private:
 	float HitHeightOffset = 0.8f;
 
 	UPROPERTY(Edit, Save, Category = "HitEffect", DisplayName = "Hit Sound Path")
-	FString HitSoundPath = "hit.wav";
+	FString HitSoundPath = "slash.mp3";
 
 	UPROPERTY(Edit, Save, Category = "HitEffect", DisplayName = "Hit Sound Volume")
 	float HitSoundVolume = 1.0f;
@@ -73,6 +73,4 @@ private:
 
 	UPROPERTY(Edit, Save, Category = "HitEffect", DisplayName = "Hit Sound Min Interval")
 	float HitSoundMinInterval = 0.05f;
-
-	FString HitSoundKey;
 };

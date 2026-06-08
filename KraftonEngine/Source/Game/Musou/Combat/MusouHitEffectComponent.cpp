@@ -18,12 +18,6 @@ void UMusouHitEffectComponent::BeginPlay()
 		CachedHitParticle = FParticleSystemManager::Get().Load(HitParticlePath.ToString());
 	}
 
-	if (!HitSoundPath.empty())
-	{
-		HitSoundKey = FString("MusouHit:") + HitSoundPath;
-		FAudioManager::Get().LoadAudio(HitSoundKey, HitSoundPath, false);
-	}
-
 	UWorld* World = GetWorld();
 	AMusouGameMode* GameMode = World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
 	if (GameMode)
@@ -68,7 +62,12 @@ void UMusouHitEffectComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 void UMusouHitEffectComponent::HandleHitConfirmed(const FMusouHitEvent& Hit)
 {
-	PendingHits.push_back(Hit);
+	FMusouHitEvent QueuedHit = Hit;
+	if (QueuedHit.HitSoundPath.empty() && Hit.Attack && !Hit.Attack->Spec.HitSoundPath.empty())
+	{
+		QueuedHit.HitSoundPath = Hit.Attack->Spec.HitSoundPath;
+	}
+	PendingHits.push_back(QueuedHit);
 }
 
 void UMusouHitEffectComponent::FlushHits(float DeltaTime)
@@ -80,7 +79,7 @@ void UMusouHitEffectComponent::FlushHits(float DeltaTime)
 
 	if (PlayCount > 0)
 	{
-		PlayHitAudio(); // 이번 프레임 히트 묶음당 1회만 재생
+		PlayHitAudio(PendingHits[0]); // 이번 프레임 히트 묶음당 1회만 재생
 	}
 
 	for (int32 i = 0; i < PlayCount; ++i)
@@ -158,11 +157,20 @@ void UMusouHitEffectComponent::UpdateActiveParticles(float DeltaTime)
 	}
 }
 
-void UMusouHitEffectComponent::PlayHitAudio()
+void UMusouHitEffectComponent::PlayHitAudio(const FMusouHitEvent& Hit)
 {
-	if (HitSoundKey.empty()) return;
+	FString SoundPath = HitSoundPath;
+	if (!Hit.HitSoundPath.empty())
+	{
+		SoundPath = Hit.HitSoundPath;
+	}
+
+	if (SoundPath.empty()) return;
+
+	const FString SoundKey = FString("MusouHit:") + SoundPath;
+	FAudioManager::Get().LoadAudio(SoundKey, SoundPath, false);
 	FAudioManager::Get().PlaySfxLimited(
-		HitSoundKey,
+		SoundKey,
 		HitSoundVolume,
 		MaxConcurrentHitSounds,
 		HitSoundMinInterval);
