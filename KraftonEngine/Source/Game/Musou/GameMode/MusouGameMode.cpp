@@ -399,20 +399,6 @@ void AMusouGameMode::Tick(float DeltaTime)
 		return;
 	}
 
-	// TODO: 실제 승리 조건이 들어오면 제거할 테스트 진입점.
-	// 현재는 플레이 중 T 키로 승리 확정 흐름과 결과 오버레이를 검증한다.
-	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible && Input.GetKeyDown('T'))
-	{
-		NotifyVictory();
-	}
-
-	// TODO: 최종 보스 등장 연출이 연결되면 제거할 테스트 진입점.
-	// 현재는 플레이 중 Y 키로 최종 보스 story dialog를 검증한다.
-	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible && Input.GetKeyDown('Y'))
-	{
-		NotifyFinalBossEncounterStarted();
-	}
-
 	// ── 치트 (디버그) — F1 플레이어 죽이기 / F2 보스 죽이기 / F3 무적 토글 / F4 체력 +100 /
 	//                   F5 공격력 999999 토글 ──
 	if (!HudPresenter.IsResultOverlayVisible() && !bStopMenuVisible)
