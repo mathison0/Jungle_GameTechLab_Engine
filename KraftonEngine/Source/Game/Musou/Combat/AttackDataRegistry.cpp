@@ -417,7 +417,7 @@ bool FAttackDataRegistry::LoadFromLua()
 		}
 		if (sol::optional<sol::table> Ultimate = (*FeedbackT)["ultimate"])
 		{
-			NewFeedback.UltimateKillsToFill = Ultimate->get_or("kills_to_fill", NewFeedback.UltimateKillsToFill);
+			NewFeedback.UltimateHitsToFill = Ultimate->get_or("hits_to_fill", NewFeedback.UltimateHitsToFill);
 		}
 		if (sol::optional<sol::table> HitReact = (*FeedbackT)["hit_react"])
 		{

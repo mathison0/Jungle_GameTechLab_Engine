@@ -69,6 +69,9 @@ public:
 
 	bool IsWeaponDrawn() const { return bWeaponDrawn; }
 
+	// 무쌍기 발동 중인지 — 게이지 적립 게이팅 등에 사용 (궁극기 자체 히트로 재충전 방지).
+	bool IsUltimateActive() const { return bUltimateActive; }
+
 	// 입력 없는 자동 전투용(크레딧 아웃트로 등) — 좌클릭 공격과 동일 진입점.
 	// 납도 상태면 첫 호출이 발도, 이후 호출이 콤보를 이어간다.
 	void TriggerAutoAttack() { OnAttackPressed(); }

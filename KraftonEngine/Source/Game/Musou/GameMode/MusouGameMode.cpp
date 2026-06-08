@@ -437,6 +437,14 @@ void AMusouGameMode::NotifyAttackComboHits(const FMusouAttackEvent& Event, int32
 		if (AMusouGameState* MusouState = GetMusouGameState())
 		{
 			MusouState->AddCombo(HitCount);
+
+			// 무쌍 게이지 — 적중 누적으로 적립. 단 무쌍기 자체의 충격파/착지 히트로는
+			// 재충전되지 않게 발동 중이면 제외 (끝나면 평시 타격으로 다시 채운다).
+			AMusouCharacter* Player = Cast<AMusouCharacter>(Event.Attacker);
+			if (!Player || !Player->IsUltimateActive())
+			{
+				MusouState->AddMusouGaugeFromHits(HitCount);
+			}
 		}
 	}
 }

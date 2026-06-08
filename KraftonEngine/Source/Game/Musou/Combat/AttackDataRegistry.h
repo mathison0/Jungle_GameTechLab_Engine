@@ -151,8 +151,8 @@ struct FMusouFeedbackParams
 	// 공중 콤보 행 타임 — 공중 체인 진행 중 플레이어 중력 배율 (1 = 변화 없음)
 	float AirComboGravityScale = 0.25f;
 
-	// 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
-	int32 UltimateKillsToFill = 40;
+	// 무쌍 게이지 — 이 히트 수(적중 누적)를 채우면 무쌍기(R) 발동 가능
+	int32 UltimateHitsToFill = 80;
 
 	// 플레이어 피격 리액션 최소 간격 (초) — 군체 다단 히트로 스턴락되지 않게
 	float HitReactCooldown = 1.2f;
