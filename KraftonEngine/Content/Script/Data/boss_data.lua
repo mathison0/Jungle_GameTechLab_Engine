@@ -39,7 +39,7 @@ return {
                 { type = "set_invincible", time = 0.0, value = true },
                 { type = "play_sound", time = 0.05, sound = "Boss_Warrior/boss_warrior_death.wav", volume = 1.0 },
                 { type = "play_montage", time = 0.1, montage = montage("sword and shield death_mixamo_com"), play_rate = 1.0, blend_in = 0.1 },
-                { type = "dialogue", time = 0.4, text = "이럴... 수가..." },
+                { type = "dialogue", time = 0.4, text = "하하... 이미... 늦었다..." },
                 { type = "destroy_actor", time = 5.0 },
             },
 
