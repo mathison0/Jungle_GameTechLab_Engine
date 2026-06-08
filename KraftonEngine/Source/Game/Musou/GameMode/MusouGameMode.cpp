@@ -90,11 +90,9 @@ namespace
 		}
 
 		FString CurrentSceneName;
-		FString PreviousSceneName;
 		if (UGameEngine* GameEngine = Cast<UGameEngine>(GEngine))
 		{
 			CurrentSceneName = GameEngine->GetCurrentSceneName();
-			PreviousSceneName = GameEngine->GetPreviousSceneName();
 		}
 
 		if (CurrentSceneName.empty())
@@ -105,7 +103,7 @@ namespace
 			}
 		}
 
-		return PreviousSceneName == "Intro" && CurrentSceneName == "Play";
+		return CurrentSceneName == "Play";
 	}
 }
 
