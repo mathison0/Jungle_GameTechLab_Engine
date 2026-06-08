@@ -73,12 +73,76 @@ namespace MaterialTextureSlot
 		if (ParameterName == FString("AO") || ParameterName == FString("AOTexture"))
 			return EMaterialTextureSlot::AO;
 
-		if (ParameterName == FString("Custom0") || ParameterName == FString("Custom0Texture"))
+		if (ParameterName == FString("Custom0") ||
+			ParameterName == FString("Custom0Texture") ||
+			ParameterName == FString("Specular") ||
+			ParameterName == FString("SpecularTexture"))
 			return EMaterialTextureSlot::Custom0;
 
 		if (ParameterName == FString("Custom1") || ParameterName == FString("Custom1Texture"))
 			return EMaterialTextureSlot::Custom1;
 
 		throw "Unknown Parameter Name";
+	}
+
+	inline bool TryFromParameterName(const FString& ParameterName, EMaterialTextureSlot& OutSlot)
+	{
+		if (ParameterName == FString("Diffuse") || ParameterName == FString("DiffuseTexture"))
+		{
+			OutSlot = EMaterialTextureSlot::Diffuse;
+			return true;
+		}
+
+		if (ParameterName == FString("Normal") || ParameterName == FString("NormalTexture"))
+		{
+			OutSlot = EMaterialTextureSlot::Normal;
+			return true;
+		}
+
+		if (ParameterName == FString("Roughness") || ParameterName == FString("RoughnessTexture"))
+		{
+			OutSlot = EMaterialTextureSlot::Roughness;
+			return true;
+		}
+
+		if (ParameterName == FString("Metallic") || ParameterName == FString("MetallicTexture"))
+		{
+			OutSlot = EMaterialTextureSlot::Metallic;
+			return true;
+		}
+
+		if (ParameterName == FString("Emissive") || ParameterName == FString("EmissiveTexture"))
+		{
+			OutSlot = EMaterialTextureSlot::Emissive;
+			return true;
+		}
+
+		if (ParameterName == FString("AO") || ParameterName == FString("AOTexture"))
+		{
+			OutSlot = EMaterialTextureSlot::AO;
+			return true;
+		}
+
+		if (ParameterName == FString("Custom0") ||
+			ParameterName == FString("Custom0Texture") ||
+			ParameterName == FString("Specular") ||
+			ParameterName == FString("SpecularTexture"))
+		{
+			OutSlot = EMaterialTextureSlot::Custom0;
+			return true;
+		}
+
+		if (ParameterName == FString("Custom1") || ParameterName == FString("Custom1Texture"))
+		{
+			OutSlot = EMaterialTextureSlot::Custom1;
+			return true;
+		}
+
+		return false;
+	}
+
+	inline bool IsSpecularParameterName(const FString& ParameterName)
+	{
+		return ParameterName == FString("Specular") || ParameterName == FString("SpecularTexture");
 	}
 }

@@ -132,15 +132,15 @@ bool UMaterial::SetTextureParameter(const FString& ParamName, UTexture2D* Textur
 {
 	TextureParameters[ParamName] = Texture;
 
-	// CachedSRVs 갱신 — 슬롯 이름과 매칭되면 즉시 반영
-	for (int s = 0; s < (int)EMaterialTextureSlot::Max; s++)
+	EMaterialTextureSlot Slot;
+	if (MaterialTextureSlot::TryFromParameterName(ParamName, Slot))
 	{
-		FString SlotName = MaterialTextureSlot::ToString(s) + "Texture";
-		if (ParamName == SlotName)
-		{
-			CachedSRVs[s] = (Texture && Texture->GetSRV()) ? Texture->GetSRV() : nullptr;
-			break;
-		}
+		const int SlotIndex = static_cast<int>(Slot);
+		CachedSRVs[SlotIndex] = (Texture && Texture->GetSRV()) ? Texture->GetSRV() : nullptr;
+	}
+	if (MaterialTextureSlot::IsSpecularParameterName(ParamName))
+	{
+		SetScalarParameter("HasSpecularMap", Texture ? 1.0f : 0.0f);
 	}
 
 	return true;
@@ -208,10 +208,30 @@ bool UMaterial::GetVector4Parameter(const FString& ParamName, FVector4& OutValue
 bool UMaterial::GetTextureParameter(const FString& ParamName, UTexture2D*& OutTexture) const
 {
 	auto It = TextureParameters.find(ParamName);
-	if (It == TextureParameters.end()) return false;
+	if (It != TextureParameters.end())
+	{
+		OutTexture = It->second;
+		return true;
+	}
 
-	OutTexture = It->second;
-	return true;
+	EMaterialTextureSlot RequestedSlot;
+	if (!MaterialTextureSlot::TryFromParameterName(ParamName, RequestedSlot))
+	{
+		return false;
+	}
+
+	for (const auto& Pair : TextureParameters)
+	{
+		EMaterialTextureSlot CandidateSlot;
+		if (MaterialTextureSlot::TryFromParameterName(Pair.first, CandidateSlot) &&
+			CandidateSlot == RequestedSlot)
+		{
+			OutTexture = Pair.second;
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool UMaterial::GetMatrixParameter(const FString& ParamName, FMatrix& Value) const
@@ -262,10 +282,17 @@ void UMaterial::RebuildCachedSRVs()
 	for (int s = 0; s < (int)EMaterialTextureSlot::Max; s++)
 	{
 		CachedSRVs[s] = nullptr;
-		UTexture2D* Tex = nullptr;
-		FString SlotName = MaterialTextureSlot::ToString(s) + "Texture";
-		if (GetTextureParameter(SlotName, Tex) && Tex && Tex->GetSRV())
-			CachedSRVs[s] = Tex->GetSRV();
+	}
+
+	for (const auto& Pair : TextureParameters)
+	{
+		EMaterialTextureSlot Slot;
+		if (MaterialTextureSlot::TryFromParameterName(Pair.first, Slot))
+		{
+			const int SlotIndex = static_cast<int>(Slot);
+			UTexture2D* Tex = Pair.second;
+			CachedSRVs[SlotIndex] = (Tex && Tex->GetSRV()) ? Tex->GetSRV() : nullptr;
+		}
 	}
 }
 
@@ -353,6 +380,10 @@ void UMaterial::Serialize(FArchive& Ar)
 				if (Loaded)
 				{
 					TextureParameters[SlotName] = Loaded;
+					if (MaterialTextureSlot::IsSpecularParameterName(SlotName))
+					{
+						SetScalarParameter("HasSpecularMap", 1.0f);
+					}
 				}
 			}
 		}
@@ -530,12 +561,21 @@ bool UMaterialInstance::SetTextureParameter(const FString& ParamName, UTexture2D
 	{
 		return false;
 	}
-	int SlotIndex = (int)MaterialTextureSlot::FromParameterName(ParamName);
+	EMaterialTextureSlot Slot;
+	if (!MaterialTextureSlot::TryFromParameterName(ParamName, Slot))
+	{
+		return false;
+	}
+	int SlotIndex = (int)Slot;
 
 	bHasTextureOverride[SlotIndex] = true;
 	CachedOverrideSRVs[SlotIndex] = Texture ? Texture->GetSRV() : nullptr;
 
 	TextureOverrides[ParamName] = Texture;
+	if (MaterialTextureSlot::IsSpecularParameterName(ParamName))
+	{
+		SetScalarParameter("HasSpecularMap", Texture ? 1.0f : 0.0f);
+	}
 	bConstantBufferDirty = true;
 	return true;
 }
@@ -595,6 +635,21 @@ bool UMaterialInstance::GetTextureParameter(const FString& ParamName, UTexture2D
 	{
 		OutTexture = It->second;
 		return true;
+	}
+
+	EMaterialTextureSlot RequestedSlot;
+	if (MaterialTextureSlot::TryFromParameterName(ParamName, RequestedSlot))
+	{
+		for (const auto& Pair : TextureOverrides)
+		{
+			EMaterialTextureSlot CandidateSlot;
+			if (MaterialTextureSlot::TryFromParameterName(Pair.first, CandidateSlot) &&
+				CandidateSlot == RequestedSlot)
+			{
+				OutTexture = Pair.second;
+				return true;
+			}
+		}
 	}
 
 	return Parent ? Parent->GetTextureParameter(ParamName, OutTexture) : false;

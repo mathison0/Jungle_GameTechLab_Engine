@@ -593,6 +593,7 @@ void FMaterialManager::ApplyTextures(UMaterialInterface* Material, json::JSON& J
 		FString TexturePath = Pair.second.ToString().c_str();
 
 		UTexture2D* Texture = nullptr;
+		const bool bIsSpecularTexture = MaterialTextureSlot::IsSpecularParameterName(SlotName);
 
 		if (!TexturePath.empty() && TexturePath != "None")
 		{
@@ -609,6 +610,10 @@ void FMaterialManager::ApplyTextures(UMaterialInterface* Material, json::JSON& J
 		}
 
 		Material->SetTextureParameter(SlotName, Texture);
+		if (bIsSpecularTexture)
+		{
+			Material->SetScalarParameter("HasSpecularMap", Texture ? 1.0f : 0.0f);
+		}
 	}
 }
 
@@ -792,6 +797,12 @@ bool FMaterialManager::InjectDefaultParameters(json::JSON& JsonData, FMaterialTe
 		}
 
 		if (ParamName == "HasNormalMap")
+		{
+			JsonData[MatKeys::Parameters][ParamName] = 0.0f;
+			continue;
+		}
+
+		if (ParamName == "HasSpecularMap")
 		{
 			JsonData[MatKeys::Parameters][ParamName] = 0.0f;
 			continue;

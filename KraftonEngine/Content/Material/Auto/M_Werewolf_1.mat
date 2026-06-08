@@ -6,13 +6,15 @@
   "Origin" : "FbxImport",
   "Parameters" : {
     "HasNormalMap" : 1.000000,
+    "HasSpecularMap" : 0.000000,
     "HitFlashAmount" : 0.000000,
     "HitFlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
     "HitFlashFillAmount" : 0.150000,
     "HitFlashRimIntensity" : 3.000000,
     "HitFlashRimPower" : 3.000000,
     "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-    "_pad" : [0.000000, 0.000000, 0.000000]
+    "_pad" : [0.000000, 0.000000, 0.000000],
+    "_specularPad" : [0.000000, 0.000000, 0.000000]
   },
   "PathFileName" : "Content/Material/Auto/M_Werewolf_1.mat",
   "RasterizerState" : "SolidBackCull",

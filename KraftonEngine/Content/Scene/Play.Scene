@@ -79,24 +79,24 @@
           "Name" : "ULargeScaleUnitManagerComponent_0",
           "ObjectId" : 6,
           "Properties" : {
-            "AllyMeleeAttackSequencePath" : "Content/Data/GameJam/Knight/Knight_Attack_mixamo_com.uasset",
-            "AllyMeleeDeadSequencePath" : "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset",
-            "AllyMeleeGettingUpSequencePath" : "Content/Data/GameJam/Knight/Knight_Getting_Up_mixamo_com.uasset",
-            "AllyMeleeHitSequencePath" : "Content/Data/GameJam/Knight/Knight_Impact_mixamo_com.uasset",
-            "AllyMeleeIdleSequencePath" : "Content/Data/GameJam/Knight/Knight_Idle_mixamo_com.uasset",
-            "AllyMeleeKnockDownSequencePath" : "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset",
-            "AllyMeleeRunBackwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Run_Backward_mixamo_com.uasset",
-            "AllyMeleeRunForwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Run_Forward_mixamo_com.uasset",
-            "AllyMeleeStrafeRunLeftSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Run_Left_mixamo_com.uasset",
-            "AllyMeleeStrafeRunRightSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Run_Right_mixamo_com.uasset",
-            "AllyMeleeStrafeWalkLeftSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Left_mixamo_com.uasset",
-            "AllyMeleeStrafeWalkRightSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Right_mixamo_com.uasset",
+            "AllyMeleeAttackSequencePath" : "Content/Data/GameJam/Melee/Melee_Attack_mixamo_com.uasset",
+            "AllyMeleeDeadSequencePath" : "Content/Data/GameJam/Melee/Melee_Flying_Back_Death_mixamo_com.uasset",
+            "AllyMeleeGettingUpSequencePath" : "Content/Data/GameJam/Melee/Melee_Getting_Up_mixamo_com.uasset",
+            "AllyMeleeHitSequencePath" : "Content/Data/GameJam/Melee/Melee_Impact_mixamo_com.uasset",
+            "AllyMeleeIdleSequencePath" : "Content/Data/GameJam/Melee/Melee_Idle_mixamo_com.uasset",
+            "AllyMeleeKnockDownSequencePath" : "Content/Data/GameJam/Melee/Melee_Flying_Back_Death_mixamo_com.uasset",
+            "AllyMeleeRunBackwardSequencePath" : "Content/Data/GameJam/Melee/Melee_Run_Backward_mixamo_com.uasset",
+            "AllyMeleeRunForwardSequencePath" : "Content/Data/GameJam/Melee/Melee_Run_Forward_mixamo_com.uasset",
+            "AllyMeleeStrafeRunLeftSequencePath" : "Content/Data/GameJam/Melee/Melee_Strafe_Run_Left_mixamo_com.uasset",
+            "AllyMeleeStrafeRunRightSequencePath" : "Content/Data/GameJam/Melee/Melee_Strafe_Run_Right_mixamo_com.uasset",
+            "AllyMeleeStrafeWalkLeftSequencePath" : "Content/Data/GameJam/Melee/Melee_Strafe_Walk_Left_mixamo_com.uasset",
+            "AllyMeleeStrafeWalkRightSequencePath" : "Content/Data/GameJam/Melee/Melee_Strafe_Walk_Right_mixamo_com.uasset",
             "AllyMeleeVisualAnimInstanceClass" : "UCrowdMeleeAnimInstance",
-            "AllyMeleeVisualMaterialSlots" : ["Content/Material/Auto/M_Knight_Armors_Weapon.mat", "Content/Material/Auto/M_Knight_Body.mat", "Content/Material/Auto/M_Knight_Body_2.mat"],
+            "AllyMeleeVisualMaterialSlots" : ["Content/Material/Auto/Paladin_MAT.mat"],
             "AllyMeleeVisualScale" : [1.000000, 1.000000, 1.000000],
-            "AllyMeleeVisualSkeletalMeshPath" : "Content/Data/GameJam/Knight/SK_Knight_SkeletalMesh.uasset",
-            "AllyMeleeWalkBackwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Walk_Backward_mixamo_com.uasset",
-            "AllyMeleeWalkForwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Walk_Forward_mixamo_com.uasset",
+            "AllyMeleeVisualSkeletalMeshPath" : "Content/Data/GameJam/Melee/Melee_SkeletalMesh.uasset",
+            "AllyMeleeWalkBackwardSequencePath" : "Content/Data/GameJam/Melee/Melee_Walk_Backward_mixamo_com.uasset",
+            "AllyMeleeWalkForwardSequencePath" : "Content/Data/GameJam/Melee/Melee_Walk_Forward_mixamo_com.uasset",
             "AllyRangedVisualAnimInstanceClass" : "None",
             "AllyRangedVisualMaterialSlots" : [],
             "AllyRangedVisualScale" : [1.000000, 1.000000, 1.000000],
@@ -121,24 +121,24 @@
             "DefaultSeparationRadius" : 1.100000,
             "DefaultSeparationWeight" : 1.400000,
             "DefaultUnitRadius" : 0.450000,
-            "EnemyMeleeAttackSequencePath" : "Content/Data/GameJam/Knight/Knight_Attack_mixamo_com.uasset",
-            "EnemyMeleeDeadSequencePath" : "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset",
-            "EnemyMeleeGettingUpSequencePath" : "Content/Data/GameJam/Knight/Knight_Getting_Up_mixamo_com.uasset",
-            "EnemyMeleeHitSequencePath" : "Content/Data/GameJam/Knight/Knight_Impact_mixamo_com.uasset",
-            "EnemyMeleeIdleSequencePath" : "Content/Data/GameJam/Knight/Knight_Idle_mixamo_com.uasset",
-            "EnemyMeleeKnockDownSequencePath" : "Content/Data/GameJam/Knight/Knight_Flying_Back_Death_mixamo_com.uasset",
-            "EnemyMeleeRunBackwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Run_Backward_mixamo_com.uasset",
-            "EnemyMeleeRunForwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Run_Forward_mixamo_com.uasset",
-            "EnemyMeleeStrafeRunLeftSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Run_Left_mixamo_com.uasset",
-            "EnemyMeleeStrafeRunRightSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Run_Right_mixamo_com.uasset",
-            "EnemyMeleeStrafeWalkLeftSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Left_mixamo_com.uasset",
-            "EnemyMeleeStrafeWalkRightSequencePath" : "Content/Data/GameJam/Knight/Knight_Strafe_Walk_Right_mixamo_com.uasset",
+            "EnemyMeleeAttackSequencePath" : "Content/Data/GameJam/Melee/Melee_Attack_mixamo_com.uasset",
+            "EnemyMeleeDeadSequencePath" : "Content/Data/GameJam/Melee/Melee_Flying_Back_Death_mixamo_com.uasset",
+            "EnemyMeleeGettingUpSequencePath" : "Content/Data/GameJam/Melee/Melee_Getting_Up_mixamo_com.uasset",
+            "EnemyMeleeHitSequencePath" : "Content/Data/GameJam/Melee/Melee_Impact_mixamo_com.uasset",
+            "EnemyMeleeIdleSequencePath" : "Content/Data/GameJam/Melee/Melee_Idle_mixamo_com.uasset",
+            "EnemyMeleeKnockDownSequencePath" : "Content/Data/GameJam/Melee/Melee_Flying_Back_Death_mixamo_com.uasset",
+            "EnemyMeleeRunBackwardSequencePath" : "Content/Data/GameJam/Melee/Melee_Run_Backward_mixamo_com.uasset",
+            "EnemyMeleeRunForwardSequencePath" : "Content/Data/GameJam/Melee/Melee_Run_Forward_mixamo_com.uasset",
+            "EnemyMeleeStrafeRunLeftSequencePath" : "Content/Data/GameJam/Melee/Melee_Strafe_Run_Left_mixamo_com.uasset",
+            "EnemyMeleeStrafeRunRightSequencePath" : "Content/Data/GameJam/Melee/Melee_Strafe_Run_Right_mixamo_com.uasset",
+            "EnemyMeleeStrafeWalkLeftSequencePath" : "Content/Data/GameJam/Melee/Melee_Strafe_Walk_Left_mixamo_com.uasset",
+            "EnemyMeleeStrafeWalkRightSequencePath" : "Content/Data/GameJam/Melee/Melee_Strafe_Walk_Right_mixamo_com.uasset",
             "EnemyMeleeVisualAnimInstanceClass" : "UCrowdMeleeAnimInstance",
-            "EnemyMeleeVisualMaterialSlots" : ["Content/Material/Auto/M_Knight_Armors_Weapon.mat", "Content/Material/Auto/M_Knight_Body.mat", "Content/Material/Auto/M_Knight_Body_2.mat"],
+            "EnemyMeleeVisualMaterialSlots" : ["Content/Material/Auto/Paladin_MAT.mat"],
             "EnemyMeleeVisualScale" : [1.000000, 1.000000, 1.000000],
-            "EnemyMeleeVisualSkeletalMeshPath" : "Content/Data/GameJam/Knight/SK_Knight_SkeletalMesh.uasset",
-            "EnemyMeleeWalkBackwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Walk_Backward_mixamo_com.uasset",
-            "EnemyMeleeWalkForwardSequencePath" : "Content/Data/GameJam/Knight/Knight_Walk_Forward_mixamo_com.uasset",
+            "EnemyMeleeVisualSkeletalMeshPath" : "Content/Data/GameJam/Melee/Melee_SkeletalMesh.uasset",
+            "EnemyMeleeWalkBackwardSequencePath" : "Content/Data/GameJam/Melee/Melee_Walk_Backward_mixamo_com.uasset",
+            "EnemyMeleeWalkForwardSequencePath" : "Content/Data/GameJam/Melee/Melee_Walk_Forward_mixamo_com.uasset",
             "EnemyRangedVisualAnimInstanceClass" : "None",
             "EnemyRangedVisualMaterialSlots" : [],
             "EnemyRangedVisualScale" : [1.000000, 1.000000, 1.000000],
@@ -1134,7 +1134,7 @@
           }, {
             "Children" : [],
             "ClassName" : "UBillboardComponent",
-            "Name" : "UBillboardComponent_143",
+            "Name" : "UBillboardComponent_145",
             "ObjectId" : 37,
             "Properties" : {
               "AngularDamping" : 0.010000,
@@ -1870,7 +1870,7 @@
           }, {
             "Children" : [],
             "ClassName" : "UBillboardComponent",
-            "Name" : "UBillboardComponent_157",
+            "Name" : "UBillboardComponent_159",
             "ObjectId" : 61,
             "Properties" : {
               "AngularDamping" : 0.010000,
@@ -1980,7 +1980,7 @@
           "Name" : "UBattleComponent_2",
           "ObjectId" : 84,
           "Properties" : {
-            "AttackPower" : 20.000000,
+            "AttackPower" : 10.000000,
             "MaxHealth" : 1000.000000,
             "bAcceptKnockback" : true,
             "bAutoActivate" : true,
@@ -2031,13 +2031,24 @@
             "bIsActive" : true,
             "bTickEnable" : true
           }
+        }, {
+          "ClassName" : "UActionComponent",
+          "Name" : "UActionComponent_17",
+          "ObjectId" : 88,
+          "Properties" : {
+            "bAutoActivate" : true,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bTickEnable" : true
+          }
         }],
       "ObjectId" : 62,
       "Properties" : {
         "HitFlashComponent" : {
           "ObjectId" : 86
         },
-        "MontageMoveUnlockTail" : 0.400000,
+        "MontageMoveUnlockTail" : 0.200000,
         "MovingAttackSpeedThreshold" : 2.000000,
         "PendingActorLocation" : [4.367889, 54.109982, 5.930581],
         "PendingActorRotation" : [0.000000, -70.599205, 0.000000],
@@ -2684,7 +2695,7 @@
                   }, {
                     "Children" : [],
                     "ClassName" : "UBillboardComponent",
-                    "Name" : "UBillboardComponent_169",
+                    "Name" : "UBillboardComponent_171",
                     "ObjectId" : 81,
                     "Properties" : {
                       "AngularDamping" : 0.010000,
@@ -2815,7 +2826,7 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_17",
       "NonSceneComponents" : [],
-      "ObjectId" : 88,
+      "ObjectId" : 89,
       "Properties" : {
         "PendingActorLocation" : [-17.426205, -111.119217, -4.822145],
         "PendingActorRotation" : [0.000000, -15.999994, 0.000000],
@@ -2828,7 +2839,7 @@
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
         "Name" : "UStaticMeshComponent_27",
-        "ObjectId" : 89,
+        "ObjectId" : 90,
         "Properties" : {
           "AngularDamping" : 0.010000,
           "CachedEditRotator" : [0.000000, -15.999994, 0.000000],
@@ -2866,7 +2877,7 @@
       "ClassName" : "ALevelTransitionTriggerVolume",
       "Name" : "ALevelTransitionTriggerVolume_0",
       "NonSceneComponents" : [],
-      "ObjectId" : 90,
+      "ObjectId" : 91,
       "Properties" : {
         "PendingActorLocation" : [-16.228340, -107.739883, -0.590496],
         "PendingActorRotation" : [0.000000, -15.999994, 0.000000],
@@ -2882,7 +2893,7 @@
         "Children" : [],
         "ClassName" : "UBoxComponent",
         "Name" : "UBoxComponent_3",
-        "ObjectId" : 91,
+        "ObjectId" : 92,
         "Properties" : {
           "AngularDamping" : 0.010000,
           "BoxExtent" : [1.000000, 1.000000, 1.000000],
@@ -2917,48 +2928,6 @@
           "bTickEnable" : true
         }
       }
-    }, {
-      "ClassName" : "AActor",
-      "Name" : "PlayBGM",
-      "NonSceneComponents" : [{
-          "ClassName" : "ULuaScriptComponent",
-          "Name" : "ULuaScriptComponent_PlayBGM",
-          "ObjectId" : 92,
-          "Properties" : {
-            "LuaPropertyOverrides" : [],
-            "ScriptFile" : "PlayBGM.lua",
-            "bAutoActivate" : true,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bTickEnable" : true
-          }
-        }],
-      "ObjectId" : 90,
-      "Properties" : {
-        "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
-        "PendingActorRotation" : [0.000000, 0.000000, 0.000000],
-        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "USceneComponent",
-        "Name" : "USceneComponent_PlayBGM",
-        "ObjectId" : 91,
-        "Properties" : {
-          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
-          "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-          "bAutoActivate" : true,
-          "bEditorOnly" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bTickEnable" : true
-        }
-      }
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "NewScene",
@@ -2968,9 +2937,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [3.800401, 56.311897, 6.920373],
+    "Location" : [6.956608, 54.091953, 11.557983],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 18.316467, 272.553162]
+    "Rotation" : [0.000000, 17.716507, 238.053314]
   },
   "Version" : 2,
   "WorldSettings" : {

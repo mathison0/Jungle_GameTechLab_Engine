@@ -654,6 +654,10 @@ void FMaterialEditorWidget::RenderTextureSection(UMaterialInterface* Material)
 					}
 
 					CachedJson[MatKeys::Textures][SlotName.c_str()] = NewTexturePath.c_str();
+					if (MaterialTextureSlot::IsSpecularParameterName(SlotName))
+					{
+						CachedJson[MatKeys::Parameters]["HasSpecularMap"] = 1.0f;
+					}
 
 					MarkDirty();
 
@@ -679,6 +683,10 @@ void FMaterialEditorWidget::RenderTextureSection(UMaterialInterface* Material)
 				}
 
 				CachedJson[MatKeys::Textures][SlotName.c_str()] = "";
+				if (MaterialTextureSlot::IsSpecularParameterName(SlotName))
+				{
+					CachedJson[MatKeys::Parameters]["HasSpecularMap"] = 0.0f;
+				}
 
 				MarkDirty();
 
