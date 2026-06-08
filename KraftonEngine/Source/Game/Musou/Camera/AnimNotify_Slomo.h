@@ -35,6 +35,16 @@ public:
 	UPROPERTY(Edit, Save, Category = "Slomo", DisplayName = "Time Dilation", Min = 0.0f, Max = 1.0f, Speed = 0.01f)
 	float TimeDilation = 0.35f;
 
+	// true 면 "맞았을 때만" 발동 — GameMode 큐에 예약해 두고, 이 공격자가 HitWindow
+	// 내에 실제 히트를 내면 그 순간 슬로모. 빗나가면 폐기. false 면 즉시 발동(기존).
+	UPROPERTY(Edit, Save, Category = "Slomo", DisplayName = "Only On Hit")
+	bool bOnlyOnHit = false;
+
+	// Only On Hit 일 때 히트를 기다리는 시간(실시간 초). 공격 임팩트 notify 와의
+	// 프레임 간격을 덮을 만큼만. 이 시간 내 히트가 없으면 발동하지 않는다.
+	UPROPERTY(Edit, Save, Category = "Slomo", DisplayName = "Hit Window", Min = 0.02f, Max = 0.5f, Speed = 0.01f)
+	float HitWindow = 0.2f;
+
 	// 빙의 플레이어가 재생할 때만 발동 (적/군체 애님 전역 감속 방지).
 	UPROPERTY(Edit, Save, Category = "Slomo", DisplayName = "Only If Player")
 	bool bOnlyIfPlayer = true;
