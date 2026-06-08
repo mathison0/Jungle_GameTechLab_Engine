@@ -150,11 +150,13 @@ void AMusouCharacter::SetupInputComponent()
 	// 말미 MontageMoveUnlockTail 구간에선 잠금 해제 + 이동 입력으로 조기 blend-out 캔슬
 	// (UE 의 BlendOutTriggerTime / recovery cancel 패턴). MoveInputThisFrame 재구축은
 	// 잠금과 무관하게 유지 (콤보 전진/분기 시 재조준 입력원).
+	// 공중 저글 콤보 중엔 AddMovementInput 차단(IsInAirCombo) — WASD 공중 제어로
+	// 콤보가 옆으로 흐르지 않게. MoveInputThisFrame 재구축은 유지해 스텝 재조준은 가능.
 	InputComponent->BindAxis("MoveForward", [this](float Value)
 	{
 		const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
 		MoveInputThisFrame = YawOnly.GetForwardVector() * Value;
-		if (Value == 0.0f || IsMovementLockedByMontage()) return;
+		if (Value == 0.0f || IsMovementLockedByMontage() || IsInAirCombo()) return;
 		TryMovementCancelMontage();
 		AddMovementInput(YawOnly.GetForwardVector(), Value);
 	});
@@ -162,7 +164,7 @@ void AMusouCharacter::SetupInputComponent()
 	{
 		const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
 		MoveInputThisFrame += YawOnly.GetRightVector() * Value;
-		if (Value == 0.0f || IsMovementLockedByMontage()) return;
+		if (Value == 0.0f || IsMovementLockedByMontage() || IsInAirCombo()) return;
 		TryMovementCancelMontage();
 		AddMovementInput(YawOnly.GetRightVector(), Value);
 	});
@@ -1260,4 +1262,11 @@ bool AMusouCharacter::IsAnyMontagePlaying() const
 bool AMusouCharacter::IsFalling() const
 {
 	return CharacterMovement && CharacterMovement->IsFalling();
+}
+
+bool AMusouCharacter::IsInAirCombo() const
+{
+	// 저글(launcher) 상태이면서 공중일 때 = 공중 콤보 전 구간. 착지 시 bJuggleAirborne
+	// 가 해제되고 IsFalling 도 false 라 자연히 이동이 다시 허용된다.
+	return bJuggleAirborne && IsFalling();
 }

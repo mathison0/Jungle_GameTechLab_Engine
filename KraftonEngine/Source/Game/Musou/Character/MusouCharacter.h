@@ -146,6 +146,10 @@ protected:
 	bool IsAnyMontagePlaying() const;
 	bool IsFalling() const;
 
+	// 공중 저글 콤보 진행 중 — launcher 로 떠오른 뒤 착지 전까지(스텝 사이 공백/행 타임 포함).
+	// 이 구간엔 WASD 공중 제어를 막아 콤보가 옆으로 흘러가지 않게 한다.
+	bool IsInAirCombo() const;
+
 	UBattleComponent* BattleComponent = nullptr;
 	UComboComponent*  ComboComponent  = nullptr;
 	UBoneAttachedStaticMeshComponent* WeaponComponent = nullptr;  // 오른손(hand_r) 무기 슬롯
@@ -159,7 +163,7 @@ protected:
 
 	// 몽타주 말미에서 이동 잠금이 풀리는 여유 시간 (초) — 0 이면 끝까지 잠금.
 	UPROPERTY(Edit, Save, Category = "Combat", DisplayName = "Montage Move Unlock Tail", Min=0.0f, Max=1.0f, Speed=0.01f)
-	float MontageMoveUnlockTail = 0.2f;
+	float MontageMoveUnlockTail = 0.4f;
 
 	// 콤보 시작 시점에 고정되는 활성 체인 컨텍스트 — 진행 중 컨텍스트 변화에 영향받지 않음.
 	EAttackContext ActiveChainContext = EAttackContext::Idle;
