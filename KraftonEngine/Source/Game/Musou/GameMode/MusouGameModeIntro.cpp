@@ -18,16 +18,16 @@
 
 namespace
 {
+	// 세로 메뉴(키보드 내비게이션 대상) — 설정/조작 안내는 우측 상단 코너 버튼(마우스 전용)으로 분리.
 	constexpr const char* IntroButtonIds[] = {
 		"start-button",
-		"settings-button",
+		"tutorial-button",
 		"score-button",
-		"controls-button",
 		"credits-button",
 		"exit-button",
 	};
 
-	constexpr int32 IntroButtonCount = 6;
+	constexpr int32 IntroButtonCount = 5;
 	constexpr int32 IntroScoreboardPageSize = 10;
 	constexpr float BGMVolumeStep = 0.1f;
 
@@ -104,6 +104,14 @@ void AMusouGameModeIntro::StartMatch()
 			IntroWidget->BindClick("keyguide-close-button", [this]()
 			{
 				HideKeyGuide();
+			});
+
+			IntroWidget->BindClick("tutorial-button", []()
+			{
+				if (GEngine)
+				{
+					GEngine->RequestTransitionToScene("Tutorial");
+				}
 			});
 
 			IntroWidget->BindClick("credits-button", []()

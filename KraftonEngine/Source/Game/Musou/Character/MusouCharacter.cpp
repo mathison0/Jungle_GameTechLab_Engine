@@ -1008,6 +1008,10 @@ bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step, bool bFaceCam
 
 	// SlotName=None → DefaultSlot(풀바디). "UpperBody" → 상반신만 (하체는 로코모션 유지).
 	AnimInstance->PlayMontage(Montage, FName::None, PlayRate, Step.BlendIn, SlotName);
+
+	// 마지막 재생 기술 기록 — 튜토리얼이 카운터 증가 + AttackId 일치로 기술 발동을 감지.
+	LastPlayedAttackId = Step.AttackId;
+	++AttackPlayCounter;
 	return true;
 }
 
@@ -1292,6 +1296,16 @@ bool AMusouCharacter::IsAnyMontagePlaying() const
 bool AMusouCharacter::IsFalling() const
 {
 	return CharacterMovement && CharacterMovement->IsFalling();
+}
+
+float AMusouCharacter::GetPlanarSpeed() const
+{
+	if (!CharacterMovement)
+	{
+		return 0.0f;
+	}
+	const FVector V = CharacterMovement->GetVelocity();
+	return std::sqrt(V.X * V.X + V.Y * V.Y);
 }
 
 bool AMusouCharacter::IsInAirCombo() const

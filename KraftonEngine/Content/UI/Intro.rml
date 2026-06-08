@@ -29,7 +29,7 @@
 		#menu-buttons {
 			position: absolute;
 			left: 20%;
-			top: 47%;
+			top: 52%;
 			display: block;
 			width: 24%;
 		}
@@ -88,6 +88,47 @@
 		}
 
 		.menu-button.selected .button-label {
+			color: #fff1b0;
+		}
+
+		/* 우측 상단 유틸 버튼 — 설정 / 조작 안내 (뒷배경 글자를 가리지 않게 메인 메뉴에서 분리). */
+		#corner-buttons {
+			position: absolute;
+			right: 28px;
+			top: 26px;
+			display: block;
+			width: 196px;
+		}
+
+		.corner-button {
+			position: relative;
+			display: block;
+			width: 100%;
+			height: 56px;
+			line-height: 56px;
+			margin-bottom: 10px;
+			padding: 0;
+			text-align: center;
+			font-size: 22px;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		.corner-button .button-label {
+			line-height: 56px;
+			height: 56px;
+		}
+
+		.corner-button:hover .button-frame-normal {
+			display: none;
+		}
+
+		.corner-button:hover .button-frame-hover {
+			display: block;
+		}
+
+		.corner-button:hover .button-label {
 			color: #fff1b0;
 		}
 
@@ -545,20 +586,15 @@
 				<img class="button-frame button-frame-hover" src="btn_hover.png" />
 				<div class="button-label">전투 참가</div>
 			</div>
-			<div id="settings-button" class="menu-button secondary-button">
+			<div id="tutorial-button" class="menu-button secondary-button">
 				<img class="button-frame button-frame-normal" src="btn_normal.png" />
 				<img class="button-frame button-frame-hover" src="btn_hover.png" />
-				<div class="button-label">설정</div>
+				<div class="button-label">튜토리얼</div>
 			</div>
 			<div id="score-button" class="menu-button secondary-button">
 				<img class="button-frame button-frame-normal" src="btn_normal.png" />
 				<img class="button-frame button-frame-hover" src="btn_hover.png" />
 				<div class="button-label">스코어 보드</div>
-			</div>
-			<div id="controls-button" class="menu-button secondary-button">
-				<img class="button-frame button-frame-normal" src="btn_normal.png" />
-				<img class="button-frame button-frame-hover" src="btn_hover.png" />
-				<div class="button-label">조작 안내</div>
 			</div>
 			<div id="credits-button" class="menu-button secondary-button">
 				<img class="button-frame button-frame-normal" src="btn_normal.png" />
@@ -569,6 +605,18 @@
 				<img class="button-frame button-frame-normal" src="btn_normal.png" />
 				<img class="button-frame button-frame-hover" src="btn_hover.png" />
 				<div class="button-label">게임 종료</div>
+			</div>
+		</div>
+		<div id="corner-buttons">
+			<div id="settings-button" class="corner-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">설정</div>
+			</div>
+			<div id="controls-button" class="corner-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">조작 안내</div>
 			</div>
 		</div>
 		<div id="audio-settings-overlay">

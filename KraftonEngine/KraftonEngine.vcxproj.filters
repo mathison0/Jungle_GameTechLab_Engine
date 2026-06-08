@@ -1997,6 +1997,9 @@
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeCredits.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeTutorial.cpp">
+      <Filter>Source\Game\Musou\GameMode</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\GameMode\MusouGameModeIntro.cpp">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClCompile>
@@ -3582,6 +3585,9 @@
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeCredits.h">
+      <Filter>Source\Game\Musou\GameMode</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeTutorial.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h">
