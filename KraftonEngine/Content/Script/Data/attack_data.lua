@@ -18,6 +18,20 @@
 --   window    콤보 윈도우 { 시작비율, 끝비율 } — 없으면 체인 말단/단발
 --   play_rate 재생속도. 숫자 = 고정, { min, max } = 매 재생 균등 랜덤 (기본 1.0)
 --             notify/RM 은 길이 비율 기준이라 속도를 바꿔도 히트 타이밍은 안 깨진다
+--   camera    몽타주 카메라 연출 샷 배열 (선택) — 구간 동안 메인(SpringArm) 카메라
+--             대신 캐릭터에 붙은 연출 카메라로 블렌드했다가 복귀:
+--               camera = { { begin_frac = 0.1, end_frac = 0.7, ... }, ... }
+--             begin_frac/end_frac  샷 구간 (재생 길이 비율, 필수)
+--             blend_in/blend_out   진입 / 메인 복귀 블렌드 초 (기본 0.15 / 0.25)
+--             offset = {x,y,z}     캡슐 로컬 m — x=전방, y=우측, z=상단 (기본 {2.5,2,1})
+--             fov                  도 단위 (0/생략 = 메인 카메라 FOV 유지)
+--             look_at              매 프레임 캐릭터 응시 (기본 true)
+--             look_height          시선 높이 — 캡슐 중심 +Z m (기본 0.5)
+--             rotation = {p,y,r}   look_at = false 일 때의 로컬 회전 (도)
+--             follow               false = 샷 시작 위치 월드 고정 (기본 true = 추적)
+--             letterbox            시네마틱 바 두께 비율 (0 = 없음)
+--             연속 컷은 항목 2개 — 연출 카메라 2대가 핑퐁하며 컷 사이도 블렌드.
+--             셰이크/슬로모는 연출 중에도 적용. 고빈도 일반 콤보엔 금지 (멀미 주의)
 --
 -- ── chains: 흐름 구성 — 스텝 id 참조라 재배열이 한 줄 ──
 --   체인 칸에 id 1개 대신 배열을 쓰면 랜덤 변주 (직전 모션 반복 회피는 C++ 처리):
@@ -179,7 +193,10 @@ return {
         jump_heavy    = { montage = montage("Jump Attack_mixamo_com"),
                           sequence = seq("Jump Attack_mixamo_com"),
                           blend_in = 0.12, attack_id = "jump_heavy", hit_frac = 0.50,
-                          play_rate = { 1.25, 1.35 }, force_root_motion = true },
+                          play_rate = { 1.25, 1.35 }, force_root_motion = true, 
+                          -- 측면 추적 샷 — 도약~착지 임팩트(hit 0.5)까지 옆에서 잡고 복귀
+                          camera = { { begin_frac = 0.08, end_frac = 0.62, blend_in = 0.15, blend_out = 0.25,
+                                      offset = { 1.0, 4.0, 0.6 }, fov = 60 } } },
         spin_high_fwd = { montage = montage("great sword high spin attack_mixamo_com"),
                           sequence = seq("great sword high spin attack_mixamo_com"),
                           blend_in = 0.15, attack_id = "spin_attack", hit_frac = 0.40 },
@@ -199,7 +216,11 @@ return {
         u_slam        = { montage = montage("Barbarian_Melee Attack Downward"),
                           sequence = seq("Barbarian_Melee Attack Downward"),
                           blend_in = 0.1, attack_id = "musou_slam", hit_frac = 0.50,
-                          play_rate = 1.05 },
+                          play_rate = 1.05,
+                          -- 무쌍기 방점 — 정면 로우앵글 + 레터박스로 임팩트 강조 후 복귀
+                          camera = { { begin_frac = 0.05, end_frac = 0.75, blend_in = 0.12, blend_out = 0.3,
+                                       offset = { 3.5, -2.0, 0.3 }, fov = 55, look_height = 0.8,
+                                       letterbox = 0.12 } } },
 
         -- 구르기 (Shift) — 입력 방향 회피. 공격 아님 (attack_id 없음), 전 구간 무적은 C++.
         -- ※ Standing Dive Forward.fbx 를 에디터에서 Barbarian 스켈레톤으로 임포트해야 활성화.
@@ -274,7 +295,7 @@ return {
     feedback = {
         -- 킬 버스트 — 스윙 1회 판정으로 min_kills 이상 처치 시 글로벌 슬로모 + 강셰이크
         kill_burst = {
-            min_kills  = 5,
+            min_kills  = 2,
             slomo_dur  = 0.25,  -- 슬로모 지속 (실시간 초)
             slomo_rate = 0.25,  -- 타임스케일 (0..1, 낮을수록 느려짐)
             shake      = 0.4,   -- 버스트 카메라 셰이크 강도
@@ -287,7 +308,7 @@ return {
 
         -- 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
         ultimate = {
-            kills_to_fill = 30,
+            kills_to_fill = 10,
         },
 
         -- 플레이어 피격 리액션 — 최소 간격 (초). 군체 다단 히트 스턴락 방지

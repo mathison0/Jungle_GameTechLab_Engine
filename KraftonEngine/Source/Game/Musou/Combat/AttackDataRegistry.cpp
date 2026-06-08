@@ -68,6 +68,57 @@ namespace
 			Step.WindowBeginFrac = Window->get_or(1, -1.0f);
 			Step.WindowEndFrac   = Window->get_or(2, -1.0f);
 		}
+
+		// camera — 몽타주 카메라 연출 샷 배열 (선택). 항목 스키마는 attack_data.lua 주석 참고.
+		if (sol::optional<sol::table> CameraT = T["camera"])
+		{
+			const int32 NumShots = static_cast<int32>(CameraT->size());
+			for (int32 i = 1; i <= NumShots; ++i)
+			{
+				sol::optional<sol::table> ShotT = (*CameraT)[i];
+				if (!ShotT)
+				{
+					continue;
+				}
+
+				FMusouCameraShot Shot;
+				Shot.BeginFrac = ShotT->get_or("begin_frac", -1.0f);
+				Shot.EndFrac   = ShotT->get_or("end_frac",   -1.0f);
+				Shot.BlendIn   = ShotT->get_or("blend_in",   Shot.BlendIn);
+				Shot.BlendOut  = ShotT->get_or("blend_out",  Shot.BlendOut);
+
+				if (sol::optional<sol::table> Off = (*ShotT)["offset"])
+				{
+					Shot.Offset.X = Off->get_or(1, Shot.Offset.X);
+					Shot.Offset.Y = Off->get_or(2, Shot.Offset.Y);
+					Shot.Offset.Z = Off->get_or(3, Shot.Offset.Z);
+				}
+				if (sol::optional<sol::table> Rot = (*ShotT)["rotation"])
+				{
+					Shot.Rotation.Pitch = Rot->get_or(1, 0.0f);
+					Shot.Rotation.Yaw   = Rot->get_or(2, 0.0f);
+					Shot.Rotation.Roll  = Rot->get_or(3, 0.0f);
+				}
+
+				// fov 는 사람 단위(deg) — 엔진 카메라는 radians 저장.
+				const float FovDeg = ShotT->get_or("fov", 0.0f);
+				Shot.FOVRad = FovDeg > 0.0f ? FovDeg * 3.14159265f / 180.0f : 0.0f;
+
+				Shot.bLookAt      = ShotT->get_or("look_at", true);
+				Shot.LookAtHeight = ShotT->get_or("look_height", Shot.LookAtHeight);
+				Shot.bFollow      = ShotT->get_or("follow", true);
+				Shot.Letterbox    = ShotT->get_or("letterbox", 0.0f);
+
+				if (Shot.IsValid())
+				{
+					Step.CameraShots.push_back(Shot);
+				}
+				else
+				{
+					UE_LOG("[AttackData] camera 샷 #%d 구간 무효 (begin_frac/end_frac 필수) — 스킵", i);
+				}
+			}
+		}
 		return Step;
 	}
 }

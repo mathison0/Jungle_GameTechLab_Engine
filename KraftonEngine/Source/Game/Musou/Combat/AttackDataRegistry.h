@@ -2,6 +2,8 @@
 
 #include "Core/Types/CoreTypes.h"
 #include "Game/Musou/Combat/AttackTypes.h"
+#include "Math/Vector.h"
+#include "Math/Rotator.h"
 
 // ============================================================
 // FAttackDataRegistry — 플레이어 공격 데이터 보관소
@@ -19,6 +21,28 @@
 // ============================================================
 
 class UAnimSequence;
+
+// 몽타주 카메라 연출 샷 1개 — steps.<id>.camera 배열 항목.
+// 구간(frac) 동안 메인 카메라 대신 캐릭터에 붙은 연출 카메라로 블렌드.
+// 소비처: MusouCharacter 가 AnimNotifyState_CameraShot 으로 주입/구동.
+struct FMusouCameraShot
+{
+	float BeginFrac = -1.0f;   // 샷 구간 (PlayLength 비율). lua: { 0.3, 0.7 } 또는 begin/end
+	float EndFrac   = -1.0f;
+	float BlendIn   = 0.15f;   // 연출 카메라 진입 블렌드 (초)
+	float BlendOut  = 0.25f;   // 메인 카메라 복귀 블렌드 (초)
+
+	FVector  Offset   = FVector(2.5f, 2.0f, 1.0f);  // 캡슐 로컬 (X=전방, Y=우측, Z=상단, m)
+	FRotator Rotation = FRotator::ZeroRotator;       // 로컬 회전 — look_at=false 일 때만
+
+	float FOVRad = 0.0f;        // 0 = 메인 카메라 FOV 유지. lua 'fov' 는 도(deg) 단위
+	bool  bLookAt = true;       // 매 프레임 캐릭터를 바라봄 (Rotation 무시)
+	float LookAtHeight = 0.5f;  // 시선 목표 — 액터 위치 기준 +Z (m)
+	bool  bFollow = true;       // false = 샷 시작 위치에 월드 고정
+	float Letterbox = 0.0f;     // 레터박스 두께 비율 (0 = 없음)
+
+	bool IsValid() const { return BeginFrac >= 0.0f && EndFrac > BeginFrac; }
+};
 
 // 공격 스텝 정의 — attack_data.lua 의 steps 항목 1개.
 // 몽타주 경로가 있으면 에디터 저작본 우선, 로드 실패 시 SequencePath 의 시퀀스로
@@ -43,6 +67,9 @@ struct FMusouAttackStep
 	float   HitFrac = -1.0f;        // MusouAttack 위치 (PlayLength 비율). <0 = 없음
 	float   WindowBeginFrac = -1.0f;// ComboWindow 시작 비율. <0 = 윈도우 없음 (체인 말단/단발)
 	float   WindowEndFrac = -1.0f;
+
+	// 몽타주 카메라 연출 — 비어 있으면 연출 없음 (대부분의 스텝). lua: camera = { {...}, ... }
+	TArray<FMusouCameraShot> CameraShots;
 
 	bool IsValid() const { return !MontagePath.empty() || !SequencePath.empty(); }
 };

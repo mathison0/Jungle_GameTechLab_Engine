@@ -5,6 +5,7 @@
 #include "Game/Musou/Combat/ComboComponent.h"
 #include "Game/Musou/Combat/AnimNotify_MusouAttack.h"
 #include "Game/Musou/Combat/AnimNotifyState_ComboWindow.h"
+#include "Game/Musou/Camera/AnimNotifyState_CameraShot.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
@@ -18,6 +19,8 @@
 #include "Animation/Montage/AnimMontageInstance.h"
 #include "Animation/Sequence/AnimSequence.h"
 #include "Animation/Sequence/AnimDataModel.h"
+#include "Component/Camera/CameraComponent.h"
+#include "Component/Camera/CineCameraComponent.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/Primitive/BoneAttachedStaticMeshComponent.h"
@@ -89,6 +92,10 @@ void AMusouCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 
 void AMusouCharacter::BeginPlay()
 {
+	// 연출 카메라는 Super::BeginPlay 의 컴포넌트 BeginPlay 루프 *앞*에 생성 —
+	// UCameraComponent::BeginPlay(카메라 매니저 등록) 를 정상 통과시킨다.
+	EnsureCinematicCameras();
+
 	Super::BeginPlay();
 
 	if (HitFlashComponent && Mesh)
@@ -221,6 +228,9 @@ void AMusouCharacter::SetupInputComponent()
 void AMusouCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// 몽타주 카메라 샷 — look_at/월드 고정 유지 + 종료 안전망.
+	UpdateCameraShot();
 
 	if (!ComboComponent)
 	{
@@ -601,6 +611,149 @@ void AMusouCharacter::ApplyWeaponState()
 	}
 }
 
+// ─────────────────────────────────────────────────────────────────
+// 몽타주 카메라 샷 — AnimNotifyState_CameraShot 구동부
+// ─────────────────────────────────────────────────────────────────
+APlayerCameraManager* AMusouCharacter::GetLocalCameraManager() const
+{
+	APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	return PC ? PC->GetPlayerCameraManager() : nullptr;
+}
+
+void AMusouCharacter::EnsureCinematicCameras()
+{
+	// 씬 직렬화 대상이 아님 — 매 플레이 런타임 생성. 캡슐에 붙여 캐릭터 위치/yaw 를
+	// 따라간다 (오프셋이 "바라보는 방향 기준" 으로 동작).
+	if (!CapsuleComponent)
+	{
+		return;
+	}
+
+	auto MakeCam = [this]() -> UCineCameraComponent*
+	{
+		UCineCameraComponent* Cam = AddComponent<UCineCameraComponent>();
+		Cam->AttachToComponent(CapsuleComponent);
+		return Cam;
+	};
+
+	if (!CineCamA) { CineCamA = MakeCam(); }
+	if (!CineCamB) { CineCamB = MakeCam(); }
+}
+
+void AMusouCharacter::StartCameraShot(const FMusouCameraShot& Shot, const void* Token)
+{
+	APlayerCameraManager* CamMgr = GetLocalCameraManager();
+	UCameraComponent* MainCam = GetCamera();
+	if (!CamMgr || !MainCam || !CineCamA || !CineCamB)
+	{
+		return;
+	}
+
+	// 핑퐁 — 직전 샷 카메라는 블렌드 source 일 수 있으므로 반대쪽을 쓴다.
+	UCineCameraComponent* Cam = (ActiveShotCam == CineCamA) ? CineCamB : CineCamA;
+
+	Cam->SetRelativeLocation(Shot.Offset);
+	Cam->SetRelativeRotation(Shot.Rotation);
+	Cam->SetFOV(Shot.FOVRad > 0.0f ? Shot.FOVRad : MainCam->GetFOV());
+
+	// 레터박스 — ActiveCamera 로 swap 완료된 시점부터 렌더러가 읽는다.
+	Cam->SetLetterboxEnabled(Shot.Letterbox > 0.0f);
+	if (Shot.Letterbox > 0.0f)
+	{
+		Cam->SetLetterboxAmount(1.0f);
+		Cam->SetLetterboxThickness(Shot.Letterbox);
+	}
+
+	ActiveShot      = Shot;
+	ActiveShotCam   = Cam;
+	ActiveShotToken = Token;
+
+	if (!Shot.bFollow)
+	{
+		// 월드 고정 샷 — 시작 시점 위치를 캡처해 두고 매 틱 되돌린다 (부모 이동 상쇄).
+		ShotWorldLock = Cam->GetWorldLocation();
+	}
+
+	// 시선 1프레임 선적용 — 블렌드 목적지 POV 가 처음부터 정답이도록.
+	AimShotCamera();
+
+	CamMgr->SetActiveCameraWithBlend(Cam, Shot.BlendIn, EViewTargetBlendFunction::VTBlend_EaseInOut);
+}
+
+void AMusouCharacter::EndCameraShot(const void* Token)
+{
+	// 이미 끝났거나, 같은 몽타주의 뒷 샷이 인수한 경우 (token 불일치) 복귀를 걸지 않는다.
+	if (!ActiveShotToken || Token != ActiveShotToken)
+	{
+		return;
+	}
+	ActiveShotToken = nullptr;
+	// ActiveShotCam 은 유지 — 직후 새 샷이 시작될 때 핑퐁 판단에 쓰인다.
+
+	APlayerCameraManager* CamMgr = GetLocalCameraManager();
+	UCameraComponent* MainCam = GetCamera();
+	if (CamMgr && MainCam)
+	{
+		CamMgr->SetActiveCameraWithBlend(MainCam, ActiveShot.BlendOut, EViewTargetBlendFunction::VTBlend_EaseInOut);
+	}
+}
+
+void AMusouCharacter::UpdateCameraShot()
+{
+	if (!ActiveShotToken)
+	{
+		return;
+	}
+
+	// 안전망 — NotifyEnd 를 거치지 않는 예외 경로(몽타주 인스턴스 즉사 등)에서도 복귀.
+	if (!IsAnyMontagePlaying())
+	{
+		EndCameraShot(ActiveShotToken);
+		return;
+	}
+
+	AimShotCamera();
+}
+
+void AMusouCharacter::AimShotCamera()
+{
+	UCineCameraComponent* Cam = ActiveShotCam;
+	if (!Cam || !ActiveShotToken)
+	{
+		return;
+	}
+
+	if (!ActiveShot.bFollow)
+	{
+		Cam->SetWorldLocation(ShotWorldLock);
+	}
+
+	if (!ActiveShot.bLookAt)
+	{
+		return;
+	}
+
+	// 월드 시선 → 캡슐 로컬 변환. 캡슐은 직립(yaw 만 가짐) 전제 —
+	// 월드 yaw 에서 액터 yaw 만 빼면 로컬 yaw 가 된다 (pitch 는 그대로).
+	const FVector Target = GetActorLocation() + FVector(0.0f, 0.0f, ActiveShot.LookAtHeight);
+	const FVector Diff   = Target - Cam->GetWorldLocation();
+	const float Len = std::sqrt(Diff.X * Diff.X + Diff.Y * Diff.Y + Diff.Z * Diff.Z);
+	if (Len < 0.01f)
+	{
+		return;
+	}
+	const FVector Dir = Diff * (1.0f / Len);
+
+	constexpr float Rad2Deg = 180.0f / 3.14159265f;
+	FRotator Rel = FRotator::ZeroRotator;
+	Rel.Pitch = -std::asin(Dir.Z) * Rad2Deg;                      // UCameraComponent::LookAt 과 동일 부호 규약
+	if (std::fabs(Dir.Z) < 0.999f)
+	{
+		Rel.Yaw = std::atan2(Dir.Y, Dir.X) * Rad2Deg - GetActorRotation().Yaw;
+	}
+	Cam->SetRelativeRotation(Rel);
+}
+
 void AMusouCharacter::PlayHitReaction()
 {
 	// 모션 우선 — 공격/구르기/무쌍기/공중 중 피격은 휘청 없이 진행 (무쌍식 슈퍼아머 느낌).
@@ -825,6 +978,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 			{
 				ApplyRootMotionOverride(Entry.second->GetSourceSequence());
 				InjectDefaultAttackNotifies(Entry.second->GetSourceSequence(), Step);
+				InjectCameraShotNotifies(Entry.second->GetSourceSequence(), Step);
 				return Entry.second;
 			}
 		}
@@ -839,6 +993,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 		{
 			ApplyRootMotionOverride(Montage->GetSourceSequence());
 			InjectDefaultAttackNotifies(Montage->GetSourceSequence(), Step);
+			InjectCameraShotNotifies(Montage->GetSourceSequence(), Step);
 			return Montage;
 		}
 	}
@@ -857,6 +1012,7 @@ UAnimMontage* AMusouCharacter::ResolveStepMontage(const FMusouAttackStep& Step)
 
 	ApplyRootMotionOverride(Sequence);
 	InjectDefaultAttackNotifies(Sequence, Step);
+	InjectCameraShotNotifies(Sequence, Step);
 
 	UAnimMontage* Montage = Manager.CreateMontage(Sequence, Sequence->GetName() + "_RuntimeMontage");
 	if (!Montage)
@@ -877,11 +1033,14 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 	}
 
 	// 저작 notify 존중 — 우리가 주입한 Auto* 외의 notify 가 하나라도 있으면 손대지 않는다.
+	// (AutoCameraShot 은 별도 패스 InjectCameraShotNotifies 의 주입물 — 저작본 취급 금지)
 	static const FName AutoHitName("AutoMusouAttack");
 	static const FName AutoWindowName("AutoComboWindow");
+	static const FName AutoShotName("AutoCameraShot");
 	for (const FAnimNotifyEvent& Existing : Sequence->GetNotifies())
 	{
-		if (Existing.NotifyName != AutoHitName && Existing.NotifyName != AutoWindowName)
+		if (Existing.NotifyName != AutoHitName && Existing.NotifyName != AutoWindowName
+			&& Existing.NotifyName != AutoShotName)
 		{
 			return;
 		}
@@ -948,6 +1107,91 @@ void AMusouCharacter::InjectDefaultAttackNotifies(UAnimSequence* Sequence, const
 		Event.TriggerTime = Length * Step.WindowBeginFrac;
 		Event.Duration    = Length * (Step.WindowEndFrac - Step.WindowBeginFrac);
 		Event.NotifyState = UObjectManager::Get().CreateObject<UAnimNotifyState_ComboWindow>(Model);
+		ModelNotifies.push_back(Event);
+	}
+
+	Sequence->RefreshRuntimeNotifies();
+}
+
+void AMusouCharacter::InjectCameraShotNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step)
+{
+	if (!Sequence)
+	{
+		return;
+	}
+
+	static const FName AutoShotName("AutoCameraShot");
+
+	// 저작 카메라 샷 존중 — Auto 가 아닌 CameraShot notify 가 하나라도 있으면 양보.
+	// (공격 notify 주입과 가드가 다른 이유: 히트/윈도우가 저작된 시퀀스에도 카메라
+	//  연출은 lua 로 얹고 싶다 — 같은 종류의 저작물이 있을 때만 물러난다.)
+	for (const FAnimNotifyEvent& Existing : Sequence->GetNotifies())
+	{
+		if (Existing.NotifyState && Cast<UAnimNotifyState_CameraShot>(Existing.NotifyState)
+			&& Existing.NotifyName != AutoShotName)
+		{
+			return;
+		}
+	}
+
+	// 주입 이력 — 같은 데이터 버전이면 그대로, 바뀌었으면 AutoCameraShot 걷어내고 재주입.
+	const int32 CurVersion = FAttackDataRegistry::Get().GetVersion();
+	bool bRecorded = false;
+	for (auto& Entry : CameraShotInjectedVersions)
+	{
+		if (Entry.first == Sequence)
+		{
+			if (Entry.second == CurVersion)
+			{
+				return;
+			}
+			Entry.second = CurVersion;
+			bRecorded = true;
+			break;
+		}
+	}
+
+	UAnimDataModel* Model = Sequence->GetDataModel();
+	const float Length = Sequence->GetPlayLength();
+	if (!Model || Length <= 0.0f)
+	{
+		return;
+	}
+
+	if (!bRecorded)
+	{
+		CameraShotInjectedVersions.push_back({ Sequence, CurVersion });
+	}
+
+	TArray<FAnimNotifyEvent>& ModelNotifies = Sequence->GetMutableModelNotifies();
+	ModelNotifies.erase(
+		std::remove_if(ModelNotifies.begin(), ModelNotifies.end(),
+			[](const FAnimNotifyEvent& Ev) { return Ev.NotifyName == AutoShotName; }),
+		ModelNotifies.end());
+
+	for (const FMusouCameraShot& Shot : Step.CameraShots)
+	{
+		if (!Shot.IsValid())
+		{
+			continue;
+		}
+
+		UAnimNotifyState_CameraShot* State = UObjectManager::Get().CreateObject<UAnimNotifyState_CameraShot>(Model);
+		State->BlendIn      = Shot.BlendIn;
+		State->BlendOut     = Shot.BlendOut;
+		State->Offset       = Shot.Offset;
+		State->Rotation     = Shot.Rotation;
+		State->FOV          = Shot.FOVRad;
+		State->bLookAt      = Shot.bLookAt;
+		State->LookAtHeight = Shot.LookAtHeight;
+		State->bFollow      = Shot.bFollow;
+		State->Letterbox    = Shot.Letterbox;
+
+		FAnimNotifyEvent Event;
+		Event.NotifyName  = AutoShotName;
+		Event.TriggerTime = Length * Shot.BeginFrac;
+		Event.Duration    = Length * (Shot.EndFrac - Shot.BeginFrac);
+		Event.NotifyState = State;
 		ModelNotifies.push_back(Event);
 	}
 

@@ -2,6 +2,9 @@
 
 #include "GameFramework/Pawn/LuaCharacter.h"
 #include "Game/Musou/Combat/AttackTypes.h"   // EAttackContext
+// FMusouAttackStep/Slot/CameraShot — attack_data.lua 로드 데이터 (FMusouCameraShot 을
+// 멤버로 들고 있어 전방 선언으로는 부족).
+#include "Game/Musou/Combat/AttackDataRegistry.h"
 #include "Math/Vector.h"
 
 #include <utility>
@@ -12,12 +15,10 @@ class UBattleComponent;
 class UComboComponent;
 class UBoneAttachedStaticMeshComponent;
 class UHitFlashComponent;
+class UCineCameraComponent;
+class APlayerCameraManager;
 class UAnimMontage;
 class UAnimSequence;
-
-// 공격 스텝/슬롯 정의 — AttackDataRegistry.h (Content/Script/Data/attack_data.lua 에서 로드).
-struct FMusouAttackStep;
-struct FMusouAttackSlot;
 
 // ============================================================
 // AMusouCharacter — 무쌍 플레이어 캐릭터 (Barbarian)
@@ -68,6 +69,12 @@ public:
 
 	bool IsWeaponDrawn() const { return bWeaponDrawn; }
 
+	// ── 몽타주 카메라 샷 — AnimNotifyState_CameraShot 이 구동 ──
+	// 상시 연출 카메라 2대(핑퐁)로 메인(SpringArm) 카메라와 블렌드 전환.
+	// Token = notify 객체 — 뒷 샷이 인수하면 앞 샷의 End 가 복귀를 걸지 않게 식별.
+	void StartCameraShot(const FMusouCameraShot& Shot, const void* Token);
+	void EndCameraShot(const void* Token);
+
 protected:
 	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
 	// ※ 공격 입력을 lua anim에서 이관한 이유: lua update()는 Animation Tick LOD
@@ -115,6 +122,16 @@ protected:
 	bool          PlayAttackStep(const FMusouAttackStep& Step);
 	UAnimMontage* ResolveStepMontage(const FMusouAttackStep& Step);
 	void          InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step);
+
+	// 카메라 샷 notify 주입 — 공격 notify 와 별도 패스. 저작 notify 가 있는 시퀀스에도
+	// 카메라 샷은 주입한다 (저작 CameraShot notify 가 있을 때만 양보).
+	void InjectCameraShotNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step);
+
+	// ── 몽타주 카메라 샷 내부 ──
+	void EnsureCinematicCameras();          // 연출 카메라 2대 런타임 생성 (BeginPlay, 씬 비저장)
+	void UpdateCameraShot();                // look_at / 월드 고정 유지 + 안전망 (Tick)
+	void AimShotCamera();                   // 활성 샷 카메라 시선/위치 갱신
+	APlayerCameraManager* GetLocalCameraManager() const;
 
 	// 슬롯에서 변주 1개 선택 — 랜덤 + 직전 변주 반복 회피. 빈 슬롯이면 nullptr.
 	const FMusouAttackStep* PickVariant(const FMusouAttackSlot& Slot);
@@ -183,4 +200,19 @@ protected:
 	// 손이 등에 닿는 타이밍(feedback.weapon.swap_frac)에 무기가 손↔등으로 옮겨진다.
 	float WeaponSwapDelay = -1.0f;
 	bool  bPendingWeaponDrawn = false;
+
+	// ── 몽타주 카메라 샷 상태 ──
+	// 연출 카메라 2대 — BeginPlay 런타임 생성 (씬 비저장, 캡슐에 부착). 핑퐁으로
+	// 샷1→샷2 연속 컷에서도 블렌드 source/target 이 항상 다른 컴포넌트가 된다.
+	UCineCameraComponent* CineCamA = nullptr;
+	UCineCameraComponent* CineCamB = nullptr;
+
+	const void*           ActiveShotToken = nullptr;  // 진행 중 샷의 notify 객체 (null = 없음)
+	UCineCameraComponent* ActiveShotCam   = nullptr;  // 직전/현재 샷 카메라 — 핑퐁 판단용
+	FMusouCameraShot      ActiveShot;
+	FVector               ShotWorldLock = FVector(0.0f, 0.0f, 0.0f);  // bFollow=false 샷의 고정 월드 위치
+
+	// 카메라 샷 주입 이력 (시퀀스 → 데이터 버전) — 공격 notify 주입과 별도 추적
+	// (가드 조건이 달라 같은 시퀀스라도 주입 가능 여부가 다르다).
+	TArray<std::pair<UAnimSequence*, int32>> CameraShotInjectedVersions;
 };
