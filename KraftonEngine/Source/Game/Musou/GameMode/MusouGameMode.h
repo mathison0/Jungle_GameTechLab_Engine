@@ -94,6 +94,9 @@ public:
 	// 최종 보스 조우 시 호출 — 전투 전 story dialog를 띄우고 월드를 일시정지한다.
 	virtual void NotifyFinalBossEncounterStarted();
 
+	// 보스 카메라 연출 등에서 HUD 전체 표시 여부를 제어한다.
+	void SetHudVisible(bool bVisible);
+
 	// 플레이어에게 실제 데미지가 적용된 순간 호출 — HUD 피격 연출 진입점.
 	virtual void NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator);
 

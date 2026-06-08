@@ -356,6 +356,16 @@ void FMusouHudPresenter::Tick(float DeltaTime, const AMusouGameState* MusouState
 	UpdateVictoryOverlay(DeltaTime);
 }
 
+void FMusouHudPresenter::SetHudVisible(bool bVisible)
+{
+	if (!Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	Widget->SetProperty("hud-root", "visibility", bVisible ? "visible" : "hidden");
+}
+
 bool FMusouHudPresenter::StartIntroDialog()
 {
 	return StartStoryDialog(EStoryDialogKind::Intro);

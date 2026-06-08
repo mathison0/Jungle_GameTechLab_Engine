@@ -22,6 +22,7 @@ public:
 	void SetWidget(UUserWidget* InWidget);
 
 	void Tick(float DeltaTime, const AMusouGameState* MusouState, float PlayerHealthRatio);
+	void SetHudVisible(bool bVisible);
 	void SetPauseMenuVisible(bool bVisible);
 	void NotifyPlayerDamaged(float Damage, float PlayerCurrentHealth, float PlayerMaxHealth);
 	void ShowBossHealth(const FString& BossName, float HealthRatio);

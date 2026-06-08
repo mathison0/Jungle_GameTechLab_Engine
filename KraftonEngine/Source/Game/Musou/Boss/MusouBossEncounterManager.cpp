@@ -12,6 +12,7 @@
 #include "Game/Musou/Boss/MusouBossCharacter.h"
 #include "Game/Musou/Character/MusouCharacter.h"
 #include "Game/Musou/Combat/BattleComponent.h"
+#include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Game/Musou/MusouGameSettings.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/Camera/WaveOscillatorCameraShake.h"
@@ -101,6 +102,10 @@ void AMusouBossEncounterManager::StartIntro()
 	}
 
 	IntroState = EBossEncounterIntroState::Playing;
+	if (AMusouGameMode* GameMode = GetWorld() ? Cast<AMusouGameMode>(GetWorld()->GetGameMode()) : nullptr)
+	{
+		GameMode->SetHudVisible(false);
+	}
 	StartSequence(EBossSequenceKind::Intro, IntroSteps);
 	UE_LOG("[BossIntro] started");
 }
@@ -140,6 +145,10 @@ void AMusouBossEncounterManager::FinishIntro()
 	ActiveSequenceKind = EBossSequenceKind::None;
 	ActiveSteps.clear();
 	IntroState = EBossEncounterIntroState::Complete;
+	if (AMusouGameMode* GameMode = GetWorld() ? Cast<AMusouGameMode>(GetWorld()->GetGameMode()) : nullptr)
+	{
+		GameMode->SetHudVisible(true);
+	}
 	if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
 	{
 		CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);

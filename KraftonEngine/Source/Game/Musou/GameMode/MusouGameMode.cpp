@@ -695,6 +695,11 @@ void AMusouGameMode::NotifyFinalBossEncounterStarted()
 	}
 }
 
+void AMusouGameMode::SetHudVisible(bool bVisible)
+{
+	HudPresenter.SetHudVisible(bVisible);
+}
+
 void AMusouGameMode::NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator)
 {
 	(void)DamageInstigator;
