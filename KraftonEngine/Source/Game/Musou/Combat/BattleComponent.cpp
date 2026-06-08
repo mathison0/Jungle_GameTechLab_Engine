@@ -120,7 +120,7 @@ void UBattleComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
 
 float UBattleComponent::ApplyDamage(float Damage, AActor* DamageInstigator)
 {
-	if (bDead || bInvincible || Damage <= 0.0f)
+	if (bDead || bInvincible || bCheatInvincible || Damage <= 0.0f)
 	{
 		return 0.0f;
 	}

@@ -421,6 +421,10 @@ bool FAttackDataRegistry::LoadFromLua()
 		{
 			NewFeedback.UltimateHitsToFill = Ultimate->get_or("hits_to_fill", NewFeedback.UltimateHitsToFill);
 		}
+		if (sol::optional<sol::table> Heal = (*FeedbackT)["heal"])
+		{
+			NewFeedback.HealPerComboHit = Heal->get_or("per_hit", NewFeedback.HealPerComboHit);
+		}
 		if (sol::optional<sol::table> HitReact = (*FeedbackT)["hit_react"])
 		{
 			NewFeedback.HitReactCooldown = HitReact->get_or("cooldown", NewFeedback.HitReactCooldown);
