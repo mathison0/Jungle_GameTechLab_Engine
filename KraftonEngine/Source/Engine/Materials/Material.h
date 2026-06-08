@@ -345,6 +345,7 @@ public:
 protected:
 	bool SetParameter(const FString& Name, const void* Data, uint32 Size);
 	void CopyParentConstantBuffers();
+	void CopyOverridesFrom(const UMaterialInstance& Source);
 
 	FString PathFileName;
 	UMaterial* Parent = nullptr;
@@ -380,6 +381,7 @@ public:
 	GENERATED_BODY()
 
 	static UMaterialInstanceDynamic* Create(UMaterial* InParent);
+	static UMaterialInstanceDynamic* Create(UMaterialInstance* SourceInstance);
 	static UMaterialInstanceDynamic* Create(UMaterial* InParent,
 		TMap<FString, std::unique_ptr<FMaterialConstantBuffer>>&& InBuffers);
 

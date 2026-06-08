@@ -154,13 +154,13 @@ void FCrowdEngagementManager::ResetPlayerEngagement(FCrowdUnit& Unit) const
 	{
 		Unit.TargetKind = ECrowdTargetKind::None;
 		Unit.Target = {};
+		Unit.MoveGoal = FVector::ZeroVector;
+		Unit.LookAtLocation = FVector::ZeroVector;
 	}
 
 	Unit.bHasCombatSlot = false;
 	Unit.bHasAttackToken = false;
 	Unit.CombatSlotIndex = -1;
-	Unit.MoveGoal = FVector::ZeroVector;
-	Unit.LookAtLocation = FVector::ZeroVector;
 }
 
 void FCrowdEngagementManager::AssignCombatTypeSlots(

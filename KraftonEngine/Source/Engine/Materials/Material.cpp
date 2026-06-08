@@ -486,6 +486,31 @@ void UMaterialInstance::CopyParentConstantBuffers()
 	}
 }
 
+void UMaterialInstance::CopyOverridesFrom(const UMaterialInstance& Source)
+{
+	ScalarOverrides = Source.ScalarOverrides;
+	Vector3Overrides = Source.Vector3Overrides;
+	Vector4Overrides = Source.Vector4Overrides;
+	MatrixOverrides = Source.MatrixOverrides;
+	TextureOverrides = Source.TextureOverrides;
+
+	for (int32 Slot = 0; Slot < static_cast<int32>(EMaterialTextureSlot::Max); ++Slot)
+	{
+		CachedOverrideSRVs[Slot] = Source.CachedOverrideSRVs[Slot];
+		bHasTextureOverride[Slot] = Source.bHasTextureOverride[Slot];
+	}
+
+	bOverrideEmissiveColor = Source.bOverrideEmissiveColor;
+	bOverrideEmissiveIntensity = Source.bOverrideEmissiveIntensity;
+	bOverrideBloomEnabled = Source.bOverrideBloomEnabled;
+	EmissiveColorOverride = Source.EmissiveColorOverride;
+	EmissiveIntensityOverride = Source.EmissiveIntensityOverride;
+	bBloomEnabledOverride = Source.bBloomEnabledOverride;
+
+	bConstantBufferDirty = true;
+	bMaterialBloomCBDirty = true;
+}
+
 bool UMaterialInstance::SetParameter(const FString& Name, const void* Data, uint32 Size)
 {
 	if (!Parent || !Data)
@@ -861,6 +886,24 @@ UMaterialInstanceDynamic* UMaterialInstanceDynamic::Create(UMaterial* InParent)
 		InParent,
 		std::move(Buffers));
 
+	return Instance;
+}
+
+UMaterialInstanceDynamic* UMaterialInstanceDynamic::Create(UMaterialInstance* SourceInstance)
+{
+	if (!SourceInstance || !SourceInstance->GetParent())
+	{
+		return nullptr;
+	}
+
+	UMaterialInstanceDynamic* Instance = Create(SourceInstance->GetParent());
+	if (!Instance)
+	{
+		return nullptr;
+	}
+
+	Instance->PathFileName = SourceInstance->GetAssetPathFileName();
+	Instance->CopyOverridesFrom(*SourceInstance);
 	return Instance;
 }
 

@@ -188,22 +188,16 @@ void ACrowdUnitVisualActor::BuildDynamicMaterials()
 			continue;
 		}
 
-		UMaterial* ParentMaterial = nullptr;
-		if (UMaterial* Material = Cast<UMaterial>(SourceMaterial))
+		UMaterialInstanceDynamic* DynamicMaterial = nullptr;
+		if (UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(SourceMaterial))
 		{
-			ParentMaterial = Material;
+			DynamicMaterial = UMaterialInstanceDynamic::Create(MaterialInstance);
 		}
-		else if (UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(SourceMaterial))
+		else if (UMaterial* Material = Cast<UMaterial>(SourceMaterial))
 		{
-			ParentMaterial = MaterialInstance->GetParent();
-		}
-
-		if (!ParentMaterial)
-		{
-			continue;
+			DynamicMaterial = UMaterialInstanceDynamic::Create(Material);
 		}
 
-		UMaterialInstanceDynamic* DynamicMaterial = UMaterialInstanceDynamic::Create(ParentMaterial);
 		if (!DynamicMaterial)
 		{
 			continue;
