@@ -3,6 +3,7 @@
 #include "Engine/Runtime/ActorPlacementRegistry.h"
 #include "Engine/Runtime/EngineInitHooks.h"
 
+#include "Game/Musou/Boss/MusouBossEncounterManager.h"
 #include "Game/Musou/Boss/MusouBossCharacter.h"
 #include "Game/Musou/Character/MusouCharacter.h"
 #include "Game/Musou/Effect/SlashEffectActor.h"
@@ -34,6 +35,18 @@ void RegisterGameActorPlacements()
 		[](UWorld* World, const FVector& Location) -> AActor*
 		{
 			AMusouBossCharacter* Actor = World->SpawnActor<AMusouBossCharacter>();
+			if (Actor)
+			{
+				Actor->InitDefaultComponents();
+				Actor->SetActorLocation(Location);
+			}
+			return Actor;
+		});
+
+	FActorPlacementRegistry::Get().RegisterEntry("Musou Boss Encounter Manager",
+		[](UWorld* World, const FVector& Location) -> AActor*
+		{
+			AMusouBossEncounterManager* Actor = World->SpawnActor<AMusouBossEncounterManager>();
 			if (Actor)
 			{
 				Actor->InitDefaultComponents();

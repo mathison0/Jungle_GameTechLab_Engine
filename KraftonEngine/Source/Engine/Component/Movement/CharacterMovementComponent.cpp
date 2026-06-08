@@ -23,6 +23,28 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+	class FCharacterControllerFilterCallback final : public physx::PxControllerFilterCallback
+	{
+	public:
+		explicit FCharacterControllerFilterCallback(bool bInIgnoreOtherControllers)
+			: bIgnoreOtherControllers(bInIgnoreOtherControllers)
+		{
+		}
+
+		bool filter(const physx::PxController& a, const physx::PxController& b) override
+		{
+			(void)a;
+			(void)b;
+			return !bIgnoreOtherControllers;
+		}
+
+	private:
+		bool bIgnoreOtherControllers = false;
+	};
+}
+
 UCharacterMovementComponent::UCharacterMovementComponent()
 {
 	// USkeletalMeshComponent::TickComponent (TG_PrePhysics, default) 가 UpdateAnimation 으로
@@ -160,7 +182,8 @@ void UCharacterMovementComponent::SyncControllerToUpdatedComponentIfNeeded()
 
 FControllerMoveResult UCharacterMovementComponent::MoveController(
 	const FVector& Delta,
-	float DeltaTime)
+	float DeltaTime,
+	bool bIgnorePawnFloor)
 {
 	if (!EnsureController())
 	{
@@ -168,13 +191,33 @@ FControllerMoveResult UCharacterMovementComponent::MoveController(
 	}
 
 	const physx::PxVec3 Disp(Delta.X, Delta.Y, Delta.Z);
-	FPhysicsRaycastFilterCallback QueryFilter(ECollisionChannel::Pawn, GetOwner());
+	const ECollisionChannel IgnoredObjectType = bIgnorePawnFloor ? ECollisionChannel::Pawn : ECollisionChannel::MAX;
+	FPhysicsRaycastFilterCallback QueryFilter(ECollisionChannel::Pawn, GetOwner(), IgnoredObjectType);
+	FCharacterControllerFilterCallback ControllerFilter(bIgnorePawnFloor);
 
-	physx::PxControllerFilters Filters(nullptr, &QueryFilter, nullptr);
+	physx::PxControllerFilters Filters(nullptr, &QueryFilter, &ControllerFilter);
 
 	const physx::PxControllerCollisionFlags Flags = Controller->move(Disp, ControllerMinMoveDistance, DeltaTime, Filters);
 	FControllerMoveResult Result;
 	Result.bHitDown = Flags.isSet(physx::PxControllerCollisionFlag::eCOLLISION_DOWN);
+	Result.bHitDownOnWalkableFloor = Result.bHitDown;
+
+	if (Result.bHitDown)
+	{
+		physx::PxControllerState State;
+		Controller->getState(State);
+
+		bool bStandingOnPawn = State.standOnAnotherCCT;
+		if (State.touchedShape)
+		{
+			if (UPrimitiveComponent* TouchedComponent = GetComponentFromQueryShape(State.touchedShape))
+			{
+				bStandingOnPawn = bStandingOnPawn || TouchedComponent->GetCollisionObjectType() == ECollisionChannel::Pawn;
+			}
+		}
+
+		Result.bHitDownOnWalkableFloor = !bStandingOnPawn;
+	}
 
 	SyncUpdatedComponentFromController();
 	return Result;
@@ -444,14 +487,18 @@ void UCharacterMovementComponent::TickWalking(float DeltaTime, const FVector& Ro
 	// Walking 중 Z velocity 는 0 — floor stick 으로만 Z 결정.
 	Velocity.Z = 0.0f;
 
-	// XY 이동: input velocity * dt + root motion XY (이미 world frame).
+	// XY movement blocks pawns, floor stick ignores pawns so characters cannot stand on each other.
 	const FVector XYOffset(
 		Velocity.X * DeltaTime + RootMotionWorldXY.X,
 		Velocity.Y * DeltaTime + RootMotionWorldXY.Y,
-		-FloorProbeDistance);
+		0.0f);
+	if (XYOffset.Length() > ControllerMinMoveDistance)
+	{
+		MoveController(XYOffset, DeltaTime);
+	}
 
-	const FControllerMoveResult Result = MoveController(XYOffset, DeltaTime);
-	const bool bHitDown = Result.bHitDown;
+	const FControllerMoveResult Result = MoveController(FVector(0.0f, 0.0f, -FloorProbeDistance), DeltaTime, true);
+	const bool bHitDown = Result.bHitDownOnWalkableFloor;
 
 	if (bHitDown)
 	{
@@ -476,14 +523,19 @@ void UCharacterMovementComponent::TickFalling(float DeltaTime, const FVector& Ro
 	// Gravity — Z 만. (양수 Gravity → -Z 가속)
 	Velocity.Z -= Gravity * DeltaTime;
 
-	// Velocity * dt 의 XY 에 root motion XY 합산. Z 는 gravity 가 책임이라 root motion 무시.
-	const FVector Offset(
+	// Horizontal movement blocks pawns. Downward landing ignores pawns so other characters are not floors.
+	const FVector XYOffset(
 		Velocity.X * DeltaTime + RootMotionWorldXY.X,
 		Velocity.Y * DeltaTime + RootMotionWorldXY.Y,
-		Velocity.Z * DeltaTime);
+		0.0f);
+	if (XYOffset.Length() > ControllerMinMoveDistance)
+	{
+		MoveController(XYOffset, DeltaTime);
+	}
 
-	const FControllerMoveResult Result = MoveController(Offset, DeltaTime);
-	const bool bHitDown = Result.bHitDown;
+	const FVector ZOffset(0.0f, 0.0f, Velocity.Z * DeltaTime);
+	const FControllerMoveResult Result = MoveController(ZOffset, DeltaTime, Velocity.Z <= 0.0f);
+	const bool bHitDown = Result.bHitDownOnWalkableFloor;
 
 	if (Velocity.Z <= 0.0f && bHitDown)
 	{

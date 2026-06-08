@@ -52,6 +52,11 @@ void UBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 {
 	UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	if (!bPatternEnabled)
+	{
+		return;
+	}
+
 	TickCooldowns(DeltaTime);
 
 	UBattleComponent* Battle = ResolveBattleComponent();
@@ -185,6 +190,25 @@ bool UBossPatternComponent::ConfigureFromDefinition(const FBossDefinition& Defin
 
 	ResetRuntime();
 	return !Patterns.empty();
+}
+
+void UBossPatternComponent::SetPatternEnabled(bool bEnabled)
+{
+	if (bPatternEnabled == bEnabled)
+	{
+		return;
+	}
+
+	bPatternEnabled = bEnabled;
+	if (!bPatternEnabled && State != EBossPatternState::Dead)
+	{
+		EnterIdle();
+	}
+}
+
+void UBossPatternComponent::PlayBossMontage(const FString& MontagePath, float PlayRate, float BlendIn)
+{
+	PlayMontagePath(MontagePath, PlayRate, BlendIn);
 }
 
 void UBossPatternComponent::ResetRuntime()

@@ -17,8 +17,11 @@ UPrimitiveComponent* GetComponentFromQueryShape(const physx::PxShape* Shape)
 	return Shape ? static_cast<UPrimitiveComponent*>(Shape->userData) : nullptr;
 }
 
-FPhysicsRaycastFilterCallback::FPhysicsRaycastFilterCallback(ECollisionChannel TraceChannel, const AActor* IgnoreActor)
-	: TraceChannel(TraceChannel), IgnoreActor(IgnoreActor)
+FPhysicsRaycastFilterCallback::FPhysicsRaycastFilterCallback(
+	ECollisionChannel TraceChannel,
+	const AActor* IgnoreActor,
+	ECollisionChannel IgnoredObjectType)
+	: TraceChannel(TraceChannel), IgnoredObjectType(IgnoredObjectType), IgnoreActor(IgnoreActor)
 {
 }
 
@@ -29,6 +32,10 @@ physx::PxQueryHitType::Enum FPhysicsRaycastFilterCallback::preFilter(const physx
 	if (!Component) return physx::PxQueryHitType::eNONE;
 
 	if (IgnoreActor && Component->GetOwner() == IgnoreActor) return physx::PxQueryHitType::eNONE;
+	if (IgnoredObjectType != ECollisionChannel::MAX && Component->GetCollisionObjectType() == IgnoredObjectType)
+	{
+		return physx::PxQueryHitType::eNONE;
+	}
 
 	const physx::PxFilterData ShapeFilterData = Shape->getQueryFilterData();
 

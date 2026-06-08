@@ -21,6 +21,9 @@ public:
 
 	bool ConfigureFromBossId(const FName& InBossId);
 	bool ConfigureFromDefinition(const FBossDefinition& Definition);
+	void SetPatternEnabled(bool bEnabled);
+	bool IsPatternEnabled() const { return bPatternEnabled; }
+	void PlayBossMontage(const FString& MontagePath, float PlayRate = 1.0f, float BlendIn = 0.1f);
 
 	const FName& GetBossId() const { return BossId; }
 	EBossPatternState GetState() const { return State; }
@@ -76,4 +79,5 @@ private:
 	FString RunMontagePath;
 	float RunMontagePlayRate = 1.0f;
 	float RunMontageBlendIn = 0.1f;
+	bool bPatternEnabled = true;
 };

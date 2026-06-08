@@ -823,6 +823,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp" />
     <ClCompile Include="Source\Game\Musou\Boss\BossPatternComponent.cpp" />
     <ClCompile Include="Source\Game\Musou\Boss\BossPatternDataRegistry.cpp" />
+    <ClCompile Include="Source\Game\Musou\Boss\MusouBossEncounterManager.cpp" />
     <ClCompile Include="Source\Game\Musou\Boss\MusouBossCharacter.cpp" />
     <ClCompile Include="Source\Game\Musou\Character\MusouCharacter.cpp" />
     <ClCompile Include="Source\Game\Musou\Camera\AnimNotify_CameraShake.cpp" />
@@ -1350,6 +1351,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Musou\Boss\BossPatternComponent.h" />
     <ClInclude Include="Source\Game\Musou\Boss\BossPatternDataRegistry.h" />
     <ClInclude Include="Source\Game\Musou\Boss\BossPatternTypes.h" />
+    <ClInclude Include="Source\Game\Musou\Boss\MusouBossEncounterManager.h" />
     <ClInclude Include="Source\Game\Musou\Boss\MusouBossCharacter.h" />
     <ClInclude Include="Source\Game\Musou\Character\MusouCharacter.h" />
     <ClInclude Include="Source\Game\Musou\Camera\AnimNotify_CameraShake.h" />

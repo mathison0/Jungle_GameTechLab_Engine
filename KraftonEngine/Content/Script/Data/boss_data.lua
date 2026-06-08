@@ -5,7 +5,7 @@ local function montage(name) return MONTAGE_DIR .. name .. "_Montage.uasset" end
 return {
     bosses = {
         knight_boss = {
-            max_hp = 1200,
+            max_hp = 100,
             attack_power = 18,
             move_speed = 3.2,
             stop_distance = 2.8,
@@ -13,6 +13,30 @@ return {
             anim_script = "Anim/boss_knight_anim.lua",
             idle_montage = montage("sword and shield idle (4)_mixamo_com"),
             run_montage = montage("sword and shield run_mixamo_com"),
+
+            intro = {
+                { type = "lock_player", time = 0.0, value = true },
+                { type = "set_pattern_enabled", time = 0.0, value = false },
+                { type = "face_target", time = 0.0 },
+                { type = "blend_camera", time = 0.0, duration = 0.35, offset = { 10.5, 1.0, 2.0 }, look_at_height = 1.5, fov = 0.87266463 },
+                { type = "play_sound", time = 0.5, sound = "Boss_Warrior/boss_warrior_intro.wav", volume = 1.0 },
+                { type = "play_montage", time = 1.2, montage = montage("sword and shield slash_mixamo_com"), play_rate = 1.0, blend_in = 0.1 },
+                { type = "dialogue", time = 1.6, text = "여기까지 온 건 제법이군. 하지만 여기서 끝이다." },
+                { type = "play_montage", time = 3.5 , montage = montage("sword and shield idle (4)_mixamo_com"), play_rate = 1.0, blend_in = 0.1 },
+                { type = "restore_camera", time = 3.75, duration = 0.25 },
+                { type = "unlock_player", time = 4.0 },
+                { type = "set_pattern_enabled", time = 4.0, value = true },
+            },
+
+            death = {
+                { type = "set_pattern_enabled", time = 0.0, value = false },
+                { type = "stop_movement", time = 0.0 },
+                { type = "set_invincible", time = 0.0, value = true },
+                { type = "play_sound", time = 0.05, sound = "Boss_Warrior/boss_warrior_death.wav", volume = 1.0 },
+                { type = "play_montage", time = 0.1, montage = montage("sword and shield death_mixamo_com"), play_rate = 1.0, blend_in = 0.1 },
+                { type = "dialogue", time = 0.4, text = "이럴... 수가..." },
+                { type = "destroy_actor", time = 5.0 },
+            },
 
             patterns = {
                 {

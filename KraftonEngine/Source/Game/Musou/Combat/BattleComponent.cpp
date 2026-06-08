@@ -1,6 +1,7 @@
 #include "Game/Musou/Combat/BattleComponent.h"
 
 #include "Game/Musou/Combat/AttackTypes.h"
+#include "Game/Musou/Combat/HitTypes.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Component/Input/ActionComponent.h"
 #include "Component/Primitive/HitFlashComponent.h"
@@ -69,12 +70,32 @@ void UBattleComponent::HandleAttackEvent(const FMusouAttackEvent& Event)
 	}
 
 	AMusouGameMode* GameMode = GetMusouGameModeFor(this);
+	const float AppliedDamage = ApplyDamage(Event.Damage, Event.Attacker);
+	if (AppliedDamage <= 0.0f)
+	{
+		return;
+	}
 	if (GameMode)
 	{
 		GameMode->NotifyAttackComboHits(Event, 1);
 	}
 
-	ApplyDamage(Event.Damage, Event.Attacker);
+	if (GameMode)
+	{
+		FMusouHitEvent Hit;
+		Hit.Attack = &Event;
+		Hit.HitActor = OwnerActor;
+		Hit.HitLocation = MyPos;
+		Hit.HitDirection = MyPos - Event.Origin;
+		Hit.HitDirection.Z = 0.0f;
+		if (Hit.HitDirection.Length() > 0.001f)
+		{
+			Hit.HitDirection = Hit.HitDirection.Normalized();
+		}
+		Hit.Damage = AppliedDamage;
+		Hit.bKilled = bDead;
+		GameMode->NotifyHitConfirmed(Hit);
+	}
 
 	// 넉백 — 공격자에서 멀어지는 수평 방향
 	if (bAcceptKnockback && !bDead)

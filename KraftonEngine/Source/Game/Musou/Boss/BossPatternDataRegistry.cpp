@@ -31,6 +31,23 @@ namespace
 		return EBossPatternStepType::Wait;
 	}
 
+	EBossSequenceStepType ParseSequenceStepType(const FString& Type)
+	{
+		if (Type == "dialogue") return EBossSequenceStepType::Dialogue;
+		if (Type == "play_montage") return EBossSequenceStepType::PlayMontage;
+		if (Type == "blend_camera") return EBossSequenceStepType::BlendCamera;
+		if (Type == "restore_camera") return EBossSequenceStepType::RestoreCamera;
+		if (Type == "play_sound") return EBossSequenceStepType::PlayAudio;
+		if (Type == "lock_player") return EBossSequenceStepType::LockPlayer;
+		if (Type == "unlock_player") return EBossSequenceStepType::UnlockPlayer;
+		if (Type == "set_pattern_enabled") return EBossSequenceStepType::SetBossPatternEnabled;
+		if (Type == "face_target") return EBossSequenceStepType::FaceBossToPlayer;
+		if (Type == "stop_movement") return EBossSequenceStepType::StopMovement;
+		if (Type == "set_invincible") return EBossSequenceStepType::SetInvincible;
+		if (Type == "destroy_actor") return EBossSequenceStepType::DestroyActor;
+		return EBossSequenceStepType::Wait;
+	}
+
 	FVector ParseVector(const sol::object& Obj, const FVector& DefaultValue = FVector::ZeroVector)
 	{
 		if (!Obj.is<sol::table>())
@@ -58,6 +75,26 @@ namespace
 		Step.Offset = ParseVector(T["offset"]);
 		Step.Speed = T.get_or("speed", 0.0f);
 		Step.bValue = T.get_or("value", false);
+		return Step;
+	}
+
+	FBossSequenceStep ParseSequenceStep(const sol::table& T)
+	{
+		FBossSequenceStep Step;
+		Step.Type = ParseSequenceStepType(T.get_or("type", std::string("wait")));
+		Step.Time = T.get_or("time", 0.0f);
+		Step.Duration = T.get_or("duration", 0.0f);
+		Step.Text = T.get_or("text", std::string());
+		Step.MontagePath = T.get_or("montage", std::string());
+		Step.SoundPath = T.get_or("sound", std::string());
+		Step.PlayRate = T.get_or("play_rate", 1.0f);
+		Step.BlendIn = T.get_or("blend_in", 0.1f);
+		Step.Volume = T.get_or("volume", 1.0f);
+		Step.CameraOffset = ParseVector(T["offset"], Step.CameraOffset);
+		Step.LookAtHeight = T.get_or("look_at_height", 1.5f);
+		Step.FOV = T.get_or("fov", 0.87266463f);
+		Step.bValue = T.get_or("value", false);
+		Step.bLoop = T.get_or("loop", false);
 		return Step;
 	}
 
@@ -231,6 +268,30 @@ bool FBossPatternDataRegistry::LoadFromLua()
 		Boss.RunMontagePlayRate = BossT.get_or("run_play_rate", 1.0f);
 		Boss.RunMontageBlendIn = BossT.get_or("run_blend_in", 0.1f);
 
+		if (sol::optional<sol::table> IntroT = BossT["intro"])
+		{
+			for (int32 Index = 1; Index <= static_cast<int32>(IntroT->size()); ++Index)
+			{
+				sol::optional<sol::table> StepT = (*IntroT)[Index];
+				if (StepT)
+				{
+					Boss.IntroSteps.push_back(ParseSequenceStep(*StepT));
+				}
+			}
+		}
+
+		if (sol::optional<sol::table> DeathT = BossT["death"])
+		{
+			for (int32 Index = 1; Index <= static_cast<int32>(DeathT->size()); ++Index)
+			{
+				sol::optional<sol::table> StepT = (*DeathT)[Index];
+				if (StepT)
+				{
+					Boss.DeathSteps.push_back(ParseSequenceStep(*StepT));
+				}
+			}
+		}
+
 		if (sol::optional<sol::table> PatternsT = BossT["patterns"])
 		{
 			for (int32 Index = 1; Index <= static_cast<int32>(PatternsT->size()); ++Index)
@@ -282,6 +343,24 @@ void FBossPatternDataRegistry::LoadDefaults()
 	Boss.AnimScript = "Anim/boss_knight_anim.lua";
 	Boss.IdleMontagePath = "Content/Montages/sword and shield idle (4)_mixamo_com_Montage.uasset";
 	Boss.RunMontagePath = "Content/Montages/sword and shield run_mixamo_com_Montage.uasset";
+	Boss.IntroSteps = {
+		{ EBossSequenceStepType::LockPlayer, 0.0f, 0.0f, FString(), FString(), FString(), 1.0f, 0.1f, 1.0f, FVector(-4.5f, -3.0f, 2.0f), 1.5f, 0.87266463f, true },
+		{ EBossSequenceStepType::SetBossPatternEnabled, 0.0f, 0.0f, FString(), FString(), FString(), 1.0f, 0.1f, 1.0f, FVector(-4.5f, -3.0f, 2.0f), 1.5f, 0.87266463f, false },
+		{ EBossSequenceStepType::FaceBossToPlayer, 0.0f, 0.0f },
+		{ EBossSequenceStepType::BlendCamera, 0.0f, 0.35f, FString(), FString(), FString(), 1.0f, 0.1f, 1.0f, FVector(-4.5f, -3.0f, 2.0f), 1.5f, 0.87266463f, false },
+		{ EBossSequenceStepType::PlayAudio, 0.35f, 0.0f, FString(), FString(), "Boss_Warrior/boss_warrior_00.wav", 1.0f, 0.1f, 1.0f },
+		{ EBossSequenceStepType::Dialogue, 0.4f, 0.0f, "Boss encounter started." },
+		{ EBossSequenceStepType::PlayMontage, 1.2f, 0.0f, FString(), Boss.IdleMontagePath, FString(), 1.0f, 0.1f },
+		{ EBossSequenceStepType::RestoreCamera, 3.75f, 0.25f },
+		{ EBossSequenceStepType::UnlockPlayer, 4.0f, 0.0f },
+		{ EBossSequenceStepType::SetBossPatternEnabled, 4.0f, 0.0f, FString(), FString(), FString(), 1.0f, 0.1f, 1.0f, FVector(-4.5f, -3.0f, 2.0f), 1.5f, 0.87266463f, true },
+	};
+	Boss.DeathSteps = {
+		{ EBossSequenceStepType::SetBossPatternEnabled, 0.0f, 0.0f, FString(), FString(), FString(), 1.0f, 0.1f, 1.0f, FVector::ZeroVector, 1.5f, 0.87266463f, false },
+		{ EBossSequenceStepType::StopMovement, 0.0f, 0.0f },
+		{ EBossSequenceStepType::SetInvincible, 0.0f, 0.0f, FString(), FString(), FString(), 1.0f, 0.1f, 1.0f, FVector::ZeroVector, 1.5f, 0.87266463f, true },
+		{ EBossSequenceStepType::PlayAudio, 0.05f, 0.0f, FString(), FString(), "Boss_Warrior/boss_warrior_00.wav", 1.0f, 0.1f, 1.0f },
+	};
 
 	FBossPattern Slash;
 	Slash.Id = FName("slash");

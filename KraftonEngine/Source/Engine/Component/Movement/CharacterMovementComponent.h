@@ -32,6 +32,7 @@ namespace physx
 struct FControllerMoveResult
 {
 	bool bHitDown = false;
+	bool bHitDownOnWalkableFloor = false;
 };
 
 UCLASS()
@@ -117,7 +118,7 @@ private:
 	void SyncUpdatedComponentFromController();
 	void SyncControllerToUpdatedComponentIfNeeded();
 
-	FControllerMoveResult MoveController(const FVector& Delta, float DeltaTime);
+	FControllerMoveResult MoveController(const FVector& Delta, float DeltaTime, bool bIgnorePawnFloor = false);
 	
 	void ConsumeInputVector(FVector& OutAccumulated);
 	bool ConsumePendingRootMotion(FTransform& OutLocalDelta);

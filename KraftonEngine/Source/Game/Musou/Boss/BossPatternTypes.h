@@ -70,6 +70,42 @@ struct FBossPattern
 	bool IsSequence() const { return !Steps.empty(); }
 };
 
+enum class EBossSequenceStepType : uint8
+{
+	Wait = 0,
+	Dialogue,
+	PlayMontage,
+	BlendCamera,
+	RestoreCamera,
+	PlayAudio,
+	LockPlayer,
+	UnlockPlayer,
+	SetBossPatternEnabled,
+	FaceBossToPlayer,
+	StopMovement,
+	SetInvincible,
+	DestroyActor
+};
+
+struct FBossSequenceStep
+{
+	EBossSequenceStepType Type = EBossSequenceStepType::Wait;
+	float Time = 0.0f;
+	float Duration = 0.0f;
+
+	FString Text;
+	FString MontagePath;
+	FString SoundPath;
+	float PlayRate = 1.0f;
+	float BlendIn = 0.1f;
+	float Volume = 1.0f;
+	FVector CameraOffset = FVector(-4.5f, -3.0f, 2.0f);
+	float LookAtHeight = 1.5f;
+	float FOV = 0.87266463f;
+	bool bValue = false;
+	bool bLoop = false;
+};
+
 struct FBossDefinition
 {
 	FName BossId = FName::None;
@@ -85,6 +121,8 @@ struct FBossDefinition
 	FString RunMontagePath;
 	float RunMontagePlayRate = 1.0f;
 	float RunMontageBlendIn = 0.1f;
+	TArray<FBossSequenceStep> IntroSteps;
+	TArray<FBossSequenceStep> DeathSteps;
 	TArray<FBossPattern> Patterns;
 
 	bool IsValid() const { return BossId.IsValid() && !Patterns.empty(); }

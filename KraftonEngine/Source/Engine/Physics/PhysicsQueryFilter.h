@@ -11,7 +11,10 @@ UPrimitiveComponent* GetComponentFromQueryShape(const physx::PxShape* Shape);
 class FPhysicsRaycastFilterCallback : public physx::PxQueryFilterCallback
 {
 public:
-	FPhysicsRaycastFilterCallback(ECollisionChannel TraceChannel, const AActor* IgnoreActor);
+	FPhysicsRaycastFilterCallback(
+		ECollisionChannel TraceChannel,
+		const AActor* IgnoreActor,
+		ECollisionChannel IgnoredObjectType = ECollisionChannel::MAX);
 
 	physx::PxQueryHitType::Enum preFilter(const physx::PxFilterData& FilterData, const physx::PxShape* Shape,
 		const physx::PxRigidActor* Actor, physx::PxHitFlags& QueryFlags) override;
@@ -19,6 +22,7 @@ public:
 
 private:
 	ECollisionChannel TraceChannel;
+	ECollisionChannel IgnoredObjectType = ECollisionChannel::MAX;
 	const AActor* IgnoreActor;
 };
 

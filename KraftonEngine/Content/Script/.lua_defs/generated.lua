@@ -485,6 +485,9 @@ function Anim.get_owner_movement_mode() end
 ---@return boolean
 function Anim.is_owner_falling() end
 
+---@return Actor?
+function Anim.get_owner() end
+
 ---@param name string
 ---@return boolean
 function Anim.get_flag(name) end

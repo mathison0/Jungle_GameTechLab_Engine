@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Component/Primitive/BillboardComponent.h"
 #include "Core/Types/ResourceTypes.h"
