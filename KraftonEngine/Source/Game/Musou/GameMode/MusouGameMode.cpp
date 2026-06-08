@@ -615,6 +615,13 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 	}
 
 	UE_LOG("[MusouGameMode] Player died");
+
+	// 사망 연출 — 쓰러지는 몽타주 재생 (입력 차단 전에 호출해도 무방, 월드는 계속 틱).
+	if (AMusouCharacter* PlayerChar = Cast<AMusouCharacter>(Player))
+	{
+		PlayerChar->PlayDeathAnimation();
+	}
+
 	EndMatch();
 	SetGameInputPossessed(false);
 	bStopMenuVisible = false;

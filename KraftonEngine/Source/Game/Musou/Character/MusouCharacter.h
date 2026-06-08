@@ -72,6 +72,11 @@ public:
 	// 무쌍기 발동 중인지 — 게이지 적립 게이팅 등에 사용 (궁극기 자체 히트로 재충전 방지).
 	bool IsUltimateActive() const { return bUltimateActive; }
 
+	// 플레이어 사망 연출 — 체력 0 시 GameMode::NotifyPlayerDeath 가 호출. 쓰러지는 몽타주를
+	// 재생하고 끝 포즈를 유지(blend-out 길게)한다. 1회만 — 재호출은 무시.
+	void PlayDeathAnimation();
+	bool IsDead() const { return bDead; }
+
 	// 입력 없는 자동 전투용(크레딧 아웃트로 등) — 좌클릭 공격과 동일 진입점.
 	// 납도 상태면 첫 호출이 발도, 이후 호출이 콤보를 이어간다.
 	void TriggerAutoAttack() { OnAttackPressed(); }
@@ -243,6 +248,9 @@ protected:
 
 	// launcher 로 떠오른 상태 — 공중 공격이 저글 체인으로 진입. 착지 시 해제 (Tick).
 	bool  bJuggleAirborne = false;
+
+	// 사망 — 사망 연출 1회 재생 후 고정. 추가 입력/연출 갱신 차단.
+	bool  bDead = false;
 
 	// 무쌍기 난무 상태 — 활성 동안 무적 + 슬롯 순차 자동 재생 (UltimateStep = 다음 인덱스).
 	bool  bUltimateActive = false;
