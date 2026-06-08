@@ -5,6 +5,7 @@
 #include "Game/Musou/Combat/AttackTypes.h"
 #include "Game/Musou/Combat/HitTypes.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
+#include "Game/Musou/UI/MusouBossHealthHudController.h"
 #include "Game/Musou/UI/MusouHudPresenter.h"
 #include "Game/Musou/UI/MusouMenuNavigator.h"
 
@@ -116,6 +117,7 @@ private:
 
 	UUserWidget* HudWidget = nullptr;
 	FMusouHudPresenter HudPresenter;
+	FMusouBossHealthHudController BossHealthHud;
 	FMusouMenuNavigator PauseMenuNavigator;
 	FMusouMenuNavigator DeathMenuNavigator;
 	FMusouMenuNavigator VictoryMenuNavigator;

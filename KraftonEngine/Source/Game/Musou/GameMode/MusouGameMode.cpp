@@ -174,6 +174,8 @@ void AMusouGameMode::StartMatch()
 	bHasPendingVictoryResult = false;
 	bVictoryScoreSubmitted = false;
 	bPendingIntroWorldPause = false;
+	BossHealthHud.SetPresenter(&HudPresenter);
+	BossHealthHud.Clear();
 
 	if (HudWidget)
 	{
@@ -210,6 +212,8 @@ void AMusouGameMode::EndMatch()
 void AMusouGameMode::EndPlay()
 {
 	bPendingIntroWorldPause = false;
+	BossHealthHud.Clear();
+	BossHealthHud.SetPresenter(nullptr);
 	HudPresenter.SetWidget(nullptr);
 	PauseMenuNavigator.SetWidget(nullptr);
 	DeathMenuNavigator.SetWidget(nullptr);
@@ -230,6 +234,7 @@ void AMusouGameMode::Tick(float DeltaTime)
 
 	// 맞았을 때만 슬로모 — 예약/직전히트 기록 만료 처리.
 	TickHitSlomoQueue(DeltaTime);
+	BossHealthHud.Tick(DeltaTime);
 
 	if (bPendingIntroWorldPause)
 	{
@@ -387,6 +392,7 @@ void AMusouGameMode::NotifyAttackHitFeedback(const FMusouAttackEvent& Event, int
 
 void AMusouGameMode::NotifyHitConfirmed(const FMusouHitEvent& Event)
 {
+	BossHealthHud.NotifyHitConfirmed(Event);
 	OnHitConfirmed.Broadcast(Event);
 }
 
@@ -446,6 +452,8 @@ void AMusouGameMode::TickHitSlomoQueue(float DeltaTime)
 
 void AMusouGameMode::NotifyEnemyKilled(APawn* Killed)
 {
+	BossHealthHud.NotifyEnemyKilled(Killed);
+
 	if (AMusouGameState* MusouState = GetMusouGameState())
 	{
 		MusouState->AddKill();
@@ -503,6 +511,7 @@ void AMusouGameMode::NotifyPlayerDeath(APawn* Player)
 	bStopMenuVisible = false;
 	bHasPendingVictoryResult = false;
 	bVictoryScoreSubmitted = false;
+	BossHealthHud.Clear();
 	HudPresenter.StartDeathOverlay();
 	PauseMenuNavigator.ClearSelection();
 	DeathMenuNavigator.ClearSelection();
@@ -539,6 +548,7 @@ void AMusouGameMode::NotifyVictory()
 	EndMatch();
 	SetGameInputPossessed(false);
 	bStopMenuVisible = false;
+	BossHealthHud.Clear();
 
 	// 스코어보드 저장 같은 후속 시스템은 여기에서 Result를 구독하면 된다.
 	OnVictoryResolved.Broadcast(Result);

@@ -5,6 +5,7 @@ local function montage(name) return MONTAGE_DIR .. name .. "_Montage.uasset" end
 return {
     bosses = {
         knight_boss = {
+            display_name = "Knight",
             max_hp = 1000,
             attack_power = 18,
             move_speed = 1.6,
@@ -109,6 +110,7 @@ return {
         },
 
         mage_boss = {
+            display_name = "Mage",
             max_hp = 900,
             attack_power = 14,
             move_speed = 2.6,

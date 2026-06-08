@@ -23,6 +23,8 @@ public:
 	void Tick(float DeltaTime, const AMusouGameState* MusouState, float PlayerHealthRatio);
 	void SetPauseMenuVisible(bool bVisible);
 	void NotifyPlayerDamaged(float Damage, float PlayerCurrentHealth, float PlayerMaxHealth);
+	void ShowBossHealth(const FString& BossName, float HealthRatio);
+	void HideBossHealth();
 	bool StartIntroDialog();
 	bool StartOutroDialog();
 	bool AdvanceStoryDialog();

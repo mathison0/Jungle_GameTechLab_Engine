@@ -1,4 +1,4 @@
-#include "Game/Musou/UI/MusouHudPresenter.h"
+﻿#include "Game/Musou/UI/MusouHudPresenter.h"
 
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "UI/UserWidget.h"
@@ -375,7 +375,6 @@ void FMusouHudPresenter::SetPauseMenuVisible(bool bVisible)
 
 	if (bVisible)
 	{
-		Widget->SetProperty("pause-overlay", "background-color", "#1616165c");
 		Widget->SetProperty("death-title", "display", "none");
 		Widget->SetProperty("death-title", "opacity", "0");
 		Widget->SetProperty("pause-menu", "display", "block");
@@ -407,6 +406,30 @@ void FMusouHudPresenter::NotifyPlayerDamaged(float Damage, float PlayerCurrentHe
 	BloodVignetteRemaining = BloodVignetteDuration;
 }
 
+void FMusouHudPresenter::ShowBossHealth(const FString& BossName, float HealthRatio)
+{
+	if (!Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	Widget->SetProperty("boss-health-panel", "display", "block");
+	Widget->SetText("boss-name", BossName.empty() ? FString("BOSS") : BossName);
+	Widget->SetAttribute("boss-hp-bar", "value", std::clamp(HealthRatio, 0.0f, 1.0f));
+}
+
+void FMusouHudPresenter::HideBossHealth()
+{
+	if (!Widget || !Widget->IsDocumentLoaded())
+	{
+		return;
+	}
+
+	Widget->SetProperty("boss-health-panel", "display", "none");
+	Widget->SetText("boss-name", "");
+	Widget->SetAttribute("boss-hp-bar", "value", 0.0f);
+}
+
 void FMusouHudPresenter::StartDeathOverlay()
 {
 	if (bDeathOverlayVisible || bVictoryOverlayVisible)
@@ -423,6 +446,7 @@ void FMusouHudPresenter::StartDeathOverlay()
 		return;
 	}
 
+	HideBossHealth();
 	Widget->SetProperty("pause-overlay", "display", "block");
 	Widget->SetProperty("pause-overlay", "background-color", MakeOverlayColor(0.0f));
 	Widget->SetProperty("death-title", "display", "block");
@@ -456,6 +480,7 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result, co
 		return;
 	}
 
+	HideBossHealth();
 	Widget->SetProperty("blood-vignette", "visibility", "hidden");
 	Widget->SetProperty("blood-vignette", "opacity", "0");
 	Widget->SetProperty("pause-overlay", "display", "block");

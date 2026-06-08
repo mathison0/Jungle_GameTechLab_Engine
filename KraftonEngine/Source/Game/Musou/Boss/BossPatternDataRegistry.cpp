@@ -276,6 +276,7 @@ bool FBossPatternDataRegistry::LoadFromLua()
 
 		FBossDefinition Boss;
 		Boss.BossId = FName(BossId);
+		Boss.DisplayName = BossT.get_or("display_name", std::string());
 		Boss.MaxHealth = BossT.get_or("max_hp", 1000.0f);
 		Boss.AttackPower = BossT.get_or("attack_power", 20.0f);
 		Boss.MoveSpeed = BossT.get_or("move_speed", 3.0f);
@@ -356,6 +357,7 @@ void FBossPatternDataRegistry::LoadDefaults()
 {
 	FBossDefinition Boss;
 	Boss.BossId = FName("knight_boss");
+	Boss.DisplayName = "Knight Boss";
 	Boss.MaxHealth = 1200.0f;
 	Boss.AttackPower = 18.0f;
 	Boss.MoveSpeed = 3.2f;

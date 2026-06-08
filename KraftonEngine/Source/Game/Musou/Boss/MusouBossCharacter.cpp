@@ -74,6 +74,16 @@ void AMusouBossCharacter::PostLoad()
 	InitializeHitFlash();
 }
 
+FString AMusouBossCharacter::GetBossDisplayName() const
+{
+	if (!DisplayName.empty())
+	{
+		return DisplayName;
+	}
+
+	return DefinitionDisplayName;
+}
+
 void AMusouBossCharacter::ApplyBossDefinition()
 {
 	if (!PatternComponent)
@@ -88,6 +98,7 @@ void AMusouBossCharacter::ApplyBossDefinition()
 
 	if (const FBossDefinition* Definition = Registry.FindBoss(BossId))
 	{
+		DefinitionDisplayName = Definition->DisplayName;
 		if (Mesh && !Definition->MeshPath.empty() && GEngine)
 		{
 			ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
@@ -101,6 +112,7 @@ void AMusouBossCharacter::ApplyBossDefinition()
 	}
 	else
 	{
+		DefinitionDisplayName.clear();
 		EnsureBossAnimation(FString(DefaultAnimScript));
 		PatternComponent->ConfigureFromBossId(BossId);
 	}
