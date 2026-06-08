@@ -730,13 +730,48 @@
 			left: 50%;
 			top: 50%;
 			margin-left: -220px;
-			margin-top: -145px;
+			margin-top: -235px;
 			display: none;
 			width: 440px;
-			height: 290px;
+			height: 470px;
 			background-color: #080202d8;
 			color: #f8f3df;
 		}
+
+		#camera-direction-row, #camera-shake-row {
+			display: block;
+			width: 440px;
+			margin-top: 14px;
+		}
+
+		/* 설정 토글 — 패널(440)을 넘지 않게 컴팩트 + 가운데 정렬. */
+		#camera-direction-toggle, #camera-shake-toggle {
+			position: relative;
+			display: block;
+			width: 300px;
+			height: 54px;
+			line-height: 54px;
+			margin-left: 70px;
+			margin-top: 0;
+			padding: 0;
+			text-align: center;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		#camera-direction-label, #camera-shake-label {
+			line-height: 54px;
+			height: 54px;
+			font-size: 20px;
+		}
+
+		#camera-direction-toggle:hover .pause-button-frame-normal,
+		#camera-shake-toggle:hover .pause-button-frame-normal { display: none; }
+		#camera-direction-toggle:hover .pause-button-frame-hover,
+		#camera-shake-toggle:hover .pause-button-frame-hover { display: block; }
+		#camera-direction-toggle:hover .pause-button-label,
+		#camera-shake-toggle:hover .pause-button-label { color: #fff1b0; }
 
 		#audio-settings-title {
 			display: block;
@@ -983,7 +1018,7 @@
 				<div id="audio-settings-button" class="pause-button">
 					<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
 					<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
-					<div class="pause-button-label">오디오</div>
+					<div class="pause-button-label">설정</div>
 				</div>
 				<div id="restart-button" class="pause-button">
 					<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
@@ -997,7 +1032,7 @@
 				</div>
 			</div>
 			<div id="audio-settings-panel">
-				<div id="audio-settings-title">오디오 설정</div>
+				<div id="audio-settings-title">설정</div>
 				<div id="audio-settings-row">
 					<div id="bgm-volume-down-button" class="audio-step-button">
 						<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
@@ -1012,6 +1047,20 @@
 						<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
 						<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
 						<div class="audio-step-label">+</div>
+					</div>
+				</div>
+				<div id="camera-direction-row">
+					<div id="camera-direction-toggle" class="pause-button">
+						<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
+						<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
+						<div id="camera-direction-label" class="pause-button-label">카메라 연출: ON</div>
+					</div>
+				</div>
+				<div id="camera-shake-row">
+					<div id="camera-shake-toggle" class="pause-button">
+						<img class="pause-button-frame pause-button-frame-normal" src="btn_normal.png" />
+						<img class="pause-button-frame pause-button-frame-hover" src="btn_hover.png" />
+						<div id="camera-shake-label" class="pause-button-label">카메라 셰이크: ON</div>
 					</div>
 				</div>
 				<div id="audio-settings-close-button" class="pause-button">

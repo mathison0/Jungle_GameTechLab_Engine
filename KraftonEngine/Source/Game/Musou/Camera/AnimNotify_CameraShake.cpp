@@ -7,10 +7,17 @@
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/Camera/WaveOscillatorCameraShake.h"
 #include "GameFramework/Camera/CameraTypes.h"
+#include "Game/Musou/MusouGameSettings.h"
 
 void UAnimNotify_CameraShake::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Anim)
 {
 	(void)Anim;
+
+	// 전역 설정 — 카메라 셰이크 off 면 흔들림 발동 안 함.
+	if (!FMusouGameSettings::Get().IsCameraShakeEnabled())
+	{
+		return;
+	}
 
 	if (!MeshComp)
 	{

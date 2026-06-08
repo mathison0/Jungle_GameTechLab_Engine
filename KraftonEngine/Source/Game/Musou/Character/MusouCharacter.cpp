@@ -8,6 +8,7 @@
 #include "Game/Musou/Camera/AnimNotifyState_CameraShot.h"
 #include "Game/Musou/GameMode/MusouGameMode.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
+#include "Game/Musou/MusouGameSettings.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/Camera/WaveOscillatorCameraShake.h"
 #include "GameFramework/GameMode/PlayerController.h"
@@ -105,6 +106,10 @@ void AMusouCharacter::BeginPlay()
 
 	// 시작 무기 상태 동기화 — 기본 납도(등에 멘 상태). 첫 공격/X 입력으로 발도.
 	ApplyWeaponState();
+
+	// 전역 설정 — 카메라 연출(몽타주 카메라 샷) 사용 여부 적용.
+	// (크레딧 게임모드는 StartMatch 에서 다시 true 로 덮어 고정 시점을 유지한다.)
+	SetCameraShotsSuppressed(!FMusouGameSettings::Get().IsCameraDirectionEnabled());
 }
 
 void AMusouCharacter::PostDuplicate()
@@ -457,11 +462,14 @@ void AMusouCharacter::OnUltimatePressed()
 	{
 		Action->Slomo(0.4f, 0.3f);
 	}
-	if (APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+	if (FMusouGameSettings::Get().IsCameraShakeEnabled())
 	{
-		if (APlayerCameraManager* CamMgr = PC->GetPlayerCameraManager())
+		if (APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
 		{
-			CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(0.5f);
+			if (APlayerCameraManager* CamMgr = PC->GetPlayerCameraManager())
+			{
+				CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(0.5f);
+			}
 		}
 	}
 

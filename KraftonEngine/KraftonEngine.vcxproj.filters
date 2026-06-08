@@ -3599,6 +3599,12 @@
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Musou\MusouGameSettings.h">
+      <Filter>Source\Game\Musou</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\MusouMatchPersistence.h">
+      <Filter>Source\Game\Musou</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h">
       <Filter>Source\Game\Musou\GameMode</Filter>
     </ClInclude>

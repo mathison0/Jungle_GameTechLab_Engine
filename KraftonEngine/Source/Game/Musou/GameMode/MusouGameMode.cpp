@@ -4,6 +4,8 @@
 #include "Game/Musou/Combat/BattleComponent.h"
 #include "Game/Musou/GameMode/MusouGameState.h"
 #include "Game/Musou/GameMode/MusouPlayerController.h"
+#include "Game/Musou/MusouGameSettings.h"
+#include "Game/Musou/MusouMatchPersistence.h"
 #include "Game/Musou/Score/MusouScoreboard.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/Camera/WaveOscillatorCameraShake.h"
@@ -103,8 +105,12 @@ void AMusouGameMode::StartMatch()
 		HudWidget = UUIManager::Get().CreateWidget(GetPlayerController(), "Content/UI/InGameHUD.rml");
 		if (HudWidget)
 		{
+			// 재시작/종료/크레딧은 "새 게임/이탈"이라 매치 상태를 보존하지 않는다(carry off + Clear).
+			// 트리거 볼륨(Play→Play2)은 버튼을 안 거치므로 기본 carry=true 로 자동 보존된다.
 			auto RestartMatch = []()
 			{
+				FMusouMatchPersistence::Get().SetCarryOnExit(false);
+				FMusouMatchPersistence::Get().Clear();
 				if (GEngine)
 				{
 					GEngine->RequestTransitionToScene("Play");
@@ -113,6 +119,8 @@ void AMusouGameMode::StartMatch()
 
 			auto StopMatch = []()
 			{
+				FMusouMatchPersistence::Get().SetCarryOnExit(false);
+				FMusouMatchPersistence::Get().Clear();
 				if (GEngine)
 				{
 					GEngine->RequestTransitionToScene("Intro");
@@ -122,6 +130,8 @@ void AMusouGameMode::StartMatch()
 			// 승리 후 "그만두기" — 엔딩 크레딧 아웃트로(Credits 씬)로. 크레딧이 끝나면 Intro 복귀.
 			auto RollCredits = []()
 			{
+				FMusouMatchPersistence::Get().SetCarryOnExit(false);
+				FMusouMatchPersistence::Get().Clear();
 				if (GEngine)
 				{
 					GEngine->RequestTransitionToScene("Credits");
@@ -147,6 +157,15 @@ void AMusouGameMode::StartMatch()
 			HudWidget->BindClick("audio-settings-close-button", [this]()
 			{
 				HideAudioSettings();
+			});
+			HudWidget->BindClick("camera-direction-toggle", [this]()
+			{
+				ToggleCameraDirection();
+			});
+			HudWidget->BindClick("camera-shake-toggle", [this]()
+			{
+				FMusouGameSettings::Get().ToggleCameraShake();
+				RefreshCameraDirectionUI();
 			});
 
 			HudWidget->BindClick("restart-button", RestartMatch);
@@ -191,6 +210,11 @@ void AMusouGameMode::StartMatch()
 		UE_LOG("[MusouGameMode] In-game HUD added to viewport");
 	}
 
+	// 씬 전환 보존 — 이 세션 종료는 기본 carry(트리거 Play→Play2). 진입 시 직전 씬이 저장한
+	// 상태가 있으면 첫 Tick 에서 복원한다 (BattleComponent BeginPlay 의 풀피 세팅 *이후*).
+	FMusouMatchPersistence::Get().SetCarryOnExit(true);
+	bRestorePending = FMusouMatchPersistence::Get().HasState();
+
 	UE_LOG("[MusouGameMode] Match started");
 }
 
@@ -211,6 +235,19 @@ void AMusouGameMode::EndMatch()
 
 void AMusouGameMode::EndPlay()
 {
+	// 씬 전환 보존 — carry(트리거 Play→Play2)면 캐시한 현재 상태 저장, 아니면(재시작/종료) 폐기.
+	{
+		FMusouMatchPersistence& P = FMusouMatchPersistence::Get();
+		if (P.ShouldCarryOnExit())
+		{
+			P.Save(CachedScore, CachedKills, CachedMaxCombo, CachedGauge, CachedHealth, CachedMaxHealth);
+		}
+		else
+		{
+			P.Clear();
+		}
+	}
+
 	bPendingIntroWorldPause = false;
 	BossHealthHud.Clear();
 	BossHealthHud.SetPresenter(nullptr);
@@ -231,6 +268,33 @@ void AMusouGameMode::EndPlay()
 void AMusouGameMode::Tick(float DeltaTime)
 {
 	AGameModeBase::Tick(DeltaTime);
+
+	// 씬 전환 보존 복원 — 첫 Tick(모든 BeginPlay 이후)에 1회.
+	if (bRestorePending)
+	{
+		bRestorePending = false;
+		RestorePersistedMatchState();
+	}
+
+	// 종료 시점 대비 현재 매치 상태를 캐시 (폰/GameState 가 EndPlay 때 이미 정리됐을 수 있음).
+	if (AMusouGameState* GS = GetMusouGameState())
+	{
+		CachedScore    = GS->GetScore();
+		CachedKills    = GS->GetKillCount();
+		CachedMaxCombo = GS->GetMaxCombo();
+		CachedGauge    = GS->GetMusouGauge();
+	}
+	if (APlayerController* PC = GetPlayerController())
+	{
+		if (AMusouCharacter* Player = Cast<AMusouCharacter>(PC->GetPossessedPawn()))
+		{
+			if (UBattleComponent* Battle = Player->GetBattleComponent())
+			{
+				CachedHealth    = Battle->GetHealth();
+				CachedMaxHealth = Battle->GetMaxHealth();
+			}
+		}
+	}
 
 	// 맞았을 때만 슬로모 — 예약/직전히트 기록 만료 처리.
 	TickHitSlomoQueue(DeltaTime);
@@ -288,7 +352,10 @@ void AMusouGameMode::Tick(float DeltaTime)
 		NotifyVictory();
 	}
 
-	if (!HudPresenter.IsResultOverlayVisible() && Input.GetKeyDown(VK_ESCAPE))
+	// 일시정지/설정 토글 — ESC 또는 P. (PIE 에서는 ESC 가 에디터의 PIE 종료에 쓰이므로
+	// P 로도 열 수 있게 해 PIE/패키징 양쪽에서 인게임 설정 접근이 가능하도록 한다.)
+	if (!HudPresenter.IsResultOverlayVisible()
+		&& (Input.GetKeyDown(VK_ESCAPE) || Input.GetKeyDown('P')))
 	{
 		if (bAudioSettingsVisible)
 		{
@@ -369,7 +436,8 @@ void AMusouGameMode::NotifyAttackHitFeedback(const FMusouAttackEvent& Event, int
 
 	// 히트 카메라 셰이크 — 강도는 스펙별 (attack_data.lua specs.shake, 핫리로드 튜닝).
 	// 플레이어 공격만 — 적 공격이 플레이어 카메라를 흔들면 피격 연출과 겹쳐 혼란.
-	if (Event.bFromPlayer && Event.Spec.ShakeScale > 0.0f)
+	if (Event.bFromPlayer && Event.Spec.ShakeScale > 0.0f
+		&& FMusouGameSettings::Get().IsCameraShakeEnabled())
 	{
 		if (APlayerCameraManager* CamMgr = GetLocalCameraManager())
 		{
@@ -488,7 +556,7 @@ void AMusouGameMode::NotifyEnemiesKilled(int32 Count)
 			}
 			if (APlayerCameraManager* CamMgr = PC->GetPlayerCameraManager())
 			{
-				CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(Feedback.KillBurstShakeScale);
+				if (FMusouGameSettings::Get().IsCameraShakeEnabled()) CamMgr->StartCameraShake<UWaveOscillatorCameraShake>(Feedback.KillBurstShakeScale);
 			}
 		}
 	}
@@ -743,6 +811,63 @@ void AMusouGameMode::RefreshAudioSettingsUI()
 	const float Volume = std::clamp(FAudioManager::Get().GetBGMVolume(), 0.0f, 1.0f);
 	HudWidget->SetText("bgm-volume-label", MakeBGMVolumeText(Volume));
 	HudWidget->SetAttribute("bgm-volume-bar", "value", Volume);
+	RefreshCameraDirectionUI();
+}
+
+void AMusouGameMode::RefreshCameraDirectionUI()
+{
+	if (!HudWidget || !HudWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+	FMusouGameSettings& S = FMusouGameSettings::Get();
+	HudWidget->SetText("camera-direction-label", S.IsCameraDirectionEnabled() ? "카메라 연출: ON" : "카메라 연출: OFF");
+	HudWidget->SetText("camera-shake-label",     S.IsCameraShakeEnabled()     ? "카메라 셰이크: ON" : "카메라 셰이크: OFF");
+}
+
+void AMusouGameMode::ToggleCameraDirection()
+{
+	FMusouGameSettings::Get().ToggleCameraDirection();
+	const bool bEnabled = FMusouGameSettings::Get().IsCameraDirectionEnabled();
+
+	// 라이브 플레이어에 즉시 반영 (다음 씬은 BeginPlay 에서 설정을 읽어 적용).
+	if (APlayerController* PC = GetPlayerController())
+	{
+		if (AMusouCharacter* Player = Cast<AMusouCharacter>(PC->GetPossessedPawn()))
+		{
+			Player->SetCameraShotsSuppressed(!bEnabled);
+		}
+	}
+	RefreshCameraDirectionUI();
+}
+
+void AMusouGameMode::RestorePersistedMatchState()
+{
+	FMusouMatchPersistence& P = FMusouMatchPersistence::Get();
+	if (!P.HasState())
+	{
+		return;
+	}
+
+	if (AMusouGameState* GS = GetMusouGameState())
+	{
+		GS->SetScore(P.GetScore());
+		GS->SetKillCount(P.GetKills());
+		GS->SetMaxCombo(P.GetMaxCombo());
+		GS->SetMusouGauge(P.GetMusouGauge());
+	}
+	if (APlayerController* PC = GetPlayerController())
+	{
+		if (AMusouCharacter* Player = Cast<AMusouCharacter>(PC->GetPossessedPawn()))
+		{
+			if (UBattleComponent* Battle = Player->GetBattleComponent())
+			{
+				Battle->SetHealth(P.GetHealth());
+			}
+		}
+	}
+	P.Clear();
+	UE_LOG("[MusouGameMode] 매치 상태 복원 — 점수/킬/콤보/무쌍게이지/체력 이어가기");
 }
 
 void AMusouGameMode::HandleAudioSettingsInput()

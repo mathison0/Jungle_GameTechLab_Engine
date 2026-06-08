@@ -110,10 +110,16 @@ private:
 	void AdjustBGMVolume(float Delta);
 	void RefreshAudioSettingsUI();
 	void HandleAudioSettingsInput();
+	void RefreshCameraDirectionUI();   // 설정 UI 의 "카메라 연출" 토글 라벨 갱신
+	void ToggleCameraDirection();      // 설정 토글 + 라이브 플레이어에 즉시 반영
 	void HandlePauseMenuInput();
 	void HandleDeathMenuInput();
 	void HandleVictoryMenuInput();
 	void SubmitVictoryScore();
+
+	// 씬 전환 보존 — Play→Play2 진입 시 점수/킬/콤보/무쌍게이지/체력 복원(첫 Tick),
+	// 종료 시 carry 여부에 따라 저장/폐기.
+	void RestorePersistedMatchState();
 
 	UUserWidget* HudWidget = nullptr;
 	FMusouHudPresenter HudPresenter;
@@ -130,6 +136,18 @@ private:
 	bool bHasPendingVictoryResult = false;
 	bool bVictoryScoreSubmitted = false;
 	FMusouMatchResult PendingVictoryResult;
+
+	// 씬 전환 보존 복원 — 모든 BeginPlay(특히 BattleComponent 의 Health=MaxHealth) 이후에
+	// 적용해야 덮어쓰기되므로 첫 Tick 에서 1회 수행한다.
+	bool bRestorePending = false;
+
+	// 종료(EndPlay) 시점엔 폰/GameState 가 이미 정리됐을 수 있어 매 Tick 현재 값을 캐시.
+	int64 CachedScore = 0;
+	int32 CachedKills = 0;
+	int32 CachedMaxCombo = 0;
+	float CachedGauge = 0.0f;
+	float CachedHealth = 100.0f;
+	float CachedMaxHealth = 100.0f;
 
 	// 맞았을 때만 슬로모 — 히트 회신을 기다리는 예약, 그리고 같은 프레임에 히트가
 	// 먼저 처리되는 순서를 덮기 위한 직전 히트 기록(짧은 수명). 둘 다 Tick 에서 만료.

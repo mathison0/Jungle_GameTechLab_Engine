@@ -61,6 +61,12 @@ public:
 	// UI와 저장소가 같은 값을 보도록 GameMode에서 이 스냅샷을 전달한다.
 	FMusouMatchResult MakeMatchResult(bool bVictory) const;
 
+	// --- 씬 전환 보존(FMusouMatchPersistence) 복원용 직접 setter ---
+	void SetScore(int64 V)      { Score = V; }
+	void SetKillCount(int32 V)  { KillCount = (V < 0) ? 0 : V; }
+	void SetMaxCombo(int32 V)   { MaxCombo = (V < 0) ? 0 : V; }
+	void SetMusouGauge(float V) { MusouGauge = (V < 0.0f) ? 0.0f : (V > 1.0f ? 1.0f : V); }
+
 	// 콤보 유지 시간(초) — 이 시간 내 추가 킬이 없으면 콤보 리셋
 	UPROPERTY(Edit, Save, Category="Musou", DisplayName="Combo Window")
 	float ComboWindow = 3.0f;

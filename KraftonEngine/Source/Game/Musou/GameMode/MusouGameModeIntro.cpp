@@ -5,6 +5,8 @@
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Runtime/Engine.h"
 #include "Game/Musou/Score/MusouScoreboard.h"
+#include "Game/Musou/MusouGameSettings.h"
+#include "Game/Musou/MusouMatchPersistence.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 
@@ -48,6 +50,11 @@ void AMusouGameModeIntro::StartMatch()
 {
 	AGameModeBase::StartMatch();
 
+	// 메인 메뉴에 도달 = 한 판이 끝난 상태. 다음 게임은 새로 시작되도록 매치 보존 상태를 비운다.
+	// (Intro→Play, Intro→Tutorial→Play 등 모든 fresh-start 경로를 한 번에 커버. Play→Play2
+	//  트리거만 Intro 를 안 거쳐 보존이 유지됨.)
+	FMusouMatchPersistence::Get().Clear();
+
 	if (!IntroWidget)
 	{
 		IntroWidget = UUIManager::Get().CreateWidget(GetPlayerController(), "Content/UI/Intro.rml");
@@ -80,6 +87,16 @@ void AMusouGameModeIntro::StartMatch()
 			IntroWidget->BindClick("audio-settings-close-button", [this]()
 			{
 				HideAudioSettings();
+			});
+			IntroWidget->BindClick("camera-direction-toggle", [this]()
+			{
+				FMusouGameSettings::Get().ToggleCameraDirection();
+				RefreshCameraDirectionUI();
+			});
+			IntroWidget->BindClick("camera-shake-toggle", [this]()
+			{
+				FMusouGameSettings::Get().ToggleCameraShake();
+				RefreshCameraDirectionUI();
 			});
 
 			IntroWidget->BindClick("scoreboard-prev-button", [this]()
@@ -274,6 +291,18 @@ void AMusouGameModeIntro::RefreshAudioSettingsUI()
 	const float Volume = std::clamp(FAudioManager::Get().GetBGMVolume(), 0.0f, 1.0f);
 	IntroWidget->SetText("bgm-volume-label", MakeBGMVolumeText(Volume));
 	IntroWidget->SetAttribute("bgm-volume-bar", "value", Volume);
+	RefreshCameraDirectionUI();
+}
+
+void AMusouGameModeIntro::RefreshCameraDirectionUI()
+{
+	if (!IntroWidget || !IntroWidget->IsDocumentLoaded())
+	{
+		return;
+	}
+	FMusouGameSettings& S = FMusouGameSettings::Get();
+	IntroWidget->SetText("camera-direction-label", S.IsCameraDirectionEnabled() ? "카메라 연출: ON" : "카메라 연출: OFF");
+	IntroWidget->SetText("camera-shake-label",     S.IsCameraShakeEnabled()     ? "카메라 셰이크: ON" : "카메라 셰이크: OFF");
 }
 
 void AMusouGameModeIntro::HandleAudioSettingsInput()

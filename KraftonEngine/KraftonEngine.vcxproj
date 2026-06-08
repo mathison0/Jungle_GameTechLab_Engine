@@ -1377,6 +1377,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\NvCloth\lib\release\NvCloth_x64.dll" "$(OutDir
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeTutorial.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameModeIntro.h" />
     <ClInclude Include="Source\Game\Musou\GameMode\MusouGameState.h" />
+    <ClInclude Include="Source\Game\Musou\MusouGameSettings.h" />
+    <ClInclude Include="Source\Game\Musou\MusouMatchPersistence.h" />
       <ClInclude Include="Source\Game\Musou\GameMode\MusouPlayerController.h" />
       <ClInclude Include="Source\Game\Musou\Score\MusouScoreboard.h" />
       <ClInclude Include="Source\Game\Musou\UI\MusouBossHealthHudController.h" />
