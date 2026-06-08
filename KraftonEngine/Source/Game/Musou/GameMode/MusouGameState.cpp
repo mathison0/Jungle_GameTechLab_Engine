@@ -45,10 +45,19 @@ void AMusouGameState::AddKills(int32 Count)
 
 	KillCount += Count;
 	Score += static_cast<int64>(Count) * static_cast<int64>(Combo);
+	// 무쌍 게이지는 킬이 아니라 적중 누적으로 적립 — AddMusouGaugeFromHits 참고.
+}
 
-	// 무쌍 게이지 적립 — kills_to_fill 킬이면 가득 (attack_data.lua feedback.ultimate).
-	const int32 KillsToFill = (std::max)(FAttackDataRegistry::Get().GetFeedback().UltimateKillsToFill, 1);
-	MusouGauge = (std::min)(MusouGauge + static_cast<float>(Count) / static_cast<float>(KillsToFill), 1.0f);
+void AMusouGameState::AddMusouGaugeFromHits(int32 HitCount)
+{
+	if (bMatchEnded || HitCount <= 0)
+	{
+		return;
+	}
+
+	// 적중 수만큼 게이지 적립 — hits_to_fill 히트면 가득 (attack_data.lua feedback.ultimate).
+	const int32 HitsToFill = (std::max)(FAttackDataRegistry::Get().GetFeedback().UltimateHitsToFill, 1);
+	MusouGauge = (std::min)(MusouGauge + static_cast<float>(HitCount) / static_cast<float>(HitsToFill), 1.0f);
 }
 
 bool AMusouGameState::TryConsumeMusouGauge()

@@ -69,6 +69,9 @@ public:
 
 	bool IsWeaponDrawn() const { return bWeaponDrawn; }
 
+	// 무쌍기 발동 중인지 — 게이지 적립 게이팅 등에 사용 (궁극기 자체 히트로 재충전 방지).
+	bool IsUltimateActive() const { return bUltimateActive; }
+
 	// 입력 없는 자동 전투용(크레딧 아웃트로 등) — 좌클릭 공격과 동일 진입점.
 	// 납도 상태면 첫 호출이 발도, 이후 호출이 콤보를 이어간다.
 	void TriggerAutoAttack() { OnAttackPressed(); }
@@ -76,6 +79,21 @@ public:
 	// 강제 납도 요청 — 무기가 뽑혀 있을 때만. 모션 중이면 토글이 스스로 무시하므로
 	// 매 틱 호출해도 안전(검집에 들어가면 IsWeaponDrawn()==false 가 되어 멈춘다).
 	void RequestSheathe() { if (bWeaponDrawn) { OnToggleWeaponPressed(); } }
+
+	// 궁극기 지면 강타 충격파 — 시작점에서 전방으로 Distance/Duration 동안 Pulses 개의
+	// 데미지 판정 + 검기(placeholder)를 순차 발사. AnimNotify_GroundSlamShockwave 가 호출.
+	void StartGroundSlamShockwave(const FVector& Origin, const FVector& Dir, float Distance,
+		float Duration, int32 Pulses, FName SpecId, float SlashSpeed, float SlashLife, float SlashYaw);
+
+	// 궁극기 백플립 도약 — 후방+상방 임펄스로 제자리 백플립을 실제로 빼준다. (leap notify 호출)
+	// GravityScale < 1 이면 체공을 연장 — 공중에서 다음 강타 몽타주가 돌게 한다.
+	void LaunchBackflip(float BackSpeed, float UpSpeed, float GravityScale);
+
+	// 궁극기 다음 슬롯 조기 전환 — 현재 슬롯 종료 전 cross-fade. (advance notify 호출)
+	void AdvanceUltimateNow();
+
+	// 무쌍기 락온 — 전방 최근접 적(보스 우선)의 위치를 찾는다. 발동 시 그쪽으로 facing 고정용.
+	bool FindNearestEnemyTarget(FVector& OutPos) const;
 
 	// 튜토리얼 심화 단계 감지용.
 	// 평면(XY) 속도 — 이동/대시 단계를 키가 아닌 실제 속도로 판정.
@@ -122,6 +140,13 @@ protected:
 	// 무쌍기 난무 — Tick 이 몽타주 종료를 감지해 다음 슬롯 자동 재생. 체인 소진 시 정리.
 	void UpdateUltimateChain();
 	void EndUltimate();
+
+	// 충격파 — Tick 이 펄스를 전방으로 순차 broadcast + 검기 스폰. 궁극기 몽타주와 독립.
+	void UpdateShockwave(float DeltaTime);
+	void EmitShockwavePulse(const FVector& WorldOrigin, const FVector& Dir);
+
+	// 궁극기 마무리 착지 임팩트 — 슬램 하강이 지면에 닿는 순간 1회 (히트스톱+셰이크+방사 검기+AOE).
+	void TriggerUltimateLandingImpact();
 	void EndRoll();
 
 	// 진입 컨텍스트 판정 — Falling → Airborne, XY 속도 ≥ 임계 → Moving, 그 외 Idle.
@@ -222,6 +247,31 @@ protected:
 	// 무쌍기 난무 상태 — 활성 동안 무적 + 슬롯 순차 자동 재생 (UltimateStep = 다음 인덱스).
 	bool  bUltimateActive = false;
 	int32 UltimateStep = 0;
+
+	// 궁극기 종료 시 슬램 하강 예약 — 지면에 닿는 순간 Tick 이 착지 임팩트를 1회 발동.
+	bool  bUltimateLandingPending = false;
+
+	// 충격파가 깔릴 지면 높이(Z) — 발동 시점에 캡처. 강타 때 캐릭터가 공중에 떠 있어도
+	// 검기/판정은 이 Z(지면 또는 타겟 높이)에서 진행해야 지상 적을 때린다.
+	float UltimateWaveZ = 0.0f;
+
+	// 전방 진행 충격파 상태 — Tick 이 펄스를 순차 발사. 궁극기 몽타주 종료와 무관하게 진행.
+	struct FShockwaveRun
+	{
+		bool    bActive   = false;
+		FVector StartPos  = FVector(0.0f, 0.0f, 0.0f);
+		FVector Dir       = FVector(1.0f, 0.0f, 0.0f);
+		float   Distance  = 12.0f;
+		float   Duration  = 0.7f;
+		float   Elapsed   = 0.0f;
+		int32   Pulses    = 8;
+		int32   NextPulse = 0;
+		FName   SpecId;
+		float   SlashSpeed = 9.0f;
+		float   SlashLife  = 0.45f;
+		float   SlashYaw   = 90.0f;
+	};
+	FShockwaveRun ShockwaveRun;
 
 	// 구르기 상태 — 활성 동안 무적. 몽타주 종료 시 해제 (Tick).
 	bool  bRolling = false;

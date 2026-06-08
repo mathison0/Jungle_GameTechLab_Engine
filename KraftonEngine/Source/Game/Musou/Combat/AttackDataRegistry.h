@@ -38,10 +38,52 @@ struct FMusouCameraShot
 	float FOVRad = 0.0f;        // 0 = 메인 카메라 FOV 유지. lua 'fov' 는 도(deg) 단위
 	bool  bLookAt = true;       // 매 프레임 캐릭터를 바라봄 (Rotation 무시)
 	float LookAtHeight = 0.5f;  // 시선 목표 — 액터 위치 기준 +Z (m)
+	float LookAhead = 0.0f;     // >0 = 캐릭터 대신 전방 LookAhead m 지점을 바라봄 (검기 사선 프레이밍)
 	bool  bFollow = true;       // false = 샷 시작 위치에 월드 고정
 	float Letterbox = 0.0f;     // 레터박스 두께 비율 (0 = 없음)
 
+	// offset/위치를 어느 yaw 기준으로 배치할지. true(기본) = 카메라 뷰(ControlRotation) 기준
+	//  → 캐릭터가 어딜 보든 화면 기준 일관 + 메인캠과 가까워 블렌드 튐 감소.
+	// false = 캐릭터 facing 기준 (도약/돌진 방향 추적샷 등). lua: anchor = "camera"/"character"
+	bool  bCameraRelative = true;
+
 	bool IsValid() const { return BeginFrac >= 0.0f && EndFrac > BeginFrac; }
+};
+
+// 전방 진행 충격파 — 궁극기 지면 강타용. 한 점에서 즉발 판정이 아니라 시작점에서
+// 전방으로 Distance 만큼 Duration 동안 Pulses 개의 판정/검기를 순차 발사 → "길게 순차 데미지".
+// 데미지 판정 기하는 AttackId 의 spec(range/cone/height/dmg)을 펄스마다 origin 만 전진시켜 사용.
+struct FMusouShockwave
+{
+	float   TriggerFrac = -1.0f;   // 몽타주 발동 시점 (지면 강타 프레임). <0 = 없음
+	float   Distance = 12.0f;      // 전방 진행 총 거리 (m)
+	float   Duration = 0.7f;       // 진행 시간 (초)
+	int32   Pulses = 8;            // 데미지/검기 펄스 수
+	FString AttackId;              // 펄스 판정 spec 키 (비면 슬램 spec 사용)
+	float   SlashSpeed = 9.0f;     // 검기(placeholder) 진행 속도
+	float   SlashLife = 0.45f;     // 검기 수명 (초)
+	float   SlashYaw = 90.0f;      // 검기 메시 시각 회전 보정 (진행 yaw + 이 값). 기존 검기 규칙=90
+
+	bool IsValid() const { return TriggerFrac >= 0.0f && Pulses > 0 && Distance > 0.0f; }
+};
+
+// 궁극기 백플립 도약 — 제자리 백플립을 후방+상방 임펄스로 실제로 빼준다.
+struct FMusouLeap
+{
+	float TriggerFrac = -1.0f;  // 도약 프레임 (PlayLength 비율). <0 = 없음
+	float Back = 6.0f;          // 후방 수평 속도 (m/s)
+	float Up = 4.0f;            // 상방 속도 (m/s)
+	float Gravity = 0.3f;       // 도약 후 중력 배율 (체공 연장). 궁극기 종료 시 1.0 복원
+
+	bool IsValid() const { return TriggerFrac >= 0.0f; }
+};
+
+// 궁극기 다음 슬롯 조기 전환 — 현재 슬롯 종료 전에 cross-fade (백플립→강타 블렌드).
+struct FMusouAdvance
+{
+	float TriggerFrac = -1.0f;  // 전환 프레임 (PlayLength 비율). <0 = 없음 (몽타주 끝에 폴백)
+
+	bool IsValid() const { return TriggerFrac >= 0.0f; }
 };
 
 // 공격 스텝 정의 — attack_data.lua 의 steps 항목 1개.
@@ -62,6 +104,10 @@ struct FMusouAttackStep
 	// (구르기 등) 을 에디터 재저장 없이 쓰기 위한 런타임 override. lua: force_root_motion
 	bool    bForceRootMotion = false;
 
+	// 궁극기 강타 제자리 고정 — 이 스텝이 무쌍기 중 재생되면 속도 0 + 중력 0 으로 공중에
+	// 못 박는다 (백핸드가 뒤로 밀리지 않게). lua: plant_in_air = true. EndUltimate 에서 중력 복원.
+	bool    bPlantInAir = false;
+
 	// ── notify 주입 파라미터 (시퀀스에 저작 notify 가 없을 때만 사용) ──
 	FString AttackId;               // specs 키. 비어 있으면 히트 notify 안 박음
 	float   HitFrac = -1.0f;        // MusouAttack 위치 (PlayLength 비율). <0 = 없음
@@ -70,6 +116,15 @@ struct FMusouAttackStep
 
 	// 몽타주 카메라 연출 — 비어 있으면 연출 없음 (대부분의 스텝). lua: camera = { {...}, ... }
 	TArray<FMusouCameraShot> CameraShots;
+
+	// 전방 진행 충격파 — 궁극기 지면 강타용. lua: shockwave = { trigger_frac=.., ... }
+	FMusouShockwave Shockwave;
+
+	// 궁극기 백플립 도약 — lua: leap = { trigger_frac=.., back=.., up=.. }
+	FMusouLeap Leap;
+
+	// 궁극기 다음 슬롯 조기 전환 — lua: advance = { trigger_frac=.. }
+	FMusouAdvance Advance;
 
 	bool IsValid() const { return !MontagePath.empty() || !SequencePath.empty(); }
 };
@@ -96,8 +151,8 @@ struct FMusouFeedbackParams
 	// 공중 콤보 행 타임 — 공중 체인 진행 중 플레이어 중력 배율 (1 = 변화 없음)
 	float AirComboGravityScale = 0.25f;
 
-	// 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
-	int32 UltimateKillsToFill = 40;
+	// 무쌍 게이지 — 이 히트 수(적중 누적)를 채우면 무쌍기(R) 발동 가능
+	int32 UltimateHitsToFill = 80;
 
 	// 플레이어 피격 리액션 최소 간격 (초) — 군체 다단 히트로 스턴락되지 않게
 	float HitReactCooldown = 1.2f;

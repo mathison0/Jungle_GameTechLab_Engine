@@ -57,6 +57,10 @@ public:
 	UPROPERTY(Edit, Save, Category = "CameraShot", DisplayName = "Look At Height", Min = -2.0f, Max = 3.0f, Speed = 0.05f)
 	float LookAtHeight = 0.5f;
 
+	// >0 = 캐릭터 대신 전방 이 거리(m) 지점을 바라봄 — 검기 사선/전방 진행을 화면에 담는다.
+	UPROPERTY(Edit, Save, Category = "CameraShot", DisplayName = "Look Ahead (m)", Min = 0.0f, Max = 20.0f, Speed = 0.1f)
+	float LookAhead = 0.0f;
+
 	// true = 캐릭터를 따라다니는 샷, false = 샷 시작 위치에 월드 고정 (캐릭터가 프레임 안에서 움직임).
 	UPROPERTY(Edit, Save, Category = "CameraShot", DisplayName = "Follow Character")
 	bool bFollow = true;
@@ -64,6 +68,11 @@ public:
 	// 레터박스 두께 비율 (0 = 없음). 화면 상하 시네마틱 바.
 	UPROPERTY(Edit, Save, Category = "CameraShot", DisplayName = "Letterbox", Min = 0.0f, Max = 0.5f, Speed = 0.01f)
 	float Letterbox = 0.0f;
+
+	// true(기본) = offset 을 카메라 뷰(ControlRotation) 기준으로 배치 → 캐릭터가 옆을 봐도
+	//  화면 기준 일관 + 블렌드 튐 감소. false = 캐릭터 facing 기준 (도약/돌진 추적샷).
+	UPROPERTY(Edit, Save, Category = "CameraShot", DisplayName = "Camera Relative")
+	bool bCameraRelative = true;
 
 	void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Anim, float TotalDuration) override;
 	void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Anim) override;

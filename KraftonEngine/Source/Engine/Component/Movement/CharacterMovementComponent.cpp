@@ -290,6 +290,13 @@ void UCharacterMovementComponent::LaunchUpward(float UpVelocity)
 	SetMovementMode(EMovementMode::Falling);
 }
 
+void UCharacterMovementComponent::LaunchAerial(const FVector& NewVelocity)
+{
+	// XY+Z 임펄스를 통째로 박고 Falling 으로 — 백플립 백스텝처럼 수평+수직 동시 도약.
+	Velocity = NewVelocity;
+	SetMovementMode(EMovementMode::Falling);
+}
+
 void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -519,8 +526,8 @@ void UCharacterMovementComponent::TickFalling(float DeltaTime, const FVector& Ro
 {
 	USceneComponent* Updated = GetUpdatedComponent();
 
-	// Gravity — Z 만. (양수 Gravity → -Z 가속)
-	Velocity.Z -= Gravity * DeltaTime;
+	// Gravity — Z 만. (양수 Gravity → -Z 가속). GravityScale 로 일시 부양 (궁극기 체공 등).
+	Velocity.Z -= Gravity * GravityScale * DeltaTime;
 
 	// Horizontal and vertical movement both keep pawn/CCT collision. Landing uses a separate floor query.
 	const FVector XYOffset(
