@@ -23,13 +23,19 @@
 			position: absolute;
 			left: 50%;
 			bottom: 64px;
-			margin-left: -380px;
-			width: 760px;
+			margin-left: -460px;
+			width: 920px;
 			height: 132px;
 			padding: 14px;
 			background-color: rgba(6, 4, 2, 0.78);
 			border-width: 2px;
 			border-color: #6b5a2e;
+		}
+
+		/* 단계 클리어 — 초록 플래시로 '성공'을 명확히 표시. */
+		#tutorial-bar.cleared {
+			background-color: rgba(18, 56, 14, 0.86);
+			border-color: #5fbf3a;
 		}
 
 		#tutorial-step {
@@ -40,6 +46,10 @@
 			text-align: center;
 			font-size: 22px;
 			color: #b89a3c;
+		}
+
+		#tutorial-bar.cleared #tutorial-step {
+			color: #bff5a4;
 		}
 
 		@keyframes tut-pulse {
@@ -54,9 +64,13 @@
 			line-height: 54px;
 			margin-top: 6px;
 			text-align: center;
-			font-size: 38px;
+			font-size: 31px;
 			color: #f0d36a;
 			animation: tut-pulse 1.1s ease-in-out infinite alternate;
+		}
+
+		#tutorial-bar.cleared #tutorial-text {
+			color: #8af06a;
 		}
 
 		#tutorial-hint {
@@ -74,7 +88,7 @@
 <body>
 	<div id="tutorial-root">
 		<div id="tutorial-bar">
-			<div id="tutorial-step">1 / 7</div>
+			<div id="tutorial-step">1 / 12</div>
 			<div id="tutorial-text">WASD 로 이동해 보세요</div>
 			<div id="tutorial-hint">ESC: 건너뛰기</div>
 		</div>

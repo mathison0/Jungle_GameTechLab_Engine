@@ -77,6 +77,14 @@ public:
 	// 매 틱 호출해도 안전(검집에 들어가면 IsWeaponDrawn()==false 가 되어 멈춘다).
 	void RequestSheathe() { if (bWeaponDrawn) { OnToggleWeaponPressed(); } }
 
+	// 튜토리얼 심화 단계 감지용.
+	// 평면(XY) 속도 — 이동/대시 단계를 키가 아닌 실제 속도로 판정.
+	float GetPlanarSpeed() const;
+	// 마지막으로 재생된 공격 스텝의 AttackId(예 "jump_attack"/"jump_heavy"/"dash_attack")와
+	// 누적 재생 카운터 — "그 기술 몽타주가 실제로 발동됐는지"를 카운터 증가 + id 일치로 감지.
+	const FString& GetLastPlayedAttackId() const { return LastPlayedAttackId; }
+	uint32 GetAttackPlayCounter() const { return AttackPlayCounter; }
+
 	// ── 몽타주 카메라 샷 — AnimNotifyState_CameraShot 이 구동 ──
 	// 상시 연출 카메라 2대(핑퐁)로 메인(SpringArm) 카메라와 블렌드 전환.
 	// Token = notify 객체 — 뒷 샷이 인수하면 앞 샷의 End 가 복귀를 걸지 않게 식별.
@@ -183,6 +191,10 @@ protected:
 
 	// 콤보 시작 시점에 고정되는 활성 체인 컨텍스트 — 진행 중 컨텍스트 변화에 영향받지 않음.
 	EAttackContext ActiveChainContext = EAttackContext::Idle;
+
+	// 마지막 재생 공격 스텝 식별 — 튜토리얼이 "그 기술이 실제로 발동됐는지" 감지.
+	FString LastPlayedAttackId;
+	uint32  AttackPlayCounter = 0;  // PlayAttackStep 마다 +1 (재생 발생 감지용)
 
 	// 이번 프레임 WASD 입력의 월드 방향 (카메라 yaw 기준). 축 바인딩이 매 프레임 재구축 —
 	// 공격 시작 회전 스냅(SnapFacingToInput)의 입력 소스. 입력 없으면 영벡터.
