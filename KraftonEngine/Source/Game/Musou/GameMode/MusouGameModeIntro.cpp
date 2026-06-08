@@ -20,6 +20,7 @@ namespace
 {
 	constexpr const char* IntroButtonIds[] = {
 		"start-button",
+		"tutorial-button",
 		"settings-button",
 		"score-button",
 		"controls-button",
@@ -27,7 +28,7 @@ namespace
 		"exit-button",
 	};
 
-	constexpr int32 IntroButtonCount = 6;
+	constexpr int32 IntroButtonCount = 7;
 	constexpr int32 IntroScoreboardPageSize = 10;
 	constexpr float BGMVolumeStep = 0.1f;
 
@@ -104,6 +105,14 @@ void AMusouGameModeIntro::StartMatch()
 			IntroWidget->BindClick("keyguide-close-button", [this]()
 			{
 				HideKeyGuide();
+			});
+
+			IntroWidget->BindClick("tutorial-button", []()
+			{
+				if (GEngine)
+				{
+					GEngine->RequestTransitionToScene("Tutorial");
+				}
 			});
 
 			IntroWidget->BindClick("credits-button", []()
