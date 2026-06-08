@@ -27,9 +27,15 @@ FUnitHandle FCrowdUnitStore::AllocateUnitSlot()
 	return FUnitHandle{ Index, Unit.Generation };
 }
 
-void FCrowdUnitStore::QueueSpawn(FUnitHandle Handle, EUnitTeam Team, const FUnitArchetype& Archetype, const FVector& Position)
+void FCrowdUnitStore::QueueSpawn(
+	FUnitHandle Handle,
+	EUnitTeam Team,
+	const FUnitArchetype& Archetype,
+	const FVector& Position,
+	bool bHasInitialMoveGoal,
+	const FVector& InitialMoveGoal)
 {
-	PendingSpawns.push_back({ Handle, Team, Archetype, Position });
+	PendingSpawns.push_back({ Handle, Team, Archetype, Position, bHasInitialMoveGoal, InitialMoveGoal });
 }
 
 void FCrowdUnitStore::ActivateUnit(
@@ -115,7 +121,13 @@ void FCrowdUnitStore::FlushPendingSpawns(const FActivateSpawnFunc& ActivateSpawn
 	{
 		if (ActivateSpawn)
 		{
-			ActivateSpawn(Spawn.Handle, Spawn.Team, Spawn.Archetype, Spawn.Position);
+			ActivateSpawn(
+				Spawn.Handle,
+				Spawn.Team,
+				Spawn.Archetype,
+				Spawn.Position,
+				Spawn.bHasInitialMoveGoal,
+				Spawn.InitialMoveGoal);
 		}
 	}
 }

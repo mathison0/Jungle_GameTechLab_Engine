@@ -116,6 +116,23 @@ void FCrowdAIManager::Update(
 		}
 
 		const float UnitDeltaTime = Unit.SimulationDeltaTime > 0.0f ? Unit.SimulationDeltaTime : DeltaTime;
+		if (Unit.TargetKind == ECrowdTargetKind::Location)
+		{
+			Unit.Target = {};
+			Unit.State = EUnitState::Move;
+			Unit.FriendlyBlockedTime = 0.0f;
+
+			const float ArriveTolerance = (std::max)(Settings.UnitMoveGoalArriveTolerance, 0.0f);
+			if (DistanceSquaredXY(Unit.Position, Unit.MoveGoal) <= ArriveTolerance * ArriveTolerance)
+			{
+				Unit.TargetKind = ECrowdTargetKind::None;
+				Unit.MoveGoal = FVector::ZeroVector;
+				Unit.State = EUnitState::Idle;
+				Unit.Velocity = FVector::ZeroVector;
+				continue;
+			}
+		}
+
 		const float FriendlyBlockedRetargetTime = (std::max)(Settings.FriendlyBlockedRetargetTime, 0.0f);
 		const bool bRetargetDueToFriendlyBlock = FriendlyBlockedRetargetTime > 0.0f
 			&& Unit.TargetKind == ECrowdTargetKind::Unit
@@ -154,6 +171,7 @@ void FCrowdAIManager::Update(
 
 		if (!Target)
 		{
+			const bool bHadLocationTarget = Unit.TargetKind == ECrowdTargetKind::Location;
 			Unit.Target = FindNearestHostile(
 				UnitStore,
 				SpatialPartition,
@@ -162,7 +180,15 @@ void FCrowdAIManager::Update(
 				Index,
 				Unit.Archetype.DetectRange);
 			Target = UnitStore.ResolveUnit(Unit.Target);
-			Unit.TargetKind = Target ? ECrowdTargetKind::Unit : ECrowdTargetKind::None;
+			if (Target)
+			{
+				Unit.TargetKind = ECrowdTargetKind::Unit;
+			}
+			else if (!bHadLocationTarget)
+			{
+				Unit.TargetKind = ECrowdTargetKind::None;
+			}
+
 			if (Target && Settings.bEnableUnitTargetDistribution)
 			{
 				AddUnitTargetClaim(UnitTargetClaimCounts, Unit.Target);
@@ -171,6 +197,14 @@ void FCrowdAIManager::Update(
 
 		if (!Target)
 		{
+			if (Unit.TargetKind == ECrowdTargetKind::Location)
+			{
+				Unit.Target = {};
+				Unit.State = EUnitState::Move;
+				Unit.FriendlyBlockedTime = 0.0f;
+				continue;
+			}
+
 			if (UpdateAllyFollowPlayerState(Unit, Settings, CurrentAllyFollowSlotIndex))
 			{
 				continue;

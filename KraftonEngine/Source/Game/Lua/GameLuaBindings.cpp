@@ -128,6 +128,15 @@ void RegisterGameLuaBindings(sol::state& Lua)
 			{
 				return Manager.SpawnUnit(Team, CombatType, Position);
 			}),
+		"SpawnUnitMoveTo", sol::overload(
+			[](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, const FVector& Position, const FVector& MoveGoal)
+			{
+				return Manager.SpawnUnitMoveTo(Team, Position, MoveGoal);
+			},
+			[](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, EUnitCombatType CombatType, const FVector& Position, const FVector& MoveGoal)
+			{
+				return Manager.SpawnUnitMoveTo(Team, CombatType, Position, MoveGoal);
+			}),
 		"SpawnUnits", sol::overload(
 			[](ULargeScaleUnitManagerComponent& Manager, EUnitTeam Team, const FVector& Center, int32 Count, float Radius)
 			{
@@ -155,6 +164,11 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		{
 			return static_cast<int32>(Manager.GetRenderData().size());
 		});
+	FLuaDocRegistry::Get().Type("LargeScaleUnitManagerComponent")
+		.Method("---@param team EUnitTeam\n---@param position Vector\n---@return UnitHandle\nfunction LargeScaleUnitManagerComponent:SpawnUnit(team, position) end")
+		.Method("---@param team EUnitTeam\n---@param combatType EUnitCombatType\n---@param position Vector\n---@return UnitHandle\nfunction LargeScaleUnitManagerComponent:SpawnUnit(team, combatType, position) end")
+		.Method("---@param team EUnitTeam\n---@param position Vector\n---@param moveGoal Vector\n---@return UnitHandle\nfunction LargeScaleUnitManagerComponent:SpawnUnitMoveTo(team, position, moveGoal) end")
+		.Method("---@param team EUnitTeam\n---@param combatType EUnitCombatType\n---@param position Vector\n---@param moveGoal Vector\n---@return UnitHandle\nfunction LargeScaleUnitManagerComponent:SpawnUnitMoveTo(team, combatType, position, moveGoal) end");
 
 	sol::table Crowd = Lua.create_named_table("Crowd");
 	Crowd.set_function("GetOrCreateManager", [](sol::optional<AActor*> OwnerActor) -> ULargeScaleUnitManagerComponent*
@@ -186,6 +200,9 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		AActor* Owner = OwnerActor.value_or(nullptr);
 		return Owner ? Owner->AddComponent<ULargeScaleUnitManagerComponent>() : nullptr;
 	});
+	FLuaDocRegistry::Get().Type("CrowdLib")
+		.Method("---@param ownerActor? Actor\n---@return LargeScaleUnitManagerComponent?\nfunction Crowd.GetOrCreateManager(ownerActor) end");
+	FLuaDocRegistry::Get().Global("Crowd", "CrowdLib");
 }
 
 // 자기-등록 — Editor / Game 측이 RegisterGameLuaBindings 함수명을 모르고도

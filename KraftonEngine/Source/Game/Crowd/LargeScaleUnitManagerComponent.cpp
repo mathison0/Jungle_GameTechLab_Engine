@@ -486,6 +486,32 @@ FUnitHandle ULargeScaleUnitManagerComponent::SpawnUnit(EUnitTeam Team, EUnitComb
 	return Handle;
 }
 
+FUnitHandle ULargeScaleUnitManagerComponent::SpawnUnitMoveTo(EUnitTeam Team, const FVector& Position, const FVector& MoveGoal)
+{
+	return SpawnUnitMoveTo(Team, EUnitCombatType::Melee, Position, MoveGoal);
+}
+
+FUnitHandle ULargeScaleUnitManagerComponent::SpawnUnitMoveTo(
+	EUnitTeam Team,
+	EUnitCombatType CombatType,
+	const FVector& Position,
+	const FVector& MoveGoal)
+{
+	const FUnitHandle Handle = UnitStore.AllocateUnitSlot();
+	const FUnitArchetype Archetype = BuildUnitArchetype(CombatType);
+
+	if (bIsUpdating)
+	{
+		UnitStore.QueueSpawn(Handle, Team, Archetype, Position, true, MoveGoal);
+	}
+	else
+	{
+		ActivateUnit(Handle, Team, Archetype, Position, true, MoveGoal);
+	}
+
+	return Handle;
+}
+
 void ULargeScaleUnitManagerComponent::SpawnUnits(EUnitTeam Team, const FVector& Center, int32 Count, float Radius)
 {
 	SpawnUnits(Team, EUnitCombatType::Melee, Center, Count, Radius);
@@ -643,6 +669,7 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	AISettings.UnitTargetSoftCapacity = UnitTargetSoftCapacity;
 	AISettings.UnitTargetContestPenaltyDistance = UnitTargetContestPenaltyDistance;
 	AISettings.FriendlyBlockedRetargetTime = FriendlyBlockedRetargetTime;
+	AISettings.UnitMoveGoalArriveTolerance = UnitMoveGoalArriveTolerance;
 	AIManager.Update(DeltaTime, UnitStore, SpatialPartition, AISettings, [this]()
 	{
 		return RandomThinkInterval();
@@ -677,7 +704,9 @@ void ULargeScaleUnitManagerComponent::ActivateUnit(
 	FUnitHandle Handle,
 	EUnitTeam Team,
 	const FUnitArchetype& Archetype,
-	const FVector& Position)
+	const FVector& Position,
+	bool bHasInitialMoveGoal,
+	const FVector& InitialMoveGoal)
 {
 	UnitStore.ActivateUnit(
 		Handle,
@@ -696,6 +725,16 @@ void ULargeScaleUnitManagerComponent::ActivateUnit(
 			Unit->GettingUpAnimDuration = ResolveAnimationPlayLength(MeleeAnimations.GettingUpSequencePath);
 		}
 
+		if (bHasInitialMoveGoal)
+		{
+			Unit->TargetKind = ECrowdTargetKind::Location;
+			Unit->Target = {};
+			Unit->MoveGoal = InitialMoveGoal;
+			Unit->LookAtLocation = FVector::ZeroVector;
+			Unit->State = EUnitState::Move;
+			Unit->FriendlyBlockedTime = 0.0f;
+		}
+
 		if (bSurfaceFollowingEnabled)
 		{
 			EnsureGroundQueryBuilt();
@@ -706,9 +745,15 @@ void ULargeScaleUnitManagerComponent::ActivateUnit(
 
 void ULargeScaleUnitManagerComponent::FlushPendingSpawns()
 {
-	UnitStore.FlushPendingSpawns([this](FUnitHandle Handle, EUnitTeam Team, const FUnitArchetype& Archetype, const FVector& Position)
+	UnitStore.FlushPendingSpawns([this](
+		FUnitHandle Handle,
+		EUnitTeam Team,
+		const FUnitArchetype& Archetype,
+		const FVector& Position,
+		bool bHasInitialMoveGoal,
+		const FVector& InitialMoveGoal)
 	{
-		ActivateUnit(Handle, Team, Archetype, Position);
+		ActivateUnit(Handle, Team, Archetype, Position, bHasInitialMoveGoal, InitialMoveGoal);
 	});
 }
 
