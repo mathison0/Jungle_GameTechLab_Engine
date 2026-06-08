@@ -34,6 +34,15 @@ namespace
 	constexpr const char* StoryDialogBlackOverlayColor = "#000000ff";
 	constexpr const char* StoryDialogTransparentOverlayColor = "#00000000";
 	constexpr int32 StoryDialogCutsceneCount = 3;
+	constexpr const char* CombatHudElementIds[] = {
+		"status-panel",
+		"score-counter",
+		"right-hud",
+		"kill-counter",
+		"kill-milestone",
+		"blood-vignette",
+		"boss-health-panel",
+	};
 
 	const char* StoryDialogCutsceneElementIds[StoryDialogCutsceneCount] = {
 		"story-dialog-intro-cutscene-1",
@@ -336,12 +345,18 @@ void FMusouHudPresenter::Tick(float DeltaTime, const AMusouGameState* MusouState
 
 void FMusouHudPresenter::SetHudVisible(bool bVisible)
 {
+	bCombatHudVisible = bVisible;
+
 	if (!Widget || !Widget->IsDocumentLoaded())
 	{
 		return;
 	}
 
-	Widget->SetProperty("hud-root", "visibility", bVisible ? "visible" : "hidden");
+	Widget->SetProperty("hud-root", "visibility", "visible");
+	for (const char* ElementId : CombatHudElementIds)
+	{
+		Widget->SetProperty(ElementId, "visibility", bVisible ? "visible" : "hidden");
+	}
 }
 
 bool FMusouHudPresenter::StartIntroDialog()
@@ -357,6 +372,37 @@ bool FMusouHudPresenter::StartOutroDialog()
 bool FMusouHudPresenter::StartFinalBossDialog()
 {
 	return StartStoryDialog(EStoryDialogKind::FinalBoss);
+}
+
+bool FMusouHudPresenter::StartBossSequenceDialog(const FString& Text)
+{
+	if (Text.empty()
+		|| bStoryDialogFadeOutActive
+		|| (StoryDialogKind != EStoryDialogKind::None && StoryDialogKind != EStoryDialogKind::BossSequence))
+	{
+		return false;
+	}
+
+	BossSequenceDialogPages.clear();
+	BossSequenceDialogPages.push_back(Text);
+	if (!StartStoryDialog(EStoryDialogKind::BossSequence))
+	{
+		BossSequenceDialogPages.clear();
+		return false;
+	}
+
+	return true;
+}
+
+void FMusouHudPresenter::FinishBossSequenceDialog()
+{
+	if (StoryDialogKind == EStoryDialogKind::BossSequence)
+	{
+		FinishStoryDialog();
+		return;
+	}
+
+	BossSequenceDialogPages.clear();
 }
 
 bool FMusouHudPresenter::AdvanceStoryDialog()
@@ -705,7 +751,12 @@ void FMusouHudPresenter::UpdateBloodVignette(float DeltaTime)
 	const float BloodFadeAlpha = BloodTimeAlpha * BloodTimeAlpha;
 	const float BloodAlpha = BloodVignetteBaseOpacity * BloodVignetteIntensity * BloodFadeAlpha;
 
-	if (BloodAlpha > 0.01f)
+	if (!bCombatHudVisible)
+	{
+		Widget->SetProperty("blood-vignette", "opacity", "0");
+		Widget->SetProperty("blood-vignette", "visibility", "hidden");
+	}
+	else if (BloodAlpha > 0.01f)
 	{
 		Widget->SetProperty("blood-vignette", "opacity", MakeOpacityValue(BloodAlpha));
 		Widget->SetProperty("blood-vignette", "visibility", "visible");
@@ -885,7 +936,8 @@ void FMusouHudPresenter::UpdateStoryDialog(float DeltaTime)
 	}
 
 	const bool bPageComplete = StoryDialogTextProgress >= static_cast<float>(CurrentGlyphCount);
-	if (bPageComplete)
+	const bool bShowNextIndicator = bPageComplete && StoryDialogKind != EStoryDialogKind::BossSequence;
+	if (bShowNextIndicator)
 	{
 		const float Pulse = 0.5f + 0.5f * static_cast<float>(std::sin(StoryDialogElapsed * StoryDialogIndicatorPulseSpeed));
 		Widget->SetProperty("story-dialog-next-indicator", "visibility", "visible");
@@ -921,6 +973,10 @@ void FMusouHudPresenter::FinishStoryDialog()
 	StoryDialogPageIndex = 0;
 	StoryDialogTextProgress = 0.0f;
 	StoryDialogElapsed = 0.0f;
+	if (FinishedKind == EStoryDialogKind::BossSequence)
+	{
+		BossSequenceDialogPages.clear();
+	}
 
 	if (!Widget || !Widget->IsDocumentLoaded())
 	{
@@ -990,6 +1046,8 @@ const TArray<FString>& FMusouHudPresenter::GetActiveStoryDialogPages() const
 		return GetOutroDialogPages();
 	case EStoryDialogKind::FinalBoss:
 		return GetFinalBossDialogPages();
+	case EStoryDialogKind::BossSequence:
+		return BossSequenceDialogPages;
 	default:
 		break;
 	}

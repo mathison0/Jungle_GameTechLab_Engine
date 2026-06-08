@@ -31,6 +31,32 @@ namespace
 	{
 		return std::atan2(Direction.Y, Direction.X) * (180.0f / 3.14159265f);
 	}
+
+	AMusouGameMode* ResolveMusouGameMode(UWorld* World)
+	{
+		return World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
+	}
+
+	void ShowBossSequenceDialogue(UWorld* World, const FString& Text)
+	{
+		if (Text.empty())
+		{
+			return;
+		}
+
+		if (AMusouGameMode* GameMode = ResolveMusouGameMode(World))
+		{
+			GameMode->ShowBossSequenceDialogue(Text);
+		}
+	}
+
+	void HideBossSequenceDialogue(UWorld* World)
+	{
+		if (AMusouGameMode* GameMode = ResolveMusouGameMode(World))
+		{
+			GameMode->HideBossSequenceDialogue();
+		}
+	}
 }
 
 void AMusouBossEncounterManager::InitDefaultComponents()
@@ -102,7 +128,7 @@ void AMusouBossEncounterManager::StartIntro()
 	}
 
 	IntroState = EBossEncounterIntroState::Playing;
-	if (AMusouGameMode* GameMode = GetWorld() ? Cast<AMusouGameMode>(GetWorld()->GetGameMode()) : nullptr)
+	if (AMusouGameMode* GameMode = ResolveMusouGameMode(GetWorld()))
 	{
 		GameMode->SetHudVisible(false);
 	}
@@ -145,8 +171,9 @@ void AMusouBossEncounterManager::FinishIntro()
 	ActiveSequenceKind = EBossSequenceKind::None;
 	ActiveSteps.clear();
 	IntroState = EBossEncounterIntroState::Complete;
-	if (AMusouGameMode* GameMode = GetWorld() ? Cast<AMusouGameMode>(GetWorld()->GetGameMode()) : nullptr)
+	if (AMusouGameMode* GameMode = ResolveMusouGameMode(GetWorld()))
 	{
+		GameMode->HideBossSequenceDialogue();
 		GameMode->SetHudVisible(true);
 	}
 	if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
@@ -379,6 +406,14 @@ void AMusouBossEncounterManager::StartSequence(EBossSequenceKind Kind, const TAr
 	StepExecuted.assign(ActiveSteps.size(), 0);
 	SequenceTime = 0.0f;
 	bIntroCameraActive = false;
+	HideBossSequenceDialogue(GetWorld());
+	if (Kind == EBossSequenceKind::Phase)
+	{
+		if (AMusouGameMode* GameMode = ResolveMusouGameMode(GetWorld()))
+		{
+			GameMode->SetHudVisible(false);
+		}
+	}
 	if (Kind == EBossSequenceKind::Intro)
 	{
 		bPlayerWasLocked = false;
@@ -442,6 +477,11 @@ void AMusouBossEncounterManager::FinishSequence()
 		bIntroCameraActive = false;
 		ActiveSequenceKind = EBossSequenceKind::None;
 		ActiveSteps.clear();
+		HideBossSequenceDialogue(GetWorld());
+		if (AMusouGameMode* GameMode = ResolveMusouGameMode(GetWorld()))
+		{
+			GameMode->SetHudVisible(true);
+		}
 		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
 		{
 			CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
@@ -455,6 +495,7 @@ void AMusouBossEncounterManager::FinishSequence()
 		bIntroCameraActive = false;
 		ActiveSequenceKind = EBossSequenceKind::None;
 		ActiveSteps.clear();
+		HideBossSequenceDialogue(GetWorld());
 		if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
 		{
 			CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
@@ -465,6 +506,7 @@ void AMusouBossEncounterManager::FinishSequence()
 
 	ActiveSequenceKind = EBossSequenceKind::None;
 	ActiveSteps.clear();
+	HideBossSequenceDialogue(GetWorld());
 	if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->GetPlayerCameraManager() : nullptr)
 	{
 		CameraManager->ReleaseCameraRequestPriority(ECameraRequestPriority::BossSequence);
@@ -510,6 +552,7 @@ void AMusouBossEncounterManager::ExecuteSequenceStep(const FBossSequenceStep& St
 	switch (Step.Type)
 	{
 	case EBossSequenceStepType::Dialogue:
+		ShowBossSequenceDialogue(GetWorld(), Step.Text);
 		UE_LOG("[BossSequence] Boss: %s", Step.Text.c_str());
 		break;
 	case EBossSequenceStepType::PlayMontage:

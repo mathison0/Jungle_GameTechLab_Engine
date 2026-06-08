@@ -16,6 +16,7 @@ class FMusouHudPresenter
 		Intro,
 		Outro,
 		FinalBoss,
+		BossSequence,
 	};
 
 public:
@@ -30,6 +31,8 @@ public:
 	bool StartIntroDialog();
 	bool StartOutroDialog();
 	bool StartFinalBossDialog();
+	bool StartBossSequenceDialog(const FString& Text);
+	void FinishBossSequenceDialog();
 	bool AdvanceStoryDialog();
 	void StartDeathOverlay();
 
@@ -46,6 +49,7 @@ public:
 	bool IsIntroDialogVisible() const { return StoryDialogKind == EStoryDialogKind::Intro; }
 	bool IsOutroDialogVisible() const { return StoryDialogKind == EStoryDialogKind::Outro; }
 	bool IsFinalBossDialogVisible() const { return StoryDialogKind == EStoryDialogKind::FinalBoss; }
+	bool IsBossSequenceDialogVisible() const { return StoryDialogKind == EStoryDialogKind::BossSequence; }
 	bool IsStoryDialogActive() const { return StoryDialogKind != EStoryDialogKind::None || bStoryDialogFadeOutActive; }
 
 	// 사망/승리 결과 오버레이가 떠 있는 동안은 pause 메뉴와 게임 입력을 열지 않는다.
@@ -71,8 +75,10 @@ private:
 
 	UUserWidget* Widget = nullptr;
 	FMusouScoreboardOverlayPresenter ScoreboardOverlay;
+	TArray<FString> BossSequenceDialogPages;
 
 	bool bKillHudInitialized = false;
+	bool bCombatHudVisible = true;
 	EStoryDialogKind StoryDialogKind = EStoryDialogKind::None;
 	bool bStoryDialogFadeOutActive = false;
 	bool bDeathOverlayVisible = false;

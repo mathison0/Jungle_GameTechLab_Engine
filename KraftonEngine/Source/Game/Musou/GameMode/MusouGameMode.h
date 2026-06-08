@@ -96,8 +96,10 @@ public:
 	bool TryStartFinalBossEncounterDialog();
 	bool IsFinalBossEncounterDialogActive() const;
 
-	// 보스 카메라 연출 등에서 HUD 전체 표시 여부를 제어한다.
+	// 보스 카메라 연출 등에서 전투 HUD 표시 여부를 제어한다.
 	void SetHudVisible(bool bVisible);
+	void ShowBossSequenceDialogue(const FString& Text);
+	void HideBossSequenceDialogue();
 
 	// 플레이어에게 실제 데미지가 적용된 순간 호출 — HUD 피격 연출 진입점.
 	virtual void NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator);

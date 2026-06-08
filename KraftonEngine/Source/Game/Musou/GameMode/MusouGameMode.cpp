@@ -736,6 +736,21 @@ void AMusouGameMode::SetHudVisible(bool bVisible)
 	HudPresenter.SetHudVisible(bVisible);
 }
 
+void AMusouGameMode::ShowBossSequenceDialogue(const FString& Text)
+{
+	if (HudPresenter.IsResultOverlayVisible())
+	{
+		return;
+	}
+
+	(void)HudPresenter.StartBossSequenceDialog(Text);
+}
+
+void AMusouGameMode::HideBossSequenceDialogue()
+{
+	HudPresenter.FinishBossSequenceDialog();
+}
+
 void AMusouGameMode::NotifyPlayerDamaged(APawn* Player, float Damage, float PlayerCurrentHealth, float PlayerMaxHealth, AActor* DamageInstigator)
 {
 	(void)DamageInstigator;
