@@ -4,6 +4,24 @@
 #include <algorithm>
 #include <chrono>
 
+namespace
+{
+	bool StartsWithContentRoot(const FString& Path)
+	{
+		return Path.rfind("Content/", 0) == 0 || Path.rfind("Content\\", 0) == 0;
+	}
+
+	FString ResolveAudioFullPath(const FString& Path)
+	{
+		if (StartsWithContentRoot(Path))
+		{
+			return FPaths::ToUtf8(FPaths::Combine(FPaths::RootDir(), FPaths::ToWide(Path)));
+		}
+
+		return FPaths::ToUtf8(FPaths::Combine(FPaths::AudioDir(), FPaths::ToWide(Path)));
+	}
+}
+
 bool FAudioManager::Initialize()
 {
 	if (FMOD::System_Create(&System) != FMOD_OK || !System)
@@ -95,7 +113,7 @@ bool FAudioManager::LoadAudio(const FString& Key, const FString& Path, bool bLoo
 		return false;
 	}
 
-	FString FullPath = FPaths::ToUtf8(FPaths::Combine(FPaths::AudioDir(), FPaths::ToWide(Path)));
+	FString FullPath = ResolveAudioFullPath(Path);
 
 	if (Audios.contains(Key) && Audios[Key] && AudioPaths.contains(Key) && AudioPaths[Key] == FullPath)
 	{
