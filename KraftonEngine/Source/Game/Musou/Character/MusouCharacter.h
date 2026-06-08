@@ -103,8 +103,10 @@ protected:
 	// 진입 컨텍스트 판정 — Falling → Airborne, XY 속도 ≥ 임계 → Moving, 그 외 Idle.
 	EAttackContext ResolveAttackContext() const;
 
-	// 공격 스텝 시작 시 이번 프레임 WASD 입력 방향으로 캡슐 yaw 즉시 회전 (입력 없으면 유지).
-	void SnapFacingToInput();
+	// 공격 스텝 시작 시 이번 프레임 WASD 입력 방향으로 캡슐 yaw 즉시 회전.
+	// bDefaultToCameraForward=true 면 입력이 없을 때 카메라 정면(ControlRotation.Yaw)으로
+	// 재조준 (공격용). false 면 입력 없을 때 현재 facing 유지 (구르기/발도납도용).
+	void SnapFacingToInput(bool bDefaultToCameraForward = false);
 
 	// 몽타주에 의한 이동/점프 잠금 — 말미 MontageMoveUnlockTail 구간과 blend-out 중엔 해제
 	// (UE 의 BlendOutTriggerTime 개념 이식: 후딜 꼬리에서 컨트롤 자연 복귀).
@@ -119,7 +121,9 @@ protected:
 	void UpdateAirComboHang();
 
 	// 공격 스텝 재생 — 에디터 몽타주 우선, 없으면 시퀀스에서 런타임 생성 (기본 notify 주입).
-	bool          PlayAttackStep(const FMusouAttackStep& Step);
+	// bFaceCameraIfNoInput: 입력 없을 때 카메라 정면 재조준(공격). SlotName: 재생 슬롯
+	// (None=DefaultSlot 풀바디, "UpperBody"=상반신만 — 발도/납도 하체 블렌드).
+	bool          PlayAttackStep(const FMusouAttackStep& Step, bool bFaceCameraIfNoInput = false, FName SlotName = FName::None);
 	UAnimMontage* ResolveStepMontage(const FMusouAttackStep& Step);
 	void          InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step);
 
@@ -135,7 +139,7 @@ protected:
 
 	// 슬롯에서 변주 1개 선택 — 랜덤 + 직전 변주 반복 회피. 빈 슬롯이면 nullptr.
 	const FMusouAttackStep* PickVariant(const FMusouAttackSlot& Slot);
-	bool PlayAttackSlot(const FMusouAttackSlot& Slot);   // PickVariant → PlayAttackStep
+	bool PlayAttackSlot(const FMusouAttackSlot& Slot, bool bFaceCameraIfNoInput = false, FName SlotName = FName::None);   // PickVariant → PlayAttackStep
 
 	void PlayComboStep(int32 Step);
 	void PlayBranchFinisher(int32 BranchStep);  // 콤보 N단 분기 피니셔 (무쌍 차지어택식)

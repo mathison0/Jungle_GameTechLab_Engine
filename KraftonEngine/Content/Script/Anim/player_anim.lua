@@ -31,6 +31,8 @@ local UNARMED_RUN_PATH  = BARBARIAN_DIR .. "Running_mixamo_com.uasset"
 local UNARMED_JUMP_PATH = BARBARIAN_DIR .. "sword and shield jump_mixamo_com.uasset"
 
 local DEFAULT_SLOT = "DefaultSlot"
+local UPPER_BODY_SLOT = "UpperBody"
+local UPPER_BODY_ROOT_BONE = "spine_01"   -- Barbarian (UE 마네킹) 상반신 루트 — spine_01 이하 트리만 마스킹
 
 -- ── 튜닝 상수 ──
 local WALK_THRESHOLD = 0.5    -- 이 속도 초과 = Walk
@@ -102,11 +104,18 @@ function init(self)
     -- 시작은 납도 (C++ 기본값과 일치 — bWeaponDrawn = false)
     Anim.sm_set_initial_state(top, "Unarmed")
 
-    -- ── DefaultSlot — 풀바디 montage 진입점 (C++에서 재생하는 공격 몽타주가 여기로) ──
-    -- 상반신 분리가 필요해지면 yui_character.lua 의 LayeredBlendPerBone 패턴 참고.
+    -- ── DefaultSlot — 풀바디 montage 진입점 (공격/구르기 몽타주가 여기로) ──
     local default_slot = Anim.create_slot(DEFAULT_SLOT, top)
 
-    Anim.set_root_node(default_slot)
+    -- ── UpperBodySlot — 상반신만 재생하는 montage 진입점 (발도/납도). ──
+    -- montage 없을 땐 Slot.GetEffectiveBlendWeight 가 0 이라 base(default_slot)만 보인다.
+    local upper_slot = Anim.create_slot(UPPER_BODY_SLOT, Anim.create_ref_pose())
+
+    -- ── LayeredBlend — spine_01 본 트리만 upper_slot 적용. 하반신은 default_slot(loco/jump). ──
+    -- 발도/납도를 이 슬롯으로 돌리면 상반신은 칼을 뽑/넣는 동안 하반신은 계속 이동한다.
+    local layer = Anim.create_layered_blend_per_bone(default_slot, upper_slot, UPPER_BODY_ROOT_BONE)
+
+    Anim.set_root_node(layer)
 end
 
 function update(self, dt)

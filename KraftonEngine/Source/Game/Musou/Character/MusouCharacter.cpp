@@ -398,7 +398,7 @@ void AMusouCharacter::OnHeavyAttackPressed()
 
 	if (const FMusouAttackSlot* Slot = Data.GetHeavySlot(ResolveAttackContext()))
 	{
-		PlayAttackSlot(*Slot);
+		PlayAttackSlot(*Slot, /*bFaceCameraIfNoInput=*/true);
 	}
 }
 
@@ -580,8 +580,11 @@ void AMusouCharacter::OnToggleWeaponPressed()
 
 	bPendingWeaponDrawn = !bWeaponDrawn;
 
+	// 발도/납도는 UpperBody 슬롯으로 — 상반신이 칼을 뽑/넣는 동안 하반신은 로코모션 유지.
+	// (이동 잠금은 DefaultSlot 기준이라 자동으로 안 걸리고, IsAnyMontagePlaying 이 UpperBody
+	//  도 보므로 모션 중 재토글/공격만 막힌다.)
 	const FMusouAttackSlot* Slot = bWeaponDrawn ? Data.GetWeaponSheatheSlot() : Data.GetWeaponDrawSlot();
-	if (!Slot || !PlayAttackSlot(*Slot))
+	if (!Slot || !PlayAttackSlot(*Slot, /*bFaceCameraIfNoInput=*/false, FName("UpperBody")))
 	{
 		// 모션 미정의/재생 실패 — 즉시 스왑 폴백.
 		bWeaponDrawn = bPendingWeaponDrawn;
@@ -591,8 +594,9 @@ void AMusouCharacter::OnToggleWeaponPressed()
 	}
 
 	// 본 스왑은 모션 중간 (손이 등에 닿는 타이밍) — 남은 재생 시간 × swap_frac 뒤에 적용.
+	// 발도납도는 UpperBody 슬롯이므로 그 슬롯의 instance 에서 남은 시간을 읽는다.
 	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
-	UAnimMontageInstance* MontageInstance = AnimInstance ? AnimInstance->GetMontageInstance() : nullptr;
+	UAnimMontageInstance* MontageInstance = AnimInstance ? AnimInstance->GetMontageInstanceForSlot(FName("UpperBody")) : nullptr;
 	const float Remaining = MontageInstance ? MontageInstance->GetSectionRemainingTime() : 0.0f;
 	WeaponSwapDelay = Remaining * Data.GetFeedback().WeaponSwapFrac;
 }
@@ -857,24 +861,34 @@ void AMusouCharacter::TryMovementCancelMontage()
 	AnimInstance->StopMontage();
 }
 
-void AMusouCharacter::SnapFacingToInput()
+void AMusouCharacter::SnapFacingToInput(bool bDefaultToCameraForward)
 {
 	if (!CapsuleComponent)
 	{
 		return;
 	}
 
-	// 입력 없으면 현재 facing 유지. (RM 전진이 새 facing 방향으로 나가고, 이후
-	// PhysOrientToMovement 도 같은 방향 속도를 따라가므로 스냅과 충돌하지 않는다.)
 	const FVector& Input = MoveInputThisFrame;
 	const float LenSq2D = Input.X * Input.X + Input.Y * Input.Y;
-	if (LenSq2D < 1e-4f)
+
+	float TargetYaw;
+	if (LenSq2D >= 1e-4f)
 	{
+		// PhysOrientToMovement 와 동일한 yaw 좌표계 — atan2(Y, X), +X 가 0°.
+		// WASD 입력은 ControlRotation.Yaw(카메라) 기준이라 이미 카메라 상대 방향.
+		TargetYaw = std::atan2(Input.Y, Input.X) * (180.0f / 3.14159265f);
+	}
+	else if (bDefaultToCameraForward)
+	{
+		// 공격 시 입력 없으면 카메라 정면으로 재조준 — "공격하면 카메라 쪽을 본다".
+		TargetYaw = GetControlRotation().Yaw;
+	}
+	else
+	{
+		// 그 외(구르기/발도납도)는 입력 없으면 현재 facing 유지. (RM 전진이 새 facing
+		// 방향으로 나가고, PhysOrientToMovement 도 같은 방향 속도를 따라간다.)
 		return;
 	}
-
-	// PhysOrientToMovement 와 동일한 yaw 좌표계 — atan2(Y, X), +X 가 0°.
-	const float TargetYaw = std::atan2(Input.Y, Input.X) * (180.0f / 3.14159265f);
 
 	FRotator R = CapsuleComponent->GetRelativeRotation();
 	R.Yaw = TargetYaw;
@@ -919,13 +933,13 @@ const FMusouAttackStep* AMusouCharacter::PickVariant(const FMusouAttackSlot& Slo
 	return &Slot.Variants[Index];
 }
 
-bool AMusouCharacter::PlayAttackSlot(const FMusouAttackSlot& Slot)
+bool AMusouCharacter::PlayAttackSlot(const FMusouAttackSlot& Slot, bool bFaceCameraIfNoInput, FName SlotName)
 {
 	const FMusouAttackStep* Step = PickVariant(Slot);
-	return Step && PlayAttackStep(*Step);
+	return Step && PlayAttackStep(*Step, bFaceCameraIfNoInput, SlotName);
 }
 
-bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step)
+bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step, bool bFaceCameraIfNoInput, FName SlotName)
 {
 	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
 	if (!AnimInstance)
@@ -940,7 +954,8 @@ bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step)
 	}
 
 	// 회전 스냅 — 모든 공격 스텝(시작/전진/분기/강공격) 공통. 스텝마다 재조준 가능.
-	SnapFacingToInput();
+	// 공격은 입력 없을 때 카메라 정면으로 재조준(bFaceCameraIfNoInput).
+	SnapFacingToInput(bFaceCameraIfNoInput);
 
 	// 재생속도 변주 — [Min, Max] 균등 랜덤. notify/RM 은 시퀀스 시간축이라 비율 유지.
 	float PlayRate = Step.PlayRateMin;
@@ -950,7 +965,8 @@ bool AMusouCharacter::PlayAttackStep(const FMusouAttackStep& Step)
 		PlayRate = Step.PlayRateMin + (Step.PlayRateMax - Step.PlayRateMin) * T;
 	}
 
-	AnimInstance->PlayMontage(Montage, FName::None, PlayRate, Step.BlendIn);
+	// SlotName=None → DefaultSlot(풀바디). "UpperBody" → 상반신만 (하체는 로코모션 유지).
+	AnimInstance->PlayMontage(Montage, FName::None, PlayRate, Step.BlendIn, SlotName);
 	return true;
 }
 
@@ -1206,7 +1222,8 @@ void AMusouCharacter::PlayComboStep(int32 Step)
 		return;
 	}
 
-	PlayAttackSlot(Chain[Step - 1]);
+	// 공격 — 입력 없으면 카메라 정면으로 재조준.
+	PlayAttackSlot(Chain[Step - 1], /*bFaceCameraIfNoInput=*/true);
 }
 
 void AMusouCharacter::PlayBranchFinisher(int32 BranchStep)
@@ -1214,14 +1231,21 @@ void AMusouCharacter::PlayBranchFinisher(int32 BranchStep)
 	// 테이블보다 깊은 단수는 마지막 분기로 clamp — Registry 가 처리.
 	if (const FMusouAttackSlot* Slot = FAttackDataRegistry::Get().GetBranchFinisher(BranchStep))
 	{
-		PlayAttackSlot(*Slot);
+		PlayAttackSlot(*Slot, /*bFaceCameraIfNoInput=*/true);
 	}
 }
 
 bool AMusouCharacter::IsAnyMontagePlaying() const
 {
 	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
-	return AnimInstance && AnimInstance->IsMontagePlaying();
+	if (!AnimInstance)
+	{
+		return false;
+	}
+	// DefaultSlot(공격/구르기) 또는 UpperBody(발도/납도) 어느 쪽이든 재생 중이면 busy.
+	// 이동 잠금(IsMovementLockedByMontage)은 DefaultSlot 만 보므로 발도납도 중 이동은 허용.
+	return AnimInstance->IsMontagePlaying()
+		|| AnimInstance->IsMontagePlaying(nullptr, FName("UpperBody"));
 }
 
 bool AMusouCharacter::IsFalling() const
