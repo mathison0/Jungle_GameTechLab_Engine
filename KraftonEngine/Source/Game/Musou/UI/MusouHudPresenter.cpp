@@ -24,7 +24,6 @@ namespace
 	constexpr float BloodVignetteLowHealthTriggerRatio = 0.35f;
 
 	constexpr float DeathOverlayFadeDuration = 0.85f;
-	constexpr float DeathOverlayMaxAlpha = 0.72f;
 	constexpr float DeathTitleFadeDelay = 0.25f;
 	constexpr float DeathTitleFadeDuration = 1.15f;
 
@@ -45,7 +44,6 @@ namespace
 	// 승리 결과 연출은 배경 → 타이틀 → 점수/세부 결과 순서로 차례로 드러낸다.
 	// 버튼은 점수 영역의 페이드인이 끝난 뒤 활성화된다.
 	constexpr float VictoryOverlayFadeDuration = 0.75f;
-	constexpr float VictoryOverlayMaxAlpha = 0.66f;
 	constexpr float VictoryTitleFadeDelay = 0.15f;
 	constexpr float VictoryTitleFadeDuration = 0.85f;
 	constexpr float VictoryScoreFadeDelay = 0.55f;
@@ -292,26 +290,6 @@ namespace
 		return Rml;
 	}
 
-	FString MakeOverlayColor(float Alpha)
-	{
-		const float ClampedAlpha = std::clamp(Alpha, 0.0f, 1.0f);
-		const int32 AlphaByte = static_cast<int32>(ClampedAlpha * 255.0f + 0.5f);
-
-		char Buffer[16] = {};
-		std::snprintf(Buffer, sizeof(Buffer), "#080A0E%02X", AlphaByte);
-		return FString(Buffer);
-	}
-
-	FString MakeVictoryOverlayColor(float Alpha)
-	{
-		const float ClampedAlpha = std::clamp(Alpha, 0.0f, 1.0f);
-		const int32 AlphaByte = static_cast<int32>(ClampedAlpha * 255.0f + 0.5f);
-
-		char Buffer[16] = {};
-		std::snprintf(Buffer, sizeof(Buffer), "#07110C%02X", AlphaByte);
-		return FString(Buffer);
-	}
-
 	// 결과 화면의 보조 정보 문구. 실제 스코어보드 UI가 들어오면 같은 Result를 넘겨 재사용한다.
 	FString MakeVictoryDetailsText(const FMusouMatchResult& Result)
 	{
@@ -431,11 +409,20 @@ void FMusouHudPresenter::SetPauseMenuVisible(bool bVisible)
 	{
 		Widget->SetProperty("death-title", "display", "none");
 		Widget->SetProperty("death-title", "opacity", "0");
+		Widget->SetProperty("pause-menu-overlay", "display", "block");
+		Widget->SetProperty("death-overlay", "display", "none");
+		Widget->SetProperty("death-overlay", "opacity", "0");
+		Widget->SetProperty("victory-overlay", "display", "none");
+		Widget->SetProperty("victory-overlay", "opacity", "0");
 		Widget->SetProperty("pause-menu", "display", "block");
 		Widget->SetProperty("death-menu", "display", "none");
 		Widget->SetProperty("resume-button", "display", "block");
 		Widget->SetProperty("restart-button", "display", "block");
 		Widget->SetProperty("stop-button", "display", "block");
+	}
+	else
+	{
+		Widget->SetProperty("pause-menu-overlay", "display", "none");
 	}
 
 	Widget->SetProperty("pause-overlay", "display", bVisible ? "block" : "none");
@@ -502,7 +489,11 @@ void FMusouHudPresenter::StartDeathOverlay()
 
 	HideBossHealth();
 	Widget->SetProperty("pause-overlay", "display", "block");
-	Widget->SetProperty("pause-overlay", "background-color", MakeOverlayColor(0.0f));
+	Widget->SetProperty("pause-menu-overlay", "display", "none");
+	Widget->SetProperty("death-overlay", "display", "block");
+	Widget->SetProperty("death-overlay", "opacity", "0");
+	Widget->SetProperty("victory-overlay", "display", "none");
+	Widget->SetProperty("victory-overlay", "opacity", "0");
 	Widget->SetProperty("death-title", "display", "block");
 	Widget->SetProperty("death-title", "opacity", "0");
 	Widget->SetProperty("victory-title", "display", "none");
@@ -538,9 +529,13 @@ void FMusouHudPresenter::StartVictoryOverlay(const FMusouMatchResult& Result, co
 	Widget->SetProperty("blood-vignette", "visibility", "hidden");
 	Widget->SetProperty("blood-vignette", "opacity", "0");
 	Widget->SetProperty("pause-overlay", "display", "block");
-	Widget->SetProperty("pause-overlay", "background-color", MakeVictoryOverlayColor(0.0f));
+	Widget->SetProperty("pause-menu-overlay", "display", "none");
+	Widget->SetProperty("death-overlay", "display", "none");
+	Widget->SetProperty("death-overlay", "opacity", "0");
+	Widget->SetProperty("victory-overlay", "display", "block");
+	Widget->SetProperty("victory-overlay", "opacity", "0");
 
-	// 같은 pause-overlay 레이어를 공유하므로 다른 메뉴/타이틀을 먼저 모두 접는다.
+	// 같은 결과 UI 컨테이너를 공유하므로 다른 메뉴/타이틀을 먼저 모두 접는다.
 	Widget->SetProperty("death-title", "display", "none");
 	Widget->SetProperty("death-menu", "display", "none");
 	Widget->SetProperty("pause-menu", "display", "none");
@@ -1012,11 +1007,12 @@ void FMusouHudPresenter::UpdateDeathOverlay(float DeltaTime)
 
 	DeathOverlayElapsed += DeltaTime;
 
-	const float OverlayAlpha = DeathOverlayMaxAlpha * SmoothStep01(DeathOverlayElapsed / DeathOverlayFadeDuration);
+	const float OverlayAlpha = SmoothStep01(DeathOverlayElapsed / DeathOverlayFadeDuration);
 	const float TitleAlpha = SmoothStep01((DeathOverlayElapsed - DeathTitleFadeDelay) / DeathTitleFadeDuration);
 
 	Widget->SetProperty("pause-overlay", "display", "block");
-	Widget->SetProperty("pause-overlay", "background-color", MakeOverlayColor(OverlayAlpha));
+	Widget->SetProperty("death-overlay", "display", "block");
+	Widget->SetProperty("death-overlay", "opacity", MakeOpacityValue(OverlayAlpha));
 	Widget->SetProperty("death-title", "display", "block");
 	Widget->SetProperty("death-title", "opacity", MakeOpacityValue(TitleAlpha));
 
@@ -1046,13 +1042,14 @@ void FMusouHudPresenter::UpdateVictoryOverlay(float DeltaTime)
 
 	VictoryOverlayElapsed += DeltaTime;
 
-	const float OverlayAlpha = VictoryOverlayMaxAlpha * SmoothStep01(VictoryOverlayElapsed / VictoryOverlayFadeDuration);
+	const float OverlayAlpha = SmoothStep01(VictoryOverlayElapsed / VictoryOverlayFadeDuration);
 	const float TitleAlpha = SmoothStep01((VictoryOverlayElapsed - VictoryTitleFadeDelay) / VictoryTitleFadeDuration);
 	const float ScoreAlpha = SmoothStep01((VictoryOverlayElapsed - VictoryScoreFadeDelay) / VictoryScoreFadeDuration);
 
-	// overlay는 매 프레임 직접 값을 갱신해 RML transition 의존 없이 동일한 타이밍을 보장한다.
+	// overlay 배경색은 RML에 두고, 여기서는 페이드 opacity만 갱신한다.
 	Widget->SetProperty("pause-overlay", "display", "block");
-	Widget->SetProperty("pause-overlay", "background-color", MakeVictoryOverlayColor(OverlayAlpha));
+	Widget->SetProperty("victory-overlay", "display", "block");
+	Widget->SetProperty("victory-overlay", "opacity", MakeOpacityValue(OverlayAlpha));
 	Widget->SetProperty("victory-title", "display", "block");
 	Widget->SetProperty("victory-title", "opacity", MakeOpacityValue(TitleAlpha));
 	Widget->SetProperty("victory-score", "display", "block");

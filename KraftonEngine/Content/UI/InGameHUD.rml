@@ -357,7 +357,33 @@
 			height: 100%;
 			z-index: 100;
 			display: none;
+			background-color: #00000000;
+		}
+
+		#pause-menu-overlay,
+		#death-overlay,
+		#victory-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 0;
+			display: none;
+			opacity: 0;
+		}
+
+		#pause-menu-overlay {
 			background-color: #161616a2;
+			opacity: 1;
+		}
+
+		#death-overlay {
+			background-color: #0e0808b8;
+		}
+
+		#victory-overlay {
+			background-color: #070b11a8;
 		}
 
 		#death-title {
@@ -1026,6 +1052,9 @@
 			</div>
 		</div>
 		<div id="pause-overlay">
+			<div id="pause-menu-overlay"></div>
+			<div id="death-overlay"></div>
+			<div id="victory-overlay"></div>
 			<div id="death-title">전사</div>
 			<!-- 승리 결과 영역: 점수/세부 기록은 FMusouMatchResult 기준으로 갱신된다. -->
 			<div id="victory-title">승리</div>
