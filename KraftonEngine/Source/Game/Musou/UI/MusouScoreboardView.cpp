@@ -48,15 +48,9 @@ namespace
 		return Result;
 	}
 
-	int32 GetScoreboardDisplayRank(const TArray<FMusouScoreboardEntry>& Entries, int32 EntryIndex)
+	int32 GetScoreboardDisplayRank(int32 EntryIndex)
 	{
-		// 동점 기록은 다른 row에 있더라도 같은 등수로 표시한다.
-		int32 Rank = EntryIndex + 1;
-		while (Rank > 1 && Entries[static_cast<size_t>(Rank - 2)].Score == Entries[static_cast<size_t>(EntryIndex)].Score)
-		{
-			--Rank;
-		}
-		return Rank;
+		return EntryIndex + 1;
 	}
 }
 
@@ -92,7 +86,7 @@ FString FMusouScoreboardView::MakeRowsRml(const TArray<FMusouScoreboardEntry>& E
 	for (int32 EntryIndex = FirstEntryIndex; EntryIndex < LastEntryIndex; ++EntryIndex)
 	{
 		const FMusouScoreboardEntry& Entry = Entries[static_cast<size_t>(EntryIndex)];
-		const int32 DisplayRank = GetScoreboardDisplayRank(Entries, EntryIndex);
+		const int32 DisplayRank = GetScoreboardDisplayRank(EntryIndex);
 
 		char DetailsBuffer[64] = {};
 		std::snprintf(DetailsBuffer, sizeof(DetailsBuffer),

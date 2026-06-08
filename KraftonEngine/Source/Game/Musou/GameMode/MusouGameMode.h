@@ -151,6 +151,7 @@ private:
 	int64 CachedScore = 0;
 	int32 CachedKills = 0;
 	int32 CachedMaxCombo = 0;
+	float CachedMatchTime = 0.0f;
 	float CachedGauge = 0.0f;
 	float CachedHealth = 100.0f;
 	float CachedMaxHealth = 100.0f;

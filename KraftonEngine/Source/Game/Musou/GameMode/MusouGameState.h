@@ -30,6 +30,7 @@ public:
 	AMusouGameState() = default;
 	~AMusouGameState() override = default;
 
+	void BeginPlay() override;
 	void Tick(float DeltaTime) override;
 
 	// --- Kill / Combo ---
@@ -54,9 +55,9 @@ public:
 	void AddMusouGaugeFromHits(int32 HitCount);   // 플레이어 적중 수만큼 게이지 적립
 
 	// --- Match ---
-	float GetMatchTime() const { return MatchTime; }
+	float GetMatchTime() const;
 	bool IsMatchEnded() const { return bMatchEnded; }
-	void SetMatchEnded(bool bEnded) { bMatchEnded = bEnded; }
+	void SetMatchEnded(bool bEnded);
 
 	// 결과 확정 시점의 값을 한 번에 복사한다. EndMatch 이후 점수/시간 갱신이 멈추더라도
 	// UI와 저장소가 같은 값을 보도록 GameMode에서 이 스냅샷을 전달한다.
@@ -66,6 +67,7 @@ public:
 	void SetScore(int64 V)      { Score = V; }
 	void SetKillCount(int32 V)  { KillCount = (V < 0) ? 0 : V; }
 	void SetMaxCombo(int32 V)   { MaxCombo = (V < 0) ? 0 : V; }
+	void SetMatchTime(float V);
 	void SetMusouGauge(float V) { MusouGauge = (V < 0.0f) ? 0.0f : (V > 1.0f ? 1.0f : V); }
 
 	// 콤보 유지 시간(초) — 이 시간 내 추가 킬이 없으면 콤보 리셋
@@ -73,12 +75,17 @@ public:
 	float ComboWindow = 3.0f;
 
 private:
+	float CalculateCurrentMatchTime() const;
+	void ResetMatchTimerBase();
+
 	int32 KillCount = 0;
 	int32 Combo = 0;
 	int32 MaxCombo = 0;
 	int64 Score = 0;
 	float ComboRemaining = 0.0f;  // 콤보 윈도우 잔여 시간
-	float MatchTime = 0.0f;       // 매치 경과 시간(초)
+	float MatchTime = 0.0f;       // 저장/복원 오프셋 또는 매치 종료 시 고정된 현실 경과 시간(초)
+	double MatchTimerBaseTotalTime = 0.0;
+	bool bMatchTimerBaseInitialized = false;
 	float MusouGauge = 0.0f;      // 무쌍 게이지 (0..1) — 적중(히트) 누적, 무쌍기 발동 시 소모
 	bool bMatchEnded = false;
 };

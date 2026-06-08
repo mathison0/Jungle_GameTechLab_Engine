@@ -1,8 +1,25 @@
 #include "Game/Musou/GameMode/MusouGameState.h"
 
 #include "Game/Musou/Combat/AttackDataRegistry.h"
+#include "Engine/Profiling/Time/Timer.h"
+#include "Engine/Runtime/Engine.h"
 
 #include <algorithm>
+
+namespace
+{
+	double GetEngineTotalTime()
+	{
+		const FTimer* Timer = GEngine ? GEngine->GetTimer() : nullptr;
+		return Timer ? Timer->GetTotalTime() : 0.0;
+	}
+}
+
+void AMusouGameState::BeginPlay()
+{
+	Super::BeginPlay();
+	ResetMatchTimerBase();
+}
 
 void AMusouGameState::Tick(float DeltaTime)
 {
@@ -12,8 +29,6 @@ void AMusouGameState::Tick(float DeltaTime)
 	{
 		return;
 	}
-
-	MatchTime += DeltaTime;
 
 	// 콤보 윈도우 — 시간 내 추가 킬이 없으면 콤보 리셋
 	if (Combo > 0)
@@ -70,6 +85,52 @@ bool AMusouGameState::TryConsumeMusouGauge()
 	return true;
 }
 
+float AMusouGameState::GetMatchTime() const
+{
+	return bMatchEnded ? MatchTime : CalculateCurrentMatchTime();
+}
+
+void AMusouGameState::SetMatchEnded(bool bEnded)
+{
+	if (bMatchEnded == bEnded)
+	{
+		return;
+	}
+
+	if (bEnded)
+	{
+		MatchTime = CalculateCurrentMatchTime();
+		bMatchEnded = true;
+		return;
+	}
+
+	bMatchEnded = false;
+	ResetMatchTimerBase();
+}
+
+void AMusouGameState::SetMatchTime(float V)
+{
+	MatchTime = (V < 0.0f) ? 0.0f : V;
+	ResetMatchTimerBase();
+}
+
+float AMusouGameState::CalculateCurrentMatchTime() const
+{
+	if (!bMatchTimerBaseInitialized)
+	{
+		return MatchTime;
+	}
+
+	const double ElapsedSinceBase = (std::max)(0.0, GetEngineTotalTime() - MatchTimerBaseTotalTime);
+	return MatchTime + static_cast<float>(ElapsedSinceBase);
+}
+
+void AMusouGameState::ResetMatchTimerBase()
+{
+	MatchTimerBaseTotalTime = GetEngineTotalTime();
+	bMatchTimerBaseInitialized = true;
+}
+
 FMusouMatchResult AMusouGameState::MakeMatchResult(bool bVictory) const
 {
 	FMusouMatchResult Result;
@@ -77,7 +138,7 @@ FMusouMatchResult AMusouGameState::MakeMatchResult(bool bVictory) const
 	Result.Score = Score;
 	Result.KillCount = KillCount;
 	Result.MaxCombo = MaxCombo;
-	Result.MatchTime = MatchTime;
+	Result.MatchTime = GetMatchTime();
 	return Result;
 }
 

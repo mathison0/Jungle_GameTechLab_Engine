@@ -234,13 +234,17 @@ namespace
 			{
 				return Left.Score > Right.Score;
 			}
-			if (Left.SavedAtEpochMs != Right.SavedAtEpochMs)
+			if (Left.MatchTime != Right.MatchTime)
 			{
-				return Left.SavedAtEpochMs > Right.SavedAtEpochMs;
+				return Left.MatchTime < Right.MatchTime;
 			}
-			if (Left.SavedAt != Right.SavedAt)
+			if (Left.KillCount != Right.KillCount)
 			{
-				return Left.SavedAt > Right.SavedAt;
+				return Left.KillCount > Right.KillCount;
+			}
+			if (Left.MaxCombo != Right.MaxCombo)
+			{
+				return Left.MaxCombo > Right.MaxCombo;
 			}
 			return Left.PlayerName < Right.PlayerName;
 		});

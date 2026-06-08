@@ -265,7 +265,15 @@ void AMusouGameMode::EndPlay()
 		FMusouMatchPersistence& P = FMusouMatchPersistence::Get();
 		if (P.ShouldCarryOnExit())
 		{
-			P.Save(CachedScore, CachedKills, CachedMaxCombo, CachedGauge, CachedHealth, CachedMaxHealth);
+			if (AMusouGameState* GS = GetMusouGameState())
+			{
+				CachedScore = GS->GetScore();
+				CachedKills = GS->GetKillCount();
+				CachedMaxCombo = GS->GetMaxCombo();
+				CachedMatchTime = GS->GetMatchTime();
+				CachedGauge = GS->GetMusouGauge();
+			}
+			P.Save(CachedScore, CachedKills, CachedMaxCombo, CachedMatchTime, CachedGauge, CachedHealth, CachedMaxHealth);
 		}
 		else
 		{
@@ -307,6 +315,7 @@ void AMusouGameMode::Tick(float DeltaTime)
 		CachedScore    = GS->GetScore();
 		CachedKills    = GS->GetKillCount();
 		CachedMaxCombo = GS->GetMaxCombo();
+		CachedMatchTime = GS->GetMatchTime();
 		CachedGauge    = GS->GetMusouGauge();
 	}
 	if (APlayerController* PC = GetPlayerController())
@@ -933,6 +942,7 @@ void AMusouGameMode::RestorePersistedMatchState()
 		GS->SetScore(P.GetScore());
 		GS->SetKillCount(P.GetKills());
 		GS->SetMaxCombo(P.GetMaxCombo());
+		GS->SetMatchTime(P.GetMatchTime());
 		GS->SetMusouGauge(P.GetMusouGauge());
 	}
 	if (APlayerController* PC = GetPlayerController())
@@ -946,7 +956,7 @@ void AMusouGameMode::RestorePersistedMatchState()
 		}
 	}
 	P.Clear();
-	UE_LOG("[MusouGameMode] 매치 상태 복원 — 점수/킬/콤보/무쌍게이지/체력 이어가기");
+	UE_LOG("[MusouGameMode] 매치 상태 복원 — 점수/킬/콤보/시간/무쌍게이지/체력 이어가기");
 }
 
 void AMusouGameMode::HandleAudioSettingsInput()

@@ -20,12 +20,13 @@ class FMusouMatchPersistence : public TSingleton<FMusouMatchPersistence>
 	friend class TSingleton<FMusouMatchPersistence>;
 
 public:
-	void Save(int64 InScore, int32 InKills, int32 InMaxCombo, float InMusouGauge,
+	void Save(int64 InScore, int32 InKills, int32 InMaxCombo, float InMatchTime, float InMusouGauge,
 	          float InHealth, float InMaxHealth)
 	{
 		Score = InScore;
 		Kills = InKills;
 		MaxCombo = InMaxCombo;
+		MatchTime = InMatchTime;
 		MusouGauge = InMusouGauge;
 		Health = InHealth;
 		MaxHealth = InMaxHealth;
@@ -38,6 +39,7 @@ public:
 	int64 GetScore() const { return Score; }
 	int32 GetKills() const { return Kills; }
 	int32 GetMaxCombo() const { return MaxCombo; }
+	float GetMatchTime() const { return MatchTime; }
 	float GetMusouGauge() const { return MusouGauge; }
 	float GetHealth() const { return Health; }
 	float GetMaxHealth() const { return MaxHealth; }
@@ -53,6 +55,7 @@ private:
 	int64 Score = 0;
 	int32 Kills = 0;
 	int32 MaxCombo = 0;
+	float MatchTime = 0.0f;
 	float MusouGauge = 0.0f;
 	float Health = 100.0f;
 	float MaxHealth = 100.0f;
