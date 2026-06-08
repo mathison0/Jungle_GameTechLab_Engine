@@ -15,6 +15,11 @@
 
 namespace
 {
+	constexpr float FixedRefractionStrength = 0.20f;
+	constexpr float FixedRefractionScale = 1.70f;
+	constexpr float FixedRefractionScreenThickness = 10.0f;
+	constexpr float FixedRefractionScreenThicknessStrength = 1.0f;
+
 	float SlashSparkRandom01(int32 Index, int32 Salt)
 	{
 		const float Value = std::sin(static_cast<float>(Index * 127 + Salt * 311) * 12.9898f) * 43758.5453f;
@@ -124,7 +129,7 @@ void ASlashEffectActor::LoadSlashAssets()
 	{
 		RefractionMeshComponent->SetStaticMesh(Mesh);
 		RefractionMeshComponent->SetMaterial(0, RefractionMaterial);
-		RefractionMeshComponent->SetRelativeScale(RefractionRelativeScale);
+		RefractionMeshComponent->SetRelativeScale(FVector(FixedRefractionScale, FixedRefractionScale, FixedRefractionScale));
 	}
 
 	ArcSparkParticle = ArcSparkParticlePath.IsNull()
@@ -261,7 +266,7 @@ void ASlashEffectActor::ActivateSlash(
 
 	if (RefractionMeshComponent)
 	{
-		RefractionMeshComponent->SetRelativeScale(RefractionRelativeScale);
+		RefractionMeshComponent->SetRelativeScale(FVector(FixedRefractionScale, FixedRefractionScale, FixedRefractionScale));
 		RefractionMeshComponent->SetRelativeRotation(FQuat::Identity);
 	}
 
@@ -451,15 +456,15 @@ void ASlashEffectActor::SetSlashMaterialParams(
 	if (RefractionMaterial)
 	{
 		RefractionMaterial->SetScalarParameter("SlashAlpha", CoreAlpha);
-		RefractionMaterial->SetScalarParameter("RefractionStrength", RefractionStrength * CoreAlpha);
+		RefractionMaterial->SetScalarParameter("RefractionStrength", FixedRefractionStrength * CoreAlpha);
 		RefractionMaterial->SetScalarParameter("RefractionNoiseScroll", NoiseScroll);
 		RefractionMaterial->SetScalarParameter("SlashReveal", RefractionReveal);
 		RefractionMaterial->SetScalarParameter("SlashRevealSoftness", RevealSoftness);
 		RefractionMaterial->SetScalarParameter("SlashEdgeSoftness", EdgeSoftness);
 		RefractionMaterial->SetScalarParameter("SlashTailFadeStart", TailFadeStart);
 		RefractionMaterial->SetScalarParameter("SlashTrailLength", RefractionTrailLength);
-		RefractionMaterial->SetScalarParameter("SlashScreenThickness", RefractionScreenThickness);
-		RefractionMaterial->SetScalarParameter("SlashScreenThicknessStrength", RefractionScreenThicknessStrength);
+		RefractionMaterial->SetScalarParameter("SlashScreenThickness", FixedRefractionScreenThickness);
+		RefractionMaterial->SetScalarParameter("SlashScreenThicknessStrength", FixedRefractionScreenThicknessStrength);
 	}
 }
 

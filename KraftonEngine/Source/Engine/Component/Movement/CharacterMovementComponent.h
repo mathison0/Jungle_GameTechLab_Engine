@@ -130,6 +130,7 @@ private:
 
 	FControllerMoveResult MoveController(const FVector& Delta, float DeltaTime);
 	bool FindWalkableFloor(float ProbeDistance) const;
+	void ResolvePawnPenetration(float DeltaTime);
 	
 	void ConsumeInputVector(FVector& OutAccumulated);
 	bool ConsumePendingRootMotion(FTransform& OutLocalDelta);

@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace
 {
@@ -32,9 +33,11 @@ namespace
 		{
 			(void)a;
 			(void)b;
-			return true;
+			return false;
 		}
 	};
+
+	constexpr float PawnSeparationSkin = 0.001f;
 }
 
 UCharacterMovementComponent::UCharacterMovementComponent()
@@ -182,7 +185,7 @@ FControllerMoveResult UCharacterMovementComponent::MoveController(
 	}
 
 	const physx::PxVec3 Disp(Delta.X, Delta.Y, Delta.Z);
-	FPhysicsRaycastFilterCallback QueryFilter(ECollisionChannel::Pawn, GetOwner());
+	FPhysicsRaycastFilterCallback QueryFilter(ECollisionChannel::Pawn, GetOwner(), ECollisionChannel::Pawn);
 	FCharacterControllerFilterCallback ControllerFilter;
 
 	physx::PxControllerFilters Filters(nullptr, &QueryFilter, &ControllerFilter);
@@ -193,6 +196,79 @@ FControllerMoveResult UCharacterMovementComponent::MoveController(
 
 	SyncUpdatedComponentFromController();
 	return Result;
+}
+
+void UCharacterMovementComponent::ResolvePawnPenetration(float DeltaTime)
+{
+	UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(GetUpdatedComponent());
+	UWorld* World = GetWorld();
+	AActor* OwnerActor = GetOwner();
+	if (!Capsule || !World || !OwnerActor)
+	{
+		return;
+	}
+
+	const FVector Location = Capsule->GetWorldLocation();
+	const float Radius = Capsule->GetScaledCapsuleRadius();
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+
+	FVector Correction(0.0f, 0.0f, 0.0f);
+
+	for (AActor* Actor : World->GetActors())
+	{
+		ACharacter* OtherCharacter = Cast<ACharacter>(Actor);
+		if (!OtherCharacter || OtherCharacter == OwnerActor)
+		{
+			continue;
+		}
+
+		UCapsuleComponent* OtherCapsule = OtherCharacter->GetCapsuleComponent();
+		if (!OtherCapsule || !OtherCapsule->IsCollisionEnabled() ||
+			OtherCapsule->GetCollisionObjectType() != ECollisionChannel::Pawn)
+		{
+			continue;
+		}
+
+		const FVector OtherLocation = OtherCapsule->GetWorldLocation();
+		const float HalfHeightSum = HalfHeight + OtherCapsule->GetScaledCapsuleHalfHeight();
+		if (std::fabs(Location.Z - OtherLocation.Z) >= HalfHeightSum)
+		{
+			continue;
+		}
+
+		FVector Delta = Location - OtherLocation;
+		Delta.Z = 0.0f;
+
+		const float MinDistance = Radius + OtherCapsule->GetScaledCapsuleRadius() + PawnSeparationSkin;
+		const float DistanceSq = Delta.X * Delta.X + Delta.Y * Delta.Y;
+		if (DistanceSq >= MinDistance * MinDistance)
+		{
+			continue;
+		}
+
+		FVector Direction;
+		float Distance = 0.0f;
+		if (DistanceSq > FMath::Epsilon)
+		{
+			Distance = std::sqrt(DistanceSq);
+			Direction = Delta * (1.0f / Distance);
+		}
+		else
+		{
+			const uintptr_t OwnerBits = reinterpret_cast<uintptr_t>(OwnerActor);
+			const float Sign = (OwnerBits & 1u) ? 1.0f : -1.0f;
+			Direction = FVector(Sign, 0.0f, 0.0f);
+		}
+
+		const float PushDistance = (MinDistance - Distance) * 0.5f;
+		Correction = Correction + Direction * PushDistance;
+	}
+
+	Correction.Z = 0.0f;
+	if (Correction.Length() > ControllerMinMoveDistance)
+	{
+		MoveController(Correction, DeltaTime);
+	}
 }
 
 bool UCharacterMovementComponent::FindWalkableFloor(float ProbeDistance) const
@@ -377,6 +453,8 @@ void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	{
 		TickFalling(DeltaTime, RootMotionWorldXY);
 	}
+
+	ResolvePawnPenetration(DeltaTime);
 
 	// 4) Root motion yaw 적용 — 기본 OFF (bApplyRootMotionRotation).
 	//    Mixamo 류 에셋은 공격 스윙의 몸통 회전이 root 본에 베이크돼 있어 (클립 중간

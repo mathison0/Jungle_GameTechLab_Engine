@@ -139,7 +139,7 @@ float4 PS(PS_Input_Particle input) : SV_TARGET
     float2 dir = RefractionDirection;
     if (dot(dir, dir) < 0.0001f)
     {
-        dir = float2(1.0f, 0.18f);
+        dir = float2(0.0f, 1.0f);
     }
     dir = normalize(dir);
 
@@ -152,11 +152,10 @@ float4 PS(PS_Input_Particle input) : SV_TARGET
     float ridge = 1.0f;
     float strengthMask = softMeshMask;
 
-    float2 offset =
-        noiseWarp * RefractionStrength * strengthMask
-        + dir * RefractionStrength * ridge * 0.45f * strengthMask;
+    float mask = softMeshMask;
 
-    offset = clamp(offset, -0.10f, 0.10f);
+    float2 pixelOffset = float2(0.0f, 50.0f / max(sceneHeight, 1));
+    float2 strongOffset = pixelOffset * mask;
 
     float4 original = SceneColorTexture.SampleLevel(
         LinearClampSampler,
@@ -164,17 +163,30 @@ float4 PS(PS_Input_Particle input) : SV_TARGET
         0
     );
 
-    float4 refracted = SceneColorTexture.SampleLevel(
+    float r = SceneColorTexture.SampleLevel(
         LinearClampSampler,
-        saturate(screenUV + offset),
+        saturate(screenUV + strongOffset * 1.04f),
         0
-    );
+    ).r;
 
-    // 최소 0.75 이상 섞어서 테스트 단계에서 반드시 티 나게 함.
-    float refractionAmount = saturate(softMeshMask * 0.9f);
-    float4 scene = lerp(original, refracted, refractionAmount);
+    float g = SceneColorTexture.SampleLevel(
+        LinearClampSampler,
+        saturate(screenUV + strongOffset),
+        0
+    ).g;
 
-    scene.rgb += softMeshMask * RefractionEdgeBoost * 0.015f;
+    float b = SceneColorTexture.SampleLevel(
+        LinearClampSampler,
+        saturate(screenUV + strongOffset * 0.96f),
+        0
+    ).b;
+
+    float4 refracted = float4(r, g, b, 1.0f);
+
+    float amount = saturate(mask * 0.55f);
+    float4 scene = lerp(original, refracted, amount);
+
+    scene.rgb += mask * RefractionEdgeBoost * 0.025f;
 
     return scene;
 }
